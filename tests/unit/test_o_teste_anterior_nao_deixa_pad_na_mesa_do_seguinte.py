@@ -33,7 +33,7 @@ from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (
 )
 from tests.unit.test_o_buraco_de_quem_saiu_se_fecha_no_jogo import (
     MesaHonesta,
-    _o_prazo_passa_e_ela_renumera,
+    _o_prazo_passa_e_o_usuario_renumera,
     montar_honesto,
 )
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
@@ -50,10 +50,10 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
         yield k
 
 
-def _o_jogo_nao_ve(bancada: MesaHonesta, vpad: object) -> None:
+def _o_jogo_nao_ve(ensaio: MesaHonesta, vpad: object) -> None:
     assert not getattr(vpad, "vivo", True), "o pad parado segue vivo na bancada"
-    assert all(v is not vpad for v in bancada.jogo.ve()[1].values()), (
-        f"o jogo segue vendo o pad parado: {bancada.jogo.ve()[1]}"
+    assert all(v is not vpad for v in ensaio.jogo.ve()[1].values()), (
+        f"o jogo segue vendo o pad parado: {ensaio.jogo.ve()[1]}"
     )
 
 
@@ -66,29 +66,29 @@ class TestOPadParadoNoTiqueSaiDoJogo:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str,
     ) -> None:
-        bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
-        antes = {u: bancada.vpad_de(u) for u in UNIQS[1:quantos]}
+        ensaio = montar_honesto(monkeypatch, kernel, quantos, transporte)
+        antes = {u: ensaio.vpad_de(u) for u in UNIQS[1:quantos]}
         assert all(getattr(v, "backend", None) == "uhid" for v in antes.values())
 
-        bancada.mesa.levantar(UNIQS[1])
-        _o_prazo_passa_e_ela_renumera(bancada, 0.0)
+        ensaio.mesa.levantar(UNIQS[1])
+        _o_prazo_passa_e_o_usuario_renumera(ensaio, 0.0)
 
-        parados = [v for u, v in antes.items() if bancada.vpad_de(u) is not v]
+        parados = [v for u, v in antes.items() if ensaio.vpad_de(u) is not v]
         assert len(parados) == quantos - 1, "quem saiu ou quem ficou atrás não desceu"
         for velho in parados:
-            _o_jogo_nao_ve(bancada, velho)
-        bancada.o_jogo_segue_a_tela()
+            _o_jogo_nao_ve(ensaio, velho)
+        ensaio.o_jogo_segue_a_tela()
 
     @MATRIZ
     def test_a_parada_no_tique_e_a_do_stop_saem_do_jogo_igual(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str,
     ) -> None:
-        bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
-        no_tique = bancada.vpad_de(UNIQS[quantos - 1])
-        posto = bancada.vpad_do_p1
+        ensaio = montar_honesto(monkeypatch, kernel, quantos, transporte)
+        no_tique = ensaio.vpad_de(UNIQS[quantos - 1])
+        posto = ensaio.vpad_do_p1
 
         parar_fora_do_tique(no_tique)
-        _o_jogo_nao_ve(bancada, no_tique)
+        _o_jogo_nao_ve(ensaio, no_tique)
         posto.stop()
-        _o_jogo_nao_ve(bancada, posto)
+        _o_jogo_nao_ve(ensaio, posto)

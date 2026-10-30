@@ -64,7 +64,7 @@ from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
 import monta
 
-BANCADA = RAIZ / "mockup/04-iluminacao.html"
+ENSAIO = RAIZ / "mockup/04-iluminacao.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 PORTAO = RAIZ / "scripts/check_a_cor_vem_do_aparelho.py"
 
@@ -112,10 +112,10 @@ def _colunas(mesa: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return a04.pacote(_contexto(mesa)).get("colunas") or {}
 
 
-def test_a_bancada_da_04_nao_crava_nenhuma_cor_de_aparelho() -> None:
+def test_o_ensaio_da_04_nao_crava_nenhuma_cor_de_aparelho() -> None:
     """Zero achados do portão da cor na `mockup/04-iluminacao.html`."""
     portao = _portao()
-    achados = portao.cravados_de(BANCADA, portao.colorways_do_mapa())
+    achados = portao.cravados_de(ENSAIO, portao.colorways_do_mapa())
     assert not achados, (
         "a 04 voltou a cravar cor de aparelho:\n  "
         + "\n  ".join(f"linha {a[0]} [{a[1]}] {a[2]} — {a[3]}" for a in achados))
@@ -176,7 +176,7 @@ def test_todo_plastico_da_04_tem_o_alvo_que_o_alcanca() -> None:
                 self.pilha.pop()
 
     varre = _Varre()
-    varre.feed(BANCADA.read_text(encoding="utf-8"))
+    varre.feed(ENSAIO.read_text(encoding="utf-8"))
     assert not varre.nus, (
         "a 04 tem `--plastico` que o produto não alcança:\n  "
         + "\n  ".join(varre.nus))
@@ -200,7 +200,7 @@ def test_o_anel_de_cada_numero_recebe_a_cor_do_dono_daquele_numero() -> None:
         c["jogador"]: str(monta.cor_da_zona(c["cor"])) for c in mesa
     }
     do_desenho = set(re.findall(r"--plastico:(#[0-9a-fA-F]{6})",
-                                BANCADA.read_text(encoding="utf-8")))
+                                ENSAIO.read_text(encoding="utf-8")))
     for numero, hexa in esperado.items():
         assert hexa.lower() not in {h.lower() for h in do_desenho}, (
             f"o modelo do P{numero} está no desenho ({hexa}) — troque a mesa de "

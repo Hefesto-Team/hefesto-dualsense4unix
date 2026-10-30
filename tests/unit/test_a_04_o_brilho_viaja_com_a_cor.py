@@ -264,7 +264,7 @@ def test_aplicou_e_o_gesto_cala(a04, ctx, monkeypatch):
     assert fn(ctx, {"controle": "p1", "uniq": UNIQ, "hex": "#0000FF"}, p) is None
 
 
-def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
+def test_guardado_vira_frase_no_cartao_do_usuario(a04, ctx, monkeypatch):
     """O clique que NÃO acendeu nada tem de dizer isso — e a frase é do produto.
 
     ESTE É O DEFEITO MAIS CARO DESTA CASA, e ele estava vivo aqui: o daemon

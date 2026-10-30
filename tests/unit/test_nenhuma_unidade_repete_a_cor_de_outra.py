@@ -135,7 +135,7 @@ def _a_10_esta_em_trabalho() -> bool:
     """A aba Perfis está declarada em trabalho na bancada (`mockup/DIVERGENCIAS.md`)?"""
     from hefesto_dualsense4unix.interface import onde
 
-    arquivo = onde.BANCADA / "DIVERGENCIAS.md"
+    arquivo = onde.ENSAIO / "DIVERGENCIAS.md"
     if not arquivo.exists():
         return False
     corpo = arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1]

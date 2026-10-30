@@ -560,7 +560,7 @@ except OSError:
     do_dmidecode = ""
 
 censo = cdg.ler_o_gabinete(dmidecode=do_dmidecode)
-censo = cdg.preservar_o_que_ela_disse(censo, cdg.ler_do_disco(alvo), cdg.ler_a_placa())
+censo = cdg.preservar_o_que_o_usuario_disse(censo, cdg.ler_do_disco(alvo), cdg.ler_a_placa())
 cdg.gravar(censo, alvo)
 if censo.get("substituiu_outra_placa"):
     print("censo anterior era de OUTRA placa — substituído")

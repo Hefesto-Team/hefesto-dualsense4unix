@@ -11,7 +11,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/02-controles.html"
+ENSAIO = RAIZ / "mockup/02-controles.html"
 
 def _do_desenho() -> tuple[int, int]:
     import monta
@@ -66,12 +66,12 @@ def ctx(a02):
     from pacotes import Contexto
 
     a02._ENDERECOS = frozenset(
-        re.findall(r'data-campo="([^"]+)"', BANCADA.read_text(encoding="utf-8")))
+        re.findall(r'data-campo="([^"]+)"', ENSAIO.read_text(encoding="utf-8")))
     yield Contexto(state={}, mesa=MESA, conectados=CONECTADOS, estados={})
     a02._ENDERECOS = None
 
 
-def test_a_bancada_tem_os_quatro_enderecos_da_identidade():
+def test_o_ensaio_tem_os_quatro_enderecos_da_identidade():
     """Sem eles o pacote não tem onde pousar, e a pintura escreve zero, calada.
 
     A CONTA DO CARD PASSOU DE 2 PARA 4 — 07/09/2026,
@@ -87,7 +87,7 @@ def test_a_bancada_tem_os_quatro_enderecos_da_identidade():
     desenha chip de quem ESTÁ na mesa. Cobrar quatro ali faria a régua reprovar
     no dia em que ela desligar um controle — o defeito irmão deste.
     """
-    doc = BANCADA.read_text(encoding="utf-8")
+    doc = ENSAIO.read_text(encoding="utf-8")
     for campo in ("peca", "via"):
         assert doc.count(f'data-campo="{campo}"') == LUGARES, (
             f"`{campo}` não está nos {LUGARES} LUGARES da bancada — um lugar "
@@ -97,7 +97,7 @@ def test_a_bancada_tem_os_quatro_enderecos_da_identidade():
             f"`{campo}` não está nos {CHIPS} chips da fita do desenho")
 
 
-def test_a_bancada_nao_traz_cor_de_plastico_no_estilo_de_linha():
+def test_o_ensaio_nao_traz_cor_de_plastico_no_estilo_de_linha():
     """`style="--plastico:#hex"` é a única forma que o produto NÃO consegue vencer.
 
     Estilo de linha ganha de qualquer folha de estilo, e o `escrever` do piloto
@@ -105,13 +105,13 @@ def test_a_bancada_nao_traz_cor_de_plastico_no_estilo_de_linha():
     texto · largura · fundo · valor · html · classe · cor). Enquanto a cor
     morar ali, a borda do card é do mockup e ponto final.
     """
-    corpo = BANCADA.read_text(encoding="utf-8").split("</head>", 1)[-1]
+    corpo = ENSAIO.read_text(encoding="utf-8").split("</head>", 1)[-1]
     assert "--plastico:#" not in corpo
 
 
-def test_a_bancada_tem_a_folha_enderecada_do_plastico():
+def test_o_ensaio_tem_a_folha_enderecada_do_plastico():
     """E o produto a TROCA INTEIRA — por isso ela nasce com o desenho dentro."""
-    doc = BANCADA.read_text(encoding="utf-8")
+    doc = ENSAIO.read_text(encoding="utf-8")
     assert '<style data-campo="plastico-css" data-hef-alvo="html">' in doc
     assert "plastico-do-desenho" not in doc
 

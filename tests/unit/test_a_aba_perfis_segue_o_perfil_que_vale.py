@@ -54,7 +54,7 @@ def _sem_perfil() -> str:
 def _paginas() -> list[Any]:
     """As páginas do publicado e da bancada, cada um com as abas de `monta.ABAS`."""
     fora = []
-    for pasta, rotulo in ((onde.PUBLICADO, "publicado"), (onde.BANCADA, "bancada")):
+    for pasta, rotulo in ((onde.PUBLICADO, "publicado"), (onde.ENSAIO, "bancada")):
         for prefixo in ABAS:
             achadas = sorted(pasta.glob(f"{prefixo}*.html"))
             assert achadas, f"não há página {prefixo}* em {pasta} ({rotulo})"

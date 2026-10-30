@@ -2155,7 +2155,7 @@ class Piloto:
         self._antes_de_instalar()
 
     def _a_mesma_recarregou(self, nova: str) -> None:
-        """O MAPA RECARREGADO VOLTA COM O ARRANJO — O-MAPA-QUE-ELA-CORRIGE-01."""
+        """O MAPA RECARREGADO VOLTA COM O ARRANJO — O-MAPA-QUE-O-USUARIO-CORRIGE-01."""
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
         if nova != arranjo_desta_maquina.PAGINA or nova != self.pagina or not self.pronto:

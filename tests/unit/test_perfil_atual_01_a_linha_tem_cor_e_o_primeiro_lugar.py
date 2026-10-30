@@ -12,7 +12,7 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions.profiles_actions import (
     ProfilesActionsMixin,
     ordem_de_exibicao,
-    perfil_que_ela_ativou,
+    perfil_que_o_usuario_ativou,
 )
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -41,7 +41,7 @@ def _do_jogo(nome: str, prioridade: int) -> Profile:
     )
 
 
-def _mesa_dela() -> list[Profile]:
+def _mesa_do_usuario() -> list[Profile]:
     """A ordem de CARGA do loader é alfabética pelo ARQUIVO — imitada aqui."""
     return [
         _catch_all("Ação", 5),
@@ -75,16 +75,16 @@ def _stub() -> Any:
     return _Stub()
 
 
-class TestOFatoDoGestoDela:
+class TestOFatoDoGestoDoUsuario:
     """Ativar deixa RASTRO EM DISCO — e é dele que a aba parte."""
 
     def test_sem_gesto_nenhum_nao_ha_perfil_atual(self) -> None:
-        assert perfil_que_ela_ativou() is None
+        assert perfil_que_o_usuario_ativou() is None
 
     def test_o_ativar_de_ontem_ainda_responde_hoje(self) -> None:
         """`session.json` é o que o `profile.switch` grava — manual-only.
 
-        Desde 01/10/2026 a resposta é a do dono (`a_escolha_dela`), que só diz
+        Desde 01/10/2026 a resposta é a do dono (`a_escolha_do_usuario`), que só diz
         um nome que CARREGA: o perfil está no disco.
         """
         from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -93,7 +93,7 @@ class TestOFatoDoGestoDela:
         (config_dir(ensure=True) / "session.json").write_text(
             '{"last_profile": "Pragmata"}', encoding="utf-8"
         )
-        assert perfil_que_ela_ativou() == "Pragmata"
+        assert perfil_que_o_usuario_ativou() == "Pragmata"
 
     def test_o_marcador_e_espelho_e_nao_vence_o_session_json(self) -> None:
         """O `active_profile.txt` não decide nada: vale o `session.json`."""
@@ -106,7 +106,7 @@ class TestOFatoDoGestoDela:
             '{"last_profile": "Navegação"}', encoding="utf-8"
         )
         (cfg / "active_profile.txt").write_text("vitoria\n", encoding="utf-8")
-        assert perfil_que_ela_ativou() == "Navegação"
+        assert perfil_que_o_usuario_ativou() == "Navegação"
 
     def test_disco_ilegivel_nao_derruba_a_aba(self, monkeypatch) -> None:
         """Best-effort: sem nome não há destaque — nunca uma exceção na GTK."""
@@ -116,24 +116,24 @@ class TestOFatoDoGestoDela:
             raise OSError("disco de mentira")
 
         monkeypatch.setattr(session, "resolve_boot_profile", _explode)
-        assert perfil_que_ela_ativou() is None
+        assert perfil_que_o_usuario_ativou() is None
 
 
 class TestOrdemDeExibicao:
     """A função PURA — o ativo primeiro, o resto NA ORDEM DE CARGA."""
 
     def test_o_ativo_vai_para_a_frente(self) -> None:
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         nomes = [p.name for p in ordem_de_exibicao(perfis, "vitoria")]
         assert nomes == ["vitoria", "Ação", "Pragmata"]
 
     def test_o_resto_nao_e_reembaralhado(self) -> None:
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         nomes = [p.name for p in ordem_de_exibicao(perfis, "Ação")]
         assert nomes == ["Ação", "Pragmata", "vitoria"]
 
     def test_sem_ativo_a_ordem_de_carga_fica_intacta(self) -> None:
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         assert [p.name for p in ordem_de_exibicao(perfis, None)] == [
             "Ação",
             "Pragmata",
@@ -142,7 +142,7 @@ class TestOrdemDeExibicao:
 
     def test_nome_que_nao_existe_na_lista_nao_muda_nada(self) -> None:
         """Marker de versão antiga, perfil renomeado: degrada em silêncio."""
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         assert [p.name for p in ordem_de_exibicao(perfis, "apagado")] == [
             "Ação",
             "Pragmata",
@@ -151,7 +151,7 @@ class TestOrdemDeExibicao:
 
     def test_nao_devolve_a_lista_de_entrada(self) -> None:
         """Quem chama continua com a ordem de CARGA na mão — ver EMPATE-01/E2."""
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         saida = ordem_de_exibicao(perfis, "vitoria")
         assert saida is not perfis
         assert [p.name for p in perfis] == ["Ação", "Pragmata", "vitoria"]

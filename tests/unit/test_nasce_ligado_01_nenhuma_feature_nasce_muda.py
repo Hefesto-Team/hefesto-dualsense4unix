@@ -68,7 +68,7 @@ O_QUE_E_MUDO: dict[str, Any] = {
 }
 
 
-A_FILA_DELA = frozenset(
+A_FILA_DO_USUARIO = frozenset(
     {
         "Profile.mouse",
         "ProfileMicConfig.volume",
@@ -85,7 +85,7 @@ class TestTodoCampoTemLinha:
             f"{endereco} não tem linha em `NASCIMENTO_DOS_CAMPOS`. Todo campo "
             "deste esquema precisa dizer de onde vem o valor quando o perfil "
             "cala — e se a resposta for 'ninguém decidiu', isso também se "
-            "declara, com `AGUARDA_A_PALAVRA_DELA` e o que falta."
+            "declara, com `AGUARDA_A_PALAVRA_DO_USUARIO` e o que falta."
         )
 
     def test_nao_ha_linha_para_campo_que_nao_existe(self) -> None:
@@ -207,7 +207,7 @@ class TestOGatilhoNasceRigidoDeVerdade:
                 "sem tocar em nada, e é dele que a ordem dela fala."
             )
 
-    def test_o_perfil_que_ela_configurou_continua_mandando(self) -> None:
+    def test_o_perfil_que_o_usuario_configurou_continua_mandando(self) -> None:
         """A trava do alcance: nascimento não pisa em escolha gravada."""
         perfil = esquema.Profile(
             name="o que ela deixou solto",
@@ -298,24 +298,24 @@ class TestOsDonosRespondemLigado:
         assert esquema.LedsConfig().auto_player_colors is True
 
 
-class TestAFilaDela:
+class TestAFilaDoUsuario:
     """O que espera a palavra de produto é lista FECHADA, e cada item diz o que falta."""
 
     def test_a_fila_e_exatamente_a_declarada(self) -> None:
         do_esquema = frozenset(
             k
             for k, v in esquema.NASCIMENTO_DOS_CAMPOS.items()
-            if v.onde == esquema.AGUARDA_A_PALAVRA_DELA
+            if v.onde == esquema.AGUARDA_A_PALAVRA_DO_USUARIO
         )
-        assert do_esquema == A_FILA_DELA, (
+        assert do_esquema == A_FILA_DO_USUARIO, (
             "a fila dela mudou sem ninguém declarar nos dois lugares. "
             f"no esquema: {sorted(do_esquema)}; neste arquivo: "
-            f"{sorted(A_FILA_DELA)}. Estacionar uma feature em "
-            "`AGUARDA_A_PALAVRA_DELA` é a única saída que esta régua deixa — "
+            f"{sorted(A_FILA_DO_USUARIO)}. Estacionar uma feature em "
+            "`AGUARDA_A_PALAVRA_DO_USUARIO` é a única saída que esta régua deixa — "
             "e ela custa uma linha aqui de propósito."
         )
 
-    @pytest.mark.parametrize("endereco", sorted(A_FILA_DELA))
+    @pytest.mark.parametrize("endereco", sorted(A_FILA_DO_USUARIO))
     def test_cada_espera_diz_o_que_falta(self, endereco: str) -> None:
         linha = esquema.NASCIMENTO_DOS_CAMPOS[endereco]
         assert linha.falta.strip(), (

@@ -699,10 +699,10 @@ def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str
             f'title="{_escapar(descricao_do_modo(modo_))}">{_escapar(_rotulo_do_modo(modo_))}'
             f"</option></optgroup>")
     imer = _imersoes()
-    for familia, delas in (imer.imersoes_por_familia(estilo) if imer else ()):
+    for familia, da_familia in (imer.imersoes_por_familia(estilo) if imer else ()):
         itens = "".join(
             f'<option value="{_escapar(i.chave)}" title="{_escapar(i.dica)}">'
-            f"{_escapar(_com_maiuscula(imer.variante_da_pagina(i)))}</option>" for i in delas)
+            f"{_escapar(_com_maiuscula(imer.variante_da_pagina(i)))}</option>" for i in da_familia)
         partes.append(f'<optgroup label="{_escapar(familia)}">{itens}</optgroup>')
     partes.append(_grupo_dos_seus(_seus_efeitos_do_gatilho(disco)))
     return "".join(partes)

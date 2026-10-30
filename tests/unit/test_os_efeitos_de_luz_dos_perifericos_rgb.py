@@ -443,8 +443,8 @@ def test_o_mockup_lista_as_quatro_em_cada_lugar_no_grupo_certo() -> None:
 
 
 def test_o_gerador_da_aba_monta_e_confere_sem_exigir_vermelho(tmp_path: pathlib.Path) -> None:
-    anterior = os.environ.get("HEFESTO_BANCADA")
-    os.environ["HEFESTO_BANCADA"] = str(tmp_path)
+    anterior = os.environ.get("HEFESTO_ENSAIO")
+    os.environ["HEFESTO_ENSAIO"] = str(tmp_path)
     try:
         import aba04
         import onde
@@ -456,9 +456,9 @@ def test_o_gerador_da_aba_monta_e_confere_sem_exigir_vermelho(tmp_path: pathlib.
         aba04._conferir(doc)
     finally:
         if anterior is None:
-            os.environ.pop("HEFESTO_BANCADA", None)
+            os.environ.pop("HEFESTO_ENSAIO", None)
         else:
-            os.environ["HEFESTO_BANCADA"] = anterior
+            os.environ["HEFESTO_ENSAIO"] = anterior
     for lista in _grupos_de_cada_lista(doc):
         for base, grupo in GRUPO_DE.items():
             assert base in lista[grupo]

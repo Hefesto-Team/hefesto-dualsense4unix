@@ -48,10 +48,10 @@ def _dentro_da_faixa(modo: str, ajustes: dict[str, int]) -> list[str]:
     return erros
 
 
-def test_cada_familia_tem_imersoes_e_cada_modo_dela_as_que_lhe_cabem() -> None:
+def test_cada_familia_tem_imersoes_e_cada_modo_do_usuario_as_que_lhe_cabem() -> None:
     for familia, modos in imersao.FAMILIAS.items():
-        delas = [i for i in imersao.IMERSOES if i.familia == familia]
-        assert delas, familia
+        da_familia = [i for i in imersao.IMERSOES if i.familia == familia]
+        assert da_familia, familia
         for modo in modos:
             assert modo in {s.name for s in PRESETS}, f"{modo} não é da lista de onze"
             assert len(imersao.imersoes_do_acionamento(modo)) == QUANTAS[modo], (familia, modo)
@@ -97,7 +97,7 @@ def test_a_dica_diz_o_tempo_so_onde_o_motor_o_toca_em_todo_modo() -> None:
     assert not erradas, erradas
 
 
-def test_os_numeros_de_cada_imersao_so_se_repetem_nela_mesma() -> None:
+def test_os_numeros_de_cada_imersao_so_se_repetem_no_usuario_mesma() -> None:
     """A tela reconhece a imersão pelos números: dois iguais seriam a mesma opção."""
     vistos: dict[tuple[str, tuple[tuple[str, int], ...]], str] = {}
     for i, modo, estilo, ajustes in imersao.todos_os_ajustes():
@@ -179,8 +179,8 @@ def test_a_lista_do_efeito_oferece_todas_em_grupos_por_familia_e_o_sem_efeito(a0
     """A lista é uma só e não depende do acionamento: ele vem dentro de cada efeito (22/10/2026)."""
     html = a03.html_das_opcoes_de_imersao()
     chaves = re.findall(r'<option value="([^"]+)"', html)
-    delas = {c for c in chaves if c in imersao.POR_CHAVE}
-    assert delas == {i.chave for i in imersao.IMERSOES} - set(imersao.IGUAL_A)
+    da_familia = {c for c in chaves if c in imersao.POR_CHAVE}
+    assert da_familia == {i.chave for i in imersao.IMERSOES} - set(imersao.IGUAL_A)
     assert "nenhum" in chaves
     assert re.findall(r'<optgroup label="([^"]+)"', html)[:7] == list(imersao.FAMILIAS_DA_PAGINA)
 
@@ -211,7 +211,7 @@ def test_o_efeito_criado_e_da_imersao_e_entra_na_lista_unica_em_seus_efeitos(a03
     assert "Recuo da régua" in a03.html_dos_seus_efeitos()
 
 
-def test_o_acionamento_que_ela_guardou_antes_continua_na_lista_em_seus_efeitos(a03) -> None:
+def test_o_acionamento_que_o_usuario_guardou_antes_continua_na_lista_em_seus_efeitos(a03) -> None:
     """Nada some do disco: o acionamento guardado mora no grupo «Seus», do lado dele."""
     from pacotes import meus_efeitos as _me
 
@@ -257,7 +257,7 @@ def _ctx() -> Any:
     return Contexto(state={"active_profile": ""}, mesa=mesa, conectados=[falso], estados={})
 
 
-def test_escolher_a_imersao_manda_ao_controle_os_numeros_dela(a03, monkeypatch) -> None:
+def test_escolher_a_imersao_manda_ao_controle_os_numeros_do_usuario(a03, monkeypatch) -> None:
     uma = imersao.POR_CHAVE["rajada-que-sobe-sozinha"]
     ponte = _Ponte()
     o = {"uniq": UNIQ, "lado": "d", "valor": uma.chave}

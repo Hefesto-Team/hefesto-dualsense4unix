@@ -103,7 +103,7 @@ def _numero_do_report(report: list[int]) -> int:
     return report[3:50][COMMON_PLAYER_LEDS]
 
 
-class TestOGestoDelaSaiNoNativo:
+class TestOGestoDoUsuarioSaiNoNativo:
     def test_a_cor_de_todos_sai_nos_dois_transportes(self) -> None:
         ctl, radio, no = _mesa_no_nativo()
 

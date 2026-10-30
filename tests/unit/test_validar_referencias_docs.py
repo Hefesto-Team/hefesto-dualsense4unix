@@ -535,7 +535,7 @@ def test_sem_a_nota_o_mesmo_adr_reprova(repo_falso: Path) -> None:
     assert METODO_FANTASMA in proc.stdout
 
 
-def test_a_nota_isenta_so_o_nome_que_ela_cita(repo_falso: Path) -> None:
+def test_a_nota_isenta_so_o_nome_que_o_usuario_cita(repo_falso: Path) -> None:
     """A isenção é por TOKEN, não por documento inteiro."""
     pasta = repo_falso / "docs" / "adr"
     pasta.mkdir(parents=True)

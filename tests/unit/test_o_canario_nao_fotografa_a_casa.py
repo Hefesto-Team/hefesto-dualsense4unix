@@ -36,7 +36,7 @@ def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.delenv(canario._CANARIO_DESLIGADO_ENV, raising=False)
     monkeypatch.setattr(canario, "_CANARIO_TETO_ENTRADAS", TETO)
     monkeypatch.setattr(canario, "_deltas_do_congelado", lambda: [])
-    monkeypatch.setattr(canario, "_gestos_da_janela_dela", lambda: [])
+    monkeypatch.setattr(canario, "_gestos_da_janela_do_usuario", lambda: [])
     monkeypatch.setattr(canario, "_GUARDA_DA_SESSAO", [])
     return lar
 
@@ -108,7 +108,7 @@ def test_o_custo_da_foto_tem_teto_qualquer_que_seja_o_nome_do_filho(
     assert not [c for c in foto if c.startswith(pasta + "/")], "entrou na pasta pesada"
 
 
-def test_o_teto_de_hoje_nao_corta_o_perfil_dela(
+def test_o_teto_de_hoje_nao_corta_o_perfil_do_usuario(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Com o teto de verdade, o `profiles/` (286 entradas em 06/10) fica inteiro, com sha256."""

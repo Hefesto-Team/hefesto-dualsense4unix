@@ -164,7 +164,7 @@ def test_a_busca_que_ninguem_viu_acabar_nao_vira_fim_ao_reabrir_a_janela(
     assert (nova.fase, nova.restam) == ("busca", 20)
 
 
-def test_cada_extensao_tem_o_andamento_dela(
+def test_cada_extensao_tem_o_andamento_do_usuario(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
     andamento, _ = dono
     andamento.ver("a", estado(BUSCANDO))

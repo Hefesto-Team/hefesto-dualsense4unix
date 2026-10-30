@@ -22,7 +22,7 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-FRASE_DELA = "Conecte um DualSense em cada entrada USB do seu dispositivo."
+FRASE_DO_USUARIO = "Conecte um DualSense em cada entrada USB do seu dispositivo."
 
 PCI = "0000:0a:00.0"
 
@@ -106,23 +106,23 @@ def test_cada_valor_medido_comeca_com_maiuscula(porta: dict[str, Any]) -> None:
         assert "<dd>Direto no computador</dd>" in fatos
 
 
-def test_a_frase_da_entrada_encontrada_e_a_dela() -> None:
-    assert pac.MAPEAR_DIZ["porta"] == FRASE_DELA
-    assert pac.campos_do_mapear({"estado": "porta", "portas": []})["mapear-diz"] == FRASE_DELA
-    bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
-    assert FRASE_DELA in bancada, "a cena do desenho não traz a frase — regere a bancada"
+def test_a_frase_da_entrada_encontrada_e_a_do_usuario() -> None:
+    assert pac.MAPEAR_DIZ["porta"] == FRASE_DO_USUARIO
+    assert pac.campos_do_mapear({"estado": "porta", "portas": []})["mapear-diz"] == FRASE_DO_USUARIO
+    ensaio = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
+    assert FRASE_DO_USUARIO in ensaio, "a cena do desenho não traz a frase — regere a bancada"
     assert not hasattr(pac, "MAPEAR_DICA_DA_PORTA"), "o «?» saiu (13/10): a explicação não tem dono"
 
 
 def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
     """A dica do diálogo (hover do título) mandava «dê um nome e o lugar, e salve» ao lado da"""
-    bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
-    inicio = bancada.index('id="mapear-portas"')
-    topo = bancada[inicio:bancada.index('id="mp-forma"', inicio)]
+    ensaio = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
+    inicio = ensaio.index('id="mapear-portas"')
+    topo = ensaio[inicio:ensaio.index('id="mp-forma"', inicio)]
     dica = topo[topo.index('class="tn-tit"'):topo.index("</span>", topo.index('class="tn-tit"'))]
     assert 'data-dica="Use o mesmo DualSense em todas as entradas"' in dica, dica[:300]
     assert "dê nome e lugar" not in dica and "Check-up" not in dica, dica[:300]
-    botao = bancada[bancada.index('href="#mapear-portas"'):]
+    botao = ensaio[ensaio.index('href="#mapear-portas"'):]
     botao = botao[:botao.index(">")]
     assert "dê nome e lugar" not in botao and "opcionais" in botao, botao
 
@@ -170,7 +170,7 @@ def test_o_salvar_vazio_numera_a_porta_sem_numero(
 
 
 @pytest.mark.parametrize("nome", [None, "Frente de cima"], ids=["sem-nome", "com-nome"])
-def test_o_salvar_vazio_na_numerada_nao_muda_o_que_ela_disse(
+def test_o_salvar_vazio_na_numerada_nao_muda_o_que_o_usuario_disse(
     tmp_path: pathlib.Path, disco: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
     nome: str | None,
 ) -> None:

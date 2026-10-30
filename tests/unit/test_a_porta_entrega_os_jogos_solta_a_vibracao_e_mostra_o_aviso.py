@@ -9,7 +9,7 @@ MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
   ``test_a_extensao_de_lancador_entrega_os_jogos_e_a_interface_os_le`` e
   ``test_o_filho_de_lancador_entrega_os_jogos_pelo_supervisor``;
 - o ``_soltar_a_vibracao`` tirado do ``finally`` da conexão reprova
-  ``test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_ela_cai``;
+  ``test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_o_usuario_cai``;
 - o ``AvisoParaVerError`` tirado do ``instalar`` reprova
   ``test_o_aviso_aparece_antes_de_instalar_e_nada_se_grava``;
 - o ``manifesto.aviso != aviso_aceito`` tirado da recusa do ``instalar`` reprova
@@ -199,7 +199,7 @@ def test_o_filho_de_lancador_entrega_os_jogos_pelo_supervisor(lar: Any, curto: P
     asyncio.run(corrida())
 
 
-def test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_ela_cai(curto: Path) -> None:
+def test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_o_usuario_cai(curto: Path) -> None:
     escritas: list[Any] = []
     do_jogo: set[str] = set()
 

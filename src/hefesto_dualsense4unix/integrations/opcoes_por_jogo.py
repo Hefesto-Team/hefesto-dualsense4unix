@@ -129,7 +129,7 @@ ADIADO_JOGO = "adiado_jogo_aberto"
 ADIADO_STEAM = "adiado_steam_aberta"
 ERRO = "erro"
 SEM_CONTA = "conta_logada_desconhecida"
-LINHA_DELA_DIVERGE = "linha_dela_diverge"
+LINHA_DO_USUARIO_DIVERGE = "linha_do_usuario_diverge"
 
 OK = "ok"
 NOVO = "novo"
@@ -439,7 +439,8 @@ def compor_opcoes_vdf_text(
 
     A ``LaunchOptions`` é a filha direta do bloco do jogo (um ``}`` de filho não o fecha);
     as cópias em blocos filhos recebem o mesmo valor. Só o nosso trecho troca
-    (:func:`compor_linha`); linha que não se compõe vai a ``pulados`` com ``linha_dela_diverge``.
+    (:func:`compor_linha`); linha que não se compõe vai a ``pulados`` com
+    ``linha_do_usuario_diverge``.
     Devolve também o valor composto de cada jogo escrito.
 
     ``instalados``: o jogo da tabela com ``appmanifest`` e sem bloco ganha o bloco antes.
@@ -464,7 +465,7 @@ def compor_opcoes_vdf_text(
         vivo = _vdf_unescape(referencia[2].group(3)) if referencia else ""
         composto = compor_linha(vivo, desejadas[appid], escritas.get(appid, ""))
         if composto is None:
-            pulados.append((appid, LINHA_DELA_DIVERGE))
+            pulados.append((appid, LINHA_DO_USUARIO_DIVERGE))
             return
         querido = _valor_do_vdf(composto)
         mudou = False
@@ -866,9 +867,9 @@ def _imprimir(relato: Relato) -> int:
             file=sys.stderr,
         )
     for item in relato["pulados"]:
-        if item["reason"] == LINHA_DELA_DIVERGE:
+        if item["reason"] == LINHA_DO_USUARIO_DIVERGE:
             print(
-                f"[opcoes-por-jogo] {item['appid']}: {LINHA_DELA_DIVERGE} — a linha que "
+                f"[opcoes-por-jogo] {item['appid']}: {LINHA_DO_USUARIO_DIVERGE} — a linha que "
                 "você escreveu não cabe com a da tabela sem perder parte dela; ficou como estava",
                 file=sys.stderr,
             )

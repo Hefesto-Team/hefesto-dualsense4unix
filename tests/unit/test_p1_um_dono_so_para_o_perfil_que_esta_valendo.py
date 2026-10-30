@@ -49,13 +49,13 @@ DAEMON_SEM_NOME: dict[str, Any] = {"active_profile": None, "freestyle_ligado": T
 @pytest.fixture
 def marcador_no_disco(monkeypatch: pytest.MonkeyPatch) -> str:
     """O `active_profile.txt` dela, sem tocar no disco do usuário."""
-    monkeypatch.setattr(pa, "perfil_que_ela_ativou", lambda: "Sackboy")
+    monkeypatch.setattr(pa, "perfil_que_o_usuario_ativou", lambda: "Sackboy")
     return "Sackboy"
 
 
 @pytest.fixture
 def disco_vazio(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(pa, "perfil_que_ela_ativou", lambda: None)
+    monkeypatch.setattr(pa, "perfil_que_o_usuario_ativou", lambda: None)
 
 
 class TestODonoResponde:
@@ -117,9 +117,9 @@ class TestODonoResponde:
         def _explode() -> str | None:
             raise OSError("disco cheio")
 
-        monkeypatch.setattr(pa, "perfil_que_ela_ativou", _explode)
+        monkeypatch.setattr(pa, "perfil_que_o_usuario_ativou", _explode)
         with pytest.raises(OSError):
-            pa.perfil_que_ela_ativou()
+            pa.perfil_que_o_usuario_ativou()
         assert pa.perfil_que_esta_valendo(None).fonte == "nao_sei"
 
 

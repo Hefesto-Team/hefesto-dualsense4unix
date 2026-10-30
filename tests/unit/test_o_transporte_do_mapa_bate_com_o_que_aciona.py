@@ -121,7 +121,7 @@ def test_o_transporte_coerente_passa(
     assert _achados_da_regra(caminho, tmp_path) == []
 
 
-def test_no_mapa_real_a_regra_acha_so_a_linha_da_vibracao_e_nada_com_ela_corrigida(
+def test_no_mapa_real_a_regra_acha_so_a_linha_da_vibracao_e_nada_com_o_usuario_corrigida(
     tmp_path: Path,
 ) -> None:
     cabecalho, linhas = _cabecalho_e_linhas()

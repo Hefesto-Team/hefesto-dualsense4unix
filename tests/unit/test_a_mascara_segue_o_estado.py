@@ -148,7 +148,7 @@ class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
     def test_sem_flag_a_maquina_e_a_de_fabrica_da_sessao(self) -> None:
         assert lc._mascara_da_maquina() == DaemonConfig.gamepad_flavor == "dualsense"
 
-    def test_a_escolha_dela_para_a_maquina_vale(self) -> None:
+    def test_a_escolha_do_usuario_para_a_maquina_vale(self) -> None:
         """O usuário escolheu Xbox para tudo (o flag, pela CLI): o jogo sem opinião"""
         save_gamepad_emulation(True, "xbox")
         d = _daemon()
@@ -189,7 +189,7 @@ class TestOsCartoesChegamDepoisDoModo:
         gp.reconciliar_as_mascaras(d)
         assert d._gamepad_device.flavor == "dualsense"
 
-    def test_o_modo_xbox_que_ela_escolheu_nao_e_desfeito(self) -> None:
+    def test_o_modo_xbox_que_o_usuario_escolheu_nao_e_desfeito(self) -> None:
         """O caminho Xbox com máscara DualSense é uinput de propósito: o juiz
         não pode brigar com ele, nem entrar em laço."""
         d = _daemon()

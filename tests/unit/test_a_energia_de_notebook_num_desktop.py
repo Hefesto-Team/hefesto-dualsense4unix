@@ -412,9 +412,9 @@ class TestADecisao:
 
 
 def _ensaio(tmp: Path, m: Maquina, *flags: str) -> str:
-    from tests.unit.test_o_ensaio_do_install_nao_escreve import _bancada
+    from tests.unit.test_o_ensaio_do_install_nao_escreve import _ensaio as _lar_do_install
 
-    _lar, _diario, amb = _bancada(tmp)
+    _lar, _diario, amb = _lar_do_install(tmp)
     amb["HEFESTO_DESEMPENHO_SYS"] = str(m.sys)
     amb["HEFESTO_DESEMPENHO_RAIZ"] = str(m.raiz)
     r = subprocess.run(

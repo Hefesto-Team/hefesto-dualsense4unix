@@ -152,7 +152,7 @@ def test_sem_lancador_aberto_nao_se_faz_nada(
     assert "Nenhum lançador estava aberto" in rl.frase_do_recibo(recibo)
 
 
-def test_a_steam_fecha_pelo_dono_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_steam_fecha_pelo_dono_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     """`stop_steam` salva a nuvem e fecha o runtime; TERM seria outro dono."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
@@ -165,7 +165,7 @@ def test_a_steam_fecha_pelo_dono_dela(monkeypatch: pytest.MonkeyPatch) -> None:
     assert chamou == ["stop"]
 
 
-def test_a_steam_abre_pelo_dono_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_steam_abre_pelo_dono_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     """`open_or_focus_steam` ainda FOCA a janela quando ela já está de pé."""
     from hefesto_dualsense4unix.integrations import steam_launcher
 

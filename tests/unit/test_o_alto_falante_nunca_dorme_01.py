@@ -162,7 +162,7 @@ def test_o_sink_do_controle_nao_dorme(sink: str) -> None:
     )
 
 
-def test_a_regra_vale_para_qualquer_dualsense_e_nao_so_para_o_dela() -> None:
+def test_a_regra_vale_para_qualquer_dualsense_e_nao_so_para_o_do_usuario() -> None:
     """UNIVERSAL: nada de MAC, de índice de card, de ordem de conexão."""
     inventados = (
         "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.7.analog-surround-40",

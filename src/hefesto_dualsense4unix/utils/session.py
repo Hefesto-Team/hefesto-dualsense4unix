@@ -1,10 +1,10 @@
 """Persistência de sessão — a escolha do usuário, e os flags que atravessam o reboot.
 
-A ESCOLHA DO USUÁRIO TEM DOIS CAMPOS E UM DONO (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`,
+A ESCOLHA DO USUÁRIO TEM DOIS CAMPOS E UM DONO (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`,
 O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, 01/10/2026). O
 `freestyle_ligado.flag` diz se o Freestyle manda; o `session.json` guarda o
 último perfil que ELA ativou, fora o Freestyle. Quem responde «qual é a escolha
-do usuário» é :func:`a_escolha_dela`, e quem a grava é :func:`gravar_a_escolha` — só
+do usuário» é :func:`a_escolha_do_usuario`, e quem a grava é :func:`gravar_a_escolha` — só
 o gesto do usuário (`ProfileManager.activate(origin="manual")`) chega lá; o
 autoswitch, o lançamento, o restauro e o «Aplicar» não tocam em nenhum dos dois.
 
@@ -119,7 +119,7 @@ def _o_perfil_carrega(nome: str) -> bool:
         return False
 
 
-def a_escolha_dela(*, freestyle_ligado: bool | None = None) -> str | None:
+def a_escolha_do_usuario(*, freestyle_ligado: bool | None = None) -> str | None:
     """A escolha do usuário: o Freestyle ligado, ou o último perfil que ela ativou."""
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
@@ -131,13 +131,13 @@ def a_escolha_dela(*, freestyle_ligado: bool | None = None) -> str | None:
         if nome and not _e_o_freestyle(nome) and _o_perfil_carrega(nome):
             return nome
     except Exception as exc:
-        logger.debug("a_escolha_dela_ilegivel", err=str(exc))
+        logger.debug("a_escolha_do_usuario_ilegivel", err=str(exc))
     return None
 
 
 def resolve_boot_profile() -> str | None:
-    """O nome que o boot restaura — a escolha do usuário (:func:`a_escolha_dela`)."""
-    return a_escolha_dela()
+    """O nome que o boot restaura — a escolha do usuário (:func:`a_escolha_do_usuario`)."""
+    return a_escolha_do_usuario()
 
 
 def _apagar_o_espelho() -> None:
@@ -149,7 +149,7 @@ def _apagar_o_espelho() -> None:
 
 def espelhar_a_escolha() -> None:
     """O `active_profile.txt` passa a dizer a escolha de agora; sem ela, sai."""
-    nome = a_escolha_dela()
+    nome = a_escolha_do_usuario()
     if nome:
         save_active_marker(nome)
     else:
@@ -253,7 +253,7 @@ def esquecer_a_escolha(nome: str | None = None) -> None:
         finally:
             os.close(fd)
         os.replace(tmp, path)
-        logger.info("a_escolha_dela_esquecida", nome=atual)
+        logger.info("a_escolha_do_usuario_esquecida", nome=atual)
     except Exception as exc:
         logger.debug("session_save_failed", err=str(exc))
     espelhar_a_escolha()
@@ -273,7 +273,7 @@ def _so_o_freestyle_na_pasta() -> bool:
         return False
 
 
-def migrar_a_escolha_dela() -> str | None:
+def migrar_a_escolha_do_usuario() -> str | None:
     """Uma vez só, com marca: a máquina nova e a sessão que apontava o Freestyle."""
     import shutil
 
@@ -303,7 +303,7 @@ def migrar_a_escolha_dela() -> str | None:
             espelhar_a_escolha()
             marca.write_text("done\n", encoding="utf-8")
     except Exception as exc:
-        logger.warning("a_escolha_dela_nao_migrou", err=str(exc))
+        logger.warning("a_escolha_do_usuario_nao_migrou", err=str(exc))
         return None
     logger.info("a_escolha_dela_migrada", desfecho=desfecho)
     return desfecho
@@ -899,7 +899,7 @@ __all__ = [
     "ARRANJOS_DO_DESKTOP",
     "ARRANJO_NAVEGACAO",
     "ARRANJO_POINT_AND_CLICK",
-    "a_escolha_dela",
+    "a_escolha_do_usuario",
     "espelhar_a_escolha",
     "esquecer_a_escolha",
     "gravar_a_escolha",
@@ -917,7 +917,7 @@ __all__ = [
     "load_mouse_preference",
     "load_paused_state",
     "load_plugins_enabled",
-    "migrar_a_escolha_dela",
+    "migrar_a_escolha_do_usuario",
     "read_active_marker",
     "resolve_boot_profile",
     "save_active_marker",

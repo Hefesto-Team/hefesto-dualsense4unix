@@ -244,12 +244,12 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from pacotes import a04_iluminacao, rodape
 
-    global_dela = marca.GLOBAL
+    global_do_usuario = marca.GLOBAL
     mesa = mesa_de()
     mesa.clicar_no_tom(1, COR_DELE[1])
-    mesa.desligar_a_paleta(global_dela)
+    mesa.desligar_a_paleta(global_do_usuario)
     acesa = _luz(mesa)[3]
-    assert acesa == _na(global_dela, BRILHO_GLOBAL), "a régua precisa do P4 no global"
+    assert acesa == _na(global_do_usuario, BRILHO_GLOBAL), "a régua precisa do P4 no global"
     for _ in range(3):
         rodape.salvar(mesa.ctx(), CLIQUE_DA_04, PonteDoRodape())
         mesa.pm.apply(mesa._perfil(), origin="manual")
@@ -259,7 +259,7 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
     leds = getattr(dele, "leds", None)
     no_disco = (tuple(leds.lightbar) if leds is not None
                 and "lightbar" in leds.model_fields_set else tuple(prof.leds.lightbar))
-    assert no_disco == global_dela, f"o Salvar deu ao P4 a cor {no_disco} no disco"
+    assert no_disco == global_do_usuario, f"o Salvar deu ao P4 a cor {no_disco} no disco"
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
@@ -428,7 +428,7 @@ def test_acende_o_tom_e_a_pergunta_do_tom_e_nao_do_byte():
             assert _acende_o_tom(_na(tom, pct / 100), tom), (tom, pct)
 
 
-def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_dela():
+def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_do_usuario():
     """Tom único da paleta: a conta do trilho. Fora dela ou ambíguo: a razão."""
     for de in (0.05, 0.5, 0.82, 1.0):
         for para in (0.0, 0.3, 0.6, 1.0):

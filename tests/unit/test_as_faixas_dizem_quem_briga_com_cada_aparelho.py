@@ -375,7 +375,7 @@ def test_toda_faixa_tem_79_canais_do_mesmo_tamanho_e_a_legenda_esta_no_titulo(
     assert na_pagina["legenda_na_linha"] is True
 
 
-def test_passar_o_mouse_numa_linha_acende_ela_e_quem_briga_e_esmaece_o_resto(
+def test_passar_o_mouse_numa_linha_acende_o_usuario_e_quem_briga_e_esmaece_o_resto(
         na_pagina: dict[str, Any]) -> None:
     f = na_pagina
     assert f["antes"] == [] and f["foco"] is True

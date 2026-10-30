@@ -14,7 +14,7 @@ cura arrancada não testa nada:
   (a linha `if controle.get("transport") == "bt"` do filtro);
 * **reprovaram DOIS nós**, com a mesma assinatura:
   `test_controle_no_cabo_nao_ocupa_radio_de_ninguem` e
-  `test_o_controle_negativo_desta_bancada_e_o_cabo`. Os dois DualSense do cabo
+  `test_o_controle_negativo_deste_ensaio_e_o_cabo`. Os dois DualSense do cabo
   passaram a produzir uma barra de 520,8 fatias na chave de ausência — o
   produto acusando os próprios controles de encher um rádio que eles nem usam;
 * **devolvi** a exclusão e os dois voltaram ao verde (21 passed).
@@ -61,7 +61,7 @@ ADAPTADOR_2 = "aa:bb:cc:00:00:66"
 PHYS_DO_CABO = "usb-0000:0c:00.3-1/input3"
 
 
-def _bancada(
+def _ensaio(
     nos: Mapping[str, Mapping[str, str]],
 ) -> tuple[Callable[[str], list[str]], Callable[[str], str]]:
     """Um `/sys/class/hidraw` de mentira: `{nó: {chave do uevent: valor}}`."""
@@ -91,7 +91,7 @@ def _hex(mac: str) -> str:
 
 def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
     """É o casamento inteiro do medidor, e ele não custa `sudo`."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {"hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1}}
     )
 
@@ -102,7 +102,7 @@ def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
 
 def test_uniq_com_e_sem_dois_pontos_casam() -> None:
     """Os dois lados escrevem o mesmo endereço de jeitos diferentes."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {"hidraw3": {"HID_UNIQ": UNIQ_A.upper(), "HID_PHYS": ADAPTADOR_1}}
     )
 
@@ -112,7 +112,7 @@ def test_uniq_com_e_sem_dois_pontos_casam() -> None:
     assert adaptador_por_uniq([UNIQ_A], listar=listar, ler=ler)[UNIQ_A] == ADAPTADOR_1
 
 
-def test_o_controle_negativo_desta_bancada_e_o_cabo() -> None:
+def test_o_controle_negativo_deste_ensaio_e_o_cabo() -> None:
     """Controle no fio traz caminho de barramento, e não ocupa rádio nenhum.
 
     É o controle negativo da sprint, e ele é executável HOJE: não há adaptador
@@ -120,7 +120,7 @@ def test_o_controle_negativo_desta_bancada_e_o_cabo() -> None:
     `HID_PHYS` de :data:`PHYS_DO_CABO`. Devolver o caminho USB como se fosse
     endereço de adaptador criaria uma barra fantasma por porta USB.
     """
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {"hidraw4": {"HID_UNIQ": UNIQ_A, "HID_PHYS": PHYS_DO_CABO}}
     )
 
@@ -136,7 +136,7 @@ def test_o_controle_negativo_desta_bancada_e_o_cabo() -> None:
 
 def test_o_vpad_nao_vira_adaptador() -> None:
     """O nosso vpad anuncia `hefesto-vpad` em `HID_PHYS` — não é MAC."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {"hidraw5": {"HID_UNIQ": UNIQ_A, "HID_PHYS": "hefesto-vpad"}}
     )
 
@@ -170,7 +170,7 @@ def test_controle_no_cabo_nao_ocupa_radio_de_ninguem() -> None:
     produto acusando os próprios controles de encher um rádio que eles nem
     usam.
     """
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {
             "hidraw4": {"HID_UNIQ": UNIQ_A, "HID_PHYS": PHYS_DO_CABO},
             "hidraw6": {"HID_UNIQ": UNIQ_B, "HID_PHYS": PHYS_DO_CABO},
@@ -191,7 +191,7 @@ def test_controle_no_cabo_nao_ocupa_radio_de_ninguem() -> None:
 
 def test_dois_controles_no_mesmo_adaptador_somam_na_mesma_barra() -> None:
     """Dividir o mesmo rádio é somar no mesmo teto — é o ponto do medidor."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {
             "hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1},
             "hidraw4": {"HID_UNIQ": UNIQ_B, "HID_PHYS": ADAPTADOR_1},
@@ -212,7 +212,7 @@ def test_dois_controles_no_mesmo_adaptador_somam_na_mesma_barra() -> None:
 
 def test_adaptadores_diferentes_sao_barras_diferentes() -> None:
     """Dois dongles são dois rádios: somar os dois esconderia a folga de um."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {
             "hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1},
             "hidraw4": {"HID_UNIQ": UNIQ_B, "HID_PHYS": ADAPTADOR_2},
@@ -229,7 +229,7 @@ def test_adaptadores_diferentes_sao_barras_diferentes() -> None:
 
 def test_controle_bt_sem_endereco_nao_pega_o_adaptador_do_vizinho() -> None:
     """Um vai para a barra do endereço; o outro, para a barra de "não sei"."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {
             "hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1},
             "hidraw4": {"HID_UNIQ": UNIQ_B},
@@ -247,7 +247,7 @@ def test_controle_bt_sem_endereco_nao_pega_o_adaptador_do_vizinho() -> None:
 
 def test_uniq_nulo_cai_na_barra_de_nao_sei_sem_levantar() -> None:
     """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:3142`)."""
-    listar, ler = _bancada({})
+    listar, ler = _ensaio({})
 
     ocupacoes = ocupacao_por_adaptador([_controle(None)], listar=listar, ler=ler)
 
@@ -256,7 +256,7 @@ def test_uniq_nulo_cai_na_barra_de_nao_sei_sem_levantar() -> None:
 
 def test_o_microfone_troca_entrada_por_audio_e_a_soma_quase_nao_se_move() -> None:
     """O comportamento MEDIDO no A/B de 25/07: o áudio divide a mesma fila."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {"hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1}}
     )
     argumentos = {"listar": listar, "ler": ler}
@@ -283,7 +283,7 @@ def test_o_microfone_troca_entrada_por_audio_e_a_soma_quase_nao_se_move() -> Non
 
 def test_o_conjunto_de_pontes_casa_mesmo_escrito_com_dois_pontos() -> None:
     """A ponte de mic guarda o `HID_UNIQ` CRU, com dois-pontos."""
-    listar, ler = _bancada(
+    listar, ler = _ensaio(
         {"hidraw3": {"HID_UNIQ": UNIQ_A, "HID_PHYS": ADAPTADOR_1}}
     )
 

@@ -7,7 +7,7 @@
 # arquivos na nossa pasta"*. O `run.sh --gui` da raiz é esse lançador: ele veste
 # a identidade no processo (`scripts/abrir_interface.py`) e abre as dez abas
 # vivas no `WebKit2.WebView`. O `HEFESTO_NA_TELA=1` do `Exec=` é o escape da
-# guarda TELA-DELA-02, e mora AQUI porque o atalho é o que se clica: o `run.sh`
+# guarda TELA-DO-USUARIO-02, e mora AQUI porque o atalho é o que se clica: o `run.sh`
 # não o declara, e todo instrumento que o chama continua sem tela.
 #
 # @RAIZ@ é substituído pelo caminho da árvore por quem instala (`install.sh`).

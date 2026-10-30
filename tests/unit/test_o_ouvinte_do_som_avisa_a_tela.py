@@ -270,7 +270,7 @@ def test_o_payload_sem_ouvinte_e_nao_sei_e_nao_nao_ha() -> None:
         "saida": "", "entrada": "", "saida_nome": "", "entrada_nome": ""}
 
 
-def test_a_linha_do_exame_diz_os_nomes_do_painel_dela() -> None:
+def test_a_linha_do_exame_diz_os_nomes_do_painel_do_usuario() -> None:
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
     linha = a09.linha_do_som_do_sistema({"som_do_sistema": {

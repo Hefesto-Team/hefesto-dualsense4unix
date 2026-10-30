@@ -387,7 +387,7 @@ def test_toda_entrada_da_classificacao_tem_prova() -> None:
 
 
 @pytest.mark.parametrize("campo", sorted(_CONSUMIDOR))
-def test_o_valor_da_peca_sai_com_o_endereco_dela(campo: str) -> None:
+def test_o_valor_da_peca_sai_com_o_endereco_do_usuario(campo: str) -> None:
     """Escrito para UM ``uniq``, o valor sai endereçado àquele ``uniq``."""
     resultado = _PROVAS[campo](BRANCO)
     assert resultado, (

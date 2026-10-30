@@ -55,7 +55,7 @@ from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
 from hefesto_dualsense4unix.daemon import ipc_server, launch_env
 from hefesto_dualsense4unix.daemon.ipc_handlers import origem_do_pedido
-from hefesto_dualsense4unix.daemon.subsystems.gamepad import ORIGENS_GESTO_DELA
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import ORIGENS_GESTO_DO_USUARIO
 from hefesto_dualsense4unix.integrations import steam_input_ponte as ponte
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations.virtual_pad import (
@@ -123,7 +123,7 @@ class DaemonDeMentira:
         caminho = params.get("caminho")
         if caminho is not None and normalizar_caminho(caminho) is None:
             return False
-        if self.jogo_aberto and origem_do_pedido(params) not in ORIGENS_GESTO_DELA:
+        if self.jogo_aberto and origem_do_pedido(params) not in ORIGENS_GESTO_DO_USUARIO:
             return True
         vpad = self.state.setdefault("gamepad_emulation", {})
         vpad["enabled"] = enabled

@@ -14,7 +14,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 REGUA = RAIZ / "scripts/check_identidade_vem_de_cima.py"
 
 
@@ -25,19 +25,19 @@ def _pacote() -> Any:
 
 
 @pytest.mark.skipif(not REGUA.exists(), reason="a régua de identidade não está nesta árvore")
-def test_sem_congelado_na_bancada_da_08() -> None:
+def test_sem_congelado_no_ensaio_da_08() -> None:
     """A régua da sprint, chamada como a sprint manda, tem de devolver zero."""
     saida = subprocess.run(
-        [sys.executable, str(REGUA), "--bancada", "--aba", "08"],
+        [sys.executable, str(REGUA), "--ensaio", "--aba", "08"],
         capture_output=True, text=True, cwd=str(RAIZ), check=False)
     assert saida.returncode == 0, (
         "a `08-conexoes` voltou a ter identidade congelada na bancada:\n"
         + saida.stdout + saida.stderr)
 
 
-def test_os_enderecos_da_identidade_existem_na_bancada() -> None:
+def test_os_enderecos_da_identidade_existem_no_ensaio() -> None:
     """Os quatro endereços desta cura, no arquivo que o produto vai renderizar."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     for endereco in ('data-campo="nome" data-hef-alvo="html"',
                      'data-campo="plastico" data-hef-alvo="cor"',
                      'data-campo="radio-sala" data-hef-alvo="html"',
@@ -49,7 +49,7 @@ def test_os_enderecos_da_identidade_existem_na_bancada() -> None:
 
 def test_os_chips_da_fita_tem_endereco() -> None:
     """Todo chip de plástico da fita tem endereço, e nenhum sobra sem."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     tags = re.findall(r"<label[^>]*\bclass=\"chip plastico[^>]*>", html)
     endereçados = [t for t in tags if 'data-campo="fita-chip"' in t]
     assert tags and len(tags) == len(endereçados), (

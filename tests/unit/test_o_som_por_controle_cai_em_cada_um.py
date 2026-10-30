@@ -121,7 +121,7 @@ def _runner_de_leitura(*, com_placa: bool = True) -> Any:
 
 
 @pytest.fixture()
-def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def usb_do_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """O casamento por dispositivo USB, dublado — é ele que separa P1 de P2."""
     from hefesto_dualsense4unix.integrations import fontes_de_captura
 
@@ -168,7 +168,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
         mic.registrar_numerador_de_assento(anterior)
 
 
-def test_o_endereco_dela_nunca_entra_no_rotulo() -> None:
+def test_o_endereco_do_usuario_nunca_entra_no_rotulo() -> None:
     """O MAC do controle na lista de áudio da máquina é o defeito que a metade"""
     anterior = mic.registrar_numerador_de_assento(lambda _u: 1)
     try:
@@ -195,7 +195,7 @@ def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
     assert som.SinkVirtualPipeWire(uniq="", runner=_Gravador()).nome == ""
 
 
-def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
+def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_do_ensaio: None) -> None:
     """O *«HDMI completo»* dela: o que a TV recebe, o controle recebe junto."""
     linhas = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
 
@@ -206,7 +206,7 @@ def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
     assert f"sink={som.nome_do_sink(_UNIQ_P1)}" in linhas[2]
 
 
-def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
+def test_sfx_deixa_o_no_livre_para_o_jogo(usb_do_ensaio: None) -> None:
     """Sem `mix`, nenhum loopback ENTRA no nó — ele espera a corrente do jogo.
     (D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX)
     """
@@ -218,7 +218,7 @@ def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
     assert f"sink={_SINK_P1}" in linhas[1]
 
 
-def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_da_bancada: None) -> None:
+def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_do_ensaio: None) -> None:
     """O critério de pronto da sprint: P1 em `mix` e P2 em `sfx`, juntos."""
     p1 = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
     p2 = _no_de_pe(_UNIQ_P2, fonte=som.FONTE_SFX).linhas
@@ -257,7 +257,7 @@ def test_sem_rota_a_frase_mora_na_rota_e_nenhum_laco_sobe() -> None:
     assert not any("module-loopback" in linha for linha in gravador.linhas)
 
 
-def test_ter_rota_e_saber_por_onde_sao_a_mesma_pergunta(usb_da_bancada: None) -> None:
+def test_ter_rota_e_saber_por_onde_sao_a_mesma_pergunta(usb_do_ensaio: None) -> None:
     """`tem_rota` é `por_onde` cheio — e a rota recusada carrega a frase."""
     com = som.rota_do_no(_UNIQ_P1, "usb", (_UNIQ_P1,), runner=_runner_de_leitura())
     sem = som.rota_do_no(_UNIQ_P2, "bt")

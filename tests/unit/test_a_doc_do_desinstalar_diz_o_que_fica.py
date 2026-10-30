@@ -44,7 +44,7 @@ def test_a_secao_diz_que_o_purge_leva_as_de_uninstalls_anteriores() -> None:
     assert "inclusive as de uninstalls anteriores" in _secao_desinstalar()
 
 
-def test_toda_flag_que_a_secao_cita_existe_e_faz_o_que_ela_diz() -> None:
+def test_toda_flag_que_a_secao_cita_existe_e_faz_o_que_o_usuario_diz() -> None:
     secao = _secao_desinstalar()
     vivas = _flags_do_uninstall()
     assert "--purge-config" in vivas, "a leitura do laço de argumentos mediu o vazio"

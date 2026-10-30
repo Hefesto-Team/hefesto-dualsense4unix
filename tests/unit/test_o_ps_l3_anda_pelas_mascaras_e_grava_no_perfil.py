@@ -113,7 +113,7 @@ class _Daemon:
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(vp, "make_virtual_pad", _fabrica)
     monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)
     dubles: dict[str, Any] = {

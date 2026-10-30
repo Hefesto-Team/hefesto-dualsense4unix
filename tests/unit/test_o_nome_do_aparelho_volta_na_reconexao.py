@@ -1,4 +1,4 @@
-"""O nome que ela dá volta na reconexão — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, item 4."""
+"""O nome que ela dá volta na reconexão — O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01, item 4."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from hefesto_dualsense4unix.utils import maquina
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, FONE, QUARTO, ROXO, SALA, VARANDA, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
-    Bancada,
+    Ensaio,
     id_da_tela,
     preparar_a_tela,
     preparar_o_diario,
@@ -53,47 +53,47 @@ def _guardado(casa: Path, aparelho: str) -> str | None:
     return (documento.get("controles", {}).get(rm.uniq(aparelho)) or {}).get("nome")
 
 
-def _renomear_na_tela(bancada: Bancada, monkeypatch: pytest.MonkeyPatch,
+def _renomear_na_tela(ensaio: Ensaio, monkeypatch: pytest.MonkeyPatch,
                       aparelho: str, nome: str) -> None:
     """O gesto da tela, o de verdade: o ``Alias`` vai a todo objeto dele no BlueZ."""
-    monkeypatch.setattr(bd, "dono", lambda: bancada.dono)
-    cena = bancada.cena()
+    monkeypatch.setattr(bd, "dono", lambda: ensaio.dono)
+    cena = ensaio.cena()
     linha = next(a for a in cena["aparelhos"]
                  if str(a["id"]).replace(":", "").lower() == rm.uniq(aparelho))
-    bancada.gesto("aparelho-renomear", alvo=linha["id"], valor=nome)
+    ensaio.gesto("aparelho-renomear", alvo=linha["id"], valor=nome)
 
 
-def _esquecer_em_todos(bancada: Bancada) -> None:
+def _esquecer_em_todos(ensaio: Ensaio) -> None:
     """O X em cada linha do vermelho, em cada adaptador — ligado ou desligado."""
     for _ in range(len(ADAPTADORES)):
-        cena = bancada.cena()
+        cena = ensaio.cena()
         linhas = [a for a in cena["aparelhos"]
                   if str(a["id"]).replace(":", "").lower() == rm.uniq(VERMELHO)
                   and not a.get("nao_conectou")]
         if not linhas:
             return
         clique = {"alvo": linhas[0]["id"], "lugar": linhas[0]["lugar"]}
-        bancada.gesto("esquecer-aparelho", **clique)
-        bancada.gesto("confirmar-esquecer", **clique)
+        ensaio.gesto("esquecer-aparelho", **clique)
+        ensaio.gesto("confirmar-esquecer", **clique)
 
 
-def _conectar_em(bancada: Bancada, destino: str, quem: str) -> cr.Movimento:
+def _conectar_em(ensaio: Ensaio, destino: str, quem: str) -> cr.Movimento:
     """Ela abre ``destino``, clica «Conectar», segura PS + Create em ``quem`` e"""
-    bancada.cena()
-    if bancada.cena().get("aberto") != id_da_tela(destino):
-        bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
-    bancada.cena()
-    rm.ela_pareia(bancada.relogio, bancada.mundo, bancada.central, quem)
-    bancada.gesto("radio-procurar")
-    bancada.esperar_a_central()
-    return next(m for m in bancada.central.movimentos() if m.destino == destino)
+    ensaio.cena()
+    if ensaio.cena().get("aberto") != id_da_tela(destino):
+        ensaio.gesto("abrir-adaptador", alvo=id_da_tela(destino))
+    ensaio.cena()
+    rm.o_usuario_pareia(ensaio.relogio, ensaio.mundo, ensaio.central, quem)
+    ensaio.gesto("radio-procurar")
+    ensaio.esperar_a_central()
+    return next(m for m in ensaio.central.movimentos() if m.destino == destino)
 
 
 PARES = [(o, d) for o in (SALA, QUARTO, VARANDA) for d in (SALA, QUARTO, VARANDA) if o != d]
 
 
 @pytest.mark.parametrize(("origem", "destino"), PARES)
-def test_o_conectar_noutro_adaptador_leva_o_nome_dela(
+def test_o_conectar_noutro_adaptador_leva_o_nome_do_usuario(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, origem: str, destino: str,
 ) -> None:
     """O vermelho se chama «André» na origem. Ela o desliga, abre outro adaptador"""
@@ -101,51 +101,51 @@ def test_o_conectar_noutro_adaptador_leva_o_nome_dela(
     mundo.pareado(origem, VERMELHO, nome="André")
     mundo.pareado(origem, AZUL, nome="Vitória")
     mundo.desligar(VERMELHO)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        feito = _conectar_em(bancada, destino, VERMELHO)
+        feito = _conectar_em(ensaio, destino, VERMELHO)
         assert (feito.estado, feito.aparelho) == (cr.CHEGOU, VERMELHO)
         assert mundo.objeto(destino, VERMELHO)["Alias"] == "André"
         assert mundo.objeto(origem, AZUL)["Alias"] == "Vitória", "o nome foi para outro"
-        cena = bancada.cena()
+        cena = ensaio.cena()
         (linha,) = [a for a in cena["aparelhos"] if str(a["id"]).lower() == rm.uniq(VERMELHO)
                     and a.get("lugar") == id_da_tela(destino)]
         assert linha["nome"] == "André"
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
-def test_sem_nome_dela_o_objeto_novo_fica_com_o_de_fabrica(
+def test_sem_nome_do_usuario_o_objeto_novo_fica_com_o_de_fabrica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O nome de fábrica não é nome: o controle que ela nunca renomeou chega"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.desligar(VERMELHO)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _conectar_em(bancada, VARANDA, VERMELHO)
+        _conectar_em(ensaio, VARANDA, VERMELHO)
         assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == FABRICA
         assert [e for e in mundo.escritas if e[2] == "Alias"] == []
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
-def test_a_tela_mostra_o_nome_dela_em_toda_chave_do_controle(
+def test_a_tela_mostra_o_nome_do_usuario_em_toda_chave_do_controle(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O roxo se chama «Vitória» só no objeto da varanda; desligado, ele tem"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(VARANDA, ROXO, conectado=False, nome="Vitória")
     mundo.pareado(SALA, ROXO, host=False)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        cena = bancada.cena()
+        cena = ensaio.cena()
         linhas = {a["lugar"]: a for a in cena["aparelhos"] if a.get("desligado")}
         assert set(linhas) == {id_da_tela(VARANDA), id_da_tela(SALA)}
         assert {a["nome"] for a in linhas.values()} == {"Vitória"}
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 @pytest.mark.parametrize(("origem", "destino"), PARES + [(a, a) for a in ADAPTADORES])
@@ -153,34 +153,34 @@ def test_renomear_esquecer_em_todos_e_parear_de_novo_o_nome_volta(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
     origem: str, destino: str,
 ) -> None:
-    """E2 da O-RADIO-CONECTA-ONDE-ELA-MANDA-02, pela mão do usuário e de ponta a ponta."""
+    """E2 da O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-02, pela mão do usuário e de ponta a ponta."""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(origem, VERMELHO)
     outro = next(a for a in ADAPTADORES if a != origem)
     mundo.pareado(outro, VERMELHO, host=False)
     mundo.pareado(origem, AZUL, nome="Vitória")
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _renomear_na_tela(bancada, monkeypatch, VERMELHO, "André")
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "André")
         assert {mundo.objeto(a, VERMELHO)["Alias"] for a in (origem, outro)} == {"André"}
-        bancada.central.cuidar_dos_nomes()
+        ensaio.central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) == "André"
         assert _guardado(casa, AZUL) == "Vitória"
 
-        _esquecer_em_todos(bancada)
+        _esquecer_em_todos(ensaio)
         assert all(mundo.objeto(a, VERMELHO) is None for a in ADAPTADORES), "sobrou chave"
-        bancada.central.cuidar_dos_nomes()
+        ensaio.central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) == "André", "esquecer a chave apagou o nome"
 
-        feito = _conectar_em(bancada, destino, VERMELHO)
+        feito = _conectar_em(ensaio, destino, VERMELHO)
         assert (feito.estado, feito.aparelho) == (cr.CHEGOU, VERMELHO)
         assert mundo.objeto(destino, VERMELHO)["Alias"] == "André"
-        (linha,) = [a for a in bancada.cena()["aparelhos"]
+        (linha,) = [a for a in ensaio.cena()["aparelhos"]
                     if str(a["id"]).lower() == rm.uniq(VERMELHO)]
         assert linha["nome"] == "André" and linha["lugar"] == id_da_tela(destino)
         assert mundo.objeto(origem, AZUL)["Alias"] == "Vitória", "o nome foi para outro"
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def _central_da_casa(mundo: rm.RadioDeMentira, relogio: rm.Relogio) -> tuple[
@@ -217,31 +217,31 @@ def test_o_controle_que_conecta_por_fora_da_central_recebe_o_nome(
         dono.fechar()
 
 
-def test_ela_apaga_o_nome_e_ele_nao_volta(
+def test_o_usuario_apaga_o_nome_e_ele_nao_volta(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Apagar o nome na tela volta ao de fábrica (e a tela ao «Player N»): o"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(QUARTO, VERMELHO, host=False)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _renomear_na_tela(bancada, monkeypatch, VERMELHO, "André")
-        bancada.central.cuidar_dos_nomes()
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "André")
+        ensaio.central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) == "André"
 
-        _renomear_na_tela(bancada, monkeypatch, VERMELHO, "")
-        bancada.central.cuidar_dos_nomes()
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "")
+        ensaio.central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) is None, "o nome apagado ficou guardado"
-        bancada.central.cuidar_dos_nomes()
-        assert all(not bancada.central._nome_dado(bancada.dono, o)
-                   for o in bancada.dono.aparelhos() or () if o.endereco == VERMELHO)
+        ensaio.central.cuidar_dos_nomes()
+        assert all(not ensaio.central._nome_dado(ensaio.dono, o)
+                   for o in ensaio.dono.aparelhos() or () if o.endereco == VERMELHO)
 
-        _esquecer_em_todos(bancada)
-        _conectar_em(bancada, VARANDA, VERMELHO)
+        _esquecer_em_todos(ensaio)
+        _conectar_em(ensaio, VARANDA, VERMELHO)
         assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == FABRICA
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_o_nome_dado_por_fora_do_produto_tambem_fica(diario: Path, casa: Path) -> None:
@@ -277,32 +277,34 @@ def test_so_o_controle_tem_o_nome_guardado(diario: Path, casa: Path) -> None:
         dono.fechar()
 
 
-def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_ela_apagando(
+def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_o_usuario_apagando(
     diario: Path, a08: Any, casa: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O X e o «Conectar» no MESMO adaptador, sem volta dos nomes no meio, e o"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _renomear_na_tela(bancada, monkeypatch, VERMELHO, "André")
-        bancada.central.cuidar_dos_nomes()
-        bancada.central.cuidar_dos_nomes()
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "André")
+        ensaio.central.cuidar_dos_nomes()
+        ensaio.central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) == "André"
 
-        monkeypatch.setattr(bancada.central, "_dar_o_nome", lambda *_a: None)
-        _esquecer_em_todos(bancada)
-        _conectar_em(bancada, SALA, VERMELHO)
+        monkeypatch.setattr(ensaio.central, "_dar_o_nome", lambda *_a: None)
+        _esquecer_em_todos(ensaio)
+        _conectar_em(ensaio, SALA, VERMELHO)
         assert mundo.objeto(SALA, VERMELHO)["Alias"] == FABRICA
 
-        bancada.central.cuidar_dos_nomes()
+        ensaio.central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) == "André", "o objeto novo apagou o nome dela"
         assert mundo.objeto(SALA, VERMELHO)["Alias"] == "André"
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
-def test_o_adaptador_que_volta_com_o_nome_velho_recebe_o_dela(diario: Path, casa: Path) -> None:
+def test_o_adaptador_que_volta_com_o_nome_velho_recebe_o_do_usuario(
+    diario: Path, casa: Path,
+) -> None:
     """A varanda estava fora da porta quando ela renomeou o vermelho de «André»"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO, nome="André")
@@ -367,7 +369,7 @@ def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
 
 
 @pytest.mark.parametrize("adaptador", ADAPTADORES)
-def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_ela_apagando(
+def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_o_usuario_apagando(
     diario: Path, casa: Path, adaptador: str,
 ) -> None:
     """O DEFEITO QUE A CONFERÊNCIA ACHOU. O vermelho se chama «André», com"""
@@ -415,7 +417,7 @@ class _DiscoQueRecusa:
 
 
 @pytest.mark.parametrize("adaptador", ADAPTADORES)
-def test_a_gravacao_recusada_nao_desfaz_o_nome_que_ela_deu(
+def test_a_gravacao_recusada_nao_desfaz_o_nome_que_o_usuario_deu(
     diario: Path, casa: Path, adaptador: str,
 ) -> None:
     """O vermelho se chama «André». Ela o renomeia para «Bia» (por fora do"""
@@ -449,7 +451,7 @@ def test_a_gravacao_recusada_nao_desfaz_o_nome_que_ela_deu(
         dono.fechar()
 
 
-def test_o_endereco_no_lugar_do_nome_nao_e_nome_dela(diario: Path, casa: Path) -> None:
+def test_o_endereco_no_lugar_do_nome_nao_e_nome_do_usuario(diario: Path, casa: Path) -> None:
     """Sem ``Name`` (o aparelho ainda não disse como se chama), o BlueZ põe o"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)

@@ -118,7 +118,7 @@ desta leva.
 este registro escreveu sem anotar. Para ela vale a regra do espaço de nomes: as
 variáveis que só o produto usa (:data:`_DO_PRODUTO_SEM_REGISTRO`) são
 presumidas nossas; as duas que uma pessoa costuma pôr sozinha
-(:data:`PODEM_SER_DELA`) não são. O erro mais barato para quem joga é esse: um
+(:data:`PODEM_SER_DO_USUARIO`) não são. O erro mais barato para quem joga é esse: um
 `IGNORE` esquecido deixa o jogo com ZERO controles; um `PROTON_DISABLE_HIDRAW`
 que ela mesma tivesse posto já tinha sido sobrescrito pelo produto enquanto ele
 estava instalado.
@@ -166,7 +166,7 @@ SEM_AMBIENTE = ("O serviço ainda não publicou o ambiente desta sessão. Ligue 
 ILEGIVEL = ("Não consegui ler o `{arquivo}` deste lançador, e não vou "
             "reescrevê-lo por cima. Abra o lançador uma vez e tente de novo.")
 
-PODEM_SER_DELA: frozenset[str] = frozenset(
+PODEM_SER_DO_USUARIO: frozenset[str] = frozenset(
     {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"})
 
 _DO_PRODUTO_SEM_REGISTRO: frozenset[str] = frozenset({
@@ -181,7 +181,7 @@ _DO_PRODUTO_SEM_REGISTRO: frozenset[str] = frozenset({
 
 CORRECOES_DA_CARONA: tuple[tuple[str, str], ...] = (("PROTON_USE_XALIA", "0"),)
 
-DELA_MANDA: frozenset[str] = frozenset(k for k, _ in CORRECOES_DA_CARONA)
+DO_USUARIO_MANDA: frozenset[str] = frozenset(k for k, _ in CORRECOES_DA_CARONA)
 
 _VALORES_LEMBRADOS = 16
 
@@ -464,7 +464,7 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
         marca = entrada.chaves.pop(chave)
         nossos = set(marca.valores)
         if not any(a == chave and b in nossos for a, b in pares):
-            if any(a == chave and not (chave in DELA_MANDA and b == marca.antes)
+            if any(a == chave and not (chave in DO_USUARIO_MANDA and b == marca.antes)
                    for a, b in pares):
                 contas.ficaram.append(chave)
             continue
@@ -484,35 +484,35 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
     return pares
 
 
-def _as_que_ela_pos(pares: Pares, ambiente: dict[str, str],
+def _as_que_o_usuario_pos(pares: Pares, ambiente: dict[str, str],
                     entrada: Entrada) -> frozenset[str]:
-    """As :data:`DELA_MANDA` do ambiente que ela já pôs neste arquivo."""
-    dela: set[str] = set()
-    for chave in DELA_MANDA & ambiente.keys():
+    """As :data:`DO_USUARIO_MANDA` do ambiente que ela já pôs neste arquivo."""
+    do_usuario: set[str] = set()
+    for chave in DO_USUARIO_MANDA & ambiente.keys():
         marca = entrada.chaves.get(chave)
         nossos = set(marca.valores) if marca is not None else set()
         if any(a == chave and b not in nossos for a, b in pares):
-            dela.add(chave)
-    return frozenset(dela)
+            do_usuario.add(chave)
+    return frozenset(do_usuario)
 
 
 def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
     """A ESCRITA sobre os pares do arquivo, anotando no registro o que é nosso."""
-    dela = _as_que_ela_pos(pares, ambiente, entrada)
+    do_usuario = _as_que_o_usuario_pos(pares, ambiente, entrada)
     atual = dict(pares)
     pares = _devolver_chaves(
         pares, [k for k in entrada.chaves if k not in ambiente], entrada, _Contas())
     for chave, valor in ambiente.items():
         marca = entrada.chaves.get(chave)
         if marca is None:
-            antes = atual.get(chave) if chave in PODEM_SER_DELA | DELA_MANDA else None
+            antes = atual.get(chave) if chave in PODEM_SER_DO_USUARIO | DO_USUARIO_MANDA else None
             entrada.chaves[chave] = Marca([valor], antes)
         elif marca.valores[-1] != valor:
             marca.valores = (
                 [v for v in marca.valores if v != valor] + [valor])[-_VALORES_LEMBRADOS:]
-        if chave in DELA_MANDA and chave not in atual:
+        if chave in DO_USUARIO_MANDA and chave not in atual:
             entrada.chaves[chave].antes = None
-    return _por_por_cima(pares, {k: v for k, v in ambiente.items() if k not in dela})
+    return _por_por_cima(pares, {k: v for k, v in ambiente.items() if k not in do_usuario})
 
 
 def _desfazer_pares(pares: Pares, entrada: Entrada) -> tuple[Pares, _Contas]:
@@ -821,7 +821,7 @@ def _curar_na_trava(
 
 
 def _ambiente_da_copia(ambiente: dict[str, str]) -> dict[str, str]:
-    return {k: v for k, v in ambiente.items() if k not in PODEM_SER_DELA}
+    return {k: v for k, v in ambiente.items() if k not in PODEM_SER_DO_USUARIO}
 
 
 def _unir(*entradas: Entrada | None) -> Entrada:
@@ -905,7 +905,7 @@ def onde_falta_o_ambiente(
 
     def falta_em(pares: Pares, ambiente: dict[str, str]) -> bool:
         tem = dict(pares)
-        return any(tem.get(k) != v and not (k in DELA_MANDA and k in tem)
+        return any(tem.get(k) != v and not (k in DO_USUARIO_MANDA and k in tem)
                    for k, v in ambiente.items())
 
     da_carona = {a.casefold() for _, ats in cartoes_com_estrada() for a in ats}
@@ -1029,9 +1029,9 @@ def _entrada_da_copia(entrada: Entrada) -> Entrada:
     """O registro do `config.json` da casa, como vale para a cópia de um jogo."""
     chaves: dict[str, Marca] = {}
     for k, m in entrada.chaves.items():
-        if k in PODEM_SER_DELA:
+        if k in PODEM_SER_DO_USUARIO:
             continue
-        if k not in DELA_MANDA:
+        if k not in DO_USUARIO_MANDA:
             chaves[k] = copy.deepcopy(m)
             continue
         nossos = [v for v in m.valores if v != m.antes]
@@ -1052,7 +1052,7 @@ def _desfazer_na_copia_do_jogo(alvo: Path, entrada: Entrada, feito: Desfeito) ->
     except ValueError:
         raiz = None
     if not isinstance(raiz, dict):
-        suspeitas = (_DO_PRODUTO_SEM_REGISTRO | set(entrada.chaves)) - PODEM_SER_DELA
+        suspeitas = (_DO_PRODUTO_SEM_REGISTRO | set(entrada.chaves)) - PODEM_SER_DO_USUARIO
         if any(nome in texto for nome in suspeitas):
             feito.erro = "não consegui ler — não reescrevo por cima"
         return None
@@ -1331,7 +1331,7 @@ def _sem_o_cache_que_a_exclusao_copiou(copia: CopiaDoJogo, entrada: Entrada) -> 
         return []
     pares = _pares_da_lista(lista)
     copiados = set(copia.depois)
-    chaves = [k for k, m in entrada.chaves.items() if k in PODEM_SER_DELA and any(
+    chaves = [k for k, m in entrada.chaves.items() if k in PODEM_SER_DO_USUARIO and any(
         a == k and (a, b) in copiados and b in m.valores for a, b in pares)]
     if not chaves:
         return []
@@ -1763,7 +1763,7 @@ def _a_camada_da_caixa(
         if chave in _NAO_VEIO_POR_JOGO:
             por_jogo.add(chave)
             continue
-        valor = None if chave in PODEM_SER_DELA else nao_veio(chave)
+        valor = None if chave in PODEM_SER_DO_USUARIO else nao_veio(chave)
         if valor is not None:
             fora[chave] = valor
     return fora, frozenset(por_jogo)

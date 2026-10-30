@@ -39,23 +39,23 @@ CABECALHO = (
 )
 
 
-def _match_dela() -> MatchCriteria:
+def _match_do_usuario() -> MatchCriteria:
     """O match como está no disco do usuário — os dois campos, na mesma ordem."""
     return MatchCriteria(window_class=[WM_JOGO], process_name=[EXE_DO_JOGO])
 
 
-def _perfil_dela() -> Profile:
-    return Profile(name="Pragmata", match=_match_dela(), priority=85)
+def _perfil_do_usuario() -> Profile:
+    return Profile(name="Pragmata", match=_match_do_usuario(), priority=85)
 
 
-class TestOPerfilDelaVoltaAoEditorSimples:
-    def test_o_match_real_dela_e_um_jogo_da_steam(self) -> None:
+class TestOPerfilDoUsuarioVoltaAoEditorSimples:
+    def test_o_match_real_do_usuario_e_um_jogo_da_steam(self) -> None:
         """O que estava devolvendo None, e por isso escondia a caixinha."""
-        assert detect_simple_preset(_match_dela()) == "steam_game", (
+        assert detect_simple_preset(_match_do_usuario()) == "steam_game", (
             "o perfil do jogo dela abria no editor AVANÇADO, e com ele o "
             "seletor rebaixado a 'Vale sempre' — que é onde a caixinha morre"
         )
-        assert simple_extra(_match_dela()) == APPID, (
+        assert simple_extra(_match_do_usuario()) == APPID, (
             "sem o número no campo, a caixinha não sabe de qual jogo fala "
             "(`_appid_do_editor` devolve None) e nasce insensível"
         )
@@ -87,7 +87,7 @@ class TestOPerfilDelaVoltaAoEditorSimples:
 class TestOProcessNameSobreviveAoRoundTrip:
     def test_o_programa_do_jogo_nao_evapora_ao_salvar(self, tmp_path: Path) -> None:
         """Abrir no simples e salvar não pode tirar o campo que a tela não mostra."""
-        disco = _match_dela()
+        disco = _match_do_usuario()
         novo = from_simple_choice("steam_game", custom_name=APPID, regra_do_disco=disco)
 
         caminho = tmp_path / "pragmata.json"
@@ -110,7 +110,7 @@ class TestOProcessNameSobreviveAoRoundTrip:
     def test_trocar_o_numero_troca_de_jogo_e_nao_herda_o_programa(self) -> None:
         """Outro appid é OUTRO jogo — herdar o `PRAGMATA.exe` seria pior que apagar."""
         novo = from_simple_choice(
-            "steam_game", custom_name=OUTRO_APPID, regra_do_disco=_match_dela()
+            "steam_game", custom_name=OUTRO_APPID, regra_do_disco=_match_do_usuario()
         )
         assert isinstance(novo, MatchCriteria)
         assert novo.window_class == [f"steam_app_{OUTRO_APPID}"]

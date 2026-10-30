@@ -180,7 +180,7 @@ def test_o_salvar_de_qualquer_aba_grava_o_disco_como_estava(aba: str) -> None:
 
 
 @pytest.mark.parametrize("aba", AS_DEZ)
-def test_as_tres_fontes_que_nao_sao_dela_ficam_fora_do_disco(aba: str) -> None:
+def test_as_tres_fontes_que_nao_sao_do_usuario_ficam_fora_do_disco(aba: str) -> None:
     """O botão do microfone, o teto da economia e a política viva, nomeados."""
     _salvar(aba)
     depois = json.loads(_o_arquivo())

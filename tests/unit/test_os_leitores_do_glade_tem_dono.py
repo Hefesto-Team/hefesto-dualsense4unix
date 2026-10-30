@@ -37,7 +37,7 @@ def test_a_aba_05_le_as_duas_frases_do_motor_e_nao_as_digita(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """O dono é `app/telas/vibracao`, e a aba **lê** dele — não redigita."""
-    monkeypatch.setenv("HEFESTO_BANCADA", str(tmp_path))
+    monkeypatch.setenv("HEFESTO_ENSAIO", str(tmp_path))
     sys.path.insert(0, str(INTERFACE))
     import aba05
 
@@ -58,7 +58,7 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
     arquivo não existe, e é esse o mundo em que a `GTK-3` vai deixar a árvore.
 
     A cópia leva `src/`, `docs/data` e `assets/` (o que o gerador lê) e a
-    bancada vai para o `tmp_path` pelo `HEFESTO_BANCADA` — a árvore de quem
+    bancada vai para o `tmp_path` pelo `HEFESTO_ENSAIO` — a árvore de quem
     roda não recebe um byte.
 
     SEM O GTK REAL, PULA — 27/09/2026. O `aba05.py` chega ao GTK pela tela da
@@ -80,13 +80,13 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
         glade.unlink()
     assert not glade.exists(), "a mordida não apagou o glade — ela não mediu nada"
 
-    bancada = tmp_path / "bancada"
-    bancada.mkdir()
+    ensaio = tmp_path / "bancada"
+    ensaio.mkdir()
     saida = subprocess.run(
         [sys.executable, "aba05.py"],
         cwd=arvore / "src" / "hefesto_dualsense4unix" / "interface",
         env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
-             "HEFESTO_BANCADA": str(bancada),
+             "HEFESTO_ENSAIO": str(ensaio),
              "PYTHONPATH": str(arvore / "src")},
         capture_output=True, text=True, timeout=180,
     )
@@ -95,7 +95,7 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
         "a aba 05 NÃO monta com o `gui/main.glade` apagado — é este o defeito "
         f"que a GTK-3 encontraria no dia de apagar:\n{saida.stderr[-3000:]}")
 
-    pagina = (bancada / "05-vibracao.html").read_text(encoding="utf-8")
+    pagina = (ensaio / "05-vibracao.html").read_text(encoding="utf-8")
     com_o_glade = (RAIZ / "mockup" / "05-vibracao.html").read_text(encoding="utf-8")
     from hefesto_dualsense4unix.app.telas import vibracao
 

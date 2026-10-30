@@ -25,12 +25,12 @@ import re
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup" / "08-conexoes.html"
+ENSAIO = RAIZ / "mockup" / "08-conexoes.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
 GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py"
 CARTAO = RAIZ / "src/hefesto_dualsense4unix/interface/conexoes.py"
 
-ARQUIVOS = [pytest.param(BANCADA, id="bancada"), pytest.param(PUBLICADA, id="publicada")]
+ARQUIVOS = [pytest.param(ENSAIO, id="bancada"), pytest.param(PUBLICADA, id="publicada")]
 
 
 def _doc(arquivo: pathlib.Path) -> str:

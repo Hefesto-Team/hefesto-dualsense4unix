@@ -223,7 +223,7 @@ def test_depois_da_0_9_5_toda_proposta_sobe_a_quarta_casa(
     assert _proposta(brinquedo) == "0.9.5.1"
 
 
-def test_a_ultima_tag_e_a_mais_alta_da_serie_e_a_proxima_parte_dela(brinquedo: Path) -> None:
+def test_a_ultima_tag_e_a_mais_alta_da_serie_e_a_proxima_parte_do_usuario(brinquedo: Path) -> None:
     _na_serie_0_9_5(brinquedo)
     commitar(brinquedo, "feat: um")
     assert _proposta(brinquedo) == "0.9.5.1"
@@ -237,7 +237,7 @@ def test_a_ultima_tag_e_a_mais_alta_da_serie_e_a_proxima_parte_dela(brinquedo: P
     assert "nada a lançar" in rodar(VERSAO, "seguinte", raiz=brinquedo).stdout
 
 
-def test_a_tag_da_propria_serie_e_de_onde_ela_parte(brinquedo: Path) -> None:
+def test_a_tag_da_propria_serie_e_de_onde_o_usuario_parte(brinquedo: Path) -> None:
     """Sem a `v0.9.5` entre as tags da série, o changelog da 0.9.5.1 leria a história inteira."""
     _na_serie_0_9_5(brinquedo)
     spec = importlib.util.spec_from_file_location("comum_da_release", RELEASE / "_comum.py")
@@ -541,7 +541,7 @@ def test_o_marco_da_issue_nasce_do_estado_da_sprint_e_o_que_sai_nao_vale(
     assert any("`marco` é um destes" in e for e in modulo.validar(bloco, tmp_path, autoria=False))
 
 
-def test_o_publico_passa_pela_regua_de_autoria_quando_ela_existe(
+def test_o_publico_passa_pela_regua_de_autoria_quando_o_usuario_existe(
     brinquedo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A régua é o `check_autoria.py texto` da árvore: se ela recusa, o bloco não vai a quem usa."""

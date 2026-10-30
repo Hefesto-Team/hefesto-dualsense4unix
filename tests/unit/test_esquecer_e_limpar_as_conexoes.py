@@ -48,7 +48,7 @@ from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, FONE, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
-    Bancada,
+    Ensaio,
     id_da_tela,
     preparar_a_tela,
     preparar_o_diario,
@@ -90,7 +90,7 @@ class PonteDeTudo:
         return asyncio.run(tratador(params))
 
 
-class Casa(Bancada):
+class Casa(Ensaio):
     """A bancada da 08 com a ponte inteira, o cabo, e só CONTROLE na lista do"""
 
     def __init__(self, a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
@@ -635,7 +635,7 @@ def test_a_chave_morta_da_origem_sai_so_quando_o_pair_deu(
         casa.cena()
         casa.gesto("abrir-adaptador", alvo=id_da_tela(VARANDA))
         casa.cena()
-        rm.ela_pareia(casa.relogio, mundo, casa.central, VERDE)
+        rm.o_usuario_pareia(casa.relogio, mundo, casa.central, VERDE)
         casa.gesto("radio-procurar")
         casa.esperar_a_central()
         (feito,) = [m for m in casa.central.movimentos() if m.aparelho == VERDE]

@@ -160,7 +160,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero(numerador_limpo) -> None:  # t
     assert bt.descricao_do_microfone(P1) == "Microfone do Controle" + _SONY
 
 
-def test_a_ponte_do_radio_batiza_o_no_com_o_nome_dela(  # type: ignore[no-untyped-def]
+def test_a_ponte_do_radio_batiza_o_no_com_o_nome_do_usuario(  # type: ignore[no-untyped-def]
     monkeypatch, numerador_limpo
 ) -> None:
     """O rótulo chega ao NÓ pela ponte — e não só à função que o compõe."""
@@ -201,7 +201,7 @@ class _NoDeRadio:
         self.uniq = uniq
 
 
-def test_a_palavra_dela_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> None:
+def test_a_palavra_do_usuario_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> None:
     """Ela aperta o botão do microfone de um controle NO FIO. A palavra fica."""
     registro = bt_mic.RegistroDePedidosDeCanal()
     sub = bt_mic.BtMicSubsystem(registro=registro)
@@ -271,7 +271,7 @@ def _com_uma_fonte(monkeypatch, fontes: list[str]) -> None:
     monkeypatch.setattr(el, "fontes_de_captura_agora", lambda: list(fontes))
 
 
-def test_sem_toque_dela_o_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
+def test_sem_toque_do_usuario_o_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
     """Um microfone por controle, sempre: a decisão de 02/10/2026.
@@ -292,7 +292,7 @@ def test_sem_toque_dela_o_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
     ], f"o controle no fio ficou sem o microfone dele: {dono_dublado['abriu']}"
 
 
-def test_com_a_recusa_dela_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
+def test_com_a_recusa_do_usuario_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado
 ) -> None:
     """O «não» dela continua tirando o canal, como no rádio."""
@@ -306,7 +306,7 @@ def test_com_a_recusa_dela_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped
     assert dono_dublado["abriu"] == [], "o canal subiu contra a recusa dela"
 
 
-def test_o_toque_dela_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-untyped-def]
+def test_o_toque_do_usuario_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
     """Ela liga o microfone de um controle no FIO: o canal com nome dele sobe."""
@@ -342,7 +342,7 @@ def test_o_supervisor_do_cabo_nao_encosta_em_quem_esta_no_radio(  # type: ignore
     assert dono_dublado["fechou"] == []
 
 
-def test_o_canal_do_cabo_cai_quando_ela_desliga(  # type: ignore[no-untyped-def]
+def test_o_canal_do_cabo_cai_quando_o_usuario_desliga(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
     """A recusa dela derruba o canal — e o `parec` que lia o microfone do usuário."""

@@ -90,7 +90,7 @@ def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return raiz
 
 
-def test_a_classe_do_dualsense_medida_na_mesa_dela_e_controle() -> None:
+def test_a_classe_do_dualsense_medida_na_mesa_do_usuario_e_controle() -> None:
     """9480 (0x2508) — o que os seis objetos do BlueZ responderam em 20/09."""
     assert CLASSE_DO_DUALSENSE == 9480
     assert ICONE_DO_DUALSENSE == "input-gaming"

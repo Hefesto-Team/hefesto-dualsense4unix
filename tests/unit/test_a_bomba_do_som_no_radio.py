@@ -242,7 +242,7 @@ class TestORitmoImpedeAInundacao:
             ler(1)
         assert sonos == [], "quadro atrasado não pode dormir"
 
-    def test_o_ensaio_de_bancada_usa_o_ritmo(self) -> None:
+    def test_o_ensaio_de_ensaio_usa_o_ritmo(self) -> None:
         """A régua lê o FONTE do ensaio, e é o único jeito honesto."""
         fonte = (REPO_ROOT / "scripts" / "ensaios" / "o_som_que_sai.py").read_text(
             encoding="utf-8"
@@ -337,7 +337,7 @@ class TestOEnsaioRecusaAntesDeEscrever:
     def test_sem_arranjo_recusa(self, ensaio: Any) -> None:
         assert ensaio.escrever_no_aparelho(self._args(ensaio, arranjo="")) == 2
 
-    def test_sem_a_orelha_dela_para_em_tres(self, ensaio: Any, capsys: Any) -> None:
+    def test_sem_a_orelha_do_usuario_para_em_tres(self, ensaio: Any, capsys: Any) -> None:
         """rc=3, e é o degrau que esta leva NÃO removeu."""
         assert ensaio.escrever_no_aparelho(self._args(ensaio)) == 3
         saida = capsys.readouterr().out
@@ -350,9 +350,9 @@ class TestOEnsaioRecusaAntesDeEscrever:
         assert ensaio.TETO_DE_SEGUNDOS <= 15.0
         assert ensaio.SEGUNDOS_PADRAO <= ensaio.TETO_DE_SEGUNDOS
 
-    def test_o_timbre_e_o_que_ela_ja_relatou(self, ensaio: Any) -> None:
+    def test_o_timbre_e_o_que_o_usuario_ja_relatou(self, ensaio: Any) -> None:
         """O pulsado, e não um tom contínuo — o relato dela carrega a resposta."""
-        assert ensaio.BANCADA_PULSOS_HZ > 0
+        assert ensaio.ENSAIO_PULSOS_HZ > 0
         ler = ensaio.pcm_pulsado()
         bloco = ler(af.BYTES_DE_PCM_POR_QUADRO * 100)
         amostras = struct.unpack(f"<{len(bloco) // 2}h", bloco)

@@ -137,7 +137,7 @@ def test_o_que_a_tela_publicada_nao_diz_esta_declarado_e_nada_mais() -> None:
         "Declaração que sobrevive ao defeito é lápide.")
 
 
-def test_a_bancada_ja_sabe_dizer_todos_os_padroes() -> None:
+def test_o_ensaio_ja_sabe_dizer_todos_os_padroes() -> None:
     """O que falta é a PUBLICAÇÃO, e a régua diz isso em vez de deixar supor."""
     fora = _padrao_fora_da_lista(onde.pagina(PAGINA))
     assert not fora, (

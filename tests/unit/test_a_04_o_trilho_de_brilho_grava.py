@@ -143,7 +143,7 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
     """O `<input type="range">` é o polegar de verdade — e sem dono ele nasce em ZERO."""
     from hefesto_dualsense4unix.interface import onde
 
-    corpo = (onde.BANCADA / PAGINA).read_text(encoding="utf-8")
+    corpo = (onde.ENSAIO / PAGINA).read_text(encoding="utf-8")
     vivas = corpo.count('data-gesto="brilho"')
     assert vivas >= 1, "a bancada não oferece o trilho de brilho a controle nenhum"
     assert corpo.count('type="range"') - corpo.count('data-linha="ritmo"') == vivas, (
@@ -175,7 +175,7 @@ def test_o_trilho_e_pintado_pelo_produto(a04):
     """O polegar recebe o valor VIVO, e não fica no que o gerador cravou."""
     from hefesto_dualsense4unix.interface import onde
 
-    corpo = (onde.BANCADA / PAGINA).read_text(encoding="utf-8")
+    corpo = (onde.ENSAIO / PAGINA).read_text(encoding="utf-8")
     for trecho in corpo.split('data-gesto="brilho"')[1:]:
         campo = trecho.split(">", 1)[0]
         assert 'data-campo="brilho-pct"' in campo or 'data-campo="brilho-pct"' in \

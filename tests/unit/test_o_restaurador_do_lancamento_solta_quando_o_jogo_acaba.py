@@ -50,7 +50,7 @@ def _exec(caminho: Path, corpo: str) -> None:
     caminho.chmod(0o755)
 
 
-class Bancada:
+class Ensaio:
     """Os dublês do lançamento: perfil, placa, sudo e o `systemd-run`."""
 
     def __init__(self, base: Path, *, com_systemd_run: bool = True) -> None:
@@ -121,8 +121,8 @@ class Bancada:
 
 
 @pytest.fixture
-def bancada(tmp_path: Path) -> Iterator[Bancada]:
-    b = Bancada(tmp_path)
+def ensaio(tmp_path: Path) -> Iterator[Ensaio]:
+    b = Ensaio(tmp_path)
     parar = threading.Event()
     fio = threading.Thread(target=b.gerente, args=(parar,), daemon=True)
     fio.start()
@@ -135,7 +135,7 @@ def bancada(tmp_path: Path) -> Iterator[Bancada]:
             filho.wait()
 
 
-def _lancar_pela_steam(b: Bancada) -> subprocess.Popen[bytes]:
+def _lancar_pela_steam(b: Ensaio) -> subprocess.Popen[bytes]:
     reaper = b.base / "reaper.py"
     reaper.write_text(_REAPER, encoding="utf-8")
     return subprocess.Popen(
@@ -144,8 +144,8 @@ def _lancar_pela_steam(b: Bancada) -> subprocess.Popen[bytes]:
         stderr=subprocess.DEVNULL, start_new_session=True)
 
 
-def test_o_reaper_sai_com_o_jogo_e_a_devolucao_chega(bancada: Bancada) -> None:
-    lancamento = _lancar_pela_steam(bancada)
+def test_o_reaper_sai_com_o_jogo_e_a_devolucao_chega(ensaio: Ensaio) -> None:
+    lancamento = _lancar_pela_steam(ensaio)
     with contextlib.suppress(subprocess.TimeoutExpired):
         lancamento.wait(timeout=1 + 3 * PERIODO + 10)
     fim = time.time()
@@ -153,19 +153,19 @@ def test_o_reaper_sai_com_o_jogo_e_a_devolucao_chega(bancada: Bancada) -> None:
         os.killpg(lancamento.pid, signal.SIGKILL)
         lancamento.wait()
         pytest.fail("o lançamento não terminou: o restaurador está preso na árvore do reaper")
-    jogo_acabou = float(bancada.marca.read_text(encoding="utf-8"))
+    jogo_acabou = float(ensaio.marca.read_text(encoding="utf-8"))
     assert fim - jogo_acabou < 3 * PERIODO, (
         f"o reaper durou {fim - jogo_acabou:.2f} s depois do jogo")
-    bancada.esperar(f"placa devolver {lancamento.pid}")
-    chamadas = bancada.esperar("perfil balanced")
+    ensaio.esperar(f"placa devolver {lancamento.pid}")
+    chamadas = ensaio.esperar("perfil balanced")
     assert f"placa acordar {lancamento.pid}" in chamadas, chamadas
     assert f"placa devolver {lancamento.pid}" in chamadas, chamadas
     assert chamadas.index("perfil performance") < chamadas.index("perfil balanced"), chamadas
-    assert bancada.perfil.read_text(encoding="utf-8").strip() == "balanced"
+    assert ensaio.perfil.read_text(encoding="utf-8").strip() == "balanced"
 
 
 def test_sem_systemd_run_nao_troca_nem_acorda(tmp_path: Path) -> None:
-    b = Bancada(tmp_path, com_systemd_run=False)
+    b = Ensaio(tmp_path, com_systemd_run=False)
     restrito = tmp_path / "restrito"
     restrito.mkdir()
     for ferramenta in ("sh", "env", "date", "mkdir", "sed", "head", "tr", "cat", "sleep", "true"):
@@ -182,7 +182,7 @@ def test_sem_systemd_run_nao_troca_nem_acorda(tmp_path: Path) -> None:
 
 
 def test_o_systemd_run_que_falha_desfaz_na_hora(tmp_path: Path) -> None:
-    b = Bancada(tmp_path)
+    b = Ensaio(tmp_path)
     _exec(b.bin / "systemd-run", "#!/bin/sh\nexit 1\n")
     saida = subprocess.run(["sh", str(LANCADOR), "true"], env=b.ambiente(),
                            capture_output=True, text=True, timeout=60, check=False)

@@ -90,7 +90,7 @@ def test_o_4_de_pe_e_curado(tmp_path: Path) -> None:
     assert _veredito(tmp_path, marcas=["hefesto-0001", "hefesto-0002"])[0] == "curado"
 
 
-def test_o_3_da_maquina_dela_precisa_do_4(tmp_path: Path) -> None:
+def test_o_3_da_maquina_do_usuario_precisa_do_4(tmp_path: Path) -> None:
     veredito, detalhe = _veredito(
         tmp_path,
         marcas=["hefesto-0001"],

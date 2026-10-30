@@ -141,7 +141,7 @@ class TestAPaginaNaoPedeARede:
             "a rede simulada não chegou a ser pedida: o instrumento não mede nada, "
             "porque nada ficaria pendurado nem COM o bloqueio fora")
 
-    def test_o_veredito_da_pagina_real_e_o_mesmo_com_a_rede_recusada_e_com_ela_respondendo(
+    def test_o_veredito_da_pagina_real_e_o_mesmo_com_a_rede_recusada_e_com_o_usuario_respondendo(
         self, tmp_path: pathlib.Path
     ) -> None:
         """A rede bloqueada não muda o que o portão lê da página."""
@@ -225,7 +225,7 @@ class TestOsCachesNaoAdocamOVeredito:
         casa = pytest.importorskip("tests.unit.portao_a_casa_sabe_e_o_produto_nao_faz")
         piloto = RAIZ / casa._PILOTO_DA_INTERFACE_NOVA
         antes = ast.dump(casa._arvore(piloto))
-        podadas = dict(casa._fontes_externas(RAIZ, podar_a_bancada=True))
+        podadas = dict(casa._fontes_externas(RAIZ, podar_o_ensaio=True))
         assert casa._PASTA_DA_PONTE + "/hefesto_vivo.py" in podadas, (
             "instrumento inválido: a poda nem chegou ao piloto")
         depois = ast.dump(casa._arvore(piloto))

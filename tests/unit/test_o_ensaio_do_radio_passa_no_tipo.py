@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "scripts" / "ensaio_do_radio.py"
+ENSAIO = RAIZ / "scripts" / "ensaio_do_radio.py"
 
 
 def _mypy() -> list[str] | None:
@@ -38,10 +38,10 @@ def _erros(arquivo: Path, tmp_path: Path) -> str:
     return fim.stdout
 
 
-def test_a_bancada_do_radio_passa_no_mypy(tmp_path: Path) -> None:
+def test_o_ensaio_do_radio_passa_no_mypy(tmp_path: Path) -> None:
     if _mypy() is None:
         pytest.skip("o mypy não existe nesta máquina")
-    saida = _erros(BANCADA, tmp_path)
+    saida = _erros(ENSAIO, tmp_path)
     assert "Success: no issues found" in saida, saida
 
 
@@ -49,12 +49,12 @@ def test_a_regua_morde_o_nome_solto_do_achado(tmp_path: Path) -> None:
     """MORDIDA embutida: o ``quem`` fora do par, como ``str | None``, reprova."""
     if _mypy() is None:
         pytest.skip("o mypy não existe nesta máquina")
-    fonte = BANCADA.read_text(encoding="utf-8")
+    fonte = ENSAIO.read_text(encoding="utf-8")
     velho = "    fio, quem = achado\n"
     assert velho in fonte
     quebrado = fonte.replace(
         velho, "    fio = achado[0]\n    quem: str | None = achado[1]\n", 1
     )
-    copia = tmp_path / "bancada_quebrada.py"
+    copia = tmp_path / "ensaio_quebrado.py"
     copia.write_text(quebrado, encoding="utf-8")
     assert "arg-type" in _erros(copia, tmp_path)

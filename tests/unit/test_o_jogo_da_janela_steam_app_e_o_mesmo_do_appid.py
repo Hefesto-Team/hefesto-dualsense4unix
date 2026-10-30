@@ -13,7 +13,7 @@ from pathlib import Path
 from hefesto_dualsense4unix.integrations.jogos_locais import JogoLocal
 from hefesto_dualsense4unix.profiles import loader
 
-_PERFIL_DELA = {
+_PERFIL_DO_USUARIO = {
     "name": "Marvel's Guardians of the Galaxy",
     "match": {"type": "criteria", "window_class": ["steam_app_1088850"]},
     "priority": 80,
@@ -24,7 +24,7 @@ def _com_o_perfil(tmp_path: Path) -> Path:
     destino = tmp_path / "perfis"
     destino.mkdir()
     (destino / "marvels_guardians_of_the_galaxy.json").write_text(
-        json.dumps(_PERFIL_DELA, ensure_ascii=False), encoding="utf-8"
+        json.dumps(_PERFIL_DO_USUARIO, ensure_ascii=False), encoding="utf-8"
     )
     return destino
 

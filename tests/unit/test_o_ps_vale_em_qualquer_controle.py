@@ -55,17 +55,17 @@ def _disparos_no_diario(registros: list[dict[str, Any]]) -> list[tuple[str, Any]
     ]
 
 
-def _apertar_juntos(bancada: MesaDosAtalhos, apertos: dict[str, tuple[str, ...]]) -> list[str]:
+def _apertar_juntos(ensaio: MesaDosAtalhos, apertos: dict[str, tuple[str, ...]]) -> list[str]:
     """Cada controle de ``apertos`` aperta os dele, todos no mesmo instante, e soltam juntos."""
-    antes = len(bancada.disparos)
+    antes = len(ensaio.disparos)
     for uniq, botoes in apertos.items():
-        bancada.mesa.apertados[uniq] = frozenset(botoes)  # type: ignore[attr-defined]
-    bancada.tique(0.0)
-    bancada.tique(0.3)
+        ensaio.mesa.apertados[uniq] = frozenset(botoes)  # type: ignore[attr-defined]
+    ensaio.tique(0.0)
+    ensaio.tique(0.3)
     for uniq in apertos:
-        del bancada.mesa.apertados[uniq]  # type: ignore[attr-defined]
-    bancada.tique(0.05)
-    return bancada.disparos[antes:]
+        del ensaio.mesa.apertados[uniq]  # type: ignore[attr-defined]
+    ensaio.tique(0.05)
+    return ensaio.disparos[antes:]
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -78,15 +78,15 @@ class TestNoControleDaCarta2:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str, caminho: str,
     ) -> None:
-        bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte, caminho=caminho)
-        assert not bancada.vaga() and bancada.inst.primary_uniq == P1
+        ensaio = montar_atalhos(monkeypatch, kernel, quantos, transporte, caminho=caminho)
+        assert not ensaio.vaga() and ensaio.inst.primary_uniq == P1
         with structlog.testing.capture_logs() as registros:
-            assert bancada.apertar(P2, "ps", "r3") == ["ponte"], (
+            assert ensaio.apertar(P2, "ps", "r3") == ["ponte"], (
                 "o PS + R3 do controle da carta 2 caiu no vazio com o P1 na mesa"
             )
         assert _disparos_no_diario(registros) == [("ponte", P2)]
-        assert bancada.a_tela() == {u: n + 1 for n, u in enumerate(UNIQS[:quantos])}
-        assert bancada.dono_do_vpad_do_p1() == P1
+        assert ensaio.a_tela() == {u: n + 1 for n, u in enumerate(UNIQS[:quantos])}
+        assert ensaio.dono_do_vpad_do_p1() == P1
 
     @pytest.mark.parametrize(("botoes", "gesto"), GESTOS)
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
@@ -94,9 +94,9 @@ class TestNoControleDaCarta2:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         transporte: str, botoes: tuple[str, ...], gesto: str,
     ) -> None:
-        bancada = montar_atalhos(monkeypatch, kernel, 4, transporte)
+        ensaio = montar_atalhos(monkeypatch, kernel, 4, transporte)
         for uniq in UNIQS[:4]:
-            assert bancada.apertar(uniq, *botoes) == [gesto], f"{uniq} não alcançou {gesto}"
+            assert ensaio.apertar(uniq, *botoes) == [gesto], f"{uniq} não alcançou {gesto}"
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -108,9 +108,9 @@ class TestOsApertosNaoSeMisturam:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
         """Ninguém fez o PS + R3: o P1 fez um PS sozinho, e é ele que dispara."""
-        bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
+        ensaio = montar_atalhos(monkeypatch, kernel, 3, transporte)
         with structlog.testing.capture_logs() as registros:
-            disparou = _apertar_juntos(bancada, {P1: ("ps",), P2: ("r3",)})
+            disparou = _apertar_juntos(ensaio, {P1: ("ps",), P2: ("r3",)})
         assert disparou == ["ps_solo"], f"os dois apertos viraram {disparou}"
         assert _disparos_no_diario(registros) == [("ps_solo", P1)]
 
@@ -118,33 +118,33 @@ class TestOsApertosNaoSeMisturam:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
         """O P2 segura o PS + R3 que já disparou; o PS + L3 do P3 dispara mesmo assim."""
-        bancada = montar_atalhos(monkeypatch, kernel, 3)
-        bancada.mesa.apertados[P2] = frozenset({"ps", "r3"})  # type: ignore[attr-defined]
-        bancada.tique(0.0)
-        bancada.tique(0.3)
-        assert bancada.disparos[-1:] == ["ponte"]
-        antes = len(bancada.disparos)
-        bancada.mesa.apertados[P3] = frozenset({"ps", "l3"})  # type: ignore[attr-defined]
-        bancada.tique(0.0)
-        bancada.tique(0.3)
-        bancada.tique(0.3)
-        assert bancada.disparos[antes:] == ["mascara"], (
+        ensaio = montar_atalhos(monkeypatch, kernel, 3)
+        ensaio.mesa.apertados[P2] = frozenset({"ps", "r3"})  # type: ignore[attr-defined]
+        ensaio.tique(0.0)
+        ensaio.tique(0.3)
+        assert ensaio.disparos[-1:] == ["ponte"]
+        antes = len(ensaio.disparos)
+        ensaio.mesa.apertados[P3] = frozenset({"ps", "l3"})  # type: ignore[attr-defined]
+        ensaio.tique(0.0)
+        ensaio.tique(0.3)
+        ensaio.tique(0.3)
+        assert ensaio.disparos[antes:] == ["mascara"], (
             "o combo que o P2 segura travou o gesto do P3"
         )
 
 
-def _o_gesto_pelo_laco(bancada: MesaDosAtalhos, uniq: str, *botoes: str) -> None:
+def _o_gesto_pelo_laco(ensaio: MesaDosAtalhos, uniq: str, *botoes: str) -> None:
     """``uniq`` faz o gesto, e o ato roda como o daemon o roda: tarefa, com o laço seguindo."""
 
     async def _junto() -> None:
-        bancada.apertar(uniq, *botoes)
+        ensaio.apertar(uniq, *botoes)
         este = asyncio.current_task()
         for _ in range(500):
             pendentes = [t for t in asyncio.all_tasks() if t is not este and not t.done()]
             if not pendentes:
                 return
             await asyncio.sleep(0)
-            bancada.tique(0.0)
+            ensaio.tique(0.0)
         raise AssertionError("o ato do gesto não terminou")
 
     asyncio.run(_junto())
@@ -158,22 +158,22 @@ class TestOPsL3DeQualquerControleAndaOModoDeTodos:
     def test_o_ps_l3_do_p3_anda_o_modo_de_todos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
-        bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
-        luz = armar_o_ato_do_daemon(bancada, monkeypatch).luz
-        bancada.daemon._hotkey_manager.on_next_mask = build_next_mask_callback(bancada.daemon)
-        assert em.mascara_vestida(bancada.daemon, P3) == "dualsense"
+        ensaio = montar_atalhos(monkeypatch, kernel, 3, transporte)
+        luz = armar_o_ato_do_daemon(ensaio, monkeypatch).luz
+        ensaio.daemon._hotkey_manager.on_next_mask = build_next_mask_callback(ensaio.daemon)
+        assert em.mascara_vestida(ensaio.daemon, P3) == "dualsense"
 
         with structlog.testing.capture_logs() as registros:
-            _o_gesto_pelo_laco(bancada, P3, "ps", "l3")
+            _o_gesto_pelo_laco(ensaio, P3, "ps", "l3")
         for _ in range(3):
-            bancada.tique()
+            ensaio.tique()
 
         assert _disparos_no_diario(registros) == [("mascara", P3)]
         for uniq in (P1, P2, P3):
-            assert em.mascara_vestida(bancada.daemon, uniq) == "xbox", f"{uniq} ficou para trás"
+            assert em.mascara_vestida(ensaio.daemon, uniq) == "xbox", f"{uniq} ficou para trás"
         assert ("piscada", "xbox") in luz, f"a luz disse {luz}"
-        assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3}
-        bancada.o_jogo_segue_a_tela()
+        assert ensaio.a_tela() == {P1: 1, P2: 2, P3: 3}
+        ensaio.o_jogo_segue_a_tela()
 
 
 class _LeitorPassivoDaMesa:
@@ -224,7 +224,7 @@ def montar_sem_coop(
     monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, modo: str, transporte: str
 ) -> MesaSemCoop:
     """Três controles na mesa, com o co-op desligado ou em mouse e teclado (sem vpad do P1)."""
-    bancada = MesaSemCoop(
+    ensaio = MesaSemCoop(
         monkeypatch,
         kernel=kernel,
         relogio=Relogio(),
@@ -232,12 +232,12 @@ def montar_sem_coop(
         coop=modo != "co-op-desligado",
     )
     for uniq, via in zip(UNIQS[:3], TRANSPORTES[transporte][:3], strict=True):
-        bancada.mesa.sentar(uniq, transporte=via)
+        ensaio.mesa.sentar(uniq, transporte=via)
     for _ in range(3):
-        bancada.tique()
-    assert bancada.coop.live_snapshots() == {}, "premissa: o co-op não segura ninguém"
-    assert bancada.inst.primary_uniq == P1
-    return bancada
+        ensaio.tique()
+    assert ensaio.coop.live_snapshots() == {}, "premissa: o co-op não segura ninguém"
+    assert ensaio.inst.primary_uniq == P1
+    return ensaio
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -250,11 +250,11 @@ class TestSemOCoop:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         modo: str, transporte: str,
     ) -> None:
-        bancada = montar_sem_coop(monkeypatch, kernel, modo, transporte)
+        ensaio = montar_sem_coop(monkeypatch, kernel, modo, transporte)
         with structlog.testing.capture_logs() as registros:
-            assert bancada.apertar(P1, "ps", "r3") == ["ponte"]
-            assert bancada.apertar(P2, "ps", "r3") == ["ponte"], "o P2 ficou mudo sem o co-op"
-            assert bancada.apertar(P3, "ps") == ["ps_solo"], "o PS do P3 não abriu a Steam"
+            assert ensaio.apertar(P1, "ps", "r3") == ["ponte"]
+            assert ensaio.apertar(P2, "ps", "r3") == ["ponte"], "o P2 ficou mudo sem o co-op"
+            assert ensaio.apertar(P3, "ps") == ["ps_solo"], "o PS do P3 não abriu a Steam"
         assert _disparos_no_diario(registros) == [
             ("ponte", P1), ("ponte", P2), ("ps_solo", P3)
         ]
@@ -263,9 +263,9 @@ class TestSemOCoop:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
         """O posto já tem leitor: o hub só abre leitor para quem não tem outra fonte."""
-        bancada = montar_sem_coop(monkeypatch, kernel, "mouse-e-teclado", "mista")
-        bancada.tique()
-        assert set(bancada.hub._gamepad) == {P2, P3}
+        ensaio = montar_sem_coop(monkeypatch, kernel, "mouse-e-teclado", "mista")
+        ensaio.tique()
+        assert set(ensaio.hub._gamepad) == {P2, P3}
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -275,17 +275,17 @@ class TestQuemRenasceNaoGanhaLeitorPassivo:
     def test_o_grab_pendente_nao_pede_o_leitor_do_hub(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        bancada = MesaSemCoop(monkeypatch, kernel=kernel, relogio=Relogio())
+        ensaio = MesaSemCoop(monkeypatch, kernel=kernel, relogio=Relogio())
         for uniq, via in zip(UNIQS[:3], TRANSPORTES["mista"][:3], strict=True):
-            bancada.mesa.sentar(uniq, transporte=via)
+            ensaio.mesa.sentar(uniq, transporte=via)
         for _ in range(3):
-            bancada.tique()
-        assert set(bancada.coop.live_snapshots()) == {P2, P3}, "premissa: o co-op de pé"
-        assert bancada.hub._demanda_entradas == {}, "o co-op de pé já tem leitor"
-        bancada.coop._teardown_player(P2)
-        bancada.tique()
-        jogador = bancada.coop._players.get(P2)
+            ensaio.tique()
+        assert set(ensaio.coop.live_snapshots()) == {P2, P3}, "premissa: o co-op de pé"
+        assert ensaio.hub._demanda_entradas == {}, "o co-op de pé já tem leitor"
+        ensaio.coop._teardown_player(P2)
+        ensaio.tique()
+        jogador = ensaio.coop._players.get(P2)
         assert jogador is not None and jogador.vpad is None, "premissa: o P2 renasce"
-        assert P2 not in bancada.hub._demanda_entradas, (
+        assert P2 not in ensaio.hub._demanda_entradas, (
             "o hub abriu um leitor passivo sobre o nó que o co-op segura"
         )

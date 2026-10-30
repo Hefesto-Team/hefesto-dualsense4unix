@@ -12,7 +12,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
     ADIADO_LOCK_MANUAL,
     APLICADO,
     IGNORADO_CATCH_ALL,
-    IGNORADO_GESTO_DELA,
+    IGNORADO_GESTO_DO_USUARIO,
     IGNORADO_JANELA_DE_JOGO,
     Daemon,
     DaemonConfig,
@@ -84,7 +84,7 @@ def _perfil(
     return Profile(name=nome, **dados)
 
 
-def _bancada(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
+def _ensaio(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
     for perfil in perfis:
         save_profile(perfil)
     fc = FakeController()
@@ -105,7 +105,7 @@ def test_ativacao_manual_seguida_de_tique_com_o_mesmo_candidato_nao_reativa(
         "hefesto_dualsense4unix.utils.session.save_last_profile",
         lambda _nome: None,
     )
-    manager, store = _bancada(
+    manager, store = _ensaio(
         [_perfil("sackboy_nativo", janela="steam_app_1599660")]
     )
     sw = AutoSwitcher(manager=manager, window_reader=lambda: {}, store=store)
@@ -124,7 +124,7 @@ def test_a_crenca_adota_o_perfil_ativo_antes_de_decidir(
     perfis_isolados: Path,
 ) -> None:
     """O mecanismo do item 1, isolado: basta o store dizer quem está ativo."""
-    manager, store = _bancada([_perfil("sackboy_nativo")])
+    manager, store = _ensaio([_perfil("sackboy_nativo")])
     sw = AutoSwitcher(manager=manager, window_reader=lambda: {}, store=store)
     assert sw._current_profile is None
 
@@ -138,7 +138,7 @@ def test_sincronizar_nao_congela_a_troca_para_outro_perfil(
     perfis_isolados: Path,
 ) -> None:
     """A guarda da cura: sincronizar não pode virar "o autoswitch parou"."""
-    manager, store = _bancada(
+    manager, store = _ensaio(
         [
             _perfil("sackboy_nativo", janela="steam_app_1599660"),
             _perfil("navegacao", janela="firefox"),
@@ -165,7 +165,7 @@ def test_catch_all_com_suppress_true_nao_liga_a_supressao() -> None:
     assert daemon._suppress_from_profile is False
 
 
-def test_o_disco_dela_dois_catch_all_nao_prendem_a_emulacao() -> None:
+def test_o_disco_do_usuario_dois_catch_all_nao_prendem_a_emulacao() -> None:
     """MORDIDA do item 2, metade B: o estado medido no disco do usuário."""
     daemon = _daemon()
     daemon.apply_profile_suppression(
@@ -258,7 +258,7 @@ def test_o_relatorio_nao_diz_mais_que_uma_secao_foi_travada(
     perfis_isolados: Path,
 ) -> None:
     """O item 4 mudou de resposta em 14/09/2026, e o teste mudou com ele."""
-    manager, _store = _bancada([_perfil("sackboy_nativo")])
+    manager, _store = _ensaio([_perfil("sackboy_nativo")])
 
     relatorio: dict[str, str] = {}
     manager.activate("sackboy_nativo", origin="autoswitch", relatorio=relatorio)
@@ -274,7 +274,7 @@ def test_sem_trava_o_relatorio_nao_inventa_secao_ignorada(
     perfis_isolados: Path,
 ) -> None:
     """A guarda: o relatório só afirma o que este código de fato silenciou."""
-    manager, _store = _bancada([_perfil("sackboy_nativo")])
+    manager, _store = _ensaio([_perfil("sackboy_nativo")])
 
     relatorio: dict[str, str] = {}
     manager.activate("sackboy_nativo", origin="autoswitch", relatorio=relatorio)
@@ -288,7 +288,7 @@ def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA do item 4, segunda metade: o MODO JOGO PADRÃO deixa rastro."""
-    manager, store = _bancada(
+    manager, store = _ensaio(
         [
             _perfil("navegacao", janela="firefox"),
             _perfil("vitoria", catch_all=True),
@@ -299,7 +299,7 @@ def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
         window_reader=lambda: {},
         store=store,
         modo_jogo_padrao_applier=lambda **_kw: APLICADO,
-        modo_jogo_padrao_reverter=lambda **_kw: IGNORADO_GESTO_DELA,
+        modo_jogo_padrao_reverter=lambda **_kw: IGNORADO_GESTO_DO_USUARIO,
     )
 
     sw._tick(dict(JANELA_DO_JOGO), 0.0)
@@ -311,14 +311,14 @@ def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
 
     trocas = [r for r in registros if r["event"] == "profile_autoswitch"]
     assert trocas, "o autoswitch não trocou de perfil"
-    assert f"modo_jogo_padrao={IGNORADO_GESTO_DELA}" in trocas[-1]["secoes"]
+    assert f"modo_jogo_padrao={IGNORADO_GESTO_DO_USUARIO}" in trocas[-1]["secoes"]
 
 
 def test_log_do_autoswitch_reporta_estados_ignorados(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA do item 5: `ignorado_*` aparece no `profile_autoswitch`."""
-    manager, store = _bancada(
+    manager, store = _ensaio(
         [
             _perfil("navegacao", janela="firefox"),
             _perfil("vitoria", catch_all=True),
@@ -329,7 +329,7 @@ def test_log_do_autoswitch_reporta_estados_ignorados(
         window_reader=lambda: {},
         store=store,
         modo_jogo_padrao_applier=lambda **_kw: APLICADO,
-        modo_jogo_padrao_reverter=lambda **_kw: IGNORADO_GESTO_DELA,
+        modo_jogo_padrao_reverter=lambda **_kw: IGNORADO_GESTO_DO_USUARIO,
     )
     sw._tick(dict(JANELA_DO_JOGO), 0.0)
 
@@ -339,7 +339,7 @@ def test_log_do_autoswitch_reporta_estados_ignorados(
 
     trocas = [r for r in registros if r["event"] == "profile_autoswitch"]
     assert trocas, "o autoswitch não trocou de perfil"
-    assert f"modo_jogo_padrao={IGNORADO_GESTO_DELA}" in trocas[-1]["secoes"], (
+    assert f"modo_jogo_padrao={IGNORADO_GESTO_DO_USUARIO}" in trocas[-1]["secoes"], (
         "o log do autoswitch voltou a filtrar os `ignorado_*` e a contar só "
         f"metade do relatório: {trocas[-1]['secoes']!r}"
     )
@@ -375,7 +375,7 @@ def test_sair_do_nativo_nao_religa_o_modo_nativo_do_perfil(
         daemon._mode_applier_ao_sair_do_nativo(
             _perfil("sackboy_nativo", mode={"kind": "native"}).mode
         )
-        == IGNORADO_GESTO_DELA
+        == IGNORADO_GESTO_DO_USUARIO
     )
 
 

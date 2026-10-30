@@ -101,7 +101,7 @@ def test_a_varredura_leva_o_berco_inteiro(
     assert berco_mod.berco() is None
 
 
-def test_arquivo_real_dela_ao_lado_do_berco_nao_e_tocado(
+def test_arquivo_real_do_usuario_ao_lado_do_berco_nao_e_tocado(
     tmp_falso: Path, sessao: _SessaoFalsa
 ) -> None:
     """O CASO PERIGOSO, e o que decide se este mecanismo pode existir."""
@@ -109,11 +109,11 @@ def test_arquivo_real_dela_ao_lado_do_berco_nao_e_tocado(
     nosso = berco_mod.berco()
     assert nosso is not None
 
-    dela = tmp_falso / "Screenshot_2026-08-07_15-49-08.png"
-    dela.write_bytes(b"PNG-de-mentira-mas-dela")
+    do_usuario = tmp_falso / "Screenshot_2026-08-07_15-49-08.png"
+    do_usuario.write_bytes(b"PNG-de-mentira-mas-do-usuario")
     outra = tmp_falso / "tmpzzzzzzzz"
     outra.mkdir()
-    (outra / "perfil-dela.json").write_text('{"name": "vitoria"}', encoding="utf-8")
+    (outra / "perfil-do-usuario.json").write_text('{"name": "vitoria"}', encoding="utf-8")
     parecido = tmp_falso / "hefesto-berco-de-outra-coisa"
     parecido.mkdir()
     (parecido / "importante.txt").write_text("não apague", encoding="utf-8")
@@ -122,8 +122,8 @@ def test_arquivo_real_dela_ao_lado_do_berco_nao_e_tocado(
     berco_mod._varrer_berco(sessao, 0)
 
     assert not nosso.exists()
-    assert dela.read_bytes() == b"PNG-de-mentira-mas-dela"
-    assert (outra / "perfil-dela.json").read_text(encoding="utf-8") == (
+    assert do_usuario.read_bytes() == b"PNG-de-mentira-mas-do-usuario"
+    assert (outra / "perfil-do-usuario.json").read_text(encoding="utf-8") == (
         '{"name": "vitoria"}'
     )
     assert (parecido / "importante.txt").read_text(encoding="utf-8") == "não apague"
@@ -228,7 +228,7 @@ def test_nome_que_nao_e_berco_nunca_e_alvo(tmp_falso: Path, nome: str) -> None:
 
 def test_link_simbolico_nunca_e_seguido(tmp_falso: Path, tmp_path: Path) -> None:
     """Um link chamado `hefesto-berco-<pid morto>` apontando para a config dela"""
-    de_verdade = tmp_path / "config-dela"
+    de_verdade = tmp_path / "config-do-usuario"
     de_verdade.mkdir()
     (de_verdade / "perfil.json").write_text("{}", encoding="utf-8")
     morto = _pid_morto()
@@ -302,7 +302,7 @@ def test_sessao_de_mentira_nao_varre_o_berco_da_sessao_viva() -> None:
     assert tempfile.gettempdir() == str(nosso)
 
 
-def test_o_home_dela_nao_e_assunto_deste_mecanismo() -> None:
+def test_o_home_do_usuario_nao_e_assunto_deste_mecanismo() -> None:
     """Contrato declarado: o berço mexe em `/tmp`, e o `$HOME` fica com o"""
     nosso = _berco_vivo()
     lar = Path(os.path.expanduser("~")).resolve()

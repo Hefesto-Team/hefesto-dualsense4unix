@@ -375,7 +375,7 @@ def test_mordida_o_serial_comparado_como_texto_reprova_o_vpad_certo(
     assert "serial_e_no_conferem" in _reprovados(ensaio, medida)
 
 
-def test_quem_esta_na_bancada_e_avisado_no_comeco_de_cada_fase(
+def test_quem_esta_no_ensaio_e_avisado_no_comeco_de_cada_fase(
         tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem o aviso, ninguém sabe quando soltar o controle e quando pôr o dedo."""
     avisos: list[str] = []

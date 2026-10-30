@@ -65,7 +65,7 @@ def _perfil(
     )
 
 
-def _bancada(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
+def _ensaio(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
     for perfil in perfis:
         save_profile(perfil)
     fc = FakeController()
@@ -119,7 +119,7 @@ def _tiques(sw: AutoSwitcher, info: dict[str, Any], de: float, ate: float) -> No
 def test_leitura_vazia_com_o_jogo_em_cena_entra_no_perfil_dele(
     perfis_isolados: Path,
 ) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     cena = _Cena()
     cena.appid = APPID
     sw = _switcher(manager, store, cena)
@@ -128,7 +128,7 @@ def test_leitura_vazia_com_o_jogo_em_cena_entra_no_perfil_dele(
 
 
 def test_leitura_vazia_sem_jogo_em_cena_fica_no_de_antes(perfis_isolados: Path) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     manager.activate("geral")
     sw = _switcher(manager, store, _Cena())
     _tiques(sw, {}, 0.0, 2.0)
@@ -138,7 +138,7 @@ def test_leitura_vazia_sem_jogo_em_cena_fica_no_de_antes(perfis_isolados: Path) 
 def test_janela_sem_regra_de_jogo_com_o_jogo_em_cena_entra_no_do_jogo(
     perfis_isolados: Path,
 ) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     cena = _Cena()
     cena.appid = APPID
     sw = _switcher(manager, store, cena)
@@ -149,7 +149,7 @@ def test_janela_sem_regra_de_jogo_com_o_jogo_em_cena_entra_no_do_jogo(
 def test_a_janela_sem_regra_e_sem_jogo_em_cena_segue_a_janela(
     perfis_isolados: Path,
 ) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     sw = _switcher(manager, store, _Cena())
     _tiques(sw, {"wm_class": "firefox", "wm_name": "Mozilla"}, 0.0, 2.0)
     assert store.active_profile == "navegacao"
@@ -158,7 +158,7 @@ def test_a_janela_sem_regra_e_sem_jogo_em_cena_segue_a_janela(
 def test_jogo_em_cena_sem_perfil_proprio_nao_inventa_perfil(
     perfis_isolados: Path,
 ) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     manager.activate("geral")
     cena = _Cena()
     cena.appid = 999
@@ -170,7 +170,7 @@ def test_jogo_em_cena_sem_perfil_proprio_nao_inventa_perfil(
 def test_sem_leitor_do_jogo_em_cena_o_caminho_de_hoje_nao_muda(
     perfis_isolados: Path,
 ) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     manager.activate("geral")
     sw = _switcher(manager, store, None)
     _tiques(sw, {}, 0.0, 2.0)
@@ -178,7 +178,7 @@ def test_sem_leitor_do_jogo_em_cena_o_caminho_de_hoje_nao_muda(
 
 
 def test_o_leitor_que_levanta_nao_derruba_o_tique(perfis_isolados: Path) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     manager.activate("geral")
 
     def _quebra() -> int | None:
@@ -194,8 +194,8 @@ def test_quando_a_prova_some_e_a_leitura_segue_vazia_o_jogo_fica(
 ) -> None:
     from hefesto_dualsense4unix.utils import session
 
-    monkeypatch.setattr(session, "a_escolha_dela", lambda **_k: "navegacao")
-    manager, store = _bancada(_os_perfis())
+    monkeypatch.setattr(session, "a_escolha_do_usuario", lambda **_k: "navegacao")
+    manager, store = _ensaio(_os_perfis())
     cena = _Cena()
     cena.appid = APPID
     sw = _switcher(manager, store, cena)
@@ -206,10 +206,10 @@ def test_quando_a_prova_some_e_a_leitura_segue_vazia_o_jogo_fica(
     assert store.active_profile == "o_jogo"
 
 
-def test_a_prova_do_jogo_nao_passa_por_cima_do_que_ela_escolheu_a_mao(
+def test_a_prova_do_jogo_nao_passa_por_cima_do_que_o_usuario_escolheu_a_mao(
     perfis_isolados: Path,
 ) -> None:
-    manager, store = _bancada(_os_perfis())
+    manager, store = _ensaio(_os_perfis())
     cena = _Cena()
     cena.appid = APPID
     sw = _switcher(manager, store, cena)

@@ -1930,8 +1930,8 @@ class BrokerState:
         if base is None:
             return frozenset()
         canon = f"{self._dev_root}/{base}"
-        dela = self.by_conn if cmd == "restore" else self.expostos_by_conn
-        return frozenset({canon}) if canon in dela.get(conn_id, set()) else frozenset()
+        mapa_da_vez = self.by_conn if cmd == "restore" else self.expostos_by_conn
+        return frozenset({canon}) if canon in mapa_da_vez.get(conn_id, set()) else frozenset()
 
     def _podar_o_que_saiu(self, *, exceto: frozenset[str] = frozenset()) -> None:
         """Tira da contabilidade a lease cujo aparelho saiu. Não escreve no fs."""

@@ -144,7 +144,7 @@ def test_ler_nos_devolve_o_nome_e_a_descricao_inteiros() -> None:
 
 @pytest.mark.parametrize("nome_da_saida", ["alsa_output.pci-0000_0b_00.4.iec958-stereo",
                                            "alsa_output.Fone do João™"])
-def test_o_monitor_da_saida_nao_ganha_o_nome_nem_a_descricao_dela(nome_da_saida: str) -> None:
+def test_o_monitor_da_saida_nao_ganha_o_nome_nem_a_descricao_do_usuario(nome_da_saida: str) -> None:
     """O monitor tem o serial da saída: do nó vêm as propriedades, e o nome e a descrição não.
 
     A forma medida em 24/10/2026 nesta máquina: o monitor 74 tem `object.serial` 74, o

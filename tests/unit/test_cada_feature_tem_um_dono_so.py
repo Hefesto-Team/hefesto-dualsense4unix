@@ -29,7 +29,7 @@ from typing import Any
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 PUBLICADAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 
 FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
@@ -51,9 +51,9 @@ if str(RAIZ / "src/hefesto_dualsense4unix/interface") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 import monta
 
-PAGINAS = sorted(p.name for p in BANCADA.glob("*.html") if p.name not in monta.PAGINAS_QUE_SAIRAM)
+PAGINAS = sorted(p.name for p in ENSAIO.glob("*.html") if p.name not in monta.PAGINAS_QUE_SAIRAM)
 ARQUIVOS = [pytest.param(pasta, nome, id=f"{rotulo}-{nome}")
-            for rotulo, pasta in (("bancada", BANCADA), ("publicada", PUBLICADAS))
+            for rotulo, pasta in (("bancada", ENSAIO), ("publicada", PUBLICADAS))
             for nome in PAGINAS]
 
 
@@ -122,9 +122,9 @@ def test_nenhuma_pagina_emite_o_gesto_de_escrita_de_outra_aba(pasta: Path, nome:
     assert not fora, f"{nome} emite gesto de escrita que é de outra aba (gesto -> dona): {fora}"
 
 
-def test_a_bancada_da_dona_emite_o_que_o_mapa_diz() -> None:
+def test_o_ensaio_da_dona_emite_o_que_o_mapa_diz() -> None:
     """Contra a régua cega: a dona emite ou atende ao menos um gesto de cada papel."""
-    achados = {nome: gestos_da_pagina((BANCADA / nome).read_text(encoding="utf-8"))
+    achados = {nome: gestos_da_pagina((ENSAIO / nome).read_text(encoding="utf-8"))
                for nome in PAGINAS}
     assert len(achados) >= 11 and any(achados.values()), "a bancada sumiu — régua cega"
     sem_nenhum = []

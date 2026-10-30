@@ -4,7 +4,7 @@ Nove auditorias só de leitura sobre as sprints de 26 e 27/09/2026 e sobre o pro
 
 > **Como ler as citações.** Todo `arquivo:linha` abaixo é o do código de
 > 27/09. As curas que vieram depois moveram linhas (o
-> `_a_escolha_dela_sem_o_vazamento`, por exemplo, estava em
+> `_a_escolha_do_usuario_sem_o_vazamento`, por exemplo, estava em
 > `lifecycle.py:304-346` e em 28/09 começava na 566). Na dúvida, procure o
 > nome da função; a linha é o endereço daquele dia. Caminho que começa em
 > `app/`, `daemon/`, `integrations/`, `interface/` ou `profiles/` é relativo a
@@ -422,5 +422,5 @@ apontam para uma pasta fora do git.
   `A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01`, `O-BASICO-MEDIDO-01`,
   `TODO-GESTO-SE-ALCANCA-SEM-MOUSE-01`, `A-JANELA-SE-NAVEGA-PELO-CONTROLE-01`,
   `A-RECUSA-SE-ENTENDE-SEM-COR-01`, `O-TIQUE-DE-CADA-ABA-CABE-NO-TETO-01`,
-  `A-TELA-E-DEPENDENCIA-DURA-01`, `O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01` e
+  `A-TELA-E-DEPENDENCIA-DURA-01`, `O-QUE-E-DO-ENSAIO-FICA-NO-ENSAIO-01` e
   `A-PORTA-DE-QUEM-CHEGA-01`.

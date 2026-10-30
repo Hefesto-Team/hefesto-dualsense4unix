@@ -95,7 +95,7 @@ def test_o_interrogacao_de_uma_ordem_nao_abre_vazio() -> None:
         "com um travessão, que é a promessa quebrada do achado de 02/09.")
 
 
-def test_ele_traz_as_duas_frases_do_produto_com_o_rotulo_delas() -> None:
+def test_ele_traz_as_duas_frases_do_produto_com_o_rotulo_do_usuario() -> None:
     """"Por que importa" e "Ganho esperado", as duas do dono, rotuladas."""
     dica = a08._linha(_item_de_ordem())["dica"]
     for rotulo, texto in zip(ROTULOS_DA_ORDEM[1:], (IMPORTA, GANHO), strict=True):

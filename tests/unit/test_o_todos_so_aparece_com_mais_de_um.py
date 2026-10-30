@@ -116,7 +116,7 @@ def test_o_rotulo_da_fita_fica_mesmo_sem_o_todos() -> None:
     assert monta.ROTULO_DA_FITA in monta.fita(ativo="todos", mesa=UM)
 
 
-def test_o_desenho_dela_nao_se_mexe() -> None:
+def test_o_desenho_do_usuario_nao_se_mexe() -> None:
     """A bancada tem DOIS na mesa, então o `Todos` continua lá, byte a byte."""
     assert len(monta.CONECTADOS) > 1, "a mesa do desenho encolheu — releia esta cura"
     assert _tem_todos(monta.fita(ativo="todos"))

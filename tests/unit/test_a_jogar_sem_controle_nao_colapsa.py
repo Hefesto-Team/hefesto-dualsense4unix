@@ -12,7 +12,7 @@ import re
 
 from hefesto_dualsense4unix.interface import aba01, monta, onde
 
-JOGAR = onde.BANCADA / "01-jogar.html"
+JOGAR = onde.ENSAIO / "01-jogar.html"
 
 
 def _folha() -> str:

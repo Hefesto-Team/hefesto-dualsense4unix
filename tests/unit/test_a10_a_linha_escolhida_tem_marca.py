@@ -147,7 +147,7 @@ def test_a_marca_sobrevive_a_repintura() -> None:
         "reescreveria para sempre e apagaria o `:hover` da linha sob o mouse")
 
 
-def test_a_marca_muda_de_linha_quando_ela_clica_noutra() -> None:
+def test_a_marca_muda_de_linha_quando_o_usuario_clica_noutra() -> None:
     """Ela clica no ``Terceiro``, depois no ``Primeiro`` — a marca acompanha."""
     nomes = ["Primeiro", "Segundo", "Terceiro"]
     _clicar("Terceiro")
@@ -167,7 +167,7 @@ def test_a_lista_vazia_nao_inventa_marca() -> None:
     from hefesto_dualsense4unix.app.actions import profiles_actions
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: None)
+        mp.setattr(profiles_actions, "perfil_que_o_usuario_ativou", lambda: None)
         linhas = _linhas(_pacote([], ativo=""))
     assert len(linhas) == 1 and "aria-selected" not in linhas[0]
 

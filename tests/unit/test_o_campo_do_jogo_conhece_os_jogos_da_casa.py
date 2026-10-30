@@ -233,7 +233,7 @@ class TestAFraseAoLadoDoCampo:
         assert frase == MSG_NAO_RECONHECI
         assert alerta is True
 
-    def test_enquanto_ela_digita_o_nome_a_frase_cala(self) -> None:
+    def test_enquanto_o_usuario_digita_o_nome_a_frase_cala(self) -> None:
         for digitando in ("M", "Mar", "Mar de Est"):
             assert frase_do_campo_do_jogo(digitando, self.nomes) is None, digitando
 

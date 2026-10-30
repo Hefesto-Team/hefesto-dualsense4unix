@@ -555,7 +555,7 @@ MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 
 ATRIBUTO_DO_SOM = "data-som"
 
-FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # (noqa-acento)
+FRASE_DO_USUARIO = "icone mas no radio ele pode tá carregando tambem"  # (noqa-acento)
 
 _RAIO = ('<svg class="g-raio" viewBox="0 0 24 24" width="11" height="11"'
          ' aria-hidden="true" focusable="false">'
@@ -1394,7 +1394,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>E o preço, dito inteiro:</b> nesse estado o P1 aparece todo, o P2 aparece pela metade (141 px dos 301) e o <b>P3 e o P4 começam com zero pixel à mostra</b>. O que diz que eles estão ali são três coisas, e as três estão na tela: o chip <b>Todos</b> aceso, o <span class="marca">{len(MESA)} controles</span> do cabeçalho e a <b>barra de rolagem</b>, que nasce junto com a rolagem e ocupa 10 px. Foi por isso que a barra precisou de regra própria — a do Chrome é sobreposta e some quando ninguém está rolando, e aí seria o defeito de 27/08 de volta com outra roupa.</li>
     <li><b>2×2 foi medido e é pior.</b> Meio card tem 515 px de largura útil para cinco colunas que pedem 884; viraria três fileiras e cada card passaria a ~545 px de altura — aí só <b>um</b> aparece de cada vez.</li>
     <li><b>O corpo fechado não pode ser <code>display:none</code>, e o motivo é a régua.</b> Ela lê a altura de todo botão e reprova família com alturas divergentes; com <code>display:none</code> os dois botões de rota de cada card fechado medem <b>0</b>, e ela acusa <span class="marca">altura divergente em button.-: 0 / 36</span> — um defeito que só existiria porque o elemento sumiu. Com <code>height:0;overflow:hidden</code> o corpo continua <b>desenhado</b> no tamanho natural e só recortado: a régua segue medindo os <b>{len(MESA)}</b> cards por dentro, não só o que está à mostra. Ela ficou mais severa, não menos.</li>
-    <li><b>O estado de carga virou ícone, e o ícone não pergunta por onde o controle fala.</b> Você decidiu assim: <i>"{FRASE_DELA}"</i>. O <b>P2 está no rádio e aparece carregando</b> — porque o transporte diz por onde o controle <i>conversa</i> e a carga diz por onde entra <i>energia</i>, e um DualSense no rádio pode estar num cabo de energia. <b>Descarregando não ganha ícone</b>: o número ao lado já diz. O vão do ícone fica reservado mesmo vazio, senão as {len(MESA)} barras voltariam a ter larguras diferentes. Passe o mouse: o nome do estado está no ponteiro, para quem não reconhecer o desenho.</li>
+    <li><b>O estado de carga virou ícone, e o ícone não pergunta por onde o controle fala.</b> Você decidiu assim: <i>"{FRASE_DO_USUARIO}"</i>. O <b>P2 está no rádio e aparece carregando</b> — porque o transporte diz por onde o controle <i>conversa</i> e a carga diz por onde entra <i>energia</i>, e um DualSense no rádio pode estar num cabo de energia. <b>Descarregando não ganha ícone</b>: o número ao lado já diz. O vão do ícone fica reservado mesmo vazio, senão as {len(MESA)} barras voltariam a ter larguras diferentes. Passe o mouse: o nome do estado está no ponteiro, para quem não reconhecer o desenho.</li>
     <li><b>As {len(MESA)} barras de bateria têm a mesma largura, e isso é leitura e não capricho.</b> Elas <i>esticavam</i> para ocupar o vão de cada linha, e os trilhos mediram <b>312, 60, 35 e 139 px</b>. O preenchimento é uma porcentagem do trilho: o <b>31%</b> do P3 num trilho de 35 px desenhava uma barra <b>menor</b> que o <b>64%</b> do P2 num de 60 — quatro réguas de tamanhos diferentes que o olho compara e lê errado. Agora são <b>{LARG_BATERIA} px</b> nas {len(MESA)}, e a mais apertada (a do P3) tem 13,7 px de folga.</li>
     <li><b>A conta é um portão.</b> Se um dia entrar mais controle a ponto de o card aberto não caber, o gerador <b>para</b> com o número na mão, em vez de entregar de novo uma tela que esconde controle calada.</li>
     <li><b>Cicatriz: a classe não pode se chamar <code>tira</code>.</b> <code>.tira</code> é a <b>fila de abas</b> do esqueleto (<code>topo.html:109</code>). Com a regra deste arquivo batizada assim, <code>height:34px</code> e <code>text-transform:uppercase</code> caíam na fila de abas lá em cima: o cabeçalho encolheu 8 px e o miolo desta aba mediu <b>550 px contra os 542 de todas as outras nove</b> — e a régua de alinhamento passou <b>verde</b>. A classe se chama <code>.ctl</code>.</li>
@@ -1620,13 +1620,13 @@ def _conferir(doc, aba="02-controles"):
     exigir('data-mic-modo="' not in corpo and 'data-gesto="mic-modo"' not in corpo,
            "o par «Virtual | Nativo» do microfone voltou — saiu em 02/10/2026")
 
-    for rota, palavra_dela in (("jogo", ROTULO_SO_OS_EFEITOS),
+    for rota, palavra_do_usuario in (("jogo", ROTULO_SO_OS_EFEITOS),
                                ("pc", ROTULO_TUDO_NO_CONTROLE),
                                ("nada", ROTULO_NADA_NO_CONTROLE)):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
-        exigir(vistos == [palavra_dela] * len(MESA),
+        exigir(vistos == [palavra_do_usuario] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
-               f"e a palavra do todo é {palavra_dela!r}")
+               f"e a palavra do todo é {palavra_do_usuario!r}")
     exigir(len(re.findall(r'data-campo="alto-junto"[^>]*><button[^>]*data-rota="jogo"', corpo)) == len(MESA),
            "a marca da fonte `mix` perdeu o invólucro do botão «jogo» em algum controle")
 

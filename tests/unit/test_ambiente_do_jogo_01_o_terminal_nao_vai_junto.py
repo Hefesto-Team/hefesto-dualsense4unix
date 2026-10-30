@@ -546,7 +546,7 @@ class TestOGanchoDoJogo:
             assert bin_sujo not in proton["PATH"].split(":"), proton["PATH"]
         assert proton["PATH"] == f"{tmp_path / 'mudos'}:/usr/bin:/bin"
 
-    def test_o_que_ela_escreve_na_opcao_de_inicializacao_sobrevive(
+    def test_o_que_o_usuario_escreve_na_opcao_de_inicializacao_sobrevive(
         self, tmp_path: Path
     ) -> None:
         """A Opção de Inicialização vem em "$@", DEPOIS da limpeza."""

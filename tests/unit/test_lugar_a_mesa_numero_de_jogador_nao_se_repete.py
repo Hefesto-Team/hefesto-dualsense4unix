@@ -346,7 +346,7 @@ def _mesa_de_06_08(raiz: Path, *, com_vpad: bool) -> Mesa:
 class TestAMesaMedidaEm0608:
     """O cenário exato das 22h40 — e ele tem de continuar sem repetir."""
 
-    def test_os_numeros_batem_com_o_journal_dela(self, raiz_leds: Path) -> None:
+    def test_os_numeros_batem_com_o_journal_do_usuario(self, raiz_leds: Path) -> None:
         """Ancoragem: se estes três números mudarem, o resto não vale nada.
 
         A medição entregue: `external_led_written slot=2` no Pro e `slot=3` no

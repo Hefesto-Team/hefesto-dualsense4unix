@@ -797,7 +797,7 @@ class TestTodoJogoTemClasse:
         texto, mudancas = pp.build_compat_tool_mapping(
             _config_vdf({"0": PINO, "42": "steamlinuxruntime_sniper", "43": "proton_9"}),
             tool_name=PINO, appids=["42", "43"], pinos_nossos=(PINO,),
-            atropelar_escolha_dela=True,
+            atropelar_escolha_do_usuario=True,
         )
         mapa = pp.extract_compat_tool_mapping(texto)
         assert mapa["42"] == "steamlinuxruntime_sniper"
@@ -853,7 +853,7 @@ class TestTodoJogoTemClasse:
         original = _config_vdf({"0": PINO, "316790": PINO})
         texto, mudancas = pp.build_compat_tool_mapping(
             original, tool_name=PINO, appids=["316790"], pinos_nossos=(PINO,),
-            atropelar_escolha_dela=True, sem_entrada_nova={"316790"},
+            atropelar_escolha_do_usuario=True, sem_entrada_nova={"316790"},
         )
         assert texto == original and mudancas == {}
 
@@ -933,7 +933,7 @@ class TestAOrfaEntraPelaFerramenta:
                 "2369580": "GE-Proton10-34",
             }),
             tool_name=PINO, appids=[], pinos_nossos=(PINO, "GE-Proton10-34"),
-            atropelar_escolha_dela=True,
+            atropelar_escolha_do_usuario=True,
         )
         mapa = pp.extract_compat_tool_mapping(texto)
         assert mapa["1245620"] == PINO
@@ -945,7 +945,7 @@ class TestAOrfaEntraPelaFerramenta:
         original = _config_vdf({"0": PINO, "1245620": "proton_11"})
         texto, mudancas = pp.build_compat_tool_mapping(
             original, tool_name=PINO, appids=[], pinos_nossos=(PINO,),
-            atropelar_escolha_dela=True, excluir={"1245620"},
+            atropelar_escolha_do_usuario=True, excluir={"1245620"},
         )
         assert texto == original and mudancas == {}
 

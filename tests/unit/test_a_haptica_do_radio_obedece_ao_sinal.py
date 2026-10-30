@@ -89,7 +89,7 @@ class TestORadioSoLevaOQueTemSinal:
         assert [r[1] >> 4 for r in escritas] == [0, 1, 2, 3]
         assert [r[10] for r in escritas] == [0, 1, 2, 3], "o contador de quadros pulou"
 
-    def test_o_ensaio_de_bancada_segue_mandando_o_que_pediu(self) -> None:
+    def test_o_ensaio_de_ensaio_segue_mandando_o_que_pediu(self) -> None:
         """A bomba nasce sem o critério: o ensaio manda silêncio de propósito."""
         bomba, escritas = _bomba_da_haptica([SILENCIO] * 3, so_com_sinal=False)
         bomba.rodar(segundos=10)
@@ -603,7 +603,7 @@ def test_a_volta_guarda_o_que_leu_e_a_espera_so_acorda_pela_mudanca(
         "a volta não publicou os endpoints dos aparelhos"
     )
     assert mesa.sub._a_mesa_do_som_mudou() is False, "a mesa parada acordou a volta"
-    mesa.servidor.tocar("alsa_output.fone_dela", "77")
+    mesa.servidor.tocar("alsa_output.fone_do_usuario", "77")
     assert mesa.sub._a_mesa_do_som_mudou() is False, "o fluxo de fora da mesa acordou a volta"
     mesa.o_jogo_abre()
     assert mesa.sub._a_mesa_do_som_mudou() is True, "o fluxo do jogo não acordou a volta"

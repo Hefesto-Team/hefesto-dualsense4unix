@@ -84,7 +84,7 @@ def nome_do_ativo(state: Any = None) -> str:
 
     O DONO DA PERGUNTA É `profiles_actions.perfil_que_esta_valendo` (§P1), e
     ele resolve em DUAS pernas: o daemon primeiro, a escolha do usuário no disco
-    depois (`utils.session.a_escolha_dela`, o mesmo dono que o boot pergunta).
+    depois (`utils.session.a_escolha_do_usuario`, o mesmo dono que o boot pergunta).
     O ``state.get("active_profile")`` CRU só tem a primeira.
 
     O QUE ISSO CURA, MEDIDO em 06/09/2026 com um perfil no disco e o daemon

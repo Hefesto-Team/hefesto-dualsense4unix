@@ -164,7 +164,7 @@ gesto do usuário trocava a ponte viva sem que nada no disco aprendesse. Medido 
 journal: 24 apertos em 7 dias, porque os 23 perfis de jogo do usuário pedem
 `dualsense` e ela joga em `xbox`.
 
-`ponte_do_gesto` (a `GestoDela`) é esse registro: a ponte que o gesto deixou de
+`ponte_do_gesto` (a `GestoDoUsuario`) é esse registro: a ponte que o gesto deixou de
 pé, o appid do jogo, e o relógio do silêncio. Ele vive no daemon como a
 tentativa, morre com o jogo como ela, e o tique de 1 Hz é quem o colhe. Não é
 uma segunda escada: é a mesma pergunta (*"que ponte ficou de pé, e ela parou de
@@ -249,7 +249,7 @@ class Passo:
 
 
 @dataclass
-class GestoDela:
+class GestoDoUsuario:
     """A ponte que o GESTO do usuário deixou de pé, esperando o silêncio."""
 
     appid: int
@@ -281,19 +281,19 @@ def em_curso(daemon: Any) -> Tentativa | None:
     return valor if isinstance(valor, Tentativa) else None
 
 
-def gesto_em_curso(daemon: Any) -> GestoDela | None:
+def gesto_em_curso(daemon: Any) -> GestoDoUsuario | None:
     """A ponte que o gesto do usuário deixou de pé neste daemon, ou None."""
     valor = getattr(daemon, ATRIBUTO_DO_GESTO, None)
-    return valor if isinstance(valor, GestoDela) else None
+    return valor if isinstance(valor, GestoDoUsuario) else None
 
 
-def _guardar_o_gesto(daemon: Any, gesto: GestoDela | None) -> None:
+def _guardar_o_gesto(daemon: Any, gesto: GestoDoUsuario | None) -> None:
     """Grava (ou apaga) a ponte do gesto. Best-effort, como a tentativa."""
     with contextlib.suppress(Exception):
         setattr(daemon, ATRIBUTO_DO_GESTO, gesto)
 
 
-def esquecer_o_gesto(daemon: Any) -> GestoDela | None:
+def esquecer_o_gesto(daemon: Any) -> GestoDoUsuario | None:
     """Apaga o registro do gesto. Devolve o que estava lá."""
     gesto = gesto_em_curso(daemon)
     _guardar_o_gesto(daemon, None)
@@ -308,7 +308,7 @@ def _anotar_o_gesto(
     momento: float,
     gestos: int | None = None,
     a_registrar: bool = False,
-) -> GestoDela:
+) -> GestoDoUsuario:
     """Abre ou refresca o registro do gesto. Um por jogo, e o relógio reinicia."""
     anterior = gesto_em_curso(daemon)
     if anterior is not None and anterior.appid == appid:
@@ -317,7 +317,7 @@ def _anotar_o_gesto(
         anterior.gestos = anterior.gestos + 1 if gestos is None else gestos
         anterior.a_registrar = anterior.a_registrar or a_registrar
         return anterior
-    novo = GestoDela(
+    novo = GestoDoUsuario(
         appid=appid,
         ponte=ponte,
         ultimo_gesto=momento,
@@ -335,7 +335,7 @@ def gesto_deixou_de_pe(
     caminho: str | None,
     jogo_vivo: bool,
     agora: float | None = None,
-) -> GestoDela | None:
+) -> GestoDoUsuario | None:
     """Momento 2b: a ponte que o gesto do usuário deixou de pé. None = nada anotado.
 
     NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O registro guardava a MÁSCARA
@@ -716,7 +716,7 @@ __all__ = [
     "PASSO_PULOU",
     "PASSO_SUBIU",
     "Comeco",
-    "GestoDela",
+    "GestoDoUsuario",
     "Passo",
     "Tentativa",
     "Tique",

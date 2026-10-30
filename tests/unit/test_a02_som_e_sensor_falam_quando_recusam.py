@@ -185,7 +185,7 @@ class PonteQueDevolveOCorpo(PonteDeMentira):
 class TestOsQuatroBotoesDeSensor:
     """**O INTERRUPTOR PASSOU A INTERROMPER — 04/09/2026, à tarde.**"""
 
-    def test_os_quatro_botoes_de_sensor_tem_endereco_na_bancada(self) -> None:
+    def test_os_quatro_botoes_de_sensor_tem_endereco_no_ensaio(self) -> None:
         """MORDIDA: tire o `data-gesto="sensor"` do gerador e isto reprova."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-gesto="sensor"') == doc.count('data-sensor="'), (
@@ -341,7 +341,7 @@ class TestOsDoisDeslizantes:
                 _gesto("volume")(_ctx(), {"uniq": UNIQ, "volume": "microfone",
                                           "valor": cru}, PonteDeMentira())
 
-    def test_os_dois_deslizantes_estao_na_bancada(self) -> None:
+    def test_os_dois_deslizantes_estao_no_ensaio(self) -> None:
         """MORDIDA: tire o `<input type="range">` do gerador e isto reprova."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-volume="microfone"') >= 1

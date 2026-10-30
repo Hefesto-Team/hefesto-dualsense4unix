@@ -92,7 +92,7 @@ def test_todo_controle_do_radio_ganha_canal_sem_declarar_nada() -> None:
     assert _Subsystem().alvos(_A, _B) == [_A, _B]
 
 
-def test_quem_ela_desligou_fica_de_fora() -> None:
+def test_quem_o_usuario_desligou_fica_de_fora() -> None:
     assert _Subsystem(frozenset({_A})).alvos(_A, _B) == [_B]
 
 

@@ -287,16 +287,16 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
         "porque a pintura não sabe escrever CLASSE.")
 
 
-def test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco():
+def test_o_html_publicado_e_o_ensaio_concordam_sobre_o_endereco():
     """Onde cada `data-campo` está, nos DOIS lados — e o par que ainda difere."""
     import monta
     import onde
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
         encoding="utf-8")
     piso, teto = len(monta.CONECTADOS), len(monta.MESA)
-    for lado, texto in (("bancada", bancada), ("publicado", publicado)):
+    for lado, texto in (("bancada", ensaio), ("publicado", publicado)):
         for quem, agulha in (
                 ("a fileira de jogador", 'data-campo="players" data-hef-alvo="html"'),
                 ("a barra de brilho", 'data-campo="brilho-pct" data-hef-alvo="largura"')):
@@ -310,7 +310,7 @@ def test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco():
             f"o {lado} ficou com os dois endereços: o da fileira e os dos "
             f"botões. Dois donos para o mesmo lugar é o que este projeto "
             f"persegue.")
-    assert bancada.count('data-campo="brilho-pct" data-hef-alvo="largura"') == teto, (
+    assert ensaio.count('data-campo="brilho-pct" data-hef-alvo="largura"') == teto, (
         "a bancada deixou de endereçar a barra de brilho nos quatro lugares — "
         "o lugar que ganha um controle volta a não ter onde pousar o brilho")
 
@@ -349,7 +349,7 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
     o gerador, e a primeira asserção reprova.
 
     E A CONTA DEIXOU DE SER `== 2` EM 07/09/2026, pela mesma razão de
-    `test_o_html_publicado_e_a_bancada_concordam_sobre_o_endereco`: a bancada e
+    `test_o_html_publicado_e_o_ensaio_concordam_sobre_o_endereco`: a bancada e
     o publicado andam em gerações diferentes, e desde a função única do
     `aba04.py` o lugar que nasce vazio também carrega o endereço da luz. O que
     vale nos dois lados é o piso (toda coluna conectada) e o teto (a mesa).
@@ -392,39 +392,39 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
     import onde
     from pacotes import a04_iluminacao as pac
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert bancada.count('data-campo="tons" data-hef-alvo="html"') == 4, (
+    ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert ensaio.count('data-campo="tons" data-hef-alvo="html"') == 4, (
         "a guia de cores voltou a não ter endereço de estado — ou ela deixou "
         "de nascer nos QUATRO lugares, e o P3 que ganha um controle volta a "
         "ficar sem onde trocar a cor.")
-    assert bancada.count('class="tom') == 4 * len(pac.tons_da_guia()), (
+    assert ensaio.count('class="tom') == 4 * len(pac.tons_da_guia()), (
         "a bancada e `tons_da_guia()` discordam sobre quantos tons a guia tem")
 
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     for n in (1, 2):
-        assert f'data-hex="{pac._hex(player_slot_color(n))}"' in bancada
+        assert f'data-hex="{pac._hex(player_slot_color(n))}"' in ensaio
 
 
-def test_a_bancada_perdeu_a_dica_congelada_da_celula_de_leds():
+def test_o_ensaio_perdeu_a_dica_congelada_da_celula_de_leds():
     """A dica do `.aceso` saiu do ATRIBUTO da célula e entrou no desenho."""
     import onde
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert '<div class="aceso" data-campo="luz" data-hef-alvo="html">' in bancada, (
+    ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert '<div class="aceso" data-campo="luz" data-hef-alvo="html">' in ensaio, (
         "a célula de LEDs voltou a carregar atributo cravado pelo gerador.")
-    assert " aceso:" not in bancada, (
+    assert " aceso:" not in ensaio, (
         "a palavra que ela mandou tirar voltou ao desenho.")
     import monta
     from pacotes import a04_iluminacao as pac
 
     for c in monta.CONECTADOS:
         esperada = pac.dica_da_luz(c["nome"], c["via"], "")
-        assert bancada.count(f'title="{esperada}"') == 3, (
+        assert ensaio.count(f'title="{esperada}"') == 3, (
             f"as três peças da coluna de {c['nome']} — as duas tiras e o "
             f"indicador — deviam dizer a MESMA dica viva ({esperada!r}); a do "
             f"meio dizendo outra coisa é a botoeira de volta.")
-    assert "Desenho que mandamos" not in bancada, (
+    assert "Desenho que mandamos" not in ensaio, (
         "a afirmação sobre o desenho das 5 luzes voltou ao desenho: este pacote "
         "não vê o override por-uniq que decide qual desenho está em vigor.")
 
@@ -441,7 +441,7 @@ def test_o_gerador_e_o_produto_desenham_a_mesma_luz():
         "sem recado não há dica: aviso permanente vira paisagem.")
 
 
-def test_um_numero_que_a_bancada_nunca_teve_nao_congela_a_aba():
+def test_um_numero_que_o_ensaio_nunca_teve_nao_congela_a_aba():
     """`monta.luzinhas(9)` levanta `KeyError`, e agora quem a chama é o PRODUTO.
 
     `core/led_control.player_led_pattern` — o dono — devolve padrão para
@@ -748,11 +748,11 @@ def test_a_casa_hachurada_saiu_e_o_gesto_nao_aceita_cor_sem_tom():
     """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem de produto."""
     import onde
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert '<input type="color"' not in bancada, (
+    ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert '<input type="color"' not in ensaio, (
         "o campo de cor do sistema voltou à fileira — e o gesto dele morreu "
         "junto, então ele seria um clique sem resposta")
-    assert 'class="livre"' not in bancada
+    assert 'class="livre"' not in ensaio
 
     with pytest.raises(ValueError) as sem_tom:
         _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "", "valor": "#00ff80",
@@ -793,14 +793,14 @@ def test_os_tres_tons_sairam_dos_quatro_controles():
 
     crus = ["#{:02X}{:02X}{:02X}".format(*rgb) for rgb in pac.tons_da_guia()]
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     for h in ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#00FFFF"):
         assert h not in crus, f"{h} continua na guia"
-        assert f'data-hex="{h}"' not in bancada, (
+        assert f'data-hex="{h}"' not in ensaio, (
             f"{h} voltou à fileira da página — a guia é só das oito cores de jogador")
 
     assert len(crus) == 8, crus
-    assert bancada.count('class="tom') == 4 * len(crus)
+    assert ensaio.count('class="tom') == 4 * len(crus)
 
     assert crus[0] == "#FFFFFF", "a primeira casa é o branco desde 19/10/2026"
     assert pac.titulo_da_casa(1).startswith("Branco.")

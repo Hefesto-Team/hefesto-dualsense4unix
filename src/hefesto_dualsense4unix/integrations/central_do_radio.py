@@ -34,7 +34,7 @@ LER → DECIDIR → APLICAR → CONFERIR
 
 A ORDEM É DESLIGAR → ESQUECER A ORIGEM → PAREAR → CONFERIR, e é a R1 dela ao pé
 da letra: *«Apagar a conexão no adaptador antigo, pedir PS + Create, e parear
-só no destino.»* FATO SUBSTITUÍDO (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
+só no destino.»* FATO SUBSTITUÍDO (A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01,
 25/09/2026): de 23/09 a 25/09 a ordem foi parear → conferir → esquecer, por
 decisão registrada, para que um parear que falhasse não perdesse a
 conexão velha. A lista dela de 25/09 mediu o preço (passos c1 e c2): com o
@@ -60,7 +60,7 @@ prazo é UM, o da tela também, e o pedido seguinte não espera a vigia para
 encontrá-lo vencido (:meth:`CentralDoRadio._vencer_os_prazos`).
 
 O NOME DO USUÁRIO mora pelo endereço do controle, e não na chave
-(:meth:`CentralDoRadio.cuidar_dos_nomes`, O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
+(:meth:`CentralDoRadio.cuidar_dos_nomes`, O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-02).
 
 IDEMPOTÊNCIA É REQUISITO
 ========================
@@ -75,7 +75,7 @@ conferência, já sem a trava —, nenhum outro começa: o pedido volta
 :data:`MOTIVO_OCUPADO`, e o botão treme. A conferida é feita duas vezes, antes
 e DEPOIS de pegar a trava, porque o outro pode nascer enquanto este espera.
 
-O DESTINO SEGUE A CAIXA QUE ELA ABRIU (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01):
+O DESTINO SEGUE A CAIXA QUE ELA ABRIU (O-CONECTAR-SEGUE-A-CAIXA-QUE-O-USUARIO-ABRIU-01):
 o pedido para o MESMO movimento, ainda antes de o aparelho aparecer na janela
 (:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), não é outro movimento — é o chip dela
 levando a busca junto. A janela fecha onde estava e recomeça no destino novo
@@ -84,9 +84,9 @@ mesmo controle.
 
 O «CONECTAR» (D8) é o mesmo caminho sem alvo: a janela abre no destino com
 mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
-SEM O CLIQUE DO USUÁRIO (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
+SEM O CLIQUE DO USUÁRIO (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DO-USUARIO,
 30/09/2026): a janela pareia o aparelho que
-o usuário escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
+o usuário escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_do_usuario`),
 e só um que a janela viu (o «Parear de Novo» escolhe antes). Até 30/09 ela pareava o primeiro
 controle que aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO
 PAREAMENTO ANTIGO também chega (a foto 2 da lista dela de 25/09: *«conectou com
@@ -1084,7 +1084,7 @@ class CentralDoRadio:
         mudou = self._mudar_o_destino(alvo, destino)
         if mudou is not None:
             return mudou
-        escolhido = self._a_escolha_dela(alvo, destino)
+        escolhido = self._a_escolha_do_usuario(alvo, destino)
         if escolhido is not None:
             return escolhido
         repetido = self._o_mesmo_em_curso(alvo, destino)
@@ -1151,7 +1151,7 @@ class CentralDoRadio:
                     de=mascarar(agora.destino), para=mascarar(novo))
         return self._com_o_destino_pedido(agora, novo)
 
-    def _a_escolha_dela(self, alvo: str, destino: str | None) -> Movimento | None:
+    def _a_escolha_do_usuario(self, alvo: str, destino: str | None) -> Movimento | None:
         """O «Parear» dela na lista do «Conectar»: a escolha, e não outro movimento.
 
         O aparelho que a janela ainda não viu também se escolhe, para o «Parear de
@@ -1178,8 +1178,8 @@ class CentralDoRadio:
             if self._movimentos.get(CONECTANDO) is not atual:
                 return None
             self._escolha = alvo
-        logger.info("central_ela_escolheu", aparelho=mascarar(alvo), adaptador=mascarar(pedido),
-                    antes_de_ver=not visto)
+        logger.info("central_o_usuario_escolheu", aparelho=mascarar(alvo),
+                    adaptador=mascarar(pedido), antes_de_ver=not visto)
         return atual
 
     def _tomar_o_destino_pedido(
@@ -1281,7 +1281,7 @@ class CentralDoRadio:
         mudou = self._mudar_o_destino(alvo, destino)
         if mudou is not None:
             return mudou
-        escolhido = self._a_escolha_dela(alvo, destino)
+        escolhido = self._a_escolha_do_usuario(alvo, destino)
         if escolhido is not None:
             return escolhido
         repetido = self._o_mesmo_em_curso(alvo, destino)
@@ -1567,7 +1567,7 @@ class CentralDoRadio:
                     self._janela_da_busca = janela
                     self._aberturas += 1
                     self._ultima_busca = dict(self._busca)
-                achado = self._esperar_a_escolha_dela(janela, dono, ligados_antes,
+                achado = self._esperar_a_escolha_do_usuario(janela, dono, ligados_antes,
                                                       comeco=comeco, segundos=segundos,
                                                       destino=adaptador.endereco)
                 if achado is None:
@@ -1700,7 +1700,7 @@ class CentralDoRadio:
         que o próprio BlueZ deriva (da ``Appearance``, no de baixo consumo); sem
         os dois, ao daemon — o controle que ele publica é controle.
 
-        FATO SUBSTITUÍDO (o conferente da A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
+        FATO SUBSTITUÍDO (o conferente da A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01,
         25/09/2026): sem classe, a pergunta ia ao kernel — *«o aparelho que tem
         hidraw no rádio é controle»*. Todo aparelho HID pelo rádio tem hidraw, e
         o ``HID_PHYS`` dele é o adaptador: o teclado de baixo consumo, que não
@@ -1768,7 +1768,7 @@ class CentralDoRadio:
                 return False
             self._dormir(PASSO_S)
 
-    def _esperar_a_escolha_dela(
+    def _esperar_a_escolha_do_usuario(
         self,
         janela: Janela,
         dono: bluez_dbus.LeitorDoBluez,

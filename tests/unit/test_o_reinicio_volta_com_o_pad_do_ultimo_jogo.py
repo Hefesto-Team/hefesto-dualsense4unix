@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 from tests.unit.test_o_reinicio_com_o_jogo_aberto_nasce_no_modo_do_jogo import (
     APPID,
-    DELA,
+    DO_USUARIO,
     FREESTYLE,
     JOGO,
     _config,
@@ -49,10 +49,10 @@ def _o_disco(*, ultimo_jogo: bool) -> None:
         mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
     ), origem="régua")
     loader.save_profile(Profile(
-        name=DELA, match=MatchCriteria(window_class=["zathura"]), priority=60,
+        name=DO_USUARIO, match=MatchCriteria(window_class=["zathura"]), priority=60,
         mode=ProfileModeConfig(kind="gamepad", caminho="dualsense"),
     ), origem="régua")
-    session.save_last_profile(DELA)
+    session.save_last_profile(DO_USUARIO)
     session.save_freestyle_ligado(False)
     session.save_gamepad_emulation(False)
     if ultimo_jogo:
@@ -112,7 +112,7 @@ def test_sem_ultimo_jogo_o_flag_desligado_governa_o_boot(
     """
     _o_disco(ultimo_jogo=False)
 
-    asyncio.run(_o_reinicio(DELA))
+    asyncio.run(_o_reinicio(DO_USUARIO))
 
     assert _lar.count("pad") == 0, "a escolha de fora do jogo ligou o pad por cima do flag"
 

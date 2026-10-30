@@ -149,7 +149,7 @@ def test_a_largura_volta_depois_de_fechar_e_reabrir(
     assert a10_perfis._larguras_em_texto(TABELA) == "nome:315"
 
 
-def test_o_piso_da_coluna_impede_que_ela_suma(
+def test_o_piso_da_coluna_impede_que_o_usuario_suma(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Uma coluna arrastada a 3px some, e ela não tem onde pegar de novo."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))

@@ -2246,7 +2246,7 @@ def _mult_da_vibracao(policy: str | None, custom_mult: float | None) -> float | 
 
 
 def vibracao_na_economia(
-    dela: ControllerRumbleOverride | None,
+    do_usuario: ControllerRumbleOverride | None,
     politica_do_perfil: str | None,
     custom_do_perfil: float | None = None,
     *,
@@ -2255,19 +2255,19 @@ def vibracao_na_economia(
     """A vibração de UMA peça sob o teto da economia."""
     base = _mult_da_vibracao(politica_do_perfil or "balanceado", custom_do_perfil)
     if base is None or base <= 0.0:
-        return dela
-    escrito = dela is not None and "policy" in dela.model_fields_set
+        return do_usuario
+    escrito = do_usuario is not None and "policy" in do_usuario.model_fields_set
     da_peca = (
-        _mult_da_vibracao(dela.policy, dela.custom_mult)
-        if escrito and dela is not None
+        _mult_da_vibracao(do_usuario.policy, do_usuario.custom_mult)
+        if escrito and do_usuario is not None
         else base
     )
     if da_peca is None:
-        return dela
+        return do_usuario
     teto = base if mesa else _mult_da_vibracao(POLITICA_DA_VIBRACAO_NA_ECONOMIA, None)
     if teto is None or da_peca <= teto:
-        return dela
-    campos = _escritos(dela) if dela is not None else {}
+        return do_usuario
+    campos = _escritos(do_usuario) if do_usuario is not None else {}
     campos.pop("policy", None)
     campos.pop("custom_mult", None)
     if not mesa:
@@ -2289,10 +2289,10 @@ NASCE_NO_LEITOR = "no-leitor"
 
 NASCE_NA_ADOCAO = "na-adoção"
 
-AGUARDA_A_PALAVRA_DELA = "aguarda-a-palavra-dela"
+AGUARDA_A_PALAVRA_DO_USUARIO = "aguarda-a-palavra-do-usuario"
 
 PILHA_DAS_FEATURES = frozenset(
-    {NASCE_NO_ESQUEMA, NASCE_NO_LEITOR, NASCE_NA_ADOCAO, AGUARDA_A_PALAVRA_DELA}
+    {NASCE_NO_ESQUEMA, NASCE_NO_LEITOR, NASCE_NA_ADOCAO, AGUARDA_A_PALAVRA_DO_USUARIO}
 )
 
 
@@ -2454,7 +2454,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_OBRIGATORIO, "Quem escreve a seção diz. O global nasce `True` no daemon."
     ),
     "ProfileMicConfig.volume": Nascimento(
-        AGUARDA_A_PALAVRA_DELA,
+        AGUARDA_A_PALAVRA_DO_USUARIO,
         "O ganho de captura não tem degrau de nascimento: a SOM-SEMPRE-01 pôs "
         "o ALTO-FALANTE em 100% na adoção e deixou o microfone de fora, "
         "escrito com todas as letras (*'o microfone continua SEM DONO'*).",
@@ -2811,7 +2811,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO, "Vazio = nenhum botão prende o clique; só existe por gesto de quem joga."
     ),
     "Profile.mouse": Nascimento(
-        AGUARDA_A_PALAVRA_DELA,
+        AGUARDA_A_PALAVRA_DO_USUARIO,
         "A ÚNICA assimetria que sobra depois da triagem: o teclado emulado "
         "nasce LIGADO no daemon e o mouse nasce DESLIGADO "
         "(`mouse_emulation_enabled=False`), os dois interruptores vizinhos na "
@@ -3048,7 +3048,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
 
 
 __all__ = [
-    "AGUARDA_A_PALAVRA_DELA",
+    "AGUARDA_A_PALAVRA_DO_USUARIO",
     "A_ECONOMIA_EM_CADA_PECA",
     "BRILHO_DAS_LUZES_NA_ECONOMIA",
     "BRILHO_DA_BARRA_NA_ECONOMIA",

@@ -14,7 +14,7 @@ import onde
 
 LARG, ALT = 1920, 1080
 
-VISTA_DELA = (1918, 840)
+VISTA_DO_USUARIO = (1918, 840)
 
 DESTINO_DOC = onde.RAIZ / "docs" / "usage" / "assets"
 
@@ -262,7 +262,7 @@ def _palavra(alvo: str, publicado: bool) -> int:
 def _vista_pedida(texto: str) -> tuple[int, int]:
     """`1918x840` -> `(1918, 840)`, e recusa qualquer outra forma."""
     if texto.strip().lower() == "dela":
-        return VISTA_DELA
+        return VISTA_DO_USUARIO
     m = re.fullmatch(r"\s*(\d{3,5})\s*[xX×]\s*(\d{3,5})\s*", texto)
     if not m:
         raise argparse.ArgumentTypeError(

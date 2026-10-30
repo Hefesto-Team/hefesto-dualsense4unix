@@ -74,7 +74,7 @@ class _EndpointDeMentira:
 
 
 @dataclass
-class _Bancada:
+class _Ensaio:
     sub: Any
     tocando: dict[str, bool] = field(default_factory=dict)
     duvida: set[str] = field(default_factory=set)
@@ -96,7 +96,7 @@ class _Bancada:
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> _Ensaio:
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
     from hefesto_dualsense4unix.integrations import filho_de_som as fs
@@ -104,7 +104,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
 
     _PonteDeMentira.criadas = []
     _PonteDeMentira.falham = set()
-    b = _Bancada(sub=None)  # type: ignore[arg-type]
+    b = _Ensaio(sub=None)  # type: ignore[arg-type]
 
     def _toca(nome: Any, *_a: Any, **kw: Any) -> bool:
         if str(nome) in b.duvida:
@@ -138,102 +138,102 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
     return b
 
 
-def test_a_mesa_de_quatro_parada_nao_levanta_ponte_nenhuma(bancada: _Bancada) -> None:
+def test_a_mesa_de_quatro_parada_nao_levanta_ponte_nenhuma(ensaio: _Ensaio) -> None:
     """Quatro controles ociosos escreviam 400 reports por segundo no rádio do usuário."""
-    bancada.volta(*MESA)
-    assert bancada.de_pe == [], "a ponte subiu sem ninguém tocando"
+    ensaio.volta(*MESA)
+    assert ensaio.de_pe == [], "a ponte subiu sem ninguém tocando"
     assert _PonteDeMentira.criadas == []
 
 
-def test_o_gravador_da_ponte_que_nao_sobe_nao_fica_vivo(bancada: _Bancada) -> None:
+def test_o_gravador_da_ponte_que_nao_sobe_nao_fica_vivo(ensaio: _Ensaio) -> None:
     """Desistir depois de abrir o `pw-record` deixaria um processo por volta."""
-    bancada.volta(*MESA)
-    assert bancada.colhidos == [], bancada.colhidos
+    ensaio.volta(*MESA)
+    assert ensaio.colhidos == [], ensaio.colhidos
 
 
-def test_o_controle_com_som_ganha_a_ponte(bancada: _Bancada) -> None:
+def test_o_controle_com_som_ganha_a_ponte(ensaio: _Ensaio) -> None:
     """MORDIDA: faça o portão recusar sempre e o alto-falante fica mudo."""
-    bancada.toca(MESA[1])
-    bancada.volta(*MESA)
-    assert bancada.de_pe == [MESA[1]]
+    ensaio.toca(MESA[1])
+    ensaio.volta(*MESA)
+    assert ensaio.de_pe == [MESA[1]]
     assert _PonteDeMentira.criadas[-1].leva is False, "sem jogo, a háptica não vai ao fio"
 
 
-def test_a_haptica_nao_passa_pelo_portao_do_som(bancada: _Bancada) -> None:
+def test_a_haptica_nao_passa_pelo_portao_do_som(ensaio: _Ensaio) -> None:
     """Quem vibra não precisa de alto-falante tocando — são dois nós."""
-    bancada.o_jogo_toca_no_endpoint(MESA[0])
-    bancada.volta(*MESA)
-    assert bancada.de_pe == [MESA[0]]
+    ensaio.o_jogo_toca_no_endpoint(MESA[0])
+    ensaio.volta(*MESA)
+    assert ensaio.de_pe == [MESA[0]]
     assert _PonteDeMentira.criadas[-1].leva is True
 
 
-def test_o_som_que_acaba_derruba_a_ponte(bancada: _Bancada) -> None:
+def test_o_som_que_acaba_derruba_a_ponte(ensaio: _Ensaio) -> None:
     """Sem isto a enxurrada seria só ADIADA: a primeira nota levantaria a ponte"""
-    bancada.toca(MESA[0])
-    bancada.volta(*MESA)
+    ensaio.toca(MESA[0])
+    ensaio.volta(*MESA)
     primeira = _PonteDeMentira.criadas[-1]
 
-    bancada.toca(MESA[0], False)
-    bancada.volta(*MESA)
+    ensaio.toca(MESA[0], False)
+    ensaio.volta(*MESA)
 
-    assert bancada.de_pe == []
+    assert ensaio.de_pe == []
     assert primeira.desceu is True, "a ponte ociosa continuou escrevendo"
-    assert bancada.sub._modo_da_ponte == {}, "o modo ficou lembrado sem ponte"
+    assert ensaio.sub._modo_da_ponte == {}, "o modo ficou lembrado sem ponte"
 
 
-def test_o_servidor_mudo_nao_derruba_a_ponte_de_pe(bancada: _Bancada) -> None:
+def test_o_servidor_mudo_nao_derruba_a_ponte_de_pe(ensaio: _Ensaio) -> None:
     """Um `pactl` que engasgou não pode calar o som de um jogo aberto."""
-    bancada.toca(MESA[0])
-    bancada.volta(*MESA)
-    assert bancada.de_pe == [MESA[0]]
+    ensaio.toca(MESA[0])
+    ensaio.volta(*MESA)
+    assert ensaio.de_pe == [MESA[0]]
 
-    bancada.duvida.add(nome_do_sink(MESA[0]))
-    bancada.volta(*MESA)
-    assert bancada.de_pe == [MESA[0]], "a dúvida derrubou a ponte de um jogo aberto"
+    ensaio.duvida.add(nome_do_sink(MESA[0]))
+    ensaio.volta(*MESA)
+    assert ensaio.de_pe == [MESA[0]], "a dúvida derrubou a ponte de um jogo aberto"
 
 
-def test_o_servidor_mudo_nao_levanta_ponte_nova(bancada: _Bancada) -> None:
+def test_o_servidor_mudo_nao_levanta_ponte_nova(ensaio: _Ensaio) -> None:
     """O outro lado, e é o que salva a mesa: `na_duvida=True` fixo devolveria a"""
-    bancada.duvida.update(nome_do_sink(u) for u in MESA)
-    bancada.volta(*MESA)
-    assert bancada.de_pe == []
+    ensaio.duvida.update(nome_do_sink(u) for u in MESA)
+    ensaio.volta(*MESA)
+    assert ensaio.de_pe == []
 
 
 class TestOLacoDoNoQueNaoNasce:
     """O nó de som só nasce com ROTA, e no rádio a rota era «a ponte está de pé»."""
 
-    def _sub(self, bancada: _Bancada) -> Any:
-        bancada.volta(*MESA)
-        return bancada.sub
+    def _sub(self, ensaio: _Ensaio) -> Any:
+        ensaio.volta(*MESA)
+        return ensaio.sub
 
     def test_sem_ponte_de_pe_o_controle_do_radio_ainda_tem_caminho(
-        self, bancada: _Bancada
+        self, ensaio: _Ensaio
     ) -> None:
         """MORDIDA: devolva `None` quando `self._pontes.get(uniq)` for `None` —"""
-        sub = self._sub(bancada)
+        sub = self._sub(ensaio)
         assert sub._pontes == {}, "a bancada precisa começar SEM ponte"
         caminho = sub._ponte_do_radio_de(MESA[0])
         assert caminho is not None and caminho() is True
 
     def test_a_ponte_de_pe_continua_respondendo_por_si(
-        self, bancada: _Bancada
+        self, ensaio: _Ensaio
     ) -> None:
         """Quando há ponte, quem responde é ela — não uma promessa."""
-        bancada.toca(MESA[0])
-        sub = self._sub(bancada)
+        ensaio.toca(MESA[0])
+        sub = self._sub(ensaio)
         caminho = sub._ponte_do_radio_de(MESA[0])
         assert caminho is not None and caminho() is True
         assert caminho == sub._pontes[MESA[0]].esta_de_pe
 
     def test_a_ponte_que_nao_subiu_tira_o_caminho_e_o_prazo_devolve(
-        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A falha de verdade — com o som do usuário na mão — some com o nó."""
         agora = [1000.0]
         monkeypatch.setattr(mod.time, "monotonic", lambda: agora[0])
         _PonteDeMentira.falham.add(MESA[0])
-        bancada.toca(MESA[0])
-        sub = self._sub(bancada)
+        ensaio.toca(MESA[0])
+        sub = self._sub(ensaio)
         assert _PonteDeMentira.criadas, "a ponte nem foi tentada"
         assert sub._pontes == {}, "a ponte que não subiu ficou guardada"
 
@@ -245,38 +245,38 @@ class TestOLacoDoNoQueNaoNasce:
         assert MESA[0] not in sub._ponte_recusada, "a recusa vencida ficou no dicionário"
 
     def test_a_ponte_que_sobe_apaga_a_recusa_velha(
-        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Sem isto, um controle que falhou uma vez carregaria a recusa por um"""
         agora = [1000.0]
         monkeypatch.setattr(mod.time, "monotonic", lambda: agora[0])
         _PonteDeMentira.falham.add(MESA[0])
-        bancada.toca(MESA[0])
-        bancada.volta(*MESA)
-        assert MESA[0] in bancada.sub._ponte_recusada
+        ensaio.toca(MESA[0])
+        ensaio.volta(*MESA)
+        assert MESA[0] in ensaio.sub._ponte_recusada
 
         _PonteDeMentira.falham.clear()
-        bancada.volta(*MESA)
-        assert bancada.sub._pontes != {}, "a ponte não subiu na segunda volta"
-        assert MESA[0] not in bancada.sub._ponte_recusada
+        ensaio.volta(*MESA)
+        assert ensaio.sub._pontes != {}, "a ponte não subiu na segunda volta"
+        assert MESA[0] not in ensaio.sub._ponte_recusada
 
     def test_sem_gravador_na_maquina_nao_ha_caminho(
-        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A `libopus` não é a única coisa que falta numa máquina recém-feita."""
         from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
-        sub = self._sub(bancada)
+        sub = self._sub(ensaio)
         monkeypatch.setattr(af, "ha_gravador_de_monitor", lambda: False)
         assert sub._ponte_do_radio_de(MESA[0]) is None
 
     def test_sem_libopus_nao_ha_caminho(
-        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A promessa pergunta À MÁQUINA — é isso que a separa do `lambda: True`."""
         from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 
-        sub = self._sub(bancada)
+        sub = self._sub(ensaio)
         monkeypatch.setattr(
             af, "a_ponte_do_radio_pode_subir", lambda: (False, "sem libopus")
         )
@@ -284,7 +284,7 @@ class TestOLacoDoNoQueNaoNasce:
 
 
 def test_a_haptica_sem_fonte_nao_vira_som_em_silencio(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A háptica que não consegue gravador cai para o modo som — e ali o portão"""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
@@ -295,9 +295,9 @@ def test_a_haptica_sem_fonte_nao_vira_som_em_silencio(
         return (lambda _n: b""), f"gravador:{no}", ""
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _so_o_som)
-    bancada.o_jogo_toca_no_endpoint(MESA[0])
-    bancada.volta(MESA[0])
+    ensaio.o_jogo_toca_no_endpoint(MESA[0])
+    ensaio.volta(MESA[0])
 
-    assert bancada.de_pe == []
-    assert bancada.colhidos == [f"gravador:{af.nome_do_sink(MESA[0])}"], (
+    assert ensaio.de_pe == []
+    assert ensaio.colhidos == [f"gravador:{af.nome_do_sink(MESA[0])}"], (
         "o gravador do som ficou vivo sem ponte — ninguém mais o colheria")

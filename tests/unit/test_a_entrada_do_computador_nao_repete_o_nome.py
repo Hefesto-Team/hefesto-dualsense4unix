@@ -51,7 +51,7 @@ def test_com_um_controlador_so_nada_muda() -> None:
     )
 
 
-def test_o_nome_que_ela_deu_vence_o_desempate() -> None:
+def test_o_nome_que_o_usuario_deu_vence_o_desempate() -> None:
     maquina = MaquinaConfig.model_validate(
         {"mapa": {"portas": {"1": {"lugar": f"pci-{PCI_DO_HUB}-usb-0:4",
                                    "nome": "Frente, a de cima"}}}}

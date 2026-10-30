@@ -156,7 +156,7 @@ def test_o_vocabulario_das_pecas_vem_do_csv_e_nao_e_generico() -> None:
     assert not demais, demais
 
 
-def test_os_papeis_saem_da_condicao_que_ela_escreveu() -> None:
+def test_os_papeis_saem_da_condicao_que_o_usuario_escreveu() -> None:
     """*Um teste em que os quatro brilham igual não diz nada.*"""
     sete = next(t for t in med.todos_os_testes() if t.id == "roteiro-07")
     assert sete.papeis["P3"] == med.PAPEL_REAGE, sete.papeis

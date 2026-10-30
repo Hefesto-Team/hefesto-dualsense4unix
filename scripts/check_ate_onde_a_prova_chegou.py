@@ -26,7 +26,7 @@ from check_paridade_transporte import (
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
-_O_APARELHO_DELA = "dualsense"
+_O_APARELHO_DO_USUARIO = "dualsense"
 
 SEM_REGISTRO = "—"
 
@@ -246,7 +246,7 @@ def ate_onde_foi(chaves: tuple[str, ...],
         degraus = []
         for chave in chaves:
             minhas = [linha for linha in mapa.get(chave, [])
-                      if linha.get("controle") == _O_APARELHO_DELA]
+                      if linha.get("controle") == _O_APARELHO_DO_USUARIO]
             vivas = [linha for linha in minhas
                      if not _nada_a_acionar(linha, lado)]
             degraus.extend(_degrau(linha, lado) for linha in vivas)
@@ -263,10 +263,10 @@ def _canais(chaves: tuple[str, ...],
     fora: list[tuple[str, str]] = []
     for chave in chaves:
         minhas = [linha for linha in mapa.get(chave, [])
-                  if linha.get("controle") == _O_APARELHO_DELA]
+                  if linha.get("controle") == _O_APARELHO_DO_USUARIO]
         if not minhas:
             raise SystemExit(
-                f"ERRO: `{chave}@{_O_APARELHO_DELA}` não tem linha no mapa, e "
+                f"ERRO: `{chave}@{_O_APARELHO_DO_USUARIO}` não tem linha no mapa, e "
                 "sem ela não há canal — logo não há como saber até onde a "
                 "prova desta feature TEM de chegar. Escreva a linha no "
                 "`docs/data/mapa-controles.csv` ou tire a chave do "

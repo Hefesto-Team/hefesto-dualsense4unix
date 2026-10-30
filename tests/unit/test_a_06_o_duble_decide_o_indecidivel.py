@@ -146,7 +146,7 @@ SEM_VARIACAO = {"na-steam"}
 def _gestos_da_maquina() -> dict[str, dict[str, Any]]:
     """Um script para CADA gesto — 02/10/2026, conferência final dos gestos.
 
-    Desde 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8) a tabela tem também os gestos
+    Desde 16/10/2026 (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, N8) a tabela tem também os gestos
     novos e o botão de tirar: o dublê tira os cinco de fábrica com combo e declara os cinco
     novos, e assim toda linha (`vale-`) e todo botão do «+ Gesto» (`livre-`) discordam do
     desenho.
@@ -232,7 +232,7 @@ _SELECT = r'<select[^>]*data-campo="{}"[^>]*>(.*?)</select>'
 
 OS_DOIS_MUNDOS = [
     pytest.param(True, id="a-pagina-publicada-de-hoje"),
-    pytest.param(False, id="a-bancada-do-dia-da-publicacao"),
+    pytest.param(False, id="o-ensaio-do-dia-da-publicacao"),
 ]
 
 

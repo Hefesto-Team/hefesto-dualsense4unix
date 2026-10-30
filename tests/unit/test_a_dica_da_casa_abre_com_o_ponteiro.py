@@ -22,7 +22,7 @@ def _sem_tela_de_mentira() -> str:
     """A razão para NÃO abrir janela aqui, ou string vazia."""
     if os.environ.get("WAYLAND_DISPLAY"):
         return ("a sessão gráfica DELA está no ambiente — esta régua abre uma "
-                "janela de verdade e ela tem UMA tela (TELA-DELA-01)")
+                "janela de verdade e ela tem UMA tela (TELA-DO-USUARIO-01)")
     if os.environ.get("HEFESTO_NA_TELA"):
         return "HEFESTO_NA_TELA está ligado: a janela nasceria na tela dela"
     if not os.environ.get("DISPLAY"):

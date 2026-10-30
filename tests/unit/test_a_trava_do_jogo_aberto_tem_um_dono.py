@@ -226,7 +226,7 @@ def test_o_p1_morto_que_renasce_sozinho_leva_a_origem_ao_co_op(
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("secundarios", [0, 1, 2, 3], ids=["1j", "2j", "3j", "4j"])
-def test_o_gesto_dela_recria_e_diz_qual_decisao_deixou(
+def test_o_gesto_do_usuario_recria_e_diz_qual_decisao_deixou(
     secundarios: int, transporte: str, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Com o jogo aberto, o gesto do usuário (`manual`) troca para Xbox, nos quatro."""
@@ -262,7 +262,7 @@ def test_o_automatico_espera_o_jogo(transporte: str) -> None:
     assert d._gamepad_device is antes and not antes.parado
 
 
-def test_a_ordem_do_co_op_passa_e_diz_a_decisao_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_ordem_do_co_op_passa_e_diz_a_decisao_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     """A carta renumerada com o jogo aberto: o secundário renasce, e a linha diz a D-2309."""
     d = _daemon()
     mesa = _a_mesa(d, monkeypatch, 2)
@@ -401,14 +401,14 @@ def _respondidas() -> tuple[str, ...]:
     return tuple(RESPONDIDAS)
 
 
-def _decisoes_dela() -> dict[str, dict[str, str]]:
+def _decisoes_do_usuario() -> dict[str, dict[str, str]]:
     with (RAIZ / "docs" / "data" / "decisoes-de-produto.csv").open(encoding="utf-8") as fh:
         return {linha["id"]: linha for linha in csv.DictReader(fh)}
 
 
-def test_toda_origem_que_passa_aponta_uma_decisao_dela() -> None:
+def test_toda_origem_que_passa_aponta_uma_decisao_do_usuario() -> None:
     """Cada chave da tabela aponta um id decidido pelo usuário (não por delegação)."""
-    decisoes = _decisoes_dela()
+    decisoes = _decisoes_do_usuario()
     for origem, decisao in gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.items():
         linha = decisoes.get(decisao)
         assert linha is not None, f"{origem}: {decisao} não está no CSV"

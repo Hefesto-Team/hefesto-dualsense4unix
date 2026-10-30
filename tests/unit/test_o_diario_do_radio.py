@@ -76,17 +76,17 @@ def test_o_diario_gira_por_tamanho_e_o_leitor_ve_os_dois(
     assert passos[-1] == "passo 11"
 
 
-def test_o_leitor_junta_o_diario_dela_com_o_do_root_pela_hora(tmp_path: Path) -> None:
-    dela = tmp_path / "dela.jsonl"
+def test_o_leitor_junta_o_diario_do_usuario_com_o_do_root_pela_hora(tmp_path: Path) -> None:
+    do_usuario = tmp_path / "dela.jsonl"
     do_root = tmp_path / "root.jsonl"
-    diario.registrar("vigia-de-zumbis", "derrubou o link", "", caminho=dela, agora=2.0)
+    diario.registrar("vigia-de-zumbis", "derrubou o link", "", caminho=do_usuario, agora=2.0)
     diario.registrar("bt-watchdog", "Trusted=true", "", caminho=do_root, agora=1.0)
-    diario.registrar("central", "moveu", "", caminho=dela, agora=3.0)
-    lidas = diario.ler(caminhos=[dela, do_root])
+    diario.registrar("central", "moveu", "", caminho=do_usuario, agora=3.0)
+    lidas = diario.ler(caminhos=[do_usuario, do_root])
     assert [e["quem"] for e in lidas] == ["bt-watchdog", "vigia-de-zumbis", "central"]
 
 
-def test_com_a_suite_no_ar_a_trava_e_o_root_nao_sao_os_dela(
+def test_com_a_suite_no_ar_a_trava_e_o_root_nao_sao_os_do_usuario(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """ARRANQUE A GUARDA da suíte em ``caminho_da_trava`` e este teste reprova."""

@@ -89,7 +89,7 @@ def test_o_perfil_com_volume_escolhido_nao_vira_padrao_sozinho(casa: Any) -> Non
     assert a02.volume_em_padrao(_ctx(CEM), P1, (CEM, False)) is False
 
 
-def test_ligar_manda_os_cem_ao_aparelho_e_guarda_o_volume_dela(casa: Any) -> None:  # noqa: F811
+def test_ligar_manda_os_cem_ao_aparelho_e_guarda_o_volume_do_usuario(casa: Any) -> None:  # noqa: F811
     guardado = volume_do_percentual(62)
     _grava_o_perfil({"volume": guardado, "muted": False})
     p = Ponte()
@@ -101,7 +101,7 @@ def test_ligar_manda_os_cem_ao_aparelho_e_guarda_o_volume_dela(casa: Any) -> Non
     assert dele.get("volume_padrao") is True and dele.get("volume") == guardado, dele
 
 
-def test_desligar_devolve_o_volume_que_ela_tinha_escolhido(casa: Any) -> None:  # noqa: F811
+def test_desligar_devolve_o_volume_que_o_usuario_tinha_escolhido(casa: Any) -> None:  # noqa: F811
     guardado = volume_do_percentual(62)
     _grava_o_perfil({"volume": guardado, "muted": False, "volume_padrao": True})
     p = Ponte()
@@ -113,7 +113,7 @@ def test_desligar_devolve_o_volume_que_ela_tinha_escolhido(casa: Any) -> None:  
     assert dele.get("volume_padrao") is False and dele.get("volume") == guardado, dele
 
 
-def test_ida_e_volta_nao_perde_o_volume_dela(casa: Any) -> None:  # noqa: F811
+def test_ida_e_volta_nao_perde_o_volume_do_usuario(casa: Any) -> None:  # noqa: F811
     guardado = volume_do_percentual(40)
     _grava_o_perfil({"volume": guardado, "muted": False})
     p = Ponte()
@@ -247,7 +247,7 @@ def test_sem_perfil_a_tela_destrava_a_barra_e_diz_o_numero(
     assert card["alto-padrao"] == "" and card["alto-num"] == percentual_do_volume(CEM), card
 
 
-def test_sem_perfil_ida_e_volta_guarda_o_volume_que_ela_escolheu(casa: Any) -> None:  # noqa: F811
+def test_sem_perfil_ida_e_volta_guarda_o_volume_que_o_usuario_escolheu(casa: Any) -> None:  # noqa: F811
     """Desliga, arrasta para 40%, liga (100% no aparelho) e desliga: os 40% voltam."""
     guardado = volume_do_percentual(40)
     p = Ponte()

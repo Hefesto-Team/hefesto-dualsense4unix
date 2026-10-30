@@ -353,7 +353,7 @@ x = VALOR
         pytest.param(14, "VALOR", False, id="o-uso-ao-lado-da-atribuicao"),
     ],
 )
-def test_o_nome_que_a_linha_liga_e_so_dela(
+def test_o_nome_que_a_linha_liga_e_so_do_usuario(
     val: ModuleType, tmp_path: Path, linha: int, nome: str, verde: bool
 ) -> None:
     arquivo = "src/hefesto_dualsense4unix/alvo.py"

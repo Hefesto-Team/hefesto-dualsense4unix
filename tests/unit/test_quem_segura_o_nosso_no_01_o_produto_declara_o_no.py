@@ -77,7 +77,7 @@ def _nome_do_vpad(jogador: int) -> str:
     return f"DualSense Wireless Controller (Hefesto P{jogador})"
 
 
-class Bancada:
+class Ensaio:
     """Uma árvore `/sys` + `/dev` de mentira, no formato exato do kernel."""
 
     def __init__(self, raiz: Path) -> None:
@@ -191,8 +191,8 @@ class Bancada:
 
 
 @pytest.fixture()
-def bancada(tmp_path: Path) -> Bancada:
-    return Bancada(tmp_path)
+def ensaio(tmp_path: Path) -> Ensaio:
+    return Ensaio(tmp_path)
 
 
 def _trocar_o_no_por_outro(caminho: Path) -> None:
@@ -205,7 +205,7 @@ def _trocar_o_no_por_outro(caminho: Path) -> None:
 
 class TestARegua:
     def test_entre_os_tres_nos_do_aparelho_sai_o_gamepad(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """MORDIDA 1: o menor `eventN` do aparelho é o do TOUCHPAD.
 
@@ -215,15 +215,15 @@ class TestARegua:
         entrega `event20`, o touchpad: um nó que existe, responde e **não é o
         que o jogo lê para mover o personagem**.
         """
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
 
-        no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
+        no = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
 
-        assert no["evdev"] == str(bancada.dev_input / "event22")
-        assert no["hidraw"] == str(bancada.dev / "hidraw5")
+        assert no["evdev"] == str(ensaio.dev_input / "event22")
+        assert no["hidraw"] == str(ensaio.dev / "hidraw5")
 
     def test_o_uniq_forjado_e_a_regua_nunca_o_vid_pid(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """Um DualSense Edge de VERDADE na mesa não pode ser confundido.
 
@@ -232,37 +232,37 @@ class TestARegua:
         casasse por vid/pid e barramento acharia os dois e escolheria o de
         menor `eventN`, que aqui é o FÍSICO dela.
         """
-        edge = bancada.aparelho(
+        edge = ensaio.aparelho(
             id_hid="0003:054C:0DF2.0009",
             hid_uniq="aa:bb:cc:00:00:01",
             hid_phys="usb-0000:00:14.0-3/input0",
             hidraw="hidraw3",
         )
-        bancada.no_de_entrada(
+        ensaio.no_de_entrada(
             dir_hid=edge,
             input_n="input10",
             event_n="event10",
             nome="DualSense Edge Wireless Controller",
             uniq="aa:bb:cc:00:00:01",
         )
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
 
-        no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
+        no = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
 
-        assert no["evdev"] == str(bancada.dev_input / "event22")
-        assert no["hidraw"] == str(bancada.dev / "hidraw5")
+        assert no["evdev"] == str(ensaio.dev_input / "event22")
+        assert no["hidraw"] == str(ensaio.dev / "hidraw5")
 
     def test_hidraw_so_sai_quando_o_uevent_do_pai_confirma(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """MORDIDA 2: duas rotas que discordam não viram afirmação."""
-        estranho = bancada.aparelho(
+        estranho = ensaio.aparelho(
             id_hid="0005:054C:0CE6.000F",
             hid_uniq="aa:bb:cc:00:00:02",
             hid_phys="aa:bb:cc:00:00:99",
             hidraw="hidraw9",
         )
-        bancada.no_de_entrada(
+        ensaio.no_de_entrada(
             dir_hid=estranho,
             input_n="input40",
             event_n="event40",
@@ -270,93 +270,93 @@ class TestARegua:
             uniq=player_mac(1),
         )
 
-        no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
+        no = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
 
-        assert no["evdev"] == str(bancada.dev_input / "event40"), (
+        assert no["evdev"] == str(ensaio.dev_input / "event40"), (
             "o nó de entrada casou pelo uniq — isso a régua mediu"
         )
         assert no["hidraw"] is None, "discordância vira 'não sei', nunca palpite"
         assert no["hidraw_ino"] is None
 
     def test_o_inode_vem_do_mesmo_instante_que_o_caminho(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """O par caminho+inode é o ponto todo desta peça."""
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
 
-        no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
+        no = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
 
-        assert no["ino"] == os.stat(bancada.dev_input / "event22").st_ino
-        assert no["hidraw_ino"] == os.stat(bancada.dev / "hidraw5").st_ino
+        assert no["ino"] == os.stat(ensaio.dev_input / "event22").st_ino
+        assert no["hidraw_ino"] == os.stat(ensaio.dev / "hidraw5").st_ino
 
     def test_o_vpad_de_uinput_nao_inventa_um_hidraw(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """O uinput é evdev puro: casa pelo nome e NÃO tem hidraw."""
-        bancada.no_de_uinput(event_n="event31", nome=_nome_do_vpad(1))
+        ensaio.no_de_uinput(event_n="event31", nome=_nome_do_vpad(1))
 
-        no = bancada.resolver(None, _nome_do_vpad(1))
+        no = ensaio.resolver(None, _nome_do_vpad(1))
 
-        assert no["evdev"] == str(bancada.dev_input / "event31")
+        assert no["evdev"] == str(ensaio.dev_input / "event31")
         assert no["hidraw"] is None
-        assert no["ino"] == os.stat(bancada.dev_input / "event31").st_ino
+        assert no["ino"] == os.stat(ensaio.dev_input / "event31").st_ino
 
-    def test_sem_uniq_e_sem_nome_nao_ha_chute(self, bancada: Bancada) -> None:
+    def test_sem_uniq_e_sem_nome_nao_ha_chute(self, ensaio: Ensaio) -> None:
         """MORDIDA 3: "pega o primeiro gamepad que achar" é proibido."""
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
 
-        assert bancada.resolver(None, None) == NO_DESCONHECIDO
-        assert bancada.resolver("", "  ") == NO_DESCONHECIDO
+        assert ensaio.resolver(None, None) == NO_DESCONHECIDO
+        assert ensaio.resolver("", "  ") == NO_DESCONHECIDO
 
     def test_mesa_vazia_devolve_quatro_nones_e_nao_explode(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """Sysfs sem nó nenhum (e sysfs inexistente) é caso NORMAL aqui."""
-        assert bancada.resolver(player_mac(1), _nome_do_vpad(1)) == NO_DESCONHECIDO
+        assert ensaio.resolver(player_mac(1), _nome_do_vpad(1)) == NO_DESCONHECIDO
         assert resolver_no_do_vpad(
             uniq=player_mac(1),
             nome=_nome_do_vpad(1),
-            raiz_class_input=str(bancada.raiz / "nao-existe"),
-            raiz_dev_input=str(bancada.dev_input),
-            raiz_dev=str(bancada.dev),
+            raiz_class_input=str(ensaio.raiz / "nao-existe"),
+            raiz_dev_input=str(ensaio.dev_input),
+            raiz_dev=str(ensaio.dev),
         ) == NO_DESCONHECIDO
 
-    def test_dois_vpads_nao_se_misturam(self, bancada: Bancada) -> None:
+    def test_dois_vpads_nao_se_misturam(self, ensaio: Ensaio) -> None:
         """Co-op: cada jogador tem o SEU nó, e o `uniq` é quem separa."""
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
-        bancada.vpad(2, event_gamepad="event27", hidraw="hidraw6")
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        ensaio.vpad(2, event_gamepad="event27", hidraw="hidraw6")
 
-        um = bancada.resolver(player_mac(1), _nome_do_vpad(1))
-        dois = bancada.resolver(player_mac(2), _nome_do_vpad(2))
+        um = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
+        dois = ensaio.resolver(player_mac(2), _nome_do_vpad(2))
 
-        assert um["evdev"] == str(bancada.dev_input / "event22")
-        assert dois["evdev"] == str(bancada.dev_input / "event27")
-        assert um["hidraw"] == str(bancada.dev / "hidraw5")
-        assert dois["hidraw"] == str(bancada.dev / "hidraw6")
+        assert um["evdev"] == str(ensaio.dev_input / "event22")
+        assert dois["evdev"] == str(ensaio.dev_input / "event27")
+        assert um["hidraw"] == str(ensaio.dev / "hidraw5")
+        assert dois["hidraw"] == str(ensaio.dev / "hidraw6")
         assert um["ino"] != dois["ino"]
 
 
 class TestOInodeReprovaOCaminhoVelho:
     def test_no_ainda_vale_reprova_quando_o_no_e_recriado(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """O vpad morreu e voltou no mesmo `eventN` — outro inode, outro nó."""
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
-        no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        no = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
         assert no_ainda_vale(no) is True
 
-        _trocar_o_no_por_outro(bancada.dev_input / "event22")
+        _trocar_o_no_por_outro(ensaio.dev_input / "event22")
 
         assert no_ainda_vale(no) is False
 
     def test_no_ainda_vale_reprova_quando_o_hidraw_troca(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """A conferência olha o PAR: o evdev intacto não absolve o hidraw."""
-        bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
-        no = bancada.resolver(player_mac(1), _nome_do_vpad(1))
+        ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        no = ensaio.resolver(player_mac(1), _nome_do_vpad(1))
 
-        _trocar_o_no_por_outro(bancada.dev / "hidraw5")
+        _trocar_o_no_por_outro(ensaio.dev / "hidraw5")
 
         assert no_ainda_vale(no) is False
 
@@ -365,7 +365,7 @@ class TestOInodeReprovaOCaminhoVelho:
         assert no_ainda_vale(dict(NO_DESCONHECIDO)) is True
 
 
-class TestASuiteNaoOlhaOSysfsDela:
+class TestASuiteNaoOlhaOSysfsDoUsuario:
     def test_a_varredura_da_suite_aponta_para_o_vazio(self) -> None:
         """A fixture de sessão do `conftest` é parte da cura, não conforto.
 
@@ -427,14 +427,14 @@ def config_em_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture()
-def sysfs_da_bancada(
-    bancada: Bancada, monkeypatch: pytest.MonkeyPatch
-) -> Bancada:
+def sysfs_do_ensaio(
+    ensaio: Ensaio, monkeypatch: pytest.MonkeyPatch
+) -> Ensaio:
     """Aponta a régua do produto para a árvore forjada, e só para ela."""
-    monkeypatch.setattr(no_mod, "RAIZ_CLASS_INPUT", str(bancada.class_input))
-    monkeypatch.setattr(no_mod, "RAIZ_DEV_INPUT", str(bancada.dev_input))
-    monkeypatch.setattr(no_mod, "RAIZ_DEV", str(bancada.dev))
-    return bancada
+    monkeypatch.setattr(no_mod, "RAIZ_CLASS_INPUT", str(ensaio.class_input))
+    monkeypatch.setattr(no_mod, "RAIZ_DEV_INPUT", str(ensaio.dev_input))
+    monkeypatch.setattr(no_mod, "RAIZ_DEV", str(ensaio.dev))
+    return ensaio
 
 
 def _daemon_com_dois_vpads(*, game_open_do_p2: bool = False) -> Any:
@@ -472,22 +472,22 @@ def _blocos(cheio: dict[str, Any]) -> list[dict[str, Any]]:
 
 class TestOStateFullDeclaraONo:
     async def test_per_vpad_diz_evdev_hidraw_inode_e_sessao_aberta(
-        self, config_em_tmp: Path, sysfs_da_bancada: Bancada
+        self, config_em_tmp: Path, sysfs_do_ensaio: Ensaio
     ) -> None:
         """A MORDIDA do contrato publicado."""
-        sysfs_da_bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
-        sysfs_da_bancada.vpad(2, event_gamepad="event27", hidraw="hidraw6")
+        sysfs_do_ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        sysfs_do_ensaio.vpad(2, event_gamepad="event27", hidraw="hidraw6")
         daemon = _daemon_com_dois_vpads(game_open_do_p2=True)
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
         cheio = await h._handle_daemon_state_full({})
 
         um, dois = _bloco(cheio, 1), _bloco(cheio, 2)
-        assert um["evdev"] == str(sysfs_da_bancada.dev_input / "event22")
-        assert um["hidraw"] == str(sysfs_da_bancada.dev / "hidraw5")
-        assert um["ino"] == os.stat(sysfs_da_bancada.dev_input / "event22").st_ino
-        assert um["hidraw_ino"] == os.stat(sysfs_da_bancada.dev / "hidraw5").st_ino
-        assert dois["evdev"] == str(sysfs_da_bancada.dev_input / "event27")
+        assert um["evdev"] == str(sysfs_do_ensaio.dev_input / "event22")
+        assert um["hidraw"] == str(sysfs_do_ensaio.dev / "hidraw5")
+        assert um["ino"] == os.stat(sysfs_do_ensaio.dev_input / "event22").st_ino
+        assert um["hidraw_ino"] == os.stat(sysfs_do_ensaio.dev / "hidraw5").st_ino
+        assert dois["evdev"] == str(sysfs_do_ensaio.dev_input / "event27")
         assert um["game_open"] is False
         assert dois["game_open"] is True, (
             "existia no objeto desde a NUMA-02 e nunca saía por IPC"
@@ -495,7 +495,7 @@ class TestOStateFullDeclaraONo:
         json.dumps(_blocos(cheio))
 
     async def test_o_no_casa_com_a_identidade_publicada_no_mesmo_bloco(
-        self, config_em_tmp: Path, sysfs_da_bancada: Bancada
+        self, config_em_tmp: Path, sysfs_do_ensaio: Ensaio
     ) -> None:
         """O `vpad_uniq` do bloco é o que resolveu o nó do bloco.
 
@@ -503,17 +503,17 @@ class TestOStateFullDeclaraONo:
         do `identidade_do_vpad` que o próprio bloco publica, nunca de uma
         segunda leitura do objeto.
         """
-        sysfs_da_bancada.vpad(2, event_gamepad="event27", hidraw="hidraw6")
+        sysfs_do_ensaio.vpad(2, event_gamepad="event27", hidraw="hidraw6")
         daemon = _daemon_com_dois_vpads()
         h = _Handlers(daemon, daemon.store, daemon.controller)
 
         dois = _bloco(await h._handle_daemon_state_full({}), 2)
 
         assert dois["vpad_uniq"] == player_mac(2)
-        assert dois["evdev"] == str(sysfs_da_bancada.dev_input / "event27")
+        assert dois["evdev"] == str(sysfs_do_ensaio.dev_input / "event27")
 
     async def test_as_chaves_existem_mesmo_sem_no_resolvido(
-        self, config_em_tmp: Path, sysfs_da_bancada: Bancada
+        self, config_em_tmp: Path, sysfs_do_ensaio: Ensaio
     ) -> None:
         """Shape estável: `None`, nunca chave ausente."""
         daemon = _daemon_com_dois_vpads()
@@ -526,7 +526,7 @@ class TestOStateFullDeclaraONo:
         assert um["game_open"] is False
 
     async def test_vpad_dublado_nao_afirma_sessao_aberta(
-        self, config_em_tmp: Path, sysfs_da_bancada: Bancada
+        self, config_em_tmp: Path, sysfs_do_ensaio: Ensaio
     ) -> None:
         """MORDIDA: `bool(MagicMock())` é `True`.
 
@@ -545,38 +545,38 @@ class TestOStateFullDeclaraONo:
         json.dumps(_blocos(cheio))
 
     async def test_o_cache_nao_publica_o_caminho_velho(
-        self, config_em_tmp: Path, sysfs_da_bancada: Bancada
+        self, config_em_tmp: Path, sysfs_do_ensaio: Ensaio
     ) -> None:
         """MORDIDA 3: o cache de 2 s não pode reintroduzir a renumeração."""
-        sysfs_da_bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        sysfs_do_ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
         daemon = _daemon_com_dois_vpads()
         h = _Handlers(daemon, daemon.store, daemon.controller)
         primeiro = _bloco(await h._handle_daemon_state_full({}), 1)
-        assert primeiro["evdev"] == str(sysfs_da_bancada.dev_input / "event22")
+        assert primeiro["evdev"] == str(sysfs_do_ensaio.dev_input / "event22")
 
-        for pasta in sorted(sysfs_da_bancada.class_input.iterdir()):
+        for pasta in sorted(sysfs_do_ensaio.class_input.iterdir()):
             (pasta / "device").unlink()
             pasta.rmdir()
-        (sysfs_da_bancada.dev_input / "event22").unlink()
-        sysfs_da_bancada.vpad(1, event_gamepad="event42", hidraw="hidraw5")
+        (sysfs_do_ensaio.dev_input / "event22").unlink()
+        sysfs_do_ensaio.vpad(1, event_gamepad="event42", hidraw="hidraw5")
 
         segundo = _bloco(await h._handle_daemon_state_full({}), 1)
 
-        assert segundo["evdev"] == str(sysfs_da_bancada.dev_input / "event42"), (
+        assert segundo["evdev"] == str(sysfs_do_ensaio.dev_input / "event42"), (
             "dentro do TTL, e ainda assim o caminho novo — quem manda é o inode"
         )
         assert segundo["ino"] == os.stat(
-            sysfs_da_bancada.dev_input / "event42"
+            sysfs_do_ensaio.dev_input / "event42"
         ).st_ino
 
     async def test_o_cache_poupa_a_varredura_quando_nada_mudou(
         self,
         config_em_tmp: Path,
-        sysfs_da_bancada: Bancada,
+        sysfs_do_ensaio: Ensaio,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """O TTL existe porque isto roda a 10-20 Hz — e ele tem de valer."""
-        sysfs_da_bancada.vpad(1, event_gamepad="event22", hidraw="hidraw5")
+        sysfs_do_ensaio.vpad(1, event_gamepad="event22", hidraw="hidraw5")
         daemon = _daemon_com_dois_vpads()
         h = _Handlers(daemon, daemon.store, daemon.controller)
         await h._handle_daemon_state_full({})

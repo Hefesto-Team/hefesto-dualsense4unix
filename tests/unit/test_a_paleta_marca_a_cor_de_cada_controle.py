@@ -263,7 +263,7 @@ class TestACasaDeCadaCor:
         assert a04.a_casa_da_cor(cor) is None
 
 
-class TestAFotoDaBancada:
+class TestAFotoDoEnsaio:
     """A cena das ~01h57, com o esperado escrito a partir dela."""
 
     def test_cada_coluna_tem_tres_x_e_a_propria_cor(
@@ -592,9 +592,9 @@ def _perto(a: tuple[int, int, int], b: tuple[int, int, int], folga: int = 10) ->
 
 def _vistas() -> dict[str, tuple[int, int]]:
     from hefesto_dualsense4unix.interface.janela import TAMANHO_OCULTA
-    from hefesto_dualsense4unix.interface.olhar import VISTA_DELA
+    from hefesto_dualsense4unix.interface.olhar import VISTA_DO_USUARIO
 
-    return {"janela": TAMANHO_OCULTA, "dela": VISTA_DELA}
+    return {"janela": TAMANHO_OCULTA, "dela": VISTA_DO_USUARIO}
 
 
 @pytest.fixture(scope="module")

@@ -205,7 +205,7 @@ def test_a_secao_le_o_gravado_e_nunca_o_pendente() -> None:
     assert secao_orcamento.orcamento_em_vigor(host) == "balanceado"
 
 
-class TestOBotaoMostraOQueElaEscolheu:
+class TestOBotaoMostraOQueOUsuarioEscolheu:
     """Achado da conferência de 23/08/2026: a tela se contradizia."""
 
     def test_a_declaracao_pendente_vence_o_disco_no_botao(self) -> None:

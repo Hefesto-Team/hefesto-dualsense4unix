@@ -866,7 +866,7 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
 |---|---|
 | `ate_onde_foi` | **a escada**, definida na seção seguinte. Cinco degraus, duas direções |
 | `por_que_nao_aciona` | **por que o produto não faz**, quando ele não faz. Seção logo abaixo |
-| `provado_por` | `ci` / `bancada` / `olho-dela` — só `olho-dela` sustenta *O APARELHO OBEDECEU* e *O JOGO REAGIU* |
+| `provado_por` | `ci` / `bancada` / `olho-do-usuario` — só `olho-do-usuario` sustenta *O APARELHO OBEDECEU* e *O JOGO REAGIU* |
 | `provado_em` | a data. Sem ela a prova não vence nunca, e prova que não vence vira mito |
 | `teste_que_morde` | o nó do pytest que reprova se aquilo quebrar |
 | `mordida_provada_em` | quando alguém **de fato** arrancou a cura e viu reprovar |
@@ -913,10 +913,10 @@ rádio, onde não chega.
 | `divida` | falta fazer, e há quem queira. **É o que o portão limita** |
 | `decisao-tomada` | não acionar é a escolha, e ela está certa hoje |
 | `nada-a-acionar` | não há feature a acionar: ou o aparelho não oferece, ou a linha é de MEDIÇÃO e `aciona = não` quer dizer *"o fenômeno não aconteceu"*, nunca *"o produto não faz"* |
-| `so-ela-decide` | a pergunta existe, ninguém a respondeu, e a resposta é dela |
+| `so-o-usuario-decide` | a pergunta existe, ninguém a respondeu, e a resposta é dela |
 
 Retrato de 22/08/2026: **4 dívidas**, 15 decisões, 20 `nada-a-acionar`,
-2 `so-ela-decide`.
+2 `so-o-usuario-decide`.
 
 **A régua** é `tests/unit/test_o_mapa_separa_divida_de_decisao.py`, e ela tem
 teto: as dívidas não podem passar de quatro. **Subir o teto é confissão, não
@@ -951,7 +951,7 @@ MONTOU  →  SAIU NO FIO  →  O APARELHO OBEDECEU
 |---|---|---|
 | `MONTOU` | o byte existe na memória do produto e a suíte o lê. **Nada saiu do processo.** | a suíte, sem aparelho |
 | `SAIU NO FIO` | a escrita no nó do transporte não errou e houve resposta do outro lado. Diz que o canal está aberto — **não** diz que o aparelho fez coisa alguma com o que recebeu | a bancada, com o aparelho na mão |
-| `O APARELHO OBEDECEU` | alguém **viu** o aparelho fazer o que foi pedido, e gravou o ensaio no caderno com `observado_por = olho-dela` | a mão do usuário |
+| `O APARELHO OBEDECEU` | alguém **viu** o aparelho fazer o que foi pedido, e gravou o ensaio no caderno com `observado_por = olho-do-usuario` | a mão do usuário |
 
 ### Os dois degraus da VOLTA — aparelho → vpad → JOGO (19/08/2026)
 
@@ -1019,8 +1019,8 @@ que fica gravado no perfil não é o que o produto **pediu** e sim o que
 **funcionou** — que é a mesma diferença entre `MONTOU` e `O APARELHO OBEDECEU`,
 aplicada ao jogo.
 
-O portão cobra isso, e cobra **duro**: `reagiu-sem-olho-dela` é FALHA desde o
-primeiro dia, ao contrário da regra irmã `grau-sem-olho-dela`, que avisa. A
+O portão cobra isso, e cobra **duro**: `reagiu-sem-olho-do-usuario` é FALHA desde o
+primeiro dia, ao contrário da regra irmã `grau-sem-olho-do-usuario`, que avisa. A
 diferença é **legado, não princípio** — a regra da lightbar nasceu com células
 já escritas por outra régua, e esta nasceu com zero.
 

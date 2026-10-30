@@ -71,7 +71,7 @@ def _ctx(entry: dict[str, Any] | None = None, **extra: Any) -> Contexto:
                     estados={}, **extra)
 
 
-def _enderecos_da_bancada() -> frozenset[str]:
+def _enderecos_do_ensaio() -> frozenset[str]:
     """Todo `data-campo` do DESENHO de hoje — e a bancada é onde ele mora."""
     doc = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
     import re as _re
@@ -80,7 +80,7 @@ def _enderecos_da_bancada() -> frozenset[str]:
 
 def _card(entry: dict[str, Any], **extra: Any) -> dict[str, Any]:
     """Os campos do card DESTE controle, com o DESENHO DE HOJE endereçado."""
-    a02._ENDERECOS = _enderecos_da_bancada()
+    a02._ENDERECOS = _enderecos_do_ensaio()
     try:
         fora = a02.pacote(_ctx(entry, **extra))
     finally:

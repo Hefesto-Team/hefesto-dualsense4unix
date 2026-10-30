@@ -87,7 +87,7 @@ class _Gravador:
         return None
 
 
-class _Bancada:
+class _Ensaio:
     """O ouvido com o leitor de fluxos e a conferência do PRODUTO, sobre o som de mentira."""
 
     def __init__(self, nome: str, *, origem_do_ouvido: int | None = 171) -> None:
@@ -122,37 +122,37 @@ class _Bancada:
 @pytest.mark.parametrize("nome", NOMES)
 def test_o_ouvido_liga_uma_vez_e_fica_no_jogo_de_nome_perdido(nome: str) -> None:
     """**A régua do defeito**: 51 voltas de liga-cala em 8 min viram uma ligação só."""
-    bancada = _Bancada(nome)
-    bancada.voltas(12)
-    assert bancada.abertos == [["pw-record", "--target=719"]], bancada.abertos
-    assert bancada.ouvido.contadores["alvo_errado"] == 0, (
+    ensaio = _Ensaio(nome)
+    ensaio.voltas(12)
+    assert ensaio.abertos == [["pw-record", "--target=719"]], ensaio.abertos
+    assert ensaio.ouvido.contadores["alvo_errado"] == 0, (
         "o ouvido calou o gravador que se ligou ao fluxo certo do jogo"
     )
-    assert bancada.derrubados == []
-    assert bancada.ouvido._conferido
+    assert ensaio.derrubados == []
+    assert ensaio.ouvido._conferido
 
 
 @pytest.mark.parametrize("nome", NOMES)
 def test_o_alvo_errado_de_verdade_continua_calando(nome: str) -> None:
     """Outro fluxo do MESMO jogo, com o MESMO nome: o serial diz que não é o pedido."""
-    bancada = _Bancada(nome, origem_do_ouvido=179)
-    bancada.voltas(2)
-    assert bancada.ouvido.contadores["alvo_errado"] == 1
-    assert len(bancada.derrubados) == 1
+    ensaio = _Ensaio(nome, origem_do_ouvido=179)
+    ensaio.voltas(2)
+    assert ensaio.ouvido.contadores["alvo_errado"] == 1
+    assert len(ensaio.derrubados) == 1
 
 
 def test_o_gravador_no_microfone_cala() -> None:
-    bancada = _Bancada(NOMES[0], origem_do_ouvido=47)
-    bancada.voltas(2)
-    assert bancada.ouvido.contadores["alvo_errado"] == 1
-    assert len(bancada.derrubados) == 1
+    ensaio = _Ensaio(NOMES[0], origem_do_ouvido=47)
+    ensaio.voltas(2)
+    assert ensaio.ouvido.contadores["alvo_errado"] == 1
+    assert len(ensaio.derrubados) == 1
 
 
 def test_sem_ligacao_no_grafo_e_nao_sei_e_nao_derruba() -> None:
-    bancada = _Bancada(NOMES[0], origem_do_ouvido=None)
-    bancada.voltas(5)
-    assert bancada.derrubados == [] and bancada.ouvido.contadores["alvo_errado"] == 0
-    assert not bancada.ouvido._conferido
+    ensaio = _Ensaio(NOMES[0], origem_do_ouvido=None)
+    ensaio.voltas(5)
+    assert ensaio.derrubados == [] and ensaio.ouvido.contadores["alvo_errado"] == 0
+    assert not ensaio.ouvido._conferido
 
 
 def _fluxo(nome: str = "", *, serial: int | None = 719, ident: int | None = 171,
@@ -411,8 +411,8 @@ def test_a_mesa_mista_cada_gravador_confere_o_proprio_no_com_o_jogo_no_grafo(
 
 @pytest.mark.parametrize("assento", ASSENTOS)
 def test_a_mesa_mista_o_ouvido_fica_no_jogo_de_qualquer_assento(assento: int) -> None:
-    bancada = _Bancada(NOMES[0])
-    bancada.pactl = _jogo_no_assento(NOMES[0], assento)
-    bancada.voltas(12)
-    assert bancada.abertos == [["pw-record", "--target=719"]]
-    assert bancada.ouvido.contadores["alvo_errado"] == 0 and bancada.derrubados == []
+    ensaio = _Ensaio(NOMES[0])
+    ensaio.pactl = _jogo_no_assento(NOMES[0], assento)
+    ensaio.voltas(12)
+    assert ensaio.abertos == [["pw-record", "--target=719"]]
+    assert ensaio.ouvido.contadores["alvo_errado"] == 0 and ensaio.derrubados == []

@@ -95,7 +95,7 @@ def test_com_o_servico_parado_o_pacote_escreve_o_painel_e_o_exame(monkeypatch) -
     assert carga["exame-lista"] == nada
 
 
-def test_com_o_servico_parado_o_que_ela_pediu_continua_no_painel(monkeypatch) -> None:
+def test_com_o_servico_parado_o_que_o_usuario_pediu_continua_no_painel(monkeypatch) -> None:
     """A pergunta do «Restaurar de fábrica» chega pelo PACOTE, sem o serviço."""
     _camada_levanta(monkeypatch)
     carga = _pergunta_do_restaurar(monkeypatch)

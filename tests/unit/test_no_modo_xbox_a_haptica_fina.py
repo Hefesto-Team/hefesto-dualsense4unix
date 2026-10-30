@@ -532,7 +532,7 @@ def test_pelo_radio_o_alto_falante_tocando_e_o_rumble_chegam_juntos(
     assert mundo.backend.do(_P1)[-1] == (0, 0), "o HID voltou a levar com a háptica no ar"
 
 
-def test_onde_o_jogo_toca_a_haptica_o_rumble_soma_nela_como_audio(mundo: _Mundo) -> None:
+def test_onde_o_jogo_toca_a_haptica_o_rumble_soma_no_usuario_como_audio(mundo: _Mundo) -> None:
     """O jogo toca no endpoint do aparelho: o rumble vira áudio nele, e o HID não leva o motor.
 
     A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01: o `HAPTICS_SELECT` do report

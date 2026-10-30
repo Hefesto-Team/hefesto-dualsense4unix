@@ -206,7 +206,7 @@ CONDICAO = Linha(
             marcas=(
                 (0, "0"),
                 (38, "38 · mudo abaixo"),
-                (af.VOLUME_QUE_ELA_OUVIU, f"{af.VOLUME_QUE_ELA_OUVIU} · produto"),
+                (af.VOLUME_QUE_O_USUARIO_OUVIU, f"{af.VOLUME_QUE_O_USUARIO_OUVIU} · produto"),
                 (102, "102 · satura"),
                 (rep.TETO_SPEAKER_VOLUME, "255"),
             ),
@@ -317,7 +317,7 @@ class Coluna:
 
     alvo: Aparelho
     rota_do_produto: af.RotaDoNo | None = None
-    volume: int = af.VOLUME_QUE_ELA_OUVIU
+    volume: int = af.VOLUME_QUE_O_USUARIO_OUVIU
     rota: int = rep.SAIDA_SO_NO_ALTO_FALANTE
     preamp: int = rep.SP_PREAMP_GAIN_PADRAO
     assumido: bool = False
@@ -833,7 +833,7 @@ class Folha:
                         suspeito=linha.pergunta,
                         presente=presente,
                         resultado="",
-                        observado_por="olho-dela",
+                        observado_por="olho-do-usuario",
                         fonte="scripts/ensaios/a_folha_do_som_por_controle.py",
                         nota=f"{valor}{feito}; martelo "
                         f"{HZ_DO_MARTELO:g} Hz {'ligado' if coluna.assumido else 'desligado'}; "

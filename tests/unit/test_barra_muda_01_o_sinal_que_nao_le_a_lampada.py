@@ -393,7 +393,7 @@ class TestOCasamentoPorJanela:
         assert nos == frozenset({"/dev/hidraw7"})
         assert pids == (600105,)
 
-    def test_a_deteccao_de_escritor_casa_a_bancada_de_22_08(self) -> None:
+    def test_a_deteccao_de_escritor_casa_o_ensaio_de_22_08(self) -> None:
         """O caso inteiro de 22/08/2026, com os instantes reais do kernel e do"""
         nascimentos = {
             "0028": sb.Nascimento("0028", 64_740.852, "/dev/hidraw6", "bt"),

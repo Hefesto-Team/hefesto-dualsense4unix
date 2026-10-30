@@ -9,7 +9,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 PILOTOS = RAIZ / "scripts" / "tela"
 
-BANCADAS = (
+ENSAIOS = (
     "jogar_vivo.py",
     "controles_vivos.py",
     "conexoes_vivas.py",
@@ -37,9 +37,9 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     return INTERFACE.parent / nome.group(1)
 
 
-def test_as_cinco_bancadas_apontam_para_uma_pagina_que_existe() -> None:
+def test_as_cinco_ensaios_apontam_para_uma_pagina_que_existe() -> None:
     faltam = []
-    for nome in BANCADAS:
+    for nome in ENSAIOS:
         arq = _casa(nome) / nome
         assert arq.exists(), f"a bancada {nome} sumiu — a lista desta régua envelheceu"
         alvo = _caminho_da_pagina(arq.read_text(encoding="utf-8"))
@@ -79,10 +79,10 @@ def _recusa_a_pagina_ausente(fonte: str) -> bool:
     return False
 
 
-def test_as_cinco_bancadas_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
+def test_as_cinco_ensaios_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
     """A guarda que faz o `rc` contar. Sem ela, achar o defeito acima é sorte."""
     sem_guarda_da_pagina, sem_guarda_da_volta = [], []
-    for nome in BANCADAS:
+    for nome in ENSAIOS:
         fonte = (_casa(nome) / nome).read_text(encoding="utf-8")
         if not _recusa_a_pagina_ausente(fonte):
             sem_guarda_da_pagina.append(nome)

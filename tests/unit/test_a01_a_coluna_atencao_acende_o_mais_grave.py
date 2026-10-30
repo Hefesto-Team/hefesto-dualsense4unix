@@ -54,7 +54,7 @@ def test_o_mais_grave_sobe_e_a_ordem_e_a_da_gravidade(monkeypatch: Any) -> None:
         f"a coluna não pôs o mais grave em cima: {selos!r}")
 
 
-def test_a_pausa_vence_tudo_porque_ela_invalida_tudo(monkeypatch: Any) -> None:
+def test_a_pausa_vence_tudo_porque_o_usuario_invalida_tudo(monkeypatch: Any) -> None:
     """Com o Hefesto em pausa, nada do resto está acontecendo."""
     _so_estes(monkeypatch, [
         {"selo": "RÁDIO", "texto": "frágil", "fonte": "x"},

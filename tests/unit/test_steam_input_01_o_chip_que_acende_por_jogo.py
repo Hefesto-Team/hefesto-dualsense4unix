@@ -789,7 +789,7 @@ def test_sem_jogo_o_gesto_recusa_dizendo_e_nada_e_escrito(lar) -> None:
         "o vdf mudou num clique que o produto recusou")
 
 
-def test_a_tela_acende_pela_escolha_dela(lar) -> None:
+def test_a_tela_acende_pela_escolha_do_usuario(lar) -> None:
     """**A MORDIDA 4** — o PENDENTE acende, e o que falta vai à faixa."""
     ctx = _ctx()
 

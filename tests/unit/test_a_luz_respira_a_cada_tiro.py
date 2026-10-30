@@ -215,7 +215,7 @@ def test_no_modo_nativo_a_barra_e_do_aparelho() -> None:
     assert backend.pintadas == []
 
 
-def test_o_jogo_que_toma_a_barra_no_meio_do_pulso_fica_com_ela() -> None:
+def test_o_jogo_que_toma_a_barra_no_meio_do_pulso_fica_com_o_usuario() -> None:
     backend = Backend()
     motor = _motor(backend)
     motor.anotar(tv.Evento(0.0, P1, tv.TIPO_DEDO, tv.LADO_DIREITO))

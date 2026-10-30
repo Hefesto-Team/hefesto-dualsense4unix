@@ -32,7 +32,7 @@ CASOS = {
 }
 
 
-def _bancada(tmp_path: Path, com_conf: bool, valor: str | None) -> tuple[Path, Path]:
+def _ensaio(tmp_path: Path, com_conf: bool, valor: str | None) -> tuple[Path, Path]:
     parametro = tmp_path / "enable_autosuspend"
     if valor is not None:
         parametro.write_text(valor + "\n", encoding="utf-8")
@@ -71,7 +71,7 @@ def _doctor(parametro: Path, conf: Path) -> str:
 def test_o_exame_responde_pelo_que_mediu(
     tmp_path: Path, com_conf: bool, valor: str | None
 ) -> None:
-    parametro, conf = _bancada(tmp_path, com_conf, valor)
+    parametro, conf = _ensaio(tmp_path, com_conf, valor)
     item = energia_do_radio(parametro=parametro, conf=conf)
 
     assert item.estado == CASOS[(com_conf, valor)][0], (
@@ -94,7 +94,7 @@ def test_o_exame_responde_pelo_que_mediu(
 def test_o_doctor_responde_pelo_mesmo_criterio(
     tmp_path: Path, com_conf: bool, valor: str | None
 ) -> None:
-    parametro, conf = _bancada(tmp_path, com_conf, valor)
+    parametro, conf = _ensaio(tmp_path, com_conf, valor)
     saida = _doctor(parametro, conf)
 
     assert saida.splitlines()[0].split()[0] == CASOS[(com_conf, valor)][1], (

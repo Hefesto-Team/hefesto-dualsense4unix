@@ -84,7 +84,7 @@ def test_o_jogo_sem_appid_tambem(lar: Path) -> None:
     assert _lancar(lar).get("PROTON_USE_XALIA") == "0"
 
 
-def test_a_launch_option_dela_manda(lar: Path) -> None:
+def test_a_launch_option_do_usuario_manda(lar: Path) -> None:
     """Quem já pôs `PROTON_USE_XALIA` no ambiente não é sobrescrito."""
     assert _lancar(lar, SteamAppId="3621330", PROTON_USE_XALIA="1")["PROTON_USE_XALIA"] == "1"
 
@@ -201,7 +201,7 @@ def test_o_valor_da_carona_e_o_do_lancador_da_steam() -> None:
     assert dict(cpe.CORRECOES_DA_CARONA) == {nome: valor}
 
 
-def test_o_que_ela_pos_manda(casa: Path) -> None:
+def test_o_que_o_usuario_pos_manda(casa: Path) -> None:
     """Ela já pôs `PROTON_USE_XALIA`: a carona não escreve por cima, e não anota como nosso."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [{"key": _XALIA, "value": "1"}]}})
     dado = json.loads((heroic / "config.json").read_text())
@@ -221,7 +221,7 @@ def test_o_que_ela_pos_manda(casa: Path) -> None:
             f"{arquivo}: o dela foi anotado como nosso")
 
 
-def test_ela_muda_o_nosso_e_fica_o_dela(casa: Path) -> None:
+def test_o_usuario_muda_o_nosso_e_fica_o_do_usuario(casa: Path) -> None:
     """Depois da carona ela troca o nosso `0` por `1`: a carona seguinte não volta ao `0`."""
     heroic = _heroic(casa, {"A": {}})
     _carona(casa)
@@ -280,7 +280,7 @@ def test_o_jogo_excluido_do_lutris_pelo_wine_herda_a_caixa(casa: Path) -> None:
     assert _XALIA not in _env_do_yml(yml)
 
 
-def test_a_aba_lancadores_nao_cobra_o_que_ela_pos(casa: Path) -> None:
+def test_a_aba_lancadores_nao_cobra_o_que_o_usuario_pos(casa: Path) -> None:
     """Com o valor dela no lugar do nosso, nada falta: o dela manda."""
     heroic = _heroic(casa, {"A": {}, "B": {"enviromentOptions": []}})
     atalhos = dict(cpe.cartoes_com_estrada())["heroic"]
@@ -294,26 +294,26 @@ def test_a_aba_lancadores_nao_cobra_o_que_ela_pos(casa: Path) -> None:
     assert cpe.onde_falta_o_ambiente("heroic", atalhos, lar=casa) == ()
 
 
-def test_o_limpa_nao_chama_de_rastro_o_xalia_dela(casa: Path) -> None:
+def test_o_limpa_nao_chama_de_rastro_o_xalia_do_usuario(casa: Path) -> None:
     """O «limpa?» conhece a variável, e a conta como «pode ser sua»."""
     assert _XALIA in m.VARIAVEIS_DO_PRODUTO
     texto = json.dumps({"defaultSettings": {"enviromentOptions": [
         {"key": _XALIA, "value": "1"}]}})
     assert m.variaveis_do_produto_no_heroic(texto) == [_XALIA]
-    assert _XALIA in m._VARIAVEIS_QUE_PODEM_SER_DELA
+    assert _XALIA in m._VARIAVEIS_QUE_PODEM_SER_DO_USUARIO
 
 
-def _global_dela(heroic: Path, valor: str) -> None:
+def _global_do_usuario(heroic: Path, valor: str) -> None:
     """Ela põe `PROTON_USE_XALIA` na lista global do Heroic, à mão."""
     dado = json.loads((heroic / "config.json").read_text())
     dado["defaultSettings"]["enviromentOptions"].append({"key": _XALIA, "value": valor})
     (heroic / "config.json").write_text(json.dumps(dado))
 
 
-def test_com_a_global_dela_o_nosso_da_copia_sai_no_desfazer(casa: Path) -> None:
+def test_com_a_global_do_usuario_o_nosso_da_copia_sai_no_desfazer(casa: Path) -> None:
     """O `1` dela na global, e a cópia de A sem a chave: a carona põe o `0` na cópia."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [{"key": "MANGOHUD", "value": "1"}]}})
-    _global_dela(heroic, "1")
+    _global_do_usuario(heroic, "1")
     for _ in range(2):
         _carona(casa)
         assert (_lista_do_jogo(heroic, "A") or {}).get(_XALIA) == "0"
@@ -325,7 +325,7 @@ def test_com_a_global_dela_o_nosso_da_copia_sai_no_desfazer(casa: Path) -> None:
     assert _lista_global(heroic)[_XALIA] == "1", "o desfazer tirou o dela da global"
 
 
-def test_ela_troca_a_global_e_o_nosso_da_copia_continua_nosso(casa: Path) -> None:
+def test_o_usuario_troca_a_global_e_o_nosso_da_copia_continua_nosso(casa: Path) -> None:
     """Ela troca o nosso `0` da global por `1`: a cópia de A segue com o nosso, e ele sai."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [{"key": "MANGOHUD", "value": "1"}]}})
     _carona(casa)
@@ -339,11 +339,11 @@ def test_ela_troca_a_global_e_o_nosso_da_copia_continua_nosso(casa: Path) -> Non
     assert _lista_global(heroic)[_XALIA] == "1"
 
 
-def test_o_jogo_excluido_com_a_global_dela_sai_sem_o_nosso(casa: Path) -> None:
+def test_o_jogo_excluido_com_a_global_do_usuario_sai_sem_o_nosso(casa: Path) -> None:
     """Com o `1` dela na global, o jogo excluído do Heroic não leva o `0` que a carona pôs."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [{"key": "MANGOHUD", "value": "1"}]},
                             "B": {}})
-    _global_dela(heroic, "1")
+    _global_do_usuario(heroic, "1")
     _carona(casa)
     assert antiga.adicionar(
         _janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
@@ -360,20 +360,20 @@ def _tirar_da_global(heroic: Path) -> None:
     (heroic / "config.json").write_text(json.dumps(dado))
 
 
-def test_o_zero_que_ela_tinha_antes_do_hefesto_fica(casa: Path) -> None:
+def test_o_zero_que_o_usuario_tinha_antes_do_hefesto_fica(casa: Path) -> None:
     """O `0` dela na global, de antes do Hefesto, continua lá depois do uninstall."""
     heroic = _heroic(casa, {})
-    _global_dela(heroic, "0")
+    _global_do_usuario(heroic, "0")
     _carona(casa)
     assert _lista_global(heroic)[_XALIA] == "0"
     cpe.desfazer_as_estradas([_pasta()], casa)
     assert _lista_global(heroic).get(_XALIA) == "0", "o uninstall tirou o 0 que era dela"
 
 
-def test_o_um_que_ela_tirou_nao_volta_no_desfazer(casa: Path) -> None:
+def test_o_um_que_o_usuario_tirou_nao_volta_no_desfazer(casa: Path) -> None:
     """Ela tinha `1`, tirou, e a carona pôs o `0`: o desfazer tira o `0` e não devolve o `1`."""
     heroic = _heroic(casa, {})
-    _global_dela(heroic, "1")
+    _global_do_usuario(heroic, "1")
     _carona(casa)
     assert _lista_global(heroic)[_XALIA] == "1"
     _tirar_da_global(heroic)
@@ -383,11 +383,11 @@ def test_o_um_que_ela_tirou_nao_volta_no_desfazer(casa: Path) -> None:
     assert _XALIA not in _lista_global(heroic), "o desfazer devolveu o 1 que ela já tinha tirado"
 
 
-def test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall(casa: Path) -> None:
+def test_o_zero_do_usuario_copiado_para_o_jogo_fica_no_uninstall(casa: Path) -> None:
     """O `0` dela na global antes do Hefesto, e o Heroic o copiou para o jogo A."""
     heroic = _heroic(casa, {"A": {"enviromentOptions": [
         {"key": "MANGOHUD", "value": "1"}, {"key": _XALIA, "value": "0"}]}})
-    _global_dela(heroic, "0")
+    _global_do_usuario(heroic, "0")
     for _ in range(2):
         _carona(casa)
         assert (_lista_do_jogo(heroic, "A") or {}).get(_XALIA) == "0"
@@ -400,10 +400,10 @@ def test_o_zero_dela_copiado_para_o_jogo_fica_no_uninstall(casa: Path) -> None:
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in copia, "o nosso ficou na cópia de A"
 
 
-def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> None:
+def test_o_excluido_que_segue_a_global_do_usuario_fica_com_o_zero_do_usuario(casa: Path) -> None:
     """O `0` dela na global antes do Hefesto, e o jogo A excluído segue a global."""
     heroic = _heroic(casa, {"A": {}, "B": {}})
-    _global_dela(heroic, "0")
+    _global_do_usuario(heroic, "0")
     _carona(casa)
     assert antiga.adicionar(
         _janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
@@ -415,10 +415,12 @@ def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> 
         _carona(casa)
 
 
-def test_o_recibo_do_uninstall_nao_diz_que_ela_mudou_o_que_ja_era_dela(casa: Path) -> None:
+def test_o_recibo_do_uninstall_nao_diz_que_o_usuario_mudou_o_que_ja_era_do_usuario(
+    casa: Path,
+) -> None:
     """O `1` dela na global antes do Hefesto fica, e o recibo não diz «mudou depois»."""
     heroic = _heroic(casa, {})
-    _global_dela(heroic, "1")
+    _global_do_usuario(heroic, "1")
     _carona(casa)
     feitos, _ = cpe.desfazer_as_estradas([_pasta()], casa)
     assert _lista_global(heroic)[_XALIA] == "1"
@@ -426,7 +428,7 @@ def test_o_recibo_do_uninstall_nao_diz_que_ela_mudou_o_que_ja_era_dela(casa: Pat
     assert "mudou depois do Hefesto" not in recibo, recibo
 
 
-def test_o_recibo_do_uninstall_diz_quando_ela_trocou_o_nosso(casa: Path) -> None:
+def test_o_recibo_do_uninstall_diz_quando_o_usuario_trocou_o_nosso(casa: Path) -> None:
     """Ela troca o nosso `0` por `1` depois da carona: o recibo diz que ficou o dela."""
     heroic = _heroic(casa, {})
     _carona(casa)

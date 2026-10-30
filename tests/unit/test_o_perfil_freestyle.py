@@ -27,7 +27,7 @@ JOGO = "steam_app_2111190"
 QUATRO = {f"aabbcc00000{n}": {"leds": {"lightbar": [n * 40, 0, 255 - n * 40]}}
           for n in (1, 2, 3, 4)}
 
-PERFIL_DELA: dict[str, Any] = {
+PERFIL_DO_USUARIO: dict[str, Any] = {
     "name": "Personalizado",
     "version": 1,
     "match": {"type": "criteria", "window_class": ["Hefesto-Dualsense4Unix"]},
@@ -37,10 +37,10 @@ PERFIL_DELA: dict[str, Any] = {
 }
 
 
-def _grava_dela(pasta: Path, dados: dict[str, Any] | None = None) -> bytes:
+def _grava_do_usuario(pasta: Path, dados: dict[str, Any] | None = None) -> bytes:
     """Grava o arquivo dela com a formatação dela e devolve os bytes exatos."""
     pasta.mkdir(parents=True, exist_ok=True)
-    bruto = (json.dumps(dados or PERFIL_DELA, ensure_ascii=False, indent=4)
+    bruto = (json.dumps(dados or PERFIL_DO_USUARIO, ensure_ascii=False, indent=4)
              + "\n").encode()
     (pasta / loader.ARQUIVO_DO_PERSONALIZADO).write_bytes(bruto)
     return bruto
@@ -73,10 +73,10 @@ def test_a_sanidade_nao_acusa_o_freestyle() -> None:
     assert verificar_perfis([fabrica]) == []
 
 
-def test_o_personalizado_dela_vira_freestyle_com_a_copia_byte_a_byte() -> None:
+def test_o_personalizado_do_usuario_vira_freestyle_com_a_copia_byte_a_byte() -> None:
     """O caso dela, fim a fim: o nome muda, o conteúdo fica, e os bytes guardam."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta)
+    bruto = _grava_do_usuario(pasta)
 
     copia = loader.o_personalizado_vira_freestyle()
 
@@ -86,15 +86,15 @@ def test_o_personalizado_dela_vira_freestyle_com_a_copia_byte_a_byte() -> None:
     novo = _freestyle(pasta)
     assert novo["name"] == "Freestyle"
     assert novo["controllers"] == QUATRO
-    assert novo["leds"] == PERFIL_DELA["leds"]
-    assert novo["priority"] == PERFIL_DELA["priority"]
+    assert novo["leds"] == PERFIL_DO_USUARIO["leds"]
+    assert novo["priority"] == PERFIL_DO_USUARIO["priority"]
     assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
 
 
 def test_a_volta_existe_e_devolve_o_arquivo_inteiro() -> None:
     """Reversível: `restaurar_do_historico` é a volta que a casa já tinha."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta)
+    bruto = _grava_do_usuario(pasta)
     loader.o_personalizado_vira_freestyle()
 
     alvo, _versao = loader.restaurar_do_historico(loader.SLUG_DO_PERSONALIZADO)
@@ -106,7 +106,7 @@ def test_a_volta_existe_e_devolve_o_arquivo_inteiro() -> None:
 def test_a_segunda_corrida_nao_faz_nada() -> None:
     """One-shot, pela marca: nem cópia nova, nem um byte do Freestyle mexido."""
     pasta = profiles_dir(ensure=True)
-    _grava_dela(pasta)
+    _grava_do_usuario(pasta)
     assert loader.o_personalizado_vira_freestyle() is not None
     antes = (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes()
 
@@ -123,7 +123,7 @@ def test_a_segunda_corrida_nao_faz_nada() -> None:
 def test_sem_copia_nada_muda_e_a_marca_nao_nasce(monkeypatch: pytest.MonkeyPatch) -> None:
     """Apagar sem volta é o único desfecho que a migração não tem."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta)
+    bruto = _grava_do_usuario(pasta)
     with monkeypatch.context() as m:
         m.setattr(loader, "_arquivar_versao", lambda *a, **k: None)
         assert loader.o_personalizado_vira_freestyle() is None
@@ -135,10 +135,10 @@ def test_sem_copia_nada_muda_e_a_marca_nao_nasce(monkeypatch: pytest.MonkeyPatch
     assert _freestyle(pasta)["controllers"] == QUATRO
 
 
-def test_a_escrita_que_falha_deixa_o_arquivo_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_escrita_que_falha_deixa_o_arquivo_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     """A ordem: a cópia, o novo, e SÓ ENTÃO o antigo sai."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta)
+    bruto = _grava_do_usuario(pasta)
 
     def _disco_cheio(*_a: Any, **_k: Any) -> None:
         raise OSError(28, "No space left on device")
@@ -152,40 +152,40 @@ def test_a_escrita_que_falha_deixa_o_arquivo_dela(monkeypatch: pytest.MonkeyPatc
     assert not (pasta / loader._PERSONALIZADO_VIROU_FREESTYLE_MARKER).exists()
 
 
-def test_a_regra_da_nossa_janela_vira_any_e_a_dela_fica() -> None:
+def test_a_regra_da_nossa_janela_vira_any_e_a_do_usuario_fica() -> None:
     """O Freestyle é o perfil de FORA do jogo: a regra que só mira o Hefesto sai."""
     pasta = profiles_dir(ensure=True)
-    _grava_dela(pasta)
+    _grava_do_usuario(pasta)
     loader.o_personalizado_vira_freestyle()
     assert _freestyle(pasta)["match"] == {"type": "any"}
 
 
-def test_a_regra_dela_para_outro_programa_fica() -> None:
+def test_a_regra_do_usuario_para_outro_programa_fica() -> None:
     pasta = profiles_dir(ensure=True)
-    dela = dict(PERFIL_DELA, match={"type": "criteria", "window_class": ["firefox"]})
-    _grava_dela(pasta, dela)
+    do_usuario = dict(PERFIL_DO_USUARIO, match={"type": "criteria", "window_class": ["firefox"]})
+    _grava_do_usuario(pasta, do_usuario)
     loader.o_personalizado_vira_freestyle()
     assert _freestyle(pasta)["match"] == {"type": "criteria", "window_class": ["firefox"]}
 
 
-def test_recusa_quando_ela_ja_tem_um_freestyle() -> None:
+def test_recusa_quando_o_usuario_ja_tem_um_freestyle() -> None:
     """Um `freestyle.json` que não é o de fábrica é DO USUÁRIO: os dois ficam."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta)
-    dela = {"name": "Freestyle", "version": 1, "match": {"type": "any"}, "priority": 7}
-    (pasta / loader.ARQUIVO_DO_PADRAO).write_text(json.dumps(dela), encoding="utf-8")
+    bruto = _grava_do_usuario(pasta)
+    do_usuario = {"name": "Freestyle", "version": 1, "match": {"type": "any"}, "priority": 7}
+    (pasta / loader.ARQUIVO_DO_PADRAO).write_text(json.dumps(do_usuario), encoding="utf-8")
 
     assert loader.o_personalizado_vira_freestyle() is None
 
     assert (pasta / loader.ARQUIVO_DO_PERSONALIZADO).read_bytes() == bruto
-    assert _freestyle(pasta) == dela
+    assert _freestyle(pasta) == do_usuario
     assert _copias(pasta) == []
 
 
 def test_o_freestyle_de_fabrica_que_o_install_copiou_cede_o_lugar() -> None:
     """O `install_profiles.sh` roda ANTES de qualquer Python e copia a fábrica."""
     pasta = profiles_dir(ensure=True)
-    _grava_dela(pasta)
+    _grava_do_usuario(pasta)
     (pasta / loader.ARQUIVO_DO_PADRAO).write_bytes(
         (FABRICA / loader.ARQUIVO_DO_PADRAO).read_bytes())
 
@@ -193,9 +193,9 @@ def test_o_freestyle_de_fabrica_que_o_install_copiou_cede_o_lugar() -> None:
     assert _freestyle(pasta)["controllers"] == QUATRO
 
 
-def test_recusa_quando_ela_renomeou_na_mao() -> None:
+def test_recusa_quando_o_usuario_renomeou_na_mao() -> None:
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta, dict(PERFIL_DELA, name="Sofá"))
+    bruto = _grava_do_usuario(pasta, dict(PERFIL_DO_USUARIO, name="Sofá"))
     assert loader.o_personalizado_vira_freestyle() is None
     assert (pasta / loader.ARQUIVO_DO_PERSONALIZADO).read_bytes() == bruto
     assert not (pasta / loader.ARQUIVO_DO_PADRAO).exists()
@@ -220,7 +220,7 @@ def test_sem_personalizado_nada_acontece_e_a_marca_nasce() -> None:
 def test_a_copia_mora_na_pasta_que_a_migracao_recebeu(tmp_path: Path) -> None:
     """`dest_dir` injetado leva o histórico junto — nunca o `profiles_dir()`."""
     outra = tmp_path / "outra"
-    bruto = _grava_dela(outra)
+    bruto = _grava_do_usuario(outra)
 
     copia = loader.o_personalizado_vira_freestyle(dest_dir=outra)
 
@@ -231,7 +231,7 @@ def test_a_copia_mora_na_pasta_que_a_migracao_recebeu(tmp_path: Path) -> None:
 
 def test_a_sessao_que_apontava_o_personalizado_aponta_o_freestyle() -> None:
     """Sem isto o boot procuraria um arquivo que virou outro, e ficaria sem perfil."""
-    _grava_dela(profiles_dir(ensure=True))
+    _grava_do_usuario(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
 
@@ -245,7 +245,7 @@ def test_a_sessao_que_apontava_o_personalizado_aponta_o_freestyle() -> None:
 
 
 def test_a_sessao_que_aponta_outro_perfil_nao_e_tocada() -> None:
-    _grava_dela(profiles_dir(ensure=True))
+    _grava_do_usuario(profiles_dir(ensure=True))
     session.save_last_profile("Mullet Mad Jack")
     session.save_active_marker("Mullet Mad Jack")
 
@@ -284,7 +284,7 @@ def test_maquina_nova_abre_com_o_freestyle(semeadura_ligada: None) -> None:
 def test_o_disco_de_23_09_vira_freestyle_numa_carga(semeadura_ligada: None) -> None:
     """O disco do usuário hoje: o Personalizado com os quatro controles, ativo na sessão."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava_dela(pasta)
+    bruto = _grava_do_usuario(pasta)
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
 
@@ -300,7 +300,7 @@ def test_o_disco_de_23_09_vira_freestyle_numa_carga(semeadura_ligada: None) -> N
 def test_o_disco_de_antes_de_05_09_vai_direto_ao_freestyle(semeadura_ligada: None) -> None:
     """`meu_perfil.json` ativo: a renomeação de 05/09 já leva ao nome de hoje."""
     pasta = profiles_dir(ensure=True)
-    velho = dict(PERFIL_DELA, name="meu_perfil", match={"type": "any"})
+    velho = dict(PERFIL_DO_USUARIO, name="meu_perfil", match={"type": "any"})
     (pasta / loader.ARQUIVO_ANTIGO_DO_PADRAO).write_text(
         json.dumps(velho, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     session.save_last_profile("meu_perfil")
@@ -314,7 +314,7 @@ def test_o_disco_de_antes_de_05_09_vai_direto_ao_freestyle(semeadura_ligada: Non
     assert (session.config_dir() / session._COPIA_DA_SESSAO).is_file()
 
 
-def test_o_install_profiles_de_hoje_roda_antes_e_o_dela_vence(
+def test_o_install_profiles_de_hoje_roda_antes_e_o_do_usuario_vence(
     tmp_path: Path, semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A MEDIDA DO ITEM 4: o `install.sh` chama o shell antes de qualquer Python."""
@@ -323,7 +323,7 @@ def test_o_install_profiles_de_hoje_roda_antes_e_o_dela_vence(
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
     assert profiles_dir() == pasta
-    _grava_dela(pasta)
+    _grava_do_usuario(pasta)
 
     feito = _install_profiles(home)
 
@@ -341,7 +341,7 @@ def test_o_install_profiles_depois_do_python_nao_traz_um_segundo(
     pasta = home / ".config" / "hefesto-dualsense4unix" / "profiles"
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
-    _grava_dela(pasta)
+    _grava_do_usuario(pasta)
     loader.load_all_profiles()
     antes = (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes()
 
@@ -355,7 +355,7 @@ def test_o_install_profiles_depois_do_python_nao_traz_um_segundo(
 def _grava_meu_perfil(pasta: Path, match: dict[str, Any]) -> None:
     """O disco de antes de 05/09: o padrão de produto ainda se chama `meu_perfil`."""
     pasta.mkdir(parents=True, exist_ok=True)
-    velho = dict(PERFIL_DELA, name=loader.NOME_ANTIGO_DO_PADRAO, match=match)
+    velho = dict(PERFIL_DO_USUARIO, name=loader.NOME_ANTIGO_DO_PADRAO, match=match)
     (pasta / loader.ARQUIVO_ANTIGO_DO_PADRAO).write_text(
         json.dumps(velho, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -365,7 +365,7 @@ def test_o_meu_perfil_com_a_nossa_janela_tambem_vale_fora_do_jogo(
 ) -> None:
     """A regra da própria janela sai também no disco de antes de 05/09."""
     pasta = profiles_dir(ensure=True)
-    _grava_meu_perfil(pasta, PERFIL_DELA["match"])
+    _grava_meu_perfil(pasta, PERFIL_DO_USUARIO["match"])
 
     assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
     assert _freestyle(pasta)["match"] == {"type": "any"}
@@ -393,12 +393,12 @@ def test_o_install_profiles_de_hoje_no_disco_de_antes_de_05_09(
 def test_o_shell_recusa_a_fabrica_ao_lado_do_nome_antigo(
     tmp_path: Path, nome_antigo: str,
 ) -> None:
-    """O `install_profiles.sh` espelha o `loader._o_slot_dela_tem_nome_antigo`."""
+    """O `install_profiles.sh` espelha o `loader._o_slot_do_usuario_tem_nome_antigo`."""
     home = tmp_path / "home"
     pasta = home / ".config" / "hefesto-dualsense4unix" / "profiles"
     pasta.mkdir(parents=True)
     (pasta / nome_antigo).write_text(
-        json.dumps(dict(PERFIL_DELA, name="Sofá"), ensure_ascii=False) + "\n",
+        json.dumps(dict(PERFIL_DO_USUARIO, name="Sofá"), ensure_ascii=False) + "\n",
         encoding="utf-8")
 
     feito = _install_profiles(home)
@@ -409,12 +409,12 @@ def test_o_shell_recusa_a_fabrica_ao_lado_do_nome_antigo(
         encoding="utf-8").splitlines()
 
 
-def test_o_personalizado_que_ela_renomeou_nao_ganha_um_freestyle_ao_lado(
+def test_o_personalizado_que_o_usuario_renomeou_nao_ganha_um_freestyle_ao_lado(
     semeadura_ligada: None,
 ) -> None:
     """Ela deu outro nome ao padrão: esse é o perfil de fora do jogo do usuário."""
     pasta = profiles_dir(ensure=True)
-    _grava_dela(pasta, dict(PERFIL_DELA, name="Sofá", match={"type": "any"}))
+    _grava_do_usuario(pasta, dict(PERFIL_DO_USUARIO, name="Sofá", match={"type": "any"}))
 
     assert [p.name for p in loader.load_all_profiles()] == ["Sofá"]
     assert not (pasta / loader.ARQUIVO_DO_PADRAO).exists()
@@ -447,7 +447,7 @@ def test_o_boot_restaura_o_freestyle_com_os_quatro_controles(
 ) -> None:
     """O disco do usuário, uma carga, e o boot: o Freestyle vale, com os quatro."""
     pasta = profiles_dir(ensure=True)
-    _grava_dela(pasta)
+    _grava_do_usuario(pasta)
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
     session.save_freestyle_ligado(True)
@@ -571,7 +571,7 @@ def test_com_o_freestyle_as_abas_tem_onde_guardar(semeadura_ligada: None) -> Non
     """A medição que derrubou o motor da 01, com o sinal que a decisão pediu."""
     from hefesto_dualsense4unix.interface.pacotes import perfil
 
-    _grava_dela(profiles_dir(ensure=True))
+    _grava_do_usuario(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
     session.save_freestyle_ligado(True)
@@ -587,7 +587,7 @@ def test_o_topo_diz_freestyle(semeadura_ligada: None) -> None:
     """Com o botão aceso, o chip «Perfil ativo» diz «Freestyle» — nunca o nome que saiu."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto, topo
 
-    _grava_dela(profiles_dir(ensure=True))
+    _grava_do_usuario(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
     session.save_freestyle_ligado(True)

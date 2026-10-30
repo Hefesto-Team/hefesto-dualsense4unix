@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     carregar_maquina,
     gravar_maquina,
 )
-from tests.unit.test_mapa_o_ensaio_de_mentira import bancada_de_agora, mapa_dela
+from tests.unit.test_mapa_o_ensaio_de_mentira import ensaio_de_agora, mapa_do_usuario
 
 PARES_DO_MOCKUP: dict[str, str] = {
     "1": "2", "2": "1",
@@ -93,9 +93,9 @@ def test_o_no_torto_e_recusado(nos: list[str]) -> None:
         MapaDaMesa.model_validate({"portas": {"7": {"nos": nos}}})
 
 
-def test_a_irma_bate_com_o_desenho_dela_entrada_por_entrada() -> None:
+def test_a_irma_bate_com_o_desenho_do_usuario_entrada_por_entrada() -> None:
     """As catorze irmãs saem iguais às que o usuário escreveu à mão no mockup."""
-    achadas = irmas_de(mapa_dela())
+    achadas = irmas_de(mapa_do_usuario())
     assert achadas == PARES_DO_MOCKUP, (
         "a irmã derivada divergiu do desenho dela: "
         f"faltam {sorted(set(PARES_DO_MOCKUP) - set(achadas))}, "
@@ -113,7 +113,7 @@ def test_a_irma_responde_com_o_gabinete_inteiro_vazio() -> None:
             ]
         }
     )
-    assert vizinhas_de_verdade(mapa, bancada_de_agora().censo()) == ()
+    assert vizinhas_de_verdade(mapa, ensaio_de_agora().censo()) == ()
     assert irmas_de(mapa) == {
         "1": "2", "2": "1", "3": "4", "4": "3", "5": "6", "6": "5", "7": "8",
         "8": "7",
@@ -122,14 +122,14 @@ def test_a_irma_responde_com_o_gabinete_inteiro_vazio() -> None:
 
 def test_a_fileira_impar_deixa_a_ultima_sem_irma_e_a_esticada_de_fora() -> None:
     """A ``15`` não tem irmã, e a ``15a`` também não — as duas por motivos."""
-    irmas = irmas_de(mapa_dela())
+    irmas = irmas_de(mapa_do_usuario())
     assert "15" not in irmas
     assert "15a" not in irmas
 
 
 def test_a_irma_nao_e_a_vizinha_da_fileira() -> None:
     """Na fileira do hub, a ``9`` é irmã da ``10`` — e NÃO da ``11``."""
-    irmas = irmas_de(mapa_dela())
+    irmas = irmas_de(mapa_do_usuario())
     assert irmas["9"] == "10"
     assert irmas["10"] == "9", "a relação tem de ser recíproca"
     assert irmas["11"] == "12"
@@ -137,7 +137,7 @@ def test_a_irma_nao_e_a_vizinha_da_fileira() -> None:
 
 def test_o_mapa_de_ontem_continua_valendo() -> None:
     """Campo novo sem bump de versão: o mapa dela, sem ``perto`` nem ``nos``."""
-    antigo = mapa_dela()
+    antigo = mapa_do_usuario()
     assert all(not f.perto and not f.alto for f in antigo.faces)
     assert antigo.portas["1"].nos == ["usb1-port3"] and antigo.portas["1"].caminho == "1-3"
     assert antigo.portas["7"].nos == ["usb4-port4"] and antigo.portas["7"].caminho == "4-4"

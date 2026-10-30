@@ -135,7 +135,7 @@ def _chave(mesa: Mesa, caminho: Path) -> str:
     return caminho.name if caminho.parent == mesa.dev else f"input/{caminho.name}"
 
 
-def _abrir_para_ela(caminho: Path) -> None:
+def _abrir_para_o_usuario(caminho: Path) -> None:
     """Uma regra que reabre (o `uaccess` do logind): `0660` + a ACL dela."""
     caminho.chmod(0o660)
     os.setxattr(caminho, ACL, encode_access_acl(UID))
@@ -152,7 +152,7 @@ def _nascer(mesa: Mesa, jogador: str, *, aberto: bool) -> None:
     mesa.js_do_movimento(jogador).chmod(0o000)
     if aberto:
         for caminho in mesa.do_controle(jogador):
-            _abrir_para_ela(caminho)
+            _abrir_para_o_usuario(caminho)
 
 
 def _montar(raiz: Path, *, aberta: bool) -> Mesa:
@@ -206,7 +206,7 @@ def _montar(raiz: Path, *, aberta: bool) -> Mesa:
     (mesa.sys_hidraw / "hidraw4" / "dev").write_text("0:0\n", encoding="ascii")
     (mesa.sys_hidraw / "hidraw4" / "device").symlink_to(vpad)
     mesa.vpad.write_text("", encoding="ascii")
-    _abrir_para_ela(mesa.vpad)
+    _abrir_para_o_usuario(mesa.vpad)
     return mesa
 
 
@@ -292,7 +292,7 @@ def _fechado(caminho: Path) -> bool:
     return False
 
 
-def _aberto_para_ela(caminho: Path) -> bool:
+def _aberto_para_o_usuario(caminho: Path) -> bool:
     """O alvo de abrir: `0660` e a ACL canônica dela, byte a byte."""
     try:
         blob = os.getxattr(caminho, ACL)
@@ -367,7 +367,7 @@ def _a_regra_que_reabre(mesa: Mesa) -> set[str]:
     """O hidraw e o event do gamepad do P3 voltam a `0660` com a ACL dela."""
     alvos = [mesa.no("P3"), mesa.entradas("P3")[0]]
     for caminho in alvos:
-        _abrir_para_ela(caminho)
+        _abrir_para_o_usuario(caminho)
     return {_chave(mesa, c) for c in alvos}
 
 
@@ -436,7 +436,7 @@ class TestR0AMesaAlcancaOKernel:
 
         assert resposta["error"] == "reject_not_physical_dualsense"
         assert vigia.drenar() == Counter()
-        assert _aberto_para_ela(mesa.vpad)
+        assert _aberto_para_o_usuario(mesa.vpad)
 
 
 class TestR1NoTempo:
@@ -534,7 +534,7 @@ class TestR3OLadoDeAbrir:
 
         assert _pede(st, pedido)["state"] == "exposed"
         assert set(vigia.drenar()) == do_controle
-        assert all(_aberto_para_ela(c) for c in mesa.do_controle(jogador))
+        assert all(_aberto_para_o_usuario(c) for c in mesa.do_controle(jogador))
 
         repetidos = []
         for _ in range(30):
@@ -546,7 +546,7 @@ class TestR3OLadoDeAbrir:
         vigia.drenar()
         assert _pede(st, pedido)["state"] == "exposed"
         assert set(vigia.drenar()) == do_controle
-        assert all(_aberto_para_ela(c) for c in mesa.do_controle(jogador))
+        assert all(_aberto_para_o_usuario(c) for c in mesa.do_controle(jogador))
 
         com_dois = [mesa.no(jogador), mesa.entradas(jogador)[0]]
         try:
@@ -558,7 +558,7 @@ class TestR3OLadoDeAbrir:
         vigia.drenar()
         assert _pede(st, pedido)["state"] == "exposed"
         assert set(vigia.drenar()) == {_chave(mesa, c) for c in com_dois}
-        assert all(_aberto_para_ela(c) for c in mesa.do_controle(jogador))
+        assert all(_aberto_para_o_usuario(c) for c in mesa.do_controle(jogador))
 
         assert _pede(st, pedido)["state"] == "exposed"
         assert vigia.drenar() == Counter()
@@ -641,7 +641,7 @@ class TestR6NaDuvidaEscreve:
         eventos = vigia.drenar()
 
         assert set(eventos) == {_chave(mesa, c) for c in mesa.todos()}, dict(eventos)
-        assert all(_aberto_para_ela(c) for c in mesa.todos())
+        assert all(_aberto_para_o_usuario(c) for c in mesa.todos())
 
 
 class _Proc:
@@ -675,7 +675,7 @@ class _Proc:
                 pids.remove(pid)
 
 
-def _ela_abre(no: str) -> bool:
+def _o_usuario_abre(no: str) -> bool:
     """O `access(2)` de um processo dela sobre o nó, que na máquina é de root."""
     try:
         modo = stat.S_IMODE(os.stat(no).st_mode)
@@ -701,7 +701,7 @@ def _espera_o_relogio_do_fs(sonda: Path) -> None:
             return
 
 
-class _Bancada:
+class _Ensaio:
     """A `VigiaDoSequestro` de produção sobre os hidraw da mesa, no tempo."""
 
     def __init__(self, raiz: Path, mesa: Mesa, st: BrokerState, proc: _Proc) -> None:
@@ -709,7 +709,7 @@ class _Bancada:
         self.st = st
         self.proc = proc
         self.vigia = ec.VigiaDoSequestro(
-            sonda=proc.sonda, alcancavel=_ela_abre, vivo=proc.vivo, firma=ec.firma_do_no
+            sonda=proc.sonda, alcancavel=_o_usuario_abre, vivo=proc.vivo, firma=ec.firma_do_no
         )
         self.hidraws = sorted(str(mesa.no(j)) for j in JOGADORES)
         self.relogio = raiz / "relogio-do-fs"
@@ -754,89 +754,89 @@ class _Bancada:
         return None
 
 
-def _bancada(raiz: Path) -> _Bancada:
+def _ensaio(raiz: Path) -> _Ensaio:
     """A mesa FECHADA (depois da R0), o broker, e a vigia com a primeira vista dada."""
     mesa = _montar(raiz, aberta=True)
     st = _estado(mesa, [])
     _volta(st, mesa)
-    bancada = _Bancada(raiz, mesa, st, _Proc())
-    bancada.passo()
-    return bancada
+    ensaio = _Ensaio(raiz, mesa, st, _Proc())
+    ensaio.passo()
+    return ensaio
 
 
-class TestR4AVigiaVoltaAoDesenhoDela:
+class TestR4AVigiaVoltaAoDesenhoDoUsuario:
     def test_com_os_nos_parados_uma_varredura_so(self, raiz: Path) -> None:
         """«Nó fechado, firma parada e ninguém segurando: nunca» — o desenho da"""
-        bancada = _bancada(raiz)
-        ctimes = _ctimes([bancada.mesa.no(j) for j in JOGADORES])
+        ensaio = _ensaio(raiz)
+        ctimes = _ctimes([ensaio.mesa.no(j) for j in JOGADORES])
 
-        bancada.andar_ate(1800.0)
+        ensaio.andar_ate(1800.0)
 
-        assert bancada.rehides == 60
-        assert bancada.proc.varreduras == 1, bancada.proc.varreduras
-        assert _ctimes([bancada.mesa.no(j) for j in JOGADORES]) == ctimes
-        assert not any(p.a_reafirmar for _t, p in bancada.passos)
+        assert ensaio.rehides == 60
+        assert ensaio.proc.varreduras == 1, ensaio.proc.varreduras
+        assert _ctimes([ensaio.mesa.no(j) for j in JOGADORES]) == ctimes
+        assert not any(p.a_reafirmar for _t, p in ensaio.passos)
 
     def test_cada_mudanca_de_verdade_no_hidraw_custa_uma_varredura(self, raiz: Path) -> None:
         """As mudanças da R2, no meio dos 30 min. As duas que mexem num hidraw"""
-        bancada = _bancada(raiz)
-        bancada.antes_do_rehide = {volta: mudar for volta, mudar in MUDANCAS.items()}
+        ensaio = _ensaio(raiz)
+        ensaio.antes_do_rehide = {volta: mudar for volta, mudar in MUDANCAS.items()}
 
-        bancada.andar_ate(1800.0)
+        ensaio.andar_ate(1800.0)
 
-        assert bancada.rehides == 60
-        assert bancada.proc.varreduras == 1 + len(MUDANCAS_NO_HIDRAW), bancada.proc.varreduras
-        assert all(_fechado(c) for c in bancada.mesa.todos())
+        assert ensaio.rehides == 60
+        assert ensaio.proc.varreduras == 1 + len(MUDANCAS_NO_HIDRAW), ensaio.proc.varreduras
+        assert all(_fechado(c) for c in ensaio.mesa.todos())
 
 
 class TestR5OHerdeiroDoDonoQueMorreu:
     def test_o_fd_herdado_e_visto_na_fatia_seguinte_a_morte(self, raiz: Path) -> None:
         """A Steam segura o hidraw do P2 que acabou de fechar (a varredura a"""
-        bancada = _bancada(raiz)
-        no = str(bancada.mesa.no("P2"))
+        ensaio = _ensaio(raiz)
+        no = str(ensaio.mesa.no("P2"))
 
         def a_janela(mesa: Mesa) -> None:
-            _abrir_para_ela(mesa.no("P2"))
-            bancada.proc.segurar(no, STEAM)
+            _abrir_para_o_usuario(mesa.no("P2"))
+            ensaio.proc.segurar(no, STEAM)
 
-        bancada.antes_do_rehide = {1: a_janela}
-        viu_a_steam = bancada.andar_ate(1800.0, parar=lambda p: no in p.novos)
+        ensaio.antes_do_rehide = {1: a_janela}
+        viu_a_steam = ensaio.andar_ate(1800.0, parar=lambda p: no in p.novos)
         assert viu_a_steam == 30.0
-        assert bancada.vigia.sequestrados == {no: (STEAM,)}
-        assert _fechado(bancada.mesa.no("P2"))
+        assert ensaio.vigia.sequestrados == {no: (STEAM,)}
+        assert _fechado(ensaio.mesa.no("P2"))
 
-        bancada.proc.segurar(no, FILHO)
-        bancada.proc.morrer(STEAM)
-        morte = bancada.t
-        varreduras = bancada.proc.varreduras
+        ensaio.proc.segurar(no, FILHO)
+        ensaio.proc.morrer(STEAM)
+        morte = ensaio.t
+        varreduras = ensaio.proc.varreduras
 
-        visto_em = bancada.andar_ate(
-            1800.0, parar=lambda _p: FILHO in bancada.vigia.sequestrados.get(no, ())
+        visto_em = ensaio.andar_ate(
+            1800.0, parar=lambda _p: FILHO in ensaio.vigia.sequestrados.get(no, ())
         )
 
         assert visto_em == morte + ec.PASSO_DA_VIGIA_S, f"o filho visto em {visto_em} (None: nunca)"
-        assert bancada.proc.varreduras == varreduras + 1
-        _t, passo = bancada.passos[-1]
+        assert ensaio.proc.varreduras == varreduras + 1
+        _t, passo = ensaio.passos[-1]
         assert passo.soltos == ()
         assert passo.sondou
 
-        inicio = len(bancada.passos)
-        bancada.andar_ate(visto_em + 600.0)
-        reescritas = [t for t, p in bancada.passos[inicio:] if no in p.a_reafirmar]
+        inicio = len(ensaio.passos)
+        ensaio.andar_ate(visto_em + 600.0)
+        reescritas = [t for t, p in ensaio.passos[inicio:] if no in p.a_reafirmar]
         buracos = [b - a for a, b in zip([visto_em, *reescritas], reescritas, strict=False)]
         assert reescritas and max(buracos) <= 1.0 + 1e-9, max(buracos, default=None)
 
-        bancada.proc.morrer(FILHO)
-        passo = bancada.fatia()
+        ensaio.proc.morrer(FILHO)
+        passo = ensaio.fatia()
         assert passo.soltos == (no,)
         assert no in passo.a_reafirmar
-        assert bancada.vigia.sequestrados == {}
+        assert ensaio.vigia.sequestrados == {}
 
-        varreduras = bancada.proc.varreduras
-        bancada.proc.vivos.add(OUTRO)
-        bancada.andar_ate(bancada.t + 60.0)
-        bancada.proc.morrer(OUTRO)
-        bancada.andar_ate(1800.0)
-        assert bancada.proc.varreduras == varreduras
-        assert bancada.vigia.vigilante is False
-        assert all(_fechado(c) for c in bancada.mesa.todos())
+        varreduras = ensaio.proc.varreduras
+        ensaio.proc.vivos.add(OUTRO)
+        ensaio.andar_ate(ensaio.t + 60.0)
+        ensaio.proc.morrer(OUTRO)
+        ensaio.andar_ate(1800.0)
+        assert ensaio.proc.varreduras == varreduras
+        assert ensaio.vigia.vigilante is False
+        assert all(_fechado(c) for c in ensaio.mesa.todos())

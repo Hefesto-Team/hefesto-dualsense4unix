@@ -1061,7 +1061,7 @@ volta. No journal do ensaio, às 09:42 de 10/09:
 
 ```
 mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
-bt_mic_palavra_dela  ligado=False
+bt_mic_palavra_do_usuario  ligado=False
 ```
 
 **O NÚMERO, com o mesmo instrumento e a mesma duração, antes e depois:**

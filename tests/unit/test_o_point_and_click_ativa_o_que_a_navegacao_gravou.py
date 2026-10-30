@@ -161,8 +161,8 @@ def _daemon_com(perfil: dict[str, Any] | None) -> _DaemonQueAnota:
         config=DaemonConfig(mouse_speed=6, mouse_scroll_speed=1),
     )
     if perfil is not None:
-        _gravar_perfil("a-navegacao-dela", perfil)
-        d.store.set_active_profile("a-navegacao-dela")
+        _gravar_perfil("a-navegacao-do-usuario", perfil)
+        d.store.set_active_profile("a-navegacao-do-usuario")
     return d
 
 

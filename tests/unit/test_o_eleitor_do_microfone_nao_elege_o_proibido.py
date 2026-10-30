@@ -169,7 +169,7 @@ def test_o_instalador_distingue_escassez_de_eleicao() -> None:
     assert "ÚNICA fonte" in trecho, "o desfecho de escassez não tem frase própria"
 
 
-def test_escassez_nao_manda_ela_rodar_o_mesmo_comando_de_novo() -> None:
+def test_escassez_nao_manda_o_usuario_rodar_o_mesmo_comando_de_novo() -> None:
     """rc 2 e rc 3 são o ESTADO da máquina, não falha do gesto."""
     fonte = INSTALL.read_text(encoding="utf-8")
     for m in re.finditer(r'fix_wireplumber_default_source\.sh" --install', fonte):

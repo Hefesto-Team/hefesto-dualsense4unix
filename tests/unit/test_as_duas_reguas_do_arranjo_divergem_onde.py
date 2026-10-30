@@ -40,7 +40,7 @@ class Posto:
 
 
 @dataclass(frozen=True)
-class Bancada:
+class Ensaio:
     """Uma mesa de mentira, e o que se espera de cada régua sobre ela."""
 
     id: str
@@ -61,8 +61,8 @@ def _postos(
     )
 
 
-BANCADAS: tuple[Bancada, ...] = (
-    Bancada(
+ENSAIOS: tuple[Ensaio, ...] = (
+    Ensaio(
         id="1-a-mesa-dela",
         titulo=(
             "a mesa dela: três adaptadores no mesmo hub, quatro controles com "
@@ -78,7 +78,7 @@ BANCADAS: tuple[Bancada, ...] = (
             "propõe UM movimento de cada vez (R12)"
         ),
     ),
-    Bancada(
+    Ensaio(
         id="2-mesa-vazia",
         titulo="a mesa vazia: nenhum adaptador, nenhum controle",
         adaptadores=(),
@@ -90,7 +90,7 @@ BANCADAS: tuple[Bancada, ...] = (
             "barramento levando os três dongles"
         ),
     ),
-    Bancada(
+    Ensaio(
         id="3-vizinho-com-folga",
         titulo=(
             "adaptador estourando e um vizinho com UM controle: seis sem "
@@ -106,7 +106,7 @@ BANCADAS: tuple[Bancada, ...] = (
         motor_move=2,
         nota="a única bancada em que a régua da tela MANDA mover — e manda menos",
     ),
-    Bancada(
+    Ensaio(
         id="4-buraco-livre-noutra-controladora",
         titulo=(
             "buraco livre noutra controladora PCI: seis controles no primeiro "
@@ -124,7 +124,7 @@ BANCADAS: tuple[Bancada, ...] = (
             "desde a MOVER-UM-POR-VEZ-01 ele é destino"
         ),
     ),
-    Bancada(
+    Ensaio(
         id="5-sem-ordem-possivel",
         titulo="sem ordem possível: seis controles e um adaptador só na mesa",
         adaptadores=(DONGLE_A,),
@@ -136,7 +136,7 @@ BANCADAS: tuple[Bancada, ...] = (
         motor_move=0,
         nota="as duas CONVERGEM: não há para onde mover, e as duas calam",
     ),
-    Bancada(
+    Ensaio(
         id="6-dois-cheios",
         titulo="dois adaptadores, ambos na Cheia: cinco controles com microfone em cada",
         adaptadores=(DONGLE_A, DONGLE_B),
@@ -205,7 +205,7 @@ def _num(valor: float) -> str:
     return f"{valor:.1f}".replace(".", ",")
 
 
-def veredito_da_tela(bancada: Bancada) -> Veredito:
+def veredito_da_tela(ensaio: Ensaio) -> Veredito:
     """A régua que JÁ está na tela — ``plano_de_radio.ordem_de_redistribuicao``."""
     estado = [
         {
@@ -215,15 +215,15 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
             "player_slot": i + 1,
             "ponte_do_radio": "som" if posto.ponte else None,
         }
-        for i, posto in enumerate(bancada.postos)
+        for i, posto in enumerate(ensaio.postos)
     ]
     planos = plano_de_radio.plano_por_adaptador(
         estado,
         com_ponte_de_mic=[
-            _sem_dois_pontos(p.endereco) for p in bancada.postos if p.mic
+            _sem_dois_pontos(p.endereco) for p in ensaio.postos if p.mic
         ],
-        adaptadores=bancada.adaptadores,
-        **_sysfs_de_mentira(bancada.postos),
+        adaptadores=ensaio.adaptadores,
+        **_sysfs_de_mentira(ensaio.postos),
     )
     ordem = plano_de_radio.ordem_de_redistribuicao(planos)
 
@@ -232,7 +232,7 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
         f'("{p.rotulo_das_pontes}")'
         for e, p in sorted(planos.items())
     )
-    invisiveis = tuple(a for a in bancada.adaptadores if a not in planos)
+    invisiveis = tuple(a for a in ensaio.adaptadores if a not in planos)
     if invisiveis:
         vistos += (
             "ADAPTADOR QUE ELA NÃO VÊ: "
@@ -286,14 +286,14 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
     )
 
 
-def veredito_do_motor(bancada: Bancada) -> Veredito:
+def veredito_do_motor(ensaio: Ensaio) -> Veredito:
     """A régua portada do mockup — ``arranjo_da_mesa.plano_dos_controles``."""
     adaptadores = tuple(
         motor.Adaptador(id=endereco, entrada=str(i + 1), rotulo=f"entrada {i + 1}")
-        for i, endereco in enumerate(bancada.adaptadores)
+        for i, endereco in enumerate(ensaio.adaptadores)
     )
     controles = tuple(
-        motor.Controle(nome=p.nome, mic=p.mic, onde=p.onde) for p in bancada.postos
+        motor.Controle(nome=p.nome, mic=p.mic, onde=p.onde) for p in ensaio.postos
     )
     plano = motor.plano_dos_controles(controles, adaptadores)
 
@@ -352,18 +352,18 @@ def _bloco_do_veredito(veredito: Veredito) -> list[str]:
     return linhas
 
 
-def relatorio_de(bancada: Bancada) -> str:
+def relatorio_de(ensaio: Ensaio) -> str:
     """O laudo de UMA bancada, com as duas réguas lado a lado."""
-    tela = veredito_da_tela(bancada)
-    arranjo = veredito_do_motor(bancada)
+    tela = veredito_da_tela(ensaio)
+    arranjo = veredito_do_motor(ensaio)
 
     linhas = [
-        f"BANCADA {bancada.id} — {bancada.titulo}",
-        f"  na mesa: {len(bancada.adaptadores)} adaptador(es), "
-        f"{len(bancada.postos)} controle(s)",
+        f"BANCADA {ensaio.id} — {ensaio.titulo}",
+        f"  na mesa: {len(ensaio.adaptadores)} adaptador(es), "
+        f"{len(ensaio.postos)} controle(s)",
     ]
-    if bancada.nota:
-        linhas.append(f"  nota: {bancada.nota}")
+    if ensaio.nota:
+        linhas.append(f"  nota: {ensaio.nota}")
     linhas += _bloco_do_veredito(tela)
     linhas += _bloco_do_veredito(arranjo)
 
@@ -401,7 +401,7 @@ def relatorio_completo() -> str:
         f"{_num(motor.CUSTO_COM_MIC)} com",
         "",
     ]
-    return "\n\n".join(cabeca[:2] + [relatorio_de(b) for b in BANCADAS])
+    return "\n\n".join(cabeca[:2] + [relatorio_de(b) for b in ENSAIOS])
 
 
 def test_a_divergencia_esta_nomeada() -> None:
@@ -409,46 +409,46 @@ def test_a_divergencia_esta_nomeada() -> None:
     laudo = relatorio_completo()
     print("\n" + laudo)
 
-    assert BANCADAS, "sem bancada não há medição"
+    assert ENSAIOS, "sem bancada não há medição"
     diverge_alguma = False
 
-    for bancada in BANCADAS:
-        tela = veredito_da_tela(bancada)
-        arranjo = veredito_do_motor(bancada)
-        bloco = relatorio_de(bancada)
+    for ensaio in ENSAIOS:
+        tela = veredito_da_tela(ensaio)
+        arranjo = veredito_do_motor(ensaio)
+        bloco = relatorio_de(ensaio)
 
         for veredito in (tela, arranjo):
             assert veredito.razao.strip(), (
-                f"[{bancada.id}] a {veredito.regua} não deu razão nenhuma — "
+                f"[{ensaio.id}] a {veredito.regua} não deu razão nenhuma — "
                 "régua muda não é régua medida"
             )
             for mov in veredito.movimentos:
                 assert mov.origem and mov.destino, (
-                    f"[{bancada.id}] a {veredito.regua} mandou mover sem nomear "
+                    f"[{ensaio.id}] a {veredito.regua} mandou mover sem nomear "
                     f"origem e destino: {mov}"
                 )
                 assert mov.origem != mov.destino, (
-                    f"[{bancada.id}] a {veredito.regua} mandou mover um controle "
+                    f"[{ensaio.id}] a {veredito.regua} mandou mover um controle "
                     "para o adaptador em que ele já está"
                 )
                 assert _curto(mov.origem) in bloco and _curto(mov.destino) in bloco, (
-                    f"[{bancada.id}] o relatório não imprime origem e destino da "
+                    f"[{ensaio.id}] o relatório não imprime origem e destino da "
                     f"{veredito.regua}:\n{bloco}"
                 )
 
-        assert len(tela.movimentos) == bancada.tela_move, (
-            f"[{bancada.id}] a régua da tela mandou mover "
-            f"{len(tela.movimentos)}, e a bancada esperava {bancada.tela_move}."
+        assert len(tela.movimentos) == ensaio.tela_move, (
+            f"[{ensaio.id}] a régua da tela mandou mover "
+            f"{len(tela.movimentos)}, e a bancada esperava {ensaio.tela_move}."
             f"\n{bloco}"
         )
-        assert len(arranjo.movimentos) == bancada.motor_move, (
-            f"[{bancada.id}] o motor do arranjo mandou mover "
+        assert len(arranjo.movimentos) == ensaio.motor_move, (
+            f"[{ensaio.id}] o motor do arranjo mandou mover "
             f"{len(arranjo.movimentos)}, e a bancada esperava "
-            f"{bancada.motor_move}.\n{bloco}"
+            f"{ensaio.motor_move}.\n{bloco}"
         )
         for rotulo in ("origem :", "destino:", "razão  :"):
             assert bloco.count(rotulo) >= 2, (
-                f"[{bancada.id}] o relatório tem de trazer '{rotulo}' das DUAS "
+                f"[{ensaio.id}] o relatório tem de trazer '{rotulo}' das DUAS "
                 f"réguas, e trouxe {bloco.count(rotulo)}:\n{bloco}"
             )
         if len(tela.movimentos) != len(arranjo.movimentos):
@@ -464,9 +464,9 @@ def test_a_divergencia_esta_nomeada() -> None:
 
 def test_a_regua_da_tela_enxerga_o_adaptador_vazio() -> None:
     """O achado 2, CURADO em 23/09/2026 (MOVER-UM-POR-VEZ-01)."""
-    bancada = next(b for b in BANCADAS if b.id == "4-buraco-livre-noutra-controladora")
-    tela = veredito_da_tela(bancada)
-    arranjo = veredito_do_motor(bancada)
+    ensaio = next(b for b in ENSAIOS if b.id == "4-buraco-livre-noutra-controladora")
+    tela = veredito_da_tela(ensaio)
+    arranjo = veredito_do_motor(ensaio)
 
     assert len(tela.movimentos) == 1, "o dongle livre voltou a não existir para a tela"
     assert tela.movimentos[0].destino == DONGLE_B
@@ -477,11 +477,11 @@ def test_a_regua_da_tela_enxerga_o_adaptador_vazio() -> None:
     )
 
 
-def test_na_mesa_dela_a_tela_propoe_um_e_o_motor_manda_mover_dois() -> None:
+def test_na_mesa_do_usuario_a_tela_propoe_um_e_o_motor_manda_mover_dois() -> None:
     """O achado 1, remedido em 23/09/2026: quatro pontes num adaptador de duas."""
-    bancada = next(b for b in BANCADAS if b.id == "1-a-mesa-dela")
-    tela = veredito_da_tela(bancada)
-    arranjo = veredito_do_motor(bancada)
+    ensaio = next(b for b in ENSAIOS if b.id == "1-a-mesa-dela")
+    tela = veredito_da_tela(ensaio)
+    arranjo = veredito_do_motor(ensaio)
 
     assert len(tela.movimentos) == 1, tela.razao
     assert tela.movimentos[0].origem == DONGLE_A

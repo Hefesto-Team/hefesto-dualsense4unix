@@ -32,7 +32,7 @@ from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.integrations.hidraw_broker_client import SOCKET_PATH_ENV
 from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import (
     INTERFACE_DO_GADGET,
-    BancadaDoGadget,
+    EnsaioDoGadget,
     _EspiaoDoDiario,
 )
 
@@ -113,7 +113,7 @@ class Mesa:
     """A bancada do gadget com o broker de verdade recusando até a sessão abrir."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, modo: str) -> None:
-        self.b = BancadaDoGadget(monkeypatch, tmp_path)
+        self.b = EnsaioDoGadget(monkeypatch, tmp_path)
         self.ug = self.b.ug
         self.relogio = [100.0]
         self.sessao_aberta = False

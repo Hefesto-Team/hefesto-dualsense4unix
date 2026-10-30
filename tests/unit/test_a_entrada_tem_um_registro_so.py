@@ -36,7 +36,7 @@ from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     _ORFAOS,
     PCI_A,
     PCI_B,
-    _a_maquina_dela,
+    _a_maquina_do_usuario,
 )
 from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     gravar_o_arquivo_de_antes as _gravar_o_arquivo_de_antes,
@@ -51,9 +51,9 @@ LUGAR_DO_MEIO = lugar_de(PCI_B, "4.1.1")
 ADAPTADOR_DO_MEIO = "aa:bb:cc:00:00:11"
 
 
-def _a_dela_com_os_nomes_dos_adaptadores() -> dict[str, Any]:
+def _a_do_usuario_com_os_nomes_dos_adaptadores() -> dict[str, Any]:
     """A máquina do usuário, com os três adaptadores nomeados como ela os nomeou."""
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     documento["adaptadores"] = {
         "aabbcc000011": {"nome": "Meio"},
         "aabbcc000012": {"nome": "Esquerda"},
@@ -67,7 +67,7 @@ def test_o_esquema_recusa_os_lugares_depois_de_migrado() -> None:
     assert "lugares" not in MaquinaConfig.model_fields
     with pytest.raises(ValueError, match="lugares"):
         MaquinaConfig.model_validate({"lugares": {lugar_de(PCI_A, "1"): {"entrada": "1"}}})
-    migrado = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
+    migrado = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_do_usuario()))
     for numero, (pci, devpath, caminho, nos) in _ENTRADAS.items():
         porta = migrado.mapa.portas[numero]
         assert porta.lugar == lugar_de(pci, devpath), f"a {numero} não guardou o lugar"
@@ -80,7 +80,7 @@ def test_o_esquema_recusa_os_lugares_depois_de_migrado() -> None:
 
 def test_o_caminho_nao_vai_ao_disco(tmp_path: Path) -> None:
     """O caminho é da LEITURA: nenhuma gravação o escreve, e quem ainda o"""
-    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
     assert carregar_maquina().mapa.portas["3"].caminho == "3-1"
     assert ee.declarar_a_velocidade("3", 3).gravou
     assert '"caminho"' not in alvo.read_text(encoding="utf-8")
@@ -100,7 +100,7 @@ def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
     """O ``pyproject.toml`` e os pacotes (Fedora, Nix) pedem ``pydantic>=2.0``,"""
     from pydantic import BaseModel
 
-    from tests.unit.test_trocar_duas_entradas_move_o_buraco import _com_o_que_ela_disse
+    from tests.unit.test_trocar_duas_entradas_move_o_buraco import _com_o_que_o_usuario_disse
 
     do_2_12 = BaseModel.model_dump
 
@@ -112,7 +112,7 @@ def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
         return do_2_12(self, *args, **kwargs)
 
     monkeypatch.setattr(BaseModel, "model_dump", model_dump_do_2_11)
-    alvo = _gravar_o_arquivo_de_antes(tmp_path, _com_o_que_ela_disse())
+    alvo = _gravar_o_arquivo_de_antes(tmp_path, _com_o_que_o_usuario_disse())
     carregar_maquina()
     assert ee.declarar_a_velocidade("3", 3).gravou
     assert ee.trocar_as_entradas("7", "8").gravou
@@ -124,7 +124,7 @@ def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
 
 def test_a_migracao_roda_ao_carregar_inteira_e_uma_vez(tmp_path: Path) -> None:
     """PROVA 2: a primeira leitura migra e regrava; a cópia de antes fica ao"""
-    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
     antes = alvo.read_bytes()
     carregar_maquina()
     depois = alvo.read_bytes()
@@ -148,7 +148,7 @@ def test_a_migracao_roda_ao_carregar_inteira_e_uma_vez(tmp_path: Path) -> None:
 
 def test_a_migracao_leva_o_nome_de_verdade_e_nao_o_numero() -> None:
     """O «Meio» da 1 vai para a posição; os números gravados como nome não vão;"""
-    migrado = migrar_o_documento(_a_dela_com_os_nomes_dos_adaptadores())
+    migrado = migrar_o_documento(_a_do_usuario_com_os_nomes_dos_adaptadores())
     portas = migrado["mapa"]["portas"]
     assert portas["1"]["nome"] == "Meio"
     assert [n for n, p in portas.items() if "nome" in p] == ["1"], portas
@@ -162,7 +162,7 @@ def test_o_nome_comprido_bloqueia_a_migracao_daquela_entrada_e_diz_no_log(
     tmp_path: Path,
 ) -> None:
     """Nada se trunca calado: o nome de mais de 24 caracteres fica no lugar,"""
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     lugar_5 = lugar_de(PCI_B, "3")
     comprido = "A de trás, perto do cabo de rede"
     documento["lugares"][lugar_5]["nome"] = comprido
@@ -196,7 +196,7 @@ def test_o_nome_comprido_bloqueia_a_migracao_daquela_entrada_e_diz_no_log(
 
 
 def test_o_nao_alcanco_vai_para_o_mapa() -> None:
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     vaga = lugar_de(PCI_A, "2")
     documento["lugares"][vaga] = {"fora": True}
     documento["lugares"][lugar_de(PCI_A, "6")]["fora"] = True
@@ -206,7 +206,7 @@ def test_o_nao_alcanco_vai_para_o_mapa() -> None:
 
 def _o_reparado_a_mao() -> dict[str, Any]:
     """O arquivo depois do reparo à mão de 26/09, no formato de antes: o buraco"""
-    reparado = copy.deepcopy(_a_maquina_dela())
+    reparado = copy.deepcopy(_a_maquina_do_usuario())
     portas = reparado["mapa"]["portas"]
     troca = {}
     for um, outro in TROCAS:
@@ -219,9 +219,9 @@ def _o_reparado_a_mao() -> dict[str, Any]:
     return reparado
 
 
-def test_os_gestos_dela_pelo_produto_dao_o_mapa_reparado_a_mao(tmp_path: Path) -> None:
+def test_os_gestos_do_usuario_pelo_produto_dao_o_mapa_reparado_a_mao(tmp_path: Path) -> None:
     """PROVA 1. O arquivo de ANTES da troca, migrado ao carregar, com a"""
-    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
     carregar_maquina()
     for um, outro in TROCAS:
         assert ee.trocar_as_entradas(um, outro).gravou, (um, outro)
@@ -243,7 +243,7 @@ _LUGAR_DE_ANTES = tuple(
 
 def test_a_troca_feita_fora_do_produto_se_repara_na_migracao() -> None:
     """O estado de 26/09 às 15h43: o ``mapa`` trocou o buraco de 3↔4 e 7↔8"""
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     portas = documento["mapa"]["portas"]
     for um, outro in (("3", "4"), ("7", "8")):
         portas[um], portas[outro] = portas[outro], portas[um]
@@ -261,7 +261,7 @@ def test_um_boot_com_outra_numeracao_diz_a_mesma_entrada(tmp_path: Path) -> None
     7 enumera como ``3-5``. O Mapear, o nome da porta e o motor do arranjo
     dizem a Entrada 7 — e o ``1-5`` deste boot, que é o OUTRO controlador,
     não é ela."""
-    documento = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
+    documento = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_do_usuario()))
     gabinete = Gabinete(tmp_path / "boot2", BOOT_2)
     assert gabinete.plugar(3, "5", DUALSENSE) == "3-5"
     censo = gabinete.ler()
@@ -275,15 +275,15 @@ def test_um_boot_com_outra_numeracao_diz_a_mesma_entrada(tmp_path: Path) -> None
     assert sete.caminho == "3-5"
     assert ee.nome_da_porta("3-5", maquina=documento, controladores=BOOT_2) == "Entrada 7"
     assert ee.nome_da_porta("1-5", maquina=documento, controladores=BOOT_2) != "Entrada 7"
-    bancada = mapa_das_portas.mesa_do_motor(documento.mapa, censo)
-    assert bancada.mesa.mapa["7"] == "3-5", bancada.mesa.mapa
+    ensaio = mapa_das_portas.mesa_do_motor(documento.mapa, censo)
+    assert ensaio.mesa.mapa["7"] == "3-5", ensaio.mesa.mapa
     assert mapa_das_portas.porta_de(
         documento.mapa, "3-5", mapa_das_portas.controladores_do_censo(censo)) == "7"
 
 
 def test_o_centro_nao_volta_ao_adaptador_do_meio(tmp_path: Path) -> None:
     """O adaptador do meio se chama «Meio» (``adaptadores``, pelo endereço), e"""
-    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_dela_com_os_nomes_dos_adaptadores())
+    alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_do_usuario_com_os_nomes_dos_adaptadores())
     documento = carregar_maquina()
     assert "Centro" not in alvo.read_text(encoding="utf-8")
     assert nome_dado_ao_adaptador(documento, ADAPTADOR_DO_MEIO) == "Meio"

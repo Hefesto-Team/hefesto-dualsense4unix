@@ -58,7 +58,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/01-jogar.html"
+ENSAIO = RAIZ / "mockup/01-jogar.html"
 PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 
 UNIQ_CABO = "aa:bb:cc:00:00:01"
@@ -150,7 +150,7 @@ def _a_jogar_esta_em_trabalho() -> bool:
     return "01-jogar.html" in mod.declaradas()
 
 
-@pytest.mark.parametrize("onde", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("onde", [ENSAIO, PUBLICADO], ids=["bancada", "publicado"])
 def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     """Cada botão do par: o mesmo `data-campo`, o alvo `classe`, e o SEU `quando`.
 

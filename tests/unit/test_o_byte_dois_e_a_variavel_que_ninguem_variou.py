@@ -17,7 +17,7 @@ COMMON = build_bt_report(bytes(range(COMMON_LEN)))[3 : 3 + COMMON_LEN]
 QUADROS = [b"\xaa" * af.BYTES_POR_QUADRO_OPUS, b"\xbb" * af.BYTES_POR_QUADRO_OPUS]
 
 
-def test_o_terceiro_corpo_traz_o_byte_dois_que_a_bancada_mediu() -> None:
+def test_o_terceiro_corpo_traz_o_byte_dois_que_o_ensaio_mediu() -> None:
     """`[2] = 0x10`, o mesmo do 0x31 que acendeu a lightbar por rádio."""
     pkt = af.montar_com_o_common_preservado(QUADROS, COMMON)
     assert pkt[2] == BT_TAG == 0x10, (
@@ -153,7 +153,7 @@ def test_o_envelope_do_ensaio_pede_os_tres_campos_que_o_mapa_nomeia() -> None:
     assert envelope[0] & rep.VALID_FLAG0_SPEAKER_VOLUME, "o volume não foi autorizado"
     assert envelope[0] & rep.VALID_FLAG0_AUDIO_PATH, "a rota não foi autorizada"
     assert envelope[1] & rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE, "o pré-amp não foi"
-    assert envelope[rep.COMMON_SPEAKER_VOLUME] == af.VOLUME_QUE_ELA_OUVIU
+    assert envelope[rep.COMMON_SPEAKER_VOLUME] == af.VOLUME_QUE_O_USUARIO_OUVIU
     rota = (
         envelope[rep.COMMON_AUDIO_PATH] & rep.OUTPUT_PATH_SEL_MASK
     ) >> rep.OUTPUT_PATH_SEL_SHIFT

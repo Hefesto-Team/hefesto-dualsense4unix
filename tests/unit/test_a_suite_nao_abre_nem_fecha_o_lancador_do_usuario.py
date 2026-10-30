@@ -1,4 +1,4 @@
-"""A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01 — a suíte não mexe no lançador do usuário."""
+"""A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DO-USUARIO-01 — a suíte não mexe no lançador do usuário."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ import pytest
 from tests import conftest
 
 RAIZ = Path(__file__).resolve().parents[2]
-SIGLA = "A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01"
+SIGLA = "A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DO-USUARIO-01"
 
 FAMILIA_DO_ESPIAO = frozenset({
     "steam", "steam-native", "steamwebhelper", "com.valvesoftware.Steam",

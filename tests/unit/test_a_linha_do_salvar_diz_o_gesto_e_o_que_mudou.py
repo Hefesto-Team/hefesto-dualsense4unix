@@ -320,7 +320,7 @@ def test_a_corrente_fecha_quando_ninguem_escreve_fora(
     assert c["sha_antes"] == b["sha_depois"]
 
 
-def test_uma_semana_fica_inteira_e_fora_dela_so_as_dez_ultimas_e_a_primeira_do_dia(
+def test_uma_semana_fica_inteira_e_fora_do_usuario_so_as_dez_ultimas_e_a_primeira_do_dia(
     dir_perfis: Path, relogio: _Relogio
 ) -> None:
     """41 gravações em seis dias deixam as 40 versões; duas semanas depois, a poda antiga."""

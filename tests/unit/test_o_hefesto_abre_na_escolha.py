@@ -111,7 +111,7 @@ CASOS_DO_BOOT = ("escolha-de-jogo", "modo-ligado", "escolha-apagada", "cli-sem-d
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("caso", CASOS_DO_BOOT)
-def test_o_boot_abre_na_escolha_dela(
+def test_o_boot_abre_na_escolha_do_usuario(
     caso: str, transporte: str, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O boot restaura a escolha, com regra de janela ou sem, nos quatro controles."""
@@ -179,7 +179,7 @@ def _ticar(vigia: AutoSwitcher, info: dict[str, str], de: float, ate: float) -> 
     return agora
 
 
-def test_sair_do_jogo_fica_no_jogo_ate_ela_mudar() -> None:
+def test_sair_do_jogo_fica_no_jogo_ate_o_usuario_mudar() -> None:
     """A escolha A, o jogo B pela janela, e o terminal: o B fica (OS-QUATRO-EM-HARMONIA-01).
 
     A regra, 14/10/2026: o perfil fica no último jogo até ela mudar ou
@@ -241,7 +241,7 @@ def test_a_troca_a_mao_nao_cai_por_janela_nem_por_tempo(
     assert _soltas(linhas) == ["jogo_com_perfil_em_foco"]
 
 
-def test_o_jogo_dela_fechando_solta_a_trava_e_diz(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_jogo_do_usuario_fechando_solta_a_trava_e_diz(monkeypatch: pytest.MonkeyPatch) -> None:
     """Com o jogo em cena, ela escolhe A à mão; o jogo fecha, e a trava solta com a linha."""
     import time
 
@@ -477,12 +477,12 @@ def test_desligar_com_o_jogo_vivo_devolve_o_jogo_e_a_escolha_fica(
 
 def test_a_maquina_nova_nasce_acesa_uma_vez_so() -> None:
     """Sem sessão e sem flag: o botão nasce aceso; apagado por ela, fica apagado."""
-    assert session.migrar_a_escolha_dela() == "maquina_nova_nasce_acesa"
+    assert session.migrar_a_escolha_do_usuario() == "maquina_nova_nasce_acesa"
     assert session.load_freestyle_ligado() is True
 
     session.save_freestyle_ligado(False)
 
-    assert session.migrar_a_escolha_dela() is None
+    assert session.migrar_a_escolha_do_usuario() is None
     assert session.load_freestyle_ligado() is False
 
 
@@ -490,10 +490,10 @@ def test_sem_sessao_com_perfil_de_jogo_na_pasta_o_botao_nao_acende() -> None:
     """Quem atualiza sem nunca ter ativado à mão: o jogo dele continua entrando."""
     _perfil(JOGO, JANELA_DO_JOGO)
 
-    assert session.migrar_a_escolha_dela() == "nada_a_mudar"
+    assert session.migrar_a_escolha_do_usuario() == "nada_a_mudar"
 
     assert session.load_freestyle_ligado() is False
-    assert session.a_escolha_dela() is None
+    assert session.a_escolha_do_usuario() is None
 
 
 def test_a_sessao_no_freestyle_apagado_vira_sem_escolha_com_a_copia() -> None:
@@ -503,22 +503,22 @@ def test_a_sessao_no_freestyle_apagado_vira_sem_escolha_com_a_copia() -> None:
     (base / "session.json").write_text(json.dumps({"last_profile": FREESTYLE}),
                                        encoding="utf-8")
 
-    assert session.migrar_a_escolha_dela() == "freestyle_desligado_vira_sem_escolha"
+    assert session.migrar_a_escolha_do_usuario() == "freestyle_desligado_vira_sem_escolha"
 
     assert session.load_last_profile() is None
-    assert session.a_escolha_dela() is None
+    assert session.a_escolha_do_usuario() is None
     copia = base / session._COPIA_DA_SESSAO
     assert json.loads(copia.read_text(encoding="utf-8")) == {"last_profile": FREESTYLE}
     assert session.load_freestyle_ligado() is False
-    assert session.migrar_a_escolha_dela() is None
+    assert session.migrar_a_escolha_do_usuario() is None
 
 
-def test_o_disco_dela_nao_muda() -> None:
+def test_o_disco_do_usuario_nao_muda() -> None:
     """A sessão num perfil que não é o Freestyle (o disco do usuário): nada a mudar."""
     _o_disco()
     session.gravar_a_escolha(AVATAR)
 
-    assert session.migrar_a_escolha_dela() == "nada_a_mudar"
+    assert session.migrar_a_escolha_do_usuario() == "nada_a_mudar"
 
     assert session.load_last_profile() == AVATAR
     assert session.load_freestyle_ligado() is False

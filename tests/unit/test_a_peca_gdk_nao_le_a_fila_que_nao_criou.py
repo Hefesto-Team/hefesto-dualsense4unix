@@ -270,7 +270,7 @@ static void vaivem(void)
 }
 
 /* A fila que a peça criou continua valendo: Duplicate, Submit e o composto sobre ela. */
-static void a_fila_dela_vale(void)
+static void a_fila_do_usuario_vale(void)
 {
     queue_obj *q = NULL, *d = NULL, *c = NULL;
     port_obj *pw = NULL;
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
     if (FAILED(query(&IID_Threading, &IID_Threading, &g_self)) || !g_self) return 4;
     g_vt = *(void ***)g_self;
 
-    a_fila_dela_vale();
+    a_fila_do_usuario_vale();
 
     memset(pilha, 0, sizeof pilha);
     memcpy(copia_pilha, pilha, sizeof pilha);
@@ -414,7 +414,7 @@ _precisa = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def _bancada() -> Iterator[tuple[Path, Path]]:
+def _pasta_de_ensaio() -> Iterator[tuple[Path, Path]]:
     wine = _WINE
     assert wine is not None
     ensaio = _ensaio()
@@ -434,10 +434,10 @@ def _bancada() -> Iterator[tuple[Path, Path]]:
 
 
 def _rodar(
-    bancada: tuple[Path, Path], fonte: str, nome: str
+    prefixo_de_ensaio: tuple[Path, Path], fonte: str, nome: str
 ) -> tuple[list[dict[str, object]], str]:
     """As linhas da prova e o trecho do xgr.log (no C: do prefixo de teste) desta rodada."""
-    raiz, prefixo = bancada
+    raiz, prefixo = prefixo_de_ensaio
     log = prefixo / "drive_c" / "xgr.log"
     antes = log.stat().st_size if log.exists() else 0
     wine = _WINE
@@ -463,9 +463,9 @@ def _rodar(
 
 
 @_precisa
-def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]) -> None:
+def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_pasta_de_ensaio: tuple[Path, Path]) -> None:
     """Prova da D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU."""
-    linhas, log = _rodar(_bancada, _FONTE.read_text(encoding="utf-8"), "cura")
+    linhas, log = _rodar(_pasta_de_ensaio, _FONTE.read_text(encoding="utf-8"), "cura")
     caiu = [ln for ln in linhas if "caiu" in ln]
     assert not caiu, f"a peça caiu: {caiu}"
     assert {"fim": True} in linhas, "a prova não chegou ao fim"
@@ -485,11 +485,13 @@ def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]
 
 
 @_precisa
-def test_a_mordida_o_magic_lido_de_volta_derruba_a_prova(_bancada: tuple[Path, Path]) -> None:
+def test_a_mordida_o_magic_lido_de_volta_derruba_a_prova(
+    _pasta_de_ensaio: tuple[Path, Path],
+) -> None:
     texto = _FONTE.read_text(encoding="utf-8")
     quebrado = texto.replace(_CURA, _QUEBRADO, 1)
     assert quebrado != texto
-    linhas, _log = _rodar(_bancada, quebrado, "mordida")
+    linhas, _log = _rodar(_pasta_de_ensaio, quebrado, "mordida")
     caiu = [ln for ln in linhas if "caiu" in ln]
     assert caiu, "com o magic lido de volta a prova devia cair, e não caiu: a régua não morde"
     assert {"fim": True} not in linhas

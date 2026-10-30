@@ -283,13 +283,13 @@ class _UinputDeMentira:
         return None
 
 
-FISICOS_DAS_BANCADAS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 6))
+FISICOS_DOS_ENSAIOS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 6))
 
 
 @contextmanager
 def kernel_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
     """O kernel de mentira no lugar do ``/dev/uhid``."""
-    k = KernelDoHidPlaystation(fisicos=FISICOS_DAS_BANCADAS)
+    k = KernelDoHidPlaystation(fisicos=FISICOS_DOS_ENSAIOS)
     k.instalar(monkeypatch)
     yield k
 

@@ -45,7 +45,7 @@ from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
 from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import (
     IDENTIDADE,
     INTERFACE_DO_GADGET,
-    BancadaDoGadget,
+    EnsaioDoGadget,
     _usb_da_mesa,
 )
 from tests.unit.test_steam_no_fisico_01_o_jogo_ve_p1_a_p4 import nascimentos  # noqa: F401
@@ -56,22 +56,22 @@ ENUMERADO = ("hidraw9", INTERFACE_DO_GADGET)
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> BancadaDoGadget:
-    return BancadaDoGadget(monkeypatch, tmp_path)
+def ensaio(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> EnsaioDoGadget:
+    return EnsaioDoGadget(monkeypatch, tmp_path)
 
 
 class TestAIdentidadeQueChegaDepois:
     """MORDIDA: em ``ancorar_no_aparelho``, devolva ``False`` logo na entrada."""
 
     def test_o_pad_sem_dono_registra_a_ancora_quando_o_dono_chega(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        bancada.enumerado = ENUMERADO
-        pad = bancada.pad(identity=None)
+        ensaio.enumerado = ENUMERADO
+        pad = ensaio.pad(identity=None)
         try:
             assert pad.start()
-            assert bancada.esperar(lambda: pad.is_bound)
-            assert bancada.pedidos[0][2] == ""
+            assert ensaio.esperar(lambda: pad.is_bound)
+            assert ensaio.pedidos[0][2] == ""
             assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
             assert pad.ancorar_no_aparelho(IDENTIDADE) is True
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
@@ -80,10 +80,10 @@ class TestAIdentidadeQueChegaDepois:
             pad.stop()
         assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
 
-    def test_o_dono_que_chega_antes_da_enumeracao_registra_nela(
-        self, bancada: BancadaDoGadget
+    def test_o_dono_que_chega_antes_da_enumeracao_registra_no_usuario(
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        pad = bancada.pad(identity=None)
+        pad = ensaio.pad(identity=None)
         try:
             assert pad.start()
             assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is True
@@ -91,19 +91,19 @@ class TestAIdentidadeQueChegaDepois:
             assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
             assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is True
             assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is False
-            bancada.enumerado = ENUMERADO
-            assert bancada.esperar(lambda: pad.is_bound)
+            ensaio.enumerado = ENUMERADO
+            assert ensaio.esperar(lambda: pad.is_bound)
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
             assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE)[1] is False
         finally:
             pad.stop()
 
-    def test_nao_sei_nao_apaga_o_dono(self, bancada: BancadaDoGadget) -> None:
-        bancada.enumerado = ENUMERADO
-        pad = bancada.pad()
+    def test_nao_sei_nao_apaga_o_dono(self, ensaio: EnsaioDoGadget) -> None:
+        ensaio.enumerado = ENUMERADO
+        pad = ensaio.pad()
         try:
             assert pad.start()
-            assert bancada.esperar(lambda: pad.is_bound)
+            assert ensaio.esperar(lambda: pad.is_bound)
             for nao_sei in (None, "", "path:/dev/input/event3"):
                 assert pad.ancorar_no_aparelho(nao_sei) is False
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
@@ -112,27 +112,27 @@ class TestAIdentidadeQueChegaDepois:
             pad.stop()
 
     def test_o_p1_que_ganhou_dono_estaciona_com_o_jogo_aberto(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
         """Sem dono o gadget descia com o jogo aberto, e o GUID do device KS mudava."""
-        bancada.enumerado = ENUMERADO
-        bancada.jogo_aberto = True
-        pad = bancada.pad(identity=None)
+        ensaio.enumerado = ENUMERADO
+        ensaio.jogo_aberto = True
+        pad = ensaio.pad(identity=None)
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad.ancorar_no_aparelho(IDENTIDADE)
         pad.stop()
-        assert bancada.clientes[0].desmontados == []
-        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
+        assert ensaio.clientes[0].desmontados == []
+        assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 1
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
-        bancada.jogo_aberto = False
-        assert bancada.ug._GADGETS_ESTACIONADOS.varrer() == 1
+        ensaio.jogo_aberto = False
+        assert ensaio.ug._GADGETS_ESTACIONADOS.varrer() == 1
         assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
 
     def test_o_gadget_que_desce_sem_enumerar_nao_fica_a_caminho(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        pad = bancada.pad(identity=None)
+        pad = ensaio.pad(identity=None)
         assert pad.start()
         assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is True
         pad.stop()
@@ -156,13 +156,13 @@ class TestAIdentidadeQueChegaDepois:
 
 class TestAIdentidadeQueMuda:
     def test_o_posto_que_passa_a_outro_controle_leva_a_ancora(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        bancada.enumerado = ENUMERADO
-        pad = bancada.pad()
+        ensaio.enumerado = ENUMERADO
+        pad = ensaio.pad()
         try:
             assert pad.start()
-            assert bancada.esperar(lambda: pad.is_bound)
+            assert ensaio.esperar(lambda: pad.is_bound)
             assert pad.ancorar_no_aparelho(OUTRA) is True
             assert pad_usb.interface_do_aparelho(OUTRA) == INTERFACE_DO_GADGET
             assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
@@ -171,16 +171,16 @@ class TestAIdentidadeQueMuda:
             pad.stop()
         assert pad_usb.interface_do_aparelho(OUTRA) is None
 
-    def test_o_registro_novo_do_aparelho_antigo_fica(self, bancada: BancadaDoGadget) -> None:
+    def test_o_registro_novo_do_aparelho_antigo_fica(self, ensaio: EnsaioDoGadget) -> None:
         """O aparelho que saiu do posto já ganhou o pad dele: o velho não o apaga.
 
         MORDIDA: em ``pad_usb.esquecer_gadget``, ignore a ``interface`` e
         apague sempre — o registro do pad novo do aparelho antigo some.
         """
-        bancada.enumerado = ENUMERADO
-        pad = bancada.pad()
+        ensaio.enumerado = ENUMERADO
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad_usb.registrar_gadget(IDENTIDADE, INTERFACE_DA_OUTRA)
         assert pad.ancorar_no_aparelho(OUTRA) is True
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
@@ -189,22 +189,22 @@ class TestAIdentidadeQueMuda:
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
 
     def test_o_gadget_que_desce_nao_apaga_o_pad_novo_do_mesmo_aparelho(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
         """O aparelho já ganhou outro pad (o cedido ao primário): o velho que desce não o apaga.
 
         MORDIDA: em ``_GadgetDoPad.desmontar``, esqueça o aparelho sem a ``interface``.
         """
-        bancada.enumerado = ENUMERADO
-        pad = bancada.pad()
+        ensaio.enumerado = ENUMERADO
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad_usb.registrar_gadget(IDENTIDADE, INTERFACE_DA_OUTRA)
         pad.stop()
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DA_OUTRA
 
     def test_o_registro_novo_nao_cruza_a_desmontagem(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A âncora nova entra sob a trava em que o ``_destruir_o_device`` solta o gadget.
 
@@ -214,10 +214,10 @@ class TestAIdentidadeQueMuda:
         """
         import threading
 
-        bancada.enumerado = ENUMERADO
-        pad = bancada.pad()
+        ensaio.enumerado = ENUMERADO
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         registrar = pad_usb.registrar_gadget
         livre: list[bool] = []
 
@@ -494,7 +494,7 @@ def test_o_hidraw_do_gadget_nao_e_aparelho(tmp_path: Path, uniq_do_gadget: str) 
     assert achados == {h._P1: "rádio", h._P2: "cabo"}
 
 
-def test_o_terceiro_gadget_da_fila_espera_a_vez_dele(bancada: BancadaDoGadget) -> None:
+def test_o_terceiro_gadget_da_fila_espera_a_vez_dele(ensaio: EnsaioDoGadget) -> None:
     """Medido em 12/10/2026: o hub enumera um gadget por vez, ~5,6 s cada.
 
     Os quatro montavam no mesmo ms com 15 s cada; o terceiro foi achado aos
@@ -503,25 +503,25 @@ def test_o_terceiro_gadget_da_fila_espera_a_vez_dele(bancada: BancadaDoGadget) -
     pad falha aos 16 s.
     """
     relogio = [100.0]
-    bancada.ug._FILA_DA_ENUMERACAO.update({"hefesto-pad-01-x", "hefesto-pad-02-y"})
-    pad = bancada.pad(time_fn=lambda: relogio[0], player=3)
+    ensaio.ug._FILA_DA_ENUMERACAO.update({"hefesto-pad-01-x", "hefesto-pad-02-y"})
+    pad = ensaio.pad(time_fn=lambda: relogio[0], player=3)
     try:
         assert pad.start()
         assert pad._gadget_prazo == pytest.approx(145.0)
         relogio[0] += 16.0
-        assert not bancada.esperar(lambda: pad._gadget_falhou, segundos=0.4)
-        bancada.enumerado = ENUMERADO
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert not ensaio.esperar(lambda: pad._gadget_falhou, segundos=0.4)
+        ensaio.enumerado = ENUMERADO
+        assert ensaio.esperar(lambda: pad.is_bound)
         assert pad._gadget_falhou is False
         assert pad.mac and not any(
-            s.endswith(pad_usb._so_hex(pad.mac)) for s in bancada.ug._FILA_DA_ENUMERACAO
+            s.endswith(pad_usb._so_hex(pad.mac)) for s in ensaio.ug._FILA_DA_ENUMERACAO
         ), "enumerado, sai da fila"
     finally:
         pad.stop()
 
 
 def test_o_p1_que_enumera_sem_dono_larga_o_som_em_tres_segundos(
-    bancada: BancadaDoGadget,
+    ensaio: EnsaioDoGadget,
 ) -> None:
     """O P1 do boot sem dono segurava o endpoint de TODO aparelho por 19 s.
 
@@ -530,13 +530,13 @@ def test_o_p1_que_enumera_sem_dono_larga_o_som_em_tres_segundos(
     """
     import time
 
-    pad = bancada.pad(identity=None)
+    pad = ensaio.pad(identity=None)
     try:
         assert pad.start()
-        serial = bancada.pedidos[0][0]
+        serial = ensaio.pedidos[0][0]
         assert pad_usb._A_CAMINHO[serial][1] - time.monotonic() > 10.0
-        bancada.enumerado = ENUMERADO
-        assert bancada.esperar(lambda: pad.is_bound)
+        ensaio.enumerado = ENUMERADO
+        assert ensaio.esperar(lambda: pad.is_bound)
         assert pad_usb.a_ancora_ou_a_espera(OUTRA)[1] is True, "o relógio da identidade tem a vez"
         assert pad_usb._A_CAMINHO[serial][1] - time.monotonic() <= 3.0
         assert pad_usb.a_ancora_ou_a_espera(OUTRA, agora=time.monotonic() + 3.1)[1] is False

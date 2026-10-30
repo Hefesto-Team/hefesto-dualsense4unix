@@ -6,7 +6,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "he
 import onde  # noqa: E402
 
 PUBLICADO = "--publicado" in sys.argv
-D = onde.PUBLICADO if PUBLICADO else onde.BANCADA
+D = onde.PUBLICADO if PUBLICADO else onde.ENSAIO
 REF = "01-jogar.html"
 ROT = 92
 

@@ -23,7 +23,7 @@ TRES_JOGOS = (
 )
 
 
-def _perfil_dela(directory: Path, arquivo: str, dados: dict[str, object]) -> bytes:
+def _perfil_do_usuario(directory: Path, arquivo: str, dados: dict[str, object]) -> bytes:
     """Escreve um perfil "dela" no diretório e devolve os bytes gravados."""
     directory.mkdir(parents=True, exist_ok=True)
     bruto = (json.dumps(dados, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -107,11 +107,11 @@ def test_o_perfil_semeado_e_valido_para_o_schema(tmp_path: Path) -> None:
     assert perfil.matches({"wm_class": "steam_app_910002"}) is False
 
 
-def test_colisao_de_nome_e_recusa_e_o_arquivo_dela_fica_intacto(
+def test_colisao_de_nome_e_recusa_e_o_arquivo_do_usuario_fica_intacto(
     tmp_path: Path,
 ) -> None:
     destino = tmp_path / "perfis"
-    dela = _perfil_dela(
+    do_usuario = _perfil_do_usuario(
         destino,
         "ilha_de_vidro.json",
         {"name": "Ilha de Vidro", "match": {"type": "manual"}, "priority": 7},
@@ -124,13 +124,13 @@ def test_colisao_de_nome_e_recusa_e_o_arquivo_dela_fica_intacto(
     assert resultado.criados == ()
     recusa = resultado.por_desfecho("nome_ocupado")
     assert [(r.appid, r.arquivo) for r in recusa] == [("910001", "ilha_de_vidro.json")]
-    assert (destino / "ilha_de_vidro.json").read_bytes() == dela
+    assert (destino / "ilha_de_vidro.json").read_bytes() == do_usuario
 
 
 def test_a_recusa_por_nome_nao_vira_marca_e_e_reavaliada(tmp_path: Path) -> None:
     """Ela renomeia o perfil que ocupava o nome; a próxima varredura semeia."""
     destino = tmp_path / "perfis"
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "ilha_de_vidro.json",
         {"name": "Ilha de Vidro", "match": {"type": "manual"}},
@@ -151,7 +151,7 @@ def test_o_jogo_que_ja_tem_perfil_pelo_appid_nao_ganha_um_segundo(
 ) -> None:
     """O caso real do disco do usuário: o preset se chama `sackboy_nativo`."""
     destino = tmp_path / "perfis"
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "sackboy_nativo.json",
         {
@@ -176,7 +176,7 @@ def test_o_jogo_que_ja_tem_perfil_pelo_appid_nao_ganha_um_segundo(
 def test_o_dono_do_appid_e_achado_mesmo_com_caixa_trocada(tmp_path: Path) -> None:
     """`Steam_App_910001` é a MESMA janela — o predicado da casa é sem caixa."""
     destino = tmp_path / "perfis"
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "meu_jogo.json",
         {
@@ -214,8 +214,8 @@ def test_perfil_corrompido_que_ocupa_o_nome_tambem_e_respeitado(
 def test_nenhuma_varredura_apaga_arquivo_nenhum(tmp_path: Path) -> None:
     """Nada nesta entrega apaga nada, em nenhum caminho — inclusive repetida."""
     destino = tmp_path / "perfis"
-    _perfil_dela(destino, "meu_perfil.json", {"name": "meu_perfil", "match": {"type": "any"}})
-    _perfil_dela(
+    _perfil_do_usuario(destino, "meu_perfil.json", {"name": "meu_perfil", "match": {"type": "any"}})
+    _perfil_do_usuario(
         destino,
         "ilha_de_vidro.json",
         {"name": "Ilha de Vidro", "match": {"type": "manual"}},
@@ -243,9 +243,9 @@ def test_gravar_sem_pisar_recusa_arquivo_existente(tmp_path: Path) -> None:
     assert sorted(p.name for p in pasta.iterdir()) == ["ja_existe.json"]
 
 
-def test_a_marca_separa_o_que_o_produto_criou_do_que_e_dela(tmp_path: Path) -> None:
+def test_a_marca_separa_o_que_o_produto_criou_do_que_e_do_usuario(tmp_path: Path) -> None:
     destino = tmp_path / "perfis"
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "sackboy_nativo.json",
         {
@@ -265,7 +265,7 @@ def test_a_marca_separa_o_que_o_produto_criou_do_que_e_dela(tmp_path: Path) -> N
     assert "910002" not in semeados
 
 
-def test_perfil_semeado_que_ela_apagou_nao_ressuscita(tmp_path: Path) -> None:
+def test_perfil_semeado_que_o_usuario_apagou_nao_ressuscita(tmp_path: Path) -> None:
     """Mesmo contrato do `.seeded_presets`: deleção proposital é decisão de produto."""
     destino = tmp_path / "perfis"
     loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=TRES_JOGOS)
@@ -336,12 +336,12 @@ def test_dois_jogos_com_o_mesmo_slug_o_segundo_e_recusado(tmp_path: Path) -> Non
     assert len(list(destino.glob("*.json"))) == 1
 
 
-def test_o_produto_avisa_quando_um_perfil_dela_casa_com_a_loja(
+def test_o_produto_avisa_quando_um_perfil_do_usuario_casa_com_a_loja(
     tmp_path: Path,
 ) -> None:
     """Treze trocas de perfil em 54 minutos por causa do `steamwebhelper`."""
     destino = tmp_path / "perfis"
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "navegacao.json",
         {
@@ -364,12 +364,12 @@ def test_o_produto_avisa_quando_um_perfil_dela_casa_com_a_loja(
 
 def test_o_aviso_pega_o_steamwebhelper_e_nao_pega_o_jogo(tmp_path: Path) -> None:
     destino = tmp_path / "perfis"
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "webhelper.json",
         {"name": "helper", "match": {"type": "criteria", "window_class": ["steamwebhelper"]}},
     )
-    _perfil_dela(
+    _perfil_do_usuario(
         destino,
         "so_jogo.json",
         {"name": "jogo", "match": {"type": "criteria", "window_class": ["steam_app_77"]}},
@@ -504,7 +504,7 @@ def test_biblioteca_inalterada_nao_abre_arquivo_nenhum(
     assert leituras == [1], "varreu a biblioteca de novo sem nada ter mudado"
 
 
-def test_a_suite_e_a_maquina_dela_ficam_de_fora_pelo_opt_out(
+def test_a_suite_e_a_maquina_do_usuario_ficam_de_fora_pelo_opt_out(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`SKIP_PRESET_SEED=1` (que a conftest põe em TODO teste) desliga isto."""

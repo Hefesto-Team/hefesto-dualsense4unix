@@ -172,7 +172,7 @@ _SUFIXO_DO_NO = "-port"
 
 
 @dataclass(frozen=True)
-class Bancada:
+class Ensaio:
     """A mesa do motor **e** o que o desenho não disse para montá-la."""
 
     mesa: motor.Mesa
@@ -182,7 +182,7 @@ class Bancada:
 
 def mesa_do_motor(
     mapa: MapaDaMesa, censo: Censo, tipos: Mapping[str, str] | None = None
-) -> Bancada:
+) -> Ensaio:
     """O desenho dela mais a leitura de agora, na forma que o motor entende.
 
     ``tipos`` é o que o usuário declarou de cada modelo (``vid:pid`` → tipo, o ``mesa.radios`` do
@@ -273,7 +273,7 @@ def mesa_do_motor(
             )
         )
 
-    return Bancada(
+    return Ensaio(
         mesa=motor.Mesa(
             aparelhos=aparelhos,
             faces=tuple(faces),
@@ -776,7 +776,7 @@ __all__ = [
     "USB_DECLARADA",
     "USB_PELA_PLACA",
     "USB_PELO_APARELHO",
-    "Bancada",
+    "Ensaio",
     "FatosDoBuraco",
     "aparelho_usb3_na_entrada",
     "caminho_de",

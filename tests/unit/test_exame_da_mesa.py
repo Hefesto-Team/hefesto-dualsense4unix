@@ -23,7 +23,7 @@ from hefesto_dualsense4unix.integrations.exame_da_mesa import (
 MAC_DE_MENTIRA = "AA:BB:CC:00:00:FF"
 
 
-def _bancada_do_radio(tmp_path: Path, valor: str | None, *, com_conf: bool) -> dict:
+def _ensaio_do_radio(tmp_path: Path, valor: str | None, *, com_conf: bool) -> dict:
     """Monta a bancada da checagem de energia do rádio em `tmp_path`."""
     parametro = tmp_path / "enable_autosuspend"
     if valor is not None:
@@ -46,7 +46,7 @@ def test_energia_do_radio_fica_certa_com_o_autosuspend_desligado(
     tmp_path: Path,
 ) -> None:
     """`enable_autosuspend=N` é o estado que o conf do Hefesto produz."""
-    item = energia_do_radio(**_bancada_do_radio(tmp_path, "N", com_conf=True))
+    item = energia_do_radio(**_ensaio_do_radio(tmp_path, "N", com_conf=True))
 
     assert item.estado == ESTADO_CERTO
     assert item.cura is None
@@ -54,7 +54,7 @@ def test_energia_do_radio_fica_certa_com_o_autosuspend_desligado(
 
 def test_energia_do_radio_pede_atencao_sem_a_regra_no_lugar(tmp_path: Path) -> None:
     """Módulo com autosuspend LIGADO e sem o conf: o rádio pode dormir."""
-    item = energia_do_radio(**_bancada_do_radio(tmp_path, "Y", com_conf=False))
+    item = energia_do_radio(**_ensaio_do_radio(tmp_path, "Y", com_conf=False))
 
     assert item.estado == ESTADO_ATENCAO
     assert item.cura is not None
@@ -65,7 +65,7 @@ def test_energia_do_radio_avisa_que_a_regra_so_vale_no_proximo_encaixe(
     tmp_path: Path,
 ) -> None:
     """Conf no disco e módulo com o valor antigo: a cura existe e não vale AINDA."""
-    item = energia_do_radio(**_bancada_do_radio(tmp_path, "Y", com_conf=True))
+    item = energia_do_radio(**_ensaio_do_radio(tmp_path, "Y", com_conf=True))
 
     assert item.estado == ESTADO_ATENCAO
     assert "encaixe" in (item.cura or "")
@@ -73,7 +73,7 @@ def test_energia_do_radio_avisa_que_a_regra_so_vale_no_proximo_encaixe(
 
 def test_energia_do_radio_nao_sabe_sem_adaptador_ligado(tmp_path: Path) -> None:
     """Sem o parâmetro no sysfs não há módulo carregado — logo, nada medido."""
-    item = energia_do_radio(**_bancada_do_radio(tmp_path, None, com_conf=True))
+    item = energia_do_radio(**_ensaio_do_radio(tmp_path, None, com_conf=True))
 
     assert item.estado == ESTADO_NAO_SEI
 
@@ -383,14 +383,14 @@ def test_o_censo_carrega_o_veredito_e_sobrevive_ao_json(tmp_path: Path) -> None:
 
 def _radio_e_portas(tmp_path: Path) -> dict:
     """Bancada mínima para `exame()` — todas as raízes dentro de `tmp_path`."""
-    bancada = _bancada_do_radio(tmp_path / "radio", None, com_conf=False)
+    ensaio = _ensaio_do_radio(tmp_path / "radio", None, com_conf=False)
     (tmp_path / "radio").mkdir(parents=True, exist_ok=True)
     portas = tmp_path / "usb"
     portas.mkdir()
     _porta(portas, "1-1", "on")
     return {
-        "parametro_do_radio": bancada["parametro"],
-        "conf_do_radio": bancada["conf"],
+        "parametro_do_radio": ensaio["parametro"],
+        "conf_do_radio": ensaio["conf"],
         "raiz_usb": portas,
         "modulos": tmp_path / "modules-vazio",  # (noqa-acento)
         "diretorio_do_modulo": tmp_path / "sem-modulo",

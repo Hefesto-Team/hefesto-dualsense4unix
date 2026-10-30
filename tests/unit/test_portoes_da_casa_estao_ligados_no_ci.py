@@ -20,7 +20,7 @@ CABECALHO = "_LISTA()"
 
 PISO = 7
 
-def so_na_maquina_dela() -> dict[str, str]:
+def so_na_maquina_do_usuario() -> dict[str, str]:
     """Os portões da tabela que, por decisão registrada, NÃO rodam no CI."""
     texto = PORTOES_SH.read_text(encoding="utf-8")
     inicio = texto.find("_DIVERGENCIAS()")
@@ -184,7 +184,7 @@ def test_a_ancora_da_lista_de_portoes_continua_de_pe() -> None:
 def test_todo_portao_da_casa_e_invocado_no_ci() -> None:
     """O que a casa manda rodar antes da leva tem de rodar no CI também."""
     for portao in portoes_da_casa():
-        if portao in so_na_maquina_dela():
+        if portao in so_na_maquina_do_usuario():
             continue
         assert passos_que_rodam(portao), (
             f"nenhum passo do ci.yml INVOCA `{portao}`, e o portoes.sh manda "
@@ -287,7 +287,7 @@ def test_todo_portao_da_casa_aponta_para_arquivo_que_existe() -> None:
 def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
     """Sem isto, o `FORA-DO-CI` vira o lugar onde se esconde o que incomoda."""
     derivados = portoes_da_casa()
-    for chave, razao in so_na_maquina_dela().items():
+    for chave, razao in so_na_maquina_do_usuario().items():
         assert chave in derivados, (
             f"{chave!r} está declarado como portão de fora do CI e nem consta "
             "mais da tabela — APAGUE a entrada."

@@ -221,7 +221,7 @@ def test_a_eleicao_que_o_wireplumber_desfez_nao_registra_dono(pactl: Any) -> Non
     assert eleitor.eleito is None, "a escrita aconteceu, a posse não"
 
 
-def test_a_devolucao_solta_a_posse_so_quando_ela_foi_conferida(pactl: Any) -> None:
+def test_a_devolucao_solta_a_posse_so_quando_o_usuario_foi_conferida(pactl: Any) -> None:
     """A posse muda pela RELEITURA DO ATIVO — e pelo ato de calar sem destino."""
     eleitor = elm.EleitorDeMicrofone()
     eleitor.eleger_por_uniq(

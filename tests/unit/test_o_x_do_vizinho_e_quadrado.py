@@ -25,13 +25,13 @@ except (ImportError, ValueError) as _erro:  # pragma: no cover
         allow_module_level=True,
     )
 
-from hefesto_dualsense4unix.interface.olhar import VISTA_DELA
+from hefesto_dualsense4unix.interface.olhar import VISTA_DO_USUARIO
 
 PAGINA = "04-iluminacao.html"
 
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
-VISTAS = {"janela": TAMANHO_OCULTA, "dela": VISTA_DELA}
+VISTAS = {"janela": TAMANHO_OCULTA, "dela": VISTA_DO_USUARIO}
 
 TETO_DO_X = 12.0
 PISO_DO_X = 8.0

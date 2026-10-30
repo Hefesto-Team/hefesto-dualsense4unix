@@ -161,7 +161,7 @@ def _dublar_a_borda(monkeypatch: pytest.MonkeyPatch, nascidos: list[Any]) -> Non
 
 
 @pytest.fixture
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """A borda dublada; o arquivo de máscaras de antes fora da casa."""
     _dublar_a_borda(monkeypatch, [])
     monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)
@@ -229,7 +229,7 @@ RESTARTS: dict[str, tuple[Any, str | None]] = {
 }
 
 
-@pytest.mark.usefixtures("_bancada")
+@pytest.mark.usefixtures("_ensaio")
 @pytest.mark.parametrize("motivo", sorted(RESTARTS))
 def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     """Com o modo Xbox de pé, nenhum restart devolve o pad ao DualSense.
@@ -259,7 +259,7 @@ def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     )
 
 
-@pytest.mark.usefixtures("_bancada")
+@pytest.mark.usefixtures("_ensaio")
 @pytest.mark.parametrize(
     ("dono", "backend"), [("dualsense", "uhid"), ("xbox", "uinput")], ids=["dualsense", "xbox"]
 )
@@ -321,12 +321,12 @@ def test_o_gesto_fora_do_jogo_grava_com_a_origem(_arquivo_do_caminho: Any) -> No
     assert session.load_gamepad_caminho_com_origem() == ("xbox", "gesto_fora_do_jogo")
 
 
-def test_a_escolha_dela_com_origem_sobrevive_aos_boots(_arquivo_do_caminho: Any) -> None:
+def test_a_escolha_do_usuario_com_origem_sobrevive_aos_boots(_arquivo_do_caminho: Any) -> None:
     """O `xbox` que o usuário escolheu fora do jogo NÃO é o vazamento de 18/09."""
     gp._guardar_o_caminho(_DaemonDoGesto(), "xbox", origin="manual")  # type: ignore[arg-type]
 
     for _boot in range(2):
-        lido = lifecycle._a_escolha_dela_sem_o_vazamento(
+        lido = lifecycle._a_escolha_do_usuario_sem_o_vazamento(
             *session.load_gamepad_caminho_com_origem()
         )
         assert lido == "xbox", "o boot desfez o Xbox que ela escolheu"
@@ -337,14 +337,14 @@ def test_o_legado_sem_origem_volta_uma_vez(_arquivo_do_caminho: Any) -> None:
     """O arquivo antigo (só o caminho) é o legado: devolvido uma vez, com a marca."""
     _arquivo_do_caminho.write_text("xbox\n", encoding="utf-8")
 
-    primeiro = lifecycle._a_escolha_dela_sem_o_vazamento(
+    primeiro = lifecycle._a_escolha_do_usuario_sem_o_vazamento(
         *session.load_gamepad_caminho_com_origem()
     )
     assert primeiro == "dualsense"
     assert session.load_gamepad_caminho_com_origem() == ("dualsense", "migracao_unica")
 
     _arquivo_do_caminho.write_text("xbox\n", encoding="utf-8")
-    segundo = lifecycle._a_escolha_dela_sem_o_vazamento(
+    segundo = lifecycle._a_escolha_do_usuario_sem_o_vazamento(
         *session.load_gamepad_caminho_com_origem()
     )
     assert segundo == "xbox", "a migração rodou duas vezes"
@@ -504,12 +504,12 @@ def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
     assert len(_lar_do_boot) == 1 and _lar_do_boot[0].flavor == "xbox"
 
 
-def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_dela(
+def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_do_usuario(
     _lar_do_boot: list[Any],
 ) -> None:
     """A escolha do usuário é um perfil com regra de janela, em Xbox; o marcador, outro.
 
-    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4):
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item 4):
     esta régua cobrava o contrário — o restore pulava o perfil de janela
     (RESTORE-ESCOPO-01) e o pad nascia no modo do Freestyle. A escolha do usuário
     volta com regra de janela ou sem, e o marcador é espelho: o boot lê o
@@ -571,7 +571,7 @@ def _daemon_do_g3() -> tuple[lifecycle.Daemon, Any]:
     return daemon, gerente_do_daemon(daemon, store=store)
 
 
-@pytest.mark.usefixtures("_bancada")
+@pytest.mark.usefixtures("_ensaio")
 @pytest.mark.parametrize("origem", ["autoswitch", "manual", "launch"])
 def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     origem: str, _lar: Any
@@ -598,7 +598,7 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
 
 
-@pytest.mark.usefixtures("_bancada")
+@pytest.mark.usefixtures("_ensaio")
 @pytest.mark.parametrize("mascara", [None, "dualsense"], ids=["sem-mascara", "dualsense"])
 @pytest.mark.parametrize("origem", ["autoswitch", "manual", "launch"])
 def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
@@ -652,7 +652,7 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
 APPID_DO_G3 = 1599660
 
 
-@pytest.mark.usefixtures("_bancada")
+@pytest.mark.usefixtures("_ensaio")
 def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
     _lar: Any, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -703,15 +703,15 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
 )
 
 BRANCO, VERMELHO, ROXO, AZUL = UNIQS[:4]
-FILA_DELA = (BRANCO, VERMELHO, ROXO, AZUL)
+FILA_DO_USUARIO = (BRANCO, VERMELHO, ROXO, AZUL)
 
 
-def _gravar_a_fila_dela() -> None:
+def _gravar_a_fila_do_usuario() -> None:
     """A fila de uma sessão anterior no disco do lar de mentira: branco 1 … azul 4."""
     from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 
     anterior = ControllerIdentityRegistry(clock=Relogio())
-    anterior.sync_connected(list(FILA_DELA))
+    anterior.sync_connected(list(FILA_DO_USUARIO))
 
 
 TRANSPORTES = {
@@ -731,14 +731,14 @@ def _a_mesa_do_boot(
     """O daemon sobe com a fila gravada, e os controles entram na ordem `chegada`."""
     from hefesto_dualsense4unix.daemon.subsystems.identity import make_auto_output_provider
 
-    _gravar_a_fila_dela()
-    bancada = MesaDoJogo(monkeypatch, relogio=(r := Relogio()), tempo=r, jogo=jogo)
-    bancada.reg.load()
-    bancada.inst.set_auto_output_provider(make_auto_output_provider(bancada.reg))
-    pelo = dict(zip(FILA_DELA, TRANSPORTES[transporte], strict=True))
+    _gravar_a_fila_do_usuario()
+    ensaio = MesaDoJogo(monkeypatch, relogio=(r := Relogio()), tempo=r, jogo=jogo)
+    ensaio.reg.load()
+    ensaio.inst.set_auto_output_provider(make_auto_output_provider(ensaio.reg))
+    pelo = dict(zip(FILA_DO_USUARIO, TRANSPORTES[transporte], strict=True))
     for uniq in chegada:
-        bancada.mesa.sentar(uniq, transporte=pelo[uniq])
-    return bancada
+        ensaio.mesa.sentar(uniq, transporte=pelo[uniq])
+    return ensaio
 
 
 def _recriacoes_do_p1(diario: list[dict[str, Any]]) -> list[Any]:
@@ -756,56 +756,56 @@ def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
     monkeypatch: pytest.MonkeyPatch, jogo: bool, transporte: str
 ) -> None:
     """Fila branco=1, vermelho=2, roxo=3, azul=4; o roxo conecta primeiro."""
-    bancada = _a_mesa_do_boot(
+    ensaio = _a_mesa_do_boot(
         monkeypatch, (ROXO, BRANCO, VERMELHO, AZUL), jogo=jogo, transporte=transporte
     )
-    vpad_do_p1 = bancada.vpad_do_p1
+    vpad_do_p1 = ensaio.vpad_do_p1
     with structlog.testing.capture_logs() as diario:
         for _ in range(4):
-            bancada.tique()
+            ensaio.tique()
 
-    assert bancada.a_tela() == {u: n + 1 for n, u in enumerate(FILA_DELA)}, (
+    assert ensaio.a_tela() == {u: n + 1 for n, u in enumerate(FILA_DO_USUARIO)}, (
         "premissa: a lâmpada segue a fila gravada"
     )
-    assert bancada.inst.primary_uniq == BRANCO, (
-        f"o primário é {bancada.inst.primary_uniq}, e a carta 1 é o branco"
+    assert ensaio.inst.primary_uniq == BRANCO, (
+        f"o primário é {ensaio.inst.primary_uniq}, e a carta 1 é o branco"
     )
     assert _recriacoes_do_p1(diario) == [], (
         f"o co-op recriou o vpad do P1 para pô-lo em ordem: {_recriacoes_do_p1(diario)}"
     )
-    assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo
-    assert bancada.o_jogo_ve() == {n + 1: u for n, u in enumerate(FILA_DELA)}
-    bancada.o_jogo_segue_a_tela()
+    assert ensaio.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo
+    assert ensaio.o_jogo_ve() == {n + 1: u for n, u in enumerate(FILA_DO_USUARIO)}
+    ensaio.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
 @pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
-def test_o_numero_que_ela_troca_na_tela_leva_o_posto(
+def test_o_numero_que_o_usuario_troca_na_tela_leva_o_posto(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
     """Ela dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada."""
-    bancada = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL), jogo=jogo)
+    ensaio = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL), jogo=jogo)
     for _ in range(3):
-        bancada.tique()
-    assert bancada.inst.primary_uniq == BRANCO
+        ensaio.tique()
+    assert ensaio.inst.primary_uniq == BRANCO
 
-    bancada.reg.escolha_da_mao({VERMELHO: 1, BRANCO: 2, ROXO: 3, AZUL: 4})
-    bancada.reg.liberar_as_lampadas()
-    assert bancada.a_tela()[VERMELHO] == 1, "premissa: o vermelho acende o 1"
+    ensaio.reg.escolha_da_mao({VERMELHO: 1, BRANCO: 2, ROXO: 3, AZUL: 4})
+    ensaio.reg.liberar_as_lampadas()
+    assert ensaio.a_tela()[VERMELHO] == 1, "premissa: o vermelho acende o 1"
 
     with structlog.testing.capture_logs() as diario:
-        assert bancada.inst.seguir_a_carta() is True
-    assert bancada.inst.primary_uniq == VERMELHO
+        assert ensaio.inst.seguir_a_carta() is True
+    assert ensaio.inst.primary_uniq == VERMELHO
     assert [r.get("uniq") for r in diario if r["event"] == "primario_segue_a_carta"], (
         "o diário não disse que o posto seguiu a carta"
     )
-    assert bancada.inst.seguir_a_carta() is False, "a segunda pergunta não muda nada"
+    assert ensaio.inst.seguir_a_carta() is False, "a segunda pergunta não muda nada"
 
     for _ in range(4):
-        bancada.tique()
-    assert bancada.inst.primary_uniq == VERMELHO
-    assert bancada.dono_do_vpad_do_p1() == VERMELHO
-    bancada.o_jogo_segue_a_tela()
+        ensaio.tique()
+    assert ensaio.inst.primary_uniq == VERMELHO
+    assert ensaio.dono_do_vpad_do_p1() == VERMELHO
+    ensaio.o_jogo_segue_a_tela()
 
 
 class _ControleQueSegueACarta(FakeController):
@@ -831,21 +831,21 @@ def test_o_tique_lento_pergunta_a_carta(_lar_do_boot: list[Any]) -> None:
     assert controle.perguntas >= 1, "o tique lento não perguntou a carta ao backend"
 
 
-def _numero_aceso(bancada: MesaDoJogo, uniq: str) -> int | None:
+def _numero_aceso(ensaio: MesaDoJogo, uniq: str) -> int | None:
     """O número que o backend escreveria na barra de jogador de `uniq`, com o co-op."""
     from hefesto_dualsense4unix.core.led_control import player_led_pattern
 
-    with bancada.inst._io_lock:
-        bits = bancada.inst._merged_desired_for_key(uniq, incluir_coop=True).player_leds
+    with ensaio.inst._io_lock:
+        bits = ensaio.inst._merged_desired_for_key(uniq, incluir_coop=True).player_leds
     return next((n for n in range(1, 9) if player_led_pattern(n) == bits), None)
 
 
-def _nome_do_microfone(bancada: MesaDoJogo, uniq: str) -> int | None:
+def _nome_do_microfone(ensaio: MesaDoJogo, uniq: str) -> int | None:
     """O «Controle N» do nó de som, pela mesma função que o `bt_mic` usa."""
     from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 
-    conectados = [c for c in bancada.inst.describe_controllers() if c.get("connected")]
-    return numero_do_assento_na_mesa(conectados, uniq, daemon=bancada.daemon)
+    conectados = [c for c in ensaio.inst.describe_controllers() if c.get("connected")]
+    return numero_do_assento_na_mesa(conectados, uniq, daemon=ensaio.daemon)
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -854,21 +854,21 @@ def test_a_carta_1_sai_e_os_outros_seguem_2_3_4(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
     """O branco sai: o vermelho, o roxo e o azul seguem 2, 3 e 4 na lâmpada e no microfone."""
-    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=jogo)
+    ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=jogo)
     for _ in range(3):
-        bancada.tique()
-    ficaram = FILA_DELA[1:]
-    assert {u: _numero_aceso(bancada, u) for u in FILA_DELA} == {
-        u: n + 1 for n, u in enumerate(FILA_DELA)
+        ensaio.tique()
+    ficaram = FILA_DO_USUARIO[1:]
+    assert {u: _numero_aceso(ensaio, u) for u in FILA_DO_USUARIO} == {
+        u: n + 1 for n, u in enumerate(FILA_DO_USUARIO)
     }, "premissa: a mesa acende 1, 2, 3 e 4"
 
-    bancada.mesa.levantar(BRANCO)
+    ensaio.mesa.levantar(BRANCO)
     for _ in range(5):
-        bancada.tique()
-        assert {u: _numero_aceso(bancada, u) for u in ficaram} == {
+        ensaio.tique()
+        assert {u: _numero_aceso(ensaio, u) for u in ficaram} == {
             VERMELHO: 2, ROXO: 3, AZUL: 4
         }, "a lâmpada de quem ficou mudou de número"
-        assert {u: _nome_do_microfone(bancada, u) for u in ficaram} == {
+        assert {u: _nome_do_microfone(ensaio, u) for u in ficaram} == {
             VERMELHO: 2, ROXO: 3, AZUL: 4
         }, "o nome do microfone de quem ficou mudou de número"
 
@@ -879,7 +879,7 @@ def test_quem_esta_fora_na_troca_nao_toma_o_numero_de_quem_esta_na_mesa() -> Non
     from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 
     registro = ControllerIdentityRegistry(clock=(relogio := Relogio()))
-    registro.sync_connected(list(FILA_DELA))
+    registro.sync_connected(list(FILA_DO_USUARIO))
     relogio.avancar(2.0)
     registro.sync_connected([BRANCO, VERMELHO, AZUL])
     daemon = SimpleNamespace(
@@ -903,17 +903,17 @@ def test_o_numero_novo_repinta_a_lampada_sem_hotplug(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
     """Ela troca o 2 e o 3 na tela: as lâmpadas se repintam sem ninguém mexer em /dev/input."""
-    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=jogo)
+    ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=jogo)
     for _ in range(3):
-        bancada.tique()
+        ensaio.tique()
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda _self: False
     )
-    bancada.reg.escolha_da_mao({BRANCO: 1, ROXO: 2, VERMELHO: 3, AZUL: 4})
-    bancada.reg.liberar_as_lampadas()
+    ensaio.reg.escolha_da_mao({BRANCO: 1, ROXO: 2, VERMELHO: 3, AZUL: 4})
+    ensaio.reg.liberar_as_lampadas()
     for _ in range(3):
-        bancada.tique()
+        ensaio.tique()
 
-    assert {u: _numero_aceso(bancada, u) for u in FILA_DELA} == {
+    assert {u: _numero_aceso(ensaio, u) for u in FILA_DO_USUARIO} == {
         BRANCO: 1, ROXO: 2, VERMELHO: 3, AZUL: 4
     }, "a lâmpada ficou com o número de antes"

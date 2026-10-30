@@ -328,7 +328,7 @@ _STREAM_PROPERTIES = (
     "Input/Audio:media.name:hefesto-retorno-do-mic-APARELHOKUKTZP\\sinput={\"mute\":false}\n"
     "Output/Audio:media.role:Notification={\"volume\":0.3}\n"
 )
-_DELA = {
+_DO_USUARIO = {
     "default-nodes": [
         "[default-nodes]",
         "default.configured.audio.sink=alsa_output.pci-0000_00_1f.3.hdmi-stereo",
@@ -363,7 +363,7 @@ def test_o_estado_do_wireplumber_perde_so_as_chaves_nossas(tmp_path: Path) -> No
         "default-nodes": 3, "stream-properties": 3,
     }
     assert m.tirar_as_chaves_nossas_do_wireplumber(pasta) == 6
-    for nome, linhas in _DELA.items():
+    for nome, linhas in _DO_USUARIO.items():
         assert (pasta / nome).read_text(encoding="utf-8").splitlines() == linhas, nome
     assert m.chaves_nossas_do_wireplumber(pasta) == {}
     assert m.tirar_as_chaves_nossas_do_wireplumber(pasta) == 0
@@ -433,5 +433,5 @@ def test_o_uninstall_para_o_wireplumber_antes_de_reescrever(tmp_path: Path) -> N
     assert feito.returncode == 0, feito.stderr
     chamadas = diario.read_text(encoding="utf-8").splitlines()
     assert chamadas == ["--user stop wireplumber 2", "--user start wireplumber 0"], chamadas
-    for nome, linhas in _DELA.items():
+    for nome, linhas in _DO_USUARIO.items():
         assert (pasta / nome).read_text(encoding="utf-8").splitlines() == linhas, nome

@@ -15,11 +15,11 @@ LIDO_DO_FIRMWARE = "lido-do-firmware"
 
 LIDO_DO_KERNEL = "lido-do-kernel"
 
-DECLARADO_POR_ELA = "declarado-por-ela"
+DECLARADO_PELO_USUARIO = "declarado-por-ela"
 
 NAO_RESPONDEU = "nao-respondeu"
 
-SELOS = (LIDO_DO_FIRMWARE, LIDO_DO_KERNEL, DECLARADO_POR_ELA, NAO_RESPONDEU)
+SELOS = (LIDO_DO_FIRMWARE, LIDO_DO_KERNEL, DECLARADO_PELO_USUARIO, NAO_RESPONDEU)
 
 VERSAO_DO_CENSO = 1
 
@@ -372,7 +372,7 @@ def ler_do_disco(caminho: str = "") -> dict[str, object]:
     return lido if isinstance(lido, dict) else {}
 
 
-def preservar_o_que_ela_disse(
+def preservar_o_que_o_usuario_disse(
     novo: dict[str, object], antigo: dict[str, object], placa: dict[str, object]
 ) -> dict[str, object]:
     """**A CURA.** Reinstalar não pode apagar o que ela ensinou ao produto."""
@@ -384,17 +384,17 @@ def preservar_o_que_ela_disse(
     faces = antigo.get("faces")
     if isinstance(faces, list) and faces:
         herdado["faces"] = faces
-    dela = _dela(antigo)
+    do_usuario = _do_usuario(antigo)
     contagens = herdado.get("contagens")
-    if dela is not None and isinstance(contagens, dict):
+    if do_usuario is not None and isinstance(contagens, dict):
         novas = dict(contagens)
-        novas["declarado_por_ela"] = _fato(dela, DECLARADO_POR_ELA)
+        novas["declarado_por_ela"] = _fato(do_usuario, DECLARADO_PELO_USUARIO)
         novas["precisa_da_palavra_dela"] = False
         herdado["contagens"] = novas
     return herdado
 
 
-def _dela(censo: dict[str, object]) -> object:
+def _do_usuario(censo: dict[str, object]) -> object:
     contagens = censo.get("contagens")
     if not isinstance(contagens, dict):
         return None

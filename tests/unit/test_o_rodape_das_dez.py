@@ -81,7 +81,7 @@ def test_os_quatro_do_rodape_valem_em_qualquer_aba():
                 f"botões mudos em todas elas.")
 
 
-def test_importar_nao_sobrescreve_perfil_dela(casa, ctx, tmp_path):
+def test_importar_nao_sobrescreve_perfil_do_usuario(casa, ctx, tmp_path):
     """Nome repetido vira `nome-2`."""
     (casa / "importado.json").write_text('{"ja": "estava aqui"}', encoding="utf-8")
     vindo = tmp_path / "de-fora.json"

@@ -86,7 +86,7 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _o_disco_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
     """O marcador em disco, sem escrever no disco."""
-    monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: nome)
+    monkeypatch.setattr(profiles_actions, "perfil_que_o_usuario_ativou", lambda: nome)
 
 
 def test_ativar_recusa_o_mesmo_perfil_mesmo_com_o_daemon_calado(
@@ -181,7 +181,7 @@ def test_com_ninguem_valendo_o_remover_nao_trava(
     def _explode() -> str:
         raise OSError("o disco não respondeu")
 
-    monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", _explode)
+    monkeypatch.setattr(profiles_actions, "perfil_que_o_usuario_ativou", _explode)
     assert profiles_actions.perfil_que_esta_valendo({}).fonte == "nenhum"
     _, erro = _remover("meu_perfil", {})
     assert isinstance(erro, RuntimeError), (

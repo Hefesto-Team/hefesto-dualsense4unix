@@ -111,10 +111,10 @@ def maquina_pelada(monkeypatch: pytest.MonkeyPatch,
 
 
 @pytest.fixture
-def maquina_dela(monkeypatch: pytest.MonkeyPatch,
+def maquina_do_usuario(monkeypatch: pytest.MonkeyPatch,
                  tmp_path: pathlib.Path) -> pathlib.Path:
     """A MÁQUINA COM DUAS ORIGENS: o Heroic com o jogo baixado, e a Steam."""
-    lar = tmp_path / "lar-dela"
+    lar = tmp_path / "lar-do-usuario"
     lar.mkdir()
     _heroic(lar, [BAIXADO])
     de_verdade, assinar = jl.jogos_com_janela, jl.assinatura_das_janelas
@@ -148,7 +148,7 @@ def _escolher(rotulo: str) -> dict[str, Any]:
 
 
 def test_a_pagina_nova_nao_pinta_o_funciona_em(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+    maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A aba Perfis do todo tirou o «Funciona em» (5faca7e8a): o pacote não o pinta no vazio."""
     _o_disco_tem(monkeypatch,
@@ -169,7 +169,7 @@ def test_a_maquina_sem_lancador_nenhum_nao_oferece_jogo(
 
 
 def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
-    maquina_dela: pathlib.Path,
+    maquina_do_usuario: pathlib.Path,
 ) -> None:
     """As cinco leituras, e as duas últimas são o disco do usuário de 11/09/2026."""
     def vem_de(match: Any) -> str | None:
@@ -187,7 +187,7 @@ def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
 
 
 def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+    maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A válvula do R-12 não morreu — ela só passou a falar a língua nova."""
     fino = MatchCriteria(window_title_regex="Elden Ring.*",
@@ -203,7 +203,7 @@ def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
 
 
 def test_a_lista_de_baixo_segue_o_campo_de_cima(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+    maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Escolhido «Heroic», o campo «Nome do Jogo» oferece os jogos do Heroic."""
     do_heroic = a10._html_dos_jogos("Heroic")
@@ -216,7 +216,7 @@ def test_a_lista_de_baixo_segue_o_campo_de_cima(
 
 
 def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
-    maquina_dela: pathlib.Path,
+    maquina_do_usuario: pathlib.Path,
 ) -> None:
     """``ELDEN RING · 1245620``, e nunca ``eldenring.exe`` — item 12 da lista dela."""
     html = a10._html_dos_jogos("Steam")
@@ -251,7 +251,7 @@ def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
     assert ">Estilo de jogo:</span>" in html
 
 
-def test_a_coluna_fala_a_lingua_do_campo(maquina_dela: pathlib.Path) -> None:
+def test_a_coluna_fala_a_lingua_do_campo(maquina_do_usuario: pathlib.Path) -> None:
     """`procedência · nome · código`, e o executável nunca quando há nome."""
     def coluna(match: Any) -> str:
         return a10._quando_usar(match, "Só neste programa")
@@ -269,7 +269,7 @@ def test_a_coluna_fala_a_lingua_do_campo(maquina_dela: pathlib.Path) -> None:
 
 
 def test_a_coluna_nao_engole_a_disputa_nem_a_frase_do_produto(
-    maquina_dela: pathlib.Path,
+    maquina_do_usuario: pathlib.Path,
 ) -> None:
     """As duas frases do produto que FICAM, e as duas ficam por conteúdo."""
     disputa = "Sempre — 2 disputam, este vence"
@@ -281,7 +281,7 @@ def test_a_coluna_nao_engole_a_disputa_nem_a_frase_do_produto(
 
 
 def test_a_coluna_traduzida_chega_a_lupa_e_a_lista_so_mostra_nome_e_datas(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+    maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A lista da tela é Nome, Criado em e Modificado em; o «Quando usar» vive só para a lupa."""
     _o_disco_tem(monkeypatch,
@@ -301,7 +301,7 @@ def test_a_coluna_traduzida_chega_a_lupa_e_a_lista_so_mostra_nome_e_datas(
 
 
 def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+    maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A tradução vem ANTES do filtro — senão a lupa mede a frase de ontem."""
     _o_disco_tem(monkeypatch,
@@ -318,7 +318,7 @@ def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
 
 
 def test_o_clique_no_campo_arrasta_a_coluna_junto(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+    maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """**O CLIQUE:** escolher o jogo do Heroic no campo e a coluna muda junto, sem recarregar."""
     prof = Profile(name="Guardioes", priority=80, match=MatchAny())

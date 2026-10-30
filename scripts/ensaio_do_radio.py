@@ -211,11 +211,11 @@ def etapa_taxa(segundos: float = 6.0) -> int:
 def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
     """Liga a varredura em `alvo`, mede a taxa DURANTE, e desliga."""
     if os.environ.get("PYTEST_CURRENT_TEST") and \
-            os.environ.get("HEFESTO_BANCADA_PODE_TOCAR_O_RADIO") != "1":
+            os.environ.get("HEFESTO_ENSAIO_PODE_TOCAR_O_RADIO") != "1":
         print("\n  RECUSADO: esta etapa LIGA a varredura num adaptador vivo, e")
         print("  quem a chamou está dentro da suíte. O rádio dela não é bancada")
         print("  de teste — o daemon reage e regrava o estado na máquina dela.")
-        print("  Escape declarado: HEFESTO_BANCADA_PODE_TOCAR_O_RADIO=1\n")
+        print("  Escape declarado: HEFESTO_ENSAIO_PODE_TOCAR_O_RADIO=1\n")
         return 7
 
     if alvo not in _adaptadores():

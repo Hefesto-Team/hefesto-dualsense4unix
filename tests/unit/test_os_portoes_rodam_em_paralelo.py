@@ -393,7 +393,7 @@ def _repo_da_vez(tmp_path: Path, **kw: str) -> tuple[Path, Path, dict[str, str]]
     return repo, anota, {"HEFESTO_VEZ_DO_PYTEST": str(vez), "ANOTA_A_VEZ": str(anota)}
 
 
-def test_o_pytest_pede_a_vez_da_casa_quando_ela_existe(tmp_path: Path) -> None:
+def test_o_pytest_pede_a_vez_da_casa_quando_o_usuario_existe(tmp_path: Path) -> None:
     repo, anota, env = _repo_da_vez(tmp_path)
     r = _corre(repo, "--rapido", "--sem-memoria", env=env)
     assert _status(r.stdout) == {"pytest-tela": "ok"}, r.stdout
@@ -889,7 +889,7 @@ _DECLARADOS = {
     "a-origem": ("@sempre", "git log base..HEAD, merge-base com o dev, rev-parse HEAD"),
     "autoria-historia": ("@sempre", "rev-parse das tags e a história inteira"),
     "autoria-arvore": ("@sempre", "git config hooks.anonimato.isento"),
-    "endereco-dela-em-toda-forma": ("@sempre", "pergunta à máquina: bluetoothctl e sysfs"),
+    "endereco-do-usuario-em-toda-forma": ("@sempre", "pergunta à máquina: bluetoothctl e sysfs"),
     "regua-de-tela": ("@sempre", "git diff --cached, git show e rev-list"),
     "interpretador-do-portao": ("@sempre", "git worktree list: as outras árvores da máquina"),
     "src-desta-arvore": ("@sempre", "git worktree list: as outras árvores da máquina"),

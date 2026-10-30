@@ -68,7 +68,7 @@ def test_a_lista_traz_o_appid_no_value_e_o_nome_no_rotulo() -> None:
         "a lista saiu na ordem do appid — ela procura pelo NOME do jogo")
 
 
-def test_o_nome_do_jogo_dela_nunca_vira_marcacao() -> None:
+def test_o_nome_do_jogo_do_usuario_nunca_vira_marcacao() -> None:
     """`perfis_web` inteiro existe por causa disto: o Python manda DADO."""
     from html.parser import HTMLParser
 
@@ -135,6 +135,6 @@ def test_a_lista_tem_teto(monkeypatch: pytest.MonkeyPatch) -> None:
         "com o campo LIVRE, que é o que ele sempre foi")
 
 
-def test_o_teto_e_folgado_para_a_maquina_dela() -> None:
+def test_o_teto_e_folgado_para_a_maquina_do_usuario() -> None:
     """Um teto apertado seria a lista RECUSANDO o que ela tem."""
     assert a10_perfis.TETO_DA_LISTA_DE_JOGOS >= 500

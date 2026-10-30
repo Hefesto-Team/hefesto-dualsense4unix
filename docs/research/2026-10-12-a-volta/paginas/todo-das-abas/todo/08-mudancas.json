@@ -8,7 +8,7 @@
       "n": 1,
       "sprint": "A-ABA-CONEXOES-DO-TODO-01",
       "o_que_muda": "O «?» do espectro vira dica em Dispositivos conectados",
-      "origem": "pedido-dela",
+      "origem": "pedido-do-usuario",
       "resposta": "todo-08-3",
       "ancora": "todo-08-1",
       "seletor": "[data-todo=\"1\"]",
@@ -18,7 +18,7 @@
       "n": 2,
       "sprint": "A-ABA-CONEXOES-DO-TODO-01",
       "o_que_muda": "O «i» dos cartões sai; o porquê vira dica",
-      "origem": "pedido-dela",
+      "origem": "pedido-do-usuario",
       "resposta": "todo-08-3",
       "ancora": "todo-08-2",
       "seletor": ".cartao-dica h4",
@@ -68,7 +68,7 @@
       "n": 7,
       "sprint": "A-ABA-CONEXOES-DO-TODO-01",
       "o_que_muda": "Nenhum «?» nos títulos nem nas janelas de mapear",
-      "origem": "pedido-dela",
+      "origem": "pedido-do-usuario",
       "resposta": "todo-08-3",
       "ancora": "todo-08-7",
       "seletor": ".tn-tit",
@@ -259,7 +259,7 @@
       "o_que_muda": "O lugar guardado não anda na tela nem na lâmpada; o desenho é o mesmo."
     },
     {
-      "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+      "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01",
       "o_que_muda": "O cartão não muda; a cadeia mora no mapa das portas."
     }
   ],
@@ -337,7 +337,7 @@
       "motivo": "Já costurada na 1-11: está no antes."
     },
     {
-      "sprint": "A-BANCADA-DE-MENTIRA-TEM-EXTERNO-E-A-SONDA-LE-A-DICA-01",
+      "sprint": "O-ENSAIO-DE-MENTIRA-TEM-EXTERNO-E-A-SONDA-LE-A-DICA-01",
       "motivo": "Já costurada na 1-11: está no antes."
     },
     {

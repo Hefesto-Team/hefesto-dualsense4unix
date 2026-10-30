@@ -677,18 +677,18 @@ DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no cont
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
 from types import SimpleNamespace  # noqa: E402
 
-_DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
+_DECLARACAO_DO_ENSAIO = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
 DICAS_DA_CENA = _dicas_da_cena()
 
 
-def _estado_da_bancada(c):
+def _estado_do_ensaio(c):
     """Os quatro selos da cena, pelo MESMO dono que o produto chama a cada tique."""
     radio = e_radio(c)
     vivo = {"uniq": "", "transport": "bt" if radio else "usb",
             "battery_pct": DA_CONTROLES[c["pref"]]["bat"], "hz_movimento": 480,
             "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False}}
     return _pacote08.estado_do_controle(vivo, {"mascara": c["mascara"]}, {"native_mode": False},
-                                        _DECLARACAO_DA_BANCADA, _MODO_DA_CENA)
+                                        _DECLARACAO_DO_ENSAIO, _MODO_DA_CENA)
 
 
 def _modo_da_cena():
@@ -747,7 +747,7 @@ def linha_do_controle(c):
     tinta = ("" if (no_radio or not conectado)
              else f' style="color:{cor_da_zona(c["cor"])}"')
     barra = f'<i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"{tinta}></i>'
-    estado = _estado_da_bancada(c) if conectado else {}
+    estado = _estado_do_ensaio(c) if conectado else {}
     marca = "" if conectado else ' off'
     diz = "" if conectado else ' data-conectado="nao"'
 
@@ -2345,7 +2345,7 @@ VAGAS_NO_DESENHO = (sum(len(ns) for _n, ns in FACES) + len(EXTENSAO)
 CONECTORES_QUE_NINGUEM_ALCANCA = 2
 EM_PE_TOTAL = VAGAS_NO_DESENHO + CONECTORES_QUE_NINGUEM_ALCANCA
 
-PENEIRA_QUANDO_ELA_EXISTIR = (
+PENEIRA_QUANDO_O_USUARIO_EXISTIR = (
     "Enquanto esta janela estiver na frente, o que você apertar no "
     "controle fica <b>aqui</b> — não chega ao jogo aberto atrás.")
 PENEIRA = ""

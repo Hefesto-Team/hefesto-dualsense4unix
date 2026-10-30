@@ -68,7 +68,7 @@ PAGINA = "07-lancadores.html"
 ANCORA = '<label class="chip on">Todos</label>'
 
 
-def _bancada() -> pathlib.Path:
+def _ensaio() -> pathlib.Path:
     """A página da BANCADA — o desenho de HOJE, não o publicado."""
     sys.path.insert(0, str(INTERFACE))
     from hefesto_dualsense4unix.interface import onde
@@ -97,7 +97,7 @@ def _conferir(caminho: pathlib.Path) -> subprocess.CompletedProcess[str]:
 @pytest.fixture
 def envenenar(tmp_path):
     """Devolve uma função que põe UM veneno na página real e devolve o caminho."""
-    limpa = _bancada().read_text(encoding="utf-8")
+    limpa = _ensaio().read_text(encoding="utf-8")
 
     def _por(veneno: str, nome: str) -> pathlib.Path:
         assert ANCORA in limpa, (
@@ -118,7 +118,7 @@ def test_a_pagina_de_hoje_esta_limpa() -> None:
     esta aba, e ele lia só três formas. Esta régua lê CINCO e o número continua
     zero — a afirmação do censo se sustenta, agora por uma medida mais larga.
     """
-    r = _conferir(_bancada())
+    r = _conferir(_ensaio())
     assert r.returncode == 0, (
         f"a página da bancada tem cor de aparelho cravada:\n{r.stderr}")
 
@@ -181,7 +181,7 @@ def test_a_regua_morde_a_paleta_de_cinco_do_esqueleto(envenenar) -> None:
 
 def test_a_regua_morde_o_plastico_do_esqueleto_que_diverge_do_mapa(tmp_path) -> None:
     """A ISENÇÃO DAS CINCO É MEDIDA, e não decretada."""
-    limpa = _bancada().read_text(encoding="utf-8")
+    limpa = _ensaio().read_text(encoding="utf-8")
     do_mapa = [ln for ln in _mapa() if (ln.get("id") or "").strip() == "nova-pink"]
     assert do_mapa, "o `nova-pink` sumiu do mapa — o caso mediria o vazio"
     agulha = "--nova-pink:"

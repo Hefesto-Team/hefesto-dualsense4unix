@@ -223,7 +223,7 @@ def _prioridades(nome: str = "pragmata") -> list[int]:
     ]
 
 
-def test_doze_gravacoes_seguidas_deixam_a_versao_de_antes_delas(
+def test_doze_gravacoes_seguidas_deixam_a_versao_de_antes_do_usuario(
     dir_perfis: Path, relogio: _Relogio
 ) -> None:
     """A régua da sprint: doze gravações seguidas, e a versão dela fica no disco."""

@@ -1,4 +1,4 @@
-"""O que é da bancada fica na bancada (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01).
+"""O que é da bancada fica na bancada (O-QUE-E-DO-ENSAIO-FICA-NO-ENSAIO-01).
 
 Curas medidas num desktop com um adaptador Wi-Fi Realtek USB não são padrão de
 toda máquina. Cada uma continua valendo onde a causa existe; nas outras, o

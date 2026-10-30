@@ -37,7 +37,7 @@ no `dev`) e **39 são só da fds**. A integração nova, `integra/fds-2`, nasce 
   `12c1060dd..0044399e9`. A guarda do `dev` velho é a branch `guarda/antes-da-reescrita-1-11` (`29d620816`), e o
   mapa velho→novo está em `leva-1-11/mapa-da-reescrita-1210.txt`. **Falta o CI e o `--so publicar`.**
 - **Código no `dev`, só falta o carimbo:** 29. Os commits estão no `dev` (conferido pelo assunto).
-  - **Carimbo agora** (19): A-BANCADA-DE-MENTIRA, O-CAMINHO-DO-BLUEZ, A-CRUA-SO-ANDA, AS-CITACOES-CURTAS,
+  - **Carimbo agora** (19): O-ENSAIO-DE-MENTIRA, O-CAMINHO-DO-BLUEZ, A-CRUA-SO-ANDA, AS-CITACOES-CURTAS,
     A-PONTE-PAUSADA, O-CARTAO-DO-EXTERNO, AS-FERRAMENTAS-DA-LEVA, O-COSTURAR-ACEITA, A-JANELA-ABERTA-CABE,
     A-GRAVACAO-DO-YML, O-REGISTRO-DO-YML, AS-FERRAMENTAS-DE-MANUTENCAO, A-SONDA-DO-BLUEZ, A-CASA-NAO-DEIXA,
     O-DUBLE-DO-CONTROLE, A-WIKI-NASCE, O-ESTILO-DO-PERFIL-LIGA-O-MOTOR, O-PAD-CEDIDO-CALA, e
@@ -217,7 +217,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-CAMINHO-DO-BLUEZ-SO-NO…` — O caminho do BlueZ só no dono. *(no dev: falta o carimbo)*
 - `O-CARTAO-DO-EXTERNO-MOSTRA-O…` — O cartão do controle externo mostra a cor e os glifos que ela declarou. *(no dev: falta o carimbo)*
 - `O-DEGRAU-DO-MEIO-E-A…` — O degrau do meio e a frase da faixa se ligam depois da B9. [bancada] *(conjunto F2-degrau)*
-- `A-BANCADA-QUE-O-RADIO-PEDE…` — A BANCADA QUE O RÁDIO PEDE — o índice. [bancada] *(espera ela)*
+- `O-ENSAIO-QUE-O-RADIO-PEDE…` — A BANCADA QUE O RÁDIO PEDE — o índice. [bancada] *(espera ela)*
 - `A-REPORT-THREAD-SAI-ANTES-DO…` — A report_thread sai antes de o handle fechar. [bancada] *(espera ela)*
 - `AS-FAIXAS-DIZEM-QUEM-BRIGA-COM…` — As faixas dizem quem briga com cada aparelho. [bancada] *(espera ela)*
 - `O-CONTROLE-JA-PAREADO-SE-PAREIA…` — O controle já pareado se pareia de novo num clique. [bancada] *(espera ela)*
@@ -327,7 +327,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-BROKER-SERVE-QUEM-ESTA-NA…` — O broker serve quem está na frente da máquina. [bancada] *(conjunto install)*
 - `O-INSTALL-EM-QUALQUER-DISTRO` — O install reconhece a distro somente leitura. *(conjunto install)*
 - `O-PERFIL-DE-FABRICA-E-O…` — O perfil de fábrica e o serviço chegam em todo formato. *(conjunto install)*
-- `O-QUE-E-DA-BANCADA-FICA…` — O que é da bancada fica na bancada. *(conjunto install)*
+- `O-QUE-E-DO-ENSAIO-FICA…` — O que é da bancada fica na bancada. *(conjunto install)*
 - `A-LINHA-DE-COMANDO-ESPERA-O…` — A linha de comando espera o que o serviço precisa. *(conjunto ipc)*
 - `A-TROCA-DE-DAEMON-ESPERA-O…` — A troca de daemon espera o desligamento inteiro. *(conjunto laco)*
 - `AS-METRICAS-CONTAM-O-QUE-A…` — As métricas contam o que a página promete. *(conjunto laco)*
@@ -337,7 +337,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 
 ### Ferramentas da leva, portões e CI (24)
 
-- `A-BANCADA-DE-MENTIRA-TEM-EXTERNO…` — A bancada de mentira tem externo, e a sonda lê a dica. *(no dev: falta o carimbo)*
+- `O-ENSAIO-DE-MENTIRA-TEM-EXTERNO…` — A bancada de mentira tem externo, e a sonda lê a dica. *(no dev: falta o carimbo)*
 - `A-CASA-NAO-DEIXA-PASSAR-COMENTARIO…` — A casa não deixa passar comentário cortado, import relativo nem posse de arquivo que não existe. *(no dev: falta o carimbo)*
 - `A-CRUA-SO-ANDA-COM-PROVA…` — A crua só anda com prova de verdade, e o rc do reapontar diz o que falta. *(no dev: falta o carimbo)*
 - `A-JANELA-ABERTA-CABE-NA-PARTE` — Um arquivo de teste não passa da parte ideal. *(no dev: falta o carimbo)*
@@ -380,9 +380,9 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 
 ### Bancada e medição (5)
 
-- `A-BANCADA-DOS-EXTERNOS` — A bancada dos controles EXTERNOS — adiada pela D-0609-EXTERNOS-DEPOIS. [bancada] *(espera ela)*
+- `O-ENSAIO-DOS-EXTERNOS` — A bancada dos controles EXTERNOS — adiada pela D-0609-EXTERNOS-DEPOIS. [bancada] *(espera ela)*
 - `MESA-DE-QUATRO` — Quatro DualSense, por cabo e por rádio, com ela. [bancada] *(espera ela)*
-- `OS-GESTOS-QUE-SO-ELA-PODE…` — OS GESTOS QUE SÓ ELA PODE FAZER — a fila da bancada, 10/09/2026. [bancada] *(espera ela)*
+- `OS-GESTOS-QUE-SO-O-USUARIO-PODE…` — OS GESTOS QUE SÓ ELA PODE FAZER — a fila da bancada, 10/09/2026. [bancada] *(espera ela)*
 - `O-BASICO-MEDIDO` — O básico se mede por um instrumento que diz o que mexe e devolve o que mexeu. [bancada] *(só bancada, sem agente)*
 - `O-FORJA-E-O-BANCO-DE…` — O Forja é o banco de prova do Hefesto. [bancada] *(só bancada, sem agente)*
 
@@ -433,7 +433,7 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 | **FECHO B** | `integra/volta-1` → `dev` | ondas 4–8 | suíte 24, install, push, CI | — |
 | **9** subsystem e o que pede bancada | **subsystem (2, Opus: O-SUBSYSTEM-SOBE-E-DESCE, defeito de produto, sai sem esperar desenho nem ela)**, F2-no-de-som (2; resposta 0.1), F2-degrau (2; respostas A3, C1, N2), F2-emuladores (2), tela-b (2: T4, T5, T6). Mais 4 só de bancada, sem agente (rádio no Wine, Big Picture, básico medido, Forja) | `integra/volta-2`; o subsystem toca os mesmos arquivos do clique de cinco (vem depois dele) e tem de vir antes da F2-controle, que o espera; tela-b só com os mockups do todo escolhidos | cada F2 fecha no item dela da bancada; tela com foto, clique e mordida em lar de mentira | 10 |
 | **10** | tela-a (3, com final: T1, T2, T3, a captura, a Função do teclado e a ordem das 14h40) | tela-a × tela-b (`profiles/schema.py`) e tela-a × subsystem (`lifecycle.py`, `mouse.py`) | idem; `--publicar` no fecho | 3 |
-| **11** | F2-controle-com-ela (2), tela-c (2: T7, T8 tela) | F2-controle × subsystem; tela-c depende de tela-a, tela-b (dado) e v-usb | idem | 4 |
+| **11** | F2-controle-com-oUsuario (2), tela-c (2: T7, T8 tela) | F2-controle × subsystem; tela-c depende de tela-a, tela-b (dado) e v-usb | idem | 4 |
 | **FECHO C** | `integra/volta-2` → `dev` | ondas 9–11 | idem | — |
 | **12** | F2-acessibilidade (3, com final; 10 fichas, a O-MOUSE-EMULADO sai como `absorvida`; as duas de tela esperam a palavra dela) | `integra/volta-3`; colide com F2-controle, tela-a, tela-b e tela-c | idem | 3 |
 | **13** | narrador (3, com final: O-CODIGO-SEM-NARRADOR-02), sozinho | toca quase todo arquivo | idem | 3 |
@@ -483,7 +483,7 @@ corridos**.
 - **A folha da bancada D2 a D8:** a folha se monta, sem agente, a partir da tabela de `SPRINTS-DA-VOLTA.md`
   (D2–D8 mais D-toque, D-jogo-novo, D-login, D-envelope, D-touch-tela, D-registro, D-captura, D-usb). Vai na aba
   Bancada da página em 127.0.0.1:8766. As respostas dela gravam em `bancada/respostas.json`. Cada resposta fecha
-  uma ficha ou vira correção na onda seguinte. A fila antiga da fds (`leva-fds/BANCADA-PLANO.md`) segue valendo
+  uma ficha ou vira correção na onda seguinte. A fila antiga da fds (`leva-fds/ENSAIO-PLANO.md`) segue valendo
   para as 39 que esperam ela.
 - **O HANDOFF:** reescrever em `docs/process/estudos/2026-10-12-a-volta/HANDOFF.md`, apontando para este plano e
   para a onda 0, com a frase de abertura da sessão nova. É o último passo desta sessão.
@@ -498,7 +498,7 @@ corridos**.
   - **Estudo B:** o crescimento segue a conta «varreduras por segundo × dispositivos × ~1,13 KiB». A poda é em
     `endpoint_de_haptica.py`, `alto_falante_bt.py`, `audio_ks_dualsense.py`, `daemon/launch_env.py`,
     `assets/hefesto-launch.sh` e nas regras do WirePlumber.
-  - **A rodada com pads virtuais** (`bancada-do-jogo/d1-vpads-1210`, 15h59 a 16h05) pôs dois pads de mentira dentro
+  - **A rodada com pads virtuais** (`ensaio-do-jogo/d1-vpads-1210`, 15h59 a 16h05) pôs dois pads de mentira dentro
     do jogo, apertando X, e mediu 5 minutos: **nenhum quadro acima de 33 ms**, mediana de 16,7 ms. Ela não
     reproduziu o engasgo, então ainda não decide entre A e B.
   - A sprint da onda 0 escreve as duas hipóteses e a régua que separa uma da outra. O conjunto sackboy só implementa
@@ -508,7 +508,7 @@ corridos**.
   - **A medida do engasgo roda sozinha, e o P2 entra pelo pad virtual. O clique dela no jogo fica só para o
     veredito final: sente ou não sente.**
 - **As 12 «esquecidas»** que o `sprint.py validar --todas` acusa: 10 já estão `absorvida` mas seguem na fila do
-  `SPRINT_ORDER` (PODA-DO-DATADO, PARIDADE-NO-JOGO-BANCADA, TESTAR-O-MICROFONE, O-REPO-QUE-SE-LE, O-ENGASGO-SE-CURA,
+  `SPRINT_ORDER` (PODA-DO-DATADO, PARIDADE-NO-JOGO-ENSAIO, TESTAR-O-MICROFONE, O-REPO-QUE-SE-LE, O-ENGASGO-SE-CURA,
   A-VOLTA-DO-MICROFONE, O-BOTAO-DO-MIC, O-JOGO-COM-O-DETECTOR-DA-SONY, A-ILUMINACAO-GANHA-A-REACAO,
   OS-TRES-CONTROLES-DE-FREQUENCIA). Saem da fila na onda 0. As outras duas: A-SUITE-NAO-ACORDA-A-PLACA (o `cria` já
   existe, porque o código está no `dev`: fecha à mão) e A-FORJA-SEM-RASTRO (o `cria` já existe: o conjunto github

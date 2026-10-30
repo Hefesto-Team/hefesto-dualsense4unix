@@ -35,7 +35,7 @@ SINK = "alsa_output.pci-0000_00_1f.3.analog-stereo"
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "cosmic-red", "mascara": "DualSense"}]
 
-DA_BANCADA = frozenset({"alto-apagado", "card-vpad", "alto-selo",
+DO_ENSAIO = frozenset({"alto-apagado", "card-vpad", "alto-selo",
                         "alto-canal", "alto-canal-porque"})
 
 
@@ -54,7 +54,7 @@ def _cards(entradas: list[dict[str, Any]], mesa: list[dict[str, Any]], *,
 
     antes = mod._ENDERECOS
     try:
-        mod._ENDERECOS = frozenset(mod._enderecos_da_pagina() | DA_BANCADA)
+        mod._ENDERECOS = frozenset(mod._enderecos_da_pagina() | DO_ENSAIO)
         cheio = {"controllers": entradas, **(state or {})}
         return mod.pacote(Contexto(state=cheio, mesa=mesa,
                                    conectados=entradas))["cards"]
@@ -90,7 +90,7 @@ def sono_lido():
     mod._CAMADA_1_QUANDO[0] = guardado[2]
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
@@ -326,14 +326,14 @@ class TestOQuartoSeloSaiuDaTela:
 
 
 class TestODesenho:
-    def test_os_cinco_enderecos_estao_na_bancada(self) -> None:
-        doc = _bancada()
-        for campo in sorted(DA_BANCADA):
+    def test_os_cinco_enderecos_estao_no_ensaio(self) -> None:
+        doc = _ensaio()
+        for campo in sorted(DO_ENSAIO):
             assert f'data-campo="{campo}"' in doc, campo
 
     def test_o_selo_nasce_apagado(self) -> None:
         """O ALARME não se crava no desenho: acendê-lo sem medição é mentira."""
-        doc = _bancada()
+        doc = _ensaio()
         assert TEXTO_SELO_SAIDA_MUDA not in doc
         assert "Canal dormindo" not in doc
 
@@ -378,7 +378,7 @@ class TestODesenho:
 
     def test_a_guarda_nao_alcanca_a_moldura_do_led(self) -> None:
         """A moldura do LED tem `title` FIXO — um `.moldura[title]` solto a apaga."""
-        doc = _bancada()
+        doc = _ensaio()
         assert re.search(r'class="moldura led"[^>]*title="', doc), (
             "a moldura do LED perdeu o `title` fixo — o risco que este caso "
             "guarda mudou de forma, releia o seletor da guarda")
@@ -389,15 +389,15 @@ class TestODesenho:
 
     def test_o_sufixo_e_o_selo_somem_com_o_marcador(self) -> None:
         """As três regras da folha: o marcador, a dica vazia e o `:empty`."""
-        doc = _bancada()
+        doc = _ensaio()
         assert ".rot .selo-som:has(.nada){display:none}" in doc
         assert ".rot .selo-som:empty{display:none}" in doc
         assert ".rot .selo-ativo.no-rotulo:has(.nada){display:none}" in doc
         assert ".rot .selo-ativo.no-rotulo:has(.selo-palavra:empty){display:none}" in doc
 
-    def test_o_nome_do_cartao_veste_a_dica_e_nasce_sem_ela(self) -> None:
+    def test_o_nome_do_cartao_veste_a_dica_e_nasce_sem_o_usuario(self) -> None:
         """O par físico↔virtual é do serviço; o desenho não o crava."""
-        doc = _bancada()
+        doc = _ensaio()
         assert ('class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo"'
                 ' data-hef-atributo="title"') in doc
         assert "alimenta o gamepad virtual" not in doc.lower()
@@ -490,7 +490,7 @@ class TestOMicrofoneSemFonte:
         so_sem_alvo = re.compile(r'(?<!:not\()\[data-apagado="sem-alvo"\]')
         casa_sem_fonte = [
             (seletor, declaracao)
-            for seletor, declaracao in _regras_do_microfone(_bancada())
+            for seletor, declaracao in _regras_do_microfone(_ensaio())
             if "data-apagado" in seletor and not so_sem_alvo.search(seletor)]
         assert casa_sem_fonte, "a folha não tem regra para o microfone sem fonte"
         for seletor, _declaracao in casa_sem_fonte:

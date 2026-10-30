@@ -303,7 +303,7 @@ class _FakeHandle:
         self.closed = True
 
 
-class Bancada:
+class Ensaio:
     """Backend real + co-op real + uma mesa só, contra um relógio virtual."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -430,23 +430,23 @@ class Bancada:
         )
 
 
-def _rodar_a_noite_dela(bancada: Bancada, *, sync_antes_do_connect: bool) -> None:
+def _rodar_a_noite_do_usuario(ensaio: Ensaio, *, sync_antes_do_connect: bool) -> None:
     """O roteiro mínimo: A,B → só B (A cai) → B,A (A volta com node novo)."""
     ordem = {"sync_antes_do_connect": sync_antes_do_connect}
-    bancada.sentar(UNIQ_A)
-    bancada.sentar(UNIQ_B)
-    bancada.passo(0.0, **ordem)
-    bancada.passo(2.0, **ordem)
-    bancada.levantar(UNIQ_A)
-    bancada.passo(3.0, **ordem)
-    bancada.sentar(UNIQ_A)
-    bancada.passo(3.0, **ordem)
-    bancada.passo(2.0, **ordem)
+    ensaio.sentar(UNIQ_A)
+    ensaio.sentar(UNIQ_B)
+    ensaio.passo(0.0, **ordem)
+    ensaio.passo(2.0, **ordem)
+    ensaio.levantar(UNIQ_A)
+    ensaio.passo(3.0, **ordem)
+    ensaio.sentar(UNIQ_A)
+    ensaio.passo(3.0, **ordem)
+    ensaio.passo(2.0, **ordem)
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Bancada:
-    return Bancada(monkeypatch)
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Ensaio:
+    return Ensaio(monkeypatch)
 
 
 @pytest.mark.parametrize("sync_antes_do_connect", [False, True])
@@ -454,50 +454,50 @@ class TestAPiscadaDoPrimario:
     """O roteiro inteiro, nas duas ordens possíveis dos dois laços."""
 
     def test_o_jogador_2_continua_sendo_o_mesmo_controle(
-        self, bancada: Bancada, sync_antes_do_connect: bool
+        self, ensaio: Ensaio, sync_antes_do_connect: bool
     ) -> None:
         """Asserção 2 — a queixa de uso, em uma linha."""
-        _rodar_a_noite_dela(bancada, sync_antes_do_connect=sync_antes_do_connect)
+        _rodar_a_noite_do_usuario(ensaio, sync_antes_do_connect=sync_antes_do_connect)
 
-        assert bancada.jogador_2() == UNIQ_B, (
+        assert ensaio.jogador_2() == UNIQ_B, (
             "asserção 2: o Jogador 2 trocou de dono na piscada do P1 — era "
-            f"{UNIQ_B} e virou {bancada.jogador_2()}. Linha do tempo "
-            f"(t, jogador_2, índice de B): {bancada.historico}"
+            f"{UNIQ_B} e virou {ensaio.jogador_2()}. Linha do tempo "
+            f"(t, jogador_2, índice de B): {ensaio.historico}"
         )
-        assert bancada.inst.primary_uniq == UNIQ_A, (
+        assert ensaio.inst.primary_uniq == UNIQ_A, (
             "o controle que era o Jogador 1 voltou e NÃO retomou o posto — "
-            f"o primário agora é {bancada.inst.primary_uniq}"
+            f"o primário agora é {ensaio.inst.primary_uniq}"
         )
 
     def test_quem_nao_saiu_da_mesa_nao_muda_de_indice(
-        self, bancada: Bancada, sync_antes_do_connect: bool
+        self, ensaio: Ensaio, sync_antes_do_connect: bool
     ) -> None:
         """Asserção 3 — o índice de quem não saiu não passeia."""
-        _rodar_a_noite_dela(bancada, sync_antes_do_connect=sync_antes_do_connect)
+        _rodar_a_noite_do_usuario(ensaio, sync_antes_do_connect=sync_antes_do_connect)
 
-        indices = {i for _t, _j2, i in bancada.historico if i is not None}
+        indices = {i for _t, _j2, i in ensaio.historico if i is not None}
         assert indices == {2}, (
             "asserção 3: B nunca saiu da mesa e mesmo assim mudou de "
             f"player_index — índices vistos: {sorted(indices)}. Linha do "
-            f"tempo: {bancada.historico}"
+            f"tempo: {ensaio.historico}"
         )
 
     def test_o_vpad_do_jogador_1_e_alimentado_pelo_mesmo_mac_do_comeco_ao_fim(
-        self, bancada: Bancada, sync_antes_do_connect: bool
+        self, ensaio: Ensaio, sync_antes_do_connect: bool
     ) -> None:
         """O outro lado da asserção 2: quem é o Jogador 1 também não passeia."""
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.passo(0.0, sync_antes_do_connect=sync_antes_do_connect)
-        primario_no_comeco = bancada.inst.primary_uniq
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.passo(0.0, sync_antes_do_connect=sync_antes_do_connect)
+        primario_no_comeco = ensaio.inst.primary_uniq
         assert primario_no_comeco == UNIQ_A
 
-        bancada.levantar(UNIQ_A)
-        bancada.passo(3.0, sync_antes_do_connect=sync_antes_do_connect)
-        bancada.sentar(UNIQ_A)
-        bancada.passo(3.0, sync_antes_do_connect=sync_antes_do_connect)
+        ensaio.levantar(UNIQ_A)
+        ensaio.passo(3.0, sync_antes_do_connect=sync_antes_do_connect)
+        ensaio.sentar(UNIQ_A)
+        ensaio.passo(3.0, sync_antes_do_connect=sync_antes_do_connect)
 
-        assert bancada.inst.primary_uniq == primario_no_comeco
+        assert ensaio.inst.primary_uniq == primario_no_comeco
 
 
 class TestOQueOInstrumentoPrecisaSaberRecusar:
@@ -526,24 +526,24 @@ class TestOQueOInstrumentoPrecisaSaberRecusar:
         assert mesa.sentar(UNIQ_A) != primeiro
 
     def test_a_invariante_de_mac_duplicado_reprova(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """A asserção 4 tem de saber acusar: dois vpads vivos com o MESMO MAC."""
-        bancada.vpads.extend([_VpadFalso(2), _VpadFalso(2)])
+        ensaio.vpads.extend([_VpadFalso(2), _VpadFalso(2)])
         with pytest.raises(AssertionError, match="mesmo MAC"):
-            bancada.conferir_invariantes()
+            ensaio.conferir_invariantes()
 
-    def test_a_invariante_de_ebusy_reprova(self, bancada: Bancada) -> None:
-        bancada.mesa.ebusy.append("EBUSY forjado")
+    def test_a_invariante_de_ebusy_reprova(self, ensaio: Ensaio) -> None:
+        ensaio.mesa.ebusy.append("EBUSY forjado")
         with pytest.raises(AssertionError, match="dois donos do mesmo node"):
-            bancada.conferir_invariantes()
+            ensaio.conferir_invariantes()
 
 
 class TestOAvisoDeTrocaDePrimario:
     """E1 isolado: o backend AVISA, e avisa ANTES do retarget."""
 
     def test_o_backend_avisa_antes_de_re_atrelar_o_evdev(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """A ordem É a cura. Avisar depois do retarget seria avisar tarde: o"""
         ordem: list[str] = []
@@ -551,53 +551,53 @@ class TestOAvisoDeTrocaDePrimario:
         def _observador(_anterior: str | None, _novo: str | None) -> None:
             ordem.append("aviso")
 
-        alvo_original = bancada.leitor_p1.retarget
+        alvo_original = ensaio.leitor_p1.retarget
 
         def _retarget(uniq: str | None) -> None:
             ordem.append("retarget")
             alvo_original(uniq)
 
-        bancada.inst.set_primary_change_observer(_observador)
-        bancada.leitor_p1.retarget = _retarget  # type: ignore[method-assign]
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
+        ensaio.inst.set_primary_change_observer(_observador)
+        ensaio.leitor_p1.retarget = _retarget  # type: ignore[method-assign]
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
 
         assert ordem == ["aviso", "retarget"]
 
     def test_o_coop_liga_o_aviso_sozinho_no_primeiro_sync(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """A fiação é do co-op, não do `lifecycle`: o manager nasce sob demanda"""
-        assert bancada.inst._primary_change_observer is None
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.coop.sync()
-        assert bancada.inst._primary_change_observer == bancada.coop.ceder_ao_primario
+        assert ensaio.inst._primary_change_observer is None
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.coop.sync()
+        assert ensaio.inst._primary_change_observer == ensaio.coop.ceder_ao_primario
 
     def test_backend_sem_a_api_nao_derruba_o_coop(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Degradação declarada: fake/legado sem `set_primary_change_observer`"""
-        bancada = Bancada(monkeypatch)
-        bancada.daemon.controller = SimpleNamespace(primary_uniq=UNIQ_A, _evdev=None)
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.coop.sync()
-        assert UNIQ_B in bancada.coop._players
+        ensaio = Ensaio(monkeypatch)
+        ensaio.daemon.controller = SimpleNamespace(primary_uniq=UNIQ_A, _evdev=None)
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.coop.sync()
+        assert UNIQ_B in ensaio.coop._players
 
-    def test_ceder_solta_o_grab_e_nao_para_o_reader(self, bancada: Bancada) -> None:
+    def test_ceder_solta_o_grab_e_nao_para_o_reader(self, ensaio: Ensaio) -> None:
         """As regras do que pode rodar sob o `_io_lock`: solta o grab (ioctl,"""
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        bancada.tique_do_poll_loop()
-        jogador = bancada.coop._players[UNIQ_B]
-        node_de_b = bancada.mesa.nodes[UNIQ_B]
-        assert bancada.mesa.dono_do_grab[node_de_b] == f"coop:{UNIQ_B}"
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.tique_do_poll_loop()
+        jogador = ensaio.coop._players[UNIQ_B]
+        node_de_b = ensaio.mesa.nodes[UNIQ_B]
+        assert ensaio.mesa.dono_do_grab[node_de_b] == f"coop:{UNIQ_B}"
 
-        bancada.coop.ceder_ao_primario(UNIQ_A, UNIQ_B)
+        ensaio.coop.ceder_ao_primario(UNIQ_A, UNIQ_B)
 
-        assert node_de_b not in bancada.mesa.dono_do_grab, (
+        assert node_de_b not in ensaio.mesa.dono_do_grab, (
             "o grab do secundário continua de pé — o leitor do primário vai "
             "levar EBUSY quando mirar este node"
         )
@@ -608,24 +608,24 @@ class TestOAvisoDeTrocaDePrimario:
         assert jogador.cedido_ao_primario is True
 
     def test_o_cedido_para_de_alimentar_o_vpad_na_hora(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """Entre o `ungrab` e o desmonte o vpad fica MUDO, não solto — senão o"""
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        bancada.tique_do_poll_loop()
-        jogador = bancada.coop._players[UNIQ_B]
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.tique_do_poll_loop()
+        jogador = ensaio.coop._players[UNIQ_B]
         vpad = jogador.vpad
         assert vpad is not None
         enviados: list[Any] = []
         vpad.forward_buttons = enviados.append  # type: ignore[method-assign]
 
-        bancada.coop.ceder_ao_primario(UNIQ_A, UNIQ_B)
-        bancada.coop.forward_all()
+        ensaio.coop.ceder_ao_primario(UNIQ_A, UNIQ_B)
+        ensaio.coop.forward_all()
 
         assert enviados == []
-        assert UNIQ_B not in bancada.coop._players
+        assert UNIQ_B not in ensaio.coop._players
         assert vpad.vivo is False, "o vpad do jogador cedido tem de ser desmontado"
 
 
@@ -633,101 +633,101 @@ class TestAReservaDoPostoDePrimario:
     """E2(a) isolado: o posto do Jogador 1 fica guardado por uma janela."""
 
     def test_o_deposto_retoma_o_posto_dentro_da_janela(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.primary_uniq == UNIQ_A
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.primary_uniq == UNIQ_A
 
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.primary_uniq == UNIQ_B, "com A fora, B TEM de assumir"
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.primary_uniq == UNIQ_B, "com A fora, B TEM de assumir"
 
-        bancada.relogio.avancar(3.0)
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.primary_uniq == UNIQ_A
+        ensaio.relogio.avancar(3.0)
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.primary_uniq == UNIQ_A
 
     def test_a_reserva_caduca_e_o_posto_nao_fica_pendurado(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """Ela desligou o controle e continuou jogando com o outro: passados 30 s"""
         from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
 
-        bancada.relogio.avancar(PRIMARIO_RESERVA_SEC + 1.0)
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
+        ensaio.relogio.avancar(PRIMARIO_RESERVA_SEC + 1.0)
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
 
-        assert bancada.inst.primary_uniq == UNIQ_B
+        assert ensaio.inst.primary_uniq == UNIQ_B
 
-    def test_controle_novo_nunca_rouba_o_posto(self, bancada: Bancada) -> None:
+    def test_controle_novo_nunca_rouba_o_posto(self, ensaio: Ensaio) -> None:
         """A regra da 1ª chave continua valendo para todo o resto: só o DEPOSTO"""
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
 
-        assert bancada.inst.primary_uniq == UNIQ_A
+        assert ensaio.inst.primary_uniq == UNIQ_A
 
     def test_o_deposto_que_vira_secundario_e_a_corrida_que_sobrou(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """**A corrida que esta sprint NÃO fecha, medida em vez de suposta.**"""
-        bancada.leitor_p1.solta_na_hora = False
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        bancada.tique_do_poll_loop()
-        bancada.leitor_p1.a_thread_do_leitor_acorda()
-        assert bancada.jogador_2() == UNIQ_B
+        ensaio.leitor_p1.solta_na_hora = False
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.tique_do_poll_loop()
+        ensaio.leitor_p1.a_thread_do_leitor_acorda()
+        assert ensaio.jogador_2() == UNIQ_B
 
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        bancada.tique_do_poll_loop()
-        bancada.leitor_p1.a_thread_do_leitor_acorda()
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.tique_do_poll_loop()
+        ensaio.leitor_p1.a_thread_do_leitor_acorda()
 
-        assert bancada.mesa.ebusy == []
+        assert ensaio.mesa.ebusy == []
 
-        bancada.relogio.avancar(3.0)
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        bancada.tique_do_poll_loop()
+        ensaio.relogio.avancar(3.0)
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.tique_do_poll_loop()
 
-        assert bancada.mesa.ebusy, (
+        assert ensaio.mesa.ebusy, (
             "a corrida deixou de existir — se foi de propósito, esta lápide "
             "e o texto acima têm de sair junto"
         )
-        assert UNIQ_B not in bancada.coop._players, (
+        assert UNIQ_B not in ensaio.coop._players, (
             "sem grab confirmado o jogador NÃO pode existir: o físico dobraria "
             "o input no jogo (BUG-COOP-GRAB-SILENT-FAIL-01)"
         )
 
-        bancada.leitor_p1.a_thread_do_leitor_acorda()
-        bancada.tique_do_poll_loop()
+        ensaio.leitor_p1.a_thread_do_leitor_acorda()
+        ensaio.tique_do_poll_loop()
 
-        assert bancada.jogador_2() == UNIQ_B
-        assert bancada.inst.primary_uniq == UNIQ_A
+        assert ensaio.jogador_2() == UNIQ_B
+        assert ensaio.inst.primary_uniq == UNIQ_A
 
     def test_a_retomada_refaz_o_transporte_e_o_retarget(
-        self, bancada: Bancada
+        self, ensaio: Ensaio
     ) -> None:
         """A armadilha nomeada na sprint: uma 'estabilidade' que devolvesse o"""
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        bancada.inst._transport = "usb"
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.inst._transport = "usb"
 
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
 
-        assert bancada.inst._transport == "bt"
-        assert bancada.leitor_p1.node == bancada.mesa.nodes[UNIQ_A]
+        assert ensaio.inst._transport == "bt"
+        assert ensaio.leitor_p1.node == ensaio.mesa.nodes[UNIQ_A]

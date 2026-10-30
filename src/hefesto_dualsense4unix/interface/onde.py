@@ -9,18 +9,18 @@ RAIZ = pathlib.Path(__file__).resolve().parents[3]
 
 AQUI = pathlib.Path(__file__).resolve().parent
 
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 
 PUBLICADO = AQUI / "paginas"  # (noqa-acento)
 
 
-_DESVIO = "HEFESTO_BANCADA"
+_DESVIO = "HEFESTO_ENSAIO"
 
 
 def saida() -> pathlib.Path:
     """Para onde os geradores escrevem AGORA: a bancada, ou o desvio do portão."""
     desviado = os.environ.get(_DESVIO)
-    return pathlib.Path(desviado) if desviado else BANCADA
+    return pathlib.Path(desviado) if desviado else ENSAIO
 
 
 def pagina(nome: str, publicado: bool = False) -> pathlib.Path:
@@ -30,7 +30,7 @@ def pagina(nome: str, publicado: bool = False) -> pathlib.Path:
 
 def paginas(publicado: bool = False) -> list[pathlib.Path]:
     """As páginas da pasta, em ordem. Só `.html`, sem os `.dc.html` do Design."""
-    pasta = PUBLICADO if publicado else BANCADA
+    pasta = PUBLICADO if publicado else ENSAIO
     return sorted(
         p
         for p in pasta.glob("*.html")

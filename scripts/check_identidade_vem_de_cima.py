@@ -167,19 +167,19 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--censo", action="store_true",
                    help="só o retrato de hoje, sem reprovar")
-    p.add_argument("--bancada", action="store_true",
+    p.add_argument("--ensaio", action="store_true",
                    help="mede `mockup/` em vez das páginas publicadas")
     p.add_argument("--aba", default="", help="só esta aba (ex.: 04)")
     args = p.parse_args()
 
-    alvo = (RAIZ / "mockup") if args.bancada else PAGINAS
+    alvo = (RAIZ / "mockup") if args.ensaio else PAGINAS
     if not alvo.is_dir():
         print(f"não achei as páginas em {alvo}", file=sys.stderr)
         return 2
 
     nomes = nomes_de_colorway()
     total = 0
-    print(f"{'bancada' if args.bancada else 'publicado':<26} {'congelados':>11}")
+    print(f"{'bancada' if args.ensaio else 'publicado':<26} {'congelados':>11}")
     print("-" * 40)
     detalhe: list[str] = []
     padrao = f"{args.aba}-*.html" if args.aba else "[0-9][0-9]-*.html"

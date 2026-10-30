@@ -247,7 +247,7 @@ def seed_default_presets(
             fname = src.name
             if fname in seeded:
                 continue
-            if fname == ARQUIVO_DO_PADRAO and _o_slot_dela_tem_nome_antigo(directory):
+            if fname == ARQUIVO_DO_PADRAO and _o_slot_do_usuario_tem_nome_antigo(directory):
                 new_entries.append(fname)
                 continue
             dest = directory / fname
@@ -347,7 +347,7 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
 _PERSONALIZADO_VIROU_FREESTYLE_MARKER = ".personalizado_virou_freestyle"
 
 
-def _o_slot_dela_tem_nome_antigo(directory: Path) -> bool:
+def _o_slot_do_usuario_tem_nome_antigo(directory: Path) -> bool:
     """O padrão de produto ainda mora sob `meu_perfil.json` ou `personalizado.json`?"""
     return any((directory / nome).exists()
                for nome in (ARQUIVO_ANTIGO_DO_PADRAO, ARQUIVO_DO_PERSONALIZADO))
@@ -738,7 +738,7 @@ class ResultadoDosEstilos:
     """O que a migração dos gêneros fez com CADA arquivo — e por quê."""
 
     movidos: tuple[str, ...] = ()
-    dela: tuple[str, ...] = ()
+    do_usuario: tuple[str, ...] = ()
     sem_fabrica: tuple[str, ...] = ()
     ocupados: tuple[str, ...] = ()
 
@@ -765,7 +765,7 @@ def migrar_generos_para_estilos_de_jogo(
     if marker.exists():
         return ResultadoDosEstilos()
     movidos: list[str] = []
-    dela: list[str] = []
+    do_usuario: list[str] = []
     sem_fabrica: list[str] = []
     ocupados: list[str] = []
     with FileLock(str(_lock_path(marker))):
@@ -782,7 +782,7 @@ def migrar_generos_para_estilos_de_jogo(
                 _relatar_migracao_aposentada("generos_viram_estilo_de_jogo", arquivo)
                 continue
             if not _e_o_estilo_de_fabrica(local, fabrica):
-                dela.append(arquivo)
+                do_usuario.append(arquivo)
                 continue
             alvo = destino / arquivo
             if alvo.exists():
@@ -804,7 +804,7 @@ def migrar_generos_para_estilos_de_jogo(
             marker.write_text("done\n", encoding="utf-8")
     resultado = ResultadoDosEstilos(
         movidos=tuple(movidos),
-        dela=tuple(dela),
+        do_usuario=tuple(do_usuario),
         sem_fabrica=tuple(sem_fabrica),
         ocupados=tuple(ocupados),
     )
@@ -812,7 +812,7 @@ def migrar_generos_para_estilos_de_jogo(
         logger.info(
             "generos_viraram_estilo_de_jogo",
             movidos=list(movidos),
-            editados_por_ela=list(dela),
+            editados_pelo_usuario=list(do_usuario),
             sem_asset_de_fabrica=list(sem_fabrica),
             destino_ocupado=list(ocupados),
             destino=ESTILOS_DE_JOGO_DIR_NAME,
@@ -1066,9 +1066,9 @@ def _maybe_seed_presets() -> None:
         with contextlib.suppress(Exception):
             o_freestyle_de_fabrica_nasce_ligado()
         with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import migrar_a_escolha_dela
+            from hefesto_dualsense4unix.utils.session import migrar_a_escolha_do_usuario
 
-            migrar_a_escolha_dela()
+            migrar_a_escolha_do_usuario()
         seed_default_presets()
         with contextlib.suppress(Exception):
             migrate_coop_local_match()

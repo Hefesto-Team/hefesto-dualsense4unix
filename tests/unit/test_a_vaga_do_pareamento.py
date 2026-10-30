@@ -71,7 +71,7 @@ class _Mesa:
         return desligou[0]
 
 
-def test_a_troca_de_vaga_sai_com_a_frase_dela() -> None:
+def test_a_troca_de_vaga_sai_com_a_frase_do_usuario() -> None:
     """MORDIDA: tratar a troca como queda (sem o ramo do gesto em ``a_saida``) reprova."""
     mesa = _Mesa()
     mesa.segurar({"ps", "triangle"}, 3.0)

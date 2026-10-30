@@ -274,7 +274,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
         assert "[PASS]" in saida, saida
         assert "ACL da sessão" in saida
 
-    def test_o_radio_dela_nao_e_o_gamepad_virtual(self, tmp_path: Path) -> None:
+    def test_o_radio_do_usuario_nao_e_o_gamepad_virtual(self, tmp_path: Path) -> None:
         """FATO QUE CAIU: o físico pelo rádio mora sob `/misc/uhid/`. A"""
         if os.geteuid() == 0:  # pragma: no cover
             pytest.skip("como root o 0000 não fecha nada")

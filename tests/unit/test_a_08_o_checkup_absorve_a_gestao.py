@@ -11,7 +11,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
 
 UNIQS = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
@@ -202,7 +202,7 @@ def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
     assert visto == {"nome": "Frente de cima", "lugar": "Frente do gabinete"}
 
 
-@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+@pytest.mark.parametrize("arquivo", [ENSAIO, PUBLICADA])
 def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     """MORDIDA: devolva o quadro «Gestão de controles» ao `MIOLO` → reprova."""
     html = arquivo.read_text(encoding="utf-8")
@@ -221,7 +221,7 @@ def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     for gesto in ("dono-renomear",
                   "mapear-comecar", "mapear-gravar", "mapear-parar", "examinar-portas"):
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"
-    if arquivo == BANCADA or "data-dica-id" in html:
+    if arquivo == ENSAIO or "data-dica-id" in html:
         for saiu in ("perfil-do-controle", "economia-do-controle", "est-mira"):
             assert f'data-gesto="{saiu}"' not in html and f'data-campo="{saiu}"' not in html
         assert (html.count('data-campo="perfil"')
@@ -231,7 +231,7 @@ def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
         assert f'data-gesto="{saiu}"' not in html, f"o gesto `{saiu}` voltou"
 
 
-@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+@pytest.mark.parametrize("arquivo", [ENSAIO, PUBLICADA])
 def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(arquivo: pathlib.Path) -> None:
     html = arquivo.read_text(encoding="utf-8")
     ancoras = re.findall(r'<a [^>]*href="#(mapear-[\w-]+)"', html)
@@ -241,7 +241,7 @@ def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(arquivo: pathlib.Path) 
     assert "Microfone e botões" not in gc and "Limite da vibração" not in gc
 
 
-@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+@pytest.mark.parametrize("arquivo", [ENSAIO, PUBLICADA])
 def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(arquivo: pathlib.Path) -> None:
     """MORDIDA: devolva as setas do acordeão à `linha_do_controle` → reprova."""
     html = arquivo.read_text(encoding="utf-8")
@@ -272,7 +272,7 @@ def test_a_entrada_da_vez_sai_em_pares_e_a_lista_e_das_numeradas() -> None:
     assert campos["mapear-estado"] == "esperando"
 
 
-@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+@pytest.mark.parametrize("arquivo", [ENSAIO, PUBLICADA])
 def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(arquivo: pathlib.Path) -> None:
     html = arquivo.read_text(encoding="utf-8")
     for campo in ("mapear-lista", "mapear-estado"):

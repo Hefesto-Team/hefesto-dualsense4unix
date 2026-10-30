@@ -93,7 +93,7 @@ def test_o_funding_de_verdade_le_sem_erro(mp: Any) -> None:
     assert ("patreon" in ativas) == any(f.rotulo == "Patreon" for f in formas)
 
 
-def test_preencher_a_chave_basta_e_cada_forma_leva_o_que_e_dela(
+def test_preencher_a_chave_basta_e_cada_forma_leva_o_que_e_do_usuario(
     mp: Any, tmp_path: Path
 ) -> None:
     pagina = _pagina(mp, _raiz(tmp_path, TUDO), tmp_path)

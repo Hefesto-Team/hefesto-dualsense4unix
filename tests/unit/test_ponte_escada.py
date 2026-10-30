@@ -230,7 +230,7 @@ class TestUmaGavetaSO:
 
         assert pe.POR_GESTO == schema.CONFIRMADA_POR_GESTO
         assert pe.POR_SILENCIO == schema.CONFIRMADA_POR_SILENCIO
-        assert pe.POR_ESCOLHA_DELA == schema.CONFIRMADA_POR_ESCOLHA
+        assert pe.POR_ESCOLHA_DO_USUARIO == schema.CONFIRMADA_POR_ESCOLHA
         assert set(pe.CONFIRMACOES) == {
             schema.CONFIRMADA_POR_GESTO,
             schema.CONFIRMADA_POR_SILENCIO,

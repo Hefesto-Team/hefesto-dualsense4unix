@@ -22,7 +22,7 @@ botões, todos ao lado de um cabeçalho que já contava certo::
     os cartões      P1 • Cosmic Red         P2 • Starlight Blue
     as duas dicas   "Valem para … o P1 Cosmic Red USB"
 
-`scripts/check_identidade_vem_de_cima.py --bancada --aba 06` contava **16**
+`scripts/check_identidade_vem_de_cima.py --ensaio --aba 06` contava **16**
 valores congelados. Esta régua é a metade que roda no CI — sem GTK, sem display
 e sem daemon — e ela cobra as DUAS coisas que o número 16 não separa:
 
@@ -88,16 +88,16 @@ def _nomes_do_desenho() -> list[str]:
 
 
 @pytest.fixture
-def bancada() -> str:
+def ensaio() -> str:
     from hefesto_dualsense4unix.interface import onde
 
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
 @pytest.fixture
-def miolo(bancada: str) -> str:
+def miolo(ensaio: str) -> str:
     """Só o miolo, sem comentário HTML e sem `<style>`."""
-    corpo = bancada.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    corpo = ensaio.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
     return re.sub(r"<style[^>]*>.*?</style>", "", corpo, flags=re.S)
 
@@ -114,13 +114,13 @@ def carga(monkeypatch):
                               {str(c["uniq"]): str(c["pref"]) for c in MESA})
 
 
-def test_nenhum_title_nomeia_o_controle(bancada):
+def test_nenhum_title_nomeia_o_controle(ensaio):
     """`title` é texto que a tela mostra, e não tem alvo de pintura."""
     for nome in _nomes_do_desenho():
-        assert f'title="{nome} ' not in bancada, (
+        assert f'title="{nome} ' not in ensaio, (
             f"um `title` voltou a nomear o plástico {nome!r} — a dica ficaria "
             f"nomeando o controle do desenho por cima de um rótulo já vivo")
-    assert 'title="Player ' not in bancada, (
+    assert 'title="Player ' not in ensaio, (
         "o `title` do cartão voltou: ele repete o rótulo em texto que nada "
         "reescreve")
 

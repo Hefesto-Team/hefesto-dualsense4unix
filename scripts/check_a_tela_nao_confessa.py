@@ -8,7 +8,7 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 FONTE = RAIZ / "src"
 sys.path.insert(0, str(FONTE))
@@ -114,7 +114,7 @@ def _dentro_da_janela(html: str) -> str:
 
 def _paginas() -> list[tuple[str, str]]:
     fora = []
-    for pasta in (BANCADA, PUBLICADO):
+    for pasta in (ENSAIO, PUBLICADO):
         if not pasta.is_dir():
             continue
         for p in sorted(pasta.glob("*.html")):

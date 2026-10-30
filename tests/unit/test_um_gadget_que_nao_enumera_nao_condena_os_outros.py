@@ -31,7 +31,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import pad_usb
 from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import (
     INTERFACE_DO_GADGET,
-    BancadaDoGadget,
+    EnsaioDoGadget,
     _EspiaoDoDiario,
 )
 
@@ -45,7 +45,7 @@ class Mesa:
     """A bancada do gadget com a pergunta real do contrato e o hidraw por serial."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        self.b = BancadaDoGadget(monkeypatch, tmp_path)
+        self.b = EnsaioDoGadget(monkeypatch, tmp_path)
         self.ug = self.b.ug
         self.relogio = [100.0]
         self.enumerados: dict[str, tuple[str, str]] = {}

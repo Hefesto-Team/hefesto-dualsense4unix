@@ -12,9 +12,10 @@ o esperado sai do que a régua escreveu, e nunca do que um pacote devolveu.
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 
 * tirar o nome do `partes_do_modelo` → a régua do nome na 04 e na 05 reprova;
-* o `e_nome_dela` aceitando o `Alias` de fábrica → a régua do filtro reprova (o nome de fábrica
+* o `e_nome_do_usuario` aceitando o `Alias` de fábrica → a régua do filtro reprova (o nome de
+fábrica
   iria para a linha);
-* o `e_nome_dela` aceitando o `Alias` que é o endereço → idem (o endereço iria para a tela);
+* o `e_nome_do_usuario` aceitando o `Alias` que é o endereço → idem (o endereço iria para a tela);
 * a 05 sem passar pelo `_identidade_do_modelo` → a 05 perde o nome e reprova;
 * o gerador sem o `html.escape` no nome → a régua do escape reprova;
 * a 04 sem o nome dela no pacote (`"dono": ""`) → a régua do nome e a dos quatro jogadores reprovam.
@@ -141,7 +142,7 @@ def test_os_quatro_jogadores_cada_um_com_o_proprio_nome_e_o_cabo_pareado_antes(
                                    "AA:BB:CC:00:00:02", "aa-bb-cc-00-00-02"])
 def test_o_alias_de_fabrica_ou_o_endereco_nao_vira_nome(
         monkeypatch: pytest.MonkeyPatch, página: str, alias: str) -> None:
-    """MORDIDAS: o `e_nome_dela` aceitando o de fábrica; aceitando o que é o endereço."""
+    """MORDIDAS: o `e_nome_do_usuario` aceitando o de fábrica; aceitando o que é o endereço."""
     _com_aliases({UNIQS[1]: alias})
     linhas = _linhas(monkeypatch, página, _contexto(2))
     for v in linhas.values():
@@ -202,7 +203,7 @@ def _nomes_que_o_modulo_define(arvore: Any) -> set[str]:
     return achados
 
 
-def test_a_08_nao_define_nenhum_simbolo_do_que_saiu_dela() -> None:
+def test_a_08_nao_define_nenhum_simbolo_do_que_saiu_do_usuario() -> None:
     """A 08 chama o dono de cada um, sem alias nem cópia: nenhum nome do conjunto é ligado nela.
 
     MORDIDA: devolva `_mac = nome_do_jogador.mac` (ou qualquer `def _esquecer`) à 08 → reprova.
@@ -282,7 +283,7 @@ def _os_remendos_na_08_que_saiu() -> list[str]:
     return maus
 
 
-def test_nenhum_teste_remenda_na_08_um_nome_que_saiu_dela() -> None:
+def test_nenhum_teste_remenda_na_08_um_nome_que_saiu_do_usuario() -> None:
     """O remendo vai ao dono (`em_fundo` ou `nome_do_jogador`); na 08 ele remendaria o nada.
 
     A atribuição direta (`pac._nomes_dos_donos = ...`) não reprova sozinha, por isso o fonte.
@@ -291,7 +292,7 @@ def test_nenhum_teste_remenda_na_08_um_nome_que_saiu_dela() -> None:
     assert _os_remendos_na_08_que_saiu() == []
 
 
-def test_o_gerador_escapa_o_nome_dela_e_o_pacote_nao_o_transforma() -> None:
+def test_o_gerador_escapa_o_nome_do_usuario_e_o_pacote_nao_o_transforma() -> None:
     """O nome é texto dela: no HTML do gerador sai escapado; no que o piloto pinta, o texto cru."""
     c = {"jogador": 1, "nome": "Cosmic Red", "via": "USB", "dono": "<b>Vi</b> & Cia"}
     html = monta.rotulo(c, "modelo")

@@ -151,7 +151,7 @@ def _montar(raiz: Path) -> Mesa:
     return mesa
 
 
-def _aberto_para_ela(caminho: str | Path) -> bool:
+def _aberto_para_o_usuario(caminho: str | Path) -> bool:
     """O estado canônico exposto, lido do fs: `0660` + ACL do uid dela."""
     try:
         modo = stat.S_IMODE(os.stat(caminho).st_mode)
@@ -224,8 +224,8 @@ class TestAConexaoDoNativoQueMorre:
         st = _estado(mesa, [])
         for no in mesa.nos:
             assert _pede(st, NATIVO, {"cmd": "expose", "node": no, "entradas": True})["ok"], no
-            assert _aberto_para_ela(no), no
-            assert all(_aberto_para_ela(e) for e in mesa.entradas(no.rsplit("/", 1)[-1])), no
+            assert _aberto_para_o_usuario(no), no
+            assert all(_aberto_para_o_usuario(e) for e in mesa.entradas(no.rsplit("/", 1)[-1])), no
         assert _pede(st, NATIVO, {"cmd": "expose", "node": mesa.no("hidraw4")})[
             "error"
         ] == "reject_not_physical_dualsense"
@@ -239,7 +239,7 @@ class TestAConexaoDoNativoQueMorre:
         for no in mesa.nos:
             resposta = _pede(st, OUTRA, {"cmd": "hide", "node": no})
             assert resposta["state"] == "exposed", no
-            assert _aberto_para_ela(no), no
+            assert _aberto_para_o_usuario(no), no
         assert sum(1 for e, _ in diario if e == "hide_adiado_por_exposicao") == 4
 
         st.on_conn_closed(NATIVO)
@@ -296,8 +296,8 @@ class TestACuraNaoFechaDemais:
         _pede(st, 3, {"cmd": "expose", "node": no, "entradas": True})
         _pede(st, OUTRA, {"cmd": "hide", "node": no})
         st.on_conn_closed(NATIVO)
-        assert _aberto_para_ela(no)
-        assert all(_aberto_para_ela(e) for e in mesa.entradas("hidraw5"))
+        assert _aberto_para_o_usuario(no)
+        assert all(_aberto_para_o_usuario(e) for e in mesa.entradas("hidraw5"))
         st.on_conn_closed(3)
         assert _fechado(no)
 
@@ -309,7 +309,7 @@ class TestACuraNaoFechaDemais:
         _pede(st, NATIVO, {"cmd": "expose", "node": no, "entradas": True})
         _pede(st, OUTRA, {"cmd": "hide", "node": no})
         st.on_conn_closed(OUTRA)
-        assert _aberto_para_ela(no)
+        assert _aberto_para_o_usuario(no)
         st.on_conn_closed(NATIVO)
         assert _fechado(no)
         assert not any(e == "hide_adiado_cumprido" for e, _ in diario)
@@ -327,7 +327,7 @@ class TestACuraNaoFechaDemais:
         ops.falhar_o_hide = False
         assert no in st.hidden and st._lease_holders(no) == 0
         _pede(st, NATIVO, {"cmd": "expose", "node": no, "entradas": True})
-        assert _aberto_para_ela(no)
+        assert _aberto_para_o_usuario(no)
         st.on_conn_closed(NATIVO)
         assert _fechado(no), "o órfão que o Nativo expôs ficou à mostra"
         assert all(_fechado(e) for e in mesa.entradas("hidraw5"))
@@ -416,7 +416,7 @@ class TestPontaAPonta:
                 assert nativo.expor(no, entradas=True), no
             for no in mesa.nos:
                 assert outra.hide(no), no
-            assert all(_aberto_para_ela(no) for no in mesa.nos)
+            assert all(_aberto_para_o_usuario(no) for no in mesa.nos)
 
             nativo.close()
 
@@ -447,7 +447,7 @@ class TestPontaAPonta:
             assert nativo.expor(no, entradas=True)
             with structlog.testing.capture_logs() as adiado:
                 assert outra.hide(no)
-            assert _aberto_para_ela(no)
+            assert _aberto_para_o_usuario(no)
             eventos = [r["event"] for r in adiado]
             assert "hidraw_broker_hidden" not in eventos, eventos
             assert "hidraw_broker_hide_adiado" in eventos, eventos

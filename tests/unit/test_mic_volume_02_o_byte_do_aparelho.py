@@ -251,7 +251,7 @@ class _Aparelho:
 
 
 @pytest.mark.asyncio
-async def test_o_gesto_dela_chega_ao_aparelho_no_controle_certo(
+async def test_o_gesto_do_usuario_chega_ao_aparelho_no_controle_certo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """MORDIDA 5: arrancar a chamada do `_handle_mic_volume_set`."""
@@ -315,7 +315,7 @@ async def test_sem_fonte_ninguem_escreve_nem_no_aparelho(
         f"escreveu no aparelho com o deslizante cinza: {aparelho.escritas}")
 
 
-def test_o_perfil_dela_tambem_chega_ao_aparelho(
+def test_o_perfil_do_usuario_tambem_chega_ao_aparelho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """MORDIDA 6: arrancar a chamada do `apply_profile_mic`."""

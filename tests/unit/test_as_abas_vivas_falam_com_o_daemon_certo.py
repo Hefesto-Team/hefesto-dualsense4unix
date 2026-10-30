@@ -20,7 +20,7 @@ ABAS_VIVAS = (
     "mesa_viva.py",
 )
 
-ARVORE_DELA = "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
+ARVORE_DO_USUARIO = "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
 
 
 PILOTOS = RAIZ / "scripts" / "tela"
@@ -32,12 +32,12 @@ def _fonte(nome: str) -> str:
 
 
 @pytest.mark.parametrize("nome", ABAS_VIVAS)
-def test_nenhuma_aba_viva_crava_a_arvore_dela(nome: str) -> None:
+def test_nenhuma_aba_viva_crava_a_arvore_do_usuario(nome: str) -> None:
     """Um caminho absoluto de árvore em CÓDIGO faz a medição olhar o passado."""
     culpadas = [
         (n, linha.rstrip())
         for n, linha in enumerate(_fonte(nome).splitlines(), 1)
-        if ARVORE_DELA in linha
+        if ARVORE_DO_USUARIO in linha
         and not linha.lstrip().startswith(("#", "*", '"', "'"))
         and ":=" not in linha
     ]

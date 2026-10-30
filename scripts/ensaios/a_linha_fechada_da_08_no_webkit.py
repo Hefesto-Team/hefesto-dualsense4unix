@@ -94,7 +94,7 @@ def main() -> int:
     ap.add_argument("--foto", default="", help="grava um PNG da janela oculta")
     escolha = ap.parse_args()
 
-    onde.PUBLICADO = onde.BANCADA
+    onde.PUBLICADO = onde.ENSAIO
 
     antes = _do_arquivo()
     sem_endereco = [c for c, achados in antes.items() if not achados]

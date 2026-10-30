@@ -26,7 +26,7 @@ PISO = (1212, 809)
 
 ESTREITA = (940, PISO[1])
 
-VISTAS = {"piso": PISO, "estreita": ESTREITA, "dela": olhar.VISTA_DELA,
+VISTAS = {"piso": PISO, "estreita": ESTREITA, "dela": olhar.VISTA_DO_USUARIO,
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
 SEM_ROLAGEM_VERTICAL = ("piso", "estreita", "dela")
@@ -234,7 +234,7 @@ def test_o_rodape_desce_para_o_fim_da_caixa(medido: dict[str, Any], vista: str) 
             f"desceu para o fim da caixa")
 
 
-def test_a_bancada_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
+def test_o_ensaio_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
     """O arquivo da bancada é o que o gerador escreve hoje — ninguém esqueceu de regerar."""
     import monta
     import onde

@@ -7,7 +7,7 @@ cores dos slots **1 e 2**, e hoje eles são o **2 e o 4** — o número de outro
 fossilizado no arquivo, com o rank 1 e o rank 2 acendendo o MESMO `#0000FF`.
 
 **A PRIMEIRA VOLTA DESTA RÉGUA MENTIU, E ESTA NASCE DISSO.** Ela tinha um
-`test_o_broadcast_dela_sobrevive` que punha **DOIS** controles e escolhia o
+`test_o_broadcast_do_usuario_sobrevive` que punha **DOIS** controles e escolhia o
 VERDE — que numa mesa de dois não é a cor do número de ninguém. *O nome do
 teste prometia a bancada; o corpo mede o único arranjo em que o defeito não
 aparece.* Na mesa de QUATRO, com os overrides dela, o mesmo broadcast saía
@@ -48,16 +48,16 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 
 MACS = [f"AA:BB:CC:00:00:0{n}" for n in (1, 2, 3, 4)]
 UNIQS = [f"aabbcc00000{n}" for n in (1, 2, 3, 4)]
-RANK_DELA = {u: n for n, u in enumerate(UNIQS, start=1)}
-OVERRIDE_DELA = {
+RANK_DO_USUARIO = {u: n for n, u in enumerate(UNIQS, start=1)}
+OVERRIDE_DO_USUARIO = {
     UNIQS[1]: player_slot_color(1),
     UNIQS[3]: player_slot_color(2),
 }
-GLOBAL_DELA = (40, 80, 180)
+GLOBAL_DO_USUARIO = (40, 80, 180)
 VERDE = (0, 255, 0)
 
 
@@ -128,11 +128,11 @@ def _mesa_de_quatro(
     ctl._handles = {m: _handle_falso() for m in MACS}
     nos = {m: _NoDeLed() for m in MACS}
     ctl._sysfs = dict(nos)
-    ctl.set_auto_output_provider(_provider_da_identidade(RANK_DELA, auto=auto))
+    ctl.set_auto_output_provider(_provider_da_identidade(RANK_DO_USUARIO, auto=auto))
     ctl.set_game_authority_provider(lambda: "daemon")
-    ctl.apply_output_defaults(OutputSpec(led=GLOBAL_DELA))
+    ctl.apply_output_defaults(OutputSpec(led=GLOBAL_DO_USUARIO))
     if overrides is None:
-        overrides = OVERRIDE_DELA
+        overrides = OVERRIDE_DO_USUARIO
     if overrides:
         ctl.reset_profile_overrides(
             {u: OutputSpec(led=c) for u, c in overrides.items()},
@@ -163,7 +163,7 @@ class TestAMesaDeQuatroNoProdutoReal:
     """As três medições que a segunda volta tinha de entregar."""
 
     @pytest.mark.asyncio
-    async def test_o_broadcast_dela_pinta_os_quatro_de_verde(
+    async def test_o_broadcast_do_usuario_pinta_os_quatro_de_verde(
         self, tmp_path: Path
     ) -> None:
         """(a) `led.set {rgb:[0,255,0]}` SEM `uniq` — o "pinta os quatro"."""
@@ -223,7 +223,7 @@ class TestAMesaDeQuatroNoProdutoReal:
         assert cores == [ctl.resolved_led_for(u) for u in UNIQS], (
             "o fio e o leitor público discordam — a tela mostraria outra cor")
 
-    def test_quem_pede_a_cor_do_proprio_numero_fica_com_ela(
+    def test_quem_pede_a_cor_do_proprio_numero_fica_com_o_usuario(
         self, tmp_path: Path
     ) -> None:
         """(c) A regra sai na ordem CERTA, e a primeira volta a saía invertida."""
@@ -275,7 +275,7 @@ class TestAMesaDeQuatroNoProdutoReal:
         assert [de_tras.resolved_led_for(u) for u in UNIQS] == esperado
 
 
-class TestAProcedenciaEOQueElaLe:
+class TestAProcedenciaEOQueOUsuarioLe:
     """O campo de 08/09/2026 — o resolvedor LÊ, e parou de adivinhar."""
 
     def test_a_cor_escolhida_para_outro_numero_acompanha_o_controle(
@@ -420,12 +420,12 @@ class TestOsBuracosDaPrimeiraVolta:
     def test_o_todos_global_do_perfil_nao_e_colisao(self) -> None:
         """D4: pintar os quatro com a cor GLOBAL é um ato dela, não um defeito."""
         mesa = [
-            PecaDaMesa(uniq=u, pedida=GLOBAL_DELA, do_numero=None,
+            PecaDaMesa(uniq=u, pedida=GLOBAL_DO_USUARIO, do_numero=None,
                        procedencia=DO_GLOBAL, numero=n)
             for n, u in enumerate(UNIQS, start=1)
         ]
 
-        assert cores_sem_colisao(mesa) == dict.fromkeys(UNIQS, GLOBAL_DELA)
+        assert cores_sem_colisao(mesa) == dict.fromkeys(UNIQS, GLOBAL_DO_USUARIO)
 
     def test_dois_controles_acima_do_oito_nao_ficam_os_dois_brancos(
         self,
@@ -465,7 +465,7 @@ class TestOsBuracosDaPrimeiraVolta:
         inst._key_to_uniq = lambda k: k
         inst._desired_default = bp._DesiredOutput()
         inst._assentar_mesa_locked = lambda: None
-        inst._auto_output_provider = _provider_da_identidade(RANK_DELA)
+        inst._auto_output_provider = _provider_da_identidade(RANK_DO_USUARIO)
         inst._desired_coop_by_uniq = {}
         inst._scaled_led = lambda uniq, resolvido: resolvido
         inst._game_output_by_uniq = {}
@@ -490,13 +490,13 @@ class TestOsBuracosDaPrimeiraVolta:
         """A camada GAME fica ACIMA do passe, como já fica acima do brilho."""
         _s, ctl, _n = _mesa_de_quatro(tmp_path)
         ctl.set_game_authority_provider(lambda: "game")
-        assert UNIQS[0] not in OVERRIDE_DELA, "o caso perde o sentido com dono"
+        assert UNIQS[0] not in OVERRIDE_DO_USUARIO, "o caso perde o sentido com dono"
 
         assert ctl.set_game_output_for(MACS[0], led=player_slot_color(1)) is True
 
         assert ctl.resolved_led_for(UNIQS[0]) == player_slot_color(1)
 
-    def test_a_paleta_de_jogador_do_sdl_nao_pinta_por_cima_da_cor_dela(
+    def test_a_paleta_de_jogador_do_sdl_nao_pinta_por_cima_da_cor_do_usuario(
         self, tmp_path: Path
     ) -> None:
         """O número do jogador é do Hefesto: o ``(0, 64, 0)`` da paleta do SDL não pinta.
@@ -540,7 +540,7 @@ def _backend_cru(
     ranks: dict[str, int],
     overrides: dict[str, tuple[int, int, int]],
     *,
-    global_: tuple[int, int, int] = GLOBAL_DELA,
+    global_: tuple[int, int, int] = GLOBAL_DO_USUARIO,
 ) -> bp.PyDualSenseController:
     """Backend montado à mão — para os estados que o produto não sabe POR."""
     inst = bp.PyDualSenseController.__new__(bp.PyDualSenseController)
@@ -727,7 +727,7 @@ class TestAProsaQueVaiPararNaTela:
     *"Ainda temos 3 cantos falando sobre o automatico"* (noqa-acento: citação literal)
     """
 
-    @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
+    @pytest.mark.parametrize("pasta", [PAGINAS, ENSAIO])
     def test_a_pagina_04_nao_fala_do_botao_que_saiu(self, pasta: Path) -> None:
         """NAS DUAS LEITURAS, e a diferença entre elas é o ponto."""
         from hefesto_dualsense4unix.interface.frases_banidas import (
@@ -735,7 +735,7 @@ class TestAProsaQueVaiPararNaTela:
             texto_visivel_no_produto,
         )
 
-        ler = texto_visivel if pasta is BANCADA else texto_visivel_no_produto
+        ler = texto_visivel if pasta is ENSAIO else texto_visivel_no_produto
         texto = ler((pasta / "04-iluminacao.html").read_text(encoding="utf-8"))
 
         achados = _BOTAO_MORTO.findall(texto.replace("Modo automático", ""))
@@ -744,7 +744,7 @@ class TestAProsaQueVaiPararNaTela:
             f"{pasta.name}/04-iluminacao.html ainda fala do botão que saiu, "
             f"{len(achados)} vez(es)")
 
-    @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
+    @pytest.mark.parametrize("pasta", [PAGINAS, ENSAIO])
     def test_nenhuma_pagina_tem_comentario_html_aninhado(
         self, pasta: Path
     ) -> None:
@@ -759,14 +759,14 @@ class TestAProsaQueVaiPararNaTela:
             f"comentário HTML aninhado em {pasta.name} — o `-->` de dentro "
             f"fecha o de fora e o resto vira corpo visível: {sujas}")
 
-    def test_a_legenda_nao_narra_commit_nem_cita_decisao_dela(self) -> None:
+    def test_a_legenda_nao_narra_commit_nem_cita_decisao_do_usuario(self) -> None:
         """A tela não é changelog — regra, 07/09/2026."""
         from hefesto_dualsense4unix.interface.frases_banidas import (
             texto_visivel,
         )
 
         texto = texto_visivel(
-            (BANCADA / "04-iluminacao.html").read_text(encoding="utf-8"))
+            (ENSAIO / "04-iluminacao.html").read_text(encoding="utf-8"))
 
         for frase in ("O que mudou hoje", "Ainda aberto", "tongle",
                       "pedido seu", "decisão sua", "4ec48520"):

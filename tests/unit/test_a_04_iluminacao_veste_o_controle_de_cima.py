@@ -48,7 +48,7 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
         sys.path.insert(0, _p)
 
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
     {"pref": "p2", "uniq": "aa:bb:cc:00:00:02", "jogador": 2, "cor": "",
@@ -75,7 +75,7 @@ def carga():
     def montar(mesa=None, conectados=None):
         ctx = pacotes.Contexto(
             state={"active_profile": ""},
-            mesa=list(mesa if mesa is not None else MESA_DELA),
+            mesa=list(mesa if mesa is not None else MESA_DO_USUARIO),
             conectados=list(conectados if conectados is not None
                             else [NO_CABO, NO_RADIO]),
             estados={})
@@ -85,7 +85,7 @@ def carga():
 
 
 @pytest.fixture
-def bancada():
+def ensaio():
     """O HTML da bancada — o desenho de HOJE, que é o que ela olha."""
     import onde
 
@@ -98,7 +98,7 @@ def _miolo(doc: str) -> str:
     return re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
 
 
-def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(bancada):
+def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(ensaio):
     """A borda do desenho deixou de ser a cor do mockup.
 
     O `--plastico:#hex` no `style` da moldura era a cor do DESENHO, e nada a
@@ -118,7 +118,7 @@ def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(bancada):
     """
     import monta
 
-    corpo = _miolo(bancada)
+    corpo = _miolo(ensaio)
     endereco = 'class="moldura" data-campo="plastico" data-hef-alvo="cor"'
     assert corpo.count(endereco) == len(monta.MESA), (
         "alguma moldura da grade perdeu o endereço da cor do plástico — sem "
@@ -132,12 +132,12 @@ def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(bancada):
         f"mostrava em volta de um controle branco.")
 
 
-def test_a_folha_le_a_borda_de_currentcolor_e_o_desenho_nao_herda(bancada):
+def test_a_folha_le_a_borda_de_currentcolor_e_o_desenho_nao_herda(ensaio):
     """As duas metades da cura, e uma sem a outra estraga a tela."""
-    assert ".luz-grade .moldura{color:var(--linha);border:1px solid currentColor;" in bancada, (
+    assert ".luz-grade .moldura{color:var(--linha);border:1px solid currentColor;" in ensaio, (
         "a borda voltou a sair de `--plastico`: o alvo `cor` do pintor escreve "
         "`style.color`, e nenhum alvo dele escreve variável CSS.")
-    assert ".luz-grade .moldura .ds-svg{color:var(--fg)}" in bancada, (
+    assert ".luz-grade .moldura .ds-svg{color:var(--fg)}" in ensaio, (
         "o desenho voltou a herdar a cor da moldura — os glifos sem classe "
         "(`glifo-ps`, `glifo-share`, `glifo-options`, `glifo-mic`, os "
         "analógicos) desenham com `stroke=\"currentColor\"`.")
@@ -155,7 +155,7 @@ def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
         "o rótulo e a cor da moldura têm de falar do MESMO controle.")
 
 
-def test_o_nome_inteiro_vai_a_dica_da_caixa_que_o_corta(carga, bancada):
+def test_o_nome_inteiro_vai_a_dica_da_caixa_que_o_corta(carga, ensaio):
     """A janela estreita corta o nome com reticência; a dica viva o devolve inteiro (D-1710).
 
     Prova da D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO.
@@ -168,7 +168,7 @@ def test_o_nome_inteiro_vai_a_dica_da_caixa_que_o_corta(carga, bancada):
         assert col.get(campo) == col["identidade"], (
             f"a dica da caixa do nome diz {col.get(campo)!r} e a caixa diz "
             f"{col['identidade']!r}: na janela estreita o fim do nome some sem volta")
-    caixas = re.findall(r'<div class="ctrl-rot"[^>]*>', _miolo(bancada))
+    caixas = re.findall(r'<div class="ctrl-rot"[^>]*>', _miolo(ensaio))
     assert caixas and all(f'data-campo="{campo}" data-hef-alvo="atributo" '
                           'data-hef-atributo="data-dica"' in c for c in caixas), (
         f"a caixa do nome perdeu o endereço da dica viva: {caixas}")
@@ -183,7 +183,7 @@ def test_sem_cor_lida_o_pacote_manda_vazio_e_nunca_a_do_mockup(carga):
         f"borda ao neutro da folha.")
 
 
-def test_a_coluna_nunca_manda_a_cor_de_um_controle_que_nao_e_o_dela(carga):
+def test_a_coluna_nunca_manda_a_cor_de_um_controle_que_nao_e_o_do_usuario(carga):
     """Duas colunas, dois valores — e o do rádio não herda o do cabo."""
     colunas = carga()["colunas"]
     assert colunas[NO_CABO["uniq"]]["plastico"] != colunas[NO_RADIO["uniq"]]["plastico"]
@@ -254,7 +254,7 @@ def test_a_troca_precisa_de_dois_e_diz_isso_em_vez_de_inventar(carga):
     """Com um controle só não há troca — e a seção fala, em vez de mentir."""
     from pacotes import a04_iluminacao as pac
 
-    html = carga(mesa=MESA_DELA[:1], conectados=[NO_CABO])["blocos"][pac.SECAO_DA_TROCA]
+    html = carga(mesa=MESA_DO_USUARIO[:1], conectados=[NO_CABO])["blocos"][pac.SECAO_DA_TROCA]
     assert "um controle só" in html
     assert 'class="troca-item' not in html, (
         "com um controle na mesa a seção desenhou um segundo — é a frase que "
@@ -263,21 +263,21 @@ def test_a_troca_precisa_de_dois_e_diz_isso_em_vez_de_inventar(carga):
     assert "nenhum controle" in vazia
 
 
-def test_a_bancada_tem_onde_pousar_o_antes_e_depois(bancada):
+def test_o_ensaio_tem_onde_pousar_o_antes_e_depois(ensaio):
     """O `blocos:` pousa por `document.querySelector` — sem o contêiner, nada."""
     from pacotes import a04_iluminacao as pac
 
-    assert '<div class="nota-troca" data-hef="troca">' in bancada
+    assert '<div class="nota-troca" data-hef="troca">' in ensaio
     assert pac.SECAO_DA_TROCA == ".nota-troca"
-    assert pac.TITULO_DA_TROCA in bancada
+    assert pac.TITULO_DA_TROCA in ensaio
 
 
-def test_o_gerador_e_o_produto_desenham_a_mesma_secao_de_troca(bancada):
+def test_o_gerador_e_o_produto_desenham_a_mesma_secao_de_troca(ensaio):
     """Um dono, dois chamadores — e é o que impede os dois lados de divergirem."""
     import monta
     from pacotes import a04_iluminacao as pac
 
-    assert pac.secao_da_troca(monta.MESA, recuo="    ") in bancada, (
+    assert pac.secao_da_troca(monta.MESA, recuo="    ") in ensaio, (
         "o rodapé da bancada deixou de sair de `secao_da_troca` — há uma "
         "segunda escrita da mesma seção.")
 
@@ -289,9 +289,9 @@ def _nomes_do_desenho() -> list[str]:
 
 
 @pytest.mark.parametrize("nome", _nomes_do_desenho())
-def test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle(bancada, nome):
+def test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle(ensaio, nome):
     """O `title` fica no que o gerador soube, e o gerador só sabe o mockup."""
-    corpo = _miolo(bancada)
+    corpo = _miolo(ensaio)
     for marca in ('data-campo="players" data-hef-alvo="html"',
                   'data-campo="luz" data-hef-alvo="html"'):
         while marca in corpo:
@@ -306,9 +306,9 @@ def test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle(bancada, nome):
         f"não tem alvo para atributo — o que está escrito ali fica na tela dela.")
 
 
-def test_a_dica_do_jogador_diz_a_regra_e_nao_o_exemplo(bancada):
+def test_a_dica_do_jogador_diz_a_regra_e_nao_o_exemplo(ensaio):
     """A coluna de RÓTULOS é uma só para as quatro — não há a quem endereçar."""
-    corpo = _miolo(bancada)
+    corpo = _miolo(ensaio)
     dica = corpo.split("o número do jogador a este controle", 1)[-1][:600]
     assert "os dois trocarem" in dica, (
         "a dica do Jogador parou de dizer a REGRA da troca — sem ela, a pessoa "

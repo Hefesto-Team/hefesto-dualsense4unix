@@ -170,11 +170,11 @@ def test_o_de_fabrica_nao_cala_ninguem() -> None:
     assert d._mapa_botoes == BUTTON_TO_UINPUT
 
 
-def test_o_resolver_herda_os_atalhos_dela() -> None:
+def test_o_resolver_herda_os_atalhos_do_usuario() -> None:
     """O que o usuário escreveu na janela antiga chega ao teclado virtual."""
-    dela = {"options": ["KEY_F1"], "l1": ["KEY_F2", "KEY_LEFTCTRL"]}
+    do_usuario = {"options": ["KEY_F1"], "l1": ["KEY_F2", "KEY_LEFTCTRL"]}
     _m, sem_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"})
-    _m, com_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"}, dela)
+    _m, com_herdar, _s = acoes.resolver({"cross": "KEY_ENTER"}, do_usuario)
 
     assert sem_herdar["options"] == ("KEY_LEFTMETA",), (
         "a linha de base mudou: sem herdar, o `options` tem de ser o de fábrica")
@@ -187,8 +187,8 @@ def test_o_resolver_herda_os_atalhos_dela() -> None:
 
 def test_a_escolha_da_tela_nova_vence_o_atalho_antigo() -> None:
     """A precedência é a das três camadas, e a última é a que ela acabou de ver."""
-    dela = {"options": ["KEY_F1"]}
-    _m, do_teclado, _s = acoes.resolver({"options": "KEY_ESC"}, dela)
+    do_usuario = {"options": ["KEY_F1"]}
+    _m, do_teclado, _s = acoes.resolver({"options": "KEY_ESC"}, do_usuario)
     assert do_teclado["options"] == ("KEY_ESC",), (
         f"a escolha da tela nova não venceu o atalho antigo: "
         f"{do_teclado.get('options')}")
@@ -219,7 +219,7 @@ def test_o_dict_vazio_e_o_none_sao_coisas_diferentes() -> None:
         f"ressuscitou {sorted(set(esvaziado) & acoes.DOMINIO_DO_TECLADO)}")
 
 
-def test_a_ativacao_inteira_nao_apaga_mais_o_atalho_dela() -> None:
+def test_a_ativacao_inteira_nao_apaga_mais_o_atalho_do_usuario() -> None:
     """O CAMINHO DE VERDADE: `apply_keyboard` escreve, `apply_button_actions` NÃO apaga.
 
     É a forma em que o defeito se manifestava para ela: os dois campos no

@@ -185,7 +185,7 @@ def test_a_porta_ilegivel_nao_e_chamada_de_vazia(tmp_path: Path) -> None:
     assert "não publica nome" in aparelho.identidade
 
 
-def _bancada(tmp_path: Path) -> Path:
+def _ensaio(tmp_path: Path) -> Path:
     """A topologia desta casa, medida em 20/09/2026 e reproduzida em `tmp_path`."""
     raiz = tmp_path / "sys"
     _no(raiz, "3-4", vid="05e3", pid="0610", nome="USB2.1 Hub", classe="09")
@@ -208,7 +208,7 @@ def test_o_laudo_diz_a_porta_e_o_aparelho(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert len(laudo.portas) == 1
     porta = laudo.portas[0]
@@ -232,7 +232,7 @@ def test_a_frase_diz_que_a_leitura_do_aparelho_e_de_agora(tmp_path: Path) -> Non
         linhas=[_linha("2026-09-16", "usb 3-4.1.3: can't read configurations, error -71")],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert "nela AGORA:" in laudo.portas[0].porque
 
@@ -246,7 +246,7 @@ def test_a_janela_corta_o_que_e_velho(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert [p.porta for p in laudo.portas] == ["3-4.1.3"]
     assert laudo.total == 1
@@ -261,7 +261,7 @@ def test_o_que_nao_e_usb71_nao_entra(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert laudo.portas == ()
     assert laudo.sem_endereco == 0
@@ -277,7 +277,7 @@ def test_o_que_nao_se_enderecou_e_contado(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert laudo.sem_endereco == 2
     assert laudo.total == 3, "o total tem de fechar com o que o doctor conta"
@@ -289,7 +289,7 @@ def test_a_porta_de_raiz_diz_que_nao_ha_hub_no_caminho(tmp_path: Path) -> None:
         linhas=[_linha("2026-09-16", "usb 1-4: device descriptor read/all, error -71")],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     porta = laudo.portas[0]
     assert porta.hubs == ()
@@ -304,19 +304,19 @@ def test_a_frase_diz_o_dia_antes_do_mes(tmp_path: Path) -> None:
         linhas=[_linha("2026-09-07", "usb 1-4: device descriptor read/all, error -71")],
         dias=15,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert "o último em 07/09" in laudo.portas[0].porque
 
 
 def test_um_evento_so_nao_vira_eventos(tmp_path: Path) -> None:
     """"1 evento" no singular, "2 eventos" no plural — e as duas medidas."""
-    bancada = _bancada(tmp_path)
+    ensaio = _ensaio(tmp_path)
     uma = storm_por_porta(
         linhas=[_linha("2026-09-16", "usb 1-4: device descriptor read/all, error -71")],
         dias=7,
         hoje=HOJE,
-        raiz_usb=bancada,
+        raiz_usb=ensaio,
     )
     assert "1 evento," in uma.portas[0].porque
     duas = storm_por_porta(
@@ -326,7 +326,7 @@ def test_um_evento_so_nao_vira_eventos(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=bancada,
+        raiz_usb=ensaio,
     )
     assert "2 eventos," in duas.portas[0].porque
 
@@ -340,7 +340,7 @@ def test_o_ultimo_e_o_mais_recente_e_nao_a_ultima_linha(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert laudo.portas[0].ultimo == "2026-09-17"
     assert "o último em 17/09" in laudo.portas[0].porque
@@ -355,7 +355,7 @@ def test_o_hub_em_comum_e_nomeado(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert [h.hub.porta for h in laudo.hubs_em_comum] == ["3-4"]
     assert laudo.hubs_em_comum[0].portas == ("3-4.1.3", "3-4.4")
@@ -368,7 +368,7 @@ def test_o_hub_em_comum_precisa_de_duas_portas(tmp_path: Path) -> None:
         linhas=[_linha("2026-09-16", "usbhid 3-4.1.3:1.3: can't add hid device: -71")],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert laudo.hubs_em_comum == ()
 
@@ -383,7 +383,7 @@ def test_as_portas_saem_da_mais_ruidosa_para_a_menos(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert [p.porta for p in laudo.portas] == ["3-4.1.3", "3-4.4"]
 
@@ -397,7 +397,7 @@ def test_o_empate_se_desfaz_pelo_nome_da_porta(tmp_path: Path) -> None:
         ],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     assert [p.porta for p in laudo.portas] == ["3-4.1.3", "3-4.4"]
 
@@ -424,7 +424,7 @@ def test_o_laudo_sobrevive_ao_json(tmp_path: Path) -> None:
         linhas=[_linha("2026-09-16", "usbhid 3-4.1.3:1.3: can't add hid device: -71")],
         dias=7,
         hoje=HOJE,
-        raiz_usb=_bancada(tmp_path),
+        raiz_usb=_ensaio(tmp_path),
     )
     forma = json.loads(json.dumps(laudo.como_dicionario(), ensure_ascii=False))
     assert forma["total"] == 1

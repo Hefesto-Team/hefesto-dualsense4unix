@@ -180,7 +180,7 @@ def main() -> int:
             suspeito="o firmware obedece ao common[42] (3 níveis) — e exige o flag2 bit0 que o kernel não define",
             presente="sim" if com_bit else "não",
             resultado="",
-            observado_por="olho-dela",
+            observado_por="olho-do-usuario",
             fonte="scripts/ensaios/o_brilho_de_hardware_da_barra.py",
             nota=f"nível {nivel} ({NOME_DO_NIVEL[nivel]}), bit {'ligado' if com_bit else 'apagado'}, "
                  f"cor {args.cor}, martelo {'não' if args.uma_vez else f'{args.hz:g} Hz'}; ela: {resposta or '(sem resposta)'}",

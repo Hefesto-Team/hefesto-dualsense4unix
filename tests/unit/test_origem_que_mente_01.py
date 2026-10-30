@@ -21,7 +21,7 @@ SETTERS = (
 )
 
 
-def test_silencio_nao_e_gesto_dela() -> None:
+def test_silencio_nao_e_gesto_do_usuario() -> None:
     """Sem `origin` no pedido, a origem é automática."""
     assert origem_do_pedido(None) == "profile"
     assert origem_do_pedido({}) == "profile"
@@ -111,7 +111,7 @@ TELAS = (
 
 
 @pytest.mark.parametrize("arquivo", TELAS)
-def test_a_janela_declara_o_gesto_dela(arquivo: str) -> None:
+def test_a_janela_declara_o_gesto_do_usuario(arquivo: str) -> None:
     """Todo pedido de modo saído da janela leva `origin: "manual"`."""
     texto = (RAIZ / "src" / "hefesto_dualsense4unix" / arquivo).read_text(
         encoding="utf-8"

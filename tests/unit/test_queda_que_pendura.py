@@ -115,7 +115,7 @@ class TestOCloseNaoPendura:
             f"o close levou {gasto:.2f}s — o join voltou a ser sem teto"
         )
 
-    def test_o_fd_nao_fecha_com_a_thread_dentro_e_fecha_quando_ela_sai(self) -> None:
+    def test_o_fd_nao_fecha_com_a_thread_dentro_e_fecha_quando_o_usuario_sai(self) -> None:
         """O `hid_device` fecha com quem sai do C por último, nunca por cima dele."""
         ds, device, thread = _handle_com_thread_pendurada()
         ds.close()

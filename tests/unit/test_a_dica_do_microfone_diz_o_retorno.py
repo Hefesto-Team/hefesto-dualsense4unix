@@ -10,7 +10,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup/01-jogar.html"
+ENSAIO = RAIZ / "mockup/01-jogar.html"
 PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 
 O_QUE_ELE_NAO_FAZ = (re.compile(r"🎙\W*\s*cala", re.I),
@@ -37,7 +37,7 @@ def _dicas_do_botao(doc: str) -> list[str]:
     return achados
 
 
-@pytest.mark.parametrize("alvo", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("alvo", [ENSAIO, PUBLICADO], ids=["bancada", "publicado"])
 def test_a_dica_do_botao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
     """MORDIDA: devolva «O 🎙 cala o microfone e apaga a luz vermelha» à dica do botão.
 
@@ -58,7 +58,7 @@ def test_a_dica_do_botao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
             f"a dica não diz o que o 🎙 faz hoje: {dica[:160]}")
 
 
-@pytest.mark.parametrize("alvo", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("alvo", [ENSAIO, PUBLICADO], ids=["bancada", "publicado"])
 def test_o_microfone_nao_tem_ponto_de_interrogacao(alvo: pathlib.Path) -> None:
     """MORDIDA: devolva o `ponto_de_interrogacao` ao cabeçalho do microfone."""
     if alvo == PUBLICADO and _a_jogar_esta_em_trabalho():

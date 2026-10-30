@@ -51,7 +51,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-BANCADA = RAIZ / "mockup/02-controles.html"
+ENSAIO = RAIZ / "mockup/02-controles.html"
 
 FORA_DO_DESENHO = {
     "nova-pink": ("#e35b8c", "rgb(227, 91, 140)"),
@@ -131,7 +131,7 @@ def _rodar_no_webkit(folhas: dict[str, str]) -> dict:
             v.evaluate_javascript(_bootstrap(), -1, None, None, None, instalou)
 
     view.connect("load-changed", carregou)
-    view.load_uri(BANCADA.as_uri())
+    view.load_uri(ENSAIO.as_uri())
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -168,7 +168,7 @@ def medido() -> dict:
         slug: a02.folha_do_plastico([{"pref": "p1", "cor": slug}])
         for slug in FORA_DO_DESENHO
     }
-    folhas["mesa-dela"] = a02.folha_do_plastico([
+    folhas["mesa-do-usuario"] = a02.folha_do_plastico([
         {"pref": "p1", "cor": "white"},
         {"pref": "p2", "cor": "galactic-purple"},
     ])
@@ -178,7 +178,7 @@ def medido() -> dict:
     return _rodar_no_webkit(folhas)
 
 
-def test_a_pagina_virgem_mostra_o_desenho_que_ela_aprovou(medido: dict) -> None:
+def test_a_pagina_virgem_mostra_o_desenho_que_o_usuario_aprovou(medido: dict) -> None:
     """Se a página já nascesse neutra, qualquer cor depois pareceria cura."""
     assert medido["virgem_p1"] == DO_DESENHO[0], (
         f"o `p1` da bancada devia nascer Cosmic Red e nasceu {medido['virgem_p1']}")
@@ -204,10 +204,10 @@ def test_o_assento_sem_controle_nao_fica_com_a_cor_do_desenho(medido: dict) -> N
             f"{medido['medidas'][slug]['p2']}, que é a cor do mockup")
 
 
-def test_a_mesa_dela_de_hoje_chega_certa_aos_dois_assentos(medido: dict) -> None:
+def test_a_mesa_do_usuario_de_hoje_chega_certa_aos_dois_assentos(medido: dict) -> None:
     """P1 White (`#e4e0d8`) e P2 Galactic Purple (`#74588e`), do mapa dela."""
-    assert medido["medidas"]["mesa-dela"]["p1"] == "rgb(228, 224, 216)"
-    assert medido["medidas"]["mesa-dela"]["p2"] == "rgb(116, 88, 142)"
+    assert medido["medidas"]["mesa-do-usuario"]["p1"] == "rgb(228, 224, 216)"
+    assert medido["medidas"]["mesa-do-usuario"]["p2"] == "rgb(116, 88, 142)"
 
 
 def test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor(medido: dict) -> None:

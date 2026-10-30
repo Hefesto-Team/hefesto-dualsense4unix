@@ -90,11 +90,11 @@ from tests.conftest import skip_sem_gi_real
 
 PAGINA = "09-sistema.html"
 
-BANCADA = _onde.pagina(PAGINA)
+ENSAIO = _onde.pagina(PAGINA)
 
 
 def _html() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+    return ENSAIO.read_text(encoding="utf-8")
 
 
 def _ctx(status: str, pausado: bool | None) -> Contexto:
@@ -413,7 +413,7 @@ def na_tela() -> dict:
     berco = pathlib.Path(tempfile.mkdtemp(prefix="a09-desenho-"))
     shutil.copytree(_onde.PUBLICADO, berco / "paginas",  # (noqa-acento)
                     dirs_exist_ok=True)
-    shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento)
+    shutil.copy2(ENSAIO, berco / "paginas" / PAGINA)  # (noqa-acento)
 
     chave = (PAGINA, "atualizar")
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,

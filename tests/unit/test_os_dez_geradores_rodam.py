@@ -33,7 +33,7 @@ O SEGUNDO ACHOU UM DEFEITO VISÍVEL no mesmo dia: `aba03.py` tinha o marcador
 nasciam com `# noqa-acento` como TEXTO no topo, em letra de título. Está na foto
 de 01/09.
 
-ONDE ELA ESCREVE: num diretório temporário, pelo `HEFESTO_BANCADA`. Ela **não
+ONDE ELA ESCREVE: num diretório temporário, pelo `HEFESTO_ENSAIO`. Ela **não
 toca** a bancada — que é a razão de aquele desvio existir.
 """
 from __future__ import annotations
@@ -62,7 +62,7 @@ def test_os_geradores_existem() -> None:
 
 
 @pytest.fixture(scope="module")
-def bancada_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+def ensaio_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
     """Uma bancada de mentira, com as páginas de hoje dentro.
 
     AS PÁGINAS VÃO JUNTO porque alguns geradores CONFEREM a vizinhança: o
@@ -78,7 +78,7 @@ def bancada_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
 
 def _rodar(nome: str, destino: pathlib.Path) -> subprocess.CompletedProcess[str]:
     ambiente = dict(os.environ)
-    ambiente["HEFESTO_BANCADA"] = str(destino)
+    ambiente["HEFESTO_ENSAIO"] = str(destino)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
     return subprocess.run(
         [sys.executable, str(INTERFACE / nome)],
@@ -87,7 +87,7 @@ def _rodar(nome: str, destino: pathlib.Path) -> subprocess.CompletedProcess[str]
 
 
 @pytest.mark.parametrize("nome", GERADORES)
-def test_o_gerador_roda(nome: str, bancada_de_prova: pathlib.Path) -> None:
+def test_o_gerador_roda(nome: str, ensaio_de_prova: pathlib.Path) -> None:
     """Ele termina sem exceção. É o degrau que os dez perderam em 01/09/2026.
 
     SEM O GTK REAL, PULA — 27/09/2026. O gerador chega ao GTK pelos pacotes
@@ -98,7 +98,7 @@ def test_o_gerador_roda(nome: str, bancada_de_prova: pathlib.Path) -> None:
     """
     from tests.conftest import repassar_a_falta_do_gtk
 
-    r = _rodar(nome, bancada_de_prova)
+    r = _rodar(nome, ensaio_de_prova)
     repassar_a_falta_do_gtk(r)
     assert r.returncode == 0, (
         f"`{nome}` não roda:\n{r.stderr.strip()[-1200:]}\n\n"
@@ -108,7 +108,7 @@ def test_o_gerador_roda(nome: str, bancada_de_prova: pathlib.Path) -> None:
 
 
 @pytest.mark.parametrize("nome", GERADORES)
-def test_o_gerador_reproduz_a_bancada(nome: str, bancada_de_prova: pathlib.Path) -> None:
+def test_o_gerador_reproduz_o_ensaio(nome: str, ensaio_de_prova: pathlib.Path) -> None:
     """O que sai é, byte a byte, o `mockup/` que está no disco.
 
     A DIFERENÇA ENTRE ESTE CASO E O DE CIMA é o defeito que cada um pega: o de
@@ -116,21 +116,21 @@ def test_o_gerador_reproduz_a_bancada(nome: str, bancada_de_prova: pathlib.Path)
     dois aconteceram. O segundo é o que revelou, em 01/09/2026, que a aba
     Gatilhos mostrava `# noqa-acento` como texto no topo das quatro colunas.
     """
-    r = _rodar(nome, bancada_de_prova)
+    r = _rodar(nome, ensaio_de_prova)
     if r.returncode != 0:
         pytest.skip(f"{nome} não roda — quem acusa isso é o caso irmão")
 
-    saiu = sorted(p for p in bancada_de_prova.glob("*.html")
+    saiu = sorted(p for p in ensaio_de_prova.glob("*.html")
                   if p.name.startswith(nome[3:5]))
     assert saiu, (
         f"`{nome}` rodou e não escreveu página nenhuma que comece com "
-        f"{nome[3:5]!r}. O desvio `HEFESTO_BANCADA` deixou de valer, e este "
+        f"{nome[3:5]!r}. O desvio `HEFESTO_ENSAIO` deixou de valer, e este "
         f"caso passaria por AUSÊNCIA — o modo mais silencioso de um teste "
         f"deixar de medir.")
     for gerado in saiu:
-        na_bancada = RAIZ / "mockup" / gerado.name
-        assert na_bancada.exists(), f"{gerado.name} saiu do gerador e não está em mockup/"
-        assert gerado.read_bytes() == na_bancada.read_bytes(), (
+        no_ensaio = RAIZ / "mockup" / gerado.name
+        assert no_ensaio.exists(), f"{gerado.name} saiu do gerador e não está em mockup/"
+        assert gerado.read_bytes() == no_ensaio.read_bytes(), (
             f"`{nome}` produz um {gerado.name} DIFERENTE do que está em "
             f"`mockup/`. O gerador foi editado e nunca rodado — a bancada ficou "
             f"para trás, e a próxima pessoa que o rodar leva um diff que não "

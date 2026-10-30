@@ -40,7 +40,7 @@ def _ctx() -> Contexto:
     return Contexto(state={"connected": True}, mesa=[], conectados=[], externos=[_externo()])
 
 
-def _ela(monkeypatch: pytest.MonkeyPatch, **campos: Any) -> None:
+def _o_usuario(monkeypatch: pytest.MonkeyPatch, **campos: Any) -> None:
     declaracao = MaquinaConfig.model_validate({"controles": {CHAVE: campos}})
     monkeypatch.setattr(mesa_viva, "_declaracao_do_disco", lambda: declaracao)
 
@@ -58,7 +58,7 @@ def test_o_que_a_docstring_diz_que_a_tela_oferece_a_tela_oferece(
     """Se a docstring de `ControleDeclarado` ou a de `a_declaracao_do_externo` nomeia um campo
     «Outra», a lista da Conexões tem de oferecer uma opção com esse rótulo; hoje ela só tem os
     nomes de fábrica, e as duas docstrings deixaram de prometer o texto livre."""
-    _ela(monkeypatch)
+    _o_usuario(monkeypatch)
     html = conexoes.declaracao_do_externo_para_editar(_externo())
     oferecidas = {v for v, _ in _opcoes_da_cor(html)}
     for dono in (ControleDeclarado, conexoes.a_declaracao_do_externo):
@@ -70,7 +70,7 @@ def test_o_que_a_docstring_diz_que_a_tela_oferece_a_tela_oferece(
 
 
 def test_a_cor_escrita_a_mao_aparece_na_lista_e_nao_pinta(monkeypatch: pytest.MonkeyPatch) -> None:
-    _ela(monkeypatch, cor=A_MAO)
+    _o_usuario(monkeypatch, cor=A_MAO)
     opcoes = _opcoes_da_cor(conexoes.declaracao_do_externo_para_editar(_externo()))
     assert (A_MAO, True) in opcoes, "o nome escrito à mão tem de aparecer, selecionado"
     assert sum(1 for _, marcada in opcoes if marcada) == 1
@@ -97,10 +97,10 @@ def _escolher(valor: str) -> list[dict]:
 
 def test_trocar_a_cor_a_mao_por_um_nome_da_lista_grava_o_nome(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    _ela(monkeypatch, cor=A_MAO)
+    _o_usuario(monkeypatch, cor=A_MAO)
     assert _escolher("Cosmic Red") == [{"controles": {CHAVE: {"cor": "Cosmic Red"}}}]
 
 
 def test_a_lista_em_branco_apaga_a_cor_a_mao(monkeypatch: pytest.MonkeyPatch) -> None:
-    _ela(monkeypatch, cor=A_MAO)
+    _o_usuario(monkeypatch, cor=A_MAO)
     assert _escolher("") == [{"controles": {CHAVE: {"cor": None}}}]

@@ -181,7 +181,7 @@ def perfil_do_rodape(state: Any) -> str:
     O-MODO-FREESTYLE-02, 24/09/2026: nasceu `perfil_do_salvar` e servia só ao
     Salvar; agora os três perguntam aqui. `perfil.nome_do_ativo` responde as
     duas pernas: o daemon, depois o disco — e a perna do disco é a escolha do usuário
-    (`utils.session.a_escolha_dela`, pela `perfil_que_esta_valendo`). `""`
+    (`utils.session.a_escolha_do_usuario`, pela `perfil_que_esta_valendo`). `""`
     quando as duas dizem "ninguém": a recusa de cada gesto continua dizendo o
     que fazer.
 

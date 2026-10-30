@@ -181,7 +181,7 @@ async def test_a_partida_nao_toma_o_microfone_de_quem_tem_headset(
 
 
 @pytest.mark.asyncio
-async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
+async def test_a_recusa_do_usuario_vale_na_partida(mesa: _Mesa) -> None:
     """`microfone: false` no `maquina.json`: a partida não liga o que ela desligou."""
     daemon = await _subir_e_esperar_a_partida(
         mesa, _config(bt_mic_recusados=lambda: frozenset({P1}))
@@ -194,7 +194,7 @@ async def test_a_recusa_dela_vale_na_partida(mesa: _Mesa) -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
+async def test_a_partida_nao_passa_por_cima_do_controle_que_o_usuario_escolheu(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Dois controles na mesa, e o usuário escolheu o SEGUNDO como microfone padrão."""

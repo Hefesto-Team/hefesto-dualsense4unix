@@ -56,7 +56,7 @@ def mesa_com_hub_e_tres_aparelhos() -> Censo:
     return Censo(aparelhos=(raiz, hub, *filhos))
 
 
-def test_as_quatro_palavras_sao_as_que_ela_carimbou() -> None:
+def test_as_quatro_palavras_sao_as_que_o_usuario_carimbou() -> None:
     """Verbatim do carimbo dela de 25/08/2026, às ~03h55, vendo o mockup."""
     from hefesto_dualsense4unix.interface.calibracao_das_entradas import FACES
 
@@ -68,7 +68,7 @@ def test_as_quatro_palavras_sao_as_que_ela_carimbou() -> None:
     )
 
 
-def test_nenhuma_face_e_mais_longa_do_que_a_maior_que_ela_aprovou() -> None:
+def test_nenhuma_face_e_mais_longa_do_que_a_maior_que_o_usuario_aprovou() -> None:
     """Nenhum rótulo de face passa de "Num hub ou extensão", a maior das quatro."""
     from hefesto_dualsense4unix.interface import calibracao_das_entradas as calibrar_entradas
 

@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session as _session
 
 
-def _a_escolha_dela(nome: str) -> None:
+def _a_escolha_do_usuario(nome: str) -> None:
     """O último perfil que ela ativou à mão, no `session.json` do lar isolado."""
     _session.save_last_profile(nome)
 
@@ -214,7 +214,7 @@ def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_vitoria(
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -237,7 +237,7 @@ def test_matchany_nunca_ativado_por_leitura_vazia_ou_unknown(
 ):
     """Critério 2: com perfil MatchAny salvo, reads `{}` ou unknown NUNCA o"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -302,7 +302,7 @@ def test_unknown_com_titulo_ativa_fallback_apos_debounce(
 ):
     """Tradeoff residual aceito (armadilha 3 da UX-01, coberto de propósito):"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -385,7 +385,7 @@ async def test_histerese_no_run_loop_mantem_perfil(isolated_profiles_dir: Path):
     """Critério 1 pelo run() REAL: Doom estável → N ticks unknown → mantém"""
     save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -465,7 +465,7 @@ def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -494,7 +494,7 @@ def test_gui_propria_nunca_ativa_fallback_sem_perfil_corrente(
 ):
     """Sem perfil corrente, encarar a GUI por minutos não ativa o MatchAny —"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -602,7 +602,7 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -632,7 +632,7 @@ def test_sair_do_perfil_de_jogo_para_janela_sem_regra_fica_no_jogo(
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -660,7 +660,7 @@ def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -709,7 +709,7 @@ def test_saida_de_catch_all_para_catch_all_nao_paga_o_debounce_longo(
 ):
     """Só perfil ESPECÍFICO arma o lado lento: quem já está no genérico não tem"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_dela("vitoria")
+    _a_escolha_do_usuario("vitoria")
     save_profile(
         _mk_profile("leitura", priority=50, match=MatchCriteria(window_class=["zathura"]))
     )

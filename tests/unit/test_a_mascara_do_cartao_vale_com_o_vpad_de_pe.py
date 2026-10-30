@@ -164,7 +164,7 @@ class _Handlers(ih.IpcHandlersMixin):
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     _Vpad.criados = []
     monkeypatch.setattr(vp, "make_virtual_pad", _fabrica)
     monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)

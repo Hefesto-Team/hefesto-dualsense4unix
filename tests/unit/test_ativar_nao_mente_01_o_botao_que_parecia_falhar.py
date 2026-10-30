@@ -219,7 +219,7 @@ class TestAJanelaLeORelatorio:
                 "Perfil ativado: vitoria"
             )
 
-    def test_secao_adiada_aparece_com_o_nome_que_ela_le(self) -> None:
+    def test_secao_adiada_aparece_com_o_nome_que_o_usuario_le(self) -> None:
         """O caso do journal da bancada: o modo ficou de fora e o toast dizia "ativado"."""
         msg = pa.mensagem_de_ativacao("vitoria", RESPOSTA_COM_MODO_ADIADO)
 

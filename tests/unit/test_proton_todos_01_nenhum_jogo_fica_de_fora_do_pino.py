@@ -37,7 +37,7 @@ def _nomes(texto: str) -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
-def _a_steam_dela_nao_decide_o_resultado(monkeypatch: pytest.MonkeyPatch) -> None:
+def _a_steam_do_usuario_nao_decide_o_resultado(monkeypatch: pytest.MonkeyPatch) -> None:
     """Neutraliza o gate da Steam VIVA nas réguas que chamam a função pública."""
     monkeypatch.setattr(proton_pin, "_steam_gate", lambda: None)
 
@@ -50,7 +50,7 @@ def test_com_todos_o_jogo_em_outra_ferramenta_migra() -> None:
         tool_name=PINO,
         appids=["2497900", "111"],
         pinos_nossos=(PINO,),
-        atropelar_escolha_dela=True,
+        atropelar_escolha_do_usuario=True,
     )
 
     assert _nomes(novo)["2497900"] == PINO, (
@@ -87,7 +87,7 @@ def test_todos_alcanca_qualquer_ferramenta(ferramenta: str) -> None:
 
     novo, _ = proton_pin.build_compat_tool_mapping(
         original, tool_name=PINO, appids=["42"], pinos_nossos=(PINO,),
-        atropelar_escolha_dela=True,
+        atropelar_escolha_do_usuario=True,
     )
     assert _nomes(novo)["42"] == PINO
 
@@ -133,7 +133,7 @@ def test_a_regua_sabe_reprovar() -> None:
     )
     com, _ = proton_pin.build_compat_tool_mapping(
         original, tool_name=PINO, appids=["2497900"], pinos_nossos=(PINO,),
-        atropelar_escolha_dela=True,
+        atropelar_escolha_do_usuario=True,
     )
     assert _nomes(sem)["2497900"] != _nomes(com)["2497900"], (
         "a flag não mudou nada — ou ela parou de ser lida, ou o jogo já era "
@@ -150,7 +150,7 @@ class TestOCaminhoDaFlag:
         return vdf
 
     def test_o_lock_com_todos_alcanca_o_jogo(self, tmp_path: pathlib.Path) -> None:
-        """A MORDIDA: tire `atropelar_escolha_dela=todos` do `lock` e isto reprova."""
+        """A MORDIDA: tire `atropelar_escolha_do_usuario=todos` do `lock` e isto reprova."""
         vdf = self._cena(tmp_path)
         r = proton_pin.lock_games_to_pinned_proton(
             tool_name=PINO,
@@ -193,7 +193,7 @@ class TestAEntradaOrfa:
             tool_name=PINO,
             appids=[],
             pinos_nossos=(PINO,),
-            atropelar_escolha_dela=True,
+            atropelar_escolha_do_usuario=True,
         )
 
         nomes = _nomes(novo)
@@ -239,7 +239,7 @@ class TestAEntradaOrfa:
         original = _vdf({"0": PINO, "111": "proton_11"})
         novo, _ = proton_pin.build_compat_tool_mapping(
             original, tool_name=PINO, appids=[], pinos_nossos=(PINO,),
-            atropelar_escolha_dela=True,
+            atropelar_escolha_do_usuario=True,
         )
         assert set(_nomes(novo)) == {"0", "111"}, (
             "o `--todos` inventou entrada: ele só pode alcançar quem já está "

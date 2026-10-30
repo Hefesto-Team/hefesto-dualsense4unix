@@ -193,7 +193,7 @@ async def test_caminho_com_uniq_continua_mirando_so_um(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_o_broadcast_dela_vence_o_jogo(tmp_path: Path) -> None:
+async def test_o_broadcast_do_usuario_vence_o_jogo(tmp_path: Path) -> None:
     """O «Todos» é gesto do usuário: vence a cor que o jogo pintou, até o jogo pintar de novo.
 
     A regra de 16/09 («meu perfil manda») caiu em 03/10/2026: o jogo manda, e na

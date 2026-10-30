@@ -109,7 +109,7 @@ _NOSSO_VPAD = {
 }
 
 
-def _bancada(nos: dict[str, dict[str, str]]) -> dict[str, Any]:
+def _ensaio(nos: dict[str, dict[str, str]]) -> dict[str, Any]:
     """Um ``/sys/class/hidraw`` de mentira, sem encostar no de verdade."""
 
     def listar(raiz: str) -> list[str]:
@@ -144,49 +144,49 @@ def linha_do_mapa() -> dict[str, str]:
 
 class TestOsDoisFiltrosDoNo:
     def test_acha_o_dualsense_no_cabo_pelo_endereco(self) -> None:
-        bancada = _bancada({"hidraw3": _OUTRO_FABRICANTE, "hidraw4": _DUALSENSE_NO_CABO})
-        assert alvo_do_controle(_UNIQ_NO_CABO, **bancada) == cor_do_plastico.AlvoDoControle(
+        ensaio = _ensaio({"hidraw3": _OUTRO_FABRICANTE, "hidraw4": _DUALSENSE_NO_CABO})
+        assert alvo_do_controle(_UNIQ_NO_CABO, **ensaio) == cor_do_plastico.AlvoDoControle(
             caminho="/dev/hidraw4", transporte=CABO
         )
 
     def test_o_mesmo_controle_no_radio_tambem_vira_alvo(self) -> None:
         """SUBSTITUÍDO em 02/09/2026 — e o que caiu não foi opinião, foi fato."""
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_RADIO})
-        alvo = alvo_do_controle(_UNIQ_NO_CABO, **bancada)
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_RADIO})
+        alvo = alvo_do_controle(_UNIQ_NO_CABO, **ensaio)
         assert alvo is not None
         assert (alvo.caminho, alvo.transporte) == ("/dev/hidraw4", RADIO)
 
     def test_barramento_que_nao_e_cabo_nem_radio_nao_vira_alvo(self) -> None:
         """`0x0003` e `0x0005` são os dois que esta casa mediu. Um terceiro"""
         estranho = {**_DUALSENSE_NO_CABO, "HID_ID": "0018:0000054C:00000CE6"}
-        bancada = _bancada({"hidraw4": estranho})
-        assert alvo_do_controle(_UNIQ_NO_CABO, **bancada) is None
+        ensaio = _ensaio({"hidraw4": estranho})
+        assert alvo_do_controle(_UNIQ_NO_CABO, **ensaio) is None
 
     def test_aparelho_de_outro_fabricante_nao_vira_alvo(self) -> None:
-        bancada = _bancada({"hidraw4": _OUTRO_FABRICANTE})
-        assert alvo_do_controle(_UNIQ_DE_OUTRO, **bancada) is None
+        ensaio = _ensaio({"hidraw4": _OUTRO_FABRICANTE})
+        assert alvo_do_controle(_UNIQ_DE_OUTRO, **ensaio) is None
 
     def test_o_nosso_vpad_nao_vira_alvo(self) -> None:
         """Ele forja VID/PID/bus de DualSense no cabo — sem o filtro, o produto
         pediria o serial de fábrica à própria saída."""
-        bancada = _bancada({"hidraw4": _NOSSO_VPAD})
-        assert alvo_do_controle(_UNIQ_DO_VPAD, **bancada) is None
+        ensaio = _ensaio({"hidraw4": _NOSSO_VPAD})
+        assert alvo_do_controle(_UNIQ_DO_VPAD, **ensaio) is None
 
     def test_sem_endereco_nao_ha_alvo(self) -> None:
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_CABO})
-        assert alvo_do_controle("", **bancada) is None
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_CABO})
+        assert alvo_do_controle("", **ensaio) is None
 
 
 class TestOProdutoLeACorPeloCabo:
     def test_a_cor_volta_do_serial_que_o_aparelho_respondeu(self) -> None:
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_CABO})
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_CABO})
         vistos: list[tuple[str, bytes]] = []
 
         def perguntar(caminho: str, pedido: bytes) -> bytes:
             vistos.append((caminho, pedido))
             return _resposta_boa()
 
-        cor = ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **bancada)
+        cor = ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **ensaio)
         assert cor is not None
         assert (cor.codigo, cor.nome) == ("05", "Starlight Blue")
         assert cor.tom, "a cor lida tem de trazer o tom que pinta a borda do card"
@@ -194,47 +194,47 @@ class TestOProdutoLeACorPeloCabo:
 
     def test_o_pedido_que_sai_e_o_unico_que_a_trava_autoriza(self) -> None:
         """A família 0x80 é a mesma em que `[1,1]` RESETA e `[12,1]` grava NVS."""
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_CABO})
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_CABO})
         capturado: list[bytes] = []
 
         def perguntar(caminho: str, pedido: bytes) -> bytes:
             capturado.append(pedido)
             return _resposta_boa()
 
-        ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **bancada)
+        ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **ensaio)
         assert capturado == [montar_pedido()]
         conferir_pedido(capturado[0])
 
     def test_eco_errado_nao_vira_cor_inventada(self) -> None:
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_CABO})
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_CABO})
         torto = bytearray(_resposta_boa())
         torto[2] = 20
         assert ler_pelo_cabo(
-            _UNIQ_NO_CABO, perguntar=lambda _c, _p: bytes(torto), **bancada
+            _UNIQ_NO_CABO, perguntar=lambda _c, _p: bytes(torto), **ensaio
         ) is None
 
     def test_sem_aparelho_a_resposta_e_nao_sei_e_nao_excecao(self) -> None:
-        assert ler_pelo_cabo(_UNIQ_NO_CABO, **_bancada({})) is None
+        assert ler_pelo_cabo(_UNIQ_NO_CABO, **_ensaio({})) is None
 
     def test_transporte_que_explode_nao_derruba_a_janela(self) -> None:
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_CABO})
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_CABO})
 
         def explode(_caminho: str, _pedido: bytes) -> bytes:
             raise OSError(5, "EIO")
 
-        assert ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=explode, **bancada) is None
+        assert ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=explode, **ensaio) is None
 
 
 def _pedido_que_sai(no: dict[str, str]) -> bytes:
     """O buffer que o produto entrega ao transporte para este nó. Sem aparelho."""
-    bancada = _bancada({"hidraw4": no})
+    ensaio = _ensaio({"hidraw4": no})
     capturado: list[bytes] = []
 
     def perguntar(_caminho: str, pedido: bytes) -> bytes:
         capturado.append(pedido)
         return _resposta_boa()
 
-    ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **bancada)
+    ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **ensaio)
     assert capturado, "o produto não chegou a mandar pedido nenhum"
     return capturado[0]
 
@@ -301,9 +301,9 @@ class TestOEnvelopeDoRadio:
             conferir_pedido(bytes(mortal))
 
     def test_a_cor_volta_do_controle_no_radio(self) -> None:
-        bancada = _bancada({"hidraw4": _DUALSENSE_NO_RADIO})
+        ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_RADIO})
         cor = ler_pelo_cabo(
-            _UNIQ_NO_CABO, perguntar=lambda _c, _p: _resposta_boa(), **bancada
+            _UNIQ_NO_CABO, perguntar=lambda _c, _p: _resposta_boa(), **ensaio
         )
         assert cor is not None
         assert (cor.codigo, cor.nome) == ("05", "Starlight Blue")
@@ -311,14 +311,14 @@ class TestOEnvelopeDoRadio:
 
 def _o_produto_pergunta_por_radio() -> bool:
     """O produto chega a PERGUNTAR a um controle de rádio, e entende a resposta?"""
-    bancada = _bancada({"hidraw4": _DUALSENSE_NO_RADIO})
+    ensaio = _ensaio({"hidraw4": _DUALSENSE_NO_RADIO})
     visto: list[bytes] = []
 
     def perguntar(_caminho: str, pedido: bytes) -> bytes:
         visto.append(pedido)
         return _resposta_boa()
 
-    cor = ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **bancada)
+    cor = ler_pelo_cabo(_UNIQ_NO_CABO, perguntar=perguntar, **ensaio)
     if not visto or cor is None:
         return False
     conferir_pedido(visto[0])

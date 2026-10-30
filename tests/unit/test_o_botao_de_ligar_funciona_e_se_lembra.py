@@ -24,7 +24,7 @@ mais dói, porque a resposta que ela precisa é justamente "segue desativado?".
 **O QUE FALTAVA NÃO ERA MÉTODO DE IPC.** ``gamepad.emulation.set`` existe
 (``daemon/ipc_server.py``), persiste (``utils/session.save_gamepad_emulation``
 grava e apaga o ``gamepad_disabled.flag``) e é respeitado depois de reiniciar
-(``gamepad_multiplos_controles_adiado estado=ignorado_gesto_dela``). Faltava a
+(``gamepad_multiplos_controles_adiado estado=ignorado_gesto_do_usuario``). Faltava a
 metade **escritora** da tela nova: ``app/actions/jogar/painel`` dizia qual botão
 acende e nunca dizia quem aplica o clique.
 
@@ -155,13 +155,13 @@ def test_a_tela_acende_o_modo_vivo_e_nao_o_do_desenho() -> None:
     ``native_mode = False``; o desenho traz ``class="on"`` chumbado no "Jogar
     pelo Hefesto". A tela tem de acender o que o daemon diz.
     """
-    dela = {
+    do_usuario = {
         "native_mode": False,
         "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
         "paused": False,
     }
-    assert painel.modo_vivo(dela) == mode_transition.MODE_DESKTOP
-    assert painel.modo_vivo(dela) != mode_transition.MODE_GAMEPAD
+    assert painel.modo_vivo(do_usuario) == mode_transition.MODE_DESKTOP
+    assert painel.modo_vivo(do_usuario) != mode_transition.MODE_GAMEPAD
 
     ligado = {"native_mode": False, "gamepad_emulation": {"enabled": True}}
     assert painel.modo_vivo(ligado) == mode_transition.MODE_GAMEPAD

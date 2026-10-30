@@ -54,7 +54,7 @@ def test_o_controle_que_nao_e_jogador_ainda_tem_numero() -> None:
     assert pacotes.jogador_de({"player": None, "player_slot": 2}) == 2
 
 
-def test_o_primario_no_radio_tem_as_duas_chaves_e_elas_coincidem() -> None:
+def test_o_primario_no_radio_tem_as_duas_chaves_e_o_usuario_coincidem() -> None:
     """A outra metade da mesma medição, para o par ficar completo no arquivo."""
     assert pacotes.jogador_de({"player": 1, "player_slot": 1}) == 1
 
@@ -123,7 +123,7 @@ class TestIdentidadeDe:
         assert na_ordem == ["Starlight Blue", "Cosmic Red"]
         assert trocados == ["Cosmic Red", "Starlight Blue"]
 
-    def test_o_que_ela_nomeou_vence_o_modelo(self) -> None:
+    def test_o_que_o_usuario_nomeou_vence_o_modelo(self) -> None:
         assert (
             pacotes.identidade_de(
                 _controle(AZUL, nome_declarado="O do sofá", modelo="Cosmic Red")
@@ -339,7 +339,7 @@ def test_o_state_full_carrega_a_identidade_de_cada_controle(chave: str) -> None:
         )
 
 
-def test_o_que_ela_declarou_sai_no_payload_sem_tocar_o_disco() -> None:
+def test_o_que_o_usuario_declarou_sai_no_payload_sem_tocar_o_disco() -> None:
     """Vem de `daemon._maquina`, que o daemon já carrega no boot e rebinda."""
     from hefesto_dualsense4unix.utils.maquina import ControleDeclarado, MaquinaConfig
 

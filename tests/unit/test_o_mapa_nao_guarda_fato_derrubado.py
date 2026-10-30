@@ -423,7 +423,7 @@ def test_a_regua_morde_um_fato_derrubado_solto(tmp_path: Path) -> None:
     assert achados[0][0].caiu_em == "09/08/2026"
 
 
-def test_a_regua_aceita_a_mesma_frase_quando_ela_vem_enterrada(
+def test_a_regua_aceita_a_mesma_frase_quando_o_usuario_vem_enterrada(
     tmp_path: Path,
 ) -> None:
     """E o contrário: com a marca, a mesma frase é registro, não afirmação."""

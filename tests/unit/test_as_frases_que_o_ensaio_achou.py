@@ -1,4 +1,4 @@
-"""AS-FRASES-QUE-A-BANCADA-ACHOU-01 — o que a tela dizia e o produto desmentia."""
+"""AS-FRASES-QUE-O-ENSAIO-ACHOU-01 — o que a tela dizia e o produto desmentia."""
 from __future__ import annotations
 
 import html
@@ -20,7 +20,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 from hefesto_dualsense4unix.interface import conexoes as gestao
 from tests.unit.test_a05_a_vibracao_aplica_e_fala import PonteDeMentira
 
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
@@ -28,7 +28,7 @@ P2 = "aa:bb:cc:00:00:02"
 
 def _pagina(nome: str) -> str:
     """A página gerada, SEM os comentários — o que chega ao olho."""
-    bruto = (BANCADA / nome).read_text(encoding="utf-8")
+    bruto = (ENSAIO / nome).read_text(encoding="utf-8")
     return re.sub(r"<!--.*?-->", "", bruto, flags=re.S)
 
 
@@ -209,7 +209,7 @@ def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
-    h = _PinnedPyDualSense(b"/dev/hidraw-de-bancada", is_edge=False)
+    h = _PinnedPyDualSense(b"/dev/hidraw-de-ensaio", is_edge=False)
     h.audio = DSAudio()
     h.light = DSLight()
     h.triggerL = DSTrigger()
@@ -218,7 +218,7 @@ def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
     return h
 
 
-def test_o_som_pelo_radio_nao_chega_a_bancada_pre_marcado_nada(
+def test_o_som_pelo_radio_nao_chega_o_ensaio_pre_marcado_nada(
         pre_marcas: dict[str, str]) -> None:
     """O produto leva o som de cada controle do rádio pelo `0x35` desde 10/09"""
     for celula in _SOM_PELO_RADIO:

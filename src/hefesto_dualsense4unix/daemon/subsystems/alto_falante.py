@@ -48,7 +48,7 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   **FALÁCIA DO CANAL QUE RESPONDE** — concluir que, porque um canal
   responde, ele FAZ o que se esperava dele: o mapa segura o degrau em
   ``MONTOU`` até a orelha do usuário ouvir o caminho inteiro do produto
-  (``audio.saida_dedicada@dualsense``, AS-FRASES-QUE-A-BANCADA-ACHOU-01);
+  (``audio.saida_dedicada@dualsense``, AS-FRASES-QUE-O-ENSAIO-ACHOU-01);
 * **PASSOU A LIGAR — 09/09/2026, SOM-POR-CONTROLE-01.** Esta linha dizia *"não
   liga o monitor ao sink USB do controle no cabo"*, e era verdade: o
   ``module-loopback`` e o casamento por dispositivo USB estavam fora da posse

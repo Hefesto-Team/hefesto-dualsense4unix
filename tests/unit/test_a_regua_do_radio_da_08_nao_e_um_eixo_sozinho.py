@@ -55,7 +55,7 @@ def _pacote() -> Any:
 
 
 @pytest.fixture
-def bancada(monkeypatch: Any) -> Any:
+def ensaio(monkeypatch: Any) -> Any:
     """A mesa de rádio DECLARADA — nunca a da máquina que roda o teste."""
     from hefesto_dualsense4unix.interface.pacotes import em_fundo
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
@@ -113,9 +113,9 @@ def _secao(*, com_radio: bool) -> dict[str, Any]:
     return _pacote().campos_do_radio(_ctx(com_radio=com_radio))
 
 
-def test_sem_resposta_a_sala_nao_diz_que_nao_ha(bancada: Any) -> None:
+def test_sem_resposta_a_sala_nao_diz_que_nao_ha(ensaio: Any) -> None:
     """O BlueZ mudo e o daemon sem `radio_ar` não são «nenhum adaptador»."""
-    bancada(None)
+    ensaio(None)
     campos = _secao(com_radio=False)
     nada = _pacote()._monta().NADA_A_DIZER
     assert campos["radio-sala"] == nada, (
@@ -125,16 +125,16 @@ def test_sem_resposta_a_sala_nao_diz_que_nao_ha(bancada: Any) -> None:
     assert "conta-de-adaptadores" not in campos
 
 
-def test_o_bluez_que_respondeu_zero_diz_que_nao_ha(bancada: Any) -> None:
-    bancada([])
+def test_o_bluez_que_respondeu_zero_diz_que_nao_ha(ensaio: Any) -> None:
+    ensaio([])
     campos = _secao(com_radio=False)
     assert _pacote().NENHUM_ADAPTADOR in campos["radio-sala"], campos["radio-sala"]
     assert "conta-de-adaptadores" not in campos
 
 
-def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(bancada: Any) -> None:
+def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(ensaio: Any) -> None:
     """TRÊS adaptadores e ninguém no rádio ainda são TRÊS cartões, nomeados."""
-    bancada(["Sala", "Extra", "Terceiro"])
+    ensaio(["Sala", "Extra", "Terceiro"])
     sala = _secao(com_radio=False)["radio-sala"]
     assert len(re.findall(r'<div class="lugar[ "]', sala)) == 3, sala[:600]
     for nome in ("Sala", "Extra", "Terceiro"):
@@ -144,9 +144,9 @@ def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(bancada: Any) -> None:
         "um cartão ganhou a linha de um controle que está no CABO")
 
 
-def test_o_controle_no_radio_aparece_no_cartao_dele(bancada: Any) -> None:
+def test_o_controle_no_radio_aparece_no_cartao_dele(ensaio: Any) -> None:
     """A cura não pode trocar o caso que já funcionava."""
-    bancada(["Sala"])
+    ensaio(["Sala"])
     sala = _secao(com_radio=True)["radio-sala"]
     assert "Galactic Purple" in sala, (
         f"a sala deixou de nomear o controle que está NO rádio:\n{sala[:600]}")

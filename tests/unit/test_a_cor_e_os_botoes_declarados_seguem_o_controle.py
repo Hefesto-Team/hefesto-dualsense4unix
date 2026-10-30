@@ -1,4 +1,4 @@
-"""AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01: a cor e os botões declarados seguem o controle.
+"""AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DO-USUARIO-01: a cor e os botões declarados seguem o controle.
 
 As respostas de 06/10/2026: os glifos das outras abas seguem o `controles.modo` e o
 `controles.botoes`, e a `controles.cor` aparece em tudo, como a do DualSense. Os três campos
@@ -86,7 +86,7 @@ def test_nome_que_o_mapa_nao_conhece_nao_pinta_nada(mv) -> None:
     assert item["cor"] == ""
 
 
-def test_a_cor_e_do_controle_dela_e_nao_do_vizinho(mv) -> None:
+def test_a_cor_e_do_controle_do_usuario_e_nao_do_vizinho(mv) -> None:
     itens = mv.mesa_do_estado(_estado(UNIQ, OUTRO), {}, declaracao=_maquina(cor="Cosmic Red"))
     por_uniq = {i["uniq"]: i for i in itens}
     assert por_uniq[UNIQ]["cor"] != "" and por_uniq[OUTRO]["cor"] == ""

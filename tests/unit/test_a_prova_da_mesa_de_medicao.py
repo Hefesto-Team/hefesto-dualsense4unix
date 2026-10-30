@@ -554,7 +554,7 @@ def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
         pg.close()
 
 
-def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
+def test_a_capa_explica_o_teste_e_o_usuario_sobrevive_aos_tres_tempos(
         pw, lar, mentira) -> None:
     """*"começa na parte superior explicando o que está sendo testado e afins"*."""
     with _Servidor(lar, mentira) as s:
@@ -629,17 +629,17 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     assert all("colorway" not in v for v in vistos)
 
 
-def test_a_cor_que_ela_disse_fica_guardada_pelo_endereco(lar, monkeypatch) -> None:
+def test_a_cor_que_o_usuario_disse_fica_guardada_pelo_endereco(lar, monkeypatch) -> None:
     """A cor do plástico não se lê sem escrever no controle, e esta página não"""
     monkeypatch.setenv("XDG_STATE_HOME", str(lar))
     monkeypatch.setattr(med, "pasta_do_registro",
                         lambda: lar / "mesa-de-medicao")
-    assert med.cores_que_ela_disse() == {}
-    med.guardar_cor_dela("aa:bb:cc:00:00:01", "nova-pink")
-    assert med.cores_que_ela_disse() == {"aa:bb:cc:00:00:01": "nova-pink"}
+    assert med.cores_que_o_usuario_disse() == {}
+    med.guardar_cor_do_usuario("aa:bb:cc:00:00:01", "nova-pink")
+    assert med.cores_que_o_usuario_disse() == {"aa:bb:cc:00:00:01": "nova-pink"}
     assert med.nome_do_colorway("nova-pink") == "Nova Pink"
-    med.guardar_cor_dela("aa:bb:cc:00:00:01", "")
-    assert med.cores_que_ela_disse() == {}
+    med.guardar_cor_do_usuario("aa:bb:cc:00:00:01", "")
+    assert med.cores_que_o_usuario_disse() == {}
 
 
 def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
@@ -656,7 +656,7 @@ def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
         "a luz virou um-por-vez, e ela se lê com os olhos nos quatro de uma vez")
 
 
-def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
+def test_o_como_vem_pronto_e_nao_e_cobrado_do_usuario(pw, lar, mentira) -> None:
     """O «como» de cada teste já vem pronto na página; ninguém o preenche."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
@@ -744,7 +744,7 @@ def test_as_21_estao_nas_seis_secoes_do_roteiro() -> None:
         assert any(nome in t.secao for t in das_21), nome
 
 
-def test_a_cor_se_le_do_aparelho_sob_o_comando_dela() -> None:
+def test_a_cor_se_le_do_aparelho_sob_o_comando_do_usuario() -> None:
     """*"A cor exige escrita mesmo. Mas ler uma vez, sob seu comando, é o que o"""
     fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
     assert "cor_do_plastico.ler_pelo_cabo" in fonte, (
@@ -872,7 +872,7 @@ def test_o_desenho_da_mesa_pinta_o_contorno_como_o_mapa(pw, lar, mentira) -> Non
         pg.close()
 
 
-def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> None:
+def test_o_ps_nao_acende_o_circulo_que_o_usuario_mandou_tirar(pw, lar, mentira) -> None:
     """*"o do PS não tem esse círculo no meio"* — 07/09/2026."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1440, "height": 1000})
@@ -896,7 +896,7 @@ def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> Non
         assert medido["cor_do_grupo"] != "none", medido
 
 
-def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
+def test_as_21_do_ensaio_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
     """*"quais desses são os mais importantes? não fez separação dos 21 mais?"*"""
     quantas = len(med.secoes_do_roteiro())
     with _Servidor(lar, mentira) as s:
@@ -931,7 +931,7 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
         pg.close()
 
 
-def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
+def test_a_espera_longa_nao_prende_o_usuario_na_tela(pw, lar, mentira) -> None:
     """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,"""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1400, "height": 1050})

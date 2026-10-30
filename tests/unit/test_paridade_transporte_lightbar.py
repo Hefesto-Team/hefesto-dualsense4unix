@@ -55,10 +55,10 @@ def _com_leds_do_hefesto(handle: Any) -> Any:
 
 @pytest.mark.parametrize("cor", CORES)
 def test_a_cor_sai_nos_bytes_certos_nos_dois_transportes(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte, cor: tuple[int, int, int]
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte, cor: tuple[int, int, int]
 ) -> None:
     """A cor pedida chega intacta a common[44..46], no cabo E no rádio."""
-    handle = _com_leds_do_hefesto(ds5_de_bancada)
+    handle = _com_leds_do_hefesto(ds5_de_ensaio)
     r, g, b = cor
     handle.light.setColorI(r, g, b)
 
@@ -74,10 +74,10 @@ def test_a_cor_sai_nos_bytes_certos_nos_dois_transportes(
 
 
 def test_vermelho_puro_nao_pode_sair_azul(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """O caso do diagnóstico, isolado e com nome — vermelho é 44, não 46."""
-    handle = _com_leds_do_hefesto(ds5_de_bancada)
+    handle = _com_leds_do_hefesto(ds5_de_ensaio)
     handle.light.setColorI(0xFF, 0x00, 0x00)
     common = transporte.extrair_common(handle.prepareReport())
     assert common[COR_R] == 0xFF, (
@@ -90,10 +90,10 @@ def test_vermelho_puro_nao_pode_sair_azul(
 
 
 def test_o_flag1_autoriza_a_lightbar_nos_dois_transportes(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Byte certo sem bit de validação é byte que o firmware ignora."""
-    handle = _com_leds_do_hefesto(ds5_de_bancada)
+    handle = _com_leds_do_hefesto(ds5_de_ensaio)
     handle.light.setColorI(0x2A, 0x40, 0xC8)
     common = transporte.extrair_common(handle.prepareReport())
     assert common[1] & rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE, (
@@ -103,13 +103,13 @@ def test_o_flag1_autoriza_a_lightbar_nos_dois_transportes(
 
 
 def test_a_cor_e_identica_nos_dois_e_so_o_envelope_muda(
-    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
+    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_ensaio: Any
 ) -> None:
     """O common de 47 bytes é o MESMO; o que muda é o que o embrulha."""
     commons: dict[str, bytes] = {}
     envelopes: dict[str, bytes] = {}
     for envelope in transportes:
-        handle = _com_leds_do_hefesto(fabrica_de_bancada(envelope))
+        handle = _com_leds_do_hefesto(fabrica_de_ensaio(envelope))
         handle.light.setColorI(0x2A, 0x40, 0xC8)
         report = bytes(handle.prepareReport())
         commons[envelope.nome] = envelope.extrair_common(report)
@@ -125,10 +125,10 @@ def test_a_cor_e_identica_nos_dois_e_so_o_envelope_muda(
 
 
 def test_sob_supressao_a_cor_nao_sai_em_nenhum_dos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Com o kernel dono do LED, o report é LED-neutro — nos dois transportes."""
-    handle = ds5_de_bancada
+    handle = ds5_de_ensaio
     handle._suppress_leds = True
     handle.light.setColorI(0xFF, 0x00, 0x00)
     common = transporte.extrair_common(handle.prepareReport())

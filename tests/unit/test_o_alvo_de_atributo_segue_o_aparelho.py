@@ -54,7 +54,7 @@ AS TRÊS MORDIDAS, e elas RODAM — não estão num comentário:
   ramo ``if(alvo === 'atributo')`` do BOOTSTRAP e roda o piloto mutilado no
   mesmo WebKit: o ``data-colorway`` não anda, e a tela continua Cosmic Red sobre
   um aparelho White — a lei quebrada, na medida;
-* :func:`test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem`
+* :func:`test_a_mordida_da_regua_sem_o_ramo_o_usuario_da_produto_sobre_pagina_virgem`
   arranca o ramo ``elif alvo == "atributo"`` da régua e a vê dar **PRODUTO** a
   uma página que NINGUÉM pintou — verde sobre nada, que é o defeito que a régua
   existe para não ter;
@@ -348,7 +348,7 @@ def _regua_sem(ramo: re.Pattern[str], quem: str) -> object:
     return modulo
 
 
-def test_a_mordida_da_regua_sem_o_ramo_ela_da_produto_sobre_pagina_virgem() -> None:
+def test_a_mordida_da_regua_sem_o_ramo_o_usuario_da_produto_sobre_pagina_virgem() -> None:
     """Arranca ``elif alvo == "atributo"`` de ``_campo`` e vê o verde sobre nada."""
     mordida = _regua_sem(RAMO_DA_REGUA, 'o ramo `elif alvo == "atributo"` da régua')
 

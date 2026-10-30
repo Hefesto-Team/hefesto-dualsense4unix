@@ -46,7 +46,7 @@
   },
   {
    "n": 5,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01",
    "o_que_muda": "O hub entra na cadeia como um só chip: «Hub USB 3 · 7 entradas», com os aparelhos dele logo abaixo",
    "resposta": "Opção A, escolhida por você",
    "origem": "rodada 4 (o que faltava desenho)",
@@ -57,7 +57,7 @@
   },
   {
    "n": 6,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01",
    "o_que_muda": "O enlace do hub aparece sob o nome: «480 Mb/s · Sabe 5 Gb/s», em laranja quando o hub negocia menos do que sabe",
    "resposta": "Opção A",
    "origem": "rodada 4 (o que faltava desenho)",
@@ -68,7 +68,7 @@
   },
   {
    "n": 7,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01",
    "o_que_muda": "O aparelho que sumiu fica na cadeia, apagado: «Não apareceu neste início»",
    "resposta": "Opção A",
    "origem": "rodada 4 (o que faltava desenho)",
@@ -79,7 +79,7 @@
   },
   {
    "n": 8,
-   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01",
+   "sprint": "O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01",
    "o_que_muda": "Uma quarta aba, Registro, lista o que entrou, saiu, voltou e ficou lento, com hora e entrada; o botão Copiar leva o texto",
    "resposta": "Opção A",
    "origem": "rodada 4 (o que faltava desenho)",

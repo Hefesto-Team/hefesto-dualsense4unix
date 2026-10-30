@@ -1,6 +1,7 @@
 """A suíte nunca alcança o serviço nem o ~/.config de quem a roda.
 
-A sprint é a A-SUITE-NUNCA-ESCREVE-NO-CONFIG-DELA-01. Medido em 30/10/2026: o conftest desviava o
+A sprint é a A-SUITE-NUNCA-ESCREVE-NO-CONFIG-DO-USUARIO-01. Medido em 30/10/2026: o conftest
+desviava o
 HOME e os quatro XDG_* e deixava o XDG_RUNTIME_DIR real, onde mora o socket do daemon do usuário.
 O `test_o_clique_2_limpa_o_painel_antes_de_agir` deixou a marca do Parar da aba Sistema no
 runtime real (13h14), e a janela dela, reaberta, não traria o serviço.
@@ -95,83 +96,87 @@ def test_o_espelho_leva_o_resto_do_runtime_e_deixa_o_que_e_do_hefesto(
 
 
 @dataclass
-class _Dela:
+class _DoUsuario:
     guarda: casa.GuardaDoReal
     runtime: Path
     config: Path
 
 
 @pytest.fixture
-def dela(monkeypatch: pytest.MonkeyPatch) -> _Dela:
+def do_usuario(monkeypatch: pytest.MonkeyPatch) -> _DoUsuario:
     runtime = _runtime_desviado() / "r"
     (runtime / "hefesto-dualsense4unix").mkdir(parents=True)
-    config = Path(os.environ["HOME"]) / "lar-dela" / ".config" / "hefesto-dualsense4unix"
+    config = Path(os.environ["HOME"]) / "lar-do-usuario" / ".config" / "hefesto-dualsense4unix"
     config.mkdir(parents=True)
     (config / "perfil.json").write_text('{"kind": "gamepad"}\n')
     guarda = casa.GuardaDoReal([config], [str(runtime / "hefesto")])
     monkeypatch.setattr(casa, "_GUARDAS", [*casa._GUARDAS, guarda])
-    return _Dela(guarda, runtime, config)
+    return _DoUsuario(guarda, runtime, config)
 
 
-def test_a_guarda_recusa_a_escrita_no_config_real_e_deixa_ler(dela: _Dela) -> None:
-    perfil = dela.config / "perfil.json"
+def test_a_guarda_recusa_a_escrita_no_config_real_e_deixa_ler(do_usuario: _DoUsuario) -> None:
+    perfil = do_usuario.config / "perfil.json"
     assert perfil.read_text() == '{"kind": "gamepad"}\n'
     with pytest.raises(PermissionError):
         perfil.write_text('{"kind": "native"}\n')
     with pytest.raises(PermissionError):
-        (dela.config / "native_mode.flag").touch()
+        (do_usuario.config / "native_mode.flag").touch()
     with pytest.raises(PermissionError):
         os.rename(perfil, perfil.with_suffix(".velho"))
     with pytest.raises(PermissionError):
-        (dela.config / "pasta-nova").mkdir()
+        (do_usuario.config / "pasta-nova").mkdir()
     assert perfil.read_text() == '{"kind": "gamepad"}\n'
-    assert sorted(p.name for p in dela.config.iterdir()) == ["perfil.json"]
-    assert len(dela.guarda.recusas) >= 4 and all("lar-dela" in r for r in dela.guarda.recusas)
+    assert sorted(p.name for p in do_usuario.config.iterdir()) == ["perfil.json"]
+    recusas = do_usuario.guarda.recusas
+    assert len(recusas) >= 4 and all("lar-do-usuario" in r for r in recusas)
 
 
-def test_a_guarda_recusa_a_escrita_que_chega_por_um_link(dela: _Dela, tmp_path: Path) -> None:
+def test_a_guarda_recusa_a_escrita_que_chega_por_um_link(
+    do_usuario: _DoUsuario, tmp_path: Path,
+) -> None:
     espelho = tmp_path / "runtime-quebrado"
     espelho.mkdir()
-    (espelho / "hefesto-dualsense4unix").symlink_to(dela.runtime / "hefesto-dualsense4unix")
-    (espelho / "hefesto-de-config").symlink_to(dela.config)
+    (espelho / "hefesto-dualsense4unix").symlink_to(do_usuario.runtime / "hefesto-dualsense4unix")
+    (espelho / "hefesto-de-config").symlink_to(do_usuario.config)
     marca = "servico-parado-pela-aba-sistema"
     with pytest.raises(PermissionError):
         (espelho / "hefesto-dualsense4unix" / marca).touch()
     with pytest.raises(PermissionError):
         (espelho / "hefesto-de-config" / "perfil.json").write_text("native")
-    assert not (dela.runtime / "hefesto-dualsense4unix" / marca).exists()
-    assert (dela.config / "perfil.json").read_text() == '{"kind": "gamepad"}\n'
-    recusas = dela.guarda.recusas
+    assert not (do_usuario.runtime / "hefesto-dualsense4unix" / marca).exists()
+    assert (do_usuario.config / "perfil.json").read_text() == '{"kind": "gamepad"}\n'
+    recusas = do_usuario.guarda.recusas
     assert len(recusas) >= 2 and all("runtime-quebrado" in r for r in recusas)
 
 
-def test_a_guarda_recusa_a_conexao_ao_socket_real(dela: _Dela) -> None:
-    servidor = _servidor(dela.runtime / "hefesto-dualsense4unix" / "h.sock")
+def test_a_guarda_recusa_a_conexao_ao_socket_real(do_usuario: _DoUsuario) -> None:
+    servidor = _servidor(do_usuario.runtime / "hefesto-dualsense4unix" / "h.sock")
     try:
         cliente = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         with pytest.raises(ConnectionRefusedError):
-            cliente.connect(str(dela.runtime / "hefesto-dualsense4unix" / "h.sock"))
+            cliente.connect(str(do_usuario.runtime / "hefesto-dualsense4unix" / "h.sock"))
         cliente.close()
         assert not _alguem_conectou(servidor)
-        assert dela.guarda.recusas and dela.guarda.recusas[0].startswith("socket.connect ")
+        recusas = do_usuario.guarda.recusas
+        assert recusas and recusas[0].startswith("socket.connect ")
     finally:
         servidor.close()
 
 
 def test_sem_a_guarda_a_mesma_escrita_e_a_mesma_conexao_passam(
-    dela: _Dela, monkeypatch: pytest.MonkeyPatch
+    do_usuario: _DoUsuario, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(casa, "_GUARDAS", [g for g in casa._GUARDAS if g is not dela.guarda])
-    (dela.config / "native_mode.flag").write_text("x")
-    servidor = _servidor(dela.runtime / "hefesto-dualsense4unix" / "h.sock")
+    monkeypatch.setattr(casa, "_GUARDAS", [g for g in casa._GUARDAS if g is not do_usuario.guarda])
+    (do_usuario.config / "native_mode.flag").write_text("x")
+    servidor = _servidor(do_usuario.runtime / "hefesto-dualsense4unix" / "h.sock")
     try:
         cliente = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        cliente.connect(str(dela.runtime / "hefesto-dualsense4unix" / "h.sock"))
+        cliente.connect(str(do_usuario.runtime / "hefesto-dualsense4unix" / "h.sock"))
         cliente.close()
         assert _alguem_conectou(servidor), "sem a guarda a conexão devia chegar"
     finally:
         servidor.close()
-    assert (dela.config / "native_mode.flag").exists() and dela.guarda.recusas == []
+    assert (do_usuario.config / "native_mode.flag").exists() and do_usuario.guarda.recusas == []
 
 
 def test_a_recusa_reprova_a_sessao_com_a_linha_do_portao(
@@ -207,14 +212,14 @@ def _lar_vigiado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.mark.parametrize("gestos", [[], ["[gesto] 01-jogar.html · hefesto → aplicado"]])
-def test_a_escrita_no_config_sem_gesto_dela_e_portao_e_com_gesto_e_aviso(
+def test_a_escrita_no_config_sem_gesto_do_usuario_e_portao_e_com_gesto_e_aviso(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     gestos: list[str],
 ) -> None:
     lar = _lar_vigiado(tmp_path, monkeypatch)
-    monkeypatch.setattr(casa, "_gestos_da_janela_dela", lambda: list(gestos))
+    monkeypatch.setattr(casa, "_gestos_da_janela_do_usuario", lambda: list(gestos))
     (lar / ".config" / "hefesto-dualsense4unix" / "profiles" / "planeta.json").write_text(
         '{"mode": {"kind": "native"}}\n'
     )
@@ -234,12 +239,12 @@ def test_a_escrita_no_config_sem_gesto_dela_e_portao_e_com_gesto_e_aviso(
         assert "native_mode.flag" in saida and "planeta.json" in saida
 
 
-def test_o_gesto_dela_nao_cobre_a_escrita_fora_do_config_do_produto(
+def test_o_gesto_do_usuario_nao_cobre_a_escrita_fora_do_config_do_produto(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     lar = _lar_vigiado(tmp_path, monkeypatch)
     gesto = "[gesto] 01-jogar.html · x → aplicado"
-    monkeypatch.setattr(casa, "_gestos_da_janela_dela", lambda: [gesto])
+    monkeypatch.setattr(casa, "_gestos_da_janela_do_usuario", lambda: [gesto])
     (lar / ".config" / "wireplumber" / "novo.conf").write_text("x")
     sessao = _SessaoFalsa()
     capsys.readouterr()
@@ -257,9 +262,9 @@ def test_os_gestos_sao_so_os_que_a_janela_anotou_depois_do_comeco(
     monkeypatch.setattr(casa, "_INTERFACE_LOG_INICIO", [(diario, diario.stat().st_size)])
     with diario.open("a") as aberto:
         aberto.write("[tique] nada\n[gesto] 01-jogar.html · hefesto → aplicado\n")
-    assert casa._gestos_da_janela_dela() == ["[gesto] 01-jogar.html · hefesto → aplicado"]
+    assert casa._gestos_da_janela_do_usuario() == ["[gesto] 01-jogar.html · hefesto → aplicado"]
     monkeypatch.setattr(casa, "_INTERFACE_LOG_INICIO", [(tmp_path / "nao-existe.log", 0)])
-    assert casa._gestos_da_janela_dela() == []
+    assert casa._gestos_da_janela_do_usuario() == []
 
 
 _NINHO = '''
@@ -267,19 +272,19 @@ import os
 import socket
 
 
-def test_alcanca_o_que_e_dela():
+def test_alcanca_o_que_e_do_usuario():
     from hefesto_dualsense4unix.utils.marca_do_parar import lembrar_o_parar
 
     lembrar_o_parar(True)
     cliente = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        cliente.connect(os.environ["SOCKET_DELA"])
+        cliente.connect(os.environ["SOCKET_DO_USUARIO"])
     except OSError:
         pass
     finally:
         cliente.close()
     try:
-        with open(os.environ["PERFIL_DELA"], "w") as perfil:
+        with open(os.environ["PERFIL_DO_USUARIO"], "w") as perfil:
             perfil.write("native")
     except OSError:
         pass
@@ -306,8 +311,8 @@ def _rodar_o_ninho(
         "HOME": str(mesa),
         "XDG_RUNTIME_DIR": str(run),
         "PYTHONPATH": str(RAIZ / "src"),
-        "SOCKET_DELA": str(produto / "hefesto-dualsense4unix.sock"),
-        "PERFIL_DELA": str(perfil),
+        "SOCKET_DO_USUARIO": str(produto / "hefesto-dualsense4unix.sock"),
+        "PERFIL_DO_USUARIO": str(perfil),
     })
     ambiente.pop(casa._CANARIO_DESLIGADO_ENV, None)
     ambiente.pop(casa._LAR_DESLIGADO_ENV, None)
@@ -326,7 +331,7 @@ def _rodar_o_ninho(
     return saida, conectou, perfil, produto
 
 
-def test_o_ninho_com_a_guarda_nao_alcanca_o_que_e_dela_e_sai_vermelho(tmp_path: Path) -> None:
+def test_o_ninho_com_a_guarda_nao_alcanca_o_que_e_do_usuario_e_sai_vermelho(tmp_path: Path) -> None:
     saida, conectou, perfil, produto = _rodar_o_ninho(tmp_path, com_a_guarda=True)
     texto = saida.stdout + saida.stderr
     assert "1 passed" in texto, texto

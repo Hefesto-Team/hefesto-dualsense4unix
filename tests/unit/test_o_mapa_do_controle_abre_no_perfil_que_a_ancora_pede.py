@@ -98,7 +98,7 @@ def test_o_point_and_click_abre_o_perfil_do_disco_que_a_06_escolheu(
     assert _mesa(ctx)["mc-tipo"] == "pac"
 
 
-def test_sem_escolha_na_06_vale_o_padrao_dela_e_escolha_que_sumiu_cai_em_navegar(
+def test_sem_escolha_na_06_vale_o_padrao_do_usuario_e_escolha_que_sumiu_cai_em_navegar(
         monkeypatch: pytest.MonkeyPatch) -> None:
     _o_disco(monkeypatch, {})
     _a_escolha_da_06(monkeypatch, None)
@@ -116,11 +116,11 @@ def test_o_mapa_le_a_escolha_pela_funcao_da_06_e_nao_pelo_campo(
     _a_escolha_da_06(monkeypatch, "molde:mouse")
     visto: list[int] = []
 
-    def so_ela() -> str:
+    def so_o_usuario() -> str:
         visto.append(1)
         return "molde:visual_novel"
 
-    monkeypatch.setattr(a06, "_o_point_and_click_de_hoje", so_ela)
+    monkeypatch.setattr(a06, "_o_point_and_click_de_hoje", so_o_usuario)
     assert _mesa(_ctx())["ancora-pac"] == "molde:visual_novel"
     assert visto, "a função da 06 não foi chamada"
 

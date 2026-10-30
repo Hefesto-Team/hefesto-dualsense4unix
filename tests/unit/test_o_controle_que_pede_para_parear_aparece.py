@@ -143,12 +143,12 @@ def test_com_a_janela_aberta_a_central_refaz_o_par_sozinha(
     mundo.pareado(SALA, VERMELHO, conectado=False, host=False, nome="vermelho")
     _dono, central = mesa(mundo)
 
-    def ela_segura() -> None:
+    def o_usuario_segura() -> None:
         mundo.segurar_ps_create(VERMELHO)
         if mundo.objeto(destino, VERMELHO) is not None:
             _ouvir(mundo, destino, VERMELHO)
 
-    relogio.agendar(2.0, ela_segura)
+    relogio.agendar(2.0, o_usuario_segura)
     relogio.durante = lambda: (mundo.segurar_ps_create(VERMELHO)
                                if mundo.fisicos[VERMELHO].pareando else None)
 
@@ -216,7 +216,7 @@ def test_o_grupo_do_adaptador_que_ouve_aparece_com_o_ponto_mesmo_sem_linha() -> 
     assert 'data-grupo="AABBCC0000B2"' not in html, "o adaptador sem pedido e sem linha apareceu"
 
 
-def test_a_tela_le_o_pedido_da_central_com_o_nome_dela() -> None:
+def test_a_tela_le_o_pedido_da_central_com_o_nome_do_usuario() -> None:
     lugares = [{"id": "AABBCC0000A1"}]
     central = {"pedindo": [
         {"aparelho": "AA:BB:CC:00:00:01", "adaptador": "AA:BB:CC:00:00:A1", "nome": "roxo"},

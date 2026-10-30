@@ -618,7 +618,7 @@ def test_a_porta_sem_numero_se_chama_pelo_devpath() -> None:
     assert ee.rotulo_do_numero("") is None
 
 
-def test_o_nome_que_ela_digita_nao_vira_marcacao(mesa: Any, monkeypatch: pytest.MonkeyPatch,
+def test_o_nome_que_o_usuario_digita_nao_vira_marcacao(mesa: Any, monkeypatch: pytest.MonkeyPatch,
                                                   ) -> None:
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 

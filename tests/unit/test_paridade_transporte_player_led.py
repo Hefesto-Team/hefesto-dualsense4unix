@@ -45,7 +45,7 @@ def _com_leds_do_hefesto(handle: Any) -> Any:
 
 @pytest.mark.parametrize(("jogador", "bitmask"), JOGADORES)
 def test_o_padrao_do_jogador_sai_no_byte_certo_nos_dois(
-    ds5_de_bancada: Any,
+    ds5_de_ensaio: Any,
     transporte: EnvelopeDeTransporte,
     jogador: str,
     bitmask: int,
@@ -53,7 +53,7 @@ def test_o_padrao_do_jogador_sai_no_byte_certo_nos_dois(
     """common[43] leva o padrão, no cabo E no rádio."""
     from pydualsense.enums import PlayerID
 
-    handle = _com_leds_do_hefesto(ds5_de_bancada)
+    handle = _com_leds_do_hefesto(ds5_de_ensaio)
     handle.light.playerNumber = getattr(PlayerID, jogador)
 
     report = handle.prepareReport()
@@ -70,14 +70,14 @@ def test_o_padrao_do_jogador_sai_no_byte_certo_nos_dois(
 
 
 def test_o_padrao_do_jogador_e_identico_nos_dois_e_so_o_envelope_muda(
-    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
+    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_ensaio: Any
 ) -> None:
     """O mesmo jogador pinta o mesmo padrão no cabo e no rádio."""
     from pydualsense.enums import PlayerID
 
     vistos: dict[str, int] = {}
     for envelope in transportes:
-        handle = _com_leds_do_hefesto(fabrica_de_bancada(envelope))
+        handle = _com_leds_do_hefesto(fabrica_de_ensaio(envelope))
         handle.light.playerNumber = PlayerID.PLAYER_3
         vistos[envelope.nome] = envelope.extrair_common(handle.prepareReport())[
             PLAYER_LED
@@ -91,14 +91,14 @@ def test_o_padrao_do_jogador_e_identico_nos_dois_e_so_o_envelope_muda(
 
 
 def test_sob_supressao_o_player_led_nao_sai_em_nenhum_dos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Com o kernel dono dos LED, nem o byte nem a autorização saem."""
     from pydualsense.enums import PlayerID
 
-    ds5_de_bancada._suppress_leds = True
-    ds5_de_bancada.light.playerNumber = PlayerID.PLAYER_4
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    ds5_de_ensaio._suppress_leds = True
+    ds5_de_ensaio.light.playerNumber = PlayerID.PLAYER_4
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
 
     assert common[PLAYER_LED] == 0, (
         f"{transporte.nome}: o player-LED vazou sob supressão"

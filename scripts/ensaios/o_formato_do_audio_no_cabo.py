@@ -147,7 +147,7 @@ def main() -> int:
         return 1
 
     common = af.common_de_audio(
-        volume=af.VOLUME_QUE_ELA_OUVIU,
+        volume=af.VOLUME_QUE_O_USUARIO_OUVIU,
         rota=rep.SAIDA_SO_NO_ALTO_FALANTE,
         preamp=rep.SP_PREAMP_GAIN_PADRAO,
     )

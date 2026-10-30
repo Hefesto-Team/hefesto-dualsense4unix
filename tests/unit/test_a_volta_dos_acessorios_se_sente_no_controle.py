@@ -147,7 +147,7 @@ def test_o_para_apaga_as_luzinhas() -> None:
     assert mesa.luzinhas[-1][1] == (False,) * 5
 
 
-def test_na_camada_de_uma_mao_o_medidor_fica_enquanto_ela_vale() -> None:
+def test_na_camada_de_uma_mao_o_medidor_fica_enquanto_o_usuario_vale() -> None:
     volta, mesa = _volta()
     volta.ao_estado(_estado(4), mesa.agora)
     inicio = mesa.agora
@@ -599,7 +599,7 @@ async def _pedir(curto: Path, metodo: str, params: dict[str, Any]) -> dict[str, 
         cliente.fechar()
 
 
-def test_sem_a_permissao_a_porta_recusa_com_o_nome_dela(curto: Path) -> None:
+def test_sem_a_permissao_a_porta_recusa_com_o_nome_do_usuario(curto: Path) -> None:
     async def corrida() -> None:
         volta, mesa = _com_o_pulso()
         porta = await _porta(curto, ["ler:acessorios.gesto"], volta, mesa)

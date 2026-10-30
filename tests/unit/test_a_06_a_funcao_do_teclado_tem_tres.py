@@ -17,7 +17,7 @@ _SELECT = r'<select[^>]*data-campo="teclado-estado"[^>]*>(.*?)</select>'
 
 OS_DOIS_MUNDOS = [
     pytest.param(True, id="a-pagina-publicada-de-hoje"),
-    pytest.param(False, id="a-bancada-do-dia-da-publicacao"),
+    pytest.param(False, id="o-ensaio-do-dia-da-publicacao"),
 ]
 
 
@@ -74,7 +74,7 @@ def ctx():
     return pacotes.Contexto(state={"active_profile": "regua"})
 
 
-def test_as_tres_palavras_dela_estao_no_desenho():
+def test_as_tres_palavras_do_usuario_estao_no_desenho():
     """O gerador e o pacote falam a MESMA lista, e ela é a dela."""
     import aba06
     from pacotes import a06_navegacao as mod
@@ -87,7 +87,7 @@ def test_as_tres_palavras_dela_estao_no_desenho():
         "a lista não nasce no padrão que ela escolheu")
 
 
-def test_o_desenho_nasce_no_padrao_dela():
+def test_o_desenho_nasce_no_padrao_do_usuario():
     """`Só fora do jogo` marcada: o padrão de produto, com as outras duas ao lado."""
     import onde
     from pacotes import a06_navegacao as mod

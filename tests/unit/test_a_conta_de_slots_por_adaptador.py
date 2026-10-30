@@ -36,7 +36,7 @@ def _sem_dois_pontos(mac: str) -> str:
     return mac.replace(":", "")
 
 
-def _bancada(mapa: dict[str, str]) -> dict[str, Any]:
+def _ensaio(mapa: dict[str, str]) -> dict[str, Any]:
     """Um `/sys/class/hidraw` de mentira: `{uniq do controle: MAC do adaptador}`."""
     nos = {f"hidraw{i}": (uniq, phys) for i, (uniq, phys) in enumerate(mapa.items())}
     textos = {
@@ -64,7 +64,7 @@ def test_dois_controles_no_mesmo_adaptador_viram_um_plano_com_dois_jogadores() -
     """MORDIDA 1. Um plano, dois jogadores, e a conta somada — não duas de 260."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2)],
-        **_bancada({P1: HUB_A, P2: HUB_A}),
+        **_ensaio({P1: HUB_A, P2: HUB_A}),
     )
     assert list(planos) == [HUB_A], (
         "o agrupamento é por ADAPTADOR: dois planos aqui seriam duas barras de "
@@ -80,7 +80,7 @@ def test_dois_adaptadores_nao_se_misturam() -> None:
     """Cada `HID_PHYS` é uma fila, e a conta de uma não empresta a da outra."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2), _controle(P3, 3)],
-        **_bancada({P1: HUB_A, P2: HUB_A, P3: HUB_B}),
+        **_ensaio({P1: HUB_A, P2: HUB_A, P3: HUB_B}),
     )
     assert set(planos) == {HUB_A, HUB_B}
     assert planos[HUB_A].agora.controles == 2
@@ -91,7 +91,7 @@ def test_o_controle_no_cabo_nao_ocupa_fatia_de_ninguem() -> None:
     """Controle negativo medido nesta bancada em 22/08: no fio não há rádio."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1, transport="usb"), _controle(P2, 2)],
-        **_bancada({P2: HUB_A}),
+        **_ensaio({P2: HUB_A}),
     )
     assert planos[HUB_A].agora.controles == 1
     assert planos[HUB_A].jogadores == (2,)
@@ -101,7 +101,7 @@ def test_controle_sem_endereco_legivel_nao_empresta_o_adaptador_do_vizinho() -> 
     """Sem `HID_PHYS` de MAC a resposta é "não sei", nunca o hub do vizinho."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2)],
-        **_bancada({P1: HUB_A, P2: "usb-0000:0c:00.3-1/input3"}),
+        **_ensaio({P1: HUB_A, P2: "usb-0000:0c:00.3-1/input3"}),
     )
     assert planos[HUB_A].jogadores == (1,)
     assert planos[""].jogadores == (2,)
@@ -112,7 +112,7 @@ def test_o_jogador_sem_numero_nao_e_chutado_pela_posicao() -> None:
     """`índice + 1` já deu "Jogador 4" a DOIS cards da mesma mesa (22/08)."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, None), _controle(P2, 2)],
-        **_bancada({P1: HUB_A, P2: HUB_A}),
+        **_ensaio({P1: HUB_A, P2: HUB_A}),
     )
     plano = planos[HUB_A]
     assert plano.jogadores == (None, 2)
@@ -124,7 +124,7 @@ def test_a_ponte_pedida_e_a_ponte_de_pe_sao_duas_contas() -> None:
         [_controle(P1, 1)],
         com_ponte_de_mic=(),
         mic_declarado=[_sem_dois_pontos(P1)],
-        **_bancada({P1: HUB_A}),
+        **_ensaio({P1: HUB_A}),
     )
     plano = planos[HUB_A]
     assert plano.planejada.slots_audio == pytest.approx(HZ_AUDIO_COM_MIC)
@@ -140,7 +140,7 @@ def test_o_declarado_que_nao_subiu_aparece_na_tela() -> None:
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1)],
         mic_declarado=[_sem_dois_pontos(P1)],
-        **_bancada({P1: HUB_A}),
+        **_ensaio({P1: HUB_A}),
     )
     assert planos[HUB_A].declarado_que_nao_subiu
 
@@ -151,7 +151,7 @@ def test_quando_a_ponte_subiu_a_tela_nao_tem_nada_a_corrigir() -> None:
         [_controle(P1, 1)],
         com_ponte_de_mic=[_sem_dois_pontos(P1)],
         mic_declarado=[_sem_dois_pontos(P1)],
-        **_bancada({P1: HUB_A}),
+        **_ensaio({P1: HUB_A}),
     )
     plano = planos[HUB_A]
     assert not plano.declarado_que_nao_subiu
@@ -169,7 +169,7 @@ def _mesa_de_cinco_num_hub_so() -> dict[str, plano_de_radio.PlanoDoAdaptador]:
         ],
         com_ponte_de_mic=[_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)],
         apelidos={HUB_A: "Hub 9"},
-        **_bancada(dict.fromkeys((P1, P2, P3, P4, P5), HUB_A)),
+        **_ensaio(dict.fromkeys((P1, P2, P3, P4, P5), HUB_A)),
     )
 
 
@@ -186,7 +186,7 @@ def _cinco_apertados_mais_um_folgado() -> dict[str, plano_de_radio.PlanoDoAdapta
         ],
         com_ponte_de_mic=[_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)],
         apelidos={HUB_A: "Hub 9", HUB_B: "Hub 15"},
-        **_bancada(
+        **_ensaio(
             {P1: HUB_A, P2: HUB_A, P3: HUB_A, P4: HUB_A, P5: HUB_A, P6: HUB_B}
         ),
     )
@@ -213,7 +213,7 @@ def test_o_balde_do_nao_sei_nunca_e_destino_de_ordem() -> None:
         ],
         com_ponte_de_mic=[_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)],
         apelidos={HUB_A: "Hub 9"},
-        **_bancada(
+        **_ensaio(
             {
                 P1: HUB_A,
                 P2: HUB_A,
@@ -264,7 +264,7 @@ def test_a_mesa_folgada_nao_manda_mudar_nada() -> None:
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2)],
         apelidos={HUB_A: "Hub 9", HUB_B: "Hub 15"},
-        **_bancada({P1: HUB_A, P2: HUB_B}),
+        **_ensaio({P1: HUB_A, P2: HUB_B}),
     )
     assert plano_de_radio.ordem_de_redistribuicao(planos) is None
 
@@ -295,7 +295,7 @@ def test_o_plano_nao_carrega_palavra_de_culpa() -> None:
 def test_a_tela_nunca_chama_o_adaptador_de_hci() -> None:
     """`hciN` é a VAGA, não o aparelho — e o índice inverte entre boots. (D-HCI1-BLOQUEADO)"""
     planos = plano_de_radio.plano_por_adaptador(
-        [_controle(P1, 1)], **_bancada({P1: HUB_A})
+        [_controle(P1, 1)], **_ensaio({P1: HUB_A})
     )
     plano = planos[HUB_A]
     assert plano.nome_na_tela == plano_de_radio.ADAPTADOR_SEM_NOME

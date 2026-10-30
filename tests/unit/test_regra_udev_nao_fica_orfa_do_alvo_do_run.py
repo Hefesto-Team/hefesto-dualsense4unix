@@ -103,7 +103,7 @@ def test_toda_regra_cola_carrega_o_test_do_proprio_alvo() -> None:
             )
 
 
-def test_o_sentinela_da_regra_da_unit_e_o_execstart_dela() -> None:
+def test_o_sentinela_da_regra_da_unit_e_o_execstart_do_usuario() -> None:
     """Se a unit mudar de `ExecStart`, o `TEST==` da regra tem de mudar junto."""
     for regra, alvos in sorted(_regras_cola().items()):
         texto = (ASSETS / regra).read_text(encoding="utf-8")

@@ -264,7 +264,7 @@ def test_sem_identidade_o_radio_volta_ao_nome_de_sempre(pactl, par) -> None:  # 
         ponte.parar()
 
 
-def test_a_ponte_nao_derruba_o_canal_de_quem_ela_nao_abriu(pactl, par) -> None:  # type: ignore[no-untyped-def]
+def test_a_ponte_nao_derruba_o_canal_de_quem_o_usuario_nao_abriu(pactl, par) -> None:  # type: ignore[no-untyped-def]
     """Fechar o que não é seu tiraria o microfone de quem não pediu nada."""
     ja = canal.abrir(P1, "canal de quem chegou antes")
     assert ja is not None
@@ -376,14 +376,14 @@ def test_o_parar_desliga_o_microfone_mesmo_sem_ter_ligado(pactl, par) -> None:  
     )
 
 
-def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
+def test_sem_ouvinte_o_ato_do_usuario_liga_o_microfone(pactl, par) -> None:  # type: ignore[no-untyped-def]
     """SUSPENDED + a palavra de produto: o microfone vai ao ar."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
     try:
         assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF])
-        ponte.dizer_o_pedido_dela(True)
+        ponte.dizer_o_pedido_do_usuario(True)
         assert _esperar(
             lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON]
         ), (
@@ -394,14 +394,14 @@ def test_sem_ouvinte_o_ato_dela_liga_o_microfone(pactl, par) -> None:  # type: i
         ponte.parar()
 
 
-def test_o_mudo_dela_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-untyped-def]
+def test_o_mudo_do_usuario_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-untyped-def]
     """RUNNING + `False`: *"não quero ser ouvida"* vence um app gravando."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
     try:
         assert _esperar(lambda: par.pedidos_de_mic() == [bt.AUDIO_CONTROL_MIC_ON])
-        ponte.dizer_o_pedido_dela(False)
+        ponte.dizer_o_pedido_do_usuario(False)
         assert _esperar(
             lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF]
         ), (
@@ -412,15 +412,15 @@ def test_o_mudo_dela_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-un
         ponte.parar()
 
 
-def test_sem_a_palavra_dela_o_ouvinte_continua_dono(pactl, par) -> None:  # type: ignore[no-untyped-def]
+def test_sem_a_palavra_do_usuario_o_ouvinte_continua_dono(pactl, par) -> None:  # type: ignore[no-untyped-def]
     """`None` devolve a decisão ao ouvinte — a economia de 06/09 fica inteira."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
     try:
-        ponte.dizer_o_pedido_dela(True)
+        ponte.dizer_o_pedido_do_usuario(True)
         assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON])
-        ponte.dizer_o_pedido_dela(None)
+        ponte.dizer_o_pedido_do_usuario(None)
         assert _esperar(
             lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF]
         ), (
@@ -431,15 +431,15 @@ def test_sem_a_palavra_dela_o_ouvinte_continua_dono(pactl, par) -> None:  # type
         ponte.parar()
 
 
-def test_o_parar_esquece_a_palavra_dela(pactl, par) -> None:  # type: ignore[no-untyped-def]
+def test_o_parar_esquece_a_palavra_do_usuario(pactl, par) -> None:  # type: ignore[no-untyped-def]
     """A terceira das cinco portas: o pedido morre com a ponte."""
     pactl.estado = "SUSPENDED"
     ponte = _ponte(P1, par)
     assert ponte.iniciar()
-    ponte.dizer_o_pedido_dela(True)
+    ponte.dizer_o_pedido_do_usuario(True)
     assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON])
     ponte.parar()
-    assert ponte._pedido_dela is None, (
+    assert ponte._pedido_do_usuario is None, (
         "o `parar()` deixou a palavra dela de pé; a ponte seguinte nasceria "
         "com o microfone no ar sem ninguém ter pedido"
     )

@@ -497,7 +497,7 @@ def test_a_tabela_com_o_jogo_entrega_o_ajuste_e_solta_o_clique_travado() -> None
     assert soltou, "sair do jogo tem de soltar o clique que o travador segura"
 
 
-@pytest.mark.parametrize("suspenso", [False, True], ids=["com-a-emulacao", "suspensa-por-ela"])
+@pytest.mark.parametrize("suspenso", [False, True], ids=["com-a-emulacao", "suspensa-pelo-usuario"])
 def test_entrar_no_jogo_solta_o_clique_travado_do_mouse_do_desktop(
     monkeypatch: pytest.MonkeyPatch, suspenso: bool,
 ) -> None:

@@ -49,7 +49,7 @@ def test_as_dez_publicadas_passam(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_as_dez_do_mockup_passam(capsys: pytest.CaptureFixture[str]) -> None:
-    assert regua.main(["--bancada"]) == 0, capsys.readouterr()
+    assert regua.main(["--ensaio"]) == 0, capsys.readouterr()
 
 
 @pytest.mark.parametrize("frase", ["Salvar perfil", "Abrir a Steam", "Modo Freestyle",
@@ -67,7 +67,7 @@ def test_recusa_a_maiuscula_no_meio(frase: str, acusada: str) -> None:
 
 def test_salvar_perfil_devolvido_ao_mockup_reprova(tmp_path: pathlib.Path) -> None:
     """A mordida na página: a cópia do mockup com «Salvar Perfil» de volta é acusada."""
-    for p in _dez(regua.BANCADA):
+    for p in _dez(regua.ENSAIO):
         shutil.copy(p, tmp_path / p.name)
     alvo = tmp_path / "10-perfis.html"
     texto = alvo.read_text(encoding="utf-8")
@@ -136,20 +136,20 @@ def test_os_tres_mapas_entram_na_leitura(tmp_path: pathlib.Path, monkeypatch: py
 
     MORDIDA: tire `mapas` da lista das páginas no `main` da régua — este caso reprova.
     """
-    bancada = tmp_path / "mockup"
-    bancada.mkdir()
-    for p in [*_dez(regua.BANCADA), *(regua.BANCADA / m for m in regua.MAPAS)]:
-        shutil.copy(p, bancada / p.name)
-    monkeypatch.setattr(regua, "BANCADA", bancada)
+    ensaio = tmp_path / "mockup"
+    ensaio.mkdir()
+    for p in [*_dez(regua.ENSAIO), *(regua.ENSAIO / m for m in regua.MAPAS)]:
+        shutil.copy(p, ensaio / p.name)
+    monkeypatch.setattr(regua, "ENSAIO", ensaio)
     monkeypatch.setattr(regua, "RAIZ", tmp_path)
-    assert regua.main(["--bancada"]) == 0, capsys.readouterr()
+    assert regua.main(["--ensaio"]) == 0, capsys.readouterr()
 
-    alvo = bancada / "mapa-do-radio.html"
+    alvo = ensaio / "mapa-do-radio.html"
     texto = alvo.read_text(encoding="utf-8")
     assert "Mapear entradas</a>" in texto
     alvo.write_text(texto.replace("Mapear entradas</a>", "Mapear Entradas</a>"), encoding="utf-8")
 
-    assert regua.main(["--bancada"]) == 1
+    assert regua.main(["--ensaio"]) == 1
     assert "mapa-do-radio.html" in capsys.readouterr().out
 
 
@@ -160,8 +160,8 @@ def test_o_mapa_com_o_js_da_maiuscula_em_toda_palavra_reprova(tmp_path: pathlib.
     MORDIDA: esvazie `TITULO_EM_TODA_PALAVRA` (`re.compile(r"(?!)")`) — este caso reprova.
     """
     alvo = tmp_path / "mapa-das-portas.html"
-    texto = (regua.BANCADA / "mapa-das-portas.html").read_text(encoding="utf-8")
-    assert regua.titulo_em_toda_palavra([regua.BANCADA / "mapa-das-portas.html"]) == []
+    texto = (regua.ENSAIO / "mapa-das-portas.html").read_text(encoding="utf-8")
+    assert regua.titulo_em_toda_palavra([regua.ENSAIO / "mapa-das-portas.html"]) == []
     alvo.write_text(texto.replace(
         "</script>", "function emTitulo(raiz) { if (!raiz) return; }\n</script>", 1),
         encoding="utf-8")

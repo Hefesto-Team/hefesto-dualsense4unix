@@ -106,11 +106,11 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
                  prova_no_aparelho=False, entre=2500)
 
 
-def _desviar_para_a_bancada(pilha: list[pathlib.Path]) -> None:
+def _desviar_para_o_ensaio(pilha: list[pathlib.Path]) -> None:
     """Aponta o PUBLICADO do piloto para uma cópia da bancada, em /tmp."""
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="ensaio-jogar-"))
     pilha.append(tmp)
-    shutil.copy2(onde.BANCADA / ABA, tmp / ABA)
+    shutil.copy2(onde.ENSAIO / ABA, tmp / ABA)
     onde.PUBLICADO = tmp
 
 
@@ -122,7 +122,7 @@ def main() -> int:
 
     lixo: list[pathlib.Path] = []
     if not opcoes.publicado:
-        _desviar_para_a_bancada(lixo)
+        _desviar_para_o_ensaio(lixo)
 
     ipcs: list[tuple[str, dict]] = []
     ponte.chamar = lambda metodo, timeout=None, **params: (  # type: ignore[assignment]

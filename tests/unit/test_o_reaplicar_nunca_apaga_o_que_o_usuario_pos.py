@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 APPID = "1912410"
 OPCOES = "VKD3D_CONFIG=no_upload_hvv %command%"
-DELA = 'WINEDLLOVERRIDES="xgameruntime=n" &&'
+DO_USUARIO = 'WINEDLLOVERRIDES="xgameruntime=n" &&'
 TOKEN = re.compile(r"""(?:[^\s'"]|'[^']*'|"[^"]*")+""")
 COOCORRENTES = ("SDL_JOYSTICK_HIDAPI=0", "PROTON_ENABLE_HIDRAW=1")
 CACHE = ("__GL_SHADER_DISK_CACHE=1", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1")
@@ -25,7 +25,7 @@ def _tokens(linha: str) -> list[str]:
     return TOKEN.findall(linha)
 
 
-def _tokens_dela(rng: random.Random) -> list[str]:
+def _tokens_do_usuario(rng: random.Random) -> list[str]:
     """Pedaços que um usuário escreve à mão, inclusive os que parecem os nossos."""
     pecas = [
         "MANGOHUD=1", "DXVK_HUD=fps", "PROTON_LOG=1", "-windowed", "gamemoderun",
@@ -36,9 +36,9 @@ def _tokens_dela(rng: random.Random) -> list[str]:
     return [rng.choice(pecas) for _ in range(rng.randint(0, 5))]
 
 
-def _linha_dela(rng: random.Random) -> str:
+def _linha_do_usuario(rng: random.Random) -> str:
     """Uma linha sem a nossa assinatura, com `%command%` no meio de pedaços dela."""
-    antes, depois = _tokens_dela(rng), _tokens_dela(rng)
+    antes, depois = _tokens_do_usuario(rng), _tokens_do_usuario(rng)
     return " ".join([*antes, "%command%", *depois])
 
 
@@ -51,7 +51,7 @@ def test_o_migrate_e_o_strip_se_desfazem_em_toda_linha_sem_a_nossa_assinatura() 
     rng = random.Random(20261013)
     vistos = 0
     for _ in range(600):
-        v = _linha_dela(rng)
+        v = _linha_do_usuario(rng)
         if slo.has_poison(v) or slo.WRAPPER_PREFIX in v or v.strip() == "%command%":
             continue
         vistos += 1
@@ -61,42 +61,42 @@ def test_o_migrate_e_o_strip_se_desfazem_em_toda_linha_sem_a_nossa_assinatura() 
     assert vistos > 300
 
 
-def test_o_veneno_legado_sai_inteiro_e_o_que_e_dela_fica_na_conta_exata() -> None:
+def test_o_veneno_legado_sai_inteiro_e_o_que_e_do_usuario_fica_na_conta_exata() -> None:
     """O bloco contíguo é nosso; o mesmo token separado dele por algo dela é do usuário."""
     rng = random.Random(7)
     for _ in range(300):
-        antes, depois = _tokens_dela(rng), _tokens_dela(rng)
+        antes, depois = _tokens_do_usuario(rng), _tokens_do_usuario(rng)
         v = " ".join([*antes, "SEP=1", BLOCO_LEGADO, "SEP=2", *depois, "%command%"])
-        dela = Counter(_tokens(" ".join([*antes, "SEP=1", "SEP=2", *depois, "%command%"])))
+        do_usuario = Counter(_tokens(" ".join([*antes, "SEP=1", "SEP=2", *depois, "%command%"])))
         tirado = Counter(_tokens(slo.strip_value(v)))
-        assert tirado == dela + Counter(CACHE), (v, slo.strip_value(v))
+        assert tirado == do_usuario + Counter(CACHE), (v, slo.strip_value(v))
         assert Counter(_tokens(slo.migrate_value(v))) == (
-            dela + Counter(_tokens(slo.WRAPPER_PREFIX))), (v, slo.migrate_value(v))
+            do_usuario + Counter(_tokens(slo.WRAPPER_PREFIX))), (v, slo.migrate_value(v))
         assert slo.IGNORE_SIGNATURE not in slo.strip_value(v)
 
 
 @pytest.mark.parametrize("posicao", ["antes", "meio", "depois"])
-def test_o_co_ocorrente_dela_longe_do_nosso_par_nao_some(posicao: str) -> None:
+def test_o_co_ocorrente_do_usuario_longe_do_nosso_par_nao_some(posicao: str) -> None:
     """Medido: com o par legado na linha, o `HIDAPI=0` que ela pôs à mão ia junto."""
-    dela = COOCORRENTES[1]
+    do_usuario = COOCORRENTES[1]
     pedacos = {
-        "antes": f"{dela} MANGOHUD=1 {BLOCO_LEGADO} %command%",
-        "meio": f"{BLOCO_LEGADO} MANGOHUD=1 {dela} %command%",
-        "depois": f"{BLOCO_LEGADO} MANGOHUD=1 {dela} %command%",
+        "antes": f"{do_usuario} MANGOHUD=1 {BLOCO_LEGADO} %command%",
+        "meio": f"{BLOCO_LEGADO} MANGOHUD=1 {do_usuario} %command%",
+        "depois": f"{BLOCO_LEGADO} MANGOHUD=1 {do_usuario} %command%",
     }
     v = pedacos[posicao]
-    assert dela in _tokens(slo.strip_value(v))
-    assert dela in _tokens(slo.migrate_value(v))
+    assert do_usuario in _tokens(slo.strip_value(v))
+    assert do_usuario in _tokens(slo.migrate_value(v))
     assert COOCORRENTES[0] not in _tokens(slo.migrate_value(v))
 
 
-def test_a_linha_dela_com_prefixo_antes_do_atalho_atravessa_o_migrate_e_o_strip() -> None:
-    v = f"{DELA} sh -c 'echo oi' && {BLOCO_LEGADO} %command%"
+def test_a_linha_do_usuario_com_prefixo_antes_do_atalho_atravessa_o_migrate_e_o_strip() -> None:
+    v = f"{DO_USUARIO} sh -c 'echo oi' && {BLOCO_LEGADO} %command%"
     migrado = slo.migrate_value(v)
-    assert DELA in migrado and "sh -c 'echo oi'" in migrado
+    assert DO_USUARIO in migrado and "sh -c 'echo oi'" in migrado
     assert slo.IGNORE_SIGNATURE not in migrado
     depois = slo.strip_value(migrado)
-    assert depois.startswith(DELA) and "sh -c 'echo oi'" in depois
+    assert depois.startswith(DO_USUARIO) and "sh -c 'echo oi'" in depois
 
 
 def _vdf(linha: str, copias: tuple[str, ...] = ()) -> str:
@@ -141,15 +141,15 @@ class _Lar:
         return slo.read_launch_options_by_appid(self.vdf.read_text(encoding="utf-8"))[APPID]
 
 
-def test_a_tabela_sobre_a_linha_do_minecraft_mantem_o_prefixo_dela(tmp_path: Path) -> None:
+def test_a_tabela_sobre_a_linha_do_minecraft_mantem_o_prefixo_do_usuario(tmp_path: Path) -> None:
     """O caso vivo: `WINEDLLOVERRIDES="…" &&` só existe no vdf. ARRANQUE a composição
     (volte a substituição inteira) e a linha perde o prefixo."""
-    lar = _Lar(tmp_path, f"{DELA} {slo.WRAPPER_LAUNCH}")
+    lar = _Lar(tmp_path, f"{DO_USUARIO} {slo.WRAPPER_LAUNCH}")
     lar.tabela(OPCOES)
     relato = lar.aplica()
     assert relato["status"] == opj.APLICADO, relato
     linha = lar.linha()
-    assert linha.startswith(DELA)
+    assert linha.startswith(DO_USUARIO)
     assert slo.WRAPPER_PREFIX in linha and "VKD3D_CONFIG=no_upload_hvv" in linha
     assert linha.endswith("%command%")
     assert lar.confere()["defeitos"] == []
@@ -158,7 +158,7 @@ def test_a_tabela_sobre_a_linha_do_minecraft_mantem_o_prefixo_dela(tmp_path: Pat
 def test_reaplicar_nao_escreve_de_novo_e_a_troca_da_tabela_leva_so_o_nosso_trecho(
     tmp_path: Path,
 ) -> None:
-    lar = _Lar(tmp_path, f"{DELA} {slo.WRAPPER_LAUNCH} -windowed")
+    lar = _Lar(tmp_path, f"{DO_USUARIO} {slo.WRAPPER_LAUNCH} -windowed")
     lar.tabela(OPCOES)
     assert lar.aplica()["status"] == opj.APLICADO
     primeira = lar.linha()
@@ -171,11 +171,11 @@ def test_reaplicar_nao_escreve_de_novo_e_a_troca_da_tabela_leva_so_o_nosso_trech
     assert lar.aplica()["status"] == opj.APLICADO
     nova = lar.linha()
     assert "VKD3D_CONFIG" not in nova and "DXVK_ASYNC=1" in nova
-    assert nova.startswith(DELA) and nova.endswith("-windowed")
+    assert nova.startswith(DO_USUARIO) and nova.endswith("-windowed")
     assert nova.count(slo.WRAPPER_PREFIX) == 1
 
 
-def test_a_variavel_dela_ao_lado_das_da_tabela_fica(tmp_path: Path) -> None:
+def test_a_variavel_do_usuario_ao_lado_das_da_tabela_fica(tmp_path: Path) -> None:
     lar = _Lar(tmp_path, "MANGOHUD=1 %command%")
     lar.tabela(OPCOES)
     assert lar.aplica()["status"] == opj.APLICADO
@@ -190,13 +190,14 @@ def test_a_variavel_dela_ao_lado_das_da_tabela_fica(tmp_path: Path) -> None:
 
 def test_as_copias_no_bloco_filho_seguem_o_mesmo_valor_composto(tmp_path: Path) -> None:
     lar = _Lar(
-        tmp_path, f"{DELA} {slo.WRAPPER_LAUNCH}", copias=(slo._vdf_escape(slo.WRAPPER_LAUNCH),))
+        tmp_path, f"{DO_USUARIO} {slo.WRAPPER_LAUNCH}",
+        copias=(slo._vdf_escape(slo.WRAPPER_LAUNCH),))
     lar.tabela(OPCOES)
     assert lar.aplica()["status"] == opj.APLICADO
     texto = lar.vdf.read_text(encoding="utf-8")
     todas = opj.opcoes_lidas_do_jogo(texto, APPID)
     assert len(todas) == 2 and todas[0] == todas[1]
-    assert slo._vdf_unescape(todas[0]).startswith(DELA)
+    assert slo._vdf_unescape(todas[0]).startswith(DO_USUARIO)
 
 
 def test_a_linha_que_nao_se_compoe_fica_como_estava_e_o_relato_diz(
@@ -208,16 +209,16 @@ def test_a_linha_que_nao_se_compoe_fica_como_estava_e_o_relato_diz(
     antes = lar.vdf.read_text(encoding="utf-8")
     relato = lar.aplica()
     assert lar.vdf.read_text(encoding="utf-8") == antes
-    assert {"vdf": str(lar.vdf), "appid": APPID, "reason": opj.LINHA_DELA_DIVERGE} in relato[
+    assert {"vdf": str(lar.vdf), "appid": APPID, "reason": opj.LINHA_DO_USUARIO_DIVERGE} in relato[
         "pulados"]
     assert relato["aplicados"] == []
     opj._imprimir(relato)
-    assert opj.LINHA_DELA_DIVERGE in capsys.readouterr().err
+    assert opj.LINHA_DO_USUARIO_DIVERGE in capsys.readouterr().err
 
 
 def test_o_valor_composto_e_o_que_a_releitura_confere(tmp_path: Path) -> None:
     """A releitura do `aplicar` compara com o composto, não com a linha da tabela."""
-    lar = _Lar(tmp_path, f"{DELA} {slo.WRAPPER_LAUNCH}")
+    lar = _Lar(tmp_path, f"{DO_USUARIO} {slo.WRAPPER_LAUNCH}")
     lar.tabela(OPCOES)
     relato = lar.aplica()
     assert relato["desfeitos"] == [] and relato["status"] == opj.APLICADO
@@ -233,15 +234,15 @@ def test_compor_linha_nas_bordas() -> None:
     assert com_args is not None and com_args.endswith("%command% -w")
 
 
-def test_o_atalho_entra_no_trecho_que_roda_o_jogo_e_nunca_antes_do_e_comercial_dela() -> None:
+def test_o_atalho_entra_no_trecho_que_roda_o_jogo_e_nunca_antes_do_e_comercial_do_usuario() -> None:
     """Sem o atalho na linha, ele vai depois do `&&` dela: antes, o `env` do wrapper
     receberia a variável dela como comando e o jogo abriria sem o Hefesto."""
     desejada = opj.linha_desejada(OPCOES, com_atalho=True)
-    composta = opj.compor_linha(f"{DELA} %command%", desejada)
-    assert composta == f"{DELA} {desejada}"
+    composta = opj.compor_linha(f"{DO_USUARIO} %command%", desejada)
+    assert composta == f"{DO_USUARIO} {desejada}"
 
 
-def test_o_comando_dela_antes_do_jogo_fica_depois_das_variaveis_da_tabela() -> None:
+def test_o_comando_do_usuario_antes_do_jogo_fica_depois_das_variaveis_da_tabela() -> None:
     """`gamemoderun VKD3D_CONFIG=… %command%` rodaria a variável como programa."""
     desejada = opj.linha_desejada(OPCOES, com_atalho=True)
     composta = opj.compor_linha("MANGOHUD=1 gamemoderun %command% -w", desejada)

@@ -127,7 +127,7 @@ class TestOCarimboPreencheOSilencioDoPerfil:
 
 
 class TestOPerfilManda:
-    def test_carimbo_discordando_nao_troca_a_mascara_dela(
+    def test_carimbo_discordando_nao_troca_a_mascara_do_usuario(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Trocar o modo de um jogo do usuário sem ela pedir é a regra ao contrário."""

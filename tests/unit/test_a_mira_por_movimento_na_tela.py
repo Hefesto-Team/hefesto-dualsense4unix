@@ -226,7 +226,7 @@ def test_o_arranjo_desligado_nao_move_nada() -> None:
     assert rot.deflexao((0.0, 200.0, 0.0), rot.SO_NAS_PECAS) == (0, 0)
 
 
-def test_o_arranjo_desligado_guarda_os_numeros_dela() -> None:
+def test_o_arranjo_desligado_guarda_os_numeros_do_usuario() -> None:
     """`montar` devolve o arranjo mesmo com a mira apagada, e o `ativo()` não o"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
@@ -590,7 +590,7 @@ def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
     return asyncio.run(servidor._handlers["mira.set"](params))
 
 
-def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
+def test_o_que_o_usuario_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
     """O chip grava NO PERFIL daquela peça, e só o que o usuário mexeu."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
@@ -704,7 +704,7 @@ def test_o_metodo_esta_no_dispatcher() -> None:
 _RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
-def _cartoes_da_bancada() -> list[tuple[str, str]]:
+def _cartoes_do_ensaio() -> list[tuple[str, str]]:
     """`(abertura, miolo)` de cada cartão da aba Controles, na bancada."""
     doc = (_RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
     doc = doc.split('<div class="nota">', 1)[0]
@@ -719,7 +719,7 @@ def test_a_mira_mora_embaixo_do_analogico_e_nao_no_cabecalho() -> None:
     Ela mora embaixo de cada analógico, numa linha só, «Mira virtual». MORDIDA: ponha o
     `chip-da-mira` de volta no grupo dos sensores e isto reprova.
     """
-    for abertura, miolo in _cartoes_da_bancada():
+    for abertura, miolo in _cartoes_do_ensaio():
         assert "chip-da-mira" not in miolo and 'data-gesto="mira"' not in miolo, abertura
         grupo = miolo.split('<span class="sensores-peca"', 1)[1].split("\n          </span>", 1)[0]
         assert grupo.index('data-sensor="giroscopio"') < grupo.index('data-sensor="acelerometro"')
@@ -732,7 +732,7 @@ def test_a_mira_mora_embaixo_do_analogico_e_nao_no_cabecalho() -> None:
 
 def test_o_chip_giroscopio_nao_mudou() -> None:
     """A palavra de produto: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro."""
-    for abertura, miolo in _cartoes_da_bancada():
+    for abertura, miolo in _cartoes_do_ensaio():
         giro = re.findall(r'<button class="sw[^"]*" data-gesto="sensor" '
                           r'data-sensor="giroscopio" data-campo="giro-ligado"[^>]*>'
                           r'<span class="p"></span>([^<]*)</button>', miolo)

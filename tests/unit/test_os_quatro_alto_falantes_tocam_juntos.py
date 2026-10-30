@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as ele
 from tests.unit.test_os_quatro_microfones_ficam_no_ar import (
-    MESA_DELA,
+    MESA_DO_USUARIO,
     P1,
     P2,
     P3,
@@ -33,8 +33,8 @@ RADIO = "bluetooth"
 CABO = "usb"
 
 MESAS: dict[str, tuple[tuple[str, str], ...]] = {
-    "a-mesa-dela": MESA_DELA,
-    "os-quatro-no-radio": tuple((u, RADIO) for u, _ in MESA_DELA),
+    "a-mesa-do-usuario": MESA_DO_USUARIO,
+    "os-quatro-no-radio": tuple((u, RADIO) for u, _ in MESA_DO_USUARIO),
 }
 
 POS_ENABLES = 4
@@ -78,7 +78,7 @@ class _PonteDeMicComEfeito:
         self.no = SimpleNamespace(uniq=uniq, caminho=caminho)
         self.mic_no_ar = False
 
-    def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
+    def dizer_o_pedido_do_usuario(self, ligado: bool | None) -> None:
         self.mic_no_ar = ligado is True
 
 
@@ -247,7 +247,7 @@ def test_os_quatro_no_ar_pelo_ato_e_os_quatro_reports_de_som_levam_o_microfone(
 
     O ato é o do produto (`hotkey.ligar_o_microfone`), com o eleitor do
     produto e o registro do produto; a ponte de microfone recebe a palavra pelo
-    `_aplicar_a_palavra_dela` do supervisor; o som pergunta pelo gancho.
+    `_aplicar_a_palavra_do_usuario` do supervisor; o som pergunta pelo gancho.
 
     MORDIDA: a do §1 — devolva o `esquecer_a_palavra` na perda do padrão (a
     guarda de `MicrofonesNoAr` em `_apagar_a_luz_de_quem_perdeu_o_canal`) e só
@@ -269,7 +269,7 @@ def test_os_quatro_no_ar_pelo_ato_e_os_quatro_reports_de_som_levam_o_microfone(
         for uniq, _ in mesa:
             assert _apertar(m, uniq, ligado=True).feito, uniq
         sub_mic._gerenciador.reconciliar(_controles(mesa))
-        sub_mic._aplicar_a_palavra_dela()
+        sub_mic._aplicar_a_palavra_do_usuario()
 
         sub = alto_falante.AltoFalanteSubsystem()
         sub._casar_as_pontes(_controles(mesa))

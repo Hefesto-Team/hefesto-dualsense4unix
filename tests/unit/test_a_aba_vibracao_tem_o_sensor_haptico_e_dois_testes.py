@@ -162,7 +162,7 @@ def test_o_trilho_mostra_o_valor_do_personalizado_sem_acender_degrau(valor: int)
 
 
 @pytest.mark.parametrize("nome", sorted(RUMBLE_POLICY_MULT))
-def test_a_politica_pelo_nome_poe_o_cursor_no_numero_dela(nome: str) -> None:
+def test_a_politica_pelo_nome_poe_o_cursor_no_numero_do_usuario(nome: str) -> None:
     """Cada política do produto, escolhida pelo nome, põe o cursor no porcento dela."""
     coluna = _coluna({"rumble_policy": nome})
     assert coluna["mult-pos"] == str(round(RUMBLE_POLICY_MULT[nome] * 100))

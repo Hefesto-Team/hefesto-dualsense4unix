@@ -226,7 +226,7 @@ def test_sem_o_metodo_da_porta_a_fila_fica_sem_os_jogos(
     assert "2 jogos" not in linha, "a fila contou jogos que a porta não recebeu"
 
 
-def test_o_jogo_da_extensao_ligada_e_do_cartao_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_jogo_da_extensao_ligada_e_do_cartao_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     assert censo.lancador_do_jogo("lutris") == ""
     bloco = censo.LancadorDaModificacao(chave="lutris", rotulo="Lutris")
     monkeypatch.setattr(censo, "lancadores_das_extensoes",

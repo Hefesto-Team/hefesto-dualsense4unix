@@ -38,7 +38,7 @@ from hefesto_dualsense4unix.daemon.subsystems import (
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MUDO
 from tests.unit.test_o_botao_do_mic_so_obedece_a_mao import _backend, _Handle, _report
 from tests.unit.test_os_quatro_microfones_ficam_no_ar import (
-    MESA_DELA,
+    MESA_DO_USUARIO,
     P1,
     P2,
     P3,
@@ -210,7 +210,7 @@ class _Mesa(bp.PyDualSenseController):
         self.leds: dict[str, bool] = {}
 
     def describe_controllers(self) -> list[dict[str, Any]]:
-        return [{"uniq": u, "connected": True, "transport": t} for u, t in MESA_DELA]
+        return [{"uniq": u, "connected": True, "transport": t} for u, t in MESA_DO_USUARIO]
 
     def set_mic_led(self, aceso: Any, *, uniq: str | None = None) -> None:
         self.leds[_n(uniq or "")] = bool(aceso)
@@ -257,7 +257,7 @@ def mundo(monkeypatch: pytest.MonkeyPatch) -> Any:
     registro = bt_mic.RegistroDePedidosDeCanal()
     sub = bt_mic.BtMicSubsystem(registro=registro)
     sub._gerenciador = _GerenciadorDeMentira()
-    handles = {_n(u): _Handle() for u, _ in MESA_DELA}
+    handles = {_n(u): _Handle() for u, _ in MESA_DO_USUARIO}
     mesa = _Mesa(handles)
     sub._backend = mesa
     anteriores = ele.registrar_dizedor_do_no_ar(
@@ -321,7 +321,7 @@ async def _corrida(mundo: Any, *, aperto_em_s: float) -> _Aparelho:
 
 
 @pytest.mark.parametrize("aperto_em_s", [0.0, 0.4])
-def test_o_aperto_dentro_da_escrita_e_depois_dela_dao_o_mesmo_ato(
+def test_o_aperto_dentro_da_escrita_e_depois_do_usuario_dao_o_mesmo_ato(
     mundo: Any, aperto_em_s: float
 ) -> None:
     """Logo após o 🎙 (bit velho) ou a 0,4 s (confirmado): P3 no ar, sem recado, firmware ligado."""

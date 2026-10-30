@@ -55,7 +55,7 @@ def _arranjo(**kw: Any) -> rot.ArranjoDeMovimento:
 DERIVA_MEDIDA_GRAUS_S = 0.85
 
 
-def test_a_deriva_do_controle_dela_nao_move_a_mira() -> None:
+def test_a_deriva_do_controle_do_usuario_nao_move_a_mira() -> None:
     """O giroscópio do DualSense NÃO marca zero parado: ele deriva.
 
     Sem corte, a câmera dela passearia sozinha com o controle na mesa — que é
@@ -116,7 +116,7 @@ def test_o_perfil_de_ontem_continua_saindo_igual() -> None:
     assert "movimento" not in perfil.model_dump()
 
 
-_MIRA_DELA = ProfileMovimentoConfig(
+_MIRA_DO_USUARIO = ProfileMovimentoConfig(
     destino="mouse", sensibilidade=9, eixo_horizontal="roll",
     inverter_vertical=True, zona_morta_graus_s=18.0, gatilho="l2")
 
@@ -125,10 +125,10 @@ def test_o_salvar_perfil_transporta_a_mira_por_movimento() -> None:
     """ARRANQUE `movimento=self.source_movimento` de `DraftConfig.to_profile` e"""
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
-    perfil = Profile(name="Com Mira", match=MatchAny(type="any"), movimento=_MIRA_DELA)
+    perfil = Profile(name="Com Mira", match=MatchAny(type="any"), movimento=_MIRA_DO_USUARIO)
     rascunho = DraftConfig.from_profile(perfil)
-    assert rascunho.to_profile("Com Mira").movimento == _MIRA_DELA
-    assert rascunho.to_profile("Outro Nome").movimento == _MIRA_DELA
+    assert rascunho.to_profile("Com Mira").movimento == _MIRA_DO_USUARIO
+    assert rascunho.to_profile("Outro Nome").movimento == _MIRA_DO_USUARIO
 
 
 def test_a_mira_sobrevive_a_ida_e_volta_pelo_disco() -> None:
@@ -137,10 +137,10 @@ def test_a_mira_sobrevive_a_ida_e_volta_pelo_disco() -> None:
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
     save_profile(Profile(name="Mira Ida E Volta", match=MatchAny(type="any"),
-                         movimento=_MIRA_DELA))
+                         movimento=_MIRA_DO_USUARIO))
     rascunho = DraftConfig.from_profile(load_profile("Mira Ida E Volta"))
     save_profile(rascunho.to_profile("Mira Ida E Volta"))
-    assert load_profile("Mira Ida E Volta").movimento == _MIRA_DELA
+    assert load_profile("Mira Ida E Volta").movimento == _MIRA_DO_USUARIO
 
 
 def test_teto_abaixo_da_zona_morta_e_recusado_no_load() -> None:
@@ -335,7 +335,7 @@ def test_uma_mira_quebrada_nao_leva_o_controle_junto(
     assert dev.buttons, "o `forward_buttons` nem aconteceu"
 
 
-def test_o_giro_desligado_por_ela_desliga_a_mira(
+def test_o_giro_desligado_pelo_usuario_desliga_a_mira(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o portão do `REGISTRO` e este teste reprova: o interruptor de"""
     dev = _despachar(monkeypatch, arranjo=_arranjo(sensibilidade=12),
@@ -522,7 +522,7 @@ def test_o_jogo_seguinte_nao_herda_a_mira_do_anterior() -> None:
         "a mira do jogo anterior sobreviveu ao perfil seguinte")
 
 
-def test_um_arranjo_torto_nao_derruba_as_luzes_dela() -> None:
+def test_um_arranjo_torto_nao_derruba_as_luzes_do_usuario() -> None:
     """ARRANQUE o `except ArranjoRecusadoError` e este teste reprova: uma linha"""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 

@@ -66,8 +66,8 @@ def pcm_de_referencia(quadros: int = 2) -> list[bytes]:
     return saida
 
 
-BANCADA_HZ = 1300.0
-BANCADA_PULSOS_HZ = 2.0
+ENSAIO_HZ = 1300.0
+ENSAIO_PULSOS_HZ = 2.0
 
 
 def pcm_pulsado(taxa: int = af.TAXA_DO_ENCODER) -> Callable[[int], bytes]:
@@ -79,15 +79,15 @@ def pcm_pulsado(taxa: int = af.TAXA_DO_ENCODER) -> Callable[[int], bytes]:
         for _ in range(quantos // 4):
             f = next(fase)
             t = f / taxa
-            porta = 1.0 if math.sin(2 * math.pi * BANCADA_PULSOS_HZ * t) >= 0 else 0.0
-            valor = int(AMPLITUDE * porta * math.sin(2 * math.pi * BANCADA_HZ * t))
+            porta = 1.0 if math.sin(2 * math.pi * ENSAIO_PULSOS_HZ * t) >= 0 else 0.0
+            valor = int(AMPLITUDE * porta * math.sin(2 * math.pi * ENSAIO_HZ * t))
             amostras.extend((valor, valor))
         return struct.pack(f"<{len(amostras)}h", *amostras)
 
     return _ler
 
 
-def _exigir_bancada() -> tuple[bool, str]:
+def _exigir_ensaio() -> tuple[bool, str]:
     """`scripts/ensaio.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
     proc = subprocess.run(
         ["bash", os.path.join(_RAIZ, "scripts", "ensaio.sh"), "exigir"],
@@ -425,7 +425,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
             "  o firmware descarta calado."
         )
         return 3
-    reservada, recado = _exigir_bancada()
+    reservada, recado = _exigir_ensaio()
     if recado:
         print(f"  bancada ..... {recado}")
     if not reservada:
@@ -435,7 +435,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     print(
         "\nO QUE VAI SAIR, E POR QUANTO TEMPO (leia antes de confirmar)\n"
         f"  alvo        {controle.caminho} ({controle.transporte})\n"
-        f"  timbre      {BANCADA_HZ:.0f} Hz PULSADO a {BANCADA_PULSOS_HZ:.0f} Hz "
+        f"  timbre      {ENSAIO_HZ:.0f} Hz PULSADO a {ENSAIO_PULSOS_HZ:.0f} Hz "
         '— o "bep bep bep"\n'
         f"  duração     {segundos:.1f} s\n"
         f"  arranjo     {arranjo.nome} — {arranjo.fonte}\n"

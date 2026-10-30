@@ -99,7 +99,7 @@ def _roda_reversao(
 
 
 @pytest.fixture
-def bancada(tmp_path: Path) -> tuple[Path, Path, Path]:
+def ensaio(tmp_path: Path) -> tuple[Path, Path, Path]:
     """`(fakes, sysfs_vazio, home)` — o cenário da distro sem as depreciadas."""
     fakes = tmp_path / "fakes"
     sysfs = tmp_path / "sysfs-vazio"
@@ -131,10 +131,10 @@ exit 0
 
 class TestOUninstallAchaOAdaptadorSemAsVelhas:
     def test_pelo_dbus_o_alias_nintendo_e_revertido(
-        self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
+        self, ensaio: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
         """O caso da distro que não tem `hciconfig`: a metade que dá para"""
-        fakes, sysfs, home = bancada
+        fakes, sysfs, home = ensaio
         _busctl_fake(fakes, alias="Nintendo meowsystem")
 
         r = _roda_reversao(fakes, sandbox_sem_velhas, sysfs=sysfs, home=home)
@@ -147,10 +147,10 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         assert "nome do adaptador revertido para 'meowsystem'" in r.stdout
 
     def test_sem_hciconfig_ele_diz_que_a_link_policy_ficou(
-        self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
+        self, ensaio: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
         """A link policy não tem sucessor vivo. Calar sobre isso seria mentir"""
-        fakes, sysfs, home = bancada
+        fakes, sysfs, home = ensaio
         _busctl_fake(fakes, alias="Nintendo meowsystem")
 
         r = _roda_reversao(fakes, sandbox_sem_velhas, sysfs=sysfs, home=home)
@@ -162,10 +162,10 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         assert "bluez-deprecated" in r.stdout, "tem de dizer COMO recuperar"
 
     def test_pelo_btmgmt_quando_nem_o_busctl_existe(
-        self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
+        self, ensaio: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
         """O terceiro degrau: a ferramenta que a upstream indica."""
-        fakes, sysfs, home = bancada
+        fakes, sysfs, home = ensaio
         _fake(fakes, "btmgmt", 'printf "hci0:\\tPrimary controller\\n"\nexit 0\n')
         _fake(fakes, "busctl", "exit 1\n")
 
@@ -177,10 +177,10 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         )
 
     def test_quem_ainda_tem_hciconfig_nao_perde_a_link_policy(
-        self, bancada: tuple[Path, Path, Path]
+        self, ensaio: tuple[Path, Path, Path]
     ) -> None:
         """Plano B preservado: migrar não pode TIRAR leitura de quem a tinha."""
-        fakes, sysfs, home = bancada
+        fakes, sysfs, home = ensaio
         _busctl_fake(fakes, alias="Nintendo meowsystem")
         _fake(fakes, "hciconfig", 'printf "hci0:\\tType: Primary\\n"\nexit 0\n')
 
@@ -193,10 +193,10 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         assert "NÃO revertida" not in r.stdout
 
     def test_o_sysfs_e_o_primeiro_degrau(
-        self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
+        self, ensaio: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
         """Kernel puro: sem pacote, sem privilégio, sem D-Bus de pé."""
-        fakes, sysfs, home = bancada
+        fakes, sysfs, home = ensaio
         (sysfs / "hci0:256").mkdir()
         (sysfs / "hci0").mkdir()
         _busctl_fake(fakes, alias="Nintendo meowsystem")
@@ -209,10 +209,10 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
         )
 
     def test_sem_adaptador_nenhum_o_bloco_cala_sem_morrer(
-        self, bancada: tuple[Path, Path, Path], sandbox_sem_velhas: Path
+        self, ensaio: tuple[Path, Path, Path], sandbox_sem_velhas: Path
     ) -> None:
         """Máquina sem rádio: nada a reverter, e o uninstall segue vivo."""
-        fakes, sysfs, home = bancada
+        fakes, sysfs, home = ensaio
         _fake(fakes, "busctl", "exit 1\n")
 
         r = _roda_reversao(fakes, sandbox_sem_velhas, sysfs=sysfs, home=home)

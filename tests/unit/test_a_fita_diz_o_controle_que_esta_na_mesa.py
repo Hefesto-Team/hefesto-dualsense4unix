@@ -63,7 +63,7 @@ def _item(pref: str, jogador: int, transporte: str, uniq: str,
     return item
 
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     _item("p1", 1, "usb", NO_CABO, cor="white", nome="White"),
     _item("p2", 2, "bt", NO_RADIO),
 ]
@@ -94,7 +94,7 @@ def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
 
 def test_a_fita_viva_nao_repete_um_nome_do_mockup() -> None:
     """Com a bancada, nenhum chip pode dizer "Cosmic Red" ou "Starlight Blue"."""
-    html = monta.fita(ativo="p1", mesa=MESA_DELA)
+    html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
     for inventado in ("Cosmic Red", "Starlight Blue", "Galactic Purple"):
         assert inventado not in html, (
             f"a fita viva ainda nomeia {inventado!r}, que é do mockup:\n{html}")
@@ -116,10 +116,10 @@ def test_a_fita_pergunta_ao_dono_do_nome() -> None:
     este teste reprova no controle do rádio — a mesa diz "Não sei" e o dono diz
     a palavra do transporte (que o chip então cala, porque já termina nele).
     """
-    html = monta.fita(ativo="p1", mesa=MESA_DELA)
-    for c in MESA_DELA:
-        do_dono = pacotes.identidade_de({**c, "transport": c["transporte"]}, MESA_DELA)
-        assert monta.identidade_do_chip(c, MESA_DELA) == do_dono, (
+    html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
+    for c in MESA_DO_USUARIO:
+        do_dono = pacotes.identidade_de({**c, "transport": c["transporte"]}, MESA_DO_USUARIO)
+        assert monta.identidade_do_chip(c, MESA_DO_USUARIO) == do_dono, (
             f"o chip de {c['pref']} nomeia diferente do dono ({do_dono!r})")
         chip = [x for x in _chips(html) if f'P{c["jogador"]} ' in x]
         assert chip, html
@@ -133,21 +133,21 @@ def test_a_fita_pergunta_ao_dono_do_nome() -> None:
 
 def test_a_fita_nunca_escreve_nao_sei_como_nome_de_controle() -> None:
     """``"Não sei"`` é a AUSÊNCIA da leitura da cor, não um nome de aparelho."""
-    html = monta.fita(ativo="p1", mesa=MESA_DELA)
+    html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
     assert pacotes.NOME_SEM_LEITURA not in html, (
         f"a fita escreveu {pacotes.NOME_SEM_LEITURA!r} como nome:\n{html}")
 
 
-def test_o_que_ela_nomeou_vence_tudo() -> None:
+def test_o_que_o_usuario_nomeou_vence_tudo() -> None:
     """``nome_declarado`` na frente do modelo e do transporte — a ordem do dono."""
-    dela = [{**MESA_DELA[0], "nome_declarado": "o meu do cabo"}, MESA_DELA[1]]
-    html = monta.fita(ativo="p1", mesa=dela)
+    do_usuario = [{**MESA_DO_USUARIO[0], "nome_declarado": "o meu do cabo"}, MESA_DO_USUARIO[1]]
+    html = monta.fita(ativo="p1", mesa=do_usuario)
     assert "o meu do cabo" in html, html
 
 
 def test_o_nome_nao_muda_quando_o_controle_troca_de_posicao() -> None:
     """O MESMO aparelho, na posição 1 e na 2, tem de se chamar igual."""
-    primeiro = monta.identidade_do_chip(MESA_DELA[0], MESA_DELA)
+    primeiro = monta.identidade_do_chip(MESA_DO_USUARIO[0], MESA_DO_USUARIO)
     invertida = [
         _item("p1", 1, "bt", NO_RADIO),
         _item("p2", 2, "usb", NO_CABO, cor="white", nome="White"),
@@ -165,7 +165,7 @@ def test_o_travessao_daqui_e_o_travessao_da_casa() -> None:
 
 def test_a_cor_nao_lida_nao_derruba_a_fita() -> None:
     """Um controle sem cor de plástico não pode matar a fita inteira."""
-    html = monta.fita(ativo="p1", mesa=MESA_DELA)
+    html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
     assert 'class="chip"' in html or 'class="chip on"' in html, (
         "o chip sem cor lida devia perder a classe `plastico`:\n" + html)
     assert "--plastico:;" not in html and '--plastico:"' not in html, html
@@ -173,16 +173,16 @@ def test_a_cor_nao_lida_nao_derruba_a_fita() -> None:
 
 def test_o_chip_sem_cor_diz_o_nome_ou_nada() -> None:
     """A borda que some não se explica na dica: a dica diz o nome, ou não existe."""
-    html = monta.fita(ativo="p1", mesa=MESA_DELA)
+    html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
     cabo, radio = (
         [c for c in _chips(html) if f'P{item["jogador"]} ' in c]
-        for item in MESA_DELA)
+        for item in MESA_DO_USUARIO)
     assert cabo and radio, html
     assert "title=" not in radio[0], (
         "o chip sem cor e sem nome ganhou dica — sem nome não há o que dizer:\n  "
         + radio[0])
     assert "não foi lida" not in html, html
-    assert f'title="{MESA_DELA[0]["nome"]}' in cabo[0], (
+    assert f'title="{MESA_DO_USUARIO[0]["nome"]}' in cabo[0], (
         "o chip com cor lida perdeu o nome na dica:\n  " + cabo[0])
 
 
@@ -197,8 +197,8 @@ def test_o_chip_nao_diz_o_transporte_duas_vezes() -> None:
     MORDIDA: tire o ramo `if nome in (c["via"], TRAVESSAO)` e este teste
     reprova com o chip do rádio dizendo `BT` duas vezes.
     """
-    radio = MESA_DELA[1]
-    html = monta.fita(ativo="p1", mesa=MESA_DELA)
+    radio = MESA_DO_USUARIO[1]
+    html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
     chip = [c for c in _chips(html) if f'P{radio["jogador"]} ' in c]
     assert chip, html
     assert _nome_escrito(chip[0], radio) == "", (
@@ -212,7 +212,7 @@ def test_a_mesa_vazia_nao_inventa_chip() -> None:
     assert "Todos" not in html, html
 
 
-def test_o_mockup_sai_igual_ao_que_ela_aprovou() -> None:
+def test_o_mockup_sai_igual_ao_que_o_usuario_aprovou() -> None:
     """Sem mesa viva, a fita é a do DESENHO, chip por chip."""
     html = monta.fita(ativo="p1")
     assert "Cosmic Red" in html and "Starlight Blue" in html, html
@@ -226,7 +226,7 @@ def test_a_fita_nasce_sem_recuo_para_o_navegador_poder_compara_la() -> None:
     assert not html[0].isspace()
 
 
-@pytest.mark.parametrize("mesa", [None, MESA_DELA])
+@pytest.mark.parametrize("mesa", [None, MESA_DO_USUARIO])
 def test_o_chip_continua_na_forma_que_a_aba_controles_reescreve(
     mesa: list[dict[str, Any]] | None,
 ) -> None:

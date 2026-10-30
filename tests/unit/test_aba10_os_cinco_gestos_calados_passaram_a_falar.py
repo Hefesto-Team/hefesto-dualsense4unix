@@ -90,7 +90,7 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _sem_a_biblioteca_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def _sem_a_biblioteca_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     """O catálogo de jogos vem VAZIO — a régua não lê a Steam desta máquina."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
@@ -135,7 +135,7 @@ def _ctx(ativo: str | None = None) -> Contexto:
 def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
     from hefesto_dualsense4unix.app.actions import profiles_actions
 
-    monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: nome)
+    monkeypatch.setattr(profiles_actions, "perfil_que_o_usuario_ativou", lambda: nome)
 
 
 def _frase(fora: Any) -> str:

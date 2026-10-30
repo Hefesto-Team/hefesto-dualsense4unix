@@ -23,7 +23,7 @@ identity.py`). Ela foi escolhida porque paga zero do preço delas, e é
 exatamente esse "zero" que os testes daqui existem para cobrar:
 
 1. **o número segue a ordem de conexão daquele momento** —
-   `TestOCasoDela`, com a bancada sem tradução;
+   `TestOCasoDoUsuario`, com a bancada sem tradução;
 2. **a ordem CONGELA quando a mesa fica estável** — `TestCongelarEGravar`.
    Congelar, aqui, é *gravar*: a ordem do momento é escrita na fila
    persistida, e por isso sobrevive ao restart (R-23);
@@ -72,11 +72,11 @@ MAC_EXTERNO = "aabbcc0000fe"
 
 ORDEM_DE_CONEXAO = (VERMELHO, AZUL, BRANCO, ROXO)
 
-O_QUE_ELA_PEDIU = {VERMELHO: 1, AZUL: 2, BRANCO: 3, ROXO: 4}
+O_QUE_O_USUARIO_PEDIU = {VERMELHO: 1, AZUL: 2, BRANCO: 3, ROXO: 4}
 
 FILA_GRAVADA = {VERMELHO: 1, BRANCO: 2, ROXO: 3, AZUL: 4}
 
-O_QUE_ELA_VIU = dict(FILA_GRAVADA)
+O_QUE_O_USUARIO_VIU = dict(FILA_GRAVADA)
 
 BOOT = "boot-teste-ordem-de-chegada"
 
@@ -110,7 +110,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-def gravar_a_fila_dela(tmp: Path, fila: dict[str, int] | None = None) -> None:
+def gravar_a_fila_do_usuario(tmp: Path, fila: dict[str, int] | None = None) -> None:
     """Escreve o `controllers.json` no schema vivo, com a fila gravada dela."""
     (tmp / "controllers.json").write_text(
         json.dumps(
@@ -157,34 +157,34 @@ def conectar_um_a_um(
         relogio.avancar(intervalo)
 
 
-class TestOCasoDela:
+class TestOCasoDoUsuario:
     """MORDIDA 1 — o caso dela, sem tradução: quatro controles, uma ordem."""
 
-    def test_a_fila_gravada_e_a_queixa_dela(self, config_isolado: Path) -> None:
+    def test_a_fila_gravada_e_a_queixa_do_usuario(self, config_isolado: Path) -> None:
         """Ancoragem: sem isto, o resto do arquivo não prova nada."""
-        gravar_a_fila_dela(config_isolado)
+        gravar_a_fila_do_usuario(config_isolado)
         reg = ControllerIdentityRegistry(clock=Relogio())
         reg.load()
         assert reg.snapshot() == FILA_GRAVADA
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
-        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_VIU
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_VIU
 
     def test_o_numero_segue_a_ordem_de_conexao_do_momento(
         self, config_isolado: Path
     ) -> None:
         """A mordida principal: vermelho 1, azul 2, branco 3, roxo 4."""
-        gravar_a_fila_dela(config_isolado)
+        gravar_a_fila_do_usuario(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
         conectar_um_a_um(reg, relogio)
-        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU
 
     def test_a_ordem_do_momento_nao_repete_nem_pula_numero(
         self, config_isolado: Path
     ) -> None:
         """A cada controle que entra, a mesa exibe exatamente 1..N."""
-        gravar_a_fila_dela(config_isolado)
+        gravar_a_fila_do_usuario(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -202,7 +202,7 @@ class TestOCasoDela:
         self, config_isolado: Path
     ) -> None:
         """Um quinto controle chegando não empurra ninguém para cima."""
-        gravar_a_fila_dela(config_isolado, {ROXO: 1, VERMELHO: 2})
+        gravar_a_fila_do_usuario(config_isolado, {ROXO: 1, VERMELHO: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -216,7 +216,7 @@ class TestCongelarEGravar:
     """MORDIDA 2 — a ordem congela quando a mesa fica estável, e congelar é GRAVAR."""
 
     def montar(self, tmp: Path) -> tuple[ControllerIdentityRegistry, Relogio]:
-        gravar_a_fila_dela(tmp)
+        gravar_a_fila_do_usuario(tmp)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -227,7 +227,7 @@ class TestCongelarEGravar:
         self, config_isolado: Path
     ) -> None:
         """Mesa em montagem: exibe a ordem do momento, grava a antiga."""
-        gravar_a_fila_dela(config_isolado)
+        gravar_a_fila_do_usuario(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -235,7 +235,7 @@ class TestCongelarEGravar:
         assert not reg.mesa_congelada()
         assert reg.snapshot() == FILA_GRAVADA
         assert fila_no_disco(config_isolado) == FILA_GRAVADA
-        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU
 
     def test_a_mesa_parada_congela_e_a_ordem_do_momento_vira_a_gravada(
         self, config_isolado: Path
@@ -246,9 +246,9 @@ class TestCongelarEGravar:
         relogio.avancar(JANELA_MESA_ESTAVEL_SEC)
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
         assert reg.mesa_congelada()
-        assert reg.snapshot() == O_QUE_ELA_PEDIU
-        assert fila_no_disco(config_isolado) == O_QUE_ELA_PEDIU
-        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+        assert reg.snapshot() == O_QUE_O_USUARIO_PEDIU
+        assert fila_no_disco(config_isolado) == O_QUE_O_USUARIO_PEDIU
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU
 
     def test_o_congelado_atravessa_o_restart_do_daemon(
         self, config_isolado: Path
@@ -262,7 +262,7 @@ class TestCongelarEGravar:
         reiniciado.load()
         assert reiniciado.snapshot_chegada() == {}, "sessão nova não herda fila"
         reiniciado.sync_connected(list(reversed(ORDEM_DE_CONEXAO)))
-        assert numeros(reiniciado, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+        assert numeros(reiniciado, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU
 
     def test_congelar_nao_muda_o_conjunto_de_postos(
         self, config_isolado: Path
@@ -295,7 +295,7 @@ class TestQuemCaiEVolta:
 
     def mesa_de_dois(self, tmp: Path) -> tuple[ControllerIdentityRegistry, Relogio]:
         """Vermelho e azul, nesta ordem de conexão, mesa já congelada."""
-        gravar_a_fila_dela(tmp, {AZUL: 1, VERMELHO: 2})
+        gravar_a_fila_do_usuario(tmp, {AZUL: 1, VERMELHO: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -339,7 +339,7 @@ class TestQuemCaiEVolta:
         self, config_isolado: Path
     ) -> None:
         """Mesa de quatro, congelada: um cai e volta, e nada se mexe."""
-        gravar_a_fila_dela(config_isolado)
+        gravar_a_fila_do_usuario(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -353,19 +353,19 @@ class TestQuemCaiEVolta:
 
         relogio.avancar(20.0)
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
-        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU
 
         reg.sync_connected(sobraram)
         relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
         assert numeros(reg, *sobraram) == {VERMELHO: 1, BRANCO: 2, ROXO: 3}
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
-        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU
 
     def test_volta_recupera_o_lugar_mesmo_sem_a_mesa_ter_congelado(
         self, config_isolado: Path
     ) -> None:
         """A promessa não depende do congelamento — nem podia."""
-        gravar_a_fila_dela(config_isolado, {AZUL: 1, VERMELHO: 2})
+        gravar_a_fila_do_usuario(config_isolado, {AZUL: 1, VERMELHO: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -387,7 +387,7 @@ class TestOGravadoEDesempate:
         self, config_isolado: Path
     ) -> None:
         """Uma olhada só, entregue na ordem CONTRÁRIA à gravada."""
-        gravar_a_fila_dela(config_isolado, {VERMELHO: 1, AZUL: 2})
+        gravar_a_fila_do_usuario(config_isolado, {VERMELHO: 1, AZUL: 2})
         reg = ControllerIdentityRegistry(clock=Relogio())
         reg.load()
         reg.sync_connected([AZUL, VERMELHO])
@@ -397,7 +397,7 @@ class TestOGravadoEDesempate:
         self, config_isolado: Path
     ) -> None:
         """A mesma dupla, o mesmo gravado — e a ordem do momento vencendo."""
-        gravar_a_fila_dela(config_isolado, {VERMELHO: 1, AZUL: 2})
+        gravar_a_fila_do_usuario(config_isolado, {VERMELHO: 1, AZUL: 2})
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -410,7 +410,7 @@ class TestOGravadoEDesempate:
         self, config_isolado: Path
     ) -> None:
         """R-23 em uma linha: reiniciar o daemon não renumera ninguém."""
-        gravar_a_fila_dela(config_isolado, O_QUE_ELA_PEDIU)
+        gravar_a_fila_do_usuario(config_isolado, O_QUE_O_USUARIO_PEDIU)
         for entrega in (
             list(ORDEM_DE_CONEXAO),
             list(reversed(ORDEM_DE_CONEXAO)),
@@ -419,13 +419,13 @@ class TestOGravadoEDesempate:
             reg = ControllerIdentityRegistry(clock=Relogio())
             reg.load()
             reg.sync_connected(entrega)
-            assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU, entrega
+            assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_O_USUARIO_PEDIU, entrega
 
     def test_a_fila_gravada_continua_existindo_e_sendo_salva(
         self, config_isolado: Path
     ) -> None:
         """"Não destruir o gravado" é literal: o arquivo continua completo."""
-        gravar_a_fila_dela(config_isolado)
+        gravar_a_fila_do_usuario(config_isolado)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -458,7 +458,7 @@ class TestALampadaEORotuloSeguemJuntos:
             _SecondaryPlayer,
         )
 
-        gravar_a_fila_dela(tmp)
+        gravar_a_fila_do_usuario(tmp)
         relogio = Relogio()
         reg = ControllerIdentityRegistry(clock=relogio)
         reg.load()
@@ -485,8 +485,8 @@ class TestALampadaEORotuloSeguemJuntos:
         self, config_isolado: Path
     ) -> None:
         coop = self.montar(config_isolado)
-        assert coop.numeros_de_jogador() == O_QUE_ELA_PEDIU  # type: ignore[attr-defined]
-        assert coop.player_indexes() == O_QUE_ELA_PEDIU  # type: ignore[attr-defined]
+        assert coop.numeros_de_jogador() == O_QUE_O_USUARIO_PEDIU  # type: ignore[attr-defined]
+        assert coop.player_indexes() == O_QUE_O_USUARIO_PEDIU  # type: ignore[attr-defined]
 
     def test_a_lampada_e_o_rotulo_continuam_sendo_a_mesma_funcao(
         self, config_isolado: Path
@@ -508,7 +508,7 @@ class TestAMesaMistaContinuaFechando:
     """
 
     def test_1_a_n_com_um_externo_na_mesa(self, config_isolado: Path) -> None:
-        gravar_a_fila_dela(config_isolado, {VERMELHO: 1, AZUL: 2})
+        gravar_a_fila_do_usuario(config_isolado, {VERMELHO: 1, AZUL: 2})
         relogio = Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         ext = ExternalIdentityRegistry()

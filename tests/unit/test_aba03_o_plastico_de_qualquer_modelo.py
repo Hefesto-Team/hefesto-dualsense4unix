@@ -28,7 +28,7 @@ desenho da aba nunca mostrou: **Nova Pink, Astro Bot e Sterling Silver**.
 
 A MORDIDA: devolva a cor para dentro de `chip_do_controle` (ou troque a leitura
 do mapa por um hexadecimal digitado) e `test_o_modelo_que_o_desenho_nao_tem` e
-`test_a_cor_sai_do_mapa_dela_nos_28` reprovam nomeando o modelo.
+`test_a_cor_sai_do_mapa_do_usuario_nos_28` reprovam nomeando o modelo.
 """
 from __future__ import annotations
 
@@ -103,7 +103,7 @@ def _cor_da_coluna(a03, slug: str, nome: str) -> str:
     return str((r["colunas"][NO_CABO["uniq"]])[a03.CAMPO_DO_PLASTICO])
 
 
-def test_o_mapa_dela_continua_com_os_28(mapa):
+def test_o_mapa_do_usuario_continua_com_os_28(mapa):
     """A régua declara o tamanho do mapa em vez de presumi-lo."""
     assert len(mapa) == 28, (
         f"o mapa dela tem {len(mapa)} modelos, e esta régua foi escrita sobre "
@@ -117,7 +117,7 @@ def test_o_mapa_dela_continua_com_os_28(mapa):
             f"medir.")
 
 
-def test_a_cor_sai_do_mapa_dela_nos_28(a03, mapa):
+def test_a_cor_sai_do_mapa_do_usuario_nos_28(a03, mapa):
     """A coluna veste o que o MAPA responde, para os 28 — e nada além disso."""
     for slug, nome, tinta in mapa:
         escrito = _cor_da_coluna(a03, slug, nome)
@@ -173,7 +173,7 @@ def test_a_cor_vai_pelo_endereco_e_nunca_no_chip(a03, mapa):
         "a página publicada perdeu o endereço da cor: a borda das colunas fica neutra")
 
 
-def test_a_bancada_nao_crava_cor_que_o_produto_nao_alcance(a03):
+def test_o_ensaio_nao_crava_cor_que_o_produto_nao_alcance(a03):
     """Na página gerada, todo `--plastico` mora num elemento com o alvo certo.
 
     É a mesma pergunta que `scripts/check_a_cor_vem_do_aparelho.py` faz sobre as

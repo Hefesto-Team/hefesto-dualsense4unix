@@ -209,11 +209,11 @@ def _home_do_processo(raiz: str, pid: str) -> str | None:
     return None
 
 
-def processos_da_mesa(raiz: str, home_dela: str, excluir: Iterable[int]) -> dict[str, int]:
+def processos_da_mesa(raiz: str, home_do_usuario: str, excluir: Iterable[int]) -> dict[str, int]:
     """A contagem dos processos que são fator, sem o instrumento nem quem o chamou."""
     fora = {int(p) for p in excluir}
     contagem: Counter[str] = Counter(
-        {"steam_dela": 0, "steam_de_teste": 0, "steam_outra": 0, "winedevice": 0,
+        {"steam_do_usuario": 0, "steam_de_teste": 0, "steam_outra": 0, "winedevice": 0,
          "pytest": 0, "giro_e_buraco": 0}
     )
     try:
@@ -232,8 +232,8 @@ def processos_da_mesa(raiz: str, home_dela: str, excluir: Iterable[int]) -> dict
         bases = [os.path.basename(a) for a in argv]
         if "steam" in bases:
             home = _home_do_processo(raiz, pid)
-            if home is not None and home.rstrip("/") == home_dela.rstrip("/"):
-                contagem["steam_dela"] += 1
+            if home is not None and home.rstrip("/") == home_do_usuario.rstrip("/"):
+                contagem["steam_do_usuario"] += 1
             elif home is not None and MARCA_DA_STEAM_DE_TESTE in home:
                 contagem["steam_de_teste"] += 1
             else:
@@ -419,7 +419,7 @@ class Portas:
     ar: Callable[[], Mapping[str, Any] | None]
     varredura: Callable[[], Any]
     raiz_proc: str = "/proc"
-    home_dela: str = field(default_factory=lambda: os.path.expanduser("~"))
+    home_do_usuario: str = field(default_factory=lambda: os.path.expanduser("~"))
     excluir: frozenset[int] = field(default_factory=lambda: frozenset({os.getpid(), os.getppid()}))
     banda_do_wifi: Callable[[str], str | None] = banda_pelo_iw
     diario_do_kernel: Callable[[float, float], str | None] = diario_do_kernel
@@ -446,7 +446,7 @@ def amostrar(portas: Portas) -> Amostra:
         estado=estado if isinstance(estado, dict) else None,
         ar=ar,
         varrendo=varrendo,
-        processos=processos_da_mesa(portas.raiz_proc, portas.home_dela, portas.excluir),
+        processos=processos_da_mesa(portas.raiz_proc, portas.home_do_usuario, portas.excluir),
         memoria=blocos_livres(portas.raiz_proc),
     )
 
@@ -627,7 +627,7 @@ def linha_da_janela(
              else None)
 
     fatores = {
-        "steam_dela": processos["steam_dela"],
+        "steam_do_usuario": processos["steam_do_usuario"],
         "steam_de_teste": processos["steam_de_teste"],
         "steam_outra": processos["steam_outra"],
         "jogo": 1 if (jogos or processos["winedevice"]) else (0 if respostas else None),
@@ -744,7 +744,7 @@ def fatores_do_grupo(linha: Mapping[str, Any]) -> dict[str, Any]:
     pads = sorted({str(c["pad"]) for c in controles.values()
                    if c.get("conectado") and c.get("pad")})
     return {
-        "steam_dela": 1 if fatores.get("steam_dela") else 0,
+        "steam_do_usuario": 1 if fatores.get("steam_do_usuario") else 0,
         "jogo": fatores.get("jogo"),
         "arranjo": arranjo,
         "cabo": cabo,
@@ -820,7 +820,7 @@ def resumo_em_texto(grupos: Sequence[Mapping[str, Any]]) -> str:
         f = grupo["fatores"]
         arranjo = "; ".join(f"{numero}: {' + '.join(nomes)}" for numero, nomes in f["arranjo"])
         partes.append(
-            f"grupo {n} · Steam dela {f['steam_dela']} · jogo {_ou_traco(f['jogo'])} · "
+            f"grupo {n} · Steam dela {f['steam_do_usuario']} · jogo {_ou_traco(f['jogo'])} · "
             f"arranjo [{arranjo or '-'}] · cabo [{', '.join(f['cabo']) or '-'}] · "
             f"voz no ar [{', '.join(f['voz_no_ar']) or '-'}] · "
             f"pads [{', '.join(f['pads']) or '-'}]"

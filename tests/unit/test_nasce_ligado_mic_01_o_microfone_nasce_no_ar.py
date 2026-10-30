@@ -150,7 +150,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch):
     `BtMicSubsystem._instalar_o_gancho_da_procura` instala no daemon vivo.
     Dublá-las mediria a régua, não o produto.
 
-    O `BtMicSubsystem` nasce sem `start()`, então `_aplicar_a_palavra_dela`
+    O `BtMicSubsystem` nasce sem `start()`, então `_aplicar_a_palavra_do_usuario`
     sai pela porta (`_gerenciador is None`): a ponte de rádio não é desta
     régua, e ela já tem dono em `test_o_microfone_pelo_radio_alimenta_o_no`.
     """
@@ -205,7 +205,7 @@ def _perfil(mic: dict | None = None, por_peca: dict | None = None):
     """Um perfil real do esquema — `match` e `button_toggles_system` são exigidos."""
     from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 
-    dados: dict[str, Any] = {"name": "o-perfil-dela", "match": MatchManual()}
+    dados: dict[str, Any] = {"name": "o-perfil-do-usuario", "match": MatchManual()}
     if mic is not None:
         dados["mic"] = {"button_toggles_system": False, **mic}
     if por_peca is not None:
@@ -240,7 +240,7 @@ class TestONascimentoComAMesaSemDono:
         )
 
     @pytest.mark.asyncio
-    async def test_a_palavra_dela_e_dita(self, mesa) -> None:
+    async def test_a_palavra_do_usuario_e_dita(self, mesa) -> None:
         """Sem a palavra o nó sobe e o `0x32` sai DESLIGADO."""
         daemon = mesa.daemon()
 
@@ -354,7 +354,7 @@ class TestAMesaComDono:
         )
 
     @pytest.mark.asyncio
-    async def test_a_palavra_dela_e_dita_sem_roubar_o_padrao(self, mesa) -> None:
+    async def test_a_palavra_do_usuario_e_dita_sem_roubar_o_padrao(self, mesa) -> None:
         """O `0x32` do SEGUNDO tem de acender igual — ele também transmite."""
         daemon = mesa.daemon((P1, P2))
 
@@ -414,14 +414,14 @@ class TestAMesaComDono:
         )
 
 
-class TestOSilencioDelaVence:
+class TestOSilencioDoUsuarioVence:
     """SOM-MIC-REPLUG-01 pela porta da frente: *"o silêncio que o produto"""
 
     @pytest.mark.asyncio
     async def test_o_controle_calado_impede_o_nascimento(self, mesa) -> None:
         """Ela calou este controle: o mudo mora no dono (`maquina.json`)."""
         assert maquina.gravar_o_mudo_do_microfone(P1, True)
-        daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
+        daemon = mesa.daemon(perfil_ativo="o-perfil-do-usuario")
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
 
@@ -442,7 +442,7 @@ class TestOSilencioDelaVence:
                 mic={"muted": True}, por_peca={P1: {"mic": {"muted": True}}}
             ),
         )
-        daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
+        daemon = mesa.daemon(perfil_ativo="o-perfil-do-usuario")
 
         assert await hotkey.nascer_no_ar(daemon, P1) is True
         assert mesa.registro.no_ar().get(P1) is True
@@ -454,7 +454,7 @@ class TestOSilencioDelaVence:
         """A ordem de 17/09/2026: *"os jogos e perfis tem que iniciar com"""
         monkeypatch.setattr(mgr, "load_profile", lambda _n: _perfil(mic={"volume": 100}))
         assert maquina.gravar_o_mudo_do_microfone(P2, False)
-        daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
+        daemon = mesa.daemon(perfil_ativo="o-perfil-do-usuario")
 
         assert await hotkey.nascer_no_ar(daemon, P1) is True
         assert mesa.registro.no_ar().get(P1) is True
@@ -726,7 +726,7 @@ NO_DO_CABO_SEM_NOME = (
 )
 
 
-class TestAEscolhaGravadaDela:
+class TestAEscolhaGravadaDoUsuario:
     """A partida do daemon não sobrescreve o microfone que o usuário escolheu."""
 
     @pytest.mark.parametrize(
@@ -860,7 +860,7 @@ class TestAEscolhaGravadaDela:
         assert mesa.eleitor.chamadas == [("eleger", P1)]
 
 
-class TestARecusaDelaVenceONascimento:
+class TestARecusaDoUsuarioVenceONascimento:
     """*"todos os controles tem que nascer com tudo"* — e só o `False` desliga."""
 
     @pytest.mark.asyncio
@@ -890,7 +890,7 @@ class TestARecusaDelaVenceONascimento:
         assert mesa.registro.no_ar() == {P1: False, P2: True}
         assert mesa.eleitor.eleito == P2
 
-    def test_o_canal_do_cabo_nao_sobe_para_quem_ela_desligou(
+    def test_o_canal_do_cabo_nao_sobe_para_quem_o_usuario_desligou(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O terceiro leitor do registro, e o único que não subtraía a recusa."""
@@ -910,7 +910,7 @@ class TestARecusaDelaVenceONascimento:
             "que ela desligou subiria com o nome dele"
         )
 
-    def test_o_canal_do_cabo_de_pe_cai_quando_ela_desliga(
+    def test_o_canal_do_cabo_de_pe_cai_quando_o_usuario_desliga(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         fechados: list[str] = []

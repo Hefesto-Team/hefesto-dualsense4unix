@@ -81,12 +81,12 @@ TAMANHOS: tuple[Tamanho, ...] = (
 )
 
 ABAS: tuple[str, ...] = tuple(
-    p.name for p in sorted(onde.BANCADA.glob("[0-9][0-9]-*.html"))
+    p.name for p in sorted(onde.ENSAIO.glob("[0-9][0-9]-*.html"))
 )
 
 if len(ABAS) < 10:
     pytest.skip(
-        f"JANELA-ESTREITA-01: achei {len(ABAS)} aba(s) em {onde.BANCADA} e o "
+        f"JANELA-ESTREITA-01: achei {len(ABAS)} aba(s) em {onde.ENSAIO} e o "
         "produto tem DEZ. Medir menos que isso seria verde por vacuidade.",
         allow_module_level=True,
     )
@@ -329,7 +329,7 @@ def medir(tamanho: Tamanho, abas: tuple[str, ...] = ABAS,
           pasta: pathlib.Path | None = None,
           letra_larga: bool = False) -> dict[str, dict[str, Any]]:
     """Abre UMA janela do tamanho pedido e navega pelas abas, medindo cada uma."""
-    pasta = pasta or onde.BANCADA
+    pasta = pasta or onde.ENSAIO
     fora: dict[str, dict[str, Any]] = {}
     with regua_de_tela.Tela(pasta / abas[0], titulo_esperado="Hefesto",
                             largura=tamanho.largura, altura=tamanho.altura) as tela:
@@ -513,7 +513,7 @@ def test_a_mordida_da_afordancia_sem_o_title_o_corte_vira_sumico(tmp_path):
         "ele esta mordida não morde nada. Reveja o alvo antes de crer no verde")
 
     (tmp_path / ABA_DA_MORDIDA).write_text(
-        (onde.BANCADA / ABA_DA_MORDIDA).read_text(encoding="utf-8")
+        (onde.ENSAIO / ABA_DA_MORDIDA).read_text(encoding="utf-8")
         .replace(' title="', ' data-title-arrancado="')
         .replace(' data-dica="', ' data-dica-arrancada="'),
         encoding="utf-8")

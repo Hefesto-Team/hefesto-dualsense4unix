@@ -218,7 +218,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "fluxo dela passa por aqui, e ligá-la não abre feature nenhuma."
     ),
     "HEFESTO_NA_TELA": (
-        "04/09/2026 — o ESCAPE da guarda TELA-DELA-01/02. Sem ele, a suíte e "
+        "04/09/2026 — o ESCAPE da guarda TELA-DO-USUARIO-01/02. Sem ele, a suíte e "
         "os 21 instrumentos de `scripts/` que abrem `Gtk.Window` desviam a "
         "janela para um `Xvfb` próprio, porque ela tem UMA tela e uma janela "
         "que nasce nela quebra o trabalho dela — reportado por ela duas vezes "
@@ -228,7 +228,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "produto instalado não lê esta chave, e ligá-la não abre feature "
         "nenhuma — só transfere para quem ligou a responsabilidade pela tela."
     ),
-    "HEFESTO_BANCADA": (
+    "HEFESTO_ENSAIO": (
         "Desvia para onde os geradores de página ESCREVEM "
         "(interface/onde.py:_DESVIO). Existe para UMA coisa: deixar um portão "
         "rodar os dez geradores num diretório temporário e comparar o que SAIU "
@@ -1386,7 +1386,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/doctor.sh:2963` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4638 (`varrendo`))."
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4639 (`varrendo`))."
     ),
     "integrations/varredura_do_radio.py::quem_esta_varrendo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
@@ -1515,7 +1515,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
         "`scripts/ensaios/a_faixa_do_receptor.py` "
         "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3946 "
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3947 "
         "(`FAIXA_NAO_ENCONTRADA`), no `_o_botao_da_descoberta`). Fecha quando a bancada B9 "
         "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
         "passa pelo desenho."
@@ -2116,7 +2116,7 @@ def _candidatas(mapa: _Mapa, alvo: Path) -> list[tuple[Promessa, str, int]]:
     return saida
 
 
-def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
+def _flags_de_ensaio(arvore: ast.AST) -> frozenset[str]:
     """As flags de linha de comando que o próprio arquivo declara."""
     flags: set[str] = set()
     for no in ast.walk(arvore):
@@ -2135,7 +2135,7 @@ def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
     return frozenset(flags)
 
 
-def _lado_de_bancada(no: ast.If, flags: frozenset[str]) -> str | None:
+def _lado_de_ensaio(no: ast.If, flags: frozenset[str]) -> str | None:
     """Que metade deste ``if`` só roda na BANCADA — ``body``, ``orelse``, ou nada."""
     teste: ast.expr = no.test
     negado = False
@@ -2152,30 +2152,30 @@ def _lado_de_bancada(no: ast.If, flags: frozenset[str]) -> str | None:
     return "orelse" if negado else "body"
 
 
-def _podar_a_bancada(arvore: ast.Module) -> tuple[ast.Module, list[ast.AST]]:
+def _podar_o_ensaio(arvore: ast.Module) -> tuple[ast.Module, list[ast.AST]]:
     """A árvore da ponte SEM os pedaços que só a bancada roda."""
-    flags = _flags_de_bancada(arvore)
+    flags = _flags_de_ensaio(arvore)
     podados: list[ast.AST] = []
     for no in ast.walk(arvore):
         if not isinstance(no, ast.If):
             continue
-        lado = _lado_de_bancada(no, flags)
+        lado = _lado_de_ensaio(no, flags)
         if lado == "body":
             podados.extend(no.body)
             no.body = [ast.Pass()]
         elif lado == "orelse" and no.orelse:
             podados.extend(no.orelse)
             no.orelse = []
-    citados_pela_bancada: set[str] = set()
+    citados_pelo_ensaio: set[str] = set()
     for no in podados:
-        citados_pela_bancada |= _refs(no)
+        citados_pelo_ensaio |= _refs(no)
     while True:
         vivos = _refs(arvore)
         alvo = next(
             (
                 (corpo, indice, definicao)
                 for corpo, indice, definicao in _definicoes_de_funcao(arvore)
-                if definicao.name in citados_pela_bancada
+                if definicao.name in citados_pelo_ensaio
                 and definicao.name not in vivos
             ),
             None,
@@ -2185,7 +2185,7 @@ def _podar_a_bancada(arvore: ast.Module) -> tuple[ast.Module, list[ast.AST]]:
         corpo, indice, definicao = alvo
         corpo[indice] = ast.Pass()
         podados.append(definicao)
-        citados_pela_bancada |= _refs(definicao)
+        citados_pelo_ensaio |= _refs(definicao)
 
 
 def _definicoes_de_funcao(
@@ -2241,7 +2241,7 @@ def pontes_vivas(raiz_do_projeto: Path | None = None) -> dict[str, Path]:
 
 
 def _fontes_externas(
-    raiz_do_projeto: Path, *, podar_a_bancada: bool = True
+    raiz_do_projeto: Path, *, podar_o_ensaio: bool = True
 ) -> list[tuple[str, ast.Module]]:
     """O Python que roda de FORA do pacote: os heredocs, e a ponte da interface.
 
@@ -2269,12 +2269,12 @@ def _fontes_externas(
             textos.append(("ponte", f"{_PASTA_DA_PONTE}/{nome}.py", texto))
         except OSError:  # pragma: no cover
             continue
-    return list(_fontes_externas_do_texto(tuple(textos), podar_a_bancada))
+    return list(_fontes_externas_do_texto(tuple(textos), podar_o_ensaio))
 
 
 @functools.cache
 def _fontes_externas_do_texto(
-    textos: tuple[tuple[str, str, str], ...], podar_a_bancada: bool
+    textos: tuple[tuple[str, str, str], ...], podar_o_ensaio: bool
 ) -> tuple[tuple[str, ast.Module], ...]:
     saida: list[tuple[str, ast.Module]] = []
     for tipo, rotulo, texto in textos:
@@ -2285,8 +2285,8 @@ def _fontes_externas_do_texto(
                 saida.append((rotulo, _lido_do_texto(texto)[0]))
             else:
                 arvore = ast.parse(texto, filename=rotulo)
-                if podar_a_bancada:
-                    arvore, _podados = _podar_a_bancada(arvore)
+                if podar_o_ensaio:
+                    arvore, _podados = _podar_o_ensaio(arvore)
                 saida.append((rotulo, arvore))
         except SyntaxError:  # pragma: no cover
             continue
@@ -2309,13 +2309,13 @@ def modulos_alcancados(raiz: Path | None = None) -> set[str]:
 
 
 def promessas_sem_caminho(
-    raiz: Path | None = None, *, podar_a_bancada: bool = True
+    raiz: Path | None = None, *, podar_o_ensaio: bool = True
 ) -> dict[str, Promessa]:
     """Funções e classes públicas de módulo que nada em produção alcança."""
     alvo = _SRC if raiz is None else raiz
     mapa = _mapear(alvo)
     raiz_do_projeto = _RAIZ if raiz is None else raiz.parents[1]
-    externas = _fontes_externas(raiz_do_projeto, podar_a_bancada=podar_a_bancada)
+    externas = _fontes_externas(raiz_do_projeto, podar_o_ensaio=podar_o_ensaio)
 
     raizes: set[str] = set()
     for entrada in _PONTOS_DE_ENTRADA:
@@ -2365,11 +2365,11 @@ def promessas_sem_caminho(
         planas |= planas_da_externa
 
     ponte_viva = pontes_vivas(raiz_do_projeto)
-    bancada_do_desenho: set[str] = set()
+    ensaio_do_desenho: set[str] = set()
     if ponte_viva:
         pasta_da_ponte = raiz_do_projeto / _PASTA_DA_PONTE
         if pasta_da_ponte.is_dir():
-            bancada_do_desenho = {
+            ensaio_do_desenho = {
                 p.relative_to(alvo).as_posix()
                 for p in pasta_da_ponte.glob("*.py")
                 if p.stem not in ponte_viva
@@ -2382,7 +2382,7 @@ def promessas_sem_caminho(
 
     orfas: dict[str, Promessa] = {}
     for promessa, modulo, indice in _candidatas(mapa, alvo):
-        if promessa.arquivo in bancada_do_desenho:
+        if promessa.arquivo in ensaio_do_desenho:
             continue
         se_alcanca = (modulo, promessa.nome)
         if citantes.get(se_alcanca, set()) - {(modulo, indice)}:
@@ -2780,7 +2780,7 @@ class TestTodaPromessaPublicaTemCaminho:
             )
 
 
-_INSTRUMENTOS_DA_BANCADA = ("olhar", "ver")
+_INSTRUMENTOS_DO_ENSAIO = ("olhar", "ver")
 
 
 class TestAPonteDaInterfaceNovaEProducao:
@@ -2832,20 +2832,20 @@ class TestAPonteDaInterfaceNovaEProducao:
             "virou um `glob`, e a bancada entrou junto com a ponte"
         )
 
-    def test_o_instrumento_de_bancada_nao_entra_no_fecho(self) -> None:
+    def test_o_instrumento_de_ensaio_nao_entra_no_fecho(self) -> None:
         """O que MEDE a tela não é a tela — e as duas moram na mesma pasta."""
         pasta = _RAIZ / _PASTA_DA_PONTE
         sumidos = [
-            nome for nome in _INSTRUMENTOS_DA_BANCADA
+            nome for nome in _INSTRUMENTOS_DO_ENSAIO
             if not (pasta / f"{nome}.py").is_file()
         ]
         assert not sumidos, (
             f"estes instrumentos não existem mais em {_PASTA_DA_PONTE}: "
-            f"{sumidos}\nATUALIZE `_INSTRUMENTOS_DA_BANCADA` — uma testemunha "
+            f"{sumidos}\nATUALIZE `_INSTRUMENTOS_DO_ENSAIO` — uma testemunha "
             "que sumiu deixa este caso verde sem medir nada."
         )
         ponte = pontes_vivas()
-        invasores = sorted(set(_INSTRUMENTOS_DA_BANCADA) & set(ponte))
+        invasores = sorted(set(_INSTRUMENTOS_DO_ENSAIO) & set(ponte))
         assert not invasores, (
             f"instrumento de bancada entrou no fecho da ponte: {invasores}\n"
             "Ou o piloto passou a importar a própria régua (e aí é o piloto "
@@ -2854,37 +2854,37 @@ class TestAPonteDaInterfaceNovaEProducao:
             "ligada — que é a dívida que este portão existe para acusar."
         )
 
-    def test_a_bancada_de_dentro_do_piloto_e_reconhecida(self) -> None:
+    def test_o_ensaio_de_dentro_do_piloto_e_reconhecida(self) -> None:
         """As flags do piloto são colhidas, e o ``if not`` NÃO é podado."""
         piloto = _arvore(_RAIZ / _PILOTO_DA_INTERFACE_NOVA)
-        flags = _flags_de_bancada(piloto)
+        flags = _flags_de_ensaio(piloto)
         assert {"prova_no_aparelho", "prova_clique", "oculta"} <= flags, (
             f"as mordidas do piloto não foram colhidas dos `add_argument`: "
-            f"{sorted(flags)}\n`_flags_de_bancada` parou de ver o idioma, e "
+            f"{sorted(flags)}\n`_flags_de_ensaio` parou de ver o idioma, e "
             "com ela toda a poda virou decoração."
         )
         positivo = ast.parse("if self.args.prova_no_aparelho:\n    x()\n").body[0]
         negativo = ast.parse("if not args.sem_cor:\n    x()\n").body[0]
         assert isinstance(positivo, ast.If) and isinstance(negativo, ast.If)
-        assert _lado_de_bancada(positivo, flags) == "body", (
+        assert _lado_de_ensaio(positivo, flags) == "body", (
             "a guarda POSITIVA de uma mordida deixou de marcar o corpo como "
             "bancada — `--prova-gesto` voltou a contar como caminho"
         )
-        assert _lado_de_bancada(negativo, flags) == "orelse", (
+        assert _lado_de_ensaio(negativo, flags) == "orelse", (
             "a guarda NEGADA foi lida como bancada: a poda vai cortar o corpo "
             "que roda SEM a flag, que é justamente a espinha viva"
         )
 
-    def test_nenhuma_promessa_e_alcancada_so_pela_bancada(self) -> None:
+    def test_nenhuma_promessa_e_alcancada_so_pelo_ensaio(self) -> None:
         """A distância entre as duas réguas — e hoje ela é ZERO."""
         podada = set(promessas_sem_caminho())
-        inteira = set(promessas_sem_caminho(podar_a_bancada=False))
-        so_a_bancada = sorted(podada - inteira)
-        assert not so_a_bancada, (
+        inteira = set(promessas_sem_caminho(podar_o_ensaio=False))
+        so_o_ensaio = sorted(podada - inteira)
+        assert not so_o_ensaio, (
             "estas promessas só são alcançadas por um pedaço de MORDIDA do "
             "piloto — `--prova-gesto`, `--sem-ponte`, `--arranca-enderecos` — e "
             "por mais nada:\n"
-            + "\n".join(f"  - {c}" for c in so_a_bancada)
+            + "\n".join(f"  - {c}" for c in so_o_ensaio)
             + "\nA régua não é caminho. FIE a cura na espinha viva do piloto "
             "(o tique, a pintura, o gesto dela), ou declare-a como dívida. "
             "Uma cura que só a própria prova exercita é uma cura desligada com "
@@ -3267,7 +3267,7 @@ class TestOPortaoMorde:
             "daqui basta uma linha na régua para uma cura desligada ficar "
             "verde — que é exatamente a dívida que este portão existe para ver."
         )
-        assert chave not in promessas_sem_caminho(copia, podar_a_bancada=False), (
+        assert chave not in promessas_sem_caminho(copia, podar_o_ensaio=False), (
             "com a ponte INTEIRA a cura continuou acusada — então não é a poda "
             "que a está acusando, e esta mordida não mede a distinção entre "
             "espinha e bancada"

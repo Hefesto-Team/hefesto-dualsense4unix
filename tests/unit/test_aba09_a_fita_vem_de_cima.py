@@ -13,10 +13,10 @@ from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
 RAIZ = pathlib.Path(onde.RAIZ)
-BANCADA = onde.BANCADA / "09-sistema.html"
+ENSAIO = onde.ENSAIO / "09-sistema.html"
 GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba09.py"
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     {"pref": "p1", "uniq": "aa11", "jogador": 1, "cor": "white", "nome": "White",
      "via": "USB", "transporte": "usb", "alvo": True, "mascara": "DualSense"},
     {"pref": "p2", "uniq": "bb22", "jogador": 2, "cor": "", "nome": "Não sei",
@@ -38,24 +38,24 @@ def _regua():
     return modulo
 
 
-def _fita_da_bancada() -> str:
+def _fita_do_ensaio() -> str:
     """Só o bloco `<div class="fita …">…</div>` da página gerada."""
-    x = BANCADA.read_text(encoding="utf-8")
+    x = ENSAIO.read_text(encoding="utf-8")
     m = re.search(r'<div class="fita[ "]', x)
     assert m, "a `.fita` sumiu da página gerada"
     return x[m.start():x.index("</div>", m.start()) + len("</div>")]
 
 
-def test_a_fita_da_bancada_tem_endereco_de_conjunto() -> None:
+def test_a_fita_do_ensaio_tem_endereco_de_conjunto() -> None:
     """A `.fita` leva `data-campo` + `data-hef-alvo="html"`."""
-    bloco = _fita_da_bancada()
+    bloco = _fita_do_ensaio()
     assert 'data-campo="fita-chips"' in bloco
     assert 'data-hef-alvo="html"' in bloco
 
 
 def test_o_endereco_nao_pousou_no_involucro() -> None:
     """E ele NÃO está na `.fita-linha`, que guarda o Perfil ativo."""
-    x = BANCADA.read_text(encoding="utf-8")
+    x = ENSAIO.read_text(encoding="utf-8")
     linha = x[x.index('<div class="fita-linha'):]
     linha = linha[:linha.index('<div class="fita ')]
     assert "data-campo" not in linha, (
@@ -72,7 +72,7 @@ def test_cada_chip_de_controle_tem_o_seu_endereco() -> None:
     o produto reescreve o chip inteiro —, e o `data-campo` do chip é o que
     registra isso no arquivo.
     """
-    bloco = _fita_da_bancada()
+    bloco = _fita_do_ensaio()
     com_cor = re.findall(r'<label class="chip plastico[^>]*>', bloco)
     assert com_cor, "nenhum chip de plástico na fita — a forma da página mudou"
     for chip in com_cor:
@@ -81,7 +81,7 @@ def test_cada_chip_de_controle_tem_o_seu_endereco() -> None:
 
 def test_o_chip_todos_nao_ganhou_endereco() -> None:
     """O `Todos` não é aparelho nenhum."""
-    bloco = _fita_da_bancada()
+    bloco = _fita_do_ensaio()
     todos = re.search(r'<label class="chip on"[^>]*>Todos</label>', bloco)
     assert todos, "o chip `Todos` sumiu da fita"
     assert "data-campo" not in todos.group(0)
@@ -90,7 +90,7 @@ def test_o_chip_todos_nao_ganhou_endereco() -> None:
 def test_a_regua_da_identidade_nao_acha_nada_na_09() -> None:
     """Zero congelados de identidade na bancada da 09. É o `PRONTO É` da spec."""
     regua = _regua()
-    achados = regua.congelados_de(BANCADA, regua.nomes_de_colorway())
+    achados = regua.congelados_de(ENSAIO, regua.nomes_de_colorway())
     assert achados == [], "\n".join(f"{ln}: {oq} -> {tr}" for ln, oq, tr in achados)
 
 
@@ -107,21 +107,21 @@ def test_o_gerador_e_o_pacote_escrevem_o_mesmo_nome() -> None:
 
 def test_a_fita_viva_nomeia_o_controle_da_mesa() -> None:
     """Com a bancada, o chip do cabo diz `White` e traz a cor do plástico."""
-    saida = a09_sistema._html_da_fita(MESA_DELA)
+    saida = a09_sistema._html_da_fita(MESA_DO_USUARIO)
     assert "White" in saida
     assert "--plastico:" in saida
 
 
 def test_a_fita_viva_nao_traz_um_nome_do_mockup() -> None:
     """Nenhum dos dois controles do desenho aparece — nem por nome, nem por hex."""
-    saida = a09_sistema._html_da_fita(MESA_DELA)
+    saida = a09_sistema._html_da_fita(MESA_DO_USUARIO)
     for agulha in DO_MOCKUP:
         assert agulha not in saida, f"o mockup falou pela máquina: {agulha}"
 
 
 def test_o_controle_sem_cor_nao_ganha_cor_inventada() -> None:
     """Campo sem informação não mostra nada — regra de produto."""
-    saida = a09_sistema._html_da_fita(MESA_DELA)
+    saida = a09_sistema._html_da_fita(MESA_DO_USUARIO)
     chips = re.findall(r'<label class="chip[^"]*" data-campo="fita-chip"[^>]*>', saida)
     assert len(chips) == 2, f"esperava dois chips de controle, achei {len(chips)}"
     assert "--plastico:" in chips[0], "o controle do cabo perdeu a cor que foi lida"
@@ -137,7 +137,7 @@ def test_o_chip_sem_leitura_nao_diz_nao_sei_nem_travessao() -> None:
     """`Não sei` é a AUSÊNCIA de leitura, não um nome — e `—` também não."""
     from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 
-    saida = a09_sistema._html_da_fita(MESA_DELA)
+    saida = a09_sistema._html_da_fita(MESA_DO_USUARIO)
     segundo = saida[saida.rindex("<label class=\"chip"):]
     assert "Não sei" not in segundo
     assert "—" not in segundo
@@ -154,7 +154,7 @@ def test_o_pacote_emite_o_endereco_da_fita(monkeypatch: pytest.MonkeyPatch) -> N
     """O `pacote()` da aba 09 devolve a chave, e ela não vem vazia."""
     monkeypatch.setattr(a09_sistema, "_leitura", lambda ctx: None)
     monkeypatch.setattr(a09_sistema._tela, "pacote", lambda leitura: {"valores": {}})
-    ctx = pacotes.Contexto(state={}, mesa=MESA_DELA, conectados=[], estados={})
+    ctx = pacotes.Contexto(state={}, mesa=MESA_DO_USUARIO, conectados=[], estados={})
     fora = a09_sistema.pacote(ctx)
     assert a09_sistema.CAMPO_DA_FITA in fora, (
         "o pacote parou de emitir a fita — a tela volta a mostrar o desenho")

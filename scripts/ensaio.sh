@@ -14,8 +14,8 @@ Uso:
 AJUDA
 }
 
-ARQ="${HEFESTO_BANCADA_ARQ:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-bancada.json}"
-AGORA="${HEFESTO_BANCADA_AGORA:-$(date +%s)}"
+ARQ="${HEFESTO_ENSAIO_ARQ:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-ensaio.json}"
+AGORA="${HEFESTO_ENSAIO_AGORA:-$(date +%s)}"
 
 _json() {
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^\",}]*\)\"\{0,1\}.*/\1/p" "$ARQ" \
@@ -67,7 +67,7 @@ _reservar() {
     exit 1
   fi
 
-  local pid="${HEFESTO_BANCADA_PID:-$PPID}"
+  local pid="${HEFESTO_ENSAIO_PID:-$PPID}"
   local expira
   expira="$(awk -v a="$AGORA" -v h="$horas" 'BEGIN{printf "%d", a + h*3600}')"
 

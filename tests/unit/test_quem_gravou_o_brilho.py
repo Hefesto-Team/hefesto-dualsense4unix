@@ -1,4 +1,4 @@
-"""A perícia do brilho (O-BRILHO-BAIXO-QUE-ELA-NAO-ESCOLHEU-01), num lar de mentira.
+"""A perícia do brilho (O-BRILHO-BAIXO-QUE-O-USUARIO-NAO-ESCOLHEU-01), num lar de mentira.
 
 O instrumento é `scripts/ensaios/quem_gravou_o_brilho.py`: lê as cópias do perfil
 em ordem de hora, diz em que par de cópias o brilho de um controle muda, casa o

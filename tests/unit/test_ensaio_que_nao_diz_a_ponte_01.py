@@ -63,7 +63,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
-BANCADA = RAIZ / "scripts" / "ensaio_do_mapa.py"
+ENSAIO = RAIZ / "scripts" / "ensaio_do_mapa.py"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
 
@@ -86,7 +86,7 @@ def _ensaio(**campos: str) -> dict:
         "presente": "sim",
         "resultado": "obedece",
         "resultado_da_feature": "",
-        "observado_por": "olho-dela",
+        "observado_por": "olho-do-usuario",
         "fonte": "teste",
         "nota": "",
         "linha_id_v1": "",
@@ -159,7 +159,7 @@ def test_ensaio_sem_ponte_sustenta_qualquer_ponte() -> None:
         )
 
 
-def test_ensaio_com_ponte_sustenta_so_a_dela() -> None:
+def test_ensaio_com_ponte_sustenta_so_a_do_usuario() -> None:
     """O braço declarado — sem ele a coluna não vale nada."""
     pela_xbox = _ensaio(id="xbox-1", ponte="gamepad/xbox")
     assert eliminacao.sustentam_a_ponte([pela_xbox], "gamepad/xbox") == [pela_xbox]
@@ -229,9 +229,9 @@ def test_a_chave_do_indice_continua_sendo_o_par() -> None:
         break
 
 
-def test_a_bancada_importa_as_pontes_em_vez_de_redigitar() -> None:
+def test_o_ensaio_importa_as_pontes_em_vez_de_redigitar() -> None:
     """ESCADA-COM-UM-DONO-SO, aplicada à coluna nova."""
-    fonte = BANCADA.read_text(encoding="utf-8")
+    fonte = ENSAIO.read_text(encoding="utf-8")
     arvore = ast.parse(fonte)
     importa = any(
         isinstance(no, ast.ImportFrom)

@@ -38,9 +38,11 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
 RAIZ = Path(__file__).resolve().parents[2]
 CONJUNTO = "Conexões 3"
-MAPA_NA_BANCADA = any(CONJUNTO in e.porque for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
+MAPA_NO_ENSAIO = any(
+    CONJUNTO in e.porque for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO
+)
 _PUBLICADA_08 = onde.pagina("08-conexoes.html", publicado=True)
-A_08_NA_BANCADA = any(marca not in _PUBLICADA_08.read_text(encoding="utf-8")
+A_08_NO_ENSAIO = any(marca not in _PUBLICADA_08.read_text(encoding="utf-8")
                       for marca in ('class="ar-do"', "data-dica-id="))
 LARGURAS = {1272: 860, 1512: 860, 1900: 1000}
 
@@ -431,7 +433,7 @@ def _vistas(largura: int) -> dict[str, Any]:
         from hefesto_dualsense4unix.interface.conexoes import html_das_dicas
 
         tamanho = (largura, LARGURAS[largura])
-        a08_pagina = onde.pagina("08-conexoes.html", publicado=not A_08_NA_BANCADA)
+        a08_pagina = onde.pagina("08-conexoes.html", publicado=not A_08_NO_ENSAIO)
         lidas = _no_webkit(a08_pagina, tamanho, [
             _medir(), _pairar(".cartao-dica h4", 1), _medir(),
             _sair(".cartao-dica h4", 1), _pintar_as_dicas(html_das_dicas(dicas.montar([]))),
@@ -439,7 +441,7 @@ def _vistas(largura: int) -> dict[str, Any]:
             "(function(){const l=[...document.querySelectorAll('.lugar .abre-lugar')];"
             "if(!l.length) return 'sem caixa'; l[l.length-1].click(); return 'clicou';})()",
             _medir()])
-        mapa_pagina = onde.pagina(pagina_do_mapa.DESTINO.name, publicado=not MAPA_NA_BANCADA)
+        mapa_pagina = onde.pagina(pagina_do_mapa.DESTINO.name, publicado=not MAPA_NO_ENSAIO)
         mapa = _no_webkit(mapa_pagina, tamanho, [
             _medir(), _clicar('.modo[data-modo="ideal"]'), _medir(),
             _clicar('.modo[data-modo="mao"]'), _medir()])

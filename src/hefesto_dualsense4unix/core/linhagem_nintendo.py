@@ -6,9 +6,9 @@ from collections.abc import Iterable
 
 OUIS_CLONE = frozenset({"e417d8"})
 
-OUI_PRO_DESTA_BANCADA = "e0f6b5"
+OUI_PRO_DESTE_ENSAIO = "e0f6b5"
 
-OUIS_NINTENDO_VISTAS = frozenset({OUI_PRO_DESTA_BANCADA})
+OUIS_NINTENDO_VISTAS = frozenset({OUI_PRO_DESTE_ENSAIO})
 
 VIDS_NINTENDO = frozenset({"057e"})
 
@@ -102,7 +102,7 @@ __all__ = [
     "OUIS_CLONE",
     "OUIS_LINHAGEM_COM_DOIS_PONTOS",
     "OUIS_NINTENDO_VISTAS",
-    "OUI_PRO_DESTA_BANCADA",
+    "OUI_PRO_DESTE_ENSAIO",
     "VIDPID_PRO",
     "VIDS_NINTENDO",
     "com_dois_pontos",

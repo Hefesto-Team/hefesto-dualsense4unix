@@ -4,7 +4,7 @@
 **O CONTRATO MUDOU EM 13/09/2026** (FRASES-E-DICAS-01), e esta régua mudou junto
 em vez de ser apagada: o roteiro no tempo é o mesmo, e as perguntas viraram o
 avesso. A palavra de produto está no índice da leva
-(o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026, linha 19):
+(o registro «A-TERCEIRA-LISTA-DO-USUARIO-INDICE» de 13/09/2026, linha 19):
 a caixa laranja da foto era uma recusa pousada no cartão, e o usuário mandou esse tipo
 de frase parar de aparecer. O clique recusado responde pela piscada de recusa
 no botão (`test_a_recusa_pisca_no_botao`), e a frase vai ao diário da janela.
@@ -408,7 +408,7 @@ def test_nada_ha_a_vencer(medido: dict) -> None:
 
 
 def test_o_prazo_saiu_com_o_canal(medido: dict) -> None:
-    """ERA `test_o_prazo_do_produto_e_o_que_ela_decidiu` — 13/09/2026."""
+    """ERA `test_o_prazo_do_produto_e_o_que_o_usuario_decidiu` — 13/09/2026."""
     assert medido["prazo-no-produto"] is False, (
         "voltou ao piloto o prazo da frase de recusa na tela")
 

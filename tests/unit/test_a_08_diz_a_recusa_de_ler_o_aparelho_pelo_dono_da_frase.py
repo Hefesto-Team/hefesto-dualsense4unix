@@ -67,7 +67,7 @@ def evdev_que_recusa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
 
 
 @pytest.mark.parametrize(("erro", "nome"), RECUSAS, ids=IDS)
-def test_o_dono_da_abertura_levanta_a_recusa_com_a_frase_dela(
+def test_o_dono_da_abertura_levanta_a_recusa_com_a_frase_do_usuario(
         evdev_que_recusa: Any, erro: OSError, nome: str) -> None:
     evdev_que_recusa["erro"] = erro
     with pytest.raises(OSError) as recusa:

@@ -85,7 +85,7 @@ def _estado(
 class TestAFraseCerta:
     """O caso dela, e os dois irmãos que o mesmo silêncio cobria."""
 
-    def test_o_caso_dela_mouse_desligado_no_desktop(self) -> None:
+    def test_o_caso_do_usuario_mouse_desligado_no_desktop(self) -> None:
         """23h50 de 09/08: modo de pé, mouse desligado, tela calada."""
         assert (
             texto_do_desktop_sem_emulacao(_estado(mouse=False, teclado=True))
@@ -198,7 +198,7 @@ class TestAEntradaLigaOMouse:
 
         assert "forcar_mouse" not in passos["desktop.arranjo.apply"]
 
-    def test_o_arranjo_declara_que_e_gesto_dela(self) -> None:
+    def test_o_arranjo_declara_que_e_gesto_do_usuario(self) -> None:
         """E aqui o contrapeso do ORIGEM-QUE-MENTE-01 mudou de lado, medido.
 
         O `mouse.emulation.restore` NÃO levava `origin`, e era certo: restaurar

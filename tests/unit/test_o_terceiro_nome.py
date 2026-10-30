@@ -1,4 +1,4 @@
-"""O-TERCEIRO-NOME-DELA-01 — «Tudo na TV e Nada no Controle»."""
+"""O-TERCEIRO-NOME-DO-USUARIO-01 — «Tudo na TV e Nada no Controle»."""
 
 from __future__ import annotations
 
@@ -20,12 +20,12 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 
 PUBLICADO = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html")
-BANCADA = pathlib.Path("mockup/01-jogar.html")
+ENSAIO = pathlib.Path("mockup/01-jogar.html")
 PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
 
 MESA = 4
-NOME_DELA = "Canais sonoros apenas no PC"
+NOME_DO_USUARIO = "Canais sonoros apenas no PC"
 NOME_DO_QUARTO = "Canais sonoros apenas no DualSense"
 NOME_DE_ONTEM = "Tudo na TV e Nada no Controle"
 
@@ -43,7 +43,7 @@ def _a_jogar_esta_em_trabalho() -> bool:
     return "01-jogar.html" in mod.declaradas()
 
 
-@pytest.mark.parametrize("alvo", [PUBLICADO, BANCADA], ids=["publicado", "mockup"])
+@pytest.mark.parametrize("alvo", [PUBLICADO, ENSAIO], ids=["publicado", "mockup"])
 class TestOsTresNomesNaTela:
     """**O PUBLICADO SÓ FICA ATRÁS ENQUANTO A 02 ESTIVER DECLARADA EM"""
 
@@ -53,13 +53,13 @@ class TestOsTresNomesNaTela:
                         "desenho de ontem até a publicação")
         return alvo.read_text(encoding="utf-8")
 
-    def test_o_terceiro_diz_o_nome_dela(self, alvo: pathlib.Path) -> None:
+    def test_o_terceiro_diz_o_nome_do_usuario(self, alvo: pathlib.Path) -> None:
         """MORDIDA: devolva «Tudo na TV e Nada no Controle» ao terceiro botão."""
         vistos = re.findall(r'data-rota="nada"[^>]*>([^<]*)</button>',
                             self._corpo(alvo))
-        assert vistos == [NOME_DELA] * MESA, (
+        assert vistos == [NOME_DO_USUARIO] * MESA, (
             f"o terceiro botão diz {sorted(set(vistos)) or '[]'} e a palavra "
-            f"dela é {NOME_DELA!r}")
+            f"dela é {NOME_DO_USUARIO!r}")
         assert NOME_DE_ONTEM not in vistos
 
     def test_o_quarto_voltou_com_o_nome_do_espelho(self, alvo: pathlib.Path) -> None:
@@ -74,7 +74,7 @@ class TestOsTresNomesNaTela:
         """**A régua que impede a cura de passar do ponto.** Quatro respostas"""
         assert len(re.findall(r'data-gesto="rota"', self._corpo(alvo))) == 3 * MESA
 
-    def test_a_ordem_e_a_escala_dela(self, alvo: pathlib.Path) -> None:
+    def test_a_ordem_e_a_escala_do_usuario(self, alvo: pathlib.Path) -> None:
         """Padrão · só no DualSense · só no PC, em todos os cartões (o «junto» saiu da tela)."""
         ordem = re.findall(r'data-gesto="rota" data-rota="([a-z]+)"',
                            self._corpo(alvo))

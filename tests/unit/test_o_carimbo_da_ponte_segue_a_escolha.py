@@ -1,4 +1,4 @@
-"""O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01 — a escolha do usuário carimba a ponte.
+"""O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01 — a escolha do usuário carimba a ponte.
 
 Medido no diário de 01/10 (Pro Jank Footy): às 19h04 ela trocou o modo para
 Xbox pela janela, o escritor único gravou `mode.caminho="xbox"` e deixou o
@@ -295,7 +295,7 @@ def test_a_escada_nao_desfaz_a_escolha(
     versoes = _versoes(JOGO)
     ponte_tentativa._guardar_o_gesto(
         d,
-        ponte_tentativa.GestoDela(
+        ponte_tentativa.GestoDoUsuario(
             appid=APPID,
             ponte=ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, "xbox"),
             ultimo_gesto=0.0,
@@ -322,7 +322,7 @@ def test_a_escada_ainda_carimba_onde_a_escolha_nao_carimbou(
     d = _daemon()
     ponte_tentativa._guardar_o_gesto(
         d,
-        ponte_tentativa.GestoDela(
+        ponte_tentativa.GestoDoUsuario(
             appid=APPID,
             ponte=ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, "xbox"),
             ultimo_gesto=0.0,

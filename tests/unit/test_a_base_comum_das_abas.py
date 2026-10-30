@@ -141,10 +141,10 @@ def test_a_base_nao_entra_duas_vezes() -> None:
 @pytest.fixture(scope="module")
 def paginas_geradas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, str]:
     """As dez abas e a Calibrar, geradas de novo numa bancada de mentira (em paralelo)."""
-    destino = tmp_path_factory.mktemp("bancada-da-base")
+    destino = tmp_path_factory.mktemp("ensaio-da-base")
     for p in (RAIZ / "mockup").glob("*.html"):
         shutil.copy2(p, destino / p.name)
-    ambiente = dict(os.environ, HEFESTO_BANCADA=str(destino), PYTHONPATH=str(RAIZ / "src"))
+    ambiente = dict(os.environ, HEFESTO_ENSAIO=str(destino), PYTHONPATH=str(RAIZ / "src"))
     geradores = [*sorted(p.name for p in INTERFACE.glob("aba[0-9][0-9].py")), "calibrar.py"]
     filhos = [(nome, subprocess.Popen(
         [sys.executable, str(INTERFACE / nome)], cwd=str(RAIZ), env=ambiente,
@@ -626,7 +626,7 @@ CHAVES = {
 
 
 def test_uma_chave_por_feature_e_a_dos_gatilhos_fica() -> None:
-    """Prova da D-1410-OS-EFEITOS-DELA-TEM-UM-DONO."""
+    """Prova da D-1410-OS-EFEITOS-DO-USUARIO-TEM-UM-DONO."""
     from hefesto_dualsense4unix.interface.pacotes import meus_efeitos
 
     assert meus_efeitos.CHAVES == CHAVES
@@ -676,7 +676,7 @@ def test_criar_efeito_recusa_o_que_nao_e_efeito() -> None:
 def test_a_03_le_a_biblioteca_pelo_dono_novo() -> None:
     """`a03.meus_efeitos()` e a gravação da 03 passam pelo mesmo dono, na chave que já existia.
 
-    Prova da D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
+    Prova da D-1410-OS-EFEITOS-DO-USUARIO-TEM-UM-DONO.
     """
     from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos, meus_efeitos
 

@@ -77,7 +77,7 @@ def _nas_listas(appid: str) -> dict[str, bool]:
     }
 
 
-def test_a_regua_nao_escreve_na_config_dela(_config_de_mentira: Path) -> None:
+def test_a_regua_nao_escreve_na_config_do_usuario(_config_de_mentira: Path) -> None:
     """A trava das outras: se o desvio cair, as três listas apontariam para a"""
     for caminho in (slo.steam_input_allowlist_path(), proton_pin.fora_do_pino_path(),
                     slo.sem_wrapper_path(), lx.caminho(), Path.home()):
@@ -107,7 +107,7 @@ def test_tirar_sai_das_duas() -> None:
     assert not lx.contem(_CHAVE)
 
 
-def test_tirar_nao_apaga_a_escolha_anterior_dela() -> None:
+def test_tirar_nao_apaga_a_escolha_anterior_do_usuario() -> None:
     """ARRANQUE o `if status == "adicionado"` (registre toda lista) e este"""
     assert slo.marcar_jogo_sem_wrapper(_APPID, nota="dela") == "adicionado"
     antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
@@ -154,7 +154,7 @@ def test_destravar_um_jogo_devolve_so_ele(tmp_path: Path, _steam_fechada: None) 
     assert "1971870" in registro["changes"], "o registro do outro jogo sumiu"
 
 
-def test_destravar_nao_desfaz_o_proton_que_ela_trocou(
+def test_destravar_nao_desfaz_o_proton_que_o_usuario_trocou(
         tmp_path: Path, _steam_fechada: None) -> None:
     """A regra do desinstalar, recortada: se ela trocou o Proton do jogo DEPOIS"""
     vdf, estado = _pinar(tmp_path, ["1599660"])
@@ -188,7 +188,7 @@ def test_destravar_o_que_nao_e_nosso_e_noop(tmp_path: Path, _steam_fechada: None
     assert vdf.read_text(encoding="utf-8") == antes
 
 
-_DELA = "VKD3D_CONFIG=no_upload_hvv %command%"
+_DO_USUARIO = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 
 @pytest.fixture
@@ -201,7 +201,7 @@ def _steam_fechada_no_atalho(monkeypatch: pytest.MonkeyPatch) -> None:
 def _biblioteca(tmp_path: Path) -> Path:
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_localconfig({
-        "1599660": slo.migrate_value(_DELA),
+        "1599660": slo.migrate_value(_DO_USUARIO),
         "1971870": slo.WRAPPER_LAUNCH,
     }), encoding="utf-8")
     return vdf
@@ -214,7 +214,7 @@ def test_tirar_o_atalho_tira_so_o_jogo_pedido(
     r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
     apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
     assert [i["appid"] for i in r["removed"]] == ["1599660"], r
-    assert apps["1599660"] == _DELA, "a linha dela não sobreviveu"
+    assert apps["1599660"] == _DO_USUARIO, "a linha dela não sobreviveu"
     assert slo.WRAPPER_PREFIX in (apps["1971870"] or ""), "o OUTRO jogo perdeu o atalho"
 
 
@@ -240,7 +240,7 @@ def test_o_vigia_tira_o_atalho_de_quem_esta_na_lista(
     assert resultado is not None
     assert [i["appid"] for i in resultado["removed"]] == ["1599660"]
     apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
-    assert apps["1599660"] == _DELA
+    assert apps["1599660"] == _DO_USUARIO
     assert slo.WRAPPER_PREFIX in (apps["1971870"] or "")
 
 
@@ -248,11 +248,11 @@ def test_o_vigia_nao_repoe_o_atalho_de_quem_esta_na_lista(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
     """O avesso, que já valia e tem de continuar valendo: o jogo da lista sem"""
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_localconfig({"1599660": _DELA}), encoding="utf-8")
+    vdf.write_text(_localconfig({"1599660": _DO_USUARIO}), encoding="utf-8")
     slo.marcar_jogo_sem_wrapper("1599660")
     status, _, _ = sw.reparar_ou_adiar(vdfs=[vdf], registro=tmp_path / "visto.json")
     assert status == sw.REPARO_NADA
-    assert slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))["1599660"] == _DELA
+    assert slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))["1599660"] == _DO_USUARIO
 
 
 @pytest.fixture
@@ -413,7 +413,7 @@ def test_a_janela_excluida_liga_o_modo_nativo(
     assert _daemon._exclusao_viva is None
 
 
-def test_o_modo_nativo_dela_nao_e_desligado_pela_exclusao(
+def test_o_modo_nativo_do_usuario_nao_e_desligado_pela_exclusao(
         _daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o `ligou_nativo` e este teste reprova: sair do jogo excluído"""
     nativo = _NativoCapturado(_daemon, monkeypatch)
@@ -658,7 +658,7 @@ def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
 _APP_DO_HEROIC = "63a665088eb1480298f1e57943b225d8"
 _NOSSOS_NO_HEROIC = (("PROTON_DISABLE_HIDRAW", "0x054c/0x0ce6"),
            ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6"))
-_DELA_NO_HEROIC = (("MANGOHUD", "1"),)
+_DO_USUARIO_NO_HEROIC = (("MANGOHUD", "1"),)
 
 
 def _lista(pares: tuple[tuple[str, str], ...]) -> list[dict[str, str]]:
@@ -674,7 +674,7 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
     """O Heroic flatpak no lar de mentira, com o Guardiões na biblioteca."""
     casa = Path.home() / ".var/app/com.heroicgameslauncher.hgl/config/heroic"
     (casa / "store_cache").mkdir(parents=True)
-    globais = _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)
+    globais = _lista(_NOSSOS_NO_HEROIC + _DO_USUARIO_NO_HEROIC)
     (casa / "config.json").write_text(json.dumps(
         {"defaultSettings": {"enviromentOptions": globais}}), encoding="utf-8")
     (casa / "store_cache" / "umu.json").write_text(
@@ -688,7 +688,8 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
     if com_copia:
         copia.parent.mkdir(parents=True)
         copia.write_text(json.dumps(
-            {_APP_DO_HEROIC: {"enviromentOptions": _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC),
+            {_APP_DO_HEROIC: {"enviromentOptions": _lista(
+                _NOSSOS_NO_HEROIC + _DO_USUARIO_NO_HEROIC),
                               "winePrefix": str(prefixo)},
              "version": "v0", "explicit": True}, indent=2), encoding="utf-8")
     return casa, copia
@@ -712,7 +713,7 @@ def test_tirar_devolve_a_copia_byte_a_byte() -> None:
     assert json.loads(copia.read_text(encoding="utf-8")) == antes
 
 
-def test_a_volta_nao_passa_por_cima_do_que_ela_mudou() -> None:
+def test_a_volta_nao_passa_por_cima_do_que_o_usuario_mudou() -> None:
     """Ela trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
     antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
@@ -730,7 +731,7 @@ def test_a_carona_mantem_a_copia_do_excluido_limpa(tmp_path: Path) -> None:
     casa, copia = _heroic_de_mentira(com_copia=True)
     antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))
-    raiz[_APP_DO_HEROIC]["enviromentOptions"] = _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)
+    raiz[_APP_DO_HEROIC]["enviromentOptions"] = _lista(_NOSSOS_NO_HEROIC + _DO_USUARIO_NO_HEROIC)
     copia.write_text(json.dumps(raiz), encoding="utf-8")
     amb = tmp_path / "launch_env"
     amb.mkdir()

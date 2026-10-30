@@ -1,6 +1,6 @@
 # O mapa de canais corrigido pela bancada
 
-Por que o «Mapa das Conexões» identificou errado as entradas USB de uma máquina real, e o que a sprint `O-MAPA-QUE-ELA-CORRIGE-01` deu à tela para ela corrigir. Medido e construído em 26/09/2026, a partir do `dev` em `34a474e9a`.
+Por que o «Mapa das Conexões» identificou errado as entradas USB de uma máquina real, e o que a sprint `O-MAPA-QUE-O-USUARIO-CORRIGE-01` deu à tela para ela corrigir. Medido e construído em 26/09/2026, a partir do `dev` em `34a474e9a`.
 
 Legenda: **MEDIDO** (rodou-se e viu-se), **LIDO** (código ou disco), **INFERIDO** (dedução sem medida). As medidas e o piloto rodaram num lar de mentira (`HOME` e `XDG_*` desviados), com uma cópia do `maquina.json` e o `/sys` real só lido, e não mudaram o `maquina.json` dela (o mesmo sha256 antes e depois). Os caminhos curtos são relativos a `src/hefesto_dualsense4unix/`, e as linhas são as desta árvore.
 
@@ -35,7 +35,7 @@ Seis decisões, registradas na sprint pelo ID: as quatro primeiras chegaram deci
 | `D-2609-O-NOME-E-DA-POSICAO` | o nome mora em `mapa.portas[N].nome`, até 24 caracteres; um nome igual ao número, a «Entrada N» ou ao número de outra entrada **não é nome**. A grafia tem um dono só, `src/hefesto_dualsense4unix/utils/rotulo_da_entrada.py` (`PALAVRA_DA_ENTRADA`, `nome_que_vale`, `com_artigo`, com artigo sempre feminino); a leitura é `nome_da_entrada` e `rotulo_do_numero` em `integrations/entrada_a_entrada.py:1110` e `:1462` |
 | `D-2609-TROCAR-MOVE-O-BURACO` | «Trocar com…» move entre N e M tudo que é do buraco físico (`caminho` e `nos` sempre juntos, `liga`, `usb`, a ponta do extensor, a amarra em `lugares`, a face do hub declarado); o número, o nome e a posição na face ficam. Desfazer é trocar de novo. Reordenar os números foi recusado: contraria o `_NUMERO_DE_ENTRADA` (`utils/maquina.py:71`), que é o número escrito no gabinete |
 | `D-2609-O-HUB-PENDE-DA-ENTRADA` | `de_quem_pende` (`integrations/entrada_a_entrada.py:1529`) liga a face à entrada pelos caminhos e nós que o Mapear gravou (vale com o hub desplugado); a declaração dela vence, e a divergência vira uma linha: «O computador lê este hub na Entrada 5.». A face fantasma só nasce para o hub declarado sem face ligada |
-| `D-2609-A-VELOCIDADE-DELA-VENCE-A-PLACA` | a precedência continua aparelho USB 3 enumerado > o que ela disse > a placa (`velocidade_da_entrada`, `integrations/mapa_das_portas.py:524`); o editor diz de onde veio («É o que a placa-mãe diz.», «É o que você disse.») |
+| `D-2609-A-VELOCIDADE-DO-USUARIO-VENCE-A-PLACA` | a precedência continua aparelho USB 3 enumerado > o que ela disse > a placa (`velocidade_da_entrada`, `integrations/mapa_das_portas.py:524`); o editor diz de onde veio («É o que a placa-mãe diz.», «É o que você disse.») |
 | `D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO` | no produto, o clique do editor não pinta nada local: o gesto grava e devolve o arranjo relido (`CHAVE_DEPOIS_DE_GRAVAR`, `interface/arranjo_desta_maquina.py:27`); uma recusa não repinta, e a piscada acha o botão |
 | `D-2609-ENSINAR-GRAVA-O-NO` | o aparelho «sem entrada» posto numa entrada grava o nó onde está e o `peer` dele (`ensinar_a_entrada`, `integrations/entrada_a_entrada.py:1367`), sem tocar em `lugares`; é a cura universal da pista que o firmware não liga |
 

@@ -72,7 +72,7 @@ def test_jogo_nunca_visto_com_wrapper_nao_e_regressao(tmp_path: Path) -> None:
     assert _linha(amb)[0] == "[ OK ]"
 
 
-def test_jogo_que_ela_recusou_nao_e_regressao(tmp_path: Path) -> None:
+def test_jogo_que_o_usuario_recusou_nao_e_regressao(tmp_path: Path) -> None:
     amb = _lar(tmp_path, {"620": "%command%"}, vistos=["620"])
     slo.marcar_jogo_sem_wrapper(620, path=slo.sem_wrapper_path(amb.home / ".config"))
 

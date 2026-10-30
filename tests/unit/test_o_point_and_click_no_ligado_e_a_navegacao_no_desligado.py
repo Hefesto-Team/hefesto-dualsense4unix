@@ -106,7 +106,7 @@ def test_o_modo_de_cada_chip(chip: str, modo: str, steam: bool) -> None:
     assert (linha.modo, linha.steam_input) == (modo, steam)
 
 
-def test_a_navegacao_leva_o_arranjo_dela() -> None:
+def test_a_navegacao_leva_o_arranjo_do_usuario() -> None:
     nav = aba._plano_do_chip(aba.CHIP_DA_NAVEGACAO)
     assert nav[-1] == ("desktop.arranjo.apply", {"origin": "manual", "arranjo": "navegacao"})
 
@@ -150,7 +150,7 @@ def test_no_arranjo_da_navegacao_o_desktop_acende_a_navegacao_no_desligado() -> 
     assert tela["steam-input-aceso"] == ""
 
 
-def test_o_clique_na_navegacao_leva_o_arranjo_dela(monkeypatch) -> None:
+def test_o_clique_na_navegacao_leva_o_arranjo_do_usuario(monkeypatch) -> None:
     planos: list[Any] = []
     monkeypatch.setattr(aba, "_aplicar", lambda p, plano: planos.append(plano) or True)
     monkeypatch.setattr(aba, "_lembrar_do_chip", lambda *a, **k: None)

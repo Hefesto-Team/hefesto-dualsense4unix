@@ -304,13 +304,13 @@ def _portao():
     return mod
 
 
-class TestAsExcecoesDelaSaoUmaListaNaoUmaFaixa:
+class TestAsExcecoesDoUsuarioSaoUmaListaNaoUmaFaixa:
     """Ela abriu o portão para a fileira de saída de som, e só para ela."""
 
-    def test_as_quatro_que_ela_nomeou_passam(self) -> None:
+    def test_as_quatro_que_o_usuario_nomeou_passam(self) -> None:
         vg = _portao()
-        assert vg.EXCECOES_DELA, "a lista nasceu vazia"
-        for cp, papel in vg.EXCECOES_DELA.items():
+        assert vg.EXCECOES_DO_USUARIO, "a lista nasceu vazia"
+        for cp, papel in vg.EXCECOES_DO_USUARIO.items():
             assert not vg.e_proibido(cp), f"U+{cp:05X} ({papel}) devia passar"
             assert papel.strip(), (
                 f"U+{cp:05X} entrou sem o papel escrito — e o papel é o que "
@@ -330,9 +330,9 @@ class TestAsExcecoesDelaSaoUmaListaNaoUmaFaixa:
     def test_a_excecao_e_uma_lista_e_nao_uma_faixa(self) -> None:
         """A FORMA do dado é a trava."""
         vg = _portao()
-        assert isinstance(vg.EXCECOES_DELA, dict)
-        assert all(isinstance(k, int) for k in vg.EXCECOES_DELA)
-        assert len(vg.EXCECOES_DELA) < 24, (
+        assert isinstance(vg.EXCECOES_DO_USUARIO, dict)
+        assert all(isinstance(k, int) for k in vg.EXCECOES_DO_USUARIO)
+        assert len(vg.EXCECOES_DO_USUARIO) < 24, (
             "a lista passou de duas dezenas — se ela cresceu tanto, a pergunta "
             "não é qual acrescentar, é se o ADR-011 ainda descreve o produto")
 

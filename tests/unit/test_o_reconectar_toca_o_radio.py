@@ -81,7 +81,7 @@ def test_o_controle_fora_do_radio_nao_leva_disconnect() -> None:
     assert desfecho.estado == radio.ESTADO_VOLTOU
 
 
-def test_o_connect_recusado_devolve_o_ps_para_ela() -> None:
+def test_o_connect_recusado_devolve_o_ps_para_o_usuario() -> None:
     """Um DualSense dormindo não atende chamado — medido em 22/09/2026.
 
     MORDIDA: faça o `Connect` recusado devolver `ESTADO_NAO_DEU` e a tela volta

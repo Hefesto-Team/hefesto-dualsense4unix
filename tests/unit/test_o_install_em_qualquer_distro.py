@@ -33,7 +33,7 @@ from tests.unit.test_install_universal_02_o_ucm_que_o_doctor_cura import (
 from tests.unit.test_o_ensaio_do_install_nao_escreve import (
     INSTALL_PATH,
     RAIZ,
-    _bancada,
+    _ensaio as _ensaio_do_lar,
 )
 
 BAZZITE = 'ID=bazzite\nID_LIKE="fedora"\nVARIANT_ID=kinoite\n'
@@ -142,7 +142,7 @@ def test_o_comando_manual_da_familia_imutavel_nao_manda_um_gerente(tmp_path: Pat
 
 
 def _ensaio(tmp_path: Path, os_release: str, *, marca: bool) -> tuple[str, str]:
-    _lar, diario, ambiente = _bancada(tmp_path)
+    _lar, diario, ambiente = _ensaio_do_lar(tmp_path)
     arquivo = tmp_path / "os-release"
     arquivo.write_text(os_release, encoding="utf-8")
     ambiente["HEFESTO_OS_RELEASE"] = str(arquivo)

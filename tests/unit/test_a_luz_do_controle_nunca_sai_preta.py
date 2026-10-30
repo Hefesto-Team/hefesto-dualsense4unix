@@ -486,7 +486,7 @@ def test_todo_passo_do_trilho_acende_uma_cor_que_se_ve(tom: RGB) -> None:
 
 
 @pytest.mark.parametrize("tom", _tons_da_regua(), ids=lambda t: "#{:02X}{:02X}{:02X}".format(*t))
-def test_a_oito_por_cento_a_luz_nao_e_mais_a_que_ela_leu_como_preto(tom: RGB) -> None:
+def test_a_oito_por_cento_a_luz_nao_e_mais_a_que_o_usuario_leu_como_preto(tom: RGB) -> None:
     """A âncora: a 8%, em todo tom, o canal maior passa do `20` das 02:30."""
     assert max(_na_escala(tom, BRILHO_DAS_0230)) > LIDA_COMO_PRETO
 

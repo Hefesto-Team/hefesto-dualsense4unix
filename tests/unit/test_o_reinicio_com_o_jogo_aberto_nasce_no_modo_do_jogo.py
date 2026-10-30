@@ -50,7 +50,7 @@ _PREFERENCIA_REAL = session.load_gamepad_preference
 
 APPID = 4235410
 JOGO = "Future Knight"
-DELA = "Desktop Dela"
+DO_USUARIO = "Desktop Dela"
 FREESTYLE = loader.NOME_DO_PADRAO
 
 
@@ -125,10 +125,10 @@ def _o_disco(caso: str) -> str:
         mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
     ), origem="régua")
     loader.save_profile(Profile(
-        name=DELA, match=MatchCriteria(window_class=["zathura"]), priority=60,
+        name=DO_USUARIO, match=MatchCriteria(window_class=["zathura"]), priority=60,
         mode=ProfileModeConfig(kind="gamepad", caminho="dualsense"),
     ), origem="régua")
-    session.save_last_profile(DELA)
+    session.save_last_profile(DO_USUARIO)
     session.save_freestyle_ligado(caso == "freestyle-ligado")
     if caso != "sem-jogo":
         appid = 999999 if caso == "jogo-sem-perfil" else APPID
@@ -136,7 +136,7 @@ def _o_disco(caso: str) -> str:
         (pasta / "last_run").write_text(
             f"appid={appid}\nepoch={int(time.time()) - 300}\npid={os.getpid()}\n",
             encoding="utf-8")
-    return {"jogo-com-perfil": JOGO, "freestyle-ligado": FREESTYLE}.get(caso, DELA)
+    return {"jogo-com-perfil": JOGO, "freestyle-ligado": FREESTYLE}.get(caso, DO_USUARIO)
 
 
 def _config() -> lifecycle.DaemonConfig:
@@ -222,11 +222,11 @@ def test_o_sinal_e_avaliado_antes_do_primeiro_pad(_lar: list[str]) -> None:
     assert _lar.index("sinal") < _lar.index("pad"), f"a ordem do boot foi {_lar[:4]}"
 
 
-def test_o_jogo_em_cena_nao_vira_a_escolha_dela(_lar: list[str]) -> None:
+def test_o_jogo_em_cena_nao_vira_a_escolha_do_usuario(_lar: list[str]) -> None:
     """Depois do reinício no jogo, a escolha do usuário segue no terceiro perfil."""
     nome = _o_disco("jogo-com-perfil")
 
     asyncio.run(_o_reinicio(nome))
 
-    assert session.load_last_profile() == DELA
+    assert session.load_last_profile() == DO_USUARIO
     assert session.load_freestyle_ligado() is False

@@ -169,7 +169,7 @@ def test_o_que_a_subtracao_nao_alcanca_continua_intocavel(
     assert "não vou tocar" in sw.frase_do_aviso(censo)
 
 
-def test_o_reparo_da_lista_estendida_preserva_o_device_dela(
+def test_o_reparo_da_lista_estendida_preserva_o_device_do_usuario(
     tmp_path: Path, steam_fechada
 ):
     """A prova NO ARQUIVO, que é onde a subtração é a diferença entre curar e"""
@@ -298,7 +298,7 @@ def test_com_a_steam_aberta_adia_sem_tocar_no_vdf(tmp_path: Path, monkeypatch):
     assert vdf.read_bytes() == antes
 
 
-def test_adiado_hoje_reparado_quando_ela_fechar(tmp_path: Path, monkeypatch):
+def test_adiado_hoje_reparado_quando_o_usuario_fechar(tmp_path: Path, monkeypatch):
     """Não há marcador de pendência: o censo é uma leitura de arquivo, então o"""
     aberta = {"steam": True}
     for mod in (sw, slo):
@@ -313,7 +313,7 @@ def test_adiado_hoje_reparado_quando_ela_fechar(tmp_path: Path, monkeypatch):
     assert "VKD3D_CONFIG=no_upload_hvv" in vdf.read_text(encoding="utf-8")
 
 
-def test_jogo_recusado_por_ela_nao_avisa_nem_repara(tmp_path: Path, steam_fechada):
+def test_jogo_recusado_pelo_usuario_nao_avisa_nem_repara(tmp_path: Path, steam_fechada):
     """'Não quero o wrapper neste jogo' tem de ser respeitado — e o produto
     não pode brigar com a dona da máquina.
 
@@ -342,7 +342,7 @@ def test_jogo_recusado_por_ela_nao_avisa_nem_repara(tmp_path: Path, steam_fechad
     assert slo.ler_jogos_sem_wrapper(lista) == []
 
 
-def test_a_recusa_dela_sobrevive_ao_install(tmp_path: Path, steam_fechada, capsys):
+def test_a_recusa_do_usuario_sobrevive_ao_install(tmp_path: Path, steam_fechada, capsys):
     """O passo sem flag do install roda `--apply` em TODOS os jogos."""
     lista = tmp_path / "jogos_sem_wrapper.txt"
     slo.marcar_jogo_sem_wrapper(PRAGMATA, path=lista)

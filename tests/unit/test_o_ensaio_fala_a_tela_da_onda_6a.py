@@ -1,4 +1,4 @@
-"""A bancada fala a tela de hoje — A-BANCADA-DELTA-6A, 24/09/2026."""
+"""A bancada fala a tela de hoje — O-ENSAIO-DELTA-6A, 24/09/2026."""
 
 from __future__ import annotations
 

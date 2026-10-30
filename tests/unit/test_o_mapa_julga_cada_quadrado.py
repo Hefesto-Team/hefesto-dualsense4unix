@@ -12,12 +12,12 @@ exigir_gi_real("o juízo de cada quadrado do mapa 2D")
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 
-from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa, bancada_do_rascunho
+from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa, ensaio_do_rascunho
 from hefesto_dualsense4unix.integrations import mapa_das_portas
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 from tests.unit.test_mapa_o_ensaio_de_mentira import (
-    bancada_de_agora,
-    mapa_dela,
+    ensaio_de_agora,
+    mapa_do_usuario,
 )
 
 BT_DA_EXTENSAO = "3-1.1.4"
@@ -38,20 +38,20 @@ class _Hospedeiro:
         self.marcou += 1
 
 
-def test_a_bancada_do_rascunho_responde_com_o_gabinete_vazio() -> None:
+def test_o_ensaio_do_rascunho_responde_com_o_gabinete_vazio() -> None:
     """Quem nunca desenhou não recebe juízo nenhum, e também não recebe erro."""
-    bancada = bancada_do_rascunho(LogicaDoMapa(MapaDaMesa()), bancada_de_agora().censo())
+    ensaio = ensaio_do_rascunho(LogicaDoMapa(MapaDaMesa()), ensaio_de_agora().censo())
 
-    assert bancada.mesa.faces == ()
-    assert mapa_das_portas.LACUNA_POSICAO not in bancada.lacunas, (
+    assert ensaio.mesa.faces == ()
+    assert mapa_das_portas.LACUNA_POSICAO not in ensaio.lacunas, (
         "sem face nenhuma não há fileira, e confessar a posição de entradas que "
-        f"não existem é ruído: {bancada.lacunas}"
+        f"não existem é ruído: {ensaio.lacunas}"
     )
 
 
-def test_o_rascunho_nao_derruba_o_que_so_ela_sabe_da_face() -> None:
+def test_o_rascunho_nao_derruba_o_que_so_o_usuario_sabe_da_face() -> None:
     """`perto` e `alto` atravessam o rascunho — senão o "Aplicar" os apagaria."""
-    bruto = mapa_dela().model_dump(mode="json")
+    bruto = mapa_do_usuario().model_dump(mode="json")
     bruto["faces"][0]["perto"] = True
     bruto["faces"][2]["alto"] = True
     mapa = MapaDaMesa.model_validate(bruto)
@@ -69,9 +69,9 @@ def test_o_rascunho_nao_derruba_o_que_so_ela_sabe_da_face() -> None:
         "a face que ela marcou como a do alto voltou do rascunho sem o fato "
         f"dela: {documento['faces'][2]}"
     )
-    bancada = bancada_do_rascunho(logica, bancada_de_agora().censo())
-    assert bancada.mesa.faces[0].perto is True
-    assert bancada.mesa.faces[2].alto is True
+    ensaio = ensaio_do_rascunho(logica, ensaio_de_agora().censo())
+    assert ensaio.mesa.faces[0].perto is True
+    assert ensaio.mesa.faces[2].alto is True
 
 
 def _todo_o_texto(widget: Any) -> set[str]:

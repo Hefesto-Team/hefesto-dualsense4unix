@@ -83,7 +83,7 @@ PAGINA = "10-perfis.html"
 ABRE = re.compile(r'<table[^>]*class="tab miuda"[^>]*>')
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
@@ -108,7 +108,7 @@ VAZIOS = [c["pref"] for c in monta.MESA if not c.get("conectado", True)]
 
 def test_a_linha_de_controle_na_mesa_nao_tem_dica() -> None:
     """MORDIDA: devolva o `title=` ao `<tr>` em `aba10.linha_do_controle`."""
-    com_dica = [t for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
+    com_dica = [t for c, t in zip(monta.MESA, _linhas(_ensaio()), strict=True)
                 if c.get("conectado", True) and "data-dica=" in t]
     assert not com_dica, (
         f"{len(com_dica)} linha(s) de controle NA MESA voltaram a ter dica. "
@@ -133,7 +133,7 @@ def test_a_publicada_nao_fica_curada_em_silencio() -> None:
 def test_o_lugar_vazio_continua_com_a_dica() -> None:
     """`P3` é um LUGAR, não uma peça: aquela frase não afirma nada sobre"""
     assert VAZIOS, "o desenho não tem lugar vazio — esta régua perdeu o objeto"
-    sem_dica = [c["pref"] for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
+    sem_dica = [c["pref"] for c, t in zip(monta.MESA, _linhas(_ensaio()), strict=True)
                 if not c.get("conectado", True) and "data-dica=" not in t]
     assert not sem_dica, (
         f"o lugar vazio {sem_dica} perdeu a dica que explica por que ele "
@@ -146,7 +146,7 @@ def test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa() -> None:
     assert len(modelos) >= 28, (
         f"o mapa das cores encolheu para {len(modelos)} modelos — esta régua "
         f"mede contra `docs/data/cores-do-dualsense.csv`, e ele é o dono")
-    dicas = re.findall(r'data-dica="([^"]*)"', _tabela(_bancada()))
+    dicas = re.findall(r'data-dica="([^"]*)"', _tabela(_ensaio()))
     culpadas = [(d, m) for d in dicas for m in modelos if m in d]
     assert not culpadas, (
         f"{len(culpadas)} dica(s) da tabela por controle nomeiam um modelo: "
@@ -157,7 +157,7 @@ def test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa() -> None:
 def test_o_nome_do_modelo_so_vive_em_elemento_enderecado() -> None:
     """Onde o modelo APARECE na tabela, ele tem de estar num elemento que o"""
     modelos = {nome for _, nome in mesa_viva.CORES.values() if nome}
-    tabela = _tabela(_bancada())
+    tabela = _tabela(_ensaio())
     solto = re.sub(r'<span data-hef="guarda\.nome">.*?</span>\s*</td>', "", tabela,
                    flags=re.DOTALL)
     achados = sorted({m for m in modelos if m in solto})

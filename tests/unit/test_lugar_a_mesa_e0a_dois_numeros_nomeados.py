@@ -52,7 +52,7 @@ def _texto(players: Any, externals: Any) -> str:
 class TestOsDoisNumerosNomeados:
     """A função pura — é ela que decide o que a boca pode dizer."""
 
-    def test_a_mesa_dela_de_06_08_diz_um_e_tres(self) -> None:
+    def test_a_mesa_do_usuario_de_06_08_diz_um_e_tres(self) -> None:
         """1 DualSense adotado + 2 externos = 1 jogador, 3 controles."""
         linhas = cmd_coop.linhas_de_contagem(1, 2)
         assert linhas[0] == "jogadores pelo Hefesto: 1"

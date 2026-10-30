@@ -82,7 +82,7 @@ def _ctx(**estado: Any):
 
 
 @pytest.fixture(scope="module")
-def bancada() -> str:
+def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA)
@@ -227,7 +227,7 @@ def test_a_chave_do_mapa_casa_nas_duas_grafias(a05) -> None:
         assert lido["e"] == 30, f"a grafia {chave!r} não casou: {lido}"
 
 
-def test_o_desenho_tem_as_duas_barras_de_motor(bancada: str) -> None:
+def test_o_desenho_tem_as_duas_barras_de_motor(ensaio: str) -> None:
     """Duas por LUGAR da mesa, com o lado, o teto do esquema e passo 1.
 
     QUATRO COISAS, e cada uma é um jeito de a linha voltar a mentir: sem
@@ -249,9 +249,9 @@ def test_o_desenho_tem_as_duas_barras_de_motor(bancada: str) -> None:
     """
     from hefesto_dualsense4unix.interface import aba05
     lugares = len(aba05.MESA)
-    assert bancada.count('data-controle="p') == lugares, (
+    assert ensaio.count('data-controle="p') == lugares, (
         f"a bancada não tem os {lugares} lugares — a régua viraria vácuo")
-    barras = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', bancada)
+    barras = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', ensaio)
               if 'data-papel="motor"' in t]
     assert len(barras) == 2 * lugares, (
         f"as barras de motor são {len(barras)} e os lugares são {lugares} — "
@@ -286,7 +286,7 @@ def test_o_endereco_velho_do_motor_continua_sendo_emitido(a05) -> None:
             "a largura saiu com `%` — o pintor acrescenta o dele")
 
 
-def test_a_faixa_de_estado_nao_existe_mais_no_desenho(bancada: str) -> None:
+def test_a_faixa_de_estado_nao_existe_mais_no_desenho(ensaio: str) -> None:
     """Nem a célula, nem o rótulo da coluna de rótulos, nem a faixa da grade.
 
     **DECISÃO, 05/09/2026, verbatim:** *"pq temos uma linha de estado se o
@@ -311,16 +311,16 @@ def test_a_faixa_de_estado_nao_existe_mais_no_desenho(bancada: str) -> None:
     rótulo `Estado` à `.rotulos`, e este caso reprova.
     """
     for morto in ('data-campo="trava"', '<span class="sec-rot">Estado'):
-        assert morto not in bancada, (
+        assert morto not in ensaio, (
             f"{morto!r} voltou ao desenho da aba 05 — a faixa de estado saiu em "
             f"05/09/2026 por decisão dela")
 
 
-def test_a_grade_da_vibracao_tem_sete_faixas(bancada: str) -> None:
+def test_a_grade_da_vibracao_tem_sete_faixas(ensaio: str) -> None:
     """A `grid-template-rows` perdeu a oitava, e a variável do piso foi junto."""
-    assert "--r-estado" not in bancada, (
+    assert "--r-estado" not in ensaio, (
         "a variável do piso da faixa de estado voltou à folha da aba 05")
-    assert bancada.count("minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);") == 1, (
+    assert ensaio.count("minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);") == 1, (
         "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava faixa "
         "saiu em 05/09/2026 e a `grid-template-rows` foi junto")
 
@@ -386,21 +386,21 @@ def test_a_linha_de_mesa_nao_existe_mais() -> None:
         "05/09/2026, e a razão não caducou.")
 
 
-def test_o_desenho_nao_tem_linha_de_mesa_nem_o_auto(bancada: str) -> None:
+def test_o_desenho_nao_tem_linha_de_mesa_nem_o_auto(ensaio: str) -> None:
     """Nem o bloco, nem o endereço, nem o quarto botão."""
     for morto in ('class="vib-mesa"', 'data-campo="degrau-mesa"',
                   'data-papel="forca-mesa"'):
-        assert morto not in bancada, (
+        assert morto not in ensaio, (
             f"{morto!r} voltou ao desenho da aba 05 — a linha de mesa saiu em "
             f"05/09/2026 por decisão dela")
-    assert 'data-forca="auto"' not in bancada, (
+    assert 'data-forca="auto"' not in ensaio, (
         "o botão `Auto` voltou à aba da vibração. Ele nunca pôs peça nenhuma em "
         "Auto — o esquema o recusa por unidade, e o clique significava `limpa o "
         "meu ajuste e segue o global`. O rótulo dizia uma coisa e o ato era "
         "outra; um botão a menos é uma mentira a menos.")
 
 
-def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
+def test_a_forca_do_ensaio_e_so_o_trilho(ensaio: str) -> None:
     """O desenho de 18/10/2026 (r3b-05-12 e o pedido do dia): sem botões, um trilho de 0 a 200%.
 
     O corte em 100% da primeira volta estava errado: o controle não tem um nível de 150%, e o
@@ -413,9 +413,9 @@ def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
 
     from hefesto_dualsense4unix.interface import aba05
 
-    assert "data-forca=" not in bancada and 'class="seg"' not in bancada, (
+    assert "data-forca=" not in ensaio and 'class="seg"' not in ensaio, (
         "os botões da Força voltaram — o desenho os tirou")
-    trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', bancada)
+    trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', ensaio)
                if 'data-papel="intensidade"' in t]
     assert len(trilhos) == len(aba05.MESA), (
         f"a Força deve ter um trilho por lugar ({len(aba05.MESA)}) e tem {len(trilhos)}")
@@ -424,7 +424,7 @@ def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
         assert f'step="{aba05.PASSO_DA_FORCA}"' in t, t
     assert (round(RUMBLE_CUSTOM_MULT_MAX * 100), 5) == (aba05.TETO_DA_FORCA, aba05.PASSO_DA_FORCA)
     assert aba05.TETO_DA_FORCA == 200, "o trilho da Força vai de 0 a 200%: cortar em 100% erra"
-    assert bancada.count('class="teto">%</span>') >= len(aba05.MESA)
+    assert ensaio.count('class="teto">%</span>') >= len(aba05.MESA)
 
 
 def test_a_coluna_sem_ajuste_proprio_mostra_a_forca_que_herdou() -> None:
@@ -451,7 +451,7 @@ def test_a_coluna_sem_ajuste_proprio_mostra_a_forca_que_herdou() -> None:
         f"que esses campos pintavam saiu em 05/09/2026")
 
 
-def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
+def test_a_nota_do_testar_mora_na_dica(ensaio: str) -> None:
     """Ela volta da tela para o `?` do "Testar agora" — e aparece UMA vez.
 
     **05-Q2 dela, 05/09/2026: _"As duas na dica."_** Ela leu as quatro opções
@@ -478,19 +478,19 @@ def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
 
     import re
 
-    dica = re.search(r'data-dica="([^"]*)">Testar agora</span>', bancada)
+    dica = re.search(r'data-dica="([^"]*)">Testar agora</span>', ensaio)
     assert dica is not None, (
         'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
         "onde a dica morar")
     assert aba05.DICA_DOS_VALORES_QUE_PASSAM in dica.group(1), (
         'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 dela é '
         '*"As duas na dica"*')
-    assert 'class="vib-nota"' not in bancada, (
+    assert 'class="vib-nota"' not in ensaio, (
         "a linha permanente embaixo da grade voltou — ela saiu na 05-Q2, e a "
         "classe sem regra de CSS seria um dado morto na página")
-    assert bancada.count(aba05.DICA_DOS_VALORES_QUE_PASSAM) == 1, (
+    assert ensaio.count(aba05.DICA_DOS_VALORES_QUE_PASSAM) == 1, (
         "a nota do Testar aparece duas vezes na mesma tela — o `?` e a linha")
-    assert "Espera 5 segundos" not in bancada, (
+    assert "Espera 5 segundos" not in ensaio, (
         "a dica dos 5 s do Auto voltou ao desenho — o botão que ela explicava "
         "saiu em 05/09/2026")
 
@@ -595,16 +595,16 @@ def test_a_frase_da_faixa_cabe_numa_linha(a05) -> None:
             f"informar:\n  {pronta}")
 
 
-def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, bancada: str) -> None:
+def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, ensaio: str) -> None:
     """O tom da linha é o do RECIBO, e ele é verde."""
     assert a05.TOM_DO_RECIBO not in (_tela.ALERTA, _tela.INFO), (
         f"o recibo passou a usar um tom que já tem dono ({a05.TOM_DO_RECIBO!r})"
         f" — o `alerta` é laranja, e alerta sobre um clique que gravou ensina "
         f"que o botão falha")
     regra = f".vib-estado .est.{a05.TOM_DO_RECIBO}"
-    assert f"{regra}{{color:var(--green)}}" in bancada, (
+    assert f"{regra}{{color:var(--green)}}" in ensaio, (
         f"o tom do recibo não é verde na folha desta aba ({regra})")
-    assert "--orange" not in bancada.split(regra, 1)[-1].split("}", 2)[0], (
+    assert "--orange" not in ensaio.split(regra, 1)[-1].split("}", 2)[0], (
         "o recibo da faixa ficou laranja")
 
 
@@ -634,9 +634,9 @@ def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
         f"A 03-Q4 dela é a piscada verde, sem palavra nova")
 
 
-def test_a_faixa_nao_declara_lugar_de_recado(bancada: str) -> None:
+def test_a_faixa_nao_declara_lugar_de_recado(ensaio: str) -> None:
     """ERA `test_a_faixa_declara_que_recebe_o_recado` — 13/09/2026."""
-    faixa = bancada.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
+    faixa = ensaio.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
     assert "data-hef-recado" not in faixa, (
         "a faixa voltou a declarar lugar de recado — o canal saiu da tela em "
         "13/09/2026, e a 05-Q4 dela diz *nada se mexe dentro das colunas*")

@@ -86,7 +86,7 @@ class PonteDeMentira:
         return True
 
 
-def _o_perfil_dela(com_override: str | None = None) -> dict[str, Any]:
+def _o_perfil_do_usuario(com_override: str | None = None) -> dict[str, Any]:
     """O perfil do usuário na forma CRUA que a pintura lê — global `max`, sem override."""
     dele: dict[str, Any] = {"leds": {"lightbar": [65, 9, 55]},
                             "speaker": {"volume": 102, "muted": False}}
@@ -112,12 +112,12 @@ def a05():
 
 
 @pytest.fixture
-def disco_dela(monkeypatch, a05):
+def disco_do_usuario(monkeypatch, a05):
     """Desvia o perfil ATIVO para o dela, e o disco para a memória."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
-    vivo: dict[str, Any] = {"cru": _o_perfil_dela()}
+    vivo: dict[str, Any] = {"cru": _o_perfil_do_usuario()}
     gravados: list[Any] = []
 
     def _ativo(_nome: str = "") -> dict[str, Any]:
@@ -165,7 +165,7 @@ NO_TRILHO_DO_GLOBAL = "150"
 NO_TRILHO_DO_OVERRIDE = "30"
 
 
-def test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor(pac, disco_dela) -> None:
+def test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor(pac, disco_do_usuario) -> None:
     """Sem override, o trilho da coluna mostra a força geral: nada de «0» nem de vazio."""
     col = _coluna(pac)
     assert col["mult-pos"] == col["mult"] == NO_TRILHO_DO_GLOBAL, (
@@ -175,10 +175,10 @@ def test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor(pac, disco_dela) -> N
         "a Força é o trilho de 0 a 200% desde 20/10/2026, e o degrau voltou à pintura")
 
 
-def test_a_coluna_com_override_proprio_mostra_o_dela(pac, disco_dela) -> None:
+def test_a_coluna_com_override_proprio_mostra_o_do_usuario(pac, disco_do_usuario) -> None:
     """O par da régua acima: com ajuste próprio, o override vence o global."""
-    vivo, _ = disco_dela
-    vivo["cru"] = _o_perfil_dela(com_override="economia")
+    vivo, _ = disco_do_usuario
+    vivo["cru"] = _o_perfil_do_usuario(com_override="economia")
 
     col = _coluna(pac)
     assert col["mult-pos"] == NO_TRILHO_DO_OVERRIDE, (
@@ -186,7 +186,7 @@ def test_a_coluna_com_override_proprio_mostra_o_dela(pac, disco_dela) -> None:
         f"precedência do produto é o override vencendo o global")
 
 
-def test_sem_politica_nenhuma_o_trilho_nao_afirma_numero(pac, disco_dela) -> None:
+def test_sem_politica_nenhuma_o_trilho_nao_afirma_numero(pac, disco_do_usuario) -> None:
     """Campo sem informação NÃO MOSTRA NADA — a regra, 02/09/2026."""
     ctx = _ctx(pac)
     ctx.state["rumble_policy"] = ""
@@ -195,7 +195,7 @@ def test_sem_politica_nenhuma_o_trilho_nao_afirma_numero(pac, disco_dela) -> Non
 
 
 def test_o_arraste_da_barra_nao_ganhou_um_recibo_por_tique(
-        pac, disco_dela) -> None:
+        pac, disco_do_usuario) -> None:
     """O `custom` fica FORA do recado, e não é esquecimento."""
     fn = pac.gesto_da_pagina(PAGINA, "intensidade")
     assert fn is not None, "o gesto `intensidade` perdeu o dono"

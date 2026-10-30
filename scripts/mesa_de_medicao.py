@@ -370,7 +370,7 @@ def como_do_mapa() -> dict[str, list[tuple[str, str]]]:
                              lambda m: m.group(1))
 
 
-PREPARO_DA_BANCADA: tuple[tuple[str, str], ...] = (
+PREPARO_DO_ENSAIO: tuple[tuple[str, str], ...] = (
     (r"^Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio\.?$",
      "P1 e P2 no cabo · P3 e P4 no rádio"),
     (r"^Feche o jogo(, se houver algum aberto)?\.?$",
@@ -400,7 +400,7 @@ def enxuga_os_passos(
         for passo in (p.strip() for p in corpo.split("\n")):
             if not passo:
                 continue
-            if any(re.match(r, passo) for r, _ in PREPARO_DA_BANCADA):
+            if any(re.match(r, passo) for r, _ in PREPARO_DO_ENSAIO):
                 continue
             achou = re.match(_A_ABA_DO_PASSO, passo)
             if achou and not aba:
@@ -689,25 +689,25 @@ def pelo_sysfs() -> list[dict[str, Any]]:
     return achados
 
 
-def arquivo_das_cores_dela() -> pathlib.Path:
-    return pasta_do_registro() / "as-cores-que-ela-disse.json"
+def arquivo_das_cores_do_usuario() -> pathlib.Path:
+    return pasta_do_registro() / "as-cores-que-o-usuario-disse.json"
 
 
-def cores_que_ela_disse() -> dict[str, str]:
+def cores_que_o_usuario_disse() -> dict[str, str]:
     try:
-        return json.loads(arquivo_das_cores_dela().read_text(encoding="utf-8"))
+        return json.loads(arquivo_das_cores_do_usuario().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
 
-def guardar_cor_dela(endereco: str, colorway: str) -> dict[str, str]:
+def guardar_cor_do_usuario(endereco: str, colorway: str) -> dict[str, str]:
     """Grava (ou apaga, com `colorway` vazio) a cor que o usuário disse de UM"""
-    tudo = cores_que_ela_disse()
+    tudo = cores_que_o_usuario_disse()
     if colorway:
         tudo[endereco] = colorway
     else:
         tudo.pop(endereco, None)
-    alvo = arquivo_das_cores_dela()
+    alvo = arquivo_das_cores_do_usuario()
     alvo.parent.mkdir(parents=True, exist_ok=True)
     tmp = alvo.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(tudo, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -737,7 +737,7 @@ def ler_a_cor_no_aparelho() -> dict[str, Any]:
                 f"o aparelho disse «{cor.nome}» e esse nome não está em "
                 f"{CORES.name} — a cor foi lida, o desenho é que não a conhece")
             continue
-        guardar_cor_dela(endereco, slug)
+        guardar_cor_do_usuario(endereco, slug)
         fora["lidos"][endereco] = {
             "nome": cor.nome, "colorway": slug,
             "codigo": cor.codigo}  # (noqa-acento)
@@ -791,7 +791,7 @@ def quem_esta_na_mesa() -> dict[str, Any]:
     fora: dict[str, Any] = {"daemon": "", "postos": postos, "quando": _agora()}
     def _pelo_kernel(motivo: str) -> dict[str, Any]:
         """A SEGUNDA FONTE, quando o daemon não responde — e ela não é"""
-        dela = cores_que_ela_disse()
+        do_usuario = cores_que_o_usuario_disse()
         vistos = pelo_sysfs()
         por_posto: dict[str, dict[str, Any]] = {}
         sobra = []
@@ -806,7 +806,7 @@ def quem_esta_na_mesa() -> dict[str, Any]:
             if livre:
                 por_posto[livre] = v
         for posto, v in por_posto.items():
-            cor = dela.get(v["uniq"], "")
+            cor = do_usuario.get(v["uniq"], "")
             postos[posto].update({
                 "presente": True,
                 "nome": nome_do_colorway(cor) or v["transporte"] or "—",
@@ -2128,7 +2128,7 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
     salvos = json.dumps(gravado, ensure_ascii=False)
     confere_json = json.dumps(tabela_de_conferencia(), ensure_ascii=False)
     preparo = "".join(f"<li>{_e(rotulo)}</li>"
-                      for _, rotulo in PREPARO_DA_BANCADA)
+                      for _, rotulo in PREPARO_DO_ENSAIO)
     return f"""<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2167,7 +2167,7 @@ def pagina(testes: list[Teste], gravado: dict[str, Any]) -> str:
 <!-- A BANCADA ANTES DE COMEÇAR — quatro linhas conferidas UMA VEZ.
      07/09/2026: *"milhares de etapas manuais"*. Eram 3.129 passos em 199
      testes, e 299 deles eram esta mesma cerimônia pedida de novo a cada
-     teste. Ver `PREPARO_DA_BANCADA`, que é quem decide o que sobe para cá —
+     teste. Ver `PREPARO_DO_ENSAIO`, que é quem decide o que sobe para cá —
      lista fechada, comparada palavra por palavra, para nunca comer um ato de
      verdade. A gaveta nasce ABERTA e ela a fecha quando a bancada estiver
      pronta; o estado fica no navegador dela, não no registro. -->
@@ -2460,7 +2460,7 @@ class _Atendente(BaseHTTPRequestHandler):
                 "application/json; charset=utf-8")
             return
         if caminho == "/cor":
-            tudo = guardar_cor_dela(_mascarar(str(item.get("endereco") or "")),
+            tudo = guardar_cor_do_usuario(_mascarar(str(item.get("endereco") or "")),
                                     str(item.get("colorway") or ""))
             self._responder(json.dumps(tudo, ensure_ascii=False).encode("utf-8"),
                             "application/json; charset=utf-8")

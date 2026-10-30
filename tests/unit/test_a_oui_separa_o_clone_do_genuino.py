@@ -56,7 +56,7 @@ def test_sem_oui_conhecida_a_marca_cai_no_vid_como_sempre() -> None:
 def test_as_tres_reguas_da_casa_apontam_para_a_mesma_oui_do_genuino() -> None:
     """NOME HERDADO — o mapa de canais aponta para ESTE nó do pytest."""
     test_os_dois_scripts_de_no_sniff_concordam_sobre_quem_e_o_clone()
-    test_a_faixa_desta_bancada_nao_voltou_a_ser_a_definicao_de_pro()
+    test_a_faixa_deste_ensaio_nao_voltou_a_ser_a_definicao_de_pro()
 
 
 def test_os_dois_scripts_de_no_sniff_concordam_sobre_quem_e_o_clone() -> None:
@@ -72,7 +72,7 @@ def test_os_dois_scripts_de_no_sniff_concordam_sobre_quem_e_o_clone() -> None:
         )
 
 
-def test_a_faixa_desta_bancada_nao_voltou_a_ser_a_definicao_de_pro() -> None:
+def test_a_faixa_deste_ensaio_nao_voltou_a_ser_a_definicao_de_pro() -> None:
     """O fato substituído não pode voltar por uma constante nova."""
     for script in (SCRIPT_MODO_ATIVO, SCRIPT_BORDA):
         texto = script.read_text(encoding="utf-8")

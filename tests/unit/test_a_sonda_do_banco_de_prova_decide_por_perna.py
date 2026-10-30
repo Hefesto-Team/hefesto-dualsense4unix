@@ -73,7 +73,7 @@ def test_o_job_roda_no_runner_do_banco_e_tem_teto() -> None:
         "o job não tem teto: um install.sh pendurado seguraria o runner por seis horas")
 
 
-def test_o_job_roda_a_sonda_e_sobe_a_saida_mesmo_se_ela_falhar() -> None:
+def test_o_job_roda_a_sonda_e_sobe_a_saida_mesmo_se_o_usuario_falhar() -> None:
     passos = _job()["steps"]
     corridas = [p for p in passos if "sonda.sh" in str(p.get("run", ""))]
     assert corridas, "nenhum passo roda `scripts/banco_de_prova/sonda.sh`"

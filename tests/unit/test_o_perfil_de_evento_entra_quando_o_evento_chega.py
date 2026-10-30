@@ -89,7 +89,7 @@ def test_com_jogo_em_cena_o_evento_nao_troca_o_perfil() -> None:
     assert ativados == []
 
 
-def test_a_escolha_dela_recente_e_o_modo_nativo_seguram_o_perfil() -> None:
+def test_a_escolha_do_usuario_recente_e_o_modo_nativo_seguram_o_perfil() -> None:
     for como in ("trava", "nativo"):
         daemon = Daemon()
         if como == "trava":

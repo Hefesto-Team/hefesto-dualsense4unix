@@ -96,7 +96,7 @@ def _retrato() -> Any:
     return modulo
 
 
-def _bancada_com_fotos(tmp_path: Path, retrato: Any) -> Path:
+def _ensaio_com_fotos(tmp_path: Path, retrato: Any) -> Path:
     """Uma pasta com dois PNGs de mentira — o suficiente para gravar recibo."""
     saida = tmp_path / "bancada"
     saida.mkdir()
@@ -109,7 +109,7 @@ def _bancada_com_fotos(tmp_path: Path, retrato: Any) -> Path:
 def test_o_recibo_do_publicado_declara_o_produto(tmp_path: Path) -> None:
     """Rodado sobre o publicado, o recibo tem de dizer que a foto é do produto."""
     retrato = _retrato()
-    saida = _bancada_com_fotos(tmp_path, retrato)
+    saida = _ensaio_com_fotos(tmp_path, retrato)
 
     retrato._gravar_prova_da_foto(
         saida,
@@ -134,7 +134,7 @@ def test_o_recibo_do_publicado_declara_o_produto(tmp_path: Path) -> None:
 def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
     """A soma é das DEZ, não de tudo o que houver na pasta."""
     retrato = _retrato()
-    saida = _bancada_com_fotos(tmp_path, retrato)
+    saida = _ensaio_com_fotos(tmp_path, retrato)
 
     retrato._gravar_prova_da_foto(saida, modo="--todas --doc", origem="mockup")
 
@@ -149,7 +149,7 @@ def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
 def test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome(tmp_path: Path) -> None:
     """O autor NOMEADO NO RECIBO GRAVADO é o programa que de fato o escreveu."""
     retrato = _retrato()
-    saida = _bancada_com_fotos(tmp_path, retrato)
+    saida = _ensaio_com_fotos(tmp_path, retrato)
 
     retrato._gravar_prova_da_foto(
         saida,

@@ -1,4 +1,4 @@
-"""Ensinar grava o nó — O-MAPA-QUE-ELA-CORRIGE-01, passo 7 (D-2609-ENSINAR-GRAVA-O-NO)."""
+"""Ensinar grava o nó — O-MAPA-QUE-O-USUARIO-CORRIGE-01, passo 7 (D-2609-ENSINAR-GRAVA-O-NO)."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 from tests.unit.test_a_entrada_declarada_vence_o_firmware import _clicar, _na_pagina
 from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
-    _a_maquina_dela,
+    _a_maquina_do_usuario,
     gravar_o_arquivo_de_antes,
 )
 
@@ -87,7 +87,7 @@ def _pendente(dado: dict[str, Any], caminho: str = _PENDRIVE) -> bool:
 @pytest.fixture()
 def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A máquina sintética no ``tmp_path``, e o barramento de mentira com o"""
-    alvo = gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    alvo = gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
     documento = carregar_maquina()
     monkeypatch.setattr(censo_do_barramento, "ler_o_barramento",
                         lambda: _censo(_aparelho(_PENDRIVE)))
@@ -126,7 +126,7 @@ def test_a_entrada_sem_caminho_ganha_o_do_lado_20() -> None:
 
     from hefesto_dualsense4unix.integrations.lugar_declarado import Recibo
 
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     dado["mapa"]["faces"][1]["portas"].append("16")
     documento = MaquinaConfig.model_validate(migrar_o_documento(dado))
     gravado: list[dict[str, Any]] = []
@@ -173,7 +173,7 @@ def test_as_recusas_dizem_a_frase_do_dono(
 
 def test_ligacoes_demais_recusa(disco: Path) -> None:
     """O teto de nós é do ``PortaDeclarada``: a quinta ligação recusa."""
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     dado["mapa"]["portas"]["2"]["nos"] = ["usb1-port3", "usb1-port7", "usb1-port8",
                                           "usb1-port9"]
     documento = MaquinaConfig.model_validate(migrar_o_documento(dado))

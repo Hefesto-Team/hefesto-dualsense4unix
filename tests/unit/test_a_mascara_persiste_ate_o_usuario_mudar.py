@@ -158,20 +158,20 @@ def test_o_boot_devolve_o_xbox_que_o_vazamento_deixou(
 ) -> None:
     """A outra metade: o arquivo dela JÁ está com o `xbox` do contágio."""
     from hefesto_dualsense4unix.daemon.lifecycle import (
-        _a_mascara_dela_sem_o_vazamento,
+        _a_mascara_do_usuario_sem_o_vazamento,
     )
 
     save_gamepad_emulation(True, "xbox")
 
-    assert _a_mascara_dela_sem_o_vazamento("xbox") == "dualsense"
+    assert _a_mascara_do_usuario_sem_o_vazamento("xbox") == "dualsense"
     assert flag.read_text(encoding="utf-8").strip() == "dualsense"
-    assert _a_mascara_dela_sem_o_vazamento("dualsense") == "dualsense"
+    assert _a_mascara_do_usuario_sem_o_vazamento("dualsense") == "dualsense"
 
 
 def test_perfil_sem_opiniao_de_mascara_nao_escreve_nada(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`gamepad_flavor: null` é ausência de pedido (E1 da ESCOLHA-DELA-VENCE-01)."""
+    """`gamepad_flavor: null` é ausência de pedido (E1 da ESCOLHA-DO-USUARIO-VENCE-01)."""
     save_gamepad_emulation(True, "xbox")
     _vpad_obedece(daemon, monkeypatch)
 
@@ -197,7 +197,7 @@ def test_sem_opiniao_e_sem_vpad_de_pe_nao_carimba_o_default(
     assert flag.read_text(encoding="utf-8").strip() == "xbox"
 
 
-def test_o_desligado_de_proposito_dela_nao_e_ressuscitado(
+def test_o_desligado_de_proposito_do_usuario_nao_e_ressuscitado(
     daemon: Daemon, tmp_path: Path, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A metade da R-07 que NÃO mudou: o eixo do LIGA/DESLIGA."""

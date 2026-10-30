@@ -203,7 +203,7 @@ def test_a_barra_apara_na_faixa_e_a_faixa_tem_dono() -> None:
         MOUSE_SPEED_MAX, MOUSE_SPEED_MIN]
 
 
-def test_a_rolagem_tem_a_faixa_dela() -> None:
+def test_a_rolagem_tem_a_faixa_do_usuario() -> None:
     """Duas barras, dois donos, e nenhum dos dois digitado aqui."""
     from pacotes import a06_navegacao as mod
 

@@ -152,7 +152,7 @@ def test_a_face_dos_hubs_tem_o_botao_de_acrescentar_com_ou_sem_extensao() -> Non
         assert 'aria-expanded="false"' in cabecalho and "hub-pergunta" not in html
 
 
-def test_a_pagina_da_bancada_nao_tem_os_tres_que_sairam() -> None:
+def test_a_pagina_do_ensaio_nao_tem_os_tres_que_sairam() -> None:
     """MORDIDA: rode o gerador com o botão devolvido (`aba08.py`) e regenere o mockup."""
     pagina = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
     achados = _gestos(pagina) & set(SAIRAM)

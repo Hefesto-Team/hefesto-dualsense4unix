@@ -25,7 +25,7 @@ cima disto — a borda, a trava, o diário e o agente próprio são os do produt
 O ``HID_PHYS`` é :meth:`RadioDeMentira.onde_esta`: o adaptador em que o
 controle está CONECTADO agora; o movimento é :meth:`RadioDeMentira.hz`.
 
-A FÍSICA QUE A LISTA DO USUÁRIO DE 25/09 MEDIU (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01),
+A FÍSICA QUE A LISTA DO USUÁRIO DE 25/09 MEDIU (A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01),
 e até ela este dublê era MAIS FROUXO que o controle de verdade:
 
 * **ligado, o PS + Create não faz nada** (passo c1: *«o controle nunca entra em
@@ -612,7 +612,7 @@ def o_clique_no_parear(central: Any, aparelho: str) -> Callable[[], None]:
     return clicar
 
 
-def ela_pareia(relogio: Relogio, mundo: RadioDeMentira, central: Any, aparelho: str,
+def o_usuario_pareia(relogio: Relogio, mundo: RadioDeMentira, central: Any, aparelho: str,
                depois_de: float = 2.0) -> None:
     """Ela segura PS + Create aos ``depois_de`` segundos e, um segundo depois —"""
     relogio.agendar(depois_de, lambda: mundo.segurar_ps_create(aparelho))

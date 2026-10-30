@@ -1290,12 +1290,12 @@ function pedirParaMover(ap, destinoId, depois) {
   document.querySelectorAll('.lugar.alvo').forEach(l => l.classList.remove('alvo'));
   const alvo = document.querySelector('.lugar[data-id="' + destinoId + '"]');
   if (alvo) alvo.classList.add('alvo');
-  const ela = ARTIGO_DO_TIPO[ap.tipo] === 'a';
+  const feminino = ARTIGO_DO_TIPO[ap.tipo] === 'a';
   const cheio = ap.tipo === 'controle' && ap.ligado.ponte &&
     pontesDe(destinoId).length >= PONTES_POR_ADAPTADOR;
   perguntar(
     'Mover ' + comoSeChama(ap) + ' para ' + comoSeChamaOLugar(lug) + '?<br>' +
-    'Só ' + (ela ? 'ela' : 'ele') + ' sai daqui. ' + comoSeParea(ap) +
+    'Só ' + (feminino ? 'ela' : 'ele') + ' sai daqui. ' + comoSeParea(ap) +
     (cheio ? ' Lá o som pode engasgar.' : ''),
     'Mover',
     () => { moverAgora(ap, destinoId); if (depois) depois(); },

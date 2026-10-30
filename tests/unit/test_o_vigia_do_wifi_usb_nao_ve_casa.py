@@ -56,5 +56,5 @@ def test_o_systemd_aceita_a_unit(tmp_path: Path) -> None:
         timeout=60,
         check=False,
     )
-    sobre_ela = [linha for linha in r.stderr.splitlines() if copia.name in linha]
-    assert r.returncode == 0 and not sobre_ela, r.stderr
+    sobre_o_usuario = [linha for linha in r.stderr.splitlines() if copia.name in linha]
+    assert r.returncode == 0 and not sobre_o_usuario, r.stderr

@@ -159,7 +159,7 @@ def test_arrancado_o_filtro_a_receita_manda_mexer_a_toa(
     assert not _movs(mesa, op)[0].essencial
 
 
-def test_arrancado_o_filtro_a_mesa_dela_perde_a_urgencia_dos_forcados(
+def test_arrancado_o_filtro_a_mesa_do_usuario_perde_a_urgencia_dos_forcados(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A MORDIDA na mesa REAL: os movimentos forçados de quem já tinha lugar não são urgentes."""
@@ -425,7 +425,7 @@ def _edicoes() -> tuple[Any, ...]:
 def _esperando() -> tuple[Any, ...]:
     from hefesto_dualsense4unix.interface import pagina_do_mapa
 
-    return tuple(pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
+    return tuple(pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO)
 
 
 _DATA_NA_RAZAO = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
@@ -460,15 +460,15 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
 def test_as_duas_casas_versionadas_do_mockup_nao_andam_sozinhas() -> None:
     """Corrigir nos DOIS foi a palavra de produto, e agora é o gerador quem corrige."""
     raiz = _FONTE_DO_MOTOR.parents[3]
-    bancada = _o_que_o_gerador_escreve()
+    ensaio = _o_que_o_gerador_escreve()
     produto = _o_que_o_produto_recebe()
     no_produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
-    assert not (_esperando() and no_produto == bancada and bancada != produto), (
+    assert not (_esperando() and no_produto == ensaio and ensaio != produto), (
         "a cópia do produto já recebeu o desenho que espera a sessão dela — no "
         "mesmo commit do `--publicar mapa-das-portas.html`, junte as edições de "
-        "`pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA` ao fim de `EDICOES` e "
+        "`pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO` ao fim de `EDICOES` e "
         "deixe aquela tupla vazia")
-    for caminho, esperado in ((_COPIA_DO_PRODUTO, produto), (_REFERENCIA_DO_DESENHO, bancada)):
+    for caminho, esperado in ((_COPIA_DO_PRODUTO, produto), (_REFERENCIA_DO_DESENHO, ensaio)):
         arquivo = raiz / caminho
         assert arquivo.exists(), (
             f"{caminho} não está nesta árvore — mas é versionado. Sem ele a "
@@ -489,11 +489,11 @@ def test_toda_edicao_do_gerador_acha_o_seu_alvo_uma_vez() -> None:
     raiz = _FONTE_DO_MOTOR.parents[3]
     origem = (raiz / _ORIGEM_CONGELADA).read_text(encoding="utf-8")
     produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
-    bancada = (raiz / _REFERENCIA_DO_DESENHO).read_text(encoding="utf-8")
+    ensaio = (raiz / _REFERENCIA_DO_DESENHO).read_text(encoding="utf-8")
     edicoes = _edicoes()
     assert edicoes, "nenhuma edição — a régua passaria por vacuidade"
     casas = [(edicoes, produto, "cópia do produto"),
-             (edicoes + _esperando(), bancada, "bancada")]
+             (edicoes + _esperando(), ensaio, "bancada")]
     for lista, casa, nome_da_casa in casas:
         texto = origem
         vez: list[str] = []
@@ -547,7 +547,7 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
     raiz = _FONTE_DO_MOTOR.parents[3]
     esperado = _o_que_o_produto_recebe()
     produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
-    bancada = (raiz / _REFERENCIA_DO_DESENHO).read_text(encoding="utf-8")
+    ensaio = (raiz / _REFERENCIA_DO_DESENHO).read_text(encoding="utf-8")
     assert produto == esperado
 
     assert produto.replace("</html>", "</html> ") != esperado
@@ -567,19 +567,21 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
             f"arrancar a edição {fora + 1} não mudou a página — ela não faz nada, "
             f"e uma edição que não muda nada é um perdão morto: {inteiras[fora].porque}")
 
-    esperando = pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA
+    esperando = pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO
     for fora in range(len(esperando)):
-        pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA = esperando[:fora] + esperando[fora + 1:]
+        pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO = (
+            esperando[:fora] + esperando[fora + 1:]
+        )
         try:
             sem_uma = pagina_do_mapa.pagina()
         finally:
-            pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA = esperando
-        assert sem_uma != bancada, (
+            pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO = esperando
+        assert sem_uma != ensaio, (
             f"arrancar a edição que espera {fora + 1} não mudou a bancada — ela "
             f"não faz nada: {esperando[fora].porque}")
 
 
-def test_a_palavra_que_ela_baniu_nao_esta_na_tela_do_mapa() -> None:
+def test_a_palavra_que_o_usuario_baniu_nao_esta_na_tela_do_mapa() -> None:
     """A palavra saiu da TELA, e é na tela que se mede — não numa lista de pares."""
     from hefesto_dualsense4unix.interface.frases_banidas import (
         texto_visivel_no_produto,
@@ -806,20 +808,20 @@ _ENTRADAS_DESENHADAS = 16
 _ENTRADAS_COM_CAMINHO = 8
 
 
-def _bancada_do_gabinete_dela() -> object:
+def _ensaio_do_gabinete_do_usuario() -> object:
     """A `Bancada` do produto: o desenho DO USUÁRIO sobre a leitura de 25/08 às 02h30."""
     from hefesto_dualsense4unix.integrations import mapa_das_portas
     from tests.unit.test_mapa_o_ensaio_de_mentira import (
-        bancada_de_agora,
-        mapa_dela,
+        ensaio_de_agora,
+        mapa_do_usuario,
     )
 
-    return mapa_das_portas.mesa_do_motor(mapa_dela(), bancada_de_agora().censo())
+    return mapa_das_portas.mesa_do_motor(mapa_do_usuario(), ensaio_de_agora().censo())
 
 
 def test_entrada_vazia_desenha_sem_caminho() -> None:
     """O gabinete desenha os buracos que ele TEM, não os que já foram ligados."""
-    mesa = _bancada_do_gabinete_dela().mesa  # type: ignore[attr-defined]
+    mesa = _ensaio_do_gabinete_do_usuario().mesa  # type: ignore[attr-defined]
     desenhadas = motor.todas_as_entradas(mesa.faces)
     assert len(desenhadas) == _ENTRADAS_DESENHADAS, [e.n for e in desenhadas]
     assert len(mesa.mapa) == _ENTRADAS_COM_CAMINHO, mesa.mapa
@@ -853,7 +855,7 @@ def test_arrancado_o_desenho_das_vazias_o_gabinete_perde_os_buracos() -> None:
 
     mapa_das_portas._entradas_da_fileira_da_face = so_as_ligadas  # type: ignore[assignment]
     try:
-        mesa = _bancada_do_gabinete_dela().mesa  # type: ignore[attr-defined]
+        mesa = _ensaio_do_gabinete_do_usuario().mesa  # type: ignore[attr-defined]
         desenhadas = motor.todas_as_entradas(mesa.faces)
         assert len(desenhadas) < _ENTRADAS_DESENHADAS, (
             "a régua passou com a cura arrancada — ela não mede o desenho")
@@ -866,7 +868,7 @@ def test_arrancado_o_desenho_das_vazias_o_gabinete_perde_os_buracos() -> None:
 
 def test_a_contagem_da_face_nao_depende_da_ligacao_por_caminho() -> None:
     """§7.5: a CONTAGEM por face e a LIGAÇÃO por caminho são dois donos."""
-    mesa = _bancada_do_gabinete_dela().mesa  # type: ignore[attr-defined]
+    mesa = _ensaio_do_gabinete_do_usuario().mesa  # type: ignore[attr-defined]
     com = [e.n for e in motor.todas_as_entradas(mesa.faces)]
 
     sem_ligacao = motor.Mesa(
@@ -877,7 +879,7 @@ def test_a_contagem_da_face_nao_depende_da_ligacao_por_caminho() -> None:
 
 
 _ENTRADA_SUGERIDA = "3"
-_ENTRADA_ONDE_ELA_POS = "7"
+_ENTRADA_ONDE_O_USUARIO_POS = "7"
 _CAMINHO_NOVO_DO_WIFI = "4-2"
 
 
@@ -928,22 +930,22 @@ def test_a_confirmacao_da_ordem_liga_a_entrada() -> None:
     perdidos = {s.aparelho.id: s for s in motor.sem_entrada(mesa_agora)}
     assert "wifi" in perdidos and perdidos["wifi"].regiao == "pc"
     livres = [e.n for e in motor.candidatas(mesa_agora, "pc")]
-    assert _ENTRADA_SUGERIDA in livres and _ENTRADA_ONDE_ELA_POS in livres, livres
+    assert _ENTRADA_SUGERIDA in livres and _ENTRADA_ONDE_O_USUARIO_POS in livres, livres
     assert len(livres) < len(motor.todas_as_entradas(mesa_agora.faces)), (
         "a dedução não cortou candidata nenhuma")
 
     depois_do_sim = _confirmar(_ENTRADA_SUGERIDA)
     assert depois_do_sim[_ENTRADA_SUGERIDA] == _CAMINHO_NOVO_DO_WIFI
-    assert _ENTRADA_ONDE_ELA_POS not in depois_do_sim
+    assert _ENTRADA_ONDE_O_USUARIO_POS not in depois_do_sim
     aprendida = mock.mesa(mapa=depois_do_sim, leitura=mock.LEITURA_AGORA)
     assert motor.alocacao(aprendida.mapa, aprendida.leitura)[
         _ENTRADA_SUGERIDA] == "wifi"
     assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(aprendida)}
 
-    depois_do_nao = _confirmar(_ENTRADA_ONDE_ELA_POS)
+    depois_do_nao = _confirmar(_ENTRADA_ONDE_O_USUARIO_POS)
     novas = sorted(n for n in depois_do_nao if n not in mock.MAPA)
-    assert depois_do_nao.get(_ENTRADA_ONDE_ELA_POS) == _CAMINHO_NOVO_DO_WIFI, (
-        f"ela apontou a entrada {_ENTRADA_ONDE_ELA_POS} e o mapa aprendeu "
+    assert depois_do_nao.get(_ENTRADA_ONDE_O_USUARIO_POS) == _CAMINHO_NOVO_DO_WIFI, (
+        f"ela apontou a entrada {_ENTRADA_ONDE_O_USUARIO_POS} e o mapa aprendeu "
         f"{novas} — o produto presumiu em vez de gravar o que ela disse")
     assert _ENTRADA_SUGERIDA not in depois_do_nao, (
         f"o mapa gravou a entrada {_ENTRADA_SUGERIDA}, que o produto sugeriu, "
@@ -959,7 +961,7 @@ def test_presumir_a_entrada_sugerida_faz_o_mapa_mentir() -> None:
     onde_o_mapa_diz = motor.entrada_de_em(
         motor.alocacao(mentindo.mapa, mentindo.leitura), "wifi")
     assert onde_o_mapa_diz == _ENTRADA_SUGERIDA
-    assert onde_o_mapa_diz != _ENTRADA_ONDE_ELA_POS, (
+    assert onde_o_mapa_diz != _ENTRADA_ONDE_O_USUARIO_POS, (
         "o dublê não reproduziu a mentira — a régua não estaria medindo nada")
 
     assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(mentindo)}

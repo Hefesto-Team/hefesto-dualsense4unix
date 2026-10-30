@@ -54,13 +54,13 @@ NOME_LONGO = "ABCDEFGHIJKLMNOPQRSTUVWX"
 PLASTICO_LONGO = "007 First Light Limited Edition"
 
 
-def _bancada(pagina: str) -> str:
+def _ensaio(pagina: str) -> str:
     return onde.pagina(pagina, publicado=False).read_text(encoding="utf-8")
 
 
 def test_o_cartao_aberto_tem_o_endereco_de_quem_joga_e_do_numero() -> None:
     """MORDIDA: tirar o `data-campo="quem-joga"` do gerador — o piloto não pinta o nome."""
-    html = _bancada(P02)
+    html = _ensaio(P02)
     cartoes = re.findall(r'<div class="ctl card[^"]*" data-controle="p\d"', html)
     assert len(cartoes) == 4
     assert len(re.findall(r'data-campo="quem-joga"', html)) == 4, (
@@ -204,7 +204,7 @@ def test_o_nome_de_24_letras_nao_quebra_a_faixa(medido: dict[str, Any]) -> None:
 
 def test_o_nome_cortado_leva_a_linha_inteira_no_title(medido: dict[str, Any]) -> None:
     """O corte é por reticência; a linha inteira mora no `title` do `.card-nome` (`card-vpad`)."""
-    html = _bancada(P02)
+    html = _ensaio(P02)
     assert re.search(
         r'<span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo"'
         r' data-hef-atributo="title"', html)
@@ -226,14 +226,14 @@ def _ctx(jogadores: tuple[int, ...]) -> pacotes.Contexto:
 
 
 @pytest.fixture
-def com_a_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def com_o_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """O pacote filtra pelo publicado; na régua o que vale é a bancada (antes do `--publicar`)."""
-    doc = _bancada(P02)
+    doc = _ensaio(P02)
     monkeypatch.setattr(a02, "_ENDERECOS", frozenset(re.findall(r'data-campo="([^"]+)"', doc)))
 
 
 def test_o_numero_vivo_vai_para_o_cartao_e_a_posicao_nao_manda(
-    com_a_bancada: None, monkeypatch: pytest.MonkeyPatch,
+    com_o_ensaio: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """MORDIDA: o pacote deixar de emitir `jogador` — o número volta ao do desenho.
 
@@ -247,8 +247,8 @@ def test_o_numero_vivo_vai_para_o_cartao_e_a_posicao_nao_manda(
         'P<span data-campo="jogador" data-hef-alvo="html">5</span>')
 
 
-def test_o_nome_dela_chega_escapado_ao_cartao(
-    com_a_bancada: None, monkeypatch: pytest.MonkeyPatch,
+def test_o_nome_do_usuario_chega_escapado_ao_cartao(
+    com_o_ensaio: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(a02, "nomes_de_quem_joga", lambda: {MAC_NORM: "Vi <b>&"})
     cards = a02.pacote(_ctx((1, 2)))["cards"]
@@ -257,7 +257,7 @@ def test_o_nome_dela_chega_escapado_ao_cartao(
 
 
 def test_o_lugar_vazio_nao_recebe_quem_joga(
-    com_a_bancada: None, monkeypatch: pytest.MonkeyPatch,
+    com_o_ensaio: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Só os conectados ganham campos: o assento vazio não tem chave nos `cards`."""
     monkeypatch.setattr(a02, "nomes_de_quem_joga", lambda: {})
@@ -266,7 +266,7 @@ def test_o_lugar_vazio_nao_recebe_quem_joga(
 
 
 def test_o_nome_chega_a_02_pelo_alias_que_a_08_le(
-    com_a_bancada: None, monkeypatch: pytest.MonkeyPatch,
+    com_o_ensaio: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O nome da 02 vem do mesmo leitor da 04 e da 05 (`nome_do_jogador`), dublado no `Alias`.
 
@@ -308,13 +308,13 @@ def test_a_regra_do_nome_ou_do_pn() -> None:
 
 def test_a_calibrar_nao_diz_mais_player_nem_sony() -> None:
     """MORDIDA: voltar o «Player {jogador}» e o «Sony •» ao `calibrar.py`."""
-    html = _bancada(PCAL)
+    html = _ensaio(PCAL)
     assert "Player " not in html and "Sony <span" not in html and "Sony •" not in html
     assert len(re.findall(r'data-campo="quem-joga"', html)) == 4
 
 
 def test_a_calibrar_diz_o_nome_e_o_numero_ou_so_o_numero(monkeypatch: pytest.MonkeyPatch) -> None:
-    doc = _bancada(PCAL)
+    doc = _ensaio(PCAL)
     monkeypatch.setattr(a11, "_TEM_A_MIRA", True, raising=False)
     monkeypatch.setattr(a11, "nomes_de_quem_joga", lambda: {MAC_NORM: "Vitória"})
     mesa = _ctx((1, 2)).mesa

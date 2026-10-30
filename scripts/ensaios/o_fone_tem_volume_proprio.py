@@ -261,7 +261,7 @@ def main() -> int:
             suspeito="o byte do fone (common[4]) manda sozinho, sem o do alto-falante",
             presente="sim" if com_bit else "não",
             resultado="",
-            observado_por="olho-dela",
+            observado_por="olho-do-usuario",
             fonte="scripts/ensaios/o_fone_tem_volume_proprio.py",
             nota=f"fone {volume:#04x}, bit {'ligado' if com_bit else 'apagado'}, "
                  f"alto-falante {'não tocado' if alto_falante is None else f'{alto_falante:#04x}'}; "

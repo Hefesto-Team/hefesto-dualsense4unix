@@ -29,7 +29,7 @@ from tests.conftest import skip_sem_gi_real
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-JOGAR = onde.BANCADA / "01-jogar.html"
+JOGAR = onde.ENSAIO / "01-jogar.html"
 
 MESA_DE_DOIS = [{"pref": "p1", "uniq": "aa:bb:cc:00:00:01"},
                 {"pref": "p2", "uniq": "aa:bb:cc:00:00:02"}]

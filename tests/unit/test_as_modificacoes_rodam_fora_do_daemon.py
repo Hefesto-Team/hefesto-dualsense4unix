@@ -635,7 +635,7 @@ def _com_a_marca(marca: str) -> list[int]:
 
 
 @pytest.mark.skipif(shutil.which("bwrap") is None, reason="sem bwrap nesta máquina")
-def test_na_caixa_o_que_a_modificacao_abriu_morre_com_ela(
+def test_na_caixa_o_que_a_modificacao_abriu_morre_com_o_usuario(
     lar: Lugares, curto: Path
 ) -> None:
     """O ``--new-session`` do ``bwrap`` põe o filho fora do grupo do PID criado: sem

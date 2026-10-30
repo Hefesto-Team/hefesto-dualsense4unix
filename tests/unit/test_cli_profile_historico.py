@@ -101,13 +101,13 @@ def test_restore_sem_historico_sai_com_erro_e_aponta_o_caminho(dir_perfis: Path)
 
 def test_doctor_perfis_acusa_o_arranjo_corrompido(dir_perfis: Path) -> None:
     """O detector chega à tela, e o comando SAI 1 quando o achado é grave."""
-    save_profile(_perfil("desktop_dela", match=MatchAny(), priority=100))
+    save_profile(_perfil("desktop_do_usuario", match=MatchAny(), priority=100))
     save_profile(_perfil("pragmata", priority=80))
 
     resultado = runner.invoke(app, ["doctor", "--perfis"])
     assert resultado.exit_code == 1, resultado.output
     assert "[FAIL]" in resultado.output
-    assert "desktop_dela" in resultado.output
+    assert "desktop_do_usuario" in resultado.output
 
 
 def test_doctor_perfis_sai_zero_no_disco_saudavel(dir_perfis: Path) -> None:

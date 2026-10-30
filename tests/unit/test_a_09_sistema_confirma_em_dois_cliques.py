@@ -109,7 +109,7 @@ def test_o_primeiro_clique_arma_e_nao_para_nada(a09, ctx, janela):
     assert a09._armado_agora() == a09.DESLIGAR
 
 
-def test_o_botao_armado_veste_a_palavra_dela(a09, ctx):
+def test_o_botao_armado_veste_a_palavra_do_usuario(a09, ctx):
     """O `blocos:` de volta troca o rótulo do botão por `Confirma?`, na hora."""
     carga = a09.desligar(ctx, _clique("Parar o serviço"), None)
 

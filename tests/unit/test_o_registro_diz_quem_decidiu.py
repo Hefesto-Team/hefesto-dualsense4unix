@@ -10,7 +10,7 @@ CSV_ = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 VALORES = {"ela", "delegacao", "indeterminado"}
 
 MARCA_INDETERMINADO = "QUEM DECIDIU: INDETERMINADO"
-MARCA_ELA = "QUEM DECIDIU: ELA"
+MARCA_O_USUARIO = "QUEM DECIDIU: ELA"
 
 LOTE_DE_04_09 = "as 54 levantadas em 04/09"
 
@@ -111,7 +111,7 @@ def test_quem_revoga_nomeia_o_revogado_na_prosa() -> None:
     )
 
 
-def test_o_lote_de_04_09_so_vira_dela_com_a_prova() -> None:
+def test_o_lote_de_04_09_so_vira_do_usuario_com_a_prova() -> None:
     """As 54 nasceram por delegação; virar uma para `ela` exige mostrar a prova."""
     lote = [d for d in _linhas() if d["nasceu_de"].startswith(LOTE_DE_04_09)]
     assert len(lote) == 54, (
@@ -121,11 +121,11 @@ def test_o_lote_de_04_09_so_vira_dela_com_a_prova() -> None:
     sem_prova = [
         d["id"]
         for d in lote
-        if d["quem_decidiu"] == "ela" and MARCA_ELA not in d["escolha"]
+        if d["quem_decidiu"] == "ela" and MARCA_O_USUARIO not in d["escolha"]
     ]
     assert not sem_prova, (
         "estas linhas do lote de 04/09 dizem `ela` sem o carimbo "
-        f"`{MARCA_ELA}` com a palavra dela na `escolha`: {sem_prova}"
+        f"`{MARCA_O_USUARIO}` com a palavra dela na `escolha`: {sem_prova}"
     )
 
 

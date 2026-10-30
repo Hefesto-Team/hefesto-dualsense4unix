@@ -254,7 +254,7 @@ def _recorte_587(raiz_up: str) -> dict[str, bytes]:
 
 
 @pytest.fixture
-def bancada(tmp_path):
+def ensaio(tmp_path):
     """Um cache com as fontes JÁ baixadas (as duas do upstream e o empacotamento)."""
     base_real = (_assets() / "BASELINE").read_text(encoding="utf-8")
     base = _baseline()
@@ -321,10 +321,10 @@ def bancada(tmp_path):
     }
 
 
-def _rodar(bancada: dict, *args: str) -> subprocess.CompletedProcess[str]:
+def _rodar(ensaio: dict, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["bash", str(_script()), *args],
-        env=bancada["env"],
+        env=ensaio["env"],
         capture_output=True,
         text=True,
         timeout=180,
@@ -340,14 +340,14 @@ def _retrato(arvore: Path) -> dict[str, str]:
 
 
 @precisa_das_ferramentas
-def test_o_preparo_monta_a_arvore_da_versao_alvo(bancada):
-    proc = _rodar(bancada, "--preparar")
+def test_o_preparo_monta_a_arvore_da_versao_alvo(ensaio):
+    proc = _rodar(ensaio, "--preparar")
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert f"árvore pronta: {bancada['arvore']} ({ALVO})" in proc.stdout
+    assert f"árvore pronta: {ensaio['arvore']} ({ALVO})" in proc.stdout
     assert "mordida: o vanilla destrói no EAGAIN, o patchado fica" in proc.stdout
-    assert not bancada["marca_curl"].exists(), "o preparo foi à rede com as fontes no cache"
+    assert not ensaio["marca_curl"].exists(), "o preparo foi à rede com as fontes no cache"
 
-    arvore = bancada["arvore"]
+    arvore = ensaio["arvore"]
     versao = subprocess.run(
         ["dpkg-parsechangelog", "-l", str(arvore / "debian" / "changelog"), "-S", "Version"],
         capture_output=True,
@@ -367,13 +367,13 @@ def test_o_preparo_monta_a_arvore_da_versao_alvo(bancada):
 
 
 @precisa_das_ferramentas
-def test_duas_corridas_do_preparo_dao_a_mesma_arvore(bancada):
-    primeira = _rodar(bancada, "--preparar")
+def test_duas_corridas_do_preparo_dao_a_mesma_arvore(ensaio):
+    primeira = _rodar(ensaio, "--preparar")
     assert primeira.returncode == 0, primeira.stdout + primeira.stderr
-    retrato = _retrato(bancada["arvore"])
-    segunda = _rodar(bancada, "--preparar")
+    retrato = _retrato(ensaio["arvore"])
+    segunda = _rodar(ensaio, "--preparar")
     assert segunda.returncode == 0, segunda.stdout + segunda.stderr
-    assert _retrato(bancada["arvore"]) == retrato
+    assert _retrato(ensaio["arvore"]) == retrato
 
 
 def _origem(env: dict[str, str]) -> str:
@@ -392,10 +392,10 @@ def _origem(env: dict[str, str]) -> str:
     return "\n".join(linhas) + "\n"
 
 
-def _cache_pronto(bancada: dict) -> tuple[Path, str]:
+def _cache_pronto(ensaio: dict) -> tuple[Path, str]:
     """A saída como o build a deixa: os três .deb, o SHA256SUMS e o ORIGEM.txt."""
-    shutil.rmtree(bancada["cache"] / "bluez-fontes")
-    saida = bancada["saida"]
+    shutil.rmtree(ensaio["cache"] / "bluez-fontes")
+    saida = ensaio["saida"]
     saida.mkdir(parents=True)
     arch = subprocess.run(
         ["dpkg", "--print-architecture"], capture_output=True, text=True, timeout=30
@@ -406,15 +406,15 @@ def _cache_pronto(bancada: dict) -> tuple[Path, str]:
         deb.write_bytes(f"deb de mentira de {pacote}\n".encode())
         linhas.append(f"{_sha(deb)}  {deb.name}\n")
     (saida / "SHA256SUMS").write_text("".join(linhas), encoding="utf-8")
-    (saida / "ORIGEM.txt").write_text(_origem(bancada["env"]), encoding="utf-8")
+    (saida / "ORIGEM.txt").write_text(_origem(ensaio["env"]), encoding="utf-8")
     return saida, arch
 
 
 @precisa_das_ferramentas
 @pytest.mark.parametrize("como_envelheceu", ["patch_mudou", "sem_origem"])
-def test_debs_feitos_com_outro_patch_mandam_reconstruir(bancada, como_envelheceu):
+def test_debs_feitos_com_outro_patch_mandam_reconstruir(ensaio, como_envelheceu):
     """O atalho pergunta também COM O QUE os .deb foram feitos."""
-    saida, _ = _cache_pronto(bancada)
+    saida, _ = _cache_pronto(ensaio)
     origem = saida / "ORIGEM.txt"
     if como_envelheceu == "patch_mudou":
         texto = origem.read_text(encoding="utf-8")
@@ -429,26 +429,26 @@ def test_debs_feitos_com_outro_patch_mandam_reconstruir(bancada, como_envelheceu
     else:
         origem.unlink()
 
-    proc = _rodar(bancada)
+    proc = _rodar(ensaio)
     assert "já construído" not in proc.stdout
     assert proc.returncode == 4, proc.stdout + proc.stderr
-    assert bancada["marca_curl"].exists()
+    assert ensaio["marca_curl"].exists()
 
 
 @precisa_das_ferramentas
-def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(bancada):
-    saida, arch = _cache_pronto(bancada)
+def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(ensaio):
+    saida, arch = _cache_pronto(ensaio)
 
-    proc = _rodar(bancada)
+    proc = _rodar(ensaio)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "já construído" in proc.stdout
-    assert not bancada["marca_curl"].exists()
-    assert not (bancada["cache"] / "bluez-obra").exists()
+    assert not ensaio["marca_curl"].exists()
+    assert not (ensaio["cache"] / "bluez-obra").exists()
 
     (saida / f"bluez_{ALVO}_{arch}.deb").write_bytes(b"adulterado\n")
-    proc = _rodar(bancada)
+    proc = _rodar(ensaio)
     assert proc.returncode == 4, proc.stdout + proc.stderr
-    assert bancada["marca_curl"].exists()
+    assert ensaio["marca_curl"].exists()
 
 
 def _cache_do_install(env: dict[str, str]) -> Path:
@@ -460,9 +460,9 @@ def _cache_do_install(env: dict[str, str]) -> Path:
 @pytest.mark.parametrize(
     "como_aponta", ["sem_variavel", "o_caminho_escrito", "com_barra_dupla", "por_um_link"]
 )
-def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada, tmp_path, como_aponta):
+def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(ensaio, tmp_path, como_aponta):
     """A guarda pergunta pelo LUGAR, não pela variável."""
-    env = dict(bancada["env"])
+    env = dict(ensaio["env"])
     do_install = _cache_do_install(env)
     if como_aponta == "sem_variavel":
         del env["HEFESTO_BLUEZ_CACHE"]
@@ -484,16 +484,16 @@ def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada, tmp_p
     )
     assert proc.returncode == 2, proc.stdout + proc.stderr
     assert "HEFESTO_BLUEZ_CACHE" in proc.stderr
-    assert not bancada["marca_curl"].exists(), "passou pela guarda e foi buscar a fonte"
+    assert not ensaio["marca_curl"].exists(), "passou pela guarda e foi buscar a fonte"
     assert not (do_install / "bluez-obra").exists()
 
 
 @precisa_das_ferramentas
 @pytest.mark.parametrize("jobs", ["0", "quatro", "-2", ""])
-def test_numero_de_processos_invalido_para_antes_de_baixar(bancada, jobs):
-    env = dict(bancada["env"])
+def test_numero_de_processos_invalido_para_antes_de_baixar(ensaio, jobs):
+    env = dict(ensaio["env"])
     env["HEFESTO_BLUEZ_JOBS"] = jobs
-    shutil.rmtree(bancada["cache"] / "bluez-fontes")
+    shutil.rmtree(ensaio["cache"] / "bluez-fontes")
     proc = subprocess.run(
         ["bash", str(_script())], env=env, capture_output=True, text=True, timeout=60
     )
@@ -502,15 +502,15 @@ def test_numero_de_processos_invalido_para_antes_de_baixar(bancada, jobs):
         return
     assert proc.returncode == 2, proc.stdout + proc.stderr
     assert "HEFESTO_BLUEZ_JOBS" in proc.stderr
-    assert not bancada["marca_curl"].exists()
+    assert not ensaio["marca_curl"].exists()
 
 
 @precisa_das_ferramentas
-def test_revisao_antiga_fora_do_cache_do_install_monta_a_arvore_da_tres(bancada):
+def test_revisao_antiga_fora_do_cache_do_install_monta_a_arvore_da_tres(ensaio):
     """O outro lado da guarda: num cache à parte, o ``.3`` se reconstrói."""
-    proc = _rodar(bancada, "--revisao", "3", "--preparar")
+    proc = _rodar(ensaio, "--revisao", "3", "--preparar")
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    arvore = bancada["arvore_586"]
+    arvore = ensaio["arvore_586"]
     assert f"árvore pronta: {arvore} (5.86-0ubuntu0.1~hefesto24.04.3)" in proc.stdout
     assert "sem mordida a provar" in proc.stdout
     device_c = arvore / "profiles" / "input" / "device.c"

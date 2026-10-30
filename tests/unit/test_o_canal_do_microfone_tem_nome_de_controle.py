@@ -190,7 +190,7 @@ def test_o_que_nao_subiu_nao_fica_pela_metade() -> None:
     assert canal.de_pe() == {}
 
 
-def test_o_gesto_dela_nunca_vira_traceback() -> None:
+def test_o_gesto_do_usuario_nunca_vira_traceback() -> None:
     """O caminho até aqui é o botão do microfone. Uma recusa, nunca um erro."""
 
     class SourceQueExplode(SourceDeMentira):
@@ -452,7 +452,7 @@ def test_as_propriedades_do_alimentador_sao_as_que_a_outra_peca_reconhece() -> N
     assert e_stream_do_hefesto(stream, raiz_proc="/proc/nao-existe") is True
 
 
-def test_o_app_dela_no_canal_novo_continua_contando_como_ouvinte(tmp_path) -> None:
+def test_o_app_do_usuario_no_canal_novo_continua_contando_como_ouvinte(tmp_path) -> None:
     """A REGRESSÃO QUE O NOME NOVO CRIOU, medida em 06/09/2026 e curada."""
     for pid, cmd, ppid in (
         (4242, f"obs --record --device={canal.nome_do_canal(P1)}", 4000),

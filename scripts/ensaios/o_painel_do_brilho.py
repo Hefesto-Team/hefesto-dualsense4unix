@@ -268,7 +268,7 @@ class Painel:
                     "e exige o flag2 bit0 que o kernel não define",
                     presente="sim" if coluna.com_bit else "não",
                     resultado="",
-                    observado_por="olho-dela",
+                    observado_por="olho-do-usuario",
                     fonte="scripts/ensaios/o_painel_do_brilho.py",
                     nota=f"nível {coluna.nivel} ({NOME_DO_NIVEL[coluna.nivel]}), "
                     f"bit {'ligado' if coluna.com_bit else 'apagado'}, cor {coluna.cor}, "

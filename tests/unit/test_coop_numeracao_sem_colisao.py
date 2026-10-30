@@ -123,7 +123,7 @@ class TestOMacDoVpadSegueOAparelho:
             f"número de jogador: {sorted(macs)}"
         )
 
-    def test_a_noite_dela_o_controle_cai_volta_e_o_jogo_ve_o_mesmo_device(
+    def test_a_noite_do_usuario_o_controle_cai_volta_e_o_jogo_ve_o_mesmo_device(
         self,
     ) -> None:
         """O roteiro do journal de 02/08, reduzido ao que a E3 responde."""

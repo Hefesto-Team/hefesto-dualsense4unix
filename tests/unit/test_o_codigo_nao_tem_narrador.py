@@ -98,7 +98,7 @@ def _texto_de_todos() -> dict[str, str]:
     return textos
 
 
-def nomes_com_dela(caminhos: list[str]) -> list[str]:
+def nomes_com_do_usuario(caminhos: list[str]) -> list[str]:
     """Os caminhos em que algum nome de arquivo ou de pasta tem a palavra «dela»."""
     achados = []
     for caminho in caminhos:
@@ -119,8 +119,8 @@ def achados_de_narrador(textos: dict[str, str]) -> list[tuple[str, str]]:
     return achados
 
 
-def test_nenhum_nome_versionado_leva_a_palavra_dela() -> None:
-    assert nomes_com_dela(_versionados()) == []
+def test_nenhum_nome_versionado_leva_a_palavra_do_usuario() -> None:
+    assert nomes_com_do_usuario(_versionados()) == []
 
 
 def test_o_vocabulario_de_narrador_nao_volta_ao_texto_versionado() -> None:
@@ -198,13 +198,13 @@ class TestMorde:
         texto = {"src/a.py": "# o agente de pareamento do BlueZ responde ao RequestConfirmation\n"}
         assert achados_de_narrador(texto) == []
 
-    def test_o_nome_com_dela_e_achado(self) -> None:
-        assert nomes_com_dela(["tests/unit/test_a_regra_dela.py"]) == [
-            "tests/unit/test_a_regra_dela.py"
+    def test_o_nome_com_do_usuario_e_achado(self) -> None:
+        assert nomes_com_do_usuario(["tests/unit/test_a_regra_do_usuario.py"]) == [
+            "tests/unit/test_a_regra_do_usuario.py"
         ]
-        assert nomes_com_dela(["tests/unit/test_o_modelo_de_delaware.py"]) == []
+        assert nomes_com_do_usuario(["tests/unit/test_o_modelo_de_delaware.py"]) == []
 
-    def test_o_script_troca_o_dela_que_aponta_para_a_pessoa(self) -> None:
+    def test_o_script_troca_o_do_usuario_que_aponta_para_a_pessoa(self) -> None:
         if not SCRIPT.exists():
             pytest.skip("o script não veio para esta árvore")
         modulo = _carregar_o_script()
@@ -215,23 +215,23 @@ class TestMorde:
         assert modulo.reescrever_prosa(gramatical) == gramatical
 
 
-def test_o_script_acha_o_dela_em_comentario_e_em_docstring_e_deixa_o_codigo() -> None:
+def test_o_script_acha_o_do_usuario_em_comentario_e_em_docstring_e_deixa_o_codigo() -> None:
     """O atalho do script (texto sem «dela» nem se examina) não pode esconder o que ele troca."""
     if not SCRIPT.exists():
         pytest.skip("o script não veio para esta árvore")
     modulo = _carregar_o_script()
-    dela = "de" + "la"
+    do_usuario = "de" + "la"
     fonte = (
-        f'"""A decisão {dela} de 19/09 manda."""\n\n\n'
+        f'"""A decisão {do_usuario} de 19/09 manda."""\n\n\n'
         "def f() -> str:\n"
-        f'    """A ordem {dela} de 19/09 manda."""\n'
-        f"    # a ordem {dela} de 19/09 manda\n"
-        f'    janela = "a ordem {dela} de 19/09"\n'
+        f'    """A ordem {do_usuario} de 19/09 manda."""\n'
+        f"    # a ordem {do_usuario} de 19/09 manda\n"
+        f'    janela = "a ordem {do_usuario} de 19/09"\n'
         "    return janela\n"
     )
     novo = modulo.reescrever_arquivo(fonte, "py")
-    assert novo.count(dela) == 1, novo
-    assert f'janela = "a ordem {dela} de 19/09"' in novo
+    assert novo.count(do_usuario) == 1, novo
+    assert f'janela = "a ordem {do_usuario} de 19/09"' in novo
     sem = "def g() -> int:\n    # a janela abre pela tela\n    return 1\n"
     assert modulo.reescrever_arquivo(sem, "py") == sem
 
@@ -241,8 +241,8 @@ def test_o_trabalho_de_um_arquivo_diz_se_ha_o_que_trocar(tmp_path: Path) -> None
         pytest.skip("o script não veio para esta árvore")
     modulo = _carregar_o_script()
     modulo.RAIZ = tmp_path
-    dela = "de" + "la"
-    (tmp_path / "sujo.py").write_text(f"# a ordem {dela} de 19/09 manda\n", encoding="utf-8")
+    do_usuario = "de" + "la"
+    (tmp_path / "sujo.py").write_text(f"# a ordem {do_usuario} de 19/09 manda\n", encoding="utf-8")
     (tmp_path / "limpo.py").write_text("# a ordem de 19/09 manda\n", encoding="utf-8")
     assert modulo._trabalho_de((("sujo.py", "py"), False))[1] == "# a ordem de 19/09 manda\n"
     assert modulo._trabalho_de((("limpo.py", "py"), False))[1] is None

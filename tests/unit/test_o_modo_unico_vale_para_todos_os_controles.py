@@ -33,13 +33,13 @@ from tests.unit.test_a_mascara_do_cartao_vale_com_o_vpad_de_pe import (
     P2,
     P3,
     PERFIL,
-    _bancada,
+    _ensaio,
     _Handlers,
     _mesa_com_o_jogo_aberto,
     _vpad_do,
 )
 
-__all__ = ["_bancada"]
+__all__ = ["_ensaio"]
 
 
 def _todos(d: Any) -> list[Any]:

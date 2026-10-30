@@ -12,13 +12,13 @@ cura arrancada não testa nada. Foram QUATRO, uma por cura:
    `_alias_sem_tesoura` (o `return f"{PREFIXO_NINTENDO} {limpo}"` virou
    `return limpo`). Reprovaram DEZ nós, entre eles
    `test_nome_sem_prefixo_em_adaptador_com_pro_sai_costurado` e
-   `test_a_mesa_desta_bancada_costura_o_adaptador_do_pro_e_so_ele` — o
+   `test_a_mesa_deste_ensaio_costura_o_adaptador_do_pro_e_so_ele` — o
    adaptador do Pro passou a receber `"Sala"` puro, que é o alias que derruba o
    Pro sob carga. Devolvi e voltaram ao verde.
 
 2. **a condição da limpeza.** Tirei o `if not hospeda_nintendo: return texto`
    de `limpar_o_nome`, deixando a limpeza incondicional. Reprovaram QUATRO,
-   entre eles `test_o_nome_dela_nao_e_comido_no_segundo_salvamento` —
+   entre eles `test_o_nome_do_usuario_nao_e_comido_no_segundo_salvamento` —
    `"Nintendo do sofá"` num dongle SEM Pro voltou como `"do sofá"`, e o segundo
    salvamento gravaria `"do sofá"`, comendo uma palavra que o usuário escreveu.
 
@@ -231,11 +231,11 @@ def test_nome_vazio_sem_pro_continua_vazio() -> None:
     assert costurar_o_nome("", hospeda_nintendo=False) == ""
 
 
-def test_a_tela_mostra_o_nome_dela_sem_a_costura() -> None:
+def test_a_tela_mostra_o_nome_do_usuario_sem_a_costura() -> None:
     assert limpar_o_nome("Nintendo Sala", hospeda_nintendo=True) == "Sala"
 
 
-def test_o_nome_dela_nao_e_comido_no_segundo_salvamento() -> None:
+def test_o_nome_do_usuario_nao_e_comido_no_segundo_salvamento() -> None:
     """Ela batiza um dongle SEM Pro de "Nintendo do sofá" — e a palavra fica."""
     escrito = "Nintendo do sofá"
     visto = limpar_o_nome(escrito, hospeda_nintendo=False)
@@ -451,7 +451,7 @@ def test_recusa_do_bluez_volta_como_nao_aplicado_e_com_motivo() -> None:
     assert resposta.alias == "Nintendo Sofá"
 
 
-def test_a_mesa_desta_bancada_costura_o_adaptador_do_pro_e_so_ele() -> None:
+def test_a_mesa_deste_ensaio_costura_o_adaptador_do_pro_e_so_ele() -> None:
     """O `bt_active_mode.sh` costura o PRIMEIRO adaptador; o Pro está no segundo."""
     bus = BusDublado()
     feitos = costurar_a_mesa(**_mesa(bus))

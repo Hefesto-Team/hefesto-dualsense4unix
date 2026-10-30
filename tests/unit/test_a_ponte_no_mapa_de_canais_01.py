@@ -100,7 +100,7 @@ class TestAsDezDizemAPonte:
             "`integrations/ponte_escada.py` ficando sem lugar no mapa"
         )
 
-    def test_sao_dez_e_elas_tem_nome(self) -> None:
+    def test_sao_dez_e_o_usuario_tem_nome(self) -> None:
         """Nomeia, nunca só conta (WRAPPER-EM-TODOS-01)."""
         chaves = sorted(lin["chave"] for lin in _as_dez(_linhas()))
         assert chaves == [

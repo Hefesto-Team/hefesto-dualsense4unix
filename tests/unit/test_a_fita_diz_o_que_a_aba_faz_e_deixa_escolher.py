@@ -136,7 +136,7 @@ def test_o_clique_no_chip_move_o_alvo(hv):
     assert hv._pref_escolhido(MESA) == "p1", "e ele volta quando ela clica de volta"
 
 
-def test_a_fita_acende_o_chip_que_ela_escolheu(hv):
+def test_a_fita_acende_o_chip_que_o_usuario_escolheu(hv):
     """A prova na TELA: o `on` sai de um chip e entra no outro."""
     hv._escolher_na_fita(_ctx(MESA), {"pref": "p2"}, None)
     vivo = hv._fita(MESA, "02-controles.html")

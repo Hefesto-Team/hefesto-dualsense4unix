@@ -109,7 +109,7 @@ class _Estado:
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
@@ -150,78 +150,78 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     return _Estado(sub=sub, controles=controles, tocando=tocando, monitores=monitores)
 
 
-def test_o_controle_sobe_o_endpoint_dele(bancada: _Estado) -> None:
+def test_o_controle_sobe_o_endpoint_dele(ensaio: _Estado) -> None:
     """Um por aparelho (A-HAPTICA-E-POR-APARELHO-01; de 28/09 a 02/10, os quatro lugares)."""
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     assert [e.uniq for e in _EndpointDeMentira.criados] == ["aa:bb:cc:00:00:01"]
     assert all(e.subiu for e in _EndpointDeMentira.criados)
 
 
-def test_sem_o_jogo_tocando_a_ponte_e_a_do_som(bancada: _Estado) -> None:
+def test_sem_o_jogo_tocando_a_ponte_e_a_do_som(ensaio: _Estado) -> None:
     """O endpoint fica publicado; o escritor continua sendo o do alto-falante."""
-    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.o_alto_falante_toca(ensaio.controles[0].uniq)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     ponte = _PonteDeMentira.criadas[-1]
     assert ponte.leva is False, "sem o jogo, a háptica não vai ao fio"
     assert ponte.fonte_de_haptica is None
 
 
-def test_com_o_jogo_tocando_a_ponte_leva_a_haptica(bancada: _Estado) -> None:
-    bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
-    bancada.sub._casar_as_pontes(bancada.controles)
+def test_com_o_jogo_tocando_a_ponte_leva_a_haptica(ensaio: _Estado) -> None:
+    ensaio.tocando[f"endpoint::{ensaio.controles[0].uniq}"] = True
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     ponte = _PonteDeMentira.criadas[-1]
     assert ponte.leva is True
     assert ponte.fonte_de_haptica is not None
 
 
-def test_a_fonte_da_haptica_pede_quatro_canais(bancada: _Estado) -> None:
+def test_a_fonte_da_haptica_pede_quatro_canais(ensaio: _Estado) -> None:
     """Dois canais dariam a voz do jogo aos motores e nenhum motor."""
-    bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
-    bancada.sub._casar_as_pontes(bancada.controles)
-    assert any(m.endswith("#4") for m in bancada.monitores), bancada.monitores
+    ensaio.tocando[f"endpoint::{ensaio.controles[0].uniq}"] = True
+    ensaio.sub._casar_as_pontes(ensaio.controles)
+    assert any(m.endswith("#4") for m in ensaio.monitores), ensaio.monitores
 
 
-def test_o_jogo_abrindo_no_meio_derruba_e_sobe_de_novo(bancada: _Estado) -> None:
+def test_o_jogo_abrindo_no_meio_derruba_e_sobe_de_novo(ensaio: _Estado) -> None:
     """A ponte que subiu sem ler o endpoint sobe de novo lendo: uma vez, para ganhar a háptica."""
-    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.o_alto_falante_toca(ensaio.controles[0].uniq)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     primeira = _PonteDeMentira.criadas[-1]
-    bancada.tocando[f"endpoint::{bancada.controles[0].uniq}"] = True
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.tocando[f"endpoint::{ensaio.controles[0].uniq}"] = True
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     assert primeira.desceu is True
     assert len(_PonteDeMentira.criadas) == 2
     assert _PonteDeMentira.criadas[-1] is not primeira
 
 
-def test_o_modo_que_nao_muda_nao_reconstroi_nada(bancada: _Estado) -> None:
+def test_o_modo_que_nao_muda_nao_reconstroi_nada(ensaio: _Estado) -> None:
     """Reconstruir a cada tique cortaria o som e a vibração a cada volta."""
-    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
-    bancada.sub._casar_as_pontes(bancada.controles)
-    bancada.sub._casar_as_pontes(bancada.controles)
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.o_alto_falante_toca(ensaio.controles[0].uniq)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     assert len(_PonteDeMentira.criadas) == 1
 
 
-def test_o_ultimo_controle_que_sai_leva_a_ponte_e_o_endpoint(bancada: _Estado) -> None:
+def test_o_ultimo_controle_que_sai_leva_a_ponte_e_o_endpoint(ensaio: _Estado) -> None:
     """Sem DualSense e sem jogo tocando, o endpoint do aparelho cai com a ponte."""
-    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
-    bancada.sub._casar_as_pontes(bancada.controles)
-    bancada.sub._casar_as_pontes([])
+    ensaio.o_alto_falante_toca(ensaio.controles[0].uniq)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
+    ensaio.sub._casar_as_pontes([])
     assert _PonteDeMentira.criadas[-1].desceu is True
-    assert _EndpointDeMentira.quedas == [bancada.controles[0].uniq]
+    assert _EndpointDeMentira.quedas == [ensaio.controles[0].uniq]
 
 
-def test_cada_aparelho_ganha_uma_ancora_propria(bancada: _Estado) -> None:
+def test_cada_aparelho_ganha_uma_ancora_propria(ensaio: _Estado) -> None:
     """Âncoras iguais são ContainerIds iguais, e o jogo confunde os controles."""
     quatro = [
         _Controle(f"aa:bb:cc:00:00:0{i}", f"/dev/hidraw{i}", "bluetooth") for i in range(1, 5)
     ]
-    bancada.sub._casar_as_pontes(quatro)
+    ensaio.sub._casar_as_pontes(quatro)
     assert len({e.ancora.syspath for e in _EndpointDeMentira.criados}) == 4
 
 
-def test_o_controle_no_cabo_tambem_sobe_o_endpoint_dele(bancada: _Estado) -> None:
+def test_o_controle_no_cabo_tambem_sobe_o_endpoint_dele(ensaio: _Estado) -> None:
     """FATO QUE CAIU (28/09/2026): «no cabo o endpoint é a placa de verdade»."""
-    bancada.sub._casar_as_pontes([_Controle("aa:bb:cc:00:00:09", "/dev/hidraw9", "usb")])
+    ensaio.sub._casar_as_pontes([_Controle("aa:bb:cc:00:00:09", "/dev/hidraw9", "usb")])
     assert [e.uniq for e in _EndpointDeMentira.criados] == ["aa:bb:cc:00:00:09"]
     assert _PonteDeMentira.criadas == []

@@ -30,7 +30,7 @@ FREESTYLE = loader.NOME_DO_PADRAO
 PERFIL = "Perfil da Régua"
 
 
-class _Bancada:
+class _Ensaio:
     """O que a borda anotou, e as duas chaves que fazem a fábrica recusar."""
 
     def __init__(self) -> None:
@@ -41,13 +41,13 @@ class _Bancada:
 class _MouseDeMentira:
     """O `UinputMouseDevice` sem `/dev/uinput`: a fábrica real do subsistema o cria."""
 
-    bancada: _Bancada
+    ensaio: _Ensaio
 
     def __init__(self, *, mouse_speed: int, scroll_speed: int, poll_hz: int) -> None:
         self.velocidades = (mouse_speed, scroll_speed)
 
     def start(self) -> bool:
-        return self.bancada.mouse_sobe
+        return self.ensaio.mouse_sobe
 
     def stop(self) -> None:
         return
@@ -124,9 +124,9 @@ class _DaemonDaNavegacao(Daemon):
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Bancada]:
-    b = _Bancada()
-    _MouseDeMentira.bancada = b
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Ensaio]:
+    b = _Ensaio()
+    _MouseDeMentira.ensaio = b
     monkeypatch.setattr(uinput_mouse, "UinputMouseDevice", _MouseDeMentira)
 
     def _fabrica(flavor: Any, *, identity: Any = None, caminho: Any = None, **_k: Any) -> _Vpad:
@@ -211,7 +211,7 @@ def _mouse_de_pe(d: _DaemonDaNavegacao) -> None:
     d.recebeu.clear()
 
 
-def test_a_ativacao_de_um_perfil_de_pad_nao_liga_o_mouse(bancada: _Bancada) -> None:
+def test_a_ativacao_de_um_perfil_de_pad_nao_liga_o_mouse(ensaio: _Ensaio) -> None:
     """O Freestyle com `mouse.enabled: true` e `kind: gamepad`, o pad de pé."""
     d = _daemon()
     _perfil(FREESTYLE, mode={"kind": "gamepad", "caminho": "dualsense"},
@@ -220,7 +220,7 @@ def test_a_ativacao_de_um_perfil_de_pad_nao_liga_o_mouse(bancada: _Bancada) -> N
 
     _gerente(d).activate(FREESTYLE, origin="manual")
 
-    assert bancada.paradas_do_pad == 0, "a ativação de um perfil de pad derrubou o pad"
+    assert ensaio.paradas_do_pad == 0, "a ativação de um perfil de pad derrubou o pad"
     assert d.chamadas("_stop_gamepad_emulation") == []
     assert [a for a in d.chamadas("set_mouse_emulation") if a[0]] == [], (
         "a ativação de um perfil de pad ligou o mouse")
@@ -228,7 +228,7 @@ def test_a_ativacao_de_um_perfil_de_pad_nao_liga_o_mouse(bancada: _Bancada) -> N
         f"as velocidades do perfil não entraram: {d.recebeu}")
 
 
-def test_o_perfil_sem_modo_nao_desliga_a_navegacao(bancada: _Bancada) -> None:
+def test_o_perfil_sem_modo_nao_desliga_a_navegacao(ensaio: _Ensaio) -> None:
     """O mouse ligado na Navegação; entra um perfil sem `mode` com `enabled: false`."""
     d = _daemon()
     _perfil(PERFIL, mode=None, mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
@@ -240,7 +240,7 @@ def test_o_perfil_sem_modo_nao_desliga_a_navegacao(bancada: _Bancada) -> None:
     assert [a for a in d.chamadas("set_mouse_emulation") if not a[0]] == []
 
 
-def test_o_perfil_de_navegacao_obedece_ao_que_ela_gravou(bancada: _Bancada) -> None:
+def test_o_perfil_de_navegacao_obedece_ao_que_o_usuario_gravou(ensaio: _Ensaio) -> None:
     """Um perfil com `kind: desktop` e `enabled: false`, com o mouse ligado: desliga."""
     d = _daemon()
     _perfil(PERFIL, mode={"kind": "desktop"},
@@ -256,7 +256,7 @@ def test_o_perfil_de_navegacao_obedece_ao_que_ela_gravou(bancada: _Bancada) -> N
 @pytest.mark.parametrize("modo", [{"kind": "gamepad", "caminho": "dualsense"}, {"kind": "desktop"}],
                          ids=["fora-da-navegacao", "na-navegacao"])
 def test_o_rodape_da_ativacao_le_o_mouse_como_aplicado(
-    bancada: _Bancada, modo: dict[str, Any]
+    ensaio: _Ensaio, modo: dict[str, Any]
 ) -> None:
     """Um `profile.switch` real, lido pelo leitor da TELA (`relato_da_ativacao`).
 
@@ -331,7 +331,7 @@ def _o_chip(d: _DaemonDaNavegacao) -> dict[str, Any]:
     return asyncio.run(_Handlers(d)._handle_desktop_arranjo_apply({"origin": "manual"}))
 
 
-def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(bancada: _Bancada) -> None:
+def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(ensaio: _Ensaio) -> None:
     """O perfil com `{enabled: false, 11, 4}` e o mouse desligado: o chip liga."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
@@ -345,7 +345,7 @@ def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(bancada: _Bancada) -
     assert d.mouse_de_pe(), "o chip entrou na Navegação sem cursor — o achado 13"
 
 
-def test_o_chip_sem_a_secao_liga_com_as_velocidades_da_sessao(bancada: _Bancada) -> None:
+def test_o_chip_sem_a_secao_liga_com_as_velocidades_da_sessao(ensaio: _Ensaio) -> None:
     """O perfil sem a seção `mouse`, e a flag de sessão dizendo desligado com `speed 3`."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
@@ -358,7 +358,7 @@ def test_o_chip_sem_a_secao_liga_com_as_velocidades_da_sessao(bancada: _Bancada)
     assert d.mouse_de_pe()
 
 
-def test_o_chip_e_o_ps_r3_dao_o_mesmo(bancada: _Bancada) -> None:
+def test_o_chip_e_o_ps_r3_dao_o_mesmo(ensaio: _Ensaio) -> None:
     """Dois daemons iguais, o mesmo perfil: o chip num, o PS + R3 no outro.
 
     As listas de chamadas aos setters do mouse, do teclado e da supressão são
@@ -397,7 +397,7 @@ def test_o_chip_e_o_ps_r3_dao_o_mesmo(bancada: _Bancada) -> None:
     assert ("set_mouse_emulation", (True, 11, 4)) in chip
 
 
-def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(bancada: _Bancada) -> None:
+def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(ensaio: _Ensaio) -> None:
     """O Freestyle ligado com `{false, 11, 4}` e `kind: gamepad`; o chip pela porta."""
     from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
 
@@ -421,7 +421,7 @@ def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(bancada: _Bancada) -> N
         "o modo e o mouse foram em duas gravações")
 
 
-def test_a_segunda_entrada_nao_grava_de_novo(bancada: _Bancada) -> None:
+def test_a_segunda_entrada_nao_grava_de_novo(ensaio: _Ensaio) -> None:
     """Entrar na Navegação já estando nela: nada mudou, nada se grava."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
@@ -441,7 +441,7 @@ def test_a_segunda_entrada_nao_grava_de_novo(bancada: _Bancada) -> None:
         "a segunda entrada na Navegação regravou o perfil sem nada ter mudado")
 
 
-def test_o_arranjo_chamado_direto_liga_e_nao_grava(bancada: _Bancada) -> None:
+def test_o_arranjo_chamado_direto_liga_e_nao_grava(ensaio: _Ensaio) -> None:
     """Sem a porta, o arranjo liga o mouse e não muda o `sha256` do perfil."""
     import hashlib
 
@@ -483,7 +483,7 @@ def test_o_socorro_forcar_mouse_nao_volta() -> None:
 
 @pytest.mark.parametrize(("sobe", "esperado"), [(True, "ligado"), (False, "desligado")],
                          ids=["o-device-subiu", "a-fabrica-recusou"])
-def test_o_diario_diz_o_mouse_vivo(bancada: _Bancada, sobe: bool, esperado: str) -> None:
+def test_o_diario_diz_o_mouse_vivo(ensaio: _Ensaio, sobe: bool, esperado: str) -> None:
     """`arranjo_do_desktop_aplicado` diz `mouse_vivo`, lido do device."""
     import structlog
 
@@ -491,7 +491,7 @@ def test_o_diario_diz_o_mouse_vivo(bancada: _Bancada, sobe: bool, esperado: str)
     _flag_do_mouse(FLAG_DA_SESSAO)
     _perfil(PERFIL, mode=None, mouse={"enabled": True, "speed": 11, "scroll_speed": 4})
     _ativo(d, PERFIL)
-    bancada.mouse_sobe = sobe
+    ensaio.mouse_sobe = sobe
 
     with structlog.testing.capture_logs() as registros:
         d.aplicar_o_arranjo_do_desktop(origin="manual")
@@ -503,7 +503,7 @@ def test_o_diario_diz_o_mouse_vivo(bancada: _Bancada, sobe: bool, esperado: str)
         "a chave `mouse` saiu do vocabulário do applier")
 
 
-def test_o_perfil_de_navegacao_sem_secao_liga_o_mouse_na_ativacao(bancada: _Bancada) -> None:
+def test_o_perfil_de_navegacao_sem_secao_liga_o_mouse_na_ativacao(ensaio: _Ensaio) -> None:
     """O pad de pé, um perfil com `kind: desktop` e sem `mouse`, a flag com `speed 3`."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
@@ -529,7 +529,7 @@ def _navegacao_de_pe_com_o_teclado(d: _DaemonDaNavegacao) -> None:
     d.recebeu.clear()
 
 
-def test_o_status_do_modo_desliga_os_dois_e_grava_pelo_dono(bancada: _Bancada) -> None:
+def test_o_status_do_modo_desliga_os_dois_e_grava_pelo_dono(ensaio: _Ensaio) -> None:
     """`desktop.status.set {enabled: false, origin: manual}`: o mouse, depois o teclado.
 
     O disco relido diz `mouse.enabled: false` e `teclado_emulado: false`, com as
@@ -565,7 +565,7 @@ def test_o_status_do_modo_desliga_os_dois_e_grava_pelo_dono(bancada: _Bancada) -
     assert resposta["keyboard_emulation"]["status"] == "ok"
 
 
-def test_o_status_pedido_para_o_lado_do_disco_nao_grava(bancada: _Bancada) -> None:
+def test_o_status_pedido_para_o_lado_do_disco_nao_grava(ensaio: _Ensaio) -> None:
     """O perfil já diz desligado, e o «Status do Modo» pede desligado: nada se grava."""
     d = _daemon()
     _perfil(PERFIL, mode={"kind": "desktop"},
@@ -580,7 +580,7 @@ def test_o_status_pedido_para_o_lado_do_disco_nao_grava(bancada: _Bancada) -> No
         "o «Status do Modo» regravou um perfil que já dizia o mesmo")
 
 
-def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(bancada: _Bancada) -> None:
+def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(ensaio: _Ensaio) -> None:
     """O mouse ligou e o teclado não subiu: o perfil fica como estava."""
     import hashlib
 
@@ -602,13 +602,13 @@ def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(bancada: _Bancada) ->
         "o perfil guardou o mouse ligado com o teclado que não subiu")
 
 
-def test_o_mouse_recusado_nao_liga_o_teclado_sozinho(bancada: _Bancada) -> None:
+def test_o_mouse_recusado_nao_liga_o_teclado_sozinho(ensaio: _Ensaio) -> None:
     """A fábrica do mouse recusa: o teclado não é tocado, e a resposta diz o motivo."""
     d = _daemon()
     _perfil(PERFIL, mode={"kind": "desktop"},
             mouse={"enabled": False, "speed": 11, "scroll_speed": 4}, teclado=False)
     _ativo(d, PERFIL)
-    bancada.mouse_sobe = False
+    ensaio.mouse_sobe = False
 
     resposta = _o_status(d, enabled=True, origin="manual")
 
@@ -619,7 +619,7 @@ def test_o_mouse_recusado_nao_liga_o_teclado_sozinho(bancada: _Bancada) -> None:
     assert resposta["gravado"] is False
 
 
-def test_o_status_sem_a_mao_dela_nao_grava(bancada: _Bancada) -> None:
+def test_o_status_sem_a_mao_do_usuario_nao_grava(ensaio: _Ensaio) -> None:
     """O pedido sem `origin` é reconciliação (ORIGEM-QUE-MENTE-01): aplica e não grava."""
     import hashlib
 

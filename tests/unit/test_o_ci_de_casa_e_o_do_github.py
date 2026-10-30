@@ -561,7 +561,9 @@ def test_o_checkout_com_ref_vira_o_da_arvore_local(mundo: Mundo) -> None:
     )
 
 
-def test_a_matriz_de_runners_roda_uma_perna_por_chamada_com_a_imagem_dela(mundo: Mundo) -> None:
+def test_a_matriz_de_runners_roda_uma_perna_por_chamada_com_a_imagem_do_usuario(
+    mundo: Mundo,
+) -> None:
     """Com as duas imagens no mesmo `-P` o act dava a MESMA imagem às duas pernas, e ao acaso."""
     mundo.rodar("--job", "deb")
     log = mundo.log("deb")

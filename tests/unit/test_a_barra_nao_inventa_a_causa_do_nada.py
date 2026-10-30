@@ -103,7 +103,7 @@ class TestABarraNaoInventaACausaDoNada:
             f"mesa comprovadamente vazia devia manter o diagnóstico; veio {frase!r}"
         )
 
-    def test_o_que_a_janela_nao_sabe_ela_nao_afirma(self) -> None:
+    def test_o_que_a_janela_nao_sabe_o_usuario_nao_afirma(self) -> None:
         """Os casos 3, 4 e 5 — invisíveis para a janela."""
         host = _Host(nativo=False, conectados=MESA_COM_UM)
         frase = frase_do_desfecho("Vibração", VAZIO, host)
@@ -145,7 +145,7 @@ class TestMesaVaziaNaoAdivinha:
     ) -> None:
         assert mesa_vazia(_Host(conectados=mapa)) is esperado, porque
 
-    def test_sem_mapa_ela_nao_inventa(self) -> None:
+    def test_sem_mapa_o_usuario_nao_inventa(self) -> None:
         """Sem o mapa a resposta é ``False``, e é o padrão SEGURO."""
         assert mesa_vazia(_Host()) is False
         assert mesa_vazia(object()) is False

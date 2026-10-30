@@ -254,7 +254,7 @@ def appid_do_jogo_em_foco(state: dict[str, Any] | None) -> str:
     return _lwd.extract_steam_appid(classe) or ""
 
 
-def ela_ja_respondeu_sobre(appid: str) -> bool:
+def o_usuario_ja_respondeu_sobre(appid: str) -> bool:
     """O usuário já disse "eu sei, deixa assim" sobre este jogo? — as DUAS recusas.
 
     São duas listas e as duas contam, porque as duas são o usuário dizendo a mesma
@@ -325,7 +325,7 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     texto = wrapper_banner_text(state)
     if texto is None:
         return None
-    if ela_ja_respondeu_sobre(appid_do_jogo_em_foco(state)):
+    if o_usuario_ja_respondeu_sobre(appid_do_jogo_em_foco(state)):
         return None
     return texto
 
@@ -584,7 +584,7 @@ def mascara_do_aparelho(state: dict[str, Any] | None) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
-FONTE_GESTO_DELA: Final[str] = "gesto"
+FONTE_GESTO_DO_USUARIO: Final[str] = "gesto"
 FONTE_PERFIL: Final[str] = "perfil"
 
 DIVERGENCIA_DO_PERFIL_PREFIXO: Final[str] = "O perfil ativo: "
@@ -608,7 +608,7 @@ def texto_da_divergencia(
     no_aparelho: object,
     *,
     jogo_aberto: bool,
-    fonte: object = FONTE_GESTO_DELA,
+    fonte: object = FONTE_GESTO_DO_USUARIO,
     perfil: object = None,
 ) -> str | None:
     """A frase da divergência entre o que o usuário escolheu e o que o jogo vê."""
@@ -766,7 +766,7 @@ def reconciliar_pendente(janela: Any) -> dict[str, str]:
 __all__ = [
     "DIVERGENCIA_DO_PERFIL_PREFIXO",
     "DIVERGENCIA_PREFIXO",
-    "FONTE_GESTO_DELA",
+    "FONTE_GESTO_DO_USUARIO",
     "FONTE_PERFIL",
     "PALAVRA_DE_TRANSPORTE_DESCONHECIDO",
     "RECONCILIAR_JOGO_ABERTO_TEXT",
@@ -780,13 +780,13 @@ __all__ = [
     "appid_do_jogo_em_foco",
     "aviso_do_wrapper",
     "controles_bt_frageis",
-    "ela_ja_respondeu_sobre",
     "externos_na_mesa",
     "jogadores_degradados",
     "jogo_com_autoridade",
     "mascara_divergente_do_daemon",
     "mascara_do_aparelho",
     "mascara_viva",
+    "o_usuario_ja_respondeu_sobre",
     "palavra_do_transporte",
     "texto_coop_degradado",
     "texto_da_divergencia",

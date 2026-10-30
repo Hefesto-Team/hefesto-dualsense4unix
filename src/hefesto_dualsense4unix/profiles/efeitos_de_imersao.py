@@ -363,13 +363,13 @@ def imersoes_por_familia(estilo: str = "") -> tuple[tuple[str, tuple[Imersao, ..
     chave_do_estilo = _estilo_de_hoje(estilo) if estilo else ""
     grupos = []
     for familia in FAMILIAS_DA_PAGINA:
-        delas = sorted(
+        da_familia = sorted(
             (i for i in IMERSOES if familia_da_pagina(i) == familia and i.chave not in IGUAL_A),
             key=lambda i: ORDEM_NA_LISTA.index(i.chave) if i.chave in ORDEM_NA_LISTA else 99)
         if chave_do_estilo:
-            delas.sort(key=lambda i: chave_do_estilo not in i.na_frente)
-        if delas:
-            grupos.append((familia, tuple(delas)))
+            da_familia.sort(key=lambda i: chave_do_estilo not in i.na_frente)
+        if da_familia:
+            grupos.append((familia, tuple(da_familia)))
     return tuple(grupos)
 
 
@@ -381,11 +381,11 @@ def modo_que_a_imersao_pede(imersao: Imersao, modo: str) -> str:
 def imersoes_do_acionamento(modo: str, estilo: str = "") -> tuple[Imersao, ...]:
     """As três do acionamento, na ordem da tabela; com `estilo`, as dele vão na frente."""
     familia = _familia_do_modo(modo)
-    delas = tuple(i for i in IMERSOES if i.familia == familia and modo in i.ajustes)
+    da_familia = tuple(i for i in IMERSOES if i.familia == familia and modo in i.ajustes)
     if not estilo:
-        return delas
+        return da_familia
     estilo = _estilo_de_hoje(estilo)
-    return tuple(sorted(delas, key=lambda i: estilo not in i.na_frente))
+    return tuple(sorted(da_familia, key=lambda i: estilo not in i.na_frente))
 
 
 def ajustes_da_imersao(imersao: Imersao, modo: str, estilo: str = "") -> dict[str, int] | None:

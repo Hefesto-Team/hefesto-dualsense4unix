@@ -70,8 +70,8 @@ def explicacao_da_disputa(
     return ""
 
 
-def perfil_que_ela_ativou() -> str | None:
-    """A escolha do usuário, lida do disco pelo dono (`utils.session.a_escolha_dela`).
+def perfil_que_o_usuario_ativou() -> str | None:
+    """A escolha do usuário, lida do disco pelo dono (`utils.session.a_escolha_do_usuario`).
 
     O Freestyle quando o botão está ligado; desligado, o último perfil que ela
     ativou; «sem escolha», `None`. Sobrevive ao daemon responder
@@ -133,7 +133,7 @@ def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
             return PerfilQueVale(do_daemon, "daemon")
     do_disco: str | None = None
     with contextlib.suppress(Exception):
-        do_disco = perfil_que_ela_ativou()
+        do_disco = perfil_que_o_usuario_ativou()
     if do_disco:
         return PerfilQueVale(do_disco, "disco")
     return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")

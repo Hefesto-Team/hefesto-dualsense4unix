@@ -74,7 +74,7 @@ def carga():
 
 
 @pytest.fixture
-def bancada():
+def ensaio():
     """O HTML da bancada — o desenho de HOJE, que é o que ela olha."""
     import onde
 
@@ -160,7 +160,7 @@ def test_a_incerta_nunca_sai_sem_estilo_de_linha(a04):
         "folha não conhece `.tira-luz.incerta`.")
 
 
-def test_sem_estado_declarado_a_bancada_nunca_inventa_a_duvida(a04):
+def test_sem_estado_declarado_o_ensaio_nunca_inventa_a_duvida(a04):
     """O gerador não tem motor a perguntar — e por isso nunca diz "não sei"."""
     sem_estado = a04.desenho_da_luz("#7EB8D4", 0.82, 1)
     assert f' {a04.CLASSE_DA_INCERTA}"' not in sem_estado
@@ -189,18 +189,18 @@ def test_o_estado_vem_depois_do_luz_porque_o_luz_recria_as_tiras(a04, carga):
     assert chaves.index("luz") < chaves.index(a04.ENDERECO_DA_INCERTA)
 
 
-def test_a_tira_carrega_o_endereco_do_estado_nas_duas_paginas(a04, bancada):
+def test_a_tira_carrega_o_endereco_do_estado_nas_duas_paginas(a04, ensaio):
     """Sem endereço, o estado viaja só dentro de um bloco `html`."""
     marca = (f'data-campo="{a04.ENDERECO_DA_INCERTA}" data-hef-alvo="classe" '
              f'data-hef-classe="{a04.CLASSE_DA_INCERTA}"')
-    assert bancada.count(marca) == 4, (
-        f"a bancada tem {bancada.count(marca)} tiras endereçadas; são duas "
+    assert ensaio.count(marca) == 4, (
+        f"a bancada tem {ensaio.count(marca)} tiras endereçadas; são duas "
         f"colunas conectadas, duas tiras cada.")
 
 
-def test_a_folha_desenha_o_contorno_e_so_o_contorno(bancada):
+def test_a_folha_desenha_o_contorno_e_so_o_contorno(ensaio):
     """O tracejado é CONTORNO, e nunca cor nova — ordem de produto."""
-    regra = bancada.split(".tira-luz.incerta{", 1)
+    regra = ensaio.split(".tira-luz.incerta{", 1)
     assert len(regra) == 2, "a folha perdeu a regra do tracejado."
     corpo = regra[1].split("}", 1)[0]
     assert "border:1px dashed" in corpo, (

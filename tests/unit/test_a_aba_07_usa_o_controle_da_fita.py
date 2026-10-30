@@ -16,7 +16,7 @@ O QUE ESTAVA NA TELA, medido em 03/09/2026 com os DOIS controles do usuário na 
                 P2 · Starlight Blue · BT       <- o MOCKUP
 
 A `07-lancadores` tinha SEIS valores de identidade congelados
-(`scripts/check_identidade_vem_de_cima.py --bancada --aba 07`), e os seis eram a
+(`scripts/check_identidade_vem_de_cima.py --ensaio --aba 07`), e os seis eram a
 fita: dois `--plastico`, dois nomes de colorway no texto e dois no `title`.
 
 POR QUE ELES ESTAVAM LÁ: `monta()` injeta a fita chamando `fita(inerte=True)`
@@ -110,7 +110,7 @@ def ctx():
                             conectados=[], estados={})
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     """A página da BANCADA — o desenho de HOJE, não o congelado."""
     from hefesto_dualsense4unix.interface import onde
 
@@ -181,7 +181,7 @@ def test_a_fita_tem_um_dono_so_com_alguem_na_mesa(a07, ctx, monkeypatch) -> None
     """ERA `test_o_pacote_escreve_a_fita`, e ele exigia o SEGUNDO dono."""
     monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
 
-    assert 'class="fita' in _bancada(), (
+    assert 'class="fita' in _ensaio(), (
         f"a página não tem `{SELETOR_DA_FITA}` — o `blocos` cairia no chão, "
         f"e `querySelector` devolve `null` sem uma linha de erro")
 
@@ -217,9 +217,9 @@ def test_a_fita_da_mesa_vazia_tambem_e_do_piloto(a07, monkeypatch) -> None:
             f"na tela do produto:\n{fita}")
 
 
-def test_a_bancada_da_07_nao_tem_identidade_congelada() -> None:
+def test_o_ensaio_da_07_nao_tem_identidade_congelada() -> None:
     """A régua da aba, na bancada: ZERO."""
-    sem_prosa = re.sub(r"<!--.*?-->|/\*.*?\*/", " ", _bancada(), flags=re.S)
+    sem_prosa = re.sub(r"<!--.*?-->|/\*.*?\*/", " ", _ensaio(), flags=re.S)
     achados = [c for c in _colorways() if c in sem_prosa]
     assert not achados, (
         f"{len(achados)} nome(s) de colorway na `{PAGINA}` — {achados}. A "
@@ -230,9 +230,9 @@ def test_a_bancada_da_07_nao_tem_identidade_congelada() -> None:
         "de aparelho — quem a escreve é o pacote, nunca o gerador.")
 
 
-def test_a_fita_da_bancada_so_tem_estrutura() -> None:
+def test_a_fita_do_ensaio_so_tem_estrutura() -> None:
     """O que sobra na fita do disco é `Selecionar:` e `Todos`."""
-    bloco = re.search(r'<div class="fita(?: inerte)?".*?</div>', _bancada(), re.S)
+    bloco = re.search(r'<div class="fita(?: inerte)?".*?</div>', _ensaio(), re.S)
     assert bloco, "não achei a fita na página — a régua ficaria verde sobre nada"
     chips = _chips(bloco.group(0))
     assert len(chips) == 1 and "Todos" in chips[0], (

@@ -121,7 +121,7 @@ def _sysfs_do_wifi(raiz: Path, *, com_wifi_usb: bool) -> Path:
     return raiz
 
 
-def _bancada(
+def _ensaio(
     tmp_path: Path,
     *,
     com_credencial: bool = True,
@@ -182,7 +182,7 @@ def _roda_ensaio(
     ambiente_extra: dict[str, str] | None = None,
     dubles_extra: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
-    lar, diario, ambiente = _bancada(
+    lar, diario, ambiente = _ensaio(
         tmp_path,
         com_credencial=com_credencial,
         com_wifi_usb=com_wifi_usb,
@@ -256,7 +256,7 @@ class TestOPlanoNaoDependeDoDpkgDeQuemRoda:
     """O ensaio mede o install: o `dpkg-query` de quem roda a régua não entra na conta."""
 
     def test_com_tudo_em_ordem_o_plano_instalaria_o_pacote(self, tmp_path: Path) -> None:
-        """A MORDIDA: tire o dublê do `_bancada` e, numa máquina com `iF`, este caso reprova."""
+        """A MORDIDA: tire o dublê do `_ensaio` e, numa máquina com `iF`, este caso reprova."""
         resultado, _lar, _diario = _roda_ensaio(
             tmp_path,
             ambiente_extra=AMBIENTE_DO_APT,

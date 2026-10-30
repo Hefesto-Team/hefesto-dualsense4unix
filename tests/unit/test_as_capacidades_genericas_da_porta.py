@@ -306,24 +306,24 @@ def test_6_o_aperto_de_cada_controle_chega_com_o_uniq_e_o_jogador_dele(
 
     Prova da D-2210-O-TOQUE-DE-BOTAO-CHEGA-DE-TODO-CONTROLE.
     """
-    bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte)
-    numeros = bancada.a_tela()
+    ensaio = montar_atalhos(monkeypatch, kernel, quantos, transporte)
+    numeros = ensaio.a_tela()
 
     def tique() -> None:
-        bancada.tique()
-        botoes = evdev_buttons_once(bancada.daemon)
-        botoes_de_todo_controle_no_servico(bancada.daemon, botoes, botoes)
+        ensaio.tique()
+        botoes = evdev_buttons_once(ensaio.daemon)
+        botoes_de_todo_controle_no_servico(ensaio.daemon, botoes, botoes)
 
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, EventBus(), ["ler:botoes"])
-        bancada.daemon._mods_supervisor = SimpleNamespace(porta=porta)
+        ensaio.daemon._mods_supervisor = SimpleNamespace(porta=porta)
         ext = await _entrar(curto, ["botoes"])
         try:
             tique()
             for uniq in UNIQS[:quantos]:
-                bancada.mesa.apertados[uniq] = frozenset({"cross"})
+                ensaio.mesa.apertados[uniq] = frozenset({"cross"})
                 tique()
-                del bancada.mesa.apertados[uniq]
+                del ensaio.mesa.apertados[uniq]
                 tique()
             return await asyncio.to_thread(_drenar, ext)
         finally:

@@ -15,7 +15,7 @@ P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
 P4 = "aa:bb:cc:00:00:04"
 
-MESA_DELA: tuple[tuple[str, str], ...] = (
+MESA_DO_USUARIO: tuple[tuple[str, str], ...] = (
     (P1, "bluetooth"),
     (P2, "usb"),
     (P3, "usb"),
@@ -24,13 +24,13 @@ MESA_DELA: tuple[tuple[str, str], ...] = (
 
 
 class _PonteDeMentira:
-    """O mínimo que `_aplicar_a_palavra_dela` toca — e a porta que ela chama."""
+    """O mínimo que `_aplicar_a_palavra_do_usuario` toca — e a porta que ela chama."""
 
     def __init__(self, uniq: str, caminho: str | None = None) -> None:
         self.no = _no(uniq, caminho)
         self.ditos: list[bool | None] = []
 
-    def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
+    def dizer_o_pedido_do_usuario(self, ligado: bool | None) -> None:
         self.ditos.append(ligado)
 
 
@@ -73,7 +73,7 @@ def _uma_volta_do_laco(subsystem, monkeypatch, nos: list[Any]) -> None:  # type:
     """Roda o `_loop` DE PRODUÇÃO exatamente uma vez, com os nós que o teste dá.
 
     Dirigir o laço de verdade é o que separa esta régua de uma que confere o
-    TEXTO do código: se alguém tirar o `_aplicar_a_palavra_dela()` de dentro do
+    TEXTO do código: se alguém tirar o `_aplicar_a_palavra_do_usuario()` de dentro do
     laço, ninguém entrega a palavra à ponte nova e o teste reprova pelo EFEITO.
 
     A `novidade` vai marcada para que o `_dormir` não espere os `RECONCILIA_S`;
@@ -195,7 +195,7 @@ def gancho(subsystem):  # type: ignore[no-untyped-def]
     eleicao.registrar_dizedor_do_no_ar(*anteriores)
 
 
-def test_o_ato_do_microfone_diz_a_palavra_dela(gancho, registro) -> None:  # type: ignore[no-untyped-def]
+def test_o_ato_do_microfone_diz_a_palavra_do_usuario(gancho, registro) -> None:  # type: ignore[no-untyped-def]
     """MORDIDA 1: `ligar_o_microfone` põe o pedido no registro."""
     d = _DaemonDeMentira()
     ato = asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
@@ -234,7 +234,7 @@ def test_sem_ninguem_atendendo_o_ato_nao_explode(registro) -> None:  # type: ign
         eleicao.registrar_dizedor_do_no_ar(*anteriores)
 
 
-def test_a_ponte_que_nasce_depois_recebe_a_palavra_dela(subsystem, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_a_ponte_que_nasce_depois_recebe_a_palavra_do_usuario(subsystem, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """Reconexão de rádio é ROTINA: a ponte nova tem de saber o que o usuário pediu.
 
     Se o latch morasse na `PonteMicBluetooth`, a primeira reconexão o apagaria
@@ -249,9 +249,9 @@ def test_a_ponte_que_nasce_depois_recebe_a_palavra_dela(subsystem, monkeypatch) 
     de propósito: ver `test_o_controle_que_sai_da_mesa_perde_a_palavra`.)
 
     **O LAÇO DE PRODUÇÃO RODA AQUI**, não uma chamada à mão de
-    `_aplicar_a_palavra_dela`: uma régua que chama a cura por fora dá verde
+    `_aplicar_a_palavra_do_usuario`: uma régua que chama a cura por fora dá verde
     mesmo com a cura desligada do caminho. ARRANQUE A REAPLICAÇÃO (tire o
-    `self._aplicar_a_palavra_dela()` de dentro do `_loop`, depois do
+    `self._aplicar_a_palavra_do_usuario()` de dentro do `_loop`, depois do
     `reconciliar`) e esta régua REPROVA.
     """
     assert subsystem.no_ar(P1, True) is True
@@ -267,7 +267,7 @@ def test_a_ponte_que_nasce_depois_recebe_a_palavra_dela(subsystem, monkeypatch) 
     )
 
 
-def test_a_palavra_vai_para_a_ponte_certa_e_so_para_ela(subsystem) -> None:  # type: ignore[no-untyped-def]
+def test_a_palavra_vai_para_a_ponte_certa_e_so_para_o_usuario(subsystem) -> None:  # type: ignore[no-untyped-def]
     """Quatro na mesa: ligar o microfone de um não liga o dos outros três."""
     p1 = subsystem._gerenciador.erguer(P1)
     p2 = subsystem._gerenciador.erguer(P2)
@@ -377,13 +377,13 @@ def _mesa_de_quatro(daemon: Any) -> None:
     """Põe os QUATRO DualSense do usuário no backend do dublê, com o transporte."""
     daemon.controller.describe_controllers = lambda: [  # type: ignore[method-assign]
         {"uniq": uniq, "connected": True, "transport": transporte}
-        for uniq, transporte in MESA_DELA
+        for uniq, transporte in MESA_DO_USUARIO
     ]
 
 
 def test_o_ato_recusado_nao_deixa_o_microfone_no_ar(gancho, registro) -> None:  # type: ignore[no-untyped-def]
     """A SEXTA PORTA, nos quatro controles do usuário."""
-    for uniq, _ in MESA_DELA:
+    for uniq, _ in MESA_DO_USUARIO:
         d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
         _mesa_de_quatro(d)
         ato = asyncio.run(hotkey.ligar_o_microfone(d, uniq, ligado=True))
@@ -442,8 +442,8 @@ def test_a_ponte_nao_recebe_pedido_ligado_depois_da_recusa(subsystem, monkeypatc
         subsystem.no_ar, subsystem.esquecer_a_palavra, subsystem.palavra_no_ar
     )
     try:
-        nos = [_no(uniq) for uniq, _ in MESA_DELA]
-        for uniq, _ in MESA_DELA:
+        nos = [_no(uniq) for uniq, _ in MESA_DO_USUARIO]
+        for uniq, _ in MESA_DO_USUARIO:
             d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
             _mesa_de_quatro(d)
             asyncio.run(hotkey.ligar_o_microfone(d, uniq, ligado=True))

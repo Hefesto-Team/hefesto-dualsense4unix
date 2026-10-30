@@ -214,7 +214,7 @@ def test_as_duas_abas_dizem_a_mesma_coisa_do_mesmo_aparelho() -> None:
         assert pedaco in do_01 and pedaco in do_08, pedaco
 
 
-def test_as_duas_paginas_da_bancada_tem_onde_escrever() -> None:
+def test_as_duas_paginas_do_ensaio_tem_onde_escrever() -> None:
     """O `data-campo` com alvo `html` está nas duas páginas da bancada."""
     for arquivo, campo, publicado in (("01-jogar.html", "externos", True),
                                       ("08-conexoes.html", "externos-lista", False)):

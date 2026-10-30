@@ -88,7 +88,7 @@ def test_a_marca_builtin_do_wine_vai_no_0x40(tmp_path: Path) -> None:
     assert depois[:0x40] == antes[:0x40] and depois[0x51:] == antes[0x51:]
 
 
-def test_a_marca_recusa_o_pe_cujo_cabecalho_ela_cobriria(tmp_path: Path) -> None:
+def test_a_marca_recusa_o_pe_cujo_cabecalho_o_usuario_cobriria(tmp_path: Path) -> None:
     dll = tmp_path / "x.dll"
     antes = _pe_de_mentira(dll, 64)
     feito = _marcar(dll)

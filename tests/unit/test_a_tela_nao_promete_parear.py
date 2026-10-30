@@ -7,7 +7,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 GERADOR = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "pagina_do_mapa.py"
-BANCADA = RAIZ / "mockup" / "mapa-das-portas.html"
+ENSAIO = RAIZ / "mockup" / "mapa-das-portas.html"
 PUBLICADO = (
     RAIZ
     / "src"
@@ -28,8 +28,8 @@ def test_o_congelado_ainda_tem_a_promessa() -> None:
     )
 
 
-def test_a_promessa_saiu_da_bancada_e_do_publicado() -> None:
-    for arquivo in (BANCADA, PUBLICADO):
+def test_a_promessa_saiu_do_ensaio_e_do_publicado() -> None:
+    for arquivo in (ENSAIO, PUBLICADO):
         texto = arquivo.read_text(encoding="utf-8")
         assert PROMESSA not in texto, (
             f"{arquivo.name} ainda oferece parear sem terminal — e o botão não "
@@ -43,7 +43,7 @@ LISTA_DE_MOVER = "no adaptador errado"
 def test_o_texto_novo_diz_o_que_ha_hoje() -> None:
     """Onde a página propõe mover um controle, ela diz o caminho de hoje."""
     assert LISTA_DE_MOVER in CONGELADO.read_text(encoding="utf-8")
-    for arquivo in (BANCADA, PUBLICADO):
+    for arquivo in (ENSAIO, PUBLICADO):
         texto = re.sub(r"\s+", " ", arquivo.read_text(encoding="utf-8"))
         if LISTA_DE_MOVER not in texto:
             continue

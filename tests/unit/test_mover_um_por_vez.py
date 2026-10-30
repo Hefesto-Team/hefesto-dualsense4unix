@@ -68,15 +68,17 @@ def _central(
     )
 
 
-def _ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str) -> None:
+def _o_usuario_segura_ps_create(
+    mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str,
+) -> None:
     """Dois segundos depois de a janela abrir, ela segura PS + Create."""
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
 
-def _ela_pareia(mundo: rm.RadioDeMentira, relogio: rm.Relogio, central: cr.CentralDoRadio,
+def _o_usuario_pareia(mundo: rm.RadioDeMentira, relogio: rm.Relogio, central: cr.CentralDoRadio,
                 aparelho: str) -> None:
     """O «Conectar»: ela segura PS + Create e clica em «Parear» na linha dele"""
-    rm.ela_pareia(relogio, mundo, central, aparelho)
+    rm.o_usuario_pareia(relogio, mundo, central, aparelho)
 
 
 def test_mover_um_controle_esquece_so_ele_e_abre_a_janela_so_no_destino(
@@ -84,7 +86,7 @@ def test_mover_um_controle_esquece_so_ele_e_abre_a_janela_so_no_destino(
 ) -> None:
     """A régua da sprint, com as três metades."""
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     feito = central.mover(VERMELHO, QUARTO)
 
@@ -115,7 +117,7 @@ def test_a_ordem_e_desligar_esquecer_a_origem_e_so_entao_parear(
 ) -> None:
     """O controle DESLIGA e a sala o ESQUECE antes de a janela abrir no quarto."""
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
 
@@ -134,7 +136,7 @@ def test_o_parear_que_falha_deixa_o_controle_sem_casa_e_o_conectar_o_traz(
     """O preço da R1 ao pé da letra, e a saída dele."""
     mundo.pair_falha = True
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     feito = central.mover(VERMELHO, QUARTO)
 
@@ -151,7 +153,7 @@ def test_o_parear_que_falha_deixa_o_controle_sem_casa_e_o_conectar_o_traz(
 
     mundo.pair_falha = False
     mundo.desligar(VERMELHO)
-    _ela_pareia(mundo, relogio, central, VERMELHO)
+    _o_usuario_pareia(mundo, relogio, central, VERMELHO)
     volta = central.conectar(VARANDA)
     assert (volta.estado, volta.aparelho, volta.destino) == (cr.CHEGOU, VERMELHO, VARANDA)
 
@@ -179,7 +181,7 @@ def test_a_conexao_velha_no_destino_sai_antes_da_janela(
     mundo.pareado(QUARTO, VERMELHO, host=False)
     dono._fotografar()
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     feito = central.mover(VERMELHO, QUARTO)
 
@@ -198,7 +200,7 @@ def test_o_adaptador_desligado_liga_e_o_pairable_so_vale_na_janela(
     mundo.mesa[rm.HCIS[QUARTO]][bd.ADAPTADOR]["Powered"] = False
     dono._fotografar()
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
 
@@ -215,7 +217,7 @@ def test_o_pairable_que_ja_estava_ligado_fica_ligado(
     mundo.mesa[rm.HCIS[QUARTO]][bd.ADAPTADOR]["Pairable"] = True
     dono._fotografar()
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
     assert mundo.escritas_no(QUARTO, "Pairable") == []
@@ -228,7 +230,7 @@ def test_o_pairable_em_nao_sei_nao_e_desfeito(
     del mundo.mesa[rm.HCIS[QUARTO]][bd.ADAPTADOR]["Pairable"]
     dono._fotografar()
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
     assert mundo.escritas_no(QUARTO, "Pairable") == [True]
@@ -239,7 +241,7 @@ def test_mover_duas_vezes_nao_move_duas(
 ) -> None:
     """O segundo diff é vazio: nenhuma chamada e nenhuma escrita no rádio."""
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
     chamadas, escritas = len(mundo.chamadas), len(mundo.escritas)
 
@@ -273,7 +275,7 @@ def test_o_segundo_toque_com_o_primeiro_esperando_nao_desfaz_o_pareamento(
     """O primeiro mover pareou no quarto e ficou «esperando» a conferência — a"""
     central = _central(dono, mundo, relogio)
     mundo.pair_mente = True
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
     primeiro = central.mover(VERMELHO, QUARTO)
     assert (primeiro.estado, primeiro.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO)
     chamadas, escritas = len(mundo.chamadas), len(mundo.escritas)
@@ -307,7 +309,7 @@ def test_a_trava_fica_na_mao_durante_o_gesto_inteiro(
 ) -> None:
     """Enquanto ela segura PS + Create, nenhum outro motor escreve no rádio."""
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
     tentativas: list[str] = []
 
     def outro_motor() -> None:
@@ -412,7 +414,7 @@ def test_mover_sem_destino_usa_a_d8_e_nunca_o_adaptador_de_agora(
 ) -> None:
     central = _central(dono, mundo, relogio)
     central.conhecer([_controle(VERMELHO, SALA), _controle(AZUL, SALA)])
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
 
     feito = central.mover(VERMELHO)
 
@@ -451,7 +453,7 @@ def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
         _controle(AZUL, SALA, "som"),
         _controle(rm.ROXO, VARANDA),
     ])
-    _ela_pareia(mundo, relogio, central, VERDE)
+    _o_usuario_pareia(mundo, relogio, central, VERDE)
 
     feito = central.conectar()
 
@@ -469,7 +471,7 @@ def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
     """Ela desliga o vermelho (ligado, o PS + Create não faz nada — passo c1 da"""
     central = _central(dono, mundo, relogio)
     mundo.desligar(VERMELHO)
-    _ela_pareia(mundo, relogio, central, VERMELHO)
+    _o_usuario_pareia(mundo, relogio, central, VERMELHO)
 
     feito = central.conectar(QUARTO)
 
@@ -488,7 +490,7 @@ def test_o_conectar_ignora_o_que_o_destino_ja_conhecia(
     mundo._achar(QUARTO, sobra)
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     central = _central(dono, mundo, relogio)
-    _ela_pareia(mundo, relogio, central, VERDE)
+    _o_usuario_pareia(mundo, relogio, central, VERDE)
 
     feito = central.conectar(QUARTO)
 
@@ -530,7 +532,7 @@ def test_o_equilibrar_propoe_um_e_so_depois_do_chegou_o_proximo(
     assert (ordem.pontes_na_origem_depois, ordem.pontes_no_destino_depois) == (3, 1)
 
     mundo.pair_mente = True
-    _ela_segura_ps_create(mundo, relogio, rm.ROXO)
+    _o_usuario_segura_ps_create(mundo, relogio, rm.ROXO)
     assert central.mover(rm.ROXO, ordem.destino).estado == cr.ESPERANDO
     assert central.propor(quatro) is None
 
@@ -645,7 +647,7 @@ async def test_o_ipc_radio_mover_move_pela_central(
     from types import SimpleNamespace
 
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
     handlers = _handlers(SimpleNamespace(_central_do_radio=central))
 
     pedido = {"aparelho": rm.uniq(VERMELHO), "destino": QUARTO}
@@ -667,7 +669,7 @@ async def test_o_ipc_sem_aparelho_e_o_conectar(
 
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     central = _central(dono, mundo, relogio)
-    _ela_pareia(mundo, relogio, central, VERDE)
+    _o_usuario_pareia(mundo, relogio, central, VERDE)
     handlers = _handlers(SimpleNamespace(_central_do_radio=central))
 
     resposta = await handlers._handle_radio_mover({"destino": QUARTO})
@@ -802,10 +804,10 @@ def test_o_movimento_da_central_vem_do_sensor_hub_do_ipc() -> None:
     assert perguntas == ["aabbcc000001"]
 
 
-def _bancada_com_trava(tmp_path: Path) -> tuple[Any, Path, Path]:
-    from tests.unit.test_o_prefixo_vai_no_adaptador_que_hospeda_nintendo import Bancada
+def _ensaio_com_trava(tmp_path: Path) -> tuple[Any, Path, Path]:
+    from tests.unit.test_o_prefixo_vai_no_adaptador_que_hospeda_nintendo import Ensaio
 
-    banca = Bancada(tmp_path)
+    banca = Ensaio(tmp_path)
     trava = tmp_path / "run" / "radio.lock"
     trava.parent.mkdir()
     real = banca.fakes / "busctl-real"
@@ -845,7 +847,7 @@ def test_o_alias_e_escrito_com_a_trava_na_mao(tmp_path: Path) -> None:
         HOSPEDEIRO_DO_PRO,
     )
 
-    banca, trava, no_instante = _bancada_com_trava(tmp_path)
+    banca, trava, no_instante = _ensaio_com_trava(tmp_path)
 
     feito = subprocess.run(
         ["bash", str(ATIVO), "--quiet"], capture_output=True, text=True, timeout=60,
@@ -860,7 +862,7 @@ def test_o_alias_e_escrito_com_a_trava_na_mao(tmp_path: Path) -> None:
 def test_com_outro_motor_na_trava_o_alias_espera_o_prazo_e_desiste(tmp_path: Path) -> None:
     import fcntl
 
-    banca, trava, _no_instante = _bancada_com_trava(tmp_path)
+    banca, trava, _no_instante = _ensaio_com_trava(tmp_path)
     with open(trava, "a+") as outro_motor:
         fcntl.flock(outro_motor, fcntl.LOCK_EX)
         feito = subprocess.run(
@@ -881,7 +883,7 @@ def test_a_trava_herdada_do_watchdog_nao_espera_o_proprio_pai(tmp_path: Path) ->
         HOSPEDEIRO_DO_PRO,
     )
 
-    banca, trava, no_instante = _bancada_com_trava(tmp_path)
+    banca, trava, no_instante = _ensaio_com_trava(tmp_path)
     tique = (
         f"exec {{fd}}<>'{trava}' && flock -n \"$fd\" || exit 9\n"
         f"bash '{ATIVO}' --quiet\n"

@@ -1,4 +1,4 @@
-"""Trocar duas entradas move o BURACO, e o nome fica — O-MAPA-QUE-ELA-CORRIGE-01, passo 4."""
+"""Trocar duas entradas move o BURACO, e o nome fica — O-MAPA-QUE-O-USUARIO-CORRIGE-01, passo 4."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.utils.maquina import (
 )
 from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     PCI_A,
-    _a_maquina_dela,
+    _a_maquina_do_usuario,
     gravar_o_arquivo_de_antes,
 )
 
@@ -25,14 +25,14 @@ _L7 = lugar_de(PCI_A, "5")
 _L8 = lugar_de(PCI_A, "6")
 
 
-def _com_o_que_ela_disse() -> dict[str, Any]:
+def _com_o_que_o_usuario_disse() -> dict[str, Any]:
     """A máquina do usuário, com nome, velocidade, hub e extensor nas entradas da troca.
 
     O extensor é a chave da porta (``extensor: true``, desde 04/10/2026) e a ponta ``8a`` é a
     entrada-filha que o Mapear grava; as duas vão com o buraco. O documento no jeito de ANTES
     (``liga: extensor``) é de ``test_o_extensor_e_a_chave_da_porta``.
     """
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     portas = documento["mapa"]["portas"]
     portas["7"].update({"usb": 2, "nome": "Sete"})
     portas["8"].update({"usb": 3, "extensor": True, "nome": "Oito"})
@@ -43,7 +43,7 @@ def _com_o_que_ela_disse() -> dict[str, Any]:
 
 @pytest.fixture()
 def disco(tmp_path: Path) -> Path:
-    alvo = gravar_o_arquivo_de_antes(tmp_path, _com_o_que_ela_disse())
+    alvo = gravar_o_arquivo_de_antes(tmp_path, _com_o_que_o_usuario_disse())
     carregar_maquina()
     return alvo
 
@@ -129,7 +129,7 @@ def test_nenhuma_das_duas_mapeada_recusa(disco: Path) -> None:
 
 def test_o_nome_que_morava_no_lugar_nao_anda_com_o_buraco(tmp_path: Path) -> None:
     """No arquivo de antes, o «Meio» da 1 mora no lugar: a primeira leitura o"""
-    gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
     assert ee.trocar_as_entradas("1", "2").gravou
     depois = carregar_maquina()
     assert ee.rotulo_do_numero("1", maquina=depois) == "Meio"
@@ -138,7 +138,7 @@ def test_o_nome_que_morava_no_lugar_nao_anda_com_o_buraco(tmp_path: Path) -> Non
 
 
 def test_a_troca_sobrevive_ao_examinar_e_a_um_mapear_de_novo(disco: Path) -> None:
-    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01: a troca 7↔8 continua de pé"""
+    """A conferência da O-MAPA-QUE-O-USUARIO-CORRIGE-01: a troca 7↔8 continua de pé"""
     from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
     from hefesto_dualsense4unix.interface import arranjo_desta_maquina
     from tests.unit.test_o_nome_da_entrada_e_da_posicao import PCI_B

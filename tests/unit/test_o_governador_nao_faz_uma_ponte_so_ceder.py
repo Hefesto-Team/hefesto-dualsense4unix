@@ -214,7 +214,9 @@ def test_quatro_pontes_num_adaptador_que_escoa_tres_cedem_uma_por_vez() -> None:
 
 
 @pytest.mark.parametrize("capacidade", [12, 15, 20])
-def test_uma_ponte_num_adaptador_que_nao_da_conta_dela_cede_e_nao_cai(capacidade: int) -> None:
+def test_uma_ponte_num_adaptador_que_nao_da_conta_do_usuario_cede_e_nao_cai(
+    capacidade: int,
+) -> None:
     """O engasgo tem teto: o adaptador que escoa menos que uma ponte, sempre, não é engasgo.
 
     Cada janela põe no ar mais que meia ponte (12, 15 ou 20 de ~23), então a

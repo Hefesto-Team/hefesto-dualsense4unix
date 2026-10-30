@@ -24,7 +24,7 @@ O_QUE_VAI_A_QUEM_USA = (
     "src", "scripts", "install.sh", "uninstall.sh",
 )
 
-CAMINHO_DA_BANCADA = re.compile("|".join([
+CAMINHO_DO_ENSAIO = re.compile("|".join([
     re.escape(f"/home/{pwd.getpwuid(os.getuid()).pw_name}") + r"\b",
     re.escape("~/Desenvolvimento/"),
     re.escape("/mnt/" + "Apate/"),
@@ -39,7 +39,7 @@ def _versionados() -> list[pathlib.Path]:
     return [RAIZ / nome for nome in saida.split("\0") if nome]
 
 
-def test_nada_que_vai_a_quem_usa_aponta_a_pasta_da_bancada() -> None:
+def test_nada_que_vai_a_quem_usa_aponta_a_pasta_do_ensaio() -> None:
     achados: list[str] = []
     arquivos = _versionados()
     assert len(arquivos) > 100, "a lista do git veio curta: a régua não está olhando a árvore"
@@ -49,6 +49,6 @@ def test_nada_que_vai_a_quem_usa_aponta_a_pasta_da_bancada() -> None:
         except (UnicodeDecodeError, FileNotFoundError, IsADirectoryError):
             continue
         for numero, linha in enumerate(texto.splitlines(), 1):
-            if CAMINHO_DA_BANCADA.search(linha):
+            if CAMINHO_DO_ENSAIO.search(linha):
                 achados.append(f"{arquivo.relative_to(RAIZ)}:{numero}: {linha.strip()[:120]}")
     assert not achados, "caminho da bancada no que vai a quem usa:\n" + "\n".join(achados)

@@ -294,7 +294,9 @@ def test_o_jogo_que_fecha_solta_quem_esperava(mesa_de_mentira: pytest.MonkeyPatc
     assert vpad.paradas == 1
 
 
-def test_a_troca_de_transporte_segue_no_dono_dela(mesa_de_mentira: pytest.MonkeyPatch) -> None:
+def test_a_troca_de_transporte_segue_no_dono_do_usuario(
+    mesa_de_mentira: pytest.MonkeyPatch,
+) -> None:
     m = _Mesa(mesa_de_mentira, MESA_MISTA)
     leitor = m.mgr._players[P2].reader
     m.em_troca.add(P2)

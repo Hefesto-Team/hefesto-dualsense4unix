@@ -388,7 +388,7 @@ def test_a_peca_a_reconhece_o_que_a_peca_b_realmente_declara() -> None:
     )
 
 
-def test_a_peca_c_acha_esta_peca_pelo_endereco_que_ela_guarda() -> None:
+def test_a_peca_c_acha_esta_peca_pelo_endereco_que_o_usuario_guarda() -> None:
     """A outra junta: o ENDEREÇO (módulo + nome) e o TIPO do retorno."""
     luz = pytest.importorskip(
         "hefesto_dualsense4unix.daemon.subsystems.luz_do_mic",

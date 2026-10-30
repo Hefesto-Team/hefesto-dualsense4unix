@@ -67,7 +67,7 @@ def test_o_heroic_le_as_tres_lojas(tmp_path: pathlib.Path) -> None:
     assert [j.nome for j in b.jogos if j.loja == "Amazon"] == ["Um da Amazon"]
 
 
-def test_o_caso_dela_biblioteca_cheia_e_zero_instalados(
+def test_o_caso_do_usuario_biblioteca_cheia_e_zero_instalados(
     tmp_path: pathlib.Path,
 ) -> None:
     """O disco do usuário em 09/09/2026: 37 na biblioteca, nenhum baixado."""

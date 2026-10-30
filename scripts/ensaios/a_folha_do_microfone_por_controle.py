@@ -1027,14 +1027,14 @@ class Folha:
                     suspeito=linha.pergunta,
                     presente="sim" if controle.leitura.publica else "não",
                     resultado="",
-                    observado_por="olho-dela",
+                    observado_por="olho-do-usuario",
                     fonte="scripts/ensaios/a_folha_do_microfone_por_controle.py",
                     nota=self._nota_da_linha(linha, controle, nota),
                 )
             )
         sys.stdout.flush()
 
-    def _nota_da_linha(self, linha: Linha, controle: ControleNaFolha, dela: str) -> str:
+    def _nota_da_linha(self, linha: Linha, controle: ControleNaFolha, do_usuario: str) -> str:
         """O que a linha do caderno carrega de MEDIDO, além da frase de produto."""
         maximo = controle.ouvido.maximo if controle.ouvido is not None else 0.0
         medido = [
@@ -1053,7 +1053,7 @@ class Folha:
         ]
         if linha.forma == "pedido":
             medido.append(f"mic.canal.set: {controle.resposta_do_canal}")
-        return "; ".join(medido) + f"; ela: {dela}"
+        return "; ".join(medido) + f"; ela: {do_usuario}"
 
     def _fechar(self, *_: Any) -> None:
         for controle in self.controles:

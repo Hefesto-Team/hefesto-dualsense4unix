@@ -285,12 +285,12 @@ def test_o_motor_sem_mapa_nao_vira_o_padrao(monkeypatch: pytest.MonkeyPatch) -> 
     assert {linha["rumble"] for linha in _por_linha(fora["guarda.secao"])} == {TRAVESSAO}
 
 
-ESPERANDO = perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+ESPERANDO = perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO
 
 
 @pytest.mark.parametrize(
     "secao", [s for s in ControllerOverrides.model_fields if s not in ESPERANDO])
-def test_o_ponto_acende_a_secao_guardada_e_so_ela(
+def test_o_ponto_acende_a_secao_guardada_e_so_o_usuario(
         monkeypatch: pytest.MonkeyPatch, secao: str) -> None:
     """Toda seção de `ControllerOverrides` tem célula e acende só a sua."""
     assert secao in MENOR_CORPO, f"o esquema ganhou `{secao}`: monte o corpo mínimo"
@@ -339,7 +339,7 @@ def tela() -> Any:
 
     from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
 
-    t = regua_de_tela.Tela(onde.BANCADA / "10-perfis.html", titulo_esperado="Hefesto",
+    t = regua_de_tela.Tela(onde.ENSAIO / "10-perfis.html", titulo_esperado="Hefesto",
                            largura=1280, altura=900)
     t.executar(
         "(function(){var s=document.createElement('style');"
@@ -385,8 +385,8 @@ def _com_a_celula_que_espera(lista: list[Any]) -> list[Any]:
     ordem = [campo for campo, _pecas in _gerador().SECOES]
     saida: list[Any] = []
     for i in range(0, len(lista), largura):
-        dela = dict(zip(a10_perfis.SECOES_DA_COLUNA, lista[i:i + largura], strict=True))
-        saida.extend(dela.get(campo, "") for campo in ordem)
+        do_usuario = dict(zip(a10_perfis.SECOES_DA_COLUNA, lista[i:i + largura], strict=True))
+        saida.extend(do_usuario.get(campo, "") for campo in ordem)
     return saida
 
 

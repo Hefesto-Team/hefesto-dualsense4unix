@@ -271,7 +271,7 @@ def test_os_tres_escritores_perguntam_ao_dono(monkeypatch: pytest.MonkeyPatch) -
             f"{nome} não perguntou ao dono: acesos={chips}")
 
 
-def test_a_regra_vale_o_que_o_pedido_dela_diz() -> None:
+def test_a_regra_vale_o_que_o_pedido_do_usuario_diz() -> None:
     """A tabela da regra, escrita à mão (cenário → quem acende)."""
     dois = _mesa(2)
     um = _mesa(1)

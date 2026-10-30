@@ -48,7 +48,7 @@ _BASE_DO_COMMON = {"usb": 1, "bt": 3}
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """As cadências encolhidas e o mundo de fora (as peças A e B) fora do teste."""
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)

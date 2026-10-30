@@ -121,13 +121,13 @@ def juntar(
     peca = dict(da_peca or {})
     if not peca:
         return dict(do_perfil or {})
-    so_a_dela = {o: d for o, d in peca.items() if o != d}
+    so_a_do_usuario = {o: d for o, d in peca.items() if o != d}
     soma = {**(do_perfil or {}), **peca}
     soma = {o: d for o, d in soma.items() if o != d}
     try:
         return resolver(soma)
     except RemapeamentoRecusadoError:
-        return so_a_dela
+        return so_a_do_usuario
 
 
 def traduzir(

@@ -57,14 +57,14 @@ from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao
 
 import monta
 
-BANCADA = RAIZ / "mockup/04-iluminacao.html"
+ENSAIO = RAIZ / "mockup/04-iluminacao.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
 LIDO = "white"
 SEM_LEITURA = ""
 
 def _colorway_do_desenho() -> str:
-    for tag, attrs in _elementos(BANCADA):
+    for tag, attrs in _elementos(ENSAIO):
         if tag == "svg" and attrs.get("data-campo") == "desenho":
             return attrs.get("data-colorway", "")
     return ""
@@ -123,7 +123,7 @@ def _contexto(mesa: list[dict[str, Any]]) -> Contexto:
 
 def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
     """Cada `<svg>` de coluna conectada traz os TRÊS atributos, e o vazio nenhum."""
-    elementos = _elementos(BANCADA)
+    elementos = _elementos(ENSAIO)
     conectadas = [
         a for _t, a in elementos
         if "ctrl" in (a.get("class") or "").split()
@@ -156,9 +156,9 @@ def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
         f"parada num lugar vazio: {len(com_colorway)} de {len(declarados)}")
 
 
-def test_a_pagina_conhece_todos_os_modelos_que_ela_mapeou() -> None:
+def test_a_pagina_conhece_todos_os_modelos_que_o_usuario_mapeou() -> None:
     """Os colorways da página são os do mapa dela, e o bloco aparece UMA vez."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     assert html.count('id="cores-do-dualsense"') == 1, (
         "as cores do mapa não estão UMA vez na página — ou voltaram para dentro "
         "dos SVGs (cada desenho sabendo pintar um modelo só), ou saíram de vez")
@@ -173,7 +173,7 @@ def test_a_pagina_conhece_todos_os_modelos_que_ela_mapeou() -> None:
 
 def test_todo_fundo_que_a_folha_pede_existe_na_pagina() -> None:
     """Nenhum `url(#id)` da página aponta para um id que ela não tem."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     ids = set(re.findall(r'id="([^"]+)"', html))
     pedidos = set(re.findall(r"url\(#([a-zA-Z0-9_-]+)\)", html))
     orfaos = sorted(pedidos - ids)
@@ -228,7 +228,7 @@ def test_o_pacote_nao_manda_o_desenho_para_quem_nao_sabe_receber(monkeypatch) ->
 def test_nenhum_alvo_da_04_chega_ao_pintor_sem_ele_saber_escrever() -> None:
     """Todo `data-hef-alvo` da bancada, ou o pintor escreve, ou a guarda barra."""
     pedidos = {
-        a["data-hef-alvo"] for _t, a in _elementos(BANCADA) if a.get("data-hef-alvo")
+        a["data-hef-alvo"] for _t, a in _elementos(ENSAIO) if a.get("data-hef-alvo")
     }
     sabidos = set(re.findall(r"alvo === '([a-z]+)'", PILOTO.read_text(encoding="utf-8")))
     sabidos.add("texto")

@@ -2,7 +2,8 @@
 """CADA BOTÃO DA ABA SISTEMA FAZ O QUE DIZ — SISTEMA-BOTOES-01, 13/09/2026.
 
 A palavra de produto está no índice da leva
-(o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026). O estudo mediu os catorze gestos e achou
+(o registro «A-TERCEIRA-LISTA-DO-USUARIO-INDICE» de 13/09/2026). O estudo mediu os catorze gestos e
+achou
 metade deles em parte:
 armavam sem a pergunta que o `title` promete, piscavam verde sobre um clique que
 não fez nada, e recusavam calados.

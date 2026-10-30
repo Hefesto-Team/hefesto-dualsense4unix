@@ -192,7 +192,7 @@ _DICA_COM_A_MIRA = ("Com o analógico virtual aceso, o giro deste controle vai a
                     "pelo analógico direito.")
 
 
-def _bancada_02() -> str:
+def _ensaio_02() -> str:
     return (_RAIZ / "mockup/01-jogar.html").read_text(encoding="utf-8")
 
 
@@ -251,7 +251,7 @@ def test_no_nativo_o_chip_da_mira_fica_cinza_nos_quatro(
 
     esperado = re.findall(r'data-campo="mira-fora" data-hef-alvo="classe" '
                           r'data-hef-classe="sem-mira" data-hef-quando="([^"]+)"',
-                          _bancada_02())
+                          _ensaio_02())
     assert esperado and set(esperado) == {"NATIVO"}, esperado
     miras = {f"aa:bb:cc:00:00:0{n}": {"ligada": n % 2 == 0, "virtual": n % 2 == 0}
              for n in (1, 2, 3, 4)}
@@ -324,11 +324,11 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     assert [c["giro-no-jogo"] for c in cards.values()] == [""], cards
 
 
-def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
+def test_o_ensaio_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
     """O desenho: a dica do Giroscópio no invólucro sem caixa, o botão SEM"""
     import re
 
-    doc = _bancada_02()
+    doc = _ensaio_02()
     invol = re.findall(r'<span class="dica-do-giro" data-campo="giro-dica" '
                        r'data-hef-alvo="atributo" data-hef-atributo="data-dica"'
                        r'(?: data-dica="([^"]*)")?><button ([^>]*)>', doc)
@@ -343,7 +343,7 @@ def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
     assert "var(--red)" not in folha.group(1), "cinza, nunca vermelho"
 
 
-def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
+def test_antes_do_ok_do_usuario_o_produto_nao_pinta_o_desenho_novo() -> None:
     """A página PUBLICADA não tem os dois endereços, e o pacote não emite para"""
     import pacotes.a02_controles as a02
 
@@ -365,14 +365,14 @@ _BOTOES_DA_LISTA = [
 ]
 
 
-def _bancada_calibrar() -> str:
+def _ensaio_calibrar() -> str:
     return (_RAIZ / "mockup/calibrar-sensores.html").read_text(encoding="utf-8")
 
 
 def _colunas_da_mira() -> list[str]:
     import re
 
-    doc = _bancada_calibrar()
+    doc = _ensaio_calibrar()
     return re.findall(r'<div class="mira"[^>]* data-controle="p\d">(.*?)\n          </div>',
                       doc, re.S)
 
@@ -425,7 +425,7 @@ def test_o_bloco_nao_tem_vermelho_nem_recado() -> None:
     O bloco da folha começa na regra que põe a lista e o «Inverter» na linha de baixo do
     deslizante: o comentário que o abria saiu da página.
     """
-    doc = _bancada_calibrar()
+    doc = _ensaio_calibrar()
     folha = doc.split("<style>", 1)[1].split("</style>", 1)[0]
     trecho = folha.split(".desl .lista,.desl .inverter{", 1)[1]
     assert "--red" not in trecho and "--orange" not in trecho

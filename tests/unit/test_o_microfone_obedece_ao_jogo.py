@@ -334,7 +334,7 @@ def palavra() -> Iterator[_Palavra]:
 
 
 @pytest.fixture(autouse=True)
-def _a_bancada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _o_ensaio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """O lar de mentira, as cadências da luz encolhidas e os registros limpos."""
     for nome in ("XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_DATA_HOME"):
         monkeypatch.setenv(nome, str(tmp_path / nome.lower()))
@@ -485,7 +485,7 @@ class TestOMudoDoJogo:
         assert espioes["disco"] == [], "o pedido do jogo foi ao disco"
         assert espioes["recado"] == [], "o pedido do jogo escreveu recado"
 
-    async def test_abrir_nao_mexe_na_palavra_dela_no_ar(
+    async def test_abrir_nao_mexe_na_palavra_do_usuario_no_ar(
         self, uhid: _UhidPorFd, palavra: _Palavra, espioes: dict[str, list[Any]]  # noqa: F811
     ) -> None:
         aparelho = _Aparelho((P3,))
@@ -755,7 +755,7 @@ class TestOBotaoFisicoSempreVale:
         finally:
             pad.stop()
 
-    async def test_o_aperto_devolve_a_luz_a_ela_mesmo_sem_o_ato(
+    async def test_o_aperto_devolve_a_luz_ao_usuario_mesmo_sem_o_ato(
         self, casa: Any, uhid: _UhidPorFd  # noqa: F811
     ) -> None:
         """Cena 1b: com o botão fora do sistema, a borda ainda é ordem de produto."""

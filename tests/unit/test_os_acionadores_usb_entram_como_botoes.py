@@ -394,7 +394,7 @@ def test_dois_acionadores_iguais_em_portas_diferentes_sao_dois() -> None:
 
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup" / "08-conexoes.html"
+ENSAIO = RAIZ / "mockup" / "08-conexoes.html"
 DESENHO = RAIZ / "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html"
 LUGAR = "AA:BB:CC:00:00:F0"
 PLASTICOS = ("Cosmic Red", "Starlight Blue", "White", "Galactic Purple")
@@ -452,7 +452,7 @@ def test_a_linha_do_aparelho_de_entrada_leva_o_usar_como_botoes_do_desenho(a08: 
         i = texto.index('data-id="A1"')
         return texto[texto.rfind("<div", 0, i):texto.index('</div><div class="linha', i) + 6]
 
-    assert linha(BANCADA.read_text()) == linha(DESENHO.read_text())
+    assert linha(ENSAIO.read_text()) == linha(DESENHO.read_text())
     ap = {"id": CHAVE, "chave": CHAVE, "tipo": "entrada", "lugar": LUGAR, "nome": "",
           "rotulo": "Acionador USB", "fixo": True, "esperando": False}
     html = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
@@ -473,7 +473,7 @@ def test_a_janela_diz_as_teclas_o_plastico_e_acende_os_botoes_escolhidos(
     assert ">Tecla 2<" in campos["acionador-teclas"] and ">L2<" in campos["acionador-teclas"]
     assert campos["acionador-brilho"].startswith("#acionador #ac-cross,#acionador #ac-l2{")
     assert campos["acionador-desenho"] == "starlight-blue"
-    janela = BANCADA.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
+    janela = ENSAIO.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
     for campo in campos:
         assert f'data-campo="{campo}"' in janela
 
@@ -481,7 +481,7 @@ def test_a_janela_diz_as_teclas_o_plastico_e_acende_os_botoes_escolhidos(
 def test_o_desenho_da_janela_e_o_dualsense_real_e_cada_botao_que_troca_e_um_gesto(a08: Any) -> None:
     import re
 
-    janela = BANCADA.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
+    janela = ENSAIO.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
     svg = re.search(r'<svg class="ac-svg".*?</svg>', janela, re.S)
     assert svg is not None
     pecas = set(re.findall(r'data-entrada="([^"]+)" data-gesto="acionador-botao" '

@@ -129,7 +129,7 @@ BANCO_FECHADO = "DEVNAME=/dev/hidraw\nCURRENT_TAGS=:seat:\nTAGS=:seat:uaccess:\n
 
 
 class TestOBancoDoUdevDizComoONoNasceu:
-    def test_a_mesa_dela_reprova_e_nomeia_a_71_sony(self, tmp_path: Path) -> None:
+    def test_a_mesa_do_usuario_reprova_e_nomeia_a_71_sony(self, tmp_path: Path) -> None:
         """A regra de antes (70) + a 71-sony do game-devices-udev: FAIL com o endereço."""
         etc, usr = _regras(tmp_path, nossa=VELHA)
         _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6", BANCO_ABERTO)

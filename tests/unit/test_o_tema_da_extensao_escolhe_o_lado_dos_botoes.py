@@ -317,7 +317,7 @@ def test_sem_extensao_a_barra_sai_do_lado_do_sistema(fases: dict[str, Any]) -> N
 
 
 @skip_sem_gi_real
-def test_com_a_extensao_a_mesma_barra_vai_para_a_esquerda_na_ordem_dela(
+def test_com_a_extensao_a_mesma_barra_vai_para_a_esquerda_na_ordem_do_usuario(
         fases: dict[str, Any]) -> None:
     f = fases["extensão"]
     assert f["lado"] == "esquerda", f

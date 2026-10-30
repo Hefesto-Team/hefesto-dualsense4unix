@@ -56,7 +56,7 @@ for _p in (str(RAIZ / "src"),
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
     {"pref": "p2", "uniq": "aa:bb:cc:00:00:02", "jogador": 2, "cor": "",
@@ -90,7 +90,7 @@ def carga():
     def montar(conectados=None):
         ctx = pacotes.Contexto(
             state={"active_profile": ""},
-            mesa=list(MESA_DELA),
+            mesa=list(MESA_DO_USUARIO),
             conectados=list(conectados if conectados is not None
                             else [NO_CABO, NO_RADIO_DISPUTADO]),
             estados={})
@@ -284,12 +284,12 @@ def test_a_cor_da_barra_e_a_que_o_motor_afirma(carga):
         "com a Steam segurando o controle o desenho continuou afirmando uma cor.")
 
 
-def test_a_bancada_declara_o_par_no_escopo_do_desenho():
+def test_o_ensaio_declara_o_par_no_escopo_do_desenho():
     """O HTML da bancada — o que ELA olha — traz a declaração na folha da página."""
     import onde
     from pacotes import a04_iluminacao as a04
 
-    bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    assert a04.tokens_da_luz() in bancada.replace("\n", ""), (
+    ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
+    assert a04.tokens_da_luz() in ensaio.replace("\n", ""), (
         "a folha da bancada não declara o par das lâmpadas no escopo do "
         "desenho — as cinco saem iguais no arquivo que ela abre.")

@@ -140,7 +140,7 @@ def _daemon(*, escolha_dela: str | None = None) -> Any:
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> list[_PadFalso]:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> list[_PadFalso]:
     """Nenhum nó de kernel, e a lista de todo vpad que a sessão pediu."""
     nascidos: list[_PadFalso] = []
 
@@ -217,7 +217,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
             "wrapper e a mesa de co-op leem daqui"
         )
 
-    def test_o_perfil_nao_escreve_a_escolha_global_dela(self) -> None:
+    def test_o_perfil_nao_escreve_a_escolha_global_do_usuario(self) -> None:
         """O apply de um perfil não vira lei sobre os outros 29."""
         daemon = _daemon()
 
@@ -229,7 +229,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         )
 
     def test_o_jogo_sem_opiniao_abre_em_uhid_com_o_espelho_de_motion_de_pe(
-        self, _bancada: list[_PadFalso]
+        self, _ensaio: list[_PadFalso]
     ) -> None:
         """A QUEIXA DE USO, em duas asserções: o canal E o espelho."""
         daemon = _daemon()
@@ -245,7 +245,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
             "o vpad ficou em uhid mas `start_motion_reader` não passou do gate: "
             "backend certo com o espelho mudo é a IMU parada do mesmo jeito"
         )
-        assert len(_bancada) == 2, "o segundo start tinha de RECRIAR o vpad"
+        assert len(_ensaio) == 2, "o segundo start tinha de RECRIAR o vpad"
 
     def test_quem_nao_opina_nasce_dualsense_mesmo_com_o_global_dizendo_xbox(
         self,
@@ -257,7 +257,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         máscara `dualsense`, mesmo com o arquivo global dizendo `xbox`"*.
 
         NOTA DATADA — 19/09/2026, E ELA CADUCA UMA RÉGUA DE 17/09. Este teste
-        chamava-se `test_a_escolha_global_dela_continua_valendo_para_quem_nao_opina`
+        chamava-se `test_a_escolha_global_do_usuario_continua_valendo_para_quem_nao_opina`
         e exigia o CONTRÁRIO: com o global em `xbox`, um jogo sem opinião tinha
         de subir em `uinput`. Era certo enquanto a herança fosse a cura — a
         O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança e o vazamento voltou por
@@ -304,7 +304,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
 
 class TestAMesaNaoHerdaOCanalDoJogoAnterior:
     def test_o_jogador_2_nasce_em_uhid_depois_de_um_jogo_em_xbox(
-        self, _mesa_de_dois: None, _bancada: list[_PadFalso]
+        self, _mesa_de_dois: None, _ensaio: list[_PadFalso]
     ) -> None:
         """*"O modo é um para todos"* — e todos é a mesa de AGORA, não a de ontem."""
         daemon = _daemon()

@@ -47,9 +47,9 @@ from hefesto_dualsense4unix.interface.pacotes import rodape
 
 UNIQ = "aabbcc0000ff"
 
-BRILHO_DELA_NO_DISCO = 0.25
-LAMPADAS_DELAS = (True, True, False, False, False)
-COR_DELA = (0, 0, 255)
+BRILHO_DO_USUARIO_NO_DISCO = 0.25
+LAMPADAS_DO_USUARIO = (True, True, False, False, False)
+COR_DO_USUARIO = (0, 0, 255)
 
 
 class _Ctx:
@@ -89,19 +89,19 @@ def perfil_configurado(monkeypatch: pytest.MonkeyPatch) -> str:
         ControllerOverrides, LedsConfig, MatchAny, Profile,
     )
 
-    nome = "perfil-que-ela-configurou"
+    nome = "perfil-que-o-usuario-configurou"
     p = Profile(name=nome, match=MatchAny(), priority=100)
     p.controllers = {UNIQ: ControllerOverrides(leds=LedsConfig(
-        lightbar=COR_DELA,
-        lightbar_brightness=BRILHO_DELA_NO_DISCO,
-        player_leds=list(LAMPADAS_DELAS),
+        lightbar=COR_DO_USUARIO,
+        lightbar_brightness=BRILHO_DO_USUARIO_NO_DISCO,
+        player_leds=list(LAMPADAS_DO_USUARIO),
     ))}
     p.button_actions = {"circle": "KEY_ESC"}
     p.teclado_emulado = True
     save_profile(p, origem="teste")
 
     de_volta = load_profile(nome)
-    assert de_volta.controllers[UNIQ].leds.lightbar_brightness == BRILHO_DELA_NO_DISCO
+    assert de_volta.controllers[UNIQ].leds.lightbar_brightness == BRILHO_DO_USUARIO_NO_DISCO
     assert de_volta.button_actions == {"circle": "KEY_ESC"}
     return nome
 
@@ -118,7 +118,7 @@ def test_o_brilho_daquele_controle_sobrevive_ao_salvar(
         perfil_configurado: str) -> None:
     """O brilho do override é DELE: nem o global de 100, nem o aceso de 90."""
     salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
-    assert _leds_gravados(salvo).lightbar_brightness == BRILHO_DELA_NO_DISCO, (
+    assert _leds_gravados(salvo).lightbar_brightness == BRILHO_DO_USUARIO_NO_DISCO, (
         "o Salvar regravou outro brilho por cima do que a aba 04 gravou para "
         "este controle")
 
@@ -127,7 +127,7 @@ def test_as_lampadas_daquele_controle_sobrevivem_ao_salvar(
         perfil_configurado: str) -> None:
     """As cinco lâmpadas são do override, e não as do global."""
     salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
-    assert tuple(_leds_gravados(salvo).player_leds) == LAMPADAS_DELAS, (
+    assert tuple(_leds_gravados(salvo).player_leds) == LAMPADAS_DO_USUARIO, (
         "o Salvar apagou as lâmpadas deste controle com as do global")
 
 
@@ -141,7 +141,7 @@ def test_a_cor_acesa_nao_vence_o_disco(perfil_configurado: str) -> None:
     acesa que difere do disco é camada, teto ou automático.
     """
     salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
-    assert tuple(_leds_gravados(salvo).lightbar) == COR_DELA, (
+    assert tuple(_leds_gravados(salvo).lightbar) == COR_DO_USUARIO, (
         f"o Salvar gravou a cor acesa {COR_ACESA} como a escolha dela")
 
 

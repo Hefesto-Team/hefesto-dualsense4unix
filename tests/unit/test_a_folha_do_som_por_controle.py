@@ -181,7 +181,7 @@ def test_os_tres_campos_da_condicao_sao_os_tres_parametros_do_produto(folha):
     assert condicao.assumir, "sem posse não há martelo, e o daemon reescreve os três"
 
 
-def test_o_volume_dela_chega_ao_report_de_audio_do_arranjo_que_carrega_o_common(folha, rep):
+def test_o_volume_do_usuario_chega_ao_report_de_audio_do_arranjo_que_carrega_o_common(folha, rep):
     """O `common-preservado` leva a condição DENTRO do report de áudio."""
     common = folha.af.common_de_audio(volume=201)
     pacote = folha.pacotes_do_tom("common-preservado", segundos=0.10, common=common)[0]
@@ -347,7 +347,7 @@ class _Relogio:
 
 
 @pytest.fixture()
-def bancada(folha, monkeypatch):
+def ensaio(folha, monkeypatch):
     """Uma folha de UMA coluna no rádio, com porta de mentira e relógio na mão."""
     from gi.repository import GLib
 
@@ -372,10 +372,10 @@ def _linha_e_botao(folha, linha_id: str, *, crc_errado: bool):
     return linha, next(b for b in linha.botoes if b.crc_errado is crc_errado)
 
 
-def test_a_rajada_manda_o_tom_inteiro_pelo_envelope_pedido(folha, bancada):
+def test_a_rajada_manda_o_tom_inteiro_pelo_envelope_pedido(folha, ensaio):
     from gi.repository import Gtk
 
-    tela, coluna, enviados, relogio = bancada
+    tela, coluna, enviados, relogio = ensaio
     linha, botao = _linha_e_botao(folha, "audio-senshi-por-set_report", crc_errado=False)
     esperados = folha.pacotes_do_tom("senshi", segundos=0.10, common=coluna.common())
 
@@ -389,10 +389,10 @@ def test_a_rajada_manda_o_tom_inteiro_pelo_envelope_pedido(folha, bancada):
     assert coluna.rajada_em_voo == "", "a folha ficou achando que ainda está tocando"
 
 
-def test_a_rajada_adianta_o_nibble_de_sequencia_do_controle(folha, bancada):
+def test_a_rajada_adianta_o_nibble_de_sequencia_do_controle(folha, ensaio):
     from gi.repository import Gtk
 
-    tela, coluna, _enviados, _relogio = bancada
+    tela, coluna, _enviados, _relogio = ensaio
     linha, botao = _linha_e_botao(folha, "audio-ds5dongle-por-data", crc_errado=False)
     quantos = len(folha.pacotes_do_tom("ds5dongle", segundos=0.10, common=coluna.common()))
     antes = coluna._seq
@@ -404,13 +404,13 @@ def test_a_rajada_adianta_o_nibble_de_sequencia_do_controle(folha, bancada):
     )
 
 
-def test_a_rajada_para_no_primeiro_nao_do_kernel_em_vez_de_insistir(folha, bancada, monkeypatch):
+def test_a_rajada_para_no_primeiro_nao_do_kernel_em_vez_de_insistir(folha, ensaio, monkeypatch):
     """Um kernel sem HIDIOCSOUTPUT recusa TODOS — insistir 150 vezes só atrasa a resposta."""
     import errno
 
     from gi.repository import Gtk
 
-    tela, coluna, enviados, relogio = bancada
+    tela, coluna, enviados, relogio = ensaio
 
     def recusa(_fd, _p, _e):
         raise OSError(errno.EINVAL, "Invalid argument")
@@ -428,10 +428,10 @@ def test_a_rajada_para_no_primeiro_nao_do_kernel_em_vez_de_insistir(folha, banca
     )
 
 
-def test_o_negativo_manda_os_mesmos_bytes_com_o_rabo_corrompido(folha, bancada):
+def test_o_negativo_manda_os_mesmos_bytes_com_o_rabo_corrompido(folha, ensaio):
     from gi.repository import Gtk
 
-    tela, coluna, enviados, relogio = bancada
+    tela, coluna, enviados, relogio = ensaio
     linha, botao = _linha_e_botao(folha, "audio-senshi-por-data", crc_errado=True)
     tela._bombear(coluna, linha, botao, Gtk.Label())
     relogio.girar()
@@ -443,8 +443,8 @@ def test_o_negativo_manda_os_mesmos_bytes_com_o_rabo_corrompido(folha, bancada):
         assert mandado[-4:] != honesto[-4:], "o negativo saiu com o CRC certo"
 
 
-def test_o_devolver_tudo_desliga_as_chaves_e_nao_so_por_baixo(folha, bancada):
-    tela, coluna, _enviados, _relogio = bancada
+def test_o_devolver_tudo_desliga_as_chaves_e_nao_so_por_baixo(folha, ensaio):
+    tela, coluna, _enviados, _relogio = ensaio
     assert tela.chaves, "a linha da condição tem de ter chave de posse"
     tela.chaves[0].set_active(True)
     assert coluna.assumido is True

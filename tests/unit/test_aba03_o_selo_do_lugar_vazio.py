@@ -76,14 +76,14 @@ NO_RADIO = {
     "is_primary": False, "inputs": {"l2_raw": 0, "r2_raw": 0},
 }
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     {"pref": "p1", "jogador": 1, "uniq": NO_CABO["uniq"], "nome": "White",
      "via": "USB", "cor": "white", "mascara": "DualSense", "alvo": True},
     {"pref": "p2", "jogador": 2, "uniq": NO_RADIO["uniq"], "nome": "Não sei",
      "via": "BT", "cor": "", "mascara": "DualSense", "alvo": False},
 ]
 
-MESA_DE_UM = [MESA_DELA[0]]
+MESA_DE_UM = [MESA_DO_USUARIO[0]]
 
 
 @pytest.fixture(scope="module")
@@ -127,7 +127,7 @@ def _o_que_a_tela_recebe(a03, mesa, conectados):
 
 def test_o_lugar_vazio_sai_por_campo(a03):
     """O cabeçalho do P3 e do P4 sai em `colunas`, e NÃO em `blocos`."""
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
     vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
     assert vazios, "a página não marca lugar vazio nenhum — a régua ficou cega"
     for pref in vazios:
@@ -215,7 +215,7 @@ def test_a_cor_saiu_de_dentro_do_chip(a03):
 
 def test_o_lugar_vazio_apaga_a_cor(a03):
     """O que o produto escreve num lugar vazio APAGA a borda de quem saiu."""
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
     for pref in sorted(a03._lugares_que_o_desenho_da_por_vazios()):
         col = r["colunas"].get(pref) or {}
         assert col.get(a03.CAMPO_DO_PLASTICO) == "", (
@@ -229,7 +229,7 @@ def test_o_lugar_vazio_apaga_a_cor(a03):
 
 def test_o_pacote_nao_emite_o_selo(a03):
     """O selo é um fato do PILOTO. O pacote que o escrevesse assinaria a visita."""
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
     tudo = "".join(str(v) for col in r["colunas"].values() for v in col.values())
     tudo += "".join(str(v) for v in r["blocos"].values())
     assert "data-hef-visto" not in tudo, (

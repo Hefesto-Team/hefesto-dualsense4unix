@@ -83,7 +83,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.linhagem_nintendo import (
-    OUI_PRO_DESTA_BANCADA,
+    OUI_PRO_DESTE_ENSAIO,
     e_pro_genuino,
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
@@ -117,7 +117,7 @@ LED_MIN_INTERVAL_SEC = 2.0
 
 EXTERNAL_PLAYER_LED_ENABLED = False
 
-NINTENDO_REAL_OUI = OUI_PRO_DESTA_BANCADA
+NINTENDO_REAL_OUI = OUI_PRO_DESTE_ENSAIO
 
 _IMU_ENABLE_ALLOWED_BUS = "usb"
 

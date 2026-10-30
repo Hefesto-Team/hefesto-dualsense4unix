@@ -19,11 +19,11 @@ AS MORDIDAS (executadas na implementação, com o md5 conferido na volta):
 * o jogo fechado sem zerar → ``test_o_jogo_que_fecha_zera_o_gatilho_e_o_envelope`` reprova;
 * o zero por silêncio fora → ``test_a_fonte_que_seca_manda_o_zero`` reprova;
 * a assinatura sem a permissão (os tópicos entregues a qualquer um) →
-  ``test_a_modificacao_so_recebe_o_que_a_permissao_dela_deixa`` reprova;
+  ``test_a_modificacao_so_recebe_o_que_a_permissao_do_usuario_deixa`` reprova;
 * o ouvido do cabo sem o envelope (a classe do produto sem a subclasse) →
   ``test_o_ouvido_do_cabo_diz_o_envelope_sem_segundo_gravador`` reprova;
 * a ponte do rádio sem a fonte espiada →
-  ``test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le`` reprova;
+  ``test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_o_usuario_le`` reprova;
 * a espia do rádio sem o ganho ou sem o portão da ponte →
   ``test_no_radio_o_envelope_leva_o_ganho_e_o_portao_que_o_controle_leva`` reprova;
 * a fonte que seca sem o zero imediato (sem tique do pad do P1, como no Modo Nativo) →
@@ -460,7 +460,7 @@ def test_o_fim_da_sessao_zera_o_envelope_dele(mesa: _Mesa, relogio: _Relogio) ->
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch, mesa: _Mesa) -> Any:
+def ensaio(monkeypatch: pytest.MonkeyPatch, mesa: _Mesa) -> Any:
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as ep
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
     from tests.unit.porta_de_mentira import todo_pad_tem_porta
@@ -508,16 +508,16 @@ def _tocando(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
     return tocando
 
 
-def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(
-    bancada: Any, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_o_usuario_le(
+    ensaio: Any, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
 
     monkeypatch.setattr(GANHO, "fator", lambda uniq: 0.6 if uniq == UNIQS[0] else 1.0)
     escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
-    bancada.tocando[f"endpoint::{UNIQS[0]}"] = True
+    ensaio.tocando[f"endpoint::{UNIQS[0]}"] = True
 
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     ponte = _PonteDeMentira.criadas[-1]
     assert ponte.fonte_de_haptica is not None
     assert escuta.tudo() == []
@@ -528,23 +528,23 @@ def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(
     assert [(e["uniq"], e["jogador"], e["intensidade"]) for e in eventos] == [
         (UNIQS[0], 1, [0.3, 0.3])
     ]
-    monitores = [p for p in bancada.pedidos if p.get("canais") == 4]
+    monitores = [p for p in ensaio.pedidos if p.get("canais") == 4]
     assert len(monitores) == 1, "o envelope abriu um segundo gravador no endpoint"
 
 
 def test_o_ouvido_do_cabo_diz_o_envelope_sem_segundo_gravador(
-    bancada: Any, mesa: _Mesa
+    ensaio: Any, mesa: _Mesa
 ) -> None:
     escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
 
-    bancada.sub._casar_os_ouvidos_das_placas({UNIQS[0]: "alsa_output.placa-de-mentira"})
-    ouvido = bancada.sub._ouvidos_das_placas[UNIQS[0]]
+    ensaio.sub._casar_os_ouvidos_das_placas({UNIQS[0]: "alsa_output.placa-de-mentira"})
+    ouvido = ensaio.sub._ouvidos_das_placas[UNIQS[0]]
     ouvido._fio.join(timeout=3)
 
     assert isinstance(ouvido, afb.OuvidoDaPlaca), "o ouvido do cabo deixou de ser o do produto"
     assert [e["intensidade"] for e in escuta.tudo()] == [[0.5, 0.5], [0.0, 0.0]]
-    assert len(bancada.pedidos) == 1, "o envelope abriu um segundo gravador na placa"
-    assert bancada.pedidos[0]["no"] == "alsa_output.placa-de-mentira"
+    assert len(ensaio.pedidos) == 1, "o envelope abriu um segundo gravador na placa"
+    assert ensaio.pedidos[0]["no"] == "alsa_output.placa-de-mentira"
     ouvido.descer()
 
 
@@ -599,7 +599,7 @@ class _Cliente:
         self.sock.close()
 
 
-def test_a_modificacao_so_recebe_o_que_a_permissao_dela_deixa() -> None:
+def test_a_modificacao_so_recebe_o_que_a_permissao_do_usuario_deixa() -> None:
     async def corrida() -> None:
         with tempfile.TemporaryDirectory(prefix="gh") as pasta:
             curto = Path(pasta)
@@ -695,15 +695,15 @@ def test_no_radio_o_envelope_leva_o_ganho_e_o_portao_que_o_controle_leva(
     )
 
 
-def test_a_ponte_do_radio_passa_o_ganho_e_o_portao_dela_a_espia(
-    bancada: Any, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+def test_a_ponte_do_radio_passa_o_ganho_e_o_portao_do_usuario_a_espia(
+    ensaio: Any, mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
-    bancada.tocando[f"endpoint::{UNIQS[0]}"] = True
-    bancada.sub._casar_as_pontes(bancada.controles)
+    ensaio.tocando[f"endpoint::{UNIQS[0]}"] = True
+    ensaio.sub._casar_as_pontes(ensaio.controles)
     ponte = _PonteDeMentira.criadas[-1]
     monkeypatch.setattr(
-        bancada.sub, "_leva_da_ponte", {**dict(bancada.sub._leva_da_ponte), UNIQS[0]: False}
+        ensaio.sub, "_leva_da_ponte", {**dict(ensaio.sub._leva_da_ponte), UNIQS[0]: False}
     )
 
     ponte.fonte_de_haptica(1024)

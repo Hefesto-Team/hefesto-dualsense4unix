@@ -320,8 +320,8 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     **O «?» encurtou em 11/09/2026 — A2-033, aprovada pelo usuário: 403 → 165.** O parágrafo do meio
     era a dica do campo em prosa (o `placeholder` já mostra `emulador · /opt/Emulador/emulador ·
     org.exemplo.Emulador`) e o de cima descrevia como o produto PROCURA, mecânica dita de novo pela
-    recusa de `_achar_o_que_ela_digitou` quando serve. Sobrou o que ela precisa antes de digitar: o
-    que vale, e que o produto confere antes de guardar.
+    recusa de `_achar_o_que_o_usuario_digitou` quando serve. Sobrou o que ela precisa antes de
+    digitar: o que vale, e que o produto confere antes de guardar.
     """
     return f'''<div class="tela-nova" id="{TELA_DO_NOVO}">
   <div class="tn-cx">
@@ -1039,7 +1039,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     submetida a ela: o `off` nasceu com `acoes=()` pelo argumento de que "Abrir o lançador" sobre
     lançador ausente seria botão que finge. O argumento tem mérito e **não é desta frente
     decidi-lo**: o desenho aprovado tem o botão nos CINCO cartões; se deve sumir com o lançador
-    ausente, quem diz é ela (`espera_a_palavra_dela`, com as três frases).
+    ausente, quem diz é ela (`espera_a_palavra_do_usuario`, com as três frases).
 
     O botão ganhou endereço nos SEIS em 03/09/2026 (decisão 17). **O produto só sabe abrir a Steam**
     (`steam_launch_options.reopen_steam`); nos outros cinco o gesto RECUSA dizendo, melhor que o

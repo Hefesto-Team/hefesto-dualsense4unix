@@ -189,7 +189,7 @@ def test_link_para_arquivo_que_nao_existe_vira_so_o_texto_e_um_aviso(tmp_path: P
     assert any("nao-existe.md" in a for a in r.wiki.avisos)
 
 
-def test_mudar_uma_linha_do_csv_muda_so_a_pagina_dela(tmp_path: Path) -> None:
+def test_mudar_uma_linha_do_csv_muda_so_a_pagina_do_usuario(tmp_path: Path) -> None:
     raiz = _arvore(tmp_path / "a")
     outra = _arvore(tmp_path / "b", linhas=[
         LINHAS_PADRAO[0], LINHAS_PADRAO[1],

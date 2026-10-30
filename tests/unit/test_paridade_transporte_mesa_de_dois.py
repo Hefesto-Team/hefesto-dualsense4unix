@@ -21,7 +21,7 @@ Em 12/08/2026, com os controles na bancada, os dois lados foram MEDIDOS e
 gravados em `docs/data/ensaios.csv`: `comb-cabo-radio-saida-2212` (+ o irmão de
 rádio) — FF disparado no cabo e no rádio na MESMA janela, os dois vibraram
 iguais; e `comb-dois-no-radio-saida-2235` — os DOIS controles do rádio
-obedecendo nas duas rotas (0x31 e sysfs). Observados pelo `olho-dela`.
+obedecendo nas duas rotas (0x31 e sysfs). Observados pelo `olho-do-usuario`.
 
 Este arquivo NÃO reproduz aquilo — o encontro de dois escritores com o
 controlador USB compartilhado não cabe num teste de unidade. O que ele faz é

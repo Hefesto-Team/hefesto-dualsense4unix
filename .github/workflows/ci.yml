@@ -759,14 +759,14 @@ jobs:
       # ANTES do passo grande de propósito: um vermelho lá não os cala. Desde
       # 10/10/2026 vêm junto os quatro portões de pytest da tabela que só a
       # suíte alcançava, agora chamados pelo nome.
-      - name: Portões da tela e do interpretador (TELA-DELA)
+      - name: Portões da tela e do interpretador (TELA-DO-USUARIO)
         env:
           HEFESTO_EXIGE_GTK_REAL: "1"
           GDK_BACKEND: x11
           NO_AT_BRIDGE: "1"
         # o `portoes.sh` acha a `.venv` desta árvore e põe o Xvfb (`xvfb-run -a`, 1280x1024x24) na frente do pytest
         run: >-
-          bash scripts/portoes.sh --so interpretador-do-portao a-tela-dela o-instrumento-e-a-tela a-frase-banida
+          bash scripts/portoes.sh --so interpretador-do-portao a-tela-do-usuario o-instrumento-e-a-tela a-frase-banida
           o-piloto-e-a-arvore src-desta-arvore portao-tem-chamador gesto-em-lugar-vazio gesto-onde-deve-04
           portoes-lentos-rapidos
       # HEFESTO_EXIGE_GTK_REAL=1 vira a chave da guarda: aqui, "pulei porque

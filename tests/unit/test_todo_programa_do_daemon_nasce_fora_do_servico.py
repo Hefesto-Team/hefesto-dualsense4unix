@@ -100,7 +100,7 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
 
 VEREDITOS_VALIDOS = frozenset({"ajudante", "o dono", "reserva do dono", "outro processo"})
 
-PROGRAMAS_DELA: dict[str, str] = {
+PROGRAMAS_DO_USUARIO: dict[str, str] = {
     "daemon/subsystems/keyboard.py::_OSKController._abrir": "o teclado na tela (L3)",
     "daemon/subsystems/hotkey.py::_a_acao_da_maquina": "o programa do PS personalizado",
     "daemon/subsystems/hotkey.py::_abrir_o_ato_da_bandeja": (
@@ -256,13 +256,13 @@ def test_todo_processo_que_o_daemon_abre_tem_veredito() -> None:
     assert {v for v, _, _ in VEREDITOS.values()} <= VEREDITOS_VALIDOS
 
 
-def test_todo_programa_dela_passa_pelo_dono() -> None:
+def test_todo_programa_do_usuario_passa_pelo_dono() -> None:
     """A régua 2: quem chama ``fora_do_servico.abrir`` em ``src/``, nos dois sentidos."""
     pastas = [p.name for p in sorted(_PACOTE.iterdir()) if p.is_dir()]
     _, donos = _varrer_pastas(pastas)
-    assert donos == set(PROGRAMAS_DELA), (
-        f"a mais: {sorted(donos - set(PROGRAMAS_DELA))}; "
-        f"a menos: {sorted(set(PROGRAMAS_DELA) - donos)}"
+    assert donos == set(PROGRAMAS_DO_USUARIO), (
+        f"a mais: {sorted(donos - set(PROGRAMAS_DO_USUARIO))}; "
+        f"a menos: {sorted(set(PROGRAMAS_DO_USUARIO) - donos)}"
     )
 
 
@@ -399,7 +399,7 @@ def gerenciador(
                 proc.wait(timeout=5)
 
 
-def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_dela(
+def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_do_usuario(
     gerenciador: _GerenciadorDeMentira,
 ) -> None:
     """Prova 1 da sprint, em bancada: a linha é a do dono, e o PID é o da unidade."""

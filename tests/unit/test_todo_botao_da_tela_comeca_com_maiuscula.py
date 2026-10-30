@@ -58,7 +58,7 @@ class _Rotulos(html.parser.HTMLParser):
 
 def _paginas() -> list[pathlib.Path]:
     em_trabalho = _declaradas()
-    return [onde.BANCADA / p.name if p.name in em_trabalho else p
+    return [onde.ENSAIO / p.name if p.name in em_trabalho else p
             for p in onde.paginas(publicado=True)]
 
 
@@ -80,7 +80,7 @@ def test_todo_botao_comeca_com_maiuscula() -> None:
         for tag, classe, texto in leitor.rotulos:
             primeiro = texto[0]
             if primeiro.isalpha() and primeiro.islower():
-                origem = "bancada" if pagina.parent == onde.BANCADA else "publicada"
+                origem = "bancada" if pagina.parent == onde.ENSAIO else "publicada"
                 minusculos.append(f"{pagina.name} ({origem}): <{tag} class={classe!r}> «{texto}»")
     assert not minusculos, (
         "botão que começa com minúscula (a regra dela da primeira letra):\n  "

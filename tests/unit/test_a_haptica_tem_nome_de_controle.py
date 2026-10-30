@@ -696,7 +696,7 @@ def _o_passo_que_conta() -> str:
     return str(conta)
 
 
-def test_a_bancada_conta_duas_placas(mesa: _Mesa) -> None:
+def test_o_ensaio_conta_duas_placas(mesa: _Mesa) -> None:
     """A conta que a célula pede, feita sobre a lista que o servidor publica."""
     mesa.volta()
     conta = _o_passo_que_conta()

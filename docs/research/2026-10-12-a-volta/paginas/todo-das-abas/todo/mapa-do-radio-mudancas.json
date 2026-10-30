@@ -8,7 +8,7 @@
    "n": 1,
    "sprint": "A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01",
    "o_que_muda": "O «?» do espectro sai; a dica fica no título",
-   "origem": "pedido-dela",
+   "origem": "pedido-do-usuario",
    "resposta": "todo-radio-3",
    "ancora": "todo-radio-1",
    "seletor": "#meus-no-ar",

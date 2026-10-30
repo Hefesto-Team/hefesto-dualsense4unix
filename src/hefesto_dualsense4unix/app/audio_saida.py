@@ -599,7 +599,7 @@ def devolver_o_som_do_pc(
 
     Recusa em vez de chutar um destino — ver :data:`MOTIVO_ROTA_SEM_VOLTA`.
 
-    **SÓ DEVOLVE QUEM ESTÁ COM ELA — 24/09/2026, O-TERCEIRO-NOME-DELA-01.**
+    **SÓ DEVOLVE QUEM ESTÁ COM ELA — 24/09/2026, O-TERCEIRO-NOME-DO-USUARIO-01.**
     Com ``de`` (o `uniq` de quem clicou), a saída só volta se ela estiver NESTE
     controle agora. O quarto botão da fileira do som («Tudo no Controle e Nada
     no PC») voltou por decisão de 23/09, e com ele uma mesa de quatro pode

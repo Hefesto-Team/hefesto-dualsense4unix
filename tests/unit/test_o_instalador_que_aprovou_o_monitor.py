@@ -66,16 +66,16 @@ RAIZ = Path(__file__).resolve().parents[2]
 WP_FIX = RAIZ / "scripts" / "fix_wireplumber_default_source.sh"
 INSTALL = RAIZ / "install.sh"
 
-MONITOR_DELA = "alsa_output.pci-0000_0c_00.4.iec958-stereo.monitor"
-ONBOARD_DELA = "alsa_input.pci-0000_0c_00.4.analog-stereo"
+MONITOR_DO_USUARIO = "alsa_output.pci-0000_0c_00.4.iec958-stereo.monitor"
+ONBOARD_DO_USUARIO = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 
 PACTL_LONGO = f"""Source #61288
-\tName: {MONITOR_DELA}
+\tName: {MONITOR_DO_USUARIO}
 \tDescription: Monitor of Digital Stereo (IEC958)
 \tMute: no
 
 Source #61289
-\tName: {ONBOARD_DELA}
+\tName: {ONBOARD_DO_USUARIO}
 \tDescription: Starship/Matisse HD Audio Controller Analog Stereo
 \tMute: no
 \tPorts:
@@ -86,8 +86,8 @@ Source #61289
 """
 
 PACTL_CURTO = (
-    f"61288\t{MONITOR_DELA}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
-    f"61289\t{ONBOARD_DELA}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
+    f"61288\t{MONITOR_DO_USUARIO}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
+    f"61289\t{ONBOARD_DO_USUARIO}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
 )
 
 WEBCAM = "alsa_input.usb-046d_C920-02.analog-stereo"
@@ -148,7 +148,7 @@ def test_monitor_nao_e_aprovado_pela_verificacao_do_install(tmp_path: Path) -> N
     Este é o teste que morde: com a cura arrancada, a função devolvia 0 e
     imprimia `OK: microfone padrão ativo = …monitor (DualSense fora)`.
     """
-    env = _dubla_pactl(tmp_path, padrao=MONITOR_DELA)
+    env = _dubla_pactl(tmp_path, padrao=MONITOR_DO_USUARIO)
     res = _rodar("verify_active_not_dualsense", env)
     assert res.returncode == 3, f"esperava exit 3 (monitor), veio {res.returncode}: {res.stdout}"
     assert "OK" not in res.stdout, f"o monitor voltou a ser aprovado: {res.stdout}"
@@ -184,9 +184,9 @@ def test_entrada_de_verdade_continua_passando(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("nome", "e_monitor"),
     [
-        (MONITOR_DELA, True),
+        (MONITOR_DO_USUARIO, True),
         ("alsa_output.pci-0000_0a_00.1.hdmi-stereo.Monitor", True),
-        (ONBOARD_DELA, False),
+        (ONBOARD_DO_USUARIO, False),
         ("alsa_input.usb-DualSense.monitor-something", False),
         ("", False),
     ],
@@ -202,17 +202,17 @@ def test_is_monitor_source_classifica_pelo_sufixo(
 
 def test_nao_elege_fonte_sem_porta_usavel(tmp_path: Path) -> None:
     """Sem fonte que se sustente, o instalador não elege NADA."""
-    env = _dubla_pactl(tmp_path, padrao=MONITOR_DELA)
+    env = _dubla_pactl(tmp_path, padrao=MONITOR_DO_USUARIO)
     res = _rodar("pick_target_source_name", env)
     assert res.returncode == 0, res.stderr
     assert res.stdout.strip() == "", f"elegeu um nó sem porta usável: {res.stdout!r}"
 
 
-def test_elege_a_fonte_com_porta_usavel_quando_ela_existe(tmp_path: Path) -> None:
+def test_elege_a_fonte_com_porta_usavel_quando_o_usuario_existe(tmp_path: Path) -> None:
     """Com a webcam plugada, o alvo é ela — e nunca um monitor."""
     env = _dubla_pactl(
         tmp_path,
-        padrao=MONITOR_DELA,
+        padrao=MONITOR_DO_USUARIO,
         longo=PACTL_LONGO_COM_WEBCAM,
         curto=PACTL_CURTO_COM_WEBCAM,
     )
@@ -223,7 +223,7 @@ def test_elege_a_fonte_com_porta_usavel_quando_ela_existe(tmp_path: Path) -> Non
 
 def test_reset_diz_que_nao_elegeu_em_vez_de_eleger_qualquer_um(tmp_path: Path) -> None:
     """O silêncio é o que enganava: sem alvo, o passo tem de DIZER isso."""
-    env = _dubla_pactl(tmp_path, padrao=MONITOR_DELA)
+    env = _dubla_pactl(tmp_path, padrao=MONITOR_DO_USUARIO)
     res = _rodar("reset_default_source", env)
     assert "nenhuma fonte de captura com porta usável" in res.stdout, res.stdout
 
@@ -277,7 +277,7 @@ def _roda_o_passo_10(
     tmp_path: Path,
     *,
     rc_do_wp_fix: int,
-    padrao: str = ONBOARD_DELA,
+    padrao: str = ONBOARD_DO_USUARIO,
     sustenta: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Executa o passo 10 REAL do install, com o wp-fix e o doctor dublados."""

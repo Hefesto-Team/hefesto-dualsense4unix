@@ -102,27 +102,27 @@ def test_um_nome_fora_do_conjunto_fechado_salva_o_diretorio_inteiro(
     raiz: Path,
 ) -> None:
     """O CASO PERIGOSO. Marcador de migração presente, mas há um arquivo que"""
-    d = _dir_de_migracao(raiz, "tmpabcdefgh", {"perfil-dela.json": '{"name": "x"}'})
+    d = _dir_de_migracao(raiz, "tmpabcdefgh", {"perfil-do-usuario.json": '{"name": "x"}'})
 
     alvos, recusas, _ = FAXINA.recolher(raiz, UMA_HORA, AGORA)
 
     assert alvos == []
     assert [r.caminho for r in recusas] == [d]
-    assert "perfil-dela.json" in recusas[0].motivo
-    assert (d / "perfil-dela.json").exists()
+    assert "perfil-do-usuario.json" in recusas[0].motivo
+    assert (d / "perfil-do-usuario.json").exists()
 
 
 def test_diretorio_sem_marcador_nem_e_mencionado(raiz: Path) -> None:
     """Um `tmp<8>` que não tem NENHUMA prova de origem some do radar — não é"""
     d = raiz / "tmpzzzzzzzz"
     d.mkdir()
-    (d / "coisa-dela.json").write_text('{"name": "vitoria"}', encoding="utf-8")
+    (d / "coisa-do-usuario.json").write_text('{"name": "vitoria"}', encoding="utf-8")
 
     alvos, recusas, _ = FAXINA.recolher(raiz, UMA_HORA, AGORA)
 
     assert alvos == []
     assert recusas == []
-    assert (d / "coisa-dela.json").exists()
+    assert (d / "coisa-do-usuario.json").exists()
 
 
 def test_subdiretorio_salva_o_diretorio(raiz: Path) -> None:
@@ -174,18 +174,18 @@ def test_registro_do_pactl_com_outro_conteudo_e_recusado(raiz: Path) -> None:
 
 def test_link_simbolico_nunca_e_alvo(raiz: Path, tmp_path: Path) -> None:
     """Um link com nome de alvo apontando para a config dela é o pior acidente"""
-    config_dela = tmp_path / "config-dela"
-    config_dela.mkdir()
-    (config_dela / "vitoria.json").write_text('{"name": "vitoria"}', encoding="utf-8")
+    config_do_usuario = tmp_path / "config-do-usuario"
+    config_do_usuario.mkdir()
+    (config_do_usuario / "vitoria.json").write_text('{"name": "vitoria"}', encoding="utf-8")
     morto = _pid_morto()
-    (raiz / f"hefesto-berco-{morto}").symlink_to(config_dela)
-    (raiz / "tmpabcdefgh").symlink_to(config_dela)
+    (raiz / f"hefesto-berco-{morto}").symlink_to(config_do_usuario)
+    (raiz / "tmpabcdefgh").symlink_to(config_do_usuario)
 
     alvos, recusas, _ = FAXINA.recolher(raiz, UMA_HORA, AGORA)
 
     assert alvos == []
     assert recusas == []
-    assert (config_dela / "vitoria.json").exists()
+    assert (config_do_usuario / "vitoria.json").exists()
 
 
 def test_entrada_de_outro_dono_nao_e_alvo(
@@ -210,7 +210,7 @@ def test_raiz_de_sistema_e_recusada(proibida: str) -> None:
     assert FAXINA.raiz_permitida(caminho) is not None
 
 
-def test_o_home_dela_nunca_pode_ser_raiz() -> None:
+def test_o_home_do_usuario_nunca_pode_ser_raiz() -> None:
     """Um script de faxina que aceite `$HOME` como raiz é um script que um dia"""
     lar = Path(os.path.expanduser("~"))
     assert FAXINA.raiz_permitida(lar) is not None
@@ -250,9 +250,9 @@ def test_com_apagar_leva_o_alvo_e_deixa_o_resto(
 ) -> None:
     """A MORDIDA do conjunto: o lixo sai, o arquivo dela FICA — no mesmo `/tmp`,"""
     lixo = _dir_de_migracao(raiz, "tmpabcdefgh")
-    quase = _dir_de_migracao(raiz, "tmpbbbbbbbb", {"perfil-dela.json": "{}"})
-    dela = raiz / "Screenshot_2026-08-07_15-49-08.png"
-    dela.write_bytes(b"PNG-dela")
+    quase = _dir_de_migracao(raiz, "tmpbbbbbbbb", {"perfil-do-usuario.json": "{}"})
+    do_usuario = raiz / "Screenshot_2026-08-07_15-49-08.png"
+    do_usuario.write_bytes(b"PNG-do-usuario")
     viva = raiz / f"hefesto-berco-{os.getpid()}"
     viva.mkdir()
     (viva / "em-uso").write_text("x", encoding="utf-8")
@@ -260,8 +260,8 @@ def test_com_apagar_leva_o_alvo_e_deixa_o_resto(
     assert FAXINA.main(["--raiz", str(raiz), "--apagar"]) == 0
 
     assert not lixo.exists()
-    assert (quase / "perfil-dela.json").read_text(encoding="utf-8") == "{}"
-    assert dela.read_bytes() == b"PNG-dela"
+    assert (quase / "perfil-do-usuario.json").read_text(encoding="utf-8") == "{}"
+    assert do_usuario.read_bytes() == b"PNG-do-usuario"
     assert (viva / "em-uso").exists()
     assert "apagado" in capsys.readouterr().out
 

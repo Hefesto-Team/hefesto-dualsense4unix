@@ -45,7 +45,7 @@ class _RelogioFalso:
         self.agora += segundos
 
 
-class _VpadDeBancada(uhid.UhidDualSense):
+class _VpadDeEnsaio(uhid.UhidDualSense):
     """Vpad com o fd desligado — exercita só o caminho de output/rumble."""
 
     def __init__(self, relogio: _RelogioFalso) -> None:
@@ -103,26 +103,26 @@ _SO_LIGHTBAR = 0x04
 
 
 @pytest.fixture
-def bancada():
+def ensaio():
     relogio = _RelogioFalso()
-    vpad = _VpadDeBancada(relogio)
+    vpad = _VpadDeEnsaio(relogio)
     try:
         yield vpad, relogio
     finally:
         vpad.fechar()
 
 
-def test_stop_normal_do_jogo_continua_chegando(bancada) -> None:
+def test_stop_normal_do_jogo_continua_chegando(ensaio) -> None:
     """O caminho feliz não pode ser sacrificado pela rede de segurança."""
-    vpad, _ = bancada
+    vpad, _ = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 200))
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 0, 0))
     assert vpad.recebido == [(200, 200), (0, 0)]
 
 
-def test_report_sem_bits_de_vibracao_nao_mata_a_vibracao_em_curso(bancada) -> None:
+def test_report_sem_bits_de_vibracao_nao_mata_a_vibracao_em_curso(ensaio) -> None:
     """O gate original: report de lightbar/gatilho NÃO zera o motor."""
-    vpad, relogio = bancada
+    vpad, relogio = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 200))
     for _ in range(50):
         relogio.avanca(0.05)
@@ -133,9 +133,9 @@ def test_report_sem_bits_de_vibracao_nao_mata_a_vibracao_em_curso(bancada) -> No
     )
 
 
-def test_rumble_preso_expira_e_o_motor_para(bancada) -> None:
+def test_rumble_preso_expira_e_o_motor_para(ensaio) -> None:
     """O defeito relatado: o stop se perde e o motor gira para sempre."""
-    vpad, relogio = bancada
+    vpad, relogio = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 200))
     assert vpad.recebido == [(200, 200)]
 
@@ -148,9 +148,9 @@ def test_rumble_preso_expira_e_o_motor_para(bancada) -> None:
     )
 
 
-def test_expiracao_nao_dispara_duas_vezes(bancada) -> None:
+def test_expiracao_nao_dispara_duas_vezes(ensaio) -> None:
     """Zerou uma vez, cala a boca: nada de enxurrada de (0,0) a cada tique."""
-    vpad, relogio = bancada
+    vpad, relogio = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 180, 180))
     relogio.avanca(uhid._RUMBLE_STALE_SEC + 1.0)
     for _ in range(20):
@@ -159,14 +159,14 @@ def test_expiracao_nao_dispara_duas_vezes(bancada) -> None:
     assert vpad.recebido == [(180, 180), (0, 0)]
 
 
-def test_jogo_que_reafirma_o_mesmo_valor_nao_e_cortado(bancada) -> None:
+def test_jogo_que_reafirma_o_mesmo_valor_nao_e_cortado(ensaio) -> None:
     """Vibração longa e legítima sobrevive enquanto o jogo a reafirmar.
 
     O carimbo de "vi vibração" é anterior ao dedup de valor de propósito: quem
     repete o MESMO par está dizendo "ainda quero vibrar", e isso adia o teto
     mesmo não havendo o que reenviar ao hardware.
     """
-    vpad, relogio = bancada
+    vpad, relogio = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 120, 120))
     for _ in range(10):
         relogio.avanca(uhid._RUMBLE_STALE_SEC * 0.5)
@@ -177,9 +177,9 @@ def test_jogo_que_reafirma_o_mesmo_valor_nao_e_cortado(bancada) -> None:
     )
 
 
-def test_rumble_volta_a_funcionar_depois_de_expirar(bancada) -> None:
+def test_rumble_volta_a_funcionar_depois_de_expirar(ensaio) -> None:
     """A expiração não é uma porta que tranca: o jogo pode voltar a vibrar."""
-    vpad, relogio = bancada
+    vpad, relogio = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 200))
     relogio.avanca(uhid._RUMBLE_STALE_SEC + 0.1)
     vpad.bombeia()
@@ -189,18 +189,18 @@ def test_rumble_volta_a_funcionar_depois_de_expirar(bancada) -> None:
     assert vpad.recebido[-1] == (90, 90)
 
 
-def test_silencio_com_motor_ja_parado_e_no_op(bancada) -> None:
+def test_silencio_com_motor_ja_parado_e_no_op(ensaio) -> None:
     """Sem rumble em vigor não há o que expirar — nem um (0,0) supérfluo."""
-    vpad, relogio = bancada
+    vpad, relogio = ensaio
     relogio.avanca(uhid._RUMBLE_STALE_SEC * 10)
     for _ in range(10):
         vpad.bombeia()
     assert vpad.recebido == []
 
 
-def test_fim_de_sessao_limpa_o_relogio(bancada) -> None:
+def test_fim_de_sessao_limpa_o_relogio(ensaio) -> None:
     """A próxima vida do vpad não herda o silêncio pendente da anterior."""
-    vpad, _ = bancada
+    vpad, _ = ensaio
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 200))
     vpad._silence_rumble()
     assert vpad.recebido[-1] == (0, 0)
@@ -220,9 +220,9 @@ def test_teto_veio_de_medicao_e_nao_de_palpite() -> None:
     )
 
 
-def test_a_parada_do_sdl_e_honrada_em_vez_de_descartada(bancada) -> None:
+def test_a_parada_do_sdl_e_honrada_em_vez_de_descartada(ensaio) -> None:
     """A causa-raiz do "tremendo sem parar", encontrada em 01/08/2026."""
-    vpad, _relogio = bancada
+    vpad, _relogio = ensaio
 
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 180))
     assert vpad.recebido == [(200, 180)]
@@ -235,9 +235,9 @@ def test_a_parada_do_sdl_e_honrada_em_vez_de_descartada(bancada) -> None:
     )
 
 
-def test_o_report_de_gatilho_continua_sendo_descartado(bancada) -> None:
+def test_o_report_de_gatilho_continua_sendo_descartado(ensaio) -> None:
     """E o gate continua certo pelo motivo certo — a cura não o afrouxa."""
-    vpad, _relogio = bancada
+    vpad, _relogio = ensaio
 
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 150, 150))
     vpad._handle_output(_evento_de_output(uhid._TRIGGER_FLAGS, 0, 0))
@@ -248,9 +248,9 @@ def test_o_report_de_gatilho_continua_sendo_descartado(bancada) -> None:
     )
 
 
-def test_o_report_de_luz_tambem_continua_sendo_descartado(bancada) -> None:
+def test_o_report_de_luz_tambem_continua_sendo_descartado(ensaio) -> None:
     """Idem para lightbar e player-LEDs, que moram no flag1."""
-    vpad, _relogio = bancada
+    vpad, _relogio = ensaio
 
     vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 90, 90))
     vpad._handle_output(_evento_de_output(0x00, 0, 0, flag1=uhid._LUZ_FLAGS))

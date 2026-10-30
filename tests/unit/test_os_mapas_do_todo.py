@@ -183,12 +183,12 @@ def test_no_sugestoes_o_titulo_do_movimento_carrega_a_razao() -> None:
 def test_as_edicoes_dos_mapas_estao_publicadas_e_a_copia_do_produto_e_a_pagina() -> None:
     """As edições entraram em ``EDICOES`` e a cópia que o produto serve já tem o desenho do todo.
 
-    MORDIDA: ponha uma edição dos mapas de volta em ``EDICOES_ESPERANDO_A_SESSAO_DELA``, ou a
+    MORDIDA: ponha uma edição dos mapas de volta em ``EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO``, ou a
     receita antiga na cópia publicada, e a régua reprova.
     """
     for edicao in pagina_do_mapa.EDICOES_DOS_MAPAS_DO_TODO:
         assert edicao in pagina_do_mapa.EDICOES
-        assert edicao not in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA
+        assert edicao not in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO
     publicada = (INTERFACE / "paginas/mapa-das-portas.html").read_text(encoding="utf-8")
     assert publicada == pagina_do_mapa.pagina(False)
     assert pagina_do_mapa.RECEITA_COM_A_DICA_NO_TITULO in publicada
@@ -196,22 +196,22 @@ def test_as_edicoes_dos_mapas_estao_publicadas_e_a_copia_do_produto_e_a_pagina()
     assert publicada.count('<style id="base-comum">') == 1
 
 
-def _no_webkit_da_bancada(passos: list[str], bancada: pathlib.Path) -> list[object]:
+def _no_webkit_do_ensaio(passos: list[str], ensaio: pathlib.Path) -> list[object]:
     """Abre num WebKit a página das portas que o GERADOR monta agora, como a régua da 08.
 
-    A página é escrita numa bancada de mentira (``HEFESTO_BANCADA``): quem é medido é o gerador, não
+    A página é escrita numa bancada de mentira (``HEFESTO_ENSAIO``): quem é medido é o gerador, não
     o arquivo de ``mockup/``, que o primeiro teste abaixo confere ser igual ao que ele escreve.
     """
     from tests.unit import test_o_mapa_das_conexoes_cabe_na_aba as vizinha
 
     nome = arranjo_desta_maquina.PAGINA
-    (bancada / nome).write_text(pagina_do_mapa.pagina(), encoding="utf-8")
-    anterior = vizinha.NA_BANCADA
-    vizinha.NA_BANCADA = True
+    (ensaio / nome).write_text(pagina_do_mapa.pagina(), encoding="utf-8")
+    anterior = vizinha.NO_ENSAIO
+    vizinha.NO_ENSAIO = True
     try:
         return vizinha._no_webkit(nome, (1212, 809), passos)
     finally:
-        vizinha.NA_BANCADA = anterior
+        vizinha.NO_ENSAIO = anterior
 
 
 LER_O_SUGESTOES = r"""
@@ -236,8 +236,8 @@ def test_o_sugestoes_desenha_o_titulo_com_a_dica_e_nenhum_interrogacao(
     """No WebKit, o Sugestões desenha os títulos com ``data-dica`` e nenhum «?»."""
     from tests.unit import test_o_mapa_das_conexoes_cabe_na_aba as vizinha
 
-    monkeypatch.setenv("HEFESTO_BANCADA", str(tmp_path))
-    lidas = _no_webkit_da_bancada([
+    monkeypatch.setenv("HEFESTO_ENSAIO", str(tmp_path))
+    lidas = _no_webkit_do_ensaio([
         arranjo_desta_maquina.js_da_entrega(vizinha._arranjo()),
         vizinha._clicar('.modo[data-modo="ideal"]'), LER_O_SUGESTOES,
     ], tmp_path)

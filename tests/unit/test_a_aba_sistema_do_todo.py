@@ -83,7 +83,7 @@ def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
     assert "status-bluetooth" in ids
 
 
-def test_as_quatro_colunas_estao_na_ordem_dela() -> None:
+def test_as_quatro_colunas_estao_na_ordem_do_usuario() -> None:
     """Funcionamento do app, Interface, Perfil global de bateria e Saúde do app.
 
     Prova da D-1610-O-PERFIL-DE-BATERIA-E-SO-O-GLOBAL-NA-SISTEMA.
@@ -519,12 +519,12 @@ MEDIR = r"""
 def _na_tela(tamanho: tuple[int, int]) -> dict[str, Any]:
     from tests.unit import test_o_mapa_das_conexoes_cabe_na_aba as vizinha
 
-    anterior = vizinha.NA_BANCADA
-    vizinha.NA_BANCADA = True
+    anterior = vizinha.NO_ENSAIO
+    vizinha.NO_ENSAIO = True
     try:
         lido = vizinha._no_webkit("09-sistema.html", tamanho, [MEDIR])[0]
     finally:
-        vizinha.NA_BANCADA = anterior
+        vizinha.NO_ENSAIO = anterior
     assert isinstance(lido, dict), lido
     return lido
 

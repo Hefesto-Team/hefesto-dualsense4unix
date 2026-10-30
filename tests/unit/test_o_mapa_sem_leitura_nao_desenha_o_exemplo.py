@@ -132,7 +132,7 @@ def tela() -> Any:
     sys.path.insert(0, str(RAIZ / "scripts"))
     import regua_de_tela
 
-    t = regua_de_tela.Tela(onde.BANCADA / arranjo_desta_maquina.PAGINA,
+    t = regua_de_tela.Tela(onde.ENSAIO / arranjo_desta_maquina.PAGINA,
                            titulo_esperado="o mapa das entradas", largura=1280, altura=900)
     t.esperar_ate("document.querySelectorAll('#faces .face-cab').length > 0",
                   motivo="o exemplo da página não se desenhou")

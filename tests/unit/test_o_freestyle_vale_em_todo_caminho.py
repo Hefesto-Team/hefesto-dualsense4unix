@@ -1,6 +1,6 @@
 """O-MODO-FREESTYLE-03 — o perfil de fora do jogo vale em todo caminho, e nasce ligado.
 
-NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, a fala do usuário de
+NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, a fala do usuário de
 29/09): o Freestyle deixou de ser o perfil de fora do jogo. Desligado, ele não
 vale em lugar nenhum; fora do jogo vale a escolha do usuário, que o boot restaura com
 regra de janela ou sem (a RESTORE-ESCOPO-01 saiu). Os achados 1 e 2 abaixo
@@ -103,14 +103,14 @@ class _FioDeMentira:
 
 
 def _mesa_de_quatro(
-    fabrica_de_bancada: Any,
+    fabrica_de_ensaio: Any,
 ) -> tuple[PyDualSenseController, list[tuple[Any, EnvelopeDeTransporte]]]:
     """O backend REAL com os quatro handles de bancada, dois em cada transporte."""
     ctl = PyDualSenseController()
     pecas: list[tuple[Any, EnvelopeDeTransporte]] = []
     for mac, transporte in MESA:
         envelope = envelope_de(transporte)
-        handle = fabrica_de_bancada(envelope)
+        handle = fabrica_de_ensaio(envelope)
         handle.device = _FioDeMentira()
         ctl._handles[mac] = handle
         pecas.append((handle, envelope))
@@ -174,12 +174,12 @@ VALE_NO_BOOT = {
 
 
 @pytest.mark.parametrize("caminho", CAMINHOS)
-def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
-    semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
+def test_o_boot_deixa_valendo_o_que_o_usuario_escolheu_nos_quatro(
+    semeadura_ligada: None, fabrica_de_ensaio: Any, caminho: str,
 ) -> None:
     """Em cada caminho da sessão, vale o que o usuário escolheu, e o gatilho chega aos quatro."""
     _prepara_a_sessao(caminho)
-    controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
+    controle, pecas = _mesa_de_quatro(fabrica_de_ensaio)
     store = StateStore()
     store.set_freestyle_ligado(session.load_freestyle_ligado())
 
@@ -199,12 +199,12 @@ def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
     assert no_fio == esperado, f"{caminho}: o gatilho que chegou ao fio"
 
 
-def test_o_boot_nao_reescreve_a_escolha_dela(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
+def test_o_boot_nao_reescreve_a_escolha_do_usuario(
+    semeadura_ligada: None, fabrica_de_ensaio: Any,
 ) -> None:
     """O boot restaura a escolha sem regravá-la: a sessão continua dizendo o jogo do usuário."""
     _prepara_a_sessao("sessao-com-perfil-de-janela")
-    controle, _ = _mesa_de_quatro(fabrica_de_bancada)
+    controle, _ = _mesa_de_quatro(fabrica_de_ensaio)
     store = StateStore()
 
     _boot(controle, store)
@@ -217,11 +217,11 @@ def test_o_boot_nao_reescreve_a_escolha_dela(
 
 
 def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
+    semeadura_ligada: None, fabrica_de_ensaio: Any,
 ) -> None:
     """A cena inteira: o botão aceso, nada o troca; apagado, o jogo entra."""
     _prepara_a_sessao("sessao-com-o-freestyle")
-    controle, _ = _mesa_de_quatro(fabrica_de_bancada)
+    controle, _ = _mesa_de_quatro(fabrica_de_ensaio)
     store = StateStore()
     _boot(controle, store)
     gerente = ProfileManager(controller=controle, store=store)
@@ -245,7 +245,7 @@ def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
 
 @pytest.mark.parametrize("caminho", ["sessao-vazia", "sessao-com-o-freestyle"])
 def test_o_boot_nao_entra_por_cima_do_jogo_que_ja_vale(
-    semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
+    semeadura_ligada: None, fabrica_de_ensaio: Any, caminho: str,
 ) -> None:
     """O daemon reiniciado no meio da partida: o jogo já vale antes do controle chegar.
 
@@ -258,7 +258,7 @@ def test_o_boot_nao_entra_por_cima_do_jogo_que_ja_vale(
     ja_vale and not mesmo_slug(...)` e a célula `sessao-vazia` reprova.
     """
     _prepara_a_sessao(caminho)
-    controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
+    controle, pecas = _mesa_de_quatro(fabrica_de_ensaio)
     store = StateStore()
     store.set_active_profile(JOGO)
 
@@ -269,11 +269,11 @@ def test_o_boot_nao_entra_por_cima_do_jogo_que_ja_vale(
 
 
 def test_no_modo_nativo_o_boot_nao_aplica_perfil_nenhum(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
+    semeadura_ligada: None, fabrica_de_ensaio: Any,
 ) -> None:
     """FEAT-NATIVE-MODE-01: o controle fica solto para o jogo, e a escolha não fura."""
     _prepara_a_sessao("sessao-com-perfil-de-janela")
-    controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
+    controle, pecas = _mesa_de_quatro(fabrica_de_ensaio)
     store = StateStore()
 
     _boot(controle, store, nativo=True)
@@ -320,7 +320,7 @@ def test_os_tres_gestos_sem_perfil_ativo_agem_no_freestyle(
     """Sem perfil valendo, os três botões agem na escolha do usuário.
 
     Na máquina nova a escolha é o Freestyle aceso (a semeadura acende o botão,
-    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 7), e a dica de cada um diz o
+    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item 7), e a dica de cada um diz o
     mesmo nome. NOTA DATADA — 01/10/2026: até aqui o rodapé caía no Freestyle
     quando nada valia, com o botão apagado também; isso saiu (item 10), e a
     recusa de «sem escolha» é a de `test_o_freestyle_desligado_nunca_e_o_perfil_ativo.py`.
@@ -457,17 +457,17 @@ def test_a_fabrica_de_antes_com_o_nome_de_antes_chega_a_de_hoje_numa_carga(
     assert not (pasta / arquivo_antigo).exists()
 
 
-def _o_freestyle_dela() -> dict[str, Any]:
+def _o_freestyle_do_usuario() -> dict[str, Any]:
     """A fábrica de 24/09 com UM ajuste dela: a cor do P1 por controle."""
-    dela = json.loads(json.dumps(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4]))
-    dela["controllers"] = {"AA:BB:CC:00:00:01": {"leds": {"lightbar": [255, 0, 128]}}}
-    return dela
+    do_usuario = json.loads(json.dumps(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4]))
+    do_usuario["controllers"] = {"AA:BB:CC:00:00:01": {"leds": {"lightbar": [255, 0, 128]}}}
+    return do_usuario
 
 
-def test_o_freestyle_dela_nao_muda(semeadura_ligada: None) -> None:
+def test_o_freestyle_do_usuario_nao_muda(semeadura_ligada: None) -> None:
     """Um byte de ajuste dela e ele deixa de ser fábrica: nem arquivo, nem histórico."""
     pasta = profiles_dir(ensure=True)
-    bruto = _grava(pasta, _o_freestyle_dela())
+    bruto = _grava(pasta, _o_freestyle_do_usuario())
     (pasta / loader.SEED_MARKER_NAME).write_text("freestyle.json\n", encoding="utf-8")
 
     loader.load_all_profiles()
@@ -490,20 +490,20 @@ def test_sem_a_copia_no_historico_nada_muda_e_a_proxima_carga_tenta(
     assert not (pasta / loader._FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER).exists()
 
 
-def test_o_personalizado_dela_vence_a_fabrica_de_antes_que_o_shell_copiou(
+def test_o_personalizado_do_usuario_vence_a_fabrica_de_antes_que_o_shell_copiou(
     semeadura_ligada: None,
 ) -> None:
     """O disco de quem atualizou em 24/09: o shell copiou a fábrica em Off ao lado dela."""
     pasta = profiles_dir(ensure=True)
     _grava(pasta, loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4])
-    dela = dict(_o_freestyle_dela(), name="Personalizado")
+    do_usuario = dict(_o_freestyle_do_usuario(), name="Personalizado")
     (pasta / loader.ARQUIVO_DO_PERSONALIZADO).write_text(
-        json.dumps(dela, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(do_usuario, ensure_ascii=False, indent=2), encoding="utf-8")
 
     assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
 
     gravado = json.loads((pasta / loader.ARQUIVO_DO_PADRAO).read_text(encoding="utf-8"))
-    assert gravado["controllers"] == dela["controllers"]
+    assert gravado["controllers"] == do_usuario["controllers"]
     assert not (pasta / loader.ARQUIVO_DO_PERSONALIZADO).exists()
 
 
@@ -516,7 +516,7 @@ def _install_profiles(home: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-@pytest.mark.parametrize("disco", ["maquina-nova", "fabrica-de-antes", "o-dela"])
+@pytest.mark.parametrize("disco", ["maquina-nova", "fabrica-de-antes", "o-do-usuario"])
 def test_o_que_o_install_faz_num_disco_que_ja_tem_o_freestyle(
     tmp_path: Path, semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch, disco: str,
 ) -> None:
@@ -529,7 +529,7 @@ def test_o_que_o_install_faz_num_disco_que_ja_tem_o_freestyle(
     bruto = b""
     if disco != "maquina-nova":
         dados = (loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4] if disco == "fabrica-de-antes"
-                 else _o_freestyle_dela())
+                 else _o_freestyle_do_usuario())
         bruto = _grava(pasta, dados)
         (pasta / loader.SEED_MARKER_NAME).write_text("freestyle.json\n", encoding="utf-8")
 
@@ -542,7 +542,7 @@ def test_o_que_o_install_faz_num_disco_que_ja_tem_o_freestyle(
     loader.load_all_profiles()
 
     final = (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes()
-    assert final == (bruto if disco == "o-dela" else ASSET.read_bytes())
+    assert final == (bruto if disco == "o-do-usuario" else ASSET.read_bytes())
 
 
 def _ctx(nome: str) -> Any:
@@ -625,7 +625,7 @@ DEZ = [f"{n:02d}-" for n in range(1, 11)]
 
 
 @pytest.mark.parametrize("pagina", DEZ)  # (noqa-acento)
-def test_a_bancada_das_dez_traz_o_rodape_novo(pagina: str) -> None:
+def test_o_ensaio_das_dez_traz_o_rodape_novo(pagina: str) -> None:
     """O desenho de HOJE das dez abas: o rodapé regerado, sem a promessa do jogo."""
     from hefesto_dualsense4unix.interface import onde
 

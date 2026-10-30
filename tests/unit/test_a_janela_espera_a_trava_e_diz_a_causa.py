@@ -167,7 +167,7 @@ def test_o_duplo_clique_com_a_trava_presa_alem_do_prazo_nao_diz_que_nao_havia_la
     assert [x.get("quem") for x in esperou] == [cpe.QUEM_JANELA], esperou
 
 
-def test_a_carona_sem_a_trava_diz_que_ela_nao_veio(
+def test_a_carona_sem_a_trava_diz_que_o_usuario_nao_veio(
         _lar: Path, _trava_presa: subprocess.Popen[str]) -> None:
     escritos = cpe.curar_todas_as_estradas(espera=0.4)
     assert escritos == ()

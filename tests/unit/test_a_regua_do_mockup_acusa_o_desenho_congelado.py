@@ -72,7 +72,7 @@ def test_o_mesmo_endereco_em_colunas_diferentes_nao_se_confunde():
         assert campos["p2·aj-val-e-0"] == "3"
 
 
-def test_uma_option_sem_value_vale_o_texto_dela():
+def test_uma_option_sem_value_vale_o_texto_do_usuario():
     """Contrato do HTML, e ignorá-lo custou uma cegueira medida em 02/09/2026."""
     campos = regua._campos_cravados(
         '<select data-campo="x" data-hef-alvo="valor">'

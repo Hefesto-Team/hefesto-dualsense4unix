@@ -57,21 +57,21 @@ def test_os_oito_estilos_sairam_da_fabrica_e_moram_na_casa_deles() -> None:
         )
 
 
-def test_o_genero_intocado_sai_da_lista_e_o_que_ela_editou_fica(
+def test_o_genero_intocado_sai_da_lista_e_o_que_o_usuario_editou_fica(
     tmp_path: Path,
 ) -> None:
     """As duas réguas no mesmo teste, que é onde a diferença aparece."""
     destino = tmp_path / "perfis"
     destino.mkdir(parents=True)
     (destino / "acao.json").write_bytes((ESTILOS / "acao.json").read_bytes())
-    fps_dela = json.loads((ESTILOS / "fps.json").read_text(encoding="utf-8"))
-    fps_dela["leds"]["lightbar"] = [10, 20, 30]
-    _escrever(destino / "fps.json", fps_dela)
+    fps_do_usuario = json.loads((ESTILOS / "fps.json").read_text(encoding="utf-8"))
+    fps_do_usuario["leds"]["lightbar"] = [10, 20, 30]
+    _escrever(destino / "fps.json", fps_do_usuario)
 
     resultado = loader.migrar_generos_para_estilos_de_jogo(dest_dir=destino)
 
     assert resultado.movidos == ("acao.json",), resultado
-    assert resultado.dela == ("fps.json",), (
+    assert resultado.do_usuario == ("fps.json",), (
         "a migração não nomeou o arquivo que ela editou — mexer calado num "
         f"perfil dela é o defeito que esta régua existe para pegar: {resultado}"
     )
@@ -156,9 +156,9 @@ def test_o_perfil_de_jogo_enxuga_so_quando_e_o_molde(tmp_path: Path) -> None:
     """As duas réguas no mesmo teste, como manda a sprint."""
     destino = tmp_path / "perfis"
     _escrever(destino / "stray.json", _molde_de_jogo("Stray", "1332010"))
-    dela = _molde_de_jogo("PEAK", "3527290")
-    dela["leds"] = {**dela["leds"], "lightbar": [200, 0, 40]}
-    _escrever(destino / "peak.json", dela)
+    do_usuario = _molde_de_jogo("PEAK", "3527290")
+    do_usuario["leds"] = {**do_usuario["leds"], "lightbar": [200, 0, 40]}
+    _escrever(destino / "peak.json", do_usuario)
     peak_antes = (destino / "peak.json").read_bytes()
 
     enxutos = loader.enxugar_perfis_de_jogo(dest_dir=destino)
@@ -197,9 +197,9 @@ def test_o_perfil_que_nao_e_de_jogo_nao_e_tocado(tmp_path: Path) -> None:
     _escrever(destino / loader.ARQUIVO_DO_PADRAO, json.loads(
         (FABRICA / loader.ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     ))
-    dela = _molde_de_jogo("Faith", "1179080")
-    dela["match"] = {**dela["match"], "process_name": ["faith.exe"]}
-    _escrever(destino / "faith.json", dela)
+    do_usuario = _molde_de_jogo("Faith", "1179080")
+    do_usuario["match"] = {**do_usuario["match"], "process_name": ["faith.exe"]}
+    _escrever(destino / "faith.json", do_usuario)
     antes = {p.name: p.read_bytes() for p in destino.glob("*.json")}
 
     assert loader.enxugar_perfis_de_jogo(dest_dir=destino) == []

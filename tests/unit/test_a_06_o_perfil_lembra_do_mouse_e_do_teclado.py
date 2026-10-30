@@ -172,7 +172,7 @@ def _zerar_a_memoria(a06) -> None:
     um dublê envenenou outro arquivo por ordem de teste em 04/09.
     """
     a06._PEDIDO.clear()
-    a06._largar_o_que_ela_mexeu()
+    a06._largar_o_que_o_usuario_mexeu()
 
 
 def test_a_barra_do_cursor_grava_no_perfil(pac, a06):

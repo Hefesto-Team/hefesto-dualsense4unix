@@ -154,7 +154,7 @@ class _Ponte:
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """A borda dublada; o registro de máscaras e o lembrete da aba zerados."""
     monkeypatch.setattr(vp, "make_virtual_pad", _fabrica)
     monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)

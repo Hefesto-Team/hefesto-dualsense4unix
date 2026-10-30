@@ -41,7 +41,7 @@ class _DeviceFalso:
 
 
 @pytest.fixture()
-def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Um mundo onde o nó do controle pode sumir e voltar com outro número."""
     estado: dict[str, Any] = {
         "no_atual": str(_NO_ANTES),
@@ -64,7 +64,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     )
     monkeypatch.setattr(er_mod, "discover_dualsense_evdevs", lambda: {})
 
-    class _AvisoDaBancada:
+    class _AvisoDoEnsaio:
         """O `/dev/input` desta bancada: muda quando o nó vigente muda."""
 
         def __init__(self) -> None:
@@ -77,19 +77,19 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             self.nasceu = bool(mudou and estado["no_atual"])
             return bool(mudou)
 
-    monkeypatch.setattr(er_mod, "_novo_aviso_de_entrada", _AvisoDaBancada)
+    monkeypatch.setattr(er_mod, "_novo_aviso_de_entrada", _AvisoDoEnsaio)
     return estado
 
 
 def _reader_com_morte(
-    bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    ensaio: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> EvdevReader:
     """Um reader cujo select morre com ENODEV assim que o flag é armado."""
     reader = EvdevReader(device_path=None)
 
     def _select(_dev: object) -> list[object]:
-        if bancada["morrer"].is_set():
-            bancada["morrer"].clear()
+        if ensaio["morrer"].is_set():
+            ensaio["morrer"].clear()
             raise OSError(19, "No such device")
         time.sleep(0.01)
         return []
@@ -100,22 +100,22 @@ def _reader_com_morte(
 
 class TestOCicloCompleto:
     def test_o_leitor_reabre_no_no_novo_depois_da_reconexao(
-        self, bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+        self, ensaio: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A MORDIDA. É o defeito de 16/08 inteiro, em três atos."""
-        reader = _reader_com_morte(bancada, monkeypatch)
+        reader = _reader_com_morte(ensaio, monkeypatch)
         assert reader.start() is True
         try:
-            _esperar(lambda: str(_NO_ANTES) in bancada["abertos"], 2.0)
+            _esperar(lambda: str(_NO_ANTES) in ensaio["abertos"], 2.0)
 
-            bancada["no_atual"] = ""
-            bancada["morrer"].set()
+            ensaio["no_atual"] = ""
+            ensaio["morrer"].set()
             time.sleep(0.3)
 
-            bancada["no_atual"] = str(_NO_DEPOIS)
+            ensaio["no_atual"] = str(_NO_DEPOIS)
 
             reabriu = _esperar(
-                lambda: str(_NO_DEPOIS) in bancada["abertos"], 4.0
+                lambda: str(_NO_DEPOIS) in ensaio["abertos"], 4.0
             )
         finally:
             reader.stop()
@@ -123,45 +123,45 @@ class TestOCicloCompleto:
         assert reabriu, (
             "o leitor NÃO reabriu no nó novo — é o defeito de 16/08: o daemon "
             f"segue dizendo connected=True com os eixos congelados. "
-            f"nós abertos: {bancada['abertos']}"
+            f"nós abertos: {ensaio['abertos']}"
         )
 
     def test_o_no_velho_nao_e_reaberto_as_cegas(
-        self, bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+        self, ensaio: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Reabrir o número antigo pegaria OUTRO aparelho."""
-        reader = _reader_com_morte(bancada, monkeypatch)
+        reader = _reader_com_morte(ensaio, monkeypatch)
         assert reader.start() is True
         try:
-            _esperar(lambda: str(_NO_ANTES) in bancada["abertos"], 2.0)
-            quantos_antes = bancada["abertos"].count(str(_NO_ANTES))
+            _esperar(lambda: str(_NO_ANTES) in ensaio["abertos"], 2.0)
+            quantos_antes = ensaio["abertos"].count(str(_NO_ANTES))
 
-            bancada["no_atual"] = ""
-            bancada["morrer"].set()
+            ensaio["no_atual"] = ""
+            ensaio["morrer"].set()
             time.sleep(0.6)
         finally:
             reader.stop()
 
-        assert bancada["abertos"].count(str(_NO_ANTES)) == quantos_antes, (
+        assert ensaio["abertos"].count(str(_NO_ANTES)) == quantos_antes, (
             "o reader reabriu o nó VELHO enquanto o controle estava fora — "
             "o kernel já pode ter dado esse número a outro aparelho"
         )
 
     def test_sumico_prolongado_nao_derruba_a_thread(
-        self, bancada: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+        self, ensaio: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Controle desligado por um tempo não pode matar o leitor."""
-        reader = _reader_com_morte(bancada, monkeypatch)
+        reader = _reader_com_morte(ensaio, monkeypatch)
         assert reader.start() is True
         try:
-            _esperar(lambda: str(_NO_ANTES) in bancada["abertos"], 2.0)
-            bancada["no_atual"] = ""
-            bancada["morrer"].set()
+            _esperar(lambda: str(_NO_ANTES) in ensaio["abertos"], 2.0)
+            ensaio["no_atual"] = ""
+            ensaio["morrer"].set()
             time.sleep(1.0)
 
-            bancada["no_atual"] = str(_NO_DEPOIS)
+            ensaio["no_atual"] = str(_NO_DEPOIS)
             voltou = _esperar(
-                lambda: str(_NO_DEPOIS) in bancada["abertos"], 4.0
+                lambda: str(_NO_DEPOIS) in ensaio["abertos"], 4.0
             )
         finally:
             reader.stop()

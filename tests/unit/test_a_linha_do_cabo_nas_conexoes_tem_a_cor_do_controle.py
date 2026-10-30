@@ -89,7 +89,7 @@ def _a_linha_do_radio(jogador: int) -> dict[str, Any]:
     return dict(ap)
 
 
-def test_1_o_controle_no_cabo_leva_a_cor_o_nome_dela_e_o_jogador() -> None:
+def test_1_o_controle_no_cabo_leva_a_cor_o_nome_do_usuario_e_o_jogador() -> None:
     (ap,) = _no_cabo([1])
     assert ap["usb"] is True and ap["desligado"] is True
     assert ap["jogador"] == 1 and ap["cor_nome"] == "Cosmic Red"

@@ -167,7 +167,7 @@ INTERFACES_BT: dict[str, str] = {
 }
 
 
-class Bancada:
+class Ensaio:
     """Um sysfs inteiro em memória, mais o registro de tudo que foi tocado."""
 
     def __init__(
@@ -233,14 +233,14 @@ class Bancada:
         }
 
 
-def _so_um_adaptador() -> Bancada:
+def _so_um_adaptador() -> Ensaio:
     """A mesma bancada, com `hci1` fora — uma mesa de UM adaptador."""
-    return Bancada(interfaces_bt={"hci0": INTERFACES_BT["hci0"]})
+    return Ensaio(interfaces_bt={"hci0": INTERFACES_BT["hci0"]})
 
 
 def test_uma_mesa_de_um_adaptador_lista_um() -> None:
     """O aceite escrito da sprint, na única forma em que esta bancada o prova."""
-    bancada = Bancada(
+    ensaio = Ensaio(
         interfaces_bt={
             "hci0": INTERFACES_BT["hci0"],
             "hci0:12": INTERFACES_BT["hci0"],
@@ -248,10 +248,10 @@ def test_uma_mesa_de_um_adaptador_lista_um() -> None:
     )
     achados = adaptadores_bluetooth(
         raiz_bt=RAIZ_BT,
-        listar=bancada.listar,
-        ler=bancada.ler,
-        existe=bancada.existe,
-        real=bancada.real,
+        listar=ensaio.listar,
+        ler=ensaio.ler,
+        existe=ensaio.existe,
+        real=ensaio.real,
     )
 
     assert len(achados) == 1
@@ -263,9 +263,9 @@ def test_uma_mesa_de_um_adaptador_lista_um() -> None:
 
 def test_o_hub_nao_entra_na_lista_de_radios() -> None:
     """Hub não é aparelho de rádio: é o próprio barramento."""
-    bancada = Bancada()
+    ensaio = Ensaio()
     achados = radios_do_barramento(
-        raiz_usb=RAIZ_USB, listar=bancada.listar, ler=bancada.ler, real=bancada.real
+        raiz_usb=RAIZ_USB, listar=ensaio.listar, ler=ensaio.ler, real=ensaio.real
     )
 
     vistos = {f"{r.vid}:{r.pid}" for r in achados}
@@ -283,8 +283,8 @@ def test_um_dualsense_no_cabo_nao_e_outro_radio_que_divide_a_faixa() -> None:
     Mordida: apagar o `if vid in _VIDS_DE_CONTROLE: continue` o `054c:0ce6`
     entrou na lista e o teste reprovou.
     """
-    bancada = Bancada()
-    mesa = ler_a_mesa(**bancada.fontes())
+    ensaio = Ensaio()
+    mesa = ler_a_mesa(**ensaio.fontes())
 
     vistos = {f"{r.vid}:{r.pid}" for r in mesa.radios}
     assert "054c:0ce6" not in vistos, vistos
@@ -293,8 +293,8 @@ def test_um_dualsense_no_cabo_nao_e_outro_radio_que_divide_a_faixa() -> None:
 
 def test_o_adaptador_nao_aparece_tambem_na_lista_de_radios() -> None:
     """A mesma antena não pode contar duas vezes."""
-    bancada = Bancada()
-    mesa = ler_a_mesa(**bancada.fontes())
+    ensaio = Ensaio()
+    mesa = ler_a_mesa(**ensaio.fontes())
 
     nos_de_radio = {r.no for r in mesa.radios}
     for adaptador in mesa.adaptadores:
@@ -303,8 +303,8 @@ def test_o_adaptador_nao_aparece_tambem_na_lista_de_radios() -> None:
 
 def test_dois_aparelhos_colados_geram_um_aviso_e_nao_dois() -> None:
     """Dois aparelhos, um problema — e a tela mostra um aviso."""
-    bancada = Bancada()
-    mesa = ler_a_mesa(**bancada.fontes())
+    ensaio = Ensaio()
+    mesa = ler_a_mesa(**ensaio.fontes())
     curtos = [
         (os.path.basename(um), os.path.basename(outro)) for um, outro in mesa.apertadas
     ]
@@ -314,8 +314,8 @@ def test_dois_aparelhos_colados_geram_um_aviso_e_nao_dois() -> None:
 
 def test_portas_vizinhas_em_hubs_diferentes_nao_estao_coladas() -> None:
     """`1.2` e `2.3` têm número final vizinho e estão em hubs diferentes."""
-    bancada = Bancada()
-    mesa = ler_a_mesa(**bancada.fontes())
+    ensaio = Ensaio()
+    mesa = ler_a_mesa(**ensaio.fontes())
     colados = {
         os.path.basename(um) for par in mesa.apertadas for um in par
     }
@@ -358,7 +358,7 @@ def test_controladores_pci_diferentes_nunca_estao_colados() -> None:
 
 def test_sysfs_vazio_ou_ilegivel_devolve_lista_vazia_sem_levantar() -> None:
     """O estado REAL desta bancada, e o de qualquer PC sem dongle."""
-    vazia = Bancada(aparelhos={}, interfaces_bt={})
+    vazia = Ensaio(aparelhos={}, interfaces_bt={})
     mesa = ler_a_mesa(**vazia.fontes())
     assert mesa.adaptadores == ()
     assert mesa.radios == ()
@@ -367,7 +367,7 @@ def test_sysfs_vazio_ou_ilegivel_devolve_lista_vazia_sem_levantar() -> None:
     def _explode(_raiz: str) -> list[str]:
         raise OSError(13, "acesso negado")
 
-    ilegivel = Bancada(listar=_explode)
+    ilegivel = Ensaio(listar=_explode)
     quebrada = ler_a_mesa(**ilegivel.fontes())
     assert quebrada.adaptadores == ()
     assert quebrada.radios == ()
@@ -375,14 +375,14 @@ def test_sysfs_vazio_ou_ilegivel_devolve_lista_vazia_sem_levantar() -> None:
 
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
     """O teste que protege a FOTO — e o único que morde o vazamento."""
-    bancada = Bancada()
-    ler_a_mesa(**bancada.fontes())
+    ensaio = Ensaio()
+    ler_a_mesa(**ensaio.fontes())
 
-    escapados = [c for c in bancada.tocados if not c.startswith("/mentira")]
+    escapados = [c for c in ensaio.tocados if not c.startswith("/mentira")]
     assert not escapados, (
         "a leitura tocou caminhos fora da bancada injetada — "
         f"o primeiro é {escapados[0]!r}"
     )
-    assert bancada.tocados, "nenhum leitor foi chamado: a bancada não provou nada"
+    assert ensaio.tocados, "nenhum leitor foi chamado: a bancada não provou nada"
 
 

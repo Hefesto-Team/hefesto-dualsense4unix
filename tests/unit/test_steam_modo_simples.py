@@ -102,7 +102,7 @@ class TestFormatGameBroken:
             assert "Steam Input" not in msg
             assert "inicialização" not in msg
 
-    def test_nao_promete_o_que_ela_mediu_ao_contrario(self) -> None:
+    def test_nao_promete_o_que_o_usuario_mediu_ao_contrario(self) -> None:
         """NOTA DATADA — 07/08/2026: o toast dizia "o Hefesto sai da frente"."""
         for status in ("adicionado", "ja_estava"):
             msg = format_game_broken_result(status=status, appid=2111190)

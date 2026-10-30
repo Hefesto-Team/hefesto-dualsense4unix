@@ -173,7 +173,7 @@ def test_o_botao_sem_sequencia_passa_intacto() -> None:
     assert b == F({"cross"})
 
 
-def test_a_sequencia_da_peca_vale_so_nela() -> None:
+def test_a_sequencia_da_peca_vale_so_no_usuario() -> None:
     perfil = _cfg(passos=[{"botao": "cross", "ms": 0}])
     peca = _cfg(passos=[{"botao": "square", "ms": 0}])
     store = SimpleNamespace()

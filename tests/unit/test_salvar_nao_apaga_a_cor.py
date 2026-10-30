@@ -34,7 +34,7 @@ from tests.unit.ponte_do_rodape import PonteDoRodape
 
 from hefesto_dualsense4unix.interface.pacotes import rodape
 
-COR_DELA = (0, 0, 255)
+COR_DO_USUARIO = (0, 0, 255)
 
 UNIQ = "aabbcc0000ff"
 
@@ -73,49 +73,49 @@ def _cor_do_controle(prof: Any, uniq: str = UNIQ) -> tuple[int, int, int] | None
 
 
 @pytest.fixture
-def perfil_com_a_cor_dela(monkeypatch: pytest.MonkeyPatch) -> str:
+def perfil_com_a_cor_do_usuario(monkeypatch: pytest.MonkeyPatch) -> str:
     """Um perfil no disco de mentira, com a cor dela guardada."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     nome = "perfil-da-prova"
     p = Profile(name=nome, match=MatchAny(), priority=100)
-    p.leds.lightbar = COR_DELA
+    p.leds.lightbar = COR_DO_USUARIO
     save_profile(p, origem="teste")
-    assert tuple(load_profile(nome).leds.lightbar) == COR_DELA
+    assert tuple(load_profile(nome).leds.lightbar) == COR_DO_USUARIO
     return nome
 
 
-def test_barra_apagada_nao_grava_cor(perfil_com_a_cor_dela: str) -> None:
+def test_barra_apagada_nao_grava_cor(perfil_com_a_cor_do_usuario: str) -> None:
     """Com a barra desligada, a cor do disco fica: é a cor para quando acender."""
-    salvo = _salvar(perfil_com_a_cor_dela, _controle((0, 0, 0), acesa=False))
-    assert _cor_do_controle(salvo) == COR_DELA, (
+    salvo = _salvar(perfil_com_a_cor_do_usuario, _controle((0, 0, 0), acesa=False))
+    assert _cor_do_controle(salvo) == COR_DO_USUARIO, (
         "a barra apagada virou cor no disco — é o preto viajando por cima da "
         "escolha dela")
 
 
-def test_cor_desconhecida_tambem_nao_grava(perfil_com_a_cor_dela: str) -> None:
+def test_cor_desconhecida_tambem_nao_grava(perfil_com_a_cor_do_usuario: str) -> None:
     """Sem fonte, não há cor a afirmar — e o disco não muda."""
-    salvo = _salvar(perfil_com_a_cor_dela,
+    salvo = _salvar(perfil_com_a_cor_do_usuario,
                     _controle(None, acesa=True, fonte="desconhecida"))
-    assert _cor_do_controle(salvo) == COR_DELA
+    assert _cor_do_controle(salvo) == COR_DO_USUARIO
 
 
 def test_barra_acesa_noutra_cor_tambem_nao_grava(
-        perfil_com_a_cor_dela: str) -> None:
+        perfil_com_a_cor_do_usuario: str) -> None:
     """Acesa noutra cor (a camada da mão, o automático, a luz pós-brilho): o disco fica."""
-    salvo = _salvar(perfil_com_a_cor_dela,
+    salvo = _salvar(perfil_com_a_cor_do_usuario,
                     _controle((126, 184, 212), acesa=True))
-    assert _cor_do_controle(salvo) == COR_DELA
+    assert _cor_do_controle(salvo) == COR_DO_USUARIO
 
 
 def test_dois_controles_um_apagado_e_um_aceso(
-        perfil_com_a_cor_dela: str) -> None:
+        perfil_com_a_cor_do_usuario: str) -> None:
     """Na mesa de dois, nenhum dos dois leva a luz do aparelho ao disco."""
     outro = "aabbcc0000ee"
-    salvo = _salvar(perfil_com_a_cor_dela,
+    salvo = _salvar(perfil_com_a_cor_do_usuario,
                     _controle((0, 0, 0), acesa=False),
                     _controle((255, 0, 0), acesa=True, uniq=outro))
-    assert _cor_do_controle(salvo) == COR_DELA, "o apagado gravou cor"
-    assert _cor_do_controle(salvo, outro) == COR_DELA, (
+    assert _cor_do_controle(salvo) == COR_DO_USUARIO, "o apagado gravou cor"
+    assert _cor_do_controle(salvo, outro) == COR_DO_USUARIO, (
         "o controle aceso levou a luz do aparelho ao disco")

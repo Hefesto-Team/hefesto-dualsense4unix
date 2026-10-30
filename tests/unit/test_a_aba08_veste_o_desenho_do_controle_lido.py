@@ -14,7 +14,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 REGUA = RAIZ / "scripts/check_a_cor_vem_do_aparelho.py"
 
 DESENHO_DA_LINHA = re.compile(r"<svg\b[^>]*\bclass=\"ds-svg ds-mini\"[^>]*>")
@@ -25,7 +25,7 @@ REGRA_DE_COLORWAY = re.compile(r'svg\[data-colorway="([^"]+)"\]')
 
 
 def _html() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+    return ENSAIO.read_text(encoding="utf-8")
 
 
 def _pacote() -> Any:
@@ -60,7 +60,7 @@ def test_todo_desenho_da_aba_tem_o_endereco_do_colorway() -> None:
             f"{tag[:160]}")
 
 
-def test_so_uma_folha_de_cores_e_ela_nao_esta_dentro_de_um_desenho() -> None:
+def test_so_uma_folha_de_cores_e_o_usuario_nao_esta_dentro_de_um_desenho() -> None:
     """A folha é UMA, da página, e não uma cópia podada por desenho."""
     folhas = FOLHA.findall(_html())
     assert len(folhas) == 1, (
@@ -72,7 +72,7 @@ def test_so_uma_folha_de_cores_e_ela_nao_esta_dentro_de_um_desenho() -> None:
         f"prefixa o `id` por controle, e é ele que a poda para um modelo só")
 
 
-def test_todo_modelo_do_mapa_dela_tem_regra_na_pagina() -> None:
+def test_todo_modelo_do_mapa_do_usuario_tem_regra_na_pagina() -> None:
     """Os VINTE E OITO, e não os dois da mesa de hoje."""
     declarados = set(REGRA_DE_COLORWAY.findall(_html()))
     faltam = _modelos_do_mapa() - declarados
@@ -204,10 +204,10 @@ def test_sem_cor_lida_o_desenho_fica_sem_identidade() -> None:
 
 @pytest.mark.skipif(not REGUA.exists(),
                     reason="o portão da cor ainda não chegou a esta árvore")
-def test_a_bancada_da_08_nao_tem_mais_cor_cravada() -> None:
+def test_o_ensaio_da_08_nao_tem_mais_cor_cravada() -> None:
     """A régua da leva, chamada como a leva manda, tem de devolver zero."""
     saida = subprocess.run(
-        [sys.executable, str(REGUA), "--bancada", "--aba", "08"],
+        [sys.executable, str(REGUA), "--ensaio", "--aba", "08"],
         capture_output=True, text=True, cwd=str(RAIZ), check=False)
     assert saida.returncode == 0, (
         "a `08-conexoes` voltou a ter cor de aparelho cravada na bancada:\n"

@@ -98,7 +98,7 @@ def test_a_permissao_estreita_basta_para_o_controle(tmp_path) -> None:
     assert caixa.permissao_de(HEROIC, **_lar_de_mentira(tmp_path)).entra
 
 
-def test_o_override_dela_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
+def test_o_override_do_usuario_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
     """O que ELA mudou é a resposta mais nova, e o `!` é a única que fecha."""
     _instalar(tmp_path, DOLPHIN, devices="dri")
     _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
@@ -219,7 +219,7 @@ def test_quem_nao_tem_estrada_nao_ganha_botao(chave, tmp_path) -> None:
     assert cura.estradas_do_cartao(chave, ("flatpak",), **_lar_de_mentira(tmp_path)) == ()
 
 
-def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_dela(tmp_path) -> None:
+def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_do_usuario(tmp_path) -> None:
     """As nossas entram; o `MANGOHUD` dela fica; o resto do arquivo fica."""
     _instalar(tmp_path, HEROIC)
     pasta = tmp_path / ".var/app" / HEROIC / "config/heroic"
@@ -284,15 +284,15 @@ def test_a_cura_nasce_onde_nao_havia_override(tmp_path) -> None:
         "uma que ninguém publicou")
 
 
-def test_a_cura_devolve_a_permissao_do_arquivo_dela(tmp_path) -> None:
+def test_a_cura_devolve_a_permissao_do_arquivo_do_usuario(tmp_path) -> None:
     """**MEDIDO PELO CONFERENTE EM 09/09/2026: o clique fechava o arquivo dela.**"""
     import os
     import stat as _stat
 
     _instalar(tmp_path, DOLPHIN)
     _instalar(tmp_path, MGBA)
-    dela = _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
-    os.chmod(dela, 0o644)
+    do_usuario = _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
+    os.chmod(do_usuario, 0o644)
     pasta = tmp_path / ".local/share/flatpak/overrides"
     os.chmod(pasta, 0o755)
     nasce = pasta / MGBA
@@ -301,9 +301,9 @@ def test_a_cura_devolve_a_permissao_do_arquivo_dela(tmp_path) -> None:
         "emuladores", ATALHOS_EMULADORES, **_lar_de_mentira(tmp_path),
         pasta_do_ambiente=_ambiente(tmp_path)))
 
-    assert _stat.S_IMODE(dela.stat().st_mode) == 0o644, (
+    assert _stat.S_IMODE(do_usuario.stat().st_mode) == 0o644, (
         "a cura fechou um arquivo de configuração DELA ao escrever nele")
-    assert dela.stat().st_uid == os.getuid()
+    assert do_usuario.stat().st_uid == os.getuid()
     assert _stat.S_IMODE(nasce.stat().st_mode) == 0o644, (
         "o override que NASCEU herdou o 0600 do arquivo temporário em vez da "
         "pasta em que ele mora")

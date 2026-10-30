@@ -101,10 +101,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 def pagina_fresca(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
     """O desenho da 07 gerado agora, do CSS e do Python desta árvore, numa pasta de prova: a
     régua mede o que o gerador faz hoje, e a ``mockup/`` (que a costura regera) não entra."""
-    pasta = tmp_path_factory.mktemp("bancada-07")
+    pasta = tmp_path_factory.mktemp("ensaio-07")
     for vizinha in (RAIZ / "mockup").glob("*.html"):
         shutil.copy2(vizinha, pasta / vizinha.name)
-    ambiente = dict(os.environ, HEFESTO_BANCADA=str(pasta), PYTHONDONTWRITEBYTECODE="1",
+    ambiente = dict(os.environ, HEFESTO_ENSAIO=str(pasta), PYTHONDONTWRITEBYTECODE="1",
                     PYTHONPATH=os.pathsep.join(filter(None, [str(RAIZ / "src"),
                                                              os.environ.get("PYTHONPATH", "")])))
     gerou = subprocess.run([sys.executable, "-m", "hefesto_dualsense4unix.interface.aba07"],

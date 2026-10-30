@@ -255,7 +255,7 @@ def _o_lugar(nome: str, *, com_em: bool = False, maiuscula: bool = False) -> str
     """O nome com o artigo: «a Entrada 3», «na entrada Meio».
 
     O ARTIGO É SEMPRE FEMININO, porque concorda com «entrada» e não com o nome
-    (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO). Aqui se adivinhava
+    (O-MAPA-QUE-O-USUARIO-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO). Aqui se adivinhava
     o gênero pelo nome, e a tela dizia «O 13 já tem…» e «no Meio». A frase e
     o artigo são do dono da grafia (``utils/rotulo_da_entrada``); este
     governador não compõe nada.
@@ -319,7 +319,7 @@ class Vaga:
     adaptador: str
     tipo: str
     alem_do_limite: bool = False
-    por_escolha_dela: bool = False
+    por_escolha_do_usuario: bool = False
     sem_medida: bool = False
     pedida_em: float = 0.0
     escritas: int = 0
@@ -736,7 +736,7 @@ class GovernadorDoRadio:
                 self._pedidos.pop(chave, None)
                 self._esperando_medida.pop(chave, None)
                 vaga = self._conceder(uniq, adaptador, tipo, alem=True, agora=agora)
-                vaga.por_escolha_dela = autorizado
+                vaga.por_escolha_do_usuario = autorizado
                 vaga.sem_medida = sem_medida
                 return vaga
             self._esperando_medida.pop(chave, None)
@@ -872,7 +872,7 @@ class GovernadorDoRadio:
             )
         if not vaga.alem_do_limite:
             por_que = "há som para mandar"
-        elif vaga.por_escolha_dela:
+        elif vaga.por_escolha_do_usuario:
             por_que = "ela ligou além do limite"
         elif vaga.sem_medida:
             por_que = POR_QUE_NAO_SEI_SE_HA_VAGA

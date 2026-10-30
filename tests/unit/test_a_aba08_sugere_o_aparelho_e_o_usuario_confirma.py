@@ -73,13 +73,13 @@ def _com_o_censo(a08, monkeypatch, por_no: dict[str, tuple[str, str]]) -> None:
     monkeypatch.setattr(a08, "_censo", lambda *_a, **_k: censo)
 
 
-def test_a_palavra_do_kernel_que_ja_e_a_dela_vira_sugestao(a08, monkeypatch):
+def test_a_palavra_do_kernel_que_ja_e_a_do_usuario_vira_sugestao(a08, monkeypatch):
     """"Teclado" (kernel) e "Teclado" (lista dela) casam sem tabela nenhuma."""
     _com_o_censo(a08, monkeypatch, {"/sys/x": ("Teclado", "lido")})
     assert a08._sugestao_do_vizinho("/sys/x", _rotulos(a08)) == "Teclado"
 
 
-def test_a_camera_do_kernel_vira_a_webcam_dela(a08, monkeypatch):
+def test_a_camera_do_kernel_vira_a_webcam_do_usuario(a08, monkeypatch):
     """O caso que ELA respondeu, e o único da tabela que a bancada exercita."""
     _com_o_censo(a08, monkeypatch, {"/sys/cam": ("Câmera", "lido")})
     assert a08._sugestao_do_vizinho("/sys/cam", _rotulos(a08)) == "Webcam"
@@ -109,7 +109,7 @@ def test_a_classe_ff_nao_sugere_nada(a08, monkeypatch):
     assert a08._sugestao_do_vizinho("/sys/ff", _rotulos(a08)) == ""
 
 
-def test_a_palavra_sem_par_na_lista_dela_nao_vira_sugestao(a08, monkeypatch):
+def test_a_palavra_sem_par_na_lista_do_usuario_nao_vira_sugestao(a08, monkeypatch):
     """"Impressora" o kernel diz; a lista dela não a tem. Então não há sugestão."""
     _com_o_censo(a08, monkeypatch, {"/sys/p": ("Impressora", "lido")})
     assert a08._sugestao_do_vizinho("/sys/p", _rotulos(a08)) == ""
@@ -123,7 +123,7 @@ def test_o_no_vazio_e_o_censo_ausente_nao_sugerem(a08, monkeypatch):
     assert a08._sugestao_do_vizinho("/sys/x", _rotulos(a08)) == ""
 
 
-def test_toda_sugestao_possivel_cabe_na_lista_dela(a08):
+def test_toda_sugestao_possivel_cabe_na_lista_do_usuario(a08):
     """O destino de cada equivalência EXISTE em `_TIPOS_DE_RADIO`."""
     rotulos = _rotulos(a08)
     fora = sorted(d for d in a08._SUGESTAO_DO_KERNEL.values() if d not in rotulos)
@@ -157,7 +157,7 @@ def _clicar(pac, a08, ponte, valor: str) -> None:
     fn(ctx, {"alvo": "3554:fa09", "valor": valor, "evento": "click"}, ponte)
 
 
-def test_o_gesto_nao_grava_a_sugestao_como_resposta_dela(pac, a08, um_vizinho):
+def test_o_gesto_nao_grava_a_sugestao_como_resposta_do_usuario(pac, a08, um_vizinho):
     """A REGRA INTEIRA numa linha: sugestão escolhida grava `tipo: None`."""
     ponte = PonteDeMentira()
     sugerida = a08._pergunta_sugerida("Teclado", a08._a_pergunta())
@@ -177,7 +177,7 @@ def test_o_gesto_nao_recusa_calado_na_sugestao(pac, a08, um_vizinho):
         _clicar(pac, a08, ponte, a08._pergunta_sugerida(rotulo, a08._a_pergunta()))
 
 
-def test_a_resposta_dela_continua_gravando(pac, a08, um_vizinho):
+def test_a_resposta_do_usuario_continua_gravando(pac, a08, um_vizinho):
     """A confirmação — um toque — grava, e grava o ID do esquema, não o rótulo."""
     ponte = PonteDeMentira()
     _clicar(pac, a08, ponte, "Webcam")

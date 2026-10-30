@@ -99,7 +99,7 @@ class _AuthorityController(FakeController):
         pass
 
 
-async def test_o_sinal_de_jogo_nao_le_o_jogo_dela(proc_com_o_jogo: set[str]) -> None:
+async def test_o_sinal_de_jogo_nao_le_o_jogo_do_usuario(proc_com_o_jogo: set[str]) -> None:
     """O caso medido: sem evidência e com o detector são, a autoridade é `daemon`."""
     ctrl = _AuthorityController(transport="usb")
     daemon = Daemon(

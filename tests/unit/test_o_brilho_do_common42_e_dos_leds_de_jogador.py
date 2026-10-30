@@ -46,7 +46,7 @@ def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
-    h = _PinnedPyDualSense(b"/dev/hidraw-de-bancada", is_edge=False)
+    h = _PinnedPyDualSense(b"/dev/hidraw-de-ensaio", is_edge=False)
     h.audio, h.light = DSAudio(), DSLight()
     h.triggerL, h.triggerR = DSTrigger(), DSTrigger()
     h._suppress_leds = led_gravavel

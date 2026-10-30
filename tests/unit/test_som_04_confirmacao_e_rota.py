@@ -372,7 +372,7 @@ def test_mandar_para_o_controle_guarda_o_sink_anterior_antes_de_trocar() -> None
     )
 
 
-def test_voltar_ao_anterior_devolve_o_sink_dela_e_esquece_a_memoria() -> None:
+def test_voltar_ao_anterior_devolve_o_sink_do_usuario_e_esquece_a_memoria() -> None:
     """O desfazer inteiro, ida e volta, com a memória limpa no fim."""
     pactl = _Pactl(padrao=SINK_HDMI)
     memoria: dict[str, str] = {}

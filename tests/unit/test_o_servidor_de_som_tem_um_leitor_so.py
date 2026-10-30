@@ -806,7 +806,7 @@ def test_as_perguntas_que_o_retrato_entende(argv: list[str], esperado: Any) -> N
     (["pactl", "--format=json", "list", "sinks"], set()),
     (["pactl", "subscribe"], set()),
 ])
-def test_cada_escrita_deixa_pendente_o_que_ela_toca(argv: list[str], tipos: set[str]) -> None:
+def test_cada_escrita_deixa_pendente_o_que_o_usuario_toca(argv: list[str], tipos: set[str]) -> None:
     assert rs.tipos_da_escrita(argv) == tipos
 
 

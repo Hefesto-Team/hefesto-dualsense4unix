@@ -58,7 +58,7 @@ class TestPredicadoDaLinhagem:
         )
         assert e_clone_conhecido(MAC_CLONE)
 
-    def test_a_faixa_desta_bancada_continua_genuina(self) -> None:
+    def test_a_faixa_deste_ensaio_continua_genuina(self) -> None:
         """A cura não pode quebrar o que JÁ funcionava — o Pro daqui."""
         daqui = sorted(OUIS_NINTENDO_VISTAS)[0]
         mac = f"{daqui[0:2]}:{daqui[2:4]}:{daqui[4:6]}:00:00:44"
@@ -388,7 +388,7 @@ class TestNenhumCaminhoDeCasaNaArvore:
         assert dono_da_raiz.resolve().parents[3] == RAIZ.resolve()
         assert (RAIZ / "pyproject.toml").exists()
 
-    def test_nenhum_script_traz_o_home_dela_como_padrao(self) -> None:
+    def test_nenhum_script_traz_o_home_do_usuario_como_padrao(self) -> None:
         """A varredura inteira, para o defeito não voltar por outro arquivo.
 
         **A VARREDURA CRESCEU DUAS VEZES EM 08/09/2026, e a segunda é a que

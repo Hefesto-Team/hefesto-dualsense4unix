@@ -50,7 +50,7 @@ Cada uma foi executada, e a frase entre parênteses é a que a régua devolveu:
   ``test_os_dois_volumes_vao_em_escalas_diferentes``;
 * trocar ``if base.volume is None:`` por ``if True:`` em ``_lembrar_do_som``
   (preferir a leitura VIVA ao que o perfil já sabe) — reprova
-  ``test_a_rota_nao_derruba_o_volume_que_ela_escolheu``. **É a mordida que
+  ``test_a_rota_nao_derruba_o_volume_que_o_usuario_escolheu``. **É a mordida que
   mediu um defeito real**: a primeira versão desta cura preferia o tique do
   daemon, e com o perfil em 62 e o tique ainda em 100 o clique na rota devolvia
   o disco a 100;
@@ -247,7 +247,7 @@ def test_os_dois_volumes_vao_em_escalas_diferentes(casa: Any) -> None:
         f"{(dele.get('speaker') or {}).get('volume')!r}")
 
 
-def test_a_rota_nao_derruba_o_volume_que_ela_escolheu(casa: Any) -> None:
+def test_a_rota_nao_derruba_o_volume_que_o_usuario_escolheu(casa: Any) -> None:
     """O TIQUE DO DAEMON NÃO CORRIGE O QUE O USUÁRIO ESCOLHEU — defeito medido.
 
     A primeira versão de `_lembrar_do_som` preenchia o volume do alto-falante

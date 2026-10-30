@@ -43,7 +43,7 @@ def test_a_entrada_sem_nome_diz_entrada_e_o_numero() -> None:
     assert _o_ligado(_o_mapa({"15": "15a"})).startswith("Ligado na Entrada 15")
 
 
-def test_a_entrada_com_nome_diz_o_nome_que_ela_deu() -> None:
+def test_a_entrada_com_nome_diz_o_nome_que_o_usuario_deu() -> None:
     assert _o_ligado(_o_mapa({"15": "15a"}, {"15": "Meio"})).startswith("Ligado na entrada Meio")
 
 

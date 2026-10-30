@@ -127,7 +127,7 @@ def julgar(caso: Caso, sonda: dict[str, dict[str, object]], lado: MedidaDoOutroL
     return falhas
 
 
-class Bancada(Protocol):
+class Ensaio(Protocol):
     """A bancada da VM (a da Forja): o vpad, o endpoint e a fonte vestidos."""
 
     def montar(self, caso: Caso) -> dict[str, str]: ...
@@ -161,17 +161,17 @@ def sha256(caminho: Path) -> str:
 
 
 def rodada(
-    proton: Path, sonda: Path, bancada: Bancada, casos: Iterable[Caso] | None = None,
+    proton: Path, sonda: Path, ensaio: Ensaio, casos: Iterable[Caso] | None = None,
 ) -> list[str]:
     """Todas as falhas da matriz; vazio é «passou»."""
     falhas: list[str] = []
     for caso in casos if casos is not None else matriz():
-        env = bancada.montar(caso)
+        env = ensaio.montar(caso)
         try:
             saida = rodar_a_sonda(proton, sonda, env)
-            falhas.extend(julgar(caso, ler_sonda(saida), bancada.medir()))
+            falhas.extend(julgar(caso, ler_sonda(saida), ensaio.medir()))
         finally:
-            bancada.desmontar()
+            ensaio.desmontar()
     return falhas
 
 
@@ -205,9 +205,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not f.passou:
         print(qp.linha_do_recibo(f, args.tarball_sha256, "não rodou", date.today().isoformat()))
         return 1
-    from bancada_da_vm import BancadaDaVm  # type: ignore[import-not-found]
+    from ensaio_da_vm import EnsaioDaVm  # type: ignore[import-not-found]
 
-    falhas = rodada(args.proton, args.sonda, BancadaDaVm())
+    falhas = rodada(args.proton, args.sonda, EnsaioDaVm())
     estado = qp.VEREDITO_PASSOU if not falhas else "; ".join(falhas)
     print(qp.linha_do_recibo(f, args.tarball_sha256, estado, date.today().isoformat()))
     return 0 if not falhas else 1

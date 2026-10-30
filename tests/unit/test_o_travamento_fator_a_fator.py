@@ -150,12 +150,12 @@ def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
     estado = _estado(_controle(VERMELHO, 300))
     sem = _janela(inst, _dez(inst, estado), rotulos,
                   inst.ContextoDaJanela(passo="base"))
-    com = _janela(inst, _dez(inst, estado, processos={"steam_dela": 1}), rotulos,
+    com = _janela(inst, _dez(inst, estado, processos={"steam_do_usuario": 1}), rotulos,
                   inst.ContextoDaJanela(passo="base"))
-    assert com["fatores"]["steam_dela"] == 1
+    assert com["fatores"]["steam_do_usuario"] == 1
     grupos = inst.resumir([sem, com])
     assert len(grupos) == 2, "a janela «base» com a Steam dela caiu no grupo da base"
-    da_steam = [g for g in grupos if g["fatores"]["steam_dela"] == 1]
+    da_steam = [g for g in grupos if g["fatores"]["steam_do_usuario"] == 1]
     assert len(da_steam) == 1 and da_steam[0]["janelas"] == 1
     assert da_steam[0]["passos"] == ["base"]
     xbox = _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 300,
@@ -177,18 +177,18 @@ def _processo(raiz: Path, pid: int, argv: list[str], home: str) -> None:
 
 def test_3_a_steam_do_teste_pelo_home(inst: Any, tmp_path: Path) -> None:
     raiz = tmp_path / "proc"
-    dela = "/home/ela"
+    do_usuario = "/home/ela"
     _processo(raiz, 100, ["/home/ela/.local/share/Steam/ubuntu12_32/steam", "-srt-logger-opened"],
-              dela)
-    _processo(raiz, 200, ["/tmp/pytest-of-ela/pytest-3/lar0/Steam/ubuntu12_32/steam"],
-              "/tmp/pytest-of-ela/pytest-3/lar0")
+              do_usuario)
+    _processo(raiz, 200, ["/tmp/pytest-of-o-usuario/pytest-3/lar0/Steam/ubuntu12_32/steam"],
+              "/tmp/pytest-of-o-usuario/pytest-3/lar0")
     _processo(raiz, 300, ["python3", "o_travamento_fator_a_fator.py", "janela", "--passo",
-                          "steam"], dela)
-    _processo(raiz, 299, ["bash", "-c", "python3 o_travamento_fator_a_fator.py janela"], dela)
-    _processo(raiz, 400, ["C:\\windows\\system32\\winedevice.exe"], dela)
-    _processo(raiz, 500, ["python", "-m", "pytest", "tests/unit"], dela)
-    contagem = inst.processos_da_mesa(str(raiz), dela, {300, 299})
-    assert contagem["steam_dela"] == 1
+                          "steam"], do_usuario)
+    _processo(raiz, 299, ["bash", "-c", "python3 o_travamento_fator_a_fator.py janela"], do_usuario)
+    _processo(raiz, 400, ["C:\\windows\\system32\\winedevice.exe"], do_usuario)
+    _processo(raiz, 500, ["python", "-m", "pytest", "tests/unit"], do_usuario)
+    contagem = inst.processos_da_mesa(str(raiz), do_usuario, {300, 299})
+    assert contagem["steam_do_usuario"] == 1
     assert contagem["steam_de_teste"] == 1
     assert contagem["steam_outra"] == 0
     assert contagem["winedevice"] == 1
@@ -257,7 +257,7 @@ def _linha_do_diario(epoch: float, texto: str) -> str:
     return f"{hora} MesaDeMentira {texto}"
 
 
-def test_6_a_linha_do_diario_entra_na_janela_dela(inst: Any) -> None:
+def test_6_a_linha_do_diario_entra_na_janela_do_usuario(inst: Any) -> None:
     t = T0 + 100
     kernel = "\n".join([
         _linha_do_diario(t - 3600, "kernel: hid_playstation: boot"),
@@ -281,7 +281,7 @@ def test_6_a_linha_do_diario_entra_na_janela_dela(inst: Any) -> None:
     assert sem_diario["fatores"]["vigia_do_radio"] is None
 
 
-def test_7_as_reguas_que_discordam_aparecem_e_so_elas(inst: Any) -> None:
+def test_7_as_reguas_que_discordam_aparecem_e_so_o_usuario(inst: Any) -> None:
     rotulos = inst.Rotulos()
     par = _estado(_controle(VERMELHO, 200, voz=70),
                   _controle(AZUL, 30, voz=0, modelo="Starlight Blue", jogador=3),
@@ -425,7 +425,7 @@ def test_o_laco_da_janela_fecha_uma_linha_por_janela(inst: Any, tmp_path: Path) 
         ar=lambda: {},
         varredura=lambda: Varredura(),
         raiz_proc=str(tmp_path),
-        home_dela="/home/ela",
+        home_do_usuario="/home/ela",
         excluir=frozenset(),
         banda_do_wifi=lambda _i: None,
         diario_do_kernel=lambda _a, _b: "",

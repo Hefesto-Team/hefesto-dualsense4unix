@@ -141,7 +141,7 @@ def test_clicar_no_que_ja_esta_valendo_nao_cria_pendencia() -> None:
     assert faixa(VIVO_DUALSENSE) == ("", "")
 
 
-def test_o_daemon_calado_nao_apaga_a_escolha_dela() -> None:
+def test_o_daemon_calado_nao_apaga_a_escolha_do_usuario() -> None:
     """O ramo offline do motor: *"o que o usuário decidiu não pode evaporar"*.
 
     E há uma armadilha medida: `mode_of_state({})` devolve `desktop` — ele só
@@ -166,7 +166,7 @@ def test_a_frase_e_a_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
         "o pacote deixou de usar `relancar.texto_do_pendente` — a frase virou cópia")
 
 
-def test_a_maiuscula_do_comeco_e_regra_dela() -> None:
+def test_a_maiuscula_do_comeco_e_regra_do_usuario() -> None:
     """28/08/2026: *"o `●` que vem antes é MARCADOR, não palavra"*."""
     from hefesto_dualsense4unix.app.actions.relancar import MARCADOR_PENDENTE
 
@@ -179,7 +179,7 @@ def test_a_maiuscula_do_comeco_e_regra_dela() -> None:
     assert primeira.isupper(), f"a frase começa em minúscula: {frase!r}"
 
 
-def test_o_rotulo_e_a_palavra_que_ela_leu_na_tela() -> None:
+def test_o_rotulo_e_a_palavra_que_o_usuario_leu_na_tela() -> None:
     """O `texto` do clique é o `textContent` do botão — o desenho, sem cópia."""
     ctx = Contexto(state=VIVO_DUALSENSE, mesa=[], conectados=[], estados={})
     aba.hefesto(ctx, {"modo": "native", "texto": "Desligado"}, PonteDeMentira())

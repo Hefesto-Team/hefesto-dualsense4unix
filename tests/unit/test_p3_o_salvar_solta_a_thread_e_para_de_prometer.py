@@ -52,7 +52,7 @@ class TestAFraseDoSalvar:
         """O perfil salvo não era o ativo: o disco mudou, o controle não."""
         assert pa.mensagem_do_salvar("Sackboy") == "Perfil salvo: Sackboy"
 
-    def test_reaplicado_sem_relatorio_mantem_a_frase_que_ela_aprovou(self) -> None:
+    def test_reaplicado_sem_relatorio_mantem_a_frase_que_o_usuario_aprovou(self) -> None:
         """Daemon antigo, ou resposta sem `secoes`: sem informação, sem alarme."""
         assert pa.mensagem_do_salvar("Sackboy", reaplicou=True) == (
             "Perfil salvo e reaplicado no controle: Sackboy"

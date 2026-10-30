@@ -109,7 +109,7 @@ class TestAFraseDoTecladoEmulado:
         assert ligado is True
         assert dica == ""
 
-    def test_desligado_avisa_o_que_ela_perde(self) -> None:
+    def test_desligado_avisa_o_que_o_usuario_perde(self) -> None:
         ligado, dica = descrever_teclado_emulado(
             {"enabled": False, "device_ativo": False, "despachando": False,
              "bloqueio": "desligada"}

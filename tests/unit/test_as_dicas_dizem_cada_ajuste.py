@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 
 
 def _a08() -> Any:
@@ -186,8 +186,8 @@ def test_sem_proposta_ou_com_proposta_sem_aparelho_nao_ha_cartao() -> None:
         assert a08._o_painel_das_dicas([], c).vazio
 
 
-def test_a_pagina_da_bancada_tem_as_dicas_e_nao_tem_a_sugestao() -> None:
-    html = BANCADA.read_text(encoding="utf-8")
+def test_a_pagina_do_ensaio_tem_as_dicas_e_nao_tem_a_sugestao() -> None:
+    html = ENSAIO.read_text(encoding="utf-8")
     assert len(re.findall(r'data-campo="dicas" data-hef-alvo="html"', html)) == 1
     for sobrou in ('class="sugestao"', 'class="ordem-tit"', 'data-campo="ordem"',
                    'class="col-exame"', 'data-campo="exame-calada"'):

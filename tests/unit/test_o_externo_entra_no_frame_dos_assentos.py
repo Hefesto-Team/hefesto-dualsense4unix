@@ -127,7 +127,7 @@ def _html_das_duas(externos: list[dict[str, Any]]) -> list[tuple[str, str]]:
 def test_o_externo_nao_ganha_nenhuma_marca_de_assento() -> None:
     """Nada de `data-controle`, `data-hef-alvo` nem `data-uniq`; `data-gesto` só nas três
     listas de declaração do cartão da Conexões (`externo-modo`, `externo-botoes` e
-    `externo-cor`: O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01, item 2)."""
+    `externo-cor`: O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01, item 2)."""
     for aba, html in _html_das_duas([UM_8BITDO, UM_PRO_NO_CABO]):
         for atributo in ("data-controle", "data-hef-alvo", "data-uniq"):
             assert atributo not in html, f"{aba}: {atributo}"

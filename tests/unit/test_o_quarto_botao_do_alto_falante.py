@@ -1,4 +1,4 @@
-"""O-TERCEIRO-NOME-DELA-01 — o QUARTO botão do alto-falante, e a saída do PC é UMA."""
+"""O-TERCEIRO-NOME-DO-USUARIO-01 — o QUARTO botão do alto-falante, e a saída do PC é UMA."""
 
 from __future__ import annotations
 

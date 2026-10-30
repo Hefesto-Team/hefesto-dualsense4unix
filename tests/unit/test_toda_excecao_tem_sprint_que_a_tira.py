@@ -276,7 +276,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "os arquivos da janela GTK, aposentada por decisão dela (D-0609-GTK-LEVA-INTEIRA)"),
     "scripts/medir_decisoes_sem_prova.py::ESTADOS_CONHECIDOS": (
         "o vocabulário do campo `estado` do CSV das decisões"),
-    "scripts/validar-glifos.py::EXCECOES_DELA": (
+    "scripts/validar-glifos.py::EXCECOES_DO_USUARIO": (
         "os quatro glifos que ela nomeou em 20/09/2026, um a um"),
     "scripts/validar-glifos.py::PADROES_IGNORADOS": _PASTAS_DE_MAQUINA,
     "scripts/validar-glifos.py::_IGNORADOS_RE": "a mesma lista de cima, compilada",

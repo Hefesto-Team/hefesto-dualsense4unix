@@ -1,4 +1,4 @@
-"""TELA-DELA-01 — a suíte não abre janela na sessão gráfica dela. NUNCA."""
+"""TELA-DO-USUARIO-01 — a suíte não abre janela na sessão gráfica dela. NUNCA."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 
 
-def test_a_suite_nao_enxerga_o_wayland_dela() -> None:
+def test_a_suite_nao_enxerga_o_wayland_do_usuario() -> None:
     """Dentro de um teste, o compositor dela não existe."""
     assert os.environ.get("WAYLAND_DISPLAY") is None, (
         "a suíte está enxergando o compositor VIVO — toda `Gtk.Window` daqui "

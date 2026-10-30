@@ -15,18 +15,18 @@ from hefesto_dualsense4unix.interface import onde
 sys.path.insert(0, str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 from monta import PAGINAS_QUE_SAIRAM
 
-BANCADA = onde.BANCADA
+ENSAIO = onde.ENSAIO
 SAIRAM = frozenset(PAGINAS_QUE_SAIRAM)
 
 PUBLICADO = onde.PUBLICADO
-DECLARACOES = BANCADA / "DIVERGENCIAS.md"
+DECLARACOES = ENSAIO / "DIVERGENCIAS.md"
 
 
 def paginas() -> list[str]:
     """As páginas que a régua cobre, enumeradas a partir da BANCADA, menos as que saíram do produto."""
     return sorted(
         p.name
-        for p in BANCADA.glob("*.html")
+        for p in ENSAIO.glob("*.html")
         if not p.name.startswith(".") and not p.name.endswith(".dc.html")
         and p.name not in SAIRAM
     )
@@ -64,20 +64,20 @@ def declaradas() -> set[str]:
 
 
 def medir() -> tuple[list[str], list[str], list[str]]:
-    """Devolve (atrasadas, só-na-bancada, só-no-publicado)."""
-    atrasadas, so_bancada, so_publicado = [], [], []
+    """Devolve (atrasadas, só-no-ensaio, só-no-publicado)."""
+    atrasadas, so_ensaio, so_publicado = [], [], []
     for nome in paginas():
         no_produto = PUBLICADO / nome
         if not no_produto.exists():
-            so_bancada.append(nome)
-        elif soma(BANCADA / nome) != soma(no_produto):
+            so_ensaio.append(nome)
+        elif soma(ENSAIO / nome) != soma(no_produto):
             atrasadas.append(nome)
     for p in PUBLICADO.glob("*.html"):
         if p.name.endswith(".dc.html") or p.name in SAIRAM:
             continue
-        if not (BANCADA / p.name).exists():
+        if not (ENSAIO / p.name).exists():
             so_publicado.append(p.name)
-    return atrasadas, so_bancada, sorted(so_publicado)
+    return atrasadas, so_ensaio, sorted(so_publicado)
 
 
 def _alvos(argv: list[str]) -> list[str]:
@@ -105,11 +105,11 @@ def publicar(argv: list[str]) -> int:
     alvos = _alvos(argv)
     atrasadas, _, _ = medir()
     for nome in alvos:
-        shutil.copy2(BANCADA / nome, PUBLICADO / nome)
+        shutil.copy2(ENSAIO / nome, PUBLICADO / nome)
     if len(alvos) == len(paginas()):
         for p in PUBLICADO.glob("*.html"):
             if not p.name.endswith(".dc.html") and (
-                    p.name in SAIRAM or not (BANCADA / p.name).exists()):
+                    p.name in SAIRAM or not (ENSAIO / p.name).exists()):
                 p.unlink()
     _tirar_declaracoes(alvos)
     mudaram = [n for n in alvos if n in atrasadas]
@@ -154,7 +154,7 @@ def so_mudou_endereco(nome: str) -> bool:
     no_produto = PUBLICADO / nome
     if not no_produto.exists():
         return False
-    return o_que_se_ve(BANCADA / nome) == o_que_se_ve(no_produto)
+    return o_que_se_ve(ENSAIO / nome) == o_que_se_ve(no_produto)
 
 
 def publicar_enderecos(argv: list[str]) -> int:
@@ -164,10 +164,10 @@ def publicar_enderecos(argv: list[str]) -> int:
     for nome in alvos:
         if not (PUBLICADO / nome).exists():
             recusadas.append((nome, "a página não existe no produto — é desenho novo"))
-        elif (BANCADA / nome).read_bytes() == (PUBLICADO / nome).read_bytes():
+        elif (ENSAIO / nome).read_bytes() == (PUBLICADO / nome).read_bytes():
             ja_iguais.append(nome)
         elif so_mudou_endereco(nome):
-            shutil.copy2(BANCADA / nome, PUBLICADO / nome)
+            shutil.copy2(ENSAIO / nome, PUBLICADO / nome)
             levadas.append(nome)
         else:
             recusadas.append((nome, "o DESENHO mudou — isto é decisão dela"))
@@ -182,7 +182,7 @@ def publicar_enderecos(argv: list[str]) -> int:
         print("\n  As recusadas esperam o OK dela:")
         for nome, _ in recusadas:
             print(f"      scripts/check_o_desenho_aprovado.py --publicar {nome[:2]}")
-    _tirar_declaracoes([n for n in levadas if soma(BANCADA / n) == soma(PUBLICADO / n)])
+    _tirar_declaracoes([n for n in levadas if soma(ENSAIO / n) == soma(PUBLICADO / n)])
     return 0
 
 
@@ -208,7 +208,7 @@ def _tirar_declaracoes(alvos: list[str]) -> None:
 
 
 def main() -> int:
-    if not BANCADA.exists():
+    if not ENSAIO.exists():
         print("ERRO: não há `mockup/`. Ela é a bancada — sem ela não há desenho.")
         return 2
     if "--publicar-enderecos" in sys.argv:
@@ -223,13 +223,13 @@ def main() -> int:
         print("      scripts/check_o_desenho_aprovado.py --publicar [NN ...]")
         return 2
 
-    atrasadas, so_bancada, so_publicado = medir()
+    atrasadas, so_ensaio, so_publicado = medir()
     decl = declaradas()
     sem_declarar = [n for n in atrasadas if n not in decl]
-    orfas = sorted(decl - set(atrasadas) - set(so_bancada))
+    orfas = sorted(decl - set(atrasadas) - set(so_ensaio))
 
     print(f"desenho: {len(paginas())} página(s) na bancada `mockup/`")
-    print(f"  o produto já tem ..... {len(paginas()) - len(atrasadas) - len(so_bancada)}")
+    print(f"  o produto já tem ..... {len(paginas()) - len(atrasadas) - len(so_ensaio)}")
     print(f"  o produto está atrás . {len(atrasadas)}  ({len(atrasadas) - len(sem_declarar)} em trabalho)")
 
     if so_publicado:
@@ -237,8 +237,8 @@ def main() -> int:
         for n in so_publicado:
             print(f"  - {n}")
         print("  O produto renderiza uma página sem referência — é o colapso que ela mandou desfazer.")
-    if so_bancada and any(n not in decl for n in so_bancada):
-        novas = [n for n in so_bancada if n not in decl]
+    if so_ensaio and any(n not in decl for n in so_ensaio):
+        novas = [n for n in so_ensaio if n not in decl]
         print(f"\nFALHA: {len(novas)} página(s) novas no desenho e ainda fora do produto:")
         for n in novas:
             print(f"  - {n}")
@@ -274,7 +274,7 @@ def main() -> int:
         print("  página tem e diz quantos ajustes ficaram de fora.`")
 
     if (sem_declarar or so_publicado or orfas or mudas
-            or [n for n in so_bancada if n not in decl]):
+            or [n for n in so_ensaio if n not in decl]):
         return 1
     print("\nOK: o produto não está atrás do desenho dela sem dizer por quê.")
     return 0

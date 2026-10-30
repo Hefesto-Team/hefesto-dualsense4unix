@@ -22,7 +22,7 @@ def ordem(
     )
 
 
-def test_a_dispensa_cala_a_ordem_no_arranjo_que_ela_viu() -> None:
+def test_a_dispensa_cala_a_ordem_no_arranjo_que_o_usuario_viu() -> None:
     uma = ordem(arranjo="4-1.1.2|3-1.1.4")
     dispensadas = {uma.chave: uma.arranjo}
     assert ordens.ordens_novas([uma], dispensadas) == ()
@@ -55,9 +55,9 @@ def test_a_ordem_calada_continua_contada() -> None:
 
 def test_o_arranjo_nao_carrega_serial_nem_endereco() -> None:
     """A tela desta aba vira PNG versionado; o arranjo entra nela."""
-    from tests.unit import ensaio_das_ordens as bancada
+    from tests.unit import ensaio_das_ordens as ensaio
 
-    leitura = ordens.Leitura(censo=bancada.censo(), entradas=bancada.entradas())
+    leitura = ordens.Leitura(censo=ensaio.censo(), entradas=ensaio.entradas())
     for uma in ordens.catalogo(leitura):
-        for serial in bancada.SERIAIS.values():
+        for serial in ensaio.SERIAIS.values():
             assert serial.lower() not in uma.arranjo.lower()

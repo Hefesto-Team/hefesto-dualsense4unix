@@ -23,7 +23,7 @@ class _Hospedeiro:
         self._maquina_pendente: dict[str, Any] | None = None
 
 
-def _mesa_de_bancada() -> Mesa:
+def _mesa_de_ensaio() -> Mesa:
     """Um adaptador e um rádio vizinho — o bastante para as duas tabelas."""
     return Mesa(
         adaptadores=[

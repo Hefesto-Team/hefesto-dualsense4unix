@@ -309,7 +309,7 @@ def _ctx(entradas: list[dict[str, Any]], nativo: bool = False) -> Any:
 
 
 @pytest.fixture
-def com_a_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def com_o_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """O pacote filtra pelo publicado; a régua lê a bancada (antes do `--publicar`)."""
     import pacotes.a02_controles as a02
     import pacotes.a11_calibrar_sensores as a11
@@ -331,7 +331,7 @@ def _gesto(pagina: str, nome: str) -> Any:
 
 def test_o_clique_no_lado_pela_02(
         perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-        com_a_bancada: None) -> None:
+        com_o_ensaio: None) -> None:
     """O «Mira virtual» da 02 liga o lado; a Calibrar só mostra os ajustes finos, sem o liga.
 
     MORDIDA: o `destino` cravado no direito — o P2 lê o esquerdo e anda pelo direito.
@@ -360,7 +360,7 @@ def test_o_clique_no_lado_pela_02(
 
 def test_clicar_no_lado_aceso_da_02_desliga_a_mira(
         perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-        com_a_bancada: None) -> None:
+        com_o_ensaio: None) -> None:
     """O «Mira virtual» da 02 liga o lado no apagado e DESLIGA no aceso (todo, 15/10/2026).
 
     MORDIDA: tire o ramo do lado aceso do `analogico_lado` e o segundo clique volta a ligar.

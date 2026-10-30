@@ -163,7 +163,7 @@ class TestADesistenciaEAnunciada:
             {"uniq": PATH_1, "frase": FRASE_SEM_CRACHA}
         ]
 
-    def test_a_frase_e_a_decidida_por_ela(self) -> None:
+    def test_a_frase_e_a_decidida_pelo_usuario(self) -> None:
         """Texto que vai à tela um dia é do usuário, e é literal.
         (D-0609-A-FRASE-DO-CONTROLE-SEM-CRACHA)
         """

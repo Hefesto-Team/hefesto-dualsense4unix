@@ -98,7 +98,7 @@ def _modulo():
     return modulo
 
 
-def test_a_declaracao_isenta_so_a_linha_dela_e_a_velha_reprova(tmp_path: Path) -> None:
+def test_a_declaracao_isenta_so_a_linha_do_usuario_e_a_velha_reprova(tmp_path: Path) -> None:
     modulo = _modulo()
     _pagina(tmp_path, "A Steam guarda a opção dela.")
     chave = ("docs/usage/pagina.md", "A Steam guarda a opção dela.")

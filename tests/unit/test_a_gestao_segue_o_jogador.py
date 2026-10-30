@@ -1,6 +1,6 @@
 """A-GESTAO-SEGUE-O-JOGADOR-01 — o destaque da Gestão segue o jogador, e a 08 fala USB/BT.
 
-A conferência da AS-FRASES-QUE-A-BANCADA-ACHOU-01 achou três coisas na prova da
+A conferência da AS-FRASES-QUE-O-ENSAIO-ACHOU-01 achou três coisas na prova da
 tela, e este arquivo guarda as três.
 
 1. **O DESTAQUE DA FITA SEGUIA A POSIÇÃO.** As regras que o `aba08.py` gera
@@ -77,7 +77,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte as palavra,
 )
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 PAGINA = "08-conexoes.html"
 
@@ -259,7 +259,7 @@ def medido() -> dict[str, Any]:
             v.evaluate_javascript(_bootstrap(), -1, None, None, None, instalou)
 
     view.connect("load-changed", carregou)
-    view.load_uri(BANCADA.as_uri())
+    view.load_uri(ENSAIO.as_uri())
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -296,7 +296,7 @@ def test_a_regua_morde_a_regra_por_posicao(medido: dict[str, Any]) -> None:
 
 
 def _css_da_pagina() -> str:
-    x = BANCADA.read_text(encoding="utf-8")
+    x = ENSAIO.read_text(encoding="utf-8")
     return "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", x, flags=re.S))
 
 
@@ -364,7 +364,7 @@ class _TextoDeTela(HTMLParser):
 
 def _frases_da_pagina() -> list[str]:
     leitor = _TextoDeTela()
-    leitor.feed(re.sub(r"<!--.*?-->", "", BANCADA.read_text(encoding="utf-8"), flags=re.S))
+    leitor.feed(re.sub(r"<!--.*?-->", "", ENSAIO.read_text(encoding="utf-8"), flags=re.S))
     assert len(leitor.frases) > 500, "a 08 gerada perdeu o texto — a régua ficou cega"
     return leitor.frases
 
@@ -457,7 +457,7 @@ def test_o_aviso_do_externo_na_08_diz_a_palavra_do_dono(a08: Any) -> None:
 
 def test_a_dica_do_cartao_nao_conta_os_controles_do_desenho() -> None:
     """A dica do número do cartão vale em qualquer mesa: sem número de controles."""
-    x = BANCADA.read_text(encoding="utf-8")
+    x = ENSAIO.read_text(encoding="utf-8")
     dicas = re.findall(r'<label class="gc-(?:num|abre)"[^>]*?title="([^"]*)"', x)
     assert len(dicas) == 2 * len(LUGARES), (
         f"a 08 tem {len(dicas)} dicas de cartão, e a mesa tem {len(LUGARES)} "

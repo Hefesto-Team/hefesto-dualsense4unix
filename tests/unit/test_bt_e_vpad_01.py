@@ -7,7 +7,7 @@ from typing import Any
 from hefesto_dualsense4unix.integrations import uhid_gamepad as uhid
 
 
-class _AudioDeBancada:
+class _AudioDeEnsaio:
     """Um `AudioControl` com o subprocess trocado por uma resposta fixa."""
 
     def __init__(self, backend: str, saida: str) -> None:
@@ -33,8 +33,8 @@ def test_a_fonte_padrao_do_controle_e_reconhecida() -> None:
         ("pactl", "alsa_input.usb-Sony_DualSense_Wireless_Controller-00.mono"),
         ("wpctl", 'node.description = "DualSense Wireless Controller Mono"'),
     ):
-        bancada = _AudioDeBancada(backend, saida)
-        assert bancada.real.fonte_padrao_e_o_controle() is True, backend
+        ensaio = _AudioDeEnsaio(backend, saida)
+        assert ensaio.real.fonte_padrao_e_o_controle() is True, backend
 
 
 def test_a_fonte_padrao_de_outro_dispositivo_nao_e_confundida() -> None:
@@ -57,16 +57,16 @@ def test_a_fonte_padrao_de_outro_dispositivo_nao_e_confundida() -> None:
 
     Mordida: trocar a comparação por `return True`.
     """
-    bancada = _AudioDeBancada(
+    ensaio = _AudioDeEnsaio(
         "pactl", "alsa_input.pci-0000_00_1f.3.analog-stereo"
     )
-    assert bancada.real.fonte_padrao_e_o_controle() is False
+    assert ensaio.real.fonte_padrao_e_o_controle() is False
 
 
 def test_sem_backend_de_audio_a_resposta_e_nao_mexer() -> None:
     """Em caso de dúvida, False — e o chamador não mexe em nada."""
-    bancada = _AudioDeBancada("none", "DualSense")
-    assert bancada.real.fonte_padrao_e_o_controle() is False
+    ensaio = _AudioDeEnsaio("none", "DualSense")
+    assert ensaio.real.fonte_padrao_e_o_controle() is False
 
 
 def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:

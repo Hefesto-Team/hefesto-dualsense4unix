@@ -84,7 +84,7 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
 PACOTE = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py"
 GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py"
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 
 
 def _item(**troca):
@@ -200,7 +200,7 @@ def test_uma_linha_sem_cura_nao_inventa_o_que_fazer():
 
 def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
     """26/09/2026, pedido: *«vamos remover essas infos que aparecem no"""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     assert 'data-campo="examinado"' not in html
     assert 'data-campo="conta-gestao"' not in html
     for texto in (html, GERADOR.read_text(encoding="utf-8")):

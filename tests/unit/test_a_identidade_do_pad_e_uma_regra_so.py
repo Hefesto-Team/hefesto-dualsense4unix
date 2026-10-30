@@ -100,7 +100,7 @@ _OS_TRES = {
 
 
 @pytest.mark.parametrize("jogo", sorted(_OS_TRES))
-def test_os_tres_jogos_da_bancada(tmp_path: Path, jogo: str) -> None:
+def test_os_tres_jogos_do_ensaio(tmp_path: Path, jogo: str) -> None:
     arquivos, esperada = _OS_TRES[jogo]
 
     assert rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", arquivos)) == esperada

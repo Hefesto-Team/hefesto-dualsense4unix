@@ -56,7 +56,7 @@ def perfis_da_corrupcao() -> list[Profile]:
             match=MatchCriteria(window_class=["editor"]),
             priority=250,
         ),
-        _perfil("desktop_dela", match=MatchAny(), priority=100),
+        _perfil("desktop_do_usuario", match=MatchAny(), priority=100),
         _perfil("pragmata", match=MatchAny(), priority=191, modo="gamepad"),
         _perfil("fallback", match=MatchAny(), priority=0),
         _perfil("meu_perfil", match=MatchAny(), priority=50),
@@ -71,7 +71,7 @@ def perfis_da_corrupcao() -> list[Profile]:
     ]
 
 
-def test_o_disco_dela_produz_exatamente_estes_achados(
+def test_o_disco_do_usuario_produz_exatamente_estes_achados(
     perfis_da_corrupcao: list[Profile],
 ) -> None:
     """As cinco regras disparam no arranjo real, e nenhuma outra."""
@@ -111,7 +111,7 @@ def test_catch_all_acima_de_especifico_e_erro() -> None:
     achados = _de(
         verificar_perfis(
             [
-                _perfil("desktop_dela", match=MatchAny(), priority=100),
+                _perfil("desktop_do_usuario", match=MatchAny(), priority=100),
                 _perfil("pragmata", match=MatchCriteria(window_class=["p"]), priority=80),
             ]
         ),
@@ -119,7 +119,7 @@ def test_catch_all_acima_de_especifico_e_erro() -> None:
     )
     assert len(achados) == 1
     assert achados[0].gravidade == "erro"
-    assert "desktop_dela" in achados[0].mensagem
+    assert "desktop_do_usuario" in achados[0].mensagem
     assert "pragmata (80)" in achados[0].mensagem
 
 
@@ -127,7 +127,7 @@ def test_empate_entre_catch_all_e_especifico_tambem_conta() -> None:
     """No empate quem vence é a ordem de leitura — 'às vezes certo' é pior."""
     achados = verificar_perfis(
         [
-            _perfil("desktop_dela", match=MatchAny(), priority=80),
+            _perfil("desktop_do_usuario", match=MatchAny(), priority=80),
             _perfil("pragmata", match=MatchCriteria(window_class=["p"]), priority=80),
         ]
     )
@@ -138,7 +138,7 @@ def test_catch_all_abaixo_do_especifico_nao_e_achado() -> None:
     """O arranjo CERTO (catch-all embaixo) não pode virar alarme."""
     achados = verificar_perfis(
         [
-            _perfil("desktop_dela", match=MatchAny(), priority=10),
+            _perfil("desktop_do_usuario", match=MatchAny(), priority=10),
             _perfil("pragmata", match=MatchCriteria(window_class=["p"]), priority=80),
         ]
     )
@@ -231,14 +231,14 @@ def test_nome_proprio_com_match_any_levanta_aviso() -> None:
 
 def test_catch_all_de_nome_proprio_no_piso_nao_e_nagueado() -> None:
     """Todo alarme precisa ter um jeito de calar seguindo o conselho dele."""
-    achados = verificar_perfis([_perfil("nome_dela", match=MatchAny(), priority=0)])
+    achados = verificar_perfis([_perfil("nome_do_usuario", match=MatchAny(), priority=0)])
     assert achados == []
 
 
 def test_perfil_de_jogo_declarado_nao_ganha_a_folga_do_piso() -> None:
     """Modo de jogo casando com TUDO é errado mesmo na prioridade 0."""
     achados = verificar_perfis(
-        [_perfil("nome_dela", match=MatchAny(), priority=0, modo="gamepad")]
+        [_perfil("nome_do_usuario", match=MatchAny(), priority=0, modo="gamepad")]
     )
     assert "catch_all_com_cara_de_jogo" in _regras(achados)
 
@@ -384,13 +384,13 @@ def test_muitos_catch_all_viram_achado() -> None:
     """MORDIDA: arrancar `_catch_all_demais` some com este achado."""
     perfis = [
         _perfil("fallback", match=MatchAny(), priority=0),
-        _perfil("desktop_dela", match=MatchAny(), priority=1),
+        _perfil("desktop_do_usuario", match=MatchAny(), priority=1),
         _perfil("meu_perfil", match=MatchAny(), priority=2),
         _perfil("pragmata", match=MatchAny(), priority=3),
     ]
     achados = _de(verificar_perfis(perfis), "catch_all_demais")
     assert len(achados) == 1
-    assert set(achados[0].perfis) == {"desktop_dela", "meu_perfil", "pragmata"}
+    assert set(achados[0].perfis) == {"desktop_do_usuario", "meu_perfil", "pragmata"}
 
 
 def test_um_catch_all_alem_do_fallback_e_tolerado() -> None:

@@ -56,7 +56,7 @@ def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
         "como dizer travado de destravado")
 
 
-def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_dela() -> None:
+def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_do_usuario() -> None:
     """Sem estado, a trava fica no TRAVESSÃO — nem acesa, nem apagada."""
     assert aba._cadeado({}) == TRAVESSAO
     assert aba._cadeado({**VIVO}) == TRAVESSAO, "daemon sem a chave acendeu a trava"
@@ -107,7 +107,7 @@ def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
             f"dois toggles num clique são um no-op")
 
 
-def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
+def test_um_clique_grava_uma_vez_so_no_disco_do_usuario() -> None:
     """O ouvinte do piloto está em dois eventos; só um pode virar escrita."""
     p = _PonteDeMentira()
     ctx = _ctx([], freestyle_ligado=False)

@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.profiles.loader import (
     seed_default_presets,
 )
 
-PERFIL_DELA: dict = {
+PERFIL_DO_USUARIO: dict = {
     "name": "meu_perfil",
     "version": 1,
     "match": {"type": "any"},
@@ -79,27 +79,27 @@ def _fonte_de_fabrica(tmp_path: Path) -> Path:
     return fonte
 
 
-def test_o_perfil_dela_muda_de_nome_sem_perder_uma_linha(disco: Path) -> None:
+def test_o_perfil_do_usuario_muda_de_nome_sem_perder_uma_linha(disco: Path) -> None:
     """O caso dela, fim a fim: renomeia e o conteúdo sai idêntico."""
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
 
     assert migrate_default_profile_name(disco) == NOME_DO_PADRAO
 
     novo = json.loads((disco / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8"))
     assert novo["name"] == NOME_DO_PADRAO
-    esperado = {k: v for k, v in PERFIL_DELA.items() if k != "name"}
+    esperado = {k: v for k, v in PERFIL_DO_USUARIO.items() if k != "name"}
     assert {k: v for k, v in novo.items() if k != "name"} == esperado
 
 
 def test_o_arquivo_antigo_fica_no_disco_e_some_da_lista(disco: Path) -> None:
     """"Guardando o antigo" — e guardado onde leitor nenhum tropece nele."""
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
 
     migrate_default_profile_name(disco)
 
     backup = disco / BACKUP_DO_PADRAO
     assert backup.is_file(), "o perfil antigo dela não pode simplesmente sumir"
-    assert json.loads(backup.read_text(encoding="utf-8")) == PERFIL_DELA
+    assert json.loads(backup.read_text(encoding="utf-8")) == PERFIL_DO_USUARIO
     assert not (disco / ARQUIVO_ANTIGO_DO_PADRAO).exists()
     assert sorted(p.name for p in disco.glob("*.json")) == [ARQUIVO_DO_PADRAO]
 
@@ -115,7 +115,7 @@ def test_a_sessao_segue_o_nome_novo(
     monkeypatch.setattr(xdg_paths, "config_dir", lambda ensure=False: lar)
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: lar)
 
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
     session.save_last_profile("meu_perfil")
     session.save_active_marker("meu_perfil")
 
@@ -142,7 +142,7 @@ def test_a_sessao_que_aponta_outro_perfil_nao_e_tocada(
     monkeypatch.setattr(xdg_paths, "config_dir", lambda ensure=False: lar)
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: lar)
 
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
     session.save_last_profile("Black Myth: Wukong")
     session.save_active_marker("Black Myth: Wukong")
 
@@ -152,31 +152,31 @@ def test_a_sessao_que_aponta_outro_perfil_nao_e_tocada(
     assert session.read_active_marker() == "Black Myth: Wukong"
 
 
-def test_recusa_quando_ela_ja_tem_um_perfil_personalizado(disco: Path) -> None:
+def test_recusa_quando_o_usuario_ja_tem_um_perfil_personalizado(disco: Path) -> None:
     """Ela mesma criou um perfil com o nome do padrão. Sobrescrever destruiria dado."""
-    dela = {"name": NOME_DO_PADRAO, "version": 1, "match": {"type": "any"},
+    do_usuario = {"name": NOME_DO_PADRAO, "version": 1, "match": {"type": "any"},
             "priority": 42}
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
-    _grava(disco, ARQUIVO_DO_PADRAO, dela)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
+    _grava(disco, ARQUIVO_DO_PADRAO, do_usuario)
 
     assert migrate_default_profile_name(disco) is None
 
     assert json.loads(
         (disco / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
-    ) == dela
+    ) == do_usuario
     assert (disco / ARQUIVO_ANTIGO_DO_PADRAO).is_file()
 
 
-def test_recusa_quando_ela_ja_renomeou_o_perfil_na_mao(disco: Path) -> None:
+def test_recusa_quando_o_usuario_ja_renomeou_o_perfil_na_mao(disco: Path) -> None:
     """O arquivo é `meu_perfil.json` mas o NOME lá dentro é do usuário."""
-    dela = dict(PERFIL_DELA, name="Meu jeito")
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, dela)
+    do_usuario = dict(PERFIL_DO_USUARIO, name="Meu jeito")
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, do_usuario)
 
     assert migrate_default_profile_name(disco) is None
 
     assert json.loads(
         (disco / ARQUIVO_ANTIGO_DO_PADRAO).read_text(encoding="utf-8")
-    ) == dela
+    ) == do_usuario
     assert not (disco / ARQUIVO_DO_PADRAO).exists()
 
 
@@ -190,10 +190,10 @@ def test_recusa_em_json_ilegivel_sem_explodir(disco: Path) -> None:
 
 def test_e_one_shot(disco: Path) -> None:
     """Rodou uma vez, não roda de novo — nem se o nome antigo reaparecer."""
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
     assert migrate_default_profile_name(disco) == NOME_DO_PADRAO
 
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
     assert migrate_default_profile_name(disco) is None
     assert (disco / ARQUIVO_ANTIGO_DO_PADRAO).is_file()
 
@@ -208,7 +208,7 @@ def test_o_semeador_nao_entrega_o_segundo_catch_all(
     disco: Path, tmp_path: Path
 ) -> None:
     """A rede: `install.sh` semeia ANTES de qualquer Python carregar perfil."""
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
 
     copiados = seed_default_presets(
         dest_dir=disco, source_dirs=(_fonte_de_fabrica(tmp_path),)
@@ -235,11 +235,11 @@ def test_maquina_nova_recebe_o_preset_de_fabrica(disco: Path, tmp_path: Path) ->
     assert semeado["name"] == NOME_DO_PADRAO
 
 
-def test_depois_da_migracao_o_semeador_nao_sobrescreve_o_dela(
+def test_depois_da_migracao_o_semeador_nao_sobrescreve_o_do_usuario(
     disco: Path, tmp_path: Path
 ) -> None:
     """A ordem de `_maybe_seed_presets`: migra e SÓ ENTÃO semeia."""
-    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
+    _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
     migrate_default_profile_name(disco)
 
     copiados = seed_default_presets(
@@ -248,7 +248,7 @@ def test_depois_da_migracao_o_semeador_nao_sobrescreve_o_dela(
 
     assert copiados == []
     depois = json.loads((disco / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8"))
-    assert depois["controllers"] == PERFIL_DELA["controllers"]
+    assert depois["controllers"] == PERFIL_DO_USUARIO["controllers"]
 
 
 def test_o_asset_versionado_nao_carrega_mais_o_slug() -> None:

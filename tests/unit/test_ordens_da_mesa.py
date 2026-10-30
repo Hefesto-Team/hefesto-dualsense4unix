@@ -1,7 +1,7 @@
 """As seis regras de topologia — o que cada uma acusa, e o que ela CALA."""
 from __future__ import annotations
 
-from tests.unit import ensaio_das_ordens as bancada
+from tests.unit import ensaio_das_ordens as ensaio
 import pytest
 
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
@@ -11,8 +11,8 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 def leitura(**campos: object) -> ordens.Leitura:
     """A bancada inteira como `Leitura`, com o que o teste quiser por cima."""
     base: dict[str, object] = {
-        "censo": bancada.censo(),
-        "entradas": bancada.entradas(),
+        "censo": ensaio.censo(),
+        "entradas": ensaio.entradas(),
     }
     base.update(campos)
     return ordens.Leitura(**base)  # type: ignore[arg-type]
@@ -48,7 +48,7 @@ def test_r1_ve_atraves_do_busnum() -> None:
 
 def test_r1_ve_o_hub_cujos_dois_lados_tem_numeros_diferentes() -> None:
     """A MORDIDA DA ORDEM-1: quem costura os dois lados é o `peer`, não a conta."""
-    censo, entradas = bancada.bancada_do_hub_em_numeros_diferentes()
+    censo, entradas = ensaio.ensaio_do_hub_em_numeros_diferentes()
     ordem = ordens.radio_largo_no_mesmo_hub(
         ordens.Leitura(censo=censo, entradas=entradas)
     )
@@ -62,7 +62,7 @@ def test_r1_cala_quando_o_peer_nao_costura_nada() -> None:
     """Sem `peer`, o produto não SABE que os dois hubs são um só — e cala."""
     sem_peer = tuple(
         no_de_entrada
-        for no_de_entrada in bancada.entradas()
+        for no_de_entrada in ensaio.entradas()
         if not no_de_entrada.no.startswith(("3-1", "4-1"))
     )
     assert ordens.radio_largo_no_mesmo_hub(leitura(entradas=sem_peer)) is None
@@ -81,7 +81,7 @@ def test_r1_nao_chuta_wifi() -> None:
     assert ordens.SEM_NOME.lower() in todo_o_texto
 
 
-def test_r1_chama_pelo_nome_que_ela_declarou() -> None:
+def test_r1_chama_pelo_nome_que_o_usuario_declarou() -> None:
     """Declarado por ela, o aparelho passa a ter nome — e é o nome DO USUÁRIO."""
     ordem = ordens.radio_largo_no_mesmo_hub(
         leitura(nomes_declarados={"2357:012d": "o adaptador de rede"})
@@ -92,14 +92,14 @@ def test_r1_chama_pelo_nome_que_ela_declarou() -> None:
 
 def test_r2_nao_acusa_a_webcam() -> None:
     """Webcam de cabo colada a um dongle: ZERO ordens."""
-    webcam = bancada.aparelho(
-        "3-3", pai="usb3", busnum=3, devpath="3", pci=bancada.PCI_DO_HUB,
+    webcam = ensaio.aparelho(
+        "3-3", pai="usb3", busnum=3, devpath="3", pci=ensaio.PCI_DO_HUB,
         classe="0e", subclasse="01", protocolo="00", vid="046d", pid="082d",
         produto="HD Pro Webcam C920",
     )
     ordem = ordens.dois_radios_colados(
         leitura(
-            censo=bancada.censo(mais=(webcam,)),
+            censo=ensaio.censo(mais=(webcam,)),
             vizinhas=(("7", "8"),),
             ocupante_da_entrada={"7": "3-1.2", "8": "3-3"},
         )
@@ -119,7 +119,7 @@ def test_r2_acusa_quando_os_dois_lados_irradiam() -> None:
     assert ordem.chave == ordens.R2_DOIS_RADIOS_COLADOS
 
 
-def test_r2_cala_sem_o_desenho_dela() -> None:
+def test_r2_cala_sem_o_desenho_do_usuario() -> None:
     """Sem desenho não há vizinhança, e isso NÃO é "está tudo certo"."""
     assert ordens.dois_radios_colados(leitura(vizinhas=())) is None
 
@@ -169,7 +169,7 @@ def test_r3_nao_tem_verbo_dobrado_na_frase_que_vai_para_a_tela() -> None:
 def test_r3_calada_sem_buraco_livre() -> None:
     """Sem entrada livre, a ordem nasce SEM AÇÃO — e diz por quê."""
     ordem = ordens.dongle_atras_de_hub(
-        leitura(entradas=bancada.entradas(sem=bancada.NOS_LIVRES))
+        leitura(entradas=ensaio.entradas(sem=ensaio.NOS_LIVRES))
     )
     assert ordem is not None
     assert ordem.destino == ""
@@ -181,7 +181,7 @@ def test_r3_calada_sem_buraco_livre() -> None:
 def test_r3_nao_oferece_destino_dentro_do_proprio_hub() -> None:
     """O buraco vazio do hub externo NÃO é destino: `unknown` não é `hotplug`."""
     ordem = ordens.dongle_atras_de_hub(
-        leitura(entradas=bancada.entradas(sem=bancada.NOS_LIVRES))
+        leitura(entradas=ensaio.entradas(sem=ensaio.NOS_LIVRES))
     )
     assert ordem is not None
     assert "3-1-port3" not in ordem.acao
@@ -190,12 +190,12 @@ def test_r3_nao_oferece_destino_dentro_do_proprio_hub() -> None:
 
 def test_r4_cala_com_teclado_direto() -> None:
     """Um teclado fora do hub e R4 cala: a casa não fica sem teclado."""
-    direto = bancada.aparelho(
-        "1-1", pai="usb1", busnum=1, devpath="1", pci=bancada.PCI_DA_PLACA,
+    direto = ensaio.aparelho(
+        "1-1", pai="usb1", busnum=1, devpath="1", pci=ensaio.PCI_DA_PLACA,
         classe="03", subclasse="01", protocolo="01", vid="04d9", pid="0169",
     )
     assert ordens.teclado_so_no_hub(
-        leitura(censo=bancada.censo(mais=(direto,)))
+        leitura(censo=ensaio.censo(mais=(direto,)))
     ) is None
 
 
@@ -208,11 +208,11 @@ def test_r4_nao_promete_radio() -> None:
 
 def test_r4_cala_sem_teclado_nenhum() -> None:
     assert ordens.teclado_so_no_hub(
-        leitura(censo=bancada.censo(sem=("3-1.4",)))
+        leitura(censo=ensaio.censo(sem=("3-1.4",)))
     ) is None
 
 
-def test_r5_r6_calam_nesta_bancada() -> None:
+def test_r5_r6_calam_neste_ensaio() -> None:
     """Tudo `on` e `over_current_count` zero: nenhuma das duas nasce."""
     assert ordens.dongle_dorme(leitura()) is None
     assert ordens.entrada_reclamou_de_corrente(leitura()) is None
@@ -234,13 +234,13 @@ def test_r5_r6_falam_quando_o_numero_muda(
     regra: object, campo: str, valor: object, chave: str
 ) -> None:
     """A prova de que o silêncio de R5/R6 é medição, e não regra morta."""
-    doente = bancada.aparelho(
+    doente = ensaio.aparelho(
         "3-1.1.4", pai="3-1.1", busnum=3, devpath="1.1.4",
-        pci=bancada.PCI_DO_HUB, atras_de_hub=True, classe="e0", subclasse="01",
+        pci=ensaio.PCI_DO_HUB, atras_de_hub=True, classe="e0", subclasse="01",
         protocolo="01", vid="2357", pid="0604", **{campo: valor},  # type: ignore[arg-type]
     )
     sadios = tuple(
-        a for a in bancada.APARELHOS if a.nome_do_kernel != "3-1.1.4"
+        a for a in ensaio.APARELHOS if a.nome_do_kernel != "3-1.1.4"
     )
     ordem = regra(  # type: ignore[operator]
         leitura(censo=Censo(aparelhos=(*sadios, doente)))
@@ -251,7 +251,7 @@ def test_r5_r6_falam_quando_o_numero_muda(
 
 def test_nenhuma_ordem_publica_serial() -> None:
     """O serial identifica a unidade dela tão bem quanto o MAC, e a tela é PNG."""
-    seriais = set(bancada.SERIAIS.values())
+    seriais = set(ensaio.SERIAIS.values())
     for ordem in ordens.catalogo(leitura()):
         texto = " ".join([ordem.acao, ordem.arranjo] + [
             linha.texto for linha in ordem.linhas
@@ -288,7 +288,7 @@ def test_sem_desenho_a_acao_diz_o_que_falta_para_apontar() -> None:
     assert "há 4 livres" in ordem.acao
 
 
-def test_com_desenho_a_acao_aponta_o_numero_dela() -> None:
+def test_com_desenho_a_acao_aponta_o_numero_do_usuario() -> None:
     """Declarado o mapa, a ordem troca a contagem pelo número que o usuário escreveu."""
     ordem = ordens.radio_largo_no_mesmo_hub(
         leitura(entradas_livres_declaradas=("4",))

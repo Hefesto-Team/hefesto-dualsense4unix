@@ -1,4 +1,5 @@
-"""O «Conectar» pareia no adaptador ABERTO, e em nenhum outro — O-RADIO-CONECTA-ONDE-ELA-MANDA-01.
+"""O «Conectar» pareia no adaptador ABERTO, e em nenhum outro —
+O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01.
 
 Os relatos dela de 26/09/2026, com três DualSense e três adaptadores:
 
@@ -77,7 +78,7 @@ class PonteQueVaiAoDaemon:
         return asyncio.run(tratadores[metodo](params))
 
 
-class Bancada:
+class Ensaio:
     """A tela (o pacote da 08), a central e o rádio de mentira, ligados como no produto."""
 
     def __init__(self, a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
@@ -208,7 +209,9 @@ def mundo_da_madrugada() -> rm.RadioDeMentira:
     return mundo
 
 
-def ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str) -> None:
+def o_usuario_segura_ps_create(
+    mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str,
+) -> None:
     """Dois segundos depois de a janela abrir, ela segura PS + Create."""
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
@@ -259,28 +262,28 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
 ) -> None:
     """E1 da sprint: abrir um adaptador e clicar «Conectar» — a busca, o ``Pair``"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=ORDENS[ordem],
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio, ordem=ORDENS[ordem],
                       jogadores=JOGADORES[jogadores])
     try:
-        cena = bancada.cena()
+        cena = ensaio.cena()
         assert [lug["id"] for lug in cena["lugares"]] == [id_da_tela(e) for e in ORDENS[ordem]]
         if cena.get("aberto") != id_da_tela(destino):
-            bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
-        assert bancada.cena()["destino_do_conectar"] == id_da_tela(destino)
+            ensaio.gesto("abrir-adaptador", alvo=id_da_tela(destino))
+        assert ensaio.cena()["destino_do_conectar"] == id_da_tela(destino)
 
-        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        assert bancada.gesto("radio-procurar") == {"armou": True}
-        bancada.esperar_a_central()
+        rm.o_usuario_pareia(relogio, mundo, ensaio.central, VERDE)
+        assert ensaio.gesto("radio-procurar") == {"armou": True}
+        ensaio.esperar_a_central()
 
-        assert bancada.ponte.chamadas == [
+        assert ensaio.ponte.chamadas == [
             ("radio.busca.set", {"ligada": True, "destino": id_da_tela(destino)})]
         assert onde_buscou(mundo) == [rm.HCIS[destino]], "a busca saiu de outro adaptador"
         assert onde_pareou(mundo) == [rm.HCIS[destino]], "o Pair saiu de outro adaptador"
-        (feito,) = [m for m in bancada.central.movimentos() if m.aparelho == VERDE]
+        (feito,) = [m for m in ensaio.central.movimentos() if m.aparelho == VERDE]
         assert (feito.estado, feito.destino) == (cr.CHEGOU, destino)
         assert mundo.onde_esta(rm.uniq(VERDE)) == destino
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
@@ -288,22 +291,22 @@ def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
 ) -> None:
     """O chip e a lista dizem a mesma coisa: escolher a varanda no chip ABRE a"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        bancada.cena()
-        bancada.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA))
-        cena = bancada.cena()
+        ensaio.cena()
+        ensaio.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA))
+        cena = ensaio.cena()
         assert cena["aberto"] == id_da_tela(VARANDA)
         assert cena["destino_do_conectar"] == id_da_tela(VARANDA)
-        sala = bancada.tique()["radio-sala"]
+        sala = ensaio.tique()["radio-sala"]
         assert f'class="lugar aberto" data-id="{id_da_tela(VARANDA)}"' in sala
 
-        ela_segura_ps_create(mundo, relogio, VERDE)
-        bancada.gesto("radio-procurar")
-        bancada.esperar_a_central()
+        o_usuario_segura_ps_create(mundo, relogio, VERDE)
+        ensaio.gesto("radio-procurar")
+        ensaio.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[VARANDA]]
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_sem_nenhum_aberto_vale_a_escolha_da_central(
@@ -311,24 +314,24 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
 ) -> None:
     """Com todas as caixas fechadas por ela, o destino é o da D8 — e a caixa"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        cena = bancada.cena()
+        cena = ensaio.cena()
         if cena.get("aberto"):
-            bancada.gesto("abrir-adaptador", alvo=cena["aberto"])
-        cena = bancada.cena()
+            ensaio.gesto("abrir-adaptador", alvo=cena["aberto"])
+        cena = ensaio.cena()
         assert cena["aberto"] is None
         d8 = cena["destino_da_central"]
         assert cena["destino_do_conectar"] == d8
 
-        ela_segura_ps_create(mundo, relogio, VERDE)
-        bancada.gesto("radio-procurar")
-        bancada.esperar_a_central()
+        o_usuario_segura_ps_create(mundo, relogio, VERDE)
+        ensaio.gesto("radio-procurar")
+        ensaio.esperar_a_central()
         (hci,) = onde_buscou(mundo)
         assert id_da_tela(next(e for e, c in rm.HCIS.items() if c == hci)) == d8
-        assert bancada.cena()["aberto"] == d8, "a caixa do destino não ficou aberta"
+        assert ensaio.cena()["aberto"] == d8, "a caixa do destino não ficou aberta"
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
@@ -336,27 +339,27 @@ def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
 ) -> None:
     """Com a busca de pé no quarto, o chip da varanda PEDE ao rádio a busca"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
     try:
-        bancada.cena()
-        bancada.gesto("escolher-adaptador", alvo=id_da_tela(QUARTO))
-        bancada.cena()
-        bancada.gesto("radio-procurar")
+        ensaio.cena()
+        ensaio.gesto("escolher-adaptador", alvo=id_da_tela(QUARTO))
+        ensaio.cena()
+        ensaio.gesto("radio-procurar")
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
-        cena = bancada.cena()
+        cena = ensaio.cena()
         assert cena["ocupado"] and cena["destino_do_conectar"] == id_da_tela(QUARTO)
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA)) == {"armou": True}
-        assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(VARANDA)})
+        assert ensaio.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA)) == {"armou": True}
+        assert ensaio.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(VARANDA)})
         assert a08._CENA_NA_TELA["destino_do_conectar"] == id_da_tela(VARANDA)
 
-        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
+        rm.o_usuario_pareia(relogio, mundo, ensaio.central, VERDE)
         busca.soltar()
-        bancada.esperar_a_central()
+        ensaio.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[QUARTO], rm.HCIS[VARANDA]]
         assert onde_pareou(mundo) == [rm.HCIS[VARANDA]]
         assert mundo.onde_esta(rm.uniq(VERDE)) == VARANDA
-        assert bancada.cena()["aberto"] == id_da_tela(VARANDA)
+        assert ensaio.cena()["aberto"] == id_da_tela(VARANDA)
     finally:
         busca.soltar()
-        bancada.fechar()
+        ensaio.fechar()

@@ -141,7 +141,7 @@ def test_forca_zero_de_verdade_continua_dizendo_forca_zero(vpad_xbox):
     assert vpad_xbox.ff_maior_pedido == (0, 0)
 
 
-class _VpadUhidDeBancada(uhid.UhidDualSense):
+class _VpadUhidDeEnsaio(uhid.UhidDualSense):
     """Vpad com o fd desligado — exercita só o caminho de output/rumble."""
 
     def __init__(self, relogio: _RelogioFalso) -> None:
@@ -208,7 +208,7 @@ _V2 = rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
 
 @pytest.fixture
 def vpad_ds():
-    v = _VpadUhidDeBancada(_RelogioFalso())
+    v = _VpadUhidDeEnsaio(_RelogioFalso())
     try:
         yield v
     finally:

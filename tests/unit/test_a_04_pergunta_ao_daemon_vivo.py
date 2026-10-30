@@ -384,7 +384,7 @@ def test_um_tom_numa_barra_apagada_a_acende_no_brilho_do_perfil(mesa_de, n):
     assert mesa.luz(n) == _na(ROXO, BRILHO_GLOBAL), "o perfil reaplicado apagou o tom"
 
 
-def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_dela_ao_outro_perfil(mesa_de):
+def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_do_usuario_ao_outro_perfil(mesa_de):
     """O P1 a 60% atravessou o autoswitch; o Salvar do B grava o B como estava."""
     from pacotes import rodape
 

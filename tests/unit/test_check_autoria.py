@@ -396,7 +396,7 @@ def test_importar_agente_de_pareamento_passa_o_nivel_2_nao_mede_codigo(repo: Pat
     assert p.returncode == 0, saida(p)
 
 
-def test_o_diff_mede_o_nivel_1_nas_linhas_acrescentadas_e_so_nelas(repo: Path) -> None:
+def test_o_diff_mede_o_nivel_1_nas_linhas_acrescentadas_e_so_no_usuario(repo: Path) -> None:
     commitar(repo, "docs: antes", arquivos={"a.md": f"{CANARIO}\n"})
     base = git(repo, "rev-parse", "HEAD")
     topo = commitar(repo, "docs: depois", arquivos={"a.md": f"{CANARIO}\nlimpa\n"})

@@ -25,7 +25,7 @@ O QUE CADA TESTE MORDE
   `test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id` — o byte de id vira
   `0xD2` e o firmware descarta calado, que é o silêncio de sempre;
 * o contador parado reprova `test_o_contador_de_quadros_avanca_a_cada_report`;
-* qualquer mudança no layout reprova `test_os_bytes_sao_os_que_ela_ouviu`.
+* qualquer mudança no layout reprova `test_os_bytes_sao_os_que_o_usuario_ouviu`.
 """
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ def report_como_o_ensaio_monta(
 @pytest.mark.parametrize("contador", [0, 1, 147, 255])
 @pytest.mark.parametrize("com_mic", [False, True])
 @pytest.mark.parametrize("rota", [af.BLOCO_SPEAKER, af.BLOCO_FONE])
-def test_os_bytes_sao_os_que_ela_ouviu(
+def test_os_bytes_sao_os_que_o_usuario_ouviu(
     seq: int, contador: int, com_mic: bool, rota: int
 ) -> None:
     """Byte a byte, em 64 combinações: o produto monta o que o ensaio montou."""

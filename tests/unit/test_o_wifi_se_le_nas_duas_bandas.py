@@ -30,7 +30,7 @@ from tests.unit.test_a_faixa_do_wifi_se_le_do_networkmanager import (
 from tests.unit.test_o_censo_le_o_barramento_inteiro import (
     RAIZ_USB,
     USB4,
-    Bancada,
+    Ensaio,
 )
 
 INTERFACE_USB = "wlxaabbcc000102"
@@ -39,8 +39,8 @@ INTERFACE_DA_PLACA = f"{NO_DA_PLACA}/4-1:1.0"
 
 
 def _censo_com(filhos: dict[str, list[str]], conteudo: dict[str, str] | None = None) -> Any:
-    banca = Bancada(listar=lambda raiz: (
-        Bancada().listagem if raiz == RAIZ_USB else list(filhos.get(raiz, ()))))
+    banca = Ensaio(listar=lambda raiz: (
+        Ensaio().listagem if raiz == RAIZ_USB else list(filhos.get(raiz, ()))))
     banca.conteudo.update(conteudo or {})
     achados = {a.nome_do_kernel: a for a in ler_o_barramento(**banca.fontes()).aparelhos}
     return achados["4-1"]
@@ -79,11 +79,11 @@ def test_o_controle_se_conhece_pelo_botao_sul_do_input() -> None:
     assert (com.especie, com.ligado_como) == ("Controle", "controle")
 
 
-def test_a_classe_que_o_descritor_diz_vence_o_kernel_quando_ela_diz_algo() -> None:
+def test_a_classe_que_o_descritor_diz_vence_o_kernel_quando_o_usuario_diz_algo() -> None:
     """Um mouse (classe 03) cuja interface pendura `net` continua Mouse: a classe vale."""
     mouse = "/mentira/devices/pci0000:00/0000:aa:00.0/usb1/1-3/1-3:1.0"
-    banca = Bancada(listar=lambda raiz: (
-        Bancada().listagem if raiz == RAIZ_USB else ["net"] if raiz == mouse else []))
+    banca = Ensaio(listar=lambda raiz: (
+        Ensaio().listagem if raiz == RAIZ_USB else ["net"] if raiz == mouse else []))
     achados = {a.nome_do_kernel: a for a in ler_o_barramento(**banca.fontes()).aparelhos}
     assert achados["1-3"].especie == "Mouse"
 
@@ -91,8 +91,8 @@ def test_a_classe_que_o_descritor_diz_vence_o_kernel_quando_ela_diz_algo() -> No
 def _leitura_do_censo(filhos: dict[str, list[str]]) -> Any:
     from hefesto_dualsense4unix.integrations import ordens_da_mesa as om
 
-    banca = Bancada(listar=lambda raiz: (
-        Bancada().listagem if raiz == RAIZ_USB else list(filhos.get(raiz, ()))))
+    banca = Ensaio(listar=lambda raiz: (
+        Ensaio().listagem if raiz == RAIZ_USB else list(filhos.get(raiz, ()))))
     return om.Leitura(censo=ler_o_barramento(**banca.fontes()),
                       ocupante_da_entrada={"1": "4-1"})
 

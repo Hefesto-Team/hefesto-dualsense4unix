@@ -168,7 +168,7 @@ def test_sem_perfil_ativo_ninguem_se_realca() -> None:
     from hefesto_dualsense4unix.app.actions import profiles_actions
 
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: None)
+        mp.setattr(profiles_actions, "perfil_que_o_usuario_ativou", lambda: None)
         linhas = _linhas(_pacote(["Primeiro", "Segundo"], ativo=""))
     assert len(linhas) == 2, (
         f"a lista parou de ser emitida — {len(linhas)} linha(s) para 2 perfis; "

@@ -109,7 +109,7 @@ def _divergencias(texto: str) -> list[str]:
 
 
 @pytest.mark.parametrize("nome", PAGINAS_COM_CARTAO)
-def test_a_bancada_nao_crava_estado_no_que_o_produto_pinta(nome: str) -> None:
+def test_o_ensaio_nao_crava_estado_no_que_o_produto_pinta(nome: str) -> None:
     """Em cada página da bancada, a classe de fora do endereço é a mesma em todo cartão."""
     texto = (MOCKUP / nome).read_text(encoding="utf-8")
     assert _divergencias(texto) == []

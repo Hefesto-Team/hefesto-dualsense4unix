@@ -24,14 +24,14 @@ NO_RADIO = {
     "is_primary": False, "inputs": {"l2_raw": 0, "r2_raw": 0},
 }
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     {"pref": "p1", "jogador": 1, "uniq": NO_CABO["uniq"], "nome": "White",
      "via": "USB", "cor": "white", "mascara": "DualSense", "alvo": True},
     {"pref": "p2", "jogador": 2, "uniq": NO_RADIO["uniq"], "nome": "Não sei",
      "via": "BT", "cor": "", "mascara": "DualSense", "alvo": False},
 ]
 
-MESA_DE_UM = [MESA_DELA[0]]
+MESA_DE_UM = [MESA_DO_USUARIO[0]]
 
 
 @pytest.fixture(scope="module")
@@ -43,7 +43,7 @@ def a03():
 
 
 @pytest.fixture(scope="module")
-def bancada() -> str:
+def ensaio() -> str:
     from hefesto_dualsense4unix.interface import onde
 
     caminho = onde.pagina(PAGINA)
@@ -112,7 +112,7 @@ def _cores(a03, r, mesa) -> dict[str, str]:
             if a03.CAMPO_DO_PLASTICO in col}
 
 
-def test_todo_chip_da_bancada_tem_endereco(a03, bancada):
+def test_todo_chip_do_ensaio_tem_endereco(a03, ensaio):
     """Os dois endereços do chip, e cada um tem um trabalho — e um alcance.
 
     O DO EMBRULHO É O DA COR — 03/09/2026, e é a cura desta frente. O
@@ -133,32 +133,32 @@ def test_todo_chip_da_bancada_tem_endereco(a03, bancada):
 
     ARRANQUE qualquer um dos dois, rode o gerador, e esta régua reprova aqui.
     """
-    embrulhos = bancada.count(
+    embrulhos = ensaio.count(
         f'<div class="{a03.CLASSE_DO_CHIP}" data-campo="{a03.CAMPO_DO_PLASTICO}"'
         f' data-hef-alvo="{a03.ALVO_DO_PLASTICO}"')
     assert embrulhos == 4, (
         f"o endereço da COR está em {embrulhos} colunas, e não em 4. É por ele "
         f"que o produto veste o plástico do controle que a fita já leu.")
 
-    miolos = bancada.count(
+    miolos = ensaio.count(
         f'<span data-campo="{a03.CAMPO_DO_CHIP}" data-hef-alvo="html">')
     assert miolos == 4, (
         f"o endereço do MIOLO está em {miolos} colunas, e não em 4. É por ele "
         f"que o nome e a dica do chip trocam quando a mesa muda.")
 
-    for casa in re.finditer(r"--plastico\s*:", bancada[_depois_da_fita(bancada):]):
-        posicao = casa.start() + _depois_da_fita(bancada)
-        inicio = bancada.rfind("<", 0, posicao)
-        tag = bancada[inicio:bancada.find(">", posicao) + 1]
+    for casa in re.finditer(r"--plastico\s*:", ensaio[_depois_da_fita(ensaio):]):
+        posicao = casa.start() + _depois_da_fita(ensaio)
+        inicio = ensaio.rfind("<", 0, posicao)
+        tag = ensaio[inicio:ensaio.find(">", posicao) + 1]
         assert f'data-hef-alvo="{a03.ALVO_DO_PLASTICO}"' in tag, (
             f"há `--plastico` num elemento que o produto não repinta: "
             f"{tag[:120]!r}. A borda fica com a cor de um controle que não "
             f"está na mesa.")
 
 
-def test_o_embrulho_diz_como_quer_ser_pintado(a03, bancada):
+def test_o_embrulho_diz_como_quer_ser_pintado(a03, ensaio):
     """Cada endereço declara o alvo que o alcança — e são dois alvos diferentes."""
-    for casa in re.finditer(rf'<div class="{a03.CLASSE_DO_CHIP}"([^>]*)>', bancada):
+    for casa in re.finditer(rf'<div class="{a03.CLASSE_DO_CHIP}"([^>]*)>', ensaio):
         atributos = casa.group(1)
         assert f'data-campo="{a03.CAMPO_DO_PLASTICO}"' in atributos, (
             f"um embrulho de chip sem o endereço da cor: {casa.group(0)!r}")
@@ -167,7 +167,7 @@ def test_o_embrulho_diz_como_quer_ser_pintado(a03, bancada):
             f"o alvo `plastico` o hexadecimal do aparelho vira texto de tela")
 
     for casa in re.finditer(
-            rf'<span data-campo="{a03.CAMPO_DO_CHIP}"([^>]*)>', bancada):
+            rf'<span data-campo="{a03.CAMPO_DO_CHIP}"([^>]*)>', ensaio):
         assert 'data-hef-alvo="html"' in casa.group(1), (
             f"o miolo {casa.group(0)!r} não diz como quer ser pintado — no "
             f"alvo padrão o `textContent` põe a marcação do chip como texto")
@@ -175,8 +175,8 @@ def test_o_embrulho_diz_como_quer_ser_pintado(a03, bancada):
 
 def test_o_chip_vivo_e_o_controle_da_mesa(a03):
     """Com um White no cabo, a coluna diz White — e nenhuma cor do desenho."""
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
-    chips = _chips(a03, r, MESA_DELA)
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
+    chips = _chips(a03, r, MESA_DO_USUARIO)
     assert set(chips) == {"p1", "p2", "p3", "p4"}, (
         f"o pacote escreve o cabeçalho de {sorted(chips)}. A coluna que ele não "
         f"escreve continua com o controle que o gerador desenhou.")
@@ -185,7 +185,7 @@ def test_o_chip_vivo_e_o_controle_da_mesa(a03):
         f"a coluna do controle no cabo não diz o nome dele: {chips['p1']!r}")
     from monta import cor_da_zona
 
-    assert _cores(a03, r, MESA_DELA)["p1"] == cor_da_zona("white"), (
+    assert _cores(a03, r, MESA_DO_USUARIO)["p1"] == cor_da_zona("white"), (
         "a borda da coluna do White não recebeu a cor do MAPA dela — ela é "
         "como se sabe de quem é a coluna (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`), "
         "e o hexadecimal tem de sair do CSV, não de uma tabela deste código")
@@ -210,7 +210,7 @@ def test_o_chip_nao_repinta_a_cada_tique(a03):
         "quem o escreve declara que esteve ali; escrevê-lo aqui seria a aba "
         "assinando a visita que não fez.")
 
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
     col = r["colunas"][NO_CABO["uniq"]]
     assert a03.CAMPO_DO_CHIP in col, (
         "a coluna COM aparelho tem de sair por `colunas`, e não por `blocos`: é "
@@ -231,11 +231,11 @@ def test_sem_cor_lida_o_chip_nao_veste_plastico(a03):
     `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
     queda já escrita.
     """
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
-    chip = _chips(a03, r, MESA_DELA)["p2"]
-    assert _cores(a03, r, MESA_DELA)["p2"] == "", (
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
+    chip = _chips(a03, r, MESA_DO_USUARIO)["p2"]
+    assert _cores(a03, r, MESA_DO_USUARIO)["p2"] == "", (
         f"a coluna do controle por rádio recebeu cor de plástico: "
-        f"{_cores(a03, r, MESA_DELA)['p2']!r}. Ninguém leu essa cor — ela viria "
+        f"{_cores(a03, r, MESA_DO_USUARIO)['p2']!r}. Ninguém leu essa cor — ela viria "
         f"do desenho. O vazio APAGA o `--plastico`, e a queda do `topo.html` "
         f"deixa a borda neutra.")
     assert "Não sei" not in chip, (
@@ -266,14 +266,14 @@ def test_o_lugar_sem_aparelho_perde_o_nome(a03):
 
 def test_o_numero_do_jogador_fica(a03):
     """`P1`…`P4` continuam na tela: eles são ESTRUTURA, não identidade."""
-    r = _pacote(a03, MESA_DELA, [NO_CABO, NO_RADIO])
-    chips = _chips(a03, r, MESA_DELA)
+    r = _pacote(a03, MESA_DO_USUARIO, [NO_CABO, NO_RADIO])
+    chips = _chips(a03, r, MESA_DO_USUARIO)
     for n, pref in enumerate(("p1", "p2", "p3", "p4"), start=1):
         assert f"P{n}" in chips[pref], (
             f"a coluna {pref} perdeu o número do jogador: {chips[pref]!r}")
 
 
-def test_o_desenho_e_o_produto_tem_um_dono_so(a03, bancada):
+def test_o_desenho_e_o_produto_tem_um_dono_so(a03, ensaio):
     """O chip que o pacote emite para a MESA do desenho é o que está na bancada."""
     import monta
 
@@ -285,7 +285,7 @@ def test_o_desenho_e_o_produto_tem_um_dono_so(a03, bancada):
             c["via"] if conectado else "",
             monta.cor_da_zona(c["cor"]) if conectado else "",
             conectado=conectado)
-        assert esperado in bancada, (
+        assert esperado in ensaio, (
             f"o chip do {c['pref'].upper()} da bancada não é o que a função "
             f"emite. Esperado:\n  {esperado}\nO desenho e o produto voltaram a "
             f"ter duas marcações para a mesma coisa.")

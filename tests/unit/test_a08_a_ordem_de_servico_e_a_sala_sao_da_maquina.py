@@ -32,9 +32,9 @@ docstring dele.
 A MORDIDA, medida em 03/09/2026 (cada arranque foi devolvido por `cp`):
 
 * troque `_html_das_dicas` por `return ""` →
-  `test_a_ordem_de_servico_e_da_maquina_dela` reprova;
+  `test_a_ordem_de_servico_e_da_maquina_do_usuario` reprova;
 * devolva `_sala_na_tela` para `return {}` →
-  `test_a_sala_pinta_o_que_ela_ja_declarou` reprova;
+  `test_a_sala_pinta_o_que_o_usuario_ja_declarou` reprova;
 * tire o `sorted(...)` do fim de `_itens_da_tela` →
   `test_as_ordens_vem_antes_das_conferencias` reprova;
 * devolva `"bateria": c.get("battery_pct")` cru →
@@ -51,7 +51,7 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 
 FRASE_DO_MOCKUP = "Mova o adaptador Bluetooth da Entrada 3 para a Entrada 9"
 
@@ -99,7 +99,7 @@ class _DeclaracaoFalsa:
         self.mesa = _MesaFalsa(altura, visada)
 
 
-def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
+def test_a_ordem_de_servico_e_da_maquina_do_usuario() -> None:
     """O cartão traz o de→para da ordem viva, e NADA do mockup."""
     p = _pacote()
     ordem = _uma_ordem(destino="Entrada 9")
@@ -236,7 +236,7 @@ def test_o_exame_de_entrada_e_uma_vez_so_mesmo_falhando() -> None:
         "**Examinar Portas**, que é gesto dela — nunca a falha")
 
 
-def test_a_sala_pinta_o_que_ela_ja_declarou() -> None:
+def test_a_sala_pinta_o_que_o_usuario_ja_declarou() -> None:
     p = _pacote()
     na_tela = p._sala_na_tela(_DeclaracaoFalsa("acima", "com_gente"))
     assert na_tela == {"sala-altura": "acima", "sala-visada": "com_gente"}, (
@@ -258,7 +258,7 @@ def test_o_none_da_sala_nao_acende_o_nao_sei() -> None:
 
 def test_os_tres_botoes_da_sala_tem_o_seu_proprio_quando() -> None:
     """Sem `data-hef-quando` distinto, o alvo `classe` acenderia os três juntos."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     for gesto, ids in (("sala-altura", {"acima", "abaixo"}),
                        ("sala-visada", {"com_gente", "livre"})):
         bloco = re.findall(
@@ -419,7 +419,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     """
     from monta import MESA
 
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     esperado = {"dicas": 1, "sala-altura": 3, "sala-visada": 3,
                 "nome": len(MESA)}
     for campo, quantos in esperado.items():
@@ -445,7 +445,7 @@ def test_as_duas_perguntas_da_sala_nao_falam_antena_nem_visada() -> None:
     O rótulo de cada pergunta é a marca `.mm-q`; o jargão que o usuário disse não
     entender fica só no nome do campo (`sala-visada`), nunca no que se lê.
     """
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     perguntas = re.findall(r'<span class="mm-q"[^>]*>([^<]*)</span>', html)
     assert len(perguntas) == 2, f"a sala tem {len(perguntas)} pergunta(s), e são duas"
     for texto in perguntas:

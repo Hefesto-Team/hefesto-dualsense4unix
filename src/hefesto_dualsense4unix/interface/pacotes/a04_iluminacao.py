@@ -1527,7 +1527,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa_dele:
             donos[_numero(ctx, c)] = casa_dele
 
-    nomes_dela = nomes_dos_donos()
+    nomes_do_usuario = nomes_dos_donos()
     pecas = _as_pecas_da_mesa(ctx, p)
     cor_de = [peca["cor"] for peca in pecas]
     casas = as_casas_da_mesa(pecas)
@@ -1558,7 +1558,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         na_lista = escolha_da_lista(
             do_efeito, uniq, None if b is None else float(b), criados, cor_dele)
         identidade = " • ".join(partes_do_modelo(
-            {"jogador": n, "dono": o_nome_de(nomes_dela, uniq), "nome": nome, "via": via}))
+            {"jogador": n, "dono": o_nome_de(nomes_do_usuario, uniq), "nome": nome, "via": via}))
         colunas[uniq] = {
             "brilho": "—" if pct is None else f"{pct}%",
             CAMPO_DO_EFEITO: na_lista,

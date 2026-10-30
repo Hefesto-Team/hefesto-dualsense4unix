@@ -171,7 +171,7 @@ def dizer_no_ar(uniq: str, ligado: bool) -> bool:
     try:
         return bool(dizedor(uniq, ligado))
     except Exception:
-        logger.debug("eleicao_mic_palavra_dela_falhou", exc_info=True)
+        logger.debug("eleicao_mic_palavra_do_usuario_falhou", exc_info=True)
         return False
 
 

@@ -92,7 +92,7 @@ CADERNO = os.path.join(
     os.path.dirname(os.path.dirname(_AQUI)), "docs", "data", "ensaios.csv"
 )
 
-FONTES_DESTA_BANCADA = (
+FONTES_DESTE_ENSAIO = (
     "scripts/ensaios/a_folha_dos_ensaios.py",
     "scripts/ensaios/o_painel_do_brilho.py",
     "scripts/ensaios/o_brilho_de_hardware_da_barra.py",
@@ -109,7 +109,7 @@ def respondidos() -> set[str]:
                 r["linha_id"]
                 for r in csv.DictReader(f)
                 if (r.get("resultado") or "").strip()
-                and (r.get("fonte") or "") in FONTES_DESTA_BANCADA
+                and (r.get("fonte") or "") in FONTES_DESTE_ENSAIO
             }
     except (OSError, KeyError):
         return set()
@@ -963,7 +963,7 @@ class Folha:
                     suspeito=ensaio.pergunta,
                     presente="sim" if assumido else "não",
                     resultado="",
-                    observado_por="olho-dela",
+                    observado_por="olho-do-usuario",
                     fonte="scripts/ensaios/a_folha_dos_ensaios.py",
                     nota=f"{campo.rotulo}={self._valor(campo, aparelho)}; "
                          f"autorização {ensaio.flag_nome} "

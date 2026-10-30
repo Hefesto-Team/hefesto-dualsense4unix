@@ -124,7 +124,7 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
     """O marcador em disco, pela costura que ``perfil_que_esta_valendo`` usa"""
     from hefesto_dualsense4unix.app.actions import profiles_actions
 
-    monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: nome)
+    monkeypatch.setattr(profiles_actions, "perfil_que_o_usuario_ativou", lambda: nome)
 
 
 def _ctx() -> Contexto:
@@ -146,7 +146,7 @@ def _realcadas(fora: dict[str, Any]) -> list[str]:
             for x in html.splitlines() if 'class="ativo"' in x]
 
 
-def test_o_rotulo_para_de_perguntar_quando_ela_troca_de_linha(
+def test_o_rotulo_para_de_perguntar_quando_o_usuario_troca_de_linha(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Armado o Pragmata, ela clica no Sackboy: o botão volta a dizer "Remover"."""
@@ -333,7 +333,7 @@ def test_o_perfil_sem_estilo_mostra_o_travessao(
     assert "editor.estilo" not in a10_perfis.NAO_PINTAVEIS
 
 
-def test_a_bancada_abre_o_estilo_de_jogo_no_travessao() -> None:
+def test_o_ensaio_abre_o_estilo_de_jogo_no_travessao() -> None:
     """A primeira opção do ``<select>``: ``value=""``, texto ``—``, marcada e sem escolha."""
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     trecho = html.split('data-hef="editor.estilo"', 1)[1].split("</select>", 1)[0]

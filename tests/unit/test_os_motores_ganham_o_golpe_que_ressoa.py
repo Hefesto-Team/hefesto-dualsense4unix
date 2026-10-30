@@ -134,7 +134,7 @@ def test_os_quatro_controles_tocam_os_dois_pelo_funil_de_sempre(
         assert max(max(par) for par in tocado) == round(255 * forca)
 
 
-def test_a_bateria_longa_baixa_a_cauda_inteira_e_ela_continua_caindo() -> None:
+def test_a_bateria_longa_baixa_a_cauda_inteira_e_o_usuario_continua_caindo() -> None:
     motores = _tocar({QUATRO[0]: "ressoar"}, tv.FORCA_NA_ECONOMIA, _MODO_DUALSENSE)
     cauda = [forte for _fraco, forte in motores.de(QUATRO[0])[1:]]
     assert cauda[0] == round(200 * tv.FORCA_NA_ECONOMIA)

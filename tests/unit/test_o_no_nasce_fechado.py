@@ -311,7 +311,7 @@ class TestOBrokerAbreSobPedido:
         assert pedir(st, 2, {"cmd": "unexpose", "node": "/dev/hidraw3"})["state"] == "fechado"
         assert "/dev/hidraw3" in ops.fechados
 
-    def test_eof_da_lease_fecha_o_que_ela_expos(self) -> None:
+    def test_eof_da_lease_fecha_o_que_o_usuario_expos(self) -> None:
         """O daemon morreu no Modo Nativo: o físico não pode ficar aberto."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})

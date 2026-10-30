@@ -1,4 +1,4 @@
-"""O nome da entrada é da POSIÇÃO — O-MAPA-QUE-ELA-CORRIGE-01, passo 2 (D1)."""
+"""O nome da entrada é da POSIÇÃO — O-MAPA-QUE-O-USUARIO-CORRIGE-01, passo 2 (D1)."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ _ORFAOS = {
 }
 
 
-def _a_maquina_dela() -> dict[str, Any]:
+def _a_maquina_do_usuario() -> dict[str, Any]:
     """O ``maquina.json`` sintético, como o Mapear de antes o deixava."""
     lugares: dict[str, Any] = {
         lugar_de(pci, devpath): {
@@ -93,11 +93,11 @@ def gravar_o_arquivo_de_antes(tmp_path: Path, documento: dict[str, Any]) -> Path
 @pytest.fixture()
 def disco(tmp_path: Path) -> Path:
     """A máquina sintética no ``maquina.json`` do ``tmp_path``, na forma de antes."""
-    return gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    return gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
 
 
 def _migrada() -> MaquinaConfig:
-    return MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
+    return MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_do_usuario()))
 
 
 def test_o_rotulo_pergunta_ao_dono_e_o_nome_mora_na_posicao() -> None:
@@ -144,12 +144,12 @@ def test_a_primeira_leitura_muda_o_nome_de_casa(disco: Path) -> None:
         json.loads(bytes_depois))
 
 
-def test_o_nome_de_mais_de_24_nao_se_perde_e_o_nome_dela_destrava(tmp_path: Path) -> None:
+def test_o_nome_de_mais_de_24_nao_se_perde_e_o_nome_do_usuario_destrava(tmp_path: Path) -> None:
     """O nome comprido demais não cabe na posição: aquele lugar fica no arquivo"""
     comprido = "A de trás, perto do cabo de rede"
     assert len(comprido) > 24
     lugar_5 = lugar_de(PCI_B, "3")
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     documento["lugares"][lugar_5]["nome"] = comprido
     disco = gravar_o_arquivo_de_antes(tmp_path, documento)
 
@@ -248,7 +248,7 @@ def test_o_gesto_do_nome_arma_no_clique_e_grava_no_change(
 
 def _com_o_mapa_trocado_por_fora() -> dict[str, Any]:
     """A forma do disco do usuário depois de 26/09/2026 às 15h43 (MEDIDO): o ``mapa``"""
-    documento = _a_maquina_dela()
+    documento = _a_maquina_do_usuario()
     portas = documento["mapa"]["portas"]
     for um, outro in (("3", "4"), ("7", "8")):
         portas[um], portas[outro] = portas[outro], portas[um]

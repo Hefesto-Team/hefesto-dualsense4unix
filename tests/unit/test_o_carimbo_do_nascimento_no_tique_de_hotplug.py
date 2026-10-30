@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
 
 _ADAPTADOR = "aa:bb:cc:99:88:77"
 
-_BANCADA: tuple[tuple[str, str, str, str, float, bool], ...] = (
+_ENSAIO: tuple[tuple[str, str, str, str, float, bool], ...] = (
     ("0028", "aa:bb:cc:11:22:01", "0x00000811", "/dev/hidraw6", 64_740.852, True),
     ("0029", "aa:bb:cc:11:22:02", "0x00001111", "/dev/hidraw7", 64_762.210, True),
     ("002a", "aa:bb:cc:11:22:03", "0x00000710", "/dev/hidraw8", 64_774.901, True),
@@ -37,11 +37,11 @@ def _instancia(linha: tuple[str, str, str, str, float, bool]) -> sb.Instancia:
     )
 
 
-def _instancias_da_bancada() -> list[sb.Instancia]:
-    return [_instancia(linha) for linha in _BANCADA]
+def _instancias_do_ensaio() -> list[sb.Instancia]:
+    return [_instancia(linha) for linha in _ENSAIO]
 
 
-def _nascimentos_da_bancada() -> dict[str, sb.Nascimento]:
+def _nascimentos_do_ensaio() -> dict[str, sb.Nascimento]:
     return {
         instancia: sb.Nascimento(
             instancia=instancia,
@@ -51,7 +51,7 @@ def _nascimentos_da_bancada() -> dict[str, sb.Nascimento]:
             escritor=(600105,) if sujo else (),
             sujo=sujo,
         )
-        for instancia, _uniq, _hw, no, quando, sujo in _BANCADA
+        for instancia, _uniq, _hw, no, quando, sujo in _ENSAIO
     }
 
 
@@ -75,15 +75,15 @@ def como_o_backend_escreve(uniq: str) -> str:
     return "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
 
 
-_MAPA_DA_BANCADA: dict[str, str] = {
-    como_o_backend_escreve(uniq): no for _i, uniq, _hw, no, _q, _s in _BANCADA
+_MAPA_DO_ENSAIO: dict[str, str] = {
+    como_o_backend_escreve(uniq): no for _i, uniq, _hw, no, _q, _s in _ENSAIO
 }
 
 
-def _leituras_da_bancada() -> list[sb.Leitura]:
+def _leituras_do_ensaio() -> list[sb.Leitura]:
     """O que o lado de DIAGNÓSTICO do módulo responde para a bancada inteira."""
     return sb.veredito_do_nascimento(
-        instancias=_instancias_da_bancada(), nascimentos=_nascimentos_da_bancada()
+        instancias=_instancias_do_ensaio(), nascimentos=_nascimentos_do_ensaio()
     )
 
 
@@ -92,8 +92,8 @@ class TestOCarimboEPorInstancia:
 
     def test_quatro_nascem_condenadas_e_duas_sas(self) -> None:
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
 
         condenados = {c.instancia for c in cartorio.condenados()}
         assert condenados == {"0028", "0029", "002a", "002b"}
@@ -107,8 +107,8 @@ class TestOCarimboEPorInstancia:
     def test_a_pergunta_depois_nao_le_o_diario(self, monkeypatch) -> None:
         """Carimbado, o veredito é resposta de MEMÓRIA."""
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
 
         def _bomba(**_kwargs: object) -> None:
             raise AssertionError(
@@ -125,10 +125,10 @@ class TestOCarimboEPorInstancia:
     def test_a_instancia_que_some_e_esquecida(self) -> None:
         """O carimbo morre com a conexão: o defeito é do usuário, não do plástico."""
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
 
-        sobrou = [i for i in _instancias_da_bancada() if i.instancia == "0033"]
+        sobrou = [i for i in _instancias_do_ensaio() if i.instancia == "0033"]
         cartorio.observar(sobrou, agora=200.0)
         assert [c.instancia for c in cartorio.todos()] == ["0033"]
         assert cartorio.da_instancia("0028") is None
@@ -144,10 +144,10 @@ class TestSuspeitaNaoVoltaAtras:
     def test_leitura_posterior_nao_absolve(self) -> None:
         """O diário só GANHA linhas; não achar a prova depois não é inocência."""
         cartorio = sb.CartorioDoNascimento()
-        alvo = _instancia(_BANCADA[0])
+        alvo = _instancia(_ENSAIO[0])
         cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
-            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_do_ensaio()),
             agora=100.0,
         )
         assert cartorio.da_instancia("0028").pede_reconexao is True
@@ -160,10 +160,10 @@ class TestSuspeitaNaoVoltaAtras:
     def test_o_carimbo_suspeito_ja_nasce_firme(self) -> None:
         """Não há o que reconferir num veredito que não pode melhorar."""
         cartorio = sb.CartorioDoNascimento()
-        alvo = _instancia(_BANCADA[0])
+        alvo = _instancia(_ENSAIO[0])
         cartorio.observar([alvo], agora=100.0)
         cartorio.carimbar(
-            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=[alvo], nascimentos=_nascimentos_do_ensaio()),
             agora=100.0,
         )
         assert cartorio.observar([alvo], agora=100.5) == []
@@ -173,9 +173,9 @@ class TestASondaAoVivoSoAgrava:
     """A régua de PRIMEIRA MÃO — o daemon vendo o nó segurado no tique em que a"""
 
     def _limpa(self) -> tuple[sb.Instancia, list[sb.Leitura]]:
-        alvo = _instancia(_BANCADA[4])
+        alvo = _instancia(_ENSAIO[4])
         return alvo, sb.veredito_do_nascimento(
-            instancias=[alvo], nascimentos=_nascimentos_da_bancada()
+            instancias=[alvo], nascimentos=_nascimentos_do_ensaio()
         )
 
     def test_agrava_quem_nasceu_sob_nossos_olhos_dentro_da_janela(self) -> None:
@@ -225,8 +225,8 @@ class TestOHwVersionNaoEIdentidade:
 
     def test_a_busca_por_hw_version_devolve_lista(self) -> None:
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
 
         achados = cartorio.do_hw_version("0x00000811")
         assert {c.instancia for c in achados} == {"0028", "0033"}
@@ -237,11 +237,11 @@ class TestOHwVersionNaoEIdentidade:
 
     def test_o_uniq_e_a_chave_que_a_tela_usa(self) -> None:
         """O endereço do controle é o que o resto do produto já usa por controle"""
-        vivas = [i for i in _instancias_da_bancada() if i.instancia in {"0029", "002b"}]
+        vivas = [i for i in _instancias_do_ensaio() if i.instancia in {"0029", "002b"}]
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar(vivas, agora=100.0)
         cartorio.carimbar(
-            sb.veredito_do_nascimento(instancias=vivas, nascimentos=_nascimentos_da_bancada()),
+            sb.veredito_do_nascimento(instancias=vivas, nascimentos=_nascimentos_do_ensaio()),
             agora=100.0,
         )
         assert cartorio.do_uniq("aa:bb:cc:11:22:02").instancia == "0029"
@@ -253,7 +253,7 @@ class TestMeiaReguaNaoAbsolve:
     """O kernel respondeu e o diário do daemon não: sabe-se QUANDO nasceu e não"""
 
     def test_escritor_desconhecido_e_nao_sei(self) -> None:
-        alvo = _instancia(_BANCADA[4])
+        alvo = _instancia(_ENSAIO[4])
         nascimentos = {
             "0033": sb.Nascimento(
                 instancia="0033",
@@ -291,7 +291,7 @@ class _DaemonFalso:
         self._nativo = nativo
         self._cartorio_do_nascimento = None
         self.controller = _ControllerFalso(
-            segura if segura is not None else _MAPA_DA_BANCADA
+            segura if segura is not None else _MAPA_DO_ENSAIO
         )
         self._sentinela_de_escritor_cru = SentinelaDeEscritorCru(
             sonda=lambda _alvos: {no: [os.getpid()] for no in nos}
@@ -311,9 +311,9 @@ def _carimbar(daemon: Any, agora: float = 0.0) -> int:
 
 
 @pytest.fixture()
-def bancada_no_sysfs(monkeypatch):
+def ensaio_no_sysfs(monkeypatch):
     """Faz o `instancias_dualsense` do daemon devolver a bancada de 22/08."""
-    vivas: list[sb.Instancia] = _instancias_da_bancada()
+    vivas: list[sb.Instancia] = _instancias_do_ensaio()
 
     def _enumerar(*_a: object, **_k: object) -> list[sb.Instancia]:
         return list(vivas)
@@ -323,7 +323,7 @@ def bancada_no_sysfs(monkeypatch):
 
 
 @pytest.fixture()
-def diario_da_bancada(monkeypatch):
+def diario_do_ensaio(monkeypatch):
     """O diagnóstico do módulo, sem `journalctl`. Conta quantas vezes foi lido."""
     chamadas: list[int] = []
     real = sb.veredito_do_nascimento
@@ -332,7 +332,7 @@ def diario_da_bancada(monkeypatch):
         chamadas.append(1)
         return real(
             instancias=kwargs.get("instancias"),
-            nascimentos=_nascimentos_da_bancada(),
+            nascimentos=_nascimentos_do_ensaio(),
         )
 
     monkeypatch.setattr(cx, "veredito_do_nascimento", _ler)
@@ -341,7 +341,7 @@ def diario_da_bancada(monkeypatch):
 
 class TestOTiqueDeHotplugCarimba:
     def test_o_tique_carimba_as_seis_com_quatro_condenadas(
-        self, bancada_no_sysfs, diario_da_bancada
+        self, ensaio_no_sysfs, diario_do_ensaio
     ) -> None:
         """A E1 da sprint, ponta a ponta pelo caminho que o daemon roda."""
         daemon = _DaemonFalso()
@@ -355,27 +355,27 @@ class TestOTiqueDeHotplugCarimba:
         }
 
     def test_o_segundo_tique_nao_le_o_diario_de_novo(
-        self, bancada_no_sysfs, diario_da_bancada
+        self, ensaio_no_sysfs, diario_do_ensaio
     ) -> None:
         """Mesa parada = zero subprocessos. É o que torna o carimbo pagável a"""
         daemon = _DaemonFalso()
         _carimbar(daemon, agora=0.0)
-        assert len(diario_da_bancada) == 1
+        assert len(diario_do_ensaio) == 1
         assert _carimbar(daemon, agora=30.0) == 2
         assert _carimbar(daemon, agora=60.0) == 0
         assert _carimbar(daemon, agora=90.0) == 0
-        assert len(diario_da_bancada) == 2, (
+        assert len(diario_do_ensaio) == 2, (
             "o tique voltou a ler o diário com a mesa parada — o carimbo deixou "
             "de ser memória e virou consulta de 30 em 30 segundos"
         )
 
-    def test_o_cartorio_e_um_so_por_daemon(self, bancada_no_sysfs, diario_da_bancada):
+    def test_o_cartorio_e_um_so_por_daemon(self, ensaio_no_sysfs, diario_do_ensaio):
         daemon = _DaemonFalso()
         assert cx.cartorio_do_nascimento_de(daemon) is cx.cartorio_do_nascimento_de(
             daemon
         )
 
-    def test_o_modo_nativo_nao_fabrica_limpa(self, bancada_no_sysfs, monkeypatch):
+    def test_o_modo_nativo_nao_fabrica_limpa(self, ensaio_no_sysfs, monkeypatch):
         """Ali o daemon não sonda (regra de produto), o diário não ganha a linha, e um"""
 
         def _bomba(**_k: object) -> list[sb.Leitura]:
@@ -393,7 +393,7 @@ class TestOTiqueDeHotplugCarimba:
 
     def test_o_modo_nativo_nao_agrava_com_foto_velha(self, monkeypatch) -> None:
         """No Modo Nativo o vigia nem sonda: a foto do sentinela é de antes."""
-        chegada = _instancia(_BANCADA[4])
+        chegada = _instancia(_ENSAIO[4])
         vivas: list[sb.Instancia] = []
         monkeypatch.setattr(cx, "instancias_dualsense", lambda *_a, **_k: list(vivas))
 
@@ -410,10 +410,10 @@ class TestOTiqueDeHotplugCarimba:
         assert carimbo.pede_reconexao is False
 
     def test_a_sonda_do_daemon_condena_a_conexao_recem_chegada(
-        self, monkeypatch, diario_da_bancada
+        self, monkeypatch, diario_do_ensaio
     ) -> None:
         """O caminho que salva quando o daemon não consegue ler o próprio diário."""
-        chegada = _instancia(_BANCADA[4])
+        chegada = _instancia(_ENSAIO[4])
         vivas: list[sb.Instancia] = []
         monkeypatch.setattr(cx, "instancias_dualsense", lambda *_a, **_k: list(vivas))
 
@@ -448,7 +448,7 @@ class TestOCarimboSoFalaDosControlesDoProduto:
         )
 
     def test_o_dualsense_do_vizinho_nao_e_carimbado(
-        self, bancada_no_sysfs, diario_da_bancada
+        self, ensaio_no_sysfs, diario_do_ensaio
     ) -> None:
         daemon = _DaemonFalso(
             segura={como_o_backend_escreve("aa:bb:cc:11:22:02"): "/dev/hidraw7"}
@@ -480,7 +480,7 @@ class TestOEnderecoCasaAsDuasGrafias:
         assert sb.endereco_normalizado(do_sysfs) == sb.endereco_normalizado(do_backend)
 
     def test_o_tique_carimba_com_o_backend_na_grafia_dele(
-        self, bancada_no_sysfs, diario_da_bancada
+        self, ensaio_no_sysfs, diario_do_ensaio
     ) -> None:
         """A mordida principal: o fixture fala como o backend REAL fala."""
         daemon = _DaemonFalso()
@@ -489,11 +489,11 @@ class TestOEnderecoCasaAsDuasGrafias:
             "é zero carimbo por tique, para sempre"
         )
 
-    def test_a_tela_acha_o_carimbo_pela_grafia_que_ela_conhece(self) -> None:
+    def test_a_tela_acha_o_carimbo_pela_grafia_que_o_usuario_conhece(self) -> None:
         """A tela só tem o ``uniq`` do payload de IPC, que vem do backend."""
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
 
         pela_tela = cartorio.do_uniq(como_o_backend_escreve("aa:bb:cc:11:22:02"))
         assert pela_tela is not None, (
@@ -505,16 +505,16 @@ class TestOEnderecoCasaAsDuasGrafias:
     def test_a_grafia_do_sysfs_continua_achando(self) -> None:
         """A cura normaliza os DOIS lados; nenhum chamador antigo se perde."""
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
         achado = cartorio.do_uniq("aa:bb:cc:11:22:02")
         assert achado is not None and achado.instancia == "0029"
 
     def test_endereco_vazio_nao_acha_o_primeiro_da_fila(self) -> None:
         """Normalizar sem esta guarda faria ``""`` casar com qualquer coisa."""
         cartorio = sb.CartorioDoNascimento()
-        cartorio.observar(_instancias_da_bancada(), agora=100.0)
-        cartorio.carimbar(_leituras_da_bancada(), agora=100.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=100.0)
+        cartorio.carimbar(_leituras_do_ensaio(), agora=100.0)
         assert cartorio.do_uniq("") is None
         assert cartorio.do_uniq("sem-hexa-nenhum") is None
 
@@ -545,7 +545,7 @@ class TestODiarioENoRecorte:
 
         monkeypatch.setattr(sb, "_linhas_do_diario", _espiar)
         sb.nascimentos_do_udev(
-            _instancias_da_bancada()[:1], perguntar=lambda *_a: "1000000", relogio=lambda: 100.0
+            _instancias_do_ensaio()[:1], perguntar=lambda *_a: "1000000", relogio=lambda: 100.0
         )
         assert vistos, "nenhuma leitura de diário aconteceu"
         for argv in vistos:
@@ -572,16 +572,16 @@ class TestOModuloContinuaSemLerALampada:
     def test_nenhuma_frase_do_carimbo_afirma_estado_da_lampada(self) -> None:
         cartorio = sb.CartorioDoNascimento()
         cartorio.observar([], agora=100.0)
-        cartorio.observar(_instancias_da_bancada(), agora=101.0)
+        cartorio.observar(_instancias_do_ensaio(), agora=101.0)
         cartorio.carimbar(
-            _leituras_da_bancada(),
+            _leituras_do_ensaio(),
             agora=101.0,
             nos_segurados={"/dev/hidraw6", "/dev/hidraw8"},
         )
         frases = [c.porque for c in cartorio.todos()]
         frases += [
             leitura.porque
-            for leitura in cx._sem_sonda_no_modo_nativo(_instancias_da_bancada())
+            for leitura in cx._sem_sonda_no_modo_nativo(_instancias_do_ensaio())
         ]
         for frase in frases:
             baixa = frase.lower()

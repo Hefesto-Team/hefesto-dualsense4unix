@@ -123,7 +123,7 @@ def _pacote(policy: str = "balanceado", *, per_vpad: list | None = None) -> dict
 
 
 @pytest.fixture(scope="module")
-def bancada() -> str:
+def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA)
@@ -195,7 +195,7 @@ def test_degrau_que_o_produto_nao_conhece_nao_afirma_numero() -> None:
         assert col["mult"] == "—", f"a tela inventou {col['mult']!r}"
 
 
-def test_o_desenho_tem_endereco_para_os_dois_punhos(bancada) -> None:
+def test_o_desenho_tem_endereco_para_os_dois_punhos(ensaio) -> None:
     """Os dois grupos de motor do SVG são endereçáveis, e a classe é a do desenho.
 
     ``data-hef-classe="acesa"`` porque quem escolheu o nome foi o SVG
@@ -211,23 +211,23 @@ def test_o_desenho_tem_endereco_para_os_dois_punhos(bancada) -> None:
     """
     from hefesto_dualsense4unix.interface import aba05
     lugares = len(aba05.MESA)
-    assert bancada.count("data-controle=\"p") == lugares, (
+    assert ensaio.count("data-controle=\"p") == lugares, (
         f"a bancada não tem os {lugares} lugares — não há o que medir")
     for sigla in ("e", "d"):
         alvo = (f'data-campo="treme-{sigla}" data-hef-alvo="classe"'
                 f' data-hef-classe="acesa"')
-        assert bancada.count(alvo) == lugares, (
+        assert ensaio.count(alvo) == lugares, (
             f"o punho {sigla!r} não tem endereço em cada um dos {lugares} "
             f"lugares da mesa")
 
 
-def test_o_lugar_vazio_nao_afirma_tremor(bancada) -> None:
+def test_o_lugar_vazio_nao_afirma_tremor(ensaio) -> None:
     """Um lugar sem controle não acende punho nenhum, nem por engano."""
     from hefesto_dualsense4unix.interface import aba05
     vazios = [c["pref"] for c in aba05.MESA if not c.get("conectado", True)]
     assert vazios, "a mesa do desenho não tem lugar vazio — não há o que medir"
     for pref in vazios:
-        bloco = _bloco_do_lugar(bancada, pref)
+        bloco = _bloco_do_lugar(ensaio, pref)
         assert 'data-campo="treme-' in bloco, (
             f"o lugar vazio {pref} perdeu o endereço do tremor — o pacote emite "
             f"`treme-e`/`treme-d` para os quatro lugares, e sem endereço o dado "
@@ -269,7 +269,7 @@ NO_DONO = (
 )
 
 
-def test_as_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
+def test_as_frases_da_janela_estavel_estao_na_aba(ensaio) -> None:
     """A aba nova diz o que o DONO ensina, com as MESMAS palavras.
 
     Não é preciosismo de texto: cada uma responde a uma pergunta que a aba nova
@@ -297,7 +297,7 @@ def test_as_frases_da_janela_estavel_estao_na_aba(bancada) -> None:
         assert frase, (
             f"{nome} saiu de `app/telas/vibracao` — a âncora do gerador da aba "
             "05 também cai")
-        assert frase.strip() in bancada, (
+        assert frase.strip() in ensaio, (
             f"a aba perdeu {nome}: {frase!r}. Regere com `python3 aba05.py`")
 
 

@@ -69,10 +69,10 @@ def gatilhos(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
     yield armados
 
 
-def _volta(bancada: MesaDoJogo, segundos: float = TIQUE) -> None:
+def _volta(ensaio: MesaDoJogo, segundos: float = TIQUE) -> None:
     """Um tique da bancada e a volta do laço que confere a numeração."""
-    bancada.tique(segundos)
-    cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon)  # type: ignore[arg-type]
+    ensaio.tique(segundos)
+    cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon)  # type: ignore[arg-type]
 
 
 def _o_jogo_sem(sai: str) -> dict[int, str | None]:
@@ -95,24 +95,24 @@ class TestTrezentosSegundosComOJogo:
     def test_ninguem_renumera_e_ninguem_renasce(
         self, monkeypatch: pytest.MonkeyPatch, gatilhos: list[str], sai: str
     ) -> None:
-        bancada = montar(monkeypatch, 4)
-        _volta(bancada)
-        vpads = {u: bancada.vpad_de(u) for u in QUATRO if u != P1}
-        bancada.mesa.levantar(sai)
-        _volta(bancada)
+        ensaio = montar(monkeypatch, 4)
+        _volta(ensaio)
+        vpads = {u: ensaio.vpad_de(u) for u in QUATRO if u != P1}
+        ensaio.mesa.levantar(sai)
+        _volta(ensaio)
         gatilhos.clear()
         with structlog.testing.capture_logs() as registros:
             for _ in range(int(TREZENTOS / TIQUE)):
-                _volta(bancada)
-        assert bancada.a_tela() == {
+                _volta(ensaio)
+        assert ensaio.a_tela() == {
             u: n + 1 for n, u in enumerate(QUATRO) if u != sai
         }, "com o jogo aberto alguém trocou de número"
         assert gatilhos == [], "a cor armou por numeração com o jogo aberto"
         assert _eventos(registros, "gatilho_da_cor_por_numeracao") == []
         assert _eventos(registros, "coop_ordem_recriada") == []
-        assert bancada.o_jogo_ve() == _o_jogo_sem(sai)
+        assert ensaio.o_jogo_ve() == _o_jogo_sem(sai)
         for uniq, vpad in vpads.items():
-            assert bancada.vpad_de(uniq) is vpad, f"{uniq} renasceu com o jogo aberto"
+            assert ensaio.vpad_de(uniq) is vpad, f"{uniq} renasceu com o jogo aberto"
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -123,27 +123,27 @@ class TestOJogoSoltaEOPrazoQueSobrou:
         self, monkeypatch: pytest.MonkeyPatch, gatilhos: list[str]
     ) -> None:
         relogio = Relogio()
-        bancada = montar(monkeypatch, 4, relogio=relogio, jogo=False)
-        _volta(bancada)
-        bancada.mesa.levantar(P2)
-        _volta(bancada)
-        assert P2 in bancada.reg.guardados()
+        ensaio = montar(monkeypatch, 4, relogio=relogio, jogo=False)
+        _volta(ensaio)
+        ensaio.mesa.levantar(P2)
+        _volta(ensaio)
+        assert P2 in ensaio.reg.guardados()
         gatilhos.clear()
-        _volta(bancada, 10.0)
-        bancada.daemon.display_authority = "game"
-        _volta(bancada, 0.0)
+        _volta(ensaio, 10.0)
+        ensaio.daemon.display_authority = "game"
+        _volta(ensaio, 0.0)
         for _ in range(100):
-            _volta(bancada)
-        assert P2 in bancada.reg.guardados(), "com o jogo aberto o prazo do P2 venceu"
+            _volta(ensaio)
+        assert P2 in ensaio.reg.guardados(), "com o jogo aberto o prazo do P2 venceu"
         assert gatilhos == []
 
-        bancada.daemon.display_authority = "daemon"
-        _volta(bancada, 0.0)
+        ensaio.daemon.display_authority = "daemon"
+        _volta(ensaio, 0.0)
         fechou = relogio()
         venceu: float | None = None
         for _ in range(60):
-            _volta(bancada, 1.0)
-            if P2 not in bancada.reg.guardados():
+            _volta(ensaio, 1.0)
+            if P2 not in ensaio.reg.guardados():
                 venceu = relogio()
                 break
         assert venceu is not None, "o prazo que sobrou não venceu em 60 s"
@@ -151,7 +151,7 @@ class TestOJogoSoltaEOPrazoQueSobrou:
         assert sobra - 1.0 <= venceu - fechou <= sobra + 1.0, (
             f"venceu {venceu - fechou:.1f} s depois de o jogo soltar; sobravam {sobra:.0f} s"
         )
-        assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3}
+        assert ensaio.a_tela() == {P1: 1, P3: 2, P4: 3}
         assert gatilhos, "o vencimento depois do jogo não armou a cor"
 
 
@@ -160,42 +160,42 @@ class TestQuemVoltaRetomaOLugar:
     """Régua 10: com o jogo aberto, o P2 volta aos 120 s e retoma o lugar 2."""
 
     def test_o_p2_volta_aos_120_segundos(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        bancada = montar(monkeypatch, 4)
-        _volta(bancada)
-        bancada.mesa.levantar(P2)
+        ensaio = montar(monkeypatch, 4)
+        _volta(ensaio)
+        ensaio.mesa.levantar(P2)
         for _ in range(60):
-            _volta(bancada)
+            _volta(ensaio)
         with structlog.testing.capture_logs() as registros:
-            bancada.mesa.sentar(P2, transporte="bt")
-            _volta(bancada)
-            _volta(bancada)
+            ensaio.mesa.sentar(P2, transporte="bt")
+            _volta(ensaio)
+            _volta(ensaio)
         assert _eventos(registros, "lugar_guardado_retomado"), "o P2 não retomou o lugar"
-        assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3, P4: 4}
-        assert bancada.o_jogo_ve()[2] == P2, f"o jogo vê {bancada.o_jogo_ve()}"
-        bancada.o_jogo_segue_a_tela()
+        assert ensaio.a_tela() == {P1: 1, P2: 2, P3: 3, P4: 4}
+        assert ensaio.o_jogo_ve()[2] == P2, f"o jogo vê {ensaio.o_jogo_ve()}"
+        ensaio.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
 class TestORenumerarAgoraComOJogo:
     """Régua 11: o gesto do usuário renumera e recria, com o jogo aberto."""
 
-    def test_o_gesto_dela_vale_com_o_jogo(
+    def test_o_gesto_do_usuario_vale_com_o_jogo(
         self, monkeypatch: pytest.MonkeyPatch, gatilhos: list[str]
     ) -> None:
-        bancada = montar(monkeypatch, 4)
-        _volta(bancada)
-        bancada.mesa.levantar(P2)
+        ensaio = montar(monkeypatch, 4)
+        _volta(ensaio)
+        ensaio.mesa.levantar(P2)
         for _ in range(5):
-            _volta(bancada)
-        assert bancada.a_tela() == {P1: 1, P3: 3, P4: 4}
+            _volta(ensaio)
+        assert ensaio.a_tela() == {P1: 1, P3: 3, P4: 4}
         with structlog.testing.capture_logs() as registros:
-            assert bancada.reg.soltar_os_lugares_guardados(motivo="renumerar") is True
-            _volta(bancada)
-            _volta(bancada)
-        assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3}
+            assert ensaio.reg.soltar_os_lugares_guardados(motivo="renumerar") is True
+            _volta(ensaio)
+            _volta(ensaio)
+        assert ensaio.a_tela() == {P1: 1, P3: 2, P4: 3}
         assert _eventos(registros, "coop_ordem_recriada"), "o co-op não recriou a mesa"
         assert gatilhos, "a cor não armou pelo «Renumerar agora»"
-        bancada.o_jogo_segue_a_tela()
+        ensaio.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -208,30 +208,30 @@ class TestOsExternosSeguemAMesmaRegra:
     ) -> None:
         relogio = Relogio()
         antes = ponte == "antes-do-jogo"
-        bancada = montar(monkeypatch, 2, relogio=relogio, jogo=not antes)
+        ensaio = montar(monkeypatch, 2, relogio=relogio, jogo=not antes)
         externo = ExternalIdentityRegistry(clock=relogio)
-        bancada.reg.set_external_hold_provider(externo.segurar_os_prazos)
+        ensaio.reg.set_external_hold_provider(externo.segurar_os_prazos)
         if antes:
-            bancada.daemon.display_authority = "game"
-            _volta(bancada, 0.0)
+            ensaio.daemon.display_authority = "game"
+            _volta(ensaio, 0.0)
         assert externo.slot_for(EXTERNO) is not None
         externo.sync_connected([EXTERNO])
-        _volta(bancada)
+        _volta(ensaio)
         with structlog.testing.capture_logs() as registros:
             externo.sync_connected([])
             for _ in range(int(TREZENTOS / TIQUE)):
-                _volta(bancada)
+                _volta(ensaio)
                 externo.sync_connected([])
         assert _eventos(registros, "external_lugar_guardado_venceu") == [], (
             "com o jogo aberto o lugar do externo venceu"
         )
         assert len(externo.lugares_da_mesa()) == 1
 
-        bancada.daemon.display_authority = "daemon"
-        _volta(bancada, 0.0)
+        ensaio.daemon.display_authority = "daemon"
+        _volta(ensaio, 0.0)
         with structlog.testing.capture_logs() as registros:
             for _ in range(int(PRAZO / TIQUE) + 1):
-                _volta(bancada)
+                _volta(ensaio)
                 externo.sync_connected([])
         assert _eventos(registros, "external_lugar_guardado_venceu"), (
             "o jogo soltou e o lugar do externo não venceu no prazo"
@@ -243,18 +243,18 @@ class TestOPostoDoP1EsperaComOJogo:
     """O posto do P1 no backend: a reserva de 30 s espera enquanto a vaga espera."""
 
     def test_o_p2_nao_toma_o_posto_com_o_jogo(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        bancada = montar(monkeypatch, 3)
-        bancada.mesa.levantar(P1)
+        ensaio = montar(monkeypatch, 3)
+        ensaio.mesa.levantar(P1)
         for _ in range(int(TREZENTOS / TIQUE)):
-            bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None, (
+            ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None, (
             "o P2 tomou o posto do P1 com o jogo aberto"
         )
-        assert bancada.inst.primary_uniq == P1
-        assert bancada.a_tela() == {P2: 2, P3: 3}
+        assert ensaio.inst.primary_uniq == P1
+        assert ensaio.a_tela() == {P2: 2, P3: 3}
 
-        bancada.mesa.sentar(P1, transporte="usb")
-        bancada.tique()
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() == P1
-        assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3}
+        ensaio.mesa.sentar(P1, transporte="usb")
+        ensaio.tique()
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() == P1
+        assert ensaio.a_tela() == {P1: 1, P2: 2, P3: 3}

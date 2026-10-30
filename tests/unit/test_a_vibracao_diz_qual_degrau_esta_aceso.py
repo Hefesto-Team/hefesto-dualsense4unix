@@ -40,7 +40,7 @@ PAGINA = "05-vibracao.html"
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
 @pytest.fixture(scope="module")
-def bancada() -> str:
+def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA, publicado=True)
@@ -109,9 +109,9 @@ def test_a_mesa_sem_politica_nao_poe_o_cursor_em_lugar_nenhum() -> None:
         assert col["mult-pos"] == "" and col["mult"] == "—", (col["mult-pos"], col["mult"])
 
 
-def test_a_largura_sai_sem_o_por_cento(pacote, bancada) -> None:
+def test_a_largura_sai_sem_o_por_cento(pacote, ensaio) -> None:
     """O alvo `largura` faz `el.style.width = valor + '%'` — o `%` é do pintor."""
-    largura = {c.chave for c in _regua._campos_cravados(bancada)
+    largura = {c.chave for c in _regua._campos_cravados(ensaio)
                if c.alvo == "largura"}
     assert not largura, (
         f"voltou alvo `largura` a esta aba: {sorted(largura)} — as três barras "
@@ -139,10 +139,10 @@ def test_os_dois_motores_tem_o_mesmo_destino(pacote) -> None:
             f"e saíram {col['motor-e-pct']!r} e {col['motor-d-pct']!r}")
 
 
-def test_o_testar_de_cada_lugar_tem_endereco_de_estado(bancada) -> None:
+def test_o_testar_de_cada_lugar_tem_endereco_de_estado(ensaio) -> None:
     """O "Testar" acende pelo alvo `classe`, e diz o mesmo pelo `aria-pressed`."""
-    lugares = bancada.count('data-controle="p')
-    tags = re.findall(r'<button class="btn" data-papel="testar"[^>]*>', bancada)
+    lugares = ensaio.count('data-controle="p')
+    tags = re.findall(r'<button class="btn" data-papel="testar"[^>]*>', ensaio)
     assert len(tags) == lugares, (
         f"a bancada tem {len(tags)} botões Testar para {lugares} lugares")
     for tag in tags:
@@ -152,7 +152,7 @@ def test_o_testar_de_cada_lugar_tem_endereco_de_estado(bancada) -> None:
             f"o Testar acende sem dizer a quem não vê a cor: {tag}")
         assert "data-hef-rotulo" not in tag, (
             f"o Testar voltou a ser só rótulo, e o estado dele some da régua: {tag}")
-    assert ".acoes-col .btn.on{" in bancada, (
+    assert ".acoes-col .btn.on{" in ensaio, (
         "o Testar aceso não tem cor na folha da aba: a classe acende e nada muda")
 
 

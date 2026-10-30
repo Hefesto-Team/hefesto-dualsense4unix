@@ -663,7 +663,7 @@ def test_o_escolher_fora_das_pastas_recusa_e_o_cancelar_esquece(lar, ctx, casa) 
     assert a07.escolher_o_lancador(ctx, {"v": "heroic"}, _Seletor(None)) is None
 
 
-def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_ela(lar, ctx, monkeypatch) -> None:
+def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_o_usuario(lar, ctx, monkeypatch) -> None:
     """D-1910-O-MAIS-DO-CONFIGURAR-ACENDE-SO-NA-EXTENSAO: o mesmo menu, nos dois lugares."""
     from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 
@@ -699,7 +699,7 @@ def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_ela(lar, ctx, monkeypat
     assert len(montadas) == 2, "o ⋮ de uma extensão repintou a janela da Steam"
 
 
-def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_dela(lar, ctx, monkeypatch) -> None:
+def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_do_usuario(lar, ctx, monkeypatch) -> None:
     """O ⋮ do «Configurar» e o da linha da extensão são dois lugares: cada um abre só o seu menu."""
     from types import SimpleNamespace
 

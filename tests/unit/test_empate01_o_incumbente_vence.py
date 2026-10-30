@@ -44,7 +44,7 @@ def _manager(ativo: str | None) -> ProfileManager:
     return ProfileManager(controller=controller, store=store)
 
 
-def _semear_o_disco_dela() -> None:
+def _semear_o_disco_do_usuario() -> None:
     """Os dois `Pragmata` como estão no disco: gêmeos, empatados em 5."""
     save_profile(Profile(name="Pragmata", match=_REGRA_DO_DESKTOP, priority=5))
     save_profile(Profile(name="Pragmata2", match=_REGRA_DO_DESKTOP, priority=5))
@@ -53,7 +53,7 @@ def _semear_o_disco_dela() -> None:
 class TestOCasoRealDosDoisPragmata:
     def test_o_ativo_continua_valendo(self, isolated_profiles_dir: Path) -> None:
         """O caso medido, inteiro: ativo = Pragmata2, vencedor = Pragmata2."""
-        _semear_o_disco_dela()
+        _semear_o_disco_do_usuario()
         escolhido = _manager("Pragmata2").select_for_window({"wm_class": WM_DESKTOP})
 
         assert escolhido is not None
@@ -67,7 +67,7 @@ class TestOCasoRealDosDoisPragmata:
         self, isolated_profiles_dir: Path
     ) -> None:
         """Com `Pragmata` ativo, é ele quem fica — o critério não tem lado."""
-        _semear_o_disco_dela()
+        _semear_o_disco_do_usuario()
         escolhido = _manager("Pragmata").select_for_window({"wm_class": WM_DESKTOP})
 
         assert escolhido is not None
@@ -91,7 +91,7 @@ class TestOCasoRealDosDoisPragmata:
         self, isolated_profiles_dir: Path
     ) -> None:
         """Nenhum perfil ativo: nada muda — segue o primeiro da ordem de carga."""
-        _semear_o_disco_dela()
+        _semear_o_disco_do_usuario()
         escolhido = _manager(None).select_for_window({"wm_class": WM_DESKTOP})
 
         assert escolhido is not None
@@ -101,7 +101,7 @@ class TestOCasoRealDosDoisPragmata:
         self, isolated_profiles_dir: Path
     ) -> None:
         """Ativo que não é candidato não desempata coisa nenhuma."""
-        _semear_o_disco_dela()
+        _semear_o_disco_do_usuario()
         save_profile(
             Profile(
                 name="Jogo",
@@ -191,7 +191,7 @@ class TestOEmpateDeixaDeSerMudo:
             registros.append((evento, kw))
 
         monkeypatch.setattr(manager_mod.logger, "info", fake_info)
-        _semear_o_disco_dela()
+        _semear_o_disco_do_usuario()
         gerente = _manager("Pragmata2")
 
         for _ in range(5):

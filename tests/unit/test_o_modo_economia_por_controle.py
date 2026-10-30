@@ -169,19 +169,19 @@ def _mult(policy: str | None, custom: float | None = None) -> float:
 def test_a_vibracao_tem_teto_e_nao_some(da_peca: str | None, do_perfil: str | None) -> None:
     """O que chega ao motor fica no degrau Economia ou abaixo, e nunca em zero."""
     custom = 0.2 if da_peca == "custom" else None
-    dela = (
+    do_usuario = (
         None
         if da_peca is None
         else ControllerRumbleOverride(policy=da_peca, custom_mult=custom)
     )
-    nova = vibracao_na_economia(dela, do_perfil, mesa=False)
+    nova = vibracao_na_economia(do_usuario, do_perfil, mesa=False)
     fator = _controllers_to_rumble_scales(
         {UNIQS[0]: ControllerOverrides(rumble=nova)} if nova is not None else {},
         RumbleConfig(policy=do_perfil),
     ).get(UNIQS[0], 1.0)
     no_motor = _mult(do_perfil) * fator
     economia = _mult("economia")
-    antes = _mult(do_perfil) if dela is None else _mult(da_peca, custom)
+    antes = _mult(do_perfil) if do_usuario is None else _mult(da_peca, custom)
     assert no_motor > 0.0, "a economia calou o motor"
     assert no_motor <= economia + 1e-9, f"passou do teto: {no_motor}"
     assert no_motor == pytest.approx(min(antes, economia)), (
@@ -190,8 +190,8 @@ def test_a_vibracao_tem_teto_e_nao_some(da_peca: str | None, do_perfil: str | No
 
 def test_as_barras_de_motor_sobrevivem_a_economia() -> None:
     """As barras só reduzem, e são escolha do usuário: a economia não as apaga."""
-    dela = ControllerRumbleOverride(policy="max", motor_fraco_pct=50)
-    nova = vibracao_na_economia(dela, "balanceado")
+    do_usuario = ControllerRumbleOverride(policy="max", motor_fraco_pct=50)
+    nova = vibracao_na_economia(do_usuario, "balanceado")
     assert nova is not None
     assert nova.policy == "economia"
     assert nova.motor_fraco_pct == 50

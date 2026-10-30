@@ -53,7 +53,7 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-DELA = ("já é o perfil que está valendo",
+DO_USUARIO = ("já é o perfil que está valendo",
         "escolha um perfil na lista primeiro",
         "o perfil precisa de um nome",
         "gravar este por cima apagaria o dele",
@@ -168,7 +168,7 @@ def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
                                PonteDeMentira())
 
 
-def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
+def test_nenhuma_frase_do_usuario_sai_como_valueerror() -> None:
     """A régua de FORMA sobre o arquivo inteiro, e ela é a que segura a regra.
 
     As frases de :data:`DO USUÁRIO` são as que ela lê. A régua exige que cada
@@ -190,16 +190,16 @@ def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
     fonte = inspect.getsource(a10_perfis)
     blocos = re.findall(r"raise (ValueError|RuntimeError)\((.*?)\)\n",
                         fonte, re.S)
-    mudas = [pedaco for pedaco in DELA
+    mudas = [pedaco for pedaco in DO_USUARIO
              if any(classe == "ValueError" and pedaco in corpo
                     for classe, corpo in blocos)]
     assert not mudas, (
         f"{len(mudas)} recusa(s) escrita(s) para ELA voltaram a ser "
         f"`ValueError`, e `_recusou_dizendo` só pinta `RuntimeError`: {mudas}")
-    achadas = [pedaco for pedaco in DELA if pedaco in fonte]
-    assert achadas == list(DELA), (
+    achadas = [pedaco for pedaco in DO_USUARIO if pedaco in fonte]
+    assert achadas == list(DO_USUARIO), (
         f"frase(s) de recusa sumiram do arquivo: "
-        f"{sorted(set(DELA) - set(achadas))}")
+        f"{sorted(set(DO_USUARIO) - set(achadas))}")
 
 
 def test_o_selecionar_continua_valueerror() -> None:

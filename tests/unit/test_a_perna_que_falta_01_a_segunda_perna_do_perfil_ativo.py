@@ -99,7 +99,7 @@ def lar_de_mentira() -> pathlib.Path:
 
 
 @pytest.fixture
-def a_maquina_dela(lar_de_mentira: pathlib.Path) -> pathlib.Path:
+def a_maquina_do_usuario(lar_de_mentira: pathlib.Path) -> pathlib.Path:
     """A COMBINAÇÃO DA MÁQUINA DO USUÁRIO — a quarta mordida, e ela é a fixture."""
     save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
     sessao.save_last_profile(NO_DISCO)
@@ -136,19 +136,19 @@ class _Handlers(IpcHandlersMixin):
 
 
 def test_o_daemon_calado_cai_no_marcador_do_proprio_boot(
-    a_maquina_dela: pathlib.Path,
+    a_maquina_do_usuario: pathlib.Path,
 ) -> None:
     """Store em ``None`` + marcadores valendo → o nome do disco."""
     assert _Handlers(ativo=None)._perfil_que_grava() == NO_DISCO
     assert _Handlers(ativo="outro")._perfil_que_grava() == "outro"
 
 
-def test_o_marcador_orfao_nao_vira_excecao_na_mao_dela(
-    a_maquina_dela: pathlib.Path,
+def test_o_marcador_orfao_nao_vira_excecao_na_mao_do_usuario(
+    a_maquina_do_usuario: pathlib.Path,
 ) -> None:
     """Marcador apontando para perfil apagado → ``None``, e nada estoura."""
-    sessao.save_last_profile("um-perfil-que-ela-apagou")
-    sessao.save_active_marker("um-perfil-que-ela-apagou")
+    sessao.save_last_profile("um-perfil-que-o-usuario-apagou")
+    sessao.save_active_marker("um-perfil-que-o-usuario-apagou")
     assert _Handlers(ativo=None)._perfil_que_grava() is None
 
 
@@ -163,7 +163,7 @@ def _gravar_o_modo() -> str | None:
 
 
 def test_o_modo_entra_no_perfil_com_o_daemon_calado(
-    a_maquina_dela: pathlib.Path,
+    a_maquina_do_usuario: pathlib.Path,
 ) -> None:
     """O QUARTO CHAMADOR, medido no disco: antes e depois.
 
@@ -173,19 +173,19 @@ def test_o_modo_entra_no_perfil_com_o_daemon_calado(
     ``gamepad.mask.set`` passa pelo escritor do modo do daemon
     (``Daemon.gravar_o_modo_escolhido``), e é ele que precisa da segunda perna.
     """
-    antes = _no_disco(a_maquina_dela)
+    antes = _no_disco(a_maquina_do_usuario)
     assert not antes.get("mode"), (
         "o perfil já nasceu com opinião de modo; a régua mediria o que ela mesma plantou")
 
     assert _gravar_o_modo() == NO_DISCO
 
-    modo = _no_disco(a_maquina_dela).get("mode") or {}
+    modo = _no_disco(a_maquina_do_usuario).get("mode") or {}
     assert (modo.get("caminho"), modo.get("gamepad_flavor")) == ("xbox", "xbox"), (
         f"o modo não chegou ao disco: {modo!r}")
 
 
 def test_com_a_cura_arrancada_o_json_fica_byte_identico(
-    a_maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    a_maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A MORDIDA 2, feita por dentro: sem a segunda perna, nada é escrito."""
     monkeypatch.setattr(
@@ -193,26 +193,26 @@ def test_com_a_cura_arrancada_o_json_fica_byte_identico(
         "nome_do_perfil_que_grava",
         lambda do_daemon: do_daemon if isinstance(do_daemon, str) and do_daemon else None,
     )
-    bytes_antes = a_maquina_dela.read_bytes()
+    bytes_antes = a_maquina_do_usuario.read_bytes()
 
     assert _gravar_o_modo() is None
-    assert a_maquina_dela.read_bytes() == bytes_antes, (
+    assert a_maquina_do_usuario.read_bytes() == bytes_antes, (
         "com a cura arrancada o arquivo MUDOU — então esta régua não estava "
         "medindo o byte que ela promete medir")
 
 
 def test_sem_daemon_o_mask_set_recusa_e_nao_diz_ok(
-    a_maquina_dela: pathlib.Path,
+    a_maquina_do_usuario: pathlib.Path,
 ) -> None:
     """O defeito de 04/09 era um 'ok' sobre nada: sem daemon, a recusa é dita."""
-    bytes_antes = a_maquina_dela.read_bytes()
+    bytes_antes = a_maquina_do_usuario.read_bytes()
     with pytest.raises(ValueError, match="daemon"):
         asyncio.run(_Handlers(ativo=None)._handle_gamepad_mask_set({"flavor": "xbox"}))
-    assert a_maquina_dela.read_bytes() == bytes_antes
+    assert a_maquina_do_usuario.read_bytes() == bytes_antes
 
 
 def test_a_barra_de_motor_tambem_esperava_a_segunda_perna(
-    a_maquina_dela: pathlib.Path,
+    a_maquina_do_usuario: pathlib.Path,
 ) -> None:
     """O levantamento da §3: `rumble.motores.set` GRAVA, logo tinha o mesmo defeito."""
     save_profile(Profile.model_validate({
@@ -225,7 +225,7 @@ def test_a_barra_de_motor_tambem_esperava_a_segunda_perna(
         )
     )
     assert resposta["status"] == "ok", resposta
-    depois = _no_disco(a_maquina_dela)
+    depois = _no_disco(a_maquina_do_usuario)
     assert depois["controllers"][P1_CHAVE]["rumble"]["motor_forte_pct"] == 40, (
         f"a barra não chegou ao disco: {depois.get('controllers')!r}")
 
@@ -325,11 +325,11 @@ def _ctx_do_daemon_calado() -> Contexto:
     return Contexto(state={"connected": True}, mesa=[], conectados=[], estados={})
 
 
-def test_o_salvar_grava_com_o_daemon_calado(a_maquina_dela: pathlib.Path) -> None:
+def test_o_salvar_grava_com_o_daemon_calado(a_maquina_do_usuario: pathlib.Path) -> None:
     """O gesto que ESCREVE NO DISCO DO USUÁRIO, medido no disco."""
-    antes = _no_disco(a_maquina_dela)
+    antes = _no_disco(a_maquina_do_usuario)
     rodape.salvar(_ctx_do_daemon_calado(), {}, _PonteDoRodape())
-    depois = _no_disco(a_maquina_dela)
+    depois = _no_disco(a_maquina_do_usuario)
 
     assert depois["name"] == NO_DISCO, (
         f"o Salvar mirou outro perfil: {depois['name']!r}")
@@ -338,7 +338,7 @@ def test_o_salvar_grava_com_o_daemon_calado(a_maquina_dela: pathlib.Path) -> Non
 
 
 def test_com_a_cura_arrancada_os_tres_do_rodape_recusam(
-    a_maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    a_maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A MORDIDA 1, e ela vale para os TRÊS — porque a cura foi a mesma."""
     monkeypatch.setattr(
@@ -347,7 +347,7 @@ def test_com_a_cura_arrancada_os_tres_do_rodape_recusam(
         lambda state=None: str((state or {}).get("active_profile") or ""),
     )
     ctx = _ctx_do_daemon_calado()
-    bytes_antes = a_maquina_dela.read_bytes()
+    bytes_antes = a_maquina_do_usuario.read_bytes()
 
     for gesto in (rodape.aplicar, rodape.salvar, rodape.exportar):
         with pytest.raises((ValueError, RuntimeError)) as erro:
@@ -355,12 +355,12 @@ def test_com_a_cura_arrancada_os_tres_do_rodape_recusam(
         assert "perfil" in str(erro.value).lower(), (
             f"{gesto.__name__} recusou por outra razão: {erro.value}")
 
-    assert a_maquina_dela.read_bytes() == bytes_antes, (
+    assert a_maquina_do_usuario.read_bytes() == bytes_antes, (
         "a recusa arrancada ainda assim escreveu — a régua não mede o que diz")
 
 
 def test_o_aplicar_e_o_exportar_atravessam_com_o_daemon_calado(
-    a_maquina_dela: pathlib.Path,
+    a_maquina_do_usuario: pathlib.Path,
 ) -> None:
     """Os outros dois chegam ao fim do caminho em vez de recusar."""
     p = _PonteDoRodape()

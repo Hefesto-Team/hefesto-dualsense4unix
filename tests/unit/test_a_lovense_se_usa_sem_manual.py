@@ -15,7 +15,7 @@ MORDIDAS (23/10/2026, executadas sobre a cura e devolvidas):
 - as regras ``.nj-tog.ligado.vermelho`` e ``#mod-janela .est-vermelho`` tiradas do CSS reprovam
   ``test_a_ligada_que_caiu_diz_caiu_em_vermelho_com_o_porque_na_dica``;
 - o ``parado`` ignorado no gesto (o recado de sempre) reprova
-  ``test_o_parar_tudo_sem_ela_na_porta_recusa_dizendo``;
+  ``test_o_parar_tudo_sem_o_usuario_na_porta_recusa_dizendo``;
 - o ⋮ sem a lista depois do «Atualizar» reprova
   ``test_atualizar_com_permissao_nova_mostra_a_lista_e_um_clique_liga`` (o clique só arma);
 - o estado do supervisor ignorado em ``processo_de`` (a chave verde de sempre) reprova a chave que
@@ -125,7 +125,7 @@ class _Ponte:
         return None
 
 
-def test_o_canto_do_agora_diz_que_ela_caiu(lar, ctx, tmp_path) -> None:  # noqa: F811
+def test_o_canto_do_agora_diz_que_o_usuario_caiu(lar, ctx, tmp_path) -> None:  # noqa: F811
     a07 = _a07()
     _instalada_e_ligada(a07, ctx, tmp_path, permissoes=(GESTO,), agora=["aparelhos"],
                         parar_tudo=True)
@@ -135,7 +135,7 @@ def test_o_canto_do_agora_diz_que_ela_caiu(lar, ctx, tmp_path) -> None:  # noqa:
     assert "Não abriu: sem o executável." in coluna
 
 
-def test_o_parar_tudo_sem_ela_na_porta_recusa_dizendo(lar, ctx, tmp_path) -> None:  # noqa: F811
+def test_o_parar_tudo_sem_o_usuario_na_porta_recusa_dizendo(lar, ctx, tmp_path) -> None:  # noqa: F811
     """Prova da D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA."""
     a07 = _a07()
     _instalada_e_ligada(a07, ctx, tmp_path, permissoes=(GESTO,), agora=["aparelhos"],

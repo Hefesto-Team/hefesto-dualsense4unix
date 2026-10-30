@@ -19,7 +19,7 @@ for _p in (str(RAIZ / "src"),):
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a05_vibracao
 
-BANCADA = RAIZ / "mockup/05-vibracao.html"
+ENSAIO = RAIZ / "mockup/05-vibracao.html"
 CORES_CSV = RAIZ / "docs/data/cores-do-dualsense.csv"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
@@ -125,8 +125,8 @@ def _desenhos(html: str) -> list[tuple[dict[str, str], bool]]:
     ]
 
 
-def _bancada() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+def _ensaio() -> str:
+    return ENSAIO.read_text(encoding="utf-8")
 
 
 def _mesa(*cores: str) -> list[dict[str, Any]]:
@@ -149,7 +149,7 @@ def _mesa(*cores: str) -> list[dict[str, Any]]:
 
 def test_todo_desenho_de_controle_pede_o_alvo_de_atributo() -> None:
     """Os quatro `<svg>` da mesa trazem o par alvo/parâmetro, e o nome certo."""
-    desenhos = _desenhos(_bancada())
+    desenhos = _desenhos(_ensaio())
     assert desenhos, "a bancada da 05 não tem um desenho de controle sequer"
 
     sem_endereco = [a.get("data-colorway") for a, _v in desenhos
@@ -188,8 +188,8 @@ def test_o_lugar_vazio_nao_afirma_modelo_nenhum() -> None:
     O ENDEREÇO FICA, e isso é o par desta função: o dia em que um terceiro
     controle entrar na mesa, o pintor tem onde escrever o modelo dele.
     """
-    vazios = [a for a, vazio in _desenhos(_bancada()) if vazio]
-    cheios = [a for a, vazio in _desenhos(_bancada()) if not vazio]
+    vazios = [a for a, vazio in _desenhos(_ensaio()) if vazio]
+    cheios = [a for a, vazio in _desenhos(_ensaio()) if not vazio]
     assert vazios and cheios, (
         "a mesa do desenho deixou de ter lugar vazio E lugar com controle — "
         "esta régua compara os dois")
@@ -206,9 +206,9 @@ def test_o_lugar_vazio_nao_afirma_modelo_nenhum() -> None:
         f"um lugar COM controle deixou de trazer o modelo do desenho: {mudos}")
 
 
-def test_a_pagina_publica_os_28_modelos_dela() -> None:
+def test_a_pagina_publica_os_28_modelos_do_usuario() -> None:
     """A página traz as regras dos 28 do mapa, e nenhum SVG guarda a podada."""
-    html = _bancada()
+    html = _ensaio()
     esperados = modelos_do_mapa()
     assert len(esperados) >= 28, (
         f"o mapa dela encolheu para {len(esperados)} modelos")
@@ -232,7 +232,7 @@ def test_a_pagina_publica_os_28_modelos_dela() -> None:
 
 def test_a_tinta_dos_modelos_por_url_existe_na_pagina() -> None:
     """Os `url(#…)` da folha acham o elemento — e ele NÃO é o de um controle."""
-    html = _bancada()
+    html = _ensaio()
     pedidos = set(re.findall(r"url\(#([^)]+)\)", html))
     assert pedidos, "a folha desta página não pede tinta nenhuma"
 
@@ -265,7 +265,7 @@ def test_o_pacote_emite_o_modelo_lido_e_cala_o_que_nao_leu() -> None:
         f"inventou o que ninguém leu: {colunas[sem].get('colorway')!r}")
 
 
-def test_o_modelo_emitido_e_um_dos_do_mapa_dela() -> None:
+def test_o_modelo_emitido_e_um_dos_do_mapa_do_usuario() -> None:
     """O que o pacote emite é um `id` do CSV — nunca um nome de vitrine."""
     conhecidos = modelos_do_mapa()
     for slug in sorted(conhecidos)[:6] + sorted(conhecidos)[-6:]:

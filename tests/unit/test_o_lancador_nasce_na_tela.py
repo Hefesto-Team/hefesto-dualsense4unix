@@ -1,4 +1,4 @@
-"""O atalho DO USUÁRIO abre na tela do usuário — o avesso do TELA-DELA-02, e o par dele."""
+"""O atalho DO USUÁRIO abre na tela do usuário — o avesso do TELA-DO-USUARIO-02, e o par dele."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def test_o_atalho_versionado_abre_o_motor_com_a_tela() -> None:
     exec_ = _exec_do_atalho()
     assert _abre_com_tela(exec_), (
         "o `Exec=` do .desktop não abre `run.sh --gui` com `HEFESTO_NA_TELA=1` — "
-        "sem a variável, o atalho dela atravessa a guarda TELA-DELA-02 e a "
+        "sem a variável, o atalho dela atravessa a guarda TELA-DO-USUARIO-02 e a "
         "janela nasce num `Xvfb` que ela não vê:\n  " + exec_
     )
 

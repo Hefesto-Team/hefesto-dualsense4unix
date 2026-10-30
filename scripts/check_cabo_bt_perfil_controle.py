@@ -603,12 +603,12 @@ _SIM_ = "sim"
 _NAO_EXISTE = "nao existe no aparelho"  # (noqa-acento)
 _ESCADA = (_SEM_LINHA, NAO, _NAO_EXISTE, _RESSALVA, _SIM_)
 
-_O_APARELHO_DELA = "dualsense"
+_O_APARELHO_DO_USUARIO = "dualsense"
 
 
 def _resposta_de_transporte(linhas: list[dict[str, str]], lado: str) -> str:
     """A resposta de um transporte: uma das quatro de `_ESCADA`."""
-    minhas = [l for l in linhas if l.get("controle") == _O_APARELHO_DELA]
+    minhas = [l for l in linhas if l.get("controle") == _O_APARELHO_DO_USUARIO]
     if not minhas:
         return _SEM_LINHA
     melhor = NAO

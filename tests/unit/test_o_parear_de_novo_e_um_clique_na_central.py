@@ -6,7 +6,7 @@ endereço dela quando a janela o vir, e nenhum outro. O dublê do BlueZ é o de 
 (``radio_de_mentira``): nunca o BlueZ dela.
 
 MORDIDAS, uma por vez: o ``visto`` e o ``janela_aberta`` fora do ``if`` de
-``_a_escolha_dela`` (a escolha antes de ver deixa de existir, ou vale em qualquer passo);
+``_a_escolha_do_usuario`` (a escolha antes de ver deixa de existir, ou vale em qualquer passo);
 o ``_onde_esta`` tirado da condição (o «Mover» do que está no ar passa a valer escolha).
 """
 

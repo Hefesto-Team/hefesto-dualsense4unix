@@ -594,7 +594,7 @@ def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
         "o «Já movi» pintou o reexame antes de a leitura nova chegar")
 
 
-def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(
+def test_o_reexame_guarda_o_que_o_usuario_ensinou_na_tela(
     disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso."""

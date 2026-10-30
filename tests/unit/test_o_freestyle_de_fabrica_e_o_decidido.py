@@ -77,8 +77,8 @@ def _o_que_falta(perfil: Profile) -> list[str]:
         falta.append(f"barra em {perfil.leds.lightbar_brightness}, e não no teto")
     if perfil.leds.player_led_brightness != "forte":
         falta.append(f"luzes de número no {perfil.leds.player_led_brightness!r}")
-    for peca, dela in (perfil.controllers or {}).items():
-        sensores = dela.sensores
+    for peca, do_usuario in (perfil.controllers or {}).items():
+        sensores = do_usuario.sensores
         if sensores is not None and False in (sensores.giroscopio, sensores.acelerometro):
             falta.append(f"sensor desligado em {peca}")
     nascimento = esquema.MODO_DE_NASCIMENTO_DO_GATILHO

@@ -14,7 +14,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py"
 PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 PUBLICADO = PAGINAS / PAGINAS_DA_SECAO_DOS_CONTROLES[0]
-BANCADA = RAIZ / "mockup" / PAGINAS_DA_SECAO_DOS_CONTROLES[0]
+ENSAIO = RAIZ / "mockup" / PAGINAS_DA_SECAO_DOS_CONTROLES[0]
 
 
 def _roteiro() -> tuple[tuple[int, str], ...]:
@@ -46,7 +46,7 @@ def _alvos_do_seletor(seletor: str) -> list[str]:
     return partes
 
 
-@pytest.mark.parametrize("alvo", [PUBLICADO, BANCADA], ids=["publicado", "mockup"])
+@pytest.mark.parametrize("alvo", [PUBLICADO, ENSAIO], ids=["publicado", "mockup"])
 def test_todo_passo_do_roteiro_acha_alvo_na_tela(alvo: Path) -> None:
     """MORDIDA 1: cada seletor do roteiro existe na página. Nos DOIS lugares."""
     html = alvo.read_text(encoding="utf-8")
@@ -79,7 +79,7 @@ def test_todo_botao_de_rota_tem_dono_na_tabela() -> None:
     inicio = fonte.index("DONOS_DOS_GESTOS = {")
     tabela = fonte[inicio : fonte.index("\n}\n", inicio)]
     declarados = set(re.findall(r'"rota:([a-z]+)"', tabela))
-    for alvo in (PUBLICADO, BANCADA):
+    for alvo in (PUBLICADO, ENSAIO):
         if not alvo.is_file():
             continue
         na_pagina = set(re.findall(r'data-rota="([a-z]+)"', alvo.read_text(encoding="utf-8")))

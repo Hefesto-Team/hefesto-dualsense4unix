@@ -67,7 +67,7 @@ def test_com_a_vigia_de_pe_a_marca_vem_antes_do_restart(tmp_path: Path) -> None:
     )
 
 
-def test_com_a_vigia_de_pe_ela_e_reiniciada_e_nao_so_habilitada(tmp_path: Path) -> None:
+def test_com_a_vigia_de_pe_o_usuario_e_reiniciada_e_nao_so_habilitada(tmp_path: Path) -> None:
     _marca, chamadas = _roda(tmp_path, ativa=True)
     assert any(c.startswith("restart") for c in chamadas), (
         "com a vigia de pé o install só habilitou: `enable --now` não troca o "
@@ -75,7 +75,7 @@ def test_com_a_vigia_de_pe_ela_e_reiniciada_e_nao_so_habilitada(tmp_path: Path) 
     )
 
 
-def test_sem_a_vigia_de_pe_ela_sobe_do_jeito_de_sempre(tmp_path: Path) -> None:
+def test_sem_a_vigia_de_pe_o_usuario_sobe_do_jeito_de_sempre(tmp_path: Path) -> None:
     marca, chamadas = _roda(tmp_path, ativa=False)
     assert not marca.exists(), "sem vigia de pé, a primeira volta TEM de reler o boot"
     assert any("enable --now" in c for c in chamadas), chamadas

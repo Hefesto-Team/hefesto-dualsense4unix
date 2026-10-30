@@ -22,7 +22,7 @@ P2 = "aa:bb:cc:00:00:b7"
 P3 = "aa:bb:cc:00:00:c3"
 P4 = "aa:bb:cc:00:00:d9"
 
-MESA_DELA: tuple[tuple[str, str], ...] = (
+MESA_DO_USUARIO: tuple[tuple[str, str], ...] = (
     (P1, "bluetooth"),
     (P2, "usb"),
     (P3, "usb"),
@@ -58,7 +58,7 @@ class _PipeWire:
     """O `pactl` que a eleição vê. O eleitor por cima dele é o do produto."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        self.publicados: dict[str, str] = {_n(u): _canal(u) for u, _ in MESA_DELA}
+        self.publicados: dict[str, str] = {_n(u): _canal(u) for u, _ in MESA_DO_USUARIO}
         self.ativo: str | None = PLACA
         self.escritas: list[str] = []
         self.reeleger_para: str | None = None
@@ -120,13 +120,13 @@ class _Backend:
     """O backend dos quatro. As chaves são normalizadas, como no produto."""
 
     def __init__(self) -> None:
-        self.mudo: dict[str, bool] = {_n(u): True for u, _ in MESA_DELA}
+        self.mudo: dict[str, bool] = {_n(u): True for u, _ in MESA_DO_USUARIO}
         self.leds: dict[str, bool] = {}
         self.escritas_de_luz: list[tuple[str, bool]] = []
 
     def describe_controllers(self) -> list[dict[str, Any]]:
         return [
-            {"uniq": u, "connected": True, "transport": t} for u, t in MESA_DELA
+            {"uniq": u, "connected": True, "transport": t} for u, t in MESA_DO_USUARIO
         ]
 
     def audio_status_for(self, uniq: str | None = None) -> dict[str, Any]:
@@ -162,7 +162,7 @@ class _PonteDeMentira:
         self.no = SimpleNamespace(uniq=uniq, caminho=caminho)
         self.ditos: list[bool | None] = []
 
-    def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
+    def dizer_o_pedido_do_usuario(self, ligado: bool | None) -> None:
         self.ditos.append(ligado)
 
 
@@ -253,18 +253,18 @@ def test_liga_um_liga_outro_e_os_dois_ficam_no_ar(mesa: Any) -> None:
     assert mesa.pipewire.ativo == _canal(P4), "o padrão é o último que ela ligou"
 
 
-def test_os_quatro_da_mesa_dela_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
+def test_os_quatro_da_mesa_do_usuario_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Os quatro no ar, e o `_loop` do supervisor entrega o SIM às duas pontes."""
-    for uniq, _ in MESA_DELA:
+    for uniq, _ in MESA_DO_USUARIO:
         assert _apertar(mesa, uniq, ligado=True).feito, uniq
 
-    assert mesa.registro.no_ar() == {_n(u): True for u, _ in MESA_DELA}
-    assert mesa.backend.leds == {_n(u): True for u, _ in MESA_DELA}
+    assert mesa.registro.no_ar() == {_n(u): True for u, _ in MESA_DO_USUARIO}
+    assert mesa.backend.leds == {_n(u): True for u, _ in MESA_DO_USUARIO}
     assert _eleito(mesa) == P4
 
-    radio = [(u, f"/dev/hidraw{i}") for i, (u, t) in enumerate(MESA_DELA) if t == "bluetooth"]
+    radio = [(u, f"/dev/hidraw{i}") for i, (u, t) in enumerate(MESA_DO_USUARIO) if t == "bluetooth"]
     monkeypatch.setattr(
         bt, "nos_dualsense_bluetooth",
         lambda: [SimpleNamespace(uniq=u, caminho=c) for u, c in radio],
@@ -279,7 +279,7 @@ def test_os_quatro_da_mesa_dela_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
         assert ponte.ditos[-1:] == [True], (
             f"a ponte de {ponte.no.uniq} não recebeu o pedido dela: {ponte.ditos}"
         )
-    assert mesa.registro.no_ar() == {_n(u): True for u, _ in MESA_DELA}, (
+    assert mesa.registro.no_ar() == {_n(u): True for u, _ in MESA_DO_USUARIO}, (
         "a varredura apagou a palavra de quem está no cabo"
     )
 

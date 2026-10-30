@@ -578,7 +578,7 @@ def test_5_o_ensaio_toca_no_ritmo_e_no_tom_do_aparelho(
 
     tempo = _TempoDeMentira()
     monkeypatch.setattr(sub, "controles_na_lista", lambda *a, **k: [_Uno()])
-    monkeypatch.setattr(ensaio, "_exigir_bancada", lambda: (True, ""))
+    monkeypatch.setattr(ensaio, "_exigir_ensaio", lambda: (True, ""))
     monkeypatch.setattr(bt_audio, "abrir_hidraw_rw", lambda _c: os.open(os.devnull, os.O_WRONLY))
     monkeypatch.setattr(af, "CodificadorOpus", _Codificador)
     monkeypatch.setattr(af, "escritor_de_hidraw", _escritor)
@@ -598,8 +598,8 @@ def test_5_o_ensaio_toca_no_ritmo_e_no_tom_do_aparelho(
         f"{REPORTS_POR_SEGUNDO_MEDIDO}"
     )
     tocada = _frequencia_tocada(pcms)
-    assert tocada == pytest.approx(ensaio.BANCADA_HZ, abs=ensaio.BANCADA_HZ * 0.01), (
-        f"o ensaio anuncia {ensaio.BANCADA_HZ:.0f} Hz e o aparelho toca {tocada:.1f} Hz"
+    assert tocada == pytest.approx(ensaio.ENSAIO_HZ, abs=ensaio.ENSAIO_HZ * 0.01), (
+        f"o ensaio anuncia {ensaio.ENSAIO_HZ:.0f} Hz e o aparelho toca {tocada:.1f} Hz"
     )
     assert "93.75 reports/s" in saida or "93,75 reports/s" in saida, saida
 

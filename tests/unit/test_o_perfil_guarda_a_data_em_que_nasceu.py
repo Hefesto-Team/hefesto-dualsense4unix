@@ -78,7 +78,7 @@ def test_o_perfil_novo_nasce_com_criado_em_e_sem_modificado_em(
     assert "modificado_em" not in arquivo
 
 
-def test_o_gesto_dela_muda_so_o_modificado_em(relogio: None, dir_perfis: Path) -> None:
+def test_o_gesto_do_usuario_muda_so_o_modificado_em(relogio: None, dir_perfis: Path) -> None:
     """MORDIDA: gravar `criado_em` em todo salvar troca o DIA_1 pelo DIA_3."""
     save_profile(_perfil())
     _por_gesto(load_profile("Forja").model_copy(update={"priority": 77}))

@@ -56,7 +56,7 @@ TABELA_8_SO_DE_GABARITO = _tabela([_bloco(0x0C + i) for i in range(18)])
 
 TABELA_8_AUSENTE = _PREAMBULO
 
-PLACA_DESTA_BANCADA = {
+PLACA_DESTE_ENSAIO = {
     "fabricante": {"valor": "Gigabyte Technology Co., Ltd.", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
     "modelo": {"valor": "B450M S2H", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
     "bios": {"valor": "F68a", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
@@ -78,7 +78,7 @@ def _no(hub, numero, *, par="", encaixe="hotplug", aparelho=""):
     )
 
 
-def entradas_desta_bancada():
+def entradas_deste_ensaio():
     """Os 22 nós de raiz TRANSCRITOS da bancada em 25/08/2026, 21h18."""
     nos = []
     for n in range(1, 11):
@@ -95,26 +95,26 @@ def entradas_desta_bancada():
     return tuple(nos)
 
 
-MAXCHILD_DESTA_BANCADA = {"usb1": 10, "usb2": 4, "usb3": 4, "usb4": 4}
+MAXCHILD_DESTE_ENSAIO = {"usb1": 10, "usb2": 4, "usb3": 4, "usb4": 4}
 
 
-def censo_desta_bancada(dmidecode=TABELA_8_DESTA_PLACA):
+def censo_deste_ensaio(dmidecode=TABELA_8_DESTA_PLACA):
     return cg.montar_censo(
         dmidecode=dmidecode,
-        entradas=entradas_desta_bancada(),
-        maxchild=MAXCHILD_DESTA_BANCADA,
-        placa=dict(PLACA_DESTA_BANCADA),
+        entradas=entradas_deste_ensaio(),
+        maxchild=MAXCHILD_DESTE_ENSAIO,
+        placa=dict(PLACA_DESTE_ENSAIO),
         entradas_da_tabela_8=18,
         agora="2026-08-25T21:18:00-03:00",
     )
 
 
-def test_a_fixture_reproduz_a_bancada_medida():
+def test_a_fixture_reproduz_o_ensaio_medido():
     """Antes de medir o produto, medir a régua."""
-    entradas = entradas_desta_bancada()
+    entradas = entradas_deste_ensaio()
     assert len(entradas) == 22
-    assert sum(MAXCHILD_DESTA_BANCADA.values()) == 22
-    kernel = cg.censo_do_kernel(entradas, MAXCHILD_DESTA_BANCADA)
+    assert sum(MAXCHILD_DESTE_ENSAIO.values()) == 22
+    kernel = cg.censo_do_kernel(entradas, MAXCHILD_DESTE_ENSAIO)
     assert kernel["soquetes"]["valor"] == 22
     assert kernel["buracos"]["valor"] == 15
     assert kernel["buracos_de_encaixe"]["valor"] == 11
@@ -134,7 +134,7 @@ def test_a_fixture_reproduz_a_bancada_medida():
 )
 def test_placa_sem_tabela_8_nao_inventa_gabinete(texto, apelido):
     """**A MORDIDA.** Firmware que não respondeu não vira gabinete de mentira."""
-    censo = censo_desta_bancada(dmidecode=texto)
+    censo = censo_deste_ensaio(dmidecode=texto)
     assert censo["faces"] == [], f"{apelido}: inventou face"
     assert censo["de_onde_sei"] == cg.NAO_RESPONDEU, apelido
     assert censo["firmware"]["tabela_8_respondeu"] is False, apelido
@@ -149,7 +149,7 @@ def test_placa_sem_tabela_8_nao_inventa_gabinete(texto, apelido):
 
 def test_zero_conectores_nao_e_a_mesma_coisa_que_nao_perguntei():
     """A recusa que o dublê tem de saber: ``None`` com selo, nunca ``0``."""
-    censo = censo_desta_bancada(dmidecode=TABELA_8_SO_DE_GABARITO)
+    censo = censo_deste_ensaio(dmidecode=TABELA_8_SO_DE_GABARITO)
     for caminho, fato in _todos_os_fatos(censo):
         if fato["valor"] is None:
             assert fato["de_onde_sei"] == cg.NAO_RESPONDEU, caminho
@@ -159,7 +159,7 @@ def test_zero_conectores_nao_e_a_mesma_coisa_que_nao_perguntei():
 
 def test_faces_nascem_vazias_mesmo_com_a_bios_falante():
     """Nem a BIOS mais loquaz produz uma face."""
-    censo = censo_desta_bancada()
+    censo = censo_deste_ensaio()
     assert censo["firmware"]["tabela_8_respondeu"] is True
     assert censo["faces"] == []
     assert "física" not in censo["por_que_faces_vazias"]
@@ -168,7 +168,7 @@ def test_faces_nascem_vazias_mesmo_com_a_bios_falante():
 
 def test_tabela_8_que_contradiz_o_kernel_nao_vence_sozinha():
     """**A MORDIDA.** As três contagens ficam gravadas, e a briga é declarada."""
-    contagens = censo_desta_bancada()["contagens"]
+    contagens = censo_deste_ensaio()["contagens"]
     assert contagens["firmware"] == {"valor": 5, "de_onde_sei": cg.LIDO_DO_FIRMWARE}
     assert contagens["kernel_soquetes"] == {"valor": 22, "de_onde_sei": cg.LIDO_DO_KERNEL}
     assert contagens["kernel_buracos"] == {"valor": 15, "de_onde_sei": cg.LIDO_DO_KERNEL}
@@ -201,8 +201,8 @@ def test_a_pergunta_diz_o_que_faltou_em_cada_caso():
 
 def test_censo_de_outra_placa_nao_serve():
     """**A MORDIDA.** ``gabinete.json`` que veio de outro PC é recusado."""
-    censo = censo_desta_bancada()
-    assert cg.serve_para_esta_placa(censo, dict(PLACA_DESTA_BANCADA)) is True
+    censo = censo_deste_ensaio()
+    assert cg.serve_para_esta_placa(censo, dict(PLACA_DESTE_ENSAIO)) is True
     outra = {
         "fabricante": {"valor": "ASUSTeK COMPUTER INC.", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
         "modelo": {"valor": "PRIME B450M-A", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
@@ -212,37 +212,37 @@ def test_censo_de_outra_placa_nao_serve():
 
 def test_placa_que_nao_sabe_quem_e_tambem_e_recusa():
     """Não saber quem é a placa não autoriza a dizer que serve."""
-    censo = censo_desta_bancada()
+    censo = censo_deste_ensaio()
     anonima = {
         "fabricante": {"valor": None, "de_onde_sei": cg.NAO_RESPONDEU},
         "modelo": {"valor": None, "de_onde_sei": cg.NAO_RESPONDEU},
     }
     assert cg.serve_para_esta_placa(censo, anonima) is False
-    assert cg.serve_para_esta_placa({}, dict(PLACA_DESTA_BANCADA)) is False
+    assert cg.serve_para_esta_placa({}, dict(PLACA_DESTE_ENSAIO)) is False
 
 
-def _censo_com_a_palavra_dela():
+def _censo_com_a_palavra_do_usuario():
     """O arquivo depois de ela responder na aba: faces declaradas e a contagem."""
-    antigo = censo_desta_bancada()
+    antigo = censo_deste_ensaio()
     antigo["faces"] = [
-        {"nome": "traseira", "entradas": 6, "de_onde_sei": cg.DECLARADO_POR_ELA},
-        {"nome": "frente", "entradas": 2, "de_onde_sei": cg.DECLARADO_POR_ELA},
+        {"nome": "traseira", "entradas": 6, "de_onde_sei": cg.DECLARADO_PELO_USUARIO},
+        {"nome": "frente", "entradas": 2, "de_onde_sei": cg.DECLARADO_PELO_USUARIO},
     ]
     antigo["contagens"]["declarado_por_ela"] = {
         "valor": 8,
-        "de_onde_sei": cg.DECLARADO_POR_ELA,
+        "de_onde_sei": cg.DECLARADO_PELO_USUARIO,
     }
     return antigo
 
 
-def test_o_install_nao_apaga_o_que_ela_ensinou():
+def test_o_install_nao_apaga_o_que_o_usuario_ensinou():
     """**A MORDIDA.** A segunda instalação não pode zerar a resposta de produto."""
-    antigo = _censo_com_a_palavra_dela()
-    novo = censo_desta_bancada(dmidecode="")
-    herdado = cg.preservar_o_que_ela_disse(novo, antigo, dict(PLACA_DESTA_BANCADA))
+    antigo = _censo_com_a_palavra_do_usuario()
+    novo = censo_deste_ensaio(dmidecode="")
+    herdado = cg.preservar_o_que_o_usuario_disse(novo, antigo, dict(PLACA_DESTE_ENSAIO))
     assert len(herdado["faces"]) == 2
     assert herdado["contagens"]["declarado_por_ela"]["valor"] == 8
-    assert herdado["contagens"]["declarado_por_ela"]["de_onde_sei"] == cg.DECLARADO_POR_ELA
+    assert herdado["contagens"]["declarado_por_ela"]["de_onde_sei"] == cg.DECLARADO_PELO_USUARIO
     assert herdado["contagens"]["precisa_da_palavra_dela"] is False
     assert herdado["de_onde_sei"] == cg.NAO_RESPONDEU
 
@@ -253,11 +253,11 @@ def test_a_declaracao_de_outra_placa_nao_pega_carona():
         "fabricante": {"valor": "ASUSTeK COMPUTER INC.", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
         "modelo": {"valor": "PRIME B450M-A", "de_onde_sei": cg.LIDO_DO_FIRMWARE},
     }
-    herdado = cg.preservar_o_que_ela_disse(_censo_com_a_palavra_dela(), {}, outra)
+    herdado = cg.preservar_o_que_o_usuario_disse(_censo_com_a_palavra_do_usuario(), {}, outra)
     assert "substituiu_outra_placa" not in herdado
 
-    herdado = cg.preservar_o_que_ela_disse(
-        censo_desta_bancada(), _censo_com_a_palavra_dela(), outra
+    herdado = cg.preservar_o_que_o_usuario_disse(
+        censo_deste_ensaio(), _censo_com_a_palavra_do_usuario(), outra
     )
     assert herdado["faces"] == []
     assert herdado["substituiu_outra_placa"] is True
@@ -273,42 +273,42 @@ def test_arquivo_ausente_ou_quebrado_nao_derruba_o_install(tmp_path):
     lista.write_text("[1, 2, 3]", encoding="utf-8")
     assert cg.ler_do_disco(str(lista)) == {}
     inteiro = tmp_path / "bom.json"
-    cg.gravar(_censo_com_a_palavra_dela(), str(inteiro))
+    cg.gravar(_censo_com_a_palavra_do_usuario(), str(inteiro))
     assert len(cg.ler_do_disco(str(inteiro))["faces"]) == 2
 
 
 def test_o_que_o_firmware_disse_vem_com_selo():
     """Todo ``valor`` deste arquivo tem um ``de_onde_sei`` ao lado, e ele é válido."""
-    fatos = _todos_os_fatos(censo_desta_bancada())
+    fatos = _todos_os_fatos(censo_deste_ensaio())
     assert len(fatos) >= 15, "a varredura não achou os campos — a régua quebrou"
     for caminho, fato in fatos:
         assert fato["de_onde_sei"] in cg.SELOS, f"{caminho}: selo desconhecido"
-    censo = censo_desta_bancada()
+    censo = censo_deste_ensaio()
     assert censo["kernel"]["soquetes"]["de_onde_sei"] == cg.LIDO_DO_KERNEL
     assert censo["firmware"]["conectores_usb"]["de_onde_sei"] == cg.LIDO_DO_FIRMWARE
     for conector in censo["firmware"]["conectores"]:
         assert conector["de_onde_sei"] == cg.LIDO_DO_FIRMWARE
 
 
-def test_o_selo_de_ela_existe_e_o_censo_nunca_o_grava():
+def test_o_selo_de_o_usuario_existe_e_o_censo_nunca_o_grava():
     """``declarado-por-ela`` é do vocabulário, e é da ABA — não deste módulo."""
-    assert cg.DECLARADO_POR_ELA in cg.SELOS
-    selos = {fato["de_onde_sei"] for _, fato in _todos_os_fatos(censo_desta_bancada())}
-    assert cg.DECLARADO_POR_ELA not in selos
+    assert cg.DECLARADO_PELO_USUARIO in cg.SELOS
+    selos = {fato["de_onde_sei"] for _, fato in _todos_os_fatos(censo_deste_ensaio())}
+    assert cg.DECLARADO_PELO_USUARIO not in selos
 
 
 def test_o_hub_da_mesa_nao_entra_no_gabinete():
     """O gabinete é o CHASSI. O hub que ela pendurou não muda o metal."""
     do_hub = tuple(_no("3-1", n) for n in range(1, 5)) + tuple(_no("3-1.1", n) for n in range(1, 5))
-    com_hub = entradas_desta_bancada() + do_hub
+    com_hub = entradas_deste_ensaio() + do_hub
     assert len(com_hub) == 30
     assert len(cg.soquetes_de_raiz(com_hub)) == 22
-    assert cg.censo_do_kernel(com_hub, MAXCHILD_DESTA_BANCADA)["buracos"]["valor"] == 15
+    assert cg.censo_do_kernel(com_hub, MAXCHILD_DESTE_ENSAIO)["buracos"]["valor"] == 15
 
 
 def test_o_buraco_3x_conta_uma_vez_so():
     """Um furo USB 3.x publica DOIS nós, e é UM furo."""
-    kernel = cg.censo_do_kernel(entradas_desta_bancada(), MAXCHILD_DESTA_BANCADA)
+    kernel = cg.censo_do_kernel(entradas_deste_ensaio(), MAXCHILD_DESTE_ENSAIO)
     assert kernel["soquetes"]["valor"] == 22
     assert kernel["buracos"]["valor"] == 15
     assert kernel["buracos"]["valor"] < kernel["soquetes"]["valor"]
@@ -316,9 +316,9 @@ def test_o_buraco_3x_conta_uma_vez_so():
 
 def test_as_duas_reguas_do_kernel_se_conferem():
     """Contar nós e ler ``maxchild`` são dois caminhos, e o censo diz se batem."""
-    entradas = entradas_desta_bancada()
-    assert cg.censo_do_kernel(entradas, MAXCHILD_DESTA_BANCADA)["reguas_concordam"] is True
-    mentiroso = dict(MAXCHILD_DESTA_BANCADA, usb1=4)
+    entradas = entradas_deste_ensaio()
+    assert cg.censo_do_kernel(entradas, MAXCHILD_DESTE_ENSAIO)["reguas_concordam"] is True
+    mentiroso = dict(MAXCHILD_DESTE_ENSAIO, usb1=4)
     torto = cg.censo_do_kernel(entradas, mentiroso)
     assert torto["reguas_concordam"] is False
     assert torto["soquetes"]["valor"] == 22 and torto["maxchild"]["valor"] == 16
@@ -352,7 +352,7 @@ def test_usb_sai_do_tipo_e_nunca_da_designacao():
 def test_conector_interno_nao_vira_buraco_do_gabinete():
     """Cabeçote de placa-mãe é fato, e não é buraco que ela alcança."""
     interno = _bloco(0x30, interna="F_USB1", tipo_interno="Access Bus (USB)", porta="USB")
-    censo = censo_desta_bancada(dmidecode=TABELA_8_DESTA_PLACA + "\n" + interno)
+    censo = censo_deste_ensaio(dmidecode=TABELA_8_DESTA_PLACA + "\n" + interno)
     conectores = censo["firmware"]["conectores"]
     assert len(conectores) == 6, "o cabeçote tem de FICAR gravado"
     assert conectores[-1]["externo"] is False and conectores[-1]["usb"] is True
@@ -422,11 +422,11 @@ def test_notebook_e_desktop_se_separam_e_o_resto_e_nao_sei(tipo, movel):
 def test_gravar_e_atomico_e_nao_deixa_sobra(tmp_path):
     """Escrita por troca de nome — JSON pela metade é aba sem gabinete e sem porquê."""
     alvo = tmp_path / "estado" / cg.NOME_DO_ARQUIVO
-    escrito = cg.gravar(censo_desta_bancada(), str(alvo))
+    escrito = cg.gravar(censo_deste_ensaio(), str(alvo))
     assert escrito == str(alvo)
     assert json.loads(alvo.read_text(encoding="utf-8"))["versao_do_censo"] == cg.VERSAO_DO_CENSO
     assert not (tmp_path / "estado" / f"{cg.NOME_DO_ARQUIVO}.novo").exists()
-    cg.gravar(censo_desta_bancada(dmidecode=""), str(alvo))
+    cg.gravar(censo_deste_ensaio(dmidecode=""), str(alvo))
     assert json.loads(alvo.read_text(encoding="utf-8"))["de_onde_sei"] == cg.NAO_RESPONDEU
 
 
@@ -444,8 +444,8 @@ def test_o_caminho_padrao_le_o_home_na_chamada(tmp_path):
 
 def test_o_resumo_diz_o_que_nao_soube():
     """A linha que o install imprime não pode ficar bonita quando faltou dado."""
-    assert "DIVERGEM" in cg.resumo(censo_desta_bancada())
-    mudo = cg.resumo(censo_desta_bancada(dmidecode=""))
+    assert "DIVERGEM" in cg.resumo(censo_deste_ensaio())
+    mudo = cg.resumo(censo_deste_ensaio(dmidecode=""))
     assert "não respondeu" in mudo and "DIVERGEM" not in mudo
 
 
@@ -484,7 +484,7 @@ _PCI_DO_HUB = "0000:0c:00.3"
 _PCI_DA_PLACA = "0000:03:00.0"
 
 
-def _bancada_dos_tres_adaptadores():
+def _ensaio_dos_tres_adaptadores():
     """O arranjo medido em 22/08/2026: três adaptadores, DOIS pais, um hub."""
     def _hub(no, pai, pci):
         return Aparelho(

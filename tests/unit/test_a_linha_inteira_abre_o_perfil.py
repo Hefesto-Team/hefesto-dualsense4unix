@@ -241,7 +241,7 @@ def tela() -> Any:
 
     from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
 
-    t = regua_de_tela.Tela(onde.BANCADA / "10-perfis.html", titulo_esperado="Hefesto",
+    t = regua_de_tela.Tela(onde.ENSAIO / "10-perfis.html", titulo_esperado="Hefesto",
                            largura=1280, altura=900)
     t.executar(
         "(function(){var s=document.createElement('style');"
@@ -284,7 +284,7 @@ def test_toda_celula_do_pacote_leva_ao_perfil_da_linha(tela: Any) -> None:
 
 
 @skip_sem_gi_real
-def test_o_rotulo_cabe_na_largura_que_ela_gravou(tela: Any) -> None:
+def test_o_rotulo_cabe_na_largura_que_o_usuario_gravou(tela: Any) -> None:
     """`criado:48`, a forma que o pacote escreve: o cabeçalho sai inteiro."""
     tela.executar(
         "(function(){var t=document.querySelector('table[data-tabela]');"

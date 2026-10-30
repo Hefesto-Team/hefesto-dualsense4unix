@@ -9,7 +9,7 @@ import re
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 
 COM_LUGAR = (
@@ -24,7 +24,7 @@ ENDERECO = re.compile(r'<[a-zA-Z][^>]*?data-controle="(p[1-4])"')
 
 
 def _paginas():
-    for raiz in (BANCADA, PUBLICADO):
+    for raiz in (ENSAIO, PUBLICADO):
         for nome in COM_LUGAR:
             caminho = raiz / f"{nome}.html"
             if caminho.exists():

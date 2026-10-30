@@ -149,7 +149,7 @@ _INTERFACE_DE_APARELHO = "1-3:1.0"
 _INTERFACE_QUE_SUMIU = "1-4:1.0"
 
 
-class Bancada:
+class Ensaio:
     """O `/sys` inteiro em memória, atrás dos três leitores injetáveis."""
 
     def __init__(self, *, com_hub: bool = False) -> None:
@@ -271,12 +271,12 @@ class Bancada:
 
 
 def _entradas(*, com_hub: bool = False) -> tuple[NoDeEntrada, ...]:
-    bancada = Bancada(com_hub=com_hub)
+    ensaio = Ensaio(com_hub=com_hub)
     return listar_entradas(
         raiz_usb=RAIZ,
-        listar=bancada.listar,
-        ler=bancada.ler,
-        real=bancada.real,
+        listar=ensaio.listar,
+        ler=ensaio.ler,
+        real=ensaio.real,
     )
 
 
@@ -326,7 +326,7 @@ def test_entrada_vazia_aparece_com_state_not_attached() -> None:
     )
 
 
-def test_a_caminhada_nao_visita_o_buraco_onde_o_mouse_dela_esta() -> None:
+def test_a_caminhada_nao_visita_o_buraco_onde_o_mouse_do_usuario_esta() -> None:
     """`usb2-port2` diz `not attached` e o buraco dele tem o mouse dentro."""
     entradas = _entradas()
     caminhada = vazias(entradas)
@@ -346,13 +346,13 @@ def test_a_caminhada_nao_visita_o_buraco_onde_o_mouse_dela_esta() -> None:
 def test_entrada_de_atravessa_o_symlink_do_aparelho() -> None:
     """Entrada OCUPADA não precisa de caminhada: o aparelho diz onde está."""
     entradas = _entradas()
-    bancada = Bancada()
+    ensaio = Ensaio()
 
-    furo = entrada_de("1-6", entradas, raiz_usb=RAIZ, real=bancada.real)
+    furo = entrada_de("1-6", entradas, raiz_usb=RAIZ, real=ensaio.real)
     assert furo is not None
     assert furo.nos == ("usb1-port6", "usb2-port2")
     assert furo.aparelho == "1-6"
-    assert entrada_de("9-9", entradas, raiz_usb=RAIZ, real=bancada.real) is None
+    assert entrada_de("9-9", entradas, raiz_usb=RAIZ, real=ensaio.real) is None
 
 
 def test_a_frente_do_gabinete_nao_e_dedutivel() -> None:
@@ -401,12 +401,12 @@ def test_sys_ausente_devolve_lista_vazia_e_nao_levanta() -> None:
 
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
     """O portão que protege a foto da janela: a bancada de mentira é total."""
-    bancada = Bancada(com_hub=True)
+    ensaio = Ensaio(com_hub=True)
     listar_entradas(
-        raiz_usb=RAIZ, listar=bancada.listar, ler=bancada.ler, real=bancada.real
+        raiz_usb=RAIZ, listar=ensaio.listar, ler=ensaio.ler, real=ensaio.real
     )
 
-    reais = [caminho for caminho in bancada.tocados if not caminho.startswith("/mentira")]
+    reais = [caminho for caminho in ensaio.tocados if not caminho.startswith("/mentira")]
     assert reais == [], f"o módulo tocou caminho de verdade: {reais}"
 
 

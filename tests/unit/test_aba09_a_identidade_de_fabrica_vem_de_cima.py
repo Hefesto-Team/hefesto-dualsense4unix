@@ -53,7 +53,7 @@ RAIZ = pathlib.Path(onde.RAIZ)
 
 SERIAL_FORJADO = "ZZZ9ZZ###########"
 
-MESA_DELA = [
+MESA_DO_USUARIO = [
     {"pref": "p1", "uniq": "aa11", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb", "alvo": True},
     {"pref": "p2", "uniq": "bb22", "jogador": 2, "cor": "galactic-purple",
@@ -89,7 +89,7 @@ def a09(monkeypatch):
 
 def test_o_controle_do_radio_e_nomeado_pela_mesa() -> None:
     """Sem serial e sem `modelo`, o nome vem da fita — que o leu pelo broker."""
-    linha = a09_sistema._linha_de_identidade(NO_RADIO, MESA_DELA)
+    linha = a09_sistema._linha_de_identidade(NO_RADIO, MESA_DO_USUARIO)
     assert "Galactic Purple" in linha, (
         "o controle do rádio ficou anônimo no painel técnico enquanto a fita, "
         f"dois centímetros acima, o chama de `Galactic Purple`: {linha!r}")
@@ -103,25 +103,25 @@ def test_o_controle_do_cabo_continua_nomeado() -> None:
     isso que faz esta linha valer alguma coisa: ela reprovaria se a cura
     tivesse trocado uma fonte pela outra em vez de somá-las.
     """
-    linha = a09_sistema._linha_de_identidade(NO_CABO, MESA_DELA)
+    linha = a09_sistema._linha_de_identidade(NO_CABO, MESA_DO_USUARIO)
     assert "White" in linha
     assert SERIAL_FORJADO in linha, "o serial de fábrica saiu da linha do cabo"
 
 
 def test_o_nome_e_o_mesmo_que_a_fita_escreve() -> None:
     """Duas escritas, uma verdade. É a lei de produto, e é o que a foto mostrava rompido."""
-    fita = a09_sistema._html_da_fita(MESA_DELA)
-    for controle, item in ((NO_CABO, MESA_DELA[0]), (NO_RADIO, MESA_DELA[1])):
+    fita = a09_sistema._html_da_fita(MESA_DO_USUARIO)
+    for controle, item in ((NO_CABO, MESA_DO_USUARIO[0]), (NO_RADIO, MESA_DO_USUARIO[1])):
         nome = item["nome"]
         assert nome in fita, f"a fita deixou de nomear {nome}"
-        assert nome in a09_sistema._linha_de_identidade(controle, MESA_DELA), (
+        assert nome in a09_sistema._linha_de_identidade(controle, MESA_DO_USUARIO), (
             f"a fita diz {nome!r} e o painel técnico diz outra coisa sobre o "
             "MESMO aparelho")
 
 
 def test_nenhum_nome_do_desenho_entra_na_linha() -> None:
     """Nem por queda, nem por padrão: o mockup não fala pelo painel."""
-    texto = "\n".join(a09_sistema._linha_de_identidade(c, MESA_DELA)
+    texto = "\n".join(a09_sistema._linha_de_identidade(c, MESA_DO_USUARIO)
                       for c in (NO_CABO, NO_RADIO))
     for agulha in DO_MOCKUP:
         assert agulha not in texto, f"o mockup falou pela máquina: {agulha}"
@@ -196,7 +196,7 @@ def test_sem_numero_a_linha_nao_inventa_um() -> None:
 def test_a_mesa_atravessa_a_faixa_lenta_ate_o_painel(a09) -> None:
     """O painel é montado na faixa lenta, e ela tinha de aprender a mesa."""
     estado = {"controllers": [NO_CABO, NO_RADIO]}
-    painel = a09._repouso_do_painel(estado, MESA_DELA)
+    painel = a09._repouso_do_painel(estado, MESA_DO_USUARIO)
     assert a09.ROTULO_DA_IDENTIDADE in painel
     assert "Galactic Purple" in painel, painel
     linhas = [ln.strip() for ln in painel.splitlines()]
@@ -211,7 +211,7 @@ def test_a_faixa_lenta_aceita_a_mesa_e_a_repassa(a09, monkeypatch) -> None:
     monkeypatch.setattr(a09, "_perfil_da_bateria", lambda: None)
     monkeypatch.setattr(a09, "_status_do_daemon", lambda _s: "online_systemd")
     estado = {"controllers": [NO_RADIO]}
-    *_, painel = a09._ler_a_faixa_lenta(estado, mesa=MESA_DELA)
+    *_, painel = a09._ler_a_faixa_lenta(estado, mesa=MESA_DO_USUARIO)
     assert "Galactic Purple" in painel, painel
 
 

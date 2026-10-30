@@ -508,7 +508,7 @@ class TestAMordidaDaCuraArrancada:
         assert "[PASS]" in r.stdout, r.stdout
         assert "[WARN]" not in r.stdout, r.stdout
 
-    def test_sem_o_ramo_da_acl_o_evdev_dela_passa_batido(self, tmp_path: Path) -> None:
+    def test_sem_o_ramo_da_acl_o_evdev_do_usuario_passa_batido(self, tmp_path: Path) -> None:
         """A segunda mordida: a ACL nomeada é a única forma que abre o"""
         corpo = _extrai_funcao_bash(DOCTOR, "_entrada_alcancavel_pelo_jogo")
         alvo = (

@@ -40,7 +40,7 @@ UNIQS = [f"aabbcc00000{n}" for n in (1, 2, 3, 4)]
 MACS = [f"AA:BB:CC:00:00:0{n}" for n in (1, 2, 3, 4)]
 LARANJA = (255, 140, 0)
 VERDE_AGUA = (0, 200, 170)
-GLOBAL_DELA = (40, 80, 180)
+GLOBAL_DO_USUARIO = (40, 80, 180)
 
 
 def _automatica(uniq: str, numero: int) -> PecaDaMesa:
@@ -215,5 +215,5 @@ def _backend(ranks: dict[str, int]) -> bp.PyDualSenseController:
     provider.uniqs_da_mesa = lambda: list(ranks)  # type: ignore[attr-defined]
     ctl.set_auto_output_provider(provider)
     ctl.set_game_authority_provider(lambda: "daemon")
-    ctl.apply_output_defaults(OutputSpec(led=GLOBAL_DELA))
+    ctl.apply_output_defaults(OutputSpec(led=GLOBAL_DO_USUARIO))
     return ctl

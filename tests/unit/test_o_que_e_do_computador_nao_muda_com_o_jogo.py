@@ -562,7 +562,7 @@ def test_o_daemon_grava_a_barra_do_motor_pelo_dono(ativo: str | None) -> None:
 CONTROLES_DA_CASA = [f"aabbcc0000{n:02x}" for n in range(1, 5)]
 
 
-def _freestyle_da_forma_dela() -> Profile:
+def _freestyle_da_forma_do_usuario() -> Profile:
     """O Freestyle com todas as seções, valores sintéticos."""
     return Profile.model_validate({
         "name": "Freestyle", "match": {"type": "any"},
@@ -633,7 +633,7 @@ def test_a_migracao_nao_muda_nenhum_valor_efetivo() -> None:
     """Régua 5: depois da migração, cada perfil vale o mesmo que valia, campo a campo."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-    perfis = [_freestyle_da_forma_dela(), *_os_vinte_e_oito()]
+    perfis = [_freestyle_da_forma_do_usuario(), *_os_vinte_e_oito()]
     caminhos = {p.name: save_profile(p) for p in perfis}
     antes = {nome: caminho.read_bytes() for nome, caminho in caminhos.items()}
 
@@ -675,7 +675,7 @@ def test_a_migracao_nao_muda_nenhum_valor_efetivo() -> None:
 
 def test_a_migracao_roda_uma_vez() -> None:
     """A marca segura: a segunda partida não semeia nem tira de novo."""
-    save_profile(_freestyle_da_forma_dela())
+    save_profile(_freestyle_da_forma_do_usuario())
     assert opc.migrar_uma_vez() is not None
     assert opc.migrar_uma_vez() is None
 

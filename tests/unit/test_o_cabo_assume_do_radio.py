@@ -465,8 +465,8 @@ class MesaDoCabo:
     def _o_watch_de_verdade(self, watch: Any) -> bool:
         """O `InputDirWatch.poll` como o real: "mudou" só quando os nós mudaram."""
         foto = frozenset(self.kernel.nodes.values())
-        antes = getattr(watch, "_foto_da_bancada", None)
-        watch._foto_da_bancada = foto
+        antes = getattr(watch, "_foto_do_ensaio", None)
+        watch._foto_do_ensaio = foto
         return foto != antes
 
     def o_co_op_ve_antes(self) -> None:
@@ -1059,7 +1059,7 @@ class TestOCaboEmEspera:
         regra.write_text("", encoding="utf-8")
         assert oce.impedimentos_da_troca() == []
 
-    def test_o_bluez_da_bancada_tem_a_forma_do_real(self) -> None:
+    def test_o_bluez_do_ensaio_tem_a_forma_do_real(self) -> None:
         """O dublê :class:`BlueZ` fala a língua do dono de verdade (conferência de 25/09)."""
         import dataclasses
         import inspect
@@ -1355,7 +1355,7 @@ class _DaemonDoLaco:
         return fn(*args)
 
 
-def _derrubar_na_bancada(mesa: MesaDoCabo, uniq: str) -> tuple[bool, str]:
+def _derrubar_no_ensaio(mesa: MesaDoCabo, uniq: str) -> tuple[bool, str]:
     """O `derrubar_o_radio` de verdade, falando com o :class:`BlueZ` da bancada."""
     return _DERRUBAR_REAL(uniq, leitor=mesa.bluez)
 
@@ -1399,7 +1399,7 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
         lambda _d: None,
     )
     monkeypatch.setattr(
-        oce, "derrubar_o_radio", lambda uniq, leitor=None: _derrubar_na_bancada(mesa, uniq)
+        oce, "derrubar_o_radio", lambda uniq, leitor=None: _derrubar_no_ensaio(mesa, uniq)
     )
     estado = {"armada": False}
 

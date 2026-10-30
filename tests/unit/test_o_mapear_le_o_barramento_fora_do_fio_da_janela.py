@@ -223,13 +223,13 @@ def test_terminar_nao_espera_o_sys(gabinete: Gabinete, disco: Path, gesto: str) 
     assert fluxo.foto_sem_esperar()["estado"] == ee.PARADO, (
         "a leitura de antes do Terminar reabriu o fluxo")
     documento = carregar_maquina()
-    dela = entrada_do_lugar(documento, lugar_de(PCI_A, "5"))
+    do_usuario = entrada_do_lugar(documento, lugar_de(PCI_A, "5"))
     if gesto == "gravar":
-        assert dela is not None
-        assert ee.nome_da_entrada(dela, maquina=documento) == "Frente", (
+        assert do_usuario is not None
+        assert ee.nome_da_entrada(do_usuario, maquina=documento) == "Frente", (
             "o Salvar clicado antes do Terminar se perdeu — e nada se perde")
     else:
-        assert dela is None, f"`{gesto}` gravou alguma coisa"
+        assert do_usuario is None, f"`{gesto}` gravou alguma coisa"
 
 
 def test_o_tique_da_cerimonia_volta_na_hora_com_o_sys_preso(

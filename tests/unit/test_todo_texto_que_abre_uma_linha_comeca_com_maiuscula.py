@@ -132,7 +132,7 @@ def test_a_pagina_parada_abre_toda_linha_com_maiuscula(aba: str) -> None:
     if aba == "mapa-das-portas":
         passos += [_clicar('.modo[data-modo="ideal"]'), LER, _clicar('.modo[data-modo="mao"]'),
                    LER, _clicar(".ap-btn[data-ap-abre]"), LER]
-    achados = _achados(_no_webkit(onde.BANCADA / f"{aba}.html", TAMANHO, passos))
+    achados = _achados(_no_webkit(onde.ENSAIO / f"{aba}.html", TAMANHO, passos))
     esperados = [PENDENTES[aba][0]] if aba in PENDENTES else []
     assert achados == esperados, f"{aba}: linha que abre em minúscula: {achados}"
 
@@ -170,7 +170,7 @@ def test_a_08_pintada_pelo_pacote_abre_toda_linha_com_maiuscula(qual: str) -> No
     for n in range(len(cena["lugares"])):
         passos += [ABRIR_A_CAIXA.format(n=n), LER]
     passos += [_clicar('[data-gesto="aparelho-menu"]'), LER]
-    achados = _achados(_no_webkit(onde.BANCADA / "08-conexoes.html", TAMANHO, passos))
+    achados = _achados(_no_webkit(onde.ENSAIO / "08-conexoes.html", TAMANHO, passos))
     assert not achados, f"a 08 pintada abre linha em minúscula: {achados}"
 
 
@@ -191,7 +191,7 @@ def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora:
     campos = a08.campos_da_secao(cena)
     passos = [_abrir_a_ancora(ancora), LER, _clicar('[data-gesto="novo-hub"]'), LER,
               _pintar(campos), _abrir_a_ancora(ancora), LER]
-    achados = _achados(_no_webkit(onde.BANCADA / "08-conexoes.html", TAMANHO, passos))
+    achados = _achados(_no_webkit(onde.ENSAIO / "08-conexoes.html", TAMANHO, passos))
     assert not achados, f"a tela #{ancora} abre linha em minúscula: {achados}"
 
 
@@ -205,7 +205,7 @@ ANCORAS_DAS_OUTRAS = (
 @pytest.mark.parametrize(("aba", "ancora"), ANCORAS_DAS_OUTRAS)
 def test_a_tela_por_ancora_das_outras_abas_abre_toda_linha_com_maiuscula(
         aba: str, ancora: str) -> None:
-    achados = _achados(_no_webkit(onde.BANCADA / f"{aba}.html", TAMANHO,
+    achados = _achados(_no_webkit(onde.ENSAIO / f"{aba}.html", TAMANHO,
                                   [_abrir_a_ancora(ancora), LER]))
     assert not achados, f"{aba}#{ancora} abre linha em minúscula: {achados}"
 
@@ -217,7 +217,7 @@ def test_a_lista_das_telas_por_ancora_e_a_que_os_geradores_escrevem() -> None:
     declaradas = {("08-conexoes", a) for a in ANCORAS_DA_08} | set(ANCORAS_DAS_OUTRAS)
     nas_paginas = {
         (pag.stem, ident)
-        for pag in onde.BANCADA.glob("*.html") if not pag.name.endswith(".dc.html")
+        for pag in onde.ENSAIO.glob("*.html") if not pag.name.endswith(".dc.html")
         for tag in re.findall(r'<[^<>]*\bclass="tela-nova"[^<>]*>', pag.read_text("utf-8"))
         for ident in re.findall(r'\bid="([^"]+)"', tag)
     }
@@ -232,7 +232,7 @@ PAGINAS_SOLTAS = ("mapa-do-radio", "calibrar-sensores")
 
 @pytest.mark.parametrize("solta", PAGINAS_SOLTAS)
 def test_a_pagina_solta_abre_toda_linha_com_maiuscula(solta: str) -> None:
-    achados = _achados(_no_webkit(onde.BANCADA / f"{solta}.html", TAMANHO, [LER]))
+    achados = _achados(_no_webkit(onde.ENSAIO / f"{solta}.html", TAMANHO, [LER]))
     assert not achados, f"{solta}: linha que abre em minúscula: {achados}"
 
 

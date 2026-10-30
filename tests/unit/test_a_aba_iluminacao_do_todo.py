@@ -552,7 +552,7 @@ def test_o_modo_automatico_governa_as_colunas_e_o_par_antigo_saiu() -> None:
     assert 'data-gesto="modo-da-luz"' in chaves[0]
 
 
-def test_cada_coluna_viva_tem_a_lista_de_efeitos_e_o_gesto_dela() -> None:
+def test_cada_coluna_viva_tem_a_lista_de_efeitos_e_o_gesto_do_usuario() -> None:
     doc = _doc()
     listas = re.findall(r"<select[^>]*>", doc)
     efeitos = [s for s in listas if "g4-efeito" in s]

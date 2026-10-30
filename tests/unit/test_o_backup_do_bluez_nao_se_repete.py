@@ -35,7 +35,7 @@ def _backups(etc: Path) -> list[Path]:
 
 def test_dois_ciclos_deixam_um_backup_por_estado(tmp_path: Path) -> None:
     """aplicar, remover, aplicar, remover: dois estados, dois backups — e não quatro."""
-    etc = _etc(tmp_path, "[General]\nName = ESTADO-DELA\n")
+    etc = _etc(tmp_path, "[General]\nName = ESTADO-DO-USUARIO\n")
     for gesto in ("aplicar", "remover", "aplicar", "remover"):
         proc = _rodar(etc, gesto)
         assert proc.returncode == 0, (gesto, proc.stdout, proc.stderr)
@@ -43,14 +43,14 @@ def test_dois_ciclos_deixam_um_backup_por_estado(tmp_path: Path) -> None:
     conteudos = {b.read_bytes() for b in backups}
     assert len(backups) == 2, [b.name for b in backups]
     assert len(conteudos) == 2, "dois backups com os MESMOS bytes"
-    assert any(b"ESTADO-DELA" in c and b"hefesto" not in c for c in conteudos), (
+    assert any(b"ESTADO-DO-USUARIO" in c and b"hefesto" not in c for c in conteudos), (
         "o estado original dela não está entre os backups"
     )
 
 
 def test_o_backup_que_ja_existe_e_dito_e_devolvido(tmp_path: Path) -> None:
     """O segundo `aplicar` sobre o mesmo original diz onde o estado já está."""
-    etc = _etc(tmp_path, "[General]\nName = ESTADO-DELA\n")
+    etc = _etc(tmp_path, "[General]\nName = ESTADO-DO-USUARIO\n")
     _rodar(etc, "aplicar")
     (primeiro,) = _backups(etc)
     _rodar(etc, "remover")

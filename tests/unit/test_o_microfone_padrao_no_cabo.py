@@ -394,7 +394,7 @@ ROOT_DIR="${HEFESTO_RAIZ}"
 
 
 @dataclass
-class Bancada:
+class Ensaio:
     """Um lar de mentira, a pasta de dublês e o diretório do cenário."""
 
     dubles: Path
@@ -445,14 +445,14 @@ PILHA_DE_ANTES = [
 ]
 
 
-def montar_bancada(
+def montar_ensaio(
     base: Path,
     *,
     aparelhos: tuple[str, ...],
     a: int = 0,
     b: int = 0,
     roteiro: list[str] | None = None,
-) -> Bancada:
+) -> Ensaio:
     """Monta dublês, lar e cenário. `a` e `b` são tiques do `pactl` depois do restart."""
     dubles = base / "dubles"
     lar = base / "lar"
@@ -516,14 +516,14 @@ def montar_bancada(
         (sim / aparelho).write_text("", encoding="utf-8")
     if roteiro is not None:
         (sim / "roteiro").write_text("\n".join(roteiro) + "\n", encoding="utf-8")
-    return Bancada(dubles=dubles, lar=lar, sim=sim)
+    return Ensaio(dubles=dubles, lar=lar, sim=sim)
 
 
-def _rodar(bancada: Bancada, corpo: str) -> subprocess.CompletedProcess[str]:
+def _rodar(ensaio: Ensaio, corpo: str) -> subprocess.CompletedProcess[str]:
     """Confere os dublês pelo Python, e o shell confere de novo antes do corpo."""
     for nome in NOMES_DUBLADOS:
-        achado = shutil.which(nome, path=bancada.env["PATH"])
-        assert achado == str(bancada.dubles / nome), f"GUARDA: {nome} resolve para {achado}"
+        achado = shutil.which(nome, path=ensaio.env["PATH"])
+        assert achado == str(ensaio.dubles / nome), f"GUARDA: {nome} resolve para {achado}"
     res = subprocess.run(
         ["bash", "-c", GUARDA + corpo],
         capture_output=True,
@@ -531,7 +531,7 @@ def _rodar(bancada: Bancada, corpo: str) -> subprocess.CompletedProcess[str]:
         encoding="utf-8",
         timeout=300,
         check=False,
-        env=bancada.env,
+        env=ensaio.env,
     )
     assert res.returncode != 97, f"a guarda recusou rodar: {res.stderr}"
     return res
@@ -546,14 +546,14 @@ def bloco_do_passo_10() -> str:
     return texto[inicio : inicio + fim.start()]
 
 
-def rodar_o_passo(bancada: Bancada) -> subprocess.CompletedProcess[str]:
+def rodar_o_passo(ensaio: Ensaio) -> subprocess.CompletedProcess[str]:
     """O bloco REAL do passo [10/11], com o wp-fix e o doctor desta árvore."""
-    return _rodar(bancada, _PREAMBULO_DO_PASSO + bloco_do_passo_10())
+    return _rodar(ensaio, _PREAMBULO_DO_PASSO + bloco_do_passo_10())
 
 
-def rodar_o_veredito(bancada: Bancada) -> subprocess.CompletedProcess[str]:
+def rodar_o_veredito(ensaio: Ensaio) -> subprocess.CompletedProcess[str]:
     """Só a `verify_active_not_dualsense` do wp-fix, carregada por `source`."""
-    return _rodar(bancada, 'set --\nsource "${HEFESTO_WP_FIX}"\nverify_active_not_dualsense\n')
+    return _rodar(ensaio, 'set --\nsource "${HEFESTO_WP_FIX}"\nverify_active_not_dualsense\n')
 
 
 CENARIOS = {
@@ -564,17 +564,17 @@ CENARIOS = {
 }
 
 
-def _passo(tmp_path: Path, cenario: str) -> tuple[Bancada, subprocess.CompletedProcess[str]]:
-    bancada = montar_bancada(tmp_path / cenario, **CENARIOS[cenario])
-    res = rodar_o_passo(bancada)
+def _passo(tmp_path: Path, cenario: str) -> tuple[Ensaio, subprocess.CompletedProcess[str]]:
+    ensaio = montar_ensaio(tmp_path / cenario, **CENARIOS[cenario])
+    res = rodar_o_passo(ensaio)
     assert res.returncode == 0, f"o passo abortou:\n{res.stdout}\n{res.stderr}"
-    return bancada, res
+    return ensaio, res
 
 
 def test_a_guarda_nao_deixa_rodar_sem_o_duble(tmp_path: Path) -> None:
     """A mordida da guarda: sem um dublê, nada roda."""
-    bancada = montar_bancada(tmp_path, aparelhos=("cabo",))
-    (bancada.dubles / "sleep").unlink()
+    ensaio = montar_ensaio(tmp_path, aparelhos=("cabo",))
+    (ensaio.dubles / "sleep").unlink()
     res = subprocess.run(
         ["bash", "-c", GUARDA + 'echo rodou >> "${HEFESTO_SIM}/argv.log"\n'],
         capture_output=True,
@@ -582,23 +582,23 @@ def test_a_guarda_nao_deixa_rodar_sem_o_duble(tmp_path: Path) -> None:
         encoding="utf-8",
         timeout=60,
         check=False,
-        env=bancada.env,
+        env=ensaio.env,
     )
     assert res.returncode == 97, res.stderr
     assert "sleep" in res.stderr
-    assert bancada.argv() == [], "o corpo rodou com um nome fora do dublê"
+    assert ensaio.argv() == [], "o corpo rodou com um nome fora do dublê"
 
 
 def test_r1_o_laco_atravessa_o_monitor_de_passagem_ate_a_webcam(tmp_path: Path) -> None:
     """Três leituras do monitor do sink virtual e depois a webcam: OK."""
-    bancada = montar_bancada(
+    ensaio = montar_ensaio(
         tmp_path, aparelhos=("webcam",), roteiro=[MONITOR_DO_SOM] * 3 + [WEBCAM]
     )
-    res = rodar_o_veredito(bancada)
+    res = rodar_o_veredito(ensaio)
     assert res.returncode == 0, f"esperava 0, veio {res.returncode}:\n{res.stdout}"
     assert f"OK: microfone padrão ativo = {WEBCAM}" in res.stdout, res.stdout
     assert "MONITOR" not in res.stdout, res.stdout
-    assert bancada.contagem("leituras") == 4, "o laço não esperou o monitor passar"
+    assert ensaio.contagem("leituras") == 4, "o laço não esperou o monitor passar"
 
 
 def test_r1_o_laco_atravessa_o_monitor_de_passagem_ate_o_dualsense(tmp_path: Path) -> None:
@@ -606,10 +606,10 @@ def test_r1_o_laco_atravessa_o_monitor_de_passagem_ate_o_dualsense(tmp_path: Pat
 
     MORDIDA: a mesma da régua acima — sem a espera, sai 3 com «FALHA».
     """
-    bancada = montar_bancada(
+    ensaio = montar_ensaio(
         tmp_path, aparelhos=("cabo",), roteiro=[MONITOR_DO_SOM] * 3 + [DS_ENTRADA]
     )
-    res = rodar_o_veredito(bancada)
+    res = rodar_o_veredito(ensaio)
     assert res.returncode == 2, f"esperava 2, veio {res.returncode}:\n{res.stdout}"
     assert "FALHA" not in res.stdout, res.stdout
     assert "única fonte de captura" in res.stdout, res.stdout
@@ -617,17 +617,17 @@ def test_r1_o_laco_atravessa_o_monitor_de_passagem_ate_o_dualsense(tmp_path: Pat
 
 def test_r2_monitor_que_nao_passa_continua_reprovando(tmp_path: Path) -> None:
     """O contraste: sem isto a R1 passaria com um laço que devolve sempre 0 ou 2."""
-    bancada = montar_bancada(tmp_path, aparelhos=("cabo",), roteiro=[MONITOR_DO_SOM])
-    res = rodar_o_veredito(bancada)
+    ensaio = montar_ensaio(tmp_path, aparelhos=("cabo",), roteiro=[MONITOR_DO_SOM])
+    res = rodar_o_veredito(ensaio)
     assert res.returncode == 3, f"esperava 3, veio {res.returncode}:\n{res.stdout}"
     assert f"MONITOR ({MONITOR_DO_SOM})" in res.stdout, res.stdout
-    assert bancada.contagem("leituras") == 20, "o monitor foi julgado antes do fim do orçamento"
-    assert bancada.contagem("sonos") == 20
+    assert ensaio.contagem("leituras") == 20, "o monitor foi julgado antes do fim do orçamento"
+    assert ensaio.contagem("sonos") == 20
 
 
 def test_r3_o_passo_no_cabo_so_com_o_dualsense_diz_uma_coisa_so(tmp_path: Path) -> None:
     """O cenário das 22:58, com o bloco real do install, o wp-fix e o doctor."""
-    bancada, res = _passo(tmp_path, "cabo")
+    ensaio, res = _passo(tmp_path, "cabo")
     saida = res.stdout
     assert "FALHA" not in saida, saida
     assert "ainda não é um microfone" not in saida, saida
@@ -636,19 +636,19 @@ def test_r3_o_passo_no_cabo_so_com_o_dualsense_diz_uma_coisa_so(tmp_path: Path) 
     assert "(o DualSense, porque é a ÚNICA entrada com porta usável agora)" in saida, saida
     assert "persistido:" not in saida, saida
     assert f"preferência de fonte guardada no WirePlumber (lida do estado dele): {MIC}" in saida
-    assert f"pactl set-default-source {DS_ENTRADA}" not in bancada.argv(), bancada.argv()
+    assert f"pactl set-default-source {DS_ENTRADA}" not in ensaio.argv(), ensaio.argv()
 
 
 def test_r3_quando_o_monitor_nao_passa_o_passo_nao_da_dois_vereditos(tmp_path: Path) -> None:
     """O WirePlumber não assenta dentro do orçamento: o veredito é o do fim."""
-    bancada, res = _passo(tmp_path, "cabo-lento")
+    ensaio, res = _passo(tmp_path, "cabo-lento")
     saida = res.stdout
     assert "ainda não é um microfone" not in saida, saida
     assert "(o veredito do microfone sai no fim deste passo)" in saida, saida
     assert "rode: bash scripts/doctor.sh --fix-mic" not in saida, saida
     assert f"o microfone padrão do sistema é um MONITOR ({MONITOR_DO_SOM})" in saida, saida
     assert "(entrada de verdade)" not in saida, saida
-    assert f"pactl set-default-source {DS_ENTRADA}" not in bancada.argv(), bancada.argv()
+    assert f"pactl set-default-source {DS_ENTRADA}" not in ensaio.argv(), ensaio.argv()
     assert "DualSense (no cabo)" not in saida, saida
     assert f"Há uma entrada com porta usável no ar ({DS_ENTRADA})" in saida, saida
 
@@ -656,8 +656,8 @@ def test_r3_quando_o_monitor_nao_passa_o_passo_nao_da_dois_vereditos(tmp_path: P
 def test_r3_sem_entrada_no_ar_o_monitor_ainda_pede_uma_entrada_de_verdade(tmp_path: Path) -> None:
     """O contraste da régua acima: sem entrada com porta usável, pedir hardware é a receita certa.
     """
-    bancada = montar_bancada(tmp_path, aparelhos=(), roteiro=[MONITOR_DO_SOM])
-    res = rodar_o_passo(bancada)
+    ensaio = montar_ensaio(tmp_path, aparelhos=(), roteiro=[MONITOR_DO_SOM])
+    res = rodar_o_passo(ensaio)
     assert res.returncode == 0, res.stderr
     assert "Há uma entrada com porta usável no ar" not in res.stdout, res.stdout
     assert "Não há comando que resolva sem uma entrada de verdade" in res.stdout, res.stdout
@@ -665,24 +665,24 @@ def test_r3_sem_entrada_no_ar_o_monitor_ainda_pede_uma_entrada_de_verdade(tmp_pa
 
 def test_r4_no_radio_o_passo_elege_o_microfone_virtual(tmp_path: Path) -> None:
     """§D.2: pelo rádio o eleito é o `hefesto_mic_…`."""
-    bancada, res = _passo(tmp_path, "radio")
-    assert f"pactl set-default-source {MIC}" in bancada.argv(), bancada.argv()
+    ensaio, res = _passo(tmp_path, "radio")
+    assert f"pactl set-default-source {MIC}" in ensaio.argv(), ensaio.argv()
     assert f"OK: microfone padrão ativo = {MIC}" in res.stdout, res.stdout
     assert f"microfone padrão do sistema: {MIC} (entrada de verdade)" in res.stdout, res.stdout
 
 
 def test_r5_o_duble_recusa_no_ausente(tmp_path: Path) -> None:
     """O contraste da R5: o detector de recusa funciona, então o zero dela vale."""
-    bancada = montar_bancada(tmp_path, aparelhos=("cabo",))
-    res = _rodar(bancada, f'pactl set-default-source "{MIC}" || true\n')
-    assert f"RECUSADO: {MIC}" in bancada.argv(), (res.stdout, res.stderr)
+    ensaio = montar_ensaio(tmp_path, aparelhos=("cabo",))
+    res = _rodar(ensaio, f'pactl set-default-source "{MIC}" || true\n')
+    assert f"RECUSADO: {MIC}" in ensaio.argv(), (res.stdout, res.stderr)
 
 
 @pytest.mark.parametrize("cenario", sorted(CENARIOS))
 def test_r5_nenhum_no_ausente_e_gravado(tmp_path: Path, cenario: str) -> None:
     """§D.4. MORDIDA: `pick_target_source_name` lendo o topo da pilha grava o"""
-    bancada, _res = _passo(tmp_path, cenario)
-    recusas = [linha for linha in bancada.argv() if linha.startswith("RECUSADO")]
+    ensaio, _res = _passo(tmp_path, cenario)
+    recusas = [linha for linha in ensaio.argv() if linha.startswith("RECUSADO")]
     assert recusas == [], recusas
 
 
@@ -690,8 +690,8 @@ def test_r6_a_conferencia_final_nao_chama_de_entrada_de_verdade_quem_grava_silen
     tmp_path: Path,
 ) -> None:
     """§D.5: a onboard com as três portas `not available` grava silêncio."""
-    bancada = montar_bancada(tmp_path, aparelhos=(), roteiro=[ONBOARD])
-    res = rodar_o_passo(bancada)
+    ensaio = montar_ensaio(tmp_path, aparelhos=(), roteiro=[ONBOARD])
+    res = rodar_o_passo(ensaio)
     assert res.returncode == 0, res.stderr
     assert "(entrada de verdade)" not in res.stdout, res.stdout
     assert (
@@ -702,16 +702,16 @@ def test_r6_a_conferencia_final_nao_chama_de_entrada_de_verdade_quem_grava_silen
 
 def test_r6_a_webcam_continua_sendo_entrada_de_verdade(tmp_path: Path) -> None:
     """O contraste da R6: sem ele, apagar a frase deixaria a régua verde para sempre."""
-    bancada = montar_bancada(tmp_path, aparelhos=("webcam",), roteiro=[WEBCAM])
-    res = rodar_o_passo(bancada)
+    ensaio = montar_ensaio(tmp_path, aparelhos=("webcam",), roteiro=[WEBCAM])
+    res = rodar_o_passo(ensaio)
     assert res.returncode == 0, res.stderr
     assert f"microfone padrão do sistema: {WEBCAM} (entrada de verdade)" in res.stdout
 
 
 def test_r6_o_dualsense_com_outra_entrada_usavel_e_aviso(tmp_path: Path) -> None:
     """§D.2: o DualSense eleito com a webcam ao lado é o caso proibido, não «ÚNICA»."""
-    bancada = montar_bancada(tmp_path, aparelhos=("cabo", "webcam"), roteiro=[DS_ENTRADA])
-    res = rodar_o_passo(bancada)
+    ensaio = montar_ensaio(tmp_path, aparelhos=("cabo", "webcam"), roteiro=[DS_ENTRADA])
+    res = rodar_o_passo(ensaio)
     assert res.returncode == 0, res.stderr
     assert "ÚNICA entrada" not in res.stdout, res.stdout
     assert f"mas há outra entrada com porta usável: {WEBCAM}" in res.stdout, res.stdout
@@ -720,8 +720,8 @@ def test_r6_o_dualsense_com_outra_entrada_usavel_e_aviso(tmp_path: Path) -> None
 @pytest.mark.parametrize("cenario", ["cabo", "cabo-lento"])
 def test_r7_a_pilha_sai_do_passo_como_entrou(tmp_path: Path, cenario: str) -> None:
     """No cabo sem outra fonte, nenhum dos três programas grava a preferência."""
-    bancada, _res = _passo(tmp_path, cenario)
-    assert bancada.pilha() == PILHA_DE_ANTES, bancada.argv()
+    ensaio, _res = _passo(tmp_path, cenario)
+    assert ensaio.pilha() == PILHA_DE_ANTES, ensaio.argv()
 
 
 def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:

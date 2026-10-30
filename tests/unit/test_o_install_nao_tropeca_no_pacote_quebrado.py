@@ -54,7 +54,7 @@ A_MEIO = "iF  linux-image-7.2.6-76070206-generic\niU  linux-generic\nii  bash\n"
 TUDO_INSTALADO = "ii  bash\nhi  linux-libc-dev\nrc  pacote-removido\nun  pacote-que-nao-veio\n"
 
 
-def _bancada(tmp_path: Path, *, dpkg: str = TUDO_INSTALADO, apt_rc: int = 0) -> Path:
+def _ensaio(tmp_path: Path, *, dpkg: str = TUDO_INSTALADO, apt_rc: int = 0) -> Path:
     """Os binários de mentira: cada um ANOTA o que recebeu em `$LOG_PKG`."""
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
@@ -96,7 +96,7 @@ def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
 
     Prova da D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO.
     """
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda(
         "run_pkg toolchain-c || echo RC=$?",
         env=_env(tmp_path, "apt", binario),
@@ -116,7 +116,7 @@ def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
     ["iF  um-pacote", "iU  um-pacote", "iH  um-pacote", "iiR um-pacote"],
 )
 def test_cada_estado_quebrado_barra_o_apt(tmp_path: Path, linha: str) -> None:
-    binario = _bancada(tmp_path, dpkg=f"ii  bash\n{linha}\n")
+    binario = _ensaio(tmp_path, dpkg=f"ii  bash\n{linha}\n")
     proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
     assert f"RC={RC_A_MEIO}" in proc.stdout, proc.stdout + proc.stderr
     assert "um-pacote" in proc.stdout
@@ -126,14 +126,14 @@ def test_cada_estado_quebrado_barra_o_apt(tmp_path: Path, linha: str) -> None:
 @pytest.mark.parametrize("linha", ["hi  retido", "rc  removido", "un  nunca-veio", "ii  ok"])
 def test_estado_que_nao_e_quebrado_nao_barra(tmp_path: Path, linha: str) -> None:
     """Retido, config-files e não-instalado não são pacote a meio."""
-    binario = _bancada(tmp_path, dpkg=f"{linha}\n")
+    binario = _ensaio(tmp_path, dpkg=f"{linha}\n")
     proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
     assert "RC=" not in proc.stdout, proc.stdout + proc.stderr
     assert len(_linhas(tmp_path / "pkg.log")) == 1
 
 
 def test_tudo_em_ii_o_apt_recebe_o_timeout_e_os_nomes(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     proc = _roda("run_pkg hidapi svg-loader", env=_env(tmp_path, "apt", binario))
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert _linhas(tmp_path / "pkg.log") == [
@@ -143,7 +143,7 @@ def test_tudo_em_ii_o_apt_recebe_o_timeout_e_os_nomes(tmp_path: Path) -> None:
 
 def test_o_recado_completo_sai_uma_vez_so(tmp_path: Path) -> None:
     """Quatro chamadores de `run_pkg` num install: o texto longo não se repete."""
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda(
         "run_pkg hidapi || true\nrun_pkg python-venv || true\nrun_pkg wlrctl || true",
         env=_env(tmp_path, "apt", binario),
@@ -154,7 +154,7 @@ def test_o_recado_completo_sai_uma_vez_so(tmp_path: Path) -> None:
 
 
 def test_o_ensaio_diz_nao_instalaria_e_nao_chama_nada(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda(
         "DRY_RUN=1; run_pkg toolchain-c; echo RC=$?",
         preludo=PRELUDO_ENSAIO,
@@ -172,7 +172,7 @@ def test_o_ensaio_diz_nao_instalaria_e_nao_chama_nada(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("familia", ["dnf", "pacman"])
 def test_fora_do_apt_o_dpkg_nem_e_consultado(tmp_path: Path, familia: str) -> None:
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     livre = tmp_path / "trava-inexistente"
     proc = _roda(
         "run_pkg hidapi",
@@ -191,7 +191,7 @@ def test_fora_do_apt_o_dpkg_nem_e_consultado(tmp_path: Path, familia: str) -> No
 
 def test_apt_falha_com_o_dpkg_ocupado_diz_quem_segura(tmp_path: Path) -> None:
     """Passado o `Lock::Timeout` o apt sai 100: o install diz quem segura a trava."""
-    binario = _bancada(tmp_path, apt_rc=100)
+    binario = _ensaio(tmp_path, apt_rc=100)
     for nome, corpo in (("fuser", 'printf " 4242\\n"\n'), ("ps", 'printf "unattended-upgr\\n"\n')):
         alvo = binario / nome
         alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
@@ -236,7 +236,7 @@ def _fuser_cego(binario: Path) -> None:
 def test_apt_ocupado_por_fcntl_diz_quem_segura_sem_o_fuser(tmp_path: Path) -> None:
     """O `unattended-upgrades` é root e trava por fcntl: o `fuser` não o vê, o
     `/proc/locks` sim."""
-    binario = _bancada(tmp_path, apt_rc=100)
+    binario = _ensaio(tmp_path, apt_rc=100)
     _fuser_cego(binario)
     trava = tmp_path / "lock-frontend"
     dono = _dono_por_fcntl(trava)
@@ -255,7 +255,7 @@ def test_apt_ocupado_por_fcntl_diz_quem_segura_sem_o_fuser(tmp_path: Path) -> No
 def test_dnf_espera_a_trava_por_fcntl_do_rpm_sem_o_fuser(tmp_path: Path) -> None:
     """O rpm trava o `.rpm.lock` por fcntl, como root: nem o `flock` nem o `fuser`
     o enxergam, e a espera tem de acontecer assim mesmo."""
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     _fuser_cego(binario)
     trava = tmp_path / "rpm.lock"
     dono = _dono_por_fcntl(trava)
@@ -279,7 +279,7 @@ def test_dnf_espera_a_trava_por_fcntl_do_rpm_sem_o_fuser(tmp_path: Path) -> None
 
 @pytest.mark.skipif(shutil.which("flock") is None, reason="sem flock não há trava de rpm a segurar")
 def test_dnf_espera_a_trava_do_rpm_e_cai_no_nao_consegui(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     trava = tmp_path / "rpm.lock"
     trava.write_text("", encoding="utf-8")
     dono = subprocess.Popen(
@@ -308,7 +308,7 @@ def test_dnf_espera_a_trava_do_rpm_e_cai_no_nao_consegui(tmp_path: Path) -> None
 
 
 def test_pacman_espera_o_db_lck_sumir_e_depois_instala(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     trava = tmp_path / "db.lck"
     trava.write_text("", encoding="utf-8")
     proc = _roda(
@@ -323,7 +323,7 @@ def test_pacman_espera_o_db_lck_sumir_e_depois_instala(tmp_path: Path) -> None:
 
 
 def test_pacman_com_trava_que_nao_sai_nao_instala(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     trava = tmp_path / "db.lck"
     trava.write_text("", encoding="utf-8")
     proc = _roda(
@@ -402,7 +402,7 @@ def _formato_deb(tmp_path: Path) -> str:
 
 
 def test_o_deb_com_pacote_a_meio_nao_chama_o_apt(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda("format_deb", preludo=_formato_deb(tmp_path), env=_env(tmp_path, "apt", binario))
     assert proc.returncode == 42, proc.stdout + proc.stderr
     assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
@@ -412,7 +412,7 @@ def test_o_deb_com_pacote_a_meio_nao_chama_o_apt(tmp_path: Path) -> None:
 
 
 def test_o_deb_com_tudo_em_ii_vai_ao_apt(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     proc = _roda("format_deb", preludo=_formato_deb(tmp_path), env=_env(tmp_path, "apt", binario))
     assert proc.returncode == 0, proc.stdout + proc.stderr
     (chamada,) = _linhas(tmp_path / "pkg.log")
@@ -437,7 +437,7 @@ def test_o_codigo_de_pacote_a_meio_nao_e_o_um_generico() -> None:
 
 
 def test_o_gtk_com_pacote_a_meio_diz_o_pacote_e_nao_a_conexao(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda(GTK, env=_env(tmp_path, "apt", binario))
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 42, saida
@@ -449,7 +449,7 @@ def test_o_gtk_com_pacote_a_meio_diz_o_pacote_e_nao_a_conexao(tmp_path: Path) ->
 
 
 def test_o_gtk_sem_pacote_a_meio_e_apt_que_falha_continua_na_conexao(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path, apt_rc=100)
+    binario = _ensaio(tmp_path, apt_rc=100)
     proc = _roda(GTK, env=_env(tmp_path, "apt", binario))
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 42, saida
@@ -458,7 +458,7 @@ def test_o_gtk_sem_pacote_a_meio_e_apt_que_falha_continua_na_conexao(tmp_path: P
 
 
 def test_o_wlrctl_com_pacote_a_meio_nao_diz_que_falta_nos_repos(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda(WLRCTL, env=_env(tmp_path, "apt", binario))
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 0, saida
@@ -469,7 +469,7 @@ def test_o_wlrctl_com_pacote_a_meio_nao_diz_que_falta_nos_repos(tmp_path: Path) 
 
 
 def test_o_wlrctl_sem_pacote_a_meio_e_apt_que_falha_continua_nos_repos(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path, apt_rc=100)
+    binario = _ensaio(tmp_path, apt_rc=100)
     proc = _roda(WLRCTL, env=_env(tmp_path, "apt", binario))
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 0, saida
@@ -478,7 +478,7 @@ def test_o_wlrctl_sem_pacote_a_meio_e_apt_que_falha_continua_nos_repos(tmp_path:
 
 
 def test_o_wlrctl_instalado_diz_instalado(tmp_path: Path) -> None:
-    binario = _bancada(tmp_path)
+    binario = _ensaio(tmp_path)
     alvo = binario / "wlrctl"
     alvo.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
     alvo.chmod(0o755)
@@ -488,7 +488,7 @@ def test_o_wlrctl_instalado_diz_instalado(tmp_path: Path) -> None:
 
 def test_o_ensaio_do_gtk_com_pacote_a_meio_segue_sem_morrer(tmp_path: Path) -> None:
     """O ensaio devolve 0: o plano descreve a instalação que dá certo."""
-    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    binario = _ensaio(tmp_path, dpkg=A_MEIO)
     proc = _roda("DRY_RUN=1\n" + GTK, preludo=PRELUDO_ENSAIO, env=_env(tmp_path, "apt", binario))
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "GTK3 instalado" in proc.stdout

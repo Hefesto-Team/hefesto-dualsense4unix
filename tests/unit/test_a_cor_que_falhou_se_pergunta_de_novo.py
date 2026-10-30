@@ -248,7 +248,7 @@ def test_a_janela_que_desistiu_pergunta_de_novo_quando_o_controle_volta() -> Non
     _tique(leitor, _estado())
     assert falso.perguntas == 5, falso.perguntas
 
-def test_o_piloto_dela_pergunta_pelo_leitor_e_nao_por_trava_propria() -> None:
+def test_o_piloto_do_usuario_pergunta_pelo_leitor_e_nao_por_trava_propria() -> None:
     """O lançador abre `hefesto_vivo`, e era ali a TERCEIRA cópia do defeito."""
     fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
     contexto = next(

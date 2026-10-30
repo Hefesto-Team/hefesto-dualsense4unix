@@ -197,7 +197,7 @@ def test_a_histerese_ignora_o_piso_de_silencio_medido() -> None:
     )
 
 
-def test_a_sala_vazia_dela_nao_acende_a_luz_nenhuma_vez() -> None:
+def test_a_sala_vazia_do_usuario_nao_acende_a_luz_nenhuma_vez() -> None:
     """As dez rajadas REAIS de 605 s de sala vazia, replicadas na ordem medida."""
     relogio = _Relogio()
     hist = Histerese()
@@ -605,7 +605,7 @@ def test_o_fluxo_vivo_que_emudece_volta_a_nao_sei() -> None:
         assert medidor.captando() == {"aaa": None}
 
 
-def test_o_fluxo_que_emudece_e_fechado_e_solta_o_microfone_dela() -> None:
+def test_o_fluxo_que_emudece_e_fechado_e_solta_o_microfone_do_usuario() -> None:
     """Responder `None` não basta: o `parec` mudo continua com o microfone
     do usuário aberto e a fonte presa em RUNNING.
 

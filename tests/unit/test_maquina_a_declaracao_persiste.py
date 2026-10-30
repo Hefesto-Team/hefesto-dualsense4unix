@@ -250,7 +250,7 @@ def test_chave_de_controle_que_nao_e_mac_de_hardware_e_recusada(
     assert not arquivo.exists()
 
 
-def test_a_faixa_forjada_da_bancada_nao_e_confundida_com_sintese(arquivo: Path) -> None:
+def test_a_faixa_forjada_do_ensaio_nao_e_confundida_com_sintese(arquivo: Path) -> None:
     """``aa:bb:cc:*`` tem o bit 0x02 ligado sem ser síntese nossa — e passa."""
     assert gravar_maquina({"controles": {CHAVE_DE_HARDWARE: {"botoes": "nintendo"}}})
     assert carregar_maquina().controles[CHAVE_DE_HARDWARE].botoes == "nintendo"

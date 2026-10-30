@@ -308,7 +308,7 @@ def test_a_leitura_que_nao_regrava_nao_multiplica_o_de_outra_placa(
     assert _no_disco(casa)["placa"] == _placa("Fabricante A", "Placa A")
 
 
-def test_sem_o_desvio_a_placa_se_le_pela_raiz_do_dono_dela(
+def test_sem_o_desvio_a_placa_se_le_pela_raiz_do_dono_do_usuario(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from hefesto_dualsense4unix.integrations import censo_do_gabinete

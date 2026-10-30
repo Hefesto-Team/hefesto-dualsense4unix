@@ -473,7 +473,7 @@ def ensaio_do_cabo(**mudancas: str) -> dict[str, str]:
         "suspeito": "um suspeito qualquer",
         "presente": "sim",
         "resultado": "obedece",
-        "observado_por": "olho-dela",
+        "observado_por": "olho-do-usuario",
         "nota": "",
     }
     base.update(mudancas)

@@ -213,7 +213,7 @@ def test_o_valor_de_cada_chave_e_o_nao_veio_do_leitor(_lar: Path) -> None:
     assert not _SEM_MEDIDA & set(env), f"o par da NVIDIA entrou sem medida: {env}"
 
 
-def test_com_um_antes_dela_na_caixa_o_yml_leva_o_dela(_lar: Path) -> None:
+def test_com_um_antes_do_usuario_na_caixa_o_yml_leva_o_do_usuario(_lar: Path) -> None:
     """Ela tinha o cache de shader DESLIGADO na caixa antes do Hefesto: o"""
     yml = _lutris_flatpak(_lar)
     caixa = _caixa(_lar)
@@ -238,7 +238,7 @@ def test_tirar_devolve_o_yml_byte_a_byte(_lar: Path) -> None:
     assert _md5(yml) == md5, yml.read_text()
 
 
-def test_com_uma_linha_dela_no_meio_so_os_nossos_saem(_lar: Path) -> None:
+def test_com_uma_linha_do_usuario_no_meio_so_os_nossos_saem(_lar: Path) -> None:
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
     antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
@@ -644,7 +644,7 @@ def test_tirar_da_lista_tira_as_duas(_lar: Path) -> None:
 
 
 @pytest.mark.parametrize("onde", ["no-yml", "na-caixa"])
-def test_o_xalia_que_ela_pos_manda(_lar: Path, onde: str) -> None:
+def test_o_xalia_que_o_usuario_pos_manda(_lar: Path, onde: str) -> None:
     """Com o `PROTON_USE_XALIA` posto por ela (no `.yml` do jogo, ou na caixa),"""
     if onde == "no-yml":
         yml = _lutris_flatpak(_lar, yml=_YML_DO_JOGO.replace(

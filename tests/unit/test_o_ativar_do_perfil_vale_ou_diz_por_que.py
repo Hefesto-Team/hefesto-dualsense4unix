@@ -56,7 +56,7 @@ def _mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> list[str]:
     todos = [Profile(name=n, match=MatchAny(), priority=10 - i)
              for i, n in enumerate(("meu_perfil", "Ação", "Navegação"))]
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
-    monkeypatch.setattr(profiles_actions, "perfil_que_ela_ativou", lambda: "meu_perfil")
+    monkeypatch.setattr(profiles_actions, "perfil_que_o_usuario_ativou", lambda: "meu_perfil")
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ARMADO", None, raising=False)
     monkeypatch.setattr(a10_perfis, "_PROCURA", "", raising=False)

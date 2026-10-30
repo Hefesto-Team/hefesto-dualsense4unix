@@ -49,7 +49,7 @@ completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
 rapido|o-gtk-fica-na-moldura|py|scripts/check_o_gtk_fica_na_moldura.py|src/** scripts/check_o_gtk_fica_na_moldura.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
-rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|@sempre
+rapido|endereco-do-usuario-em-toda-forma|py|scripts/check_o_endereco_em_toda_forma.py|@sempre
 rapido|serial-de-aparelho|py|scripts/check_numero_de_serie.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 rapido|codigo-sem-comentario|py|scripts/check_codigo_sem_comentario.py|@sempre
@@ -59,7 +59,7 @@ rapido|autoria-historia|py|scripts/check_autoria.py historia|@sempre
 completo|casa-sabe|pytest|tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
 completo|portao-tem-chamador|pytest|tests/unit/test_portao_todo_portao_tem_chamador.py
 completo|interpretador-do-portao|pytest|tests/unit/test_o_portao_declara_o_interpretador.py|@sempre
-completo|a-tela-dela|pytest|tests/unit/test_a_tela_nao_recebe_janela_de_teste.py
+completo|a-tela-do-usuario|pytest|tests/unit/test_a_tela_nao_recebe_janela_de_teste.py
 completo|o-instrumento-e-a-tela|pytest|tests/unit/test_o_instrumento_nao_abre_na_tela_do_usuario.py
 completo|a-frase-banida|pytest|tests/unit/test_a_frase_banida_nao_chega_a_tela.py
 completo|src-desta-arvore|pytest|tests/unit/test_a_suite_mede_esta_arvore.py|@sempre

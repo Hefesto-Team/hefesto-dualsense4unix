@@ -31,7 +31,7 @@ def _catch_all(nome: str, prioridade: int) -> Profile:
     return _perfil(nome, prioridade, MatchAny())
 
 
-def _mesa_dela() -> list[Profile]:
+def _mesa_do_usuario() -> list[Profile]:
     return [
         _catch_all("fallback", 0),
         _catch_all("meu_perfil", 1),
@@ -46,7 +46,7 @@ def _mesa_dela() -> list[Profile]:
 class TestOTextoDaColuna:
     def test_nenhum_sempre_anuncia_disputa(self) -> None:
         """Os quatro `any` da bancada dizem «Só quando eu escolher»: nenhum entra sozinho."""
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         for perfil in perfis:
             if perfil.match.type == "any":
                 assert rotulo_quando_usar(perfil, perfis, "Pragmata2") == LABEL_SO_MANUAL
@@ -62,7 +62,7 @@ class TestOTextoDaColuna:
     def test_as_outras_frases_da_coluna_nao_mudaram(self) -> None:
         """R-12/LEIGO-06 continuam valendo — esta entrega só toca o "Sempre"."""
         perfis = [
-            *_mesa_dela(),
+            *_mesa_do_usuario(),
             _perfil("FPS", 60, MatchCriteria(process_name=["cs2"])),
             _perfil("vazio", 50, MatchCriteria()),
             _perfil("manual", 50, MatchManual()),
@@ -99,7 +99,7 @@ class TestAColunaEspelhaOManager:
         self, monkeypatch: pytest.MonkeyPatch, incumbente: str | None
     ) -> None:
         """Janela de desktop sem regra: o gerente não elege ninguém, a coluna também."""
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         real = self._quem_o_manager_escolhe(perfis, incumbente, monkeypatch)
         anunciado = [
             p.name for p in perfis
@@ -112,7 +112,7 @@ class TestAColunaEspelhaOManager:
 class TestOTooltip:
     def test_o_sempre_nao_tem_mais_tooltip(self) -> None:
         """A frase «é o que entra quando nenhuma regra específica casa» saiu."""
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         for perfil in perfis:
             assert explicacao_da_disputa(perfil, perfis, "Pragmata2") == ""
 
@@ -120,7 +120,7 @@ class TestOTooltip:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Dentro de um jogo sem regra própria, nenhum «Sempre» entra."""
-        perfis = _mesa_dela()
+        perfis = _mesa_do_usuario()
         monkeypatch.setattr(
             "hefesto_dualsense4unix.profiles.manager.perfis_para_consulta",
             lambda: list(perfis),

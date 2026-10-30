@@ -276,7 +276,7 @@ def test_a_guarda_mata_a_primeira_carga_errada(tmp_path: pathlib.Path) -> None:
         b.fechar()
 
 
-def test_a_guarda_nao_mata_quando_ela_clica_na_tira(
+def test_a_guarda_nao_mata_quando_o_usuario_clica_na_tira(
     banca: Banca, tmp_path: pathlib.Path
 ) -> None:
     """O defeito de 29/08: a janela dela fechou sozinha em ~12 s."""
@@ -319,7 +319,7 @@ def test_a_folha_da_casa_esconde_a_nota_e_desenha_o_select(banca: Banca) -> None
     assert banca.ler("getComputedStyle(document.getElementById('uma-caixa')).appearance") == "none"
 
 
-def test_a_mordida_da_folha_sem_ela_o_select_volta_ao_tema_do_sistema(
+def test_a_mordida_da_folha_sem_o_usuario_o_select_volta_ao_tema_do_sistema(
     pagina: pathlib.Path,
 ) -> None:
     """A MORDIDA da folha: sem ela, os dois valores mudam."""

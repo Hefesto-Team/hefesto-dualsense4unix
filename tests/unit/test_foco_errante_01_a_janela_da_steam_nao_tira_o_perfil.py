@@ -82,7 +82,7 @@ def _perfil(nome: str, *, janela: str | None = None, prioridade: int = 10) -> Pr
     )
 
 
-def _bancada(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
+def _ensaio(perfis: list[Profile]) -> tuple[ProfileManager, StateStore]:
     for perfil in perfis:
         save_profile(perfil)
     fc = FakeController()
@@ -170,7 +170,7 @@ def test_a_janela_do_cliente_steam_nao_troca_o_perfil_com_o_jogo_vivo(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA nº 1: o defeito de 18/08, reduzido a dez segundos de tique."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -186,7 +186,7 @@ def test_a_recusa_preserva_o_gatilho_e_a_lightbar_do_jogo(
     perfis_isolados: Path,
 ) -> None:
     """O que ela PERDIA, no vocabulário do aparelho."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -205,7 +205,7 @@ def test_sem_jogo_vivo_a_janela_com_perfil_proprio_troca_normalmente(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA nº 2: arranque o termo de VITALIDADE e este teste reprova."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: None)
     agora = _entrar_no_jogo(sw, store)
 
@@ -214,11 +214,11 @@ def test_sem_jogo_vivo_a_janela_com_perfil_proprio_troca_normalmente(
     assert store.active_profile == "navegacao"
 
 
-def test_sem_jogo_vivo_a_janela_da_steam_nao_ativa_a_navegacao_feita_para_ela(
+def test_sem_jogo_vivo_a_janela_da_steam_nao_ativa_a_navegacao_feita_para_o_usuario(
     perfis_isolados: Path,
 ) -> None:
     """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: a Navegação feita para a Steam não entra por ela."""
-    manager, store = _bancada([
+    manager, store = _ensaio([
         *_os_dois_perfis(),
         _perfil("navegacao_da_steam", janela="steam", prioridade=99),
     ])
@@ -232,7 +232,7 @@ def test_sem_jogo_vivo_a_janela_da_steam_nao_ativa_a_navegacao_feita_para_ela(
 
 def test_o_jogo_morre_e_a_guarda_solta(perfis_isolados: Path) -> None:
     """O ensaio E-4 da sprint, em memória: a MESMA janela, uma variável só."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     vivo = [True]
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID if vivo[0] else None)
     agora = _entrar_no_jogo(sw, store)
@@ -251,7 +251,7 @@ def test_janela_de_outro_app_nao_tira_o_perfil_com_o_jogo_vivo(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA nº 3: estreite a guarda de volta à janela da Steam e isto reprova."""
-    manager, store = _bancada([*_os_dois_perfis(), _perfil("web", janela="firefox")])
+    manager, store = _ensaio([*_os_dois_perfis(), _perfil("web", janela="firefox")])
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -265,7 +265,7 @@ def test_a_guarda_so_vale_para_o_jogo_do_perfil_corrente(
     perfis_isolados: Path,
 ) -> None:
     """MORDIDA nº 4: guarda cruzada — o marker de A não segura o perfil de B."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: OUTRO_APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -280,7 +280,7 @@ def test_perfil_de_desktop_corrente_nao_ganha_guarda_nenhuma(
     """A guarda exige que o perfil CORRENTE seja a regra própria de um jogo."""
     from hefesto_dualsense4unix.utils.session import save_last_profile
 
-    manager, store = _bancada([
+    manager, store = _ensaio([
         _perfil("desktop"),
         _perfil("navegacao", janela=JANELA_DA_NAVEGACAO["wm_class"]),
     ])
@@ -305,7 +305,7 @@ def test_o_jogo_vivo_nao_expira_aos_quinze_minutos(
     assert launch_session_appid(base_dir=base) is None
     assert jogo_do_wrapper_vivo(base_dir=base, proc_dir=proc) == APPID
 
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(
         manager,
         store,
@@ -356,7 +356,7 @@ def test_pid_reciclado_nao_segura_o_perfil(
 
     assert jogo_do_wrapper_vivo(base_dir=base, proc_dir=proc) is None
 
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(
         manager,
         store,
@@ -409,7 +409,7 @@ def test_a_corroboracao_le_o_proc_de_verdade(tmp_path: Path) -> None:
 
 def test_a_recusa_loga_uma_vez_por_episodio(perfis_isolados: Path) -> None:
     """MORDIDA nº 7: arranque a chave de dedup e vira uma linha por tique."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -427,7 +427,7 @@ def test_a_recusa_loga_uma_vez_por_episodio(perfis_isolados: Path) -> None:
 
 def test_um_episodio_novo_volta_a_aparecer_no_journal(perfis_isolados: Path) -> None:
     """Dedup não pode virar silêncio: o episódio SEGUINTE tem de aparecer."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -445,7 +445,7 @@ def test_um_episodio_novo_volta_a_aparecer_no_journal(perfis_isolados: Path) -> 
 
 def test_a_entrada_no_perfil_do_jogo_continua_barata(perfis_isolados: Path) -> None:
     """GUARDA (passa nos dois estados): a UX-04 continua de pé."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
 
     sw._tick(dict(JANELA_DO_JOGO), 0.0)
@@ -456,7 +456,7 @@ def test_a_entrada_no_perfil_do_jogo_continua_barata(perfis_isolados: Path) -> N
 
 def test_o_tique_cego_continua_retendo_o_perfil(perfis_isolados: Path) -> None:
     """GUARDA: a histerese UX-01 não foi tocada."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
 
@@ -470,7 +470,7 @@ def test_sem_leitor_injetado_a_guarda_nao_derruba_o_tique(
     perfis_isolados: Path,
 ) -> None:
     """GUARDA: o default de produção (ler o disco real) é inerte sem marker."""
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store)
     agora = _entrar_no_jogo(sw, store)
 
@@ -485,7 +485,7 @@ def test_leitor_que_levanta_nao_derruba_o_tique(perfis_isolados: Path) -> None:
     def _explode() -> int | None:
         raise RuntimeError("marker ilegível")
 
-    manager, store = _bancada(_os_dois_perfis())
+    manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=_explode)
     agora = _entrar_no_jogo(sw, store)
 

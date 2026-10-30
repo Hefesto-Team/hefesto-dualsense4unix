@@ -33,7 +33,7 @@ def _manager(profile: Profile, monkeypatch: Any) -> tuple[ProfileManager, list[d
 
     monkeypatch.setattr(m, "load_profile", lambda _n: profile)
     inst = ProfileManager.__new__(ProfileManager)
-    inst.store = _Loja("o-perfil-dela")  # type: ignore[attr-defined]
+    inst.store = _Loja("o-perfil-do-usuario")  # type: ignore[attr-defined]
     inst.speaker_applier = applier  # type: ignore[attr-defined]
     return inst, chamadas
 
@@ -42,7 +42,7 @@ def _perfil(
     *, global_: ProfileSpeakerConfig | None, por_peca: dict[str, ProfileSpeakerConfig]
 ) -> Profile:
     return _mk_profile(
-        "o-perfil-dela",
+        "o-perfil-do-usuario",
         speaker=global_,
         controllers={
             u: ControllerOverrides(speaker=s) for u, s in por_peca.items()
@@ -50,7 +50,7 @@ def _perfil(
     )
 
 
-class TestOReplugDevolveOQueElaGravou:
+class TestOReplugDevolveOQueOUsuarioGravou:
     def test_o_perfil_sem_global_volta_a_ser_aplicado(self, monkeypatch: Any) -> None:
         """A MORDIDA: exigir `profile.speaker` de novo cala isto por inteiro."""
         p = _perfil(

@@ -134,7 +134,7 @@ def test_degrau_fora_da_escada_nao_e_engolido(regua, monkeypatch):
         regua._degrau({"chave": "x", "cabo_ate_onde_foi": "montou"}, "cabo")
 
 
-def test_a_escada_desta_regua_e_a_do_dono_dela(regua):
+def test_a_escada_desta_regua_e_a_do_dono_do_usuario(regua):
     """O vocabulário é DERIVADO, nunca redigitado — um dono só."""
     from check_paridade_transporte import VALORES_DA_ESCADA
 

@@ -221,7 +221,7 @@ def test_cem_linhas_com_origem_do_mapa_passam(arvore):
     assert rodar("--origem", "audio.alto_falante") == 0
 
 
-def test_a_origem_da_decisao_dela_tambem_vale(arvore):
+def test_a_origem_da_decisao_do_usuario_tambem_vale(arvore):
     raiz, _mod, rodar = arvore
     _cresce(raiz)
     assert rodar("--origem", "D-UMA-DECISAO") == 0

@@ -81,7 +81,7 @@ ENDERECOS_QUE_SO_PINTAM = ("desenho", "identidade")
 
 
 @pytest.fixture(scope="module")
-def bancada() -> str:
+def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA)
@@ -95,17 +95,17 @@ def gerador(tmp_path_factory: pytest.TempPathFactory):
     import importlib
     import os
 
-    destino = tmp_path_factory.mktemp("bancada-da-regua")
-    antes = os.environ.get("HEFESTO_BANCADA")
-    os.environ["HEFESTO_BANCADA"] = str(destino)
+    destino = tmp_path_factory.mktemp("ensaio-da-regua")
+    antes = os.environ.get("HEFESTO_ENSAIO")
+    os.environ["HEFESTO_ENSAIO"] = str(destino)
     try:
         mod = importlib.import_module("aba05")
         yield mod
     finally:
         if antes is None:
-            os.environ.pop("HEFESTO_BANCADA", None)
+            os.environ.pop("HEFESTO_ENSAIO", None)
         else:
-            os.environ["HEFESTO_BANCADA"] = antes
+            os.environ["HEFESTO_ENSAIO"] = antes
 
 
 def _gestos_registrados() -> set[str]:
@@ -115,9 +115,9 @@ def _gestos_registrados() -> set[str]:
     return {nome for pagina, nome in pacotes.GESTOS if pagina in (PAGINA, "*")}
 
 
-def test_nenhum_papel_desta_aba_fica_sem_gesto(bancada: str) -> None:
+def test_nenhum_papel_desta_aba_fica_sem_gesto(ensaio: str) -> None:
     """Todo `data-papel` da bancada é um gesto que o pacote atende."""
-    papeis = {g.nome for g in _regua._papeis_cravados(bancada)}
+    papeis = {g.nome for g in _regua._papeis_cravados(ensaio)}
     assert papeis, ("a bancada não tem `data-papel` nenhum — ou o desenho mudou "
                     "de vocabulário, ou esta régua virou vácuo")
     orfaos = papeis - _gestos_registrados()
@@ -128,18 +128,18 @@ def test_nenhum_papel_desta_aba_fica_sem_gesto(bancada: str) -> None:
         f"tela. Endereço que é só pintura sai em `data-hef`")
 
 
-def test_o_gerador_reprova_um_papel_orfao(gerador, bancada: str) -> None:
+def test_o_gerador_reprova_um_papel_orfao(gerador, ensaio: str) -> None:
     """A régua 11 do `aba05._conferir` faz a GERAÇÃO falhar, não só o teste."""
-    envenenado = bancada.replace(
+    envenenado = ensaio.replace(
         'data-hef="identidade"', 'data-papel="identidade"', 1)
-    assert envenenado != bancada, (
+    assert envenenado != ensaio, (
         'o desenho não tem mais `data-hef="identidade"`')
     with pytest.raises(SystemExit):
         gerador._conferir(envenenado)
-    gerador._conferir(bancada)
+    gerador._conferir(ensaio)
 
 
-def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
+def test_os_quatro_enderecos_continuam_existindo(ensaio: str) -> None:
     """A cura tirou o CLIQUE, não o endereço.
 
     ``regua_do_mockup.ATRIBUTOS_DE_CAMPO`` é ``("data-campo", "data-papel",
@@ -163,7 +163,7 @@ def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
     ele é o que mantém a moldura fora do ouvinte de clique.
     """
     sombreados = {"desenho"}
-    campos = {c.chave for c in _regua._campos_cravados(bancada)}
+    campos = {c.chave for c in _regua._campos_cravados(ensaio)}
     assert "plastico" in campos, (
         "a moldura perdeu o `data-campo=\"plastico\"` — sem ele a cor do "
         "aparelho volta a não ter onde pousar, e o `desenho` volta a ser o "
@@ -176,16 +176,16 @@ def test_os_quatro_enderecos_continuam_existindo(bancada: str) -> None:
             f"de contá-lo, e um campo a menos não é um defeito a menos")
 
 
-def test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique(bancada: str) -> None:
+def test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique(ensaio: str) -> None:
     """Os quatro saem em `data-hef`, que é o único dos três fora do ouvinte."""
     for nome in ENDERECOS_QUE_SO_PINTAM:
-        assert f'data-hef="{nome}"' in bancada, (
+        assert f'data-hef="{nome}"' in ensaio, (
             f"`{nome}` não sai em `data-hef` — ver a razão no cabeçalho")
-        assert f'data-papel="{nome}"' not in bancada, (
+        assert f'data-papel="{nome}"' not in ensaio, (
             f"`{nome}` voltou a ser `data-papel` e volta a ser clique sem dono")
 
 
-def test_os_dois_botoes_de_verdade_continuam_clicaveis(bancada: str) -> None:
+def test_os_dois_botoes_de_verdade_continuam_clicaveis(ensaio: str) -> None:
     """"Testar" e "Parar" NÃO podem perder o `data-papel`; e a Força não tem mais botão.
 
     Os degraus de Força saíram da BANCADA em 18/10/2026 (r3b-05-12) e do pacote em 20/10/2026
@@ -198,10 +198,10 @@ def test_os_dois_botoes_de_verdade_continuam_clicaveis(bancada: str) -> None:
     publicado = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
     assert 'data-papel="forca"' not in publicado, (
         "os botões da Força voltaram ao publicado, e o gesto deles saiu")
-    assert 'data-papel="forca"' not in bancada, (
+    assert 'data-papel="forca"' not in ensaio, (
         "os botões da Força voltaram à bancada — o desenho de 18/10 os tirou")
     for nome in ("testar", "parar"):
-        assert f'data-papel="{nome}"' in bancada, (
+        assert f'data-papel="{nome}"' in ensaio, (
             f"`{nome}` perdeu o `data-papel` — ele TEM gesto, e sem o atributo o "
             f"clique dela para de chegar ao daemon")
         assert nome in _gestos_registrados(), (

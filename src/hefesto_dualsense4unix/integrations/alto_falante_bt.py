@@ -691,12 +691,12 @@ def montar_com_o_common_preservado(
     return bytes(pkt)
 
 
-VOLUME_QUE_ELA_OUVIU = 85
+VOLUME_QUE_O_USUARIO_OUVIU = 85
 
 
 def common_de_audio(
     *,
-    volume: int = VOLUME_QUE_ELA_OUVIU,
+    volume: int = VOLUME_QUE_O_USUARIO_OUVIU,
     rota: int = rep.SAIDA_SO_NO_ALTO_FALANTE,
     preamp: int = rep.SP_PREAMP_GAIN_PADRAO,
 ) -> bytes:
@@ -1020,7 +1020,7 @@ class SinkVirtualPipeWire:
         self._module_id = linhas[-1]
         logger.info("som_sink_publicado", sink=self.nome, module_id=self._module_id)
         self._ligar_a_rota()
-        self._passar_a_escolha_dela()
+        self._passar_a_escolha_do_usuario()
         return True
 
     def no_ar(self, modulos: Sequence[ModuloDeSom] | None = None) -> bool | None:
@@ -1056,7 +1056,7 @@ class SinkVirtualPipeWire:
             self.runner(["pactl", "unload-module", module_id])
             logger.info("som_orfao_derrubado", sink=self.nome, module_id=module_id)
 
-    def _passar_a_escolha_dela(self) -> None:
+    def _passar_a_escolha_do_usuario(self) -> None:
         """A saída padrão gravada no nome velho deste nó passa ao nome novo. Nunca levanta."""
         from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
             passar_a_escolha_gravada_ao_nome_novo,
@@ -3188,7 +3188,7 @@ __all__ = [
     "TRANSPORTE_CABO",
     "TRANSPORTE_RADIO",
     "VOLTA_DA_SEQUENCIA",
-    "VOLUME_QUE_ELA_OUVIU",
+    "VOLUME_QUE_O_USUARIO_OUVIU",
     "Arranjo",
     "BombaDeSomPeloRadio",
     "CodificadorOpus",

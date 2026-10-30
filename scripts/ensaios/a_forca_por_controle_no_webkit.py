@@ -92,7 +92,7 @@ def main() -> int:
     ap.add_argument("--pref", default="p1")
     ap.add_argument("--perfis-de-origem", default="",
                     help="a pasta de perfis a COPIAR (só leitura)")
-    ap.add_argument("--bancada", action="store_true",
+    ap.add_argument("--ensaio", action="store_true",
                     help="abre o desenho de `mockup/` em vez da página "
                          "publicada — é onde a barra arrastável já existe")
     ap.add_argument("--arrasta", type=int, default=30,
@@ -147,7 +147,7 @@ def main() -> int:
         import onde as _onde
 
         piloto.view.load_uri(
-            _onde.pagina(ABA, publicado=not args_meus.bancada).as_uri())
+            _onde.pagina(ABA, publicado=not args_meus.ensaio).as_uri())
         return False
 
     GLib.timeout_add(400, _abrir)

@@ -157,6 +157,6 @@ def test_gatilho_novo_sem_numero_medido_e_recusado() -> None:
         registro.registrar("sem_numero", lambda: None)
 
 
-def test_o_nome_do_gatilho_da_lightbar_e_o_do_modulo_dela() -> None:
+def test_o_nome_do_gatilho_da_lightbar_e_o_do_modulo_do_usuario() -> None:
     """O nome viaja pelo módulo, não por string solta em cada chamador."""
     assert NOME_DO_GATILHO == "lightbar"

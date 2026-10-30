@@ -362,7 +362,7 @@ def test_a_recusa_que_o_tradutor_nao_conhece_volta_inteira(a03):
     assert str(recusa.value) == "o hidraw sumiu no meio do caminho"
 
 
-def test_o_travessao_espera_a_publicacao_dela(a03):
+def test_o_travessao_espera_a_publicacao_do_usuario(a03):
     """O pacote NÃO manda travessão numa página que não o oferece."""
     guardado = a03._OFERECE
     try:
@@ -384,8 +384,8 @@ def test_o_travessao_esta_no_desenho_de_hoje(a03):
     """A BANCADA oferece `—` nos dois campos de escolha, e ele é `disabled`."""
     from hefesto_dualsense4unix.interface import onde
 
-    bancada = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    miolo = bancada.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
+    ensaio = onde.pagina(PAGINA).read_text(encoding="utf-8")
+    miolo = ensaio.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     quantos = len(re.findall(
         rf'<option value="{a03.TRAVESSAO}"[^>]*\bdisabled\b', miolo))
     campos = len(re.findall(r"<select(?![^>]*data-linha)", miolo))

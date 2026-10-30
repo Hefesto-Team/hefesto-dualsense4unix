@@ -182,7 +182,7 @@ class _Gravador:
         return None
 
 
-class _Bancada:
+class _Ensaio:
     """O ouvido com tudo de mentira: o fluxo, o gravador, a conferência e o relógio."""
 
     def __init__(self, pcm: bytes, alvo: str | None = "jogo") -> None:
@@ -220,52 +220,52 @@ def _pcm_com_um_estalo_a_esquerda() -> bytes:
 
 
 def test_sem_pedido_o_ouvido_nao_grava_nada() -> None:
-    bancada = _Bancada(b"")
-    bancada.quer = False
-    bancada.ouvido.uma_volta()
-    assert bancada.abertos == []
+    ensaio = _Ensaio(b"")
+    ensaio.quer = False
+    ensaio.ouvido.uma_volta()
+    assert ensaio.abertos == []
 
 
 def test_sem_fluxo_de_jogo_o_ouvido_fica_calado() -> None:
-    bancada = _Bancada(b"")
-    bancada.fluxo = None
-    bancada.ouvido.uma_volta()
-    assert bancada.abertos == [] and not bancada.ouvido.ouvindo
+    ensaio = _Ensaio(b"")
+    ensaio.fluxo = None
+    ensaio.ouvido.uma_volta()
+    assert ensaio.abertos == [] and not ensaio.ouvido.ouvindo
 
 
 def test_o_ouvido_grava_o_jogo_e_entrega_o_estalo_com_o_lado() -> None:
-    bancada = _Bancada(_pcm_com_um_estalo_a_esquerda())
-    bancada.ouvido.uma_volta()
-    assert bancada.abertos == [["pw-record", "--target=504"]]
-    bancada.esperar_o_leitor()
-    assert bancada.ouvido.ouvindo
-    assert [t.lado for t in bancada.ouvido.tirar()] == ["esquerdo"]
-    assert bancada.ouvido.tirar() == []
-    bancada.agora += tj.VIVO_S + 0.1
-    assert not bancada.ouvido.ouvindo, "sem PCM chegando o ouvido não está ouvindo"
+    ensaio = _Ensaio(_pcm_com_um_estalo_a_esquerda())
+    ensaio.ouvido.uma_volta()
+    assert ensaio.abertos == [["pw-record", "--target=504"]]
+    ensaio.esperar_o_leitor()
+    assert ensaio.ouvido.ouvindo
+    assert [t.lado for t in ensaio.ouvido.tirar()] == ["esquerdo"]
+    assert ensaio.ouvido.tirar() == []
+    ensaio.agora += tj.VIVO_S + 0.1
+    assert not ensaio.ouvido.ouvindo, "sem PCM chegando o ouvido não está ouvindo"
 
 
 def test_o_gravador_que_ligou_em_outro_no_cai() -> None:
-    bancada = _Bancada(b"", alvo="microfone")
-    bancada.ouvido.uma_volta()
-    bancada.ouvido.uma_volta()
-    assert bancada.derrubados == [bancada.gravador]
-    assert bancada.ouvido.contadores["alvo_errado"] == 1
+    ensaio = _Ensaio(b"", alvo="microfone")
+    ensaio.ouvido.uma_volta()
+    ensaio.ouvido.uma_volta()
+    assert ensaio.derrubados == [ensaio.gravador]
+    assert ensaio.ouvido.contadores["alvo_errado"] == 1
 
 
 def test_nao_sei_o_alvo_nao_derruba() -> None:
-    bancada = _Bancada(b"", alvo=None)
-    bancada.ouvido.uma_volta()
-    bancada.ouvido.uma_volta()
-    assert bancada.derrubados == []
+    ensaio = _Ensaio(b"", alvo=None)
+    ensaio.ouvido.uma_volta()
+    ensaio.ouvido.uma_volta()
+    assert ensaio.derrubados == []
 
 
 def test_o_pedido_que_acaba_cala_o_gravador() -> None:
-    bancada = _Bancada(b"")
-    bancada.ouvido.uma_volta()
-    bancada.quer = False
-    bancada.ouvido.uma_volta()
-    assert bancada.derrubados == [bancada.gravador]
+    ensaio = _Ensaio(b"")
+    ensaio.ouvido.uma_volta()
+    ensaio.quer = False
+    ensaio.ouvido.uma_volta()
+    assert ensaio.derrubados == [ensaio.gravador]
 
 
 class _Ouvido:

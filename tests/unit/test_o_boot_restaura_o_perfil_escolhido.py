@@ -1,6 +1,6 @@
 """O boot restaura o perfil que ela ativou à mão, com regra de janela ou sem.
 
-`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4: o boot não adia mais perfil de
+`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item 4: o boot não adia mais perfil de
 janela, e o estado público não guarda espera nenhuma. O campo
 `perfil_adiado_por_janela` saiu do `StateStore` em 03/10/2026, sem escritor
 desde a decisão. As duas provas ficam: o Sackboy que ela ativou volta no boot, e
@@ -63,7 +63,7 @@ class _BootDaemon:
         return fn(*args)  # type: ignore[operator]
 
 
-def _salvar_sackboy_dela() -> None:
+def _salvar_sackboy_do_usuario() -> None:
     """Grava o perfil `Sackboy` COMO ELE ESTÁ na máquina do usuário (08/08 01:49)."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
@@ -78,7 +78,7 @@ def _salvar_sackboy_dela() -> None:
 
 
 @pytest.mark.asyncio
-async def test_boot_restaura_o_perfil_de_janela_que_ela_escolheu(
+async def test_boot_restaura_o_perfil_de_janela_que_o_usuario_escolheu(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
     """O caso dela, fim a fim: o Sackboy que ela ativou à mão volta no boot."""
@@ -90,7 +90,7 @@ async def test_boot_restaura_o_perfil_de_janela_que_ela_escolheu(
         save_last_profile,
     )
 
-    _salvar_sackboy_dela()
+    _salvar_sackboy_do_usuario()
     save_last_profile("Sackboy")
     save_active_marker("Sackboy")
 

@@ -97,12 +97,12 @@ class TestOsCincoDegraus:
         mesa.marca()
         assert sc._dualsense_mic_intended() is True
 
-    def test_5_nao_sei_nunca_e_ela_pediu(self, mesa) -> None:
+    def test_5_nao_sei_nunca_e_o_usuario_pediu(self, mesa) -> None:
         """Nem o 51 nem a marca: a ausência tem DUAS origens e o disco não as separa."""
         assert sc._dualsense_mic_intended() is False
 
 
-class TestOAvisoNaoMandaDesfazerAEscolhaDela:
+class TestOAvisoNaoMandaDesfazerAEscolhaDoUsuario:
     def test_com_a_marca_o_daemon_cala_sobre_o_microfone(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -967,7 +967,7 @@ def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
             f"mesmo nome.")
 
 
-def _o_que_ela_digitou(o: dict[str, Any]) -> tuple[str, str]:
+def _o_que_o_usuario_digitou(o: dict[str, Any]) -> tuple[str, str]:
     """`(rótulo, alvo)` da tela de registro, já aparados."""
     forma = o.get("forma") or {}
     if not isinstance(forma, dict):
@@ -1009,7 +1009,7 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     """
     global _PARA_QUEM
 
-    rotulo, alvo = _o_que_ela_digitou(o)
+    rotulo, alvo = _o_que_o_usuario_digitou(o)
     if not o.get("forma"):
         _PARA_QUEM = str(o.get("v") or "").strip()
         return _resposta(VIGIA.agora(), ctx.state)
@@ -1022,11 +1022,11 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
         raise ValueError(
             f"São {len(alvo)} caracteres, e o teto é {_MAXIMO_DA_AGULHA}. Diga "
             "só o comando ou o nome do atalho.")
-    recado = _guardar_onde_ele_esta(p, rotulo, alvo, _achar_o_que_ela_digitou)
+    recado = _guardar_onde_ele_esta(p, rotulo, alvo, _achar_o_que_o_usuario_digitou)
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
 
 
-def _achar_o_que_ela_digitou(alvo: str) -> tuple[str, str, str]:
+def _achar_o_que_o_usuario_digitou(alvo: str) -> tuple[str, str, str]:
     """`onde_isso_esta`, e a RECUSA na língua de quem DIGITOU."""
     achado = onde_isso_esta(alvo)
     if not achado[0]:
@@ -1090,7 +1090,7 @@ def _pasta_de_partida() -> str:
 TITULO_DO_SELETOR = "Escolha o atalho do lançador (.desktop)"
 
 
-def _achar_o_que_ela_apontou(alvo: str) -> tuple[str, str, str]:
+def _achar_o_que_o_usuario_apontou(alvo: str) -> tuple[str, str, str]:
     """`onde_isso_esta`, e a RECUSA na língua de quem APONTOU um arquivo.
 
     **A RECUSA É OUTRA, e a diferença é medida.** Quem digitou errou o comando
@@ -1156,15 +1156,15 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
     **A GRAVAÇÃO É A MESMA DO «Adicionar»** (:func:`_guardar_onde_ele_esta`), e
     tem de ser: dois caminhos escrevendo o `maquina.json` cada um do seu jeito
     é como um deles esquece a colisão com cartão de fábrica. O que muda é só a
-    frase de "não achei" — ver :func:`_achar_o_que_ela_apontou`.
+    frase de "não achei" — ver :func:`_achar_o_que_o_usuario_apontou`.
     """
     caminho = p.escolher_arquivo(TITULO_DO_SELETOR, padrao="*.desktop",
                                  sugestao=_pasta_de_partida())
     if not caminho:
         return None
-    rotulo, _digitado = _o_que_ela_digitou(o)
+    rotulo, _digitado = _o_que_o_usuario_digitou(o)
     recado = _guardar_onde_ele_esta(p, rotulo, str(caminho),
-                                    _achar_o_que_ela_apontou)
+                                    _achar_o_que_o_usuario_apontou)
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
 
 
@@ -1355,19 +1355,19 @@ def _ler_as_instaladas() -> tuple[_Instalada, ...]:
         except (ManifestoRecusadoError, OSError):
             manifesto = None
         nota = tema.css_da_extensao(manifesto, lg).recusa_curta if manifesto is not None else ""
-        dela = vivo.get(mod_id) or {}
-        saida.append(_Instalada(entrada, manifesto, str(dela.get("estado") or ""), nota,
-                                _porque_do_supervisor(dela)))
+        do_mod = vivo.get(mod_id) or {}
+        saida.append(_Instalada(entrada, manifesto, str(do_mod.get("estado") or ""), nota,
+                                _porque_do_supervisor(do_mod)))
     return tuple(saida)
 
 
 TETO_DA_ULTIMA_LINHA = 160
 
 
-def _porque_do_supervisor(dela: dict[str, Any]) -> str:
+def _porque_do_supervisor(do_mod: dict[str, Any]) -> str:
     """O motivo e a última linha do diário que o supervisor gravou: a dica da chave que não roda."""
-    motivo = str(dela.get("motivo") or "").strip()
-    linha = " ".join(str(dela.get("ultima_linha") or "").split())
+    motivo = str(do_mod.get("motivo") or "").strip()
+    linha = " ".join(str(do_mod.get("ultima_linha") or "").split())
     if len(linha) > TETO_DA_ULTIMA_LINHA:
         linha = linha[: TETO_DA_ULTIMA_LINHA - 1] + "…"
     return " ".join(x for x in (motivo, f"«{linha}»" if linha else "") if x)
@@ -1478,11 +1478,11 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
         if miolo:
             blocos[seletor] = miolo
     if _MEXIDA.html_mod and _MEXIDA.agora:
-        dela = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
+        do_mod = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, _AGORA.agora(),
-            processo=exp.processo_de(dela.entrada.ligada, dela.estado) if dela else "",
-            porque=dela.porque if dela else "")
+            processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
+            porque=do_mod.porque if do_mod else "")
     carga = _com_os_aparelhos(carga)
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
     return carga
@@ -2114,7 +2114,7 @@ def escolher_o_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
                                  sugestao=_pasta_de_partida())
     if not caminho:
         return None
-    _achar_o_que_ela_apontou(str(caminho))
+    _achar_o_que_o_usuario_apontou(str(caminho))
     _MEXIDA.onde_escolhido = str(caminho)
     _montar_a_conf(chave, ctx.state)
     return _a_pintura_agora(ctx)
@@ -2138,7 +2138,7 @@ def guardar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
         _PARA_QUEM = chave
         try:
             recados.append(_guardar_onde_ele_esta(p, "", _MEXIDA.onde_escolhido,
-                                                  _achar_o_que_ela_apontou))
+                                                  _achar_o_que_o_usuario_apontou))
         finally:
             _PARA_QUEM = ""
         _MEXIDA.onde_escolhido = ""
@@ -2605,9 +2605,9 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     if acoes or (aparelhos and aparelhos.grupo) or aba_cc:
         grupos = [exp.OpcaoDaJanela(mod_id, o.id, o.rotulo, o.tipo, "", grupo=o.grupo or "")
                   for o in manifesto.opcoes if o.tipo != "livre" and o.id != manifesto.chave]
-        for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos, aba_cc).items():
+        for n, acoes_da_aba in exp.acoes_por_aba(grupos, acoes, aparelhos, aba_cc).items():
             blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(
-                mod_id, delas, em_curso, _armada_de(mod_id), _MEXIDA.desligada)
+                mod_id, acoes_da_aba, em_curso, _armada_de(mod_id), _MEXIDA.desligada)
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)

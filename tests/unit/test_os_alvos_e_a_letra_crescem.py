@@ -118,10 +118,10 @@ def _so_o_arquivo(rota: Any) -> None:
 @pytest.fixture(scope="module")
 def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
     """As dez abas como os geradores as escrevem hoje, numa bancada de mentira."""
-    bancada = tmp_path_factory.mktemp("bancada")
+    ensaio = tmp_path_factory.mktemp("bancada")
     for pagina in MOCKUP.glob("*.html"):
-        shutil.copy(pagina, bancada / pagina.name)
-    ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"), HEFESTO_BANCADA=str(bancada))
+        shutil.copy(pagina, ensaio / pagina.name)
+    ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"), HEFESTO_ENSAIO=str(ensaio))
     for aba in ABAS:
         numero = aba[:2]
         feito = subprocess.run(
@@ -129,7 +129,7 @@ def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
             env=ambiente, capture_output=True, text=True, timeout=300, check=False,
         )
         assert feito.returncode == 0, (aba, feito.stdout[-400:], feito.stderr[-800:])
-    return bancada
+    return ensaio
 
 
 @pytest.fixture(scope="module")

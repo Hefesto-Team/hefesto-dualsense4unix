@@ -1,6 +1,6 @@
 """O diário de uma modificação fica no teto ENQUANTO ela roda.
 
-Sprint O-DIARIO-DA-MODIFICACAO-TEM-TETO-ENQUANTO-ELA-RODA-01. Lar de mentira (``HOME`` e
+Sprint O-DIARIO-DA-MODIFICACAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA-01. Lar de mentira (``HOME`` e
 ``XDG_*`` em pasta temporária), sem caixa, com um filho que só escreve na saída e fica de pé.
 Nenhuma prova fala com o serviço dela.
 """
@@ -132,7 +132,7 @@ def _texto(diario: Path) -> str:
 def test_a_modificacao_que_fala_muito_nao_passa_do_teto_enquanto_roda(
     lar: Lugares, curto: Path
 ) -> None:
-    """D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-ELA-RODA."""
+    """D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA."""
     diario = _instalar_e_ligar(lar, curto, "fica")
 
     async def corrida() -> None:

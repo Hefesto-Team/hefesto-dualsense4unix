@@ -282,8 +282,8 @@ def test_o_revive_depois_da_falha_total_volta_no_modo_da_sessao(
 @pytest.mark.parametrize(
     ("devolucao", "gravador"),
     [
-        ("_a_escolha_dela_sem_o_vazamento", "save_gamepad_caminho"),
-        ("_a_mascara_dela_sem_o_vazamento", "save_gamepad_emulation"),
+        ("_a_escolha_do_usuario_sem_o_vazamento", "save_gamepad_caminho"),
+        ("_a_mascara_do_usuario_sem_o_vazamento", "save_gamepad_emulation"),
     ],
 )
 def test_a_devolucao_do_xbox_roda_uma_vez_e_a_escolha_seguinte_fica(

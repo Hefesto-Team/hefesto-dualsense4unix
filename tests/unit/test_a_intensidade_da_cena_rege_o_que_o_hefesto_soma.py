@@ -80,7 +80,7 @@ def test_a_energia_do_som_do_jogo_separa_o_silencio_do_estrondo() -> None:
     assert ic.rms_do_pcm(struct.pack("<hh", 16384, -16384)) == pytest.approx(0.5)
 
 
-def test_a_faixa_so_troca_depois_de_quatro_segundos_nela() -> None:
+def test_a_faixa_so_troca_depois_de_quatro_segundos_no_usuario() -> None:
     cena = ic.IntensidadeDaCena(graduar=True)
     cena.contar([_evento(ic.TIPO_RUMBLE)])
     fim = _sessao(cena, 3.9, 0.0)

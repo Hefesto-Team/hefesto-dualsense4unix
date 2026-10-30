@@ -285,7 +285,7 @@ class TestARegra82ChamaOHelperParaTodoPro:
             "tem de cobrir exatamente as faixas já vistas"
         )
 
-    def test_o_pro_desta_bancada_nao_chama_o_helper_duas_vezes(self) -> None:
+    def test_o_pro_deste_ensaio_nao_chama_o_helper_duas_vezes(self) -> None:
         """Duas rotas para o mesmo aparelho seriam dois `RUN+=` por connect."""
         linhas = _linhas_de_regra()
         com_run = [ln for ln in linhas if "RUN+=" in ln]

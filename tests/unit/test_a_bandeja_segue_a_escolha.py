@@ -1,4 +1,5 @@
-"""O ÍCONE NA BANDEJA SEGUE A ESCOLHA, E VOLTA COM O SERVIÇO (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01,
+"""O ÍCONE NA BANDEJA SEGUE A ESCOLHA, E VOLTA COM O SERVIÇO
+(AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01,
 S3 e S4).
 
 O pedido de 16/10: *«a tray do app não aparece mais na interface. Adiciona um botão (…) pra

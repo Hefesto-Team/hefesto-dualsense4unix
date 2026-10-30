@@ -15,7 +15,7 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     FONTE_PADRAO,
     FONTE_SFX,
 )
-from tests.unit import ensaio_do_som_junto as bancada
+from tests.unit import ensaio_do_som_junto as ensaio
 
 _P1 = "aa:bb:cc:00:00:b1"
 _P2 = "aa:bb:cc:00:00:b2"
@@ -123,25 +123,25 @@ def test_o_perfil_nao_e_relido_a_cada_varredura(
     )
 
 
-def test_a_escolha_dela_vale_na_varredura_seguinte(
+def test_a_escolha_do_usuario_vale_na_varredura_seguinte(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O outro lado do cache: gravar o perfil TEM de chegar ao NÓ VIVO."""
-    pactl = bancada.Pactl()
+    pactl = ensaio.Pactl()
     monkeypatch.setattr(som, "_rodar", pactl)
 
-    nome = bancada.escrever_perfil({_P1: FONTE_SFX})
-    sub, ger = bancada.subsystem_e_gerenciador(
+    nome = ensaio.escrever_perfil({_P1: FONTE_SFX})
+    sub, ger = ensaio.subsystem_e_gerenciador(
         nome, ponte_do_radio_por_controle=lambda _uniq: (lambda: True)
     )
-    ger.reconciliar([bancada.radio(_P1)])
+    ger.reconciliar([ensaio.radio(_P1)])
     no = ger.nos[_P1]
     assert pactl.loopbacks == [], "o nó nasceu com o mix sem ela ter pedido"
 
-    bancada.ela_clica(_P1, FONTE_MIX)
-    ger.reconciliar([bancada.radio(_P1)])
+    ensaio.o_usuario_clica(_P1, FONTE_MIX)
+    ger.reconciliar([ensaio.radio(_P1)])
 
-    assert pactl.loopbacks == [(f"{bancada.HDMI}.monitor", no.nome)], (
+    assert pactl.loopbacks == [(f"{ensaio.HDMI}.monitor", no.nome)], (
         "ela salvou e o nó VIVO continuou com a fonte de antes — "
         f"loopbacks de pé: {pactl.loopbacks}"
     )

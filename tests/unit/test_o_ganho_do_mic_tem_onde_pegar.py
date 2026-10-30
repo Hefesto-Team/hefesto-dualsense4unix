@@ -12,7 +12,7 @@ from hefesto_dualsense4unix.integrations import ganho_do_microfone as gm
 
 PUBLICADO = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html")
-BANCADA = pathlib.Path("mockup/01-jogar.html")
+ENSAIO = pathlib.Path("mockup/01-jogar.html")
 
 
 def test_o_desenho_do_todo_nao_tem_a_linha_do_ganho() -> None:
@@ -20,7 +20,7 @@ def test_o_desenho_do_todo_nao_tem_a_linha_do_ganho() -> None:
 
     MORDIDA: ponha o `<input data-gesto="ganho-mic">` de volta na página e isto reprova.
     """
-    for pagina in (BANCADA, PUBLICADO):
+    for pagina in (ENSAIO, PUBLICADO):
         corpo = pagina.read_text(encoding="utf-8")
         assert 'data-gesto="ganho-mic"' not in corpo and 'class="vol ganho"' not in corpo, (
             f"a linha do Ganho voltou a {pagina}")

@@ -628,9 +628,9 @@ def _a_ordem_na_tela(ordem: Any) -> tuple[str, str]:
     declaracao = _declaracao()
     mapa = getattr(declaracao, "mapa", None)
     numero = mapa_das_portas.porta_de(mapa, caminho) if mapa is not None else None
-    dela = declaracao if mapa is not None else None
-    de = rotulo_do_numero(numero or "", maquina=dela) or caminho or TRACO
-    return de, rotulo_do_numero(destino, maquina=dela) or destino
+    a_declarada = declaracao if mapa is not None else None
+    de = rotulo_do_numero(numero or "", maquina=a_declarada) or caminho or TRACO
+    return de, rotulo_do_numero(destino, maquina=a_declarada) or destino
 
 
 def _dbm(valor: object) -> int | None:
@@ -864,16 +864,16 @@ def _exame() -> list[dict[str, Any]]:
             if not _calada(i) and getattr(i, "chave", "") != CHAVE_DA_LEITURA]
 
 
-def _bancada() -> Any:
+def _ensaio() -> Any:
     """A mesa do motor montada sobre o rascunho DO USUÁRIO — ou `None` sem censo."""
     censo = _censo()
     if censo is None:
         return None
     perfil._com_o_src()
-    from hefesto_dualsense4unix.interface.logica_do_mapa import bancada_do_rascunho
+    from hefesto_dualsense4unix.interface.logica_do_mapa import ensaio_do_rascunho
 
     with contextlib.suppress(Exception):
-        return bancada_do_rascunho(_logica_do_mapa(), censo)
+        return ensaio_do_rascunho(_logica_do_mapa(), censo)
     return None
 
 
@@ -907,8 +907,8 @@ def _confissao_do_mapa() -> dict[str, str]:
     desenho: —."*); não emitir deixa a linha como o desenho a escreveu, o único estado honesto
     quando a leitura do barramento falhou.
     """
-    bancada = _bancada()
-    if bancada is None:
+    ensaio = _ensaio()
+    if ensaio is None:
         return {}
     try:
         perfil._com_o_src()
@@ -916,7 +916,7 @@ def _confissao_do_mapa() -> dict[str, str]:
             confissao_do_desenho,
         )
 
-        itens = tuple(confissao_do_desenho(bancada))
+        itens = tuple(confissao_do_desenho(ensaio))
     except Exception:
         return {}
     if not itens:
@@ -939,12 +939,12 @@ def _html_do_mapa() -> str:
     from hefesto_dualsense4unix.interface import logica_do_mapa as mm
 
     logica = _logica_do_mapa()
-    bancada = _bancada()
+    ensaio = _ensaio()
 
     def veredito_de(numero: str, esticada: bool) -> tuple[str, str, str]:
-        if bancada is None:
+        if ensaio is None:
             return "", "", ""
-        v = mm.veredito_do_quadrado(bancada, numero, logica.escolhido)
+        v = mm.veredito_do_quadrado(ensaio, numero, logica.escolhido)
         return ("", "", "") if v is None else (v.v, v.texto, v.porque)
 
     quem_esta: dict[str, tuple[str, str]] = {}
@@ -1011,8 +1011,8 @@ def a_declaracao_do_externo(entrada: dict[str, Any],
                             declaracao: Any = None) -> dict[str, str]:
     """A cor e a família dos botões que o usuário declarou deste controle externo.
 
-    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01 (08/10/2026). A fonte é a da mesa das dez abas
-    (`mesa_viva.cor_declarada` e `mesa_viva.familia_dos_botoes`): o externo e o DualSense não
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01 (08/10/2026). A fonte é a da mesa das dez
+    abas (`mesa_viva.cor_declarada` e `mesa_viva.familia_dos_botoes`): o externo e o DualSense não
     discordam sobre `controles.cor`, `controles.botoes` e `controles.modo`. A chave é a do
     `maquina.json` (`chave_de_maquina`: o `identity` do daemon, e o `uniq` sem ele); sem endereço
     fixo não há onde declarar e devolve vazio, que não mostra nada.
@@ -1052,19 +1052,19 @@ def marcas_do_externo(entrada: dict[str, Any], elemento: str) -> tuple[str, str]
     letras da face (sul, leste, oeste, norte). Sem declaração, ``("", "")``: campo sem informação
     não mostra nada.
     """
-    ela = a_declaracao_do_externo(entrada)
+    a_declaracao = a_declaracao_do_externo(entrada)
     atributos = ""
-    if ela["cor"]:
-        atributos = (f' style="border-color:{ela["cor"]}" '
-                     f'title="{html.escape(ela["cor_nome"], quote=True)}"')
+    if a_declaracao["cor"]:
+        atributos = (f' style="border-color:{a_declaracao["cor"]}" '
+                     f'title="{html.escape(a_declaracao["cor_nome"], quote=True)}"')
     botoes = ""
-    if ela["botoes"]:
+    if a_declaracao["botoes"]:
         from hefesto_dualsense4unix.interface import mesa_viva
 
-        letras = mesa_viva.LETRAS_DA_FACE[ela["botoes"]]
+        letras = mesa_viva.LETRAS_DA_FACE[a_declaracao["botoes"]]
         texto = " ".join(letras[b] for b in _FACE_DO_EXTERNO)
         dica = "Botões declarados"
-        botoes = (f'<{elemento} class="ext-botoes" data-botoes="{ela["botoes"]}" '
+        botoes = (f'<{elemento} class="ext-botoes" data-botoes="{a_declaracao["botoes"]}" '
                   f'title="{dica}">{texto}</{elemento}>')
     return atributos, botoes
 
@@ -1101,7 +1101,8 @@ def _lista_do_externo(gesto: str, quem: str, titulo: str, vazio: str,
 def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
     """As três listas (modo, botões, cor) do cartão do externo na Conexões.
 
-    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01, item 2. Só o cartão da Conexões escreve (o da
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01, item 2. Só o cartão da Conexões escreve
+    (o da
     Jogar só mostra), e só quando o controle tem chave no `maquina.json`; a escolha vale para o
     desenho da tela, nada é remapeado no controle.
     """
@@ -1878,7 +1879,7 @@ def _declarar_do_externo(ctx: Contexto, o: dict[str, Any], p: Any, campo: str,
                          validos: set[str]) -> None:
     """Grava ``controles[chave].<campo>`` de um controle externo, pelo `machine.declare`.
 
-    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01, item 2 (08/10/2026). O caminho é o do
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01, item 2 (08/10/2026). O caminho é o do
     `machine.declare` (o daemon funde contra o disco sob lock, relê e responde). A chave NÃO vem do
     clique: sai do controle que a tela tem agora (`data-externo`: o `identity` ou o `uniq`), e
     controle que não está mais aqui recusa, em vez de gravar sob endereço que ninguém escolheu.
@@ -3265,7 +3266,7 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
                 f'title="Não usa rádio; só ocupa porta">{SEM_RADIO}</span>{usar}</div>'
                 '<span class="conta-da-vaga zero" title="Não usa rádio">'
                 + TRACO_CURTO + '</span></div>')
-    elif ap.get("tipo") == "outro" and not ap.get("tipo_dela"):
+    elif ap.get("tipo") == "outro" and not ap.get("tipo_do_usuario"):
         return _linha_sem_tipo(ap, abre, le, nome, rotulo, aid)
     else:
         cor = _cor_de(ap)
@@ -3472,11 +3473,11 @@ def _como_se_pareia(ap: dict[str, Any]) -> str:
 
 def pergunta_de_mover(ap: dict[str, Any], destino: dict[str, Any], cena: dict[str, Any]) -> str:
     """A pergunta ANTES de mover (R7): só ele sai, e o que ela faz com a mão."""
-    ela = ARTIGO_DO_TIPO.get(str(ap.get("tipo"))) == "a"
+    feminino = ARTIGO_DO_TIPO.get(str(ap.get("tipo"))) == "a"
     cheio = (ap.get("tipo") == "controle" and ap.get("ponte")
              and len(_pontes(cena, str(destino["id"]))) >= PONTES_POR_ADAPTADOR)
     return (f"Mover {como_se_chama(ap)} para {como_se_chama_o_lugar(destino)}?<br>"
-            f"Só {'ela' if ela else 'ele'} sai daqui. {_como_se_pareia(ap)}"
+            f"Só {'ela' if feminino else 'ele'} sai daqui. {_como_se_pareia(ap)}"
             + (" Lá o som pode engasgar." if cheio else ""))
 
 
@@ -4487,7 +4488,7 @@ def _tipo_do_aparelho(icone: str, classe: int | None, aparencia: int | None = No
     return pela_classe if pela_classe != "outro" else _tipo_pela_aparencia(aparencia)
 
 
-def _tipo_que_ela_disse(endereco: str) -> str:
+def _tipo_que_o_usuario_disse(endereco: str) -> str:
     """O tipo que a pessoa deu a este aparelho do Bluetooth (``""`` quando não deu).
 
     Lido do ``maquina.json`` pelo ENDEREÇO: a escolha da pessoa vence a adivinhação do ``Icon``, da
@@ -4509,7 +4510,7 @@ def _com_a_categoria_do_enlace(aparelhos: list[dict[str, Any]],
     encontram (:func:`_tipo_do_aparelho` não vê o enlace).
     """
     for ap in aparelhos:
-        if ap.get("tipo") != "outro" or ap.get("tipo_dela"):
+        if ap.get("tipo") != "outro" or ap.get("tipo_do_usuario"):
             continue
         do_lugar = _dicionario(enlaces.get(str(ap.get("lugar") or "")))
         if _dicionario(do_lugar.get(_so_hex(str(ap.get("id") or "")))).get("le") is True:
@@ -4713,7 +4714,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         pedido["uniq"] = str(dono["id"]) if dono else quem
     pedindo = _quem_pede_para_parear(central, lugares, aparelhos_bz)
     proposta = _a_proposta_da_cena(central.get("proposta"), aparelhos)
-    lugares = _na_ordem_dela(lugares)
+    lugares = _na_ordem_do_usuario(lugares)
     aparelhos += _os_acionadores_declarados(declaracao_viva, lugares)
     buscas: dict[str, object] = {
         nome_do_jogador.mac(m.get("destino")): (
@@ -4768,7 +4769,7 @@ def _chave_da_ordem(endereco: object) -> str:
     return chave_do_adaptador(endereco) or ""
 
 
-def _na_ordem_dela(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _na_ordem_do_usuario(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Os adaptadores na ORDEM QUE ELA ARRASTOU, gravada no adaptador pelo endereço.
 
     Decisão de 25/09/2026 (``utils/maquina.AdaptadorDeclarado.ordem``).
@@ -4876,9 +4877,9 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     da busca sem ninguém é dito no «Procurar».
 
     A meia chave é da central e a tela só mostra (achado 8 da auditoria de 26/09,
-    A-CAIXA-FICA-ONDE-ELA-ABRIU-01): quem tira a chave do ``Pair`` que não conectou é a central,
-    antes do «não chegou» (``central_do_radio._esquecer_a_meia_chave``), e quem tira a linha é o X
-    dela (``radio.dispensar``).
+    A-CAIXA-FICA-ONDE-O-USUARIO-ABRIU-01): quem tira a chave do ``Pair`` que não conectou é a
+    central, antes do «não chegou» (``central_do_radio._esquecer_a_meia_chave``), e quem tira a
+    linha é o X dela (``radio.dispensar``).
     """
     da_mesa = {_so_hex(str(e.get("uniq") or "")): e for e in ctx.mesa}
     linhas: list[dict[str, Any]] = []
@@ -4999,7 +5000,7 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
             rotulo = (alias if alias and not nome_do_jogador.e_nome_de_fabrica(alias)
                       else "DualSense")
         else:
-            tipo = _tipo_que_ela_disse(a.endereco) or _tipo_do_aparelho(
+            tipo = _tipo_que_o_usuario_disse(a.endereco) or _tipo_do_aparelho(
                 str(getattr(a, "icone", "") or ""), a.classe, getattr(a, "aparencia", None))
             nome, rotulo = alias, alias or PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()
         no_cabo = tipo == "controle" and h in no_usb
@@ -5157,11 +5158,11 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         if (not a.conectado or not adaptador or _so_hex(endereco) in vistos
                 or "V054C" in str(getattr(a, "modalias", "")).upper()):
             continue
-        dela = _tipo_que_ela_disse(endereco)
+        a_declarada = _tipo_que_o_usuario_disse(endereco)
         fora.append({"id": endereco,
-                     "tipo": dela or _tipo_do_aparelho(getattr(a, "icone", ""), a.classe,
+                     "tipo": a_declarada or _tipo_do_aparelho(getattr(a, "icone", ""), a.classe,
                                                        getattr(a, "aparencia", None)),
-                     "tipo_dela": bool(dela),
+                     "tipo_do_usuario": bool(a_declarada),
                      "lugar": adaptador,
                      "nome": str(a.nome or ""), "rotulo": str(a.nome or ""),
                      "pareado": a.pareado is True,

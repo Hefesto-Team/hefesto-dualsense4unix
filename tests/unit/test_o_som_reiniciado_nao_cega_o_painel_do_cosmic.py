@@ -76,7 +76,7 @@ def _argv0(pid: int) -> str:
 
 
 @dataclass
-class Bancada:
+class Ensaio:
     """Os dublês, o estado que eles leem e os processos de mentira."""
 
     tmp: Path
@@ -123,7 +123,7 @@ class Bancada:
 
 
 @pytest.fixture
-def bancada(tmp_path: Path) -> Iterator[Bancada]:
+def ensaio(tmp_path: Path) -> Iterator[Ensaio]:
     fakes = tmp_path / "fakes"
     estado = tmp_path / "estado"
     estado.mkdir()
@@ -170,14 +170,14 @@ def bancada(tmp_path: Path) -> Iterator[Bancada]:
     (estado / "clientes").write_text(CLIENTES_BASE, encoding="utf-8")
     (estado / "cliente-do-painel-texto").write_text(CLIENTE_DO_PAINEL, encoding="utf-8")
     daemon_bin = _exe(tmp_path / "usr-bin", "cosmic-settings-daemon", LEVA_O_PIPEWIRE)
-    b = Bancada(tmp_path, fakes, estado, diario, daemon_bin)
+    b = Ensaio(tmp_path, fakes, estado, diario, daemon_bin)
     try:
         yield b
     finally:
         b.encerrar()
 
 
-def _sessao_cosmic(b: Bancada) -> dict[str, int]:
+def _sessao_cosmic(b: Ensaio) -> dict[str, int]:
     """A sessão COSMIC de mentira: a sessão, o painel com o ambiente, o daemon e a janela."""
     principal = b.processo("cosmic-session")
     painel = b.processo(
@@ -201,7 +201,7 @@ def _sessao_cosmic(b: Bancada) -> dict[str, int]:
     return {"principal": principal, "painel": painel, "daemon": daemon, "janela": janela}
 
 
-def _reiniciar(b: Bancada, *, dry_run: bool = False) -> tuple[str, str, str]:
+def _reiniciar(b: Ensaio, *, dry_run: bool = False) -> tuple[str, str, str]:
     script = (
         "set -euo pipefail\n"
         "_faria() { printf 'FARIA %s\\n' \"$*\"; }\n"
@@ -228,17 +228,17 @@ def _reiniciar(b: Bancada, *, dry_run: bool = False) -> tuple[str, str, str]:
 
 
 def test_no_cosmic_o_daemon_conferido_sai_e_volta_com_o_ambiente_da_sessao(
-    bancada: Bancada,
+    ensaio: Ensaio,
 ) -> None:
     """MORDIDA: sem a volta do daemon no reinício, ele segue vivo e nada sobe pelo systemd-run.
 
     Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
     """
-    p = _sessao_cosmic(bancada)
-    rc, painel, _ = _reiniciar(bancada)
+    p = _sessao_cosmic(ensaio)
+    rc, painel, _ = _reiniciar(ensaio)
     assert rc == "0"
-    assert painel == "voltou", bancada.chamadas()
-    chamadas = bancada.chamadas()
+    assert painel == "voltou", ensaio.chamadas()
+    chamadas = ensaio.chamadas()
     restart = chamadas.index("systemctl --user restart pipewire pipewire-pulse wireplumber")
     subida = next(i for i, c in enumerate(chamadas) if c.startswith("systemd-run "))
     assert restart < subida, chamadas
@@ -249,9 +249,9 @@ def test_no_cosmic_o_daemon_conferido_sai_e_volta_com_o_ambiente_da_sessao(
     assert not _vivo(p["daemon"]), "o daemon conferido não saiu"
     assert _vivo(p["janela"]), "a janela das Configurações morreu: o comm não separa os dois"
     assert _vivo(p["painel"]) and _vivo(p["principal"])
-    argv = bancada.systemd_run()
+    argv = ensaio.systemd_run()
     assert argv[:2] == ["--user", "--collect"], argv
-    assert argv[-1] == str(bancada.daemon_bin), argv
+    assert argv[-1] == str(ensaio.daemon_bin), argv
     ambiente = {argv[i + 1] for i, a in enumerate(argv) if a == "-E"}
     for esperado in (
         "WAYLAND_DISPLAY=wayland-teste",
@@ -270,32 +270,32 @@ def test_no_cosmic_o_daemon_conferido_sai_e_volta_com_o_ambiente_da_sessao(
             assert c.startswith(f"pgrep -u {uid} -x "), c
 
 
-def test_fora_do_cosmic_o_reinicio_e_so_o_systemctl(bancada: Bancada) -> None:
+def test_fora_do_cosmic_o_reinicio_e_so_o_systemctl(ensaio: Ensaio) -> None:
     """MORDIDA: sem a pergunta pela sessão, o daemon de quem não usa o COSMIC seria morto."""
-    p = _sessao_cosmic(bancada)
-    (bancada.estado / "cosmic-session").unlink()
-    rc, painel, _ = _reiniciar(bancada)
+    p = _sessao_cosmic(ensaio)
+    (ensaio.estado / "cosmic-session").unlink()
+    rc, painel, _ = _reiniciar(ensaio)
     assert (rc, painel) == ("0", "")
     assert _vivo(p["daemon"])
-    assert not bancada.systemd_run()
-    assert "systemctl --user restart pipewire pipewire-pulse wireplumber" in bancada.chamadas()
+    assert not ensaio.systemd_run()
+    assert "systemctl --user restart pipewire pipewire-pulse wireplumber" in ensaio.chamadas()
 
 
-def test_no_cosmic_sem_daemon_nao_sobe_nenhum(bancada: Bancada) -> None:
-    p = _sessao_cosmic(bancada)
-    bancada.lista("cosmic-settings", str(p["janela"]))
-    rc, painel, _ = _reiniciar(bancada)
+def test_no_cosmic_sem_daemon_nao_sobe_nenhum(ensaio: Ensaio) -> None:
+    p = _sessao_cosmic(ensaio)
+    ensaio.lista("cosmic-settings", str(p["janela"]))
+    rc, painel, _ = _reiniciar(ensaio)
     assert (rc, painel) == ("0", "")
     assert _vivo(p["janela"])
-    assert not bancada.systemd_run()
+    assert not ensaio.systemd_run()
 
 
-def test_so_morre_o_pid_que_e_o_daemon(bancada: Bancada) -> None:
+def test_so_morre_o_pid_que_e_o_daemon(ensaio: Ensaio) -> None:
     """Um PID da lista que não é o daemon (outro programa, ou o número reaproveitado) fica."""
-    p = _sessao_cosmic(bancada)
-    outro = bancada.processo("/usr/bin/outro-programa")
-    bancada.lista("cosmic-settings", str(outro), str(p["daemon"]), str(p["janela"]))
-    _reiniciar(bancada)
+    p = _sessao_cosmic(ensaio)
+    outro = ensaio.processo("/usr/bin/outro-programa")
+    ensaio.lista("cosmic-settings", str(outro), str(p["daemon"]), str(p["janela"]))
+    _reiniciar(ensaio)
     assert _vivo(outro) and _vivo(p["janela"])
     for _ in range(50):
         if not _vivo(p["daemon"]):
@@ -304,57 +304,57 @@ def test_so_morre_o_pid_que_e_o_daemon(bancada: Bancada) -> None:
     assert not _vivo(p["daemon"])
 
 
-def test_se_a_sessao_ressuscita_o_daemon_nao_sobe_um_segundo(bancada: Bancada) -> None:
-    p = _sessao_cosmic(bancada)
-    novo = bancada.processo(str(bancada.daemon_bin))
-    bancada.lista(
+def test_se_a_sessao_ressuscita_o_daemon_nao_sobe_um_segundo(ensaio: Ensaio) -> None:
+    p = _sessao_cosmic(ensaio)
+    novo = ensaio.processo(str(ensaio.daemon_bin))
+    ensaio.lista(
         "cosmic-settings", str(p["daemon"]), f"{novo} se-morto {p['daemon']}", str(p["janela"])
     )
-    (bancada.estado / "cliente-do-painel").touch()
-    rc, painel, _ = _reiniciar(bancada)
+    (ensaio.estado / "cliente-do-painel").touch()
+    rc, painel, _ = _reiniciar(ensaio)
     assert (rc, painel) == ("0", "voltou")
-    assert not bancada.systemd_run(), "subiu um segundo daemon por cima do que a sessão trouxe"
+    assert not ensaio.systemd_run(), "subiu um segundo daemon por cima do que a sessão trouxe"
     assert _vivo(novo)
 
 
-def test_se_nao_volta_o_aviso_diz_o_comando(bancada: Bancada) -> None:
-    _sessao_cosmic(bancada)
-    (bancada.estado / "nunca-volta").touch()
-    rc, painel, resto = _reiniciar(bancada)
+def test_se_nao_volta_o_aviso_diz_o_comando(ensaio: Ensaio) -> None:
+    _sessao_cosmic(ensaio)
+    (ensaio.estado / "nunca-volta").touch()
+    rc, painel, resto = _reiniciar(ensaio)
     assert (rc, painel) == ("0", "nao-voltou"), resto
     cura = resto.splitlines()[0]
-    assert f"systemd-run --user --collect {bancada.daemon_bin}" in cura, cura
+    assert f"systemd-run --user --collect {ensaio.daemon_bin}" in cura, cura
 
 
-def test_o_daemon_que_nao_le_o_pipewire_fica_quieto(bancada: Bancada) -> None:
+def test_o_daemon_que_nao_le_o_pipewire_fica_quieto(ensaio: Ensaio) -> None:
     """MORDIDA: outra versão do COSMIC, com o daemon sem a libpipewire, não perde o daemon.
 
     Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
     """
-    p = _sessao_cosmic(bancada)
-    bancada.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
-    rc, painel, resto = _reiniciar(bancada)
+    p = _sessao_cosmic(ensaio)
+    ensaio.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+    rc, painel, resto = _reiniciar(ensaio)
     assert (rc, painel) == ("0", ""), resto
     assert _vivo(p["daemon"])
-    assert not bancada.systemd_run()
+    assert not ensaio.systemd_run()
 
 
-def test_systemctl_que_falha_devolve_1_e_nao_mexe_no_painel(bancada: Bancada) -> None:
-    p = _sessao_cosmic(bancada)
-    (bancada.estado / "systemctl-falha").touch()
-    rc, painel, _ = _reiniciar(bancada)
+def test_systemctl_que_falha_devolve_1_e_nao_mexe_no_painel(ensaio: Ensaio) -> None:
+    p = _sessao_cosmic(ensaio)
+    (ensaio.estado / "systemctl-falha").touch()
+    rc, painel, _ = _reiniciar(ensaio)
     assert (rc, painel) == ("1", "")
     assert _vivo(p["daemon"])
-    assert not bancada.systemd_run()
+    assert not ensaio.systemd_run()
 
 
-def test_o_ensaio_so_diz_o_que_faria(bancada: Bancada) -> None:
-    p = _sessao_cosmic(bancada)
-    rc, _, resto = _reiniciar(bancada, dry_run=True)
+def test_o_ensaio_so_diz_o_que_faria(ensaio: Ensaio) -> None:
+    p = _sessao_cosmic(ensaio)
+    rc, _, resto = _reiniciar(ensaio, dry_run=True)
     assert rc == "0"
     assert "FARIA religar o cosmic-settings-daemon" in resto, resto
     assert _vivo(p["daemon"])
-    assert not bancada.systemd_run()
+    assert not ensaio.systemd_run()
 
 
 def _sem_comentario(texto: str) -> list[str]:
@@ -388,7 +388,7 @@ def test_o_ensaio_do_uninstall_dubla_o_systemd_run() -> None:
     assert "systemd-run" in bloco.split()
 
 
-def _doctor(b: Bancada) -> str:
+def _doctor(b: Ensaio) -> str:
     r = subprocess.run(
         [BASH, "-c", 'set --; source "$DOCTOR_SH"; check_o_painel_do_cosmic_ve_o_som; true'],
         env={
@@ -411,54 +411,54 @@ def _doctor(b: Bancada) -> str:
     return r.stdout
 
 
-def test_o_doctor_da_ok_com_o_daemon_nos_clientes(bancada: Bancada) -> None:
-    _sessao_cosmic(bancada)
-    (bancada.estado / "cliente-do-painel").touch()
-    saida = _doctor(bancada)
+def test_o_doctor_da_ok_com_o_daemon_nos_clientes(ensaio: Ensaio) -> None:
+    _sessao_cosmic(ensaio)
+    (ensaio.estado / "cliente-do-painel").touch()
+    saida = _doctor(ensaio)
     assert saida.startswith("[ OK ] o painel do COSMIC vê o som"), saida
 
 
-def test_o_doctor_avisa_com_o_daemon_vivo_e_fora_dos_clientes(bancada: Bancada) -> None:
+def test_o_doctor_avisa_com_o_daemon_vivo_e_fora_dos_clientes(ensaio: Ensaio) -> None:
     """MORDIDA: sem a leitura do doctor, o daemon cego passa calado."""
-    p = _sessao_cosmic(bancada)
-    saida = _doctor(bancada)
+    p = _sessao_cosmic(ensaio)
+    saida = _doctor(ensaio)
     assert saida.startswith("[WARN] o painel do COSMIC está sem o som"), saida
-    assert f"kill {p['daemon']} && systemd-run --user --collect {bancada.daemon_bin}" in saida
+    assert f"kill {p['daemon']} && systemd-run --user --collect {ensaio.daemon_bin}" in saida
     assert str(p["janela"]) not in saida
     assert _vivo(p["daemon"]), "o doctor só lê"
 
 
-def test_o_doctor_avisa_com_o_daemon_morto(bancada: Bancada) -> None:
+def test_o_doctor_avisa_com_o_daemon_morto(ensaio: Ensaio) -> None:
     """Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC."""
-    p = _sessao_cosmic(bancada)
-    bancada.lista("cosmic-settings", str(p["janela"]))
-    saida = _doctor(bancada)
+    p = _sessao_cosmic(ensaio)
+    ensaio.lista("cosmic-settings", str(p["janela"]))
+    saida = _doctor(ensaio)
     assert saida.startswith("[WARN]"), saida
     assert "não está no ar" in saida
-    assert f"rode: systemd-run --user --collect {bancada.daemon_bin}" in saida, saida
+    assert f"rode: systemd-run --user --collect {ensaio.daemon_bin}" in saida, saida
     assert "kill" not in saida
 
 
 @pytest.mark.parametrize("vivo", [True, False])
-def test_o_doctor_cala_com_o_daemon_que_nao_le_o_pipewire(bancada: Bancada, vivo: bool) -> None:
+def test_o_doctor_cala_com_o_daemon_que_nao_le_o_pipewire(ensaio: Ensaio, vivo: bool) -> None:
     """MORDIDA: o daemon que nunca é cliente não está cego, e o aviso seria falso."""
-    p = _sessao_cosmic(bancada)
-    bancada.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+    p = _sessao_cosmic(ensaio)
+    ensaio.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     if not vivo:
-        bancada.lista("cosmic-settings", str(p["janela"]))
-    assert _doctor(bancada) == ""
+        ensaio.lista("cosmic-settings", str(p["janela"]))
+    assert _doctor(ensaio) == ""
 
 
-def test_o_doctor_fora_do_cosmic_nao_diz_nada(bancada: Bancada) -> None:
-    _sessao_cosmic(bancada)
-    (bancada.estado / "cosmic-session").unlink()
-    assert _doctor(bancada) == ""
+def test_o_doctor_fora_do_cosmic_nao_diz_nada(ensaio: Ensaio) -> None:
+    _sessao_cosmic(ensaio)
+    (ensaio.estado / "cosmic-session").unlink()
+    assert _doctor(ensaio) == ""
 
 
-def test_o_doctor_com_o_pipewire_fora_nao_avisa(bancada: Bancada) -> None:
-    _sessao_cosmic(bancada)
-    (bancada.estado / "pipewire-fora").touch()
-    saida = _doctor(bancada)
+def test_o_doctor_com_o_pipewire_fora_nao_avisa(ensaio: Ensaio) -> None:
+    _sessao_cosmic(ensaio)
+    (ensaio.estado / "pipewire-fora").touch()
+    saida = _doctor(ensaio)
     assert "[WARN]" not in saida and "[FAIL]" not in saida, saida
 
 

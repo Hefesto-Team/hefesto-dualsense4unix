@@ -551,17 +551,17 @@ def _campos_do_arquivo(caminho: pathlib.Path) -> frozenset[str]:
         re.findall(r'data-campo="([^"]+)"', caminho.read_text(encoding="utf-8")))
 
 
-BANCADA = RAIZ / "mockup/01-jogar.html"
+ENSAIO = RAIZ / "mockup/01-jogar.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 
-DA_BANCADA = tuple(sorted(_campos_do_arquivo(BANCADA) - _campos_do_arquivo(PUBLICADA)))
+DO_ENSAIO = tuple(sorted(_campos_do_arquivo(ENSAIO) - _campos_do_arquivo(PUBLICADA)))
 
 
 @pytest.fixture()
 def com_a_pagina_publicada(a02):
     """Finge que ela já publicou: a página passa a ter os quatro endereços."""
     antes = a02._ENDERECOS
-    a02._ENDERECOS = frozenset(antes or ()) | frozenset(DA_BANCADA)
+    a02._ENDERECOS = frozenset(antes or ()) | frozenset(DO_ENSAIO)
     yield
     a02._ENDERECOS = antes
 
@@ -664,7 +664,7 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 PAGINAS_COM_O_PONTO = [
     (rotulo, caminho)
-    for rotulo, caminho in (("bancada", BANCADA), ("publicada", PUBLICADA))
+    for rotulo, caminho in (("bancada", ENSAIO), ("publicada", PUBLICADA))
     if 'data-campo="touch-ponto"' in caminho.read_text(encoding="utf-8")
 ]
 

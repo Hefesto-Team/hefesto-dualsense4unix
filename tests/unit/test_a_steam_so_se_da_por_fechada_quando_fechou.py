@@ -49,7 +49,7 @@ class Mesa:
         campos = ["S"] + ["0"] * 18 + [inicio] + ["0"] * 5
         (pasta / "stat").write_text(f"{pid} ({comm}) " + " ".join(campos) + "\n")
 
-    def a_steam_dela(self, *, lar: Path | None = None) -> None:
+    def a_steam_do_usuario(self, *, lar: Path | None = None) -> None:
         self.processo(CLIENTE, "steam",
                       ["/x/.steam/debian-installation/ubuntu12_32/steam", "-srt-logger-opened"],
                       lar=lar)
@@ -106,7 +106,7 @@ def _parar(mesa: Mesa) -> bool:
 
 def test_o_stop_steam_nao_diz_fechada_com_o_cliente_vivo(mesa: Mesa) -> None:
     """O caso medido: o cliente fica, e o webhelper volta 9 s depois de morto."""
-    mesa.a_steam_dela()
+    mesa.a_steam_do_usuario()
     mesa.cliente_teimoso = True
     mesa.volta_do_webhelper = 9.0
     assert _parar(mesa) is False
@@ -115,7 +115,7 @@ def test_o_stop_steam_nao_diz_fechada_com_o_cliente_vivo(mesa: Mesa) -> None:
 
 def test_o_fechar_tira_a_steam_inteira_pelo_pid(mesa: Mesa) -> None:
     """A Steam que não atende o `-shutdown` sai pelo PID, o cliente primeiro,"""
-    mesa.a_steam_dela()
+    mesa.a_steam_do_usuario()
     assert _parar(mesa) is True
     assert mesa.sinais[:2] == [(CLIENTE, signal.SIGTERM), (WEBHELPER, signal.SIGTERM)]
     assert not any(mesa.raiz.iterdir())
@@ -123,7 +123,7 @@ def test_o_fechar_tira_a_steam_inteira_pelo_pid(mesa: Mesa) -> None:
 
 def test_com_o_home_trocado_nenhum_processo_leva_sinal(mesa: Mesa, tmp_path: Path) -> None:
     """A Steam de outro `HOME` (a suíte, o `sudo`) não é de quem pede: nem"""
-    mesa.a_steam_dela(lar=tmp_path / "home-dela")
+    mesa.a_steam_do_usuario(lar=tmp_path / "home-do-usuario")
     assert _parar(mesa) is True
     assert mesa.sinais == []
     assert mesa.abertos == []
@@ -185,7 +185,7 @@ def test_a_steam_de_outro_lar_nao_ganha_outra(
     abertos: list[list[str]] = []
     _o_dono_reabre(monkeypatch, abertos)
     monkeypatch.setattr(slo, "processos_da_steam", lambda *a, **k: [
-        slo.ProcessoDaSteam(CLIENTE, "cliente", str(tmp_path / "home-dela"), "1")])
+        slo.ProcessoDaSteam(CLIENTE, "cliente", str(tmp_path / "home-do-usuario"), "1")])
     assert steam_launcher.open_or_focus_steam() is False
     assert abertos == []
 
@@ -224,7 +224,7 @@ def test_a_foto_do_reiniciar_so_ve_o_lancador_deste_lar(monkeypatch: pytest.Monk
 
 def test_o_webhelper_sem_home_e_do_lar_do_cliente(mesa: Mesa) -> None:
     """O webhelper é Chromium e não traz `HOME` no `environ`: ele é do lar do"""
-    mesa.a_steam_dela()
+    mesa.a_steam_do_usuario()
     lares = {x.pid: x.lar for x in slo.processos_da_steam(mesa.raiz)}
     assert lares == {CLIENTE: str(mesa.lar), WEBHELPER: str(mesa.lar)}
     assert slo.e_deste_lar(WEBHELPER, mesa.raiz, mesa.lar)

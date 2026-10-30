@@ -27,7 +27,7 @@ O QUE FICOU DE FORA, E POR QUÊ (não é esquecimento)
   continua vendo: o `hide` age em UMA superfície (`hidraw`) e o mesmo controle
   mora em TRÊS — `event*` e `js*` seguem alcançáveis. O `EVIOCGRAB` é o que
   impede o físico de produzir entrada nelas, então com ele recusado a
-  duplicação não é hipótese, é o que sobra. Ver `TestOAvisoDeGrabFalaComEla`
+  duplicação não é hipótese, é o que sobra. Ver `TestOAvisoDeGrabFalaComOUsuario`
   abaixo;
 * **a palavra "primário"** no subtítulo do card continua. É o outro jargão que
   a I9 nomeia, e trocá-la é decisão de produto: o card já mostra o número do jogador,
@@ -247,7 +247,7 @@ class TestOCardFalaALinguaDoMapa:
         assert "?" not in home_actions.palavra_do_transporte(None)
 
 
-class TestOAvisoDeGrabFalaComEla:
+class TestOAvisoDeGrabFalaComOUsuario:
     """25/08/2026 — a metade da I9 que a ``ESCONDE-SÓ-O-HIDRAW-01`` destravou."""
 
     def test_a_linha_nao_fala_a_lingua_do_kernel(self) -> None:

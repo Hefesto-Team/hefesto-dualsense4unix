@@ -107,7 +107,7 @@ def escrever_perfil(fontes: dict[str, str], nome: str = PERFIL) -> str:
     return nome
 
 
-def ela_clica(uniq: str, fonte: str, nome: str = PERFIL) -> None:
+def o_usuario_clica(uniq: str, fonte: str, nome: str = PERFIL) -> None:
     """O gesto do usuário nos três botões: grava a fonte no perfil, e o mtime anda."""
     alvo = _caminho_do_perfil(nome)
     corpo = json.loads(alvo.read_text(encoding="utf-8"))

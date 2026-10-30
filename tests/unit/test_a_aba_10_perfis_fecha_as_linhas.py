@@ -150,7 +150,7 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
         monkeypatch.setattr(a10_perfis, "SECOES_DA_COLUNA", tuple(
             a10_perfis.SECOES_DA_COLUNA) + tuple(
             s for s in perfis_web.SECOES_POR_CONTROLE
-            if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+            if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO
             and s not in perfis_web.SECOES_QUE_MORAM_NO_MAPA))
     fora = _emitido(_perfil(guardado))
     html = _pagina(publicado)
@@ -225,7 +225,7 @@ def test_a_lista_emitida_tem_um_bloco_por_controle_da_mesa() -> None:
 @pytest.mark.parametrize(
     ("classe", "estado", "frase"),
     [("exige", "editor.jogo.exige", "editor.jogo.exigencia")])
-def test_a_marca_e_a_frase_moram_na_bancada(classe: str, estado: str,
+def test_a_marca_e_a_frase_moram_no_ensaio(classe: str, estado: str,
                                             frase: str) -> None:
     """As duas metades de cada marca existem no desenho, e a dica nasce VAZIA."""
     html = _pagina(publicado=False)
@@ -310,7 +310,7 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
     aí. A régua não mudou uma linha: ela sempre comparou contra a CONSTANTE, e
     é por isso que continua verde com um fim novo. Quem cobra que o fim não
     volte a mandar ninguém para fora é
-    ``test_a_tela_nao_manda_ela_para_fora_do_produto``.
+    ``test_a_tela_nao_manda_o_usuario_para_fora_do_produto``.
 
     MORDIDA: devolva `exigencia_invisivel(match)` cru em
     `_exigencia_para_esta_tela` e esta régua reprova citando a frase.
@@ -383,7 +383,7 @@ def test_o_produto_continua_sem_tentar_pintar_a_dica_da_prioridade() -> None:
         "o produto voltou a mandar a dica da Prioridade, que a página não desenha")
 
 
-def test_o_endereco_colado_vira_o_numero_na_frente_dela(
+def test_o_endereco_colado_vira_o_numero_na_frente_do_usuario(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
 ) -> None:
     """Colar o endereço da loja grava o número — e o CAMPO passa a mostrá-lo."""
@@ -508,7 +508,7 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
         "trocaria pelo genérico “Revise os campos do perfil”")
 
 
-def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
+def test_a_tela_nao_manda_o_usuario_para_fora_do_produto() -> None:
     """Nenhum texto desta aba manda a pessoa para o terminal. Decisão 10-Q2."""
     proibidos = ("linha de comando", "hefesto-dualsense4unix profile",
                  "Modo avançado")

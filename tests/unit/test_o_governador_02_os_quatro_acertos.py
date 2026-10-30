@@ -104,7 +104,7 @@ def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptado
     assert governador.ligar_aqui(CONTROLE_3) is True
 
     vaga = _subir(governador, CONTROLE_3)
-    assert vaga.alem_do_limite is True and vaga.por_escolha_dela is True
+    assert vaga.alem_do_limite is True and vaga.por_escolha_do_usuario is True
     relogio.agora += 60.0
     vaga.soltar("a fonte do som secou")
 
@@ -113,11 +113,11 @@ def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptado
     assert isinstance(de_novo, gov.Vaga), (
         "a ponte desceu e subiu de novo, com ele no mesmo adaptador, e perguntou a ela"
     )
-    assert de_novo.alem_do_limite is True and de_novo.por_escolha_dela is True
+    assert de_novo.alem_do_limite is True and de_novo.por_escolha_do_usuario is True
     assert governador.publicar()[ADAPTADOR_A]["pedidos"] == []
 
 
-def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_dela() -> None:
+def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_do_usuario() -> None:
     """Ela respondeu, e a ponte ainda não esteve no ar: não se pergunta de novo."""
     relogio, registro = _Relogio(), _Diario()
     governador = _a_terceira_no_a_com_vaga_no_b(relogio, registro)
@@ -130,7 +130,7 @@ def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_dela() -> None:
 
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
     assert isinstance(vaga, gov.Vaga), "a vaga que nunca subiu gastou a resposta dela"
-    assert vaga.alem_do_limite is True and vaga.por_escolha_dela is True
+    assert vaga.alem_do_limite is True and vaga.por_escolha_do_usuario is True
 
 
 def test_a_marca_alem_do_limite_sai_de_quem_voltou_a_caber() -> None:
@@ -566,7 +566,7 @@ def test_quem_fecha_e_o_iniciar_do_governador_de_producao(tmp_path: Path) -> Non
     assert diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf) == {}
 
 
-def test_o_governador_de_regua_nao_le_o_diario_dela(
+def test_o_governador_de_regua_nao_le_o_diario_do_usuario(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Com ``registrar`` injetado e sem leitor, não há diário para ler: um"""

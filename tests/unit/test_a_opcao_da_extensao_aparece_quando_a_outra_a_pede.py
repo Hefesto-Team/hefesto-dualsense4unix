@@ -98,7 +98,7 @@ def _com(opcao_id: str, aparece_com: Any) -> list[dict[str, Any]]:
     (_opcoes({"id": "ao-vivo", "rotulo": "Ao vivo", "tipo": "livre",
               "aparece_com": {"telefone": True}}),
      "o livre ao-vivo mora na faixa de baixo e não declara aparece_com"),
-], ids=["nao-existe", "ela-mesma", "ciclo", "valor-fora", "lista-com-um-fora", "lista-vazia",
+], ids=["nao-existe", "o-usuario-mesma", "ciclo", "valor-fora", "lista-com-um-fora", "lista-vazia",
         "ligado-sem-bool", "ligado-com-1", "lista-com-numero", "alvo-de-outro-tipo", "vazio",
         "livre"])
 def test_o_manifesto_recusa(declaradas: list[dict[str, Any]], frase: str) -> None:

@@ -147,7 +147,7 @@ class _Diario:
         return [campos for evento, campos in self.linhas if evento == nome]
 
 
-class _Bancada:
+class _Ensaio:
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self.c = _CDoHidapi()
         self.diario = _Diario()
@@ -202,19 +202,19 @@ class _Bancada:
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Bancada]:
-    b = _Bancada(monkeypatch)
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Ensaio]:
+    b = _Ensaio(monkeypatch)
     try:
         yield b
     finally:
         b.soltar_tudo()
 
 
-def _preso_no_read(bancada: _Bancada, no: _No) -> tuple[bp._PinnedPyDualSense, threading.Thread]:
+def _preso_no_read(ensaio: _Ensaio, no: _No) -> tuple[bp._PinnedPyDualSense, threading.Thread]:
     """Um handle com a thread de produção DENTRO do `read`, que o kernel segura."""
     no.segurar_read = True
-    h = bancada.handle(no)
-    t = bancada.subir(h)
+    h = ensaio.handle(no)
+    t = ensaio.subir(h)
     assert no.preso_no_read.wait(2.0), "a thread não chegou ao read"
     return h, t
 
@@ -225,10 +225,10 @@ def _cronometrar(fn: Any) -> float:
     return time.monotonic() - inicio
 
 
-def test_o_handle_so_fecha_depois_que_a_thread_sai(bancada: _Bancada) -> None:
+def test_o_handle_so_fecha_depois_que_a_thread_sai(ensaio: _Ensaio) -> None:
     """A thread presa no `read`; `close()` volta no teto e NÃO fecha por cima dela."""
     no = _No()
-    h, t = _preso_no_read(bancada, no)
+    h, t = _preso_no_read(ensaio, no)
 
     gasto = _cronometrar(h.close)
 
@@ -240,21 +240,21 @@ def test_o_handle_so_fecha_depois_que_a_thread_sai(bancada: _Bancada) -> None:
     assert not t.is_alive()
     assert no.fechado is True, "quem saiu por último não fechou"
     assert no.liberado_com_uso is False
-    assert bancada.diario.eventos("report_thread_morreu_por_excecao") == []
-    saidas = bancada.diario.eventos("report_thread_saiu_e_fechou")
+    assert ensaio.diario.eventos("report_thread_morreu_por_excecao") == []
+    saidas = ensaio.diario.eventos("report_thread_saiu_e_fechou")
     assert len(saidas) == 1
     assert saidas[0]["path"] == b"/dev/hidraw9"
     assert saidas[0]["segundos"] >= TETO
 
 
-def test_o_aviso_diz_onde_a_thread_estava(bancada: _Bancada) -> None:
+def test_o_aviso_diz_onde_a_thread_estava(ensaio: _Ensaio) -> None:
     """O `report_thread_nao_encerrou` traz o nó, os segundos e ONDE ela está."""
     no = _No()
-    h, _t = _preso_no_read(bancada, no)
+    h, _t = _preso_no_read(ensaio, no)
 
     h.close()
 
-    avisos = bancada.diario.eventos("report_thread_nao_encerrou")
+    avisos = ensaio.diario.eventos("report_thread_nao_encerrou")
     assert len(avisos) == 1
     aviso = avisos[0]
     assert aviso["path"] == b"/dev/hidraw9"
@@ -263,12 +263,12 @@ def test_o_aviso_diz_onde_a_thread_estava(bancada: _Bancada) -> None:
     assert "ficou com ela" in aviso["detalhe"]
 
 
-def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(bancada: _Bancada) -> None:
+def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(ensaio: _Ensaio) -> None:
     """O kernel solta o `read` com um REPORT (o dedo no botão do microfone)."""
     no = _No()
     no.fila.append(_report_do_radio())
-    h = bancada.handle(no)
-    t = bancada.subir(h)
+    h = ensaio.handle(no)
+    t = ensaio.subir(h)
     for _ in range(400):
         if h._reports_aceitos >= 1 and no.writes_chamados >= 1:
             break
@@ -291,27 +291,27 @@ def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(bancada: _Bancada) -> 
     assert not t.is_alive()
     assert no.writes_chamados == writes_antes, "a thread escreveu depois do sinal"
     assert h._mic_mudo_seq == seq_antes, "o report de depois do sinal virou aperto"
-    saidas = bancada.diario.eventos("report_thread_saiu_e_fechou")
+    saidas = ensaio.diario.eventos("report_thread_saiu_e_fechou")
     assert len(saidas) == 1 and saidas[0]["descartados"] == 1
     assert no.fechado is True and no.liberado_com_uso is False
 
 
 def test_o_escritor_avulso_fecha_ao_sair_e_o_close_nao_espera_por_ele(
-    bancada: _Bancada,
+    ensaio: _Ensaio,
 ) -> None:
     """Um `hid_write` avulso preso (um USB lento); a `report_thread` já saiu."""
     no = _No()
-    h = bancada.handle(no)
+    h = ensaio.handle(no)
     h.report_thread = None
     no.segurar_write = True
     quadro = [0x31] + [0] * 77
     avulso = threading.Thread(target=lambda: h.writeReport(quadro), daemon=True)
-    bancada.threads.append(avulso)
+    ensaio.threads.append(avulso)
     avulso.start()
     assert no.preso_no_write.wait(2.0)
 
     quem_fecha = threading.Thread(target=h.close, daemon=True)
-    bancada.threads.append(quem_fecha)
+    ensaio.threads.append(quem_fecha)
     inicio = time.monotonic()
     quem_fecha.start()
     quem_fecha.join(timeout=TETO + FOLGA)
@@ -323,7 +323,7 @@ def test_o_escritor_avulso_fecha_ao_sair_e_o_close_nao_espera_por_ele(
     avulso.join(timeout=2.0)
     assert no.fechado is True, "o avulso saiu e não fechou"
     assert no.liberado_com_uso is False
-    assert len(bancada.diario.eventos("escrita_avulsa_saiu_e_fechou")) == 1
+    assert len(ensaio.diario.eventos("escrita_avulsa_saiu_e_fechou")) == 1
     chamados = no.writes_chamados
     with pytest.raises(OSError):
         h.writeReport(quadro)
@@ -331,7 +331,7 @@ def test_o_escritor_avulso_fecha_ao_sair_e_o_close_nao_espera_por_ele(
 
 
 def _mesa_presa(
-    bancada: _Bancada, n: int
+    ensaio: _Ensaio, n: int
 ) -> tuple[Any, list[_No], list[bp._PinnedPyDualSense]]:
     ctl = bp.PyDualSenseController()
     nos: list[_No] = []
@@ -339,8 +339,8 @@ def _mesa_presa(
     for i in range(n):
         no = _No()
         no.segurar_read = True
-        h = bancada.handle(no, path=f"/dev/hidraw{20 + i}".encode())
-        bancada.subir(h)
+        h = ensaio.handle(no, path=f"/dev/hidraw{20 + i}".encode())
+        ensaio.subir(h)
         assert no.preso_no_read.wait(2.0)
         ctl._handles[f"aabbcc0000a{i}"] = h
         nos.append(no)
@@ -349,7 +349,7 @@ def _mesa_presa(
 
 
 def _os_que_sairam_param_e_fecham(
-    bancada: _Bancada, nos: list[_No], handles: list[bp._PinnedPyDualSense]
+    ensaio: _Ensaio, nos: list[_No], handles: list[bp._PinnedPyDualSense]
 ) -> None:
     """Todo handle que saiu recebeu o sinal, e fecha quando o «kernel» o solta."""
     assert all(h.ds_thread is False for h in handles), "um handle saiu sem o sinal"
@@ -361,24 +361,24 @@ def _os_que_sairam_param_e_fecham(
         assert not h.report_thread.is_alive(), "a thread que saiu não parou"
     assert all(no.fechado for no in nos), "quem saiu por último não fechou"
     assert not any(no.liberado_com_uso for no in nos)
-    assert len(bancada.diario.eventos("report_thread_saiu_e_fechou")) == len(handles)
+    assert len(ensaio.diario.eventos("report_thread_saiu_e_fechou")) == len(handles)
 
 
-def test_os_quatro_presos_param_num_teto_so(bancada: _Bancada) -> None:
+def test_os_quatro_presos_param_num_teto_so(ensaio: _Ensaio) -> None:
     """`disconnect()` com os quatro presos no `read` volta em < 1,5 x o teto."""
-    ctl, nos, handles = _mesa_presa(bancada, 4)
+    ctl, nos, handles = _mesa_presa(ensaio, 4)
 
     gasto = _cronometrar(ctl.disconnect)
 
     assert gasto < 1.5 * TETO, f"o disconnect levou {gasto:.2f} s com quatro presos"
     assert not any(no.fechado for no in nos), "fechou por cima de uma leitura"
-    assert len(bancada.diario.eventos("report_thread_nao_encerrou")) == 4
-    _os_que_sairam_param_e_fecham(bancada, nos, handles)
+    assert len(ensaio.diario.eventos("report_thread_nao_encerrou")) == 4
+    _os_que_sairam_param_e_fecham(ensaio, nos, handles)
 
 
-def test_os_dois_que_saem_no_hotplug_pagam_um_teto(bancada: _Bancada) -> None:
+def test_os_dois_que_saem_no_hotplug_pagam_um_teto(ensaio: _Ensaio) -> None:
     """O `_close_handles` com duas chaves saindo, idem."""
-    ctl, nos, handles = _mesa_presa(bancada, 4)
+    ctl, nos, handles = _mesa_presa(ensaio, 4)
     ficam = {"aabbcc0000a0", "aabbcc0000a1"}
 
     def _hotplug() -> None:
@@ -391,11 +391,11 @@ def test_os_dois_que_saem_no_hotplug_pagam_um_teto(bancada: _Bancada) -> None:
     assert set(ctl._handles) == ficam
     assert not any(no.fechado for no in nos)
     assert all(h.ds_thread is True for h in handles[:2]), "o sinal alcançou quem fica"
-    _os_que_sairam_param_e_fecham(bancada, nos[2:], handles[2:])
+    _os_que_sairam_param_e_fecham(ensaio, nos[2:], handles[2:])
 
 
 def _find_device_de_mentira(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> list[_No]:
     criados: list[_No] = []
 
@@ -403,24 +403,24 @@ def _find_device_de_mentira(
         no = _No()
         no.fila.append(_report_do_radio())
         criados.append(no)
-        return bancada.device(no), False
+        return ensaio.device(no), False
 
     monkeypatch.setattr(bp._PinnedPyDualSense, "_pydualsense__find_device", _achar)
     return criados
 
 
 def test_pelo_open_one_a_thread_e_daemon_e_tem_o_nome_do_no(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O `init()` dentro do `_runner` do `_open_one` de produção."""
-    _find_device_de_mentira(bancada, monkeypatch)
+    _find_device_de_mentira(ensaio, monkeypatch)
     ctl = bp.PyDualSenseController()
 
     handle = ctl._open_one(b"/dev/hidraw5", is_edge=False)
 
     assert handle is not None
     thread = handle.report_thread
-    bancada.threads.append(thread)
+    ensaio.threads.append(thread)
     assert thread.daemon is True
     assert thread.name == "hefesto-report-hidraw5"
     assert handle.conType is ConnectionType.BT
@@ -428,27 +428,27 @@ def test_pelo_open_one_a_thread_e_daemon_e_tem_o_nome_do_no(
 
 
 def test_por_uma_thread_que_nao_e_daemon_a_report_thread_segue_daemon(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Um `init()` chamado de uma thread NÃO-daemon (um ensaio, um teste)."""
-    _find_device_de_mentira(bancada, monkeypatch)
+    _find_device_de_mentira(ensaio, monkeypatch)
     h = bp._PinnedPyDualSense(b"/dev/hidraw6", is_edge=False)
     quem_inicia = threading.Thread(target=h.init, daemon=False)
     quem_inicia.start()
     quem_inicia.join(timeout=2.0)
 
     thread = h.report_thread
-    bancada.threads.append(thread)
+    ensaio.threads.append(thread)
     assert thread.daemon is True
     assert thread.name == "hefesto-report-hidraw6"
     h.close()
 
 
-def test_com_o_controle_falando_o_close_fecha_na_hora_sem_aviso(bancada: _Bancada) -> None:
+def test_com_o_controle_falando_o_close_fecha_na_hora_sem_aviso(ensaio: _Ensaio) -> None:
     """(a) A thread vê o sinal, o `close()` fecha ele mesmo e não há aviso."""
     no = _No()
-    h = bancada.handle(no)
-    t = bancada.subir(h)
+    h = ensaio.handle(no)
+    t = ensaio.subir(h)
     for _ in range(10):
         no.soltar(_report_do_radio())
         time.sleep(0.005)
@@ -458,17 +458,17 @@ def test_com_o_controle_falando_o_close_fecha_na_hora_sem_aviso(bancada: _Bancad
     assert no.fechado is True, "o close() voltou com o dispositivo aberto"
     assert not t.is_alive()
     assert no.liberado_com_uso is False
-    assert bancada.diario.eventos("report_thread_nao_encerrou") == []
-    assert bancada.diario.eventos("report_thread_morreu_por_excecao") == []
-    assert bancada.diario.eventos("report_thread_saiu_e_fechou") == [], (
+    assert ensaio.diario.eventos("report_thread_nao_encerrou") == []
+    assert ensaio.diario.eventos("report_thread_morreu_por_excecao") == []
+    assert ensaio.diario.eventos("report_thread_saiu_e_fechou") == [], (
         "a linha de volta é só de quem ficou com o handle"
     )
 
 
-def test_a_queda_do_radio_sai_limpa_e_o_close_nao_avisa(bancada: _Bancada) -> None:
+def test_a_queda_do_radio_sai_limpa_e_o_close_nao_avisa(ensaio: _Ensaio) -> None:
     """(b) O kernel tira o nó ANTES: o `read` volta erro com o `_device` de pé."""
     no = _No()
-    h, t = _preso_no_read(bancada, no)
+    h, t = _preso_no_read(ensaio, no)
 
     no.soltar()
     t.join(timeout=2.0)
@@ -478,5 +478,5 @@ def test_a_queda_do_radio_sai_limpa_e_o_close_nao_avisa(bancada: _Bancada) -> No
 
     assert no.fechado is True
     assert no.liberado_com_uso is False
-    assert bancada.diario.eventos("report_thread_nao_encerrou") == []
-    assert bancada.diario.eventos("report_thread_morreu_por_excecao") == []
+    assert ensaio.diario.eventos("report_thread_nao_encerrou") == []
+    assert ensaio.diario.eventos("report_thread_morreu_por_excecao") == []

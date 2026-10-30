@@ -262,7 +262,7 @@ class TestDoctorDistingueAsQuatroAusencias:
         assert "[FAIL]" in saida
         assert "install nunca passou por aqui" in saida
 
-    def test_ausente_por_escolha_dela_nao_e_fail(self, tmp_path: Path) -> None:
+    def test_ausente_por_escolha_do_usuario_nao_e_fail(self, tmp_path: Path) -> None:
         """O único dos quatro que NÃO é falha. É o coração do 108b711."""
         saida = _roda_check_doctor(
             tmp_path, "resultado=pulado\nmotivo=--no-osk\ndata=2026-08-10T00:00:00\n"

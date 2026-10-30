@@ -40,7 +40,7 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     TIQUE,
     config_isolado,  # noqa: F401
 )
-from tests.unit.test_o_modo_tem_um_dono import FILA_DELA, TRANSPORTES, _a_mesa_do_boot
+from tests.unit.test_o_modo_tem_um_dono import FILA_DO_USUARIO, TRANSPORTES, _a_mesa_do_boot
 from tests.unit.test_o_pad_virtual_atende_a_vibracao_desde_que_nasce import (
     _UInputComoOPythonEvdev,
     evdev_de_mentira,  # noqa: F401
@@ -573,17 +573,17 @@ def test_o_pad_xbox_responde_o_efeito_antes_de_5_ms() -> None:
 _PASSA_O_PRAZO = 3 + int(prazo_do_lugar_guardado() // TIQUE)
 
 _ORDENS = [
-    ordem for quantos in (2, 3, 4) for ordem in itertools.permutations(FILA_DELA[:quantos])
+    ordem for quantos in (2, 3, 4) for ordem in itertools.permutations(FILA_DO_USUARIO[:quantos])
 ]
 
 
-def _nomes_errados(bancada: Any) -> list[dict[str, Any]]:
+def _nomes_errados(ensaio: Any) -> list[dict[str, Any]]:
     """Os itens da mesa em que o número no nome do vpad não é o número de agora."""
-    return [item for item in bancada.coop.mesa() if item["nome_divergente"]]
+    return [item for item in ensaio.coop.mesa() if item["nome_divergente"]]
 
 
-def _vivos(bancada: Any) -> set[int]:
-    return {id(v) for v in bancada.vpads if v.vivo}
+def _vivos(ensaio: Any) -> set[int]:
+    return {id(v) for v in ensaio.vpads if v.vivo}
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -595,45 +595,45 @@ def test_com_o_jogo_solto_o_nome_e_o_numero(
     monkeypatch: pytest.MonkeyPatch, chegada: tuple[str, ...], transporte: str
 ) -> None:
     """Sem jogo, em toda ordem de chegada: o nome de cada vpad é o número dele."""
-    bancada = _a_mesa_do_boot(monkeypatch, chegada, jogo=False, transporte=transporte)
+    ensaio = _a_mesa_do_boot(monkeypatch, chegada, jogo=False, transporte=transporte)
     for _ in range(6):
-        bancada.tique()
-    assert _nomes_errados(bancada) == [], "premissa: a mesa nasce com os nomes certos"
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == [], "premissa: a mesa nasce com os nomes certos"
 
-    bancada.mesa.levantar(FILA_DELA[0])
+    ensaio.mesa.levantar(FILA_DO_USUARIO[0])
     for _ in range(_PASSA_O_PRAZO):
-        bancada.tique()
-    assert _nomes_errados(bancada) == [], (
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == [], (
         "a fila andou e o vpad seguiu com o número de quando nasceu"
     )
 
-    bancada.mesa.sentar(FILA_DELA[0], transporte=transporte)
+    ensaio.mesa.sentar(FILA_DO_USUARIO[0], transporte=transporte)
     for _ in range(6):
-        bancada.tique()
-    assert _nomes_errados(bancada) == []
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == []
 
 
 @pytest.mark.usefixtures("config_isolado")
 def test_o_nome_espera_a_mesa_assentar(monkeypatch: pytest.MonkeyPatch) -> None:
     """Quem ficou renasce UMA vez pelo nome, e só com a mesa assentada."""
-    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False)
+    ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=False)
     for _ in range(6):
-        bancada.tique()
-    nascidos = len(bancada.vpads)
+        ensaio.tique()
+    nascidos = len(ensaio.vpads)
 
-    bancada.mesa.levantar(FILA_DELA[0])
+    ensaio.mesa.levantar(FILA_DO_USUARIO[0])
     for _ in range(_PASSA_O_PRAZO):
-        bancada.tique()
-    assert len(bancada.vpads) - nascidos == 2, "a saída da carta 1: o roxo e o azul"
+        ensaio.tique()
+    assert len(ensaio.vpads) - nascidos == 2, "a saída da carta 1: o roxo e o azul"
 
-    nascidos = len(bancada.vpads)
-    bancada.mesa.sentar(FILA_DELA[0])
+    nascidos = len(ensaio.vpads)
+    ensaio.mesa.sentar(FILA_DO_USUARIO[0])
     for _ in range(6):
-        bancada.tique()
-    assert len(bancada.vpads) - nascidos == 3, (
+        ensaio.tique()
+    assert len(ensaio.vpads) - nascidos == 3, (
         "a volta: o vermelho, e o roxo e o azul uma vez só"
     )
-    assert _nomes_errados(bancada) == []
+    assert _nomes_errados(ensaio) == []
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -642,25 +642,25 @@ def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
     monkeypatch: pytest.MonkeyPatch, quem: str
 ) -> None:
     """Com o jogo na autoridade, o nome velho espera; o jogo solta, e ele renasce."""
-    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=True)
+    ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=True)
     for _ in range(6):
-        bancada.tique()
-    assert _nomes_errados(bancada) == []
-    alvo = bancada.daemon._gamepad_device if quem == "posto" else bancada.vpad_de(FILA_DELA[2])
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == []
+    alvo = ensaio.daemon._gamepad_device if quem == "posto" else ensaio.vpad_de(FILA_DO_USUARIO[2])
     alvo.player = 4 if quem == "posto" else 2
-    assert _nomes_errados(bancada), "premissa: o nome velho aparece no alarme"
-    vivos = _vivos(bancada)
+    assert _nomes_errados(ensaio), "premissa: o nome velho aparece no alarme"
+    vivos = _vivos(ensaio)
 
     for _ in range(4):
-        bancada.tique()
-    assert _vivos(bancada) == vivos, "um vpad renasceu com o jogo segurando"
+        ensaio.tique()
+    assert _vivos(ensaio) == vivos, "um vpad renasceu com o jogo segurando"
     assert alvo.vivo
 
-    bancada.daemon.display_authority = "daemon"
+    ensaio.daemon.display_authority = "daemon"
     for _ in range(3):
-        bancada.tique()
+        ensaio.tique()
     assert not alvo.vivo, "o jogo soltou e o vpad seguiu com o nome velho"
-    assert _nomes_errados(bancada) == []
+    assert _nomes_errados(ensaio) == []
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -670,42 +670,42 @@ def test_qualquer_carta_que_sai_deixa_os_nomes_certos(
     monkeypatch: pytest.MonkeyPatch, quem_sai: int, transporte: str
 ) -> None:
     """Sem jogo, a bancada inteira, e sai qualquer um dos quatro (não só a carta 1)."""
-    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False, transporte=transporte)
+    ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=False, transporte=transporte)
     for _ in range(6):
-        bancada.tique()
-    assert _nomes_errados(bancada) == [], "premissa: a mesa nasce com os nomes certos"
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == [], "premissa: a mesa nasce com os nomes certos"
 
-    saiu = FILA_DELA[quem_sai]
-    bancada.mesa.levantar(saiu)
+    saiu = FILA_DO_USUARIO[quem_sai]
+    ensaio.mesa.levantar(saiu)
     for _ in range(_PASSA_O_PRAZO):
-        bancada.tique()
-    assert _nomes_errados(bancada) == [], (
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == [], (
         f"a carta {quem_sai + 1} saiu e quem ficou seguiu com o número de quando nasceu"
     )
 
-    bancada.mesa.sentar(saiu, transporte=TRANSPORTES[transporte][quem_sai])
+    ensaio.mesa.sentar(saiu, transporte=TRANSPORTES[transporte][quem_sai])
     for _ in range(6):
-        bancada.tique()
-    assert _nomes_errados(bancada) == []
+        ensaio.tique()
+    assert _nomes_errados(ensaio) == []
 
 
 @pytest.mark.usefixtures("config_isolado")
 def test_cada_episodio_do_nome_velho_vai_ao_diario(monkeypatch: pytest.MonkeyPatch) -> None:
     """A carta 1 sai duas vezes na mesma vida do daemon: o diário diz as duas."""
-    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False)
+    ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=False)
     for _ in range(6):
-        bancada.tique()
+        ensaio.tique()
     por_saida: list[int] = []
     for _volta in range(2):
         with structlog.testing.capture_logs() as diario:
-            bancada.mesa.levantar(FILA_DELA[0])
+            ensaio.mesa.levantar(FILA_DO_USUARIO[0])
             for _ in range(_PASSA_O_PRAZO):
-                bancada.tique()
+                ensaio.tique()
         por_saida.append(
             sum(1 for r in diario if r["event"] == "coop_nome_do_virtual_renasce")
         )
-        assert _nomes_errados(bancada) == []
-        bancada.mesa.sentar(FILA_DELA[0])
+        assert _nomes_errados(ensaio) == []
+        ensaio.mesa.sentar(FILA_DO_USUARIO[0])
         for _ in range(6):
-            bancada.tique()
+            ensaio.tique()
     assert por_saida == [1, 1], f"linhas do diário por saída da carta 1: {por_saida}"

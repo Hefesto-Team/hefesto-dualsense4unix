@@ -134,11 +134,11 @@ def test_ligado_o_autoswitch_nem_pergunta_a_janela(semeadura_ligada: None) -> No
 def _o_freestyle_diz(mode: dict[str, Any] | None) -> None:
     """Grava a seção `mode` no Freestyle do disco (None = sem a seção, o de fábrica)."""
     arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
-    dela = json.loads(arquivo.read_text(encoding="utf-8"))
-    dela.pop("mode", None)
+    do_usuario = json.loads(arquivo.read_text(encoding="utf-8"))
+    do_usuario.pop("mode", None)
     if mode is not None:
-        dela["mode"] = mode
-    arquivo.write_text(json.dumps(dela), encoding="utf-8")
+        do_usuario["mode"] = mode
+    arquivo.write_text(json.dumps(do_usuario), encoding="utf-8")
 
 
 @pytest.mark.parametrize("janela", [JANELA, "steam_app_2111190"],
@@ -220,7 +220,7 @@ def test_ligado_nenhuma_ativacao_automatica_passa(
     gerente.activate(FREESTYLE, origin=origem)
 
 
-def test_o_gesto_dela_liga_e_desliga_e_o_disco_acompanha(semeadura_ligada: None) -> None:
+def test_o_gesto_do_usuario_liga_e_desliga_e_o_disco_acompanha(semeadura_ligada: None) -> None:
     """O «Ativar» do Freestyle liga; o de outro perfil desliga; o disco vai junto."""
     loader.load_all_profiles()
     _o_jogo()
@@ -465,9 +465,9 @@ def test_o_primeiro_pad_nasce_no_modo_do_freestyle(semeadura_ligada: None) -> No
     """
     loader.load_all_profiles()
     arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
-    dela = json.loads(arquivo.read_text(encoding="utf-8"))
-    dela["mode"] = {"kind": "gamepad", "caminho": "xbox"}
-    arquivo.write_text(json.dumps(dela), encoding="utf-8")
+    do_usuario = json.loads(arquivo.read_text(encoding="utf-8"))
+    do_usuario["mode"] = {"kind": "gamepad", "caminho": "xbox"}
+    arquivo.write_text(json.dumps(do_usuario), encoding="utf-8")
     loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0,
                                 mode=ProfileModeConfig(kind="gamepad", caminho="dualsense")))
     session.save_last_profile("Leitura")
@@ -672,12 +672,12 @@ def _modo_no_fio(nome: str, params: list[int]) -> int:
 
 
 def test_os_quatro_controles_ficam_com_o_freestyle_com_o_jogo_em_foco(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
+    semeadura_ligada: None, fabrica_de_ensaio: Any,
 ) -> None:
     """A prova 1 no byte: o jogo em foco, e os quatro com o gatilho do Freestyle."""
     loader.load_all_profiles()
     _o_jogo(gatilho="Off")
-    controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
+    controle, pecas = _mesa_de_quatro(fabrica_de_ensaio)
     store = StateStore()
     vigia = AutoSwitcher(manager=_liga(store, controle), window_reader=lambda: {},
                          store=store)
@@ -792,9 +792,9 @@ def test_ligar_sem_caminho_pergunta_o_modo_ao_perfil_ativo(
     """
     loader.load_all_profiles()
     arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
-    dela = json.loads(arquivo.read_text(encoding="utf-8"))
-    dela["mode"] = modo
-    arquivo.write_text(json.dumps(dela), encoding="utf-8")
+    do_usuario = json.loads(arquivo.read_text(encoding="utf-8"))
+    do_usuario["mode"] = modo
+    arquivo.write_text(json.dumps(do_usuario), encoding="utf-8")
     store = StateStore()
     h = _Handlers(store, _liga(store))
     daemon = _DaemonDoChip()
@@ -808,7 +808,7 @@ def test_ligar_sem_caminho_pergunta_o_modo_ao_perfil_ativo(
         assert pedido["caminho_e_escolha"] is False
 
 
-def test_o_caminho_que_ela_manda_vence_o_do_perfil(semeadura_ligada: None) -> None:
+def test_o_caminho_que_o_usuario_manda_vence_o_do_perfil(semeadura_ligada: None) -> None:
     """O chip de modo manda o caminho: o pedido é a escolha, e vai como escolha.
 
     NOTA DATADA (27/10/2026, D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): o caminho

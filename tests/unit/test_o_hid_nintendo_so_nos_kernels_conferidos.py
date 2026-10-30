@@ -182,7 +182,7 @@ def test_o_escolher_poe_o_fonte_do_build_exato(tmp_path: Path) -> None:
     assert _sha(pasta / "hid-ids.h") == campos["SHA256_HID_IDS_H"]
 
 
-def test_o_escolher_deixa_a_raiz_nos_kernels_dela(tmp_path: Path) -> None:
+def test_o_escolher_deixa_a_raiz_nos_kernels_do_usuario(tmp_path: Path) -> None:
     for build in sorted(_da_raiz()):
         pasta = _pacote_como_no_usr_src(tmp_path / build)
         resultado = _escolher(pasta, f"{build}-generic")

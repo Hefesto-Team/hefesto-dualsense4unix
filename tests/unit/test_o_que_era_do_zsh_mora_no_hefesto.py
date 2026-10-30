@@ -411,7 +411,7 @@ def test_gancho_de_comando_sem_sysfs_de_mentira_e_recusado(tmp_path: Path) -> No
         assert "recuso" in r.stderr
 
 
-def test_o_script_nao_carrega_o_nome_da_maquina_dela() -> None:
+def test_o_script_nao_carrega_o_nome_da_maquina_do_usuario() -> None:
     texto = WIFI.read_text(encoding="utf-8")
     for proibido in ("aurora", "AURORA_", "/run/aurora", "wlx"):
         assert proibido not in texto.replace("aurora-wifi-usb.sh`", ""), proibido
@@ -655,7 +655,7 @@ def test_o_install_poe_os_quatro_destinos_e_liga_o_timer(tmp_path: Path) -> None
 
 
 def test_sem_dongle_o_install_pula_e_diz_o_porque(tmp_path: Path) -> None:
-    """O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01: o vigia só entra onde há Wi-Fi USB."""
+    """O-QUE-E-DO-ENSAIO-FICA-NO-ENSAIO-01: o vigia só entra onde há Wi-Fi USB."""
     amb = _mesa(tmp_path, com_dongle=False)
     nm = tmp_path / "NetworkManager"
     nm.mkdir()

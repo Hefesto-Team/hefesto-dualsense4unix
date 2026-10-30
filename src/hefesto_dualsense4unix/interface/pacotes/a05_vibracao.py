@@ -527,7 +527,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         str(c.get("uniq") or ""): str(c.get("cor") or "") for c in ctx.mesa
     }
     colunas: dict[str, dict[str, Any]] = {}
-    nomes_dela = nomes_dos_donos()
+    nomes_do_usuario = nomes_dos_donos()
     da_mesa = {str(c.get("uniq") or ""): c for c in ctx.mesa}
     perfil_ativo = _perfil_ativo(ctx)
     bloco_dos_controles = perfil_ativo.get("controllers")
@@ -537,7 +537,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         pct = _pct_da_coluna(politica, custom)
         barras = _barras_dos_motores(ctx.state, uniq)
         padrao = vale_o_padrao(politica)
-        identidade = _identidade_do_modelo(da_mesa.get(uniq), nomes_dela,
+        identidade = _identidade_do_modelo(da_mesa.get(uniq), nomes_do_usuario,
                                            _sem_marcacao(col.get("identidade", "")))
         plano = {
             "identidade": identidade,

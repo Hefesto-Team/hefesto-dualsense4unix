@@ -209,13 +209,13 @@ def test_a_ordem_das_celulas_e_a_do_desenho() -> None:
               for c in _celulas(publicado=False)]
     do_desenho = list(a10_perfis.SECOES_DA_COLUNA) + [
         s for s in perfis_web.SECOES_POR_CONTROLE
-        if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+        if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO
         and s not in perfis_web.SECOES_QUE_MORAM_NO_MAPA]
     largura = len(do_desenho)
     assert secoes[:largura] == do_desenho, (
         f"a primeira linha do desenho traz {secoes[:largura]} e o pacote "
         f"distribui na ordem {list(a10_perfis.SECOES_DA_COLUNA)}, com "
-        f"{sorted(perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA)} esperando a sessão")
+        f"{sorted(perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO)} esperando a sessão")
     assert secoes == do_desenho * (len(secoes) // largura), (
         "as linhas da tabela não repetem a mesma ordem de seções")
 
@@ -223,7 +223,7 @@ def test_a_ordem_das_celulas_e_a_do_desenho() -> None:
 def test_nenhum_campo_do_perfil_fica_sem_coluna() -> None:
     """Tudo o que o perfil SABE guardar por controle tem célula na tela."""
     faltando = (set(perfis_web.SECOES_POR_CONTROLE) - set(a10_perfis.SECOES_DA_COLUNA)
-                - perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA)
+                - perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO)
     assert not faltando, (
         f"o perfil guarda {sorted(faltando)} por controle e a coluna `Ajuste "
         f"próprio` não os mostra — ajuste guardado que a tela esconde")
@@ -290,13 +290,13 @@ def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
         f"a dica é {linhas[0]['dica']!r}")
 
 
-def test_a_secao_que_espera_a_sessao_dela_ainda_nao_esta_publicada() -> None:
-    """A isenção de `SECOES_ESPERANDO_A_SESSAO_DELA` tem PRAZO, e é este teste."""
+def test_a_secao_que_espera_a_sessao_do_usuario_ainda_nao_esta_publicada() -> None:
+    """A isenção de `SECOES_ESPERANDO_A_SESSAO_DO_USUARIO` tem PRAZO, e é este teste."""
     publicadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
                   for c in _celulas(publicado=True)}
     desenhadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
                   for c in _celulas(publicado=False)}
-    for secao in (perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+    for secao in (perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO
                   - perfis_web.SECOES_QUE_MORAM_NO_MAPA):
         assert secao in desenhadas, (
             f"`{secao}` espera a sessão dela e o DESENHO não tem a célula — não "
@@ -306,7 +306,7 @@ def test_a_secao_que_espera_a_sessao_dela_ainda_nao_esta_publicada() -> None:
             f"isenção sobre um campo que não existe")
         assert secao not in publicadas, (
             f"a página publicada já tem a célula de `{secao}`: tire o nome de "
-            f"`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA` e ponha-o em "
+            f"`perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO` e ponha-o em "
             f"`a10_perfis.SECOES_DA_COLUNA`, na ordem do desenho")
         assert secao not in a10_perfis.SECOES_DA_COLUNA, (
             f"`{secao}` está na distribuição do pacote e a página publicada não "

@@ -97,7 +97,7 @@ class TestAsDezCelulasContinuamEscritas:
                 )
 
     @pytest.mark.parametrize("identificador", sorted(LINHAS_RESPONDIDAS))
-    def test_o_lado_que_esta_leva_escreveu_nao_afirma_medido_sem_bancada(
+    def test_o_lado_que_esta_leva_escreveu_nao_afirma_medido_sem_ensaio(
         self, mapa: dict[str, dict[str, str]], identificador: str
     ) -> None:
         linha = mapa[identificador]
@@ -121,7 +121,7 @@ class TestAsDezCelulasContinuamEscritas:
                 "(regra 7 do portão)."
             )
 
-    def test_as_nove_linhas_de_combinacao_nunca_afirmam_medido_sem_bancada(
+    def test_as_nove_linhas_de_combinacao_nunca_afirmam_medido_sem_ensaio(
         self, mapa: dict[str, dict[str, str]]
     ) -> None:
         """As nove `combinacao.*` do SN30 respondem — e nenhuma diz `medido`."""

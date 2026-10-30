@@ -120,7 +120,7 @@ _SUDO_DE_MENTIRA = '#!/bin/bash\nexec "$@"\n'
 _UPDATE_GRUB_DE_MENTIRA = '#!/bin/bash\necho regenerou >> "${0%/*}/../update-grub.log"\n'
 
 
-def _bancada(tmp_path: Path, *, com_kernelstub: bool) -> tuple[Path, dict[str, str]]:
+def _ensaio(tmp_path: Path, *, com_kernelstub: bool) -> tuple[Path, dict[str, str]]:
     """Um lar de mentira: bin/ só com o que o script usa, etc/ e sys/ próprios."""
     import json
     import shutil
@@ -171,7 +171,7 @@ def _roda(env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
 def test_o_kernelstub_com_o_token_velho_migra(tmp_path: Path) -> None:
     import json
 
-    raiz, env = _bancada(tmp_path, com_kernelstub=True)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=True)
     r = _roda(env)
     assert r.returncode == 0, r.stderr
     conf = json.loads((raiz / "etc/kernelstub/configuration").read_text(encoding="utf-8"))
@@ -185,7 +185,7 @@ def test_o_kernelstub_com_o_token_velho_migra(tmp_path: Path) -> None:
 
 
 def test_o_grub_com_o_token_velho_migra(tmp_path: Path) -> None:
-    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=False)
     r = _roda(env)
     assert r.returncode == 0, r.stderr
     grub = (raiz / "etc/default/grub").read_text(encoding="utf-8")
@@ -195,7 +195,7 @@ def test_o_grub_com_o_token_velho_migra(tmp_path: Path) -> None:
 
 
 def test_o_terceiro_no_mesmo_token_fica(tmp_path: Path) -> None:
-    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=False)
     grub = raiz / "etc/default/grub"
     grub.write_text('GRUB_CMDLINE_LINUX_DEFAULT="usbcore.quirks=0bda:8153:k,'
                     '054c:0ce6:gn,054c:0df2:gn"\n', encoding="utf-8")
@@ -206,7 +206,7 @@ def test_o_terceiro_no_mesmo_token_fica(tmp_path: Path) -> None:
 
 
 def test_o_remove_tira_o_velho_e_o_novo(tmp_path: Path) -> None:
-    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=False)
     r = _roda(env, "--remove")
     assert r.returncode == 0, r.stderr
     grub = (raiz / "etc/default/grub").read_text(encoding="utf-8")
@@ -214,14 +214,14 @@ def test_o_remove_tira_o_velho_e_o_novo(tmp_path: Path) -> None:
 
 
 def test_o_status_aponta_o_defeito(tmp_path: Path) -> None:
-    _, env = _bancada(tmp_path, com_kernelstub=False)
+    _, env = _ensaio(tmp_path, com_kernelstub=False)
     r = _roda(env, "--status")
     assert r.returncode == 0, r.stderr
     assert "[DEFEITO] 054c:0df2:gn" in r.stdout, r.stdout
 
 
 def test_o_token_de_terceiro_e_fundido_e_nao_duplicado(tmp_path: Path) -> None:
-    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=False)
     grub = raiz / "etc/default/grub"
     grub.write_text('GRUB_CMDLINE_LINUX_DEFAULT="quiet usbcore.quirks=0bda:8153:k"\n',
                     encoding="utf-8")
@@ -232,7 +232,7 @@ def test_o_token_de_terceiro_e_fundido_e_nao_duplicado(tmp_path: Path) -> None:
 
 
 def test_o_systemd_boot_ganha_o_quirk_no_etc_kernel_cmdline(tmp_path: Path) -> None:
-    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=False)
     (raiz / "etc/default/grub").unlink()
     cmdline = raiz / "etc/kernel/cmdline"
     cmdline.parent.mkdir(parents=True)
@@ -249,7 +249,7 @@ def test_o_systemd_boot_ganha_o_quirk_no_etc_kernel_cmdline(tmp_path: Path) -> N
 
 
 def test_sem_carregador_conhecido_o_token_exato_vai_para_a_tela(tmp_path: Path) -> None:
-    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    raiz, env = _ensaio(tmp_path, com_kernelstub=False)
     (raiz / "etc/default/grub").unlink()
     r = _roda(env)
     assert r.returncode == 0, r.stderr

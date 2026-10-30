@@ -28,7 +28,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 PALAVRAS = re.compile(r"\w+", re.UNICODE)
 
 
@@ -227,7 +227,7 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
             seguinte()
 
     view.connect("load-changed", carregou)
-    view.load_uri(BANCADA.as_uri())
+    view.load_uri(ENSAIO.as_uri())
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()

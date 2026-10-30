@@ -266,7 +266,7 @@ class TestDoisControlesLigamAEmulacao:
         espiao.bind(monkeypatch)
         d.store.set_native_mode_active(True, origin="manual")
 
-        assert d.aplicar_gamepad_para_multiplos_controles() == "ignorado_gesto_dela"
+        assert d.aplicar_gamepad_para_multiplos_controles() == "ignorado_gesto_do_usuario"
         assert espiao.chamadas == []
 
     def test_idempotente_um_pedido_por_episodio(
@@ -462,7 +462,7 @@ class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
 
 
 class TestUmDonoSoParaAMascara:
-    def test_a_janela_nao_escolhe_mascara_por_ela(self) -> None:
+    def test_a_janela_nao_escolhe_mascara_pelo_usuario(self) -> None:
         """Sem escolha explícita, o campo NÃO vai — quem decide é o daemon."""
         plano = mode_transition.plan_mode_transition("gamepad", None)
 
@@ -495,7 +495,7 @@ class TestUmDonoSoParaAMascara:
 
         assert params_cli == pela_janela
 
-    def test_o_plano_manda_a_mascara_que_ela_escolheu(self) -> None:
+    def test_o_plano_manda_a_mascara_que_o_usuario_escolheu(self) -> None:
         """O outro lado da regra: escolha explícita dela chega intacta ao daemon."""
         passo = mode_transition.plan_mode_transition("gamepad", "dualsense")[-1]
 

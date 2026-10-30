@@ -128,7 +128,7 @@ async def test_as_tres_de_antes_seguem_iguais(monkeypatch: pytest.MonkeyPatch) -
 def test_a_supressao_do_usuario_cala_o_sempre_com_o_jogo_aberto() -> None:
     """«Suspender mouse e teclado» vale com o jogo aberto, também no «Sempre».
 
-    MORDIDA: tirar o `_suspenso_por_ela` de `despachar_no_jogo`.
+    MORDIDA: tirar o `_suspenso_pelo_usuario` de `despachar_no_jogo`.
     """
     teclado = _TecladoDeMentira()
     chamadas: list[frozenset[str]] = []

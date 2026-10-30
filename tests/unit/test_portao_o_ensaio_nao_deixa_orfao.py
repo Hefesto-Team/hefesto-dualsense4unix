@@ -11,20 +11,20 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "scripts" / "ensaio.sh"
+ENSAIO = RAIZ / "scripts" / "ensaio.sh"
 
 _UMA_HORA = 3600
 
 
 def _roda(*argv: str, arq: Path, agora: int | None = None, pid: int | None = None):
     env = dict(os.environ)
-    env["HEFESTO_BANCADA_ARQ"] = str(arq)
+    env["HEFESTO_ENSAIO_ARQ"] = str(arq)
     if agora is not None:
-        env["HEFESTO_BANCADA_AGORA"] = str(agora)
+        env["HEFESTO_ENSAIO_AGORA"] = str(agora)
     if pid is not None:
-        env["HEFESTO_BANCADA_PID"] = str(pid)
+        env["HEFESTO_ENSAIO_PID"] = str(pid)
     return subprocess.run(
-        ["bash", str(BANCADA), *argv],
+        ["bash", str(ENSAIO), *argv],
         capture_output=True,
         text=True,
         env=env,
@@ -35,7 +35,7 @@ def _roda(*argv: str, arq: Path, agora: int | None = None, pid: int | None = Non
 @pytest.fixture
 def arq(tmp_path: Path) -> Path:
     """O estado vive em tmp, nunca no XDG_RUNTIME_DIR de verdade."""
-    return tmp_path / "hefesto-bancada.json"
+    return tmp_path / "hefesto-ensaio.json"
 
 
 @pytest.fixture
@@ -78,7 +78,7 @@ def test_reservada_o_exigir_recusa_com_motivo_e_hora(arq: Path, detentor) -> Non
     assert str(detentor.pid) in tudo, "a recusa não diz QUEM segura (PID):\n" + tudo
 
 
-def test_detentor_morto_a_bancada_volta_a_ficar_livre(arq: Path, detentor) -> None:
+def test_detentor_morto_o_ensaio_volta_a_ficar_livre(arq: Path, detentor) -> None:
     agora = int(time.time())
     _roda("reservar", "medição de BT", "--horas", "4", arq=arq, agora=agora, pid=detentor.pid)
 
@@ -118,7 +118,7 @@ def test_o_teto_vence_mesmo_com_o_detentor_vivo(arq: Path, detentor) -> None:
     os.kill(detentor.pid, 0)
 
 
-def test_sem_arquivo_nenhum_a_bancada_e_livre(arq: Path) -> None:
+def test_sem_arquivo_nenhum_o_ensaio_e_livre(arq: Path) -> None:
     r = _roda("status", arq=arq)
     assert "LIVRE" in r.stdout
     assert _roda("exigir", arq=arq).returncode == 0
@@ -143,10 +143,10 @@ def test_reservar_sobre_reserva_viva_e_recusado(arq: Path, detentor) -> None:
 
 def test_o_estado_nao_mora_dentro_da_arvore_versionada() -> None:
     """Estado transitório em git vira commit de carona -- 16 de 22 em 23/08."""
-    texto = BANCADA.read_text(encoding="utf-8")
+    texto = ENSAIO.read_text(encoding="utf-8")
     assert "XDG_RUNTIME_DIR" in texto
     versionados = subprocess.run(
-        ["git", "ls-files", "hefesto-bancada.json"],
+        ["git", "ls-files", "hefesto-ensaio.json"],
         capture_output=True, text=True, cwd=RAIZ, check=True,
     ).stdout.strip()
     assert versionados == "", "o estado da bancada foi versionado: " + versionados

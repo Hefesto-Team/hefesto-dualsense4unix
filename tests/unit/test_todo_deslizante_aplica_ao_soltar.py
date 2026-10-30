@@ -30,7 +30,7 @@ sys.path.insert(0, str(INTERFACE))
 
 from hefesto_dualsense4unix.interface import onde
 
-DESENHO = onde.BANCADA
+DESENHO = onde.ENSAIO
 PAGINA_DO_CRIADOR = "03-gatilhos.html"
 UNIQ = "aa:bb:cc:00:00:01"
 

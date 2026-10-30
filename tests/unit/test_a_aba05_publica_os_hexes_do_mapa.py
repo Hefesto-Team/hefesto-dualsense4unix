@@ -7,7 +7,7 @@ import pathlib
 import re
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup/05-vibracao.html"
+ENSAIO = RAIZ / "mockup/05-vibracao.html"
 CORES_CSV = RAIZ / "docs/data/cores-do-dualsense.csv"
 
 FORA_DO_DESENHO = ("nova-pink", "astro-bot", "sterling-silver")
@@ -29,10 +29,10 @@ BLOCO = re.compile(r'svg\[data-colorway="([^"]+)"\]\{([^}]*)\}')
 
 
 def _pagina() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+    return ENSAIO.read_text(encoding="utf-8")
 
 
-def _mapa_dela() -> dict[str, dict[str, dict[str, str]]]:
+def _mapa_do_usuario() -> dict[str, dict[str, dict[str, str]]]:
     """``id -> zona -> a linha do CSV``. A fonte, sem intermediário."""
     linhas = [
         x for x in CORES_CSV.read_text(encoding="utf-8").splitlines()
@@ -74,9 +74,9 @@ def _partida(zonas: dict[str, dict[str, str]]) -> bool:
             and _esperado(zonas, "casca_esq") != _esperado(zonas, "casca_dir"))
 
 
-def test_cada_zona_dos_28_traz_o_hex_do_csv_dela() -> None:
+def test_cada_zona_dos_28_traz_o_hex_do_csv_do_usuario() -> None:
     """As oito zonas sólidas dos 28 modelos, comparadas com o CSV linha a linha."""
-    folha, mapa = _folha(_pagina()), _mapa_dela()
+    folha, mapa = _folha(_pagina()), _mapa_do_usuario()
     assert len(mapa) >= 28, f"o mapa dela encolheu para {len(mapa)} modelos"
 
     divergem: list[str] = []
@@ -124,9 +124,9 @@ def test_nenhuma_variavel_da_folha_sai_vazia() -> None:
         "podou o que devia publicar")
 
 
-def test_os_modelos_que_o_desenho_nao_tem_resolvem_do_mapa_dela() -> None:
+def test_os_modelos_que_o_desenho_nao_tem_resolvem_do_mapa_do_usuario() -> None:
     """Nova Pink, Astro Bot e Sterling Silver: o hex é o dela, e é ÚNICO."""
-    folha, mapa = _folha(_pagina()), _mapa_dela()
+    folha, mapa = _folha(_pagina()), _mapa_do_usuario()
     desenhados = set(re.findall(r'<svg[^>]*\sdata-colorway="([^"]+)"', _pagina()))
     assert desenhados, "a bancada da 05 não desenha controle nenhum"
 
@@ -164,7 +164,7 @@ def test_toda_zona_publicada_tem_a_regra_que_a_aplica() -> None:
 
 def test_o_sem_hex_do_csv_vira_hachura_e_nao_uma_cor_inventada() -> None:
     """O CSV manda não inventar fill, e a página obedece."""
-    folha, mapa = _folha(_pagina()), _mapa_dela()
+    folha, mapa = _folha(_pagina()), _mapa_do_usuario()
     errados: list[str] = []
     quantos = 0
     for ident, zonas in sorted(mapa.items()):
@@ -180,9 +180,9 @@ def test_o_sem_hex_do_csv_vira_hachura_e_nao_uma_cor_inventada() -> None:
     assert not errados, f"SEM-HEX que virou cor na página: {errados}"
 
 
-def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_dela() -> None:
+def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_do_usuario() -> None:
     """Onde o mapa dela tem buraco, a página diz "não medi" — de um jeito só."""
-    folha, mapa = _folha(_pagina()), _mapa_dela()
+    folha, mapa = _folha(_pagina()), _mapa_do_usuario()
     marcadores: set[str] = set()
     buracos: list[str] = []
     for ident, zonas in sorted(mapa.items()):
@@ -201,12 +201,12 @@ def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_dela() -> None:
         "tem como saber qual é o marcador e qual é cor de verdade")
 
     marcador = next(iter(marcadores))
-    dela = {
+    do_usuario = {
         (linha.get("hex") or "").strip().upper()
         for zonas in mapa.values() for linha in zonas.values()
         if (linha.get("hex") or "").strip()
     }
-    assert marcador and marcador not in dela, (
+    assert marcador and marcador not in do_usuario, (
         f"o marcador de 'não medi' é {marcador!r}, que é uma cor do mapa dela — "
         "a folha estaria afirmando uma cor amostrada onde não há medição")
 
@@ -214,7 +214,7 @@ def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_dela() -> None:
 def test_a_casca_partida_sai_em_gradiente_de_duas_metades() -> None:
     """Spider-Man 2 e God of War 20th têm DUAS cascas, e a página as tem."""
     html = _pagina()
-    folha, mapa = _folha(html), _mapa_dela()
+    folha, mapa = _folha(html), _mapa_do_usuario()
     partidas = [i for i, z in sorted(mapa.items()) if _partida(z)]
     assert partidas, "nenhuma casca partida no mapa dela — nada a medir"
 

@@ -20,7 +20,7 @@ PRAGMATA = MatchCriteria(
 )
 
 
-def test_o_caso_dela_e_declarado_com_o_campo_e_o_valor() -> None:
+def test_o_caso_do_usuario_e_declarado_com_o_campo_e_o_valor() -> None:
     """A cura. Morde ao fazer `exigencia_invisivel` devolver "" sempre."""
     texto = exigencia_invisivel(PRAGMATA)
     assert "nome do processo" in texto, "o rótulo tem de ser o do editor avançado"

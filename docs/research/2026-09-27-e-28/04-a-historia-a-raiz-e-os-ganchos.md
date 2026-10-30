@@ -345,7 +345,7 @@ As correções, provadas em cópia, dão 52 de 52 casos certos. No dia real, os 
 eventos dos vazamentos seguem recusados. Cinco processos por comando somam 60 a
 68 ms; a proposta é um despachante único.
 
-**A ordem:** `A-TRAVA-DA-MAQUINA-DELA-01` (pré-condição) → `A-VIGIA-DAS-TRAVAS-01`
+**A ordem:** `A-TRAVA-DA-MAQUINA-DO-USUARIO-01` (pré-condição) → `A-VIGIA-DAS-TRAVAS-01`
 → em paralelo `O-DESPACHANTE-DAS-REGRAS-DA-CASA-01`, `O-RASTRO-BARRADO-NO-ATO-01`
 e `OS-GANCHOS-DO-GIT-NAO-ENSINAM-O-CONTORNO-01` → em paralelo
 `A-SENHA-SO-PASSA-PELO-ASKPASS-01`, `O-ENDERECO-NUNCA-CHEGA-A-CONVERSA-01` e

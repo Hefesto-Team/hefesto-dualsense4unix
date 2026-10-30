@@ -1,6 +1,6 @@
 """Os atos da bandeja que o controle também faz: abrir o painel e o serviço.
 
-E o dono da própria bandeja (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S3 e S4): a escolha de ter o
+E o dono da própria bandeja (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, S3 e S4): a escolha de ter o
 ícone mora no autostart da sessão (`X-GNOME-Autostart-enabled`), a bandeja viva é o PID que ela
 grava em `$XDG_RUNTIME_DIR` mais `kill -0`, e `garantir_a_bandeja` a sobe quando a escolha está
 ligada e não há nenhuma viva.

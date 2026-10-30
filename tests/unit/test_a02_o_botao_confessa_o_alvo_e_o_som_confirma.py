@@ -30,7 +30,7 @@ recusam.py` faz isso), o veto acima não existe: a lista viva é de mentira, o
 sink do DualSense casa pela regra do um-para-um, e o motor segue para o
 `paplay`, que **não** está dublado. Medido: `paplay --device=<o sink do controle
 do usuário>`. A cura é `ponte.dentro_da_janela` — sem janela de pé, ninguém clicou —
-e a `TestAGuardaDaMaquinaDela` é quem a segura.
+e a `TestAGuardaDaMaquinaDoUsuario` é quem a segura.
 
 AS MORDIDAS DESTE ARQUIVO
 --------------------------
@@ -52,9 +52,9 @@ AS MORDIDAS DESTE ARQUIVO
 * **deixar a exceção do som subir** (tirar o `try` de `tocar`) — reprova
   `test_o_som_que_falha_nao_derruba_o_volume`;
 * **inventar uma segunda chave para o som** — reprova
-  `test_a_chave_dela_desliga_o_som_e_o_gesto_nao_recusa`;
+  `test_a_chave_do_usuario_desliga_o_som_e_o_gesto_nao_recusa`;
 * **tirar o `dentro_da_janela` de `_fora_do_voo`** — reprovam as duas da
-  `TestAGuardaDaMaquinaDela`, e a segunda mostra o `paplay` que sairia.
+  `TestAGuardaDaMaquinaDoUsuario`, e a segunda mostra o `paplay` que sairia.
 """
 from __future__ import annotations
 
@@ -405,7 +405,7 @@ def test_o_som_que_falha_nao_derruba_o_volume(
     )
 
 
-def test_a_chave_dela_desliga_o_som_e_o_gesto_nao_recusa(
+def test_a_chave_do_usuario_desliga_o_som_e_o_gesto_nao_recusa(
     casa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """MORDIDA 3 da sprint, e ela roda o motor DE VERDADE — sem tocar nada.
@@ -452,7 +452,7 @@ def _seletor_do_piloto(*_a: Any, **_k: Any) -> None:
     return None
 
 
-class TestAGuardaDaMaquinaDela:
+class TestAGuardaDaMaquinaDoUsuario:
     """**Sem a janela de pé, o som não nasce — e o defeito que isto cura foi medido.**
 
     Medido na bancada em 06/09/2026, com a cura do som já escrita: a régua irmã

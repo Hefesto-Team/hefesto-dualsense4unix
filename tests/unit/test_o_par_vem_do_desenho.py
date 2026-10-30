@@ -47,7 +47,7 @@ from hefesto_dualsense4unix.integrations import mapa_das_portas
 from hefesto_dualsense4unix.integrations.mapa_das_portas import irmas_de
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
-PEER_DA_BANCADA: dict[str, str] = {
+PEER_DO_ENSAIO: dict[str, str] = {
     "usb1-port5": "usb2-port1",
     "usb2-port1": "usb1-port5",
     "usb1-port6": "usb2-port2",
@@ -101,7 +101,7 @@ def test_o_lado_2_0_e_o_lado_3_x_declarados_separados_nao_viram_irmas() -> None:
     )
     assert irmas_de(so_os_nos) == {}, (
         "sem face desenhada não há fileira, e o peer amarraria 5 a 6 — que são "
-        f"o mesmo furo, não dois vizinhos. Medido: {PEER_DA_BANCADA['usb1-port5']}"
+        f"o mesmo furo, não dois vizinhos. Medido: {PEER_DO_ENSAIO['usb1-port5']}"
     )
 
 

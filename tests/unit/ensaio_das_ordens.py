@@ -187,7 +187,7 @@ NOS_LIVRES = (
 )
 
 
-def bancada_do_hub_em_numeros_diferentes() -> tuple[Censo, tuple[NoDeEntrada, ...]]:
+def ensaio_do_hub_em_numeros_diferentes() -> tuple[Censo, tuple[NoDeEntrada, ...]]:
     """Um hub num buraco cujos dois lados têm NÚMEROS diferentes."""
     aparelhos = (
         aparelho("usb1", busnum=1, devpath="0", pci=PCI_DA_PLACA, e_hub=True,

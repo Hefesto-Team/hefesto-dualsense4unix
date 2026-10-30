@@ -754,7 +754,7 @@ class PonteMicBluetooth:
         self._ultimo_rearme = 0.0
         self._canal_e_nosso = False
         self._mic_pedido: bool | None = None
-        self._pedido_dela: bool | None = None
+        self._pedido_do_usuario: bool | None = None
         self._ultimo_olhar_na_source = 0.0
         self._stats = EstatisticaMic(source=self._nome_source)
 
@@ -787,9 +787,9 @@ class PonteMicBluetooth:
             source=stats.source,
         )
 
-    def dizer_o_pedido_dela(self, ligado: bool | None) -> None:
+    def dizer_o_pedido_do_usuario(self, ligado: bool | None) -> None:
         """A palavra de produto sobre este microfone. `None` devolve a decisão ao ouvinte."""
-        self._pedido_dela = ligado
+        self._pedido_do_usuario = ligado
 
     def iniciar(self) -> bool:
         """Sobe tudo: decodificador, source, fd do hidraw, thread e o 0x32."""
@@ -850,7 +850,7 @@ class PonteMicBluetooth:
             thread.join(timeout=2.0)
         self._escrever_pedido(ligar=False)
         self._mic_pedido = False
-        self._pedido_dela = None
+        self._pedido_do_usuario = None
         self._fechar_fd()
         if self._source is not None:
             self._fechar_a_source()
@@ -962,9 +962,9 @@ class PonteMicBluetooth:
         source = self._source
         if source is None:
             return self._mic_pedido
-        pedido_dela = self._pedido_dela
-        if pedido_dela is not None:
-            self._pedir_mic(pedido_dela)
+        pedido_do_usuario = self._pedido_do_usuario
+        if pedido_do_usuario is not None:
+            self._pedir_mic(pedido_do_usuario)
             return self._mic_pedido
         relogio = time.monotonic() if agora is None else agora
         if (

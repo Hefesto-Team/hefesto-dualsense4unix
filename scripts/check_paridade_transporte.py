@@ -89,12 +89,12 @@ AVISO (não derruba o CI hoje)
                           outros 76 responderem por `resultado`, que é texto
                           livre com semântica de suspeito, promover reprovaria
                           afirmação verdadeira. Promoção por `RESULTADO_REPROVA`.
- 10. `grau-sem-olho-dela` — o ensaio que sustenta o `O APARELHO OBEDECEU` existe
-                          e diz que obedeceu, mas ninguém do `olho-dela` viu.
+ 10. `grau-sem-olho-do-usuario` — o ensaio que sustenta o `O APARELHO OBEDECEU` existe
+                          e diz que obedeceu, mas ninguém do `olho-do-usuario` viu.
                           `docs/method/METODO-DE-ISOLAMENTO.md` (seção "o que
                           registrar em cada linha do mapa") diz que só o olho
                           de quem confere sustenta esse degrau. Promoção por
-                          `OLHO_DELA_REPROVA`.
+                          `OLHO_DO_USUARIO_REPROVA`.
  11. `mordida-nao-provada` — linha com grau forte e `teste_que_morde` preenchido
                           cuja `mordida_provada_em` está vazia: ninguém arrancou
                           a cura e viu reprovar. Medido em 12/08/2026: a coluna
@@ -109,13 +109,13 @@ AVISO (não derruba o CI hoje)
                           mesma linha, o que o aparelho fez — que é exatamente o
                           que a casa cobra em toda parte.
 
- 13. `reagiu-sem-olho-dela` — `ate_onde_foi = O JOGO REAGIU` com ensaio que
-                          sustenta, mas observado por quem não é `olho-dela`.
+ 13. `reagiu-sem-olho-do-usuario` — `ate_onde_foi = O JOGO REAGIU` com ensaio que
+                          sustenta, mas observado por quem não é `olho-do-usuario`.
                           DURA desde o primeiro dia, ao contrário da regra 10, e
                           o motivo é LEGADO, não princípio: o degrau nasceu em
                           19/08/2026 com zero células no CSV, então não há
                           afirmação antiga que uma regra dura possa machucar.
-                          Detalhe em `_achado_sem_olho_dela`.
+                          Detalhe em `_achado_sem_olho_do_usuario`.
 
 FALHA (as duas mais novas)
   A numeração desta lista é CRONOLÓGICA, não por severidade — é por isso que as
@@ -189,7 +189,7 @@ FALHA (as duas mais novas)
                           (§4.5). Ela não acusa a célula: acusa a LEITURA que a
                           célula convida. Hoje há UMA no mapa
                           (`movimento.acelerometro@dualsense`, `sim` +
-                          `so-ela-decide`), ela está CERTA e a ressalva diz que
+                          `so-o-usuario-decide`), ela está CERTA e a ressalva diz que
                           é de propósito — e é justamente por isso que a regra é
                           AVISO. No mesmo dia, ler uma coluna de causa como veto
                           levou a PARAR um passo que
@@ -266,7 +266,7 @@ O buraco de 12/08/2026, e por que a regra 6 nasceu
 --------------------------------------------------
 Alguém escreveu numa cópia da árvore a afirmação mais forte que o vocabulário
 da casa permite — `cabo_ate_onde_foi = radio_ate_onde_foi = O APARELHO OBEDECEU`,
-`provado_por = olho-dela` — numa linha com ZERO ensaios no caderno, e o portão
+`provado_por = olho-do-usuario` — numa linha com ZERO ensaios no caderno, e o portão
 devolveu exatamente o mesmo número de reprovações de antes: quinze. A mentira
 passou inteira, e por três motivos que este arquivo tinha por escrito:
 
@@ -373,7 +373,7 @@ ROTULO_DO_LADO = {"cabo": "cabo", "radio": "rádio"}
 
 RESULTADO_REPROVA = False
 
-OLHO_DELA_REPROVA = False
+OLHO_DO_USUARIO_REPROVA = False
 
 CSV_RELATIVO = "docs/data/mapa-controles.csv"
 ENSAIOS_RELATIVO = "docs/data/ensaios.csv"
@@ -416,9 +416,9 @@ DIRECAO_SAIDA = "saída"
 DIRECAO_ENTRADA = "entrada"
 
 FECHA_A_SUITE = "a suíte, sem aparelho"
-FECHA_A_BANCADA = "a bancada, com o aparelho na mão"
+FECHA_O_ENSAIO = "a bancada, com o aparelho na mão"
 FECHA_O_INSTRUMENTO = "um instrumento, de fora do jogo"
-FECHA_A_MAO_DELA = "a mão dela, e mais ninguém"
+FECHA_A_MAO_DO_USUARIO = "a mão dela, e mais ninguém"
 
 
 @dataclass(frozen=True)
@@ -453,7 +453,7 @@ ESCADA = (
             "lado. Diz que o canal está aberto — não diz que o aparelho fez "
             "coisa alguma com o que recebeu."
         ),
-        fechado_por=FECHA_A_BANCADA,
+        fechado_por=FECHA_O_ENSAIO,
     ),
     Degrau(
         valor="O APARELHO OBEDECEU",
@@ -461,10 +461,10 @@ ESCADA = (
         resumo="acendeu, girou, saiu som",
         criterio=(
             "alguém VIU o aparelho fazer o que foi pedido, e registrou o ensaio "
-            "no caderno com `observado_por = olho-dela`. É o fim da direção de "
+            "no caderno com `observado_por = olho-do-usuario`. É o fim da direção de "
             "saída: depois dele o aparelho já fez a sua parte."
         ),
-        fechado_por=FECHA_A_MAO_DELA,
+        fechado_por=FECHA_A_MAO_DO_USUARIO,
     ),
     Degrau(
         valor="O JOGO RECEBEU",
@@ -489,11 +489,11 @@ ESCADA = (
         criterio=(
             "ela jogou e viu. Nenhum instrumento desta casa lê o estado interno "
             "de um jogo sob Proton, e nenhum vai ler: o único sensor deste "
-            "degrau é ela. O ensaio tem de trazer `observado_por = olho-dela`, e "
+            "degrau é ela. O ensaio tem de trazer `observado_por = olho-do-usuario`, e "
             "o gesto `PS + R3` existe para ela poder fechá-lo sem tirar a mão do "
             "controle."
         ),
-        fechado_por=FECHA_A_MAO_DELA,
+        fechado_por=FECHA_A_MAO_DO_USUARIO,
     ),
 )
 
@@ -517,11 +517,11 @@ GRAUS_QUE_EXIGEM_ENSAIO = tuple(
 GRAUS_QUE_EXIGEM_VEREDICTO = tuple(
     degrau.valor
     for degrau in ESCADA
-    if degrau.fechado_por in (FECHA_O_INSTRUMENTO, FECHA_A_MAO_DELA)
+    if degrau.fechado_por in (FECHA_O_INSTRUMENTO, FECHA_A_MAO_DO_USUARIO)
 )
 
-GRAUS_QUE_SO_A_MAO_DELA_FECHA = tuple(
-    degrau.valor for degrau in ESCADA if degrau.fechado_por == FECHA_A_MAO_DELA
+GRAUS_QUE_SO_A_MAO_DO_USUARIO_FECHA = tuple(
+    degrau.valor for degrau in ESCADA if degrau.fechado_por == FECHA_A_MAO_DO_USUARIO
 )
 
 GRAUS_SEM_LEGADO = frozenset({GRAU_JOGO_RECEBEU, GRAU_JOGO_REAGIU})
@@ -541,7 +541,7 @@ DOMINIO_POR_SUFIXO = {
             "",
             "nada-a-acionar",
             "decisao-tomada",
-            "so-ela-decide",
+            "so-o-usuario-decide",
             "divida",
             "o-aparelho-recusa",
             "nao-medido",
@@ -590,7 +590,7 @@ RESULTADOS_DO_CADERNO = frozenset(
     {"obedece", "não obedece", "parcial", "inconclusivo"}
 )
 
-OBSERVADOR_QUE_SUSTENTA = "olho-dela"
+OBSERVADOR_QUE_SUSTENTA = "olho-do-usuario"
 
 PREFIXO_DE_ARQUIVO = "test_"
 SUFIXO_DE_ARQUIVO = "_test.py"
@@ -1909,18 +1909,18 @@ def _regra_do_caderno(
             )
         ]
 
-    if grau not in GRAUS_QUE_SO_A_MAO_DELA_FECHA:
+    if grau not in GRAUS_QUE_SO_A_MAO_DO_USUARIO_FECHA:
         return guarda
 
     if not any(
         (e.get("observado_por") or "").strip() == OBSERVADOR_QUE_SUSTENTA for e in sustentam
     ):
         observadores = sorted({(e.get("observado_por") or "").strip() for e in sustentam})
-        return [*guarda, _achado_sem_olho_dela(grau, observadores, numero, ident, lado, rotulo)]
+        return [*guarda, _achado_sem_olho_do_usuario(grau, observadores, numero, ident, lado, rotulo)]
     return guarda
 
 
-def _achado_sem_olho_dela(
+def _achado_sem_olho_do_usuario(
     grau: str,
     observadores: list[str],
     numero: int,
@@ -1932,7 +1932,7 @@ def _achado_sem_olho_dela(
     if grau in GRAUS_SEM_LEGADO:
         return Achado(
             FALHA,
-            "reagiu-sem-olho-dela",
+            "reagiu-sem-olho-do-usuario",
             numero,
             ident,
             lado,
@@ -1944,8 +1944,8 @@ def _achado_sem_olho_dela(
             "que um instrumento consegue ver de fora",
         )
     return Achado(
-        FALHA if OLHO_DELA_REPROVA else AVISO,
-        "grau-sem-olho-dela",
+        FALHA if OLHO_DO_USUARIO_REPROVA else AVISO,
+        "grau-sem-olho-do-usuario",
         numero,
         ident,
         lado,
@@ -2307,11 +2307,11 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
         "mapa-com-provado-por": _milhar(sum(provado.values())),
         "mapa-provado-aparelho": _milhar(provado.get("aparelho", 0)),
         "mapa-provado-fonte-do-driver": _milhar(provado.get("fonte-do-driver", 0)),
-        "mapa-provado-olho-dela": _milhar(provado.get("olho-dela", 0)),
+        "mapa-provado-olho-do-usuario": _milhar(provado.get("olho-do-usuario", 0)),
         "mapa-provado-descritor": _milhar(provado.get("descritor", 0)),
         "caderno-com-observado-por": _milhar(sum(observado.values())),
-        "caderno-observado-olho-dela": _milhar(observado.get("olho-dela", 0)),
-        "caderno-observado-bancada": _milhar(observado.get("bancada", 0)),
+        "caderno-observado-olho-do-usuario": _milhar(observado.get("olho-do-usuario", 0)),
+        "caderno-observado-ensaio": _milhar(observado.get("bancada", 0)),
         "caderno-observado-aparelho": _milhar(observado.get("aparelho", 0)),
         "linhas-do-mapa": _milhar(linhas),
         "colunas-do-mapa": _milhar(len(cabecalho)),

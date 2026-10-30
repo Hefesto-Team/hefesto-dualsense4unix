@@ -96,7 +96,7 @@ def test_r4_pega_o_ensaio_de_radio_sem_degrau(mod):
     assert not mod.r4([{"id": "e2", "linha_id": "x", "transporte": "cabo", "degrau": ""}])
 
 
-def test_as_sete_perguntas_sao_as_dela(mod):
+def test_as_sete_perguntas_sao_as_do_usuario(mod):
     """São as do `SPRINT_ORDER.md` §2.1, e são SETE — a oitava veio depois."""
     assert len(mod.PERGUNTAS) == 7, (
         f"são {len(mod.PERGUNTAS)} perguntas e a trilha dela tem sete. Se a "

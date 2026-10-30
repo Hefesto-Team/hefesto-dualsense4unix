@@ -12,7 +12,7 @@ DualSense do rádio na mesa::
 
 No journal da bancada::
 
-    02:11:15.541  bt_mic_palavra_dela   ligado=True
+    02:11:15.541  bt_mic_palavra_do_usuario   ligado=True
     02:11:15.547  bt_mic_pedido         ligar=True  seq=4
     02:11:16.164  mic_da_mesa_borda     mudo=True  repiques_engolidos=3  seq=5
     02:11:16.166  bt_mic_pedido         ligar=False seq=5
@@ -33,7 +33,7 @@ bit oscilando — e o botão parado; e ganham a do furo da marca velha.
 
 A MORDIDA: volte `_registrar_borda_do_mic` a contar a virada do bit de estado
 e `test_o_eco_da_nossa_escrita_nao_conta_borda` e
-`test_o_gating_do_firmware_nao_e_o_dedo_dela` reprovam.
+`test_o_gating_do_firmware_nao_e_o_dedo_do_usuario` reprovam.
 """
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def handle() -> _Handle:
     return h
 
 
-def test_o_gating_do_firmware_nao_e_o_dedo_dela(handle: _Handle) -> None:
+def test_o_gating_do_firmware_nao_e_o_dedo_do_usuario(handle: _Handle) -> None:
     """40 oscilações a ~16,7 Hz não são 40 apertos — não são aperto nenhum."""
     handle.oscila(40)
     assert handle._mic_mudo_seq == 0, (
@@ -104,7 +104,7 @@ def test_o_gating_do_firmware_nao_e_o_dedo_dela(handle: _Handle) -> None:
     )
 
 
-def test_depois_do_gating_o_dedo_dela_continua_valendo(handle: _Handle) -> None:
+def test_depois_do_gating_o_dedo_do_usuario_continua_valendo(handle: _Handle) -> None:
     """A cura não pode virar mordaça: o botão tem de sobreviver ao gating."""
     handle.oscila(40)
     estado = bool(handle._mic_mudo)
@@ -115,7 +115,7 @@ def test_depois_do_gating_o_dedo_dela_continua_valendo(handle: _Handle) -> None:
     )
 
 
-def test_o_gesto_DELA_conta_borda(handle: _Handle) -> None:  # noqa: N802
+def test_o_gesto_DO_USUARIO_conta_borda(handle: _Handle) -> None:  # noqa: N802
     """O positivo, e ele vem primeiro: sem isto a cura poderia matar tudo."""
     handle.aperta(antes=True, depois=False)
     assert handle._mic_mudo_seq == 1, (
@@ -134,7 +134,7 @@ def test_o_eco_da_nossa_escrita_nao_conta_borda(handle: _Handle) -> None:
     )
 
 
-def test_depois_do_eco_o_botao_e_dela(handle: _Handle) -> None:
+def test_depois_do_eco_o_botao_e_do_usuario(handle: _Handle) -> None:
     """Depois do eco, cada aperto dela conta — nos dois sentidos."""
     handle.set_microphone_mute(False)
     handle.report(False)

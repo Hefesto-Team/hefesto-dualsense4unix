@@ -560,9 +560,9 @@ def _gi_do_sistema_enxerga_o_gtk3() -> bool:
     reason="precisa de um clone sem .venv e de uma máquina com o GTK3 no Python do sistema",
 )
 def test_o_ensaio_em_clone_sem_venv_nao_diz_que_falta_o_gtk3(tmp_path: Path) -> None:
-    from tests.unit.test_o_ensaio_do_install_nao_escreve import INSTALL_PATH, _bancada
+    from tests.unit.test_o_ensaio_do_install_nao_escreve import INSTALL_PATH, _ensaio
 
-    _lar, _diario, ambiente = _bancada(tmp_path)
+    _lar, _diario, ambiente = _ensaio(tmp_path)
     proc = subprocess.run(
         [BASH, str(INSTALL_PATH), "--dry-run", "--yes"],
         capture_output=True,

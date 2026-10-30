@@ -81,7 +81,7 @@ class _PilotoDeMentira:
             prova_clique=gestos, incluir_perigosos=incluir)
 
 
-def test_a_prova_clique_recusa_o_que_mexe_na_maquina_dela() -> None:
+def test_a_prova_clique_recusa_o_que_mexe_na_maquina_do_usuario() -> None:
     """A MORDIDA: tire a guarda do `_provar_cliques` e este teste passa a clicar."""
     piloto = _PilotoDeMentira("10-perfis.html", "remover")
     with pytest.raises(SystemExit) as caiu:

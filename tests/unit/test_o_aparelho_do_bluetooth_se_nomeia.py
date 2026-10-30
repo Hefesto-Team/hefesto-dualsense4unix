@@ -10,8 +10,10 @@ O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01 (13/10/2026). O que a 
   do disco;
 * a escolha «Outro» também vale: o aparelho deixa de perguntar e não vira «Acessório» pelo enlace.
 
-MORDIDAS: tirar a leitura da escolha (``_tipo_que_ela_disse``) reprova a sobrevivência e a vitória
-sobre a adivinhação; tirar o ``tipo_dela`` do teste do enlace devolve o «Acessório» ao «Outro» dela;
+MORDIDAS: tirar a leitura da escolha (``_tipo_que_o_usuario_disse``) reprova a sobrevivência e a
+vitória
+sobre a adivinhação; tirar o ``tipo_do_usuario`` do teste do enlace devolve o «Acessório» ao «Outro»
+dela;
 tirar o «?» do ``_linha_sem_tipo`` reprova a linha; tirar o ``data-alvo`` do «?» reprova a bancada.
 """
 
@@ -29,9 +31,9 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.utils import maquina
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "mockup" / "08-conexoes.html"
+ENSAIO = RAIZ / "mockup" / "08-conexoes.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
-ARQUIVOS = [pytest.param(BANCADA, id="bancada"), pytest.param(PUBLICADA, id="publicada")]
+ARQUIVOS = [pytest.param(ENSAIO, id="bancada"), pytest.param(PUBLICADA, id="publicada")]
 
 ENDERECO = "AA:BB:CC:00:00:E2"
 ADAPTADOR = "/org/bluez/hci0"
@@ -95,9 +97,9 @@ def test_o_aparelho_com_tipo_nao_pergunta(tipo: str) -> None:
     assert "tipo-qual" not in linha and "Sem tipo" not in linha
 
 
-def test_o_outro_que_ela_escolheu_nao_pergunta_de_novo() -> None:
+def test_o_outro_que_o_usuario_escolheu_nao_pergunta_de_novo() -> None:
     """Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO."""
-    ap = {"id": ENDERECO, "tipo": "outro", "tipo_dela": True, "lugar": LUGAR, "nome": "X",
+    ap = {"id": ENDERECO, "tipo": "outro", "tipo_do_usuario": True, "lugar": LUGAR, "nome": "X",
           "rotulo": "X", "esperando": False, "fixo": False}
     linha = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
     assert "tipo-qual" not in linha and "Sem tipo" not in linha
@@ -117,7 +119,7 @@ def test_a_grade_tem_as_nove_palavras_e_cada_uma_grava_um_valor_que_o_schema_ace
 
 def test_sem_escolha_o_aparelho_fica_outro_e_pergunta() -> None:
     ap = _conectado()
-    assert ap["tipo"] == "outro" and ap["tipo_dela"] is False
+    assert ap["tipo"] == "outro" and ap["tipo_do_usuario"] is False
 
 
 @pytest.mark.parametrize(("icone", "classe"), [("input-gaming", None), ("", 0x002508),
@@ -136,7 +138,7 @@ def test_o_controle_que_a_class_ou_o_icon_dizem_nao_pergunta(icone: str,
     (ap,) = a08._aparelhos_da_cena(ctx, ctx.state, {}, [],
                                    (_bluez(icone=icone, classe=classe),), {ADAPTADOR: LUGAR},
                                    [LUGAR])
-    assert (ap["tipo"], ap["tipo_dela"]) == ("gamepad", False)
+    assert (ap["tipo"], ap["tipo_do_usuario"]) == ("gamepad", False)
     linha = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
     assert "tipo-qual" not in linha and "Sem tipo" not in linha
     assert ", controle — " in linha and ", gamepad" not in linha
@@ -148,7 +150,7 @@ def test_a_escolha_se_guarda_pelo_endereco_e_vence_a_adivinhacao(
     ponte = _escolher(monkeypatch, "fone")
     assert ponte.chamadas == [{"aparelhos": {"aabbcc0000e2": {"tipo": "fone"}}}]
     ap = _conectado()
-    assert (ap["tipo"], ap["tipo_dela"]) == ("fone", True)
+    assert (ap["tipo"], ap["tipo_do_usuario"]) == ("fone", True)
     ctx = a08.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
     (com_icone,) = a08._aparelhos_da_cena(
         ctx, ctx.state, {}, [], (_bluez(icone="input-keyboard"),), {ADAPTADOR: LUGAR}, [LUGAR])
@@ -158,8 +160,8 @@ def test_a_escolha_se_guarda_pelo_endereco_e_vence_a_adivinhacao(
 def test_a_escolha_sobrevive_a_releitura_do_disco(monkeypatch: pytest.MonkeyPatch) -> None:
     _escolher(monkeypatch, "caixa")
     a08._reler_a_declaracao()
-    assert a08._tipo_que_ela_disse(ENDERECO) == "caixa"
-    assert a08._tipo_que_ela_disse(ENDERECO.lower().replace(":", "")) == "caixa"
+    assert a08._tipo_que_o_usuario_disse(ENDERECO) == "caixa"
+    assert a08._tipo_que_o_usuario_disse(ENDERECO.lower().replace(":", "")) == "caixa"
     assert _conectado()["tipo"] == "caixa"
     do_disco = maquina.carregar_maquina().aparelhos
     assert do_disco["aabbcc0000e2"].tipo == "caixa"
@@ -180,13 +182,13 @@ def test_controle_vira_o_aparelho_de_glifo_de_controle_e_nao_o_controle_do_hefes
     assert a08.glifo_do_tipo("gamepad") == "ds" and a08.PALAVRA_DO_TIPO["gamepad"] == "controle"
 
 
-def test_o_outro_dela_nao_vira_acessorio_pelo_enlace(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_outro_do_usuario_nao_vira_acessorio_pelo_enlace(monkeypatch: pytest.MonkeyPatch) -> None:
     _escolher(monkeypatch, "outro")
     ap = _conectado()
     enlaces = {LUGAR: {a08._so_hex(ENDERECO): {"le": True}}}
     a08._com_a_categoria_do_enlace([ap], enlaces)
-    assert (ap["tipo"], ap["tipo_dela"]) == ("outro", True)
-    sem_escolha = {"id": ENDERECO, "tipo": "outro", "tipo_dela": False, "lugar": LUGAR}
+    assert (ap["tipo"], ap["tipo_do_usuario"]) == ("outro", True)
+    sem_escolha = {"id": ENDERECO, "tipo": "outro", "tipo_do_usuario": False, "lugar": LUGAR}
     a08._com_a_categoria_do_enlace([sem_escolha], enlaces)
     assert sem_escolha["tipo"] == a08.TIPO_ACESSORIO
 

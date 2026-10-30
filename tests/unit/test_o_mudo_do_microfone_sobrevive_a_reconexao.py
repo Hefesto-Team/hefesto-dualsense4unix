@@ -88,7 +88,7 @@ def _reconectar(ctl: bp.PyDualSenseController, *, radio: bool, key: str = KEY_1)
 
 
 class TestOMudoSobreviveAoHandleNovo:
-    def test_o_desmutar_dela_sobrevive_no_radio(self) -> None:
+    def test_o_desmutar_do_usuario_sobrevive_no_radio(self) -> None:
         """O caso da queixa: ela desmuta, o rádio cai e volta, e o mic segue vivo."""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         assert ctl.set_microphone_mute(False, uniq=KEY_1) is True
@@ -100,7 +100,7 @@ class TestOMudoSobreviveAoHandleNovo:
         assert report[FLAG1_NO_RADIO] & rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
         assert report[MUDO_NO_RADIO] == 0x00
 
-    def test_o_mudo_dela_sobrevive_no_radio(self) -> None:
+    def test_o_mudo_do_usuario_sobrevive_no_radio(self) -> None:
         """A outra ponta da mesma posse: mudo pedido continua mudo pedido."""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         assert ctl.set_microphone_mute(True, uniq=KEY_1) is True

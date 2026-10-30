@@ -149,7 +149,7 @@ def test_prioridade_ainda_decide_entre_perfis_igualmente_especificos(
 
 
 def test_select_for_window_nao_elege_o_match_any(isolated_profiles_dir: Path):
-    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item"""
+    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item"""
     save_profile(
         _mk_profile("shooter", match=MatchCriteria(window_class=["DoomEternal"]))
     )
@@ -258,7 +258,7 @@ def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
 
 
 def test_catch_all_nao_entra_nem_em_janela_comum(isolated_profiles_dir: Path):
-    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o"""
+    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`): o"""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
 
     fc = FakeController()

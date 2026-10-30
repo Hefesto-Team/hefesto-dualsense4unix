@@ -144,19 +144,19 @@ class TestOQueSoOBluetoothTem:
             assert bt.problemas_do_envelope(report) != []
 
 
-class TestABancadaNaoPodeMedirAPyDualSense:
+class TestOEnsaioNaoPodeMedirAPyDualSense:
     """O `except Exception` do `prepareReport` cai no report do UPSTREAM."""
 
     def test_o_fallback_do_upstream_explode_em_vez_de_mentir(
-        self, ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+        self, ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
     ) -> None:
-        del ds5_de_bancada.light
+        del ds5_de_ensaio.light
         with pytest.raises(AssertionError, match="fallback do upstream"):
-            ds5_de_bancada.prepareReport()
+            ds5_de_ensaio.prepareReport()
 
-    def test_a_bancada_inteira_monta_o_envelope_do_seu_transporte(
-        self, ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    def test_o_ensaio_inteiro_monta_o_envelope_do_seu_transporte(
+        self, ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
     ) -> None:
-        report = ds5_de_bancada.prepareReport()
+        report = ds5_de_ensaio.prepareReport()
         assert transporte.problemas_do_envelope(report) == []
         assert len(report) == transporte.tamanho_do_report

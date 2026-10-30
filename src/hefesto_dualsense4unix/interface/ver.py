@@ -17,7 +17,7 @@ from gi.repository import Gtk, WebKit2  # noqa: E402
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde  # noqa: E402
 
-D = onde.BANCADA
+D = onde.ENSAIO
 
 ABAS = [
     ("Jogar", "01-jogar.html"),

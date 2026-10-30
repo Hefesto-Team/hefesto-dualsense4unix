@@ -10,7 +10,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-O_QUE_A_SESSAO_DELA_DIZ = "close,maximize,minimize:"
+O_QUE_A_SESSAO_DO_USUARIO_DIZ = "close,maximize,minimize:"
 
 A_DIREITA = ":minimize,maximize,close"
 
@@ -51,7 +51,7 @@ def test_a_barra_da_janela_fica_do_lado_do_sistema(gtk, sessao) -> None:
     from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     sessao("COSMIC")
-    gtk.set_property("gtk-decoration-layout", O_QUE_A_SESSAO_DELA_DIZ)
+    gtk.set_property("gtk-decoration-layout", O_QUE_A_SESSAO_DO_USUARIO_DIZ)
     assert theme.adotar_a_barra_da_sessao() == A_DIREITA
     agora = gtk.get_property("gtk-decoration-layout")
     assert agora == A_DIREITA, (
@@ -74,13 +74,13 @@ def test_fora_do_cosmic_o_produto_nao_mexe(gtk, sessao) -> None:
     from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     sessao("GNOME")
-    gtk.set_property("gtk-decoration-layout", O_QUE_A_SESSAO_DELA_DIZ)
+    gtk.set_property("gtk-decoration-layout", O_QUE_A_SESSAO_DO_USUARIO_DIZ)
     assert theme.adotar_a_barra_da_sessao() == ""
-    assert gtk.get_property("gtk-decoration-layout") == O_QUE_A_SESSAO_DELA_DIZ, (
+    assert gtk.get_property("gtk-decoration-layout") == O_QUE_A_SESSAO_DO_USUARIO_DIZ, (
         "o produto reescreveu a decoração numa sessão que não é COSMIC")
 
 
-def test_nada_e_escrito_na_configuracao_dela(gtk, sessao) -> None:
+def test_nada_e_escrito_na_configuracao_do_usuario(gtk, sessao) -> None:
     """A decisão ``1-a`` em uma linha: **nenhuma** linha no disco do usuário."""
     import ast
 

@@ -249,7 +249,7 @@ def _janelas_do_hub(inst: Any) -> list[Any]:
 
 def test_4b_o_3_antigo_reprova_quando_a_tabela_mede_5(inst: Any) -> None:
     hub = _janelas_do_hub(inst)
-    assert inst.k_da_bancada(inst.tabela(hub)) == (5, "líquido")
+    assert inst.k_do_ensaio(inst.tabela(hub)) == (5, "líquido")
     problemas = inst.conferir_a_constante(hub, fatias=3, procedencia="provisório", marginal=187.5)
     assert len(problemas) == 3
     assert inst.conferir_a_constante(
@@ -265,7 +265,7 @@ def test_4d_medida_fora_dos_pacotes_nao_escolhe_constante(inst: Any) -> None:
     hub = _janelas_do_hub(inst)
     torta = [j if j.pontes == 0 else type(j)(**{**j.__dict__, "hz": {"controle 1": 600.0}})
              for j in hub]
-    assert inst.k_da_bancada(inst.tabela(torta)) is None
+    assert inst.k_do_ensaio(inst.tabela(torta)) is None
     assert inst.conferir_a_constante(torta, fatias=3, procedencia="medido 10/10/2026",
                                      marginal=187.5)
 

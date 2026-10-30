@@ -34,7 +34,7 @@ ESCOLHE = "vai para o controle escolhido aqui"
 
 
 class TestAFitaDeLeituraNaoTemBalao:
-    def test_a_06_nao_tem_mais_a_frase_dela(self) -> None:
+    def test_a_06_nao_tem_mais_a_frase_do_usuario(self) -> None:
         html = hefesto_vivo._fita(MESA, "06-navegacao.html")
         assert TRECHO_DA_06 not in html and GENERICO not in html
         assert 'class="fita inerte">' in html, html[:120]
@@ -64,14 +64,14 @@ class TestAFitaDeLeituraNaoTemBalao:
         assert not hasattr(monta, "casca_da_fita")
 
 
-class TestAGuardaSeparaOTypoDaBancada:
+class TestAGuardaSeparaOTypoDoEnsaio:
     def test_o_typo_de_uma_das_dez_ainda_para(self) -> None:
         import pytest
 
         with pytest.raises(SystemExit):
             monta.a_fita_escolhe("03-gatihos")
 
-    def test_a_bancada_com_numero_de_fora_passa_e_nao_escolhe(self) -> None:
+    def test_o_ensaio_com_numero_de_fora_passa_e_nao_escolhe(self) -> None:
         assert monta.a_fita_escolhe("98-prova-da-ressalva") is False
         assert monta.a_fita_escolhe("97-botao-cinza.html") is False
 

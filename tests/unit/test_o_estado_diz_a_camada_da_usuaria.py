@@ -49,7 +49,7 @@ def _camadas(inst: PyDualSenseController) -> dict[str, Any]:
     return {str(c["uniq"]): c["camada_da_usuaria"] for c in inst.describe_controllers()}
 
 
-def test_o_controle_sem_ajuste_dela_diz_lista_vazia() -> None:
+def test_o_controle_sem_ajuste_do_usuario_diz_lista_vazia() -> None:
     assert _camadas(_backend()) == {UNIQ_1: [], UNIQ_2: []}
 
 

@@ -21,12 +21,12 @@ USB2 = "/mentira/devices/pci0000:00/0000:aa:00.0/usb2"
 USB3 = "/mentira/devices/pci0000:00/0000:bb:00.3/usb3"
 USB4 = "/mentira/devices/pci0000:00/0000:bb:00.3/usb4"
 
-HUB_DE_BANCADA = f"{USB3}/3-3"
-HUB_ENCADEADO = f"{HUB_DE_BANCADA}/3-3.1"
+HUB_DE_ENSAIO = f"{USB3}/3-3"
+HUB_ENCADEADO = f"{HUB_DE_ENSAIO}/3-3.1"
 BLUETOOTH = (
     f"{HUB_ENCADEADO}/3-3.1.1",
     f"{HUB_ENCADEADO}/3-3.1.4",
-    f"{HUB_DE_BANCADA}/3-3.2",
+    f"{HUB_DE_ENSAIO}/3-3.2",
 )
 CAMERA = f"{USB4}/4-3/4-3.1/4-3.1.10"
 
@@ -111,7 +111,7 @@ APARELHOS: dict[str, dict[str, str]] = {
         "product": "xHCI Host Controller",
         "power/control": "on",
     },
-    HUB_DE_BANCADA: {
+    HUB_DE_ENSAIO: {
         "idVendor": "05e3",
         "idProduct": "0610",
         "bDeviceClass": "09",
@@ -181,7 +181,7 @@ APARELHOS: dict[str, dict[str, str]] = {
         "power/control": "on",
         "port/over_current_count": "0",
     },
-    f"{HUB_DE_BANCADA}/3-3.3": {
+    f"{HUB_DE_ENSAIO}/3-3.3": {
         "idVendor": "258a",
         "idProduct": "010c",
         "bDeviceClass": "00",
@@ -288,7 +288,7 @@ INTERFACES: dict[str, dict[str, str]] = {
     f"{USB1}/1-4/1-4:1.1": {"classe": "03", "subclasse": "01", "protocolo": "02"},
     f"{USB2}/2-0:1.0": {"classe": "09", "subclasse": "00", "protocolo": "00"},
     f"{USB3}/3-0:1.0": {"classe": "09", "subclasse": "00", "protocolo": "00"},
-    f"{HUB_DE_BANCADA}/3-3:1.0": {"classe": "09", "subclasse": "00", "protocolo": "00"},
+    f"{HUB_DE_ENSAIO}/3-3:1.0": {"classe": "09", "subclasse": "00", "protocolo": "00"},
     f"{HUB_ENCADEADO}/3-3.1:1.0": {
         "classe": "09",
         "subclasse": "00",
@@ -305,12 +305,12 @@ INTERFACES: dict[str, dict[str, str]] = {
         "protocolo": "01",
     },
     f"{BLUETOOTH[2]}/3-3.2:1.0": {"classe": "e0", "subclasse": "01", "protocolo": "01"},
-    f"{HUB_DE_BANCADA}/3-3.3/3-3.3:1.0": {
+    f"{HUB_DE_ENSAIO}/3-3.3/3-3.3:1.0": {
         "classe": "03",
         "subclasse": "01",
         "protocolo": "01",
     },
-    f"{HUB_DE_BANCADA}/3-3.3/3-3.3:1.1": {
+    f"{HUB_DE_ENSAIO}/3-3.3/3-3.3:1.1": {
         "classe": "03",
         "subclasse": "00",
         "protocolo": "00",
@@ -338,7 +338,7 @@ _ATRIBUTO_DA_INTERFACE = {
 }
 
 
-class Bancada:
+class Ensaio:
     """Um sysfs inteiro em memória, mais o registro de tudo que foi tocado."""
 
     def __init__(
@@ -400,7 +400,7 @@ class Bancada:
 
 
 def _censo() -> Censo:
-    return ler_o_barramento(**Bancada().fontes())
+    return ler_o_barramento(**Ensaio().fontes())
 
 
 def _por_nome(censo: Censo) -> dict[str, Any]:
@@ -489,9 +489,9 @@ def test_os_tres_bluetooth_estao_no_mesmo_hub_apesar_de_terem_pais_diferentes() 
     pais = {censo.aparelho(no).pai for no in BLUETOOTH if censo.aparelho(no)}
 
     assert len(pais) == 2, pais
-    assert hub_em_comum(censo, list(BLUETOOTH)) == HUB_DE_BANCADA
-    assert cadeia_de_hubs(censo, BLUETOOTH[0]) == (HUB_ENCADEADO, HUB_DE_BANCADA)
-    assert cadeia_de_hubs(censo, BLUETOOTH[2]) == (HUB_DE_BANCADA,)
+    assert hub_em_comum(censo, list(BLUETOOTH)) == HUB_DE_ENSAIO
+    assert cadeia_de_hubs(censo, BLUETOOTH[0]) == (HUB_ENCADEADO, HUB_DE_ENSAIO)
+    assert cadeia_de_hubs(censo, BLUETOOTH[2]) == (HUB_DE_ENSAIO,)
 
 
 def test_sem_hub_em_comum_a_resposta_e_vazia_e_nao_o_controlador() -> None:
@@ -580,10 +580,10 @@ def test_o_barramento_agrupa_por_busnum_e_nao_por_controlador_pci() -> None:
     assert barramentos["usb3"].velocidade_mbps == 480.0
     assert barramentos["usb4"].velocidade_mbps == 10000.0
     assert set(barramentos["usb3"].aparelhos) == {
-        HUB_DE_BANCADA,
+        HUB_DE_ENSAIO,
         HUB_ENCADEADO,
         *BLUETOOTH,
-        f"{HUB_DE_BANCADA}/3-3.3",
+        f"{HUB_DE_ENSAIO}/3-3.3",
     }
     assert BLUETOOTH[0] not in barramentos["usb4"].aparelhos
 
@@ -602,7 +602,7 @@ def test_o_painel_do_gabinete_so_existe_onde_o_kernel_o_publica() -> None:
     """Dois aparelhos sabem onde estão; o resto não, e `unknown` é não saber."""
     achados = _por_nome(
         ler_o_barramento(
-            **Bancada(
+            **Ensaio(
                 aparelhos={
                     **APARELHOS,
                     BLUETOOTH[0]: {
@@ -621,26 +621,26 @@ def test_o_painel_do_gabinete_so_existe_onde_o_kernel_o_publica() -> None:
 
 def test_censo_vazio_ou_ilegivel_devolve_nada_sem_levantar() -> None:
     """`/sys` ausente (contêiner, sandbox) não pode derrubar a janela."""
-    vazia = ler_o_barramento(**Bancada(aparelhos={}, interfaces={}).fontes())
+    vazia = ler_o_barramento(**Ensaio(aparelhos={}, interfaces={}).fontes())
     assert vazia.aparelhos == ()
     assert vazia.barramentos == ()
 
     def _explode(_raiz: str) -> list[str]:
         raise OSError(13, "acesso negado")
 
-    quebrada = ler_o_barramento(**Bancada(listar=_explode).fontes())
+    quebrada = ler_o_barramento(**Ensaio(listar=_explode).fontes())
     assert quebrada.aparelhos == ()
     assert quebrada.barramentos == ()
 
 
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
     """O teste que protege a FOTO — e o único que morde o vazamento."""
-    bancada = Bancada()
-    ler_o_barramento(**bancada.fontes())
+    ensaio = Ensaio()
+    ler_o_barramento(**ensaio.fontes())
 
-    escapados = [c for c in bancada.tocados if not c.startswith("/mentira")]
+    escapados = [c for c in ensaio.tocados if not c.startswith("/mentira")]
     assert not escapados, (
         "a leitura tocou caminhos fora da bancada injetada — "
         f"o primeiro é {escapados[0]!r}"
     )
-    assert bancada.tocados, "nenhum leitor foi chamado: a bancada não provou nada"
+    assert ensaio.tocados, "nenhum leitor foi chamado: a bancada não provou nada"

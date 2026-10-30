@@ -13,7 +13,7 @@ TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramentos ``usb9``/``usb10``, caminhos
 desvia. Nada da bancada entra no código: a declaração é dado de quem usa.
 
 A MORDIDA (E2 da sprint): arranque a leitura do declarado — o ``declarada`` do
-``_rapido_do_no`` ou o ``_o_que_ela_declarou_nas_entradas`` do
+``_rapido_do_no`` ou o ``_o_que_o_usuario_declarou_nas_entradas`` do
 ``arranjo_desta_maquina`` — e as réguas de baixo reprovam.
 """
 
@@ -84,8 +84,8 @@ def _mapa(**declarado: dict[str, Any]) -> MapaDaMesa:
     )
 
 
-def _usb(bancada: mapa_das_portas.Bancada) -> dict[str, int]:
-    return {e.n: e.usb for f in bancada.mesa.faces for e in f.entradas}
+def _usb(ensaio: mapa_das_portas.Ensaio) -> dict[str, int]:
+    return {e.n: e.usb for f in ensaio.mesa.faces for e in f.entradas}
 
 
 def test_a_velocidade_declarada_vence_o_par_do_firmware() -> None:
@@ -102,9 +102,9 @@ def test_a_velocidade_declarada_vence_o_par_do_firmware() -> None:
 
 def test_o_aparelho_usb3_na_entrada_vence_a_declaracao() -> None:
     """Medição vence os dois: um aparelho a 5000M no lado rápido da 7."""
-    bancada = mapa_das_portas.mesa_do_motor(
+    ensaio = mapa_das_portas.mesa_do_motor(
         _mapa(e7={"usb": 2}), _censo(_aparelho("10-2", 5000.0)))
-    assert _usb(bancada)["7"] == 3
+    assert _usb(ensaio)["7"] == 3
     assert mapa_das_portas.velocidade_da_entrada(False, 2, True) == (
         True, mapa_das_portas.USB_PELO_APARELHO)
     assert mapa_das_portas.velocidade_da_entrada(False, 3) == (
@@ -114,7 +114,7 @@ def test_o_aparelho_usb3_na_entrada_vence_a_declaracao() -> None:
     assert mapa_das_portas.velocidade_da_entrada(None, None) == (None, "")
 
 
-def test_o_arranjo_da_pagina_pinta_a_velocidade_que_ela_disse() -> None:
+def test_o_arranjo_da_pagina_pinta_a_velocidade_que_o_usuario_disse() -> None:
     """A página recebe o USB 3.0 da frente — é isso que a pinta de azul."""
     documento = MaquinaConfig(mapa=_mapa(e1={"usb": 3}))
     veio = arranjo_desta_maquina.arranjo(
@@ -457,9 +457,9 @@ _HUBS = {"usb1": 480.0, "usb2": 5000.0, "usb3": 480.0, "usb4": 10000.0,
 def _a_placa_que_erra() -> dict[str, Any]:
     """A máquina de 15 entradas com a placa trocada e a declaração contrária."""
     from hefesto_dualsense4unix.utils.maquina import migrar_o_documento
-    from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
+    from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_do_usuario
 
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     portas = dado["mapa"]["portas"]
     portas["7"]["nos"] = ["usb1-port5", "usb2-port1"]
     portas["8"]["nos"] = ["usb1-port6", "usb2-port2"]
@@ -523,13 +523,13 @@ def test_o_arranjo_e_o_mapear_dizem_a_mesma_velocidade_e_a_mesma_origem() -> Non
     divergentes = {n: (da_tela.get(n), do_mapear[n]) for n in do_mapear
                    if da_tela.get(n) != do_mapear[n]}
     assert not divergentes, f"a tela e o Mapear dizem velocidades diferentes: {divergentes}"
-    aparelho, dela, placa = (mapa_das_portas.USB_PELO_APARELHO,
+    aparelho, do_usuario, placa = (mapa_das_portas.USB_PELO_APARELHO,
                              mapa_das_portas.USB_DECLARADA, mapa_das_portas.USB_PELA_PLACA)
     assert {n: da_tela[n] for n in ("1", "2", "3", "5", "7", "8", "9")} == {
-        "1": (3, dela), "2": (3, dela),
+        "1": (3, do_usuario), "2": (3, do_usuario),
         "3": (3, aparelho),
         "5": (3, aparelho),
-        "7": (2, dela), "8": (3, placa),
+        "7": (2, do_usuario), "8": (3, placa),
         "9": (3, placa),
     }
 

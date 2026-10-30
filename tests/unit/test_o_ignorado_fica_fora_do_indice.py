@@ -103,7 +103,7 @@ def test_git_rm_cached_devolve_o_verde_e_deixa_o_disco(repo: Path) -> None:
     assert _roda(repo).returncode == 0
 
 
-def test_a_isencao_dispensa_so_o_caminho_dela(repo: Path) -> None:
+def test_a_isencao_dispensa_so_o_caminho_do_usuario(repo: Path) -> None:
     modulo = _carrega()
     _git(repo, "add", "-f", "docs/process/x.md")
     assert [c for c, _ in modulo.achados(repo, {})] == ["docs/process/x.md"]

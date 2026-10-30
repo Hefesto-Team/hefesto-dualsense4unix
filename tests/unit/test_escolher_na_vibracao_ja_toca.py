@@ -153,7 +153,7 @@ class TestARecusaECadaColuna:
         assert ponte.nomes() == ["rumble_motores_set"]
 
     @pytest.mark.parametrize("uniq", [AZUL, BRANCO])
-    def test_cada_coluna_toca_no_controle_dela(self, uniq: str) -> None:
+    def test_cada_coluna_toca_no_controle_do_usuario(self, uniq: str) -> None:
         ponte = _Ponte()
         _escolher(a05.GESTO_DO_EFEITO_IMERSAO, uniq, "batida", ponte)
         _escolher(a05.GESTO_DO_EFEITO_HAPTICO, uniq, "toque", ponte)

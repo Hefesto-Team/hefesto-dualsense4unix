@@ -93,7 +93,7 @@ LINHA_FORA_DO_ALCANCE = (
 )
 
 
-def test_a_subtracao_tira_o_nosso_par_e_deixa_o_dela():
+def test_a_subtracao_tira_o_nosso_par_e_deixa_o_do_usuario():
     """O par sai de dentro da lista; a vírgula que sobraria é comida."""
     assert slo.subtrair_nosso_ignore(LINHA_ESTENDIDA) == (
         "SDL_JOYSTICK_HIDAPI=0 "
@@ -217,7 +217,7 @@ def test_transform_nao_toca_o_que_a_subtracao_nao_alcanca():
         assert novo == texto, modo
 
 
-def test_main_migra_a_linha_estendida_preservando_a_parte_dela(
+def test_main_migra_a_linha_estendida_preservando_a_parte_do_usuario(
     tmp_path, monkeypatch, capsys
 ):
     """ERA `test_main_reporta_ignore_estendido_sem_tocar`."""

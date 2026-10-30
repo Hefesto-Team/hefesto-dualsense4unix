@@ -34,12 +34,12 @@ def _heroic(
     plantar_o_registro(pasta, {
         str(i["app_name"]): {"is_dlc": bool((i.get("install") or {}).get("is_dlc"))}
         for i in itens if i.get("is_installed")})
-    mapa = UMU_DO_DISCO_DELA if umu is None else umu
+    mapa = UMU_DO_DISCO_DO_USUARIO if umu is None else umu
     (alvo.parent / "umu.json").write_text(json.dumps(mapa), encoding="utf-8")
     return pasta
 
 
-UMU_DO_DISCO_DELA: dict[str, Any] = {
+UMU_DO_DISCO_DO_USUARIO: dict[str, Any] = {
     "legendary_63a665088eb1480298f1e57943b225d8": "umu-1088850",
     "__timestamp": {"legendary_63a665088eb1480298f1e57943b225d8":
                     "Thu Sep 10 2026 00:17:23 GMT-0300"},
@@ -323,7 +323,7 @@ def test_o_rotulo_nunca_derruba_a_aba_por_causa_de_um_disco_torto(
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) == {}
 
 
-def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
+def test_o_caderno_releu_o_disco_quando_o_usuario_instalou_o_segundo_jogo(
     tmp_path: pathlib.Path,
 ) -> None:
     """**A TRAVA MEDIDA CONTRA A PRÓPRIA SAÍDA, e ela atravessou 17 réguas.**"""
@@ -338,7 +338,7 @@ def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
     segundo = dict(BAIXADO, app_name="outro", title="Hades II",
                    install={"executable": "bin/hades2.exe", "is_dlc": False})
     _heroic(tmp_path, [BAIXADO, segundo], umu=dict(
-        UMU_DO_DISCO_DELA, legendary_outro="umu-1145350"))
+        UMU_DO_DISCO_DO_USUARIO, legendary_outro="umu-1145350"))
 
     depois = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
 
@@ -403,10 +403,10 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
             'label="Marvel\'s Guardians of the Galaxy"></option>') in html
     assert '<option value="3357650" label="PRAGMATA · 3357650">' in html
 
-    assert a10._forma_do_que_ela_escolheu("steam_app_1088850") == "steam_game"
-    assert a10._forma_do_que_ela_escolheu("Celeste.x86_64") == "janela"
-    assert a10._forma_do_que_ela_escolheu("3357650") == "steam_game"
-    assert a10._forma_do_que_ela_escolheu("Cyberpunk2077.exe") == "game"
+    assert a10._forma_do_que_o_usuario_escolheu("steam_app_1088850") == "steam_game"
+    assert a10._forma_do_que_o_usuario_escolheu("Celeste.x86_64") == "janela"
+    assert a10._forma_do_que_o_usuario_escolheu("3357650") == "steam_game"
+    assert a10._forma_do_que_o_usuario_escolheu("Cyberpunk2077.exe") == "game"
     assert (from_simple_choice("steam_game", "1088850").window_class
             == from_simple_choice("janela", "steam_app_1088850").window_class
             == ["steam_app_1088850"])

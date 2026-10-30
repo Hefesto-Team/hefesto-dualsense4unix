@@ -187,7 +187,7 @@ def test_o_par_do_teste_nao_vem_do_que_o_jogo_pediu(pac, a05) -> None:
         f"par que siga o JOGO em vez das barras aparece aqui")
 
 
-def test_cada_coluna_leva_a_barra_da_peca_dela(pac, a05) -> None:
+def test_cada_coluna_leva_a_barra_da_peca_do_usuario(pac, a05) -> None:
     """P1 inteiro e P2 pela metade, na MESMA mesa e no mesmo tique."""
     ctx = _ctx(pac, {
         CHAVE_P1: {"forte_pct": 100, "fraco_pct": 100},

@@ -121,7 +121,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
 
    **"D9" AQUI NÃO É O "D9" DO DESENHO.** Neste módulo ``D9`` é a decisão do
    *slot volátil* (abaixo). Em
-   o registro «O-QUE-ELA-DESENHOU-o-todo-por-aba» de 26/08/2026 ``D9`` é
+   o registro «O-QUE-O-USUARIO-DESENHOU-o-todo-por-aba» de 26/08/2026 ``D9`` é
    outra coisa — a decisão dos três botões de sensor na aba Controles. Os dois
    documentos estão entre os primeiros que quem chega abre, e a colisão já
    custa uma busca errada por leitura; registrada em 29/08/2026 para não custar
@@ -142,7 +142,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   silêncio, sem uma linha na tela dizendo por quê. Os cinco controles desta
   bancada têm MAC de 12 hex, então **toda prova feita aqui passa** — é a
   amostra mais favorável possível, e é exatamente o que a
-  ``D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA`` (decisão, 29/08/2026) condena. Dono:
+  ``D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO`` (decisão, 29/08/2026) condena. Dono:
   ``O-CONTROLE-SEM-MAC-01``.
 
   A decisão de não persistir continua CERTA — um path que muda entre boots
@@ -951,7 +951,7 @@ não reconhece, em vez de cair no ``DEFAULT_FLAVOR``. O normalizador tolerante
 ``"xbox"``) é o certo para a linha de comando e o errado aqui: esta casa já
 pagou o ``or "xbox"`` do editor de perfis, que transformava *"sem opinião"* em
 *"exige Xbox"* e apagava giroscópio e touchpad no jogo do usuário sem que ninguém
-pedisse (ESCOLHA-DELA-VENCE-01, E1). O catálogo de máscaras válidas é o
+pedisse (ESCOLHA-DO-USUARIO-VENCE-01, E1). O catálogo de máscaras válidas é o
 ``FLAVORS`` do vpad — fonte única, para que uma máscara nova não precise ser
 declarada em dois lugares.
 ~~~~
@@ -1134,7 +1134,7 @@ QUEM GANHA PONTE, em três caminhos e nesta ordem (03/09/2026)
 
 **E DESLIGAR CONTINUA DESLIGANDO.** Tirar a marca do card no "Aplicar" derruba
 a ponte mesmo que houvesse um pedido aberto: o laço vê o `uniq` SAIR da
-declaração e solta o pedido junto (`_soltar_os_que_ela_desmarcou`). Sem isso o
+declaração e solta o pedido junto (`_soltar_os_que_o_usuario_desmarcou`). Sem isso o
 gesto mais explícito que ela tem — o interruptor — perderia para um toque de
 botão feito minutos antes, que é o oposto de quem manda.
 

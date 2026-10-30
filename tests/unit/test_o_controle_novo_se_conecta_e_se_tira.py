@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08_tela
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
-    Bancada,
+    Ensaio,
     id_da_tela,
     mundo_da_madrugada,
     preparar_a_tela,
@@ -135,7 +135,7 @@ def test_a_busca_sai_do_destino_antes_do_connect_da_chave_nova(
     o_controle_do_diario(mundo, relogio, VERDE)
     central, dono = central_sem_tela(mundo, relogio)
     try:
-        rm.ela_pareia(relogio, mundo, central, VERDE)
+        rm.o_usuario_pareia(relogio, mundo, central, VERDE)
         feito = central.conectar(destino)
         (pair,) = _linha(mundo, "Pair", VERDE)
         parou = [i for i in _linha(mundo, "StopDiscovery") if i > pair]
@@ -170,7 +170,7 @@ def test_a_chave_nova_que_conecta_tarde_nao_sai_como_meia_chave(
     no_ar_antes = {a: f.conectado_em for a, f in mundo.fisicos.items() if f.conectado_em}
     central, dono = central_sem_tela(mundo, relogio)
     try:
-        rm.ela_pareia(relogio, mundo, central, VERDE)
+        rm.o_usuario_pareia(relogio, mundo, central, VERDE)
         feito = central.conectar(destino)
         assert (feito.estado, feito.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO), (
             "a régua não reproduziu o pareado-e-ainda-não-conectado")
@@ -207,7 +207,7 @@ def test_o_prazo_da_chave_nova_conta_do_pair_e_nao_da_janela(
     visto = o_controle_do_diario(mundo, relogio, VERDE, acorda_em=20.0)
     central, dono = central_sem_tela(mundo, relogio)
     try:
-        rm.ela_pareia(relogio, mundo, central, VERDE, depois_de=50.0)
+        rm.o_usuario_pareia(relogio, mundo, central, VERDE, depois_de=50.0)
         feito = central.conectar(destino)
         assert visto["pareou"] is not None and visto["pareou"] - feito.comecou >= 50.0
         assert feito.prazo_desde == visto["pareou"]
@@ -244,7 +244,7 @@ def test_a_chave_que_nunca_atende_sai_aos_sessenta_segundos_do_pair(diario: Path
 
     dono.conectar = conectar_medindo  # type: ignore[method-assign]
     try:
-        rm.ela_pareia(relogio, mundo, central, VERDE)
+        rm.o_usuario_pareia(relogio, mundo, central, VERDE)
         central.conectar(QUARTO)
         fim = a_vigia_por(central, relogio, VERDE, cr.PRAZO_DO_PENDENTE_S + 5.0)
         assert fim is not None and (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
@@ -260,23 +260,23 @@ def test_a_chave_que_nunca_atende_sai_aos_sessenta_segundos_do_pair(diario: Path
         dono.fechar()
 
 
-def bancada_no_tempo(a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
-                     relogio: rm.Relogio) -> Bancada:
+def ensaio_no_tempo(a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
+                     relogio: rm.Relogio) -> Ensaio:
     """A tela, a central e o tratador REAL do ``radio.dispensar``, com a hora de parede da tela
     andando junto com o relógio da central (o prazo das duas é o mesmo)."""
     base = time.time() - relogio.agora
     monkeypatch.setattr(time, "time", lambda: base + relogio.agora)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
-    pelo_daemon = bancada.ponte.resultado
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
+    pelo_daemon = ensaio.ponte.resultado
 
     def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
         if metodo != "radio.dispensar":
             return pelo_daemon(metodo, timeout, **params)
-        bancada.ponte.chamadas.append((metodo, dict(params)))
-        return asyncio.run(bancada.ponte.eu._handle_radio_dispensar(params))
+        ensaio.ponte.chamadas.append((metodo, dict(params)))
+        return asyncio.run(ensaio.ponte.eu._handle_radio_dispensar(params))
 
-    monkeypatch.setattr(bancada.ponte, "resultado", resultado)
-    return bancada
+    monkeypatch.setattr(ensaio.ponte, "resultado", resultado)
+    return ensaio
 
 
 def _linhas_de(cena: dict[str, Any], aparelho: str, lugar: str) -> list[dict[str, Any]]:
@@ -307,34 +307,34 @@ def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
     mundo, relogio = mundo_de(), rm.Relogio()
     mundo.pareado(destino, VERDE, conectado=False, host=False)
     ligados = sorted(f.endereco for f in mundo.fisicos.values() if f.conectado_em)
-    bancada = bancada_no_tempo(a08, monkeypatch, mundo, relogio)
+    ensaio = ensaio_no_tempo(a08, monkeypatch, mundo, relogio)
     try:
         prazo = cr.PRAZO_DO_PENDENTE_S
-        bancada.central._guardar(cr.Movimento(
+        ensaio.central._guardar(cr.Movimento(
             VERDE, destino, cr.ESPERANDO, cr.PASSO_CONFERINDO,
             motivo=cr.MOTIVO_SEM_CONFIRMACAO, pareou_no_destino=True,
             comecou=relogio() - prazo - 0.5, quando=time.time() - prazo - 0.5))
-        campos = bancada.tique()
+        campos = ensaio.tique()
         (linha,) = _linhas_de(dict(a08._CENA_NA_TELA), VERDE, destino)
         assert linha.get("nao_conectou"), linha
         clique = {"alvo": linha["id"], "lugar": linha["lugar"]}
         assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
                 f'data-lugar="{linha["lugar"]}"') in campos["radio-moldes"]
 
-        bancada.gesto("aparelho-menu", **clique)
-        assert bancada.gesto("dispensar-linha", **clique) == {"armou": True}
+        ensaio.gesto("aparelho-menu", **clique)
+        assert ensaio.gesto("dispensar-linha", **clique) == {"armou": True}
 
         for volta in range(20):
             relogio.dormir(0.5)
             if volta % 2:
-                bancada.central.vigiar()
-            sobra = _linhas_de(bancada.cena(), VERDE, destino)
+                ensaio.central.vigiar()
+            sobra = _linhas_de(ensaio.cena(), VERDE, destino)
             assert not sobra, f"a linha voltou aos {0.5 * (volta + 1):.1f} s de tique: {sobra}"
-        assert bancada.central.movimento_de(VERDE) is None
+        assert ensaio.central.movimento_de(VERDE) is None
         assert mundo.objeto(destino, VERDE) is None, "a meia chave ficou e volta como Desligado"
         assert sorted(f.endereco for f in mundo.fisicos.values() if f.conectado_em) == ligados
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 MOCKUP_08 = Path(__file__).resolve().parents[2] / "mockup/08-conexoes.html"
@@ -485,7 +485,7 @@ def test_a_gaveta_tem_o_tamanho_do_que_mostra_e_mora_ao_lado_da_linha(tmp_path: 
     «⋮» das outras linhas fica livre), com o estado do aparelho, e o que apaga é vermelho com
     letra branca.
 
-    MORDIDA: :func:`test_mordida_sem_a_gaveta_na_linha_ela_volta_ao_canto`.
+    MORDIDA: :func:`test_mordida_sem_a_gaveta_na_linha_o_usuario_volta_ao_canto`.
     """
     f = _no_webkit_08(_a_pagina(tmp_path), ABRE_A_GAVETA, MEDE_A_GAVETA)
     assert (f["aberto"], f["tipo"]) == (True, "menu"), f
@@ -497,6 +497,6 @@ def test_a_gaveta_tem_o_tamanho_do_que_mostra_e_mora_ao_lado_da_linha(tmp_path: 
     assert f["botoes"] == [[a08_tela.TIRAR_A_LINHA, "rgb(255, 85, 85)", "rgb(255, 255, 255)"]], f
 
 
-def test_mordida_sem_a_gaveta_na_linha_ela_volta_ao_canto(tmp_path: Path) -> None:
+def test_mordida_sem_a_gaveta_na_linha_o_usuario_volta_ao_canto(tmp_path: Path) -> None:
     f = _no_webkit_08(_a_pagina(tmp_path, A_GAVETA_NA_LINHA), ABRE_A_GAVETA, MEDE_A_GAVETA)
     assert not (f["perto_da_linha"] and f["a_esquerda_do_menu"]), f

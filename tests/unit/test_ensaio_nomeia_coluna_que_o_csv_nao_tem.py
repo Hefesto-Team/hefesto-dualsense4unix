@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "scripts" / "ensaio_do_mapa.py"
+ENSAIO = RAIZ / "scripts" / "ensaio_do_mapa.py"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS = RAIZ / "docs" / "data" / "ensaios.csv"
 
@@ -21,7 +21,7 @@ API_DO_PANDAS = frozenset({"copy", "to_csv", "loc", "index", "itertuples", "colu
 
 
 def _arvore() -> ast.Module:
-    return ast.parse(BANCADA.read_text(encoding="utf-8"), filename=str(BANCADA))
+    return ast.parse(ENSAIO.read_text(encoding="utf-8"), filename=str(ENSAIO))
 
 
 def _cabecalho(caminho: Path) -> list[str]:
@@ -52,7 +52,7 @@ def _importado_de_scripts(nome: str) -> list[str] | None:
         import importlib
         import sys as _sys
 
-        caminho = str(BANCADA.parent / "scripts")
+        caminho = str(ENSAIO.parent / "scripts")
         if caminho not in _sys.path:
             _sys.path.insert(0, caminho)
         modulo = importlib.import_module(no.module)
@@ -91,7 +91,7 @@ def _lista_literal(nome: str) -> list[str]:
                     "literais; este teste não consegue mais lê-la por AST"
                 )
         return colunas
-    pytest.fail(f"não achei a lista `{nome}` em {BANCADA.name}")
+    pytest.fail(f"não achei a lista `{nome}` em {ENSAIO.name}")
 
 
 def _atributos_por_quadro() -> dict[str, set[str]]:
@@ -192,7 +192,7 @@ def _campos_do_ensaio() -> list[str]:
     pytest.fail("não achei o dicionário `novo` do formulário de ensaio em ensaio_do_mapa.py")
 
 
-def test_o_que_a_bancada_edita_existe_no_mapa_de_canais() -> None:
+def test_o_que_o_ensaio_edita_existe_no_mapa_de_canais() -> None:
     """`EDITAVEIS` é o que a bancada ESCREVE de volta — errar aqui é gravar no vazio."""
     cabecalho = set(_cabecalho(MAPA))
     faltando = [c for c in _lista_literal("EDITAVEIS") if c not in cabecalho]
@@ -212,7 +212,7 @@ def test_o_que_a_grade_mostra_existe_no_mapa_de_canais() -> None:
     )
 
 
-def test_o_que_a_bancada_le_por_atributo_existe_no_mapa_de_canais() -> None:
+def test_o_que_o_ensaio_le_por_atributo_existe_no_mapa_de_canais() -> None:
     """Os filtros, a busca e o caderno leem coluna como `v.chave` — sem lista nenhuma."""
     cabecalho = set(_cabecalho(MAPA))
     faltando = sorted(c for c in _colunas_por_atributo() if c not in cabecalho)
@@ -222,7 +222,7 @@ def test_o_que_a_bancada_le_por_atributo_existe_no_mapa_de_canais() -> None:
     )
 
 
-def test_os_nomes_de_quadro_declarados_ainda_existem_na_bancada() -> None:
+def test_os_nomes_de_quadro_declarados_ainda_existem_no_ensaio() -> None:
     """A régua acima só morde os nomes que ela conhece; um rename não pode emudecê-la."""
     vazios = sorted(n for n, atrs in _atributos_por_quadro().items() if not atrs)
     assert not vazios, (
@@ -251,17 +251,17 @@ def test_o_column_config_so_configura_coluna_que_a_grade_mostra() -> None:
     )
 
 
-def _funcao_da_bancada(nome: str) -> Callable[..., list[str]]:
+def _funcao_do_ensaio(nome: str) -> Callable[..., list[str]]:
     """A função pura `nome` do módulo da bancada, compilada SEM importar o módulo (que exige o
     streamlit, fora do produto)."""
     for no in _arvore().body:
         if isinstance(no, ast.FunctionDef) and no.name == nome:
             espaco: dict[str, object] = {"Iterable": Iterable}
             exec(
-                compile(ast.Module([no], []), str(BANCADA), "exec"), espaco
+                compile(ast.Module([no], []), str(ENSAIO), "exec"), espaco
             )
             return espaco[nome]  # type: ignore[return-value]
-    pytest.fail(f"não achei a função `{nome}` em {BANCADA.name}")
+    pytest.fail(f"não achei a função `{nome}` em {ENSAIO.name}")
 
 
 def _opcoes_da_lista(nome: str, caminho: Path, coluna: str) -> list[str]:
@@ -273,7 +273,7 @@ def _opcoes_da_lista(nome: str, caminho: Path, coluna: str) -> list[str]:
             continue
         if isinstance(no.value, ast.Call) and isinstance(no.value.func, ast.Name):
             fixos = _lista_literal(no.value.args[0].id)  # type: ignore[attr-defined]
-            return _funcao_da_bancada(no.value.func.id)(fixos, _valores_da_coluna(caminho, coluna))
+            return _funcao_do_ensaio(no.value.func.id)(fixos, _valores_da_coluna(caminho, coluna))
     return _lista_literal(nome)
 
 
@@ -338,16 +338,16 @@ def _opcoes_da_lista_de_mentira(celula: str) -> list[str]:
                 "`ESTADOS` não recebe a coluna `estado_hoje` do CSV que a bancada carrega"
             )
             fixos = _lista_literal(no.value.args[0].id)  # type: ignore[attr-defined]
-            return _funcao_da_bancada(no.value.func.id)(fixos, ["", "funciona", celula, celula])
+            return _funcao_do_ensaio(no.value.func.id)(fixos, ["", "funciona", celula, celula])
     pytest.fail("não achei `ESTADOS` em ensaio_do_mapa.py")
 
 
 _ENDERECO_DE_LINHA = re.compile(r"[A-Za-z0-9_/-]+\.(?:py|c|h|md|csv|html|sh):\d+")
 
 
-def test_o_fonte_da_bancada_nao_traz_endereco_arquivo_linha() -> None:
+def test_o_fonte_do_ensaio_nao_traz_endereco_arquivo_linha() -> None:
     """Endereço `arquivo:linha` escrito na bancada é cópia que ninguém reaponta."""
-    achados = sorted(set(_ENDERECO_DE_LINHA.findall(BANCADA.read_text(encoding="utf-8"))))
+    achados = sorted(set(_ENDERECO_DE_LINHA.findall(ENSAIO.read_text(encoding="utf-8"))))
     assert not achados, (
         f"a bancada traz {achados} no fonte: o texto que cita linha mora no CSV, e a bancada "
         "só o oferece (`estados_do_mapa`)"

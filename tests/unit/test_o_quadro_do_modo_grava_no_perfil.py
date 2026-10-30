@@ -189,7 +189,7 @@ def test_o_modo_do_disco_sobrevive_aos_gestos_que_ficaram(
         f"{guardado.mode.kind!r}")
     assert guardado.mode.gamepad_flavor == "xbox", (
         f"`{nome_do_gesto}` perdeu a máscara do modo jogo — é a cicatriz de "
-        f"ESCOLHA-DELA-VENCE-01/E1 pelo avesso")
+        f"ESCOLHA-DO-USUARIO-VENCE-01/E1 pelo avesso")
 
 
 def test_duplicar_leva_o_modo_junto(disco: dict[str, Any]) -> None:
@@ -236,7 +236,7 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     `interface/pacotes/perfil.secao_do_modo`, que saiu com o escritor da
     janela; as duas regras que ela cobrava passam a ser cobradas do dono: a
     máscara não é do modo, e nada de máscara inventada
-    (ESCOLHA-DELA-VENCE-01/E1).
+    (ESCOLHA-DO-USUARIO-VENCE-01/E1).
 
     AJUSTADA À REGRA DE PRODUTO — MODO-DE-CONEXAO-01, 13/09/2026 (na validação). ANTES
     a segunda asserção cobrava a poda: fora do modo jogo o `gamepad_flavor` era

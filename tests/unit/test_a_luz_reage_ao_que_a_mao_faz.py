@@ -98,7 +98,7 @@ def _aperta(estado: fx.ReageAoBotao, contagem: dict[str, int], agora: float) -> 
 
 
 @pytest.mark.parametrize(("botao", "cor"), list(SIMBOLOS.items()))
-def test_o_simbolo_apertado_pinta_a_barra_na_cor_dele_e_ela_apaga_devagar(
+def test_o_simbolo_apertado_pinta_a_barra_na_cor_dele_e_o_usuario_apaga_devagar(
         botao: str, cor: RGB) -> None:
     estado = fx.ReageAoBotao(LARANJA, 5)
     contagem: dict[str, int] = {}

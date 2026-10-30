@@ -284,7 +284,7 @@ def test_o_bit_virando_sem_mao_nao_solta_a_posse(transporte: str) -> None:
 
 
 @_TRANSPORTES
-def test_quem_retoma_a_posse_depois_do_aperto_fica_com_ela(transporte: str) -> None:
+def test_quem_retoma_a_posse_depois_do_aperto_fica_com_o_usuario(transporte: str) -> None:
     """A mão soltou, e antes de alguém ler a marca o ato tomou a posse de novo.
 
     A marca do aperto não pode apagar do mapa uma posse que o handle voltou a
@@ -432,7 +432,7 @@ async def test_no_tempo_o_fantasma_nao_chega_a_eleicao(
     assert evento["mudo"] is False, "o P2 estava mudo: o aperto pede ligar"
 
 
-def test_o_instrumento_da_bancada_separa_a_mao_de_quem_vira_o_bit() -> None:
+def test_o_instrumento_do_ensaio_separa_a_mao_de_quem_vira_o_bit() -> None:
     """Quem virou o bit do branco sem a mão continua sem medida."""
     import importlib.util
     import sys

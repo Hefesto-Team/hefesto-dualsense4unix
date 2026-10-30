@@ -497,7 +497,7 @@ class TestAEconomiaCortaAHaptica:
         dono.ler_do_daemon(daemon)
         assert dono.fator(BRANCO) == pytest.approx(1.5)
 
-    def test_o_state_full_diz_o_que_vale_ao_lado_do_que_ela_escolheu(
+    def test_o_state_full_diz_o_que_vale_ao_lado_do_que_o_usuario_escolheu(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod

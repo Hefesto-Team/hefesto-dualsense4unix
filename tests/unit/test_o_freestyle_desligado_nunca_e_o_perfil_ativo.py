@@ -5,7 +5,7 @@ e o «Freestyle definitivo» do tema de 01/10/2026: com o botão «Modo Freestyl
 aceso, o Freestyle manda em tudo; apagado, ele não vale em lugar nenhum, e a aba
 Perfis não o oferece como um perfil a escolher.
 
-A INVARIANTE (item 6 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): no retrato do
+A INVARIANTE (item 6 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`): no retrato do
 `daemon.state_full`, `active_profile == Freestyle` só com `freestyle_ligado`.
 Até 01/10/2026 o boot e a volta do jogo punham o Freestyle valendo com o botão
 apagado — o chip dizia «Freestyle» e o botão dizia «desligado», e a pergunta de 29/09 era qual dos

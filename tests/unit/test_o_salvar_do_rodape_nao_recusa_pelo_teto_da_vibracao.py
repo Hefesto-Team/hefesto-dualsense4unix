@@ -33,7 +33,7 @@ import pytest
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from tests.unit.ponte_do_rodape import PonteDoRodape
 
-ESTADO_DELA = {
+ESTADO_DO_USUARIO = {
     "active_profile": "Personalizado",
     "rumble_policy": "balanceado",
     "rumble_passthrough": True,
@@ -89,7 +89,7 @@ class _Ponte:
 
 def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
     """O caso EXATO da máquina do usuário: degrau "Padrão", teto lembrado 0,7."""
-    prof = _salvar(ESTADO_DELA)
+    prof = _salvar(ESTADO_DO_USUARIO)
     assert prof.rumble.policy is None, (
         f"o Salvar gravou a política do aparelho ({prof.rumble.policy!r}) num "
         "perfil sem opinião sobre ela")
@@ -98,7 +98,7 @@ def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
 
 def test_sob_custom_no_aparelho_o_salvar_nao_inventa_o_teto(disco: Any) -> None:
     """Nem sob "custom" o teto do aparelho vira escolha do usuário pelo Salvar."""
-    prof = _salvar({**ESTADO_DELA, "rumble_policy": "custom"})
+    prof = _salvar({**ESTADO_DO_USUARIO, "rumble_policy": "custom"})
     assert (prof.rumble.policy, prof.rumble.custom_mult) == (None, None)
 
 

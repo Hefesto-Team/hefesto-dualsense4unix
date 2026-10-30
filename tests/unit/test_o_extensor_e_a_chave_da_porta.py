@@ -76,17 +76,17 @@ def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return alvo
 
 
-def test_o_extensor_pesa_no_motor_so_nas_entradas_que_ela_marcou() -> None:
+def test_o_extensor_pesa_no_motor_so_nas_entradas_que_o_usuario_marcou() -> None:
     """O motor lê ``esticada`` da chave da porta, e o BT ganha ponto na ponta do extensor."""
-    bancada = mapa_das_portas.mesa_do_motor(_mapa(extensor_na="7"), _censo())
-    esticadas = {e.n: e.esticada for f in bancada.mesa.faces for e in f.entradas}
+    ensaio = mapa_das_portas.mesa_do_motor(_mapa(extensor_na="7"), _censo())
+    esticadas = {e.n: e.esticada for f in ensaio.mesa.faces for e in f.entradas}
     assert esticadas == {"1": False, "5": False, "7": True}, esticadas
 
-    entradas = {e.n: e for f in bancada.mesa.faces for e in f.entradas}
+    entradas = {e.n: e for f in ensaio.mesa.faces for e in f.entradas}
     dongle = motor.Aparelho(id="9-9", tipo="Bluetooth", nome="Dongle", classe="bt")
     razoes = {
         n: {r.texto for r in motor.nota_de(
-            bancada.mesa, dongle, entradas[n], {}, (), {}).razoes}
+            ensaio.mesa, dongle, entradas[n], {}, (), {}).razoes}
         for n in ("5", "7")
     }
     ponta = "na ponta do extensor: a antena que fica mais longe das outras"

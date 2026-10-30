@@ -170,7 +170,7 @@ def daemon_no_ar() -> bool:
     return True
 
 
-def _exigir_bancada() -> tuple[bool, str]:
+def _exigir_ensaio() -> tuple[bool, str]:
     """``scripts/ensaio.sh exigir`` — rc≠0 é ESPERAR, nunca contornar."""
     proc = subprocess.run(
         ["bash", os.path.join(_RAIZ, "scripts", "ensaio.sh"), "exigir"],
@@ -313,7 +313,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         print("PARADO ANTES DE ESCREVER, e de propósito.\n" + resumo(argumentos, controle.caminho))
         print("  Acrescente --eu-estou-ouvindo com o ouvido e a mão dela do outro lado.")
         return 3
-    livre, recado = _exigir_bancada()
+    livre, recado = _exigir_ensaio()
     if recado:
         print(f"  bancada ..... {recado}")
     if not livre:

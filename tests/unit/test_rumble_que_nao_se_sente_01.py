@@ -51,7 +51,7 @@ class _RelogioFalso:
         return self.agora
 
 
-class _VpadDeBancada(uhid.UhidDualSense):
+class _VpadDeEnsaio(uhid.UhidDualSense):
     """Vpad com o fd desligado — exercita só o caminho de output/rumble."""
 
     def __init__(self, relogio: _RelogioFalso) -> None:
@@ -114,7 +114,7 @@ _SO_LIGHTBAR = 0x04
 
 @pytest.fixture
 def vpad():
-    v = _VpadDeBancada(_RelogioFalso())
+    v = _VpadDeEnsaio(_RelogioFalso())
     try:
         yield v
     finally:

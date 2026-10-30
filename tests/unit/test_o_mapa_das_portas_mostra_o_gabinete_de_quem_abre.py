@@ -195,7 +195,7 @@ def test_a_pagina_abre_a_porta_e_recusa_meio_arranjo() -> None:
         assert f'"{campo}"' in pagina
 
 
-def test_o_piloto_entrega_o_arranjo_a_esta_pagina_e_so_a_ela() -> None:
+def test_o_piloto_entrega_o_arranjo_a_esta_pagina_e_so_ao_usuario() -> None:
     """O piloto tem o gesto, e ele é disparado pelo nome DESTA página."""
     import inspect
 

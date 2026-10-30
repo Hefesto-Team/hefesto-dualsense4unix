@@ -254,7 +254,7 @@ class LogicaDoMapa:
             entrada["filha_de"] = None
 
 
-def bancada_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.Bancada:
+def ensaio_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.Ensaio:
     """A mesa do motor montada a partir do RASCUNHO — não do disco."""
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
@@ -264,7 +264,7 @@ def bancada_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.B
     )
 
 
-def classe_do_escolhido(bancada: mapa_das_portas.Bancada, caminho: str) -> str:
+def classe_do_escolhido(ensaio: mapa_das_portas.Ensaio, caminho: str) -> str:
     """A classe que o motor julga para o aparelho na mão — ``""`` se ele não a tem.
 
     ``""`` acontece de verdade e não é borda: o Archer T3U desta bancada
@@ -274,32 +274,32 @@ def classe_do_escolhido(bancada: mapa_das_portas.Bancada, caminho: str) -> str:
     """
     if not caminho:
         return ""
-    for aparelho in bancada.mesa.aparelhos:
+    for aparelho in ensaio.mesa.aparelhos:
         if aparelho.id == caminho:
             return aparelho.classe
     return ""
 
 
 def veredito_do_quadrado(
-    bancada: mapa_das_portas.Bancada, numero: str, escolhido: str
+    ensaio: mapa_das_portas.Ensaio, numero: str, escolhido: str
 ) -> motor.Veredito | None:
     """O que este quadrado diz sobre o aparelho que está na mão do usuário."""
-    entrada = motor.por_num(bancada.mesa.faces, numero)
+    entrada = motor.por_num(ensaio.mesa.faces, numero)
     if entrada is None:
         return None
     return motor.julgar(
         entrada,
-        classe_do_escolhido(bancada, escolhido) or None,
-        bancada.mesa,
+        classe_do_escolhido(ensaio, escolhido) or None,
+        ensaio.mesa,
         escolhido or None,
     )
 
 
-def confissao_do_desenho(bancada: mapa_das_portas.Bancada) -> tuple[str, ...]:
+def confissao_do_desenho(ensaio: mapa_das_portas.Ensaio) -> tuple[str, ...]:
     """As frases do que o desenho não diz, na ordem das chaves."""
     return tuple(
         _(CONFISSAO[chave]) if chave in CONFISSAO else chave
-        for chave in bancada.lacunas
+        for chave in ensaio.lacunas
     )
 
 
@@ -316,9 +316,9 @@ def rotulo_do_aparelho(aparelho: Aparelho) -> str:
 __all__ = [
     "LogicaDoMapa",
     "aparelhos_para_colocar",
-    "bancada_do_rascunho",
     "classe_do_escolhido",
     "confissao_do_desenho",
+    "ensaio_do_rascunho",
     "rotulo_do_aparelho",
     "veredito_do_quadrado",
 ]

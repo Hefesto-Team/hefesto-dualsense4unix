@@ -11,7 +11,7 @@ from hefesto_dualsense4unix.utils import maquina
 
 
 class _Store:
-    def __init__(self, ativo: str | None = "o-perfil-dela") -> None:
+    def __init__(self, ativo: str | None = "o-perfil-do-usuario") -> None:
         self.active_profile = ativo
 
 
@@ -39,7 +39,7 @@ def _perfil(mic: dict | None = None, por_peca: dict | None = None):
     """Um perfil de mentira com só o que estes casos leem."""
     from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 
-    dados: dict[str, Any] = {"name": "o-perfil-dela", "match": MatchManual()}
+    dados: dict[str, Any] = {"name": "o-perfil-do-usuario", "match": MatchManual()}
     if mic is not None:
         dados["mic"] = {"button_toggles_system": False, **mic}
     if por_peca is not None:
@@ -71,7 +71,7 @@ def _dono(uniq: str, mudo: bool) -> None:
 
 
 class TestOMudoVoltaNoReplug:
-    def test_o_mudo_dela_atravessa_o_replug(self, mesa) -> None:
+    def test_o_mudo_do_usuario_atravessa_o_replug(self, mesa) -> None:
         """**O CASO QUE ORIGINOU ESTA RÉGUA.**"""
         _dono("aabbcc000003", True)
         m = mesa.com(_perfil())

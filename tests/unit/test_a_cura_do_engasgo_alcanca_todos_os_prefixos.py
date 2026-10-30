@@ -128,7 +128,7 @@ def test_a_cura_e_idempotente(casa: Path) -> None:
     assert de_novo["222"].erro == ""
 
 
-def test_o_gancho_nao_desfaz_o_que_ela_devolveu(casa: Path) -> None:
+def test_o_gancho_nao_desfaz_o_que_o_usuario_devolveu(casa: Path) -> None:
     """Ela devolveu de propósito: o jogo seguinte NÃO pode desligar de novo."""
     raiz = casa / ".steam" / "steam" / "steamapps" / "compatdata" / "222"
     cv.curar_todos(casa)

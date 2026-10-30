@@ -120,7 +120,7 @@ def _grava(nome: str, **barras: int | None) -> None:
     )
 
 
-class TestAContaDela:
+class TestAContaDoUsuario:
     def test_degrau_150_fraca_100_forte_50_sai_150_e_75(self, perfis: Path) -> None:
         """O CASO EXATO DA FRASE DE PRODUTO, do disco ao par escrito no controle."""
         _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
@@ -196,17 +196,17 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
         """A peça que escolheu Padrão ignora as barras mesmo com o global em Máximo, e a que
         escolheu Máximo as aplica mesmo com o global em Padrão. (O degrau da PEÇA em si é o fator
         por unidade que o backend aplica um andar abaixo; aqui sai o par sobre o degrau global.)"""
-        for degrau_dela, global_, esperado in (
+        for degrau_do_usuario, global_, esperado in (
             ("balanceado", "max", (150, 150)), ("max", "balanceado", (100, 50))
         ):
             save_profile(Profile(
                 name="Bancada", match=MatchAny(),
                 controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
-                    policy=degrau_dela, motor_forte_pct=50))}))
+                    policy=degrau_do_usuario, motor_forte_pct=50))}))
             backend = _Backend()
             d = _daemon(policy=global_, perfil_ativo="Bancada", controller=backend)
             gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
-            assert backend.rumbles == [(BRANCO, *esperado)], (degrau_dela, global_)
+            assert backend.rumbles == [(BRANCO, *esperado)], (degrau_do_usuario, global_)
 
     def test_o_degrau_clicado_na_coluna_chega_ao_motor_no_segundo_seguinte(
         self, perfis: Path, monkeypatch: pytest.MonkeyPatch
@@ -222,20 +222,20 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
         relogio = [1.0e9]
         monkeypatch.setattr(gp_mod, "time", SimpleNamespace(monotonic=lambda: relogio[0]))
 
-        def _degrau_dela(degrau: str) -> None:
+        def _degrau_do_usuario(degrau: str) -> None:
             save_profile(Profile(
                 name="Bancada", match=MatchAny(),
                 controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                     policy=degrau, motor_forte_pct=50))}))
 
-        _degrau_dela("balanceado")
+        _degrau_do_usuario("balanceado")
         backend = _Backend()
         d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
-        _degrau_dela("max")
+        _degrau_do_usuario("max")
         relogio[0] += 2.0
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
-        _degrau_dela("balanceado")
+        _degrau_do_usuario("balanceado")
         relogio[0] += 2.0
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
         assert backend.rumbles == [
@@ -846,7 +846,7 @@ class TestATelaDizOProduto:
         assert "50%" in frase and "150%" in frase
         assert "75%" in frase, f"o produto não saiu na frase: {frase}"
 
-    def test_o_caso_dela_barra_zero_confessa_o_zero(self) -> None:
+    def test_o_caso_do_usuario_barra_zero_confessa_o_zero(self) -> None:
         """O P2 da bancada: força 200%, motores em 0%."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 

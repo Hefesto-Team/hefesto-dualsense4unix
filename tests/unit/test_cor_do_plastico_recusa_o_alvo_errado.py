@@ -107,7 +107,7 @@ class NoDeMentira:
 
 
 @dataclass
-class Bancada:
+class Ensaio:
     """A mesa de mentira de uma execução: o alvo, o outro nó, e os espiões."""
 
     alvo: Any
@@ -135,7 +135,7 @@ def _aparelho(dir_device: Path, *, hidraw: str, mac: str, transporte: str) -> An
 
 
 @pytest.fixture()
-def bancada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Bancada:
+def ensaio(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Ensaio:
     """A mesa inteira substituída: descritor, porta, `fcntl` e reports."""
     device = tmp_path / "sysfs-do-alvo"
     device.mkdir()
@@ -146,7 +146,7 @@ def bancada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Bancada:
         direita.send(bytes([0x01]) + b"\x00" * 63)
 
     falso = FcntlDeMentira()
-    mesa = Bancada(
+    mesa = Ensaio(
         alvo=_aparelho(device, hidraw="hidraw4", mac=MAC_DO_ALVO, transporte=COMUM.CABO),
         outro=_aparelho(device, hidraw="hidraw9", mac=MAC_DO_OUTRO_NO, transporte=COR.RADIO),
         fcntl=falso,
@@ -172,7 +172,7 @@ def bancada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Bancada:
         direita.close()
 
 
-def _como_o_main(mesa: Bancada, pedido: str, **argumentos: Any) -> Any:
+def _como_o_main(mesa: Ensaio, pedido: str, **argumentos: Any) -> Any:
     """A MESMA ordem do `_corpo()`: escolher o alvo e SÓ ENTÃO medir."""
     exigir_mac = argumentos.pop("exigir_mac", "")
     aparelho = COR.escolher_alvo(mesa.alvos, pedido, exigir_mac=exigir_mac)
@@ -184,35 +184,35 @@ def _como_o_main(mesa: Bancada, pedido: str, **argumentos: Any) -> Any:
     )
 
 
-def test_exigir_mac_com_o_mac_do_no_devolve_o_alvo(bancada: Bancada) -> None:
+def test_exigir_mac_com_o_mac_do_no_devolve_o_alvo(ensaio: Ensaio) -> None:
     """O caso feliz, e ele importa: uma trava que recusa tudo não é trava."""
-    escolhido = COR.escolher_alvo(bancada.alvos, "hidraw4", exigir_mac=MAC_DO_ALVO)
-    assert escolhido is bancada.alvo
+    escolhido = COR.escolher_alvo(ensaio.alvos, "hidraw4", exigir_mac=MAC_DO_ALVO)
+    assert escolhido is ensaio.alvo
 
     assert (
-        COR.escolher_alvo(bancada.alvos, "/dev/hidraw4", exigir_mac=MAC_DO_ALVO.upper())
-        is bancada.alvo
+        COR.escolher_alvo(ensaio.alvos, "/dev/hidraw4", exigir_mac=MAC_DO_ALVO.upper())
+        is ensaio.alvo
     )
 
 
-def test_exigir_mac_do_outro_no_recusa_antes_de_abrir_a_porta(bancada: Bancada) -> None:
+def test_exigir_mac_do_outro_no_recusa_antes_de_abrir_a_porta(ensaio: Ensaio) -> None:
     """A mordida provada à mão: pedir um nó exigindo o MAC de OUTRO controle."""
     with pytest.raises(SystemExit) as caiu:
-        _como_o_main(bancada, "hidraw4", exigir_mac=MAC_DO_OUTRO_NO, escrever=True)
+        _como_o_main(ensaio, "hidraw4", exigir_mac=MAC_DO_OUTRO_NO, escrever=True)
 
     recado = str(caiu.value)
     assert "NÃO é o controle que você pediu" in recado
     assert "NADA foi ao aparelho" in recado
 
-    assert bancada.aberturas == []
-    assert bancada.fcntl.escritas == []
-    assert bancada.fcntl.leituras == []
+    assert ensaio.aberturas == []
+    assert ensaio.fcntl.escritas == []
+    assert ensaio.fcntl.leituras == []
 
 
-def test_a_recusa_do_mac_nao_imprime_o_endereco_inteiro(bancada: Bancada) -> None:
+def test_a_recusa_do_mac_nao_imprime_o_endereco_inteiro(ensaio: Ensaio) -> None:
     """A recusa é texto que vai para transcrito versionado — e ele é mascarado."""
     with pytest.raises(SystemExit) as caiu:
-        COR.escolher_alvo(bancada.alvos, "hidraw4", exigir_mac=MAC_DO_OUTRO_NO)
+        COR.escolher_alvo(ensaio.alvos, "hidraw4", exigir_mac=MAC_DO_OUTRO_NO)
 
     recado = str(caiu.value)
     assert "aa:bb:cc:00:00:03" in recado
@@ -221,7 +221,7 @@ def test_a_recusa_do_mac_nao_imprime_o_endereco_inteiro(bancada: Bancada) -> Non
 
 
 def test_o_envelope_de_radio_integro_passa_e_o_rabo_e_o_medido(
-    bancada: Bancada, capsys: pytest.CaptureFixture[str]
+    ensaio: Ensaio, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """O envelope montado pelo instrumento é aceito, e o CRC é o de 14:46."""
     envelope = COR.envelope_de_radio(COR.montar_payload(64))
@@ -233,10 +233,10 @@ def test_o_envelope_de_radio_integro_passa_e_o_rabo_e_o_medido(
     falha = COR.mandar_o_comando(4242, bytearray(envelope), bytes_de_crc=4)
 
     assert falha == ""
-    assert bancada.fcntl.escritas == [bytes(envelope)]
+    assert ensaio.fcntl.escritas == [bytes(envelope)]
 
 
-def test_o_rabo_de_crc_corrompido_reprova(bancada: Bancada) -> None:
+def test_o_rabo_de_crc_corrompido_reprova(ensaio: Ensaio) -> None:
     """A mordida literal do transcrito: veio `0x8c460d93`, recalculado `0x73460d93`."""
     envelope = COR.envelope_de_radio(COR.montar_payload(64))
     envelope[-1] ^= 0xFF
@@ -247,10 +247,10 @@ def test_o_rabo_de_crc_corrompido_reprova(bancada: Bancada) -> None:
     recado = str(caiu.value)
     assert f"veio 0x{CRC_CORROMPIDO:08x}" in recado
     assert f"recalculado 0x{CRC_DO_ENVELOPE:08x}" in recado
-    assert bancada.fcntl.escritas == []
+    assert ensaio.fcntl.escritas == []
 
 
-def test_o_miolo_continua_conferido_por_tras_do_crc(bancada: Bancada) -> None:
+def test_o_miolo_continua_conferido_por_tras_do_crc(ensaio: Ensaio) -> None:
     """Conhecer o rabo não pode afrouxar o miolo — foi essa a promessa da cura."""
     payload = COR.montar_payload(64)
     payload[5] = 0x01
@@ -260,10 +260,10 @@ def test_o_miolo_continua_conferido_por_tras_do_crc(bancada: Bancada) -> None:
         COR.mandar_o_comando(4242, envelope, bytes_de_crc=4)
 
     assert "vieram sujos" in str(caiu.value)
-    assert bancada.fcntl.escritas == []
+    assert ensaio.fcntl.escritas == []
 
 
-def test_o_par_que_reseta_o_controle_e_recusado(bancada: Bancada) -> None:
+def test_o_par_que_reseta_o_controle_e_recusado(ensaio: Ensaio) -> None:
     """`[1,1]` reseta o aparelho. A trava tem de conhecê-lo pelo nome."""
     payload = COR.montar_payload(64)
     payload[2] = 1
@@ -271,7 +271,7 @@ def test_o_par_que_reseta_o_controle_e_recusado(bancada: Bancada) -> None:
     with pytest.raises(COR.PayloadRecusadoError):
         COR.mandar_o_comando(4242, payload)
 
-    assert bancada.fcntl.escritas == []
+    assert ensaio.fcntl.escritas == []
 
 
 def test_a_semente_do_instrumento_e_a_mesma_do_pacote() -> None:
@@ -326,45 +326,45 @@ def test_mascarar_mac_zera_os_octetos_quatro_e_cinco() -> None:
 
 
 def test_sem_escrever_nada_vai_ao_fio(
-    bancada: Bancada, capsys: pytest.CaptureFixture[str]
+    ensaio: Ensaio, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Seco por omissão: o instrumento chega até a beira da escrita e para."""
-    medida = _como_o_main(bancada, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=False)
+    medida = _como_o_main(ensaio, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=False)
     tela = capsys.readouterr().out
 
-    assert bancada.fcntl.escritas == []
+    assert ensaio.fcntl.escritas == []
     assert medida.escreveu is False
     assert medida.serial.texto == ""
 
-    assert bancada.aberturas == [bancada.alvo.caminho_hidraw]
-    assert COR.FEATURE_FIRMWARE in bancada.fcntl.leituras
+    assert ensaio.aberturas == [ensaio.alvo.caminho_hidraw]
+    assert COR.FEATURE_FIRMWARE in ensaio.fcntl.leituras
     assert medida.antes.vivo is True
     assert "RODADA SECA" in tela
     assert "--escrever" in tela
 
 
 def test_com_escrever_sai_exatamente_um_set_feature(
-    bancada: Bancada, capsys: pytest.CaptureFixture[str]
+    ensaio: Ensaio, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A contraprova do teste acima: com a autorização, o comando sai — UM."""
-    medida = _como_o_main(bancada, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=True)
+    medida = _como_o_main(ensaio, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=True)
     capsys.readouterr()
 
     esperado = bytes([0x80, 0x01, 0x13]) + b"\x00" * 61
-    assert bancada.fcntl.escritas == [esperado]
+    assert ensaio.fcntl.escritas == [esperado]
     assert medida.escreveu is True
     assert medida.serial.texto == SERIAL_FORJADO
     assert medida.serial.codigo_da_cor == "02"
     assert medida.serial.nome_da_cor == COR_DO_SERIAL_FORJADO
     assert medida.continua_sao is True
-    assert bancada.nos[0].fechado is True
+    assert ensaio.nos[0].fechado is True
 
 
 def test_a_tela_nunca_mostra_o_serial_em_hexadecimal(
-    bancada: Bancada, capsys: pytest.CaptureFixture[str]
+    ensaio: Ensaio, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """O dump da resposta sai mascarado já na tela; o texto decodificado, não."""
-    _como_o_main(bancada, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=True)
+    _como_o_main(ensaio, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=True)
     tela = capsys.readouterr().out
 
     em_hexadecimal = SERIAL_FORJADO.encode("ascii")[6:].hex(" ")
@@ -372,20 +372,20 @@ def test_a_tela_nunca_mostra_o_serial_em_hexadecimal(
 
 
 def test_radio_sem_radio_a_serio_nao_abre_a_porta(
-    bancada: Bancada, capsys: pytest.CaptureFixture[str]
+    ensaio: Ensaio, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Caminho novo não se estreia por omissão — nem com `--escrever` na linha."""
-    medida = _como_o_main(bancada, "hidraw9", exigir_mac=MAC_DO_OUTRO_NO, escrever=True)
+    medida = _como_o_main(ensaio, "hidraw9", exigir_mac=MAC_DO_OUTRO_NO, escrever=True)
     tela = capsys.readouterr().out
 
-    assert bancada.aberturas == []
-    assert bancada.fcntl.escritas == []
+    assert ensaio.aberturas == []
+    assert ensaio.fcntl.escritas == []
     assert medida.escreveu is False
     assert "--radio-a-serio" in medida.erro_da_escrita
     assert "RECUSADO" in tela
 
 
-def test_a_familia_do_firmware_nunca_e_escrita(bancada: Bancada) -> None:
+def test_a_familia_do_firmware_nunca_e_escrita(ensaio: Ensaio) -> None:
     """A D-32 dela: ler a família `0xf0`-`0xf7`, nunca escrever."""
     for report_id in COR.FAMILIA_DO_FIRMWARE:
         payload = COR.montar_payload(64)
@@ -394,13 +394,13 @@ def test_a_familia_do_firmware_nunca_e_escrita(bancada: Bancada) -> None:
             COR.mandar_o_comando(4242, payload)
         assert "família do FIRMWARE" in str(caiu.value)
 
-    assert bancada.fcntl.escritas == []
+    assert ensaio.fcntl.escritas == []
 
 
-def test_o_ensaio_nao_abriu_dev_hidraw_nenhum(bancada: Bancada) -> None:
+def test_o_ensaio_nao_abriu_dev_hidraw_nenhum(ensaio: Ensaio) -> None:
     """A guarda contra o próprio ensaio: nenhum caminho de `/dev` é real."""
-    _como_o_main(bancada, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=True)
+    _como_o_main(ensaio, "hidraw4", exigir_mac=MAC_DO_ALVO, escrever=True)
 
-    for caminho in bancada.aberturas:
+    for caminho in ensaio.aberturas:
         assert caminho.startswith("/dev/hidraw")
         assert not os.path.exists(caminho)

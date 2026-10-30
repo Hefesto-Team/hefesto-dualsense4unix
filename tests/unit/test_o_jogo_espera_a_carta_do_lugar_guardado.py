@@ -449,7 +449,7 @@ def montar(
     """A mesa de ``quantos`` controles na ordem, os vpads nascidos, o jogo aberto."""
     if relogio is None and tempo is None:
         relogio = Relogio()
-    bancada = MesaDoJogo(
+    ensaio = MesaDoJogo(
         monkeypatch,
         relogio=relogio,
         tempo=tempo if tempo is not None else relogio,  # type: ignore[arg-type]
@@ -457,17 +457,17 @@ def montar(
         coop=coop,
     )
     for uniq, via in zip(UNIQS[:quantos], TRANSPORTES[transporte][:quantos], strict=True):
-        bancada.mesa.sentar(uniq, transporte=via)
+        ensaio.mesa.sentar(uniq, transporte=via)
     for _ in range(3):
-        bancada.tique()
-    assert bancada.dono_do_vpad_do_p1() == P1
+        ensaio.tique()
+    assert ensaio.dono_do_vpad_do_p1() == P1
     if coop:
         esperado = {n + 1: UNIQS[n] for n in range(quantos)}
-        assert bancada.o_jogo_ve() == esperado, (
-            f"a bancada não montou a mesa: {bancada.o_jogo_ve()}"
+        assert ensaio.o_jogo_ve() == esperado, (
+            f"a bancada não montou a mesa: {ensaio.o_jogo_ve()}"
         )
-        assert bancada.a_tela() == {UNIQS[n]: n + 1 for n in range(quantos)}
-    return bancada
+        assert ensaio.a_tela() == {UNIQS[n]: n + 1 for n in range(quantos)}
+    return ensaio
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -479,51 +479,51 @@ class TestOP1ForaPorVinteSegundos:
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
     ) -> None:
         """A MORDIDA desta sprint: o P2 não dirige o jogador 1 enquanto a tela diz 2."""
-        bancada = montar(monkeypatch, quantos, transporte)
+        ensaio = montar(monkeypatch, quantos, transporte)
         ficaram = UNIQS[1:quantos]
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram}
+        vpads_de_antes = {u: ensaio.vpad_de(u) for u in ficaram}
 
-        bancada.mesa.levantar(P1)
+        ensaio.mesa.levantar(P1)
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
-            bancada.tique()
-            assert bancada.vpad_do_p1.vivo, "o vpad do P1 sumiu em vez de parar"
-            assert bancada.dono_do_vpad_do_p1() is None, (
+            ensaio.tique()
+            assert ensaio.vpad_do_p1.vivo, "o vpad do P1 sumiu em vez de parar"
+            assert ensaio.dono_do_vpad_do_p1() is None, (
                 f"o vpad do jogador 1 está sendo dirigido por "
-                f"{bancada.dono_do_vpad_do_p1()} com o P1 fora dentro do prazo — "
-                f"a tela diz {bancada.a_tela()}"
+                f"{ensaio.dono_do_vpad_do_p1()} com o P1 fora dentro do prazo — "
+                f"a tela diz {ensaio.a_tela()}"
             )
             for uniq in ficaram:
-                assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], (
+                assert ensaio.vpad_de(uniq) is vpads_de_antes[uniq], (
                     f"{uniq} perdeu o vpad dele com o P1 fora"
                 )
-            assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
-            assert bancada.o_jogo_ve() == {1: None, **{n + 2: u for n, u in enumerate(ficaram)}}
-            bancada.o_jogo_segue_a_tela()
-        assert bancada.inst.primary_uniq == P1, "o posto de P1 deixou de ser do P1"
+            assert ensaio.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
+            assert ensaio.o_jogo_ve() == {1: None, **{n + 2: u for n, u in enumerate(ficaram)}}
+            ensaio.o_jogo_segue_a_tela()
+        assert ensaio.inst.primary_uniq == P1, "o posto de P1 deixou de ser do P1"
 
     @MATRIZ
     def test_a_volta_dele_dentro_do_prazo(
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
     ) -> None:
-        bancada = montar(monkeypatch, quantos, transporte)
+        ensaio = montar(monkeypatch, quantos, transporte)
         ficaram = UNIQS[1:quantos]
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram}
+        vpads_de_antes = {u: ensaio.vpad_de(u) for u in ficaram}
 
-        via = bancada.mesa.transporte_de(P1)
-        bancada.mesa.levantar(P1)
+        via = ensaio.mesa.transporte_de(P1)
+        ensaio.mesa.levantar(P1)
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
-            bancada.tique()
-        bancada.mesa.sentar(P1, transporte=via)
-        bancada.tique()
+            ensaio.tique()
+        ensaio.mesa.sentar(P1, transporte=via)
+        ensaio.tique()
 
-        assert bancada.dono_do_vpad_do_p1() == P1
-        assert bancada.inst.get_transport() == via
+        assert ensaio.dono_do_vpad_do_p1() == P1
+        assert ensaio.inst.get_transport() == via
         for uniq in ficaram:
-            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], (
+            assert ensaio.vpad_de(uniq) is vpads_de_antes[uniq], (
                 f"{uniq} foi recriado na volta do P1"
             )
-        assert bancada.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(quantos)}
-        bancada.o_jogo_segue_a_tela()
+        assert ensaio.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(quantos)}
+        ensaio.o_jogo_segue_a_tela()
 
     @MATRIZ
     def test_depois_do_prazo_vale_a_num01(
@@ -536,32 +536,32 @@ class TestOP1ForaPorVinteSegundos:
         espera com ele. Antes, passado o prazo, o P2 assumia o vpad do P1 no
         meio da partida.
         """
-        bancada = montar(monkeypatch, quantos, transporte)
-        vpad_do_p1 = bancada.vpad_do_p1
+        ensaio = montar(monkeypatch, quantos, transporte)
+        vpad_do_p1 = ensaio.vpad_do_p1
 
-        bancada.mesa.levantar(P1)
+        ensaio.mesa.levantar(P1)
         passos = int((max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado()) + TIQUE) / TIQUE)
         for _ in range(passos + 1):
-            bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None, "com o jogo aberto o posto não espera"
-        assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(UNIQS[1:quantos])}
-        bancada.o_jogo_segue_a_tela()
+            ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None, "com o jogo aberto o posto não espera"
+        assert ensaio.a_tela() == {u: n + 2 for n, u in enumerate(UNIQS[1:quantos])}
+        ensaio.o_jogo_segue_a_tela()
 
-        bancada.daemon.display_authority = "daemon"
+        ensaio.daemon.display_authority = "daemon"
         for _ in range(passos + 1):
-            bancada.tique()
+            ensaio.tique()
 
-        assert bancada.dono_do_vpad_do_p1() == P2
-        assert bancada.daemon._gamepad_device is vpad_do_p1, "a R-04: o vpad do P1 fica"
+        assert ensaio.dono_do_vpad_do_p1() == P2
+        assert ensaio.daemon._gamepad_device is vpad_do_p1, "a R-04: o vpad do P1 fica"
         assert vpad_do_p1.vivo
-        tela = bancada.a_tela()
+        tela = ensaio.a_tela()
         assert tela == {u: n + 1 for n, u in enumerate(UNIQS[1:quantos])}
-        jogo = bancada.o_jogo_ve()
+        jogo = ensaio.o_jogo_ve()
         donos = [dono for dono in jogo.values() if dono is not None]
         assert sorted(donos) == sorted(UNIQS[1:quantos]), (
             f"alguém ficou sem controle (ou com dois) depois do prazo: {jogo}"
         )
-        bancada.o_jogo_segue_a_tela()
+        ensaio.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -573,28 +573,28 @@ class TestOsOutrosTresLugares:
     def test_quem_sai_volta_ao_mesmo_lugar_e_ninguem_anda(
         self, monkeypatch: pytest.MonkeyPatch, quem: str, transporte: str
     ) -> None:
-        bancada = montar(monkeypatch, 4, transporte)
+        ensaio = montar(monkeypatch, 4, transporte)
         ficaram = [u for u in UNIQS[:4] if u != quem]
         numero = UNIQS.index(quem) + 1
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in UNIQS[1:4]}
+        vpads_de_antes = {u: ensaio.vpad_de(u) for u in UNIQS[1:4]}
 
-        via = bancada.mesa.transporte_de(quem)
-        bancada.mesa.levantar(quem)
+        via = ensaio.mesa.transporte_de(quem)
+        ensaio.mesa.levantar(quem)
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
-            bancada.tique()
-            assert bancada.dono_do_vpad_do_p1() == P1
-            assert bancada.a_tela() == {u: UNIQS.index(u) + 1 for u in ficaram}
-            assert bancada.o_jogo_ve().get(numero) == quem, "o lugar dele espera no vpad dele"
-            assert bancada.vpad_de(quem) is vpads_de_antes[quem]
-            bancada.o_jogo_segue_a_tela()
+            ensaio.tique()
+            assert ensaio.dono_do_vpad_do_p1() == P1
+            assert ensaio.a_tela() == {u: UNIQS.index(u) + 1 for u in ficaram}
+            assert ensaio.o_jogo_ve().get(numero) == quem, "o lugar dele espera no vpad dele"
+            assert ensaio.vpad_de(quem) is vpads_de_antes[quem]
+            ensaio.o_jogo_segue_a_tela()
 
-        bancada.mesa.sentar(quem, transporte=via)
-        bancada.tique()
-        bancada.tique()
+        ensaio.mesa.sentar(quem, transporte=via)
+        ensaio.tique()
+        ensaio.tique()
         for uniq, vpad in vpads_de_antes.items():
-            assert bancada.vpad_de(uniq) is vpad
-        assert bancada.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(4)}
-        bancada.o_jogo_segue_a_tela()
+            assert ensaio.vpad_de(uniq) is vpad
+        assert ensaio.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(4)}
+        ensaio.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -605,17 +605,17 @@ class TestQuandoOPostoNaoEspera:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O controle de reserva: sem co-op, o outro não tem vpad próprio."""
-        bancada = montar(monkeypatch, 2, coop=False)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() == P2
+        ensaio = montar(monkeypatch, 2, coop=False)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() == P2
 
     def test_sem_jogo_o_outro_assume_na_hora(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Sem jogo, o dono do posto de P1 também navega o PC — não se para o mouse."""
-        bancada = montar(monkeypatch, 3, jogo=False)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() == P2
+        ensaio = montar(monkeypatch, 3, jogo=False)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() == P2
 
     def test_gente_nova_com_o_jogo_senta_depois_do_ultimo_e_o_posto_espera(
         self, monkeypatch: pytest.MonkeyPatch
@@ -626,35 +626,35 @@ class TestQuandoOPostoNaoEspera:
         depois do último, e o posto do P1 segue à espera dele. Antes, a gente
         nova refazia a mesa e o P2 assumia o jogador 1 no meio da partida.
         """
-        bancada = montar(monkeypatch, 3)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None
-        bancada.mesa.sentar(NOVO)
-        bancada.tique()
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None
-        assert bancada.a_tela() == {P2: 2, P3: 3, NOVO: 4}
+        ensaio = montar(monkeypatch, 3)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None
+        ensaio.mesa.sentar(NOVO)
+        ensaio.tique()
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None
+        assert ensaio.a_tela() == {P2: 2, P3: 3, NOVO: 4}
 
     def test_o_renumerar_agora_solta_o_posto(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        bancada = montar(monkeypatch, 3)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None
-        bancada.reg.compact(bancada.reg.snapshot())
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() == P2
-        assert bancada.a_tela()[P2] == 1
+        ensaio = montar(monkeypatch, 3)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None
+        ensaio.reg.compact(ensaio.reg.snapshot())
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() == P2
+        assert ensaio.a_tela()[P2] == 1
 
     def test_o_jogo_que_solta_a_autoridade_solta_o_posto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        bancada = montar(monkeypatch, 3)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None
-        bancada.daemon.display_authority = "daemon"
-        assert bancada.dono_do_vpad_do_p1() == P2, (
+        ensaio = montar(monkeypatch, 3)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None
+        ensaio.daemon.display_authority = "daemon"
+        assert ensaio.dono_do_vpad_do_p1() == P2, (
             "a vaga tem de acabar no tique do read_state, sem esperar o connect()"
         )
 
@@ -666,23 +666,23 @@ class TestQuandoOPostoNaoEspera:
             make_primary_rumble_sink,
         )
 
-        bancada = montar(monkeypatch, 3)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.inst.primary_uniq == P1
-        assert bancada.inst.hidraw_path() is None
+        ensaio = montar(monkeypatch, 3)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.inst.primary_uniq == P1
+        assert ensaio.inst.hidraw_path() is None
 
         broadcast: list[tuple[int, int]] = []
         mirados: list[str] = []
         monkeypatch.setattr(
-            bancada.inst, "set_rumble", lambda weak, strong: broadcast.append((weak, strong))
+            ensaio.inst, "set_rumble", lambda weak, strong: broadcast.append((weak, strong))
         )
         monkeypatch.setattr(
-            bancada.inst,
+            ensaio.inst,
             "set_rumble_for",
             lambda uniq, weak, strong: mirados.append(uniq) or False,
         )
-        make_primary_rumble_sink(bancada.daemon)(120, 200)  # type: ignore[arg-type]
+        make_primary_rumble_sink(ensaio.daemon)(120, 200)  # type: ignore[arg-type]
 
         assert broadcast == [], "o rumble do jogador 1 foi em broadcast para os que ficaram"
         assert mirados == [P1]
@@ -697,25 +697,25 @@ class TestOPrazoAtravessaASuspensao:
     ) -> None:
         kernel = Kernel()
         monkeypatch.setattr(time, "clock_gettime", kernel.clock_gettime)
-        bancada = montar(monkeypatch, 4, tempo=kernel)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        assert bancada.dono_do_vpad_do_p1() is None
+        ensaio = montar(monkeypatch, 4, tempo=kernel)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        assert ensaio.dono_do_vpad_do_p1() is None
 
         kernel.dormir(3600.0)
-        bancada.tique(0.0)
-        assert bancada.dono_do_vpad_do_p1() is None
-        assert bancada.a_tela()[P2] == 2
-        bancada.daemon.display_authority = "daemon"
-        bancada.tique(0.0)
+        ensaio.tique(0.0)
+        assert ensaio.dono_do_vpad_do_p1() is None
+        assert ensaio.a_tela()[P2] == 2
+        ensaio.daemon.display_authority = "daemon"
+        ensaio.tique(0.0)
         kernel.dormir(3600.0)
-        bancada.tique(0.0)
+        ensaio.tique(0.0)
 
-        assert bancada.dono_do_vpad_do_p1() == P2, (
+        assert ensaio.dono_do_vpad_do_p1() == P2, (
             "depois de uma hora dormindo, o posto do P1 ainda esperava — o prazo "
             "não contou a suspensão"
         )
-        assert bancada.a_tela()[P2] == 1
+        assert ensaio.a_tela()[P2] == 1
 
     def test_quem_volta_primeiro_depois_de_dormir_e_o_um(
         self, monkeypatch: pytest.MonkeyPatch
@@ -723,33 +723,33 @@ class TestOPrazoAtravessaASuspensao:
         """O caso da sprint: a mesa saiu antes de dormir, e o primeiro que volta é 1."""
         kernel = Kernel()
         monkeypatch.setattr(time, "clock_gettime", kernel.clock_gettime)
-        bancada = montar(monkeypatch, 4, tempo=kernel)
+        ensaio = montar(monkeypatch, 4, tempo=kernel)
         for uniq in UNIQS[:4]:
-            bancada.mesa.levantar(uniq)
-        bancada.tique()
-        assert bancada.a_tela() == {}
+            ensaio.mesa.levantar(uniq)
+        ensaio.tique()
+        assert ensaio.a_tela() == {}
 
-        bancada.daemon.display_authority = "daemon"
-        bancada.tique(0.0)
+        ensaio.daemon.display_authority = "daemon"
+        ensaio.tique(0.0)
         kernel.dormir(3600.0)
-        bancada.mesa.sentar(P3)
-        bancada.tique(0.0)
+        ensaio.mesa.sentar(P3)
+        ensaio.tique(0.0)
 
-        assert bancada.a_tela() == {P3: 1}, (
+        assert ensaio.a_tela() == {P3: 1}, (
             "o primeiro a voltar depois de uma hora dormindo mostrou o número "
-            f"antigo sozinho: {bancada.a_tela()}"
+            f"antigo sozinho: {ensaio.a_tela()}"
         )
-        assert bancada.dono_do_vpad_do_p1() == P3
+        assert ensaio.dono_do_vpad_do_p1() == P3
 
     def test_acordada_o_prazo_ainda_vale(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """O contrapeso: sem dormir, os mesmos segundos não vencem nada."""
         kernel = Kernel()
         monkeypatch.setattr(time, "clock_gettime", kernel.clock_gettime)
-        bancada = montar(monkeypatch, 4, tempo=kernel)
-        bancada.mesa.levantar(P1)
-        bancada.tique()
-        bancada.tique(VINTE_SEGUNDOS - TIQUE)
-        assert bancada.dono_do_vpad_do_p1() is None
+        ensaio = montar(monkeypatch, 4, tempo=kernel)
+        ensaio.mesa.levantar(P1)
+        ensaio.tique()
+        ensaio.tique(VINTE_SEGUNDOS - TIQUE)
+        assert ensaio.dono_do_vpad_do_p1() is None
 
 
 class TestORelogioEUmSo:
@@ -789,24 +789,24 @@ class TestAVoltaPeloOutroTransporte:
     def test_o_p1_volta_pelo_outro_transporte_ao_vpad_dele(
         self, monkeypatch: pytest.MonkeyPatch, quantos: int, de: str, para: str
     ) -> None:
-        bancada = montar(monkeypatch, quantos, "usb" if de == "usb" else "bt")
+        ensaio = montar(monkeypatch, quantos, "usb" if de == "usb" else "bt")
         ficaram = UNIQS[1:quantos]
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram}
+        vpads_de_antes = {u: ensaio.vpad_de(u) for u in ficaram}
 
-        bancada.mesa.levantar(P1)
+        ensaio.mesa.levantar(P1)
         for _ in range(3):
-            bancada.tique()
-            assert bancada.dono_do_vpad_do_p1() is None
-        bancada.mesa.sentar(P1, transporte=para)
-        bancada.tique()
+            ensaio.tique()
+            assert ensaio.dono_do_vpad_do_p1() is None
+        ensaio.mesa.sentar(P1, transporte=para)
+        ensaio.tique()
 
-        assert bancada.dono_do_vpad_do_p1() == P1
-        assert bancada.inst.get_transport() == para
+        assert ensaio.dono_do_vpad_do_p1() == P1
+        assert ensaio.inst.get_transport() == para
         for uniq in ficaram:
-            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq]
-        assert bancada.a_tela()[P1] == 1
-        assert bancada.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(quantos)}
-        bancada.o_jogo_segue_a_tela()
+            assert ensaio.vpad_de(uniq) is vpads_de_antes[uniq]
+        assert ensaio.a_tela()[P1] == 1
+        assert ensaio.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(quantos)}
+        ensaio.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -827,26 +827,26 @@ class TestOTopoDoEstadoNaVaga:
     """
 
     @staticmethod
-    def _carga_no_p1(bancada: MesaDoJogo, nivel: int, estado: int) -> None:
-        handle = bancada.inst._handles[CHAVE_DE[P1]]
+    def _carga_no_p1(ensaio: MesaDoJogo, nivel: int, estado: int) -> None:
+        handle = ensaio.inst._handles[CHAVE_DE[P1]]
         handle.battery = SimpleNamespace(Level=nivel, State=estado)
 
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
     def test_o_topo_segue_conectado_com_a_carga_do_dono_do_posto(
         self, monkeypatch: pytest.MonkeyPatch, transporte: str
     ) -> None:
-        bancada = montar(monkeypatch, 3, transporte)
-        self._carga_no_p1(bancada, 75, 0x1)
-        antes = bancada.inst.read_state()
+        ensaio = montar(monkeypatch, 3, transporte)
+        self._carga_no_p1(ensaio, 75, 0x1)
+        antes = ensaio.inst.read_state()
         assert (antes.connected, antes.battery_pct, antes.battery_state) == (
             True, 75, "carregando",
         )
 
-        bancada.mesa.levantar(P1)
+        ensaio.mesa.levantar(P1)
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
-            bancada.tique()
-            estado = bancada.inst.read_state()
-            assert bancada.dono_do_vpad_do_p1() is None
+            ensaio.tique()
+            estado = ensaio.inst.read_state()
+            assert ensaio.dono_do_vpad_do_p1() is None
             assert estado.connected is True, (
                 "com três controles jogando, o topo disse desconectado"
             )
@@ -865,20 +865,20 @@ class TestOTopoDoEstadoNaVaga:
         from hefesto_dualsense4unix.daemon.state_store import StateStore
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import _game_rumble_mult
 
-        bancada = montar(monkeypatch, 4)
-        self._carga_no_p1(bancada, 75, 0x0)
-        bancada.daemon.config = DaemonConfig(coop_enabled=True, rumble_policy="auto")
-        bancada.daemon.store = StateStore()
+        ensaio = montar(monkeypatch, 4)
+        self._carga_no_p1(ensaio, 75, 0x0)
+        ensaio.daemon.config = DaemonConfig(coop_enabled=True, rumble_policy="auto")
+        ensaio.daemon.store = StateStore()
         agora = 0.0
 
         def tique_do_laco() -> float:
-            bancada.daemon.store.update_controller_state(bancada.inst.read_state())
-            return _game_rumble_mult(bancada.daemon, agora)  # type: ignore[arg-type]
+            ensaio.daemon.store.update_controller_state(ensaio.inst.read_state())
+            return _game_rumble_mult(ensaio.daemon, agora)  # type: ignore[arg-type]
 
         assert tique_do_laco() == 1.0
-        bancada.mesa.levantar(P1)
+        ensaio.mesa.levantar(P1)
         for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
-            bancada.tique()
+            ensaio.tique()
             agora += TIQUE
             assert tique_do_laco() == 1.0, (
                 "com o P1 fora, a vibração «auto» do P2, do P3 e do P4 caiu — "

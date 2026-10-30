@@ -43,7 +43,7 @@ o nosso vpad"). Ela está ERRADA aqui, e o motivo é de produto: tem de ser univ
 DualSense ou quatro controles de outra marca. Os externos são read-only por decisão de produto —
 numeramos e
 acendemos o LED, não os adotamos —, então eles chegam ao jogo POR SI, e um
-`_EXCEPT` os apagaria todos. Ver `test_o_except_mataria_os_externos_dela`.
+`_EXCEPT` os apagaria todos. Ver `test_o_except_mataria_os_externos_do_usuario`.
 """
 
 from __future__ import annotations
@@ -128,13 +128,13 @@ def test_com_a_emulacao_desligada_nao_se_esconde_nada() -> None:
     assert _IGNORE not in _env(backends=[])
 
 
-def test_o_except_mataria_os_externos_dela() -> None:
+def test_o_except_mataria_os_externos_do_usuario() -> None:
     """Por que não `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT`."""
     env = _env()
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT" not in env
 
 
-def test_o_par_da_valve_nao_e_o_steam_controller_fisico_dela() -> None:
+def test_o_par_da_valve_nao_e_o_steam_controller_fisico_do_usuario() -> None:
     """`28de:11ff` é o espelho virtual; o aparelho físico da Valve é outro PID."""
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         _TYPE_BY_VIDPID,

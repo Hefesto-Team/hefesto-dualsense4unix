@@ -65,7 +65,7 @@ def _o_da_tela(preset) -> str:
     return ROTULO_DO_JOGO_DECIDE if preset.name == "Off" else preset.label
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     from hefesto_dualsense4unix.interface import onde
 
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
@@ -114,7 +114,7 @@ def test_todo_modo_do_produto_tem_opcao_no_pacote(a03, presets):
 
 def test_o_desenho_nao_tem_mais_a_lista_de_acionamento():
     """A bancada não digita rótulo de modo: o campo que os carregava saiu do desenho."""
-    doc = _bancada()
+    doc = _ensaio()
     assert not _selects(doc, "modo") and not _selects(doc, "g2-acion")
     assert "g2-acion" not in doc.split("</style>", 1)[-1]
     assert len(_selects(doc, "g2-imersao")) == 8

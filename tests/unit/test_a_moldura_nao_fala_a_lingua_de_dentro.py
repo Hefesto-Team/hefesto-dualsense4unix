@@ -118,7 +118,7 @@ def test_a_dica_do_desktop_tambem_e_medida(arvore: pathlib.Path) -> None:
     assert ".desktop" in r.stdout, r.stdout
 
 
-def test_a_isencao_da_bancada_e_lida_e_nao_digitada(arvore: pathlib.Path) -> None:
+def test_a_isencao_do_ensaio_e_lida_e_nao_digitada(arvore: pathlib.Path) -> None:
     """O texto dos pilotos isentos sai do ARQUIVO, e a isenção não pode emudecer."""
     alvo = arvore / "scripts/tela/perfis_vivos.py"
     texto = alvo.read_text(encoding="utf-8")
@@ -145,7 +145,7 @@ def test_a_isencao_da_bancada_e_lida_e_nao_digitada(arvore: pathlib.Path) -> Non
     assert r.returncode != 0, (
         f"o portão passou com um isento que não tem mais texto de moldura:\n"
         f"{r.stdout}")
-    assert "A_BANCADA" in (r.stdout + r.stderr), (r.stdout, r.stderr)
+    assert "O_ENSAIO" in (r.stdout + r.stderr), (r.stdout, r.stderr)
 
 
 def test_a_lista_de_palavras_banidas_vem_do_dono(arvore: pathlib.Path) -> None:

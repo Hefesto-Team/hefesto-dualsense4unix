@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.daemon.subsystems.coop import (
     planejar_a_ordem,
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
-from tests.unit import test_o_jogo_espera_a_carta_do_lugar_guardado as bancada_mod
+from tests.unit import test_o_jogo_espera_a_carta_do_lugar_guardado as ensaio_mod
 from tests.unit.test_coop_ensaio_de_queda_do_primario import _LeitorDeSecundario
 from tests.unit.test_o_buraco_de_quem_saiu_se_fecha_no_jogo import _as_mesas_do_produto
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
@@ -301,25 +301,25 @@ def _montar(
 ) -> MesaDoJogo:
     """A mesa de ``quem``, nesta ordem de chegada, com o jogo aberto."""
     relogio = Relogio()
-    bancada = MesaDoJogo(monkeypatch, relogio=relogio, tempo=relogio)
+    ensaio = MesaDoJogo(monkeypatch, relogio=relogio, tempo=relogio)
     monkeypatch.setattr(_LeitorQueDemora, "demorados", demorados)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.EvdevReader", _LeitorQueDemora
     )
     for uniq, via in zip(quem, vias, strict=True):
-        bancada.mesa.sentar(uniq, transporte=via)
+        ensaio.mesa.sentar(uniq, transporte=via)
     for _ in range(3):
-        bancada.tique()
-    assert bancada.dono_do_vpad_do_p1() == quem[0]
-    return bancada
+        ensaio.tique()
+    assert ensaio.dono_do_vpad_do_p1() == quem[0]
+    return ensaio
 
 
 def _ticks(segundos: float) -> int:
     return int(segundos / TIQUE)
 
 
-def _nascidos(bancada: MesaDoJogo, desde: int, uniq: str) -> list[Any]:
-    return [v for v in bancada.vpads[desde:] if getattr(v, "identidade", None) == uniq]
+def _nascidos(ensaio: MesaDoJogo, desde: int, uniq: str) -> list[Any]:
+    return [v for v in ensaio.vpads[desde:] if getattr(v, "identidade", None) == uniq]
 
 
 PRAZO = max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado())
@@ -329,7 +329,7 @@ DEPOIS = 10.0
 @pytest.fixture
 def mesa_de_seis(monkeypatch: pytest.MonkeyPatch) -> None:
     """A bancada de queda com um sexto controle (a mesa de cinco lê ``CHAVE_DE``)."""
-    monkeypatch.setitem(bancada_mod.CHAVE_DE, SEXTO, "AA:BB:CC:00:00:06")
+    monkeypatch.setitem(ensaio_mod.CHAVE_DE, SEXTO, "AA:BB:CC:00:00:06")
     monkeypatch.setattr(coop_mod, "ESPERA_PELA_ORDEM_S", 0.0)
 
 
@@ -347,19 +347,19 @@ class TestUmDosSessentaComSeisControles:
 
     @staticmethod
     def _o_prazo_do_p2_passa(
-        monkeypatch: pytest.MonkeyPatch, bancada: MesaDoJogo, g: str
+        monkeypatch: pytest.MonkeyPatch, ensaio: MesaDoJogo, g: str
     ) -> tuple[int, Planos, Any]:
-        bancada.mesa.levantar(P2)
+        ensaio.mesa.levantar(P2)
         for _ in range(_ticks(DEPOIS)):
-            bancada.tique()
-        bancada.mesa.levantar(g)
-        bancada.tique()
-        antes = len(bancada.vpads)
-        vpad_do_z = bancada.vpad_de(SEXTO)
+            ensaio.tique()
+        ensaio.mesa.levantar(g)
+        ensaio.tique()
+        antes = len(ensaio.vpads)
+        vpad_do_z = ensaio.vpad_de(SEXTO)
         planos = Planos(monkeypatch)
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
-            bancada.tique()
-        assert len(bancada.reg.guardados()) == 2, "com o jogo aberto um prazo venceu"
+            ensaio.tique()
+        assert len(ensaio.reg.guardados()) == 2, "com o jogo aberto um prazo venceu"
         return antes, planos, vpad_do_z
 
     @pytest.mark.parametrize("volta", [True, False], ids=["o-p2-volta", "ninguem-volta"])
@@ -369,38 +369,38 @@ class TestUmDosSessentaComSeisControles:
     ) -> None:
         g = NOVO
         quem = (P1, P2, P3, P4, g, SEXTO)
-        bancada = _montar(
+        ensaio = _montar(
             monkeypatch, quem, TRANSPORTES_DE_SEIS[transporte], demorados=frozenset({g})
         )
-        assert bancada.vpad_de(g) is None, "o g devia estar esperando o grab"
-        assert bancada.o_jogo_ve() == {1: P1, 2: P2, 3: P3, 4: P4, 5: SEXTO}
+        assert ensaio.vpad_de(g) is None, "o g devia estar esperando o grab"
+        assert ensaio.o_jogo_ve() == {1: P1, 2: P2, 3: P3, 4: P4, 5: SEXTO}
         vias = dict(zip(quem, TRANSPORTES_DE_SEIS[transporte], strict=True))
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in (P3, P4)}
+        vpads_de_antes = {u: ensaio.vpad_de(u) for u in (P3, P4)}
 
-        antes, planos, vpad_do_z = self._o_prazo_do_p2_passa(monkeypatch, bancada, g)
+        antes, planos, vpad_do_z = self._o_prazo_do_p2_passa(monkeypatch, ensaio, g)
 
         assert planos.os_que_a_faixa_mudou() == []
-        assert bancada.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
-        assert bancada.o_jogo_ve()[2] == P2, "o boneco 2 espera no vpad do P2 (D-2410)"
-        assert len(bancada.vpads) == antes, "com o jogo aberto alguém renasceu"
+        assert ensaio.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
+        assert ensaio.o_jogo_ve()[2] == P2, "o boneco 2 espera no vpad do P2 (D-2410)"
+        assert len(ensaio.vpads) == antes, "com o jogo aberto alguém renasceu"
         for uniq, vpad in vpads_de_antes.items():
-            assert bancada.vpad_de(uniq) is vpad, f"{uniq} renasceu"
-        assert bancada.vpad_de(SEXTO) is vpad_do_z, "o z estava certo e renasceu"
+            assert ensaio.vpad_de(uniq) is vpad, f"{uniq} renasceu"
+        assert ensaio.vpad_de(SEXTO) is vpad_do_z, "o z estava certo e renasceu"
 
         if volta:
-            bancada.mesa.sentar(P2, transporte=vias[P2])
-            bancada.tique()
-            bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3, P4: 4, SEXTO: 6}
-            assert bancada.o_jogo_ve()[2] == P2, "o P2 voltou fora do boneco dele"
+            ensaio.mesa.sentar(P2, transporte=vias[P2])
+            ensaio.tique()
+            ensaio.tique()
+            assert ensaio.a_tela() == {P1: 1, P2: 2, P3: 3, P4: 4, SEXTO: 6}
+            assert ensaio.o_jogo_ve()[2] == P2, "o P2 voltou fora do boneco dele"
         else:
             for _ in range(_ticks(DEPOIS) + 1):
-                bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
+                ensaio.tique()
+            assert ensaio.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
         assert planos.os_que_a_faixa_mudou() == []
         for uniq, vpad in vpads_de_antes.items():
-            assert bancada.vpad_de(uniq) is vpad, f"{uniq} renasceu"
-        assert bancada.vpad_de(SEXTO) is vpad_do_z
+            assert ensaio.vpad_de(uniq) is vpad, f"{uniq} renasceu"
+        assert ensaio.vpad_de(SEXTO) is vpad_do_z
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -418,37 +418,37 @@ class TestQuemEsperaOLugarGuardado:
     ) -> None:
         quem = (P1, P2, P3, P4, NOVO)
         vias = TRANSPORTES_DE_SEIS[transporte][:5]
-        bancada = _montar(monkeypatch, quem, vias)
-        assert bancada.o_jogo_ve() == {n + 1: u for n, u in enumerate(quem)}
-        vpad_do_novo = bancada.vpad_de(NOVO)
-        vpad_do_p3 = bancada.vpad_de(P3)
+        ensaio = _montar(monkeypatch, quem, vias)
+        assert ensaio.o_jogo_ve() == {n + 1: u for n, u in enumerate(quem)}
+        vpad_do_novo = ensaio.vpad_de(NOVO)
+        vpad_do_p3 = ensaio.vpad_de(P3)
 
-        bancada.mesa.levantar(P2)
+        ensaio.mesa.levantar(P2)
         for _ in range(_ticks(DEPOIS)):
-            bancada.tique()
-        bancada.mesa.levantar(P4)
-        bancada.tique()
-        antes = len(bancada.vpads)
+            ensaio.tique()
+        ensaio.mesa.levantar(P4)
+        ensaio.tique()
+        antes = len(ensaio.vpads)
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
-            bancada.tique()
-        assert len(bancada.reg.guardados()) == 2, "com o jogo aberto um prazo venceu"
+            ensaio.tique()
+        assert len(ensaio.reg.guardados()) == 2, "com o jogo aberto um prazo venceu"
 
-        assert bancada.a_tela() == {P1: 1, P3: 3, NOVO: 5}
-        bancada.o_jogo_segue_a_tela()
-        assert len(bancada.vpads) == antes, "com o jogo aberto alguém renasceu"
+        assert ensaio.a_tela() == {P1: 1, P3: 3, NOVO: 5}
+        ensaio.o_jogo_segue_a_tela()
+        assert len(ensaio.vpads) == antes, "com o jogo aberto alguém renasceu"
 
         if volta:
-            bancada.mesa.sentar(P2, transporte=vias[1])
-            bancada.tique()
-            bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3, NOVO: 5}
+            ensaio.mesa.sentar(P2, transporte=vias[1])
+            ensaio.tique()
+            ensaio.tique()
+            assert ensaio.a_tela() == {P1: 1, P2: 2, P3: 3, NOVO: 5}
         else:
             for _ in range(_ticks(DEPOIS) + 1):
-                bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 3, NOVO: 5}
-        bancada.o_jogo_segue_a_tela()
-        assert bancada.vpad_de(NOVO) is vpad_do_novo, "o novo renasceu"
-        assert bancada.vpad_de(P3) is vpad_do_p3, "o P3 renasceu"
+                ensaio.tique()
+            assert ensaio.a_tela() == {P1: 1, P3: 3, NOVO: 5}
+        ensaio.o_jogo_segue_a_tela()
+        assert ensaio.vpad_de(NOVO) is vpad_do_novo, "o novo renasceu"
+        assert ensaio.vpad_de(P3) is vpad_do_p3, "o P3 renasceu"
 
 
 DOIS_FORA = [
@@ -477,19 +477,19 @@ class TestAMatrizDeQuatro:
         transporte: str,
         volta: bool,
     ) -> None:
-        bancada = montar(monkeypatch, 4, transporte)
+        ensaio = montar(monkeypatch, 4, transporte)
         planos = Planos(monkeypatch)
-        via = bancada.mesa.transporte_de(UNIQS[segundo])
+        via = ensaio.mesa.transporte_de(UNIQS[segundo])
         sempre = [u for n, u in enumerate(UNIQS[:4]) if n not in (primeiro, segundo)]
 
         def tique() -> None:
-            vpads = {u: bancada.vpad_de(u) for u in sempre}
-            jogo, tela = bancada.o_jogo_ve(), bancada.a_tela()
+            vpads = {u: ensaio.vpad_de(u) for u in sempre}
+            jogo, tela = ensaio.o_jogo_ve(), ensaio.a_tela()
             certos = {u for u in sempre if jogo.get(tela.get(u)) == u}
-            bancada.tique()
-            jogo, numeros = bancada.o_jogo_ve(), bancada.a_tela()
+            ensaio.tique()
+            jogo, numeros = ensaio.o_jogo_ve(), ensaio.a_tela()
             for uniq in sempre:
-                novo = bancada.vpad_de(uniq)
+                novo = ensaio.vpad_de(uniq)
                 if novo is not None and vpads[uniq] is not None and novo is not vpads[uniq]:
                     assert uniq not in certos or numeros[uniq] != tela[uniq], (
                         f"{uniq} estava no boneco do número dele e renasceu"
@@ -498,17 +498,17 @@ class TestAMatrizDeQuatro:
                         f"{uniq} renasceu fora do boneco do número: {jogo}, {numeros}"
                     )
 
-        bancada.mesa.levantar(UNIQS[primeiro])
+        ensaio.mesa.levantar(UNIQS[primeiro])
         for _ in range(_ticks(DEPOIS)):
             tique()
-        bancada.mesa.levantar(UNIQS[segundo])
+        ensaio.mesa.levantar(UNIQS[segundo])
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             tique()
-        assert len(bancada.reg.guardados()) == 2
-        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
+        assert len(ensaio.reg.guardados()) == 2
+        ensaio.reg.soltar_os_lugares_guardados(motivo="renumerar")
         tique()
         if volta:
-            bancada.mesa.sentar(UNIQS[segundo], transporte=via)
+            ensaio.mesa.sentar(UNIQS[segundo], transporte=via)
             tique()
             tique()
         else:
@@ -518,11 +518,11 @@ class TestAMatrizDeQuatro:
         assert planos.feitos, "o co-op não perguntou nada ao planejador"
         assert planos.os_que_a_faixa_mudou() == []
         ficaram = [u for n, u in enumerate(UNIQS[:4]) if n != primeiro and (volta or n != segundo)]
-        assert set(bancada.a_tela()) == set(ficaram)
+        assert set(ensaio.a_tela()) == set(ficaram)
         if (primeiro, segundo, volta) == (0, 1, True):
-            assert bancada.inst.primary_uniq == P3, "a R-04: o posto ficou com o P3"
-            assert bancada.coop._p1_espera_o_jogo is True
-            jogo = bancada.o_jogo_ve()
-            assert P2 in jogo.values() and jogo[bancada.a_tela()[P4]] == P4, jogo
+            assert ensaio.inst.primary_uniq == P3, "a R-04: o posto ficou com o P3"
+            assert ensaio.coop._p1_espera_o_jogo is True
+            jogo = ensaio.o_jogo_ve()
+            assert P2 in jogo.values() and jogo[ensaio.a_tela()[P4]] == P4, jogo
         else:
-            bancada.o_jogo_segue_a_tela()
+            ensaio.o_jogo_segue_a_tela()

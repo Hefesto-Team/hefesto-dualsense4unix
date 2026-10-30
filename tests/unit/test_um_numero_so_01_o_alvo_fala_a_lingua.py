@@ -160,7 +160,7 @@ def test_mordida_da_ponta_1_sem_o_gesto_a_fila_podre_fica(tmp_path) -> None:
     assert len(gravado[ORDER_FIELD]) == 8, "a mordida não morde"
 
 
-class _MesaDela:
+class _MesaDoUsuario:
     """A mesa MEDIDA: quatro controles, índice e jogador em ordens diferentes."""
 
     MESA = (
@@ -186,7 +186,7 @@ class _MesaDela:
 
 class _RegistroDaFila:
     def slot_for(self, uniq: str, *, assign: bool = True) -> int | None:
-        for u, _, slot in _MesaDela.MESA:
+        for u, _, slot in _MesaDoUsuario.MESA:
             if u == uniq:
                 return slot
         return None
@@ -202,7 +202,7 @@ def handlers():
 
     class _Handlers(IpcHandlersMixin):
         def __init__(self) -> None:
-            self.controller = _MesaDela()
+            self.controller = _MesaDoUsuario()
             self.daemon = _Daemon()
 
     return _Handlers()
@@ -232,7 +232,7 @@ async def test_mordida_da_ponta_2_o_indice_sozinho_mente(handlers) -> None:
 
 
 @pytest.mark.asyncio
-async def test_o_alvo_aceita_o_numero_que_ela_ve(handlers) -> None:
+async def test_o_alvo_aceita_o_numero_que_o_usuario_ve(handlers) -> None:
     """A PONTA 3: «Controle 1» mira o controle que ACENDE 1, não o índice 0."""
     r = await handlers._handle_controller_target_set({"jogador": 1})
     assert handlers.controller.alvo == 1, "o jogador 1 é o índice 1 nesta mesa"

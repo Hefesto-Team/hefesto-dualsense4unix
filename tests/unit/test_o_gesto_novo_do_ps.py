@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""O GESTO NOVO DO PS DISPARA, E O REMOVIDO SAI DE VEZ (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8).
+"""O GESTO NOVO DO PS DISPARA, E O REMOVIDO SAI DE VEZ (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01,
+N8).
 
 O pedido de 16/10: *«os gestos do PS falta adicionar botão pra adicionar gesto novo (…) e remover
 também fora que essa seção fica de olho pra ver se algum atalho tá proibido. aí ele não deixa se

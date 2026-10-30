@@ -748,7 +748,7 @@ def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
     assert laco.olhar()[ULTIMA]["gravou"], "o DualSense não marcou"
 
 
-def test_a_re_enumeracao_do_dongle_nao_vira_a_porta_que_ela_plugou(
+def test_a_re_enumeracao_do_dongle_nao_vira_a_porta_que_o_usuario_plugou(
     tmp_path: Path, disco: Path
 ) -> None:
     """O ``-71`` e o reset de porta da ponte root: o dongle SOME e VOLTA na"""
@@ -914,7 +914,7 @@ def _executavel(caminho: Path, corpo: str) -> None:
     caminho.chmod(caminho.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
 
-class Bancada:
+class Ensaio:
     """Dois adaptadores e um ``maquina.json``: o que o script lê e o que escreve."""
 
     def __init__(
@@ -1016,7 +1016,7 @@ exit 0
 
 def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
     """UM escritor: o ``bt_active_mode.sh`` lê o nome do adaptador no"""
-    banca = Bancada(
+    banca = Ensaio(
         tmp_path, alias={"hci0": "Sala", "hci1": "Quarto"}, adaptadores={"hci0": "Sofá"}
     )
     feito = banca.rodar()
@@ -1026,7 +1026,7 @@ def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
 
 def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
     """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido: *«temos o"""
-    banca = Bancada(
+    banca = Ensaio(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
         lugares={ID_PATH["hci0"]: {"entrada": "15", "nome": "15"}},
@@ -1038,7 +1038,7 @@ def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
 
 def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> None:
     """O adaptador que hospeda um Pro Controller recebe o nome COSTURADO — o Pro"""
-    banca = Bancada(
+    banca = Ensaio(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
         adaptadores={"hci1": "Quarto novo"},
@@ -1052,7 +1052,7 @@ def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> 
 
 def test_o_script_nao_reescreve_o_nome_que_ja_esta_la(tmp_path: Path) -> None:
     """O watchdog roda a cada 2 min: nome que já está no ``Alias`` não se"""
-    banca = Bancada(
+    banca = Ensaio(
         tmp_path,
         alias={"hci0": "Sofá", "hci1": "Quarto"},
         adaptadores={"hci0": "Sofá"},
@@ -1088,9 +1088,9 @@ def test_sob_sudo_o_gancho_do_maquina_json_morre(tmp_path: Path) -> None:
     assert rodar() == str(tmp_path / "maquina.json")
 
 
-def test_sob_a_suite_o_script_nao_le_o_maquina_json_dela(tmp_path: Path) -> None:
+def test_sob_a_suite_o_script_nao_le_o_maquina_json_do_usuario(tmp_path: Path) -> None:
     """Com os ganchos de teste e sem ``HEFESTO_MAQUINA_JSON``, o script não"""
-    banca = Bancada(
+    banca = Ensaio(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
         adaptadores={"hci0": "Sofá"},

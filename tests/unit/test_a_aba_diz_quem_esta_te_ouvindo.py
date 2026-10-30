@@ -170,7 +170,7 @@ class TestOPacoteEmite:
             a02._ENDERECOS = antes
         return {}
 
-    def test_enquanto_ela_nao_publicar_a_chave_nao_sai(self) -> None:
+    def test_enquanto_o_usuario_nao_publicar_a_chave_nao_sai(self) -> None:
         """MORDIDA: emita `mic-ressalva` fora do `_so_se_a_pagina_tiver`."""
         import pacotes.a02_controles as a02
 
@@ -217,7 +217,7 @@ class TestOGeradorTemOEndereco:
         assert 'monta_ressalva("mic-ressalva")' in bloco, (
             "a linha de quem ouve saiu da moldura do microfone")
 
-    def test_a_pagina_da_bancada_carrega_o_endereco(self) -> None:
+    def test_a_pagina_do_ensaio_carrega_o_endereco(self) -> None:
         """MORDIDA: gere a página sem rodar `aba02.py` de novo."""
         pagina = RAIZ / "mockup" / "02-controles.html"
         if not pagina.exists():  # pragma: no cover

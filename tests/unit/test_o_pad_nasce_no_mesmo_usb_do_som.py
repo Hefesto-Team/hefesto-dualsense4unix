@@ -640,7 +640,7 @@ class ClienteDeMentira:
         self.fechado = True
 
 
-class BancadaDoGadget:
+class EnsaioDoGadget:
     """O lado do jogo de um /dev/hidgN: um par SEQPACKET guarda um report por escrita."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -717,8 +717,8 @@ class BancadaDoGadget:
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> BancadaDoGadget:
-    return BancadaDoGadget(monkeypatch, tmp_path)
+def ensaio(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> EnsaioDoGadget:
+    return EnsaioDoGadget(monkeypatch, tmp_path)
 
 
 class _EspiaoDoDiario:
@@ -740,43 +740,43 @@ class _EspiaoDoDiario:
 
 class TestOVpadNasceNoGadget:
     def test_o_vpad_nasce_no_gadget_com_as_features_do_probe(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        pad = bancada.pad()
+        pad = ensaio.pad()
         try:
             assert pad.start() is True
             assert pad._gadget is not None
-            serial, descritor, identidade = bancada.pedidos[0]
+            serial, descritor, identidade = ensaio.pedidos[0]
             assert serial == pad_usb.serial_do_pad(pad.mac, pad.player)
             assert descritor == _descritor()
             assert identidade == IDENTIDADE
-            assert sorted(bancada.guardadas) == [0x05, 0x09, 0x20]
+            assert sorted(ensaio.guardadas) == [0x05, 0x09, 0x20]
             mac_le = bytes(int(x, 16) for x in reversed(pad.mac.split(":")))
-            assert bancada.guardadas[0x09][1:7] == mac_le
+            assert ensaio.guardadas[0x09][1:7] == mac_le
             assert pad.wait_for_bind(0.5) is True
             assert pad.is_bound is False
-            bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-            assert bancada.esperar(lambda: pad.is_bound)
+            ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+            assert ensaio.esperar(lambda: pad.is_bound)
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
         finally:
             pad.stop()
 
     def test_a_entrada_sai_crua_e_o_output_do_jogo_chega_ao_controle(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from hefesto_dualsense4unix.integrations import uhid_gamepad
 
         espiao = _EspiaoDoDiario(uhid_gamepad.logger)
         monkeypatch.setattr(uhid_gamepad, "logger", espiao)
         pedidos: list[tuple[int, int]] = []
-        pad = bancada.pad(rumble_sink=lambda w, s: pedidos.append((w, s)))
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        pad = ensaio.pad(rumble_sink=lambda w, s: pedidos.append((w, s)))
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
         try:
             assert pad.start()
-            assert bancada.esperar(lambda: pad.is_bound)
-            assert bancada.jogo is not None
+            assert ensaio.esperar(lambda: pad.is_bound)
+            assert ensaio.jogo is not None
             pad.forward_buttons(frozenset({"cross"}))
-            report = bancada.jogo.recv(512)
+            report = ensaio.jogo.recv(512)
             assert len(report) == 64 and report[0] == 0x01
             saida = bytearray(48)
             saida[0] = 0x02
@@ -785,9 +785,9 @@ class TestOVpadNasceNoGadget:
             import time
 
             time.sleep(0.6)
-            bancada.jogo.send(bytes([0x08]) + bytes(46))
-            bancada.jogo.send(bytes(saida))
-            assert bancada.esperar(lambda: pad.output_count == 1)
+            ensaio.jogo.send(bytes([0x08]) + bytes(46))
+            ensaio.jogo.send(bytes(saida))
+            assert ensaio.esperar(lambda: pad.output_count == 1)
             for _ in range(20):
                 pad.pump_ff()
                 if pedidos:
@@ -800,122 +800,122 @@ class TestOVpadNasceNoGadget:
             pad.stop()
 
     def test_sem_o_contrato_o_vpad_nasce_uhid_e_nao_pede_ao_broker(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        bancada.falta = ["usbip_vudc"]
-        pad = bancada.pad()
+        ensaio.falta = ["usbip_vudc"]
+        pad = ensaio.pad()
         try:
             assert pad.start() is True
             assert pad._gadget is None
-            assert bancada.pedidos == []
+            assert ensaio.pedidos == []
         finally:
             pad.stop()
 
     def test_sem_o_ioctl_o_contrato_vai_ao_doctor_e_o_vpad_nasce_uhid(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        bancada.ioctl_erro = errno.ENOTTY
-        pad = bancada.pad()
+        ensaio.ioctl_erro = errno.ENOTTY
+        pad = ensaio.pad()
         try:
             assert pad.start() is True
             assert pad._gadget is None
-            assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+            assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
             assert pad_usb.CONTRATO_DO_IOCTL in pad_usb.contrato_que_faltou_ao_montar()
         finally:
             pad.stop()
 
     def test_o_gadget_que_nao_enumera_volta_ao_uhid(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
         relogio = [100.0]
-        pad = bancada.pad(time_fn=lambda: relogio[0])
+        pad = ensaio.pad(time_fn=lambda: relogio[0])
         try:
             assert pad.start()
             relogio[0] += 16.0
-            assert bancada.esperar(lambda: pad._gadget_falhou)
+            assert ensaio.esperar(lambda: pad._gadget_falhou)
             pad.pump_ff()
             assert pad._gadget is None and pad.is_active
-            assert bancada.esperar(lambda: bancada.clientes[0].desmontados == ["hefesto-pad-0"])
+            assert ensaio.esperar(lambda: ensaio.clientes[0].desmontados == ["hefesto-pad-0"])
             assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:
             pad.stop()
 
-    def test_sem_jogo_o_gadget_desce_com_o_vpad(self, bancada: BancadaDoGadget) -> None:
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        pad = bancada.pad()
+    def test_sem_jogo_o_gadget_desce_com_o_vpad(self, ensaio: EnsaioDoGadget) -> None:
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad.stop()
-        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
         assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
 
     def test_com_o_jogo_aberto_o_gadget_espera_e_o_aparelho_o_retoma(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        bancada.jogo_aberto = True
-        pad = bancada.pad()
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        ensaio.jogo_aberto = True
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
-        assert bancada.jogo is not None
+        assert ensaio.esperar(lambda: pad.is_bound)
+        assert ensaio.jogo is not None
         pad.forward_buttons(frozenset({"cross"}))
-        bancada.jogo.recv(512)
+        ensaio.jogo.recv(512)
         pad.stop()
-        neutro = bancada.jogo.recv(512)
+        neutro = ensaio.jogo.recv(512)
         assert neutro[0] == 0x01 and neutro[1:5] == bytes([0x80] * 4)
         assert neutro[8] == 0x08
-        assert bancada.clientes[0].desmontados == []
+        assert ensaio.clientes[0].desmontados == []
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
-        de_volta = bancada.pad()
+        de_volta = ensaio.pad()
         try:
             assert de_volta.start()
-            assert len(bancada.pedidos) == 1
+            assert len(ensaio.pedidos) == 1
             assert de_volta.is_bound
         finally:
             de_volta.stop()
-        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
-        bancada.jogo_aberto = False
-        assert bancada.ug._GADGETS_ESTACIONADOS.varrer() == 1
-        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 1
+        ensaio.jogo_aberto = False
+        assert ensaio.ug._GADGETS_ESTACIONADOS.varrer() == 1
+        assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
 
-    def test_o_estacionado_desce_quando_o_jogo_fecha(self, bancada: BancadaDoGadget) -> None:
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        bancada.jogo_aberto = True
-        pad = bancada.pad()
+    def test_o_estacionado_desce_quando_o_jogo_fecha(self, ensaio: EnsaioDoGadget) -> None:
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        ensaio.jogo_aberto = True
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad.stop()
-        estacionados = bancada.ug._GADGETS_ESTACIONADOS
+        estacionados = ensaio.ug._GADGETS_ESTACIONADOS
         assert estacionados.varrer() == 0
-        bancada.jogo_aberto = False
+        ensaio.jogo_aberto = False
         assert estacionados.varrer() == 1
-        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
 
 
 class TestOPadEmUsbNaoQuebraOResto:
     """O que o conferente final achou: o gadget convivendo com o co-op e a máscara."""
 
-    def test_em_enumeracao_o_pad_esta_vivo_para_o_coop(self, bancada: BancadaDoGadget) -> None:
+    def test_em_enumeracao_o_pad_esta_vivo_para_o_coop(self, ensaio: EnsaioDoGadget) -> None:
         """~9 s sem o ``_started``: sem isto o co-op renascia o jogador a cada tique."""
         from unittest.mock import MagicMock
 
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
 
         relogio = [100.0]
-        pad = bancada.pad(time_fn=lambda: relogio[0])
+        pad = ensaio.pad(time_fn=lambda: relogio[0])
         try:
             assert pad.start()
             assert pad._started is False
             assert vpad_vivo(pad) is True
             relogio[0] += 16.0
-            assert bancada.esperar(lambda: pad._gadget_falhou)
+            assert ensaio.esperar(lambda: pad._gadget_falhou)
             assert vpad_vivo(pad) is False
         finally:
             pad.stop()
         assert vpad_vivo(MagicMock(_started=False)) is False
 
     def test_o_estacionado_do_aparelho_que_ficou_sem_adocao_desce_pelo_prazo_da_volta(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A emulação desligada com o jogo aberto não deixa um DualSense fantasma.
 
@@ -929,33 +929,33 @@ class TestOPadEmUsbNaoQuebraOResto:
         """
         import time
 
-        monkeypatch.setattr(bancada.ug, "_GADGET_VARRE_S", 3600.0)
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        bancada.jogo_aberto = True
-        bancada.aparelho_presente = True
-        pad = bancada.pad()
+        monkeypatch.setattr(ensaio.ug, "_GADGET_VARRE_S", 3600.0)
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        ensaio.jogo_aberto = True
+        ensaio.aparelho_presente = True
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad.stop()
-        estacionados = bancada.ug._GADGETS_ESTACIONADOS
-        prazo = bancada.ug._GADGET_RETOMA_S
+        estacionados = ensaio.ug._GADGETS_ESTACIONADOS
+        prazo = ensaio.ug._GADGET_RETOMA_S
         t0 = time.monotonic()
         assert estacionados.quantos() == 1
         assert estacionados.varrer(agora=t0 + 1.0) == 0
-        bancada.aparelho_presente = False
+        ensaio.aparelho_presente = False
         assert estacionados.varrer(agora=t0 + prazo + 1.0) == 0
-        assert bancada.clientes[0].desmontados == []
-        bancada.aparelho_presente = True
+        assert ensaio.clientes[0].desmontados == []
+        ensaio.aparelho_presente = True
         assert estacionados.varrer(agora=t0 + prazo + 2.0) == 0, (
             "a conta da volta anterior derrubou o gadget do aparelho que acabou de voltar"
         )
         assert estacionados.varrer(agora=t0 + 2 * prazo + 1.5) == 0
         assert estacionados.varrer(agora=t0 + 2 * prazo + 2.0) == 1
         assert estacionados.quantos() == 0
-        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
 
     def test_o_aparelho_que_demora_a_voltar_retoma_o_mesmo_gadget(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O caso do P3 de 14/10: o `hidraw` voltou 14 s depois, e o co-op o adota.
 
@@ -969,80 +969,80 @@ class TestOPadEmUsbNaoQuebraOResto:
         """
         import time
 
-        monkeypatch.setattr(bancada.ug, "_GADGET_VARRE_S", 3600.0)
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        bancada.jogo_aberto = True
-        pad = bancada.pad()
+        monkeypatch.setattr(ensaio.ug, "_GADGET_VARRE_S", 3600.0)
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        ensaio.jogo_aberto = True
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         t0 = time.monotonic()
         pad.stop()
-        estacionados = bancada.ug._GADGETS_ESTACIONADOS
-        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
+        estacionados = ensaio.ug._GADGETS_ESTACIONADOS
+        assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 1
         for passo in (5.0, 10.0, 14.0):
             assert estacionados.varrer(agora=t0 + passo) == 0
-        bancada.aparelho_presente = True
+        ensaio.aparelho_presente = True
         assert estacionados.varrer(agora=t0 + 14.5) == 0, (
             "o relógio do estacionamento derrubou o gadget antes da adoção"
         )
-        assert bancada.clientes[0].desmontados == []
-        de_volta = bancada.pad()
+        assert ensaio.clientes[0].desmontados == []
+        de_volta = ensaio.pad()
         try:
             assert de_volta.start()
-            assert len(bancada.pedidos) == 1, "a volta pediu um gadget novo"
+            assert len(ensaio.pedidos) == 1, "a volta pediu um gadget novo"
             assert de_volta.is_bound
-            assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
-            assert bancada.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is False
+            assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 0
+            assert ensaio.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is False
             assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
-            assert bancada.clientes[0].desmontados == []
+            assert ensaio.clientes[0].desmontados == []
         finally:
             de_volta.stop()
 
     def test_a_adocao_sem_o_gadget_derruba_o_estacionado_na_hora(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O pad do aparelho nasceu em outra máscara: o estacionado é fantasma, sem relógio.
 
         MORDIDA: faça ``_GadgetsEstacionados.a_adocao_decidiu`` devolver
         ``False`` logo na entrada — o gadget fica de pé ao lado do pad novo.
         """
-        monkeypatch.setattr(bancada.ug, "_GADGET_VARRE_S", 3600.0)
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        bancada.jogo_aberto = True
-        bancada.aparelho_presente = True
-        pad = bancada.pad()
+        monkeypatch.setattr(ensaio.ug, "_GADGET_VARRE_S", 3600.0)
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        ensaio.jogo_aberto = True
+        ensaio.aparelho_presente = True
+        pad = ensaio.pad()
         assert pad.start()
-        assert bancada.esperar(lambda: pad.is_bound)
+        assert ensaio.esperar(lambda: pad.is_bound)
         pad.stop()
-        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 1
-        assert bancada.ug.o_pad_do_aparelho_nasceu("aa:bb:cc:00:00:99") is False
-        assert bancada.clientes[0].desmontados == []
-        assert bancada.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is True
-        assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
-        assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+        assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 1
+        assert ensaio.ug.o_pad_do_aparelho_nasceu("aa:bb:cc:00:00:99") is False
+        assert ensaio.clientes[0].desmontados == []
+        assert ensaio.ug.o_pad_do_aparelho_nasceu(IDENTIDADE) is True
+        assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 0
+        assert ensaio.clientes[0].desmontados == ["hefesto-pad-0"]
         assert pad_usb.interface_do_aparelho(IDENTIDADE) is None
 
     def test_o_gadget_que_cai_com_o_jogo_aberto_volta_ao_uhid(
-        self, bancada: BancadaDoGadget
+        self, ensaio: EnsaioDoGadget
     ) -> None:
         """O broker que cai tira o gadget de baixo do pad: ele renasce, não emudece."""
-        bancada.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
-        bancada.jogo_aberto = True
-        pad = bancada.pad()
+        ensaio.enumerado = ("hidraw9", INTERFACE_DO_GADGET)
+        ensaio.jogo_aberto = True
+        pad = ensaio.pad()
         try:
             assert pad.start()
-            assert bancada.esperar(lambda: pad.is_bound)
-            assert bancada.jogo is not None
-            bancada.jogo.close()
+            assert ensaio.esperar(lambda: pad.is_bound)
+            assert ensaio.jogo is not None
+            ensaio.jogo.close()
             pad.forward_buttons(frozenset({"cross"}))
             assert pad._gadget_caiu is False
-            bancada.enumerado = None
+            ensaio.enumerado = None
             pad.forward_buttons(frozenset({"circle"}))
-            assert bancada.esperar(lambda: pad._gadget_caiu, segundos=6.0)
+            assert ensaio.esperar(lambda: pad._gadget_caiu, segundos=6.0)
             pad.pump_ff()
             assert pad._gadget is None and pad.is_active
-            assert bancada.esperar(lambda: bancada.clientes[0].desmontados == ["hefesto-pad-0"])
-            assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
+            assert ensaio.esperar(lambda: ensaio.clientes[0].desmontados == ["hefesto-pad-0"])
+            assert ensaio.ug._GADGETS_ESTACIONADOS.quantos() == 0
             assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:
             pad.stop()
@@ -1116,17 +1116,17 @@ class TestOGetReportEOHidrawDoGadget:
         assert chamadas[0][:2] == (7, pad_usb.GADGET_HID_WRITE_GET_REPORT)
 
     def test_o_get_report_pendente_se_responde_com_a_feature_guardada(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import select
 
-        pad = bancada.pad()
+        pad = ensaio.pad()
         try:
             assert pad.start()
             monkeypatch.setattr(pad_usb, "ler_o_id_do_get_report", lambda _fd: 0x20)
-            bancada.guardadas.clear()
-            bancada.ug._drenar_o_gadget(pad, pad._fd, select.POLLPRI)
-            assert bancada.guardadas == {0x20: pad._features[0x20]}
+            ensaio.guardadas.clear()
+            ensaio.ug._drenar_o_gadget(pad, pad._fd, select.POLLPRI)
+            assert ensaio.guardadas == {0x20: pad._features[0x20]}
         finally:
             pad.stop()
 
@@ -1393,17 +1393,17 @@ class TestSemOKernelODoctorDizOContrato:
         assert "[ OK ]" in saida and "[WARN]" not in saida, saida
 
     def test_o_daemon_avisa_uma_vez_e_o_pad_nasce_uhid(
-        self, bancada: BancadaDoGadget, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: EnsaioDoGadget, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         avisos: list[dict[str, Any]] = []
-        monkeypatch.setattr(bancada.ug, "_CONTRATOS_JA_AVISADOS", set())
+        monkeypatch.setattr(ensaio.ug, "_CONTRATOS_JA_AVISADOS", set())
         monkeypatch.setattr(
-            bancada.ug.logger, "warning",
+            ensaio.ug.logger, "warning",
             lambda evento, **kw: avisos.append({"evento": evento, **kw}),
         )
-        bancada.falta = ["vhci_hcd"]
+        ensaio.falta = ["vhci_hcd"]
         for _ in range(2):
-            pad = bancada.pad()
+            pad = ensaio.pad()
             try:
                 assert pad.start() and pad._gadget is None
             finally:

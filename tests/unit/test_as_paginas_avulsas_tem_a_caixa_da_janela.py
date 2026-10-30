@@ -29,7 +29,7 @@ FOLGA = 2
 
 PISO = (1212, 809)
 
-VISTAS = {"piso": PISO, "dela": olhar.VISTA_DELA, "tv-inteira": (olhar.LARG, olhar.ALT),
+VISTAS = {"piso": PISO, "dela": olhar.VISTA_DO_USUARIO, "tv-inteira": (olhar.LARG, olhar.ALT),
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
 FIM = """() => {
@@ -173,13 +173,13 @@ def test_as_tres_pedem_a_caixa_ao_mesmo_dono() -> None:
 
 
 @skip_sem_gi_real
-def test_a_bancada_e_o_que_os_geradores_escrevem(tmp_path: pathlib.Path) -> None:
+def test_o_ensaio_e_o_que_os_geradores_escrevem(tmp_path: pathlib.Path) -> None:
     """Os dois mockups são o que `mapa.py` e `pagina_do_mapa.py` escrevem hoje."""
     import onde
 
     from hefesto_dualsense4unix.interface import pagina_do_mapa
 
-    ambiente = dict(os.environ, HEFESTO_BANCADA=str(tmp_path), PYTHONPATH=str(RAIZ / "src"))
+    ambiente = dict(os.environ, HEFESTO_ENSAIO=str(tmp_path), PYTHONPATH=str(RAIZ / "src"))
     r = subprocess.run([sys.executable, str(INTERFACE / "mapa.py")], capture_output=True,
                        text=True, timeout=180, env=ambiente, cwd=str(RAIZ))
     assert r.returncode == 0, r.stderr[-1200:]

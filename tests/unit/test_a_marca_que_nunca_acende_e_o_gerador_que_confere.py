@@ -19,7 +19,7 @@ pela validação da RESTOS-DA-ONDA-DOIS-01:
    sabota a primeira escrita de cada um e exige a bancada com o mesmo md5.
 
 ONDE ELA ESCREVE: numa cópia do `mockup/` em `tmp_path`, pelo desvio
-`HEFESTO_BANCADA` que `interface/onde.py` documenta. A bancada não é tocada.
+`HEFESTO_ENSAIO` que `interface/onde.py` documenta. A bancada não é tocada.
 """
 from __future__ import annotations
 
@@ -148,20 +148,20 @@ runpy.run_path(str(gerador), run_name="__main__")
 """
 
 
-def _bancada(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
+def _ensaio(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
     """Uma bancada de mentira com as páginas de hoje, e um TMPDIR só dela."""
-    bancada = tmp_path / "bancada"
-    bancada.mkdir()
+    ensaio = tmp_path / "bancada"
+    ensaio.mkdir()
     for p in (RAIZ / "mockup").glob("*.html"):
-        shutil.copy2(p, bancada / p.name)
+        shutil.copy2(p, ensaio / p.name)
     provisorio = tmp_path / "tmp"
     provisorio.mkdir()
-    return bancada, provisorio
+    return ensaio, provisorio
 
 
-def _ambiente(bancada: pathlib.Path, provisorio: pathlib.Path) -> dict[str, str]:
+def _ambiente(ensaio: pathlib.Path, provisorio: pathlib.Path) -> dict[str, str]:
     ambiente = dict(os.environ)
-    ambiente["HEFESTO_BANCADA"] = str(bancada)
+    ambiente["HEFESTO_ENSAIO"] = str(ensaio)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
     ambiente["TMPDIR"] = str(provisorio)
     return ambiente
@@ -179,22 +179,22 @@ def _pagina_do(gerador: str) -> str:
 
 
 @pytest.mark.parametrize("gerador", GERADORES)
-def test_a_recusa_nao_chega_a_bancada(gerador: str, tmp_path: pathlib.Path) -> None:
+def test_a_recusa_nao_chega_o_ensaio(gerador: str, tmp_path: pathlib.Path) -> None:
     """A escrita sabotada recusa, e a bancada sai com o mesmo md5 de antes.
 
     MORDE: devolva a forma antiga ao `__main__` de qualquer gerador (`monta()`
     direto na bancada, `_conferir()` depois) e o caso dele reprova no md5.
     """
-    bancada, provisorio = _bancada(tmp_path)
-    antes = _md5(bancada)
+    ensaio, provisorio = _ensaio(tmp_path)
+    antes = _md5(ensaio)
     r = subprocess.run(
         [sys.executable, "-c", SABOTAGEM, str(INTERFACE / gerador)],
         capture_output=True, text=True, timeout=300,
-        env=_ambiente(bancada, provisorio), cwd=str(RAIZ))
+        env=_ambiente(ensaio, provisorio), cwd=str(RAIZ))
     assert r.returncode != 0 and "sabotagem da régua" in r.stderr, (
         f"`{gerador}` não passou pela escrita sabotada (rc={r.returncode}) — a "
         f"régua não mediu nada:\n{r.stderr.strip()[-800:]}")
-    assert _md5(bancada) == antes, (
+    assert _md5(ensaio) == antes, (
         f"`{gerador}` recusou a página e a bancada MUDOU: a escrita veio antes "
         "da conferência, e o `--publicar` seguinte levaria a página recusada")
     recusadas = list(provisorio.glob(f"hefesto-prova-*/{_pagina_do(gerador)}"))
@@ -203,21 +203,21 @@ def test_a_recusa_nao_chega_a_bancada(gerador: str, tmp_path: pathlib.Path) -> N
 
 
 @pytest.mark.parametrize("gerador", GERADORES)
-def test_o_gerador_que_passa_escreve_a_bancada(gerador: str, tmp_path: pathlib.Path) -> None:
+def test_o_gerador_que_passa_escreve_o_ensaio(gerador: str, tmp_path: pathlib.Path) -> None:
     """Sem sabotagem, a página chega à bancada e o provisório é apagado.
 
     A BANCADA COMEÇA ENVENENADA, e é de propósito: uma cópia do `mockup/` já é
     igual ao que o gerador produz, e um gerador que parasse de copiar passaria
     por ausência.
     """
-    bancada, provisorio = _bancada(tmp_path)
-    pagina = bancada / _pagina_do(gerador)
+    ensaio, provisorio = _ensaio(tmp_path)
+    pagina = ensaio / _pagina_do(gerador)
     pagina.write_text(pagina.read_text(encoding="utf-8") + "\n<!-- velha -->",
                       encoding="utf-8")
     r = subprocess.run(
         [sys.executable, str(INTERFACE / gerador)],
         capture_output=True, text=True, timeout=300,
-        env=_ambiente(bancada, provisorio), cwd=str(RAIZ))
+        env=_ambiente(ensaio, provisorio), cwd=str(RAIZ))
     assert r.returncode == 0, f"`{gerador}` não roda:\n{r.stderr.strip()[-1200:]}"
     assert pagina.read_bytes() == (RAIZ / "mockup" / pagina.name).read_bytes(), (
         f"`{gerador}` conferiu e não copiou a página para a bancada")

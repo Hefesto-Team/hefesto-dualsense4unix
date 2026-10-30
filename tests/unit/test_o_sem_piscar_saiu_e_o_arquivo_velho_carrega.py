@@ -1,5 +1,5 @@
 """O «Sem piscar» saiu da tela e do produto, e o `maquina.json` que o tinha ligado carrega
-(AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, item I2, 16/10/2026).
+(AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, item I2, 16/10/2026).
 
 O usuário pediu: *«aquele sem piscar some da tela. Já existe o efeito Luz fixa. não devemos ter um
 botão ali pra isso»*. O interruptor era global (`maquina.json`, chave `luz.sem_piscar`) e, ligado,

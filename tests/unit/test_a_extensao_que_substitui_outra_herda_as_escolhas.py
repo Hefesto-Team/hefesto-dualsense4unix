@@ -128,7 +128,7 @@ def test_a_escolha_que_a_nova_aceita_passa_e_a_que_nao_aceita_fica_no_padrao(
     assert "modo" not in _guardado(lg, NOVA), "o valor recusado nem entra no arquivo"
 
 
-def test_a_escolha_que_ela_ja_fez_na_nova_vale_mais_que_a_da_antiga(
+def test_a_escolha_que_o_usuario_ja_fez_na_nova_vale_mais_que_a_da_antiga(
         lg: Lugares, tmp_path: Path, antiga_com_escolhas: None) -> None:
     _nova_que_ja_estava(lg, tmp_path, ligada=False)
     _escolher(lg, NOVA, porta=22000)
@@ -202,7 +202,7 @@ def test_a_antiga_desligada_nao_liga_a_nova(lg: Lugares, tmp_path: Path,
     assert not instalador.ler_registro(lg.registro)[NOVA].ligada
 
 
-def test_a_antiga_desligada_nao_desliga_a_nova_que_ela_ja_usava(
+def test_a_antiga_desligada_nao_desliga_a_nova_que_o_usuario_ja_usava(
         lg: Lugares, tmp_path: Path, antiga_com_escolhas: None) -> None:
     instalador.desligar(ANTIGA, lugares=lg)
     _nova_que_ja_estava(lg, tmp_path, ligada=True)

@@ -263,12 +263,12 @@ class TestODonoDoEvento:
         (nos / "input").mkdir(parents=True)
         monkeypatch.setattr(ode, "RAIZ_DAS_ENTRADAS", str(nos / "input"))
         monkeypatch.setattr(ode, "RAIZ_DOS_NOS", str(nos))
-        daemon = _DaemonDeBancada(_ControleQueContaOArme())
+        daemon = _DaemonDeEnsaio(_ControleQueContaOArme())
         asyncio.run(_rodar_uma_volta(daemon))
         assert daemon.controller.armado_no_connect == [True]
         assert ode.dono_armado() is None, "o reconnect_loop saiu e o dono ficou armado"
 
-        daemon = _DaemonDeBancada(_ControleQueContaOArme())
+        daemon = _DaemonDeEnsaio(_ControleQueContaOArme())
         asyncio.run(_rodar_uma_volta(daemon, watch=InputDirWatch(root=str(nos / "input"))))
         assert daemon.controller.armado_no_connect == [False], (
             "o watch injetado é teste: ele não arma o dono do processo"
@@ -294,7 +294,7 @@ class _ControleQueContaOArme:
         return "usb"
 
 
-class _DaemonDeBancada:
+class _DaemonDeEnsaio:
     """Superfície mínima do DaemonProtocol que o `reconnect_loop` toca."""
 
     def __init__(self, controller: Any) -> None:
@@ -326,7 +326,7 @@ class _DaemonDeBancada:
             self._stop_event.set()
 
 
-async def _rodar_uma_volta(daemon: _DaemonDeBancada, *, watch: Any = None) -> None:
+async def _rodar_uma_volta(daemon: _DaemonDeEnsaio, *, watch: Any = None) -> None:
     from hefesto_dualsense4unix.daemon.connection import reconnect_loop
 
     daemon._stop_event = asyncio.Event()

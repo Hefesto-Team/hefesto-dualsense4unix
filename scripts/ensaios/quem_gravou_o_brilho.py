@@ -3,7 +3,7 @@
 
 Só LÊ. Não fala com o daemon, não escreve em pasta nenhuma e imprime no
 terminal; quem quiser guardar redireciona. Nasceu da sprint
-O-BRILHO-BAIXO-QUE-ELA-NAO-ESCOLHEU-01 (o 8% do controle branco no Freestyle não foi
+O-BRILHO-BAIXO-QUE-O-USUARIO-NAO-ESCOLHEU-01 (o 8% do controle branco no Freestyle não foi
 escolha do usuário).
 
 O que faz, por ordem:
@@ -102,8 +102,8 @@ def achar_as_copias(perfis: pathlib.Path, casa: pathlib.Path | None,
     if (perfis / "freestyle.json").is_file():
         achados.append((perfis / "freestyle.json", "agora"))
     if casa is not None:
-        for sub in ("bancada-antes-2709/freestyle.json",
-                    "leva-2809/bancada-2809/perfis-antes-da-bancada/profiles/freestyle.json"):
+        for sub in ("ensaio-antes-2709/freestyle.json",
+                    "leva-2809/ensaio-2809/perfis-antes-do-ensaio/profiles/freestyle.json"):
             if (casa / sub).is_file():
                 achados.append((casa / sub, "cópia da casa " + sub.split("/")[0]))
     if estado is not None:

@@ -43,8 +43,8 @@ o MAC, e não entra em arquivo versionado.
 O DOIS ESTADOS, E OS DOIS SÃO REAIS
 ------------------------------------
 
-:func:`bancada_de_agora` é a leitura de 25/08 às 02h30.
-:func:`bancada_com_o_wifi_no_hub` é a MESMA mesa com o Archer T3U de volta em
+:func:`ensaio_de_agora` é a leitura de 25/08 às 02h30.
+:func:`ensaio_com_o_wifi_no_hub` é a MESMA mesa com o Archer T3U de volta em
 ``4-1.1.2``, que é onde ele estava às 21h de 24/08 — a leitura "antes" de um
 ensaio real. Ele existe porque é o único estado em que o **hub de dois
 barramentos** aparece: com o Wi-Fi na traseira, o lado 3.0 do hub está vazio e
@@ -255,7 +255,7 @@ _INTERFACES_BT: dict[str, str] = {
 }
 
 
-class Bancada:
+class Ensaio:
     """Um sysfs inteiro em memória, mais o registro de tudo que foi tocado."""
 
     def __init__(
@@ -377,25 +377,25 @@ def _interfaces_com_o_wifi_em(nome: str) -> dict[str, tuple[str, str, str]]:
     return {**_INTERFACES, NOS[nome]: ("ff", "ff", "ff")}
 
 
-def bancada_de_agora() -> Bancada:
+def ensaio_de_agora() -> Ensaio:
     """A leitura de 25/08/2026 às 02h30 — o Wi-Fi numa traseira 3.0."""
-    return Bancada(
+    return Ensaio(
         aparelhos=_com_o_wifi_em("4-4"),
         interfaces=_interfaces_com_o_wifi_em("4-4"),
         interfaces_bt=dict(_INTERFACES_BT),
     )
 
 
-def bancada_com_o_wifi_no_hub() -> Bancada:
+def ensaio_com_o_wifi_no_hub() -> Ensaio:
     """A MESMA mesa às 21h de 24/08 — o Wi-Fi no lado 3.0 do hub."""
-    return Bancada(
+    return Ensaio(
         aparelhos=_com_o_wifi_em("4-1.1.2"),
         interfaces=_interfaces_com_o_wifi_em("4-1.1.2"),
         interfaces_bt=dict(_INTERFACES_BT),
     )
 
 
-def mapa_dela() -> MapaDaMesa:
+def mapa_do_usuario() -> MapaDaMesa:
     """O gabinete dela: três faces, quinze entradas, e uma por extensão."""
     return MapaDaMesa.model_validate(
         {
@@ -421,9 +421,9 @@ def mapa_dela() -> MapaDaMesa:
     )
 
 
-def test_a_bancada_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
+def test_o_ensaio_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
     """O censo desta bancada é a leitura de 02h30, aparelho por aparelho."""
-    censo = bancada_de_agora().censo()
+    censo = ensaio_de_agora().censo()
     nomes = sorted(a.nome_do_kernel for a in censo.conectados())
 
     assert nomes == [
@@ -442,7 +442,7 @@ def test_a_bancada_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
 
 def test_as_duas_entradas_da_frente_sao_indistinguiveis_para_a_maquina() -> None:
     """O fato que obriga o mapa a ser declarado, na bancada."""
-    censo = bancada_de_agora().censo()
+    censo = ensaio_de_agora().censo()
     paineis = {
         a.nome_do_kernel: a.painel
         for a in censo.conectados()
@@ -457,7 +457,7 @@ def test_as_duas_entradas_da_frente_sao_indistinguiveis_para_a_maquina() -> None
 
 def test_o_hub_de_dois_chips_enumera_em_dois_barramentos() -> None:
     """`3-1` e `4-1` são o mesmo plástico — mesmo controlador, `devpath` igual."""
-    censo = bancada_com_o_wifi_no_hub().censo()
+    censo = ensaio_com_o_wifi_no_hub().censo()
     lados = {
         a.nome_do_kernel: (a.busnum, a.devpath, a.controlador_pci)
         for a in censo.conectados()
@@ -471,11 +471,11 @@ def test_o_hub_de_dois_chips_enumera_em_dois_barramentos() -> None:
     )
 
 
-def test_a_bancada_nao_toca_um_caminho_do_sys_real() -> None:
+def test_o_ensaio_nao_toca_um_caminho_do_sys_real() -> None:
     """Nenhum leitor desta bancada chega perto do `/sys` desta máquina."""
-    bancada = bancada_de_agora()
-    bancada.censo()
-    bancada.mesa()
+    ensaio = ensaio_de_agora()
+    ensaio.censo()
+    ensaio.mesa()
 
-    vazados = [caminho for caminho in bancada.tocados if caminho.startswith("/sys")]
+    vazados = [caminho for caminho in ensaio.tocados if caminho.startswith("/sys")]
     assert not vazados, f"a bancada tocou o /sys real: {vazados[:5]}"

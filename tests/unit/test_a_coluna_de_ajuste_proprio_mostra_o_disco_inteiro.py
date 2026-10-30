@@ -104,7 +104,7 @@ def test_toda_secao_do_esquema_tem_celula_na_pagina() -> None:
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
     na_pagina = {m for m in re.findall(r'data-hef-secao="([^"]+)"', html)}
     faltando = [s for s in perfis_web.SECOES_POR_CONTROLE if s not in na_pagina
-                and s not in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA]
+                and s not in perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO]
     assert not faltando, (
         f"o perfil guarda {faltando} por controle e a página publicada não tem "
         f"célula para essas seções — ajuste guardado no disco que a tela esconde. "
@@ -129,7 +129,7 @@ def test_a_pagina_nao_inventa_secao_que_o_esquema_nao_guarda() -> None:
                     reason="sem o Chrome do sistema — a régua não tem motor")
 @pytest.mark.parametrize("linha", [0, 1])
 @pytest.mark.parametrize("secao", list(perfis_web.SECOES_POR_CONTROLE))
-def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
+def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_do_usuario(
     monkeypatch: pytest.MonkeyPatch, linha: int, secao: str,
 ) -> None:
     """Um ajuste, um controle: acende UMA célula, na linha e na coluna dele."""
@@ -163,7 +163,7 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
 
     acesas = [(i, nome) for i, celulas in enumerate(linhas)
               for nome, on in celulas if on]
-    if secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA:
+    if secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO:
         assert acesas == [], (
             f"`{secao}` espera a sessão dela e acendeu {acesas} na página "
             f"publicada — a distribuição casou a célula com uma vizinha")

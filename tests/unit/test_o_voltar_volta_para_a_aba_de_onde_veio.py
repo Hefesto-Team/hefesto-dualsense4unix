@@ -27,7 +27,7 @@ def _declaradas() -> set[str]:
     return set(mod.declaradas())
 
 
-PASTA = onde.BANCADA if MAPA in _declaradas() else onde.PUBLICADO
+PASTA = onde.ENSAIO if MAPA in _declaradas() else onde.PUBLICADO
 
 
 def _origens() -> list[str]:

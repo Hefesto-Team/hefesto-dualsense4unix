@@ -463,7 +463,7 @@ class TestVeredito:
         dias = int(default.group(1)) / (1 if default.group(2).startswith("day") else 24)
         assert dias >= 3, f"janela default de {dias} dia(s) é curta demais para o episódio"
 
-    def test_janela_e_configuravel_para_o_teste_e_para_ela(self, tmp_path: Path) -> None:
+    def test_janela_e_configuravel_para_o_teste_e_para_o_usuario(self, tmp_path: Path) -> None:
         binario = _bin_isolado(tmp_path)
         raiz = _monta_sysfs(tmp_path, {INSTANCIA: True})
         fixture = tmp_path / "jornal.txt"

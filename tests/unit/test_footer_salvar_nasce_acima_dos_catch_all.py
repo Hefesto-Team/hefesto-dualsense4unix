@@ -70,7 +70,7 @@ def _regra(nome: str, prioridade: int) -> Profile:
     )
 
 
-DISCO_DELA = [
+DISCO_DO_USUARIO = [
     _catch_all("fallback", 0),
     _catch_all("vitoria", 0),
     _catch_all("meu_perfil", 1),
@@ -82,11 +82,11 @@ DISCO_DELA = [
 ]
 
 
-def test_prioridade_calculada_vence_todo_catch_all_do_disco_dela() -> None:
-    app = _app_fake(list(DISCO_DELA))
+def test_prioridade_calculada_vence_todo_catch_all_do_disco_do_usuario() -> None:
+    app = _app_fake(list(DISCO_DO_USUARIO))
     prioridade = app._prioridade_acima_dos_catch_all()
 
-    catch_alls = [p.priority for p in DISCO_DELA if p.e_catch_all]
+    catch_alls = [p.priority for p in DISCO_DO_USUARIO if p.e_catch_all]
     assert prioridade > max(catch_alls), (
         f"perfil novo nasceria em {prioridade} e o maior catch-all dela é "
         f"{max(catch_alls)} — ele perderia a disputa que deveria ganhar"
@@ -98,13 +98,15 @@ def test_prioridade_calculada_vence_todo_catch_all_do_disco_dela() -> None:
 def test_o_default_do_esquema_seria_pior_que_o_calculo() -> None:
     """Trava a razão de existir do cálculo, para ninguém "simplificar" de volta."""
     default_do_esquema = int(Profile.model_fields["priority"].default)
-    catch_alls = [p.priority for p in DISCO_DELA if p.e_catch_all]
+    catch_alls = [p.priority for p in DISCO_DO_USUARIO if p.e_catch_all]
 
     assert default_do_esquema <= max(catch_alls), (
         "este teste pressupõe que o default do esquema NÃO vence os catch-all "
         "dela; se o esquema mudou, o cálculo do rodapé precisa ser revisto"
     )
-    perdedores = [p.name for p in DISCO_DELA if p.e_catch_all and p.priority > default_do_esquema]
+    perdedores = [
+        p.name for p in DISCO_DO_USUARIO if p.e_catch_all and p.priority > default_do_esquema
+    ]
     assert perdedores, "o default do esquema deveria perder para algum catch-all dela"
 
 
@@ -117,9 +119,9 @@ def test_sem_cache_o_calculo_nao_explode_e_da_a_folga() -> None:
 
 def test_regra_especifica_alta_nao_infla_a_prioridade_do_novo() -> None:
     """Só catch-all entra na conta — senão o `sackboy_nativo` (80) puxaria o novo"""
-    app = _app_fake(list(DISCO_DELA))
+    app = _app_fake(list(DISCO_DO_USUARIO))
     prioridade = app._prioridade_acima_dos_catch_all()
-    regras = [p.priority for p in DISCO_DELA if not p.e_catch_all]
+    regras = [p.priority for p in DISCO_DO_USUARIO if not p.e_catch_all]
     assert prioridade < min(regras), (
         f"perfil novo nasceu em {prioridade}, acima da regra mais baixa "
         f"({min(regras)}) — passaria a vencer regra de jogo alheia"

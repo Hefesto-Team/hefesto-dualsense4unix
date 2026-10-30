@@ -115,7 +115,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 def main() -> int:
     linha = argparse.ArgumentParser(description=__doc__)
-    linha.add_argument("--bancada", action="store_true",
+    linha.add_argument("--ensaio", action="store_true",
                        help="medir o DESENHO (`mockup/`) em vez do publicado. "
                             "É onde a cura vive até ela dar o OK.")
     linha.add_argument("--foto", default="",
@@ -125,11 +125,11 @@ def main() -> int:
                        help="deixar o selo NESTE estado antes da foto "
                             "(ATIVO/MUDO/—). Sem isto a foto sai no último "
                             "estado medido, que é o travessão.")
-    dela = linha.parse_args()
+    do_usuario = linha.parse_args()
 
     from hefesto_dualsense4unix.interface import onde
 
-    alvo = onde.pagina(ABA, publicado=not dela.bancada)
+    alvo = onde.pagina(ABA, publicado=not do_usuario.ensaio)
     print(f"[medindo] {alvo}")
 
     args = argparse.Namespace(**BANDEIRAS, abre=ABA)
@@ -148,7 +148,7 @@ def main() -> int:
         if not piloto.pronto:
             return True
         if not fila:
-            if dela.foto:
+            if do_usuario.foto:
                 GLib.timeout_add(300, retratar)
             else:
                 Gtk.main_quit()
@@ -166,19 +166,19 @@ def main() -> int:
     def retratar() -> bool:
         """A foto, DEPOIS da medição — e com o selo no estado pedido."""
         piloto.pronto = False
-        if not dela.selo:
+        if not do_usuario.selo:
             return bater()
 
         def injetou(_v: object, _e: object) -> None:
             GLib.timeout_add(200, bater)
 
-        piloto.ponte.perguntar(PINTA_E_LE % json.dumps(dela.selo), injetou)
+        piloto.ponte.perguntar(PINTA_E_LE % json.dumps(do_usuario.selo), injetou)
         return False
 
     def bater() -> bool:
-        piloto.tela.fotografar(dela.foto)
-        print(f"foto: {dela.foto}"
-              + (f" (selo forçado em {dela.selo!r})" if dela.selo else ""))
+        piloto.tela.fotografar(do_usuario.foto)
+        print(f"foto: {do_usuario.foto}"
+              + (f" (selo forçado em {do_usuario.selo!r})" if do_usuario.selo else ""))
         Gtk.main_quit()
         return False
 

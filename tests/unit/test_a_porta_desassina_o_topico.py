@@ -86,29 +86,29 @@ def test_desassinar_o_movimento_fecha_o_leitor_de_cada_controle(
 
     async def corrida() -> dict[str, Any]:
         porta = await _porta_de_duas(curto, relogio)
-        bancada = _Mesa(porta, MESAS[mesa])
-        bancada.hub = _hub_que_descobre(bancada.uniqs, relogio)
-        bancada.daemon._garantir_sensor_hub = lambda: bancada.hub
+        ensaio = _Mesa(porta, MESAS[mesa])
+        ensaio.hub = _hub_que_descobre(ensaio.uniqs, relogio)
+        ensaio.daemon._garantir_sensor_hub = lambda: ensaio.hub
         ext = await _entrar(curto, "ficha", ["movimento"])
         try:
-            bancada.tique(relogio)
-            bancada.hub.reconciliar()
-            abertos, leitores = set(bancada.hub._motion), dict(bancada.hub._motion)
+            ensaio.tique(relogio)
+            ensaio.hub.reconciliar()
+            abertos, leitores = set(ensaio.hub._motion), dict(ensaio.hub._motion)
             con = _conexao_de(porta, "exemplo")
             tarefas = list(con.tarefas)
             resposta = await asyncio.to_thread(
                 ext.pedir, "eventos.desassinar", {"topicos": ["movimento"]})
             await _esperar(lambda: not _vivas(tarefas))
             for _ in range(3):
-                bancada.tique(relogio, SensorHub._DEMANDA_TTL_S)
-            bancada.hub.reconciliar()
+                ensaio.tique(relogio, SensorHub._DEMANDA_TTL_S)
+            ensaio.hub.reconciliar()
             de_novo = await asyncio.to_thread(
                 ext.pedir, "eventos.assinar", {"topicos": ["bateria"]})
             return {
                 "abertos": abertos, "leitores": leitores, "resposta": resposta,
                 "le": porta.le_o_movimento(), "filas": list(con.filas_do_movimento),
                 "quedas": porta.bus.subscriber_count(EventTopic.CONTROLLER_DISCONNECTED),
-                "depois": set(bancada.hub._motion), "de_novo": de_novo,
+                "depois": set(ensaio.hub._motion), "de_novo": de_novo,
                 "tarefas": _vivas(tarefas),
             }
         finally:
@@ -126,33 +126,33 @@ def test_desassinar_o_movimento_fecha_o_leitor_de_cada_controle(
     assert "result" in r["de_novo"], r["de_novo"]
 
 
-def test_a_que_desassina_larga_so_o_dela(curto: pathlib.Path) -> None:  # noqa: F811
+def test_a_que_desassina_larga_so_o_do_usuario(curto: pathlib.Path) -> None:  # noqa: F811
     relogio = _Relogio()
 
     async def corrida() -> dict[str, Any]:
         porta = await _porta_de_duas(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
-        bancada.hub = _hub_que_descobre(bancada.uniqs, relogio)
-        bancada.daemon._garantir_sensor_hub = lambda: bancada.hub
+        ensaio = _Mesa(porta, MESAS["mista"])
+        ensaio.hub = _hub_que_descobre(ensaio.uniqs, relogio)
+        ensaio.daemon._garantir_sensor_hub = lambda: ensaio.hub
         uma = await _entrar(curto, "ficha", ["movimento"])
         outra = await _entrar(curto, "outra-ficha", ["movimento"])
         try:
-            bancada.tique(relogio)
-            bancada.hub.reconciliar()
+            ensaio.tique(relogio)
+            ensaio.hub.reconciliar()
             await asyncio.to_thread(_drenar, uma, 0.2)
             await asyncio.to_thread(_drenar, outra, 0.2)
             resposta = await asyncio.to_thread(
                 uma.pedir, "eventos.desassinar", {"topicos": ["movimento"]})
-            for leitor in bancada.hub._motion.values():
+            for leitor in ensaio.hub._motion.values():
                 leitor.giro = (300.0, 0.0, 0.0)
             for _ in range(3):
-                bancada.tique(relogio, SensorHub._DEMANDA_TTL_S)
-            bancada.hub.reconciliar()
+                ensaio.tique(relogio, SensorHub._DEMANDA_TTL_S)
+            ensaio.hub.reconciliar()
             return {
                 "resposta": resposta,
                 "da_uma": await asyncio.to_thread(_drenar, uma, 0.3),
                 "da_outra": await asyncio.to_thread(_drenar, outra, 0.3),
-                "vivos": set(bancada.hub._motion),
+                "vivos": set(ensaio.hub._motion),
             }
         finally:
             uma.fechar()

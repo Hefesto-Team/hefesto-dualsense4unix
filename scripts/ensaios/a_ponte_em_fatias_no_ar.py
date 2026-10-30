@@ -394,7 +394,7 @@ PACOTES_DA_PONTE: tuple[int, ...] = (3, 5)
 FOLGA_DO_K = 0.5
 
 
-def k_da_bancada(linhas: Sequence[LinhaDaTabela]) -> tuple[int, str] | None:
+def k_do_ensaio(linhas: Sequence[LinhaDaTabela]) -> tuple[int, str] | None:
     """O ``k`` de pacote que a tabela gravada mede, e o modelo que o explica.
 
     Primeiro o líquido (o do mapa do rádio), depois o bruto; ``None`` quando nenhum dos dois
@@ -438,7 +438,7 @@ def conferir_a_constante(
         if not procedencia.startswith("provisório"):
             return [f"não há tabela gravada da bancada e o CSV diz «{procedencia}» para o k"]
         return []
-    medido = k_da_bancada(tabela(gravada))
+    medido = k_do_ensaio(tabela(gravada))
     if medido is None:
         return ["a tabela gravada não casa com pacote nenhum (3-DH3 ou 2-DH5) em modelo nenhum: "
                 "a conta da ponte é outra, e a constante não se escolhe por ela"]

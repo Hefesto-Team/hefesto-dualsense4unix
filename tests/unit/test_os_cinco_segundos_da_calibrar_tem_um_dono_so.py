@@ -48,6 +48,6 @@ def test_o_tempo_da_tela_vem_do_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_desenho_e_o_publicado_dizem_o_tempo_de_hoje(publicado: bool) -> None:
     import onde
 
-    arquivo = (onde.PUBLICADO if publicado else onde.BANCADA) / "calibrar-sensores.html"
+    arquivo = (onde.PUBLICADO if publicado else onde.ENSAIO) / "calibrar-sensores.html"
     esperado = f"<b>Medindo {rot.SEGUNDOS_DO_ZERO:g} s</b>"
     assert esperado in arquivo.read_text(encoding="utf-8"), f"{arquivo} não diz {esperado}"

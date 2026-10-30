@@ -82,7 +82,7 @@ def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Pat
 
 
 @pytest.fixture
-def sem_maquina_dela(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
+def sem_maquina_do_usuario(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
     """A camada 1 e o tocador viram dublê. NADA sai desta régua para o PipeWire."""
     from hefesto_dualsense4unix.app import audio_saida
     from pacotes import a02_controles as a02
@@ -152,7 +152,7 @@ class TestOJuntoSaiuDaTela:
     """O «Ouvir junto» saiu da fileira com o desenho do todo (15/10/2026): três botões."""
 
     def test_o_gesto_recusa_o_junto(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+        self, casa: pathlib.Path, sem_maquina_do_usuario: dict[str, list[Any]]
     ) -> None:
         """MORDIDA: devolva `junto` aos botões da fileira e isto reprova."""
         p = Ponte()
@@ -173,7 +173,7 @@ class TestOGestoEntregaAFonte:
     """O que o botão MANDA, e não só o que ele grava — 20/09/2026."""
 
     def test_sair_do_mix_diz_sfx_ao_daemon(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+        self, casa: pathlib.Path, sem_maquina_do_usuario: dict[str, list[Any]]
     ) -> None:
         """Um perfil antigo em `mix` sai dele no primeiro clique.
 
@@ -192,7 +192,7 @@ class TestOGestoEntregaAFonte:
             f"a camada 1 de um controle foi parar noutro: {pedidos}")
 
     def test_quem_ja_estava_em_sfx_nao_reescreve_a_camada_1(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+        self, casa: pathlib.Path, sem_maquina_do_usuario: dict[str, list[Any]]
     ) -> None:
         """MORDIDA: tire a guarda `== "mix"` e diga `sfx` em todo clique."""
         p = Ponte()
@@ -202,7 +202,7 @@ class TestOGestoEntregaAFonte:
             f"reescreveu a camada 1 sem ninguém a ter mudado: {p.com_fonte()}")
 
     def test_a_camada_1_e_a_2_nao_viajam_no_mesmo_pedido(
-        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+        self, casa: pathlib.Path, sem_maquina_do_usuario: dict[str, list[Any]]
     ) -> None:
         """Um `speaker.set` leva a `fonte` OU o byte — nunca os dois."""
         from pacotes import a02_controles as a02
@@ -248,7 +248,7 @@ class TestATabelaDosBotoes:
     )
     def test_cada_botao_do_som_so_mexe_no_controle_da_coluna(
         self, o: dict[str, Any], metodo: str, casa: pathlib.Path,
-        sem_maquina_dela: dict[str, list[Any]],
+        sem_maquina_do_usuario: dict[str, list[Any]],
     ) -> None:
         """Pergunta 3 da sprint, botão a botão: **vale só para aquele controle?**"""
         nome = next(k for k in ("mudo", "volume", "rota") if k in o)

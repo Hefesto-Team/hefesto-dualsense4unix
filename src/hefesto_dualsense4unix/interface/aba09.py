@@ -627,11 +627,11 @@ if not _RELOAD:
     raise SystemExit("ERRO: o botão do `atualizar` sumiu da coluna do serviço — "
                      "seletor que casa ZERO é erro, não silêncio.")
 _ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
-_PALAVRA_DELA_09Q1 = "Atualizar"
-if ROTULO_ATUALIZAR != _PALAVRA_DELA_09Q1 or _ROT_RELOAD != _PALAVRA_DELA_09Q1:
+_PALAVRA_DOUSUARIO_09Q1 = "Atualizar"
+if ROTULO_ATUALIZAR != _PALAVRA_DOUSUARIO_09Q1 or _ROT_RELOAD != _PALAVRA_DOUSUARIO_09Q1:
     raise SystemExit(
         f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e ela mandou manter "
-        f"{_PALAVRA_DELA_09Q1!r} (09-Q1, 05/09/2026).")
+        f"{_PALAVRA_DOUSUARIO_09Q1!r} (09-Q1, 05/09/2026).")
 if f'data-hef-em-voo="{EM_VOO_ATUALIZAR}"' not in _ATRS:
     raise SystemExit(f"ERRO: o botão {ROTULO_ATUALIZAR!r} perdeu o `data-hef-em-voo` (09-Q3).")
 if "Não muda nada" in _ATRS:
@@ -659,7 +659,7 @@ CAMPO_DA_FITA = "fita-chips"
 CAMPO_DO_CHIP = "fita-chip"
 
 
-def escrever_a_bancada():
+def escrever_o_ensaio():
     """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`."""
     n = monta("09-sistema", "Sistema", MIOLO, CSS)
 
@@ -699,6 +699,6 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    escrever_a_bancada()
+    escrever_o_ensaio()
     shutil.copyfile(_prova / "09-sistema.html", _real / "09-sistema.html")
     shutil.rmtree(_prova)

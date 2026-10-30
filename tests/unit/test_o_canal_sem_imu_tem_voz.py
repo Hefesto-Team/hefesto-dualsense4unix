@@ -37,7 +37,7 @@ degradação*. `gamepad.dedup_status` o isenta desde então
 (`and caminho_do_vpad(device) != CAMINHO_XBOX`), e `degraded` no `state_full`
 faz o mesmo.
 
-`test_a_escolha_dela_continua_integra_e_o_campo_novo_fala` exige **as duas
+`test_a_escolha_do_usuario_continua_integra_e_o_campo_novo_fala` exige **as duas
 coisas na mesma leitura**: `degraded`/`dedup_ok` dizendo íntegro (a decisão
 de produto, intacta) **e** `canal_sem_imu` dizendo que as dez saíram do ar. Ele
 reprova tanto para quem arrancar a voz nova quanto para quem tentar "curar"
@@ -139,7 +139,7 @@ class TestOParQueTiraAsDezDoAr:
             ("dualsense", "uhid", None, False, "sem escolha, a máscara decide"),
         ],
     )
-    def test_so_o_par_da_queixa_dela_acende(
+    def test_so_o_par_da_queixa_do_usuario_acende(
         self, flavor: str, backend: str, caminho: str | None, sem_dez: bool, porque: str
     ) -> None:
         """MORDA: tire o gate da máscara de `canal_sem_imu` e o terceiro caso"""
@@ -373,7 +373,7 @@ async def _gamepad_emulation(socket_path: Path) -> dict[str, Any]:
 
 class TestOStateFullPublicaOCampoNovo:
     @pytest.mark.asyncio
-    async def test_a_escolha_dela_continua_integra_e_o_campo_novo_fala(
+    async def test_a_escolha_do_usuario_continua_integra_e_o_campo_novo_fala(
         self, servidor: Any
     ) -> None:
         """A RÉGUA R3, e ela morde dos DOIS lados.

@@ -244,9 +244,9 @@ def _troca_da_peca(cru: dict[str, Any], mac: str | None) -> dict[str, str]:
 def _sequencias_do_cru(cru: dict[str, Any], mac: str | None) -> dict[str, Any]:
     """As sequências do perfil cru, ou as do controle `mac` quando ele tem as dele."""
     if mac:
-        dela = ((cru.get("controllers") or {}).get(mac) or {}).get(ATIVACAO) or {}
-        if "sequencia" in dela:
-            return dict(dela["sequencia"] or {})
+        ajuste = ((cru.get("controllers") or {}).get(mac) or {}).get(ATIVACAO) or {}
+        if "sequencia" in ajuste:
+            return dict(ajuste["sequencia"] or {})
     return dict((cru.get(ATIVACAO) or {}).get("sequencia") or {})
 
 
@@ -1008,8 +1008,8 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
     sequencias = _sequencias_do_perfil(prof, mac)
     antes_das_sequencias = dict(sequencias)
     do_perfil = dict(prof.remapeamento or {})
-    dela = (prof.controllers or {}).get(mac) if mac else None
-    trocas = dict(dela.remapeamento or {}) if dela else {}
+    ajuste = (prof.controllers or {}).get(mac) if mac else None
+    trocas = dict(ajuste.remapeamento or {}) if ajuste else {}
     if not mac:
         trocas = do_perfil
 
@@ -1061,8 +1061,8 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
 
 def _sequencias_do_perfil(prof: Any, mac: str | None) -> dict[str, Any]:
     """As sequências do perfil, ou as do controle `mac` quando ele tem as dele (campo a campo)."""
-    dela = (prof.controllers or {}).get(mac) if mac else None
-    secao = getattr(dela, ATIVACAO, None)
+    ajuste = (prof.controllers or {}).get(mac) if mac else None
+    secao = getattr(ajuste, ATIVACAO, None)
     propria = getattr(secao, "sequencia", None)
     if propria is not None and secao is not None and "sequencia" in secao.model_fields_set:
         return {b: v.model_dump() for b, v in propria.items()}
@@ -1090,13 +1090,13 @@ def _com_as_sequencias(prof: Any, mac: str | None, sequencias: dict[str, Any]) -
             return prof.model_copy(update={ATIVACAO: refeita(prof.ativacao, sequencias or None)})
         do_perfil = _sequencias_do_perfil(prof.model_copy(update={"controllers": None}), None)
         todos = dict(prof.controllers or {})
-        dela = todos.get(mac) or ControllerOverrides()
+        ajuste = todos.get(mac) or ControllerOverrides()
         propria = None if sequencias == do_perfil else sequencias
-        dela = dela.model_copy(update={ATIVACAO: refeita(dela.ativacao, propria)})
-        if all(getattr(dela, campo) is None for campo in ControllerOverrides.model_fields):
+        ajuste = ajuste.model_copy(update={ATIVACAO: refeita(ajuste.ativacao, propria)})
+        if all(getattr(ajuste, campo) is None for campo in ControllerOverrides.model_fields):
             todos.pop(mac, None)
         else:
-            todos[mac] = dela
+            todos[mac] = ajuste
         return prof.model_copy(update={"controllers": todos or None})
     except ValueError as exc:
         frase = str(exc).split("Value error, ")[-1].split(" [type=")[0]
@@ -1107,14 +1107,14 @@ def _com_a_troca_da_peca(prof: Any, mac: str, propria: dict[str, str] | None,
                          acoes_do_perfil: dict[str, str]) -> Any:
     """O perfil com a troca do controle `mac` no lugar; a peça que fica sem nada sai do mapa."""
     todos = dict(prof.controllers or {})
-    dela = todos.get(mac)
-    if dela is None and propria is None:
+    ajuste = todos.get(mac)
+    if ajuste is None and propria is None:
         return prof.model_copy(update={"button_actions": acoes_do_perfil or None})
-    dela = (dela or ControllerOverrides()).model_copy(update={"remapeamento": propria})
-    if all(getattr(dela, campo) is None for campo in ControllerOverrides.model_fields):
+    ajuste = (ajuste or ControllerOverrides()).model_copy(update={"remapeamento": propria})
+    if all(getattr(ajuste, campo) is None for campo in ControllerOverrides.model_fields):
         todos.pop(mac, None)
     else:
-        todos[mac] = dela
+        todos[mac] = ajuste
     return prof.model_copy(update={"button_actions": acoes_do_perfil or None,
                                    "controllers": todos or None})
 

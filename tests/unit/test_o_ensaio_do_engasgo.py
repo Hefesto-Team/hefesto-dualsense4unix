@@ -80,7 +80,7 @@ def test_preparar_e_devolver_deixam_a_opcao_como_era(lar: Path) -> None:
     assert not (_pasta(lar) / "antes.json").exists()
 
 
-def test_o_jogo_fora_da_tabela_sai_dela_no_devolver(lar: Path) -> None:
+def test_o_jogo_fora_da_tabela_sai_do_usuario_no_devolver(lar: Path) -> None:
     assert _rodar(lar, "preparar", "1599660").returncode == 0
     assert _tabela(lar)["1599660"].startswith("MANGOHUD=1 ")
     assert _rodar(lar, "devolver").returncode == 0

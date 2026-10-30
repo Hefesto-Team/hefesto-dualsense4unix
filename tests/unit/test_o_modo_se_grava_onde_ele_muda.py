@@ -78,7 +78,7 @@ class _Vpad:
         self.parado = True
 
 
-class _Bancada:
+class _Ensaio:
     """O que a borda anotou: quantos pads pararam, e se a fábrica recusa."""
 
     def __init__(self) -> None:
@@ -151,8 +151,8 @@ class _Handlers(IpcHandlersMixin):
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Bancada]:
-    b = _Bancada()
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Ensaio]:
+    b = _Ensaio()
     monkeypatch.setattr(vp, "make_virtual_pad", b.fabrica)
     monkeypatch.setattr(gp, "stop_gamepad_emulation", b.parar)
     dubles: dict[str, Any] = {
@@ -241,7 +241,7 @@ def _chip(h: _Handlers, caminho: str) -> dict[str, Any]:
         {"enabled": True, "caminho": caminho, "origin": "manual"}))
 
 
-def test_o_chip_grava_no_freestyle_sem_depender_da_janela(bancada: _Bancada) -> None:
+def test_o_chip_grava_no_freestyle_sem_depender_da_janela(ensaio: _Ensaio) -> None:
     """O Freestyle ligado em Xbox: o «Sony DualSense» vai ao disco pelo daemon.
 
     A janela não está nesta régua de propósito: é ela que desiste aos 2,0 s, e
@@ -268,7 +268,7 @@ def test_o_chip_grava_no_freestyle_sem_depender_da_janela(bancada: _Bancada) -> 
         "a gravação não deixou a versão de antes no `.historico`")
 
 
-def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(bancada: _Bancada) -> None:
+def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(ensaio: _Ensaio) -> None:
     """Depois do chip, o «Ativar» do Freestyle não para nem recria o pad.
 
     E o primeiro pad do boot nasce no modo que o usuário escolheu
@@ -281,12 +281,12 @@ def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(bancada: _Bancada) -> None:
     _freestyle_ligado_em(d, "xbox")
     h = _Handlers(d, _gerente(d))
     _chip(h, "dualsense")
-    paradas = bancada.paradas
+    paradas = ensaio.paradas
 
     asyncio.run(h._handle_profile_switch({"name": FREESTYLE}))
 
-    assert bancada.paradas == paradas, (
-        f"a ativação à mão do Freestyle parou o pad {bancada.paradas - paradas} vez(es): "
+    assert ensaio.paradas == paradas, (
+        f"a ativação à mão do Freestyle parou o pad {ensaio.paradas - paradas} vez(es): "
         "o perfil ainda dizia o modo de antes do chip")
     assert d.config.gamepad_caminho == "dualsense"
     caminho_do_boot, _mascara, nome = lifecycle._o_modo_do_perfil_do_boot(d.store)
@@ -294,14 +294,14 @@ def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(bancada: _Bancada) -> None:
         f"o boot restauraria {nome!r} em {caminho_do_boot!r}")
 
 
-def test_o_modo_que_o_aparelho_recusou_nao_vai_ao_disco(bancada: _Bancada) -> None:
+def test_o_modo_que_o_aparelho_recusou_nao_vai_ao_disco(ensaio: _Ensaio) -> None:
     """A fábrica do pad recusa: o desfecho é `falhou`, e o disco não muda."""
     d = _daemon()
     _freestyle_ligado_em(d, "xbox")
     h = _Handlers(d, _gerente(d))
     antes = _sha(_arquivo(FREESTYLE))
     versoes = _versoes(FREESTYLE)
-    bancada.fabrica_recusa = True
+    ensaio.fabrica_recusa = True
 
     resposta = _chip(h, "dualsense")
 
@@ -311,7 +311,7 @@ def test_o_modo_que_o_aparelho_recusou_nao_vai_ao_disco(bancada: _Bancada) -> No
     assert _versoes(FREESTYLE) == versoes
 
 
-def test_so_a_porta_grava_e_a_chamada_direta_nao(bancada: _Bancada) -> None:
+def test_so_a_porta_grava_e_a_chamada_direta_nao(ensaio: _Ensaio) -> None:
     """Um perfil sem `mode`, e o pad de pé. Desde 27/10/2026 não há cartão de máscara: a
     chamada direta é o setter do pad sem porta (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES).
     """
@@ -333,7 +333,7 @@ def test_so_a_porta_grava_e_a_chamada_direta_nao(bancada: _Bancada) -> None:
 
 
 def test_com_o_freestyle_desligado_o_perfil_do_jogo_recebe(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O Freestyle desligado, o perfil de um jogo ativo e a janela dele em foco."""
     d = _daemon()
@@ -358,7 +358,7 @@ def test_com_o_freestyle_desligado_o_perfil_do_jogo_recebe(
     assert _sha(flag) == flag_antes, "o chip dentro do jogo virou lei para todo jogo"
 
 
-def test_o_nativo_a_mao_grava_native(bancada: _Bancada) -> None:
+def test_o_nativo_a_mao_grava_native(ensaio: _Ensaio) -> None:
     """`native.mode.set {enabled: true, origin: "manual"}` grava `kind: native`.
 
     A máscara padrão do perfil fica (o modo não escreve a máscara).
@@ -378,7 +378,7 @@ def test_o_nativo_a_mao_grava_native(bancada: _Bancada) -> None:
     assert modo.gamepad_flavor == "dualsense", "o Nativo apagou a máscara padrão do perfil"
 
 
-def test_o_nativo_ja_aceso_grava_native_no_perfil_que_divergiu(bancada: _Bancada) -> None:
+def test_o_nativo_ja_aceso_grava_native_no_perfil_que_divergiu(ensaio: _Ensaio) -> None:
     """O Nativo já ligado e o perfil dizendo `gamepad`: o clique à mão conserta o perfil.
 
     É o `ja_estava` do Nativo: o setter volta cedo (nada a trocar no aparelho),
@@ -405,7 +405,7 @@ def test_o_nativo_ja_aceso_grava_native_no_perfil_que_divergiu(bancada: _Bancada
         f"o clique no Nativo aceso deixou o perfil dizendo {modo!r}")
 
 
-def test_a_navegacao_a_mao_grava_desktop(bancada: _Bancada) -> None:
+def test_a_navegacao_a_mao_grava_desktop(ensaio: _Ensaio) -> None:
     """`desktop.arranjo.apply {origin: "manual"}` grava `kind: desktop`.
 
     O caminho vai a `null` (a Navegação não diz por qual canal o pad sobe), e o
@@ -427,7 +427,7 @@ def test_a_navegacao_a_mao_grava_desktop(bancada: _Bancada) -> None:
     assert modo.gamepad_flavor == "dualsense", "a Navegação apagou a máscara padrão do perfil"
 
 
-def test_ligar_sem_caminho_saindo_do_nativo_grava_gamepad(bancada: _Bancada) -> None:
+def test_ligar_sem_caminho_saindo_do_nativo_grava_gamepad(ensaio: _Ensaio) -> None:
     """O interruptor «Ligado» saindo do Nativo: `kind: gamepad`, e o caminho fica.
 
     O pedido não escolhe caminho, e o perfil (que dizia Nativo) não opina sobre
@@ -450,7 +450,7 @@ def test_ligar_sem_caminho_saindo_do_nativo_grava_gamepad(bancada: _Bancada) -> 
         f"o «Ligado» saindo do Nativo gravou {modo!r}")
 
 
-def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(bancada: _Bancada) -> None:
+def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(ensaio: _Ensaio) -> None:
     """Quem grava é o modo que ENTRA: os passos que saem não escrevem nada."""
     d = _daemon()
     _perfil(JOGO, mode=None)
@@ -535,7 +535,7 @@ def _gravacoes(registros: list[dict[str, Any]]) -> list[tuple[str, str]]:
     return list(zip(portas, origens, strict=False))
 
 
-def test_o_diario_diz_por_qual_porta_o_modo_chegou(bancada: _Bancada) -> None:
+def test_o_diario_diz_por_qual_porta_o_modo_chegou(ensaio: _Ensaio) -> None:
     """O clique pelo IPC grava com `porta=ipc`; o PS + R3, com `porta=controle`."""
     d = _daemon()
     _freestyle_ligado_em(d, "xbox")
@@ -555,7 +555,7 @@ def test_o_diario_diz_por_qual_porta_o_modo_chegou(bancada: _Bancada) -> None:
 
 
 def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O Freestyle em Xbox no disco; o «Salvar» antes do chip e depois dele."""
     from hefesto_dualsense4unix.interface.pacotes import perfil as pacote_perfil
@@ -580,7 +580,7 @@ def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
 
 @pytest.mark.parametrize("pad_da_maquina", [True, False])
 def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
-    bancada: _Bancada, pad_da_maquina: bool
+    ensaio: _Ensaio, pad_da_maquina: bool
 ) -> None:
     """O Freestyle (gamepad) valendo, e ela ativa à mão um jogo sem `mode`."""
     from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
@@ -592,12 +592,12 @@ def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
     h = _Handlers(d, _gerente(d))
     asyncio.run(h._handle_profile_switch({"name": FREESTYLE}))
     assert d._gamepad_device is not None, "premissa: o Freestyle ligou o pad"
-    paradas = bancada.paradas
+    paradas = ensaio.paradas
 
     asyncio.run(h._handle_profile_switch({"name": JOGO}))
 
     if pad_da_maquina:
-        assert bancada.paradas == paradas and d._gamepad_device is not None, (
+        assert ensaio.paradas == paradas and d._gamepad_device is not None, (
             "o perfil sem `mode` derrubou o pad que a preferência dela deixa ligado: "
             "o controle caiu no mouse e teclado (22:40:34 de 01/10)")
         assert d.config.gamepad_emulation_enabled is True

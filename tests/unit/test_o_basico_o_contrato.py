@@ -157,7 +157,7 @@ def fazer_maquina(ob: ModuleType, estado: dict[str, Any], config: Path, **extra:
         def secure_boot(self) -> str:
             return "sem EFI"
 
-        def config_dela(self) -> Path:
+        def config_do_usuario(self) -> Path:
             return self.config
 
         def pactl(self, *argv: str) -> str | None:
@@ -452,7 +452,7 @@ def _rodar_com_perfil_mexido(ob: ModuleType, tmp_path: Path, nome: str) -> tuple
     return ob.executar(["--saida", str(saida), "retrato"], maquina), saida
 
 
-def test_regua_3_o_arquivo_dela_que_mudou_recusa(ob: ModuleType, tmp_path: Path) -> None:
+def test_regua_3_o_arquivo_do_usuario_que_mudou_recusa(ob: ModuleType, tmp_path: Path) -> None:
     rc, saida = _rodar_com_perfil_mexido(ob, tmp_path, "cura")
     assert rc == ob.RC_RECUSADO
     assert any("profiles/freestyle.json mudou" in r for r in resumo(saida)["recusas"])
@@ -908,7 +908,7 @@ def test_o_1b_com_menos_pads_que_jogadores_e_nao_sei_e_nunca_vermelho(
     assert linha["veredito"] == ob.NAO_SEI, linha
 
 
-def test_a_celula_da_matriz_mostra_o_pior_dos_passos_dela(
+def test_a_celula_da_matriz_mostra_o_pior_dos_passos_do_usuario(
     ob: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A hora de cada pad cai na MESMA célula («todos»): um vermelho no meio sumia da matriz."""
@@ -998,7 +998,7 @@ def test_um_pad_sem_jogador_no_meio_da_recriacao_nao_derruba_a_abertura(
     assert da_linha(saida, "o LED contra o jogador")
 
 
-def test_a_sessao_observa_a_janela_e_ve_o_panico_que_chega_nela(
+def test_a_sessao_observa_a_janela_e_ve_o_panico_que_chega_no_usuario(
     ob: ModuleType, tmp_path: Path
 ) -> None:
     """Sem ``--bpftrace`` a sessão não esperava: o pânico e a fila eram contados numa janela de 0 s.
@@ -1021,11 +1021,11 @@ def test_a_sessao_observa_a_janela_e_ve_o_panico_que_chega_nela(
     assert "1 pânico" in linha["porque"]
 
 
-def _rodar_a_troca(ob: ModuleType, tmp_path: Path, bancada: str | None) -> tuple[int, Path, Any]:
+def _rodar_a_troca(ob: ModuleType, tmp_path: Path, ensaio: str | None) -> tuple[int, Path, Any]:
     estado = estado_da_mesa(caminho="xbox", backend="uinput")
     ensaios = {"quem_e_quem.py": quem_e_quem_json(ob, estado)}
-    if bancada is not None:
-        ensaios["ensaio.sh"] = bancada
+    if ensaio is not None:
+        ensaios["ensaio.sh"] = ensaio
     maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uinput_xbox(ob),
                             ensaios=ensaios)
     saida = tmp_path / "saida"
@@ -1033,16 +1033,16 @@ def _rodar_a_troca(ob: ModuleType, tmp_path: Path, bancada: str | None) -> tuple
     return rc, saida, maquina
 
 
-def test_a_troca_de_modo_reserva_a_bancada_antes_de_escrever(
+def test_a_troca_de_modo_reserva_o_ensaio_antes_de_escrever(
     ob: ModuleType, tmp_path: Path
 ) -> None:
     """A troca escreve na sessão do daemon e recria os pads: é escrita (01 §3.2)."""
-    rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "tomada", bancada=None)
+    rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "tomada", ensaio=None)
     assert rc == ob.RC_RECUSADO
     assert any("bancada" in r for r in resumo(saida)["recusas"])
     assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"] == []
 
-    _rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "livre", bancada="")
+    _rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "livre", ensaio="")
     rodados = [Path(a[1]).name + " " + a[2] for a in maquina.rodados if len(a) > 2]
     assert "ensaio.sh exigir" in rodados and "ensaio.sh liberar" in rodados
     assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"]

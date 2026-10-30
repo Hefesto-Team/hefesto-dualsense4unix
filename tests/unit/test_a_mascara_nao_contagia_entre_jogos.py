@@ -101,7 +101,7 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
             sessao, "save_gamepad_emulation",
             lambda enabled, flavor=None: escritos.append((enabled, flavor)))
 
-        assert lifecycle._a_mascara_dela_sem_o_vazamento("xbox") == "dualsense"
+        assert lifecycle._a_mascara_do_usuario_sem_o_vazamento("xbox") == "dualsense"
         assert escritos == [(True, "dualsense")], (
             "a devolução não chegou ao disco — o próximo boot lê `xbox` de novo")
 
@@ -115,7 +115,7 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
             sessao, "save_gamepad_emulation",
             lambda *a, **k: escritos.append((a, k)))
 
-        assert lifecycle._a_mascara_dela_sem_o_vazamento("dualsense") == "dualsense"
+        assert lifecycle._a_mascara_do_usuario_sem_o_vazamento("dualsense") == "dualsense"
         assert escritos == []
 
     def test_o_boot_passa_a_flag_pela_devolucao(self):
@@ -123,10 +123,10 @@ class TestPonto3ODevolvedorDoXboxDoVazamento:
         fonte = LIFECYCLE.read_text(encoding="utf-8")
         i = fonte.index("gp_enabled, gp_flavor = load_gamepad_emulation()")
         bloco = fonte[i : i + 900]
-        assert "_a_mascara_dela_sem_o_vazamento(gp_flavor)" in bloco, (
+        assert "_a_mascara_do_usuario_sem_o_vazamento(gp_flavor)" in bloco, (
             "o boot não passa a flag pela devolução — a função existe e "
             "ninguém a chama")
-        assert bloco.index("_a_mascara_dela_sem_o_vazamento") < bloco.index(
+        assert bloco.index("_a_mascara_do_usuario_sem_o_vazamento") < bloco.index(
             "self.config.gamepad_flavor = gp_flavor"
         ), "a devolução vem DEPOIS de o slot da sessão já ter o xbox"
 
@@ -139,6 +139,8 @@ class TestOsDoisEixosTemAMesmaForma:
         chamadas = {
             getattr(c.func, "id", getattr(c.func, "attr", ""))
             for c in ast.walk(arvore) if isinstance(c, ast.Call)}
-        for irma in ("_a_escolha_dela_sem_o_vazamento", "_a_mascara_dela_sem_o_vazamento"):
+        for irma in (
+            "_a_escolha_do_usuario_sem_o_vazamento", "_a_mascara_do_usuario_sem_o_vazamento",
+        ):
             assert irma in definidas, f"{irma} sumiu"
             assert irma in chamadas, f"{irma} existe e ninguém a chama"

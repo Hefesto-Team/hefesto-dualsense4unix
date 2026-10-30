@@ -1,5 +1,5 @@
 """As telas de 16/10 medidas no motor que o produto usa: o WebKit, numa janela fora da tela
-(AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01).
+(AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01).
 
 A Navegação (N1 a N9) e o mapa do controle, nas duas larguras da régua (1212x809 e 1920x1080):
 nada rola na vertical, os três botões de «Permitir navegação» ficam numa linha, e os dez gestos do

@@ -98,10 +98,10 @@ class _OpsQueAbre:
         return os.open(self.alvo, os.O_RDONLY | os.O_CLOEXEC)
 
 
-def _broker_de_bancada(tmp_path: Path) -> Any:
+def _broker_de_ensaio(tmp_path: Path) -> Any:
     from hefesto_dualsense4unix.broker.hidraw_broker import BrokerState
 
-    alvo = tmp_path / "no-de-bancada"
+    alvo = tmp_path / "no-de-ensaio"
     alvo.write_bytes(b"reports")
     return BrokerState(
         allowed_uid=1000,
@@ -153,7 +153,7 @@ def test_a_regua_da_arbitragem_sabe_dizer_que_existe():
 
 def test_a_arbitragem_do_no_ainda_nao_existe(tmp_path):
     """A dívida 5.a, medida no comportamento do broker REAL — não por grep."""
-    assert arbitragem_do_no(_broker_de_bancada(tmp_path)) is False, (
+    assert arbitragem_do_no(_broker_de_ensaio(tmp_path)) is False, (
         "o broker passou a arbitrar o segundo `open` do mesmo nó — o portão 5.a "
         "existe. Este portão cumpriu o papel dele e sai; ver a docstring."
     )

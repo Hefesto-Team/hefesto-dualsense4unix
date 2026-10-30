@@ -843,7 +843,7 @@ def a_pessoa_mandou(uniq: str | None, em: float | None = None) -> None:
     pedido = _LUZ_DO_JOGO.get(chave)
     if pedido is not None and pedido[1] <= _A_PESSOA_MANDOU_EM[chave]:
         _LUZ_DO_JOGO.pop(chave, None)
-        logger.info("luz_do_mic_volta_a_ela", uniq=chave)
+        logger.info("luz_do_mic_volta_ao_usuario", uniq=chave)
 
 
 def quando_a_pessoa_mandou(uniq: str | None) -> float | None:

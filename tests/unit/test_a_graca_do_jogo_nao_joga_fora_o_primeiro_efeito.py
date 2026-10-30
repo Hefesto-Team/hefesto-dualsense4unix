@@ -88,7 +88,7 @@ def _pump_em(pad: UhidDualSense, clock: _Clock, t: float) -> None:
 
 class TestAGracaGuardaOGatilho:
     @pytest.mark.parametrize("player", [1, 2, 3, 4])
-    def test_o_gatilho_mandado_na_graca_chega_quando_ela_vence(
+    def test_o_gatilho_mandado_na_graca_chega_quando_o_usuario_vence(
         self, fake_uhid: _FakeFd, player: int
     ) -> None:
         """MORDIDA: o `return` puro da graça e o bloco nunca chega (o jogo calou)."""

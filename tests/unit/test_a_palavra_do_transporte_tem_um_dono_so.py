@@ -158,7 +158,7 @@ def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
             "discordam — a mesa do desenho estaria dizendo duas coisas")
 
 
-def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
+def test_o_gerador_nao_escreve_o_ensaio_como_efeito_de_import() -> None:
     """Importar um gerador NÃO pode reescrever o desenho dela no disco."""
     import pathlib as _pl
     import re as _re
@@ -205,13 +205,13 @@ def test_as_quatro_superficies_seguem_a_dona(monkeypatch) -> None:
             "nenhum")
 
 
-def test_as_quatro_superficies_dizem_a_palavra_dela_hoje() -> None:
+def test_as_quatro_superficies_dizem_a_palavra_do_usuario_hoje() -> None:
     """E o que elas dizem HOJE é `USB` e `BT` — palavra, 21/09/2026."""
     for cru in ("usb", "bt"):
-        dela = home_actions.palavra_do_transporte(cru)
+        do_usuario = home_actions.palavra_do_transporte(cru)
         estado, mesa = _mesa(cru, cru)
         for onde, texto in _superficies(estado, mesa).items():
-            assert dela in texto, (
+            assert do_usuario in texto, (
                 f"{onde} não diz a palavra dela para {cru!r}: {texto!r}")
 
 
@@ -226,7 +226,7 @@ def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
             f"{home_actions.palavra_do_transporte(controle['transporte'])!r}")
 
 
-def test_a_contagem_e_a_unica_excecao_e_ela_continua_em_sigla() -> None:
+def test_a_contagem_e_a_unica_excecao_e_o_usuario_continua_em_sigla() -> None:
     """O cabeçalho fica em `USB`/`BT` — decisão, 06/09/2026."""
     _, mesa = _mesa("usb", "bt")
     assert mesa_viva.texto_da_contagem(mesa)[1] == "1 USB · 1 BT"

@@ -75,7 +75,7 @@ def _vale() -> Profile:
     return opc.perfil_que_vale(load_profile(JOGO), opc.o_computador())
 
 
-def test_o_jogo_apaga_a_tecla_do_computador_e_ela_nao_volta() -> None:
+def test_o_jogo_apaga_a_tecla_do_computador_e_o_usuario_nao_volta() -> None:
     """A tecla que o computador define, apagada no jogo, vale «nada» e a vizinha segue.
 
     A MORDIDA: tire a chamada de ``_com_a_lapide_do_que_se_apagou`` do

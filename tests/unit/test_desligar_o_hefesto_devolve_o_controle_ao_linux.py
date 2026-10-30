@@ -156,7 +156,7 @@ def _o_daemon_sobe_e_para(cena: Cena) -> int:
 
 
 class TestPararODaemonEntregaOFisico:
-    def test_antes_da_graca_o_fisico_segue_fechado_e_depois_dela_e_da_sessao(
+    def test_antes_da_graca_o_fisico_segue_fechado_e_depois_do_usuario_e_da_sessao(
         self, seis: Cena
     ) -> None:
         """MORDIDA: tire a chamada de `tique_da_entrega` (ou o `entregar_ao_linux`

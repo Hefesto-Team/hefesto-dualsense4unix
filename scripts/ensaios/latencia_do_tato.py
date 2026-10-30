@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """latencia_do_tato.py — quanto tempo o motor leva para mexer, lido de fora.
 
-A-LATENCIA-DO-TATO-SE-MEDE-SEM-A-MAO-DELA-01 (08/10/2026). Todas as sprints do
+A-LATENCIA-DO-TATO-SE-MEDE-SEM-A-MAO-DO-USUARIO-01 (08/10/2026). Todas as sprints do
 tato dependem de um número que ninguém tinha: o intervalo entre a escrita do
 relatório e o motor do controle mexer. Sem ele, «sente atrasado» é opinião, e a
 única régua era a mão do usuário. O giroscópio do PRÓPRIO controle, pousado e parado,
@@ -270,7 +270,7 @@ def recusas(env: dict[str, str], uid: int, casa_real: str | None) -> list[str]:
     if not lar_e_de_mentira(env.get("HOME"), casa_real):
         motivos.append(
             "HOME é o lar real: rode no lar de mentira da bancada "
-            "(docs/process/ferramentas-da-leva/bancada-de-tela-em-lar-de-mentira/)")
+            "(docs/process/ferramentas-da-leva/ensaio-de-tela-em-lar-de-mentira/)")
     if ha_daemon(sockets_do_daemon(env, uid)):
         motivos.append(
             "há daemon no ar (ou um socket que aceita conexão): ele escreve no mesmo hidraw "

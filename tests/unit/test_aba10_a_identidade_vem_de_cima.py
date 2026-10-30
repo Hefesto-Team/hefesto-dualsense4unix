@@ -56,7 +56,7 @@ SEM_COR = {"pref": "p3", "uniq": "aabbcc000003", "jogador": 3, "cor": "",
            "alvo": False, "mascara": "DualSense"}
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
@@ -89,9 +89,9 @@ def _pacote(mesa: list[dict[str, Any]]) -> dict[str, Any]:
     return a10_perfis.pacote(ctx)
 
 
-def test_a_barra_do_plastico_tem_endereco_na_bancada() -> None:
+def test_a_barra_do_plastico_tem_endereco_no_ensaio() -> None:
     """MORDIDA: tire o ``data-hef`` do ``<span class="pl">`` em"""
-    html = _bancada()
+    html = _ensaio()
     quantas = html.count(f'data-hef="{BARRA}"')
     assert quantas == 4, (
         f"são {quantas} barras endereçadas na tabela por controle, e o desenho "
@@ -101,14 +101,14 @@ def test_a_barra_do_plastico_tem_endereco_na_bancada() -> None:
 
 def test_o_alvo_da_barra_e_cor_e_nao_fundo() -> None:
     """O alvo `fundo` guarda ``#ae335a`` e lê ``rgb(174, 51, 90)`` de volta: a"""
-    html = _bancada()
+    html = _ensaio()
     assert html.count('data-hef-alvo="cor"') == 4, (
         "a barra do plástico perdeu o alvo `cor` — com `fundo` o contador de "
         "pinturas mente uma vez por tique, e ele é O instrumento com que esta "
         "casa prova que um endereço existe")
 
 
-def test_nenhum_plastico_congelado_sobrou_no_miolo_da_bancada() -> None:
+def test_nenhum_plastico_congelado_sobrou_no_miolo_do_ensaio() -> None:
     """A régua da leva — ``check_identidade_vem_de_cima.py`` — acusa
     ``--plastico:#hex`` num elemento sem endereço. No miolo desta aba não pode
     haver nenhum: a cor de um aparelho não se digita na página.
@@ -120,7 +120,7 @@ def test_nenhum_plastico_congelado_sobrou_no_miolo_da_bancada() -> None:
     piloto (``hefesto_vivo.pintar``, ``p.fita``) com a mesa VIVA; o conserto do
     endereço dela é um só, compartilhado, e está no relato desta frente.
     """
-    miolo = _bancada().split('class="miolo"')[-1]
+    miolo = _ensaio().split('class="miolo"')[-1]
     assert "--plastico:" not in miolo, (
         "voltou um `--plastico` cravado no miolo da 10 — identidade de aparelho "
         "escrita à mão numa página é o desenho mandando na tela do produto")
@@ -167,16 +167,16 @@ def test_um_colorway_que_o_mapa_nao_tem_nao_derruba_a_aba() -> None:
     assert a10_perfis._plastico({"cor": "cor-que-nao-existe"}) == ""
 
 
-def test_o_que_espera_publicacao_ja_esta_na_bancada() -> None:
+def test_o_que_espera_publicacao_ja_esta_no_ensaio() -> None:
     """Declarar "espera a publicação" sobre um endereço que nem a bancada tem é"""
-    tem = _enderecos(_bancada())
+    tem = _enderecos(_ensaio())
     faltando = set(a10_perfis.ESPERANDO_A_PUBLICACAO) - tem
     assert not faltando, (
         f"{sorted(faltando)} está declarado como 'esperando a publicação' e a "
         f"BANCADA não tem o endereço. Não está esperando: está faltando.")
 
 
-def test_o_que_espera_publicacao_sai_da_lista_quando_ela_publicar() -> None:
+def test_o_que_espera_publicacao_sai_da_lista_quando_o_usuario_publicar() -> None:
     """Uma declaração que envelheceu é a régua se desligando sem ninguém"""
     ja_publicados = set(a10_perfis.ESPERANDO_A_PUBLICACAO) & _enderecos(_publicada())
     assert not ja_publicados, (

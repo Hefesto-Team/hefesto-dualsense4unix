@@ -88,7 +88,7 @@ class TestLeituraDoSistema:
         dir_ = _monta_sysfs(tmp_path, [ORFAO_NO_ESCOPO], [])
         assert dualsense_sem_driver(dir_) == [ORFAO_NO_ESCOPO]
 
-    def test_a_mesa_dela_dois_ligados_um_visivel(self, tmp_path: Path) -> None:
+    def test_a_mesa_do_usuario_dois_ligados_um_visivel(self, tmp_path: Path) -> None:
         dir_ = _monta_sysfs(
             tmp_path, [ORFAO_NO_ESCOPO], [DUALSENSE_ADOTADO, VPAD_COM_DRIVER]
         )
@@ -245,7 +245,7 @@ class TestOTextoDaTela:
             assert f"{MINUTOS_ENTRE_TENTATIVAS} minutos" in texto
             assert "PS" in texto, "a saída manual, se a tentativa não pegar"
 
-    def test_fala_a_lingua_dela_e_nao_a_do_mecanismo(self) -> None:
+    def test_fala_a_lingua_do_usuario_e_nao_a_do_mecanismo(self) -> None:
         for quantos in (1, 2):
             texto = texto_de_controle_nao_adotado(_estado(quantos)).lower()
             assert "controle" in texto

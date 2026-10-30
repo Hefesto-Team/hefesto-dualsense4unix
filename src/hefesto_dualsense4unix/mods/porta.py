@@ -1100,11 +1100,11 @@ class Porta:
         recebe por ali, o supervisor confere o parar dela, e a outra extensão não o recebe.
         ``False`` quando a extensão não está conectada à porta (nada a parar).
         """
-        delas = [con for con in self._conexoes
+        conexoes_do_mod = [con for con in self._conexoes
                  if con.sessao is not None and con.sessao.mod_id == mod_id]
-        if not delas:
+        if not conexoes_do_mod:
             return False
-        for con in delas:
+        for con in conexoes_do_mod:
             assert con.sessao is not None
             if "ler:acessorios.gesto" not in con.sessao.permissoes and con.escritor is not None:
                 self._avisar(con, con.escritor, EVENTO_DO_PARAR, {"mod": mod_id})
@@ -1131,11 +1131,11 @@ class Porta:
 
     def _avisar_a(self, mod_id: str, nome: str, dados: dict[str, Any]) -> bool:
         """O evento ``nome`` a cada conexão de ``mod_id``, e a nenhuma outra."""
-        delas = self._conexoes_de(mod_id)
-        for con in delas:
+        conexoes_do_mod = self._conexoes_de(mod_id)
+        for con in conexoes_do_mod:
             assert con.escritor is not None
             self._avisar(con, con.escritor, nome, dados)
-        return bool(delas)
+        return bool(conexoes_do_mod)
 
     def acao(self, mod_id: str, acao: str, *, alvo: str | None = None,
              valor: bool | str | None = None) -> bool:

@@ -63,7 +63,7 @@ def _cena_base() -> dict[str, Any]:
     return cena
 
 
-def _com_a_foto_dela(cena: dict[str, Any], lid: str, quem: tuple[str, ...]) -> dict[str, Any]:
+def _com_a_foto_do_usuario(cena: dict[str, Any], lid: str, quem: tuple[str, ...]) -> dict[str, Any]:
     """O lugar da foto: sem face, na USB 3.0, perto de um vizinho, e com quem está em `quem`
     esperando PS + Create."""
     lug = next(lg for lg in cena["lugares"] if lg["id"] == lid)
@@ -76,29 +76,29 @@ def _com_a_foto_dela(cena: dict[str, Any], lid: str, quem: tuple[str, ...]) -> d
 
 
 def _cena_da_foto() -> dict[str, Any]:
-    return _com_a_foto_dela(_cena_base(), "L1", ("P2",))
+    return _com_a_foto_do_usuario(_cena_base(), "L1", ("P2",))
 
 
 def _cena_dentro_da_maquina() -> dict[str, Any]:
     """O lugar sem entrada sabida diz «Dentro da máquina»; a espera vai ao lado."""
-    cena = _com_a_foto_dela(_cena_base(), "L2", ("P3",))
+    cena = _com_a_foto_do_usuario(_cena_base(), "L2", ("P3",))
     next(lg for lg in cena["lugares"] if lg["id"] == "L2").update(lugar="", entrada="")
     return cena
 
 
 def _cena_de_dois_esperando() -> dict[str, Any]:
-    return _com_a_foto_dela(_cena_base(), "L3", ("P3", "P4"))
+    return _com_a_foto_do_usuario(_cena_base(), "L3", ("P3", "P4"))
 
 
 def _cena_de_um_so() -> dict[str, Any]:
     """Um adaptador só: a linha não tem a seta, e a coluna dela fica vazia."""
-    cena = _com_a_foto_dela(_cena_base(), "L1", ("P2",))
+    cena = _com_a_foto_do_usuario(_cena_base(), "L1", ("P2",))
     cena["lugares"] = cena["lugares"][:1]
     cena["aparelhos"] = [a for a in cena["aparelhos"] if a["lugar"] == "L1"]
     return cena
 
 
-CENAS = {"a-foto-dela": _cena_da_foto, "dentro-da-maquina": _cena_dentro_da_maquina,
+CENAS = {"a-foto-do-usuario": _cena_da_foto, "dentro-da-maquina": _cena_dentro_da_maquina,
          "dois-esperando": _cena_de_dois_esperando, "um-so": _cena_de_um_so}
 
 
@@ -193,7 +193,7 @@ def test_a_linha_do_adaptador_cabe_no_desenho(nome: str, tamanho: tuple[int, int
 def test_a_linha_do_adaptador_cabe_na_pagina_publicada(tamanho: tuple[int, int]) -> None:
     if MARCA_DA_CURA not in PUBLICADA.read_text(encoding="utf-8"):
         pytest.skip("o publicado da 08 ainda é o de antes; o `--publicar` é da costura")
-    _conferir(PUBLICADA, tamanho, "a-foto-dela")
+    _conferir(PUBLICADA, tamanho, "a-foto-do-usuario")
 
 
 def _grade_da_sala(texto: str, prefixo: str) -> str:

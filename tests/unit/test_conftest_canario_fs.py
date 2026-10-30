@@ -40,7 +40,7 @@ def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         canario, "_CANARIO_FOTO_AVISO", canario._fotografar_tudo_de_aviso()
     )
     monkeypatch.setattr(canario, "_deltas_do_congelado", lambda: [])
-    monkeypatch.setattr(canario, "_gestos_da_janela_dela", lambda: [])
+    monkeypatch.setattr(canario, "_gestos_da_janela_do_usuario", lambda: [])
     monkeypatch.setattr(canario, "_GUARDA_DA_SESSAO", [])
     return lar
 

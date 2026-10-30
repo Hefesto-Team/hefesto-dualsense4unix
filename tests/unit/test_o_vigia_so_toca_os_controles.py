@@ -123,7 +123,7 @@ def _prop(mentira: Path, dispositivo: str, nome: str, valor: str | None) -> None
     (pasta / nome).write_text(valor + "\n", encoding="utf-8")
 
 
-def _bancada(
+def _ensaio(
     tmp_path: Path, *, bonded: bool, recusas: bool = False
 ) -> tuple[dict[str, str], Path]:
     """Dois aparelhos conectados e pareados: um controle e um acessório sem classe."""
@@ -215,7 +215,7 @@ def _log(tmp_path: Path) -> str:
 
 
 def test_o_bond_temporario_so_e_promovido_no_controle(tmp_path: Path) -> None:
-    env, mentira = _bancada(tmp_path, bonded=False)
+    env, mentira = _ensaio(tmp_path, bonded=False)
     proc = _tique(env)
     assert proc.returncode == 0, proc.stderr
     chamadas = _chamadas(mentira)
@@ -232,7 +232,7 @@ def test_o_bond_temporario_so_e_promovido_no_controle(tmp_path: Path) -> None:
 
 def test_o_trust_so_e_aplicado_no_controle(tmp_path: Path) -> None:
     """Prova da D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE."""
-    env, mentira = _bancada(tmp_path, bonded=True)
+    env, mentira = _ensaio(tmp_path, bonded=True)
     proc = _tique(env)
     assert proc.returncode == 0, proc.stderr
     sets = [c for c in _chamadas(mentira) if c.startswith("busctl set-property")]
@@ -244,7 +244,7 @@ def test_o_trust_so_e_aplicado_no_controle(tmp_path: Path) -> None:
 
 def test_a_vigia_1_ainda_conta_o_aparelho_que_nao_e_controle(tmp_path: Path) -> None:
     """Só o acessório sem classe está conectado: o restart continua adiado."""
-    env, mentira = _bancada(tmp_path, bonded=True, recusas=True)
+    env, mentira = _ensaio(tmp_path, bonded=True, recusas=True)
     _prop(mentira, CONTROLE, "Connected", "b false")
     proc = _tique(env)
     assert proc.returncode == 0, proc.stderr

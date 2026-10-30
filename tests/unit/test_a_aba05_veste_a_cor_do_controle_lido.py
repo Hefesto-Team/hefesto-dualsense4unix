@@ -21,7 +21,7 @@ from hefesto_dualsense4unix.interface.pacotes import a05_vibracao
 
 import monta
 
-BANCADA = RAIZ / "mockup/05-vibracao.html"
+ENSAIO = RAIZ / "mockup/05-vibracao.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
 LIDO = "white"
@@ -77,12 +77,12 @@ def test_a_cor_do_plastico_mora_onde_o_pintor_alcanca() -> None:
     03/09/2026 mostrava, com a moldura em Cosmic Red e o rótulo dizendo White.
 
     A MORDIDA: devolver o `style="--plastico:…"` ao `.ctrl` faz esta função
-    reprovar, e faz o `check_identidade_vem_de_cima --bancada --aba 05` voltar
+    reprovar, e faz o `check_identidade_vem_de_cima --ensaio --aba 05` voltar
     de 0 para 2.
     """
     sem_dono = []
     no_ctrl = []
-    for tag, attrs in _elementos(BANCADA):
+    for tag, attrs in _elementos(ENSAIO):
         if "--plastico" not in attrs.get("style", ""):
             continue
         classes = (attrs.get("class") or "").split()
@@ -118,7 +118,7 @@ def test_a_moldura_pede_o_alvo_da_cor_uma_vez_por_coluna_conectada() -> None:
     plástico para AFIRMAR — mas tem, agora, onde receber o do controle que
     chegar. É a mesma divisão que o `data-colorway` do `<svg>` já fazia.
     """
-    elementos = _elementos(BANCADA)
+    elementos = _elementos(ENSAIO)
     colunas = [
         a for _t, a in elementos
         if "ctrl" in (a.get("class") or "").split()
@@ -177,7 +177,7 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
       inteira e deixar os dois controles do MOCKUP na tela do usuário.
 
     A MORDIDA: tirar o `data-campo` do chip faz o
-    `check_identidade_vem_de_cima --bancada --aba 05` voltar de 0 para 8.
+    `check_identidade_vem_de_cima --ensaio --aba 05` voltar de 0 para 8.
 
     O RECORTE É O ENDEREÇO, E NÃO A CLASSE — 03/09/2026, e DUAS frentes da
     mesma leva chegaram a esta cura sem saber uma da outra, o que é a melhor
@@ -240,7 +240,7 @@ def test_a_fita_viva_nao_desiste_quando_a_cor_nao_veio() -> None:
 def test_todo_alvo_que_a_pagina_pede_o_pintor_sabe_escrever() -> None:
     """Nenhum `data-hef-alvo` da 05 é desconhecido do `escrever()` do piloto."""
     pedidos = {
-        a["data-hef-alvo"] for _t, a in _elementos(BANCADA) if a.get("data-hef-alvo")
+        a["data-hef-alvo"] for _t, a in _elementos(ENSAIO) if a.get("data-hef-alvo")
     }
     sabidos = set(re.findall(r"alvo === '([a-z]+)'", PILOTO.read_text(encoding="utf-8")))
     sabidos.add("texto")

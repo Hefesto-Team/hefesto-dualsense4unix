@@ -20,7 +20,7 @@ a interface nova não a chamava.
 
 O QUE CADA TESTE VIGIA, e a MORDIDA de cada um está na docstring dele. A que mais
 importa: troque a escada pelo `steam_game_running_appid()` e o
-`test_a_escada_alcanca_o_jogo_que_ela_ja_fechou` reprova.
+`test_a_escada_alcanca_o_jogo_que_o_usuario_ja_fechou` reprova.
 
 NADA AQUI TOCA A MÁQUINA DO USUÁRIO. O `conftest.py` desta casa desvia `HOME` e os
 quatro `XDG_*`; o que escreve em disco escreve no lar de mentira, e o que
@@ -57,7 +57,7 @@ def a07():
     return sys.modules[fn.__module__]
 
 
-def test_a_escada_alcanca_o_jogo_que_ela_ja_fechou(a07, monkeypatch):
+def test_a_escada_alcanca_o_jogo_que_o_usuario_ja_fechou(a07, monkeypatch):
     """O caso REAL do botão: o jogo não funcionou, ela fechou, e só então veio."""
     from hefesto_dualsense4unix.daemon import launch_env
 

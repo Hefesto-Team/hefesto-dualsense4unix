@@ -18,7 +18,7 @@ com endereço, e é nossa:
 No journal da bancada, hoje às 09:42, a assinatura exata::
 
     mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
-    bt_mic_palavra_dela  ligado=False
+    bt_mic_palavra_do_usuario  ligado=False
 
 A CURA é exigir SUSTENTAÇÃO da borda: o dedo do usuário TRAVA o valor (o kernel faz
 latch), o gating do firmware não. **Mas a janela de sustentação precisa ficar

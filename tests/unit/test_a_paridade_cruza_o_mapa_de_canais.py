@@ -255,7 +255,7 @@ def test_a_ponte_desta_arvore_tem_as_duas_pontas_vivas(regua, linhas_reais) -> N
     assert [f for f in falhas if f.startswith("ponte-morta")] == []
 
 
-def test_a_ponte_esta_no_piso_e_o_piso_e_o_tamanho_dela(regua) -> None:
+def test_a_ponte_esta_no_piso_e_o_piso_e_o_tamanho_do_usuario(regua) -> None:
     assert len(regua.PONTES) >= regua.PISO_DAS_PONTES
     assert regua.PISO_DAS_PONTES > 0
 

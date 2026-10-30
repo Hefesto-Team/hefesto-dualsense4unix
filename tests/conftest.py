@@ -1262,7 +1262,7 @@ def _marcar_o_diario_da_janela() -> None:
     _INTERFACE_LOG_INICIO.append((caminho, tamanho))
 
 
-def _gestos_da_janela_dela() -> list[str]:
+def _gestos_da_janela_do_usuario() -> list[str]:
     """Os `[gesto]` que a janela DELA anotou desde o começo da sessão."""
     if not _INTERFACE_LOG_INICIO:
         return []
@@ -1461,7 +1461,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
         if (resto := d.split(None, 1)[-1]) == config
         or resto.startswith((config + os.sep, config + " ("))
     ]
-    gestos = _gestos_da_janela_dela() if no_config else []
+    gestos = _gestos_da_janela_do_usuario() if no_config else []
     if gestos:
         _escrever_no_terminal(session, [
             "",
@@ -1861,7 +1861,7 @@ def _hefesto_fake_env(
 
 
 @pytest.fixture(autouse=True)
-def _nenhum_controle_de_fora_da_mesa_dela_entra_no_coop(
+def _nenhum_controle_de_fora_da_mesa_do_usuario_entra_no_coop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O co-op de um caso não adota o Pro Controller nem o 8BitDo que estiverem plugados nela.
@@ -2256,7 +2256,7 @@ def transportes() -> tuple[EnvelopeDeTransporte, ...]:
 
 
 @pytest.fixture()
-def fabrica_de_bancada(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
+def fabrica_de_ensaio(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
     """Fábrica de `_PinnedPyDualSense` SEM device, num transporte escolhido.
 
     O handle nasce pelo `__init__` de produção (que não toca em hardware) e
@@ -2289,7 +2289,7 @@ def fabrica_de_bancada(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
     monkeypatch.setattr(pydualsense, "prepareReport", _fallback_proibido)
 
     def _fabricar(envelope: EnvelopeDeTransporte) -> Any:
-        handle = _PinnedPyDualSense(b"/dev/hidraw-de-bancada", is_edge=False)
+        handle = _PinnedPyDualSense(b"/dev/hidraw-de-ensaio", is_edge=False)
         handle.light = DSLight()
         handle.audio = DSAudio()
         handle.triggerL = DSTrigger()
@@ -2303,11 +2303,11 @@ def fabrica_de_bancada(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
 
 
 @pytest.fixture()
-def ds5_de_bancada(
-    transporte: EnvelopeDeTransporte, fabrica_de_bancada: Callable[..., Any]
+def ds5_de_ensaio(
+    transporte: EnvelopeDeTransporte, fabrica_de_ensaio: Callable[..., Any]
 ) -> Any:
-    """O handle de bancada do transporte DESTE caso (ver `fabrica_de_bancada`)."""
-    return fabrica_de_bancada(transporte)
+    """O handle de bancada do transporte DESTE caso (ver `fabrica_de_ensaio`)."""
+    return fabrica_de_ensaio(transporte)
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -3168,7 +3168,7 @@ _ESPERA_DOS_FILHOS_S = 5.0
 
 _POPEN_COM_SOM: list[bool] = []
 
-_SIGLA_DO_LANCADOR = "A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01"
+_SIGLA_DO_LANCADOR = "A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DO-USUARIO-01"
 
 
 def lancador_de_mentira() -> Path | None:

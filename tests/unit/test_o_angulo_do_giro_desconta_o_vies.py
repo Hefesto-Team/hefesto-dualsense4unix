@@ -88,7 +88,7 @@ class _Hub:
         return (a[0], a[1], a[2])
 
 
-class _Bancada:
+class _Ensaio:
     """Um relógio, um hub, o armazém do daemon e um mouse por controle."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, vies: dict[str, tuple[float, float, float]],
@@ -135,7 +135,7 @@ class _Bancada:
 def test_ida_e_volta_com_o_zero_guardado_devolve_o_cursor_ao_lugar(
         monkeypatch: pytest.MonkeyPatch, navegacao: bool) -> None:
     """O defeito: a soma sobrava `2 x 1,5° x pixels_por_grau` para o lado do viés."""
-    b = _Bancada(monkeypatch, {_P1: _VIES}, {_P1: _VIES}, navegacao)
+    b = _Ensaio(monkeypatch, {_P1: _VIES}, {_P1: _VIES}, navegacao)
     ida, soma = b.ida_e_volta(_P1)
     assert abs(ida) > 100.0, f"a ida quase não andou ({ida}): a régua mede outra coisa"
     assert abs(soma) < 0.02 * abs(ida), (
@@ -146,7 +146,7 @@ def test_ida_e_volta_com_o_zero_guardado_devolve_o_cursor_ao_lugar(
 def test_sem_zero_guardado_os_pixels_sao_os_de_hoje(
         monkeypatch: pytest.MonkeyPatch, navegacao: bool) -> None:
     """A cura só age em quem calibrou: sem zero o viés continua entrando, como antes."""
-    b = _Bancada(monkeypatch, {_P1: _VIES}, {}, navegacao)
+    b = _Ensaio(monkeypatch, {_P1: _VIES}, {}, navegacao)
     ida, soma = b.ida_e_volta(_P1)
     esperado = rot.pixels((0.0, _VIES[1] * 2.0, 0.0), b.arranjo)[0]
     assert soma == pytest.approx(esperado, rel=0.05), (soma, esperado)
@@ -158,7 +158,7 @@ def test_cada_controle_desconta_o_proprio_vies(
         monkeypatch: pytest.MonkeyPatch, navegacao: bool) -> None:
     """O zero é por controle (P1 a P4, cabo e rádio): o do P2 não conserta o P1."""
     vies_p2 = (0.0, -2.5, 0.0)
-    b = _Bancada(monkeypatch, {_P1: _VIES, _P2: vies_p2}, {_P2: vies_p2}, navegacao)
+    b = _Ensaio(monkeypatch, {_P1: _VIES, _P2: vies_p2}, {_P2: vies_p2}, navegacao)
     _, soma_p1 = b.ida_e_volta(_P1)
     ida_p2, soma_p2 = b.ida_e_volta(_P2)
     assert abs(soma_p2) < 0.02 * abs(ida_p2), soma_p2

@@ -64,7 +64,7 @@ from gi.repository import Gtk
 from hefesto_dualsense4unix.app.actions.config import secao_exame as secao
 from hefesto_dualsense4unix.integrations import exame_da_mesa as exame_mod
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
-from tests.unit import ensaio_das_ordens as bancada
+from tests.unit import ensaio_das_ordens as ensaio
 
 SERIAL = re.compile(
     "(?<![0-9A-Fa-f])[0-9A-Fa-f]{"
@@ -72,22 +72,22 @@ SERIAL = re.compile(
     "}(?![0-9A-Fa-f])"
 )
 
-SEM_BANCADA = Path("/bancada/nao-existe")
+SEM_ENSAIO = Path("/bancada/nao-existe")
 
 
 def _leitura() -> ordens.Leitura:
     """A bancada de 24/08 como `Leitura` — sem desenho de gabinete nenhum."""
-    return ordens.Leitura(censo=bancada.censo(), entradas=bancada.entradas())
+    return ordens.Leitura(censo=ensaio.censo(), entradas=ensaio.entradas())
 
 
 def _itens(**extra: Any) -> list[exame_mod.Item]:
     """As cinco conferências no pior caso, mais o que o teste pedir por cima."""
     argumentos: dict[str, Any] = {
-        "parametro_do_radio": SEM_BANCADA,
-        "conf_do_radio": SEM_BANCADA,
-        "raiz_usb": SEM_BANCADA,
-        "modulos": SEM_BANCADA,  # (noqa-acento)
-        "diretorio_do_modulo": SEM_BANCADA,
+        "parametro_do_radio": SEM_ENSAIO,
+        "conf_do_radio": SEM_ENSAIO,
+        "raiz_usb": SEM_ENSAIO,
+        "modulos": SEM_ENSAIO,  # (noqa-acento)
+        "diretorio_do_modulo": SEM_ENSAIO,
         "executar_busctl": lambda _argumentos: None,
         "leitura_da_vizinhanca": list,
         "leitura_das_ordens": _leitura,

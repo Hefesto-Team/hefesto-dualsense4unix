@@ -1,4 +1,4 @@
-"""DESLIGAR-COM-A-STEAM-ABERTA-DEVOLVE-O-CONTROLE-A-ELA-01 — a entrega religa o driver HID.
+"""DESLIGAR-COM-A-STEAM-ABERTA-DEVOLVE-O-CONTROLE-AO-USUARIO-01 — a entrega religa o driver HID.
 
 A bancada de 23/10/2026 (rodadas A8 a A11): com a Steam aberta ANTES de desligar
 o Hefesto, a entrega do broker (só a ACL e o modo do nó) não a faz abrir o

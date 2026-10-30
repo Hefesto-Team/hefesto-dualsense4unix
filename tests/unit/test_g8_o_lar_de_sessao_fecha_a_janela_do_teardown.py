@@ -56,7 +56,7 @@ UNIQ_DA_REGUA = "e8473a0000f1"
 
 NOME_DO_MARCADOR = "prova-de-escrita-tardia.txt"
 
-NOME_DA_FILA_DELA = "a-fila-que-ja-estava-la.json"
+NOME_DA_FILA_DO_USUARIO = "a-fila-que-ja-estava-la.json"
 
 
 @pytest.fixture(scope="session")
@@ -284,7 +284,7 @@ def _rodar_o_ninho(
     )
     mesa = tmp_path / ("mesa-com" if com_a_cura else "mesa-sem")
     (mesa / ".config" / "hefesto-dualsense4unix").mkdir(parents=True)
-    (mesa / ".config" / "hefesto-dualsense4unix" / NOME_DA_FILA_DELA).write_text(
+    (mesa / ".config" / "hefesto-dualsense4unix" / NOME_DA_FILA_DO_USUARIO).write_text(
         '{"version": 1}\n', encoding="utf-8"
     )
 
@@ -321,7 +321,7 @@ def _nasceram_na_mesa(mesa: Path) -> list[str]:
     return sorted(
         str(p.relative_to(mesa))
         for p in raiz.rglob("*")
-        if p.is_file() and p.name != NOME_DA_FILA_DELA
+        if p.is_file() and p.name != NOME_DA_FILA_DO_USUARIO
     )
 
 

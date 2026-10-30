@@ -44,7 +44,7 @@ def _da_steam(appid: str, nome: str) -> JogoLocal:
     return JogoLocal(appid=appid, nome=nome, fonte="steam")
 
 
-def _perfil_dela(directory: Path, arquivo: str, dados: dict[str, object]) -> bytes:
+def _perfil_do_usuario(directory: Path, arquivo: str, dados: dict[str, object]) -> bytes:
     """Escreve um perfil "dela" no diretório e devolve os bytes gravados."""
     directory.mkdir(parents=True, exist_ok=True)
     bruto = (json.dumps(dados, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -188,7 +188,7 @@ def test_um_appid_e_uma_chave_iguais_nao_disputam_a_mesma_linha(
     ]
 
 
-def test_o_perfil_do_lancador_que_ela_apagou_nao_ressuscita(tmp_path: Path) -> None:
+def test_o_perfil_do_lancador_que_o_usuario_apagou_nao_ressuscita(tmp_path: Path) -> None:
     """Mesmo contrato do `.seeded_presets` — e ele só vale se a marca RELER."""
     destino = tmp_path / "perfis"
     jogos = [_do_heroic(GOTG_CHAVE, GOTG_NOME)]
@@ -343,9 +343,9 @@ def test_criar_a_mao_um_segundo_perfil_para_o_mesmo_jogo_nao_e_recusado(
 
     assert caminho.is_file(), "criar à mão foi recusado"
     with caminho.open(encoding="utf-8") as fh:
-        dela = json.load(fh)
-    assert dela["match"]["window_class"] == [GOTG_CHAVE]
-    assert dela["priority"] == 90
+        do_usuario = json.load(fh)
+    assert do_usuario["match"]["window_class"] == [GOTG_CHAVE]
+    assert do_usuario["priority"] == 90
     assert semeado.read_bytes() == bytes_do_semeado
     assert sorted(p.name for p in destino.glob("*.json")) == [
         "guardioes_do_meu_jeito.json",
@@ -353,7 +353,7 @@ def test_criar_a_mao_um_segundo_perfil_para_o_mesmo_jogo_nao_e_recusado(
     ]
 
 
-def test_a_varredura_seguinte_nao_pisa_no_perfil_que_ela_criou(
+def test_a_varredura_seguinte_nao_pisa_no_perfil_que_o_usuario_criou(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A PROVA EM BYTE: os dois arquivos idênticos depois de três varreduras."""
@@ -378,12 +378,12 @@ def test_a_varredura_seguinte_nao_pisa_no_perfil_que_ela_criou(
     assert depois == antes
 
 
-def test_o_perfil_dela_feito_antes_impede_o_semeado_e_fica_intacto(
+def test_o_perfil_do_usuario_feito_antes_impede_o_semeado_e_fica_intacto(
     tmp_path: Path,
 ) -> None:
     """Ela criou primeiro: o produto registra que TRATOU e não cria o segundo."""
     destino = tmp_path / "perfis"
-    dela = _perfil_dela(
+    do_usuario = _perfil_do_usuario(
         destino,
         "o_meu_guardioes.json",
         {
@@ -398,7 +398,7 @@ def test_o_perfil_dela_feito_antes_impede_o_semeado_e_fica_intacto(
     )
 
     assert resultado.criados == ()
-    assert (destino / "o_meu_guardioes.json").read_bytes() == dela
+    assert (destino / "o_meu_guardioes.json").read_bytes() == do_usuario
     ja_tinha = resultado.por_desfecho("ja_tinha_perfil")
     assert [(r.jogo, r.arquivo) for r in ja_tinha] == [
         (GOTG_NOME, "o_meu_guardioes.json")
@@ -409,11 +409,11 @@ def test_o_perfil_dela_feito_antes_impede_o_semeado_e_fica_intacto(
     assert loader.perfis_de_jogo_semeados(dest_dir=destino) == {}
 
 
-def test_a_colisao_de_nome_com_o_perfil_dela_e_recusa_e_nao_sobrescrita(
+def test_a_colisao_de_nome_com_o_perfil_do_usuario_e_recusa_e_nao_sobrescrita(
     tmp_path: Path,
 ) -> None:
     destino = tmp_path / "perfis"
-    dela = _perfil_dela(
+    do_usuario = _perfil_do_usuario(
         destino,
         "marvels_guardians_of_the_galaxy.json",
         {"name": GOTG_NOME, "match": {"type": "manual"}, "priority": 7},
@@ -424,11 +424,11 @@ def test_a_colisao_de_nome_com_o_perfil_dela_e_recusa_e_nao_sobrescrita(
     )
 
     assert resultado.criados == ()
-    assert (destino / "marvels_guardians_of_the_galaxy.json").read_bytes() == dela
+    assert (destino / "marvels_guardians_of_the_galaxy.json").read_bytes() == do_usuario
     assert [r.jogo for r in resultado.por_desfecho("nome_ocupado")] == [GOTG_NOME]
 
 
-def test_a_prioridade_decide_entre_o_dela_e_o_semeado(
+def test_a_prioridade_decide_entre_o_do_usuario_e_o_semeado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """*"os dois convivem e a prioridade decide qual vence"* — pelo seletor REAL."""

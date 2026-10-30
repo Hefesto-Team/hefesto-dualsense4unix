@@ -35,7 +35,7 @@ def _declaradas() -> set[str]:
 
 def _paginas() -> list[pathlib.Path]:
     em_trabalho = _declaradas()
-    return [onde.BANCADA / p.name if p.name in em_trabalho else p
+    return [onde.ENSAIO / p.name if p.name in em_trabalho else p
             for p in onde.paginas(publicado=True)]
 
 

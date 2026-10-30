@@ -136,7 +136,7 @@ falha, se existir, é DEPOIS do vpad, e ninguém a localizou"*. Os três degraus
 antigos medem só a IDA (produto -> aparelho); os dois novos medem a volta que
 importa para jogar.
 
-**`O JOGO REAGIU` só fecha com `olho-dela`**, e o portão derruba quem tentar
+**`O JOGO REAGIU` só fecha com `olho-do-usuario`**, e o portão derruba quem tentar
 outra coisa: não existe régua nesta casa que leia o estado interno de um jogo
 sob Proton. `O JOGO RECEBEU` fecha com instrumento — mas o instrumento ainda
 não foi escrito, e as duas sondas que existem hoje mentem nesse cenário (uma
@@ -315,10 +315,10 @@ esteja o documento onde ele aparece.
   coluna não tem domínio declarado, então o portão não vê. Não filtre por ela.
 - `provado_por` (mapa, <!--@mapa-com-provado-por-->87<!--/--> linhas:
   `aparelho` <!--@mapa-provado-aparelho-->45<!--/-->, `fonte-do-driver`
-  <!--@mapa-provado-fonte-do-driver-->26<!--/-->, `olho-dela`
+  <!--@mapa-provado-fonte-do-driver-->26<!--/-->, `olho-do-usuario`
   <!--@mapa-provado-olho-dela-->12<!--/-->, `descritor`
   <!--@mapa-provado-descritor-->3<!--/-->) e `observado_por` (caderno,
-  <!--@caderno-com-observado-por-->251<!--/--> linhas: `olho-dela`
+  <!--@caderno-com-observado-por-->251<!--/--> linhas: `olho-do-usuario`
   <!--@caderno-observado-olho-dela-->144<!--/-->, `bancada`
   <!--@caderno-observado-bancada-->69<!--/-->, `aparelho`
   <!--@caderno-observado-aparelho-->25<!--/-->) fazem a mesma pergunta com

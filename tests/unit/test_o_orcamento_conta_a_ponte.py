@@ -250,7 +250,7 @@ def test_ponte_que_levanta_ao_ser_perguntada_fica_de_fora() -> None:
     assert sub.pontes_de_pe() == {}
 
 
-def test_o_k_da_ponte_segue_a_tabela_da_bancada() -> None:
+def test_o_k_da_ponte_segue_a_tabela_do_ensaio() -> None:
     """A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01: o ``FATIAS_DA_PONTE`` é o ``k`` que a bancada grava.
 
     Sem ``tests/fixtures/a_ponte_em_fatias_no_ar/bancada.json`` o ``k`` é provisório no CSV; com

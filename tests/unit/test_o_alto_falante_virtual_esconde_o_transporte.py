@@ -156,7 +156,7 @@ def servidor(monkeypatch: pytest.MonkeyPatch) -> ServidorDeSomDeMentira:
 
 
 @pytest.fixture
-def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def usb_do_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """O censo de USB que o `sink_do_controle` consulta, dublado."""
     from hefesto_dualsense4unix.integrations import usb_pai
 
@@ -187,7 +187,7 @@ def _ponte_de_pe(_uniq: str) -> Any:
 
 
 def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no(
-    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
+    servidor: ServidorDeSomDeMentira, usb_do_ensaio: None
 ) -> None:
     """Trocar o cabo pelo rádio não pode trocar o nome nem o rótulo da saída."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
@@ -231,7 +231,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
 
 
 def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
-    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
+    servidor: ServidorDeSomDeMentira, usb_do_ensaio: None
 ) -> None:
     """Dois DualSense no cabo: cada nó entrega no sink DAQUELE controle.
 
@@ -260,7 +260,7 @@ def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
 
 
 def test_o_laco_do_cabo_usa_os_dois_canais_da_frente(
-    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
+    servidor: ServidorDeSomDeMentira, usb_do_ensaio: None
 ) -> None:
     """O mapa (`audio.alto_falante@dualsense`, `cabo_canal`) diz *canais 1-2*."""
     GerenciadorDeNosDeSom().reconciliar([_cabo(_UNIQ_P1)])
@@ -328,7 +328,7 @@ def test_a_frase_do_radio_diz_as_tres_coisas() -> None:
 def test_um_no_por_controle_no_servidor(
     mesa: list[ControleNaLista],
     servidor: ServidorDeSomDeMentira,
-    usb_da_bancada: None,
+    usb_do_ensaio: None,
 ) -> None:
     """O servidor tem UM nó por controle, com o rótulo do assento, e mais nada."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
@@ -349,7 +349,7 @@ def test_um_no_por_controle_no_servidor(
 
 
 def test_quem_sai_da_mesa_leva_so_a_rota_e_o_no_fica(
-    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
+    servidor: ServidorDeSomDeMentira, usb_do_ensaio: None
 ) -> None:
     """Tirar um controle leva a rota DELE (os fios descem); o nó fica, e o dos outros não muda."""
     ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)

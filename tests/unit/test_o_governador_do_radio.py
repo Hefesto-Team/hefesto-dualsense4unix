@@ -774,7 +774,7 @@ async def test_o_ipc_ligar_aqui_responde_pelo_governador() -> None:
     assert resposta == {"status": "ok", "uniq": CONTROLE_3}
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
     assert isinstance(vaga, gov.Vaga), "ela respondeu «Ligar aqui» e a ponte seguiu recusada"
-    assert vaga.alem_do_limite is True and vaga.por_escolha_dela is True
+    assert vaga.alem_do_limite is True and vaga.por_escolha_do_usuario is True
 
     with pytest.raises(ValueError):
         await handlers._handle_radio_ponte_ligar_aqui({})

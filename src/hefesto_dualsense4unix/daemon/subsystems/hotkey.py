@@ -1225,7 +1225,7 @@ async def _metade_do_canal(
     respondia `ok=False`, e o desfecho era a MESMA mentira de segunda geração
     que `_apagar_a_luz_de_quem_perdeu_o_canal` fecha do outro lado, entrando
     pela porta da frente: a tela dizia RECUSADO, o LED não acendia, e
-    `BtMicSubsystem._aplicar_a_palavra_dela` entregava `True` à ponte na
+    `BtMicSubsystem._aplicar_a_palavra_do_usuario` entregava `True` à ponte na
     varredura seguinte — **0x32 LIGADO**.
 
     Não é caso inventado: `EleitorDeMicrofone.eleger_o_controle` devolve
@@ -1233,7 +1233,7 @@ async def _metade_do_canal(
     controle"* sempre que a ponte demora a publicar, que é o desfecho COMUM por
     rádio, e `eleger_por_uniq` tem mais quatro recusas. Medido com o eleitor
     REAL, a ponte REAL e o registro REAL: `no_ar() == {uniq: True}`,
-    `_pedido_dela is True`, e o `0x32` saindo LIGADO na varredura seguinte com
+    `_pedido_do_usuario is True`, e o `0x32` saindo LIGADO na varredura seguinte com
     a source ``SUSPENDED``.
 
     **DESFAZER É DEVOLVER O QUE HAVIA, não apagar.** `palavra_no_ar` é lido
@@ -1774,7 +1774,7 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
         return await _nascer_no_ar_na_vez(daemon, uniq)
 
 
-def _ela_desligou_este_microfone(daemon: DaemonProtocol, uniq: str) -> bool:
+def _o_usuario_desligou_este_microfone(daemon: DaemonProtocol, uniq: str) -> bool:
     """O `maquina.json` diz `microfone: false` para ESTE controle?"""
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import uniqs_negados
 
@@ -1925,7 +1925,7 @@ async def _o_nascimento_pode_tomar_o_padrao(daemon: DaemonProtocol, uniq: str) -
 
 async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     """O corpo de `nascer_no_ar`, já com a vez na fila. Ver o docstring de lá."""
-    if _ela_desligou_este_microfone(daemon, uniq):
+    if _o_usuario_desligou_este_microfone(daemon, uniq):
         logger.info("mic_nasce_calado_por_recusa", uniq=uniq)
         dizer_no_ar(uniq, False)
         return False
@@ -2324,8 +2324,8 @@ async def o_jogo_pede_o_mudo(
 
     chave = chave_do_mic(uniq) or uniq
     _MUDO_DO_JOGO[chave] = (em, bool(mudo))
-    ela = quando_a_pessoa_mandou(uniq)
-    if ela is not None and em < ela:
+    quando_mandou = quando_a_pessoa_mandou(uniq)
+    if quando_mandou is not None and em < quando_mandou:
         logger.info("mic_mudo_do_jogo_velho", uniq=chave, mudo=mudo)
         return None
     if mudo:

@@ -14,12 +14,12 @@ VOLUMES = [0x00, 0x40, 0xC0, rep.TETO_SPEAKER_VOLUME]
 
 @pytest.mark.parametrize("volume", VOLUMES)
 def test_o_volume_do_alto_falante_sai_no_byte_certo_nos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte, volume: int
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte, volume: int
 ) -> None:
     """common[5] leva o volume e o flag0 0x20 é quem o autoriza."""
-    ds5_de_bancada.set_audio_volumes(speaker=volume)
+    ds5_de_ensaio.set_audio_volumes(speaker=volume)
 
-    report = ds5_de_bancada.prepareReport()
+    report = ds5_de_ensaio.prepareReport()
     assert transporte.problemas_do_envelope(report) == []
     common = transporte.extrair_common(report)
 
@@ -34,11 +34,11 @@ def test_o_volume_do_alto_falante_sai_no_byte_certo_nos_dois(
 
 
 def test_o_preamp_sai_no_byte_certo_nos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """SOM-ROTA-01: sem o common[37] o deslizante dela vale 40% do curso."""
-    ds5_de_bancada.set_audio_volumes(speaker=0xC0, preamp=rep.SP_PREAMP_GAIN_PADRAO)
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    ds5_de_ensaio.set_audio_volumes(speaker=0xC0, preamp=rep.SP_PREAMP_GAIN_PADRAO)
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
 
     assert common[rep.COMMON_AUDIO_CONTROL2] & rep.SP_PREAMP_GAIN_MASK == (
         rep.SP_PREAMP_GAIN_PADRAO
@@ -49,11 +49,11 @@ def test_o_preamp_sai_no_byte_certo_nos_dois(
 
 
 def test_a_posse_do_audio_e_por_byte_nos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Quem pede só o alto-falante autoriza SÓ o alto-falante — nos dois."""
-    ds5_de_bancada.set_audio_volumes(speaker=0xC0)
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    ds5_de_ensaio.set_audio_volumes(speaker=0xC0)
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
 
     assert common[0] & rep.VALID_FLAG0_SPEAKER_VOLUME
     assert common[0] & rep.VALID_FLAG0_HEADPHONE_VOLUME == 0
@@ -63,10 +63,10 @@ def test_a_posse_do_audio_e_por_byte_nos_dois(
 
 
 def test_sem_dono_o_audio_nao_sai_em_nenhum_dos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """AUDIO-OWNER-01 nos dois transportes: sem posse, nem bit nem valor."""
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     assert common[0] & rep.VALID_FLAG0_AUDIO_MASK == 0, (
         f"{transporte.nome}: autorizamos áudio sem ter escrito valor nenhum — "
         "é 'volume zero' a 60 Hz com cara de keepalive"
@@ -77,13 +77,13 @@ def test_sem_dono_o_audio_nao_sai_em_nenhum_dos_dois(
 
 
 def test_o_common_do_audio_e_identico_e_so_o_envelope_muda(
-    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
+    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_ensaio: Any
 ) -> None:
     """As duas metades da frase do BTREPORT-02, provadas de uma vez."""
     commons: dict[str, bytes] = {}
     reports: dict[str, bytes] = {}
     for envelope in transportes:
-        handle = fabrica_de_bancada(envelope)
+        handle = fabrica_de_ensaio(envelope)
         handle.set_audio_volumes(speaker=0xC0, preamp=rep.SP_PREAMP_GAIN_PADRAO)
         report = bytes(handle.prepareReport())
         reports[envelope.nome] = report

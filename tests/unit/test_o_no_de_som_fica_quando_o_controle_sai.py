@@ -107,7 +107,7 @@ def servidor(monkeypatch: pytest.MonkeyPatch) -> ServidorComFluxos:
 
 
 @pytest.fixture(autouse=True)
-def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def usb_do_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.integrations import usb_pai
 
     monkeypatch.setattr(

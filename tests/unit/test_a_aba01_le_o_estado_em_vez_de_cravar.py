@@ -215,7 +215,7 @@ def test_o_aviso_do_jogo_sem_atalho_acende_na_coluna(duas_listas_vazias: Any) ->
         "o texto da coluna deixou de ser o do dono")
 
 
-def test_a_bancada_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
+def test_o_ensaio_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
     """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03."""
     if str(RAIZ / "scripts" / "tela") not in sys.path:
         sys.path.insert(0, str(RAIZ / "scripts" / "tela"))
@@ -277,7 +277,7 @@ def test_nenhuma_fonte_fala_sem_este_arquivo_saber(monkeypatch: Any) -> None:
 
 
 def _em_trabalho() -> bool:
-    arquivo = onde.BANCADA / "DIVERGENCIAS.md"
+    arquivo = onde.ENSAIO / "DIVERGENCIAS.md"
     if not arquivo.exists():
         return False
     corpo = arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1]
@@ -294,8 +294,8 @@ def _atras_so_por_endereco() -> bool:
     modulo = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(modulo)
     nome = "01-jogar.html"
-    bancada, produto = onde.BANCADA / nome, onde.PUBLICADO / nome
-    if not produto.exists() or bancada.read_bytes() == produto.read_bytes():
+    ensaio, produto = onde.ENSAIO / nome, onde.PUBLICADO / nome
+    if not produto.exists() or ensaio.read_bytes() == produto.read_bytes():
         return False
     return bool(modulo.so_mudou_endereco(nome))
 

@@ -30,11 +30,11 @@ def _retrato() -> Any:
     return modulo
 
 
-def test_a_palavra_dela_resolve_para_a_vista_medida() -> None:
-    """`--vista dela` não redigita número nenhum: ele tem dono em `VISTA_DELA`."""
+def test_a_palavra_do_usuario_resolve_para_a_vista_medida() -> None:
+    """`--vista dela` não redigita número nenhum: ele tem dono em `VISTA_DO_USUARIO`."""
     retrato = _retrato()
-    assert retrato._vista_pedida("dela") == retrato.VISTA_DELA
-    assert retrato._vista_pedida("  DELA  ") == retrato.VISTA_DELA
+    assert retrato._vista_pedida("dela") == retrato.VISTA_DO_USUARIO
+    assert retrato._vista_pedida("  DELA  ") == retrato.VISTA_DO_USUARIO
 
 
 @pytest.mark.parametrize(
@@ -74,7 +74,7 @@ def test_o_main_recusa_a_vista_torta_em_vez_de_fotografar() -> None:
     )
 
 
-def test_a_vista_dela_fecha_a_conta_das_parcelas() -> None:
+def test_a_vista_do_usuario_fecha_a_conta_das_parcelas() -> None:
     """1918x840 não é número escolhido: é a TV da bancada menos o que o compositor come."""
     retrato = _retrato()
     tv_larg, tv_alt = 1920, 1080
@@ -84,15 +84,15 @@ def test_a_vista_dela_fecha_a_conta_das_parcelas() -> None:
         tv_alt - painel - borda - barra - borda - doca,
     )
 
-    medida = retrato.VISTA_DELA
+    medida = retrato.VISTA_DO_USUARIO
     assert medida == da_conta, (
-        f"`VISTA_DELA` é {medida} e a conta das parcelas dá {da_conta}. Cada "
+        f"`VISTA_DO_USUARIO` é {medida} e a conta das parcelas dá {da_conta}. Cada "
         "parcela tem origem declarada no fonte do retratista; um total que não "
         "bate com elas é um número que perdeu o dono."
     )
 
 
-def test_as_dez_fotos_da_vista_nasceram_na_vista_dela() -> None:
+def test_as_dez_fotos_da_vista_nasceram_na_vista_do_usuario() -> None:
     """E a constante responde pelas IMAGENS que existem — não só por si mesma."""
     retrato = _retrato()
     pasta = retrato.DESTINO_DOC / retrato.SUBPASTA_DA_VISTA
@@ -100,11 +100,11 @@ def test_as_dez_fotos_da_vista_nasceram_na_vista_dela() -> None:
     if not recibo.is_file():
         pytest.skip(f"{pasta} ainda não foi fotografada nesta árvore")
 
-    larg, alt = retrato.VISTA_DELA
+    larg, alt = retrato.VISTA_DO_USUARIO
     texto = recibo.read_text(encoding="utf-8")
     assert f"vista:   {larg}x{alt}" in texto, (
         f"o recibo de `{pasta.name}/` não declara a vista `{larg}x{alt}` que "
-        "`VISTA_DELA` diz ser a dela. Ou a constante mudou e as dez fotos "
+        "`VISTA_DO_USUARIO` diz ser a dela. Ou a constante mudou e as dez fotos "
         "ficaram para trás, ou as fotos saíram de outra vista — e nos dois "
         "casos a pasta afirma uma tela que ninguém tirou.\n\n"
         "    src/hefesto_dualsense4unix/interface/olhar.py "
@@ -118,7 +118,7 @@ def test_a_foto_da_vista_nao_cai_por_cima_da_do_readme(tmp_path: pathlib.Path) -
     del tmp_path
     retrato = _retrato()
     do_readme = retrato.destino_das_fotos(True, None)
-    da_vista = retrato.destino_das_fotos(True, retrato.VISTA_DELA)
+    da_vista = retrato.destino_das_fotos(True, retrato.VISTA_DO_USUARIO)
 
     assert do_readme == retrato.DESTINO_DOC
     assert da_vista == retrato.DESTINO_DOC / retrato.SUBPASTA_DA_VISTA
@@ -126,7 +126,7 @@ def test_a_foto_da_vista_nao_cai_por_cima_da_do_readme(tmp_path: pathlib.Path) -
         "as duas famílias de foto estão caindo na MESMA pasta. A execução "
         "seguinte do retrato apagaria a foto da vista sem uma linha de aviso."
     )
-    assert retrato.destino_das_fotos(False, retrato.VISTA_DELA) == pathlib.Path(
+    assert retrato.destino_das_fotos(False, retrato.VISTA_DO_USUARIO) == pathlib.Path(
         "/tmp"
     ), "sem `--doc` a foto é rascunho e não pode encostar em `docs/`"
 

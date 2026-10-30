@@ -63,7 +63,7 @@ def test_a_leitura_crua_de_uma_sessao_muda_e_vazia() -> None:
     assert ambiente_lido(variaveis={"XDG_SESSION_DESKTOP": "cosmic"}) == "cosmic"
 
 
-def test_a_correcao_dela_vence_a_deteccao(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_correcao_do_usuario_vence_a_deteccao(monkeypatch: pytest.MonkeyPatch) -> None:
     """Se ela disser que é GNOME, é GNOME — mesmo numa sessão que grita COSMIC."""
     monkeypatch.setattr(
         ambiente_mod, "load_gui_prefs", lambda: {CHAVE_AMBIENTE: "gnome"}

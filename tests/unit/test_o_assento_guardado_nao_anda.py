@@ -335,7 +335,7 @@ class TestQuemNaoGuardaLugar:
 
 
 @pytest.mark.usefixtures("config_isolado")
-class TestOGestoDelaTrocaSobreOQueElaVe:
+class TestOGestoDoUsuarioTrocaSobreOQueOUsuarioVe:
     """O clique do usuário é TROCA sobre o que ela vê — e ela vê o buraco."""
 
     def test_o_3_para_o_p4_troca_o_p3_e_o_p4_e_mais_ninguem(self) -> None:

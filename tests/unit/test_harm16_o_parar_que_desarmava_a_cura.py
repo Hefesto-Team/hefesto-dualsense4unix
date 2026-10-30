@@ -121,7 +121,7 @@ async def test_o_parar_continua_desarmando_depois_de_trocar_de_perfil(
 
 
 @pytest.mark.asyncio
-async def test_o_par_nao_nulo_que_ela_fixou_continua_intocado(
+async def test_o_par_nao_nulo_que_o_usuario_fixou_continua_intocado(
     servidor: Any,
 ) -> None:
     """A metade que impede o conserto de reintroduzir outro defeito."""

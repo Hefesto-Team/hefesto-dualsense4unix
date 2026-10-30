@@ -269,7 +269,7 @@ class TestModoJogoPadrao:
 
         estado = daemon.aplicar_modo_jogo_padrao(wm_class=WM_MMJ)
 
-        assert estado == "ignorado_gesto_dela"
+        assert estado == "ignorado_gesto_do_usuario"
         assert setters.gamepad == []
         assert setters.native == []
 

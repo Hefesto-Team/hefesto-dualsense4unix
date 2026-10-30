@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     gravar_maquina,
 )
 
-MAPA_DELA: dict[str, Any] = {
+MAPA_DO_USUARIO: dict[str, Any] = {
     "faces": [
         {"nome": "Frente", "portas": ["1", "2"]},
         {"nome": "Traseira", "portas": ["3", "4", "5", "6", "7", "8"]},
@@ -48,7 +48,7 @@ def _documento(arquivo: Path) -> dict[str, Any]:
 
 def test_o_mapa_vai_ao_disco_e_volta_igual(arquivo: Path) -> None:
     """Ida e volta do gabinete inteiro, face por face e entrada por entrada."""
-    assert gravar_maquina({"mapa": MAPA_DELA}) is True
+    assert gravar_maquina({"mapa": MAPA_DO_USUARIO}) is True
 
     lido = carregar_maquina().mapa
 
@@ -85,7 +85,7 @@ def test_o_codigo_antigo_preserva_o_mapa(
     arquivo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Uma versão que não conhece ``mapa`` lê, grava, e NÃO destrói o mapa."""
-    assert gravar_maquina({"mapa": MAPA_DELA}) is True
+    assert gravar_maquina({"mapa": MAPA_DO_USUARIO}) is True
     antes = _documento(arquivo)["mapa"]
 
     campos_sem_mapa = {
@@ -259,7 +259,7 @@ def test_o_teto_de_faces_e_de_entradas_vale() -> None:
                 },
             }
         )
-    assert MaquinaConfig.model_validate({"version": 1, "mapa": MAPA_DELA})
+    assert MaquinaConfig.model_validate({"version": 1, "mapa": MAPA_DO_USUARIO})
 
 
 def test_o_esquema_nao_aceita_campo_que_ninguem_conhece() -> None:

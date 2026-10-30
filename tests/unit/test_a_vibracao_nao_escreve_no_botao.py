@@ -248,8 +248,8 @@ def test_a_mesa_desta_aba_so_emite_o_degrau_geral(emitidos):
     assert set(pacote["mesa"]) == set(), (
         f"a mesa emite {sorted(pacote['mesa'])} — e a página só tem endereço "
         f"para o degrau geral")
-    bancada = onde.pagina(PAGINA).read_text(encoding="utf-8")
-    assert 'data-campo="degrau-mesa"' not in bancada, (
+    ensaio = onde.pagina(PAGINA).read_text(encoding="utf-8")
+    assert 'data-campo="degrau-mesa"' not in ensaio, (
         "o `degrau-mesa` voltou ao desenho — campo sem endereço é "
         "pintura que não acontece, e ela é silenciosa dos dois lados")
     assert not pacote["mesa"], (

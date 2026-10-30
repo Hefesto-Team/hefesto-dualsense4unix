@@ -240,10 +240,10 @@ class TestQuemNaoTomaAVez:
         """A janela de um Xvfb de instrumento nunca chama a da tela do usuário."""
         ai = _carregar_o_lancador()
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-1")
-        dela = ai.nome_da_vez()
+        do_usuario = ai.nome_da_vez()
         monkeypatch.delenv("WAYLAND_DISPLAY")
         monkeypatch.setenv("DISPLAY", ":99")
-        assert ai.nome_da_vez() != dela
+        assert ai.nome_da_vez() != do_usuario
         assert "/" not in ai.nome_da_vez()
 
 

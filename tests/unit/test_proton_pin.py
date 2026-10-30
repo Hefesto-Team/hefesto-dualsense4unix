@@ -598,7 +598,7 @@ def test_list_installed_appids_filtra_ferramentas(tmp_path):
     assert pp.list_installed_appids(home=tmp_path) == ["1245620", "1599660"]
 
 
-_VDF_COM_ESCOLHA_DELA = """"UserLocalConfigStore"
+_VDF_COM_ESCOLHA_DO_USUARIO = """"UserLocalConfigStore"
 {
 \t"Software"
 \t{
@@ -622,10 +622,10 @@ _VDF_COM_ESCOLHA_DELA = """"UserLocalConfigStore"
 """
 
 
-def test_o_lock_nao_atropela_o_proton_que_ela_escolheu() -> None:
-    """A MORDIDA. Tire o `if not atropelar_escolha_dela` e isto fica vermelho."""
+def test_o_lock_nao_atropela_o_proton_que_o_usuario_escolheu() -> None:
+    """A MORDIDA. Tire o `if not atropelar_escolha_do_usuario` e isto fica vermelho."""
     texto, changes = pp.build_compat_tool_mapping(
-        _VDF_COM_ESCOLHA_DELA,
+        _VDF_COM_ESCOLHA_DO_USUARIO,
         tool_name="GE-Proton10-34",
         appids=["2497900"],
     )
@@ -649,7 +649,7 @@ def test_o_lock_nao_atropela_o_proton_que_ela_escolheu() -> None:
 def test_quem_nao_tinha_escolha_continua_ganhando_o_proton_validado() -> None:
     """A cura não pode virar cadeado: jogo SEM escolha continua sendo travado."""
     _, changes = pp.build_compat_tool_mapping(
-        _VDF_COM_ESCOLHA_DELA,
+        _VDF_COM_ESCOLHA_DO_USUARIO,
         tool_name="GE-Proton10-34",
         appids=["2497900", "851100"],
     )

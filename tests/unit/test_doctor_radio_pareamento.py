@@ -75,7 +75,7 @@ class TestBluezVersionVerdict:
         assert _rodar("_bluez_version_verdict", "") == "unknown"
 
 
-    def test_versao_do_backport_dela_fica_ok(self) -> None:
+    def test_versao_do_backport_do_usuario_fica_ok(self) -> None:
         """A versão REAL instalada nesta máquina não pode cair no teto —"""
         assert _rodar("_bluez_version_verdict", "5.86-0ubuntu0.1~hefesto24.04.3") == "ok"
 

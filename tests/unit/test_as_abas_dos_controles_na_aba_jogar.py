@@ -38,7 +38,7 @@ from tests.conftest import skip_sem_gi_real
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-JOGAR = onde.BANCADA / "01-jogar.html"
+JOGAR = onde.ENSAIO / "01-jogar.html"
 
 PLASTICOS = {"p1": "midnight-black", "p2": "starlight-blue", "p3": "cosmic-red", "p4": "white"}
 
@@ -90,7 +90,7 @@ def test_a_fileira_das_abas_abre_o_quadro_dos_controles() -> None:
         assert f'id="c-{c["pref"]}"' in quadro
 
 
-def test_a_folha_do_plastico_pinta_a_aba_com_o_tom_dela() -> None:
+def test_a_folha_do_plastico_pinta_a_aba_com_o_tom_do_usuario() -> None:
     """A mesma regra pinta a caixa e a aba; o tom é o da borda do plástico, não o hexa cru.
 
     D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
@@ -223,7 +223,7 @@ def _pintar(tela: Any, prefs: list[str], alvo: str = "") -> dict[str, Any]:
 
 @skip_sem_gi_real
 @pytest.mark.parametrize("prefs", [["p1"], ["p1", "p2"], ["p1", "p2", "p3", "p4"]])
-def test_n_controles_n_abas_cada_uma_da_cor_dela(tela: Any, prefs: list[str]) -> None:
+def test_n_controles_n_abas_cada_uma_da_cor_do_usuario(tela: Any, prefs: list[str]) -> None:
     """Com 1, 2 e 4 na mesa: as quatro abas à vista; a de cada controle com a borda do
     plástico dele, e a do lugar vazio tracejada e só com o número.
 

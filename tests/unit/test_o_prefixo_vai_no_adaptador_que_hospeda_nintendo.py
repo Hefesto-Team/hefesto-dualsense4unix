@@ -36,7 +36,7 @@ AS QUATRO MORDIDAS
    `test_o_sniff_default_volta_em_todos_os_adaptadores` reprova nomeando os
    adaptadores que ficaram de fora;
 4. troque uma faixa de `OUIS_LINHAGEM` no shell e
-   `test_a_regra_da_linhagem_e_a_mesma_do_dono_dela` reprova — a regra tem UM
+   `test_a_regra_da_linhagem_e_a_mesma_do_dono_do_usuario` reprova — a regra tem UM
    dono (`core/linhagem_nintendo.py`) e esta cópia em shell é PINADA nele.
 
 POR QUE UMA CÓPIA EM SHELL, E NÃO UMA CHAMADA AO MÓDULO
@@ -114,7 +114,7 @@ def _mapa(nome: str, pares: dict[str, str]) -> str:
     return f"declare -A {nome}=({corpo})\n"
 
 
-class Bancada:
+class Ensaio:
     """Três adaptadores, cinco controles, e um registro do que foi escrito."""
 
     def __init__(
@@ -247,7 +247,7 @@ exit 0
 
 def test_so_o_adaptador_que_hospeda_o_pro_recebe_o_prefixo(tmp_path: Path) -> None:
     """A mordida principal: um acerto em três virava zero acerto."""
-    banca = Bancada(tmp_path)
+    banca = Ensaio(tmp_path)
     banca.rodar()
     escritos = banca.aliases_escritos()
 
@@ -265,7 +265,7 @@ def test_so_o_adaptador_que_hospeda_o_pro_recebe_o_prefixo(tmp_path: Path) -> No
 
 def test_o_bond_em_disco_basta_com_o_bluetoothd_ainda_povoando(tmp_path: Path) -> None:
     """A fonte que responde ANTES do link — e é a única que responde ali."""
-    banca = Bancada(tmp_path, dbus_ve_devices=False)
+    banca = Ensaio(tmp_path, dbus_ve_devices=False)
     banca.rodar()
     assert banca.aliases_escritos() == {
         HOSPEDEIRO_DO_PRO: f"{PREFIXO_NINTENDO} Sofá"
@@ -274,7 +274,7 @@ def test_o_bond_em_disco_basta_com_o_bluetoothd_ainda_povoando(tmp_path: Path) -
 
 def test_com_o_pro_fora_da_mesa_ninguem_e_prefixado(tmp_path: Path) -> None:
     """O controle negativo. Sem esta linha o teste acima passaria com um"""
-    banca = Bancada(tmp_path, com_pro=False)
+    banca = Ensaio(tmp_path, com_pro=False)
     banca.rodar()
     assert banca.aliases_escritos() == {}, banca.aliases_escritos()
 
@@ -283,7 +283,7 @@ def test_o_prefixo_nao_cresce_a_cada_tique_da_vigia(tmp_path: Path) -> None:
     """A vigia roda a cada 2 min: sem idempotência o nome cresceria sem teto."""
     ja_costurado = dict(ALIAS_INICIAL)
     ja_costurado[HOSPEDEIRO_DO_PRO] = f"{PREFIXO_NINTENDO} Sofá"
-    banca = Bancada(tmp_path, alias=ja_costurado)
+    banca = Ensaio(tmp_path, alias=ja_costurado)
     banca.rodar()
     assert banca.aliases_escritos() == {}, (
         "alias já protegido foi reescrito — é assim que 'Nintendo Nintendo "
@@ -293,7 +293,7 @@ def test_o_prefixo_nao_cresce_a_cada_tique_da_vigia(tmp_path: Path) -> None:
 
 def test_bond_de_dongle_que_saiu_da_mesa_nao_derruba_o_resto(tmp_path: Path) -> None:
     """`/var/lib/bluetooth` guarda o bond de dongle que já foi desplugado."""
-    banca = Bancada(tmp_path, dbus_ve_devices=False)
+    banca = Ensaio(tmp_path, dbus_ve_devices=False)
     fantasma = banca.lib / "AA:BB:CC:00:00:99" / MAC_PRO
     fantasma.mkdir(parents=True)
     (fantasma / "info").write_text(
@@ -309,7 +309,7 @@ def test_nome_que_nao_cabe_com_o_prefixo_e_recusado_com_motivo(tmp_path: Path) -
     """Acima do teto o BlueZ recusa a chamada inteira — e calar é o pior."""
     comprido = dict(ALIAS_INICIAL)
     comprido[HOSPEDEIRO_DO_PRO] = "á" * ((TETO_DE_BYTES // 2) + 1)
-    banca = Bancada(tmp_path, alias=comprido)
+    banca = Ensaio(tmp_path, alias=comprido)
     banca.rodar()
     diario = banca.log.read_text(encoding="utf-8") if banca.log.exists() else ""
     assert banca.aliases_escritos() == {}, banca.aliases_escritos()
@@ -318,21 +318,21 @@ def test_nome_que_nao_cabe_com_o_prefixo_e_recusado_com_motivo(tmp_path: Path) -
 
 def test_o_sniff_default_volta_em_todos_os_adaptadores(tmp_path: Path) -> None:
     """A operação (2) tem escopo DIFERENTE da (1), e a razão está no script."""
-    banca = Bancada(tmp_path)
+    banca = Ensaio(tmp_path)
     banca.rodar()
     assert banca.sniff_devolvido_em() == set(ADAPTADORES), banca.sniff_devolvido_em()
 
 
 def test_o_sniff_default_nao_e_mexido_em_quem_ja_o_tem(tmp_path: Path) -> None:
     """Régua do teste acima: com SNIFF já no default, o registro fica VAZIO."""
-    banca = Bancada(tmp_path, sniff_no_default=True)
+    banca = Ensaio(tmp_path, sniff_no_default=True)
     banca.rodar()
     assert banca.sniff_devolvido_em() == set(), banca.sniff_devolvido_em()
 
 
 def test_o_diario_nomeia_o_adaptador_que_recebeu_o_prefixo(tmp_path: Path) -> None:
     """`alias do adaptador -> 'X'` falava pelo rádio inteiro (lição A5)."""
-    banca = Bancada(tmp_path)
+    banca = Ensaio(tmp_path)
     banca.rodar()
     diario = banca.log.read_text(encoding="utf-8") if banca.log.exists() else ""
     assert f"alias do adaptador {HOSPEDEIRO_DO_PRO} ->" in diario, diario
@@ -348,7 +348,7 @@ def _lista_do_shell(nome: str) -> tuple[str, ...]:
     return tuple(re.findall(r'"([^"]*)"', achado.group(1)))
 
 
-def test_a_regra_da_linhagem_e_a_mesma_do_dono_dela() -> None:
+def test_a_regra_da_linhagem_e_a_mesma_do_dono_do_usuario() -> None:
     """Dois escritores do mesmo alias, e por isso UMA regra só."""
     esperadas = com_dois_pontos(OUIS_NINTENDO_VISTAS | OUIS_CLONE)
     assert set(_lista_do_shell("OUIS_LINHAGEM")) == esperadas, (

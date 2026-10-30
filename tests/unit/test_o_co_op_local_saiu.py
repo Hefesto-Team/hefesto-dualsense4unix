@@ -69,8 +69,8 @@ def test_a_aba_perfis_nao_digita_a_conta_dos_estilos() -> None:
     O editor novo não a tem; se voltar, a conta tem de vir do dono (`estilos_de_jogo.DE_FABRICA`).
     MORDIDA: cravar «Os dezessete de fábrica» no gerador reprova.
     """
-    bancada = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
-    achado = re.search(r"Os (\w+) de fábrica não se editam", bancada)
+    ensaio = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
+    achado = re.search(r"Os (\w+) de fábrica não se editam", ensaio)
     if achado:
         assert _LIDO.get(achado.group(1)) == len(estilos_de_jogo.DE_FABRICA), (
             f"a bancada diz «{achado.group(1)}» de fábrica e o motor tem "
@@ -186,7 +186,7 @@ CO_OP_QUE_PODE_FICAR: tuple[str, ...] = ()
 
 def _em_trabalho(nome: str) -> bool:
     """A aba está declarada em trabalho em `mockup/DIVERGENCIAS.md`?"""
-    arquivo = onde.BANCADA / "DIVERGENCIAS.md"
+    arquivo = onde.ENSAIO / "DIVERGENCIAS.md"
     if not arquivo.exists():
         return False
     corpo = arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1]
@@ -199,9 +199,9 @@ def _as_dez(publicado: bool) -> list[pathlib.Path]:
 
 def test_nenhuma_aba_diz_co_op_no_que_o_produto_renderiza() -> None:
     """A leitura do PRODUTO (`texto_visivel_no_produto`: sem a `.nota`, sem código)."""
-    bancada = _as_dez(publicado=False)
-    assert len(bancada) == 10, [p.name for p in bancada]
-    alvos = bancada + [p for p in _as_dez(publicado=True) if not _em_trabalho(p.name)]
+    ensaio = _as_dez(publicado=False)
+    assert len(ensaio) == 10, [p.name for p in ensaio]
+    alvos = ensaio + [p for p in _as_dez(publicado=True) if not _em_trabalho(p.name)]
     achados: list[str] = []
     for pagina in alvos:
         visivel = texto_visivel_no_produto(pagina.read_text(encoding="utf-8"))

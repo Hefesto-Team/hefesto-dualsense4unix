@@ -267,10 +267,10 @@ def _linhas_da_lista(
 
 SECOES_QUE_MORAM_NO_MAPA: frozenset[str] = frozenset({"remapeamento"})
 
-SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = SECOES_QUE_MORAM_NO_MAPA
+SECOES_ESPERANDO_A_SESSAO_DO_USUARIO: frozenset[str] = SECOES_QUE_MORAM_NO_MAPA
 
 SECOES_NA_TELA: tuple[str, ...] = tuple(
-    s for s in SECOES_POR_CONTROLE if s not in SECOES_ESPERANDO_A_SESSAO_DELA
+    s for s in SECOES_POR_CONTROLE if s not in SECOES_ESPERANDO_A_SESSAO_DO_USUARIO
 )
 
 _EXTENSO: dict[int, str] = {

@@ -9,7 +9,7 @@ from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 from tests.unit.test_coop_ensaio_de_queda_do_primario import (
     UNIQ_A,
     UNIQ_B,
-    Bancada,
+    Ensaio,
 )
 from tests.unit.test_reserva_do_posto_01_os_eventos_falam import (
     P1,
@@ -70,7 +70,7 @@ def test_o_transporte_da_queda_e_lido_e_nao_digitado(journal: io.StringIO) -> No
     )
 
 
-def test_a_constante_de_producao_nao_saiu_da_bancada() -> None:
+def test_a_constante_de_producao_nao_saiu_do_ensaio() -> None:
     """A trava da §RESERVA-2: a janela da sessão de medição não vai para o disco."""
     assert PRIMARIO_RESERVA_SEC > 0.0, (
         "prazo zero ou negativo não é reserva: a caducidade dispara no mesmo "
@@ -88,20 +88,20 @@ def test_a_constante_de_producao_nao_saiu_da_bancada() -> None:
 class TestAVoltaPeloCabo:
     """§RESERVA-5 — o que o produto faz, medido, para a pergunta da §7.3."""
 
-    def test_a_bancada_sabe_a_diferenca_entre_o_cabo_e_o_radio(
+    def test_o_ensaio_sabe_a_diferenca_entre_o_cabo_e_o_radio(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Valida o INSTRUMENTO antes de acreditar nele."""
-        bancada = Bancada(monkeypatch)
-        bancada.sentar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.get_transport() == "bt"
+        ensaio = Ensaio(monkeypatch)
+        ensaio.sentar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.get_transport() == "bt"
 
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        bancada.sentar(UNIQ_A, transporte="usb")
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.get_transport() == "usb", (
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.sentar(UNIQ_A, transporte="usb")
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.get_transport() == "usb", (
             "a bancada não distingue o cabo do rádio — o `conType` do dublê "
             "não chega ao `_detect_transport` do produto"
         )
@@ -110,26 +110,26 @@ class TestAVoltaPeloCabo:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """CARACTERIZAÇÃO: o deposto no rádio que volta pelo CABO retoma o posto."""
-        bancada = Bancada(monkeypatch)
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.primary_uniq == UNIQ_A
+        ensaio = Ensaio(monkeypatch)
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.primary_uniq == UNIQ_A
 
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
-        assert bancada.inst.primary_uniq == UNIQ_B, "com A fora, B TEM de assumir"
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
+        assert ensaio.inst.primary_uniq == UNIQ_B, "com A fora, B TEM de assumir"
 
-        bancada.relogio.avancar(PRIMARIO_RESERVA_SEC / 2.0)
-        bancada.sentar(UNIQ_A, transporte="usb")
-        bancada.tique_do_reconnect_loop()
+        ensaio.relogio.avancar(PRIMARIO_RESERVA_SEC / 2.0)
+        ensaio.sentar(UNIQ_A, transporte="usb")
+        ensaio.tique_do_reconnect_loop()
 
-        assert bancada.inst.primary_uniq == UNIQ_A, (
+        assert ensaio.inst.primary_uniq == UNIQ_A, (
             "a caracterização mudou: o deposto que volta pelo cabo NÃO retoma "
             "mais o posto. Se foi decisão dela (§7.3), este teste e a §6 da "
             "sprint mudam junto"
         )
-        assert bancada.inst.get_transport() == "usb", (
+        assert ensaio.inst.get_transport() == "usb", (
             "a retomada não refez o `_detect_transport` — o daemon acha que o "
             "primário está no rádio quando ele voltou pelo cabo"
         )
@@ -138,15 +138,15 @@ class TestAVoltaPeloCabo:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O outro lado, e é ele que limita o estrago do de cima."""
-        bancada = Bancada(monkeypatch)
-        bancada.sentar(UNIQ_A)
-        bancada.sentar(UNIQ_B)
-        bancada.tique_do_reconnect_loop()
-        bancada.levantar(UNIQ_A)
-        bancada.tique_do_reconnect_loop()
+        ensaio = Ensaio(monkeypatch)
+        ensaio.sentar(UNIQ_A)
+        ensaio.sentar(UNIQ_B)
+        ensaio.tique_do_reconnect_loop()
+        ensaio.levantar(UNIQ_A)
+        ensaio.tique_do_reconnect_loop()
 
-        bancada.relogio.avancar(PRIMARIO_RESERVA_SEC + 1.0)
-        bancada.sentar(UNIQ_A, transporte="usb")
-        bancada.tique_do_reconnect_loop()
+        ensaio.relogio.avancar(PRIMARIO_RESERVA_SEC + 1.0)
+        ensaio.sentar(UNIQ_A, transporte="usb")
+        ensaio.tique_do_reconnect_loop()
 
-        assert bancada.inst.primary_uniq == UNIQ_B
+        assert ensaio.inst.primary_uniq == UNIQ_B

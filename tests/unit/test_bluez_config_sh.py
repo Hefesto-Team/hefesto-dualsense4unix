@@ -99,7 +99,7 @@ vermelhas, devolvidas.
   vermelhos (a regra do ``tail -n 1`` não tinha teste que mordesse);
 - volte a promessa única do rebaixamento do ``never`` →
   ``test_never_dentro_do_bloco_nao_ganha_promessa_que_nao_se_cumpre`` e
-  ``test_never_fora_do_bloco_ganha_a_promessa_e_ela_se_cumpre`` ficam vermelhos;
+  ``test_never_fora_do_bloco_ganha_a_promessa_e_o_usuario_se_cumpre`` ficam vermelhos;
   o mesmo texto no ``doctor.sh`` derruba
   ``test_o_doctor_nao_promete_devolucao_sem_ressalva``;
 - tire a releitura final do disco do ``_aplicar`` →
@@ -182,7 +182,7 @@ UNINSTALL = RAIZ / "uninstall.sh"
 
 MARCA = "#hefesto-desativou# "
 
-MAIN_CONF_DELA = """[General]
+MAIN_CONF_DO_USUARIO = """[General]
 
 # >>> hefesto bluetooth >>>
 # hefesto-dualsense4unix — bloco de uma versão anterior.
@@ -299,7 +299,7 @@ def _backups(etc: Path) -> list[Path]:
 
 def test_bloco_antigo_do_hefesto_com_always_vira_confirm(tmp_path: Path) -> None:
     """O caso que ninguém tratava: RECONHECER e CORRIGIR bloco nosso antigo."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     proc = _rodar(etc, "aplicar")
 
     assert proc.returncode == 0, proc.stderr
@@ -319,7 +319,7 @@ def test_o_aplicar_diz_em_voz_alta_que_corrigiu_valor_do_proprio_hefesto(
     tmp_path: Path,
 ) -> None:
     """Correção silenciosa foi o que deixou o `always` viver quatro dias."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     proc = _rodar(etc, "aplicar")
 
     assert "always" in proc.stdout
@@ -353,7 +353,7 @@ def test_chave_comentada_do_template_upstream_fica_intacta(tmp_path: Path) -> No
 
 def test_rodar_duas_vezes_nao_gera_backup_novo(tmp_path: Path) -> None:
     """BUG-INSTALL-MAIN-CONF-BACKUP-INFINITO-01, agora com portão."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "aplicar")
     apos_primeiro = _backups(etc)
     assert len(apos_primeiro) == 1, "a primeira aplicação tem de deixar UM backup"
@@ -368,7 +368,7 @@ def test_rodar_duas_vezes_nao_gera_backup_novo(tmp_path: Path) -> None:
 
 def test_rodar_duas_vezes_nao_duplica_o_bloco(tmp_path: Path) -> None:
     """BUG-INSTALL-MAIN-CONF-CRESCE-01: nem bloco repetido, nem arquivo crescendo."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "aplicar")
     primeiro = (etc / "main.conf").read_text(encoding="utf-8")
     _rodar(etc, "aplicar")
@@ -405,7 +405,7 @@ def test_blocos_legados_de_instalacao_antiga_tambem_saem(tmp_path: Path) -> None
 
 def test_dropin_presente_nao_deixa_always_no_main_conf(tmp_path: Path) -> None:
     """O furo que o mapa chamou de 4-A, e que é o pior dos dois."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
     proc = _rodar(etc, "aplicar")
 
     assert proc.returncode == 0, proc.stderr
@@ -419,7 +419,7 @@ def test_dropin_presente_nao_deixa_always_no_main_conf(tmp_path: Path) -> None:
 
 def test_dropin_e_bloco_declaram_o_mesmo_valor(tmp_path: Path) -> None:
     """Os dois lugares dizendo a mesma coisa é o que torna a dúvida inofensiva."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
     _rodar(etc, "aplicar")
 
     dropin = (etc / "main.conf.d" / "hefesto-justworks.conf").read_text(encoding="utf-8")
@@ -432,7 +432,7 @@ def test_dropin_e_bloco_declaram_o_mesmo_valor(tmp_path: Path) -> None:
     assert _valor(etc) == "confirm"
 
 
-_DROPIN_DELA = (
+_DROPIN_DO_USUARIO = (
     "# escrito à mão por ela em 03/08\n"
     "[General]\n"
     "JustWorksRepairing=never\n"
@@ -446,15 +446,15 @@ def _backups_de_dropin(etc: Path) -> list[Path]:
 
 def test_aplicar_nao_destroi_dropin_editado_a_mao(tmp_path: Path) -> None:
     """Reescrever por cima sem cópia é apagar decisão de produto — no outro caminho."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
     alvo = etc / "main.conf.d" / "hefesto-justworks.conf"
-    alvo.write_text(_DROPIN_DELA, encoding="utf-8")
+    alvo.write_text(_DROPIN_DO_USUARIO, encoding="utf-8")
 
     proc = _rodar(etc, "aplicar")
 
     assert proc.returncode == 0, proc.stderr
     guardados = [b.read_text(encoding="utf-8") for b in _backups_de_dropin(etc)]
-    assert _DROPIN_DELA in guardados, (
+    assert _DROPIN_DO_USUARIO in guardados, (
         "o aplicar reescreveu um drop-in editado à mão SEM guardar cópia: "
         f"backups encontrados = {[b.name for b in _backups_de_dropin(etc)]}"
     )
@@ -467,15 +467,15 @@ def test_aplicar_nao_destroi_dropin_editado_a_mao(tmp_path: Path) -> None:
 
 def test_remover_nao_apaga_dropin_editado_a_mao_sem_copia(tmp_path: Path) -> None:
     """A mesma invariante pelo outro lado: `rm -f` sem backup é perda líquida."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
     alvo = etc / "main.conf.d" / "hefesto-justworks.conf"
-    alvo.write_text(_DROPIN_DELA, encoding="utf-8")
+    alvo.write_text(_DROPIN_DO_USUARIO, encoding="utf-8")
 
     proc = _rodar(etc, "remover")
 
     assert not alvo.exists(), "o remover deixou o drop-in para trás"
     guardados = [b.read_text(encoding="utf-8") for b in _backups_de_dropin(etc)]
-    assert _DROPIN_DELA in guardados, (
+    assert _DROPIN_DO_USUARIO in guardados, (
         "o remover apagou um drop-in editado à mão SEM guardar cópia: "
         f"backups encontrados = {[b.name for b in _backups_de_dropin(etc)]}"
     )
@@ -484,7 +484,7 @@ def test_remover_nao_apaga_dropin_editado_a_mao_sem_copia(tmp_path: Path) -> Non
 
 def test_dropin_igual_ao_nosso_asset_nao_gera_backup(tmp_path: Path) -> None:
     """A EXCEÇÃO DECLARADA — e a linha de base dos dois testes acima."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
 
     _rodar(etc, "aplicar")
     assert _backups_de_dropin(etc) == [], "a primeira gravação gerou backup do nada"
@@ -526,7 +526,7 @@ def test_remover_devolve_a_chave_de_terceiro(tmp_path: Path) -> None:
 
 def test_remover_tira_os_dropins(tmp_path: Path) -> None:
     """Simetria do caminho A: o que o aplicar grava em main.conf.d, o remover tira."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
     _rodar(etc, "aplicar")
     _rodar(etc, "remover")
 
@@ -553,7 +553,7 @@ def test_remover_deixa_um_unico_backup_mesmo_com_tres_blocos(tmp_path: Path) -> 
 
 def test_remover_duas_vezes_nao_gera_backup_novo(tmp_path: Path) -> None:
     """O `cmp` vale para os dois lados — remover o que já saiu é no-op honesto."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "remover")
     apos = _backups(etc)
     _rodar(etc, "remover")
@@ -597,7 +597,7 @@ _PRE_COLAPSO = "main.conf.bak.hefesto-1784672963"
 _POS_COLAPSO = "main.conf.bak.hefesto-1784694261"
 
 
-def _povoar_como_a_maquina_dela(etc: Path, quantos: int = 37) -> list[Path]:
+def _povoar_como_a_maquina_do_usuario(etc: Path, quantos: int = 37) -> list[Path]:
     """37 backups, com os dois pontos do colapso entre os MAIS ANTIGOS."""
     criados: list[Path] = []
     momento = 1_784_600_000
@@ -624,8 +624,8 @@ def _povoar_como_a_maquina_dela(etc: Path, quantos: int = 37) -> list[Path]:
 
 def test_aplicar_nao_apaga_backup_nenhum(tmp_path: Path) -> None:
     """A EVIDÊNCIA NÃO SAI. Nem um arquivo, nem com 37 no diretório."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    antes = _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    antes = _povoar_como_a_maquina_do_usuario(etc)
 
     proc = _rodar(etc, "aplicar", manter="10")
 
@@ -639,8 +639,8 @@ def test_aplicar_nao_apaga_backup_nenhum(tmp_path: Path) -> None:
 
 def test_remover_nao_apaga_backup_nenhum(tmp_path: Path) -> None:
     """O mesmo pelo outro lado: desinstalar também não é hora de faxina."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    antes = _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    antes = _povoar_como_a_maquina_do_usuario(etc)
 
     _rodar(etc, "remover", manter="10")
 
@@ -650,8 +650,8 @@ def test_remover_nao_apaga_backup_nenhum(tmp_path: Path) -> None:
 
 def test_podar_por_padrao_so_simula(tmp_path: Path) -> None:
     """`podar` sem argumento NÃO apaga: diz o que sairia, e para por aí."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    antes = _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    antes = _povoar_como_a_maquina_do_usuario(etc)
 
     proc = _rodar(etc, "podar", manter="10")
 
@@ -664,8 +664,8 @@ def test_podar_por_padrao_so_simula(tmp_path: Path) -> None:
 
 def test_podar_nunca_apaga_o_mais_antigo(tmp_path: Path) -> None:
     """O mais antigo é o estado mais próximo do pré-hefesto. Fica, sempre."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    _povoar_como_a_maquina_do_usuario(etc)
 
     proc = _rodar(etc, "podar", manter="1", arg="--aplicar")
 
@@ -676,8 +676,8 @@ def test_podar_nunca_apaga_o_mais_antigo(tmp_path: Path) -> None:
 
 def test_podar_nunca_apaga_backup_de_conteudo_unico(tmp_path: Path) -> None:
     """Conteúdo único = única cópia daquele estado. É o instante do estrago."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    _povoar_como_a_maquina_do_usuario(etc)
 
     proc = _rodar(etc, "podar", manter="1", arg="--aplicar")
 
@@ -691,7 +691,7 @@ def test_podar_nunca_apaga_backup_de_conteudo_unico(tmp_path: Path) -> None:
 
 def test_podar_nunca_faz_um_estado_sumir_do_disco(tmp_path: Path) -> None:
     """A promessa é sobre ESTADO, não sobre arquivo — e a regra velha não era."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     momento = 1_784_600_000
     estados = {
         "antigo": "[General]\n# estado A — o mais próximo do pré-hefesto\n",
@@ -730,10 +730,10 @@ def test_podar_nunca_faz_um_estado_sumir_do_disco(tmp_path: Path) -> None:
 
 def test_podar_nao_toca_backup_que_nao_e_nosso(tmp_path: Path) -> None:
     """Há um backup de OUTRA ferramenta em /etc/bluetooth que não é nosso."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     alheio = etc / "main.conf.bak.outra-ferramenta-1784689791"
     alheio.write_text("nao-e-nosso\n", encoding="utf-8")
-    _povoar_como_a_maquina_dela(etc)
+    _povoar_como_a_maquina_do_usuario(etc)
 
     _rodar(etc, "podar", manter="1", arg="--aplicar")
 
@@ -743,8 +743,8 @@ def test_podar_nao_toca_backup_que_nao_e_nosso(tmp_path: Path) -> None:
 
 def test_retencao_zero_desliga_a_poda(tmp_path: Path) -> None:
     """A retenção é declarada: `0` significa "não apague nada", e tem de valer."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    _povoar_como_a_maquina_do_usuario(etc)
 
     proc = _rodar(etc, "podar", manter="0", arg="--aplicar")
 
@@ -754,8 +754,8 @@ def test_retencao_zero_desliga_a_poda(tmp_path: Path) -> None:
 
 def test_podar_com_argumento_desconhecido_recusa(tmp_path: Path) -> None:
     """`podar --forca-tudo` não pode virar `podar --aplicar` por engano."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    _povoar_como_a_maquina_do_usuario(etc)
 
     proc = _rodar(etc, "podar", arg="--forca-tudo")
 
@@ -767,8 +767,8 @@ def test_podar_nao_anuncia_remocao_que_nao_aconteceu(tmp_path: Path) -> None:
     """O `|| true` engolia a falha do `rm` e a frase de sucesso saía igual."""
     if os.geteuid() == 0:
         pytest.skip("como root o modo do diretório não impede o rm")
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    _povoar_como_a_maquina_do_usuario(etc)
     etc.chmod(0o555)
     try:
         proc = _rodar(etc, "podar", manter="10", arg="--aplicar")
@@ -780,9 +780,9 @@ def test_podar_nao_anuncia_remocao_que_nao_aconteceu(tmp_path: Path) -> None:
     assert "0 de 37 backup(s) removido(s)" in proc.stdout
 
 
-def test_verificar_acusa_o_estado_da_maquina_dela(tmp_path: Path) -> None:
+def test_verificar_acusa_o_estado_da_maquina_do_usuario(tmp_path: Path) -> None:
     """Antes desta entrega, NADA no projeto sabia dizer que a máquina estava assim."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     proc = _rodar(etc, "verificar")
 
     assert proc.returncode != 0
@@ -792,7 +792,7 @@ def test_verificar_acusa_o_estado_da_maquina_dela(tmp_path: Path) -> None:
 
 def test_verificar_nao_escreve_nada(tmp_path: Path) -> None:
     """Modo de leitura que escreve não é modo de leitura."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     antes = (etc / "main.conf").read_bytes()
     listagem_antes = sorted(p.name for p in etc.iterdir())
 
@@ -804,7 +804,7 @@ def test_verificar_nao_escreve_nada(tmp_path: Path) -> None:
 
 def test_verificar_aprova_depois_do_aplicar(tmp_path: Path) -> None:
     """Linha de base — sem ela, um verificador que reprova tudo 'passaria'."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "aplicar")
     proc = _rodar(etc, "verificar")
 
@@ -832,7 +832,7 @@ def test_o_script_e_executavel_e_tem_sintaxe_valida() -> None:
 
 def test_modo_desconhecido_nao_faz_nada(tmp_path: Path) -> None:
     """Um erro de digitação no chamador não pode virar reescrita silenciosa."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     antes = (etc / "main.conf").read_bytes()
     proc = _rodar(etc, "aplicarr")
 
@@ -855,7 +855,7 @@ def test_o_script_nunca_reinicia_o_bluetoothd() -> None:
 
 def test_o_script_diz_com_todas_as_letras_quando_a_mudanca_vale(tmp_path: Path) -> None:
     """Ela precisa saber que o `confirm` só vale no próximo boot."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     proc = _rodar(etc, "aplicar")
 
     assert "PRÓXIMO BOOT" in proc.stdout
@@ -898,7 +898,7 @@ def _shim(tmp_path: Path, alvo: Path, comandos: tuple[str, ...], corta: bool) ->
 
 def test_escrita_interrompida_nao_trunca_o_main_conf(tmp_path: Path) -> None:
     """Nenhuma escrita cai DIRETO sobre o main.conf vivo — nem uma."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     original = (etc / "main.conf").read_text(encoding="utf-8")
     pasta = _shim(tmp_path, etc / "main.conf", ("cp", "install"), corta=True)
 
@@ -917,7 +917,7 @@ def test_escrita_interrompida_nao_trunca_o_main_conf(tmp_path: Path) -> None:
 
 def test_falha_na_troca_atomica_devolve_o_arquivo_intacto(tmp_path: Path) -> None:
     """Falha no `mv` = nada aconteceu. O arquivo dela sobrevive BYTE A BYTE."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     original = (etc / "main.conf").read_bytes()
     pasta = _shim(tmp_path, etc / "main.conf", ("mv",), corta=False)
 
@@ -938,7 +938,7 @@ def _sobras(etc: Path) -> list[str]:
 
 def test_a_troca_atomica_nao_deixa_temporario_quando_o_mv_fracassa(tmp_path: Path) -> None:
     """ESTE TESTE NÃO MORDIA (achado de 06/08/2026, MEDIDO)."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     pasta = _shim(tmp_path, etc / "main.conf", ("mv",), corta=False)
 
     proc = _rodar(etc, "aplicar", path_extra=pasta)
@@ -951,7 +951,7 @@ def test_a_troca_atomica_nao_deixa_temporario_quando_o_mv_fracassa(tmp_path: Pat
 
 def test_um_kill_no_meio_da_troca_nao_deixa_temporario(tmp_path: Path) -> None:
     """O `trap` que não existia: um kill entre o `mktemp` e o `mv`."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     original = (etc / "main.conf").read_bytes()
     pasta = tmp_path / "shim-kill"
     pasta.mkdir()
@@ -983,7 +983,7 @@ def test_um_kill_no_meio_da_troca_nao_deixa_temporario(tmp_path: Path) -> None:
 
 def test_verificar_reporta_temporario_orfao(tmp_path: Path) -> None:
     """O que um SIGKILL deixar para trás, alguém tem de saber contar."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     orfao = etc / ".main.conf.hefesto-novo.aBc123"
     orfao.write_text("[General]\n", encoding="utf-8")
 
@@ -999,7 +999,7 @@ def test_verificar_reporta_temporario_orfao(tmp_path: Path) -> None:
 
 def test_backup_de_zero_byte_nao_conta_como_backup(tmp_path: Path) -> None:
     """O backup nasce vazio do `mktemp`; um SIGKILL antes do `cp` o deixa assim."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     vivo = etc / "main.conf.bak.hefesto-1786000001"
     vivo.write_text("[General]\nJustWorksRepairing=always\n", encoding="utf-8")
     morto = etc / "main.conf.bak.hefesto-1786000002"
@@ -1018,7 +1018,7 @@ def test_backup_de_zero_byte_nao_conta_como_backup(tmp_path: Path) -> None:
 
 def test_o_resumo_do_aplicar_nao_soma_backup_vazio(tmp_path: Path) -> None:
     """A mesma conta na frase que o `aplicar` imprime, que é a que ela lê."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     (etc / "main.conf.bak.hefesto-1786000001").write_text("[General]\n", encoding="utf-8")
     (etc / "main.conf.bak.hefesto-1786000002").touch()
 
@@ -1036,8 +1036,8 @@ def test_o_resumo_do_aplicar_nao_soma_backup_vazio(tmp_path: Path) -> None:
 
 def test_a_poda_nao_alcanca_backup_vazio(tmp_path: Path) -> None:
     """Não conta como backup, então não é candidato — e continua no disco."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
-    _povoar_como_a_maquina_dela(etc)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
+    _povoar_como_a_maquina_do_usuario(etc)
     morto = etc / "main.conf.bak.hefesto-1786099999"
     morto.touch()
 
@@ -1082,7 +1082,7 @@ def test_aplicar_nomeia_linha_de_terceiro_dentro_do_bloco(tmp_path: Path) -> Non
 
 def test_bloco_so_com_o_nosso_conteudo_nao_gera_alarme(tmp_path: Path) -> None:
     """Aviso que sai sempre é aviso que ninguém lê."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     proc = _rodar(etc, "aplicar")
 
     assert "sai do arquivo" not in proc.stdout
@@ -1148,7 +1148,7 @@ def test_remover_recusa_em_vez_de_concluir_que_nao_ha_nada_nosso(tmp_path: Path)
     """main.conf ilegível fazia o `remover` decidir que não havia bloco nosso."""
     if os.geteuid() == 0:
         pytest.skip("root lê qualquer modo; o cenário não existe")
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     (etc / "main.conf").chmod(0o000)
     try:
         proc = _rodar(etc, "remover")
@@ -1164,7 +1164,7 @@ def test_verificar_nao_inventa_valor_quando_nao_consegue_ler(tmp_path: Path) -> 
     """"não declarado" e "não consigo ler" são coisas MUITO diferentes."""
     if os.geteuid() == 0:
         pytest.skip("root lê qualquer modo; o cenário não existe")
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     (etc / "main.conf").chmod(0o000)
     try:
         proc = _rodar(etc, "verificar")
@@ -1180,7 +1180,7 @@ def test_leitura_de_arquivo_ilegivel_escala_em_vez_de_desistir(tmp_path: Path) -
     """Recusar é melhor que mentir; ESCALAR é melhor que recusar."""
     if os.geteuid() == 0:
         pytest.skip("root lê qualquer modo; o cenário não existe")
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     falso = tmp_path / "escalador" / "sudo-de-mentira"
     falso.parent.mkdir()
     falso.write_text(
@@ -1256,7 +1256,7 @@ def test_duas_gravacoes_no_mesmo_segundo_nao_comem_o_backup_anterior(
     tmp_path: Path,
 ) -> None:
     """O estado imediatamente anterior é o backup de MAIOR valor. E era o que sumia."""
-    etc = _etc(tmp_path, "[General]\nName = ESTADO-A-DELA\n")
+    etc = _etc(tmp_path, "[General]\nName = ESTADO-A-DO-USUARIO\n")
     _rodar(etc, "aplicar")
     (etc / "main.conf").write_text("[General]\nName = ESTADO-B\n", encoding="utf-8")
     _rodar(etc, "aplicar")
@@ -1267,7 +1267,7 @@ def test_duas_gravacoes_no_mesmo_segundo_nao_comem_o_backup_anterior(
         f"duas gravações deixaram {len(backups)} backup(s): a segunda comeu a "
         "primeira porque o nome só tem resolução de um segundo"
     )
-    assert any("ESTADO-A-DELA" in c for c in conteudos), (
+    assert any("ESTADO-A-DO-USUARIO" in c for c in conteudos), (
         "o backup do estado imediatamente anterior foi DESTRUÍDO — é sempre o "
         "de maior valor, e era sempre ele que morria"
     )
@@ -1309,7 +1309,7 @@ def test_a_frase_do_resumo_deixou_de_ser_mentira(tmp_path: Path) -> None:
 
 def test_backup_parcial_e_apagado_e_o_main_conf_nao_e_tocado(tmp_path: Path) -> None:
     """Meio backup é pior que backup nenhum: tem cara de cópia fiel."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     original = (etc / "main.conf").read_bytes()
     pasta = tmp_path / "shim-backup-parcial"
     pasta.mkdir()
@@ -1341,7 +1341,7 @@ def test_backup_parcial_e_apagado_e_o_main_conf_nao_e_tocado(tmp_path: Path) -> 
 
 def test_backup_que_mente_ter_copiado_e_pego_pelo_cmp(tmp_path: Path) -> None:
     """A metade do `cmp`, que até 06/08/2026 NÃO TINHA MORDIDA NENHUMA."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     original = (etc / "main.conf").read_bytes()
     assert len(original) > 118, "a fixture precisa ser maior que o corte"
     pasta = tmp_path / "shim-cp-que-mente"
@@ -1378,11 +1378,11 @@ def test_backup_que_mente_ter_copiado_e_pego_pelo_cmp(tmp_path: Path) -> None:
 
 def test_backup_integro_e_conferido_byte_a_byte(tmp_path: Path) -> None:
     """A linha de base do teste acima: um backup normal É uma cópia fiel."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "aplicar")
 
     assert len(_backups(etc)) == 1
-    assert _backups(etc)[0].read_text(encoding="utf-8") == MAIN_CONF_DELA
+    assert _backups(etc)[0].read_text(encoding="utf-8") == MAIN_CONF_DO_USUARIO
 
 
 _TABELA_DO_GRUPO: list[tuple[str, str, str | None]] = [
@@ -1495,7 +1495,7 @@ def test_o_veredito_acompanha_o_grupo(tmp_path: Path) -> None:
 
 def test_o_ultimo_vence_e_nao_o_primeiro(tmp_path: Path) -> None:
     """A regra `tail -n 1` sem teste: trocar por `head -n 1` passava verde."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "aplicar")
     with (etc / "main.conf").open("a", encoding="utf-8") as fh:
         fh.write("\n[General]\nJustWorksRepairing=always\n")
@@ -1523,7 +1523,7 @@ def test_aplicar_corrige_o_caso_do_grupo(tmp_path: Path) -> None:
     assert _valor(etc) == "confirm"
 
 
-def test_never_fora_do_bloco_ganha_a_promessa_e_ela_se_cumpre(tmp_path: Path) -> None:
+def test_never_fora_do_bloco_ganha_a_promessa_e_o_usuario_se_cumpre(tmp_path: Path) -> None:
     """Fora do bloco a promessa é verdadeira — e o teste cobra o cumprimento."""
     original = "[General]\nJustWorksRepairing = never\nName = BlueZ\n"
     etc = _etc(tmp_path, original)
@@ -1646,7 +1646,7 @@ def test_verificar_reporta_o_valor_dos_dropins(tmp_path: Path) -> None:
 
 def test_dropin_nosso_nao_vira_conflito(tmp_path: Path) -> None:
     """Aviso que sai sempre é aviso que ninguém lê."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA, com_dropin_dir=True)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO, com_dropin_dir=True)
     _rodar(etc, "aplicar")
 
     proc = _rodar(etc, "verificar")
@@ -1769,7 +1769,7 @@ def test_o_aplicar_nao_anuncia_garantia_sobre_arquivo_recusado(tmp_path: Path) -
 
 def test_arquivo_valido_com_bloco_nosso_nao_e_acusado_de_recusa(tmp_path: Path) -> None:
     """A linha de base: um detector de recusa que acusa tudo não serve."""
-    etc = _etc(tmp_path, MAIN_CONF_DELA)
+    etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
 
     _rodar(etc, "aplicar")
     proc = _rodar(etc, "verificar")

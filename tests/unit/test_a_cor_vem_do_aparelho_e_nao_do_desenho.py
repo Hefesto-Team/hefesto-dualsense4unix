@@ -64,7 +64,7 @@ def test_a_folha_podada_e_divida(portao: object, colorways: set[str]) -> None:
         "pelas declarações de zona que ela traz")
 
 
-def test_o_banco_de_provas_dela_sai_limpo_da_familia_zona(
+def test_o_banco_de_provas_do_usuario_sai_limpo_da_familia_zona(
         portao: object, colorways: set[str]) -> None:
     """O arquivo de verdade em que ela vê as 28 cores clicando."""
     banco = PAGINAS / "mapa-do-controle.html"

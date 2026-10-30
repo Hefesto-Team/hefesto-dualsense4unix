@@ -1,14 +1,14 @@
 """Os dois módulos de barramento passam a falar do mesmo aparelho pelo mesmo nome."""
 from __future__ import annotations
 
-from tests.unit.test_mapa_o_ensaio_de_mentira import bancada_de_agora
+from tests.unit.test_mapa_o_ensaio_de_mentira import ensaio_de_agora
 
 
 def test_o_caminho_do_adaptador_bate_com_o_do_censo() -> None:
     """Todo ``Adaptador.caminho`` existe como ``Aparelho.nome_do_kernel``."""
-    bancada = bancada_de_agora()
-    censo = bancada.censo()
-    adaptadores = bancada.adaptadores()
+    ensaio = ensaio_de_agora()
+    censo = ensaio.censo()
+    adaptadores = ensaio.adaptadores()
 
     do_censo = {aparelho.nome_do_kernel for aparelho in censo.conectados()}
     dos_adaptadores = {a.caminho for a in adaptadores if a.caminho}
@@ -26,9 +26,9 @@ def test_o_caminho_do_adaptador_bate_com_o_do_censo() -> None:
 
 def test_o_caminho_do_radio_vizinho_tambem_bate() -> None:
     """A mesma palavra, do lado dos outros rádios da faixa."""
-    bancada = bancada_de_agora()
-    censo = bancada.censo()
-    mesa = bancada.mesa()
+    ensaio = ensaio_de_agora()
+    censo = ensaio.censo()
+    mesa = ensaio.mesa()
 
     do_censo = {aparelho.nome_do_kernel for aparelho in censo.conectados()}
     dos_radios = {radio.caminho for radio in mesa.radios if radio.caminho}

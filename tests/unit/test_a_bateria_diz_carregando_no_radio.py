@@ -118,7 +118,7 @@ def _card(entrada: dict[str, Any]) -> dict[str, Any]:
     return next(iter(cards.values()))
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
@@ -220,7 +220,7 @@ def _icones(doc: str) -> list[str]:
 
 def test_o_icone_tem_endereco_e_os_dois_alvos() -> None:
     """Dois elementos, um endereço só — a gramática do `giro-no-jogo`."""
-    icones = _icones(_bancada())
+    icones = _icones(_ensaio())
     assert icones, "não achei o ícone de carga na bancada da aba Controles"
     for icone in icones:
         assert icone.count('data-campo="bateria-carga"') == 2
@@ -230,7 +230,7 @@ def test_o_icone_tem_endereco_e_os_dois_alvos() -> None:
 
 def test_o_icone_tem_nome_acessivel() -> None:
     """A palavra vai no `title`, e é ela que um leitor de tela anuncia."""
-    doc = _bancada()
+    doc = _ensaio()
     for palavra in (carga_na_tela("carregando"), carga_na_tela("cheio")):
         assert f'title="{palavra}"' in doc, (
             f"o ícone de {palavra!r} ficou sem nome acessível na bancada"
@@ -239,7 +239,7 @@ def test_o_icone_tem_nome_acessivel() -> None:
 
 def test_a_folha_casa_com_a_palavra_do_produto() -> None:
     """A regra de CSS é gerada da MESMA palavra que o produto escreve."""
-    doc = _bancada()
+    doc = _ensaio()
     for estado in ("carregando", "cheio", "fora_de_faixa", "erro"):
         assert f'[data-carga="{carga_na_tela(estado)}"]' in doc, (
             f"a folha não tem regra para {carga_na_tela(estado)!r} — o ícone "

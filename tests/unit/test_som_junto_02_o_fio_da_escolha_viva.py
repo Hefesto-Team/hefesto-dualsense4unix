@@ -18,7 +18,7 @@ from tests.unit.ensaio_do_som_junto import (
     Pactl,
     Store,
     cabo,
-    ela_clica,
+    o_usuario_clica,
     escrever_perfil,
 )
 
@@ -29,7 +29,7 @@ def _calar_o_laco(sub: Any, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture()
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Pactl:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Pactl:
     """O `pactl` desviado no dono único dele: `alto_falante_bt._rodar`."""
     pactl = Pactl(placas=(SINK_P1,))
     monkeypatch.setattr(af, "_rodar", pactl)
@@ -62,7 +62,7 @@ def subsystem_de_pe(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def test_o_start_fia_a_fonte_no_gerenciador_que_ele_constroi(
-    bancada: Pactl, subsystem_de_pe: Any
+    ensaio: Pactl, subsystem_de_pe: Any
 ) -> None:
     """MORDIDA: apague `fonte_por_controle=self._fonte_do_controle` do `start`."""
     sub = subsystem_de_pe(escrever_perfil({P1: af.FONTE_MIX}))
@@ -77,7 +77,7 @@ def test_o_start_fia_a_fonte_no_gerenciador_que_ele_constroi(
 
 
 def test_o_gerenciador_injetado_continua_vencendo(
-    bancada: Pactl, monkeypatch: pytest.MonkeyPatch
+    ensaio: Pactl, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Quem injeta um gerenciador não o vê trocado pelo `start` — é contrato."""
     meu = mod.GerenciadorDeNosDeSom()
@@ -92,7 +92,7 @@ def test_o_gerenciador_injetado_continua_vencendo(
 
 
 def test_a_escolha_viva_chega_ao_no_sem_passar_pelo_perfil(
-    bancada: Pactl, placa_do_p1: None, subsystem_de_pe: Any
+    ensaio: Pactl, placa_do_p1: None, subsystem_de_pe: Any
 ) -> None:
     """O caminho do `speaker.set {fonte}`, do IPC até o `module-loopback`."""
     sub = subsystem_de_pe(None)
@@ -101,17 +101,17 @@ def test_a_escolha_viva_chega_ao_no_sem_passar_pelo_perfil(
     ger.reconciliar([cabo(P1)])
     no = ger.nos[P1]
     id_do_no = no.module_id
-    assert (f"{HDMI}.monitor", no.nome) not in bancada.loopbacks, (
+    assert (f"{HDMI}.monitor", no.nome) not in ensaio.loopbacks, (
         "o nó nasceu com o som da máquina dentro sem ninguém ter escolhido — "
         "`FONTE_PADRAO` é `sfx` por decisão dela, de 08/09")
 
     assert sub.escolher_a_fonte(P1, af.FONTE_MIX) is True
     ger.reconciliar([cabo(P1)])
 
-    assert (f"{HDMI}.monitor", no.nome) in bancada.loopbacks, (
+    assert (f"{HDMI}.monitor", no.nome) in ensaio.loopbacks, (
         f"o `speaker.set {{fonte}}` não chegou ao nó vivo — de pé: "
-        f"{bancada.loopbacks}")
-    assert (f"{no.nome}.monitor", SINK_P1) in bancada.loopbacks, (
+        f"{ensaio.loopbacks}")
+    assert (f"{no.nome}.monitor", SINK_P1) in ensaio.loopbacks, (
         "a saída para o alto-falante do controle caiu junto com a chegada do mix")
     assert ger.nos[P1].module_id == id_do_no, (
         "o nó RENASCEU — `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`: o jogo "
@@ -119,7 +119,7 @@ def test_a_escolha_viva_chega_ao_no_sem_passar_pelo_perfil(
 
 
 def test_a_escolha_viva_vence_o_perfil_no_no_e_nao_so_no_cache(
-    bancada: Pactl, placa_do_p1: None, subsystem_de_pe: Any
+    ensaio: Pactl, placa_do_p1: None, subsystem_de_pe: Any
 ) -> None:
     """Perfil em `sfx`, clique em `mix`: quem manda no NÓ é o clique."""
     sub = subsystem_de_pe(escrever_perfil({P1: af.FONTE_SFX}))
@@ -127,17 +127,17 @@ def test_a_escolha_viva_vence_o_perfil_no_no_e_nao_so_no_cache(
 
     ger.reconciliar([cabo(P1)])
     no = ger.nos[P1]
-    assert (f"{HDMI}.monitor", no.nome) not in bancada.loopbacks
+    assert (f"{HDMI}.monitor", no.nome) not in ensaio.loopbacks
 
     sub.escolher_a_fonte(P1, af.FONTE_MIX)
     ger.reconciliar([cabo(P1)])
 
-    assert (f"{HDMI}.monitor", no.nome) in bancada.loopbacks, (
-        f"o perfil venceu o clique de agora: {bancada.loopbacks}")
+    assert (f"{HDMI}.monitor", no.nome) in ensaio.loopbacks, (
+        f"o perfil venceu o clique de agora: {ensaio.loopbacks}")
 
 
 def test_o_perfil_continua_mandando_em_quem_nao_clicou(
-    bancada: Pactl, placa_do_p1: None, subsystem_de_pe: Any
+    ensaio: Pactl, placa_do_p1: None, subsystem_de_pe: Any
 ) -> None:
     """O caminho novo não atropela o antigo, e o `mtime` continua valendo."""
     nome = escrever_perfil({P1: af.FONTE_SFX})
@@ -147,15 +147,15 @@ def test_o_perfil_continua_mandando_em_quem_nao_clicou(
     ger.reconciliar([cabo(P1)])
     no = ger.nos[P1]
 
-    ela_clica(P1, af.FONTE_MIX, nome)
+    o_usuario_clica(P1, af.FONTE_MIX, nome)
     ger.reconciliar([cabo(P1)])
 
-    assert (f"{HDMI}.monitor", no.nome) in bancada.loopbacks, (
-        f"a escolha gravada no perfil parou de chegar ao nó: {bancada.loopbacks}")
+    assert (f"{HDMI}.monitor", no.nome) in ensaio.loopbacks, (
+        f"a escolha gravada no perfil parou de chegar ao nó: {ensaio.loopbacks}")
 
 
 def test_a_escolha_viva_e_de_um_controle_so(
-    bancada: Pactl, subsystem_de_pe: Any
+    ensaio: Pactl, subsystem_de_pe: Any
 ) -> None:
     """Escolher para o P1 não põe o som da máquina no ouvido do P2."""
     sub = subsystem_de_pe(None)
@@ -168,7 +168,7 @@ def test_a_escolha_viva_e_de_um_controle_so(
 
 
 def test_um_nome_que_o_no_nao_sabe_tratar_nao_entra_no_fio(
-    bancada: Pactl, subsystem_de_pe: Any
+    ensaio: Pactl, subsystem_de_pe: Any
 ) -> None:
     """Tipo FECHADO no dono, e não só na porta do IPC."""
     sub = subsystem_de_pe(None)

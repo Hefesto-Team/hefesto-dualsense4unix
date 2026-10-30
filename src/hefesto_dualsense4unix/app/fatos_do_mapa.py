@@ -1451,7 +1451,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -1459,7 +1459,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
     },
     'energia.desligar@sn30': {
@@ -2344,7 +2344,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -2352,7 +2352,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
     },
     'identidade.pareamento@sn30': {
@@ -3655,7 +3655,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': 'MONTOU',
             'canal': 'evdev',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
         'radio': {
             'aceita': 'sim',
@@ -3663,7 +3663,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': 'MONTOU',
             'canal': 'evdev',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
     },
     'movimento.acelerometro@pro': {
@@ -4746,7 +4746,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'outro',
             'de_onde_sei': 'afirmado-no-doc',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'so-o-usuario-decide',
         },
     },
     'plataforma.mapeamento_posicao@dualsense': {

@@ -130,7 +130,7 @@ def _emitidos(**overrides: Any) -> dict[str, Any]:
     return a10_perfis.pacote(ctx)
 
 
-def test_a_bancada_declara_o_alvo_classe_em_toda_celula() -> None:
+def test_o_ensaio_declara_o_alvo_classe_em_toda_celula() -> None:
     """Sem ``data-hef-alvo="classe"`` o pintor cai no ramo padrão e apaga o SVG.
 
     O NÚMERO É LIDO, E NÃO DIGITADO — 03/09/2026. Esta régua se chamava
@@ -187,7 +187,7 @@ def test_o_produtor_e_o_desenho_dizem_as_secoes_na_mesma_ordem() -> None:
         f"  produto (SECOES_POR_CONTROLE)  {perfis_web.SECOES_POR_CONTROLE}")
 
 
-def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
+def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_do_usuario(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O defeito que ``NAO_PINTAVEIS`` escondia — e ele acenderia tudo."""
@@ -206,7 +206,7 @@ def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
         "o que o pacote emite não é lido como aceso/apagado pelo alvo `classe`")
 
 
-def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
+def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_do_usuario(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Uma seção de cada vez, e a célula que acende é sempre a mesma posição.

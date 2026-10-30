@@ -296,7 +296,7 @@ def test_a_coluna_reservada_entra_na_uniao_das_chaves(pacotes_mod):
     assert sorted(carga["vazios"]) == sorted(LUGARES)
 
 
-def test_a_coluna_viva_manda_e_o_lugar_dela_nao_e_apagado(pacotes_mod):
+def test_a_coluna_viva_manda_e_o_lugar_do_usuario_nao_e_apagado(pacotes_mod):
     """Quem tem dono não recebe travessão — e a união vem das colunas VIVAS."""
     carga = {"colunas": {"p1": {"bateria": "95%", "via": "USB"}}, "mesa": {}}
     pacotes_mod.apagar_os_lugares_sem_dono(carga)

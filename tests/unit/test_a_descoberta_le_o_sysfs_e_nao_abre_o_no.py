@@ -573,7 +573,7 @@ def test_o_hub_procura_de_novo_na_volta_seguinte_a_mudanca(registro: Any) -> Non
     )
 
 
-def test_o_hub_procura_a_peca_que_ela_acabou_de_desligar(registro: Any) -> None:
+def test_o_hub_procura_a_peca_que_o_usuario_acabou_de_desligar(registro: Any) -> None:
     """Sensor desligado AGORA é pergunta nova, mesmo sem a pasta mudar."""
     chamadas: list[int] = []
 

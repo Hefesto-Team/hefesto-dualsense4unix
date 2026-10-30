@@ -76,7 +76,7 @@ def test_sem_o_dado_vivo_cada_base_cai_numa_cor_que_nao_e_preta() -> None:
         assert max(fx.cor_no_instante(efeito, 3.0)) > 0, texto
 
 
-def test_a_aurora_com_uma_cor_vai_aos_vizinhos_dela_e_volta() -> None:
+def test_a_aurora_com_uma_cor_vai_aos_vizinhos_do_usuario_e_volta() -> None:
     efeito = EfeitoDaLuz("aurora", (LARANJA,), 5)
     assert fx.cores_da_aurora(efeito.cores)[0] == LARANJA
     assert len(set(fx.cores_da_aurora(efeito.cores))) == 3, "a cor e os dois vizinhos"
@@ -307,7 +307,7 @@ def test_nenhuma_luzinha_acende_mais_de_tres_vezes_por_segundo(ritmo: int) -> No
             assert sum(1 for t in subidas[i:] if t - inicio < 1.0 - 1e-6) <= 3
 
 
-def test_uma_cintilada_acende_de_uma_a_tres_luzinhas_e_o_numero_volta_entre_elas() -> None:
+def test_uma_cintilada_acende_de_uma_a_tres_luzinhas_e_o_numero_volta_entre_o_usuario() -> None:
     quadros = _estrelas(5)
     cintiladas = [q.luzinhas for q in quadros if q.luzinhas is not None]
     assert cintiladas and all(1 <= sum(c) <= 3 for c in cintiladas)

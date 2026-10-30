@@ -91,7 +91,7 @@ O QUE FAZER COM UM ACHADO
 
     scripts/check_a_cor_vem_do_aparelho.py            # reprova, listando
     scripts/check_a_cor_vem_do_aparelho.py --censo    # só o retrato, rc=0
-    scripts/check_a_cor_vem_do_aparelho.py --bancada  # mede `mockup/`
+    scripts/check_a_cor_vem_do_aparelho.py --ensaio  # mede `mockup/`
 
 A RÉGUA IRMÃ é ``scripts/check_identidade_vem_de_cima.py``, e elas não se
 sobrepõem: aquela acha NOME de cor e ``--plastico`` em elemento **sem endereço
@@ -288,12 +288,12 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--censo", action="store_true",
                    help="só o retrato de hoje, sem reprovar")
-    p.add_argument("--bancada", action="store_true",
+    p.add_argument("--ensaio", action="store_true",
                    help="mede `mockup/` em vez das páginas publicadas")
     p.add_argument("--aba", default="", help="só esta aba (ex.: 04)")
     args = p.parse_args()
 
-    alvo = (RAIZ / "mockup") if args.bancada else PAGINAS
+    alvo = (RAIZ / "mockup") if args.ensaio else PAGINAS
     if not alvo.is_dir():
         print(f"não achei as páginas em {alvo}", file=sys.stderr)
         return 2
@@ -301,7 +301,7 @@ def main() -> int:
     colorways = colorways_do_mapa()
     familias = ("plastico", "colorway", "zona")
     total = dict.fromkeys(familias, 0)
-    print(f"{'bancada' if args.bancada else 'publicado':<22}"
+    print(f"{'bancada' if args.ensaio else 'publicado':<22}"
           + "".join(f"{f:>10}" for f in familias) + f"{'total':>8}")
     print("-" * 62)
     detalhe: list[str] = []

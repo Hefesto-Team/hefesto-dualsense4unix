@@ -128,12 +128,12 @@ def o_virtual_liga_o_microfone() -> tuple[bool, str]:
         no = bt.NoDualSenseBT(caminho="/dev/hidraw-conferencia", uniq="aabbcc000001",
                               produto=0x0CE6)
         ponte = bt.PonteMicBluetooth(no, source=_SourceQueDiz(estado))
-        ponte.dizer_o_pedido_dela(palavra)
+        ponte.dizer_o_pedido_do_usuario(palavra)
         return ponte._talvez_seguir_a_source()
 
     try:
         sem_ouvinte_com_a_palavra = pedido("SUSPENDED", True)
-        mudo_dela_contra_o_gravador = pedido("RUNNING", False)
+        mudo_do_usuario_contra_o_gravador = pedido("RUNNING", False)
         sem_palavra_o_ouvinte_manda = pedido("SUSPENDED", None)
     except Exception as erro:
         return False, f"a ponte não pôde ser exercitada: {erro!r}"
@@ -141,9 +141,9 @@ def o_virtual_liga_o_microfone() -> tuple[bool, str]:
     if sem_ouvinte_com_a_palavra is not True:
         return False, ("SUSPENDED + a palavra dela LIGADA e o microfone NÃO subiu "
                        f"(pedido={sem_ouvinte_com_a_palavra!r}) — o ato dela não liga nada")
-    if mudo_dela_contra_o_gravador is not False:
+    if mudo_do_usuario_contra_o_gravador is not False:
         return False, ("RUNNING + a palavra dela DESLIGADA e o microfone ficou no ar "
-                       f"(pedido={mudo_dela_contra_o_gravador!r}) — o mudo dela não vence o gravador")
+                       f"(pedido={mudo_do_usuario_contra_o_gravador!r}) — o mudo dela não vence o gravador")
     if sem_palavra_o_ouvinte_manda is not False:
         return False, ("sem palavra dela e sem ouvinte o microfone subiu "
                        f"(pedido={sem_palavra_o_ouvinte_manda!r}) — a economia do link caiu junto")

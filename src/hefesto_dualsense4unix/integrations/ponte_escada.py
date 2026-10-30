@@ -131,7 +131,7 @@ do usuário na aba de perfil. Jogo fechado no meio da escada não confirma nada.
 regra de 18/08, *"o perfil tem de guardar tudo"*, e quem grava é
 `profiles/manager.confirmar_ponte`. Este módulo não abre uma segunda gaveta
 para o mesmo fato: ele DECIDE, e devolve a ponte a carimbar. Os três nomes de
-origem (`POR_GESTO`, `POR_SILENCIO`, `POR_ESCOLHA_DELA`) são byte a byte os
+origem (`POR_GESTO`, `POR_SILENCIO`, `POR_ESCOLHA_DO_USUARIO`) são byte a byte os
 `CONFIRMADA_POR_*` do esquema, de propósito — dois vocabulários para a mesma
 pergunta é como esta casa cria uma discordância que ninguém vê.
 
@@ -167,8 +167,8 @@ KIND_DESKTOP = "desktop"
 
 POR_GESTO = "gesto"
 POR_SILENCIO = "silencio"
-POR_ESCOLHA_DELA = "escolha_dela"
-CONFIRMACOES = frozenset({POR_GESTO, POR_SILENCIO, POR_ESCOLHA_DELA})
+POR_ESCOLHA_DO_USUARIO = "escolha_dela"
+CONFIRMACOES = frozenset({POR_GESTO, POR_SILENCIO, POR_ESCOLHA_DO_USUARIO})
 
 SUBIR_AGORA = "agora"
 SUBIR_SO_COM_GESTO = "so_com_gesto"
@@ -444,7 +444,7 @@ __all__ = [
     "KIND_NATIVE",
     "MASCARA_DUALSENSE",
     "MASCARA_XBOX",
-    "POR_ESCOLHA_DELA",
+    "POR_ESCOLHA_DO_USUARIO",
     "POR_GESTO",
     "POR_SILENCIO",
     "SILENCIO_CONFIRMA_SEC",

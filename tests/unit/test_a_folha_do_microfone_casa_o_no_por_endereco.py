@@ -74,7 +74,7 @@ def test_o_byte_recusa_valor_acima_do_teto_do_aparelho(folha):
         folha.common_do_byte(0x41)
 
 
-def test_o_martelo_so_bate_o_que_ela_assumiu_e_a_porta_so_abre_ai(folha, monkeypatch):
+def test_o_martelo_so_bate_o_que_o_usuario_assumiu_e_a_porta_so_abre_ai(folha, monkeypatch):
     """A porta do hidraw NÃO abre na construção — é o que faz `--listar` inócuo."""
 
     class EscritorDeMentira:

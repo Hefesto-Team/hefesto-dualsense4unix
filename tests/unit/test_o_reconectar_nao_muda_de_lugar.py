@@ -269,7 +269,7 @@ def test_o_chip_xbox_pede_com_origem_manual() -> None:
     assert pedidos == [{"enabled": True, "origin": "manual", "caminho": "xbox"}], plano
 
 
-def test_a_trava_do_jogo_aberto_nao_segura_o_gesto_dela() -> None:
+def test_a_trava_do_jogo_aberto_nao_segura_o_gesto_do_usuario() -> None:
     """§3.2, segundo elo: com o jogo na autoridade, só a AUTOMAÇÃO é segurada."""
     from hefesto_dualsense4unix.daemon.subsystems import gamepad
 

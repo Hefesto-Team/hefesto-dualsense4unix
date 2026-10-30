@@ -532,11 +532,11 @@ _FEITO_CADUCO = "religada-por-fora"
 _FEITO_PELA_EXCLUSAO = "religada-pela-exclusao"
 
 
-def _e_escolha_dela(registro_dela: dict[str, str]) -> bool:
+def _e_escolha_do_usuario(registro_do_usuario: dict[str, str]) -> bool:
     """O `manter` deste registro veio de um GESTO do usuário, ou de uma inferência?"""
-    if registro_dela.get("escolha") != "manter":
+    if registro_do_usuario.get("escolha") != "manter":
         return False
-    return registro_dela.get("feito") != _FEITO_CADUCO
+    return registro_do_usuario.get("feito") != _FEITO_CADUCO
 
 
 def _agora() -> str:
@@ -617,10 +617,10 @@ def aplicar_no_prefixo(
     if religar:
         for camada in prefixo.camadas:
             marca = chave_de_estado(camada.chave, camada.caminho_windows)
-            registro_dela = memoria.get(marca, {})
-            if camada.ligada or registro_dela.get("feito") != "desligada":
+            registro_do_usuario = memoria.get(marca, {})
+            if camada.ligada or registro_do_usuario.get("feito") != "desligada":
                 continue
-            alvos[(camada.chave, camada.caminho_windows)] = registro_dela.get(
+            alvos[(camada.chave, camada.caminho_windows)] = registro_do_usuario.get(
                 "valor_antes", "00000000"
             )
             religadas.append(camada.nome_curto)
@@ -634,8 +634,8 @@ def aplicar_no_prefixo(
             if not camada.e_sobra:
                 continue
             marca = chave_de_estado(camada.chave, camada.caminho_windows)
-            registro_dela = memoria.get(marca, {})
-            if not forcar and _e_escolha_dela(registro_dela):
+            registro_do_usuario = memoria.get(marca, {})
+            if not forcar and _e_escolha_do_usuario(registro_do_usuario):
                 respeitadas.append(camada.nome_curto)
                 continue
             alvos[(camada.chave, camada.caminho_windows)] = _DESLIGADA_DWORD

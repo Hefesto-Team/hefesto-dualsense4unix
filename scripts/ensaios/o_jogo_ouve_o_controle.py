@@ -315,7 +315,7 @@ def linha_para_o_caderno(
         suspeito=p.pergunta,
         presente="sim",
         resultado=resultado,
-        observado_por={"ouvi": "orelha-dela", "vi": "olho-dela"}.get(p.sentido, "mão-dela"),
+        observado_por={"ouvi": "orelha-do-usuario", "vi": "olho-do-usuario"}.get(p.sentido, "mão-do-usuario"),
         fonte=FONTE,
         nota=f"controle {c.mascarado}; " + " ; ".join(gestos) + (f" ; ela: {nota}" if nota else ""),
     )

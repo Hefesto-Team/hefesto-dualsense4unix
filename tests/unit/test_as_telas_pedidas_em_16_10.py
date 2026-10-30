@@ -1,5 +1,5 @@
 """As telas que o usuário pediu em 16/10, lidas no desenho que o gerador escreve
-(AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01: N1 a N9 da Navegação e S1 a S4 do Sistema).
+(AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01: N1 a N9 da Navegação e S1 a S4 do Sistema).
 
 Só o gerador: o HTML de `mockup/` e o pacote da aba, sem janela. A geometria (sem rolagem em
 1212x809 e em 1920x1080) mora em `test_as_telas_de_16_10_no_webkit.py`, no motor que o produto usa.

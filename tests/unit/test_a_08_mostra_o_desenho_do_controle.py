@@ -56,7 +56,7 @@ NOSSOS = ("pro-controller.svg", "xbox.svg", "8bitdo.svg", "generico.svg")
 
 
 @pytest.fixture(autouse=True)
-def _sem_o_maquina_json_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def _sem_o_maquina_json_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.interface import mesa_viva
 
     monkeypatch.setattr(mesa_viva, "_declaracao_do_disco",
@@ -240,7 +240,7 @@ def test_o_acrescentar_grava_o_gabinete_inteiro_com_o_hub_dentro(logica) -> None
     assert "Ligado na <b>Entrada 2</b>" in html
 
 
-def test_o_hub_diz_a_entrada_com_o_nome_que_ela_deu(logica) -> None:
+def test_o_hub_diz_a_entrada_com_o_nome_que_o_usuario_deu(logica) -> None:
     """O produto passa o nome da entrada ao desenho: «na entrada Meio», não «na Entrada 2»."""
     logica.portas["2"]["nome"] = "Meio"
     logica.acrescentar_hub("2", "Hub da mesa")

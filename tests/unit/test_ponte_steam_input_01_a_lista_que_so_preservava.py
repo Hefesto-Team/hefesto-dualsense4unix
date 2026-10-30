@@ -152,7 +152,7 @@ class TestAArvoreViva:
         assert viva is not None
         assert viva.caminho == "UserLocalConfigStore/apps"
 
-    def test_a_escrita_cai_na_arvore_viva_e_so_nela(self) -> None:
+    def test_a_escrita_cai_na_arvore_viva_e_so_no_usuario(self) -> None:
         texto = _vdf(canonica={_SACKBOY: "%command%"}, viva={_SACKBOY: "0"})
         novo, _, _ = ponte.ligar_no_texto(texto, [_SACKBOY])
         canonica, viva = ponte.ler_arvores(novo)
@@ -375,7 +375,7 @@ _RAIZ = Path(__file__).resolve().parents[2]
 _GUARDA = _RAIZ / "scripts" / "disable_steam_input.sh"
 _DONO_DA_PONTE = _RAIZ / "src" / "hefesto_dualsense4unix" / "integrations"
 
-_PONTE_DA_BANCADA = """\
+_PONTE_DO_ENSAIO = """\
 import runpy
 import sys
 
@@ -401,7 +401,7 @@ class TestOGuardaConstroiAPonte:
     """O gatilho já existia: o `hefesto-steam-input-guard` acorda quando o"""
 
     @pytest.fixture()
-    def bancada(self, tmp_path: Path) -> dict[str, Any]:
+    def ensaio(self, tmp_path: Path) -> dict[str, Any]:
         home = tmp_path / "home"
         vdf = home / ".steam/steam/userdata/1/config/localconfig.vdf"
         vdf.parent.mkdir(parents=True)
@@ -423,20 +423,20 @@ class TestOGuardaConstroiAPonte:
             alvo = stubs / nome
             alvo.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
             alvo.chmod(0o755)
-        ponte_py = tmp_path / "ponte_da_bancada.py"
+        ponte_py = tmp_path / "ponte_do_ensaio.py"
         ponte_py.write_text(
-            _PONTE_DA_BANCADA.format(dono=str(_DONO_DA_PONTE)), encoding="utf-8"
+            _PONTE_DO_ENSAIO.format(dono=str(_DONO_DA_PONTE)), encoding="utf-8"
         )
         return {"home": home, "vdf": vdf, "stubs": stubs, "ponte_py": ponte_py}
 
     def _roda(
-        self, bancada: dict[str, Any], *args: str
+        self, ensaio: dict[str, Any], *args: str
     ) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
-        env["HOME"] = str(bancada["home"])
-        env["XDG_CONFIG_HOME"] = str(bancada["home"] / ".config")
-        env["PATH"] = f"{bancada['stubs']}:/usr/bin:/bin"
-        env["PONTE_PY"] = str(bancada["ponte_py"])
+        env["HOME"] = str(ensaio["home"])
+        env["XDG_CONFIG_HOME"] = str(ensaio["home"] / ".config")
+        env["PATH"] = f"{ensaio['stubs']}:/usr/bin:/bin"
+        env["PONTE_PY"] = str(ensaio["ponte_py"])
         return subprocess.run(
             [_BASH, str(_GUARDA), *args],
             capture_output=True, text=True, check=False, env=env, timeout=120,
@@ -449,47 +449,47 @@ class TestOGuardaConstroiAPonte:
         assert proc.returncode == 0, proc.stderr
 
     def test_o_guarda_desliga_o_de_fora_e_liga_o_da_lista(
-        self, bancada: dict[str, Any]
+        self, ensaio: dict[str, Any]
     ) -> None:
         """A MORDIDA no shell, e as duas metades no mesmo arquivo."""
-        proc = self._roda(bancada, "--apply-quiet")
+        proc = self._roda(ensaio, "--apply-quiet")
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        texto = bancada["vdf"].read_text(encoding="utf-8")
+        texto = ensaio["vdf"].read_text(encoding="utf-8")
         assert _valor(texto, _SACKBOY) == "2", proc.stdout
         assert _valor(texto, _DONT_SCREAM) == "0", proc.stdout
         assert '"SteamController_PSSupport"\t\t"0"' in texto
 
-    def test_segunda_rodada_nao_mexe_em_nada(self, bancada: dict[str, Any]) -> None:
-        self._roda(bancada, "--apply-quiet")
-        depois_da_primeira = bancada["vdf"].read_text(encoding="utf-8")
-        backups_antes = len(list(bancada["vdf"].parent.glob("*.bak.*")))
+    def test_segunda_rodada_nao_mexe_em_nada(self, ensaio: dict[str, Any]) -> None:
+        self._roda(ensaio, "--apply-quiet")
+        depois_da_primeira = ensaio["vdf"].read_text(encoding="utf-8")
+        backups_antes = len(list(ensaio["vdf"].parent.glob("*.bak.*")))
 
-        proc = self._roda(bancada, "--apply-quiet")
+        proc = self._roda(ensaio, "--apply-quiet")
 
         assert proc.returncode == 0
-        assert bancada["vdf"].read_text(encoding="utf-8") == depois_da_primeira
-        assert len(list(bancada["vdf"].parent.glob("*.bak.*"))) == backups_antes
+        assert ensaio["vdf"].read_text(encoding="utf-8") == depois_da_primeira
+        assert len(list(ensaio["vdf"].parent.glob("*.bak.*"))) == backups_antes
         assert "resultado=nada-a-fazer" in proc.stdout
 
     def test_o_status_nao_diz_tudo_limpo_com_a_excecao_inerte(
-        self, bancada: dict[str, Any]
+        self, ensaio: dict[str, Any]
     ) -> None:
         """O portão que olha para o lugar errado encerra a busca."""
-        original = bancada["vdf"].read_text(encoding="utf-8")
+        original = ensaio["vdf"].read_text(encoding="utf-8")
 
-        proc = self._roda(bancada, "--status")
+        proc = self._roda(ensaio, "--status")
 
         assert "resultado=precisa-corrigir" in proc.stdout
         assert "ponte pendente" in proc.stdout
-        assert bancada["vdf"].read_text(encoding="utf-8") == original
+        assert ensaio["vdf"].read_text(encoding="utf-8") == original
 
     def test_com_a_ponte_de_pe_o_status_fica_limpo(
-        self, bancada: dict[str, Any]
+        self, ensaio: dict[str, Any]
     ) -> None:
         """Contraprova: sem esta metade, um `precisa-corrigir` fixo passaria."""
-        self._roda(bancada, "--apply-quiet")
+        self._roda(ensaio, "--apply-quiet")
 
-        proc = self._roda(bancada, "--status")
+        proc = self._roda(ensaio, "--status")
 
         assert "resultado=nada-a-fazer" in proc.stdout
         assert "ponte pendente" not in proc.stdout

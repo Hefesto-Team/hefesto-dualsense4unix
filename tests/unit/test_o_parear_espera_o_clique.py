@@ -80,7 +80,7 @@ def test_sem_clique_nada_pareia(mesa: Any, relogio: rm.Relogio) -> None:
     assert mundo.fisicos[VERDE].pareando is True
 
 
-def test_ela_escolhe_entre_dois(mesa: Any, relogio: rm.Relogio) -> None:
+def test_o_usuario_escolhe_entre_dois(mesa: Any, relogio: rm.Relogio) -> None:
     """O verde aos 2 s e o roxo aos 3 s, os dois em PS + Create; o clique do usuário"""
     mundo = _mundo(VERDE, ROXO)
     _dono, central = mesa(mundo)
@@ -312,7 +312,7 @@ def test_o_controle_que_chama_o_host_sem_clique_nao_pareia(
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
 
 
-def test_o_controle_que_chama_o_host_pareia_no_clique_dela(
+def test_o_controle_que_chama_o_host_pareia_no_clique_do_usuario(
         mesa: Any, relogio: rm.Relogio, monkeypatch: pytest.MonkeyPatch) -> None:
     """O mesmo roxo, e o clique do usuário um passo depois: um ``Pair`` no quarto, e
     ele chega. A linha dele é «DualSense» na lista do quarto — com o sinal que

@@ -219,7 +219,7 @@ def test_a_comparacao_do_desfecho_e_surda_ao_aviso_por_construcao(a04, pac, dono
         "ser relido antes de a cura mudar")
 
 
-def test_o_desfecho_devolve_a_frase_quando_ela_tem_aviso(monkeypatch, a04, pac,
+def test_o_desfecho_devolve_a_frase_quando_o_usuario_tem_aviso(monkeypatch, a04, pac,
                                                          dono):
     """A CURA: `_cobrar_a_frase_do_desenho` devolve a frase do dono, com o aviso."""
     _abrir_o_todos(monkeypatch, a04, pac)

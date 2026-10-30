@@ -29,7 +29,7 @@ KEY_CABO = "AA:BB:CC:00:00:01"
 KEY_RADIO = "AA:BB:CC:00:00:02"
 UNIQ_CABO = "aabbcc000001"
 
-ROXO_DELA = (129, 61, 156)
+ROXO_DO_USUARIO = (129, 61, 156)
 
 
 def _null_evdev() -> EvdevReader:
@@ -101,25 +101,25 @@ def test_a_piscada_ignora_o_seletor_de_controle() -> None:
     assert node.escritas and radio.reports, "o aviso ficou preso no alvo"
 
 
-def test_o_aviso_nao_rouba_a_cor_dela() -> None:
+def test_o_aviso_nao_rouba_a_cor_do_usuario() -> None:
     """A MORDIDA principal. O `set_led` GRAVA a cor no estado desejado — e no"""
     inst, _cabo, _radio, _node = _backend_com_dois()
-    inst._desired_by_uniq[UNIQ_CABO] = _DesiredOutput(led=ROXO_DELA)
+    inst._desired_by_uniq[UNIQ_CABO] = _DesiredOutput(led=ROXO_DO_USUARIO)
 
     inst.pintar_lightbar_sem_lembrar((255, 0, 0))
 
     assert inst._desired_default.led is None, "o aviso gravou no default"
-    assert inst._desired_by_uniq[UNIQ_CABO].led == ROXO_DELA, "o roxo dela sumiu"
+    assert inst._desired_by_uniq[UNIQ_CABO].led == ROXO_DO_USUARIO, "o roxo dela sumiu"
 
 
 def test_a_piscada_devolve_a_cor_do_perfil() -> None:
     """Fim da sequência = a cor dela de volta, nos dois transportes."""
     inst, _cabo, radio, node = _backend_com_dois()
-    inst._desired_default.led = ROXO_DELA
+    inst._desired_default.led = ROXO_DO_USUARIO
 
     inst.piscar_aviso_de_modo((255, 0, 0), aceso_s=0.0, apagado_s=0.0)
 
-    assert node.escritas[-1] == ROXO_DELA, "o cabo ficou com a cor do aviso"
+    assert node.escritas[-1] == ROXO_DO_USUARIO, "o cabo ficou com a cor do aviso"
     assert radio.reports, "o rádio não recebeu nada"
 
 

@@ -144,7 +144,9 @@ def _nasce(monkeypatch: pytest.MonkeyPatch, *, saida: str) -> None:
     async def pede_silencio(_daemon: Any, _uniq: str) -> bool:
         return saida == "controle"
 
-    monkeypatch.setattr(hotkey, "_ela_desligou_este_microfone", lambda _d, _u: saida == "recusa")
+    monkeypatch.setattr(
+        hotkey, "_o_usuario_desligou_este_microfone", lambda _d, _u: saida == "recusa"
+    )
     monkeypatch.setattr(hotkey, "_o_controle_pede_silencio", pede_silencio)
     monkeypatch.setattr(hotkey, "_o_firmware_esta_mudo", lambda _d, _u: saida == "gesto")
 
@@ -173,7 +175,7 @@ def test_so_a_mudanca_escreve_e_o_mudo_de_fora_fica(mesa) -> None:
     mesa.pactl.zerar()
 
     for _ in range(3):
-        mesa.sub._aplicar_a_palavra_dela()
+        mesa.sub._aplicar_a_palavra_do_usuario()
 
     assert mesa.pactl.escritas() == []
     assert mesa.pactl.mudo_do_no[mesa.no_de(B)] == "1"
@@ -201,7 +203,7 @@ def test_o_que_ja_funcionava_continua(mesa, monkeypatch) -> None:
         def esta(self, _u: str) -> bool:
             return True
 
-    monkeypatch.setattr(hotkey, "_ela_desligou_este_microfone", lambda _d, _u: False)
+    monkeypatch.setattr(hotkey, "_o_usuario_desligou_este_microfone", lambda _d, _u: False)
     monkeypatch.setattr(hotkey, "_o_firmware_esta_mudo", lambda _d, _u: False)
 
     async def livre(_d: Any, _u: str) -> bool:

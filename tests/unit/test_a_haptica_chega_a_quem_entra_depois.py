@@ -724,7 +724,7 @@ def _quem_le(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
     return lidos
 
 
-def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
+def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_o_usuario_descer(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """O jogo fecha o fluxo e o gadget do P1 volta noutra porta, na mesma volta."""

@@ -101,7 +101,7 @@ SONDAS_DO_BASICO: tuple[str, ...] = (
     "uhid-raw-request.bt",
 )
 
-ARQUIVOS_DELA: tuple[str, ...] = (
+ARQUIVOS_DO_USUARIO: tuple[str, ...] = (
     "profiles/*.json",
     "controller_masks.json",
     "gamepad_caminho.flag",
@@ -714,7 +714,7 @@ class Maquina:
         return "sem EFI" if not base.exists() else "não lido"
 
 
-    def config_dela(self) -> Path:
+    def config_do_usuario(self) -> Path:
         from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
         return Path(config_dir())
@@ -968,7 +968,7 @@ class Sessao:
         self.sha_antes: dict[str, str] = {}
         self.copias: dict[str, bytes] = {}
         self.volta_antes: dict[str, Any] = {}
-        self.bancada_reservada = False
+        self.ensaio_reservado = False
         self.reiniciar_o_daemon_no_fim = False
         self.corridas: dict[str, int] = {}
 
@@ -1024,9 +1024,9 @@ class Sessao:
 
     def fotografar(self, *, copiar: bool = False) -> dict[str, str]:
         """O ``sha256`` dos arquivos dela; com ``copiar``, a cópia byte a byte na pasta privada."""
-        base = self.maquina.config_dela()
+        base = self.maquina.config_do_usuario()
         achados: dict[str, str] = {}
-        for padrao in ARQUIVOS_DELA:
+        for padrao in ARQUIVOS_DO_USUARIO:
             for arquivo in sorted(base.glob(padrao)):
                 if not arquivo.is_file():
                     continue
@@ -1129,34 +1129,34 @@ class Sessao:
         return rc, texto
 
 
-    def reservar_a_bancada(self) -> None:
+    def reservar_o_ensaio(self) -> None:
         """Reserva a bancada antes de escrever (01 §3.2); ocupada é recusa, nunca contorno."""
-        if self.bancada_reservada:
+        if self.ensaio_reservado:
             return
-        bancada = RAIZ / "scripts" / "ensaio.sh"
-        if not bancada.is_file():
+        ensaio = RAIZ / "scripts" / "ensaio.sh"
+        if not ensaio.is_file():
             self.dizer("  (esta instalação não tem o semáforo da bancada: sigo sem reserva, declarado)")
             return
-        rc, texto = self.maquina.rodar(["bash", str(bancada), "exigir"], 10.0)
+        rc, texto = self.maquina.rodar(["bash", str(ensaio), "exigir"], 10.0)
         if rc != 0:
             raise Recusa("a bancada está tomada: " + texto.strip().splitlines()[-1] if texto.strip() else "a bancada está tomada")
         rc, texto = self.maquina.rodar(
-            ["bash", str(bancada), "reservar", f"o_basico {self.sub}", "--horas", "1"],
+            ["bash", str(ensaio), "reservar", f"o_basico {self.sub}", "--horas", "1"],
             10.0,
-            {"HEFESTO_BANCADA_PID": str(os.getpid())},
+            {"HEFESTO_ENSAIO_PID": str(os.getpid())},
         )
         if rc != 0:
             raise Recusa("não consegui reservar a bancada: " + texto.strip())
-        self.bancada_reservada = True
+        self.ensaio_reservado = True
 
-    def liberar_a_bancada(self) -> None:
-        if self.bancada_reservada:
+    def liberar_o_ensaio(self) -> None:
+        if self.ensaio_reservado:
             self.maquina.rodar(["bash", str(RAIZ / "scripts" / "ensaio.sh"), "liberar"], 10.0)
-            self.bancada_reservada = False
+            self.ensaio_reservado = False
 
 
     def fechar(self) -> int:
-        self.liberar_a_bancada()
+        self.liberar_o_ensaio()
         rc = rc_dos_passos(self.passos, self.recusas)
         self.gravar("caderno-proposto.csv", caderno(self.passos, self.carimbo, self.comando))
         contagem = Counter(p.veredito for p in self.passos)
@@ -1466,7 +1466,7 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
     inicio = s.maquina.agora()
 
     if a.boot:
-        s.reservar_a_bancada()
+        s.reservar_o_ensaio()
         _reiniciar_o_daemon(s, "o --boot da sessão")
 
     sondas = _subir_as_sondas(s, a, ("trava-por-pad.bt", "uhid-raw-request.bt"), a.segundos)
@@ -1788,7 +1788,7 @@ def _trocar_o_modo_e_voltar(s: Sessao, destino: str) -> None:
         raise Recusa(f"o modo de agora é {antes!r}: a troca só vale entre dualsense e xbox")
     if _jogo_vivo(s.estado_inicio):
         raise Recusa("há jogo aberto: a troca recriaria os pads no meio da partida")
-    s.reservar_a_bancada()
+    s.reservar_o_ensaio()
     compositor = _pid_do_compositor(s.maquina)
     marco = s.maquina.agora()
     try:
@@ -2126,7 +2126,7 @@ def sub_saidas(s: Sessao, a: argparse.Namespace) -> None:
         return
     if _jogo_vivo(e):
         raise Recusa("há jogo aberto: a vibração e o gatilho do protocolo disputariam o do jogo")
-    s.reservar_a_bancada()
+    s.reservar_o_ensaio()
     sondas = _subir_as_sondas(s, a, ("nucleo-por-processo.bt",), 120.0)
     leitor = s.maquina.leitor_dos_fisicos()
     try:
@@ -2444,7 +2444,7 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
     mesa = controles_na_mesa(e)
     if _jogo_vivo(e):
         raise Recusa("há jogo aberto: o tom do protocolo tocaria por cima do jogo")
-    s.reservar_a_bancada()
+    s.reservar_o_ensaio()
     rc, texto = s.rodar_ensaio("os_nos_de_som_por_controle.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     nos = _por_chave(_lista(dado), "mac") if isinstance(dado, list) else {}
@@ -2749,7 +2749,7 @@ def executar(argv: Sequence[str], maquina: Maquina | None = None) -> int:
     except Exception as erro:
         s.recusar(f"o subcomando caiu no meio: {type(erro).__name__}: {erro}")
     finally:
-        s.liberar_a_bancada()
+        s.liberar_o_ensaio()
         try:
             s.relistar_e_conferir()
             for diferenca in s.conferir_a_volta():

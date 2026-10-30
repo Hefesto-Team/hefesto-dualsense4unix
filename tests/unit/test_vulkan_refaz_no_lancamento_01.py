@@ -211,10 +211,10 @@ def test_o_campo_feito_e_o_que_separa_os_dois_manter(casa: Path) -> None:
     do_botao = {"feito": "religada", "escolha": "manter"}
     da_regra_caduca = {"feito": "religada-por-fora", "escolha": "manter"}
 
-    assert cv._e_escolha_dela(do_botao) is True
-    assert cv._e_escolha_dela(da_regra_caduca) is False
-    assert cv._e_escolha_dela({"feito": "desligada"}) is False
-    assert cv._e_escolha_dela({}) is False
+    assert cv._e_escolha_do_usuario(do_botao) is True
+    assert cv._e_escolha_do_usuario(da_regra_caduca) is False
+    assert cv._e_escolha_do_usuario({"feito": "desligada"}) is False
+    assert cv._e_escolha_do_usuario({}) is False
 
 
 def test_nada_mais_escreve_o_marcador_caduco(prefixo: Path, casa: Path) -> None:

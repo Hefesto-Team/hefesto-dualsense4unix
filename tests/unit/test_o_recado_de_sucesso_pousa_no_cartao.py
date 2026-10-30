@@ -639,7 +639,7 @@ def test_nenhuma_frase_volta_nos_tiques(medido: dict) -> None:
         "a repintura trouxe uma frase à tela depois da recusa")
 
 
-def test_a_recusa_tem_o_tom_dela_e_o_sucesso_nao_tem_no(medido: dict) -> None:
+def test_a_recusa_tem_o_tom_do_usuario_e_o_sucesso_nao_tem_no(medido: dict) -> None:
     """ERA `test_o_sucesso_e_verde_e_a_recusa_e_laranja` — 13/09/2026."""
     assert _r(_leitura(medido, "com-a-recusa")) == []
     for marco in ("depois-do-sucesso", "com-a-frase-do-dono"):

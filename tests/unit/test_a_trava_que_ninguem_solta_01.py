@@ -134,7 +134,7 @@ def test_nenhuma_linha_de_producao_arma_a_trava() -> None:
     assert not achados, (
         "a trava manual voltou ao código de produção:\n"
         + "\n".join(achados)
-        + "\n\nEla saiu inteira em 14/09/2026 por decisão dela — *«e pra qualquer "
+        + "\n\nOUsuario saiu inteira em 14/09/2026 por decisão dela — *«e pra qualquer "
           "outro jogo»*, *«isso nao faz sentido mais»*. "  # (noqa-acento)
           "Se um caminho novo precisa "
           "proteger um ajuste dela contra o perfil, a pergunta a fazer é outra: "

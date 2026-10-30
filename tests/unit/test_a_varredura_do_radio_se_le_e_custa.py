@@ -126,10 +126,10 @@ def _sem_dois_pontos(mac: str) -> str:
     return mac.replace(":", "")
 
 
-def _bancada(mapa: dict[str, str]) -> dict[str, Any]:
+def _ensaio(mapa: dict[str, str]) -> dict[str, Any]:
     """Um `/sys/class/hidraw` de mentira: `{uniq do controle: MAC do adaptador}`.
 
-    Mesma forma de `test_a_conta_de_slots_por_adaptador._bancada`. Sem ela o
+    Mesma forma de `test_a_conta_de_slots_por_adaptador._ensaio`. Sem ela o
     teste mediria a bancada de quem o roda — e quem o roda é a bancada, com
     quatro DualSense de pé.
     """
@@ -174,7 +174,7 @@ def _mesa_apertada_com_dois_destinos() -> dict[str, plano_de_radio.PlanoDoAdapta
             bm.ADAPTADOR_QUE_VARRE: "Dongle de trás",
             bm.ADAPTADOR_FOLGADO: "Dongle do meio",
         },
-        **_bancada(
+        **_ensaio(
             {
                 P1: bm.ADAPTADOR_PARADO,
                 P2: bm.ADAPTADOR_PARADO,
@@ -338,7 +338,7 @@ def test_o_unico_destino_possivel_continua_valendo_mesmo_varrendo() -> None:
             bm.ADAPTADOR_PARADO: "Dongle da frente",
             bm.ADAPTADOR_QUE_VARRE: "Dongle de trás",
         },
-        **_bancada(
+        **_ensaio(
             {
                 P1: bm.ADAPTADOR_PARADO,
                 P2: bm.ADAPTADOR_PARADO,
@@ -377,7 +377,7 @@ def test_a_mesa_folgada_nao_vira_ordem_so_porque_alguem_varre() -> None:
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2)],
         apelidos={bm.ADAPTADOR_QUE_VARRE: "Dongle de trás"},
-        **_bancada({P1: bm.ADAPTADOR_QUE_VARRE, P2: bm.ADAPTADOR_PARADO}),
+        **_ensaio({P1: bm.ADAPTADOR_QUE_VARRE, P2: bm.ADAPTADOR_PARADO}),
     )
     assert (
         plano_de_radio.ordem_de_redistribuicao(
@@ -506,7 +506,7 @@ def test_a_lembranca_nao_congela_a_resposta_para_sempre(
     ).varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
 
 
-def test_o_leitor_nao_presume_bancada_nenhuma(
+def test_o_leitor_nao_presume_ensaio_nenhuma(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Um adaptador só, e o leitor responde igual — a ordem de 11/09."""

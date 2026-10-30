@@ -150,7 +150,7 @@ class TestOEscritorNaoSujaOQueNaoEDele:
         assert _PRAGMATA in aplicados
         assert WRAPPER_PREFIX in read_apps_by_appid(novo)[_PRAGMATA]
 
-    def test_repor_preserva_a_variavel_que_ela_pos(self) -> None:
+    def test_repor_preserva_a_variavel_que_o_usuario_pos(self) -> None:
         """O `VKD3D_CONFIG` dela é cura de crash — o wrapper convive, não come."""
         novo, _, _ = apply_wrapper_vdf_text(
             _vdf_das_tres_arvores(canonica=_LINHA_COMIDA)

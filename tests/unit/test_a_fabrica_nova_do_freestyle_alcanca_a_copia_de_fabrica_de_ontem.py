@@ -85,18 +85,18 @@ def test_a_copia_intocada_da_fabrica_a_vira_a_fabrica_b(fabricas: dict[str, Any]
     assert _copias(pasta) == [bruto_a], "a segunda volta não faz nada"
 
 
-def test_o_freestyle_com_um_ajuste_dela_fica_intocado(fabricas: dict[str, Any]) -> None:
+def test_o_freestyle_com_um_ajuste_do_usuario_fica_intocado(fabricas: dict[str, Any]) -> None:
     pasta = profiles_dir(ensure=True)
     _carregar_com(fabricas, "A")
     alvo = pasta / loader.ARQUIVO_DO_PADRAO
-    dela = json.loads(alvo.read_text(encoding="utf-8"))
-    dela["leds"]["lightbar"] = [255, 0, 128]
-    bruto_dela = (json.dumps(dela, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    alvo.write_bytes(bruto_dela)
+    do_usuario = json.loads(alvo.read_text(encoding="utf-8"))
+    do_usuario["leds"]["lightbar"] = [255, 0, 128]
+    bruto_do_usuario = (json.dumps(do_usuario, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    alvo.write_bytes(bruto_do_usuario)
 
     _carregar_com(fabricas, "B")
 
-    assert alvo.read_bytes() == bruto_dela
+    assert alvo.read_bytes() == bruto_do_usuario
     assert _copias(pasta) == []
 
 

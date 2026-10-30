@@ -319,11 +319,11 @@ def _fechado(ap: Aparelho) -> tuple[bool, str]:
     )
 
 
-class TestOUdevDeBolsoReproduzAMesaDela:
+class TestOUdevDeBolsoReproduzAMesaDoUsuario:
     """Uma régua que não reproduz o defeito não prova a cura."""
 
     @pytest.mark.parametrize("aparelho", sorted(FISICOS))
-    def test_a_regra_de_antes_nasce_aberta_como_na_mesa_dela(
+    def test_a_regra_de_antes_nasce_aberta_como_na_mesa_do_usuario(
         self, tmp_path: Path, aparelho: str
     ) -> None:
         """A regra como estava instalada até 25/09: o nome 70 e o `MODE=` sem trava."""
@@ -357,7 +357,7 @@ class TestOUdevDeBolsoReproduzAMesaDela:
         )
         assert rodar(FISICOS[aparelho](), raiz).acl_da_sessao
 
-    def test_a_assinatura_do_banco_dela_e_uaccess_sem_seat(self, tmp_path: Path) -> None:
+    def test_a_assinatura_do_banco_do_usuario_e_uaccess_sem_seat(self, tmp_path: Path) -> None:
         """A impressão digital medida: `Q:uaccess` sem `Q:seat` no físico do rádio."""
         raiz = montar(tmp_path, nome_da_regra=NOME_DE_ANTES)
         ap = rodar(pelo_radio("0ce6"), raiz)

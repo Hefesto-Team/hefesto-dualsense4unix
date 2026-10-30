@@ -137,7 +137,7 @@ def _apertar(mgr: HotkeyManager, botoes: tuple[str, ...], *, de: str | None = No
     asyncio.run(_cena())
 
 
-def _listas_da_bancada() -> dict[str, list[str]]:
+def _listas_do_ensaio() -> dict[str, list[str]]:
     import onde
 
     doc = onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
@@ -150,13 +150,13 @@ def _listas_da_bancada() -> dict[str, list[str]]:
     return fora
 
 
-def test_a_lista_da_bancada_e_o_vocabulario_do_produto() -> None:
+def test_a_lista_do_ensaio_e_o_vocabulario_do_produto() -> None:
     """As listas da tabela do mockup regerado oferecem EXATAMENTE os rótulos do dono.
 
     Uma por gesto com combo, os de fábrica e os novos; o PS sozinho saiu da tabela e mora na
-    linha PS de «Os botões» (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8, 16/10/2026).
+    linha PS de «Os botões» (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, N8, 16/10/2026).
     """
-    listas = _listas_da_bancada()
+    listas = _listas_do_ensaio()
     assert set(listas) == set(ag.TODOS_OS_GESTOS) - {ag.GESTO_DO_PS}, listas.keys()
     rotulos = [r for _g, ops in ag.por_grupo() for r in ops]
     for gesto, ops in listas.items():
@@ -482,7 +482,7 @@ def test_a_bandeja_e_o_controle_chamam_o_mesmo_ato(atendentes: dict[str, list[An
                        ato])]
 
 
-def test_o_main_da_bandeja_e_o_ato_dela(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_main_da_bandeja_e_o_ato_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.app.actions import atos_da_bandeja as ab
 
     feitos: list[str] = []
@@ -534,7 +534,7 @@ def test_a_escolha_sobrevive_a_reabrir_a_aba(atendentes: dict[str, list[Any]]) -
     assert _o_ps_pintado() == "— Nada —"
 
 
-def test_a_bancada_tem_os_enderecos_da_pintura() -> None:
+def test_o_ensaio_tem_os_enderecos_da_pintura() -> None:
     """Cada lista tem `data-campo` de valor, e a opção do script tem o seu."""
     import onde
 

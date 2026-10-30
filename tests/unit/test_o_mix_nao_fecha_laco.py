@@ -121,7 +121,7 @@ def test_o_monitor_de_outro_controle_nao_e_laco() -> None:
 
 
 @pytest.fixture()
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Pactl:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Pactl:
     """O `pactl` desviado no dono único dele: `alto_falante_bt._rodar`."""
     pactl = Pactl(placas=(SINK_P1,))
     monkeypatch.setattr(af, "_rodar", pactl)
@@ -133,8 +133,8 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> Pactl:
     return pactl
 
 
-def test_a_rota_do_radio_recusa_o_monitor_do_proprio_no(bancada: Pactl) -> None:
-    bancada.padrao = NO_P1
+def test_a_rota_do_radio_recusa_o_monitor_do_proprio_no(ensaio: Pactl) -> None:
+    ensaio.padrao = NO_P1
 
     rota = af.rota_do_no(
         P1, af.TRANSPORTE_RADIO, fonte=af.FONTE_MIX, ponte_do_radio=lambda: True
@@ -148,8 +148,8 @@ def test_a_rota_do_radio_recusa_o_monitor_do_proprio_no(bancada: Pactl) -> None:
     assert rota.motivo == "", "a recusa inventou uma frase de tela"
 
 
-def test_a_rota_do_cabo_recusa_o_monitor_da_propria_placa(bancada: Pactl) -> None:
-    bancada.padrao = SINK_P1
+def test_a_rota_do_cabo_recusa_o_monitor_da_propria_placa(ensaio: Pactl) -> None:
+    ensaio.padrao = SINK_P1
 
     rota = af.rota_do_no(P1, af.TRANSPORTE_CABO, fonte=af.FONTE_MIX)
 
@@ -160,26 +160,26 @@ def test_a_rota_do_cabo_recusa_o_monitor_da_propria_placa(bancada: Pactl) -> Non
     )
 
 
-def test_a_rota_com_a_tv_de_saida_segue_igual(bancada: Pactl) -> None:
-    bancada.padrao = HDMI
+def test_a_rota_com_a_tv_de_saida_segue_igual(ensaio: Pactl) -> None:
+    ensaio.padrao = HDMI
 
     rota = af.rota_do_no(P1, af.TRANSPORTE_CABO, fonte=af.FONTE_MIX)
 
     assert rota.monitor_do_mix == f"{HDMI}.monitor"
 
 
-def test_o_no_de_pe_no_cabo_nao_fecha_o_laco(bancada: Pactl) -> None:
+def test_o_no_de_pe_no_cabo_nao_fecha_o_laco(ensaio: Pactl) -> None:
     """O fone plugado no controle: a placa dele é a saída padrão do sistema."""
-    bancada.padrao = SINK_P1
+    ensaio.padrao = SINK_P1
     nome = escrever_perfil({P1: af.FONTE_MIX})
     _sub, ger = subsystem_e_gerenciador(nome)
 
     ger.reconciliar([cabo(P1)])
     no = ger.nos[P1]
 
-    assert (f"{SINK_P1}.monitor", no.nome) not in bancada.loopbacks, (
-        f"o nó subiu com o laço de pé: {bancada.loopbacks}"
+    assert (f"{SINK_P1}.monitor", no.nome) not in ensaio.loopbacks, (
+        f"o nó subiu com o laço de pé: {ensaio.loopbacks}"
     )
-    assert (f"{no.nome}.monitor", SINK_P1) in bancada.loopbacks, (
+    assert (f"{no.nome}.monitor", SINK_P1) in ensaio.loopbacks, (
         "o controle ficou sem a saída para o alto-falante"
     )

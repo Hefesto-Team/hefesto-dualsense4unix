@@ -102,7 +102,7 @@ def servidor(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> _Servidor:
     monkeypatch.setattr(bt.shutil, "which", lambda _nome: "/usr/bin/pactl")
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(af, "_rodar", servidor)
-    monkeypatch.setattr(af.SinkVirtualPipeWire, "_passar_a_escolha_dela", lambda _self: None)
+    monkeypatch.setattr(af.SinkVirtualPipeWire, "_passar_a_escolha_do_usuario", lambda _self: None)
     monkeypatch.setattr(
         af, "sink_do_controle", lambda uniq, *_a, **_k: PLACA_P1 if uniq == P1 else ""
     )

@@ -227,7 +227,7 @@ _VDF_SO_ALLOWLIST = (
 
 
 @pytest.fixture()
-def bancada_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
+def ensaio_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
     """`ambiente`, mas com um vdf que SÓ tem appids da allowlist ligados."""
     ambiente["vdf"].write_text(_VDF_SO_ALLOWLIST, encoding="utf-8")
     lista = (
@@ -246,47 +246,47 @@ class TestPreVooNaoFechaSteamAToa:
     """D-32 (05/08/2026) — o pré-voo do apply casava a allowlist e mentia."""
 
     def test_apply_nao_fecha_a_steam_nem_diz_aplicado(
-        self, bancada_allowlist: dict[str, Any]
+        self, ensaio_allowlist: dict[str, Any]
     ) -> None:
-        original = bancada_allowlist["vdf"].read_text(encoding="utf-8")
+        original = ensaio_allowlist["vdf"].read_text(encoding="utf-8")
 
-        proc = _roda(bancada_allowlist, "--apply", steam=True)
+        proc = _roda(ensaio_allowlist, "--apply", steam=True)
 
         assert proc.returncode == 0
         assert _tag(proc) == "nada-a-fazer", proc.stdout
-        assert not (bancada_allowlist["estado"] / "steam_calls").exists()
-        assert bancada_allowlist["vdf"].read_text(encoding="utf-8") == original
+        assert not (ensaio_allowlist["estado"] / "steam_calls").exists()
+        assert ensaio_allowlist["vdf"].read_text(encoding="utf-8") == original
 
     def test_apply_quiet_do_guarda_tambem_para_de_dizer_aplicado(
-        self, bancada_allowlist: dict[str, Any]
+        self, ensaio_allowlist: dict[str, Any]
     ) -> None:
         """É o modo do timer de 30 min — a origem do `resultado=aplicado` das 02:13."""
-        original = bancada_allowlist["vdf"].read_text(encoding="utf-8")
+        original = ensaio_allowlist["vdf"].read_text(encoding="utf-8")
 
-        proc = _roda(bancada_allowlist, "--apply-quiet")
+        proc = _roda(ensaio_allowlist, "--apply-quiet")
 
         assert proc.returncode == 0
         assert _tag(proc) == "nada-a-fazer", proc.stdout
-        assert bancada_allowlist["vdf"].read_text(encoding="utf-8") == original
+        assert ensaio_allowlist["vdf"].read_text(encoding="utf-8") == original
 
     def test_jogo_fora_da_allowlist_continua_fechando_e_aplicando(
-        self, bancada_allowlist: dict[str, Any]
+        self, ensaio_allowlist: dict[str, Any]
     ) -> None:
         """Contraprova: a cura não anestesiou o guarda."""
-        bancada_allowlist["vdf"].write_text(
+        ensaio_allowlist["vdf"].write_text(
             _VDF_SO_ALLOWLIST.replace('"3357650"', '"1599660"'), encoding="utf-8"
         )
 
-        proc = _roda(bancada_allowlist, "--apply", steam=True)
+        proc = _roda(ensaio_allowlist, "--apply", steam=True)
 
         assert proc.returncode == 0
         assert _tag(proc) == "aplicado", proc.stdout
-        chamadas = (bancada_allowlist["estado"] / "steam_calls").read_text(
+        chamadas = (ensaio_allowlist["estado"] / "steam_calls").read_text(
             encoding="utf-8"
         )
         assert "-shutdown" in chamadas
-        assert not (bancada_allowlist["estado"] / "pkill").exists()
-        texto = bancada_allowlist["vdf"].read_text(encoding="utf-8")
+        assert not (ensaio_allowlist["estado"] / "pkill").exists()
+        texto = ensaio_allowlist["vdf"].read_text(encoding="utf-8")
         assert texto.count('"UseSteamControllerConfig"\t\t"0"') == 1
         assert texto.count('"UseSteamControllerConfig"\t\t"2"') == 1
 

@@ -237,7 +237,7 @@ def _hub_com_dublês(relogio: Any) -> tuple[SensorHub, dict[str, _MotionDeMentir
     return hub, criados
 
 
-def test_o_no_de_movimento_fica_exclusivo_quando_ela_desliga() -> None:
+def test_o_no_de_movimento_fica_exclusivo_quando_o_usuario_desliga() -> None:
     """**A MORDIDA.** Arranque o `_reconciliar_grabs` e isto reprova."""
     agora = [100.0]
     hub, criados = _hub_com_dublês(lambda: agora[0])

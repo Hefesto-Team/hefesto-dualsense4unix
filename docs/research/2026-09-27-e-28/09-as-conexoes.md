@@ -7,9 +7,9 @@ Cada rodada teve uma implementação e uma conferência independente, que refez 
 | rodada | sprints |
 |---|---|
 | 1 | `O-MAPEAR-NAO-CONGELA-A-JANELA-01`, `O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01` |
-| 2 | `O-RADIO-CONECTA-ONDE-ELA-MANDA-01`, `O-MAPA-DAS-CONEXOES-NO-PRODUTO-01` |
+| 2 | `O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01`, `O-MAPA-DAS-CONEXOES-NO-PRODUTO-01` |
 | 2b | `O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01` |
-| 3 | `A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01`, `O-RADIO-CONECTA-ONDE-ELA-MANDA-02`, `O-MAPA-DAS-CONEXOES-NO-PRODUTO-02` |
+| 3 | `A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01`, `O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-02`, `O-MAPA-DAS-CONEXOES-NO-PRODUTO-02` |
 
 ## 1. O Mapear congelava a janela
 
@@ -52,7 +52,7 @@ Régua: `tests/unit/test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar.py`
 
 ## 3. O «Conectar» pareia no adaptador aberto
 
-**`O-RADIO-CONECTA-ONDE-ELA-MANDA-01`:**
+**`O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01`:**
 
 - o destino do «Conectar» é a caixa aberta (`_destino_do_conectar`); sem caixa aberta, vale a D8 (`destino_da_central`);
 - o «esperando» segura a tela por no máximo 60 s. Depois vira «Não Conectou», com «Tentar de Novo» e o X. Os 60 s vêm do diário: janela de 30 s, mais 11 s do Pair, mais 10 s de conferir, dão 51 s;

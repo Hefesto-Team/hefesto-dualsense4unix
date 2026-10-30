@@ -13,7 +13,7 @@ Cada sprint de tela com a situação e o lugar onde o desenho mora. Nenhuma fica
 | A-ABA-CONEXOES-DO-TODO-01 | coberta e desenho novo | 08-conexoes.html | 1 a 12 já estavam; a rodada 4 acrescenta 13 (o giroscópio sai dos cartões, como você confirmou às ~22h; substitui a 08-6) |
 | A-ABA-NAVEGACAO-DO-TODO-01 | coberta | 06-navegacao.html | mudanças 1 a 27 |
 | A-ABA-SISTEMA-DO-TODO-01 | coberta | 09-sistema.html | mudanças 1 a 11 |
-| O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01 | desenho novo (marcação) | mapa-das-portas.html | o desenho já existia na página sem âncora; a rodada 4 marca 5 (hub como um chip), 6 (enlace), 7 (não apareceu neste início) e 8 (aba Registro) |
+| O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01 | desenho novo (marcação) | mapa-das-portas.html | o desenho já existia na página sem âncora; a rodada 4 marca 5 (hub como um chip), 6 (enlace), 7 (não apareceu neste início) e 8 (aba Registro) |
 | O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-E-A-DA-ULTIMA-MUDANCA-01 | coberta | 10-perfis.html | mudanças 8 e 10 |
 | A-ABA-EXPERIMENTAL-DO-TODO-01 | coberta | 07-lancadores.html | mudanças 1 a 33 |
 | OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 | desenho novo | 02-controles.html; 06-navegacao.html; 09-sistema.html; calibrar-sensores.html | Controles 18, Navegação 28 (aba e janela Acessibilidade), Sistema 12, Calibrar 7: botões e letra, como você respondeu às ~23h40 (alvos de 24 px, letra de 12 px, sem rolagem); o botão «Tamanho da interface» segue no 09 do todo |

@@ -475,7 +475,7 @@ class TestFiacao:
         assert destino != "", destino
 
 
-class TestOLogNaoMenteNoJournalDela:
+class TestOLogNaoMenteNoJournalDoUsuario:
     @staticmethod
     def _logger_falso(tmp_path: Path) -> tuple[Path, dict[str, str]]:
         """Um `logger` de mentira na frente do PATH."""

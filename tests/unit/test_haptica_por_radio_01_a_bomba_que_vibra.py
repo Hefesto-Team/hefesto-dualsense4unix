@@ -67,7 +67,7 @@ def _so_a_haptica(bloco: bytes, *, contador: int = 1, seq: int = 1) -> bytes:
     )
 
 
-def test_o_report_da_haptica_e_o_0x36_que_vibrou_na_mao_dela() -> None:
+def test_o_report_da_haptica_e_o_0x36_que_vibrou_na_mao_do_usuario() -> None:
     """A bancada de 03/10 (trecho 2): só a háptica, com o ``0x10`` neutro, vibrou."""
     report = _so_a_haptica(bytes(range(64)))
     assert len(report) == af.TAMANHO_DO_DEGRAU[0x36]

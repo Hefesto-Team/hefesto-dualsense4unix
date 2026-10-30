@@ -453,7 +453,7 @@ def test_a_parcialidade_vale_dentro_da_secao() -> None:
     assert guardado.leds.model_fields_set == {"lightbar_brightness"}
 
 
-def test_existe_exatamente_uma_feature_sem_dono_e_ela_e_o_touchpad(
+def test_existe_exatamente_uma_feature_sem_dono_e_o_usuario_e_o_touchpad(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Feature sem dono PASSA — e sai impressa, com o motivo."""

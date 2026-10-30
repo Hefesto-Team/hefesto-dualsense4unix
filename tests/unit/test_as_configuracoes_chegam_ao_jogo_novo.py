@@ -188,7 +188,7 @@ def test_o_appid_do_jogo_novo_vem_do_appmanifest_e_a_ferramenta_da_steam_fica_de
     assert sorted(vigia.jogos_novos_a_receber(casa.home, config_home=casa.config)) == [VELHO, NOVO]
 
 
-def test_o_jogo_instalado_sem_bloco_ganha_o_bloco_na_arvore_canonica_e_so_nela() -> None:
+def test_o_jogo_instalado_sem_bloco_ganha_o_bloco_na_arvore_canonica_e_so_no_usuario() -> None:
     novo, criados = slo.garantir_blocos_no_texto(_vdf(), [NOVO, VELHO, "abc"])
     assert criados == [NOVO]
     assert set(slo.read_apps_by_appid(novo)) == {VELHO, NOVO}

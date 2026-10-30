@@ -150,7 +150,7 @@ def test_o_controle_que_ja_estava_no_cabo_nao_e_a_porta_da_vez(
     )
 
 
-def test_ela_tira_o_controle_antes_de_gravar_e_a_porta_continua_a_da_vez(
+def test_o_usuario_tira_o_controle_antes_de_gravar_e_a_porta_continua_a_da_vez(
     mesa: Gabinete, disco: Path
 ) -> None:
     fluxo = _fluxo(mesa)
@@ -216,7 +216,7 @@ def _sem(documento: dict[str, Any], *caminhos: tuple[str, ...]) -> dict[str, Any
     return copia
 
 
-def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> None:
+def test_a_revisita_so_troca_o_que_o_usuario_trocou(mesa: Gabinete, disco: Path) -> None:
     fluxo = _fluxo(mesa)
     _mapear_tres(mesa, fluxo)
     antes = json.loads(disco.read_text(encoding="utf-8"))
@@ -359,7 +359,7 @@ def test_um_gravador_so_no_dono() -> None:
     assert not crus, f"uma escrita crua de arquivo no dono do mapa, fora do lock: {crus}"
 
 
-def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Path) -> None:
+def test_o_lugar_e_universal_e_o_do_usuario_continua_aceito(mesa: Gabinete, disco: Path) -> None:
     assert len(set(ee.LUGARES_DA_PORTA)) == len(ee.LUGARES_DA_PORTA) == 7
     for antigo in (ee.FACE_FRENTE, ee.FACE_ATRAS, ee.FACE_HUB):
         assert antigo in ee.LUGARES_DA_PORTA, "a grafia de antes fica, ou a face dela fica órfã"
@@ -386,7 +386,7 @@ def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Pat
         fluxo.gravar(chave="99", nome="não existe")
 
 
-def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
+def test_a_porta_que_o_usuario_so_nomeou_e_do_mapa_e_se_renomeia(
     mesa: Gabinete, disco: Path
 ) -> None:
     """O nome dado a uma porta sem número fica com a porta, e o Mapear o renomeia."""
@@ -490,8 +490,8 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
     assert no_hub_interno is not None and no_hub_interno.bluetooth == "", (
         "o hub interno hospeda o rádio da placa E o painel da frente: não sei"
     )
-    na_mesa_dela = mapa.porta(lugar_de(PCI_A, "5.1"))
-    assert na_mesa_dela is not None and na_mesa_dela.bluetooth == junta.BLUETOOTH_DONGLE
+    na_mesa_do_usuario = mapa.porta(lugar_de(PCI_A, "5.1"))
+    assert na_mesa_do_usuario is not None and na_mesa_do_usuario.bluetooth == junta.BLUETOOTH_DONGLE
     hub = mapa.porta(lugar_de(PCI_B, "4"))
     assert hub is not None and (hub.e_bluetooth, hub.bluetooth) == (False, "")
 

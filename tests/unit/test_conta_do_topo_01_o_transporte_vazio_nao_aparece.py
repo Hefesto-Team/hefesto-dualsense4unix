@@ -61,7 +61,7 @@ def test_o_transporte_vazio_nao_aparece(usb: int, bt: int, esperado: str) -> Non
     assert mesa_viva.frase_dos_transportes(usb, bt) == esperado
 
 
-def test_a_mesa_dela_do_dia_da_decisao() -> None:
+def test_a_mesa_do_usuario_do_dia_da_decisao() -> None:
     """A cena exata da queixa: um controle, no rádio, e mais nada."""
     prefixo, conta = mesa_viva.texto_da_contagem([{"transporte": "bt"}])
     assert prefixo == "● 1 controle: "
@@ -117,7 +117,7 @@ def test_o_esqueleto_usa_o_mesmo_dono_da_frase() -> None:
     )
 
 
-def test_o_esqueleto_e_o_vivo_dizem_a_mesma_coisa_para_a_mesa_dela() -> None:
+def test_o_esqueleto_e_o_vivo_dizem_a_mesma_coisa_para_a_mesa_do_usuario() -> None:
     """Fim a fim, no formato: o que o esqueleto grava é o que o piloto pinta."""
     _, vivo = mesa_viva.texto_da_contagem([{"transporte": "bt"}])
 

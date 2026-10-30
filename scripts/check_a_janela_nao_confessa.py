@@ -119,7 +119,7 @@ A_MOLDURA: dict[str, str] = {
         "pelo `.desktop`, pelo `--version` e pela bandeja",
 }
 
-A_BANCADA: tuple[str, ...] = (
+O_ENSAIO: tuple[str, ...] = (
     "interface/controles_vivos.py",
     "scripts/tela/jogar_vivo.py",
     "scripts/tela/conexoes_vivas.py",
@@ -159,7 +159,7 @@ IDS: tuple[tuple[str, str], ...] = (
 )
 
 
-def palavras_que_ela_baniu() -> tuple[str, ...]:
+def palavras_que_o_usuario_baniu() -> tuple[str, ...]:
     """`PALAVRAS_BANIDAS`, lida do DONO por AST — nunca copiada para cá."""
     dono = FONTE / "interface" / "frases_banidas.py"
     arvore = ast.parse(dono.read_text(encoding="utf-8"))
@@ -246,14 +246,14 @@ def da_janela() -> list[tuple[str, str]]:
     return [t for rel in A_MOLDURA for t in _texto_de_moldura(rel, "A_MOLDURA")]
 
 
-def da_bancada() -> list[tuple[str, str]]:
+def do_ensaio() -> list[tuple[str, str]]:
     """O mesmo, para os pilotos isentos — LIDO, para a isenção não envelhecer."""
     fora: list[tuple[str, str]] = []
-    for rel in A_BANCADA:
-        achado = _texto_de_moldura(rel, "A_BANCADA")
+    for rel in O_ENSAIO:
+        achado = _texto_de_moldura(rel, "O_ENSAIO")
         if not achado:
             raise SystemExit(
-                f"ERRO: {rel} está isento em `A_BANCADA` e não tem texto de "
+                f"ERRO: {rel} está isento em `O_ENSAIO` e não tem texto de "
                 f"moldura nenhum. Ou ele parou de abrir janela — e sai da lista "
                 f"—, ou esta régua parou de achar o texto dele.")
         fora += achado
@@ -289,7 +289,7 @@ def do_sistema() -> list[tuple[str, str]]:
 
 
 def main() -> int:
-    banidas = palavras_que_ela_baniu()
+    banidas = palavras_que_o_usuario_baniu()
     achados: list[str] = []
     lidos = 0
 
@@ -302,7 +302,7 @@ def main() -> int:
           "subtítulo próprio, e nenhum é o que o lançador dela abre.\n"
           "O texto abaixo é LIDO do arquivo, não digitado nesta régua:")
     marcados = 0
-    for onde, diz in da_bancada():
+    for onde, diz in do_ensaio():
         marcas = _acusar(diz, banidas)
         marcados += bool(marcas)
         print(f"  {onde:<44} {diz!r}"

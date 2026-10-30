@@ -274,7 +274,7 @@ def _tudo_mudo_menos_o_proton(a09: Any, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setattr(cv, "frase_do_ato", lambda _ligar: "")
 
 
-def test_o_reaplicar_apaga_as_que_sobram_sem_perguntar_por_elas(
+def test_o_reaplicar_apaga_as_que_sobram_sem_perguntar_pelo_usuario(
         a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """O duplo clique das correções leva as versões sem uso, e o recibo diz quantas."""
     _tudo_mudo_menos_o_proton(a09, monkeypatch)

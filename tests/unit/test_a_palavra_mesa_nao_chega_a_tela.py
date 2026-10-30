@@ -75,7 +75,7 @@ from hefesto_dualsense4unix.interface.frases_banidas import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 PRODUTO = INTERFACE / "paginas"  # (noqa-acento)
 
 sys.path.insert(0, str(INTERFACE))
@@ -86,10 +86,10 @@ PACOTES = INTERFACE / "pacotes"
 
 def _paginas() -> list[Path]:
     """As abas do produto (`monta.ABAS`) na bancada — e RECUSA achar menos."""
-    achadas = sorted(BANCADA / nome for nome in monta.as_abas_do_produto()
-                     if (BANCADA / nome).is_file())
+    achadas = sorted(ENSAIO / nome for nome in monta.as_abas_do_produto()
+                     if (ENSAIO / nome).is_file())
     assert len(achadas) == len(monta.ABAS), (
-        f"achei {len(achadas)} abas em {BANCADA} e o produto tem {len(monta.ABAS)} — "
+        f"achei {len(achadas)} abas em {ENSAIO} e o produto tem {len(monta.ABAS)} — "
         "o caminho mudou, e uma régua que não acha a tela não mede a tela."
     )
     return achadas
@@ -139,7 +139,7 @@ def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_abas() -> None:
     assert not sujas, (
         f"palavra banida LIDA na tela ({', '.join(PALAVRAS_BANIDAS)}):\n  "
         + "\n  ".join(sujas)
-        + "\n\nEla, 06/09/2026: *o termo sai e coloca-se termos simples pro "
+        + "\n\nOUsuario, 06/09/2026: *o termo sai e coloca-se termos simples pro "
         "user comum. feature fica*. O que entra no lugar está no glossário, "
         "§1 — `docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-"
         "falam.md`. O nome interno (`mesa_viva`, `monta.MESA`, `mesa-frase`) "

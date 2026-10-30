@@ -79,7 +79,7 @@ def test_o_portao_aceita_a_diretiva(tipo: str, rel: str, texto: str) -> None:
     assert G.achados_do_texto(texto, tipo, rel) == [], f"a diretiva reprovou: {texto!r}"
 
 
-def test_a_marca_da_lista_de_excecao_so_vale_onde_o_leitor_dela_le() -> None:
+def test_a_marca_da_lista_de_excecao_so_vale_onde_o_leitor_do_usuario_le() -> None:
     texto = "ISENTOS = {\n    'a',  # sai com: UMA-SPRINT-01\n}\n"
     assert G.achados_do_texto(texto, "py", "src/hefesto_dualsense4unix/x.py")
 

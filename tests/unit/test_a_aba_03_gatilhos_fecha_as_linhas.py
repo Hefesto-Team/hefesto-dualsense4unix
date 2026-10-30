@@ -13,7 +13,7 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "03-gatilhos.html"
-BANCADA = RAIZ / "mockup" / PAGINA
+ENSAIO = RAIZ / "mockup" / PAGINA
 
 
 def _publicada() -> str:
@@ -217,7 +217,7 @@ def test_o_reenvio_saiu_do_desenho():
     MORDIDA: devolva o `<button class="btn reenviar" …>` ao `aba03.py`, rode o
     gerador, e esta régua reprova junto com a 5-bis do `_conferir`.
     """
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     assert html.count('class="g2-cab"') >= 2, (
         "o desenho perdeu as colunas por controle — sem elas esta régua daria "
         "verde sobre uma página vazia")
@@ -427,7 +427,7 @@ def test_o_recibo_conta_quando_o_daemon_diz_dois_destinos(a03, ctx):
 
 def test_o_embrulho_de_cada_campo_e_pintavel_e_o_select_nao_tem_title():
     """As duas metades da mesma cura, e uma sem a outra é pior que nenhuma."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     colunas = len(set(re.findall(r'data-controle="(p\d+)"', html)))
     assert colunas >= 4, "a bancada perdeu os lugares: o laço abaixo passaria vazio"
 

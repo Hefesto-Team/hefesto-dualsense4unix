@@ -30,13 +30,13 @@ def _bits_de_vibracao(common: bytes) -> tuple[int, int, int]:
 
 @pytest.mark.parametrize(("fraco", "forte"), PARES_DE_MOTOR)
 def test_os_dois_motores_saem_nos_bytes_certos_nos_dois_transportes(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte, fraco: int, forte: int
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte, fraco: int, forte: int
 ) -> None:
     """common[2] é o motor direito (fraco), common[3] o esquerdo (forte)."""
-    ds5_de_bancada.setRightMotor(fraco)
-    ds5_de_bancada.setLeftMotor(forte)
+    ds5_de_ensaio.setRightMotor(fraco)
+    ds5_de_ensaio.setLeftMotor(forte)
 
-    report = ds5_de_bancada.prepareReport()
+    report = ds5_de_ensaio.prepareReport()
     assert transporte.problemas_do_envelope(report) == []
     common = transporte.extrair_common(report)
 
@@ -51,11 +51,11 @@ def test_os_dois_motores_saem_nos_bytes_certos_nos_dois_transportes(
 
 
 def test_com_rumble_nosso_os_bits_de_vibracao_ligam_nos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Motor escrito sem bit de validação é motor que o firmware ignora."""
-    ds5_de_bancada.setLeftMotor(0xC0)
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    ds5_de_ensaio.setLeftMotor(0xC0)
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     flag0, flag1, _flag2 = _bits_de_vibracao(common)
     assert flag0 == (
         rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
@@ -66,12 +66,12 @@ def test_com_rumble_nosso_os_bits_de_vibracao_ligam_nos_dois(
 
 
 def test_o_bit_de_vibracao_v2_e_o_mesmo_nos_dois_transportes(
-    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
+    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_ensaio: Any
 ) -> None:
     """O flag2 0x04 (`COMPATIBLE_VIBRATION2`) tem de valer o mesmo dos dois lados."""
     vistos: dict[str, int] = {}
     for envelope in transportes:
-        handle = fabrica_de_bancada(envelope)
+        handle = fabrica_de_ensaio(envelope)
         handle.setLeftMotor(0xC0)
         common = envelope.extrair_common(handle.prepareReport())
         vistos[envelope.nome] = common[rep.COMMON_VALID_FLAG2] & (
@@ -85,10 +85,10 @@ def test_o_bit_de_vibracao_v2_e_o_mesmo_nos_dois_transportes(
 
 
 def test_sem_rumble_nosso_o_keepalive_e_neutro_nos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """GUERRA-01 item 2 — e a regra vale nos DOIS transportes."""
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     assert _bits_de_vibracao(common) == (0, 0, 0), (
         f"{transporte.nome}: o keepalive saiu asserindo vibração sem ter "
         "rumble nosso — ele zera o rumble de quem estiver tocando"
@@ -97,33 +97,33 @@ def test_sem_rumble_nosso_o_keepalive_e_neutro_nos_dois(
 
 
 def test_a_transicao_ativa_para_zero_manda_um_stop_nos_dois(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Ao zerar, UM report sai com flags ligados e motores 0; o seguinte é neutro."""
-    ds5_de_bancada.setLeftMotor(0xA0)
-    ds5_de_bancada.prepareReport()
-    ds5_de_bancada.setLeftMotor(0)
+    ds5_de_ensaio.setLeftMotor(0xA0)
+    ds5_de_ensaio.prepareReport()
+    ds5_de_ensaio.setLeftMotor(0)
 
-    parada = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    parada = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     assert (parada[MOTOR_DIREITO], parada[MOTOR_ESQUERDO]) == (0, 0)
     assert _bits_de_vibracao(parada) != (0, 0, 0), (
         f"{transporte.nome}: a transição ativa→0 não mandou o report de STOP "
         "— o motor continua girando"
     )
 
-    depois = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    depois = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     assert _bits_de_vibracao(depois) == (0, 0, 0), (
         f"{transporte.nome}: o report seguinte ao STOP não voltou ao neutro"
     )
 
 
 def test_o_rumble_e_identico_nos_dois_e_so_o_envelope_muda(
-    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
+    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_ensaio: Any
 ) -> None:
     """Os mesmos motores no cabo e no rádio produzem o MESMO common."""
     commons: dict[str, bytes] = {}
     for envelope in transportes:
-        handle = fabrica_de_bancada(envelope)
+        handle = fabrica_de_ensaio(envelope)
         handle.setRightMotor(0x20)
         handle.setLeftMotor(0xC0)
         commons[envelope.nome] = envelope.extrair_common(handle.prepareReport())

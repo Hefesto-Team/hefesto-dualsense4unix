@@ -111,14 +111,14 @@ def test_a_regua_pega_cada_forma_da_raiz() -> None:
         "A": ("/dev", 1), "B": ("/sys/class/input", 2)}
 
 
-def test_cada_raiz_tem_a_constante_dela_no_broker() -> None:
+def test_cada_raiz_tem_a_constante_do_usuario_no_broker() -> None:
     constantes = constantes_de_cima(BROKER.read_text(encoding="utf-8"))
     errados = {nome: constantes.get(nome, (None, 0))[0] for nome, raiz in RAIZES.items()
                if constantes.get(nome, (None, 0))[0] != raiz}
     assert errados == {}, f"a constante de cada raiz falta ou mudou de valor no broker: {errados}"
 
 
-def test_cada_raiz_so_aparece_na_constante_dela() -> None:
+def test_cada_raiz_so_aparece_na_constante_do_usuario() -> None:
     fonte = BROKER.read_text(encoding="utf-8")
     constantes = constantes_de_cima(fonte)
     fora = {nome: [linha for linha in linhas if linha != constantes.get(nome, (None, 0))[1]]

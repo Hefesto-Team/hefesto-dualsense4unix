@@ -1594,7 +1594,7 @@ class ProfileManager:
         """Carimba a ponte no perfil do jogo e GRAVA. None = não há perfil."""
 
         def _carimbar(profile: Profile) -> Profile:
-            if _a_escolha_dela_ja_carimbou(profile, kind, gamepad_flavor, steam_input):
+            if _a_escolha_do_usuario_ja_carimbou(profile, kind, gamepad_flavor, steam_input):
                 return profile
             carimbado = carimbar_ponte(
                 profile,
@@ -1617,7 +1617,7 @@ class ProfileManager:
             return None
         if salvo.ponte is not None and salvo.ponte.confirmada_por == CONFIRMADA_POR_ESCOLHA:
             logger.info(
-                "ponte_ja_confirmada_pela_escolha_dela",
+                "ponte_ja_confirmada_pela_escolha_do_usuario",
                 appid=str(appid),
                 profile=salvo.name,
                 pedida_por=por,
@@ -1790,12 +1790,12 @@ def pontes_confirmadas(
     return saida
 
 
-def _a_escolha_dela_ja_carimbou(
+def _a_escolha_do_usuario_ja_carimbou(
     profile: Profile, kind: str, gamepad_flavor: object, steam_input: bool
 ) -> bool:
     """O perfil já tem ESTA ponte carimbada pela escolha do usuário?
 
-    O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01: a escada pede o carimbo da
+    O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01: a escada pede o carimbo da
     ponte de pé depois do silêncio, `por=silencio` ou `por=gesto`. Quando a
     escolha do usuário já carimbou a MESMA ponte (o PS + R3 carimba na hora e deixa o
     gesto anotado, que o tique colhe 180 s depois), o carimbo dela fica: a
@@ -2003,7 +2003,7 @@ def gravar_o_modo_no_perfil_ativo(
     na Navegação grava, NA MESMA GRAVAÇÃO, o ``mouse.enabled`` que ela deixou
     de pé (:func:`secao_do_mouse_da_navegacao`); ``None`` não toca a seção.
 
-    `appid_do_jogo` e `steam_input` (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01,
+    `appid_do_jogo` e `steam_input` (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01,
     03/10/2026): o jogo que o wrapper lançou e que ainda roda, e se ele está na
     allowlist do Steam Input. Quando o perfil que grava é a regra DESSE jogo, o
     carimbo vai na mesma gravação, `por=escolha_dela`

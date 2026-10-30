@@ -85,7 +85,7 @@ class TestGateDestrutivo:
         assert daemon.config.gamepad_flavor == "dualsense"
         assert daemon.config.gamepad_emulation_enabled is True
 
-    def test_gesto_manual_dela_continua_trocando_a_mascara(self) -> None:
+    def test_gesto_manual_do_usuario_continua_trocando_a_mascara(self) -> None:
         """A última palavra é sempre dela — o gate só segura o automático."""
         vpad = _Vpad("dualsense")
         daemon = _DaemonFalso(autoridade="game", vpad=vpad)

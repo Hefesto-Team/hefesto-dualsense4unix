@@ -372,7 +372,7 @@ def test_os_dois_caminhos_chamam_o_dono_unico() -> None:
     assert _chama("coop.py", "forward_all", "ativar_o_botao")
 
 
-def test_perfil_sem_a_secao_nao_grava_a_chave_e_com_ela_volta_igual() -> None:
+def test_perfil_sem_a_secao_nao_grava_a_chave_e_com_o_usuario_volta_igual() -> None:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     vazio = Profile.model_validate({"name": "Vazio", "match": {"type": "any"}})

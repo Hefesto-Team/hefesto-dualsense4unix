@@ -48,7 +48,7 @@ ONDA2-10, decisões do PO (04/09/2026):
     tela (`FIM_DA_EXIGENCIA_AQUI`): a do produto está certa na janela GTK e errada aqui. [04] o
     CAMPO DO JOGO SE CORRIGE: `editor_jogo` devolve `editor.jogo` na forma canônica
     com o desfecho. É o único instante em que a tela pode fazê-lo: o campo está em
-    `CAMPOS_QUE_ELA_DIGITA` e o tique não o repinta.
+    `CAMPOS_QUE_O_USUARIO_DIGITA` e o tique não o repinta.
 
     [03] e [05] são de DESENHO e moram no `aba10.py`.
 
@@ -233,8 +233,8 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     recebe vazio (fim da função). Os `campos` seguem valendo.
 
     `campos` são os endereços que o gesto corrige NA HORA, no mesmo embrulho (04/09/2026, decisão
-    [04] do PO). Os campos que ela DIGITA são omitidos do tique (`CAMPOS_QUE_ELA_DIGITA`, para a
-    pintura não apagar o que se escreve), então o único instante em que a tela devolve a forma
+    [04] do PO). Os campos que ela DIGITA são omitidos do tique (`CAMPOS_QUE_O_USUARIO_DIGITA`, para
+    a pintura não apagar o que se escreve), então o único instante em que a tela devolve a forma
     canônica do que foi colado (o endereço da loja, por exemplo) é a resposta do PRÓPRIO gesto. O
     caminho já existia: gesto que devolve dicionário tem a carga pintada na hora
     (`hefesto_vivo._deu_certo` → `window.__hef.pintar`), no vocabulário `endereço → valor` da
@@ -320,7 +320,7 @@ _ARMADO: tuple[str, float] | None = None
 _PINTADO_PARA: str = ""
 _ULTIMO_TIQUE: float = 0.0
 
-CAMPOS_QUE_ELA_DIGITA = ("editor.jogo", "editor.evento.comando", "editor.estilo")
+CAMPOS_QUE_O_USUARIO_DIGITA = ("editor.jogo", "editor.evento.comando", "editor.estilo")
 
 
 def _uma_vez_so(alvo: str) -> tuple[str, ...]:
@@ -332,7 +332,7 @@ def _uma_vez_so(alvo: str) -> tuple[str, ...]:
     if voltou or alvo != _PINTADO_PARA:
         _PINTADO_PARA = alvo
         return ()
-    return CAMPOS_QUE_ELA_DIGITA
+    return CAMPOS_QUE_O_USUARIO_DIGITA
 
 
 SEPARADOR_EM_TEXTO = " • "
@@ -1344,7 +1344,7 @@ def _nomes_dos_jogos() -> dict[str, str]:
     return nomes
 
 
-def _forma_do_que_ela_escolheu(texto: str) -> str:
+def _forma_do_que_o_usuario_escolheu(texto: str) -> str:
     """Que FORMA de regra este texto pede, quando o seletor não disse nada."""
     from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
 
@@ -1781,7 +1781,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     O estilo é um **VERBO**: resolve gatilho, vibração e luz de uma vez e dali quem manda são esses
     três, que ela reajusta nas abas sem nada "voltar atrás". O `<select>` mostra o estilo GUARDADO
     no perfil aberto (19/10/2026; antes ficava fora da pintura e mostrava o do perfil anterior), e
-    só quando outro perfil abre: `editor.estilo` está em `CAMPOS_QUE_ELA_DIGITA`, então pintar
+    só quando outro perfil abre: `editor.estilo` está em `CAMPOS_QUE_O_USUARIO_DIGITA`, então pintar
     nunca dispara este gesto nem reaplica a receita. O perfil guarda também a CHAVE
     (`Profile.estilo`, desde 09/10/2026, O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01), por onde o
     motor do tato acha a receita invisível que nenhuma aba mostra; o pacote de `perfis_web` já traz
@@ -1885,11 +1885,11 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     **O campo se corrige (04/09/2026, decisão [04] do PO).** Colar o endereço da loja funciona
     (`normalize_appid` lê o número e a regra grava o número), mas a TELA seguia mostrando
     `https://store.steampowered.com/app/1599660/…` sobre regra que já guardava `1599660`. A correção
-    só cabe aqui: `editor.jogo` está em `CAMPOS_QUE_ELA_DIGITA`, o tique NÃO o repinta no mesmo
-    perfil (senão apagaria a segunda tecla) e a resposta deste gesto é o único instante em que a
-    tela devolve a forma canônica, pintada na hora. O valor sai de `jogo_do_perfil`, a mesma
-    função com que `perfis_web._pacote_do_editor` enche o campo a cada tique; um `if` local
-    seria a segunda verdade.
+    só cabe aqui: `editor.jogo` está em `CAMPOS_QUE_O_USUARIO_DIGITA`, o tique NÃO o repinta no
+    mesmo perfil (senão apagaria a segunda tecla) e a resposta deste gesto é o único instante em que
+    a tela devolve a forma canônica, pintada na hora. O valor sai de `jogo_do_perfil`, a mesma
+    função com que `perfis_web._pacote_do_editor` enche o campo a cada tique; um `if` local seria a
+    segunda verdade.
     """
     from hefesto_dualsense4unix.profiles.simple_match import (
         from_simple_choice,
@@ -1921,7 +1921,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         raise RuntimeError(recado)
     chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
     if chave not in ("game", "steam_game", "janela"):
-        chave = _forma_do_que_ela_escolheu(texto)
+        chave = _forma_do_que_o_usuario_escolheu(texto)
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
     prof.nome_do_jogo = None
     _gravar(prof, ctx, p)
@@ -2079,8 +2079,8 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     **Nasce SEM a seção `mode` (11/09/2026).** Com o quadro «Modo» fora do editor ninguém respondia
     *"que modo tem um perfil criado aqui?"*; é `None`, **«Não mexer no modo»**, o perfil sem
-    opinião, como todo perfil nascia antes de 06/09; outro padrão faria o novo MEXER no modo da
-    máquina sem pedido, a cicatriz do `or "xbox"` do Salvar da estável (ESCOLHA-DELA-VENCE-01/E1).
+    opinião, como todo perfil nascia antes de 06/09; outro padrão faria o novo MEXER no modo sem
+    pedido, a cicatriz do `or "xbox"` do Salvar da estável (ESCOLHA-DO-USUARIO-VENCE-01/E1).
     **A exceção (20/10/2026):** o jogo da Steam cuja ponte o prontuário confirmou nasce com essa
     máscara (`_o_modo_que_o_jogo_pede`). Quem muda depois é a aba Jogar, e nada aqui zera o campo
     de perfil que já o tem: o gesto cria arquivo novo, não reescreve os dela.

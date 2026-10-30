@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.profiles.steam_app import e_janela_de_lancador
 from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import (
     CLASSE_DO_JOGO,
     JANELA_DO_JOGO,
-    _bancada,
+    _ensaio,
     _perfil,
     _switcher,
     perfis_isolados,  # noqa: F401
@@ -42,11 +42,11 @@ JANELAS_SEM_PERFIL = [
 def _a_escolha(monkeypatch: pytest.MonkeyPatch, nome: str) -> None:
     from hefesto_dualsense4unix.utils import session
 
-    monkeypatch.setattr(session, "a_escolha_dela", lambda **_k: nome)
+    monkeypatch.setattr(session, "a_escolha_do_usuario", lambda **_k: nome)
 
 
 def _no_jogo(nome_do_jogo: str = "sackboy") -> tuple[object, object, float]:
-    manager, store = _bancada([
+    manager, store = _ensaio([
         _perfil(nome_do_jogo, janela=CLASSE_DO_JOGO, prioridade=90),
         _perfil("lure", janela=OUTRO_JOGO, prioridade=80),
     ])
@@ -92,7 +92,7 @@ def test_o_perfil_que_outro_pos_e_o_jogo_confirma_tambem_fica(
     MORDIDA: tire o ``_o_ultimo_jogo_passa_a(candidate)`` do ``_tick`` e o «lure» entra.
     """
     _a_escolha(monkeypatch, "lure")
-    manager, store = _bancada([
+    manager, store = _ensaio([
         _perfil("sackboy", janela=CLASSE_DO_JOGO, prioridade=90),
         _perfil("lure", janela=OUTRO_JOGO, prioridade=80),
     ])
@@ -125,7 +125,7 @@ def test_outro_jogo_que_inicia_leva_o_perfil(monkeypatch: pytest.MonkeyPatch) ->
 
 
 @pytest.mark.usefixtures("perfis_isolados")
-def test_quando_ela_muda_a_escolha_volta_a_valer(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_quando_o_usuario_muda_a_escolha_volta_a_valer(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ela ativa outro perfil na mão: o «fica» é do jogo, não dela."""
     _a_escolha(monkeypatch, "lure")
     sw, store, agora = _no_jogo()
@@ -146,7 +146,7 @@ def test_o_perfil_de_jogo_com_a_classe_do_lancador_nao_entra_pela_janela_dele(
     MORDIDA: tire o filtro do ``e_janela_de_lancador`` em ``select_for_window_ex``.
     """
     _a_escolha(monkeypatch, "sackboy")
-    manager, _store = _bancada([
+    manager, _store = _ensaio([
         _perfil("sackboy", janela=CLASSE_DO_JOGO, prioridade=90),
         _perfil("lure", janela=OUTRO_JOGO, prioridade=80).model_copy(
             update={"match": MatchCriteria(window_class=[OUTRO_JOGO, "steam"])}
@@ -158,7 +158,7 @@ def test_o_perfil_de_jogo_com_a_classe_do_lancador_nao_entra_pela_janela_dele(
 
 @pytest.mark.usefixtures("perfis_isolados")
 @pytest.mark.parametrize("janela", JANELAS_DE_LANCADOR, ids=lambda j: j["wm_class"])
-def test_o_perfil_feito_para_a_janela_do_lancador_nao_entra_por_ela(
+def test_o_perfil_feito_para_a_janela_do_lancador_nao_entra_pelo_usuario(
     janela: dict[str, str],
 ) -> None:
     """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: nem a Navegação feita para a Steam entra pela Steam.
@@ -167,7 +167,7 @@ def test_o_perfil_feito_para_a_janela_do_lancador_nao_entra_por_ela(
 
     MORDIDA: devolva o ``candidates = [p for p in candidates if not perfil_e_de_jogo(p)]``.
     """
-    manager, _store = _bancada([
+    manager, _store = _ensaio([
         _perfil("navegacao", janela=janela["wm_class"], prioridade=50),
     ])
     assert manager.select_for_window(dict(janela)) is None
@@ -191,7 +191,7 @@ def test_jogo_fecha_steam_heroic_e_so_outro_jogo_leva_o_perfil(
     fica no do jogo. Só o outro jogo que abre leva o perfil.
     """
     _a_escolha(monkeypatch, "navegacao_0")
-    manager, store = _bancada([
+    manager, store = _ensaio([
         _perfil("sackboy", janela=CLASSE_DO_JOGO, prioridade=90),
         _perfil("lure", janela=OUTRO_JOGO, prioridade=80),
         *_a_navegacao_dos_lancadores(),
@@ -220,7 +220,7 @@ def test_jogo_fecha_steam_heroic_e_so_outro_jogo_leva_o_perfil(
 
 @pytest.mark.usefixtures("perfis_isolados")
 @pytest.mark.parametrize("janela", JANELAS_DE_LANCADOR, ids=lambda j: j["wm_class"])
-@pytest.mark.parametrize("quem", ["ela-a-mao", "o-boot"])
+@pytest.mark.parametrize("quem", ["o-usuario-a-mao", "o-boot"])
 def test_sem_jogo_antes_o_lancador_nao_ativa_nem_a_navegacao_nem_a_escolha(
     monkeypatch: pytest.MonkeyPatch, janela: dict[str, str], quem: str
 ) -> None:
@@ -232,13 +232,13 @@ def test_sem_jogo_antes_o_lancador_nao_ativa_nem_a_navegacao_nem_a_escolha(
     MORDIDA: tire o ``_o_lancador_nao_ativa`` do ``_tick`` e a escolha entra.
     """
     _a_escolha(monkeypatch, "lure")
-    manager, store = _bancada([
+    manager, store = _ensaio([
         _perfil("lure", janela=OUTRO_JOGO, prioridade=80),
         _perfil("leitura", prioridade=0),
         *_a_navegacao_dos_lancadores(),
     ])
     sw = _switcher(manager, store, jogo_vivo=lambda: None)
-    if quem == "ela-a-mao":
+    if quem == "o-usuario-a-mao":
         sw._tick({"wm_class": "firefox", "wm_name": ""}, 0.0)
     store.set_active_profile("leitura")
     with structlog.testing.capture_logs() as diario:
@@ -261,7 +261,7 @@ def test_o_lancador_nao_solta_o_modo_jogo_padrao(
     do lançador não o solta; a janela que não é de lançador continua soltando.
     """
     _a_escolha(monkeypatch, "")
-    manager, store = _bancada([*_a_navegacao_dos_lancadores()])
+    manager, store = _ensaio([*_a_navegacao_dos_lancadores()])
     soltou: list[str] = []
     ligou: list[str] = []
 
@@ -296,7 +296,7 @@ def test_o_jogo_em_cena_com_a_steam_na_frente_leva_o_perfil(
 ) -> None:
     """Outro jogo que inicia com a Steam na frente (a tela de carga) leva o perfil dele."""
     _a_escolha(monkeypatch, "")
-    manager, store = _bancada([
+    manager, store = _ensaio([
         _perfil("sackboy", janela=CLASSE_DO_JOGO, prioridade=90),
         _perfil("lure", janela=OUTRO_JOGO, prioridade=80),
         *_a_navegacao_dos_lancadores(),

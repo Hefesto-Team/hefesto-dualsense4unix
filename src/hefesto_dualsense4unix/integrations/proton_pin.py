@@ -683,7 +683,7 @@ def build_compat_tool_mapping(
     *,
     tool_name: str,
     appids: Sequence[str],
-    atropelar_escolha_dela: bool = False,
+    atropelar_escolha_do_usuario: bool = False,
     pinos_nossos: Sequence[str] = (),
     sem_entrada_nova: Collection[str] = (),
     excluir: Collection[str] = (),
@@ -697,7 +697,7 @@ def build_compat_tool_mapping(
     excluidos = {str(a) for a in excluir}
     nativos = {str(a) for a in sem_entrada_nova}
     targets = ["0", *[a for a in appids if a != "0" and a not in excluidos]]
-    if atropelar_escolha_dela:
+    if atropelar_escolha_do_usuario:
         ja_no_mapa = sorted(
             (
                 a
@@ -731,7 +731,7 @@ def build_compat_tool_mapping(
             if entry.name_value == tool_name:
                 continue
             nossa = entry.name_value in pinos_nossos
-            troca_pedida = atropelar_escolha_dela and e_da_familia_proton(
+            troca_pedida = atropelar_escolha_do_usuario and e_da_familia_proton(
                 entry.name_value
             )
             if appid != "0" and not troca_pedida and not nossa:
@@ -1031,7 +1031,7 @@ def _lock_dentro_da_trava(
             tool_name=tool_name,
             appids=appids,
             pinos_nossos=pinos_nossos,
-            atropelar_escolha_dela=todos,
+            atropelar_escolha_do_usuario=todos,
             sem_entrada_nova=sem_entrada_nova,
             excluir=excluir,
         )

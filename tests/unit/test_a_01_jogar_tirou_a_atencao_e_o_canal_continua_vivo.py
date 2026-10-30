@@ -50,7 +50,7 @@ def test_a_faixa_da_atencao_saiu_das_duas_paginas() -> None:
                 f"{onde_}: o endereço {campo!r} voltou à página")
 
 
-def test_o_botao_que_ela_mandou_deixar_ficou() -> None:
+def test_o_botao_que_o_usuario_mandou_deixar_ficou() -> None:
     """*"deixar só o reconectar controles"* — e "só" não quer dizer "nenhum"."""
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(

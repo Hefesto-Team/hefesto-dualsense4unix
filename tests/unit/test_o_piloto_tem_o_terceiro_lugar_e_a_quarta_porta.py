@@ -483,8 +483,8 @@ def test_sem_o_atributo_nenhum_recado_no_cartao(medido: dict) -> None:
         "a frase da recusa chegou à leitura da tela por outro caminho")
 
 
-def test_com_uma_faixa_nenhum_recado_pousa_nela(medido: dict) -> None:
-    """ERA `test_com_uma_faixa_o_recado_pousa_nela` — 13/09/2026."""
+def test_com_uma_faixa_nenhum_recado_pousa_no_usuario(medido: dict) -> None:
+    """ERA `test_com_uma_faixa_o_recado_pousa_no_usuario` — 13/09/2026."""
     assert medido["faixas-1"] == "1", (
         f"a régua não conseguiu declarar UMA faixa: {medido['faixas-1']!r}")
     assert _r(medido["com-uma-faixa"]) == [], medido["com-uma-faixa"]

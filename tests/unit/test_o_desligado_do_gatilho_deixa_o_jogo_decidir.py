@@ -65,7 +65,7 @@ _SELECT = re.compile(r'<select[^>]*class="g2-imersao"[^>]*>(?P<dentro>.*?)</sele
 _OPCAO = re.compile(r"<option(?P<attrs>[^>]*)>(?P<texto>[^<]*)</option>")
 
 
-def _listas_da_bancada() -> list[str]:
+def _listas_do_ensaio() -> list[str]:
     from hefesto_dualsense4unix.interface import onde
 
     doc = onde.pagina("03-gatilhos.html").read_text(encoding="utf-8")
@@ -85,7 +85,7 @@ def _visiveis(dentro: str) -> list[str]:
             if "hidden" not in m.group("attrs")]
 
 
-@pytest.mark.parametrize("fonte", [_listas_da_bancada, _listas_do_pacote])
+@pytest.mark.parametrize("fonte", [_listas_do_ensaio, _listas_do_pacote])
 def test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado(fonte) -> None:
     listas = fonte()
     assert listas, "nenhuma lista de modo encontrada"
@@ -97,7 +97,7 @@ def test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado(fonte) -> None:
             "o «Desligado» voltou à lista: o gatilho tem duas palavras para a mesma coisa")
 
 
-@pytest.mark.parametrize("fonte", [_listas_da_bancada, _listas_do_pacote])
+@pytest.mark.parametrize("fonte", [_listas_do_ensaio, _listas_do_pacote])
 def test_o_travessao_nao_e_uma_linha_da_lista(fonte) -> None:
     """O `—` fica no `<select>` (o piloto o escreve no lugar vazio), mas escondido."""
     for dentro in fonte():
@@ -121,7 +121,7 @@ def test_o_gesto_e_o_rotulo_falam_a_mesma_coisa() -> None:
 def _vpad_ligado_ao_fisico(
     fake: _FakeFd, campos_do_perfil: dict[str, Any]
 ) -> tuple[bp.PyDualSenseController, Any, UhidDualSense, _Clock]:
-    ctl, _no, handle = _controle(campos_dela=campos_do_perfil)
+    ctl, _no, handle = _controle(campos_do_usuario=campos_do_perfil)
     clock = _Clock()
 
     def _no_fisico(lado: str, bloco: bytes) -> None:

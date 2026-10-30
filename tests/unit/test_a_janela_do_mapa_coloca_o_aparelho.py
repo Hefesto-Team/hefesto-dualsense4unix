@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
 )
-from tests.unit.test_mapa_o_ensaio_de_mentira import mapa_dela
+from tests.unit.test_mapa_o_ensaio_de_mentira import mapa_do_usuario
 
 
 class _Hospedeiro:
@@ -32,7 +32,7 @@ class _Hospedeiro:
 
 def test_a_segunda_extensao_da_mesma_entrada_ganha_outra_letra() -> None:
     """Duas extensões na mesma entrada são ``12a`` e ``12b``, nunca a mesma."""
-    logica = LogicaDoMapa(mapa_dela())
+    logica = LogicaDoMapa(mapa_do_usuario())
 
     assert logica.acrescentar_extensao("12") == "12a"
     assert logica.acrescentar_extensao("12") == "12b"

@@ -26,9 +26,9 @@ from hefesto_dualsense4unix.utils.maquina import (
 SPRINT = "O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01"
 SPRINT_DOS_940 = "O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01"
 
-NA_BANCADA = any(SPRINT in e.porque or SPRINT_DOS_940 in e.porque
-                 for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
-QUAL = "bancada" if NA_BANCADA else "publicada"
+NO_ENSAIO = any(SPRINT in e.porque or SPRINT_DOS_940 in e.porque
+                 for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO)
+QUAL = "bancada" if NO_ENSAIO else "publicada"
 
 VISTAS = {"foto-3": (1920, 887), "dela": (1918, 840), "ladrilhada": (1212, 809),
           "estreita": (860, 809),
@@ -211,7 +211,7 @@ def _no_webkit(pagina: str, tamanho: tuple[int, int], passos: list[str]) -> list
             GLib.timeout_add(50, seguinte)
 
     view.connect("load-changed", carregou)
-    view.load_uri(onde.pagina(pagina, publicado=not NA_BANCADA).as_uri())
+    view.load_uri(onde.pagina(pagina, publicado=not NO_ENSAIO).as_uri())
     guarda = GLib.timeout_add(40000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -359,7 +359,7 @@ def test_a_razao_de_cada_movimento_mora_na_dica_do_titulo() -> None:
     assert 0 < len(dica["razao"].split()) <= 12 and "<" not in dica["razao"], dica
 
 
-def test_o_adicionar_e_uma_linha_com_a_pergunta_dela() -> None:
+def test_o_adicionar_e_uma_linha_com_a_pergunta_do_usuario() -> None:
     mao = _medido("dela")["adicionar"]
     assert mao["pergunta"] and mao["pergunta"].lower() == "o que vai conectar?", mao
     topo_p, topo_e, fim_p, fim_e = mao["pergunta_e_escolhas"]

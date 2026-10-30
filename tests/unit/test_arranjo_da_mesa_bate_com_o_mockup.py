@@ -293,7 +293,7 @@ def _mesa_com_nomes(**kw: Any) -> motor.Mesa:
 
 
 @pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
-def test_o_nome_que_ela_deu_entra_em_toda_frase_da_receita(variante: str) -> None:
+def test_o_nome_que_o_usuario_deu_entra_em_toda_frase_da_receita(variante: str) -> None:
     """A página diz a entrada pelo dono: com nome, «na entrada Atrás» e o título «… → Alto»; sem,
     «na Entrada 9». O ouro é a PÁGINA VIVA com os nomes dados, não o ouro sem nome remendado.
 
@@ -305,14 +305,14 @@ def test_o_nome_que_ela_deu_entra_em_toda_frase_da_receita(variante: str) -> Non
 
 @pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
 @pytest.mark.parametrize("na_mao", ["bt", "teclado", "mouse"])
-def test_o_nome_que_ela_deu_entra_no_porque_do_julgamento(n: str, na_mao: str) -> None:
+def test_o_nome_que_o_usuario_deu_entra_no_porque_do_julgamento(n: str, na_mao: str) -> None:
     mesa = _mesa_com_nomes()
     entrada = motor.por_num(mesa.faces, n)
     assert entrada is not None
     assert _veredito(motor.julgar(entrada, na_mao, mesa)) == ouro(f"nomes/julgar/{n}/{na_mao}")
 
 
-def test_o_nome_que_ela_deu_entra_no_rotulo_do_adaptador() -> None:
+def test_o_nome_que_o_usuario_deu_entra_no_rotulo_do_adaptador() -> None:
     plano = _controles(motor.plano_dos_controles(
         mock.CONTROLES[:4], motor.adaptadores_da_mesa(_mesa_com_nomes())))
     assert plano == ouro("nomes/controles/padrao")

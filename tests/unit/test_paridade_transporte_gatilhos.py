@@ -56,15 +56,15 @@ def _aplicar_efeito(handle: Any, lado: str, modo: int, forcas: tuple[int, ...]) 
 @pytest.mark.parametrize("lado", ["right", "left"])
 @pytest.mark.parametrize(("modo", "forcas"), EFEITOS)
 def test_modo_e_forcas_saem_nos_offsets_certos_nos_dois_transportes(
-    ds5_de_bancada: Any,
+    ds5_de_ensaio: Any,
     transporte: EnvelopeDeTransporte,
     lado: str,
     modo: int,
     forcas: tuple[int, ...],
 ) -> None:
     """Modo, as seis forças contíguas e a sétima avulsa — no cabo E no rádio."""
-    _aplicar_efeito(ds5_de_bancada, lado, modo, forcas)
-    report = ds5_de_bancada.prepareReport()
+    _aplicar_efeito(ds5_de_ensaio, lado, modo, forcas)
+    report = ds5_de_ensaio.prepareReport()
     assert transporte.problemas_do_envelope(report) == []
     common = transporte.extrair_common(report)
 
@@ -83,23 +83,23 @@ def test_modo_e_forcas_saem_nos_offsets_certos_nos_dois_transportes(
 
 
 def test_os_dois_lados_convivem_sem_se_pisar(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Direito e esquerdo ao mesmo tempo, valores distintos, nos dois transportes."""
-    _aplicar_efeito(ds5_de_bancada, "right", 1, (0xAA, 0, 0, 0, 0, 0, 0x11))
-    _aplicar_efeito(ds5_de_bancada, "left", 2, (0xBB, 0, 0, 0, 0, 0, 0x22))
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    _aplicar_efeito(ds5_de_ensaio, "right", 1, (0xAA, 0, 0, 0, 0, 0, 0x11))
+    _aplicar_efeito(ds5_de_ensaio, "left", 2, (0xBB, 0, 0, 0, 0, 0, 0x22))
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
 
     assert (common[10], common[11], common[19]) == (1, 0xAA, 0x11)
     assert (common[21], common[22], common[30]) == (2, 0xBB, 0x22)
 
 
 def test_o_flag0_autoriza_os_dois_gatilhos_nos_dois_transportes(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
     """Bloco escrito sem bit de validação é bloco que o firmware ignora."""
-    _aplicar_efeito(ds5_de_bancada, "right", 1, (0xFF, 0, 0, 0, 0, 0, 0))
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    _aplicar_efeito(ds5_de_ensaio, "right", 1, (0xFF, 0, 0, 0, 0, 0, 0))
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     assert common[0] & rep.VALID_FLAG0_RIGHT_TRIGGER_FFB, (
         f"{transporte.nome}: o gatilho direito saiu sem o bit 0x04 do flag0"
     )
@@ -110,14 +110,14 @@ def test_o_flag0_autoriza_os_dois_gatilhos_nos_dois_transportes(
 
 @pytest.mark.parametrize("lado", ["right", "left"])
 def test_o_bloco_cru_do_jogo_sai_verbatim_nos_dois_transportes(
-    ds5_de_bancada: Any, transporte: EnvelopeDeTransporte, lado: str
+    ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte, lado: str
 ) -> None:
     """REPLICA-03: os 11 bytes do jogo entram inteiros, sem passar pela DSTrigger."""
     bloco = bytes(range(0x81, 0x81 + BLOCO_CRU_LEN))
     atributo = "_raw_trigger_right" if lado == "right" else "_raw_trigger_left"
-    setattr(ds5_de_bancada, atributo, bloco)
+    setattr(ds5_de_ensaio, atributo, bloco)
 
-    common = transporte.extrair_common(ds5_de_bancada.prepareReport())
+    common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
     inicio = 10 if lado == "right" else 21
     assert bytes(common[inicio : inicio + BLOCO_CRU_LEN]) == bloco, (
         f"{transporte.nome}/{lado}: o bloco cru do jogo não saiu verbatim"
@@ -125,12 +125,12 @@ def test_o_bloco_cru_do_jogo_sai_verbatim_nos_dois_transportes(
 
 
 def test_o_bloco_de_gatilho_e_identico_nos_dois_e_so_o_envelope_muda(
-    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_bancada: Any
+    transportes: tuple[EnvelopeDeTransporte, ...], fabrica_de_ensaio: Any
 ) -> None:
     """A morte que reprovava 1 teste em 8589 passa a reprovar aqui, com lado."""
     blocos: dict[str, bytes] = {}
     for envelope in transportes:
-        handle = fabrica_de_bancada(envelope)
+        handle = fabrica_de_ensaio(envelope)
         _aplicar_efeito(handle, "right", 5, (1, 2, 3, 4, 5, 6, 7))
         _aplicar_efeito(handle, "left", 38, (9, 8, 7, 6, 5, 4, 3))
         common = envelope.extrair_common(handle.prepareReport())

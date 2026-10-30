@@ -280,7 +280,7 @@ def test_o_exame_vazio_diz_qual_dos_dois_vazios_e(a09):
     assert 'class="saude"' in html_, html_
 
 
-def test_o_endereco_do_exame_existe_na_bancada(a09, ctx):
+def test_o_endereco_do_exame_existe_no_ensaio(a09, ctx):
     """Os dois endereços do exame existem no desenho de HOJE, com o alvo `html`."""
     import onde
 

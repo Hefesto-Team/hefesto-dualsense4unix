@@ -104,9 +104,9 @@ def padrao_que_vale(escolha: object, estilo: object) -> str | None:
     """
     if escolha == SEM_EFEITO:
         return None
-    dela = escolha_valida(escolha)
-    if dela is not None:
-        return dela
+    escolhido = escolha_valida(escolha)
+    if escolhido is not None:
+        return escolhido
     if not isinstance(estilo, str):
         return None
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo

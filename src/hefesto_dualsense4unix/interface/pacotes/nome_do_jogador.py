@@ -45,7 +45,7 @@ def e_nome_de_fabrica(nome: str) -> bool:
     return any(nome.startswith(f) for f in NOMES_DE_FABRICA)
 
 
-def e_nome_dela(nome: str) -> bool:
+def e_nome_do_usuario(nome: str) -> bool:
     """Um ``Alias`` que ela pode ter dado: nem o de fábrica, nem o endereço."""
     return bool(nome) and not e_nome_de_fabrica(nome) and not ALIAS_QUE_E_ENDERECO.fullmatch(nome)
 
@@ -59,7 +59,7 @@ def nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
     for a in sorted(aparelhos_bz, key=lambda a: getattr(a, "conectado", None) is not True):
         nome = str(getattr(a, "nome", "") or "").strip()
         endereco = mac(getattr(a, "endereco", ""))
-        if endereco and e_nome_dela(nome) and endereco not in nomes:
+        if endereco and e_nome_do_usuario(nome) and endereco not in nomes:
             nomes[endereco] = nome_dado(nome) if em_fundo.e_controle_do_bluez(a) else nome
     return nomes
 

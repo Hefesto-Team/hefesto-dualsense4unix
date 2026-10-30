@@ -103,7 +103,7 @@ class _Medidor:
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
     monkeypatch.setattr(mod, "ESPERA_DO_REPORT_S", 0.001)

@@ -71,7 +71,7 @@ class ClienteDeMentira:
 
 
 @pytest.fixture()
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Any:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Any:
     """Um `Daemon` cru, o cliente do broker desviado, e a lista de atos."""
     from hefesto_dualsense4unix.daemon import lifecycle as mod
     import hefesto_dualsense4unix.integrations.hidraw_broker_client as cli
@@ -88,10 +88,10 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 class TestSobreviveAReiniciar:
     def test_o_modo_lido_do_disco_expoe_sem_ninguem_chamar_set_native_mode(
-        self, bancada: Any
+        self, ensaio: Any
     ) -> None:
         """A MORDIDA do bloqueante 1, e ela reproduz o boot LITERALMENTE."""
-        daemon, atos, _mod = bancada
+        daemon, atos, _mod = ensaio
         daemon.controller = ControllerDeMentira(
             {"aabbcc000001": "/dev/hidraw3", "aabbcc000002": "/dev/hidraw7"}
         )
@@ -101,9 +101,9 @@ class TestSobreviveAReiniciar:
 
         assert atos == [("expor", "/dev/hidraw3"), ("expor", "/dev/hidraw7")]
 
-    def test_fora_do_modo_nativo_o_tique_nao_pede_nada(self, bancada: Any) -> None:
+    def test_fora_do_modo_nativo_o_tique_nao_pede_nada(self, ensaio: Any) -> None:
         """O laço roda a cada 2 s a vida inteira: fora do modo, custa nada."""
-        daemon, atos, _mod = bancada
+        daemon, atos, _mod = ensaio
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = False
 
@@ -129,10 +129,10 @@ class TestSobreviveAReiniciar:
 
 class TestSobreviveAReplug:
     def test_o_no_que_saiu_e_solto_e_o_que_entrou_e_exposto(
-        self, bancada: Any
+        self, ensaio: Any
     ) -> None:
         """Replug com NÚMERO NOVO: a lease velha ficava pendurada num nó morto."""
-        daemon, atos, _mod = bancada
+        daemon, atos, _mod = ensaio
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
         daemon._reconciliar_exposicao_do_modo_nativo()
@@ -144,10 +144,10 @@ class TestSobreviveAReplug:
         assert atos == [("desexpor", "/dev/hidraw3"), ("expor", "/dev/hidraw9")]
 
     def test_o_no_que_renasceu_fechado_com_o_mesmo_numero_e_reafirmado(
-        self, bancada: Any, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A METADE QUE QUASE ESCAPOU, e é a que nenhuma contabilidade pega."""
-        daemon, atos, mod = bancada
+        daemon, atos, mod = ensaio
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
         daemon._reconciliar_exposicao_do_modo_nativo()
@@ -160,9 +160,9 @@ class TestSobreviveAReplug:
 
         assert atos == [("expor", "/dev/hidraw3")]
 
-    def test_o_no_que_continua_aberto_nao_vira_pedido(self, bancada: Any) -> None:
+    def test_o_no_que_continua_aberto_nao_vira_pedido(self, ensaio: Any) -> None:
         """O irmão que mede o contrário — sem ele a régua acima daria verde sempre."""
-        daemon, atos, _mod = bancada
+        daemon, atos, _mod = ensaio
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
         daemon._reconciliar_exposicao_do_modo_nativo()
@@ -172,9 +172,9 @@ class TestSobreviveAReplug:
 
         assert atos == []
 
-    def test_o_controle_que_sai_da_mesa_solta_a_lease(self, bancada: Any) -> None:
+    def test_o_controle_que_sai_da_mesa_solta_a_lease(self, ensaio: Any) -> None:
         """Com zero controles o alvo é vazio, e a lease não pode sobrar."""
-        daemon, atos, _mod = bancada
+        daemon, atos, _mod = ensaio
         daemon.controller = ControllerDeMentira({"aabbcc000001": "/dev/hidraw3"})
         daemon._native_mode = True
         daemon._reconciliar_exposicao_do_modo_nativo()
@@ -256,7 +256,7 @@ class TestOsPacotesNaoFechamSemPorta:
         assert len(fechadas) == 4, fechadas
         assert all('MODE:="0600"' in linha for linha in fechadas)
 
-    def test_a_transformacao_recusa_um_asset_que_ela_nao_alcanca(
+    def test_a_transformacao_recusa_um_asset_que_o_usuario_nao_alcanca(
         self, tmp_path: Path
     ) -> None:
         """Guarda 2: `sed` que casa ZERO vezes passaria calado pela guarda 1."""
@@ -349,7 +349,7 @@ class TestOCapturadorEntraPelaPorta:
         assert "os.open" not in chamadas
         assert "abrir_hidraw" in nomes
 
-    def test_ela_usa_o_fd_que_a_porta_devolveu(
+    def test_o_usuario_usa_o_fd_que_a_porta_devolveu(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Prova de COMPORTAMENTO, não de texto: o fd vem do `NoAberto`."""

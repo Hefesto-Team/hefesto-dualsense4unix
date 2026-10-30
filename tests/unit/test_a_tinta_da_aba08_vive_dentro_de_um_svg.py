@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 
 FOLHA = re.compile(r'<style id="([^"]*cores-do-dualsense-folha)">(.*?)</style>', re.S)
 
@@ -47,7 +47,7 @@ class _OndeCadaIdNasceu(HTMLParser):
 
 
 def _html() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+    return ENSAIO.read_text(encoding="utf-8")
 
 
 def _folha() -> str:
@@ -90,7 +90,7 @@ def test_toda_tinta_citada_pela_folha_nasce_dentro_de_um_svg() -> None:
         f"`<defs id=\"cores-do-dualsense\">` em `aba08.TABELA_DAS_CORES`.")
 
 
-def test_nenhum_modelo_do_mapa_dela_pede_tinta_que_a_pagina_nao_resolve() -> None:
+def test_nenhum_modelo_do_mapa_do_usuario_pede_tinta_que_a_pagina_nao_resolve() -> None:
     """A conta que ela lê: QUAIS dos 28 a página sabe pintar de verdade."""
     folha = _folha()
     nasceram = _onde_nasceram()

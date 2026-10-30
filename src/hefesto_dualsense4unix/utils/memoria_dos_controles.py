@@ -87,7 +87,7 @@ VARIAVEIS_DO_PRODUTO: tuple[str, ...] = (
     "PROTON_USE_XALIA",
 )
 
-_VARIAVEIS_QUE_PODEM_SER_DELA = frozenset(
+_VARIAVEIS_QUE_PODEM_SER_DO_USUARIO = frozenset(
     {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "PROTON_USE_XALIA"}
 )
 
@@ -1863,14 +1863,14 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
     for heroic in _achar_heroic(raizes):
         with contextlib.suppress(OSError):
             chaves = variaveis_do_produto_no_heroic(heroic.read_text(encoding="utf-8"))
-            certas = [k for k in chaves if k not in _VARIAVEIS_QUE_PODEM_SER_DELA]
+            certas = [k for k in chaves if k not in _VARIAVEIS_QUE_PODEM_SER_DO_USUARIO]
             if certas:
                 rastros.append(Rastro(str(heroic), "o ambiente do Hefesto em todo jogo do "
                                       "Heroic: " + ", ".join(certas)))
     for override in _achar_overrides(raizes):
         with contextlib.suppress(OSError):
             chaves = variaveis_do_produto_no_override(override.read_text(encoding="utf-8"))
-            certas = [k for k in chaves if k not in _VARIAVEIS_QUE_PODEM_SER_DELA]
+            certas = [k for k in chaves if k not in _VARIAVEIS_QUE_PODEM_SER_DO_USUARIO]
             if certas:
                 rastros.append(Rastro(str(override), "o ambiente do Hefesto no Flatpak "
                                       "deste lançador: " + ", ".join(certas)))

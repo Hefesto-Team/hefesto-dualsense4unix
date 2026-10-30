@@ -151,7 +151,7 @@ def _mesa(
     return mesa
 
 
-def test_a_imersao_com_momentos_liga_o_motor_e_o_perfil_sem_ela_nao() -> None:
+def test_a_imersao_com_momentos_liga_o_motor_e_o_perfil_sem_o_usuario_nao() -> None:
     com = tv.receita_do_perfil(_perfil(triggers={"right": PINO}))
     assert com.momentos_da_imersao and com.ligada
     sem = tv.receita_do_perfil(_perfil())

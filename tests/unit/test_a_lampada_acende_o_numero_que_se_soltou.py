@@ -186,58 +186,58 @@ def mesa_da_luz(
     criadas: list[MesaDaLuz] = []
 
     def _montar(transporte: str = "bt", *, jogo: bool = False, quantos: int = 4) -> MesaDaLuz:
-        bancada = MesaDaLuz(monkeypatch, tmp_path, jogo=jogo)
-        criadas.append(bancada)
+        ensaio = MesaDaLuz(monkeypatch, tmp_path, jogo=jogo)
+        criadas.append(ensaio)
         for uniq, via in zip(UNIQS[:quantos], TRANSPORTES[transporte][:quantos], strict=True):
-            bancada.mesa.sentar(uniq, transporte=via)
+            ensaio.mesa.sentar(uniq, transporte=via)
         for _ in range(3):
-            bancada.tique()
-        assert bancada.reg.liberar_as_lampadas() is True
-        bancada.tique()
+            ensaio.tique()
+        assert ensaio.reg.liberar_as_lampadas() is True
+        ensaio.tique()
         esperado = {UNIQS[n]: n + 1 for n in range(quantos)}
-        assert bancada.a_tela() == esperado
-        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is False
-        return bancada
+        assert ensaio.a_tela() == esperado
+        assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is False
+        return ensaio
 
     yield _montar
-    for bancada in criadas:
-        bancada.fechar()
+    for ensaio in criadas:
+        ensaio.fechar()
 
 
-def _a_volta_e_o_disparo(bancada: MesaDaLuz) -> None:
+def _a_volta_e_o_disparo(ensaio: MesaDaLuz) -> None:
     """A volta do laço confere a numeração, e o gatilho dispara se ela armou."""
-    if cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon):
-        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-        bancada.disparar()
+    if cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon):
+        ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+        ensaio.disparar()
 
 
-def _sai_e_o_prazo_passa(bancada: MesaDaLuz, sai: str) -> dict[str, int]:
+def _sai_e_o_prazo_passa(ensaio: MesaDaLuz, sai: str) -> dict[str, int]:
     """``sai`` levanta, o prazo passa nos tiques, e a fatia arma. Devolve a conta."""
-    ordem = [u for u in UNIQS if u in bancada.mesa.nodes]
-    bancada.mesa.levantar(sai)
-    bancada.tique()
-    _a_volta_e_o_disparo(bancada)
-    assert bancada.reg.numeros_da_mesa() == {
+    ordem = [u for u in UNIQS if u in ensaio.mesa.nodes]
+    ensaio.mesa.levantar(sai)
+    ensaio.tique()
+    _a_volta_e_o_disparo(ensaio)
+    assert ensaio.reg.numeros_da_mesa() == {
         u: n + 1 for n, u in enumerate(ordem) if u != sai
     }, "dentro do prazo ninguém troca de número (D-2409)"
     for _ in range(math.ceil(PRAZO / TIQUE) + 1):
-        bancada.tique()
-    if bancada.daemon.display_authority == "game":
-        assert bancada.reg.numeros_da_mesa() == {
+        ensaio.tique()
+    if ensaio.daemon.display_authority == "game":
+        assert ensaio.reg.numeros_da_mesa() == {
             u: n + 1 for n, u in enumerate(ordem) if u != sai
         }, "com o jogo aberto ninguém renumera por quem saiu (D-3009)"
-        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is False
-        bancada.daemon.display_authority = "daemon"
+        assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is False
+        ensaio.daemon.display_authority = "daemon"
         for _ in range(math.ceil(PRAZO / TIQUE) + 1):
-            bancada.tique()
+            ensaio.tique()
     conta = {u: n + 1 for n, u in enumerate(u for u in ordem if u != sai)}
     andou = conta != {u: n + 1 for n, u in enumerate(ordem) if u != sai}
-    assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is andou, (
+    assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is andou, (
         "o prazo venceu e a fatia não armou" if andou
         else "quem saiu era o último: ninguém troca de número, e nada arma"
     )
-    bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-    bancada.limpar()
+    ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+    ensaio.limpar()
     return conta if andou else {}
 
 
@@ -253,11 +253,11 @@ class TestOPrimeiroReportDizONumeroNovo:
     def test_o_disparo_acende_a_conta(
         self, mesa_da_luz: Callable[..., MesaDaLuz], sai: str, transporte: str, jogo: bool
     ) -> None:
-        bancada = mesa_da_luz(transporte, jogo=jogo)
-        esperado = _sai_e_o_prazo_passa(bancada, sai)
-        assert bancada.disparar() == (1 if esperado else 0), "o gatilho e a conta discordam"
+        ensaio = mesa_da_luz(transporte, jogo=jogo)
+        esperado = _sai_e_o_prazo_passa(ensaio, sai)
+        assert ensaio.disparar() == (1 if esperado else 0), "o gatilho e a conta discordam"
         for uniq, numero in esperado.items():
-            acendeu = bancada.o_que_acendeu(uniq)
+            acendeu = ensaio.o_que_acendeu(uniq)
             assert acendeu, f"{uniq} não recebeu escrita no disparo"
             assert acendeu[0] == numero, (
                 f"{uniq}: o disparo acendeu {acendeu} e a conta diz {numero} "
@@ -271,13 +271,13 @@ class TestUmaEscritaPorControle:
     def test_um_report_no_radio_um_set_players_no_cabo(
         self, mesa_da_luz: Callable[..., MesaDaLuz], sai: str, transporte: str
     ) -> None:
-        bancada = mesa_da_luz(transporte)
-        esperado = _sai_e_o_prazo_passa(bancada, sai)
-        bancada.disparar()
+        ensaio = mesa_da_luz(transporte)
+        esperado = _sai_e_o_prazo_passa(ensaio, sai)
+        ensaio.disparar()
         for uniq in esperado:
-            assert len(bancada.o_que_acendeu(uniq)) == 1, (
-                f"{uniq} ({bancada.mesa.transporte_de(uniq)}): "
-                f"{bancada.o_que_acendeu(uniq)} — duas fatias do rádio por nada"
+            assert len(ensaio.o_que_acendeu(uniq)) == 1, (
+                f"{uniq} ({ensaio.mesa.transporte_de(uniq)}): "
+                f"{ensaio.o_que_acendeu(uniq)} — duas fatias do rádio por nada"
             )
 
 
@@ -285,24 +285,24 @@ class TestOFioDeCadaUm:
     def test_o_preparo_no_laco_a_escrita_no_executor(
         self, mesa_da_luz: Callable[..., MesaDaLuz], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        bancada = mesa_da_luz("bt")
-        _sai_e_o_prazo_passa(bancada, P2)
+        ensaio = mesa_da_luz("bt")
+        _sai_e_o_prazo_passa(ensaio, P2)
         publicacoes: list[int] = []
-        publicar = bancada.inst.set_coop_outputs
+        publicar = ensaio.inst.set_coop_outputs
 
         def espiao(*a: Any, **kw: Any) -> Any:
             publicacoes.append(threading.get_ident())
             return publicar(*a, **kw)
 
-        monkeypatch.setattr(bancada.inst, "set_coop_outputs", espiao)
+        monkeypatch.setattr(ensaio.inst, "set_coop_outputs", espiao)
         fio_do_laco = threading.get_ident()
-        bancada.disparar()
+        ensaio.disparar()
         assert publicacoes, "o disparo não republicou a camada do co-op"
         assert set(publicacoes) == {fio_do_laco}, (
             "a camada do co-op foi publicada fora do fio do laço"
         )
-        escritas = {fio for h in bancada.handles.values() for fio, _r in h.reports}
-        assert escritas and escritas <= bancada.fio_do_executor, (
+        escritas = {fio for h in ensaio.handles.values() for fio, _r in h.reports}
+        assert escritas and escritas <= ensaio.fio_do_executor, (
             "a escrita do gatilho saiu do executor"
         )
 
@@ -312,18 +312,18 @@ class TestORenumerarEAVoltaTardia:
     def test_o_renumerar_agora(
         self, mesa_da_luz: Callable[..., MesaDaLuz], transporte: str
     ) -> None:
-        bancada = mesa_da_luz(transporte)
-        bancada.mesa.levantar(P2)
-        bancada.tique()
-        _a_volta_e_o_disparo(bancada)
-        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
-        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is True
-        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-        bancada.limpar()
-        bancada.disparar()
+        ensaio = mesa_da_luz(transporte)
+        ensaio.mesa.levantar(P2)
+        ensaio.tique()
+        _a_volta_e_o_disparo(ensaio)
+        ensaio.reg.soltar_os_lugares_guardados(motivo="renumerar")
+        assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is True
+        ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+        ensaio.limpar()
+        ensaio.disparar()
         for uniq, numero in {P1: 1, P3: 2, P4: 3}.items():
-            assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
-                f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
+            assert ensaio.o_que_acendeu(uniq)[:1] == [numero], (
+                f"{uniq}: {ensaio.o_que_acendeu(uniq)}, a conta diz {numero}"
             )
 
     def test_o_p1_que_volta_depois_do_prazo(
@@ -335,30 +335,30 @@ class TestORenumerarEAVoltaTardia:
         na autoridade o prazo não vence; o que solta o lugar de quem saiu, no
         meio da partida, é o gesto do usuário.
         """
-        bancada = mesa_da_luz("mista", jogo=True)
-        via = bancada.mesa.transporte_de(P1)
-        bancada.mesa.levantar(P1)
+        ensaio = mesa_da_luz("mista", jogo=True)
+        via = ensaio.mesa.transporte_de(P1)
+        ensaio.mesa.levantar(P1)
         for _ in range(math.ceil(PRAZO / TIQUE) + 1):
-            bancada.tique()
-        assert bancada.reg.numeros_da_mesa() == {P2: 2, P3: 3, P4: 4}, (
+            ensaio.tique()
+        assert ensaio.reg.numeros_da_mesa() == {P2: 2, P3: 3, P4: 4}, (
             "com o jogo aberto o prazo do P1 venceu (D-3009)"
         )
-        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
-        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is True
-        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-        bancada.disparar()
-        bancada.mesa.sentar(P1, transporte=via)
+        ensaio.reg.soltar_os_lugares_guardados(motivo="renumerar")
+        assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is True
+        ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+        ensaio.disparar()
+        ensaio.mesa.sentar(P1, transporte=via)
         for _ in range(3):
-            bancada.tique()
-        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is True
-        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-        bancada.limpar()
-        bancada.disparar()
+            ensaio.tique()
+        assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is True
+        ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+        ensaio.limpar()
+        ensaio.disparar()
         conta = {P1: 1, P2: 2, P3: 3, P4: 4}
-        assert bancada.a_tela() == conta, f"a conta e a tela discordam: {bancada.a_tela()}"
+        assert ensaio.a_tela() == conta, f"a conta e a tela discordam: {ensaio.a_tela()}"
         for uniq, numero in conta.items():
-            assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
-                f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
+            assert ensaio.o_que_acendeu(uniq)[:1] == [numero], (
+                f"{uniq}: {ensaio.o_que_acendeu(uniq)}, a conta diz {numero}"
             )
 
 
@@ -369,10 +369,10 @@ class TestODiarioDizONumero:
     def test_o_gatilho_diz_o_numero_que_escreveu(
         self, mesa_da_luz: Callable[..., MesaDaLuz]
     ) -> None:
-        bancada = mesa_da_luz("bt")
-        esperado = _sai_e_o_prazo_passa(bancada, P2)
+        ensaio = mesa_da_luz("bt")
+        esperado = _sai_e_o_prazo_passa(ensaio, P2)
         with structlog.testing.capture_logs() as registros:
-            bancada.disparar()
+            ensaio.disparar()
         escritos = [r for r in registros if r["event"] == "gatilho_da_cor_escrito"]
         assert sorted(r["numero"] for r in escritos) == sorted(esperado.values()), escritos
 
@@ -401,54 +401,54 @@ class TestSemCoOp:
     def test_um_controle_so_acende_pela_automatica(
         self, mesa_da_luz: Callable[..., MesaDaLuz], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        bancada = mesa_da_luz("bt", quantos=1)
+        ensaio = mesa_da_luz("bt", quantos=1)
         publicacoes: list[Any] = []
-        publicar = bancada.inst.set_coop_outputs
+        publicar = ensaio.inst.set_coop_outputs
         monkeypatch.setattr(
-            bancada.inst,
+            ensaio.inst,
             "set_coop_outputs",
             lambda *a, **kw: publicacoes.append((a, kw)) or publicar(*a, **kw),
         )
-        bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
-        cx.armar_gatilho_da_cor_por_evento(bancada.daemon, "teste")
-        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-        bancada.limpar()
-        bancada.disparar()
+        ensaio.reg.soltar_os_lugares_guardados(motivo="renumerar")
+        cx.armar_gatilho_da_cor_por_evento(ensaio.daemon, "teste")
+        ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+        ensaio.limpar()
+        ensaio.disparar()
         assert publicacoes == [], f"o preparo publicou camada sem secundário: {publicacoes}"
-        assert bancada.inst._desired_coop_by_uniq == {}
-        assert bancada.o_que_acendeu(P1) == [1]
+        assert ensaio.inst._desired_coop_by_uniq == {}
+        assert ensaio.o_que_acendeu(P1) == [1]
 
 
 class TestQuemChegaSemLiberacao:
     def test_a_estreia_acende_sem_esperar_o_gatilho(
         self, mesa_da_luz: Callable[..., MesaDaLuz]
     ) -> None:
-        bancada = mesa_da_luz("bt", quantos=3)
-        bancada.limpar()
-        bancada.mesa.sentar(P4, transporte="bt")
-        bancada.tique()
-        assert bancada.o_que_acendeu(P4)[-1:] == [4], (
-            f"o quarto estreou sem acender o 4: {bancada.o_que_acendeu(P4)}"
+        ensaio = mesa_da_luz("bt", quantos=3)
+        ensaio.limpar()
+        ensaio.mesa.sentar(P4, transporte="bt")
+        ensaio.tique()
+        assert ensaio.o_que_acendeu(P4)[-1:] == [4], (
+            f"o quarto estreou sem acender o 4: {ensaio.o_que_acendeu(P4)}"
         )
 
     def test_a_camada_publicada_entre_duas_liberacoes_nao_chega_ao_disparo(
         self, mesa_da_luz: Callable[..., MesaDaLuz]
     ) -> None:
         """As 16 trocas do diário: uma publicação qualquer no meio, e o disparo seguinte."""
-        bancada = mesa_da_luz("bt")
-        bancada.mesa.levantar(P2)
-        bancada.tique()
-        _a_volta_e_o_disparo(bancada)
+        ensaio = mesa_da_luz("bt")
+        ensaio.mesa.levantar(P2)
+        ensaio.tique()
+        _a_volta_e_o_disparo(ensaio)
         for _ in range(math.ceil(PRAZO / TIQUE) + 1):
-            bancada.tique()
-        bancada.coop.sync(force=True)
-        assert cx.armar_gatilho_da_cor_por_numeracao(bancada.daemon) is True
-        bancada.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
-        bancada.limpar()
-        bancada.disparar()
+            ensaio.tique()
+        ensaio.coop.sync(force=True)
+        assert cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon) is True
+        ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
+        ensaio.limpar()
+        ensaio.disparar()
         for uniq, numero in {P1: 1, P3: 2, P4: 3}.items():
-            assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
-                f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
+            assert ensaio.o_que_acendeu(uniq)[:1] == [numero], (
+                f"{uniq}: {ensaio.o_que_acendeu(uniq)}, a conta diz {numero}"
             )
 
 
@@ -468,27 +468,27 @@ class TestOCaboSemONo:
         self, mesa_da_luz: Callable[..., MesaDaLuz], monkeypatch: pytest.MonkeyPatch, sai: str
     ) -> None:
         """O cabo sem nó de LED gravável (sem a regra 77), o caminho degradado de sempre."""
-        bancada = mesa_da_luz("usb")
+        ensaio = mesa_da_luz("usb")
         monkeypatch.setattr(
             "hefesto_dualsense4unix.core.sysfs_leds.discover",
-            lambda: {u: bancada._no_de(u) for u in bancada.mesa.nodes if u != P4},
+            lambda: {u: ensaio._no_de(u) for u in ensaio.mesa.nodes if u != P4},
         )
         luz = _Luz()
-        bancada.handles[P4].light = luz  # type: ignore[attr-defined]
-        bancada.tique()
+        ensaio.handles[P4].light = luz  # type: ignore[attr-defined]
+        ensaio.tique()
         assert P4 not in {
-            bancada.inst._key_to_uniq(k) for k in bancada.inst._sysfs
+            ensaio.inst._key_to_uniq(k) for k in ensaio.inst._sysfs
         }, "a bancada não tirou o nó do P4"
-        esperado = _sai_e_o_prazo_passa(bancada, sai)
+        esperado = _sai_e_o_prazo_passa(ensaio, sai)
         assert esperado[P4] == 3, esperado
-        bancada.disparar()
+        ensaio.disparar()
         for _ in range(3):
-            bancada.tique()
+            ensaio.tique()
         assert luz.playerNumber is not None and int(luz.playerNumber) == PLAYER_IDS[3], (
             f"o P4 (cabo sem nó) acende {luz.playerNumber!r}, a conta diz 3 (saiu {sai})"
         )
         for uniq, numero in esperado.items():
             if uniq != P4:
-                assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
-                    f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
+                assert ensaio.o_que_acendeu(uniq)[:1] == [numero], (
+                    f"{uniq}: {ensaio.o_que_acendeu(uniq)}, a conta diz {numero}"
                 )

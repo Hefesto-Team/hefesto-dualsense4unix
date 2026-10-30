@@ -356,7 +356,7 @@ def _declarar(raiz: Path, texto: str) -> None:
     (raiz / CONFERIDO).write_text(texto, encoding="utf-8")
 
 
-def test_a_declaracao_so_vale_para_o_commit_que_ela_nomeia(tmp_path: Path) -> None:
+def test_a_declaracao_so_vale_para_o_commit_que_o_usuario_nomeia(tmp_path: Path) -> None:
     """A MORDIDA da segunda porta: SHA de outro commit não abre nada."""
     raiz = _repo_de_mentira(tmp_path, fotos_por_ultimo=False)
 

@@ -1,4 +1,4 @@
-"""Todo texto de tela que diz a entrada pergunta ao dono — O-MAPA-QUE-ELA-CORRIGE-01, passo 3.
+"""Todo texto de tela que diz a entrada pergunta ao dono — O-MAPA-QUE-O-USUARIO-CORRIGE-01, passo 3.
 
 Com «Meio» na 1 (e o «2» que o Mapear de antes gravava como nome na 2), cada
 superfície diz «Meio» e «Entrada 2» — e nenhuma diz «O 13», «Entrada: 2» ou
@@ -45,7 +45,7 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
 from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     PCI_A,
     PCI_B,
-    _a_maquina_dela,
+    _a_maquina_do_usuario,
     gravar_o_arquivo_de_antes,
 )
 
@@ -59,7 +59,7 @@ _O_QUE_NAO_SE_DIZ = ("O 13", "o 13", "Entrada: 2", "<b>2</b>", "no Meio", "O Mei
 
 @pytest.fixture()
 def documento() -> MaquinaConfig:
-    return MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
+    return MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_do_usuario()))
 
 
 def _limpo(texto: str) -> None:
@@ -194,14 +194,14 @@ def test_o_nome_dado_no_mapa_chega_ao_cartao_e_a_ordem(
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
-    gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
+    gravar_o_arquivo_de_antes(tmp_path, _a_maquina_do_usuario())
     assert ee.dar_nome_a_entrada("2", "Frente de cima").gravou
-    dela = carregar_maquina()
-    assert dela.mapa.portas["2"].nome == "Frente de cima"
+    do_usuario = carregar_maquina()
+    assert do_usuario.mapa.portas["2"].nome == "Frente de cima"
 
     monkeypatch.setattr(censo_do_barramento, "ler_o_barramento", lambda **_k: Censo())
     monkeypatch.setattr(entradas_do_gabinete, "listar_entradas", lambda **_k: ())
-    lida: Any = secao_exame.leitura_das_ordens(dela)
+    lida: Any = secao_exame.leitura_das_ordens(do_usuario)
     assert dict(lida.nomes_das_entradas) == {"1": "Meio", "2": "Frente de cima"}
 
     from tests.unit.test_ordens_da_mesa import leitura
@@ -210,7 +210,7 @@ def test_o_nome_dado_no_mapa_chega_ao_cartao_e_a_ordem(
         entradas_livres_declaradas=("2",), nomes_das_entradas=lida.nomes_das_entradas))
     assert ordem is not None and ordem.acao.endswith("para a entrada Frente de cima"), ordem
 
-    monkeypatch.setattr(a08_conexoes, "_declaracao", lambda *_a, **_k: dela)
+    monkeypatch.setattr(a08_conexoes, "_declaracao", lambda *_a, **_k: do_usuario)
     vazio = ordens.Linha(texto="", selo="")
     de, para = a08_conexoes._a_ordem_na_tela(ordens.Ordem(
         chave="teste", acao=ordem.acao, o_que_eu_vi=vazio, por_que_importa=vazio,

@@ -86,7 +86,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/02-controles.html"
+ENSAIO = RAIZ / "mockup/02-controles.html"
 
 DO_DESENHO = ("#ae335a", "#7eb8d4")
 
@@ -109,7 +109,7 @@ def aba02():
 
 @pytest.fixture(scope="module")
 def doc() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+    return ENSAIO.read_text(encoding="utf-8")
 
 
 FOLHA = re.compile(r"<style([^>]*)>(.*?)</style>", re.S)
@@ -195,7 +195,7 @@ def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
     assert '.aba-ctl[data-controle="p1"]' in seletor
 
 
-def test_a_bancada_mostra_o_desenho_que_ela_aprovou(doc):
+def test_o_ensaio_mostra_o_desenho_que_o_usuario_aprovou(doc):
     """Sem daemon, a página é a bancada: a folha nasce com o que o usuário aprovou."""
     assert _cor_do_assento(doc, "p1") == DO_DESENHO[0]
     assert _cor_do_assento(doc, "p2") == DO_DESENHO[1]
@@ -216,7 +216,7 @@ def test_nenhum_assento_fica_sem_cor_definida(doc, a02):
             f"o assento {pref} ficou sem `--plastico`, e a borda dele deixa de existir")
 
 
-def test_a_mesa_dela_de_hoje_chega_inteira_a_tela(doc, a02):
+def test_a_mesa_do_usuario_de_hoje_chega_inteira_a_tela(doc, a02):
     """P1 White no cabo, P2 Galactic Purple no rádio — os dois aparelhos do usuário."""
     troca = a02.folha_do_plastico([
         {"pref": "p1", "cor": "white", "nome": "White"},
@@ -270,13 +270,13 @@ def _casca_do_mapa() -> dict[str, str]:
     return fora
 
 
-def test_o_mapa_dela_tem_vinte_e_oito_modelos():
+def test_o_mapa_do_usuario_tem_vinte_e_oito_modelos():
     """O número da lei de produto. Se ele mudar, tudo abaixo tem de ser relido."""
     assert len(_modelos_do_mapa()) == 28
 
 
 @pytest.mark.parametrize("slug", sorted(_casca_do_mapa()))
-def test_todo_modelo_do_mapa_dela_vira_borda(a02, slug):
+def test_todo_modelo_do_mapa_do_usuario_vira_borda(a02, slug):
     """A LEI DE PRODUTO, medida modelo a modelo: *"nada hardcoded"*.
 
     A pergunta é feita com o SLUG — o `id` da linha dela, que é o que
@@ -312,7 +312,7 @@ def test_a_borda_e_o_chip_da_fita_nunca_discordam(a02):
             f"a borda do card e o chip da fita discordam em `{slug}`")
 
 
-def test_o_produto_escreve_cada_modelo_como_o_mapa_dela():
+def test_o_produto_escreve_cada_modelo_como_o_mapa_do_usuario():
     """Dois arquivos com o mesmo modelo escrito diferente é divergência silenciosa."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
@@ -327,7 +327,7 @@ def test_o_produto_escreve_cada_modelo_como_o_mapa_dela():
         f"dela) e `cor_do_plastico.NOMES_DE_FABRICA` (o que o produto sabe): {achadas}")
 
 
-def test_nenhum_modelo_do_mapa_dela_falta_no_produto():
+def test_nenhum_modelo_do_mapa_do_usuario_falta_no_produto():
     """A régua não acha zero por cegueira: ela exige os 28 do lado do produto."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 

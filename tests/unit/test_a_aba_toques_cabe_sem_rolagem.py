@@ -7,7 +7,7 @@ glifo (``.tq-lista``) usa quantas colunas couberem, três na largura da bancada,
 MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas):
 
 - a lista de volta a duas colunas (``repeat(2,minmax(0,1fr))``) reprova
-  ``test_nenhuma_aba_rola_e_nenhum_seletor_corta`` e ``test_a_bancada_tem_tres_colunas``;
+  ``test_nenhuma_aba_rola_e_nenhum_seletor_corta`` e ``test_o_ensaio_tem_tres_colunas``;
 - a linha de volta a 32 px reprova ``test_nenhuma_aba_rola_e_nenhum_seletor_corta``;
 - a coluna mínima larga demais (``minmax(300px,1fr)``) reprova as duas.
 """
@@ -39,8 +39,8 @@ from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito i
     VISTAS,
 )
 
-BANCADA = (1212, 809)
-LARGURAS = tuple(dict.fromkeys((*VISTAS, BANCADA)))
+ENSAIO = (1212, 809)
+LARGURAS = tuple(dict.fromkeys((*VISTAS, ENSAIO)))
 
 _ABRIR = """(function(endereco, h){
   location.hash = endereco;
@@ -119,15 +119,15 @@ def test_nenhuma_aba_rola_e_nenhum_seletor_corta(medidas: dict[str, Any]) -> Non
     assert not falhas, "\n".join(falhas)
 
 
-def test_a_bancada_tem_tres_colunas(medidas: dict[str, Any]) -> None:
+def test_o_ensaio_tem_tres_colunas(medidas: dict[str, Any]) -> None:
     """Prova da D-2610-A-TOQUES-EM-TRES-COLUNAS."""
     for caso, medida in medidas.items():
         colunas = medida["abas"]["Toques"]["colunas"]
         assert colunas and min(colunas) >= 3, f"{caso}: colunas {colunas}"
-    assert medidas["{}x{}".format(*BANCADA)]["abas"]["Toques"]["colunas"][0] == 3
+    assert medidas["{}x{}".format(*ENSAIO)]["abas"]["Toques"]["colunas"][0] == 3
 
 
 def test_o_seletor_da_terceira_coluna_se_alcanca(medidas: dict[str, Any]) -> None:
     """O quadrado é o terceiro botão: na bancada ele mora na terceira coluna e o clique o acha."""
-    terceira = medidas["{}x{}".format(*BANCADA)]["terceira"]
+    terceira = medidas["{}x{}".format(*ENSAIO)]["terceira"]
     assert terceira == {"coluna": 2, "alcancavel": True}, terceira

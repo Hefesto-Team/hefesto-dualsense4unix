@@ -86,7 +86,7 @@ def _retrato_de_fora(mesa: Mesa) -> list[tuple[str, tuple[int, bytes | None]]]:
     ]
 
 
-class Bancada:
+class Ensaio:
     """O broker de produção num socket de verdade, servido por este processo."""
 
     def __init__(self, mesa: Mesa, pasta: Path) -> None:
@@ -153,52 +153,52 @@ def pasta() -> Iterator[Path]:
 
 
 @pytest.fixture
-def bancada(mesa: Mesa, pasta: Path) -> Bancada:
+def ensaio(mesa: Mesa, pasta: Path) -> Ensaio:
     _nascer_todos(mesa)
-    return Bancada(mesa, pasta)
+    return Ensaio(mesa, pasta)
 
 
 def _os_seis_fechados(mesa: Mesa) -> bool:
     return all(_fechado(no) for base, _ in OS_SEIS for no in _tudo_do_aparelho(mesa, base))
 
 
-def test_o_boot_sem_login_nunca_entrega(bancada: Bancada) -> None:
+def test_o_boot_sem_login_nunca_entrega(ensaio: Ensaio) -> None:
     """MORDIDA: troque o ``None`` do ``_sem_cliente_desde`` do ``Broker.__init__``
     por ``relogio()`` e o broker entrega antes do daemon (o login chega em +304 s)."""
-    bancada.tique(GRACA * 20)
-    assert bancada.st.entregue is False
-    assert _os_seis_fechados(bancada.mesa)
+    ensaio.tique(GRACA * 20)
+    assert ensaio.st.entregue is False
+    assert _os_seis_fechados(ensaio.mesa)
 
 
 def test_o_ping_da_presenca_entrega_os_seis_depois_da_graca(
-    bancada: Bancada, pasta: Path
+    ensaio: Ensaio, pasta: Path
 ) -> None:
     """MORDIDA: o ``--ping`` sair sem conectar, e nada é entregue."""
-    de_fora = _retrato_de_fora(bancada.mesa)
-    assert bancada.ping(pasta, "--ping") == 0
-    assert "peer_accepted" in bancada.eventos, "o --ping não chegou ao broker"
-    bancada.tique(GRACA - 1)
-    assert bancada.st.entregue is False
-    assert _os_seis_fechados(bancada.mesa)
-    bancada.tique(1.0)
-    assert bancada.st.entregue is True
+    de_fora = _retrato_de_fora(ensaio.mesa)
+    assert ensaio.ping(pasta, "--ping") == 0
+    assert "peer_accepted" in ensaio.eventos, "o --ping não chegou ao broker"
+    ensaio.tique(GRACA - 1)
+    assert ensaio.st.entregue is False
+    assert _os_seis_fechados(ensaio.mesa)
+    ensaio.tique(1.0)
+    assert ensaio.st.entregue is True
     for base, tipo in OS_SEIS:
-        for no in _tudo_do_aparelho(bancada.mesa, base):
+        for no in _tudo_do_aparelho(ensaio.mesa, base):
             assert _aberto_para_a_sessao(no), f"{tipo} {no.name} não voltou à sessão"
-    assert _retrato_de_fora(bancada.mesa) == de_fora, "a entrega tocou o pad ou o externo"
+    assert _retrato_de_fora(ensaio.mesa) == de_fora, "a entrega tocou o pad ou o externo"
 
 
-def test_com_o_hefesto_de_pe_o_ping_nao_entrega(bancada: Bancada, pasta: Path) -> None:
+def test_com_o_hefesto_de_pe_o_ping_nao_entrega(ensaio: Ensaio, pasta: Path) -> None:
     daemon, _ponta = socket.socketpair()
-    assert bancada.broker.register_client(daemon) is not None
-    assert bancada.ping(pasta, "--ping") == 0
-    bancada.tique(GRACA * 3)
-    assert bancada.st.entregue is False
-    assert _os_seis_fechados(bancada.mesa)
+    assert ensaio.broker.register_client(daemon) is not None
+    assert ensaio.ping(pasta, "--ping") == 0
+    ensaio.tique(GRACA * 3)
+    assert ensaio.st.entregue is False
+    assert _os_seis_fechados(ensaio.mesa)
 
 
 def test_o_ping_sem_broker_diz_que_nao_chegou(pasta: Path, mesa: Mesa) -> None:
-    b = Bancada(mesa, pasta)
+    b = Ensaio(mesa, pasta)
     b.sock_path.unlink()
     assert b.ping(pasta, "--ping") != 0
 

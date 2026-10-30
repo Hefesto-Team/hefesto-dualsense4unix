@@ -29,13 +29,13 @@ COM_JOGO_SEM_WRAPPER = {
 }
 
 
-def test_o_aviso_aparece_quando_ela_nao_respondeu(monkeypatch):
-    monkeypatch.setattr(ha, "ela_ja_respondeu_sobre", lambda _a: False)
+def test_o_aviso_aparece_quando_o_usuario_nao_respondeu(monkeypatch):
+    monkeypatch.setattr(ha, "o_usuario_ja_respondeu_sobre", lambda _a: False)
     assert ha.aviso_do_wrapper(COM_JOGO_SEM_WRAPPER) == ha.WRAPPER_MISSING_TEXT
 
 
-def test_o_aviso_cala_quando_ela_ja_respondeu(monkeypatch):
-    monkeypatch.setattr(ha, "ela_ja_respondeu_sobre", lambda _a: True)
+def test_o_aviso_cala_quando_o_usuario_ja_respondeu(monkeypatch):
+    monkeypatch.setattr(ha, "o_usuario_ja_respondeu_sobre", lambda _a: True)
     assert ha.aviso_do_wrapper(COM_JOGO_SEM_WRAPPER) is None, (
         "ela dispensou o jogo e a tela continuou acusando"
     )
@@ -66,7 +66,7 @@ def test_falha_de_disco_mostra_o_aviso_em_vez_de_escondelo(monkeypatch):
         raise OSError("disco fora do ar")
 
     monkeypatch.setattr(lwd, "load_dismissed_appids", explode)
-    assert ha.ela_ja_respondeu_sobre("1086940") is False, (
+    assert ha.o_usuario_ja_respondeu_sobre("1086940") is False, (
         "um erro de leitura escondeu o aviso — esconder por falha é pior que "
         "mostrar duas vezes"
     )

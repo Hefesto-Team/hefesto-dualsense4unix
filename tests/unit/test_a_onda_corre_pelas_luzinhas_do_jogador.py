@@ -316,7 +316,7 @@ def test_a_onda_e_um_report_por_quadro_no_radio_e_o_numero_volta_nos_dois_transp
     assert not ctl._desired_by_uniq, "o quadro da onda não entra no estado desejado"
 
 
-def test_a_dica_da_onda_diz_que_ela_corre_pelas_luzinhas_e_pela_barra() -> None:
+def test_a_dica_da_onda_diz_que_o_usuario_corre_pelas_luzinhas_e_pela_barra() -> None:
     """A tela diz o que o aparelho faz: a Onda sai pelo quadro único, então a dica fala das
     luzinhas e da barra."""
     from pacotes import a04_iluminacao as a04

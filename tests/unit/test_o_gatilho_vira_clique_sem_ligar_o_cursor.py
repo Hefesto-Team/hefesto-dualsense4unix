@@ -116,7 +116,7 @@ def test_a_linha_do_analogico_diferente_do_cursor_nao_move_o_cursor(
         f"o analógico esquerdo em {token!r} moveu o cursor")
 
 
-def test_a_rolagem_so_anda_com_a_linha_dela(uinput: _UinputGravador) -> None:
+def test_a_rolagem_so_anda_com_a_linha_do_usuario(uinput: _UinputGravador) -> None:
     """MORDIDA: voltar o `_emit_scroll` incondicional reprova."""
     dev = _mouse(uinput, {acoes.EIXO_DIREITO: acoes.TOKEN_NADA})
     _dispatch(dev, rx=128, ry=255)
@@ -481,7 +481,7 @@ def test_suspender_mouse_e_teclado_cala_a_tabela_no_jogo(de_quem: str) -> None:
 
     A supressão que ELA ligou cala a tabela; a do perfil do jogo não, porque o
     jogo aberto é justamente onde a chave age. MORDIDA: tirar o
-    `_suspenso_por_ela` de `despachar_no_jogo` faz o caso «gesto» reprovar.
+    `_suspenso_pelo_usuario` de `despachar_no_jogo` faz o caso «gesto» reprovar.
     """
     tabela, mouse, _teclado = _tabela_com_gravadores(None)
     daemon = _daemon_de_mentira()

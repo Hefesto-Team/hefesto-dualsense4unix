@@ -158,7 +158,7 @@ def ensaio(monkeypatch: pytest.MonkeyPatch) -> Any:
     modulo = _carregar_o_ensaio()
     borda: dict[str, Any] = {"daemon": False, "abriu": [], "escritos": []}
     monkeypatch.setattr(modulo, "daemon_no_ar", lambda: borda["daemon"])
-    monkeypatch.setattr(modulo, "_exigir_bancada", lambda: (True, ""))
+    monkeypatch.setattr(modulo, "_exigir_ensaio", lambda: (True, ""))
     from hefesto_dualsense4unix.daemon.subsystems import alto_falante as sub
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
@@ -196,7 +196,7 @@ def test_o_ensaio_recusa_com_o_daemon_no_ar(ensaio: Any) -> None:
     assert ensaio.borda["abriu"] == [] and ensaio.borda["escritos"] == []
 
 
-def test_o_ensaio_para_sem_o_ouvido_dela(ensaio: Any) -> None:
+def test_o_ensaio_para_sem_o_ouvido_do_usuario(ensaio: Any) -> None:
     """Sem ``--eu-estou-ouvindo``, rc=3 e nada é aberto."""
     assert ensaio.main(["--escrever", "--exigir-mac", MAC]) == 3
     assert ensaio.borda["abriu"] == []
@@ -275,11 +275,11 @@ def test_nao_sei_se_o_daemon_esta_no_ar_e_recusa(monkeypatch: pytest.MonkeyPatch
         shutil.rmtree(pasta, ignore_errors=True)
 
 
-def test_o_ensaio_recusa_com_a_bancada_tomada(
+def test_o_ensaio_recusa_com_o_ensaio_tomada(
     ensaio: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`ensaio.sh exigir` com rc≠0 (outra reserva viva): rc=2 e nada é aberto."""
-    monkeypatch.setattr(ensaio, "_exigir_bancada", lambda: (False, "BANCADA OCUPADA"))
+    monkeypatch.setattr(ensaio, "_exigir_ensaio", lambda: (False, "BANCADA OCUPADA"))
 
     assert ensaio.main(ESCREVER) == 2
     assert ensaio.borda["abriu"] == [] and ensaio.borda["escritos"] == []

@@ -19,7 +19,7 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     ADAPTADORES,
-    Bancada,
+    Ensaio,
     id_da_tela,
     preparar_a_tela,
     preparar_o_diario,
@@ -112,28 +112,28 @@ def mundo_da_madrugada(relogio: rm.Relogio) -> RadioComHora:
 
 
 def montar(a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: RadioComHora | None = None,
-           **extra: Any) -> tuple[Bancada, Parada]:
+           **extra: Any) -> tuple[Ensaio, Parada]:
     relogio = mundo.relogio if mundo is not None else rm.Relogio()
     mundo = mundo if mundo is not None else mundo_da_madrugada(relogio)
-    bancada = Bancada(a08, monkeypatch, mundo, relogio, **extra)
-    return bancada, Parada(relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio, **extra)
+    return ensaio, Parada(relogio)
 
 
-def ligar(bancada: Bancada, parada: Parada, onde: str) -> dict[str, Any]:
+def ligar(ensaio: Ensaio, parada: Parada, onde: str) -> dict[str, Any]:
     """O «Procurar» ligado em ``onde`` pelo tratador real, com o fio da central"""
     parada.segurar_em(0.0)
-    resposta = bancada.ponte.resultado("radio.busca.set", ligada=True, destino=id_da_tela(onde))
+    resposta = ensaio.ponte.resultado("radio.busca.set", ligada=True, destino=id_da_tela(onde))
     assert isinstance(resposta, dict)
     assert parada.parou.wait(5.0), "a central não abriu a janela"
     return resposta
 
 
-def desligar(bancada: Bancada, parada: Parada) -> dict[str, Any]:
+def desligar(ensaio: Ensaio, parada: Parada) -> dict[str, Any]:
     """O «Procurar» desligado pelo tratador real; o fio solto logo depois, para"""
     soltura = threading.Timer(0.3, parada.soltar)
     soltura.start()
     try:
-        resposta = bancada.ponte.resultado("radio.busca.set", ligada=False)
+        resposta = ensaio.ponte.resultado("radio.busca.set", ligada=False)
     finally:
         soltura.cancel()
         parada.soltar()
@@ -178,20 +178,20 @@ def test_abrir_o_painel_nao_liga_o_radio(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, aberto: str,
 ) -> None:
     """O «+ Conectar» só abre o painel: nenhum pedido ao daemon, nenhum"""
-    bancada, _parada = montar(a08, monkeypatch)
+    ensaio, _parada = montar(a08, monkeypatch)
     try:
         a08._ABERTO["lugar"] = id_da_tela(aberto)
-        bancada.cena()
-        assert bancada.gesto("conectar-aparelho") == {"armou": True}
-        assert bancada.ponte.chamadas == [], "o «+ Conectar» pediu ao rádio"
-        assert bancada.mundo.metodos("StartDiscovery") == []
-        assert bancada.central.movimentos() == ()
-        campos = bancada.tique()
+        ensaio.cena()
+        assert ensaio.gesto("conectar-aparelho") == {"armou": True}
+        assert ensaio.ponte.chamadas == [], "o «+ Conectar» pediu ao rádio"
+        assert ensaio.mundo.metodos("StartDiscovery") == []
+        assert ensaio.central.movimentos() == ()
+        campos = ensaio.tique()
         assert campos["radio-procurando"] == a08.PROCURAR_DESLIGADO
         assert 'data-painel="conectar" data-alvo="" data-titulo="Conectar">' in (
             campos["radio-moldes"])
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
     mockup = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
     cabecalho = re.search(r'(<button class="cadeado[^>]*data-gesto="radio-procurar"[^>]*>.*?'
@@ -205,18 +205,18 @@ def test_desligar_para_o_radio_em_ate_um_segundo(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde: str,
 ) -> None:
     """Ligada e desligada pelo ``radio.busca.set``: o ``StopDiscovery`` e o"""
-    bancada, parada = montar(a08, monkeypatch)
-    mundo = bancada.mundo
+    ensaio, parada = montar(a08, monkeypatch)
+    mundo = ensaio.mundo
     try:
-        ligada = ligar(bancada, parada, onde)
+        ligada = ligar(ensaio, parada, onde)
         assert ligada["status"] == "ok", ligada
         assert id_da_tela(ligada["busca"]["adaptador"]) == id_da_tela(onde), ligada
         assert mundo.propriedade_do_adaptador(onde, "Discovering") is True
         assert mundo.propriedade_do_adaptador(onde, "Pairable") is True
-        pedido_em = bancada.relogio()
+        pedido_em = ensaio.relogio()
 
-        resposta = desligar(bancada, parada)
-        bancada.esperar_a_central()
+        resposta = desligar(ensaio, parada)
+        ensaio.esperar_a_central()
 
         assert resposta == {"status": "ok", "busca": None}, resposta
         (parou,) = mundo.horas("StopDiscovery", onde)
@@ -224,28 +224,28 @@ def test_desligar_para_o_radio_em_ate_um_segundo(
         fechou = mundo.horas("Pairable", onde, False)
         assert fechou and fechou[-1] - pedido_em <= 1.0, fechou
         assert mundo.propriedade_do_adaptador(onde, "Pairable") is False
-        assert bancada.central.publicar()["busca"] is None
-        (fim,) = bancada.central.movimentos()
+        assert ensaio.central.publicar()["busca"] is None
+        (fim,) = ensaio.central.movimentos()
         assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_DESLIGADA), fim
-        assert nao_conectou(bancada.cena()) == [], "a busca desligada virou «Não Conectou»"
+        assert nao_conectou(ensaio.cena()) == [], "a busca desligada virou «Não Conectou»"
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_desligar_sem_busca_nao_toca_no_radio(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Pedir o estado que já vale responde ``ok`` sem tocar no rádio."""
-    bancada, _parada = montar(a08, monkeypatch)
+    ensaio, _parada = montar(a08, monkeypatch)
     try:
-        assert bancada.ponte.resultado("radio.busca.set", ligada=False) == {
+        assert ensaio.ponte.resultado("radio.busca.set", ligada=False) == {
             "status": "ok", "busca": None}
-        assert [m for _c, _i, m, _a in bancada.mundo.chamadas
+        assert [m for _c, _i, m, _a in ensaio.mundo.chamadas
                 if m in ("StartDiscovery", "StopDiscovery")] == []
-        assert bancada.central.movimentos() == ()
+        assert ensaio.central.movimentos() == ()
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 @pytest.mark.parametrize("onde", ADAPTADORES)
@@ -253,19 +253,19 @@ def test_o_interruptor_e_a_pilula_leem_a_busca_da_central(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde: str,
 ) -> None:
     """Com a busca ligada num dos três adaptadores, o interruptor diz LIGADO e"""
-    bancada, parada = montar(a08, monkeypatch)
+    ensaio, parada = montar(a08, monkeypatch)
     try:
-        ligar(bancada, parada, onde)
-        campos = bancada.tique()
+        ligar(ensaio, parada, onde)
+        campos = ensaio.tique()
         assert campos["radio-procurando"] == a08.PROCURAR_LIGADO
         esperado = ["", "", ""]
         esperado[posicao(onde)] = "sim"
         assert campos["radio-conectando"] == esperado
         assert 'data-titulo="Procurando" data-pulso="1"' in campos["radio-moldes"]
 
-        desligar(bancada, parada)
-        bancada.esperar_a_central()
-        ctx = bancada.ctx()
+        desligar(ensaio, parada)
+        ensaio.esperar_a_central()
+        ctx = ensaio.ctx()
         sobra = cr.Movimento(cr.CONECTANDO, onde, cr.ESPERANDO, cr.PASSO_GESTO,
                              quando=time.time() - 5.0).publicar()
         ctx.state["radio_central"]["movimentos"].append(sobra)
@@ -276,7 +276,7 @@ def test_o_interruptor_e_a_pilula_leem_a_busca_da_central(
             assert campos["radio-conectando"] == ["", "", ""], f"tique {n}"
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 @pytest.mark.parametrize("onde", ADAPTADORES)
@@ -284,18 +284,18 @@ def test_o_teto_apaga_a_busca_sozinho_aos_cento_e_vinte_segundos(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde: str,
 ) -> None:
     """Aos 90 s a janela da busca ainda está aberta, o interruptor aceso, a"""
-    bancada, parada = montar(a08, monkeypatch)
-    mundo = bancada.mundo
+    ensaio, parada = montar(a08, monkeypatch)
+    mundo = ensaio.mundo
     try:
-        ligar(bancada, parada, onde)
+        ligar(ensaio, parada, onde)
         (abriu,) = mundo.horas("StartDiscovery", onde)
         parada.segurar_em(abriu + 90.0)
         parada.seguir()
         assert parada.parou.wait(10.0), "a busca acabou antes dos 90 s"
         assert mundo.propriedade_do_adaptador(onde, "Discovering") is True
         assert mundo.horas("StopDiscovery", onde) == []
-        assert bancada.central.publicar()["busca"] is not None
-        ctx = aos(bancada.ctx(), 90.0)
+        assert ensaio.central.publicar()["busca"] is not None
+        ctx = aos(ensaio.ctx(), 90.0)
         campos = tique(a08, ctx)
         cena = dict(a08._CENA_NA_TELA)
         assert campos["radio-procurando"] == a08.PROCURAR_LIGADO
@@ -303,124 +303,124 @@ def test_o_teto_apaga_a_busca_sozinho_aos_cento_e_vinte_segundos(
         assert nao_conectou(cena) == [], "a busca de 90 s virou «Não Conectou»"
 
         parada.soltar()
-        bancada.esperar_a_central()
+        ensaio.esperar_a_central()
         (parou,) = mundo.horas("StopDiscovery", onde)
         assert gp.SEGUNDOS_MAX <= parou - abriu <= gp.SEGUNDOS_MAX + 1.0, parou - abriu
-        assert bancada.central.publicar()["busca"] is None
-        campos = bancada.tique()
+        assert ensaio.central.publicar()["busca"] is None
+        campos = ensaio.tique()
         assert campos["radio-procurando"] == a08.PROCURAR_DESLIGADO
         assert nao_conectou(dict(a08._CENA_NA_TELA)) == [], "o teto virou «Não Conectou»"
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_o_mover_segue_com_os_trinta_segundos_dele(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O teto é só da busca do «Procurar»: o «Mover» do vermelho para o quarto,"""
-    bancada, parada = montar(a08, monkeypatch)
-    mundo = bancada.mundo
+    ensaio, parada = montar(a08, monkeypatch)
+    mundo = ensaio.mundo
     try:
-        assert bancada.central.comecar_a_mover(VERMELHO, QUARTO).estado == cr.ESPERANDO
-        bancada.esperar_a_central()
+        assert ensaio.central.comecar_a_mover(VERMELHO, QUARTO).estado == cr.ESPERANDO
+        ensaio.esperar_a_central()
         (abriu,) = mundo.horas("StartDiscovery", QUARTO)
         (parou,) = mundo.horas("StopDiscovery", QUARTO)
         assert gp.SEGUNDOS_DA_JANELA <= parou - abriu <= gp.SEGUNDOS_DA_JANELA + 1.0, (
             parou - abriu)
-        (fim,) = bancada.central.movimentos()
+        (fim,) = ensaio.central.movimentos()
         assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO), fim
-        assert nao_conectou(bancada.cena()) == [(id_da_tela(QUARTO), id_da_tela(VERMELHO))]
+        assert nao_conectou(ensaio.cena()) == [(id_da_tela(QUARTO), id_da_tela(VERMELHO))]
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_o_parear_que_nao_chega_faz_a_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """«Não Conectou» fica para o que o usuário mandou e não chegou: com a busca"""
-    bancada, _parada = montar(a08, monkeypatch)
-    mundo = bancada.mundo
+    ensaio, _parada = montar(a08, monkeypatch)
+    mundo = ensaio.mundo
     try:
         mundo.pair_falha = True
-        rm.ela_pareia(bancada.relogio, mundo, bancada.central, VERDE)
-        resposta = bancada.ponte.resultado("radio.busca.set", ligada=True,
+        rm.o_usuario_pareia(ensaio.relogio, mundo, ensaio.central, VERDE)
+        resposta = ensaio.ponte.resultado("radio.busca.set", ligada=True,
                                            destino=id_da_tela(QUARTO))
         assert resposta["status"] == "ok", resposta
-        bancada.esperar_a_central()
-        (fim,) = bancada.central.movimentos()
+        ensaio.esperar_a_central()
+        (fim,) = ensaio.central.movimentos()
         assert (fim.aparelho, fim.estado, fim.motivo) == (
             VERDE, cr.NAO_CHEGOU, cr.MOTIVO_NAO_PAREOU), fim
-        assert nao_conectou(bancada.cena()) == [(id_da_tela(QUARTO), id_da_tela(VERDE))]
+        assert nao_conectou(ensaio.cena()) == [(id_da_tela(QUARTO), id_da_tela(VERDE))]
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_a_busca_do_hefesto_nao_e_outro_programa(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O ``Discovering`` do adaptador da busca não acende a marca «varrendo» e"""
-    bancada, parada = montar(a08, monkeypatch)
-    mundo = bancada.mundo
+    ensaio, parada = montar(a08, monkeypatch)
+    mundo = ensaio.mundo
     try:
-        cena = bancada.cena()
+        cena = ensaio.cena()
         sem_busca = str(cena["destino_da_central"])
-        assert id_da_tela(bancada.central.escolher_destino() or "") == sem_busca
+        assert id_da_tela(ensaio.central.escolher_destino() or "") == sem_busca
         onde = next(e for e in ADAPTADORES if id_da_tela(e) == sem_busca)
         outro = next(e for e in (QUARTO, VARANDA) if e != onde)
         assert onde != SALA, "a D8 desta mesa escolheu o adaptador cheio"
 
         a08._ABERTO["lugar"] = sem_busca
-        ligar(bancada, parada, onde)
-        campos = bancada.tique()
+        ligar(ensaio, parada, onde)
+        campos = ensaio.tique()
         cena = dict(a08._CENA_NA_TELA)
         assert campos["radio-varrendo"] == ["", "", ""], "a busca dela virou «outro programa»"
         assert cena["destino_da_central"] == sem_busca, "a D8 da tela fugiu da busca dela"
-        bancada.relogio.agora += cr.VALIDADE_DOS_ADAPTADORES_S
-        assert id_da_tela(bancada.central.escolher_destino() or "") == sem_busca, (
+        ensaio.relogio.agora += cr.VALIDADE_DOS_ADAPTADORES_S
+        assert id_da_tela(ensaio.central.escolher_destino() or "") == sem_busca, (
             "a D8 da central fugiu da busca dela")
 
         mundo._mudar(rm.HCIS[outro], bd.ADAPTADOR, "Discovering", True)
         esperado = ["", "", ""]
         esperado[posicao(outro)] = "sim"
-        assert bancada.tique()["radio-varrendo"] == esperado
-        desligar(bancada, parada)
-        bancada.esperar_a_central()
-        assert bancada.tique()["radio-varrendo"] == esperado
+        assert ensaio.tique()["radio-varrendo"] == esperado
+        desligar(ensaio, parada)
+        ensaio.esperar_a_central()
+        assert ensaio.tique()["radio-varrendo"] == esperado
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_o_mesmo_clique_entregue_duas_vezes_deixa_a_busca_como_pedida(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A tela diz DESLIGADO e o clique chega duas vezes antes do tique (a"""
-    bancada, parada = montar(a08, monkeypatch)
+    ensaio, parada = montar(a08, monkeypatch)
     try:
         a08._ABERTO["lugar"] = id_da_tela(QUARTO)
-        bancada.cena()
-        assert bancada.gesto("radio-procurar", evento="change") is None
-        assert bancada.ponte.chamadas == []
+        ensaio.cena()
+        assert ensaio.gesto("radio-procurar", evento="change") is None
+        assert ensaio.ponte.chamadas == []
 
         parada.segurar_em(0.0)
-        assert bancada.gesto("radio-procurar") == {"armou": True}
+        assert ensaio.gesto("radio-procurar") == {"armou": True}
         assert parada.parou.wait(5.0)
         segunda: Any
         try:
-            segunda = bancada.gesto("radio-procurar")
+            segunda = ensaio.gesto("radio-procurar")
         except RuntimeError as erro:
             segunda = erro
         pedido = ("radio.busca.set", {"ligada": True, "destino": id_da_tela(QUARTO)})
-        assert bancada.ponte.chamadas == [pedido, pedido], "a segunda entrega não repetiu o pedido"
+        assert ensaio.ponte.chamadas == [pedido, pedido], "a segunda entrega não repetiu o pedido"
         assert segunda == {"armou": True}, segunda
-        assert len(bancada.mundo.horas("StartDiscovery", QUARTO)) == 1
-        busca = bancada.central.publicar()["busca"]
+        assert len(ensaio.mundo.horas("StartDiscovery", QUARTO)) == 1
+        busca = ensaio.central.publicar()["busca"]
         assert busca is not None and id_da_tela(busca["adaptador"]) == id_da_tela(QUARTO)
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_com_o_daemon_mudo_o_interruptor_e_o_travessao_e_nao_manda_nada(
@@ -429,16 +429,16 @@ def test_com_o_daemon_mudo_o_interruptor_e_o_travessao_e_nao_manda_nada(
     """Sem ``radio_central`` no estado (o daemon não respondeu), o campo é o"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    bancada, _parada = montar(a08, monkeypatch)
+    ensaio, _parada = montar(a08, monkeypatch)
     try:
         mudo = Contexto(state={"controllers": []}, conectados=[], mesa=[])
         assert tique(a08, mudo)["radio-procurando"] == a08.TRAVESSAO_DO_PROCURAR
         with pytest.raises(RuntimeError):
-            bancada.gesto("radio-procurar")
-        assert bancada.ponte.chamadas == []
-        assert bancada.mundo.metodos("StartDiscovery") == []
+            ensaio.gesto("radio-procurar")
+        assert ensaio.ponte.chamadas == []
+        assert ensaio.mundo.metodos("StartDiscovery") == []
     finally:
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
@@ -450,10 +450,10 @@ def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
     for onde, quem in ((SALA, VERMELHO), (SALA, AZUL), (QUARTO, VERDE), (VARANDA, ROXO)):
         mundo.pareado(onde, quem)
     jogadores = {rm.uniq(VERMELHO): 1, rm.uniq(AZUL): 2, rm.uniq(VERDE): 3, rm.uniq(ROXO): 4}
-    bancada, parada = montar(a08, monkeypatch, mundo, jogadores=jogadores)
+    ensaio, parada = montar(a08, monkeypatch, mundo, jogadores=jogadores)
 
     def quem_esta_onde() -> set[tuple[str, str, Any]]:
-        bancada.tique()
+        ensaio.tique()
         return {(str(a["id"]), str(a["lugar"]), a.get("jogador"))
                 for a in a08._CENA_NA_TELA["aparelhos"]
                 if a.get("tipo") == "controle" and not a.get("nao_conectou")}
@@ -462,9 +462,9 @@ def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
         antes = quem_esta_onde()
         assert {j for _i, _l, j in antes} == {1, 2, 3, 4}
         for onde in ADAPTADORES:
-            assert ligar(bancada, parada, onde)["status"] == "ok"
-            assert desligar(bancada, parada)["status"] == "ok"
-            bancada.esperar_a_central()
+            assert ligar(ensaio, parada, onde)["status"] == "ok"
+            assert desligar(ensaio, parada)["status"] == "ok"
+            ensaio.esperar_a_central()
             assert mundo.metodos("Disconnect") == [], onde
             assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == [], onde
             assert {e: f.conectado_em for e, f in mundo.fisicos.items()} == {
@@ -472,7 +472,7 @@ def test_ligar_e_desligar_nao_tira_ninguem_do_ar_nem_do_lugar(
             assert quem_esta_onde() == antes, onde
     finally:
         parada.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def test_a_busca_acabada_nao_responde_ocupado_nem_fica_publicada(
@@ -482,8 +482,8 @@ def test_a_busca_acabada_nao_responde_ocupado_nem_fica_publicada(
     da janela): nesse vão o «Procurar» desligado lia a busca ainda de pé com o
     movimento já acabado e respondia «ocupado». Sem movimento em curso não há
     busca publicada, e quem espera por ela a vê apagada."""
-    bancada, _parada = montar(a08, monkeypatch)
-    central = bancada.central
+    ensaio, _parada = montar(a08, monkeypatch)
+    central = ensaio.central
     try:
         with central._tranca:
             central._busca = {"adaptador": SALA, "desde": 1.0, "ate": 121.0}
@@ -498,7 +498,7 @@ def test_a_busca_acabada_nao_responde_ocupado_nem_fica_publicada(
     finally:
         with central._tranca:
             central._busca = None
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def _folha(fonte: str, prefixo: str) -> dict[str, dict[str, str]]:

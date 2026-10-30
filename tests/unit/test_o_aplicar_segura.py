@@ -27,7 +27,7 @@ from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import 
     CLASSE_DO_JOGO,
     JANELA_DA_NAVEGACAO,
     JANELA_DO_JOGO,
-    _bancada,
+    _ensaio,
     _perfil,
     _switcher,
     perfis_isolados,  # noqa: F401
@@ -45,7 +45,7 @@ def _a_montagem(*, prender: bool = True):  # type: ignore[no-untyped-def]
     """
     jogo = _perfil("sackboy", janela=CLASSE_DO_JOGO, prioridade=90)
     jogo.mode = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
-    manager, store = _bancada([
+    manager, store = _ensaio([
         jogo,
         _perfil("lure", janela="steam_app_1599660", prioridade=80),
         _perfil("fliperama", janela="retroarch", prioridade=40),
@@ -86,7 +86,7 @@ def test_o_aplicar_segura_aos_12_e_aos_60_segundos() -> None:
     assert store.active_profile == "fliperama", "aos 12 s a escolha passou por cima do «Aplicar»"
     _terminal(sw, 15.0, 2.0 + 60.0)
     assert store.active_profile == "fliperama", "aos 60 s a escolha passou por cima do «Aplicar»"
-    assert session.a_escolha_dela() == "lure", "o «Aplicar» virou a escolha"
+    assert session.a_escolha_do_usuario() == "lure", "o «Aplicar» virou a escolha"
     assert session.o_ultimo_jogo() == "sackboy", "o último jogo saiu do disco"
 
 

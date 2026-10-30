@@ -558,7 +558,7 @@ def _perfil(**campos: object):
     return Profile.model_validate({"name": "Bancada", "match": {"type": "any"}, **campos})
 
 
-def test_a_intensidade_do_gatilho_mora_no_controle_e_o_dump_sem_ela_e_o_de_antes() -> None:
+def test_a_intensidade_do_gatilho_mora_no_controle_e_o_dump_sem_o_usuario_e_o_de_antes() -> None:
     import json
 
     sem = _perfil()

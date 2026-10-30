@@ -165,7 +165,7 @@ RENOMES_DA_LEX_1: dict[str, str] = {
 }
 
 
-def test_as_duas_secoes_renomeadas_dizem_a_palavra_dela() -> None:
+def test_as_duas_secoes_renomeadas_dizem_a_palavra_do_usuario() -> None:
     """"A mesa" virou "Conexões" e "Orçamento" virou "Desempenho". (D-PERFIL-DE-DESEMPENHO)"""
     titulos = {
         secao.__name__.rsplit(".", 1)[-1]: secao.TITULO for secao in SECOES_DA_ABA

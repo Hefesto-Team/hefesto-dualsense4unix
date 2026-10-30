@@ -21,7 +21,7 @@ from hefesto_dualsense4unix.interface.frases_banidas import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 PRODUTO = INTERFACE / "paginas"  # (noqa-acento)
 
 sys.path.insert(0, str(INTERFACE))
@@ -65,7 +65,7 @@ _ESCONDE = re.compile(
 )
 
 
-def test_a_folha_diz_o_que_esconde_e_a_regua_le_dela() -> None:
+def test_a_folha_diz_o_que_esconde_e_a_regua_le_do_usuario() -> None:
     """`.nota` não se digita na régua: ele sai da folha do produto."""
     escondidos = seletores_escondidos()
     assert escondidos == seletores_escondidos(FOLHA_DA_CASA), (
@@ -148,12 +148,12 @@ def test_o_seletor_que_a_regua_nao_sabe_honrar_e_recusado_em_voz_alta() -> None:
     assert seletores_escondidos(".nota,{display:none}") == (".nota",)
 
 
-def test_o_produto_esconde_o_bilhete_e_a_bancada_o_conta() -> None:
+def test_o_produto_esconde_o_bilhete_e_o_ensaio_o_conta() -> None:
     """A mesma página, duas respostas — e as duas certas."""
-    bancada = texto_visivel(PAGINA)
+    ensaio = texto_visivel(PAGINA)
     produto = texto_visivel_no_produto(PAGINA)
 
-    assert palavra_banida_em(bancada) == "mesa", (
+    assert palavra_banida_em(ensaio) == "mesa", (
         "a BANCADA deixou de contar o bilhete. Ela é o desenho que ela abre "
         "CRU no navegador — ali a `.nota` é texto de verdade, e uma régua que "
         "a ignore deixa a palavra voltar pelo desenho."
@@ -196,7 +196,7 @@ def test_a_leitura_do_produto_nao_apaga_a_tela() -> None:
     )
 
 
-def test_a_bancada_continua_lendo_o_que_o_produto_esconde() -> None:
+def test_o_ensaio_continua_lendo_o_que_o_produto_esconde() -> None:
     """Uma `.nota` na página tem de contar na leitura da bancada e sumir na do produto.
 
     As páginas deixaram de trazer a legenda do desenho (ela vai para a sessão
@@ -204,7 +204,7 @@ def test_a_bancada_continua_lendo_o_que_o_produto_esconde() -> None:
     """
     iguais: list[str] = []
     nota = '<div class="nota"><p>' + "palavra " * 150 + "</p></div>"
-    for pagina in _paginas(BANCADA):
+    for pagina in _paginas(ENSAIO):
         cru = pagina.read_text(encoding="utf-8").replace("</body>", nota + "</body>")
         so_no_desenho = len(texto_visivel(cru).split()) - len(
             texto_visivel_no_produto(cru).split()

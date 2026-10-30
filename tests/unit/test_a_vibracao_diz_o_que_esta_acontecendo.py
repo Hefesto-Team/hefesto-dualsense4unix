@@ -49,7 +49,7 @@ AS MORDIDAS, e cada uma reprova um teste diferente:
 * **ponha ``quote=False`` no TOM** → ``test_o_tom_e_escapado_como_atributo``
   reprova: ali o valor vai para dentro de ``class="…"``, e uma aspa reta fecha o
   atributo;
-* tire o bloco do ``MIOLO`` do gerador → ``test_a_bancada_tem_o_bloco`` reprova
+* tire o bloco do ``MIOLO`` do gerador → ``test_o_ensaio_tem_o_bloco`` reprova
   (e o próprio ``_conferir`` do gerador recusa gerar).
 
 AS TRÊS MORDIDAS EM NEGRITO SÃO DE 02/09/2026, e as três primeiras existem
@@ -264,7 +264,7 @@ def test_o_pacote_emite_o_bloco_do_estado():
     assert _ra.texto_do_alcance_da_intensidade(SEM_VPAD) in blocos["#vib-estado"]
 
 
-def test_a_bancada_tem_o_bloco():
+def test_o_ensaio_tem_o_bloco():
     """A página que ELA olha tem o endereço do bloco e a frase do produto."""
     import onde
 

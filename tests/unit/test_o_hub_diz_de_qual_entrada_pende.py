@@ -1,4 +1,4 @@
-"""O hub diz de qual entrada pende — O-MAPA-QUE-ELA-CORRIGE-01, passo 5."""
+"""O hub diz de qual entrada pende — O-MAPA-QUE-O-USUARIO-CORRIGE-01, passo 5."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
 )
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, migrar_o_documento
-from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
+from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_do_usuario
 
 
 def _aparelho(caminho: str, mbps: float, classe: str, *, hub: bool = False) -> Aparelho:
@@ -45,7 +45,7 @@ _HUB = ee.FACE_HUB
 
 def _documento(**mudar: Any) -> MaquinaConfig:
     """A máquina sintética; ``mudar`` põe campos em ``portas[N]``."""
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     for numero, campos in mudar.items():
         dado["mapa"]["portas"].setdefault(numero.lstrip("_"), {}).update(campos)
     return MaquinaConfig.model_validate(migrar_o_documento(dado))
@@ -89,7 +89,7 @@ def test_hub_declarado_na_3_nao_cria_face() -> None:
     assert _a_face(dado, _HUB)["titulo"] == "Hub na Entrada 3"
 
 
-def test_so_hub_na_5_vale_a_dela_e_diz_onde_o_computador_le() -> None:
+def test_so_hub_na_5_vale_a_do_usuario_e_diz_onde_o_computador_le() -> None:
     """Só «Hub» na 5, e nada na 3: vale a dela, com a linha a mais — e sem a"""
     dado = _arranjo(_documento(**{"5": {"liga": "hub"}}))
     face = _a_face(dado, _HUB)
@@ -102,7 +102,7 @@ def test_so_hub_na_5_vale_a_dela_e_diz_onde_o_computador_le() -> None:
 
 def test_hub_declarado_com_nada_lido_desenha_os_quatro_buracos() -> None:
     """Uma máquina sem o hub no disco: o hub declarado na 5 é a face de quatro"""
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     dado["mapa"]["faces"] = dado["mapa"]["faces"][:2]
     for numero in range(9, 16):
         del dado["mapa"]["portas"][str(numero)]
@@ -118,7 +118,7 @@ def test_hub_declarado_com_nada_lido_desenha_os_quatro_buracos() -> None:
 
 def test_dois_hubs_lidos_cada_um_com_a_sua_face() -> None:
     """Um segundo hub na 6 (``3-4``), com a face dele: cada face na sua entrada."""
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     dado["mapa"]["faces"].append({"nome": "Outro hub", "portas": ["16", "17"]})
     dado["mapa"]["portas"]["16"] = {"caminho": "3-4.1", "nos": ["3-4-port1", "4-4-port1"]}
     dado["mapa"]["portas"]["17"] = {"caminho": "3-4.2", "nos": ["3-4-port2", "4-4-port2"]}
@@ -127,7 +127,7 @@ def test_dois_hubs_lidos_cada_um_com_a_sua_face() -> None:
 
 
 def test_a_face_mista_nao_pende_de_ninguem() -> None:
-    dado = _a_maquina_dela()
+    dado = _a_maquina_do_usuario()
     dado["mapa"]["faces"][2]["portas"].append("7")
     assert _HUB not in ee.de_quem_pende(MaquinaConfig.model_validate(migrar_o_documento(dado)).mapa)
 
@@ -141,7 +141,7 @@ def test_o_hub_desplugado_continua_ligado() -> None:
     assert (face["daEntrada"], face["titulo"]) == ("3", "Hub na Entrada 3")
 
 
-def test_o_titulo_diz_o_nome_que_ela_deu() -> None:
+def test_o_titulo_diz_o_nome_que_o_usuario_deu() -> None:
     documento = _documento(**{"3": {"nome": "Traseira de cima"}})
     face = _a_face(_arranjo(documento), _HUB)
     assert face["titulo"] == "Hub na entrada Traseira de cima"

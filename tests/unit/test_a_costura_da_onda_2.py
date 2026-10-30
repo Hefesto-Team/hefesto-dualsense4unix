@@ -182,7 +182,7 @@ def _controle(u: str, adaptador: str, ponte: str | None = None) -> dict[str, Any
     }
 
 
-def _ela_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
+def _o_usuario_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
     """Dois no A, um no B: o terceiro do A pergunta, e ela responde «Ligar aqui»."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
@@ -194,7 +194,7 @@ def _ela_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
     assert governador.ligar_aqui(CONTROLE_3) is True
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
-    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
+    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_do_usuario
     vaga.subiu("som")
     vaga.soltar("a fonte do som secou")
     return governador
@@ -553,7 +553,7 @@ def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
     central = _central(dono, mundo, relogio)
     mundo.pair_mente = True
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
-    rm.ela_pareia(relogio, mundo, central, VERDE)
+    rm.o_usuario_pareia(relogio, mundo, central, VERDE)
 
     chegaram = threading.Semaphore(0)
     de_verdade = bd.na_trava
@@ -585,7 +585,7 @@ def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
     assert len(mundo.metodos("StartDiscovery")) == 1, "duas janelas abriram"
 
 
-def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
+def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_do_usuario() -> None:
     """O sysfs que some sob a mão é «não sei», e «não sei» não decide nada."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
@@ -594,14 +594,14 @@ def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
         CONTROLE_4: ADAPTADOR_B,
     }
     relogio = _Relogio()
-    governador = _ela_liga_aqui_o_terceiro(onde, relogio)
+    governador = _o_usuario_liga_aqui_o_terceiro(onde, relogio)
 
     onde[CONTROLE_3] = OSError("o hidraw sumiu no meio da leitura")
     relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
     assert governador.conferir_as_autorizacoes() == 0
     onde[CONTROLE_3] = ADAPTADOR_A
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
-    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
+    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_do_usuario
 
 
 def test_no_radio_central_controle_e_sempre_o_uniq(
@@ -750,12 +750,12 @@ def test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador(longe: str) -> None
         CONTROLE_4: ADAPTADOR_B,
     }
     relogio = _Relogio()
-    governador = _ela_liga_aqui_o_terceiro(onde, relogio)
+    governador = _o_usuario_liga_aqui_o_terceiro(onde, relogio)
 
     relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
     governador.tique()
     vibracao = governador.pedir_vaga(CONTROLE_3, "haptica")
-    assert isinstance(vibracao, gov.Vaga) and vibracao.por_escolha_dela
+    assert isinstance(vibracao, gov.Vaga) and vibracao.por_escolha_do_usuario
     vibracao.soltar("a vibração parou")
 
     onde[CONTROLE_3] = longe
@@ -824,7 +824,7 @@ def test_pedir_vaga_em_outro_adaptador_tambem_derruba_a_resposta() -> None:
         CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
         CONTROLE_4: ADAPTADOR_B,
     }
-    governador = _ela_liga_aqui_o_terceiro(onde, _Relogio())
+    governador = _o_usuario_liga_aqui_o_terceiro(onde, _Relogio())
 
     onde[CONTROLE_3] = ADAPTADOR_B
     no_b = governador.pedir_vaga(CONTROLE_3, "som")
@@ -835,7 +835,7 @@ def test_pedir_vaga_em_outro_adaptador_tambem_derruba_a_resposta() -> None:
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
 
 
-def test_quem_esperou_a_trava_confere_de_novo_com_ela_na_mao(
+def test_quem_esperou_a_trava_confere_de_novo_com_o_usuario_na_mao(
     diario: Path,
     mundo: rm.RadioDeMentira,
     dono: bd.DonoVivo,

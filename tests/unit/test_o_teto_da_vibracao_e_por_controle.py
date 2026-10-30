@@ -176,7 +176,7 @@ def _texto_visivel(bruto: bytes) -> str:
     return " ".join(_TAG.sub(" ", texto).split())
 
 
-def test_o_desenho_dela_so_mudou_no_que_esta_declarado() -> None:
+def test_o_desenho_do_usuario_so_mudou_no_que_esta_declarado() -> None:
     """A bancada e o publicado dizem as MESMAS PALAVRAS, byte a byte.
 
     **ESTE CASO ENCOLHEU EM 03/09/2026, e a razão é a sprint
@@ -239,11 +239,11 @@ def test_o_desenho_dela_so_mudou_no_que_esta_declarado() -> None:
     sys.modules["check_desenho_da_regua"] = mod
     spec.loader.exec_module(mod)
 
-    bancada = _texto_visivel(mod.o_que_se_ve(onde.BANCADA / "08-conexoes.html"))
+    ensaio = _texto_visivel(mod.o_que_se_ve(onde.ENSAIO / "08-conexoes.html"))
     publicado = _texto_visivel(mod.o_que_se_ve(onde.PUBLICADO / "08-conexoes.html"))
 
     if "08-conexoes.html" not in mod.declaradas():
-        assert bancada == publicado, (
+        assert ensaio == publicado, (
             "a bancada da 08 passou a DIZER uma coisa que o publicado não diz — "
             "e palavra de tela é decisão dela, não de quem gera a página. Se "
             "isso é adiantamento com razão, declare em `mockup/DIVERGENCIAS.md`.")
@@ -261,7 +261,7 @@ def test_o_desenho_dela_so_mudou_no_que_esta_declarado() -> None:
 
 def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
     """Bancada à frente do publicado só vale DECLARADA — é o portão do desenho."""
-    bancada = (RAIZ / "mockup/08-conexoes.html").read_bytes()
+    ensaio = (RAIZ / "mockup/08-conexoes.html").read_bytes()
     publicado = (
         RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
     ).read_bytes()
@@ -269,7 +269,7 @@ def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
     corpo = texto.split("\n---\n", 1)[-1]
     declarada = "## 08-conexoes.html" in corpo
 
-    if bancada == publicado:
+    if ensaio == publicado:
         assert not declarada, (
             "a bancada da 08 e o produto são byte-idênticos, e ainda há uma "
             "seção dizendo que a aba está EM TRABALHO — a lápide sobreviveu à "

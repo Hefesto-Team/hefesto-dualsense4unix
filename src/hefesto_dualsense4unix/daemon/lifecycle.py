@@ -411,11 +411,11 @@ IGNORADO_CATCH_ALL = "ignorado_catch_all"
 IGNORADO_JANELA_DE_JOGO = "ignorado_janela_de_jogo"
 
 
-def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
+def _a_mascara_do_usuario_sem_o_vazamento(do_disco: object) -> str | None:
     """A máscara dela lida do disco, com o `xbox` do vazamento devolvido.
 
     MASCARA-CONTAGIO-01, ponto 3, 21/09/2026 — **irmã exata de
-    :func:`_a_escolha_dela_sem_o_vazamento`, logo abaixo**, no outro eixo. A
+    :func:`_a_escolha_do_usuario_sem_o_vazamento`, logo abaixo**, no outro eixo. A
     ordem de 19/09 nomeava os dois: *"sim tudo dualsense, tudo ligado
     mascara dualsense por default mas esse vazamento me preocupa"*.
     <!-- noqa-acento: citação literal -->
@@ -466,7 +466,7 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
     return "dualsense"
 
 
-def _a_escolha_dela_sem_o_vazamento(
+def _a_escolha_do_usuario_sem_o_vazamento(
     do_disco: object, origem: str | None = None
 ) -> str | None:
     """A escolha do usuário lida do disco, com o `xbox` do vazamento devolvido."""
@@ -548,7 +548,7 @@ class ModoAdiado:
 ORIGEM_GAME_SIGNAL = "game_signal"
 
 IGNORADO_SEM_JOGO = "ignorado_sem_jogo"
-IGNORADO_GESTO_DELA = "ignorado_gesto_dela"
+IGNORADO_GESTO_DO_USUARIO = "ignorado_gesto_do_usuario"
 
 ORIGEM_EXCLUSAO: Final = "exclusão"
 
@@ -785,7 +785,7 @@ class Daemon:
         gp_enabled, gp_flavor = load_gamepad_emulation()
         if gp_enabled and not self._native_mode:
             self.config.gamepad_emulation_enabled = True
-            gp_flavor = _a_mascara_dela_sem_o_vazamento(gp_flavor)
+            gp_flavor = _a_mascara_do_usuario_sem_o_vazamento(gp_flavor)
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
@@ -793,7 +793,7 @@ class Daemon:
             load_gamepad_caminho_com_origem,
         )
 
-        escolha_dela = _a_escolha_dela_sem_o_vazamento(*load_gamepad_caminho_com_origem())
+        escolha_dela = _a_escolha_do_usuario_sem_o_vazamento(*load_gamepad_caminho_com_origem())
         self.config.gamepad_caminho_global = escolha_dela
         self._caminho_do_boot: str | None = None
         self._wire_game_signal()
@@ -1079,11 +1079,11 @@ class Daemon:
             gerente_do_daemon,
             o_freestyle_manda,
         )
-        from hefesto_dualsense4unix.utils.session import a_escolha_dela
+        from hefesto_dualsense4unix.utils.session import a_escolha_do_usuario
 
         manda = o_freestyle_manda(self.store)
         name = (NOME_DO_PADRAO if manda else None) or self.store.active_profile or (
-            a_escolha_dela(freestyle_ligado=manda))
+            a_escolha_do_usuario(freestyle_ligado=manda))
         if not name:
             return
         manager = gerente_do_daemon(
@@ -1107,7 +1107,7 @@ class Daemon:
                 "profile_mode_skipped_saida_do_nativo",
                 profile=getattr(profile, "name", None),
             )
-            return IGNORADO_GESTO_DELA
+            return IGNORADO_GESTO_DO_USUARIO
         return self.apply_profile_mode(mode, profile=profile, origin=origin)
 
     def _zero_rumble_motors(self) -> None:
@@ -1807,7 +1807,7 @@ class Daemon:
         pela regra do dono (`manager.secao_do_mouse_da_navegacao`), com as
         velocidades vivas quando o perfil não tinha a seção.
 
-        O CARIMBO VAI JUNTO (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DELA-01,
+        O CARIMBO VAI JUNTO (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01,
         03/10/2026): o daemon passa o jogo que vale (o appid do wrapper vivo, o
         mesmo que a escada usa) e o Steam Input dele (a allowlist que a escada
         lê), e o escritor carimba a ponte `por=escolha_dela` quando o perfil
@@ -2001,7 +2001,7 @@ class Daemon:
         preferencia, _flavor = load_gamepad_preference()
         if preferencia is not None:
             return self._log_gamepad_multi(
-                IGNORADO_GESTO_DELA,
+                IGNORADO_GESTO_DO_USUARIO,
                 "ligada" if preferencia else "desligada_de_proposito",
                 0,
             )
@@ -2010,9 +2010,9 @@ class Daemon:
                 ADIADO_LOCK_MANUAL, "gesto_manual_recente", 0
             )
         if self._native_mode or self.store.native_mode_active:
-            return self._log_gamepad_multi(IGNORADO_GESTO_DELA, "modo_nativo", 0)
+            return self._log_gamepad_multi(IGNORADO_GESTO_DO_USUARIO, "modo_nativo", 0)
         if self._mouse_device is not None:
-            return self._log_gamepad_multi(IGNORADO_GESTO_DELA, "mouse_em_uso", 0)
+            return self._log_gamepad_multi(IGNORADO_GESTO_DO_USUARIO, "mouse_em_uso", 0)
         controles = self.contar_controles_fisicos()
         if controles < 2:
             return self._log_gamepad_multi(
@@ -2540,7 +2540,7 @@ class Daemon:
             and getattr(self.store, "native_mode_origin", None) != "profile"
         ):
             return self._log_modo_jogo_padrao(
-                IGNORADO_GESTO_DELA, "modo_nativo_manual", wm_class
+                IGNORADO_GESTO_DO_USUARIO, "modo_nativo_manual", wm_class
             )
         gamepad_antes = (
             self.config.gamepad_emulation_enabled and self._gamepad_device is not None

@@ -201,7 +201,7 @@ def test_o_registro_velho_sem_o_xalia_se_cura_pela_prova_byte_a_byte(
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in _env_do_yml(yml)
 
 
-def test_o_xalia_posto_por_ela_com_outro_valor_nao_vira_nosso(
+def test_o_xalia_posto_pelo_usuario_com_outro_valor_nao_vira_nosso(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem a prova byte a byte o par segue como dela: ninguém reanota, a volta o deixa."""
     yml, _ = _excluido_sem_o_xalia(_lar, monkeypatch)

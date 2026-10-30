@@ -109,7 +109,7 @@ def test_o_check_nao_escreve_no_no(tmp_path: Path) -> None:
     )
 
 
-def test_a_mensagem_que_ela_le_nao_promete_cor(tmp_path: Path) -> None:
+def test_a_mensagem_que_o_usuario_le_nao_promete_cor(tmp_path: Path) -> None:
     """A frase RENDERIZADA (não o fonte) é a que ela lê — e ela também não mente."""
     leds = tmp_path / "leds"
     no = leds / "0005:054C:0CE6.0002:rgb:indicator"

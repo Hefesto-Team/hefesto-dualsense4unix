@@ -300,7 +300,7 @@ def test_o_uniq_do_kernel_leva_ao_dispositivo_usb_sem_olhar_ordem() -> None:
     }
 
 
-def _monitor_da_bancada(
+def _monitor_do_ensaio(
     monkeypatch: pytest.MonkeyPatch,
     registro: list[list[str]] | None = None,
     *,
@@ -334,21 +334,21 @@ def _monitor_da_bancada(
 
 
 @pytest.fixture
-def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
-    return _monitor_da_bancada(monkeypatch)
+def monitor_do_ensaio(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
+    return _monitor_do_ensaio(monkeypatch)
 
 
 def test_o_selo_da_saida_muda_acende_no_card_certo(
-    monitor_da_bancada: mm.MicMonitor,
+    monitor_do_ensaio: mm.MicMonitor,
 ) -> None:
     """A carona da camada 1 segue o mesmo casamento — e some no rádio."""
-    monitor_da_bancada.reconciliar()
-    leitura = monitor_da_bancada.leitura(_CABO_A)
+    monitor_do_ensaio.reconciliar()
+    leitura = monitor_do_ensaio.leitura(_CABO_A)
     assert leitura is not None
     assert leitura.saida_muda is True
     assert leitura.sink == _SINK_A
-    assert monitor_da_bancada.leitura(_CABO_B) is None
-    assert monitor_da_bancada.leitura(_RADIO_A) is None
+    assert monitor_do_ensaio.leitura(_CABO_B) is None
+    assert monitor_do_ensaio.leitura(_RADIO_A) is None
 
 
 def test_o_monitor_so_pergunta_o_sysfs_pela_porta_do_json(
@@ -360,7 +360,7 @@ def test_o_monitor_so_pergunta_o_sysfs_pela_porta_do_json(
     `_casar_por_usb` faz o argv longo aparecer no registro e o casamento sumir.
     """
     registro: list[list[str]] = []
-    monitor = _monitor_da_bancada(monkeypatch, registro)
+    monitor = _monitor_do_ensaio(monkeypatch, registro)
 
     monitor.reconciliar()
 
@@ -372,7 +372,7 @@ def test_o_monitor_so_pergunta_o_sysfs_pela_porta_do_json(
     assert leitura.sink == _SINK_A
 
 
-def test_o_casamento_do_monitor_sai_igual_ao_do_texto_longo_da_mesma_bancada(
+def test_o_casamento_do_monitor_sai_igual_ao_do_texto_longo_da_mesmo_ensaio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O `por_no` do JSON é o do texto longo de 15/08, medido no código antigo.
@@ -381,7 +381,7 @@ def test_o_casamento_do_monitor_sai_igual_ao_do_texto_longo_da_mesma_bancada(
     numa árvore de leitura e deu estes três pares; a expectativa é escrita à mão, nunca
     o parser novo chamado de dentro do teste.
     """
-    monitor = _monitor_da_bancada(monkeypatch)
+    monitor = _monitor_do_ensaio(monkeypatch)
     monkeypatch.setattr(
         mm, "usb_pai_por_no", lambda mapa: usb_pai_por_no(mapa, existe=_existe, real=lambda c: c)
     )
@@ -407,7 +407,7 @@ def test_sem_a_porta_do_json_o_casamento_vale_none_e_nao_chuta(
     Os dois sinks de cabo têm nomes que não os distinguem; sem o USB, nenhum
     controle ganha placa. «Não sei» nunca vira «é este».
     """
-    monitor = _monitor_da_bancada(monkeypatch, com_json=False)
+    monitor = _monitor_do_ensaio(monkeypatch, com_json=False)
 
     assert monitor._casar_por_usb(
         "sinks", sinks_dualsense(_SINKS_CURTO), dict(_USB_POR_UNIQ)

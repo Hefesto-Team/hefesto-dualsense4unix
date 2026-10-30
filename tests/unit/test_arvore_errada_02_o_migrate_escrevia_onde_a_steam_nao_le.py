@@ -152,8 +152,8 @@ class TestOMigrateSoEscreveOndeASteamLe:
 
     def test_linha_alheia_fora_da_canonica_passa_intacta(self) -> None:
         """A linha VKD3D dela, sem veneno e sem wrapper, não é nossa para mexer."""
-        dela = "VKD3D_CONFIG=no_upload_hvv %command%"
-        texto = _vdf_das_tres_arvores(solta={"413080": dela})
+        do_usuario = "VKD3D_CONFIG=no_upload_hvv %command%"
+        texto = _vdf_das_tres_arvores(solta={"413080": do_usuario})
         for modo in ("migrate", "strip"):
             novo, mudadas = slo.transform_vdf_text(texto, modo)
             assert mudadas == 0, modo
@@ -164,9 +164,9 @@ class TestORecolherEOCaminhoDeVolta:
     """`recolher` apaga a linha INTEIRA, e só fora da árvore viva."""
 
     def test_apaga_a_linha_de_fora_e_nao_a_de_dentro(self) -> None:
-        dela = "VKD3D_CONFIG=no_upload_hvv %command%"
+        do_usuario = "VKD3D_CONFIG=no_upload_hvv %command%"
         texto = _vdf_das_tres_arvores(
-            viva={"316790": LINHA_914}, solta={"413080": dela}, web={"440": ""}
+            viva={"316790": LINHA_914}, solta={"413080": do_usuario}, web={"440": ""}
         )
         novo, mudadas = slo.transform_vdf_text(texto, "recolher")
         assert mudadas == 2, novo

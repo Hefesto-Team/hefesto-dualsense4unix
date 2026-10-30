@@ -29,7 +29,7 @@ from hefesto_dualsense4unix.core.speaker_scale import (
     volume_do_percentual,
 )
 
-LARGURA_DA_TELA_DELA = 1870
+LARGURA_DA_TELA_DO_USUARIO = 1870
 
 
 def _gtk_pronto() -> bool:

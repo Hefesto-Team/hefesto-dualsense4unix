@@ -132,7 +132,7 @@ def _cor_no_disco(caminho) -> list | None:
     return ((dado.get("controllers") or {}).get(CHAVE, {}).get("leds") or {}).get("lightbar")
 
 
-def test_clicar_num_tom_grava_a_cor_no_override_dela(pac, a04):
+def test_clicar_num_tom_grava_a_cor_no_override_do_usuario(pac, a04):
     """O estado do disco do usuário em 09/09: brilho sim, cor não. Depois do clique, as duas.
 
     **A MORDIDA:** tire a chamada de `_guardar_a_cor_no_perfil` do fim de

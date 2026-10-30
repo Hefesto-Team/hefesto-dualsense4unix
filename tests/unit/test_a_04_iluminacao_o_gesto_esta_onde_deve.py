@@ -106,8 +106,8 @@ GESTO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 
 def _gerar(destino: pathlib.Path) -> pathlib.Path:
     """A página da aba 04 montada pelo gerador de verdade, num lar de mentira."""
-    anterior = os.environ.get("HEFESTO_BANCADA")
-    os.environ["HEFESTO_BANCADA"] = str(destino)
+    anterior = os.environ.get("HEFESTO_ENSAIO")
+    os.environ["HEFESTO_ENSAIO"] = str(destino)
     try:
         import aba04
         import onde
@@ -118,9 +118,9 @@ def _gerar(destino: pathlib.Path) -> pathlib.Path:
         return onde.pagina(PAGINA)
     finally:
         if anterior is None:
-            os.environ.pop("HEFESTO_BANCADA", None)
+            os.environ.pop("HEFESTO_ENSAIO", None)
         else:
-            os.environ["HEFESTO_BANCADA"] = anterior
+            os.environ["HEFESTO_ENSAIO"] = anterior
 
 
 O_QUE_O_NAVEGADOR_DESENHA = r"""

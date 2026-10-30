@@ -48,6 +48,6 @@ def test_as_duas_casas_de_hoje_existem() -> None:
             f"`{pasta}` está declarada em PASTAS_DAS_ABAS e não existe")
 
 
-def test_a_bancada_vem_antes_do_publicado() -> None:
+def test_o_ensaio_vem_antes_do_publicado() -> None:
     """A ordem é decisão desta casa, e está escrita em ``onde.pagina``."""
     assert regua.PASTAS_DAS_ABAS[0] == "mockup"

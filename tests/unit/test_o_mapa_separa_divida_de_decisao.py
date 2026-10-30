@@ -23,7 +23,7 @@ PELO MOTIVO CERTO: os dois lados de `luz.led_jogador.brilho@dualsense` passaram
 a ser ACIONADOS pelo produto. A decisão de produto
 `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS` (Fraco, Médio e Forte na linha
 LEDs, nascendo no Fraco) virou campo do perfil e report nos dois transportes
-(O-BRILHO-DAS-LUZES-DE-NUMERO-01). As duas eram `so-ela-decide`, que é
+(O-BRILHO-DAS-LUZES-DE-NUMERO-01). As duas eram `so-o-usuario-decide`, que é
 DECISÃO: o contador de dívida deste arquivo não se moveu.
 
 **RECONTADO EM 21/09/2026: eram 47** — 23 no cabo, 24 no rádio. A que ENTROU é
@@ -115,19 +115,19 @@ O domínio, e ele responde *"não aciona — e daí?"*:
 `nada-a-acionar`     não há feature a acionar: ou o aparelho não oferece, ou a
                      linha é de MEDIÇÃO e `aciona = não` responde "o fenômeno
                      não aconteceu", nunca "o produto não faz".
-`so-ela-decide`      a pergunta existe, ninguém a respondeu, e a resposta é do usuário.
+`so-o-usuario-decide`      a pergunta existe, ninguém a respondeu, e a resposta é do usuário.
                      Nem dívida nem decisão — fila de decisão.
 ===================  ============================================================
 
 Os valores são hifenizados por um motivo mecânico que vale registrar:
 `scripts/validar-acentuacao.py` reprova a palavra "decisão" escrita sem o til, e
 está certo — mas não a reprova quando ela é parte de um identificador maior.
-Daí `decisao-tomada`, e daí `so-ela-decide`.
+Daí `decisao-tomada`, e daí `so-o-usuario-decide`.
 
 O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
-20 `nada-a-acionar`, 2 `so-ela-decide`.
+20 `nada-a-acionar`, 2 `so-o-usuario-decide`.
 
-Em 29/08/2026 as duas `so-ela-decide` saíram — eram o acelerômetro do DualSense
+Em 29/08/2026 as duas `so-o-usuario-decide` saíram — eram o acelerômetro do DualSense
 no cabo e no rádio, e a decisão de produto foi que ele não sai: ele tem de FUNCIONAR. A palavra
 continua no domínio, sem uso e com a
 razão escrita, em `RESERVADOS`: o estado que ela nomeia não morreu com a linha
@@ -147,7 +147,7 @@ A RÉGUA FOI VALIDADA, e é a parte que esta casa esquece três vezes por dia
 Um teste que itera a mesma lista que deveria conferir não mede nada. Dois testes
 aqui existem só para provar que este não faz isso:
 
-- `test_a_populacao_nao_depende_da_coluna_que_ela_confere` apaga a coluna nova
+- `test_a_populacao_nao_depende_da_coluna_que_o_usuario_confere` apaga a coluna nova
   inteira num CSV de mentira e confere que a população continua com o mesmo
   tamanho — a população sai de `de_onde_sei` e `aciona`, que são outras colunas;
 - `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv` põe uma dívida a mais num
@@ -194,7 +194,7 @@ ACIONA_NAO = "não"
 DIVIDA = "divida"
 DECISAO = "decisao-tomada"
 NADA_A_ACIONAR = "nada-a-acionar"
-SO_ELA_DECIDE = "so-ela-decide"
+SO_O_USUARIO_DECIDE = "so-o-usuario-decide"
 O_APARELHO_RECUSA = "o-aparelho-recusa"
 
 DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
@@ -330,7 +330,7 @@ def test_a_decisao_pode_crescer_sem_reprovar() -> None:
         assert not [chave for chave in populacao(falso) if not respostas(falso).get(chave)]
 
 
-def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
+def test_a_populacao_nao_depende_da_coluna_que_o_usuario_confere() -> None:
     """Apagar a coluna nova não pode encolher a população que a cobra."""
     import tempfile
 
@@ -364,7 +364,7 @@ def test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv() -> None:
 RESERVADOS: dict[str, str] = {}
 
 _A_RESERVA_DE_29_08_QUE_CADUCOU = {
-    SO_ELA_DECIDE: (
+    SO_O_USUARIO_DECIDE: (
         "29/08/2026, ONDA-CONTROLES-04. O último uso era "
         "`movimento.acelerometro@dualsense`, nos dois lados, e ele saiu porque "
         "a causa FOI RESOLVIDA: ela decidiu (*\"não era pra ele sair. era pra "
@@ -380,7 +380,7 @@ _A_RESERVA_DE_29_08_QUE_CADUCOU = {
 }
 
 
-@pytest.mark.parametrize("valor", [DIVIDA, DECISAO, NADA_A_ACIONAR, SO_ELA_DECIDE])
+@pytest.mark.parametrize("valor", [DIVIDA, DECISAO, NADA_A_ACIONAR, SO_O_USUARIO_DECIDE])
 def test_cada_valor_do_dominio_e_usado_ou_explicado(valor: str) -> None:
     """Valor de domínio que ninguém usa é vocabulário morto — ou é dívida de fila."""
     usados = set(respostas(MAPA).values())
@@ -412,7 +412,7 @@ def test_reservado_que_ninguem_explica_nao_entra() -> None:
 
 VETO_DOS_EXTERNOS = "D-2409-O-VETO-DOS-EXTERNOS-SEGUE-ATE-O-RELEASE"
 NUNCA_GRAVA_A_CALIBRACAO = "D-2409-O-HEFESTO-NUNCA-GRAVA-A-CALIBRACAO"
-RESPONDIDAS_POR_ELA: dict[str, str] = {
+RESPONDIDAS_PELO_USUARIO: dict[str, str] = {
     "combinacao.rumble_simultaneo@sn30": VETO_DOS_EXTERNOS,
     "combinacao.tres_na_mesa@pro": VETO_DOS_EXTERNOS,
     "combinacao.tres_na_mesa@sn30": VETO_DOS_EXTERNOS,
@@ -426,7 +426,7 @@ RESPONDIDAS_POR_ELA: dict[str, str] = {
     "vibracao.rumble.passthrough@sn30": VETO_DOS_EXTERNOS,
     "entrada.stick.calibracao@dualsense": NUNCA_GRAVA_A_CALIBRACAO,
 }
-DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
+DECISOES_DO_USUARIO = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 
 O_VETO_ALCANCA_O_PRO: dict[str, str] = {
     "plataforma.adocao@pro": VETO_DOS_EXTERNOS,
@@ -455,7 +455,7 @@ def respostas_que_voltaram(
     }
     achados: list[str] = []
     if respondidas is None:
-        respondidas = RESPONDIDAS_POR_ELA
+        respondidas = RESPONDIDAS_PELO_USUARIO
     for ident, decisao in respondidas.items():
         if decisao not in decididas:
             achados.append(
@@ -476,39 +476,40 @@ def respostas_que_voltaram(
         texto = " ".join(valor or "" for valor in linha.values())
         if decisao not in texto:
             achados.append(f"{ident}: nenhuma célula cita `{decisao}`")
-        if SO_ELA_DECIDE in texto:
-            achados.append(f"{ident}: alguma célula ainda diz `{SO_ELA_DECIDE}`")
+        if SO_O_USUARIO_DECIDE in texto:
+            achados.append(f"{ident}: alguma célula ainda diz `{SO_O_USUARIO_DECIDE}`")
     return achados
 
 
-def test_a_resposta_dela_nao_volta_a_ser_pergunta() -> None:
-    """MORDE: devolva `so-ela-decide` a uma das doze, apague o id dela, ou mexa no `aciona`."""
-    voltaram = respostas_que_voltaram(MAPA, DECISOES_DELA)
+def test_a_resposta_do_usuario_nao_volta_a_ser_pergunta() -> None:
+    """MORDE: devolva `so-o-usuario-decide` a uma das doze, apague o id dela, ou mexa no
+    `aciona`."""
+    voltaram = respostas_que_voltaram(MAPA, DECISOES_DO_USUARIO)
     assert not voltaram, (
         f"{len(voltaram)} achado(s) nas linhas que ela respondeu em 24/09/2026: "
         + "; ".join(voltaram)
         + ". A pergunta tem resposta: os dois lados dizem `aciona = não`, a causa é "
         "`decisao-tomada` e a linha cita a decisão pelo id. Se a pergunta voltou, a "
         "decisão sai de `decidida` no arquivo dela e a linha sai de "
-        "`RESPONDIDAS_POR_ELA` no mesmo gesto"
+        "`RESPONDIDAS_PELO_USUARIO` no mesmo gesto"
     )
 
 
 def test_a_regua_das_respostas_ve_uma_que_volta() -> None:
-    """Uma célula devolvida a `so-ela-decide` num CSV de mentira tem de ser VISTA."""
+    """Uma célula devolvida a `so-o-usuario-decide` num CSV de mentira tem de ser VISTA."""
     import tempfile
 
     alvo = ("entrada.stick.calibracao@dualsense", "radio")
     with tempfile.TemporaryDirectory() as pasta:
-        falso = _csv_de_mentira(Path(pasta) / "mapa.csv", trocas={alvo: SO_ELA_DECIDE})
-        voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
+        falso = _csv_de_mentira(Path(pasta) / "mapa.csv", trocas={alvo: SO_O_USUARIO_DECIDE})
+        voltaram = respostas_que_voltaram(falso, DECISOES_DO_USUARIO)
     assert any(achado.startswith(f"{alvo[0]} ({alvo[1]})") for achado in voltaram), voltaram
-    assert any(SO_ELA_DECIDE in achado for achado in voltaram), voltaram
+    assert any(SO_O_USUARIO_DECIDE in achado for achado in voltaram), voltaram
 
 
 def _decisoes_com_o_estado(destino: Path, ident: str, estado: str) -> Path:
     """Uma cópia do registro dela com o `estado` de UMA decisão trocado."""
-    linhas = list(csv.DictReader(io.StringIO(DECISOES_DELA.read_text(encoding="utf-8"))))
+    linhas = list(csv.DictReader(io.StringIO(DECISOES_DO_USUARIO.read_text(encoding="utf-8"))))
     for linha in linhas:
         if linha["id"] == ident:
             linha["estado"] = estado
@@ -526,10 +527,11 @@ def test_a_decisao_que_sobe_a_escada_continua_respondida(estado: str) -> None:
     sim."""
     import tempfile
 
-    decisao = next(iter(RESPONDIDAS_POR_ELA.values()))
+    decisao = next(iter(RESPONDIDAS_PELO_USUARIO.values()))
     with tempfile.TemporaryDirectory() as pasta:
         subiu = _decisoes_com_o_estado(Path(pasta) / "subiu.csv", decisao, estado)
-        assert respostas_que_voltaram(MAPA, subiu) == respostas_que_voltaram(MAPA, DECISOES_DELA)
+        esperadas = respostas_que_voltaram(MAPA, DECISOES_DO_USUARIO)
+        assert respostas_que_voltaram(MAPA, subiu) == esperadas
         reaberta = _decisoes_com_o_estado(Path(pasta) / "reaberta.csv", decisao, "aberta")
         assert any(decisao in achado for achado in respostas_que_voltaram(MAPA, reaberta))
 
@@ -564,13 +566,13 @@ def test_a_regua_das_respostas_ve_o_aciona_que_muda(ident: str, lado: str, acion
     colunas = {f"{lado}_aciona": aciona, f"{lado}_{SUFIXO}": ""}
     with tempfile.TemporaryDirectory() as pasta:
         falso = _mapa_com_a_linha_mexida(Path(pasta) / "mapa.csv", ident, colunas)
-        voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
+        voltaram = respostas_que_voltaram(falso, DECISOES_DO_USUARIO)
     assert any(achado.startswith(f"{ident} ({lado}): `aciona`") for achado in voltaram), voltaram
 
 
 def test_o_veto_alcanca_o_pro() -> None:
     """MORDE: devolva `nada-a-acionar` a uma linha do Pro, ou apague o id da taxa."""
-    voltaram = respostas_que_voltaram(MAPA, DECISOES_DELA, O_VETO_ALCANCA_O_PRO)
+    voltaram = respostas_que_voltaram(MAPA, DECISOES_DO_USUARIO, O_VETO_ALCANCA_O_PRO)
     assert not voltaram, (
         f"{len(voltaram)} achado(s) nas linhas do Pro e da taxa que o veto alcança: "
         + "; ".join(voltaram)
@@ -596,5 +598,5 @@ def test_a_regua_do_veto_ve_o_pro_que_volta(ident: str, colunas: dict[str, str],
 
     with tempfile.TemporaryDirectory() as pasta:
         falso = _mapa_com_a_linha_mexida(Path(pasta) / "mapa.csv", ident, colunas)
-        voltaram = respostas_que_voltaram(falso, DECISOES_DELA, O_VETO_ALCANCA_O_PRO)
+        voltaram = respostas_que_voltaram(falso, DECISOES_DO_USUARIO, O_VETO_ALCANCA_O_PRO)
     assert any(item.startswith(achado) for item in voltaram), voltaram

@@ -255,7 +255,7 @@ def paginas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     destino = tmp_path_factory.mktemp("nativo")
     for arq in (RAIZ / "mockup").glob("*.html"):
         (destino / arq.name).write_text(arq.read_text(encoding="utf-8"), encoding="utf-8")
-    env = dict(os.environ, HEFESTO_BANCADA=str(destino),
+    env = dict(os.environ, HEFESTO_ENSAIO=str(destino),
                PYTHONPATH=str(RAIZ / "src") + os.pathsep + os.environ.get("PYTHONPATH", ""))
     for n in ("01", "03", "04", "05"):
         feito = subprocess.run([sys.executable, f"aba{n}.py"], cwd=INTERFACE, env=env,

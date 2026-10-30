@@ -59,7 +59,7 @@ class _Sinal:
         return self._n, dict(self.dbm)
 
 
-class _Bancada:
+class _Ensaio:
     """O governador real com `controles` (uma ponte de som cada) num adaptador que escoa
     `capacidade` pacotes por janela. `passo()` fecha uma janela; `fraco(uniq)` põe o sinal dele
     abaixo do que atrasa o botão (o tique seguinte o lê).
@@ -115,18 +115,18 @@ class _Bancada:
 
 def _correr(
     controles: tuple[str, ...], capacidade: int, *, longe: str | None = None
-) -> _Bancada:
+) -> _Ensaio:
     """`longe` fica com o sinal fraco a partir da janela `JANELAS_ANTES`; o que se conta é só o
     que acontece nas `JANELAS_DEPOIS` seguintes (janelas cedidas e quadros de cada controle).
     """
-    bancada = _Bancada(controles, capacidade)
+    ensaio = _Ensaio(controles, capacidade)
     for janela in range(JANELAS_ANTES + JANELAS_DEPOIS):
         if janela == JANELAS_ANTES:
-            bancada.contando = True
+            ensaio.contando = True
             if longe is not None:
-                bancada.fraco(longe)
-        bancada.passo()
-    return bancada
+                ensaio.fraco(longe)
+        ensaio.passo()
+    return ensaio
 
 
 @pytest.mark.parametrize("capacidade", [47, 24])
@@ -168,24 +168,24 @@ def test_o_flag_da_fila_nao_fica_na_vaga_longe() -> None:
     a longe não lhe devolve o flag), e o `not vaga.longe` do ramo `inteiro` não tem régua que o
     arranque sozinho. O do `_conceder` morde na régua seguinte.
     """
-    bancada = _Bancada((CONTROLE_1, CONTROLE_2, CONTROLE_3), 24)
-    a = bancada.vagas[CONTROLE_1]
+    ensaio = _Ensaio((CONTROLE_1, CONTROLE_2, CONTROLE_3), 24)
+    a = ensaio.vagas[CONTROLE_1]
     na_vez_do_par_b_e_c = False
     for _ in range(JANELAS_ANTES):
-        bancada.passo()
-        estado = next(iter(bancada.governador._estados.values()))
+        ensaio.passo()
+        estado = next(iter(ensaio.governador._estados.values()))
         na_vez_do_par_b_e_c = a._cedendo_pela_fila and estado.vez % 3 == 1
         if na_vez_do_par_b_e_c:
             break
     assert na_vez_do_par_b_e_c, "premissa: a A leva o flag e a vez cai no par B+C"
-    bancada.fraco(CONTROLE_1)
-    bancada.contando = True
-    bancada.passo()
+    ensaio.fraco(CONTROLE_1)
+    ensaio.contando = True
+    ensaio.passo()
     assert a.longe and a._cedendo_pela_fila is False
     for _ in range(40):
-        bancada.passo()
+        ensaio.passo()
         assert a._cedendo_pela_fila is False, "a fila voltou a pôr o flag na vaga longe"
-    assert bancada.parada == 0, "janelas sem nenhuma ponte escrevendo: as duas vizinhas cederam"
+    assert ensaio.parada == 0, "janelas sem nenhuma ponte escrevendo: as duas vizinhas cederam"
 
 
 def test_a_ponte_que_nasce_no_episodio_com_o_controle_longe_nao_leva_o_flag() -> None:
@@ -193,15 +193,15 @@ def test_a_ponte_que_nasce_no_episodio_com_o_controle_longe_nao_leva_o_flag() ->
 
     MORDIDA: o `_conceder` voltando a pôr `vaga.cedendo = True` sem olhar a pausa.
     """
-    bancada = _Bancada((CONTROLE_1, CONTROLE_2, CONTROLE_3), 24)
+    ensaio = _Ensaio((CONTROLE_1, CONTROLE_2, CONTROLE_3), 24)
     for _ in range(20):
-        bancada.passo()
-    estado = next(iter(bancada.governador._estados.values()))
+        ensaio.passo()
+    estado = next(iter(ensaio.governador._estados.values()))
     assert estado.cedendo, "premissa: o adaptador está num episódio de ceder"
-    bancada.fraco(CONTROLE_2)
-    bancada.passo()
-    bancada.passo()
-    vaga = bancada.governador.pedir_vaga(CONTROLE_2, "vibracao")
+    ensaio.fraco(CONTROLE_2)
+    ensaio.passo()
+    ensaio.passo()
+    vaga = ensaio.governador.pedir_vaga(CONTROLE_2, "vibracao")
     assert isinstance(vaga, gov.Vaga)
     assert vaga.longe and vaga._cedendo_pela_fila is False
 
@@ -299,21 +299,21 @@ def test_o_governador_publica_a_taxa_e_o_ceder_de_cada_ponte() -> None:
     A taxa é a de `Vaga.escritas` por janela do adaptador, suavizada: o que a ponte pôs no ar,
     nunca a constante. MORDIDA: `publicar` sem o `hz`/`cedendo` (a Conexões não tem o que ler).
     """
-    bancada = _Bancada((CONTROLE_2, CONTROLE_3), 47)
+    ensaio = _Ensaio((CONTROLE_2, CONTROLE_3), 47)
     for _ in range(80):
-        bancada.passo()
-    pontes = {p["uniq"]: p for p in bancada.governador.publicar()[ADAPTADOR_A]["pontes"]}
+        ensaio.passo()
+    pontes = {p["uniq"]: p for p in ensaio.governador.publicar()[ADAPTADOR_A]["pontes"]}
     for uniq in (CONTROLE_2, CONTROLE_3):
         assert pontes[uniq]["cedendo"] is False
         assert abs(pontes[uniq]["hz"] - 93.75) < 8, pontes[uniq]
 
-    bancada = _Bancada((CONTROLE_1, CONTROLE_2, CONTROLE_3), 47)
+    ensaio = _Ensaio((CONTROLE_1, CONTROLE_2, CONTROLE_3), 47)
     for _ in range(40):
-        bancada.passo()
-    bancada.fraco(CONTROLE_1)
+        ensaio.passo()
+    ensaio.fraco(CONTROLE_1)
     for _ in range(40):
-        bancada.passo()
-    pontes = {p["uniq"]: p for p in bancada.governador.publicar()[ADAPTADOR_A]["pontes"]}
+        ensaio.passo()
+    pontes = {p["uniq"]: p for p in ensaio.governador.publicar()[ADAPTADOR_A]["pontes"]}
     assert pontes[CONTROLE_1]["pausada_pelo_sinal"] and pontes[CONTROLE_1]["cedendo"]
     assert pontes[CONTROLE_1]["hz"] < 5, "a ponte pausada ainda publica a taxa de antes"
 
@@ -332,10 +332,10 @@ def test_a_tela_le_a_taxa_e_o_ceder_que_o_governador_publica() -> None:
 
 def test_do_governador_a_caixa_da_tela_a_ponte_longe_fica_vazia_e_a_vizinha_diz_o_hz() -> None:
     """Ponta a ponta: o governador real publica, a Conexões lê, a caixa muda de «94» para vazio."""
-    bancada = _Bancada((CONTROLE_1, CONTROLE_2), 47)
+    ensaio = _Ensaio((CONTROLE_1, CONTROLE_2), 47)
     for _ in range(60):
-        bancada.passo()
-    publicado = {ADAPTADOR_A: bancada.governador.publicar()[ADAPTADOR_A]}
+        ensaio.passo()
+    publicado = {ADAPTADOR_A: ensaio.governador.publicar()[ADAPTADOR_A]}
 
     def caixas() -> list[str]:
         controles = [{"uniq": a08._so_hex(u), "transport": "bt", "adaptador": ADAPTADOR_A,
@@ -350,10 +350,10 @@ def test_do_governador_a_caixa_da_tela_a_ponte_longe_fica_vazia_e_a_vizinha_diz_
     perto = caixas()
     assert all(c.endswith(" Hz") and 80 <= int(c.split()[0]) <= 105 for c in perto), perto
 
-    bancada.fraco(CONTROLE_1)
+    ensaio.fraco(CONTROLE_1)
     for _ in range(40):
-        bancada.passo()
-    publicado = {ADAPTADOR_A: bancada.governador.publicar()[ADAPTADOR_A]}
+        ensaio.passo()
+    publicado = {ADAPTADOR_A: ensaio.governador.publicar()[ADAPTADOR_A]}
     longe = caixas()
     assert longe[0] == "" and longe[1].endswith(" Hz"), longe
 

@@ -20,7 +20,8 @@ funções do desenho).
 
 MORDIDA (executada em 21/10/2026): sem o `overflow-y:auto` da `.lanc-fila`,
 `test_a_fila_que_nao_cabe_rola_por_dentro` reprova nos três casos e o ⋮ aberto também (o miolo
-rola); com o piso de volta em 38 px e o vão em 8, `test_a_fila_dela_cabe_inteira_na_maximizada`
+rola); com o piso de volta em 38 px e o vão em 8,
+`test_a_fila_do_usuario_cabe_inteira_na_maximizada`
 reprova; sem o vigia do ⋮ no `comportamento.js`,
 `test_o_menu_com_as_permissoes_da_ultima_fileira_fica_a_vista` reprova nas duas vistas; sem a
 dica na frase da extensão (`ext-faz`), seis dos sete reprovam pelo texto cortado.
@@ -175,7 +176,7 @@ def _sem_rolar_o_miolo(m: dict[str, list[int] | None]) -> None:
     assert m.get("cortes") == [], f"texto cortado sem a dica: {m.get('cortes')}"
 
 
-def test_a_fila_dela_cabe_inteira_na_maximizada(
+def test_a_fila_do_usuario_cabe_inteira_na_maximizada(
         medida: dict[str, dict[str, list[int] | None]]) -> None:
     """Dez lançadores e a linha do «Adicionar» (a fila dela), na janela maximizada: tudo à vista."""
     m = medida["1918x840-dela"]

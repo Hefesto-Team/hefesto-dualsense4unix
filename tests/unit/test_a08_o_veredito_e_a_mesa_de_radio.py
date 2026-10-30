@@ -8,7 +8,7 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 
 
 def _pacote():  # type: ignore[no-untyped-def]
@@ -85,7 +85,7 @@ def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
         "do estado — e ela também tem dono (`secao_exame.FRASE_DO_SELO`)")
 
 
-def test_o_que_ela_calou_nao_segura_a_cor() -> None:
+def test_o_que_o_usuario_calou_nao_segura_a_cor() -> None:
     """A ordem DISPENSADA sai da conta — senão o ⊘ é botão morto."""
     p = _pacote()
     ordem = _ordem("vizinhanca", "arranjo-de-hoje")
@@ -109,7 +109,7 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
 
 def test_a_linha_de_veredito_saiu_da_tela() -> None:
     """A LINHA SAIU — 26/09/2026, pedido com a janela maximizada."""
-    html = BANCADA.read_text()
+    html = ENSAIO.read_text()
     assert 'class="veredito"' not in html, (
         "a linha de veredito voltou ao desenho — ela saiu a pedido dela")
     saiu = _pacote().pacote(_ctx())

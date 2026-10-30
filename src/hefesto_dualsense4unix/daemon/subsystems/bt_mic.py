@@ -119,7 +119,7 @@ class RegistroDePedidosDeCanal:
             mudou = self._no_ar.get(chave) is not ligado
             self._no_ar[chave] = ligado
         if mudou:
-            logger.info("bt_mic_palavra_dela", uniq=chave, ligado=ligado)
+            logger.info("bt_mic_palavra_do_usuario", uniq=chave, ligado=ligado)
             self.novidade.set()
         return True
 
@@ -129,7 +129,7 @@ class RegistroDePedidosDeCanal:
         with self._lock:
             saiu = self._no_ar.pop(chave, None) is not None
         if saiu:
-            logger.info("bt_mic_palavra_dela_esquecida", uniq=chave)
+            logger.info("bt_mic_palavra_do_usuario_esquecida", uniq=chave)
             self.novidade.set()
         return saiu
 
@@ -453,7 +453,7 @@ class BtMicSubsystem:
         e isso é pior que o código morto sozinho: a próxima pessoa confiaria na
         promessa. `alvos()` só pode entregar o que está na lista que recebe.
 
-        Quem trata do pedido continua sendo o `_soltar_os_que_ela_desmarcou`
+        Quem trata do pedido continua sendo o `_soltar_os_que_o_usuario_desmarcou`
         (a borda de subida da recusa solta o pedido) e o
         `_esquecer_quem_saiu_da_mesa`.
 
@@ -501,7 +501,7 @@ class BtMicSubsystem:
             self._registro.pedir(uniq)
         ok = self._registro.dizer_no_ar(uniq, ligado)
         if ok:
-            self._aplicar_a_palavra_dela()
+            self._aplicar_a_palavra_do_usuario()
         return ok
 
     def esquecer_a_palavra(self, uniq: str) -> bool:
@@ -516,7 +516,7 @@ class BtMicSubsystem:
         **PERDER O PADRÃO NÃO CHAMA MAIS — 13/09/2026 (OS-QUATRO-NO-AR-01).**
         Até aqui quem chamava era a perda da eleição, e ligar o microfone de um
         segundo controle tirava o primeiro do ar: medido em 10/09/2026 com dois
-        DualSense no rádio, `bt_mic_palavra_dela_esquecida` e depois
+        DualSense no rádio, `bt_mic_palavra_do_usuario_esquecida` e depois
         `bt_mic_pedido ligar=False` no hidraw do primeiro. Os quatro ficam no ar
         juntos; só a fonte padrão do sistema é de um.
 
@@ -526,7 +526,7 @@ class BtMicSubsystem:
         """
         saiu = self._registro.esquecer_a_palavra(uniq)
         if saiu:
-            self._aplicar_a_palavra_dela()
+            self._aplicar_a_palavra_do_usuario()
         return saiu
 
     def palavra_no_ar(self, uniq: str) -> bool | None:
@@ -549,7 +549,7 @@ class BtMicSubsystem:
             with contextlib.suppress(Exception):
                 canal_do_microfone.escrever_o_mudo(uniq, palavras.get(chave) is False)
 
-    def _aplicar_a_palavra_dela(self) -> None:
+    def _aplicar_a_palavra_do_usuario(self) -> None:
         """Entrega a cada canal o mudo e a cada ponte viva o que o usuário disse."""
         with contextlib.suppress(Exception):
             self._dizer_o_mudo_aos_canais()
@@ -565,7 +565,7 @@ class BtMicSubsystem:
             return
         palavras = self._registro.no_ar()
         for ponte in pontes.values():
-            dizer = getattr(ponte, "dizer_o_pedido_dela", None)
+            dizer = getattr(ponte, "dizer_o_pedido_do_usuario", None)
             if not callable(dizer):
                 continue
             uniq = norm_mac(str(getattr(getattr(ponte, "no", None), "uniq", ""))) or ""
@@ -827,10 +827,10 @@ class BtMicSubsystem:
             try:
                 nos = nos_dualsense_bluetooth()
                 self._esquecer_quem_saiu_da_mesa(nos)
-                self._soltar_os_que_ela_desmarcou()
+                self._soltar_os_que_o_usuario_desmarcou()
                 self._reconciliar_o_cabo(nos)
                 gerenciador.reconciliar(self.alvos(nos))
-                self._aplicar_a_palavra_dela()
+                self._aplicar_a_palavra_do_usuario()
                 self._varrer_os_orfaos(nos)
                 self._renomear_os_canais_velhos()
                 self._devolver_a_fonte_padrao()
@@ -942,7 +942,7 @@ class BtMicSubsystem:
             return
         logger.info("bt_mic_canal_do_cabo_fora", uniq=uniq)
 
-    def _soltar_os_que_ela_desmarcou(self) -> None:
+    def _soltar_os_que_o_usuario_desmarcou(self) -> None:
         """O interruptor do card vence o botão do controle, e por isso a BORDA."""
         agora = uniqs_pedidos(self._config)
         negados = uniqs_negados(self._config)

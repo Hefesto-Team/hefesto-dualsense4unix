@@ -162,7 +162,7 @@ def test_o_clique_em_outra_grafia_do_endereco_acha_a_escolha_dele(
     assert _toques(com_toque, _QUATRO[3]) == [formas.APARO]
 
 
-def test_no_radio_a_forma_toca_pelo_tocador_do_controle_dela(
+def test_no_radio_a_forma_toca_pelo_tocador_do_controle_do_usuario(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
     controles = _no_radio_os_quatro(com_toque)

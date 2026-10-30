@@ -30,7 +30,7 @@ APPID = 9900099
 EPOCH = 1000
 
 
-def _perfil_dela() -> Profile:
+def _perfil_do_usuario() -> Profile:
     """O perfil do usuário, da CÓPIA. Nunca do diretório em que ela joga."""
     return Profile.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
 
@@ -122,7 +122,7 @@ def _sem_espera(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def jogo_dela(monkeypatch: pytest.MonkeyPatch) -> int:
+def jogo_do_usuario(monkeypatch: pytest.MonkeyPatch) -> int:
     """O appid que o wrapper diria estar rodando — o MESMO sinal do produto."""
     monkeypatch.setattr(le, "launch_session_appid", lambda **kw: APPID)
     return APPID
@@ -139,13 +139,13 @@ def env_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-class TestOGestoDelaChegaAoPerfil:
+class TestOGestoDoUsuarioChegaAoPerfil:
     @pytest.mark.asyncio
-    async def test_o_perfil_dela_vira_xbox_depois_do_silencio(
-        self, jogo_dela: int
+    async def test_o_perfil_do_usuario_vira_xbox_depois_do_silencio(
+        self, jogo_do_usuario: int
     ) -> None:
         """A sequência inteira, do arquivo dela até o arquivo dela."""
-        save_profile(_perfil_dela(), origem="teste")
+        save_profile(_perfil_do_usuario(), origem="teste")
         antes = _no_disco()
         assert antes.mode is not None and antes.mode.gamepad_flavor == "dualsense"
         assert antes.ponte is not None and antes.ponte.gamepad_flavor == "dualsense"
@@ -177,9 +177,9 @@ class TestOGestoDelaChegaAoPerfil:
         assert depois.ponte.confirmada_em != antes.ponte.confirmada_em
 
     @pytest.mark.asyncio
-    async def test_o_resto_do_perfil_dela_nao_e_tocado(self, jogo_dela: int) -> None:
+    async def test_o_resto_do_perfil_do_usuario_nao_e_tocado(self, jogo_do_usuario: int) -> None:
         """Alinhar a máscara não pode reescrever o perfil ao redor dela."""
-        save_profile(_perfil_dela(), origem="teste")
+        save_profile(_perfil_do_usuario(), origem="teste")
         antes = _no_disco()
 
         d = _Daemon(flavor="dualsense")
@@ -199,10 +199,10 @@ class TestOGestoDelaChegaAoPerfil:
 
     @pytest.mark.asyncio
     async def test_o_lancamento_seguinte_arma_xbox_e_para_de_perguntar(
-        self, jogo_dela: int, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+        self, jogo_do_usuario: int, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A entrega vista do lado dela: o aperto seguinte não acontece."""
-        save_profile(_perfil_dela(), origem="teste")
+        save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
         gesto = pt.gesto_em_curso(d)
@@ -228,7 +228,7 @@ class TestOGestoDelaChegaAoPerfil:
     ) -> None:
         """Ela mexendo na mesa, fora de uma partida, não é opinião sobre jogo."""
         monkeypatch.setattr(le, "launch_session_appid", lambda **kw: None)
-        save_profile(_perfil_dela(), origem="teste")
+        save_profile(_perfil_do_usuario(), origem="teste")
 
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
@@ -241,10 +241,10 @@ class TestOGestoDelaChegaAoPerfil:
 
     @pytest.mark.asyncio
     async def test_jogo_fechado_no_meio_nao_carimba_nada(
-        self, jogo_dela: int
+        self, jogo_do_usuario: int
     ) -> None:
         """Silêncio com o jogo fechado é ela tendo ido embora, não aprovação."""
-        save_profile(_perfil_dela(), origem="teste")
+        save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
         gesto = pt.gesto_em_curso(d)
@@ -258,14 +258,14 @@ class TestOGestoDelaChegaAoPerfil:
         assert depois.mode is not None and depois.mode.gamepad_flavor == "dualsense"
         assert depois.mode.caminho is None
         assert depois.ponte is not None
-        assert depois.ponte.confirmada_em == _perfil_dela().ponte.confirmada_em  # type: ignore[union-attr]
+        assert depois.ponte.confirmada_em == _perfil_do_usuario().ponte.confirmada_em  # type: ignore[union-attr]
 
     @pytest.mark.asyncio
     async def test_mouse_teclado_nao_vira_modo_de_perfil_de_jogo(
-        self, jogo_dela: int
+        self, jogo_do_usuario: int
     ) -> None:
         """A terceira ponte do ciclo não é degrau da escada, e não se grava."""
-        save_profile(_perfil_dela(), origem="teste")
+        save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="xbox")
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
@@ -289,7 +289,7 @@ def _perfil_antes_do_gesto() -> Profile:
 class TestODegrauCaroNaoCustaAPartida:
     @pytest.mark.asyncio
     async def test_a_sequencia_do_journal_termina_em_xbox_gravado(
-        self, jogo_dela: int
+        self, jogo_do_usuario: int
     ) -> None:
         """As quatro linhas do journal, reproduzidas, e o desfecho trocado."""
         save_profile(_perfil_antes_do_gesto(), origem="teste")
@@ -316,7 +316,7 @@ class TestODegrauCaroNaoCustaAPartida:
 
     @pytest.mark.asyncio
     async def test_o_degrau_caro_nao_carimba_e_a_escada_continua_aberta(
-        self, jogo_dela: int, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+        self, jogo_do_usuario: int, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O CUIDADO da frente: não matar o caminho para o Nativo."""
         save_profile(_perfil_antes_do_gesto(), origem="teste")
@@ -368,7 +368,7 @@ class TestODegrauCaroNaoCustaAPartida:
 
     @pytest.mark.asyncio
     async def test_o_alinhamento_sobrevive_ao_jogo_fechando(
-        self, jogo_dela: int
+        self, jogo_do_usuario: int
     ) -> None:
         """Alinhar o `mode` NÃO é confirmar, e por isso não espera silêncio."""
         save_profile(_perfil_antes_do_gesto(), origem="teste")
@@ -395,7 +395,7 @@ class TestODegrauCaroNaoCustaAPartida:
 class TestOQueNenhumaDasDuasFaz:
     @pytest.mark.asyncio
     async def test_jogo_sem_perfil_nao_ganha_arquivo(
-        self, jogo_dela: int
+        self, jogo_do_usuario: int
     ) -> None:
         """Criar perfil nas costas dela tem uma porta só, e é o editor."""
         d = _Daemon(flavor="dualsense")
@@ -409,7 +409,7 @@ class TestOQueNenhumaDasDuasFaz:
 
     @pytest.mark.asyncio
     async def test_o_silencio_sem_gesto_continua_carimbando_por_silencio(
-        self, jogo_dela: int
+        self, jogo_do_usuario: int
     ) -> None:
         """A escada sem gesto nenhum não muda de origem NEM alinha o `mode`."""
         sem_modo = Profile(
@@ -435,9 +435,9 @@ class TestOQueNenhumaDasDuasFaz:
         assert gravado.ponte.confirmada_por == "silencio"
         assert gravado.mode is None, "escreveu `mode` num perfil sem opinião"
 
-    def test_a_fixture_e_o_estado_dela_de_29_08(self) -> None:
+    def test_a_fixture_e_o_estado_do_usuario_de_29_08(self) -> None:
         """A régua da própria régua: se a cópia mudar, o teste deixa de medir"""
-        perfil = _perfil_dela()
+        perfil = _perfil_do_usuario()
         assert perfil.mode is not None
         assert perfil.mode.gamepad_flavor == "dualsense"
         assert perfil.ponte == PonteConfirmada(

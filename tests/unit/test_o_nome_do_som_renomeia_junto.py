@@ -429,7 +429,7 @@ def test_o_supervisor_delega_o_canal_do_radio_a_ponte(
     assert da_ponte.parada is False
 
 
-def test_a_ponte_so_renomeia_o_canal_que_ela_abriu(
+def test_a_ponte_so_renomeia_o_canal_que_o_usuario_abriu(
     canal_limpo: None, numerador: dict[str, int]
 ) -> None:
     """Um canal que já estava no ar tem outro dono — e é ele quem o renomeia."""

@@ -111,7 +111,7 @@ def test_o_dono_honra_o_xdg_config_home_nas_duas_formas(
     assert wireplumber_config_dir() == xdg / "wireplumber" / "wireplumber.conf.d"
 
 
-def test_o_nome_do_dropin_troca_a_extensao_e_so_ela() -> None:
+def test_o_nome_do_dropin_troca_a_extensao_e_so_o_usuario() -> None:
     assert wireplumber_nome_do_dropin(f"{N51}.conf", "lua") == f"{N51}.lua"
     assert wireplumber_nome_do_dropin(f"{N51}.conf", "conf") == f"{N51}.conf"
     assert wireplumber_nome_do_dropin(f"{N54}.lua", "conf") == f"{N54}.conf"

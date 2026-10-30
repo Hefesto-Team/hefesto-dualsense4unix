@@ -1668,9 +1668,9 @@ class IpcHandlersMixin:
 
         `ligado` opcional: ausente → inverte. **LIGAR** é o «Ativar» do Freestyle na aba Perfis, o
         mesmo caminho (o `profile.switch` dele, com a ativação à mão, liga o modo SEMPRE:
-        `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`); ligado, nenhum caminho automático troca o perfil.
-        **DESLIGAR** devolve a escolha do usuário na hora, sem o leitor de janela (no COSMIC sem
-        portal o autoswitch nunca acha janela): com jogo vivo, o jogo volta por cima
+        `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`); ligado, nenhum caminho automático troca o
+        perfil. **DESLIGAR** devolve a escolha do usuário na hora, sem o leitor de janela (no COSMIC
+        sem portal o autoswitch nunca acha janela): com jogo vivo, o jogo volta por cima
         (`origin="launch"`); sem jogo, a escolha (`origin="system"`); sem escolha, nenhum perfil
         ativo («Fica sem perfil», 29/09). A trava da troca à mão solta junto, com a linha no diário.
         """
@@ -1698,14 +1698,14 @@ class IpcHandlersMixin:
         """O botão apagado: o jogo vivo, ou a escolha do usuário, ou nenhum perfil."""
         from hefesto_dualsense4unix.profiles.autoswitch import jogo_do_wrapper_vivo
         from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
-        from hefesto_dualsense4unix.utils.session import a_escolha_dela
+        from hefesto_dualsense4unix.utils.session import a_escolha_do_usuario
 
         perfil = None
         with contextlib.suppress(Exception):
             appid = jogo_do_wrapper_vivo()
             perfil = perfil_do_appid(appid) if appid is not None else None
         nome, origem = (perfil.name, "launch") if perfil is not None else (
-            a_escolha_dela(freestyle_ligado=False), "system")
+            a_escolha_do_usuario(freestyle_ligado=False), "system")
         relatorio: dict[str, str] = {}
         self.profile_manager.apagar_o_freestyle(nome, origin=origem, relatorio=relatorio)
         if self.daemon is not None:

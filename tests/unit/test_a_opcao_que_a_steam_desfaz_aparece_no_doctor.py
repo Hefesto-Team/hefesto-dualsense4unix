@@ -124,7 +124,7 @@ def test_a_releitura_que_desmente_a_escrita_fica_no_registro(
     assert lar.estados() == [opj.DESFEITO_NA_ESCRITA]
 
 
-def test_a_opcao_que_ela_ainda_nao_aplicou_nao_e_defeito(lar: Lar) -> None:
+def test_a_opcao_que_o_usuario_ainda_nao_aplicou_nao_e_defeito(lar: Lar) -> None:
     """Tabela nova, nada escrito: o `aplicar` ainda vai pôr, não há o que acusar."""
     lar.steam_escreve(_vdf("algo velho %command%"))
 

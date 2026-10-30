@@ -45,7 +45,7 @@ def envolve(s, achador, pid, titulo, extra=""):
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("uso: remapear.py <svg-dela> [--gravar]")
+        sys.exit("uso: remapear.py <svg-do-usuario> [--gravar]")
     alvo = pathlib.Path(sys.argv[1])
     s = alvo.read_text()
     feito = []

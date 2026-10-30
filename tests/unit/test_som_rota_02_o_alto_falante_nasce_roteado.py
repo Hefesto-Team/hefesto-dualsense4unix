@@ -75,7 +75,7 @@ class TestOAltoFalanteNasceRoteado:
 
         assert handle._volumes_audio[1] == bp.VOLUME_PADRAO_DO_SOM
 
-    def test_o_padrao_nao_cala_a_televisao_dela(self) -> None:
+    def test_o_padrao_nao_cala_a_televisao_do_usuario(self) -> None:
         """A MORDIDA: trocar o padrão por 3 manda TODO o som para o controle."""
         assert bp.ROTA_PADRAO_DO_SOM != rep.SAIDA_SO_NO_ALTO_FALANTE
         assert bp.ROTA_PADRAO_DO_SOM == rep.SAIDA_L_FONE_R_ALTO_FALANTE

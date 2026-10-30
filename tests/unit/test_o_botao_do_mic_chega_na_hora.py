@@ -240,7 +240,7 @@ class _EventoVirtual:
         return self._armado
 
 
-class _Bancada:
+class _Ensaio:
     """O relógio virtual, o lado C de mentira e os wrappers de verdade."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -309,8 +309,8 @@ class _Bancada:
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Bancada]:
-    b = _Bancada(monkeypatch)
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Ensaio]:
+    b = _Ensaio(monkeypatch)
     try:
         yield b
     finally:
@@ -329,18 +329,18 @@ def _primeiro_com_o_dedo(aparelho: _Aparelho, inicio: float) -> float:
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 @pytest.mark.parametrize("transporte", ["radio", "cabo"])
 def test_do_dedo_a_borda_leva_no_maximo_uma_volta(
-    bancada: _Bancada, transporte: str, n: int
+    ensaio: _Ensaio, transporte: str, n: int
 ) -> None:
     """Um aperto em `t0` dá `_mic_mudo_em - t0` ≤ uma volta, em todo `n`."""
-    inicio = bancada.relogio.t + 3.0
+    inicio = ensaio.relogio.t + 3.0
     aparelho = _Aparelho(
-        bancada.relogio,
+        ensaio.relogio,
         transporte=transporte,
         taxa=_TAXA[transporte],
         botao=_aperto(inicio, 0.1),
     )
-    h = bancada.handle(aparelho, n=n)
-    bancada.rodar(h, segundos=4.0)
+    h = ensaio.handle(aparelho, n=n)
+    ensaio.rodar(h, segundos=4.0)
 
     t0 = _primeiro_com_o_dedo(aparelho, inicio)
     assert h._mic_mudo_seq == 1, "o aperto não virou borda"
@@ -355,19 +355,19 @@ def test_do_dedo_a_borda_leva_no_maximo_uma_volta(
 
 @pytest.mark.parametrize(("transporte", "n"), [("cabo", 1), ("radio", 4)])
 def test_a_fila_de_mentira_reproduz_o_defeito(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch, transporte: str, n: int
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch, transporte: str, n: int
 ) -> None:
     """O INSTRUMENTO MEDE: com UMA leitura por volta, a borda leva ~63 voltas."""
     monkeypatch.setattr(bp, "LEITURAS_POR_VOLTA", 1)
-    inicio = bancada.relogio.t + 3.0
+    inicio = ensaio.relogio.t + 3.0
     aparelho = _Aparelho(
-        bancada.relogio,
+        ensaio.relogio,
         transporte=transporte,
         taxa=_TAXA[transporte],
         botao=_aperto(inicio, 0.1),
     )
-    h = bancada.handle(aparelho, n=n)
-    bancada.rodar(h, segundos=6.0)
+    h = ensaio.handle(aparelho, n=n)
+    ensaio.rodar(h, segundos=6.0)
 
     t0 = _primeiro_com_o_dedo(aparelho, inicio)
     assert h._mic_mudo_em is not None
@@ -378,24 +378,24 @@ def test_a_fila_de_mentira_reproduz_o_defeito(
 
 @pytest.mark.parametrize("transporte", ["radio", "cabo"])
 def test_o_toque_curto_entre_duas_voltas_da_uma_borda(
-    bancada: _Bancada, transporte: str
+    ensaio: _Ensaio, transporte: str
 ) -> None:
     """Três reports com o dedo embaixo, dentro de uma volta: UMA borda."""
     taxa = _TAXA[transporte]
-    aparelho = _Aparelho(bancada.relogio, transporte=transporte, taxa=taxa)
+    aparelho = _Aparelho(ensaio.relogio, transporte=transporte, taxa=taxa)
     inicio = aparelho.instante(int(2.0 * taxa)) - 1e-6
     aparelho._botao = _aperto(inicio, 2.5 / taxa)
-    h = bancada.handle(aparelho, n=4)
-    bancada.rodar(h, segundos=3.0)
+    h = ensaio.handle(aparelho, n=4)
+    ensaio.rodar(h, segundos=3.0)
 
     assert h._mic_mudo_seq == 1
     assert h._mic_botao is False, "o report mais novo é o do dedo que subiu"
 
 
-def test_com_a_fila_vazia_a_saida_escreve_em_cada_volta(bancada: _Bancada) -> None:
+def test_com_a_fila_vazia_a_saida_escreve_em_cada_volta(ensaio: _Ensaio) -> None:
     """Dez voltas com o aparelho calado: dez escritas, uma por mudança."""
-    aparelho = _Aparelho(bancada.relogio, transporte="radio", taxa=0.0)
-    h = bancada.handle(aparelho, n=4)
+    aparelho = _Aparelho(ensaio.relogio, transporte="radio", taxa=0.0)
+    h = ensaio.handle(aparelho, n=4)
     h._suppress_leds = True
     voltas = {"n": 0}
 
@@ -405,7 +405,7 @@ def test_com_a_fila_vazia_a_saida_escreve_em_cada_volta(bancada: _Bancada) -> No
         if voltas["n"] >= 10:
             h.ds_thread = False
 
-    bancada.depois_de_cada_volta(_mudar_a_saida)
+    ensaio.depois_de_cada_volta(_mudar_a_saida)
     h.sendReport()
 
     assert voltas["n"] == 10
@@ -419,43 +419,43 @@ class _GiraEmFalso(BaseException):
 
 
 def test_sem_throttle_a_volta_vazia_nao_gira_em_falso(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Com o throttle zero e o aparelho calado, a volta ainda dorme."""
-    aparelho = _Aparelho(bancada.relogio, transporte="radio", taxa=0.0)
-    h = bancada.handle(aparelho, n=1)
+    aparelho = _Aparelho(ensaio.relogio, transporte="radio", taxa=0.0)
+    h = ensaio.handle(aparelho, n=1)
     h._throttle_sec = 0.0
     h._output_muted = True
-    ler = bancada.c.hid_read_timeout
+    ler = ensaio.c.hid_read_timeout
     visto = {"t": -1.0, "n": 0}
 
     def _contar(dev: Any, bufp: Any, length: int, ms: int) -> int:
-        if visto["t"] == bancada.relogio.t:
+        if visto["t"] == ensaio.relogio.t:
             visto["n"] += 1
             if visto["n"] > 100:
                 raise _GiraEmFalso("a volta vazia não dormiu")
         else:
-            visto["t"], visto["n"] = bancada.relogio.t, 0
+            visto["t"], visto["n"] = ensaio.relogio.t, 0
         return ler(dev, bufp, length, ms)
 
-    monkeypatch.setattr(bancada.c, "hid_read_timeout", _contar)
-    bancada.rodar(h, segundos=0.05)
+    monkeypatch.setattr(ensaio.c, "hid_read_timeout", _contar)
+    ensaio.rodar(h, segundos=0.05)
 
     assert h.connected is True
 
 
 def test_um_parse_por_volta_com_o_report_de_estado_mais_novo(
-    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ensaio: _Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O `readInput` roda uma vez por volta, e com o report de estado mais NOVO."""
     aparelho = _Aparelho(
-        bancada.relogio,
+        ensaio.relogio,
         transporte="radio",
         taxa=_TAXA["radio"],
         bateria=lambda i: i % 11,
         audio=lambda i: i % 3 == 1,
     )
-    h = bancada.handle(aparelho, n=4)
+    h = ensaio.handle(aparelho, n=4)
     parses: list[int] = []
     real = bp._PinnedPyDualSense.readInput
 
@@ -470,8 +470,8 @@ def test_um_parse_por_volta_com_o_report_de_estado_mais_novo(
         if aparelho.ultimo_estado_lido != com_estado[-1]:
             com_estado.append(aparelho.ultimo_estado_lido)
 
-    bancada.depois_de_cada_volta(_conta_volta)
-    bancada.rodar(h, segundos=2.0)
+    ensaio.depois_de_cada_volta(_conta_volta)
+    ensaio.rodar(h, segundos=2.0)
 
     voltas = len(com_estado) - 1
     assert voltas > 50
@@ -496,19 +496,19 @@ _MESA = (("radio", 688.0), ("radio", 560.0), ("radio", 390.0), ("cabo", 250.0))
 
 @pytest.mark.parametrize("jogador", range(4))
 def test_no_tempo_os_quatro_apertos_chegam_numa_volta(
-    bancada: _Bancada, jogador: int
+    ensaio: _Ensaio, jogador: int
 ) -> None:
     """Trinta segundos de mesa de quatro, um aperto a cada 1,5 s alternando."""
     transporte, taxa = _MESA[jogador]
-    inicio = bancada.relogio.t
+    inicio = ensaio.relogio.t
     apertos = [inicio + 1.0 + 1.5 * k for k in range(20) if k % 4 == jogador]
     aparelho = _Aparelho(
-        bancada.relogio,
+        ensaio.relogio,
         transporte=transporte,
         taxa=taxa,
         botao=lambda t: any(a <= t < a + 0.08 for a in apertos),
     )
-    h = bancada.handle(aparelho, n=4)
+    h = ensaio.handle(aparelho, n=4)
     bordas: list[float] = []
     seq = {"visto": 0}
 
@@ -519,8 +519,8 @@ def test_no_tempo_os_quatro_apertos_chegam_numa_volta(
             assert h._mic_mudo_em is not None
             bordas.append(h._mic_mudo_em)
 
-    bancada.depois_de_cada_volta(_anotar)
-    bancada.rodar(h, segundos=30.0)
+    ensaio.depois_de_cada_volta(_anotar)
+    ensaio.rodar(h, segundos=30.0)
 
     assert len(bordas) == len(apertos), f"{len(bordas)} bordas para {len(apertos)} apertos"
     for aperto, borda in zip(apertos, bordas, strict=True):
@@ -583,7 +583,7 @@ class _Daemon:
 
 
 @pytest.fixture
-def luz_na_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def luz_no_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """As cadências encolhidas, e as peças irmãs de mentira (ninguém ouve)."""
     monkeypatch.setattr(luz, "INTERVALO_S", 0.001)
     monkeypatch.setattr(luz, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
@@ -638,7 +638,7 @@ async def _a_borda(
     return antes, apos
 
 
-@pytest.mark.usefixtures("luz_na_bancada")
+@pytest.mark.usefixtures("luz_no_ensaio")
 async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_cala(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -661,7 +661,7 @@ async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_cala(
     assert luz.estado_da_luz_do_mic(UM) == luz.APAGADA
 
 
-@pytest.mark.usefixtures("luz_na_bancada")
+@pytest.mark.usefixtures("luz_no_ensaio")
 async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_liga(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -685,7 +685,7 @@ async def test_a_luz_nao_repinta_o_estado_de_antes_no_aperto_que_liga(
     assert apos and apos[-1] == luz.ACESA
 
 
-@pytest.mark.usefixtures("luz_na_bancada")
+@pytest.mark.usefixtures("luz_no_ensaio")
 async def test_a_reancoragem_liga_e_a_luz_nunca_apaga(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -716,7 +716,7 @@ async def test_a_reancoragem_liga_e_a_luz_nunca_apaga(
     assert apos and apos[-1] == luz.ACESA
 
 
-@pytest.mark.usefixtures("luz_na_bancada")
+@pytest.mark.usefixtures("luz_no_ensaio")
 async def test_o_ato_que_nao_escreve_solta_a_borda_no_teto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -766,7 +766,7 @@ class _BackendDeDois(_Backend):
         ]
 
 
-@pytest.mark.usefixtures("luz_na_bancada")
+@pytest.mark.usefixtures("luz_no_ensaio")
 async def test_a_borda_de_um_controle_nao_segura_a_luz_do_outro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

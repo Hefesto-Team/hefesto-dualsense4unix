@@ -36,15 +36,15 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/02-controles.html"
+ENSAIO = RAIZ / "mockup/02-controles.html"
 
-def _lugares_da_bancada() -> int:
+def _lugares_do_ensaio() -> int:
     import monta
 
     return len(monta.MESA)
 
 
-LUGARES = _lugares_da_bancada()
+LUGARES = _lugares_do_ensaio()
 
 
 UNIQ_CABO = "aa:bb:cc:00:00:01"
@@ -105,15 +105,15 @@ def ctx(a02):
     """O `Contexto` da bancada, com a BANCADA como lista de endereços válidos."""
     from pacotes import Contexto
 
-    desenho = BANCADA.read_text(encoding="utf-8")
+    desenho = ENSAIO.read_text(encoding="utf-8")
     a02._ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', desenho))
     yield Contexto(state={}, mesa=MESA, conectados=[CABO, SEM_LEITURA], estados={})
     a02._ENDERECOS = None
 
 
-def test_a_bancada_tem_os_quarenta_e_seis_enderecos_da_leitura_viva():
+def test_o_ensaio_tem_os_quarenta_e_seis_enderecos_da_leitura_viva():
     """Sem eles a pintura escreve zero, calada — e foi o estado até hoje."""
-    doc = BANCADA.read_text(encoding="utf-8")
+    doc = ENSAIO.read_text(encoding="utf-8")
     faltam = [c for c in DA_LEITURA_VIVA
               if doc.count(f'data-campo="{c}"') != LUGARES]
     assert not faltam, (
@@ -127,7 +127,7 @@ def test_o_glifo_e_a_barra_declaram_o_alvo_que_o_piloto_precisa():
     SVG; uma barra sem `largura` receberia o número dentro da barrinha. Os dois
     são falhas mudas — o `escrever` do piloto não reclama de nada.
     """
-    doc = BANCADA.read_text(encoding="utf-8")
+    doc = ENSAIO.read_text(encoding="utf-8")
     for campo, alvo in (
         ("glifo-cross", "classe"), ("l2-barra", "largura"),
         ("giro-x-neg", "largura"), ("giro-x-pos", "largura"),

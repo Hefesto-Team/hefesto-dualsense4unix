@@ -115,7 +115,7 @@ def test_o_aparelho_chega_a_pagina_com_o_modelo_e_o_que_a_maquina_ve(disco: Path
     assert depois["cor"] != teclado["cor"], "o tipo que ela disse não decide a cor"
 
 
-def test_o_tipo_que_ela_diz_so_pesa_no_motor_quando_a_maquina_nao_leu_a_classe(
+def test_o_tipo_que_o_usuario_diz_so_pesa_no_motor_quando_a_maquina_nao_leu_a_classe(
     disco: Path,
 ) -> None:
     """QUEM VENCE: a máquina no que mede. A placa ``ff/ff/ff`` não tem classe; o teclado tem."""
@@ -123,8 +123,8 @@ def test_o_tipo_que_ela_diz_so_pesa_no_motor_quando_a_maquina_nao_leu_a_classe(
     assert ee.declarar_o_aparelho("1111:0001", tipo="mouse").gravou
     tipos = mapa_das_portas.tipos_declarados(carregar_maquina())
     assert tipos == {"3333:0003": "wifi", "1111:0001": "mouse"}
-    bancada = mapa_das_portas.mesa_do_motor(_mapa(), _censo(_teclado(), _placa()), tipos)
-    classes = {a.id: a.classe for a in bancada.mesa.aparelhos}
+    ensaio = mapa_das_portas.mesa_do_motor(_mapa(), _censo(_teclado(), _placa()), tipos)
+    classes = {a.id: a.classe for a in ensaio.mesa.aparelhos}
     assert classes["9-5"] == "wifi", "a placa sem classe não ganhou o tipo que ela disse"
     assert classes["9-1"] == "teclado", "o tipo dito venceu o que o kernel mede"
 
@@ -135,8 +135,8 @@ def test_a_velocidade_dita_so_vale_na_entrada_vazia(disco: Path) -> None:
         faces=[FaceDeclarada(nome="Frente", portas=["1", "2"])],
         portas={"1": PortaDeclarada(caminho="9-1", usb=3), "2": PortaDeclarada(usb=3)},
     )
-    bancada = mapa_das_portas.mesa_do_motor(mapa, _censo(_teclado()))
-    usb = {e.n: e.usb for f in bancada.mesa.faces for e in f.entradas}
+    ensaio = mapa_das_portas.mesa_do_motor(mapa, _censo(_teclado()))
+    usb = {e.n: e.usb for f in ensaio.mesa.faces for e in f.entradas}
     assert usb["1"] == 2, "ela disse 3.0, mas há um teclado a 480M nela: vale a medida"
     assert usb["2"] == 3, "na entrada vazia a máquina não sabe: vale o que ela disse"
 
@@ -183,7 +183,7 @@ def test_a_leitura_diz_o_wifi_em_usb3_encostado_no_bluetooth(disco: Path) -> Non
     assert mapa_das_portas.leitura_da_maquina(mapa, _censo(outro, bt)) == []
 
 
-def test_os_gestos_do_painel_gravam_no_disco_dela(disco: Path) -> None:
+def test_os_gestos_do_painel_gravam_no_disco_do_usuario(disco: Path) -> None:
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")

@@ -770,7 +770,7 @@ async def test_o_dono_que_caiu_do_cabo_com_o_handle_aberto_nao_e_nomeado() -> No
     )
 
 
-def test_a_leitura_da_mesa_e_uma_so_e_ela_exige_o_connected() -> None:
+def test_a_leitura_da_mesa_e_uma_so_e_o_usuario_exige_o_connected() -> None:
     """`hotkey` e `state_full` perguntam à MESMA função quem tem card.
 
     Duas réguas sobre o mesmo estado é o defeito que esta casa já pagou onze
@@ -1159,7 +1159,7 @@ async def test_a_luz_apaga_quando_o_wireplumber_deu_o_canal_a_um_terceiro() -> N
 
 
 @pytest.mark.asyncio
-async def test_a_luz_fica_acesa_quando_o_wireplumber_devolveu_o_canal_a_ela() -> None:
+async def test_a_luz_fica_acesa_quando_o_wireplumber_devolveu_o_canal_ao_usuario() -> None:
     """O contra-caso, e é ele que impede a cura preguiçosa."""
     with pytest.MonkeyPatch.context() as monkey:
         eleitor, pipewire = _eleitor_de_verdade(monkey)
@@ -1294,7 +1294,7 @@ async def test_a_luz_da_j1_fica_quando_o_gesto_do_j2_da_o_padrao_a_um_terceiro()
     sem dono, e o plástico do J2 apagado (ele não ganhou nada).
 
     FATO SUBSTITUÍDO (13/09/2026, OS-QUATRO-NO-AR-01). Esta régua se chamava
-    `test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_dela` e cobrava
+    `test_a_luz_da_j1_apaga_quando_o_gesto_do_j2_tira_o_canal_do_usuario` e cobrava
     o plástico da J1 APAGADO. Perder o padrão não é mais sair do ar: o canal
     DO USUÁRIO continua publicado e no ar, e a luz dela fica. Quem apaga a luz de
     quem sai do ar de fato é `hotkey._conferir_quem_saiu_do_ar`.
@@ -1364,7 +1364,7 @@ async def test_a_luz_da_j1_fica_acesa_quando_o_j2_ganha_o_padrao() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_luz_da_j1_fica_acesa_quando_o_wireplumber_devolveu_o_canal_a_ela() -> (
+async def test_a_luz_da_j1_fica_acesa_quando_o_wireplumber_devolveu_o_canal_ao_usuario() -> (
     None
 ):
     """O contra-caso que impede a cura preguiçosa — e ele é o mais comum."""

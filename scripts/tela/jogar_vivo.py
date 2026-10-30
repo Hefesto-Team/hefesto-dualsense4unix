@@ -102,12 +102,12 @@ import aba01  # noqa: E402  # isort:skip
 
 PAGINA = onde.PUBLICADO / "01-jogar.html"
 
-BANCADA = onde.BANCADA / "01-jogar.html"
+ENSAIO = onde.ENSAIO / "01-jogar.html"
 
 
 def pagina_de(args: Any) -> pathlib.Path:
     """De onde esta bancada lê a página: o publicado, ou o desenho de hoje."""
-    return BANCADA if getattr(args, "bancada", False) else PAGINA
+    return ENSAIO if getattr(args, "ensaio", False) else PAGINA
 
 
 TITULO_ESPERADO = "Hefesto — aba JOGAR"
@@ -869,7 +869,7 @@ def main() -> int:
     p.add_argument("--prova-gesto", action="store_true",
                    help="dispara cliques sintéticos e prova o eco")
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
-    p.add_argument("--bancada", action="store_true",
+    p.add_argument("--ensaio", action="store_true",
                    help="lê o desenho de HOJE (`mockup/01-jogar.html`) em vez da "
                         "página publicada — para clicar e fotografar o que ainda "
                         "espera o OK dela. NÃO publica nada.")

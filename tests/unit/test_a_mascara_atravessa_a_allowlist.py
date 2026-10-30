@@ -147,7 +147,7 @@ def test_o_estado_barrado_e_distinguivel_de_aplicado_e_de_falhou() -> None:
     from hefesto_dualsense4unix.daemon.lifecycle import (
         ADIADO_JOGO_ABERTO,
         APLICADO,
-        IGNORADO_GESTO_DELA,
+        IGNORADO_GESTO_DO_USUARIO,
     )
 
     barrado = le.IGNORADO_DISPUTA_DA_ALLOWLIST
@@ -155,4 +155,4 @@ def test_o_estado_barrado_e_distinguivel_de_aplicado_e_de_falhou() -> None:
         "o dialeto do `lifecycle` é `ignorado_*`; sair dele quebra quem filtra "
         "o journal por prefixo"
     )
-    assert barrado not in {APLICADO, ADIADO_JOGO_ABERTO, IGNORADO_GESTO_DELA, "falhou"}
+    assert barrado not in {APLICADO, ADIADO_JOGO_ABERTO, IGNORADO_GESTO_DO_USUARIO, "falhou"}

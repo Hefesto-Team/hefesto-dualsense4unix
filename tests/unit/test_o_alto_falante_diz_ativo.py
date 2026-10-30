@@ -141,7 +141,7 @@ def test_o_dono_do_selo_nao_pergunta_pelo_sono() -> None:
 
 
 @skip_sem_gi_real
-def test_a_bancada_viva_nao_carrega_a_palavra_do_sono() -> None:
+def test_o_ensaio_vivo_nao_carrega_a_palavra_do_sono() -> None:
     """O «Dormindo» do `controles_vivos.py` saiu, e o kwarg que o carregava."""
     import inspect
 
@@ -155,7 +155,7 @@ def test_a_bancada_viva_nao_carrega_a_palavra_do_sono() -> None:
     assert '"dormindo"' not in fonte and '"acordado"' not in fonte
 
 
-def test_a_bancada_do_desenho_mostra_ativo_no_cabo_e_no_radio() -> None:
+def test_o_ensaio_do_desenho_mostra_ativo_no_cabo_e_no_radio() -> None:
     """O mockup acompanha pelo gerador: a pílula ATIVO nos dois transportes."""
     import re
 

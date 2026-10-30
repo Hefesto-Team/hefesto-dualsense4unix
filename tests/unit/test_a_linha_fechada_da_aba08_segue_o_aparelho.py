@@ -34,11 +34,11 @@ pacote que emite para um endereço que não existe escreve zero e some.
 A MORDIDA — medida, e cada uma reprova SÓ o seu:
 
 * tire o `data-campo="confissao-conta"` do `aba08.py` e regenere  →
-  `test_os_enderecos_novos_existem_na_bancada` reprova (1);
+  `test_os_enderecos_novos_existem_no_ensaio` reprova (1);
 * devolva `"mic-caminho"` à coluna do pacote  →
   `test_toda_chave_da_coluna_tem_endereco_na_08` reprova (2, as duas páginas);
 * faça `_confissao_do_mapa` devolver a conta da CENA em vez da bancada  →
-  `test_a_confissao_conta_as_lacunas_da_bancada` reprova (1).
+  `test_a_confissao_conta_as_lacunas_do_ensaio` reprova (1).
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/08-conexoes.html"
+ENSAIO = RAIZ / "mockup/08-conexoes.html"
 GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py"
 
 
@@ -83,7 +83,7 @@ def _ctx() -> Any:
                     conectados=conectados, estados={})
 
 
-def test_os_enderecos_novos_existem_na_bancada() -> None:
+def test_os_enderecos_novos_existem_no_ensaio() -> None:
     """Os cinco endereços desta leva, no arquivo que o produto vai renderizar.
 
     O ALVO ENTRA NA BUSCA, e não só o `data-campo`: o `luz-trava` sem
@@ -91,7 +91,7 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
     "cabo" em vez de acender ou apagar. Endereço certo com alvo errado é um
     defeito que a tela mostra e a contagem de campos não vê.
     """
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     esperados = (
         'data-campo="confissao-nada" data-hef-alvo="classe" '
         'data-hef-classe="sumido" data-hef-quando="sim"',
@@ -105,9 +105,9 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
         "a dica da confissão voltou à bancada da 08")
 
 
-def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
+def test_o_pacote_emite_o_que_o_ensaio_enderecou() -> None:
     """Todo `data-campo` POR CONTROLE da bancada tem quem o escreva."""
-    html = BANCADA.read_text(encoding="utf-8")
+    html = ENSAIO.read_text(encoding="utf-8")
     linhas = re.findall(
         r'<div class="gc-item gc-p\d"(?! [^>]*\bfora\b)[^>]*>.*?(?=<div class="gc-item)',
         html, flags=re.S)
@@ -127,7 +127,7 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
 DADOS_DA_COLUNA = frozenset({"via", "bateria", "ponte", "fragil"})
 
 PAGINAS = {
-    "mockup": BANCADA,
+    "mockup": ENSAIO,
     "publicado": RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html",
 }
 
@@ -158,14 +158,14 @@ def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
     from hefesto_dualsense4unix.interface import logica_do_mapa as mapa_da_mesa
 
     pac = _pacote()
-    monkeypatch.setattr(pac, "_bancada", lambda: object())
+    monkeypatch.setattr(pac, "_ensaio", lambda: object())
     monkeypatch.setattr(
         mapa_da_mesa, "confissao_do_desenho",
         lambda _b: tuple(f"lacuna número {n}" for n in range(quantas)))
     return pac._confissao_do_mapa()
 
 
-def test_a_confissao_conta_as_lacunas_da_bancada(monkeypatch: Any) -> None:
+def test_a_confissao_conta_as_lacunas_do_ensaio(monkeypatch: Any) -> None:
     """A conta por extenso é a de `confissao_do_desenho`, e não a da cena.
 
     A CENA TEM TRÊS. Se a régua desse verde com a bancada em uma lacuna
@@ -194,7 +194,7 @@ def test_sem_lacuna_a_linha_da_confissao_some(monkeypatch: Any) -> None:
 def test_sem_censo_a_confissao_nao_emite_nada(monkeypatch: Any) -> None:
     """Barramento não lido: NÃO se emite — porque vazio vira travessão."""
     pac = _pacote()
-    monkeypatch.setattr(pac, "_bancada", lambda: None)
+    monkeypatch.setattr(pac, "_ensaio", lambda: None)
     assert pac._confissao_do_mapa() == {}
 
 

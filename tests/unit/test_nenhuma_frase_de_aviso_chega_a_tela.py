@@ -100,11 +100,11 @@ def test_a_dica_do_canal_nao_chega_a_tela() -> None:
 
 def _paginas() -> list[pathlib.Path]:
     publicadas = sorted((INTERFACE / "paginas").glob("??-*.html"))  # (noqa-acento)
-    bancada = sorted((RAIZ / "mockup").glob("??-*.html"))
-    assert len(publicadas) == 10 and len(bancada) == 10, (
+    ensaio = sorted((RAIZ / "mockup").glob("??-*.html"))
+    assert len(publicadas) == 10 and len(ensaio) == 10, (
         "a régua não achou as dez abas — o caminho mudou, e uma régua que não "
         "acha a tela não mede a tela")
-    return publicadas + bancada
+    return publicadas + ensaio
 
 
 def _visivel_sem_a_ajuda(pagina: str) -> str:

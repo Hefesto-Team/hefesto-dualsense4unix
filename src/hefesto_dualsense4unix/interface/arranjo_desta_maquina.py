@@ -103,11 +103,11 @@ def _ler_a_maquina(
             return None
         censo = (ler_o_barramento or _ler)()
         tipos = mapa_das_portas.tipos_declarados(documento)
-        bancada = mapa_das_portas.mesa_do_motor(declarado, censo, tipos)
+        ensaio = mapa_das_portas.mesa_do_motor(declarado, censo, tipos)
         conectados = censo.conectados()
         ids = identidades(
             conectados, ler_o_serial or mapa_das_portas.serial_do_no, antes,
-            lido_em=bancada.mesa.leitura)
+            lido_em=ensaio.mesa.leitura)
         modelos = _modelos(conectados)
     except Exception:
         return None
@@ -116,7 +116,7 @@ def _ler_a_maquina(
         das_faixas = dict(faixas()) if faixas is not None else {}
     except Exception:
         das_faixas = {}
-    mesa = bancada.mesa
+    mesa = ensaio.mesa
     pelo_caminho = {a.nome_do_kernel: a for a in conectados}
     sem_lugar = _a_fileira_sem_lugar(declarado, censo, mapa_das_portas)
     if not mesa.faces and sem_lugar is None:
@@ -125,7 +125,7 @@ def _ler_a_maquina(
     quando = (agora or _dt.datetime.now()).strftime("%d/%m/%Y %Hh%M")
     caminhos = {ids.get(a.id, a.id): mesa.leitura.get(a.id, a.id) for a in mesa.aparelhos}
     faces = _faces(mesa.faces)
-    hub_lido = _o_que_ela_declarou_nas_entradas(
+    hub_lido = _o_que_o_usuario_declarou_nas_entradas(
         faces, declarado, lambda numero: nome_da_entrada(numero, maquina=documento))
     if sem_lugar is not None:
         faces.append(sem_lugar)
@@ -164,7 +164,7 @@ def _ler_a_maquina(
         ),
         "rotulos": rotulos_das_entradas(documento),
         "hubLido": hub_lido,
-        "usbDe": dict(bancada.usb_de),
+        "usbDe": dict(ensaio.usb_de),
         "sumiram": sumiram,
         "registro": registro,
     }, lida
@@ -328,7 +328,7 @@ def _declarado(
     return saida
 
 
-def _o_que_ela_declarou_nas_entradas(
+def _o_que_o_usuario_declarou_nas_entradas(
     faces: list[dict[str, Any]],
     mapa: Any,
     nome_de: Callable[[str], str | None] = lambda _n: None,
@@ -352,16 +352,16 @@ def _o_que_ela_declarou_nas_entradas(
                 por_numero.setdefault(entrada["filho"]["n"], entrada["filho"])
     hub_lido: dict[str, bool] = {}
     for face in faces:
-        dela = pendencias.get(face["nome"])
-        if dela is None:
+        pendencia = pendencias.get(face["nome"])
+        if pendencia is None:
             continue
-        face["daEntrada"] = dela.entrada
-        face["titulo"] = titulo_do_hub(dela.entrada, nome_de(dela.entrada))
-        if dela.lida is not None:
-            face["diverge"] = frase_do_hub_lido(dela.lida, nome_de(dela.lida))
-        if dela.barramento is not None:
-            hub_lido[dela.barramento] = True
-    ligadas = {dela.entrada for dela in pendencias.values()}
+        face["daEntrada"] = pendencia.entrada
+        face["titulo"] = titulo_do_hub(pendencia.entrada, nome_de(pendencia.entrada))
+        if pendencia.lida is not None:
+            face["diverge"] = frase_do_hub_lido(pendencia.lida, nome_de(pendencia.lida))
+        if pendencia.barramento is not None:
+            hub_lido[pendencia.barramento] = True
+    ligadas = {pendencia.entrada for pendencia in pendencias.values()}
     for numero, nome in faces_dos_hubs(mapa).items():
         entrada = por_numero.get(numero)
         if entrada is None or numero in ligadas:

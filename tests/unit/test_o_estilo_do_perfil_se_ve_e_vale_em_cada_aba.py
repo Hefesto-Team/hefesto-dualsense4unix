@@ -211,8 +211,9 @@ def test_o_gatilho_e_a_vibracao_de_cada_estilo_se_mostram_na_03_e_na_05_de_p1_a_
                 if not automatico and mudo != (lado.modo == "Off"):
                     falhas.append(f"{estilo.rotulo} · 03 na tela · P{n}: o lado {sig} mostra "
                                   f"{col.get(f'modo-{sig}')!r}, o estilo pede {lado.modo}")
-            dela = (v.get("colunas") or {}).get(uniq) or {}
-            if dela.get("mult") != quer:
-                falhas.append(f"{estilo.rotulo} · 05 na tela · P{n}: força {dela.get('mult')!r}, "
+            do_usuario = (v.get("colunas") or {}).get(uniq) or {}
+            if do_usuario.get("mult") != quer:
+                falhas.append(f"{estilo.rotulo} · 05 na tela · P{n}: "
+                              f"força {do_usuario.get('mult')!r}, "
                               f"o degrau {estilo.vibracao} é {quer}")
     assert not falhas, "\n".join(falhas)

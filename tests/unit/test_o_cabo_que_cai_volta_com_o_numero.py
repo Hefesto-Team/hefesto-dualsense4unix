@@ -194,7 +194,7 @@ def _ambiente_limpo() -> dict[str, str]:
     }
 
 
-class Bancada:
+class Ensaio:
     """O ``/sys`` de mentira da bancada, e a corrente do religar ligada nele."""
 
     def __init__(self, tmp_path: Path, *, esperas: str = "0 0 0", regras: bool = True) -> None:
@@ -460,9 +460,9 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return config
 
 
-def _volta(bancada: Bancada, uniq: str) -> float:
+def _volta(ensaio: Ensaio, uniq: str) -> float:
     """Segundos entre a linha do kernel e o daemon ver o controle de volta."""
-    passada = bancada.passada_que_religou(uniq)
+    passada = ensaio.passada_que_religou(uniq)
     if passada is None:
         return TIQUE / 2 + POLL
     return sum(ESPERAS[: passada + 1]) + CADEIA + POLL
@@ -472,23 +472,23 @@ def _volta(bancada: Bancada, uniq: str) -> float:
 @pytest.mark.parametrize("quem", [P1, P2], ids=["p1-atras-do-hub", "p2-direto-no-hub"])
 def test_o_cabo_que_perde_a_hid_volta_com_o_numero(tmp_path: Path, quem: str) -> None:
     """O -71 no cabo: a HID fica sem driver, o aviso religa, e ninguém anda."""
-    bancada = Bancada(tmp_path)
+    ensaio = Ensaio(tmp_path)
     mesa = Mesa()
     antes = mesa.tela()
     assert antes == {P1: 1, P2: 2, P3: 3, P4: 4}
 
-    linhas = bancada.cai_o_cabo(quem)
-    mesa.cai(bancada.ligados())
+    linhas = ensaio.cai_o_cabo(quem)
+    mesa.cai(ensaio.ligados())
     assert quem not in mesa.tela()
     mesa.em(ATRASO_DO_KERNEL)
 
-    anotadas = bancada.aviso(linhas)
+    anotadas = ensaio.aviso(linhas)
     lugar = f"pci-{PCI_DO_HUB}-usb-0:{NO_CABO[quem].partition('-')[2]}"
     assert all(linha.endswith(f" · lugar {lugar}") for linha in anotadas), anotadas
 
-    volta = _volta(bancada, quem)
+    volta = _volta(ensaio, quem)
     mesa.em(ATRASO_DO_KERNEL + volta - QUASE)
-    mesa.ve(bancada.ligados() - {quem})
+    mesa.ve(ensaio.ligados() - {quem})
     ficaram = {u: n for u, n in antes.items() if u != quem}
     assert mesa.tela() == ficaram, (
         f"o controle voltaria {ATRASO_DO_KERNEL + volta:.0f} s depois da queda, com o prazo em "
@@ -496,8 +496,8 @@ def test_o_cabo_que_perde_a_hid_volta_com_o_numero(tmp_path: Path, quem: str) ->
         f"estava fora: {mesa.tela()}"
     )
     mesa.em(ATRASO_DO_KERNEL + volta)
-    mesa.ve(bancada.ligados())
-    assert quem in bancada.ligados(), " | ".join(bancada.chamadas() + bancada.frases())
+    mesa.ve(ensaio.ligados())
+    assert quem in ensaio.ligados(), " | ".join(ensaio.chamadas() + ensaio.frases())
     assert mesa.tela() == antes, "ele voltou com outro número"
 
 
@@ -509,36 +509,36 @@ def test_o_adaptador_que_cai_derruba_os_dois_e_cada_um_volta_com_o_seu(
     tmp_path: Path, orfaos: tuple[str, ...]
 ) -> None:
     """O -71 no adaptador: os dois do rádio caem, voltam, e cada um fica com o seu."""
-    bancada = Bancada(tmp_path)
+    ensaio = Ensaio(tmp_path)
     mesa = Mesa()
     antes = mesa.tela()
 
-    anotadas = bancada.aviso(bancada.cai_o_radio())
+    anotadas = ensaio.aviso(ensaio.cai_o_radio())
     assert anotadas[0].endswith(f" · lugar pci-{PCI_DO_RADIO}-usb-0:4"), anotadas
-    assert not bancada.chamadas(), "o -71 do adaptador não é probe perdida: nada a religar ainda"
-    mesa.cai(bancada.ligados())
+    assert not ensaio.chamadas(), "o -71 do adaptador não é probe perdida: nada a religar ainda"
+    mesa.cai(ensaio.ligados())
     assert mesa.tela() == {P1: 1, P2: 2}
 
     mesa.em(ATRASO_DO_KERNEL)
-    linhas = bancada.voltam_pelo_radio(orfaos)
+    linhas = ensaio.voltam_pelo_radio(orfaos)
     limpos = {P3, P4} - set(orfaos)
     mesa.em(ATRASO_DO_KERNEL + POLL)
-    mesa.ve(bancada.ligados())
+    mesa.ve(ensaio.ligados())
     assert mesa.tela() == {P1: 1, P2: 2, **{u: antes[u] for u in limpos}}, (
         "quem reconectou limpo pegou o número de quem ainda está fora"
     )
 
-    bancada.aviso(linhas)
-    volta = max(_volta(bancada, uniq) for uniq in orfaos)
+    ensaio.aviso(linhas)
+    volta = max(_volta(ensaio, uniq) for uniq in orfaos)
     mesa.em(ATRASO_DO_KERNEL + volta - QUASE)
-    mesa.ve(bancada.ligados() - set(orfaos))
+    mesa.ve(ensaio.ligados() - set(orfaos))
     assert mesa.tela() == {u: n for u, n in antes.items() if u not in orfaos}, (
         f"os do rádio voltariam {ATRASO_DO_KERNEL + volta:.0f} s depois da queda, e os outros "
         f"trocaram de número: {mesa.tela()}"
     )
     mesa.em(ATRASO_DO_KERNEL + volta)
-    mesa.ve(bancada.ligados())
-    assert set(orfaos) <= bancada.ligados(), " | ".join(bancada.chamadas() + bancada.frases())
+    mesa.ve(ensaio.ligados())
+    assert set(orfaos) <= ensaio.ligados(), " | ".join(ensaio.chamadas() + ensaio.frases())
     assert mesa.tela() == antes
 
 
@@ -556,11 +556,11 @@ def test_as_esperas_cabem_no_lugar_guardado() -> None:
 
 def test_a_probe_que_cai_de_novo_tem_a_segunda_passada(tmp_path: Path) -> None:
     """A primeira escrita no ``bind`` falha (a probe caiu de novo); a segunda religa."""
-    bancada = Bancada(tmp_path)
-    bancada.aviso(bancada.cai_o_cabo(P2, probe_falha=1))
-    assert P2 in bancada.ligados()
-    assert bancada.passada_que_religou(P2) == 1, bancada.frases()
-    frases = " | ".join(bancada.frases())
+    ensaio = Ensaio(tmp_path)
+    ensaio.aviso(ensaio.cai_o_cabo(P2, probe_falha=1))
+    assert P2 in ensaio.ligados()
+    assert ensaio.passada_que_religou(P2) == 1, ensaio.frases()
+    frases = " | ".join(ensaio.frases())
     assert "NÃO pegou (tentativa 1/3, na hora do aviso do kernel)" in frases
     assert "o kernel-watch tenta de novo em segundos, e depois o watchdog" in frases
     assert f"controle do cabo RELIGADO em {NO_CABO[P2]}, na hora do aviso do kernel" in frases
@@ -568,34 +568,34 @@ def test_a_probe_que_cai_de_novo_tem_a_segunda_passada(tmp_path: Path) -> None:
 
 def test_sem_a_regra_do_sudo_nada_muda(tmp_path: Path) -> None:
     """O install sem senha, o Flatpak: o sudo recusa o ``-l`` e a corrente para ali."""
-    bancada = Bancada(tmp_path, regras=False)
-    linha = bancada.cai_o_cabo(P2)[1]
-    anotadas = bancada.aviso([linha])
+    ensaio = Ensaio(tmp_path, regras=False)
+    linha = ensaio.cai_o_cabo(P2)[1]
+    anotadas = ensaio.aviso([linha])
     assert len(anotadas) == 1
-    assert P2 not in bancada.ligados()
-    assert bancada.chamadas() == [f"recusado: {PONTE} religar-orfaos"]
+    assert P2 not in ensaio.ligados()
+    assert ensaio.chamadas() == [f"recusado: {PONTE} religar-orfaos"]
 
 
 def test_uma_rajada_e_um_trabalho_so(tmp_path: Path) -> None:
     """As duas linhas da HID perdida chegam juntas: um ``-l``, uma passada por espera."""
-    bancada = Bancada(tmp_path, esperas="1")
-    bancada.aviso(bancada.cai_o_cabo(P2))
-    chamadas = bancada.chamadas()
+    ensaio = Ensaio(tmp_path, esperas="1")
+    ensaio.aviso(ensaio.cai_o_cabo(P2))
+    chamadas = ensaio.chamadas()
     assert chamadas == [f"lista: {PONTE} religar-orfaos", f"roda: {PONTE} religar-orfaos"], chamadas
 
 
 def test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele(tmp_path: Path) -> None:
     """Nunca só o primeiro: o P1 perde a HID quando o trabalho do P2 já passou."""
-    bancada = Bancada(tmp_path)
+    ensaio = Ensaio(tmp_path)
     pausa = tmp_path / "pausa"
     env = {
-        **bancada.ambiente(),
+        **ensaio.ambiente(),
         "HEFESTO_TESTE_PAUSA_DEPOIS_DE": str(len(ESPERAS)),
         "HEFESTO_TESTE_PAUSA": str(pausa),
     }
-    do_p2 = bancada.classificar(bancada.cai_o_cabo(P2))
+    do_p2 = ensaio.classificar(ensaio.cai_o_cabo(P2))
     trabalho = subprocess.Popen(
-        ["bash", str(VIGIA), "--test-anotar", str(bancada.trava)],
+        ["bash", str(VIGIA), "--test-anotar", str(ensaio.trava)],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -610,30 +610,30 @@ def test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele(tmp_path: 
         limite = time.monotonic() + 60
         while not parou.exists():
             assert trabalho.poll() is None, "o trabalho do P2 acabou sem chegar à última passada"
-            assert time.monotonic() < limite, " | ".join(bancada.chamadas())
+            assert time.monotonic() < limite, " | ".join(ensaio.chamadas())
             time.sleep(0.02)
-        assert P2 in bancada.ligados(), " | ".join(bancada.frases())
+        assert P2 in ensaio.ligados(), " | ".join(ensaio.frases())
 
-        do_p1 = bancada.classificar(bancada.cai_o_cabo(P1))
+        do_p1 = ensaio.classificar(ensaio.cai_o_cabo(P1))
         feito = subprocess.run(
-            ["bash", str(VIGIA), "--test-anotar", str(bancada.trava)],
+            ["bash", str(VIGIA), "--test-anotar", str(ensaio.trava)],
             input="\n".join(do_p1) + "\n",
             capture_output=True,
             text=True,
             check=False,
-            env=bancada.ambiente(),
+            env=ensaio.ambiente(),
             timeout=60,
         )
         assert feito.returncode == 0, feito.stderr
-        assert bancada.chamadas().count(f"lista: {PONTE} religar-orfaos") == 1, (
+        assert ensaio.chamadas().count(f"lista: {PONTE} religar-orfaos") == 1, (
             "o aviso do P1 abriu um trabalho seu: a trava não estava na mão do do P2"
         )
     finally:
         pausa.with_name(pausa.name + ".segue").touch()
         trabalho.wait(timeout=120)
     assert trabalho.returncode == 0, trabalho.stderr.read() if trabalho.stderr else ""
-    assert P1 in bancada.ligados(), " | ".join(bancada.chamadas() + bancada.frases())
-    assert bancada.passada_que_religou(P1) == 0, bancada.frases()
+    assert P1 in ensaio.ligados(), " | ".join(ensaio.chamadas() + ensaio.frases())
+    assert ensaio.passada_que_religou(P1) == 0, ensaio.frases()
 
 
 @pytest.mark.parametrize(
@@ -647,9 +647,9 @@ def test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele(tmp_path: 
 )
 def test_so_a_probe_perdida_chama_o_religar(tmp_path: Path, mensagem: str) -> None:
     """As duas formas que o ``bt_rebind_orphans.sh`` cura chamam o religar."""
-    bancada = Bancada(tmp_path, regras=False)
-    bancada.aviso([f"{HORA} maquina kernel: {mensagem}"])
-    assert bancada.chamadas() == [f"recusado: {PONTE} religar-orfaos"]
+    ensaio = Ensaio(tmp_path, regras=False)
+    ensaio.aviso([f"{HORA} maquina kernel: {mensagem}"])
+    assert ensaio.chamadas() == [f"recusado: {PONTE} religar-orfaos"]
 
 
 @pytest.mark.parametrize(
@@ -663,14 +663,14 @@ def test_so_a_probe_perdida_chama_o_religar(tmp_path: Path, mensagem: str) -> No
     ],
 )
 def test_o_que_nao_e_probe_perdida_nao_chama(tmp_path: Path, mensagem: str) -> None:
-    bancada = Bancada(tmp_path, regras=False)
-    bancada.aviso([f"{HORA} maquina kernel: {mensagem}"])
-    assert bancada.chamadas() == []
+    ensaio = Ensaio(tmp_path, regras=False)
+    ensaio.aviso([f"{HORA} maquina kernel: {mensagem}"])
+    assert ensaio.chamadas() == []
 
 
 def test_a_guarda_do_gancho_sai_antes_de_ler(tmp_path: Path) -> None:
     """Sem o sudo de mentira, o ``--test-anotar`` sai com 2 e não escreve nada."""
-    env = {k: v for k, v in Bancada(tmp_path).ambiente().items() if k != "HEFESTO_KERNELWATCH_SUDO"}
+    env = {k: v for k, v in Ensaio(tmp_path).ambiente().items() if k != "HEFESTO_KERNELWATCH_SUDO"}
     feito = subprocess.run(
         ["bash", str(VIGIA), "--test-anotar", str(tmp_path / "trava")],
         input=(
@@ -688,18 +688,18 @@ def test_a_guarda_do_gancho_sai_antes_de_ler(tmp_path: Path) -> None:
 
 
 def test_a_linha_que_ja_tem_lugar_nao_ganha_outro(tmp_path: Path) -> None:
-    bancada = Bancada(tmp_path, regras=False)
+    ensaio = Ensaio(tmp_path, regras=False)
     ja = (
         f"{HORA} [USB-71] usb 3-4.4: device descriptor read/64, error -71"
         f" · lugar pci-{PCI_DO_HUB}-usb-0:4.4"
     )
     feito = subprocess.run(
-        ["bash", str(VIGIA), "--test-anotar", str(bancada.trava)],
+        ["bash", str(VIGIA), "--test-anotar", str(ensaio.trava)],
         input=ja + "\n",
         capture_output=True,
         text=True,
         check=False,
-        env=bancada.ambiente(),
+        env=ensaio.ambiente(),
         timeout=30,
     )
     assert feito.stdout.splitlines() == [ja]
@@ -721,19 +721,19 @@ MENSAGENS_DO_LUGAR = (
 
 def test_o_lugar_do_vigia_e_o_do_dono(tmp_path: Path) -> None:
     """DUAS CÓPIAS, UMA FORMA: a porta e o lugar do bash contra os do Python."""
-    bancada = Bancada(tmp_path)
+    ensaio = Ensaio(tmp_path)
     feito = subprocess.run(
         ["bash", str(VIGIA), "--test-lugar"],
         input="\n".join(MENSAGENS_DO_LUGAR) + "\n",
         capture_output=True,
         text=True,
         check=False,
-        env=bancada.ambiente(),
+        env=ensaio.ambiente(),
         timeout=30,
     )
     assert feito.returncode == 0, feito.stderr
     do_vigia = [tuple(linha.split("\t")) for linha in feito.stdout.splitlines()]
-    controladores = controladores_dos_barramentos(raiz_usb=str(bancada.usb))
+    controladores = controladores_dos_barramentos(raiz_usb=str(ensaio.usb))
     assert controladores == {1: PCI_DO_RADIO, 2: PCI_DO_RADIO, 3: PCI_DO_HUB, 4: PCI_DO_HUB}
     do_dono = [
         (porta, lugar_do_caminho(porta, controladores) if porta else "")
@@ -789,9 +789,9 @@ def test_dos_dois_lados_da_entrada_usb3_fica_o_que_tem_aparelho(tmp_path: Path) 
 
 
 def _ponte(
-    bancada: Bancada, *args: str, ponte: Path = PONTE, ganchos: bool = True
+    ensaio: Ensaio, *args: str, ponte: Path = PONTE, ganchos: bool = True
 ) -> subprocess.CompletedProcess[str]:
-    env = bancada.ambiente()
+    env = ensaio.ambiente()
     if not ganchos:
         fora = ("HEFESTO_HID_DEVICES_DIR", "HEFESTO_USB_DEVICES_DIR")
         env = {k: v for k, v in env.items() if k not in fora}
@@ -806,39 +806,39 @@ def _ponte(
 
 
 def test_o_verbo_nao_recebe_argumento(tmp_path: Path) -> None:
-    feito = _ponte(Bancada(tmp_path), "religar-orfaos", "3-4.4:1.3")
+    feito = _ponte(Ensaio(tmp_path), "religar-orfaos", "3-4.4:1.3")
     assert feito.returncode == 2
     assert "quem escolhe o controle é o /sys" in feito.stderr
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="mede a recusa de quem não é root")
 def test_sem_os_ganchos_o_verbo_exige_root(tmp_path: Path) -> None:
-    bancada = Bancada(tmp_path)
-    bancada.cai_o_cabo(P2)
-    feito = _ponte(bancada, "religar-orfaos", ganchos=False)
+    ensaio = Ensaio(tmp_path)
+    ensaio.cai_o_cabo(P2)
+    feito = _ponte(ensaio, "religar-orfaos", ganchos=False)
     assert feito.returncode == 1
     assert "requer root" in feito.stderr
-    assert bancada.frases() == []
+    assert ensaio.frases() == []
 
 
 def test_o_ensaio_diz_e_nao_escreve(tmp_path: Path) -> None:
-    bancada = Bancada(tmp_path)
-    bancada.cai_o_cabo(P2)
-    feito = _ponte(bancada, "--dry-run", "religar-orfaos")
+    ensaio = Ensaio(tmp_path)
+    ensaio.cai_o_cabo(P2)
+    feito = _ponte(ensaio, "--dry-run", "religar-orfaos")
     assert feito.returncode == 0, feito.stderr
     assert (
-        f"[dry-run] faria: echo '{NO_CABO[P2]}:1.3' > {bancada.usb_drivers}/usbhid/bind "
+        f"[dry-run] faria: echo '{NO_CABO[P2]}:1.3' > {ensaio.usb_drivers}/usbhid/bind "
         "(tentativa 1/3, na hora do aviso do kernel)"
     ) in feito.stdout
-    assert (bancada.usb_drivers / "usbhid" / "bind").read_text(encoding="utf-8") == ""
-    assert list(bancada.stamps.iterdir()) == []
+    assert (ensaio.usb_drivers / "usbhid" / "bind").read_text(encoding="utf-8") == ""
+    assert list(ensaio.stamps.iterdir()) == []
 
 
 def test_sem_o_religar_ao_lado_a_ponte_recusa(tmp_path: Path) -> None:
     sozinha = tmp_path / "sozinha" / PONTE.name
     sozinha.parent.mkdir()
     sozinha.write_text(PONTE.read_text(encoding="utf-8"), encoding="utf-8")
-    feito = _ponte(Bancada(tmp_path), "religar-orfaos", ponte=sozinha)
+    feito = _ponte(Ensaio(tmp_path), "religar-orfaos", ponte=sozinha)
     assert feito.returncode == 1
     assert "não está ao lado desta ponte" in feito.stderr
 
@@ -866,8 +866,8 @@ def test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root(
     tmp_path: Path, dono: str, modo: int, roda: bool
 ) -> None:
     """A regra do sudo abre o verbo sem senha, e o que ele RODA é o arquivo ao lado."""
-    bancada = Bancada(tmp_path)
-    bancada.cai_o_cabo(P2)
+    ensaio = Ensaio(tmp_path)
+    ensaio.cai_o_cabo(P2)
     lib = tmp_path / "lib"
     lib.mkdir()
     ponte = lib / PONTE.name
@@ -881,10 +881,10 @@ def test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root(
         (falsos / nome).write_text(texto, encoding="utf-8")
         (falsos / nome).chmod(0o755)
     env = {
-        **bancada.ambiente(),
+        **ensaio.ambiente(),
         "PATH": f"{falsos}{os.pathsep}{os.environ.get('PATH', '/usr/bin:/bin')}",
         "HEFESTO_TESTE_DONO": dono,
-        "BASH_ENV": str(bancada.kernel),
+        "BASH_ENV": str(ensaio.kernel),
     }
     feito = subprocess.run(
         ["bash", str(ponte), "religar-orfaos"],
@@ -896,12 +896,12 @@ def test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root(
     )
     if roda:
         assert feito.returncode == 0, feito.stderr
-        assert P2 in bancada.ligados(), " | ".join(bancada.frases())
+        assert P2 in ensaio.ligados(), " | ".join(ensaio.frases())
     else:
         assert feito.returncode == 1, feito.stdout + feito.stderr
         assert "não é só do root" in feito.stderr
-        assert P2 not in bancada.ligados()
-        assert bancada.frases() == []
+        assert P2 not in ensaio.ligados()
+        assert ensaio.frases() == []
 
 
 def test_a_regra_do_sudo_tem_o_verbo_sem_argumento() -> None:
@@ -951,11 +951,11 @@ def test_o_servico_passa_pelo_anotar() -> None:
 
 
 def _religar(
-    bancada: Bancada, *args: str, kernel: bool = False
+    ensaio: Ensaio, *args: str, kernel: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    env = bancada.ambiente()
+    env = ensaio.ambiente()
     if kernel:
-        env["BASH_ENV"] = str(bancada.kernel)
+        env["BASH_ENV"] = str(ensaio.kernel)
     return subprocess.run(
         ["bash", str(RELIGAR), *args],
         capture_output=True,
@@ -968,39 +968,39 @@ def _religar(
 
 def test_o_aviso_tem_orcamento_proprio_e_esgota_calado(tmp_path: Path) -> None:
     """As três do aviso não comem as três do tique, e a desistência é do tique."""
-    bancada = Bancada(tmp_path)
-    bancada.cai_o_cabo(P2)
-    saidas = [_religar(bancada, "--evento", "--quiet").stdout for _ in range(4)]
+    ensaio = Ensaio(tmp_path)
+    ensaio.cai_o_cabo(P2)
+    saidas = [_religar(ensaio, "--evento", "--quiet").stdout for _ in range(4)]
     assert [s.count("NÃO pegou") for s in saidas] == [1, 1, 1, 0], saidas
     assert "(tentativa 3/3, na hora do aviso do kernel)" in saidas[2]
     assert saidas[3] == "", "o aviso esgotado fala — quem diz a desistência é o tique"
     assert "DESISTINDO" not in "".join(saidas)
     no = f"{NO_CABO[P2]}:1.3"
-    devnum = (bancada.usb / NO_CABO[P2] / "devnum").read_text(encoding="utf-8").strip()
-    assert sorted(p.name for p in bancada.stamps.iterdir()) == [f"evento-cabo-{no}-{devnum}"]
+    devnum = (ensaio.usb / NO_CABO[P2] / "devnum").read_text(encoding="utf-8").strip()
+    assert sorted(p.name for p in ensaio.stamps.iterdir()) == [f"evento-cabo-{no}-{devnum}"]
 
-    tique = _religar(bancada, "--quiet").stdout
+    tique = _religar(ensaio, "--quiet").stdout
     assert "NÃO pegou (tentativa 1/3) — nova tentativa na próxima passagem do watchdog" in tique
 
 
 @pytest.mark.parametrize("onde", ["cabo", "radio"])
 def test_quem_religa_limpa_os_dois_contadores(tmp_path: Path, onde: str) -> None:
-    bancada = Bancada(tmp_path)
+    ensaio = Ensaio(tmp_path)
     if onde == "cabo":
-        bancada.cai_o_cabo(P2)
-        devnum = (bancada.usb / NO_CABO[P2] / "devnum").read_text(encoding="utf-8").strip()
+        ensaio.cai_o_cabo(P2)
+        devnum = (ensaio.usb / NO_CABO[P2] / "devnum").read_text(encoding="utf-8").strip()
         chave = f"cabo-{NO_CABO[P2]}:1.3-{devnum}"
         frase = f"controle do cabo RELIGADO em {NO_CABO[P2]}, na hora do aviso do kernel"
     else:
-        bancada.cai_o_radio()
-        bancada.voltam_pelo_radio((P3,))
-        chave = bancada.no_de(P3)
+        ensaio.cai_o_radio()
+        ensaio.voltam_pelo_radio((P3,))
+        chave = ensaio.no_de(P3)
         frase = f"controle órfão RECUPERADO por rebind, na hora do aviso do kernel: {chave}"
     for nome, conteudo in ((chave, "1"), (f"{chave}.desisti", ""), (f"evento-{chave}", "2")):
-        (bancada.stamps / nome).write_text(conteudo, encoding="utf-8")
-    feito = _religar(bancada, "--evento", "--quiet", kernel=True)
+        (ensaio.stamps / nome).write_text(conteudo, encoding="utf-8")
+    feito = _religar(ensaio, "--evento", "--quiet", kernel=True)
     assert frase in feito.stdout, feito.stdout
-    assert list(bancada.stamps.iterdir()) == []
+    assert list(ensaio.stamps.iterdir()) == []
 
 
 def test_o_religar_diz_o_novo_uso() -> None:

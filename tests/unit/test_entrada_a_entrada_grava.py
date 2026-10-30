@@ -306,7 +306,7 @@ def test_o_nome_do_adaptador_vai_pelo_endereco_e_nao_pelo_hci() -> None:
     assert nomes_depois == nomes_antes, "o nome ficou na porta em vez de ir com o adaptador"
 
 
-def test_os_leitores_de_hoje_e_o_mapa_das_portas_leem_o_que_ela_gravou(
+def test_os_leitores_de_hoje_e_o_mapa_das_portas_leem_o_que_o_usuario_gravou(
     boot_1: SysfsDeMentira, disco: Path
 ) -> None:
     from hefesto_dualsense4unix.integrations.mapa_das_portas import porta_de

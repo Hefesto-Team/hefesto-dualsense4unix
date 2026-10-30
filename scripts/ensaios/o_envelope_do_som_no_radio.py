@@ -219,7 +219,7 @@ def main() -> int:
             suspeito="o áudio por rádio depende do ENVELOPE HID (DATA no canal de interrupção vs SET_REPORT no de controle)",
             presente="sim" if envelope == "set_report" else "não",
             resultado="",
-            observado_por="olho-dela",
+            observado_por="olho-do-usuario",
             fonte="scripts/ensaios/o_envelope_do_som_no_radio.py",
             nota=f"arranjo {nome}, envelope {envelope}, CRC {'errado' if args.crc_errado else 'certo'}; ela: {resposta or '(sem resposta)'}",
         ))

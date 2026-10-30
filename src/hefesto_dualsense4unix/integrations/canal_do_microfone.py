@@ -241,7 +241,7 @@ _MUDO_ESCRITO: dict[str, bool] = {}
 _TRANCA = threading.Lock()
 
 
-def _passar_a_escolha_dela(uniq: str, nome: str) -> None:
+def _passar_a_escolha_do_usuario(uniq: str, nome: str) -> None:
     """A fonte padrão gravada no nome velho deste canal passa ao nome novo. Nunca levanta."""
     from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
         passar_a_escolha_gravada_ao_nome_novo,
@@ -251,7 +251,7 @@ def _passar_a_escolha_dela(uniq: str, nome: str) -> None:
         passar_a_escolha_gravada_ao_nome_novo(uniq, nome, prefixo=PREFIXO_CANAL)
 
 
-def _a_palavra_dela(uniq: str) -> bool | None:
+def _a_palavra_do_usuario(uniq: str) -> bool | None:
     """O que o usuário disse sobre este microfone (`False` = calado).
 
     `None` = nada, ou ninguém atende.
@@ -316,8 +316,8 @@ def abrir(
             return None
         _DE_PE[uniq] = source
         _FONTE_PEDIDA[uniq] = str(fonte or "")
-        _passar_a_escolha_dela(uniq, nome)
-        mudo = _a_palavra_dela(uniq) is False
+        _passar_a_escolha_do_usuario(uniq, nome)
+        mudo = _a_palavra_do_usuario(uniq) is False
         if escrever_o_mudo_no_no(nome, mudo, rodar=rodar):
             _MUDO_ESCRITO[uniq] = mudo
         else:

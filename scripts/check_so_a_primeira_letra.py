@@ -13,7 +13,7 @@ O QUE ELA LÊ
 O texto que a pessoa lê nas dez abas — a leitura do produto é a de
 `frases_banidas.texto_visivel_no_produto`, com o `<style>`, o `<script>`,
 os comentários e o `<title>` do documento fora (o recorte é o da régua da caixa
-alta, `_so_a_tela`) — nas páginas publicadas e, com `--bancada`, no `mockup/`.
+alta, `_so_a_tela`) — nas páginas publicadas e, com `--ensaio`, no `mockup/`.
 E lê também os três mapas que as abas abrem (`MAPAS`: o das portas, o do controle e
 o do rádio), que até 09/10/2026 ficavam fora: o das portas carregou de 26/09 a
 05/10 um JS que punha maiúscula em TODA palavra na hora da pintura, e o texto
@@ -50,7 +50,7 @@ alta é da régua irmã, e a que tem maiúscula por dentro («RetroArch»,
 Uso::
 
     scripts/check_so_a_primeira_letra.py              # as páginas publicadas
-    scripts/check_so_a_primeira_letra.py --bancada    # o `mockup/`
+    scripts/check_so_a_primeira_letra.py --ensaio    # o `mockup/`
     scripts/check_so_a_primeira_letra.py --lista      # só o inventário, rc=0
 """
 from __future__ import annotations
@@ -63,7 +63,7 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
-BANCADA = RAIZ / "mockup"
+ENSAIO = RAIZ / "mockup"
 CORES_CSV = RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 PECAS_CSV = RAIZ / "docs" / "data" / "pecas-do-dualsense.csv"
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
@@ -245,7 +245,7 @@ def titulo_em_toda_palavra(paginas: list[pathlib.Path]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    alvo = BANCADA if "--bancada" in argv else PUBLICADO
+    alvo = ENSAIO if "--ensaio" in argv else PUBLICADO
     do_produto = set(monta.as_abas_do_produto())
     abas = sorted(p for p in alvo.glob("*.html") if E_ABA.match(p.name) and p.name in do_produto)
     if len(abas) != len(do_produto):

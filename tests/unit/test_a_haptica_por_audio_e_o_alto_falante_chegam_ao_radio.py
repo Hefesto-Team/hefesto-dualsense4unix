@@ -239,7 +239,7 @@ def test_o_canto_pelo_radio_vai_ao_fio_com_a_haptica_aberta_e_muda(sala: Mesa) -
     assert sala.ponte(P1) is primeira
 
 
-def test_o_canto_que_comeca_com_a_haptica_tocando_vai_junto_com_ela(sala: Mesa) -> None:
+def test_o_canto_que_comeca_com_a_haptica_tocando_vai_junto_com_o_usuario(sala: Mesa) -> None:
     """O chão tocava na háptica e o canto começa: os dois no MESMO relatório, sem troca."""
     som, endpoint = af.nome_do_sink(P2), no_do(P2)
     sala.fonte(endpoint).quadro = MOTOR

@@ -85,9 +85,9 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
-DEGRAU_DELA = "max"
-BARRA_FORTE_DELA = 50
-BARRA_FRACA_DELA = 100
+DEGRAU_DO_USUARIO = "max"
+BARRA_FORTE_DO_USUARIO = 50
+BARRA_FRACA_DO_USUARIO = 100
 
 PECA = "aabbcc000001"
 
@@ -122,7 +122,7 @@ def _daemon_sintetico(degrau: str) -> Any:
         ),
         _last_auto_mult=1.0,
         _last_auto_change_at=0.0,
-        _rumble_motores_pct=(None, {PECA: (BARRA_FORTE_DELA, BARRA_FRACA_DELA)}),
+        _rumble_motores_pct=(None, {PECA: (BARRA_FORTE_DO_USUARIO, BARRA_FRACA_DO_USUARIO)}),
     )
 
 
@@ -136,7 +136,7 @@ def _par_da_conta(degrau: str, base: int) -> tuple[int, int, float, float]:
     return weak, strong, mult_fraco, mult_forte
 
 
-def _exigir_bancada() -> bool:
+def _exigir_ensaio() -> bool:
     """`scripts/ensaio.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
     proc = subprocess.run(
         ["bash", str(RAIZ / "scripts" / "ensaio.sh"), "exigir"],
@@ -161,7 +161,7 @@ def main() -> int:
                     help="intensidade base a que a conta se aplica (0-255)")
     ap.add_argument("--segundos", type=float, default=1.5,
                     help="quanto tempo cada passo fica tremendo")
-    ap.add_argument("--degrau", default=DEGRAU_DELA,
+    ap.add_argument("--degrau", default=DEGRAU_DO_USUARIO,
                     help="a política da coluna: economia|balanceado|max|custom")
     ap.add_argument("--sem-escrever", action="store_true",
                     help="só imprime a conta; não toca no aparelho nem na bancada")
@@ -174,7 +174,7 @@ def main() -> int:
     weak, strong, mf, mF = _par_da_conta(args.degrau, args.base)
     print()
     print(f"A CONTA DO PRODUTO, com os números dela (degrau {args.degrau!r}, "
-          f"barra fraca {BARRA_FRACA_DELA}%, barra forte {BARRA_FORTE_DELA}%):")
+          f"barra fraca {BARRA_FRACA_DO_USUARIO}%, barra forte {BARRA_FORTE_DO_USUARIO}%):")
     print(f"  mult do motor FRACO ... {mf:.4f}")
     print(f"  mult do motor FORTE ... {mF:.4f}")
     print(f"  razão forte/fraco ..... {(mF / mf if mf else float('nan')):.4f}"
@@ -199,7 +199,7 @@ def main() -> int:
     print("  (o degrau global multiplica os DOIS motores por igual — ele muda a "
           "força, nunca a razão)")
 
-    if not _exigir_bancada():
+    if not _exigir_ensaio():
         print("BANCADA TOMADA — esperar, e dizer na entrega que se está "
               "esperando. Nada foi escrito.", file=sys.stderr)
         return 2

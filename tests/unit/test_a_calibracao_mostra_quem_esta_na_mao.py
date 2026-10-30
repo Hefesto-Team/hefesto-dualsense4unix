@@ -61,7 +61,7 @@ def _uniq(i: int) -> str:
     return f"aa:bb:cc:00:00:0{i + 1}"
 
 
-def _bancada(quantos: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _ensaio(quantos: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """`(mesa, conectados)` de N controles — a forma que o piloto monta."""
     mesa = [{"pref": f"p{i + 1}", "uniq": _uniq(i), "jogador": i + 1,
              "cor": SLUGS[i], "nome": CORES[i], "via": VIAS[i].upper(),
@@ -79,7 +79,7 @@ def _bancada(quantos: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
 
 
 def _carga(pacotes_mod: Any, quantos: int) -> dict[str, Any]:
-    mesa, conectados = _bancada(quantos)
+    mesa, conectados = _ensaio(quantos)
     ctx = pacotes_mod.Contexto(state={"active_profile": "x"}, mesa=mesa,
                                conectados=conectados, estados={})
     pacote = pacotes_mod.pacote_da_pagina(PAGINA, ctx)
@@ -132,7 +132,7 @@ def test_cada_cartao_recebe_a_leitura_do_seu_proprio_controle(pacotes_mod, calib
 
 def test_sem_leitura_de_sensor_a_tela_escreve_travessao(pacotes_mod, calibrar_mod):
     """Controle SEM `gyro` no `inputs` mostra `—`, nunca zero fingindo repouso."""
-    mesa, conectados = _bancada(1)
+    mesa, conectados = _ensaio(1)
     del conectados[0]["inputs"]["gyro"]
     del conectados[0]["inputs"]["accel"]
     ctx = pacotes_mod.Contexto(state={}, mesa=mesa, conectados=conectados, estados={})
@@ -240,7 +240,7 @@ def test_o_topo_mostra_o_perfil_ativo_que_o_piloto_pinta(pacotes_mod, calibrar_m
     topo = doc.split('<div class="topo">', 1)[1].split('<div class="corpo">', 1)[0]
     assert re.search(r'<div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span>'
                      r'<span class="pa-nome" data-campo="perfil">', topo), topo
-    mesa, conectados = _bancada(1)
+    mesa, conectados = _ensaio(1)
     ctx = pacotes_mod.Contexto(state={"active_profile": "x"}, mesa=mesa,
                                conectados=conectados, estados={})
     assert "perfil" in pacotes_mod.topo(ctx), "ninguém pinta o nome do perfil"

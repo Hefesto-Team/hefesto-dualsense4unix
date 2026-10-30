@@ -42,7 +42,7 @@ def ensaio(
     transporte: str,
     *,
     resultado: str = "obedece",
-    observado_por: str = "olho-dela",
+    observado_por: str = "olho-do-usuario",
     identificador: str = "ensaio-de-mentira",
     degrau: str = "",
 ) -> dict[str, str]:
@@ -263,8 +263,8 @@ def test_a_promocao_do_resultado_e_uma_constante_que_funciona(tmp_path: Path) ->
     assert niveis == {censo.FALHA}
 
 
-def test_ensaio_sem_o_olho_dela_avisa_e_nao_derruba(tmp_path: Path) -> None:
-    """`METODO-DE-ISOLAMENTO.md` diz que só `olho-dela` sustenta o degrau mais"""
+def test_ensaio_sem_o_olho_do_usuario_avisa_e_nao_derruba(tmp_path: Path) -> None:
+    """`METODO-DE-ISOLAMENTO.md` diz que só `olho-do-usuario` sustenta o degrau mais"""
     caminho = monta_arvore(
         tmp_path,
         [linha_com_grau(radio_ate_onde_foi="MONTOU")],
@@ -272,19 +272,19 @@ def test_ensaio_sem_o_olho_dela_avisa_e_nao_derruba(tmp_path: Path) -> None:
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
-    assert "AVISO grau-sem-olho-dela" in processo.stdout
+    assert "AVISO grau-sem-olho-do-usuario" in processo.stdout
 
 
-def test_a_promocao_do_olho_dela_e_uma_constante_que_funciona(tmp_path: Path) -> None:
+def test_a_promocao_do_olho_do_usuario_e_uma_constante_que_funciona(tmp_path: Path) -> None:
     censo = modulo_do_censo()
     caminho = monta_arvore(
         tmp_path,
         [linha_com_grau(radio_ate_onde_foi="MONTOU")],
         [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
     )
-    censo.OLHO_DELA_REPROVA = True
+    censo.OLHO_DO_USUARIO_REPROVA = True
     achados, _, _ = censo.censo(caminho, tmp_path, censo.date(2026, 8, 12))
-    niveis = {a.nivel for a in achados if a.regra == "grau-sem-olho-dela"}
+    niveis = {a.nivel for a in achados if a.regra == "grau-sem-olho-do-usuario"}
     assert niveis == {censo.FALHA}
 
 
@@ -390,7 +390,7 @@ def test_os_degraus_do_jogo_sem_ensaio_reprovam_igual_aos_de_saida(
         assert degrau in processo.stdout
 
 
-def test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_dela(
+def test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_do_usuario(
     tmp_path: Path,
 ) -> None:
     """O degrau que um INSTRUMENTO vê, e é isto que o separa do de cima."""
@@ -414,11 +414,11 @@ def test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_dela(
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
-    assert "reagiu-sem-olho-dela" not in processo.stdout
-    assert "grau-sem-olho-dela" not in processo.stdout
+    assert "reagiu-sem-olho-do-usuario" not in processo.stdout
+    assert "grau-sem-olho-do-usuario" not in processo.stdout
 
 
-def test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa(
+def test_o_jogo_reagiu_sem_o_olho_do_usuario_derruba_e_nao_apenas_avisa(
     tmp_path: Path,
 ) -> None:
     """MORDIDA MEDIDA (19/08/2026): trocado o `FALHA` do ramo"""
@@ -442,14 +442,14 @@ def test_o_jogo_reagiu_sem_o_olho_dela_derruba_e_nao_apenas_avisa(
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 1, processo.stdout
-    assert "FALHA reagiu-sem-olho-dela:" in processo.stdout
+    assert "FALHA reagiu-sem-olho-do-usuario:" in processo.stdout
     assert "O JOGO RECEBEU" in processo.stdout, (
         "a mensagem tem de oferecer o degrau que um instrumento consegue "
         f"fechar, senão ela só diz não:\n{processo.stdout}"
     )
 
 
-def test_o_jogo_reagiu_com_o_olho_dela_passa(tmp_path: Path) -> None:
+def test_o_jogo_reagiu_com_o_olho_do_usuario_passa(tmp_path: Path) -> None:
     """O caso SIMÉTRICO: com o gesto do usuário gravado, o degrau mais alto passa."""
     caminho = monta_arvore(
         tmp_path,
@@ -465,13 +465,13 @@ def test_o_jogo_reagiu_com_o_olho_dela_passa(tmp_path: Path) -> None:
                 "audio.jack.deteccao@pro",
                 "cabo",
                 degrau=DEGRAUS_DE_ENTRADA[1],
-                observado_por="olho-dela",
+                observado_por="olho-do-usuario",
             )
         ],
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
-    assert "reagiu-sem-olho-dela" not in processo.stdout
+    assert "reagiu-sem-olho-do-usuario" not in processo.stdout
 
 
 def test_a_escada_tem_um_dono_so(tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""A seção Rádio e Adaptadores faz o que diz — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01."""
+"""A seção Rádio e Adaptadores faz o que diz — A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01."""
 
 from __future__ import annotations
 
@@ -100,7 +100,7 @@ def test_o_mover_move_qualquer_um_dos_quatro_em_qualquer_mesa(
                 assert mundo.onde_esta(rm.uniq(outro)) == SALA, "desligou quem não ia"
 
 
-def test_ligado_o_gesto_dela_nao_faz_nada_e_por_isso_o_produto_desliga_antes(
+def test_ligado_o_gesto_do_usuario_nao_faz_nada_e_por_isso_o_produto_desliga_antes(
     mesa: Any, relogio: rm.Relogio
 ) -> None:
     """O passo c1, medido: com o controle ligado, o PS + Create se perde."""
@@ -175,25 +175,25 @@ def test_o_conectar_mostra_chegando_quem_volta_pelo_pareamento_antigo(
 ) -> None:
     """A foto 2 da lista dela: o «Conectar» procurando na Direita, e ela liga o"""
     mundo, _dono, central = mesa(controles)
-    dela = QUATRO[controles - 1]
-    mundo.desligar(dela)
-    relogio.agendar(2.0, lambda: mundo.apertar_ps(dela))
+    do_usuario = QUATRO[controles - 1]
+    mundo.desligar(do_usuario)
+    relogio.agendar(2.0, lambda: mundo.apertar_ps(do_usuario))
 
     feito = central.conectar(QUARTO)
 
     assert (feito.estado, feito.motivo) == (cr.CHEGOU, cr.MOTIVO_PELO_PAREAMENTO_ANTIGO)
-    assert (feito.aparelho, feito.destino) == (dela, SALA)
+    assert (feito.aparelho, feito.destino) == (do_usuario, SALA)
     assert mundo.lapides == []
     assert mundo.propriedade_do_adaptador(QUARTO, "Discovering") is False
     assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False
-    assert [m.aparelho for m in central.movimentos()] == [dela]
+    assert [m.aparelho for m in central.movimentos()] == [do_usuario]
 
 
 def test_o_conectar_ainda_pareia_quem_segura_ps_create(mesa: Any, relogio: rm.Relogio) -> None:
     """O caminho de sempre continua: um controle novo, em modo de parear, chega"""
     mundo, _dono, central = mesa(3)
     mundo.fisicos[ROXO] = rm.Fisico(ROXO, rm.CLASSE_DE_CONTROLE)
-    rm.ela_pareia(relogio, mundo, central, ROXO)
+    rm.o_usuario_pareia(relogio, mundo, central, ROXO)
 
     feito = central.conectar(QUARTO)
 
@@ -201,7 +201,7 @@ def test_o_conectar_ainda_pareia_quem_segura_ps_create(mesa: Any, relogio: rm.Re
     assert mundo.onde_esta(rm.uniq(ROXO)) == QUARTO
 
 
-def test_o_nome_que_ela_deu_vai_junto_no_mover(diario: Path, relogio: rm.Relogio) -> None:
+def test_o_nome_que_o_usuario_deu_vai_junto_no_mover(diario: Path, relogio: rm.Relogio) -> None:
     """O passo a2: *«O nome renomeado não aparece»*. O BlueZ guarda o ``Alias``
     POR OBJETO — um por adaptador —, e o mover criava um objeto novo com o nome
     de fábrica. O nome dela vai junto. <!-- noqa-acento: citação literal -->
@@ -640,13 +640,15 @@ def test_com_um_adaptador_so_a_caixa_nasce_e_fica_aberta(
     assert cena["aberto"] is None
 
 
-def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_ordem_que_o_usuario_arrasta_fica_gravada(
+    a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """*«segurar a área do conector e arrastar ela pra mudar de ordem entre
     eles»*: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
     dele, desde 28/09/2026 — antes era o ``gui_prefs``, pelo lugar), e a sala
     nasce nela. <!-- noqa-acento: citação literal -->
 
-    MORDIDA: tire o ``_na_ordem_dela`` do ``cena_do_radio`` — a sala volta à
+    MORDIDA: tire o ``_na_ordem_do_usuario`` do ``cena_do_radio`` — a sala volta à
     ordem do BlueZ e esta régua reprova.
     """
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina, ordem_dos_adaptadores
@@ -667,7 +669,7 @@ def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.Monk
         a08.adaptador_reordenar(None, {"valor": "AABBCC0000FF"}, None)
 
 
-def test_a_ordem_de_antes_vale_ate_ela_arrastar_de_novo(
+def test_a_ordem_de_antes_vale_ate_o_usuario_arrastar_de_novo(
     a08: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A ordem que ela arrastou antes de 28/09/2026 morava no ``gui_prefs``,
@@ -675,7 +677,7 @@ def test_a_ordem_de_antes_vale_ate_ela_arrastar_de_novo(
     pelos adaptadores da tela, sem ninguém escrever na leitura; o arrastar
     seguinte a leva ao adaptador, pelo endereço, e a lista de lá sai.
 
-    MORDIDA: tire o ``_a_ordem_de_antes`` do ``_na_ordem_dela`` — a sala nasce
+    MORDIDA: tire o ``_a_ordem_de_antes`` do ``_na_ordem_do_usuario`` — a sala nasce
     na ordem do BlueZ, e a arrumação dela se perde na atualização.
     """
     from hefesto_dualsense4unix.app import gui_prefs
@@ -833,7 +835,7 @@ def test_o_controle_que_o_daemon_nao_le_chega_pelo_hid_phys(
     else:
         mundo.fisicos[OUTRO_CONTROLE] = rm.Fisico(OUTRO_CONTROLE, rm.CLASSE_DE_CONTROLE,
                                                   modalias=modalias)
-        rm.ela_pareia(relogio, mundo, central, OUTRO_CONTROLE)
+        rm.o_usuario_pareia(relogio, mundo, central, OUTRO_CONTROLE)
         feito = central.conectar(QUARTO)
 
     assert mundo.hz(rm.uniq(OUTRO_CONTROLE)) is None, "o daemon não mede este controle"
@@ -878,7 +880,7 @@ def test_o_teclado_de_baixo_consumo_esperando_tem_o_desenho_do_teclado(
 
 
 @pytest.mark.parametrize("quantos", [2, 3, 4])
-def test_a_lampada_aparece_sem_ela_abrir_caixa_nenhuma(
+def test_a_lampada_aparece_sem_o_usuario_abrir_caixa_nenhuma(
     a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int
 ) -> None:
     """O passo b5 dela, pelo que ela VÊ: a lâmpada mora no corpo da caixa do"""

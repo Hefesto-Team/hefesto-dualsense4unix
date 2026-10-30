@@ -76,11 +76,11 @@ from tests.conftest import skip_sem_gi_real
 
 PAGINA = "09-sistema.html"
 
-BANCADA = _onde.pagina(PAGINA)
+ENSAIO = _onde.pagina(PAGINA)
 
 
 def _html() -> str:
-    return BANCADA.read_text(encoding="utf-8")
+    return ENSAIO.read_text(encoding="utf-8")
 
 
 def _ctx(**estado: object) -> Contexto:
@@ -318,7 +318,7 @@ def test_a_identidade_e_decidida_aqui_e_nao_pelo_arquivo_achado(
         "perfil de hoje.")
 
 
-def test_o_preset_ausente_recusa_na_lingua_dela(
+def test_o_preset_ausente_recusa_na_lingua_do_usuario(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """A frase era dev-fala num toast desde 23/08 (*"Asset 'personalizado.json'"""
     monkeypatch.setattr(_rodape, "_meu_perfil_asset", lambda: None)
@@ -450,7 +450,7 @@ def na_tela() -> dict:
     berco = pathlib.Path(tempfile.mkdtemp(prefix="a09-quatro-"))
     shutil.copytree(_onde.PUBLICADO, berco / "paginas",  # (noqa-acento)
                     dirs_exist_ok=True)
-    shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento)
+    shutil.copy2(ENSAIO, berco / "paginas" / PAGINA)  # (noqa-acento)
 
     chaves = [(PAGINA, g) for g in ("reiniciar", "autostart", "atualizar")]
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,

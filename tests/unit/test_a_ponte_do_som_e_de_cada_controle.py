@@ -23,7 +23,7 @@ P2 = "aabbccdd0002"
 RADIO = "bluetooth"
 
 
-def test_o_produto_sabe_montar_o_pacote_desde_a_bancada() -> None:
+def test_o_produto_sabe_montar_o_pacote_desde_o_ensaio() -> None:
     """A resposta que mudou em 10/09/2026, e que a tela repetia errada."""
     assert a_ponte_do_radio_sabe_montar() is True
 

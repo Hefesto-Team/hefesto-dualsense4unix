@@ -49,7 +49,7 @@ UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 PERFIL = "Régua do estilo"
 RECEITA = {"mode": "Machine", "params": [1, 9, 6, 20]}
-DELA = {"mode": "Rigid", "params": [2, 200]}
+DO_USUARIO = {"mode": "Rigid", "params": [2, 200]}
 
 
 def _blocos(ajustes: Any) -> dict[bytes, set[str]]:
@@ -240,7 +240,7 @@ def disco(monkeypatch: pytest.MonkeyPatch, a03: Any) -> tuple[dict[str, Any], li
     prof = Profile.model_validate({
         "name": PERFIL, "match": {"type": "any"}, "estilo": "fps",
         "triggers": {"left": RECEITA, "right": RECEITA},
-        "controllers": {CHAVE: {"triggers": {"left": DELA, "right": DELA}}},
+        "controllers": {CHAVE: {"triggers": {"left": DO_USUARIO, "right": DO_USUARIO}}},
     })
     estado = {PERFIL: prof}
     gravados: list[Any] = []
@@ -289,7 +289,7 @@ def test_do_estilo_manda_a_receita_e_apaga_a_escolha_daquele_lado(a03: Any, disc
     assert len(gravados) == 1, "a escolha do controle não saiu do perfil"
     seus = estado[PERFIL].controllers[CHAVE].triggers
     assert "left" not in seus.model_fields_set, "o L2 daquele controle continua escolhido"
-    assert seus.right.mode == DELA["mode"], "o «Do estilo» do L2 apagou o R2"
+    assert seus.right.mode == DO_USUARIO["mode"], "o «Do estilo» do L2 apagou o R2"
     assert a03._do_rascunho(UNIQ, "left") is None, "a sessão segura o efeito de antes"
 
 

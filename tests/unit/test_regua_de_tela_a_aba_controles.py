@@ -215,7 +215,7 @@ def _desvio_vertical(tela: Any, lado: str, indice: int = 0) -> float:
 
 
 @pytest.fixture(scope="module")
-def bancada():
+def ensaio():
     """Uma aba aberta e a ponte instalada — uma vez para o módulo inteiro."""
     with regua_de_tela.Tela(PAGINA, titulo_esperado="Hefesto") as tela:
         tela.executar(controles_vivos.BOOTSTRAP)
@@ -223,9 +223,9 @@ def bancada():
 
 
 @pytest.fixture()
-def mesa(bancada):
+def mesa(ensaio):
     """Cada teste começa com a mesa no centro e o rodapé limpo."""
-    tela, cabeca = bancada
+    tela, cabeca = ensaio
     cabeca.eco_mudo.clear()
     cabeca.eco_rota.clear()
     cabeca.eco_sensor.clear()

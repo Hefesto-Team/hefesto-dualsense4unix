@@ -94,7 +94,7 @@ def _interface(
         (no / "authorized").write_text(authorized + "\n", encoding="utf-8")
 
 
-def _bancada(tmp_path: Path) -> Path:
+def _ensaio(tmp_path: Path) -> Path:
     """O ``/sys`` de mentira: o HID do rádio vazio, e o ``usbhid/bind`` do cabo."""
     (tmp_path / "hid" / "devices").mkdir(parents=True)
     (tmp_path / "hid" / "drivers" / "playstation").mkdir(parents=True)
@@ -131,7 +131,7 @@ def _bind(tmp_path: Path) -> str:
 
 def test_religa_a_hid_do_controle_sony(tmp_path: Path) -> None:
     """A interface HID órfã de um DualSense vai para o ``bind`` do ``usbhid``."""
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, f"{PORTA}:1.0", classe="01", com_driver=True)
     _interface(usb, INTERFACE)
@@ -143,7 +143,7 @@ def test_religa_a_hid_do_controle_sony(tmp_path: Path) -> None:
 
 
 def test_dry_run_diz_o_que_faria_e_nao_escreve(tmp_path: Path) -> None:
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, INTERFACE)
     r = _roda(tmp_path, "--dry-run")
@@ -152,7 +152,7 @@ def test_dry_run_diz_o_que_faria_e_nao_escreve(tmp_path: Path) -> None:
 
 
 def test_a_interface_com_driver_nao_e_tocada(tmp_path: Path) -> None:
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, INTERFACE, com_driver=True)
     r = _roda(tmp_path)
@@ -162,7 +162,7 @@ def test_a_interface_com_driver_nao_e_tocada(tmp_path: Path) -> None:
 
 def test_a_interface_de_audio_sem_driver_nao_e_tocada(tmp_path: Path) -> None:
     """O áudio do DualSense fica sem driver POR DESENHO (a regra 75): não é HID."""
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, f"{PORTA}:1.0", classe="01")
     _interface(usb, f"{PORTA}:1.1", classe="01")
@@ -171,7 +171,7 @@ def test_a_interface_de_audio_sem_driver_nao_e_tocada(tmp_path: Path) -> None:
 
 
 def test_interface_desligada_de_proposito_nao_e_tocada(tmp_path: Path) -> None:
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, INTERFACE, authorized="0")
     _roda(tmp_path)
@@ -180,7 +180,7 @@ def test_interface_desligada_de_proposito_nao_e_tocada(tmp_path: Path) -> None:
 
 def test_orfa_que_nao_e_da_sony_e_ignorada(tmp_path: Path) -> None:
     """O teclado com a HID órfã não é nosso: conta, diz, e não toca."""
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, "3-4.1.2", vid="258a")
     _interface(usb, "3-4.1.2:1.0")
     r = _roda(tmp_path)
@@ -189,7 +189,7 @@ def test_orfa_que_nao_e_da_sony_e_ignorada(tmp_path: Path) -> None:
 
 
 def test_o_vid_em_maiusculas_tambem_e_sony(tmp_path: Path) -> None:
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA, vid="054C")
     _interface(usb, INTERFACE)
     _roda(tmp_path)
@@ -197,7 +197,7 @@ def test_o_vid_em_maiusculas_tambem_e_sony(tmp_path: Path) -> None:
 
 
 def test_para_apos_o_teto_e_desiste_uma_vez_so(tmp_path: Path) -> None:
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, INTERFACE)
     saidas = [_roda(tmp_path, "--quiet").stdout for _ in range(5)]
@@ -208,7 +208,7 @@ def test_para_apos_o_teto_e_desiste_uma_vez_so(tmp_path: Path) -> None:
 
 def test_tirar_e_por_o_cabo_da_orcamento_novo(tmp_path: Path) -> None:
     """Outro ``devnum`` é outro encaixe: a desistência do anterior não vale para ele."""
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA, devnum="12")
     _interface(usb, INTERFACE)
     antes = [_roda(tmp_path, "--quiet").stdout for _ in range(4)]
@@ -221,7 +221,7 @@ def test_tirar_e_por_o_cabo_da_orcamento_novo(tmp_path: Path) -> None:
 
 def test_o_contador_do_encaixe_que_saiu_e_limpo(tmp_path: Path) -> None:
     """O ``/run`` não acumula contador de encaixe morto — nem apaga o do vivo."""
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA, devnum="12")
     _interface(usb, INTERFACE)
     _roda(tmp_path, "--quiet")
@@ -236,7 +236,7 @@ def test_o_contador_do_encaixe_que_saiu_e_limpo(tmp_path: Path) -> None:
 
 def test_a_arvore_de_25_07_nao_varre_o_cabo_de_quem_roda(tmp_path: Path) -> None:
     """Quem desvia só o HID (as réguas de 25/07) não ganha a varredura do cabo."""
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA)
     _interface(usb, INTERFACE)
     env = dict(os.environ)
@@ -336,7 +336,7 @@ def test_com_radio_as_guardas_deixam_o_tique_seguir(tmp_path: Path) -> None:
     assert "CHAMOU-A-VIGIA" not in r.stdout, r.stdout
 
 
-def test_a_vigia_existe_antes_das_guardas_e_roda_depois_delas() -> None:
+def test_a_vigia_existe_antes_das_guardas_e_roda_depois_do_usuario() -> None:
     """A função nasce ANTES das guardas (senão a guarda chamaria um nome que não"""
     codigo = _codigo_do_watchdog()
     definicao = codigo.index("vigia_rebind_orfaos() {")
@@ -371,7 +371,7 @@ def test_o_doctor_e_o_religar_leem_a_mesma_orfa(
     """O mesmo ``/sys`` de mentira, os dois leitores reais, a mesma resposta."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import aparelho_da_porta
 
-    usb = _bancada(tmp_path)
+    usb = _ensaio(tmp_path)
     _aparelho(usb, PORTA, vid=vid)
     _interface(usb, INTERFACE, classe=classe, com_driver=com_driver, authorized=authorized)
     o_doctor_acusa = aparelho_da_porta(PORTA, raiz_usb=usb / "devices").hid_sem_driver

@@ -101,7 +101,7 @@ DESFECHOS_EMULACAO_ATIVA = frozenset(
     {EMU_APLICADO, EMU_JA_ESTAVA, EMU_BLOQUEADO_POR_JOGO}
 )
 
-ORIGENS_GESTO_DELA = frozenset({"manual", "gesto_de_perfil"})
+ORIGENS_GESTO_DO_USUARIO = frozenset({"manual", "gesto_de_perfil"})
 
 ORIGENS_QUE_PASSAM_COM_O_JOGO: dict[str, str] = {
     "manual": "D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR",
@@ -3286,7 +3286,7 @@ __all__ = [
     "EMU_JA_ESTAVA",
     "EMU_RECUSADO_STEAM_INPUT",
     "LAUNCH_RECONCILE_INTERVAL_SEC",
-    "ORIGENS_GESTO_DELA",
+    "ORIGENS_GESTO_DO_USUARIO",
     "ORIGENS_QUE_PASSAM_COM_O_JOGO",
     "REBACKEND_COOLDOWN_SEC",
     "PonteDosAcionadores",

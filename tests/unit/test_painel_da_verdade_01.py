@@ -42,11 +42,11 @@ class _Relogio:
         self.t += s
 
 
-def _vpad_de_bancada() -> Any:
+def _vpad_de_ensaio() -> Any:
     """Um vpad com os campos de estado que o carimbo usa, e nada mais."""
     from hefesto_dualsense4unix.integrations import uhid_gamepad as uhid
 
-    class _Bancada(uhid.UhidDualSense):  # type: ignore[misc]
+    class _Ensaio(uhid.UhidDualSense):  # type: ignore[misc]
         def __init__(self, relogio: _Relogio) -> None:
             self.time_fn = relogio
             self.player = 1
@@ -59,7 +59,7 @@ def _vpad_de_bancada() -> Any:
             self.lightbar_sink = None
             self.player_led_sink = None
 
-    return _Bancada
+    return _Ensaio
 
 
 def test_o_vpad_carimba_a_categoria_e_a_idade_envelhece() -> None:
@@ -70,7 +70,7 @@ def test_o_vpad_carimba_a_categoria_e_a_idade_envelhece() -> None:
     )
 
     relogio = _Relogio()
-    vpad = _vpad_de_bancada()(relogio)
+    vpad = _vpad_de_ensaio()(relogio)
 
     assert vpad.visto_ha_s == {}, "vpad recém-nascido não viu nada"
 
@@ -92,7 +92,7 @@ def test_categoria_sem_sink_nao_e_carimbada() -> None:
     from hefesto_dualsense4unix.integrations.uhid_gamepad import ATIVIDADE_TRIGGER
 
     relogio = _Relogio()
-    vpad = _vpad_de_bancada()(relogio)
+    vpad = _vpad_de_ensaio()(relogio)
     vpad.trigger_sink = None
 
     vpad._forward_replica("trigger_right", b"\x00" * 11, primeira=True)

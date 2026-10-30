@@ -44,7 +44,7 @@ LIGADORES = {
     "nix": REPO / "packaging" / "nix" / "module.nix",
 }
 
-ELA = 4001
+O_USUARIO = 4001
 OUTRA = 4000
 
 
@@ -88,12 +88,12 @@ def logind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LogindFalso:
 
 class TestUidDaSessaoAtiva:
     def test_devolve_o_uid_da_sessao_ativa(self, logind: LogindFalso) -> None:
-        logind.na_frente("c2", ELA)
-        assert hb.uid_da_sessao_ativa() == ELA
+        logind.na_frente("c2", O_USUARIO)
+        assert hb.uid_da_sessao_ativa() == O_USUARIO
 
     def test_a_troca_de_conta_inverte_a_resposta(self, logind: LogindFalso) -> None:
-        logind.na_frente("c2", ELA)
-        assert hb.uid_da_sessao_ativa() == ELA
+        logind.na_frente("c2", O_USUARIO)
+        assert hb.uid_da_sessao_ativa() == O_USUARIO
         logind.na_frente("c3", OUTRA)
         assert hb.uid_da_sessao_ativa() == OUTRA
 
@@ -140,19 +140,19 @@ class TestUidAutorizado:
     ) -> None:
         agora = [100.0]
         estado = _estado(logind, agora)
-        logind.na_frente("c2", ELA)
-        assert estado.uid_autorizado() == ELA
+        logind.na_frente("c2", O_USUARIO)
+        assert estado.uid_autorizado() == O_USUARIO
         logind.na_frente("c3", OUTRA)
         agora[0] += hb.VALIDADE_DA_SESSAO_S / 2
-        assert estado.uid_autorizado() == ELA, "dentro do prazo vale a resposta guardada"
+        assert estado.uid_autorizado() == O_USUARIO, "dentro do prazo vale a resposta guardada"
         agora[0] += hb.VALIDADE_DA_SESSAO_S
         assert estado.uid_autorizado() == OUTRA
 
     def test_esquecer_a_resposta_forca_a_pergunta(self, logind: LogindFalso) -> None:
         agora = [100.0]
         estado = _estado(logind, agora)
-        logind.na_frente("c2", ELA)
-        assert estado.uid_autorizado() == ELA
+        logind.na_frente("c2", O_USUARIO)
+        assert estado.uid_autorizado() == O_USUARIO
         logind.na_frente("c3", OUTRA)
         estado.esquecer_a_sessao_lida()
         assert estado.uid_autorizado() == OUTRA
@@ -162,12 +162,12 @@ class TestUidAutorizado:
     ) -> None:
         agora = [100.0]
         estado = _estado(logind, agora)
-        logind.na_frente("c2", ELA)
-        assert estado.uid_autorizado() == ELA
+        logind.na_frente("c2", O_USUARIO)
+        assert estado.uid_autorizado() == O_USUARIO
         logind.vazio()
         agora[0] += 5 * hb.VALIDADE_DA_SESSAO_S
         assert estado.uid_autorizado() is None
-        assert estado.uid_para_agir() == ELA
+        assert estado.uid_para_agir() == O_USUARIO
 
     def test_a_varredura_do_fisico_entregue_nao_pergunta_a_cada_segundo(
         self, tmp_path: Path
@@ -178,7 +178,7 @@ class TestUidAutorizado:
 
         def na_frente() -> int:
             perguntas.append(agora[0])
-            return ELA
+            return O_USUARIO
 
         vazio = tmp_path / "hidraw"
         vazio.mkdir()
@@ -250,13 +250,13 @@ def _broker(
 class TestRegisterClient:
     def test_atende_quem_esta_na_frente_e_recusa_a_outra_conta(self, logind: LogindFalso) -> None:
         eventos: list[tuple[str, dict[str, object]]] = []
-        logind.na_frente("c2", ELA)
+        logind.na_frente("c2", O_USUARIO)
         broker, cliente = _broker(logind, [100.0], eventos)
-        cliente(ELA)
+        cliente(O_USUARIO)
         cliente(OUTRA)
         aceitos = [c for e, c in eventos if e == "peer_accepted"]
         recusados = [c for e, c in eventos if e == "peer_rejected"]
-        assert [c["peer_uid"] for c in aceitos] == [ELA]
+        assert [c["peer_uid"] for c in aceitos] == [O_USUARIO]
         assert [c["peer_uid"] for c in recusados] == [OUTRA]
         assert recusados[0]["motivo"] == "nao_e_quem_esta_na_frente"
         del broker
@@ -264,30 +264,30 @@ class TestRegisterClient:
     def test_inverte_quando_a_outra_conta_assume_a_frente(self, logind: LogindFalso) -> None:
         eventos: list[tuple[str, dict[str, object]]] = []
         agora = [100.0]
-        logind.na_frente("c2", ELA)
+        logind.na_frente("c2", O_USUARIO)
         broker, cliente = _broker(logind, agora, eventos)
-        cliente(ELA)
+        cliente(O_USUARIO)
         logind.na_frente("c3", OUTRA)
         agora[0] += 5 * hb.VALIDADE_DA_SESSAO_S
-        cliente(ELA)
+        cliente(O_USUARIO)
         cliente(OUTRA)
         aceitos = [c["peer_uid"] for e, c in eventos if e == "peer_accepted"]
         recusados = [c["peer_uid"] for e, c in eventos if e == "peer_rejected"]
-        assert aceitos == [ELA, OUTRA]
-        assert recusados == [ELA]
+        assert aceitos == [O_USUARIO, OUTRA]
+        assert recusados == [O_USUARIO]
         del broker
 
     def test_quem_ficou_atras_na_troca_de_usuario_e_solta(self, logind: LogindFalso) -> None:
         eventos: list[tuple[str, dict[str, object]]] = []
         agora = [100.0]
-        logind.na_frente("c2", ELA)
+        logind.na_frente("c2", O_USUARIO)
         broker, cliente = _broker(logind, agora, eventos)
-        antiga = cliente(ELA)
+        antiga = cliente(O_USUARIO)
         logind.na_frente("c3", OUTRA)
         agora[0] += 5 * hb.VALIDADE_DA_SESSAO_S
         cliente(OUTRA)
         soltos = [c for e, c in eventos if e == "peer_solto"]
-        assert [c["peer_uid"] for c in soltos] == [ELA]
+        assert [c["peer_uid"] for c in soltos] == [O_USUARIO]
         antiga.settimeout(2.0)
         assert antiga.recv(16) == b"", "a conexão de quem ficou atrás tem de cair"
         del broker
@@ -296,7 +296,7 @@ class TestRegisterClient:
         eventos: list[tuple[str, dict[str, object]]] = []
         logind.vazio()
         broker, cliente = _broker(logind, [100.0], eventos)
-        cliente(ELA)
+        cliente(O_USUARIO)
         recusados = [c for e, c in eventos if e == "peer_rejected"]
         assert [c["motivo"] for c in recusados] == ["sem_sessao_ativa"]
         del broker

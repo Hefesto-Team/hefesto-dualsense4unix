@@ -33,7 +33,7 @@ class _Handlers(IpcHandlersMixin):
         self.daemon = daemon
 
 
-class TestAPalavraDelaChegaComoMascaraDeSony:
+class TestAPalavraDoUsuarioChegaComoMascaraDeSony:
     """Metade 1: "sony" pede PlayStation e recebe PlayStation."""
 
     @pytest.mark.parametrize(

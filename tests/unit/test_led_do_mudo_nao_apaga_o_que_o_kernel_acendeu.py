@@ -42,7 +42,7 @@ def test_sem_dono_o_led_do_mudo_nao_e_autorizado(handle: Any) -> None:
     assert common[8] == 0, "byte inerte, mas nunca autorizado"
 
 
-def test_o_keepalive_nao_desfaz_o_mudo_que_ela_apertou(handle: Any) -> None:
+def test_o_keepalive_nao_desfaz_o_mudo_que_o_usuario_apertou(handle: Any) -> None:
     """A cena inteira, no report: o kernel acendeu, e o nosso não apaga."""
     for _ in range(5):
         common = handle._build_common(rumble_asserted=False)

@@ -148,7 +148,7 @@ def test_a_gravacao_que_passa_nao_deixa_linha(
     assert not [x for x in diario if x.get("event") == _EVENTO], diario
 
 
-def test_o_docstring_da_carona_nao_chama_o_usuario_de_ela() -> None:
+def test_o_docstring_da_carona_nao_chama_o_usuario_de_o_usuario() -> None:
     doc = cpe.EstradasEscritas.__doc__ or ""
     assert "em que ela" not in doc, doc
     assert "onde a carona escreveu" in doc, doc

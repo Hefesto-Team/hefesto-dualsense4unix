@@ -173,12 +173,12 @@ class TestOAvisoDeixouDeAcusarAPessoa:
         assert 'warn "' in corpo
 
     def test_o_texto_diz_o_que_esta_aberto_e_de_quem_e_o_arquivo(self) -> None:
-        """NOTA DATADA — 06/08/2026, AFIRMACAO-SO-NO-ESTADO-DELA-01."""
+        """NOTA DATADA — 06/08/2026, AFIRMACAO-SO-NO-ESTADO-DO-USUARIO-01."""
         corpo = _funcao_inteira("check_perms_soft")
         assert "NÃO é do Hefesto" in corpo, "o aviso não diz de quem é o arquivo"
         assert "_culpado_tardio" in corpo, (
             "a inocência dos aparelhos do Hefesto voltou a ser afirmada em vez "
-            "de medida — ver AFIRMACAO-SO-NO-ESTADO-DELA-01"
+            "de medida — ver AFIRMACAO-SO-NO-ESTADO-DO-USUARIO-01"
         )
         assert "ATENÇÃO: a regra acima roda DEPOIS" in corpo, (
             "sumiu o ramo que avisa quando o culpado VENCE as nossas regras"

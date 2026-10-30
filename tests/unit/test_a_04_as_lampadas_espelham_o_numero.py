@@ -329,7 +329,7 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
-def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
+def test_o_piso_da_aba_desceu_com_a_ordem_do_usuario(a04):
     """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
     assert a04.PISO_DA_ABA == 7, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "

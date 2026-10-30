@@ -38,15 +38,15 @@ def test_o_dano_recusa_adaptador_inexistente() -> None:
     assert "RECUSADO" in fim.stdout or "não existe" in fim.stdout
 
 
-def test_a_suite_nao_toca_o_radio_dela() -> None:
-    """RADIO-DELA-01 — e este teste nasceu de um vermelho de verdade."""
+def test_a_suite_nao_toca_o_radio_do_usuario() -> None:
+    """RADIO-DO-USUARIO-01 — e este teste nasceu de um vermelho de verdade."""
     fim = _rodar("dano", "hci0", "1")
     assert fim.returncode == 7, (
         f"a etapa que LIGA a varredura não recusou dentro da suíte (rc={fim.returncode}). "
         "O rádio dela não é bancada de teste."
     )
     assert "RECUSADO" in fim.stdout
-    assert "HEFESTO_BANCADA_PODE_TOCAR_O_RADIO" in fim.stdout, (
+    assert "HEFESTO_ENSAIO_PODE_TOCAR_O_RADIO" in fim.stdout, (
         "recusou sem declarar o escape — guarda sem porta vira contorno"
     )
 

@@ -63,7 +63,7 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
 
 ORIGEM = (onde.RAIZ / "mockup" / "congelados" / "2026-08-24-mapa-das-portas.html")
 
-DESTINO = onde.BANCADA / "mapa-das-portas.html"
+DESTINO = onde.ENSAIO / "mapa-das-portas.html"
 
 
 class Edicao(NamedTuple):
@@ -1768,7 +1768,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "    if (lg && lg.hasAttribute(\"data-gesto\")) return;\n"
             "    if (lg) {\n"
         ),
-        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 0) — «O que tem aqui» espera o disco.',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 0) — «O que tem aqui» espera o'
+            ' disco.'
+        ),
     ),
     Edicao(
         antes="    var ub = ev.target.closest(\"#edita [data-usb]\");\n",
@@ -1776,7 +1779,9 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "    var ub = ev.target.closest(\"#edita [data-usb]\");\n"
             "    if (ub && ub.hasAttribute(\"data-gesto\")) return;\n"
         ),
-        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 0) — «Velocidade» espera o disco.',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 0) — «Velocidade» espera o disco.'
+        ),
     ),
     Edicao(
         antes=(
@@ -1792,7 +1797,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "      : \"Clique numa entrada para dar nome, corrigir ou trocar.\";\n"
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 0) — medido no diário '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 0) — medido no diário '
             'dela: dois cliques no plugue e nenhuma escolha; a dica não dizia que '
             'ali há um editor.'
         ),
@@ -1850,7 +1855,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "  }\n"
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o nome da entrada '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 2) — o nome da entrada '
             'vem do dono, e o editor ganha o campo «Nome».'
         ),
     ),
@@ -1873,7 +1878,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "</span><div class=\"seg\">'\n"
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o cabeçalho do '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 2) — o cabeçalho do '
             'editor diz o nome dela, e o campo «Nome» vem antes do resto.'
         ),
     ),
@@ -1897,7 +1902,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "  });\n"
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o nome no exemplo '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 2) — o nome no exemplo '
             'é só da tela.'
         ),
     ),
@@ -1913,7 +1918,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             " border-radius: var(--radius-sm); }\n"
             "  .edita .campo-nome:focus { outline: none; border-color: var(--color-accent); }\n"
         ),
-        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o campo «Nome».',
+        porque='26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 2) — o campo «Nome».',
     ),
     Edicao(
         antes=(
@@ -1929,7 +1934,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        motivo[ap.id] = {'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a razão da'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a razão da'
             ' entrada tomada diz o nome dela.'
         ),
     ),
@@ -1947,7 +1952,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        motivo[a.id] = {'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a razão da'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a razão da'
             ' entrada tomada diz o nome dela (a variante).'
         ),
     ),
@@ -1963,7 +1968,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'lugar" });\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a razão da'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a razão da'
             ' entrada tomada diz o nome dela (a receita).'
         ),
     ),
@@ -1982,7 +1987,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '+ r.n + " na " + naFraseDe(para); })(rot(a))\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o moviment'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o moviment'
             'o diz as duas entradas pelo nome.'
         ),
     ),
@@ -2000,7 +2005,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      if (porta.esticada) return { v: "melhor"'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a vizinha '
             'colada diz o nome da entrada (o adaptador).'
         ),
     ),
@@ -2020,7 +2025,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'ul,'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a vizinha '
             'colada diz o nome da entrada (o Wi-Fi).'
         ),
     ),
@@ -2040,7 +2045,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'reta do PC'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a vizinha '
             'colada diz o nome da entrada (o teclado).'
         ),
     ),
@@ -2060,7 +2065,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'xt: "vale evitar", porque: "hub com'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a vizinha '
             'colada diz o nome da entrada (o mouse).'
         ),
     ),
@@ -2074,7 +2079,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '(p) : "entrada por confirmar" };\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o adaptado'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o adaptado'
             'r diz a entrada em que está pelo nome.'
         ),
     ),
@@ -2082,7 +2087,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes='        porque = de ? "estava na entrada " + de : "ainda sem lugar";\n',
         depois='        porque = de ? "estava na " + naFraseDe(de) : "ainda sem lugar";\n',
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o plano di'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o plano di'
             'z de onde veio pelo nome.'
         ),
     ),
@@ -2090,7 +2095,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes='        porque = "vai para a entrada " + portaDeEm(ctx.plano, idAgora);\n',
         depois='        porque = "vai para a " + naFraseDe(portaDeEm(ctx.plano, idAgora));\n',
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o plano di'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o plano di'
             'z para onde vai pelo nome.'
         ),
     ),
@@ -2101,7 +2106,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois='    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + ", vazia";\n',
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a dica do '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a dica do '
             'plugue vazio diz o nome da entrada.'
         ),
     ),
@@ -2121,7 +2126,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ' ap.tipo'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o plugue m'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o plugue m'
             'ostra o nome que ela deu à entrada.'
         ),
     ),
@@ -2136,13 +2141,13 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '                     overflow: hidden; text-overflow: ellips'
             'is; }\n'
         ),
-        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a linha do nome no plugue.',
+        porque='26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a linha do nome no plugue.',
     ),
     Edicao(
         antes='      FACES.push({ nome: "Hub na Entrada " + n,',
         depois='      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n),',
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o nome da face do '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o nome da face do '
             'hub é o do dono (`FACE_DO_HUB_DECLARADO`), e a página não compõe a '
             'palavra.'
         ),
@@ -2160,7 +2165,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + (soNaTela ? "" : linhaDaTroca(editando));\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — «Mudar de Entrad'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — «Mudar de Entrad'
             'a» sai: o ato dele é o «Trocar com…», que grava.'
         ),
     ),
@@ -2180,7 +2185,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois="",
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — o botão «Mudar d'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — o botão «Mudar d'
             'e Entrada» saiu, e o ouvinte dele junto.'
         ),
     ),
@@ -2219,7 +2224,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  function linhaDoNome(n) {\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — a linha «Trocar '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — a linha «Trocar '
             'de lugar» do editor.'
         ),
     ),
@@ -2242,7 +2247,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      modo = "mao";\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — o chip do aparel'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — o chip do aparel'
             'ho que já está numa entrada abre o editor dela.'
         ),
     ),
@@ -2266,7 +2271,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'r(--color-ink); }\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — a lista «Trocar '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — a lista «Trocar '
             'com…».'
         ),
     ),
@@ -2285,7 +2290,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  .edita-cab .fecha { position: absolute; top: 0; right: 0; }\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (a conferência) — com um nome'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (a conferência) — com um nome'
             ' de 24 letras o nome e a face quebravam cada um em duas linhas, lado'
             ' a lado; a sprint pede que a face desça para uma linha própria.'
         ),
@@ -2294,7 +2299,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes='no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳]+/g',
         depois='no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳…]+/g',
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — as reticências '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — as reticências '
             'separam a palavra: «Trocar com…» não vira «Trocar Com…».'
         ),
     ),
@@ -2311,7 +2316,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        + (f.diverge ? \'<p class="diverge">\' + f.diverge + "</p>" : "")\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a face do hub di'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — a face do hub di'
             'z de qual entrada pende.'
         ),
     ),
@@ -2325,7 +2330,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '|| HUB_LIDO[porta.n]) h += \'<span class="decl">hub</span>\';\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — o plugue da entr'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — o plugue da entr'
             'ada em que o computador lê um hub ganha a marca.'
         ),
     ),
@@ -2351,7 +2356,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ': String(n),\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — o hub declarado '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — o hub declarado '
             'na tela não duplica a face ligada.'
         ),
     ),
@@ -2365,7 +2370,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ' "direto");\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — o editor da entr'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — o editor da entr'
             'ada em que o computador lê um hub.'
         ),
     ),
@@ -2384,7 +2389,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'lido) {\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — «Direto» apagado'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — «Direto» apagado'
             ' onde o computador lê um hub.'
         ),
     ),
@@ -2401,7 +2406,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \'<div class="edita-linha"><span>Velocidade</span>'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a linha que diz '
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — a linha que diz '
             'por que «Hub» nasce apertado.'
         ),
     ),
@@ -2420,7 +2425,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '-quiet); }\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a linha da diver'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 5) — a linha da diver'
             'gência e a do editor.'
         ),
     ),
@@ -2438,7 +2443,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + "</div>" + origemDaVelocidade(editando) + "</div>")\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 6) — a linha de baixo'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 6) — a linha de baixo'
             ' de «Velocidade» diz de onde ela veio.'
         ),
     ),
@@ -2454,7 +2459,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'nk-quiet); }\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 6) — a linha da orige'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 6) — a linha da orige'
             'm.'
         ),
     ),
@@ -2484,7 +2489,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  }\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 7) — o plugue candida'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 7) — o plugue candida'
             'to leva o gesto de ensinar.'
         ),
     ),
@@ -2499,7 +2504,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'ton><span class="rotulo">\';\n'
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 7) — o plugue do soqu'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 7) — o plugue do soqu'
             'ete diz o gesto.'
         ),
     ),
@@ -2515,7 +2520,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        if (ocupada(alocacao, p)) return;\n'  # (noqa-acento)
         ),
         porque=(
-            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 7) — no produto o cli'
+            '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 7) — no produto o cli'
             'que não ensina na memória.'
         ),
     ),
@@ -5883,8 +5888,9 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
         antes="</head>",
         depois=CSS_DA_CADEIA_E_DO_REGISTRO,
         porque=(
-            "15/10/2026, O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01 — a folha do"
-            " desenho do todo: a quarta aba, o hub recuado, o enlace e o esmaecido de quem sumiu"
+            "15/10/2026, O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01 —"
+            " a folha do desenho do todo: a quarta aba, o hub recuado, o enlace e o esmaecido"
+            " de quem sumiu"
         ),
     ),
     Edicao(
@@ -6292,14 +6298,14 @@ EDICOES_DA_LETRA_DA_CASA: tuple[Edicao, ...] = (
     ),
 )
 
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
     """A página: a origem congelada mais as :data:`EDICOES`.
 
     Com ``com_as_que_esperam`` (o padrão, e é a BANCADA), vêm também as
-    :data:`EDICOES_ESPERANDO_A_SESSAO_DELA`; sem ele, sai a cópia que o produto
+    :data:`EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO`; sem ele, sai a cópia que o produto
     tem hoje.
 
     Cada troca é cobrada: `antes` tem de aparecer uma vez e só uma. É o que
@@ -6309,7 +6315,7 @@ def pagina(com_as_que_esperam: bool = True) -> str:
     """
     texto = ORIGEM.read_text(encoding="utf-8")
     edicoes = _as_edicoes() + (
-        EDICOES_ESPERANDO_A_SESSAO_DELA if com_as_que_esperam else ())
+        EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO if com_as_que_esperam else ())
     for numero, edicao in enumerate(edicoes, 1):
         quantas = texto.count(edicao.antes)
         if quantas != 1:
@@ -6328,7 +6334,7 @@ def main(argv: list[str] | None = None) -> int:
     antes = DESTINO.read_text(encoding="utf-8") if DESTINO.exists() else ""
     DESTINO.write_text(novo, encoding="utf-8")
     print(f"mapa-das-portas: {len(_as_edicoes())} edições sobre a origem congelada"
-          f" + {len(EDICOES_ESPERANDO_A_SESSAO_DELA)} esperando a sessão dela · "
+          f" + {len(EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO)} esperando a sessão dela · "
           f"{len(novo.splitlines())} linhas · "
           f"{'mudou' if novo != antes else 'já estava igual'}")
     print(f"  escrito em {DESTINO}")

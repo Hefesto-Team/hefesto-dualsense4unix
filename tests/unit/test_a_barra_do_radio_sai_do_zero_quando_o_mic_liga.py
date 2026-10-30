@@ -70,7 +70,7 @@ ADAPTADOR_C = "aa:bb:cc:00:00:ce"
 MESA = {UM: ADAPTADOR_A, DOIS: ADAPTADOR_B, TRES: ADAPTADOR_B, QUATRO: ADAPTADOR_C}
 
 
-def _bancada() -> tuple[Any, Any]:
+def _ensaio() -> tuple[Any, Any]:
     """Um `/sys/class/hidraw` de mentira com os quatro nós da bancada."""
     nos = {
         f"hidraw{indice}": {"HID_UNIQ": uniq, "HID_PHYS": adaptador}
@@ -240,7 +240,7 @@ class TestABarraSeMexe:
 
     def test_o_controle_negativo_a_coluna_de_audio_e_zero_nos_tres(self) -> None:
         """A linha de base de 22/08: quatro no rádio, nenhuma ponte."""
-        listar, ler = _bancada()
+        listar, ler = _ensaio()
         ocupacoes = ocupacao_por_adaptador(
             _controles(), com_ponte_de_mic=(), listar=listar, ler=ler
         )
@@ -258,7 +258,7 @@ class TestABarraSeMexe:
         self,
     ) -> None:
         """A pergunta que ela vai fazer ao ver o interruptor: *cabe em quatro?*"""
-        listar, ler = _bancada()
+        listar, ler = _ensaio()
         ocupacoes = ocupacao_por_adaptador(
             _controles(), com_ponte_de_mic=list(MESA), listar=listar, ler=ler
         )
@@ -269,7 +269,7 @@ class TestABarraSeMexe:
 
     def test_ligar_um_microfone_nao_mexe_no_adaptador_do_vizinho(self) -> None:
         """"Por controle" tem de valer também na barra: uma ponte, um adaptador."""
-        listar, ler = _bancada()
+        listar, ler = _ensaio()
         ocupacoes = ocupacao_por_adaptador(
             _controles(), com_ponte_de_mic={UM}, listar=listar, ler=ler
         )
@@ -283,7 +283,7 @@ class TestABarraSeMexe:
         assert ADAPTADOR_A[:8] == ADAPTADOR_B[:8] == ADAPTADOR_C[:8], (
             "o cenário perdeu o OUI comum, que é a coisa toda que ele mede"
         )
-        listar, ler = _bancada()
+        listar, ler = _ensaio()
 
         ocupacoes = ocupacao_por_adaptador(_controles(), listar=listar, ler=ler)
 

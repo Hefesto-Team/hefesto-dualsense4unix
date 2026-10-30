@@ -371,8 +371,8 @@ def test_a_recusa_nao_segue_para_a_aba_seguinte(medido: dict) -> None:
     assert not leitura["vistas"]["recusa"], leitura
 
 
-def test_a_recusa_nao_volta_quando_ela_volta_a_pagina(medido: dict) -> None:
-    """ERA `test_a_recusa_volta_quando_ela_volta_a_pagina` — 13/09/2026."""
+def test_a_recusa_nao_volta_quando_o_usuario_volta_a_pagina(medido: dict) -> None:
+    """ERA `test_a_recusa_volta_quando_o_usuario_volta_a_pagina` — 13/09/2026."""
     leitura = _leitura(medido, "02-de-volta")
     assert leitura["aba"] == PAGINA_02, leitura["aba"]
     assert leitura["recados"] == [], leitura["recados"]

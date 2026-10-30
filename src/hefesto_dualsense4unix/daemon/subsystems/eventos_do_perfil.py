@@ -105,7 +105,7 @@ class EventosDoPerfil:
             return "modo_nativo"
         trava = getattr(store, "manual_profile_lock_active", None)
         if callable(trava) and trava(self._relogio()):
-            return "escolha_dela_recente"
+            return "escolha_do_usuario_recente"
         return None
 
     async def _entrar(self, perfil: Any, momento: str) -> bool:

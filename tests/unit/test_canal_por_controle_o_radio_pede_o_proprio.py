@@ -27,7 +27,7 @@ COMO MORDE (exercido em 03/09/2026, cura arrancada e devolvida por `cp`)
 * tire o `| self._registro.abertos()` de `BtMicSubsystem.alvos` ->
   `test_quem_pediu_ganha_a_ponte_dele` e o ponta-a-ponta reprovam: o pedido
   volta a não valer nada e o rádio volta a ficar sem canal;
-* tire o `_soltar_os_que_ela_desmarcou` do laço ->
+* tire o `_soltar_os_que_o_usuario_desmarcou` do laço ->
   `test_desmarcar_no_aplicar_vence_o_pedido` reprova: o interruptor do card
   perde para um toque de botão de minutos antes;
 * tire o `_esquecer_quem_saiu_da_mesa` -> `test_quem_sai_da_mesa_perde_o_pedido`
@@ -143,7 +143,7 @@ class TestAsDuasMetades:
         subsystem._config = config
         assert sorted(n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])) == [UM, DOIS]
 
-    def test_a_recusa_dela_cala_e_o_resto_continua(self) -> None:
+    def test_a_recusa_do_usuario_cala_e_o_resto_continua(self) -> None:
         """O par que substituiu o gate: o `false` no disco é a palavra de produto."""
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
@@ -200,7 +200,7 @@ class TestAVidaDoPedido:
         registro.pedir(UM)
 
         recusados.add(UM)
-        subsystem._soltar_os_que_ela_desmarcou()
+        subsystem._soltar_os_que_o_usuario_desmarcou()
 
         assert registro.abertos() == frozenset()
         assert subsystem.alvos([_No(UM)]) == []
@@ -216,12 +216,12 @@ class TestAVidaDoPedido:
         registro.pedir(DOIS)
 
         recusados.add(UM)
-        subsystem._soltar_os_que_ela_desmarcou()
+        subsystem._soltar_os_que_o_usuario_desmarcou()
 
         assert registro.abertos() == frozenset({DOIS})
         assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
 
-        subsystem._soltar_os_que_ela_desmarcou()
+        subsystem._soltar_os_que_o_usuario_desmarcou()
 
         assert registro.abertos() == frozenset({DOIS})
 
@@ -291,7 +291,7 @@ class _Pactl:
 
 
 @pytest.fixture()
-def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
+def ensaio(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     """A bancada: um `pactl` dublado e o script que DECLARA as duas flags."""
     dublê = _Pactl()
     script = tmp_path / "fix_wireplumber_default_source.sh"
@@ -315,7 +315,7 @@ class TestPontaAPonta:
         elm.registrar_pedidor_de_canal(anterior)
 
     def test_o_controle_do_radio_pede_o_canal_e_elege(
-        self, bancada: Any, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O CAMINHO QUE NÃO EXISTIA. Sem a cura, isto é a recusa de sempre."""
         publicadas: list[str] = []
@@ -337,10 +337,10 @@ class TestPontaAPonta:
         assert resultado.ok is True
         assert resultado.alvo == FONTE_DE_UM
         assert eleitor.eleito == UM
-        assert bancada.escritas == [FONTE_DE_UM]
+        assert ensaio.escritas == [FONTE_DE_UM]
 
     def test_o_cabo_nao_pede_nada(
-        self, bancada: Any, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Quem já tem canal não pede — o toque no cabo custa o mesmo de sempre."""
         pedidos: list[str] = []
@@ -354,7 +354,7 @@ class TestPontaAPonta:
         assert resultado.alvo == FONTE_DO_CABO
 
     def test_quando_ninguem_atende_a_recusa_e_a_de_sempre(
-        self, bancada: Any, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """NENHUMA FRASE NOVA — ela recusou a premissa do recado, não o texto."""
         monkeypatch.setattr(elm, "fontes_de_captura_agora", list)
@@ -368,7 +368,7 @@ class TestPontaAPonta:
         )
 
     def test_o_canal_que_nao_sobe_no_orcamento_nao_inventa_frase(
-        self, bancada: Any, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Pedido aceito e canal que não aparece: a recusa continua a de sempre."""
         elm.registrar_pedidor_de_canal(lambda _u: True)
@@ -384,7 +384,7 @@ class TestPontaAPonta:
         )
 
     def test_o_canal_de_um_nao_e_o_canal_do_outro(
-        self, bancada: Any, monkeypatch: pytest.MonkeyPatch
+        self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Quatro canais quer dizer que a source de UM não serve para DOIS."""
         elm.registrar_pedidor_de_canal(lambda _u: True)

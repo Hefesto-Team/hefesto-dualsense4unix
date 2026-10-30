@@ -62,7 +62,7 @@ def _card(mod, contexto, entrada: dict) -> dict:
     return next(iter(cards.values()))
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
@@ -81,7 +81,7 @@ def _selos(doc: str) -> list[str]:
 
 def test_o_selo_tem_tres_alvos() -> None:
     """A cor, o risco e a palavra são TRÊS alvos, e um elemento aceita UM."""
-    selos = _selos(_bancada())
+    selos = _selos(_ensaio())
     assert selos, "não achei um `.selo-ativo` na bancada da aba Controles"
 
     for selo in selos:
@@ -113,7 +113,7 @@ def test_o_selo_tem_tres_alvos() -> None:
 
 def test_o_quando_do_selo_vem_do_dono() -> None:
     """O valor que acende cada classe é o que `mesa_viva.selo_do_mic` devolve."""
-    doc = _bancada()
+    doc = _ensaio()
     for selo in _selos(doc):
         for classe, esperado in (("on", mesa_viva.selo_do_mic(False, True)),
                                  ("cortado", mesa_viva.selo_do_mic(True, True))):
@@ -148,7 +148,7 @@ def test_o_verde_quer_dizer_uma_coisa_so() -> None:
 
 def test_a_folha_pinta_as_duas_classes() -> None:
     """As classes que o produto acende existem no CSS da página."""
-    doc = _bancada()
+    doc = _ensaio()
     assert ".selo-ativo.on{" in doc, (
         "a regra que ACENDE o selo sumiu — a classe seria escrita e o fundo "
         "ficaria apagado nos três estados"

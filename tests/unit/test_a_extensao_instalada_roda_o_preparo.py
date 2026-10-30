@@ -1,6 +1,6 @@
 """A extensão instalada pelo Hefesto roda o preparo dela.
 
-A sprint é a A-EXTENSAO-INSTALADA-PELO-HEFESTO-RODA-O-PREPARO-DELA-01: o campo ``preparar``
+A sprint é a A-EXTENSAO-INSTALADA-PELO-HEFESTO-RODA-O-PREPARO-DO-USUARIO-01: o campo ``preparar``
 do manifesto é um comando, relativo à pasta da extensão, que o instalador roda fora da caixa,
 como quem usa, depois de trocar o código e antes de ligar. Tudo num lar de mentira (``HOME`` e
 ``XDG_*`` em pasta temporária), com uma extensão de mentira cujo preparo grava um arquivo na

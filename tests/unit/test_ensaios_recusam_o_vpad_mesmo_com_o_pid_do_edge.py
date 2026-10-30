@@ -248,7 +248,7 @@ def test_keepalive_continua_listando_o_controle_do_cabo(keepalive, tmp_path):
     assert achados[0]["transporte"] == "cabo"
 
 
-def test_os_tres_instrumentos_usam_a_mesma_regua_e_nao_copias_dela():
+def test_os_tres_instrumentos_usam_a_mesma_regua_e_nao_copias_do_usuario():
     """O defeito de origem era a régua escrita três vezes, com três respostas."""
     import identidade_do_vpad
 

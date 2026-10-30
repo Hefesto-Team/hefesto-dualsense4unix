@@ -26,8 +26,8 @@ def _pagina_de_prova(destino: pathlib.Path) -> pathlib.Path:
     """Uma página montada pelo `monta()`, com as peças da folha em uso."""
     import os
 
-    anterior = os.environ.get("HEFESTO_BANCADA")
-    os.environ["HEFESTO_BANCADA"] = str(destino)
+    anterior = os.environ.get("HEFESTO_ENSAIO")
+    os.environ["HEFESTO_ENSAIO"] = str(destino)
     try:
         miolo = f"""    <div class="quadro"><div class="quadro-corpo">
       <div class="acoes">
@@ -43,9 +43,9 @@ def _pagina_de_prova(destino: pathlib.Path) -> pathlib.Path:
         monta.monta("99-prova-da-folha", "Prova da folha", miolo)
     finally:
         if anterior is None:
-            os.environ.pop("HEFESTO_BANCADA", None)
+            os.environ.pop("HEFESTO_ENSAIO", None)
         else:
-            os.environ["HEFESTO_BANCADA"] = anterior
+            os.environ["HEFESTO_ENSAIO"] = anterior
     return destino / "99-prova-da-folha.html"
 
 
@@ -107,11 +107,11 @@ def medido(tmp_path_factory: pytest.TempPathFactory) -> dict:
     return dict(saida)
 
 
-def test_a_folha_entra_nas_dez_paginas_da_bancada() -> None:
+def test_a_folha_entra_nas_dez_paginas_do_ensaio() -> None:
     """As dez páginas carregam a folha — e é `monta()` quem a põe lá."""
-    paginas = sorted(onde.BANCADA.glob("[0-9][0-9]-*.html"))
+    paginas = sorted(onde.ENSAIO.glob("[0-9][0-9]-*.html"))
     assert len(paginas) >= 10, (
-        f"achei {len(paginas)} aba(s) em {onde.BANCADA} — as dez abas têm "
+        f"achei {len(paginas)} aba(s) em {onde.ENSAIO} — as dez abas têm "
         f"uma cada, e uma lista curta faria este caso passar quase vazio")
     sem_a_peca = [p.name for p in paginas
                   if ".btn.apagado" not in p.read_text(encoding="utf-8")]

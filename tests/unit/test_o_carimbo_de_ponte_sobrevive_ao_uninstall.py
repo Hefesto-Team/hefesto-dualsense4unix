@@ -147,12 +147,12 @@ class TestOCarimboSobreviveAoUninstall:
 class TestOInstallNaoPassaPorCimaDoCarimbo:
     """A outra metade do ciclo: reinstalar não pode reescrever o que aprendeu."""
 
-    @pytest.mark.parametrize("e_preset", [True, False], ids=["preset", "so_dela"])
+    @pytest.mark.parametrize("e_preset", [True, False], ids=["preset", "so_do_usuario"])
     def test_install_profiles_preserva_o_perfil_que_ja_existe(
         self, tmp_path: Path, e_preset: bool
     ) -> None:
         """O caso `preset` é o perigoso, e o nome sai da FONTE, não daqui."""
-        nome = _um_nome_de_preset() if e_preset else "jogo_dela_sem_preset"
+        nome = _um_nome_de_preset() if e_preset else "jogo_do_usuario_sem_preset"
         alvo = _grava_perfil(tmp_path, nome)
 
         r = subprocess.run(

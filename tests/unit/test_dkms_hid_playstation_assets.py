@@ -479,7 +479,7 @@ class TestFormatoDoPatchUpstream:
         for corpo in PATCHES:
             assert SOB_ANONIMO in corpo
 
-    def test_0002_carrega_a_medicao_do_clone_e_o_que_ela_refuta(self) -> None:
+    def test_0002_carrega_a_medicao_do_clone_e_o_que_o_usuario_refuta(self) -> None:
         corpo = PATCH2.split("\n---\n", 1)[0]
         assert "expected 16 got 9" in corpo, "o sintoma medido"
         assert "054c:05c4" in corpo, "o clone se anuncia com os IDs da Sony"

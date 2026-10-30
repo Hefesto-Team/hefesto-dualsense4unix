@@ -667,10 +667,10 @@ class AutoSwitcher:
         return self._current_profile is not None and profile.name != self._current_profile
 
     def _perfil_da_escolha(self) -> Profile | None:
-        """O perfil da escolha do usuário, pelo dono (`a_escolha_dela`). Nunca levanta."""
-        from hefesto_dualsense4unix.utils.session import a_escolha_dela
+        """O perfil da escolha do usuário, pelo dono (`a_escolha_do_usuario`). Nunca levanta."""
+        from hefesto_dualsense4unix.utils.session import a_escolha_do_usuario
 
-        nome = a_escolha_dela(freestyle_ligado=self.freestyle_ligado())
+        nome = a_escolha_do_usuario(freestyle_ligado=self.freestyle_ligado())
         if not nome:
             self._escolha_nome = None
             self._escolha_perfil = None

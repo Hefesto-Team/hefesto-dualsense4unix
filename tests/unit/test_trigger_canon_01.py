@@ -42,7 +42,7 @@ SENSACAO_APROVADA: dict[str, tuple[int, tuple[int, ...]]] = {
 
 
 @pytest.mark.parametrize("nome", sorted(SENSACAO_APROVADA))
-def test_a_sensacao_que_ela_aprovou_nao_muda_um_byte(nome: str) -> None:
+def test_a_sensacao_que_o_usuario_aprovou_nao_muda_um_byte(nome: str) -> None:
     """A prova de regressão da E0-bis, e a mais importante do arquivo."""
     esperado_modo, esperado_forces = SENSACAO_APROVADA[nome]
     efeito = _efeito_com_os_padroes(nome, pela_fabrica=nome in FABRICAS_DE_01_08)

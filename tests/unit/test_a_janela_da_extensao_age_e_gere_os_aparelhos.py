@@ -129,8 +129,8 @@ def test_o_manifesto_torto_e_recusado_com_a_frase(
     assert frase in recusa.value.frase, recusa.value.frase
 
 
-def test_a_acao_chega_so_a_extensao_dela(curto: pathlib.Path) -> None:  # noqa: F811
-    """Prova da D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA."""
+def test_a_acao_chega_so_a_extensao_do_usuario(curto: pathlib.Path) -> None:  # noqa: F811
+    """Prova da D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-AO-USUARIO."""
     async def corrida() -> None:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})

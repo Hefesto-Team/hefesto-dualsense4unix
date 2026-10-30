@@ -30,7 +30,7 @@ _DECISOES = _RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 _ID_DA_DECISAO = "D-0609-A-FRASE-DO-TECLADO-NA-TELA"
 
 
-def _frase_que_ela_decidiu() -> str:
+def _frase_que_o_usuario_decidiu() -> str:
     """A frase entre aspas na linha da decisão de produto, lida do CSV."""
     with _DECISOES.open(encoding="utf-8") as arquivo:
         for linha in csv.DictReader(arquivo):
@@ -160,7 +160,7 @@ def test_a_frase_ensina_o_gesto_de_saida(mesa: dict[str, Any]) -> None:
     )
 
 
-def test_a_frase_e_a_que_ela_decidiu(mesa: dict[str, Any]) -> None:
+def test_a_frase_e_a_que_o_usuario_decidiu(mesa: dict[str, Any]) -> None:
     """O texto publicado é, palavra por palavra, o da decisão de produto.
     (D-0609-A-FRASE-DO-TECLADO-NA-TELA)
     """
@@ -170,7 +170,7 @@ def test_a_frase_e_a_que_ela_decidiu(mesa: dict[str, Any]) -> None:
 
     abertura = _avisos_de_abertura(mesa["emitidos"])
     assert abertura, "nenhum aviso de abertura para comparar com a decisão dela"
-    decidida = _frase_que_ela_decidiu()
+    decidida = _frase_que_o_usuario_decidiu()
     assert _texto(abertura[0]) == decidida, (
         f"o produto publica {_texto(abertura[0])!r} e a decisão dela diz "
         f"{decidida!r}. Texto de tela é dela: mude a linha do "

@@ -93,7 +93,7 @@ class _Daemon:
 
 
 @pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
+def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
     """Encolhe as cadências, e deixa o MUNDO do lado de fora."""
     monkeypatch.setattr(mod, "INTERVALO_S", 0.001)
     monkeypatch.setattr(mod, "INTERVALO_DE_QUEM_OUVE_S", 0.0)
@@ -232,7 +232,7 @@ def test_so_o_mudo_apaga_a_luz() -> None:
 
 
 @pytest.mark.asyncio
-async def test_o_laco_acende_na_mesa_dela_e_publica_a_sala_vazia(
+async def test_o_laco_acende_na_mesa_do_usuario_e_publica_a_sala_vazia(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O laço inteiro, no arranjo dela — e o journal tinha `estado=0`."""
@@ -270,7 +270,7 @@ async def test_escreve_so_na_mudanca_ao_longo_de_centenas_de_tiques(
 
 
 @pytest.mark.asyncio
-async def test_o_pisca_nao_vira_martelo_quando_ela_fala_sem_parar(
+async def test_o_pisca_nao_vira_martelo_quando_o_usuario_fala_sem_parar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ela fala por centenas de tiques seguidos: `2` é escrito UMA vez."""

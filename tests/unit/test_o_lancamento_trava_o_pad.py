@@ -24,7 +24,7 @@ def test_com_a_trava_o_automatico_nao_recria_antes_da_janela() -> None:
     ) is True
 
 
-def test_o_gesto_dela_passa_com_a_trava() -> None:
+def test_o_gesto_do_usuario_passa_com_a_trava() -> None:
     daemon = _daemon_sem_jogo()
     daemon._pad_travado_pelo_lancamento = (4235410, 1000.0)
 

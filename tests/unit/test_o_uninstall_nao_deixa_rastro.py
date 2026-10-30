@@ -74,7 +74,7 @@ AMBIENTE_NATIVO = (
     "SDL_GAMECONTROLLER_USE_BUTTON_LABELS=0\nSDL_ACCELEROMETER_AS_JOYSTICK=0\n"
 )
 
-HEROIC_DELA = {
+HEROIC_DO_USUARIO = {
     "version": "v0",
     "defaultSettings": {
         "language": "pt",
@@ -84,7 +84,7 @@ HEROIC_DELA = {
         ],
     },
 }
-LUTRIS_DELA = "[Context]\ndevices=all;\nfilesystems=host;\n"
+LUTRIS_DO_USUARIO = "[Context]\ndevices=all;\nfilesystems=host;\n"
 
 
 def _instalar_flatpak(lar: Path, app_id: str) -> None:
@@ -100,7 +100,7 @@ def _heroic(lar: Path, *, nativo: bool) -> Path:
     pasta = lar / (".config/heroic" if nativo else f".var/app/{HEROIC}/config/heroic")
     pasta.mkdir(parents=True, exist_ok=True)
     alvo = pasta / "config.json"
-    alvo.write_text(json.dumps(HEROIC_DELA, indent=2) + "\n", encoding="utf-8")
+    alvo.write_text(json.dumps(HEROIC_DO_USUARIO, indent=2) + "\n", encoding="utf-8")
     return alvo
 
 
@@ -108,7 +108,7 @@ def _lutris(lar: Path) -> Path:
     _instalar_flatpak(lar, LUTRIS)
     alvo = lar / ".local/share/flatpak/overrides" / LUTRIS
     alvo.parent.mkdir(parents=True, exist_ok=True)
-    alvo.write_text(LUTRIS_DELA, encoding="utf-8")
+    alvo.write_text(LUTRIS_DO_USUARIO, encoding="utf-8")
     return alvo
 
 
@@ -130,11 +130,12 @@ def _opcoes(alvo: Path) -> dict[str, str]:
     return {x["key"]: x["value"] for x in dado["defaultSettings"]["enviromentOptions"]}
 
 
-def _heroic_copia_para_o_jogo(config: Path, jogo: str, *, dela: list[dict[str, str]] | None = None,
+def _heroic_copia_para_o_jogo(config: Path, jogo: str, *,
+                              do_usuario: list[dict[str, str]] | None = None,
                               ) -> Path:
     """O que o Heroic faz quando ela muda uma opção de um jogo — pelo fonte dele."""
     global_ = json.loads(config.read_text(encoding="utf-8"))["defaultSettings"]
-    lista = [dict(x) for x in global_.get("enviromentOptions", [])] + list(dela or [])
+    lista = [dict(x) for x in global_.get("enviromentOptions", [])] + list(do_usuario or [])
     alvo = config.parent / "GamesConfig" / f"{jogo}.json"
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(json.dumps(
@@ -162,7 +163,7 @@ def mesa(tmp_path: Path) -> dict[str, Path]:
 
 
 @pytest.mark.parametrize("nativo", [False, True], ids=["heroic-flatpak", "heroic-nativo"])
-def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_dela(
+def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_do_usuario(
     tmp_path: Path, nativo: bool
 ) -> None:
     """A MORDIDA: faça `_devolver_chaves` ignorar o `antes` e o cache de shader"""
@@ -182,10 +183,10 @@ def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_dela(
     feitos, completo = cura.desfazer_as_estradas([pasta], lar)
 
     assert completo
-    assert json.loads(heroic.read_text(encoding="utf-8")) == HEROIC_DELA, (
+    assert json.loads(heroic.read_text(encoding="utf-8")) == HEROIC_DO_USUARIO, (
         "o Heroic não voltou a ser o dela: o MANGOHUD e o cache de shader "
         "desligado são dela, e o resto é nosso")
-    assert lutris.read_text(encoding="utf-8") == LUTRIS_DELA, (
+    assert lutris.read_text(encoding="utf-8") == LUTRIS_DO_USUARIO, (
         "o override do Lutris não voltou byte a byte ao que ela deu à mão")
     assert not mgba.exists(), "o override que nasceu com o Hefesto ficou"
     assert not cura.caminho_do_registro(pasta).exists(), "o registro sobreviveu ao desfazer"
@@ -195,18 +196,18 @@ def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_dela(
 
 def test_o_valor_de_antes_volta_no_lugar_em_que_estava(mesa: dict[str, Path]) -> None:
     """A escrita põe o nosso por cima do dela, NA MESMA POSIÇÃO; o desfazer o"""
-    dela = json.loads(json.dumps(HEROIC_DELA))
-    dela["defaultSettings"]["enviromentOptions"].reverse()
-    mesa["heroic"].write_text(json.dumps(dela, indent=2) + "\n", encoding="utf-8")
+    do_usuario = json.loads(json.dumps(HEROIC_DO_USUARIO))
+    do_usuario["defaultSettings"]["enviromentOptions"].reverse()
+    mesa["heroic"].write_text(json.dumps(do_usuario, indent=2) + "\n", encoding="utf-8")
     _curar(mesa["lar"], mesa["pasta"])
 
     cura.desfazer_as_estradas([mesa["pasta"]], mesa["lar"])
 
-    assert json.loads(mesa["heroic"].read_text(encoding="utf-8")) == dela, (
+    assert json.loads(mesa["heroic"].read_text(encoding="utf-8")) == do_usuario, (
         "o valor de antes voltou, mas fora do lugar em que ela o tinha")
 
 
-def test_o_valor_que_ela_mudou_depois_do_hefesto_fica(mesa: dict[str, Path]) -> None:
+def test_o_valor_que_o_usuario_mudou_depois_do_hefesto_fica(mesa: dict[str, Path]) -> None:
     _curar(mesa["lar"], mesa["pasta"])
     dado = json.loads(mesa["heroic"].read_text(encoding="utf-8"))
     for item in dado["defaultSettings"]["enviromentOptions"]:
@@ -279,7 +280,7 @@ def test_arquivo_que_nao_abre_nao_e_reescrito_e_o_registro_fica(
     assert not completo
     assert mesa["heroic"].read_bytes() == antes, "o desfazer reescreveu um arquivo que não abriu"
     assert str(mesa["heroic"]) in cura.ler_registro(mesa["pasta"])
-    assert mesa["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA, (
+    assert mesa["lutris"].read_text(encoding="utf-8") == LUTRIS_DO_USUARIO, (
         "um arquivo que não abriu não pode segurar o desfazer dos outros")
     assert any("não consegui ler" in cura.frase_do_desfeito(f) for f in feitos)
 
@@ -311,7 +312,7 @@ def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
     else:
         cura._escrever_no_heroic(heroic, cura.ambiente_da_ponte(pasta))
     copia = _heroic_copia_para_o_jogo(heroic, "Jogo1",
-                                      dela=[{"key": "DXVK_HUD", "value": "fps"}])
+                                      do_usuario=[{"key": "DXVK_HUD", "value": "fps"}])
     sem_nada_nosso = heroic.parent / "GamesConfig" / "Jogo2.json"
     sem_nada_nosso.write_text(json.dumps(
         {"Jogo2": {"enviromentOptions": [{"key": "MANGOHUD", "value": "0"}]},
@@ -364,11 +365,12 @@ def test_os_espelhos_do_desfazer() -> None:
     from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
 
     allowlist = set(ENV_ALLOWLIST)
-    assert cura.PODEM_SER_DELA | cura.DELA_MANDA == m._VARIAVEIS_QUE_PODEM_SER_DELA
-    assert not cura._DO_PRODUTO_SEM_REGISTRO & cura.DELA_MANDA
-    assert allowlist >= cura.PODEM_SER_DELA
-    assert not cura._DO_PRODUTO_SEM_REGISTRO & cura.PODEM_SER_DELA
-    historico = allowlist - cura.PODEM_SER_DELA - NASCIDAS_DEPOIS_DO_REGISTRO
+    uniao = cura.PODEM_SER_DO_USUARIO | cura.DO_USUARIO_MANDA
+    assert uniao == m._VARIAVEIS_QUE_PODEM_SER_DO_USUARIO
+    assert not cura._DO_PRODUTO_SEM_REGISTRO & cura.DO_USUARIO_MANDA
+    assert allowlist >= cura.PODEM_SER_DO_USUARIO
+    assert not cura._DO_PRODUTO_SEM_REGISTRO & cura.PODEM_SER_DO_USUARIO
+    historico = allowlist - cura.PODEM_SER_DO_USUARIO - NASCIDAS_DEPOIS_DO_REGISTRO
     assert historico == cura._DO_PRODUTO_SEM_REGISTRO
     assert cura._PASTA_DOS_OVERRIDES == m.PASTA_DOS_OVERRIDES
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
@@ -419,7 +421,7 @@ def test_o_desfazer_roda_com_o_python_do_sistema(tmp_path: Path, pasta_pedida: b
                    "PYTHONDONTWRITEBYTECODE": "1"},
         capture_output=True, text=True, timeout=60, check=False, cwd=str(tmp_path))
     assert r.returncode == 0, r.stdout + r.stderr
-    assert json.loads(heroic.read_text(encoding="utf-8")) == HEROIC_DELA
+    assert json.loads(heroic.read_text(encoding="utf-8")) == HEROIC_DO_USUARIO
     assert not mgba.exists()
     assert not cura.caminho_do_registro(pasta).exists()
     assert "tirei" in r.stdout
@@ -734,12 +736,12 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
     assert not defeitos, "o «limpa?» achou rastro do Hefesto:\n" + "\n".join(defeitos)
     limpa = _limpa(r, tmp_path)
     assert limpa.returncode == 0, limpa.stdout + limpa.stderr
-    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA, (
+    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DO_USUARIO, (
         "o Heroic dela não voltou a ser o dela")
     no_jogo = {k for k, _ in _lista_do_jogo(alvos["jogo"])}
     assert not no_jogo & cura._DO_PRODUTO_SEM_REGISTRO, (
         f"o jogo com opção própria no Heroic ficou com o ambiente do Hefesto: {no_jogo}")
-    assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA
+    assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DO_USUARIO
     assert not alvos["mgba"].exists()
     for estado in {r.estado / m.SLUG, r.lar / ".local/state" / m.SLUG}:
         assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
@@ -789,7 +791,7 @@ def test_sem_purge_fica_so_o_historico_e_o_uninstall_diz(tmp_path: Path) -> None
         f"sem --purge-config, só o histórico (e o que ninguém nomeia) fica: {ficou}")
     assert f"a pasta de estado {estado} fica, com:" in rodou.stdout
     assert "mesa-de-medicao" in rodou.stdout
-    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA
+    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DO_USUARIO
     assert not alvos["mgba"].exists()
 
 
@@ -808,7 +810,7 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
     estado = r.estado / m.SLUG
     assert sorted(os.listdir(estado)) == ["launch_env"], sorted(os.listdir(estado))
     assert sorted(os.listdir(estado / "launch_env")) == ["estradas.json"]
-    assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA, (
+    assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DO_USUARIO, (
         "o arquivo que não abriu segurou o desfazer dos outros lançadores")
     assert _limpa(r, tmp_path).returncode == 1, "o «limpa?» não viu o desfazer pendente"
 
@@ -823,7 +825,7 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
         capture_output=True, text=True, timeout=60, check=False, cwd=str(tmp_path))
 
     assert depois.returncode == 0, depois.stdout + depois.stderr
-    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA, (
+    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DO_USUARIO, (
         "o desfazer de depois não sabia mais o que era nosso: o registro se perdeu")
     assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
     limpa = _limpa(r, tmp_path)

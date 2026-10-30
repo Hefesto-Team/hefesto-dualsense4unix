@@ -60,7 +60,7 @@ class _GerenciadorDeMentira:
 
 
 @pytest.fixture
-def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+def ensaio(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """A mesa de quatro: três no rádio, um no cabo. É a cena dela."""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
@@ -116,10 +116,10 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     }
 
 
-def test_uma_ponte_por_controle_no_radio_e_nenhuma_no_cabo(bancada: dict) -> None:
+def test_uma_ponte_por_controle_no_radio_e_nenhuma_no_cabo(ensaio: dict) -> None:
     """Três pontes para os três do rádio. O do cabo não ganha — e não é falha."""
-    sub = bancada["sub"]
-    sub._reconciliar(bancada["ger"])
+    sub = ensaio["sub"]
+    sub._reconciliar(ensaio["ger"])
 
     assert sorted(sub._pontes) == [
         "aa:bb:cc:00:00:01",
@@ -136,17 +136,17 @@ def test_uma_ponte_por_controle_no_radio_e_nenhuma_no_cabo(bancada: dict) -> Non
 
 
 def test_cada_ponte_leva_o_hidraw_e_o_monitor_DAQUELE_controle(  # noqa: N802
-    bancada: dict,
+    ensaio: dict,
 ) -> None:
     """O elo que impede o som do P2 de sair no alto-falante do P1."""
-    sub = bancada["sub"]
-    af = bancada["af"]
-    sub._reconciliar(bancada["ger"])
+    sub = ensaio["sub"]
+    af = ensaio["af"]
+    sub._reconciliar(ensaio["ger"])
 
-    for controle in bancada["controles"][:3]:
+    for controle in ensaio["controles"][:3]:
         ponte = sub._pontes[controle.uniq]
         ponte.abrir_hidraw()
-        assert controle.caminho in bancada["abertos"], (
+        assert controle.caminho in ensaio["abertos"], (
             f"a ponte de {controle.uniq} não abriu {controle.caminho}"
         )
         esperado = af.nome_do_sink(controle.uniq)
@@ -160,11 +160,11 @@ def test_cada_ponte_leva_o_hidraw_e_o_monitor_DAQUELE_controle(  # noqa: N802
     )
 
 
-def test_a_ponte_sobe_antes_do_no(bancada: dict) -> None:
+def test_a_ponte_sobe_antes_do_no(ensaio: dict) -> None:
     """A ORDEM, e ela é medida."""
-    sub = bancada["sub"]
-    ordem = bancada["ordem"]
-    ger = bancada["ger"]
+    sub = ensaio["sub"]
+    ordem = ensaio["ordem"]
+    ger = ensaio["ger"]
     reconciliar_real = ger.reconciliar
 
     def _marcado(controles: list[Any] | None = None) -> None:
@@ -181,15 +181,15 @@ def test_a_ponte_sobe_antes_do_no(bancada: dict) -> None:
     )
 
 
-def test_quem_sai_da_lista_perde_a_ponte(bancada: dict) -> None:
+def test_quem_sai_da_lista_perde_a_ponte(ensaio: dict) -> None:
     """Um fd de hidraw e um `pw-record` por controle — eles não vazam."""
-    sub = bancada["sub"]
-    controles = bancada["controles"]
-    sub._reconciliar(bancada["ger"])
+    sub = ensaio["sub"]
+    controles = ensaio["controles"]
+    sub._reconciliar(ensaio["ger"])
     saiu = sub._pontes["aa:bb:cc:00:00:02"]
 
     controles.pop(1)
-    sub._reconciliar(bancada["ger"])
+    sub._reconciliar(ensaio["ger"])
 
     assert "aa:bb:cc:00:00:02" not in sub._pontes, "a ponte do que saiu ficou"
     assert saiu.desceu, "a ponte do que saiu não foi derrubada"
@@ -199,13 +199,13 @@ def test_quem_sai_da_lista_perde_a_ponte(bancada: dict) -> None:
     ], "derrubar um vizinho derrubou os outros"
 
 
-def test_a_ponte_nao_e_reconstruida_a_cada_varredura(bancada: dict) -> None:
+def test_a_ponte_nao_e_reconstruida_a_cada_varredura(ensaio: dict) -> None:
     """A varredura roda a cada 2 s. Reconstruir ali cortaria o som toda vez."""
-    sub = bancada["sub"]
-    sub._reconciliar(bancada["ger"])
+    sub = ensaio["sub"]
+    sub._reconciliar(ensaio["ger"])
     antes = dict(sub._pontes)
-    sub._reconciliar(bancada["ger"])
-    sub._reconciliar(bancada["ger"])
+    sub._reconciliar(ensaio["ger"])
+    sub._reconciliar(ensaio["ger"])
 
     assert all(sub._pontes[u] is p for u, p in antes.items()), (
         "a ponte foi reconstruída numa varredura sem mudança na lista"
@@ -216,10 +216,10 @@ def test_a_ponte_nao_e_reconstruida_a_cada_varredura(bancada: dict) -> None:
     )
 
 
-def test_o_stop_derruba_todas_as_pontes(bancada: dict) -> None:
+def test_o_stop_derruba_todas_as_pontes(ensaio: dict) -> None:
     """Sem isto, cada `start()` seguinte abriria um segundo par por controle."""
-    sub = bancada["sub"]
-    sub._reconciliar(bancada["ger"])
+    sub = ensaio["sub"]
+    sub._reconciliar(ensaio["ger"])
     pontes = list(sub._pontes.values())
 
     asyncio.run(sub.stop())

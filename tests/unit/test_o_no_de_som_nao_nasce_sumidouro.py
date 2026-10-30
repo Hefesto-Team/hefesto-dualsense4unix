@@ -173,10 +173,10 @@ async def test_o_boot_nao_publica_no_de_som_sem_rota(
     )
 
 
-def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_dela(
+def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_do_usuario(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SOM-DELA-01: um nó construído SEM runner injetado não sobe de verdade."""
+    """SOM-DO-USUARIO-01: um nó construído SEM runner injetado não sobe de verdade."""
     import subprocess
 
     from hefesto_dualsense4unix.integrations import alto_falante_bt

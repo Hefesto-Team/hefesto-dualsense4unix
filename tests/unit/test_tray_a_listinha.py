@@ -1,4 +1,4 @@
-"""TRAY-A-LISTINHA-DELA-01 — os quatro atos que desceram para a bandeja."""
+"""TRAY-A-LISTINHA-DO-USUARIO-01 — os quatro atos que desceram para a bandeja."""
 
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ def _rotulos(tray: Any) -> list[str]:
     ]
 
 
-def test_a_ordem_do_menu_e_a_frase_que_ela_mandou_escrever(
+def test_a_ordem_do_menu_e_a_frase_que_o_usuario_mandou_escrever(
         gtk_de_mentira: Any) -> None:
     """Jogo antes de serviço, e cada grupo atrás da sua divisória."""
     tray = _tray(gtk_de_mentira,

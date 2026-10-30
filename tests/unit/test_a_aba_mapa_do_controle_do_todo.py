@@ -47,7 +47,7 @@ def test_o_mapa_nao_tem_sensor_nem_chip_de_todos_ou_nenhum() -> None:
         assert palavra not in doc, f"«{palavra}» voltou ao desenho"
 
 
-def test_cada_linha_tem_a_peca_dela_no_desenho() -> None:
+def test_cada_linha_tem_a_peca_do_usuario_no_desenho() -> None:
     doc = _doc()
     linhas = re.findall(r'<button class="b2 item-([a-z0-9_-]+)" data-b="([a-z0-9_]+)"', doc)
     assert len(linhas) == 23, linhas

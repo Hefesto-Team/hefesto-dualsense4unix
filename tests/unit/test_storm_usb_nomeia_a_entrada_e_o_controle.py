@@ -134,7 +134,7 @@ def test_sem_o_dono_a_frase_fica_com_o_caminho_do_kernel(tmp_path: Path) -> None
     assert "Entrada" not in laudo.portas[0].porque.split(";")[0]
 
 
-def test_o_retrato_de_outra_maquina_nao_usa_os_nomes_dela(tmp_path: Path) -> None:
+def test_o_retrato_de_outra_maquina_nao_usa_os_nomes_do_usuario(tmp_path: Path) -> None:
     """Com a raiz de outro ``/sys``, o ``maquina.json`` DESTA máquina não vale."""
     from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, gravar_maquina
 
@@ -370,7 +370,7 @@ def test_o_log_fora_de_ordem_nao_engana_o_desfecho(tmp_path: Path) -> None:
         ("usb 3-4: clear tt 1 (9092) error -71", ""),
     ],
 )
-def test_as_linhas_da_mesa_dela_e_o_desfecho(mensagem: str, desfecho: str) -> None:
+def test_as_linhas_da_mesa_do_usuario_e_o_desfecho(mensagem: str, desfecho: str) -> None:
     """As formas COPIADAS do `kernel.log` dela (24/09), e o desfecho de cada uma."""
     assert em._desfecho(mensagem) == desfecho
 

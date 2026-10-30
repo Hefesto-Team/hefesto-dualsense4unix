@@ -31,8 +31,8 @@ from hefesto_dualsense4unix.core import backend_pydualsense as bp
 MAC_1 = "AA:BB:CC:00:00:01"
 UNIQ_1 = "aabbcc000001"
 
-COR_DELA = (255, 255, 0)
-PADRAO_DELA = (True, False, False, False, False)
+COR_DO_USUARIO = (255, 255, 0)
+PADRAO_DO_USUARIO = (True, False, False, False, False)
 
 COR_DO_JOGO = (200, 60, 0)
 PADRAO_DO_JOGO = (True, False, True, False, True)
@@ -72,7 +72,7 @@ def _handle() -> SimpleNamespace:
 
 def _controle(
     *,
-    campos_dela: dict[str, Any] | None = None,
+    campos_do_usuario: dict[str, Any] | None = None,
     autoridade: str = "game",
 ) -> tuple[bp.PyDualSenseController, _NoDeLed, SimpleNamespace]:
     """Controle com o jogo no comando e os campos DO USUÁRIO já carimbados."""
@@ -82,10 +82,10 @@ def _controle(
     ctl._handles = {MAC_1: handle}
     ctl._sysfs = {MAC_1: no}
     ctl.set_game_authority_provider(lambda: autoridade)
-    if campos_dela:
-        ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(**campos_dela)
+    if campos_do_usuario:
+        ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(**campos_do_usuario)
         ctl._desired_owner_by_uniq[UNIQ_1] = dict.fromkeys(
-            campos_dela, bp._LAYER_PROFILE
+            campos_do_usuario, bp._LAYER_PROFILE
         )
     return ctl, no, handle
 
@@ -97,7 +97,7 @@ def _eventos(registros: list[dict[str, Any]], nome: str) -> list[dict[str, Any]]
 class TestOJogoManda:
     def test_a_cor_do_jogo_vence_a_do_perfil(self) -> None:
         """MORDIDA: devolver a peneira do perfil no merge e a cor do perfil volta."""
-        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
 
         assert ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO) is True
 
@@ -109,7 +109,7 @@ class TestOJogoManda:
     def test_o_gatilho_do_jogo_vence_o_do_perfil(self) -> None:
         """MORDIDA: devolver a recusa do `set_game_trigger_for` e o bloco não chega."""
         efeito = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
-        ctl, _no, handle = _controle(campos_dela={"trigger_right": efeito})
+        ctl, _no, handle = _controle(campos_do_usuario={"trigger_right": efeito})
 
         assert ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO) is True
 
@@ -130,17 +130,17 @@ class TestOJogoManda:
         assert handle._raw_trigger_right == BLOCO_DO_JOGO
 
     def test_o_numero_do_jogador_segue_do_hefesto(self) -> None:
-        ctl, no, _ = _controle(campos_dela={"player_leds": PADRAO_DELA})
+        ctl, no, _ = _controle(campos_do_usuario={"player_leds": PADRAO_DO_USUARIO})
 
         ctl.set_game_output_for(MAC_1, player_leds=PADRAO_DO_JOGO)
 
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).player_leds == PADRAO_DELA
+            assert ctl._merged_desired_for_key(MAC_1).player_leds == PADRAO_DO_USUARIO
         assert PADRAO_DO_JOGO not in no.player_calls
 
     def test_ninguem_recusa_mais_pelo_perfil(self) -> None:
         efeito = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
-        ctl, _no, _ = _controle(campos_dela={"led": COR_DELA, "trigger_left": efeito})
+        ctl, _no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO, "trigger_left": efeito})
 
         with structlog.testing.capture_logs() as registros:
             ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
@@ -154,28 +154,28 @@ class TestOJogoManda:
 
 class TestNaAusenciaOPerfilGanha:
     def test_sem_o_jogo_pintar_vale_o_perfil(self) -> None:
-        ctl, _no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, _no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
 
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
 
     def test_o_jogo_que_sai_devolve_a_cor_do_perfil(self) -> None:
-        ctl, _no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, _no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
 
         ctl.end_game_session_for(MAC_1)
 
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
 
     def test_sem_autoridade_do_jogo_o_pedido_fica_retido(self) -> None:
         """Com o daemon no comando (sem jogo), o perfil vale e o pedido espera."""
-        ctl, _no, _ = _controle(campos_dela={"led": COR_DELA}, autoridade="daemon")
+        ctl, _no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO}, autoridade="daemon")
 
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
 
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
         assert ctl._retained_game_outputs[UNIQ_1]["led"] == COR_DO_JOGO
 
 
@@ -192,24 +192,24 @@ class TestOQueNaoTemDonoContinuaSendoDoJogo:
         assert no.rgb_calls == [COR_DO_JOGO]
 
 
-class TestOGestoDelaNoMeioDoJogo:
+class TestOGestoDoUsuarioNoMeioDoJogo:
     """O gesto do usuário na interface é a ordem mais nova: vale até o jogo pintar de novo."""
 
-    def test_a_cor_que_ela_escolhe_agora_vence_e_o_jogo_que_repinta_volta(self) -> None:
+    def test_a_cor_que_o_usuario_escolhe_agora_vence_e_o_jogo_que_repinta_volta(self) -> None:
         """MORDIDA: o gesto sem soltar a camada do jogo e a cor dela não aparece."""
         ctl, _no, _ = _controle()
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
 
         with ctl._io_lock:
-            ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(led=COR_DELA)
+            ctl._desired_by_uniq[UNIQ_1] = bp._DesiredOutput(led=COR_DO_USUARIO)
             ctl._stamp_owner_locked(UNIQ_1, ("led",), bp._LAYER_USER)
-            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
 
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
         with ctl._io_lock:
             assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_JOGO
 
-    def test_o_gatilho_dela_solta_o_bloco_cru_do_jogo_e_so_aquele_lado(self) -> None:
+    def test_o_gatilho_do_usuario_solta_o_bloco_cru_do_jogo_e_so_aquele_lado(self) -> None:
         ctl, _no, handle = _controle()
         ctl.set_game_trigger_for(MAC_1, "left", BLOCO_DO_JOGO)
         ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
@@ -243,7 +243,7 @@ class TestPerfilAteOJogoProvar:
         self, sem_efeito: bytes
     ) -> None:
         """MORDIDA: tratar todo bloco como ordem e o Rígido do perfil some."""
-        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl, _no, handle = _controle(campos_do_usuario={"trigger_right": EFEITO_DO_PERFIL})
 
         ctl.set_game_trigger_for(MAC_1, "right", sem_efeito)
         ctl.set_game_trigger_for(MAC_1, "left", sem_efeito)
@@ -256,7 +256,7 @@ class TestPerfilAteOJogoProvar:
 
     def test_o_primeiro_efeito_real_passa_a_mandar(self) -> None:
         """MORDIDA: não marcar o «já provou» e o «sem efeito» seguinte é descartado."""
-        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl, _no, handle = _controle(campos_do_usuario={"trigger_right": EFEITO_DO_PERFIL})
         ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
 
         ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
@@ -265,7 +265,7 @@ class TestPerfilAteOJogoProvar:
 
     def test_o_sem_efeito_depois_de_provar_vale(self) -> None:
         """O menu do jogo que desliga o gatilho depois de ter mandado um efeito."""
-        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl, _no, handle = _controle(campos_do_usuario={"trigger_right": EFEITO_DO_PERFIL})
         ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
 
         ctl.set_game_trigger_for(MAC_1, "right", SEM_EFEITO)
@@ -283,7 +283,7 @@ class TestPerfilAteOJogoProvar:
 
     def test_a_saida_do_jogo_devolve_o_perfil_e_zera_o_ja_provou(self) -> None:
         """MORDIDA: a saída sem zerar e o «sem efeito» da partida seguinte vira ordem."""
-        ctl, _no, handle = _controle(campos_dela={"trigger_right": EFEITO_DO_PERFIL})
+        ctl, _no, handle = _controle(campos_do_usuario={"trigger_right": EFEITO_DO_PERFIL})
         ctl.set_game_trigger_for(MAC_1, "right", BLOCO_DO_JOGO)
 
         ctl.end_game_session_for(MAC_1)
@@ -297,17 +297,17 @@ class TestPerfilAteOJogoProvar:
 
     def test_o_preto_de_quem_nunca_pintou_e_ausencia(self) -> None:
         """MORDIDA: o preto tratado como ordem e a cor do perfil apaga."""
-        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
 
         ctl.set_game_output_for(MAC_1, led=(0, 0, 0))
 
         assert (0, 0, 0) not in no.rgb_calls
         assert UNIQ_1 not in ctl._game_output_by_uniq
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
 
     def test_o_preto_depois_de_pintar_vale(self) -> None:
-        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
 
         ctl.set_game_output_for(MAC_1, led=(0, 0, 0))
@@ -317,18 +317,18 @@ class TestPerfilAteOJogoProvar:
             assert ctl._merged_desired_for_key(MAC_1).led == (0, 0, 0)
 
     def test_a_saida_do_jogo_zera_o_ja_pintou(self) -> None:
-        ctl, _no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, _no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
         ctl.end_game_session_for(MAC_1)
 
         ctl.set_game_output_for(MAC_1, led=(0, 0, 0))
 
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).led == COR_DELA
+            assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
 
     def test_o_preto_junto_do_numero_nao_perde_o_numero_recusado(self) -> None:
         """O número do jogador segue do Hefesto, e o preto sozinho não pinta."""
-        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        ctl, no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
 
         ctl.set_game_output_for(MAC_1, led=(0, 0, 0), player_leds=PADRAO_DO_JOGO)
 
@@ -358,7 +358,7 @@ class TestPerfilAteOJogoProvar:
                 assert handles[mac]._raw_trigger_right is None
                 assert mac.replace(":", "").lower() not in ctl._game_output_by_uniq
 
-    def test_o_gesto_dela_solta_e_o_jogo_provado_segue_provado(self) -> None:
+    def test_o_gesto_do_usuario_solta_e_o_jogo_provado_segue_provado(self) -> None:
         """O gesto tira o bloco do jogo, e o «sem efeito» que vem depois ainda é do jogo."""
         ctl, _no, handle = _controle()
         ctl.set_game_trigger_for(MAC_1, "left", BLOCO_DO_JOGO)
@@ -450,7 +450,7 @@ def test_cada_um_dos_quatro_obedece_ao_jogo(n: int) -> None:
     ctl._handles = {mac: _handle()}
     ctl._sysfs = {mac: _NoDeLed()}
     ctl.set_game_authority_provider(lambda: "game")
-    ctl._desired_by_uniq[uniq] = bp._DesiredOutput(led=COR_DELA)
+    ctl._desired_by_uniq[uniq] = bp._DesiredOutput(led=COR_DO_USUARIO)
     ctl._desired_owner_by_uniq[uniq] = {"led": bp._LAYER_PROFILE}
 
     ctl.set_game_output_for(mac, led=COR_DO_JOGO)

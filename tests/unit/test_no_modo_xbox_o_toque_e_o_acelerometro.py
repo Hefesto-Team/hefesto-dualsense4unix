@@ -187,7 +187,7 @@ class TestAInclinacao:
         )
         assert forte[0] > leve[0] > 0
 
-    def test_o_neutro_e_como_ela_segura(self) -> None:
+    def test_o_neutro_e_como_o_usuario_segura(self) -> None:
         """Quem segura a 30 graus não anda: o neutro é o ângulo da mão do usuário."""
         mao = _inclinado(30.0)
         assert rot.deflexao_da_inclinacao(mao, mao, self._a()) == (0, 0)

@@ -358,7 +358,7 @@ def hexdump(dados: bytes) -> str:
 
 
 @dataclass
-class Bancada:
+class Ensaio:
     """O único escritor do hidraw durante o ensaio. Sabe parar o motor."""
 
     fisico: Fisico
@@ -516,7 +516,7 @@ def linhas_de_caderno(
                 "sim" if presente else "não",
                 resultado,
                 "",
-                "olho-dela",
+                "olho-do-usuario",
                 fonte,
                 nota,
                 "",
@@ -590,12 +590,12 @@ def modo_seco(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> int:
     É o que dá para testar sem hardware — e é o que se roda antes de chamar
     ela para a bancada.
     """
-    bancada = Bancada(fisico=fisico, base=base, seco=True)
+    ensaio = Ensaio(fisico=fisico, base=base, seco=True)
     print("  MODO SECO: nada é aberto, nada é escrito, o daemon segue de pé.")
     print()
     for condicao in escolher_condicoes(args.condicoes):
         flags = imprimir_condicao(condicao, base)
-        bancada.pulso(flags, args.weak, args.strong, 0.0)
+        ensaio.pulso(flags, args.weak, args.strong, 0.0)
         for suspeito, presente in condicao.registros:
             print(f"    caderno ....... {suspeito} · presente={'sim' if presente else 'não'}")
         print()
@@ -616,16 +616,16 @@ def modo_parar(fisico: Fisico, base: bytearray) -> int:
         print("  Este modo é para quando o daemon está PARADO (durante o ensaio).")
         print("  Rode assim mesmo? Ctrl+C para desistir.")
         input("    [enter] para mandar a parada mesmo com o daemon vivo ")
-    bancada = Bancada(fisico=fisico, base=base)
+    ensaio = Ensaio(fisico=fisico, base=base)
     try:
-        bancada.abrir()
-        print(f"  {bancada.porta}")
-        bancada.parar("pânico")
+        ensaio.abrir()
+        print(f"  {ensaio.porta}")
+        ensaio.parar("pânico")
     except PortaFechadaError as erro:
         print(f"  {erro}")
         return 4
     finally:
-        bancada.fechar()
+        ensaio.fechar()
     print("  Sequência de parada mandada. Confirme com ela que o controle está mudo.")
     return 0
 
@@ -666,13 +666,13 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
         print("  começo e no fim, nada controla bateria caindo nem mão acostumando —")
         print("  a resposta vale menos, e isso fica dito aqui.")
         print()
-    bancada = Bancada(fisico=fisico, base=base, keepalive=not args.sem_keepalive)
+    ensaio = Ensaio(fisico=fisico, base=base, keepalive=not args.sem_keepalive)
     respostas: list[tuple[Condicao, str, str]] = []
     quando = datetime.now().isoformat(timespec="seconds")
 
     def _sinal(_num: int, _frame: object) -> None:
-        bancada.parar("sinal recebido")
-        bancada.fechar()
+        ensaio.parar("sinal recebido")
+        ensaio.fechar()
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGINT, _sinal)
@@ -680,15 +680,15 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
 
     try:
         try:
-            bancada.abrir()
+            ensaio.abrir()
         except PortaFechadaError as erro:
             print(f"  {erro}")
             return 4
-        print(f"  {bancada.porta}\n")
+        print(f"  {ensaio.porta}\n")
         for condicao in condicoes:
             flags = imprimir_condicao(condicao, base)
             input("    [enter] para disparar ")
-            bancada.pulso(flags, args.weak, args.strong, args.segundos)
+            ensaio.pulso(flags, args.weak, args.strong, args.segundos)
             pergunta = "    VIBROU? (s = vibrou / n = não vibrou / ? = não sei) "
             resposta = ""
             while resposta not in ("s", "n", "?"):
@@ -707,7 +707,7 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
         print()
         print("  INTERROMPIDO — a parada já foi mandada.")
     finally:
-        bancada.fechar()
+        ensaio.fechar()
         if estava_ativo:
             print(f"  religando {SERVICO} ...")
             subprocess.run(["systemctl", "--user", "start", SERVICO], check=False)

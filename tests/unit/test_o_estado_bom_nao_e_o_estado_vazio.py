@@ -94,7 +94,7 @@ def test_o_estado_bom_diz_quanta_coisa_conferiu() -> None:
     assert "está tudo certo" not in topo.texto.lower()
 
 
-def test_o_estado_bom_com_dispensa_conta_a_decisao_dela() -> None:
+def test_o_estado_bom_com_dispensa_conta_a_decisao_do_usuario() -> None:
     """Dispensa que some sem deixar marca some com uma decisão de produto junto."""
     topo = ordens.cabecalho(**AS_QUATRO[ordens.TOPO_NADA_NOVO])  # type: ignore[arg-type]
     assert "1" in topo.texto

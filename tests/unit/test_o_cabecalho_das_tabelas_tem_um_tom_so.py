@@ -41,7 +41,7 @@ def _estilos(html: str) -> str:
     return "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", html, re.S))
 
 
-def test_as_dez_abas_estao_na_bancada() -> None:
+def test_as_dez_abas_estao_no_ensaio() -> None:
     assert len(ABAS) == 10, [p.name for p in ABAS]
 
 

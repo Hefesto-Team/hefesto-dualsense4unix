@@ -3,9 +3,9 @@
 MEDIDO NA BANCADA, 10/09/2026, com o DualSense do rádio na mão. Ela pedia
 o canal do microfone e o daemon o derrubava sozinho 49 ms depois::
 
-    01:57:08.255  bt_mic_palavra_dela            ligado=True
+    01:57:08.255  bt_mic_palavra_do_usuario            ligado=True
     01:57:08.256  bt_mic_pedido                  ligar=True  seq=4
-    01:57:08.304  bt_mic_palavra_dela_esquecida        <- 49 ms
+    01:57:08.304  bt_mic_palavra_do_usuario_esquecida        <- 49 ms
     01:57:09.376  bt_mic_pedido                  ligar=False seq=5
 
 O sintoma que o usuário viu foi o nó `hefesto_mic_<hex6>` nascendo, sumindo e

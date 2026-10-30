@@ -10,14 +10,14 @@ from hefesto_dualsense4unix.integrations.mapa_das_portas import (
 )
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 from tests.unit.test_mapa_o_ensaio_de_mentira import (
-    bancada_de_agora,
-    mapa_dela,
+    ensaio_de_agora,
+    mapa_do_usuario,
 )
 
 
 def test_o_caminho_vira_numero_e_o_numero_vira_caminho() -> None:
     """As duas pontas da mesma amarração, incluindo a entrada por extensão."""
-    mapa = mapa_dela()
+    mapa = mapa_do_usuario()
 
     assert porta_de(mapa, "3-1.1.4") == "15a"
     assert porta_de(mapa, "3-1.2") == "9"
@@ -27,9 +27,9 @@ def test_o_caminho_vira_numero_e_o_numero_vira_caminho() -> None:
     assert filhas_de(mapa, "15") == ("15a",)
 
 
-def test_caminho_que_ela_nao_declarou_devolve_nada() -> None:
+def test_caminho_que_o_usuario_nao_declarou_devolve_nada() -> None:
     """Sem declaração não há número — e a tela volta a falar como fala hoje."""
-    mapa = mapa_dela()
+    mapa = mapa_do_usuario()
 
     assert porta_de(mapa, "9-9") is None
     assert porta_de(mapa, "") is None, "caminho vazio casou com alguma entrada"
@@ -39,9 +39,9 @@ def test_caminho_que_ela_nao_declarou_devolve_nada() -> None:
     )
 
 
-def test_as_entradas_vazias_sao_as_que_ela_pode_usar() -> None:
+def test_as_entradas_vazias_sao_as_que_o_usuario_pode_usar() -> None:
     """A resposta que a ordem de serviço consome: onde ainda cabe um dongle."""
-    livres = portas_livres(mapa_dela(), bancada_de_agora().censo())
+    livres = portas_livres(mapa_do_usuario(), ensaio_de_agora().censo())
 
     assert livres == ("3", "5", "6", "8", "10", "11", "12", "14"), (
         f"a lista de entradas livres mudou: {livres}"
@@ -57,10 +57,10 @@ def test_as_duas_entradas_da_frente_sao_vizinhas_e_o_sysfs_nao_sabe() -> None:
         vizinhancas_apertadas,
     )
 
-    bancada = bancada_de_agora()
-    mesa = bancada.mesa()
+    ensaio = ensaio_de_agora()
+    mesa = ensaio.mesa()
 
-    pares = vizinhas_de_verdade(mapa_dela(), bancada.censo())
+    pares = vizinhas_de_verdade(mapa_do_usuario(), ensaio.censo())
 
     assert pares == (("1", "2"), ), (
         f"a vizinhança pelo desenho dela mudou: {pares}"
@@ -83,7 +83,7 @@ def test_a_entrada_por_extensao_nao_e_vizinha_da_fileira() -> None:
         }
     )
 
-    pares = vizinhas_de_verdade(mapa, bancada_de_agora().censo())
+    pares = vizinhas_de_verdade(mapa, ensaio_de_agora().censo())
 
     assert pares == (), (
         "o dongle na ponta da extensão virou vizinho de quem ficou na fileira: "

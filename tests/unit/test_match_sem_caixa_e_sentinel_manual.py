@@ -29,7 +29,7 @@ class TestComparacaoSemCaixa:
         assert m.matches({"exe_basename": "cyberpunk2077.exe"}) is True
         assert m.matches({"exe_basename": "CYBERPUNK2077.EXE"}) is True
 
-    def test_process_name_casa_com_a_caixa_que_ela_digitou(self) -> None:
+    def test_process_name_casa_com_a_caixa_que_o_usuario_digitou(self) -> None:
         """E o inverso: ela digita minúsculo, o executável é CamelCase."""
         m = MatchCriteria(process_name=["cyberpunk2077.exe"])
         assert m.matches({"exe_basename": "Cyberpunk2077.exe"}) is True

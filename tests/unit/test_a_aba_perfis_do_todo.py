@@ -417,7 +417,7 @@ def tela() -> Any:
 
     from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
 
-    t = regua_de_tela.Tela(onde.BANCADA / "10-perfis.html", titulo_esperado="Hefesto",
+    t = regua_de_tela.Tela(onde.ENSAIO / "10-perfis.html", titulo_esperado="Hefesto",
                            largura=1212, altura=809)
     t.executar(
         "(function(){var s=document.createElement('style');"

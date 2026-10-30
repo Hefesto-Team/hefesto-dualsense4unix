@@ -404,10 +404,10 @@ async def vigiar_o_cabo_em_espera(
 def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None) -> str | None:
     """O nome da escolha do usuário para o boot, com a memória do botão quando há.
 
-    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4: o boot e a reconexão
+    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item 4: o boot e a reconexão
     restauram a escolha do usuário, com regra de janela ou sem. A pergunta é a do
     dono (`utils.session.resolve_boot_profile`, que pergunta a
-    `a_escolha_dela`); a memória do Modo Freestyle (`o_freestyle_manda`) vale
+    `a_escolha_do_usuario`); a memória do Modo Freestyle (`o_freestyle_manda`) vale
     quando há `store`, e o disco quando o boot pergunta antes de haver memória.
     O Freestyle desligado nunca volta (item 6). Levanta só o que o dono levanta.
 
@@ -428,7 +428,7 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
     from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, o_freestyle_manda
     from hefesto_dualsense4unix.utils.session import (
-        a_escolha_dela,
+        a_escolha_do_usuario,
         load_freestyle_ligado,
         o_ultimo_jogo,
         resolve_boot_profile,
@@ -447,7 +447,7 @@ def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None)
         return ultimo
     nome = resolve_boot_profile()
     if e_o_freestyle(nome):
-        nome = a_escolha_dela(freestyle_ligado=False)
+        nome = a_escolha_do_usuario(freestyle_ligado=False)
     if not nome or e_o_freestyle(nome):
         return None
     return nome

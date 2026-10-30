@@ -80,7 +80,7 @@ def _pagina(publicado: bool) -> str:
     return caminho.read_text(encoding="utf-8")
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     """O DESENHO da 07 (o mockup): o pacote pinta a fila, as extensões e as janelas dele.
 
     18/10/2026: o pacote passou a pintar o que o desenho da aba Experimental do todo tem, e a régua
@@ -101,7 +101,7 @@ def test_todo_endereco_da_pagina_tem_quem_o_pinte(a07, ctx):
     """Zero vazios e zero órfãos — nos DOIS sentidos."""
     fora = a07.pacote(ctx)
     da_grade = "".join(str(v) for v in (fora.get("blocos") or {}).values())
-    da_pagina = (set(CAMPO.findall(_bancada() + _pagina_publicada() + da_grade))
+    da_pagina = (set(CAMPO.findall(_ensaio() + _pagina_publicada() + da_grade))
                  - _do_topo() - SEM_PINTOR_AINDA)
     emite = {k for k in fora
              if k not in ("sem_dono", "cobertura", "blocos")}
@@ -119,7 +119,7 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     """Um botão com endereço e sem quem o atenda some no clique."""
     import pacotes
 
-    no_html = set(GESTO.findall(_bancada() + _pagina_publicada()))
+    no_html = set(GESTO.findall(_ensaio() + _pagina_publicada()))
     com_dono = {n for (p, n) in pacotes.GESTOS if p == PAGINA}
     no_html -= pacotes.camada.GESTOS_DO_MENU
     no_html -= pacotes.camada.GESTOS_DA_MOLDURA
@@ -269,7 +269,7 @@ def test_o_tique_nao_bloqueia_no_disco(a07, ctx, monkeypatch):
         "número inventado")
 
 
-def test_esta_regua_nao_alcanca_a_biblioteca_dela():
+def test_esta_regua_nao_alcanca_a_biblioteca_do_usuario():
     """A pergunta que custou dez minutos em 02/09, respondida por medição."""
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
@@ -809,7 +809,7 @@ def _publicada(com_a_legenda: bool = False) -> str:
     return doc.split(_FIM_DA_ABA, 1)[0]
 
 
-def test_o_selo_do_nao_localizado_e_a_palavra_dela(desenho):
+def test_o_selo_do_nao_localizado_e_a_palavra_do_usuario(desenho):
     """A PALAVRA É DE PRODUTO, e este é o ÚNICO lugar que a digita."""
     assert desenho.SELOS["off"] == "NÃO LOCALIZADO", (
         f"o selo do estado 'procurei e não achei' diz "
@@ -1261,7 +1261,7 @@ def _com_lar_de_mentira(monkeypatch, tmp_path):
     return pasta
 
 
-def test_o_seletor_grava_o_desktop_que_ela_apontou(a07, ctx, desenho,
+def test_o_seletor_grava_o_desktop_que_o_usuario_apontou(a07, ctx, desenho,
                                                    tmp_path, monkeypatch):
     """«Escolher o arquivo…» — decisão de 09/09/2026, a opção (C).
 
@@ -1271,7 +1271,7 @@ def test_o_seletor_grava_o_desktop_que_ela_apontou(a07, ctx, desenho,
     filtro e a pasta de partida, resolve o que voltou nas MESMAS buscas do
     procurador, e grava pela MESMA porta do «Adicionar» (`machine_declare`).
 
-    **A MORDIDA:** troque `_achar_o_que_ela_apontou` por uma função que devolve
+    **A MORDIDA:** troque `_achar_o_que_o_usuario_apontou` por uma função que devolve
     o caminho cru sem procurar, e o `agulha` gravado deixa de ser o `stem` do
     atalho — o cartão passa a apontar para uma agulha que a busca nunca casa.
     """
@@ -1359,7 +1359,7 @@ def test_o_seletor_aceita_um_programa_do_path(a07, ctx, desenho,
         f"o binário apontado não entrou pelo campo `comandos`: {p.chamadas}")
 
 
-def test_o_seletor_declara_que_mexe_na_maquina_dela(a07, desenho):
+def test_o_seletor_declara_que_mexe_na_maquina_do_usuario(a07, desenho):
     """Com `--oculta` não há diálogo, logo a prova de clique NÃO pode acioná-lo.
 
     `pacotes.perigosos()` é DERIVADO do `grava=` do próprio gesto — nunca

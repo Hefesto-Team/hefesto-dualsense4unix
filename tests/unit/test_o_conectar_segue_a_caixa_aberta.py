@@ -1,4 +1,4 @@
-"""O «Conectar» segue a caixa que ela abriu — O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01."""
+"""O «Conectar» segue a caixa que ela abriu — O-CONECTAR-SEGUE-A-CAIXA-QUE-O-USUARIO-ABRIU-01."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_a_caixa_fica_onde_foi_aberta import CHIP, _cartao
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
-    Bancada,
+    Ensaio,
     BuscaDePe,
     PonteQueVaiAoDaemon,
     id_da_tela,
@@ -147,7 +147,7 @@ def test_o_chip_leva_a_busca_do_conectar_para_o_adaptador_dele(
     assert (resposta["movimento"]["aparelho"], resposta["movimento"]["destino"]) == (
         cr.CONECTANDO, chip)
 
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, chip), fim
@@ -174,7 +174,7 @@ def test_a_janela_e_o_prazo_recomecam_no_destino_novo(diario: Path, fechar: list
 
     assert mesa.chip(VARANDA)["status"] == "ok"
     mesa.mundo.pair_mente = True
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE, depois_de=25.0)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE, depois_de=25.0)
     busca.soltar()
     fio.join(timeout=15.0)
 
@@ -187,7 +187,7 @@ def test_a_janela_e_o_prazo_recomecam_no_destino_novo(diario: Path, fechar: list
 
 
 @pytest.mark.parametrize(("onde_busca", "chip"), PARES)
-def test_o_ultimo_clique_dela_vence(
+def test_o_ultimo_clique_do_usuario_vence(
     diario: Path, fechar: list[Any], onde_busca: str, chip: str,
 ) -> None:
     """Dois chips antes de a busca andar: vale o último. Voltar ao adaptador da"""
@@ -202,7 +202,7 @@ def test_o_ultimo_clique_dela_vence(
     assert mesa.chip(onde_busca)["status"] == "ok"
     assert mesa.chip(chip)["status"] == "ok"
     assert mesa.chip(terceiro)["status"] == "ok"
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.destino) == (cr.CHEGOU, terceiro), fim
@@ -221,7 +221,7 @@ def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
     mesa.relogio.agora = antes.comecou + gp.SEGUNDOS_MAX
 
     assert mesa.chip(QUARTO)["status"] == "ok"
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, QUARTO), fim
@@ -294,7 +294,7 @@ def test_voltar_ao_chip_da_busca_desfaz_o_pedido(diario: Path, fechar: list[Any]
 
     assert mesa.chip(VARANDA)["status"] == "ok"
     assert mesa.chip(QUARTO)["status"] == "ok"
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.destino) == (cr.CHEGOU, QUARTO), fim
@@ -320,7 +320,7 @@ def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
     assert (voltou.estado, voltou.motivo, voltou.aparelho) == (
         cr.CHEGOU, cr.MOTIVO_PELO_PAREAMENTO_ANTIGO, ROXO), voltou
 
-    rm.ela_pareia(mesa.relogio, mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mundo, mesa.central, VERDE)
     fim = mesa.central.conectar(VARANDA)
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
     assert onde_buscou(mundo) == [rm.HCIS[SALA], rm.HCIS[VARANDA]]
@@ -333,25 +333,25 @@ def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
     """O que ela vê, pela tela de verdade (o pacote da 08, o gesto do chip, o"""
     mundo = mundo_da_madrugada()
     relogio = rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
     try:
-        bancada.cena()
-        bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
-        bancada.cena()
-        assert bancada.gesto("radio-procurar") == {"armou": True}
+        ensaio.cena()
+        ensaio.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
+        ensaio.cena()
+        assert ensaio.gesto("radio-procurar") == {"armou": True}
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
 
-        bancada.cena()
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
-        assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(chip)})
+        ensaio.cena()
+        assert ensaio.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
+        assert ensaio.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(chip)})
         de_pe = BuscaDePe(relogio)
         busca.soltar()
         assert de_pe.dentro.wait(5.0), "a janela nova não abriu"
         busca = de_pe
         assert onde_buscou(mundo) == [rm.HCIS[onde_busca], rm.HCIS[chip]]
 
-        campos = bancada.tique()
+        campos = ensaio.tique()
         cena = dict(a08._CENA_NA_TELA)
         assert cena["ocupado"] is True
         assert cena["aberto"] == cena["destino_do_conectar"] == id_da_tela(chip)
@@ -360,7 +360,7 @@ def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
         _a_busca_acende_so_no(campos, a08, chip)
     finally:
         busca.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 @pytest.mark.parametrize(("destino", "chip"), MOVERES)
@@ -488,7 +488,7 @@ def test_depois_do_gesto_o_destino_nao_muda(diario: Path, fechar: list[Any], pas
 def _o_verde_pareou_e_nao_conectou(mesa: Mesa, destino: str) -> cr.Movimento:
     """O ``Pair`` do verde dá e ele não conecta (o branco do diário dela)."""
     mesa.mundo.pair_mente = True
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     feito = mesa.central.conectar(destino)
     assert (feito.estado, feito.passo, feito.aparelho) == (
         cr.ESPERANDO, cr.PASSO_CONFERINDO, VERDE)
@@ -506,7 +506,7 @@ def _sem_a_trava(trabalho: Any) -> None:
 
 
 @pytest.mark.parametrize("destino", TRES)
-def test_o_nao_chegou_sem_a_trava_deve_a_meia_chave_e_ela_sai_na_faxina(
+def test_o_nao_chegou_sem_a_trava_deve_a_meia_chave_e_o_usuario_sai_na_faxina(
     diario: Path, fechar: list[Any], destino: str,
 ) -> None:
     """O prazo vence com outro motor segurando a trava: o «não chegou» sai (a"""
@@ -571,7 +571,7 @@ def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
     assert mesa.de(VERDE).estado == cr.NAO_CHEGOU
 
     mesa.mundo.pair_mente = False
-    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     fim = mesa.central.conectar(destino)
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, destino), fim
     assert mesa.mundo.lapides == [(destino, VERDE)]
@@ -594,7 +594,7 @@ def test_o_falhou_depois_do_pair_tira_a_meia_chave(
 
     mesa.central._dar_o_nome = quebrou  # type: ignore[method-assign]
     alvo = VERDE if quem == "conectar" else VERMELHO
-    rm.ela_pareia(mesa.relogio, mundo, mesa.central, alvo)
+    rm.o_usuario_pareia(mesa.relogio, mundo, mesa.central, alvo)
     fim = (mesa.central.conectar(destino) if quem == "conectar"
            else mesa.central.mover(VERMELHO, destino))
     assert (fim.estado, fim.motivo, fim.aparelho) == (cr.NAO_CHEGOU, cr.MOTIVO_FALHOU, alvo)
@@ -746,7 +746,7 @@ def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
     _o_conectar_no_gesto(mesa, busca, QUARTO)
 
     assert mesa.chip(VARANDA)["status"] == "ok"
-    rm.ela_pareia(mesa.relogio, mundo, mesa.central, VERDE)
+    rm.o_usuario_pareia(mesa.relogio, mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
@@ -760,33 +760,33 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
     """O último clique do usuário vence também pela TELA. Entre o chip aceito e o fio"""
     mundo = mundo_da_madrugada()
     relogio = rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
     try:
-        bancada.cena()
-        bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
-        bancada.cena()
-        assert bancada.gesto("radio-procurar") == {"armou": True}
+        ensaio.cena()
+        ensaio.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
+        ensaio.cena()
+        assert ensaio.gesto("radio-procurar") == {"armou": True}
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
-        bancada.cena()
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
+        ensaio.cena()
+        assert ensaio.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
 
-        campos = bancada.tique()
+        campos = ensaio.tique()
         _a_busca_acende_so_no(campos, a08, chip)
 
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
+        assert ensaio.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
             "armou": True}
-        assert bancada.ponte.chamadas[-1] == (
+        assert ensaio.ponte.chamadas[-1] == (
             "radio.mover", {"destino": id_da_tela(onde_busca)}), "o clique de volta não chegou"
-        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
+        rm.o_usuario_pareia(relogio, mundo, ensaio.central, VERDE)
         busca.soltar()
-        bancada.esperar_a_central()
+        ensaio.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca foi para o chip desfeito"
         assert onde_pareou(mundo) == [rm.HCIS[onde_busca]]
-        assert bancada.cena()["aberto"] == id_da_tela(onde_busca)
+        assert ensaio.cena()["aberto"] == id_da_tela(onde_busca)
     finally:
         busca.soltar()
-        bancada.fechar()
+        ensaio.fechar()
 
 
 def _a_busca_acende_so_no(campos: dict[str, Any], a08: Any, adaptador: str) -> None:

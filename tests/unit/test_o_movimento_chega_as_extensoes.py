@@ -198,26 +198,26 @@ def test_cada_controle_sai_com_o_uniq_o_jogador_e_o_transporte_dele(
 
     async def corrida() -> tuple[_Mesa, list[dict[str, Any]]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS[mesa])
+        ensaio = _Mesa(porta, MESAS[mesa])
         ext = await _entrar(curto, ["movimento"])
         try:
-            bancada.tique(relogio)
-            for n, uniq in enumerate(bancada.uniqs):
-                bancada.mexer(uniq, (100.0 + n, -50.0, 20.0), (0.0, 0.5, 0.85))
-                bancada.tique(relogio)
-                bancada.mexer(uniq, PARADO[0], PARADO[1])
-                bancada.tique(relogio)
-            return bancada, _so_o_movimento(await asyncio.to_thread(_drenar, ext))
+            ensaio.tique(relogio)
+            for n, uniq in enumerate(ensaio.uniqs):
+                ensaio.mexer(uniq, (100.0 + n, -50.0, 20.0), (0.0, 0.5, 0.85))
+                ensaio.tique(relogio)
+                ensaio.mexer(uniq, PARADO[0], PARADO[1])
+                ensaio.tique(relogio)
+            return ensaio, _so_o_movimento(await asyncio.to_thread(_drenar, ext))
         finally:
             ext.fechar()
             await porta.parar()
 
-    bancada, dados = asyncio.run(corrida())
+    ensaio, dados = asyncio.run(corrida())
     visto = [(d["uniq"], d["jogador"], d["transporte"], _giro(d)) for d in dados]
-    poses = [(u, n + 1, bancada.vias[u], PARADO[0]) for n, u in enumerate(bancada.uniqs)]
+    poses = [(u, n + 1, ensaio.vias[u], PARADO[0]) for n, u in enumerate(ensaio.uniqs)]
     gestos = [
-        (uniq, n + 1, bancada.vias[uniq], giro)
-        for n, uniq in enumerate(bancada.uniqs)
+        (uniq, n + 1, ensaio.vias[uniq], giro)
+        for n, uniq in enumerate(ensaio.uniqs)
         for giro in ((100.0 + n, -50.0, 20.0), PARADO[0])
     ]
     assert visto == poses + gestos, f"{mesa}: {visto}"
@@ -322,14 +322,14 @@ def test_quem_assina_o_movimento_segura_so_o_leitor_de_movimento(
 
     async def corrida() -> SensorHub:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
-        bancada.hub = _hub_que_descobre(bancada.uniqs)
-        bancada.daemon._garantir_sensor_hub = lambda: bancada.hub
+        ensaio = _Mesa(porta, MESAS["mista"])
+        ensaio.hub = _hub_que_descobre(ensaio.uniqs)
+        ensaio.daemon._garantir_sensor_hub = lambda: ensaio.hub
         ext = await _entrar(curto, ["movimento"])
         try:
-            bancada.tique(relogio)
-            bancada.hub.reconciliar()
-            return bancada.hub
+            ensaio.tique(relogio)
+            ensaio.hub.reconciliar()
+            return ensaio.hub
         finally:
             ext.fechar()
             await porta.parar()
@@ -348,15 +348,15 @@ def test_o_leitor_de_movimento_morre_quando_o_ultimo_assinante_sai(
 
     async def corrida() -> tuple[set[str], set[str], dict[str, Any]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
-        bancada.hub = _hub_que_descobre(bancada.uniqs, relogio)
-        bancada.daemon._garantir_sensor_hub = lambda: bancada.hub
+        ensaio = _Mesa(porta, MESAS["mista"])
+        ensaio.hub = _hub_que_descobre(ensaio.uniqs, relogio)
+        ensaio.daemon._garantir_sensor_hub = lambda: ensaio.hub
         ext = await _entrar(curto, ["movimento"])
         try:
-            bancada.tique(relogio)
-            bancada.hub.reconciliar()
-            abertos = set(bancada.hub._motion)
-            leitores = dict(bancada.hub._motion)
+            ensaio.tique(relogio)
+            ensaio.hub.reconciliar()
+            abertos = set(ensaio.hub._motion)
+            leitores = dict(ensaio.hub._motion)
         finally:
             ext.fechar()
         prazo = asyncio.get_running_loop().time() + 3.0
@@ -364,9 +364,9 @@ def test_o_leitor_de_movimento_morre_quando_o_ultimo_assinante_sai(
             await asyncio.sleep(0.02)
         try:
             for _ in range(3):
-                bancada.tique(relogio, SensorHub._DEMANDA_TTL_S)
-            bancada.hub.reconciliar()
-            return abertos, set(bancada.hub._motion), leitores
+                ensaio.tique(relogio, SensorHub._DEMANDA_TTL_S)
+            ensaio.hub.reconciliar()
+            return abertos, set(ensaio.hub._motion), leitores
         finally:
             await porta.parar()
 
@@ -384,12 +384,12 @@ def test_quem_assina_so_as_entradas_nao_pede_o_movimento(
 
     async def corrida() -> SensorHub:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
+        ensaio = _Mesa(porta, MESAS["mista"])
         ext = await _entrar(curto, ["entradas"])
         try:
-            bancada.tique(relogio)
-            entradas_de_todo_controle_no_servico(bancada.daemon, bancada.posto)
-            return bancada.hub
+            ensaio.tique(relogio)
+            entradas_de_todo_controle_no_servico(ensaio.daemon, ensaio.posto)
+            return ensaio.hub
         finally:
             ext.fechar()
             await porta.parar()
@@ -410,15 +410,15 @@ def test_quem_assina_so_as_entradas_nao_segura_o_leitor_de_movimento(
 
     async def corrida() -> SensorHub:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
-        bancada.hub = _hub_que_descobre(bancada.uniqs)
-        bancada.daemon._garantir_sensor_hub = lambda: bancada.hub
+        ensaio = _Mesa(porta, MESAS["mista"])
+        ensaio.hub = _hub_que_descobre(ensaio.uniqs)
+        ensaio.daemon._garantir_sensor_hub = lambda: ensaio.hub
         ext = await _entrar(curto, ["entradas"])
         try:
-            bancada.tique(relogio)
-            entradas_de_todo_controle_no_servico(bancada.daemon, bancada.posto)
-            bancada.hub.reconciliar()
-            return bancada.hub
+            ensaio.tique(relogio)
+            entradas_de_todo_controle_no_servico(ensaio.daemon, ensaio.posto)
+            ensaio.hub.reconciliar()
+            return ensaio.hub
         finally:
             ext.fechar()
             await porta.parar()
@@ -432,18 +432,18 @@ def test_sem_assinante_nenhum_leitor_e_pedido(curto: pathlib.Path) -> None:  # n
 
     async def corrida() -> _Mesa:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
+        ensaio = _Mesa(porta, MESAS["mista"])
         ext = await _entrar(curto, ["entradas"])
         try:
-            bancada.mexer(P2, (300.0, 0.0, 0.0))
-            bancada.tique(relogio)
-            return bancada
+            ensaio.mexer(P2, (300.0, 0.0, 0.0))
+            ensaio.tique(relogio)
+            return ensaio
         finally:
             ext.fechar()
             await porta.parar()
 
-    bancada = asyncio.run(corrida())
-    assert bancada.hub._demanda_do_movimento == {}
+    ensaio = asyncio.run(corrida())
+    assert ensaio.hub._demanda_do_movimento == {}
 
 
 def test_o_movimento_visto_nao_registra_demanda_nem_drena() -> None:
@@ -466,25 +466,25 @@ def test_o_parado_nao_sai_de_novo_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
 
     async def corrida() -> tuple[list[dict[str, Any]], list[tuple[float, dict[str, Any]]]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
+        ensaio = _Mesa(porta, MESAS["mista"])
         ext = await _entrar(curto, ["movimento"])
         try:
             tremor = FAIXA_MORTA_DO_GIRO * 0.7
             for n in range(200):
                 sinal = 1 if n % 2 else -1
-                bancada.mexer(P2, (0.5 + sinal * tremor / 2, -0.4, 0.2),
+                ensaio.mexer(P2, (0.5 + sinal * tremor / 2, -0.4, 0.2),
                               (0.0, 0.98 + sinal * FAIXA_MORTA_DA_ACEL * 0.4, 0.1))
-                bancada.tique(relogio, TIQUE)
+                ensaio.tique(relogio, TIQUE)
             parado = _so_o_movimento(await asyncio.to_thread(_drenar, ext, 0.2))
             instantes: list[tuple[float, dict[str, Any]]] = []
             for n in range(240):
-                bancada.mexer(P2, (float(n * 3), 0.0, 0.0))
-                bancada.tique(relogio, TIQUE)
+                ensaio.mexer(P2, (float(n * 3), 0.0, 0.0))
+                ensaio.tique(relogio, TIQUE)
                 for dados in _so_o_movimento(await asyncio.to_thread(_drenar, ext, 0.002)):
                     instantes.append((relogio.t, dados))
-            bancada.mexer(P2, PARADO[0])
+            ensaio.mexer(P2, PARADO[0])
             for _ in range(6):
-                bancada.tique(relogio, TIQUE)
+                ensaio.tique(relogio, TIQUE)
             instantes += [(relogio.t, d) for d in
                           _so_o_movimento(await asyncio.to_thread(_drenar, ext))]
             return parado, instantes
@@ -511,19 +511,19 @@ def test_um_eixo_que_passa_da_faixa_sai_e_o_que_nao_passa_nao(
 
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["um-so-no-bt"])
+        ensaio = _Mesa(porta, MESAS["um-so-no-bt"])
         ext = await _entrar(curto, ["movimento"])
         try:
-            bancada.tique(relogio)
+            ensaio.tique(relogio)
             gx, gy, gz = PARADO[0]
             ax, ay, az = PARADO[1]
-            bancada.mexer(P1, (gx, gy, gz + FAIXA_MORTA_DO_GIRO * 0.9))
-            bancada.tique(relogio)
-            bancada.mexer(P1, (gx, gy, gz + FAIXA_MORTA_DO_GIRO * 1.1))
-            bancada.tique(relogio)
-            bancada.mexer(P1, (gx, gy, gz + FAIXA_MORTA_DO_GIRO * 1.1),
+            ensaio.mexer(P1, (gx, gy, gz + FAIXA_MORTA_DO_GIRO * 0.9))
+            ensaio.tique(relogio)
+            ensaio.mexer(P1, (gx, gy, gz + FAIXA_MORTA_DO_GIRO * 1.1))
+            ensaio.tique(relogio)
+            ensaio.mexer(P1, (gx, gy, gz + FAIXA_MORTA_DO_GIRO * 1.1),
                           (ax + FAIXA_MORTA_DA_ACEL * 1.5, ay, az))
-            bancada.tique(relogio)
+            ensaio.tique(relogio)
             return _so_o_movimento(await asyncio.to_thread(_drenar, ext))
         finally:
             ext.fechar()
@@ -540,16 +540,16 @@ def test_o_controle_que_sai_manda_o_repouso_uma_vez(curto: pathlib.Path) -> None
 
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
+        ensaio = _Mesa(porta, MESAS["mista"])
         ext = await _entrar(curto, ["movimento"])
         try:
-            bancada.tique(relogio)
+            ensaio.tique(relogio)
             await asyncio.to_thread(_drenar, ext, 0.2)
-            bancada.mexer(P3, (250.0, 0.0, 0.0))
-            bancada.tique(relogio)
-            del bancada.daemon.controller._alvos["chave-2"]
-            bancada.tique(relogio)
-            bancada.tique(relogio)
+            ensaio.mexer(P3, (250.0, 0.0, 0.0))
+            ensaio.tique(relogio)
+            del ensaio.daemon.controller._alvos["chave-2"]
+            ensaio.tique(relogio)
+            ensaio.tique(relogio)
             return _so_o_movimento(await asyncio.to_thread(_drenar, ext))
         finally:
             ext.fechar()
@@ -568,10 +568,10 @@ def test_a_queda_leva_o_repouso_mesmo_sem_tique(curto: pathlib.Path, quem: str) 
 
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
+        ensaio = _Mesa(porta, MESAS["mista"])
         ext = await _entrar(curto, ["movimento"])
         try:
-            bancada.tique(relogio)
+            ensaio.tique(relogio)
             await asyncio.to_thread(_drenar, ext, 0.2)
             porta.bus.publish(EventTopic.CONTROLLER_DISCONNECTED,
                               {"reason": "alvo_sumiu", "uniq": quem})
@@ -592,15 +592,15 @@ def test_quem_assina_depois_recebe_o_movimento_de_agora(curto: pathlib.Path) -> 
 
     async def corrida() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         porta = await _porta(curto, relogio)
-        bancada = _Mesa(porta, MESAS["mista"])
+        ensaio = _Mesa(porta, MESAS["mista"])
         primeira = await _entrar(curto, ["movimento"])
         try:
-            bancada.mexer(P2, (80.0, 0.0, 0.0))
-            bancada.tique(relogio)
+            ensaio.mexer(P2, (80.0, 0.0, 0.0))
+            ensaio.tique(relogio)
             await asyncio.to_thread(_drenar, primeira, 0.2)
             segunda = await _entrar(curto, ["movimento"])
             try:
-                bancada.tique(relogio)
+                ensaio.tique(relogio)
                 return (_so_o_movimento(await asyncio.to_thread(_drenar, primeira)),
                         _so_o_movimento(await asyncio.to_thread(_drenar, segunda)))
             finally:

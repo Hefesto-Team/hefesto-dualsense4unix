@@ -60,7 +60,7 @@ def _lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 @pytest.fixture
-def bancada(mesa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+def ensaio(mesa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """A mesa do fio com o P1 dono de `_P1`, de pé num pad DualSense velho."""
     monkeypatch.setattr(mesa.daemon.controller, "primary_uniq", _P1, raising=False)
     original = vp.make_virtual_pad
@@ -133,72 +133,72 @@ def _mascara_pela_ipc(b: SimpleNamespace, flavor: str) -> tuple[Any, float]:
 
 @pytest.mark.parametrize("pedida", _PEDIDAS)
 def test_o_modo_pela_ipc_diz_falhou_e_nao_grava(
-    bancada: SimpleNamespace, pedida: str,
+    ensaio: SimpleNamespace, pedida: str,
 ) -> None:
     """A fábrica do P1 demora e falha: a resposta é «falhou», e o perfil não muda."""
-    bancada.m.estado.falhar = True
-    resposta, gasto = _mascara_pela_ipc(bancada, pedida)
+    ensaio.m.estado.falhar = True
+    resposta, gasto = _mascara_pela_ipc(ensaio, pedida)
     assert gasto >= _BROKER_S, f"o modo respondeu antes do desfecho ({gasto * 1000:.0f} ms)"
     assert resposta["status"] == "failed" and resposta["enabled"] is False, resposta
     assert resposta["motivo"] == "aparelho_nao_vestiu", resposta
-    assert bancada.gravadas == [], "o perfil guardou o modo que não vestiu"
+    assert ensaio.gravadas == [], "o perfil guardou o modo que não vestiu"
 
 
 @pytest.mark.parametrize("pedida", _PEDIDAS)
 def test_o_modo_pela_ipc_responde_depois_do_pad_vestido(
-    bancada: SimpleNamespace, pedida: str,
+    ensaio: SimpleNamespace, pedida: str,
 ) -> None:
-    resposta, gasto = _mascara_pela_ipc(bancada, pedida)
-    novo = _o_p1_novo(bancada)
+    resposta, gasto = _mascara_pela_ipc(ensaio, pedida)
+    novo = _o_p1_novo(ensaio)
     assert novo is not None and novo.flavor == pedida, "o P1 não nasceu no modo pedido"
     assert gasto >= _BROKER_S, f"o modo respondeu antes do pad ({gasto * 1000:.0f} ms)"
     assert resposta["status"] == "ok" and resposta["flavor"] == pedida, resposta
-    assert bancada.gravadas == [(pedida, novo)], (
-        "o perfil guarda o modo uma vez, depois de o pad existir", bancada.gravadas)
+    assert ensaio.gravadas == [(pedida, novo)], (
+        "o perfil guarda o modo uma vez, depois de o pad existir", ensaio.gravadas)
 
 
 @pytest.mark.parametrize("falha", [False, True], ids=["nasce", "falha"])
-def test_o_ps_l3_grava_quando_o_p1_existe(bancada: SimpleNamespace, falha: bool) -> None:
+def test_o_ps_l3_grava_quando_o_p1_existe(ensaio: SimpleNamespace, falha: bool) -> None:
     """O gesto espera o desfecho no laço, e o perfil só recebe o modo que ficou de pé."""
-    bancada.m.estado.falhar = falha
-    _no_laco(bancada, hotkey.build_next_mask_callback(bancada.m.daemon))
-    _tique(bancada.m)
+    ensaio.m.estado.falhar = falha
+    _no_laco(ensaio, hotkey.build_next_mask_callback(ensaio.m.daemon))
+    _tique(ensaio.m)
     if falha:
-        assert bancada.gravadas == [], "o modo que não vestiu foi ao perfil"
+        assert ensaio.gravadas == [], "o modo que não vestiu foi ao perfil"
     else:
-        novo = _o_p1_novo(bancada)
+        novo = _o_p1_novo(ensaio)
         assert novo is not None and novo.flavor == "xbox"
-        assert bancada.gravadas == [("xbox", novo)], bancada.gravadas
+        assert ensaio.gravadas == [("xbox", novo)], ensaio.gravadas
 
 
 @pytest.mark.parametrize("ponte", [hotkey.PONTE_XBOX, hotkey.PONTE_DUALSENSE])
 def test_o_ps_r3_repetido_em_voo_grava_o_modo_uma_vez_depois_do_pad(
-    bancada: SimpleNamespace, ponte: str,
+    ensaio: SimpleNamespace, ponte: str,
 ) -> None:
     """D-2510-O-PEDIDO-IGUAL-EM-VOO-SE-JUNTA-AO-PRIMEIRO."""
     if ponte == hotkey.PONTE_DUALSENSE:
-        bancada.velho.caminho = vp.CAMINHO_XBOX
-        bancada.velho.flavor = "xbox"
-    hotkey._aplicar_ponte(bancada.m.daemon, ponte)
-    _tique(bancada.m)
-    assert gp.o_p1_que_nasce(bancada.m.daemon) is not None, "o primeiro pedido não está em voo"
-    hotkey._aplicar_ponte(bancada.m.daemon, ponte)
-    assert bancada.m.gravados == [], (
-        "o pedido repetido gravou o modo antes de o pad existir", bancada.m.gravados)
-    assert bancada.tabelas == [], "as tabelas do perfil voltaram antes de o pad existir"
-    _ate(bancada.m, lambda: _o_p1_novo(bancada) is not None)
-    _tique(bancada.m)
-    novo = _o_p1_novo(bancada)
-    assert len(bancada.m.estado.pedidos) == 1, "o pedido igual pediu outro pad"
-    assert bancada.m.gravados == [("gamepad", novo)], bancada.m.gravados
-    assert bancada.tabelas == [novo], bancada.tabelas
+        ensaio.velho.caminho = vp.CAMINHO_XBOX
+        ensaio.velho.flavor = "xbox"
+    hotkey._aplicar_ponte(ensaio.m.daemon, ponte)
+    _tique(ensaio.m)
+    assert gp.o_p1_que_nasce(ensaio.m.daemon) is not None, "o primeiro pedido não está em voo"
+    hotkey._aplicar_ponte(ensaio.m.daemon, ponte)
+    assert ensaio.m.gravados == [], (
+        "o pedido repetido gravou o modo antes de o pad existir", ensaio.m.gravados)
+    assert ensaio.tabelas == [], "as tabelas do perfil voltaram antes de o pad existir"
+    _ate(ensaio.m, lambda: _o_p1_novo(ensaio) is not None)
+    _tique(ensaio.m)
+    novo = _o_p1_novo(ensaio)
+    assert len(ensaio.m.estado.pedidos) == 1, "o pedido igual pediu outro pad"
+    assert ensaio.m.gravados == [("gamepad", novo)], ensaio.m.gravados
+    assert ensaio.tabelas == [novo], ensaio.tabelas
 
 
-def test_dois_pedidos_iguais_pela_ipc_esperam_o_mesmo_pad(bancada: SimpleNamespace) -> None:
+def test_dois_pedidos_iguais_pela_ipc_esperam_o_mesmo_pad(ensaio: SimpleNamespace) -> None:
     """O duplo clique: as duas respostas dizem o desfecho, e o que segue roda uma vez."""
-    bancada.m.daemon._gamepad_device = None
-    bancada.m.daemon.config.gamepad_emulation_enabled = False
-    ipc = _Ipc(bancada.m.daemon)
+    ensaio.m.daemon._gamepad_device = None
+    ensaio.m.daemon.config.gamepad_emulation_enabled = False
+    ipc = _Ipc(ensaio.m.daemon)
     params = {"enabled": True, "caminho": "xbox", "origin": "manual"}
 
     async def _dois() -> list[Any]:
@@ -207,13 +207,13 @@ def test_dois_pedidos_iguais_pela_ipc_esperam_o_mesmo_pad(bancada: SimpleNamespa
         segundo = asyncio.ensure_future(ipc._handle_gamepad_emulation_set(dict(params)))
         return list(await asyncio.gather(primeiro, segundo))
 
-    respostas, gasto = _no_laco(bancada, _dois)
-    novo = _o_p1_novo(bancada)
-    assert novo is not None and len(bancada.m.estado.pedidos) == 1
+    respostas, gasto = _no_laco(ensaio, _dois)
+    novo = _o_p1_novo(ensaio)
+    assert novo is not None and len(ensaio.m.estado.pedidos) == 1
     assert gasto >= _BROKER_S, "uma das respostas veio antes do pad"
     assert all(r["status"] == "ok" and r["enabled"] is True for r in respostas), respostas
-    assert bancada.m.gravados == [("gamepad", novo)], bancada.m.gravados
-    assert bancada.tabelas == [novo], bancada.tabelas
+    assert ensaio.m.gravados == [("gamepad", novo)], ensaio.m.gravados
+    assert ensaio.tabelas == [novo], ensaio.tabelas
 
 
 @pytest.mark.parametrize("rota", ["gamepad.emulation.set", "gamepad.mask.set"])

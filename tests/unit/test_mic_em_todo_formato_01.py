@@ -72,7 +72,7 @@ def test_o_mic_e_curado_antes_do_exit_dos_formatos_nao_nativos() -> None:
     )
 
 
-def test_o_ramo_nao_nativo_respeita_as_flags_dela() -> None:
+def test_o_ramo_nao_nativo_respeita_as_flags_do_usuario() -> None:
     """A cura não pode decidir no lugar dela."""
     linhas = _texto().splitlines()
     exit_linha = _linha_do_exit_da_bifurcacao()

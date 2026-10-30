@@ -361,18 +361,18 @@ def test_as_cores_dos_adaptadores_se_separam_para_quem_nao_ve_cor() -> None:
             assert d >= 12, f"{a} e {b} em {modo}: ΔE {d:.1f}"
 
 
-def test_o_lido_sai_com_o_selo_e_sem_interrogacao_e_o_dela_sem_selo() -> None:
+def test_o_lido_sai_com_o_selo_e_sem_interrogacao_e_o_do_usuario_sem_selo() -> None:
     lido = _viz("3554:fa09", sugestao="Teclado", sugestao_tipo="teclado", lido="Teclado")
-    dela = _viz("25a7:fa07", tipo="teclado", nome="Teclado")
+    do_usuario = _viz("25a7:fa07", tipo="teclado", nome="Teclado")
     camera = _viz("0c45:6366", sugestao="Webcam", sugestao_tipo="webcam", lido="Câmera")
-    cena = _cena(vizinhos=[lido, dela, camera])
+    cena = _cena(vizinhos=[lido, do_usuario, camera])
     linhas = _linhas(cena)
     r_lido = linhas["3554:fa09"].achar(None, "rotulo")[0]
     assert r_lido.attrs["aria-label"] == "Teclado" and "?" not in r_lido.attrs["aria-label"]
     assert "lido pelo computador" in r_lido.attrs["title"]
-    r_dela = linhas["25a7:fa07"].achar(None, "rotulo")[0]
-    assert r_dela.attrs["aria-label"] == "Teclado"
-    assert "lido pelo computador" not in r_dela.attrs["title"]
+    r_do_usuario = linhas["25a7:fa07"].achar(None, "rotulo")[0]
+    assert r_do_usuario.attrs["aria-label"] == "Teclado"
+    assert "lido pelo computador" not in r_do_usuario.attrs["title"]
     assert "0c45:6366" not in linhas
 
 

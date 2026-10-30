@@ -70,7 +70,7 @@ def test_o_que_nao_e_jogo_com_janela_propria_fica_fora_sem_a_classe(
     assert jl.jogos_diretos_dos_atalhos(pastas=[tmp_path]) == []
 
 
-def test_o_atalho_com_a_classe_declarada_segue_com_ela(tmp_path: Path) -> None:
+def test_o_atalho_com_a_classe_declarada_segue_com_o_usuario(tmp_path: Path) -> None:
     texto = FORJA.replace("FORJA", "Celeste") + "StartupWMClass=CelesteWin\n"
     _atalho(tmp_path, "celeste.desktop", texto)
 

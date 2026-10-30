@@ -1,6 +1,6 @@
 """O Mapa das Conexões mostra a cadeia USB e o registro do que entra e sai.
 
-O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01. O ``/sys`` de mentira
+O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DO-USUARIO-01. O ``/sys`` de mentira
 (``tests/fixtures/cadeia_usb/``) é o da sprint de produto; o diário é o que o ouvido do USB
 escreve de verdade, lido pelo arquivo, sem IPC.
 
@@ -156,7 +156,7 @@ def test_a_marca_do_enlace_so_no_aparelho_que_publica_superspeed(sys_usb: SysDeM
         "sem o BOS não se sabe que ele sabe 5 Gb/s: sem marca")
 
 
-def test_o_apelido_dela_vence_o_nome_da_maquina(sys_usb: SysDeMentira) -> None:
+def test_o_apelido_do_usuario_vence_o_nome_da_maquina(sys_usb: SysDeMentira) -> None:
     documento = _documento(**{"f0e2:0811": RadioDeclarado(apelido="Minha antena")})
     (wifi,) = _por_modelo(_arranjo(sys_usb, documento=documento))["f0e2:0811"]
     assert wifi["nomeDeclarado"] == "Minha antena"
@@ -233,7 +233,7 @@ def test_o_apelido_vence_tambem_no_registro(
     assert {linha["nome"] for linha in linhas if linha["tipo"] == "Wi-Fi"} == {"Minha antena"}
 
 
-def test_a_entrada_com_nome_aparece_com_o_nome_dela_no_registro(
+def test_a_entrada_com_nome_aparece_com_o_nome_do_usuario_no_registro(
         sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
     """O nome da entrada tem um dono só (`entrada_a_entrada.rotulo_do_numero`): a entrada que ela
     batizou aparece no registro como no resto do mapa, e não como «Entrada 5»."""
@@ -311,7 +311,7 @@ def test_o_hub_que_sai_e_uma_linha_so(
     assert [(linha["evento"], linha["tipo"]) for linha in linhas] == [("Saiu", "Hub")]
 
 
-def test_a_pagina_da_bancada_tem_a_cadeia_e_a_quarta_aba() -> None:
+def test_a_pagina_do_ensaio_tem_a_cadeia_e_a_quarta_aba() -> None:
     texto = pagina_do_mapa.pagina()
     assert 'data-modo="registro"' in texto and 'id="registro"' in texto
     assert "Conectado agora</h3>" not in texto, "a lista é a cadeia"

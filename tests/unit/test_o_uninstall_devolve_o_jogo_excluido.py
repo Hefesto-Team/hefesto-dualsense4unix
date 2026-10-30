@@ -140,7 +140,7 @@ def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> N
     assert global_["enviromentOptions"] == [{"key": "MANGOHUD", "value": "1"}]
 
 
-def test_ela_mexeu_a_chave_dela_fica(lar: Path) -> None:
+def test_o_usuario_mexeu_a_chave_do_usuario_fica(lar: Path) -> None:
     """MORDIDA: a volta exata sem conferir o «depois» (a chave dela sumiria)."""
     casa = _heroic(lar, {"A": {}})
     _carona(lar)

@@ -16,7 +16,7 @@ def _sem_o_portao_da_steam(monkeypatch: pytest.MonkeyPatch) -> None:
 
 PINO_VELHO = "GE-Proton10-34"
 PINO_NOVO = "GE-Proton11-6-x86_64"
-ESCOLHA_DELA = "proton_11"
+ESCOLHA_DO_USUARIO = "proton_11"
 
 
 def _config_vdf(entradas: dict[str, str]) -> str:
@@ -43,7 +43,7 @@ def _acoes(mudancas: dict[str, dict[str, str]]) -> dict[str, str]:
     return {appid: c["action"] for appid, c in mudancas.items()}
 
 
-class TestOPinoVelhoNaoEEscolhaDela:
+class TestOPinoVelhoNaoEEscolhaDoUsuario:
     def test_a_entrada_do_pino_nosso_migra(self) -> None:
         """A MORDIDA: sem `pinos_nossos`, isto volta a ser `preservado`."""
         texto = _config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO})
@@ -57,9 +57,9 @@ class TestOPinoVelhoNaoEEscolhaDela:
         assert f'"name"\t\t"{PINO_NOVO}"' in novo
         assert PINO_VELHO not in novo
 
-    def test_a_escolha_dela_continua_preservada(self) -> None:
+    def test_a_escolha_do_usuario_continua_preservada(self) -> None:
         """O dano de 14/08 segue impossível: só o que é NOSSO migra."""
-        texto = _config_vdf({"0": PINO_VELHO, "2497900": ESCOLHA_DELA})
+        texto = _config_vdf({"0": PINO_VELHO, "2497900": ESCOLHA_DO_USUARIO})
 
         novo, mudancas = pp.build_compat_tool_mapping(
             texto, tool_name=PINO_NOVO, appids=["2497900"],
@@ -67,7 +67,7 @@ class TestOPinoVelhoNaoEEscolhaDela:
         )
 
         assert _acoes(mudancas)["2497900"] == "preservado"
-        assert ESCOLHA_DELA in novo
+        assert ESCOLHA_DO_USUARIO in novo
 
     def test_sem_historico_nada_migra(self) -> None:
         """Sem saber o que é nosso, o produto não adivinha — preserva."""
@@ -153,7 +153,7 @@ class TestOsBaldesSaoContadosSeparados:
         vdf.write_text(_config_vdf({
             "0": PINO_VELHO,
             "1599660": PINO_VELHO,
-            "2497900": ESCOLHA_DELA,
+            "2497900": ESCOLHA_DO_USUARIO,
         }))
         steamapps = pp.default_steam_root(tmp_path) / "steamapps"
         steamapps.mkdir(parents=True, exist_ok=True)
@@ -227,21 +227,21 @@ class TestORegistroDizOQueAconteceu:
             PINO_VELHO
         )
 
-    def test_o_previous_name_dela_sobrevive_a_subida_de_pino(
+    def test_o_previous_name_do_usuario_sobrevive_a_subida_de_pino(
         self, tmp_path: Path
     ) -> None:
         """A MORDIDA: exigir `tool_name` igual apaga isto a cada subida."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": ESCOLHA_DELA, "1599660": ESCOLHA_DELA}))
+        vdf.write_text(_config_vdf({"0": ESCOLHA_DO_USUARIO, "1599660": ESCOLHA_DO_USUARIO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(
             tool_name=PINO_VELHO, appids=["1599660"], config_vdf=vdf,
-            state_path=estado, migrar_de=[ESCOLHA_DELA],
+            state_path=estado, migrar_de=[ESCOLHA_DO_USUARIO],
         )
         assert json.loads(estado.read_text())["changes"]["1599660"][
             "previous_name"
-        ] == ESCOLHA_DELA
+        ] == ESCOLHA_DO_USUARIO
 
         pp.lock_games_to_pinned_proton(
             tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
@@ -249,7 +249,7 @@ class TestORegistroDizOQueAconteceu:
         )
 
         gravado = json.loads(estado.read_text())["changes"]["1599660"]
-        assert gravado["previous_name"] == ESCOLHA_DELA
+        assert gravado["previous_name"] == ESCOLHA_DO_USUARIO
         assert gravado["veio_de"] == PINO_VELHO
 
     def test_preservado_nao_promete_desfazer_o_que_nao_fez(
@@ -257,7 +257,7 @@ class TestORegistroDizOQueAconteceu:
     ) -> None:
         """Sem `veio_de`, quem lê sabe que esta corrida não mexeu no appid."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO_VELHO, "2497900": ESCOLHA_DELA}))
+        vdf.write_text(_config_vdf({"0": PINO_VELHO, "2497900": ESCOLHA_DO_USUARIO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(

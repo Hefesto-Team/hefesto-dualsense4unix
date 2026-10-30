@@ -45,7 +45,7 @@ def test_a_regra_do_contador_nao_usa_a_familia_mono() -> None:
     assert "tabular-nums" in regra, regra
 
 
-def test_a_bancada_da_07_tem_a_regra_do_gerador() -> None:
+def test_o_ensaio_da_07_tem_a_regra_do_gerador() -> None:
     pagina = onde.pagina("07-lancadores.html").read_text(encoding="utf-8")
     assert _regra_do_contador(pagina) == _regra_do_contador(desenho_da_experimental.CSS)
 

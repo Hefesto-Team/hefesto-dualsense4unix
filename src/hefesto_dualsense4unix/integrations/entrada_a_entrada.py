@@ -921,16 +921,16 @@ def _gravar_as_portas(
         no_do_aparelho = no_do_caminho(porta.caminho)
         buraco = list(nos) or ([no_do_aparelho] if no_do_aparelho else [])
         declaracao_das_portas[numero] = {"lugar": porta.lugar, "nos": buraco}
-        for outro, dela in mapa.portas.items():
+        for outro, vizinha in mapa.portas.items():
             if outro in numeros:
                 continue
-            if dela.lugar == porta.lugar or (
-                not dela.lugar and porta.caminho and caminho_da_porta(dela) == porta.caminho
+            if vizinha.lugar == porta.lugar or (
+                not vizinha.lugar and porta.caminho and caminho_da_porta(vizinha) == porta.caminho
             ):
                 declaracao_das_portas[outro] = {"lugar": None, "nos": []}
-            elif buraco and set(dela.nos) & set(buraco):
+            elif buraco and set(vizinha.nos) & set(buraco):
                 declaracao_das_portas[outro] = {
-                    "nos": [no for no in dela.nos if no not in buraco]
+                    "nos": [no for no in vizinha.nos if no not in buraco]
                 }
         if face is not None and porta.lugar in fora:
             fora.remove(porta.lugar)
@@ -1376,7 +1376,7 @@ def ensinar_a_entrada(
 ) -> Recibo:
     """ENSINAR: o nó em que o aparelho ``caminho`` está agora passa a ser da ``numero``.
 
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). Ela pega o aparelho
+    O-MAPA-QUE-O-USUARIO-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). Ela pega o aparelho
     que o mapa vê «fora do mapa» e clica a entrada em que ele está. Até aqui a
     página guardava isso só na memória, e a releitura o mostrava pendente de
     novo. É a cura universal da pista que o firmware não liga: os nós vêm da
@@ -1405,11 +1405,11 @@ def ensinar_a_entrada(
             raise ValueError(RECUSA_O_APARELHO_JA_TEM_ENTRADA)
         if outra != numero and caminho_da_porta(porta) in onde_mora - {""}:
             raise ValueError(RECUSA_O_APARELHO_JA_TEM_ENTRADA)
-    dela = mapa.portas.get(numero) or PortaDeclarada()
+    vizinha = mapa.portas.get(numero) or PortaDeclarada()
     plugados = {e.no: e.aparelho for e in lidos if e.aparelho}
-    if any(plugados.get(no) for no in set(dela.nos) - set(novos)):
+    if any(plugados.get(no) for no in set(vizinha.nos) - set(novos)):
         raise ValueError(RECUSA_A_ENTRADA_OCUPADA)
-    nos = list(dict.fromkeys([*dela.nos, *novos]))
+    nos = list(dict.fromkeys([*vizinha.nos, *novos]))
     try:
         PortaDeclarada(nos=nos)
     except ValueError:
@@ -1430,8 +1430,8 @@ def _o_buraco(porta: PortaDeclarada | None) -> dict[str, Any]:
 
 def _a_ponta_de(mapa: MapaDaMesa, ponta: str, numero: str) -> PortaDeclarada | None:
     """A entrada-filha ``ponta`` do extensor da ``numero``, ou ``None``."""
-    dela = mapa.portas.get(ponta)
-    return dela if dela is not None and dela.filha_de == numero else None
+    vizinha = mapa.portas.get(ponta)
+    return vizinha if vizinha is not None and vizinha.filha_de == numero else None
 
 
 def _a_ponta_inteira(ponta: PortaDeclarada | None, filha_de: str) -> dict[str, Any]:
@@ -1452,7 +1452,7 @@ def dar_nome_a_entrada(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """O nome que ela dá à entrada ``numero`` — O-MAPA-QUE-ELA-CORRIGE-01."""
+    """O nome que ela dá à entrada ``numero`` — O-MAPA-QUE-O-USUARIO-CORRIGE-01."""
     vale = _o_nome_que_grava(numero, nome or "")
     return _declarar_na_entrada(numero, {"nome": vale}, maquina=maquina, gravar=gravar)
 
@@ -1474,15 +1474,15 @@ def _declarar_na_entrada(
     else:
         raise ValueError(f"o número {numero!r} não está no mapa desta máquina")
     ponta = ponta_do_extensor(numero)
-    dela = mapa.portas.get(ponta) if ponta else None
+    vizinha = mapa.portas.get(ponta) if ponta else None
     if (
         ponta
         and "extensor" in campos
         and campos["extensor"] is None
-        and dela is not None
-        and dela.filha_de == numero
-        and not dela.lugar
-        and not dela.nos
+        and vizinha is not None
+        and vizinha.filha_de == numero
+        and not vizinha.lugar
+        and not vizinha.nos
     ):
         declaracao[ponta] = {"filha_de": None, "liga": None, "extensor": None, "usb": None}
     recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": declaracao}})
@@ -1518,10 +1518,9 @@ class Pendencia:
 def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     """``nome da face -> Pendencia`` de cada face que pende de uma entrada.
 
-    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA): identificar onde fica o hub. Uma
-    função pura sobre o ``mapa`` do disco:
-    lê o que o Mapear gravou (os caminhos e os nós), e por isso vale com o hub
-    desplugado e em qualquer máquina. <!-- noqa-acento: citação literal -->
+    O-MAPA-QUE-O-USUARIO-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA): identificar onde fica o hub.
+    Uma função pura sobre o ``mapa`` do disco: lê o que o Mapear gravou (os caminhos e os nós), e
+    por isso vale com o hub desplugado e em qualquer máquina. <!-- noqa-acento: citação literal -->
 
     PELO BARRAMENTO, a face F pende da entrada E quando E não está em F, toda
     entrada de F que tem pontos DESCE de E (um ponto dela é um caminho de E, ou
@@ -1559,10 +1558,10 @@ def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     saida: dict[str, Pendencia] = {}
     for face in mapa.faces:
         if face.nome in pelo_nome:
-            dela = pelo_nome[face.nome]
+            vizinha = pelo_nome[face.nome]
             lida = pelo_barramento.get(face.nome)
             saida[face.nome] = Pendencia(
-                dela, lida if lida not in (None, dela) else None, True, lida)
+                vizinha, lida if lida not in (None, vizinha) else None, True, lida)
     lidas_sem_hub = [
         nome for nome, lida in pelo_barramento.items()
         if nome not in saida and lida not in declarados
@@ -1856,7 +1855,7 @@ def ler_o_mapa(
     if adaptadores is None:
         adaptadores = _adaptadores_do_sistema(raiz_bt)
     sem_porta = sum(1 for a in adaptadores if not str(getattr(a, "no", "") or ""))
-    dela = tuple(
+    vizinha = tuple(
         dict.fromkeys(
             [f.nome for f in documento.mapa.faces if f.nome not in LUGARES_DA_PORTA]
             + list(faces_dos_hubs(documento.mapa).values())
@@ -1865,7 +1864,7 @@ def ler_o_mapa(
     return MapaDasPortas(
         portas=tuple(portas),
         bluetooth_sem_porta=sem_porta,
-        lugares=LUGARES_DA_PORTA + dela,
+        lugares=LUGARES_DA_PORTA + vizinha,
     )
 
 

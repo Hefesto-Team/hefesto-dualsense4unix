@@ -42,7 +42,7 @@ def test_sem_estilo_o_motor_fica_desligado() -> None:
     assert tv.receita_do_perfil(_perfil(estilo="personalizado")) == tv.DESLIGADA
 
 
-def test_o_desvio_da_bancada_sobrepoe_so_o_seu_campo() -> None:
+def test_o_desvio_do_ensaio_sobrepoe_so_o_seu_campo() -> None:
     do_estilo = tv.receita_do_perfil(_perfil(estilo="fps"))
     com_desvio = tv.receita_do_perfil(
         _perfil(estilo="fps", receita_do_tato={"som_no_controle": True}))

@@ -110,7 +110,7 @@ def _o_c_do_hidapi(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-class _Bancada:
+class _Ensaio:
     """O laço de verdade num handle, com relógio e evento de mentira e a lista das escritas."""
 
     def __init__(
@@ -164,7 +164,7 @@ def test_a_vibracao_no_cabo_sai_na_hora_com_quatro_controles(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Quatro no cabo: o sono antigo era 32 ms; a escrita nova sai em até 2 ms."""
-    banca = _Bancada(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
+    banca = _Ensaio(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
     banca.mexer_o_motor_em(1.010, 200)
 
     banca.rodar_ate(1.5)
@@ -177,7 +177,7 @@ def test_a_volta_nao_dorme_o_sono_inteiro_quando_a_saida_muda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A espera é o prazo da volta COMO TETO; uma mudança a interrompe."""
-    banca = _Bancada(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
+    banca = _Ensaio(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
     banca.mexer_o_motor_em(1.003, 200)
 
     banca.rodar_ate(1.2)
@@ -191,7 +191,7 @@ def test_sem_mudanca_o_keepalive_segue_no_ritmo_de_sempre(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ocioso, a volta continua escrevendo o report igual a cada `OUT_REPORT_KEEPALIVE_SEC`."""
-    banca = _Bancada(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
+    banca = _Ensaio(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
 
     banca.rodar_ate(1.9)
 
@@ -208,7 +208,7 @@ def test_no_radio_o_intervalo_entre_escritas_continua_o_de_hoje(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Quatro no rádio num adaptador: duas mudanças coladas saem separadas por >= 32 ms."""
-    banca = _Bancada(monkeypatch, throttle=0.032, piso=0.032)
+    banca = _Ensaio(monkeypatch, throttle=0.032, piso=0.032)
     banca.mexer_o_motor_em(1.010, 200)
     banca.mexer_o_motor_em(1.011, 201)
     banca.mexer_o_motor_em(1.012, 202)
@@ -226,7 +226,7 @@ def test_a_mudanca_dentro_do_piso_do_cabo_e_adiada_e_nao_perdida(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Duas mudanças com 1 ms de distância no cabo: a segunda sai quando o piso passa."""
-    banca = _Bancada(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
+    banca = _Ensaio(monkeypatch, throttle=0.032, piso=bp.PISO_DE_ESCRITA_DO_CABO_SEC)
     banca.mexer_o_motor_em(1.010, 200)
     banca.mexer_o_motor_em(1.011, 201)
 
@@ -242,7 +242,7 @@ def test_handle_sem_evento_dorme_o_prazo_de_antes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O dublê por `__new__` não tem Event nem piso: o laço é o de sempre."""
-    banca = _Bancada(monkeypatch, throttle=0.032, piso=0.0)
+    banca = _Ensaio(monkeypatch, throttle=0.032, piso=0.0)
     banca.inst._acordar = None
     dormidos: list[float] = []
 

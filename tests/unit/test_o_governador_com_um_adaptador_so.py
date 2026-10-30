@@ -142,7 +142,7 @@ def test_sem_amostra_a_terceira_espera_a_medida_e_nao_sobe_alem_do_limite() -> N
     assert (recusa.motivo, recusa.vagas) == (gov.MOTIVO_CHEIO, (ADAPTADOR_B,))
 
 
-def test_com_so_o_adaptador_dela_na_amostra_vale_a_r4_medida() -> None:
+def test_com_so_o_adaptador_do_usuario_na_amostra_vale_a_r4_medida() -> None:
     """Uma janela medida com só o A: aí sim, «não há vaga em outro adaptador»."""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(_MedidorDaMesa({ADAPTADOR_A: ""}), relogio, registro)
@@ -247,7 +247,7 @@ def test_o_medidor_que_sempre_falha_cede_a_r4_no_teto_e_o_diario_diz_nao_sei() -
     assert volta.acordou == [CONTROLE_3], "o teto passou e ninguém acordou a volta"
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
     assert isinstance(vaga, gov.Vaga), "passado o teto, a ponte seguiu esperando"
-    assert vaga.alem_do_limite is True and vaga.por_escolha_dela is False
+    assert vaga.alem_do_limite is True and vaga.por_escolha_do_usuario is False
     vaga.subiu("som")
     [subida] = [e for e in registro.de(diario.PONTE_SUBIU) if e["controle"] == CONTROLE_3]
     assert subida["por_que"] == "não sei se há vaga em outro adaptador"

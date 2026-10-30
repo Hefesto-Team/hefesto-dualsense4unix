@@ -1,4 +1,5 @@
-"""O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01: o cartão do externo lê a declaração do usuário.
+"""O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01: o cartão do externo lê a declaração do
+usuário.
 
 As respostas de 06/10/2026: os glifos das outras abas seguem o `controles.modo` e o
 `controles.botoes` do controle externo, e a `controles.cor` dele aparece em tudo. O fio
@@ -52,7 +53,7 @@ def _ctx(*externos: dict[str, Any]) -> Contexto:
                     externos=list(externos))
 
 
-def _ela(monkeypatch: pytest.MonkeyPatch, **campos: Any) -> None:
+def _o_usuario(monkeypatch: pytest.MonkeyPatch, **campos: Any) -> None:
     """O `maquina.json` do usuário, lido pelo ponto em que a mesa o lê."""
     declaracao = MaquinaConfig.model_validate({"controles": {CHAVE: campos}})
     from hefesto_dualsense4unix.interface import mesa_viva
@@ -77,18 +78,18 @@ def _letras(html: str) -> str:
     ({"modo": "xinput"}, "A B X Y"),
     ({"botoes": "xbox", "modo": "switch"}, "A B X Y"),
 ])
-def test_os_dois_cartoes_mostram_a_familia_dos_botoes_que_ela_declarou(
+def test_os_dois_cartoes_mostram_a_familia_dos_botoes_que_o_usuario_declarou(
         monkeypatch: pytest.MonkeyPatch, campos: dict, letras: str) -> None:
-    _ela(monkeypatch, **campos)
+    _o_usuario(monkeypatch, **campos)
     for html in _dos_dois(_externo()):
         assert _letras(html) == letras, html
 
 
-def test_os_dois_cartoes_pintam_a_borda_com_a_cor_que_ela_declarou(
+def test_os_dois_cartoes_pintam_a_borda_com_a_cor_que_o_usuario_declarou(
         monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.interface import mesa_viva
 
-    _ela(monkeypatch, cor="Cosmic Red")
+    _o_usuario(monkeypatch, cor="Cosmic Red")
     cor = cor_do_nome("Cosmic Red")
     assert cor is not None
     slug, _ = mesa_viva.CORES[cor.codigo]
@@ -104,19 +105,19 @@ def test_os_dois_cartoes_pintam_a_borda_com_a_cor_que_ela_declarou(
     {"modo": "dinput"},
     {"cor": "Rosa choque da minha tia"},
 ])
-def test_o_que_ela_nao_declarou_nao_desenha_nada(
+def test_o_que_o_usuario_nao_declarou_nao_desenha_nada(
         monkeypatch: pytest.MonkeyPatch, campos: dict) -> None:
     """Sem declaração, sem família ou sem cor que o mapa conheça: o cartão de sempre."""
-    _ela(monkeypatch, **campos)
+    _o_usuario(monkeypatch, **campos)
     for html in _dos_dois(_externo()):
         assert "border-color" not in html
         assert "ext-botoes" not in html
         assert "style=" not in html
 
 
-def test_a_declaracao_e_do_controle_dela_e_nao_do_vizinho(
+def test_a_declaracao_e_do_controle_do_usuario_e_nao_do_vizinho(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    _ela(monkeypatch, botoes="nintendo", cor="Cosmic Red")
+    _o_usuario(monkeypatch, botoes="nintendo", cor="Cosmic Red")
     vizinho = _externo(uniq="aa:bb:cc:00:00:32", slot=4)
     jogar_html, conexoes_html = _dos_dois(_externo(), vizinho)
     for html in (jogar_html, conexoes_html):
@@ -129,7 +130,7 @@ def test_a_declaracao_e_do_controle_dela_e_nao_do_vizinho(
 def test_cabo_e_radio_de_um_a_quatro_jogadores(
         monkeypatch: pytest.MonkeyPatch, bus: str, slot: int) -> None:
     """A declaração é do controle, não do transporte nem do número do jogador."""
-    _ela(monkeypatch, botoes="nintendo", cor="Cosmic Red")
+    _o_usuario(monkeypatch, botoes="nintendo", cor="Cosmic Red")
     for html in _dos_dois(_externo(bus=bus, slot=slot)):
         assert _letras(html) == "B A Y X"
         assert "border-color" in html
@@ -138,7 +139,7 @@ def test_cabo_e_radio_de_um_a_quatro_jogadores(
 def test_sem_endereco_fixo_nao_ha_onde_ter_declaracao(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """MAC forjado (`02:…`) ou ausente não tem chave no `maquina.json`: vazio, sem erro."""
-    _ela(monkeypatch, botoes="nintendo", cor="Cosmic Red")
+    _o_usuario(monkeypatch, botoes="nintendo", cor="Cosmic Red")
     for entrada in (_externo(uniq="02:fe:00:00:00:31"), _externo(uniq="")):
         for html in _dos_dois(entrada):
             assert "ext-botoes" not in html and "border-color" not in html
@@ -146,7 +147,7 @@ def test_sem_endereco_fixo_nao_ha_onde_ter_declaracao(
 
 def test_o_identity_do_daemon_manda_na_chave(monkeypatch: pytest.MonkeyPatch) -> None:
     """`chave_de_maquina` usa o `identity` quando o daemon o carimbou (o dono é ele)."""
-    _ela(monkeypatch, botoes="xbox")
+    _o_usuario(monkeypatch, botoes="xbox")
     com_identity = _externo(uniq="aa:bb:cc:00:00:99", identity="aa:bb:cc:00:00:31")
     for html in _dos_dois(com_identity):
         assert _letras(html) == "A B X Y"
@@ -156,14 +157,14 @@ def test_o_cartao_e_a_mesa_leem_a_mesma_fonte(monkeypatch: pytest.MonkeyPatch) -
     """O que a mesa dá a um DualSense com esta declaração é o que o cartão do externo mostra."""
     from hefesto_dualsense4unix.interface import mesa_viva
 
-    _ela(monkeypatch, botoes="nintendo", cor="Cosmic Red")
+    _o_usuario(monkeypatch, botoes="nintendo", cor="Cosmic Red")
     (item,) = mesa_viva.mesa_do_estado(
         {"controllers": [{"uniq": "aa:bb:cc:00:00:31", "connected": True,
                           "transport": "usb", "player_slot": 1}]}, {})
-    ela = conexoes.a_declaracao_do_externo(_externo())
-    assert ela["botoes"] == item["botoes"] == "nintendo"
-    assert ela["cor"] == conexoes._hex_do_plastico(item["cor"])
-    assert ela["cor_nome"] == item["nome"]
+    a_declaracao = conexoes.a_declaracao_do_externo(_externo())
+    assert a_declaracao["botoes"] == item["botoes"] == "nintendo"
+    assert a_declaracao["cor"] == conexoes._hex_do_plastico(item["cor"])
+    assert a_declaracao["cor_nome"] == item["nome"]
 
 
 def test_a_familia_declarada_vale_tambem_para_o_dualsense(
@@ -174,7 +175,7 @@ def test_a_familia_declarada_vale_tambem_para_o_dualsense(
     """
     from hefesto_dualsense4unix.interface import mesa_viva
 
-    _ela(monkeypatch, botoes="nintendo")
+    _o_usuario(monkeypatch, botoes="nintendo")
     (item,) = mesa_viva.mesa_do_estado(
         {"controllers": [{"uniq": "aa:bb:cc:00:00:31", "connected": True,
                           "transport": "usb", "player_slot": 1}]}, {})
@@ -183,7 +184,7 @@ def test_a_familia_declarada_vale_tambem_para_o_dualsense(
 
 def test_o_cartao_nao_chama_o_externo_de_assento(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ganhar cor e botões não é virar `.cartao` nem ganhar `data-controle`."""
-    _ela(monkeypatch, botoes="nintendo", cor="Cosmic Red")
+    _o_usuario(monkeypatch, botoes="nintendo", cor="Cosmic Red")
     for html in _dos_dois(_externo()):
         assert 'class="cartao' not in html and "data-controle" not in html
         assert "data-colorway" not in html and "--plastico" not in html
@@ -219,8 +220,8 @@ def test_so_a_conexoes_tem_as_listas_e_so_com_endereco_fixo() -> None:
     assert "data-gesto" not in sem_chave
 
 
-def test_as_listas_mostram_o_que_ela_declarou(monkeypatch: pytest.MonkeyPatch) -> None:
-    _ela(monkeypatch, modo="switch", botoes="nintendo", cor="Cosmic Red")
+def test_as_listas_mostram_o_que_o_usuario_declarou(monkeypatch: pytest.MonkeyPatch) -> None:
+    _o_usuario(monkeypatch, modo="switch", botoes="nintendo", cor="Cosmic Red")
     html = conexoes._html_dos_externos(_ctx(_externo()))
     assert re.search(r'<option value="switch" selected>', _lista(html, "externo-modo"))
     assert re.search(r'<option value="nintendo" selected>B A Y X<',
@@ -229,7 +230,7 @@ def test_as_listas_mostram_o_que_ela_declarou(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_sem_declaracao_a_primeira_opcao_e_nao_sei(monkeypatch: pytest.MonkeyPatch) -> None:
-    _ela(monkeypatch)
+    _o_usuario(monkeypatch)
     html = conexoes._html_dos_externos(_ctx(_externo()))
     for gesto in GESTOS:
         lista = _lista(html, gesto)
@@ -244,7 +245,7 @@ def test_a_lista_da_chave_nao_se_chama_modo(monkeypatch: pytest.MonkeyPatch) -> 
 
     Decisão: D-0810-A-LISTA-DA-CHAVE-SE-CHAMA-CHAVE.
     """
-    _ela(monkeypatch)
+    _o_usuario(monkeypatch)
     lista = _lista(conexoes._html_dos_externos(_ctx(_externo())), "externo-modo")
     assert '<option value="" selected>Chave</option>' in lista
     assert ">Modo<" not in lista
@@ -252,7 +253,7 @@ def test_a_lista_da_chave_nao_se_chama_modo(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_a_cor_fora_do_mapa_continua_na_lista(monkeypatch: pytest.MonkeyPatch) -> None:
     """Uma cor que o mapa não conhece não some nem é trocada em silêncio."""
-    _ela(monkeypatch, cor="Rosa choque da minha tia")
+    _o_usuario(monkeypatch, cor="Rosa choque da minha tia")
     lista = _lista(conexoes._html_dos_externos(_ctx(_externo())), "externo-cor")
     assert 'value="Rosa choque da minha tia" selected' in lista
 
@@ -307,7 +308,7 @@ def test_clique_solto_ou_controle_que_sumiu_recusa_sem_gravar(gesto: str) -> Non
     assert ponte.chamadas == []
 
 
-def test_o_daemon_que_recusa_chega_a_ela_com_o_motivo() -> None:
+def test_o_daemon_que_recusa_chega_ao_usuario_com_o_motivo() -> None:
     fn = gesto_da_pagina(conexoes.PAGINA, "externo-botoes")
     with pytest.raises(RuntimeError, match="sem serviço"):
         fn(_ctx(_externo()), {"externo": "aa:bb:cc:00:00:31", "valor": "xbox"},
@@ -327,7 +328,7 @@ def test_o_que_a_lista_grava_o_cartao_mostra(monkeypatch: pytest.MonkeyPatch) ->
         _ctx(_externo()), {"externo": "aa:bb:cc:00:00:31", "valor": "nintendo"}, _Dono())
     gesto_da_pagina(conexoes.PAGINA, "externo-cor")(
         _ctx(_externo()), {"externo": "aa:bb:cc:00:00:31", "valor": "Cosmic Red"}, _Dono())
-    _ela(monkeypatch, **gravado)
+    _o_usuario(monkeypatch, **gravado)
     html = conexoes._html_dos_externos(_ctx(_externo()))
     assert _letras(html) == "B A Y X"
     assert "border-color" in html

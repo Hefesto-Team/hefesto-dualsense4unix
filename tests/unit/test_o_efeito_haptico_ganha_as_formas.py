@@ -74,7 +74,7 @@ def test_nenhuma_forma_passa_do_teto_e_todas_terminam_em_zero(chave: str, energi
     assert abs(onda[-1]) < 1e-6
 
 
-def test_a_energia_fora_da_faixa_e_trazida_para_ela() -> None:
+def test_a_energia_fora_da_faixa_e_trazida_para_o_usuario() -> None:
     assert max(abs(x) for x in fh.amostras(fh.IMPACTO, 7.0)) <= 1.0 + 1e-6
     assert max(abs(x) for x in fh.amostras(fh.IMPACTO, -1.0)) == 0.0
 

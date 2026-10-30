@@ -139,7 +139,7 @@ def test_o_eixo_parado_chega_com_a_posicao_real_e_nao_com_128() -> None:
     )
 
 
-def test_os_quatro_eixos_do_stick_chegam_com_a_medida_da_bancada() -> None:
+def test_os_quatro_eixos_do_stick_chegam_com_a_medida_do_ensaio() -> None:
     """Os quatro daquela unidade, não só o que estava longe do centro."""
     reader = _reader_aberto_em(_caps_dualsense())
     snap = reader.snapshot()

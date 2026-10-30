@@ -261,7 +261,7 @@ puxava o endereço para o buffer, e o laço esperava 60 s por uma linha já lida
 **Aviso que a sprint deve a ela.** O `interface.sh` foi pedido por ela em
 29/08, para clicar na raiz; a frase de 27/09 não o nomeia. Depois do merge,
 quem abre na tela é o menu, a dock ou `HEFESTO_NA_TELA=1 ./run.sh --gui`; o
-`./run.sh` sozinho abre numa tela invisível, pela guarda `TELA-DELA-02`. Entre
+`./run.sh` sozinho abre numa tela invisível, pela guarda `TELA-DO-USUARIO-02`. Entre
 o merge e o install, o atalho do menu e o «Abrir painel» da bandeja apontam
 para um arquivo que não existe: o install tem de rodar no mesmo fecho.
 

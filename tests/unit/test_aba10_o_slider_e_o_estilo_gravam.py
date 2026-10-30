@@ -89,7 +89,7 @@ def _ctx(mesa: list[dict[str, Any]] | None = None) -> Contexto:
                     conectados=list(tem), estados={})
 
 
-def _bancada() -> str:
+def _ensaio() -> str:
     return onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
 
 
@@ -98,7 +98,7 @@ def test_a_prioridade_saiu_da_pagina_e_a_faixa_segue_do_esquema() -> None:
 
     MORDIDA: devolva o `<input type="range">` ao gerador e isto reprova.
     """
-    html = _bancada()
+    html = _ensaio()
     assert 'type="range"' not in html and "editor.prioridade" not in html, (
         "a Prioridade voltou à página: quem manda é a ordem arrastada (`editor.ordem`)")
     assert (PRIORIDADE_MINIMA, PRIORIDADE_MAXIMA) == (0, 200)
@@ -109,9 +109,9 @@ def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
 
     Com o trilho da Prioridade fora da página restam os dois campos de texto e o select do estilo,
     que se pinta só quando outro perfil abre (pintar a cada tique reaplicaria a receita).
-    MORDIDA: tire ``editor.jogo`` de ``CAMPOS_QUE_ELA_DIGITA`` e isto reprova.
+    MORDIDA: tire ``editor.jogo`` de ``CAMPOS_QUE_O_USUARIO_DIGITA`` e isto reprova.
     """
-    assert set(a10_perfis.CAMPOS_QUE_ELA_DIGITA) == {
+    assert set(a10_perfis.CAMPOS_QUE_O_USUARIO_DIGITA) == {
         "editor.jogo", "editor.evento.comando", "editor.estilo"}
 
 
@@ -120,7 +120,7 @@ def test_o_select_oferece_o_que_o_motor_sabe_aplicar() -> None:
 
     O estilo que só uma extensão pede fica fora do desenho; o pacote o acrescenta com ela.
     """
-    html = _bancada()
+    html = _ensaio()
     fora = [e.rotulo for e in estilos_de_jogo.estilos_a_vista()
             if f">{e.rotulo}</option>" not in html]
     assert not fora, f"o motor conhece e o `<select>` não oferece: {fora}"

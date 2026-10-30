@@ -55,7 +55,7 @@ COMO SE LÊ O RESULTADO
 ----------------------
 Quem lê é o olho de quem confere: o registrador **não tem caminho de leitura** no
 firmware. O instrumento imprime o que está MANDANDO e espera; ela diz o que a
-luz fez. É por isso que a linha do mapa vai nascer `provado_por = olho-dela`, e
+luz fez. É por isso que a linha do mapa vai nascer `provado_por = olho-do-usuario`, e
 nunca `bancada`.
 
     scripts/ensaios/nivel_do_led_do_mic.py             # a escada padrão

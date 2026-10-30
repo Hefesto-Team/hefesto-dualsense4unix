@@ -132,7 +132,7 @@ BLOCOS_PRESERVADOS_ADR_011: tuple[tuple[int, int, str], ...] = (
     (0x25A0, 0x25FF, "Geometric Shapes"),
 )
 
-EXCECOES_DELA: dict[int, str] = {
+EXCECOES_DO_USUARIO: dict[int, str] = {
     0x1F3AE: "o som do JOGO, na fileira de saída do cartão do controle",
     0x1F4FA: "a TV, na fileira de saída do cartão do controle",
     0x1F50A: "o alto-falante do controle, na fileira de saída",
@@ -140,9 +140,9 @@ EXCECOES_DELA: dict[int, str] = {
 }
 
 
-def excecao_dela(cp: int) -> tuple[bool, str]:
+def excecao_do_usuario(cp: int) -> tuple[bool, str]:
     """True se ``cp`` é uma das exceções que o usuário nomeou, com o papel dele."""
-    papel = EXCECOES_DELA.get(cp)
+    papel = EXCECOES_DO_USUARIO.get(cp)
     return (papel is not None), (papel or "")
 
 
@@ -172,7 +172,7 @@ def e_proibido(cp: int) -> bool:
         return False
     if cp == VARIATION_SELECTOR_16:
         return True
-    if excecao_dela(cp)[0]:
+    if excecao_do_usuario(cp)[0]:
         return False
     return tem_apresentacao_emoji(cp)
 

@@ -244,7 +244,7 @@ def test_gesto_manual_na_mascara_esquece_a_divergencia(daemon: Any) -> None:
     assert daemon._mascara_adiada_por_jogo is None
 
 
-def test_ela_ativando_o_perfil_na_mao_troca_a_mascara_com_jogo_aberto(
+def test_o_usuario_ativando_o_perfil_na_mao_troca_a_mascara_com_jogo_aberto(
     daemon: Any,
 ) -> None:
     """`origin="manual"` na ativação = `profile.switch` da GUI/applet ou o
@@ -280,7 +280,7 @@ def test_o_gesto_de_perfil_nao_grava_preferencia_nem_promove_backend(
     daemon.apply_profile_mode(perfil.mode, profile=perfil, origin="manual")
 
     assert gravou == [], "a máscara do perfil não é a preferência dela"
-    assert "gesto_de_perfil" in gamepad_mod.ORIGENS_GESTO_DELA
+    assert "gesto_de_perfil" in gamepad_mod.ORIGENS_GESTO_DO_USUARIO
     assert gamepad_mod._deve_promover_backend(
         daemon, _FakePad("dualsense"), "dualsense", "gesto_de_perfil"
     ) is False

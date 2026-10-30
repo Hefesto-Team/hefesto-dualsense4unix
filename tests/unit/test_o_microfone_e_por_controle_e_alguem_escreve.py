@@ -35,7 +35,7 @@ AS MORDIDAS, EXERCIDAS EM 23/08/2026 — a saída real está no relatório da le
    `lifecycle.run()`. Reprovou `test_o_run_fia_a_fonte_no_maquina_json`: o campo
    volta a `None` e o defeito-mãe está de volta, com todo o resto verde.
 2. **`alvos()` devolvendo `list(nos)` sem filtrar.** Reprovou
-   `test_so_o_controle_que_ela_ligou_ganha_ponte` com os quatro `uniq` na lista
+   `test_so_o_controle_que_o_usuario_ligou_ganha_ponte` com os quatro `uniq` na lista
    — ligar UM microfone ligaria os quatro, que é o oposto da decisão de produto.
 3. **`"uniqs": com_ponte` fora do bloco do `state_full`.** Reprovou
    `test_o_state_full_diz_de_quais_controles_a_ponte_subiu`, e é a régua cega
@@ -202,7 +202,7 @@ class TestOGate:
 
 
 class TestPorControle:
-    def test_so_o_controle_que_ela_desligou_fica_sem_ponte(self) -> None:
+    def test_so_o_controle_que_o_usuario_desligou_fica_sem_ponte(self) -> None:
         """A decisão de produto, exercida contra a mesa cheia — pelo outro lado.
 
         **O SENTIDO VIROU EM 18/09/2026, o TESTE não.** Esta régua sempre
@@ -267,7 +267,7 @@ class TestPorControle:
 
 
 class TestOQueOProdutoRelata:
-    def test_a_ponte_relatada_e_a_que_subiu_e_nao_a_que_ela_pediu(self) -> None:
+    def test_a_ponte_relatada_e_a_que_subiu_e_nao_a_que_o_usuario_pediu(self) -> None:
         """Uma ponte pedida que não subiu não ocupa fatia de rádio nenhuma."""
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_uniqs=lambda: frozenset({UM, DOIS}))

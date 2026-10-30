@@ -355,7 +355,7 @@ LISTAS = {
 }
 
 
-def test_na_mesa_dela_so_a_pergunta_do_install_responde_um_canal(tmp_path: Path) -> None:
+def test_na_mesa_do_usuario_so_a_pergunta_do_install_responde_um_canal(tmp_path: Path) -> None:
     """O script e o doctor de verdade, sobre a lista de 29/09."""
     fontes = LISTAS["a-mesa-de-29-09"]
     assert _script_de_verdade(tmp_path, fontes, "--melhor-fonte-elegivel") == _canal(VERMELHO)

@@ -232,7 +232,7 @@ class TestOOuvidoSabeDaFrente:
         monkeypatch.setattr(af, "OUVIDO", novo)
         return novo
 
-    def test_a_frente_acende_a_chave_dela_e_nao_a_dos_motores(self, ouvido: Any) -> None:
+    def test_a_frente_acende_a_chave_do_usuario_e_nao_a_dos_motores(self, ouvido: Any) -> None:
         ler = af.fonte_que_ouve(_fonte([FRENTE]), "endpoint::x", canais=af.CANAIS_DA_HAPTICA)
         assert ler(len(FRENTE))
         assert ouvido.tem_sinal(af.no_da_frente("endpoint::x")) is True

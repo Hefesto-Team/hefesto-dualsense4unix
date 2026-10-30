@@ -499,7 +499,7 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
     daemon._teclado_sempre = bool(getattr(profile, "teclado_sempre", None))
 
 
-def _suspenso_por_ela(daemon: Any) -> bool:
+def _suspenso_pelo_usuario(daemon: Any) -> bool:
     """A emulação está suspensa por gesto do usuário (e não pelo perfil do jogo)?"""
     return bool(getattr(daemon, "_emulation_suppressed", False)) and not bool(
         getattr(daemon, "_suppress_from_profile", False))
@@ -526,7 +526,7 @@ def despachar_no_jogo(
     if no_jogo:
         _soltar_o_travado(getattr(daemon, "_mouse_device", None))
         soltar_as_teclas_do_analogico(daemon)
-    if no_jogo and _suspenso_por_ela(daemon):
+    if no_jogo and _suspenso_pelo_usuario(daemon):
         no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)
     so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False)) or bool(
