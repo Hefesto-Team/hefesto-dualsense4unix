@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""A BANCADA DE BT — o degrau 0.9.5, medido por leitura de arquivo.
+"""O ENSAIO DE BT — o degrau 0.9.5, medido por leitura de arquivo.
 
 ELE NASCEU EM 01/09/2026, e a escada de releases o previa pelo nome:
 o registro «A-ESCADA-DE-RELEASES» de 24/08/2026, seção *0.9.5 — o rádio para
 de mentir*, declarava *"arquivo a nascer: `scripts/check_ensaio_de_bt.py`"*.
-Sem ele, o degrau dela não tinha como ser conferido por ninguém — só descrito.
+Sem ele, o degrau não tinha como ser conferido por ninguém — só descrito.
 
-O DEGRAU É DO USUÁRIO, na palavra de produto: *"quando terminarmos a bancada do specs em
-bt"*. E o que ele exige NÃO é construir canal nenhum. A escada é explícita:
+O DEGRAU É DE PRODUTO: terminar o ensaio do specs em BT. E o que ele exige NÃO é construir canal nenhum. A escada é explícita:
 
     "Este degrau não manda construir canal nenhum — manda PARAR DE AFIRMAR o que
      não se mediu. Preencher `radio_por_que_nao_aciona` com `decisao-tomada`
@@ -24,14 +23,14 @@ AS QUATRO RÉGUAS, e cada uma sai da tabela da escada:
     R3  das SETE perguntas de rádio do usuário, quantas seguem sem medição
     R4  ensaio de rádio no caderno sem o `degrau` preenchido
 
-A QUINTA É DE BANCADA E NÃO ENTRA AQUI: `ls /sys/class/bluetooth/` devolvendo
+A QUINTA É DE ENSAIO NO APARELHO E NÃO ENTRA AQUI: `ls /sys/class/bluetooth/` devolvendo
 três adaptadores, e um ensaio com quatro DualSense simultâneos no rádio
-observado por ela. Nenhum arquivo responde isso, e fingir que responde seria a
+observado por quem usa. Nenhum arquivo responde isso, e fingir que responde seria a
 doença que este degrau existe para curar.
 
 O CORTE É `controle == dualsense`, pela decisão **D-J**: cobertura de aparelho
-que ela não tem na mesa é assunto da 1.0. `--todos` tira o corte, para o dia em
-que ela decidir o contrário.
+que a máquina de teste não tem é assunto da 1.0. `--todos` tira o corte, para o dia
+da decisão contrária.
 """
 from __future__ import annotations
 
@@ -133,12 +132,12 @@ def main() -> int:
     reguas = (
         ("R1", "admite não acionar por rádio e não nomeia a culpa", r1(pecas)),
         ("R2", "afirma acionar por rádio e não foi medido", r2(pecas)),
-        ("R3", "pergunta de rádio dela com peça da família por medir", r3(pecas)),
+        ("R3", "pergunta de rádio do usuário com peça da família por medir", r3(pecas)),
         ("R4", "ensaio de rádio sem o degrau preenchido", r4(ensaios)),
     )
 
     alvo = "todos os controles" if args.todos else "DualSense (corte da D-J)"
-    print(f"bancada de BT — {len(pecas)} peças de {alvo}, {len(ensaios)} ensaios\n")
+    print(f"ensaio de BT — {len(pecas)} peças de {alvo}, {len(ensaios)} ensaios\n")
     total = 0
     for nome, texto, itens in reguas:
         total += len(itens)
@@ -153,17 +152,17 @@ def main() -> int:
     print()
     if total:
         print(f"O DEGRAU 0.9.5 NÃO ESTÁ FECHADO: {total} pendência(s) nas quatro réguas.")
-        print("Elas fecham por HONESTIDADE, não por construção — a escada de")
+        print("As réguas fecham por HONESTIDADE, não por construção — a escada de")
         print("releases diz com todas as letras que este degrau *'não manda")
         print("construir canal nenhum, manda parar de afirmar o que não se mediu'*.")
         print()
         print("E A QUINTA RÉGUA NÃO ESTÁ AQUI: três adaptadores em")
         print("`/sys/class/bluetooth/` e um ensaio com quatro DualSense no rádio,")
-        print("observado por ela. Nenhum arquivo responde isso.")
+        print("observado por quem usa. Nenhum arquivo responde isso.")
         return 1
     print("As quatro réguas de arquivo estão zeradas.")
-    print("Falta a R5, que é de bancada e não se lê em arquivo: três adaptadores")
-    print("e um ensaio de quatro DualSense no rádio, com o olho dela.")
+    print("Falta a R5, que é de ensaio no aparelho e não se lê em arquivo: três adaptadores")
+    print("e um ensaio de quatro DualSense no rádio, com o olho de quem usa.")
     return 0
 
 

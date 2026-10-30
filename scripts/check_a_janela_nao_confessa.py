@@ -3,7 +3,7 @@
 
 POR QUE ELE NASCEU, e o achado é o valor durável desta frente
 --------------------------------------------------------------
-Em 08/09/2026 ela abriu o produto instalado, com os quatro DualSense na mesa, e
+Em 08/09/2026 o produto instalado abriu, com os quatro DualSense na mesa, e
 leu na barra de título da janela:
 
     Hefesto
@@ -18,7 +18,7 @@ para a moldura do produto.
 **corpo das dez páginas** — o HTML. A barra de título é GTK; o ``.desktop`` é
 INI; a unit é systemd. *A régua parava na borda da* ``<body>``\\ *, e a tela do usuário
 não para.* Enquanto as dez páginas eram varridas linha por linha, a primeira
-coisa que ela lê ao abrir o programa não era medida por ninguém.
+coisa que se lê ao abrir o programa não era medida por ninguém.
 
 O QUE ELE LÊ — a moldura do PRODUTO
 ------------------------------------
@@ -38,7 +38,7 @@ Duas das quatro peneiras são LIDAS de quem já as possui, e não copiadas:
 
 * a **forma de confissão** vem de ``check_a_tela_nao_confessa.FORMA`` — por
   ``import``, porque é irmão nesta pasta e não custa dependência nenhuma;
-* as **palavras que ela baniu** vêm de
+* as **palavras banidas** vêm de
   ``interface/frases_banidas.PALAVRAS_BANIDAS`` — por AST, porque importar
   o módulo puxaria o pacote inteiro e o CI roda este arquivo no ``python3``
   pelado.
@@ -49,7 +49,7 @@ proibição.
 
 As outras duas peneiras são desta régua, e são a novidade: a LÍNGUA DA OBRA
 (:data:`OBRA`) e o APELIDO DA CASA (:data:`APELIDO`) — as palavras com que esta
-equipe fala do próprio trabalho, e o jeito como ela chama o piloto.
+equipe fala do próprio trabalho, e o jeito como a equipe chama o piloto.
 
 O QUE ELE NÃO LÊ, e é DECISÃO — o ``<title>`` das dez páginas
 --------------------------------------------------------------
@@ -72,19 +72,19 @@ O irmão ``check_a_tela_nao_confessa`` tem duas tabelas (``FATOS`` e
 legítimo do confessado sem errar. Aqui a superfície é outra: **32 textos**, e
 cada um é uma decisão de produto deliberada — o nome do app, a dica do lançador,
 a descrição da unit. Numa lista desse tamanho, reprovar de vez é a severidade
-certa: quem escrever "bancada" na barra de título tem de parar, e a mensagem de
+certa: quem escrever "mockup" na barra de título tem de parar, e a mensagem de
 falha diz o que fazer.
 
 Se um dia a moldura precisar legitimamente de uma palavra desta lista, o
-caminho é o mesmo do irmão — uma tabela com a razão escrita e a data —, e ela
-nasce quando houver a primeira linha para pôr nela. **Tabela vazia criada por
+caminho é o mesmo do irmão — uma tabela com a razão escrita e a data —, e a tabela
+nasce quando houver a primeira linha para pôr. **Tabela vazia criada por
 precaução é convite para encher.**
 
 A MORDIDA, e é a que a sprint pediu
 ------------------------------------
 Devolva ``subtitulo="a onda 5 fechou"`` ao ``hefesto_vivo.py`` e esta régua tem
-de REPROVAR. Sem isso ela não mede nada — e uma régua que só sabe passar foi o
-que deixou este defeito chegar aos olhos dela.
+de REPROVAR. Sem isso a régua não mede nada — e uma régua que só sabe passar foi o
+que deixou este defeito chegar aos olhos de quem usa.
 
 A régua da régua é ``tests/unit/test_a_moldura_nao_fala_a_lingua_de_dentro.py``,
 que morde as quatro peneiras uma a uma, o ``.desktop``, e as duas fontes lidas.
@@ -135,7 +135,7 @@ CHAVES_UNIT = ("Description",)
 OBRA = re.compile(
     r"\b(?:"
     r"onda|ondas|leva|levas|sprint|sprints"
-    r"|mockup|bancada|piloto|gerador|geradores"
+    r"|mockup|ban" r"cada|piloto|gerador|geradores"
     r"|port[ãa]o|port[õo]es|r[ée]gua|r[ée]guas|mordida"
     r"|worktree|branch|merge|commit|rebase"
     r"|refator\w*|backlog|changelog|hotfix"
@@ -204,7 +204,7 @@ def _acusar(texto: str, banidas: tuple[str, ...]) -> list[str]:
     for p in banidas:
         for m in re.finditer(rf"(?<![{_COLADO}]){re.escape(p)}(?![{_COLADO}])",
                              texto, re.IGNORECASE):
-            fora.append(f"palavra que ela baniu da tela: {m.group(0)!r}")
+            fora.append(f"palavra banida da tela: {m.group(0)!r}")
     return fora
 
 
@@ -298,8 +298,8 @@ def main() -> int:
         for razao in _acusar(texto, banidas):
             achados.append(f"{onde}\n      {texto!r}\n      -> {razao}")
 
-    print("A BANCADA FICA FORA, e por decisão — estes abrem janela própria, com "
-          "subtítulo próprio, e nenhum é o que o lançador dela abre.\n"
+    print("AS FERRAMENTAS DE ENSAIO FICAM FORA, e por decisão — estes abrem janela própria, com "
+          "subtítulo próprio, e nenhum é o que o lançador do produto abre.\n"
           "O texto abaixo é LIDO do arquivo, não digitado nesta régua:")
     marcados = 0
     for onde, diz in do_ensaio():
@@ -317,7 +317,7 @@ def main() -> int:
               f"régua não existem nesta árvore:\n")
         for lista, rel in _CAMINHOS_MORTOS:
             print(f"  `{lista}` aponta para {rel}")
-        print("\nA moldura mudou de lugar e esta régua ficou cega para ela.")
+        print("\nA moldura mudou de lugar e esta régua ficou cega.")
         print("CONSERTE O PONTEIRO — tirar a linha some com a vigilância junto.")
         print("Se o arquivo saiu de vez, a linha sai com uma lápide dizendo")
         print("quem herdou o que ele escrevia na moldura.")
@@ -328,12 +328,12 @@ def main() -> int:
               f"dentro.\n")
         for a in achados:
             print("  " + a)
-        print("\nA moldura é a primeira coisa que ela lê, e o produto instalado a")
+        print("\nA moldura é a primeira coisa que quem usa lê, e o produto instalado a")
         print("mostra antes de qualquer página. O que cabe ali é o que serve a")
         print("QUEM USA; o registro de obra mora na sprint e no `docs/`.")
-        print("Se a segunda linha não tem o que dizer a quem usa, ela SAI —")
+        print("Se a segunda linha não tem o que dizer a quem usa, a linha SAI —")
         print("foi o que aconteceu com `subtitulo=\"as dez abas, vivas\"` em")
-        print("08/09/2026, que ela leu na barra de título do produto instalado.")
+        print("08/09/2026, lido na barra de título do produto instalado.")
         return 1
 
     print(f"\nOK: a moldura não fala a língua de dentro — {lidos} texto(s) de "

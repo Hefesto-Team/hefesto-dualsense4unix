@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""assar_transforms_svg.py — o SVG dela vira PNG igual ao que ela desenhou."""
+"""assar_transforms_svg.py — o SVG vira PNG igual ao desenhado."""
 from __future__ import annotations
 
 import re

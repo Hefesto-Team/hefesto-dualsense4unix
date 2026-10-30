@@ -8,8 +8,8 @@ Perfil», «Gestão de Controles», «Modo Automático», «Perfil de Bateria»,
 Nativo». A régua da caixa alta (`check_a_maiuscula_decorativa.py`) pega a
 palavra INTEIRA em maiúscula; esta pega a INICIAL maiúscula no meio da frase.
 
-O QUE ELA LÊ
-------------
+O QUE A RÉGUA LÊ
+----------------
 O texto que a pessoa lê nas dez abas — a leitura do produto é a de
 `frases_banidas.texto_visivel_no_produto`, com o `<style>`, o `<script>`,
 os comentários e o `<title>` do documento fora (o recorte é o da régua da caixa
@@ -281,9 +281,9 @@ def main(argv: list[str] | None = None) -> int:
     if achados or fantasmas or mortas or em_toda_palavra:
         print(f"\nREPROVADO — {len(achados)} maiúscula(s) no meio da frase em "
               f"{alvo.relative_to(RAIZ)}.\n"
-              "A regra dela (09/10/2026): só a primeira letra da frase ou do rótulo é\n"
+              "A regra de produto (09/10/2026): só a primeira letra da frase ou do rótulo é\n"
               "maiúscula. Escreva em minúscula; se for nome próprio ou marca, declare\n"
-              "na lista que tem o nome do que ela guarda, no topo desta régua.",
+              "na lista que tem o nome do que guarda, no topo desta régua.",
               file=sys.stderr)
         return 1
     print(f"OK: {len(abas)} abas e {len(mapas)} mapas de {alvo.relative_to(RAIZ)}, nenhuma maiúscula "

@@ -184,7 +184,7 @@ if command -v busctl >/dev/null 2>&1; then
         [[ -n "${TRAVA_FD}" || -z "${TRAVA_DO_RADIO}" ]] && return 0
         [[ -d "${TRAVA_DO_RADIO%/*}" ]] || return 0
         if [[ -L "${TRAVA_DO_RADIO}" ]]; then
-            log "recusando a trava do rádio: ${TRAVA_DO_RADIO} é link simbólico; sigo sem ela"
+            log "recusando a trava do rádio: ${TRAVA_DO_RADIO} é link simbólico; sigo sem a trava"
             return 0
         fi
         for fd in "/proc/$$/fd/"*; do

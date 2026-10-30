@@ -11,7 +11,7 @@ O mapa cataloga **28 modelos e 10 zonas** em ``docs/data/cores-do-dualsense.csv`
 produto usa QUATRO — os do desenho, cravados. Quem tiver um Nova Pink vê um
 Cosmic Red.
 
-AS TRÊS FAMÍLIAS, e elas são três porque o desenho crava a cor de três jeitos
+AS TRÊS FAMÍLIAS, e são três porque o desenho crava a cor de três jeitos
 --------------------------------------------------------------------------------
 ``plastico``
     Um ``--plastico:#hex`` escrito na página. É a variável que pinta a borda do
@@ -23,11 +23,11 @@ AS TRÊS FAMÍLIAS, e elas são três porque o desenho crava a cor de três jeit
 
 ``zona``
     Os ``--z-casca:#hex`` da folha embutida em cada SVG. **Aqui mora a
-    armadilha**, e ela é o oposto do que parece.
+    armadilha**, e é o oposto do que parece.
 
 O QUE **NÃO** É DÍVIDA, e confundir isto mandaria apagar o trabalho DO USUÁRIO
 ------------------------------------------------------------------------
-Um CSS que declara os 28 modelos e escolhe por seletor **é a tabela dela,
+Um CSS que declara os 28 modelos e escolhe por seletor **é a tabela do usuário,
 publicada** — é o mecanismo certo, e é o que o ``mapa-do-controle.html`` já faz.
 O que é dívida é o produto **escolher UM modelo** em vez de seguir o aparelho.
 
@@ -45,10 +45,10 @@ As outras duas famílias saem da conta quando o PRODUTO pode reescrevê-las:
 * qualquer elemento com endereço e ``data-hef-alvo="html"``, que o produto
   troca por dentro — é como um ``<style>`` de página pode ser vivo.
 
-E O BLOCO QUE O PILOTO TROCA INTEIRO: a ``.fita`` do topo. Ela não tem endereço
+E O BLOCO QUE O PILOTO TROCA INTEIRO: a ``.fita`` do topo. A fita não tem endereço
 porque não se pinta campo a campo — ``hefesto_vivo.pintar`` substitui o
 ``outerHTML`` de ``document.querySelector('.fita')`` a cada tique, com o que
-``monta.fita(mesa=…)`` monta da mesa VIVA. Contar os chips dela seria acusar
+``monta.fita(mesa=…)`` monta da mesa VIVA. Contar os chips da fita seria acusar
 exatamente a única parte da tela que já obedece à lei.
 
 O NÚMERO DE HOJE, e o portão NASCE VERMELHO
@@ -58,7 +58,7 @@ Medido em 03/09/2026 sobre as dez páginas publicadas, com estas regras:
     plastico   18      colorway   18      zona  324      TOTAL  360
 
 Sete das dez abas têm dívida; ``07-lancadores``, ``09-sistema`` e ``10-perfis``
-nascem limpas — as duas cores que elas mostram estão na ``.fita``, que o produto
+nascem limpas — as duas cores que essas abas mostram estão na ``.fita``, que o produto
 já troca inteira. A pior é a ``04-iluminacao``, com 88.
 
 Isso é correto e é o ponto: ele mede a dívida **enquanto as dez abas a fecham**.
@@ -69,15 +69,15 @@ O censo de 03/09 contou por expressão regular tudo o que se PARECE com cor
 cravada: 34 ``--plastico``, 181 ``data-colorway`` (contando as ~10 linhas de
 seletor CSS de cada SVG) e 288 hexes de zona. Este portão conta o que a lei
 proíbe: 16 dos 34 ``--plastico`` estão na ``.fita`` ou já têm o alvo
-``plastico`` (a ``05-vibracao`` curou os quatro dela), e o ``data-colorway`` de
+``plastico`` (a ``05-vibracao`` curou os seus quatro), e o ``data-colorway`` de
 uma REGRA CSS não é escolha cravada — é a tabela. Os dois números medem coisas
 diferentes e os dois estão certos sobre o que medem.
 
 **A PROVA DE QUE ELE DISTINGUE A TABELA DA ESCOLHA** está no disco, e é o
-arquivo que ela usa para ver as 28 cores clicando: ``mapa-do-controle.html``
+arquivo que se usa para ver as 28 cores clicando: ``mapa-do-controle.html``
 publica a folha inteira e sai deste portão com **zero** achados de ``zona``,
 enquanto cada folha podada das abas rende 18. Uma régua que não distinguisse os
-dois mandaria apagar o trabalho dela, que é o oposto da lei.
+dois mandaria apagar o trabalho do usuário, que é o oposto da lei.
 
 O QUE FAZER COM UM ACHADO
 --------------------------
@@ -93,7 +93,7 @@ O QUE FAZER COM UM ACHADO
     scripts/check_a_cor_vem_do_aparelho.py --censo    # só o retrato, rc=0
     scripts/check_a_cor_vem_do_aparelho.py --ensaio  # mede `mockup/`
 
-A RÉGUA IRMÃ é ``scripts/check_identidade_vem_de_cima.py``, e elas não se
+A RÉGUA IRMÃ é ``scripts/check_identidade_vem_de_cima.py``, e as duas não se
 sobrepõem: aquela acha NOME de cor e ``--plastico`` em elemento **sem endereço
 nenhum**; esta acha cor cravada mesmo onde o endereço existe — porque um
 endereço com o alvo errado não alcança a cor. Duas réguas independentes é o que
@@ -241,7 +241,7 @@ class _Varredor(HTMLParser):
                 self._folha_linha, "zona",
                 f"folha com {len(declarados)} de {len(self.colorways)} modelos "
                 f"({n} hexes de zona)",
-                f"faltam {len(faltam)} modelos do mapa dela", n)
+                f"faltam {len(faltam)} modelos do mapa", n)
 
     @staticmethod
     def _porque(alvo: str, familia: str) -> str:
@@ -301,7 +301,7 @@ def main() -> int:
     colorways = colorways_do_mapa()
     familias = ("plastico", "colorway", "zona")
     total = dict.fromkeys(familias, 0)
-    print(f"{'bancada' if args.ensaio else 'publicado':<22}"
+    print(f"{'desenho' if args.ensaio else 'publicado':<22}"
           + "".join(f"{f:>10}" for f in familias) + f"{'total':>8}")
     print("-" * 62)
     detalhe: list[str] = []
@@ -331,7 +331,7 @@ def main() -> int:
         return 0
     if sum(total.values()):
         print()
-        print("A cor do plástico vem do APARELHO. Ela mapeou 28 modelos e 10")
+        print("A cor do plástico vem do APARELHO. O mapa tem 28 modelos e 10")
         print("zonas; cada linha acima é o produto escolhendo UM em vez de")
         print("seguir o controle que a fita do topo identificou.")
         print()

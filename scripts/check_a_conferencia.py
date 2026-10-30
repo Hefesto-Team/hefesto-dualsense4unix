@@ -20,7 +20,7 @@ ABAS = {
 
 
 def corpo_visivel(nome: str) -> str:
-    """O que ELA LÊ DENTRO DA JANELA."""
+    """O que QUEM USA LÊ DENTRO DA JANELA."""
     bruto = (PAGINAS / nome).read_text(encoding="utf-8")
     corte = bruto.find('<div class="nota"')
     if corte > 0:
@@ -107,7 +107,7 @@ def mascara_nintendo_pro() -> tuple[bool, str]:
 
 
 def o_virtual_liga_o_microfone() -> tuple[bool, str]:
-    """O ato dela conta como ouvinte na ponte do rádio. EXERCITA A PONTE REAL."""
+    """O ato de quem usa conta como ouvinte na ponte do rádio. EXERCITA A PONTE REAL."""
     import sys as _sys
     _sys.path.insert(0, str(RAIZ / "src"))
     try:
@@ -139,16 +139,16 @@ def o_virtual_liga_o_microfone() -> tuple[bool, str]:
         return False, f"a ponte não pôde ser exercitada: {erro!r}"
 
     if sem_ouvinte_com_a_palavra is not True:
-        return False, ("SUSPENDED + a palavra dela LIGADA e o microfone NÃO subiu "
-                       f"(pedido={sem_ouvinte_com_a_palavra!r}) — o ato dela não liga nada")
+        return False, ("SUSPENDED + a palavra do usuário LIGADA e o microfone NÃO subiu "
+                       f"(pedido={sem_ouvinte_com_a_palavra!r}) — o ato do usuário não liga nada")
     if mudo_do_usuario_contra_o_gravador is not False:
-        return False, ("RUNNING + a palavra dela DESLIGADA e o microfone ficou no ar "
-                       f"(pedido={mudo_do_usuario_contra_o_gravador!r}) — o mudo dela não vence o gravador")
+        return False, ("RUNNING + a palavra do usuário DESLIGADA e o microfone ficou no ar "
+                       f"(pedido={mudo_do_usuario_contra_o_gravador!r}) — o mudo do usuário não vence o gravador")
     if sem_palavra_o_ouvinte_manda is not False:
-        return False, ("sem palavra dela e sem ouvinte o microfone subiu "
+        return False, ("sem palavra do usuário e sem ouvinte o microfone subiu "
                        f"(pedido={sem_palavra_o_ouvinte_manda!r}) — a economia do link caiu junto")
-    return True, ("a ponte foi exercitada: sem ouvinte, o ato dela LIGA; o mudo dela "
-                  "vence um gravador; e sem a palavra dela quem manda é o ouvinte")
+    return True, ("a ponte foi exercitada: sem ouvinte, o ato do usuário LIGA; o mudo do usuário "
+                  "vence um gravador; e sem a palavra do usuário quem manda é o ouvinte")
 
 
 def cor_unica() -> tuple[bool, str]:
@@ -209,7 +209,7 @@ LINHAS = [
 
 
 def main() -> int:
-    print("A CONFERÊNCIA DELA — medida no PUBLICADO\n")
+    print("A CONFERÊNCIA — medida no PUBLICADO\n")
     esquerda, direita = [], []
     for titulo, regua in LINHAS:
         try:
@@ -221,8 +221,8 @@ def main() -> int:
     print()
     print(f"  ✓ na árvore: {len(esquerda)}     falta: {len(direita)}")
     if direita:
-        print("\n  NÃO PASSA PARA O DEV — ordem dela: *\"se alguma [ficar n]a direita,")
-        print("  ela não passa para o dev\"*. O que falta:")
+        print("\n  NÃO PASSA PARA O DEV — a conferência com algo à direita não passa")
+        print("  para o dev. O que falta:")
         for titulo, nota in direita:
             print(f"    · {titulo}: {nota}")
         return 1

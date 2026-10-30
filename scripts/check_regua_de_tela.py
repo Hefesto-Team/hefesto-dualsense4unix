@@ -179,10 +179,10 @@ def _bloco(raiz: Path, desenho: list[str], abas: list[str]) -> str:
         "",
         f"  Abas tocadas: {quais}",
         "",
-        "  A pergunta, e ela é dela (29/08/2026): existe validação que prove que",
+        "  A pergunta (29/08/2026): existe validação que prove que",
         "  isto ficou de pé — e que avise se amanhã alguém o desfizer?",
         "",
-        "  A interface nova roda num `WebKit2.WebView`, então ela é DIRIGÍVEL por",
+        "  A interface nova roda num `WebKit2.WebView`, então é DIRIGÍVEL por",
         "  dentro: `run_javascript` clica com `el.click()` (o mesmo caminho de",
         "  eventos de um clique real), lê o DOM e mede geometria; o",
         "  `register_script_message_handler` traz a resposta ao Python. Validar",
@@ -203,7 +203,7 @@ def _bloco(raiz: Path, desenho: list[str], abas: list[str]) -> str:
         linhas.append(
             "  A BIBLIOTECA — importe-a de um `tests/unit/test_*.py` e dirija o"
         )
-        linhas.append("  motor que ela vai usar (`Tela.abrir`, `clicar_e_ouvir`):")
+        linhas.append("  motor que o produto usa (`Tela.abrir`, `clicar_e_ouvir`):")
         linhas += [f"    {r}" for r in biblioteca]
         linhas.append("")
     if do_mockup:
@@ -216,7 +216,7 @@ def _bloco(raiz: Path, desenho: list[str], abas: list[str]) -> str:
         linhas.append("  Não achei régua nenhuma em `src/hefesto_dualsense4unix/interface/`.")
     linhas += [
         "",
-        "  E ela precisa MORDER: régua desta casa já nasceu falsa duas vezes (as",
+        "  E a régua precisa MORDER: régua desta casa já nasceu falsa duas vezes (as",
         "  cicatrizes do `src/hefesto_dualsense4unix/interface/LEIA-ME.md`), e em 29/08 o",
         "  `--prova-gesto` deu VERDE sobre dois botões que nunca clicava. Arranque",
         "  a cura, veja a régua reprovar, devolva.",
@@ -254,7 +254,7 @@ def _o_ponto_cego(raiz: Path) -> None:
     print("  `scripts/regua_de_tela.py`. Sobre o mockup ele é mudo, e nenhum")
     print("  gancho pode deixar de ser.")
     print()
-    print("  A saída, se ela quiser cobertura ali, é DELA e é de versionamento,")
+    print("  A saída, se quiser cobertura ali, é de quem usa e é de versionamento,")
     print("  não de gancho: tirar `layout/` do `.gitignore`, ou mover para")
     print("  `scripts/` o que for instrumento permanente — que foi exatamente o")
     print("  argumento com que `scripts/regua_de_tela.py` nasceu fora da pasta.")
@@ -285,8 +285,8 @@ def _diagnostico(raiz: Path) -> int:
     print("  gancho deste repositório: o mapa de canais (docs/specs.html), o contrato")
     print("  IPC, as citações `arquivo:linha` e o portão da foto.")
     print()
-    print("  O conserto é de UMA linha, e é DELA: o arquivo é global e vale para")
-    print("  todo repositório dela. Em ~/.config/git/hooks/pre-commit:")
+    print("  O conserto é de UMA linha, e é de quem usa: o arquivo é global e vale para")
+    print("  todo repositório da conta. Em ~/.config/git/hooks/pre-commit:")
     print()
     print('    -LOCAL_HOOK="$REPO_ROOT/.git/hooks/pre-commit"')
     print('    +LOCAL_HOOK="$(git rev-parse --path-format=absolute'

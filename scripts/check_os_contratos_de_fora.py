@@ -6,7 +6,7 @@ o COSMIC. Quando um deles evolui, o que quebra é o ponto de contato que ningué
 que existia. O censo é ``docs/data/contratos-de-fora.csv``, uma linha por
 (arquivo, alvo); esta régua mede o código e reprova a divergência nos dois sentidos.
 
-O que ela conta, por AST em ``src/`` (comentário e docstring não contam):
+O que a régua conta, por AST em ``src/`` (comentário e docstring não contam):
 
 * ``cmd:<ferramenta>``  uma ferramenta do outro como argumento (``pactl``, ``busctl``…),
   e ``cmd:<dinâmico>`` quando o arquivo lança processo e nenhuma ferramenta aparece nele.
@@ -341,7 +341,7 @@ def contatos_do_manifesto(texto: str, arquivo: str, pasta: Path | None = None) -
     Lê o mesmo bloco que o conferidor do manifesto e o censo dos lançadores aceitam
     (``censo_dos_lancadores.lancador_da_modificacao``), sem importá-los: o portão roda solto.
     O que não é lista de textos o conferidor recusa; aqui só se lê o que é texto.
-    ``pasta`` é onde o manifesto mora: um ``leitor.executar`` que é arquivo dela é código da
+    ``pasta`` é onde o manifesto mora: um ``leitor.executar`` que é arquivo da pasta é código da
     própria modificação, não ferramenta do ``PATH``.
     """
     try:
@@ -526,8 +526,8 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
                 and linha["alvo"] not in contratos[nome]:
             q.append(
                 f"{rotulo}: linha frágil cita {doctor!r}, mas a sonda dele não pergunta "
-                f"`{linha['alvo']}` (o `cobre` do contrato): o doctor daria [ OK ] com ela "
-                "quebrada. Use `-` ou faça a sonda perguntar.")
+                f"`{linha['alvo']}` (o `cobre` do contrato): o doctor daria [ OK ] com o alvo "
+                "quebrado. Use `-` ou faça a sonda perguntar.")
     return q
 
 

@@ -2,7 +2,7 @@
 """check_a_decisao_tem_prova.py — decidida não é feita, e agora alguém cobra.
 
 DECISAO-SEM-DONO-01. O `docs/data/decisoes-de-produto.csv` guarda a decisão e o dono
-dela, e até aqui o registro parava no momento em que ela respondia: nada ligava
+da decisão, e até aqui o registro parava no momento da resposta: nada ligava
 a linha ao código. O microfone mudo de 17/09 era uma decisão de 25/08.
 
 A ESCADA do campo `estado`, nas palavras que o usuário aceitou em 23/09:
@@ -26,19 +26,19 @@ O PORTÃO, em quatro regras:
      de uma que já foi paga.
 
 O PISO DESCE SOZINHO E SÓ SOBE À MÃO. O `--aceitar` nunca acrescenta: ele só
-tira. Uma decisão registrada antes da régua dela (o registro é no dia em que ela
-responde, e o código vem depois) entra no piso pela mão de quem a registra, numa
+tira. Uma decisão registrada antes da sua régua (o registro é no dia da
+resposta, e o código vem depois) entra no piso pela mão de quem a registra, numa
 linha que aparece no diff, de preferência sob um comentário datado que diz de
-onde ela veio. O portão não distingue essa entrada de uma que fura a fila: quem
+onde veio. O portão não distingue essa entrada de uma que fura a fila: quem
 confere o diff do piso é quem a distingue.
 
 A marca `processo` é declarada uma a uma, nunca por palavra: a triagem por
 vocabulário dá 34% de «indecidível» (`medir_decisoes_sem_prova.py`).
 
-O QUE ELE MEDE, E É DITO EM VOZ ALTA: a EXISTÊNCIA da prova e a ligação dela com
+O QUE ELE MEDE, E É DITO EM VOZ ALTA: a EXISTÊNCIA da prova e a sua ligação com
 o id, não a QUALIDADE. Verde aqui não quer dizer que a régua morde nem que o
 produto cumpre a decisão: D-AUDIO-E-GIRO-NASCEM-LIGADOS teve citação em tests/
-por treze dias com o microfone mudo no produto dela. Quem sobe uma decisão a
+por treze dias com o microfone mudo no produto. Quem sobe uma decisão a
 `implementada` arranca a cura e vê a régua reprovar, e diz isso no commit.
 """
 
@@ -117,7 +117,7 @@ class _Fontes:
 
 
 def problemas_da_prova(ident: str, prova: str, fontes: _Fontes) -> list[str]:
-    """Cada prova declarada tem de abrir: arquivo, função e o id dentro dela."""
+    """Cada prova declarada tem de abrir: arquivo, função e o id dentro da função."""
     ruins: list[str] = []
     padrao = _regex_do_id(ident)
     for parte in (p.strip() for p in prova.split("|")):
@@ -153,7 +153,7 @@ def medir(raiz: Path) -> dict[str, Any]:
         ruins.append(f"{CSV_DAS_DECISOES} não tem uma linha sequer")
     if faltando:
         ruins.append(
-            "o CSV perdeu a(s) coluna(s) " + ", ".join(faltando) + ": sem elas toda decisão "
+            "o CSV perdeu a(s) coluna(s) " + ", ".join(faltando) + ": sem as colunas toda decisão "
             "pareceria sem prova ou toda prova pareceria ausente"
         )
     ids_vistos: set[str] = set()
@@ -227,7 +227,7 @@ def aceitar(raiz: Path, m: dict[str, Any], semear: bool = False) -> int:
         print(
             f"RECUSADO: {len(m['novas_sem_prova'])} decisão(ões) sem prova que não estão no piso. "
             "O --aceitar só desce o piso: dê prova (ou, se é de processo, a marca) a cada uma, "
-            "ou, se é decisão registrada antes da régua dela, acrescente o id ao piso à mão."
+            "ou, se é decisão registrada antes da sua régua, acrescente o id ao piso à mão."
         )
         _imprimir_ids(m["novas_sem_prova"])
         return 2
@@ -235,7 +235,7 @@ def aceitar(raiz: Path, m: dict[str, Any], semear: bool = False) -> int:
         cabecalho = (
             "# PISO das decisões decididas e sem prova (scripts/check_a_decisao_tem_prova.py).\n"
             "# Um id por linha. Desce sozinho: `--aceitar` tira o que ganhou prova ou a marca\n"
-            "# `processo`. Só sobe à mão, no diff: a decisão registrada antes da régua dela.\n"
+            "# `processo`. Só sobe à mão, no diff: a decisão registrada antes da sua régua.\n"
         )
         corpo = "".join(f"{i}\n" for i in m["sem_prova"])
         (raiz / PISO).write_text(cabecalho + corpo, encoding="utf-8")

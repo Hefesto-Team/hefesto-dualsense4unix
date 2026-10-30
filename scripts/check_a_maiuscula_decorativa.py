@@ -3,31 +3,31 @@
 
 POR QUE ELE NASCEU, e a ordem é de produto
 -------------------------------------
-Em 11/09/2026 ela abriu o produto instalado com um DualSense no cabo e leu, na
-MESMA tela, a mesma palavra escrita de dois jeitos::
+Em 11/09/2026 o produto instalado, com um DualSense no cabo, mostrou na
+MESMA tela a mesma palavra escrita de dois jeitos::
 
     fita    P1 • Cosmic Red • CABO
     card    Cosmic Red • cabo
 
-    "Leia o cabo e acordado (ambos minusculo sem iniciar de forma   (noqa-acento: citação literal)
-     capitular). Esse tipo de coisa não pode se repetir na interface."   (noqa-acento: citação literal)
+A decisão: «cabo» e «acordado» em minúscula, e esse tipo de grafia não se repete
+na interface.
 
-**A segunda frase é o que fez esta régua existir.** O caso dela foi curado no
+**A segunda metade é o que fez esta régua existir.** O caso foi curado no
 `topo.html` (ESQUELETO-C2); o que não pode é voltar — nem ali, nem em nenhuma
 das outras nove páginas.
 
-E A REGRA DA CASA SOBRE MAIÚSCULA É DO USUÁRIO, de 30/08/2026: *"a maiúscula a   (noqa-acento: citação literal)
-regra é sobre a primeira letra a ser capitalizada, é o padrão do projeto"*.
+E A REGRA DA CASA SOBRE MAIÚSCULA, de 30/08/2026: a maiúscula é a da primeira
+letra, que é o padrão do projeto.
 Palavra INTEIRA em caixa alta não é ênfase nesta casa — é ruído, e é o que esta
 régua procura.
 
 AS DUAS METADES, E UMA SOZINHA MENTE
 -------------------------------------
-O `CABO` dela **não estava escrito em lugar nenhum**. O HTML dizia `cabo`
-(regra de `monta.rotulo`: quem escreve em maiúscula no HTML tira dela a chance
+O `CABO` da foto **não estava escrito em lugar nenhum**. O HTML dizia `cabo`
+(regra de `monta.rotulo`: quem escreve em maiúscula no HTML tira da regra a chance
 de copiar o nome como ele é) e quem gritava era UMA LINHA DE CSS. Uma régua que
-lesse só o texto das dez páginas daria **verde sobre a tela que ela
-fotografou**.
+lesse só o texto das dez páginas daria **verde sobre a tela
+fotografada**.
 
 Por isso são duas peneiras, e as duas reprovam:
 
@@ -48,8 +48,8 @@ O QUE ELE NÃO LÊ, E É DECISÃO
 * **O conteúdo dos SELOS**, e é ordem da sprint: *"Os selos são desenho e
   ficam."* A peneira é ESTRUTURAL (a classe do elemento), nunca uma lista de
   palavras: um selo novo amanhã já nasce coberto, e uma palavra decorativa que
-  se disfarce de selo continua sendo pega — porque ela não está dentro de um.
-* **A bancada (`mockup/`)**. O alvo é o que o produto RENDERIZA; o desenho em
+  se disfarce de selo continua sendo pega — porque não está dentro de um.
+* **O desenho (`mockup/`)**. O alvo é o que o produto RENDERIZA; o desenho em
   conclusão é assunto do `check_o_desenho_aprovado`.
 
 QUEM DECIDE O QUE É "LIDO NO PRODUTO" NÃO É ESTE ARQUIVO
@@ -127,7 +127,7 @@ def _branco(texto: str) -> str:
 
 
 def _so_a_tela(pagina: str) -> str:
-    """A página sem o `<style>`, o `<script>`, os comentários e o `<title>` dela."""
+    """A página sem o `<style>`, o `<script>`, os comentários e o `<title>`."""
     from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 
     limpo = sem_o_mudo(pagina)
@@ -234,9 +234,9 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             n, trecho = lugares[0]
             vermelhos.append(
-                f"§2 {p.name}:{n}  «{palavra}» em caixa alta, e ela não é sigla, "
+                f"§2 {p.name}:{n}  «{palavra}» em caixa alta, e não é sigla, "
                 f"selo nem código\n     …{trecho}…\n"
-                f"     a regra dela (30/08/2026) é a PRIMEIRA letra: escreva "
+                f"     a regra (30/08/2026) é a PRIMEIRA letra: escreva "
                 f"«{palavra.capitalize()}» ou «{palavra.lower()}». Se for sigla "
                 f"ou selo, declare em SIGLA/SELO com a razão.")
 
@@ -259,8 +259,8 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         for v in vermelhos:
             print("  " + v + "\n", file=sys.stderr)
-        print("Ela, 11/09/2026: «Esse tipo de coisa não pode se repetir na "
-              "interface.»", file=sys.stderr)
+        print("A regra de 11/09/2026: caixa alta decorativa não se repete na "
+              "interface.", file=sys.stderr)
         return 1
 
     print(f"OK: {len(paginas)} páginas publicadas, nenhuma regra de folha sobe a "

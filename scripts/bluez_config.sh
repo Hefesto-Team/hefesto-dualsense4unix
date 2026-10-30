@@ -182,13 +182,13 @@ _avisar_alheio_no_bloco() {
     while IFS= read -r linha; do
         [[ -n "${linha}" ]] || continue
         if [[ "${visto}" -eq 0 ]]; then
-            _diz "ATENÇÃO: há linha que NÃO é nossa dentro do bloco hefesto — o bloco inteiro é reescrito, então ela SAI (o backup abaixo guarda o original):"
+            _diz "ATENÇÃO: há linha que NÃO é nossa dentro do bloco hefesto — o bloco inteiro é reescrito, então a linha SAI (o backup abaixo guarda o original):"
             visto=1
         fi
         _diz "  sai do arquivo: ${linha}"
     done < <(_alheio_no_bloco)
     if [[ "${visto}" -eq 1 ]]; then
-        _diz "  se alguma dessas linhas era sua, ponha-a FORA das sentinelas do hefesto e ela sobrevive a toda execução"
+        _diz "  se alguma dessas linhas era sua, ponha-a FORA das sentinelas do hefesto e a linha sobrevive a toda execução"
     fi
 }
 
@@ -407,7 +407,7 @@ _podar() {
             continue
         fi
         if [[ -n "${guardiao["${i}"]:-}" ]]; then
-            _diz "preservado (ÚNICA cópia deste conteúdo que sobreviveria — nenhum estado do main.conf dela some do disco): ${p}"
+            _diz "preservado (ÚNICA cópia deste conteúdo que sobreviveria — nenhum estado do main.conf de quem usa some do disco): ${p}"
             continue
         fi
         alvos+=("${p}")
@@ -469,7 +469,7 @@ _aplicar() {
             _diz "  'never' recusa todo re-pareamento de quem já tem bond; '${VALOR_SEGURO}' aceita SÓ com confirmação do agente"
             if [[ "${onde}" == "dentro" ]]; then
                 _diz "  esse 'never' está DENTRO do bloco hefesto, e o bloco inteiro é REESCRITO: a linha SAI agora e o 'remover' NÃO a devolve — só o backup abaixo guarda"
-                _diz "  se 'never' foi escolha sua, escreva-a FORA das sentinelas do hefesto: ali ela é neutralizada, não apagada, e volta inteira no 'remover'"
+                _diz "  se 'never' foi escolha sua, escreva-a FORA das sentinelas do hefesto: ali a linha é neutralizada, não apagada, e volta inteira no 'remover'"
             else
                 _diz "  se 'never' foi escolha sua, rode 'bash scripts/bluez_config.sh remover': a sua linha está FORA do bloco, é neutralizada, não apagada, e volta inteira"
             fi

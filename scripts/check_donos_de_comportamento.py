@@ -54,7 +54,7 @@ def _referencias(caminho: Path) -> frozenset[str]:
     árvore, 06/09/2026.** Até aqui as duas regras deste portão perguntavam se o
     nome do dono APARECIA no arquivo da tela, lendo o texto inteiro — docstring
     e comentário junto. É a família de defeito que esta casa mais paga: *a
-    régua confunde a PALAVRA com o ATO*. Ela mentiu nos DOIS sentidos ao mesmo
+    régua confunde a PALAVRA com o ATO*. A régua mentiu nos DOIS sentidos ao mesmo
     tempo:
 
     * **falso VERMELHO** (regra 3) — ``migrar_para_systemd`` foi acusado de "a
@@ -66,7 +66,7 @@ def _referencias(caminho: Path) -> frozenset[str]:
       mudou para ``home_actions.palavra_do_transporte`` na ONDA B de 06/09. A
       ponte antiga tinha caído, e o portão não viu porque o nome velho sobrevive
       num COMENTÁRIO que explica a história. Este é exatamente o defeito que a
-      regra 2 existe para pegar, e ela passou por cima dele.
+      regra 2 existe para pegar, e a régua passou por cima dele.
 
     O próprio produto já tinha escrito o aviso: o docstring de
     ``mesa_viva._via_do_transporte`` registra que *"em 05/09/2026 um comentário

@@ -50,13 +50,13 @@ FATOS: dict[str, str] = {
         "o sujeito é A STEAM. Estado de agora, e MEDIDO: depois de escrever, o "
         "gesto do chip «Steam Input» RELÊ o arquivo da Steam e diz o que "
         "ficou lá. A causa comum é aquele jogo não existir naquele arquivo — a "
-        "Steam só o escreve depois de o jogo ter aberto uma vez por ela —, e "
-        "por isso a frase termina no que ELA faz a seguir. Calar seria pior: "
+        "Steam só o escreve depois de o jogo ter aberto uma vez pela Steam —, e "
+        "por isso a frase termina no que QUEM USA faz a seguir. Calar seria pior: "
         "cantar «ligado» sobre um arquivo que não mudou é o `excecao_inerte` "
         "que a PONTE-STEAM-INPUT-01 existiu para matar — STEAM-INPUT-01, "
         "20/09/2026",
     "o Hefesto não volta a perguntar":
-        "COMPORTAMENTO, nomeado por ela como legal em 07/09/2026 — a frase diz "
+        "COMPORTAMENTO, declarado legal em 07/09/2026 — a frase diz "
         "o que o botão faz",
 
 
@@ -83,7 +83,7 @@ FATOS: dict[str, str] = {
         "gestos da Navegação e da Iluminação, inclusive o das lâmpadas com o "
         "co-op ligado, em que a frase ainda nomeia o dono — 11/09/2026",
     "o Hefesto não está rodando — ligue na aba Sistema":
-        "ESTADO DE AGORA, e ela diz onde ligar. O serviço parado é fato "
+        "ESTADO DE AGORA, e a frase diz onde ligar. O serviço parado é fato "
         "presente, não capacidade por entregar — 11/09/2026",
     "o Hefesto não conseguiu mirar este":
         "ESTADO DO ATO, e diz AS DUAS METADES: para onde o volume foi e que o "
@@ -263,7 +263,7 @@ _TETO = 12
 def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
             prof: int = 0, vistos: frozenset = frozenset(),
             dono: ast.AST | None = None) -> tuple[str, bool]:
-    """A frase como ela CHEGA ao cartão — e se a régua a montou inteira.
+    """A frase como CHEGA ao cartão — e se a régua a montou inteira.
 
     ``dono`` é a função cujo corpo deu o ``local`` (``None``: o módulo). O nome já seguido se
     guarda pelo escopo em que ele mora, ``(arquivo, dono, nome)``: a local de mesmo nome na
@@ -358,7 +358,7 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
 
 
 def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
-    """Os recados dos gestos: os que a régua LEU, e os que ela não alcançou."""
+    """Os recados dos gestos: os que a régua LEU, e os que não alcançou."""
     lidos: list[tuple[str, str]] = []
     mudos: list[tuple[str, str]] = []
     for p in sorted(PACOTES.glob("*.py")):
@@ -397,7 +397,7 @@ SEM_LETRA: dict[str, str] = {
         "o campo `motivo` do desfecho de `app/actions` da rota do som",
     "a04_iluminacao.py:_cobrar_a_frase_do_desenho ← frase":
         "a frase do DONO do desenho das lâmpadas (`app/actions`), devolvida "
-        "inteira quando ela difere do desfecho feliz",
+        "inteira quando difere do desfecho feliz",
     "a05_vibracao.py:parar ← motivo":
         "a recusa do `rumble.stop`, palavra do daemon",
     "a09_sistema.py:reiniciar ← motivo":
@@ -436,7 +436,7 @@ SEM_LETRA: dict[str, str] = {
 
     'a01_jogar.py:_plano_do_chip ← BOTOES_SEM_DONO.get(f"modo-{chave}", "sem dono no produto")':
         "o valor sai de um dicionário pela chave do clique; as frases estão no "
-        "próprio `a01_jogar.py`, e ler qual delas sai pediria saber a chave",
+        "próprio `a01_jogar.py`, e ler qual frase sai pediria saber a chave",
 }
 
 
@@ -468,8 +468,8 @@ def main() -> int:
             print("  " + a)
         if len(achados) > 30:
             print(f"  … e mais {len(achados) - 30}.")
-        print("\nA ordem dela, 07/09/2026: *\"o layout não informa os nossos")
-        print("defeitos\"*. Pergunte de quem é o sujeito da frase:")
+        print("\nA ordem de 07/09/2026: a tela não informa os nossos defeitos.")
+        print("Pergunte de quem é o sujeito da frase:")
         print("  • do mundo, do aparelho, do sistema, ou estado de agora")
         print("       -> declare em FATOS, com a razão e a data.")
         print("  • NOSSO, uma capacidade que ainda devemos")
@@ -491,8 +491,8 @@ def main() -> int:
               f"NÃO CONSEGUIU LER.\n")
         for chave, onde in nao_declarados:
             print(f"  {onde}\n      {chave}")
-        print("\nA frase chega ao cartão dela por `str(erro)`, e aqui ela não")
-        print("tem uma letra de prosa que a régua alcance. Diga de quem ela é")
+        print("\nA frase chega ao cartão por `str(erro)`, e aqui não tem")
+        print("uma letra de prosa que a régua alcance. Diga de quem a frase é")
         print("em SEM_LETRA — o dono costuma ser o daemon ou `app/actions/*`.")
         print("Se o dono for ESTE arquivo, escreva a frase no `raise` e a")
         print("régua passa a lê-la sozinha.")

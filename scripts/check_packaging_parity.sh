@@ -106,7 +106,7 @@ else
             else
                 echo "[FAIL] app/tray.py não constrói mais um nome terminado em -symbolic"
                 echo "       APPLET-MONOCROMÁTICO-01: sem o sufixo, o painel não recolore"
-                echo "       e o ícone dela volta a ser o único cromático da barra."
+                echo "       e o ícone volta a ser o único cromático da barra."
                 rc=1
             fi
         fi
@@ -114,7 +114,7 @@ else
     LANCADOR_PY=src/hefesto_dualsense4unix/interface/abrir.py
     if [[ ! -f "${LANCADOR_PY}" ]]; then
         echo "[FAIL] ${LANCADOR_PY} sumiu — ninguém veste o ícone no processo"
-        echo "       e a janela dela nasce com o ícone genérico do sistema."
+        echo "       e a janela nasce com o ícone genérico do sistema."
         rc=1
     elif ! grep -q 'set_default_icon_name(' "${LANCADOR_PY}" \
          || ! grep -q '\.icone' "${LANCADOR_PY}"; then
@@ -258,7 +258,7 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
     else
         echo "[FAIL] ${rules_name}: FALTANDO em: ${missing[*]}"
         echo "       adicione a regra ao(s) instalador(es) furado(s) acima — ou,"
-        echo "       se ela for opt-in/descontinuada de propósito, à lista"
+        echo "       se a regra for opt-in/descontinuada de propósito, à lista"
         echo "       INSTALL_OPTIONAL_RULES deste script (com justificativa)."
         rc=1
     fi
@@ -501,7 +501,7 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
     else
         echo "[FAIL] vigia do Wi-Fi USB: FALTANDO em: ${missing[*]}"
         echo "       Peça que o install põe e o uninstall não tira é o defeito que tirou"
-        echo "       esta família do zsh dela: desinstalar deixava tudo de pé."
+        echo "       esta família do zsh de quem usa: desinstalar deixava tudo de pé."
         rc=1
     fi
 else
@@ -741,7 +741,7 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     else
         echo "[FAIL] config do BlueZ: ${missing[*]}"
         echo "       JustWorksRepairing=always sem detector foi o defeito de 06/08/2026:"
-        echo "       a cura estava no repositório e não chegava ao disco dela."
+        echo "       a cura estava no repositório e não chegava ao disco de quem usa."
         rc=1
     fi
 else
@@ -950,7 +950,7 @@ else
         echo "       copie o DIRETÓRIO que o contém, ou chame de lá o helper de scripts/"
         echo "       que o instala. Se ele é resto de uma cura que outro caminho já"
         echo "       substituiu, APAGUE o arquivo — artefato versionado que ninguém"
-        echo "       instala é promessa que a máquina dela nunca recebe."
+        echo "       instala é promessa que a máquina de quem usa nunca recebe."
         echo "       Se ainda não é hora, declare em _ARTEFATO_SEM_DONO_HOJE deste"
         echo "       script, com a data e o endereço de onde o caminho se perde."
         rc=1
@@ -1120,7 +1120,7 @@ else
     done
 
     _PRODSCRIPT_LACUNAS_HOJE=(
-        "25/08/2026 — LEVAR NÃO É ACHAR. BASES_DE_INSTALACAO (app/actions/daemon_actions.py) conhece quatro bases: a raiz do checkout, /app/share (Flatpak), /usr/share e /usr/local/share. O Nix instala em \$out/share e as duas receitas de AppImage em \$APPDIR/usr/share, e nenhuma das duas é uma delas — nesses três formatos os arquivos agora VIAJAM e o consumidor ainda não olha para onde caíram. A cura é uma base derivada de sys.prefix, num arquivo que a frente BG-04 não possui."
+        "25/08/2026 — LEVAR NÃO É ACHAR. BASES_DE_INSTALACAO (app/actions/daemon_actions.py) conhece quatro bases: a raiz do checkout, /app/share (Flatpak), /usr/share e /usr/local/share. O Nix instala em \$out/share e as duas receitas de AppImage em \$APPDIR/usr/share, e nenhuma das duas é uma dessas bases — nesses três formatos os arquivos agora VIAJAM e o consumidor ainda não olha para onde caíram. A cura é uma base derivada de sys.prefix, num arquivo que a frente BG-04 não possui."
     )
 
     _prod_consumidor="src/hefesto_dualsense4unix/app/actions/daemon_actions.py"

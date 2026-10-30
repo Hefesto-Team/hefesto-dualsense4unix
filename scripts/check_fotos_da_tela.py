@@ -129,7 +129,7 @@ def fotos_sujas(raiz: Path) -> bool:
 
 
 def _uma_familia_em_dia(raiz: Path, familia: str) -> bool | None:
-    """A topologia de UMA família: a foto dela veio depois da mexida na tela?"""
+    """A topologia de UMA família: a foto da família veio depois da mexida na tela?"""
     das_fotos = _git(raiz, "log", "-1", "--format=%H", "--", *_pathspec(familia))
     do_codigo = _git(raiz, "log", "-1", "--format=%H", "--", *CODIGO_DA_TELA)
     if not das_fotos or not do_codigo:
@@ -161,7 +161,7 @@ _CURA = (
     "\n  Se as imagens saírem iguais, o recibo `PROVA-DA-FOTO.txt` muda "
     "sozinho\n"
     "  e já serve de prova; se saírem diferentes, OLHE-AS antes de commitar —\n"
-    "  mudança de desenho é palavra dela (PROVA-DE-TELA-01).\n"
+    "  mudança de desenho é palavra de quem decide o produto (PROVA-DE-TELA-01).\n"
     "\n  Este gancho não tem chave própria de propósito. `git commit "
     "--no-verify`\n"
     "  passa, e aí quem cobra é `test_as_fotos_acompanham_a_versao.py` na "
@@ -190,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "portão das fotos: este commit mexe na tela e não leva foto — mas "
             f"há imagem modificada em `{FOTOS}`.\n"
-            "  Passando: a cura está em curso. Mas ela está FORA deste "
+            "  Passando: a cura está em curso. Mas está FORA deste "
             f"commit —\n    git add {FOTOS}\n"
             "  antes de commitar, ou a foto fica para trás e a suíte cobra.",
             file=sys.stderr,

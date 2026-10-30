@@ -58,9 +58,9 @@ SUFIXOS = {".py", ".html", ".glade", ".css", ".js"}
 
 APOSENTADOS: dict[str, str] = {
     "src/hefesto_dualsense4unix/gui/main.glade": (
-        "a janela GTK, aposentada em 06/09/2026 por decisão dela "
-        "(D-0609-GTK-LEVA-INTEIRA): *\"a ideia sempre foi reaproveitar o que fiz "
-        "no gtk e não apontar nada mais pra lá mas pro html\"*"
+        "a janela GTK, aposentada em 06/09/2026 "
+        "(D-0609-GTK-LEVA-INTEIRA, decisão de produto): o que havia no GTK se reaproveita, e nada "
+        "mais aponta para lá, só para o HTML"
     ),
     "src/hefesto_dualsense4unix/app/app.py": (
         "o `HefestoApp`, que montava a janela — mesma decisão, mesmo dia"
@@ -220,7 +220,7 @@ class Arvore:
         return self._linhas[p]
 
     def ocorre(self, alvo: str, arquivos: list[Path]) -> Path | None:
-        """O símbolo APARECE, prosa incluída: a pergunta da citação por desenho, e só dela.
+        """O símbolo APARECE, prosa incluída: a pergunta da citação por desenho, e só essa.
 
         NÃO CONFUNDIR COM :meth:`usa`. **Muitos sinais deste CSV são citações
         por desenho**: a linha 19 vigia ``test_os_donos_de_fato.py`` (um nome de
@@ -319,7 +319,7 @@ def conferir_a_lista_de_aposentados() -> list[str]:
                 f"    ({razao})\n"
                 "    e o arquivo EXISTE nesta árvore. Ou a remoção foi desfeita — e a\n"
                 "    linha sai daqui, para os endereços voltarem a ser conferidos —, ou\n"
-                "    alguém recriou o que a decisão dela mandou apagar.")
+                "    alguém recriou o que a decisão de produto mandou apagar.")
     return falhas
 
 
@@ -368,7 +368,7 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
 
         sinal, escopo = l["sinal"], l["sinal_escopo"]
         if not sinal:
-            falhas.append(f"sem-endereco: {onde}\n    a linha não tem `sinal`: nada nela é conferível.")
+            falhas.append(f"sem-endereco: {onde}\n    a linha não tem `sinal`: nada na linha é conferível.")
             continue
         if l["sinal_espera"] == "PRESENTE":
             if escopo == "LADO-HTML":
@@ -477,7 +477,7 @@ def cruzar_com_o_mapa(
         falhas.append(
             f"ponte-encolheu: a ponte com o mapa tem {len(pontes)} entrada(s) e o "
             f"piso é {piso}.\n"
-            "    Apagar uma ponte é calar o achado dela, não resolvê-lo. Se a "
+            "    Apagar uma ponte é calar o seu achado, não resolvê-lo. Se a "
             "feature\n    saiu do CSV, a ponte sai junto E o piso desce, no mesmo "
             "commit e com a razão escrita.")
 
@@ -514,8 +514,8 @@ def cruzar_com_o_mapa(
                     f"{ident}  [{lado}]  aciona={aciona or '(vazio)'} "
                     f"causa=nao-medido\n"
                     f"    a tela AFIRMA paridade em {onde}\n"
-                    "    e a célula não foi medida. Não é veto: é a fila da "
-                    "bancada (SPECS-A-PROCEDENCIA-01).")
+                    "    e a célula não foi medida. Não é veto: é a fila do "
+                    "ensaio (SPECS-A-PROCEDENCIA-01).")
                 continue
             cobra.append(f"{lado}={aciona or '(vazio)'}"
                          + (f" ({causa})" if causa else ""))
@@ -527,8 +527,8 @@ def cruzar_com_o_mapa(
             f"transporte-nao-declarado: {onde}\n"
             f"    veredito {linha['veredito']}, e o mapa restringe o canal "
             f"{ident}: {' · '.join(cobra)}.\n"
-            "    A linha não diz 'cabo' nem 'rádio' em lugar nenhum — então ela "
-            "afirma\n    paridade sem dizer ONDE ela vale. Escreva o transporte "
+            "    A linha não diz 'cabo' nem 'rádio' em lugar nenhum — então "
+            "afirma\n    paridade sem dizer ONDE vale. Escreva o transporte "
             "no `porque`.\n"
             "    (Se o aparelho contradiz o mapa, o APARELHO ganha: meça, escreva "
             "aqui o\n    que viu, e relate a célula para a SPECS-A-PROCEDENCIA-01 "
@@ -606,7 +606,7 @@ def main() -> int:
         if falhas:
             print()
         print(f"AVISO: {len(avisos)} célula(s) do mapa que a tela AFIRMA e a "
-              "bancada ainda não mediu.")
+              "o ensaio ainda não mediu.")
         print("       O mapa INFORMA, nunca VETA (D-0609-O-MAPA-INFORMA-NUNCA-VETA): "
               "isto NÃO é rc=1.")
         print("       Nenhuma linha abaixo entra no rc deste portão.\n")

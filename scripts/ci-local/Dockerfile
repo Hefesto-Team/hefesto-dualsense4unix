@@ -1,6 +1,6 @@
 # A imagem do `ci-local.sh`: a do `act` para o Ubuntu do runner (o 26.04 do `ubuntu-latest` desde
 # 10/2026; o 24.04 de quem o nomeia) mais o que o runner do GitHub traz
-# e ela não. Cada linha nova daqui nasce de uma falha medida de «o runner tem, a imagem não»,
+# e a imagem não. Cada linha nova daqui nasce de uma falha medida de «o runner tem, a imagem não»,
 # com o job que a mostrou:
 #   shellcheck      o job `shellcheck`: `shellcheck: command not found`, rc=127
 #   python3-dev     o job `anonymity`: `Python.h: No such file` ao compilar o evdev do `.[dev]`

@@ -13,8 +13,8 @@ documentação". Medido em 11/08/2026: não era. O `--check` do `gerar-mapa.py`
 existia e NINGUÉM o chamava — nem workflow, nem hook, nem teste. Pela régua da
 casa (PORTÃO-VIVO-01), um gate que ninguém roda não é gate, é arquivo.
 
-E o defeito que o mapa foi feito para pegar é o dela, textual: *"tínhamos algo
-para o cabo e na hora do vamos ver a versão de BT não funcionava"*. Uma célula
+E o defeito que o mapa foi feito para pegar é este: algo funcionava no cabo e,
+na hora de jogar, a versão de BT não funcionava. Uma célula
 que diz `aciona = sim, medido` e não aponta um teste é exatamente essa
 promessa: se aquela feature quebrar naquele transporte, a suíte inteira
 continua verde e ninguém fica sabendo.
@@ -59,7 +59,7 @@ FALHA
   4. `integridade`      — coluna do cabeçalho que sumiu, `id` vazio ou
                           duplicado, valor fora do domínio declarado abaixo.
   5. `mapa-nao-publicado` — linha do CSV cujo `id` não aparece no `specs.html`
-                          publicado. Ver a nota sobre ela, logo abaixo.
+                          publicado. Ver a nota sobre a regra, logo abaixo.
   6. `grau-sem-ensaio`  — célula que declara um `ate_onde_foi` que a suíte não
                           sustenta sozinha (hoje: `SAIU NO FIO`,
                           `O APARELHO OBEDECEU`, `O JOGO RECEBEU`,
@@ -82,7 +82,7 @@ AVISO (não derruba o CI hoje)
   9. `grau-sem-ensaio-que-obedeca` — `ate_onde_foi = O APARELHO OBEDECEU` com
                           ensaios naquele lado, mas nenhum deles dizendo que a FEATURE
                           obedeceu. Desde 13/08/2026 quem responde isso é
-                          `resultado_da_feature` quando ela está preenchida, e
+                          `resultado_da_feature` quando está preenchida, e
                           `resultado` quando não (ver "o preço do `resultado`"
                           abaixo). Segue AVISO e não FALHA porque a coluna nova
                           está preenchida em 1 dos 77 ensaios: enquanto os
@@ -100,7 +100,7 @@ AVISO (não derruba o CI hoje)
                           a cura e viu reprovar. Medido em 12/08/2026: a coluna
                           está vazia em 293 de 293 linhas e nenhuma regra a lia.
  12. `veredicto-da-feature-mal-declarado` — a guarda da coluna nova, e a razão
-                          de ela não ser um afrouxamento. DURA, em duas metades:
+                          de não ser um afrouxamento. DURA, em duas metades:
                           `resultado_da_feature` fora do vocabulário do caderno
                           reprova, e `resultado_da_feature` que DIVERGE de
                           `resultado` com a `nota` do ensaio vazia reprova
@@ -151,7 +151,7 @@ FALHA (as duas mais novas)
 
                           A régua do DOMÍNIO desta coluna sai da `ESCADA` de
                           `ponte_escada.py`, LIDA POR AST (ver
-                          `dominio_das_pontes`) — sem ela "Steam Input",
+                          `dominio_das_pontes`) — sem a leitura "Steam Input",
                           "steam input" e "SteamInput" viram três pontes.
 
  16. `causa-nao-declarada` — `aciona = não` MEDIDO (`de_onde_sei = medido`) com
@@ -170,9 +170,9 @@ FALHA (as duas mais novas)
                           (`daemon/subsystems/rumble.py`). Nasceu em
                           25/08/2026: duas células contavam a escada
                           `0,3 / 0,7 / 1,0`, de ANTES de 11/08/2026 — dia em que
-                          ela a trocou para `0,3 / 1,0 / 1,5`. Corrigir as
+                          a escala virou `0,3 / 1,0 / 1,5`. Corrigir as
                           células sem deixar régua seria faxina, e faxina volta.
-                          A regra não guarda número: ela compara com o dono, e a
+                          A regra não guarda número: compara com o dono, e a
                           conta de citações vai ao resumo para que um zero
                           (= parou de olhar) apareça sem ninguém desconfiar.
 
@@ -186,10 +186,10 @@ FALHA (as duas mais novas)
  20. `causa-sem-negativa` — AVISO. `*_por_que_nao_aciona` preenchida num lado
                           cujo `aciona` NÃO é `não`. É a 16 invertida, e nasceu
                           em 06/09/2026 pedida pela A-RECUSA-QUE-CITOU-O-MAPA-01
-                          (§4.5). Ela não acusa a célula: acusa a LEITURA que a
+                          (§4.5). A regra não acusa a célula: acusa a LEITURA que a
                           célula convida. Hoje há UMA no mapa
                           (`movimento.acelerometro@dualsense`, `sim` +
-                          `so-o-usuario-decide`), ela está CERTA e a ressalva diz que
+                          `so-o-usuario-decide`), a célula está CERTA e a ressalva diz que
                           é de propósito — e é justamente por isso que a regra é
                           AVISO. No mesmo dia, ler uma coluna de causa como veto
                           levou a PARAR um passo que
@@ -200,12 +200,12 @@ FALHA (as duas mais novas)
                           10/10/2026: a `vibracao.rumble.passthrough@dualsense`
                           dizia «só cabo», herança do v1, e acionava nos dois
                           lados. Até então a coluna só era contada, e a regra
-                          7 compara um lado com o outro, nunca com ela.
+                          7 compara um lado com o outro, nunca com a coluna.
 
 A pergunta que passou a ter DONO — a procedência (06/09/2026)
 --------------------------------------------------------------
 *De onde se sabe esta célula?* é respondida por `procedencia_da_celula()`, neste
-arquivo, e por mais ninguém. Ela devolve os PONTEIROS que se pode seguir — o
+arquivo, e por mais ninguém. A função devolve os PONTEIROS que se pode seguir — o
 carimbo (`provado_em` + `provado_por`), a mordida (`teste_que_morde`), o
 endereço (`*_codigo_ref`), a fonte de fora (`fonte_externa`), a evidência com
 endereço e o ensaio do caderno —, e quem a cobra é
@@ -215,11 +215,11 @@ A `scripts/mesa_de_medicao.py` monta o **COMO** de cada célula com metade dessa
 colunas (`_como_da_celula`). São perguntas irmãs sobre as mesmas colunas, e a
 régua da procedência guarda as duas contra a divergência: no dia em que uma
 coluna mudar de nome, as duas leituras respondem coisas diferentes CALADAS, e
-uma delas passa a mentir. É o defeito que esta casa já pagou duas vezes —
+uma das leituras passa a mentir. É o defeito que esta casa já pagou duas vezes —
 *a régua estava medindo o mundo de ontem*.
 
-A cegueira que a regra 19 fecha — e a metade que ela NÃO fecha (31/08/2026)
---------------------------------------------------------------------------
+A cegueira que a regra 19 fecha — e a metade que NÃO fecha (31/08/2026)
+----------------------------------------------------------------------
 Medido em duas leituras independentes, numa leva de levantamento em fonte
 externa: este portão é **cego ao CONTEÚDO** das colunas sem domínio. Quatro
 estragos plausíveis em células recém-escritas passaram com `rc=0` — o byte do
@@ -237,8 +237,8 @@ conteúdo: **quem escreve o byte tem de dizer de onde o sabe.** É a mesma forma
 da regra 1 (`sem-mordida`) e da 16 (`causa-nao-declarada`) — a régua sabe o QUÊ
 e cala sobre o DE ONDE.
 
-Por que ela pode nascer DURA, como a 13 e ao contrário da 7: medida contra o CSV
-de 31/08/2026, ela acha **ZERO** células. A versão irrestrita (sem exigir
+Por que a regra pode nascer DURA, como a 13 e ao contrário da 7: medida contra o
+CSV de 31/08/2026, acha **ZERO** células. A versão irrestrita (sem exigir
 `aciona` respondido) acharia 4, todas `*_comando` das duas linhas
 `entrada.emulacao_mouse.*`, com `aciona` vazio nos dois lados — que é buraco de
 censo, exatamente o que a regra 7 aprendeu a não castigar. Por isso a
@@ -254,7 +254,7 @@ isso por escrito em duas linhas suas: `toque.touchpad` ("quem ler
 `radio_aciona = sim` aqui está lendo 'o vpad ENTREGA', não 'o jogo REAGE'") e
 `movimento.giroscopio.jogo` ("o repasse está íntegro e o jogo não reage: a
 falha, se existir, é DEPOIS do vpad, e ninguém a localizou"). Era possível o
-mapa inteiro ficar verde enquanto ela não conseguia jogar.
+mapa inteiro ficar verde enquanto ninguém conseguia jogar.
 
 `O JOGO RECEBEU` e `O JOGO REAGIU` entram com o critério escrito em `ESCADA` —
 sem critério um degrau vira adjetivo — e com a mesma severidade dos degraus
@@ -271,7 +271,7 @@ devolveu exatamente o mesmo número de reprovações de antes: quinze. A mentira
 passou inteira, e por três motivos que este arquivo tinha por escrito:
 
   - `docs/data/ensaios.csv` não era citado aqui uma única vez. O caderno de
-    bancada — o arquivo onde mora o que o aparelho FEZ — não era fonte de
+    ensaios — o arquivo onde mora o que o aparelho FEZ — não era fonte de
     verdade de portão nenhum;
   - as colunas do degrau (hoje `cabo_ate_onde_foi`/`radio_ate_onde_foi`) não
     entravam em domínio nenhum, então `O APARELHO OBEDECEU` era escrevível em
@@ -305,16 +305,16 @@ FEATURE fez, separada do que o SUSPEITO provou". A coluna chegou, e chama-se
 `resultado_da_feature` — o nome sai da frase da própria regra 9, que já dizia
 "o `resultado` do SUSPEITO em vez do que a FEATURE fez".
 
-Como ela funciona, e por que não é um afrouxamento:
+Como a coluna funciona, e por que não é um afrouxamento:
 
   - VAZIA é o padrão, e vazia quer dizer "`resultado` também responde pela
     feature". Foi assim que 76 dos 77 ensaios ficaram intocados: nenhuma
-    medição dela foi reescrita, que era a condição do pedido;
-  - PREENCHIDA, ela responde pelas regras 9 e 10 no lugar de `resultado` — e só
-    por elas. `scripts/eliminacao.py` continua julgando o suspeito por
+    medição foi reescrita, que era a condição do pedido;
+  - PREENCHIDA, a coluna responde pelas regras 9 e 10 no lugar de `resultado` — e só
+    por essas. `scripts/eliminacao.py` continua julgando o suspeito por
     `resultado`, porque é o suspeito que ele julga. Uma coluna, duas perguntas,
     nenhuma régua nova;
-  - e ela é CARA de preencher, pela regra 12: o valor tem de estar no
+  - e é CARA de preencher, pela regra 12: o valor tem de estar no
     vocabulário do caderno, e divergir de `resultado` exige `nota` escrita. É o
     que separa "corrigir a leitura de uma coluna" de "desligar a guarda".
 
@@ -323,9 +323,9 @@ linha (`gatilho.direito.adaptativo@dualsense`) tem `gatilho-dir-radio-isolado-22
 por rádio com `resultado = obedece`. O degrau estava certo; a coluna é que
 estava sendo lida errado.
 
-Por que a regra 5 nasceu, e o que ela ainda faz
------------------------------------------------
-Ela nasceu porque o `--check` do `gerar-mapa.py` comparava MTIME, e mtime no CI
+Por que a regra 5 nasceu, e o que ainda faz
+-------------------------------------------
+A regra nasceu porque o `--check` do `gerar-mapa.py` comparava MTIME, e mtime no CI
 é ordem de checkout, não histórico de edição: o `actions/checkout` escreve os
 arquivos em ordem de caminho, e `specs.html` (raiz, "sp") sai depois de `docs/`
 e de `scripts/` — então ele nascia sempre "mais novo" que as fontes e passava
@@ -335,12 +335,12 @@ conteúdo no runner.
 Desde a MAPA-CONTEUDO-01 (12/08/2026) aquele `--check` regenera a página em
 memória e compara o CONTEÚDO inteiro, então ele morde no CI também — e morde
 mais fundo que esta regra, que só pergunta pelo `id`. A regra 5 continua por
-duas razões: ela roda sem depender do gerador (se ele quebrar, o censo ainda
-responde) e ela aponta a LINHA do CSV que ficou de fora, enquanto o `--check`
+duas razões: roda sem depender do gerador (se ele quebrar, o censo ainda
+responde) e aponta a LINHA do CSV que ficou de fora, enquanto o `--check`
 manda regerar a página inteira.
 
-Limite honesto da regra 5: ela pega a linha NOVA que ninguém publicou. Linha
-REMOVIDA do CSV e ainda publicada no HTML ela não vê — quem vê isso é o
+Limite honesto da regra 5: pega a linha NOVA que ninguém publicou. Linha
+REMOVIDA do CSV e ainda publicada no HTML a regra não vê — quem vê isso é o
 `--check` por conteúdo.
 
 Uso:
@@ -416,9 +416,9 @@ DIRECAO_SAIDA = "saída"
 DIRECAO_ENTRADA = "entrada"
 
 FECHA_A_SUITE = "a suíte, sem aparelho"
-FECHA_O_ENSAIO = "a bancada, com o aparelho na mão"
+FECHA_O_ENSAIO = "o ensaio, com o aparelho na mão"
 FECHA_O_INSTRUMENTO = "um instrumento, de fora do jogo"
-FECHA_A_MAO_DO_USUARIO = "a mão dela, e mais ninguém"
+FECHA_A_MAO_DO_USUARIO = "a mão do usuário, e mais ninguém"
 
 
 @dataclass(frozen=True)
@@ -487,10 +487,10 @@ ESCADA = (
         direcao=DIRECAO_ENTRADA,
         resumo="o personagem andou, o gatilho endureceu DENTRO do jogo",
         criterio=(
-            "ela jogou e viu. Nenhum instrumento desta casa lê o estado interno "
+            "quem usa jogou e viu. Nenhum instrumento desta casa lê o estado interno "
             "de um jogo sob Proton, e nenhum vai ler: o único sensor deste "
-            "degrau é ela. O ensaio tem de trazer `observado_por = olho-do-usuario`, e "
-            "o gesto `PS + R3` existe para ela poder fechá-lo sem tirar a mão do "
+            "degrau é quem usa. O ensaio tem de trazer `observado_por = olho-do-usuario`, e "
+            "o gesto `PS + R3` existe para quem usa poder fechá-lo sem tirar a mão do "
             "controle."
         ),
         fechado_por=FECHA_A_MAO_DO_USUARIO,
@@ -800,7 +800,7 @@ def indexar_testes(raiz: Path) -> dict[str, ArquivoDeTeste]:
 
 
 def alvos_da_celula(texto: str) -> list[str]:
-    """Quebra a célula `teste_que_morde` nos alvos que ela aponta."""
+    """Quebra a célula `teste_que_morde` nos alvos que aponta."""
     return [pedaco.strip() for pedaco in _SEPARADOR_DE_ALVOS.split(texto) if pedaco.strip()]
 
 
@@ -1027,12 +1027,12 @@ def ids_publicados(specs: Path) -> str | None:
 
 
 def caderno_de_ensaios(raiz: Path) -> tuple[dict[tuple[str, str], list[dict]] | None, str]:
-    """O caderno de bancada indexado por (`linha_id`, transporte), ou None."""
+    """O caderno de ensaios indexado por (`linha_id`, transporte), ou None."""
     caminho = raiz / ENSAIOS_RELATIVO
     if not caminho.is_file():
         return None, (
             f"grau-sem-ensaio ({ENSAIOS_RELATIVO} ausente — sem o caderno de "
-            "bancada não há o que casar com o grau)"
+            "ensaios não há o que casar com o grau)"
         )
     try:
         return carrega_por_lado(caminho), ""
@@ -1419,7 +1419,7 @@ def censo(
                         f"`{lado}_por_que_nao_aciona` está vazia: a régua sabe "
                         "que não aciona e não sabe de quem é a culpa — nem se "
                         "alguém chegou a olhar. Se ninguém mediu, a palavra é "
-                        "`nao-medido`, e ela NÃO autoriza dizer que o aparelho "
+                        "`nao-medido`, e NÃO autoriza dizer que o aparelho "
                         "não faz. Preencha com uma das causas do domínio "
                         f"({sorted(DOMINIO_POR_SUFIXO['por_que_nao_aciona'] - {''})})",
                     )
@@ -1599,8 +1599,8 @@ def _regra_da_ponte_nao_declarada(
     """Regra 15 — afirmação forte por `uhid` que não diz por qual ponte.
 
     A linha `uhid` é a única do mapa em que a PONTE decide se a feature existe:
-    sob a nossa máscara DualSense (`054c:0df2`) ela chega ao jogo, e sob a
-    máscara Xbox (`045e:028e`) ela não tem por onde chegar — o pacote do Xbox
+    sob a nossa máscara DualSense (`054c:0df2`) a feature chega ao jogo, e sob a
+    máscara Xbox (`045e:028e`) não tem por onde chegar — o pacote do Xbox
     360 é fixo desde 2005 e o `xpad` declara sete eixos e um nó só
     (`pilha-steam-input-xpad-sdl.md` §1.5). Por isso `aciona = sim, medido` sem
     `ponte_alcanca` não é uma célula incompleta: é uma célula que afirma duas
@@ -1717,7 +1717,7 @@ def _regra_da_validade(
 def _regra_da_assimetria(
     linha: dict[str, str], numero: int, ident: str, resumo: Resumo
 ) -> list[Achado]:
-    """Regra 7 — o caso que ela descreveu: consolidado no cabo, morto no rádio."""
+    """Regra 7 — o caso descrito: consolidado no cabo, morto no rádio."""
     cabo = (linha[f"{LADOS[0]}_aciona"] or "").strip()
     radio = (linha[f"{LADOS[1]}_aciona"] or "").strip()
     if cabo == radio:
@@ -1835,7 +1835,7 @@ def _regra_do_caderno(
     lado: str,
     resumo: Resumo,
 ) -> list[Achado]:
-    """Regras 6, 9, 10 e 12 — o grau forte contra o caderno de bancada."""
+    """Regras 6, 9, 10 e 12 — o grau forte contra o caderno de ensaios."""
     rotulo = ROTULO_DO_LADO[lado]
     if not ensaios:
         resumo.graus_fortes_sem_ensaio += 1
@@ -1940,7 +1940,7 @@ def _achado_sem_olho_do_usuario(
             f"observado por {observadores}. Este degrau NÃO tem instrumento: "
             "nenhuma régua desta casa lê o estado interno de um jogo sob "
             f"Proton. Só `{OBSERVADOR_QUE_SUSTENTA}` o fecha — grave o ensaio "
-            f"com o gesto dela, ou desça para `{GRAU_JOGO_RECEBEU}`, que é o "
+            f"com o gesto do usuário, ou desça para `{GRAU_JOGO_RECEBEU}`, que é o "
             "que um instrumento consegue ver de fora",
         )
     return Achado(
@@ -1952,7 +1952,7 @@ def _achado_sem_olho_do_usuario(
         f"o ensaio que sustenta `{grau}` no {rotulo} foi "
         f"observado por {observadores}, e o METODO-DE-ISOLAMENTO diz que "
         f"só `{OBSERVADOR_QUE_SUSTENTA}` sustenta esse degrau: peça o "
-        "olho dela, ou desça para `SAIU NO FIO`",
+        "olho do usuário, ou desça para `SAIU NO FIO`",
     )
 
 
@@ -2011,7 +2011,7 @@ def regra_id_estavel(
                 f"`--contra {contra}` não resolveu ({motivo!r}). Provavelmente um "
                 "clone raso sem `fetch-depth: 0`, ou a ref não existe. A régua "
                 "da estabilidade do `id` reprova em vez de sair calada — sem "
-                "histórico ela não tem como saber se um `id` sumiu.",
+                "histórico não há como saber se um `id` sumiu.",
             )
         ]
 
@@ -2116,7 +2116,7 @@ _MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (
 def numeros_soltos(texto: str) -> list[tuple[int, str]]:
     """Números com cara de medição que estão FORA de `<!--@…-->…<!--/-->`.
 
-    **POR QUE ELA EXISTE, e o buraco é medido — 08/09/2026.** A régua das marcas
+    **POR QUE A RÉGUA EXISTE, e o buraco é medido — 08/09/2026.** A régua das marcas
     confere só o que está marcado, e por isso NOVE números do documento
     envelheceram calados: eles nunca foram marcados. O pior deles era o aviso de
     custo — *"661.177 caracteres, ~165 mil tokens"* contra 1.396.169 e ~349 mil
@@ -2328,7 +2328,7 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
 
 
 def valor_gerado(chave: str, fixos: dict[str, str], raiz: Path) -> tuple[str, str | None]:
-    """O valor de uma chave, ou `("", motivo)` quando ela não se resolve."""
+    """O valor de uma chave, ou `("", motivo)` quando não se resolve."""
     if chave.startswith(_PREFIXO_DE_BYTES):
         relativo = chave[len(_PREFIXO_DE_BYTES) :]
         alvo = raiz / relativo
@@ -2425,7 +2425,7 @@ def confere_leia_primeiro(raiz: Path, escrever: bool) -> int:
 
 
 def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
-    """O quadro que ela lê para saber ONDE o mapa está cego."""
+    """O quadro que se lê para saber ONDE o mapa está cego."""
     print("")
     print("Resumo do censo (nenhum destes números é limiar — são o retrato de hoje):")
     linhas = [
@@ -2454,7 +2454,7 @@ def imprime_resumo(resumo: Resumo, desligadas: list[str]) -> None:
         ),
         ("     desses, SEM ensaio no caderno", resumo.graus_fortes_sem_ensaio),
         ("     desses, na direção de ENTRADA (o jogo)", resumo.graus_de_entrada),
-        ("ensaios lidos do caderno de bancada", resumo.ensaios_no_caderno),
+        ("ensaios lidos do caderno de ensaios", resumo.ensaios_no_caderno),
         (
             f"linhas que alcançam o jogo por `{CANAL_QUE_A_MASCARA_DECIDE}`",
             resumo.linhas_que_alcancam_por_uhid,
@@ -2596,11 +2596,11 @@ def main(argv: list[str] | None = None) -> int:
         print("Cada linha acima é uma afirmação do mapa sem rede que a sustente.")
         print("Preencha `teste_que_morde` com o id do nó do pytest que reprova")
         print("quando aquela feature quebrar NAQUELE transporte, ou baixe a")
-        print("`de_onde_sei` da célula para o que ela de fato é. Vazio é pergunta")
+        print("`de_onde_sei` da célula para o que de fato é. Vazio é pergunta")
         print("aberta e não reprova; `medido` sem teste, sim.")
         print("")
         pedem = ", ".join(f"`{valor}`" for valor in GRAUS_QUE_EXIGEM_ENSAIO)
-        print("E o grau é a MESMA conta na bancada:")
+        print("E o grau é a MESMA conta no ensaio:")
         print(f"{pedem} pedem ensaio do MESMO transporte em")
         print(f"{ENSAIOS_RELATIVO}. Sem ensaio, o degrau honesto é")
         print(f"`{GRAU_MONTOU}` — que já é o que a suíte prova sem aparelho.")

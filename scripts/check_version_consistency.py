@@ -48,7 +48,7 @@ _RE_PRIMEIRA_RELEASE = re.compile(
 
 
 def _data_no_changelog(texto: str, numero: str) -> str | None:
-    """Data da seção `## [X.Y.Z] — AAAA-MM-DD`, se ela existir e for datada."""
+    """Data da seção `## [X.Y.Z] — AAAA-MM-DD`, se existir e for datada."""
     padrao = rf"^##\s*\[{re.escape(numero)}\]\s*[—-]\s*(\d{{4}}-\d{{2}}-\d{{2}})\s*$"
     achado = re.search(padrao, texto, re.MULTILINE)
     return achado.group(1) if achado else None

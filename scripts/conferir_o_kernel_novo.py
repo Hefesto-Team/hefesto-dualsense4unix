@@ -12,7 +12,7 @@ arquivo de fábrica do kernel novo é a base da série. Este script responde por
   o patch não toca (o `rx.h` do rtw88) mudou; a saída diz qual.
 
 As bases saem do que o pacote guarda no disco: a raiz e cada pasta de `fonte-por-kernel/`
-valem pelos arquivos de fábrica dela (o que ela guarda, com a série dela desfeita), mais as
+valem pelos seus arquivos de fábrica (o que a pasta guarda, com a sua série desfeita), mais as
 chaves `SHA256_VANILLA_C|H[_<kernel>]` do BASELINE; build novo no BASELINE não pede edição aqui.
 
 O fonte é um diretório com a árvore do kernel ou `--pop <commit>`, que baixa só os
@@ -141,7 +141,7 @@ def _serie_da_pasta(pasta: Path) -> list[str]:
 
 
 def _kernel_da_chave(pasta: Path, kernel: str) -> bool:
-    """A chave `..._7_2_6` é da pasta `7.2.6-76070206`: o kernel da chave abre o nome dela."""
+    """A chave `..._7_2_6` é da pasta `7.2.6-76070206`: o kernel da chave abre o nome da pasta."""
     nome = re.sub(r"[.-]", "_", pasta.name)
     return nome == kernel or nome.startswith(kernel + "_")
 
@@ -157,7 +157,7 @@ def _fabrica_dos_arquivos(pacote: str, pastas: list[Path], serie: Serie) -> dict
     """O sha de fábrica de cada arquivo: o que as pastas guardam, com a série desfeita.
 
     O arquivo vem da primeira pasta que o guarda (a do kernel, depois a raiz): o `usb.h` do
-    7.2.6 é o da raiz. Com a série impossível de desfazer, só os arquivos que ela não toca
+    7.2.6 é o da raiz. Com a série impossível de desfazer, só os arquivos que a série não toca
     (as chaves vazias do PACOTES) entram, porque os outros já não se sabem de fábrica.
     """
     arquivos = list(PACOTES[pacote])
@@ -197,7 +197,7 @@ def _fabrica_dos_arquivos(pacote: str, pastas: list[Path], serie: Serie) -> dict
 def _bases(pacote: str) -> list[tuple[str, dict[str, set[str]]]]:
     """As bases conhecidas: a da raiz e uma por pasta de `fonte-por-kernel/`.
 
-    Cada uma vale pelos arquivos de fábrica que o disco guarda (a série dela desfeita) e pelas
+    Cada uma vale pelos arquivos de fábrica que o disco guarda (com a sua série desfeita) e pelas
     chaves de fábrica do BASELINE. Uma chave `_<kernel>` de pasta que existe é da pasta, nunca
     da raiz: a raiz construída num kernel que mudou é o verde falso que esta régua cura.
     """
@@ -227,7 +227,7 @@ def _bases(pacote: str) -> list[tuple[str, dict[str, set[str]]]]:
 
 
 def _series(pacote: str) -> list[Serie]:
-    """A série da raiz (a do BASELINE) e a de cada pasta por kernel (a que ela guarda)."""
+    """A série da raiz (a do BASELINE) e a de cada pasta por kernel (a que a pasta guarda)."""
     nomes = _serie_da_raiz(_linhas_do_baseline(pacote))
     series = [Serie("da raiz", DKMS / pacote / "patch", nomes, "da raiz")]
     for pasta in _pastas_por_kernel(pacote):

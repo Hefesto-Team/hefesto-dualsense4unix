@@ -434,7 +434,7 @@ def _base_da_leva(raiz: Path) -> str | None:
 
     Uma leva nasce do ``dev`` (a integração e cada árvore de entrada), e o ``dev``
     só anda no fecho; logo ``merge-base HEAD dev`` é a base da leva inteira, e a
-    faixa não encolhe quando o teto se regrava no meio dela. No próprio ``dev``
+    faixa não encolhe quando o teto se regrava no meio da leva. No próprio ``dev``
     (faixa vazia) vale o último commit que mexeu no teto.
     """
     saida = subprocess.run(

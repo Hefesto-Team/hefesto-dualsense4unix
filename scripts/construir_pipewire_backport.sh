@@ -13,7 +13,7 @@ Uso:
   scripts/construir_pipewire_backport.sh --prova       # passos 1 a 3, e a prova sem dependência de build:
       compila só o servidor da árvore (meson mínimo, sem ALSA nem Bluetooth) com e sem a cura,
       e roda assets/pipewire-backport/prova/reproduzir.sh nos dois. Com a cura, 0 pendurados;
-      sem ela, todos. Precisa de meson, ninja e gcc, e do wireplumber e do wpctl no PATH.
+      sem a cura, todos. Precisa de meson, ninja e gcc, e do wireplumber e do wpctl no PATH.
   scripts/construir_pipewire_backport.sh --conferir-metadata ARQ
       # só a pergunta do passo 3, sobre ARQ
   HEFESTO_PIPEWIRE_CACHE=/outro scripts/construir_pipewire_backport.sh
@@ -259,7 +259,7 @@ provar() {
     rc=0
     saida="$(bash "${ASSETS}/prova/reproduzir.sh" "${sem_cura}" 2>/dev/null)" || rc=$?
     diga "sem a cura: ${saida:-sem saída} (rc=${rc})"
-    [[ "${rc}" -eq 1 ]] || morra "${RC_PROVA}" "sem a cura, a prova não pendurou: ela não mede nada"
+    [[ "${rc}" -eq 1 ]] || morra "${RC_PROVA}" "sem a cura, a prova não pendurou: não mede nada"
 }
 
 avisar_do_libbluetooth_dev() {

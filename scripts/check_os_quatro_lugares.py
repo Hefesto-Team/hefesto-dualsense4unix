@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Os QUATRO lugares de cada aba carregam os MESMOS endereços.
 
-ELA MEDIU O DEFEITO NA PRÓPRIA MESA, 07/09/2026, com os quatro DualSense
-ligados e os quatro reconhecidos:
-
-    "4 controles conectados mas as infos dos dos outros 2 ultimos não  (noqa-acento: citação literal)
-    aparecem (…) isso em todas as abas."
+O DEFEITO MEDIDO NA MESA, 07/09/2026, com os quatro DualSense ligados e os
+quatro reconhecidos: as informações dos dois últimos não apareciam, em todas as
+abas.
 
 A CAUSA NÃO ERA O DADO. Medido de ponta a ponta: o daemon publicava os quatro,
 o piloto montava `colunas=['p1','p2','p3','p4']` e `vazios=[]`. O que faltava
@@ -18,7 +16,7 @@ quatro.
 POR QUE UM PORTÃO, e não só a auto-checagem de cada gerador: o defeito é o
 MESMO em dez arquivos, e sete deles o tinham. Uma régua por aba já existe (cada
 `abaNN.py` ganhou a sua nesta leva) — esta aqui é a que atravessa as dez e vê
-o que nenhuma delas pode ver: uma aba nova nascendo com o ramo separado.
+o que nenhuma das outras pode ver: uma aba nova nascendo com o ramo separado.
 
 O QUE NÃO PRECISA PRÉ-EXISTIR, e as duas razões são estruturais:
 
@@ -33,11 +31,11 @@ O QUE NÃO PRECISA PRÉ-EXISTIR, e as duas razões são estruturais:
 
 TRÊS ABAS NÃO TÊM CARTÃO POR CONTROLE, e isso é desenho, não falta: Lançadores
 (os cartões são por lançador), Sistema (a página é a contagem da máquina) e
-Perfis (os lugares são `<tr data-hef-uniq>`, outro vocabulário). Elas passam
+Perfis (os lugares são `<tr data-hef-uniq>`, outro vocabulário). Essas passam
 declarando ausência, e o portão diz isso em vez de calar.
 
 Uso:
-    scripts/check_os_quatro_lugares.py              a bancada — o desenho de hoje
+    scripts/check_os_quatro_lugares.py              o desenho de hoje (`mockup/`)
     scripts/check_os_quatro_lugares.py --publicado  o que o produto renderiza
 """
 from __future__ import annotations
@@ -126,7 +124,7 @@ def main() -> int:
     if not paginas:
         print("check_os_quatro_lugares: não achei nenhuma aba para medir.")
         return 1
-    onde_estou = "o publicado" if publicado else "a bancada"
+    onde_estou = "o publicado" if publicado else "o desenho"
     print(f"os quatro lugares — {onde_estou}, {len(paginas)} abas")
     ruins = 0
     for p in paginas:
@@ -135,7 +133,7 @@ def main() -> int:
         ruins += 0 if passou else 1
     if ruins:
         print(f"\n{ruins} aba(s) em que o dado dos quatro controles não tem "
-              f"onde pousar. É o defeito que ela mediu em 07/09/2026: a tela "
+              f"onde pousar. É o defeito medido em 07/09/2026: a tela "
               f"mostra dois porque o desenho tem dois.")
     return 1 if ruins else 0
 

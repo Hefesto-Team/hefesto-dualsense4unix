@@ -440,7 +440,7 @@ main() {
     [[ "${JOBS}" =~ ^[1-9][0-9]*$ ]] || morra "${RC_USO}" "HEFESTO_BLUEZ_JOBS inválido: ${JOBS} (um inteiro a partir de 1)"
     if [[ "${REVISAO}" != "${revisao_ultima}" ]] \
             && [[ "$(realpath -m "${SAIDA}")" == "$(realpath -m "${SAIDA_DO_INSTALL}")" ]]; then
-        morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê (${SAIDA_DO_INSTALL})"
+        morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê (${SAIDA_DO_INSTALL})"
     fi
     PATCHES="$(ler "PATCHES_R${REVISAO}")"
     ALVO="$(ler_da_revisao VERSAO_BASE)~hefesto24.04.${REVISAO}"

@@ -171,8 +171,8 @@ class Catraca:
                     f"universo VAZIO: o censo de «{medida.nome}» não encontrou "
                     "nada para varrer. Zero de um universo de zero não é uma "
                     "medida — é não ter olhado, e lê-se como verde. "
-                    "Confira se a pasta que esta medida lê ainda está onde ela "
-                    "pensa que está.",
+                    "Confira se a pasta que esta medida lê ainda está onde a "
+                    "medida pensa que está.",
                 ),
             )
         if medida.conferir_universo is not None:

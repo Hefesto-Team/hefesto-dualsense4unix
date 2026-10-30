@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O endereço dela em toda forma — a régua que PERGUNTA AO DONO (local, fora do CI)."""
+"""O endereço de rádio da máquina de teste em toda forma — a régua que PERGUNTA AO DONO (local, fora do CI)."""
 from __future__ import annotations
 
 import argparse
@@ -290,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
         pedacos_dos_virtuais(virtuais_da_maquina(reais)),
     )
     if achados:
-        print(f"FALHA: {len(achados)} linha(s) com os octetos 4 ou 5 de um endereço dela.\n")
+        print(f"FALHA: {len(achados)} linha(s) com os octetos 4 ou 5 de um endereço da máquina de teste.\n")
         for a in achados[:60]:
             print("  " + a)
         if len(achados) > 60:

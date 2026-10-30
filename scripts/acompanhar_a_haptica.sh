@@ -71,5 +71,5 @@ elif [ "$viu4ch" -eq 0 ]; then
   echo "As opções chegaram, mas o sink NUNCA abriu em 4 canais."
   echo "O jogo não pediu háptica, ou o endpoint KS não foi aceito."
 else
-  echo "A CORRENTE FECHOU. Falta o quarto sinal, e ele é dela: VIBROU?"
+  echo "A CORRENTE FECHOU. Falta o quarto sinal, e ele é de quem segura o controle: VIBROU?"
 fi

@@ -57,7 +57,7 @@ O que esta régua NÃO pega, dito na cara
 ----------------------------------------
 É estrutural, não semântica: uma função que chama uma OUTRA função que já é
 FAN-OUT (por exemplo, `_handle_led_set` chamando `_registrar_em_todos`) não é
-ela mesma marcada FAN-OUT — quem escreve o loop/a queda é quem o portão
+marcada FAN-OUT — quem escreve o loop/a queda é quem o portão
 cobra. Um fan-out por caminho que não é `for` NEM o padrão exato da Regra 2
 (recursão, `map()`, `asyncio.gather`, um parâmetro com outro nome) não é
 pego por esta versão — ver §2.4 da sprint, "NÃO VERIFICADO". Isto mede os
@@ -344,7 +344,7 @@ def _qualname(func: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
 
 
 def _marca_qualnames(tree: ast.Module) -> None:
-    """Prefixa cada função com `Classe.` quando ela é método — um só passo,"""
+    """Prefixa cada função com `Classe.` quando é método — um só passo,"""
 
     def visita(node: ast.AST, prefixo: str) -> None:
         for filho in ast.iter_child_nodes(node):

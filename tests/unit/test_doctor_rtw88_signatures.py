@@ -332,7 +332,7 @@ class TestCheckWifiPowersave:
         self._conf_do_hefesto(tmp_path)
         resultado = self._roda(tmp_path, wifi={"wlan0": "off", "wlan1": "on"})
         assert "WARN: o conf do hefesto desliga" in resultado.stdout
-        assert "wlan1 ainda está com ela LIGADA" in resultado.stdout
+        assert "wlan1 ainda está com a economia LIGADA" in resultado.stdout
         assert "PASS" not in resultado.stdout
 
     def test_so_o_iwconfig_no_sbin_le_a_interface_e_diz_o_comando_dele(
@@ -340,7 +340,7 @@ class TestCheckWifiPowersave:
     ) -> None:
         self._conf_do_hefesto(tmp_path)
         resultado = self._roda(tmp_path, wifi={"wlan0": "on"}, ferramenta="iwconfig")
-        assert "wlan0 ainda está com ela LIGADA" in resultado.stdout, resultado.stdout
+        assert "wlan0 ainda está com a economia LIGADA" in resultado.stdout, resultado.stdout
         assert f"sudo {tmp_path}/sbin/iwconfig wlan0 power off" in resultado.stdout
         assert " iw dev " not in resultado.stdout
 

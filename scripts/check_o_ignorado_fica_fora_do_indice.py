@@ -7,7 +7,7 @@ porque o repositório carrega só o produto) entrou com `git add -f` numa branch
 perguntou, porque as réguas que listam a árvore pedem `--cached --others`, nunca o versionado que casa regra de
 ignorado.
 
-A pergunta é sobre o ÍNDICE, não sobre o disco: `git ls-files --cached --ignored`. Ela responde igual num clone do
+A pergunta é sobre o ÍNDICE, não sobre o disco: `git ls-files --cached --ignored`, que responde igual num clone do
 CI (que não tem ignorado no disco) e na árvore de quem trabalha. Cada achado sai com a regra que ele casa
 (`git check-ignore --no-index -v`), que é o que diz a quem lê se o erro é o arquivo ou a regra.
 

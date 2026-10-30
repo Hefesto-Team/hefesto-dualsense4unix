@@ -2,7 +2,7 @@
 """Quem assina a história e o que o texto carrega: uma régua só, no gancho, nos portões e no CI.
 
 Só assinam as pessoas do `.mailmap` (autor, committer e tagger, nome e endereço); linha
-de atribuição só com o endereço delas; termos internos que não se publicam, de uma lista
+de atribuição só com o endereço dessas pessoas; termos internos que não se publicam, de uma lista
 fora do repositório. A saída nunca imprime o termo nem a linha que casou: o log do CI é público.
 
 Modos:
@@ -183,7 +183,7 @@ def _identidades_do_commit(an: str, ae: str, cn: str, ce: str, casa: Casa) -> li
 
 
 def _atribuicao_da_casa(valor: str, casa: Casa) -> bool:
-    """A linha de atribuição traz endereço, e TODO endereço dela é de quem está no `.mailmap`."""
+    """A linha de atribuição traz endereço, e TODO endereço da linha é de quem está no `.mailmap`."""
     enderecos = [e.lower() for e in ENDERECO.findall(valor)]
     return bool(enderecos) and all(e in casa[1] for e in enderecos)
 
@@ -433,7 +433,7 @@ def _veredito(ruins: list[str], alcance: str, lista: Lista | None) -> int:
     if lista.invalidas:
         print(f"autoria: NÃO MEDIDO: {lista.invalidas} linha(s) da lista não se leem "
               "(o formato é `1 <termo>`, `2 <Termo>` ou `1 re:<expressão>`); "
-              "o termo delas não foi medido.")
+              "o termo dessas linhas não foi medido.")
         return 1
     if unicos:
         return 1

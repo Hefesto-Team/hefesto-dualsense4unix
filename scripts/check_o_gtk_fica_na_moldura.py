@@ -12,7 +12,7 @@ Reprova, nomeando `arquivo:linha`, o `from gi.repository import Gtk/Gdk/WebKit2`
 (também como `require_version`, puxado por `from gi import`) em
 qualquer arquivo de `src/hefesto_dualsense4unix/` que não esteja em
 `DONOS_DO_GTK` ou nos `PADROES_DOS_PILOTOS`. A lista é a fonte, com o motivo de
-cada entrada, e ela não envelhece calada: entrada cujo arquivo sumiu, ou que já
+cada entrada, e não envelhece calada: entrada cujo arquivo sumiu, ou que já
 não importa Gtk/Gdk, também reprova.
 
 O que fica de fora de propósito: `GLib`, `Gio` e `GdkPixbuf` (não são widget), e o

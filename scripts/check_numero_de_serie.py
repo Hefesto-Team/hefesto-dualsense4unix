@@ -24,10 +24,10 @@ Entre o commit que vaza e a reprovação havia um dia inteiro de trabalho — fo
 exatamente assim com os 37 endereços de rádio crus desta manhã, que o portão
 autoritativo de MAC acusava e ninguém rodava. Esta reprova antes do commit.
 
-O serial de fábrica identifica a unidade dela **tão bem quanto o MAC**, e a
+O serial de fábrica identifica a unidade **tão bem quanto o MAC**, e a
 regra desta casa é sobre ARQUIVO VERSIONADO, não sobre a palavra "MAC" — a
-docstring de ``cor_do_plastico.mascarar_serial`` registra que ELA MESMA já foi
-escrita com o serial verdadeiro de um controle da bancada.
+docstring de ``cor_do_plastico.mascarar_serial`` registra que A PRÓPRIA DOCSTRING já foi
+escrita com o serial verdadeiro de um controle da máquina de teste.
 
 PELA FORMA, E NUNCA POR LISTA
 ------------------------------
@@ -44,7 +44,7 @@ buffer de um log do Proton, todos marcados com a razão.
 
 A MÁSCARA É A QUE JÁ EXISTE, e não uma nova: ``AB1C05###########`` — os SEIS
 primeiros caracteres ficam (modelo e planta, compartilhados por lote, que não
-identificam unidade nenhuma) e o resto vira ``#``. O dono dela é
+identificam unidade nenhuma) e o resto vira ``#``. O dono da regra é
 ``cor_do_plastico.CARACTERES_PUBLICOS_DO_SERIAL``, e este portão o LÊ em vez de
 digitar o número.
 
@@ -56,7 +56,7 @@ Escreva ``serial-de-mentira`` na MESMA linha, com a razão::
                                              # exemplo da própria máscara
 
 A marca vai na linha do token porque a varredura é por linha — escrita na de
-baixo ela não alcança nada. É a mesma convenção do ``endereco-de-mentira`` do
+baixo a marca não alcança nada. É a mesma convenção do ``endereco-de-mentira`` do
 ``check_endereco_de_radio.py``.
 
     scripts/check_numero_de_serie.py          # o portão
@@ -176,7 +176,7 @@ def main() -> int:
     for v in violacoes:
         print(f"  {v}")
     print()
-    print("O serial de fábrica identifica a unidade dela tão bem quanto o MAC,")
+    print("O serial de fábrica identifica a unidade tão bem quanto o MAC,")
     print("e a regra desta casa é sobre ARQUIVO VERSIONADO — não sobre a")
     print("palavra 'MAC'. A máscara já tem dono:")
     print(f"  {_mascara_de_exemplo()}")

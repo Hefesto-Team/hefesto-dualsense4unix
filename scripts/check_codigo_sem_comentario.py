@@ -3,7 +3,7 @@
 
 A regra é a D-2610-O-CODIGO-NAO-TEM-COMENTARIO: nos cinco tipos (``.py``, ``.sh``, ``.html``, ``.js``,
 ``.css``, e o arquivo sem extensão que abre com ``#!`` de shell ou de Python), todo comentário reprova pelo
-nome do arquivo e pela linha, menos a diretiva da lista ``DIRETIVAS``, na forma nua dela. O porquê que vale
+nome do arquivo e pela linha, menos a diretiva da lista ``DIRETIVAS``, na forma nua. O porquê que vale
 guardar mora em ``docs/research/o-porque-dos-modulos.md``; a docstring fica, porque não é comentário.
 
 Os comentários são lidos pelo analisador de cada linguagem, nunca por ``grep``: o ``tokenize`` no Python; no
@@ -38,7 +38,7 @@ class Diretiva:
 
     A ancorada abre o comentário (``# noqa: E501``, ``# type: ignore[x]``); a de linha (``noqa-acento``,
     ``serial-de-mentira``) vale em qualquer ponto dele, mas só colada em código na mesma linha, que é
-    onde o leitor dela olha.
+    onde o seu leitor olha.
     """
 
     nome: str

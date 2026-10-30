@@ -9,11 +9,10 @@ comentário, `.desktop`, AppStream, `.po`. O ``S`` é do **DualSense**, o aparel
 que dá nome ao produto; ``Dualsense`` não é nada.
 
 **E ele travava uma cura já medida.** Em 11/09/2026 a barra da janela passou a
-dizer o nome inteiro, por ordem de produto — *"no nome da janela não conseguimos
-deixar Hefesto - DualSense4Unix ao invés de só hefesto?"*  (noqa-acento: citação
-literal) —, e as duas linhas que o fizeram, as de ``_MOLDURA`` logo abaixo,
+dizer o nome inteiro (Hefesto - DualSense4Unix, e não só hefesto), por ordem de
+produto, e as duas linhas que o fizeram, as de ``_MOLDURA`` logo abaixo,
 nasceram com o nome **DIGITADO**, com a dívida escrita ao lado: ler do dono poria a grafia
-errada na barra dela. Fechada a grafia, as duas passaram a ler. É o padrão desta
+errada na barra. Fechada a grafia, as duas passaram a ler. É o padrão desta
 casa: *quando um valor tem dono, a régua PERGUNTA ao dono.*
 
 AS DUAS PENEIRAS, e uma sozinha daria verde sobre o defeito da outra
@@ -30,7 +29,7 @@ O QUE ELE **NÃO** ACUSA, e cada exceção foi MEDIDA contra a árvore de 11/09
 ---------------------------------------------------------------------------
 Nem toda ocorrência é o nome do produto em texto. Estas são **identificador
 técnico**: strings que alguém de fora deste repositório casa LETRA POR LETRA.
-Trocar a caixa delas não dá erro — dá silêncio, que é o preço que esta casa
+Trocar a caixa dessas strings não dá erro — dá silêncio, que é o preço que esta casa
 mais paga.
 
 * ``Hefesto-Dualsense4Unix`` (hífen, sem espaços) — é o ``wm_class`` de
@@ -48,13 +47,11 @@ mais paga.
   aparelho, em Steam e em cada jogo.
 * ``Hefesto - Dualsense4Unix Virtual Keyboard`` / ``… Virtual Mouse+Keyboard`` —
   idem, e o compositor guarda configuração POR NOME de dispositivo.
-  **O que quebraria:** a configuração de teclado/mouse virtual dela volta ao
+  **O que quebraria:** a configuração de teclado/mouse virtual de quem usa volta ao
   padrão, sem aviso.
 
-Ordem, 11/09/2026, e é ela que decide estas quatro:
-
-    *"a ideia é que todas as features mesmo do app funcionem nao so pra  (noqa-acento: citação literal)
-    mim mas pra qualquer outro user"*
+A ordem de 11/09/2026 decide estas quatro: toda feature do app funciona para
+qualquer usuário, não só para a máquina de teste.
 
 Uma troca de grafia que quebre o reconhecimento de janela, o ``.desktop`` ou o
 nó de entrada quebra a instalação de **todo mundo**. Por isso o passo 1 foi
@@ -65,7 +62,7 @@ A MORDIDA (arranque a cura, veja reprovar, devolva)
 ``tests/unit/test_portao_a_grafia_do_nome_morde.py`` fabrica os dois defeitos
 num diretório de mentira e exige rc=1 nos dois, e exige rc=0 sobre os quatro
 identificadores técnicos — porque uma régua que reprovasse o ``wm_class`` seria
-pior que a ausência dela.
+pior que a ausência de régua.
 
 À mão, nesta árvore::
 
@@ -97,11 +94,11 @@ _ERRADA = re.compile(
 
 ISENTOS: dict[str, str] = {
     "scripts/check_a_grafia_do_nome.py":
-        "esta régua: a docstring tem de poder escrever o que ela caça.",
+        "esta régua: a docstring tem de poder escrever o que caça.",
     "scripts/aplicar_a_grafia_do_nome.sh":
-        "a cura: a expressão tem de poder escrever o que ela substitui.",
+        "a cura: a expressão tem de poder escrever o que substitui.",
     "tests/unit/test_portao_a_grafia_do_nome_morde.py":
-        "a mordida: ela fabrica o defeito para ver a régua reprovar.",
+        "a mordida: fabrica o defeito para ver a régua reprovar.",
 }
 
 _MOLDURA = (

@@ -6,7 +6,7 @@ número. O `validar-citacoes-de-linha.py` confere que a linha existe; o `reapont
 leva o número quando o código anda. Nenhum dos dois sabe PARA ONDE a citação devia apontar: uma
 varredura em massa a reescreveu sem olhar o conteúdo, e o desvio ficou verde.
 
-Aqui a pergunta é a da própria linha do CSV: o `sinal` dela (o símbolo que a feature descreve)
+Aqui a pergunta é a da própria linha do CSV: o seu `sinal` (o símbolo que a feature descreve)
 está a até ``JANELA`` linhas da linha citada? Só entram as linhas cujo `sinal_escopo` é o
 `a07_lancadores.py`: citar a 07 numa linha cujo sinal mora em outro arquivo não tem contra o que
 conferir, e é erro (a citação sai e a célula diz o símbolo).
@@ -69,7 +69,7 @@ def conferir(csv_: Path, arquivo: Path) -> tuple[list[str], int]:
             if not any(primeira - JANELA <= i <= ultima + JANELA for i in lugares):
                 falhas.append(
                     f"longe-do-sinal: {onde}\n    cita {citada}, e `{chave}` (do sinal {sinal!r}) "
-                    f"não está a {JANELA} linhas dela; mora em "
+                    f"não está a {JANELA} linhas da citada; mora em "
                     f"{', '.join(map(str, lugares)) or 'lugar nenhum do arquivo'}.")
     return falhas, conferidas
 

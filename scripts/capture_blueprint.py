@@ -23,7 +23,7 @@ Este script falhava com `'/dev/hidraw8' inacessível ([Errno 13] Permission
 denied)` sempre que o co-op estava ligado — e a leitura fácil ("a regra udev
 não cobre o Bluetooth") mandava consertar o lugar errado. A regra está certa e
 pegou; quem tira a ACL é o **próprio Hefesto**, de propósito, para o jogo não
-enxergar o físico. A porta certa é o broker, e é por ela que se entra agora.
+enxergar o físico. A porta certa é o broker, e é por ele que se entra agora.
 O `open()` direto continua existindo como queda — e sai DECLARADO no relatório,
 porque uma medição que não diz por onde entrou não pode ser comparada com a do
 outro braço do ensaio.

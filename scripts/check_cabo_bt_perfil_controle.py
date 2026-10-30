@@ -27,11 +27,11 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
     "padrao-da-aba": "devolve a aba ao desenho — é da tela",
     "vizinho-o-que-e": "abre a explicação de um vizinho de porta — é texto",
-    "procurar": "filtra a lista dos perfis pelo que ela digitou — é da tela",
+    "procurar": "filtra a lista dos perfis pelo que se digitou — é da tela",
     "adicionar-lancador": "registra onde um lançador está — é da máquina",
     "editar-o-css-da-modificacao": "abre o `meu.css` da extensão no editor — é texto da pessoa, "
                                    "e nada aqui toca o controle",
-    "procurar-o-arquivo": "abre o seletor do sistema para ela apontar o "
+    "procurar-o-arquivo": "abre o seletor do sistema para apontar o "
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
     "copiar-registro": "copia o registro técnico para a área de transferência "
@@ -42,9 +42,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                    "entre o nó de captura deste controle e a saída padrão. É "
                    "leitura do microfone mais uma tocada na saída, e não muda "
                    "estado nenhum: nem no aparelho, nem no perfil. **E NÃO "
-                   "PERSISTE DE PROPÓSITO** — ela pediu *\"POR DEFAULT SEGUE "
-                   "DESLIGADO\"* (21/09/2026), e um retorno que renascesse "
-                   "ligado poria a voz dela no ar sem ninguém ter clicado. O "
+                   "PERSISTE DE PROPÓSITO** — por padrão segue "
+                   "desligado (21/09/2026), e um retorno que renascesse "
+                   "ligado poria a voz de quem usa no ar sem ninguém ter clicado. O "
                    "volume e o ganho que ele reflete são dos deslizantes ao "
                    "lado, que têm as quatro respostas por conta deles "
                    "(TESTAR-O-MICROFONE-01, 20/09/2026)",
@@ -86,7 +86,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "mapear-parar": "o Mapear Entradas para de olhar as portas — é da máquina",
     "modo": "o efeito do gatilho (03) e o modo de navegação (06) — o gesto tem "
             "dois donos, e os dois caem em linhas do mapa por outro gesto",
-    "modo-dualsense": "o modo é UM para todos — decisão dela de 08/09 "
+    "modo-dualsense": "o modo é UM para todos — decisão de 08/09 "
                       "(`D-0809-O-MODO-E-UM-PARA-TODOS-OS-CONTROLES`)",
     "modo-navegacao": "idem",
     "modo-steam": "idem",
@@ -99,12 +99,12 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "criar-perfil-do-jogo": "cria o perfil do jogo escolhido na janela dos lançadores — é do perfil",
     "ligar-modificacao": "liga ou desliga uma extensão — é do supervisor da máquina",
     "configurar-modificacao": "abre a janela de uma extensão — é da tela",
-    "guardar-opcao-da-modificacao": "guarda uma opção da extensão no `opcoes.json` dela — é da máquina",
+    "guardar-opcao-da-modificacao": "guarda uma opção da extensão no `opcoes.json` da extensão — é da máquina",
     "mais-da-modificacao": "o ⋮ da extensão (atualizar, ver as permissões, remover) — é da máquina",
     "parar-tudo-da-modificacao": "o «Parar tudo» da janela pede à extensão que zere os aparelhos "
-                                 "dela — é do serviço, não de um controle",
+                                 "da extensão — é do serviço, não de um controle",
     "chave-da-modificacao": "a chave Ligado/Desligado da janela grava a opção da extensão no "
-                            "`opcoes.json` dela e, desligada, pede que zere os aparelhos — é da "
+                            "`opcoes.json` da extensão e, desligada, pede que zere os aparelhos — é da "
                             "máquina e do serviço, não de um controle",
     "escolher-o-lancador": "abre o seletor do sistema para apontar o atalho do lançador — é da máquina",
     "guardar-lancador": "guarda o atalho e o perfil por jogo do lançador — é da máquina",
@@ -151,7 +151,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "acao-do-gesto": "escolhe a ação de um gesto — é do perfil",
     "novo-gesto": "acrescenta um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
     "remover-gesto": "tira um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
-    "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
+    "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global para todos os controles",
     "vel-rolagem": "idem",
     "modo-dos-gatilhos": "o par Automático | Personalizado dos gatilhos grava `triggers.modo` "
                          "no perfil — o ATO no aparelho é o do gesto `modo` da 03",
@@ -159,10 +159,10 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                         "perfil — o ATO no aparelho é o de cada ajuste da 05",
     "modo-dos-controles": "o par Automático | Personalizado dos controles grava "
                           "`controles_modo` no perfil — o ATO no aparelho é o de cada ajuste da 02",
-    "criar-efeito": "guarda no `gui_prefs` um efeito que ela criou, com a chave da feature — é "
+    "criar-efeito": "guarda no `gui_prefs` um efeito criado, com a chave da feature — é "
                     "da tela; o ATO no aparelho é o do gesto que aplica o efeito",
     "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
-    "adaptador-reordenar": "grava a ordem em que ela arrastou as caixas dos adaptadores, "
+    "adaptador-reordenar": "grava a ordem em que se arrastaram as caixas dos adaptadores, "
                            "no `gui_prefs` — é da tela",
     "sugerir-alocacao": "mostra a sugestão da central para um adaptador — é da tela",
     "aceitar-sugestao": "abre a pergunta de mover a partir do balão — é da tela; "
@@ -200,7 +200,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "adaptador-renomear": "dá nome ao LUGAR do adaptador no `maquina.json` — é da máquina",
     "aparelho-renomear": "dá nome a um aparelho no BlueZ (`Alias`) — é da máquina",
     "entrada-comecar": "começa o «Mapear Entrada a Entrada» — é da máquina "
-                       "(as entradas do gabinete dela)",
+                       "(as entradas do gabinete)",
     "entrada-face": "grava a face de uma entrada no `maquina.json` — é da máquina",
     "entrada-pular": "pula uma entrada da cerimônia — é da tela",
     "entrada-levantar": "passa a cerimônia para a fase em pé — é da tela",
@@ -727,14 +727,14 @@ def main() -> int:
 
     if nova:
         print(f"VERMELHO: {len(nova)} feature(s) da tela sem as quatro "
-              f"respostas, e nenhuma delas está declarada:")
+              f"respostas, e nenhuma está declarada:")
         for gesto, falta in sorted(nova.items()):
             abas = next(l[1] for l in linhas if l[0] == gesto)
             print(f"  [{abas}] {gesto}: {falta}")
         print()
         print("Toda feature que a tela oferece responde: cabo? rádio? no "
               "perfil? por controle? Quem não responde as quatro não está "
-              "pronta — é a régua dela de 08/09/2026. Cure, ou declare em "
+              "pronta — é a régua de 08/09/2026. Cure, ou declare em "
               "`A_DIVIDA_CONHECIDA` com a sprint que é dona.")
         return 1
 

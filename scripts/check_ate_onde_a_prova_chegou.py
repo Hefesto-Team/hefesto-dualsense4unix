@@ -40,7 +40,7 @@ _FIM_DA_DIRECAO: dict[str, str] = {
 
 CUSTOS = {
     "horas": "conserto de horas — o caminho existe e falta acionar ou registrar",
-    "médio": "bancada com ela, ou um campo a criar depois da medição",
+    "médio": "ensaio no aparelho, ou um campo a criar depois da medição",
     "grande": "bloqueio de transporte, ou um degrau que ninguém sabe fechar",
 }
 
@@ -52,7 +52,7 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "Inclinação saiu da 02), e `movimento.acelerometro@dualsense` está em MONTOU "
         "nos dois transportes. A régua da E12b leva o clique ao perfil no disco e de "
         "volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
-        "aberto andar com o controle inclinado na mão dela, que é a prova da sprint",
+        "aberto andar com o controle inclinado na mão, que é a prova da sprint",
     ),
     "touchpad": (
         "médio",
@@ -60,11 +60,11 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "o interruptor «Ligado | Desligado» grava o campo `touchpad` no perfil do controle, e "
         "`toque.touchpad.cursor` e `toque.touchpad.dedos` estão em MONTOU nos dois transportes. "
         "A régua dos dublês grava e relê o campo por controle; falta o jogo aberto, com o "
-        "Desligado calando o toque no controle dela, que é a prova da sprint",
+        "Desligado calando o toque no controle, que é a prova da sprint",
     ),
     "sensor": (
         "grande",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "`movimento.giroscopio@dualsense` está em MONTOU nos dois. Medido em 13/09: o zero "
         "em Modo Virtual era da libSDL2 2.30.0 do sistema; nas bibliotecas dos runtimes da "
         "Steam o vpad expõe os dois sensores, e o SDL pareia o nó «Motion Sensors» pelo "
@@ -77,14 +77,14 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "2026-09-24-O-BRILHO-DAS-LUZES-DE-NUMERO-01.md",
         "`luz.led_jogador.brilho@dualsense` está em MONTOU nos dois: a régua pergunta "
         "ao report montado pelo bit do degrau (o `flag2` bit0 e o `common[42]`), no "
-        "USB com e sem o nó do kernel e no BT, do P1 ao P4. O que falta é o olho dela "
+        "USB com e sem o nó do kernel e no BT, do P1 ao P4. O que falta é o olho de quem usa "
         "nas lâmpadas nos três degraus, nas células `mapa-luz.led_jogador.brilho-cabo` "
-        "e `-radio` da bancada (25/09); ninguém viu ainda qual degrau o firmware "
+        "e `-radio` do ensaio (25/09); ninguém viu ainda qual degrau o firmware "
         "acende ao ligar",
     ),
     "mudo": (
         "horas",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "`audio.microfone.mudo@dualsense` está em MONTOU nos dois, e no rádio "
         "o `aciona` é `parcial`. O negativo do mudo por rádio JÁ foi medido em "
         "07/09 (`mic-radio-negativo-do-mudo-0907`) e a célula não subiu: o que "
@@ -93,8 +93,8 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     ),
     "custo-mic": (
         "horas",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
-        "é o MESMO ato do `mudo` da aba 02 — o gesto dela, chamado pela linha do "
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
+        "é o MESMO ato do `mudo` da aba 02 — o gesto do usuário, chamado pela linha do "
         "controle na seção do rádio —, e para na mesma célula "
         "`audio.microfone.mudo@dualsense` (MONTOU nos dois). O que falta é o "
         "registro do degrau, e é a linha 20 do roteiro da mesa, como a do `mudo`",
@@ -105,7 +105,7 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "o gesto tem dois donos e responde pelo pior: `audio.alto_falante."
         "volume` está em MONTOU nos dois, e `audio.microfone.volume` diz `não` "
         "nos dois. O trilho MEXE hoje — na fonte do PipeWire —, e o que não é "
-        "escrito é o byte do aparelho (output 0x02, `common[6]`). A bancada "
+        "escrito é o byte do aparelho (output 0x02, `common[6]`). O ensaio "
         "decide, e a regra é a das sprints de byte: byte que o aparelho não "
         "obedece não ganha campo",
     ),
@@ -114,35 +114,35 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "2026-10-03-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01.md",
         "o «Padrão» do alto-falante escreve o volume nominal pelo mesmo caminho do "
         "trilho (`audio.alto_falante.volume`, MONTOU nos dois transportes): falta a "
-        "orelha dela na bancada da 1.5, de P1 a P4, no cabo e no rádio",
+        "escuta no ensaio da 1.5, de P1 a P4, no cabo e no rádio",
     ),
     "mira-sensibilidade": (
         "médio",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "a Mira da Calibrar lê o mesmo giro da `mira`, e `movimento.giroscopio@dualsense` "
         "está em MONTOU nos dois transportes; falta o jogo aberto virar a câmera com a "
-        "sensibilidade escolhida e o controle na mão dela. É da MESA-DE-QUATRO-01",
+        "sensibilidade escolhida e o controle na mão. É da MESA-DE-QUATRO-01",
     ),
     "mira-tremor": (
         "médio",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "o filtro do tremor da Mira da Calibrar age sobre o giro "
         "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
-        "aberto com a mão dela dizer se a câmera parou de tremer. É da MESA-DE-QUATRO-01",
+        "aberto com a mão no controle dizer se a câmera parou de tremer. É da MESA-DE-QUATRO-01",
     ),
     "mira-segurar": (
         "médio",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "o «segurar para mirar» da Calibrar liga o giro (`movimento.giroscopio@dualsense`, "
         "MONTOU nos dois transportes) só com o botão apertado; falta o jogo aberto com o "
-        "dedo dela no botão. É da MESA-DE-QUATRO-01",
+        "dedo no botão. É da MESA-DE-QUATRO-01",
     ),
     "mira-inverter": (
         "médio",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "o eixo invertido da Mira da Calibrar troca o sinal do giro "
         "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
-        "aberto virar a câmera para o lado que a mão dela espera. É da MESA-DE-QUATRO-01",
+        "aberto virar a câmera para o lado que a mão espera. É da MESA-DE-QUATRO-01",
     ),
     "calibrar-comecar": (
         "médio",
@@ -155,9 +155,9 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     ),
     "rota": (
         "grande",
-        "2026-08-31-A-BANCADA-QUE-O-RADIO-PEDE-INDICE.md",
+        "2026-08-31-O-ENSAIO-QUE-O-RADIO-PEDE-INDICE.md",
         "`audio.alto_falante.rota@dualsense` OBEDECEU no cabo (16/08, com a "
-        "orelha dela) e está em MONTOU no rádio. O bloqueio é de transporte e "
+        "escuta no ensaio) e está em MONTOU no rádio. O bloqueio é de transporte e "
         "tem endereço: o kernel só escreve `audio_control` quando "
         "`plugged_state` muda, e `plugged_state` só é escrito no ramo USB "
         "(`hid-playstation.c:1647-1661`). É o ensaio 13 do índice do rádio",
@@ -267,7 +267,7 @@ def _canais(chaves: tuple[str, ...],
         if not minhas:
             raise SystemExit(
                 f"ERRO: `{chave}@{_O_APARELHO_DO_USUARIO}` não tem linha no mapa, e "
-                "sem ela não há canal — logo não há como saber até onde a "
+                "sem a linha não há canal — logo não há como saber até onde a "
                 "prova desta feature TEM de chegar. Escreva a linha no "
                 "`docs/data/mapa-controles.csv` ou tire a chave do "
                 "`DO_APARELHO`."
@@ -353,7 +353,7 @@ def _imprimir_o_inventario(linhas: list[tuple[str, str, str, str, str, bool]]) -
     print()
     print("as quatro primeiras colunas são do `check_cabo_bt_perfil_controle` "
           "(«o Hefesto MEXE nisso?»); as duas da prova são desta régua «até "
-          "onde a prova chegou?». Elas NÃO se substituem.")
+          "onde a prova chegou?». As duas NÃO se substituem.")
     print()
 
 
@@ -392,13 +392,13 @@ def main() -> int:
     novas = {g: l for g, l in paradas.items() if g not in A_PROVA_QUE_FALTA}
     if novas:
         print(f"VERMELHO: {len(novas)} feature(s) da tela cuja prova parou "
-              f"antes do destino, e nenhuma delas está declarada:")
+              f"antes do destino, e nenhuma está declarada:")
         for gesto, (_g, abas, cabo, radio, destino, _ok) in sorted(novas.items()):
             print(f"  [{abas}] {gesto}: cabo {cabo} · rádio {radio} · "
                   f"o destino é {destino}")
         print()
-        print("A tela oferecer já é o selo forte — ela não confessa dívida "
-              "nossa (ordem dela de 07/09). Então a falta mora aqui, com "
+        print("A tela oferecer já é o selo forte — a tela não confessa dívida "
+              "nossa (ordem de 07/09). Então a falta mora aqui, com "
               "CUSTO e DONA, ou a prova sobe o degrau no mapa.")
         return 1
 

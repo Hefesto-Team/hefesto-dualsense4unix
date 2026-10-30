@@ -82,7 +82,7 @@ def medir(caminho: pathlib.Path, larguras: tuple[int, ...] | int) -> Any:
 
     Um navegador para as três larguras (o lançamento do Chrome era o grosso do
     custo), a rede recusada (`chrome_sem_rede`) e a espera pelo desenho assentado.
-    Com uma largura só devolve o resultado dela; com várias, `{largura: resultado}`.
+    Com uma largura só devolve o resultado da largura; com várias, `{largura: resultado}`.
     """
     uma = isinstance(larguras, int)
     lista = (larguras,) if isinstance(larguras, int) else larguras
@@ -113,7 +113,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     print(f"=== a altura do cartão · {pagina.name} "
-          f"({'publicado' if publicado else 'bancada'}) · teto {teto}px ===")
+          f"({'publicado' if publicado else 'desenho'}) · teto {teto}px ===")
     falhas: list[str] = []
     vistos = medir(pagina, LARGURAS)
     for larg in LARGURAS:

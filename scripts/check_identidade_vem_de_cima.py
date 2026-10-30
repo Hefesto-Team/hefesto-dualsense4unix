@@ -1,36 +1,35 @@
 #!/usr/bin/env python3
 """check_identidade_vem_de_cima.py — a identidade do controle vem da FITA, nunca do mockup.
 
-A LEI, e é do usuário (03/09/2026)
----------------------------------
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado. Por isso temos o mapa pra servir como  # noqa-acento: citação literal
-    variável de identificação"
+A LEI (03/09/2026)
+------------------
+Se o topo mostra o controle White como Player 1, cada aba usa os controles lá
+de cima e não mistura com a informação dos mockups. Cada feature se refere ao
+controle conectado, e o mapa é a variável de identificação.
 
-A fita do topo lê do aparelho. Toda aba abaixo dela tem de usar AQUELE controle.
+A fita do topo lê do aparelho. Toda aba abaixo da fita tem de usar AQUELE controle.
 Um nome de cor ou um `--plastico` escrito à mão dentro da página é o mockup
 mandando na tela do produto — e o resultado é o que o usuário viu em 03/09: a fita
 dizendo `P1 · White · USB` com o card logo abaixo dizendo `Cosmic Red`.
 
 POR QUE ESTA RÉGUA EXISTE ALÉM DA QUE JÁ HAVIA
 -----------------------------------------------
-A `interface/regua_do_mockup.py` mede muito bem — mas ela só enumera elementos
+A `interface/regua_do_mockup.py` mede muito bem — mas só enumera elementos
 que JÁ TÊM endereço: `ATRIBUTOS_DE_CAMPO = ("data-campo", "data-papel",
 "data-hef")`. Um valor congelado sem endereço nenhum **não é um campo para
-ela**, e por isso não aparece nem como `MOCKUP` nem como `INDECIDÍVEL` — ele
+a régua**, e por isso não aparece nem como `MOCKUP` nem como `INDECIDÍVEL` — ele
 simplesmente não é contado.
 
 Medido em 03/09/2026: a régua velha dizia `283 PRODUTO · 53 MOCKUP · 0
 INDECIDÍVEL` enquanto havia **129 nomes de cor e 48 `--plastico` congelados**
-fora do alcance dela. As duas réguas não se sobrepõem: uma mede o que tem
+fora do seu alcance. As duas réguas não se sobrepõem: uma mede o que tem
 endereço, esta acha o que não tem.
 
-É a regra desta casa, e ela já foi paga três vezes: **duas réguas independentes
+É a regra desta casa, e já foi paga três vezes: **duas réguas independentes
 é o que revela.** Uma régua que só olha onde já se olhou não descobre nada.
 
-O QUE ELA REPROVA
------------------
+O QUE A RÉGUA REPROVA
+---------------------
 Numa página PUBLICADA (`interface/paginas/NN-*.html`), qualquer um destes:
 
 1. `--plastico:#hex` escrito à mão num elemento sem endereço que permita ao
@@ -41,7 +40,7 @@ Numa página PUBLICADA (`interface/paginas/NN-*.html`), qualquer um destes:
 Comentário não conta — `<!-- ... -->` e `/* ... */` são prosa, e contá-los
 inflaria o número. Número inflado é a coisa que esta casa mais derruba.
 
-O que ela NÃO reprova, de propósito: `P1`, `P2`, `P3`, `P4`. O número do
+O que a régua NÃO reprova, de propósito: `P1`, `P2`, `P3`, `P4`. O número do
 jogador é ESTRUTURA — é a posição na mesa, não a identidade do aparelho. O usuário
 disse com todas as letras: *"O p1 ou p2 reflete o player do jogador."*
 
@@ -179,7 +178,7 @@ def main() -> int:
 
     nomes = nomes_de_colorway()
     total = 0
-    print(f"{'bancada' if args.ensaio else 'publicado':<26} {'congelados':>11}")
+    print(f"{'desenho' if args.ensaio else 'publicado':<26} {'congelados':>11}")
     print("-" * 40)
     detalhe: list[str] = []
     padrao = f"{args.aba}-*.html" if args.aba else "[0-9][0-9]-*.html"

@@ -104,7 +104,7 @@ def alvos_cumpridos() -> dict[str, str]:
 
 
 def _prosa_do_python(texto: str) -> dict[int, list[tuple[int, int]]]:
-    """As posições que são COMENTÁRIO ou DOCSTRING — a prosa, e só ela."""
+    """As posições que são COMENTÁRIO ou DOCSTRING — a prosa, e só a prosa."""
     import io
     import tokenize
 

@@ -23,7 +23,7 @@ Três verbos:
   resposta «sem plástico de cabo nesta casa».
 * `acl`: com o daemon de pé, mede se QUEM RODA o jogo (este processo, sem `sudo`) abre
   o hidraw e o evdev do pad que o Hefesto criou. O `uaccess` só dá ACL a quem tem sessão
-  num assento, e o runner não tem: sem ela o jogo não vê o pad.
+  num assento, e o runner não tem: sem a ACL o jogo não vê o pad.
 
 Os endereços são da faixa sintética `aa:bb:cc:00:00:0N`: nunca um endereço real.
 """

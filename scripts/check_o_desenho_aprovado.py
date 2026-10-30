@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O produto não anda na frente do desenho dela, e não fica atrás dele calado."""
+"""O produto não anda na frente do desenho aprovado, e não fica atrás dele calado."""
 from __future__ import annotations
 
 import hashlib
@@ -23,7 +23,7 @@ DECLARACOES = ENSAIO / "DIVERGENCIAS.md"
 
 
 def paginas() -> list[str]:
-    """As páginas que a régua cobre, enumeradas a partir da BANCADA, menos as que saíram do produto."""
+    """As páginas que a régua cobre, enumeradas a partir do DESENHO (`mockup/`), menos as que saíram do produto."""
     return sorted(
         p.name
         for p in ENSAIO.glob("*.html")
@@ -95,13 +95,13 @@ def _alvos(argv: list[str]) -> list[str]:
     if desconhecidos:
         raise SystemExit(
             f"ERRO: não achei página para {', '.join(desconhecidos)}.\n"
-            f"  As que existem na bancada: {', '.join(paginas())}"
+            f"  As que existem no desenho: {', '.join(paginas())}"
         )
     return sorted(set(escolhidas))
 
 
 def publicar(argv: list[str]) -> int:
-    """Leva o desenho ao produto. É o que roda depois do OK dela numa aba."""
+    """Leva o desenho ao produto. É o que roda depois do OK numa aba."""
     alvos = _alvos(argv)
     atrasadas, _, _ = medir()
     for nome in alvos:
@@ -122,14 +122,14 @@ def publicar(argv: list[str]) -> int:
 
 
 DIZ_O_QUE_ESPERA = re.compile(
-    r"enquanto|at[ée] (?:ela |voc[êe] )?publicar|hoje ela v[êe]|"
-    r"o produto continua|na tela dela hoje|sem publicar|at[ée] l[áa]",
+    r"enquanto|at[ée] (?:voc[êe] )?publicar|hoje (?:se|quem usa) v[êe]|"
+    r"o produto continua|na tela de hoje|sem publicar|at[ée] l[áa]",
     re.I,
 )
 
 
 def declaracoes_sem_custo() -> list[str]:
-    """As seções que não dizem o que o produto faz enquanto espera o OK dela."""
+    """As seções que não dizem o que o produto faz enquanto espera o OK."""
     if not DECLARACOES.exists():
         return []
     _, sep, corpo = DECLARACOES.read_text(encoding="utf-8").partition("\n---\n")
@@ -150,7 +150,7 @@ def declaracoes_sem_custo() -> list[str]:
 
 
 def so_mudou_endereco(nome: str) -> bool:
-    """A bancada e o produto MOSTRAM a mesma coisa, e só os endereços mudaram?"""
+    """O desenho e o produto MOSTRAM a mesma coisa, e só os endereços mudaram?"""
     no_produto = PUBLICADO / nome
     if not no_produto.exists():
         return False
@@ -170,7 +170,7 @@ def publicar_enderecos(argv: list[str]) -> int:
             shutil.copy2(ENSAIO / nome, PUBLICADO / nome)
             levadas.append(nome)
         else:
-            recusadas.append((nome, "o DESENHO mudou — isto é decisão dela"))
+            recusadas.append((nome, "o DESENHO mudou, e isto pede uma decisão de produto antes de publicar"))
 
     print(f"endereços: {len(levadas)} levada(s) · {len(recusadas)} recusada(s) "
           f"· {len(ja_iguais)} já igual(is)")
@@ -179,7 +179,7 @@ def publicar_enderecos(argv: list[str]) -> int:
     for nome, porque in recusadas:
         print(f"  RECUSADA {nome}  ({porque})")
     if recusadas:
-        print("\n  As recusadas esperam o OK dela:")
+        print("\n  As recusadas esperam o OK:")
         for nome, _ in recusadas:
             print(f"      scripts/check_o_desenho_aprovado.py --publicar {nome[:2]}")
     _tirar_declaracoes([n for n in levadas if soma(ENSAIO / n) == soma(PUBLICADO / n)])
@@ -203,13 +203,13 @@ def _tirar_declaracoes(alvos: list[str]) -> None:
             guardadas.append(linha)
     novo = "\n".join(guardadas).strip("\n")
     if not re.search(r"^##\s+\S+\.html\s*$", novo, re.M):
-        novo = "<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->"
+        novo = "<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->"
     DECLARACOES.write_text(f"{cabeca}\n---\n\n{novo}\n", encoding="utf-8")
 
 
 def main() -> int:
     if not ENSAIO.exists():
-        print("ERRO: não há `mockup/`. Ela é a bancada — sem ela não há desenho.")
+        print("ERRO: não há `mockup/`, e sem `mockup/` não há desenho.")
         return 2
     if "--publicar-enderecos" in sys.argv:
         return publicar_enderecos(
@@ -228,7 +228,7 @@ def main() -> int:
     sem_declarar = [n for n in atrasadas if n not in decl]
     orfas = sorted(decl - set(atrasadas) - set(so_ensaio))
 
-    print(f"desenho: {len(paginas())} página(s) na bancada `mockup/`")
+    print(f"desenho: {len(paginas())} página(s) em `mockup/`")
     print(f"  o produto já tem ..... {len(paginas()) - len(atrasadas) - len(so_ensaio)}")
     print(f"  o produto está atrás . {len(atrasadas)}  ({len(atrasadas) - len(sem_declarar)} em trabalho)")
 
@@ -236,13 +236,13 @@ def main() -> int:
         print(f"\nFALHA: {len(so_publicado)} página(s) do produto sumiram do desenho:")
         for n in so_publicado:
             print(f"  - {n}")
-        print("  O produto renderiza uma página sem referência — é o colapso que ela mandou desfazer.")
+        print("  O produto renderiza uma página sem referência — é o colapso que a decisão de 31/08/2026 mandou desfazer.")
     if so_ensaio and any(n not in decl for n in so_ensaio):
         novas = [n for n in so_ensaio if n not in decl]
         print(f"\nFALHA: {len(novas)} página(s) novas no desenho e ainda fora do produto:")
         for n in novas:
             print(f"  - {n}")
-        print("  Declare a aba em trabalho, ou publique quando ela aprovar.")
+        print("  Declare a aba em trabalho, ou publique quando a aba for aprovada.")
     if sem_declarar:
         print(f"\nFALHA: o produto está ATRÁS do desenho em {len(sem_declarar)} página(s), sem declaração:")
         for n in sem_declarar:
@@ -250,8 +250,8 @@ def main() -> int:
         print(f"\n  Veja o que mudou:   diff <(git show HEAD:layout/{sem_declarar[0]}) mockup/{sem_declarar[0]}")
         print(f"  Se a aba ainda está em trabalho, declare em {DECLARACOES.relative_to(RAIZ)}:")
         print(f"      ## {sem_declarar[0]}")
-        print("      - **31/08/2026** — o ponto da lista que está aberto nela.")
-        print("  Se ela aprovou a aba INTEIRA:")
+        print("      - **31/08/2026** — o ponto da lista que está aberto na aba.")
+        print("  Se a aba INTEIRA foi aprovada:")
         print(f"      scripts/check_o_desenho_aprovado.py --publicar {sem_declarar[0][:2]}")
     if orfas:
         print(f"\nFALHA: {len(orfas)} declaração(ões) sem trabalho aberto — APAGUE de {DECLARACOES.name}:")
@@ -262,21 +262,21 @@ def main() -> int:
     mudas = declaracoes_sem_custo()
     if mudas:
         print(f"\nFALHA: {len(mudas)} declaração(ões) não dizem o que o produto FAZ")
-        print("       enquanto espera o OK dela:")
+        print("       enquanto espera o OK:")
         for n in mudas:
             print(f"  - {n}")
         print("\n  Isto custou TRÊS frentes em 02/09/2026, e sempre do mesmo jeito: o")
         print("  pacote foi para o merge com o rótulo novo e a página publicada ficou")
         print("  com o antigo. O produto rodou com metade nova e metade velha —")
         print("  clique morto, tela afirmando o contrário, conteúdo vazando.")
-        print("\n  Escreva na seção o que ela vê HOJE, com a página de agora. Por")
+        print("\n  Escreva na seção o que quem usa vê HOJE, com a página de agora. Por")
         print("  exemplo: `Até publicar, o pacote se limita às quatro casas que a")
         print("  página tem e diz quantos ajustes ficaram de fora.`")
 
     if (sem_declarar or so_publicado or orfas or mudas
             or [n for n in so_ensaio if n not in decl]):
         return 1
-    print("\nOK: o produto não está atrás do desenho dela sem dizer por quê.")
+    print("\nOK: o produto não está atrás do desenho sem dizer por quê.")
     return 0
 
 

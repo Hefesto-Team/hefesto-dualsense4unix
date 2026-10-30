@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Falha se uma faixa de MAC SINTÉTICA de teste aparecer no `config_dir()` real.
 
-T-06 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). Medido na bancada
+T-06 (ONDA0-Z7 · O AMBIENTE PRESUMIDO 01, 24/08/2026). Medido na máquina de teste
 em 23/08/2026: quatro registros com endereços da faixa `aabbcc` vazaram para
-`~/.config/hefesto-dualsense4unix/controllers.json` — a mesa de produção dela,
-não um fixture — empurrando os quatro DualSense REAIS dela das posições 1-4
+`~/.config/hefesto-dualsense4unix/controllers.json` — a mesa de produção de quem
+usa, não um fixture — empurrando os quatro DualSense REAIS das posições 1-4
 para 1, 6, 7 e 8. `grep -rl aabbcc tests/ | wc -l` achou 91 arquivos de teste
 usando a faixa; algum deles escreveu no disco do usuário em vez de num diretório
 isolado (T-06 também rastreia a CAUSA — ver `docs/process/agentes/` da leva).
@@ -34,14 +34,14 @@ gancho, nem lista de portões. Portão que ninguém chama é o defeito
   está no disco é de quem é dono da máquina;
 * a suíte chama a função :func:`enderecos` no ``tests/conftest.py``
   (FAIXA-NO-BERCO-01): ali a régua é o DELTA — reprova só se apareceu um
-  endereço sintético que não estava lá no começo da sessão. Assim ela é verde
+  endereço sintético que não estava lá no começo da sessão. Assim a régua é verde
   numa máquina já poluída e vermelha no dia em que um teste polui;
 * e o CABEÇALHO da suíte (``pytest_report_header``, mesmo ``conftest.py``,
   25/08/2026) RELATA a contagem do ``--casa`` em toda execução. **Esta linha é
   a correção de um fato:** até 25/08 este cabeçalho dizia que o ``--casa`` não
   rodava sozinho em lugar nenhum, e a consequência foi medida — o estado
-  PARADO do ``~/.config`` dela não era olhado por instrumento nenhum, e quatro
-  endereços forjados moraram na fila dela de 22/08 a 25/08 sem ninguém ver. O
+  PARADO do ``~/.config`` de quem usa não era olhado por instrumento nenhum, e quatro
+  endereços forjados moraram na fila de 22/08 a 25/08 sem ninguém ver. O
   delta é cego para a sujeira que já estava lá; o relato do cabeçalho não é.
 
 Uso:
@@ -166,7 +166,7 @@ def achados_na_arvore(raiz: Path) -> list[str]:
 def limpar(diretorio: Path) -> list[str]:
     """Tira a faixa sintética da FILA do ``controllers.json`` — gesto explícito.
 
-    **O QUE ISTO CURA, medido na bancada em 18/09/2026:** quatro endereços
+    **O QUE ISTO CURA, medido na máquina de teste em 18/09/2026:** quatro endereços
     ``aa:bb:cc:00:00:0{1..4}`` moravam na fila de numeração desde 22/08,
     ocupando os postos 4 a 7 e empurrando um DualSense real para o **oitavo**.
     A causa (a suíte escrevendo no ``~/.config`` real) foi fechada em 25/08

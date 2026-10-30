@@ -2,9 +2,9 @@
 """PORTÃO — o desenho, o nome e o glifo de cada peça do DualSense concordam?
 
 O defeito que ele existe para pegar: o SVG chamava de `l2` e `r2` duas peças que
-são o Share e o Options. Elas ficam ao lado do touchpad; o gatilho não fica. Isso
-atravessou dois meses porque nenhuma régua comparava o NOME da peça com o LUGAR
-dela — e quem viu foi ela, passando o mouse por cima, em 27/08/2026.
+são o Share e o Options. Essas ficam ao lado do touchpad; o gatilho não fica. Isso
+atravessou dois meses porque nenhuma régua comparava o NOME da peça com o seu LUGAR
+no desenho — e o defeito apareceu ao passar o mouse por cima, em 27/08/2026.
 
 Fonte da verdade: docs/data/pecas-do-dualsense.csv
 Mapa que ele mede:  o publicado, que quem diz onde é `interface/onde.py`
@@ -16,7 +16,7 @@ Duas versões desta régua já mentiram, e as duas pela mesma causa: MIRAVAM ERR
   1. o centro do bbox — no giroscópio o centro é o PS, que mora dentro dele;
   2. 12% da caixa — no L1 esse ponto cai dentro do alvo do L2, que é menor e por
      isso nasce por cima.
-Agora ela VARRE uma grade dentro da caixa e aceita o primeiro ponto onde o alvo
+Agora a régua VARRE uma grade dentro da caixa e aceita o primeiro ponto onde o alvo
 daquela peça é quem recebe o ponteiro. Se nenhum ponto serve, aí sim é falha: a
 peça está inteiramente coberta e ninguém consegue apontá-la.
 """

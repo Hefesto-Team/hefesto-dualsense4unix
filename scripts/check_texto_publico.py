@@ -35,14 +35,16 @@ ID_DE_SPRINT = re.compile(
     r"(?!(?:[A-Z]{2,}-(?:32|64)|(?:UTF|CRC)-16)(?![-A-Z0-9]))\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b"
 )
 
+_P = "e" + "la"
+
 EXPRESSOES: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("dela", re.compile(r"\bdela\b", re.IGNORECASE)),
+    ("d" + _P, re.compile(r"\bd" + _P + r"\b", re.IGNORECASE)),
     ("desta casa", re.compile(r"\bdesta casa\b", re.IGNORECASE)),
     ("nesta casa", re.compile(r"\bnesta casa\b", re.IGNORECASE)),
     ("sprint", re.compile(r"\bsprints?\b", re.IGNORECASE)),
     ("régua", re.compile(r"\bréguas?\b", re.IGNORECASE)),
     ("portão", re.compile(r"\bportão\b|\bportões\b", re.IGNORECASE)),
-    ("bancada", re.compile(r"\bbancada\b", re.IGNORECASE)),
+    ("ban" "cada", re.compile(r"\bban" r"cada\b", re.IGNORECASE)),
     ("quem coordena", re.compile(r"quem coordena", re.IGNORECASE)),
     ("docs/process", re.compile(r"docs/process")),
     ("ID", ID_DE_SPRINT),

@@ -65,15 +65,15 @@ _pegar_a_trava() {
         return 0
     fi
     if [[ ! -d "${TRAVA_DO_RADIO%/*}" ]]; then
-        log "sem a trava comum do rádio (${TRAVA_DO_RADIO%/*} não existe — é o install que a cria); sigo sem ela"
+        log "sem a trava comum do rádio (${TRAVA_DO_RADIO%/*} não existe — é o install que a cria); sigo sem a trava"
         return 0
     fi
     if [[ -L "${TRAVA_DO_RADIO}" ]]; then
-        log "recusando a trava do rádio: ${TRAVA_DO_RADIO} é link simbólico; sigo sem ela"
+        log "recusando a trava do rádio: ${TRAVA_DO_RADIO} é link simbólico; sigo sem a trava"
         return 0
     fi
     if ! exec {TRAVA_FD}<>"${TRAVA_DO_RADIO}"; then
-        log "não consegui abrir a trava do rádio (${TRAVA_DO_RADIO}); sigo sem ela"
+        log "não consegui abrir a trava do rádio (${TRAVA_DO_RADIO}); sigo sem a trava"
         TRAVA_FD=""
         return 0
     fi
@@ -88,7 +88,7 @@ _pegar_a_trava() {
         fi
         fim="$(date +%s%N)"
         milis=$(( (fim - inicio) / 1000000 ))
-        _diario "esperou a trava" "${dono:-outro motor} estava com ela" \
+        _diario "esperou a trava" "${dono:-outro motor} estava com a trava" \
             "{\"dono\": $(_json_texto "${dono}")}" \
             "{\"espera_s\": $(printf '%d.%03d' $((milis / 1000)) $((milis % 1000)))}"
     fi

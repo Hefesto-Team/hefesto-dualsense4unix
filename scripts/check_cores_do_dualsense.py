@@ -191,7 +191,6 @@ with sync_playwright() as pw:
         """O modelo no SVG, como o chip do controle o põe (o seletor `#cw` saiu em 15/10/2026)."""
         pg.evaluate("""m => {
           document.querySelector('svg.ds').setAttribute('data-colorway', m);
-          // a peça acesa pela ação do botão (`muda`, `on`) vence o plástico: a régua o mede sem ela
           document.querySelectorAll('.b2[data-estado]').forEach(e => e.removeAttribute('data-estado'));
         }""", modelo)
 
