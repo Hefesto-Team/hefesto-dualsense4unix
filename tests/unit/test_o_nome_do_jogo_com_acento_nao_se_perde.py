@@ -1,6 +1,6 @@
 """O nome do jogo com ™, ® ou acento não se perde no pactl, e o ouvido do tato fica no jogo.
 
-O-NOME-DO-JOGO-COM-ACENTO-NAO-SE-PERDE-NO-PACTL-01 (24/10/2026). Na bancada do Sackboy™ o
+O-NOME-DO-JOGO-COM-ACENTO-NAO-SE-PERDE-NO-PACTL-01 (24/10/2026). No ensaio do Sackboy™ o
 `pactl --format=json` entregou «(null)» no `node.name` do jogo, o grafo do PipeWire deu o nome
 inteiro, e o ouvido calava o gravador a cada 10 s. Aqui o JSON de mentira do `pactl` tem a forma
 medida (o texto perdido, o serial e o id inteiros) e o grafo de mentira tem o nome em UTF-8.

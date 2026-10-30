@@ -38,7 +38,7 @@ def test_nenhuma_guarda_invertida_le_por_grep_q() -> None:
             linha = texto[: m.start()].count("\n") + 1
             culpadas.append(f"{p.relative_to(RAIZ)}:{linha}: {m.group(0).strip()}")
     assert not culpadas, (
-        "guarda invertida sobre `| grep -q` — sob `pipefail` ela devolve 141 "
+        "guarda invertida sobre `| grep -q` — sob `pipefail` a guarda devolve 141 "
         "quando ACHA, e o `if !` a torna sempre verdadeira:\n"
         + "\n".join(f"  - {c}" for c in sorted(culpadas))
         + "\nLeia para uma variável e pergunte à variável: sem cano, sem sinal."
@@ -73,7 +73,7 @@ def test_o_mecanismo_e_real_e_nao_folclore() -> None:
     assert achou.returncode == 141, (
         f"o pipeline devolveu {achou.returncode}, não 141 (SIGPIPE). "
         "Se isto mudou de verdade, as duas regras acima podem ser relaxadas — "
-        "mas confira antes, porque elas custaram dois defeitos em produção."
+        "mas confira antes, porque as guardas custaram dois defeitos em produção."
     )
 
 
@@ -106,6 +106,6 @@ def test_as_tres_guardas_do_dkms_perguntam_a_variavel(guarda: str) -> None:
     trecho = fonte[max(0, i - 400):i]
     assert "_dkms_status_texto" in trecho, (
         f"a guarda do `dkms {guarda}` não pergunta ao `_dkms_status_texto` — "
-        f"ela voltou a ler por cano, e vai rodar o passo mesmo com o módulo "
+        f"a guarda voltou a ler por cano, e vai rodar o passo mesmo com o módulo "
         f"já no lugar"
     )

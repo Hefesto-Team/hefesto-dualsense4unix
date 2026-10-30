@@ -6,9 +6,9 @@ reverte a de mais cedo (``D-O-PAR-DE-ENTRADAS-VEM-DO-SYSFS``).
 A MEDIÇÃO QUE DERRUBOU A PREMISSA
 ----------------------------------
 
-O ``peer`` foi oferecido a ela como *"o que responde também na entrada vazia, o
+O ``peer`` foi oferecido como *"o que responde também na entrada vazia, o
 caso que nenhuma outra leitura alcança"*. ``readlink`` em cada ``*/peer`` dos 38
-nós de entrada desta bancada, em 25/08/2026::
+nós de entrada desta máquina de teste, em 25/08/2026::
 
     usb1-port5  <-> usb2-port1      mesmo buraco, lados 2.0 e 3.x
     usb3-port1  <-> usb4-port1      idem
@@ -20,9 +20,9 @@ BURACO — é para isso que o kernel o publica — e nunca dois buracos vizinhos
 plástico só, **cada uma com o seu aparelho ao mesmo tempo** (``plano[porta.par]``
 devolve um aparelho DIFERENTE; se fosse o mesmo buraco nunca haveria dois).
 
-Na bancada o ``peer`` responde por **zero** entradas; o desenho, pelas
+Na máquina de teste o ``peer`` responde por **zero** entradas; o desenho, pelas
 **catorze**. A fonte certa já estava no esquema — ``FaceDeclarada.portas``, de
-duas em duas —, responde com o gabinete inteiro vazio, e é **fato dela** em vez
+duas em duas —, responde com o gabinete inteiro vazio, e é **fato declarado** em vez
 de inferência.
 
 O QUE ESTA BATERIA PRENDE
@@ -35,7 +35,7 @@ O QUE ESTA BATERIA PRENDE
    há as penalidades de vizinho rádio, e o produto tem de DIZER isso. Juízo
    otimista silencioso é pior que juízo nenhum.
 
-A bancada não tem DualSense conectado, e nada aqui precisa de um: as três coisas
+A máquina de teste não tem DualSense conectado, e nada aqui precisa de um: as três coisas
 acima são função pura e uma constante de texto.
 """
 from __future__ import annotations
@@ -63,11 +63,11 @@ def test_a_irma_nao_aceita_leitura_de_sistema_nenhuma() -> None:
     """
     parametros = list(inspect.signature(irmas_de).parameters)
     assert parametros == ["mapa"], (
-        "a irmã tem UMA fonte, e ela é o desenho dela. Parâmetro a mais na "
+        "a irmã tem UMA fonte, e a fonte é o desenho declarado. Parâmetro a mais na "
         f"assinatura é porta de entrada para leitura de sistema: {parametros}"
     )
     assert not hasattr(mapa_das_portas, "SELO_INFERIDO"), (
-        "o selo de inferência voltou. Com uma fonte só, e sendo ela fato dela, "
+        "o selo de inferência voltou. Com uma fonte só, e sendo a fonte fato declarado, "
         "não há segunda procedência de que desconfiar — o selo seria enfeite"
     )
 
@@ -106,7 +106,7 @@ def test_o_lado_2_0_e_o_lado_3_x_declarados_separados_nao_viram_irmas() -> None:
 
 
 def test_o_gabinete_nao_desenhado_devolve_silencio() -> None:
-    """Mapa vazio, resposta vazia — e é ela que a tela tem de traduzir."""
+    """Mapa vazio, resposta vazia — e é isso que a tela tem de traduzir."""
     assert irmas_de(MapaDaMesa()) == {}
 
 

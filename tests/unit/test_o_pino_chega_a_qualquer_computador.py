@@ -287,7 +287,7 @@ class TestSemSteamOEnsureNaoEnvenena:
     def test_a_maquina_ja_envenenada_ouve_o_gesto_no_install(
         self, lar: Path, download_local: dict, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Reinstalar não tira a sobra; o install passa a DIZER onde ela está."""
+        """Reinstalar não tira a sobra; o install passa a DIZER onde a sobra está."""
         sobra = lar / ".steam/steam/compatibilitytools.d" / PINO
         sobra.mkdir(parents=True)
         (sobra / pp.MANIFEST_BASENAME).write_text(
@@ -301,7 +301,7 @@ class TestSemSteamOEnsureNaoEnvenena:
         assert ".sobra-do-hefesto" in saida, saida
 
     def test_raiz_com_coisa_que_nao_e_nossa_nao_e_acusada(self, lar: Path) -> None:
-        """A régua da raiz envenenada é estreita: o que não é nosso, ela não acusa."""
+        """A régua da raiz envenenada é estreita: o que não é nosso, a régua não acusa."""
         alheio = lar / ".steam/steam/compatibilitytools.d/Proton-de-outro"
         alheio.mkdir(parents=True)
         assert pp.raiz_envenenada(lar) is None
@@ -529,7 +529,7 @@ class TestOInstallLeCadaCodigo:
                 assert "--lock --todos" in linha, linha
 
     def test_a_ordem_baixa_fecha_uma_vez_edita_trava_e_reabre(self) -> None:
-        """d172d9fb8 (c): o download ANTES da janela, a trava DENTRO dela."""
+        """d172d9fb8 (c): o download ANTES da janela, a trava DENTRO da janela."""
         ordem = [
             'step "11a"',
             '_pp_saida="$(${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --ensure 2>&1)"',
@@ -921,7 +921,7 @@ class TestTodoJogoTemClasse:
         assert set(mapa) == {"0", "2497900", "555"}, mapa
 
     def test_a_entrada_que_ja_existe_nunca_e_apagada(self) -> None:
-        """O 316790 dela fica no GE: tirá-lo mudaria os saves de lugar."""
+        """O jogo 316790 fica no GE: tirá-lo mudaria os saves de lugar."""
         original = _config_vdf({"0": PINO, "316790": PINO})
         texto, mudancas = pp.build_compat_tool_mapping(
             original, tool_name=PINO, appids=["316790"], pinos_nossos=(PINO,),

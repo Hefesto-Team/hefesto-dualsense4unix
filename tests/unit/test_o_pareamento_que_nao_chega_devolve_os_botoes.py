@@ -132,7 +132,7 @@ def test_com_a_janela_aberta_o_esquecer_treme(
 def test_a_busca_que_ninguem_respondeu_acaba_sem_nao_conectou(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela abre a varanda, liga o «Procurar», e não segura PS + Create: a"""
+    """Quem usa abre a varanda, liga o «Procurar», e não segura PS + Create: a"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
@@ -202,7 +202,7 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
 def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Item 5b, MEDIDO no diário dela: dos sete pareamentos da madrugada, só o
+    """Item 5b, MEDIDO no diário do daemon: dos sete pareamentos da madrugada, só o
     do branco recebeu ``Connect`` — o ``Pair`` do DualSense já conecta. A régua
     segura isso: o ``Connect`` depois do ``Pair`` é a última tentativa, só para
     quem não está no ar.
@@ -227,9 +227,9 @@ def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
 def _mesa_das_chaves() -> rm.RadioDeMentira:
     """O vermelho no ar na sala, com uma chave velha no quarto; o roxo desligado,"""
     mundo = rm.RadioDeMentira()
-    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(SALA, VERMELHO, nome="Lobo")
     mundo.pareado(QUARTO, VERMELHO, host=False)
-    mundo.pareado(VARANDA, ROXO, conectado=False, nome="Vitória")
+    mundo.pareado(VARANDA, ROXO, conectado=False, nome="Coruja")
     mundo.pareado(SALA, ROXO, host=False)
     return mundo
 
@@ -268,7 +268,7 @@ def test_o_esquecer_tira_so_no_adaptador_da_linha(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
     quem: str, onde: str, fica: str,
 ) -> None:
-    """O «Esquecer» do «⋮» abre a pergunta (nada sai), e o «Esquecer» dela tira"""
+    """O «Esquecer» do «⋮» abre a pergunta (nada sai), e o «Esquecer» da pergunta tira"""
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
@@ -278,7 +278,7 @@ def test_o_esquecer_tira_so_no_adaptador_da_linha(
                   "lugar": id_da_tela(onde)}
         assert ensaio.gesto("esquecer-aparelho", **clique) == {"armou": True}
         assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == [], (
-            "o «Esquecer» esqueceu sem ela")
+            "o «Esquecer» esqueceu sem a pergunta")
 
         ensaio.gesto("confirmar-esquecer", **clique)
         assert mundo.objeto(onde, quem) is None
@@ -594,7 +594,7 @@ def test_o_pair_em_voo_passado_o_prazo_nao_se_fecha_pelo_pedido(
 def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O fone que ela moveu para a varanda não chegou. A linha «Não Conectou» dele"""
+    """O fone que quem usa moveu para a varanda não chegou. A linha «Não Conectou» dele"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
@@ -670,7 +670,7 @@ def test_todo_menu_na_tela_tem_o_esquecer_e_a_pergunta_dele(
 def test_o_fone_da_sony_desligado_nao_vira_controle(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A CLASSE decide quando ela existe, e só sem ela o ``Icon`` e o
+    """A CLASSE decide quando existe, e só sem a classe o ``Icon`` e o
     ``Modalias`` falam — a regra da central (``_e_controle``). Um fone pareado e
     desligado, com a classe de fone e o ``054C`` da Sony no ``Modalias``, não é
     a linha «Desligado» de um CONTROLE: é a de um fone. O DualSense desligado ao

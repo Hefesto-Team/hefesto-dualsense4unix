@@ -7,7 +7,7 @@ Decisão, 22/08/2026, literal:
 
 Preset é sobre gatilho, vibração e luz. Quem aplica "Ação" não pode descobrir
 depois que ele também trocou o aparelho que o jogo enxerga — e desde `0042ebf`
-a máscara GRUDA no disco até ela mudar, então o efeito não se desfaz sozinho.
+a máscara GRUDA no disco até quem usa mudar, então o efeito não se desfaz sozinho.
 
 NOTA DATADA — 22/08/2026: ESTE ARQUIVO SUBSTITUI O `test_preset_flavor_migration`
 --------------------------------------------------------------------------------
@@ -17,11 +17,11 @@ citava como razão a H1 da auditoria pré-release:
     *"a máscara DualSense faz o jogo ignorar o gamepad virtual (rumble in-game
     morto + controle duplicado)."*
 
-**A H1 não foi refutada: ela continua SEM remedição** (E1 da sprint, que precisa
+**A H1 não foi refutada: continua SEM remedição** (E1 da sprint, que precisa
 de um jogo com vibração rodando e da mão do usuário). O que a derrubou como razão de
 portão foi a decisão acima — nem a H1 de pé autoriza o produto a escrever
 máscara no perfil de alguém. O que a H1 ganha, enquanto ninguém a remede, é uma
-linha na tela dizendo que ela existe e que não foi reconferida
+linha na tela dizendo que a H1 existe e que não foi reconferida
 (`profiles_actions.TEXTO_MASCARA_DUALSENSE_VALIDADA`).
 
 E `DEFAULT_FLAVOR = "xbox"` **fica**: ele é o piso do daemon quando ninguém
@@ -75,8 +75,8 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
         f"achados: {gamepads}"
     )
     assert not ofensores, (
-        "preset de gênero voltou a escolher a máscara por ela. A máscara vem "
-        f"do gesto dela, e o preset shipa `null` (= mantém a atual): {ofensores}"
+        "preset de gênero voltou a escolher a máscara por quem usa. A máscara vem "
+        f"do gesto de quem usa, e o preset shipa `null` (= mantém a atual): {ofensores}"
     )
 
 
@@ -127,7 +127,7 @@ def test_a_semeadura_nao_reescreve_a_mascara_de_quem_ja_tem_perfil() -> None:
         assert depois["mode"]["gamepad_flavor"] == mascara, (
             f"{arquivo}: uma migração reescreveu a máscara "
             f"({mascara!r} -> {depois['mode']['gamepad_flavor']!r}). Máscara é "
-            "escolha dela, e desde `0042ebf` ela gruda"
+            "escolha de quem usa, e desde `0042ebf` gruda"
         )
 
 

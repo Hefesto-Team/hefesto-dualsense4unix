@@ -1,7 +1,7 @@
 """O nome que o pactl perde vem do grafo, num dono só, e nome vazio nunca casa com vazio.
 
 O-NOME-QUE-O-PACTL-PERDE-VEM-DO-GRAFO-01 (24/10/2026). O JSON de mentira do `pactl` tem a forma
-medida na bancada do Sackboy™ (`r1-cabo-2410b/si-C.json`): o índice é o serial, o `object.id` e o
+medida no ensaio do Sackboy™ (`r1-cabo-2410b/si-C.json`): o índice é o serial, o `object.id` e o
 `object.serial` chegam inteiros, e `application.name`, `node.name` e `module-stream-restore.id`
 chegam «(null)». O grafo de mentira (`pw-dump`) tem o UTF-8 inteiro e o serial como número.
 """

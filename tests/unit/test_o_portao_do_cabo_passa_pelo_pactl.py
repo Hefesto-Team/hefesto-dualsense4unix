@@ -1,6 +1,6 @@
 """O portão dos motores do cabo abre de verdade: o ``pactl`` aceita o comando.
 
-A rodada 1 da bancada (14/10/2026, Sackboy, só o White no cabo): o laço da
+A rodada 1 do ensaio (14/10/2026, Sackboy, só o White no cabo): o laço da
 háptica ficou com a frente a 100 % e os motores a 0 % a partida inteira, com o
 White marcado em ``haptica_quem_joga``. O portão aberto mandava
 ``100% 100% 1.0000 1.0000`` — por cento na frente, fator nos motores —, e o

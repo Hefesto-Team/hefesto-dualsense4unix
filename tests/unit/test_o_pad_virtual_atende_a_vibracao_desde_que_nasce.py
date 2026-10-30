@@ -96,7 +96,7 @@ def test_criar_o_pad_nunca_abre_o_proprio_no(
         assert evdev_de_mentira.instancias, "o pad não nasceu do UInput"
         assert evdev_de_mentira.abriu_o_proprio_no == 0, (
             "criar o pad abriu o próprio nó: é a espera circular de 30 s com "
-            "o gilrs do cosmic-osk que derrubou a sessão dela em 27/09"
+            "o gilrs do cosmic-osk que derrubou a sessão gráfica em 27/09"
         )
         assert evdev_de_mentira.instancias[0].device is None
     finally:

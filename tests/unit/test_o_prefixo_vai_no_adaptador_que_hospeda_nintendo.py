@@ -2,11 +2,11 @@
 
 Sprint: a sprint `N-IGUAL-A-UM-01`, entrega E2.
 
-O DEFEITO, MEDIDO em 22/08/2026 na bancada de três adaptadores
+O DEFEITO, MEDIDO em 22/08/2026 na máquina de teste de três adaptadores
 -----------------------------------------------------------------
 
 `scripts/bt_active_mode.sh` escolhia UM adaptador — o primeiro do glob do sysfs,
-com `return 0` na primeira volta — e prefixava `Nintendo` só nele. Na bancada
+com `return 0` na primeira volta — e prefixava `Nintendo` só nele. Na máquina de teste
 o Pro Controller vive no segundo, e o prefixo ficava no primeiro, que não
 hospeda Nintendo nenhum::
 
@@ -50,7 +50,7 @@ portão de paridade abaixo é o que a impede de virar uma segunda verdade.
 NADA AQUI ENCOSTA NO BARRAMENTO DO USUÁRIO
 -------------------------------------
 
-Bancada inteira de mentira: `HEFESTO_SYS_BLUETOOTH` e `HEFESTO_BT_LIB` desviam
+Máquina de teste inteira de mentira: `HEFESTO_SYS_BLUETOOTH` e `HEFESTO_BT_LIB` desviam
 as duas raízes, e `busctl`, `hciconfig`, `hcitool` e `id` são dublês num `PATH`
 montado à mão. Nenhum adaptador vivo é lido, e nenhum é renomeado.
 """
@@ -259,7 +259,7 @@ def test_so_o_adaptador_que_hospeda_o_pro_recebe_o_prefixo(tmp_path: Path) -> No
     assert not intrusos, (
         "prefixo escrito em adaptador que não hospeda Nintendo nenhum: "
         f"{intrusos}. O `apelido_do_dongle` nunca subtrai, então a palavra vira "
-        "parte permanente do nome que ela escreveu."
+        "parte permanente do nome que quem usa escreveu."
     )
 
 
@@ -342,7 +342,7 @@ def _lista_do_shell(nome: str) -> tuple[str, ...]:
     texto = SCRIPT.read_text(encoding="utf-8")
     achado = re.search(rf"^{nome}=\((.*)\)$", texto, re.M)
     assert achado, (
-        f"o `bt_active_mode.sh` não declara mais `{nome}` — sem ela o portão de "
+        f"o `bt_active_mode.sh` não declara mais `{nome}` — sem a declaração o portão de "
         "paridade abaixo não mede nada"
     )
     return tuple(re.findall(r'"([^"]*)"', achado.group(1)))

@@ -38,7 +38,7 @@ cura arrancada não testa nada. Foram QUATRO, uma por cura:
    árvore invertida entre boots, o nome foi parar em `aa:bb:cc:00:00:11` em vez
    de `aa:bb:cc:00:00:33`. É a cicatriz do `bt_health_watchdog.sh`, viva.
 
-A MESA QUE ESTES TESTES REPRODUZEM é a desta bancada em 22/08/2026, com os
+A MESA QUE ESTES TESTES REPRODUZEM é a desta máquina de teste em 22/08/2026, com os
 endereços trocados pela faixa sintética `aa:bb:cc:`: três adaptadores idênticos,
 quatro DualSense e um Pro Controller, todos no rádio, distribuídos 1/2/2 — e o
 Pro no SEGUNDO adaptador, que é o detalhe que faz o defeito aparecer.
@@ -207,9 +207,9 @@ def test_nome_sem_prefixo_em_adaptador_sem_pro_sai_limpo() -> None:
 
 def test_o_prefixo_e_prefixo_e_nao_sufixo() -> None:
     """O firmware do Pro casa o COMEÇO do nome — `Nintendo*`."""
-    alias = costurar_o_nome("Sofá da Vitória", hospeda_nintendo=True)
+    alias = costurar_o_nome("Sofá do Quarto", hospeda_nintendo=True)
     assert alias.startswith(PREFIXO_NINTENDO)
-    assert alias.endswith("Sofá da Vitória")
+    assert alias.endswith("Sofá do Quarto")
 
 
 def test_a_costura_e_idempotente() -> None:
@@ -236,7 +236,7 @@ def test_a_tela_mostra_o_nome_do_usuario_sem_a_costura() -> None:
 
 
 def test_o_nome_do_usuario_nao_e_comido_no_segundo_salvamento() -> None:
-    """Ela batiza um dongle SEM Pro de "Nintendo do sofá" — e a palavra fica."""
+    """Quem usa batiza um dongle SEM Pro de "Nintendo do sofá" — e a palavra fica."""
     escrito = "Nintendo do sofá"
     visto = limpar_o_nome(escrito, hospeda_nintendo=False)
     assert visto == escrito
@@ -278,7 +278,7 @@ def test_alias_ja_protegido_atravessa_a_ida_e_volta_intacto(
 
 
 def test_nintendo_colado_na_palavra_nao_e_costura_deste_produto() -> None:
-    """`NintendoCasa` é nome dela — nem o script nem o módulo colam assim."""
+    """`NintendoCasa` é nome de quem usa — nem o script nem o módulo colam assim."""
     assert limpar_o_nome("NintendoCasa", hospeda_nintendo=True) == "NintendoCasa"
 
 
@@ -294,7 +294,7 @@ def test_prefixo_em_caixa_errada_e_normalizado_na_ida_e_volta() -> None:
 
 
 def test_nome_comprido_com_acento_e_cortado_em_fronteira_de_caractere() -> None:
-    """124 x "á" = 248 bytes, e o BlueZ desta bancada RECUSOU esse tamanho."""
+    """124 x "á" = 248 bytes, e o BlueZ desta máquina de teste RECUSOU esse tamanho."""
     alias = costurar_o_nome("á" * 400, hospeda_nintendo=False)
     assert len(alias.encode("utf-8")) <= TETO_MEDIDO_NO_BLUEZ
     assert alias.encode("utf-8").decode("utf-8") == alias

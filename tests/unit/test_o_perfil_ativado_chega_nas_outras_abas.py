@@ -41,7 +41,7 @@ import pytest
 from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil
 
 DE_ONTEM = "Perfil de ontem"
-ATIVADO = "Perfil que ela ativou"
+ATIVADO = "Perfil ativado agora"
 
 CURTO_CIRCUITO_DECLARADO = {"a05_vibracao.py"}
 
@@ -99,7 +99,7 @@ def test_com_o_daemon_calado_as_outras_abas_leem_o_perfil_do_disco(
 def test_o_ativar_troca_o_que_as_outras_abas_mostram(
     pasta_de_perfis: Any, marcador: dict[str, str],
 ) -> None:
-    """O TIQUE SEGUINTE: ela ativa, e a outra aba mostra o valor NOVO.
+    """O TIQUE SEGUINTE: quem usa ativa, e a outra aba mostra o valor NOVO.
 
     O `profile.switch` grava os dois marcadores manuais em disco — é isso que o
     dublê do `marcador` representa. A régua faz a leitura ANTES e DEPOIS, no
@@ -107,7 +107,7 @@ def test_o_ativar_troca_o_que_as_outras_abas_mostram(
 
     MORDIDA: com a cura arrancada as DUAS leituras devolvem `{}`, e a asserção
     do brilho reprova dizendo que a aba Iluminação mostraria travessão nos dois
-    tiques — antes e depois de ela ativar.
+    tiques — antes e depois de quem usa ativar.
     """
     ctx = _ctx_com_daemon_calado()
     antes = perfil.ativo(ctx.state.get("active_profile"))
@@ -144,7 +144,7 @@ def test_sem_daemon_e_sem_marcador_a_resposta_e_vazia(
 
 
 def test_nome_do_ativo_nunca_levanta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ela é pintura a duas vezes por segundo: exceção aqui derruba a aba.
+    """É pintura a duas vezes por segundo: exceção aqui derruba a aba.
 
     MORDIDA: tire o `try/except` de `perfil.nome_do_ativo` e isto reprova com o
     `RuntimeError` do dublê subindo — que na janela viva é a aba inteira

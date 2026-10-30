@@ -8,7 +8,7 @@ nunca a dívida (regra de 07/09/2026: a tela não confessa o que o produto ainda
 O «Perfil jogo - navegação» lista os moldes e os perfis do disco que configuram botão
 (`blocos`), e a escolha vale para o perfil ativo: o do jogo, ou o `maquina.json` sem jogo.
 
-MORDIDAS: tirar o `inert` de um controle da Acessibilidade, acender o Guardar dela, devolver a dica
+MORDIDAS: tirar o `inert` de um controle da Acessibilidade, acender o Guardar, devolver a dica
 «Chega com a próxima versão», tirar «Meus perfis» do pacote ou deixar o gesto aceitar um valor sem o
 prefixo reprovam.
 """

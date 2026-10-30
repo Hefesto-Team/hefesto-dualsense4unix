@@ -8,7 +8,7 @@ voo trazia para um pad já parado descia por ``gadget.desmontar()`` no fio do
 pedido, por fora da fila da descida: o MAC do pad, o pad novo do mesmo aparelho
 e o ``stop_all`` não o esperavam.
 
-Os pads são os de VERDADE, no gadget da bancada; o cliente da descida é o
+Os pads são os de VERDADE, no gadget do ensaio; o cliente da descida é o
 ``HidrawBrokerClient`` de verdade contra o socket que aceita e não responde.
 """
 

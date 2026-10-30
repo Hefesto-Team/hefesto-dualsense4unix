@@ -7,8 +7,8 @@ Conexões (`D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE`), «Eu escolho» virou
 Sistema falam o MESMO perfil, por um dono e pelo mesmo gesto do daemon
 (`D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`).
 
-A Conexões deixou de ter os botões (13/10/2026, mudança 12 do desenho do todo, pedido da Vitória:
-*«remove os botões do perfil econômico e perfil máximo. Isso já existe na aba sistema.»*): o gesto
+A Conexões deixou de ter os botões (13/10/2026, mudança 12 do desenho do todo: os botões de
+perfil econômico e perfil máximo já existiam na aba Sistema): o gesto
 `perfil-do-controle`, o `perfil_na_linha` e o campo `perfil` do cartão saíram de lá. O que
 ficou, e a mordida que o derruba:
 
@@ -21,8 +21,8 @@ ficou, e a mordida que o derruba:
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o `maquina.json`
 e o perfil gravados aqui moram dentro dele.
 
-A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
-de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal -->
+A régua de toda decisão: nenhuma vale só para um modo, uma rota, o cabo ou o rádio, ou só para
+o player 1.
 """
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def test_os_rotulos_sao_os_do_desenho_e_personalizado_e_o_terceiro() -> None:
         "Perfil máximo", "Perfil econômico", "Personalizado"]
 
 
-@pytest.mark.parametrize("arquivo", PAGINAS_09, ids=["bancada", "publicada"])
+@pytest.mark.parametrize("arquivo", PAGINAS_09, ids=["mockup", "publicada"])
 def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.Path) -> None:
     html = arquivo.read_text(encoding="utf-8")
     botoes = re.findall(

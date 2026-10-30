@@ -19,7 +19,7 @@ from tests.unit.radio_de_mentira import AZUL, FONE, QUARTO, ROXO, SALA, VERDE, V
 
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
+    """A trava e o diário numa pasta de teste — nunca os reais, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(caminho))
@@ -114,7 +114,7 @@ def test_o_clique_durante_a_busca_nao_e_ocupado(mesa: Any, relogio: rm.Relogio) 
 
 
 def test_a_escolha_e_de_qualquer_aparelho(mesa: Any, relogio: rm.Relogio) -> None:
-    """Ela escolhe o fone na janela da sala: um ``Pair`` nele, e o CONFERIR"""
+    """Quem usa escolhe o fone na janela da sala: um ``Pair`` nele, e o CONFERIR"""
     mundo = _mundo()
     mundo.fisicos[FONE] = rm.Fisico(FONE, rm.CLASSE_DE_FONE)
     _dono, central = mesa(mundo)
@@ -199,7 +199,7 @@ def tela(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def _campos_com_a_busca_na_direita(a08: Any) -> dict[str, Any]:
-    """A busca de pé na Direita, e a caixa Meio aberta por ela."""
+    """A busca de pé na Direita, e a caixa Meio aberta por quem usa."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     a08._ABERTO["lugar"] = _id(ADAPTADORES[2])
@@ -220,7 +220,7 @@ def _texto_visivel(html: str) -> str:
 def test_a_tela_mostra_o_dualsense_novo_e_manda_a_escolha(tela: Any, nome: str) -> None:
     """A linha do DualSense novo diz «DualSense» com o desenho dele, e nunca o
     endereço — nem quando o BlueZ põe o endereço no ``Alias`` de quem não
-    anuncia nome. O «Parear» dela chega ao daemon como ``radio.mover`` com
+    anuncia nome. O «Parear» de quem usa chega ao daemon como ``radio.mover`` com
     aquele aparelho e o adaptador da BUSCA (a Direita), e não o da caixa
     aberta (o Meio).
 
@@ -301,7 +301,7 @@ def _o_roxo_com_a_chave_so_do_lado_dele() -> rm.RadioDeMentira:
 
 def test_o_controle_que_chama_o_host_sem_clique_nao_pareia(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """O 01:23:40 da madrugada dela: ligado só com o PS, ele chama o quarto, que"""
+    """O 01:23:40 da madrugada do ensaio: ligado só com o PS, ele chama o quarto, que"""
     mundo = _o_roxo_com_a_chave_so_do_lado_dele()
     _dono, central = mesa(mundo)
     relogio.agendar(2.0, lambda: mundo.chamar_o_host(ROXO))

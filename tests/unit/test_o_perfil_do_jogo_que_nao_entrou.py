@@ -133,7 +133,7 @@ def test_fora_de_janela_de_jogo_nada_e_regra_deste_jogo() -> None:
 def test_cada_campo_reprova_com_o_rotulo_do_editor(
     criterio: dict[str, Any], campo: str, rotulo: str
 ) -> None:
-    """Os três campos são cobertos, e o rótulo é o que ela lê no editor."""
+    """Os três campos são cobertos, e o rótulo é o que quem usa lê no editor."""
     reprovados = campos_reprovados(
         MatchCriteria(**criterio), dict(JANELA_DO_PRAGMATA)
     )
@@ -207,7 +207,7 @@ class _Handlers(IpcHandlersMixin):
 
 @pytest.fixture
 def _disco(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    """Conta quantas vezes o disco foi lido, e serve o perfil do caso dela."""
+    """Conta quantas vezes o disco foi lido, e serve o perfil do caso real."""
     leituras: list[int] = []
     pragmata = _perfil(
         "Pragmata",
@@ -244,7 +244,7 @@ def test_fora_de_jogo_nao_toca_no_disco(_disco: list[int]) -> None:
 
     Morde na guarda do appid. Arranque: remover o `return []` antecipado, e o
     `state_full` (10 Hz) passa a ler os 14 perfis do disco do usuário a cada tique,
-    com ela parada no navegador. É o poller cego que esta casa já pagou uma vez
+    com quem usa parada no navegador. É o poller cego que esta casa já pagou uma vez
     (104% de um núcleo).
     """
     handlers = _Handlers(_StoreDublado("firefox", exe="firefox"))

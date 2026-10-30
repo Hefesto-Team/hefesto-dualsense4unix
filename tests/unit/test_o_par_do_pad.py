@@ -208,7 +208,7 @@ class TestAIdentidadeQueMuda:
     ) -> None:
         """A âncora nova entra sob a trava em que o ``_destruir_o_device`` solta o gadget.
 
-        Fora dela, o gadget lido podia descer entre a leitura e o registro, e a
+        Fora da trava, o gadget lido podia descer entre a leitura e o registro, e a
         âncora ficava numa interface morta. MORDIDA: em ``ancorar_no_aparelho``,
         chame o ``_ancorar_o_gadget`` fora do ``with self._lock``.
         """
@@ -426,7 +426,7 @@ def test_o_prazo_vencido_nao_empresta(monkeypatch: pytest.MonkeyPatch, tmp_path:
 def test_a_porta_que_chega_depois_faz_o_endpoint_nascer(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O aparelho cuja porta chega depois ganha o endpoint nela, sem queda nenhuma."""
+    """O aparelho cuja porta chega depois ganha o endpoint na porta, sem queda nenhuma."""
     mesa = _mesa_com_gadgets(monkeypatch, tmp_path)
     controle = _chega(mesa, h._P1, "bt")
     mesa.volta(controle)
@@ -578,7 +578,7 @@ def test_o_co_op_e_o_dono_unico_de_este_aparelho_vai_ganhar_pad() -> None:
 def test_o_co_op_diz_ao_som_quem_vai_ganhar_pad_e_quando_o_pad_nasceu(
     nascimentos: list[str], monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """O co-op real, na bancada da STEAM-NO-FISICO-01: o som espera só o que vai nascer.
+    """O co-op real, no ensaio da STEAM-NO-FISICO-01: o som espera só o que vai nascer.
 
     O jogador assentado e ainda sem pad (o grab pendente) segura o endpoint; o
     pad que nasce o solta, mas só DEPOIS de nascer (o gadget que montou dentro

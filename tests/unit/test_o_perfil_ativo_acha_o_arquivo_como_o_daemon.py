@@ -105,7 +105,7 @@ def test_o_duble_do_fundo_e_o_que_a_08_chama() -> None:
 
     lida = threading.Event()
     assert a08_conexoes.em_fundo.em_fundo("regua-do-duble", lida.set, 0.0) is None
-    assert not lida.wait(1.0), "o fio da 08 leu: o dublê está noutro módulo que o que ela chama"
+    assert not lida.wait(1.0), "o fio da 08 leu: o dublê está noutro módulo que o que a 08 chama"
 
 @pytest.fixture
 def pasta() -> pathlib.Path:
@@ -284,7 +284,7 @@ def test_cada_aba_diz_o_mesmo_que_no_nome_canonico(pasta: pathlib.Path, forma: s
         linhas = _diferencas(gemeo[pag], agora[pag])
         assert not linhas, (
             f"[{forma}] a {pag} diz outra coisa que diria com o mesmo perfil no "
-            f"nome canônico — ela não achou o arquivo que o daemon lê "
+            f"nome canônico — a leitura não achou o arquivo que o daemon lê "
             f"({len(linhas)} campos):\n  " + "\n  ".join(linhas[:12]))
 
 
@@ -484,7 +484,7 @@ def test_a_memoria_vence_no_prazo(pasta: pathlib.Path,
 
 
 def test_a_lembranca_e_do_perfil_e_nao_da_grafia(pasta: pathlib.Path) -> None:
-    """«Grafia Com Acentuação» e o slug dela são o mesmo perfil (R-10), e a lembrança também.
+    """«Grafia Com Acentuação» e o slug da grafia são o mesmo perfil (R-10), e a lembrança também.
 
     O nome chega do daemon, e quando ele se cala chega do marcador em disco
     (`nome_do_ativo`), que pode trazer a outra grafia do MESMO arquivo.

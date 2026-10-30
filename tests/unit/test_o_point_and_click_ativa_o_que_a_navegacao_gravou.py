@@ -30,10 +30,10 @@ Com o perfil em 6 e a flag ausente, o recuo devolveria o MESMO 6 e a régua
 passaria com o defeito de pé. Este é o furo que mata réguas desta família, e
 ele se fecha escolhendo os números — não escrevendo mais asserções.
 
-O FURO DESTA RÉGUA, dito porque a casa exige: ela mede o **daemon**, não o
+O FURO DESTA RÉGUA, dito porque a casa exige: a régua mede o **daemon**, não o
 **aparelho**. Um `set_mouse_emulation` que devolve `True` não prova cursor na
 tela — foi assim que *"aplicado"* apareceu sobre nada quatro vezes numa
-madrugada. A prova do aparelho é da bancada.
+madrugada. A prova do aparelho é do ensaio no aparelho.
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils.session import config_dir
 
 PERFIL_DA_NAVEGACAO: dict[str, Any] = {
-    "name": "A Navegação Dela",
+    "name": "A Navegação do Usuário",
     "match": {"type": "any"},
     "mouse": {"enabled": True, "speed": 11, "scroll_speed": 4},
     "key_bindings": {"l1": ["KEY_LEFTSHIFT"], "options": ["KEY_ESC"]},
@@ -176,7 +176,7 @@ def test_o_terceiro_passo_do_modo_le_o_perfil_e_nao_a_sessao() -> None:
         "desktop.arranjo.apply",
     ], f"a definição do modo desktop se moveu: {metodos}"
     assert passos[-1][1] == {"origin": "manual"}, (
-        "o arranjo tem de DECLARAR que é gesto dela — o silêncio é lido como "
+        "o arranjo tem de DECLARAR que é gesto de quem usa — o silêncio é lido como "
         "reconciliação (ORIGEM-QUE-MENTE-01), e o daemon não grava o modo "
         f"`desktop` no perfil ativo: {passos[-1][1]}"
     )
@@ -201,11 +201,11 @@ def test_o_arranjo_liga_o_mouse_com_as_velocidades_do_perfil() -> None:
     ligado, speed, scroll = args
     assert ligado is True
     assert speed == 11, (
-        f"o mouse ligou com speed {speed}, e o perfil dela diz 11. "
+        f"o mouse ligou com speed {speed}, e o perfil de quem usa diz 11. "
         "3 é a flag de sessão (o defeito) e 6 é o default da config."
     )
     assert scroll == 4, (
-        f"o mouse ligou com scroll_speed {scroll}, e o perfil dela diz 4."
+        f"o mouse ligou com scroll_speed {scroll}, e o perfil de quem usa diz 4."
     )
 
 
@@ -246,7 +246,7 @@ def test_as_duas_portas_ligam_o_mouse_com_as_velocidades_do_perfil(porta: str) -
     ligado, speed, scroll = args
     assert ligado is True, (
         f"a entrada pela porta {porta!r} obedeceu ao `mouse.enabled: false` do "
-        "perfil e deixou ela sem cursor no modo que existe para dar o cursor")
+        "perfil e deixou quem usa sem cursor no modo que existe para dar o cursor")
     assert (speed, scroll) == (11, 4), (
         f"a entrada ligou o mouse com ({speed}, {scroll}) e o perfil diz (11, 4)"
     )

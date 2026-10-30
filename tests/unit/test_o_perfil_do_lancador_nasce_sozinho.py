@@ -45,7 +45,7 @@ def _da_steam(appid: str, nome: str) -> JogoLocal:
 
 
 def _perfil_do_usuario(directory: Path, arquivo: str, dados: dict[str, object]) -> bytes:
-    """Escreve um perfil "dela" no diretório e devolve os bytes gravados."""
+    """Escreve um perfil "de quem usa" no diretório e devolve os bytes gravados."""
     directory.mkdir(parents=True, exist_ok=True)
     bruto = (json.dumps(dados, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     (directory / arquivo).write_bytes(bruto)
@@ -282,7 +282,7 @@ def test_a_janela_do_proprio_hefesto_nunca_e_regra_de_jogo() -> None:
 def test_catch_all_continua_nao_sendo_regra_de_jogo_com_o_cadastro_cheio() -> None:
     """A R-01 inteira: um genérico NUNCA fura, venha a janela de onde vier."""
     schema_mod.registrar_classes_de_jogo([GOTG_CHAVE])
-    generico = Profile(name="vitoria", match=MatchAny(), priority=5)
+    generico = Profile(name="geral", match=MatchAny(), priority=5)
     por_titulo = Profile(
         name="fps",
         match=MatchCriteria(window_title_regex="(Doom|Control)"),
@@ -381,7 +381,7 @@ def test_a_varredura_seguinte_nao_pisa_no_perfil_que_o_usuario_criou(
 def test_o_perfil_do_usuario_feito_antes_impede_o_semeado_e_fica_intacto(
     tmp_path: Path,
 ) -> None:
-    """Ela criou primeiro: o produto registra que TRATOU e não cria o segundo."""
+    """Quem usa criou primeiro: o produto registra que TRATOU e não cria o segundo."""
     destino = tmp_path / "perfis"
     do_usuario = _perfil_do_usuario(
         destino,
@@ -560,12 +560,12 @@ def test_a_semeadura_le_os_lancadores_e_declara_as_classes() -> None:
     chamados = _chamados_por("semear_perfis_dos_jogos")
 
     assert "jogos_com_janela" in chamados, (
-        "a semeadura voltou a ler SÓ a Steam. A decisão dela é que todo jogo "
+        "a semeadura voltou a ler SÓ a Steam. A decisão é que todo jogo "
         "instalado de um lançador que o produto lê ganhe perfil sozinho."
     )
     assert "_declarar_as_classes_de_jogo" in chamados, (
         "a semeadura parou de declarar as classes ao esquema. Sem isso o "
-        "perfil do Heroic nasce, aparece na lista e NÃO ENTRA quando ela abre "
+        "perfil do Heroic nasce, aparece na lista e NÃO ENTRA quando quem usa abre "
         "o jogo — o pior dos dois mundos."
     )
 
@@ -575,9 +575,9 @@ def test_o_gatilho_automatico_assina_as_duas_bibliotecas() -> None:
 
     assert "assinatura_da_biblioteca" in chamados
     assert "assinatura_das_bibliotecas" in chamados, (
-        "o freio voltou a assinar só a Steam: o jogo que ela baixa pelo Heroic "
+        "o freio voltou a assinar só a Steam: o jogo que quem usa baixa pelo Heroic "
         "não ganharia perfil enquanto o daemon estivesse de pé, e o daemon "
-        "dela fica dias de pé."
+        "de quem usa fica dias de pé."
     )
 
 

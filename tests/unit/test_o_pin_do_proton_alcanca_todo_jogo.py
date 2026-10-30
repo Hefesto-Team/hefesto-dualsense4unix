@@ -130,7 +130,7 @@ def test_o_heroic_nativo_vai_ao_pino_mesmo_com_o_proton_proprio(
 
 def test_o_heroic_do_flatpak_ganha_o_pino_dentro_da_caixa(
         lar: Path, conf: dict[str, str]) -> None:
-    """Mordida: a caixa do Flatpak não enxerga a pasta da Steam; o pino nasce dentro dela."""
+    """Mordida: a caixa do Flatpak não enxerga a pasta da Steam; o pino nasce dentro da caixa."""
     raiz = _steam_de_verdade(lar)
     _pino_na(raiz)
     caixa = lar / FLATPAK

@@ -4,7 +4,7 @@ O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 4 da seção «A decisão de 04/10». 
 rótulo de tela da chave `balanceado` (1,0x), e o perfil que acaba de nascer NÃO opina: a vibração
 fica sem `policy` (vale a política da casa, que nasce `balanceado`) e o alto-falante fica sem a
 seção `speaker` (o controle nasce nos 100% de sempre na adoção). As duas pontas são o que se
-prova aqui: se uma delas mudasse, o perfil novo deixaria de nascer em Padrão sem aviso.
+prova aqui: se uma das duas mudasse, o perfil novo deixaria de nascer em Padrão sem aviso.
 
 MORDIDAS: o default `balanceado` do `DaemonConfig`; o 1,0 do `balanceado`; os 100% da adoção.
 """

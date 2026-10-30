@@ -21,14 +21,14 @@ espera (``_wait_online_or_hotplug``), logo depois do
 10 Hz (``numeros_da_mesa``, memória sob o lock) e só arma quando a tabela
 MUDA; armado, a fatia encolhe e o disparo cai 1,5 s depois.
 
-**A bancada:** o ``ControllerIdentityRegistry`` de produção com relógio
+**O ensaio:** o ``ControllerIdentityRegistry`` de produção com relógio
 injetado, a espera de produção (``_wait_online_or_hotplug``) com o dono do
 evento ARMADO numa ``/dev`` de mentira (a receita das réguas da família 5, em
 ``test_o_repouso_espera_o_evento.py``) e um ``/dev/input`` que não muda. O
 relógio é um só: ele move o registro, o ``time.monotonic`` do módulo da espera
 (o mecanismo do gatilho) e cada fatia. Os escritores da cor são o único
 dublê do controller, e cada um pergunta ao MESMO dono que o real
-(``numero_da_lampada``) no instante em que escreve. Na régua 7, a bancada de
+(``numero_da_lampada``) no instante em que escreve. Na régua 7, o ensaio de
 jogo aberto da O-ASSENTO-GUARDADO-NAO-ANDA-02 (backend real, co-op real,
 registro real).
 
@@ -53,7 +53,7 @@ AS MORDIDAS (29/09/2026, cada uma devolvida com o md5 conferido):
 
 **A guarda da R-04 só trabalha com o vpad do posto FORA de ordem**, e isso só
 acontece depois que o P1 volta tarde (o P2 segue no posto, com a carta 2). Nos
-outros três casos da régua 7 ela não morde, e está medido: o primário é a
+outros três casos da régua 7 a guarda não morde, e está medido: o primário é a
 carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4), e com o posto vago a carta dele é
 a do lugar em que espera — o vpad do posto nunca sai do boneco. O quarto caso
 é o que a sprint pedia: a fatia renumera com o posto fora de ordem, e o vpad
@@ -588,7 +588,7 @@ class TestAOrdemCongeladaEAMesma:
 
 
 class _WatchParado:
-    """O ``/dev/input`` da bancada de jogo não muda durante a espera."""
+    """O ``/dev/input`` do ensaio de jogo não muda durante a espera."""
 
     def poll(self) -> bool:
         return False
@@ -598,7 +598,7 @@ class _WatchParado:
 def jogo_aberto(
     config_isolado: Path, raizes: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[Callable[[tuple[str, ...]], Any]]:
-    """A bancada de jogo aberto com os quatro, as lâmpadas liberadas e ``saem`` fora."""
+    """O ensaio de jogo aberto com os quatro, as lâmpadas liberadas e ``saem`` fora."""
 
     def _montar(saem: tuple[str, ...]) -> Any:
         ensaio = montar(monkeypatch, 4, "mista", jogo=True)
@@ -952,7 +952,7 @@ class TestODiarioDizACarta:
         registros = diario.linhas
         coop._spawn_player(P4, "/dev/input/event40")
         roxo = coop._players[P4]
-        assert roxo.player_index == INDICE_DO_ROXO, "a bancada não alocou o 4"
+        assert roxo.player_index == INDICE_DO_ROXO, "o ensaio não alocou o 4"
         monkeypatch.setattr(coop, "_calibration_pronta", lambda _i: (False, None))
         coop._promote_player(roxo)
         monkeypatch.setattr(coop, "_calibration_pronta", lambda _i: (True, None))
@@ -1035,7 +1035,7 @@ def _o_posto_do_p1_nasce(
 ) -> list[dict[str, Any]]:
     """O ``start_gamepad_emulation`` de produção, com a fábrica devolvendo ``backend``.
 
-    Devolve o que a fábrica recebeu. O pad dublado leva o ``player`` que ela ouviu,
+    Devolve o que a fábrica recebeu. O pad dublado leva o ``player`` que a fábrica ouviu,
     como o uhid de produção (e o gadget em USB dentro dele, que loga com ele).
     """
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_mod

@@ -53,7 +53,7 @@ def test_o_codificador_funciona_dentro_de_uma_thread(tem_libopus: bool) -> None:
 
 
 def test_o_ponteiro_de_uma_thread_NAO_cabe_em_32_bits(tem_libopus: bool) -> None:  # noqa: N802
-    """A premissa do defeito, medida — e ela é o que torna a cura necessária."""
+    """A premissa do defeito, medida — e é o que torna a cura necessária."""
     lib = _carregar_libopus_encoder()
     erro = ctypes.c_int()
     ponteiros: dict[str, int] = {}
@@ -106,7 +106,7 @@ def test_toda_chamada_variadica_passa_pelo_dono(tem_libopus: bool) -> None:
 
 
 def test_a_mordida_mata_o_processo_de_verdade(tem_libopus: bool) -> None:
-    """A prova de que a cura é load-bearing: sem ela, SIGSEGV num subprocesso."""
+    """A prova de que a cura é load-bearing: sem a cura, SIGSEGV num subprocesso."""
     programa = (
         "import ctypes, threading, sys\n"
         f"sys.path.insert(0, {str(RAIZ / 'src')!r})\n"

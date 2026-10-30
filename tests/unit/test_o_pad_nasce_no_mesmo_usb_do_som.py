@@ -4,7 +4,7 @@ A sprint é a O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026).
 
 Tudo aqui roda num sysfs e num configfs DE MENTIRA, montados no ``tmp_path``: a
 suíte nunca monta gadget, nunca escreve no ``/sys`` real e nunca acha o aparelho
-de quem roda. A prova no aparelho e no jogo é da bancada, no fecho.
+de quem roda. A prova no aparelho e no jogo é do ensaio no aparelho, no fecho.
 
 O que se prova, nesta ordem:
 

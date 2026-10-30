@@ -38,7 +38,7 @@ PERFIL_DO_USUARIO: dict[str, Any] = {
 
 
 def _grava_do_usuario(pasta: Path, dados: dict[str, Any] | None = None) -> bytes:
-    """Grava o arquivo dela com a formatação dela e devolve os bytes exatos."""
+    """Grava o arquivo de quem usa com a formatação própria e devolve os bytes exatos."""
     pasta.mkdir(parents=True, exist_ok=True)
     bruto = (json.dumps(dados or PERFIL_DO_USUARIO, ensure_ascii=False, indent=4)
              + "\n").encode()
@@ -74,7 +74,7 @@ def test_a_sanidade_nao_acusa_o_freestyle() -> None:
 
 
 def test_o_personalizado_do_usuario_vira_freestyle_com_a_copia_byte_a_byte() -> None:
-    """O caso dela, fim a fim: o nome muda, o conteúdo fica, e os bytes guardam."""
+    """O caso real, fim a fim: o nome muda, o conteúdo fica, e os bytes guardam."""
     pasta = profiles_dir(ensure=True)
     bruto = _grava_do_usuario(pasta)
 
@@ -412,7 +412,7 @@ def test_o_shell_recusa_a_fabrica_ao_lado_do_nome_antigo(
 def test_o_personalizado_que_o_usuario_renomeou_nao_ganha_um_freestyle_ao_lado(
     semeadura_ligada: None,
 ) -> None:
-    """Ela deu outro nome ao padrão: esse é o perfil de fora do jogo do usuário."""
+    """Quem usa deu outro nome ao padrão: esse é o perfil de fora do jogo do usuário."""
     pasta = profiles_dir(ensure=True)
     _grava_do_usuario(pasta, dict(PERFIL_DO_USUARIO, name="Sofá", match={"type": "any"}))
 
@@ -476,12 +476,12 @@ def test_sem_sessao_o_boot_cai_no_freestyle(semeadura_ligada: None, transporte: 
 
     assert store.active_profile == "Freestyle"
     assert session.load_last_profile() is None, (
-        "o boot gravou a sessão: restauro de sistema não é gesto dela")
+        "o boot gravou a sessão: restauro de sistema não é gesto de quem usa")
 
 
 def test_sem_freestyle_no_disco_o_boot_nao_inventa(semeadura_ligada: None,
                                                    monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem o arquivo (ela o apagou), o boot fica como sempre ficou: sem perfil."""
+    """Sem o arquivo (quem usa o apagou), o boot fica como sempre ficou: sem perfil."""
     loader.load_all_profiles()
     (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
     store = StateStore()
@@ -538,7 +538,7 @@ def test_com_o_modo_freestyle_desligado_o_jogo_entra_e_fica(
 ) -> None:
     """Desligado, o boot abre na escolha do usuário, e o jogo entra e FICA na volta.
 
-    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o perfil do último jogo vale até ela
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o perfil do último jogo vale até quem usa
     mudar ou outro jogo iniciar; a janela sem perfil próprio não devolve a escolha.
     """
     assert _cena(travado=False, escolha="Sofá") == ["Sofá", "Sofá",
@@ -643,7 +643,7 @@ def test_o_salvar_sem_perfil_ativo_grava_no_freestyle(semeadura_ligada: None) ->
 
 
 def test_sem_freestyle_no_disco_o_salvar_continua_recusando(semeadura_ligada: None) -> None:
-    """Sem o arquivo (ela o apagou), o gesto não inventa perfil: recusa dizendo."""
+    """Sem o arquivo (quem usa o apagou), o gesto não inventa perfil: recusa dizendo."""
     from hefesto_dualsense4unix.interface.pacotes import rodape, topo
 
     loader.load_all_profiles()

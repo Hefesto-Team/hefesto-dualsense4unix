@@ -1,4 +1,4 @@
-"""O orçamento de ar conta PONTES, não soma entrada — AR-MEDIDO-01, R10 dela."""
+"""O orçamento de ar conta PONTES, não soma entrada — AR-MEDIDO-01, R10."""
 
 from __future__ import annotations
 
@@ -251,10 +251,10 @@ def test_ponte_que_levanta_ao_ser_perguntada_fica_de_fora() -> None:
 
 
 def test_o_k_da_ponte_segue_a_tabela_do_ensaio() -> None:
-    """A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01: o ``FATIAS_DA_PONTE`` é o ``k`` que a bancada grava.
+    """A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01: o ``FATIAS_DA_PONTE`` é o ``k`` que o ensaio grava.
 
     Sem ``tests/fixtures/a_ponte_em_fatias_no_ar/bancada.json`` o ``k`` é provisório no CSV; com
-    ela, a constante, o CSV e o desenho dizem o ``k`` medido, e voltar o 3 antigo reprova.
+    o arquivo, a constante, o CSV e o desenho dizem o ``k`` medido, e voltar o 3 antigo reprova.
     """
     caminho = RAIZ / "scripts" / "ensaios" / "a_ponte_em_fatias_no_ar.py"
     spec = importlib.util.spec_from_file_location("_orcamento_a_ponte_em_fatias_no_ar", caminho)

@@ -4,7 +4,7 @@ Sprint O-PRO-CONTROLLER-GANHA-O-CANAL-COM-HIDRAW-01. O passo 0 (16/10/2026) leu 
 `is_hidraw_enabled` do winebus do Proton: o hidraw por padrão é só do DualSense,
 do DualShock 4 e de volantes e manches da lista; o 057e:2009 só o ganharia pela
 `PROTON_ENABLE_HIDRAW`. Ativou o decidido por delegação de 13/10: a Pro segue no
-uinput de hoje, e o doctor diz o que ela entrega.
+uinput de hoje, e o doctor diz o que a Pro entrega.
 """
 from __future__ import annotations
 

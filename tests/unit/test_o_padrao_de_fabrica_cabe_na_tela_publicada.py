@@ -6,7 +6,7 @@ O DEFEITO QUE ESTA RÉGUA MEDE, e ele foi reproduzido em 02/09/2026 na base
 (`core/keyboard_mappings.DEFAULT_BUTTON_BINDINGS`), a página que o produto
 RENDERIZA foi congelada antes disso e não tem a `<option>` do rótulo novo, e o
 "Guardar" da aba Navegação passou a gravar `{'l3': '__OPEN_OSK__'}` no perfil
-ATIVO — uma escolha que ela não fez, em silêncio, bastando um clique para mudar
+ATIVO — uma escolha que quem usa não fez, em silêncio, bastando um clique para mudar
 qualquer OUTRA linha.
 
 A CADEIA TEM QUATRO ELOS, e o terceiro é o que a esconde:
@@ -20,22 +20,22 @@ A CADEIA TEM QUATRO ELOS, e o terceiro é o que a esconde:
     4. `a06_navegacao.guardar_definicoes` recolhe o `select.value` das 21
        linhas, compara com o padrão e grava a diferença.
 
-POR QUE ELA MORA DO LADO DO `keyboard_mappings`: porque é lá que o padrão nasce,
+POR QUE A RÉGUA MORA DO LADO DO `keyboard_mappings`: porque é lá que o padrão nasce,
 e é lá que a decisão de trocá-lo é tomada. Quem troca um padrão passa por este
 arquivo; quem publica uma página, não.
 
-O QUE ELA **NÃO** É: ela não dirige navegador nenhum. A pergunta aqui é de
-VOCABULÁRIO — o rótulo do padrão existe como `<option>` daquela linha? —, e ela
+O QUE A RÉGUA **NÃO** É: não dirige navegador nenhum. A pergunta aqui é de
+VOCABULÁRIO — o rótulo do padrão existe como `<option>` daquela linha? —, e a régua
 se responde lendo o HTML que o produto renderiza. A régua que dirige o Chrome e
 mede o que o clique RECOLHE é
 `tests/unit/test_a_tela_entrega_as_vinte_e_uma_linhas.py`; são perguntas
 diferentes, e esta roda sem motor.
 
-ELA MORDE NOS DOIS SENTIDOS, de propósito:
+A RÉGUA MORDE NOS DOIS SENTIDOS, de propósito:
 
 * padrão novo fora do vocabulário da tela publicada, sem declaração → vermelho
   no mesmo dia em que alguém o trocar;
-* declaração que caducou — ela publicou a página e o rótulo passou a existir →
+* declaração que caducou — quem decide publicou a página e o rótulo passou a existir →
   vermelho também, e a mensagem manda apagar a linha. É o sino, e não a lápide.
 """
 from __future__ import annotations
@@ -106,7 +106,7 @@ def test_o_padrao_de_todas_as_linhas_tem_nome_na_lista_da_tela() -> None:
 
     Um padrão sem rótulo em `acoes_de_botao.ACOES` é pior que um fora do
     `<select>`: a linha não teria como mostrar a verdade em página nenhuma, nem
-    na bancada.
+    no ensaio.
     """
     sem_nome = {b: t for b, t in acoes.padrao().items() if t not in acoes.ACOES}
     assert not sem_nome, (
@@ -125,9 +125,9 @@ def test_o_que_a_tela_publicada_nao_diz_esta_declarado_e_nada_mais() -> None:
         "a página que o produto RENDERIZA não sabe dizer o que estes botões "
         f"fazem de fábrica: {a_mais} (botão -> (de fábrica, o que a tela poria "
         "no lugar)).\nO 'Guardar' da aba Navegação grava a diferença no perfil "
-        "ATIVO dela — e isto não é escolha dela, é o desenho congelado. "
+        "ATIVO — e isto não é escolha de quem usa, é o desenho congelado. "
         "Publique a aba (`scripts/check_o_desenho_aprovado.py --publicar 06`, "
-        "que é ato DELA) ou declare a linha em "
+        "que é ato de quem decide) ou declare a linha em "
         "`core/keyboard_mappings.PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ` com a "
         "razão e a medição.")
     assert not a_menos, (
@@ -141,14 +141,14 @@ def test_o_ensaio_ja_sabe_dizer_todos_os_padroes() -> None:
     """O que falta é a PUBLICAÇÃO, e a régua diz isso em vez de deixar supor."""
     fora = _padrao_fora_da_lista(onde.pagina(PAGINA))
     assert not fora, (
-        f"nem a BANCADA sabe dizer o padrão destes botões: {fora}. Não adianta "
+        f"nem o ENSAIO sabe dizer o padrão destes botões: {fora}. Não adianta "
         "publicar — rode o gerador da aba primeiro "
         "(`src/hefesto_dualsense4unix/interface/aba06.py`), porque a lista da "
         "tela sai de `core/acoes_de_botao.por_grupo()`.")
 
 
 def test_o_que_a_tela_publicada_poria_no_lugar_muda_o_que_o_device_faz() -> None:
-    """A divergência NÃO é cosmética — ela troca o comportamento do controle.
+    """A divergência NÃO é cosmética — troca o comportamento do controle.
 
     Segue o fio do daemon sem daemon nenhum: `acoes_de_botao.resolver` monta o
     que vai ao device de teclado e `profiles.manager.resolve_key_bindings` o

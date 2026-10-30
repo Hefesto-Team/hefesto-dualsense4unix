@@ -1,8 +1,7 @@
 """O Nintendo Pro no mapa de canais — plataforma, combinação e identidade.
 
-Nasceu em 03/09/2026 (ONDA-PRO-PLATAFORMA-01), da pergunta de produto: *"a ideia é
-mapa tanto pra USB quanto rádio estarem conectadas no projeto inteiro e lá ser
-nosso hub central"*.
+Nasceu em 03/09/2026 (ONDA-PRO-PLATAFORMA-01), com a ideia de o mapa valer para USB
+e rádio no projeto inteiro e ser o hub central.
 
 O que este arquivo guarda são DOZE linhas `@pro` que estavam com o veredito
 (`aciona`) MUDO em pelo menos um transporte e agora dizem SIM ou NÃO, lendo o
@@ -17,7 +16,7 @@ de gates que o driver escreve por BARRAMENTO (``joycon_using_usb`` é
 A mordida tem duas metades, e é essa a razão de o arquivo existir:
 
 1. **apagou a célula, reprova.** Uma célula esvaziada volta a ler-se como
-   "ninguém respondeu" — que é o estado de onde ela saiu.
+   "ninguém respondeu" — que é o estado de onde a célula saiu.
 2. **mudou o fonte, reprova.** Cada célula afirma um gate, uma linha de conf ou
    uma escrita do produto. Se o fonte mudar, a célula vira mentira publicada no
    ``docs/specs.html``, e o teste manda atualizar o mapa no mesmo gesto.
@@ -192,7 +191,7 @@ class TestOVereditoEstaEscrito:
     ) -> None:
         assert mapa[identificador][f"{lado}_de_onde_sei"].strip() != "medido", (
             f"{identificador}: `{lado}_de_onde_sei` virou `medido`. Se houve "
-            "bancada, o ensaio tem de entrar em docs/data/ensaios.csv no mesmo "
+            "medição no aparelho, o ensaio tem de entrar em docs/data/ensaios.csv no mesmo "
             "gesto — senão a promoção é só uma palavra mais forte."
         )
 
@@ -206,8 +205,8 @@ class TestOVereditoEstaEscrito:
         grau = mapa[identificador][f"{lado}_ate_onde_foi"].strip()
         assert grau in ("", "MONTOU"), (
             f"{identificador}: `{lado}_ate_onde_foi` subiu para {grau!r} sem que "
-            "haja ensaio `@pro` no caderno. O teto do que se afirma sem a mesa "
-            "dela é MONTOU."
+            "haja ensaio `@pro` no caderno. O teto do que se afirma sem ensaio "
+            "é MONTOU."
         )
 
     @pytest.mark.parametrize("identificador", sorted(LADOS_RESPONDIDOS))
@@ -227,7 +226,7 @@ class TestOVereditoEstaEscrito:
         for identificador, marca in sorted(MUDA_COM_RAZAO.items()):
             assert marca in mapa[identificador]["cabo_ressalva"], (
                 f"{identificador}: a `cabo_ressalva` perdeu a marca {marca!r}. "
-                "Sem ela, o vazio do cabo volta a ser indistinguível de "
+                "Sem a marca, o vazio do cabo volta a ser indistinguível de "
                 "descuido — e o que está escrito ali é a medição de uma linha "
                 "só que resolve a pergunta."
             )
@@ -252,7 +251,7 @@ class TestOVereditoEstaEscrito:
 
         ausente = "«MARCA QUE CÉLULA NENHUMA ESCREVEU»"
         assert ausente not in mapa[RESPONDIDA_NA_VARREDURA]["cabo_ressalva"], (
-            "a cobrança da marca passa com uma marca inventada: ela não "
+            "a cobrança da marca passa com uma marca inventada: a cobrança não "
             "distingue nada, e a próxima célula muda entraria numa régua que "
             "não morde."
         )
@@ -270,7 +269,7 @@ class TestOVereditoEstaEscrito:
             assert linha[f"{lado}_de_onde_sei"].strip() != "medido", (
                 f"{RESPONDIDA_NA_VARREDURA}: `{lado}_de_onde_sei` virou "
                 "`medido` sem ensaio @pro no caderno — a resposta veio de "
-                "leitura de fonte e o teto dela é `inferido-do-codigo`"
+                "leitura de fonte e o teto da linha é `inferido-do-codigo`"
             )
 
     @pytest.mark.parametrize("identificador", sorted(CELULAS_DESCOLADAS))
@@ -307,8 +306,8 @@ class TestOFonteAindaSustentaOQueOMapaAfirma:
         normalizado = re.sub(r"\s+", " ", _texto(DRIVER))
         assert entrada in normalizado, (
             "a `nintendo_hid_devices` perdeu a entrada "
-            f"{entrada!r}. É ela que faz `plataforma.probe@pro` responder `sim` "
-            "naquele transporte — sem ela o driver nem é chamado."
+            f"{entrada!r}. É a entrada que faz `plataforma.probe@pro` responder `sim` "
+            "naquele transporte — sem a entrada o driver nem é chamado."
         )
 
     def test_so_leitores_de_dualsense_herdam_a_vigia_do_mudo(self) -> None:
@@ -325,7 +324,7 @@ class TestOFonteAindaSustentaOQueOMapaAfirma:
         assert herdeiros == LEITORES_COM_VIGIA_DE_MUDO, (
             "as subclasses de `_EvdevReconnectLoop` mudaram: "
             f"{sorted(herdeiros)}. Se um leitor de controle EXTERNO passou a "
-            "herdar dela, o Pro ganhou vigia de mudo e "
+            "herdar da classe, o Pro ganhou vigia de mudo e "
             "`plataforma.vigia_zumbi@pro` deixou de ser `divida` no cabo."
         )
 
@@ -337,9 +336,9 @@ class TestOFonteAindaSustentaOQueOMapaAfirma:
         recuo = len(linhas[indice]) - len(linhas[indice].lstrip())
         assert recuo == 4, (
             "a escrita de `SDL_GAMECONTROLLER_USE_BUTTON_LABELS` ganhou recuo "
-            f"({recuo} espaços): ela deixou de estar no corpo da função e passou "
+            f"({recuo} espaços): a escrita deixou de estar no corpo da função e passou "
             "a depender de alguma condição. `plataforma.mapeamento_posicao@pro` "
-            "afirma `sim` nos dois transportes porque ela é incondicional."
+            "afirma `sim` nos dois transportes porque a escrita é incondicional."
         )
 
     def test_o_aviso_da_cascata_ainda_acusa_so_o_clone(self) -> None:

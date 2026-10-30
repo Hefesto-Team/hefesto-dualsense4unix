@@ -1,6 +1,6 @@
 """O-PERFIL-ATIVADO-APLICA-TUDO-OU-DIZ-POR-QUE-01 (03/10/2026).
 
-O log da janela dela: «Perfil ativado: Avatar Legends — Aplicado, menos:
+O log da janela: «Perfil ativado: Avatar Legends — Aplicado, menos:
 mascara:<id>, mascara:<id>, alto-falante de um…». No diário do serviço, no mesmo
 instante, a máscara de um controle FOI aplicada (`profile_mascara_por_peca`
 mascara=xbox) e a do outro VOLTOU AO PADRÃO (`profile_mascara_devolvida_ao_padrao`).

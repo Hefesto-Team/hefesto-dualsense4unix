@@ -79,7 +79,7 @@ def _retrato_com(saidas: str, padrao_da_saida: str = "", pw_dump: str = "",
 
 
 def test_a_descricao_sai_do_formato_longo_medido(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O padrão publicado leva o nome do painel dela, pelo caminho do produto."""
+    """O padrão publicado leva o nome do painel do sistema, pelo caminho do produto."""
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
     retrato = _retrato_com(LISTA_MEDIDA, padrao_da_saida="hefesto_som_000003")
@@ -201,7 +201,7 @@ def _correr(daemon: Any, linhas: list[str], padroes: list[ods.SomDoSistema],
 
 def test_a_primeira_leitura_vem_antes_do_subscribe(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem ela a tela ficaria sem resposta até a primeira mudança — que pode"""
+    """Sem a leitura inicial a tela ficaria sem resposta até a primeira mudança — que pode"""
     daemon = _DaemonDeMentira()
     inicial = ods.SomDoSistema(saida="hdmi", entrada="mic")
 
@@ -225,7 +225,7 @@ def test_o_evento_que_nao_muda_nada_nao_repinta(
 
 def test_a_troca_de_padrao_chega_na_hora(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O caso dela: trocar a saída no painel do COSMIC."""
+    """O caso real: trocar a saída no painel do COSMIC."""
     daemon = _DaemonDeMentira()
     antes = ods.SomDoSistema(saida="hdmi", entrada="mic", saida_nome="TV")
     depois = ods.SomDoSistema(saida="fone", entrada="mic", saida_nome="Fone")
@@ -285,7 +285,7 @@ def test_a_linha_do_exame_diz_os_nomes_do_painel_do_usuario() -> None:
     assert "HDA NVidia" in texto
     assert "Microfone do Controle 1" in texto
     assert "alsa_output" not in texto, (
-        "o nome CRU chegou à tela — e ele não é o que o painel dela mostra")
+        "o nome CRU chegou à tela — e ele não é o que o painel do sistema mostra")
 
 
 def test_sem_o_bloco_a_linha_nao_aparece() -> None:

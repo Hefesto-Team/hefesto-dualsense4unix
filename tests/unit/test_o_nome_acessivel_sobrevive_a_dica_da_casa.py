@@ -211,7 +211,7 @@ def _paginas() -> list[pathlib.Path]:
 
 @pytest.fixture(scope="module")
 def com_a_cura() -> list[dict[str, Any]]:
-    """As treze páginas publicadas, com a camada como ela é hoje."""
+    """As treze páginas publicadas, com a camada como está hoje."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
     return [_censo(p, hefesto_vivo.DICA_DA_CASA) for p in _paginas()]
 

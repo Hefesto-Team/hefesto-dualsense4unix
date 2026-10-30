@@ -2,8 +2,8 @@
 
 O roxo tinha par no quarto, a ponte o esqueceu e ele entra em PS + Create depois: o
 clique do usuário chegou ANTES de a janela o ver. A central aceita a escolha e pareia o
-endereço dela quando a janela o vir, e nenhum outro. O dublê do BlueZ é o de sempre
-(``radio_de_mentira``): nunca o BlueZ dela.
+endereço escolhido quando a janela o vir, e nenhum outro. O dublê do BlueZ é o de sempre
+(``radio_de_mentira``): nunca o BlueZ da máquina.
 
 MORDIDAS, uma por vez: o ``visto`` e o ``janela_aberta`` fora do ``if`` de
 ``_a_escolha_do_usuario`` (a escolha antes de ver deixa de existir, ou vale em qualquer passo);

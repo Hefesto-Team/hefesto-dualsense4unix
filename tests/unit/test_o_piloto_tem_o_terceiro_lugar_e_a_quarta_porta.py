@@ -165,7 +165,7 @@ def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     profiles_dir().mkdir(parents=True, exist_ok=True)
-    for nome in ("regua", "Bancada"):
+    for nome in ("regua", "Ensaio"):
         if not (profiles_dir() / f"{nome.lower()}.json").exists():
             loader.save_profile(Profile(name=nome, match=MatchManual()),
                                 origem="regua")
@@ -525,13 +525,13 @@ def test_a_quarta_porta_despacha_o_gesto_de_leitura(medido: dict) -> None:
         f"a quarta porta não despachou o gesto vivo: {novos!r}")
     assert f"clique:{GESTO_DO_CLIQUE}" not in novos, (
         f"o `input` despachou TAMBÉM o gesto de `data-hef-gesto`, que grava no "
-        f"disco dela: {novos!r}")
+        f"disco de quem usa: {novos!r}")
     assert f"{PAGINA}:{VIVO}" in medido["vivos_atendidos"], (
         f"o piloto não contou a leitura: {medido['vivos_atendidos']!r}")
 
 
 def test_a_leitura_pinta_o_que_trouxe(medido: dict) -> None:
-    """A resposta do gesto vivo é carga de pintura, e ela chega à tela."""
+    """A resposta do gesto vivo é carga de pintura, e a carga chega à tela."""
     leitura = medido["depois-do-vivo"]
     assert isinstance(leitura, dict), leitura
     assert leitura["rotulo"] == "li abc", (
@@ -573,7 +573,7 @@ def test_o_gesto_vivo_nao_troca_bloco(medido: dict) -> None:
     assert isinstance(leitura, dict), leitura
     assert leitura["rotulo"] is not None, (
         "a coluna do p1 foi trocada pelo bloco do gesto vivo — o campo do "
-        "rótulo sumiu com ela")
+        "rótulo sumiu com a coluna")
 
 
 def test_a_resposta_velha_nao_pinta_por_cima_da_nova(medido: dict) -> None:

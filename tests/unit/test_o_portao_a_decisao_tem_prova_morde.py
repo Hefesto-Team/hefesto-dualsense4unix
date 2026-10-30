@@ -131,7 +131,7 @@ def test_prova_em_funcao_que_nao_existe_reprova(arvore, capsys):
 
 
 def test_prova_que_nao_cita_a_decisao_reprova(arvore, capsys):
-    """A função existe, e o id foi para o cabeçalho do arquivo: não é a régua dela."""
+    """A função existe, e o id foi para o cabeçalho do arquivo: não é a régua da decisão."""
     raiz, mod = arvore
     _escreve_teste(raiz, "test_a.py",
                    '"""Nasceu da D-A."""\n\ndef test_a_cura_de_d_a():\n    assert True\n')
@@ -190,7 +190,7 @@ def test_estado_fora_da_escada_reprova(arvore, capsys):
 
 
 def test_piso_velho_reprova_e_o_aceitar_desce(arvore, capsys):
-    """D-C ganhou prova: ela tem de sair do piso, senão a vaga serviria a uma decisão nova."""
+    """D-C ganhou prova: a D-C tem de sair do piso, senão a vaga serviria a uma decisão nova."""
     raiz, mod = arvore
     linhas = list(csv.DictReader(
         (raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))

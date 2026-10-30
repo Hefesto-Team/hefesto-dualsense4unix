@@ -4,7 +4,7 @@ Medido antes de curar (15/10/2026): o editor perguntava «Funciona em», «Prefe
 prioridade) e tinha o «Detectar»; o perfil se achava por um rótulo e não pelo NOME DO JOGO, e dois
 perfis do mesmo jogo empatavam por ordem de arquivo. A tela nova tem «Nome do jogo», «Aplicar em»
 (quatro alvos), «Quando» (só no alvo Eventos) e «Qual vale primeiro»; o desempate do manager é a
-prioridade e, no empate, o perfil que a semeadura fez e ela nunca mexeu.
+prioridade e, no empate, o perfil que a semeadura fez e quem usa nunca mexeu.
 
 MORDIDAS (cada uma foi feita e viu reprovar):
 

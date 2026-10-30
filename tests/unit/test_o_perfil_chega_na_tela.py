@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A RÉGUA DA CURA DE 01/09/2026: o que está no perfil chega à tela.
 
-POR QUE ELA EXISTE, e a pergunta de produto é o enunciado: *"vc tá corrigindo na
-origem esses problemas que tá relatando né?"*
+POR QUE A RÉGUA EXISTE: a pergunta do produto era se os problemas relatados
+estavam sendo corrigidos na origem.
 
 Não estava. Dezessete valores desta interface mostravam travessão com uma frase
 dizendo que o produto não sabia aquilo. **Doze tinham dono** — o perfil no disco
@@ -10,7 +10,7 @@ do usuário — e o erro tinha uma forma só: *perguntou-se ao `state_full` do d
 não publica gatilho nem brilho, e a ausência foi lida como inexistência.*
 
 O QUE ESTA RÉGUA MEDE, e é a parte que a cura pode perder de novo: que os
-valores do perfil ATRAVESSEM até o pacote. Ela não olha texto de tela nem
+valores do perfil ATRAVESSEM até o pacote. A régua não olha texto de tela nem
 docstring — monta um perfil com gatilho e brilho, chama as funções de pacote, e
 cobra os valores de volta.
 
@@ -131,7 +131,7 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
         f"o R2 do perfil guarda [3, 8, 20] e a caixa trouxe {valores_d}")
 
     assert f'style="width:{round(180 / 255 * 100)}%"' in caixa_e, (
-        f"a barra da Força não veio na porcentagem da FAIXA dela:\n{caixa_e}")
+        f"a barra da Força não veio na porcentagem da FAIXA do campo:\n{caixa_e}")
 
 
 def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):
@@ -142,7 +142,7 @@ def test_o_brilho_do_perfil_chega_em_porcentagem(ctx_com):
     col = next(iter(r["colunas"].values()))
     assert col["brilho"] == "70%", (
         f"o brilho saiu {col.get('brilho')!r}. `leds.lightbar_brightness` está "
-        f"no schema com faixa declarada e preenchido nos 33 perfis dela; "
+        f"no schema com faixa declarada e preenchido nos 33 perfis da máquina de teste; "
         f"`—` aqui é o travessão de volta, e `0.7` é o disco cru na tela.")
     assert col["brilho-pct"] == 70, "o disco guarda 0..1 e a barra pede 0..100"
 
@@ -166,7 +166,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
     tem**, e a razão de cada um está escrita no `SEM_DONO` do próprio pacote:
 
     **DE SETE PARA CINCO — 03/09/2026, e a régua ENVELHECEU: os três que
-    saíram saíram porque foram CURADOS.** Ela tinha a lista de 02/09 congelada e
+    saíram saíram porque foram CURADOS.** A régua tinha a lista de 02/09 congelada e
     reprovava a melhora em vez do defeito. Cada saída foi conferida no pacote
     que a declarava:
 
@@ -181,7 +181,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         método para isso"* é verdade pelo IPC, e irrelevante: o produto sabe
         abrir a Steam desde 23/08 por outro caminho
         (`steam_launch_options.reopen_steam`, que tinha zero chamadores vindos
-        de `interface/`). Decisão 17 dela, 03/09: o botão liga, e o gesto entra
+        de `interface/`). Decisão 17, de 03/09: o botão liga, e o gesto entra
         em `hefesto_vivo.PERIGOSOS` para a `--prova-gesto` não abrir a Steam na
         tela do usuário. (O botão saiu com a aba antiga em 18/10/2026: a
         Experimental não o traz.)

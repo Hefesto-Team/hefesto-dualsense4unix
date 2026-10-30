@@ -92,7 +92,7 @@ def test_a_razao_de_nao_ter_medido_chega_junto(relatorio):
     """A saída dele é mostrada. Sem a razão, o rótulo é só outro silêncio."""
     assert "o dado deste portão de brinquedo não está no disco" in relatorio.stdout
     assert "e esta segunda linha é a razão" in relatorio.stdout, (
-        "só a primeira linha chegou; a razão vem depois dela e é o que "
+        "só a primeira linha chegou; a razão vem depois da primeira e é o que "
         f"transforma o rótulo em conserto:\n{relatorio.stdout}")
     assert "medi tudo e está certo" not in relatorio.stdout, (
         f"a saída de quem passou vazou para o relatório:\n{relatorio.stdout}")

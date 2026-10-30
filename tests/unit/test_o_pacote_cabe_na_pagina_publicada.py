@@ -136,7 +136,7 @@ def test_a_lista_de_excecoes_nao_guarda_fantasma() -> None:
     mortas = sorted(set(EXCECOES_DATADAS) - vivos)
     assert not mortas, (
         f"a lista guarda exceção que já morreu: {mortas}. Apague a linha — a "
-        "dívida é menor do que ela diz."
+        "dívida é menor do que a lista diz."
     )
 
 
@@ -200,7 +200,7 @@ def test_a_regua_pega_o_defeito_que_derrubou_a_navegacao() -> None:
         "    return mesa\n"
     )
     assert "Desativado" in _acusacoes(defeito), (
-        "a régua NÃO pegou o defeito que devolveu a Navegação — ela passaria "
+        "a régua NÃO pegou o defeito que devolveu a Navegação — a régua passaria "
         "verde sobre o clique morto e sobre a tela afirmando o contrário"
     )
 

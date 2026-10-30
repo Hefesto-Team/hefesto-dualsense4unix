@@ -3,7 +3,7 @@
 O-PAREAR-DA-EXTENSAO-MOSTRA-O-ANDAMENTO-COMO-A-ABA-08-01 (26/10/2026). O usuário clicou Parear em
 «Configurar · Lovense» e «funcionou mas sem nenhum indicativo de que ia conectar em algum momento».
 A janela agora lê do estado que a extensão devolve (a conexão que diz «Procurando aparelhos»)
-quando a busca começa e quando acaba: durante ela, a faixa «Procurando aparelhos» com os segundos
+quando a busca começa e quando acaba: no meio, a faixa «Procurando aparelhos» com os segundos
 que faltam do prazo de 20 s; no fim, o aparelho que apareceu ou a razão de não ter achado nenhum.
 Sem aparelho a faixa divide a linha do Parear (é a própria linha do aviso).
 

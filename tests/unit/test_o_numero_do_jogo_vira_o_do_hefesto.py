@@ -7,7 +7,7 @@ número do aparelho com quem tinha o do jogo, como a troca à mão da aba
 Controles, e o lugar dele na mesa do jogo troca junto, para nenhum pad
 renascer debaixo do jogo.
 
-A bancada é a da STEAM-NO-FISICO-01 (o ``CoopManager`` real, os leitores e os
+O ensaio é o da STEAM-NO-FISICO-01 (o ``CoopManager`` real, os leitores e os
 vpads falsos; o ``external_mask`` sobe antes do leitor falso, que não tem o
 ``BUTTON_MAP`` que o módulo lê ao carregar); o registro é um dublê do número,
 e a troca é a do contrato do ``_set_number_locked`` (o alvo e quem tem o número

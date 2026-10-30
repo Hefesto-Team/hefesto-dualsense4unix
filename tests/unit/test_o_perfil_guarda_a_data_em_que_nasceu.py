@@ -62,7 +62,7 @@ def _perfil(prioridade: int = 10, **resto: Any) -> Profile:
 
 
 def _por_gesto(perfil: Profile, **kw: Any) -> None:
-    marca = gesto_de_agora.set("teste · gesto dela")
+    marca = gesto_de_agora.set("teste · gesto de quem usa")
     try:
         save_profile(perfil, **kw)
     finally:

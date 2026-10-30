@@ -1,4 +1,4 @@
-"""O produto monta o MESMO report que fez o som sair na bancada.
+"""O produto monta o MESMO report que fez o som sair no aparelho.
 
 MEDIDO EM 10/09/2026: o alto-falante do DualSense tocou por rádio, 70 segundos
 contínuos, sem um corte, com a orelha do usuário e o alcance testado. Os bytes que
@@ -48,7 +48,7 @@ def report_como_o_ensaio_monta(
     buffer: bytes,
     com_mic: bool = False,
 ) -> bytes:
-    """A montagem do ENSAIO, escrita à mão — é ela que tocou."""
+    """A montagem do ENSAIO, escrita à mão — é a que tocou."""
     pkt = bytearray(TAMANHO_035)
     pkt[0] = 0x35
     pkt[1] = (seq & 0x0F) << 4
@@ -86,7 +86,7 @@ def test_os_bytes_sao_os_que_o_usuario_ouviu(
         ),
     )
     assert do_produto == do_ensaio, (
-        "o produto diverge do report que TOCOU na bancada dela em 10/09/2026 — "
+        "o produto diverge do report que TOCOU no aparelho em 10/09/2026 — "
         f"primeiro byte diferente: "
         f"{next(i for i in range(TAMANHO_035) if do_produto[i] != do_ensaio[i])}"
     )
@@ -149,11 +149,11 @@ def test_o_contador_de_quadros_avanca_a_cada_report() -> None:
 
 
 def test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id() -> None:
-    """A guarda do háptico: sem ela o `[0]` vira `0xD2` e o firmware cala."""
+    """A guarda do háptico: sem a guarda o `[0]` vira `0xD2` e o firmware cala."""
     assert af.ARRANJO_035.len_haptico == 0
     assert af.ARRANJO_035.pos_tag_haptico == 0, (
         "este teste só prova o que promete se a posição do háptico for 0 — é "
-        "ela que colide com o byte de id"
+        "a posição que colide com o byte de id"
     )
     report = af.ARRANJO_035.montar(
         [QUADRO], controle=af.controle_de_audio_035(contador_de_quadros=0)

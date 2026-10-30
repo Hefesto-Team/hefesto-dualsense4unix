@@ -126,7 +126,7 @@ def test_outro_jogo_que_inicia_leva_o_perfil(monkeypatch: pytest.MonkeyPatch) ->
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_quando_o_usuario_muda_a_escolha_volta_a_valer(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ela ativa outro perfil na mão: o «fica» é do jogo, não dela."""
+    """Quem usa ativa outro perfil na mão: o «fica» é do jogo, não de quem usa."""
     _a_escolha(monkeypatch, "lure")
     sw, store, agora = _no_jogo()
     store.set_active_profile("lure")
@@ -226,7 +226,7 @@ def test_sem_jogo_antes_o_lancador_nao_ativa_nem_a_navegacao_nem_a_escolha(
 ) -> None:
     """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: sem jogo antes, o lançador também não ativa nada.
 
-    O que ela ativou à mão (ou o que o boot pôs) fica; nem a Navegação do
+    O que quem usa ativou à mão (ou o que o boot pôs) fica; nem a Navegação do
     lançador nem a volta à escolha entram pela janela dele.
 
     MORDIDA: tire o ``_o_lancador_nao_ativa`` do ``_tick`` e a escolha entra.

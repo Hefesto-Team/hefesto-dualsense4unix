@@ -164,7 +164,7 @@ def test_o_visual_novel_chega_ao_teclado_como_tecla_segurada(disco: dict[str, An
 def test_o_point_and_click_de_antes_deixa_o_perfil_sem_as_linhas_do_so_mouse(
     disco: dict[str, Any],
 ) -> None:
-    """O perfil que escolheu o estilo antes guarda as linhas do `so_mouse`; elas saem.
+    """O perfil que escolheu o estilo antes guarda as linhas do `so_mouse`; as linhas saem.
 
     MORDIDA: tire o `MOLDE_QUE_O_ESTILO_GRAVAVA` da faxina (`a10_perfis`) e os ombros do perfil
     seguem mudos no estilo seguinte.
@@ -182,7 +182,7 @@ def test_o_point_and_click_de_antes_deixa_o_perfil_sem_as_linhas_do_so_mouse(
 
 
 def test_o_estilo_novo_tira_so_as_linhas_do_molde_anterior(disco: dict[str, Any]) -> None:
-    """O PageUp do visual novel não fica num jogo de tiro; a linha dela fica."""
+    """O PageUp do visual novel não fica num jogo de tiro; a linha do visual novel fica."""
     _aplicar("Visual novel")
     disco["perfil"] = disco["perfil"].model_copy(update={
         "button_actions": {**disco["perfil"].button_actions, "dpad_up": "KEY_W"}})

@@ -111,7 +111,7 @@ class TestOAlvoViajaComARegra:
                 if Path(origem).name not in texto:
                     faltando.append(f"{nome}: {origem}")
         assert not faltando, (
-            "formato que leva as regras 82/83 e NÃO leva o alvo do RUN+= delas — "
+            "formato que leva as regras 82/83 e NÃO leva o alvo do RUN+= das duas — "
             "a regra vai para o disco e fica inerte: " + "; ".join(faltando)
         )
 
@@ -161,7 +161,7 @@ class TestOAlvoSaiQuandoOPacoteSai:
         )
 
     def test_o_snapshot_de_bonds_nao_e_apagado(self) -> None:
-        """O /var/lib é o salva-vidas dela; desinstalar não é motivo para queimá-lo."""
+        """O /var/lib é o salva-vidas de quem usa; desinstalar não é motivo para queimá-lo."""
         for nome, caminho in GANCHOS_DE_REMOCAO.items():
             texto = _texto(caminho)
             assert "/var/lib/hefesto-dualsense4unix/bt-bonds" not in texto, (
@@ -170,7 +170,7 @@ class TestOAlvoSaiQuandoOPacoteSai:
 
 
 def _caminhos_de_host(arquivo: Path) -> set[str]:
-    """Os caminhos de HOST que a regra (ou a unidade) chama, lidos dela mesma."""
+    """Os caminhos de HOST que a regra (ou a unidade) chama, lidos da própria regra."""
     texto = "\n".join(
         linha for linha in _texto(arquivo).splitlines() if not linha.lstrip().startswith("#")
     )
@@ -278,7 +278,7 @@ class TestAProvaDoNixMoraNumWorkflowProprio:
             assert caminho in texto, f"mexer em {caminho} não dispara a prova do Nix"
 
     def test_a_action_do_nix_nao_entra_no_ci_yml(self) -> None:
-        """No `ci.yml` ela tiraria o modo offline do `ci-local.sh` de todos os jobs de casa e
+        """No `ci.yml` a action tiraria o modo offline do `ci-local.sh` de todos os jobs de casa e
         poria um job que nunca compilou na guarda que tranca a release."""
         assert "install-nix-action" not in _texto(self.CI_YML)
         assert "install-nix-action" in _texto(self.NIX_YML)

@@ -9,7 +9,7 @@ própria, até o daemon reiniciar.
 O pedido ao broker é o de VERDADE (``uhid_gamepad._pedir_ao_broker`` com o
 ``HidrawBrokerClient`` de verdade) contra um socket de mentira que faz o que o
 broker faz antes do login: não existe, aceita e fecha (o peer recusado), ou
-responde ``sem_sessao_ativa``. Aberta a sessão, o gadget vem da bancada do
+responde ``sem_sessao_ativa``. Aberta a sessão, o gadget vem do ensaio do
 gadget, o mesmo dublê das outras réguas do pad em USB.
 """
 
@@ -110,7 +110,7 @@ class BrokerAntesDoLogin:
 
 
 class Mesa:
-    """A bancada do gadget com o broker de verdade recusando até a sessão abrir."""
+    """O ensaio do gadget com o broker de verdade recusando até a sessão abrir."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, modo: str) -> None:
         self.b = EnsaioDoGadget(monkeypatch, tmp_path)

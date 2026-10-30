@@ -72,7 +72,7 @@ def test_so_o_dono_monta_o_perfil_sem_perfil_ativo() -> None:
             fora.append(f"{arquivo.relative_to(RAIZ)}:{linha} (em {funcao})")
     assert not fora, "o par montado fora da casa dele:\n" + "\n".join(fora)
     assert _os_pares(ast.parse(DONO.read_text(encoding="utf-8"))), (
-        "a régua não acha nem o par da casa: ela não mede nada"
+        "a régua não acha nem o par da casa: a régua não mede nada"
     )
 
 

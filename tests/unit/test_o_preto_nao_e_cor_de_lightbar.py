@@ -1,8 +1,7 @@
 """O PRETO É BANIDO COMO COR DE LIGHTBAR — ordem, 22/09/2026.
 
-**A QUEIXA, com as palavras do usuário:** *"pq o lightbar do starlight blue sempre
-desliga após conectar? mesmo o perfil atual não mandando ele desligar e ter
-cor? isso é só com ele, independente da ordem"*.
+**A QUEIXA:** a lightbar do Starlight Blue sempre desligava ao conectar, mesmo com o
+perfil atual mandando cor; só com ele, independente da ordem.
 
 **O PERFIL MANDAVA.** Medido no disco do usuário no mesmo minuto: a peça daquele
 controle tinha `leds.lightbar: [0, 0, 0]`, escrita por um "Salvar Perfil" às
@@ -10,8 +9,7 @@ controle tinha `leds.lightbar: [0, 0, 0]`, escrita por um "Salvar Perfil" às
 gravou PRETO. E não era um controle só: **sete dos 29 perfis do usuário** guardam o
 preto na seção GLOBAL, e neles abrir o jogo apagava a barra dos quatro.
 
-**A ORDEM:** *"vamos banir esse preto de aparecer independente do controle
-tambem"*. <!-- noqa-acento: citação literal -->
+**A ORDEM:** banir esse preto de aparecer, independente do controle.
 
 O QUE ESTA RÉGUA COBRA, nos cinco pontos do caminho:
 
@@ -25,7 +23,7 @@ O QUE ESTA RÉGUA COBRA, nos cinco pontos do caminho:
 E O CONTRAPESO: **apagar a barra continua possível pelo
 brilho**. `lightbar_brightness = 0.0` zera os três canais DEPOIS da escolha da
 cor, e essa é a mão do usuário — o banimento tira do produto o direito de apagar
-sozinho, não tira dela o apagar.
+sozinho, não tira de quem usa o apagar.
 """
 
 from __future__ import annotations
@@ -71,10 +69,10 @@ def test_a_peca_com_cor_continua_escrevendo() -> None:
 
 
 def test_o_brilho_zero_continua_apagando_a_peca() -> None:
-    """O contrapeso: apagar pelo brilho é a mão do usuário, e ela continua valendo."""
+    """O contrapeso: apagar pelo brilho é a mão do usuário, e continua valendo."""
     spec = _spec_da_peca((128, 0, 255), brilho=0.0)
     assert spec is not None and spec.led == (0, 0, 0), (
-        "o brilho 0 parou de apagar — o banimento comeu o apagar dela")
+        "o brilho 0 parou de apagar — o banimento comeu o apagar de quem usa")
 
 
 class _ControleDeMentira:

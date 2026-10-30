@@ -29,7 +29,7 @@ def test_o_helper_do_pacote_nao_poe_o_vigia_e_diz_por_que() -> None:
     ):
         assert alvo not in codigo, (
             f"o install-host-udev.sh passou a instalar {alvo} — a decisão (P-15) é que "
-            "o pacote não o liga; se ela mudou, mude esta régua junto"
+            "o pacote não o liga; se a decisão mudou, mude esta régua junto"
         )
 
 

@@ -4,9 +4,9 @@ O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 1 da seção «A decisão de 04/10»: 
 original, não há por que ter um Original à parte, e o botão passa a se chamar Padrão. Com o degrau
 Padrão as três barras do controle (Sensor Háptico,
 Motor esquerdo, Motor direito) ficam inteiras verdes e travadas, com a palavra no lugar do número; o
-que ela guardou espera a Economia ou o Máximo.
+que quem usa guardou espera a Economia ou o Máximo.
 
-A página sob prova é a da BANCADA (``mockup/05-vibracao.html``), no WebKit fora da tela, com o
+A página sob prova é a do DESENHO (``mockup/05-vibracao.html``), no WebKit fora da tela, com o
 BOOTSTRAP do piloto: o pintor de verdade acende a classe, e a folha de estilo de verdade trava.
 
 MORDIDAS: a regra ``.forca.padrao ~ .motor .trilho.arrasta{display:none}`` (a barra de arrasto
@@ -168,7 +168,7 @@ def test_economia_e_maximo_destravam_e_o_numero_guardado_volta() -> None:
     assert "padrao" not in depois["classe_forca"].split()  # (noqa-acento)
     esquerdo = next(x for x in depois["linhas"] if x["campo"] == "barra-e")
     assert esquerdo["arrasto_visivel"] and not esquerdo["trava_visivel"], esquerdo
-    assert esquerdo["num"] == "50", "o 50% que ela guardou volta ao destravar"
+    assert esquerdo["num"] == "50", "o 50% que quem usa guardou volta ao destravar"
 
 
 TRAVAS_POR_LUGAR = r"""

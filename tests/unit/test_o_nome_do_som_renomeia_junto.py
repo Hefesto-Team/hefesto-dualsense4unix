@@ -1,13 +1,13 @@
 """O-NOME-DO-SOM-RENOMEIA-JUNTO-01 — o rótulo do nó segue o assento.
 
-O DEFEITO, ACHADO DE OUVIDO POR ELA EM TESTE CEGO — 20/09/2026, 04:24
+O DEFEITO, ACHADO DE OUVIDO EM TESTE CEGO — 20/09/2026, 04:24
 ---------------------------------------------------------------------
 Dois gabaritos lacrados antes de qualquer som tocar, três rodadas de seis
-segundos, e ela sem saber o alvo nem o timbre de nenhuma. Acertou 3 de 3::
+segundos, e quem ouvia sem saber o alvo nem o timbre de nenhuma. Acertou 3 de 3::
 
-    mandei para «Alto-falante do Controle 3» → ela ouviu no Player 1, verde
+    mandei para «Alto-falante do Controle 3» → ouviu-se no Player 1, verde
     mandei para nada                          → «nada»
-    mandei para «Alto-falante do Controle 1» → ela ouviu no Player 3, azul
+    mandei para «Alto-falante do Controle 1» → ouviu-se no Player 3, azul
 
 **Os nomes do Player 1 e do Player 3 estavam trocados ENTRE SI**, e o
 «Microfone do Controle N» mentia junto — pior: três dos quatro, e um deles sem
@@ -116,7 +116,7 @@ def test_a_troca_entre_dois_rotulos_e_envelhecimento() -> None:
 
 
 def test_a_regua_fraca_da_verde_sobre_a_troca() -> None:
-    """O estado REAL da bancada passaria por uma régua de «tem número»."""
+    """O estado REAL da máquina de teste passaria por uma régua de «tem número»."""
     no_ar = {
         uniq: f"Alto-falante do Controle {n}" + _SONY
         for uniq, n in _ASSENTOS_DO_NOME.items()
@@ -221,7 +221,7 @@ def test_a_renumeracao_chega_ao_rotulo_do_no_vivo(
 def test_rotulo_igual_nao_encosta_no_no(
     monkeypatch: pytest.MonkeyPatch, numerador: dict[str, int]
 ) -> None:
-    """Varredura sem novidade não derruba nada — ela roda de 5 em 5 segundos."""
+    """Varredura sem novidade não derruba nada — a varredura roda de 5 em 5 segundos."""
     _mesa(monkeypatch)
     ger = GerenciadorDeNosDeSom()
     ger.reconciliar(_controles())
@@ -306,7 +306,7 @@ class _SourceEspia:
 def sem_pactl(monkeypatch: pytest.MonkeyPatch) -> None:
     """NENHUM `pactl` e NENHUM processo saem deste arquivo.
 
-    Ela tem quatro DualSense de pé e o som da máquina inteira passa pelo mesmo
+    Quem usa tem quatro DualSense de pé e o som da máquina inteira passa pelo mesmo
     servidor. Os dublês entram nos TRÊS pontos de saída do módulo — a fábrica
     do nó, o `pactl` do `desmutar` e o `Popen` do alimentador — e não nos
     argumentos de cada chamada, porque o caminho que esta sprint acrescenta
@@ -387,7 +387,7 @@ def test_a_fonte_do_cabo_volta_com_o_canal(
 
 
 class _PonteFalsa:
-    """Uma ponte de rádio de mentira — só o que o supervisor pergunta a ela."""
+    """Uma ponte de rádio de mentira — só o que o supervisor pergunta à ponte."""
 
     def __init__(self, uniq: str) -> None:
         self.no = mic.NoDualSenseBT(caminho="/dev/hidraw9", uniq=uniq, produto=0x0CE6)
@@ -473,7 +473,7 @@ def test_o_no_nao_some_quando_a_rota_nao_resolve(
     ger.reconciliar(_controles())
 
     assert set(ger.nos) == set(_ASSENTOS_DE_AGORA), (
-        "um nó SUMIU da mesa dela para trocar de nome"
+        "um nó SUMIU da mesa de quem usa para trocar de nome"
     )
     assert all(ger.nos[u] is antes[u] for u in antes)
     assert all(not no.parado for no in antes.values())
@@ -503,7 +503,7 @@ def test_o_no_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
     ger.reconciliar(_controles())
 
     assert set(ger.nos) == set(_ASSENTOS_DE_AGORA), (
-        "um nó SUMIU da mesa dela para trocar de nome"
+        "um nó SUMIU da mesa de quem usa para trocar de nome"
     )
     assert ger.nos[_P3] is not antes[_P3]
     assert antes[_P3].parado is True
@@ -525,7 +525,7 @@ def test_o_canal_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
     monkeypatch.setattr(canal, "SourceVirtualPipeWire", _RecusaONomeNovo)
     de_pe = canal.renomear(_P3, mic.descricao_do_microfone(_P3))
 
-    assert de_pe is not None, "o microfone dela SUMIU para trocar de nome"
+    assert de_pe is not None, "o microfone de quem usa SUMIU para trocar de nome"
     assert de_pe.descricao == "Microfone do Controle 1" + _SONY
     assert canal.canal_de_pe(_P3) is de_pe
 
@@ -547,7 +547,7 @@ def test_o_canal_que_nem_a_volta_ergue_devolve_none(
 
 
 def _ponte_com_canal_proprio(uniq: str, descricao: str) -> Any:
-    """Uma `PonteMicBluetooth` de verdade com o canal aberto por ELA."""
+    """Uma `PonteMicBluetooth` de verdade com o canal aberto por QUEM USA."""
     no = mic.NoDualSenseBT(caminho="/dev/hidraw9", uniq=uniq, produto=0x0CE6)
     ponte = mic.PonteMicBluetooth(no)
     ponte._source = ponte._abrir_o_canal_por_controle(descricao)

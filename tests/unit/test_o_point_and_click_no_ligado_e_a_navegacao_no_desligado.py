@@ -1,4 +1,4 @@
-"""A fileira da Jogar: três chips no Ligado, três no Desligado, e o Point and click fora dela.
+"""A fileira da Jogar: três chips no Ligado, três no Desligado, e o Point and click fora da fileira.
 
 A-ABA-JOGAR-DO-TODO-01 (15/10/2026) pôs o «Point and click» no Ligado e a «Navegação» no
 Desligado, os dois no MESMO modo `desktop` do daemon com tabelas de botões diferentes. Desde
@@ -209,8 +209,8 @@ def test_todo_alvo_clicavel_tem_24_px() -> None:
 def _miolo_da_pagina() -> str:
     """O quadro Status, sem comentário e sem SVG.
 
-    A seção Controles (`<div class="quadro estica">`) veio da aba 02 com os `title` dela, e a
-    régua dela é a da seção; esta mede o que é só da Jogar.
+    A seção Controles (`<div class="quadro estica">`) veio da aba 02 com os `title` da 02, e a
+    régua própria é a da seção; esta mede o que é só da Jogar.
     """
     corpo = _pagina().split('<div class="miolo">', 1)[-1].split('<div class="quadro estica">', 1)[0]
     corpo = re.sub(r"<svg.*?</svg>", "", corpo, flags=re.S)

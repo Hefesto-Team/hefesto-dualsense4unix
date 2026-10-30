@@ -8,7 +8,7 @@ o tique de entrada de TODOS os controles parava junto.
 
 O pedido é o de VERDADE (``_pedir_ao_broker`` com o ``HidrawBrokerClient``)
 contra um socket que aceita e não responde; o gadget que o broker devolve vem
-da bancada do gadget, o mesmo dublê das outras réguas do pad em USB.
+do ensaio do gadget, o mesmo dublê das outras réguas do pad em USB.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ QUEDAS = ("caiu", "nao_enumerou")
 
 
 def _guardar_o_lado_do_jogo(m: Mesa) -> None:
-    """A bancada guarda só o último lado do jogo; o que ela larga fecharia o gadget."""
+    """O ensaio guarda só o último lado do jogo; o que ele larga fecharia o gadget."""
     lados = m.__dict__.setdefault("lados_do_jogo", [])
     if m.b.jogo is not None and m.b.jogo not in lados:
         lados.append(m.b.jogo)
@@ -91,7 +91,7 @@ def _fechar(m: Mesa, pads: list[Any]) -> None:
 
 
 def _preso(m: Mesa, monkeypatch: pytest.MonkeyPatch) -> threading.Event:
-    """O broker que responde só quando a régua solta (o gadget vem da bancada)."""
+    """O broker que responde só quando a régua solta (o gadget vem do ensaio)."""
     solta = threading.Event()
     pedir = m.ug.PEDIR_O_PAD_USB
 

@@ -1,4 +1,4 @@
-"""O nome que ela dá volta na reconexão — O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01, item 4."""
+"""O nome que quem usa dá volta na reconexão — O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01, item 4."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def _esquecer_em_todos(ensaio: Ensaio) -> None:
 
 
 def _conectar_em(ensaio: Ensaio, destino: str, quem: str) -> cr.Movimento:
-    """Ela abre ``destino``, clica «Conectar», segura PS + Create em ``quem`` e"""
+    """Quem usa abre ``destino``, clica «Conectar», segura PS + Create em ``quem`` e"""
     ensaio.cena()
     if ensaio.cena().get("aberto") != id_da_tela(destino):
         ensaio.gesto("abrir-adaptador", alvo=id_da_tela(destino))
@@ -96,21 +96,21 @@ PARES = [(o, d) for o in (SALA, QUARTO, VARANDA) for d in (SALA, QUARTO, VARANDA
 def test_o_conectar_noutro_adaptador_leva_o_nome_do_usuario(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, origem: str, destino: str,
 ) -> None:
-    """O vermelho se chama «André» na origem. Ela o desliga, abre outro adaptador"""
+    """O vermelho se chama «Lobo» na origem. Quem usa o desliga, abre outro adaptador"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
-    mundo.pareado(origem, VERMELHO, nome="André")
-    mundo.pareado(origem, AZUL, nome="Vitória")
+    mundo.pareado(origem, VERMELHO, nome="Lobo")
+    mundo.pareado(origem, AZUL, nome="Coruja")
     mundo.desligar(VERMELHO)
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
         feito = _conectar_em(ensaio, destino, VERMELHO)
         assert (feito.estado, feito.aparelho) == (cr.CHEGOU, VERMELHO)
-        assert mundo.objeto(destino, VERMELHO)["Alias"] == "André"
-        assert mundo.objeto(origem, AZUL)["Alias"] == "Vitória", "o nome foi para outro"
+        assert mundo.objeto(destino, VERMELHO)["Alias"] == "Lobo"
+        assert mundo.objeto(origem, AZUL)["Alias"] == "Coruja", "o nome foi para outro"
         cena = ensaio.cena()
         (linha,) = [a for a in cena["aparelhos"] if str(a["id"]).lower() == rm.uniq(VERMELHO)
                     and a.get("lugar") == id_da_tela(destino)]
-        assert linha["nome"] == "André"
+        assert linha["nome"] == "Lobo"
     finally:
         ensaio.fechar()
 
@@ -118,7 +118,7 @@ def test_o_conectar_noutro_adaptador_leva_o_nome_do_usuario(
 def test_sem_nome_do_usuario_o_objeto_novo_fica_com_o_de_fabrica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O nome de fábrica não é nome: o controle que ela nunca renomeou chega"""
+    """O nome de fábrica não é nome: o controle que ninguém renomeou chega"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.desligar(VERMELHO)
@@ -134,16 +134,16 @@ def test_sem_nome_do_usuario_o_objeto_novo_fica_com_o_de_fabrica(
 def test_a_tela_mostra_o_nome_do_usuario_em_toda_chave_do_controle(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O roxo se chama «Vitória» só no objeto da varanda; desligado, ele tem"""
+    """O roxo se chama «Coruja» só no objeto da varanda; desligado, ele tem"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
-    mundo.pareado(VARANDA, ROXO, conectado=False, nome="Vitória")
+    mundo.pareado(VARANDA, ROXO, conectado=False, nome="Coruja")
     mundo.pareado(SALA, ROXO, host=False)
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
         cena = ensaio.cena()
         linhas = {a["lugar"]: a for a in cena["aparelhos"] if a.get("desligado")}
         assert set(linhas) == {id_da_tela(VARANDA), id_da_tela(SALA)}
-        assert {a["nome"] for a in linhas.values()} == {"Vitória"}
+        assert {a["nome"] for a in linhas.values()} == {"Coruja"}
     finally:
         ensaio.fechar()
 
@@ -158,27 +158,27 @@ def test_renomear_esquecer_em_todos_e_parear_de_novo_o_nome_volta(
     mundo.pareado(origem, VERMELHO)
     outro = next(a for a in ADAPTADORES if a != origem)
     mundo.pareado(outro, VERMELHO, host=False)
-    mundo.pareado(origem, AZUL, nome="Vitória")
+    mundo.pareado(origem, AZUL, nome="Coruja")
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "André")
-        assert {mundo.objeto(a, VERMELHO)["Alias"] for a in (origem, outro)} == {"André"}
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "Lobo")
+        assert {mundo.objeto(a, VERMELHO)["Alias"] for a in (origem, outro)} == {"Lobo"}
         ensaio.central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
-        assert _guardado(casa, AZUL) == "Vitória"
+        assert _guardado(casa, VERMELHO) == "Lobo"
+        assert _guardado(casa, AZUL) == "Coruja"
 
         _esquecer_em_todos(ensaio)
         assert all(mundo.objeto(a, VERMELHO) is None for a in ADAPTADORES), "sobrou chave"
         ensaio.central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André", "esquecer a chave apagou o nome"
+        assert _guardado(casa, VERMELHO) == "Lobo", "esquecer a chave apagou o nome"
 
         feito = _conectar_em(ensaio, destino, VERMELHO)
         assert (feito.estado, feito.aparelho) == (cr.CHEGOU, VERMELHO)
-        assert mundo.objeto(destino, VERMELHO)["Alias"] == "André"
+        assert mundo.objeto(destino, VERMELHO)["Alias"] == "Lobo"
         (linha,) = [a for a in ensaio.cena()["aparelhos"]
                     if str(a["id"]).lower() == rm.uniq(VERMELHO)]
-        assert linha["nome"] == "André" and linha["lugar"] == id_da_tela(destino)
-        assert mundo.objeto(origem, AZUL)["Alias"] == "Vitória", "o nome foi para outro"
+        assert linha["nome"] == "Lobo" and linha["lugar"] == id_da_tela(destino)
+        assert mundo.objeto(origem, AZUL)["Alias"] == "Coruja", "o nome foi para outro"
     finally:
         ensaio.fechar()
 
@@ -199,7 +199,7 @@ def test_o_controle_que_conecta_por_fora_da_central_recebe_o_nome(
     diario: Path, casa: Path, destino: str,
 ) -> None:
     """«Reaplicado em toda conexão, em qualquer adaptador»: o nome está no"""
-    assert maquina.gravar_o_nome_do_controle(VERMELHO, "André")
+    assert maquina.gravar_o_nome_do_controle(VERMELHO, "Lobo")
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA if destino != SALA else QUARTO, AZUL)
     mundo.pareado(destino, VERMELHO)
@@ -207,10 +207,10 @@ def test_o_controle_que_conecta_por_fora_da_central_recebe_o_nome(
     try:
         assert mundo.objeto(destino, VERMELHO)["Alias"] == FABRICA
         feitos = central.cuidar_dos_nomes()
-        assert feitos == ((VERMELHO, "André"),)
-        assert mundo.objeto(destino, VERMELHO)["Alias"] == "André"
+        assert feitos == ((VERMELHO, "Lobo"),)
+        assert mundo.objeto(destino, VERMELHO)["Alias"] == "Lobo"
         assert [e for e in mundo.escritas if e[2] == "Alias"] == [
-            (rm.no_de(destino, VERMELHO), bd.APARELHO, "Alias", "André")]
+            (rm.no_de(destino, VERMELHO), bd.APARELHO, "Alias", "Lobo")]
         assert central.cuidar_dos_nomes() == (), "a volta escreveu de novo o que já estava"
     finally:
         central.fechar()
@@ -226,9 +226,9 @@ def test_o_usuario_apaga_o_nome_e_ele_nao_volta(
     mundo.pareado(QUARTO, VERMELHO, host=False)
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "André")
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "Lobo")
         ensaio.central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
 
         _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "")
         ensaio.central.cuidar_dos_nomes()
@@ -245,17 +245,17 @@ def test_o_usuario_apaga_o_nome_e_ele_nao_volta(
 
 
 def test_o_nome_dado_por_fora_do_produto_tambem_fica(diario: Path, casa: Path) -> None:
-    """O produto é para qualquer computador: o nome que ela dá pelo"""
+    """O produto é para qualquer computador: o nome que quem usa dá pelo"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(VARANDA, VERMELHO, host=False)
     central, dono = _central_da_casa(mundo, relogio)
     try:
         assert central.cuidar_dos_nomes() == ()
-        mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Bia", espera=1.0)
+        mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Raposa", espera=1.0)
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "Bia"
-        assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == "Bia"
+        assert _guardado(casa, VERMELHO) == "Raposa"
+        assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == "Raposa"
     finally:
         central.fechar()
         dono.fechar()
@@ -265,11 +265,11 @@ def test_so_o_controle_tem_o_nome_guardado(diario: Path, casa: Path) -> None:
     """DECISÃO desta sprint: o campo é ``ControleDeclarado.nome``, e só controle"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE, nome="Caixa da Sala")
-    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(SALA, VERMELHO, nome="Lobo")
     central, dono = _central_da_casa(mundo, relogio)
     try:
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
         assert _guardado(casa, FONE) is None
         assert mundo.objeto(SALA, FONE)["Alias"] == "Caixa da Sala"
     finally:
@@ -285,10 +285,10 @@ def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_o_usuario_apagando(
     mundo.pareado(SALA, VERMELHO)
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:
-        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "André")
+        _renomear_na_tela(ensaio, monkeypatch, VERMELHO, "Lobo")
         ensaio.central.cuidar_dos_nomes()
         ensaio.central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
 
         monkeypatch.setattr(ensaio.central, "_dar_o_nome", lambda *_a: None)
         _esquecer_em_todos(ensaio)
@@ -296,8 +296,8 @@ def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_o_usuario_apagando(
         assert mundo.objeto(SALA, VERMELHO)["Alias"] == FABRICA
 
         ensaio.central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André", "o objeto novo apagou o nome dela"
-        assert mundo.objeto(SALA, VERMELHO)["Alias"] == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo", "o objeto novo apagou o nome dado"
+        assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Lobo"
     finally:
         ensaio.fechar()
 
@@ -305,37 +305,37 @@ def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_o_usuario_apagando(
 def test_o_adaptador_que_volta_com_o_nome_velho_recebe_o_do_usuario(
     diario: Path, casa: Path,
 ) -> None:
-    """A varanda estava fora da porta quando ela renomeou o vermelho de «André»"""
+    """A varanda estava fora da porta quando quem usa renomeou o vermelho de «Lobo»"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
-    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(SALA, VERMELHO, nome="Lobo")
     central, dono = _central_da_casa(mundo, relogio)
     try:
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
-        mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Bia", espera=1.0)
+        assert _guardado(casa, VERMELHO) == "Lobo"
+        mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Raposa", espera=1.0)
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "Bia"
+        assert _guardado(casa, VERMELHO) == "Raposa"
 
-        mundo.pareado(VARANDA, VERMELHO, host=False, nome="André")
+        mundo.pareado(VARANDA, VERMELHO, host=False, nome="Lobo")
         dono._fotografar()
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "Bia", "o adaptador que voltou trouxe o nome velho"
-        assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == "Bia"
-        assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Bia"
+        assert _guardado(casa, VERMELHO) == "Raposa", "o adaptador que voltou trouxe o nome velho"
+        assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == "Raposa"
+        assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Raposa"
     finally:
         central.fechar()
         dono.fechar()
 
 
 def test_o_nome_apagado_sai_tambem_do_objeto_que_ficou_com_ele(diario: Path, casa: Path) -> None:
-    """Ela apaga o nome, e a escrita não alcança um dos objetos (o BlueZ recusou"""
+    """Quem usa apaga o nome, e a escrita não alcança um dos objetos (o BlueZ recusou"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
-    mundo.pareado(SALA, VERMELHO, nome="André")
-    mundo.pareado(VARANDA, VERMELHO, host=False, nome="André")
+    mundo.pareado(SALA, VERMELHO, nome="Lobo")
+    mundo.pareado(VARANDA, VERMELHO, host=False, nome="Lobo")
     central, dono = _central_da_casa(mundo, relogio)
     try:
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
         mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "", espera=1.0)
         central.cuidar_dos_nomes()
         assert _guardado(casa, VERMELHO) is None
@@ -350,7 +350,7 @@ def test_o_nome_apagado_sai_tambem_do_objeto_que_ficou_com_ele(diario: Path, cas
 def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
     """Ninguém chama a volta à mão no produto: é o fio da faxina, que o daemon"""
     mundo = rm.RadioDeMentira()
-    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(SALA, VERMELHO, nome="Lobo")
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()
     central = cr.CentralDoRadio(
@@ -362,7 +362,7 @@ def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
         fim = time.monotonic() + 5.0
         while _guardado(casa, VERMELHO) is None and time.monotonic() < fim:
             time.sleep(0.02)
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
     finally:
         central.fechar(espera=2.0)
         dono.fechar()
@@ -372,16 +372,16 @@ def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
 def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_o_usuario_apagando(
     diario: Path, casa: Path, adaptador: str,
 ) -> None:
-    """O DEFEITO QUE A CONFERÊNCIA ACHOU. O vermelho se chama «André», com"""
+    """O DEFEITO QUE A CONFERÊNCIA ACHOU. O vermelho se chama «Lobo», com"""
     outro = next(a for a in ADAPTADORES if a != adaptador)
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
-    mundo.pareado(adaptador, VERMELHO, nome="André")
-    mundo.pareado(outro, VERMELHO, host=False, nome="André")
+    mundo.pareado(adaptador, VERMELHO, nome="Lobo")
+    mundo.pareado(outro, VERMELHO, host=False, nome="Lobo")
     central, dono = _central_da_casa(mundo, relogio)
     try:
         central.cuidar_dos_nomes()
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
 
         mundo.esquecer_na_ponte(adaptador, VERMELHO)
         mundo.desligar(VERMELHO)
@@ -392,8 +392,8 @@ def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_o_usuario_apagando(
         assert novo["Alias"] == FABRICA
 
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André", "o achado sem chave apagou o nome dela"
-        assert mundo.objeto(outro, VERMELHO)["Alias"] == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo", "o achado sem chave apagou o nome dado"
+        assert mundo.objeto(outro, VERMELHO)["Alias"] == "Lobo"
     finally:
         central.fechar()
         dono.fechar()
@@ -420,9 +420,9 @@ class _DiscoQueRecusa:
 def test_a_gravacao_recusada_nao_desfaz_o_nome_que_o_usuario_deu(
     diario: Path, casa: Path, adaptador: str,
 ) -> None:
-    """O vermelho se chama «André». Ela o renomeia para «Bia» (por fora do"""
+    """O vermelho se chama «Lobo». Quem usa o renomeia para «Raposa» (por fora do"""
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
-    mundo.pareado(adaptador, VERMELHO, nome="André")
+    mundo.pareado(adaptador, VERMELHO, nome="Lobo")
     disco = _DiscoQueRecusa()
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()
@@ -433,19 +433,19 @@ def test_a_gravacao_recusada_nao_desfaz_o_nome_que_o_usuario_deu(
     try:
         central.cuidar_dos_nomes()
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
 
         no = rm.no_de(adaptador, VERMELHO)
-        mundo.escrever(no, bd.APARELHO, "Alias", "s", "Bia", espera=1.0)
+        mundo.escrever(no, bd.APARELHO, "Alias", "s", "Raposa", espera=1.0)
         disco.recusar = 1
         assert central.cuidar_dos_nomes() == ()
-        assert _guardado(casa, VERMELHO) == "André"
-        assert mundo.objeto(adaptador, VERMELHO)["Alias"] == "Bia"
+        assert _guardado(casa, VERMELHO) == "Lobo"
+        assert mundo.objeto(adaptador, VERMELHO)["Alias"] == "Raposa"
 
         central.cuidar_dos_nomes()
         central.cuidar_dos_nomes()
-        assert _guardado(casa, VERMELHO) == "Bia", "o nome dela não chegou ao disco"
-        assert mundo.objeto(adaptador, VERMELHO)["Alias"] == "Bia", "o nome velho voltou"
+        assert _guardado(casa, VERMELHO) == "Raposa", "o nome dado não chegou ao disco"
+        assert mundo.objeto(adaptador, VERMELHO)["Alias"] == "Raposa", "o nome velho voltou"
     finally:
         central.fechar()
         dono.fechar()
@@ -474,7 +474,7 @@ def test_o_endereco_no_lugar_do_nome_nao_e_nome_do_usuario(diario: Path, casa: P
 def test_com_o_dono_vivo_a_volta_dos_nomes_nao_espera_a_faxina(diario: Path, casa: Path) -> None:
     """A faxina anda a cada 30 s; o nome, com o dono lendo da memória, a cada"""
     mundo = rm.RadioDeMentira()
-    mundo.pareado(VARANDA, VERMELHO, nome="André")
+    mundo.pareado(VARANDA, VERMELHO, nome="Lobo")
     dono = bd.DonoVivo(mundo)
     assert dono.ligar()
     central = cr.CentralDoRadio(
@@ -487,7 +487,7 @@ def test_com_o_dono_vivo_a_volta_dos_nomes_nao_espera_a_faxina(diario: Path, cas
         fim = time.monotonic() + cr.INTERVALO_DOS_NOMES_S + 3.0
         while _guardado(casa, VERMELHO) is None and time.monotonic() < fim:
             time.sleep(0.05)
-        assert _guardado(casa, VERMELHO) == "André"
+        assert _guardado(casa, VERMELHO) == "Lobo"
     finally:
         central.fechar(espera=2.0)
         dono.fechar()
@@ -497,11 +497,11 @@ def test_o_nome_no_maquina_json_e_do_controle_e_nao_apaga_o_resto(casa: Path) ->
     """O nome entra pela fusão: o microfone e a economia do mesmo controle"""
     assert maquina.gravar_maquina({"controles": {rm.uniq(VERMELHO): {
         "microfone": False, "economia": True}}})
-    assert maquina.gravar_o_nome_do_controle(VERMELHO.upper(), "  André  ")
+    assert maquina.gravar_o_nome_do_controle(VERMELHO.upper(), "  Lobo  ")
     lido = maquina.carregar_maquina().controles[rm.uniq(VERMELHO)]
-    assert (lido.nome, lido.microfone, lido.economia) == ("André", False, True)
+    assert (lido.nome, lido.microfone, lido.economia) == ("Lobo", False, True)
     assert maquina.nomes_dos_controles(maquina.carregar_maquina()) == {
-        rm.uniq(VERMELHO): "André"}
+        rm.uniq(VERMELHO): "Lobo"}
 
     assert maquina.gravar_o_nome_do_controle(rm.uniq(VERMELHO), "")
     documento = json.loads(casa.read_text(encoding="utf-8"))

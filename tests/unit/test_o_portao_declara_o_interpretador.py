@@ -142,9 +142,9 @@ def test_uma_venv_capenga_na_frente_nao_ganha_de_uma_completa(tmp_path: Path) ->
     )
 
     assert r.returncode == 0, (
-        "o script parou na PRIMEIRA venv que achou, e ela era a capenga — é a "
+        "o script parou na PRIMEIRA venv que achou, e era a capenga — é a "
         "regra da POSIÇÃO, que foi o defeito de 04/09/2026. A regra é de "
-        "CAPACIDADE: pergunta-se à venv se ela tem o que os portões precisam.\n"
+        "CAPACIDADE: pergunta-se à venv se tem o que os portões precisam.\n"
         + r.stdout + r.stderr
     )
     assert "INTERPRETADOR INCOMPLETO" not in r.stdout, r.stdout

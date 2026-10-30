@@ -114,10 +114,10 @@ def test_sem_o_daemon_a_tela_diz_por_que_os_gestos_nao_voltaram(gesto: Any) -> N
 def test_as_nove_linhas_que_o_perfil_alcanca_sao_as_do_produto() -> None:
     """A conta que sustenta o botão: 9 de 21, e as 12 restantes são fixas.
 
-    ELA NÃO SE DIGITA. Se `DEFAULT_BUTTON_BINDINGS` crescer, este caso reprova e
+    A CONTA NÃO SE DIGITA. Se `DEFAULT_BUTTON_BINDINGS` crescer, este caso reprova e
     obriga a REVER a frase do gesto — que hoje afirma, com todas as letras, que
     as outras 12 estão sempre de fábrica. É essa afirmação que faz o botão fechar
-    inteiro, e ela é a primeira coisa que caducaria.
+    inteiro, e é a primeira coisa que caducaria.
     """
     from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
 
