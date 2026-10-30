@@ -30,8 +30,8 @@ A MORDIDA desta régua é dupla, de propósito:
    porque a afirmação da tela passaria a ser falsa. Régua que só olha texto
    deixaria a tela mentindo ao contrário.
 
-O QUE ELA **NÃO** MEDE: que a ponte esteja no ar agora, ou que o firmware
-obedeça. Isso é bancada, com a orelha do usuário. Aqui se mede só que o produto
+O QUE NÃO MEDE: que a ponte esteja no ar agora, ou que o firmware
+obedeça. Isso é ensaio no aparelho, de ouvido. Aqui se mede só que o produto
 parou de recomendar o cabo por um motivo que deixou de ser verdade.
 """
 

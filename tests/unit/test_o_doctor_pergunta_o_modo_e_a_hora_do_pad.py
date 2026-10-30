@@ -3,7 +3,7 @@
 O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 (27/09/2026).
 
 **O MODO.** Às 16h16 de 27/09 o fecho foi «pads no `uhid` e nenhum
-`vpad_degradado`», com o Freestyle dela no modo Xbox. O `state_full` daquela
+`vpad_degradado`», com o Freestyle no modo Xbox. O `state_full` daquela
 cena diz `caminho: xbox`, o P1 em `uhid` e `degraded: false`: tudo o que existia
 lia íntegro. `modo_contra_o_ar` compara, por jogador, o canal que o modo pedido
 dá (`virtual_pad.quer_uhid`, o dono) com o pad no ar.
@@ -458,7 +458,7 @@ class TestAHoraDoPad:
         assert all(m.atraso_s is not None and m.atraso_s < 0.01 for m in medidas)
 
     def test_o_journald_parado_nao_vira_nao_medido(self) -> None:
-        """As duas chegadas presas no mesmo journald: o atraso é entre elas."""
+        """As duas chegadas presas no mesmo journald: o atraso é entre as duas."""
         medidas = hora_do_pad(PARADA_KERNEL, PARADA_DAEMON)
         assert [m.veredito for m in medidas] == [OK, OK, OK]
         assert medidas[2].hora == "23:46:18"
@@ -709,7 +709,7 @@ class TestODoctorPergunta:
         assert "o diário do daemon não tem a subida dele" not in saida
 
     def test_a_medida_que_morre_calada_avisa_com_uma_venv_ao_lado(self, lar: Path) -> None:
-        """O mundo do job do GTK real e da bancada: uma `.venv` ao lado do `doctor.sh`."""
+        """O mundo do job do GTK real e do ensaio: uma `.venv` ao lado do `doctor.sh`."""
         copia = lar / "scripts" / "doctor.sh"
         copia.parent.mkdir()
         shutil.copy2(DOCTOR, copia)

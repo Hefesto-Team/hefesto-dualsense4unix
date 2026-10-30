@@ -1,7 +1,7 @@
 """O diário de toda extensão tem a hora de cada linha.
 
 Sprint O-DIARIO-DE-CADA-EXTENSAO-TEM-A-HORA-DE-CADA-LINHA-01. Um processo de mentira escreve no
-cano que o supervisor copia; o diário é de uma pasta temporária e nada fala com o serviço dela.
+cano que o supervisor copia; o diário é de uma pasta temporária e nada fala com o serviço real.
 """
 from __future__ import annotations
 
@@ -172,7 +172,7 @@ def test_depois_da_poda_a_primeira_linha_que_fica_tem_a_data(tmp_path: Path,
                                                             monkeypatch: pytest.MonkeyPatch
                                                             ) -> None:
     """A poda do teto guarda a metade nova: a linha que abre o diário podado diz o dia. A
-    MORDIDA: com a data só na troca do dia, ela começa pela hora."""
+    MORDIDA: com a data só na troca do dia, a linha começa pela hora."""
     monkeypatch.setattr(supervisor_mod, "TETO_DO_DIARIO_BYTES", 4096)
     diario = tmp_path / "diario.log"
     linhas = _pelo_cano(diario, [b"uma linha do jogo\n" * 40 for _ in range(20)],

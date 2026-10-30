@@ -14,11 +14,11 @@ MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
 - o ``estilos_pedidos`` sem o ``if not entrada.ligada`` reprova a extensão desligada;
 - o gesto sem a recusa do estilo fora da vista grava o Adulto sem extensão;
 - o ``estilos_a_vista`` sem o guardado tira o Adulto do perfil que já o tem;
-- cada recusa do manifesto arrancada reprova o caso dela;
+- cada recusa do manifesto arrancada reprova o seu caso;
 - o ``moldes_a_vista`` que devolve todos reprova o molde do Mapa e o da Navegação;
 - o gesto da Navegação sem a recusa grava o molde sem a extensão;
 - o gesto da Navegação que ignora o pedido recusa o molde com a extensão ligada;
-- o Mapa sem o molde que a Navegação guarda abre em «Navegar» e recusa o molde dela;
+- o Mapa sem o molde que a Navegação guarda abre em «Navegar» e recusa o seu molde;
 - o ``estilos_a_vista`` que esconde só o Adulto pelo nome reprova o outro estilo pedido;
 - a marca dos pedidos fixa (a lista que não muda com a janela aberta) reprova oito casos;
 - o leitor do manifesto sem a recusa por valor derruba o pedido da extensão vizinha.
@@ -185,7 +185,7 @@ def test_com_a_extensao_ligada_a_lista_oferece_e_desligada_esconde(
 def test_o_perfil_que_guarda_o_adulto_carrega_e_o_mostra(lg: instalador.Lugares) -> None:
     """D-3010-O-PERFIL-QUE-GUARDA-O-ESTILO-PEDIDO-O-MANTEM."""
     _o_disco()
-    assert loader.load_profile(NOITE).estilo == ADULTO, "a escolha dela não se apaga"
+    assert loader.load_profile(NOITE).estilo == ADULTO, "a escolha de quem usa não se apaga"
     opcoes = _opcoes_do_estilo(NOITE)
     assert _escolhido(opcoes) == [ROTULO], "a tela diz o estilo que o perfil guarda"
     assert ROTULO not in _rotulos(_opcoes_do_estilo(TARDE)), "o Adulto vazou para outro perfil"
@@ -238,7 +238,7 @@ def test_o_molde_da_navegacao_so_aparece_com_a_extensao_ou_escolhido(
     outro = f"{a06_navegacao.PREFIXO_DO_MOLDE}point_and_click"
     assert ROTULO not in _moldes(a06_navegacao._opcoes_dos_moldes(outro))
     assert ROTULO in _moldes(a06_navegacao._opcoes_dos_moldes(molde)), (
-        "o molde que ela já escolheu sumiu da lista")
+        "o molde já escolhido sumiu da lista")
     with pytest.raises(ValueError, match="só aparece com a extensão"):
         a06_navegacao.point_and_click_perfil(Contexto(state={}, mesa=[], conectados=[],
                                                       estados={}),

@@ -115,7 +115,7 @@ def test_log_limpo_nao_diz_nada() -> None:
 
 @pytest.mark.parametrize("tag", ["JOYCON", "JOYCON-PROBE", "USB-71", "BT-ERR"])
 def test_os_quatro_contadores_obedecem_a_janela(tag: str) -> None:
-    """A janela vale para os QUATRO, e não só para o que ela notou."""
+    """A janela vale para os QUATRO, e não só para o que se notou."""
     velho = _rodar(["# 2026-07-20 kernel-watch iniciado", _linha(30, tag)])
     assert "WARN" not in velho, f"{tag} de 30 dias atrás virou aviso:\n{velho}"
     novo = _rodar(["# 2026-07-20 kernel-watch iniciado", _linha(1, tag)])

@@ -32,10 +32,10 @@ def test_toda_aba_tem_pacote_ou_razao(pacotes_mod):
 
 
 def test_as_dez_tem_pacote_e_nenhuma_esta_de_fora(pacotes_mod):
-    """A MORDIDA DOS DOIS LADOS, e ela mudou de lado em 02/09/2026."""
+    """A MORDIDA DOS DOIS LADOS, que mudou de lado em 02/09/2026."""
     tem = {a for a in ABAS if a in pacotes_mod.PACOTES}
     assert tem == set(ABAS) - SEM_PACOTE, (
-        f"a lista de quem pinta mudou sem a decisão dela mudar: {sorted(tem)}")
+        f"a lista de quem pinta mudou sem a decisão de produto mudar: {sorted(tem)}")
 
 
 def test_a_pagina_que_saiu_abre_na_que_a_absorveu():
@@ -75,7 +75,7 @@ def test_todo_pacote_declara_cobertura(pacotes_mod):
             continue
         p = pacotes_mod.pacote_da_pagina(aba, ctx)
         assert isinstance(p, dict), f"{aba}: pacote não é dicionário"
-        assert "cobertura" in p, f"{aba}: pacote sem `cobertura` — é ela que diz quanto falta"
+        assert "cobertura" in p, f"{aba}: pacote sem `cobertura` — a cobertura diz o que falta"
         c = p["cobertura"]
         assert {"pintados", "sem_dono"} <= set(c), f"{aba}: cobertura incompleta"
         assert c["pintados"] or c["sem_dono"], (
@@ -89,4 +89,4 @@ def test_a_pagina_tem_onde_pintar(aba):
             / "paginas" / aba)  # (noqa-acento)
     assert html.exists(), f"{aba} não existe no produto"
     n = len(ENDERECO.findall(html.read_text(encoding="utf-8")))
-    assert n > 0, f"{aba}: nenhum endereço de pintura — o pacote dela pintaria no vazio"
+    assert n > 0, f"{aba}: nenhum endereço de pintura — o pacote pintaria no vazio"

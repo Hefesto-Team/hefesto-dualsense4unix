@@ -24,7 +24,7 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
         "a régua 7 do básico, que nomeia a pasta para proibi-la: afirma que "
         "nenhum caminho do protocolo mora ali, e nunca lê o que há dentro",
     "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py":
-        "a régua das listas de exceção: ela pergunta a cada sprint citada se "
+        "a régua das listas de exceção: que pergunta a cada sprint citada se "
         "ainda está aberta, e o estado de uma sprint é processo",
     "scripts/check_os_contratos_de_fora.py":
         "o portão do censo dos contratos: confere que a `sprint_filha` de uma "
@@ -37,7 +37,7 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
     "tests/unit/test_a_catraca_da_origem_morde.py":
         "a régua 6 da catraca roda o `fecho.sh` da leva, que é ferramenta de "
         "processo, para provar que o pagamento viaja antes do merge; sem o "
-        "arquivo, ela se pula",
+        "arquivo, a régua se pula",
 }
 
 RAIZES_REAIS = frozenset({
@@ -77,7 +77,7 @@ def _rastreado(relativo: str) -> bool:
 def test_a_pasta_do_metodo_existe_e_e_rastreada() -> None:
     """Cada arquivo de `docs/method/` é rastreado — o oráculo é o git."""
     assert PASTA.is_dir(), (
-        "`docs/method/` sumiu — é a pasta do que as réguas leem, e sem ela "
+        "`docs/method/` sumiu — é a pasta do que as réguas leem, e sem a pasta "
         "28 testes voltam a reprovar em todo clone limpo")
     arquivos = sorted(p for p in PASTA.iterdir() if p.is_file())
     assert len(arquivos) >= 8, (
@@ -170,7 +170,7 @@ def test_nenhum_modulo_le_a_arvore_real_do_processo() -> None:
     assert not culpados, (
         f"{len(culpados)} leitura(s) da árvore real `{PROCESSO}/`:\n  "
         + "\n  ".join(culpados)
-        + "\n\nEssa pasta é `.gitignore:178` — ela não viaja no clone nem na "
+        + "\n\nEssa pasta é `.gitignore:178` — não viaja no clone nem na "
         "worktree de trabalho. O que uma régua lê mora em `docs/method/`. Se o "
         "que você está lendo é PROCESSO mesmo (sprint, painel, colisão), "
         "declare o módulo em `LEITORES_DE_PROCESSO` com a razão.")
@@ -212,6 +212,6 @@ def test_a_regua_acusa_a_leitura_da_arvore_real(fonte: str) -> None:
     '"o gesto morava em docs/process/sprints/ e saiu em 20/09"',
 ])
 def test_a_regua_deixa_passar_a_arvore_de_brinquedo(fonte: str) -> None:
-    """E o que ela NÃO pode acusar, que é metade de uma régua boa."""
+    """E o que a régua NÃO pode acusar, que é metade de uma régua boa."""
     assert not _le_o_processo_real(ast.parse(fonte)), (
         f"a régua acusou o que é legítimo: {fonte}")

@@ -1,4 +1,4 @@
-"""A BANCADA DO RÁDIO — e a guarda que separa «sem dano» de «sem alvo»."""
+"""O ENSAIO DO RÁDIO — e a guarda que separa «sem dano» de «sem alvo»."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def test_a_suite_nao_toca_o_radio_do_usuario() -> None:
     fim = _rodar("dano", "hci0", "1")
     assert fim.returncode == 7, (
         f"a etapa que LIGA a varredura não recusou dentro da suíte (rc={fim.returncode}). "
-        "O rádio dela não é bancada de teste."
+        "O rádio de quem usa não é máquina de teste."
     )
     assert "RECUSADO" in fim.stdout
     assert "HEFESTO_ENSAIO_PODE_TOCAR_O_RADIO" in fim.stdout, (
@@ -52,7 +52,7 @@ def test_a_suite_nao_toca_o_radio_do_usuario() -> None:
 
 
 def test_as_guardas_vem_antes_de_ligar_a_varredura() -> None:
-    """A ORDEM é a cura, e ela se lê no arquivo — não se mede ligando o rádio."""
+    """A ORDEM é a cura, e se lê no arquivo — não se mede ligando o rádio."""
     corpo = CONDUTOR.read_text(encoding="utf-8")
     trecho = corpo.split("def etapa_dano", 1)[-1].split("\ndef ", 1)[0]
     liga = trecho.index("subprocess.Popen(")
@@ -63,7 +63,7 @@ def test_as_guardas_vem_antes_de_ligar_a_varredura() -> None:
     ):
         onde = trecho.index(agulha)
         assert onde < liga, (
-            f"{porque} corre DEPOIS de a varredura subir — ela não guarda nada."
+            f"{porque} corre DEPOIS de a varredura subir — não guarda nada."
         )
 
 
@@ -94,7 +94,7 @@ def test_o_condutor_nunca_deixa_o_radio_varrendo() -> None:
     trecho = corpo.split("def etapa_dano", 1)[-1].split("\ndef ", 1)[0]
     assert "finally:" in trecho, (
         "a etapa que LIGA a varredura não tem `finally` — uma exceção no meio "
-        "deixaria o rádio dela varrendo."
+        "deixaria o rádio de quem usa varrendo."
     )
     assert "scan off" in trecho and "terminate()" in trecho, (
         "o `finally` não desliga a busca nem mata o cliente"

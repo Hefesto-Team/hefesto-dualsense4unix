@@ -2,12 +2,12 @@
 
 A-LISTA-DO-WEBKIT-DA-SUITE-VOLTA-AO-TAMANHO-REAL-01: a lógica (`a09_sistema`) deixou de importar
 a moldura (`interface.janela`) para pôr o registro na área de transferência; a `JanelaDaAba` que
-nasce entrega a função dela a `utils/area_de_transferencia`, e o «Copiar» pede por ali. Os
+nasce entrega a sua função a `utils/area_de_transferencia`, e o «Copiar» pede por ali. Os
 testes da 09 trocam o `_por_na_area_de_transferencia` por um dublê, e nenhum deles vê o elo: sem
 esta régua, a janela que deixasse de entregar a função calaria o «Copiar» com tudo verde.
 
 O filho, num X de mentira e num lar de mentira, pede o «Copiar» antes da janela (sem moldura,
-`False`) e depois dela (o texto chega à área de transferência do GTK).
+`False`) e depois da moldura (o texto chega à área de transferência do GTK).
 
 MORDIDA (executada em 23/10/2026): arrancar o `_area.receber(por_na_area_de_transferencia)` do
 `JanelaDaAba.__init__` faz o filho dizer `depois False` e a régua reprovar.

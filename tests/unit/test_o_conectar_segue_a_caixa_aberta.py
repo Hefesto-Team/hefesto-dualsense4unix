@@ -1,4 +1,4 @@
-"""O «Conectar» segue a caixa que ela abriu — O-CONECTAR-SEGUE-A-CAIXA-QUE-O-USUARIO-ABRIU-01."""
+"""O «Conectar» segue a caixa aberta — O-CONECTAR-SEGUE-A-CAIXA-QUE-O-USUARIO-ABRIU-01."""
 
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ class Mesa:
 
 @pytest.fixture()
 def fechar() -> Iterator[list[Any]]:
-    """O que a régua abriu fecha no fim, mesmo quando ela reprova no meio."""
+    """O que a régua abriu fecha no fim, mesmo quando reprova no meio."""
     abertos: list[Any] = []
     yield abertos
     for coisa in reversed(abertos):
@@ -113,7 +113,7 @@ def _a_janela_de_cada_um_fechou(mundo: rm.RadioDeMentira) -> None:
 
 
 def _o_conectar_no_gesto(mesa: Mesa, busca: BuscaDePe, onde: str) -> cr.Movimento:
-    """O «Conectar» dela em ``onde``, com a janela aberta esperando o gesto."""
+    """O «Conectar» em ``onde``, com a janela aberta esperando o gesto."""
     assert mesa.central.comecar_a_conectar(onde).estado == cr.ESPERANDO
     assert busca.dentro.wait(5.0), "a central não abriu a janela"
     movimento = mesa.no_gesto()
@@ -158,7 +158,7 @@ def test_o_chip_leva_a_busca_do_conectar_para_o_adaptador_dele(
 
 
 def test_a_janela_e_o_prazo_recomecam_no_destino_novo(diario: Path, fechar: list[Any]) -> None:
-    """Ela clica o chip aos 50 s de uma janela de 30 e de um prazo de 60. No"""
+    """O clique no chip vem aos 50 s de uma janela de 30 e de um prazo de 60. No"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -212,7 +212,7 @@ def test_o_ultimo_clique_do_usuario_vence(
 def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """Ela clica o chip quando a janela do «Conectar» acaba: o pedido chegou"""
+    """O chip é clicado quando a janela do «Conectar» acaba: o pedido chegou"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -231,7 +231,7 @@ def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
 def test_o_controle_que_aparece_junto_com_o_chip_pareia_no_adaptador_do_chip(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """O verde aparece na janela da sala no mesmo instante em que ela clica o"""
+    """O verde aparece na janela da sala no mesmo instante do clique no"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -271,7 +271,7 @@ class JanelaDePe:
 def test_a_janela_que_um_pedido_desfeito_interrompeu_recomeca(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """A espera do gesto sai porque o usuário pediu outro destino, e ela o desfaz no"""
+    """A espera do gesto sai porque o usuário pediu outro destino, e o pedido a desfaz no"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     no_gesto = mesa.central._guardar(cr.Movimento(
@@ -298,13 +298,13 @@ def test_voltar_ao_chip_da_busca_desfaz_o_pedido(diario: Path, fechar: list[Any]
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.destino) == (cr.CHEGOU, QUARTO), fim
-    assert onde_buscou(mesa.mundo) == [rm.HCIS[QUARTO]], "a janela andou sem ela pedir"
+    assert onde_buscou(mesa.mundo) == [rm.HCIS[QUARTO]], "a janela andou sem pedido"
 
 
 def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """Ela clica o chip do quarto, e no mesmo instante o roxo volta sozinho pelo"""
+    """O chip do quarto é clicado, e no mesmo instante o roxo volta sozinho pelo"""
     mundo = mundo_da_madrugada()
     mundo.pareado(VARANDA, ROXO, conectado=False)
     mesa = Mesa(mundo)
@@ -330,7 +330,7 @@ def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
 def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
-    """O que ela vê, pela tela de verdade (o pacote da 08, o gesto do chip, o"""
+    """O que se vê, pela tela de verdade (o pacote da 08, o gesto do chip, o"""
     mundo = mundo_da_madrugada()
     relogio = rm.Relogio()
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
@@ -369,7 +369,7 @@ def test_o_chip_leva_o_mover_do_mesmo_controle(
 ) -> None:
     """A régua (3) da sprint: um «Mover» de ``aa:bb:cc:00:00:01`` espera no"""
     mundo = mundo_da_madrugada()
-    mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Vitória", espera=1.0)
+    mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Lia", espera=1.0)
     mesa = Mesa(mundo)
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)
@@ -387,11 +387,11 @@ def test_o_chip_leva_o_mover_do_mesmo_controle(
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERMELHO, chip), fim
     assert chip not in fim.origens, "o destino novo ficou como origem"
-    assert fim.nome == "Vitória"
+    assert fim.nome == "Lia"
     assert [(c.rsplit("/", 1)[0], bd.endereco_do_aparelho(c)) for c, _a in mundo.metodos("Pair")
             ] == [(rm.HCIS[chip], VERMELHO)]
     assert mundo.onde_esta(rm.uniq(VERMELHO)) == chip
-    assert mesa.objeto(chip, VERMELHO)["Alias"] == "Vitória"
+    assert mesa.objeto(chip, VERMELHO)["Alias"] == "Lia"
     assert onde_buscou(mundo) == [rm.HCIS[destino], rm.HCIS[chip]]
     _a_janela_de_cada_um_fechou(mundo)
 
@@ -486,7 +486,7 @@ def test_depois_do_gesto_o_destino_nao_muda(diario: Path, fechar: list[Any], pas
 
 
 def _o_verde_pareou_e_nao_conectou(mesa: Mesa, destino: str) -> cr.Movimento:
-    """O ``Pair`` do verde dá e ele não conecta (o branco do diário dela)."""
+    """O ``Pair`` do verde dá e ele não conecta (o branco do diário)."""
     mesa.mundo.pair_mente = True
     rm.o_usuario_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     feito = mesa.central.conectar(destino)
@@ -562,7 +562,7 @@ def test_o_fio_da_faxina_paga_a_meia_chave_devida_sozinho(
 def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
     diario: Path, fechar: list[Any], destino: str,
 ) -> None:
-    """O defeito que a meia chave faz, visto por ela: o «Conectar» seguinte no"""
+    """O defeito que a meia chave faz, visto pela tela: o «Conectar» seguinte no"""
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
     feito = _o_verde_pareou_e_nao_conectou(mesa, destino)
@@ -644,7 +644,7 @@ def test_a_chave_devida_de_quem_conectou_depois_nao_sai(
 def test_a_janela_de_antes_fecha_no_pedido_sem_esperar_o_gesto(
     diario: Path, fechar: list[Any], quem: str,
 ) -> None:
-    """O chip não espera a janela de antes acabar nem ela segurar PS + Create:"""
+    """O chip não espera a janela de antes acabar nem o PS + Create:"""
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     busca = BuscaDePe(mesa.relogio)

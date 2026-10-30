@@ -77,7 +77,7 @@ def test_o_diario_gira_por_tamanho_e_o_leitor_ve_os_dois(
 
 
 def test_o_leitor_junta_o_diario_do_usuario_com_o_do_root_pela_hora(tmp_path: Path) -> None:
-    do_usuario = tmp_path / "dela.jsonl"
+    do_usuario = tmp_path / "usuario.jsonl"
     do_root = tmp_path / "root.jsonl"
     diario.registrar("vigia-de-zumbis", "derrubou o link", "", caminho=do_usuario, agora=2.0)
     diario.registrar("bt-watchdog", "Trusted=true", "", caminho=do_root, agora=1.0)
@@ -315,7 +315,7 @@ def test_a_lapide_segura_um_controle_e_deixa_os_outros_voltarem(tmp_path: Path) 
 
 
 def test_pareado_de_novo_depois_da_lapide_volta(tmp_path: Path) -> None:
-    """A lápide só enterra o que existia ANTES dela."""
+    """A lápide só enterra o que existia ANTES da lápide."""
     agora = int(time.time())
     acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
     _snapshot(acervo, agora - 60, [(ADAPTADOR, VERMELHO)])
@@ -636,7 +636,7 @@ def _watchdog(tmp_path: Path, *args: str, prazo: str = "5") -> subprocess.Popen[
 
 
 def test_o_watchdog_espera_a_trava_que_o_daemon_segura(tmp_path: Path) -> None:
-    """O shell root e o Python dela disputam o MESMO arquivo, e a espera vai"""
+    """O shell root e o Python do usuário disputam o MESMO arquivo, e a espera vai"""
     primeiro = _motor(tmp_path, "central", 1.0)
     try:
         _espera_a_entrada(tmp_path / "radio-diario.jsonl", "central", "Connect")
@@ -677,13 +677,13 @@ def test_o_daemon_espera_a_trava_que_o_watchdog_segura(tmp_path: Path) -> None:
         with diario.trava_do_radio(
             "vigia-de-zumbis",
             caminho=tmp_path / "radio.lock",
-            diario=tmp_path / "dela.jsonl",
+            diario=tmp_path / "usuario.jsonl",
             prazo_s=10,
         ) as espera:
             assert espera > 0.3
     finally:
         watchdog.communicate(timeout=30)
-    [entrada] = diario.ler(caminhos=[tmp_path / "dela.jsonl"])
+    [entrada] = diario.ler(caminhos=[tmp_path / "usuario.jsonl"])
     assert entrada["antes"]["dono"].startswith("bt-watchdog ")
 
 
@@ -799,7 +799,7 @@ def test_com_a_trava_na_mao_do_watchdog_o_vigia_nao_derruba_nada(
     from hefesto_dualsense4unix.daemon.subsystems.conexoes import PonteComTrava
 
     monkeypatch.setenv(diario.ENV_TRAVA, str(tmp_path / "radio.lock"))
-    monkeypatch.setenv(diario.ENV_DIARIO, str(tmp_path / "dela.jsonl"))
+    monkeypatch.setenv(diario.ENV_DIARIO, str(tmp_path / "usuario.jsonl"))
     watchdog = _watchdog(tmp_path, "--so-a-trava", "3")
     try:
         fim = time.monotonic() + 15
@@ -813,7 +813,7 @@ def test_com_a_trava_na_mao_do_watchdog_o_vigia_nao_derruba_nada(
         watchdog.communicate(timeout=30)
     assert (agiu, interna.pedidos) == (False, []), "derrubou o link com o watchdog agindo"
     assert "próxima volta" in motivo
-    [desistencia] = diario.ler(caminhos=[tmp_path / "dela.jsonl"])
+    [desistencia] = diario.ler(caminhos=[tmp_path / "usuario.jsonl"])
     assert desistencia["o_que"] == diario.DESISTIU_DA_TRAVA
     assert desistencia["antes"]["dono"].startswith("bt-watchdog ")
 
@@ -828,7 +828,7 @@ def test_o_daemon_monta_o_vigia_com_a_trava() -> None:
 
 
 def test_o_watchdog_root_recusa_trava_que_e_link(tmp_path: Path) -> None:
-    """Root num arquivo que ela também abre: um link no lugar da trava não leva a"""
+    """Root num arquivo que o usuário também abre: um link no lugar da trava não leva a"""
     alvo = tmp_path / "arquivo-de-outra-pessoa"
     alvo.write_text("intocado\n", encoding="utf-8")
     (tmp_path / "radio.lock").symlink_to(alvo)

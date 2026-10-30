@@ -1,10 +1,10 @@
-"""A bancada fala a forma A — A-FORJA-VALIDA-O-SOM-01, 24/09/2026.
+"""O ensaio fala a forma A — A-FORJA-VALIDA-O-SOM-01, 24/09/2026.
 
 A decisão de 23/09 mudou o nome que a lista de som mostra: a saída e a
 entrada de cada controle passaram a se chamar «Alto-falante do Controle N
 (DualSense Wireless Controller)» e «Microfone do Controle N (DualSense
 Wireless Controller)». Os dois arquivos do gesto (`docs/method/…O-COMO-*`) são
-DADO — a página da bancada os lê —, e um gesto que manda escolher «Alto-falante
+DADO — a página do ensaio os lê —, e um gesto que manda escolher «Alto-falante
 do Controle 2» numa lista em que ele não existe mais com esse nome manda
 procurar o que não está lá.
 

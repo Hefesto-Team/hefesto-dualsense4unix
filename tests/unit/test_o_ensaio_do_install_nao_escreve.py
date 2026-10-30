@@ -132,7 +132,7 @@ def _ensaio(
     """Um lar de mentira, um PATH só de dublês, e o ambiente que os usa.
 
     O `dpkg-query` também é dublê (`dpkg`: o que ele lista, tudo em ordem por padrão): o plano
-    sai igual em qualquer máquina, com o dpkg dela a meio ou não.
+    sai igual em qualquer máquina, com o dpkg a meio ou não.
     """
     lar = tmp_path / "lar"
     lar.mkdir()
@@ -223,7 +223,7 @@ class TestOEnsaioExiste:
         assert ajuda.returncode == 0, ajuda.stderr
         assert "--dry-run" in ajuda.stdout, (
             "o `--help` do install não fala do `--dry-run`. É a flag que existe "
-            "para ela olhar ANTES de deixar rodar — escondê-la anula o motivo"
+            "para quem usa olhar ANTES de deixar rodar — escondê-la anula o motivo"
         )
 
     def test_o_ensaio_sai_bem(self, tmp_path: Path) -> None:
@@ -399,9 +399,9 @@ class TestNenhumaCuraDeHostEscapa:
         assert not definicoes, (
             "o `install.sh` define função `*_host` no próprio corpo: "
             + ", ".join(sorted(set(definicoes)))
-            + ". Elas moram em `scripts/lib/camada_de_maquina.sh`, e as réguas "
+            + ". As funções moram em `scripts/lib/camada_de_maquina.sh`, e as réguas "
             "desta casa acham o corpo de cada cura por este texto — um segundo "
-            "`nome_host() {` aqui faz seis delas medirem a coisa errada. Para "
+            "`nome_host() {` aqui faz seis réguas medirem a coisa errada. Para "
             "o ensaio, use a tabela `_ENSAIO_CURAS_DE_HOST`."
         )
 
@@ -488,7 +488,7 @@ class TestOPlanoNaoEnvelhece:
             if marca not in resultado.stdout
         ]
         assert not sumiram, (
-            "o plano do ensaio deixou de nomear mudanças que ela precisa ver "
+            "o plano do ensaio deixou de nomear mudanças que quem usa precisa ver "
             "antes de autorizar: " + "; ".join(sumiram)
         )
 
@@ -498,6 +498,6 @@ class TestOPlanoNaoEnvelhece:
         assert "NADA foi escrito" in resultado.stdout
         assert re.search(r"\d+ mudanças planejadas, \d+ com root", resultado.stdout), (
             "o fecho do ensaio não conta quantas mudanças o plano tem — o "
-            "número é o que diz se ela está olhando um install inteiro ou um "
+            "número é o que diz se quem usa está olhando um install inteiro ou um "
             "plano que morreu no meio"
         )

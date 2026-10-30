@@ -1,7 +1,7 @@
 """O-ENOMEM-DA-LEITURA-DO-PAD-USB-TEM-CAUSA-01 (22/10/2026): a rajada vira uma linha.
 
 Medido no `/var/log/syslog` de 18/10 a 21/10/2026: 34.837 linhas do daemon, e 9.446
-delas de cinco eventos `info` que chegam em rajada (`gatilho_armado` a 186 por minuto).
+ainda, de cinco eventos `info` que chegam em rajada (`gatilho_armado` a 186 por minuto).
 A cadeia do diário do produto junta cada rajada numa janela: a primeira ocorrência sai
 inteira, e as seguintes saem numa linha só, no fim da janela, com `vezes=`.
 
@@ -106,7 +106,7 @@ def test_a_chave_separa_as_rajadas_e_o_evento_de_fora_nao_se_junta(mesa: _Mesa) 
 
 
 def test_a_ocorrencia_da_janela_vencida_fecha_a_conta(mesa: _Mesa) -> None:
-    """Sem o fio do fim da janela, quem chega depois dela leva a conta junto."""
+    """Sem o fio do fim da janela, quem chega depois da janela leva a conta junto."""
 
     def escrever() -> None:
         mesa.diario.info("gatilho_armado", nome="cor")

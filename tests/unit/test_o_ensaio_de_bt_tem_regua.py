@@ -4,7 +4,7 @@
 A escada de releases (o registro «A-ESCADA-DE-RELEASES» de 24/08/2026) declara
 o degrau **0.9.5 — o rádio para de mentir** e nomeia o arquivo que o mede:
 *"arquivo a nascer: `scripts/check_ensaio_de_bt.py`"*. Ele não existia, e o
-degrau dela não tinha como ser conferido por ninguém — só descrito.
+degrau não tinha como ser conferido por ninguém — só descrito.
 
 O QUE ESTE TESTE COBRA, e é o mínimo para o portão não virar decoração:
 
@@ -12,11 +12,11 @@ O QUE ESTE TESTE COBRA, e é o mínimo para o portão não virar decoração:
 2. as quatro réguas medem o que a escada diz que medem — cada uma conferida
    contra um CSV de mentira com o caso exato;
 3. zero pendência devolve rc=0, e uma pendência devolve rc=1;
-4. a QUINTA régua não é fingida: ela é de bancada, e o script diz isso.
+4. a QUINTA régua não é fingida: é de ensaio no aparelho, e o script diz isso.
 
 O PONTO 4 É O QUE IMPORTA MAIS. A R5 pede três adaptadores em
-`/sys/class/bluetooth/` e um ensaio com quatro DualSense no rádio observado por
-ela. Nenhum arquivo responde isso, e um portão que a desse por fechada seria
+`/sys/class/bluetooth/` e um ensaio com quatro DualSense no rádio observado de
+perto. Nenhum arquivo responde isso, e um portão que a desse por fechada seria
 exatamente a doença que este degrau existe para curar: *afirmar o que não se
 mediu*.
 """
@@ -36,7 +36,7 @@ SCRIPT = RAIZ / "scripts/check_ensaio_de_bt.py"
 
 @pytest.fixture(scope="module")
 def mod():
-    spec = importlib.util.spec_from_file_location("bancada", SCRIPT)
+    spec = importlib.util.spec_from_file_location("ensaio_de_bt", SCRIPT)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     return m
@@ -46,7 +46,7 @@ def test_o_script_existe():
     """A escada o nomeava e ele não existia. Um degrau sem régua é uma descrição."""
     assert SCRIPT.exists(), (
         "`scripts/check_ensaio_de_bt.py` sumiu. A escada de releases o nomeia "
-        "como o que mede o degrau 0.9.5 — sem ele, o degrau dela volta a ser "
+        "como o que mede o degrau 0.9.5 — sem ele, o degrau volta a ser "
         "uma frase.")
 
 
@@ -99,8 +99,8 @@ def test_r4_pega_o_ensaio_de_radio_sem_degrau(mod):
 def test_as_sete_perguntas_sao_as_do_usuario(mod):
     """São as do `SPRINT_ORDER.md` §2.1, e são SETE — a oitava veio depois."""
     assert len(mod.PERGUNTAS) == 7, (
-        f"são {len(mod.PERGUNTAS)} perguntas e a trilha dela tem sete. Se a "
-        f"oitava entrou aqui, ela passou a travar um degrau que ela mesma disse "
+        f"são {len(mod.PERGUNTAS)} perguntas e a trilha tem sete. Se a "
+        f"oitava entrou aqui, passou a travar um degrau que a trilha mesma disse "
         f"vir depois.")
     familias = {f for _, _, fs in mod.PERGUNTAS for f in fs}
     reais = {peca["familia"] for peca in csv.DictReader(
@@ -112,9 +112,9 @@ def test_as_sete_perguntas_sao_as_do_usuario(mod):
 
 
 def test_a_quinta_regua_nao_e_fingida(mod):
-    """Ela é de bancada, e o script tem de DIZER isso em vez de dá-la por feita."""
+    """A R5 é de ensaio no aparelho, e o script tem de DIZER isso em vez de dá-la por feita."""
     fonte = SCRIPT.read_text(encoding="utf-8")
     assert "R5" in fonte and "bluetooth" in fonte, (
-        "o script deixou de mencionar a R5. Ela pede três adaptadores e um "
-        "ensaio de quatro DualSense no rádio com o olho dela — nenhum arquivo "
+        "o script deixou de mencionar a R5. A R5 pede três adaptadores e um "
+        "ensaio de quatro DualSense no rádio observado de perto — nenhum arquivo "
         "responde isso, e omiti-la faria o portão verde valer mais do que vale.")

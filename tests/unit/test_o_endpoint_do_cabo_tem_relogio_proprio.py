@@ -5,7 +5,7 @@ jogo no nosso endpoint andavam com ``node.driver-id`` da placa USB do controle, 
 mesmo do laço ``hefesto-haptica-do-cabo-<marca>``. No rádio o endpoint é o único
 driver do grafo dele.
 
-A forma da cura saiu de uma bancada de PipeWire própria (servidor, WirePlumber e
+A forma da cura saiu de um ensaio de PipeWire próprio (servidor, WirePlumber e
 ``pipewire-pulse`` no runtime de mentira, a placa como ``null-audio-sink`` com o
 ``priority.driver`` 1009 de uma placa ALSA): o ``pw-loopback`` 1.6.9 põe os dois
 lados no MESMO ``node.group`` mesmo com ``--capture-props``/``--playback-props``

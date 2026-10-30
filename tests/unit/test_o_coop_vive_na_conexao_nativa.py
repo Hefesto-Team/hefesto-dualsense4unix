@@ -22,9 +22,9 @@ O QUE ESTA RÉGUA NÃO MEDE, e é honesto dizer
 --------------------------------------------
 
 **Se o JOGO vê dois jogadores.** Essa é a §5 da sprint, e nenhuma leitura de
-código a responde: quem conta gamepads é o jogo. Ela é bancada (dois
+código a responde: quem conta gamepads é o jogo. É ensaio no aparelho (dois
 DualSense num jogo de co-op local, no cabo e no rádio), e vive na
-MESA-DE-QUATRO-01. É exatamente por ela ainda estar aberta que o Caminho A — a
+MESA-DE-QUATRO-01. É exatamente por a sprint ainda estar aberta que o Caminho A — a
 tela dizendo de quem é a conta — é o piso desta sprint e não um extra: sem a
 frase, o número novo seria uma afirmação sobre o jogo que ninguém mediu.
 
@@ -110,7 +110,7 @@ def test_o_numero_do_jogador_sobrevive_sem_vpad() -> None:
 
 
 def test_no_controlar_o_pc_ninguem_e_jogador() -> None:
-    """A CONTRAPROVA, e ela vale tanto quanto a cura."""
+    """A CONTRAPROVA, que vale tanto quanto a cura."""
     daemon = _daemon(nativo=False, registro=_registro(MAC_1, MAC_2))
     assert resolve_player_numbers(daemon, [_ctrl(MAC_1), _ctrl(MAC_2)]) == [
         None,
@@ -151,7 +151,7 @@ def test_perguntar_o_numero_nao_da_lugar_na_fila() -> None:
 
     ``resolve_player_numbers`` roda no ``state_full``, dez vezes por segundo.
     Se perguntar o número atribuísse lugar, a ordem da fila passaria a depender
-    de quem abriu a tela — e o número dela nasceria de um efeito colateral de
+    de quem abriu a tela — e o número da conta nasceria de um efeito colateral de
     olhar. É o mesmo contrato do ``ipc_handlers._player_slot_for``.
 
     A MORDIDA: tire o ``assign=False`` da chamada de ``slot_for`` em
@@ -171,7 +171,7 @@ def test_a_conexao_nativa_continua_sem_ligar_o_vpad() -> None:
     daemon = _daemon(nativo=True, registro=_registro(MAC_1, MAC_2))
     assert CoopManager(daemon).should_be_active() is False, (
         "o co-op passou a se ligar sem vpad: ou o grab e o vpad deixaram de ser "
-        "o mecanismo, ou alguém desfez o Modo Nativo que ela pediu"
+        "o mecanismo, ou alguém desfez o Modo Nativo pedido"
     )
 
 
@@ -194,7 +194,7 @@ def test_o_texto_do_modo_nativo_fala_de_jogadores() -> None:
     do_modo = [a for a in linhas if a["fonte"] == "painel.aviso_do_modo_nativo"]
     assert do_modo, (
         "a coluna Atenção calou sobre a Conexão Nativa com dois controles; "
-        f"o que ela publicou foi {[a['selo'] for a in linhas]}"
+        f"o que a tela publicou foi {[a['selo'] for a in linhas]}"
     )
     texto = do_modo[0]["texto"]
     assert "jogadores" in texto, (
@@ -247,7 +247,7 @@ def test_a_dica_do_desligado_e_curta_e_a_conta_dos_jogadores_mora_no_aviso() -> 
     os jogadores (herdeira do ``TEXTO_NATIVO``) vive na frase do aviso.
 
     MUDOU EM 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, sem «?»): a aba Jogar não repete a oração —
-    ela diz «Nenhum jogo recebe controle do Hefesto» no mouse, e quem lista a conta dos
+    a tela diz «Nenhum jogo recebe controle do Hefesto» no mouse, e quem lista a conta dos
     jogadores é o aviso do modo (``painel.FRASE_DO_MODO_NATIVO``), que a aba Sistema recebe.
     """
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}

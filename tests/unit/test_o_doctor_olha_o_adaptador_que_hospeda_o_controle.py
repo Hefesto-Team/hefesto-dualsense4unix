@@ -70,7 +70,7 @@ def test_o_discovering_do_segundo_adaptador_e_visto(tmp_path: Path) -> None:
 def test_a_cura_do_bond_sem_sdp_aponta_para_o_adaptador_do_controle(
     tmp_path: Path,
 ) -> None:
-    """A linha de cura é para ela COPIAR — tem de citar o adaptador certo."""
+    """A linha de cura é para quem usa COPIAR — tem de citar o adaptador certo."""
     saida = _rodar_check_bt_radio(_busctl_fake(tmp_path, uuids="as 0"))
     assert "SDP vazio" in saida, saida
     assert "org.bluez /org/bluez/hci1 org.bluez.Adapter1 RemoveDevice" in saida, saida

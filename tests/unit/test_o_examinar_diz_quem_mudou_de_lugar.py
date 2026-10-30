@@ -232,7 +232,7 @@ def test_o_gesto_reexaminar_devolve_o_arranjo_na_chave_da_entrega(
     assert (arranjo_desta_maquina.PAGINA, "reexaminar") not in pacotes.GESTOS_QUE_MEXEM
     antes = disco.read_bytes()
     resposta = reexaminar(None, {}, None)
-    assert disco.read_bytes() == antes, "o «Examinar» escreveu no disco dela"
+    assert disco.read_bytes() == antes, "o «Examinar» escreveu no disco de quem usa"
     dado = resposta[arranjo_desta_maquina.CHAVE_DA_ENTREGA]
     assert dado["aparelhos"] and dado["leituras"]["agora"]["caminho"]
 
@@ -296,7 +296,7 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
 
     fonte = inspect.getsource(hefesto_vivo.Piloto._gesto)
     assert _A_VOLTA_DO_GESTO.search(fonte), (
-        "o arranjo relido não sai da resposta antes de ela ir à pintura")
+        "o arranjo relido não sai da resposta antes da pintura")
 
 
 def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -380,7 +380,7 @@ def test_o_extensor_grava_como_a_chave_da_entrada(disco: Path) -> None:
 
 
 def test_o_extensor_nao_muda_a_velocidade_da_entrada(disco: Path) -> None:
-    """A velocidade é da entrada; o extensor só diz que há um cabo entre ela e o aparelho."""
+    """A velocidade é da entrada; o extensor só diz que há um cabo entre a entrada e o aparelho."""
     assert ee.declarar_a_velocidade("3", 3).gravou
     antes = _ler()
     assert ee.declarar_o_extensor("3", True).gravou
@@ -597,7 +597,7 @@ def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
 def test_o_reexame_guarda_o_que_o_usuario_ensinou_na_tela(
     disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso."""
+    """Quem usa ensina que a webcam está na 4, e o «Examinar» não desfaz isso."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -639,7 +639,7 @@ def test_o_reexame_guarda_o_que_o_usuario_ensinou_na_tela(
     assert "Webcam" not in reexame["painel"], (
         "a webcam não saiu da 4, e o reexame a lista: " + reexame["painel"])
     assert "4 de 5 entradas mapeadas" in fechado["painel"], (
-        "o «Examinar» jogou fora o que ela ensinou nesta tela: " + fechado["painel"])
+        "o «Examinar» jogou fora o que se ensinou nesta tela: " + fechado["painel"])
     assert "fora do mapa" not in fechado["painel"].lower(), fechado["painel"]
 
 

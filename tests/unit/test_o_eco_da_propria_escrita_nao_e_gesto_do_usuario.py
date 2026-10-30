@@ -1,6 +1,6 @@
 """A borda do botão do microfone não conta o ECO da nossa própria escrita.
 
-O DEFEITO ERA UM LAÇO FECHADO, medido na bancada em 10/09/2026 com o
+O DEFEITO ERA UM LAÇO FECHADO, medido no aparelho em 10/09/2026 com o
 DualSense do rádio na mesa::
 
     1. o daemon liga o microfone            -> set_microphone_mute(False)
@@ -10,7 +10,7 @@ DualSense do rádio na mesa::
     5. `mic_da_mesa_loop` lia isso como "o usuário apertou o botão do microfone"
     6. o daemon DESLIGAVA o microfone
 
-No journal da bancada::
+No journal do ensaio::
 
     02:11:15.541  bt_mic_palavra_do_usuario   ligado=True
     02:11:15.547  bt_mic_pedido         ligar=True  seq=4
@@ -23,8 +23,8 @@ microfone no ar) cortava o microfone aos 1,1 s pelo mesmo caminho.
 
 AS CURAS DE 10/09 FORAM DUAS GUARDAS SOBRE O BIT DE MUDO — uma fila com as
 marcas do que NÓS pedimos, e uma sustentação de 300 ms. As duas tinham furo:
-uma escrita que não ecoava (o bit já estava lá) deixava a marca viva e ela
-engolia o aperto SEGUINTE dela; e um aperto com o bit parado sumia calado.
+uma escrita que não ecoava (o bit já estava lá) deixava a marca viva, que
+engolia o aperto SEGUINTE do usuário; e um aperto com o bit parado sumia calado.
 
 28/09/2026 — A CURA FOI À ORIGEM (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01): a borda
 passou a ser o BOTÃO (`buttons[2]` bit 2), que nem o eco nem o gating apertam.
@@ -99,7 +99,7 @@ def test_o_gating_do_firmware_nao_e_o_dedo_do_usuario(handle: _Handle) -> None:
     """40 oscilações a ~16,7 Hz não são 40 apertos — não são aperto nenhum."""
     handle.oscila(40)
     assert handle._mic_mudo_seq == 0, (
-        f"o gating do firmware virou {handle._mic_mudo_seq} aperto(s) dela — "
+        f"o gating do firmware virou {handle._mic_mudo_seq} aperto(s) do usuário — "
         "é o corte de 1,1 s do microfone por rádio"
     )
 
@@ -110,7 +110,7 @@ def test_depois_do_gating_o_dedo_do_usuario_continua_valendo(handle: _Handle) ->
     estado = bool(handle._mic_mudo)
     handle.aperta(antes=estado, depois=not estado)
     assert handle._mic_mudo_seq == 1, (
-        "depois do gating o aperto dela parou de contar — a guarda virou "
+        "depois do gating o aperto do usuário parou de contar — a guarda virou "
         "mordaça, que é a cura errada"
     )
 
@@ -119,23 +119,23 @@ def test_o_gesto_DO_USUARIO_conta_borda(handle: _Handle) -> None:  # noqa: N802
     """O positivo, e ele vem primeiro: sem isto a cura poderia matar tudo."""
     handle.aperta(antes=True, depois=False)
     assert handle._mic_mudo_seq == 1, (
-        "o aperto dela no botão do microfone TEM de contar — o hid-playstation "
+        "o aperto do usuário no botão do microfone TEM de contar — o hid-playstation "
         "consome o botão e não o entrega como evento"
     )
 
 
 def test_o_eco_da_nossa_escrita_nao_conta_borda(handle: _Handle) -> None:
-    """O caso EXATO da bancada: nós pedimos, e o eco volta."""
+    """O caso EXATO do ensaio: nós pedimos, e o eco volta."""
     handle.set_microphone_mute(False)
     handle.report(False)
     assert handle._mic_mudo_seq == 0, (
-        "o eco da nossa escrita virou «ela apertou o botão» — é o laço de "
+        "o eco da nossa escrita virou «o usuário apertou o botão» — é o laço de "
         "10/09/2026, que desligava o microfone 620 ms depois de ligá-lo"
     )
 
 
 def test_depois_do_eco_o_botao_e_do_usuario(handle: _Handle) -> None:
-    """Depois do eco, cada aperto dela conta — nos dois sentidos."""
+    """Depois do eco, cada aperto do usuário conta — nos dois sentidos."""
     handle.set_microphone_mute(False)
     handle.report(False)
     handle.aperta(antes=False, depois=True)
@@ -150,7 +150,7 @@ def test_a_escrita_que_nao_ecoou_nao_engole_o_aperto_seguinte(handle: _Handle) -
     handle.report(True)
     handle.aperta(antes=True, depois=False)
     handle.aperta(antes=False, depois=True)
-    assert handle._mic_mudo_seq == 2, "um aperto dela foi engolido como eco"
+    assert handle._mic_mudo_seq == 2, "um aperto do usuário foi engolido como eco"
 
 
 def test_devolver_a_posse_nao_engole_borda(handle: _Handle) -> None:

@@ -2,7 +2,7 @@
 
 Com o Modo Freestyle ligado, o perfil que vale é o Freestyle, e ele não está na lista
 de escolher (decisão de 02/10: a tela dele é o botão). Quem PINTA o editor lia a lista
-de escolher e abria no primeiro dela; quem GRAVA lia a lista inteira e mirava o
+de escolher e abria no primeiro da lista; quem GRAVA lia a lista inteira e mirava o
 Freestyle. Medido antes da cura, com «Freestyle» e «Corrida» no disco:
 
     pacote(ctx)["perfis.renomear"]        -> "Corrida"
@@ -169,7 +169,7 @@ def test_renomear_renomeia_a_corrida_e_o_freestyle_fica() -> None:
 
 
 def test_a_linha_clicada_continua_sendo_o_alvo(alvos: list[str]) -> None:
-    """Com a linha escolhida, editor e gesto miram ela, e não o primeiro da lista."""
+    """Com a linha escolhida, editor e gesto miram a linha, e não o primeiro da lista."""
     _o_disco()
     loader.save_profile(Profile(name=AVATAR, match=MatchCriteria(window_class=["avatar"])),
                         origem="régua")

@@ -1,4 +1,4 @@
-"""O desenho de 19/10/2026 da Perfis (10) e da Experimental (07), para ela escolher.
+"""O desenho de 19/10/2026 da Perfis (10) e da Experimental (07), para a escolha.
 
 Cinco sprints, só o desenho: o editor de Perfis (o estilo guardado, o nome Freestyle, o renomear),
 os eventos do perfil («Meu comando»), a coluna do ajuste próprio com a ativação e os analógicos,
@@ -308,11 +308,11 @@ def test_o_configurar_do_lancador_traz_a_pasta_o_perfil_por_jogo_e_guardar() -> 
 
 
 def test_a_opcao_de_jogos_da_janela_generica_leva_o_rotulo_e_as_caixas() -> None:
-    """O exemplo da página não tem a opção de jogos; o desenho dela não pode perder o rótulo."""
+    """O exemplo da página não tem a opção de jogos; o desenho não pode perder o rótulo."""
     import desenho_da_experimental as exp
 
-    opcao = exp.OpcaoDaJanela("x", "jg", "Os jogos dela", "jogos", ["a"], (), "Jogos",
+    opcao = exp.OpcaoDaJanela("x", "jg", "Os jogos de casa", "jogos", ["a"], (), "Jogos",
                               jogos=(("a", "Jogo A"), ("b", "Jogo B")))
     html = exp.modificacao_miolo_html("X", [opcao])
-    assert "Os jogos dela" in html and html.count('type="checkbox"') == 2
+    assert "Os jogos de casa" in html and html.count('type="checkbox"') == 2
     assert html.count(" checked") == 1

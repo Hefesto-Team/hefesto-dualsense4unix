@@ -1,4 +1,4 @@
-"""A bancada fala a tela de hoje — O-ENSAIO-DELTA-6A, 24/09/2026."""
+"""O ensaio fala a tela de hoje — O-ENSAIO-DELTA-6A, 24/09/2026."""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ def test_quem_manda_nao_clicar_nos_botoes_do_cartao_nomeia_todos() -> None:
 
 
 def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
-    """A dica do «Giroscópio» que a bancada cita é a que o pacote pinta."""
+    """A dica do «Giroscópio» que o ensaio cita é a que o pacote pinta."""
     import pacotes.a02_controles as a02
 
     donos = {
@@ -111,11 +111,11 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
     assert not erradas, f"dicas citadas que não são as do pacote: {erradas}"
     assert vistas["Com o analógico virtual aceso"] >= 2, (
         "nenhuma célula confere a dica que muda com a Mira acesa — no cabo e no "
-        f"rádio, ela tem de aparecer pelo menos duas vezes: {vistas}")
+        f"rádio, a dica tem de aparecer pelo menos duas vezes: {vistas}")
 
 
 def test_os_ajustes_da_mira_citados_existem_na_calibrar() -> None:
-    """O que a bancada diz morar nos ajustes do analógico virtual está na Calibrar.
+    """O que o ensaio diz morar nos ajustes do analógico virtual está na Calibrar.
 
     O bloco «Mira Virtual» embaixo dos cartões virou, em 08/10/2026, os ajustes do
     «Analógico virtual» dentro do cartão de cada controle

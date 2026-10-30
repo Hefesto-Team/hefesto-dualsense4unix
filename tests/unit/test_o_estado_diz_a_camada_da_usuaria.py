@@ -81,7 +81,7 @@ def test_soltar_a_camada_devolve_a_lista_vazia() -> None:
 
 
 def test_o_que_e_do_perfil_nao_e_da_usuaria() -> None:
-    """Só a procedência `usuaria` conta: o campo do perfil não é ajuste dela."""
+    """Só a procedência `usuaria` conta: o campo do perfil não é ajuste de quem usa."""
     inst = _backend()
     inst.apply_output_for(UNIQ_1, OutputSpec(led=(0, 255, 0)))
     inst._desired_owner_by_uniq[UNIQ_1]["led"] = bp._LAYER_PROFILE

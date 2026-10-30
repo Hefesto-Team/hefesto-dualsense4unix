@@ -29,7 +29,7 @@ regressão só apareceu aos 181 segundos, com 67 testes verdes). Então:
   `time.monotonic` de verdade e uma thread de verdade, e exige que ele só cure
   depois de a janela passar — o instante inicial tem de sair sem cura.
 
-A BANCADA NÃO É TOCADA. Todos os leitores entram por injeção, e os endereços
+A MÁQUINA NÃO É TOCADA. Todos os leitores entram por injeção, e os endereços
 são da faixa sintética da casa (`aa:bb:cc:…`). Nenhum teste chama `hcitool`,
 `busctl` ou `sudo` de verdade — o `desconectar` corta rádio, e cortar o rádio
 do usuário no meio de uma partida é exatamente o defeito que esta sprint cura.
@@ -107,7 +107,7 @@ def test_o_link_com_hidraw_nunca_e_zumbi() -> None:
     """A MORDIDA que mais importa: quem virou controle não se toca.
 
     Sem esta, o detector poderia acusar todo link do rádio — e a cura seria
-    derrubar os quatro DualSense da bancada.
+    derrubar os quatro DualSense da máquina de teste.
     """
     assert zumbis([LINK_SAO], {SAO}, CONHECIDOS) == []
     assert zumbis([LINK_ZUMBI], {SAO, ZUMBI}, CONHECIDOS | {("hci1", ZUMBI)}) == []
@@ -290,7 +290,7 @@ def test_o_subsystem_esta_na_lista_com_partida_e_parada() -> None:
 
 
 def test_o_vigia_nasce_ligado_e_a_chave_desliga(monkeypatch: Any) -> None:
-    """Ligado por default — ordem de produto: *"o produto precisa ser inteligente"*."""
+    """Ligado por padrão: o produto tem de agir sozinho, sem pedir o gesto."""
     vigia = ConexoesSubsystem()
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI", raising=False)
     assert vigia.is_enabled(object()) is True  # type: ignore[arg-type]
@@ -464,7 +464,7 @@ def test_o_zumbi_de_adaptador_fora_da_tela_nao_aparece(a08: Any) -> None:
 
 
 def test_o_x_tira_a_linha_ate_o_episodio_acabar(a08: Any) -> None:
-    """O X (`dispensar-linha`) tira a linha sem esquecer nada, e ela não volta"""
+    """O X (`dispensar-linha`) tira a linha sem esquecer nada, e a linha não volta"""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])

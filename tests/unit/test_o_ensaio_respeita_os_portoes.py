@@ -1,4 +1,4 @@
-"""O `--dry-run` imprime o plano DAQUELA linha de comando — com as flags dela."""
+"""O `--dry-run` imprime o plano DAQUELA linha de comando — com as suas flags."""
 
 from __future__ import annotations
 

@@ -18,7 +18,7 @@ barramento e pela marca, nunca pelo nome), e o resto do hide sai numa linha
 O molde é o `_roda` da `test_esconde_so_o_hidraw_veredito_das_tres_superficies.py`
 (bash, `/dev` e `/sys` de mentira, `getfacl` de mentira), copiado na forma e
 com o pai HID de cada nó dito pela cena. As duas réguas leem a mesma função do
-`doctor.sh`. Cada régua tem a mordida dela rodando aqui dentro.
+`doctor.sh`. Cada régua tem a sua mordida rodando aqui dentro.
 """
 
 from __future__ import annotations

@@ -4,7 +4,7 @@ A trava da A-IDENTIDADE-DO-PAD-VIRTUAL-E-UMA-REGRA-SO-01, escrita ANTES da regra
 verde na base `29c489469`: a roupa, o VID:PID, o nome, o descritor, a env gravada, o
 caminho do gadget, a vibração, a luz e os gatilhos. Os valores são os de 22/10/2026 (a env
 é a do `steam_app_1599660.env` lido naquele dia). Se a cura de qualquer sprint mudar um
-deles, a sprint para e a pergunta vai a ela: o Sackboy é o jogo de referência do DualSense.
+deles, a sprint para e a pergunta vai a quem decide: o Sackboy é o jogo de referência.
 
 O jogo é de mentira, com os sinais medidos no executável do Sackboy (a biblioteca
 `WinDualSense` e os dois pares `054c:0ce6` e `054c:0df2`), nunca cópia do arquivo.

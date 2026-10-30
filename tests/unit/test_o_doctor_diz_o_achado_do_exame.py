@@ -70,7 +70,7 @@ def test_cada_item_sai_numa_linha_propria() -> None:
 
 
 def test_o_certo_nao_vira_linha() -> None:
-    """Conferência que passou não é achado — ela não ocupa linha no terminal."""
+    """Conferência que passou não é achado — não ocupa linha no terminal."""
     censo = {"veredito": "certo",
              "itens": [{"chave": "k", "estado": "certo",
                         "rotulo": "Energia", "porque": "tudo bem"}]}

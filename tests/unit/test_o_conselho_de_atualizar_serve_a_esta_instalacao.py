@@ -333,7 +333,7 @@ class TestOConselhoNaoTemDUASREDACOES:
 
         for frase in repo_files.FRASE_DE_ATUALIZAR.values():
             assert frase not in fonte, (
-                f"`daemon_actions` reescreveu a frase {frase!r}. Ela mora em "
+                f"`daemon_actions` reescreveu a frase {frase!r}. A frase mora em "
                 "`utils/repo_files.FRASE_DE_ATUALIZAR`, e é comparada palavra "
                 "por palavra com a do `scripts/doctor.sh` por portão."
             )

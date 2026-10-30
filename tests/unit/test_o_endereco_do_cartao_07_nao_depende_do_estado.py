@@ -2,7 +2,7 @@
 """A FORMA DA 07 NÃO DEPENDE DO ESTADO — aba 07, Lançadores (Experimental no desenho do todo).
 
 A régua mora no gerador (`interface/aba07.py`, `_confere_a_forma`), e roda a cada `import aba07`
-sem tocar a bancada: o gerador só escreve dentro do `if __name__ == "__main__"`. Este teste a
+sem tocar o desenho: o gerador só escreve dentro do `if __name__ == "__main__"`. Este teste a
 morde pela porta do import, como o `test_a_palavra_do_transporte_tem_um_dono_so`.
 
 17/10/2026: o cartão por lançador (e as réguas `_INSTAVEIS` e `_SEM_OBRIGATORIOS` do endereço por

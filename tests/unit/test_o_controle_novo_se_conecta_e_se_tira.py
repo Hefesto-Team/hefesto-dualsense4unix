@@ -197,7 +197,7 @@ def test_a_chave_nova_que_conecta_tarde_nao_sai_como_meia_chave(
 def test_o_prazo_da_chave_nova_conta_do_pair_e_nao_da_janela(
     diario: Path, destino: str,
 ) -> None:
-    """Ela segura PS + Create aos 50 s da janela (no diário foram 16 s, e a chave viveu só
+    """PS + Create seguros aos 50 s da janela (no diário foram 16 s, e a chave viveu só
     os 42 s que sobravam). O controle atende 20 s depois do ``Pair``: aos 70 s da janela,
     depois dos 60 s do prazo velho — e a chave fica, porque o prazo conta do ``Pair``.
 
@@ -290,7 +290,7 @@ def _linhas_de(cena: dict[str, Any], aparelho: str, lugar: str) -> list[dict[str
 def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, mundo_de: Any,
 ) -> None:
-    """A cura 2: o «Tirar esta linha» da gaveta tira a linha, e ela não volta em 10 s de tique.
+    """A cura 2: o «Tirar esta linha» da gaveta tira a linha, e a linha não volta em 10 s de tique.
 
     O caso medido: a tela e a central contam o mesmo prazo, mas quem fala primeiro é a tela (a
     vigia da central dá uma volta por segundo, e o ``Connect`` da volta segura o fio). Nesse
@@ -394,7 +394,7 @@ O_CONECTAR_E_OUTRA_CAIXA = r"""
   document.getElementById('rd-b-conectar').click();
   window.__antes = [...document.querySelectorAll('#rd-painel .op[aria-pressed="true"]')]
     .map(function(o){ return o.dataset.alvo; });
-  // a caixa que se abre com o painel já aberto: a coluna dos «⋮» dela nasce depois do painel
+  // a caixa que se abre com o painel já aberto: a coluna dos «⋮» da caixa nasce depois do painel
   document.querySelector('.radio .abre-lugar[data-alvo="L3"]').click();
   const topo = document.querySelector('.radio .sala .lugar[data-id="L2"] .lugar-topo');
   const q = topo.getBoundingClientRect();
@@ -453,7 +453,7 @@ def _no_webkit_08(pagina: Path, prepara: str, mede: str) -> dict[str, Any]:
 def test_com_o_conectar_aberto_a_caixa_de_outro_adaptador_muda_o_alvo(tmp_path: Path) -> None:
     """A cura 3: com o painel do «Conectar» aberto, o clique na caixa de outro adaptador é a
     escolha do chip (o alvo muda e o painel fica), e o «⋮» de outra linha troca a gaveta. Um véu
-    cobria a seção e todo clique nela só fechava o painel; sem o véu, o painel ainda cobria a
+    cobria a seção e todo clique na seção só fechava o painel; sem o véu, o painel ainda cobria a
     coluna dos «⋮», e o clique de verdade (no ponto do botão) caía nele.
 
     MORDIDAS: :func:`test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel` e
@@ -480,7 +480,7 @@ def test_mordida_sem_a_caixa_que_escolhe_o_clique_so_fecha_o_painel(tmp_path: Pa
 
 
 def test_a_gaveta_tem_o_tamanho_do_que_mostra_e_mora_ao_lado_da_linha(tmp_path: Path) -> None:
-    """A cura 4 (foto 13 dela): a gaveta do «⋮» era a seção inteira, vazia, com o nome solto e um
+    """A cura 4 (foto 13): a gaveta do «⋮» era a seção inteira, vazia, com o nome solto e um
     botão. Agora: do tamanho do que mostra, na altura da linha e à esquerda do «⋮» (a coluna dos
     «⋮» das outras linhas fica livre), com o estado do aparelho, e o que apaga é vermelho com
     letra branca.

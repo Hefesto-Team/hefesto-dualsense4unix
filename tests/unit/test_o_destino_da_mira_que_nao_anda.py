@@ -105,7 +105,7 @@ def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def _perfil_escrito_a_mao(
     *, mesa: dict[str, Any] | None = None, por_controle: dict[int, dict[str, Any]] | None = None
 ) -> dict[str, Any]:
-    """O perfil como ela o escreveria num editor de texto: um dicionário cru."""
+    """O perfil como quem usa o escreveria num editor de texto: um dicionário cru."""
     bruto: dict[str, Any] = {"name": "Feito no editor", "match": {"type": "any"}}
     if mesa is not None:
         bruto["movimento"] = mesa

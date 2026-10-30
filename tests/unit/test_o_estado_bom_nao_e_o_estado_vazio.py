@@ -95,7 +95,7 @@ def test_o_estado_bom_diz_quanta_coisa_conferiu() -> None:
 
 
 def test_o_estado_bom_com_dispensa_conta_a_decisao_do_usuario() -> None:
-    """Dispensa que some sem deixar marca some com uma decisão de produto junto."""
+    """Dispensa que some sem deixar marca leva junto uma decisão do produto."""
     topo = ordens.cabecalho(**AS_QUATRO[ordens.TOPO_NADA_NOVO])  # type: ignore[arg-type]
     assert "1" in topo.texto
     assert topo.botao

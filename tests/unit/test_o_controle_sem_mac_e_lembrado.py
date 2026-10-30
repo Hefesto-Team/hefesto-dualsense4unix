@@ -152,7 +152,7 @@ class TestADesistenciaEAnunciada:
     def test_sem_cracha_nenhum_slot_volatil_e_a_frase(
         self, isolated_config: Path
     ) -> None:
-        """As DUAS metades, e nenhuma delas sozinha basta."""
+        """As DUAS metades, e nenhuma basta sozinha."""
         reg = ControllerIdentityRegistry()
         reg.set_cracha_provider(_cracha_fixo({}))
         reg.sync_connected([PATH_1])

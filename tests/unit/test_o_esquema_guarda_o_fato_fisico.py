@@ -41,13 +41,13 @@ def test_a_face_guarda_perto_e_alto() -> None:
     frente, traseira, hub = mapa.faces
     assert (frente.perto, frente.alto) == (True, False)
     assert (traseira.perto, traseira.alto) == (False, False), (
-        "face que ela não marcou tem de nascer sem bônus nenhum"
+        "face não marcada tem de nascer sem bônus nenhum"
     )
     assert (hub.perto, hub.alto) == (False, True)
 
 
 def test_o_fato_fisico_sobrevive_ao_disco() -> None:
-    """Ida e volta pelo ``maquina.json``: o que ela marcou continua marcado."""
+    """Ida e volta pelo ``maquina.json``: o que se marcou continua marcado."""
     assert gravar_maquina(
         {
             "mapa": {
@@ -97,7 +97,7 @@ def test_a_irma_bate_com_o_desenho_do_usuario_entrada_por_entrada() -> None:
     """As catorze irmãs saem iguais às que o usuário escreveu à mão no mockup."""
     achadas = irmas_de(mapa_do_usuario())
     assert achadas == PARES_DO_MOCKUP, (
-        "a irmã derivada divergiu do desenho dela: "
+        "a irmã derivada divergiu do desenho declarado: "
         f"faltam {sorted(set(PARES_DO_MOCKUP) - set(achadas))}, "
         f"sobram {sorted(set(achadas) - set(PARES_DO_MOCKUP))}"
     )
@@ -136,11 +136,11 @@ def test_a_irma_nao_e_a_vizinha_da_fileira() -> None:
 
 
 def test_o_mapa_de_ontem_continua_valendo() -> None:
-    """Campo novo sem bump de versão: o mapa dela, sem ``perto`` nem ``nos``."""
+    """Campo novo sem bump de versão: o mapa declarado, sem ``perto`` nem ``nos``."""
     antigo = mapa_do_usuario()
     assert all(not f.perto and not f.alto for f in antigo.faces)
     assert antigo.portas["1"].nos == ["usb1-port3"] and antigo.portas["1"].caminho == "1-3"
     assert antigo.portas["7"].nos == ["usb4-port4"] and antigo.portas["7"].caminho == "4-4"
     assert irmas_de(antigo)["1"] == "2", (
-        "o desenho dela responde sem uma linha de campo novo declarada"
+        "o desenho declarado responde sem uma linha de campo novo declarada"
     )

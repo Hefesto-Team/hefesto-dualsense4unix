@@ -1,16 +1,16 @@
 """O controle que pede para parear aparece, mesmo já conhecido.
 
-O-CONTROLE-QUE-PEDE-PARA-PAREAR-APARECE-MESMO-JA-CONHECIDO-01 (05/10/2026). Ela segurou PS + Create
+O-CONTROLE-QUE-PEDE-PARA-PAREAR-APARECE-MESMO-JA-CONHECIDO-01 (05/10/2026). PS + Create seguros
 no «vermelho» com a janela aberta, e a aba 08 disse «0 controles». No BlueZ ele estava no ar na
 Esquerda (RSSI de -56 a -62) com ``Paired`` verdadeiro e ``Connected`` falso: o controle perdeu a
 chave, o BlueZ guarda a dele, e a lista «no ar» só trazia aparelho novo ou conectado.
 
 A cura: a central publica o pedido (conhecido + desconectado + ouvido na varredura); a aba mostra
 o cartão «Roxo quer conectar» com «Parear» e o ponto que pulsa no grupo do adaptador que o ouve;
-com a janela aberta por ela, a central refaz o par sozinha no adaptador da janela.
+com a janela aberta pelo usuário, a central refaz o par sozinha no adaptador da janela.
 
 TUDO É DE MENTIRA: o BlueZ é o ``radio_de_mentira`` (com o dono vivo de verdade por cima) ou
-objetos montados à mão; nunca o BlueZ dela. Endereços na faixa forjada ``aa:bb:cc``.
+objetos montados à mão; nunca o BlueZ da máquina. Endereços na faixa forjada ``aa:bb:cc``.
 
 AS MORDIDAS (feitas na sprint, uma de cada vez, com a cura devolvida e o md5 conferido): tirar o
 ``RSSI`` do critério (``ouvidos`` passa a ser todo objeto) reprova «sem sinal, nada»; tirar o
@@ -135,7 +135,7 @@ def test_a_central_publica_o_pedido_pelo_dono_vivo(mesa: Any) -> None:
 @pytest.mark.parametrize("destino", [QUARTO, SALA], ids=["outra-entrada", "a-do-par-velho"])
 def test_com_a_janela_aberta_a_central_refaz_o_par_sozinha(
         mesa: Any, relogio: rm.Relogio, destino: str) -> None:
-    """Ela abriu o «Conectar» e segurou PS + Create: sem outro clique, o par velho sai e o novo
+    """O «Conectar» aberto e PS + Create seguros: sem outro clique, o par velho sai e o novo
     entra no adaptador da janela. Na mesma entrada do par velho, o objeto velho sai antes do
     ``Pair`` (sem isso o BlueZ responde «já existe» sobre a chave que o controle perdeu)."""
     mundo = rm.RadioDeMentira()
@@ -164,7 +164,7 @@ def test_com_a_janela_aberta_a_central_refaz_o_par_sozinha(
 
 def test_com_a_janela_aberta_o_conhecido_desligado_nao_e_escolhido(
         mesa: Any, relogio: rm.Relogio) -> None:
-    """Sem o sinal (ela não segurou PS + Create), a janela acaba sem gesto e sem ``Pair``."""
+    """Sem o sinal (ninguém segurou PS + Create), a janela acaba sem gesto e sem ``Pair``."""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, AZUL)
     mundo.pareado(SALA, VERMELHO, conectado=False, host=False)

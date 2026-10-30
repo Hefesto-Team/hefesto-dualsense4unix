@@ -1,9 +1,8 @@
-"""O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01 — o gatilho: UMA entrada, e ela diz o que faz.
+"""O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01 — o gatilho: UMA entrada, que diz o que faz.
 
-A foto dela, 03/10/2026 ~18h20 (aba Gatilhos, P1, L2): a lista do modo oferecia
+A foto de 03/10/2026 ~18h20 (aba Gatilhos, P1, L2): a lista do modo oferecia
 `—` e `Desligado`, que pareciam a mesma entrada. A regra de produto, ~18h15:
-*«o certo seria os controles obedecerem quando o jogo manda e na
-ausencia disso o perfil ganha»*  (noqa-acento: citação)
+os controles obedecem quando o jogo manda, e na ausência disso o perfil ganha.
 Então o «Desligado» do gatilho é «O jogo decide» (desde 06/10/2026, por ordem de produto, o rótulo
 é «Sem efeito»; a regra é a mesma): sem jogo pintando, o
 gatilho fica como o controle vem de fábrica (`trigger.reset`), e o que o jogo

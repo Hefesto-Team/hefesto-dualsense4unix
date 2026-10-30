@@ -98,7 +98,7 @@ class TestOQueOAparelhoDeclara:
         assert captura[0]["mapa"] == 0x0003
 
     def test_a_saida_e_de_quatro_canais(self, unidades: dict[int, dict]) -> None:
-        """E ela é a razão de trocar o perfil de ENTRADA mexer na saída dela."""
+        """E é a razão de trocar o perfil de ENTRADA mexer na SAÍDA."""
         entrada_usb = [u for u in unidades.values() if u["terminal"] == 0x0101]
         origem = [u for u in entrada_usb if u["tipo"] == "entrada"]
         assert len(origem) == 1

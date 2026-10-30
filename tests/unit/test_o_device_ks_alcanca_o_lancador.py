@@ -23,7 +23,7 @@ def _lar(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
 
 
 def test_o_prefixo_do_lancador_recebe_o_device(_lar, monkeypatch):
-    """O caso dela: um prefixo do Heroic, com um DualSense na mesa.
+    """O caso de uso: um prefixo do Heroic, com um DualSense na mesa.
 
     MORDIDA: tire a chamada de `_device_ks_nos_lancadores` do
     `materialize_launch_env`. O prefixo continua sem device, e a háptica nativa

@@ -6,7 +6,7 @@ Medido em 23/10/2026 (D-2210-O-CSS-DE-QUEM-USA-ENTRA-POR-CIMA-DO-TEMA): o ``meu.
 ``<dados>/<id>`` inteiro, e com ele o CSS que a pessoa escreveu; e três eventos do vigia sobre o
 mesmo arquivo recusado punham seis linhas ``[tema]`` no diário (a recusa do tema e a do CSS, a
 cada evento). Agora os dois agrupam como ``@media``, a remoção deixa o ``meu.css`` (reinstalar o
-encontra), e cada leitor lembra a última frase e só a diz quando ela muda.
+encontra), e cada leitor lembra a última frase e só a diz quando muda.
 
 Tudo em lugares de mentira no ``tmp_path``; a sonda abre uma ``PonteDaTela`` de verdade na tela
 de mentira, para provar que o WebKit pinta o que a régua deixa passar.

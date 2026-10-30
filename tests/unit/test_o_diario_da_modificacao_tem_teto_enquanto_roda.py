@@ -1,8 +1,8 @@
-"""O diário de uma modificação fica no teto ENQUANTO ela roda.
+"""O diário de uma modificação fica no teto ENQUANTO roda.
 
 Sprint O-DIARIO-DA-MODIFICACAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA-01. Lar de mentira (``HOME`` e
 ``XDG_*`` em pasta temporária), sem caixa, com um filho que só escreve na saída e fica de pé.
-Nenhuma prova fala com o serviço dela.
+Nenhuma prova fala com o serviço real.
 """
 from __future__ import annotations
 

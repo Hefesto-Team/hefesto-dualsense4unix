@@ -1,6 +1,6 @@
 """BOND-DOBRADO-01 — o controle com chave em dois adaptadores, e ninguém via.
 
-Achado na bancada em 19/09/2026: quatro DualSense, SEIS bonds. Dois
+Achado no aparelho em 19/09/2026: quatro DualSense, SEIS bonds. Dois
 controles com chave de pareamento em dois adaptadores ao mesmo tempo — uma
 migração feita pela metade, em que o bond do adaptador de ORIGEM ficou.
 
@@ -8,12 +8,12 @@ Nenhuma superfície mostrava isso: nem o `doctor`, nem a aba Conexões, nem o
 `plano_de_radio`, que conta ocupação por adaptador sem nunca perguntar se o
 mesmo controle está contado duas vezes.
 
-Estas réguas exercitam a FUNÇÃO do shell, não o texto dela: o corpo é extraído
+Estas réguas exercitam a FUNÇÃO do shell, não o seu texto: o corpo é extraído
 do `doctor.sh` e rodado com uma lista de caminhos de mentira. É a mesma
 mordida que separa "acha o defeito" de "acusa qualquer coisa".
 
 A-SOBRA-DO-BOND-SAI-SOZINHA-01 (25/09/2026): o check contava OBJETO do BlueZ, e
-o BlueZ guarda um objeto para todo aparelho que uma busca achou. Na bancada,
+o BlueZ guarda um objeto para todo aparelho que uma busca achou. No ensaio,
 dez vizinhos vistos por hci1 e hci2 viraram dez «chaves em dois adaptadores»,
 e o doctor deu 12 avisos para UM controle com chave dobrada. Agora só conta
 objeto com ``Paired=true`` — e quem apaga a sobra é a central do rádio, sozinha
@@ -130,7 +130,7 @@ def test_o_recado_diz_o_gesto_e_nao_apaga_sozinho() -> None:
     corpo = corpo.split("\n}\n", 1)[0]
     assert "fail " not in corpo, (
         "bond dobrado é `warn`, não `fail`: é estado a arrumar com a escolha "
-        "dela, não defeito que impede o produto de funcionar."
+        "de quem usa, não defeito que impede o produto de funcionar."
     )
     assert "rm " not in corpo and "remove" not in corpo, (
         "o check APAGANDO bond: o doctor só acusa. Quem apaga a sobra é a "
@@ -163,6 +163,6 @@ def test_o_recado_diz_que_a_sobra_sai_sozinha() -> None:
         ["/org/bluez/hci0/dev_AA_BB_CC_00_00_01", "/org/bluez/hci1/dev_AA_BB_CC_00_00_01"]
     )
     assert "sozinho" in saida, (
-        "o recado manda ela apagar à mão o que o daemon apaga sozinho quando o "
+        "o recado manda apagar à mão o que o daemon apaga sozinho quando o "
         "controle conecta — o recado mente sobre o produto."
     )

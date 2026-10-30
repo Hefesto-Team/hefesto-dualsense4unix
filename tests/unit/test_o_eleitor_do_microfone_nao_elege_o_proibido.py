@@ -32,7 +32,7 @@ a terceira só apareceram depois de a primeira ser curada:
    "FALHA: a fonte padrão é um MONITOR (auto_null.monitor)"; cinco segundos
    depois a resposta era outra. **Mesmo estado, dois veredictos.**
 
-O QUE ESTA RÉGUA COBRA, e ela cobra a FORMA para valer no próximo caso:
+O QUE ESTA RÉGUA COBRA, e cobra a FORMA para valer no próximo caso:
 
 - o eleitor e a régua leem a MESMA lista (`fontes_elegiveis`);
 - essa lista já exclui o DualSense e os monitores — quem a lê não precisa
@@ -88,7 +88,7 @@ def test_o_ranqueador_do_doctor_ainda_tem_o_fallback(fix: str) -> None:
     corpo = _corpo(DOCTOR.read_text(encoding="utf-8"), "_melhor_source_de_captura")
     assert 'escolha = (outro != "") ? outro : ds' in corpo, (
         "o fallback do ranqueador mudou de forma — releia esta régua inteira: "
-        "ela existe porque `prefere=0` cai no DualSense quando não há outra"
+        "a regra existe porque `prefere=0` cai no DualSense quando não há outra"
     )
 
 
@@ -112,7 +112,7 @@ def test_a_lista_de_elegiveis_exclui_monitores(fix: str) -> None:
 def test_o_eleitor_le_a_lista_e_nao_o_pactl_cru(fix: str) -> None:
     corpo = _corpo(fix, "pick_target_source_name")
     assert "fontes_elegiveis" in corpo, (
-        "o eleitor voltou a montar a própria lista — é assim que ela diverge "
+        "o eleitor voltou a montar a própria lista — é assim que a lista diverge "
         "da que a régua lê"
     )
 
@@ -176,7 +176,7 @@ def test_escassez_nao_manda_o_usuario_rodar_o_mesmo_comando_de_novo() -> None:
         trecho = fonte[max(0, m.start() - 600) : m.start() + 900]
         assert "-ne 1" in trecho or "-eq 1" in trecho, (
             "um chamador do `--install` voltou a usar `||`, que trata rc 2 e 3 "
-            "como falha e manda ela repetir o comando à toa"
+            "como falha e manda repetir o comando à toa"
         )
 
 
@@ -296,7 +296,7 @@ def _rodar_a_consulta(tmp_path: pathlib.Path, curta: str, funcao: str) -> str:
 
 
 def test_so_os_controles_na_maquina_nao_ha_outra_captura(tmp_path) -> None:
-    """A bancada: o microfone do cabo e o canal do rádio, e nada mais."""
+    """O ensaio: o microfone do cabo e o canal do rádio, e nada mais."""
     curta = (
         f"1027\t{NO_DO_MIC}\tPipeWire\ts32le 2ch\tSUSPENDED\n"
         f"1040\t{NO_DO_CANAL}\tPipeWire\ts16le 1ch\tRUNNING\n"
@@ -342,7 +342,7 @@ def test_a_consulta_nova_e_consulta_e_nao_escreve(fix: str) -> None:
     inicio = fix.index("ACORDADO_MUDOU=1")
     guarda = fix[inicio : fix.index("install_dropin_acordado ||", inicio)]
     assert '"${MODE}" != "outra-captura-elegivel"' in guarda, (
-        "a consulta nova caiu fora da lista de consultas — ela instalaria drop-in"
+        "a consulta nova caiu fora da lista de consultas — instalaria drop-in"
     )
     assert "--outra-captura-elegivel) MODE=" in fix
     assert "    outra-captura-elegivel)\n" in fix

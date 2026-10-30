@@ -158,7 +158,7 @@ def _vocabulario(classe: ast.ClassDef, modulo: ast.Module, caminho: Path) -> dic
         if not isinstance(base, ast.Name):
             raise AssertionError(
                 f"{caminho.name}: o dublê `{classe.name}` herda de uma expressão "
-                "que esta régua não sabe ler. Ela mede o que está ESCRITO no "
+                "que esta régua não sabe ler. A régua mede o que está ESCRITO no "
                 "arquivo do dublê; se a base vier de outro lugar, a régua "
                 "precisa ser reescrita em vez de ficar verde sobre nada."
             )
@@ -168,7 +168,7 @@ def _vocabulario(classe: ast.ClassDef, modulo: ast.Module, caminho: Path) -> dic
                 f"{caminho.name}: o dublê `{classe.name}` herda de `{base.id}`, "
                 "que não é declarado neste módulo. Se ele passou a herdar do "
                 "`Daemon` de produção, esta régua deixa de medir — todo método "
-                "existiria por herança e ela ficaria verde sobre nada. "
+                "existiria por herança e a régua ficaria verde sobre nada. "
                 "Reescreva-a antes de seguir."
             )
         for nome, linha in _vocabulario(pai, modulo, caminho).items():
@@ -210,7 +210,7 @@ def test_ha_pelo_menos_um_duble_rodando_o_poll_loop_de_producao() -> None:
     assert dubles, (
         "nenhuma classe em `tests/` amarra `X._poll_loop.__get__(self)`. Ou o "
         "dublê do laço sumiu, ou mudou de forma — e esta régua não mede mais "
-        "nada. Ela existe porque `test_aba_no_jogo_so_com_jogo_aberto.py` roda "
+        "nada. A régua existe porque `test_aba_no_jogo_so_com_jogo_aberto.py` roda "
         "o `_poll_loop` de PRODUÇÃO."
     )
     nomes = {classe.name for _, _, classe in dubles}
@@ -330,7 +330,7 @@ def test_a_regua_alcanca_o_rabo_do_laco_e_a_leitura_sem_chamada() -> None:
         f"termina na {fim_do_while}. O dublê roda o laço ATÉ O FIM "
         "(`_is_stopping` devolve `True` e a função continua), então o rabo é "
         "território dele. Foi este o furo nº 1 da conferência de 20/09/2026: a "
-        "régua dava verde com a bancada do dublê em dois `AttributeError`."
+        "régua dava verde com o ensaio do dublê em dois `AttributeError`."
     )
     so_lidos = set(executado) - chamados
     assert so_lidos, (
@@ -367,6 +367,6 @@ def test_a_regua_recusa_um_duble_que_herda_o_daemon_de_producao() -> None:
     else:
         raise AssertionError(
             "`_vocabulario` aceitou um dublê que herda do `Daemon` de produção. "
-            "Nesse arranjo ela não mede nada — todo método existe por herança — "
+            "Nesse arranjo a régua não mede nada — todo método existe por herança — "
             "e a régua principal passa a dar verde sobre um dublê cego."
         )

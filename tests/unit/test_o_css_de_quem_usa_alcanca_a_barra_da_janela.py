@@ -1,6 +1,6 @@
 """O CSS de quem usa alcança a barra da janela, que é GTK e fica fora da página.
 
-A regra que começa por ``headerbar`` vale na barra; a régua não deixa ela esconder nem empurrar
+A regra que começa por ``headerbar`` vale na barra; a régua não a deixa esconder nem empurrar
 os botões, a declaração que o GTK não entende fica de fora sozinha, e o CSS desligado devolve a
 barra ao padrão.
 

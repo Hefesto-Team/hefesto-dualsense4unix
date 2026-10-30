@@ -55,6 +55,6 @@ def test_a_lista_da_sistema_nao_traz_o_aviso_do_opt_out(monkeypatch: Any,
 
 
 def test_a_funcao_e_o_tema_do_aviso_sairam() -> None:
-    """Sem a função no dono e sem o tema dela na aba Sistema."""
+    """Sem a função no dono e sem o seu tema na aba Sistema."""
     assert not hasattr(home_actions, "aviso_de_opt_out_antigo")
     assert not [f for f in a09_sistema.TEMA_DA_FONTE if "opt_out" in f]

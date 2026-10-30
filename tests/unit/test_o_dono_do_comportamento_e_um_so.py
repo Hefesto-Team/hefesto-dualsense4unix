@@ -1,4 +1,4 @@
-"""A régua do portão `donos-de-comportamento` — ela tem de MORDER."""
+"""A régua do portão `donos-de-comportamento` — tem de MORDER."""
 
 from __future__ import annotations
 

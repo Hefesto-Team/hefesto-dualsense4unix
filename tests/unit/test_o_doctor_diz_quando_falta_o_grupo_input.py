@@ -58,7 +58,7 @@ def _declarados(*nomes: str) -> dict[str, Any]:
 
 
 def test_o_declarado_que_recusa_a_leitura_da_warn_com_o_que_conferir(tmp_path: Path) -> None:
-    """Dentro do doctor, a frase do dono («rode o doctor») mandaria a pessoa aonde ela já está:
+    """Dentro do doctor, a frase do dono («rode o doctor») mandaria a pessoa aonde já está:
     a linha diz o aparelho e onde conferir o serviço que não o serviu."""
     _no(tmp_path, "event3", nome="Teclado USB", teclas=TECLAS_DE_TECLADO)
 
@@ -185,7 +185,7 @@ def test_o_aviso_da_permissao_sobe_o_codigo_de_saida_do_doctor(
 def test_a_suite_nunca_abre_o_teclado_desta_maquina() -> None:
     """A fixture da sessão (``tests/conftest.py``) põe a pergunta num ``/sys`` vazio.
 
-    Sem ela, o ``doctor_cmd`` dos outros testes abria o aparelho de quem roda e o código de saída
+    Sem isso, o ``doctor_cmd`` dos outros testes abria o aparelho de quem roda e o código de saída
     dependia da permissão dessa pessoa.
     """
     def abrir(evento: str) -> Any:

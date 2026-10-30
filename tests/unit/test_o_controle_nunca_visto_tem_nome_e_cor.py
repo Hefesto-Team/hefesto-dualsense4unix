@@ -1,15 +1,14 @@
 """O controle que o produto nunca viu tem nome e cor — O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01.
 
-A cena dela, 25/09/2026, e ela é o aceite desta régua: *«imagina que eu quero
-mostrar pra um user que tem um controle desses edição limitada do dualsense. E
-quero mostrar que o app reconhece de primeira. aí ele pluga o controle dele e o
-app não funciona pq ele tá todo setado pra funcionar só no meu pc.»*  (noqa-acento: citação literal)
+A cena de 25/09/2026, que é o aceite desta régua: mostrar a alguém com um DualSense de edição
+limitada que o app reconhece o controle de primeira, e não um app que só funciona na máquina
+de quem o fez.
 
 O QUE ESTAVA ERRADO, medido antes da cura com o código real (o leitor do
 serial, a mesa e os pacotes das dez páginas):
 
 * os códigos ``13``, ``14``, ``15``, ``ZC``, ``ZD``, ``ZE`` e ``ZF`` estão no
-  mapa dela (``docs/data/cores-do-dualsense.csv``, 28 modelos) e não estavam na
+  mapa de cores (``docs/data/cores-do-dualsense.csv``, 28 modelos) e não estavam na
   tabela DIGITADA do produto (21): o serial voltava inteiro, no cabo e no rádio,
   e a tela escrevia ``Não sei · USB``, ``P2 • Não sei • BT``;
 * um código que nem o mapa conhece (uma edição que sair amanhã) saía igual;
@@ -27,7 +26,7 @@ A LEITURA É A DO PRODUTO, com um dublê do APARELHO que não é mais frouxo que
 ele: a trava do pedido roda (``conferir_pedido``), pelo rádio o pedido sem a
 assinatura de semente ``0x53`` volta ``None`` (o ``errno 5`` medido em
 02/09/2026), e a assinatura é conferida por uma conta escrita AQUI, com
-``zlib``, e não pela do produto — senão a régua mediria a conta contra ela
+``zlib``, e não pela do produto — senão a régua mediria a conta contra si mesma
 mesma. Nenhum byte vai a aparelho nenhum.
 """
 from __future__ import annotations
@@ -75,7 +74,7 @@ def _linhas_do_mapa() -> list[dict[str, str]]:
 
 
 def _do_mapa(codigo: str) -> tuple[str, str]:
-    """``(id, nome)`` que o CSV dela dá a um código — lidos AQUI, não do produto."""
+    """``(id, nome)`` que o CSV dá a um código — lidos AQUI, não do produto."""
     for linha in _linhas_do_mapa():
         if linha["codigo_da_cor"].strip().upper() == codigo:
             return linha["id"].strip(), linha["nome"].strip()
@@ -214,7 +213,7 @@ def test_o_cartao_diz_um_nome_e_uma_cor(
         f"{rotulo} no {transporte}, P{posicao}: o cartão disse {item['nome']!r}")
     assert item["nome"] != NAO_SEI
     assert item["cor"] == ident, (
-        f"{rotulo}: o desenho recebeu {item['cor']!r}, e o mapa dela diz {ident!r}")
+        f"{rotulo}: o desenho recebeu {item['cor']!r}, e o mapa diz {ident!r}")
     entrada = next(c for c in _estado(aparelhos.controles)["controllers"]
                    if c["uniq"] == item["uniq"])
     assert pacotes.identidade_de(entrada, mesa) == nome
@@ -531,7 +530,7 @@ def test_o_edge_se_chama_edge_em_toda_forma_de_falha(forma: str, transporte: str
 def test_a_declaracao_gravada_com_a_grafia_de_antes_acha_a_cor(
     gravado: str, de_fabrica: str
 ) -> None:
-    """``ControleDeclarado.cor`` é texto livre, gravado no ``maquina.json`` dela."""
+    """``ControleDeclarado.cor`` é texto livre, gravado no ``maquina.json`` de quem usa."""
     achada = cp.cor_do_nome(gravado)
     assert achada is not None and achada.codigo == de_fabrica, (gravado, achada)
     assert achada.nome == _do_mapa(de_fabrica)[1]

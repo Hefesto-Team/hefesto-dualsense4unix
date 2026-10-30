@@ -14,11 +14,11 @@ byte a byte na mesma forma do vpad, que mora em
 
     /sys/devices/virtual/misc/uhid/0003:054C:0DF2.002F/leds/inputM:rgb:indicator
 
-MEDIDO em 22/08/2026 nesta bancada, com QUATRO DualSense no rádio e os quatro
+MEDIDO em 22/08/2026 nesta máquina de teste, com QUATRO DualSense no rádio e os quatro
 `multi_intensity` graváveis: o doctor imprimia *"sem DualSense físico com nó de
 LED agora (só o controle virtual, ou nenhum)"*. Zero de quatro.
 
-O custo do silêncio é o pior que este check pode pagar: ela abre o doctor
+O custo do silêncio é o pior que este check pode pagar: quem usa abre o doctor
 exatamente quando a cor não está saindo, e a cor falha JUSTAMENTE no rádio. Só
 quem usa cabo chegava a ver este check dizer alguma coisa — e o teste que já
 existia (`test_doctor_nao_afirma_efeito.py`) montava a cena com o device sob
@@ -118,7 +118,7 @@ def _roda_o_check(raiz: Path, corpo_extra: str = "") -> str:
 
 
 def test_o_controle_do_radio_nao_e_confundido_com_o_vpad(tmp_path: Path) -> None:
-    """A cena da bancada de 22/08: um DualSense no rádio + o vpad do daemon."""
+    """A cena do ensaio de 22/08: um DualSense no rádio + o vpad do daemon."""
     _no_de_led(
         tmp_path,
         nome_do_no="input259:rgb:indicator",

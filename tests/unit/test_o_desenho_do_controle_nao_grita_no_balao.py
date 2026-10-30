@@ -8,7 +8,7 @@ minúsculo.
 
 Esta régua lê a FONTE (os dois SVG e a lista do exportador) e as páginas do
 ``mockup/``, que o gerador reescreve. Não depende de ``--publicar``, que é da
-costura: o que ela mede é a origem.
+costura: o que se mede é a origem.
 """
 from __future__ import annotations
 

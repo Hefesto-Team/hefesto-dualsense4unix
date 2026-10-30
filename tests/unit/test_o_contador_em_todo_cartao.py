@@ -42,7 +42,7 @@ def test_todo_cartao_localizado_abre_o_corpo_com_o_contador():
            if not c.diz.startswith(desenho.contador_html(0))]
     assert not sem, (
         f"cartão(ões) localizado(s) sem o contador abrindo o corpo: {sem}. "
-        f"Ela pediu o mesmo texto em todos — «todos tem que serem iguais»")
+        f"O pedido é o mesmo texto em todos os cartões")
 
 
 def test_o_cartao_que_nao_achou_nao_conta():

@@ -73,7 +73,7 @@ class _Relogio:
 
 
 class _LeitorQueGira:
-    """O leitor do nó «Motion Sensors»: a velocidade e a integral dela no relógio da mesa."""
+    """O leitor do nó «Motion Sensors»: a velocidade e a sua integral no relógio da mesa."""
 
     def __init__(self, relogio: _Relogio, giro: tuple[float, float, float]) -> None:
         self._relogio = relogio
@@ -153,7 +153,7 @@ def _a_mesa(
                          socket_path=tmp_path / "cursor.sock", daemon=daemon)
     servidor._sensor_hub = hub
     daemon._ipc_server = servidor
-    perfil = Profile(name="Bancada", match=MatchAny(type="any"))
+    perfil = Profile(name="Ensaio", match=MatchAny(type="any"))
     save_profile(perfil)
     gerente.apply_movimento(perfil)
     daemon.store.set_active_profile(perfil.name)
@@ -244,7 +244,7 @@ def test_abaixo_da_zona_o_cursor_fica_parado(
 def test_a_sensibilidade_baixa_nao_aumenta_a_zona(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sensibilidade 1 a 8 graus/s: antes a zona dela era 35 graus/s, agora é a da tela."""
+    """Sensibilidade 1 a 8 graus/s: antes a sua zona era 35 graus/s, agora é a da tela."""
     dx, _ = _na_navegacao(tmp_path, monkeypatch, giro=8.0, sensibilidade=1)
     assert abs(dx - _esperado(8.0, 1)) <= 1, dx
 

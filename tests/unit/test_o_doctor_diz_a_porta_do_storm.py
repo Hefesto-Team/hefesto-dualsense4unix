@@ -14,19 +14,19 @@ cinco formas de linha do kernel, o hub em comum, a porta vazia) é cobrada em
 **Nada aqui olha o `/sys` da máquina que roda a suíte.** A raiz entra por
 `HEFESTO_DOCTOR_RAIZ_USB`, que é o mesmo argumento `--raiz-usb` com que o
 suporte endereça um -71 contra o retrato de barramento de OUTRA máquina. Sem
-isso a régua mudaria de resposta quando ela tirasse um DualSense da mesa.
+isso a régua mudaria de resposta quando alguém tirasse um DualSense da mesa.
 
 AS MORDIDAS:
 
 * :func:`test_o_doctor_diz_a_porta_e_o_aparelho` — apague a chamada a
-  `_o_endereco_do_storm` em `check_kernel_watch` e ela reprova: volta o número
+  `_o_endereco_do_storm` em `check_kernel_watch` e a régua reprova: volta o número
   sem endereço, que é o defeito inteiro da sprint.
 * :func:`test_o_hub_em_comum_e_aviso_e_nao_nota_de_rodape` — troque o `warn`
-  do caso `hub)` por `info` e ela reprova. O hub é a ÚNICA linha deste bloco
+  do caso `hub)` por `info` e a régua reprova. O hub é a ÚNICA linha deste bloco
   sobre a qual há o que fazer; enterrá-la entre `info` é publicar a cura em
   letra miúda.
 * :func:`test_evento_velho_nao_ganha_endereco` — arranque AS DUAS travas da
-  janela (o `-gt 0` do doctor E o corte do módulo) e ela reprova. Arrancar
+  janela (o `-gt 0` do doctor E o corte do módulo) e a régua reprova. Arrancar
   uma só não morde, e foi assim que se descobriu que a guarda do doctor é
   ECONOMIA, não comportamento — está escrito lá.
 * :func:`test_sem_python_do_produto_o_doctor_diz_que_nao_sabe` e
@@ -35,10 +35,10 @@ AS MORDIDAS:
   inexistente e dizia cobrir a primeira guarda; `py` vinha não-vazio, a guarda
   nem rodava, e arrancá-la deixava a régua verde.
 * :func:`test_o_evento_sem_endereco_chega_ao_terminal` — engula o
-  `sem_endereco` no trecho Python do doctor e ela reprova: a soma das portas
+  `sem_endereco` no trecho Python do doctor e a régua reprova: a soma das portas
   ficaria menor que o total sem ninguém ver.
 * :func:`test_a_janela_do_doctor_e_a_do_modulo_sao_uma_so` — fixe o
-  ``--dias`` em 7 e ela reprova. **Achada pela conferência de 20/09**: era a
+  ``--dias`` em 7 e a régua reprova. **Achada pela conferência de 20/09**: era a
   mesma cegueira do `sem_endereco` entrando pela porta de trás — duas janelas
   diferentes deixam a soma dos endereços menor que a contagem com
   ``sem_endereco`` igual a zero, e nenhuma régua acusava.
@@ -46,11 +46,11 @@ AS MORDIDAS:
 * :func:`test_o_controle_sem_hid_vira_aviso_com_o_gesto` e
   :func:`test_a_entrada_largada_vira_aviso_com_o_gesto` (24/09, «nomear e
   religar») — troque o `warn` do `parada_hid)` ou do `parada_vazia)` por `info`
-  e a régua dela reprova. São as duas entradas em que o kernel DESISTIU: nelas
+  e a sua régua reprova. São as duas entradas em que o kernel DESISTIU: nessas
   o controle não volta pelo kernel, e é a linha sobre a qual há o que fazer.
 
 **DUAS MORDIDAS DESTE ARQUIVO NÃO MORDERAM NA PRIMEIRA TENTATIVA**, e as duas
-estão corrigidas acima em vez de escondidas. Elas custaram também uma
+estão corrigidas acima em vez de escondidas. As duas custaram também uma
 sentinela do `doctor.sh` que foi escrita e removida: nenhuma entrada a
 alcançava.
 """
@@ -311,7 +311,7 @@ def test_log_limpo_nao_ganha_bloco_de_endereco() -> None:
 
 
 def test_o_endereco_nao_le_o_sys_da_maquina_que_roda() -> None:
-    """Com a raiz injetada VAZIA, nenhum aparelho é nomeado — nem o dela."""
+    """Com a raiz injetada VAZIA, nenhum aparelho é nomeado — nem o da máquina."""
     saida = _rodar(
         [
             "# 2026-07-20 kernel-watch iniciado",
@@ -320,7 +320,7 @@ def test_o_endereco_nao_le_o_sys_da_maquina_que_roda() -> None:
         com_sys=False,
     )
     assert "3-4.1.3" in saida, saida
-    assert "054c" not in saida, f"leu o /sys de fora da bancada injetada:\n{saida}"
+    assert "054c" not in saida, f"leu o /sys de fora da raiz injetada:\n{saida}"
 
 
 def _interface_hid_sem_driver(raiz: pathlib.Path) -> None:

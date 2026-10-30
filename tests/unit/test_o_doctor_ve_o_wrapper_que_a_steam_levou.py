@@ -86,7 +86,7 @@ def test_leitura_sem_nenhum_app_nao_conclui_nada(tmp_path: Path) -> None:
 
 
 def test_linha_com_o_par_estendido_nao_e_regressao(tmp_path: Path) -> None:
-    """A pergunta é a da sentinela: a linha que ela chama de intocável não vira contrato quebrado.
+    """A pergunta é a da sentinela: a linha dita intocável não vira contrato quebrado.
 
     MORDIDA: volte a sonda a uma regra própria (``WRAPPER_PREFIX not in valor``) e este reprova.
     """

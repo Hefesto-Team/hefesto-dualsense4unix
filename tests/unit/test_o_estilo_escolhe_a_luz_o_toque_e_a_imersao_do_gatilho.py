@@ -115,7 +115,7 @@ def test_o_estilo_escolhe_a_forma_do_toque(chave: str, forma: str | None) -> Non
 def test_todo_estilo_de_fabrica_tem_a_forma_na_tabela() -> None:
     """Estilo novo sem linha aqui reprova: a forma dele não nasce por acaso.
 
-    O Nativo é modo (quem manda é o jogo); Visual novel e Adulto ficam para as sprints delas.
+    O Nativo é modo (quem manda é o jogo); Visual novel e Adulto ficam para as próprias sprints.
     """
     fora = ({e.chave for e in ej.DE_FABRICA} - set(FORMA_DO_ESTILO)
             - {"nativo", "visual_novel", "adulto"})

@@ -16,31 +16,31 @@ DIFÍCIL — um parser que só reconhecesse ``usb 3-4:`` daria verde sobre 40% d
 `kernel.log` desta casa:
 
 * :func:`test_a_porta_do_hub_vira_a_porta_do_aparelho` — arranque
-  ``_PORTA_DE_HUB`` de `exame_da_mesa` e ela reprova: ``usb 3-1.1-port3``
+  ``_PORTA_DE_HUB`` de `exame_da_mesa` e a régua reprova: ``usb 3-1.1-port3``
   deixa de virar ``3-1.1.3`` e o evento cai em "sem endereço". É o caso em que
   o aparelho NUNCA enumerou, logo não tem endereço próprio — o kernel nomeia a
-  porta física, e é dela que o degrau sai.
+  porta física, e é da porta que o degrau sai.
 * :func:`test_a_porta_do_hub_raiz_vira_o_no` — arranque
   ``_PORTA_DE_HUB_RAIZ`` e ``usb usb3-port4`` deixa de virar ``3-4``.
 * :func:`test_a_interface_vira_o_aparelho` — arranque ``_INTERFACE_USB`` e
   ``usbhid 3-4.1.3:1.3`` deixa de virar ``3-4.1.3``.
 * :func:`test_o_que_nao_se_enderecou_e_contado` — faça
   :func:`storm_por_porta` descartar em silêncio o que não soube endereçar e
-  ela reprova: a soma das portas ficaria menor que o total contado, sem
+  a régua reprova: a soma das portas ficaria menor que o total contado, sem
   ninguém ver. É o F3 desta casa (*ausência é resposta*).
 * :func:`test_o_hub_em_comum_precisa_de_duas_portas` — baixe o piso para UMA
-  porta e ela reprova: um hub com uma única porta ruim seria acusado, o que é
+  porta e a régua reprova: um hub com uma única porta ruim seria acusado, o que é
   trocar a causa pelo endereço.
 * :func:`test_a_porta_vazia_nao_vira_aparelho_nenhum` — faça a porta ausente
-  devolver ``presente=True`` e ela reprova: o doctor passaria a nomear um
+  devolver ``presente=True`` e a régua reprova: o doctor passaria a nomear um
   aparelho que não está lá.
-* :func:`test_a_janela_corta_o_que_e_velho` — tire o corte e ela reprova.
+* :func:`test_a_janela_corta_o_que_e_velho` — tire o corte e a régua reprova.
 
 CINCO MORDIDAS QUE NÃO MORDIAM, achadas pela conferência de 20/09 e curadas
 aqui. Todas na mesma dobra: **a frase do laudo estava coberta em pedaços, e o
-pedaço de fora era o que a bancada imprime mais**:
+pedaço de fora era o que o ensaio imprime mais**:
 
-* :func:`test_a_porta_de_raiz_diz_que_nao_ha_hub_no_caminho` — a bancada das
+* :func:`test_a_porta_de_raiz_diz_que_nao_ha_hub_no_caminho` — o ensaio das
   réguas só tinha o arranjo FUNDO (``3-4.1.3``, atrás de dois hubs). O ramo
   sem hub — 27 dos 33 eventos da janela de 20/09 — passava com o texto
   arrancado.
@@ -106,7 +106,7 @@ def test_a_interface_vira_o_aparelho() -> None:
 
 
 def test_o_driver_nao_precisa_ser_o_usbhid() -> None:
-    """`uvcvideo 1-6:1.0` é a webcam, e ela também mora numa porta."""
+    """`uvcvideo 1-6:1.0` é a webcam, e também mora numa porta."""
     assert porta_do_evento(
         "uvcvideo 1-6:1.0: UVC non compliance: permanently disabling control "
         "980900 (Brightness), due to error -71"
@@ -137,7 +137,7 @@ def test_a_cadeia_sobe_degrau_por_degrau() -> None:
 
 
 def test_a_porta_de_raiz_nao_tem_hub_no_caminho() -> None:
-    """`1-4` é uma entrada do próprio computador: a cadeia é ela sozinha."""
+    """`1-4` é uma entrada do próprio computador: a cadeia é só a entrada."""
     assert cadeia_da_porta("1-4") == ("1-4",)
 
 
@@ -149,7 +149,7 @@ def test_a_cadeia_recusa_o_que_nao_e_porta() -> None:
 
 
 def test_a_cadeia_nao_le_o_sys() -> None:
-    """Ela é texto puro, e é isso que a faz servir a porta que já não existe."""
+    """O laudo é texto puro, e é isso que a faz servir a porta que já não existe."""
     assert cadeia_da_porta("9-9.9.9") == ("9-9", "9-9.9", "9-9.9.9")
 
 
@@ -226,7 +226,7 @@ def test_a_frase_diz_que_a_leitura_do_aparelho_e_de_agora(tmp_path: Path) -> Non
     A contagem e a data vêm do LOG (passado); quem está na porta vem do ``/sys``
     (presente). Sem o "AGORA" a frase afirmaria que o DualSense de hoje é o
     aparelho que deu -71 há quatro dias — e o ``/sys`` não sabe disso. É a
-    mesma classe do defeito que ela pegou em 03/09, aqui em outra roupa.
+    mesma classe do defeito que a régua pegou em 03/09, aqui em outra roupa.
     """
     laudo = storm_por_porta(
         linhas=[_linha("2026-09-16", "usb 3-4.1.3: can't read configurations, error -71")],
@@ -363,7 +363,7 @@ def test_o_hub_em_comum_e_nomeado(tmp_path: Path) -> None:
 
 
 def test_o_hub_em_comum_precisa_de_duas_portas(tmp_path: Path) -> None:
-    """Uma porta só NÃO acusa o hub dela."""
+    """Uma porta só NÃO acusa o seu hub."""
     laudo = storm_por_porta(
         linhas=[_linha("2026-09-16", "usbhid 3-4.1.3:1.3: can't add hid device: -71")],
         dias=7,
@@ -460,7 +460,7 @@ def test_sem_nenhum_dos_dois_o_caminho_e_none(tmp_path: Path) -> None:
     ],
 )
 def test_as_formas_do_kernel_log_desta_casa(mensagem: str, porta: str) -> None:
-    """Sete linhas COPIADAS do `kernel.log` desta bancada, com o -71 mascarado."""
+    """Sete linhas COPIADAS do `kernel.log` desta máquina de teste, com o -71 mascarado."""
     assert porta_do_evento(mensagem) == porta
 
 

@@ -142,7 +142,7 @@ def test_toda_fixture_autouse_de_sessao_tolera_o_produto_ausente() -> None:
     assert not desprotegidas, (
         "fixture(s) autouse de escopo de sessão em tests/conftest.py importam "
         f"{PACOTE} sem tolerar a ausência dele: {', '.join(desprotegidas)}. "
-        f"Elas rodam em TODA sessão de pytest, inclusive nos jobs leves do "
+        f"As fixtures rodam em TODA sessão de pytest, inclusive nos jobs leves do "
         f"ci.yml ({', '.join(sorted(jobs_leves()))}), que instalam só o pytest. "
         "Envolva o import num try/except ModuleNotFoundError estreito."
     )

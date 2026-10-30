@@ -1,6 +1,6 @@
 """O controle não perde o microfone para SI MESMO — e o defeito era de FORMA.
 
-MEDIDO NA BANCADA, 10/09/2026, com o DualSense do rádio na mão. Ela pedia
+MEDIDO NO APARELHO, 10/09/2026, com o DualSense do rádio na mão. O clique pedia
 o canal do microfone e o daemon o derrubava sozinho 49 ms depois::
 
     01:57:08.255  bt_mic_palavra_do_usuario            ligado=True
@@ -9,10 +9,9 @@ o canal do microfone e o daemon o derrubava sozinho 49 ms depois::
     01:57:09.376  bt_mic_pedido                  ligar=False seq=5
 
 O sintoma que o usuário viu foi o nó `hefesto_mic_<hex6>` nascendo, sumindo e
-voltando — *"algo tava bugando"* —, e o microfone do rádio nunca ficava no ar.
-<!-- noqa-acento: citação literal -->
+voltando, e o microfone do rádio nunca ficava no ar.
 
-A CAUSA está numa linha do log, e ela se lê sozinha::
+A CAUSA está numa linha do log, e se lê sozinha::
 
     mic_da_mesa_luz_do_ex_dono_apagada
         ex_dono      = aa:bb:cc:dd:ee:d8      <- com os dois-pontos
@@ -58,7 +57,7 @@ NORMALIZADO = "aabbccddeed8"
 
 @pytest.mark.asyncio
 async def test_nao_esquece_a_palavra_de_quem_acabou_de_pedir(monkeypatch):
-    """O caso EXATO da bancada: os três campos são o mesmo aparelho."""
+    """O caso EXATO do ensaio: os três campos são o mesmo aparelho."""
     esquecidos: list[str] = []
     monkeypatch.setattr(hotkey, "esquecer_a_palavra", esquecidos.append)
     daemon = _DaemonDeMentira()
@@ -73,7 +72,7 @@ async def test_nao_esquece_a_palavra_de_quem_acabou_de_pedir(monkeypatch):
 
     assert esquecidos == [], (
         "o controle perdeu o canal para SI MESMO — é o defeito de 10/09/2026, e "
-        f"ele apaga o pedido dela 49 ms depois de ela o fazer (esquecidos={esquecidos})"
+        f"ele apaga o pedido 49 ms depois de feito (esquecidos={esquecidos})"
     )
     assert daemon.acendeu == [], "e a luz dele não pode ser apagada tampouco"
 
