@@ -117,7 +117,7 @@ def test_a_linha_de_troca_diz_que_a_curta_e_curta_e_a_que_inteira_se_prende(repo
 def test_o_validador_le_a_curta_de_csv_presa_a_inteira_da_celula(repo: Path) -> None:
     """A curta que aponta para a linha sem o símbolo prometido reprova; a certa e a solta, não.
 
-    A do ``r4`` é do `outro.py`, nomeado entre a inteira e ela: não se prende ao `alvo.py` (a
+    A do ``r4`` é do `outro.py`, nomeado entre a inteira e a curta: não se prende ao `alvo.py` (a
     mordida é o ``ancora_da_curta`` sem o laço do nome do meio, e o `:98` vira queixa)."""
     corpo = (
         f"r1,{END}:3 (`VALOR`) e :6 (`segunda`),`:6` (`segunda`),z\n"

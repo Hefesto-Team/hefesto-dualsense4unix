@@ -1,4 +1,4 @@
-"""A conta de fatias POR ADAPTADOR, com nome de jogador — e o que ela recusa dizer."""
+"""A conta de fatias POR ADAPTADOR, com nome de jogador — e o que a conta recusa dizer."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -88,7 +88,7 @@ def test_dois_adaptadores_nao_se_misturam() -> None:
 
 
 def test_o_controle_no_cabo_nao_ocupa_fatia_de_ninguem() -> None:
-    """Controle negativo medido nesta bancada em 22/08: no fio não há rádio."""
+    """Controle negativo medido neste ensaio em 22/08: no fio não há rádio."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1, transport="usb"), _controle(P2, 2)],
         **_ensaio({P2: HUB_A}),
@@ -287,7 +287,7 @@ def test_o_plano_nao_carrega_palavra_de_culpa() -> None:
         if palavra in texto.lower()
     ]
     assert not achados, (
-        "a conta passou a ligar ocupação a qualidade, e a bancada não "
+        "a conta passou a ligar ocupação a qualidade, e o ensaio não "
         "sustenta essa causa:\n  " + "\n  ".join(achados)
     )
 

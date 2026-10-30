@@ -100,7 +100,7 @@ def test_sem_lampada_nenhuma_a_fila_decide() -> None:
 
 
 def test_a_lampada_menor_que_chega_leva_o_posto() -> None:
-    """A troca que ela pede na tela continua valendo: a lâmpada 1 nova senta."""
+    """A troca pedida na tela continua valendo: a lâmpada 1 nova senta."""
     mesa = _Mesa({UM: 2, DOIS: 1}, {})
     chaves = [_chave(UM), _chave(DOIS)]
     ctl = _backend(chaves, mesa)
@@ -161,7 +161,7 @@ def _no_tique(ctl: PyDualSenseController, reg: ControllerIdentityRegistry) -> No
 @pytest.mark.usefixtures("config_isolado")
 @pytest.mark.parametrize("quantos", [2, 3, 4])
 def test_quem_volta_depois_do_prazo_e_a_carta_dele_ja_no_hotplug(quantos: int) -> None:
-    """A carta 1 sai, o prazo passa, ela volta: a carta não muda quando a lâmpada acende.
+    """A carta 1 sai, o prazo passa, o controle volta: a carta não muda quando a lâmpada acende.
 
     MORDIDA: tire a ``_mesa_que_vai_sentar`` de ``_cartas_locked`` e, no
     hotplug, a carta põe quem voltou depois das acesas (o 2 vira o 1), e um

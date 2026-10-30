@@ -19,7 +19,7 @@ da janela repintou a barra 20 vezes e a altura do miolo ficou nos mesmos número
 candidatos reproduziu aqui, então NÃO há cura inventada: esta régua fica como teto (a rajada não
 passa de uma mudança de altura do miolo) e como prova de que o instrumento sabe acusar.
 O que faltou é o gesto real de maximizar/restaurar num compositor de verdade, que num X sem
-gerenciador não existe: fica para a bancada (D8).
+gerenciador não existe: fica para o ensaio (D8).
 
 MORDIDA: `test_o_instrumento_acusa_a_barra_que_solta_a_altura` troca o repinte por um que MUDA
 a altura da janela, de verdade, a cada chamada — e o contador tem de sair do zero. Sem essa
@@ -51,7 +51,7 @@ PAGINA = "09-sistema.html"
 
 pytestmark = pytest.mark.skipif(
     shutil.which("xvfb-run") is None,
-    reason="sem `xvfb-run` a janela com barra nasceria na tela dela",
+    reason="sem `xvfb-run` a janela com barra nasceria na tela de quem usa",
 )
 
 _AJUDANTE = r"""

@@ -86,7 +86,7 @@ def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA)
-    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    assert arq.exists(), f"o ensaio não tem {PAGINA} — rode `python3 aba05.py`"
     return arq.read_text(encoding="utf-8")
 
 
@@ -157,7 +157,7 @@ def test_a_barra_de_motor_grava_um_lado_so(lado: str, campo: str, outro: str) ->
     assert kw.get(campo) == 50, (
         f"o lado {lado!r} gravou {kw!r}, e ele é o campo {campo!r}")
     assert outro not in kw, (
-        f"o gesto mandou também o {outro!r} — a barra que ela NÃO arrastou tem "
+        f"o gesto mandou também o {outro!r} — a barra que NÃO foi arrastada tem "
         f"de ficar intacta, e é o contrato do método")
     assert kw.get("uniq") == UNIQ, (
         "o gesto gravou sem endereço — sem `uniq` o método cai no primário, e a "
@@ -192,7 +192,7 @@ def test_a_barra_de_motor_recusa_o_clique_sem_lado() -> None:
 def test_a_barra_le_de_volta_o_mapa_do_daemon(a05) -> None:
     """O que o `state_full` publica é o que a barra desenha.
 
-    Sem esta metade a aba desenha a barra onde ela ESTAVA, não onde ela está: o
+    Sem esta metade a aba desenha a barra onde a barra ESTAVA, não onde está: o
     gesto grava, o perfil muda, e o cursor fica onde o mockup o pôs. A fonte é
     `state_full.rumble_motores`, que a ONDA1-D2 publicou a partir do MESMO mapa
     que `apply_game_rumble` multiplica.
@@ -241,7 +241,7 @@ def test_o_desenho_tem_as_duas_barras_de_motor(ensaio: str) -> None:
     parte, sem um único `data-campo`, e as duas barras do P3 e do P4 não
     existiam — o `barra-e`/`barra-d` que o pacote emite para os quatro lugares
     chegava sem ter onde pousar. Num lugar vazio a barra é `display:none` pela
-    folha, então ela não recebe clique; ela existe para o instante em que o
+    folha, então não recebe clique; existe para o instante em que o
     controle chega, sem regerar HTML nenhum.
 
     MORDIDA: em `aba05._coluna`, troque `_barra_de_motor(...)` pelo `_barra(...)`
@@ -250,7 +250,7 @@ def test_o_desenho_tem_as_duas_barras_de_motor(ensaio: str) -> None:
     from hefesto_dualsense4unix.interface import aba05
     lugares = len(aba05.MESA)
     assert ensaio.count('data-controle="p') == lugares, (
-        f"a bancada não tem os {lugares} lugares — a régua viraria vácuo")
+        f"o ensaio não tem os {lugares} lugares — a régua viraria vácuo")
     barras = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', ensaio)
               if 'data-papel="motor"' in t]
     assert len(barras) == 2 * lugares, (
@@ -289,11 +289,11 @@ def test_o_endereco_velho_do_motor_continua_sendo_emitido(a05) -> None:
 def test_a_faixa_de_estado_nao_existe_mais_no_desenho(ensaio: str) -> None:
     """Nem a célula, nem o rótulo da coluna de rótulos, nem a faixa da grade.
 
-    **DECISÃO, 05/09/2026, verbatim:** *"pq temos uma linha de estado se o
-    estado em vibração sempre vai ser o jogo mandando os input pro controle e a
-    gnt aumentando eles ou diminuindo? remove ela não faz sentido"*.
+    **DECISÃO, 05/09/2026:** a linha de estado sai, porque em vibração o
+    estado é sempre o jogo mandando os comandos ao controle, e quem usa só
+    aumenta ou diminui.
 
-    **ELA TEM RAZÃO MEDIDA pelo caminho que ela usa**, e é por isso que esta
+    **A DECISÃO TEM RAZÃO MEDIDA pelo caminho de uso**, e é por isso que esta
     régua guarda a remoção em vez de a lamentar. A faixa tinha três estados
     (`estado_da_trava`) e os dois "travada" precisam de `rumble_active` armado.
     Os DOIS gestos desta aba terminam em `rumble_passthrough(True)` —
@@ -313,7 +313,7 @@ def test_a_faixa_de_estado_nao_existe_mais_no_desenho(ensaio: str) -> None:
     for morto in ('data-campo="trava"', '<span class="sec-rot">Estado'):
         assert morto not in ensaio, (
             f"{morto!r} voltou ao desenho da aba 05 — a faixa de estado saiu em "
-            f"05/09/2026 por decisão dela")
+            f"05/09/2026 por decisão do produto")
 
 
 def test_a_grade_da_vibracao_tem_sete_faixas(ensaio: str) -> None:
@@ -336,13 +336,13 @@ def test_o_pacote_nao_emite_mais_o_campo_da_trava() -> None:
 
 
 def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
-    """A camada de produto da trava saiu junto — ela era desta aba e de mais
+    """A camada de produto da trava saiu junto — era desta aba e de mais
     nenhuma.
 
     **A MEDIÇÃO NÃO É DESTE TESTE**, e é o que torna a remoção segura: assim que
     a faixa saiu, o `portao_a_casa_sabe_e_o_produto_nao_faz` reprovou nomeando
     `estado_da_trava` e `html_da_trava` como *promessas públicas sem chamador em
-    produção*. A janela estável nunca as chamou — ela tem a sua própria linha
+    produção*. A janela estável nunca as chamou — tem a sua própria linha
     (`app/actions/rumble_actions._update_rumble_state_label`), com as suas
     próprias palavras —, e o `SOLTAR_A_TRAVA` mandava clicar no "Parar nesta
     coluna", que só existe no HTML.
@@ -355,7 +355,7 @@ def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
         assert not hasattr(_tela, morta), (
             f"`{morta}` voltou a `app/telas/vibracao.py`. As cinco nasceram em "
             f"04/09/2026 para a faixa de estado da aba 05, que saiu em 05/09 "
-            f"por decisão dela — sem ela, não há quem as chame no produto.")
+            f"por decisão de produto — sem a camada, não há quem as chame no produto.")
 
 
 def test_a_linha_de_mesa_nao_existe_mais() -> None:
@@ -366,7 +366,7 @@ def test_a_linha_de_mesa_nao_existe_mais() -> None:
     econômico na aba sistema todos vão pra vibração manual. o resto é
     desnecessário e só polui e deixa difícil entender"*.
 
-    ELA TEM RAZÃO MEDIDA, e é por isso que esta régua guarda a remoção em vez de
+    A DECISÃO TEM RAZÃO MEDIDA, e é por isso que esta régua guarda a remoção em vez de
     a lamentar: a economia de bateria JÁ tem dono — o Perfil de Bateria da aba
     09 grava `orcamento.teto`, e `core.rumble._effective_mult` aplica
     `min(modo escolhido, teto)`, nunca produto (`_sob_o_teto`). O perfil
@@ -392,7 +392,7 @@ def test_o_desenho_nao_tem_linha_de_mesa_nem_o_auto(ensaio: str) -> None:
                   'data-papel="forca-mesa"'):
         assert morto not in ensaio, (
             f"{morto!r} voltou ao desenho da aba 05 — a linha de mesa saiu em "
-            f"05/09/2026 por decisão dela")
+            f"05/09/2026 por decisão do produto")
     assert 'data-forca="auto"' not in ensaio, (
         "o botão `Auto` voltou à aba da vibração. Ele nunca pôs peça nenhuma em "
         "Auto — o esquema o recusa por unidade, e o clique significava `limpa o "
@@ -430,7 +430,7 @@ def test_a_forca_do_ensaio_e_so_o_trilho(ensaio: str) -> None:
 def test_a_coluna_sem_ajuste_proprio_mostra_a_forca_que_herdou() -> None:
     """A coluna que herda mostra no trilho a força geral — sem apagar a tela. 17/09, e 20/10.
 
-    Até 20/10/2026 ela acendia o degrau herdado com a marca `degrau-herdado`. A «Força» virou o
+    Até 20/10/2026 a coluna acendia o degrau herdado com a marca `degrau-herdado`. A «Força» virou o
     trilho de 0 a 200% sem botões (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-
     PS5-01): o que fica é o número da força em vigor no cursor, e nenhum degrau na pintura.
     """
@@ -442,7 +442,7 @@ def test_a_coluna_sem_ajuste_proprio_mostra_a_forca_que_herdou() -> None:
     col = next(iter(carga["colunas"].values()))
     geral = str(round(RUMBLE_POLICY_MULT["balanceado"] * 100))
     assert col["mult-pos"] == col["mult"] == geral, (
-        f"a coluna pôs o cursor em {col['mult-pos']!r} — sem ajuste próprio ela HERDA a "
+        f"a coluna pôs o cursor em {col['mult-pos']!r} — sem ajuste próprio a coluna HERDA a "
         f"força geral, e herdar não é motivo para apagar o trilho")
     assert "degrau" not in col and "degrau-herdado" not in col, (
         "o degrau voltou à pintura, e a Força não tem mais botões")
@@ -452,22 +452,22 @@ def test_a_coluna_sem_ajuste_proprio_mostra_a_forca_que_herdou() -> None:
 
 
 def test_a_nota_do_testar_mora_na_dica(ensaio: str) -> None:
-    """Ela volta da tela para o `?` do "Testar agora" — e aparece UMA vez.
+    """A nota volta da tela para o `?` do "Testar agora" — e aparece UMA vez.
 
-    **05-Q2 dela, 05/09/2026: _"As duas na dica."_** Ela leu as quatro opções
+    **05-Q2, 05/09/2026: as duas na dica.** Das quatro opções
     — as duas na dica, só a nota do Testar, a do Automático quando valer, as
-    duas na tela — e escolheu a primeira. Até 05/09 o produto fazia a segunda,
-    e aquilo estava escrito como *"decisão [02] dela, 04/09/2026"* em quatro
+    duas na tela — a escolhida foi a primeira. Até 05/09 o produto fazia a segunda,
+    e aquilo estava escrito como decisão [02] de 04/09/2026 em quatro
     lugares: a fonte real era a `ONDA2-05-VIBRACAO-01`, que decidiu no lugar
-    dela. **A palavra de produto vence a atribuição.**
+    do produto. **A decisão de produto vence a atribuição.**
 
     O QUE NÃO MUDOU, e é a metade da razão de 04/09 que não caducou: a frase é
     LIDA do `gui/main.glade` (`DICA_DOS_VALORES_QUE_PASSAM`), nunca redigitada.
-    Esta régua a compara com o que o glade diz AGORA, e por isso ela não
+    Esta régua a compara com o que o glade diz AGORA, e por isso não
     sobrevive a uma segunda cópia do texto.
 
-    O ENDEREÇO É A CÉLULA DO RÓTULO, não a página: perguntar `frase in bancada`
-    daria verde com ela de volta na linha embaixo da grade.
+    O ENDEREÇO É A CÉLULA DO RÓTULO, não a página: perguntar `frase in ensaio`
+    daria verde com a nota de volta na linha embaixo da grade.
 
     MORDIDA: em `aba05.MIOLO`, devolva a linha
     `<div class="vib-nota">{DICA_DOS_VALORES_QUE_PASSAM}</div>` depois da
@@ -483,15 +483,15 @@ def test_a_nota_do_testar_mora_na_dica(ensaio: str) -> None:
         'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
         "onde a dica morar")
     assert aba05.DICA_DOS_VALORES_QUE_PASSAM in dica.group(1), (
-        'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 dela é '
+        'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 é '
         '*"As duas na dica"*')
     assert 'class="vib-nota"' not in ensaio, (
-        "a linha permanente embaixo da grade voltou — ela saiu na 05-Q2, e a "
+        "a linha permanente embaixo da grade voltou — saiu na 05-Q2, e a "
         "classe sem regra de CSS seria um dado morto na página")
     assert ensaio.count(aba05.DICA_DOS_VALORES_QUE_PASSAM) == 1, (
         "a nota do Testar aparece duas vezes na mesma tela — o `?` e a linha")
     assert "Espera 5 segundos" not in ensaio, (
-        "a dica dos 5 s do Auto voltou ao desenho — o botão que ela explicava "
+        "a dica dos 5 s do Auto voltou ao desenho — o botão que a dica explicava "
         "saiu em 05/09/2026")
 
 
@@ -500,17 +500,17 @@ def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(
     """A gravação aconteceu: o canal é o de SUCESSO, não o da recusa.
 
     Enquanto só existia o canal da recusa, um clique que deu certo pousava uma
-    tarja LARANJA de 30 s no cartão dela — que ensina que o botão falha. A
+    tarja LARANJA de 30 s no cartão do controle — que ensina que o botão falha. A
     ONDA0-P construiu o canal de sucesso (verde, 6 s), e um gesto que devolva
     `{"recado": …}` manda a própria frase.
 
-    **ELA DEIXOU DE LER O TEXTO DO CÓDIGO — 06/09/2026.** O que estava aqui era
+    **A RÉGUA DEIXOU DE LER O TEXTO DO CÓDIGO — 06/09/2026.** O que estava aqui era
     `inspect.getsource(_aplicar_a_forca)` procurando as strings
     `'return {"recado":'` e `"raise RuntimeError"`: a régua **mediu o FONTE**, e
     não o que o gesto devolve. É a forma de defeito que esta casa pagou onze vezes em
-    26/08 — *a régua digita o que devia LER* — e ela reprovaria qualquer
+    26/08 — *a régua digita o que devia LER* — e reprovaria qualquer
     mudança de forma, inclusive a desta sprint, sem que nada na tela tivesse
-    piorado. Agora ela CHAMA o gesto com o disco dublê e olha o que volta.
+    piorado. Agora a régua CHAMA o gesto com o disco dublê e olha o que volta.
 
     MORDIDA: em `_aplicar_a_forca`, troque o `return {"recado": …}` do primeiro
     ramo por `raise RuntimeError(…)` — este caso reprova pelo `pytest.raises`,
@@ -558,8 +558,8 @@ def test_a_frase_da_faixa_nomeia_a_coluna(a05, disco) -> None:
                                   {"uniq": OUTRO, "valor": "50"}, PonteFiel())
     frase = str((volta or {}).get("recado") or "")
     assert frase.startswith(f"P2{a05.SEPARADOR_DA_FAIXA}"), (
-        f"a linha da faixa não nomeia a coluna: {frase!r}. Ela fala das quatro "
-        f"colunas ao mesmo tempo, e o `P2` é o único endereço que ela tem")
+        f"a linha da faixa não nomeia a coluna: {frase!r}. A linha fala das quatro "
+        f"colunas ao mesmo tempo, e o `P2` é o único endereço que tem")
     assert "P1" not in frase, (
         f"a frase do P2 nomeou outra coluna: {frase!r}")
 
@@ -591,7 +591,7 @@ def test_a_frase_da_faixa_cabe_numa_linha(a05) -> None:
         assert len(pronta) <= a05.TETO_DA_LINHA_DA_FAIXA, (
             f"{nome} tem {len(pronta)} caracteres na linha e o teto medido é "
             f"{a05.TETO_DA_LINHA_DA_FAIXA} — a faixa corta a segunda linha, e "
-            f"uma explicação que ela não consegue ler ocupa o lugar sem "
+            f"uma explicação que quem usa não consegue ler ocupa o lugar sem "
             f"informar:\n  {pronta}")
 
 
@@ -611,8 +611,8 @@ def test_a_frase_da_faixa_e_recibo_e_nao_alerta(a05, ensaio: str) -> None:
 def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
     """O clique que NÃO contradiz o botão continua sem frase nenhuma.
 
-    **É ESTA QUE GUARDA A 03-Q4 DO USUÁRIO**, 05/09/2026: *"nada muda de lugar e
-    nenhuma palavra nova entra na tela"*. Sem ela, alguém acrescenta um
+    **É ESTA QUE GUARDA A 03-Q4**, 05/09/2026: nada muda de lugar e
+    nenhuma palavra nova entra na tela. Sem esta régua, alguém acrescenta um
     `"Pronto."` na faixa e a decisão morre calada — o "deu certo" seco é a
     piscada verde no campo, não uma linha de texto.
 
@@ -631,7 +631,7 @@ def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
     assert gravados, "o clique não gravou — o silêncio seria sobre nada"
     assert volta is None, (
         f"o clique que deu certo e não tem notícia falou na tela: {volta!r}. "
-        f"A 03-Q4 dela é a piscada verde, sem palavra nova")
+        f"A 03-Q4 é a piscada verde, sem palavra nova")
 
 
 def test_a_faixa_nao_declara_lugar_de_recado(ensaio: str) -> None:
@@ -639,7 +639,7 @@ def test_a_faixa_nao_declara_lugar_de_recado(ensaio: str) -> None:
     faixa = ensaio.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
     assert "data-hef-recado" not in faixa, (
         "a faixa voltou a declarar lugar de recado — o canal saiu da tela em "
-        "13/09/2026, e a 05-Q4 dela diz *nada se mexe dentro das colunas*")
+        "13/09/2026, e a 05-Q4 diz *nada se mexe dentro das colunas*")
 
 
 def test_nenhuma_linha_da_faixa_diz_mesa(a05) -> None:
@@ -654,5 +654,5 @@ def test_nenhuma_linha_da_faixa_diz_mesa(a05) -> None:
                 a05.FRASE_DO_QUE_A_COLUNA_MOSTRA % a05._nome_do_degrau("furrufu")]
     for frase in da_faixa:
         assert "mesa" not in frase.lower(), (
-            f"a palavra que ela baniu da tela voltou a uma linha da faixa: "
+            f"a palavra banida da tela voltou a uma linha da faixa: "
             f"{frase!r}")

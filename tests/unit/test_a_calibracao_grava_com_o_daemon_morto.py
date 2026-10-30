@@ -27,7 +27,7 @@ class _PonteDoServico:
     """A ponte do piloto, só com o `machine_declare` — com a resposta escolhida.
 
     Mesma forma de `ipc_bridge.machine_declare`: `(ok, motivo)`, e `(False,
-    None)` quando o serviço não respondeu. O dublê não é mais frouxo que ela:
+    None)` quando o serviço não respondeu. O dublê não é mais frouxo que a ponte:
     ele devolve exatamente a dupla que a ponte devolve em cada caso.
     """
 
@@ -48,7 +48,7 @@ def _a08() -> Any:
 
 def test_a_08_grava_a_sala_com_o_servico_parado(tmp_path: Path) -> None:
     caminho = caminho_da_maquina()
-    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
+    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp do ensaio"
     assert not caminho.exists()
 
     ponte = _PonteDoServico((False, None))
@@ -57,7 +57,7 @@ def test_a_08_grava_a_sala_com_o_servico_parado(tmp_path: Path) -> None:
     a08.sala_visada(None, {"modo": "com_gente"}, ponte)
 
     assert ponte.pedidos, "o serviço tem de ser perguntado PRIMEIRO — o disco é o plano B"
-    assert caminho.exists(), "a resposta dela não chegou ao disco com o serviço parado"
+    assert caminho.exists(), "a resposta não chegou ao disco com o serviço parado"
     gravado = carregar_maquina()
     assert gravado.mesa.altura_da_antena == "acima"
     assert gravado.mesa.linha_de_visada == "com_gente", (

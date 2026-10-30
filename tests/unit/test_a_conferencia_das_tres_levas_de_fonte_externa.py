@@ -50,7 +50,7 @@ class TestOsBotoesDeTrasDoEdge:
 
     O mapa afirmou que os quatro botões de trás do DualSense Edge moram em
     `payload[10]` (o `buttons[3]` do driver, que ninguém lê), citando a
-    `pydualsense`. A `pydualsense` diz o contrário: ela os lê de `states[10]`,
+    `pydualsense`. A `pydualsense` diz o contrário: lê os dois de `states[10]`,
     que é `payload[9]` — o `buttons[2]`, o MESMO byte do PS, do touchpad e do
     mudo. O documento da própria leva acertou; a célula do mapa, não.
     """

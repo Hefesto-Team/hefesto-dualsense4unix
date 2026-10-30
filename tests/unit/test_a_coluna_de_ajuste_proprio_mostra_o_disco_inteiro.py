@@ -165,7 +165,7 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_do_usuario(
               for nome, on in celulas if on]
     if secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO:
         assert acesas == [], (
-            f"`{secao}` espera a sessão dela e acendeu {acesas} na página "
+            f"`{secao}` espera a sessão de aprovação e acendeu {acesas} na página "
             f"publicada — a distribuição casou a célula com uma vizinha")
         return
     assert acesas == [(linha, secao)], (
@@ -233,7 +233,7 @@ def test_a_linha_sem_controle_nao_mostra_glifo_nenhum(
         assert not linha["fora"], (
             f"a linha {n} TEM controle e foi marcada como vazia")
         assert set(linha["glifos"]) == {"visible"}, (
-            f"a linha {n} tem controle e os glifos dela sumiram: "
+            f"a linha {n} tem controle e os glifos da linha sumiram: "
             f"{linha['glifos']}")
 
     for n, linha in enumerate(visto[len(MESA):], start=len(MESA) + 1):
@@ -247,4 +247,4 @@ def test_a_linha_sem_controle_nao_mostra_glifo_nenhum(
         assert set(linha["glifos"]) == {"hidden"}, (
             f"a linha {n} não tem controle e ainda desenha os glifos: "
             f"{linha['glifos']}. É a tela mostrando um aparelho que não está "
-            f"aqui — a queixa dela de 05/09.")
+            f"aqui — a queixa de 05/09.")

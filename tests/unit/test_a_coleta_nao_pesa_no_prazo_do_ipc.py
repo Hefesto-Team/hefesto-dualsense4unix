@@ -4,7 +4,7 @@ O servidor e o cliente do IPC dos testes moram no processo da suíte, e o
 cliente espera 1 s pelo `daemon.state_full`. Sem o congelamento do
 `tests/conftest.py`, cada passada cheia varria ~1 milhão de objetos da coleta,
 levava 1,2 a 2,3 s no runner do CI e reprovava o teste de contrato que caísse
-nela (14/10/2026). Uma biblioteca já congela algumas centenas por conta
+na varredura (14/10/2026). Uma biblioteca já congela algumas centenas por conta
 própria, e por isso a régua compara com o que a varredura ainda alcança.
 """
 

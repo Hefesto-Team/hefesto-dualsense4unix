@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.interface import janela as ponte_da_tela
 
 
 def _barra_de_verdade() -> tuple[Any, dict[str, Any]]:
-    """A barra do produto, montada pelo dono dela. Nenhuma janela é aberta."""
+    """A barra do produto, montada pelo dono. Nenhuma janela é aberta."""
     return ponte_da_tela.montar_a_barra("Hefesto", "aba CONTROLES", lambda *_: None)
 
 
@@ -41,7 +41,7 @@ def test_os_dois_estados_do_maximizar_sao_icones_diferentes() -> None:
         "o ícone não muda com o estado — é o defeito que a 4ª volta deixou"
     )
     assert restaurada[1] != maximizada[1], (
-        "a dica promete a mesma coisa nos dois estados, e num deles ela mente"
+        "a dica promete a mesma coisa nos dois estados, e num deles mente"
     )
 
 
@@ -194,7 +194,7 @@ def _quem_escuta() -> Any:
 
 
 def test_so_o_foco_mudando_nao_agenda_redesenho(monkeypatch: Any) -> None:
-    """Ela alterna entre o terminal e a janela o dia todo — e isso não é geometria."""
+    """Alternar entre o terminal e a janela o dia todo não é geometria."""
     agendados: list[int] = []
     monkeypatch.setattr(
         ponte_da_tela.GLib,

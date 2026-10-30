@@ -37,7 +37,7 @@ def _no(raiz: Path, uniq: str, capacity: str, status: str) -> Path:
 
 @pytest.fixture()
 def sysfs_com_quatro_nos(tmp_path: Path) -> Path:
-    """O sysfs medido na bancada: quatro nós, dois deles nossos."""
+    """O sysfs medido no ensaio: quatro nós, dois deles nossos."""
     raiz = tmp_path / "power_supply"
     raiz.mkdir()
     _no(raiz, _VPAD_1, "100", "Charging")
@@ -72,7 +72,7 @@ class TestAVarreduraDevolveDoisENaoQuatro:
     em produção.
 
     Mordida: tire o filtro do vpad e o diário abre QUATRO curvas em vez de
-    duas, duas delas cravadas em 100% ``Charging`` para sempre.
+    duas, duas cravadas em 100% ``Charging`` para sempre.
     """
 
     def test_quatro_nos_no_disco_dois_controles_na_resposta(
@@ -202,6 +202,6 @@ class TestOEspelhoNaoDiverge:
             )
 
     def test_todo_jogador_da_mesa_cai_na_mesma_faixa(self) -> None:
-        """Quatro DualSense é a bancada; os quatro vpads têm de ser pegos."""
+        """Quatro DualSense é o ensaio; os quatro vpads têm de ser pegos."""
         for jogador in (1, 2, 3, 4):
             assert e_no_do_vpad(player_mac(jogador))

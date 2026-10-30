@@ -1,17 +1,15 @@
 """O estado de carga atravessa do byte até o payload — BATERIA-PARADA-01 (B1).
 
-A QUEIXA, e ela estava certa (26/08/2026):
-
-    *"sinto que o percentual de bateria do controle inclusive nunca é
-    atualizado enquanto o controle tá conectado seja por cabo seja por bt"*
+A QUEIXA estava certa (26/08/2026): o percentual de bateria parecia nunca
+atualizar com o controle conectado, fosse pelo cabo, fosse pelo rádio.
 
 O que estava congelado não era o número — era a AUSÊNCIA da outra metade. Três
-leituras do daemon vivo com sete segundos entre elas devolveram
+leituras do daemon vivo com sete segundos entre as três devolveram
 ``bat=100 status=None`` nas três, com o kernel dizendo ``Full`` num controle e
 ``Charging`` no outro no mesmo instante. **O produto lia o NÚMERO e jogava fora
 o ESTADO**, e "100%" mudo é indistinguível de uma barra travada.
 
-Reconferido na bancada em 06/09/2026, e o aparelho concorda com o enunciado: o
+Reconferido no ensaio em 06/09/2026, e o aparelho concorda com o enunciado: o
 nó ``status`` do DualSense do usuário em ``/sys/class/power_supply/`` dizia ``Full``
 com ``capacity=100`` enquanto o produto não tinha campo nenhum para carregar
 essa palavra. (O endereço do controle do usuário não entra aqui: em ``tests/`` só
@@ -42,7 +40,7 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 
 
 def _handle(nibble: int | None, level: int) -> Any:
-    """Um handle da pydualsense como o ``report_thread`` dela o deixa."""
+    """Um handle da pydualsense como o ``report_thread`` o deixa."""
     battery = SimpleNamespace(Level=level)
     if nibble is not None:
         battery.State = nibble

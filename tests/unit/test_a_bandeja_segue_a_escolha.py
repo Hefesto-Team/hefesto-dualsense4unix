@@ -2,14 +2,14 @@
 (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01,
 S3 e S4).
 
-O pedido de 16/10: *«a tray do app não aparece mais na interface. Adiciona um botão (…) pra
-permitir voltar a usar o app na tray desativar ou ativar»*. <!-- noqa-acento: citação literal -->
+O pedido de 16/10: o ícone na bandeja tinha sumido, e um botão passa a ativar ou
+desativar o uso do app na bandeja.
 
 O que se mede, num lar de mentira (`XDG_CONFIG_HOME` e `XDG_RUNTIME_DIR` em `tmp_path`):
 
 1. a pílula «Ícone na bandeja» grava `X-GNOME-Autostart-enabled` e faz valer agora: ligar sobe a
    bandeja (o `Popen` é um dublê que sobe um `sleep` com «tray» na linha), desligar a encerra
-   pelo PID dela;
+   pelo PID do serviço;
 2. `garantir_a_bandeja` não sobe uma segunda com a viva de pé, e sobe com o PID morto;
 3. o «Retomar» e o «Ativar» da Sistema e o «start» da bandeja chamam `garantir_a_bandeja`;
 4. o bloco do autostart do `install.sh`, rodado de verdade, preserva o `false` e o ensaio diz.

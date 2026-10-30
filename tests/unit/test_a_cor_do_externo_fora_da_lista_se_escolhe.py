@@ -3,12 +3,12 @@
 A docstring de ``ControleDeclarado`` prometia um «campo "Outra"» de texto livre que a tela nunca
 teve (a janela GTK que o tinha saiu no ``f1dd18fd8``). A decisão de produto de 08/10/2026
 é a do caminho que não tira nada: a tela continua com a lista dos nomes de
-fábrica, e as duas docstrings passam a dizer o que ela faz. O que se mede aqui, com o
+fábrica, e as duas docstrings passam a dizer o que a tela faz. O que se mede aqui, com o
 ``maquina.json`` dublado no ponto em que a mesa o lê:
 
 * o que a docstring afirma que a tela oferece, a tela oferece (lido da saída do gerador);
 * a cor escrita à mão no arquivo APARECE na lista, não pinta nada e não derruba o cartão;
-* escolher um nome da lista no lugar dela grava o nome, e a lista em branco apaga.
+* escolher um nome da lista no lugar da cor escrita grava o nome, e a lista em branco apaga.
 
 TUDO É DE MENTIRA: faixa forjada ``aa:bb:cc``, nada chega a daemon. Mordida: devolver o
 «campo "Outra"» à docstring reprova a primeira; tirar o ``atual`` da lista, a segunda.
@@ -56,7 +56,7 @@ def _opcoes_da_cor(html: str) -> list[tuple[str, bool]]:
 def test_o_que_a_docstring_diz_que_a_tela_oferece_a_tela_oferece(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Se a docstring de `ControleDeclarado` ou a de `a_declaracao_do_externo` nomeia um campo
-    «Outra», a lista da Conexões tem de oferecer uma opção com esse rótulo; hoje ela só tem os
+    «Outra», a lista da Conexões tem de oferecer uma opção com esse rótulo; hoje a lista só tem os
     nomes de fábrica, e as duas docstrings deixaram de prometer o texto livre."""
     _o_usuario(monkeypatch)
     html = conexoes.declaracao_do_externo_para_editar(_externo())

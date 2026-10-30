@@ -35,7 +35,7 @@ def test_a_chave_posta_e_lida_e_a_retirada_some(tmp_path):
 
 
 def test_a_chave_diz_quando_e_como_desfazer(tmp_path):
-    """O dia em que ela topar com este arquivo sem lembrar do contexto, a"""
+    """O dia em que alguém topar com este arquivo sem lembrar do contexto, a"""
     _por_a_chave(tmp_path)
     motivo = chave.motivo_do_desligamento(tmp_path)
     assert "desligado em" in motivo
@@ -125,7 +125,7 @@ def test_a_regua_do_popen_morde_o_argv_do_fallback_antigo():
 
 
 def test_o_script_da_chave_usa_os_nomes_de_unit_que_existem():
-    """Conferidos na bancada em 29/08 com `systemctl --user"""
+    """Conferidos no ensaio em 29/08 com `systemctl --user"""
     script = (RAIZ / "scripts" / "hefesto-chave.sh").read_text(encoding="utf-8")
     for unit in (
         "hefesto-dualsense4unix.service",

@@ -17,7 +17,7 @@ Mordidas (cada uma arrancada, vista reprovar e devolvida; as vistas estão no re
   :func:`test_o_registro_cabe_em_1212x700`;
 * a mudança de ``aviso`` para ``falha`` do exame SAIU em 21/10/2026
   (O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01): o aviso fica
-  laranja; a régua dela é `test_o_status_diz_o_que_esta_bem_em_verde.py`;
+  laranja; a régua do tom é `test_o_status_diz_o_que_esta_bem_em_verde.py`;
 * trocar a posição do Steam Input ou do Áudio no exame:
   :func:`test_as_posicoes_do_exame_sao_as_do_dono`;
 * tirar o predicado ``sem_dono_do_rumble`` da linha do gamepad:

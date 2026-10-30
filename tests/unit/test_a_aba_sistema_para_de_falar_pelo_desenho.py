@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """A RÉGUA DA ABA SISTEMA: onde o pacote cala, quem fala é o MOCKUP.
 
-POR QUE ELA EXISTE, e é o defeito medido em 02/09/2026 com a janela aberta e o
+POR QUE A RÉGUA EXISTE, e é o defeito medido em 02/09/2026 com a janela aberta e o
 daemon vivo: o `pacote()` desta aba DELEGA para `interface/sistema.pacote`, que
 sabe responder os doze endereços da página. Só que o `Leitura` que o alimentava
 preenchia **três dos sete campos**. Os outros quatro chegavam `None`, a camada
 do produto devolvia o traço honesto — e o traço nunca chegava à tela, porque o
 pacote não emitia aqueles endereços.
 
-**Uma página que não é pintada não fica em branco: ela fica com o desenho.** O
+**Uma página que não é pintada não fica em branco: fica com o desenho.** O
 que a janela mostrava, contra o que a máquina do usuário respondia:
 
     Como ele enxerga a janela: —   Sem ver nada agora (sem_foco_x)
@@ -19,7 +19,7 @@ que a janela mostrava, contra o que a máquina do usuário respondia:
      em 2 jogos — desliguei"       (e mais cinco, nenhuma igual às do desenho)
     [23:41:02] daemon pronto …     não há registro nenhum sendo lido
 
-AS QUATRO COISAS QUE ELA COBRA, e cada uma é um jeito diferente de recair:
+AS QUATRO COISAS QUE A RÉGUA COBRA, e cada uma é um jeito diferente de recair:
 
 1. **O `Leitura` chega COMPLETO.** Um campo que volta a ficar `None` por
    esquecimento é silencioso — nada levanta, e a tela volta a mostrar o desenho.
@@ -27,7 +27,7 @@ AS QUATRO COISAS QUE ELA COBRA, e cada uma é um jeito diferente de recair:
    a chave `perfil` (o rótulo do perfil de BATERIA) apagou o `perfil` do
    cabeçalho — o perfil de JOGO, que é das dez abas.
 3. **O exame vem do DADO.** A lista sai do `storm_report`. A contagem que
-   ficava em cima dela saiu da página por pedido (25/09/2026, 22h13), e o
+   ficava em cima da contagem saiu da página por pedido (25/09/2026, 22h13), e o
    endereço saiu junto.
 4. **O painel de registro não pisca.** O que um gesto "Ver …" escreve fica; a
    pintura do tique seguinte repete o mesmo texto em vez de apagá-lo.
@@ -147,7 +147,7 @@ def test_a_faixa_lenta_nao_repete_o_subprocesso_a_cada_tique(a09, ctx):
     finally:
         a09._autostart = original
     assert len(chamadas) == 1, (
-        f"a faixa lenta leu {len(chamadas)} vezes em três tiques — ela existe "
+        f"a faixa lenta leu {len(chamadas)} vezes em três tiques — a faixa existe "
         f"para ler UMA vez a cada {a09.LENTO_S}s.")
 
 
@@ -235,7 +235,7 @@ def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
 
     Pedido, 25/09/2026, 22h13: *«Remove esse 8 linhas deixa o espaço
     vazio»*. Um endereço que o pacote escreve sem lugar na página é escritor
-    calado; um lugar na página sem quem o escreva mostra o «8» da bancada.
+    calado; um lugar na página sem quem o escreva mostra o «8» do ensaio.
 
     **A MORDIDA:** devolva `fora["exame-contagem"] = …` no `pacote` e este
     teste reprova pelo pacote; devolva a chave em `aba_sistema.ENDERECOS` e
@@ -262,7 +262,7 @@ def test_a_lista_do_exame_tem_uma_linha_por_achado(a09):
 
 
 def test_a_lista_do_exame_escapa_a_frase_do_produto(a09):
-    """A frase vem do `doctor`, não daqui. Um `<` dela não pode virar tag."""
+    """A frase vem do `doctor`, não daqui. Um `<` da frase não pode virar tag."""
     exame = {"linhas": [{"selo": "OK", "cls": "ok", "g": "✓",
                          "txt": '<b>x</b> & "y"'}],
              "vazio": ""}
@@ -286,13 +286,13 @@ def test_o_endereco_do_exame_existe_no_ensaio(a09, ctx):
 
     doc = onde.pagina("09-sistema.html").read_text(encoding="utf-8")
     assert 'data-campo="exame-lista"' in doc, (
-        "o gerador parou de marcar `exame-lista` na bancada — o exame volta "
-        "a mostrar os oito achados de bancada do `aba09.py`.")
+        "o gerador parou de marcar `exame-lista` no ensaio — o exame volta "
+        "a mostrar os oito achados de ensaio do `aba09.py`.")
     assert re.search(r'data-campo="exame-lista"[^>]*data-hef-alvo="html"', doc), (
         "o endereço do exame perdeu o alvo `html`: a pintura passaria a "
-        "escrever a marcação como TEXTO na tela dela.")
+        "escrever a marcação como TEXTO na tela de quem usa.")
     assert 'data-campo="exame-contagem"' not in doc, (
-        "a contagem do exame voltou à bancada — ela saiu por pedido dela "
+        "a contagem do exame voltou ao ensaio — a contagem saiu por pedido "
         "(25/09/2026, 22h13), e o pacote não a escreve mais.")
     p = a09.pacote(ctx)
     assert p["exame-lista"].startswith('<div class="col-lista">'), p["exame-lista"][:80]
@@ -308,9 +308,9 @@ def test_o_repouso_do_painel_e_o_da_camada_e_nao_o_do_mockup(a09, ctx):
     **FATO SUBSTITUÍDO — 03/09/2026.** Este teste exigia o travessão
     (`p[REGISTRO] == "—"`), e o travessão era o repouso de então: a nota de
     `aba_sistema.SEM_FONTE` dizia que não havia método de IPC que devolvesse o
-    registro. **A GTK nunca teve um traço aqui:** o `Gtk.TextView` dela fica
+    registro. **A GTK nunca teve um traço aqui:** o `Gtk.TextView` da GTK fica
     sempre com a saída de `systemctl status <unit>` (`daemon_actions.py:1577` e
-    `:2549`). O repouso passou a ser o mesmo dela, mais a identidade de fábrica
+    `:2549`). O repouso passou a ser o mesmo da GTK, mais a identidade de fábrica
     (decisão 10). O que este teste guarda continua sendo o mesmo: **o repouso é
     do PRODUTO, e nunca as quatro linhas inventadas do mockup.**
 
@@ -352,4 +352,4 @@ def test_nenhuma_faixa_desta_aba_volta_ao_1fr_cru():
             f"isso estoura 27px (`.bloco2`) e 253px (`.saude-cols`).")
     assert '(".status3", ".avancadas")' in fonte, (
         "as duas faixas internas saíram da lista da régua 5 do gerador — foi "
-        "por estarem de fora dela que o `1fr` cru sobreviveu ali.")
+        "por estarem de fora da regra que o `1fr` cru sobreviveu ali.")

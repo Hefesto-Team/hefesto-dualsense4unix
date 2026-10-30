@@ -94,7 +94,7 @@ def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _rumble_do_disco() -> ControllerRumbleOverride | None:
-    dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
+    dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {}).get(BRANCO)
     return dele.rumble if dele is not None else None
 
 
@@ -175,10 +175,10 @@ class TestAPintura:
 
     def test_a_escolha_do_perfil_chega_a_lista_do_controle(self, perfis: Path) -> None:
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 efeito_haptico="guarda", efeito_imersao="pancada_do_lado"))}))
-        coluna = next(iter(a05.pacote(_ctx("Bancada"))["colunas"].values()))
+        coluna = next(iter(a05.pacote(_ctx("Ensaio"))["colunas"].values()))
         assert coluna["haptico-escolha"] == "guarda"
         assert coluna["haptico-dica"] == formas.DICAS["guarda"]
         assert coluna["imersao-escolha"] == "pancada_do_lado"
@@ -200,11 +200,11 @@ class TestOGesto:
     def test_escolher_grava_o_campo_no_perfil_da_peca(
             self, perfis: Path, campo: str, valor: str) -> None:
         """Do clique ao disco. MORDIDA: tirar a gravação do gesto reprova aqui."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", GESTOS[campo])
         assert gesto is not None
-        gesto(_ctx("Bancada"), {"uniq": UNIQ, "valor": valor}, ponte)
+        gesto(_ctx("Ensaio"), {"uniq": UNIQ, "valor": valor}, ponte)
         assert ponte.pedidos == [{campo: valor, "uniq": UNIQ}]
         rumble = _rumble_do_disco()
         assert rumble is not None and getattr(rumble, campo) == valor
@@ -217,26 +217,26 @@ class TestOGesto:
         Prova da D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA.
         """
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 **{campo: "sem_efeito"}, motor_forte_pct=50))}))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", GESTOS[campo])
         assert gesto is not None
-        gesto(_ctx("Bancada"), {"uniq": UNIQ, "valor": "do_estilo"}, ponte)
+        gesto(_ctx("Ensaio"), {"uniq": UNIQ, "valor": "do_estilo"}, ponte)
         rumble = _rumble_do_disco()
         assert rumble is not None, "apagar a escolha levou a barra junto"
         assert campo not in rumble.model_fields_set and rumble.motor_forte_pct == 50
 
     def test_uma_lista_nao_mexe_na_outra_nem_nas_barras(self, perfis: Path) -> None:
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 efeito_haptico="aparo", haptica=75))}))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "efeito-imersao")
         assert gesto is not None
-        gesto(_ctx("Bancada"), {"uniq": UNIQ, "valor": "onda"}, ponte)
+        gesto(_ctx("Ensaio"), {"uniq": UNIQ, "valor": "onda"}, ponte)
         rumble = _rumble_do_disco()
         assert rumble is not None
         assert (rumble.efeito_haptico, rumble.efeito_imersao, rumble.haptica) == (
@@ -246,12 +246,12 @@ class TestOGesto:
     def test_valor_fora_da_lista_e_recusado_sem_pedir_ao_daemon(
             self, perfis: Path, campo: str) -> None:
         """MORDIDA: arrancar a checagem do gesto manda o lixo ao daemon, que ainda recusa."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", GESTOS[campo])
         assert gesto is not None
         with pytest.raises(RuntimeError, match="Escolha uma das opções"):
-            gesto(_ctx("Bancada"), {"uniq": UNIQ, "valor": "estrondo"}, ponte)
+            gesto(_ctx("Ensaio"), {"uniq": UNIQ, "valor": "estrondo"}, ponte)
         assert ponte.pedidos == []
         assert _rumble_do_disco() is None
 
@@ -259,8 +259,8 @@ class TestOGesto:
     def test_o_daemon_recusa_a_chave_que_nao_existe_listando_as_que_existem(
             self, perfis: Path, campo: str) -> None:
         """A borda do daemon vale por si, para quem chega sem passar pela tela."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         with pytest.raises(ValueError, match=campo):
             asyncio.run(h._handle_rumble_motores_set({"uniq": BRANCO, campo: "estrondo"}))
         assert _rumble_do_disco() is None
@@ -307,15 +307,15 @@ class TestOTestar:
         Prova da D-1610-O-TESTAR-TOCA-O-PADRAO-ESCOLHIDO.
         """
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 efeito_imersao="onda"))}))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "testar")
         parar = pacotes.gesto_da_pagina("05-vibracao.html", "parar")
         assert gesto is not None and parar is not None
         onda = padroes.PADROES["onda"]
-        gesto(_ctx("Bancada"), {"uniq": UNIQ}, ponte)
+        gesto(_ctx("Ensaio"), {"uniq": UNIQ}, ponte)
 
         def sets() -> list[tuple[Any, ...]]:
             return [c[1] for c in list(ponte.chamadas) if c[0] == "rumble_set_checked"]
@@ -326,7 +326,7 @@ class TestOTestar:
         assert sets()[:len(onda)] == [(d, e) for _ms, e, d in onda], (
             f"o Testar não tocou a Onda do perfil: {sets()}")
         assert UNIQ in a05.em_teste(), "o padrão fica no ar até o «Parar»"
-        parar(_ctx("Bancada"), {"uniq": UNIQ}, ponte)
+        parar(_ctx("Ensaio"), {"uniq": UNIQ}, ponte)
         assert UNIQ not in a05.em_teste()
 
     @pytest.mark.parametrize("escolha", ["do_estilo", "sem_efeito", None])
@@ -334,12 +334,12 @@ class TestOTestar:
             self, perfis: Path, escolha: str | None) -> None:
         rumble = ControllerRumbleOverride(efeito_imersao=escolha) if escolha else None
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=rumble)} if rumble else None))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "testar")
         assert gesto is not None
-        gesto(_ctx("Bancada"), {"uniq": UNIQ}, ponte)
+        gesto(_ctx("Ensaio"), {"uniq": UNIQ}, ponte)
         sets = [c for c in ponte.chamadas if c[0] == "rumble_set_checked"]
         assert len(sets) == 1, "o sustentado é UM pedido, que fica até o Parar"
         assert UNIQ in a05.em_teste()

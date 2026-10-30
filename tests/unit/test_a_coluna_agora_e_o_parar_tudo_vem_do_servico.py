@@ -2,7 +2,7 @@
 
 O manifesto declara `agora` (nivel, perfil, aparelhos) e `parar_tudo`; a janela os desenha do último
 `acessorios.estado` da extensão, que o serviço guarda por extensão e entrega por `mods.agora`, e o
-«Parar tudo» publica `acessorios.gesto {gesto: "para", mod}` por `mods.parar_tudo`, só para ela.
+«Parar tudo» publica `acessorios.gesto {gesto: "para", mod}` por `mods.parar_tudo`, só para a dona.
 
 MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
 

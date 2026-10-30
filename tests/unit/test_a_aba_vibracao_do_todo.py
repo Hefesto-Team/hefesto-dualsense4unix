@@ -25,7 +25,7 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 
 def _doc() -> str:
-    """O desenho sem o estilo e sem o script: o que a pessoa vê e o que ela aciona."""
+    """O desenho sem o estilo e sem o script: o que a pessoa vê e o que aciona."""
     bruto = MOCKUP.read_text(encoding="utf-8")
     return re.sub(r"<(style|script)>.*?</\1>", "", bruto, flags=re.S)
 

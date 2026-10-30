@@ -2,7 +2,7 @@
 
 O medidor de `CONFIG-04` já sabia pintar a fatia de áudio: a conta de ocupação (hoje
 `plano_por_adaptador`) recebe `com_ponte_de_mic` desde o dia em que nasceu, e o
-`test_medidor_de_radio` prova a aritmética dela. O que faltava era o
+`test_medidor_de_radio` prova a aritmética do medidor. O que faltava era o
 **parâmetro estar ligado à verdade**: o `daemon.state_full` não publicava de
 QUAIS controles a ponte estava de pé, e a seção "A mesa" lia uma chave que não
 existia. Com quatro controles no rádio e uma ponte viva, a barra pintava áudio
@@ -16,10 +16,10 @@ A CADEIA TEM TRÊS ELOS, e este arquivo guarda os três
    bloco, e a única das três que fala de CONTROLE em vez de PROCESSO;
 3. a seção "A mesa" lê aquela chave e a repassa a `plano_por_adaptador`.
 
-A LINHA DE BASE, e ela é o controle negativo desta entrega
+A LINHA DE BASE é o controle negativo desta entrega
 -----------------------------------------------------------
 
-Medida na bancada às 22h de 22/08/2026 e refeita às 00h de 23/08, com a
+Medida no ensaio às 22h de 22/08/2026 e refeita às 00h de 23/08, com a
 régua do PRODUTO (`daemon.state_full` mais `ocupacao_por_adaptador`): quatro
 DualSense no rádio, distribuídos 1/2/1 em três adaptadores, e a coluna de áudio
 em **zero nos três** — não porque o rádio recusou, mas porque ninguém pediu.
@@ -71,7 +71,7 @@ MESA = {UM: ADAPTADOR_A, DOIS: ADAPTADOR_B, TRES: ADAPTADOR_B, QUATRO: ADAPTADOR
 
 
 def _ensaio() -> tuple[Any, Any]:
-    """Um `/sys/class/hidraw` de mentira com os quatro nós da bancada."""
+    """Um `/sys/class/hidraw` de mentira com os quatro nós do ensaio."""
     nos = {
         f"hidraw{indice}": {"HID_UNIQ": uniq, "HID_PHYS": adaptador}
         for indice, (uniq, adaptador) in enumerate(MESA.items())
@@ -257,7 +257,7 @@ class TestABarraSeMexe:
     def test_com_os_quatro_microfones_o_pior_radio_continua_abaixo_do_teto(
         self,
     ) -> None:
-        """A pergunta que ela vai fazer ao ver o interruptor: *cabe em quatro?*"""
+        """A pergunta que quem usa vai fazer ao ver o interruptor: *cabe em quatro?*"""
         listar, ler = _ensaio()
         ocupacoes = ocupacao_por_adaptador(
             _controles(), com_ponte_de_mic=list(MESA), listar=listar, ler=ler
@@ -279,7 +279,7 @@ class TestABarraSeMexe:
         assert ocupacoes[ADAPTADOR_C].slots_audio == 0.0
 
     def test_dois_adaptadores_do_mesmo_oui_nao_se_fundem(self) -> None:
-        """O aviso de produto que a bancada deu em 22/08."""
+        """O aviso de produto que o ensaio deu em 22/08."""
         assert ADAPTADOR_A[:8] == ADAPTADOR_B[:8] == ADAPTADOR_C[:8], (
             "o cenário perdeu o OUI comum, que é a coisa toda que ele mede"
         )

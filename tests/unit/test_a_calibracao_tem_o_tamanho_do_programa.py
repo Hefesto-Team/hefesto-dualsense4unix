@@ -26,10 +26,10 @@ PISO = (1212, 809)
 
 ESTREITA = (940, PISO[1])
 
-VISTAS = {"piso": PISO, "estreita": ESTREITA, "dela": olhar.VISTA_DO_USUARIO,
+VISTAS = {"piso": PISO, "estreita": ESTREITA, "do_usuario": olhar.VISTA_DO_USUARIO,
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
-SEM_ROLAGEM_VERTICAL = ("piso", "estreita", "dela")
+SEM_ROLAGEM_VERTICAL = ("piso", "estreita", "do_usuario")
 
 
 def _controle(i: int, via: str) -> dict[str, Any]:
@@ -121,7 +121,7 @@ def medido(calibrar_mod: Any) -> dict[str, dict[str, Any]]:
     aba = onde.pagina(ABA_VIZINHA)
     calibrar = onde.pagina(PAGINA)
     assert aba.exists() and calibrar.exists(), (
-        f"a bancada não tem {ABA_VIZINHA} e {PAGINA} — o caminho mudou? Uma "
+        f"o ensaio não tem {ABA_VIZINHA} e {PAGINA} — o caminho mudou? Uma "
         f"régua de tamanho que não abre página passa sobre tudo.")
     esconde = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
 
@@ -166,8 +166,8 @@ def test_a_calibracao_tem_a_caixa_da_aba(medido: dict[str, Any], vista: str,
               if abs(cal[k] - aba[k]) > FOLGA}
     assert not difere, (
         f"na vista {vista} ({mesa}), a caixa da Calibrar difere da da "
-        f"{ABA_VIZINHA} em {difere} (calibrar, aba). É a queixa dela: *'altura "
-        f"e largura de layout inferior'*. O tamanho mora no `topo.html` e a "
+        f"{ABA_VIZINHA} em {difere} (calibrar, aba). É a queixa de uso: altura "
+        f"e largura diferentes no layout de baixo. O tamanho mora no `topo.html` e a "
         f"Calibrar o lê por `calibrar.moldura()`.")
 
 
@@ -202,7 +202,7 @@ def test_nada_da_calibracao_transborda_na_horizontal(medido: dict[str, Any], vis
 @pytest.mark.parametrize("vista", VISTAS)
 def test_o_inverter_fica_empilhado_na_largura_inteira_do_cartao(
         medido: dict[str, Any], vista: str) -> None:
-    """Opção b dela (08/10/2026): os dois botões, um embaixo do outro, em qualquer largura."""
+    """Opção b (08/10/2026): os dois botões, um embaixo do outro, em qualquer largura."""
     for mesa in ("um-no-cabo", "um-no-radio", "quatro"):
         grupos = medido[vista][mesa]["inverter"]
         assert len(grupos) == len(MESAS[mesa]), (vista, mesa, grupos)
@@ -235,7 +235,7 @@ def test_o_rodape_desce_para_o_fim_da_caixa(medido: dict[str, Any], vista: str) 
 
 
 def test_o_ensaio_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
-    """O arquivo da bancada é o que o gerador escreve hoje — ninguém esqueceu de regerar."""
+    """O arquivo do ensaio é o que o gerador escreve hoje — ninguém esqueceu de regerar."""
     import monta
     import onde
 
@@ -246,7 +246,7 @@ def test_o_ensaio_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
 
 
 def test_o_tamanho_vem_do_topo(calibrar_mod: Any) -> None:
-    """Mude o teto da `.janela` no esqueleto e a Calibrar vai junto; tire-o e ela PARA."""
+    """Mude o teto da `.janela` no esqueleto e a Calibrar vai junto; tire-o e a régua PARA."""
     import monta
 
     assert "min(100%,1600px)" in monta.TOPO, (

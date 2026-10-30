@@ -211,17 +211,17 @@ def test_remover_outro_perfil_continua_perguntando_e_apagando(
 
 
 def test_a_aba_nao_le_mais_o_active_profile_cru() -> None:
-    """A régua mecânica, e ela é o que impede a volta pela porta dos fundos.
+    """A régua mecânica é o que impede a volta pela porta dos fundos.
 
     Cinco lugares liam ``ctx.state.get("active_profile")`` e todos passaram a
     chamar ``_valendo``. Uma cura em quatro dos cinco deixaria a aba respondendo
     diferente conforme o botão — que é pior que o defeito original.
 
-    **ELA MEDE TEXTO, E TEXTO SE REESCREVE** — achado de auditoria, 02/09/2026.
+    **A RÉGUA MEDE TEXTO, E TEXTO SE REESCREVE** — achado de auditoria, 02/09/2026.
     A reversão dos quatro sítios que não tinham régua de ATO, escrita por
     concatenação (``state.get("act" "ive_profile")``), deixou 1080 testes
     verdes: qualquer f-string, ``.format()`` ou constante de módulo produz o
-    mesmo efeito. Ela FICA — pega o descuido, que é o caso comum — mas quem
+    mesmo efeito. A régua FICA — pega o descuido, que é o caso comum — mas quem
     segura o defeito é a régua de comportamento, e agora existe para os cinco:
 
         ativar               este arquivo, ``test_ativar_recusa_o_mesmo_perfil…``

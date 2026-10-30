@@ -11,11 +11,11 @@ para todo perfil**: a régua do mockup acusava 16 dos 17 campos daquela aba.
 **AS DUAS COISAS QUE ESTE ARQUIVO GUARDA:**
 
 1. **O DESENHO DECLARA O ALVO.** ``aba10.linha_do_controle`` escreve
-   ``data-hef-alvo="classe"`` em toda célula, e a bancada sai com ele.
+   ``data-hef-alvo="classe"`` em toda célula, e o ensaio sai com ele.
 
 2. **O PACOTE MANDA O ESTADO, não o nome da seção.** A emissão era
    ``[s for g in guarda for s in (g.get("secoes") or [])]`` — iterar um ``dict``
-   devolve as CHAVES. Com dois controles na mesa ela dava
+   devolve as CHAVES. Com dois controles na mesa a emissão dava
    ``["leds","triggers","rumble","speaker"] * 2`` para QUALQUER perfil, e como
    ``ligado("leds")`` é verdadeiro isso teria acendido tudo para todo mundo. O
    defeito viveu escondido atrás de ``NAO_PINTAVEIS``: uma emissão que ninguém
@@ -34,7 +34,7 @@ Ele nasceu em ``ae2219a2`` (02/09, 23h38) e ``eb22662a`` (03/09, 02h56) mudou
 por baixo dele TRÊS contratos sem tocá-lo. **Nove dos dez testes pararam de
 rodar** — não de reprovar: ``ValueError``, ``AttributeError`` e um ``20 == 16``:
 
-- ``aba10.SECOES`` virou um PAR (era ``campo, pecas, dica``); a decisão nº4 dela
+- ``aba10.SECOES`` virou um PAR (era ``campo, pecas, dica``); a decisão nº4
   tirou as oito dicas das células;
 - ``_a_pagina_acende_a_secao_por_classe`` foi REMOVIDA, com razão — ver a nota
   datada na seção 4;
@@ -45,7 +45,7 @@ um dia**: ``ControllerOverrides`` ganhou o campo ``mic`` às 02h50 e o produto
 continuou emitindo quatro chaves, porque ``SECOES_POR_CONTROLE`` era digitada.
 As três asserções cravadas foram trocadas por leituras do gerador — a régua que
 digita o que devia LER é a forma de instrumento falso que esta casa já pagou
-onze vezes, e aqui ela cobrou duas: reprovava a melhora e morria com ela.
+onze vezes, e aqui cobrou duas: reprovava a melhora e morria com a régua.
 """
 
 from __future__ import annotations
@@ -135,8 +135,8 @@ def test_o_ensaio_declara_o_alvo_classe_em_toda_celula() -> None:
 
     O NÚMERO É LIDO, E NÃO DIGITADO — 03/09/2026. Esta régua se chamava
     ``…_nas_dezesseis_celulas`` e cravava ``== 16``. No dia em que a decisão
-    nº20 dela pôs a quinta coluna, ela passou a reprovar a MELHORA: *"a tabela
-    tem 20 células, e o desenho dela são quatro linhas de quatro seções"* — a
+    nº20 pôs a quinta coluna, a régua passou a reprovar a MELHORA: a tabela
+    tem 20 células, e o desenho tem quatro linhas de quatro seções — a
     régua digitando o que devia LER, que é a forma de instrumento falso que esta
     casa já pagou onze vezes. O número sai agora do gerador.
 
@@ -154,7 +154,7 @@ def test_o_ensaio_declara_o_alvo_classe_em_toda_celula() -> None:
     sem_alvo = [c for c in celulas if 'data-hef-alvo="classe"' not in c]
     assert not sem_alvo, (
         f"{len(sem_alvo)} de {esperado} células de `guarda.secao` não declaram "
-        "`data-hef-alvo=\"classe\"` — o pintor escreveria TEXTO nelas e o "
+        "`data-hef-alvo=\"classe\"` — o pintor escreveria TEXTO nessas células e o "
         "`el.textContent` apagaria o glifo SVG de dentro")
 
 
@@ -172,7 +172,7 @@ def test_o_glifo_aceso_e_o_apagado_sao_o_mesmo_desenho() -> None:
     ]
     assert not diferentes, (
         f"o glifo aceso e o apagado divergem em {diferentes} — a classe deixou "
-        "de ser a diferença inteira, e pintar só ela mostraria a forma errada")
+        "de ser a diferença inteira, e pintar só a classe mostraria a forma errada")
 
 
 def test_o_produtor_e_o_desenho_dizem_as_secoes_na_mesma_ordem() -> None:

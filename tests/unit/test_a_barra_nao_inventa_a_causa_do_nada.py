@@ -22,7 +22,7 @@ Até 25/08/2026 a barra respondia a **todas as cinco** com a mesma frase:
 *"guardado; em Modo Nativo quem manda no controle é o jogo"*, que é a verdade.
 
 A ironia é o ponto: a frente que introduziu esta frase existia para tirar da
-tela a palavra "aplicado" sem prova. Ela trocou uma afirmação sem prova por
+tela a palavra "aplicado" sem prova. A cura trocou uma afirmação sem prova por
 outra, na direção oposta — e é o padrão A3 desta casa, *o conserto que
 reintroduz o defeito que cura*.
 
@@ -113,7 +113,7 @@ class TestABarraNaoInventaACausaDoNada:
             f"a barra disse {frase!r} com um controle CONECTADO e o Modo "
             "Nativo desligado. Este é um dos três caminhos que a janela não "
             "enxerga (índice ausente, exceção na leitura, alvo sem uniq) — e "
-            "sobre o que ela não sabe, ela não afirma."
+            "sobre o que a barra não sabe, a barra não afirma."
         )
         assert "Modo Nativo" not in frase, (
             f"a barra disse {frase!r} com o Modo Nativo DESLIGADO — inventar "

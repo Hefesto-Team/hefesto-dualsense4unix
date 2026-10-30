@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OS BOTÕES DA JANELA DO LADO DO SISTEMA — queixa 2 dela, e a premissa que caiu."""
+"""OS BOTÕES DA JANELA DO LADO DO SISTEMA — queixa 2, e a premissa que caiu."""
 from __future__ import annotations
 
 import pathlib
@@ -56,8 +56,8 @@ def test_a_barra_da_janela_fica_do_lado_do_sistema(gtk, sessao) -> None:
     agora = gtk.get_property("gtk-decoration-layout")
     assert agora == A_DIREITA, (
         f"a janela continuaria com os botões à esquerda ({agora!r}) — que é a "
-        f"queixa 2 dela, palavra por palavra: 'a barra de navegação fechar, "
-        f"maximizar diminuir não é a mesma do sistema'.")
+        f"queixa 2: a barra da janela com fechar, maximizar e minimizar "
+        f"diferente da do sistema.")
 
 
 def test_a_janela_do_produto_ja_nasce_com_a_barra_certa(gtk, sessao) -> None:
@@ -102,14 +102,14 @@ def test_nada_e_escrito_na_configuracao_do_usuario(gtk, sessao) -> None:
         for dentro in [d for c in corpo for d in ast.walk(c)]:
             if isinstance(dentro, ast.Constant) and isinstance(dentro.value, str):
                 assert "settings.ini" not in dentro.value, (
-                    f"{no.name} carrega o caminho do `settings.ini` dela")
+                    f"{no.name} carrega o caminho do `settings.ini` de quem usa")
             if isinstance(dentro, ast.Call):
                 alvo = getattr(dentro.func, "id", None) or getattr(
                     dentro.func, "attr", "")
                 assert alvo not in ("open", "write_text", "write_bytes"), (
-                    f"{no.name} escreve em arquivo ({alvo}) — a decisão dela é "
-                    f"`1-a`, e ela diz com todas as letras: nenhuma linha na "
-                    f"configuração dela.")
+                    f"{no.name} escreve em arquivo ({alvo}) — a decisão é "
+                    f"`1-a`, e diz com todas as letras: nenhuma linha na "
+                    f"configuração de quem usa.")
 
 
 def test_a_segunda_chamada_nao_reescreve(gtk, sessao) -> None:
@@ -135,4 +135,4 @@ def test_perguntar_a_sessao_devolve_a_resposta_errada(gtk) -> None:
                     f"({dito!r}) — não há divergência a registrar")
     assert theme.barra_que_o_sistema_usa() != dito, (
         f"o produto passou a SEGUIR a sessão, e a sessão diz {dito!r} — botões "
-        f"à esquerda. É a queixa 2 dela reaberta pela cura que devia fechá-la.")
+        f"à esquerda. É a queixa 2 reaberta pela cura que devia fechá-la.")

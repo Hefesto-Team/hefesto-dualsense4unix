@@ -121,7 +121,7 @@ def _mesa(
 
 
 def _ativar(ctl: bp.PyDualSenseController) -> None:
-    """A sequência de `ProfileManager.activate`, na ordem de produto."""
+    """A sequência de `ProfileManager.activate`, na ordem do produto."""
     ctl.apply_output_defaults(OutputSpec(led=COR_GLOBAL, player_leds=NUMERO_GLOBAL))
     ctl.set_led_scales(None)
     ctl.reset_profile_overrides({})

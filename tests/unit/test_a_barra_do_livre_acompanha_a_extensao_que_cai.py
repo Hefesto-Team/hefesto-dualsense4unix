@@ -217,10 +217,10 @@ def test_a_barra_apaga_e_acende_no_navegador_sem_perder_o_arrasto(
 
 def test_a_dica_da_barra_apagada_se_ve_com_a_camada_da_janela(
         janela: Any, ctx: Any, lar: Any, tmp_path: pathlib.Path) -> None:  # noqa: F811
-    """A dica é o porquê do cinza; aberta pela camada da janela, ela tem de se ver na Experimental.
+    """A dica é o porquê do cinza; aberta pela camada da janela, tem de se ver na Experimental.
 
     25/10/2026: a folha da Experimental trazia a regra da caixa do desenho sem o ``.da-base``
-    (``#hef-dica{opacity:0}``), e ela pegava a caixa da camada da janela, que nunca veste
+    (``#hef-dica{opacity:0}``), e a regra pegava a caixa da camada da janela, que nunca veste
     ``visivel``: no produto, toda dica da aba abria invisível. A medida é a opacidade lida no
     WebKit, com a folha da aba e a camada da janela de verdade.
     """

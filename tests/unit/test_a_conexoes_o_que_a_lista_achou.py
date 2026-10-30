@@ -22,7 +22,7 @@ TECLADO = "aa:bb:cc:00:00:7e"
 
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
+    """A trava e o diário numa pasta de teste — nunca os de verdade, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(caminho))
@@ -152,7 +152,7 @@ def test_um_adaptador_so_nao_tem_para_onde_mover(mesa: Any, relogio: rm.Relogio)
 
 def test_o_teclado_se_move_sem_desenho_de_dualsense(mesa: Any, relogio: rm.Relogio) -> None:
     """O passo c3: mover um TECLADO. Ele também desliga e sai da sala antes, e
-    o movimento publica a classe dele — é por ela que a tela sabe que não é um
+    o movimento publica a classe dele — é pela classe que a tela sabe que não é um
     DualSense, e não pede PS + Create (o resto do item 2 é da tela, abaixo)."""
     mundo, dono, central = mesa(1)
     mundo.pareado(SALA, TECLADO, classe=rm.CLASSE_DE_TECLADO)
@@ -173,7 +173,7 @@ def test_o_teclado_se_move_sem_desenho_de_dualsense(mesa: Any, relogio: rm.Relog
 def test_o_conectar_mostra_chegando_quem_volta_pelo_pareamento_antigo(
     mesa: Any, relogio: rm.Relogio, controles: int
 ) -> None:
-    """A foto 2 da lista dela: o «Conectar» procurando na Direita, e ela liga o"""
+    """A foto 2 da lista: o «Conectar» procurando na Direita, e quem usa liga o"""
     mundo, _dono, central = mesa(controles)
     do_usuario = QUATRO[controles - 1]
     mundo.desligar(do_usuario)
@@ -204,13 +204,13 @@ def test_o_conectar_ainda_pareia_quem_segura_ps_create(mesa: Any, relogio: rm.Re
 def test_o_nome_que_o_usuario_deu_vai_junto_no_mover(diario: Path, relogio: rm.Relogio) -> None:
     """O passo a2: *«O nome renomeado não aparece»*. O BlueZ guarda o ``Alias``
     POR OBJETO — um por adaptador —, e o mover criava um objeto novo com o nome
-    de fábrica. O nome dela vai junto. <!-- noqa-acento: citação literal -->
+    de fábrica. O nome dado vai junto.
 
     MORDIDA: tire o ``_dar_o_nome`` do :meth:`_parear_e_conferir` — o quarto
     fica com «DualSense Wireless Controller» e esta régua reprova.
     """
     mundo = rm.RadioDeMentira()
-    mundo.pareado(SALA, VERMELHO, nome="Vitória")
+    mundo.pareado(SALA, VERMELHO, nome="Vermelhinho")
     mundo.pareado(SALA, AZUL)
     dono = _dono(mundo)
     central = _central(dono, mundo, relogio)
@@ -219,8 +219,8 @@ def test_o_nome_que_o_usuario_deu_vai_junto_no_mover(diario: Path, relogio: rm.R
     feito = central.mover(VERMELHO, QUARTO)
 
     assert feito.estado == cr.CHEGOU
-    assert mundo.objeto(QUARTO, VERMELHO)["Alias"] == "Vitória"
-    assert feito.publicar()["nome"] == "Vitória"
+    assert mundo.objeto(QUARTO, VERMELHO)["Alias"] == "Vermelhinho"
+    assert feito.publicar()["nome"] == "Vermelhinho"
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(AZUL))
     azul = central.mover(AZUL, VARANDA)
     assert azul.nome == ""
@@ -244,7 +244,7 @@ def _plano(controles: list[dict[str, Any]], adaptadores: tuple[str, ...]) -> Any
 
 
 def test_quatro_num_adaptador_so_pedem_equilibrar_ate_dois_um_um() -> None:
-    """Os passos b4 e b5 dela: os quatro num adaptador, dois vazios ao lado, e"""
+    """Os passos b4 e b5: os quatro num adaptador, dois vazios ao lado, e"""
     tres = (SALA, QUARTO, VARANDA)
     mesa = [_no_ar(u, SALA) for u in QUATRO]
     primeira = _plano(mesa, tres)
@@ -302,7 +302,7 @@ def test_as_pontes_alem_do_limite_continuam_na_frente() -> None:
 
 
 def test_a_central_publica_a_proposta_de_equilibrar(mesa: Any, relogio: rm.Relogio) -> None:
-    """A proposta chega ao ``state_full["radio_central"]`` — é ela que acende a
+    """A proposta chega ao ``state_full["radio_central"]`` — é a proposta que acende a
     lâmpada e dá o que perguntar ao «Equilibrar» (o resto é da tela, abaixo)."""
     *_, central = mesa(4)
     publicado = central.publicar([_no_ar(u, SALA) for u in QUATRO])
@@ -406,7 +406,7 @@ def _linha(a08: Any, cena: dict[str, Any], quem: str) -> str:
 def test_a_lotacao_conta_as_pontes_e_nao_os_controles(
     a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int
 ) -> None:
-    """O item 4, MEDIDO: não é defeito de conta. A foto 3 dela mostra três"""
+    """O item 4, MEDIDO: não é defeito de conta. A foto 3 mostra três"""
     _montar(a08, monkeypatch)
     onde = {c: 1 for c in QUATRO[:quantos]}
     cena = _cena(a08, _estado(onde))
@@ -570,23 +570,23 @@ def test_o_nome_segue_o_controle_e_o_numero_segue_o_daemon(
 ) -> None:
     """O passo a2: *«O vermelho era P4, reconectou como P3, e a tela mostrava o"""
     aparelhos = (
-        _objeto(0, VERMELHO, nome="Vitória", conectado=True),
-        _objeto(2, VERMELHO, nome="André", conectado=False),
+        _objeto(0, VERMELHO, nome="Vermelhinho", conectado=True),
+        _objeto(2, VERMELHO, nome="Reserva", conectado=False),
     )
     _montar(a08, monkeypatch, aparelhos=aparelhos)
     estado = _estado({VERMELHO: 0, AZUL: 0})
     cena = _cena(a08, estado, jogadores={VERMELHO: 4, AZUL: 1, VERDE: 2, ROXO: 3})
     vermelho = next(a for a in cena["aparelhos"] if a["id"] == rm.uniq(VERMELHO))
-    assert a08.nome_na_conexoes(vermelho) == "Vitória ● Cosmic Red ● P4"
+    assert a08.nome_na_conexoes(vermelho) == "Vermelhinho ● Cosmic Red ● P4"
     linha = _linha(a08, cena, VERMELHO)
-    assert 'value="Vitória"' in linha and "● Cosmic Red ● P4" in linha
+    assert 'value="Vermelhinho"' in linha and "● Cosmic Red ● P4" in linha
 
     cena = _cena(a08, estado, jogadores={VERMELHO: 3, AZUL: 1, VERDE: 2, ROXO: 4})
     vermelho = next(a for a in cena["aparelhos"] if a["id"] == rm.uniq(VERMELHO))
-    assert a08.nome_na_conexoes(vermelho) == "Vitória ● Cosmic Red ● P3"
+    assert a08.nome_na_conexoes(vermelho) == "Vermelhinho ● Cosmic Red ● P3"
     azul = next(a for a in cena["aparelhos"] if a["id"] == rm.uniq(AZUL))
     assert a08.nome_na_conexoes(azul) == "Player 1 ● White ● P1"
-    assert "Vitória ● Cosmic Red ● P3" in a08.html_dos_moldes(cena)
+    assert "Vermelhinho ● Cosmic Red ● P3" in a08.html_dos_moldes(cena)
 
 
 def test_renomear_escreve_o_nome_em_todo_adaptador_que_conhece_o_controle(
@@ -594,16 +594,16 @@ def test_renomear_escreve_o_nome_em_todo_adaptador_que_conhece_o_controle(
 ) -> None:
     """O nome vai para TODOS os objetos do controle — senão o adaptador em que"""
     mundo = rm.RadioDeMentira()
-    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(SALA, VERMELHO, nome="Reserva")
     mundo.pareado(QUARTO, VERMELHO, host=False)
     dono = _dono(mundo)
     monkeypatch.setattr(bd, "dono", lambda: dono)
 
-    escrita = a08._alias_do_aparelho(VERMELHO.upper(), "Vitória")
+    escrita = a08._alias_do_aparelho(VERMELHO.upper(), "Vermelhinho")
 
     assert escrita.feita
-    assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Vitória"
-    assert mundo.objeto(QUARTO, VERMELHO)["Alias"] == "Vitória"
+    assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Vermelhinho"
+    assert mundo.objeto(QUARTO, VERMELHO)["Alias"] == "Vermelhinho"
     dono.fechar()
 
 
@@ -626,7 +626,7 @@ def test_quem_voltou_pelo_pareamento_antigo_pisca_no_adaptador_em_que_chegou(
 def test_com_um_adaptador_so_a_caixa_nasce_e_fica_aberta(
     a08: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """*«Essa área se só tiver um conector ela tá sempre aberta.»*"""
+    """Com um conector só, a área fica sempre aberta."""
     _montar(a08, monkeypatch, adaptadores=1)
     cena = _cena(a08, _estado({VERMELHO: 0, AZUL: 0}))
     unico = cena["lugares"][0]
@@ -643,10 +643,10 @@ def test_com_um_adaptador_so_a_caixa_nasce_e_fica_aberta(
 def test_a_ordem_que_o_usuario_arrasta_fica_gravada(
     a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """*«segurar a área do conector e arrastar ela pra mudar de ordem entre
-    eles»*: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
+    """Segurar a área do conector e arrastar muda a ordem entre
+    eles: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
     dele, desde 28/09/2026 — antes era o ``gui_prefs``, pelo lugar), e a sala
-    nasce nela. <!-- noqa-acento: citação literal -->
+    nasce nessa ordem.
 
     MORDIDA: tire o ``_na_ordem_do_usuario`` do ``cena_do_radio`` — a sala volta à
     ordem do BlueZ e esta régua reprova.
@@ -672,13 +672,13 @@ def test_a_ordem_que_o_usuario_arrasta_fica_gravada(
 def test_a_ordem_de_antes_vale_ate_o_usuario_arrastar_de_novo(
     a08: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A ordem que ela arrastou antes de 28/09/2026 morava no ``gui_prefs``,
-    pela chave do LUGAR (A-ENTRADA-TEM-UM-REGISTRO-SO-01). Ela vale, traduzida
+    """A ordem arrastada antes de 28/09/2026 morava no ``gui_prefs``,
+    pela chave do LUGAR (A-ENTRADA-TEM-UM-REGISTRO-SO-01). Essa ordem vale, traduzida
     pelos adaptadores da tela, sem ninguém escrever na leitura; o arrastar
     seguinte a leva ao adaptador, pelo endereço, e a lista de lá sai.
 
     MORDIDA: tire o ``_a_ordem_de_antes`` do ``_na_ordem_do_usuario`` — a sala nasce
-    na ordem do BlueZ, e a arrumação dela se perde na atualização.
+    na ordem do BlueZ, e a arrumação de quem usa se perde na atualização.
     """
     from hefesto_dualsense4unix.app import gui_prefs
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina, ordem_dos_adaptadores
@@ -715,7 +715,7 @@ def test_a_caixa_unica_nao_tem_seta_e_as_varias_se_arrastam(
 def test_o_conectar_nasce_no_adaptador_de_menos_controles(
     a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int, adaptadores: int
 ) -> None:
-    """A foto 2 dela: o chip do «Procurando» nascia na DIREITA, a dos três"""
+    """A foto 2: o chip do «Procurando» nascia na DIREITA, a dos três"""
     _montar(a08, monkeypatch, adaptadores=adaptadores)
     for cheio in range(adaptadores):
         cena = _cena(a08, _estado({c: cheio for c in QUATRO[:quantos]}))
@@ -790,7 +790,7 @@ OUTRO_CONTROLE = "aa:bb:cc:00:00:8b"
 def test_o_teclado_de_baixo_consumo_se_move_como_teclado(
     mesa: Any, relogio: rm.Relogio, controles: int
 ) -> None:
-    """O «BT5.0 Keyboard» dela é de baixo consumo: sem ``Class``, com o ``Icon``
+    """O «BT5.0 Keyboard» de teste é de baixo consumo: sem ``Class``, com o ``Icon``
     que o BlueZ deriva da ``Appearance``, e com hidraw pelo rádio como todo HID.
     Ele se move como teclado — não vira controle, não espera o movimento de
     DualSense, e chega.
@@ -824,7 +824,7 @@ def test_o_teclado_de_baixo_consumo_se_move_como_teclado(
 def test_o_controle_que_o_daemon_nao_le_chega_pelo_hid_phys(
     mesa: Any, relogio: rm.Relogio, modalias: str, caminho: str
 ) -> None:
-    """O controle desconhecido da régua dela: é controle pela classe, e o daemon"""
+    """O controle desconhecido da régua: é controle pela classe, e o daemon"""
     mundo, dono, central = mesa(2)
     if caminho == "mover":
         mundo.pareado(SALA, OUTRO_CONTROLE, modalias=modalias)
@@ -883,7 +883,7 @@ def test_o_teclado_de_baixo_consumo_esperando_tem_o_desenho_do_teclado(
 def test_a_lampada_aparece_sem_o_usuario_abrir_caixa_nenhuma(
     a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int
 ) -> None:
-    """O passo b5 dela, pelo que ela VÊ: a lâmpada mora no corpo da caixa do"""
+    """O passo b5, pelo que quem usa VÊ: a lâmpada mora no corpo da caixa do"""
     from hefesto_dualsense4unix.integrations import plano_de_radio
 
     _montar(a08, monkeypatch)

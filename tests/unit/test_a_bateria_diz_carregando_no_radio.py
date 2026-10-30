@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """O ESTADO DE CARGA NÃO PERGUNTA POR ONDE O CONTROLE FALA — BATERIA-ICONE-01.
 
-**A DECISÃO, 06/09/2026, verbatim, e ela recusou as três opções que lhe
-foram oferecidas:**
-
-    *"icone mas no radio ele pode tá carregando
-     tambem."*  <!-- noqa-acento: fala do usuário, verbatim -->
+**A DECISÃO, 06/09/2026, recusou as três opções que foram oferecidas:**
+a forma é ícone, e no rádio o controle também pode estar carregando.
 
 São DUAS coisas numa frase, e as duas viram régua aqui:
 
@@ -17,9 +14,9 @@ São DUAS coisas numa frase, e as duas viram régua aqui:
    transporte diz por onde o controle CONVERSA, a carga diz por onde entra
    ENERGIA, e um DualSense falando por rádio pode estar num cabo de energia.
 
-**O QUE ESTA RÉGUA TRANCA, e é o motivo dela existir:** que ninguém, em nenhum
+**O QUE ESTA RÉGUA TRANCA, e é o motivo de a régua existir:** que ninguém, em nenhum
 degrau do caminho, infira "carregando" de "cabo" nem "na bateria" de "rádio".
-Ela anda o caminho inteiro com um controle **no rádio e carregando**:
+A régua anda o caminho inteiro com um controle **no rádio e carregando**:
 
     describe_controllers  →  carga_na_tela  →  pacote da aba 02  →  o HTML
 
@@ -28,8 +25,8 @@ propósito e **não existia no código** — o ``_detect_transport`` e o
 ``_read_battery_state_opt`` leem coisas diferentes, o ``ipc_handlers`` repassa o
 dicionário verbatim, e a ``pydualsense`` corrige o offset do rádio antes de ler
 o byte (``readInput``: ``states = inReport[1:]`` quando BT). O acoplamento
-estava na PROSA — nas opções oferecidas a ela. Esta régua é o que impede que ele
-desça da prosa para o código: hoje ela passa, e passa a reprovar no dia em que
+estava na PROSA — nas opções oferecidas. Esta régua é o que impede que ele
+desça da prosa para o código: hoje passa, e passa a reprovar no dia em que
 alguém escrever o ``if transport == "usb"``.
 
 AS MORDIDAS, e as quatro foram feitas antes de este arquivo ser commitado:
@@ -77,7 +74,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 
 
 def _handle(nibble: int, level: int, *, via: str) -> Any:
-    """Um handle da pydualsense como o ``report_thread`` dela o deixa."""
+    """Um handle da pydualsense como o ``report_thread`` o deixa."""
     return SimpleNamespace(
         battery=SimpleNamespace(Level=level, State=nibble),
         conType=SimpleNamespace(name=via),
@@ -184,7 +181,7 @@ def test_a_funcao_da_palavra_nao_tem_por_onde_receber_o_transporte() -> None:
     parametros = list(inspect.signature(carga_na_tela).parameters)
     assert parametros == ["estado"], (
         f"`carga_na_tela` passou a receber {parametros} — o estado de carga é "
-        f"independente do transporte (decisão dela, 06/09/2026)"
+        f"independente do transporte (decisão de 06/09/2026)"
     )
 
 
@@ -193,8 +190,8 @@ def test_o_card_do_radio_carregando_diz_o_icone() -> None:
     card = _card(_entrada(transport="bt", battery_state="carregando"))
     assert card["bateria-carga"] == "Carregando", (
         "um controle NO RÁDIO e carregando não anunciou o estado no card — é "
-        "exatamente a premissa que ela corrigiu: 'no radio ele pode tá "
-        "carregando tambem'"  # (noqa-acento)
+        "exatamente a premissa corrigida: no rádio o controle também pode "
+        "estar carregando"
     )
 
 
@@ -221,7 +218,7 @@ def _icones(doc: str) -> list[str]:
 def test_o_icone_tem_endereco_e_os_dois_alvos() -> None:
     """Dois elementos, um endereço só — a gramática do `giro-no-jogo`."""
     icones = _icones(_ensaio())
-    assert icones, "não achei o ícone de carga na bancada da aba Controles"
+    assert icones, "não achei o ícone de carga no ensaio da aba Controles"
     for icone in icones:
         assert icone.count('data-campo="bateria-carga"') == 2
         assert 'data-hef-atributo="title"' in icone
@@ -229,11 +226,11 @@ def test_o_icone_tem_endereco_e_os_dois_alvos() -> None:
 
 
 def test_o_icone_tem_nome_acessivel() -> None:
-    """A palavra vai no `title`, e é ela que um leitor de tela anuncia."""
+    """A palavra vai no `title`, e é o `title` que um leitor de tela anuncia."""
     doc = _ensaio()
     for palavra in (carga_na_tela("carregando"), carga_na_tela("cheio")):
         assert f'title="{palavra}"' in doc, (
-            f"o ícone de {palavra!r} ficou sem nome acessível na bancada"
+            f"o ícone de {palavra!r} ficou sem nome acessível no ensaio"
         )
 
 
@@ -249,7 +246,7 @@ def test_a_folha_casa_com_a_palavra_do_produto() -> None:
 
 
 def test_o_desenho_mostra_um_controle_no_radio_carregando() -> None:
-    """A correção de premissa dela, virada CENA — é o que ela vai olhar."""
+    """A correção de premissa, virada CENA — é o que quem usa vai olhar."""
     import aba02
 
     no_radio = [c for c in aba02.CONECTADOS if c.get("transporte") == "bt"]

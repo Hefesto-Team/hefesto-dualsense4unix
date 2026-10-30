@@ -1,9 +1,9 @@
 """A coluna «Status» da aba Perfis diz o controle de agora, e o ponto diz o disco.
 
 A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01 (02/10/2026). A queixa de 29/09,
-com os quatro DualSense na mesa: *«alguns estão acesos e outros não. E pora
-piorar não refletem o stauts real daquele momento do controle. parece
-aleatório.»* <!-- noqa-acento: citação literal -->
+com os quatro DualSense na mesa: alguns glifos acesos e outros não, sem
+refletir o status real do controle naquele momento, como se fossem
+aleatórios.
 
 O DEFEITO, MEDIDO: o glifo acendia com o que o PERFIL ABERTO NO EDITOR guarda
 só para aquele controle (`perfis_web._secoes_do_controle`), e nada na coluna
@@ -231,7 +231,7 @@ def test_a_dica_diz_o_nao_sei_e_a_coluna_nao_tem_mascara(
 
 def test_trocar_o_perfil_do_editor_muda_o_ponto_e_nao_o_glifo(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O clique na lista que ela via trocar a coluna inteira com os controles"""
+    """O clique na lista que se via trocar a coluna inteira com os controles"""
     state = _o_cenario()
     perfis = [_perfil("Régua A", TUDO), _perfil("Régua B", ["rumble"])]
     com_a = _emitidos(monkeypatch, state, perfis, editado="Régua A")
@@ -441,7 +441,7 @@ def test_o_ponto_e_o_glifo_aceso_sao_coisas_diferentes_na_tela(
 
 @skip_sem_gi_real
 def test_as_oito_secoes_cabem_na_celula(tela: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A foto dela tinha o oitavo grupo inteiro fora da célula, nas quatro linhas."""
+    """A foto tinha o oitavo grupo inteiro fora da célula, nas quatro linhas."""
     aba10 = _gerador()
     fora = _emitidos(monkeypatch, _o_cenario(), [_perfil("Régua A", TUDO)])
     linhas = _pintar(tela, fora)

@@ -6,7 +6,7 @@ pelo ``os.open(caminho, os.O_RDWR | os.O_NONBLOCK)`` de antes e as SEIS
 reprovam, a mordida 1 com ``cor is None`` — que é o "Não sei" dos dois cards
 que o usuário viu hoje.
 
-O DEFEITO, MEDIDO NA BANCADA EM 29/08/2026
+O DEFEITO, MEDIDO NO ENSAIO EM 29/08/2026
 --------------------------------------------
 Palavra de produto: *"fora que os controles lá em cima tão tudo Não sei ainda."*
 
@@ -24,8 +24,8 @@ BROKER-01 funcionando (``broker/hidraw_broker.py``, ``setfacl -b`` + ``chmod
 0600``). Não é bug de udev, não é firmware, não é o rádio: é o nosso próprio
 produto batendo na porta que o nosso próprio produto fechou.
 
-A CASA JÁ TINHA A PORTA, E O ENSAIO JÁ ENTRA POR ELA
------------------------------------------------------
+A CASA JÁ TINHA A PORTA, E O ENSAIO JÁ ENTRA POR ESSA PORTA
+-----------------------------------------------------------
 ``scripts/ensaios/cor_do_plastico.py:651`` chama ``abrir_no_hidraw``
 (``scripts/ensaios/comum.py:346``), que é ``abrir_hidraw``
 (``integrations/hidraw_broker_client.py:400``): broker primeiro, ``open()``
@@ -51,23 +51,23 @@ AS TRÊS MORDIDAS DESTE ARQUIVO
 A QUARTA MORDIDA NÃO ESTÁ AQUI, E O MOTIVO NÃO É PREGUIÇA
 ----------------------------------------------------------
 A segunda metade do defeito é a MEMÓRIA: ninguém persiste o resultado, e o
-``SET_FEATURE`` se repete a cada abertura de tela. Ela não entra nesta leva
+``SET_FEATURE`` se repete a cada abertura de tela. A memória não entra nesta leva
 porque **o campo tem outro dono**: a ``ONDA-CONEXOES-09`` (27/08) já decidiu o
 arquivo e a porta — ``maquina.json``, seção ``controles``, por
 ``declarar_a_maquina`` — e escolheu o campo ``cor``. Há uma medição contra essa
-escolha, e ela precisa ser resolvida por quem é dono daquela sprint, não por
+escolha, e a medição precisa ser resolvida por quem é dono daquela sprint, não por
 esta:
 
-    gravando no ``cor``, ela declara Cosmic Red -> clica "Não sei" (a entrada
+    gravando no ``cor``, quem usa declara Cosmic Red -> clica "Não sei" (a entrada
     some do arquivo, como tem de sumir) -> a leitura seguinte grava Cosmic Red
     de volta. **O gesto do usuário é desfeito sem rastro.** A asserção "a cor lida
     não apaga a cor declarada" não pega isso, porque ``None`` não é declaração:
-    é a ausência dela. Mesma classe do ``or "xbox"`` do ``external_mask.py``.
+    é a ausência de declaração. Mesma classe do ``or "xbox"`` do ``external_mask.py``.
 
 O CUSTO DE NÃO TER A MEMÓRIA, medido: o ``SET_FEATURE`` sai **uma vez por
 controle por execução**, não por tique — ``mesa_viva`` e ``secao_controles``
 guardam a resposta em memória (``self._cache[uniq]``). É o mesmo comando de
-leitura pura que o ensaio manda nesta bancada desde 27/08, com prova de vida
+leitura pura que o ensaio manda nesta máquina de teste desde 27/08, com prova de vida
 antes e depois. Não é risco novo; é o comportamento que a permissão escondia.
 
 O QUE ESTE ARQUIVO **NÃO** PROVA: que o broker devolve o fd certo. Isso tem
@@ -88,7 +88,7 @@ Duas, e as duas já são padrão desta casa (``estado_do_grab`` tem as mesmas, e
         ioctl: Any = None,   # default: fcntl.ioctl
     ) -> bytes | None:
 
-``ler_pelo_cabo`` não muda: o ``perguntar=`` que ela já tem continua sendo o
+``ler_pelo_cabo`` não muda: o ``perguntar=`` que a função já tem continua sendo o
 ponto de injeção do transporte inteiro, e é por ele que estes testes entram.
 
 E o módulo novo da memória (mordida 4) tem de importar ``config_dir``
@@ -196,7 +196,7 @@ class AparelhoDeMentira:
 
 
 def porta_do_broker(arquivo: Path) -> tuple[Any, BrokerDeMentira, AparelhoDeMentira]:
-    """``(perguntar, broker, aparelho)`` — a bancada, com o nó ESCONDIDO."""
+    """``(perguntar, broker, aparelho)`` — o ensaio, com o nó ESCONDIDO."""
     broker = BrokerDeMentira(arquivo)
     aparelho = AparelhoDeMentira(fds_aceitos=_ConjuntoVivo(broker.servidos))
     abrir = partial(abrir_hidraw, cliente=broker)
@@ -222,7 +222,7 @@ class _ConjuntoVivo:
 def test_mordida_1_com_o_no_escondido_a_cor_chega_pela_porta_do_broker(
     tmp_path: Path,
 ) -> None:
-    """A bancada: nó 0600 root:root, daemon rodando, broker de pé."""
+    """O ensaio: nó 0600 root:root, daemon rodando, broker de pé."""
     arquivo = tmp_path / "hidraw9"
     arquivo.write_bytes(b"")
     perguntar, broker, aparelho = porta_do_broker(arquivo)
@@ -230,7 +230,7 @@ def test_mordida_1_com_o_no_escondido_a_cor_chega_pela_porta_do_broker(
     cor = ler_pelo_cabo(UNIQ, **sysfs_de_mentira(), perguntar=perguntar)
 
     assert cor is not None, (
-        "a cor voltou None com o broker de pé — é o 'Não sei' do card dela. "
+        "a cor voltou None com o broker de pé — é o 'Não sei' do card. "
         "A porta é `abrir_hidraw` (integrations/hidraw_broker_client.py:400), "
         "a mesma que o ensaio usa (scripts/ensaios/comum.py:346)."
     )
@@ -278,7 +278,7 @@ def test_mordida_1_sem_broker_a_porta_direta_continua_servindo(
 
     assert cor is not None and cor.nome == "Cosmic Red", (
         "sem broker a leitura tem de cair para o open() direto — a queda é a "
-        "que `abrir_hidraw` já implementa, e ela não pode ser trocada por uma "
+        "que `abrir_hidraw` já implementa, e a queda não pode ser trocada por uma "
         "exigência de broker."
     )
 
@@ -298,7 +298,7 @@ def test_mordida_1_as_duas_portas_fechadas_viram_nao_sei_e_nunca_levantam() -> N
         return produto._perguntar_ao_hidraw(caminho, pedido, abrir=abrir_que_fecha)
 
     cor = ler_pelo_cabo(UNIQ, **sysfs_de_mentira(), perguntar=perguntar)
-    assert cor is None, "porta fechada é 'Não sei', não exceção na cara dela"
+    assert cor is None, "porta fechada é 'Não sei', não exceção na cara de quem usa"
 
 
 def test_mordida_2_o_ioctl_usa_o_descritor_que_veio_do_broker(tmp_path: Path) -> None:
@@ -360,7 +360,7 @@ def test_mordida_3_o_par_que_reseta_nao_chega_nem_a_pedir_fd(tmp_path: Path) -> 
         )
 
     assert broker.pedidos == [], (
-        "a trava mordeu DEPOIS de abrir a porta — ela tem de morder antes: "
+        "a trava mordeu DEPOIS de abrir a porta — a trava tem de morder antes: "
         f"o broker chegou a ser consultado {broker.pedidos}"
     )
     assert aparelho.escritas == [], "nenhum byte pode ter saído"

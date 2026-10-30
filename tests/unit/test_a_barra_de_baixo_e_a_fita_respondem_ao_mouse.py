@@ -67,7 +67,7 @@ def test_o_chip_da_fita_tem_hover(desenho: pathlib.Path) -> None:
 
 
 def test_a_fita_inerte_nao_responde() -> None:
-    """Nenhuma regra :hover do topo alcança o chip de uma fita `.inerte` (ela não escolhe nada)."""
+    """Nenhuma regra :hover do topo alcança o chip de uma fita `.inerte` (que não escolhe nada)."""
     for sel, _ in _regras_hover(TOPO.read_text(encoding="utf-8")):
         if ".chip" in sel and ".fita" in sel:
             assert ".fita:not(.inerte)" in sel, sel

@@ -66,7 +66,7 @@ def _html() -> str:
     if not PAGINA.is_file():
         pytest.fail(
             f"{PAGINA} não existe — a aba Sistema da interface nova é essa "
-            "página, e sem ela esta régua não sabe qual rótulo cobre qual "
+            "página, e sem o rótulo esta régua não sabe qual rótulo cobre qual "
             "linha. Portão que não acha o alvo tem de falar, não calar."
         )
     return PAGINA.read_text(encoding="utf-8")
@@ -126,9 +126,9 @@ def test_a_regua_sabe_onde_olhar() -> None:
 
     com_servico = [i for i, r in linhas.items() if "serviço" in r.lower()]
     assert com_servico, (
-        "NENHUM rótulo de linha desta aba diz 'serviço' — e a decisão dela de "
+        "NENHUM rótulo de linha desta aba diz 'serviço' — e a decisão de "
         "31/08/2026 é justamente que esta aba nomeia o SERVIÇO. Ou o desenho "
-        "voltou atrás (e aí é decisão dela, escrita aqui), ou esta régua "
+        "voltou atrás (e aí é decisão de produto, escrita aqui), ou esta régua "
         f"deixou de saber ler {PAGINA.name}. Rótulos vistos: {sorted(linhas.values())}"
     )
     assert [g for g, t in botoes.items() if "serviço" in t.lower()], (
@@ -158,8 +158,8 @@ class TestOQueONomeDaLinhaObriga:
             "a linha da tela nomeia o SERVIÇO e o produto escreve 'Hefesto' na "
             "mesma linha — a tela se contradiz dentro de si mesma:\n  "
             + "\n  ".join(recaidas)
-            + "\n\nA palavra 'Hefesto' ficou com a aba Jogar por decisão dela "
-            "(31/08/2026), onde ela quer dizer o MODO: o Hefesto no meio do "
+            + "\n\nA palavra 'Hefesto' ficou com a aba Jogar por decisão do produto "
+            "(31/08/2026), onde quer dizer o MODO: o Hefesto no meio do "
             "jogo, ou o aparelho puro. Quem desliga lá continua com o serviço "
             "rodando; quem para aqui mata tudo. Onde 'Hefesto' é o PROGRAMA — "
             "quem enxerga a janela, quem escreve nos controles — a palavra "

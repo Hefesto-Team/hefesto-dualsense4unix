@@ -1,7 +1,7 @@
 """A coluna "Ajuste próprio" da aba Perfis mostra DADO, e não o desenho.
 
-Ela é a linha de cinco glifos que responde *"o que este perfil guarda só deste
-controle?"*. Até 03/09/2026 ela era desenho puro: as dezesseis células nasciam
+É a linha de cinco glifos que responde *"o que este perfil guarda só deste
+controle?"*. Até 03/09/2026 a coluna era desenho puro: as dezesseis células nasciam
 acesas ou apagadas pelo `GUARDA` fixo do gerador e nada as tocava depois — a
 régua do mockup as acusava uma a uma, e eram **dezesseis dos dezessete** campos
 que aquela aba ainda devia.
@@ -27,7 +27,7 @@ O QUE ESTAVA QUEBRADO, e eram três coisas empilhadas
 A CURA, e as três metades chegam juntas: o desenho ganhou
 ``data-hef-alvo="classe"`` (um ENDEREÇO, que
 ``check_o_desenho_aprovado.INVISIVEIS`` deixa chegar ao produto sem passar por
-ela), o pacote passou a ler o dicionário POR NOME, e ``guarda.secao`` saiu de
+essa lista), o pacote passou a ler o dicionário POR NOME, e ``guarda.secao`` saiu de
 ``NAO_PINTAVEIS``.
 
 AS DUAS DECISÕES DE PRODUTO QUE ESTE ARQUIVO SEGURA — 03/09/2026
@@ -55,7 +55,7 @@ controle tem ajuste próprio"* ficava **apagada à força** — ``pintaGuarda`` 
 ``!!linha.secoes['mic']`` e a chave não saía de ``SECOES_POR_CONTROLE``, que era
 digitada à mão.
 
-**As duas réguas que faltavam, e elas fecham a direção que ninguém guardava:**
+**As duas réguas que faltavam fecham a direção que ninguém guardava:**
 ``test_o_produto_mostra_todo_campo_do_esquema`` (o produto não pode esconder um
 campo que o perfil guarda) e ``test_nenhuma_isencao_desta_lista_ja_caducou``
 (uma isenção que já foi atendida tem de sumir). ``SECOES_POR_CONTROLE`` deixou
@@ -180,9 +180,9 @@ def test_a_pagina_publicada_sabe_receber_a_pintura() -> None:
     """Toda célula do PRODUTO tem `data-hef-alvo="classe"`.
 
     Sem o alvo, o pintor escreve `textContent` e apaga o glifo SVG de dentro do
-    `<span>` — o defeito que ela fotografou em 02/09 na coluna ao lado. Esta
-    régua lê a página PUBLICADA de propósito: é ela que recebe a pintura, e
-    medir a bancada daria verde sobre um HTML que o produto não renderiza.
+    `<span>` — o defeito fotografado em 02/09 na coluna ao lado. Esta
+    régua lê a página PUBLICADA de propósito: é a publicada que recebe a pintura, e
+    medir o ensaio daria verde sobre um HTML que o produto não renderiza.
     """
     celulas = _celulas(publicado=True)
     assert celulas, "a página publicada não tem célula de `guarda.secao` nenhuma"
@@ -197,9 +197,8 @@ def test_a_celula_nao_tem_dica_nenhuma() -> None:
     """DECISÃO DE PRODUTO nº4 — as oito dicas das células saíram, e não voltam."""
     com_dica = [c for c in _celulas(publicado=False) if "title=" in c]
     assert not com_dica, (
-        f"{len(com_dica)} célula(s) de `Ajuste próprio` com dica. Ela mandou as "
-        f"oito saírem em 03/09/2026: \"Meu Deus melhor nenhuma assim. Auto "
-        f"falante é auto falante, gatilho é gatilho.\" A dica do CABEÇALHO "
+        f"{len(com_dica)} célula(s) de `Ajuste próprio` com dica. A decisão de "
+        f"03/09/2026 tirou as oito. A dica do CABEÇALHO "
         f"explica o conceito uma vez, e o glifo já diz o nome da peça.")
 
 
@@ -243,7 +242,7 @@ def test_toda_coluna_sem_campo_esta_declarada() -> None:
 def test_a_coluna_do_microfone_existe_na_tela() -> None:
     """DECISÃO DE PRODUTO nº20 — o microfone é o quinto ajuste por controle."""
     assert "mic" in a10_perfis.SECOES_DA_COLUNA, (
-        "o microfone saiu da coluna `Ajuste próprio` (decisão dela nº20)")
+        "o microfone saiu da coluna `Ajuste próprio` (decisão nº20)")
     secoes = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
               for c in _celulas(publicado=False)}
     assert "mic" in secoes, "o desenho perdeu a célula do microfone"
@@ -273,7 +272,7 @@ def test_nenhuma_isencao_desta_lista_ja_caducou() -> None:
         f"`ESPERANDO_O_ESQUEMA` ainda declara {sorted(caducas)} como *a "
         "caminho*, e o campo JÁ está em `ControllerOverrides`. Apague o nome "
         "da lista: enquanto ele estiver lá, a isenção cobre uma coluna que "
-        "deveria estar acendendo com o dado dela.")
+        "deveria estar acendendo com o dado do perfil.")
 
 
 def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
@@ -299,10 +298,10 @@ def test_a_secao_que_espera_a_sessao_do_usuario_ainda_nao_esta_publicada() -> No
     for secao in (perfis_web.SECOES_ESPERANDO_A_SESSAO_DO_USUARIO
                   - perfis_web.SECOES_QUE_MORAM_NO_MAPA):
         assert secao in desenhadas, (
-            f"`{secao}` espera a sessão dela e o DESENHO não tem a célula — não "
-            f"há o que ela aprovar; regere `interface/aba10.py`")
+            f"`{secao}` espera a sessão de aprovação e o DESENHO não tem a célula — não "
+            f"há o que aprovar; regere `interface/aba10.py`")
         assert secao in perfis_web.SECOES_POR_CONTROLE, (
-            f"`{secao}` espera a sessão dela e não está no esquema — é uma "
+            f"`{secao}` espera a sessão de aprovação e não está no esquema — é uma "
             f"isenção sobre um campo que não existe")
         assert secao not in publicadas, (
             f"a página publicada já tem a célula de `{secao}`: tire o nome de "

@@ -1,4 +1,4 @@
-"""A caixa fica onde ela abriu — A-CAIXA-FICA-ONDE-O-USUARIO-ABRIU-01 (item 2 da auditoria de
+"""A caixa fica onde foi aberta — A-CAIXA-FICA-ONDE-O-USUARIO-ABRIU-01 (item 2 da auditoria de
 26/09)."""
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def mundo_com(adaptadores: tuple[str, ...]) -> rm.RadioDeMentira:
 
 
 def _a_busca_abre_em(ensaio: Ensaio, busca: BuscaDePe, destino: str) -> None:
-    """O caminho dela: o chip do destino, e o «Procurar» — a janela abre ali."""
+    """O caminho de quem usa: o chip do destino, e o «Procurar» — a janela abre ali."""
     ensaio.cena()
     ensaio.gesto("escolher-adaptador", alvo=id_da_tela(destino))
     ensaio.cena()
@@ -87,7 +87,7 @@ def test_a_caixa_que_o_usuario_abriu_fica_com_a_busca_noutro_adaptador(
         _a_busca_abre_em(ensaio, busca, onde_busca)
         ensaio.gesto("abrir-adaptador", alvo=id_da_tela(onde_o_usuario_abre))
         abertos = [ensaio.cena()["aberto"] for _ in range(TIQUES)]
-        assert abertos == [id_da_tela(onde_o_usuario_abre)] * TIQUES, "o tique desfez o clique dela"
+        assert abertos == [id_da_tela(onde_o_usuario_abre)] * TIQUES, "o tique desfez o clique"
         sala = ensaio.tique()["radio-sala"]
         assert 'class="lugar aberto"' in _cartao(sala, id_da_tela(onde_o_usuario_abre))
         assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca saiu do lugar"
@@ -148,7 +148,7 @@ def test_o_usuario_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
         _a_busca_abre_em(ensaio, busca, onde_busca)
         ensaio.gesto("abrir-adaptador", alvo=id_da_tela(onde_busca))
         for _ in range(TIQUES):
-            assert ensaio.cena()["aberto"] is None, "a caixa da busca abriu por cima dela"
+            assert ensaio.cena()["aberto"] is None, "a caixa da busca abriu por cima da escolha"
         campos = ensaio.tique()
         cartao = _cartao(campos["radio-sala"], id_da_tela(onde_busca))
         classes = cartao.split('"', 2)[1].split()
@@ -311,7 +311,7 @@ def _quem_chama(nome: str) -> set[tuple[str, str]]:
 
 
 def test_so_o_x_do_usuario_esquece_um_pareamento_pela_tela() -> None:
-    """Na tela, o pareamento sai por UM caminho: o X dela («Esquecer» da"""
+    """Na tela, o pareamento sai por UM caminho: o X de quem usa («Esquecer» da"""
     assert _quem_chama("_esquecer_o_pareamento") == {
         ("a08_conexoes.py", "confirmar_esquecer"),
         ("a08_conexoes.py", "parear_de_novo"),
@@ -351,14 +351,14 @@ ROTEIRO_DO_CHIP = r"""
 
 @pytest.fixture(scope="module")
 def chip_no_webkit() -> dict[str, Any]:
-    """A bancada da 08 num WebKit offscreen — o motor que ela usa."""
+    """O ensaio da 08 num WebKit offscreen — o motor da janela."""
     import json
 
     from hefesto_dualsense4unix.interface import onde
 
     pagina = onde.pagina("08-conexoes.html")
     if not pagina.is_file():
-        pytest.skip("a bancada da 08 não está no disco — rode o gerador")
+        pytest.skip("o ensaio da 08 não está no disco — rode o gerador")
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -410,7 +410,7 @@ MOVER = [
 ]
 
 
-@pytest.mark.parametrize(("destino", "dela"), MOVER)
+@pytest.mark.parametrize(("destino", "do_usuario"), MOVER)
 def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_do_usuario_fica(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, do_usuario: str,
 ) -> None:
@@ -435,7 +435,7 @@ def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_do_usuario_fica(
         outra = next(a for a in TRES if a != destino)
         ensaio.gesto("abrir-adaptador", alvo=id_da_tela(outra))
         abertos = [ensaio.cena()["aberto"] for _ in range(TIQUES)]
-        assert abertos == [id_da_tela(outra)] * TIQUES, "a espera do «Mover» desfez o clique dela"
+        assert abertos == [id_da_tela(outra)] * TIQUES, "a espera do «Mover» desfez o clique"
     finally:
         busca.soltar()
         ensaio.fechar()
@@ -444,7 +444,7 @@ def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_do_usuario_fica(
 def test_a_escolha_de_um_adaptador_que_saiu_nao_segura_a_caixa(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A caixa que ela abriu era a de um adaptador que saiu da máquina: aquela"""
+    """A caixa aberta era a de um adaptador que saiu da máquina: aquela"""
     mundo, relogio = mundo_com((SALA, QUARTO)), rm.Relogio()
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio, ordem=(SALA, QUARTO))
     busca = BuscaDePe(relogio)

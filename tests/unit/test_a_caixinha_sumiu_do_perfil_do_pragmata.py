@@ -52,7 +52,7 @@ class TestOPerfilDoUsuarioVoltaAoEditorSimples:
     def test_o_match_real_do_usuario_e_um_jogo_da_steam(self) -> None:
         """O que estava devolvendo None, e por isso escondia a caixinha."""
         assert detect_simple_preset(_match_do_usuario()) == "steam_game", (
-            "o perfil do jogo dela abria no editor AVANÇADO, e com ele o "
+            "o perfil do jogo abria no editor AVANÇADO, e com ele o "
             "seletor rebaixado a 'Vale sempre' — que é onde a caixinha morre"
         )
         assert simple_extra(_match_do_usuario()) == APPID, (
@@ -101,7 +101,7 @@ class TestOProcessNameSobreviveAoRoundTrip:
         assert isinstance(relido.match, MatchCriteria)
         assert relido.match.window_class == [WM_JOGO]
         assert relido.match.process_name == [EXE_DO_JOGO], (
-            "o editor simples apagou um campo da regra dela sem ela pedir"
+            "o editor simples apagou um campo da regra sem ninguém pedir"
         )
         assert detect_simple_preset(relido.match) == "steam_game", (
             "o segundo round-trip tem de fechar igual ao primeiro"

@@ -5,8 +5,8 @@ Só o ``HID_PHYS`` no adaptador pretendido E o movimento chegando dizem
 «chegou»; sem os dois o estado fica «esperando».
 
 FATO SUBSTITUÍDO (25/09/2026, A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01): aqui se
-lia *«e a origem NÃO se apaga»*. Desde a lista dela de 25/09 a origem sai ANTES
-do gesto (a R1 dela ao pé da letra — ligado, o controle não entra em modo de
+lia *«e a origem NÃO se apaga»*. Desde a lista de 25/09 a origem sai ANTES
+do gesto (a R1 ao pé da letra — ligado, o controle não entra em modo de
 parear, e com a chave lá ele volta sozinho). O que o CONFERIR segura continua
 sendo o «chegou»: sem os dois sinais, nunca «chegou», e o diário não diz
 «moveu».

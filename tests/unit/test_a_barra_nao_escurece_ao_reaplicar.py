@@ -240,7 +240,7 @@ def test_o_salvar_nao_grava_a_luz_acesa_como_a_cor(mesa_de):
 
 
 def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
-    """Sem a paleta, o global dela (`#2850B4`) acende fora dos catorze tons."""
+    """Sem a paleta, o global (`#2850B4`) acende fora dos catorze tons."""
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from pacotes import a04_iluminacao, rodape
 
@@ -429,7 +429,7 @@ def test_acende_o_tom_e_a_pergunta_do_tom_e_nao_do_byte():
 
 
 def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_do_usuario():
-    """Tom único da paleta: a conta do trilho. Fora dela ou ambíguo: a razão."""
+    """Tom único da paleta: a conta do trilho. Fora da paleta ou ambíguo: a razão."""
     for de in (0.05, 0.5, 0.82, 1.0):
         for para in (0.0, 0.3, 0.6, 1.0):
             for tom in PALETA:

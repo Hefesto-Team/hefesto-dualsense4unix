@@ -1,4 +1,4 @@
-"""A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 — o desenho novo dela na aba 05."""
+"""A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 — o desenho novo na aba 05."""
 
 from __future__ import annotations
 
@@ -123,7 +123,7 @@ class TestOTrilhoMoraNaForca:
         assert len(cabecas) == len(faixas), len(cabecas)
 
     def test_a_faixa_do_personalizado_virou_a_sensor_haptico(self) -> None:
-        """A quarta célula é a linha da háptica, e o rótulo dela é o dela."""
+        """A quarta célula é a linha da háptica, e o rótulo é o da háptica."""
         html = MOCKUP.read_text(encoding="utf-8")
         assert re.search(r'<span class="sec-rot"[^>]*>Sensor háptico', html)
         assert not re.search(r'<span class="sec-rot"[^>]*>Personalizado', html)
@@ -152,7 +152,7 @@ def _coluna(state: dict[str, Any]) -> dict[str, Any]:
 def test_o_trilho_mostra_o_valor_do_personalizado_sem_acender_degrau(valor: int) -> None:
     """Régua 2: com o personalizado, o cursor e o número são o valor; degrau não há mais.
 
-    Até 20/10/2026 ela cobrava o MAIOR degrau que o valor alcançava. A «Força» virou o trilho de
+    Até 20/10/2026 a régua cobrava o MAIOR degrau que o valor alcançava. A «Força» virou o trilho de
     0 a 200% sem botões (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e
     a régua da escada saiu com eles. Os dois extremos (0 e 200) entram porque o trilho vai até eles.
     """
@@ -163,7 +163,7 @@ def test_o_trilho_mostra_o_valor_do_personalizado_sem_acender_degrau(valor: int)
 
 @pytest.mark.parametrize("nome", sorted(RUMBLE_POLICY_MULT))
 def test_a_politica_pelo_nome_poe_o_cursor_no_numero_do_usuario(nome: str) -> None:
-    """Cada política do produto, escolhida pelo nome, põe o cursor no porcento dela."""
+    """Cada política do produto, escolhida pelo nome, põe o cursor no porcento da política."""
     coluna = _coluna({"rumble_policy": nome})
     assert coluna["mult-pos"] == str(round(RUMBLE_POLICY_MULT[nome] * 100))
     assert "degrau" not in coluna
@@ -171,12 +171,12 @@ def test_a_politica_pelo_nome_poe_o_cursor_no_numero_do_usuario(nome: str) -> No
 
 def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:  # noqa: F811
     """Régua 3: o arraste a 90 grava a ``haptica``, relida do DISCO pelo esquema."""
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
     gesto = pacotes.gesto_da_pagina(PAGINA, "haptica")
     assert gesto is not None
     gesto(_ctx({}), {"uniq": BRANCO, "valor": "90"}, ponte)
-    dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
+    dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[BRANCO]
     assert dele.rumble is not None and dele.rumble.haptica == 90
 
 
@@ -310,8 +310,8 @@ class TestOsDoisTestes:
     def test_a_haptica_de_outra_coluna_nao_cala_a_primeira(self) -> None:
         """Um teste POR CONTROLE: o «Háptica» do segundo não toca no do primeiro.
 
-        Ela, 03/10/2026: *«vibração e háptico é por cada controle e precisam
-        funcionar em independente»*. MORDIDA: volte `_EM_TESTE_DA_HAPTICA` a um
+        Decisão de 03/10/2026: vibração e háptica são por controle e
+        funcionam de forma independente. MORDIDA: volte `_EM_TESTE_DA_HAPTICA` a um
         `uniq` só (o gesto calando os outros) → reprova.
         """
         outro = "aa:bb:cc:00:00:07"
@@ -401,7 +401,7 @@ class _TocadorComToque(_Tocador):
     def tocar_em_laco(
         self, amostras: Any, lado: str, *, sink: str, dono: str, forma: str
     ) -> None:
-        """O laço do teste: anota a volta como o toque ou o corpo dela, e fica tocando."""
+        """O laço do teste: anota a volta como o toque ou o corpo do efeito, e fica tocando."""
         if forma == formas.SOM_NO_CORPO:
             self.corpos.append(list(amostras))
         else:
@@ -564,7 +564,7 @@ CENAS = ("quieta", "vpad-nao-subiu")
 
 @pytest.fixture(scope="module", params=CENAS)
 def medida(request: Any) -> dict[str, Any]:
-    """Abre o DESENHO (a bancada, ``mockup/``) num WebKit offscreen do tamanho do miolo."""
+    """Abre o DESENHO (o ensaio, ``mockup/``) num WebKit offscreen do tamanho do miolo."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -655,7 +655,7 @@ def test_a_aba_nao_rola_e_as_colunas_acabam_no_mesmo_y(medida: dict[str, Any]) -
 
 
 def test_o_desenho_nao_encolhe(medida: dict[str, Any]) -> None:
-    """O desenho volta ao tamanho de antes da linha da háptica, e a fala do usuário é essa."""
+    """O desenho volta ao tamanho de antes da linha da háptica, como o produto pede."""
     piso = DESENHO_DE_ANTES if medida["cena"] == "quieta" else DESENHO_COM_AVISO
     assert medida["desenho"] >= piso, (
         f"o desenho encolheu para {medida['desenho']} px: {medida}")

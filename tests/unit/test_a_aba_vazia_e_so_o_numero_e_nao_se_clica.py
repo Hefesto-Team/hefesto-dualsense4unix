@@ -2,7 +2,7 @@
 
 Desde a D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR, as quatro abas ficam à vista na Jogar. O usuário
 escolheu no chat, em 29/10/2026, «Vazias pequenas, sem clique»: a aba de um lugar sem controle é só
-o disco do número, apagado e estreito, sem «Desconectado», e o clique nela não abre nada. Quando
+o disco do número, apagado e estreito, sem «Desconectado», e o clique na aba não abre nada. Quando
 um controle chega ao lugar, a aba fica cheia no tique seguinte; quando sai, encolhe, e se era a
 aberta a aberta passa ao primeiro conectado.
 """

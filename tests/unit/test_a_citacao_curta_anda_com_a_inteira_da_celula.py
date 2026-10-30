@@ -1,4 +1,4 @@
-"""A forma curta ``:N`` de uma célula de CSV anda com a inteira, e a troca é pelo lugar dela.
+"""A forma curta ``:N`` de uma célula de CSV anda com a inteira, e a troca é pelo lugar da curta.
 
 Fonte: o conferente da `ferramentas-1-8` (08/10/2026). A curta de CSV (``…hid-playstation.c:132,
 :986, :1858-1861``) nunca foi lida; e a troca da curta era por LINHA, então um ``:5`` igual,
@@ -131,7 +131,7 @@ def test_o_dois_pontos_de_outra_ancora_na_mesma_linha_de_md_nao_vai_junto(repo: 
 
 
 def test_a_ancora_nao_cruza_a_virgula_do_csv(repo: Path) -> None:
-    """Duas células na mesma linha: o ``:3`` da segunda não tem inteira na célula dela."""
+    """Duas células na mesma linha: o ``:3`` da segunda não tem inteira na própria célula."""
     planilha = _planilha(repo, f"x.um,{END}:11-12,:3\n")
     _inserir_no_topo(repo, 12, commitar=True)
 

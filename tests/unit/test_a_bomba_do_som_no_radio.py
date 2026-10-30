@@ -97,7 +97,7 @@ class TestSecoNaoEscreveUmByte:
         )
         bomba.rodar(segundos=0.05, agora=_relogio())
         assert bomba.contagem.escritas_aceitas_pelo_kernel == 0
-        assert bomba.contagem.reports_montados > 0, "seca ela ainda faz a conta inteira"
+        assert bomba.contagem.reports_montados > 0, "seca a bomba ainda faz a conta inteira"
 
     def test_molhado_sem_escritor_continua_seco(self) -> None:
         """``seco=False`` sem escritor não vira escrita: não há para onde."""
@@ -110,7 +110,7 @@ class TestSecoNaoEscreveUmByte:
 
 
 class TestAEscritaRecusadaEhContadaNaoEhCrash:
-    """ARRANQUE o ``except OSError`` e veja o ensaio morrer no meio da bancada."""
+    """ARRANQUE o ``except OSError`` e veja o ensaio morrer no meio do ensaio."""
 
     def test_conta_aceitas_e_recusadas(self) -> None:
         chamadas = {"n": 0}
@@ -351,7 +351,7 @@ class TestOEnsaioRecusaAntesDeEscrever:
         assert ensaio.SEGUNDOS_PADRAO <= ensaio.TETO_DE_SEGUNDOS
 
     def test_o_timbre_e_o_que_o_usuario_ja_relatou(self, ensaio: Any) -> None:
-        """O pulsado, e não um tom contínuo — o relato dela carrega a resposta."""
+        """O pulsado, e não um tom contínuo — o relato de uso carrega a resposta."""
         assert ensaio.ENSAIO_PULSOS_HZ > 0
         ler = ensaio.pcm_pulsado()
         bloco = ler(af.BYTES_DE_PCM_POR_QUADRO * 100)
@@ -361,14 +361,14 @@ class TestOEnsaioRecusaAntesDeEscrever:
 
 
 class TestACapturaArmadaRecusaOReportDeAudio:
-    """ARRANQUE a recusa do bit ``0x02`` e veja Opus virar marca dela.
+    """ARRANQUE a recusa do bit ``0x02`` e veja Opus virar marca de quem ouve.
 
     Com o microfone ligado, o DualSense manda áudio no MESMO report ``0x31``,
     com os MESMOS 78 bytes e CRC válido — a única diferença é o bit ``0x02`` do
     byte 1. Em 16/08/2026 um caminho sem essa recusa leu Opus como estado de
     botão: MIC e PS presos, a Steam sendo aberta dezenas de vezes por segundo,
-    e ela desligando o controle. Aqui o estrago seria mais barato e mais
-    traiçoeiro — **marcas que ela nunca fez, com a hora certa** — e nada é pior
+    e quem usa desligando o controle. Aqui o estrago seria mais barato e mais
+    traiçoeiro — **marcas que ninguém fez, com a hora certa** — e nada é pior
     para um ensaio que já está inconclusivo há vinte dias.
     """
 

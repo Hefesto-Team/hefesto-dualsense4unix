@@ -15,7 +15,7 @@ O que a régua cobra, e a mordida de cada uma:
 5. **O modo da vibração e o dos controles gravam e voltam iguais** ao reabrir o perfil.
 6. **O menu do botão direito tem dono**: o WebKit cala o dele, e cada item aciona um gesto
    registrado.
-7. **Os efeitos que ela cria têm um dono só**, com uma chave por feature.
+7. **Os efeitos que a base cria têm um dono só**, com uma chave por feature.
 """
 from __future__ import annotations
 
@@ -140,7 +140,7 @@ def test_a_base_nao_entra_duas_vezes() -> None:
 
 @pytest.fixture(scope="module")
 def paginas_geradas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, str]:
-    """As dez abas e a Calibrar, geradas de novo numa bancada de mentira (em paralelo)."""
+    """As dez abas e a Calibrar, geradas de novo num ensaio de mentira (em paralelo)."""
     destino = tmp_path_factory.mktemp("ensaio-da-base")
     for p in (RAIZ / "mockup").glob("*.html"):
         shutil.copy2(p, destino / p.name)
@@ -578,7 +578,7 @@ def test_a_dica_da_casa_le_o_data_dica_ao_vivo() -> None:
     assert "data-dica" in vivo
     assert "data-hef-razao" in vivo
     js = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
-    assert "window.__hefDica" in js, "a dica da base só cria a dela quando o piloto não tem a sua"
+    assert "window.__hefDica" in js, "a dica da base só cria a própria se o piloto não tem a sua"
 
 
 _FOCO = """<!doctype html><html><head><meta charset="utf-8"></head><body>

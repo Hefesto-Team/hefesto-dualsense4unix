@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """A calibração mostra os controles de QUEM A ABRE — zero, um ou quatro.
 
-F3-CALIBRAR, 11/09/2026. A ordem de produto é de 11/09 e vale para o produto inteiro:
-
-    *"a ideia é que todas as features mesmo do app funcionem nao so  # (noqa-acento) cita ela
-    pra mim mas pra qualquer outro user"*
+F3-CALIBRAR, 11/09/2026. A regra é de 11/09 e vale para o produto inteiro: toda
+feature funciona para qualquer usuário, não só para a máquina em que nasceu.
 
 O DEFEITO QUE ESTA RÉGUA IMPEDE DE VOLTAR, medido no daemon do usuário em 11/09 com
-os dois DualSense na bancada::
+os dois DualSense no ensaio::
 
     a tela dizia                    o `daemon.state_full` respondia
     P1 · Cosmic Red · USB           P1 · Starlight Blue · USB
@@ -15,10 +13,10 @@ os dois DualSense na bancada::
     giro +0.2 / -0.1 / +0.0         `inputs` sem chave `gyro` nenhuma
 
 A lista era `monta.CONECTADOS` — o DESENHO, que tem sempre dois — e os números
-eram a constante `calibrar.REPOUSO`. **Com quatro na bancada ela veria dois.**
+eram a constante `calibrar.REPOUSO`. **Com quatro no ensaio a tela mostraria dois.**
 
 O QUE CADA TESTE MORDE está no docstring dele. Nenhum número fixo entra aqui
-que não venha do dublê: a régua monta a bancada que quer e cobra que a página
+que não venha do dublê: a régua monta o ensaio que quer e cobra que a página
 mostre EXATAMENTE aquela.
 """
 from __future__ import annotations
@@ -94,22 +92,22 @@ def _html_dos_controles(pacotes_mod: Any, quantos: int) -> str:
 
 @pytest.mark.parametrize("quantos", [0, 1, 2, 4])
 def test_a_pagina_mostra_um_cartao_por_controle_conectado(pacotes_mod, quantos):
-    """Um cartão por controle da bancada, e NENHUM a mais."""
+    """Um cartão por controle do ensaio, e NENHUM a mais."""
     html = _html_dos_controles(pacotes_mod, quantos)
     cartoes = re.findall(r'<div class="ctr"', html)
     assert len(cartoes) == quantos, (
-        f"{quantos} na bancada e {len(cartoes)} cartões na tela")
+        f"{quantos} no ensaio e {len(cartoes)} cartões na tela")
     lugares = re.findall(r'data-controle="(p\d)"', html)
     assert lugares == [f"p{i + 1}" for i in range(quantos)], (
-        f"os lugares da tela não são os da bancada: {lugares}")
+        f"os lugares da tela não são os do ensaio: {lugares}")
 
 
 def test_sem_controle_a_pagina_diz_o_que_falta_e_nao_desenha_cartao(
         pacotes_mod, calibrar_mod):
     """Zero é estado LEGÍTIMO: uma frase, nenhum cartão, nenhum travessão solto."""
     html = _html_dos_controles(pacotes_mod, 0)
-    assert "ctr" not in html, "cartão fantasma com a bancada vazia"
-    assert calibrar_mod.SEM_CONTROLE in html, "a bancada vazia não diz o que falta"
+    assert "ctr" not in html, "cartão fantasma com o ensaio vazio"
+    assert calibrar_mod.SEM_CONTROLE in html, "o ensaio vazio não diz o que falta"
     assert "cabo" in calibrar_mod.SEM_CONTROLE and "rádio" in calibrar_mod.SEM_CONTROLE
 
 

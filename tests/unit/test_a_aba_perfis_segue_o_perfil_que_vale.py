@@ -7,8 +7,8 @@ O literal morava no ``topo.html``, que entra inteiro nas dez páginas, e ficava
 na tela até o primeiro tique de cada aba e sempre que a pintura falhava.
 
 A CURA É O QUE O PINTOR JÁ ESCREVE QUANDO NÃO HÁ PERFIL ATIVO. A régua não
-digita esse valor: ela pergunta a ``pacotes.topo()`` o que ele escreve sem
-perfil, e cobra que as vinte páginas (a bancada e o publicado) nasçam com isso.
+digita esse valor: pergunta a ``pacotes.topo()`` o que ele escreve sem
+perfil, e cobra que as vinte páginas (o ensaio e o publicado) nasçam com isso.
 Pintura que falha passa a mostrar ausência, nunca um perfil falso.
 
 A MORDIDA: devolva ao ``topo.html`` um nome de perfil no chip, regere e
@@ -52,9 +52,9 @@ def _sem_perfil() -> str:
 
 
 def _paginas() -> list[Any]:
-    """As páginas do publicado e da bancada, cada um com as abas de `monta.ABAS`."""
+    """As páginas do publicado e do ensaio, cada um com as abas de `monta.ABAS`."""
     fora = []
-    for pasta, rotulo in ((onde.PUBLICADO, "publicado"), (onde.ENSAIO, "bancada")):
+    for pasta, rotulo in ((onde.PUBLICADO, "publicado"), (onde.ENSAIO, "ensaio")):
         for prefixo in ABAS:
             achadas = sorted(pasta.glob(f"{prefixo}*.html"))
             assert achadas, f"não há página {prefixo}* em {pasta} ({rotulo})"
