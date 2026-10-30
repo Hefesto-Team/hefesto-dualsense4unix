@@ -1,10 +1,10 @@
 {
-  "name": "Mullet Mad Jack",
+  "name": "Jogo Fict\u00edcio Carimbado",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_2111190"
+      "steam_app_9900099"
     ],
     "window_title_regex": null,
     "process_name": []

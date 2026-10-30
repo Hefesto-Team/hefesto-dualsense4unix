@@ -1,10 +1,10 @@
 {
-  "name": "Big Walk",
+  "name": "Jogo Fict\u00edcio Ponte DualSense",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_1478500"
+      "steam_app_9900007"
     ],
     "window_title_regex": null,
     "process_name": []

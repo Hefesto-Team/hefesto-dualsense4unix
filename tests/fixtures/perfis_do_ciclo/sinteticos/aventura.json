@@ -4,18 +4,18 @@
   "match": {
     "type": "criteria",
     "window_class": [],
-    "window_title_regex": ".*(Elden Ring|God of War|Witcher|Dark Souls|Sekiro|Horizon|Tomb Raider|Ghost of Tsushima|Zelda|Dragon Age|Baldur|Hollow Knight|Bloodborne|Demon.s Souls|Lies of P).*",
+    "window_title_regex": ".*(Jogo Fict\u00edcio A|Jogo Fict\u00edcio B|Jogo Fict\u00edcio C|Jogo Fict\u00edcio D|Jogo Fict\u00edcio E|Jogo Fict\u00edcio F|Jogo Fict\u00edcio G|Jogo Fict\u00edcio H|Jogo Fict\u00edcio I|Jogo Fict\u00edcio J|Jogo Fict\u00edcio K|Jogo Fict\u00edcio L|Jogo Fict\u00edcio M|Jogo.s Fict\u00edcio N|Jogo Fict\u00edcio O).*",
     "process_name": [
-      "eldenring.exe",
-      "HorizonZeroDawn.exe",
-      "GodOfWar.exe",
-      "witcher3.exe",
-      "DarkSoulsIII.exe",
-      "Sekiro.exe",
-      "TombRaider.exe",
-      "GhostOfTsushima.exe",
-      "bg3.exe",
-      "LiesOfP.exe"
+      "jogo_ficticio_a.exe",
+      "jogo_ficticio_b.exe",
+      "jogo_ficticio_c.exe",
+      "jogo_ficticio_d.exe",
+      "jogo_ficticio_e.exe",
+      "jogo_ficticio_f.exe",
+      "jogo_ficticio_g.exe",
+      "jogo_ficticio_h.exe",
+      "jogo_ficticio_i.exe",
+      "jogo_ficticio_j.exe"
     ]
   },
   "priority": 70,

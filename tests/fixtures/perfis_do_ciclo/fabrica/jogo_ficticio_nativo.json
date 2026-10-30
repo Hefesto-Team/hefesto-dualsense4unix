@@ -1,14 +1,7 @@
 {
-  "name": "sackboy_nativo",
+  "name": "jogo_ficticio_nativo",
   "version": 1,
-  "match": {
-    "type": "criteria",
-    "window_class": [
-      "steam_app_1599660"
-    ],
-    "window_title_regex": null,
-    "process_name": []
-  },
+  "match": {"type": "criteria", "window_class": ["steam_app_9900013"], "window_title_regex": null, "process_name": []},
   "priority": 80,
   "triggers": {
     "left": {

@@ -1,17 +1,7 @@
 {
   "name": "Navegação",
   "version": 1,
-  "match": {
-    "type": "criteria",
-    "window_class": [
-      "firefox", "Navigator", "brave-browser", "Brave-browser",
-      "chromium", "chromium-browser", "google-chrome", "Google-chrome",
-      "gnome-terminal", "gnome-terminal-server",
-      "steam", "Steam"
-    ],
-    "window_title_regex": null,
-    "process_name": []
-  },
+  "match": {"type": "criteria", "window_class": ["app-ficticio-0", "App-ficticio-1", "app-ficticio-2", "App-ficticio-3", "app-ficticio-4", "app-ficticio-5", "app-ficticio-6", "App-ficticio-7", "app-ficticio-8", "app-ficticio-9", "app-ficticio-10", "App-ficticio-11"], "window_title_regex": null, "process_name": []},
   "priority": 50,
   "triggers": {
     "left":  {"mode": "Off", "params": []},

@@ -1,30 +1,35 @@
 {
-  "name": "DON'T SCREAM TOGETHER",
+  "name": "Jogo Fict\u00edcio Pulso",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_2692990"
+      "steam_app_9900011"
     ],
     "window_title_regex": null,
     "process_name": []
   },
-  "priority": 80,
+  "priority": 100,
   "triggers": {
     "left": {
-      "mode": "Off",
-      "params": []
+      "mode": "SlopeFeedback",
+      "params": [
+        1,
+        8,
+        2,
+        7
+      ]
     },
     "right": {
-      "mode": "Off",
+      "mode": "Pulse",
       "params": []
     }
   },
   "leds": {
     "lightbar": [
-      0,
-      0,
-      0
+      97,
+      53,
+      131
     ],
     "player_leds": [
       false,
@@ -38,8 +43,17 @@
   },
   "rumble": {
     "passthrough": true,
-    "policy": null,
+    "policy": "max",
     "custom_mult": null
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
+  },
+  "mode": {
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense"
   },
   "suppress_desktop_emulation": false
 }

@@ -1,15 +1,16 @@
 {
-  "name": "Wendigo Blue",
+  "name": "point_and_click",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_3359390"
+      "App-ficticio-0",
+      "app-ficticio-1"
     ],
     "window_title_regex": null,
     "process_name": []
   },
-  "priority": 80,
+  "priority": 66,
   "triggers": {
     "left": {
       "mode": "Off",
@@ -22,24 +23,52 @@
   },
   "leds": {
     "lightbar": [
-      0,
-      0,
+      255,
+      170,
       0
     ],
     "player_leds": [
       false,
       false,
-      false,
+      true,
       false,
       false
     ],
-    "lightbar_brightness": 1.0,
+    "lightbar_brightness": 0.6,
     "auto_player_colors": true
   },
   "rumble": {
     "passthrough": true,
     "policy": null,
     "custom_mult": null
+  },
+  "key_bindings": {
+    "l1": [
+      "KEY_LEFTSHIFT"
+    ],
+    "r1": [
+      "KEY_DOT"
+    ],
+    "options": [
+      "KEY_ESC"
+    ],
+    "create": [
+      "KEY_I"
+    ],
+    "touchpad_left_press": [
+      "KEY_E"
+    ],
+    "touchpad_middle_press": [
+      "KEY_U"
+    ],
+    "touchpad_right_press": [
+      "KEY_P"
+    ]
+  },
+  "mouse": {
+    "enabled": true,
+    "speed": 8,
+    "scroll_speed": 1
   },
   "suppress_desktop_emulation": false
 }

@@ -1,29 +1,34 @@
 {
-  "name": "Mortal Kombat",
+  "name": "Jogo Fict\u00edcio Ponte Xbox",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_1971870"
+      "steam_app_9900008"
     ],
     "window_title_regex": null,
     "process_name": []
   },
-  "priority": 100,
+  "priority": 102,
   "triggers": {
     "left": {
-      "mode": "Feedback",
+      "mode": "MultiPositionFeedback",
       "params": [
+        0,
+        1,
+        2,
+        3,
+        4,
         5,
-        4
+        6,
+        7,
+        8,
+        8
       ]
     },
     "right": {
-      "mode": "Resistance",
-      "params": [
-        3,
-        5
-      ]
+      "mode": "Pulse",
+      "params": []
     }
   },
   "leds": {
@@ -56,5 +61,12 @@
     "kind": "gamepad",
     "gamepad_flavor": "dualsense"
   },
-  "suppress_desktop_emulation": true
+  "suppress_desktop_emulation": true,
+  "ponte": {
+    "kind": "gamepad",
+    "gamepad_flavor": "xbox",
+    "steam_input": false,
+    "confirmada_em": "2026-08-22T03:40:22-03:00",
+    "confirmada_por": "silencio"
+  }
 }

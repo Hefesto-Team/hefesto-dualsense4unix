@@ -4,20 +4,20 @@
   "match": {
     "type": "criteria",
     "window_class": [],
-    "window_title_regex": ".*(Forza|Gran Turismo|Assetto Corsa|F1 20|F1 202|Dirt Rally|Need for Speed|Project CARS|Wreckfest|iRacing|BeamNG).*",
+    "window_title_regex": ".*(Jogo Fict\u00edcio A|Jogo Fict\u00edcio B|Jogo Fict\u00edcio C|Jogo Fict\u00edcio D 20|Jogo Fict\u00edcio E 20|Jogo Fict\u00edcio F|Jogo Fict\u00edcio G|Jogo Fict\u00edcio H|Jogo Fict\u00edcio I|Jogo Fict\u00edcio J|Jogo Fict\u00edcio K).*",
     "process_name": [
-      "ForzaHorizon5.exe",
-      "ForzaMotorsport.exe",
-      "GranTurismo7.exe",
-      "AC2.exe",
-      "AssettoCorsa.exe",
-      "F12023.exe",
-      "F12022.exe",
-      "F12021.exe",
-      "drt.exe",
-      "NeedForSpeedHeat.exe",
-      "ProjectCarsGO.exe",
-      "BeamNG.drive.exe"
+      "jogo_ficticio_a.exe",
+      "jogo_ficticio_b.exe",
+      "jogo_ficticio_c.exe",
+      "jogo_ficticio_d.exe",
+      "jogo_ficticio_e.exe",
+      "jogo_ficticio_f.exe",
+      "jogo_ficticio_g.exe",
+      "jogo_ficticio_h.exe",
+      "jogo_ficticio_i.exe",
+      "jogo_ficticio_j.exe",
+      "jogo_ficticio_k.exe",
+      "jogo_ficticio_l.exe"
     ]
   },
   "priority": 55,

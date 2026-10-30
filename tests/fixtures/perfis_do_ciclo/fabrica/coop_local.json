@@ -1,10 +1,7 @@
 {
   "name": "coop_local",
   "version": 1,
-  "match": {
-    "type": "criteria",
-    "window_title_regex": ".*(Sackboy|Overcooked|It Takes Two|Split Fiction|Cuphead|Moving Out|Unravel Two|LEGO |Rayman Legends|Broforce|Castle Crashers|TowerFall|Gang Beasts|Human Fall Flat|Ultimate Chicken Horse|Streets of Rage|Trine|Portal 2|Stardew Valley|Nine Parchments|Heave Ho|Pico Park|Boomerang Fu).*"
-  },
+  "match": {"type": "criteria", "window_title_regex": ".*(Jogo Fictício A|Jogo Fictício B|Jogo Fictício C|Jogo Fictício D|Jogo Fictício E|Jogo Fictício F|Jogo Fictício G|Jogo Fictício H |Jogo Fictício I|Jogo Fictício J|Jogo Fictício K|Jogo Fictício L|Jogo Fictício M|Jogo Fictício N|Jogo Fictício O|Jogo Fictício P|Jogo Fictício Q|Jogo Fictício R 20|Jogo Fictício S|Jogo Fictício T|Jogo Fictício U|Jogo Fictício V|Jogo Fictício W).*"},
   "priority": 75,
   "triggers": {
     "left": {

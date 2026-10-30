@@ -1,10 +1,10 @@
 {
-  "name": "Dont Scream",
+  "name": "Jogo_Ficticio_Sublinhado",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_2497900"
+      "steam_app_9900006"
     ],
     "window_title_regex": null,
     "process_name": []
@@ -12,30 +12,25 @@
   "priority": 97,
   "triggers": {
     "left": {
-      "mode": "MultiPositionFeedback",
+      "mode": "Feedback",
       "params": [
-        0,
-        1,
-        2,
-        3,
-        4,
         5,
-        6,
-        7,
-        8,
-        8
+        4
       ]
     },
     "right": {
-      "mode": "Pulse",
-      "params": []
+      "mode": "Resistance",
+      "params": [
+        3,
+        5
+      ]
     }
   },
   "leds": {
     "lightbar": [
-      129,
-      61,
-      156
+      80,
+      60,
+      220
     ],
     "player_leds": [
       false,
@@ -44,27 +39,22 @@
       false,
       false
     ],
-    "lightbar_brightness": 1.0,
-    "auto_player_colors": false
+    "lightbar_brightness": 0.6,
+    "auto_player_colors": true
   },
   "rumble": {
     "passthrough": true,
-    "policy": "balanceado",
-    "custom_mult": null
-  },
-  "mic": {
-    "button_toggles_system": true,
-    "volume": 97,
-    "muted": false
+    "policy": "custom",
+    "custom_mult": 0.66
   },
   "speaker": {
-    "volume": 99,
+    "volume": 101,
     "muted": false,
-    "rota": 3
+    "rota": 2
   },
   "mode": {
     "kind": "gamepad",
     "gamepad_flavor": "dualsense"
   },
-  "suppress_desktop_emulation": false
+  "suppress_desktop_emulation": true
 }

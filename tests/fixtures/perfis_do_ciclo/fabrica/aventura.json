@@ -1,17 +1,7 @@
 {
   "name": "Aventura",
   "version": 1,
-  "match": {
-    "type": "criteria",
-    "window_class": [],
-    "window_title_regex": ".*(Elden Ring|God of War|Witcher|Dark Souls|Sekiro|Horizon|Tomb Raider|Ghost of Tsushima|Zelda|Dragon Age|Baldur|Hollow Knight|Bloodborne|Demon.s Souls|Lies of P).*",
-    "process_name": [
-      "eldenring.exe", "HorizonZeroDawn.exe", "GodOfWar.exe",
-      "witcher3.exe", "DarkSoulsIII.exe", "Sekiro.exe",
-      "TombRaider.exe", "GhostOfTsushima.exe",
-      "bg3.exe", "LiesOfP.exe"
-    ]
-  },
+  "match": {"type": "criteria", "window_class": [], "window_title_regex": ".*(Jogo Fictício A|Jogo Fictício B|Jogo Fictício C|Jogo Fictício D|Jogo Fictício E|Jogo Fictício F|Jogo Fictício G|Jogo Fictício H|Jogo Fictício I|Jogo Fictício J|Jogo Fictício K|Jogo Fictício L|Jogo Fictício M|Jogo.s Fictício N|Jogo Fictício O).*", "process_name": ["jogo_ficticio_a.exe", "jogo_ficticio_b.exe", "jogo_ficticio_c.exe", "jogo_ficticio_d.exe", "jogo_ficticio_e.exe", "jogo_ficticio_f.exe", "jogo_ficticio_g.exe", "jogo_ficticio_h.exe", "jogo_ficticio_i.exe", "jogo_ficticio_j.exe"]},
   "priority": 70,
   "triggers": {
     "left":  {"mode": "MultiPositionFeedback", "params": [[1], [2], [3], [4], [5], [6], [7], [8], [8], [8]]},

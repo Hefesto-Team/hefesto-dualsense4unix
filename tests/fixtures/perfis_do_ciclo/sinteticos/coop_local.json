@@ -3,7 +3,7 @@
   "version": 1,
   "match": {
     "type": "criteria",
-    "window_title_regex": ".*(Sackboy|Overcooked|It Takes Two|Split Fiction|Cuphead|Moving Out|Unravel Two|LEGO |Rayman Legends|Broforce|Castle Crashers|TowerFall|Gang Beasts|Human Fall Flat|Ultimate Chicken Horse|Streets of Rage|Trine|Portal 2|Stardew Valley|Nine Parchments|Heave Ho|Pico Park|Boomerang Fu).*"
+    "window_title_regex": ".*(Jogo Fict\u00edcio A|Jogo Fict\u00edcio B|Jogo Fict\u00edcio C|Jogo Fict\u00edcio D|Jogo Fict\u00edcio E|Jogo Fict\u00edcio F|Jogo Fict\u00edcio G|Jogo Fict\u00edcio H |Jogo Fict\u00edcio I|Jogo Fict\u00edcio J|Jogo Fict\u00edcio K|Jogo Fict\u00edcio L|Jogo Fict\u00edcio M|Jogo Fict\u00edcio N|Jogo Fict\u00edcio O|Jogo Fict\u00edcio P|Jogo Fict\u00edcio Q|Jogo Fict\u00edcio R 20|Jogo Fict\u00edcio S|Jogo Fict\u00edcio T|Jogo Fict\u00edcio U|Jogo Fict\u00edcio V|Jogo Fict\u00edcio W).*"
   },
   "priority": 75,
   "triggers": {

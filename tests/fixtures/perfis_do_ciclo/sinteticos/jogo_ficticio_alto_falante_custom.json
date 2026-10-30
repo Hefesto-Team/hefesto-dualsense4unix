@@ -1,10 +1,10 @@
 {
-  "name": "Mina",
+  "name": "Jogo Fict\u00edcio Alto-falante",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_1875580"
+      "steam_app_9900009"
     ],
     "window_title_regex": null,
     "process_name": []

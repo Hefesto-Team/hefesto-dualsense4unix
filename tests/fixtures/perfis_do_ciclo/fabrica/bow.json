@@ -1,11 +1,7 @@
 {
   "name": "bow",
   "version": 1,
-  "match": {
-    "type": "criteria",
-    "window_title_regex": "(Horizon|Tomb Raider|Ghost of Tsushima|Elden Ring|Skyrim)",
-    "process_name": []
-  },
+  "match": {"type": "criteria", "window_title_regex": "(Jogo Fictício A|Jogo Fictício B|Jogo Fictício C|Jogo Fictício D|Jogo Fictício E)", "process_name": []},
   "priority": 10,
   "triggers": {
     "left":  {"mode": "Off", "params": []},

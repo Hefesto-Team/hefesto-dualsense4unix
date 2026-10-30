@@ -1,10 +1,10 @@
 {
-  "name": "Scarlet Deer Inn",
+  "name": "Jogo Fict\u00edcio: Dois Pontos",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_1553260"
+      "steam_app_9900003"
     ],
     "window_title_regex": null,
     "process_name": []

@@ -4,19 +4,19 @@
   "match": {
     "type": "criteria",
     "window_class": [],
-    "window_title_regex": ".*(FIFA|EA Sports FC|eFootball|NBA 2K|MLB|NHL|Madden|PGA Tour|UFC|TopSpin|Riders Republic).*",
+    "window_title_regex": ".*(Jogo Fict\u00edcio A|Jogo Fict\u00edcio B|Jogo Fict\u00edcio C|Jogo Fict\u00edcio D 20|Jogo Fict\u00edcio E|Jogo Fict\u00edcio F|Jogo Fict\u00edcio G|Jogo Fict\u00edcio H|Jogo Fict\u00edcio I|Jogo Fict\u00edcio J|Jogo Fict\u00edcio K).*",
     "process_name": [
-      "FIFA24.exe",
-      "FIFA23.exe",
-      "EASPORTSFC25.exe",
-      "eFootball.exe",
-      "NBA2K24.exe",
-      "NBA2K23.exe",
-      "MLB23.exe",
-      "NHL24.exe",
-      "Madden24.exe",
-      "TopSpin2K25.exe",
-      "UFC5.exe"
+      "jogo_ficticio_a.exe",
+      "jogo_ficticio_b.exe",
+      "jogo_ficticio_c.exe",
+      "jogo_ficticio_d.exe",
+      "jogo_ficticio_e.exe",
+      "jogo_ficticio_f.exe",
+      "jogo_ficticio_g.exe",
+      "jogo_ficticio_h.exe",
+      "jogo_ficticio_i.exe",
+      "jogo_ficticio_j.exe",
+      "jogo_ficticio_k.exe"
     ]
   },
   "priority": 57,

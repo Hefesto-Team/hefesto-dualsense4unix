@@ -1,29 +1,37 @@
 {
-  "name": "Grim Fandango Remastered",
+  "name": "Jogo Fict\u00edcio Com Microfone",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_316790"
+      "steam_app_9900001"
     ],
     "window_title_regex": null,
     "process_name": []
   },
-  "priority": 80,
+  "priority": 97,
   "triggers": {
     "left": {
-      "mode": "Off",
-      "params": []
+      "mode": "SemiAutoGun",
+      "params": [
+        3,
+        6,
+        5
+      ]
     },
     "right": {
-      "mode": "Off",
-      "params": []
+      "mode": "AutoGun",
+      "params": [
+        2,
+        6,
+        60
+      ]
     }
   },
   "leds": {
     "lightbar": [
-      0,
-      0,
+      255,
+      128,
       0
     ],
     "player_leds": [
@@ -40,6 +48,16 @@
     "passthrough": true,
     "policy": null,
     "custom_mult": null
+  },
+  "mic": {
+    "button_toggles_system": true,
+    "volume": null,
+    "muted": false
+  },
+  "speaker": {
+    "volume": 102,
+    "muted": false,
+    "rota": 2
   },
   "suppress_desktop_emulation": false
 }

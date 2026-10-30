@@ -1,0 +1,44 @@
+{
+  "name": "bow",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_title_regex": "(Jogo Fict\u00edcio A|Jogo Fict\u00edcio B|Jogo Fict\u00edcio C|Jogo Fict\u00edcio D|Jogo Fict\u00edcio E)",
+    "process_name": []
+  },
+  "priority": 10,
+  "triggers": {
+    "left": {
+      "mode": "Off",
+      "params": []
+    },
+    "right": {
+      "mode": "Bow",
+      "params": [
+        1,
+        7,
+        8,
+        8
+      ]
+    }
+  },
+  "leds": {
+    "lightbar": [
+      0,
+      180,
+      100
+    ],
+    "player_leds": [
+      false,
+      true,
+      false,
+      true,
+      false
+    ],
+    "lightbar_brightness": 1.0
+  },
+  "rumble": {
+    "passthrough": true
+  },
+  "key_bindings": null
+}

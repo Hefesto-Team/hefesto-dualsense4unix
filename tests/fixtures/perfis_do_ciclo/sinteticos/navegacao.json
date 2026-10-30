@@ -1,48 +1,58 @@
 {
-  "name": "Sackboy",
+  "name": "Navegação",
   "version": 1,
   "match": {
     "type": "criteria",
     "window_class": [
-      "steam_app_1599660"
+      "app-ficticio-0",
+      "App-ficticio-1",
+      "app-ficticio-2",
+      "App-ficticio-3",
+      "app-ficticio-4",
+      "app-ficticio-5",
+      "app-ficticio-6",
+      "App-ficticio-7",
+      "app-ficticio-8",
+      "app-ficticio-9",
+      "app-ficticio-10",
+      "App-ficticio-11"
     ],
     "window_title_regex": null,
     "process_name": []
   },
-  "priority": 97,
+  "priority": 0,
   "triggers": {
     "left": {
-      "mode": "SemiAutoGun",
+      "mode": "PulseA",
       "params": [
-        3,
-        6,
-        5
+        2,
+        7,
+        180
       ]
     },
     "right": {
-      "mode": "AutoGun",
+      "mode": "Resistance",
       "params": [
-        2,
-        6,
-        60
+        3,
+        5
       ]
     }
   },
   "leds": {
     "lightbar": [
-      255,
-      128,
-      0
+      97,
+      53,
+      131
     ],
     "player_leds": [
       false,
       false,
-      false,
+      true,
       false,
       false
     ],
-    "lightbar_brightness": 1.0,
-    "auto_player_colors": true
+    "lightbar_brightness": 0.4,
+    "auto_player_colors": false
   },
   "rumble": {
     "passthrough": true,
@@ -51,7 +61,7 @@
   },
   "mic": {
     "button_toggles_system": true,
-    "volume": null,
+    "volume": 98,
     "muted": false
   },
   "speaker": {

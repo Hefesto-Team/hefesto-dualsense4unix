@@ -66,7 +66,9 @@ class TestAventuraECorridaAbremNoEditor:
 
     def test_os_doze_presets_de_fabrica_abrem_todos(self) -> None:
         mau = []
-        for f in sorted(FIXTURES_FABRICA.glob("*.json")):
+        arquivos = sorted(FIXTURES_FABRICA.glob("*.json"))
+        assert len(arquivos) == 12, f"a fábrica tem doze presets, achei {len(arquivos)}"
+        for f in arquivos:
             perfil = Profile.model_validate(json.loads(f.read_text()))
             try:
                 DraftConfig.from_profile(perfil)

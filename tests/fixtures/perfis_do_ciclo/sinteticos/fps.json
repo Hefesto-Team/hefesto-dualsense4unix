@@ -4,20 +4,20 @@
   "match": {
     "type": "criteria",
     "window_class": [],
-    "window_title_regex": ".*(Counter-Strike|Valorant|Apex Legends|Call of Duty|Overwatch|Cyberpunk 2077|Halo|Rainbow Six|Battlefield|Warzone|Hunt: Showdown|Deathloop|Metro|Doom|Returnal|Control).*",
+    "window_title_regex": ".*(Jogo Fict\u00edcio A|Jogo Fict\u00edcio B|Jogo Fict\u00edcio C|Jogo Fict\u00edcio D|Jogo Fict\u00edcio E|Jogo Fict\u00edcio F 20|Jogo Fict\u00edcio G|Jogo Fict\u00edcio H|Jogo Fict\u00edcio I|Jogo Fict\u00edcio J|Jogo Fict\u00edcio: K|Jogo Fict\u00edcio L|Jogo Fict\u00edcio M|Jogo Fict\u00edcio N|Jogo Fict\u00edcio O|Jogo Fict\u00edcio P).*",
     "process_name": [
-      "cs2",
-      "cs2.exe",
-      "VALORANT-Win64-Shipping.exe",
-      "r5apex.exe",
-      "ModernWarfare.exe",
-      "Overwatch.exe",
-      "Cyberpunk2077.exe",
-      "HaloInfinite.exe",
-      "RainbowSix.exe",
-      "bf2042.exe",
-      "Warzone.exe",
-      "Deathloop.exe"
+      "jogo_ficticio_a",
+      "jogo_ficticio_b.exe",
+      "jogo_ficticio_c.exe",
+      "jogo_ficticio_d.exe",
+      "jogo_ficticio_e.exe",
+      "jogo_ficticio_f.exe",
+      "jogo_ficticio_g.exe",
+      "jogo_ficticio_h.exe",
+      "jogo_ficticio_i.exe",
+      "jogo_ficticio_j.exe",
+      "jogo_ficticio_k.exe",
+      "jogo_ficticio_l.exe"
     ]
   },
   "priority": 60,

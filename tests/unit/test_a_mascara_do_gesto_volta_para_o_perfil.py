@@ -24,9 +24,9 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 FIXTURE = (
-    RAIZ / "tests" / "fixtures" / "perfis" / "mullet_mad_jack-carimbo-que-ela-desmente.json"
+    RAIZ / "tests" / "fixtures" / "perfis" / "jogo_ficticio-carimbo-que-ela-desmente.json"
 )
-APPID = 2111190
+APPID = 9900099
 EPOCH = 1000
 
 
@@ -37,7 +37,7 @@ def _perfil_dela() -> Profile:
 
 def _no_disco() -> Profile:
     """O perfil como ficou em disco — releitura, não o objeto em memória."""
-    perfis = [p for p in load_all_profiles() if p.name == "Mullet Mad Jack"]
+    perfis = [p for p in load_all_profiles() if p.name == "Jogo Fictício Carimbado"]
     assert len(perfis) == 1, f"esperava um perfil no disco, achei {len(perfis)}"
     return perfis[0]
 
@@ -279,7 +279,7 @@ class TestOGestoDelaChegaAoPerfil:
 def _perfil_antes_do_gesto() -> Profile:
     """O estado dos três casos do journal, e é o dela: o ARQUIVO diz"""
     return Profile(
-        name="Mullet Mad Jack",
+        name="Jogo Fictício Carimbado",
         match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
         priority=80,
         mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense"),
@@ -413,7 +413,7 @@ class TestOQueNenhumaDasDuasFaz:
     ) -> None:
         """A escada sem gesto nenhum não muda de origem NEM alinha o `mode`."""
         sem_modo = Profile(
-            name="Mullet Mad Jack",
+            name="Jogo Fictício Carimbado",
             match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
             priority=80,
         )
