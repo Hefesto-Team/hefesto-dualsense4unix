@@ -59,6 +59,34 @@ print(json.dumps({"tela": tela, "dono": dono, "nosso": nosso,
 """
 
 
+_FALSO_XVFB = r"""
+import os, socket, sys, time
+from pathlib import Path
+Path("/tmp/.X80-lock").write_text(f"{os.getpid():>10}\n")
+time.sleep(float(sys.argv[1]))
+if sys.argv[2] == "escuta":
+    tela = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    tela.bind("\0/tmp/.X11-unix/X80")
+    tela.listen()
+    time.sleep(60)
+"""
+
+_CONFERENCIA = r"""
+import json, socket, subprocess, sys, time
+from hefesto_dualsense4unix.utils import tela_de_mentira as t
+alheio = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+if sys.argv[3] == "alheio":
+    alheio.bind("\0/tmp/.X11-unix/X80")
+    alheio.listen()
+inicio = time.monotonic()
+proc = subprocess.Popen([sys.executable, "-c", sys.argv[1], sys.argv[2], sys.argv[3]])
+adotou = t._a_tela_e_deste_xvfb(proc, 80)
+espera = time.monotonic() - inicio
+t._encerrar(proc)
+print(json.dumps({"adotou": adotou, "espera": espera}))
+"""
+
+
 def _caixa() -> list[str]:
     if shutil.which("bwrap") is None:
         pytest.skip("sem `bwrap` não há /tmp e rede próprios para a corrida")
@@ -74,14 +102,14 @@ def _caixa() -> list[str]:
     return caixa
 
 
-def _correr(atraso_do_vizinho: float) -> dict[str, object]:
+def _correr(*argumentos: str) -> dict[str, object]:
     ambiente = {
         chave: valor for chave, valor in os.environ.items()
         if chave not in {"HEFESTO_NA_TELA", "WAYLAND_DISPLAY", "TMPDIR"}
     }
     ambiente.update({"DISPLAY": ":0", "TMPDIR": "/tmp", "PYTHONPATH": str(_SRC)})
     feito = subprocess.run(
-        [*_caixa(), sys.executable, "-c", _CORRIDA, _VIZINHO, str(atraso_do_vizinho)],
+        [*_caixa(), sys.executable, "-c", *argumentos],
         capture_output=True, text=True, env=ambiente, timeout=60,
     )
     assert feito.returncode == 0, feito.stderr[-2000:]
@@ -94,7 +122,7 @@ def test_o_xvfb_que_perdeu_a_corrida_nao_adota_a_tela_do_vizinho() -> None:
     ``Xvfb`` firmar o lock; o nosso fica vivo na espera do lock temporário. Adotar
     o ``:80`` é morrer calado quando o dono derruba a tela dele. MORDE: com a
     espera só pelo caminho do socket, a tela volta ``:80`` e o dono é o vizinho."""
-    medida = _correr(0.3)
+    medida = _correr(_CORRIDA, _VIZINHO, "0.3")
     assert medida["tela"] == ":81", medida
     assert medida["dono"] == medida["nosso"], medida
     assert medida["dono"] != medida["vizinho"], medida
@@ -103,5 +131,21 @@ def test_o_xvfb_que_perdeu_a_corrida_nao_adota_a_tela_do_vizinho() -> None:
 def test_o_xvfb_que_perdeu_a_corrida_nao_fica_orfao() -> None:
     """O ``Xvfb`` que perdeu o ``:80`` sai pelas mãos de quem o criou, e o da tela
     adotada sai no ``derrubar``: nenhum fica vivo na caixa."""
-    medida = _correr(0.3)
+    medida = _correr(_CORRIDA, _VIZINHO, "0.3")
     assert medida["sobras"] == [], medida
+
+
+def test_o_lock_do_proprio_xvfb_so_adota_quando_ele_ja_escuta_a_tela() -> None:
+    """O lock nasce antes do socket: adotar só pelo lock aponta o GTK para uma tela
+    que ainda não atende. MORDE: sem a conferência do socket, a espera cai a zero."""
+    medida = _correr(_CONFERENCIA, _FALSO_XVFB, "0.8", "escuta")
+    assert medida["adotou"] is True, medida
+    assert float(str(medida["espera"])) >= 0.8, medida
+
+
+def test_o_lock_do_proprio_xvfb_nao_adota_o_socket_de_outro_processo() -> None:
+    """Com o ``/tmp`` próprio e a rede dividida, o lock é nosso e o socket abstrato
+    da tela é de outro processo, e é a ele que o GTK se liga primeiro. MORDE: sem a
+    conferência do socket, a tela alheia se adota."""
+    medida = _correr(_CONFERENCIA, _FALSO_XVFB, "1.0", "alheio")
+    assert medida["adotou"] is False, medida
