@@ -9,22 +9,12 @@ ensaio: true
 
 # O COMO das 21 — o gesto exato de cada linha do ensaio
 
-**Encomenda do usuário, 07/09/2026, verbatim:**
-
-> *"O COMO é obrigatório: escreva o gesto exato que foi aplicado. É isto que se
-> perdia quando a sessão morria. isso aqui me quebra. isso eu espero que o
-> [assistente] descreva."*
-
-<!-- A palavra entre colchetes é uma ELISÃO, não uma paráfrase: o usuário
-     escreveu ali o nome de um fornecedor, e este arquivo passou a ser
-     versionado em 20/09/2026. O `check_anonymity.sh` reprova nome de
-     fornecedor em arquivo rastreado, e a regra de produto sobre isso é
-     absoluta. Nenhuma outra palavra da frase foi tocada. -->
+**Encomenda de produto, 07/09/2026:** o COMO é obrigatório e diz o gesto exato que foi
+aplicado, porque é isto que se perdia quando a sessão morria, e quem conduz o ensaio o
+descreve.
 
 E o defeito que fez este arquivo nascer, apontado pelo usuário olhando a linha 10 na
-tela:
-
-> *"sinceramente não entendi o que diabos é pra fazer aqui."*
+tela: nada ali dizia o que fazer.
 
 A queixa estava certa. O COMO saía como `linha do roteiro: 10` mais `passa quando:
 mudaram` — o roteiro repetido, não o gesto. Um roteiro escrito em telegrama

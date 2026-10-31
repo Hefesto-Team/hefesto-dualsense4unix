@@ -18,8 +18,8 @@ A LINHA DO TEMPO, do vigia da lightbar
 
 O QUE O USUÁRIO VIU, E É O QUE O INSTRUMENTO NÃO VÊ
 ----------------------------------------------
-Primeira tentativa: "ele conectou, ligou a lightbar e DESLIGOU O CONTROLE".
-Segunda: "demorou mais pra conectar mas conectou e ligou com o lightbar correto".
+Primeira tentativa: conectou, acendeu a barra e DESLIGOU O CONTROLE.
+Segunda: demorou mais para conectar, mas conectou e acendeu a barra na cor certa.
 E o antes: a barra estava APAGADA, com o sysfs dizendo `multi=255,0,0`.
 
 O DADO QUE ACUSA

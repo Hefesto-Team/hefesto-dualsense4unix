@@ -970,8 +970,8 @@ CLI (`mic bt`), pela GUI ou por aqui.
 
 AS DUAS TRAVAS, LIDAS ANTES DE MEXER (CANAL-POR-CONTROLE-01, 03/09/2026)
 ------------------------------------------------------------------------
-Decisão de produto, com as palavras do usuário e sem corrigi-las:
-*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+Decisão de produto: com quatro controles, cada um dos quatro tem o próprio canal
+de entrada.
 
 Medido com os dois controles na mesa: existia **UM** canal, o do cabo.
 O do rádio não publicava fonte nenhuma, e quem recusava eram duas travas

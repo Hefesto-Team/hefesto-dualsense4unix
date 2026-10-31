@@ -1039,7 +1039,7 @@ invertido.
 ### Os dois botões do meio, medidos — e não há o que trocar
 
 O usuário perguntou se dava para trocar, por firmware, o botão do coração pelo da
-estrela, *"pra ele sempre funcionar nesse sentido"*. Medido em 11/08/2026, no
+estrela, para que ele sempre funcionasse nesse sentido. Medido em 11/08/2026, no
 aparelho do usuário, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
 
 | botão no plástico | evdev | code | o que faz |
