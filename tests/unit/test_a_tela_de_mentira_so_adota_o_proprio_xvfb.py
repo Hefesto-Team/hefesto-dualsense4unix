@@ -118,7 +118,9 @@ def _correr(*argumentos: str) -> dict[str, object]:
 
 
 def test_o_xvfb_que_perdeu_a_corrida_nao_adota_a_tela_do_vizinho() -> None:
-    """O vizinho pega o ``:80`` depois da conferência do socket e antes do nosso
+    """Prova da D-3110-A-TELA-DE-MENTIRA-SO-SE-ADOTA-QUANDO-E-DESTE-PROCESSO.
+
+    O vizinho pega o ``:80`` depois da conferência do socket e antes do nosso
     ``Xvfb`` firmar o lock; o nosso fica vivo na espera do lock temporário. Adotar
     o ``:80`` é morrer calado quando o dono derruba a tela dele. MORDE: com a
     espera só pelo caminho do socket, a tela volta ``:80`` e o dono é o vizinho."""
