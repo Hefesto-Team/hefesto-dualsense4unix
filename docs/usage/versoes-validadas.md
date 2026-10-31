@@ -10,7 +10,7 @@ não foi testado. A página e o código são conferidos juntos por
 |---|---|---|---|
 | Python | `>= 3.10` | `pyproject.toml` | a instalação não começa |
 | BlueZ | `>= 5.79` e `< 5.87` | `hefesto-dualsense4unix doctor` | abaixo de 5.79, reprova (o `bluetoothd` trava com vários controles); de 5.87 em diante, avisa (há um defeito conhecido na desconexão) |
-| Kernel, para os módulos do Hefesto (`hid-playstation`, `hid-nintendo`, `uhid`, `usb-f-hid`, `rtw88-usb`) | o que roda, quando o fonte de fábrica dele se acha e a série de `patch/` aplica sem fuzz | o `preparar-o-fonte.py` de cada módulo, no `dkms build`, e o `hefesto-dualsense4unix doctor` | o módulo não é compilado, o driver de fábrica fica, e o doctor diz o que falta (a fonte do kernel da distro, a rede até o git.kernel.org ou o rebase da série). Sem o `hid-playstation` do Hefesto, o microfone pelo Bluetooth não liga |
+| Kernel, para os módulos do Hefesto (`hid-playstation`, `hid-nintendo`, `uhid`, `usb-f-hid`, `rtw88-usb`) | o que roda, quando o fonte de fábrica dele se acha e a série de `patch/` aplica sem fuzz | o `preparar-o-fonte.py` de cada módulo, quando o `dkms` lê o `dkms.conf` do kernel, e o `hefesto-dualsense4unix doctor` | o módulo não é compilado, o driver de fábrica fica, e o doctor diz o que falta (a fonte do kernel da distro, a rede até o git.kernel.org ou o rebase da série). Sem o `hid-playstation` do Hefesto, o microfone pelo Bluetooth não liga |
 
 As versões das bibliotecas Python que rodaram com os controles estão em
 `constraints.txt`, e o instalador as usa.
