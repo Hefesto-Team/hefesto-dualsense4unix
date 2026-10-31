@@ -75,3 +75,7 @@ tests/unit/test_o_id_da_peca_sai_tambem_dos_dados_da_10.py
 tests/unit/test_o_install_recarrega_a_janela_e_a_bandeja.py
 tests/unit/test_o_no_do_fisico_nao_fica_com_quem_o_abriu_na_janela.py
 tests/unit/test_o_teste_anterior_nao_deixa_pad_na_mesa_do_seguinte.py
+tests/unit/test_a_mascara_do_gesto_volta_para_o_perfil.py
+tests/unit/test_a_mascara_segue_o_estado.py
+tests/unit/test_o_mapa_do_gabinete_e_do_usuario.py
+tests/unit/test_o_quadro_do_modo_grava_no_perfil.py

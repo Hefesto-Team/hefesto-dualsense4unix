@@ -110,7 +110,8 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     def _load(nome: str, *a: Any, **kw: Any) -> Profile:
         if nome != guardado["perfil"].name:
             raise FileNotFoundError(nome)
-        return guardado["perfil"].model_copy(deep=True)
+        perfil: Profile = guardado["perfil"]
+        return perfil.model_copy(deep=True)
 
     def _save(prof: Profile, *a: Any, **kw: Any) -> None:
         guardado["perfil"] = prof

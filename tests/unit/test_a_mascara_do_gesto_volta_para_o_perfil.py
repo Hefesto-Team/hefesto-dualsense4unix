@@ -5,11 +5,12 @@ import json
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
 from hefesto_dualsense4unix.daemon import launch_env as le
+from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 from hefesto_dualsense4unix.daemon.subsystems import hotkey as hotkey_sub
 from hefesto_dualsense4unix.integrations import ponte_escada as pe
 from hefesto_dualsense4unix.integrations import ponte_tentativa as pt
@@ -61,6 +62,9 @@ class _Daemon:
         self._coop_manager = None
         self.pedidos: list[tuple[bool, str | None, str, str | None]] = []
         self.aplicados: list[Any] = []
+
+    def como_daemon(self) -> DaemonProtocol:
+        return cast("DaemonProtocol", self)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
         return fn(*args)
@@ -151,7 +155,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         assert antes.ponte is not None and antes.ponte.gamepad_flavor == "dualsense"
 
         d = _Daemon(flavor="dualsense")
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
         assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
 
         gesto = pt.gesto_em_curso(d)
@@ -159,12 +163,12 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         assert gesto.appid == APPID
         assert gesto.ponte == pe.ESCADA[1].ponte
 
-        le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC - 1)
+        le.tique_da_escada(d.como_daemon(), agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC - 1)
         meio = _no_disco()
         assert meio.mode is not None and meio.mode.gamepad_flavor == "dualsense"
         assert meio.mode.caminho is None
 
-        le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
+        le.tique_da_escada(d.como_daemon(), agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
 
         depois = _no_disco()
         assert depois.mode is not None
@@ -183,10 +187,10 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         antes = _no_disco()
 
         d = _Daemon(flavor="dualsense")
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
         gesto = pt.gesto_em_curso(d)
         assert gesto is not None
-        le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
+        le.tique_da_escada(d.como_daemon(), agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
 
         depois = _no_disco()
         assert depois.priority == antes.priority
@@ -204,17 +208,17 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         """A entrega vista do lado de quem usa: o aperto seguinte não acontece."""
         save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="dualsense")
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
         gesto = pt.gesto_em_curso(d)
         assert gesto is not None
-        le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
+        le.tique_da_escada(d.como_daemon(), agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
 
         gravado = _no_disco()
         monkeypatch.setattr(le, "_steam_profiles", lambda dd: [(APPID, gravado)])
         outro = _Daemon(flavor="dualsense")
         outro.display_authority = "unknown"
 
-        resultado = le.arm_launch_profile(outro, base_dir=env_dir, now=EPOCH + 1.0)
+        resultado = le.arm_launch_profile(outro.como_daemon(), base_dir=env_dir, now=EPOCH + 1.0)
 
         assert resultado is not None
         assert resultado["armado"] is True
@@ -231,11 +235,11 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         save_profile(_perfil_do_usuario(), origem="teste")
 
         d = _Daemon(flavor="dualsense")
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
 
         assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
         assert pt.gesto_em_curso(d) is None
-        le.tique_da_escada(d, agora=time.monotonic() + 1e6)
+        le.tique_da_escada(d.como_daemon(), agora=time.monotonic() + 1e6)
         assert _no_disco().mode.gamepad_flavor == "dualsense"  # type: ignore[union-attr]
         assert _no_disco().mode.caminho is None  # type: ignore[union-attr]
 
@@ -246,12 +250,12 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         """Silêncio com o jogo fechado é quem usa tendo ido embora, não aprovação."""
         save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="dualsense")
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
         gesto = pt.gesto_em_curso(d)
         assert gesto is not None
 
         d.display_authority = "unknown"
-        le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
+        le.tique_da_escada(d.como_daemon(), agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
 
         assert pt.gesto_em_curso(d) is None
         depois = _no_disco()
@@ -268,11 +272,11 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="xbox")
 
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
 
         assert d.pedidos == [(False, None, "manual", None)], "premissa: foi para o desktop"
         assert pt.gesto_em_curso(d) is None
-        le.tique_da_escada(d, agora=time.monotonic() + 1e6)
+        le.tique_da_escada(d.como_daemon(), agora=time.monotonic() + 1e6)
         assert _no_disco().mode.kind == "gamepad"  # type: ignore[union-attr]
 
 
@@ -294,21 +298,25 @@ class TestODegrauCaroNaoCustaAPartida:
         """As quatro linhas do journal, reproduzidas, e o desfecho trocado."""
         save_profile(_perfil_antes_do_gesto(), origem="teste")
         d = _Daemon(flavor="xbox")
-        d._ponte_tentativa = pt.Tentativa(
-            appid=APPID,
-            epoch=EPOCH,
-            degrau=pe.ESCADA[1],
-            ultimo_gesto=0.0,
-            viu_o_jogo=True,
-            gestos=2,
+        setattr(
+            d,
+            pt.ATRIBUTO_DA_TENTATIVA,
+            pt.Tentativa(
+                appid=APPID,
+                epoch=EPOCH,
+                degrau=pe.ESCADA[1],
+                ultimo_gesto=0.0,
+                viu_o_jogo=True,
+                gestos=2,
+            ),
         )
 
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
 
         assert d.pedidos == [(False, None, "manual", None)], "o aperto foi comido"
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
 
-        le.tique_da_escada(d)
+        le.tique_da_escada(d.como_daemon())
 
         gravado = _no_disco()
         assert gravado.mode is not None
@@ -321,22 +329,26 @@ class TestODegrauCaroNaoCustaAPartida:
         """O CUIDADO da frente: não matar o caminho para o Nativo."""
         save_profile(_perfil_antes_do_gesto(), origem="teste")
         d = _Daemon(flavor="xbox")
-        d._ponte_tentativa = pt.Tentativa(
-            appid=APPID,
-            epoch=EPOCH,
-            degrau=pe.ESCADA[1],
-            ultimo_gesto=0.0,
-            viu_o_jogo=True,
-            gestos=2,
+        setattr(
+            d,
+            pt.ATRIBUTO_DA_TENTATIVA,
+            pt.Tentativa(
+                appid=APPID,
+                epoch=EPOCH,
+                degrau=pe.ESCADA[1],
+                ultimo_gesto=0.0,
+                viu_o_jogo=True,
+                gestos=2,
+            ),
         )
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
-        le.tique_da_escada(d)
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
+        le.tique_da_escada(d.como_daemon())
 
         gravado = _no_disco()
         assert gravado.ponte is None, "carimbou o degrau que o usuário acabou de recusar"
 
         for adiante in (60.0, 120.0, 181.0):
-            le.tique_da_escada(d, agora=EPOCH + adiante)
+            le.tique_da_escada(d.como_daemon(), agora=EPOCH + adiante)
             depois = _no_disco()
             assert depois.ponte is None, (
                 f"{adiante:.0f}s depois do degrau caro, o produto carimbou "
@@ -352,7 +364,7 @@ class TestODegrauCaroNaoCustaAPartida:
         outro = _Daemon(flavor="dualsense")
         outro.display_authority = "unknown"
 
-        resultado = le.arm_launch_profile(outro, base_dir=env_dir, now=EPOCH + 1.0)
+        resultado = le.arm_launch_profile(outro.como_daemon(), base_dir=env_dir, now=EPOCH + 1.0)
 
         assert resultado is not None
         assert pe.ESCADA[2].ponte.kind == pe.KIND_NATIVE, "premissa do teste"
@@ -373,18 +385,22 @@ class TestODegrauCaroNaoCustaAPartida:
         """Alinhar o `mode` NÃO é confirmar, e por isso não espera silêncio."""
         save_profile(_perfil_antes_do_gesto(), origem="teste")
         d = _Daemon(flavor="xbox")
-        d._ponte_tentativa = pt.Tentativa(
-            appid=APPID,
-            epoch=EPOCH,
-            degrau=pe.ESCADA[1],
-            ultimo_gesto=0.0,
-            viu_o_jogo=True,
-            gestos=2,
+        setattr(
+            d,
+            pt.ATRIBUTO_DA_TENTATIVA,
+            pt.Tentativa(
+                appid=APPID,
+                epoch=EPOCH,
+                degrau=pe.ESCADA[1],
+                ultimo_gesto=0.0,
+                viu_o_jogo=True,
+                gestos=2,
+            ),
         )
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
 
         d.display_authority = "unknown"
-        le.tique_da_escada(d)
+        le.tique_da_escada(d.como_daemon())
 
         gravado = _no_disco()
         assert gravado.mode is not None
@@ -399,11 +415,11 @@ class TestOQueNenhumaDasDuasFaz:
     ) -> None:
         """Criar perfil nas costas do usuário tem uma porta só, e é o editor."""
         d = _Daemon(flavor="dualsense")
-        await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
+        await hotkey_sub.build_next_bridge_callback(d.como_daemon())()
         gesto = pt.gesto_em_curso(d)
         assert gesto is not None
 
-        le.tique_da_escada(d, agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
+        le.tique_da_escada(d.como_daemon(), agora=gesto.ultimo_gesto + pe.SILENCIO_CONFIRMA_SEC + 1)
 
         assert load_all_profiles() == []
 
@@ -419,16 +435,20 @@ class TestOQueNenhumaDasDuasFaz:
         )
         save_profile(sem_modo, origem="teste")
         d = _Daemon(flavor="dualsense")
-        d._ponte_tentativa = pt.Tentativa(
-            appid=APPID,
-            epoch=EPOCH,
-            degrau=pe.ESCADA[0],
-            ultimo_gesto=0.0,
-            viu_o_jogo=True,
-            gestos=0,
+        setattr(
+            d,
+            pt.ATRIBUTO_DA_TENTATIVA,
+            pt.Tentativa(
+                appid=APPID,
+                epoch=EPOCH,
+                degrau=pe.ESCADA[0],
+                ultimo_gesto=0.0,
+                viu_o_jogo=True,
+                gestos=0,
+            ),
         )
 
-        le.tique_da_escada(d, agora=pe.SILENCIO_CONFIRMA_SEC + 1)
+        le.tique_da_escada(d.como_daemon(), agora=pe.SILENCIO_CONFIRMA_SEC + 1)
 
         gravado = _no_disco()
         assert gravado.ponte is not None
