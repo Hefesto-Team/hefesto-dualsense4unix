@@ -3,14 +3,14 @@
 O de fábrica responde todo pedido de feature com 64 bytes e sem o pacote vazio;
 o Wine e o SDL pedem 128, e cada pedido volta ETIMEDOUT aos ~5 s. O fonte em
 `assets/dkms/usb-f-hid/` é o stable v7.1.5 com um patch, e esta régua cobra a
-proveniência dele: o pino do `dkms.conf` só aceita os kernels conferidos, o `.c`
-da pasta é o do BASELINE, o patch desfeito devolve o de fábrica, a marca
-`get_report_sized` está no fonte e todo kernel de OUTRA versão que o pino aceita
-(o 7.2.6) tem o de fábrica dele medido igual ao da base.
+proveniência dele: o cache (`fonte-por-kernel/raiz.txt`) e os KERNELS_VALIDADOS dizem
+o mesmo, o `.c` da pasta é o do BASELINE, o patch desfeito devolve o de fábrica, a
+marca `get_report_sized` está no fonte e todo kernel de OUTRA versão do cache (o
+7.2.6) tem o de fábrica dele medido igual ao da base.
 
-A MORDIDA: trocar um byte do `f_hid.c`, tirar a marca, abrir o pino para
-`^7\\.1\\.` ou mandar o módulo para `/kernel` em vez de `/updates/dkms` reprova
-pelo menos uma régua daqui.
+A MORDIDA: trocar um byte do `f_hid.c`, tirar a marca, pôr no cache um kernel sem
+medida ou mandar o módulo para `/kernel` em vez de `/updates/dkms` reprova pelo
+menos uma régua daqui.
 """
 
 from __future__ import annotations
@@ -45,33 +45,12 @@ def _conf(chave: str) -> str:
     return casou.group(1)
 
 
-def _pino() -> re.Pattern[str]:
-    return re.compile(_conf("BUILD_EXCLUSIVE_KERNEL"))
-
-
-def test_cada_kernel_validado_casa_o_pino() -> None:
-    validados = _baseline()["KERNELS_VALIDADOS"].split(",")
-    assert validados and all(validados), "KERNELS_VALIDADOS vazio: o pino não teria dono"
-    for build in validados:
-        assert _pino().match(f"{build.strip()}-generic"), (
-            f"{build} está em KERNELS_VALIDADOS e o dkms.conf não o constrói"
-        )
-
-
-@pytest.mark.parametrize(
-    "build", ["7.2.7-76070207", "7.1.6-76070106", "7.1.5-1", "7.3.0-76070300", "6.17.9-76061709"]
-)
-def test_o_pino_nao_aceita_kernel_que_ninguem_conferiu(build: str) -> None:
-    assert build not in _baseline()["KERNELS_VALIDADOS"].split(",")
-    assert not _pino().match(f"{build}-generic"), f"o pino deixa passar {build}"
-
-
-def test_o_pino_aceita_o_7_2_6_que_o_sistema_trouxe() -> None:
-    """O 7.2.6-76070206 foi conferido: sem ele o DKMS pula e o Wine espera 5 s por pedido."""
-    validados = _baseline()["KERNELS_VALIDADOS"].split(",")
-    assert "7.2.6-76070206" in validados
-    assert _pino().match("7.2.6-76070206-generic")
-    assert not _pino().match("7.2.6-76070207-generic"), "o pino é pelo build exato"
+def test_o_cache_e_os_conferidos_dizem_o_mesmo() -> None:
+    """Kernel no cache sem estar nos conferidos é fonte que ninguém mediu."""
+    raiz = (PASTA / "fonte-por-kernel" / "raiz.txt").read_text(encoding="utf-8").split()
+    validados = [v.strip() for v in _baseline()["KERNELS_VALIDADOS"].split(",")]
+    assert raiz and sorted(raiz) == sorted(validados), (raiz, validados)
+    assert "7.2.6-76070206" in raiz
 
 
 def test_todo_kernel_de_outra_versao_tem_o_fabrica_medido_igual_a_base() -> None:
@@ -152,13 +131,3 @@ def test_o_patch_traz_a_marca() -> None:
     """A marca nasce do patch, não de uma edição solta no `.c` da pasta."""
     remendo = (PASTA / "patch" / _baseline()["PATCH"]).read_text(encoding="utf-8")
     assert "+module_param(get_report_sized, bool, 0444);" in remendo
-
-
-def test_a_regex_do_pino_e_os_conferidos_dizem_o_mesmo() -> None:
-    """O ritual do BASELINE: o build entra na regex e em KERNELS_VALIDADOS juntos."""
-    casou = re.fullmatch(r"\^\(?(.+?)\)?-", _conf("BUILD_EXCLUSIVE_KERNEL"))
-    assert casou, "o pino perdeu a forma `^(build|build)-`"
-    alternativas = casou.group(1)
-    na_regex = {a.replace("\\.", ".") for a in alternativas.split("|")}
-    validados = {v.strip() for v in _baseline()["KERNELS_VALIDADOS"].split(",")}
-    assert na_regex == validados

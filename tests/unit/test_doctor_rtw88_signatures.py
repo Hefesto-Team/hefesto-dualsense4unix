@@ -177,13 +177,14 @@ class TestCheckDkmsRtw88:
             "a razão de nunca recarregar (WiFi em uso) fica na mensagem"
         )
 
-    def test_kernel_fora_do_pino_e_warn_de_rebase(self) -> None:
+    def test_kernel_sem_build_diz_o_motivo_do_pre_build(self) -> None:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_rtw88_usb_dkms")
-        assert "rebase pendente" in corpo
-        assert "BUILD_EXCLUSIVE_KERNEL" in corpo, (
-            "kernel novo cai no pino de ABI — o warn precisa apontar o ritual "
-            "de rebase, não deixar a cura sumir em silêncio"
+        assert "_dkms_veredito" in corpo, (
+            "o kernel em que o módulo não compilou tem o motivo gravado pelo "
+            "preparar-o-fonte.py — o warn precisa repeti-lo, não deixar a cura "
+            "sumir em silêncio"
         )
+        assert "BUILD_EXCLUSIVE_KERNEL" not in corpo
 
     def test_remediacao_acionavel_tambem_sem_checkout(self) -> None:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_rtw88_usb_dkms")

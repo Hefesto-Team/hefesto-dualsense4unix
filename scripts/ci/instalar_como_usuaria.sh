@@ -14,11 +14,12 @@ Uso (dentro do contêiner, como root):
   --fontes pop  antes de tudo, põe o repositório do Pop!_OS sobre o
                 ubuntu:24.04, com a chave conferida pela impressão digital
   --so-fontes   só prepara as fontes e sai (o smoke do wheel usa)
-  --so-dkms     não instala nada do produto: instala o dkms e os headers mais
-                novos da distro e roda o `dkms build -k` de cada módulo de
-                assets/dkms/. Código 77 é o BUILD_EXCLUSIVE_KERNEL recusando
-                um kernel fora do pino; qualquer outro código diferente de 0
-                reprova
+  --so-dkms     não instala nada do produto: instala o dkms, os headers e os
+                módulos do kernel mais novo da distro e roda o `dkms build -k`
+                de cada módulo de assets/dkms/. O módulo que não compila só
+                passa com o veredito do preparar-o-fonte.py (fonte de fábrica
+                que não se acha ou série que não aplica: o de fábrica fica,
+                com o motivo); compilação que quebra ou série sem .c reprova
 
 Variáveis:
     HEFESTO_CI_USUARIA   nome da usuária criada (default: jogadora)
@@ -111,11 +112,19 @@ dkms_contra_os_headers() {
                     | awk '{print $1}' | sort -V | tail -1)"
             fi
             [[ -n "${pacote}" ]] || falha "a distro não oferece headers de kernel"
-            apt-get install -y -qq dkms build-essential "${pacote}" >/dev/null ;;
+            local modulos=linux-image-amd64 extra=""
+            if [[ "${ID:-}" != debian ]]; then
+                modulos="linux-modules-${pacote#linux-headers-}"
+                extra="linux-modules-extra-${pacote#linux-headers-}"
+            fi
+            apt-get install -y -qq dkms build-essential python3 patch ca-certificates kmod zstd \
+                "${pacote}" "${modulos}" >/dev/null
+            [[ -z "${extra}" ]] || apt-get install -y -qq "${extra}" >/dev/null 2>&1 || true ;;
         dnf)
-            dnf install -y -q dkms kernel-devel make gcc elfutils-libelf-devel >/dev/null ;;
+            dnf install -y -q dkms kernel-devel kernel-modules-core kernel-modules make gcc \
+                elfutils-libelf-devel python3 patch >/dev/null ;;
         pacman)
-            pacman -Sy --noconfirm --needed dkms linux-headers base-devel >/dev/null ;;
+            pacman -Sy --noconfirm --needed dkms linux linux-headers base-devel python patch >/dev/null ;;
     esac
     local k=""
     if [[ -d /usr/src/kernels ]]; then
@@ -128,7 +137,7 @@ dkms_contra_os_headers() {
     [[ -n "${k}" && -e "/lib/modules/${k}/build/Makefile" ]] \
         || falha "os headers instalados não deixaram um /lib/modules/<k>/build"
     printf 'kernel dos headers: %s\n' "${k}"
-    local conf dir nome ver rc reprovados=()
+    local conf dir nome ver rc estado frase reprovados=()
     for conf in "${RAIZ}"/assets/dkms/*/dkms.conf; do
         dir="$(dirname "${conf}")"
         nome="$(sed -n 's/^PACKAGE_NAME="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "${conf}")"
@@ -140,20 +149,28 @@ dkms_contra_os_headers() {
         dkms build -m "${nome}" -v "${ver}" -k "${k}" > "/tmp/dkms-${nome}.log" 2>&1
         rc=$?
         set -e
-        case "${rc}" in
-            0)  printf '  %-26s compila (rc 0)\n' "${nome}" ;;
-            77) printf '  %-26s fora do pino de kernel, de propósito (rc 77)\n' "${nome}" ;;
-            *)  printf '  %-26s NÃO compila (rc %s); o fim do log:\n' "${nome}" "${rc}"
+        estado="" frase=""
+        if [[ -r "/var/lib/dkms/${nome}/${ver}/fonte-${k}.txt" ]]; then
+            { IFS= read -r estado && IFS= read -r frase; } < "/var/lib/dkms/${nome}/${ver}/fonte-${k}.txt" || true
+        fi
+        case "${rc}:${estado}" in
+            0:*)
+                printf '  %-26s compila (rc 0): %s\n' "${nome}" "${frase:-sem veredito}" ;;
+            *:sem-fonte | *:sem-fabrica | *:nao-aplica)
+                printf '  %-26s fica no de fábrica (rc %s): %s\n' "${nome}" "${rc}" "${frase}" ;;
+            *)  printf '  %-26s NÃO compila (rc %s, veredito «%s»); o fim do log:\n' \
+                    "${nome}" "${rc}" "${estado:-nenhum}"
                 tail -15 "/tmp/dkms-${nome}.log" | sed 's/^/      /'
                 reprovados+=("${nome}") ;;
         esac
         if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-            printf -- '- `%s` contra `%s`: rc %s\n' "${nome}" "${k}" "${rc}" >> "${GITHUB_STEP_SUMMARY}"
+            printf -- '- `%s` contra `%s`: rc %s, %s\n' "${nome}" "${k}" "${rc}" "${frase:-sem veredito}" \
+                >> "${GITHUB_STEP_SUMMARY}"
         fi
     done
     (( ${#reprovados[@]} == 0 )) \
         || falha "módulo(s) que não compilam contra ${k}: ${reprovados[*]}"
-    titulo "APROVADO: todo módulo compila ou é recusado pelo pino em ${k}"
+    titulo "APROVADO: todo módulo compila em ${k} ou fica no de fábrica com o motivo"
 }
 
 if (( SO_DKMS )); then

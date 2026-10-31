@@ -278,11 +278,14 @@ Bluetooth.
 
 ## Rebase (kernel novo)
 
-**Um fonte por kernel, e só nos kernels conferidos (15/10/2026).** O `.c` daqui
-substitui o de fábrica; contra um kernel cujo de fábrica é outro, ele compila
-limpo e desfaz os consertos dele. Por isso o `dkms.conf` tem o
-`BUILD_EXCLUSIVE_KERNEL`, e o `PRE_BUILD` (`escolher-o-fonte.sh`) põe no lugar o
-fonte do build exato:
+**Um fonte por kernel (15/10/2026), e o kernel que roda (31/10/2026).** O `.c`
+daqui substitui o de fábrica; contra um kernel cujo de fábrica é outro, ele
+compilaria limpo e desfaria os consertos dele. Por isso o `PRE_BUILD`
+(`preparar-o-fonte.py`) põe no lugar o fonte do build exato: o do cache, quando
+o build está nele, e, fora do cache, o de fábrica do kernel que roda, achado na
+árvore do kernel, na fonte da distro ou no stable do kernel.org, conferido pelo
+`srcversion` do módulo de fábrica, com a série guardada mais nova que aplica
+com -F0. O cache:
 
 - `hid-nintendo.c` e `hid-ids.h` da raiz servem os builds de
   `fonte-por-kernel/raiz.txt` (7.0.11-76070011 e 7.1.5-76070105, o mesmo de
@@ -292,12 +295,12 @@ fonte do build exato:
   rebaseada em `patch/`. O pedaço do 0003 no `joycon_init` foi refeito por cima
   do ramo do HORI (`LIC_PRO`), e o do 0001 mantém o `err_io_stop` novo.
 
-Kernel fora da lista: o DKMS pula (rc 77) e o de fábrica assume, com os
-consertos dele. O ritual inteiro, com os sha256 de cada pasta, está em
+Quando o fonte não se acha ou nenhuma série aplica: o DKMS pula (rc 77), o de
+fábrica assume com os consertos dele, e o doctor diz o motivo. O ritual inteiro, com os sha256 de cada pasta, está em
 `patch/BASELINE`, e `scripts/conferir_o_kernel_novo.py` faz o primeiro passo
 para um fonte de kernel antes de ele chegar. O `PACKAGE_VERSION` não sobe: o
-motivo está no cabeçalho do `dkms.conf`. O `patch/` da raiz não entra no build
-(o helper DKMS o apaga do source copiado).
+motivo está no cabeçalho do `dkms.conf`. O `patch/` viaja para o source
+copiado: é a série que o `preparar-o-fonte.py` aplica num kernel fora do cache.
 
 **O 0001 e o 7.3.** O mainline do 7.3 traz o próprio limitador de subcomando
 com recuo (`joycon_enforce_subcmd_rate_legacy`, `JC_SUBCMD_RATE_MAX_FAILURES`),

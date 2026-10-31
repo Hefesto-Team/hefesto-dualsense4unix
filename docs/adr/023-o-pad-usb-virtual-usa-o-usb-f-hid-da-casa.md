@@ -20,7 +20,11 @@ pedido volta ETIMEDOUT aos ~5 s. Com 4 controles, o `winebus` estoura o prazo do
   (`assets/dkms/usb-f-hid/`), no molde do `hid-playstation` e do `uhid`. O patch
   fecha a resposta no tamanho gravado e manda o pacote vazio quando falta.
 - Ele só se constrói nos kernels conferidos (`BUILD_EXCLUSIVE_KERNEL` e o ritual do
-  `patch/BASELINE`). Fora deles, o de fábrica assume.
+  `patch/BASELINE`). Fora deles, o de fábrica assume. *Nota de 31/10/2026: o pino
+  caducou. O `preparar-o-fonte.py` compila no kernel que roda, do `f_hid.c` de
+  fábrica conferido pelo `srcversion`, e o de fábrica só assume quando o fonte não
+  se acha ou o patch não aplica, com o motivo no doctor
+  (OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01).*
 - A marca `get_report_sized` (0444, sempre Y) separa o curado do de fábrica. O pad
   a mede ao montar e o `daemon.state_full` a publica. O `doctor` dá `[FAIL]` sem
   a marca.

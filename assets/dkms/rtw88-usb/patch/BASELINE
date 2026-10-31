@@ -16,7 +16,7 @@
 #
 # POR ISSO O `main.h` NÃO É VERSIONADO: ele vive em
 # `main-por-kernel/main-<build>.h`, um por kernel validado, e o
-# `escolher-o-main.sh` (PRE_BUILD do dkms.conf) põe o certo no lugar. Uma cópia
+# `preparar-o-fonte.py` (PRE_BUILD do dkms.conf) põe o certo no lugar. Uma cópia
 # versionada seria uma segunda verdade sobre qual ABI é a nossa.
 #
 # Paridade verificável do usb.c/usb.h (na raiz do asset, caminhos -p6; o do
@@ -45,9 +45,8 @@
 # headers são byte a byte os da raiz, e o `main.h` do 7.2.6 é byte a byte o do
 # 7.1.5 (mesmo assim ganha o seu `main-por-kernel/main-7.2.6-76070206.h`: um
 # por build, ABI que alguém mediu). A lista dos builds que a raiz serve mora em
-# `fonte-por-kernel/raiz.txt` (o `dkms_lib.sh` apaga o `patch/` do /usr/src, e
-# a BASELINE não chega ao `escolher-o-main.sh`), e uma régua cobra que a BASELINE, as
-# pastas, o `main-por-kernel/`, o `KERNELS_VALIDADOS` e a regex digam o mesmo.
+# `fonte-por-kernel/raiz.txt`, e uma régua cobra que a BASELINE, as pastas, o
+# `main-por-kernel/` e o `KERNELS_VALIDADOS` digam o mesmo.
 # Compilado em 17/10/2026 com os headers reais (`linux-headers-7.2.6-76070206`,
 # gcc-13 13.3.0): rc=0, vermagic 7.2.6-76070206-generic, `parm: hang_reset` e
 # `switch_usb_mode` no `.ko`. Os CRCs dos exports MUDARAM no 7.2.6
@@ -60,25 +59,26 @@
 # existem aqui porque o linux-headers não traz headers de driver (conferido:
 # só `Kconfig` e `Makefile`).
 #
-# O RITUAL PARA ACRESCENTAR UM KERNEL, e nenhum passo é opcional:
-#   1. apt-get source linux   (com deb-src ligado; ~234 MB)
-#   2. confira que os NOVE headers batem com SHA256_HEADERS_BUNDLE. Se algum
-#      divergir, ele também vira `por-kernel` — e o ritual cresce.
-#   3. aplique só os patches que ainda faltam (o 0001 já está no vanilla >=7.1.3)
-#      e confira que o resultado bate com SHA256_PATCHED_C/H. Se NÃO bater, o
-#      usb.c mudou de verdade e isto vira um rebase, não um bump.
-#   4. copie o `main.h` novo para `main-por-kernel/main-<build>.h`
-#   5. acrescente o build ao BUILD_EXCLUSIVE_KERNEL do dkms.conf
-#   6. compile e compare os CRCs dos exports com os do Module.symvers do
-#      linux-headers alvo. Se divergirem, PARE: o `rtw88_8822bu` in-tree não
-#      vai carregar contra o nosso módulo.
-#   7. escreva os sha novos aqui.
-# Se o de fábrica do kernel novo NÃO for o da raiz (o 7.2.6 não foi), os
-# passos 2 e 3 viram a pasta `fonte-por-kernel/<build>/` (o `usb.c` rebaseado,
-# o `rx.h` e a série em `patch/`), com as chaves `*_<versão>` dele no fim
-# deste arquivo, como as do 7.2.6; se for, o build entra em
-# `fonte-por-kernel/raiz.txt`. Nos dois casos o `main.h` dele
-# entra em `main-por-kernel/`.
+# O KERNEL NOVO (31/10/2026, OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01) não pede
+# ritual: o `preparar-o-fonte.py` (PRE_BUILD do dkms.conf) usa o cache quando o
+# build está em `fonte-por-kernel/` (a pasta dele ou o `raiz.txt`); senão acha o
+# `usb.c` de fábrica do kernel que roda, com o `main.h` e os headers dele (na
+# árvore do kernel, na fonte da distro ou no stable do kernel.org), confere
+# pelo `srcversion` do módulo de fábrica e aplica a série guardada mais nova
+# que entra com -F0. Quando nenhuma entra, o de fábrica fica, e o doctor diz
+# qual patch deixou pedaço de fora.
+# O RITUAL DO REBASE, quando o doctor diz que a série não aplica:
+#   1. a série é refeita sobre o `usb.c` de fábrica daquele kernel (o que o
+#      doctor nomeia), numa pasta `fonte-por-kernel/<build>/patch/` nova,
+#      com a linha POR_KERNEL do kernel aqui;
+#   2. o patchado compila contra os headers dele, com os `parm: hang_reset` e
+#      `switch_usb_mode` no `.ko`;
+#   3. o build entra em KERNELS_VALIDADOS, e a pasta guarda o fonte patchado (o
+#      cache), com o `main.h` dele em `main-por-kernel/`. Os CRCs dos exports
+#      se comparam com os do Module.symvers do linux-headers alvo: se divergirem,
+#      o `rtw88_8822bu` in-tree não carrega contra o nosso módulo. A lista, o
+#      `raiz.txt`, as pastas e o `main-por-kernel/` dizem o mesmo, e uma régua
+#      cobra (tests/unit/test_dkms_rtw88_usb_assets.py).
 KERNEL_BASE=v7.0.11
 KERNELS_VALIDADOS=7.0.11-76070011 7.1.5-76070105 7.2.6-76070206
 KERNEL_TESTED=7.0.11-76070011-generic

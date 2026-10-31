@@ -50,15 +50,17 @@ Bluetooth ele sobe, no cabo ele morre.
   `SHA256_VANILLA_C`. Comando pronto na seção **Upstream**. Até 28/09/2026 a
   base era o v7.0.11, e o módulo rodava no 7.1.5 desfazendo duas verificações
   do DualShock 4 que o stable acrescentou; a conta está no `patch/BASELINE`.
-- **Só nos kernels conferidos, cada um com o seu fonte.** O `dkms.conf` tem
-  `BUILD_EXCLUSIVE_KERNEL`, e a lista é a mesma do `KERNELS_VALIDADOS` do
-  `patch/BASELINE`. Fora da lista o DKMS pula e o de fábrica assume. O `.c` da raiz
+- **No kernel que roda, com o cache dos conferidos.** O cache é a lista do
+  `KERNELS_VALIDADOS` do `patch/BASELINE`. Fora dele, o `preparar-o-fonte.py`
+  acha o de fábrica do kernel que roda, confere pelo `srcversion` e aplica a
+  série; quando não acha ou a série não aplica, o DKMS pula, o de fábrica assume
+  e o doctor diz o motivo. O `.c` da raiz
   serve os builds de `fonte-por-kernel/raiz.txt` (o 7.1.5-76070105); o
   7.2.6-76070206 tem outro de fábrica (`48a08ddd…`, com os botões de trás e o
   Fn do DualSense Edge no evdev) e o seu fonte em
   `fonte-por-kernel/7.2.6-76070206/`, com o `hid-ids.h` e a série dele. O
-  `PRE_BUILD` (`escolher-o-fonte.sh`, o mesmo do `hid-nintendo`) escolhe pelo
-  build exato.
+  `PRE_BUILD` (`preparar-o-fonte.py`, o mesmo dos outros quatro pacotes) escolhe
+  pelo build exato.
 - `hid-ids.h` = header local intocado do commit `POP_LINUX_COMMIT_HID_IDS_H`
   (o do v7.0.11). Ele bate **byte a byte** com o `hid-ids.h` já vendorado em
   `assets/dkms/hid-nintendo/` (mesmo `SHA256_HID_IDS_H` nos dois pacotes). O
@@ -553,14 +555,14 @@ echo 0 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
 ## Rebase (kernel novo)
 
 `patch/BASELINE` guarda kernel base, commit, os sha256, a **ordem** da série
-(uma linha `PATCH=` por patch) e o ritual para acrescentar um kernel ao pino.
+(uma linha `PATCH=` por patch) e o ritual do rebase.
 Rota: o `scripts/conferir_o_kernel_novo.py` mede o de fábrica do kernel novo
 contra a raiz e diz se ele confere, se a série aplica limpa ou se pede rebase à
 mão. Se o de fábrica for outro, a série aplicada sobre ele vai para
 `fonte-por-kernel/<build>/`, com o `hid-ids.h` dele e a linha `POR_KERNEL` no
-BASELINE; depois o `BUILD_EXCLUSIVE_KERNEL` e o `KERNELS_VALIDADOS`, e o build
-re-provado com o `parm: mic_frames_ignored` no `.ko`. O `patch/` da raiz não
-entra no build (o helper DKMS o apaga do source copiado).
+BASELINE; depois o `KERNELS_VALIDADOS`, e o build re-provado com o `parm:
+mic_frames_ignored` no `.ko`. O `patch/` viaja para o source copiado: é a série
+que o `preparar-o-fonte.py` aplica no de fábrica de um kernel fora do cache.
 
 ## Upstream
 

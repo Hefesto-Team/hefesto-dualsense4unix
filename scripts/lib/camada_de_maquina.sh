@@ -787,7 +787,7 @@ install_dkms_usb_f_hid_host() {
     dkms_install_patched_module hefesto-usb-f-hid \
         "$(dkms_pkg_version "${_fhid_src}")" "${_fhid_src}" usb_f_hid
     if ! dkms_module_from_updates usb_f_hid; then
-        warn "usb_f_hid patchado NÃO ficou staged (veja avisos acima; fora dos KERNELS_VALIDADOS de assets/dkms/usb-f-hid/patch/BASELINE o DKMS pula) — o de fábrica continua, e o jogo no Proton espera 5 s por pedido de feature"
+        warn "usb_f_hid patchado NÃO ficou staged (o motivo está no aviso acima e no hefesto-dualsense4unix doctor) — o de fábrica continua, e o jogo no Proton espera 5 s por pedido de feature"
         return 0
     fi
     trocar_usb_f_hid_a_quente

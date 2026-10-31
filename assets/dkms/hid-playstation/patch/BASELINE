@@ -56,9 +56,8 @@
 # ganha uma pasta `fonte-por-kernel/<build>/` com o `hid-playstation.c` (a
 # série aplicada sobre o de fábrica DELE), o `hid-ids.h` dele e a série
 # rebaseada em `patch/`, e uma linha POR_KERNEL abaixo, com os mesmos campos da
-# raiz. O `PRE_BUILD` do dkms.conf (`escolher-o-fonte.sh`) põe o certo no
-# lugar. A lista dos builds da raiz mora em `fonte-por-kernel/raiz.txt`, e não
-# aqui, porque o `dkms_lib.sh` apaga este `patch/` do /usr/src.
+# raiz. O `PRE_BUILD` do dkms.conf (`preparar-o-fonte.py`) põe o certo no
+# lugar. A lista dos builds da raiz mora em `fonte-por-kernel/raiz.txt`.
 #
 # O 7.2.6-76070206: o de fábrica é o do pop-os/linux em 8b969b992 (o ramo
 # linux_noble de 02/10/2026), sha 48a08ddd…, igual ao do stable v7.2.6, do
@@ -71,21 +70,21 @@
 # no `.ko`, `mic_frames_ignored` entre eles. O hid-ids.h vai junto por kernel,
 # como no hid-nintendo, para o fonte e os IDs serem do mesmo commit.
 #
-# O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
-# e nenhum passo é opcional:
-#   1. o hid-playstation.c de fábrica daquele kernel (o do commit do Pop que o
-#      pacote dele nomeia) se mede pelo sha256. Se for o SHA256_VANILLA_C da
-#      raiz, o build entra em `fonte-por-kernel/raiz.txt`. Se for outro, a
-#      série é refeita sobre ele numa pasta `fonte-por-kernel/<build>/` nova,
-#      com a linha POR_KERNEL do kernel aqui. Nunca se acrescenta o kernel com o
-#      arquivo de outro;
-#   2. o patchado compila contra os headers dele, com o `parm:
-#      mic_frames_ignored` no `.ko`;
-#   3. só então o build entra na regex e em KERNELS_VALIDADOS. A regex, a
-#      lista, o raiz.txt e as pastas dizem o mesmo, e uma régua cobra os
-#      quatro (tests/unit/test_o_hid_playstation_so_nos_kernels_conferidos.py).
-# O `scripts/conferir_o_kernel_novo.py` faz o passo 1 para um fonte de kernel
-# antes de ele chegar: confere, aplica limpa ou pede rebase à mão.
+# O KERNEL NOVO (31/10/2026, OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01) não pede
+# ritual: o `preparar-o-fonte.py` (PRE_BUILD do dkms.conf) usa o cache quando o
+# build está em `fonte-por-kernel/` (a pasta dele ou o `raiz.txt`); senão acha o
+# `hid-playstation.c` de fábrica do kernel que roda (na árvore do kernel, na fonte
+# da distro ou no stable do kernel.org), confere pelo `srcversion` do módulo de
+# fábrica e aplica a série guardada mais nova que entra com -F0. Quando nenhuma
+# entra, o de fábrica fica, e o doctor diz qual patch deixou pedaço de fora.
+# O RITUAL DO REBASE, quando o doctor diz que a série não aplica:
+#   1. a série é refeita sobre o `hid-playstation.c` de fábrica daquele kernel (o
+#      que o doctor nomeia), numa pasta `fonte-por-kernel/<build>/patch/` nova,
+#      com a linha POR_KERNEL do kernel aqui;
+#   2. o patchado compila contra os headers dele, com o `parm: mic_frames_ignored` no `.ko`;
+#   3. o build entra em KERNELS_VALIDADOS, e a pasta guarda o fonte patchado (o
+#      cache). A lista, o `raiz.txt` e as pastas dizem o mesmo, e uma régua cobra
+#      (tests/unit/test_o_hid_playstation_so_nos_kernels_conferidos.py).
 KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
 KERNELS_VALIDADOS=7.1.5-76070105 7.2.6-76070206

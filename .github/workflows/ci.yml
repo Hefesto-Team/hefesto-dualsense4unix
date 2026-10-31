@@ -1267,10 +1267,10 @@ jobs:
       - name: Executar o install.sh como usuária comum
         run: bash scripts/ci/instalar_como_usuaria.sh ${{ matrix.presentes }}
       # O P3 DA MÁQUINA LIMPA (28/09/2026): cada módulo de assets/dkms/ contra
-      # os headers mais novos da distro. rc 0 compila; rc 77 é o pino de kernel
-      # recusando o que não foi conferido, de propósito. Informativo até haver
-      # corridas medidas em cada imagem: o hid-nintendo não tem pino, e ninguém
-      # mediu ainda o fonte dele contra o kernel do Debian 12 e do Fedora 42.
+      # o kernel mais novo da distro (headers e módulos). rc 0 compila do fonte
+      # de fábrica conferido pelo srcversion; o que fica no de fábrica passa com
+      # o motivo do preparar-o-fonte.py. Informativo até haver corridas medidas
+      # em cada imagem: ninguém mediu ainda o Debian 12 e o Fedora 42.
       - name: O dkms build -k de cada módulo contra os headers da distro
         continue-on-error: true
         run: bash scripts/ci/instalar_como_usuaria.sh --so-dkms

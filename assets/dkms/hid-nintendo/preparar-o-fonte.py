@@ -439,7 +439,7 @@ def _do_kernel(kver: str, ksrc: str, modulo: str) -> str:
                 else "pelos alias e parâmetros, que o kernel não grava srcversion"
             )
             return (
-                f"hefesto-{modulo}: o de fábrica de {kver} veio de {origem} "
+                f"hefesto-{modulo}: o fonte de fábrica de {kver} é {origem} "
                 f"(conferido {conferencia}), e a série de {rotulo} aplicou ({', '.join(notas)})"
             )
         raise VereditoError(

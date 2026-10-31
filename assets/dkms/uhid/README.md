@@ -121,13 +121,15 @@ echo 0 | sudo tee /sys/module/uhid/parameters/backpressure   # desliga
 - Código C e comentários do patch em **inglês**, como os vizinhos: a convenção
   do subsistema HID, visando o upstream.
 
-- **Só nos kernels conferidos** (`BUILD_EXCLUSIVE_KERNEL` do `dkms.conf`, a
-  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`): hoje, o
-  7.1.5-76070105 e o 7.2.6-76070206 (o `uhid.c` de fábrica dos dois é o mesmo
-  byte a byte, e o `srcversion` do `.ko` de fábrica também). Este `uhid.c` substitui o de fábrica; contra um kernel cujo
-  `uhid.c` é outro, ele compilaria limpo e devolveria o arquivo errado. Fora da
-  lista o DKMS pula e o de fábrica assume — o 7.0.11-76070011 inclusive, cujo
-  de fábrica é o do v7.1. O ritual para acrescentar um kernel está no
+- **No kernel que roda.** Este `uhid.c` é o cache dos kernels conferidos
+  (`fonte-por-kernel/raiz.txt`, a mesma lista do `KERNELS_VALIDADOS` do
+  `patch/BASELINE`): hoje, o 7.1.5-76070105 e o 7.2.6-76070206 (o `uhid.c` de
+  fábrica dos dois é o mesmo byte a byte, e o `srcversion` do `.ko` de fábrica
+  também). Contra um kernel cujo `uhid.c` é outro, ele compilaria limpo e
+  devolveria o arquivo errado; por isso, fora do cache, o `preparar-o-fonte.py`
+  (o `PRE_BUILD`) acha o `uhid.c` de fábrica do kernel que roda, confere pelo
+  `srcversion` e aplica a série. Quando não acha ou a série não aplica, o DKMS
+  pula, o de fábrica assume e o doctor diz o motivo. O ritual do rebase está no
   `BASELINE`, e a régua é
   `tests/unit/test_o_uhid_patchado_so_nos_kernels_conferidos.py`.
 

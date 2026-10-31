@@ -288,7 +288,7 @@ def test_no_dkms_nao_constroi_nem_troca(tmp_path: Path) -> None:
 
 
 def test_fora_do_baseline_nao_troca_o_de_fabrica(tmp_path: Path) -> None:
-    """Kernel fora do pino: o DKMS pula (rc 77), nada fica staged e o carregado fica.
+    """O fonte de fábrica não se achou: o DKMS pula (rc 77), nada fica staged e o carregado fica.
 
     A MORDIDA: tire a volta cedo do `dkms_module_from_updates` e a troca recarrega o
     de fábrica à toa, sem cura nenhuma em `updates/dkms`.
@@ -296,11 +296,12 @@ def test_fora_do_baseline_nao_troca_o_de_fabrica(tmp_path: Path) -> None:
     r, chamadas = _passo_do_install(tmp_path, staged=False)
     assert [c for c in chamadas if c.startswith("dkms ")], chamadas
     assert not any("modprobe" in c for c in chamadas), chamadas
-    assert "KERNELS_VALIDADOS" in r.stdout and "patch/BASELINE" in r.stdout, r.stdout
+    assert "NÃO ficou staged" in r.stdout and "doctor" in r.stdout, r.stdout
+    assert "KERNELS_VALIDADOS" not in r.stdout, r.stdout
 
 
 def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
-            kernel: str = KERNEL_CONFERIDO) -> str:
+            kernel: str = KERNEL_CONFERIDO, veredito: tuple[str, str] | None = None) -> str:
     bin_ = tmp_path / "bin-doctor"
     bin_.mkdir()
     arquivo = (
@@ -314,6 +315,11 @@ def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
     sys_module = _sys_module(tmp_path, carregado=carregado, marca=marca, refcnt=0)
     efivars = tmp_path / "efivars-vazia"
     efivars.mkdir()
+    arvore = tmp_path / "arvore-do-dkms"
+    if veredito is not None:
+        pasta = arvore / "hefesto-usb-f-hid" / "1.0.0"
+        pasta.mkdir(parents=True)
+        (pasta / f"fonte-{kernel}.txt").write_text("\n".join(veredito) + "\n", encoding="utf-8")
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; check_hefesto_usb_f_hid_dkms'],
         env={
@@ -322,6 +328,7 @@ def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
             "HEFESTO_DOCTOR_KERNEL": kernel,
             "HEFESTO_DOCTOR_SYS_MODULE": str(sys_module),
             "HEFESTO_EFIVARS_ROOT": str(efivars),
+            "HEFESTO_DKMS_TREE": str(arvore),
         },
         capture_output=True, text=True, timeout=30, check=False,
     )
@@ -341,11 +348,12 @@ def test_o_doctor_com_o_curado_staged_diz_que_falta_trocar(tmp_path: Path) -> No
     assert "[FAIL]" in saida and "não foi trocada" in saida, saida
 
 
-def test_o_doctor_em_kernel_nao_conferido_aponta_o_baseline(tmp_path: Path) -> None:
+def test_o_doctor_diz_o_motivo_que_o_pre_build_gravou(tmp_path: Path) -> None:
+    frase = "hefesto-usb-f-hid: o fonte de fábrica de 7.3.0-76070300-generic não se acha"
     saida = _doctor(tmp_path, carregado=True, marca=False, staged=False,
-                    kernel="7.3.0-76070300-generic")
-    assert "[FAIL]" in saida and "patch/BASELINE" in saida, saida
-    assert "7.1.5-76070105" in saida, saida
+                    kernel="7.3.0-76070300-generic", veredito=("sem-fonte", frase))
+    assert "[FAIL]" in saida and frase in saida, saida
+    assert "não está instalada para o kernel" not in saida, saida
 
 
 def test_o_doctor_com_a_marca_passa(tmp_path: Path) -> None:

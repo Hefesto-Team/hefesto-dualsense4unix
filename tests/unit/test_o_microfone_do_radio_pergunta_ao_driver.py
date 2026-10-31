@@ -228,10 +228,16 @@ KERNEL_CONFERIDO = "7.1.5-76070105-generic"
 
 
 def _doctor_hidp(
-    tmp_path: Path, *, modulo: Path | None, staged: bool, kernel: str = KERNEL_CONFERIDO
+    tmp_path: Path, *, modulo: Path | None, staged: bool, kernel: str = KERNEL_CONFERIDO,
+    veredito: str = "",
 ) -> str:
     bin_ = tmp_path / "bin-doctor"
     bin_.mkdir()
+    arvore_dkms = tmp_path / "dkms"
+    pasta_do_veredito = arvore_dkms / "hefesto-hid-playstation" / "1.0.0"
+    pasta_do_veredito.mkdir(parents=True)
+    if veredito:
+        (pasta_do_veredito / f"fonte-{kernel}.txt").write_text(veredito, encoding="utf-8")
     arquivo = (
         "/lib/modules/k/updates/dkms/hid-playstation.ko.zst" if staged
         else "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst"
@@ -255,6 +261,7 @@ def _doctor_hidp(
                 "HEFESTO_DOCTOR_KERNEL": kernel,
                 "HEFESTO_DOCTOR_SYS_MODULE": str(raiz),
                 "HEFESTO_EFIVARS_ROOT": str(efivars),
+                "HEFESTO_DKMS_TREE": str(arvore_dkms),
             },
             capture_output=True, text=True, timeout=30, check=False,
         )
@@ -280,10 +287,14 @@ class TestODoctorPerguntaAoDriver:
         assert "[WARN]" in saida and "microfone do DualSense pelo rádio" in saida, saida
         assert "PRÓXIMO BOOT" in saida and "reinicie o computador" in saida, saida
 
-    def test_kernel_fora_do_pino_diz_por_que(self, tmp_path: Path) -> None:
+    def test_kernel_sem_o_fonte_de_fabrica_diz_por_que(self, tmp_path: Path) -> None:
         modulo = _sys_do_modulo(tmp_path, srcversion="A74F93FE20FF36683AF7614")
-        saida = _doctor_hidp(tmp_path, modulo=modulo, staged=False, kernel="6.17.9-1-generic")
-        assert "[WARN]" in saida and "não está entre os conferidos" in saida, saida
+        motivo = "hefesto-hid-playstation: não achei o fonte de fábrica de 6.17.9-1-generic"
+        saida = _doctor_hidp(
+            tmp_path, modulo=modulo, staged=False, kernel="6.17.9-1-generic",
+            veredito=f"sem-fonte\n{motivo}\n",
+        )
+        assert "[WARN]" in saida and motivo in saida, saida
 
     def test_sem_driver_carregado_so_informa(self, tmp_path: Path) -> None:
         saida = _doctor_hidp(tmp_path, modulo=None, staged=True)

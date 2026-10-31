@@ -66,12 +66,12 @@ class TestContratoDeTexto:
                 f"função {funcao} ausente da API"
             )
 
-    def test_idempotencia_resincroniza_so_se_mudou_e_exclui_patch(self) -> None:
-        assert "diff -rq -x patch" in LIB, (
+    def test_idempotencia_resincroniza_so_se_mudou_e_leva_a_serie(self) -> None:
+        assert "diff -rq -x LICENSES" in LIB, (
             "re-sincronizar /usr/src só quando os assets mudaram (idempotente)"
         )
-        assert 'rm -rf "${_srcdst}/patch"' in LIB, (
-            "patch/ é referência de rebase/upstream — não entra no build"
+        assert 'rm -rf "${_srcdst}/patch"' not in LIB, (
+            "o patch/ é a série que o PRE_BUILD aplica no fonte de fábrica do kernel que roda"
         )
 
     def test_build_e_install_tolerantes_a_reexecucao(self) -> None:
@@ -327,7 +327,7 @@ class TestExecucaoDePontaAPonta:
         assert "ok: modinfo resolve" in resultado.stdout
         destino = src_root / "hefesto-teste-9.9.9"
         assert (destino / "hid-teste.c").exists(), "source sincronizado no *_SRC_ROOT"
-        assert not (destino / "patch").exists(), "patch/ não entra no build"
+        assert (destino / "patch").is_dir(), "a série de patch/ viaja para o PRE_BUILD"
 
     def test_segunda_chamada_e_no_op_real(self, tmp_path: Path) -> None:
         script = self.SCRIPT_DUAS_CHAMADAS.format(assets=tmp_path / "assets-dkms")

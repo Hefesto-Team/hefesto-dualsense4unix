@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -136,37 +138,16 @@ class TestDkmsConf:
     def test_autoinstall_reconstrucao_em_update_de_kernel(self) -> None:
         assert 'AUTOINSTALL="yes"' in DKMS_CONF
 
-    def test_pino_de_abi_build_exclusive_kernel(self) -> None:
-        pino = re.search(r'^BUILD_EXCLUSIVE_KERNEL="(.+)"$', DKMS_CONF, re.MULTILINE)
-        assert pino is not None, "BUILD_EXCLUSIVE_KERNEL ausente"
-        for build in _baseline()["KERNELS_VALIDADOS"].split():
-            assert build.replace(".", "\\.") in pino.group(1), (
-                f"o build validado {build} não está no BUILD_EXCLUSIVE_KERNEL — "
-                f"o dkms vai PULAR um kernel que a BASELINE diz ter sido medido"
-            )
-        assert all(b in pino.group(1) for b in ("76070011", "76070105", "76070206")), (
-            "o pino tem de casar o BUILD exato; só a versão nominal deixa um "
-            "respin da mesma versão corromper memória silenciosamente"
-        )
-
-    def test_a_regex_do_pino_e_a_baseline_dizem_o_mesmo(self) -> None:
-        """Os dois sentidos: build na regex sem estar em KERNELS_VALIDADOS ninguém mediu."""
-        pino = re.search(r'^BUILD_EXCLUSIVE_KERNEL="(.+)"$', DKMS_CONF, re.MULTILINE)
-        assert pino is not None, "BUILD_EXCLUSIVE_KERNEL ausente"
-        forma = re.fullmatch(r"\^\(?(.+?)\)?-", pino.group(1))
-        assert forma, "o pino perdeu a forma `^(build|build)-`"
-        na_regex = {alt.replace("\\.", ".") for alt in forma.group(1).split("|")}
-        assert na_regex == set(_baseline()["KERNELS_VALIDADOS"].split())
-
-    def test_o_pre_build_escolhe_o_main_do_kernel_alvo(self) -> None:
-        """Sem ele, o `main.h` do build ANTERIOR fica — e é a corrupção."""
-        assert 'PRE_BUILD="./escolher-o-main.sh $kernelver"' in DKMS_CONF, (
+    def test_sem_pino_o_pre_build_decide_pelo_kernel_que_roda(self) -> None:
+        """O `main.h` vem do cache ou do fonte de fábrica conferido; nunca de outro kernel."""
+        assert "BUILD_EXCLUSIVE_KERNEL=" not in DKMS_CONF
+        assert re.search(r'^PRE_BUILD="\./preparar-o-fonte\.py \$kernelver ', DKMS_CONF, re.M), (
             "o PRE_BUILD sumiu — o build vai usar o `main.h` que estiver na "
             "pasta, e um `main.h` de outro kernel corrompe memória sem avisar"
         )
-        escolhedor = ASSET_DIR / "escolher-o-main.sh"
-        assert escolhedor.is_file(), f"{escolhedor} não existe"
-        assert escolhedor.stat().st_mode & 0o111, "o escolhedor não é executável"
+        preparador = ASSET_DIR / "preparar-o-fonte.py"
+        assert preparador.is_file(), f"{preparador} não existe"
+        assert preparador.stat().st_mode & 0o111, "o preparador não é executável"
 
     def test_todo_kernel_validado_tem_o_main_dele(self) -> None:
         """A lista da BASELINE e os arquivos em disco, nos DOIS sentidos."""
@@ -441,7 +422,7 @@ class TestBaselineEParidadeDosPatches:
         assert resultado.returncode != 0, (
             "`assets/dkms/rtw88-usb/main.h` voltou para o git. Ele é DERIVADO: "
             "as fontes são `main-por-kernel/main-<build>.h`, e quem escolhe é o "
-            "`escolher-o-main.sh` no PRE_BUILD."
+            "`preparar-o-fonte.py` no PRE_BUILD."
         )
 
     def test_patches_revertidos_devolvem_o_vanilla_exato(self, tmp_path: Path) -> None:
@@ -504,12 +485,15 @@ def _copia_do_pacote(destino: Path) -> Path:
 
 
 def _escolhe(pacote: Path, kernelver: str) -> subprocess.CompletedProcess[str]:
+    modulos = pacote.parent / "lib-modules-vazia"
+    modulos.mkdir(exist_ok=True)
     return subprocess.run(
-        ["bash", str(pacote / "escolher-o-main.sh"), kernelver],
+        [sys.executable, str(pacote / "preparar-o-fonte.py"), kernelver, str(modulos)],
         capture_output=True,
         text=True,
         check=False,
         timeout=30,
+        env={**os.environ, "HEFESTO_DKMS_MODULES_ROOT": str(modulos)},
     )
 
 
@@ -602,5 +586,6 @@ class TestOFontePorKernel:
             pacote / "main-por-kernel" / "main-7.2.7-76070207.h",
         )
         resultado = _escolhe(pacote, "7.2.7-76070207-generic")
-        assert resultado.returncode != 0, "kernel com main.h e sem fonte conferido compilou"
-        assert "fonte conferido" in resultado.stderr
+        assert resultado.returncode == 77, "kernel com main.h e sem fonte conferido compilou"
+        assert "não traz o rtw88_usb de fábrica" in resultado.stderr, resultado.stderr
+        assert "$(error " in (pacote / "Makefile").read_text(encoding="utf-8")

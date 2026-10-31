@@ -30,22 +30,25 @@
 # pop-os/linux em cb46eb86 (o commit que o pacote nomeia: a versão instalada
 # termina em `~cb46eb8`; o 8b969b992 dá os mesmos arquivos) e no stable v7.2.6.
 # O in-tree do 7.2.6 tem o mesmo srcversion do do 7.1.5 (2517788801D7F858316B340).
-# Por isso o 7.2.6 só entra na regex e em KERNELS_VALIDADOS, sem fonte por
+# Por isso o 7.2.6 entra no `raiz.txt` e em KERNELS_VALIDADOS, sem fonte por
 # kernel. O patchado compila contra os headers reais dele (gcc-13 13.3.0): rc=0,
 # vermagic 7.2.6-76070206-generic, `parm: get_report_sized` no `.ko`.
 #
-# O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
-# e nenhum passo é opcional:
-#   1. o f_hid.c e o u_hid.h de fábrica daquele kernel (o do commit do Pop que
-#      o pacote dele nomeia) têm de ser os SHA256_VANILLA_C e SHA256_U_HID_H
-#      desta base. Se NÃO forem, o patch é refeito sobre o stable daquele
-#      kernel e este BASELINE muda inteiro — nunca se acrescenta o kernel com
-#      o arquivo de outro;
-#   2. o patchado compila contra os headers dele
-#      (`make -C /lib/modules/<kernel>/build M=<cópia desta pasta> modules`),
-#      com o `parm: get_report_sized` no `modinfo` do `.ko`;
-#   3. só então o build entra na regex e em KERNELS_VALIDADOS — a mesma lista
-#      nos dois lugares, e uma régua cobra os dois sentidos.
+# O KERNEL NOVO (31/10/2026, OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01) não pede
+# ritual: o `preparar-o-fonte.py` (PRE_BUILD do dkms.conf) usa o cache quando o
+# build está em `fonte-por-kernel/` (a pasta dele ou o `raiz.txt`); senão acha o
+# `f_hid.c` (com o `u_hid.h`) de fábrica do kernel que roda (na árvore do kernel, na fonte
+# da distro ou no stable do kernel.org), confere pelo `srcversion` do módulo de
+# fábrica e aplica a série guardada mais nova que entra com -F0. Quando nenhuma
+# entra, o de fábrica fica, e o doctor diz qual patch deixou pedaço de fora.
+# O RITUAL DO REBASE, quando o doctor diz que a série não aplica:
+#   1. a série é refeita sobre o `f_hid.c` (com o `u_hid.h`) de fábrica daquele kernel (o
+#      que o doctor nomeia), numa pasta `fonte-por-kernel/<build>/patch/` nova,
+#      com a linha POR_KERNEL do kernel aqui;
+#   2. o patchado compila contra os headers dele, com o `parm: get_report_sized` no `.ko`;
+#   3. o build entra em KERNELS_VALIDADOS, e a pasta guarda o fonte patchado (o
+#      cache). A lista, o `raiz.txt` e as pastas dizem o mesmo, e uma régua cobra
+#      (tests/unit/test_o_usb_f_hid_fecha_a_resposta.py).
 KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
 KERNEL_TESTED_2=7.2.6-76070206-generic

@@ -151,7 +151,7 @@ def test_a_licenca_no_destino_nao_quebra_o_no_op_da_segunda_chamada(
 def test_a_biblioteca_exclui_licenses_da_comparacao_de_sincronia() -> None:
     """Morde só TEXTO, e está declarado como tal — existe para a armadilha"""
     lib = LIB_PATH.read_text(encoding="utf-8")
-    assert "-x patch -x LICENSES" in lib, (
-        "o diff de sincronia do dkms_lib.sh precisa excluir LICENSES junto com "
-        "patch — os dois existem em um lado só da comparação"
+    assert "diff -rq -x LICENSES" in lib, (
+        "o diff de sincronia do dkms_lib.sh precisa excluir LICENSES, que só "
+        "existe no destino"
     )

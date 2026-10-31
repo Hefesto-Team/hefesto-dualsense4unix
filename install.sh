@@ -130,8 +130,8 @@ Flags:
                         enfileira usb_queue_reset_device — gate: module
                         param hang_reset (default Y; N desliga só o reset,
                         a detecção/silenciamento continua). Fail-safe
-                        total: dkms/headers ausentes, kernel fora do pino
-                        BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou
+                        total: dkms/headers ausentes, fonte de fábrica do
+                        kernel que não se acha, série que não aplica ou
                         build falho = aviso honesto, o in-tree segue
                         valendo, o install NUNCA aborta. Ativação NUNCA
                         recarrega um módulo já carregado (derrubaria o
@@ -1175,7 +1175,7 @@ _ensaio_camada() {
                 _nao_faria "uhid com contrapressão (--no-dkms)"
                 return 0
             fi
-            _faria_root "compilar e instalar o módulo DKMS hefesto-uhid (só nos kernels conferidos do dkms.conf; fora deles o de fábrica assume)"
+            _faria_root "compilar e instalar o módulo DKMS hefesto-uhid (do fonte de fábrica do kernel que roda, conferido; sem ele, o de fábrica assume e o doctor diz o motivo)"
             _faria_root "instalar /etc/modprobe.d/hefesto-uhid.conf (backpressure=$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" backpressure)) e, com o patchado já carregado, ligar a contrapressão a quente em /sys/module/uhid/parameters/backpressure (o uhid NUNCA é recarregado)"
             ;;
         dkms-usb-f-hid)
@@ -1183,7 +1183,7 @@ _ensaio_camada() {
                 _nao_faria "módulo DKMS hefesto-usb-f-hid (--no-dkms)"
                 return 0
             fi
-            _faria_root "compilar e instalar o módulo DKMS hefesto-usb-f-hid (a resposta do GET_REPORT dos pads USB virtuais; só nos kernels conferidos do dkms.conf)"
+            _faria_root "compilar e instalar o módulo DKMS hefesto-usb-f-hid (a resposta do GET_REPORT dos pads USB virtuais; do fonte de fábrica do kernel que roda, conferido)"
             _faria_root "trocar o usb_f_hid carregado sem a marca get_report_sized: o daemon solta os pads, modprobe -r usb_f_hid e modprobe usb_f_hid, e o daemon sobe de novo (com gadget alheio, só no próximo boot)"
             ;;
         ucm)

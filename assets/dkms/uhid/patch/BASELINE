@@ -35,25 +35,30 @@
 # mesmo arquivo) e no stable v7.2.6. O passo 1 do ritual, com os headers reais
 # dele (gcc-13 13.3.0): o uhid.c sem patch dá o srcversion 4873D04A5BF04EDF44E1C53,
 # o MESMO do uhid.ko de fábrica do 7.2.6; o patchado compila (rc=0, vermagic
-# 7.2.6-76070206-generic, `parm: backpressure`). Por isso o 7.2.6 só entra na
-# regex, em KERNELS_VALIDADOS e em SRCVERSION_DE_FABRICA.
+# 7.2.6-76070206-generic, `parm: backpressure`). Por isso o 7.2.6 entra no
+# `raiz.txt`, em KERNELS_VALIDADOS e em SRCVERSION_DE_FABRICA.
 #
-# O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
-# e nenhum passo é opcional:
-#   1. o `uhid.c` sem patch (o `patch -R` deste) compilado contra os headers
-#      daquele kernel tem de dar o MESMO `srcversion` do `uhid.ko` de fábrica
-#      dele. Se NÃO der, o patch é refeito sobre o `uhid.c` do stable daquele
-#      kernel e este BASELINE muda inteiro — nunca se acrescenta o kernel com o
-#      arquivo de outro;
-#   2. o patchado compila contra os headers dele, com o `parm: backpressure`;
-#   3. só então o build entra na regex, em KERNELS_VALIDADOS e em
-#      SRCVERSION_DE_FABRICA — a mesma lista nos três lugares.
+# O KERNEL NOVO (31/10/2026, OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01) não pede
+# ritual: o `preparar-o-fonte.py` (PRE_BUILD do dkms.conf) usa o cache quando o
+# build está em `fonte-por-kernel/` (a pasta dele ou o `raiz.txt`); senão acha o
+# `uhid.c` de fábrica do kernel que roda (na árvore do kernel, na fonte
+# da distro ou no stable do kernel.org), confere pelo `srcversion` do módulo de
+# fábrica e aplica a série guardada mais nova que entra com -F0. Quando nenhuma
+# entra, o de fábrica fica, e o doctor diz qual patch deixou pedaço de fora.
+# O RITUAL DO REBASE, quando o doctor diz que a série não aplica:
+#   1. a série é refeita sobre o `uhid.c` de fábrica daquele kernel (o
+#      que o doctor nomeia), numa pasta `fonte-por-kernel/<build>/patch/` nova,
+#      com a linha POR_KERNEL do kernel aqui;
+#   2. o patchado compila contra os headers dele, com o `parm: backpressure` no `.ko`;
+#   3. o build entra em KERNELS_VALIDADOS, e a pasta guarda o fonte patchado (o
+#      cache). A lista, o `raiz.txt` e as pastas dizem o mesmo, e uma régua cobra
+#      (tests/unit/test_o_uhid_patchado_so_nos_kernels_conferidos.py).
 KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
 KERNELS_VALIDADOS=7.1.5-76070105 7.2.6-76070206
 SRCVERSION_DE_FABRICA=7.1.5-76070105:4873D04A5BF04EDF44E1C53 7.2.6-76070206:4873D04A5BF04EDF44E1C53
 SHA256_VANILLA_C=07eb905e156af79fec3bbda79110909114d1e288a107500f23de84a0c7f08cf7
-SHA256_PATCHED_C=7c23f821fde9ce7ec5efe67f53dd376f690d6b640f8af67aa55de6e60c922ddd
+SHA256_PATCHED_C=d5759257eff4428d2cf6e14e1400b03e1ed702b99f268fea8debd2bd53f61a95
 PATCH=0001-HID-uhid-optionally-report-EAGAIN-when-the-output-que.patch
 # O de fábrica do 7.2.6-76070206, medido em 17/10/2026 (o passo 1 do ritual):
 POP_LINUX_COMMIT_7_2_6_76070206=cb46eb86556705fcc040e436bab75eef1e71518e

@@ -92,11 +92,14 @@ contrato proíbe `modprobe` e `rmmod`.
 - Código C e comentários do patch em **inglês**, a convenção do subsistema
   USB gadget. O envio ao linux-usb não foi feito: é decisão a tomar.
 
-- **Só nos kernels conferidos** (`BUILD_EXCLUSIVE_KERNEL` do `dkms.conf`, a
-  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`): hoje, o
-  7.1.5-76070105 e o 7.2.6-76070206 (o `f_hid.c` de fábrica dos dois é o mesmo
-  byte a byte). Fora da lista o DKMS pula e o de fábrica assume. O ritual
-  para acrescentar um kernel está no `BASELINE`, e a régua é
+- **No kernel que roda.** Este `f_hid.c` é o cache dos kernels conferidos
+  (`fonte-por-kernel/raiz.txt`, a mesma lista do `KERNELS_VALIDADOS` do
+  `patch/BASELINE`): hoje, o 7.1.5-76070105 e o 7.2.6-76070206 (o `f_hid.c` de
+  fábrica dos dois é o mesmo byte a byte). Fora do cache, o
+  `preparar-o-fonte.py` (o `PRE_BUILD`) acha o `f_hid.c` de fábrica do kernel
+  que roda, confere pelo `srcversion` e aplica a série; quando não acha ou a
+  série não aplica, o DKMS pula, o de fábrica assume e o doctor diz o motivo. O
+  ritual do rebase está no `BASELINE`, e a régua é
   `tests/unit/test_o_usb_f_hid_fecha_a_resposta.py`.
 
 - A decisão está no [ADR-023](../../../docs/adr/023-o-pad-usb-virtual-usa-o-usb-f-hid-da-casa.md),

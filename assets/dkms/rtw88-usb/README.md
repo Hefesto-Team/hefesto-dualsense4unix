@@ -15,9 +15,12 @@ hardware morto e vaza ack frames (WARN do mac80211).
   `patch/BASELINE`.
 - O **7.2.6-76070206** tem o fonte dele em `fonte-por-kernel/7.2.6-76070206/`
   (`usb.c` com o `patch/0002` rebaseado, e o `rx.h`): o de fábrica passou a testar
-  o retorno de `rtw_rx_query_rx_desc`. O `PRE_BUILD` (`escolher-o-main.sh`)
+  o retorno de `rtw_rx_query_rx_desc`. O `PRE_BUILD` (`preparar-o-fonte.py`)
   põe no lugar o fonte e o `main.h` do build exato; os builds que a raiz serve
-  estão em `fonte-por-kernel/raiz.txt`.
+  estão em `fonte-por-kernel/raiz.txt`. Fora desse cache, ele acha o `usb.c` de
+  fábrica do kernel que roda, com o `main.h` dele, confere pelo `srcversion` e
+  aplica a série; quando não acha ou a série não aplica, o DKMS pula e o doctor
+  diz o motivo.
 - `main.h debug.h mac.h reg.h tx.h rx.h fw.h ps.h util.h hci.h` = headers
   locais do rtw88, vanilla **intocados** (fecho transitivo de includes do
   usb.c: usb.c inclui main/debug/mac/reg/tx/rx/fw/ps/usb.h; main.h inclui
