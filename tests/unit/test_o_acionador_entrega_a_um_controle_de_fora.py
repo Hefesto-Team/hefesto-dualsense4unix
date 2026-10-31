@@ -540,7 +540,8 @@ def test_o_default_env_leva_os_pares_da_foto() -> None:
 def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
     mesa: list[str], monkeypatch: pytest.MonkeyPatch, mascara: str
 ) -> None:
-    """D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO: o P1 que cai não passa o boneco a quem já joga."""
+    """D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO: o P1 que cai, com o lugar guardado, não passa o boneco
+    a quem já joga."""
     dualsenses = {P1: "/dev/input/event20"}
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
@@ -564,6 +565,7 @@ def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
 
     dualsenses.clear()
     daemon.controller.primary_uniq = None
+    daemon.identity_registry = SimpleNamespace(guardados=lambda: {P1: 20.0})
     mgr.sync(force=True)
     mgr.forward_all()
 

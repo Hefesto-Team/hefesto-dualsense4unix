@@ -264,3 +264,87 @@ class TestOP1VagoSoDepoisDoPrazo:
         mgr.sync(force=True)
         assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
         assert mgr.numeros_de_jogador()[PRO] == 1
+
+
+def _mesa_com_o_dualsense_no_p1(
+    monkeypatch: pytest.MonkeyPatch, mascara: str, *, jogo: bool
+) -> tuple[CoopManager, Any, dict[str, str], _Guardados]:
+    dualsenses = {P1: "/dev/input/event20"}
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+        lambda: dict(dualsenses),
+    )
+    pad: Any = _PadDoP1()
+    pad.flavor = mascara
+    daemon: Any = _daemon(_Broker())
+    daemon.config.gamepad_flavor = mascara
+    daemon._gamepad_device = pad
+    daemon.display_authority = "game" if jogo else "daemon"
+    daemon.controller.is_connected = lambda: bool(dualsenses)
+    registro = _Guardados({})
+    daemon.identity_registry = registro
+    mgr = CoopManager(daemon)
+    daemon._coop_manager = mgr
+    mgr.sync()
+    mgr.sync(force=True)
+    assert mgr._players[PRO].vpad is not pad and mgr._players[PRO].player_index == 2
+    return mgr, pad, dualsenses, registro
+
+
+@pytest.mark.usefixtures("mesa")
+class TestOP1GuardadoNaoSeTomaNaVolta:
+    """Item 2 na volta do de fora: com o lugar do P1 guardado, quem volta não toma o pad do P1."""
+
+    @MASCARAS
+    @pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+    def test_o_pro_que_volta_com_o_p1_guardado_senta_no_pad_proprio(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str, jogo: bool
+    ) -> None:
+        mgr, pad, dualsenses, registro = _mesa_com_o_dualsense_no_p1(
+            monkeypatch, mascara, jogo=jogo
+        )
+        daemon: Any = mgr._daemon
+
+        dualsenses.clear()
+        daemon.controller.primary_uniq = None
+        registro.lugares = {P1: 20.0}
+        mgr._teardown_player(PRO)
+        mgr.sync(force=True)
+        pro = mgr._players[PRO]
+        if pro.vpad is not None and pro.vpad is not pad:
+            pro.vpad.flavor = mascara
+        for _ in range(2):
+            mgr.sync(force=True)
+        assert not pro.no_p1 and pro.vpad is not None and pro.vpad is not pad, (
+            "o Pro que voltou tomou o pad do P1 com o lugar do P1 guardado"
+        )
+        assert mgr.o_de_fora_no_p1() is None
+
+        proprio: Any = pro.vpad
+        paradas: list[str] = []
+        proprio.stop = lambda: paradas.append("parou")
+        registro.lugares = {}
+        mgr.sync(force=True)
+        assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
+        assert paradas == ["parou"], "o pad próprio do Pro ficou de pé junto com o do P1"
+
+
+@pytest.mark.usefixtures("mesa")
+class TestOAvisoDoHotplugNaoDesmontaNinguem:
+    """O aviso de troca de primário pode vir do fio do hotplug: quem espera só sai no ``sync``."""
+
+    @MASCARAS
+    def test_o_de_fora_que_espera_no_p1_sai_no_sync_e_nao_no_aviso(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, _pad, dualsenses = _mesa_com_o_pro(monkeypatch, mascara, jogo=False)
+        pro = mgr._players[PRO]
+        pro.a_espera = True
+
+        dualsenses[P1] = "/dev/input/event20"
+        mgr.ceder_ao_primario(None, P1)
+        assert mgr._players.get(PRO) is pro, "o aviso de troca desmontou o jogador fora do laço"
+
+        mgr._daemon.controller.primary_uniq = P1
+        mgr.sync(force=True)
+        assert mgr.o_de_fora_no_p1() is None
