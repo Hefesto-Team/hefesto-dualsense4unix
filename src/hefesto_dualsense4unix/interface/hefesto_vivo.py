@@ -2173,7 +2173,7 @@ class Piloto:
     def _instalar(self) -> None:
         """A página confirmou: a troca pedida durante a primeira carga sai agora, e a nova se instala."""
         pendente, self._ir_quando_confirmar = self._ir_quando_confirmar, ""
-        if pendente:
+        if pendente and _a_pagina_pedida(pendente) != _pagina_da_uri(self.view.get_uri()):
             self._ir(pendente)
             return
         self._antes_de_instalar()
