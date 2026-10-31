@@ -41,6 +41,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileMouseConfig,
     ProfileSpeakerConfig,
     _mult_da_vibracao,
+    a_mascara_de_cada_controle_no_modo,
     controles_em_economia,
     e_endereco_de_jogo,
     economia_da_mesa,
@@ -1591,7 +1592,12 @@ class ProfileManager:
         quando: str | None = None,
         alinhar_o_modo: bool = False,
     ) -> Profile | None:
-        """Carimba a ponte no perfil do jogo e GRAVA. None = não há perfil."""
+        """Carimba a ponte no perfil do jogo e GRAVA. None = não há perfil.
+
+        O ``mode`` vai junto quando ``alinhar_o_modo`` pede ou quando o perfil não tem modo
+        (:func:`o_carimbo_leva_o_modo`): a aba Jogar e o lançamento leem o mesmo modo.
+        """
+        alinhou: list[bool] = []
 
         def _carimbar(profile: Profile) -> Profile:
             if _a_escolha_do_usuario_ja_carimbou(profile, kind, gamepad_flavor, steam_input):
@@ -1604,8 +1610,9 @@ class ProfileManager:
                 por=por,
                 quando=quando,
             )
-            if not alinhar_o_modo:
+            if not (alinhar_o_modo or o_carimbo_leva_o_modo(profile, kind)):
                 return carimbado
+            alinhou.append(True)
             return alinhar_o_modo_com_a_ponte(
                 carimbado, kind=kind, caminho=gamepad_flavor
             )
@@ -1631,7 +1638,7 @@ class ProfileManager:
             gamepad_flavor=salvo.ponte.gamepad_flavor if salvo.ponte else None,
             steam_input=steam_input,
             por=por,
-            modo_alinhado=alinhar_o_modo,
+            modo_alinhado=bool(alinhou),
         )
         return salvo
 
@@ -1837,8 +1844,55 @@ def alinhar_o_modo_com_a_ponte(
     profile: Profile, *, kind: str, caminho: object = None
 ) -> Profile:
     """Devolve uma CÓPIA do perfil com o `mode` igual à ponte de pé. Não grava."""
-    secao = secao_do_modo_com_o_caminho(profile.mode, kind=kind, caminho=caminho)
+    secao = secao_do_modo_com_o_caminho(
+        profile.mode, kind=kind, caminho=caminho, mascara=caminho)
     return profile.model_copy(update={"mode": secao})
+
+
+KINDS_DA_PONTE_QUE_VIRAM_MODO: frozenset[str] = frozenset({"gamepad", "native"})
+
+
+def o_carimbo_leva_o_modo(profile: Profile, kind: str) -> bool:
+    """O carimbo desta ponte grava o ``mode`` junto? Sim quando o perfil não tem modo.
+
+    Perfil sem ``mode`` é o que ninguém escolheu à mão, e o lançamento arma a ponte carimbada
+    (``launch_env._modo_da_ponte``); a ponte do ``desktop`` o lançamento não arma, e não vira modo.
+    """
+    return profile.mode is None and kind in KINDS_DA_PONTE_QUE_VIRAM_MODO
+
+
+def _secao_crua(secao: ProfileModeConfig) -> dict[str, Any]:
+    return dict(secao.model_dump(mode="json"))
+
+
+def perfil_no_formato_da_aba_jogar(dados: dict[str, Any]) -> dict[str, Any]:
+    """O perfil cru no formato único do modo: o que o escritor da aba Jogar grava. Não grava.
+
+    Três formatos antigos, uma regra: a máscara por controle vira o ``mode``
+    (:func:`~hefesto_dualsense4unix.profiles.schema.a_mascara_de_cada_controle_no_modo`); o
+    ``mode`` do ``gamepad`` sem o par ganha o caminho e a máscara pelo escritor único
+    (:func:`secao_do_modo_com_o_caminho`); o perfil sem ``mode`` com a ponte carimbada ganha o
+    modo da ponte (:func:`o_carimbo_leva_o_modo`). O perfil sem ``mode`` e sem ponte fica: quem
+    decide é a escada. Perfil que já está no formato volta o mesmo objeto.
+    """
+    novo = a_mascara_de_cada_controle_no_modo(dados)
+    bruto = novo.get("mode")
+    if isinstance(bruto, dict):
+        atual = ProfileModeConfig.model_validate(bruto)
+        secao = secao_do_modo_com_o_caminho(
+            atual, kind=atual.kind, caminho=atual.caminho, mascara=atual.gamepad_flavor)
+        if novo is dados and secao.model_dump() == atual.model_dump():
+            return dados
+        return {**novo, "mode": _secao_crua(secao)}
+    ponte = novo.get("ponte")
+    if bruto is not None or not isinstance(ponte, dict):
+        return novo
+    kind = ponte.get("kind")
+    if not isinstance(kind, str) or kind not in KINDS_DA_PONTE_QUE_VIRAM_MODO:
+        return novo
+    mascara = ponte.get("gamepad_flavor") if kind == "gamepad" else None
+    secao = secao_do_modo_com_o_caminho(None, kind=kind, mascara=mascara)
+    return {**novo, "mode": _secao_crua(secao)}
 
 
 def secao_do_modo_com_o_caminho(
@@ -2821,8 +2875,10 @@ __all__ = [
     "e_o_freestyle",
     "gerente_do_daemon",
     "ligar_o_freestyle",
+    "o_carimbo_leva_o_modo",
     "o_freestyle_manda",
     "os_perfis_de_escolher",
+    "perfil_no_formato_da_aba_jogar",
     "pontes_do_som_do_daemon",
     "resolve_key_bindings",
 ]

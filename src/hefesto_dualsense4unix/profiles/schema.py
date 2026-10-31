@@ -3201,3 +3201,14 @@ NASCIMENTO_DOS_CAMPOS["TriggersConfig.intensidade"] = Nascimento(
     "da 03 escreve, por controle (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-"
     "COMO-NO-PS5-01); não é feature que nasce muda.",
 )
+
+
+def a_mascara_de_cada_controle_no_modo(data: dict[str, Any]) -> dict[str, Any]:
+    """O perfil cru sem ``controllers.*.mascara``, com o modo que a máscara deixa.
+
+    A mesma regra da leitura (:meth:`Profile._a_mascara_de_cada_controle_vira_o_modo`), para a
+    migração em disco (``loader.todo_perfil_no_formato_da_aba_jogar``) gravar o que a leitura
+    já via. Perfil sem a chave volta o mesmo objeto.
+    """
+    novo: dict[str, Any] = Profile._a_mascara_de_cada_controle_vira_o_modo(data)
+    return novo

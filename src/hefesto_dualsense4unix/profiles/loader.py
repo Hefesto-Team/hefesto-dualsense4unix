@@ -1085,6 +1085,42 @@ def o_carimbo_da_escolha_ganha_o_nome_novo(dest_dir: Path | None = None) -> list
     return trocados
 
 
+def todo_perfil_no_formato_da_aba_jogar(dest_dir: Path | None = None) -> list[str]:
+    """Regrava no formato da aba Jogar o modo de todo perfil que ainda mora num formato antigo.
+
+    A regra é a de ``manager.perfil_no_formato_da_aba_jogar``; só o ``mode`` e a máscara por
+    controle mudam, o ``modificado_em`` fica, a versão de antes vai ao ``.historico`` e a
+    gravação é atômica, sob a trava do perfil. Sem marca: o perfil já convertido não muda, e o
+    que chegar de fora se converte na partida seguinte.
+    """
+    from hefesto_dualsense4unix.profiles.manager import perfil_no_formato_da_aba_jogar
+
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    convertidos: list[str] = []
+    for path in sorted(directory.glob("*.json")):
+        with FileLock(str(_lock_path(path))):
+            dados = _dados_crus_do_perfil(path)
+            if dados is None:
+                continue
+            try:
+                novo = perfil_no_formato_da_aba_jogar(dados)
+                if novo is dados or novo == dados:
+                    continue
+                Profile.model_validate(novo)
+                _arquivar_versao(path.stem, path.read_bytes(), raiz=directory)
+                _atomic_write_json(path, novo)
+            except (ValidationError, OSError, ValueError) as exc:
+                logger.warning(
+                    "perfil_nao_foi_ao_formato_da_aba_jogar",
+                    arquivo=path.name, err=str(exc)[:200],
+                )
+                continue
+        convertidos.append(path.name)
+    if convertidos:
+        logger.info("perfis_no_formato_da_aba_jogar", perfis=convertidos)
+    return convertidos
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga."""
     global _seed_attempted
@@ -1114,6 +1150,7 @@ def _maybe_seed_presets() -> None:
         with contextlib.suppress(Exception):
             o_mudo_do_microfone_vai_para_o_controle()
         o_carimbo_da_escolha_ganha_o_nome_novo()
+        todo_perfil_no_formato_da_aba_jogar()
     except Exception as exc:
         logger.warning(
             "presets_seed_failed",
@@ -2524,4 +2561,5 @@ __all__ = [
     "save_profile",
     "seed_default_presets",
     "semear_perfis_dos_jogos",
+    "todo_perfil_no_formato_da_aba_jogar",
 ]
