@@ -61,8 +61,8 @@ def _diario(*eventos: str) -> list[str]:
     return [f"{cabeca} [info     ] {evento}" for evento in eventos]
 
 
-ARME_0CE6 = "launch_arm_roupa               appid=1000 roupa=0ce6 vestem=['p1']"
-ARME_EDGE = "launch_arm_roupa               appid=2000 roupa=0df2 vestem=['p1']"
+ARME_0CE6 = "launch_arm_roupa               appid=9901000 roupa=0ce6 vestem=['p1']"
+ARME_EDGE = "launch_arm_roupa               appid=9902000 roupa=0df2 vestem=['p1']"
 RECRIOU_P1 = "gamepad_emulation_started      caminho=dualsense identity=aabbcc000001"
 RECRIOU_P2 = "coop_player_roupa_trocada      identity=aabbcc000002"
 ROUPA = "roupa_do_pad                   pedida=0ce6 veste=0ce6"
@@ -142,7 +142,7 @@ def test_as_teclas_que_chegaram_ao_evdev(apertos: int, veredito: str) -> None:
 
 def test_o_diario_se_le_no_formato_do_journal() -> None:
     eventos = E.eventos_do_diario([*_diario(ARME_0CE6, RECRIOU_P1), "linha sem evento"])
-    campos = {"appid": "1000", "roupa": "0ce6", "vestem": "['p1']"}
+    campos = {"appid": "9901000", "roupa": "0ce6", "vestem": "['p1']"}
     assert eventos[0] == ("launch_arm_roupa", campos)
     assert eventos[1][0] == "gamepad_emulation_started"
     assert len(eventos) == 2

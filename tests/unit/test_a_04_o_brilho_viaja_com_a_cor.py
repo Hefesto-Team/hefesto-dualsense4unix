@@ -300,6 +300,7 @@ def test_guardado_vira_frase_no_cartao_do_usuario(a04, ctx, monkeypatch):
 def test_no_nativo_a_camada_recusa_a_luz_antes_do_daemon(a04, ctx, monkeypatch):
     """Desde 03/10/2026 (DESLIGAR…-01, item 5) a luz não sai no Nativo: o jogo manda."""
     import pacotes
+    from pacotes import camada
 
     _com_o_perfil(monkeypatch, a04, {"leds": {"lightbar_brightness": 1.0}})
     ctx.state["native_mode"] = True
@@ -307,7 +308,7 @@ def test_no_nativo_a_camada_recusa_a_luz_antes_do_daemon(a04, ctx, monkeypatch):
     fn = pacotes.gesto_da_pagina("04-iluminacao.html", "cor")
     with pytest.raises(RuntimeError) as erro:
         fn(ctx, {"controle": "p1", "uniq": UNIQ, "hex": "#0000FF"}, p)
-    assert "modo nativo" in str(erro.value)
+    assert str(erro.value) == camada.FRASE_NO_NATIVO
     assert not p.chamadas, "no Nativo a luz chegou ao daemon"
 
 

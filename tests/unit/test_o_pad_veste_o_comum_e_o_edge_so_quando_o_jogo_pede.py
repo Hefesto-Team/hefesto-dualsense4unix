@@ -234,12 +234,13 @@ def test_o_caminho_que_nao_mostra_o_comum_veste_o_edge(
 
 
 def _dois_jogos(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `10` sem sinal, o `20` que conhece só o Edge e o `30` dos dois, sem Steam de verdade."""
+    """O `9900010` sem sinal, o `9900020` só do Edge e o `9900030` dos dois, sem a Steam."""
     sem_sinal = _jogo(tmp_path / "SemSinal", _SEM_SINAL["so-o-exe"])
     do_edge = _jogo(tmp_path / "DoEdge", _SO_O_EDGE["pid-no-exe"])
     dos_dois = _jogo(tmp_path / "DosDois", _OS_DOIS_MODELOS["pid-no-exe"][0])
     monkeypatch.setattr(prontuario_dos_jogos, "jogos_instalados", lambda home=None: [
-        ("10", "Sem sinal", sem_sinal), ("20", "Do Edge", do_edge), ("30", "Dos dois", dos_dois)])
+        ("9900010", "Sem sinal", sem_sinal), ("9900020", "Do Edge", do_edge),
+        ("9900030", "Dos dois", dos_dois)])
     monkeypatch.setattr(rj, "_opcoes_de_lancamento", lambda home: {})
 
 
@@ -253,9 +254,10 @@ def test_o_laco_do_servico_da_o_comum_ao_jogo_sem_sinal(
 
     roupas = rj.roupas_dos_jogos(so_o_cache=so_o_cache)
 
-    assert {a: r for a, (r, _f) in roupas.items()} == {"10": "0ce6", "20": "0df2", "30": "0ce6"}
-    assert rj.roupas_dos_jogos(steam_input=["10", "30"])["30"][0] == "0df2"
-    assert rj.roupas_dos_jogos(modo_xbox=True)["30"][0] == "0df2"
+    assert {a: r for a, (r, _f) in roupas.items()} == {
+        "9900010": "0ce6", "9900020": "0df2", "9900030": "0ce6"}
+    assert rj.roupas_dos_jogos(steam_input=["9900010", "9900030"])["9900030"][0] == "0df2"
+    assert rj.roupas_dos_jogos(modo_xbox=True)["9900030"][0] == "0df2"
 
 
 def _daemon_uhid() -> SimpleNamespace:
@@ -300,14 +302,14 @@ def test_a_env_do_jogo_sem_sinal_veste_o_comum_e_esconde_so_o_fisico(
 
     le.materialize_launch_env(_daemon_uhid())
 
-    env = pasta / "steam_app_10.env"
+    env = pasta / "steam_app_9900010.env"
     assert env.exists(), "o jogo sem sinal não ganhou a env do 0ce6"
     assert "0x054c/0x0ce6" not in _valores(env)
     assert "sdl_gamecontroller_ignore_devices=0x28de/0x11ff" in _valores(env)
-    assert le.roupa_gravada(10, pasta) == ROUPA_COMUM
-    assert not (pasta / "steam_app_20.env").exists()
-    assert le.roupa_gravada(20, pasta) == ROUPA_PADRAO
-    dos_dois = pasta / "steam_app_30.env"
+    assert le.roupa_gravada(9900010, pasta) == ROUPA_COMUM
+    assert not (pasta / "steam_app_9900020.env").exists()
+    assert le.roupa_gravada(9900020, pasta) == ROUPA_PADRAO
+    dos_dois = pasta / "steam_app_9900030.env"
     assert dos_dois.exists(), "o jogo dos dois modelos não ganhou a env do 0ce6"
     assert "0x054c/0x0ce6" not in _valores(dos_dois)
-    assert le.roupa_gravada(30, pasta) == ROUPA_COMUM
+    assert le.roupa_gravada(9900030, pasta) == ROUPA_COMUM

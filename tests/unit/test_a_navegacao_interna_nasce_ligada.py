@@ -123,7 +123,7 @@ def test_dentro_da_lista_o_anel_e_da_cor_oposta(pagina: Any) -> None:
 
 
 def _as_listas_reais() -> str:
-    """A lista do efeito do P1, como a 03 publicada a traz: o «—» escondido primeiro."""
+    """A lista do efeito do P1, como a 03 publicada a traz."""
     from hefesto_dualsense4unix.interface import onde
 
     texto = (onde.PUBLICADO / "03-gatilhos.html").read_text(encoding="utf-8")
@@ -140,7 +140,7 @@ def reais(navegador: Any) -> Any:
 
 @pytest.mark.parametrize("classe", ["g2-imersao"])
 def test_nas_listas_reais_da_03_a_volta_pula_o_lugar_vazio(reais: Any, classe: str) -> None:
-    """D-1910-A-NAVEGACAO-INTERNA-NASCE-LIGADA: a volta cai no primeiro efeito, nunca no «—»."""
+    """D-1910-A-NAVEGACAO-INTERNA-NASCE-LIGADA: a volta cai na primeira opção que se escolhe."""
     sel = f"document.querySelector('select.{classe}')"
     caixas = json.loads(reais.evaluate("window.__hefNav.ler()"))["caixas"]
     listas = [c["endereco"] for c in caixas if c.get("tipo") == "lista"]
@@ -151,8 +151,30 @@ def test_nas_listas_reais_da_03_a_volta_pula_o_lugar_vazio(reais: Any, classe: s
                        "[{op: 'escolha', endereco: e, passo: p}], [])", [endereco, p])
         return str(reais.evaluate(f"{sel}.value"))
 
-    ultimo = str(reais.evaluate(f"{sel}.options[{sel}.options.length - 1].value"))
-    primeiro = str(reais.evaluate(f"{sel}.options[1].value"))
-    reais.evaluate(f"{sel}.selectedIndex = {sel}.options.length - 1")
-    assert passo(1) == primeiro, "do último, a volta caiu no «—» escondido"
-    assert passo(-1) == ultimo, "do primeiro, o anterior caiu no «—» escondido"
+    escolhiveis = list(reais.evaluate(
+        f"Array.from({sel}.options).filter(o => !o.disabled && !o.hidden).map(o => o.value)"))
+    assert len(escolhiveis) > 2, "a lista de efeito da 03 publicada ficou sem opções"
+    primeiro, ultimo = str(escolhiveis[0]), str(escolhiveis[-1])
+    reais.evaluate(f"v => {{ {sel}.value = v; }}", ultimo)
+    assert passo(1) == primeiro, "do último, a volta não caiu na primeira opção"
+    assert passo(-1) == ultimo, "do primeiro, o anterior não caiu na última opção"
+
+
+def test_a_volta_pula_a_opcao_desabilitada_e_escondida(navegador: Any) -> None:
+    pg = _com_a_navegacao(navegador, (
+        '<!doctype html><html><body><div style="margin:40px">'
+        '<select class="lista" data-gesto="efeito">'
+        '<option value="vazio" disabled hidden>—</option><option value="a">A</option>'
+        '<option value="b">B</option><option value="c">C</option></select></div></body></html>'))
+    sel = "document.querySelector('select.lista')"
+    caixas = json.loads(pg.evaluate("window.__hefNav.ler()"))["caixas"]
+    endereco = next(c["endereco"] for c in caixas if c.get("tipo") == "lista")
+
+    def passo(p: int) -> str:
+        pg.evaluate("([e, p]) => window.__hefNav.aplicar("
+                    "[{op: 'escolha', endereco: e, passo: p}], [])", [endereco, p])
+        return str(pg.evaluate(f"{sel}.value"))
+
+    pg.evaluate(f"{sel}.value = 'c'")
+    assert passo(1) == "a", "do último, a volta caiu na opção desabilitada e escondida"
+    assert passo(-1) == "c", "do primeiro, o anterior caiu na opção desabilitada e escondida"

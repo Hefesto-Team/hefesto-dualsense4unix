@@ -2,7 +2,7 @@
 
 Sprint O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME-01.
 
-Medido em 31/10/2026: o arme do appid 1875580 subiu a escada para ``gamepad/dualsense`` às
+Medido em 31/10/2026: o arme de um jogo subiu a escada para ``gamepad/dualsense`` às
 05:26:00, mas o wrapper leu o ``default.env`` escrito às 05:25:41 com ``mascara=xbox``
 (``SDL_JOYSTICK_HIDAPI=0``); o arquivo seguinte só saiu 41 s depois do lançamento. As réguas
 armam um jogo DualSense com o ``default.env`` do Xbox em disco e a escrita do fio escrevente
