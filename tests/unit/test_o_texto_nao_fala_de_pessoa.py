@@ -104,6 +104,17 @@ def test_a_arvore_limpa_passa_e_a_suja_reprova(portao, tmp_path, monkeypatch, ca
     assert "src/a.py:1: posto" in capsys.readouterr().out
 
 
+def test_o_gancho_do_commit_mede_so_os_caminhos_dados(portao, tmp_path, monkeypatch, capsys):
+    raiz = _repo(tmp_path, {"limpo.md": LIMPO, "sujo.md": f"a {_POSTO} de antes\n"})
+    monkeypatch.setattr(portao, "RAIZ", raiz)
+    monkeypatch.setattr(portao, "ISENTOS", {})
+    assert portao.main(["limpo.md"]) == 0
+    assert portao.main(["limpo.md", "sujo.md"]) == 1
+    assert "sujo.md:1: posto" in capsys.readouterr().out
+    (raiz / f"{_POSTO}.md").write_text(LIMPO, encoding="utf-8")
+    assert portao.main([f"{_POSTO}.md"]) == 1
+
+
 def test_a_autoria_legal_passa_so_na_linha_de_identidade(portao, tmp_path):
     raiz = _repo(
         tmp_path,

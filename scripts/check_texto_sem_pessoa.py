@@ -28,6 +28,7 @@ Uso::
     python3 scripts/check_texto_sem_pessoa.py               # rc=1 se houver ocorrência
     python3 scripts/check_texto_sem_pessoa.py --relatorio   # conta por área e por classe
     python3 scripts/check_texto_sem_pessoa.py --detalhe ARQ # grava cada ocorrência em ARQ
+    python3 scripts/check_texto_sem_pessoa.py ARQ...        # só estes caminhos (o gancho do commit)
 
 Os nomes que o disco de quem usa guardava migram na leitura e se montam por
 partes onde moram (`utils/nomes_gravados.py`): a régua não tem formato isento.
@@ -261,9 +262,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--relatorio", action="store_true", help="conta por área e por classe")
     ap.add_argument("--detalhe", help="arquivo onde cada ocorrência é gravada")
     ap.add_argument("--limite", type=int, default=40, help="quantas ocorrências imprimir (padrão 40)")
+    ap.add_argument("caminhos", nargs="*", help="só estes caminhos, relativos à raiz (o gancho do commit)")
     args = ap.parse_args(argv)
 
-    achadas = varrer(RAIZ)
+    achadas = varrer(RAIZ, sorted(set(args.caminhos)) if args.caminhos else None)
     if args.detalhe:
         Path(args.detalhe).write_text(
             "".join(f"{o.rel}:{o.linha}: {o.classe}: {o.trecho}\n" for o in achadas), encoding="utf-8"

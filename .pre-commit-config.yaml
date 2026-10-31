@@ -181,6 +181,10 @@ repos:
       # no índice, um arquivo que ele corrigiria reprova: é o comportamento
       # padrão do pre-commit para gancho que modifica. A lógica mora nas réguas
       # dos donos; o script as importa (scripts/o-texto-enxuto.py).
+      - id: texto-sem-pessoa
+        name: nenhum arquivo fala de pessoa, de posto de ensaio, de nome nem de fala citada
+        entry: python3 scripts/check_texto_sem_pessoa.py
+        language: system
       - id: texto-enxuto
         name: o texto enxuto (o pronome de pessoa se corrige; comentário, docstring e citação nova reprovam)
         entry: python3 scripts/o-texto-enxuto.py --aplicar --restagear
