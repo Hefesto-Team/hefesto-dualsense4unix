@@ -330,7 +330,7 @@
 .lf-nome-2 { flex-direction:column;align-items:flex-start;gap:1px;min-width:0 }
 .lf > .lf-nome-2 { flex:1 1 auto }
 .lf-nome-2 .lf-n { font-size:11px;color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap }
-.lf-nome-2 .lf-imped { font-size:11px;color:var(--yellow);white-space:nowrap;cursor:help }
+.lf > .lf-imped { flex:0 0 auto;display:inline-flex;align-items:center;min-height:24px;font-size:12px;color:var(--yellow);white-space:nowrap;cursor:help }
 .lf { gap:8px }
 .lf-botoes { gap:6px }
 .lf-botoes .btn.mini { width:76px;padding:0;justify-content:center;box-sizing:border-box;text-align:center }

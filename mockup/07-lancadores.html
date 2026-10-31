@@ -703,7 +703,7 @@
 .lf-nome-2 { flex-direction:column;align-items:flex-start;gap:1px;min-width:0 }
 .lf > .lf-nome-2 { flex:1 1 auto }
 .lf-nome-2 .lf-n { font-size:11px;color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap }
-.lf-nome-2 .lf-imped { font-size:11px;color:var(--yellow);white-space:nowrap;cursor:help }
+.lf > .lf-imped { flex:0 0 auto;display:inline-flex;align-items:center;min-height:24px;font-size:12px;color:var(--yellow);white-space:nowrap;cursor:help }
 .lf { gap:8px }
 .lf-botoes { gap:6px }
 .lf-botoes .btn.mini { width:76px;padding:0;justify-content:center;box-sizing:border-box;text-align:center }
@@ -1359,7 +1359,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           </div>
           <div class="lf" data-lancador="lutris">
             <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M7 7h10v5a5 5 0 0 1-10 0zM12 17v4"/></svg></span>
-            <span class="lf-nome lf-nome-2"><span class="lanc-nome">Lutris</span><span class="lf-n">12 jogos</span><span class="lf-imped" data-dica="Corrida de Inverno: roda pelo Wine, e não pelo Proton">1 fora do Proton fixado</span></span>
+            <span class="lf-nome lf-nome-2"><span class="lanc-nome">Lutris</span><span class="lf-n">12 jogos</span></span><span class="lf-imped" data-dica="Corrida de Inverno: roda pelo Wine, e não pelo Proton">1 fora do Proton fixado</span>
             <span class="lf-botoes"><span class="btn mini apagado" aria-disabled="true">Identificar</span><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="lutris">Criar perfis</a><a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador" data-v="lutris">Configurar</a></span>
           </div>
           <div class="lf ausente" data-lancador="heroic">

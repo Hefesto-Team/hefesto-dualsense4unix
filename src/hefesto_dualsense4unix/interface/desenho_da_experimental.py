@@ -157,14 +157,14 @@ def fila_html(fila: Fila) -> str:
         destino = fila.configurar if gesto == "configurar-lancador" else destino
         ativo = botao_ativo(gesto, fila.achado)
         botoes.append(_botao(gesto, rotulo, destino, fila.chave, ativo))
-    contagem = (f'<span class="lf-n">{_e(fila.jogos)}</span>{fila.fora_do_pino}'
-                if fila.achado else "")
+    contagem = f'<span class="lf-n">{_e(fila.jogos)}</span>' if fila.achado else ""
+    fora = fila.fora_do_pino if fila.achado else ""
     nome_cl = "lf-nome lf-nome-2" if fila.achado else "lf-nome"
     vazio = "" if fila.achado else '\n            <span class="lanc-jogos"></span>'
     classe = "lf" if fila.achado else "lf ausente"
     return f'''          <div class="{classe}" data-lancador="{_a(fila.chave)}">
             <span class="ext-ico lf-ico">{_icone(fila.chave)}</span>
-            <span class="{nome_cl}"><span class="lanc-nome">{_e(fila.nome)}</span>{contagem}</span>{vazio}
+            <span class="{nome_cl}"><span class="lanc-nome">{_e(fila.nome)}</span>{contagem}</span>{vazio}{fora}
             <span class="lf-botoes">{"".join(botoes)}</span>
           </div>'''
 
