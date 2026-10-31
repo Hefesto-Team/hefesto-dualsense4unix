@@ -8,6 +8,8 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 _TESTES = Path(__file__).resolve().parents[1]
 _FIXTURES = _TESTES / "fixtures"
@@ -15,7 +17,7 @@ _RAIZ = _TESTES.parent
 _PORTAO = _RAIZ / "scripts" / "check_a_biblioteca_pessoal_fica_fora.py"
 
 
-def _regras():
+def _regras() -> ModuleType:
     spec = importlib.util.spec_from_file_location("_biblioteca_pessoal", _PORTAO)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
@@ -38,8 +40,8 @@ def _textos() -> list[tuple[Path, str]]:
     return textos
 
 
-def _perfis() -> list[tuple[Path, dict]]:
-    perfis = []
+def _perfis() -> list[tuple[Path, dict[str, Any]]]:
+    perfis: list[tuple[Path, dict[str, Any]]] = []
     for arquivo, texto in _textos():
         if arquivo.suffix == ".json":
             perfis.extend((arquivo, dados) for dados in R.perfis_em(json.loads(texto)))
@@ -62,7 +64,7 @@ def test_nenhum_appid_real_em_fixture() -> None:
 def test_os_perfis_de_fixture_so_casam_jogo_ficticio() -> None:
     perfis = _perfis()
     assert len(perfis) >= 37, f"a régua achou só {len(perfis)} perfis em fixtures"
-    violacoes = []
+    violacoes: list[str] = []
     for arquivo, dados in perfis:
         onde = arquivo.relative_to(_FIXTURES)
         violacoes.extend(f"{onde}: {campo}" for campo in R.defeitos_do_perfil(dados))
@@ -77,7 +79,7 @@ def test_os_perfis_de_fixture_so_casam_jogo_ficticio() -> None:
 
 
 def test_nenhum_appid_real_nos_testes() -> None:
-    violacoes = []
+    violacoes: list[str] = []
     for arquivo in sorted(_TESTES.rglob("*")):
         if not arquivo.is_file() or "__pycache__" in arquivo.parts:
             continue

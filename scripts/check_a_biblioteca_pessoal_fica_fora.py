@@ -285,10 +285,10 @@ def arquivos_da_arvore() -> Iterator[tuple[str, str | None]]:
 def arquivos_da_revisao(rev: str) -> Iterator[tuple[str, str | None]]:
     entradas = []
     for registro in filter(None, git("ls-tree", "-r", "-z", rev).split(b"\0")):
-        meta, caminho = registro.split(b"\t", 1)
+        meta, nome = registro.split(b"\t", 1)
         modo, tipo, sha = meta.split()
         if tipo == b"blob":
-            entradas.append((caminho.decode(), sha.decode(), modo == b"120000"))
+            entradas.append((nome.decode(), sha.decode(), modo == b"120000"))
     entradas.sort()
     pedido = "".join(f"{sha}\n" for _, sha, _ in entradas).encode()
     saida = subprocess.run(["git", "cat-file", "--batch"], input=pedido, capture_output=True,
