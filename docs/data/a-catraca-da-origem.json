@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1173916,
+      "piso": 1173928,
       "por_item": {
         "docs": 107806,
         "scripts": 110027,
         "src": 296072,
-        "tests": 660011
+        "tests": 660023
       },
-      "razao": "tamanho: +513 linhas (1173403 -> 1173916), pagas por Origem: D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo 1318eedc3820",
+      "razao": "tamanho: +12 linhas (1173916 -> 1173928), pagas por Origem: D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA; registrado no fecho, topo 9035aff50bfc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1261,6 +1261,12 @@
           "de": 1173403,
           "para": 1173916,
           "razao": "tamanho: +513 linhas (1173403 -> 1173916), pagas por Origem: D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo 1318eedc3820"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1173916,
+          "para": 1173928,
+          "razao": "tamanho: +12 linhas (1173916 -> 1173928), pagas por Origem: D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA; registrado no fecho, topo 9035aff50bfc"
         }
       ],
       "unidade": "linhas",
