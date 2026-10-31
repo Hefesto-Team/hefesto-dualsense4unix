@@ -917,8 +917,7 @@ def _guardar_o_modo_do_arme(daemon: Any, appid: int, mode: Any) -> None:
     modos = getattr(daemon, "_modos_dos_armes", None)
     if not isinstance(modos, dict):
         modos = {}
-        with contextlib.suppress(Exception):
-            daemon._modos_dos_armes = modos
+        daemon._modos_dos_armes = modos
     if mode is None:
         modos.pop(int(appid), None)
     else:

@@ -150,10 +150,10 @@ def test_o_status_com_o_appid_devolve_o_ambiente_do_arme_sem_esperar_a_escrita(
     """
     acabadas = _a_mesa_do_lancamento(tmp_path, monkeypatch, _perfil(_PERFIS[caso]))
     _marker(tmp_path)
-    daemon = _Mesa()
+    daemon: Any = _Mesa()
 
     async def corpo() -> tuple[dict[str, Any], float]:
-        laco = asyncio.get_running_loop()
+        laco: Any = asyncio.get_running_loop()
         assert le.armar_o_escrevente(laco.call_soon_threadsafe, laco) is not None
         t0 = time.perf_counter()
         bloco = le.o_ambiente_no_status(daemon, {"appid": APPID})
@@ -184,7 +184,7 @@ def test_o_status_sem_o_appid_nao_arma_nem_responde_ambiente(
     """O ``daemon.status`` da CLI e da interface (sem ``appid``) continua sem o bloco."""
     _a_mesa_do_lancamento(tmp_path, monkeypatch, _perfil(None))
     _marker(tmp_path)
-    daemon = _Mesa()
+    daemon: Any = _Mesa()
     assert le.o_ambiente_no_status(daemon, {}) == {}
     assert le.o_ambiente_no_status(None, {"appid": APPID}) == {}
     assert daemon.aplicados == []
