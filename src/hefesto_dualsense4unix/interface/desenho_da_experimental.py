@@ -1406,9 +1406,9 @@ CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jog
                        ("~/Jogos/SteamLibrary",), True)
 IMPEDIMENTOS_DE_EXEMPLO = (
     LinhaDeImpedimento("entrada:1", "Sackboy: A Big Adventure",
-                       "O Steam Input está ligado: o jogo vê um controle de Xbox", "Desligar o Steam Input"),
+                       "Steam Input ligado", "Desligar o Steam Input"),
     LinhaDeImpedimento("proton:2", "Resident Evil Village",
-                       "Fora do Proton fixado: a vibração e os gatilhos não chegam", "Usar o Proton fixado"),
+                       "Fora do Proton fixado", "Usar o Proton fixado"),
 )
 
 

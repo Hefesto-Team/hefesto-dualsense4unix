@@ -307,8 +307,6 @@ def html_do_mapa(
         dizeres = []
         if esticada:
             dizeres.append(dicas["esticada"])
-        elif dentro:
-            dizeres.append(dicas["enumera"].format(c=dentro[1]))
         dizeres.append(porque)
         linhas = [f'<span class="mm-n">{_e(numero)}</span>',
                   f'<span class="mm-c{"" if dentro or tomada else " mm-vazia"}">{_e(corpo)}</span>']

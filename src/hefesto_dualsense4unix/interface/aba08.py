@@ -603,12 +603,6 @@ EXAMINAR_PORTAS = "Examinar entradas"
 RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
-BORDA_LIDA = ("A borda é a cor do plástico que o Hefesto <b>leu do aparelho</b>: este controle "
-              "está no cabo, e pelo cabo ele pergunta e o aparelho responde.")
-BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não foi lida</b>. "
-                "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
-                "continua na cor que o resto do Hefesto já conhece.")
-
 BOTAO_DICA = (
     "O botão físico do microfone faz o mesmo que o desta tela: liga o microfone "
     "<b>e</b> o canal dele. O que ele cala vale para o computador todo, não só "
@@ -922,7 +916,6 @@ CONFISSAO_NA_TELA = (
     f'</span></div>')
 
 from hefesto_dualsense4unix.interface.logica_do_mapa import (  # noqa: E402
-    DICA_ENUMERA,
     DICA_EXTENSAO,
     DICA_JA_COLOCADO,
 )
@@ -931,7 +924,6 @@ from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase 
 _MAPA_PY = R / "src/hefesto_dualsense4unix/interface/logica_do_mapa.py"
 _confere_no_produto(_MAPA_PY, [
     "Você já colocou este aparelho {onde}.",
-    "O sistema enumera este aparelho como {c}.",
     "Foi você quem disse que há uma extensão aqui.",
 ])
 
@@ -953,8 +945,6 @@ def quadrado(n, esticada=False):
     dizeres = []
     if esticada:
         dizeres.append(DICA_EXTENSAO)
-    elif dentro:
-        dizeres.append(DICA_ENUMERA.format(c=dentro[1]))
     dizeres.append(porque)
     linhas = [f'<span class="mm-n">{n}</span>',
               f'<span class="mm-c{"" if dentro else " mm-vazia"}">{corpo}</span>']
@@ -983,7 +973,6 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
              "por_extensao": MAPA["ROTULO_POR_EXTENSAO"],
              "nova_entrada": MAPA["ROTULO_NOVA_ENTRADA"]},
     dicas={"esticada": DICA_EXTENSAO,
-           "enumera": DICA_ENUMERA,
            "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA},
     pergunta={"aberta": True, "entradas": [n for _nome, ns in FACES for n in ns]})
 

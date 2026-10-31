@@ -21,4 +21,11 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->
+## 07-lancadores.html
+- **31/10/2026** — AS-FRASES-QUE-SOBRARAM-DA-TELA-SAEM-01: as linhas de impedimento dizem só «Steam Input ligado» e
+  «Fora do Proton fixado», sem o que o jogo vê; os botões ficam. Até publicar, o produto abre a frase longa do desenho.
+
+## 08-conexoes.html
+- **31/10/2026** — AS-FRASES-QUE-SOBRARAM-DA-TELA-SAEM-01: a dica de cada entrada do mapa do gabinete perde
+  «O sistema enumera este aparelho como …» e fica com o veredito. O produto vivo já monta o mapa pelo `conexoes.py`
+  curado; até publicar, a página estática da 08 guarda as dicas velhas.

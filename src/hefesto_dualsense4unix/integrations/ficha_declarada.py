@@ -82,8 +82,6 @@ _SINAIS_SONY: tuple[tuple[str, tuple[bytes, ...]], ...] = (
 _VID_SONY = b"\x4c\x05"
 _PIDS_SONY: dict[str, bytes] = {"0ce6": b"\xe6\x0c", "0df2": b"\xf2\x0d"}
 _JANELA_DO_PID = 8
-_PID_DO_VPAD = "0df2"
-_PID_DO_DUALSENSE = "0ce6"
 
 _MANIFESTO_GDK = "MicrosoftGame.config"
 _PROFUNDIDADE_DA_PASTA = 6
@@ -407,16 +405,6 @@ def julgar(
     return NAO_SEI, ()
 
 
-def _avisos(binario: SinaisDoBinario) -> tuple[str, ...]:
-    if _PID_DO_DUALSENSE in binario.pids and _PID_DO_VPAD not in binario.pids:
-        return (
-            "o executável conhece o modelo 0CE6 do DualSense e não o 0DF2, que é o modelo "
-            "do controle virtual; um jogo de tabela fixa de modelos pode não o reconhecer "
-            "como DualSense",
-        )
-    return ()
-
-
 def montar_ficha(
     appid: str,
     declaracao: DeclaracaoDaSteam | None,
@@ -429,7 +417,6 @@ def montar_ficha(
         appid=str(appid),
         veredito=veredito,
         fontes=fontes,
-        avisos=_avisos(sinais),
         declaracao=declaracao,
         binario=sinais,
     )

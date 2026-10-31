@@ -860,8 +860,8 @@ function pontesQueCabem(lid) {
 const nivelDoMovimento = hz => (typeof hz !== 'number' || Number.isNaN(hz)) ? ''
   : hz >= HZ_DO_JOGO ? 'liso' : hz >= HZ_QUE_ENGASGA ? 'medio' : 'engasga';
 const DICA_DO_MOVIMENTO = {
-  liso: 'Movimento por segundo: chega tudo o que o jogo usa',
-  medio: 'Movimento por segundo: chega menos que pelo USB',
+  liso: 'Movimento por segundo: completo',
+  medio: 'Movimento por segundo: reduzido',
   engasga: 'Movimento por segundo: engasga',
   '': 'Movimento por segundo',
 };

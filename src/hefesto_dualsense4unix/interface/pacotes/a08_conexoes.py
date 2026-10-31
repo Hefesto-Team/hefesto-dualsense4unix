@@ -957,7 +957,7 @@ def _html_do_mapa() -> str:
         rotulos={"vazia": mm.ROTULO_VAZIA,
                  "por_extensao": mm.ROTULO_POR_EXTENSAO,
                  "nova_entrada": mm.ROTULO_NOVA_ENTRADA},
-        dicas={"esticada": mm.DICA_EXTENSAO, "enumera": mm.DICA_ENUMERA,
+        dicas={"esticada": mm.DICA_EXTENSAO,
                "nova_entrada": _tela.DICA_NOVA_ENTRADA},
         nomes={n: str(p["nome"]) for n, p in logica.portas.items()
                if p.get("filha_de") and p.get("nome")},
@@ -2497,8 +2497,8 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
 PONTES_POR_ADAPTADOR = N_MAX_PONTES
 MARGINAL_DA_PONTE = (FATIAS_DA_PONTE - 1) * HZ_DA_PONTE
 DICA_DO_MOVIMENTO = {
-    NIVEL_LISO: "Movimento por segundo: chega tudo o que o jogo usa",
-    NIVEL_MEDIO: "Movimento por segundo: chega menos que pelo USB",
+    NIVEL_LISO: "Movimento por segundo: completo",
+    NIVEL_MEDIO: "Movimento por segundo: reduzido",
     NIVEL_ENGASGA: "Movimento por segundo: engasga",
     "": "Movimento por segundo",
 }

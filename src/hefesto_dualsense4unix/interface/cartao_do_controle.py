@@ -137,19 +137,6 @@ TEXTO_BOTAO_MIC_SILENCIAR: Final[str] = "Silenciar"
 TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Liberar"
 TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "Silenciar"
 
-DICA_MIC_ATIVAR: Final[str] = (
-    "O microfone está mudo no firmware do controle (camada 3). Desmutar daqui "
-    "faz o hefesto assumir o registrador — e o botão de microfone do controle "
-    "para de valer até você clicar em Liberar."
-)
-DICA_MIC_SILENCIAR: Final[str] = (
-    "O microfone está aberto e quem manda no mudo é o botão físico do "
-    "controle. Silenciar daqui faz o hefesto assumir o registrador."
-)
-DICA_MIC_DEVOLVER: Final[str] = (
-    "Quem manda no mudo agora é o hefesto, e por isso o botão de microfone do "
-    "controle não responde. Liberar faz o botão físico voltar a valer."
-)
 DICA_MIC_SEM_LEITURA: Final[str] = (
     "O daemon ainda não leu o estado do microfone deste controle. Sem saber "
     "se ele está mudo, mandar mutar ou desmutar seria chute."
@@ -514,10 +501,10 @@ def acao_mic(entry: Any) -> AcaoMic:
     if not isinstance(mudo, bool):
         return AcaoMic(TEXTO_BOTAO_MIC_SEM_LEITURA, None, False, DICA_MIC_SEM_LEITURA)
     if mudo:
-        return AcaoMic(TEXTO_BOTAO_MIC_ATIVAR, False, True, DICA_MIC_ATIVAR)
+        return AcaoMic(TEXTO_BOTAO_MIC_ATIVAR, False, True, "")
     if isinstance(audio.get("mic_mudo_desejado"), bool):
-        return AcaoMic(TEXTO_BOTAO_MIC_DEVOLVER, None, True, DICA_MIC_DEVOLVER)
-    return AcaoMic(TEXTO_BOTAO_MIC_SILENCIAR, True, True, DICA_MIC_SILENCIAR)
+        return AcaoMic(TEXTO_BOTAO_MIC_DEVOLVER, None, True, "")
+    return AcaoMic(TEXTO_BOTAO_MIC_SILENCIAR, True, True, "")
 
 
 class AcaoSpeaker(NamedTuple):
@@ -647,10 +634,7 @@ def cor_do_swatch(entry: Any) -> RGB | None:
 __all__ = [
     "ALL_BUTTONS",
     "DICA_AUDIO_SEM_ENDERECO",
-    "DICA_MIC_ATIVAR",
-    "DICA_MIC_DEVOLVER",
     "DICA_MIC_SEM_LEITURA",
-    "DICA_MIC_SILENCIAR",
     "DICA_SPEAKER_ATIVAR",
     "DICA_SPEAKER_SEM_DADO",
     "DICA_SPEAKER_SILENCIAR",

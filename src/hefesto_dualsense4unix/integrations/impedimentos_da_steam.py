@@ -17,8 +17,8 @@ ENTRADA = "entrada"
 PROTON = "proton"
 
 FRASE = {
-    ENTRADA: "O Steam Input está ligado: o jogo vê um controle de Xbox",
-    PROTON: "Fora do Proton fixado: a vibração e os gatilhos não chegam",
+    ENTRADA: "Steam Input ligado",
+    PROTON: "Fora do Proton fixado",
 }
 BOTAO = {
     ENTRADA: "Desligar o Steam Input",
