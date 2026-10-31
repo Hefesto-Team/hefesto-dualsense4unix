@@ -91,9 +91,9 @@ def test_a_publicada_nao_traz_de_volta_o_que_saiu() -> None:
 
 
 def _caches_do_arquivo(a03, monkeypatch, arquivo: pathlib.Path) -> None:
-    """O pacote lê a página PUBLICADA (endereços, opções, lugares): aponta-o para `arquivo`."""
+    """O pacote lê a página PUBLICADA (endereços e lugares): aponta-o para `arquivo`."""
     monkeypatch.setattr(a03, "_pagina_publicada", lambda: arquivo.read_text(encoding="utf-8"))
-    for cache in ("_ENDERECOS", "_VAZIOS", "_OFERECE"):
+    for cache in ("_ENDERECOS", "_VAZIOS"):
         monkeypatch.setattr(a03, cache, None)
 
 
