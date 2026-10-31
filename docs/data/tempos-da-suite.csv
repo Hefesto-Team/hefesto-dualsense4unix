@@ -1141,7 +1141,6 @@ tests/unit/test_o_doctor_diz_quando_foi.py,556,medido
 tests/unit/test_o_doctor_enxerga_a_luz_do_radio.py,338,medido
 tests/unit/test_o_doctor_fala_com_quem_usa.py,323,medido
 tests/unit/test_o_doctor_le_o_recibo_do_proton_fixado.py,610,medido
-tests/unit/test_o_doctor_le_os_kernels_validados.py,407,medido
 tests/unit/test_o_doctor_nao_conta_o_pad_como_fisico.py,958,medido
 tests/unit/test_o_doctor_nao_manda_pegar_o_cabo_por_um_mic_que_o_radio_ja_da.py,550,medido
 tests/unit/test_o_doctor_nomeia_o_contrato.py,820,medido
