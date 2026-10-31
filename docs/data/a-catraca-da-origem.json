@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1177450,
+      "piso": 1177827,
       "por_item": {
-        "docs": 107817,
+        "docs": 107818,
         "scripts": 110035,
-        "src": 296826,
-        "tests": 662772
+        "src": 296929,
+        "tests": 663045
       },
-      "razao": "tamanho: +204 linhas (1177246 -> 1177450), pagas por Origem: D-3110-A-TELA-DE-MENTIRA-SO-SE-ADOTA-QUANDO-E-DESTE-PROCESSO; registrado no fecho, topo c92a98a98792",
+      "razao": "tamanho: +377 linhas (1177450 -> 1177827), pagas por Origem: D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO; registrado no fecho, topo 430122a07226",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1309,10 +1309,16 @@
           "de": 1177246,
           "para": 1177450,
           "razao": "tamanho: +204 linhas (1177246 -> 1177450), pagas por Origem: D-3110-A-TELA-DE-MENTIRA-SO-SE-ADOTA-QUANDO-E-DESTE-PROCESSO; registrado no fecho, topo c92a98a98792"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1177450,
+          "para": 1177827,
+          "razao": "tamanho: +377 linhas (1177450 -> 1177827), pagas por Origem: D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO; registrado no fecho, topo 430122a07226"
         }
       ],
       "unidade": "linhas",
-      "universo": 3286
+      "universo": 3288
     }
   }
 }
