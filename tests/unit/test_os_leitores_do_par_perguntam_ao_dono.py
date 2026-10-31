@@ -193,8 +193,8 @@ def _o_perfil_sem_secao(d: Any, *, dono_do_pad: str | None) -> None:
 
 
 class TestOPerfilSemSecaoNaoHerdaOCaminhoDoAnterior:
-    """MORDIDA: o ramo do perfil sem seção `mode` sem levar o caminho da sessão ao da máquina
-    (só a máscara), como era."""
+    """MORDIDAS: o ramo do perfil sem seção `mode` sem levar o caminho da sessão ao da máquina
+    (só a máscara), como era; e o ramo do pad sem a pergunta do juiz para o par sem caminho."""
 
     @pytest.mark.parametrize("transporte", TRANSPORTES)
     @pytest.mark.parametrize(("caminho", "mascara"), OS_CAMINHOS_XBOX)
@@ -215,6 +215,20 @@ class TestOPerfilSemSecaoNaoHerdaOCaminhoDoAnterior:
         assert d._gamepad_device.caminho == "dualsense", (
             f"o P1 seguiu no caminho {d._gamepad_device.caminho} ({transporte})")
         assert d._gamepad_device.backend == "uhid", "o movimento só chega pelo uhid"
+
+    @pytest.mark.parametrize("transporte", TRANSPORTES)
+    @pytest.mark.parametrize(("caminho", "mascara"), OS_CAMINHOS_XBOX)
+    def test_com_o_dono_em_gamepad_o_perfil_recria_o_p1_sem_esperar_o_juiz(
+        self, transporte: str, caminho: str, mascara: str
+    ) -> None:
+        save_gamepad_emulation(True, "dualsense")
+        d = _daemon(transporte)
+        _o_jogo_de_caminho_xbox(d, caminho, mascara)
+
+        _o_perfil_sem_secao(d, dono_do_pad="gamepad")
+
+        assert (d._gamepad_device.caminho, d._gamepad_device.backend) == ("dualsense", "uhid"), (
+            f"o P1 seguiu em {d._gamepad_device.caminho} até o juiz do tique ({transporte})")
 
     @pytest.mark.parametrize("transporte", TRANSPORTES)
     def test_com_a_maquina_em_xbox_o_p1_segue_a_maquina(self, transporte: str) -> None:

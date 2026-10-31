@@ -299,7 +299,7 @@ def _o_ramo_do_pad(
         or flavor_do_jogo != _mascara_da_sessao(daemon)
         or _o_p1_vestiria(daemon, flavor_do_jogo) != flavor_atual
         or (caminho is not None and caminho != _caminho_vivo(daemon))
-        or (caminho is None and getattr(daemon.config, "gamepad_caminho", None))
+        or (caminho is None and _o_p1_fora_do_par_sem_caminho(daemon, flavor_do_jogo))
     ):
         adiada_por_jogo = daemon._pedir_mascara_do_perfil(
             flavor_do_jogo,
@@ -5113,6 +5113,23 @@ def _dizer_parando_e_soltar(parada: asyncio.Event) -> None:
 
     sd_notify.parando()
     parada.set()
+
+
+def _o_p1_fora_do_par_sem_caminho(daemon: Any, flavor_do_jogo: str) -> bool:
+    """O P1 de pé fora do par sem caminho: o slot da sessão tem um, ou o juiz das máscaras o recria.
+
+    O perfil sem seção `mode` zera o slot antes do ramo do pad, e o pad nascido no caminho
+    escolhido do perfil anterior só aparece na pergunta do juiz (`vpad_ficou_para_tras`).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import vpad_ficou_para_tras
+
+    if getattr(daemon.config, "gamepad_caminho", None):
+        return True
+    device = getattr(daemon, "_gamepad_device", None)
+    return device is not None and vpad_ficou_para_tras(
+        getattr(device, "flavor", None), primary_identity(daemon), flavor_do_jogo,
+        vpad=device, caminho=None,
+    )
 
 
 __all__ = [
