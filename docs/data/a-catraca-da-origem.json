@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1176233,
+      "piso": 1176231,
       "por_item": {
         "docs": 107809,
         "scripts": 110028,
-        "src": 296514,
-        "tests": 661882
+        "src": 296487,
+        "tests": 661907
       },
-      "razao": "tamanho: +235 linhas (1175998 -> 1176233), pagas por Origem: D-2210-O-TOQUE-DE-BOTAO-CHEGA-DE-TODO-CONTROLE; registrado no fecho, topo 0f1ea34d235d",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
