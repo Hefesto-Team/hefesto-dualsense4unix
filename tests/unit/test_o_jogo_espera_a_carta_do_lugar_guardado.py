@@ -77,6 +77,7 @@ from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     ControllerIdentityRegistry,
+    make_auto_output_provider,
     prazo_do_lugar_guardado,
     relogio_do_lugar_guardado,
 )
@@ -267,6 +268,7 @@ class MesaDoJogo:
             self.inst._relogio = relogio
         self.inst.read_calibration = lambda _uniq=None: None  # type: ignore[assignment]
         self.reg = ControllerIdentityRegistry(clock=relogio)
+        self.inst.set_auto_output_provider(make_auto_output_provider(self.reg))
         self.jogo = JogoPorFora(
             lambda: getattr(getattr(self, "daemon", None), "display_authority", None) == "game"
         )
@@ -339,6 +341,7 @@ class MesaDoJogo:
         self.reg.sync_connected(
             [u for u in self.inst.alvos_conectados().values() if isinstance(u, str)]
         )
+        self.inst.seguir_a_carta()
         self.coop.sync()
         self.coop.forward_all()
         self.coop.forward_all()
@@ -352,8 +355,9 @@ class MesaDoJogo:
         deixava o pad do P1 vestindo quem o co-op promovia a secundário. Com
         o jogo segurando, o pad do posto não renasce (D-3009) e segue vestindo
         quem era o primário quando nasceu; o MAC é a O-VPAD-DO-P1-NAO-REPETE-
-        O-MAC-01. MORDIDA: devolva ``_cartas_locked`` sem a
-        ``_mesa_que_vai_sentar`` e a volta da carta 1 reprova aqui.
+        O-MAC-01. A mordida da ``_mesa_que_vai_sentar`` mora em
+        ``test_a_carta_de_quem_ainda_nao_tem_lampada.py``; nos ensaios deste arquivo o ramo
+        de reserva (``_depois_das_acesas``) dá a mesma carta, e a mordida não reprova aqui.
         """
         assert not self.mesa.ebusy, "; ".join(self.mesa.ebusy)
         if not self.coop._jogo_com_a_autoridade():
