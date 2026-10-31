@@ -132,7 +132,7 @@ dispatcher. A tabela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 | `trigger.set`       | `{side, mode, params: [int]}`                 | `{status, aplicado_em, guardado_em}`   |
 | `trigger.reset`     | `{side?: "left"\|"right"\|"both"}`            | `{status, aplicado_em, guardado_em}`   |
 | `led.set`           | `{rgb: [r,g,b], player_leds?: [bool]*5}`      | `{status, aplicado_em, guardado_em}`   |
-| `daemon.status`     | `{}`                                          | `{connected, battery_pct, transport, active_profile}` |
+| `daemon.status`     | `{appid?: int}`                               | `{connected, battery_pct, transport, active_profile, ambiente?: {appid, linhas, estado}}` |
 | `controller.list`   | `{}`                                          | `{controllers: [{vid, pid, transport, firmware, edge}]}` |
 | `daemon.reload`     | `{}`                                          | `{status}`                             |
 | `mouse.emulation.set` | `{enabled?: bool, speed?: 1-12, scroll_speed?: 1-5}` | `{status, enabled}`             |

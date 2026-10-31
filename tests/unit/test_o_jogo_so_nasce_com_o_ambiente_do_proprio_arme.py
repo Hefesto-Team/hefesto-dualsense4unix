@@ -424,7 +424,9 @@ def test_o_jogo_dualsense_nasce_com_o_ambiente_dualsense_com_o_xbox_em_disco(
     caso: str, sem_escrevente: None, runtime: Path, tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A prova (1) da sprint: o wrapper de verdade contra o ``IpcServer`` de verdade.
+    """Prova da D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME.
+
+    A prova (1) da sprint: o wrapper de verdade contra o ``IpcServer`` de verdade.
 
     O ``default.env`` em disco é o do Xbox e a escrita do fio escrevente leva ``LENTA_S``; o
     ambiente que o jogo recebe é o do DualSense, em menos de ``TETO_S``.
