@@ -254,9 +254,8 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             oferece = re.search(
                 rf'data-campo="{campo}"(.*?)</select>', publicada, re.S)
             assert oferece, f"{pref}·{campo} não é um `<select>` da página"
-            na_tela = valor if valor != "" else a03.TRAVESSAO
-            assert f'value="{na_tela}"' in oferece.group(1), (
-                f"{pref}·{campo} = {valor!r} (na tela: {na_tela!r}), e o "
+            assert f'value="{valor}"' in oferece.group(1), (
+                f"{pref}·{campo} = {valor!r}, e o "
                 f"`<select>` da página não oferece essa opção. `escrever()` do "
                 f"piloto devolve 0 sem escrever, e a coluna fica com o efeito de "
                 f"quem saiu dali.")
@@ -374,33 +373,44 @@ def test_a_recusa_que_o_tradutor_nao_conhece_volta_inteira(a03):
     assert str(recusa.value) == "o hidraw sumiu no meio do caminho"
 
 
-def test_o_travessao_espera_a_publicacao_do_usuario(a03):
-    """O pacote NÃO manda travessão numa página que não o oferece."""
-    guardado = a03._OFERECE
-    try:
-        a03._OFERECE = {"modo": frozenset({"Off"}), "imersao": frozenset({""})}
-        assert a03._sem_nada("modo", "Off") == "Off"
-        assert a03._sem_nada("imersao", "") == ""
-        a03._OFERECE = {"modo": frozenset({"Off", a03.TRAVESSAO}),
-                        "imersao": frozenset({"", a03.TRAVESSAO})}
-        assert a03._sem_nada("modo", "Off") == a03.VAZIO, (
-            "a página já oferece o travessão e o pacote continua mandando `Off` "
-            "— o lugar vazio segue dizendo a mesma palavra que um controle "
-            "conectado diria")
-        assert a03._sem_nada("imersao", "") == a03.VAZIO
-    finally:
-        a03._OFERECE = guardado
+def test_o_lugar_vazio_pergunta_o_traco_ao_dono(a03, publicada, monkeypatch):
+    """O lugar vazio mostra o nenhum efeito do dono, ofereça a página o que oferecer."""
+    from hefesto_dualsense4unix.profiles import sem_efeito
+
+    vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
+    assert vazios, "a página não marca lugar vazio nenhum — a régua ficou cega"
+    velha = publicada.replace(f'value="{sem_efeito.VALOR}"', f'value="{sem_efeito.ROTULO}"')
+    assert velha != publicada, "a página publicada não oferece o nenhum efeito"
+    for pagina in (publicada, velha, ""):
+        monkeypatch.setattr(a03, "_pagina_publicada", lambda pagina=pagina: pagina)
+        colunas = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]
+        for pref in vazios:
+            for sig in a03.LADOS:
+                valor = colunas[pref][f"{a03.CAMPO_DA_IMERSAO}-{sig}"]
+                assert valor == sem_efeito.VALOR, (
+                    f"{pref}·{sig} recebeu {valor!r} com a página "
+                    f"{'publicada' if pagina is publicada else 'velha' if pagina else 'ilegível'}; "
+                    f"o lugar vazio mostra {sem_efeito.VALOR!r}, do dono "
+                    f"`profiles/sem_efeito.py`, sem perguntar ao `<select>`.")
+
+
+@pytest.mark.parametrize("partir", ["", "—", "sem_efeito", "nenhum", "sem-efeito"])
+def test_criar_sem_ponto_de_partida_recusa_dizendo(a03, partir):
+    """O nenhum efeito, em qualquer nome do dono, não é ponto de partida de efeito novo."""
+    with pytest.raises(RuntimeError, match=re.escape("Escolha em qual efeito partir.")):
+        a03._da_area_de_criar({"forma": {"partir": partir, "nome": "x"}})
 
 
 def test_o_travessao_esta_no_desenho_de_hoje(a03):
     """O ENSAIO oferece o «—», o nenhum efeito que o lugar vazio mostra, em todo campo."""
     from hefesto_dualsense4unix.interface import onde
+    from hefesto_dualsense4unix.profiles import sem_efeito
 
     ensaio = onde.pagina(PAGINA).read_text(encoding="utf-8")
     miolo = ensaio.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     quantos = len(re.findall(
-        rf'<option value="{a03.SEM_IMERSAO}"(?![^>]*\b(?:disabled|hidden)\b)[^>]*>'
-        rf'{a03.TRAVESSAO}</option>', miolo))
+        rf'<option value="{re.escape(sem_efeito.VALOR)}"(?![^>]*\b(?:disabled|hidden)\b)[^>]*>'
+        rf'{re.escape(sem_efeito.ROTULO)}</option>', miolo))
     campos = len(re.findall(r"<select(?![^>]*data-linha)", miolo))
     assert quantos == campos, (
         f"{quantos} campos oferecem `—` e há {campos} campos de "

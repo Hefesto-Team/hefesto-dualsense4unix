@@ -60,8 +60,6 @@ CHEGADAS = tuple(f"gatilho_{sig}" for sig in LADOS)
 
 NOME_DO_LADO = {"left": "Gatilho esquerdo (L2)", "right": "Gatilho direito (R2)"}
 
-VAZIO = ""
-
 DEGRAUS_DA_FORCA = 8
 CAMPO_DA_FORCA = {"l2": "forca-l2", "r2": "forca-r2"}
 
@@ -79,17 +77,10 @@ _LUGAR_VAZIO = re.compile(r'data-controle="(p\d+)"[^>]*data-conectado="nao"')
 
 _QUALQUER_LUGAR = re.compile(r'data-controle="(p\d+)"')
 
-_SELECT = re.compile(
-    r'<select[^>]*class="(?P<classe>g2-imersao)"[^>]*>'
-    r'(?P<dentro>.*?)</select>', re.S)
-
-_CAMPO_DA_CLASSE = {"g2-imersao": "imersao"}
-
 _COMENTARIO_CSS = re.compile(r"/\*.*?\*/", re.S)
 
 _ENDERECOS: frozenset[str] | None = None
 _VAZIOS: frozenset[str] | None = None
-_OFERECE: dict[str, frozenset[str]] | None = None
 
 
 def _pagina_publicada() -> str:
@@ -105,18 +96,6 @@ def _pagina_publicada() -> str:
 def sem_comentarios_de_css(doc: str) -> str:
     """O documento sem os `/* … */` — e sem espaço, para casar declaração."""
     return _COMENTARIO_CSS.sub(" ", doc).replace(" ", "").replace("\n", "")
-
-
-def _o_que_o_select_oferece() -> dict[str, frozenset[str]]:
-    """Os `value` que cada campo de escolha da página publicada aceita."""
-    global _OFERECE
-    if _OFERECE is None:
-        fora: dict[str, set[str]] = {"imersao": set()}
-        for m in _SELECT.finditer(_pagina_publicada()):
-            fora[_CAMPO_DA_CLASSE[m.group("classe")]].update(
-                re.findall(r'<option[^>]*value="([^"]*)"', m.group("dentro")))
-        _OFERECE = {k: frozenset(v) for k, v in fora.items()}
-    return _OFERECE
 
 
 def _enderecos_da_pagina() -> frozenset[str]:
@@ -167,11 +146,6 @@ def _todos_os_lugares_da_pagina() -> frozenset[str]:
 
 
 TRAVESSAO = "—"
-
-
-def _sem_nada(campo: str, cravado: str) -> str:
-    """O que este campo mostra num lugar SEM APARELHO, hoje."""
-    return VAZIO if TRAVESSAO in _o_que_o_select_oferece().get(campo, ()) else cravado
 
 
 def _escapar(texto: str) -> str:
@@ -1009,8 +983,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     for pref in sorted(_lugares_que_o_desenho_da_por_vazios() - ocupados):
         vazia: dict[str, Any] = {f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}": SEM_APARELHO_AQUI
                                  for sig in LADOS}
-        vazia.update({f"{CAMPO_DA_IMERSAO}-{sig}": _sem_nada("imersao", SEM_IMERSAO)
-                      for sig in LADOS})
+        vazia.update({f"{CAMPO_DA_IMERSAO}-{sig}": _sem_efeito.VALOR for sig in LADOS})
         vazia.update({f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}": "" for sig in LADOS})
         vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
         vazia[CAMPO_DO_PLASTICO] = ""
@@ -1774,7 +1747,7 @@ def _da_area_de_criar(o: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi feito.")
     partir = str(forma.get("partir") or "").strip()
-    if not partir or partir == TRAVESSAO:
+    if not partir or _sem_efeito.e_sem_efeito(partir):
         raise RuntimeError("Escolha em qual efeito partir.")
     return partir, forma
 
