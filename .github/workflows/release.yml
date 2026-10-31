@@ -388,9 +388,9 @@ jobs:
   # que não o tem, o passo é pulado e o resto roda de verdade, sobre os arquivos que o `act` consegue montar.
   # O atestado de repositório público vai para o registro público de transparência (Sigstore) e não se
   # apaga: ele espera o `guarda-ci` como todo job que entrega para fora.
-  # A peça GDK (xgameruntime.dll) e a sonda da peça, do fonte em assets/gdk-runtime/. O Ubuntu é o 24.04 fixo:
-  # o pino.txt grava o sha256 do binário, e só o mesmo compilador dá o mesmo binário. O `--conferir` reprova a
-  # release se o fonte mudou sem o pino acompanhar.
+  # A peça GDK (xgameruntime.dll), o GameInput da casa (gameinput.dll) e as duas sondas, do fonte em
+  # assets/gdk-runtime/. O Ubuntu é o 24.04 fixo: o pino.txt grava o sha256 do binário, e só o mesmo compilador dá
+  # o mesmo binário. O `--conferir` reprova a release se o fonte mudou sem o pino acompanhar.
   peca-gdk:
     name: A peça GDK, compilada e conferida com o pino
     runs-on: ubuntu-24.04
@@ -409,9 +409,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: peca-gdk-${{ needs.build.outputs.version }}
-          path: |
-            dist/peca-gdk/xgameruntime.dll
-            dist/peca-gdk/sonda-gdk.exe
+          path: dist/peca-gdk/
           if-no-files-found: error
 
   integridade:
@@ -470,7 +468,7 @@ jobs:
           path: dist/tudo/
           merge-multiple: true
       - name: Conferir os arquivos com o SHA256SUMS
-        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak' 'xgameruntime.dll' 'sonda-gdk.exe'
+        run: python3 scripts/release/sums.py conferir dist/tudo --exigir '*.whl' '*.tar.gz' '*.AppImage' '*.deb' '*.flatpak' 'xgameruntime.dll' 'sonda-gdk.exe' 'gameinput.dll' 'sonda-gameinput.exe'
       - name: Notas da release (a seção do CHANGELOG e como conferir)
         env:
           VERSION: ${{ needs.build.outputs.version }}
