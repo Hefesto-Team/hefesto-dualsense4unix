@@ -654,7 +654,6 @@ def _foto_do_catalogo() -> _FotoDoCatalogo:
     return _FotoDoCatalogo(nomes=nomes, ofertas=_ofertas_de_jogos(nomes))
 
 
-
 _FORA_DO_DISCO: tuple[object, frozenset[str]] | None = None
 
 
@@ -708,16 +707,14 @@ def _jogo_fora_do_disco(prof: Any, foto: _FotoDoCatalogo, steam: bool,
     return False
 
 
-def _so_os_instalados(lista: list[dict[str, Any]], todos: list[Any],
-                      foto: _FotoDoCatalogo, ativo: str) -> list[dict[str, Any]]:
-    """A lista sem o perfil de jogo desinstalado; o arquivo fica, e o perfil ativo nunca sai."""
-    steam = _a_steam_responde()
+def _so_os_instalados(todos: list[Any], foto: _FotoDoCatalogo, valendo: str) -> list[Any]:
+    """Os perfis sem o de jogo desinstalado; o arquivo fica, e o perfil que vale nunca sai."""
+    steam = bool(foto.nomes) and _a_steam_responde()
     fora = _chaves_fora_do_disco()
-    escondidos = {str(getattr(p, "name", "") or "") for p in todos
-                  if _jogo_fora_do_disco(p, foto, steam, fora)}
-    escondidos.discard(ativo)
-    return [linha for linha in lista
-            if str(linha.get("perfil") or linha.get("nome") or "") not in escondidos]
+    return [p for p in todos
+            if str(getattr(p, "name", "") or "") == valendo
+            or not _jogo_fora_do_disco(p, foto, steam, fora)]
+
 
 def _ofertas_de(foto: _FotoDoCatalogo | None) -> list[Any]:
     """As ofertas da foto do tique, ou a pergunta de sempre sem a foto."""
@@ -1016,10 +1013,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
     try:
-        todos = os_perfis_de_escolher(load_all_profiles())
+        do_disco = os_perfis_de_escolher(load_all_profiles())
         foto = _foto_do_catalogo()
+        todos = _so_os_instalados(do_disco, foto, _valendo(ctx, do_disco))
         ativo = _em_uso(ctx, todos)
-        valendo = _valendo(ctx, todos)
         alvo = _alvo_do_editor(ctx, todos)
         escolhido = str(getattr(alvo, "name", "") or "")
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
@@ -1028,15 +1025,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     except Exception:
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
-    instalados = _so_os_instalados(bruto.get("lista") or [], todos, foto, valendo)
-    lista = _ordenada(_filtrada(_com_a_procedencia(instalados, todos, foto)))
+    lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos, foto)))
     editor = bruto.get("editor") or {}
     fora = {
         "perfis.linha.nome": [x.get("nome", "") for x in lista],
         "perfis.linha.criado": [x.get("criado", "") for x in lista],
         "perfis.linha.modificado": [x.get("modificado", "") for x in lista],
         "perfis.procura": _PROCURA,
-        "perfis.procura.conta": (f"{len(instalados) - len(lista)} "
+        "perfis.procura.conta": (f"{len(bruto.get('lista') or []) - len(lista)} "
                                  f"fora da busca" if _PROCURA.strip() else ""),
         **{f"perfis.ordem.{c}": (_seta_da_coluna(c)) for c in COLUNAS_DA_LISTA},
         "perfis.larguras": _larguras_em_texto(TABELA_DA_LISTA),
@@ -1312,7 +1308,8 @@ def _alvo_do_editor(ctx: Contexto, todos: list[Any] | None = None) -> Any:
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
         from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
-        todos = os_perfis_de_escolher(load_all_profiles())
+        do_disco = os_perfis_de_escolher(load_all_profiles())
+        todos = _so_os_instalados(do_disco, _foto_do_catalogo(), _valendo(ctx, do_disco))
     escolhido = _escolhido([{"nome": x.name} for x in todos], _valendo(ctx, todos))
     alvo = find_by_slug(escolhido, todos) if escolhido else None
     if alvo is None and todos:

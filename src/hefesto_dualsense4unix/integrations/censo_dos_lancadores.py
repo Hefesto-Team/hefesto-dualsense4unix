@@ -1304,7 +1304,6 @@ def jogos_com_chave_de_janela(
     return achados
 
 
-
 def chaves_de_janela_fora_do_disco(lar: Path | None = None) -> frozenset[str]:
     """As chaves de janela, em minúsculas, dos jogos conhecidos e não instalados.
 
@@ -1318,6 +1317,7 @@ def chaves_de_janela_fora_do_disco(lar: Path | None = None) -> frozenset[str]:
             if chave:
                 (dentro if jogo.instalado else fora).add(chave)
     return frozenset(fora - dentro)
+
 
 _FONTES: dict[str, tuple[str, ...]] = {
     "Heroic": ("store_cache/*_library.json", "store_cache/umu.json",

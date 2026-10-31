@@ -4,7 +4,9 @@ O disco é o de verdade, no lar isolado da suíte: a biblioteca da Steam com um 
 quatro perfis (um de jogo instalado, um de jogo desinstalado, o ativo de jogo desinstalado e um sem
 jogo). O arquivo do desinstalado fica no disco e volta à lista quando o jogo volta.
 
-A MORDIDA: troque o `_so_os_instalados` do `pacote` pela lista crua, e o desinstalado volta.
+AS MORDIDAS: troque o `_so_os_instalados` do `pacote` pelos perfis do disco, e o desinstalado volta;
+troque o do `_alvo_do_editor`, e o editor abre no perfil que a lista não mostra; tire o
+`bool(foto.nomes)`, e a leitura da Steam que falha esconde todo jogo do usuário.
 """
 from __future__ import annotations
 
@@ -126,3 +128,30 @@ def test_o_censo_responde_so_pelo_que_a_biblioteca_conhece(
     assert {"dentro.exe"}.isdisjoint(fora)
     assert all(not j.instalado for j in biblioteca.jogos
                if j.classe_de_janela.casefold() in fora)
+
+
+def test_o_editor_nunca_abre_no_perfil_que_a_lista_nao_mostra(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    save_profile(Profile(name="Antes de todos", priority=100,
+                         match=MatchCriteria(window_class=["steam_app_9100004"])))
+    ctx = Contexto(state={"active_profile": ""}, mesa=[], conectados=[], estados={})
+    visiveis = a10_perfis.pacote(ctx)["perfis.linha.nome"]
+    assert a10_perfis._alvo_do_editor(ctx).name in visiveis
+    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Desinstalado")
+    assert a10_perfis._alvo_do_editor(ctx).name in visiveis
+
+
+def test_a_leitura_da_steam_que_falha_nao_esconde_nada(monkeypatch: pytest.MonkeyPatch) -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+
+    def falha() -> dict[str, str]:
+        raise OSError("biblioteca ilegível")
+
+    monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", falha)
+    assert _nomes() == ["Ativo fora", "Desinstalado", "Instalado", "Sem jogo"]
