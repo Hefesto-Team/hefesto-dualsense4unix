@@ -389,6 +389,7 @@ def test_o_pro_conta_como_fisico_e_o_par_vai_na_assinatura(mesa: list[str]) -> N
 
     assert le._snapshot(daemon)[4] == 3
     assert le._pares_de_fora(daemon) == (PAR_DO_PRO,)
+    assert le._assinatura_da_mesa(daemon)[7] == (PAR_DO_PRO,)
 
     daemon.controller.describe_controllers = lambda: []
     assert le._snapshot(daemon)[4] == 0
@@ -533,3 +534,40 @@ def test_o_default_env_leva_os_pares_da_foto() -> None:
     padrao, _estado = le._o_ambiente_padrao(foto)
     assert "0x057e/0x2009" in _ignore(padrao)
     assert "0x057e/0x2009" in _ignore(le._o_ambiente_do_comum(foto, padrao))
+
+
+@pytest.mark.parametrize("mascara", ["dualsense", "xbox"])
+def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch, mascara: str
+) -> None:
+    """D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO: o P1 que cai não passa o boneco a quem já joga."""
+    dualsenses = {P1: "/dev/input/event20"}
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+        lambda: dict(dualsenses),
+    )
+    pad = _PadDoP1()
+    pad.flavor = mascara
+    daemon = _daemon(_Broker())
+    daemon.config.gamepad_flavor = mascara
+    daemon._gamepad_device = pad
+    daemon.controller.is_connected = lambda: bool(dualsenses)
+    mgr = CoopManager(daemon)
+    daemon._coop_manager = mgr
+    mgr.sync()
+    mgr.sync(force=True)
+    pro = mgr._players[PRO]
+    proprio = pro.vpad
+    assert proprio is not None and proprio is not pad and not pro.no_p1
+    proprio.flavor = mascara
+    numero = pro.player_index
+
+    dualsenses.clear()
+    daemon.controller.primary_uniq = None
+    mgr.sync(force=True)
+    mgr.forward_all()
+
+    assert mgr._players[PRO] is pro and not pro.no_p1
+    assert pro.vpad is proprio and pro.player_index == numero
+    assert mgr.o_de_fora_no_p1() is None
+    assert pad.botoes == []

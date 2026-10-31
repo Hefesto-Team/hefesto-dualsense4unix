@@ -996,15 +996,15 @@ class CoopManager:
         return next((p for p in self._players.values() if getattr(p, "no_p1", False)), None)
 
     def _sentar_o_de_fora_no_p1(self, sozinho: bool) -> None:
-        """Sem DualSense na mesa, o primeiro controle de fora na carta dirige o pad do P1."""
+        """Sem DualSense na mesa, o primeiro de fora na carta sem pad próprio dirige o do P1;
+        quem já joga no pad dele segue no boneco (D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO)."""
         if not sozinho or not self._o_p1_esta_livre():
             return
-        de_fora = [m for m in self._na_ordem_da_carta(self._players) if self._players[m].externo]
+        sem_pad = [m for m, p in self._players.items() if p.externo and p.vpad is None]
+        de_fora = self._na_ordem_da_carta(sem_pad)
         if not de_fora:
             return
         player = self._players[de_fora[0]]
-        if player.vpad is not None:
-            self._derrubar_para_renascer(player.identity)
         player.no_p1 = True
         player.player_index = 1
         if player.reader.grab_state == "held":
