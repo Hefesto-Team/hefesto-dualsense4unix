@@ -1,4 +1,4 @@
-"""As fixtures não levam a biblioteca de jogos de ninguém: só appid e título fictícios."""
+"""Fixtures e testes não levam a biblioteca de jogos de ninguém: só appid e título fictícios."""
 from __future__ import annotations
 
 import json
@@ -6,11 +6,17 @@ import re
 import unicodedata
 from pathlib import Path
 
-_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+_TESTES = Path(__file__).resolve().parents[1]
+_FIXTURES = _TESTES / "fixtures"
 
 _APPID_FICTICIO = range(9_900_000, 10_000_000)
 _STEAM_APP = re.compile(r"steam_app_(\d+)")
 _APPID_EM_CHAVE = re.compile(r"\"appid\"\s*:\s*\"?(\d+)")
+_APPID_NO_TESTE = re.compile(
+    r"(?ix)(?:steam_app_|umu-|com/(?:app|sub|bundle)/|apps/|appmanifest_|compatdata/|shadercache/"
+    r"|rungameid/|jogo\ da\ steam\ |appid\w*[\"']?\s*[:=]\s*[\"']?|appid\s+"
+    r"|steam(?:app|game)id[\"']?\s*[:=]\s*[\"']?|steam_compat_app_id[\"']?\s*[:=]\s*[\"']?)"
+    r"(\d+)(?!\d)")
 _REGEX_ENVOLTA = re.compile(r"(?:\.\*)?\((.*)\)(?:\.\*)?")
 
 _CATEGORIAS = frozenset(
@@ -42,6 +48,11 @@ def _ficticio(texto: str) -> bool:
 
 def _appid_ficticio(numero: str) -> bool:
     return int(numero) == 0 or int(numero) in _APPID_FICTICIO
+
+
+def _appid_de_teste(numero: str) -> bool:
+    valor = int(numero)
+    return valor == 0 or valor >= _APPID_FICTICIO.start or valor % 10 != 0
 
 
 def _categorias_neutras() -> set[str]:
@@ -123,3 +134,25 @@ def test_os_perfis_de_fixture_so_casam_jogo_ficticio() -> None:
         "Fictício …» / jogo_ficticio_* (ou ponha a categoria neutra em "
         "_CATEGORIAS): " + "; ".join(violacoes)
     )
+
+
+def test_nenhum_appid_real_nos_testes() -> None:
+    violacoes = []
+    for arquivo in sorted(_TESTES.rglob("*")):
+        if not arquivo.is_file() or "__pycache__" in arquivo.parts:
+            continue
+        try:
+            texto = arquivo.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for numero_da_linha, linha in enumerate(texto.splitlines(), start=1):
+            violacoes.extend(
+                f"{arquivo.relative_to(_TESTES)}:{numero_da_linha}: {achado.group(0)}"
+                for achado in _APPID_NO_TESTE.finditer(linha)
+                if not _appid_de_teste(achado.group(1)))
+    assert violacoes == [], (
+        f"{len(violacoes)} appid(s) de jogo de verdade nos testes — a Steam numera os apps de "
+        "dez em dez, e o teste do comportamento por número de jogo usa a faixa fictícia "
+        "(9900000 em diante), um número que a loja não dá (que não termina em 0) ou o dado "
+        "que o produto lê do catálogo, nunca a biblioteca de quem desenvolve: "
+        + "; ".join(violacoes[:40]))
