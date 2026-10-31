@@ -154,6 +154,8 @@ def test_o_runner_entre_aspas_e_o_runner_que_saiu_do_disco(
     _runners(casa)
     aspas = _garrafa(casa, "Aspas", f"'{VELHO}'", "'Com Aspas'")
     sumiu = _garrafa(casa, "Sumiu", "GE-Proton8-1")
+    wine_ge = _garrafa(casa, "Wine-GE", "wine-ge-proton8-26")
+    antes = wine_ge.read_bytes()
     quebrada = casa / "bottles" / "Quebrada" / "bottle.yml"
     quebrada.parent.mkdir(parents=True)
     quebrada.write_text("Name: Quebrada\nArch: win64\n", encoding="utf-8")
@@ -161,8 +163,28 @@ def test_o_runner_entre_aspas_e_o_runner_que_saiu_do_disco(
     feito = _apontar(lar, conf)
 
     assert _runner(aspas) == PINO and _runner(sumiu) == PINO
+    assert wine_ge.read_bytes() == antes, "o Wine-GE que saiu do disco virou Proton"
     assert feito.reescritas == 2
-    assert feito.fora == (censo.ForaDoPino("bottles", "Quebrada", censo.PORQUE_ILEGIVEL),)
+    assert feito.fora == (censo.ForaDoPino("bottles", "Quebrada", censo.PORQUE_ILEGIVEL),
+                          censo.ForaDoPino("bottles", "Wine-GE", censo.PORQUE_PELO_WINE))
+
+
+@pytest.mark.parametrize(("argv", "aberto"), [
+    (["/usr/bin/bottles"], True),
+    (["/usr/bin/python3", "/app/bin/bottles"], True),
+    (["/usr/bin/python3", "-sP", "/usr/bin/bottles", "--no-update"], True),
+    (["vim", "bottles"], False),
+    (["/usr/bin/python3", "-m", "http.server", "bottles"], False),
+    (["/usr/bin/bottles-cli", "list"], False),
+], ids=["nativo", "script", "script-com-opcao", "outro-programa", "outro-script", "a-cli"])
+def test_o_bottles_aberto_e_o_processo_do_bottles(
+        tmp_path: Path, argv: list[str], aberto: bool) -> None:
+    """Mordida: casar ``bottles`` em qualquer argumento trava o pin com um editor na pasta."""
+    proc = tmp_path / "proc"
+    (proc / "self").mkdir(parents=True)
+    (proc / "41").mkdir()
+    (proc / "41" / "cmdline").write_bytes(b"\0".join(a.encode() for a in argv) + b"\0")
+    assert censo.bottles_aberto(proc) is aberto
 
 
 def _atalho(pasta: Path, nome: str, exec_: str, *extra: str) -> None:
@@ -184,12 +206,15 @@ def test_o_atalho_do_umu_avulso_e_dito_e_o_de_outro_programa_nao(
     _atalho(meus, "escondido", "umu-run /p/x.exe", "Hidden=true")
     _atalho(sistema, "escondido", "umu-run /p/x.exe")
     _atalho(sistema, "parecido", "meu-umu-runner /p/x.exe")
+    _atalho(sistema, "de-fora", "umu-run /p/de-fora.exe")
 
     feito = _apontar(lar, conf)
 
     assert feito.fora == (censo.ForaDoPino("umu", "Corrida", censo.PORQUE_UMU_AVULSO),
                           censo.ForaDoPino("umu", "Pelo-Caminho", censo.PORQUE_UMU_AVULSO))
     assert "umu" in pp.quem_usa_o_proton(lar)
+    assert censo.atalhos_do_umu_avulso() == ("Corrida", "Pelo-Caminho", "De-Fora"), (
+        "sem o lar, as pastas do XDG da máquina contam, e o atalho escondido do usuário vence")
 
 
 def test_sem_bottles_nem_umu_nada_muda(lar: Path, conf: dict[str, str]) -> None:

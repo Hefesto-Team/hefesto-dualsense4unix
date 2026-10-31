@@ -1698,15 +1698,31 @@ def casas_do_bottles(lar: Path | None = None) -> tuple[tuple[Path, ...], tuple[F
         return (), (ForaDoPino("bottles", "", PORQUE_ILEGIVEL),)
 
 
-def bottles_aberto() -> bool:
-    """O Bottles está rodando? Ele regrava a configuração das garrafas: aberto, nada se escreve."""
-    for pid in os.listdir("/proc"):
-        if not pid.isdigit():
-            continue
-        with contextlib.suppress(OSError):
-            argv = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")[:2]
-            if any(Path(a.decode("utf-8", "replace")).name.casefold() == "bottles" for a in argv):
-                return True
+def _e_o_bottles(argv: list[str]) -> bool:
+    nomes = [Path(a).name.casefold() for a in argv if a]
+    if not nomes:
+        return False
+    if nomes[0] == "bottles":
+        return True
+    if not nomes[0].startswith("python"):
+        return False
+    script = next((a for a in argv[1:] if a and not a.startswith("-")), "")
+    return Path(script).name.casefold() == "bottles"
+
+
+def bottles_aberto(proc: Path = Path("/proc")) -> bool:
+    """O Bottles está rodando? Ele regrava a configuração das garrafas: aberto, nada se escreve.
+
+    O Bottles é um script Python: o processo é ``bottles`` ou o interpretador com ele de script.
+    """
+    with contextlib.suppress(OSError):
+        for pid in os.listdir(proc):
+            if not pid.isdigit():
+                continue
+            with contextlib.suppress(OSError):
+                bruto = (proc / pid / "cmdline").read_bytes().split(b"\0")
+                if _e_o_bottles([a.decode("utf-8", "replace") for a in bruto]):
+                    return True
     return False
 
 
@@ -1722,7 +1738,8 @@ def _runner_pelo_proton(runners: Path, runner: str) -> bool:
     pasta = runners / runner
     if (pasta / "proton").is_file():
         return True
-    return not pasta.exists() and "proton" in runner.casefold()
+    nome = runner.casefold()
+    return not pasta.exists() and "proton" in nome and "wine" not in nome
 
 
 @dataclass(frozen=True)
@@ -1819,12 +1836,13 @@ def atalhos_do_umu_avulso(lar: Path | None = None) -> tuple[str, ...]:
 
     O umu avulso não tem configuração por jogo: o Proton vem do ``PROTONPATH`` de quem o chama a
     cada lançamento. As pastas são as do XDG, a do usuário primeiro; o mesmo atalho numa pasta
-    seguinte não conta de novo.
+    seguinte não conta de novo. Com ``lar``, só a pasta de atalhos dele.
     """
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     try:
-        pastas = [_onde(lar).dados / "applications", *jogos_locais.pastas_de_atalhos()]
+        pastas = [_onde(lar).dados / "applications",
+                  *(jogos_locais.pastas_de_atalhos() if lar is None else ())]
     except Exception:
         return ()
     atalhos: dict[str, Path] = {}
