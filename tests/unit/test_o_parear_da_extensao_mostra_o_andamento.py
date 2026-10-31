@@ -324,7 +324,7 @@ def test_a_janela_de_topo_fixo_guarda_a_borda_da_tela(
             falhas.append(f"{caso}: a janela vai de {topo['y']:.1f} a {topo['b']:.1f} "
                           f"e não guarda {BORDA} px das bordas de {h}")
         teto = min(TETO_DA_JANELA, h - 2 * BORDA)
-        if abs((topo["y"] + topo["b"]) / 2 - h / 2) > (teto - topo["h"]) / 2 + 0.5:
-            falhas.append(f"{caso}: a janela de {topo['h']:.1f} px sai do lugar em que a "
-                          f"janela mais alta fica no centro")
+        if abs(topo["y"] - (h - teto) / 2) > 0.5:
+            falhas.append(f"{caso}: o topo fica em {topo['y']:.1f}, e não onde a janela mais "
+                          f"alta ({teto} px) fica no centro, {(h - teto) / 2:.1f}")
     assert not falhas, "\n".join(falhas)
