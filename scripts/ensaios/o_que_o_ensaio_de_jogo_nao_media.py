@@ -21,7 +21,7 @@ nasceram na mão e nunca ganharam script que as repita. Cada subcomando mede uma
 O QUE ELE NUNCA FAZ: escrever no aparelho, falar com o daemon ou subir o ``bpftrace``. Ler o evdev é
 ``O_RDONLY`` sem ``EVIOCGRAB``; o ``/proc`` e o ``/sys`` só se leem, e as raízes se trocam por
 ``--proc`` e ``--sys``. O ``bpftrace`` pede ``sudo``: o subcomando ``receita-do-quadro`` imprime a
-linha exata para quem coordena o ensaio rodar.
+linha exata para rodar à mão.
 """
 
 from __future__ import annotations
