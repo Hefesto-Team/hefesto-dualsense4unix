@@ -289,6 +289,43 @@ def test_o_dkms_lib_le_o_veredito_que_o_preparador_grava(tmp_path: Path) -> None
     assert (estado, frase) == kernel.lido()
 
 
+@pytest.mark.parametrize(("estado", "fica"), [("cache", True), ("sem-fonte", False)])
+def test_o_dkms_lib_esquece_so_o_veredito_que_falhou(
+    tmp_path: Path, estado: str, fica: bool
+) -> None:
+    arvore = tmp_path / "dkms"
+    pasta = arvore / "hefesto-uhid" / "1.0.0"
+    pasta.mkdir(parents=True)
+    texto = pasta / f"fonte-{KERNEL_NOVO}.txt"
+    guardado = pasta / f"fonte-{KERNEL_NOVO}.tar"
+    texto.write_text(f"{estado}\na frase\nchave\n", encoding="utf-8")
+    guardado.write_bytes(b"")
+    falso = tmp_path / "bin"
+    falso.mkdir()
+    sudo = falso / "sudo"
+    sudo.write_text('#!/bin/sh\nexec "$@"\n', encoding="utf-8")
+    sudo.chmod(0o755)
+    rodou = subprocess.run(
+        [
+            BASH,
+            "-c",
+            f"source '{REPO / 'scripts' / 'dkms_lib.sh'}'\n"
+            f"_dkms_esquecer_o_veredito_que_falhou hefesto-uhid 1.0.0 {KERNEL_NOVO}",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={
+            **os.environ,
+            "HEFESTO_DKMS_TREE": str(arvore),
+            "PATH": f"{falso}:{os.environ['PATH']}",
+        },
+    )
+    assert rodou.returncode == 0, rodou.stderr
+    assert texto.exists() is fica
+    assert guardado.exists() is fica
+
+
 def _uhid_sem_srcversion(kernel: Kernel) -> None:
     modinfo = kernel.bin / "modinfo"
     modinfo.write_text(
