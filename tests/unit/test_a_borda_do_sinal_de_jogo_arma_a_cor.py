@@ -17,17 +17,17 @@ reprovam.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 import pytest
 import structlog.testing
 
+from hefesto_dualsense4unix.core.lightbar_gatilho import NOME_DO_GATILHO as NOME_DA_COR
 from hefesto_dualsense4unix.daemon import connection
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 from hefesto_dualsense4unix.daemon.subsystems import game_signal as gs
 from hefesto_dualsense4unix.daemon.subsystems.game_signal import HYSTERESIS_SEC, GameSignal
-
-NOME_DA_COR = connection.NOME_DO_GATILHO_DA_LIGHTBAR
 
 
 class _ControleDeMentira:
@@ -68,7 +68,7 @@ class _Relogio:
         return self.agora
 
 
-def _as_cores(diario: list[dict[str, Any]]) -> list[str]:
+def _as_cores(diario: Sequence[Mapping[str, Any]]) -> list[str]:
     return [
         str(linha.get("evento"))
         for linha in diario
