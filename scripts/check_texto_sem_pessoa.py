@@ -36,12 +36,8 @@ partes onde moram (`utils/nomes_gravados.py`): a régua não tem formato isento.
 A fala se pega por quatro sinais: o marcador de isenção de acento que se declara
 citação, a gíria de chat entre «», a fala apresentada (as palavras, a ordem,
 a queixa ou a decisão atribuídas ao usuário ou ao produto) logo antes das aspas,
-e a fala rotulada. A rotulada é o rótulo de transcrição (literal, verbatim,
-textual), a palavra de produto, a resposta datada ou o usuário como sujeito,
-com ou sem data, logo antes de dois-pontos e das aspas, inclusive as aspas
-dobradas do CSV; e, num JSON de ``docs/research/``, o campo ``pedido`` com
-conteúdo, que guardava a fala crua (o pedido se guarda em prosa, em
-``pedido_em_prosa``). O rótulo de tela entre aspas, sem apresentador, passa.
+e a rotulada (literal, verbatim, textual, palavra de produto, resposta datada, o
+usuário como sujeito, e o ``pedido`` cheio num JSON de ``docs/research/``).
 
 O que a régua NÃO alcança: a fala entre aspas sem nenhum dos quatro sinais (a
 itálica entre aspas retas, a mais comum, casa também texto de fora); a paráfrase; o pronome masculino; o
@@ -82,15 +78,9 @@ _FALA_APRESENTADA = re.compile(
     re.IGNORECASE,
 )
 _DATA = r"(?:[,\s]+(?:em\s+|de\s+)?\d{1,2}/\d{2}(?:/\d{4})?(?:,?\s*(?:às\s+)?~?\d{1,2}h\d{0,2})?)?"
-_FALA_ROTULADA = re.compile(
-    _SEM_LETRA_ANTES
-    + r"(?:(?:literal|verbatim|textual|(?:o|do)\s+usuário|respondid[ao]\s+em\s+\d{1,2}/\d{2}(?:/\d{4})?)"
-    + _DATA
-    + r"\s*:|palavra de produto"
-    + _DATA
-    + r"[\s:,]*|o usuário(?:\s+já)?\s+disse:?)[\s*_]*(?:\"\"|[\"'«“])[*_]*(?=[^\W_]|[(…`])",
-    re.IGNORECASE,
-)
+_FALA_ROTULADA = re.compile(_SEM_LETRA_ANTES + r"(?:(?:literal|verbatim|textual|(?:o|do)\s+usuário|"
+    r"respondid[ao]\s+em\s+\d{1,2}/\d{2}(?:/\d{4})?)" + _DATA + r"\s*:|palavra de produto" + _DATA
+    + r"[\s:,]*|o usuário(?:\s+já)?\s+disse:?)[\s*_]*(?:\"\"|[\"'«“])[*_]*(?=[^\W_]|[(…`])", re.IGNORECASE)
 _ROTULOS = ("literal", "verbatim", "textual", "usuário", "produto", "respondid")
 _PEDIDO_CRU = re.compile(r'"pedido"\s*:\s*"(?!")')
 _GIRIA = re.compile(r"«[^»\n]*?(?<![^\W\d_])(?:vc|vcs|pq|tb|tbm|n[ée]|t[aá]|pra)(?![^\W\d_])[^»\n]*»")
@@ -116,11 +106,7 @@ def _citacao(texto: str, baixo: str) -> bool:
     return "«" in texto and bool(_GIRIA.search(texto))
 
 
-def _pedido_cru(rel: str, linha: str) -> bool:
-    return rel.startswith("docs/research/") and rel.endswith(".json") and bool(_PEDIDO_CRU.search(linha))
-
-
-def classes_da_linha(linha: str) -> list[str]:
+def classes_da_linha(linha: str, pesquisa: bool = False) -> list[str]:
     baixo = linha.lower()
     achadas = []
     if _pronome(linha, baixo):
@@ -129,7 +115,7 @@ def classes_da_linha(linha: str) -> list[str]:
         achadas.append("posto")
     if _nome(linha, baixo):
         achadas.append("nome")
-    if _citacao(linha, baixo):
+    if _citacao(linha, baixo) or (pesquisa and _PEDIDO_CRU.search(linha)):
         achadas.append("citacao")
     return achadas
 
@@ -220,17 +206,12 @@ def varrer(raiz: Path, arquivos: list[str] | None = None) -> list[Ocorrencia]:
         if rel in ISENTOS:
             continue
         texto = _ler(caminho)
-        if texto is None:
-            continue
         pesquisa = rel.startswith("docs/research/") and rel.endswith(".json")
-        if not pesquisa and not _tem_sinal(texto):
+        if texto is None or not (pesquisa or _tem_sinal(texto)):
             continue
         autoria = _autoria(rel)
         for n, linha in enumerate(texto.splitlines(), 1):
-            classes = classes_da_linha(linha)
-            if pesquisa and "citacao" not in classes and _pedido_cru(rel, linha):
-                classes.append("citacao")
-            for classe in classes:
+            for classe in classes_da_linha(linha, pesquisa):
                 if classe == "nome" and autoria and _IDENTIDADE.search(linha):
                     resto = _IDENTIDADE.sub("", linha)
                     if not _nome(resto, resto.lower()):
