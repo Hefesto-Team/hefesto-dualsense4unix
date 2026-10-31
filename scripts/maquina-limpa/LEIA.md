@@ -60,10 +60,10 @@ O `scripts/ci/instalar_como_usuaria.sh` — o mesmo instrumento do job
 `ubuntu:24.04` com o repositório do Pop por cima (o Pop sem a parte gráfica,
 pelo `--fontes pop`, com a chave conferida pela impressão digital),
 `fedora:42`, `archlinux:latest` e `debian:12`. Com `--dkms`, roda o mesmo
-`--so-dkms` do CI (o `dkms build -k` de cada módulo contra os headers da
-distro; o rc 77 de um módulo é o pino, de propósito) e o `make` direto do
-`hid-playstation`, que diz se o fonte compila ali (a L6). Com `--bluez`, roda
-a receita do backport do BlueZ no Pop (a L2).
+`--so-dkms` do CI: o `dkms build -k` de cada módulo contra os headers da
+distro, que compila do fonte de fábrica do kernel conferido pelo `srcversion`
+ou fica no de fábrica com o motivo do `preparar-o-fonte.py`. Com `--bluez`,
+roda a receita do backport do BlueZ no Pop (a L2).
 
 **As travas:** a árvore nunca é montada (o roteiro do CI faz `chown -R` da
 raiz), entra por tarball só de leitura; nada de `--privileged` nem `--device`.
@@ -75,9 +75,10 @@ sem controle; e a sobra do uninstall, que se confere contra o que o produto
 declara deixar.
 
 O job `install-multi-distro` do CI roda as mesmas quatro imagens e o mesmo
-passo do dkms, e o `smoke-multi-distro` espelha a matriz. O Pop e o Fedora
-entram experimentais, e o passo do dkms informativo, até haver corridas
-medidas: o `debian:12` continua sendo o portão duro.
+passo do dkms, e o `smoke-multi-distro` espelha a matriz. O passo do dkms
+reprova o módulo que não compila nem fica no de fábrica com o motivo (medido
+em 31/10/2026 no Debian 12, no Fedora 42, no Pop e no Arch); o Pop, o Fedora e
+o Arch seguem experimentais no job, e o `debian:12` é o portão duro.
 
 ## P4 — `p4-vm.sh`
 

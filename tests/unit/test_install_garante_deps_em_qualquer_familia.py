@@ -596,15 +596,31 @@ def test_as_fontes_vem_antes_das_deps_nos_dois_jobs() -> None:
         assert fontes < deps, f"{job}: as fontes do Pop entram depois das dependências"
 
 
+def _estados_do_preparador() -> set[str]:
+    texto = (RAIZ / "assets/dkms/uhid/preparar-o-fonte.py").read_text(encoding="utf-8")
+    return set(re.findall(r'VereditoError\(\s*"([a-z-]+)"', texto))
+
+
 def test_o_install_multi_distro_compila_cada_modulo() -> None:
     passos = [p for p in _passos("install-multi-distro") if "--so-dkms" in str(p.get("run", ""))]
     assert len(passos) == 1, "o passo do dkms build -k saiu do install-multi-distro"
+    assert "continue-on-error" not in passos[0], (
+        "o passo do dkms voltou a ser informativo: um módulo que não compila nem diz o "
+        "motivo passaria verde"
+    )
     texto = INSTALAR_COMO_USUARIA.read_text(encoding="utf-8")
     assert "assets/dkms/*/dkms.conf" in texto, "o passo não percorre todos os módulos"
-    assert re.search(r"^\s*77\)", texto, re.M), (
-        "o rc 77 (o pino de kernel recusando, de propósito) deixou de ser aceito"
-    )
     assert 'dkms build -m "${nome}" -v "${ver}" -k "${k}"' in texto
+    caso = re.search(r'case "\$\{rc\}:\$\{estado\}" in\n(.*?)\n\s*esac', texto, re.S)
+    assert caso, "o passo deixou de decidir pelo rc e pelo veredito do preparar-o-fonte.py"
+    ramos = [r.strip() for r in re.findall(r"^\s*(\*|[0-9*]+:[^)\n]*)\)", caso.group(1), re.M)]
+    assert ramos[0] == "0:*" and ramos[-1] == "*", ramos
+    aceitos = {r.split(":", 1)[1] for r in " | ".join(ramos[1:-1]).split(" | ")}
+    assert aceitos == _estados_do_preparador() - {"sem-serie"}, (
+        f"o passo aceita {sorted(aceitos)} como «fica no de fábrica»; só um veredito do "
+        "preparar-o-fonte.py com o motivo passa, e a série que não diz o .c reprova"
+    )
+    assert "reprovados+=" in caso.group(1).rsplit("*)", 1)[1], "o resto deixou de reprovar"
 
 
 def test_a_chave_do_pop_e_conferida_pela_impressao_digital() -> None:

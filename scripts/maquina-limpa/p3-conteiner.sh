@@ -64,15 +64,9 @@ echo "--- doctor sem aparelho:"
 su - jogadora -c 'bash /opt/hefesto/scripts/doctor.sh 2>&1' | grep -E '^\[(FAIL|WARN)\]' || true
 find / -xdev -newer /arvore.tgz -not -path '/proc/*' 2>/dev/null | sort > /tmp/pos-install.txt
 if [ "${COM_DKMS}" = 1 ]; then
-  echo "--- cada módulo contra os headers desta distro (L6), o mesmo passo do CI:"
+  echo "--- cada módulo contra os headers desta distro, o mesmo passo do CI:"
   bash /opt/hefesto/scripts/ci/instalar_como_usuaria.sh --so-dkms
-  echo "rc_dkms_build=$? (1 = algum módulo não compila; o rc 77 de um módulo é o pino, de propósito)"
-  k="$(ls /lib/modules | sort -V | tail -1)"
-  b=/tmp/make-direto; rm -rf "$b"; cp -a /opt/hefesto/assets/dkms/hid-playstation "$b"
-  make -C "/lib/modules/${k}/build" M="$b" modules >/tmp/make-direto.txt 2>&1 \
-    || make -C "/usr/src/kernels/${k}" M="$b" modules >>/tmp/make-direto.txt 2>&1
-  echo "rc_make_direto=$? (o fonte compila neste kernel, com ou sem o pino)"
-  tail -5 /tmp/make-direto.txt
+  echo "rc_dkms_build=$? (1 = algum módulo não compila nem fica no de fábrica com o motivo)"
 fi
 if [ "${COM_BLUEZ}" = 1 ]; then
   echo "--- a receita do BlueZ (L2):"

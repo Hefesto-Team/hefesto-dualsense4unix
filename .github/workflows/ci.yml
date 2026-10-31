@@ -1269,10 +1269,10 @@ jobs:
       # O P3 DA MÁQUINA LIMPA (28/09/2026): cada módulo de assets/dkms/ contra
       # o kernel mais novo da distro (headers e módulos). rc 0 compila do fonte
       # de fábrica conferido pelo srcversion; o que fica no de fábrica passa com
-      # o motivo do preparar-o-fonte.py. Informativo até haver corridas medidas
-      # em cada imagem: ninguém mediu ainda o Debian 12 e o Fedora 42.
+      # o motivo do preparar-o-fonte.py. Medido em 31/10/2026 no Debian 12, no
+      # Fedora 42, no Pop e no Arch: reprova só o módulo que não compila nem diz
+      # o motivo, e o passo é duro onde o job é duro.
       - name: O dkms build -k de cada módulo contra os headers da distro
-        continue-on-error: true
         run: bash scripts/ci/instalar_como_usuaria.sh --so-dkms
       - name: Upload do log do install
         if: always()
