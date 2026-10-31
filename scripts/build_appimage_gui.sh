@@ -76,7 +76,7 @@ if [[ -d "$HERE/assets/glyphs" ]]; then
         "$HERE/assets/glyphs/"*.svg
 fi
 
-git -C "$HERE" ls-files -z -- assets/profiles_default assets/estilos_de_jogo \
+git -C "$HERE" ls-files -z -- 'assets/profiles_default/*.json' 'assets/estilos_de_jogo/*.json' \
     | xargs -0 -r cp --parents -t "$APPDIR/usr/share/hefesto-dualsense4unix/"
 
 install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \

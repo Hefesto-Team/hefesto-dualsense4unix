@@ -1354,7 +1354,7 @@ Sackboy fechou, a Steam saiu e o serviço reiniciou com o terminal em foco. O
 primeiro tique do autoswitch chegou 1,8 s ANTES do restauro, com a crença `None`,
 e a queda do «sem candidato» foi à escolha à mão (o perfil de outro jogo); o restauro
 pôs o Sackboy, e o tique seguinte pôs a escolha à mão de novo. O `_activate` ainda gravou
-o «Lure» no `ultimo_jogo.json`, porque ele tem regra `steam_app_3851570` e passava
+a escolha à mão no `ultimo_jogo.json`, porque o perfil tem regra `steam_app_9938515` e passava
 por perfil de jogo: o disco perdeu o jogo de verdade. A cura não depende de ordem
 nem de tempo: a queda do «sem candidato» tem um dono, o
 `AutoSwitcher._o_ultimo_jogo_que_vale`, que devolve o último jogo antes da escolha

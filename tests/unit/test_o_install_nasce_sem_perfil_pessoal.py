@@ -20,6 +20,7 @@ from hefesto_dualsense4unix.profiles import loader
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTRUSO = "jogo_ficticio_intruso.json"
+LEIA = "LEIA-PRIMEIRO.md"
 SHARE = Path("usr/share/hefesto-dualsense4unix")
 _PASTAS_DA_FABRICA = ("assets/profiles_default", "assets/estilos_de_jogo")
 _GIT_ENV = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
@@ -44,11 +45,13 @@ def _repo_com_intruso(raiz: Path) -> Path:
     estilos.mkdir(parents=True)
     for nome in loader.ARQUIVOS_DOS_ESTILOS_DE_JOGO:
         (estilos / nome).write_text(_perfil(nome.removesuffix(".json")), encoding="utf-8")
+    (estilos / LEIA).write_text("", encoding="utf-8")
     (raiz / "assets" / "71-uinput.rules").write_text("", encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=raiz, check=True, env=_GIT_ENV)
     versionados = [
         *(f"assets/profiles_default/{n}" for n in loader.ARQUIVOS_DE_FABRICA),
         *(f"assets/estilos_de_jogo/{n}" for n in loader.ARQUIVOS_DOS_ESTILOS_DE_JOGO),
+        f"assets/estilos_de_jogo/{LEIA}",
         "assets/71-uinput.rules",
     ]
     subprocess.run(["git", "add", "--", *versionados], cwd=raiz, check=True, env=_GIT_ENV)
@@ -166,7 +169,11 @@ def test_o_deb_nao_leva_o_json_solto(tmp_path: Path) -> None:
 
 
 def test_o_appimage_nao_leva_o_json_solto(tmp_path: Path) -> None:
-    """MORDIDA: devolver o `install ... "$HERE/assets/profiles_default/"*.json` ao script."""
+    """O AppImage leva só os JSON versionados, nem o intruso nem o `LEIA-PRIMEIRO.md` da pasta.
+
+    MORDIDA: devolver o `install ... "$HERE/assets/profiles_default/"*.json` ao script, ou tirar o
+    `*.json` do `git ls-files`.
+    """
     repo = _repo_com_intruso(tmp_path / "repo")
     appdir = tmp_path / "AppDir"
     (appdir / SHARE).mkdir(parents=True)
