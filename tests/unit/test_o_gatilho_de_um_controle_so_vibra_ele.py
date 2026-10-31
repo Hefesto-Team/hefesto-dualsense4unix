@@ -1,9 +1,10 @@
 """O gatilho de um controle só vibra ele (O-GATILHO-DE-UM-CONTROLE-SO-VIBRA-ELE-01).
 
-Quatro DualSense na mesa, um perfil de estilo souls com o Eco e o Ressoar em
-todos: o R2 de um controle só escreve nele. O motor do tato vivo lê o gatilho
-de cada um pelo leitor dele e escreve pelo ``uniq`` do evento, no Modo Xbox e no
-Modo DualSense, com jogo e sem jogo, de P1 a P4 e com dois apertos ao mesmo tempo.
+Quatro DualSense, o estilo souls com o Eco e o Ressoar em todos. O motor do
+tato vivo lê o gatilho de cada um pelo leitor dele. Com jogo, o R2 de um
+controle escreve só nos motores dele; sem jogo, o tato não escreve em nenhum
+outro. No Modo Xbox e no Modo DualSense, de P1 a P4 e com dois apertos ao
+mesmo tempo.
 """
 from __future__ import annotations
 
