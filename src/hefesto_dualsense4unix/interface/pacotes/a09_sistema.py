@@ -1765,7 +1765,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE MUDA EM RELAÇÃO À JANELA ANTIGA, e é decisão de produto: lá o
     `_ao_escolher` **não manda IPC** — acumula em `host._maquina_pendente` e só o
     "Aplicar" do rodapé grava (`footer_actions.py`). Aqui vale a regra de
-    01/09: *"clicar na cor já deveria aplicar"*. O gesto age na hora, e o
+    01/09: clicar na cor já aplica. O gesto age na hora, e o
     caminho é o MESMO que aquele "Aplicar" usa — `machine_declare_detalhado`, do
     `ipc_bridge`. Não é uma segunda porta para o disco.
 

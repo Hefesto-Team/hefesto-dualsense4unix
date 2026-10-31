@@ -217,8 +217,8 @@ não registrado no mesmo dia vira lembrança.
 
 Todo suspeito que ficar `não é a causa` é candidato a **parar de ser acionado**.
 
-Foi o que o usuário descreveu: *"de 5 canais, um deles é o que realmente impactava;
-após isso passamos a usar somente ele, e deixamos o projeto menos complexo"*.
+Foi o caso relatado: de cinco canais, um só impactava de verdade; depois
+disso só ele ficou em uso, e o projeto ficou menos complexo.
 
 A causa isolada responde **por onde acionar**. Os inocentados respondem **o que
 dá para parar de fazer** — e é essa a pergunta que encolhe o código.
@@ -833,9 +833,9 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
 - **A `A-20` é a que fez este guia ser reescrito.** Sobre a queda de um controle
   às 22:00:33 de 12/08 eu escrevi uma causa de firmware — *"foi power off do
   firmware por proteção"* — sem uma única medição que a sustentasse, num
-  documento cuja pergunta de abertura é qual instrumento está mentindo. O usuário
-  corrigiu na hora, e a regra que o usuário deu vale mais que o episódio: *"presumir
-  nunca pode ser feito, trabalhamos com evidências"*.
+  documento cuja pergunta de abertura é qual instrumento está mentindo. A correção
+  veio na hora, e a regra vale mais que o episódio: nunca se presume,
+  trabalha-se com evidência.
 
   **As duas falas acima são relato da sessão de 12→13/08, não citação de
   documento.** Não as procure na árvore — não estão lá, e conferir quer dizer ir

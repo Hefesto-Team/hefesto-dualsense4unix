@@ -27,7 +27,7 @@ ou seja, dentro da rajada. Chega junto, e a última palavra é da Steam.
 
 SÃO DUAS LUZES, NÃO UMA
 =======================
-Pergunta, 12/08: *"isso vai servir pro player e pro lightbar, certo?"* —
+Pergunta de 12/08: se isto vale para o player e para o lightbar —
 e a resposta tem de ser sim, porque **a Steam repinta as duas**. Medido no
 mesmo dia: ao abrir a Steam com as barras acesas, as barras migraram para as cores
 de jogador do usuário, e o número de jogador acompanhou. Um gatilho que reescrevesse

@@ -2096,9 +2096,9 @@ class Piloto:
         detalhes"), tem régua própria e não precisa saber que existe recado.
 
         **A METADE DO SUCESSO DA D-01 CADUCOU EM 13/09/2026** — TELA-CALADA-01,
-        pela palavra de produto, com a foto do rodapé: *"essas frases de status que
-        aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as
-        abas da interface"*. O recado de sucesso chegava por três portas — o
+        por pedido de produto, com a foto do rodapé: as frases de status do
+        rodapé saem, em todas as
+        abas da interface. O recado de sucesso chegava por três portas — o
         cartão, as faixas `data-hef-recados` da 01 e da 05, e a aba seguinte —,
         e as três passavam por um depósito de tom `sucesso` feito aqui. **A frase
         continua vindo do dono e continua saindo da carga**; o que mudou é o

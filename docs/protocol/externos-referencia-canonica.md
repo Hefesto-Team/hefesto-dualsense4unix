@@ -800,9 +800,9 @@ D-input, LED2 X-input, LED3 macOS, rotativo = Switch ou pareamento). GRAU:
 nunca foi olhada neste projeto**. Fecha com cinco segundos de olho de quem confere.
 
 > **NOTA DATADA — 07/08/2026 21h06: o usuário olhou, e a metade física da `P-4` está
-> respondida.** Nas palavras do usuário, sobre o aparelho na mão: *"não há lightbar
-> mas existe led de identificação de player nele também, igual o pro
-> controller"*.
+> respondida.** Com o aparelho na mão: não há lightbar,
+> mas há LED de identificação de player, igual ao Pro
+> Controller.
 >
 > - **A ausência de lightbar RGB física está CONFIRMADA** — a frase acima sobe
 >   de MÉDIA para **MEDIDA** nessa metade. Escrever `red`/`green`/`blue` neste
@@ -1261,8 +1261,8 @@ modo. **Cinco segundos.**
 E3.
 
 > **NOTA DATADA — 07/08/2026 21h06: metade desta pergunta está RESPONDIDA, e a
-> previsão acima se confirmou.** O usuário olhou o aparelho: *"não há lightbar mas
-> existe led de identificação de player nele também, igual o pro controller"*.
+> previsão acima se confirmou.** O aparelho conferido na mão: não há lightbar, mas
+> há LED de identificação de player, igual ao Pro Controller.
 > Os cinco segundos foram gastos e o desfecho está na seção 4.7.
 >
 > **O que RESTA da `P-4`, e a pergunta vira esta pergunta:** *quando o daemon escreve

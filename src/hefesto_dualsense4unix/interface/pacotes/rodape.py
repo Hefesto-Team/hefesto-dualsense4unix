@@ -73,9 +73,9 @@ def _recado(frase: str) -> None:
     """A notícia da carona vai ao DIÁRIO da janela — e não mais à tela.
 
     ATÉ 13/09/2026 A FRASE IA AO CARTÃO, como `{"recado": …}` pelo canal de sucesso
-    do piloto (a D-01). O usuário mandou tirar, com a foto deste rodapé: *"essas
-    frases de status que aparecem no rodapé isso não deveria estar
-    aparecendo"*, *"em todas as abas da interface"* (TELA-CALADA-01). Medido no
+    do piloto (a D-01). Saíram por pedido de produto, com a foto deste rodapé: as
+    frases de status do rodapé não aparecem
+    em nenhuma aba da interface (TELA-CALADA-01). Medido no
     piloto oculto antes da cura: o «Aplicar» com um jogo sem o atalho escrevia
     a frase na faixa da 01, no cartão do P1 da 02 — onde a frase já chegava vinda
     da 01 — e na faixa da 05.

@@ -1254,8 +1254,8 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
 def o_lugar_vazio() -> dict[str, str]:
     """O que a coluna SEM controle mostra nos dois desenhos da aba.
 
-    Pedido de 21/09/2026, zero controles: *"os leds na linha dos leds do p3,p4 tem que aparecerem
-    mas não aparecerem ligados como o p1 e o p2"* (o P1 e o P2 mostravam as duas tiras ACESAS no
+    Pedido de 21/09/2026, zero controles: os LEDs da linha do P3 e do P4 aparecem, mas
+    apagados, diferentes do P1 e do P2 (o P1 e o P2 mostravam as duas tiras ACESAS no
     azul e no vermelho do mockup, porque o alvo `html` fica fora do travessão e ninguém repintava; o
     P3 e o P4 um travessão seco).
 
@@ -2025,7 +2025,7 @@ def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
 def cor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O usuário clicou num tom. A cor vai AO CONTROLE NA HORA.
 
-    Decisão de 01/09/2026 (*"clicar na cor já deveria aplicar a cor no controle."*), que vale para a
+    Decisão de 01/09/2026 (clicar na cor aplica a cor no controle), que vale para a
     interface inteira: **o gesto age na hora**, sem rascunho à espera de "Aplicar". A cor chega pelo
     `led.set` direto; o "Salvar perfil" continua sendo o que grava.
 
@@ -2632,7 +2632,7 @@ def _pares_da_troca(ctx: Contexto, uniq: str, n: int) -> list[tuple[str, int]]:
 def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> str:
     """As cinco lâmpadas SEGUEM o número que o usuário acabou de escolher.
 
-    Queixa de 04/09/2026: *"escolha do jogador no iluminação não funciona"*. O gesto renumerava e
+    Defeito de 04/09/2026: a escolha do jogador na Iluminação não funcionava. O gesto renumerava e
     parava; renumerar não move lâmpada. Medido no ensaio (dois DualSense, daemon vivo,
     `/sys/class/leds` a cada passo):
 

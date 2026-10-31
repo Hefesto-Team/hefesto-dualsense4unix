@@ -27,8 +27,8 @@ plausível e falso é pior que um traço honesto, porque o usuário confia nele.
 * **OS OITO INTERRUPTORES DE LADO GANHARAM FONTE — 14/09/2026.** Eles estavam
   em :data:`SEM_FONTE` desde que esta tela nasceu, com a razão certa: *não há
   campo de habilitar motor por lado*. A cura de 14/09 não criou o campo — a cura
-  leu o que já existia. Ordem de produto, com o controle na mão: *"ele deveria ligar se
-  > 0 no slicer dele"*. Aceso passou a ser a LEITURA da barra daquele motor, e o
+  leu o que já existia. Ordem de produto, com o controle na mão: o motor liga quando
+  a barra dele passa de 0. Aceso passou a ser a LEITURA da barra daquele motor, e o
   clique, o par que a escreve (`interface/pacotes/a05_vibracao`, chave
   `lado-{lado}` e gesto `lado`). A `MIGRA-VIBRACAO-06`, que fecharia isto criando
   o campo, deixa de ser necessária por este caminho.

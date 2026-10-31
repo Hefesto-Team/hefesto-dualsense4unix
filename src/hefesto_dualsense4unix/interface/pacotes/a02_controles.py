@@ -2314,7 +2314,7 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
        «Ignorar tremor até» são da tela Calibrar sensores, e mandar os três
        aqui reafirmaria os números do usuário a cada clique;
     3. **NO MODO NATIVO NÃO PEDE NADA** — A-MIRA-POR-MOVIMENTO-NA-TELA-02,
-       palavra de 24/09/2026: *"fica cinza no Nativo, sem gravar"*. O
+       decisão de 24/09/2026: fica cinza no Nativo, sem gravar. O
        chip está cinza (`mira-fora`), e o clique recusa ANTES da ponte com
        :data:`MIRA_CINZA_NO_NATIVO` — quem recusa é a camada (`pacotes/camada.py`,
        aplicada pelo `@gesto`), não um `if` aqui. O daemon tem a MESMA guarda

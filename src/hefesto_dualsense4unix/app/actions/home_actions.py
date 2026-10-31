@@ -302,8 +302,8 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     (`app/actions/jogar/painel.py:533`), porque as três chamavam
     `wrapper_banner_text` direto, sem consultar lista nenhuma.
 
-    A decisão, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
-    tudo"*. E o `calados` da 07 antiga já dizia, por escrito, que a conta
+    A decisão, 05/09/2026 (pergunta `07-Q3`), é que as duas recusas calam
+    tudo. E o `calados` da 07 antiga já dizia, por escrito, que a conta
     precisava de um dono para a outra metade não a redigitar.
 
     `wrapper_banner_text` continua puro e continua existindo: ele responde

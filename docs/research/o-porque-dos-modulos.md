@@ -1324,8 +1324,8 @@ a frente:
 
 - o contrato do topo desta classe: **campo ``None`` = sem opinião**, e
   perfil que não pediu nada não impõe nada;
-- o usuário, em 18/08/2026, derrubando o princípio geral: *"o perfil tem de
-  guardar tudo"*;
+- o pedido de 18/08/2026, que derrubou o princípio geral: o perfil
+  guarda tudo;
 - ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08): áudio e giroscópio nascem
   **LIGADOS** em todo jogo — que é um default, não uma ausência.
 
@@ -1414,7 +1414,7 @@ o usuário tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do 
 do usuário, outro jogo com perfil em foco, o lançamento de um jogo com perfil
 (`_a_trava_da_mao_segura`, `origin="launch"`). Ele continua sem gravar a escolha
 nem o último jogo, que é a parte da D-0110 que fica: o boot não aprende um perfil
-que o usuário não escolheu. **Só o gesto prende** (parte 3, as respostas de produto, 14/10/2026: *«Só o Aplicar prende»*). O funil dos
+que o usuário não escolheu. **Só o gesto prende** (parte 3, as respostas de produto, 14/10/2026: só o Aplicar prende). O funil dos
 ajustes das abas (`interface/pacotes/perfil.gravar_e_reaplicar`) também passa pelo
 `profile.reaplicar`, mas sem o parâmetro `prender`: o ajuste numa aba não arma a trava, e o
 autoswitch segue trocando de perfil por janela depois dele (Kodi, Navegação). Quem pede `prender`
@@ -1444,8 +1444,8 @@ do jogo ligado, onde só o nó do sistema (o cursor) é alcançado.
 
 ## o Testar da aba Vibração (`interface/pacotes/a05_vibracao.py`, `testar`)
 
-Pedido de 07/09/2026: *«o botão Testar tem que ficar em estado de ligado e ir refletindo os slicers ao vivo
-comigo. E se eu clicar em Parar ele para de testar»*. Era um pulso de meio segundo, e o pulso não responde
+Pedido de 07/09/2026: o botão Testar fica ligado e reflete as barras ao vivo, junto
+com quem mexe, e o Parar encerra o teste. Era um pulso de meio segundo, e o pulso não responde
 *«quanto é 40%?»*: a mão precisa estar no controle enquanto a outra arrasta a barra. O `_refrescar_o_teste`
 reenvia o par a cada mudança de barra, e a mão só volta ao jogo quando o usuário clica em Parar.
 
@@ -1660,7 +1660,7 @@ nasceu sem a linha. É o padrão que a casa persegue: a casa sabe e o produto n�
 
 ## abrir (`interface/abrir.py`), a entrada que abre a janela
 
-Pedido, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na dock"*. Em 07/10/2026 o
+Pedido de 29/08/2026: o lançador.sh mostra a logo do app na dock. Em 07/10/2026 o
 ensaio achou a segunda porta: o console script `hefesto-dualsense4unix-gui` ia direto ao piloto, e
 a janela da bandeja se anunciava `hefesto-dualsense4unix-gui`, nome que nenhum `.desktop` casa (dock
 com a engrenagem). O corpo do antigo envoltório mora aqui, no pacote, porque o wheel não leva

@@ -1058,8 +1058,8 @@ isto entendeu errado na primeira leitura e chegou a anotar "não há o que
 corrigir": não há **defeito**, e há um **pedido**, que são coisas diferentes.
 
 **No Switch: não dá.** O mapeamento vive no firmware, e o SN30 Pro de 2018 não
-tem remapeamento persistente — medido pelo usuário: *"8bitdo ultimate software não
-funciona nem a pau no meu controle"*. O Ultimate Software atende os aparelhos
+tem remapeamento persistente — medido no aparelho: o 8BitDo Ultimate Software não
+funciona com este controle. O Ultimate Software atende os aparelhos
 novos (Ultimate, Pro 2, parte dos Pro+); este modelo era servido pela ferramenta
 antiga, que **atualiza firmware e não remapeia**. Some-se a isso que o `fwupd`
 recusa o aparelho fora do modo bootloader (medido acima), e o caminho de

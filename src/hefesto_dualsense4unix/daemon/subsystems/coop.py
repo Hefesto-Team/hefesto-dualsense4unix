@@ -799,8 +799,8 @@ class CoopManager:
     def numero_para_o_nome(self, identity: str, fallback: int) -> int:
         """O número que vai DENTRO do nome do vpad deste controle.
 
-        A-MESMA-LINGUA-01 (07/09/2026). Decisão de produto, em cinco palavras:
-        *"precisamos que falem a mesma língua."*
+        A-MESMA-LINGUA-01 (07/09/2026). Decisão de produto: os dois nomes
+        falam a mesma língua.
 
         **A pergunta é feita ao DONO, e o dono é um só.** O número que a carta
         mostra sai de :meth:`numeros_de_jogador` — a fila de chegada

@@ -105,8 +105,8 @@ A FAXINA (A-SOBRA-DO-BOND-SAI-SOZINHA-01, 25/09/2026)
 O mover desta central esquece a origem no fim. Um mover feito à mão, ou antes
 de a central existir, deixa a chave velha para trás: o controle fica com bond em dois
 adaptadores, e no ensaio o P2 ficou assim de 19/09 a 25/09, com o ``doctor``
-acusando e ninguém arrumando. A pergunta, 25/09: *«A interface do app não
-deveria corrigir isso automaticamente?»* Deveria, e a decisão é de quem
+acusando e ninguém arrumando. A pergunta de 25/09 foi se a interface não
+deveria corrigir isso sozinha. Deveria, e a decisão é de quem
 coordena: o controle guarda UM host, e quando o kernel o diz conectado num
 adaptador (``HID_PHYS``) ele mesmo respondeu qual chave vale. A do outro
 adaptador é sobra, e sai como sai a origem de um mover: ``RemoveDevice`` mais o

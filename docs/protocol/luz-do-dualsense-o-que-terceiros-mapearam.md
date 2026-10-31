@@ -6,8 +6,8 @@ aparelho neste levantamento** — a máquina estava em uso com dois controles vi
 Tudo aqui é `afirmado-no-doc` ou `inferido-do-codigo`; nenhuma célula ganhou
 `ate_onde_foi`.
 
-O pedido, que é o contrato deste trabalho: *"como é só informação eles
-trouxeram"*. Fato com endereço — o número do report, o offset do byte, o formato
+O pedido, que é o contrato deste trabalho: só o que eles trouxeram
+de informação. Fato com endereço — o número do report, o offset do byte, o formato
 do comando. Nenhuma linha de código de terceiro foi copiada.
 
 ---

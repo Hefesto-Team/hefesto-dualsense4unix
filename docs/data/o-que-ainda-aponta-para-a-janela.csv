@@ -1,7 +1,7 @@
 # O QUE AINDA APONTA PARA A JANELA GTK — inventário da sprint GTK-1 (06/09/2026)
 #
-# Decisão de produto (D-0609-GTK-LEVA-INTEIRA): "a ideia sempre foi reaproveitar o que
-# fiz no gtk e não apontar nada mais pra lá mas pro html". A frase inteira está
+# Decisão de produto (D-0609-GTK-LEVA-INTEIRA): reaproveitar o que a GTK fazia e
+# não apontar mais nada para lá: tudo aponta para o HTML. O registro inteiro está
 # em docs/process/sprints/arquivados/2026-09-06-GTK-1-o-inventario-e-o-portao-que-impede-a-janela-de-crescer.md
 #
 # O QUE SAI É A JANELA. O QUE FICA É O MOTOR (app/actions/, app/telas/,

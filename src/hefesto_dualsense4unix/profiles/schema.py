@@ -726,7 +726,7 @@ class ProfileMicConfig(BaseModel):
     **Os dois campos são opcionais, e `None` é "sem opinião".** É o mesmo
     contrato do `mouse` e do `speaker`, e ele importa aqui pelo motivo de
     sempre: um perfil que não pediu nada não pode impor nada. A queixa que
-    originou essa regra — *"a config que eu deixo nunca é respeitada"* — vale
+    originou essa regra — a configuração de quem usa nunca era respeitada — vale
     nos dois sentidos.
 
     **ATIVAR UM PERFIL APLICA O MICROFONE (18/08/2026).** Esta docstring dizia
@@ -804,8 +804,8 @@ class ProfileSpeakerConfig(BaseModel):
     ``muted=True`` manda 0 ao firmware e guarda os 180 como preferência; o
     ``muted=False`` posterior devolve os 180 (medido na sprint).
 
-    A ROTA DE SAÍDA (``rota``), pedido em 09/08/2026: *"tanto usar o mic
-    do controle quanto usar o canal de saída de som específico do DS"*. É o
+    A ROTA DE SAÍDA (``rota``), pedido em 09/08/2026: usar o microfone
+    do controle e também o canal de saída de som próprio do DualSense. É o
     ``OUTPUT_PATH_SEL`` (``audio_control``, bits 4-5) da referência canônica,
     o mesmo número que o ``rota`` do ``speaker.set`` já carrega:
 

@@ -43,8 +43,8 @@ controle DESCONECTA. É a metade (1) do ``BT-NINTENDO-ACTIVE-01``, pesquisa de
 ``scripts/bt_active_mode.sh:137-149`` aplica.
 
 Renomear um adaptador que hospeda um Pro sem manter o prefixo derruba o Pro. Por
-isso a decisão (22/08/2026) é: *"você escreve, o produto protege o
-prefixo"*. O nome que a TELA mostra é o de quem usa, limpo; o que vai ao BlueZ é o
+isso a decisão (22/08/2026) é que quem usa escreve e o produto protege o
+prefixo. O nome que a TELA mostra é o de quem usa, limpo; o que vai ao BlueZ é o
 costurado. Quem usa nunca precisa saber que a costura existe.
 
 POR QUE PREFIXO, E NÃO SUFIXO — três razões, nenhuma de gosto

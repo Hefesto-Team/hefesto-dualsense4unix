@@ -341,9 +341,9 @@ def _barras_dos_motores(state: dict[str, Any], uniq: str) -> dict[str, int]:
 def _forca_propria(overrides: dict[str, Any], uniq: str) -> tuple[str, Any] | None:
     """A força que ESTE controle guarda só para ele, ou ``None`` quando herda.
 
-    **É O QUE A DECISÃO [05] DO USUÁRIO PRECISA E NÃO EXISTIA** — 04/09/2026: *"a
+    **É O QUE A DECISÃO [05] PRECISA E NÃO EXISTIA** — 04/09/2026: a
     coluna sem ajuste próprio deixa de acender degrau e passa a apontar para
-    essa linha; 'herdado' fica óbvio sem uma palavra a mais"*. Até hoje as duas
+    essa linha, e o herdado fica óbvio sem uma palavra a mais. Até hoje as duas
     coisas tinham a MESMA cara na tela: um degrau que o usuário escolheu para aquele
     controle e um degrau que o Hefesto está usando porque a mesa manda.
 

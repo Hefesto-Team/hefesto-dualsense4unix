@@ -487,8 +487,8 @@ _TETO_DA_ORDEM_DOS_ADAPTADORES = 63
 class AdaptadorDeclarado(BaseModel):
     """Um adaptador Bluetooth pelo ENDEREÇO: o nome que o usuário deu a ele.
 
-    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido: *«temos
-    o nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
+    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido para separar
+    o nome das entradas do nome dos dispositivos, que se confundiam.
     Revoga a herança da D3: com o adaptador levando o nome da porta, as
     entradas que o usuário numerou no Mapear viraram adaptadores «15» e «13». O
     nome é do APARELHO e vai com ele de porta em porta; o da entrada fica em
@@ -752,7 +752,7 @@ class ControleDeclarado(BaseModel):
     exatamente a surpresa que aquele módulo recusa.
 
     **OS TRÊS VALORES MUDARAM DE SIGNIFICADO EM 18/09/2026**, por ordem de produto:
-    *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*.
+    todo controle nasce com tudo, microfone, giroscópio e o resto.
 
     ==========  =====================================================
     ``None``    ninguém disse nada → **o microfone LIGA**. É um

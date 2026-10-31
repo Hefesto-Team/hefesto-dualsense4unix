@@ -660,8 +660,8 @@ função.
 
 ## Nota de verificação — 25/09/2026, a contagem do exame sai da aba Sistema
 
-`A-09-SISTEMA-EM-TRES-SECOES-01`, os ajustes do usuário das 22h13: *«Remove esse 8
-linhas deixa o espaço vazio»*. A linha da contagem no CSV foi de `SO_NO_HTML`
+`A-09-SISTEMA-EM-TRES-SECOES-01`, os ajustes pedidos às 22h13: o «8
+linhas» sai e o espaço fica vazio. A linha da contagem no CSV foi de `SO_NO_HTML`
 para **`IGUAL`**, pelo mesmo caminho do «Ver os plugins» (13/09): nenhum dos
 dois lados conta as linhas do exame, e o sinal é a decisão escrita no pacote
 (`D-A-CONTAGEM-DO-EXAME-SAIU`). A tabela foi recontada do CSV: `09-sistema`

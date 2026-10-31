@@ -1529,9 +1529,9 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `freestyle.set`), e régua que mudasse preferência de uso para provar que sabe clicar seria pior
     que a cobertura que compra.
 
-    **O verde é o recibo e só acende quando o serviço confirmou** (05/09/2026, `03-Q4`: *"O campo
-    que você acabou de mexer ganha uma borda verde por cerca de um segundo e meio"*, *"nenhuma
-    palavra nova entra na tela"*). É o gesto que mais precisava dele: o único cujo efeito **não
+    **O verde é o recibo e só acende quando o serviço confirmou** (05/09/2026, `03-Q4`: o campo
+    recém-mexido ganha uma borda verde por cerca de um segundo e meio, e nenhuma
+    palavra nova entra na tela). É o gesto que mais precisava dele: o único cujo efeito **não
     aparece em lugar nenhum** (trocar de modo acende um chip, a máscara muda o cartão; o cadeado
     muda um booleano no disco e a caixa já está marcada pelo clique). Pedir o verde é VOLTAR SEM
     LEVANTAR, mecanismo do piloto: `hefesto_vivo._gesto` anota `"aplicou"` no ramo sem exceção e o

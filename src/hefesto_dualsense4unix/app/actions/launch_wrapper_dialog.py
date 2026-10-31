@@ -2,7 +2,7 @@
 
 O gatilho do lembrete (`wrapper_dialog_decision`) e o «Voltar a perguntar»
 (`remove_dismissed_appid`) saíram em 19/10/2026, sem chamador desde a 07 antiga
-(O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01, a resposta de 19/10: «Saem do produto»).
+(O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01, decidido em 19/10 que saem do produto).
 A dispensa que já está no disco continua calando o aviso da Jogar
 (`home_actions.aviso_do_wrapper`).
 """

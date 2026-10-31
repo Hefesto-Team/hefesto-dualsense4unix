@@ -328,6 +328,6 @@ mesa, `hardware_version` "distingue 4 em 4", e a cor também. Num PC qualquer,
 com dois DualSense brancos comprados no mesmo dia, os dois colidem no mesmo
 instante. A única coluna que continua distinguindo é o MAC.
 
-Este parágrafo é a resposta à regra de produto: "n=4 é AMOSTRA". A contagem de 4-em-4
+Este parágrafo é a resposta à regra de produto de que n=4 é AMOSTRA. A contagem de 4-em-4
 não promove candidato nenhum a universal; o que promove é o MECANISMO — e o
 mecanismo do MAC é a fabricação, não o lote.

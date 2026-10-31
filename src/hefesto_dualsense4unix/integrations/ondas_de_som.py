@@ -1,7 +1,7 @@
 """As ondas sonoras da aba 02 — o que ENTRA e o que SAI, medido de verdade.
 
-Pedido, 05/09/2026: *"ondas sonoras do auto falante e do microfone devem
-ser reais na aba controle. sobre o audio que entra e o que sai"*.
+Pedido de 05/09/2026: as ondas do alto-falante e do microfone na aba
+Controles são reais, do áudio que entra e do que sai.
 
 Até aqui as catorze barrinhas de cada medidor eram DESENHO — quatorze alturas
 digitadas no gerador (``aba02.CARDS[...]["mic_v"]``), iguais em todo tique, com

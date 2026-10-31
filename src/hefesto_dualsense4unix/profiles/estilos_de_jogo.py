@@ -50,8 +50,8 @@ legível. **Se o usuário preferir apagada mesmo, é uma palavra e uma linha.**
 
 O «CO-OP LOCAL» SAIU — 25/09/2026, O-CO-OP-LOCAL-SAI-01
 --------------------------------------------------------
-O pedido é de produto (`D-2409-O-CO-OP-LOCAL-SAI`): *"Temos que remover o perfil
-coop ou modo de jogo coop que não faz sentido inclusive."* O Hefesto dá um
+O pedido é de produto (`D-2409-O-CO-OP-LOCAL-SAI`): o perfil ou modo de jogo
+coop sai, porque não faz sentido. O Hefesto dá um
 controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não é um modo
 que se escolhe — um Estilo com esse nome prometia ligar o que nunca desliga.
 O que ele fazia (gatilho `SimpleRigid`,

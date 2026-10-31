@@ -1299,10 +1299,9 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     E ELE PASSOU A GRAVAR NO PERFIL — 05/09/2026, a **decisão D2**
     (o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
     *"persistência no clique em toda parte, com o rodapé como rede de
-    segurança"*. O usuário pediu, com estas palavras: *"ao pular e sair configurando
-    de aba em aba o perfil vai se lembrando de cada config de cada aba pra cada
-    controle … e salvar se lembra disso quando eu for jogar o jogo e no dia
-    seguinte"*.
+    segurança"*. O pedido: ao passar de aba em aba, o perfil guarda cada ajuste de cada
+    aba para cada controle, e o Salvar o mantém para o jogo e para o dia
+    seguinte.
 
     **O QUE FALTAVA, MEDIDO:** `controllers[uniq].triggers` não persistia por
     clique nenhum. O `_RASCUNHO` guardava o gatilho aplicado NESTA SESSÃO e o
@@ -1486,8 +1485,8 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
 
     **O DEFEITO FECHADO AQUI**, e ele é a queixa de origem desta casa: quando
     dava certo, a tela não dizia nada. O piloto imprimia `[gesto] … → aplicado`
-    no terminal de quem lançou a janela, e quem clica não lê terminal. A decisão, 04/09/2026: *"No
-    próprio cartão, como a recusa."*
+    no terminal de quem lançou a janela, e quem clica não lê terminal. A decisão, 04/09/2026: no
+    próprio cartão, como a recusa.
 
     **NÃO HÁ CANAL NOVO AQUI, e é o ponto inteiro do conflito C-3.** A lista
     desta aba propunha *o campo que pisca*; o cartão é a mesma peça das outras

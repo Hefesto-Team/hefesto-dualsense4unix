@@ -1,7 +1,7 @@
 """PRONTUARIO-01 — o que o DISCO sabe sobre cada jogo, e o que ele NÃO sabe.
 
-O alvo que o usuário nomeou em 15/08/2026, ao sair: *"espero de fato que tenhamos
-tudo resolvido e cada um dos jogos locais jogável via cabo ou bt"*. Este módulo
+O alvo nomeado em 15/08/2026: tudo resolvido, e cada jogo local
+jogável pelo cabo ou pelo rádio. Este módulo
 é a régua desse alvo — e a primeira coisa que ele faz é recusar o número fácil.
 
 O QUE ELE NUNCA DIZ

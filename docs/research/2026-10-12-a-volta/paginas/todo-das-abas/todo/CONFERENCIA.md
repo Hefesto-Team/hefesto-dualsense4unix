@@ -223,7 +223,7 @@ Conflitos:
 - 7: Muda a altura da linha do desenho B aprovado.
 - 8: BRIEF-T6 aberto: menu do sistema (A, aplicado; aqui desenhado em HTML só para se ver) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da aba Sistema.
 - 9: A sprint espera o desenho e não tem recomendação: aplicada a opção 1 (alvos de 24 px, mesma letra), igual às outras abas. A letra mínima e o Tamanho da interface ficam para a escolha do usuário.
-- 10: A sprint O-JOGO-DOS-ACESSORIOS… desenhou os mesmos controles nos dois lugares (05 e janela); a T7 de 12/10 (um dono só, «Temos que evitar features se repetindo») é mais nova e vence: a 05 grava, a janela só lê.
+- 10: A sprint O-JOGO-DOS-ACESSORIOS… desenhou os mesmos controles nos dois lugares (05 e janela); a T7 de 12/10 (um dono só, sem recurso repetido em abas diferentes) é mais nova e vence: a 05 grava, a janela só lê.
 ## 08
 
 3 mudanças, 2 recomendadas a escolher; 13 por baixo, 22 fora.

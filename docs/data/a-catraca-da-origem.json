@@ -240,14 +240,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1166530,
+      "piso": 1166529,
       "por_item": {
-        "docs": 107767,
-        "scripts": 109556,
-        "src": 294780,
-        "tests": 654427
+        "docs": 107747,
+        "scripts": 109576,
+        "src": 294775,
+        "tests": 654431
       },
-      "razao": "tamanho: +5425 linhas (1161105 -> 1166530), pagas por Origem: D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-2910-A-ABA-VAZIA-E-SO-O-NUMERO, D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS, D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO, D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo b6a3b54dbae0",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",

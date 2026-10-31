@@ -455,9 +455,9 @@ def reaplicar(nome: str, ctx: Any, p: Any, *, era: str = "") -> None:
 def com_a_carona(frase: str = "") -> str:
     """Repõe o atalho de inicialização que a Steam comeu, e junta a notícia à frase.
 
-    CARONA-DO-WRAPPER-01 (16/08/2026), e **o desenho é do usuário**: *"nem precisa ter
-    um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar ou salvar
-    o perfil seja dentro ou fora da guia de perfis."*
+    CARONA-DO-WRAPPER-01 (16/08/2026), **o desenho é de produto**: sem botão na interface, o wrapper
+    se corrige sozinho no Aplicar ou no Salvar do
+    perfil, dentro ou fora da aba Perfis.
 
     O QUE A FUNÇÃO CURA: a Steam guarda UMA linha de `LaunchOptions` por jogo, e
     qualquer coisa escrita ali substitui a chamada do `hefesto-launch` em

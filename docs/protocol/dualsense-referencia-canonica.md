@@ -650,8 +650,8 @@ nossa própria vontade de ter achado mais do que achamos.
 
 ## 3. Áudio — o caso do alto-falante relatado pelo usuário
 
-O usuário deu o exemplo: *"Zelda Skyward Sword: o speaker do controle faz os barulhos
-da espada enquanto na tela tem o som normal do jogo"*.
+O exemplo relatado: em Zelda Skyward Sword, o alto-falante do controle faz os barulhos
+da espada, enquanto a TV toca o som normal do jogo.
 
 **No PS5** o jogo abre uma **porta de áudio dedicada** ao alto-falante do pad,
 paralela à saída principal. Não é mixagem: são portas diferentes. O SDK é fechado

@@ -1367,8 +1367,8 @@ def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[
 
     JOGO-QUE-SE-DIZ-01: `851100` sozinho não diz nada a ninguém, e a estável põe o nome ao lado do
     campo (`profile_jogo_reconhecido`, `profiles_actions._atualizar_frase_do_jogo`). Esta aba ganhou
-    o rótulo em 06/09/2026 (decisão 10-Q4): *"Rótulo ao lado, ao vivo — à direita do campo aparece o
-    nome do jogo (…), ou «não está nesta máquina», ou «não reconheci este endereço»"*; o desfecho do
+    o rótulo em 06/09/2026 (decisão 10-Q4), ao lado e ao vivo, à direita do campo, com o
+    nome do jogo (…), ou «não está nesta máquina», ou «não reconheci este endereço»; o desfecho do
     gesto continua dizendo o nome e o rótulo responde SEM gravar nada. Devolve o par inteiro, com o
     `é_alerta` que separa *"não instalado aqui (o número vale)"*, rotina, de *"não reconheci este
     endereço"*, erro (sem o bit as duas saem da mesma cor).
@@ -1432,7 +1432,7 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     O valor vem de `valor` e não de `texto`: o ouvinte manda `texto: alvo.textContent`, vazio num
     `<input>`; desde 01/09 o clique traz o `value` (`hefesto_vivo.py`) e o piloto escuta `change`, o
     único evento que campo de texto dispara com o valor novo. Renomeia na hora porque esta aba não
-    tem "Salvar" próprio (decisão de 01/09, *"clicar na cor já deveria aplicar a cor no controle"*;
+    tem "Salvar" próprio (decisão de 01/09, clicar na cor aplica a cor no controle;
     o do rodapé regrava o perfil ATIVO como o disco o tem, `rodape._draft_do_ativo`, e nem olha este
     campo): campo que aceita texto e não guarda é o botão que responde calado.
 

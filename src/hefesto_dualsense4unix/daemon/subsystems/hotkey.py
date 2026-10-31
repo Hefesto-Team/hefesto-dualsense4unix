@@ -374,9 +374,9 @@ def _disparar_piscada(
 def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
     """Pisca em TODOS os controles quando o MODO muda. AVISO-DE-MODO-01.
 
-    Pedido, 19/08/2026: *"um alerta visual no lightbar de todos os
-    controles dualsense conectados, seja via bt, seja via cabo. seja com steam
-    aberta ou não"* — e *"o lightbar de todos pisca 3 vezes rápido"*.
+    Pedido de 19/08/2026: um alerta visual no lightbar de todos os DualSense
+    conectados, pelo rádio ou pelo cabo, com a Steam aberta ou não, e o
+    lightbar de todos pisca três vezes, rápido.
 
     **Por que é level-triggered, e não um callback do gesto.** O usuário troca de
     modo por quatro portas: o gesto no controle, a janela, a CLI/IPC e o

@@ -227,7 +227,7 @@ por `docs/data/paridade-gtk-html.csv`, mas ainda não está em
 
 ## 5. A raiz só com o produto (`A-RAIZ-SO-COM-O-PRODUTO-01`)
 
-Pela frase de produto de 27/09, «a raiz do repo tem que ser limpa», a raiz foi de 35
+Pela ordem de produto de 27/09, de que a raiz do repo fica limpa, a raiz foi de 35
 para 27 entradas:
 
 - o código aposentado (`arquivados/`) sai e fica no histórico;

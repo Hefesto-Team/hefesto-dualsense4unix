@@ -54,7 +54,7 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
    função daqui: a pergunta é de quem desenvolve, e a tela nunca a fez.
 
 3. **O "Automático" da escada não tinha leitor nem escritor.** **FECHADO por
-   palavra de produto**, 31/08: *"na aba jogar o Botão Automático não existe"*. O
+   decisão de produto**, 31/08: a aba Jogar não tem Botão Automático. O
    MECANISMO ficou inteiro — *tentar em ordem e parar quando acerta* é o que
    ``integrations/ponte_tentativa`` faz sozinho, sempre; o que saiu foi o botão
    que fingia comandá-lo.

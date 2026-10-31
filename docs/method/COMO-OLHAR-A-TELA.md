@@ -547,8 +547,8 @@ lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 **As cinco regras, e cada uma nasceu de um defeito da mesma noite:**
 
 1. **HTML standalone, aberto por duplo clique.** Sem rede, sem servidor, sem
-   fonte web. O usuário recusou o artefato publicado com uma frase: *"html standalone
-   por favor"*. É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
+   fonte web. O artefato publicado foi recusado, com o pedido de HTML
+   standalone. É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
    que só funciona com rede não serve para depurar rádio.
 2. **A paleta tem dono único: `scripts/paleta_da_casa.py`**, copiada byte a byte.
    *"O artefato tem de parecer parte do Hefesto, não um site sobre ele."*

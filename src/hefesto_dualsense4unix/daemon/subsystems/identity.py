@@ -796,8 +796,8 @@ class ControllerIdentityRegistry:
             23:56:49.284  gatilho_da_cor_escrito: rosa → verde
 
         Por **27 segundos** o mesmo controle mostrava três lâmpadas de Player 3
-        e a barra do Player 4. A palavra de produto, confirmando a predição: *"Rosa e
-        só verde meio minuto depois"*.
+        e a barra do Player 4. O relato de produto confirmou a predição: rosa, e
+        só verde meio minuto depois.
 
         A assimetria não era de desenho: as lâmpadas saem por rotas que não
         esperam nada (o `set_players` do sysfs, o `0x31` só com o número do

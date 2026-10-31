@@ -549,8 +549,8 @@ def _dica_da_linha(item: Any) -> str:
     o do gerador. O `<b>` do rótulo é o da janela estável e entra DEPOIS do escape (rótulo e texto
     passam por `_e` separados; escapar a frase montada mostraria `<b>`).
 
-    Uma ordem da mesa sem verbete (02/09/2026, o achado de pé: *"o `?` de uma linha sem verbete e
-    sem cura abre uma caixa VAZIA de 330px"*): `DICAS_DAS_LINHAS` é indexada por chave de REGRA
+    Uma ordem da mesa sem verbete (02/09/2026, o achado de pé: o `?` de uma linha sem verbete e
+    sem cura abre uma caixa VAZIA de 330px): `DICAS_DAS_LINHAS` é indexada por chave de REGRA
     (`energia_do_radio`, `energia_das_portas`, `pareamentos`, `suporte_ao_controle`,
     `vizinhanca_das_portas`) e o item do catálogo de ORDENS traz `chave=ordem.chave` (o slug do
     arranjo, nenhuma parte) e `cura=ordem.acao or None`, talvez vazio; `partes` ficava só com `""` e

@@ -664,7 +664,7 @@ def medir_r4(nav, mordida: str) -> int:
 VAGAS = {"01": 2, "02": 2, "03": 0, "04": 2, "05": 2, "06": 0, "08": 2, "calibrar": 2}
 JS_GERAL = r"""
 (function(){
-  // a letra conta: a citação na nota da 04 («o meu controle azul é o player 2») fica, como toda citação
+  // a letra conta: o exemplo na nota da 04, com o número do player, fica, como todo exemplo
   var re=/Player\s*[0-9]|Pedro/,ATR=['title','aria-label','value','placeholder','alt','data-dica','data-titulo'],ditos=[];
   function nome(e){var c=(typeof e.className==='string'?e.className:'').trim().split(/\s+/).slice(0,2).join('.');return e.tagName.toLowerCase()+(c?'.'+c:'')+(e.id?'#'+e.id:'');}
   if(re.test(document.title))ditos.push(['title',document.title]);

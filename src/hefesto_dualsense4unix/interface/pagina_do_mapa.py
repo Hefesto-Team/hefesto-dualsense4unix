@@ -769,7 +769,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "verdade.</p>"
         ),
         porque=(
-            "11/09/2026 — mesma decisão: «a 15» é uma entrada de um gabinete só. "
+            "11/09/2026 — mesma decisão, a entrada «15» é de um gabinete só. "
             "O fato do cabo passivo vale para qualquer um."
         ),
     ),
@@ -936,7 +936,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '="true">⟳</span> Examinar</button>\n'
         ),
         porque=(
-            '26/09/2026, três pedidos: «Mapa das Entradas» passa a «Mapa das '
+            '26/09/2026, três pedidos. O «Mapa das Entradas» passa a «Mapa das '
             'Conexões»; a linha «leitura deste computador · <data>» some; e o '
             'botão «Examinar de novo», desconexo do resto dos elementos, se '
             'integra. O «Examinar» ocupa o lugar da data, com o ícone, e '

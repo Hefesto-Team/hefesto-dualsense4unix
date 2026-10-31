@@ -272,8 +272,8 @@ def sync_steam_input_exception(
     o duplicado do jogador 1 derruba o jogador 2 junto —
     `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia.
 
-    A decisão de produto fecha a conta pelo outro lado: *"a allowlist do Steam Input
-    NÃO tira o Hefesto da frente"*. O duplicado tem duas curas — esconder o
+    A decisão de produto fecha a conta pelo outro lado: a allowlist do Steam Input
+    NÃO tira o Hefesto da frente. O duplicado tem duas curas — esconder o
     virtual ou esconder o físico — e a segunda custa o jogador 2, a primeira
     não. O mecanismo é o mesmo `hide`/`restore` do broker, na direção contrária.
 
