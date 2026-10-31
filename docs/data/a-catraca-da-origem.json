@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1171912,
+      "piso": 1173403,
       "por_item": {
-        "docs": 107802,
-        "scripts": 109592,
-        "src": 295685,
-        "tests": 658833
+        "docs": 107806,
+        "scripts": 110027,
+        "src": 295829,
+        "tests": 659741
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +1491 linhas (1171912 -> 1173403), pagas por Origem: D-0410-A-PONTE-DO-RADIO-LEVA-UM-RELATORIO-SO, D-0609-O-ENSAIO-PROVA-NAO-BLOQUEIA, D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, luz.lightbar.cor; registrado no fecho, topo 6586540921cd",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1249,10 +1249,16 @@
           "de": 1171876,
           "para": 1172174,
           "razao": "tamanho: +298 linhas (1171876 -> 1172174), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo 7acb02bd0cdc"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1171912,
+          "para": 1173403,
+          "razao": "tamanho: +1491 linhas (1171912 -> 1173403), pagas por Origem: D-0410-A-PONTE-DO-RADIO-LEVA-UM-RELATORIO-SO, D-0609-O-ENSAIO-PROVA-NAO-BLOQUEIA, D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, luz.lightbar.cor; registrado no fecho, topo 6586540921cd"
         }
       ],
       "unidade": "linhas",
-      "universo": 3270
+      "universo": 3275
     }
   }
 }
