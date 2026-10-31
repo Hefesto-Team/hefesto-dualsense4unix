@@ -14,7 +14,8 @@ e as pinturas; um deslocamento errado em `GATILHOS` reprova `test_o_recibo_confe
 guardando `_no_fio` sem conferir a escrita reprova `test_o_quadro_que_o_fio_recusou_nao_e_recibo`;
 a luz comparada com a cor do handle reprova `test_a_luz_pelo_no_ou_pelo_radio_confere_a_rota`;
 o `_a_cor_saiu` sem olhar o transporte reprova
-`test_a_rota_que_nao_alcanca_o_transporte_nao_e_recibo`.
+`test_a_rota_que_nao_alcanca_o_transporte_nao_e_recibo`; o `0x31` da barra sem conferir os bytes
+reprova `test_a_barra_do_radio_so_e_recibo_com_o_quadro_inteiro`.
 """
 
 from __future__ import annotations
@@ -394,4 +395,18 @@ def test_a_escrita_da_cor_guarda_o_que_o_controle_aceitou(
                         writeReport=escrito_no_radio or (lambda q: len(q)))
     no = SimpleNamespace(set_rgb=lambda *_c: True, set_players=lambda *_p: True)
     assert ctl._write_partial_output(h, no, bp._DesiredOutput(led=(7, 8, 9)), what="régua")
+    assert h._cor_no_fio == esperado
+
+
+@pytest.mark.parametrize(("falta", "esperado"), [(0, (4, 5, 6)), (3, None)])
+def test_a_barra_do_radio_so_e_recibo_com_o_quadro_inteiro(falta: int, esperado: Any) -> None:
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+    ctl: Any = bp.PyDualSenseController.__new__(bp.PyDualSenseController)
+    h = SimpleNamespace(conType=SimpleNamespace(name="BT"), _cor_no_fio=None,
+                        writeReport=lambda q: len(q) - falta)
+    ok, _cor, _players = ctl._escrever_barra_e_numero_bt(
+        "k", h, bp._DesiredOutput(led=(4, 5, 6)), pode_player=False, nome="régua"
+    )
+    assert ok is (falta == 0)
     assert h._cor_no_fio == esperado
