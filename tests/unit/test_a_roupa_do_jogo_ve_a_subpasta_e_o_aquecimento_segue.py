@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.integrations import a_roupa_do_jogo as rj
 
 _PASTA_DO_PERFIL = "Jogo_Data/il2cpp_data/Metadata"
 _METADATA = f"{_PASTA_DO_PERFIL}/global-metadata.dat"
-_PERFIL_DO_COMUM = b"PlayStation5USBWindowsNativeProfile"
+_PERFIL_DO_EDGE = b"PlayStation5EdgeUSBWindowsNativeProfile"
 _PASSADO_NS = 1_600_000_000 * 1_000_000_000
 
 
@@ -41,22 +41,22 @@ def _jogo_sem_declaracao(raiz: Path) -> Path:
 
 
 def test_o_arquivo_novo_na_subpasta_muda_a_roupa_sem_limpar_o_cache(tmp_path: Path) -> None:
-    """Um jogo que ganha, numa subpasta, o arquivo que o declara `0ce6` veste o `0ce6`.
+    """Um jogo que ganha, numa subpasta, o arquivo que o declara Edge veste o `0df2`.
 
     MORDIDA: tirar as subpastas da chave (`_bibliotecas_e_manifesto` sem `pastas`, ou
-    `_ler_o_disco` sem as subpastas em `lidos`) devolve `0df2` na segunda pergunta.
+    `_ler_o_disco` sem as subpastas em `lidos`) devolve `0ce6` na segunda pergunta.
     """
     raiz = _jogo_sem_declaracao(tmp_path / "Jogo")
 
     antes, _fonte = rj.roupa_do_jogo(raiz)
-    assert antes == "0df2"
+    assert antes == "0ce6"
     assert str(raiz) in rj._CACHE, "a primeira pergunta guardou a leitura"
 
-    (raiz / _METADATA).write_bytes(b"\0" + _PERFIL_DO_COMUM + b"\0")
+    (raiz / _METADATA).write_bytes(b"\0" + _PERFIL_DO_EDGE + b"\0")
 
     depois, fonte = rj.roupa_do_jogo(raiz)
-    assert depois == "0ce6", fonte
-    assert fonte == f"{_METADATA} declara só o DualSense comum"
+    assert depois == "0df2", fonte
+    assert fonte == f"{_METADATA} declara o DualSense Edge"
 
 
 def test_a_chave_guarda_as_subpastas_que_a_varredura_visitou(tmp_path: Path) -> None:
@@ -79,18 +79,18 @@ def test_a_chave_guarda_as_subpastas_que_a_varredura_visitou(tmp_path: Path) -> 
 
 
 def test_o_arquivo_que_some_da_subpasta_tambem_invalida(tmp_path: Path) -> None:
-    """Apagar da subpasta o arquivo que declarava o `0ce6` devolve o Edge.
+    """Apagar da subpasta o arquivo que declarava o Edge devolve o DualSense comum.
 
     O arquivo lido já estava na chave; o caso guarda que a volta da cura segue valendo
     para o que some.
     """
     raiz = _jogo_sem_declaracao(tmp_path / "Jogo")
-    (raiz / _METADATA).write_bytes(b"\0" + _PERFIL_DO_COMUM + b"\0")
-    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
+    (raiz / _METADATA).write_bytes(b"\0" + _PERFIL_DO_EDGE + b"\0")
+    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
 
     (raiz / _METADATA).unlink()
 
-    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
+    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
 
 
 def test_o_aquecimento_segue_quando_uma_raiz_levanta(
@@ -108,7 +108,7 @@ def test_o_aquecimento_segue_quando_uma_raiz_levanta(
         pedidas.append(raiz)
         if raiz.name == "b":
             raise RuntimeError("jogo com disco ruim")
-        return "0df2", "x"
+        return "0ce6", "x"
 
     avisos: list[int] = []
     monkeypatch.setattr(rj, "roupa_do_jogo", _roupa)
@@ -130,7 +130,7 @@ def test_a_raiz_que_levanta_e_registrada_com_o_caminho(
     def _roupa(raiz: Path, **_kw: Any) -> tuple[str, str]:
         if raiz == ruim:
             raise RuntimeError("disco")
-        return "0df2", "x"
+        return "0ce6", "x"
 
     monkeypatch.setattr(rj, "roupa_do_jogo", _roupa)
     with caplog.at_level("DEBUG", logger=rj.logger.name):

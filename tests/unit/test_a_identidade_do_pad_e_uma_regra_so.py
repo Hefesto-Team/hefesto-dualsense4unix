@@ -1,9 +1,9 @@
 """A identidade do pad virtual é uma regra só (A-IDENTIDADE-DO-PAD-VIRTUAL-E-UMA-REGRA-SO-01).
 
-A regra (docs/protocol/a-identidade-do-pad-virtual.md): o pad veste o `0ce6` só quando o
-jogo nomeia o DualSense comum, não nomeia o Edge e nada no caminho dele pede o Edge (a
-biblioteca Sony, o Modo Xbox, o Steam Input, a Launch Option que esconde o `0ce6`). Em todo
-outro caso, o Edge. A régua confere a regra em todas as combinações de sinais, nos três jogos
+A regra (docs/protocol/a-identidade-do-pad-virtual.md): o pad veste o Edge só quando o jogo
+nomeia o Edge ou o caminho dele pede o Edge (a biblioteca Sony, o Modo Xbox, o Steam Input, a
+Launch Option que esconde o `0ce6`). Em todo outro caso, inclusive sem sinal nenhum, o
+DualSense comum (`0ce6`). A régua confere a regra em todas as combinações de sinais, nos três jogos
 do ensaio de 22/10/2026, e que a decisão mora num lugar só.
 """
 from __future__ import annotations
@@ -76,9 +76,8 @@ def test_a_regra_em_toda_combinacao(
 
     roupa, fonte = rj.roupa_do_jogo(raiz, **_CAMINHO[caminho])
 
-    so_o_comum = comum != "nada" and edge == "nada"
-    nada_pede_o_edge = sony == "nada" and caminho == "direto"
-    assert roupa == ("0ce6" if so_o_comum and nada_pede_o_edge else "0df2"), fonte
+    pede_o_edge = edge != "nada" or sony != "nada" or caminho != "direto"
+    assert roupa == ("0df2" if pede_o_edge else "0ce6"), fonte
     assert fonte, "toda roupa diz de onde veio"
 
 
@@ -90,7 +89,7 @@ _OS_TRES = {
     ),
     "dungeons-ii": (
         {"Jogo.exe": b"MZ" + "WinDualShock".encode("utf-16-le") + _SEPARA + _PID_DO_COMUM},
-        ("0df2", "a biblioteca Sony (WinDualShock) pede o Edge de hoje"),
+        ("0df2", "a biblioteca Sony (WinDualShock) pede o Edge"),
     ),
     "mullet-mad-jack": (
         {_METADATA: _PERFIL_DO_COMUM, "Jogo.exe": b"MZ"},

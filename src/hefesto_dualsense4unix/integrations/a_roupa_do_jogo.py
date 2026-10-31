@@ -1,11 +1,12 @@
 """A roupa do pad para UM jogo, por uma regra só (docs/protocol/a-identidade-do-pad-virtual.md).
 
-`roupa_do_jogo(raiz) -> (roupa, fonte)`: o pad veste o `0ce6` só quando o jogo nomeia o
-DualSense comum, não nomeia o Edge e nada no caminho dele pede o que só o Edge tem (o
-contêiner USB do gadget, que a biblioteca Sony procura; o pad Sony, que o Modo Xbox e o Steam
-Input não mostram ao jogo; o PID que a Launch Option dele não esconde). Em todo outro caso,
-o Edge. O que o jogo nomeia se lê no disco (D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO), em
-cache pela assinatura dos arquivos; a regra é `_a_regra`, e nunca troca máscara nem perfil.
+`roupa_do_jogo(raiz) -> (roupa, fonte)`: o pad veste o Edge só quando o jogo nomeia o Edge
+ou o caminho dele pede o que só o Edge tem (o contêiner USB do gadget, que a biblioteca Sony
+procura; o pad Sony, que o Modo Xbox e o Steam Input não mostram ao jogo; o PID que a Launch
+Option dele não esconde). Em todo outro caso, inclusive sem sinal nenhum do controle, o
+DualSense comum (`0ce6`), que todo jogo do DualSense conhece. O que o jogo nomeia se lê no
+disco (D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO), em cache pela assinatura dos arquivos; a regra
+é `_a_regra`, e nunca troca máscara nem perfil.
 """
 from __future__ import annotations
 
@@ -153,7 +154,7 @@ def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
         edge = "o executável conhece o modelo 0DF2 do Edge"
     if comum is None and ROUPA_DO_COMUM in pids:
         comum = "o executável conhece só o modelo 0CE6 do DualSense comum"
-    da_sony = f"a biblioteca Sony ({', '.join(sorted(sony))}) pede o Edge de hoje" if sony else None
+    da_sony = f"a biblioteca Sony ({', '.join(sorted(sony))}) pede o Edge" if sony else None
     return _Declarado(edge=edge, comum=comum, sony=da_sony), lidos
 
 
@@ -171,11 +172,11 @@ def _o_caminho_pede_o_edge(
 
 
 def _a_regra(declarado: _Declarado, caminho: str | None) -> tuple[str, str]:
-    """A regra única: o `0ce6` onde ele é o único modelo que serve ao jogo; senão, o Edge."""
+    """A regra única: o Edge onde o jogo ou o caminho dele o pede; senão, o `0ce6`."""
     pede_o_edge = caminho or declarado.edge or declarado.sony
-    if declarado.comum is not None and pede_o_edge is None:
-        return ROUPA_DO_COMUM, declarado.comum
-    return ROUPA_DO_EDGE, pede_o_edge or "nenhum sinal do controle: o Edge de hoje"
+    if pede_o_edge is not None:
+        return ROUPA_DO_EDGE, pede_o_edge
+    return ROUPA_DO_COMUM, declarado.comum or "nenhum sinal do controle: o DualSense comum"
 
 
 def _relativo(arquivo: Path, raiz: Path) -> str:
@@ -310,7 +311,7 @@ def roupas_dos_jogos(
     """`{appid: (roupa, fonte)}` dos jogos instalados com pasta em disco.
 
     Com `so_o_cache` (o laço do serviço, que não espera disco), o jogo que o cache
-    não tem fica de fora (o Edge de hoje) e é lido num fio próprio, que chama
+    não tem fica de fora (sem roupa própria até a leitura) e é lido num fio próprio, que chama
     `ao_aquecer` no fim; o jogo de leitura suspeita já passada a margem segue com a roupa
     guardada e ganha uma releitura nesse mesmo fio.
     """

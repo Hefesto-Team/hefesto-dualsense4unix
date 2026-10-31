@@ -28,7 +28,7 @@ from hefesto_dualsense4unix.integrations import a_roupa_do_jogo as rj
 
 _PASTA_DO_PERFIL = "Jogo_Data/il2cpp_data/Metadata"
 _METADATA = f"{_PASTA_DO_PERFIL}/global-metadata.dat"
-_PERFIL_DO_COMUM = b"\0PlayStation5USBWindowsNativeProfile\0"
+_PERFIL_DO_EDGE = b"\0PlayStation5EdgeUSBWindowsNativeProfile\0"
 _T0 = 1_700_000_000 * 10**9
 _SEGUNDO = 10**9
 
@@ -98,8 +98,8 @@ def _jogo(raiz: Path, ns: int) -> Path:
 
 
 def _chega_o_perfil_no_mesmo_tique(raiz: Path, ns: int) -> None:
-    """O arquivo que declara o `0ce6` nasce e o disco devolve a data de antes a tudo."""
-    (raiz / _METADATA).write_bytes(_PERFIL_DO_COMUM)
+    """O arquivo que declara o `0df2` nasce e o disco devolve a data de antes a tudo."""
+    (raiz / _METADATA).write_bytes(_PERFIL_DO_EDGE)
     _datar(raiz, ns)
 
 
@@ -139,12 +139,12 @@ def test_o_arquivo_do_mesmo_tique_aparece_passada_a_margem(
     """Chave igual, leitura recém-feita: passada a margem, a roupa muda sem reiniciar nada.
 
     MORDIDA: tirar a regra do suspeito (`_a_releitura_venceu` sempre falso), ou zerar a margem,
-    devolve `0df2` na consulta de depois da margem.
+    devolve `0ce6` na consulta de depois da margem.
     """
     t_arquivos = _T0 - _SEGUNDO // 2
     raiz = _jogo(tmp_path / "Jogo", t_arquivos)
 
-    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
+    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
     chave_antes = rj._CACHE[str(raiz)][0]
 
     _chega_o_perfil_no_mesmo_tique(raiz, t_arquivos)
@@ -153,12 +153,12 @@ def test_o_arquivo_do_mesmo_tique_aparece_passada_a_margem(
     )
 
     relogio.avanca(1)
-    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
+    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
 
     relogio.avanca(2)
     roupa, fonte = rj.roupa_do_jogo(raiz)
-    assert roupa == "0ce6", fonte
-    assert fonte == f"{_METADATA} declara só o DualSense comum"
+    assert roupa == "0df2", fonte
+    assert fonte == f"{_METADATA} declara o DualSense Edge"
 
 
 def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roupas(
@@ -175,17 +175,17 @@ def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roup
 
     relogio.avanca(1)
     assert set(laco()) == {"1"}
-    assert laco()["1"][0] == "0df2"
+    assert laco()["1"][0] == "0ce6"
     assert not aqueceu.is_set(), "dentro da margem não há releitura"
     assert not rj._AQUECENDO.is_set()
     assert lidas == []
 
     _chega_o_perfil_no_mesmo_tique(raiz, _T0 - _SEGUNDO // 2)
     relogio.avanca(2)
-    assert laco()["1"][0] == "0df2"
+    assert laco()["1"][0] == "0ce6"
     assert aqueceu.wait(5), "o aquecimento relê fora do laço e avisa"
     assert lidas == [raiz]
-    assert laco()["1"][0] == "0ce6"
+    assert laco()["1"][0] == "0df2"
 
 
 def test_o_arquivo_que_chega_durante_a_leitura_tambem_e_visto(
@@ -195,7 +195,7 @@ def test_o_arquivo_que_chega_durante_a_leitura_tambem_e_visto(
 
     O instante em que a leitura COMEÇOU, tirado antes, fecha o vão: a pasta dele é mais nova
     que o começo, logo a leitura é suspeita, e a consulta seguinte (a leitura lenta já passou da
-    margem) a refaz. MORDIDA: tirar o instante DEPOIS da leitura deixa o `0df2` para sempre.
+    margem) a refaz. MORDIDA: tirar o instante DEPOIS da leitura deixa o `0ce6` para sempre.
     """
     raiz = _jogo(tmp_path / "Jogo", _T0 - _SEGUNDO)
     real = rj._ler_o_disco
@@ -207,10 +207,10 @@ def test_o_arquivo_que_chega_durante_a_leitura_tambem_e_visto(
         return lido
 
     monkeypatch.setattr(rj, "_ler_o_disco", _lenta_com_chegada)
-    assert rj.roupa_do_jogo(raiz)[0] == "0df2", "a leitura não viu o arquivo que chegou depois"
+    assert rj.roupa_do_jogo(raiz)[0] == "0ce6", "a leitura não viu o arquivo que chegou depois"
     monkeypatch.setattr(rj, "_ler_o_disco", real)
 
-    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
+    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
 
 
 def test_datas_velhas_nao_relem_e_o_suspeito_se_le_uma_vez_so(
@@ -223,18 +223,18 @@ def test_datas_velhas_nao_relem_e_o_suspeito_se_le_uma_vez_so(
     lidas = _conta_as_leituras(monkeypatch)
     velho = _jogo(tmp_path / "Velho", _T0 - 3600 * _SEGUNDO)
     for _ in range(3):
-        assert rj.roupa_do_jogo(velho)[0] == "0df2"
+        assert rj.roupa_do_jogo(velho)[0] == "0ce6"
     assert lidas == [velho], "as datas mais velhas que a margem: uma leitura só"
 
     lidas.clear()
     novo = _jogo(tmp_path / "Novo", _T0 - _SEGUNDO // 2)
     for _ in range(3):
-        assert rj.roupa_do_jogo(novo)[0] == "0df2"
+        assert rj.roupa_do_jogo(novo)[0] == "0ce6"
     assert lidas == [novo], "dentro da margem a consulta não relê"
 
     relogio.avanca(3)
     for _ in range(3):
-        assert rj.roupa_do_jogo(novo)[0] == "0df2"
+        assert rj.roupa_do_jogo(novo)[0] == "0ce6"
     assert lidas == [novo, novo], "passada a margem, UMA releitura, e a seguinte já não é suspeita"
 
 
@@ -243,11 +243,11 @@ def test_a_chave_diferente_segue_o_caminho_de_sempre(
 ) -> None:
     """Quem escreve na própria pasta o tempo todo muda a chave e é lido na hora, sem margem."""
     raiz = _jogo(tmp_path / "Jogo", _T0 - _SEGUNDO // 2)
-    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
+    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
     lidas = _conta_as_leituras(monkeypatch)
 
-    (raiz / _METADATA).write_bytes(_PERFIL_DO_COMUM)
+    (raiz / _METADATA).write_bytes(_PERFIL_DO_EDGE)
     _datar(raiz, _T0 + _SEGUNDO // 4)
 
-    assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
+    assert rj.roupa_do_jogo(raiz)[0] == "0df2"
     assert lidas == [raiz]

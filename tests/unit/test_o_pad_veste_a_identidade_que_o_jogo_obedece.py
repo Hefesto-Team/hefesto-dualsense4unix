@@ -84,7 +84,7 @@ def test_o_incontrol_so_do_comum_veste_o_0ce6(tmp_path: Path, onde: str) -> None
         ({_METADATA: _PERFIS_DO_COMUM + b"\0" + _PERFIL_DO_EDGE}, "0df2"),
         ({_METADATA: _PERFIS_DO_COMUM, _INCONTROL: b"DualSenseEdgeNativeProfile"}, "0df2"),
         ({_METADATA: _PERFIS_DO_COMUM + b"\0" + _HORI}, "0ce6"),
-        ({_METADATA: _HORI}, "0df2"),
+        ({_METADATA: _HORI}, "0ce6"),
         ({_METADATA: _PERFIS_DO_COMUM, "Jogo.exe": b"MZ\x4c\x05\xf2\x0d"}, "0df2"),
         ({"Jogo.exe": b"MZ\x4c\x05\xe6\x0c"}, "0ce6"),
         ({"Jogo.exe": b"MZ\x4c\x05\xe6\x0c\0\0\x4c\x05\xf2\x0d"}, "0df2"),
@@ -106,9 +106,9 @@ def test_o_sinal_do_edge_ganha(
         ({_REWIRED: _u16("DualSenseDriver"), _ASSETS: b"Sony DualSense"}, "0ce6"),
         ({_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense"}, "0df2"),
         ({_REWIRED: b"DualSenseDriver", _ASSETS: b"Sony DualSense Edge"}, "0df2"),
-        ({_ASSETS: b"Sony DualSense"}, "0df2"),
+        ({_ASSETS: b"Sony DualSense"}, "0ce6"),
         ({"SDL3.dll": b"DualSense Edge\0DualSense", _METADATA: _PERFIS_DO_COMUM}, "0df2"),
-        ({"SDL2.dll": b"DualSense"}, "0df2"),
+        ({"SDL2.dll": b"DualSense"}, "0ce6"),
     ],
     ids=["rewired-comum", "rewired-edge-na-dll", "rewired-edge-no-assets",
          "assets-sem-rewired", "sdl3-com-edge", "sdl2-sem-edge"],
@@ -122,17 +122,16 @@ def test_o_rewired_e_a_sdl(tmp_path: Path, arquivos: dict[str, bytes], esperada:
 @pytest.mark.parametrize(
     ("arquivos", "extras"),
     [
-        ({}, {}),
         ({"Jogo_Data/Plugins/libScePad.dll": b"x"}, {}),
         ({"Jogo_Data/Plugins/libScePad.dll": b"x", _METADATA: _PERFIS_DO_COMUM}, {}),
         ({_METADATA: _PERFIS_DO_COMUM}, {"opcoes_de_lancamento": f"{IGNORE_SIGNATURE} %command%"}),
         ({_METADATA: _PERFIS_DO_COMUM}, {"no_steam_input": True}),
         ({_METADATA: _PERFIS_DO_COMUM}, {"modo_xbox": True}),
     ],
-    ids=["pasta-vazia", "so-libscepad", "libscepad-ganha-do-incontrol",
+    ids=["so-libscepad", "libscepad-ganha-do-incontrol",
          "launch-option-envenenada", "steam-input", "modo-xbox"],
 )
-def test_sem_sinal_fica_o_edge(
+def test_o_caminho_e_a_biblioteca_sony_pedem_o_edge(
     tmp_path: Path, arquivos: dict[str, bytes], extras: dict[str, Any]
 ) -> None:
     roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path, arquivos), **extras)
@@ -264,7 +263,7 @@ def lancamento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         lambda home=None, **k: {
             str(_COM_PERFIL): ("0ce6", "global-metadata.dat declara só o DualSense comum"),
             str(_SEM_PERFIL): ("0ce6", "InControl.dll declara só o DualSense comum"),
-            str(_DO_EDGE): ("0df2", "nenhum sinal do controle: o Edge de hoje"),
+            str(_DO_EDGE): ("0df2", "o executável conhece o modelo 0DF2 do Edge"),
         },
     )
     return pasta
