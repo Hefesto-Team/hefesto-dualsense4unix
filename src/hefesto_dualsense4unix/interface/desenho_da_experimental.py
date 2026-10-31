@@ -787,7 +787,7 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
 
     Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só a opção.
     """
-    partes = []
+    partes: list[str] = []
     for na_grade, juntas in itertools.groupby(itens, key=_vai_na_grade):
         if na_grade:
             partes.extend(map(_grade, _grades(list(juntas))))

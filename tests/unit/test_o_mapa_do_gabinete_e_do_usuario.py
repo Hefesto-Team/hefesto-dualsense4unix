@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import pathlib
 import sys
+from collections.abc import Callable
+from types import ModuleType
 from typing import Any
 
 import pytest
@@ -51,21 +53,23 @@ class PonteDeMentira:
 
 
 @pytest.fixture
-def pac():
+def pac() -> ModuleType:
     import pacotes
 
-    return pacotes
+    modulo: ModuleType = pacotes
+    return modulo
 
 
 @pytest.fixture
-def a08():
+def a08() -> ModuleType:
     from pacotes import a08_conexoes
 
-    return a08_conexoes
+    modulo: ModuleType = a08_conexoes
+    return modulo
 
 
 @pytest.fixture(autouse=True)
-def rascunho_limpo(a08, monkeypatch):
+def rascunho_limpo(a08: ModuleType, monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     """Um rascunho novo por caso, e NUNCA o disco do usuário."""
     from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
@@ -74,13 +78,13 @@ def rascunho_limpo(a08, monkeypatch):
     return a08
 
 
-def _gesto(pac, nome: str):
-    fn = pac.gesto_da_pagina("08-conexoes.html", nome)
+def _gesto(pac: ModuleType, nome: str) -> Callable[..., Any]:
+    fn: Callable[..., Any] | None = pac.gesto_da_pagina("08-conexoes.html", nome)
     assert fn is not None, f"08-conexoes.html:{nome} perdeu o dono"
     return fn
 
 
-def _ctx(pac):
+def _ctx(pac: ModuleType) -> Any:
     return pac.Contexto(state={}, mesa=[], conectados=[], estados={})
 
 
@@ -125,7 +129,7 @@ def test_cada_quadrado_leva_o_endereco_da_entrada() -> None:
     assert "3-1.1.1" not in saiu, "a dica voltou a dizer como o sistema enumera o aparelho"
 
 
-def test_o_gesto_de_dois_tempos(pac, a08) -> None:
+def test_o_gesto_de_dois_tempos(pac: ModuleType, a08: ModuleType) -> None:
     """Escolher não grava; pôr grava. E sem escolher antes, RECUSA dizendo."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Traseira")
@@ -145,7 +149,7 @@ def test_o_gesto_de_dois_tempos(pac, a08) -> None:
     assert len(p.declarado) == 1, "pôr o aparelho na entrada tem de gravar"
 
 
-def test_grava_o_mapa_inteiro_e_nao_um_pedaco(pac, a08) -> None:
+def test_grava_o_mapa_inteiro_e_nao_um_pedaco(pac: ModuleType, a08: ModuleType) -> None:
     """As faces são uma LISTA, e `fundir_declaracao` troca lista inteira."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Frente")
@@ -158,7 +162,7 @@ def test_grava_o_mapa_inteiro_e_nao_um_pedaco(pac, a08) -> None:
         f"junto, senão criar uma apaga as outras.")
 
 
-def test_face_sem_nome_recusa(pac) -> None:
+def test_face_sem_nome_recusa(pac: ModuleType) -> None:
     """*"Sem nome, não cria"* — é o que o `title` do botão promete."""
     p = PonteDeMentira()
     with pytest.raises(ValueError):
@@ -166,7 +170,7 @@ def test_face_sem_nome_recusa(pac) -> None:
     assert p.declarado == []
 
 
-def test_nova_entrada_pega_o_menor_numero_livre(pac, a08) -> None:
+def test_nova_entrada_pega_o_menor_numero_livre(pac: ModuleType, a08: ModuleType) -> None:
     """A regra é do produto: os números são do GABINETE e não se repetem."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Frente")
@@ -181,7 +185,7 @@ def test_nova_entrada_pega_o_menor_numero_livre(pac, a08) -> None:
         "não podem levar o mesmo número")
 
 
-def test_tirar_esvazia_e_a_entrada_fica(pac, a08) -> None:
+def test_tirar_esvazia_e_a_entrada_fica(pac: ModuleType, a08: ModuleType) -> None:
     """A entrada CONTINUA no desenho — é o que o `title` promete."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Frente")
@@ -197,7 +201,7 @@ def test_tirar_esvazia_e_a_entrada_fica(pac, a08) -> None:
         _gesto(pac, "tirar-daqui")(_ctx(pac), {"entrada": "1"}, p)
 
 
-def test_extensao_vira_filha_com_letra(pac, a08) -> None:
+def test_extensao_vira_filha_com_letra(pac: ModuleType, a08: ModuleType) -> None:
     """A `10` vira `10a`, depois `10b`. E não há neta."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Traseira")
@@ -210,7 +214,7 @@ def test_extensao_vira_filha_com_letra(pac, a08) -> None:
         _gesto(pac, "nova-extensao")(_ctx(pac), {"entrada": "1a"}, p)
 
 
-def test_um_aparelho_esta_em_um_lugar_so(pac, a08) -> None:
+def test_um_aparelho_esta_em_um_lugar_so(pac: ModuleType, a08: ModuleType) -> None:
     """Pôr onde ele não estava o tira de onde estava, no mesmo gesto."""
     p = PonteDeMentira()
     a08._LOGICA.acrescentar_face("Traseira")
@@ -224,9 +228,10 @@ def test_um_aparelho_esta_em_um_lugar_so(pac, a08) -> None:
     assert onde == ["2"], f"o aparelho ficou em {onde} — tem de estar em UM lugar"
 
 
-def test_clique_sem_alvo_recusa(pac) -> None:
+def test_clique_sem_alvo_recusa(pac: ModuleType) -> None:
     """Nenhum dos seis mira um alvo padrão quando o clique não o disse."""
     p = PonteDeMentira()
+    clique: dict[str, str]
     for nome, clique in (("escolher-aparelho", {}), ("escolher-entrada", {}),
                          ("tirar-daqui", {}), ("nova-entrada", {}),
                          ("nova-extensao", {}), ("nova-face", {})):
