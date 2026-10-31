@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 04-iluminacao.html
-- **31/10/2026** — A-FALA-CITADA-SAI-DOS-DADOS-E-O-PORTAO-A-VE-01: a dica da troca de jogador diz o caso de 26/08 em prosa, sem a fala entre aspas. Até publicar, a página do produto continua com a fala citada nessa dica; o comportamento é o mesmo.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->
