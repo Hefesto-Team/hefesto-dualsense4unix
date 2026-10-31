@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1177827,
+      "piso": 1177828,
       "por_item": {
         "docs": 107818,
         "scripts": 110035,
         "src": 296929,
-        "tests": 663045
+        "tests": 663046
       },
-      "razao": "tamanho: +377 linhas (1177450 -> 1177827), pagas por Origem: D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO; registrado no fecho, topo 430122a07226",
+      "razao": "tamanho: +1 linhas (1177827 -> 1177828), pagas por Origem: D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO; registrado no fecho, topo 37a0c1773de5",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1315,6 +1315,12 @@
           "de": 1177450,
           "para": 1177827,
           "razao": "tamanho: +377 linhas (1177450 -> 1177827), pagas por Origem: D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO; registrado no fecho, topo 430122a07226"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1177827,
+          "para": 1177828,
+          "razao": "tamanho: +1 linhas (1177827 -> 1177828), pagas por Origem: D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO; registrado no fecho, topo 37a0c1773de5"
         }
       ],
       "unidade": "linhas",
