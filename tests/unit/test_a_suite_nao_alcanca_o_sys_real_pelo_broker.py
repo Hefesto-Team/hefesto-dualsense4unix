@@ -99,6 +99,27 @@ def _validate_physical_node(c: _Cena) -> None:
     assert [k["sys_class_bluetooth"] for _a, k in pai] == [c.raiz["SYS_CLASS_BLUETOOTH"]]
 
 
+def _validate_external_node(c: _Cena) -> None:
+    c.abrir_o_sysfs()
+    pai = c.espiar("_pai_hid_e_controle_de_fora", True)
+    no = f"{c.raiz['DEV_ROOT']}/{BASE}"
+    assert hb.validate_external_node(no, stat_fn=c.stat, lstat_fn=c.stat) == BASE
+    assert f"{c.raiz['SYS_CLASS_HIDRAW']}/{BASE}/dev" in c.tocados
+    assert [k["sys_class_bluetooth"] for _a, k in pai] == [c.raiz["SYS_CLASS_BLUETOOTH"]]
+
+
+def _devolver_os_externos(c: _Cena) -> None:
+    pedidos: list[str] = []
+    ops = SimpleNamespace(devolver_externo=lambda no, *_a: pedidos.append(no))
+    externos = {
+        f"{c.raiz['DEV_ROOT']}/{BASE}": hb._ExternoEscondido("/sys/devices/x", 0o660),
+        f"/dev/{BASE}": hb._ExternoEscondido("/sys/devices/y", 0o660),
+    }
+    hb.devolver_os_externos(externos, ops=ops, log=lambda *_a, **_k: None)
+    assert pedidos == [f"{c.raiz['DEV_ROOT']}/{BASE}"]
+    assert externos == {}
+
+
 def _validate_physical_input_node(c: _Cena) -> None:
     c.abrir_o_sysfs()
     pai = c.espiar("_pai_hid_e_dualsense_fisico", True)
@@ -167,6 +188,8 @@ CASOS: dict[str, Callable[[_Cena], None]] = {
     "canonical_input_base": _canonical_input_base,
     "validate_physical_node": _validate_physical_node,
     "validate_physical_input_node": _validate_physical_input_node,
+    "validate_external_node": _validate_external_node,
+    "devolver_os_externos": _devolver_os_externos,
     "motivo_de_recusar_o_acionador": _motivo_de_recusar_o_acionador,
     "FsAclOps": _FsAclOps,
     "BrokerState": _BrokerState,

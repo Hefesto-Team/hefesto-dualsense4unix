@@ -136,6 +136,7 @@ _SYS_KCMP = {
 }.get(_MAQUINA)
 _KCMP_FILE = 0
 SERVIDOS_PATH = "/run/hefesto-hidraw-broker/servidos"
+EXTERNOS_PATH = "/run/hefesto-hidraw-broker/externos"
 REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
 REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
@@ -308,9 +309,32 @@ def validate_physical_node(
     seguro". `stat_fn`/`lstat_fn` são injetáveis só para os testes herméticos
     (não dá para criar char device sem root); default = os.stat/os.lstat.
     """
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
+    lido = _pai_do_hidraw(
+        node, dev_root=dev_root, sys_class_hidraw=sys_class_hidraw,
+        stat_fn=stat_fn, lstat_fn=lstat_fn,
+    )
+    if lido is None:
+        return None
+    base, hid_parent, uevent = lido
+    if not _pai_hid_e_dualsense_fisico(
+        hid_parent, uevent, sys_class_bluetooth=sys_class_bluetooth
+    ):
+        return None
+    return base
+
+
+def _pai_do_hidraw(
+    node: object,
+    *,
+    dev_root: str | None,
+    sys_class_hidraw: str | None,
+    stat_fn: Callable[[str], Any],
+    lstat_fn: Callable[[str], Any],
+) -> tuple[str, str, dict[str, str]] | None:
+    """As barreiras 1-3 do validador: ``(base, pai HID, uevent do pai)``, ou None."""
     dev_root = _raiz(dev_root, "DEV_ROOT")
     sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
-    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
     if not isinstance(node, str):
         return None
     base = canonical_hidraw_base(node, dev_root=dev_root)
@@ -332,11 +356,98 @@ def validate_physical_node(
             uevent = _parse_uevent_text(fh.read())
     except OSError:
         return None
-    if not _pai_hid_e_dualsense_fisico(
+    return base, hid_parent, uevent
+
+
+def validate_external_node(
+    node: object,
+    *,
+    dev_root: str | None = None,
+    sys_class_hidraw: str | None = None,
+    sys_class_bluetooth: str | None = None,
+    stat_fn: Callable[[str], Any] = os.stat,
+    lstat_fn: Callable[[str], Any] = os.lstat,
+) -> str | None:
+    """Basename `hidrawN` se `node` é um controle de jogo FÍSICO que não é DualSense; senão None.
+
+    O-BROKER-ESCONDE-O-HIDRAW-DO-CONTROLE-DE-FORA-01 (31/10/2026). As barreiras 1-3 são as do
+    `validate_physical_node`; a quarta pergunta o que o aparelho É, nunca o nome nem a marca:
+    barramento USB ou Bluetooth, o pai HID com um nó de entrada que tem tecla de controle de
+    jogo (`_tem_entrada_de_controle`), e nada que o validador do DualSense aceite ou que traga as
+    marcas do pad do Hefesto. O uhid só vale pelo rádio, com as regras D3/D4 do DualSense. NUNCA
+    abre o device; na dúvida, recusa.
+    """
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
+    lido = _pai_do_hidraw(
+        node, dev_root=dev_root, sys_class_hidraw=sys_class_hidraw,
+        stat_fn=stat_fn, lstat_fn=lstat_fn,
+    )
+    if lido is None:
+        return None
+    base, hid_parent, uevent = lido
+    if not _pai_hid_e_controle_de_fora(
         hid_parent, uevent, sys_class_bluetooth=sys_class_bluetooth
     ):
         return None
     return base
+
+
+def _pai_hid_e_controle_de_fora(
+    hid_parent: str, uevent: dict[str, str], *, sys_class_bluetooth: str
+) -> bool:
+    """A barreira 4 do `validate_external_node`: o pai HID é um controle de jogo de fora?"""
+    match = _HID_ID_VALUE_RE.match(uevent.get("HID_ID", ""))
+    if match is None:
+        return False
+    bus = int(match.group(1), 16)
+    if bus not in ACCEPTED_BUSES:
+        return False
+    if _pai_hid_e_dualsense_fisico(hid_parent, uevent, sys_class_bluetooth=sys_class_bluetooth):
+        return False
+    if _e_o_nosso_vpad(uevent, hid_parent, bus):
+        return False
+    if not _o_virtual_e_um_radio_de_verdade(
+        hid_parent, uevent, bus, sys_class_bluetooth=sys_class_bluetooth
+    ):
+        return False
+    return _tem_entrada_de_controle(hid_parent)
+
+
+def _tem_entrada_de_controle(hid_parent: str) -> bool:
+    """Algum nó de entrada do pai HID tem tecla de controle de jogo (`_MASCARA_DE_CONTROLE`)?"""
+    try:
+        filhos = sorted(os.listdir(f"{hid_parent}/input"))
+    except OSError:
+        return False
+    return any(
+        _teclas_do_input(f"{hid_parent}/input/{pasta}") & _MASCARA_DE_CONTROLE
+        for pasta in filhos
+        if pasta.startswith("input")
+    )
+
+
+def _o_virtual_e_um_radio_de_verdade(
+    hid_parent: str, uevent: dict[str, str], bus: int, *, sys_class_bluetooth: str
+) -> bool:
+    """Fora de `/devices/virtual/`, sim; dentro, só o uhid do rádio com as regras D3/D4."""
+    if "/devices/virtual/" not in hid_parent:
+        return True
+    if "/misc/uhid/" not in hid_parent:
+        return False
+    if bus != BUS_BT:
+        return False
+    phys = uevent.get("HID_PHYS", "").strip().lower()
+    uniq = uevent.get("HID_UNIQ", "").strip().lower()
+    if phys.startswith(VPAD_PHYS_PREFIX):
+        return False
+    if uniq.replace(":", "").startswith(VPAD_UNIQ_PREFIX):
+        return False
+    if _MAC_RE.match(uniq) is None:
+        return False
+    if _MAC_RE.match(phys) is None:
+        return False
+    adapters = _adapter_addresses(sys_class_bluetooth)
+    return not (adapters is not None and adapters and phys not in adapters)
 
 
 def _pai_hid_e_dualsense_fisico(
@@ -363,25 +474,9 @@ def _pai_hid_e_dualsense_fisico(
         return False
     if "/vhci_hcd." in hid_parent and _e_o_nosso_vpad(uevent, hid_parent, bus):
         return False
-    if "/devices/virtual/" in hid_parent:
-        if "/misc/uhid/" not in hid_parent:
-            return False
-        if bus != BUS_BT:
-            return False
-        phys = uevent.get("HID_PHYS", "").strip().lower()
-        uniq = uevent.get("HID_UNIQ", "").strip().lower()
-        if phys.startswith(VPAD_PHYS_PREFIX):
-            return False
-        if uniq.replace(":", "").startswith(VPAD_UNIQ_PREFIX):
-            return False
-        if _MAC_RE.match(uniq) is None:
-            return False
-        if _MAC_RE.match(phys) is None:
-            return False
-        adapters = _adapter_addresses(sys_class_bluetooth)
-        if adapters is not None and adapters and phys not in adapters:
-            return False
-    return True
+    return _o_virtual_e_um_radio_de_verdade(
+        hid_parent, uevent, bus, sys_class_bluetooth=sys_class_bluetooth
+    )
 
 
 def canonical_input_base(node: object, *, dev_input_root: str | None = None) -> str | None:
@@ -490,7 +585,11 @@ def chave_do_acionador_no_sys(sys_dir: str) -> str:
 
 
 def _teclas_no_sys(sys_dir: str) -> int:
-    palavras = _ler_o_sys(f"{sys_dir}/device/capabilities/key").split()
+    return _teclas_do_input(f"{sys_dir}/device")
+
+
+def _teclas_do_input(input_dir: str) -> int:
+    palavras = _ler_o_sys(f"{input_dir}/capabilities/key").split()
     try:
         return int("".join(f"{int(p, 16):016x}" for p in palavras), 16) if palavras else 0
     except ValueError:
@@ -750,6 +849,60 @@ class FsAclOps:
                 return
             os.chmod(ref, 0o660)
             os.setxattr(ref, _ACL_XATTR, encode_access_acl(uid))
+        finally:
+            os.close(fd)
+
+    def _pin_externo(self, node: str, base: str, pai: str) -> int | None:
+        """O_PATH no nó do controle de fora; None = sumiu ou o nome é de outro aparelho."""
+        try:
+            fd = os.open(node, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
+        except OSError:
+            return None
+        st = os.fstat(fd)
+        if not self._e_char_device(st.st_mode) or self._sysfs_rdev(base) != (
+            os.major(st.st_rdev),
+            os.minor(st.st_rdev),
+        ) or self.pai_hid_do_no(base) != pai:
+            os.close(fd)
+            return None
+        return fd
+
+    def esconder_externo(self, node: str, base: str, pai: str) -> tuple[int, bytes | None]:
+        """Guarda o modo e a ACL do nó, e o fecha (`0600` sem ACL). Devolve o que guardou."""
+        fd = self._pin_externo(node, base, pai)
+        if fd is None:
+            raise FileNotFoundError(node)
+        try:
+            ref = f"/proc/self/fd/{fd}"
+            modo = stat_mod.S_IMODE(os.fstat(fd).st_mode)
+            try:
+                acl: bytes | None = os.getxattr(ref, _ACL_XATTR)
+            except OSError as exc:
+                if exc.errno not in _SEM_ACL:
+                    raise
+                acl = None
+            if acl is not None:
+                os.removexattr(ref, _ACL_XATTR)
+            os.chmod(ref, 0o600)
+            return modo, acl
+        finally:
+            os.close(fd)
+
+    def devolver_externo(
+        self, node: str, base: str, pai: str, modo: int, acl: bytes | None
+    ) -> None:
+        """Devolve ao nó o modo e a ACL de antes do esconderijo, e só ao MESMO aparelho."""
+        fd = self._pin_externo(node, base, pai)
+        if fd is None:
+            raise FileNotFoundError(node)
+        try:
+            ref = f"/proc/self/fd/{fd}"
+            os.chmod(ref, modo)
+            if acl is not None:
+                os.setxattr(ref, _ACL_XATTR, acl)
+            else:
+                with contextlib.suppress(OSError):
+                    os.removexattr(ref, _ACL_XATTR)
         finally:
             os.close(fd)
 
@@ -1565,6 +1718,98 @@ class _HiddenNode:
 
 
 @dataclass
+class _ExternoEscondido:
+    """O hidraw de um controle de fora escondido: o aparelho e o estado de antes."""
+
+    pai: str
+    modo: int
+    acl: bytes | None = None
+
+    def como_dado(self) -> dict[str, object]:
+        return {"pai": self.pai, "modo": self.modo,
+                "acl": None if self.acl is None else self.acl.hex()}
+
+    @classmethod
+    def de_dado(cls, dado: object) -> _ExternoEscondido | None:
+        if not isinstance(dado, dict):
+            return None
+        pai, modo, acl = dado.get("pai"), dado.get("modo"), dado.get("acl")
+        if not isinstance(pai, str) or not pai or not isinstance(modo, int):
+            return None
+        if acl is not None and not isinstance(acl, str):
+            return None
+        try:
+            return cls(pai, modo & 0o7777, None if acl is None else bytes.fromhex(acl))
+        except ValueError:
+            return None
+
+
+def ler_os_externos(path: str | None) -> dict[str, _ExternoEscondido]:
+    """Os controles de fora que um broker escondeu e ainda não devolveu (``path``)."""
+    if path is None:
+        return {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            bruto = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(bruto, dict):
+        return {}
+    lidos: dict[str, _ExternoEscondido] = {}
+    for canon, dado in bruto.items():
+        entrada = _ExternoEscondido.de_dado(dado)
+        if isinstance(canon, str) and entrada is not None:
+            lidos[canon] = entrada
+    return lidos
+
+
+def gravar_os_externos(path: str | None, externos: dict[str, _ExternoEscondido]) -> None:
+    """Grava (ou apaga, quando vazio) a lista dos controles de fora escondidos."""
+    if path is None:
+        return
+    if not externos:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(path)
+        return
+    provisorio = f"{path}.novo"
+    with open(provisorio, "w", encoding="utf-8") as fh:
+        json.dump({c: e.como_dado() for c, e in sorted(externos.items())}, fh)
+    os.replace(provisorio, path)
+
+
+def devolver_os_externos(
+    externos: dict[str, _ExternoEscondido],
+    *,
+    ops: Any,
+    dev_root: str | None = None,
+    log: Callable[..., None] = _log,
+) -> list[str]:
+    """Devolve cada controle de fora ao estado de antes; tira da lista o devolvido e o que saiu."""
+    dev_root = _raiz(dev_root, "DEV_ROOT")
+    devolvidos: list[str] = []
+    for canon in sorted(externos):
+        entrada = externos[canon]
+        base = canonical_hidraw_base(canon, dev_root=dev_root)
+        if base is None:
+            del externos[canon]
+            continue
+        try:
+            ops.devolver_externo(canon, base, entrada.pai, entrada.modo, entrada.acl)
+        except FileNotFoundError:
+            log("externo_saiu", node=canon)
+            del externos[canon]
+            continue
+        except OSError as exc:
+            log("externo_nao_devolvido", node=canon, err=str(exc))
+            continue
+        del externos[canon]
+        devolvidos.append(canon)
+    if devolvidos:
+        log("externos_devolvidos", nodes=",".join(devolvidos))
+    return devolvidos
+
+
+@dataclass
 class _ExpostoNode:
     """Um nó mantido ABERTO a pedido: a lease INVERTIDA do `cmd expose`."""
 
@@ -1663,6 +1908,8 @@ class BrokerState:
         servidos_path: str | None = None,
         binario: str | None = None,
         marca_do_reinicio: str = REINICIO_SEM_ABRIR_PATH,
+        validator_externo: Callable[[str], str | None] | None = None,
+        externos_path: str | None = None,
     ) -> None:
         dev_root = _raiz(dev_root, "DEV_ROOT")
         sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
@@ -1721,6 +1968,10 @@ class BrokerState:
         self._pid_da_conn: dict[int, int] = {}
         self._servidos: dict[int, int] = self._ler_os_servidos()
         self._segurados: dict[str, set[tuple[str, int, str]]] = {}
+        self._validator_externo = validator_externo
+        self._externos_path = externos_path
+        self.externos: dict[str, _ExternoEscondido] = ler_os_externos(externos_path)
+        self.externos_by_conn: dict[int, set[str]] = {}
 
 
     def uid_autorizado(self, validade: float = VALIDADE_DA_SESSAO_S) -> int | None:
@@ -1760,6 +2011,113 @@ class BrokerState:
             sys_class_hidraw=self._sys_class_hidraw,
             sys_class_bluetooth=self._sys_class_bluetooth,
         )
+
+    def _validate_externo(self, node: str) -> str | None:
+        if self._validator_externo is not None:
+            return self._validator_externo(node)
+        return validate_external_node(
+            node,
+            dev_root=self._dev_root,
+            sys_class_hidraw=self._sys_class_hidraw,
+            sys_class_bluetooth=self._sys_class_bluetooth,
+        )
+
+    def _gravar_os_externos(self) -> None:
+        try:
+            gravar_os_externos(self._externos_path, self.externos)
+        except OSError as erro:
+            self._log("externos_nao_gravados", erro=str(erro))
+
+    def _externo_holders(self, canon: str) -> int:
+        return sum(1 for held in self.externos_by_conn.values() if canon in held)
+
+    def _cmd_hide_externo(
+        self, conn_id: int, node: object
+    ) -> dict[str, object] | None:
+        """O hide do controle de fora; None = o nó não é um, e o pedido segue o do DualSense."""
+        if not isinstance(node, str):
+            return None
+        if canonical_hidraw_base(node, dev_root=self._dev_root) is None:
+            return None
+        base = self._validate_externo(node)
+        if base is None:
+            return None
+        canon = f"{self._dev_root}/{base}"
+        pai = self._pai_hid(base)
+        if not pai:
+            return {"ok": False, "cmd": "hide", "node": canon, "error": "hide_node_gone"}
+        entrada = self.externos.get(canon)
+        if entrada is not None and entrada.pai != pai:
+            del self.externos[canon]
+            for held in self.externos_by_conn.values():
+                held.discard(canon)
+            entrada = None
+        try:
+            modo, acl = self._ops.esconder_externo(canon, base, pai)
+        except FileNotFoundError:
+            self._log("hide_node_gone", node=canon)
+            return {"ok": False, "cmd": "hide", "node": canon, "error": "hide_node_gone"}
+        except OSError as exc:
+            self._log("hide_failed", node=canon, err=str(exc))
+            return {"ok": False, "cmd": "hide", "node": canon, "error": "hide_failed"}
+        if entrada is None:
+            self.externos[canon] = _ExternoEscondido(pai, modo, acl)
+            self._gravar_os_externos()
+            self._log("externo_escondido", node=canon, conn=conn_id)
+        self.externos_by_conn.setdefault(conn_id, set()).add(canon)
+        return {"ok": True, "cmd": "hide", "node": canon, "state": "hidden"}
+
+    def _cmd_restore_externo(self, conn_id: int, node: object) -> dict[str, object] | None:
+        """O restore do controle de fora escondido; None = o nó não está entre eles."""
+        base = canonical_hidraw_base(node, dev_root=self._dev_root)
+        if base is None:
+            return None
+        canon = f"{self._dev_root}/{base}"
+        if canon not in self.externos:
+            return None
+        self.externos_by_conn.get(conn_id, set()).discard(canon)
+        if self._externo_holders(canon) > 0:
+            return {"ok": True, "cmd": "restore", "node": canon, "state": "hidden"}
+        return self._devolver_o_externo(canon)
+
+    def _devolver_o_externo(self, canon: str) -> dict[str, object]:
+        so_ele = {canon: self.externos[canon]}
+        devolvidos = devolver_os_externos(
+            so_ele, ops=self._ops, dev_root=self._dev_root, log=self._log
+        )
+        if canon in so_ele:
+            return {"ok": False, "cmd": "restore", "node": canon, "error": "restore_failed"}
+        del self.externos[canon]
+        self._gravar_os_externos()
+        estado = "exposed" if devolvidos else "gone"
+        return {"ok": True, "cmd": "restore", "node": canon, "state": estado}
+
+    def _soltar_os_externos_da(self, conn_id: int) -> list[str]:
+        """O fim da conexão devolve o controle de fora que só essa conexão escondia."""
+        devolvidos: list[str] = []
+        for canon in sorted(self.externos_by_conn.pop(conn_id, set())):
+            if (
+                canon in self.externos
+                and self._externo_holders(canon) == 0
+                and self._devolver_o_externo(canon).get("ok")
+            ):
+                devolvidos.append(canon)
+        return devolvidos
+
+    def devolver_os_externos_sem_dono(self) -> list[str]:
+        """O controle de fora que nenhuma conexão viva segura volta ao estado de antes."""
+        sem_dono = {c: e for c, e in self.externos.items() if self._externo_holders(c) == 0}
+        if not sem_dono:
+            return []
+        restantes = dict(sem_dono)
+        devolvidos = devolver_os_externos(
+            restantes, ops=self._ops, dev_root=self._dev_root, log=self._log
+        )
+        for canon in sem_dono:
+            if canon not in restantes:
+                del self.externos[canon]
+        self._gravar_os_externos()
+        return devolvidos
 
     def _validate_entrada(self, node: str) -> str | None:
         if self._validator_entrada is not None:
@@ -2003,6 +2361,7 @@ class BrokerState:
                     ),
                     "no_nasce_fechado": self.no_nasce_fechado,
                     "entregue": self.entregue,
+                    "externos": sorted(self.externos),
                 },
                 None,
             )
@@ -2017,11 +2376,17 @@ class BrokerState:
         if cmd == "unexpose":
             return (self._entradas_seguem(self._cmd_unexpose(conn_id, request.get("node"))), None)
         if cmd == "hide":
+            externo = self._cmd_hide_externo(conn_id, request.get("node"))
+            if externo is not None:
+                return (externo, None)
             return (
                 self._entradas_seguem(self._cmd_hide(conn_id, peer_uid, request.get("node"))),
                 None,
             )
         if cmd == "restore":
+            externo = self._cmd_restore_externo(conn_id, request.get("node"))
+            if externo is not None:
+                return (externo, None)
             return (self._entradas_seguem(self._cmd_restore(conn_id, request.get("node"))), None)
         if cmd == "restore_all":
             return (self._cmd_restore_all(conn_id), None)
@@ -2240,6 +2605,12 @@ class BrokerState:
         for canon in sorted(nomes):
             response = self._entradas_seguem(self._cmd_restore(conn_id, canon))
             if response.get("ok") and response.get("state") in ("exposed", "fechado", "gone"):
+                restored.append(canon)
+            elif not response.get("ok"):
+                failed.append(canon)
+        for canon in sorted(self.externos_by_conn.get(conn_id, set())):
+            response = self._cmd_restore_externo(conn_id, canon) or {}
+            if response.get("ok") and response.get("state") in ("exposed", "gone"):
                 restored.append(canon)
             elif not response.get("ok"):
                 failed.append(canon)
@@ -2538,7 +2909,7 @@ class BrokerState:
         """
         self._podar_o_que_saiu()
         self._desmontar_os_pads_da(conn_id)
-        restored: list[str] = []
+        restored: list[str] = self._soltar_os_externos_da(conn_id)
         failed: list[str] = []
         entradas_da_conn = self.entradas_by_conn.pop(conn_id, set())
         tocados = set(entradas_da_conn) | set(self.by_conn.get(conn_id, set()))
@@ -2810,6 +3181,9 @@ class BrokerState:
                         continue
                     with contextlib.suppress(OSError):
                         abrir(canon.rsplit("/", 1)[-1], uid_agora)
+            self.externos_by_conn.clear()
+            restored.extend(self.devolver_os_externos_sem_dono())
+        self.externos_by_conn.clear()
         self.by_conn.clear()
         self.podados_by_conn.clear()
         self.expostos.clear()
@@ -3104,12 +3478,14 @@ class Broker:
         if state.entregue:
             if not self._peer_uids and agora - self._ultima_entrega >= 1.0:
                 self._ultima_entrega = agora
+                state.devolver_os_externos_sem_dono()
                 state.entregar_ao_linux()
             return
         if self._sem_cliente_desde is None:
             return
         if agora - self._sem_cliente_desde >= self._graca_da_entrega_s:
             self._ultima_entrega = agora
+            state.devolver_os_externos_sem_dono()
             state.entregar_ao_linux()
 
     def run(self) -> None:
@@ -3398,6 +3774,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.restore_all_and_exit and reinicio_sem_abrir_pedido():
             _log("reinicio_sem_abrir", belt="restore-all-and-exit")
             return 0
+        if args.restore_all_and_exit:
+            externos = ler_os_externos(EXTERNOS_PATH)
+            devolver_os_externos(externos, ops=FsAclOps())
+            with contextlib.suppress(OSError):
+                gravar_os_externos(EXTERNOS_PATH, externos)
         if allowed_uid is None:
             _log("restore_sem_sessao_ativa")
             return 0
@@ -3424,6 +3805,7 @@ def main(argv: list[str] | None = None) -> int:
         marca_da_entrega=MARCA_DA_ENTREGA_PATH,
         servidos_path=SERVIDOS_PATH,
         binario=os.path.abspath(__file__),
+        externos_path=EXTERNOS_PATH,
     )
     state.entregue = herdada
     broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
