@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 1599660
+APPID = 9931993
 
 
 def _marker(tmp_path: Path, *, appid: int = APPID, epoch: int = 1000) -> Path:

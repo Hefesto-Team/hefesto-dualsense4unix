@@ -49,14 +49,14 @@ class TestMatchCriteria:
 
     def test_and_entre_campos(self):
         m = MatchCriteria(
-            window_class=["steam_app_1091500"],
+            window_class=["steam_app_9921830"],
             process_name=["Cyberpunk2077.exe"],
         )
-        assert m.matches({"wm_class": "steam_app_1091500", "exe_basename": "other"}) is False
+        assert m.matches({"wm_class": "steam_app_9921830", "exe_basename": "other"}) is False
         assert (
             m.matches(
                 {
-                    "wm_class": "steam_app_1091500",
+                    "wm_class": "steam_app_9921830",
                     "exe_basename": "Cyberpunk2077.exe",
                 }
             )

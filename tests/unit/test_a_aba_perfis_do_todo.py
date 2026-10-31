@@ -170,8 +170,8 @@ def _linhas(ctx: Contexto) -> list[str]:
 
 def test_o_clique_deixa_o_cabecalho_e_o_editor_no_mesmo_perfil(lar: Path) -> None:
     """MORDIDA: sem o `_ativar_o` no `selecionar`, o cabeçalho segue no perfil velho."""
-    _guardar("Elden Ring", 40, "steam_app_1245620")
-    _guardar("Pragmata", 30, "steam_app_3357650")
+    _guardar("Elden Ring", 40, "steam_app_9924912")
+    _guardar("Pragmata", 30, "steam_app_9967153")
     ctx = _ctx("Elden Ring")
     ponte = Ponte(ctx.state)
 
@@ -277,13 +277,13 @@ def test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero(
         lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O rótulo do lado saiu: o campo diz «Pragmata», e escrever o nome grava o jogo da Steam.
 
-    Medido no ensaio (15/10/2026): o campo «Nome do jogo» mostrava `3357650` e mais nada.
+    Medido no ensaio (15/10/2026): o campo «Nome do jogo» mostrava `9967153` e mais nada.
     """
     from hefesto_dualsense4unix.profiles.simple_match import simple_extra
 
-    monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", lambda: {"3357650": "Pragmata"})
+    monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", lambda: {"9967153": "Pragmata"})
     monkeypatch.setattr(a10_perfis, "_ofertas_de_jogos", lambda *a, **k: [])
-    _guardar("Pragmata", 30, "steam_app_3357650")
+    _guardar("Pragmata", 30, "steam_app_9967153")
     _guardar("Meu jogo", 20)
     _aberto("Pragmata")
     ctx = _ctx("Pragmata")
@@ -292,7 +292,7 @@ def test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero(
     _aberto("Meu jogo")
     resposta = a10_perfis.editor_jogo(
         _ctx("Meu jogo"), {"valor": "pragmata", "evento": "change"}, Ponte({}))
-    assert simple_extra(loader.load_profile("Meu jogo").match) == "3357650"
+    assert simple_extra(loader.load_profile("Meu jogo").match) == "9967153"
     assert resposta["mesa"]["editor.jogo"] == "Pragmata"
     assert a10_perfis.pacote(_ctx("Meu jogo"))["editor.jogo"] == "Pragmata"
 
@@ -303,12 +303,12 @@ def test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo(lar: Path) -> Non
     Medido no ensaio (15/10/2026): com «Pragmata» e «Pragmata online», os dois `<li>` chegavam ao
     `<ol>` e o bloco seguia `display:none`, pois o `:has` ficou com a leitura do `<ol>` vazio.
     """
-    _guardar("Pragmata", 30, "steam_app_3357650")
+    _guardar("Pragmata", 30, "steam_app_9967153")
     _guardar("Navegar", 0)
     _aberto("Pragmata")
     ctx = _ctx("Pragmata")
     assert a10_perfis.pacote(ctx)["editor.ordem.ha"] == ""
-    _guardar("Pragmata online", 20, "steam_app_3357650")
+    _guardar("Pragmata online", 20, "steam_app_9967153")
     fora = a10_perfis.pacote(ctx)
     assert fora["editor.ordem.ha"] == "sim"
     assert fora["blocos"][a10_perfis.SELETOR_DA_ORDEM].count("<li") == 2
@@ -331,8 +331,8 @@ def test_arrastar_regrava_a_ordem_do_mesmo_jogo(lar: Path) -> None:
     Prova da D-1510-A-ORDEM-DOS-PERFIS-SE-ARRASTA.
     """
     for nome, prioridade in (("Souls A", 30), ("Souls B", 20), ("Souls C", 10)):
-        _guardar(nome, prioridade, "steam_app_1245620")
-    _guardar("Outro jogo", 99, "steam_app_3357650")
+        _guardar(nome, prioridade, "steam_app_9924912")
+    _guardar("Outro jogo", 99, "steam_app_9967153")
     _aberto("Souls A")
     ctx, ponte = _ctx("Souls A"), Ponte({})
 
@@ -350,7 +350,7 @@ def test_arrastar_regrava_a_ordem_do_mesmo_jogo(lar: Path) -> None:
 
 def test_arrastar_para_onde_ja_esta_nao_grava_nada(lar: Path) -> None:
     for nome, prioridade in (("Souls A", 30), ("Souls B", 20)):
-        _guardar(nome, prioridade, "steam_app_1245620")
+        _guardar(nome, prioridade, "steam_app_9924912")
     _aberto("Souls A")
     antes = {p.name: p.model_dump_json() for p in loader.load_all_profiles()}
     resposta = a10_perfis.editor_ordem(
@@ -367,7 +367,7 @@ def test_o_clique_solto_num_item_da_ordem_nao_e_arrasto(lar: Path, pedido: dict[
     """MORDIDA: sem a guarda da `posNova`, o clique solto num item dizia na tela «não entendi para
     onde o perfil foi arrastado» (medido no piloto em lar de mentira, 15/10/2026)."""
     for nome, prioridade in (("Souls A", 30), ("Souls B", 20)):
-        _guardar(nome, prioridade, "steam_app_1245620")
+        _guardar(nome, prioridade, "steam_app_9924912")
     _aberto("Souls A")
     antes = {p.name: p.model_dump_json() for p in loader.load_all_profiles()}
     assert a10_perfis.editor_ordem(_ctx("Souls A"), pedido, Ponte({})) is None
@@ -381,8 +381,8 @@ def test_o_clique_solto_num_item_da_ordem_nao_e_arrasto(lar: Path, pedido: dict[
 ])
 def test_arrastar_para_lugar_nenhum_recusa_sem_gravar(lar: Path, pedido: dict[str, str]) -> None:
     for nome, prioridade in (("Souls A", 30), ("Souls B", 20)):
-        _guardar(nome, prioridade, "steam_app_1245620")
-    _guardar("Outro jogo", 99, "steam_app_3357650")
+        _guardar(nome, prioridade, "steam_app_9924912")
+    _guardar("Outro jogo", 99, "steam_app_9967153")
     _aberto("Souls A")
     with pytest.raises(RuntimeError, match="Nada foi salvo"):
         a10_perfis.editor_ordem(_ctx("Souls A"), pedido, Ponte({}))

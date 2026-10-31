@@ -510,7 +510,7 @@ class TestOGanchoDoJogo:
             "XDG_STATE_HOME": str(tmp_path / "state"),
             "HOME": str(tmp_path),
             "HEFESTO_SYSFS": str(tmp_path / "sysfs"),
-            "SteamAppId": "1599660",
+            "SteamAppId": "9931993",
             **_busca_suja(sujo, str(mudos)),
         }
         proc = subprocess.run(
@@ -535,7 +535,7 @@ class TestOGanchoDoJogo:
         sessao = _da_sessao(tmp_path)
         for nome in ("DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS"):
             assert jogo[nome] == sessao[nome]
-        assert jogo["SteamAppId"] == "1599660"
+        assert jogo["SteamAppId"] == "9931993"
 
     def test_o_proton_nao_acha_o_python_do_terminal_depois_da_runtime(
         self, tmp_path: Path

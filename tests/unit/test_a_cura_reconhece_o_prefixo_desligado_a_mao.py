@@ -23,8 +23,8 @@ SUFIXO_DO_USUARIO = ".desligado"
 
 @pytest.fixture()
 def prefixo_do_usuario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`compatdata/1599660` no estado exato em que a máquina do usuário está."""
-    raiz = tmp_path / "compatdata" / "1599660"
+    """`compatdata/9931993` no estado exato em que a máquina do usuário está."""
+    raiz = tmp_path / "compatdata" / "9931993"
     (raiz / "pfx").mkdir(parents=True)
     (raiz / "pfx" / "system.reg").write_text(
         "\n".join(
@@ -67,7 +67,7 @@ def _manifestos_no_disco(raiz: Path) -> set[str]:
 def test_a_camada_renomeada_a_mao_esta_ligada_no_registro_e_ausente_no_disco(
     prefixo_do_usuario: Path,
 ) -> None:
-    prefixo = cv.prefixo_de_jogo(prefixo_do_usuario, appid="1599660")
+    prefixo = cv.prefixo_de_jogo(prefixo_do_usuario, appid="9931993")
     assert len(prefixo.camadas) == 2
     for camada in prefixo.camadas:
         assert camada.ligada is True, "o registro diz 00000000 = LIGADA"
@@ -90,7 +90,7 @@ def test_curar_desliga_as_duas_entradas_sem_tocar_nos_arquivos_do_usuario(
     }
 
     resultado = cv.aplicar_no_prefixo(
-        cv.prefixo_de_jogo(prefixo_do_usuario, appid="1599660"),
+        cv.prefixo_de_jogo(prefixo_do_usuario, appid="9931993"),
         forcar=True,
         home=tmp_path / "casa",
     )
@@ -119,12 +119,12 @@ def test_devolver_volta_byte_a_byte_e_os_arquivos_do_usuario_seguem_como_estavam
     arquivos = _manifestos_no_disco(prefixo_do_usuario)
 
     cv.aplicar_no_prefixo(
-        cv.prefixo_de_jogo(prefixo_do_usuario, appid="1599660"), forcar=True, home=casa
+        cv.prefixo_de_jogo(prefixo_do_usuario, appid="9931993"), forcar=True, home=casa
     )
     assert registro.read_bytes() != original, "a cura não escreveu — teste sem mordida"
 
     cv.aplicar_no_prefixo(
-        cv.prefixo_de_jogo(prefixo_do_usuario, appid="1599660"), religar=True, home=casa
+        cv.prefixo_de_jogo(prefixo_do_usuario, appid="9931993"), religar=True, home=casa
     )
     assert registro.read_bytes() == original
     assert _manifestos_no_disco(prefixo_do_usuario) == arquivos
@@ -136,13 +136,13 @@ def test_o_lancamento_seguinte_nao_desfaz_a_devolucao_do_usuario(
     """O usuário clicou em devolver; abrir o jogo de novo não pode desligar outra vez."""
     casa = tmp_path / "casa"
     cv.aplicar_no_prefixo(
-        cv.prefixo_de_jogo(prefixo_do_usuario, appid="1599660"), forcar=True, home=casa
+        cv.prefixo_de_jogo(prefixo_do_usuario, appid="9931993"), forcar=True, home=casa
     )
     cv.aplicar_no_prefixo(
-        cv.prefixo_de_jogo(prefixo_do_usuario, appid="1599660"), religar=True, home=casa
+        cv.prefixo_de_jogo(prefixo_do_usuario, appid="9931993"), religar=True, home=casa
     )
 
-    resultado = cv.curar_um_prefixo(prefixo_do_usuario, appid="1599660", home=casa)
+    resultado = cv.curar_um_prefixo(prefixo_do_usuario, appid="9931993", home=casa)
     assert resultado.desligadas == ()
     assert sorted(resultado.respeitadas) == [
         "EOSOverlayVkLayer-Win32.json",

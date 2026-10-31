@@ -58,7 +58,7 @@ def _registro(*extra: str) -> str:
 
 
 def _prefixo(tmp_path: Path, texto: str) -> Path:
-    compat = tmp_path / "compatdata" / "3357650"
+    compat = tmp_path / "compatdata" / "9967153"
     (compat / "pfx").mkdir(parents=True)
     (compat / "pfx" / "system.reg").write_text(texto, encoding="utf-8")
     return compat
@@ -452,7 +452,7 @@ def _lancar(
                 "HOME": str(home),
                 "XDG_RUNTIME_DIR": str(runtime),
                 "XDG_STATE_HOME": str(estado),
-                "SteamAppId": "3357650",
+                "SteamAppId": "9967153",
                 "STEAM_COMPAT_DATA_PATH": str(compat),
                 "HEFESTO_SYSFS": str(sysfs),
             },
@@ -593,7 +593,7 @@ def _lancar_com_o_pactl(
         "HOME": str(home),
         "XDG_RUNTIME_DIR": str(runtime),
         "XDG_STATE_HOME": str(estado),
-        "SteamAppId": "3357650",
+        "SteamAppId": "9967153",
         "STEAM_COMPAT_DATA_PATH": str(compat),
         "HEFESTO_SYSFS": str(sysfs),
         **(env_extra or {}),

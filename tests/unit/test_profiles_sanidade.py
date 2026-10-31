@@ -274,12 +274,12 @@ def test_empate_entre_enderecos_disjuntos_nao_e_achado() -> None:
             [
                 _perfil(
                     "gotg",
-                    match=MatchCriteria(window_class=["steam_app_1088850"]),
+                    match=MatchCriteria(window_class=["steam_app_9921777"]),
                     priority=80,
                 ),
                 _perfil(
                     "stray",
-                    match=MatchCriteria(window_class=["steam_app_1332010"]),
+                    match=MatchCriteria(window_class=["steam_app_9926640"]),
                     priority=80,
                 ),
             ]
@@ -299,12 +299,12 @@ def test_empate_com_a_mesma_janela_continua_sendo_achado() -> None:
             [
                 _perfil(
                     "pragmata",
-                    match=MatchCriteria(window_class=["steam_app_3357650"]),
+                    match=MatchCriteria(window_class=["steam_app_9967153"]),
                     priority=80,
                 ),
                 _perfil(
                     "pragmata2",
-                    match=MatchCriteria(window_class=["STEAM_APP_3357650"]),
+                    match=MatchCriteria(window_class=["STEAM_APP_9967153"]),
                     priority=80,
                 ),
             ]

@@ -50,37 +50,37 @@ def _linha(amb: cf.Ambiente) -> tuple[str, str]:
 
 
 def test_jogo_visto_com_wrapper_que_voltou_sem_ele_quebra_o_contrato(tmp_path: Path) -> None:
-    amb = _lar(tmp_path, {"620": "MANGOHUD=1 %command%"}, vistos=["620"])
+    amb = _lar(tmp_path, {"9900620": "MANGOHUD=1 %command%"}, vistos=["9900620"])
 
     tag, msg = _linha(amb)
 
     assert tag == "[WARN]"
-    assert "steam-localconfig" in msg and "620" in msg
+    assert "steam-localconfig" in msg and "9900620" in msg
     assert "grep -c hefesto-launch" in msg
 
 
 def test_jogo_que_ainda_tem_o_wrapper_e_ok(tmp_path: Path) -> None:
     com_wrapper = slo._vdf_escape(slo.WRAPPER_PREFIX + " %command%")
-    amb = _lar(tmp_path, {"620": com_wrapper}, vistos=["620"])
+    amb = _lar(tmp_path, {"9900620": com_wrapper}, vistos=["9900620"])
 
     assert _linha(amb)[0] == "[ OK ]"
 
 
 def test_jogo_nunca_visto_com_wrapper_nao_e_regressao(tmp_path: Path) -> None:
-    amb = _lar(tmp_path, {"620": "%command%"}, vistos=[])
+    amb = _lar(tmp_path, {"9900620": "%command%"}, vistos=[])
 
     assert _linha(amb)[0] == "[ OK ]"
 
 
 def test_jogo_que_o_usuario_recusou_nao_e_regressao(tmp_path: Path) -> None:
-    amb = _lar(tmp_path, {"620": "%command%"}, vistos=["620"])
-    slo.marcar_jogo_sem_wrapper(620, path=slo.sem_wrapper_path(amb.home / ".config"))
+    amb = _lar(tmp_path, {"9900620": "%command%"}, vistos=["9900620"])
+    slo.marcar_jogo_sem_wrapper(9900620, path=slo.sem_wrapper_path(amb.home / ".config"))
 
     assert _linha(amb)[0] == "[ OK ]"
 
 
 def test_leitura_sem_nenhum_app_nao_conclui_nada(tmp_path: Path) -> None:
-    amb = _lar(tmp_path, {}, vistos=["620"])
+    amb = _lar(tmp_path, {}, vistos=["9900620"])
 
     assert _linha(amb)[0] == "[ OK ]"
 
@@ -91,15 +91,15 @@ def test_linha_com_o_par_estendido_nao_e_regressao(tmp_path: Path) -> None:
     MORDIDA: volte a sonda a uma regra própria (``WRAPPER_PREFIX not in valor``) e este reprova.
     """
     estendida = 'SDL_GAMECONTROLLER_IGNORE_DEVICES="0x054c/0x0ce6,0x057e/0x2009" %command%'
-    amb = _lar(tmp_path, {"620": slo._vdf_escape(estendida)}, vistos=["620"])
+    amb = _lar(tmp_path, {"9900620": slo._vdf_escape(estendida)}, vistos=["9900620"])
 
     assert _linha(amb)[0] == "[ OK ]"
 
 
 def test_a_recusa_mora_onde_o_xdg_config_home_diz(tmp_path: Path) -> None:
-    amb = _lar(tmp_path, {"620": "%command%"}, vistos=["620"])
+    amb = _lar(tmp_path, {"9900620": "%command%"}, vistos=["9900620"])
     config = tmp_path / "config-noutro-lugar"
-    slo.marcar_jogo_sem_wrapper(620, path=slo.sem_wrapper_path(config))
+    slo.marcar_jogo_sem_wrapper(9900620, path=slo.sem_wrapper_path(config))
     amb = cf.Ambiente(
         rodar=amb.rodar, home=amb.home, env={"XDG_CONFIG_HOME": str(config)}, raiz=amb.raiz
     )
@@ -108,9 +108,9 @@ def test_a_recusa_mora_onde_o_xdg_config_home_diz(tmp_path: Path) -> None:
 
 
 def test_o_registro_mora_onde_o_xdg_state_home_diz(tmp_path: Path) -> None:
-    amb = _lar(tmp_path, {"620": "%command%"}, vistos=[])
+    amb = _lar(tmp_path, {"9900620": "%command%"}, vistos=[])
     estado = tmp_path / "estado-noutro-lugar"
-    sen.gravar_registro(["620"], path=estado / "hefesto-dualsense4unix" / sen.REGISTRO_BASENAME)
+    sen.gravar_registro(["9900620"], path=estado / "hefesto-dualsense4unix" / sen.REGISTRO_BASENAME)
     amb = cf.Ambiente(
         rodar=amb.rodar, home=amb.home, env={"XDG_STATE_HOME": str(estado)}, raiz=amb.raiz
     )
@@ -118,4 +118,4 @@ def test_o_registro_mora_onde_o_xdg_state_home_diz(tmp_path: Path) -> None:
     tag, msg = _linha(amb)
 
     assert tag == "[WARN]"
-    assert "620" in msg
+    assert "9900620" in msg

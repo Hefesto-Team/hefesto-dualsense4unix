@@ -25,11 +25,11 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     simple_extra,
 )
 
-APPID = "3357650"
+APPID = "9967153"
 WM_JOGO = f"steam_app_{APPID}"
 EXE_DO_JOGO = "PRAGMATA.exe"
 
-OUTRO_APPID = "1599660"
+OUTRO_APPID = "9931993"
 
 CABECALHO = (
     "# hefesto-dualsense4unix — allowlist do Steam Input per-app\n"

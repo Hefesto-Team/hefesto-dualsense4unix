@@ -46,38 +46,38 @@ def _acoes(mudancas: dict[str, dict[str, str]]) -> dict[str, str]:
 class TestOPinoVelhoNaoEEscolhaDoUsuario:
     def test_a_entrada_do_pino_nosso_migra(self) -> None:
         """A MORDIDA: sem `pinos_nossos`, isto volta a ser `preservado`."""
-        texto = _config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO})
+        texto = _config_vdf({"0": PINO_VELHO, "9931993": PINO_VELHO})
 
         novo, mudancas = pp.build_compat_tool_mapping(
-            texto, tool_name=PINO_NOVO, appids=["1599660"],
+            texto, tool_name=PINO_NOVO, appids=["9931993"],
             pinos_nossos=[PINO_VELHO],
         )
 
-        assert _acoes(mudancas)["1599660"] == "migrado"
+        assert _acoes(mudancas)["9931993"] == "migrado"
         assert f'"name"\t\t"{PINO_NOVO}"' in novo
         assert PINO_VELHO not in novo
 
     def test_a_escolha_do_usuario_continua_preservada(self) -> None:
         """O dano de 14/08 segue impossível: só o que é NOSSO migra."""
-        texto = _config_vdf({"0": PINO_VELHO, "2497900": ESCOLHA_DO_USUARIO})
+        texto = _config_vdf({"0": PINO_VELHO, "9949958": ESCOLHA_DO_USUARIO})
 
         novo, mudancas = pp.build_compat_tool_mapping(
-            texto, tool_name=PINO_NOVO, appids=["2497900"],
+            texto, tool_name=PINO_NOVO, appids=["9949958"],
             pinos_nossos=[PINO_VELHO],
         )
 
-        assert _acoes(mudancas)["2497900"] == "preservado"
+        assert _acoes(mudancas)["9949958"] == "preservado"
         assert ESCOLHA_DO_USUARIO in novo
 
     def test_sem_historico_nada_migra(self) -> None:
         """Sem saber o que é nosso, o produto não adivinha — preserva."""
-        texto = _config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO})
+        texto = _config_vdf({"0": PINO_VELHO, "9931993": PINO_VELHO})
 
         _novo, mudancas = pp.build_compat_tool_mapping(
-            texto, tool_name=PINO_NOVO, appids=["1599660"],
+            texto, tool_name=PINO_NOVO, appids=["9931993"],
         )
 
-        assert _acoes(mudancas)["1599660"] == "preservado"
+        assert _acoes(mudancas)["9931993"] == "preservado"
 
     def test_o_global_muda_como_sempre_mudou(self) -> None:
         """A entrada `"0"` nunca esteve sob a guarda: é a função do recurso."""
@@ -93,11 +93,11 @@ class TestOPinoVelhoNaoEEscolhaDoUsuario:
 class TestOHistoricoDePinosCresceSozinho:
     def test_o_lock_grava_o_pino_de_hoje_no_historico(self, tmp_path: Path) -> None:
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO}))
+        vdf.write_text(_config_vdf({"0": PINO_VELHO, "9931993": PINO_VELHO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
@@ -108,22 +108,22 @@ class TestOHistoricoDePinosCresceSozinho:
     def test_a_segunda_subida_nao_precisa_de_semente(self, tmp_path: Path) -> None:
         """É isto que impede o defeito de 16/09 de voltar na próxima subida."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO}))
+        vdf.write_text(_config_vdf({"0": PINO_VELHO, "9931993": PINO_VELHO}))
         estado = tmp_path / "lock.json"
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
         mais_novo = "GE-Proton12-1-x86_64"
         resultado = pp.lock_games_to_pinned_proton(
-            tool_name=mais_novo, appids=["1599660"], config_vdf=vdf,
+            tool_name=mais_novo, appids=["9931993"], config_vdf=vdf,
             state_path=estado,
         )
 
         mudancas = resultado["changes"]
         assert isinstance(mudancas, dict)
-        assert _acoes(mudancas)["1599660"] == "migrado"
+        assert _acoes(mudancas)["9931993"] == "migrado"
         assert f'"name"\t\t"{mais_novo}"' in vdf.read_text(encoding="utf-8")
 
     def test_registro_antigo_sem_a_chave_conta_o_tool_name(
@@ -133,7 +133,7 @@ class TestOHistoricoDePinosCresceSozinho:
         estado = tmp_path / "lock.json"
         estado.write_text(json.dumps({
             "tool_name": PINO_VELHO,
-            "changes": {"1599660": {"action": "added", "previous_name": ""}},
+            "changes": {"9931993": {"action": "added", "previous_name": ""}},
         }), encoding="utf-8")
 
         assert PINO_VELHO in pp._pinos_ja_usados(estado)
@@ -152,12 +152,12 @@ class TestOsBaldesSaoContadosSeparados:
         vdf = tmp_path / "config.vdf"
         vdf.write_text(_config_vdf({
             "0": PINO_VELHO,
-            "1599660": PINO_VELHO,
-            "2497900": ESCOLHA_DO_USUARIO,
+            "9931993": PINO_VELHO,
+            "9949958": ESCOLHA_DO_USUARIO,
         }))
         steamapps = pp.default_steam_root(tmp_path) / "steamapps"
         steamapps.mkdir(parents=True, exist_ok=True)
-        for appid, nome in (("1599660", "Sackboy"), ("2497900", "DON'T SCREAM")):
+        for appid, nome in (("9931993", "Sackboy"), ("9949958", "DON'T SCREAM")):
             (steamapps / f"appmanifest_{appid}.acf").write_text(
                 f'"AppState"\n{{\n\t"appid"\t\t"{appid}"\n\t"name"\t\t"{nome}"\n}}\n',
                 encoding="utf-8",
@@ -185,7 +185,7 @@ class TestORegistroDizOQueAconteceu:
         vdf = tmp_path / "config.vdf"
         estado = tmp_path / "lock.json"
         pp.lock_games_to_pinned_proton(
-            tool_name=tool, appids=["1599660"], config_vdf=vdf,
+            tool_name=tool, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=migrar_de,
         )
         return estado
@@ -193,37 +193,37 @@ class TestORegistroDizOQueAconteceu:
     def test_a_acao_de_agora_vence_a_da_corrida_anterior(self, tmp_path: Path) -> None:
         """A MORDIDA: com a fusão por entrada, isto volta a dizer `preservado`."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO}))
+        vdf.write_text(_config_vdf({"0": PINO_VELHO, "9931993": PINO_VELHO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9931993"], config_vdf=vdf,
             state_path=estado,
         )
-        assert json.loads(estado.read_text())["changes"]["1599660"]["action"] == (
+        assert json.loads(estado.read_text())["changes"]["9931993"]["action"] == (
             "preservado"
         )
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
-        gravado = json.loads(estado.read_text())["changes"]["1599660"]
+        gravado = json.loads(estado.read_text())["changes"]["9931993"]
         assert gravado["action"] == "migrado"
         assert f'"name"\t\t"{PINO_NOVO}"' in vdf.read_text(encoding="utf-8")
 
     def test_o_veio_de_desfaz_uma_subida(self, tmp_path: Path) -> None:
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO_VELHO, "1599660": PINO_VELHO}))
+        vdf.write_text(_config_vdf({"0": PINO_VELHO, "9931993": PINO_VELHO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
-        assert json.loads(estado.read_text())["changes"]["1599660"]["veio_de"] == (
+        assert json.loads(estado.read_text())["changes"]["9931993"]["veio_de"] == (
             PINO_VELHO
         )
 
@@ -232,23 +232,23 @@ class TestORegistroDizOQueAconteceu:
     ) -> None:
         """A MORDIDA: exigir `tool_name` igual apaga isto a cada subida."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": ESCOLHA_DO_USUARIO, "1599660": ESCOLHA_DO_USUARIO}))
+        vdf.write_text(_config_vdf({"0": ESCOLHA_DO_USUARIO, "9931993": ESCOLHA_DO_USUARIO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_VELHO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_VELHO, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=[ESCOLHA_DO_USUARIO],
         )
-        assert json.loads(estado.read_text())["changes"]["1599660"][
+        assert json.loads(estado.read_text())["changes"]["9931993"][
             "previous_name"
         ] == ESCOLHA_DO_USUARIO
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["1599660"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9931993"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
-        gravado = json.loads(estado.read_text())["changes"]["1599660"]
+        gravado = json.loads(estado.read_text())["changes"]["9931993"]
         assert gravado["previous_name"] == ESCOLHA_DO_USUARIO
         assert gravado["veio_de"] == PINO_VELHO
 
@@ -257,14 +257,14 @@ class TestORegistroDizOQueAconteceu:
     ) -> None:
         """Sem `veio_de`, quem lê sabe que esta corrida não mexeu no appid."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO_VELHO, "2497900": ESCOLHA_DO_USUARIO}))
+        vdf.write_text(_config_vdf({"0": PINO_VELHO, "9949958": ESCOLHA_DO_USUARIO}))
         estado = tmp_path / "lock.json"
 
         pp.lock_games_to_pinned_proton(
-            tool_name=PINO_NOVO, appids=["2497900"], config_vdf=vdf,
+            tool_name=PINO_NOVO, appids=["9949958"], config_vdf=vdf,
             state_path=estado, migrar_de=[PINO_VELHO],
         )
 
-        gravado = json.loads(estado.read_text())["changes"]["2497900"]
+        gravado = json.loads(estado.read_text())["changes"]["9949958"]
         assert gravado["action"] == "preservado"
         assert "veio_de" not in gravado

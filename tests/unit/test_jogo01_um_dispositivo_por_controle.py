@@ -1,6 +1,6 @@
 """JOGO-01 — um controle físico produz exatamente UM dispositivo de jogo.
 
-Medido ao vivo em 25/07 com o Mullet Mad Jack (`steam_app_2111190`, o único
+Medido ao vivo em 25/07 com o Mullet Mad Jack (`steam_app_9942223`, o único
 appid da allowlist do Steam Input desta máquina) e UM DualSense no cabo:
 
     /dev/input/js0  ->  Hefesto Virtual DualSense P1   (o nosso gamepad virtual)
@@ -40,7 +40,7 @@ import pytest
 import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 from hefesto_dualsense4unix.daemon import launch_env as le
 
-MMJ = 2111190
+MMJ = 9942223
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 
 

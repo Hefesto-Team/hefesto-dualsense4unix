@@ -37,7 +37,7 @@ def _mesa_do_usuario() -> list[Profile]:
         _catch_all("meu_perfil", 1),
         _catch_all("Pragmata", 5),
         _perfil(
-            "Pragmata2", 85, MatchCriteria(window_class=["steam_app_3357650"])
+            "Pragmata2", 85, MatchCriteria(window_class=["steam_app_9967153"])
         ),
         _catch_all("viajante", 0),
     ]

@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
 )
 
 PRAGMATA = MatchCriteria(
-    window_class=["steam_app_3357650"], process_name=["PRAGMATA.exe"]
+    window_class=["steam_app_9967153"], process_name=["PRAGMATA.exe"]
 )
 
 
@@ -40,7 +40,7 @@ def test_a_frase_nao_manda_apagar_nada() -> None:
 
 def test_sem_campo_invisivel_a_linha_nao_existe() -> None:
     """O caso comum não pode ganhar um aviso permanente."""
-    assert exigencia_invisivel(MatchCriteria(window_class=["steam_app_1599660"])) == ""
+    assert exigencia_invisivel(MatchCriteria(window_class=["steam_app_9931993"])) == ""
 
 
 def test_fora_do_jogo_da_steam_a_pagina_simples_nao_esconde_nada() -> None:
@@ -54,7 +54,7 @@ def test_fora_do_jogo_da_steam_a_pagina_simples_nao_esconde_nada() -> None:
 def test_com_regex_de_titulo_o_editor_nao_abre_como_jogo_da_steam() -> None:
     """A fronteira exata do aviso, e a fronteira foi MEDIDA, não suposta."""
     match = MatchCriteria(
-        window_class=["steam_app_3357650"], window_title_regex="PRAGMATA"
+        window_class=["steam_app_9967153"], window_title_regex="PRAGMATA"
     )
     assert exigencia_invisivel(match) == ""
 
@@ -63,7 +63,7 @@ def test_o_appid_com_process_name_e_o_unico_caso_de_hoje() -> None:
     """Uma frase só, mesmo com mais de um valor invisível."""
     texto = exigencia_invisivel(
         MatchCriteria(
-            window_class=["steam_app_3357650"],
+            window_class=["steam_app_9967153"],
             process_name=["PRAGMATA.exe", "Pragmata-Win64-Shipping.exe"],
         )
     )
@@ -91,9 +91,9 @@ def test_salvar_pela_pagina_simples_continua_preservando_o_invisivel() -> None:
 
     Morde ao fazer `from_simple_choice` ignorar a `regra_do_disco`.
     """
-    novo = from_simple_choice("steam_game", "3357650", regra_do_disco=PRAGMATA)
+    novo = from_simple_choice("steam_game", "9967153", regra_do_disco=PRAGMATA)
     assert isinstance(novo, MatchCriteria)
-    assert novo.window_class == ["steam_app_3357650"]
+    assert novo.window_class == ["steam_app_9967153"]
     assert novo.process_name == ["PRAGMATA.exe"], (
         "salvar pela página simples apagou o campo que o usuário não vê"
     )

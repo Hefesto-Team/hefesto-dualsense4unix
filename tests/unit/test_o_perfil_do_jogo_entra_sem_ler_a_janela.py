@@ -32,7 +32,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID = 2497900
+APPID = 9949958
 CLASSE = f"steam_app_{APPID}"
 RAIZ = Path(__file__).resolve().parents[2]
 

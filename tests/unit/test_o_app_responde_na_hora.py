@@ -658,7 +658,7 @@ class TestOVigiaEsperaAEscritaEmVoo:
 
         monkeypatch.setattr(cura, "curar_todas_as_estradas", lambda: {})
         (tmp_path / "last_run").write_text(
-            f"appid=1599660\nepoch={int(time.time())}\npid={os.getpid()}\n",
+            f"appid=9931993\nepoch={int(time.time())}\npid={os.getpid()}\n",
             encoding="utf-8")
         jogadores: dict[str, Any] = {}
         daemon = SimpleNamespace(
@@ -822,7 +822,7 @@ class TestAPerguntaAbandonadaNaoRoda:
 
         servidor._handlers["daemon.state_full"] = pergunta
         servidor._handlers["teste.muda"] = muda
-        servidor._wrapper_marker_cached = lambda: (1599660, int(time.time()))
+        servidor._wrapper_marker_cached = lambda: (9931993, int(time.time()))
         servidor._armar_launch = armar
         with _NoFio(servidor) as no_fio:
             no_fio.laco.call_soon_threadsafe(time.sleep, 0.5)

@@ -120,7 +120,7 @@ async def test_sync_game_signal_dispara_replay_na_volta_de_daemon_para_game() ->
     await daemon._sync_game_signal()
     assert daemon.display_authority == "daemon"
 
-    daemon.store.record_window_detect_read("xlib", "steam_app_1599660")
+    daemon.store.record_window_detect_read("xlib", "steam_app_9931993")
     await daemon._sync_game_signal()
 
     assert daemon.display_authority == "game"
@@ -174,7 +174,7 @@ def test_gather_game_signal_inputs_correlaciona_last_exit_por_pid(
     outro_pid = meu_pid + 1
     agora = int(time.time())
     (launch_dir / "last_run").write_text(
-        f"appid=1599660\nepoch={agora - 10}\npid={meu_pid}\n", encoding="utf-8"
+        f"appid=9931993\nepoch={agora - 10}\npid={meu_pid}\n", encoding="utf-8"
     )
     (launch_dir / "last_exit").write_text(
         f"epoch={agora - 5}\npid={outro_pid}\n", encoding="utf-8"

@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.integrations.jogos_locais import (
     jogos_da_biblioteca_steam,
 )
 
-_SACKBOY = "1599660"
+_SACKBOY = "9931993"
 
 _LAYOUTS = {
     "nativa": ".steam/steam",
@@ -96,9 +96,9 @@ class TestOsQuatroLayouts:
     ) -> None:
         """Flatpak + nativa convivem — quem migra de uma para a outra tem as duas."""
         _casa_com_steam(home_isolado, _LAYOUTS["nativa"])
-        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"], appid="1000")
+        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"], appid="9901000")
         assert len(slo.raizes_de_jogos(home_isolado)) == 2
-        assert EmulationActionsMixin._steam_input_appids_ligados() == [_SACKBOY, "1000"]
+        assert EmulationActionsMixin._steam_input_appids_ligados() == [_SACKBOY, "9901000"]
 
 
 class TestAllowlistNoMesmoArquivo:
@@ -116,8 +116,8 @@ class TestAllowlistNoMesmoArquivo:
     ) -> None:
         monkeypatch.setenv("HOME", str(tmp_path / "casa"))
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
-        slo.add_appid_to_steam_input_allowlist(2111190)
-        assert "2111190" in sd.steam_input_allowlist()
+        slo.add_appid_to_steam_input_allowlist(9942223)
+        assert "9942223" in sd.steam_input_allowlist()
 
 
 class TestReabrirASteamSemBinario:
@@ -209,12 +209,12 @@ class TestOsAtalhosSeguemOXdg:
         )
 
         exports = tmp_path / "flatpak/exports/share"
-        self._atalho(exports / "applications", "851100", "Jogo da Flatpak")
+        self._atalho(exports / "applications", "9917022", "Jogo da Flatpak")
         monkeypatch.setenv("HOME", str(tmp_path / "casa"))
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "vazio"))
         monkeypatch.setenv("XDG_DATA_DIRS", f"{exports}:{tmp_path / 'nao-existe'}")
         achados = [(j.appid, j.nome) for j in jogos_dos_atalhos_desktop()]
-        assert ("851100", "Jogo da Flatpak") in achados
+        assert ("9917022", "Jogo da Flatpak") in achados
 
     def test_o_xdg_data_home_manda_no_diretorio_da_pessoa(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -330,7 +330,7 @@ class TestSteamRootOuRecusa:
     def test_flatpak_e_nativa_juntas_prefere_a_nativa(self, home_isolado: Path) -> None:
         """Quem tem as duas pode travar na nativa -- não é recusa."""
         raiz = _casa_com_steam(home_isolado, _LAYOUTS["nativa"])
-        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"], appid="1000")
+        _casa_com_steam(home_isolado, _LAYOUTS["flatpak"], appid="9901000")
         resultado = proton_pin.steam_root_ou_recusa(home_isolado)
         assert resultado.raiz == raiz
         assert resultado.motivo is None

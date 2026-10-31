@@ -246,7 +246,7 @@ class TestR02CatchAllNaoReverte:
         daemon.config.gamepad_emulation_enabled = True
         daemon._gamepad_device = object()
         calls.gamepad.clear()
-        daemon.store.record_window_detect_read("teste", "steam_app_2111190")
+        daemon.store.record_window_detect_read("teste", "steam_app_9942223")
 
         daemon.apply_profile_mode(None, profile=_profile(None))
 

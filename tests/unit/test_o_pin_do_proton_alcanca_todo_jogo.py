@@ -97,14 +97,14 @@ def test_o_minimo_e_o_11_7_e_o_conf_do_produto_o_cumpre() -> None:
 def test_steam_todo_jogo_e_o_atalho_de_fora_vao_ao_pino(lar: Path, conf: dict[str, str]) -> None:
     raiz = _steam_de_verdade(lar)
     _pino_na(raiz)
-    _jogo(raiz, "2497900")
+    _jogo(raiz, "9949958")
     vdf = raiz / "config" / "config.vdf"
-    vdf.write_text(_config_vdf({"2497900": "proton_9", "3456789012": VELHO}), encoding="utf-8")
+    vdf.write_text(_config_vdf({"9949958": "proton_9", "3456789012": VELHO}), encoding="utf-8")
     pp.lock_proton_for_all_games(conf=conf, home=lar, config_vdf=vdf,
                                  state_path=lar / "lock.json", todos=True,
                                  compat_dir=raiz / "compatibilitytools.d")
     mapa = pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
-    assert mapa == {"0": PINO, "2497900": PINO, "3456789012": PINO}, mapa
+    assert mapa == {"0": PINO, "9949958": PINO, "3456789012": PINO}, mapa
 
 
 def test_o_heroic_nativo_vai_ao_pino_mesmo_com_o_proton_proprio(

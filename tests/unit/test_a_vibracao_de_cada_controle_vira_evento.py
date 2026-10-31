@@ -286,7 +286,7 @@ def test_o_jogo_que_fecha_vira_evento_e_cala_a_batida(
     mesa: _Mesa, relogio: _Relogio
 ) -> None:
     bus = mesa.daemon.bus
-    appid: list[int | None] = [730]
+    appid: list[int | None] = [9900730]
 
     class _Daemon(SimpleNamespace):
         @property
@@ -307,7 +307,7 @@ def test_o_jogo_que_fecha_vira_evento_e_cala_a_batida(
     anunciador.ver()
 
     dito = fechou.tudo()
-    assert len(dito) == 1 and dito[0]["appid"] == 730
+    assert len(dito) == 1 and dito[0]["appid"] == 9900730
     zero = vibracao.tudo()
     assert zero and zero[-1]["efetivo"] == [0, 0], "quem vibrava não recebeu o zero"
     relogio.avancar(1.0)
@@ -321,7 +321,7 @@ def test_quem_vibrava_recebe_o_zero_antes_do_jogo_fechou(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bus = mesa.daemon.bus
-    appid: list[int | None] = [730]
+    appid: list[int | None] = [9900730]
 
     class _Daemon(SimpleNamespace):
         @property

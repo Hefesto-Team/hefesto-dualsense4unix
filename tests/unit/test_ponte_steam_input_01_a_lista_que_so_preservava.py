@@ -21,9 +21,9 @@ from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import (
     curar_o_que_e_automatico,
 )
 
-_DONT_SCREAM = "2497900"
-_SACKBOY = "1599660"
-_MMJ = "2111190"
+_DONT_SCREAM = "9949958"
+_SACKBOY = "9931993"
+_MMJ = "9942223"
 
 
 def _vdf(

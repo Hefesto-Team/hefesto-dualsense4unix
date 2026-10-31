@@ -31,8 +31,8 @@ from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 FREESTYLE = loader.NOME_DO_PADRAO
 AVATAR = "Avatar Legends"
-JANELA_DO_AVATAR = "steam_app_2424420"
-APPID_DO_JOGO = 3357650
+JANELA_DO_AVATAR = "steam_app_9948488"
+APPID_DO_JOGO = 9967153
 JOGO = "PRAGMATA"
 JANELA_DO_JOGO = f"steam_app_{APPID_DO_JOGO}"
 NAVEGADOR = "Navegador"
@@ -355,7 +355,7 @@ def test_o_perfil_de_jogo_que_a_mao_tirou_sem_o_jogo_aberto_nao_segura_nada(
             vigia._tick(navegador, t)
         assert store.active_profile == JOGO, "a troca à mão caiu pela janela do navegador"
         assert _soltas(linhas) == [], "a trava soltou sem evento"
-        vivo[0] = 2424420
+        vivo[0] = 9948488
         for t in (601.0, 601.5, 602.0):
             relogio[0] = 1000.0 + t
             vigia._tick(avatar, t)

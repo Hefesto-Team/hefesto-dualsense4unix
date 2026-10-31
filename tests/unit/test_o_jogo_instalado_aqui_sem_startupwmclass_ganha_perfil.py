@@ -204,7 +204,7 @@ def test_a_janela_do_jogo_instalado_aqui_troca_para_o_perfil_dele(
     loader.save_profile(
         Profile(
             name="Avatar Legends",
-            match=MatchCriteria(window_class=["steam_app_2111190"]),
+            match=MatchCriteria(window_class=["steam_app_9942223"]),
             priority=80,
         ),
         origem="teste",
@@ -214,7 +214,7 @@ def test_a_janela_do_jogo_instalado_aqui_troca_para_o_perfil_dele(
     fc = FakeController()
     fc.connect()
     gerente = ProfileManager(controller=fc)
-    assert gerente.select_for_window({"wm_class": "steam_app_2111190"}).name == (
+    assert gerente.select_for_window({"wm_class": "steam_app_9942223"}).name == (
         "Avatar Legends"
     )
     escolhido = gerente.select_for_window({"wm_class": "FORJA"})

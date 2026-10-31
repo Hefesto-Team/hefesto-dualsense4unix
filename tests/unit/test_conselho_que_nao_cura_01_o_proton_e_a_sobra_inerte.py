@@ -73,7 +73,7 @@ def _lar_do_proton(
     elif manifesto != "ausente":  # pragma: no cover
         raise ValueError(manifesto)
 
-    for appid, nome in (("2497900", "DON'T SCREAM"), ("316790", "Grim Fandango")):
+    for appid, nome in (("9949958", "DON'T SCREAM"), ("9906335", "Grim Fandango")):
         (raiz / "steamapps" / f"appmanifest_{appid}.acf").write_text(
             f'"AppState"\n{{\n\t"appid"\t\t"{appid}"\n\t"name"\t\t"{nome}"\n}}\n',
             encoding="utf-8",
@@ -168,9 +168,9 @@ class TestOJogoForaDoPinTemNomeERazao:
         lar = _lar_do_proton(
             tmp_path,
             manifesto="ok",
-            por_jogo={"2497900": "proton_11"},
+            por_jogo={"9949958": "proton_11"},
             registro={
-                "2497900": {"action": "preservado", "previous_name": "proton_11"}
+                "9949958": {"action": "preservado", "previous_name": "proton_11"}
             },
         )
         saida = _rodar("check_proton_pin", lar)
@@ -188,7 +188,7 @@ class TestOJogoForaDoPinTemNomeERazao:
     ) -> None:
         """O NEGATIVO: sem prova de que foi escolha do usuário, o alarme fica."""
         lar = _lar_do_proton(
-            tmp_path, manifesto="ok", por_jogo={"2497900": "proton_11"}, registro={}
+            tmp_path, manifesto="ok", por_jogo={"9949958": "proton_11"}, registro={}
         )
         saida = _rodar("check_proton_pin", lar)
         rotulo, linha = _mensagem(saida, "em outro Proton")
@@ -240,8 +240,8 @@ class TestASobraForaDaArvoreViva:
         """O retrato do vdf medido: o órfão carrega a linha VKD3D, não a nossa."""
         lar = _lar_do_wrapper(
             tmp_path,
-            viva={"316790": f"{WRAPPER} %command%"},
-            solta={"413080": "VKD3D_CONFIG=no_upload_hvv %command%"},
+            viva={"9906335": f"{WRAPPER} %command%"},
+            solta={"9908261": "VKD3D_CONFIG=no_upload_hvv %command%"},
         )
         saida = _rodar("check_arvore_canonica_do_wrapper", lar)
         rotulo, linha = _mensagem(saida, "sobra inerte")
@@ -255,8 +255,8 @@ class TestASobraForaDaArvoreViva:
         """O NEGATIVO: lixo nosso de verdade tem de continuar aparecendo."""
         lar = _lar_do_wrapper(
             tmp_path,
-            viva={"316790": f"{WRAPPER} %command%"},
-            solta={"413080": f"{WRAPPER} %command%"},
+            viva={"9906335": f"{WRAPPER} %command%"},
+            solta={"9908261": f"{WRAPPER} %command%"},
         )
         saida = _rodar("check_arvore_canonica_do_wrapper", lar)
         rotulo, linha = _mensagem(saida, "NOSSAS")
@@ -265,7 +265,7 @@ class TestASobraForaDaArvoreViva:
 
     def test_a_arvore_viva_intacta_continua_passando(self, tmp_path: Path) -> None:
         lar = _lar_do_wrapper(
-            tmp_path, viva={"316790": f"{WRAPPER} %command%"}, solta={}
+            tmp_path, viva={"9906335": f"{WRAPPER} %command%"}, solta={}
         )
         saida = _rodar("check_arvore_canonica_do_wrapper", lar)
         assert "chamam o wrapper" in saida, saida

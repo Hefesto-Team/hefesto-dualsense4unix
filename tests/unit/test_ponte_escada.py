@@ -309,7 +309,7 @@ class TestAPonteSaiDoPerfilSemVocabularioNovo:
 
         perfil = Profile(
             name="sackboy",
-            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            match=MatchCriteria(window_class=["steam_app_9931993"]),
             mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense"),
         )
         assert pe.ponte_do_perfil(perfil, na_allowlist=False) == pe.ESCADA[0].ponte

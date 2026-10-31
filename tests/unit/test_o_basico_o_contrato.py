@@ -61,7 +61,7 @@ UNIQS = tuple(f"02:00:1a:4b:5c:0{n}" for n in range(1, 5))
 
 DESCONHECIDO = ("02", "00", "1a", "6d", "7e", "9f")
 
-APPID_DO_JOGO = 3050
+APPID_DO_JOGO = 9903050
 
 
 def _carregar(nome: str, caminho: Path) -> ModuleType:
@@ -407,7 +407,7 @@ def test_regua_2_o_motivo_dito_explica_e_nao_absolve(ob: ModuleType, tmp_path: P
         linha_do_diario(1.0, "daemon_starting"),
         linha_do_diario(
             30.0,
-            "vpad_recriacao_bloqueada_por_jogo motivo='troca_de_caminho:dualsense' appid=3050",
+            "vpad_recriacao_bloqueada_por_jogo motivo='troca_de_caminho:dualsense' appid=9903050",
         ),
     ]
     maquina = fazer_maquina(
@@ -1070,8 +1070,8 @@ def test_o_reinicio_assenta_quando_a_mesa_do_comeco_volta_em_todo_modo(
 
 def _a_steam_apaga_o_wrapper(argv: Sequence[str], maquina: Any) -> None:
     if len(argv) > 1 and Path(argv[1]).name == "quem_e_quem.py":
-        maquina.steam["steam.wrapper.com"] = ["1599660"]
-        maquina.steam["steam.wrapper.faltantes"] = ["3357650"]
+        maquina.steam["steam.wrapper.com"] = ["9931993"]
+        maquina.steam["steam.wrapper.faltantes"] = ["9967153"]
 
 
 def test_a_volta_ve_o_wrapper_que_a_steam_apagou_no_meio(ob: ModuleType, tmp_path: Path) -> None:
@@ -1080,7 +1080,7 @@ def test_a_volta_ve_o_wrapper_que_a_steam_apagou_no_meio(ob: ModuleType, tmp_pat
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
         ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado)},
-        steam={"steam.wrapper.com": ["1599660", "3357650"], "steam.wrapper.faltantes": []},
+        steam={"steam.wrapper.com": ["9931993", "9967153"], "steam.wrapper.faltantes": []},
         ao_rodar=_a_steam_apaga_o_wrapper,
     )
     saida = tmp_path / "saida"

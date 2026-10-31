@@ -5,7 +5,7 @@ uma máscara DIFERENTE da atual, esses backends descrevem outro flavor e não
 dizem nada sobre o que vai existir quando o perfil ativar.
 
 Caso medido na configuração do usuário: máscara global `xbox` (vpad uinput) e o
-Sackboy com perfil `dualsense`. O `steam_app_1599660.env` saía SEM
+Sackboy com perfil `dualsense`. O `steam_app_9931993.env` saía SEM
 `SDL_GAMECONTROLLER_IGNORE_DEVICES` e SEM `PROTON_DISABLE_HIDRAW` — porque
 "uinput" não autoriza o dedup. O arquivo por-appid ficava estritamente PIOR que
 o `default.env`, e o jogo abria vendo o DualSense físico junto com o virtual.
@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 def _perfil(flavor: str) -> Profile:
     return Profile(
         name="sackboy_nativo",
-        match=MatchCriteria(window_class=["steam_app_1599660"]),
+        match=MatchCriteria(window_class=["steam_app_9931993"]),
         priority=80,
         mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor),
     )

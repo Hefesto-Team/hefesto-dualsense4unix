@@ -558,8 +558,8 @@ def test_do_acf_ao_perfil_sem_dubles(tmp_path: Path) -> None:
         [
             ("910001", "Ilha de Vidro"),
             ("910002", "Corrida Sem Fim"),
-            ("2805730", "Proton Experimental"),
-            ("1391110", "Steam Linux Runtime 3.0 (sniper)"),
+            ("9956114", "Proton Experimental"),
+            ("9927822", "Steam Linux Runtime 3.0 (sniper)"),
         ],
     )
     destino = tmp_path / "perfis"

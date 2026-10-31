@@ -74,11 +74,11 @@ class TestMigracao:
 
     def test_editado_pela_usuaria_nao_e_tocado(self, tmp_path: Path) -> None:
         editado = dict(FABRICA_VELHO)
-        editado["match"] = {"type": "criteria", "window_class": ["steam_app_1599660"]}
+        editado["match"] = {"type": "criteria", "window_class": ["steam_app_9931993"]}
         dest, src = _monta(tmp_path, editado)
         assert _roda(dest, src) == []
         d = json.loads((dest / "coop_local.json").read_text(encoding="utf-8"))
-        assert d["match"]["window_class"] == ["steam_app_1599660"]
+        assert d["match"]["window_class"] == ["steam_app_9931993"]
 
     def test_match_any_explicito_nao_e_estado_de_fabrica(self, tmp_path: Path) -> None:
         outro = dict(FABRICA_VELHO)

@@ -48,7 +48,7 @@ def test_o_stem_diferente_entra_sozinho(tmp_path: pathlib.Path) -> None:
 
 @pytest.mark.parametrize("stem,campos", [
     ("org.gnome.TextEditor", {"Name": "Editor", "Categories": "Utility;TextEditor;"}),
-    ("meow-steam-851100", {"Name": "Um jogo", "Categories": "Game;"}),
+    ("meow-steam-9917022", {"Name": "Um jogo", "Categories": "Game;"}),
     ("debian-uxterm", {"Name": "UXTerm", "Categories": "System;TerminalEmulator;"}),
     ("oculto", {"Name": "Escondido", "Categories": "Game;Emulator;",
                 "NoDisplay": "true"}),

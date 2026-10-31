@@ -903,19 +903,19 @@ class TestOsArquivosDaCasa:
 
         launch_env._MARCADORES_PELA_ASSINATURA.esquecer()
         marcador = tmp_path / "last_run"
-        marcador.write_text("appid=1599660\nepoch=1900000000\npid=4242\n")
+        marcador.write_text("appid=9931993\nepoch=1900000000\npid=4242\n")
         _envelhecer(marcador)
         with contando() as conta:
             for _ in range(20):
-                assert launch_env.read_last_run_marker(tmp_path) == (1599660, 1900000000)
+                assert launch_env.read_last_run_marker(tmp_path) == (9931993, 1900000000)
                 assert launch_env.read_last_run_pid(tmp_path) == 4242
         assert len(_sob(conta, marcador, "open")) == 1
-        marcador.write_text("appid=2497900\nepoch=1900000100\npid=4343\n")
-        assert launch_env.read_last_run_marker(tmp_path) == (2497900, 1900000100)
+        marcador.write_text("appid=9949958\nepoch=1900000100\npid=4343\n")
+        assert launch_env.read_last_run_marker(tmp_path) == (9949958, 1900000100)
 
 
 _REAPER = (
-    "/home/quem/.steam/ubuntu12_32/reaper SteamLaunch AppId=1599660 -- "
+    "/home/quem/.steam/ubuntu12_32/reaper SteamLaunch AppId=9931993 -- "
     "/.../proton waitforexitandrun /.../Jogo.exe"
 )
 
@@ -1005,7 +1005,7 @@ class TestONegativoDeProc:
         _exibir(0.0)
         _exibir(8.0)
         assert proc_de_mentira.varreduras == 1
-        proc_de_mentira.lancar(1599660, 4242)
+        proc_de_mentira.lancar(9931993, 4242)
         _exibir(10.0)
         assert proc_de_mentira.varreduras == 2
 
@@ -1038,7 +1038,7 @@ class TestONegativoDeProc:
         proc_de_mentira.mapa["200"] = _REAPER
         vistos = [_exibir(float(t)) for t in range(10, 60, 2)]
         assert vistos == [None] * len(vistos)
-        assert _exibir(60.0) == 1599660
+        assert _exibir(60.0) == 9931993
 
     def test_outra_janela_em_foco_invalida_o_negativo(
         self, proc_de_mentira: _ProcDeMentira
@@ -1056,8 +1056,8 @@ class TestONegativoDeProc:
         _exibir(6.0)
         assert proc_de_mentira.varreduras == 1
         proc_de_mentira.mapa["200"] = _REAPER
-        sw._tick({"wm_class": "steam_app_1599660", "pid": 200}, 8.0)
-        assert _exibir(8.0) == 1599660
+        sw._tick({"wm_class": "steam_app_9931993", "pid": 200}, 8.0)
+        assert _exibir(8.0) == 9931993
 
     def test_desarmado_a_exibicao_segue_nos_cinco_segundos(
         self, proc_de_mentira: _ProcDeMentira

@@ -79,10 +79,10 @@ class TestRoundtripSimplePresets:
 
     def test_steam_game_roundtrip(self, tmp_dir: Path) -> None:
         """R-12 item 1: a opção que faltava — perfil DO jogo da Steam."""
-        profile = _build_simple_profile("MadJack", 70, "steam_game", custom_name="2111190")
+        profile = _build_simple_profile("MadJack", 70, "steam_game", custom_name="9942223")
         reloaded = _save_and_reload(profile, tmp_dir)
         assert isinstance(reloaded.match, MatchCriteria)
-        assert reloaded.match.window_class == ["steam_app_2111190"]
+        assert reloaded.match.window_class == ["steam_app_9942223"]
         assert detect_simple_preset(reloaded.match) == "steam_game", (
             "sem a detecção, reabrir o perfil jogaria a usuária no editor "
             "avançado e o round-trip do editor simples estaria quebrado"

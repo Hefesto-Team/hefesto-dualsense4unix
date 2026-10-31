@@ -26,7 +26,7 @@ _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
 
 FISICO = "0x054C/0x0CE6"
 
-_APPIDS_DO_FALLBACK = ("2246340", "1151640", "2322010", "1034860", "330390", "3255380")
+_APPIDS_DO_FALLBACK = ("9944926", "9923032", "9946440", "9920697", "9906607", "9965107")
 
 
 def _nonzero(valor: str) -> bool:
@@ -88,7 +88,7 @@ def test_o_ramo_wayland_apaga_o_ignore_e_o_fisico_segue_escondido(
     """MORDIDA: tire o `PROTON_DISABLE_HIDRAW` da máscara, e o físico reaparece."""
     env = _env_da_mascara(mascara, backend)
     assert env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] == le._IGNORE_VALUE
-    depois = _script_do_ge({**env, "PROTON_ENABLE_WAYLAND": "1"}, "1599660", ge_118=ge_118)
+    depois = _script_do_ge({**env, "PROTON_ENABLE_WAYLAND": "1"}, "9931993", ge_118=ge_118)
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in depois
     assert depois["PROTON_DISABLE_HIDRAW"] == le._DISABLE_HIDRAW_VALUE
     assert not _o_lancamento_mostra_o_fisico(depois)
@@ -96,13 +96,13 @@ def test_o_ramo_wayland_apaga_o_ignore_e_o_fisico_segue_escondido(
 
 def test_sem_wayland_o_ignore_fica() -> None:
     env = _env_da_mascara("dualsense", "uhid")
-    assert _script_do_ge(env, "1599660")["SDL_GAMECONTROLLER_IGNORE_DEVICES"] == le._IGNORE_VALUE
+    assert _script_do_ge(env, "9931993")["SDL_GAMECONTROLLER_IGNORE_DEVICES"] == le._IGNORE_VALUE
 
 
 def test_o_modo_nativo_nao_esconde_nada() -> None:
     env = le.compose_env(native_mode=True, emulation_enabled=True, flavor="dualsense",
                          backends=["uhid"], fisicos=1)
-    assert _o_lancamento_mostra_o_fisico(_script_do_ge(env, "1599660"))
+    assert _o_lancamento_mostra_o_fisico(_script_do_ge(env, "9931993"))
 
 
 @pytest.mark.parametrize("appid", _APPIDS_DO_FALLBACK)
@@ -162,7 +162,7 @@ def _wrapper(runtime: Path, state_home: Path, args: list[str]) -> str:
         "HOME": str(state_home),
         "XDG_RUNTIME_DIR": str(runtime),
         "XDG_STATE_HOME": str(state_home),
-        "SteamAppId": "1599660",
+        "SteamAppId": "9931993",
     }
     feito = subprocess.run(["sh", str(_WRAPPER), *args], env=env, capture_output=True,
                            text=True, timeout=15, check=False)

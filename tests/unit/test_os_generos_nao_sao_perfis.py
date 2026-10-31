@@ -155,8 +155,8 @@ def test_a_migracao_dos_generos_e_one_shot(tmp_path: Path) -> None:
 def test_o_perfil_de_jogo_enxuga_so_quando_e_o_molde(tmp_path: Path) -> None:
     """As duas réguas no mesmo teste, como manda a sprint."""
     destino = tmp_path / "perfis"
-    _escrever(destino / "stray.json", _molde_de_jogo("Stray", "1332010"))
-    do_usuario = _molde_de_jogo("PEAK", "3527290")
+    _escrever(destino / "stray.json", _molde_de_jogo("Stray", "9926640"))
+    do_usuario = _molde_de_jogo("PEAK", "9970545")
     do_usuario["leds"] = {**do_usuario["leds"], "lightbar": [200, 0, 40]}
     _escrever(destino / "peak.json", do_usuario)
     peak_antes = (destino / "peak.json").read_bytes()
@@ -167,7 +167,7 @@ def test_o_perfil_de_jogo_enxuga_so_quando_e_o_molde(tmp_path: Path) -> None:
     stray = json.loads((destino / "stray.json").read_text(encoding="utf-8"))
     assert list(stray) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), stray
     assert stray["name"] == "Stray"
-    assert stray["match"]["window_class"] == ["steam_app_1332010"]
+    assert stray["match"]["window_class"] == ["steam_app_9926640"]
     assert stray["priority"] == loader.PRIORIDADE_DO_PERFIL_DE_JOGO
     assert (destino / "peak.json").read_bytes() == peak_antes, (
         "o perfil com a cor DE QUEM USA foi reescrito — é exatamente o que quem usa pediu "
@@ -178,7 +178,7 @@ def test_o_perfil_de_jogo_enxuga_so_quando_e_o_molde(tmp_path: Path) -> None:
 def test_o_arquivo_enxuto_carrega_o_mesmo_perfil_de_antes(tmp_path: Path) -> None:
     """Nada muda de comportamento: o que saiu era o default do esquema."""
     destino = tmp_path / "perfis"
-    _escrever(destino / "stray.json", _molde_de_jogo("Stray", "1332010"))
+    _escrever(destino / "stray.json", _molde_de_jogo("Stray", "9926640"))
     antes = Profile.model_validate(
         json.loads((destino / "stray.json").read_text(encoding="utf-8"))
     )
@@ -197,7 +197,7 @@ def test_o_perfil_que_nao_e_de_jogo_nao_e_tocado(tmp_path: Path) -> None:
     _escrever(destino / loader.ARQUIVO_DO_PADRAO, json.loads(
         (FABRICA / loader.ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     ))
-    do_usuario = _molde_de_jogo("Faith", "1179080")
+    do_usuario = _molde_de_jogo("Faith", "9923581")
     do_usuario["match"] = {**do_usuario["match"], "process_name": ["faith.exe"]}
     _escrever(destino / "faith.json", do_usuario)
     antes = {p.name: p.read_bytes() for p in destino.glob("*.json")}
@@ -210,7 +210,7 @@ def test_o_perfil_que_nao_e_de_jogo_nao_e_tocado(tmp_path: Path) -> None:
 def test_o_perfil_de_jogo_novo_nasce_so_com_nome_e_id(tmp_path: Path) -> None:
     """O mesmo contrato do Passo 3 aplicado ao futuro."""
     destino = tmp_path / "perfis"
-    jogos = [JogoLocal(appid="1332010", nome="Stray", fonte="steam")]
+    jogos = [JogoLocal(appid="9926640", nome="Stray", fonte="steam")]
 
     resultado = loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=jogos)
 
@@ -219,7 +219,7 @@ def test_o_perfil_de_jogo_novo_nasce_so_com_nome_e_id(tmp_path: Path) -> None:
     assert list(gravado) == [*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"], gravado
     perfil = Profile.model_validate(gravado)
     assert perfil.name == "Stray"
-    assert perfil.match.window_class == ["steam_app_1332010"]
+    assert perfil.match.window_class == ["steam_app_9926640"]
     assert perfil.priority == loader.PRIORIDADE_DO_PERFIL_DE_JOGO
 
 
@@ -229,7 +229,7 @@ def test_o_perfil_novo_ja_nasce_enxuto_e_a_migracao_nao_o_reescreve(
     """Passo 3 e Passo 4 são o MESMO contrato — a régua prova que fecham."""
     destino = tmp_path / "perfis"
     loader.semear_perfis_dos_jogos(
-        dest_dir=destino, jogos=[JogoLocal(appid="851100", nome="Touhou", fonte="steam")]
+        dest_dir=destino, jogos=[JogoLocal(appid="9917022", nome="Touhou", fonte="steam")]
     )
     antes = (destino / "touhou.json").read_bytes()
 

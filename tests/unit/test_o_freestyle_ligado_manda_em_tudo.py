@@ -40,7 +40,7 @@ from tests.conftest import EnvelopeDeTransporte, envelope_de
 RAIZ = Path(__file__).resolve().parents[2]
 FABRICA = RAIZ / "assets" / "profiles_default"
 
-APPID = 3357650
+APPID = 9967153
 JANELA = f"steam_app_{APPID}"
 JOGO = "PRAGMATA"
 FREESTYLE = loader.NOME_DO_PADRAO
@@ -141,7 +141,7 @@ def _o_freestyle_diz(mode: dict[str, Any] | None) -> None:
     arquivo.write_text(json.dumps(do_usuario), encoding="utf-8")
 
 
-@pytest.mark.parametrize("janela", [JANELA, "steam_app_2111190"],
+@pytest.mark.parametrize("janela", [JANELA, "steam_app_9942223"],
                          ids=["jogo-com-perfil-proprio", "jogo-sem-perfil"])
 def test_ligado_e_dizendo_o_modo_o_modo_jogo_padrao_nao_entra(
     semeadura_ligada: None, janela: str,
@@ -164,7 +164,7 @@ def test_ligado_e_dizendo_o_modo_o_modo_jogo_padrao_nao_entra(
     assert store.active_profile == FREESTYLE
 
 
-@pytest.mark.parametrize("janela", [JANELA, "steam_app_2111190"],
+@pytest.mark.parametrize("janela", [JANELA, "steam_app_9942223"],
                          ids=["jogo-com-perfil-proprio", "jogo-sem-perfil"])
 def test_ligado_sem_dizer_o_modo_o_jogo_liga_o_modo_padrao(
     semeadura_ligada: None, janela: str,
@@ -738,7 +738,7 @@ def test_com_o_jogo_vivo_a_janela_de_outro_jogo_troca(semeadura_ligada: None) ->
     """O termo 1: outro jogo em foco não é "janela de fora" — ele troca."""
     loader.load_all_profiles()
     _o_jogo()
-    outro = "steam_app_1599660"
+    outro = "steam_app_9931993"
     loader.save_profile(Profile(name="Sackboy", match=MatchCriteria(window_class=[outro]),
                                 priority=80))
     store = StateStore()

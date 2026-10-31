@@ -77,7 +77,7 @@ def test_o_lancador_nao_chama_o_sudo_da_placa(tmp_path: Path) -> None:
             "HOME": str(tmp_path),
             "XDG_RUNTIME_DIR": str(tmp_path / "run"),
             "XDG_STATE_HOME": str(tmp_path / "state"),
-            "SteamAppId": "1599660",
+            "SteamAppId": "9931993",
             "HEFESTO_GM_POLL_SECS": "0.2",
         },
         capture_output=True, text=True, timeout=30, check=False,

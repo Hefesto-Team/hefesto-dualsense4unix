@@ -54,10 +54,10 @@ class TestFormatFixSafe:
                 "ran": 2,
                 "missing": 0,
                 "steam_input": (0, "[steam-input] resultado=aplicado\n"),
-                "steam_input_jogos": ["Sackboy (appid 1599660)"],
+                "steam_input_jogos": ["Sackboy (appid 9931993)"],
             }
         )
-        assert "Sackboy (appid 1599660)" in msg
+        assert "Sackboy (appid 9931993)" in msg
         assert "voltou a ser entregue pelo Hefesto" in msg
         assert "sequestra" not in msg
         assert "Deixar tudo pronto" not in msg
@@ -81,12 +81,12 @@ class TestFormatFixSafe:
 
 class TestFormatGameBroken:
     def test_adicionado_diz_o_proximo_passo(self) -> None:
-        msg = format_game_broken_result(status="adicionado", appid=2111190)
-        assert "2111190" in msg
+        msg = format_game_broken_result(status="adicionado", appid=9942223)
+        assert "9942223" in msg
         assert "Feche e abra o jogo" in msg
 
     def test_ja_estava_nao_finge_novidade(self) -> None:
-        msg = format_game_broken_result(status="ja_estava", appid=620)
+        msg = format_game_broken_result(status="ja_estava", appid=9900620)
         assert "já estava marcado" in msg
 
     def test_sem_jogo_pede_o_que_falta(self) -> None:
@@ -105,10 +105,10 @@ class TestFormatGameBroken:
     def test_nao_promete_o_que_o_usuario_mediu_ao_contrario(self) -> None:
         """NOTA DATADA — 07/08/2026: o toast dizia "o Hefesto sai da frente"."""
         for status in ("adicionado", "ja_estava"):
-            msg = format_game_broken_result(status=status, appid=2111190)
+            msg = format_game_broken_result(status=status, appid=9942223)
             assert "sai da frente" not in msg
             assert "dobrado" in msg, "o defeito que a marca cura é o dobrado"
-        adicionado = format_game_broken_result(status="adicionado", appid=2111190)
+        adicionado = format_game_broken_result(status="adicionado", appid=9942223)
         assert "gatilhos continuam valendo" in adicionado
 
 

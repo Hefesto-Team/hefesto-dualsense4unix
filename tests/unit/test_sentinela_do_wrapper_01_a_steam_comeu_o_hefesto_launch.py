@@ -11,7 +11,7 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 _TAB = "\t"
 
-PRAGMATA = "3357650"
+PRAGMATA = "9967153"
 LINHA_PRAGMATA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 LINHA_ESTENDIDA = (

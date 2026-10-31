@@ -165,7 +165,7 @@ def _estilo(ctx: Contexto, ponte: Any) -> None:
 
 
 def _jogo(ctx: Contexto, ponte: Any) -> None:
-    a10_perfis.editor_jogo(ctx, {"valor": "1245620", "evento": "change"}, ponte)
+    a10_perfis.editor_jogo(ctx, {"valor": "9924912", "evento": "change"}, ponte)
 
 
 @pytest.mark.parametrize("gesto,nome_do_gesto", [

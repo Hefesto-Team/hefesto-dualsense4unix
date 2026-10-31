@@ -41,7 +41,7 @@ def _perfil_com_gatilho_e_luz() -> Profile:
     """Um perfil de jogo, com as duas seções que a trava silenciava."""
     return Profile(
         name="jogo-de-prova",
-        match=MatchCriteria(window_class=["steam_app_1599660"]),
+        match=MatchCriteria(window_class=["steam_app_9931993"]),
         priority=80,
         triggers=TriggersConfig(
             left=TriggerConfig(mode="Rigid", params=[5, 200]),

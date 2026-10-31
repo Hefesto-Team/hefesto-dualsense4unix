@@ -71,7 +71,7 @@ def _salvar_sackboy_do_usuario() -> None:
     save_profile(
         Profile(
             name="Sackboy",
-            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            match=MatchCriteria(window_class=["steam_app_9931993"]),
             priority=200,
         )
     )

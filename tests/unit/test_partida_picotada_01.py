@@ -34,7 +34,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.launch_env import steam_input_exception_appid
 
-SACKBOY = 1599660
+SACKBOY = 9931993
 
 CLASSE_DO_JOGO = f"steam_app_{SACKBOY}"
 
@@ -73,7 +73,7 @@ def test_alt_tab_de_verdade_encerra_a_excecao_no_mesmo_tique(tmp_path: Path) -> 
 
 def test_jogo_fora_da_allowlist_nunca_ativa(tmp_path: Path) -> None:
     """Outro jogo da Steam em foco não liga a exceção de um appid alheio."""
-    assert _perguntar("steam_app_3357650", "steam_app_3357650", tmp_path) is None
+    assert _perguntar("steam_app_9967153", "steam_app_9967153", tmp_path) is None
 
 
 @pytest.mark.parametrize(

@@ -18,7 +18,7 @@ from hefesto_dualsense4unix.daemon.subsystems.game_signal import GameSignal, cla
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID = 1599660
+APPID = 9931993
 REAPER_COM_JOGO = (
     "/home/usuario/.steam/debian-installation/ubuntu12_32/reaper "
     f"SteamLaunch AppId={APPID} -- /.../proton waitforexitandrun /.../Launcher.exe"

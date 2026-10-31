@@ -104,7 +104,7 @@ def _perfil_sem_modo() -> Profile:
         {
             "name": "Sackboy",
             "version": 1,
-            "match": {"type": "criteria", "window_class": ["steam_app_1599660"]},
+            "match": {"type": "criteria", "window_class": ["steam_app_9931993"]},
             "priority": 80,
         }
     )

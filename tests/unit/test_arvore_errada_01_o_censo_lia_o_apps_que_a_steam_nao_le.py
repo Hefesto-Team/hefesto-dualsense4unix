@@ -19,8 +19,8 @@ def _escapado(valor: str) -> str:
     return _vdf_escape(valor)
 
 _LINHA_COMIDA = "VKD3D_CONFIG=no_upload_hvv %command%"
-_PRAGMATA = "3357650"
-_DUSKFADE = "2542020"
+_PRAGMATA = "9967153"
+_DUSKFADE = "9950840"
 
 
 def _bloco_app(appid: str, *pares: tuple[str, str], recuo: str) -> str:
@@ -47,7 +47,7 @@ def _vdf_das_tres_arvores(
             ("SteamControllerRumble", "1"),
             recuo="\t",
         )
-    bloco_web = _bloco_app("480", ("LaunchOptions", "lixo %command%"), recuo="\t\t\t")
+    bloco_web = _bloco_app("9900480", ("LaunchOptions", "lixo %command%"), recuo="\t\t\t")
     return (
         '"UserLocalConfigStore"\n{\n'
         '\t"Software"\n\t{\n\t\t"Valve"\n\t\t{\n\t\t\t"Steam"\n\t\t\t{\n'
@@ -108,14 +108,14 @@ class TestOLeitorNaoLeMaisDaArvoreErrada:
         texto = _vdf_das_tres_arvores(canonica=_LINHA_COMIDA, outra=None).replace(
             '\t"apps"\n\t{\n\t}\n',
             '\t"apps"\n\t{\n'
-            + _bloco_app("413080", ("LaunchOptions", "x %command%"), recuo="\t")
+            + _bloco_app("9908261", ("LaunchOptions", "x %command%"), recuo="\t")
             + "\t}\n",
         )
-        assert "413080" not in read_apps_by_appid(texto)
+        assert "9908261" not in read_apps_by_appid(texto)
 
     def test_a_webstorage_tambem_fica_de_fora(self) -> None:
         texto = _vdf_das_tres_arvores(canonica=_LINHA_COMIDA)
-        assert "480" not in read_apps_by_appid(texto)
+        assert "9900480" not in read_apps_by_appid(texto)
 
     def test_a_arvore_boa_continua_sendo_lida_inteira(self) -> None:
         """Ancorar não pode virar "não acha mais nada"."""

@@ -26,7 +26,7 @@ from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 RAIZ = Path(__file__).resolve().parents[2]
-JOGO = "steam_app_1245620"
+JOGO = "steam_app_9924912"
 
 
 def _o_que_chega_aos_olhos(html: str) -> str:

@@ -21,7 +21,7 @@ MACS = {1: "aa:bb:cc:00:00:01", 2: "aa:bb:cc:00:00:02",
         3: "aa:bb:cc:00:00:03", 4: "aa:bb:cc:00:00:04"}
 TRANSPORTE = {1: "usb", 2: "usb", 3: "bt", 4: "bt"}
 
-JOGO = {"type": "criteria", "window_class": ["steam_app_1599660"]}
+JOGO = {"type": "criteria", "window_class": ["steam_app_9931993"]}
 TODOS = {"type": "any"}
 MANUAL = {"type": "manual"}
 

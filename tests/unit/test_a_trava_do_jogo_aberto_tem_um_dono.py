@@ -446,7 +446,7 @@ def test_a_sessao_do_pad_que_fecha_e_reabre_nao_abre_a_trava() -> None:
             window_healthy=True, window_class_current=None, window_seen_age=None,
             profile_rule_match=False, marker=None, marker_pid_alive=False,
             exit_marker=None, session_open=sessao, now=1000.0,
-            appid_de_jogo_vivo=4235410,
+            appid_de_jogo_vivo=9984708,
         )
         sinal.evaluate(bruto, session_open=sessao)
         assert sinal.authority == "game", f"a sessão {sessao} mexeu na autoridade"
@@ -485,7 +485,7 @@ def test_o_jogo_que_fecha_solta_a_trava_do_lancamento() -> None:
     """O jogo devolve a autoridade (`game` → `daemon`): a trava do lançamento acaba, e diz."""
     d = _daemon()
     gp.start_gamepad_emulation(d, "dualsense", origin="profile")
-    d._pad_travado_pelo_lancamento = (4235410, 1000)
+    d._pad_travado_pelo_lancamento = (9984708, 1000)
 
     with structlog.testing.capture_logs() as diario:
         _sinal_que_vai(d, "game", _SEM_JOGO)
@@ -500,25 +500,25 @@ def test_o_jogo_que_fecha_solta_a_trava_do_lancamento() -> None:
 def test_o_sinal_que_nao_sabe_nao_solta_a_trava_do_lancamento() -> None:
     """`game` → `unknown` (o detector cego, sem evidência) é «não sei»: a trava fica."""
     d = _daemon()
-    d._pad_travado_pelo_lancamento = (4235410, 1000)
+    d._pad_travado_pelo_lancamento = (9984708, 1000)
 
     _sinal_que_vai(d, "game", dict(_SEM_JOGO, window_healthy=False))
 
     assert d.display_authority == "unknown"
-    assert d._pad_travado_pelo_lancamento == (4235410, 1000)
+    assert d._pad_travado_pelo_lancamento == (9984708, 1000)
 
 
 def test_o_appid_em_cena_so_vale_com_o_jogo_na_autoridade() -> None:
     """O appid da evidência (o marcador vivo, ou o processo) só responde com o sinal em `game`."""
     d = _daemon()
-    _sinal_que_vai(d, "unknown", dict(_SEM_JOGO, appid_de_jogo_vivo=4235410))
-    assert (d.display_authority, d.appid_em_cena) == ("game", 4235410)
+    _sinal_que_vai(d, "unknown", dict(_SEM_JOGO, appid_de_jogo_vivo=9984708))
+    assert (d.display_authority, d.appid_em_cena) == ("game", 9984708)
 
     _sinal_que_vai(d, "game", _SEM_JOGO)
     assert (d.display_authority, d.appid_em_cena) == ("daemon", None)
 
 
-_TRAVA = (4235410, 1000)
+_TRAVA = (9984708, 1000)
 _MARCADOR_DA_TRAVA = dict(
     _SEM_JOGO, marker=_TRAVA, marker_pid=4321, marker_pid_alive=False, now=1010.0,
 )
@@ -599,7 +599,7 @@ def test_a_soltura_do_lancamento_que_caiu_fica_de_fora_de_game() -> None:
     d._pad_travado_pelo_lancamento = _TRAVA
 
     motivos = _diario_da_soltura(
-        d, "game", dict(_MARCADOR_DA_TRAVA, window_class_current="steam_app_4235410",
+        d, "game", dict(_MARCADOR_DA_TRAVA, window_class_current="steam_app_9984708",
                         window_seen_age=1.0, appid_de_jogo_vivo=_TRAVA[0]))
 
     assert d.display_authority == "game"

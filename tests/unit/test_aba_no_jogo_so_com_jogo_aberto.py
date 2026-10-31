@@ -56,7 +56,7 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-PRAGMATA = 3357650
+PRAGMATA = 9967153
 
 
 def test_o_store_nasce_sem_ter_perguntado() -> None:

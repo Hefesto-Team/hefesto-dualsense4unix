@@ -439,7 +439,7 @@ class TestOCompostoDoXWayland:
         from hefesto_dualsense4unix.integrations import window_detect
 
         xlib = _XlibDeMentira(
-            WindowInfo(wm_class="steam_app_3357650", pid=42, exe_basename="PRAGMATA.exe"),
+            WindowInfo(wm_class="steam_app_9967153", pid=42, exe_basename="PRAGMATA.exe"),
             None,
         )
         wayland = _WaylandDeMentira(WindowInfo(wm_class="nao-devia-ser-perguntado"))
@@ -447,7 +447,7 @@ class TestOCompostoDoXWayland:
 
         info = composto.get_active_window_info()
         assert info is not None
-        assert info.wm_class == "steam_app_3357650"
+        assert info.wm_class == "steam_app_9967153"
         assert info.exe_basename == "PRAGMATA.exe"
         assert wayland.chamadas == 0
         assert composto.backend_name == "xlib"

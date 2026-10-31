@@ -31,7 +31,7 @@ REG_REAL = """WINE REGISTRY Version 2
 @pytest.fixture()
 def prefixo(tmp_path: Path) -> Path:
     """Um `compatdata/<appid>` de mentira com o registro acima."""
-    raiz = tmp_path / "compatdata" / "1599660"
+    raiz = tmp_path / "compatdata" / "9931993"
     (raiz / "pfx").mkdir(parents=True)
     (raiz / "pfx" / "system.reg").write_text(REG_REAL, encoding="utf-8")
     return raiz
@@ -127,7 +127,7 @@ def test_a_escrita_recusa_o_driver_mesmo_pedido_de_frente(
         preservada_por=None,
     )
     torto = cv.PrefixoDeJogo(
-        appid="1599660",
+        appid="9931993",
         raiz=prefixo,
         registro=registro,
         camadas=(driver,),
@@ -157,7 +157,7 @@ def test_a_escrita_recusa_o_driver_mesmo_pedido_de_frente(
         preservada_por=None,
     )
     pior = cv.PrefixoDeJogo(
-        appid="1599660", raiz=prefixo, registro=registro, camadas=(mentiroso,)
+        appid="9931993", raiz=prefixo, registro=registro, camadas=(mentiroso,)
     )
     resultado = cv.aplicar_no_prefixo(pior, forcar=True)
     assert resultado.desligadas == ()
@@ -172,7 +172,7 @@ def test_curar_de_verdade_desliga_a_sobra_e_deixa_o_driver_em_zero(
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
     registro = prefixo / "pfx" / "system.reg"
 
-    resultado = cv.curar_um_prefixo(prefixo, appid="1599660")
+    resultado = cv.curar_um_prefixo(prefixo, appid="9931993")
     assert sorted(resultado.desligadas) == [
         "EOSOverlayVkLayer-Win32.json",
         "EOSOverlayVkLayer-Win64.json",
@@ -189,7 +189,7 @@ def test_o_driver_dentro_de_implicitlayers_e_ignorado_e_a_sobra_ainda_cura(
 ) -> None:
     """O caso patológico: o driver registrado na chave ERRADA, e repetido."""
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    raiz = tmp_path / "compatdata" / "1599660"
+    raiz = tmp_path / "compatdata" / "9931993"
     (raiz / "pfx").mkdir(parents=True)
     registro = raiz / "pfx" / "system.reg"
     registro.write_text(
@@ -209,7 +209,7 @@ def test_o_driver_dentro_de_implicitlayers_e_ignorado_e_a_sobra_ainda_cura(
         encoding="utf-8",
     )
 
-    resultado = cv.curar_um_prefixo(raiz, appid="1599660")
+    resultado = cv.curar_um_prefixo(raiz, appid="9931993")
     assert resultado.erro == ""
     assert resultado.desligadas == ("EOSOverlayVkLayer-Win64.json",)
 

@@ -315,7 +315,7 @@ def modulos_falsos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(pacote, "steam_launch_options", slo, raising=False)
     from hefesto_dualsense4unix.integrations import lista_de_exclusao
 
-    monkeypatch.setattr(lista_de_exclusao, "appids", lambda *a, **kw: ["1599660"])
+    monkeypatch.setattr(lista_de_exclusao, "appids", lambda *a, **kw: ["9931993"])
     return caixa
 
 

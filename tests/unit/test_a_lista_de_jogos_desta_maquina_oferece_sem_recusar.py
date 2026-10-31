@@ -14,8 +14,8 @@ from hefesto_dualsense4unix.interface.pacotes import a10_perfis
 PAGINA = "10-perfis.html"
 
 CATALOGO = [
-    JogoLocal(appid="851100", nome="Sea of Stars", fonte="steam"),
-    JogoLocal(appid="1245620", nome="ELDEN RING", fonte="steam"),
+    JogoLocal(appid="9917022", nome="Sea of Stars", fonte="steam"),
+    JogoLocal(appid="9924912", nome="ELDEN RING", fonte="steam"),
     JogoLocal(appid="999001", nome='A & B <b>"C"</b>', fonte="desktop"),
 ]
 
@@ -62,9 +62,9 @@ def test_a_lista_traz_o_appid_no_value_e_o_nome_no_rotulo() -> None:
     número.
     """
     html = a10_perfis._html_dos_jogos()
-    assert '<option value="851100" label="Sea of Stars · 851100">' in html
-    assert '<option value="1245620" label="ELDEN RING · 1245620">' in html
-    assert html.index("1245620") < html.index("851100"), (
+    assert '<option value="9917022" label="Sea of Stars · 9917022">' in html
+    assert '<option value="9924912" label="ELDEN RING · 9924912">' in html
+    assert html.index("9924912") < html.index("9917022"), (
         "a lista saiu na ordem do appid — a busca é pelo NOME do jogo")
 
 

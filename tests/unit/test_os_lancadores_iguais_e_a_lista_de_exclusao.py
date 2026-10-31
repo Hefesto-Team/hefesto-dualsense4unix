@@ -50,8 +50,8 @@ from tests.unit.test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch impo
 )
 from tests.unit import a_exclusao_de_antes as antiga
 
-_CHAVE = "steam_app_1088850"
-_APPID = "1088850"
+_CHAVE = "steam_app_9921777"
+_APPID = "9921777"
 
 
 @pytest.fixture(autouse=True)
@@ -86,14 +86,14 @@ def test_a_regua_nao_escreve_na_config_do_usuario(_config_de_mentira: Path) -> N
 
 def test_a_exclusao_nunca_toca_na_lista_do_steam_input() -> None:
     """A CORREÇÃO DE 21/09, e tem dois lados."""
-    slo.add_appid_to_steam_input_allowlist("3357650", nota="manual")
+    slo.add_appid_to_steam_input_allowlist("9967153", nota="manual")
     assert not hasattr(lx, "migrar_a_lista_velha"), (
         "a migração da lista do Steam Input voltou — a migração desligaria a vibração "
         "do PRAGMATA")
-    antiga.adicionar("steam_app_3357650", lancador="steam", nome="PRAGMATA")
-    assert _nas_listas("3357650")["entrada"] is True
-    lx.tirar("steam_app_3357650")
-    assert _nas_listas("3357650")["entrada"] is True, (
+    antiga.adicionar("steam_app_9967153", lancador="steam", nome="PRAGMATA")
+    assert _nas_listas("9967153")["entrada"] is True
+    lx.tirar("steam_app_9967153")
+    assert _nas_listas("9967153")["entrada"] is True, (
         "tirar da exclusão apagou a marca que QUEM USA pôs no Steam Input")
     antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     assert _nas_listas(_APPID)["entrada"] is False
@@ -133,7 +133,7 @@ def _steam_fechada(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _pinar(tmp_path: Path, jogos: list[str]) -> tuple[Path, Path]:
     vdf = tmp_path / "config.vdf"
-    vdf.write_text(_config_vdf({"1245620": "proton_11"}), encoding="utf-8")
+    vdf.write_text(_config_vdf({"9924912": "proton_11"}), encoding="utf-8")
     estado = tmp_path / "estado" / "proton-pin-lock.json"
     r = proton_pin.lock_games_to_pinned_proton(
         tool_name=PIN_NAME, appids=jogos, config_vdf=vdf, state_path=estado)
@@ -143,45 +143,45 @@ def _pinar(tmp_path: Path, jogos: list[str]) -> tuple[Path, Path]:
 
 def test_destravar_um_jogo_devolve_so_ele(tmp_path: Path, _steam_fechada: None) -> None:
     """ARRANQUE o recorte `changes={alvo: …}` (passe o registro inteiro) e este"""
-    vdf, estado = _pinar(tmp_path, ["1599660", "1971870"])
-    r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
+    vdf, estado = _pinar(tmp_path, ["9931993", "9939437"])
+    r = proton_pin.destravar_um_jogo("9931993", config_vdf=vdf, state_path=estado)
     assert r["status"] == "destravado" and r["reverted"] == 1, r
     mapa = proton_pin.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
-    assert "1599660" not in mapa, "o jogo excluído continua pinado"
-    assert mapa.get("1971870") == PIN_NAME, "o OUTRO jogo perdeu o pino"
+    assert "9931993" not in mapa, "o jogo excluído continua pinado"
+    assert mapa.get("9939437") == PIN_NAME, "o OUTRO jogo perdeu o pino"
     registro = json.loads(estado.read_text(encoding="utf-8"))
-    assert "1599660" not in registro["changes"]
-    assert "1971870" in registro["changes"], "o registro do outro jogo sumiu"
+    assert "9931993" not in registro["changes"]
+    assert "9939437" in registro["changes"], "o registro do outro jogo sumiu"
 
 
 def test_destravar_nao_desfaz_o_proton_que_o_usuario_trocou(
         tmp_path: Path, _steam_fechada: None) -> None:
     """A regra do desinstalar, recortada: se quem usa trocou o Proton do jogo DEPOIS"""
-    vdf, estado = _pinar(tmp_path, ["1599660"])
+    vdf, estado = _pinar(tmp_path, ["9931993"])
     texto = vdf.read_text(encoding="utf-8")
     vdf.write_text(texto.replace(f'"{PIN_NAME}"', '"proton_9"', 2), encoding="utf-8")
     trocado = proton_pin.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
-    assert trocado.get("1599660") == "proton_9"
-    r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
+    assert trocado.get("9931993") == "proton_9"
+    r = proton_pin.destravar_um_jogo("9931993", config_vdf=vdf, state_path=estado)
     assert r["status"] == "destravado" and r["reverted"] == 0, r
     assert proton_pin.extract_compat_tool_mapping(
-        vdf.read_text(encoding="utf-8")).get("1599660") == "proton_9"
-    assert "1599660" not in json.loads(estado.read_text(encoding="utf-8"))["changes"]
+        vdf.read_text(encoding="utf-8")).get("9931993") == "proton_9"
+    assert "9931993" not in json.loads(estado.read_text(encoding="utf-8"))["changes"]
 
 
 def test_destravar_com_a_steam_aberta_nao_toca_em_nada(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _steam_fechada: None) -> None:
     """ARRANQUE o `_steam_gate()` e este teste reprova: a Steam viva regrava o"""
-    vdf, estado = _pinar(tmp_path, ["1599660"])
+    vdf, estado = _pinar(tmp_path, ["9931993"])
     antes = vdf.read_text(encoding="utf-8"), estado.read_text(encoding="utf-8")
     monkeypatch.setattr(proton_pin, "steam_running", lambda: True)
-    r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
+    r = proton_pin.destravar_um_jogo("9931993", config_vdf=vdf, state_path=estado)
     assert r["status"] == "recusado", r
     assert (vdf.read_text(encoding="utf-8"), estado.read_text(encoding="utf-8")) == antes
 
 
 def test_destravar_o_que_nao_e_nosso_e_noop(tmp_path: Path, _steam_fechada: None) -> None:
-    vdf, estado = _pinar(tmp_path, ["1599660"])
+    vdf, estado = _pinar(tmp_path, ["9931993"])
     antes = vdf.read_text(encoding="utf-8")
     r = proton_pin.destravar_um_jogo("424242", config_vdf=vdf, state_path=estado)
     assert (r["status"], r["reason"]) == ("noop", "nao_era_nosso")
@@ -201,8 +201,8 @@ def _steam_fechada_no_atalho(monkeypatch: pytest.MonkeyPatch) -> None:
 def _biblioteca(tmp_path: Path) -> Path:
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_localconfig({
-        "1599660": slo.migrate_value(_DO_USUARIO),
-        "1971870": slo.WRAPPER_LAUNCH,
+        "9931993": slo.migrate_value(_DO_USUARIO),
+        "9939437": slo.WRAPPER_LAUNCH,
     }), encoding="utf-8")
     return vdf
 
@@ -211,11 +211,11 @@ def test_tirar_o_atalho_tira_so_o_jogo_pedido(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
     """ARRANQUE o filtro `so_os_jogos` do `transform_vdf_text` e este teste"""
     vdf = _biblioteca(tmp_path)
-    r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
+    r = slo.tirar_o_atalho_dos_jogos(["9931993"], vdfs=[vdf])
     apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
-    assert [i["appid"] for i in r["removed"]] == ["1599660"], r
-    assert apps["1599660"] == _DO_USUARIO, "a linha do usuário não sobreviveu"
-    assert slo.WRAPPER_PREFIX in (apps["1971870"] or ""), "o OUTRO jogo perdeu o atalho"
+    assert [i["appid"] for i in r["removed"]] == ["9931993"], r
+    assert apps["9931993"] == _DO_USUARIO, "a linha do usuário não sobreviveu"
+    assert slo.WRAPPER_PREFIX in (apps["9939437"] or ""), "o OUTRO jogo perdeu o atalho"
 
 
 def test_tirar_o_atalho_com_a_steam_aberta_nao_toca(
@@ -224,7 +224,7 @@ def test_tirar_o_atalho_com_a_steam_aberta_nao_toca(
     vdf = _biblioteca(tmp_path)
     antes = vdf.read_text(encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
-    r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
+    r = slo.tirar_o_atalho_dos_jogos(["9931993"], vdfs=[vdf])
     assert [e["reason"] for e in r["errors"]] == ["steam_aberta"], r
     assert vdf.read_text(encoding="utf-8") == antes
 
@@ -233,26 +233,26 @@ def test_o_vigia_tira_o_atalho_de_quem_esta_na_lista(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
     """ARRANQUE o `recusados_com_wrapper` do censo e este teste reprova: o"""
     vdf = _biblioteca(tmp_path)
-    assert slo.marcar_jogo_sem_wrapper("1599660") == "adicionado"
+    assert slo.marcar_jogo_sem_wrapper("9931993") == "adicionado"
     status, censo, resultado = sw.reparar_ou_adiar(
         vdfs=[vdf], registro=tmp_path / "visto.json")
     assert status == sw.REPARO_FEITO, (status, censo)
     assert resultado is not None
-    assert [i["appid"] for i in resultado["removed"]] == ["1599660"]
+    assert [i["appid"] for i in resultado["removed"]] == ["9931993"]
     apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
-    assert apps["1599660"] == _DO_USUARIO
-    assert slo.WRAPPER_PREFIX in (apps["1971870"] or "")
+    assert apps["9931993"] == _DO_USUARIO
+    assert slo.WRAPPER_PREFIX in (apps["9939437"] or "")
 
 
 def test_o_vigia_nao_repoe_o_atalho_de_quem_esta_na_lista(
         tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
     """O avesso, que já valia e tem de continuar valendo: o jogo da lista sem"""
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_localconfig({"1599660": _DO_USUARIO}), encoding="utf-8")
-    slo.marcar_jogo_sem_wrapper("1599660")
+    vdf.write_text(_localconfig({"9931993": _DO_USUARIO}), encoding="utf-8")
+    slo.marcar_jogo_sem_wrapper("9931993")
     status, _, _ = sw.reparar_ou_adiar(vdfs=[vdf], registro=tmp_path / "visto.json")
     assert status == sw.REPARO_NADA
-    assert slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))["1599660"] == _DO_USUARIO
+    assert slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))["9931993"] == _DO_USUARIO
 
 
 @pytest.fixture
@@ -260,7 +260,7 @@ def _steam_do_teste(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
         _steam_fechada: None, _steam_fechada_no_atalho: None) -> tuple[Path, Path, Path]:
     """Os três arquivos da Steam apontados para a pasta de teste — nenhum"""
-    config_vdf, estado = _pinar(tmp_path, ["1599660", "1971870"])
+    config_vdf, estado = _pinar(tmp_path, ["9931993", "9939437"])
     biblioteca = _biblioteca(tmp_path)
     monkeypatch.setattr(proton_pin, "default_config_vdf", lambda home=None: config_vdf)
     monkeypatch.setattr(proton_pin, "default_lock_state_path", lambda home=None: estado)
@@ -304,13 +304,13 @@ def _lancar(runtime: Path, casa: Path, appid: str, *, com_config: bool = True
 def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
     """ARRANQUE o `if jogo_excluido` do wrapper e este teste reprova: com a"""
-    assert antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
-    fora, marca_fora = _lancar(_runtime_com_daemon, tmp_path, "1599660")
+    assert antiga.adicionar("steam_app_9931993", lancador="steam", nome="Wo Long") == "adicionado"
+    fora, marca_fora = _lancar(_runtime_com_daemon, tmp_path, "9931993")
     assert fora.returncode == 0, fora.stderr
     assert "HIDAPI=|" in fora.stdout, fora.stdout
     assert not marca_fora.exists(), "o marcador de lançamento do Hefesto foi gravado"
 
-    dentro, marca_dentro = _lancar(_runtime_com_daemon, tmp_path, "1971870")
+    dentro, marca_dentro = _lancar(_runtime_com_daemon, tmp_path, "9939437")
     assert "HIDAPI=0|" in dentro.stdout, "o controle: sem a lista, as envs chegam"
     assert marca_dentro.exists()
 
@@ -318,7 +318,7 @@ def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
 def test_steam_app_1_nao_casa_steam_app_15(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
     """As aspas dos dois lados do número: excluir um jogo não exclui o de"""
-    antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
+    antiga.adicionar("steam_app_9931993", lancador="steam", nome="Wo Long")
     r, _ = _lancar(_runtime_com_daemon, tmp_path, "159966")
     assert "HIDAPI=0|" in r.stdout, r.stdout
 
@@ -326,7 +326,7 @@ def test_steam_app_1_nao_casa_steam_app_15(
 def test_sem_home_o_jogo_abre_do_mesmo_jeito(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
     """O wrapper roda com `set -u`: um `$HOME` cru na leitura da lista"""
-    r, _ = _lancar(_runtime_com_daemon, tmp_path, "1599660", com_config=False)
+    r, _ = _lancar(_runtime_com_daemon, tmp_path, "9931993", com_config=False)
     assert r.returncode == 0, r.stderr
     assert "IGNORE=" in r.stdout, r.stdout
 
@@ -337,14 +337,14 @@ def _prefixo_curado(
         _steam_do_teste: tuple[Path, Path, Path]) -> Path:
     """O prefixo de um jogo que o Hefesto já tocou: o device KS gravado e a"""
     compatdata = tmp_path / "steamapps" / "compatdata"
-    raiz = compatdata / "1599660"
+    raiz = compatdata / "9931993"
     (raiz / "pfx").mkdir(parents=True)
     texto = ks.texto_novo(_registro_com_camadas((EPIC, "00000000")),
                           [ks.Controle(pid=0x0CE6, bus=3, dev=28, usec=None)], 1)
     (raiz / "pfx" / "system.reg").write_text(texto, encoding="utf-8")
     monkeypatch.setattr(cv, "pastas_compatdata", lambda home=None: [compatdata])
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "estado-das-camadas"))
-    assert cv.curar_um_prefixo(raiz, appid="1599660").desligadas
+    assert cv.curar_um_prefixo(raiz, appid="9931993").desligadas
     assert _nossos_blocos_ks(raiz)
     return raiz
 
@@ -361,21 +361,21 @@ def _epic_ligada(raiz: Path) -> bool:
 
 def test_o_botao_vulkan_pula_o_jogo_excluido(_prefixo_curado: Path) -> None:
     """ARRANQUE o `excluir` do `curar_todos` e este teste reprova: o botão da"""
-    cv.aplicar_no_prefixo(cv.prefixo_de_jogo(_prefixo_curado, appid="1599660"), religar=True,
+    cv.aplicar_no_prefixo(cv.prefixo_de_jogo(_prefixo_curado, appid="9931993"), religar=True,
                           pela_exclusao=True)
-    cv.curar_todos(excluir=["1599660"])
+    cv.curar_todos(excluir=["9931993"])
     assert _epic_ligada(_prefixo_curado)
     cv.curar_todos()
     assert not _epic_ligada(_prefixo_curado), "o controle: sem o excluir, o botão cura"
 
 
 def test_os_appids_da_lista_sao_so_os_de_steam() -> None:
-    antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
+    antiga.adicionar("steam_app_9931993", lancador="steam", nome="Wo Long")
     antiga.adicionar("retroarch", lancador="emulador", nome="RetroArch")
-    assert lx.appids() == ["1599660"]
+    assert lx.appids() == ["9931993"]
 
 
-_JANELA = "steam_app_1599660"
+_JANELA = "steam_app_9931993"
 
 
 class _NativoCapturado:
@@ -549,7 +549,7 @@ def _o_dia_bom(desenho) -> object:
     """A Steam em ordem e os outros achados — os cartões no estado LOCALIZADO."""
     achados = tuple((item.chave, f"/opt/{item.chave}") for item in desenho.EMBUTIDOS
                     if item.chave != desenho.STEAM)
-    return desenho.Leitura(com_wrapper=("620", "440"), instalados=2,
+    return desenho.Leitura(com_wrapper=("9900620", "9900440"), instalados=2,
                            onde_estao=achados)
 
 
@@ -557,8 +557,8 @@ def _o_dia_do_reparo(desenho) -> object:
     """A Steam com um jogo SEM o atalho — o estado do «Consertar»."""
     achados = tuple((item.chave, f"/opt/{item.chave}") for item in desenho.EMBUTIDOS
                     if item.chave != desenho.STEAM)
-    return desenho.Leitura(com_wrapper=("620",), instalados=2,
-                           reparaveis=(("440", "Um jogo", "nunca recebeu o atalho"),),
+    return desenho.Leitura(com_wrapper=("9900620",), instalados=2,
+                           reparaveis=(("9900440", "Um jogo", "nunca recebeu o atalho"),),
                            onde_estao=achados)
 
 
@@ -624,7 +624,7 @@ def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07, monkeypatch) -> 
                      janelas=janelas[jogos[0].chave])
     assert lx.contem("com.libretro.RetroArch")
     assert lx.contem("COM.LIBRETRO.RETROARCH")
-    assert not lx.contem("steam_app_1599660")
+    assert not lx.contem("steam_app_9931993")
 
 
 class _Ctx:
@@ -678,7 +678,7 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
     (casa / "config.json").write_text(json.dumps(
         {"defaultSettings": {"enviromentOptions": globais}}), encoding="utf-8")
     (casa / "store_cache" / "umu.json").write_text(
-        json.dumps({f"legendary_{_APP_DO_HEROIC}": "umu-1088850"}), encoding="utf-8")
+        json.dumps({f"legendary_{_APP_DO_HEROIC}": "umu-9921777"}), encoding="utf-8")
     (casa / "store_cache" / "legendary_library.json").write_text(json.dumps(
         {"library": [{"app_name": _APP_DO_HEROIC, "title": "Guardiões", "is_installed": True,
                       "install": {"executable": "retail/gotg.exe"}}]}), encoding="utf-8")

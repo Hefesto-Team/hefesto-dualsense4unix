@@ -87,7 +87,7 @@ def _perfil_de_jogo(flavor: str | None) -> Profile:
         {
             "name": "Sackboy",
             "version": 1,
-            "match": {"type": "criteria", "window_class": ["steam_app_1599660"]},
+            "match": {"type": "criteria", "window_class": ["steam_app_9931993"]},
             "priority": 97,
             "mode": mode,
         }

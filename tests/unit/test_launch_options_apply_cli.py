@@ -69,10 +69,10 @@ def steam_fechada(monkeypatch):
 def test_apply_poe_o_wrapper_em_todo_jogo_inclusive_no_que_nunca_teve_opcoes(
     tmp_path: Path, steam_fechada, capsys
 ):
-    """O defeito da E4 em uma linha: com `--migrate`, o jogo 1599660 (sem"""
+    """O defeito da E4 em uma linha: com `--migrate`, o jogo 9931993 (sem"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
-        _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
+        _vdf({"9900620": "MANGOHUD=1 %command%"}, sem_launch_options=("9931993",)),
         encoding="utf-8",
     )
 
@@ -80,8 +80,8 @@ def test_apply_poe_o_wrapper_em_todo_jogo_inclusive_no_que_nunca_teve_opcoes(
 
     assert rc == 0
     valores = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))
-    assert valores["1599660"] == slo.WRAPPER_LAUNCH
-    assert valores["620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
+    assert valores["9931993"] == slo.WRAPPER_LAUNCH
+    assert valores["9900620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
     out = capsys.readouterr().out
     assert "wrapper aplicado a 2 jogos" in out
     assert len(list(tmp_path.glob("localconfig.vdf.bak.hefesto-launch-*"))) == 1
@@ -93,7 +93,7 @@ def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
     """Requisito de produto, palavra por palavra: idempotente. O install roda sem"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
-        _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
+        _vdf({"9900620": "MANGOHUD=1 %command%"}, sem_launch_options=("9931993",)),
         encoding="utf-8",
     )
 
@@ -116,19 +116,19 @@ def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
 def test_apply_remove_o_veneno_legado_no_mesmo_passo(tmp_path: Path, steam_fechada):
     """Quem tinha a linha 914 sai da linha DIRETO para o wrapper (o `--apply` usa o"""
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
+    vdf.write_text(_vdf({"9931993": LINHA_914}), encoding="utf-8")
 
     assert slo.main(["--apply", "--vdf", str(vdf)]) == 0
 
     texto = vdf.read_text(encoding="utf-8")
     assert slo.IGNORE_SIGNATURE not in texto
-    assert slo.read_launch_options_by_appid(texto)["1599660"] == slo.WRAPPER_LAUNCH
+    assert slo.read_launch_options_by_appid(texto)["9931993"] == slo.WRAPPER_LAUNCH
 
 
 def test_apply_recusa_com_a_steam_aberta(tmp_path: Path, monkeypatch, capsys):
     """Editar com a Steam viva é edição PERDIDA: a Steam regrava o vdf ao sair."""
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"620": "MANGOHUD=1 %command%"})
+    original = _vdf({"9900620": "MANGOHUD=1 %command%"})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -147,7 +147,7 @@ def test_apply_recusa_com_jogo_aberto_e_nao_derruba_a_steam(
 ):
     """`steam -shutdown` com jogo aberto MATA o jogo (progresso não salvo"""
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"620": ""}, sem_launch_options=("1599660",))
+    original = _vdf({"9900620": ""}, sem_launch_options=("9931993",))
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: True)
@@ -174,7 +174,7 @@ def test_apply_tem_segunda_muralha_quando_o_stop_steam_mente(
     O gate de dentro do `apply_wrapper_to_all_games` é a segunda muralha: em
     vez de escrever num vdf que a Steam vai regravar, recusa com rc=3."""
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"620": "MANGOHUD=1 %command%"})
+    original = _vdf({"9900620": "MANGOHUD=1 %command%"})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -193,7 +193,7 @@ def test_apply_com_stop_steam_fecha_aplica_e_reabre(
 ):
     """O caminho EXATO do install (`--apply --stop-steam`): quem fechou a"""
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": "MANGOHUD=1 %command%"}), encoding="utf-8")
     estado = {"viva": True}
     eventos: list[str] = []
 
@@ -212,14 +212,14 @@ def test_apply_com_stop_steam_fecha_aplica_e_reabre(
     assert rc == 0
     assert eventos == ["fechou", "reabriu"]
     valores = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))
-    assert valores["620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
+    assert valores["9900620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
 
 
 def test_apply_nao_reabre_uma_steam_que_ja_estava_fechada(
     tmp_path: Path, steam_fechada, monkeypatch
 ):
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": ""}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": ""}), encoding="utf-8")
     eventos: list[str] = []
     monkeypatch.setattr(slo, "reopen_steam", lambda: eventos.append("reabriu"))
 
@@ -230,7 +230,7 @@ def test_apply_nao_reabre_uma_steam_que_ja_estava_fechada(
 
 def test_apply_dry_run_nao_escreve_nada(tmp_path: Path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",))
+    original = _vdf({"9900620": "MANGOHUD=1 %command%"}, sem_launch_options=("9931993",))
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(
         slo, "steam_running", lambda: (_ for _ in ()).throw(AssertionError)
@@ -257,7 +257,7 @@ def test_apply_pula_o_vdf_de_sandbox_inteiro(tmp_path: Path, steam_fechada, caps
     )
     sandbox.mkdir(parents=True)
     vdf = sandbox / "localconfig.vdf"
-    original = _vdf({"620": ""})
+    original = _vdf({"9900620": ""})
     vdf.write_text(original, encoding="utf-8")
 
     rc = slo.main(["--apply", "--vdf", str(vdf)])
@@ -276,20 +276,20 @@ def test_apply_erro_por_vdf_nao_aborta_os_demais(tmp_path: Path, steam_fechada, 
     ruim.write_bytes(b'"UserLocalConfigStore"\n{\n\xff byte invalido\n}\n')
     bom = tmp_path / "bom" / "localconfig.vdf"
     bom.parent.mkdir()
-    bom.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
+    bom.write_text(_vdf({"9900620": "MANGOHUD=1 %command%"}), encoding="utf-8")
 
     rc = slo.main(["--apply", "--vdf", str(ruim), "--vdf", str(bom)])
 
     assert rc == 1
     assert "ERRO" in capsys.readouterr().out
     valores = slo.read_launch_options_by_appid(bom.read_text(encoding="utf-8"))
-    assert valores["620"].startswith(slo.WRAPPER_PREFIX)
+    assert valores["9900620"].startswith(slo.WRAPPER_PREFIX)
 
 
 def test_apply_e_mutuamente_exclusivo_com_migrate_e_strip(tmp_path: Path):
     """Um modo por vez: `--apply --strip` na mesma linha seria ambíguo (põe ou"""
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": ""}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": ""}), encoding="utf-8")
     for args in (
         ["--apply", "--migrate", "--vdf", str(vdf)],
         ["--apply", "--strip", "--vdf", str(vdf)],
@@ -325,7 +325,7 @@ def test_uninstall_tira_exatamente_o_que_o_apply_pos(tmp_path: Path, steam_fecha
     """Simetria (regra da casa): tudo que o install põe, o uninstall tira. O"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
-        _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
+        _vdf({"9900620": "MANGOHUD=1 %command%"}, sem_launch_options=("9931993",)),
         encoding="utf-8",
     )
 
@@ -338,8 +338,8 @@ def test_uninstall_tira_exatamente_o_que_o_apply_pos(tmp_path: Path, steam_fecha
     assert slo.WRAPPER_PREFIX not in texto
     assert slo._vdf_escape(slo.WRAPPER_PREFIX) not in texto
     valores = slo.read_launch_options_by_appid(texto)
-    assert valores["620"] == "MANGOHUD=1 %command%"
-    assert valores["1599660"] == ""
+    assert valores["9900620"] == "MANGOHUD=1 %command%"
+    assert valores["9931993"] == ""
 
     uninstall = (_raiz() / "uninstall.sh").read_text(encoding="utf-8")
     assert "--strip --stop-steam" in uninstall

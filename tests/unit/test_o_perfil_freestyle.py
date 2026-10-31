@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
 RAIZ = Path(__file__).resolve().parents[2]
 FABRICA = RAIZ / "assets" / "profiles_default"
-JOGO = "steam_app_2111190"
+JOGO = "steam_app_9942223"
 
 QUATRO = {f"aabbcc00000{n}": {"leds": {"lightbar": [n * 40, 0, 255 - n * 40]}}
           for n in (1, 2, 3, 4)}

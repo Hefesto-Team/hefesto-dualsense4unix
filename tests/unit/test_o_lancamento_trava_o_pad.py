@@ -17,7 +17,7 @@ def _daemon_sem_jogo() -> Any:
 
 def test_com_a_trava_o_automatico_nao_recria_antes_da_janela() -> None:
     daemon = _daemon_sem_jogo()
-    daemon._pad_travado_pelo_lancamento = (4235410, 1000.0)
+    daemon._pad_travado_pelo_lancamento = (9984708, 1000.0)
 
     assert gp._recriacao_bloqueada_por_jogo(
         daemon, origin="profile", motivo="troca_de_caminho:dualsense"
@@ -26,7 +26,7 @@ def test_com_a_trava_o_automatico_nao_recria_antes_da_janela() -> None:
 
 def test_o_gesto_do_usuario_passa_com_a_trava() -> None:
     daemon = _daemon_sem_jogo()
-    daemon._pad_travado_pelo_lancamento = (4235410, 1000.0)
+    daemon._pad_travado_pelo_lancamento = (9984708, 1000.0)
 
     assert gp._recriacao_bloqueada_por_jogo(
         daemon, origin="manual", motivo="gesto"
@@ -49,7 +49,7 @@ def test_jogo_sem_perfil_trava_o_pad_que_ja_esta_de_pe(
 ) -> None:
     """Sem perfil não há modo a impor. O que há é o pad de pé, e é ele que"""
     (tmp_path / "last_run").write_text(
-        "appid=2111190\nepoch=1000\npid=1\n", encoding="utf-8"
+        "appid=9942223\nepoch=1000\npid=1\n", encoding="utf-8"
     )
     monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [])
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
@@ -60,7 +60,7 @@ def test_jogo_sem_perfil_trava_o_pad_que_ja_esta_de_pe(
     assert resultado is not None
     assert resultado["armado"] is False
     assert resultado["motivo"] == "sem_perfil"
-    assert daemon._pad_travado_pelo_lancamento == (2111190, 1000)
+    assert daemon._pad_travado_pelo_lancamento == (9942223, 1000)
 
 
 def test_o_lancamento_novo_solta_a_trava_antes_de_vestir(
@@ -68,7 +68,7 @@ def test_o_lancamento_novo_solta_a_trava_antes_de_vestir(
 ) -> None:
     """Se a soltura viesse depois do apply, o arming do jogo novo seria"""
     (tmp_path / "last_run").write_text(
-        "appid=2111190\nepoch=2000\npid=1\n", encoding="utf-8"
+        "appid=9942223\nepoch=2000\npid=1\n", encoding="utf-8"
     )
     monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [])
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())

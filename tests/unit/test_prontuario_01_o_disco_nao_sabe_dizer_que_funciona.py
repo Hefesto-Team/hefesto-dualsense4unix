@@ -25,7 +25,7 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
     _vdf_escape,
 )
 
-_PRAGMATA, _DUSKFADE, _SACKBOY = "3357650", "2542020", "1599660"
+_PRAGMATA, _DUSKFADE, _SACKBOY = "9967153", "9950840", "9931993"
 _COMIDA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 
@@ -55,7 +55,7 @@ class TestNaoPrometeOQueNaoSabe:
             linha=_com_wrapper(), evidencia=assinatura, steam_input="0",
         )
         funciona = Prontuario(
-            appid="2497900", nome="DON'T SCREAM", raiz=Path("/jogo"),
+            appid="9949958", nome="DON'T SCREAM", raiz=Path("/jogo"),
             linha=_com_wrapper(), evidencia=assinatura, steam_input="0",
         )
         assert quebrado.veredito == funciona.veredito == SEM_IMPEDIMENTO
@@ -204,8 +204,8 @@ class TestOCensoDeVerdade:
             '\t"installdir"\t\t"Pragmata"\n}\n',
             encoding="utf-8",
         )
-        (steamapps / "appmanifest_1493710.acf").write_text(
-            '"AppState"\n{\n\t"appid"\t\t"1493710"\n'
+        (steamapps / "appmanifest_9929874.acf").write_text(
+            '"AppState"\n{\n\t"appid"\t\t"9929874"\n'
             '\t"name"\t\t"Proton Experimental"\n'
             '\t"installdir"\t\t"Proton"\n}\n',
             encoding="utf-8",

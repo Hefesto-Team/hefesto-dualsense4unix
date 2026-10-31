@@ -99,7 +99,7 @@ def test_o_perfil_antigo_sem_o_campo_carrega_igual() -> None:
 def _um_jogo_da_steam_com_ponte(mascara: str | None, kind: str = "gamepad") -> None:
     ponte = PonteConfirmada(kind=kind, gamepad_flavor=mascara)  # type: ignore[arg-type]
     loader.save_profile(
-        Profile(name="Confirmado antes", match=MatchCriteria(window_class=["steam_app_1245620"]),
+        Profile(name="Confirmado antes", match=MatchCriteria(window_class=["steam_app_9924912"]),
                 priority=50, ponte=ponte),
         origem="régua")
 
@@ -111,7 +111,7 @@ def test_o_jogo_com_ponte_de_gamepad_nasce_com_a_mascara() -> None:
     """
     _um_jogo_da_steam_com_ponte("xbox")
     a10_perfis.criar_para_o_jogo(
-        _ctx(), Ponte(), classes=("steam_app_1245620",), nome_do_jogo="Elden Ring")
+        _ctx(), Ponte(), classes=("steam_app_9924912",), nome_do_jogo="Elden Ring")
     perfil = _o_que_nasceu("Elden Ring")
     assert perfil.mode is not None
     assert (perfil.mode.kind, perfil.mode.gamepad_flavor) == ("gamepad", "xbox")
@@ -121,7 +121,7 @@ def test_o_jogo_com_ponte_de_gamepad_nasce_com_a_mascara() -> None:
 def test_sem_ponte_confirmada_o_perfil_segue_sem_mascara() -> None:
     """Quando o produto não sabe, nasce sem opinião: o padrão que o daemon aplica."""
     a10_perfis.criar_para_o_jogo(
-        _ctx(), Ponte(), classes=("steam_app_1245620",), nome_do_jogo="Elden Ring")
+        _ctx(), Ponte(), classes=("steam_app_9924912",), nome_do_jogo="Elden Ring")
     assert _o_que_nasceu("Elden Ring").mode is None
     a10_perfis.criar_para_o_jogo(
         _ctx(), Ponte(), classes=EMULADOR, nome_do_jogo="Metal Slug Anthology")
@@ -133,19 +133,19 @@ def test_sem_ponte_confirmada_o_perfil_segue_sem_mascara() -> None:
 def test_ponte_que_nao_diz_mascara_nao_inventa_uma(kind: str, mascara: str | None) -> None:
     _um_jogo_da_steam_com_ponte(mascara, kind=kind)
     a10_perfis.criar_para_o_jogo(
-        _ctx(), Ponte(), classes=("steam_app_1245620",), nome_do_jogo="Elden Ring")
+        _ctx(), Ponte(), classes=("steam_app_9924912",), nome_do_jogo="Elden Ring")
     assert _o_que_nasceu("Elden Ring").mode is None
 
 
 def test_reescrever_a_regra_larga_o_nome_antigo(monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: sem o `prof.nome_do_jogo = None`, o nome de antes sobrevive à regra nova."""
     a10_perfis.criar_para_o_jogo(
-        _ctx(), Ponte(), classes=("steam_app_1245620",), nome_do_jogo="Elden Ring")
+        _ctx(), Ponte(), classes=("steam_app_9924912",), nome_do_jogo="Elden Ring")
     assert _o_que_nasceu("Elden Ring").nome_do_jogo == "Elden Ring"
     monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", lambda: {})
-    a10_perfis.editor_jogo(_ctx(), {"valor": "1599660", "evento": "change"}, Ponte())
+    a10_perfis.editor_jogo(_ctx(), {"valor": "9931993", "evento": "change"}, Ponte())
     perfil = _o_que_nasceu("Elden Ring")
-    assert simple_extra(perfil.match) == "1599660"
+    assert simple_extra(perfil.match) == "9931993"
     assert perfil.nome_do_jogo is None
 
 
@@ -187,7 +187,7 @@ def test_o_criar_da_aba_lancadores_chega_ao_editor(monkeypatch: pytest.MonkeyPat
 def test_o_novo_com_o_jogo_em_foco_leva_a_mascara_e_nao_o_nome() -> None:
     """O «Novo» passa pelo mesmo `_nascer`: com o jogo confirmado em foco, a máscara vem junto."""
     _um_jogo_da_steam_com_ponte("nintendo")
-    contexto = Contexto(state={"window_detect_last_class": "steam_app_1245620"}, mesa=[],
+    contexto = Contexto(state={"window_detect_last_class": "steam_app_9924912"}, mesa=[],
                         conectados=[], estados={})
     a10_perfis.novo(contexto, {}, Ponte())
     perfil = _o_que_nasceu("Novo perfil")

@@ -19,8 +19,8 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
     rotulo_do_jogo,
 )
 
-_SACKBOY = "1599660"
-_MMJ = "2111190"
+_SACKBOY = "9931993"
+_MMJ = "9942223"
 
 
 def _vdf(appids_ligados: list[str], *, global_ligado: bool = False) -> str:
@@ -81,7 +81,7 @@ class TestTraducaoDoAppid:
     def test_o_appid_nunca_some_da_frase(self, casa: Path) -> None:
         """É o número que quem usa confere na Steam, e o único identificador comum"""
         _instalar(casa, _SACKBOY, "Sackboy: A Big Adventure")
-        assert rotulo_do_jogo(_SACKBOY, casa) == "Sackboy: A Big Adventure (appid 1599660)"
+        assert rotulo_do_jogo(_SACKBOY, casa) == "Sackboy: A Big Adventure (appid 9931993)"
 
 
 class TestQuemEstaLigado:
@@ -141,8 +141,8 @@ class TestMensagemDoDoctor:
     def test_dois_jogos_no_mesmo_arquivo_aparecem_os_dois(self, casa: Path) -> None:
         """Era aqui que o "1 perfil(is)" mais mentia: dez jogos, um arquivo."""
         _instalar(casa, _SACKBOY, "Sackboy: A Big Adventure")
-        _instalar(casa, "3357650", "Pragmata")
-        _localconfig(casa, _vdf([_SACKBOY, "3357650"]))
+        _instalar(casa, "9967153", "Pragmata")
+        _localconfig(casa, _vdf([_SACKBOY, "9967153"]))
 
         _, msg = sd.check_steam_input(casa)
 
@@ -172,7 +172,7 @@ class TestMensagemDoDoctor:
 
 
 class TestToastDosBotoes:
-    _ROTULO = "Sackboy: A Big Adventure (appid 1599660)"
+    _ROTULO = "Sackboy: A Big Adventure (appid 9931993)"
 
     def test_frase_nomeia_o_jogo_e_o_motivo(self) -> None:
         frase = _frase_steam_input(0, "aplicado", [self._ROTULO])
@@ -208,7 +208,7 @@ class TestToastDosBotoes:
 
 
     def test_relatorio_torto_nao_derruba_nem_inventa(self) -> None:
-        for torto in ("Sackboy", [1599660], 7, {"a": 1}):
+        for torto in ("Sackboy", [9931993], 7, {"a": 1}):
             msg = format_fix_safe_result(
                 {
                     "ran": 1,

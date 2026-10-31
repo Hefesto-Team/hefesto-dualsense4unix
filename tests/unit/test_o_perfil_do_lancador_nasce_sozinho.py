@@ -30,7 +30,7 @@ from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_
 GOTG_CHAVE = "gotg.exe"
 GOTG_NOME = "Marvel's Guardians of the Galaxy"
 
-UMU_DO_GOTG = "umu-1088850"
+UMU_DO_GOTG = "umu-9921777"
 
 
 def _do_heroic(chave: str, nome: str) -> JogoLocal:
@@ -238,7 +238,7 @@ def test_sem_cadastro_o_predicado_e_exatamente_o_de_antes() -> None:
     """VAZIO = comportamento histórico. É o fail-safe da mudança."""
     schema_mod.registrar_classes_de_jogo([])
 
-    assert e_endereco_de_jogo("steam_app_2111190") is True
+    assert e_endereco_de_jogo("steam_app_9942223") is True
     assert e_endereco_de_jogo("gotg.exe") is False
     assert e_endereco_de_jogo("firefox") is False
     assert e_endereco_de_jogo(None) is False

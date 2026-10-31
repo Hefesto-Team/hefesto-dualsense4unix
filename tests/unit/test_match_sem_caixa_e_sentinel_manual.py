@@ -56,13 +56,13 @@ class TestComparacaoSemCaixa:
 
     def test_and_entre_campos_continua_valendo(self) -> None:
         m = MatchCriteria(
-            window_class=["steam_app_1599660"],
+            window_class=["steam_app_9931993"],
             process_name=["Sackboy.exe"],
         )
-        assert m.matches({"wm_class": "STEAM_APP_1599660"}) is False
+        assert m.matches({"wm_class": "STEAM_APP_9931993"}) is False
         assert (
             m.matches(
-                {"wm_class": "STEAM_APP_1599660", "exe_basename": "sackboy.exe"}
+                {"wm_class": "STEAM_APP_9931993", "exe_basename": "sackboy.exe"}
             )
             is True
         )
@@ -92,9 +92,9 @@ class TestComparacaoSemCaixa:
         """`perfil_e_regra_de_jogo` não pode divergir do matcher."""
         profile = Profile(
             name="madjack",
-            match=MatchCriteria(window_class=["Steam_App_2111190"]),
+            match=MatchCriteria(window_class=["Steam_App_9942223"]),
         )
-        info = {"wm_class": "steam_app_2111190"}
+        info = {"wm_class": "steam_app_9942223"}
         assert profile.matches(info) is True
         assert perfil_e_regra_de_jogo(profile, info) is True
 
@@ -102,19 +102,19 @@ class TestComparacaoSemCaixa:
         """O caso SIMÉTRICO — o que a suíte nunca cobria (UNIFICA-PREDICADO-01)."""
         profile = Profile(
             name="madjack",
-            match=MatchCriteria(window_class=["steam_app_2111190"]),
+            match=MatchCriteria(window_class=["steam_app_9942223"]),
         )
-        for wm_class in ("STEAM_APP_2111190", "Steam_App_2111190"):
+        for wm_class in ("STEAM_APP_9942223", "Steam_App_9942223"):
             info = {"wm_class": wm_class}
             assert profile.matches(info) is True
             assert perfil_e_regra_de_jogo(profile, info) is True
 
     def test_editor_simples_reconhece_o_jogo_em_qualquer_caixa(self) -> None:
         """O terceiro lugar onde a mesma divergência aparecia (UNIFICA-PREDICADO-01)."""
-        for wc in ("Steam_App_2111190", "STEAM_APP_2111190", " steam_app_2111190 "):
+        for wc in ("Steam_App_9942223", "STEAM_APP_9942223", " steam_app_9942223 "):
             m = MatchCriteria(window_class=[wc])
             assert detect_simple_preset(m) == "steam_game"
-            assert simple_extra(m) == "2111190"
+            assert simple_extra(m) == "9942223"
 
 
 class TestSentinelManual:
@@ -124,7 +124,7 @@ class TestSentinelManual:
         assert (
             m.matches(
                 {
-                    "wm_class": "steam_app_1599660",
+                    "wm_class": "steam_app_9931993",
                     "wm_name": "Sackboy",
                     "exe_basename": "sackboy",
                 }
@@ -164,7 +164,7 @@ class TestSentinelManual:
         manual = Profile(name="coop", match=MatchManual(), priority=99)
         monkeypatch.setattr(manager_mod, "perfis_para_consulta", lambda: [manual])
         selecionado = manager_mod.ProfileManager(controller=None).select_for_window(
-            {"wm_class": "steam_app_1599660", "wm_name": "Sackboy"}
+            {"wm_class": "steam_app_9931993", "wm_name": "Sackboy"}
         )
         assert selecionado is None
 

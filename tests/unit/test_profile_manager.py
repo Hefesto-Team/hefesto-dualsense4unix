@@ -111,7 +111,7 @@ def test_criteria_vence_catch_all_de_prioridade_maior(isolated_profiles_dir: Pat
         _mk_profile(
             "mad_jack",
             priority=0,
-            match=MatchCriteria(window_class=["steam_app_2111190"]),
+            match=MatchCriteria(window_class=["steam_app_9942223"]),
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -119,7 +119,7 @@ def test_criteria_vence_catch_all_de_prioridade_maior(isolated_profiles_dir: Pat
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    picked = manager.select_for_window({"wm_class": "steam_app_2111190"})
+    picked = manager.select_for_window({"wm_class": "steam_app_9942223"})
     assert picked is not None
     assert picked.name == "mad_jack"
 
@@ -182,12 +182,12 @@ def test_janela_de_jogo_sem_regra_propria_nao_cai_no_catch_all(
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    assert manager.select_for_window({"wm_class": "steam_app_2111190"}) is None
+    assert manager.select_for_window({"wm_class": "steam_app_9942223"}) is None
 
 
 @pytest.mark.parametrize(
     "wm_class",
-    ["STEAM_APP_2111190", "Steam_App_2111190", "  steam_app_2111190  "],
+    ["STEAM_APP_9942223", "Steam_App_9942223", "  steam_app_9942223  "],
 )
 def test_veto_r21_vale_com_wm_class_em_caixa_alta(
     isolated_profiles_dir: Path, wm_class: str
@@ -211,7 +211,7 @@ def test_veto_r21_em_caixa_alta_sem_candidato_nenhum(isolated_profiles_dir: Path
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    assert manager.select_for_window_ex({"wm_class": "STEAM_APP_2111190"}) == (
+    assert manager.select_for_window_ex({"wm_class": "STEAM_APP_9942223"}) == (
         None,
         MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
     )
@@ -223,7 +223,7 @@ def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
         _mk_profile(
             "mad_jack",
             priority=0,
-            match=MatchCriteria(window_class=["steam_app_2111190"]),
+            match=MatchCriteria(window_class=["steam_app_9942223"]),
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -231,7 +231,7 @@ def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    picked = manager.select_for_window({"wm_class": "steam_app_2111190"})
+    picked = manager.select_for_window({"wm_class": "steam_app_9942223"})
     assert picked is not None and picked.name == "mad_jack"
 
 
@@ -252,7 +252,7 @@ def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
     fc.connect()
     manager = ProfileManager(controller=fc)
     picked = manager.select_for_window(
-        {"wm_class": "steam_app_379720", "wm_name": "Doom Eternal"}
+        {"wm_class": "steam_app_9907594", "wm_name": "Doom Eternal"}
     )
     assert picked is not None and picked.name == "fps"
 
@@ -296,9 +296,9 @@ def test_veto_loga_uma_vez_por_jogo(
     fc.connect()
     manager = ProfileManager(controller=fc)
     for _ in range(10):
-        manager.select_for_window({"wm_class": "steam_app_2111190"})
+        manager.select_for_window({"wm_class": "steam_app_9942223"})
     manager.select_for_window({"wm_class": "firefox"})
-    manager.select_for_window({"wm_class": "steam_app_2111190"})
+    manager.select_for_window({"wm_class": "steam_app_9942223"})
 
     eventos = [
         c

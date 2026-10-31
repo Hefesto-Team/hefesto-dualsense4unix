@@ -79,7 +79,7 @@ def test_seeing_nasce_falso_porque_presuncao_nao_e_medicao() -> None:
 def test_seeing_cai_depois_do_teto_de_cegueira_e_volta_na_leitura_util() -> None:
     """O coração da leva: um detector cego para de se declarar são."""
     store = _semeado()
-    store.record_window_detect_read("xlib", "steam_app_3357650", now=100.0)
+    store.record_window_detect_read("xlib", "steam_app_9967153", now=100.0)
 
     assert store.window_detect_seeing(now=100.0) is True
     quase = 100.0 + WINDOW_DETECT_BLIND_AFTER_SEC - 0.5
@@ -305,7 +305,7 @@ def test_seis_motivos_do_xlib_sao_seis_strings_distintas() -> None:
 
 def test_leitura_boa_limpa_o_motivo(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "jogo-bin")
-    topo = _Win(0x400001, wm_class=("j", "steam_app_3357650"), title="Jogo", pid=42)
+    topo = _Win(0x400001, wm_class=("j", "steam_app_9967153"), title="Jogo", pid=42)
     display = _Display(
         foco=topo, janelas={topo.id: topo}, net_active=topo.id
     )
@@ -514,7 +514,7 @@ class TestOMotivoChegaAoStore:
 
     def test_leitura_util_nao_carrega_motivo(self, monkeypatch) -> None:
         store, ler = self._montar(
-            monkeypatch, motivo=None, classe="steam_app_1599660"
+            monkeypatch, motivo=None, classe="steam_app_9931993"
         )
         ler()
         assert store.window_detect_reason is None

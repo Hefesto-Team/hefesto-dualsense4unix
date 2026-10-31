@@ -8,7 +8,7 @@ from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 REAPER = (
     "/home/usuario/.steam/debian-installation/ubuntu12_32/reaper "
-    "SteamLaunch AppId=1599660 -- /.../proton waitforexitandrun /.../Launcher.exe"
+    "SteamLaunch AppId=9931993 -- /.../proton waitforexitandrun /.../Launcher.exe"
 )
 ISCA_PGREP = "pgrep -f reaper SteamLaunch AppId= "
 ISCA_EXECCOND = (
@@ -67,14 +67,14 @@ def test_isca_com_pid_menor_nao_esconde_o_jogo(proc_falso):
     """O caso que quebrava: isca com pid MENOR que o do jogo."""
     proc_falso({"100": ISCA_PGREP, "200": REAPER})
     assert slo.steam_game_running() is True
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993
 
 
 def test_isca_com_pid_maior_tambem(proc_falso):
     """A ordem inversa também: o resultado não pode depender do sorteio de pid."""
     proc_falso({"100": REAPER, "200": ISCA_PGREP})
     assert slo.steam_game_running() is True
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993
 
 
 def test_execcondition_das_units_nao_casa(proc_falso):
@@ -127,7 +127,7 @@ def test_caminho_rapido_usa_o_marker(monkeypatch):
     class _ComMarker:
         @staticmethod
         def read_last_run_marker():
-            return (1599660, 1786513632)
+            return (9931993, 1786513632)
 
         @staticmethod
         def read_last_run_pid():
@@ -144,7 +144,7 @@ def test_caminho_rapido_usa_o_marker(monkeypatch):
         raise AssertionError("varreu /proc apesar do marker válido")
 
     monkeypatch.setattr(slo.os, "listdir", _nao_deve_varrer)
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993
 
 
 def test_marker_com_pid_morto_cai_na_varredura(monkeypatch):
@@ -153,7 +153,7 @@ def test_marker_com_pid_morto_cai_na_varredura(monkeypatch):
     class _MarkerVelho:
         @staticmethod
         def read_last_run_marker():
-            return (1599660, 1)
+            return (9931993, 1)
 
         @staticmethod
         def read_last_run_pid():
@@ -168,7 +168,7 @@ def test_marker_com_pid_morto_cai_na_varredura(monkeypatch):
         slo, "_cmdline_of", lambda pid: "" if str(pid) == "62720" else REAPER
     )
     monkeypatch.setattr(slo.os, "listdir", lambda path: ["777"])
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993
 
 
 def test_marker_de_outro_appid_nao_confirma(monkeypatch):
@@ -207,4 +207,4 @@ def test_import_do_marker_falhando_cai_na_varredura(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", _sem_daemon)
     monkeypatch.setattr(slo, "_cmdline_of", lambda pid: REAPER)
     monkeypatch.setattr(slo.os, "listdir", lambda path: ["500"])
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993

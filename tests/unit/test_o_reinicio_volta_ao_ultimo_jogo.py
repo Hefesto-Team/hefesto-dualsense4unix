@@ -29,7 +29,7 @@ from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import 
     perfis_isolados,  # noqa: F401
 )
 
-OUTRO_JOGO = "steam_app_1599660"
+OUTRO_JOGO = "steam_app_9931993"
 JANELA_DO_TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "Terminal"}
 JANELA_DA_STEAM = {"wm_class": "steam", "wm_name": ""}
 
@@ -228,7 +228,7 @@ def test_a_escolha_que_e_perfil_de_jogo_nao_vira_o_ultimo_jogo(
 ) -> None:
     """A MEMÓRIA CONTAMINADA: a escolha entra pelo «sem candidato» e não grava o último jogo.
 
-    Medido às 20h52 de 14/10/2026: o «Lure Of Passion» (regra ``steam_app_3851570``)
+    Medido às 20h52 de 14/10/2026: o «Lure Of Passion» (regra ``steam_app_9977031``)
     entrou como escolha à mão, e o ``o_ultimo_jogo_lembrado`` o gravou por cima do
     Sackboy. O perfil que entra pela escolha nunca grava nem apaga a memória do jogo.
 

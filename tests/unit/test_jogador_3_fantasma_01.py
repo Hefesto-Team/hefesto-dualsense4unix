@@ -29,7 +29,7 @@ class _DaemonFalso:
         return False
 
 
-APPID = 1599660
+APPID = 9931993
 
 
 @pytest.fixture()
@@ -65,7 +65,7 @@ def test_o_gesto_manual_dispensa_a_excecao(daemon_com_jogo_marcado: _DaemonFalso
 
 def test_a_dispensa_e_por_appid_e_nao_global(monkeypatch: pytest.MonkeyPatch) -> None:
     """Dispensar um jogo não pode dispensar os outros da lista."""
-    outro = 3357650
+    outro = 9967153
     d = _DaemonFalso(excecao=True, appid=outro)
     d._steam_input_excecao_dispensada_appid = APPID
 

@@ -20,7 +20,7 @@ import pytest
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
 from hefesto_dualsense4unix.mods.supervisor import comando_na_caixa, pastas_dos_jogos
 
-APPID = "720050"
+APPID = "9914401"
 
 
 def _manifesto(*permissoes: str) -> Manifesto:

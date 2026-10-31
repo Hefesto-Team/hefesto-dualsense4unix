@@ -77,7 +77,7 @@ class TestATabelaBateComOsBackends:
 
         class _Resposta:
             returncode = 0
-            stdout = '[{"app_id": "steam_app_3357650", "title": "PRAGMATA"}]'
+            stdout = '[{"app_id": "steam_app_9967153", "title": "PRAGMATA"}]'
             stderr = ""
 
         monkeypatch.setattr(wlr_toplevel.shutil, "which", lambda _b: "/usr/bin/wlrctl")
@@ -86,7 +86,7 @@ class TestATabelaBateComOsBackends:
         )
         info = wlr_toplevel.WlrctlBackend().get_active_window_info()
         assert info is not None
-        assert info.wm_class == "steam_app_3357650"
+        assert info.wm_class == "steam_app_9967153"
         assert info.exe_basename == ""
         nome = wlr_toplevel.WlrctlBackend.backend_name
         assert backend_ve_nome_do_processo(nome) is False
@@ -129,13 +129,13 @@ class TestOCampoDerrubaOPerfilInteiro:
     def test_com_a_window_class_certa_o_perfil_ainda_nao_entra(self) -> None:
         """A afirmação forte do aviso, medida: *"nem com o window_class certo"*."""
         janela_wayland = {
-            "wm_class": "steam_app_3357650",
+            "wm_class": "steam_app_9967153",
             "wm_name": "PRAGMATA",
             "exe_basename": "",
         }
-        so_a_classe = MatchCriteria(window_class=["steam_app_3357650"])
+        so_a_classe = MatchCriteria(window_class=["steam_app_9967153"])
         com_o_processo = MatchCriteria(
-            window_class=["steam_app_3357650"], process_name=["PRAGMATA.exe"]
+            window_class=["steam_app_9967153"], process_name=["PRAGMATA.exe"]
         )
 
         assert so_a_classe.matches(janela_wayland) is True

@@ -134,7 +134,7 @@ def _com_guid(texto: str, guid: str) -> list[str]:
 
 
 def _prefixo(tmp_path: Path, sistema: str = SISTEMA, usuario: str | None = None) -> Path:
-    compat = tmp_path / "compatdata" / "1599660"
+    compat = tmp_path / "compatdata" / "9931993"
     (compat / "pfx").mkdir(parents=True)
     (compat / "pfx" / "system.reg").write_text(sistema, encoding="utf-8")
     (compat / "pfx" / "user.reg").write_text(

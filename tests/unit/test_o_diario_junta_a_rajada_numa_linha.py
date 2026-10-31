@@ -141,7 +141,7 @@ def test_o_perfil_fechado_que_diverge_fica_no_debug(monkeypatch: pytest.MonkeyPa
     launch_env._publicar_divergencias(
         types.SimpleNamespace(),
         [
-            {"appid": 10 + i, "motivo": "perfil_xbox_vs_vivo_dualsense", "em_cena": False,
+            {"appid": 9900010 + i, "motivo": "perfil_xbox_vs_vivo_dualsense", "em_cena": False,
              "profile": f"P{i}", "mascara_perfil": "xbox", "mascara_viva": "dualsense"}
             for i in range(25)
         ],

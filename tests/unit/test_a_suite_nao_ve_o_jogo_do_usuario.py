@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.testing import FakeController
 
 PID_DE_FORA = "9999999"
 
-REAPER = b"/home/x/.steam/steam/ubuntu12_32/reaper\0SteamLaunch\0AppId=1599660\0--\0jogo.exe\0"
+REAPER = b"/home/x/.steam/steam/ubuntu12_32/reaper\0SteamLaunch\0AppId=9931993\0--\0jogo.exe\0"
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def test_o_jogo_que_a_sessao_nasceu_continua_visto(proc_com_o_jogo: set[str]) ->
     filho = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
     try:
         proc_com_o_jogo.add(str(filho.pid))
-        assert slo.steam_game_running_appid() == 1599660
+        assert slo.steam_game_running_appid() == 9931993
     finally:
         filho.kill()
         filho.wait(timeout=10)

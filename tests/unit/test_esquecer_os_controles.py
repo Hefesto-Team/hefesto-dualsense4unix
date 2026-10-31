@@ -698,7 +698,8 @@ def instalar_de_mentira(r: m.Raizes) -> None:
     (steam / "steam.sh").write_text("#!/bin/sh\n", encoding="utf-8")
     vdf = steam / "userdata/12345/config/localconfig.vdf"
     vdf.parent.mkdir(parents=True, exist_ok=True)
-    texto = vdf.read_text(encoding="utf-8") if vdf.is_file() else _localconfig(["100", "200"])
+    texto = (vdf.read_text(encoding="utf-8") if vdf.is_file()
+             else _localconfig(["9900100", "9900200"]))
     novo, _aplicados, _ = slo.apply_wrapper_vdf_text(texto)
     vdf.write_text(novo, encoding="utf-8")
     cfg = steam / "config/config.vdf"
@@ -707,7 +708,7 @@ def instalar_de_mentira(r: m.Raizes) -> None:
     nome = proton_pin.parse_pin_conf(
         (RAIZ / "assets/proton-pin.conf").read_text(encoding="utf-8"))["name"]
     travado, mudancas = proton_pin.build_compat_tool_mapping(
-        base, tool_name=nome, appids=["100", "200"])
+        base, tool_name=nome, appids=["9900100", "9900200"])
     cfg.write_text(travado, encoding="utf-8")
     estado = r.estado / m.SLUG
     estado.mkdir(parents=True, exist_ok=True)
@@ -808,7 +809,7 @@ def test_a_casa_inteira_da_a_volta_completa(
     plantar_a_mesa(r, 4, "misto", True)
     instalar_de_mentira(r)
     (r.estado / m.SLUG / "camadas-vulkan.json").write_text(json.dumps(
-        {"100": {"EOSOverlay.json": {"feito": "religada", "escolha": "manter"}}}),
+        {"9900100": {"EOSOverlay.json": {"feito": "religada", "escolha": "manter"}}}),
         encoding="utf-8")
     antes = _arvore(tmp_path)
     sistema = SistemaDeMentira()
@@ -856,7 +857,7 @@ def test_a_casa_inteira_da_a_volta_completa(
 
 
 def test_o_limpa_ve_o_device_ks_num_prefixo(raizes: m.Raizes) -> None:
-    compat = raizes.lar / ".steam/steam/steamapps/compatdata/100/pfx"
+    compat = raizes.lar / ".steam/steam/steamapps/compatdata/9900100/pfx"
     compat.mkdir(parents=True)
     (raizes.lar / ".steam/steam/steam.sh").write_text("", encoding="utf-8")
     (compat / "system.reg").write_text(
@@ -932,7 +933,7 @@ def test_o_limpa_diz_as_copias_ao_lado_como_de_proposito(raizes: m.Raizes) -> No
     steam = (raizes.lar / ".steam/steam").resolve()
     vdf = steam / "userdata/12345/config/localconfig.vdf"
     cfg = steam / "config/config.vdf"
-    reg = steam / "steamapps/compatdata/100/pfx/system.reg"
+    reg = steam / "steamapps/compatdata/9900100/pfx/system.reg"
     reg.parent.mkdir(parents=True)
     reg.write_text("WINE REGISTRY Version 2\n", encoding="utf-8")
     for arquivo, sufixo in ((vdf, "hefesto-launch-1"), (vdf, "steam-input-2"),

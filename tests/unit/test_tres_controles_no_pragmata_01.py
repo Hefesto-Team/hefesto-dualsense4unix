@@ -17,7 +17,7 @@ Quatro aparelhos para UM controle físico::
 
 O `steam` (pid 3699757) era o único processo com `/dev/uinput` aberto além do
 `input-remapper` do sistema, e o `pad 0` nasceu no MESMO segundo em que o daemon
-logou ``steam_input_excecao_ativada appid=3357650`` (02:13:40). São **dois**
+logou ``steam_input_excecao_ativada appid=9967153`` (02:13:40). São **dois**
 espelhos porque o Steam Input enxerga **dois** controles — o físico e o nosso
 vpad — e faz um Xbox virtual para cada.
 

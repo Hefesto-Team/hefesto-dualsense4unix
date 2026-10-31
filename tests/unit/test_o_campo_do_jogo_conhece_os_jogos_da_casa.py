@@ -19,20 +19,20 @@ from hefesto_dualsense4unix.integrations.jogos_locais import (
 )
 
 JOGOS_FALSOS: list[tuple[str, str]] = [
-    ("851100", "Mar de Estrelas"),
-    ("1599660", "Saco de Aventura™: O Retorno"),
-    ("2111190", "Café Cósmico"),
+    ("9917022", "Mar de Estrelas"),
+    ("9931993", "Saco de Aventura™: O Retorno"),
+    ("9942223", "Café Cósmico"),
 ]
 
 FERRAMENTAS_FALSAS: list[tuple[str, str]] = [
-    ("1493710", "Proton Experimental"),
-    ("2180100", "Proton Hotfix"),
-    ("3658110", "Proton 10.0"),
-    ("1628350", "Steam Linux Runtime 3.0 (sniper)"),
-    ("228980", "Steamworks Common Redistributables"),
+    ("9929874", "Proton Experimental"),
+    ("9943602", "Proton Hotfix"),
+    ("9973162", "Proton 10.0"),
+    ("9932567", "Steam Linux Runtime 3.0 (sniper)"),
+    ("9904579", "Steamworks Common Redistributables"),
 ]
 
-SO_NO_ATALHO = ("321000", "Jogo Sem Manifesto")
+SO_NO_ATALHO = ("9906420", "Jogo Sem Manifesto")
 
 
 def _escrever_acf(steamapps: Path, appid: str, nome: str) -> None:
@@ -103,7 +103,7 @@ def atalhos_de_mentira(tmp_path: Path) -> Path:
     pasta = tmp_path / "atalhos"
     appid_orfao, nome_orfao = SO_NO_ATALHO
     _escrever_desktop(pasta, "jogo-sem-manifesto.desktop", nome_orfao, appid_orfao)
-    _escrever_desktop(pasta, "cafe.desktop", "Café", "2111190")
+    _escrever_desktop(pasta, "cafe.desktop", "Café", "9942223")
     (pasta / "escondido.desktop").write_text(
         "[Desktop Entry]\nType=Application\nName=Escondido\n"
         "Exec=steam steam://rungameid/999999\nNoDisplay=true\n",
@@ -132,7 +132,7 @@ class TestABibliotecaDeMentira:
     ) -> None:
         """O jogo do segundo disco não pode ficar de fora da lista."""
         appids = {j.appid for j in jogos_da_biblioteca_steam(home=casa_de_mentira)}
-        assert "2111190" in appids
+        assert "9942223" in appids
 
     def test_proton_e_runtime_nao_sao_jogos(self, casa_de_mentira: Path) -> None:
         nomes = {j.nome for j in jogos_da_biblioteca_steam(home=casa_de_mentira)}
@@ -158,7 +158,7 @@ class TestOsAtalhosDesktop:
     def test_le_o_rungameid_do_exec(self, atalhos_de_mentira: Path) -> None:
         achados = jogos_dos_atalhos_desktop([atalhos_de_mentira])
         por_id = {j.appid: j.nome for j in achados}
-        assert por_id["321000"] == "Jogo Sem Manifesto"
+        assert por_id["9906420"] == "Jogo Sem Manifesto"
 
     def test_atalho_que_o_menu_esconde_fica_de_fora(
         self, atalhos_de_mentira: Path
@@ -178,9 +178,9 @@ class TestOCatalogoInteiro:
             home=casa_de_mentira, pastas_de_atalhos=[atalhos_de_mentira]
         )
         por_id = {j.appid: j for j in catalogo}
-        assert por_id["321000"].nome == "Jogo Sem Manifesto"
-        assert por_id["2111190"].nome == "Café Cósmico"
-        assert por_id["2111190"].fonte == "steam"
+        assert por_id["9906420"].nome == "Jogo Sem Manifesto"
+        assert por_id["9942223"].nome == "Café Cósmico"
+        assert por_id["9942223"].fonte == "steam"
 
     def test_a_lista_sai_em_ordem_alfabetica_sem_appid_repetido(
         self, casa_de_mentira: Path, atalhos_de_mentira: Path
@@ -195,10 +195,10 @@ class TestOCatalogoInteiro:
         )
 
     def test_o_rotulo_carrega_o_numero_junto(self, casa_de_mentira: Path) -> None:
-        """`851100` sozinho não diz nada; o nome sozinho não é conferível."""
+        """`9917022` sozinho não diz nada; o nome sozinho não é conferível."""
         catalogo = catalogo_de_jogos(home=casa_de_mentira, pastas_de_atalhos=[])
         rotulos = {j.rotulo for j in catalogo}
-        assert "Mar de Estrelas (appid 851100)" in rotulos
+        assert "Mar de Estrelas (appid 9917022)" in rotulos
 
 
 class TestAFraseAoLadoDoCampo:
@@ -214,11 +214,11 @@ class TestAFraseAoLadoDoCampo:
         assert frase_do_campo_do_jogo("   ", self.nomes) is None
 
     def test_o_numero_vira_o_nome_do_jogo(self) -> None:
-        assert frase_do_campo_do_jogo("851100", self.nomes) == ("Mar de Estrelas", False)
+        assert frase_do_campo_do_jogo("9917022", self.nomes) == ("Mar de Estrelas", False)
 
     def test_o_endereco_colado_tambem_vira_o_nome(self) -> None:
         assert frase_do_campo_do_jogo(
-            "https://store.steampowered.com/app/851100/Sea_of_Stars/", self.nomes
+            "https://store.steampowered.com/app/9917022/Sea_of_Stars/", self.nomes
         ) == ("Mar de Estrelas", False)
 
     def test_jogo_que_nao_esta_aqui_diz_isso_sem_alarme(self) -> None:
@@ -239,7 +239,7 @@ class TestAFraseAoLadoDoCampo:
 
     def test_sem_catalogo_o_numero_continua_valendo(self) -> None:
         """Máquina sem Steam: a lista fica vazia e o campo não fica quebrado."""
-        assert frase_do_campo_do_jogo("851100", {}) == (MSG_FORA_DA_MAQUINA, False)
+        assert frase_do_campo_do_jogo("9917022", {}) == (MSG_FORA_DA_MAQUINA, False)
 
 
 class TestOFiltroDeFerramenta:

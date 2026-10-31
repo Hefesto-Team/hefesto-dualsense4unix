@@ -296,7 +296,7 @@ def _pcm_de(canais_ligados: tuple[int, ...], nivel: int, quadros: int, lado: int
 
 
 def test_o_jogo_que_fecha_zera_o_gatilho_e_o_envelope(mesa: _Mesa, relogio: _Relogio) -> None:
-    mesa.daemon.appid_em_cena = 570
+    mesa.daemon.appid_em_cena = 9900570
     _tique(mesa.daemon)
     gp.apply_game_trigger(mesa.daemon, "left", _arma(2, 5, 4), target_uniq=UNIQS[0])
     fonte = eh.espiar_a_haptica(

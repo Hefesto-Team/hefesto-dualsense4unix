@@ -68,7 +68,7 @@ def _heroic(lar: Path, jogos: dict[str, dict[str, object] | None]) -> Path:
     (casa / "config.json").write_text(json.dumps({"defaultSettings": {
         "enviromentOptions": [{"key": "MANGOHUD", "value": "1"}]}}, indent=2))
     (casa / "store_cache/umu.json").write_text(json.dumps(
-        {f"legendary_{app}": f"umu-{100 + i}" for i, app in enumerate(jogos)}))
+        {f"legendary_{app}": f"umu-{9900100 + i}" for i, app in enumerate(jogos)}))
     (casa / "store_cache/legendary_library.json").write_text(json.dumps({"library": [
         {"app_name": app, "title": app, "is_installed": True} for app in jogos]}))
     plantar_o_registro(casa, list(jogos))
@@ -123,7 +123,8 @@ def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> N
     casa = _heroic(lar, {"A": copia, "B": {"enviromentOptions": [
         {"key": "MANGOHUD", "value": "1"}]}})
     _carona(lar)
-    assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
+    assert antiga.adicionar(
+        "steam_app_9900100", lancador="heroic", nome="A", lar=lar) == "adicionado"
     assert _lista_propria(casa, "A") is not None, "a exclusão não deu a A a lista própria"
 
     feitos, completo = _desfazer(lar)
@@ -144,7 +145,7 @@ def test_o_usuario_mexeu_a_chave_do_usuario_fica(lar: Path) -> None:
     """MORDIDA: a volta exata sem conferir o «depois» (a chave de quem usa sumiria)."""
     casa = _heroic(lar, {"A": {}})
     _carona(lar)
-    antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar)
+    antiga.adicionar("steam_app_9900100", lancador="heroic", nome="A", lar=lar)
     arquivo = casa / "GamesConfig" / "A.json"
     dado = json.loads(arquivo.read_text())
     dado["A"]["enviromentOptions"].append({"key": "DXVK_HUD", "value": "fps"})
@@ -171,7 +172,7 @@ def _lutris(lar: Path, jogos: dict[str, str]) -> dict[str, Path]:
     umu = dados / "runtime/umu-games/umu-games.json"
     umu.parent.mkdir(parents=True)
     umu.write_text(json.dumps([{"name": s, "store": "gog", "appid": a,
-                                "umu_id": f"umu-{70000 + i}"}
+                                "umu_id": f"umu-{9970000 + i}"}
                                for i, (s, a) in enumerate(jogos.items())]))
     con = sqlite3.connect(dados / "pga.db")
     with con:
@@ -201,7 +202,7 @@ def test_sem_pyyaml_o_yml_volta_exato_ou_fica(lar: Path, tmp_path: Path) -> None
     _carona(lar)
     originais = {s: _md5(y) for s, y in ymls.items()}
     for i in (0, 1):
-        assert antiga.adicionar(f"steam_app_{70000 + i}", lancador="lutris", nome=str(i),
+        assert antiga.adicionar(f"steam_app_{9970000 + i}", lancador="lutris", nome=str(i),
                                 lar=lar) == "adicionado"
     assert all(_md5(y) != originais[s] for s, y in ymls.items()), "a exclusão não escreveu"
     dado = yaml.safe_load(ymls["mexido"].read_text())
@@ -232,7 +233,7 @@ def _excluir_um_de_cada(r: m.Raizes, monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setenv("XDG_STATE_HOME", str(r.estado))
     casa = r.lar / _HEROIC
     (casa / "store_cache").mkdir(parents=True)
-    (casa / "store_cache/umu.json").write_text(json.dumps({"legendary_A": "umu-100"}))
+    (casa / "store_cache/umu.json").write_text(json.dumps({"legendary_A": "umu-9900100"}))
     (casa / "store_cache/legendary_library.json").write_text(json.dumps({"library": [
         {"app_name": "A", "title": "A", "is_installed": True}]}))
     plantar_o_registro(casa, ["A"])
@@ -242,12 +243,14 @@ def _excluir_um_de_cada(r: m.Raizes, monkeypatch: pytest.MonkeyPatch,
     cpe.curar_todas_as_estradas(lar=r.lar, pasta_do_ambiente=pasta,
                                 raiz_sistema=r.lar.parent / "flatpak-do-sistema")
     yml_original = yml.read_text()
-    assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=r.lar) == "adicionado"
     assert antiga.adicionar(
-        "steam_app_70000", lancador="lutris", nome="Q", lar=r.lar) == "adicionado"
+        "steam_app_9900100", lancador="heroic", nome="A", lar=r.lar) == "adicionado"
+    assert antiga.adicionar(
+        "steam_app_9970000", lancador="lutris", nome="Q", lar=r.lar) == "adicionado"
     assert antiga.adicionar("emulador:mgba", lancador="mgba", nome="mGBA — todos os jogos",
                             janelas=("io.mgba.mGBA",), lar=r.lar) == "adicionado"
-    assert antiga.adicionar("steam_app_200", lancador="steam", nome="S", lar=r.lar) == "adicionado"
+    assert antiga.adicionar(
+        "steam_app_9900200", lancador="steam", nome="S", lar=r.lar) == "adicionado"
     assert _lista_propria(casa, "A") is not None
     assert yml.read_text() != yml_original, "a exclusão não cobriu a caixa no `.yml`"
     return ({"casa": casa, "yml": yml,
@@ -265,7 +268,7 @@ def _lutris_no_harness(lar: Path, dados: Path) -> Path:
     (lar / ".var/app" / _LUTRIS / "config/lutris").symlink_to(dados)
     umu = dados / "runtime/umu-games/umu-games.json"
     umu.parent.mkdir(parents=True)
-    umu.write_text(json.dumps([{"store": "gog", "appid": "11", "umu_id": "umu-70000"}]))
+    umu.write_text(json.dumps([{"store": "gog", "appid": "11", "umu_id": "umu-9970000"}]))
     con = sqlite3.connect(dados / "pga.db")
     with con:
         con.execute("CREATE TABLE games (name TEXT, slug TEXT, runner TEXT, executable TEXT, "
@@ -365,11 +368,13 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
     original = "# o jogo de quem usa\n" + ymls["q"].read_text()
     ymls["q"].write_text(original)
     _carona(lar)
-    assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
-    assert antiga.adicionar("steam_app_70000", lancador="lutris", nome="Q", lar=lar) == "adicionado"
+    assert antiga.adicionar(
+        "steam_app_9900100", lancador="heroic", nome="A", lar=lar) == "adicionado"
+    assert antiga.adicionar(
+        "steam_app_9970000", lancador="lutris", nome="Q", lar=lar) == "adicionado"
     feitos, completo = _desfazer(lar)
     assert completo, [cpe.frase_do_desfeito(f) for f in feitos]
-    assert [e.chave for e in lx.ler()] == ["steam_app_100", "steam_app_70000"]
+    assert [e.chave for e in lx.ler()] == ["steam_app_9900100", "steam_app_9970000"]
 
     (_pasta() / "default.env").parent.mkdir(parents=True, exist_ok=True)
     (_pasta() / "default.env").write_text(_PONTE)
@@ -387,7 +392,7 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
     assert propria and not set(propria) & {"SDL_GAMECONTROLLER_IGNORE_DEVICES",
                                            "PROTON_DISABLE_HIDRAW"}, (
         f"o jogo excluído do Heroic voltou a seguir a global com o nosso: {propria}")
-    assert lx.tirar("steam_app_70000", lar=lar) == "removido"
+    assert lx.tirar("steam_app_9970000", lar=lar) == "removido"
     assert ymls["q"].read_text() == original, (
         f"o «Tirar» de depois não devolveu o `.yml` byte a byte: {ymls['q'].read_text()!r}")
 

@@ -33,7 +33,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 HEROIC_ID = "com.heroicgameslauncher.hgl"
 
-UMU_DO_GOTG = "umu-1088850"
+UMU_DO_GOTG = "umu-9921777"
 
 CHAVE_DO_GOTG = classe_do_umu_id(UMU_DO_GOTG)
 
@@ -123,7 +123,7 @@ def maquina_do_usuario(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(jl, "assinatura_das_janelas",
                         lambda *_a, **_k: assinar(lar=lar, pastas=[lar]))
     monkeypatch.setattr(a10, "_nomes_dos_jogos",
-                        lambda: {"1245620": "ELDEN RING"})
+                        lambda: {"9924912": "ELDEN RING"})
     return lar
 
 
@@ -175,7 +175,7 @@ def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
     def vem_de(match: Any) -> str | None:
         return sm.procedencia_do_match(match, a10._lancador_da_chave)
 
-    assert vem_de(MatchCriteria(window_class=["steam_app_1245620"])) == "Steam"
+    assert vem_de(MatchCriteria(window_class=["steam_app_9924912"])) == "Steam"
     assert vem_de(MatchCriteria(process_name=["steam"])) == "Steam"
     assert vem_de(MatchAny()) == "Qualquer jogo"
     assert vem_de(sm.SIMPLE_MATCH_PRESETS["browser"]) == "Navegação"
@@ -209,18 +209,18 @@ def test_a_lista_de_baixo_segue_o_campo_de_cima(
     do_heroic = a10._html_dos_jogos("Heroic")
     da_steam = a10._html_dos_jogos("Steam")
 
-    assert CHAVE_DO_GOTG in do_heroic and "1245620" not in do_heroic
-    assert "1245620" in da_steam and CHAVE_DO_GOTG not in da_steam
+    assert CHAVE_DO_GOTG in do_heroic and "9924912" not in do_heroic
+    assert "9924912" in da_steam and CHAVE_DO_GOTG not in da_steam
     inteira = a10._html_dos_jogos("Qualquer jogo")
-    assert CHAVE_DO_GOTG in inteira and "1245620" in inteira
+    assert CHAVE_DO_GOTG in inteira and "9924912" in inteira
 
 
 def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
     maquina_do_usuario: pathlib.Path,
 ) -> None:
-    """``ELDEN RING · 1245620``, e nunca ``eldenring.exe`` — item 12 da lista de pedidos."""
+    """``ELDEN RING · 9924912``, e nunca ``eldenring.exe`` — item 12 da lista de pedidos."""
     html = a10._html_dos_jogos("Steam")
-    assert 'label="ELDEN RING · 1245620"' in html
+    assert 'label="ELDEN RING · 9924912"' in html
     assert ".exe" not in html
 
     do_heroic = a10._html_dos_jogos("Heroic")
@@ -256,8 +256,8 @@ def test_a_coluna_fala_a_lingua_do_campo(maquina_do_usuario: pathlib.Path) -> No
     def coluna(match: Any) -> str:
         return a10._quando_usar(match, "Só neste programa")
 
-    assert coluna(MatchCriteria(window_class=["steam_app_1245620"])) == (
-        "Steam · ELDEN RING · 1245620")
+    assert coluna(MatchCriteria(window_class=["steam_app_9924912"])) == (
+        "Steam · ELDEN RING · 9924912")
     assert coluna(MatchCriteria(window_class=[CHAVE_DO_GOTG])) == (
         "Heroic · Marvel's Guardians of the Galaxy")
     assert ".exe" not in coluna(MatchCriteria(window_class=[CHAVE_DO_GOTG]))
@@ -289,7 +289,7 @@ def test_a_coluna_traduzida_chega_a_lupa_e_a_lista_so_mostra_nome_e_datas(
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
                  Profile(name="Elden Ring", priority=85,
                          match=MatchCriteria(
-                             window_class=["steam_app_1245620"])))
+                             window_class=["steam_app_9924912"])))
     monkeypatch.setattr(a10, "_PROCURA", "heroic · marvel", raising=False)
 
     fora = a10.pacote(_ctx())
@@ -309,7 +309,7 @@ def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
                  Profile(name="Elden Ring", priority=85,
                          match=MatchCriteria(
-                             window_class=["steam_app_1245620"])))
+                             window_class=["steam_app_9924912"])))
     monkeypatch.setattr(a10, "_PROCURA", "guardians", raising=False)
 
     fora = a10.pacote(_ctx())

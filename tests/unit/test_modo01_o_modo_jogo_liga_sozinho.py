@@ -44,7 +44,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID_MMJ = 2111190
+APPID_MMJ = 9942223
 WM_MMJ = f"steam_app_{APPID_MMJ}"
 _RAIZ_DOS_ASSETS = Path(__file__).resolve().parents[2] / "assets"
 CASAS_DE_FABRICA = (
@@ -665,7 +665,7 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
         store.set_freestyle_ligado(True)
         sw = _switcher(store)
 
-        janela = {"wm_class": "steam_app_1599660", "wm_name": "Sackboy"}
+        janela = {"wm_class": "steam_app_9931993", "wm_name": "Sackboy"}
         sw._tick(janela, 0.0)
         sw._tick(janela, 0.6)
 
@@ -734,7 +734,7 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
                 "mode": {"kind": "gamepad", "gamepad_flavor": "xbox"},
             }
         )
-        janela = {"wm_class": "steam_app_379720", "wm_name": "Doom Eternal"}
+        janela = {"wm_class": "steam_app_9907594", "wm_name": "Doom Eternal"}
 
         assert perfil_e_regra_de_jogo(por_titulo, janela) is False
         assert perfil_declara_modo_de_jogo(por_titulo) is True

@@ -44,8 +44,8 @@ def casa_com_link(tmp_path: Path) -> Path:
     (tmp_path / ".steam/steam").symlink_to(real, target_is_directory=True)
 
     steamapps = tmp_path / ".steam/steam/steamapps"
-    _manifest(steamapps, "2542020", "Duskfade")
-    _manifest(steamapps, "2497900", "DONT SCREAM")
+    _manifest(steamapps, "9950840", "Duskfade")
+    _manifest(steamapps, "9949958", "DONT SCREAM")
     _libraryfolders(steamapps, [real])
     return tmp_path
 
@@ -69,7 +69,7 @@ class TestAPastaNaoSaiRepetida:
         """Deduplicar não pode virar "só a primeira pasta"."""
         outro = casa_com_link / "mnt/Disco2"
         (outro / "steamapps").mkdir(parents=True)
-        _manifest(outro / "steamapps", "3357650", "PRAGMATA")
+        _manifest(outro / "steamapps", "9967153", "PRAGMATA")
         _libraryfolders(
             casa_com_link / ".steam/steam/steamapps",
             [casa_com_link / ".steam/debian-installation", outro],
@@ -104,14 +104,14 @@ class TestQuemContaNaoContaEmDobro:
             for acf in sorted(pasta.glob("appmanifest_*.acf"))
         ]
         assert sorted(vistos) == [
-            "appmanifest_2497900.acf",
-            "appmanifest_2542020.acf",
+            "appmanifest_9949958.acf",
+            "appmanifest_9950840.acf",
         ]
 
 
 class TestOQueJaFuncionavaContinua:
     def test_traducao_de_appid_em_nome(self, casa_com_link: Path) -> None:
-        assert nome_do_appid("2542020", casa_com_link) == "Duskfade"
+        assert nome_do_appid("9950840", casa_com_link) == "Duskfade"
 
     def test_jogo_ausente_continua_devolvendo_none(self, casa_com_link: Path) -> None:
         assert nome_do_appid("9999999", casa_com_link) is None
@@ -119,4 +119,4 @@ class TestOQueJaFuncionavaContinua:
     def test_casa_sem_steam_nenhuma_nao_levanta(self, tmp_path: Path) -> None:
         """Máquina sem Steam: uma pasta inexistente, e silêncio."""
         assert len(pastas_steamapps(tmp_path)) == 1
-        assert nome_do_appid("2542020", tmp_path) is None
+        assert nome_do_appid("9950840", tmp_path) is None

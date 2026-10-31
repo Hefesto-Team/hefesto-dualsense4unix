@@ -8,7 +8,7 @@ from hefesto_dualsense4unix.daemon.subsystems.game_signal import (
     classify,
 )
 
-APPID = 1599660
+APPID = 9931993
 STEAM_WC = f"steam_app_{APPID}"
 
 

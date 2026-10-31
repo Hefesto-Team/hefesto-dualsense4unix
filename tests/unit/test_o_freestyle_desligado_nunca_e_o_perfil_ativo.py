@@ -39,7 +39,7 @@ from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 FREESTYLE = loader.NOME_DO_PADRAO
 AVATAR = "Avatar Legends"
-JANELA_DO_AVATAR = "steam_app_2424420"
+JANELA_DO_AVATAR = "steam_app_9948488"
 TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "~"}
 OUTRO = "Navegador"
 

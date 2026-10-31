@@ -47,7 +47,7 @@ def _a_montagem(*, prender: bool = True):  # type: ignore[no-untyped-def]
     jogo.mode = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
     manager, store = _ensaio([
         jogo,
-        _perfil("lure", janela="steam_app_1599660", prioridade=80),
+        _perfil("lure", janela="steam_app_9931993", prioridade=80),
         _perfil("fliperama", janela="retroarch", prioridade=40),
         _perfil("navegacao", janela=JANELA_DA_NAVEGACAO["wm_class"], prioridade=50),
         _perfil("navegador", janela=JANELA_DO_NAVEGADOR["wm_class"], prioridade=45),

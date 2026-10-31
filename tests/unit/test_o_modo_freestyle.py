@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 RAIZ = Path(__file__).resolve().parents[2]
-JOGO = "steam_app_2111190"
+JOGO = "steam_app_9942223"
 
 
 class _Ponte:

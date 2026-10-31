@@ -12,7 +12,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import opcoes_por_jogo as opj
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-APPID = "1912410"
+APPID = "9938248"
 OPCOES = "VKD3D_CONFIG=no_upload_hvv %command%"
 DO_USUARIO = 'WINEDLLOVERRIDES="xgameruntime=n" &&'
 TOKEN = re.compile(r"""(?:[^\s'"]|'[^']*'|"[^"]*")+""")

@@ -247,9 +247,9 @@ def test_a_marca_acende_exatamente_quando_a_frase_existe() -> None:
         "por título": Profile(name="por título",
                               match=MatchCriteria(window_title_regex="^Elden")),
         "Pragmata": Profile(name="Pragmata", match=MatchCriteria(
-            window_class=["steam_app_3357650"], process_name=["PRAGMATA.exe"])),
+            window_class=["steam_app_9967153"], process_name=["PRAGMATA.exe"])),
         "simples": Profile(name="simples", match=MatchCriteria(
-            window_class=["steam_app_1245620"])),
+            window_class=["steam_app_9924912"])),
     }
     for nome, prof in casos.items():
         fora = _emitido(prof)
@@ -288,7 +288,7 @@ def test_a_exigencia_do_pragmata_chega_a_esta_tela() -> None:
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
     prof = Profile(name="Pragmata", match=MatchCriteria(
-        window_class=["steam_app_3357650"], process_name=["PRAGMATA.exe"]))
+        window_class=["steam_app_9967153"], process_name=["PRAGMATA.exe"]))
     fora = _emitido(prof)
     frase = str(fora["editor.jogo.exigencia"])
     assert "PRAGMATA.exe" in frase, (
@@ -318,7 +318,7 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
     prof = Profile(name="Pragmata", match=MatchCriteria(
-        window_class=["steam_app_3357650"], process_name=["PRAGMATA.exe"]))
+        window_class=["steam_app_9967153"], process_name=["PRAGMATA.exe"]))
     frase = str(_emitido(prof)["editor.jogo.exigencia"])
     assert "Modo avançado" not in frase, (
         f"a tela manda quem usa ligar um “Modo avançado” que esta interface não "
@@ -335,7 +335,7 @@ def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
         exigencia_invisivel,
     )
 
-    match = MatchCriteria(window_class=["steam_app_3357650"],
+    match = MatchCriteria(window_class=["steam_app_9967153"],
                           process_name=["PRAGMATA.exe"])
     do_produto = exigencia_invisivel(match)
     assert do_produto, "o produto parou de contar a exigência escondida"
@@ -400,11 +400,11 @@ def test_o_endereco_colado_vira_o_numero_na_frente_do_usuario(
 
     ctx = Contexto(state={"active_profile": "régua"}, mesa=list(MESA),
                    conectados=list(MESA), estados={})
-    colado = "https://store.steampowered.com/app/1599660/Sackboy/"
+    colado = "https://store.steampowered.com/app/9931993/Sackboy/"
     resposta = a10_perfis.editor_jogo(ctx, {"valor": colado, "evento": "change"},
                                       None)
     assert resposta is not None, "o gesto não respondeu"
-    assert resposta["mesa"]["editor.jogo"] == "1599660", (
+    assert resposta["mesa"]["editor.jogo"] == "9931993", (
         f"o campo continua mostrando o endereço colado: "
         f"{resposta['mesa']['editor.jogo']!r}")
     assert gravados, "o gesto não gravou o perfil"
@@ -494,11 +494,11 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
         f"o campo livre volta {simple_extra(escrito)!r} em vez da classe — a "
         f"tela abriria VAZIA sobre um perfil que tem regra no disco")
 
-    da_steam = from_simple_choice("steam_game", "1599660")
+    da_steam = from_simple_choice("steam_game", "9931993")
     assert detect_simple_preset(da_steam) == "steam_game", (
         "um `steam_app_<id>` deixou de sair como jogo da Steam — a forma nova "
         "roubou o round-trip que o R-12 existe para proteger")
-    assert simple_extra(da_steam) == "1599660"
+    assert simple_extra(da_steam) == "9931993"
 
     with pytest.raises(ValueError, match="Diga a janela do jogo"):
         from_simple_choice("janela", "   ")
@@ -565,9 +565,9 @@ def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos",
-                        lambda: {"1245620": "Elden Ring"})
+                        lambda: {"9924912": "Elden Ring"})
 
-    instalado = a10_perfis._jogo_reconhecido("1245620")
+    instalado = a10_perfis._jogo_reconhecido("9924912")
     assert instalado == ("Elden Ring", False), (
         f"o appid instalado devia devolver o NOME sem alerta: {instalado!r}")
 
@@ -599,7 +599,7 @@ def test_o_rotulo_do_jogo_saiu_da_pagina_e_do_pacote(publicado: bool) -> None:
 
     html = _pagina(publicado)
     fora = _emitido(Profile(name="Elden Ring", match=MatchCriteria(
-        window_class=["steam_app_1245620"])))
+        window_class=["steam_app_9924912"])))
 
     for endereco in ("editor.jogo.rotulo", "editor.jogo.alerta"):
         assert endereco not in fora, f"o produto voltou a emitir `{endereco}`"
@@ -694,7 +694,7 @@ def test_a_frase_curta_e_a_longa_sem_o_aviso_e_nao_um_corte(
             com_wrapper=[], recusados=[], sandbox=[], erros=[],
             steam_aberta=True, jogo_aberto=True,
             faltantes=[sw.JogoSemWrapper(
-                appid="1245620", rotulo="Elden Ring (appid 1245620)",
+                appid="9924912", rotulo="Elden Ring (appid 9924912)",
                 opcoes="", motivo=motivo, vdf="/x")])
 
     regressao = _censo(sw.MOTIVO_REGRESSAO)
@@ -733,13 +733,13 @@ def test_o_campo_do_jogo_nao_grava_por_tecla(
 
     for evento in ("input", "keyup", "paste", "click"):
         gravados.clear()
-        a10_perfis.editor_jogo(ctx, {"valor": "1599660", "evento": evento}, None)
+        a10_perfis.editor_jogo(ctx, {"valor": "9931993", "evento": evento}, None)
         assert not gravados, (
             f"um evento `{evento}` gravou o perfil no disco — com o `input` "
             f"ligado, isso é uma gravação por TECLA digitada")
 
-    for aberto in ({"valor": "1599660", "evento": "change"},
-                   {"valor": "1599660"}):
+    for aberto in ({"valor": "9931993", "evento": "change"},
+                   {"valor": "9931993"}):
         gravados.clear()
         a10_perfis.editor_jogo(ctx, dict(aberto), None)
         assert gravados, (

@@ -73,7 +73,7 @@ def _lancar(lar: Path, **extra: str) -> dict[str, str]:
 
 def test_todo_jogo_nasce_sem_o_xalia(lar: Path) -> None:
     """Sem daemon e sem escolha gravada: o jogo recebe `PROTON_USE_XALIA=0`."""
-    visto = _lancar(lar, SteamAppId="3621330")
+    visto = _lancar(lar, SteamAppId="9972426")
     assert visto.get("PROTON_USE_XALIA") == "0", (
         "o lançador não desligou o xalia, e o proton o liga sozinho: "
         f"{visto.get('PROTON_USE_XALIA')!r}")
@@ -86,16 +86,16 @@ def test_o_jogo_sem_appid_tambem(lar: Path) -> None:
 
 def test_a_launch_option_do_usuario_manda(lar: Path) -> None:
     """Quem já pôs `PROTON_USE_XALIA` no ambiente não é sobrescrito."""
-    assert _lancar(lar, SteamAppId="3621330", PROTON_USE_XALIA="1")["PROTON_USE_XALIA"] == "1"
+    assert _lancar(lar, SteamAppId="9972426", PROTON_USE_XALIA="1")["PROTON_USE_XALIA"] == "1"
 
 
 def test_o_jogo_da_lista_de_exclusao_abre_como_sem_o_hefesto(lar: Path) -> None:
     """A lista de exclusão vale antes de tudo: nenhuma env do Hefesto."""
     status = antiga.adicionar(
-        "steam_app_3621330", lancador="steam", nome="Pro Jank Footy",
+        "steam_app_9972426", lancador="steam", nome="Pro Jank Footy",
         config_home=lar / "casa" / ".config")
     assert status == "adicionado", status
-    assert "PROTON_USE_XALIA" not in _lancar(lar, SteamAppId="3621330")
+    assert "PROTON_USE_XALIA" not in _lancar(lar, SteamAppId="9972426")
 
 
 _XALIA = "PROTON_USE_XALIA"

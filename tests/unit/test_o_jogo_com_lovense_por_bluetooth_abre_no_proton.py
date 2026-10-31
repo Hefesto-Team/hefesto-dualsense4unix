@@ -84,7 +84,7 @@ def test_o_jogo_com_a_dll_do_kit_recebe_o_override_mesmo_com_o_nome_da_pasta_dif
 
 
 def test_o_jogo_com_o_kit_sem_a_dll_ble_nao_recebe_nada_e_nao_acusa_falta(lar: Path) -> None:
-    """O Third Crisis (1260820) traz o kit sem o BLE: a receita não é dele, e nada «falta»."""
+    """O Third Crisis (9925216) traz o kit sem o BLE: a receita não é dele, e nada «falta»."""
     raiz = _jogo_unity(lar, "710003", com_a_dll=False)
     assert rda.ambiente_do_jogo(raiz) == {} and rda.pecas_que_faltam(raiz) == ()
     censo = pdj.levantar_censo(allowlist=[], pontes={})

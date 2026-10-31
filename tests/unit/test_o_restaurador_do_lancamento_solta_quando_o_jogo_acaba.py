@@ -93,7 +93,7 @@ class Ensaio:
             "PATH": f"{self.bin}:/usr/bin:/bin",
             "HEFESTO_PLACA_ACORDADA": str(self.placa),
             "HEFESTO_GM_POLL_SECS": str(PERIODO),
-            "SteamAppId": "3621330",
+            "SteamAppId": "9972426",
         }
 
     def gerente(self, parar: threading.Event) -> None:

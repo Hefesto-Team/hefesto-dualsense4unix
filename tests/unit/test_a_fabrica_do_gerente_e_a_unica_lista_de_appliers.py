@@ -575,7 +575,7 @@ def test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo(
     save_profile(
         Profile(
             name="sackboy_nativo",
-            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            match=MatchCriteria(window_class=["steam_app_9931993"]),
             priority=10,
             triggers=TriggersConfig(
                 left=TriggerConfig(mode="Off"), right=TriggerConfig(mode="Off")

@@ -68,9 +68,9 @@ class TestOsResolvedoresConcordam:
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
         destino = steam_input_allowlist_path()
         destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_text("2111190\n# comentário\n", encoding="utf-8")
+        destino.write_text("9942223\n# comentário\n", encoding="utf-8")
 
-        assert launch_env.steam_input_appids() == {2111190}
+        assert launch_env.steam_input_appids() == {9942223}
 
 
 class TestNinguemMontaOCaminhoPorContaPropria:

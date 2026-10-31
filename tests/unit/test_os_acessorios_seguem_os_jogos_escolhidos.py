@@ -62,17 +62,17 @@ def _store(nome: str | None) -> SimpleNamespace:
 
 def test_abrir_um_jogo_publica_jogo_perfil_estilo_e_jogador() -> None:
     save_profile(Profile(name="Elden Ring", priority=5, estilo="terror", marcas=["adulto"],
-                         match=MatchCriteria(window_class=["steam_app_1245620"])))
+                         match=MatchCriteria(window_class=["steam_app_9924912"])))
     bus = EventBus()
     fila = bus.subscribe(EventTopic.PERFIL_TROCOU)
-    AnunciadorDoJogo(bus, _store("Elden Ring"), _daemon(1245620, bus)).ver()
+    AnunciadorDoJogo(bus, _store("Elden Ring"), _daemon(9924912, bus)).ver()
 
     (evento,) = _tudo(fila)
     assert (evento["perfil"], evento["jogo"], evento["estilo"]) == (
-        "Elden Ring", "steam_app_1245620", "terror")
+        "Elden Ring", "steam_app_9924912", "terror")
     assert [(c["jogador"], c["perfil"], c["jogo"], c["estilo"]) for c in evento["controles"]] == [
-        (1, "Elden Ring", "steam_app_1245620", "terror"),
-        (2, "Elden Ring", "steam_app_1245620", "terror"),
+        (1, "Elden Ring", "steam_app_9924912", "terror"),
+        (2, "Elden Ring", "steam_app_9924912", "terror"),
     ]
     assert "marcas" not in evento and all("marcas" not in c for c in evento["controles"])
 
@@ -98,22 +98,22 @@ def test_dois_controles_em_jogos_diferentes_publicam_cada_um_o_seu() -> None:
     save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento)
     bus = EventBus()
     fila = bus.subscribe(EventTopic.PERFIL_TROCOU)
-    appids = {MAC_1: 1245620, MAC_2: 730}
-    AnunciadorDoJogo(bus, _store("padrao"), _daemon(1245620, bus),  # (noqa-acento)
+    appids = {MAC_1: 9924912, MAC_2: 9900730}
+    AnunciadorDoJogo(bus, _store("padrao"), _daemon(9924912, bus),  # (noqa-acento)
                      appids.get).ver()
 
     (evento,) = _tudo(fila)
     assert {c["jogador"]: c["jogo"] for c in evento["controles"]} == {
-        1: "steam_app_1245620", 2: "steam_app_730"}
+        1: "steam_app_9924912", 2: "steam_app_9900730"}
 
 
 def test_a_conexao_tardia_recebe_o_jogo_de_agora() -> None:
     save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento)
     bus = EventBus()
-    AnunciadorDoJogo(bus, _store("padrao"), _daemon(730, bus)).ver()  # (noqa-acento)
+    AnunciadorDoJogo(bus, _store("padrao"), _daemon(9900730, bus)).ver()  # (noqa-acento)
     tardia = bus.subscribe(EventTopic.PERFIL_TROCOU)
     (evento,) = _tudo(tardia)
-    assert evento["jogo"] == "steam_app_730"
+    assert evento["jogo"] == "steam_app_9900730"
 
 
 def test_o_jogo_que_fecha_diz_fechou_e_depois_o_perfil_sem_jogo() -> None:
@@ -122,7 +122,7 @@ def test_o_jogo_que_fecha_diz_fechou_e_depois_o_perfil_sem_jogo() -> None:
     ordem: list[str] = []
     publicar = bus.publish
     bus.publish = lambda t, c: (ordem.append(t), publicar(t, c))[1]  # type: ignore[method-assign]
-    servico = _daemon(730, bus)
+    servico = _daemon(9900730, bus)
     anunciador = AnunciadorDoJogo(bus, _store("padrao"), servico)  # (noqa-acento)
     anunciador.ver()
     servico.appid_em_cena = None
@@ -285,9 +285,9 @@ def _instalada(a07, ctx, tmp_path) -> None:
 def test_a_janela_desenha_o_range_do_manifesto_e_uma_caixa_por_jogo_com_perfil(
         lar, ctx, tmp_path) -> None:
     save_profile(Profile(name="Elden Ring", priority=5,
-                         match=MatchCriteria(window_class=["steam_app_1245620"])))
+                         match=MatchCriteria(window_class=["steam_app_9924912"])))
     save_profile(Profile(name="Counter-Strike 2", priority=5,
-                         match=MatchCriteria(window_class=["steam_app_730"])))
+                         match=MatchCriteria(window_class=["steam_app_9900730"])))
     save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento)
     a07 = _a07()
     _instalada(a07, ctx, tmp_path)
@@ -298,13 +298,13 @@ def test_a_janela_desenha_o_range_do_manifesto_e_uma_caixa_por_jogo_com_perfil(
     caixas = re.findall(
         r'<input type="checkbox"( checked)? data-gesto="guardar-opcao-da-'
         r'modificacao" data-v="acess:jogos:(steam_app_\d+)">', janela)  # (noqa-acento)
-    assert caixas == [("", "steam_app_730"), ("", "steam_app_1245620")], (
+    assert caixas == [("", "steam_app_9900730"), ("", "steam_app_9924912")], (
         "uma caixa por jogo que tem perfil, na ordem dos nomes, e nenhuma marcada de fábrica")
 
 
 def test_o_deslizante_e_marcar_o_jogo_gravam_na_hora_e_a_janela_repinta(lar, ctx, tmp_path) -> None:
     save_profile(Profile(name="Elden Ring", priority=5,
-                         match=MatchCriteria(window_class=["steam_app_1245620"])))
+                         match=MatchCriteria(window_class=["steam_app_9924912"])))
     a07 = _a07()
     _instalada(a07, ctx, tmp_path)
     a07.configurar_modificacao(ctx, {"v": "acess"}, _Ponte())
@@ -313,15 +313,15 @@ def test_o_deslizante_e_marcar_o_jogo_gravam_na_hora_e_a_janela_repinta(lar, ctx
         ctx, {"v": "acess:vibracao", "valor": "17", "evento": "change"}, _Ponte())
     assert 'value="17"' in janela_pintada(carga["blocos"])
     carga = a07.guardar_opcao_da_modificacao(
-        ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
+        ctx, {"v": "acess:jogos:steam_app_9924912", "valor": "on", "evento": "change"}, _Ponte())
     assert "checked" in janela_pintada(carga["blocos"])
     guardado = json.loads((lar.dados / "acess" / "opcoes.json").read_text(encoding="utf-8"))
-    assert guardado == {"vibracao": 17.0, "jogos": ["steam_app_1245620"]}
+    assert guardado == {"vibracao": 17.0, "jogos": ["steam_app_9924912"]}
 
     assert a07.guardar_opcao_da_modificacao(
-        ctx, {"v": "acess:jogos:steam_app_1245620", "evento": "click"}, _Ponte()) is None
+        ctx, {"v": "acess:jogos:steam_app_9924912", "evento": "click"}, _Ponte()) is None
     a07.guardar_opcao_da_modificacao(
-        ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
+        ctx, {"v": "acess:jogos:steam_app_9924912", "valor": "on", "evento": "change"}, _Ponte())
     assert ler(_manifesto_de(lar), lar)["jogos"] == []
 
 

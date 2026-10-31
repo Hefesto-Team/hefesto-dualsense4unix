@@ -15,7 +15,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 1599660
+APPID = 9931993
 
 
 def _marker(tmp_path: Path, *, appid: int, epoch: int) -> Path:
@@ -135,7 +135,7 @@ class TestArmingPeloMarker:
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Mullet Mad Jack sem perfil próprio: nada a impor (R-02 cuida do"""
-        _marker(env_dir, appid=2111190, epoch=1000)
+        _marker(env_dir, appid=9942223, epoch=1000)
         monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
         daemon = _DaemonFalso()
@@ -143,7 +143,7 @@ class TestArmingPeloMarker:
         resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
 
         assert resultado == {
-            "appid": 2111190, "armado": False, "motivo": "sem_perfil"
+            "appid": 9942223, "armado": False, "motivo": "sem_perfil"
         }
         assert daemon.aplicados == []
 
@@ -172,10 +172,10 @@ class TestArmingPeloMarker:
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Contradição 11 da §5 do plano: a allowlist é opt-in explícito de 'o"""
-        _marker(env_dir, appid=2111190, epoch=1000)
-        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
+        _marker(env_dir, appid=9942223, epoch=1000)
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {9942223})
         monkeypatch.setattr(
-            le, "_steam_profiles", lambda daemon: [(2111190, _perfil())]
+            le, "_steam_profiles", lambda daemon: [(9942223, _perfil())]
         )
         daemon = _DaemonFalso()
 
@@ -192,10 +192,10 @@ class TestAllowlistPulaSoAMascara:
     def test_allowlist_aplica_a_supressao_do_perfil(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _marker(env_dir, appid=2111190, epoch=1000)
+        _marker(env_dir, appid=9942223, epoch=1000)
         perfil = _perfil(suprime=True)
-        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
-        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(2111190, perfil)])
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {9942223})
+        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(9942223, perfil)])
         daemon = _DaemonFalso()
 
         resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
@@ -244,8 +244,8 @@ class TestAllowlistPulaSoAMascara:
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Sem perfil não há opinião nenhuma a aplicar — nem máscara, nem"""
-        _marker(env_dir, appid=2111190, epoch=1000)
-        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
+        _marker(env_dir, appid=9942223, epoch=1000)
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {9942223})
         monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
         daemon = _DaemonFalso()
 

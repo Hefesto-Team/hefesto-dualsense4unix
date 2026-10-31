@@ -61,7 +61,7 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 P1 = "aabbcc000001"
 FREESTYLE = loader.NOME_DO_PADRAO
 JOGO = "Jogo da Régua"
-JANELA_DO_JOGO = "steam_app_480"
+JANELA_DO_JOGO = "steam_app_9900480"
 
 
 class _Vpad:

@@ -425,8 +425,8 @@ def test_o_rodape_nao_devolve_recado_e_relata(capsys) -> None:
     """`rodape._recado` devolve `None` e leva a notícia da carona ao diário."""
     from hefesto_dualsense4unix.interface.pacotes import rodape
 
-    assert rodape._recado("  Reposto o atalho de inicialização: 3357650  ") is None
+    assert rodape._recado("  Reposto o atalho de inicialização: 9967153  ") is None
     err = capsys.readouterr().err
-    assert "Reposto o atalho de inicialização: 3357650" in err, err
+    assert "Reposto o atalho de inicialização: 9967153" in err, err
     assert rodape._recado("   ") is None
     assert "[relato]" not in capsys.readouterr().err

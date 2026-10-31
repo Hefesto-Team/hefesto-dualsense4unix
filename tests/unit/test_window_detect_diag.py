@@ -266,7 +266,7 @@ class TestStoreSinalNuma01:
         store = StateStore()
         store.record_window_detect_read("xlib", "Celeste", now=10.0)
         assert store.game_window_seen_at is None
-        store.record_window_detect_read("xlib", "steam_app_1599660", now=20.0)
+        store.record_window_detect_read("xlib", "steam_app_9931993", now=20.0)
         assert store.game_window_seen_at == 20.0
 
     def test_game_window_seen_at_e_sticky_ele_mesmo_ate_o_proximo_match(

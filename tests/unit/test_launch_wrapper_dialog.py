@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import extract_ste
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
 
-APPID = "1599660"
+APPID = "9931993"
 WM_JOGO = f"steam_app_{APPID}"
 
 
@@ -38,7 +38,7 @@ class TestExtractSteamAppid:
     @pytest.mark.parametrize(
         ("wm_class", "esperado"),
         [
-            ("steam_app_1599660", "1599660"),
+            ("steam_app_9931993", "9931993"),
             ("STEAM_APP_42", "42"),
             ("  steam_app_7  ", "7"),
             ("steam_app_", None),

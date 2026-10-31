@@ -291,7 +291,7 @@ def test_o_proc_ilegivel_do_escritor_cru_nao_vira_negativo_carimbado(
 
 REAPER = (
     "/home/usuario/.steam/debian-installation/ubuntu12_32/reaper "
-    "SteamLaunch AppId=1599660 -- /.../proton waitforexitandrun /.../Launcher.exe"
+    "SteamLaunch AppId=9931993 -- /.../proton waitforexitandrun /.../Launcher.exe"
 )
 
 

@@ -22,7 +22,7 @@ Estes testes cobrem os três estados que a sprint exige, e cada um MORDE numa
 linha diferente do produto:
 
 1. **cobertura incompleta durante a subida** — o arquivo POR APPID, que é o que
-   um jogo com perfil realmente lê (o caso medido: `steam_app_1599660.env`), tem
+   um jogo com perfil realmente lê (o caso medido: `steam_app_9931993.env`), tem
    de obedecer à mesma cobertura por físico que o `default.env`. Mordida:
    `_env_for_profile` sem o `fisicos` (como estava até 12/08);
 2. **cobertura completa no fim** — nada disso pode virar "o dedup parou de
@@ -53,7 +53,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 DISABLE = "PROTON_DISABLE_HIDRAW"
 
-APPID_SACKBOY = 1599660
+APPID_SACKBOY = 9931993
 
 
 class _LoggerEspiao:
@@ -138,7 +138,7 @@ class TestCoberturaIncompletaDuranteASubida:
 
         Até 12/08 o `materialize_launch_env` chamava `_env_for_profile` sem o
         número de físicos. O default 0 significa "NÃO SEI", e "não sei" AUTORIZA
-        o IGNORE — logo o `steam_app_1599660.env`, o arquivo que o jogo COM
+        o IGNORE — logo o `steam_app_9931993.env`, o arquivo que o jogo COM
         perfil de fato lê, saía escondendo os quatro DualSense numa mesa com
         dois vpads vivos. Dois jogadores ficariam com zero controle, que é
         exatamente o desfecho que a doutrina desta casa proíbe por escrito.

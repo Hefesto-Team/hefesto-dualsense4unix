@@ -23,13 +23,13 @@ CABECALHO = (
     "# Uma linha por AppID; '#' comenta.\n"
     "\n"
     "# Mullet Mad Jack — SetDualSenseTriggerEffect via Steamworks:\n"
-    "2111190\n"
+    "9942223\n"
     "\n"
     "# Pragmata — suporte nativo a DualSense entregue PELA Steam.\n"
-    "3357650\n"
+    "9967153\n"
 )
 
-JOGOS = {"2111190": "Mullet Mad Jack", "3357650": "PRAGMATA"}
+JOGOS = {"9942223": "Mullet Mad Jack", "9967153": "PRAGMATA"}
 
 
 @pytest.fixture
@@ -68,22 +68,22 @@ def vivos(allowlist: Path) -> list[str]:
 
 def test_remove_pela_cli_tira_o_appid_do_arquivo(steam_falsa: Path) -> None:
     """A MORDIDA: sem a chamada ligada, o arquivo continua com os dois appids."""
-    assert vivos(steam_falsa) == ["2111190", "3357650"]
+    assert vivos(steam_falsa) == ["9942223", "9967153"]
 
-    resultado = runner.invoke(app, ["gamepad", "steam-input", "remove", "2111190"])
+    resultado = runner.invoke(app, ["gamepad", "steam-input", "remove", "9942223"])
 
     assert resultado.exit_code == 0, resultado.output
-    assert vivos(steam_falsa) == ["3357650"], "o appid removido continua no arquivo"
+    assert vivos(steam_falsa) == ["9967153"], "o appid removido continua no arquivo"
 
 
 def test_remove_preserva_o_arquivo_da_mantenedora(steam_falsa: Path) -> None:
     """Só a linha do appid sai — cabeçalho e anotações de quem usa ficam byte a byte."""
-    runner.invoke(app, ["gamepad", "steam-input", "remove", "2111190"])
+    runner.invoke(app, ["gamepad", "steam-input", "remove", "9942223"])
 
     texto = steam_falsa.read_text(encoding="utf-8")
     assert "allowlist do Steam Input per-app" in texto
     assert "# Pragmata — suporte nativo a DualSense entregue PELA Steam." in texto
-    assert "\n2111190\n" not in texto
+    assert "\n9942223\n" not in texto
 
 
 def test_remove_aceita_o_nome_do_jogo(steam_falsa: Path) -> None:
@@ -91,7 +91,7 @@ def test_remove_aceita_o_nome_do_jogo(steam_falsa: Path) -> None:
     resultado = runner.invoke(app, ["gamepad", "steam-input", "remove", "pragmata"])
 
     assert resultado.exit_code == 0, resultado.output
-    assert vivos(steam_falsa) == ["2111190"]
+    assert vivos(steam_falsa) == ["9942223"]
 
 
 def test_list_mostra_o_nome_e_nao_so_o_numero(steam_falsa: Path) -> None:
@@ -101,7 +101,7 @@ def test_list_mostra_o_nome_e_nao_so_o_numero(steam_falsa: Path) -> None:
     assert resultado.exit_code == 0, resultado.output
     assert "Mullet Mad Jack" in resultado.output
     assert "PRAGMATA" in resultado.output
-    assert "2111190" in resultado.output
+    assert "9942223" in resultado.output
 
 
 def test_list_diz_como_desfazer(steam_falsa: Path) -> None:
@@ -117,7 +117,7 @@ def test_remove_de_jogo_ausente_avisa_e_falha(steam_falsa: Path) -> None:
 
     assert resultado.exit_code == 1
     assert "não estava" in resultado.output
-    assert vivos(steam_falsa) == ["2111190", "3357650"]
+    assert vivos(steam_falsa) == ["9942223", "9967153"]
 
 
 def test_nome_ambiguo_nao_remove_no_chute(steam_falsa: Path) -> None:
@@ -125,7 +125,7 @@ def test_nome_ambiguo_nao_remove_no_chute(steam_falsa: Path) -> None:
     resultado = runner.invoke(app, ["gamepad", "steam-input", "remove", "a"])
 
     assert resultado.exit_code == 1
-    assert vivos(steam_falsa) == ["2111190", "3357650"]
+    assert vivos(steam_falsa) == ["9942223", "9967153"]
 
 
 def test_lista_vazia_nao_mente(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

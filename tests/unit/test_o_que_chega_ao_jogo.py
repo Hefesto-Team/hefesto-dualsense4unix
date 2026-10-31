@@ -92,7 +92,7 @@ def _as_da_steam(visto: dict[str, str]) -> set[str]:
 def test_com_o_botao_ligado_o_jogo_recebe_as_duas(lar: Path) -> None:
     """Ligado pelo dono, o jogo nasce com as duas `DISABLE_…_1=1` — sem daemon."""
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
-    visto = _lancar(lar, SteamAppId="1599660")
+    visto = _lancar(lar, SteamAppId="9931993")
     assert _as_da_steam(visto) == set(cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM), (
         "o botão está ligado e o jogo não recebeu as duas linhas do dono: "
         f"{sorted(_as_da_steam(visto))}")
@@ -101,7 +101,7 @@ def test_com_o_botao_ligado_o_jogo_recebe_as_duas(lar: Path) -> None:
 def test_com_o_botao_desligado_a_steam_decide(lar: Path) -> None:
     """Sem a escolha, nenhuma das duas: o jogo fica como a Steam o abre."""
     cv.gravar_camadas_da_steam_fora(False, config_home=_config(lar))
-    visto = _lancar(lar, SteamAppId="1599660")
+    visto = _lancar(lar, SteamAppId="9931993")
     assert _as_da_steam(visto) == set()
     assert visto.get("ENABLE_VK_LAYER_VALVE_steam_overlay_1") == "1"
 
@@ -113,7 +113,7 @@ def test_o_arquivo_adulterado_nao_exporta_outra_coisa(lar: Path) -> None:
     arquivo.write_text(
         "LD_PRELOAD=/tmp/nao-existe.so\n"
         f"{cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM[0]}\n", encoding="utf-8")
-    visto = _lancar(lar, SteamAppId="1599660")
+    visto = _lancar(lar, SteamAppId="9931993")
     assert "LD_PRELOAD" not in visto
     assert _as_da_steam(visto) == set(), (
         "um arquivo pela metade entregou ao jogo metade do que a pílula diz")
@@ -141,7 +141,7 @@ def test_a_pilula_e_o_lancador_leem_o_mesmo_arquivo_do_mesmo_jeito(
         arquivo.write_bytes(escrito)
     else:
         arquivo.write_bytes(escrito.encode("utf-8"))
-    o_jogo_recebeu = _as_da_steam(_lancar(lar, SteamAppId="1599660")) == set(
+    o_jogo_recebeu = _as_da_steam(_lancar(lar, SteamAppId="9931993")) == set(
         cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
     assert cv.camadas_da_steam_fora(_config(lar)) is o_jogo_recebeu, (
         f"a pílula diz {'acesa' if not o_jogo_recebeu else 'apagada'} e o jogo "
@@ -153,14 +153,14 @@ def test_o_jogo_da_lista_de_exclusao_abre_sem_nada(
     """O jogo que o usuário tirou do Hefesto abre como se ele não estivesse instalado."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(_config(lar)))
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
-    assert antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
-    assert _as_da_steam(_lancar(lar, SteamAppId="1599660")) == set()
-    assert _as_da_steam(_lancar(lar, SteamAppId="1971870")) == set(
+    assert antiga.adicionar("steam_app_9931993", lancador="steam", nome="Wo Long") == "adicionado"
+    assert _as_da_steam(_lancar(lar, SteamAppId="9931993")) == set()
+    assert _as_da_steam(_lancar(lar, SteamAppId="9939437")) == set(
         cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
 
 
 def _prefixo_e_jogo(lar: Path, *, com_carregador: bool) -> tuple[Path, Path, str]:
-    prefixo = lar / "biblioteca" / "compatdata" / "1599660"
+    prefixo = lar / "biblioteca" / "compatdata" / "9931993"
     (prefixo / "pfx").mkdir(parents=True)
     texto = _registro()
     (prefixo / "pfx" / "system.reg").write_text(texto, encoding="utf-8")
@@ -177,7 +177,7 @@ def test_o_registro_nao_se_mexe_sem_o_carregador_da_khronos(lar: Path) -> None:
     _instalar_o_curador(lar)
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
     prefixo, jogo, antes = _prefixo_e_jogo(lar, com_carregador=False)
-    _lancar(lar, SteamAppId="1599660", STEAM_COMPAT_DATA_PATH=str(prefixo),
+    _lancar(lar, SteamAppId="9931993", STEAM_COMPAT_DATA_PATH=str(prefixo),
             STEAM_COMPAT_INSTALL_PATH=str(jogo))
     registro = prefixo / "pfx" / "system.reg"
     assert registro.read_text(encoding="utf-8") == antes
@@ -189,7 +189,7 @@ def test_o_registro_se_mexe_no_jogo_que_traz_o_carregador(lar: Path) -> None:
     _instalar_o_curador(lar)
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
     prefixo, jogo, _ = _prefixo_e_jogo(lar, com_carregador=True)
-    _lancar(lar, SteamAppId="1599660", STEAM_COMPAT_DATA_PATH=str(prefixo),
+    _lancar(lar, SteamAppId="9931993", STEAM_COMPAT_DATA_PATH=str(prefixo),
             STEAM_COMPAT_INSTALL_PATH=str(jogo))
     texto = (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8")
     assert 'EOSOverlayVkLayer-Win64.json"=dword:00000001' in texto
@@ -203,11 +203,11 @@ def test_religado_depois_de_devolver_o_gancho_volta_a_tirar(lar: Path) -> None:
     marca = cv.chave_de_estado(r"Software\Khronos\Vulkan\ImplicitLayers", EPIC)
     estado = lar / "estado" / "hefesto-dualsense4unix" / cv.ESTADO_BASENAME
     estado.parent.mkdir(parents=True)
-    estado.write_text(json.dumps({"prefixos": {"1599660": {
+    estado.write_text(json.dumps({"prefixos": {"9931993": {
         marca: {"feito": "religada", "escolha": "manter", "quando": "2026-09-28T01:00:00"},
     }}}), encoding="utf-8")
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
-    _lancar(lar, SteamAppId="1599660", STEAM_COMPAT_DATA_PATH=str(prefixo),
+    _lancar(lar, SteamAppId="9931993", STEAM_COMPAT_DATA_PATH=str(prefixo),
             STEAM_COMPAT_INSTALL_PATH=str(jogo))
     texto = (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8")
     assert 'EOSOverlayVkLayer-Win64.json"=dword:00000001' in texto, (
@@ -219,7 +219,7 @@ def test_com_o_botao_desligado_o_registro_nao_se_mexe(lar: Path) -> None:
     """Nem no jogo que traz o carregador: desligado, o gancho sai do caminho."""
     _instalar_o_curador(lar)
     prefixo, jogo, antes = _prefixo_e_jogo(lar, com_carregador=True)
-    _lancar(lar, SteamAppId="1599660", STEAM_COMPAT_DATA_PATH=str(prefixo),
+    _lancar(lar, SteamAppId="9931993", STEAM_COMPAT_DATA_PATH=str(prefixo),
             STEAM_COMPAT_INSTALL_PATH=str(jogo))
     assert (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8") == antes
 

@@ -94,7 +94,7 @@ NAVEGACAO = Profile(
 )
 SACKBOY = Profile(
     name="sackboy_nativo",
-    match=MatchCriteria(window_class=["steam_app_1599660"]),
+    match=MatchCriteria(window_class=["steam_app_9931993"]),
     priority=80,
 )
 

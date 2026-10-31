@@ -755,13 +755,13 @@ class TestOVigiaTravaSozinho:
     ) -> None:
         """De ponta a ponta, sem rede: a Steam apareceu depois do install."""
         raiz = _steam_de_verdade(lar)
-        _jogo(raiz, "2497900")
-        (raiz / "steamapps" / "compatdata" / "2497900").mkdir(parents=True)
+        _jogo(raiz, "9949958")
+        (raiz / "steamapps" / "compatdata" / "9949958").mkdir(parents=True)
         cache = lar / "cache"
         cache.mkdir()
         (cache / f"{PINO}.tar.gz").write_bytes(download_local["tarball"].read_bytes())
         (raiz / "config" / "config.vdf").write_text(
-            _config_vdf({"2497900": "proton_11"}), encoding="utf-8"
+            _config_vdf({"9949958": "proton_11"}), encoding="utf-8"
         )
 
         rc = pp.main(["--manter", "--conf", str(download_local["conf"]),
@@ -773,20 +773,20 @@ class TestOVigiaTravaSozinho:
         assert pp.pinned_proton_installed(PINO, raiz / "compatibilitytools.d")
         mapa = pp.extract_compat_tool_mapping(
             (raiz / "config" / "config.vdf").read_text(encoding="utf-8"))
-        assert mapa == {"0": PINO, "2497900": PINO}, mapa
+        assert mapa == {"0": PINO, "9949958": PINO}, mapa
 
     def test_o_manter_respeita_a_excecao_nomeada(
         self, lar: Path, download_local: dict
     ) -> None:
         """MORDIDA: tire o `excluir=ler_jogos_fora_do_pino()` do `--manter`."""
         raiz = _steam_de_verdade(lar)
-        _jogo(raiz, "2497900")
+        _jogo(raiz, "9949958")
         compat = raiz / "compatibilitytools.d"
         pp._extract_verified_tarball(download_local["tarball"], PINO, compat)
         (raiz / "config" / "config.vdf").write_text(
-            _config_vdf({"0": PINO, "2497900": "proton_11"}), encoding="utf-8"
+            _config_vdf({"0": PINO, "9949958": "proton_11"}), encoding="utf-8"
         )
-        assert pp.main(["--fora-do-pino", "2497900"]) == 0
+        assert pp.main(["--fora-do-pino", "9949958"]) == 0
         texto = pp.fora_do_pino_path().read_text(encoding="utf-8")
         assert re.search(r"# \d\d/\d\d/\d{4} — fora do Proton pinado", texto), texto
 
@@ -795,32 +795,32 @@ class TestOVigiaTravaSozinho:
 
         mapa = pp.extract_compat_tool_mapping(
             (raiz / "config" / "config.vdf").read_text(encoding="utf-8"))
-        assert mapa["2497900"] == "proton_11", "o vigia brigou com a escolha nomeada"
+        assert mapa["9949958"] == "proton_11", "o vigia brigou com a escolha nomeada"
 
     def test_o_manter_tira_do_pino_quem_entrou_na_excecao_depois(
         self, lar: Path, download_local: dict
     ) -> None:
         """OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01 (21/09/2026). O jogo já"""
         raiz = _steam_de_verdade(lar)
-        _jogo(raiz, "2497900")
+        _jogo(raiz, "9949958")
         pp._extract_verified_tarball(
             download_local["tarball"], PINO, raiz / "compatibilitytools.d")
         (raiz / "config" / "config.vdf").write_text(
-            _config_vdf({"2497900": "proton_11"}), encoding="utf-8"
+            _config_vdf({"9949958": "proton_11"}), encoding="utf-8"
         )
         estado = lar / "estado.json"
         pp.main(["--manter", "--conf", str(download_local["conf"]),
                  "--state", str(estado)])
         vdf = raiz / "config" / "config.vdf"
         assert pp.extract_compat_tool_mapping(
-            vdf.read_text(encoding="utf-8"))["2497900"] == PINO
-        assert pp.main(["--fora-do-pino", "2497900"]) == 0
+            vdf.read_text(encoding="utf-8"))["9949958"] == PINO
+        assert pp.main(["--fora-do-pino", "9949958"]) == 0
 
         pp.main(["--manter", "--conf", str(download_local["conf"]),
                  "--state", str(estado)])
 
         mapa = pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
-        assert mapa["2497900"] == "proton_11", "o jogo excluído continua no pino"
+        assert mapa["9949958"] == "proton_11", "o jogo excluído continua no pino"
 
     def test_sem_steam_o_manter_nao_faz_nada(self, lar: Path, download_local: dict) -> None:
         assert pp.main(["--manter", "--conf", str(download_local["conf"])]) == 0
@@ -854,10 +854,10 @@ def mesa(lar: Path) -> Path:
     _pino_na(raiz)
     (raiz / "appcache").mkdir()
     (raiz / "appcache" / "appinfo.vdf").write_bytes(_appinfo({
-        "316790": "windows,macos,linux", "2497900": "windows"}))
-    for appid in ("316790", "2497900"):
+        "9906335": "windows,macos,linux", "9949958": "windows"}))
+    for appid in ("9906335", "9949958"):
         _jogo(raiz, appid)
-    (raiz / "steamapps" / "compatdata" / "2497900").mkdir(parents=True)
+    (raiz / "steamapps" / "compatdata" / "9949958").mkdir(parents=True)
     return raiz
 
 
@@ -880,11 +880,11 @@ class TestTodoJogoTemClasse:
     def test_o_appinfo_diz_quem_e_nativo(self, tmp_path: Path, formato: int) -> None:
         arquivo = tmp_path / "appinfo.vdf"
         arquivo.write_bytes(_appinfo(
-            {"316790": "windows,macos,linux", "2497900": "windows", "7": None},
+            {"9906335": "windows,macos,linux", "9949958": "windows", "7": None},
             formato=formato,
         ))
-        lido = pp.oslist_do_appinfo(arquivo, ["316790", "2497900", "7", "999"])
-        assert lido == {"316790": "windows,macos,linux", "2497900": "windows", "7": ""}
+        lido = pp.oslist_do_appinfo(arquivo, ["9906335", "9949958", "7", "999"])
+        assert lido == {"9906335": "windows,macos,linux", "9949958": "windows", "7": ""}
 
     def test_formato_desconhecido_e_ilegivel(self, tmp_path: Path) -> None:
         arquivo = tmp_path / "appinfo.vdf"
@@ -901,15 +901,15 @@ class TestTodoJogoTemClasse:
         (raiz / "config" / "config.vdf").write_text(_config_vdf(ctm), encoding="utf-8")
         (raiz / "appcache").mkdir()
         (raiz / "appcache" / "appinfo.vdf").write_bytes(_appinfo({
-            "316790": "windows,macos,linux",
-            "2497900": "windows",
+            "9906335": "windows,macos,linux",
+            "9949958": "windows",
         }))
-        for appid in ("316790", "2497900", "555", "556"):
+        for appid in ("9906335", "9949958", "555", "556"):
             _jogo(raiz, appid)
         (raiz / "steamapps" / "compatdata" / "555").mkdir(parents=True)
 
-        sem = pp.jogos_sem_entrada_nova(["316790", "2497900", "555", "556"], home=lar)
-        assert sem == {"316790", "556"}
+        sem = pp.jogos_sem_entrada_nova(["9906335", "9949958", "555", "556"], home=lar)
+        assert sem == {"9906335", "556"}
 
         r = pp.lock_proton_for_all_games(
             conf={"name": PINO, "url": "x", "sha256": "ab" * 32},
@@ -918,14 +918,14 @@ class TestTodoJogoTemClasse:
         mapa = pp.extract_compat_tool_mapping(
             (raiz / "config" / "config.vdf").read_text(encoding="utf-8"))
         assert r["status"] == "locked", r
-        assert set(mapa) == {"0", "2497900", "555"}, mapa
+        assert set(mapa) == {"0", "9949958", "555"}, mapa
 
     def test_a_entrada_que_ja_existe_nunca_e_apagada(self) -> None:
-        """O jogo 316790 fica no GE: tirá-lo mudaria os saves de lugar."""
-        original = _config_vdf({"0": PINO, "316790": PINO})
+        """O jogo 9906335 fica no GE: tirá-lo mudaria os saves de lugar."""
+        original = _config_vdf({"0": PINO, "9906335": PINO})
         texto, mudancas = pp.build_compat_tool_mapping(
-            original, tool_name=PINO, appids=["316790"], pinos_nossos=(PINO,),
-            atropelar_escolha_do_usuario=True, sem_entrada_nova={"316790"},
+            original, tool_name=PINO, appids=["9906335"], pinos_nossos=(PINO,),
+            atropelar_escolha_do_usuario=True, sem_entrada_nova={"9906335"},
         )
         assert texto == original and mudancas == {}
 
@@ -939,16 +939,16 @@ class TestTodoJogoTemClasse:
         raiz = tmp_path / ".steam/steam"
         (raiz / "steamapps").mkdir(parents=True)
         _pino_na(raiz)
-        _jogo(raiz, "2497900")
+        _jogo(raiz, "9949958")
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_config_vdf({"0": PINO, "2497900": "proton_11"}), encoding="utf-8")
+        vdf.write_text(_config_vdf({"0": PINO, "9949958": "proton_11"}), encoding="utf-8")
 
         pp.lock_proton_for_all_games(
             conf={"name": PINO, "url": "x", "sha256": "ab" * 32},
             home=tmp_path, config_vdf=vdf, state_path=tmp_path / "e.json", todos=True,
         )
         assert pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))[
-            "2497900"] == PINO
+            "9949958"] == PINO
 
 
     def test_o_install_nao_da_entrada_ao_nativo(
@@ -958,7 +958,7 @@ class TestTodoJogoTemClasse:
         rc = pp.main(["--lock", "--todos", "--conf", str(download_local["conf"]),
                       "--state", str(lar / "estado.json")])
         assert rc == 0
-        assert _mapa(mesa) == {"0": PINO, "2497900": PINO}
+        assert _mapa(mesa) == {"0": PINO, "9949958": PINO}
 
     def test_o_vigia_nao_da_entrada_ao_nativo(
         self, mesa: Path, download_local: dict, lar: Path
@@ -967,31 +967,31 @@ class TestTodoJogoTemClasse:
         rc = pp.main(["--manter", "--conf", str(download_local["conf"]),
                       "--state", str(lar / "estado.json")])
         assert rc == 0
-        assert _mapa(mesa) == {"0": PINO, "2497900": PINO}
+        assert _mapa(mesa) == {"0": PINO, "9949958": PINO}
 
     def test_o_install_respeita_a_excecao_nomeada(
         self, mesa: Path, download_local: dict, lar: Path
     ) -> None:
         """MORDIDA (B6b): `excluir=()` no `_cmd_lock`."""
         (mesa / "config" / "config.vdf").write_text(
-            _config_vdf({"0": PINO, "2497900": "proton_11"}), encoding="utf-8")
-        assert pp.main(["--fora-do-pino", "2497900"]) == 0
+            _config_vdf({"0": PINO, "9949958": "proton_11"}), encoding="utf-8")
+        assert pp.main(["--fora-do-pino", "9949958"]) == 0
         rc = pp.main(["--lock", "--todos", "--conf", str(download_local["conf"]),
                       "--state", str(lar / "estado.json")])
         assert rc == 0
-        assert _mapa(mesa)["2497900"] == "proton_11", "o install atropelou a exceção"
+        assert _mapa(mesa)["9949958"] == "proton_11", "o install atropelou a exceção"
 
     def test_o_botao_respeita_a_excecao_nomeada(self, mesa: Path, lar: Path) -> None:
         """MORDIDA (B6a): `excluir=()` em `lock_proton_for_all_games`."""
         (mesa / "config" / "config.vdf").write_text(
-            _config_vdf({"0": PINO, "2497900": "proton_11"}), encoding="utf-8")
-        assert pp.main(["--fora-do-pino", "2497900"]) == 0
+            _config_vdf({"0": PINO, "9949958": "proton_11"}), encoding="utf-8")
+        assert pp.main(["--fora-do-pino", "9949958"]) == 0
         r = pp.lock_proton_for_all_games(
             conf={"name": PINO, "url": "x", "sha256": "ab" * 32},
             home=lar, state_path=lar / "estado.json", todos=True,
         )
         assert r["status"] in ("locked", "noop"), r
-        assert _mapa(mesa)["2497900"] == "proton_11", "o botão atropelou a exceção"
+        assert _mapa(mesa)["9949958"] == "proton_11", "o botão atropelou a exceção"
 
 
 class TestAOrfaEntraPelaFerramenta:
@@ -1000,24 +1000,24 @@ class TestAOrfaEntraPelaFerramenta:
         texto, mudancas = pp.build_compat_tool_mapping(
             _config_vdf({
                 "0": PINO,
-                "1245620": "proton_11",
-                "4046520": "steamlinuxruntime_sniper",
-                "2369580": "GE-Proton10-34",
+                "9924912": "proton_11",
+                "9980930": "steamlinuxruntime_sniper",
+                "9947391": "GE-Proton10-34",
             }),
             tool_name=PINO, appids=[], pinos_nossos=(PINO, "GE-Proton10-34"),
             atropelar_escolha_do_usuario=True,
         )
         mapa = pp.extract_compat_tool_mapping(texto)
-        assert mapa["1245620"] == PINO
-        assert mapa["2369580"] == PINO
-        assert mapa["4046520"] == "steamlinuxruntime_sniper"
-        assert "4046520" not in mudancas, mudancas
+        assert mapa["9924912"] == PINO
+        assert mapa["9947391"] == PINO
+        assert mapa["9980930"] == "steamlinuxruntime_sniper"
+        assert "9980930" not in mudancas, mudancas
 
     def test_orfa_nomeada_nao_e_tocada(self) -> None:
-        original = _config_vdf({"0": PINO, "1245620": "proton_11"})
+        original = _config_vdf({"0": PINO, "9924912": "proton_11"})
         texto, mudancas = pp.build_compat_tool_mapping(
             original, tool_name=PINO, appids=[], pinos_nossos=(PINO,),
-            atropelar_escolha_do_usuario=True, excluir={"1245620"},
+            atropelar_escolha_do_usuario=True, excluir={"9924912"},
         )
         assert texto == original and mudancas == {}
 
@@ -1131,15 +1131,15 @@ class TestODoctorVeOQueAntesCalava:
         raiz = casa / ".steam/steam"
         (raiz / "config").mkdir(parents=True)
         (raiz / "steamapps").mkdir(parents=True)
-        _jogo(raiz, "2497900", "DON'T SCREAM")
-        _jogo(raiz, "4046520", "Um Nativo")
+        _jogo(raiz, "9949958", "DON'T SCREAM")
+        _jogo(raiz, "9980930", "Um Nativo")
         (raiz / "config" / "config.vdf").write_text(_config_vdf({
             "0": pp._load_conf(None)["name"],
-            "2497900": "proton_11", "4046520": "steamlinuxruntime_sniper",
+            "9949958": "proton_11", "9980930": "steamlinuxruntime_sniper",
         }), encoding="utf-8")
         nomes = casa / ".config/hefesto-dualsense4unix/jogos_fora_do_pino.txt"
         nomes.parent.mkdir(parents=True)
-        nomes.write_text("2497900\n", encoding="utf-8")
+        nomes.write_text("9949958\n", encoding="utf-8")
         os.utime(nomes, (1_758_153_600, 1_758_153_600))
 
         saida = _doctor("check_proton_pin", casa)
@@ -1156,10 +1156,10 @@ class TestODoctorVeOQueAntesCalava:
 def steam_sem_pino(lar: Path) -> Path:
     """Uma Steam de verdade, um jogo só-Windows num outro Proton, e o pino AUSENTE"""
     raiz = _steam_de_verdade(lar)
-    _jogo(raiz, "2497900")
-    (raiz / "steamapps" / "compatdata" / "2497900").mkdir(parents=True)
+    _jogo(raiz, "9949958")
+    (raiz / "steamapps" / "compatdata" / "9949958").mkdir(parents=True)
     (raiz / "config" / "config.vdf").write_text(
-        _config_vdf({"2497900": "proton_11"}), encoding="utf-8")
+        _config_vdf({"9949958": "proton_11"}), encoding="utf-8")
     return raiz
 
 
@@ -1226,7 +1226,7 @@ class TestSemOPinoNadaSeTrava:
         rc = pp.main(["--lock", "--todos", "--conf", str(download_local["conf"]),
                       "--state", str(lar / "estado.json")])
         assert rc == 0
-        assert _mapa(steam_sem_pino) == {"0": PINO, "2497900": PINO}
+        assert _mapa(steam_sem_pino) == {"0": PINO, "9949958": PINO}
 
     def test_todo_chamador_do_lock_diz_onde_o_pino_mora(self) -> None:
         """A guarda só vale para quem passa `compat_dir`; o chamador novo que"""

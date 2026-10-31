@@ -23,7 +23,7 @@ from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import 
     perfis_isolados,  # noqa: F401
 )
 
-OUTRO_JOGO = "steam_app_1599660"
+OUTRO_JOGO = "steam_app_9931993"
 JANELA_DO_TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "Terminal"}
 JANELAS_DE_LANCADOR = [
     {"wm_class": "steam", "wm_name": ""},

@@ -11,7 +11,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     simple_extra,
 )
 
-MMJ = "2111190"
+MMJ = "9942223"
 
 
 class TestJogoDaSteam:
@@ -53,12 +53,12 @@ class TestJogoDaSteam:
             from_simple_choice("steam_game", custom_name="sackboy")
 
     def test_normalize_appid(self) -> None:
-        assert normalize_appid("1599660") == "1599660"
-        assert normalize_appid("steam_app_1599660") == "1599660"
-        assert normalize_appid("STEAM_APP_1599660") == "1599660"
+        assert normalize_appid("9931993") == "9931993"
+        assert normalize_appid("steam_app_9931993") == "9931993"
+        assert normalize_appid("STEAM_APP_9931993") == "9931993"
         assert normalize_appid("") is None
         assert normalize_appid(None) is None
-        assert normalize_appid("1599660 e mais") is None
+        assert normalize_appid("9931993 e mais") is None
 
 
 class TestRoundTripDoEditor:
@@ -66,8 +66,8 @@ class TestRoundTripDoEditor:
         m = from_simple_choice("steam_game", custom_name=MMJ)
         assert detect_simple_preset(m) == "steam_game"
         assert simple_extra(m) == MMJ, (
-            "o campo pede o NÚMERO — devolver 'steam_app_2111190' faria o "
-            "próximo Salvar gravar 'steam_app_steam_app_2111190'"
+            "o campo pede o NÚMERO — devolver 'steam_app_9942223' faria o "
+            "próximo Salvar gravar 'steam_app_steam_app_9942223'"
         )
 
     def test_game_continua_devolvendo_o_nome_do_programa(self) -> None:

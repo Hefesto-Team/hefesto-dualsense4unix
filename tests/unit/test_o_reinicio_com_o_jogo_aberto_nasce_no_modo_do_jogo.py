@@ -48,7 +48,7 @@ from hefesto_dualsense4unix.utils import session, xdg_paths
 _SALVAR_EMULACAO_REAL = session.save_gamepad_emulation
 _PREFERENCIA_REAL = session.load_gamepad_preference
 
-APPID = 4235410
+APPID = 9984708
 JOGO = "Future Knight"
 DO_USUARIO = "Desktop do Usuário"
 FREESTYLE = loader.NOME_DO_PADRAO

@@ -20,7 +20,7 @@ P1, P2, P3, P4 = "02fe000000f0", "aabbcc0000d8", "aabbcc000003", "aabbcc0000ab"
 
 PERFIL: dict[str, Any] = {
     "name": NOME, "version": 1,
-    "match": {"type": "criteria", "window_class": ["steam_app_3357650"],
+    "match": {"type": "criteria", "window_class": ["steam_app_9967153"],
               "window_title_regex": None, "process_name": []},
     "priority": 80,
     "triggers": {"left": {"mode": "Off", "params": []},
@@ -253,7 +253,7 @@ def test_o_aplicar_e_o_salvar_miram_o_mesmo_perfil() -> None:
 def test_o_editor_da_10_grava_so_o_campo_dele_com_o_aparelho_divergindo() -> None:
     """Mudar o jogo grava a regra do jogo, e o microfone e a cor ficam."""
     antes = _o_perfil()
-    a10_perfis.editor_jogo(_ctx(), {"valor": "1245620", "evento": "change"},
+    a10_perfis.editor_jogo(_ctx(), {"valor": "9924912", "evento": "change"},
                            PonteDoRodape())
     mudou = _o_que_mudou(antes, _o_perfil())
     assert mudou and all(m.startswith("match.") for m in mudou), (

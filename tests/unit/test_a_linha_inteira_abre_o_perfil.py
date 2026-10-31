@@ -100,7 +100,7 @@ def _o_que_se_ve(valor: Any) -> list[str]:
     return leitor.pedacos
 
 
-PERFIS = [("Mortal Kombat", 90, "steam_app_1971870"), ("Pragmata", 80, "steam_app_3357650"),
+PERFIS = [("Mortal Kombat", 90, "steam_app_9939437"), ("Pragmata", 80, "steam_app_9967153"),
           ("Desktop", 0, None)]
 
 
@@ -124,7 +124,7 @@ def test_o_gesto_escolhe_pelo_nome_da_linha(monkeypatch: pytest.MonkeyPatch) -> 
     """O clique na `<tr>` traz o nome no `hefPerfil`; o `texto` é a linha colada."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     a10_perfis.selecionar(_ctx(freestyle_ligado=True), {"hefPerfil": "Pragmata",
-                                   "texto": "Pragmata80Steam · Pragmata · 3357650"}, None)
+                                   "texto": "Pragmata80Steam · Pragmata · 9967153"}, None)
     assert a10_perfis._ESCOLHIDO == "Pragmata", (
         f"o gesto abriu {a10_perfis._ESCOLHIDO!r}, e a linha é a do Pragmata")
 

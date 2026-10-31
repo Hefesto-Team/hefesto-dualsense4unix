@@ -234,7 +234,7 @@ def test_store_guarda_titulo_e_executavel_da_leitura() -> None:
     store.set_window_detect_backend("xlib", healthy=True)
 
     store.record_window_detect_read(
-        "xlib", "steam_app_1599660", wm_name=TITULO_COOP, exe_basename="Sackboy.exe"
+        "xlib", "steam_app_9931993", wm_name=TITULO_COOP, exe_basename="Sackboy.exe"
     )
 
     assert store.window_detect_current_name == TITULO_COOP
@@ -246,20 +246,20 @@ def test_titulo_e_executavel_decaem_como_a_classe_crua() -> None:
     store = StateStore()
     store.set_window_detect_backend("xlib", healthy=True)
     store.record_window_detect_read(
-        "xlib", "steam_app_1599660", wm_name=TITULO_COOP, exe_basename="Sackboy.exe"
+        "xlib", "steam_app_9931993", wm_name=TITULO_COOP, exe_basename="Sackboy.exe"
     )
 
     store.record_window_detect_read("xlib", "unknown")
 
     assert store.window_detect_current_name is None
     assert store.window_detect_current_exe is None
-    assert store.window_detect_last_class == "steam_app_1599660"
+    assert store.window_detect_last_class == "steam_app_9931993"
 
 
 def test_novo_episodio_do_detector_zera_titulo_e_executavel() -> None:
     store = StateStore()
     store.record_window_detect_read(
-        "xlib", "steam_app_1599660", wm_name=TITULO_COOP, exe_basename="Sackboy.exe"
+        "xlib", "steam_app_9931993", wm_name=TITULO_COOP, exe_basename="Sackboy.exe"
     )
 
     store.set_window_detect_backend("xlib", healthy=True)

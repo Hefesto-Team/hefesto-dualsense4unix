@@ -26,7 +26,7 @@ from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
-APPID = "3357650"
+APPID = "9967153"
 
 _CURADOR_TEIMOSO = """\
 import os

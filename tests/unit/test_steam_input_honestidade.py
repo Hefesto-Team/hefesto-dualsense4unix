@@ -26,7 +26,7 @@ _VDF = (
     "{\n"
     '\t"apps"\n'
     "\t{\n"
-    '\t\t"2111190"\n'
+    '\t\t"9942223"\n'
     "\t\t{\n"
     '\t\t\t"UseSteamControllerConfig"\t\t"2"\n'
     "\t\t}\n"
@@ -208,11 +208,11 @@ _VDF_SO_ALLOWLIST = (
     "{\n"
     '\t"apps"\n'
     "\t{\n"
-    '\t\t"2111190"\n'
+    '\t\t"9942223"\n'
     "\t\t{\n"
     '\t\t\t"UseSteamControllerConfig"\t\t"2"\n'
     "\t\t}\n"
-    '\t\t"3357650"\n'
+    '\t\t"9967153"\n'
     "\t\t{\n"
     '\t\t\t"UseSteamControllerConfig"\t\t"2"\n'
     "\t\t}\n"
@@ -235,7 +235,7 @@ def ensaio_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
     )
     lista.parent.mkdir(parents=True, exist_ok=True)
     lista.write_text(
-        "# ensaio — jogos cujo DualSense vem pela Steam\n2111190\n3357650\n",
+        "# ensaio — jogos cujo DualSense vem pela Steam\n9942223\n9967153\n",
         encoding="utf-8",
     )
     ambiente["allowlist"] = lista
@@ -274,7 +274,7 @@ class TestPreVooNaoFechaSteamAToa:
     ) -> None:
         """Contraprova: a cura não anestesiou o guarda."""
         ensaio_allowlist["vdf"].write_text(
-            _VDF_SO_ALLOWLIST.replace('"3357650"', '"1599660"'), encoding="utf-8"
+            _VDF_SO_ALLOWLIST.replace('"9967153"', '"9931993"'), encoding="utf-8"
         )
 
         proc = _roda(ensaio_allowlist, "--apply", steam=True)

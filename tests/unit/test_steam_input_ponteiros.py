@@ -136,7 +136,7 @@ def test_nenhum_texto_da_janela_ensina_o_gesto_na_steam() -> None:
 
 @pytest.mark.parametrize("status", ["adicionado", "ja_estava"])
 def test_toast_do_jogo_marcado_nao_manda_ninguem_a_steam(status: str) -> None:
-    msg = format_game_broken_result(status=status, appid=2111190)
+    msg = format_game_broken_result(status=status, appid=9942223)
     assert "Propriedades" not in msg
     assert "Ativar" not in msg
 
@@ -144,7 +144,7 @@ def test_toast_do_jogo_marcado_nao_manda_ninguem_a_steam(status: str) -> None:
 @pytest.mark.parametrize("status", ["adicionado", "ja_estava"])
 def test_toast_do_jogo_marcado_nao_deixa_vazio(status: str) -> None:
     """Tirar a frase falsa não pode virar silêncio."""
-    msg = format_game_broken_result(status=status, appid=2111190)
+    msg = format_game_broken_result(status=status, appid=9942223)
     assert "Feche e abra o jogo" in msg
     citados = re.findall(r"\bdocs/[\w./-]+\.md\b", msg)
     assert citados, f"o toast não aponta destino nenhum: {msg!r}"

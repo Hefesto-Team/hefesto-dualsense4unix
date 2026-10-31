@@ -181,7 +181,7 @@ VIVO_JOGO_SEM_ATALHO: dict[str, Any] = {
     "paused": False,
     "gamepad_emulation": {"enabled": True, "flavor": "dualsense",
                           "backend": "uhid", "wrapper_used": False},
-    "window_detect_last_class": "steam_app_570",
+    "window_detect_last_class": "steam_app_9900570",
     "controllers": [{"uniq": "aa", "connected": True, "player_slot": 1}],
 }
 

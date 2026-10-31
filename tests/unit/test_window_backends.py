@@ -18,7 +18,7 @@ class _FakeGameWin:
     """Janela de jogo VIVA apontada pelo `_NET_ACTIVE_WINDOW` rançoso."""
 
     def get_wm_class(self) -> tuple[str, str]:
-        return ("sackboy", "steam_app_1599660")
+        return ("sackboy", "steam_app_9931993")
 
     def get_wm_name(self) -> str:
         return "Sackboy: A Big Adventure"
@@ -112,7 +112,7 @@ def test_focus_valido_mantem_comportamento_atual(
     )
     info = backend.get_active_window_info()
     assert info is not None
-    assert info.wm_class == "steam_app_1599660"
+    assert info.wm_class == "steam_app_9931993"
     assert info.title == "Sackboy: A Big Adventure"
     assert info.pid == 4242
     assert info.exe_basename == "sackboy-bin"
@@ -226,7 +226,7 @@ def test_apos_o_drop_uma_conexao_nova_volta_a_ler(
     )
     info = backend.get_active_window_info()
     assert info is not None
-    assert info.wm_class == "steam_app_1599660"
+    assert info.wm_class == "steam_app_9931993"
 
 
 def test_reconexao_falhada_respeita_o_backoff(
@@ -360,7 +360,7 @@ def test_foco_em_filha_sobe_ate_o_top_level(
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "mmj-bin")
     topo = _FakeXWin(
         0x400001,
-        wm_class=("mmj", "steam_app_2111190"),
+        wm_class=("mmj", "steam_app_9942223"),
         title="Mullet Mad Jack",
         pid=4242,
     )
@@ -376,7 +376,7 @@ def test_foco_em_filha_sobe_ate_o_top_level(
     info = _backend_arvore(display).get_active_window_info()
 
     assert info is not None
-    assert info.wm_class == "steam_app_2111190"
+    assert info.wm_class == "steam_app_9942223"
     assert info.title == "Mullet Mad Jack"
     assert info.pid == 4242
     assert info.exe_basename == "mmj-bin"
@@ -416,7 +416,7 @@ def test_foco_sem_top_level_na_arvore_retorna_none(
 def test_net_active_ausente_retorna_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem `_NET_ACTIVE_WINDOW` não há corroboração — degrada para None, como"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
-    topo = _FakeXWin(0x600001, wm_class=("a", "steam_app_1599660"))
+    topo = _FakeXWin(0x600001, wm_class=("a", "steam_app_9931993"))
     display = _FakeArvoreDisplay(
         foco=topo.id, janelas={topo.id: topo}, net_active=0
     )

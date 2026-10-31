@@ -115,7 +115,7 @@ def _o_perfil_inteiro() -> Profile:
 
     return Profile(
         name=NOME,
-        match=MatchCriteria(window_class=["steam_app_480"]),
+        match=MatchCriteria(window_class=["steam_app_9900480"]),
         priority=80,
         triggers=TriggersConfig(right=TriggerConfig(mode="Rigid", params=[5, 100])),
         leds=LedsConfig(lightbar=(1, 2, 3)),

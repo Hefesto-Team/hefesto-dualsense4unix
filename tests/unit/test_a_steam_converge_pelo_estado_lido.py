@@ -68,26 +68,26 @@ def test_o_apply_que_a_steam_desfez_nao_vira_aplicado(
     tmp_path: Path, steam_fechada: None, a_steam_desfaz: list[str]
 ) -> None:
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": "MANGOHUD=1 %command%"}), encoding="utf-8")
 
     resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
 
     assert a_steam_desfaz, "o dublê da Steam nunca foi chamado: o teste não mede nada"
     assert resultado["applied"] == []
     assert [(e["appid"], e["reason"]) for e in resultado["errors"]] == [
-        ("620", slo.MOTIVO_NAO_FIRMOU)
+        ("9900620", slo.MOTIVO_NAO_FIRMOU)
     ]
 
 
 def test_o_apply_que_firmou_continua_aplicado(tmp_path: Path, steam_fechada: None) -> None:
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": "MANGOHUD=1 %command%"}), encoding="utf-8")
 
     resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
 
-    assert [a["appid"] for a in resultado["applied"]] == ["620"]
+    assert [a["appid"] for a in resultado["applied"]] == ["9900620"]
     assert resultado["errors"] == []
-    assert slo.nao_firmaram(vdf, ["620"], com_wrapper=True) == []
+    assert slo.nao_firmaram(vdf, ["9900620"], com_wrapper=True) == []
 
 
 def test_o_relatorio_do_apply_nomeia_o_jogo_que_nao_firmou(
@@ -97,20 +97,20 @@ def test_o_relatorio_do_apply_nomeia_o_jogo_que_nao_firmou(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": "%command%"}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": "%command%"}), encoding="utf-8")
 
     rc = slo.main(["--apply", "--vdf", str(vdf)])
 
     saida = capsys.readouterr().out
     assert rc == 1
-    assert "o jogo 620 não ficou como gravei" in saida
+    assert "o jogo 9900620 não ficou como gravei" in saida
 
 
 def test_o_atalho_que_a_steam_devolveu_nao_vira_removido(
     tmp_path: Path, steam_fechada: None
 ) -> None:
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": slo._vdf_escape(slo.WRAPPER_LAUNCH)}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": slo._vdf_escape(slo.WRAPPER_LAUNCH)}), encoding="utf-8")
     original = vdf.read_text(encoding="utf-8")
     troca = Path.replace
 
@@ -121,22 +121,22 @@ def test_o_atalho_que_a_steam_devolveu_nao_vira_removido(
 
     with pytest.MonkeyPatch.context() as mp:
         mp.setattr(Path, "replace", _devolve)
-        resultado = slo.tirar_o_atalho_dos_jogos(["620"], vdfs=[vdf])
+        resultado = slo.tirar_o_atalho_dos_jogos(["9900620"], vdfs=[vdf])
 
     assert resultado["removed"] == []
     assert [(e["appid"], e["reason"]) for e in resultado["errors"]] == [
-        ("620", slo.MOTIVO_NAO_FIRMOU)
+        ("9900620", slo.MOTIVO_NAO_FIRMOU)
     ]
 
 
 def test_o_atalho_tirado_e_lido_de_volta_como_tirado(tmp_path: Path, steam_fechada: None) -> None:
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": slo._vdf_escape(slo.WRAPPER_LAUNCH)}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": slo._vdf_escape(slo.WRAPPER_LAUNCH)}), encoding="utf-8")
 
-    resultado = slo.tirar_o_atalho_dos_jogos(["620"], vdfs=[vdf])
+    resultado = slo.tirar_o_atalho_dos_jogos(["9900620"], vdfs=[vdf])
 
-    assert [r["appid"] for r in resultado["removed"]] == ["620"]
-    assert slo.nao_firmaram(vdf, ["620"], com_wrapper=False) == []
+    assert [r["appid"] for r in resultado["removed"]] == ["9900620"]
+    assert slo.nao_firmaram(vdf, ["9900620"], com_wrapper=False) == []
 
 
 def test_o_migrate_que_a_steam_desfez_sai_como_erro(
@@ -144,7 +144,7 @@ def test_o_migrate_que_a_steam_desfez_sai_como_erro(
 ) -> None:
     veneno = f"{slo.IGNORE_SIGNATURE} %command%"
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": veneno}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": veneno}), encoding="utf-8")
 
     with pytest.raises(OSError, match=slo.MOTIVO_NAO_FIRMOU):
         slo.process_vdf(vdf, "migrate")
@@ -152,7 +152,7 @@ def test_o_migrate_que_a_steam_desfez_sai_como_erro(
 
 def test_o_migrate_que_firmou_devolve_o_que_mudou(tmp_path: Path) -> None:
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"620": f"{slo.IGNORE_SIGNATURE} %command%"}), encoding="utf-8")
+    vdf.write_text(_vdf({"9900620": f"{slo.IGNORE_SIGNATURE} %command%"}), encoding="utf-8")
 
     mudadas, _ = slo.process_vdf(vdf, "migrate")
 

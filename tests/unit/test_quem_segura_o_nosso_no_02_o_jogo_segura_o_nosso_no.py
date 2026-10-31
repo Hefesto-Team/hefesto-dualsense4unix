@@ -550,7 +550,7 @@ def test_processo_que_so_menciona_exe_nao_entra_na_arvore(
     _forjar_processo(proc, 1017, cmdline="/usr/bin/earlyoom --avoid jogo.exe")
     _forjar_processo(proc, 3087833, cmdline="/opt/coisa/ferramenta.exe")
     _forjar_processo(
-        proc, 5000, cmdline="Z:\\jogo\\jogo.exe", environ="SteamAppId=2497900\0"
+        proc, 5000, cmdline="Z:\\jogo\\jogo.exe", environ="SteamAppId=9949958\0"
     )
     monkeypatch.setattr(INS, "arvore_do_jogo", lambda _p: [1017, 3087833, 5000])
 

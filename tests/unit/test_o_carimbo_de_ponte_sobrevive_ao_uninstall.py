@@ -118,13 +118,13 @@ class TestOCarimboSobreviveAoUninstall:
         """O terceiro termo do carimbo não mora no perfil."""
         lista = tmp_path / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
         lista.parent.mkdir(parents=True, exist_ok=True)
-        lista.write_text("2497900\n2542020\n", encoding="utf-8")
+        lista.write_text("9949958\n9950840\n", encoding="utf-8")
 
         r = _roda_bloco(tmp_path, keep_config=1)
 
         assert r.returncode == 0, r.stderr
         assert lista.is_file(), "o uninstall padrão levou a allowlist do Steam Input"
-        assert lista.read_text(encoding="utf-8").split() == ["2497900", "2542020"]
+        assert lista.read_text(encoding="utf-8").split() == ["9949958", "9950840"]
 
     def test_o_purge_e_destrutivo_mas_deixa_backup(self, tmp_path: Path) -> None:
         """`--purge-config` APAGA — e é para apagar. O que ele não pode é apagar"""

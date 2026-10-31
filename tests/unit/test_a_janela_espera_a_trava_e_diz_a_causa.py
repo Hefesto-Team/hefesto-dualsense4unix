@@ -31,7 +31,7 @@ from tests.unit.test_a_lista_de_exclusao_tem_um_escritor_por_vez import (
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-_CHAVE = "steam_app_1088850"
+_CHAVE = "steam_app_9921777"
 _CAIXA = "processo:regua"
 
 

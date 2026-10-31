@@ -34,7 +34,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-JANELA_DO_JOGO = {"wm_class": "steam_app_1599660", "wm_name": "Sackboy"}
+JANELA_DO_JOGO = {"wm_class": "steam_app_9931993", "wm_name": "Sackboy"}
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ def test_ativacao_manual_seguida_de_tique_com_o_mesmo_candidato_nao_reativa(
         lambda _nome: None,
     )
     manager, store = _ensaio(
-        [_perfil("sackboy_nativo", janela="steam_app_1599660")]
+        [_perfil("sackboy_nativo", janela="steam_app_9931993")]
     )
     sw = AutoSwitcher(manager=manager, window_reader=lambda: {}, store=store)
 
@@ -140,7 +140,7 @@ def test_sincronizar_nao_congela_a_troca_para_outro_perfil(
     """A guarda da cura: sincronizar não pode virar "o autoswitch parou"."""
     manager, store = _ensaio(
         [
-            _perfil("sackboy_nativo", janela="steam_app_1599660"),
+            _perfil("sackboy_nativo", janela="steam_app_9931993"),
             _perfil("navegacao", janela="firefox"),
         ]
     )
@@ -216,7 +216,7 @@ def test_janela_de_jogo_em_foco_nao_reverte_a_politica_de_rumble() -> None:
     """MORDIDA do item 3, guarda B (`janela_de_jogo_em_foco`)."""
     daemon = _daemon()
     daemon.apply_profile_rumble_policy("max", None, profile=_perfil("jogo"))
-    daemon.store.record_window_detect_read("xlib", "steam_app_1599660")
+    daemon.store.record_window_detect_read("xlib", "steam_app_9931993")
 
     estado = daemon.apply_profile_rumble_policy(
         None, None, profile=_perfil("navegacao")

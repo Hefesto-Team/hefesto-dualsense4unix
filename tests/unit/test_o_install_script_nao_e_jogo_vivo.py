@@ -24,7 +24,7 @@ _JOGO = (
     "~/.steam/debian-installation/ubuntu12_32/reaper SteamLaunch AppId={appid} "
     "-- /.../proton waitforexitandrun /.../Jogo.exe "
 )
-_APPIDS = (1599660, 2424420)
+_APPIDS = (9931993, 9948488)
 
 
 class _ModuloSemMarker:
@@ -70,26 +70,26 @@ def test_o_avaliador_segura_a_steam_mas_nao_e_jogo(
 
 def test_o_token_so_vale_nos_argumentos_do_reaper() -> None:
     """`Install=1` depois do `--` é argumento do JOGO, não do avaliador."""
-    jogo_com_o_token = _JOGO.format(appid=1599660) + "Install=1 "
-    assert slo.e_avaliador_do_install_script(_AVALIADOR.format(appid=1599660))
+    jogo_com_o_token = _JOGO.format(appid=9931993) + "Install=1 "
+    assert slo.e_avaliador_do_install_script(_AVALIADOR.format(appid=9931993))
     assert not slo.e_avaliador_do_install_script(jogo_com_o_token)
-    assert not slo.e_avaliador_do_install_script(_JOGO.format(appid=1599660))
+    assert not slo.e_avaliador_do_install_script(_JOGO.format(appid=9931993))
     assert not slo.e_avaliador_do_install_script("pgrep -f SteamLaunch AppId= Install=1")
 
 
 def test_o_jogo_de_verdade_continua_sendo_jogo(monkeypatch: pytest.MonkeyPatch) -> None:
     """Contraprova: a régua sabe dizer "jogo". Sem a contraprova, um None fixo passaria."""
-    _instalar_proc(monkeypatch, {"100": _JOGO.format(appid=1599660)})
+    _instalar_proc(monkeypatch, {"100": _JOGO.format(appid=9931993)})
 
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993
     assert slo.steam_game_running() is True
 
 
 @pytest.mark.parametrize(
     "mapa",
     [
-        {"100": _AVALIADOR.format(appid=1599660), "200": _JOGO.format(appid=4235410)},
-        {"100": _JOGO.format(appid=4235410), "200": _AVALIADOR.format(appid=1599660)},
+        {"100": _AVALIADOR.format(appid=9931993), "200": _JOGO.format(appid=9984708)},
+        {"100": _JOGO.format(appid=9984708), "200": _AVALIADOR.format(appid=9931993)},
     ],
     ids=["avaliador-com-pid-menor", "avaliador-com-pid-maior"],
 )
@@ -99,23 +99,23 @@ def test_o_avaliador_nao_esconde_o_jogo_que_convive_com_ele(
     """A varredura devolve UMA cmdline. O jogo vence, qualquer que seja a"""
     _instalar_proc(monkeypatch, mapa)
 
-    assert slo.steam_game_running_appid() == 4235410
+    assert slo.steam_game_running_appid() == 9984708
 
 
 def test_a_foto_do_avaliador_nao_esconde_o_jogo_que_nasce_depois(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A varredura tem memória (BG-03): o pid achado é reconfirmado sem varrer."""
-    mapa = {"100": _AVALIADOR.format(appid=1599660)}
+    mapa = {"100": _AVALIADOR.format(appid=9931993)}
     _instalar_proc(monkeypatch, mapa)
     assert slo.steam_game_running_appid() is None
 
-    mapa["200"] = _JOGO.format(appid=1599660)
+    mapa["200"] = _JOGO.format(appid=9931993)
 
-    assert slo.steam_game_running_appid() == 1599660
+    assert slo.steam_game_running_appid() == 9931993
 
 
-APPID = 1599660
+APPID = 9931993
 EPOCH = 1000
 
 

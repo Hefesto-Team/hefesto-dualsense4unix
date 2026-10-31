@@ -1,6 +1,6 @@
 """R-06 (auditoria 23/07) — a allowlist do Steam Input deixa de ser inerte.
 
-`steam_input_apps.txt` (com o appid 2111190 do Mullet Mad Jack) era respeitada
+`steam_input_apps.txt` (com o appid 9942223 do Mullet Mad Jack) era respeitada
 SÓ pelo guard de VDF. Nada no caminho de LANÇAMENTO a consultava — o jogo caía
 no `default.env`, que carrega o dedup (`SDL_GAMECONTROLLER_IGNORE_DEVICES` +
 `PROTON_DISABLE_HIDRAW`) — e o daemon continuava fazendo EVIOCGRAB no evdev e
@@ -60,7 +60,7 @@ import pytest
 import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 from hefesto_dualsense4unix.daemon import launch_env as le
 
-MMJ = 2111190
+MMJ = 9942223
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 
@@ -97,7 +97,7 @@ class TestAllowlistNoArquivo:
         destino = tmp_path / "hefesto-dualsense4unix" / "steam_input_apps.txt"
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_text(
-            "# comentário\n2111190\n\nlixo\n620 \n", encoding="utf-8"
+            "# comentário\n9942223\n\nlixo\n620 \n", encoding="utf-8"
         )
 
         assert le.steam_input_appids() == {MMJ, 620}
@@ -175,7 +175,7 @@ class TestSessaoDaExcecao:
 
     def test_jogo_fora_da_allowlist_nao_liga(self, tmp_path: Path) -> None:
         daemon = _daemon_falso()
-        daemon.store.window_detect_current_class = "steam_app_1599660"
+        daemon.store.window_detect_current_class = "steam_app_9931993"
         assert (
             le.steam_input_exception_appid(
                 daemon, base_dir=tmp_path, now=1.0, allowlist={MMJ}

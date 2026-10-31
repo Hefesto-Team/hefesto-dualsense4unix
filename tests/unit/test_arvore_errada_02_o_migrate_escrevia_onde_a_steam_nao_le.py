@@ -100,18 +100,18 @@ class TestOMigrateSoEscreveOndeASteamLe:
     def test_a_regua_deste_arquivo_enxerga_as_tres_arvores(self) -> None:
         """CONTROLE DA RÉGUA: sem isto, um `not in` passa por cegueira."""
         texto = _vdf_das_tres_arvores(
-            viva={"620": LINHA_914}, solta={"620": LINHA_914}, web={"620": LINHA_914}
+            viva={"9900620": LINHA_914}, solta={"9900620": LINHA_914}, web={"9900620": LINHA_914}
         )
         arvores = _valores_por_arvore(texto)
         assert set(arvores) == {CANONICA, SOLTA, WEB}, arvores
-        assert arvores[SOLTA]["620"] == LINHA_914
+        assert arvores[SOLTA]["9900620"] == LINHA_914
 
     def test_o_wrapper_nao_entra_na_arvore_que_a_steam_nao_le(self) -> None:
-        texto = _vdf_das_tres_arvores(solta={"620": LINHA_914}, web={"440": LINHA_914})
+        texto = _vdf_das_tres_arvores(solta={"9900620": LINHA_914}, web={"9900440": LINHA_914})
         novo, mudadas = slo.transform_vdf_text(texto, "migrate")
         arvores = _valores_por_arvore(novo)
         assert mudadas == 2, novo
-        for caminho, appid in ((SOLTA, "620"), (WEB, "440")):
+        for caminho, appid in ((SOLTA, "9900620"), (WEB, "9900440")):
             valor = arvores[caminho][appid]
             assert slo.WRAPPER_PREFIX not in valor, (caminho, valor)
             assert slo.IGNORE_SIGNATURE not in valor, (caminho, valor)
@@ -119,31 +119,31 @@ class TestOMigrateSoEscreveOndeASteamLe:
 
     def test_na_arvore_viva_o_migrate_continua_embrulhando(self) -> None:
         """O NEGATIVO que impede a cura de virar 'não faz nada em lugar nenhum'."""
-        texto = _vdf_das_tres_arvores(viva={"620": LINHA_914})
+        texto = _vdf_das_tres_arvores(viva={"9900620": LINHA_914})
         novo, mudadas = slo.transform_vdf_text(texto, "migrate")
         assert mudadas == 1
-        assert slo.WRAPPER_PREFIX in _valores_por_arvore(novo)[CANONICA]["620"]
+        assert slo.WRAPPER_PREFIX in _valores_por_arvore(novo)[CANONICA]["9900620"]
 
     def test_o_mesmo_appid_nas_duas_arvores_so_ganha_wrapper_na_viva(self) -> None:
         """O retrato do arquivo do usuário: o appid existe nas duas árvores."""
         texto = _vdf_das_tres_arvores(
-            viva={"2358720": LINHA_914}, solta={"2358720": LINHA_914}
+            viva={"9947174": LINHA_914}, solta={"9947174": LINHA_914}
         )
         novo, _ = slo.transform_vdf_text(texto, "migrate")
         arvores = _valores_por_arvore(novo)
-        assert slo.WRAPPER_PREFIX in arvores[CANONICA]["2358720"]
-        assert slo.WRAPPER_PREFIX not in arvores[SOLTA]["2358720"]
+        assert slo.WRAPPER_PREFIX in arvores[CANONICA]["9947174"]
+        assert slo.WRAPPER_PREFIX not in arvores[SOLTA]["9947174"]
 
     def test_o_strip_continua_alcancando_todas_as_arvores(self) -> None:
         """Ancorar o `strip` deixaria o lixo já plantado lá para sempre."""
         plantado = slo._vdf_escape(f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%")
         texto = _vdf_das_tres_arvores(
-            viva={"620": plantado}, solta={"620": plantado}, web={"440": plantado}
+            viva={"9900620": plantado}, solta={"9900620": plantado}, web={"9900440": plantado}
         )
         novo, mudadas = slo.transform_vdf_text(texto, "strip")
         assert mudadas == 3, novo
         arvores = _valores_por_arvore(novo)
-        for caminho, appid in ((CANONICA, "620"), (SOLTA, "620"), (WEB, "440")):
+        for caminho, appid in ((CANONICA, "9900620"), (SOLTA, "9900620"), (WEB, "9900440")):
             assert arvores[caminho][appid] == "MANGOHUD=1 %command%", caminho
 
     def test_modo_desconhecido_continua_explodindo(self) -> None:
@@ -153,7 +153,7 @@ class TestOMigrateSoEscreveOndeASteamLe:
     def test_linha_alheia_fora_da_canonica_passa_intacta(self) -> None:
         """A linha VKD3D do usuário, sem veneno e sem wrapper, não é nossa para mexer."""
         do_usuario = "VKD3D_CONFIG=no_upload_hvv %command%"
-        texto = _vdf_das_tres_arvores(solta={"413080": do_usuario})
+        texto = _vdf_das_tres_arvores(solta={"9908261": do_usuario})
         for modo in ("migrate", "strip"):
             novo, mudadas = slo.transform_vdf_text(texto, modo)
             assert mudadas == 0, modo
@@ -166,18 +166,18 @@ class TestORecolherEOCaminhoDeVolta:
     def test_apaga_a_linha_de_fora_e_nao_a_de_dentro(self) -> None:
         do_usuario = "VKD3D_CONFIG=no_upload_hvv %command%"
         texto = _vdf_das_tres_arvores(
-            viva={"316790": LINHA_914}, solta={"413080": do_usuario}, web={"440": ""}
+            viva={"9906335": LINHA_914}, solta={"9908261": do_usuario}, web={"9900440": ""}
         )
         novo, mudadas = slo.transform_vdf_text(texto, "recolher")
         assert mudadas == 2, novo
         arvores = _valores_por_arvore(novo)
-        assert arvores[CANONICA]["316790"] == LINHA_914
+        assert arvores[CANONICA]["9906335"] == LINHA_914
         assert SOLTA not in arvores, arvores
         assert WEB not in arvores, arvores
 
     def test_o_resto_do_bloco_da_steam_fica_de_pe(self) -> None:
         """Só a linha nossa sai — o bloco continua sendo da Steam."""
-        texto = _vdf_das_tres_arvores(solta={"413080": "seja o que for"})
+        texto = _vdf_das_tres_arvores(solta={"9908261": "seja o que for"})
         novo, _ = slo.transform_vdf_text(texto, "recolher")
         assert '"playtime"' in novo
         assert novo.count("{") == texto.count("{")
@@ -185,7 +185,7 @@ class TestORecolherEOCaminhoDeVolta:
         assert "LaunchOptions" not in novo
 
     def test_arvore_so_com_a_viva_nao_muda_um_byte(self) -> None:
-        texto = _vdf_das_tres_arvores(viva={"316790": LINHA_914})
+        texto = _vdf_das_tres_arvores(viva={"9906335": LINHA_914})
         novo, mudadas = slo.transform_vdf_text(texto, "recolher")
         assert mudadas == 0
         assert novo == texto

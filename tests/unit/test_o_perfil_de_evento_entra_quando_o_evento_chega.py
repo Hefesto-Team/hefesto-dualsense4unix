@@ -83,7 +83,7 @@ def test_o_controle_conectado_ativa_o_perfil_de_evento() -> None:
 
 
 def test_com_jogo_em_cena_o_evento_nao_troca_o_perfil() -> None:
-    daemon = Daemon(ativo="Elden Ring", appid=1245620)
+    daemon = Daemon(ativo="Elden Ring", appid=9924912)
     motor, ativados = _motor(daemon, [_perfil("Ao conectar", "controle_conectado")])
     asyncio.run(_publicar_e_esperar(daemon, motor))
     assert ativados == []

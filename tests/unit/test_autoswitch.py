@@ -210,7 +210,7 @@ def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_o_pessoal(
     save_profile(
         _mk_profile(
             "sackboy_nativo",
-            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            match=MatchCriteria(window_class=["steam_app_9931993"]),
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -221,8 +221,8 @@ def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_o_pessoal(
     manager = ProfileManager(controller=fc)
     sw = _mk_switcher(manager)
 
-    sw._tick({"wm_class": "steam_app_1599660"}, 0.0)
-    sw._tick({"wm_class": "steam_app_1599660"}, 0.6)
+    sw._tick({"wm_class": "steam_app_9931993"}, 0.0)
+    sw._tick({"wm_class": "steam_app_9931993"}, 0.6)
     assert sw._current_profile == "sackboy_nativo"
 
     for t in (1.0, 1.5, 6.1, 60.0, 300.0):
@@ -461,7 +461,7 @@ def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
     save_profile(
         _mk_profile(
             "sackboy_nativo",
-            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            match=MatchCriteria(window_class=["steam_app_9931993"]),
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -472,8 +472,8 @@ def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
     manager = ProfileManager(controller=fc)
     sw = _mk_switcher(manager)
 
-    sw._tick({"wm_class": "steam_app_1599660"}, 0.0)
-    sw._tick({"wm_class": "steam_app_1599660"}, 0.6)
+    sw._tick({"wm_class": "steam_app_9931993"}, 0.0)
+    sw._tick({"wm_class": "steam_app_9931993"}, 0.6)
     assert sw._current_profile == "sackboy_nativo"
 
     for t, wm in (
@@ -574,7 +574,7 @@ def test_janela_propria_matcher():
         assert AutoSwitcher._janela_propria({"wm_class": wm}), wm
 
     alheias = [
-        {"wm_class": "steam_app_1599660"},
+        {"wm_class": "steam_app_9931993"},
         {"wm_class": "Doom"},
         {"wm_class": "unknown"},
         {"wm_class": ""},
@@ -596,7 +596,7 @@ def _sw_assimetrico(manager: ProfileManager) -> AutoSwitcher:
 def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
     save_profile(
         _mk_profile(
-            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+            "madjack", match=MatchCriteria(window_class=["steam_app_9942223"])
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -611,8 +611,8 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
     sw._tick({"wm_class": "firefox"}, 0.6)
     assert sw._current_profile == "pessoal"
 
-    sw._tick({"wm_class": "steam_app_2111190"}, 1.0)
-    sw._tick({"wm_class": "steam_app_2111190"}, 1.6)
+    sw._tick({"wm_class": "steam_app_9942223"}, 1.0)
+    sw._tick({"wm_class": "steam_app_9942223"}, 1.6)
     assert sw._current_profile == "madjack"
 
 
@@ -626,7 +626,7 @@ def test_sair_do_perfil_de_jogo_para_janela_sem_regra_fica_no_jogo(
     """
     save_profile(
         _mk_profile(
-            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+            "madjack", match=MatchCriteria(window_class=["steam_app_9942223"])
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -637,8 +637,8 @@ def test_sair_do_perfil_de_jogo_para_janela_sem_regra_fica_no_jogo(
     manager = ProfileManager(controller=fc)
     sw = _sw_assimetrico(manager)
 
-    sw._tick({"wm_class": "steam_app_2111190"}, 0.0)
-    sw._tick({"wm_class": "steam_app_2111190"}, 0.6)
+    sw._tick({"wm_class": "steam_app_9942223"}, 0.0)
+    sw._tick({"wm_class": "steam_app_9942223"}, 0.6)
     assert sw._current_profile == "madjack"
 
     for t in (10.0, 10.5, 11.0, 11.4):
@@ -654,7 +654,7 @@ def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
     """Ping-pong de 18-28 s do journal, reproduzido: com o debounce de saída,"""
     save_profile(
         _mk_profile(
-            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+            "madjack", match=MatchCriteria(window_class=["steam_app_9942223"])
         )
     )
     save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
@@ -665,8 +665,8 @@ def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
     manager = ProfileManager(controller=fc)
     sw = _sw_assimetrico(manager)
 
-    sw._tick({"wm_class": "steam_app_2111190"}, 0.0)
-    sw._tick({"wm_class": "steam_app_2111190"}, 0.6)
+    sw._tick({"wm_class": "steam_app_9942223"}, 0.0)
+    sw._tick({"wm_class": "steam_app_9942223"}, 0.6)
 
     t = 1.0
     for _ in range(6):
@@ -674,7 +674,7 @@ def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
             sw._tick({"wm_class": "firefox"}, t)
             t += 0.5
         for _ in range(4):
-            sw._tick({"wm_class": "steam_app_2111190"}, t)
+            sw._tick({"wm_class": "steam_app_9942223"}, t)
             t += 0.5
 
     assert sw._current_profile == "madjack"

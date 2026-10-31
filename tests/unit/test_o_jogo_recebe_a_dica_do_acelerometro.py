@@ -173,7 +173,7 @@ def test_a_dica_atravessa_o_arquivo_e_o_wrapper_ate_o_processo_do_jogo(
                 "HOME": os.environ.get("HOME", "/tmp"),
                 "XDG_RUNTIME_DIR": str(runtime),
                 "XDG_STATE_HOME": str(estado),
-                "SteamAppId": "1599660",
+                "SteamAppId": "9931993",
             },
             capture_output=True,
             text=True,

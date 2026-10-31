@@ -74,7 +74,7 @@ def _perfil(flavor: str, *, nome: str = "dont_scream") -> Profile:
         {
             "name": nome,
             "version": 1,
-            "match": {"type": "criteria", "window_class": ["steam_app_2497900"]},
+            "match": {"type": "criteria", "window_class": ["steam_app_9949958"]},
             "priority": 80,
             "mode": {"kind": "gamepad", "gamepad_flavor": flavor},
         }
@@ -320,7 +320,7 @@ def test_modo_jogo_padrao_nao_vira_laco_com_a_mascara_divergente(
     monkeypatch.setattr(daemon, "set_gamepad_emulation_desfecho", espiao)
 
     for _ in range(6):
-        daemon.aplicar_modo_jogo_padrao(wm_class="steam_app_2497900")
+        daemon.aplicar_modo_jogo_padrao(wm_class="steam_app_9949958")
 
     assert pedidos == ["xbox"], f"o tique de 2 Hz voltou a pedir (pedidos={pedidos})"
 

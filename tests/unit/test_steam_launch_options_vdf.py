@@ -201,7 +201,7 @@ def test_has_poison_ve_o_nosso_par_em_qualquer_posicao():
 
 def test_transform_migra_a_linha_estendida_nos_dois_modos():
     """ERA `test_transform_pula_linha_estendida_nos_dois_modos`, e ele exigia"""
-    texto = _vdf({"1599660": LINHA_ESTENDIDA})
+    texto = _vdf({"9931993": LINHA_ESTENDIDA})
     for modo in ("migrate", "strip"):
         novo, mudadas = slo.transform_vdf_text(texto, modo)
         assert mudadas == 1, modo
@@ -210,7 +210,7 @@ def test_transform_migra_a_linha_estendida_nos_dois_modos():
 
 
 def test_transform_nao_toca_o_que_a_subtracao_nao_alcanca():
-    texto = _vdf({"1599660": slo._vdf_escape(LINHA_FORA_DO_ALCANCE)})
+    texto = _vdf({"9931993": slo._vdf_escape(LINHA_FORA_DO_ALCANCE)})
     for modo in ("migrate", "strip"):
         novo, mudadas = slo.transform_vdf_text(texto, modo)
         assert mudadas == 0, modo
@@ -222,7 +222,7 @@ def test_main_migra_a_linha_estendida_preservando_a_parte_do_usuario(
 ):
     """ERA `test_main_reporta_ignore_estendido_sem_tocar`."""
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"1599660": LINHA_ESTENDIDA}), encoding="utf-8")
+    vdf.write_text(_vdf({"9931993": LINHA_ESTENDIDA}), encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
     rc = slo.main(["--migrate", "--vdf", str(vdf)])
@@ -236,7 +236,7 @@ def test_main_migra_a_linha_estendida_preservando_a_parte_do_usuario(
 
 def test_main_ainda_reporta_o_que_nao_alcanca(tmp_path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"1599660": slo._vdf_escape(LINHA_FORA_DO_ALCANCE)})
+    original = _vdf({"9931993": slo._vdf_escape(LINHA_FORA_DO_ALCANCE)})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -254,7 +254,7 @@ def test_strip_remove_o_wrapper_preservando_o_resto():
 
 
 def test_transform_migrate_so_toca_linhas_envenenadas():
-    texto = _vdf({"1599660": LINHA_914, "620": "MANGOHUD=1 %command%"})
+    texto = _vdf({"9931993": LINHA_914, "9900620": "MANGOHUD=1 %command%"})
     novo, mudadas = slo.transform_vdf_text(texto, "migrate")
     assert mudadas == 1
     assert slo.IGNORE_SIGNATURE not in novo
@@ -265,7 +265,7 @@ def test_transform_migrate_so_toca_linhas_envenenadas():
 
 def test_transform_respeita_escaping_de_aspas_do_usuario():
     valor_escapado = 'sh -c \\"echo oi\\" %command%'
-    texto = _vdf({"620": valor_escapado})
+    texto = _vdf({"9900620": valor_escapado})
     novo, mudadas = slo.transform_vdf_text(texto, "migrate")
     assert mudadas == 0
     assert novo == texto
@@ -274,9 +274,9 @@ def test_transform_respeita_escaping_de_aspas_do_usuario():
 def test_transform_strip_remove_novo_e_legado():
     texto = _vdf(
         {
-            "1599660": slo._vdf_escape(slo.WRAPPER_LAUNCH),
-            "440": LINHA_914,
-            "620": "MANGOHUD=1 %command%",
+            "9931993": slo._vdf_escape(slo.WRAPPER_LAUNCH),
+            "9900440": LINHA_914,
+            "9900620": "MANGOHUD=1 %command%",
         }
     )
     novo, mudadas = slo.transform_vdf_text(texto, "strip")
@@ -288,7 +288,7 @@ def test_transform_strip_remove_novo_e_legado():
 
 
 def test_migrate_depois_strip_zera_o_nosso_rastro():
-    texto = _vdf({"1599660": LINHA_914})
+    texto = _vdf({"9931993": LINHA_914})
     migrado, _ = slo.transform_vdf_text(texto, "migrate")
     limpo, _ = slo.transform_vdf_text(migrado, "strip")
     assert '"LaunchOptions"\t\t""' in limpo
@@ -296,7 +296,7 @@ def test_migrate_depois_strip_zera_o_nosso_rastro():
 
 def test_process_vdf_dry_run_nao_toca_no_arquivo(tmp_path: Path):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"1599660": LINHA_914})
+    original = _vdf({"9931993": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
     changed, diff = slo.process_vdf(vdf, "migrate", dry_run=True)
     assert changed == 1
@@ -307,7 +307,7 @@ def test_process_vdf_dry_run_nao_toca_no_arquivo(tmp_path: Path):
 
 def test_process_vdf_migra_com_backup_e_e_idempotente(tmp_path: Path):
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
+    vdf.write_text(_vdf({"9931993": LINHA_914}), encoding="utf-8")
     changed, _ = slo.process_vdf(vdf, "migrate")
     assert changed == 1
     backups = list(tmp_path.glob("localconfig.vdf.bak.hefesto-launch-*"))
@@ -320,7 +320,7 @@ def test_process_vdf_migra_com_backup_e_e_idempotente(tmp_path: Path):
 
 def test_main_recusa_migrar_com_steam_aberta(tmp_path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"1599660": LINHA_914})
+    original = _vdf({"9931993": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -335,7 +335,7 @@ def test_main_recusa_migrar_com_steam_aberta(tmp_path, monkeypatch, capsys):
 def test_main_recusa_com_jogo_da_steam_aberto(tmp_path, monkeypatch, capsys):
     """DEDUP-05 exigência 2: `steam -shutdown` com jogo aberto MATA o jogo —"""
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"1599660": LINHA_914})
+    original = _vdf({"9931993": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: True)
@@ -359,7 +359,7 @@ def test_main_recusa_com_jogo_da_steam_aberto(tmp_path, monkeypatch, capsys):
 
 def test_main_migra_com_steam_fechada(tmp_path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
-    vdf.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
+    vdf.write_text(_vdf({"9931993": LINHA_914}), encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
     rc = slo.main(["--migrate", "--vdf", str(vdf)])
@@ -377,7 +377,7 @@ def test_main_migrate_em_vdf_de_sandbox_so_remove_o_veneno(tmp_path, monkeypatch
     )
     sandbox.mkdir(parents=True)
     vdf = sandbox / "localconfig.vdf"
-    original = _vdf({"1599660": LINHA_914})
+    original = _vdf({"9931993": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -396,7 +396,7 @@ def test_main_migrate_em_vdf_de_sandbox_so_remove_o_veneno(tmp_path, monkeypatch
 
 def test_main_status_relata_sem_tocar(tmp_path, monkeypatch, capsys):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"1599660": LINHA_914})
+    original = _vdf({"9931993": LINHA_914})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     rc = slo.main(["--status", "--vdf", str(vdf)])
@@ -453,49 +453,49 @@ def _vdf_sem_launch_options(appid: str) -> str:
 
 
 def test_apply_wrapper_prefixa_preservando_opcoes_do_usuario():
-    texto = _vdf({"620": "MANGOHUD=1 %command%"})
+    texto = _vdf({"9900620": "MANGOHUD=1 %command%"})
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
-    assert aplicados == ["620"]
+    assert aplicados == ["9900620"]
     assert pulados == []
     valores = slo.read_launch_options_by_appid(novo)
-    assert valores["620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
+    assert valores["9900620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
 
 
 def test_apply_wrapper_insere_launch_options_em_jogo_sem_nenhuma():
-    texto = _vdf_sem_launch_options("1599660")
+    texto = _vdf_sem_launch_options("9931993")
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
-    assert aplicados == ["1599660"]
+    assert aplicados == ["9931993"]
     assert pulados == []
     valores = slo.read_launch_options_by_appid(novo)
-    assert valores["1599660"] == slo.WRAPPER_LAUNCH
+    assert valores["9931993"] == slo.WRAPPER_LAUNCH
     assert '"playtime"' in novo
 
 
 def test_apply_wrapper_e_idempotente_e_reporta_skip():
-    texto = _vdf({"620": "MANGOHUD=1 %command%"})
+    texto = _vdf({"9900620": "MANGOHUD=1 %command%"})
     uma_vez, _, _ = slo.apply_wrapper_vdf_text(texto)
     duas_vezes, aplicados, pulados = slo.apply_wrapper_vdf_text(uma_vez)
     assert duas_vezes == uma_vez
     assert aplicados == []
-    assert pulados == [("620", "ja_tem_wrapper")]
+    assert pulados == [("9900620", "ja_tem_wrapper")]
 
 
 def test_apply_wrapper_remove_veneno_legado_junto():
-    texto = _vdf({"1599660": LINHA_914})
+    texto = _vdf({"9931993": LINHA_914})
     novo, aplicados, _ = slo.apply_wrapper_vdf_text(texto)
-    assert aplicados == ["1599660"]
+    assert aplicados == ["9931993"]
     assert slo.IGNORE_SIGNATURE not in novo
-    assert slo.read_launch_options_by_appid(novo)["1599660"] == slo.WRAPPER_LAUNCH
+    assert slo.read_launch_options_by_appid(novo)["9931993"] == slo.WRAPPER_LAUNCH
 
 
 def test_apply_wrapper_migra_o_ignore_estendido():
     """ERA `test_apply_wrapper_pula_ignore_estendido_sem_tocar`, e o nome dele"""
-    texto = _vdf({"1599660": LINHA_ESTENDIDA, "620": ""})
+    texto = _vdf({"9931993": LINHA_ESTENDIDA, "9900620": ""})
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
-    assert "1599660" in aplicados
-    assert aplicados == ["1599660", "620"]
-    assert ("1599660", "ignore_estendido") not in pulados
-    linha = slo.read_launch_options_by_appid(novo)["1599660"]
+    assert "9931993" in aplicados
+    assert aplicados == ["9931993", "9900620"]
+    assert ("9931993", "ignore_estendido") not in pulados
+    linha = slo.read_launch_options_by_appid(novo)["9931993"]
     assert linha.startswith(slo.WRAPPER_PREFIX + " ")
     assert "0x057e/0x2009" in linha, "o device que O USUÁRIO escondeu foi jogado fora"
     assert "0x054c/0x0ce6" not in linha
@@ -503,16 +503,16 @@ def test_apply_wrapper_migra_o_ignore_estendido():
 
 def test_apply_wrapper_ainda_pula_o_que_nao_alcanca():
     """O `skipped` não morreu — ele passou a nomear só o que sobra."""
-    texto = _vdf({"1599660": slo._vdf_escape(LINHA_FORA_DO_ALCANCE), "620": ""})
+    texto = _vdf({"9931993": slo._vdf_escape(LINHA_FORA_DO_ALCANCE), "9900620": ""})
     novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
-    assert ("1599660", "ignore_estendido") in pulados
-    assert aplicados == ["620"]
-    assert slo.read_launch_options_by_appid(novo)["1599660"] == LINHA_FORA_DO_ALCANCE
+    assert ("9931993", "ignore_estendido") in pulados
+    assert aplicados == ["9900620"]
+    assert slo.read_launch_options_by_appid(novo)["9931993"] == LINHA_FORA_DO_ALCANCE
 
 
 def test_apply_wrapper_to_all_games_recusa_com_steam_aberta(tmp_path, monkeypatch):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"620": "MANGOHUD=1 %command%"})
+    original = _vdf({"9900620": "MANGOHUD=1 %command%"})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -524,7 +524,7 @@ def test_apply_wrapper_to_all_games_recusa_com_steam_aberta(tmp_path, monkeypatc
 
 def test_apply_wrapper_to_all_games_recusa_com_jogo_aberto(tmp_path, monkeypatch):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf({"620": ""})
+    original = _vdf({"9900620": ""})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(slo, "steam_game_running", lambda: True)
@@ -538,31 +538,31 @@ def test_apply_wrapper_to_all_games_recusa_com_jogo_aberto(tmp_path, monkeypatch
 def test_apply_wrapper_to_all_games_aplica_com_backup(tmp_path, monkeypatch):
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
-        _vdf({"620": "MANGOHUD=1 %command%", "440": slo._vdf_escape(slo.WRAPPER_LAUNCH)}),
+        _vdf({"9900620": "MANGOHUD=1 %command%", "9900440": slo._vdf_escape(slo.WRAPPER_LAUNCH)}),
         encoding="utf-8",
     )
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
     resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
-    assert [a["appid"] for a in resultado["applied"]] == ["620"]
+    assert [a["appid"] for a in resultado["applied"]] == ["9900620"]
     assert [(s["appid"], s["reason"]) for s in resultado["skipped"]] == [
-        ("440", "ja_tem_wrapper")
+        ("9900440", "ja_tem_wrapper")
     ]
     assert resultado["errors"] == []
     assert len(list(tmp_path.glob("localconfig.vdf.bak.hefesto-launch-*"))) == 1
     valores = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))
-    assert valores["620"].startswith(slo.WRAPPER_PREFIX)
+    assert valores["9900620"].startswith(slo.WRAPPER_PREFIX)
 
 
 def test_apply_wrapper_to_all_games_dry_run_nao_toca(tmp_path, monkeypatch):
     vdf = tmp_path / "localconfig.vdf"
-    original = _vdf_sem_launch_options("1599660")
+    original = _vdf_sem_launch_options("9931993")
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(
         slo, "steam_running", lambda: (_ for _ in ()).throw(AssertionError)
     )
     resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf], dry_run=True)
-    assert [a["appid"] for a in resultado["applied"]] == ["1599660"]
+    assert [a["appid"] for a in resultado["applied"]] == ["9931993"]
     assert vdf.read_text(encoding="utf-8") == original
     assert list(tmp_path.glob("*.bak.*")) == []
 
@@ -578,13 +578,13 @@ def test_apply_wrapper_to_all_games_vdf_nao_utf8_vira_erro_por_vdf(
     ruim.write_bytes(b'"UserLocalConfigStore"\n{\n\xff byte invalido\n}\n')
     bom = tmp_path / "bom" / "localconfig.vdf"
     bom.parent.mkdir()
-    bom.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
+    bom.write_text(_vdf({"9900620": "MANGOHUD=1 %command%"}), encoding="utf-8")
 
     resultado = slo.apply_wrapper_to_all_games(vdfs=[ruim, bom])
     assert [e["vdf"] for e in resultado["errors"]] == [str(ruim)]
-    assert [a["appid"] for a in resultado["applied"]] == ["620"]
+    assert [a["appid"] for a in resultado["applied"]] == ["9900620"]
     assert slo.read_launch_options_by_appid(bom.read_text(encoding="utf-8"))[
-        "620"
+        "9900620"
     ].startswith(slo.WRAPPER_PREFIX)
 
 
@@ -599,7 +599,7 @@ def test_main_strip_vdf_nao_utf8_nao_estoura_traceback(
     ruim.write_bytes(b'"UserLocalConfigStore"\n{\n\xff\n}\n')
     bom = tmp_path / "bom" / "localconfig.vdf"
     bom.parent.mkdir()
-    bom.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
+    bom.write_text(_vdf({"9931993": LINHA_914}), encoding="utf-8")
 
     rc = slo.main(["--strip", "--vdf", str(ruim), "--vdf", str(bom)])
     assert rc == 1
@@ -616,7 +616,7 @@ def test_apply_wrapper_to_all_games_pula_vdf_de_sandbox(tmp_path, monkeypatch):
     )
     sandbox.mkdir(parents=True)
     vdf = sandbox / "localconfig.vdf"
-    original = _vdf({"620": ""})
+    original = _vdf({"9900620": ""})
     vdf.write_text(original, encoding="utf-8")
     monkeypatch.setattr(slo, "steam_running", lambda: False)
     monkeypatch.setattr(slo, "steam_game_running", lambda: False)
@@ -839,56 +839,56 @@ def test_allowlist_path_respeita_xdg(monkeypatch, tmp_path):
 def test_allowlist_nasce_com_cabecalho_quando_nao_existe(tmp_path):
     alvo = tmp_path / "sub" / "steam_input_apps.txt"
 
-    assert slo.add_appid_to_steam_input_allowlist(2111190, path=alvo) == "adicionado"
+    assert slo.add_appid_to_steam_input_allowlist(9942223, path=alvo) == "adicionado"
 
     texto = alvo.read_text(encoding="utf-8")
     assert texto.startswith("# hefesto-dualsense4unix")
-    assert slo.parse_steam_input_allowlist(texto) == ["2111190"]
+    assert slo.parse_steam_input_allowlist(texto) == ["9942223"]
 
 
 def test_allowlist_preserva_cabecalho_e_comentarios_existentes(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
-    original = "# cabeçalho da usuária\n# não me apague\n2111190\n"
+    original = "# cabeçalho da usuária\n# não me apague\n9942223\n"
     alvo.write_text(original, encoding="utf-8")
 
-    assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "adicionado"
+    assert slo.add_appid_to_steam_input_allowlist(9900620, path=alvo) == "adicionado"
 
     texto = alvo.read_text(encoding="utf-8")
     assert texto.startswith(original)
-    assert slo.parse_steam_input_allowlist(texto) == ["2111190", "620"]
+    assert slo.parse_steam_input_allowlist(texto) == ["9942223", "9900620"]
 
 
 def test_allowlist_nao_duplica(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n2111190\n", encoding="utf-8")
+    alvo.write_text("# topo\n9942223\n", encoding="utf-8")
     antes = alvo.read_text(encoding="utf-8")
 
-    assert slo.add_appid_to_steam_input_allowlist("2111190", path=alvo) == "ja_estava"
+    assert slo.add_appid_to_steam_input_allowlist("9942223", path=alvo) == "ja_estava"
 
     assert alvo.read_text(encoding="utf-8") == antes
 
 
 def test_allowlist_appid_apenas_comentado_e_readicionado(tmp_path):
-    """`# 620` é comentário, não presença — a linha morta não pode fazer o"""
+    """`# 9900620` é comentário, não presença — a linha morta não pode fazer o"""
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n# 620 desliguei este\n", encoding="utf-8")
+    alvo.write_text("# topo\n# 9900620 desliguei este\n", encoding="utf-8")
 
-    assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "adicionado"
+    assert slo.add_appid_to_steam_input_allowlist(9900620, path=alvo) == "adicionado"
 
-    assert "620" in slo.parse_steam_input_allowlist(
+    assert "9900620" in slo.parse_steam_input_allowlist(
         alvo.read_text(encoding="utf-8")
     )
 
 
 def test_allowlist_sem_quebra_de_linha_final_nao_gruda_appids(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n2111190", encoding="utf-8")
+    alvo.write_text("# topo\n9942223", encoding="utf-8")
 
-    slo.add_appid_to_steam_input_allowlist(620, path=alvo)
+    slo.add_appid_to_steam_input_allowlist(9900620, path=alvo)
 
     assert slo.parse_steam_input_allowlist(
         alvo.read_text(encoding="utf-8")
-    ) == ["2111190", "620"]
+    ) == ["9942223", "9900620"]
 
 
 @pytest.mark.parametrize("torto", ["", "abc", "12a", None])
@@ -906,35 +906,35 @@ def test_allowlist_erro_de_io_nao_levanta(tmp_path, monkeypatch):
     monkeypatch.setattr(
         Path, "read_text", lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
     )
-    assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "erro"
+    assert slo.add_appid_to_steam_input_allowlist(9900620, path=alvo) == "erro"
 
 
 def test_allowlist_grava_a_nota_como_comentario(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
-    slo.add_appid_to_steam_input_allowlist(620, path=alvo, nota="marcado pela GUI")
+    slo.add_appid_to_steam_input_allowlist(9900620, path=alvo, nota="marcado pela GUI")
     texto = alvo.read_text(encoding="utf-8")
-    assert "# marcado pela GUI\n620\n" in texto
-    assert slo.parse_steam_input_allowlist(texto) == ["620"]
+    assert "# marcado pela GUI\n9900620\n" in texto
+    assert slo.parse_steam_input_allowlist(texto) == ["9900620"]
 
 
 def test_allowlist_remove_o_appid_e_preserva_cabecalho_e_comentarios(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
     alvo.write_text(
-        "# cabeçalho da usuária\n# não me apague\n2111190\n620\n", encoding="utf-8"
+        "# cabeçalho da usuária\n# não me apague\n9942223\n9900620\n", encoding="utf-8"
     )
 
-    assert slo.remove_appid_from_steam_input_allowlist(2111190, path=alvo) == "removido"
+    assert slo.remove_appid_from_steam_input_allowlist(9942223, path=alvo) == "removido"
 
     texto = alvo.read_text(encoding="utf-8")
-    assert texto == "# cabeçalho da usuária\n# não me apague\n620\n"
+    assert texto == "# cabeçalho da usuária\n# não me apague\n9900620\n"
 
 
 def test_allowlist_remove_leva_o_comentario_inline_junto(tmp_path):
-    """`620 # marcado pela GUI` é UMA linha cujo appid é 620."""
+    """`9900620 # marcado pela GUI` é UMA linha cujo appid é 9900620."""
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n620 # marcado pela GUI\n", encoding="utf-8")
+    alvo.write_text("# topo\n9900620 # marcado pela GUI\n", encoding="utf-8")
 
-    assert slo.remove_appid_from_steam_input_allowlist("620", path=alvo) == "removido"
+    assert slo.remove_appid_from_steam_input_allowlist("9900620", path=alvo) == "removido"
 
     assert alvo.read_text(encoding="utf-8") == "# topo\n"
 
@@ -942,9 +942,9 @@ def test_allowlist_remove_leva_o_comentario_inline_junto(tmp_path):
 def test_allowlist_remove_deixa_a_nota_orfa_de_proposito(tmp_path):
     """Adivinhar "qual comentário era nosso" acertaria a nota do `add` e uma"""
     alvo = tmp_path / "steam_input_apps.txt"
-    slo.add_appid_to_steam_input_allowlist(620, path=alvo, nota="marcado pela GUI")
+    slo.add_appid_to_steam_input_allowlist(9900620, path=alvo, nota="marcado pela GUI")
 
-    slo.remove_appid_from_steam_input_allowlist(620, path=alvo)
+    slo.remove_appid_from_steam_input_allowlist(9900620, path=alvo)
 
     texto = alvo.read_text(encoding="utf-8")
     assert "# marcado pela GUI" in texto
@@ -953,10 +953,10 @@ def test_allowlist_remove_deixa_a_nota_orfa_de_proposito(tmp_path):
 
 def test_allowlist_remove_appid_ausente_nao_reescreve(tmp_path):
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n2111190\n", encoding="utf-8")
+    alvo.write_text("# topo\n9942223\n", encoding="utf-8")
     antes = alvo.read_text(encoding="utf-8")
 
-    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "nao_estava"
+    assert slo.remove_appid_from_steam_input_allowlist(9900620, path=alvo) == "nao_estava"
 
     assert alvo.read_text(encoding="utf-8") == antes
 
@@ -964,17 +964,17 @@ def test_allowlist_remove_appid_ausente_nao_reescreve(tmp_path):
 def test_allowlist_remove_appid_so_comentado_e_nao_estava(tmp_path):
     """Simetria com o `add`, que RE-ADICIONA um appid comentado: linha morta"""
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n# 620 desliguei este\n", encoding="utf-8")
+    alvo.write_text("# topo\n# 9900620 desliguei este\n", encoding="utf-8")
 
-    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "nao_estava"
+    assert slo.remove_appid_from_steam_input_allowlist(9900620, path=alvo) == "nao_estava"
 
-    assert "# 620 desliguei este" in alvo.read_text(encoding="utf-8")
+    assert "# 9900620 desliguei este" in alvo.read_text(encoding="utf-8")
 
 
 def test_allowlist_remove_sem_arquivo_nao_cria_nada(tmp_path):
     alvo = tmp_path / "sub" / "steam_input_apps.txt"
 
-    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "nao_estava"
+    assert slo.remove_appid_from_steam_input_allowlist(9900620, path=alvo) == "nao_estava"
 
     assert not alvo.exists()
 
@@ -982,32 +982,32 @@ def test_allowlist_remove_sem_arquivo_nao_cria_nada(tmp_path):
 @pytest.mark.parametrize("torto", ["", "abc", "12a", None])
 def test_allowlist_remove_recusa_appid_nao_numerico(tmp_path, torto):
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n620\n", encoding="utf-8")
+    alvo.write_text("# topo\n9900620\n", encoding="utf-8")
 
     assert (
         slo.remove_appid_from_steam_input_allowlist(torto, path=alvo)
         == "appid_invalido"
     )
-    assert alvo.read_text(encoding="utf-8") == "# topo\n620\n"
+    assert alvo.read_text(encoding="utf-8") == "# topo\n9900620\n"
 
 
 def test_allowlist_remove_erro_de_io_nao_levanta(tmp_path, monkeypatch):
     alvo = tmp_path / "steam_input_apps.txt"
-    alvo.write_text("# topo\n620\n", encoding="utf-8")
+    alvo.write_text("# topo\n9900620\n", encoding="utf-8")
     monkeypatch.setattr(
         Path, "write_text", lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
     )
-    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "erro"
+    assert slo.remove_appid_from_steam_input_allowlist(9900620, path=alvo) == "erro"
 
 
 def test_allowlist_ida_e_volta_devolve_o_arquivo_ao_estado_util(tmp_path):
     """O ciclo completo do botão: marcar, desmarcar, marcar de novo."""
     alvo = tmp_path / "steam_input_apps.txt"
 
-    assert slo.add_appid_to_steam_input_allowlist(2111190, path=alvo) == "adicionado"
-    assert slo.remove_appid_from_steam_input_allowlist(2111190, path=alvo) == "removido"
+    assert slo.add_appid_to_steam_input_allowlist(9942223, path=alvo) == "adicionado"
+    assert slo.remove_appid_from_steam_input_allowlist(9942223, path=alvo) == "removido"
     assert slo.parse_steam_input_allowlist(alvo.read_text(encoding="utf-8")) == []
-    assert slo.add_appid_to_steam_input_allowlist(2111190, path=alvo) == "adicionado"
+    assert slo.add_appid_to_steam_input_allowlist(9942223, path=alvo) == "adicionado"
     assert slo.parse_steam_input_allowlist(alvo.read_text(encoding="utf-8")) == [
-        "2111190"
+        "9942223"
     ]

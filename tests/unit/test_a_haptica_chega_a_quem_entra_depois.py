@@ -535,7 +535,7 @@ def _lancar(tmp_path: Path, sysfs: Path) -> str:
              'printf "%s\\n" "${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}"'],
             env={
                 "PATH": str(binarios), "HOME": str(home), "XDG_RUNTIME_DIR": str(runtime),
-                "XDG_STATE_HOME": str(estado), "SteamAppId": "3357650",
+                "XDG_STATE_HOME": str(estado), "SteamAppId": "9967153",
                 "STEAM_COMPAT_DATA_PATH": str(compat), "HEFESTO_SYSFS": str(sysfs),
             },
             capture_output=True, text=True, timeout=30.0, check=False,

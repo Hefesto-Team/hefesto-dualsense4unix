@@ -7,7 +7,7 @@ PS5. Quem o esconde do jogo é a env do lançamento, lida UMA vez no `exec` — 
 a env seguia o modo e a máscara do INSTANTE em que o jogo abriu:
 
 * o PS + R3 parou na Navegação, gravou `kind=desktop` no perfil do Future
-  Knight, e o `steam_app_4235410.env` ficou sem IGNORE e sem DISABLE. Ao subir
+  Knight, e o `steam_app_9984708.env` ficou sem IGNORE e sem DISABLE. Ao subir
   para um modo de jogo dentro da partida, o jogo segue com o físico (que o
   Hefesto graba) e o vpad chega como segundo controle;
 * o caminho Xbox com o cartão DualSense (o vpad Edge 0df2 em uinput) saía sem
@@ -34,7 +34,7 @@ _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 _DISABLE = "PROTON_DISABLE_HIDRAW"
 _HIDAPI = "SDL_JOYSTICK_HIDAPI"
 P1 = "aabbcc000001"
-APPID = 4235410
+APPID = 9984708
 
 
 def _env(path: Path) -> dict[str, str]:

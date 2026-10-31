@@ -13,7 +13,7 @@ from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_
 from tests.unit import a_exclusao_de_antes as antiga
 
 _APP = "63a665088eb1480298f1e57943b225d8"
-_CHAVE = "steam_app_1088850"
+_CHAVE = "steam_app_9921777"
 _IGNORE = ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6")
 _HIDRAW = ("PROTON_DISABLE_HIDRAW", "0x054c/0x0ce6")
 _MHWILDS = ("PROTON_ENABLE_MHWILDS_USB_AUDIO", "1")
@@ -51,7 +51,7 @@ def _heroic(*, copia: tuple[tuple[str, str], ...] | None = _COPIA_VELHA) -> Path
     (casa / "store_cache").mkdir(parents=True)
     (casa / "config.json").write_text(json.dumps(
         {"defaultSettings": {"enviromentOptions": _lista(_COPIA_VELHA)}}))
-    (casa / "store_cache" / "umu.json").write_text(json.dumps({f"legendary_{_APP}": "umu-1088850"}))
+    (casa / "store_cache" / "umu.json").write_text(json.dumps({f"legendary_{_APP}": "umu-9921777"}))
     (casa / "store_cache" / "legendary_library.json").write_text(json.dumps(
         {"library": [{"app_name": _APP, "title": "Guardiões", "is_installed": True,
                       "install": {"executable": "retail/gotg.exe"}}]}))

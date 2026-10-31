@@ -37,9 +37,9 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import steam_input_ponte as ponte
 
-_FORA = ("316790", "2111190", "3357650")
-_NA_LISTA = "2497900"
-_SEM_CONFIG = "4235410"
+_FORA = ("9906335", "9942223", "9967153")
+_NA_LISTA = "9949958"
+_SEM_CONFIG = "9984708"
 _CONTA = "10"
 _CONFIGSET_DE_APARELHO = "configset_aparelho-de-mentira.vdf"
 
@@ -85,13 +85,13 @@ def _valores(texto: str) -> dict[str, str | None]:
 class TestOConfigset:
     def test_so_autosave_de_appid_conta(self) -> None:
         texto = _configset({
-            "1599660": {"autosave": "1"},
-            "1828690": {"template": "controller_xboxone_gamepad_fps.vdf"},
-            "2358720": {"workshop": "123"},
-            "2497900-testing": {"autosave": "1"},
-            "3357650": {"autosave": "1"},
+            "9931993": {"autosave": "1"},
+            "9936573": {"template": "controller_xboxone_gamepad_fps.vdf"},
+            "9947174": {"workshop": "123"},
+            "9949958-testing": {"autosave": "1"},
+            "9967153": {"autosave": "1"},
         })
-        assert ponte.appids_com_autosave(texto) == {"1599660", "3357650"}
+        assert ponte.appids_com_autosave(texto) == {"9931993", "9967153"}
 
     def test_o_configset_vazio_da_steam_e_nada_configurado(self) -> None:
         assert ponte.appids_com_autosave('"controller_config"\n{\n}\n') == set()
@@ -100,10 +100,10 @@ class TestOConfigset:
     @pytest.mark.parametrize(
         "texto",
         [
-            '"controller_config"\n{\n\t"1599660"\n\t{\n\t\t"autosave"\t\t"1"\n',
+            '"controller_config"\n{\n\t"9931993"\n\t{\n\t\t"autosave"\t\t"1"\n',
             '"controller_config"\n{\n}\n}\n',
             '"autosave"\t\t"1"\n',
-            '"controller_config"\n{\n\t"1599660"\n}\n',
+            '"controller_config"\n{\n\t"9931993"\n}\n',
             "{\n}\n",
             '"controller_config" {\n}\n',
             '"a"\n{\n}\n"b"\n{\n}\n',
@@ -119,13 +119,13 @@ class TestOConfigset:
 
     def test_a_pasta_do_jogo_tambem_conta(self, tmp_path: Path) -> None:
         pasta = tmp_path / "config"
-        (pasta / "413090").mkdir(parents=True)
-        (pasta / "2497900-testing").mkdir()
+        (pasta / "9908263").mkdir(parents=True)
+        (pasta / "9949958-testing").mkdir()
         (pasta / "configset_controller_ps5.vdf").write_text(
-            _configset({"1599660": {"autosave": "1"}}), encoding="utf-8"
+            _configset({"9931993": {"autosave": "1"}}), encoding="utf-8"
         )
         (pasta / "preferences_qualquer.vdf").write_text("lixo que não é configset")
-        assert ponte.configuracao_por_jogo(pasta) == {"413090", "1599660"}
+        assert ponte.configuracao_por_jogo(pasta) == {"9908263", "9931993"}
 
     def test_pasta_que_nao_existe_e_nada_configurado(self, tmp_path: Path) -> None:
         assert ponte.configuracao_por_jogo(tmp_path / "nao-existe") == set()
@@ -134,7 +134,7 @@ class TestOConfigset:
         pasta = tmp_path / "config"
         pasta.mkdir()
         (pasta / "configset_controller_ps5.vdf").write_text(
-            _configset({"1599660": {"autosave": "1"}}), encoding="utf-8"
+            _configset({"9931993": {"autosave": "1"}}), encoding="utf-8"
         )
         (pasta / _CONFIGSET_DE_APARELHO).write_bytes(b"\xff\xfe\x00quebrado")
         assert ponte.configuracao_por_jogo(pasta) is None
@@ -213,7 +213,7 @@ def _montar_lar(raiz: Path) -> dict[str, Path]:
     perfil = home / ".config/hefesto-dualsense4unix/profiles/jogo_de_mentira.json"
     perfil.parent.mkdir(parents=True)
     perfil.write_text(
-        '{"name": "jogo_de_mentira", "match": {"window_class": ["steam_app_316790"]},'
+        '{"name": "jogo_de_mentira", "match": {"window_class": ["steam_app_9906335"]},'
         ' "priority": 80, "mode": {"kind": "gamepad", "gamepad_flavor": "xbox"}}\n',
         encoding="utf-8",
     )

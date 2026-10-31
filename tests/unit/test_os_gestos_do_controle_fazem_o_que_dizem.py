@@ -552,7 +552,7 @@ MODOS = {
     "steam_input": {"gamepad_caminho": "dualsense", "steam_input": True},
 }
 JOGOS = {"fechado": ("daemon", None), "com_autoridade": ("game", None),
-         "vivo_sem_autoridade": ("daemon", 3621330)}
+         "vivo_sem_autoridade": ("daemon", 9972426)}
 SEXTOS = {"nada": {"ps": {"faz": "nada"}}, "steam": {"ps": {"faz": "abrir_a_steam"}},
           "nao_declarado": {}}
 

@@ -166,7 +166,7 @@ def test_a_semeadura_grava_criado_em_e_o_gesto_em_curso_nao_a_carimba(
     try:
         loader.semear_perfis_dos_jogos(
             dest_dir=destino,
-            jogos=[JogoLocal(appid="1245620", nome="Elden Ring", fonte="steam")])
+            jogos=[JogoLocal(appid="9924912", nome="Elden Ring", fonte="steam")])
     finally:
         gesto_de_agora.reset(marca)
     bruto = json.loads((destino / "elden_ring.json").read_text(encoding="utf-8"))
@@ -178,7 +178,7 @@ def test_a_semeadura_grava_criado_em_e_o_gesto_em_curso_nao_a_carimba(
 def test_o_perfil_de_jogo_intocado_continua_intocado_com_a_data(relogio: None) -> None:
     """A data não conta como edição: o enxugar segue reconhecendo o perfil de jogo da semeadura."""
     gordo = loader._payload_do_perfil(Profile(
-        name="Elden Ring", match=MatchCriteria(window_class=["steam_app_1245620"]),
+        name="Elden Ring", match=MatchCriteria(window_class=["steam_app_9924912"]),
         priority=loader.PRIORIDADE_DO_PERFIL_DE_JOGO, criado_em=DIA_1, modificado_em=DIA_2))
     assert loader._e_perfil_de_jogo_intocado(gordo) is True
     assert loader._e_perfil_de_jogo_intocado({**gordo, "mic": {"muted": True}}) is False

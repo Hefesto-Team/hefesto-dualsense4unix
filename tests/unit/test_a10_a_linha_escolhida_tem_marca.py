@@ -178,10 +178,10 @@ def test_a_linha_escolhida_viva_e_a_linha_do_desenho() -> None:
     for ativo in (True, False):
         for escolhido in (True, False):
             do_desenho = aba10.linha_do_perfil(
-                "Elden Ring", "85", "Jogo da Steam · 1245620", ativo,
+                "Elden Ring", "85", "Jogo da Steam · 9924912", ativo,
                 "a disputa", escolhido)
             do_produto = a10_perfis._linha_da_lista(
-                "Elden Ring", "85", "Jogo da Steam · 1245620", ativo,
+                "Elden Ring", "85", "Jogo da Steam · 9924912", ativo,
                 "a disputa", escolhido)
             assert do_produto == do_desenho, (
                 f"a linha viva divergiu do desenho (ativo={ativo}, "

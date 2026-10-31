@@ -43,7 +43,7 @@ PAGINA = "07-lancadores.html"
 
 SEM_WRAPPER: dict[str, Any] = {
     "gamepad_emulation": {"enabled": True, "wrapper_used": False},
-    "window_detect_last_class": "steam_app_3357650",
+    "window_detect_last_class": "steam_app_9967153",
 }
 
 
@@ -63,8 +63,8 @@ def test_a_escada_alcanca_o_jogo_que_o_usuario_ja_fechou(a07, monkeypatch):
 
     monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
     monkeypatch.setattr(launch_env, "read_last_run_marker",
-                        lambda *a, **kw: (3357650, 1))
-    assert a07.a_escada_do_jogo({}) == (3357650, a07.FECHADO)
+                        lambda *a, **kw: (9967153, 1))
+    assert a07.a_escada_do_jogo({}) == (9967153, a07.FECHADO)
 
 
 def test_a_escada_prefere_a_evidencia_mais_forte(a07, monkeypatch):
@@ -77,7 +77,7 @@ def test_a_escada_prefere_a_evidencia_mais_forte(a07, monkeypatch):
     assert a07.a_escada_do_jogo(SEM_WRAPPER) == (999, a07.ABERTO)
 
     monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
-    assert a07.a_escada_do_jogo(SEM_WRAPPER) == (3357650, a07.ABERTO)
+    assert a07.a_escada_do_jogo(SEM_WRAPPER) == (9967153, a07.ABERTO)
 
 
 def test_um_degrau_que_explode_nao_come_os_outros(a07, monkeypatch):
@@ -89,8 +89,8 @@ def test_um_degrau_que_explode_nao_come_os_outros(a07, monkeypatch):
 
     monkeypatch.setattr(launch_env, "launch_session_appid", _explode)
     monkeypatch.setattr(launch_env, "read_last_run_marker",
-                        lambda *a, **kw: (3357650, 1))
-    assert a07.a_escada_do_jogo({}) == (3357650, a07.FECHADO)
+                        lambda *a, **kw: (9967153, 1))
+    assert a07.a_escada_do_jogo({}) == (9967153, a07.FECHADO)
 
 
 def test_sem_evidencia_nenhuma_a_escada_recusa(a07, monkeypatch):

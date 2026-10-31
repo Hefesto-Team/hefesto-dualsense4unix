@@ -41,7 +41,7 @@ class _LoggerEspiao:
         raise AssertionError(f"evento {nome!r} não saiu; saíram {self.nomes()}")
 
 
-APPID = 2497900
+APPID = 9949958
 
 
 def _perfil_xbox(nome: str = "DONT SCREAM") -> SimpleNamespace:

@@ -45,7 +45,7 @@ from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import nomes_gravados
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-APPID = 1234560
+APPID = 9924691
 JANELA = f"steam_app_{APPID}"
 JOGO = "Jogo da Régua do Carimbo"
 FREESTYLE = loader.NOME_DO_PADRAO

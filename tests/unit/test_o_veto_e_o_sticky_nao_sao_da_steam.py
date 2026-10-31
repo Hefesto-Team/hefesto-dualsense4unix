@@ -18,9 +18,9 @@ class TestOStickyNaoGuardaANossaJanela:
     def test_a_nossa_classe_nao_derruba_a_anterior(self):
         """MORDIDA: devolva `self._window_detect_last_class = wm_class` para"""
         store = StateStore()
-        store.record_window_detect_read("xlib", "steam_app_1088850")
+        store.record_window_detect_read("xlib", "steam_app_9921777")
         store.record_window_detect_read("xlib", NOSSA)
-        assert store.window_detect_last_class == "steam_app_1088850", (
+        assert store.window_detect_last_class == "steam_app_9921777", (
             "a nossa própria janela virou o sticky — é essa janela que o «Novo» "
             "lê quando quem usa clica no botão")
 
@@ -80,9 +80,9 @@ class TestONovoNaoGravaANossaPropriaJanela:
             _classe_de_outro_app,
         )
 
-        ctx = self._ctx(window_detect_last_class="steam_app_1088850",
+        ctx = self._ctx(window_detect_last_class="steam_app_9921777",
                         window_detect_current_class=NOSSA)
-        assert _classe_de_outro_app(ctx) == "steam_app_1088850"
+        assert _classe_de_outro_app(ctx) == "steam_app_9921777"
 
     def test_a_crua_serve_quando_e_de_outro_app(self):
         from hefesto_dualsense4unix.interface.pacotes.a10_perfis import (
@@ -119,6 +119,6 @@ class TestOVetoDaR21AlcancaQualquerLancador:
             assert e_endereco_de_jogo("jogo-nativo-do-heroic") is False
             registrar_classes_de_jogo(["jogo-nativo-do-heroic"])
             assert e_endereco_de_jogo("jogo-nativo-do-heroic") is True
-            assert e_endereco_de_jogo("steam_app_1088850") is True
+            assert e_endereco_de_jogo("steam_app_9921777") is True
         finally:
             registrar_classes_de_jogo([])

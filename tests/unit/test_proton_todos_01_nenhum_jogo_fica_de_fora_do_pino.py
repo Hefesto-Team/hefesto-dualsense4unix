@@ -43,22 +43,22 @@ def _a_steam_do_usuario_nao_decide_o_resultado(monkeypatch: pytest.MonkeyPatch) 
 
 def test_com_todos_o_jogo_em_outra_ferramenta_migra() -> None:
     """A cena exata da queixa: o DON'T SCREAM em `proton_11`, o resto no pino."""
-    original = _vdf({"0": PINO, "2497900": "proton_11", "111": PINO})
+    original = _vdf({"0": PINO, "9949958": "proton_11", "111": PINO})
 
     novo, mudancas = proton_pin.build_compat_tool_mapping(
         original,
         tool_name=PINO,
-        appids=["2497900", "111"],
+        appids=["9949958", "111"],
         pinos_nossos=(PINO,),
         atropelar_escolha_do_usuario=True,
     )
 
-    assert _nomes(novo)["2497900"] == PINO, (
+    assert _nomes(novo)["9949958"] == PINO, (
         "o jogo que apontava para outra ferramenta NÃO migrou com a ordem de 17/09 "
         "ligada — é a queixa de 17/09/2026"
     )
-    assert mudancas["2497900"]["action"] != "preservado"
-    assert mudancas["2497900"]["previous_name"] == "proton_11", (
+    assert mudancas["9949958"]["action"] != "preservado"
+    assert mudancas["9949958"]["previous_name"] == "proton_11", (
         "o caminho de volta tem de ficar registrado: o `--unlock` devolve o "
         "`previous_name`, e sem ele a decisão do usuário vira via de mão única"
     )
@@ -66,13 +66,13 @@ def test_com_todos_o_jogo_em_outra_ferramenta_migra() -> None:
 
 def test_sem_todos_a_guarda_continua_sendo_o_padrao() -> None:
     """O padrão da função não mudou — quem não pede, não atropela."""
-    original = _vdf({"0": PINO, "2497900": "proton_11"})
+    original = _vdf({"0": PINO, "9949958": "proton_11"})
 
     novo, mudancas = proton_pin.build_compat_tool_mapping(
-        original, tool_name=PINO, appids=["2497900"], pinos_nossos=(PINO,),
+        original, tool_name=PINO, appids=["9949958"], pinos_nossos=(PINO,),
     )
 
-    assert _nomes(novo)["2497900"] == "proton_11", "a guarda deixou de ser o padrão"
+    assert _nomes(novo)["9949958"] == "proton_11", "a guarda deixou de ser o padrão"
     assert mudancas == {}, f"preservar não pode escrever nada: {mudancas}"
     assert novo == original, "o arquivo mudou apesar de a guarda ter preservado"
 
@@ -126,16 +126,16 @@ def test_a_flag_existe_no_cli() -> None:
 
 def test_a_regua_sabe_reprovar() -> None:
     """Com a ordem de produto DESLIGADA, o caso central falha — é o que a prova."""
-    original = _vdf({"0": PINO, "2497900": "proton_11"})
+    original = _vdf({"0": PINO, "9949958": "proton_11"})
 
     sem, _ = proton_pin.build_compat_tool_mapping(
-        original, tool_name=PINO, appids=["2497900"], pinos_nossos=(PINO,),
+        original, tool_name=PINO, appids=["9949958"], pinos_nossos=(PINO,),
     )
     com, _ = proton_pin.build_compat_tool_mapping(
-        original, tool_name=PINO, appids=["2497900"], pinos_nossos=(PINO,),
+        original, tool_name=PINO, appids=["9949958"], pinos_nossos=(PINO,),
         atropelar_escolha_do_usuario=True,
     )
-    assert _nomes(sem)["2497900"] != _nomes(com)["2497900"], (
+    assert _nomes(sem)["9949958"] != _nomes(com)["9949958"], (
         "a flag não mudou nada — ou parou de ser lida, ou o jogo já era "
         "alcançado por outro caminho e esta régua dá verde sobre nada"
     )
@@ -146,7 +146,7 @@ class TestOCaminhoDaFlag:
 
     def _cena(self, tmp_path: pathlib.Path) -> pathlib.Path:
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_vdf({"0": PINO, "2497900": "proton_11"}), encoding="utf-8")
+        vdf.write_text(_vdf({"0": PINO, "9949958": "proton_11"}), encoding="utf-8")
         return vdf
 
     def test_o_lock_com_todos_alcanca_o_jogo(self, tmp_path: pathlib.Path) -> None:
@@ -154,13 +154,13 @@ class TestOCaminhoDaFlag:
         vdf = self._cena(tmp_path)
         r = proton_pin.lock_games_to_pinned_proton(
             tool_name=PINO,
-            appids=["2497900"],
+            appids=["9949958"],
             config_vdf=vdf,
             state_path=tmp_path / "estado.json",
             todos=True,
         )
         assert r["status"] in ("locked", "noop"), r
-        assert _nomes(vdf.read_text(encoding="utf-8"))["2497900"] == PINO, (
+        assert _nomes(vdf.read_text(encoding="utf-8"))["9949958"] == PINO, (
             "o `todos=True` não chegou ao miolo que decide — o repasse se "
             "perdeu entre a função pública e `build_compat_tool_mapping`"
         )
@@ -171,11 +171,11 @@ class TestOCaminhoDaFlag:
         antes = vdf.read_text(encoding="utf-8")
         proton_pin.lock_games_to_pinned_proton(
             tool_name=PINO,
-            appids=["2497900"],
+            appids=["9949958"],
             config_vdf=vdf,
             state_path=tmp_path / "estado.json",
         )
-        assert _nomes(vdf.read_text(encoding="utf-8"))["2497900"] == "proton_11", (
+        assert _nomes(vdf.read_text(encoding="utf-8"))["9949958"] == "proton_11", (
             "o padrão deixou de preservar: alguém grudou o `todos` em True"
         )
         assert vdf.read_text(encoding="utf-8") == antes
@@ -186,7 +186,7 @@ class TestAEntradaOrfa:
 
     def test_com_todos_a_entrada_orfa_tambem_migra(self) -> None:
         """A cena medida: o alvo não está em `appids` porque não está instalado."""
-        original = _vdf({"0": PINO, "1245620": "proton_11", "2369580": "GE-Proton10-34"})
+        original = _vdf({"0": PINO, "9924912": "proton_11", "9947391": "GE-Proton10-34"})
 
         novo, mudancas = proton_pin.build_compat_tool_mapping(
             original,
@@ -197,19 +197,19 @@ class TestAEntradaOrfa:
         )
 
         nomes = _nomes(novo)
-        assert nomes["1245620"] == PINO, (
+        assert nomes["9924912"] == PINO, (
             "a entrada órfã continuou no `proton_11`: o `--todos` só olhou os "
             "appids passados, e o jogo volta fora do pino quando for reinstalado"
         )
-        assert nomes["2369580"] == PINO
-        assert mudancas["1245620"]["previous_name"] == "proton_11", (
+        assert nomes["9947391"] == PINO
+        assert mudancas["9924912"]["previous_name"] == "proton_11", (
             "o caminho de volta some: sem `previous_name` o `--unlock` não "
             "devolve a órfã ao que era"
         )
 
     def test_sem_todos_a_orfa_nao_e_tocada(self) -> None:
         """A MORDIDA do outro lado — e prova que o alcance é da FLAG."""
-        original = _vdf({"0": PINO, "1245620": "proton_11"})
+        original = _vdf({"0": PINO, "9924912": "proton_11"})
 
         novo, mudancas = proton_pin.build_compat_tool_mapping(
             original, tool_name=PINO, appids=[], pinos_nossos=(PINO,),
@@ -220,7 +220,7 @@ class TestAEntradaOrfa:
     def test_o_lock_inteiro_alcanca_a_orfa(self, tmp_path: pathlib.Path) -> None:
         """Fim a fim pela função pública — o CAMINHO, não o método."""
         vdf = tmp_path / "config.vdf"
-        vdf.write_text(_vdf({"0": PINO, "1245620": "proton_11"}), encoding="utf-8")
+        vdf.write_text(_vdf({"0": PINO, "9924912": "proton_11"}), encoding="utf-8")
 
         r = proton_pin.lock_games_to_pinned_proton(
             tool_name=PINO,
@@ -230,7 +230,7 @@ class TestAEntradaOrfa:
             todos=True,
         )
         assert r["status"] in ("locked", "noop"), r
-        assert _nomes(vdf.read_text(encoding="utf-8"))["1245620"] == PINO, (
+        assert _nomes(vdf.read_text(encoding="utf-8"))["9924912"] == PINO, (
             "o `todos=True` não alcançou a órfã pelo caminho de produção"
         )
 

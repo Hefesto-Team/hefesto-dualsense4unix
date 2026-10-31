@@ -162,13 +162,13 @@ class TestAFraseDoDetectorDeJanela:
                 "window_detect_backend": "xlib",
                 "window_detect_healthy": True,
                 "window_detect_seeing": True,
-                "window_detect_current_class": "steam_app_3357650",
-                "window_detect_last_class": "steam_app_3357650",
+                "window_detect_current_class": "steam_app_9967153",
+                "window_detect_last_class": "steam_app_9967153",
                 "window_detect_reason": None,
             }
         )
         assert "funcionando" in texto
-        assert "steam_app_3357650" in texto
+        assert "steam_app_9967153" in texto
 
     def test_cego_por_janela_wayland_explica_em_portugues(self) -> None:
         """A pendência declarada da JANELA-CEGA-01, na tela e sem jargão."""

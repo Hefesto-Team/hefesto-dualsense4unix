@@ -56,7 +56,7 @@ P1 = "02fe000000f0"
 
 PERFIL: dict[str, Any] = {
     "name": NOME, "version": 1,
-    "match": {"type": "criteria", "window_class": ["steam_app_3357650"],
+    "match": {"type": "criteria", "window_class": ["steam_app_9967153"],
               "window_title_regex": None, "process_name": []},
     "priority": 80,
     "triggers": {"left": {"mode": "Off", "params": []},
@@ -266,7 +266,7 @@ def test_o_editor_da_10_so_muda_o_campo_dele() -> None:
     """Mudar o jogo grava a regra do jogo, e o microfone fica."""
     antes = _o_disco()
     a10_perfis.editor_jogo(_ctx(VIVO_QUE_DIVERGE, MESA_QUE_DIVERGE),
-                           {"valor": "1245620", "evento": "change"},
+                           {"valor": "9924912", "evento": "change"},
                            PonteDeMentira())
     mudou = _o_que_mudou(antes, _o_disco())
     assert mudou and all(k.startswith("match") for k in mudou), (

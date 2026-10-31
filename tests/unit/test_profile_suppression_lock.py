@@ -245,6 +245,6 @@ def test_janela_de_jogo_em_foco_congela_a_liberacao(
 ) -> None:
     """2ª guarda: nem perfil específico solta a supressão com jogo em foco."""
     daemon.apply_profile_suppression(True, profile=_perfil())
-    daemon.store.record_window_detect_read("teste", "steam_app_2111190")
+    daemon.store.record_window_detect_read("teste", "steam_app_9942223")
     daemon.apply_profile_suppression(False, profile=_perfil())
     assert daemon._emulation_suppressed is True

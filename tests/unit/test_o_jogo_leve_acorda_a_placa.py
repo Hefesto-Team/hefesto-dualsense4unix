@@ -211,7 +211,7 @@ def _lar_do_lancador(base: Path) -> tuple[dict[str, str], Path]:
         "PATH": f"{mudos}:/usr/bin:/bin",
         "HEFESTO_PLACA_ACORDADA": str(placa),
         "HEFESTO_GM_POLL_SECS": "0.1",
-        "SteamAppId": "3621330",
+        "SteamAppId": "9972426",
     }
     assert not str(casa).startswith("/home/"), "o lar de mentira caiu numa casa de verdade"
     return ambiente, log

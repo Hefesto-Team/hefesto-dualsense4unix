@@ -191,7 +191,7 @@ def test_2c_sem_medir_so_descreve_e_nao_pergunta_ao_daemon(
 
 
 def test_2d_jogo_aberto_recusa(inst: Any, tmp_path: Path) -> None:
-    mesa = _Mesa(jogo=1086940)
+    mesa = _Mesa(jogo=9921738)
     assert _rodar(inst, mesa, tmp_path, "--medir") == 2
     assert any(inst.RECUSA_JOGO in e for e in mesa.escrito)
     assert mesa.toques == []

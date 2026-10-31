@@ -543,7 +543,7 @@ _TAB = "\t"
 def _localconfig() -> str:
     blocos = "".join(
         f'{_TAB * 5}"{a}"\n{_TAB * 5}{{\n{_TAB * 6}"LaunchOptions"{_TAB * 2}'
-        f'"VKD3D_CONFIG=dxr %command%"\n{_TAB * 5}}}\n' for a in ("100", "200"))
+        f'"VKD3D_CONFIG=dxr %command%"\n{_TAB * 5}}}\n' for a in ("9900100", "9900200"))
     return ('"UserLocalConfigStore"\n{\n'
             f'{_TAB}"Software"\n{_TAB}{{\n{_TAB * 2}"Valve"\n{_TAB * 2}{{\n'
             f'{_TAB * 3}"Steam"\n{_TAB * 3}{{\n{_TAB * 4}"apps"\n{_TAB * 4}{{\n'
@@ -572,7 +572,7 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
     nome = proton_pin.parse_pin_conf(
         (RAIZ / "assets/proton-pin.conf").read_text(encoding="utf-8"))["name"]
     travado, mudancas = proton_pin.build_compat_tool_mapping(
-        _config_vdf(), tool_name=nome, appids=["100", "200"])
+        _config_vdf(), tool_name=nome, appids=["9900100", "9900200"])
     cfg.write_text(travado, encoding="utf-8")
     estado = r.estado / m.SLUG
     estado.mkdir(parents=True)
@@ -834,7 +834,7 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
 
 UM_JOGO_ABERTO: dict[int, str] = {
     4242: "/lar/.local/share/Steam/ubuntu12_64/steamrt64/steam -silent",
-    4243: "reaper SteamLaunch AppId=100 -- /lar/jogo/jogo.exe",
+    4243: "reaper SteamLaunch AppId=9900100 -- /lar/jogo/jogo.exe",
 }
 
 

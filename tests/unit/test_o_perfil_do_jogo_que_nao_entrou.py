@@ -24,7 +24,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 
 JANELA_DO_PRAGMATA: dict[str, Any] = {
-    "wm_class": "steam_app_3357650",
+    "wm_class": "steam_app_9967153",
     "wm_name": "PRAGMATA",
     "exe_basename": "wine64-preloader",
 }
@@ -38,7 +38,7 @@ def test_o_perfil_do_pragmata_aparece_com_o_campo_que_reprovou() -> None:
     """O caso literal de 10/08. Morde em `perfis_que_nao_entraram`."""
     pragmata = _perfil(
         "Pragmata",
-        window_class=["steam_app_3357650"],
+        window_class=["steam_app_9967153"],
         process_name=["PRAGMATA.exe"],
     )
     achados = perfis_que_nao_entraram(JANELA_DO_PRAGMATA, [pragmata])
@@ -59,7 +59,7 @@ def test_a_frase_diz_o_exigido_e_o_observado_lado_a_lado() -> None:
         [
             _perfil(
                 "Pragmata",
-                window_class=["steam_app_3357650"],
+                window_class=["steam_app_9967153"],
                 process_name=["PRAGMATA.exe"],
             )
         ],
@@ -76,7 +76,7 @@ def test_a_frase_diz_o_exigido_e_o_observado_lado_a_lado() -> None:
 
 def test_sem_o_process_name_o_perfil_entra_e_o_aviso_some() -> None:
     """A contraprova: com o campo fora, não há o que avisar."""
-    entra = _perfil("Pragmata", window_class=["steam_app_3357650"])
+    entra = _perfil("Pragmata", window_class=["steam_app_9967153"])
     assert entra.matches(dict(JANELA_DO_PRAGMATA)) is True
     assert perfis_que_nao_entraram(JANELA_DO_PRAGMATA, [entra]) == []
 
@@ -114,7 +114,7 @@ def test_fora_de_janela_de_jogo_nada_e_regra_deste_jogo() -> None:
     }
     pragmata = _perfil(
         "Pragmata",
-        window_class=["steam_app_3357650"],
+        window_class=["steam_app_9967153"],
         process_name=["PRAGMATA.exe"],
     )
     achados = perfis_que_nao_entraram(janela_de_desktop, [pragmata])
@@ -144,7 +144,7 @@ def test_cada_campo_reprova_com_o_rotulo_do_editor(
 def test_campo_que_casa_nao_entra_na_lista_de_reprovados() -> None:
     """Só o que reprovou é relatado — o resto passou e não é assunto."""
     match = MatchCriteria(
-        window_class=["steam_app_3357650"],
+        window_class=["steam_app_9967153"],
         process_name=["PRAGMATA.exe"],
     )
     reprovados = campos_reprovados(match, dict(JANELA_DO_PRAGMATA))
@@ -159,13 +159,13 @@ def test_a_caixa_do_r12_continua_valendo_no_diagnostico() -> None:
 
 def test_sem_dado_no_campo_a_frase_diz_isso_em_vez_de_aspas_vazias() -> None:
     """Os dois backends de Wayland devolvem ``exe_basename`` vazio, sempre."""
-    janela = {"wm_class": "steam_app_3357650", "wm_name": "", "exe_basename": ""}
+    janela = {"wm_class": "steam_app_9967153", "wm_name": "", "exe_basename": ""}
     achado = perfis_que_nao_entraram(
         janela,
         [
             _perfil(
                 "Pragmata",
-                window_class=["steam_app_3357650"],
+                window_class=["steam_app_9967153"],
                 process_name=["PRAGMATA.exe"],
             )
         ],
@@ -182,7 +182,7 @@ def test_varios_valores_exigidos_saem_com_ou() -> None:
         [
             _perfil(
                 "Ação",
-                window_class=["steam_app_3357650"],
+                window_class=["steam_app_9967153"],
                 process_name=["NieR.exe", "Sifu.exe", "HiFiRush.exe"],
             )
         ],
@@ -211,7 +211,7 @@ def _disco(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> list[int]:
     leituras: list[int] = []
     pragmata = _perfil(
         "Pragmata",
-        window_class=["steam_app_3357650"],
+        window_class=["steam_app_9967153"],
         process_name=["PRAGMATA.exe"],
     )
 
@@ -231,7 +231,7 @@ def test_o_daemon_manda_a_frase_pronta_do_perfil_deste_jogo(
     _disco: list[int],
 ) -> None:
     """A ponta do daemon: o estado carrega nome e frase, prontos para a tela."""
-    handlers = _Handlers(_StoreDublado("steam_app_3357650"))
+    handlers = _Handlers(_StoreDublado("steam_app_9967153"))
     achados = handlers._perfil_que_nao_entrou()
 
     assert [a["nome"] for a in achados] == ["Pragmata"]
@@ -258,7 +258,7 @@ def test_o_cache_evita_reler_o_disco_a_cada_tique(_disco: list[int]) -> None:
     Morde no cache. Arranque: sem ele são 10 leituras aqui — e ~140 JSON por
     segundo na máquina do usuário, já que o `state_full` roda a 10 Hz.
     """
-    handlers = _Handlers(_StoreDublado("steam_app_3357650"))
+    handlers = _Handlers(_StoreDublado("steam_app_9967153"))
     for _ in range(10):
         handlers._perfil_que_nao_entrou()
     assert len(_disco) == 1
@@ -266,7 +266,7 @@ def test_o_cache_evita_reler_o_disco_a_cada_tique(_disco: list[int]) -> None:
 
 def test_mudar_de_janela_invalida_o_cache(_disco: list[int]) -> None:
     """Cache que não invalida vira mentira: o aviso do jogo anterior ficaria."""
-    store = _StoreDublado("steam_app_3357650")
+    store = _StoreDublado("steam_app_9967153")
     handlers = _Handlers(store)
     handlers._perfil_que_nao_entrou()
     store.window_detect_current_exe = "PRAGMATA.exe"

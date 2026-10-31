@@ -54,7 +54,7 @@ def _run_wrapper(
     *,
     runtime: Path,
     state_home: Path,
-    appid: str | None = "1599660",
+    appid: str | None = "9931993",
     args: list[str] | None = None,
     timeout: float = 15.0,
 ) -> subprocess.CompletedProcess[str]:
@@ -288,10 +288,10 @@ def _last_run(state_home: Path) -> dict[str, str]:
 def test_marker_last_run_gravado_com_appid_e_epoch(runtime, tmp_path):
     """O wrapper grava appid + epoch em chave=valor — é o que o daemon compara"""
     antes = int(time.time())
-    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="1599660")
+    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="9931993")
     assert result.returncode == 0
     marker = _last_run(tmp_path)
-    assert marker["appid"] == "1599660"
+    assert marker["appid"] == "9931993"
     assert antes <= int(marker["epoch"]) <= int(time.time()) + 1
 
 
@@ -314,10 +314,10 @@ def test_marker_last_run_sem_appid_nao_grava(runtime, tmp_path):
 
 def test_marker_last_run_regravado_a_cada_launch(runtime, tmp_path):
     """Dois launches => o marker reflete o ÚLTIMO (mv atômico, nunca metade)."""
-    _run_wrapper(runtime=runtime, state_home=tmp_path, appid="10")
-    _run_wrapper(runtime=runtime, state_home=tmp_path, appid="20")
+    _run_wrapper(runtime=runtime, state_home=tmp_path, appid="9900010")
+    _run_wrapper(runtime=runtime, state_home=tmp_path, appid="9900020")
     marker = _last_run(tmp_path)
-    assert marker["appid"] == "20"
+    assert marker["appid"] == "9900020"
     tmp_sobra = tmp_path / "hefesto-dualsense4unix" / "launch_env" / "last_run.tmp"
     assert not tmp_sobra.exists()
 
@@ -333,7 +333,7 @@ def _last_exit(state_home: Path) -> dict[str, str]:
 
 def test_marker_last_run_grava_pid(runtime, tmp_path):
     """NUMA-01: `pid=$$` no `last_run` — o `exec env` final preserva o PID"""
-    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="1599660")
+    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="9931993")
     assert result.returncode == 0
     marker = _last_run(tmp_path)
     assert marker["pid"].isdigit()
@@ -368,7 +368,7 @@ def test_exec_falhando_grava_last_exit_e_o_launch_nao_trava(runtime, tmp_path):
         "HOME": os.environ.get("HOME", "/tmp"),
         "XDG_RUNTIME_DIR": str(runtime),
         "XDG_STATE_HOME": str(tmp_path),
-        "SteamAppId": "1599660",
+        "SteamAppId": "9931993",
     }
     antes = int(time.time())
     result = subprocess.run(

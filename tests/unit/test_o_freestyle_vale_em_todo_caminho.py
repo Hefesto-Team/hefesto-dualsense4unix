@@ -73,7 +73,7 @@ MESA: tuple[tuple[str, str], ...] = (
     ("AA:BB:CC:00:00:04", "bt"),
 )
 
-JANELA_DO_JOGO = "steam_app_1599660"
+JANELA_DO_JOGO = "steam_app_9931993"
 JOGO = "Sackboy"
 
 CAMINHOS = ("sessao-vazia", "sessao-com-perfil-de-janela", "sessao-com-o-freestyle",

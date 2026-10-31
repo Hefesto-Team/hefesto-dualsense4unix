@@ -65,10 +65,10 @@ def _pasta(lar: Path) -> Path:
 
 def test_preparar_e_devolver_deixam_a_opcao_como_era(lar: Path) -> None:
     original = "VKD3D_CONFIG=no_upload_hvv %command%"
-    (lar / "tabela.json").write_text(json.dumps({"3357650": original}))
-    r = _rodar(lar, "preparar", "3357650")
+    (lar / "tabela.json").write_text(json.dumps({"9967153": original}))
+    r = _rodar(lar, "preparar", "9967153")
     assert r.returncode == 0, r.stderr
-    opcao = _tabela(lar)["3357650"]
+    opcao = _tabela(lar)["9967153"]
     assert opcao.startswith(
         "VKD3D_CONFIG=no_upload_hvv MANGOHUD=1 MANGOHUD_CONFIG=no_display=1,"), opcao
     assert f"output_folder={_pasta(lar) / 'mangohud'} %command%" in opcao, opcao
@@ -76,24 +76,24 @@ def test_preparar_e_devolver_deixam_a_opcao_como_era(lar: Path) -> None:
 
     r = _rodar(lar, "devolver")
     assert r.returncode == 0, r.stderr
-    assert _tabela(lar) == {"3357650": original}
+    assert _tabela(lar) == {"9967153": original}
     assert not (_pasta(lar) / "antes.json").exists()
 
 
 def test_o_jogo_fora_da_tabela_sai_do_usuario_no_devolver(lar: Path) -> None:
-    assert _rodar(lar, "preparar", "1599660").returncode == 0
-    assert _tabela(lar)["1599660"].startswith("MANGOHUD=1 ")
+    assert _rodar(lar, "preparar", "9931993").returncode == 0
+    assert _tabela(lar)["9931993"].startswith("MANGOHUD=1 ")
     assert _rodar(lar, "devolver").returncode == 0
     assert _tabela(lar) == {}
 
 
 def test_com_a_steam_aberta_o_preparar_recusa_e_nao_deixa_rastro(lar: Path) -> None:
-    (lar / "tabela.json").write_text(json.dumps({"3357650": "X=1 %command%"}))
+    (lar / "tabela.json").write_text(json.dumps({"9967153": "X=1 %command%"}))
     (lar / "steam-aberta").touch()
-    r = _rodar(lar, "preparar", "3357650")
+    r = _rodar(lar, "preparar", "9967153")
     assert r.returncode != 0
     assert "Steam" in r.stderr
-    assert _tabela(lar) == {"3357650": "X=1 %command%"}
+    assert _tabela(lar) == {"9967153": "X=1 %command%"}
     assert not (_pasta(lar) / "antes.json").exists()
 
 
@@ -103,7 +103,7 @@ def test_sem_preparar_a_volta_recusa(lar: Path) -> None:
 
 
 def test_a_volta_grava_a_memoria_e_so_le_a_maquina(lar: Path) -> None:
-    assert _rodar(lar, "preparar", "1599660").returncode == 0
+    assert _rodar(lar, "preparar", "9931993").returncode == 0
     r = _rodar(lar, "volta", "um", "0.03")
     assert r.returncode == 0, r.stderr
     volta = _pasta(lar) / "voltas" / "um"
@@ -174,7 +174,7 @@ def test_o_que_nao_foi_medido_sai_como_traco_e_nunca_como_zero(lar: Path) -> Non
 
 def test_o_csv_que_o_jogo_fechou_depois_vai_para_a_volta_certa(lar: Path) -> None:
     """O MangoHud pode fechar o arquivo só quando o jogo sai."""
-    assert _rodar(lar, "preparar", "1599660").returncode == 0
+    assert _rodar(lar, "preparar", "9931993").returncode == 0
     voltas = _pasta(lar) / "voltas"
     for nome, atras in (("a", 600), ("b", 60)):
         (voltas / nome).mkdir(parents=True)

@@ -21,7 +21,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID_MMJ = 2111190
+APPID_MMJ = 9942223
 WM_MMJ = f"steam_app_{APPID_MMJ}"
 
 

@@ -38,7 +38,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID = 2497900
+APPID = 9949958
 
 CLASSE_DO_JOGO = f"steam_app_{APPID}"
 
@@ -48,7 +48,7 @@ JANELA_DO_CLIENTE_STEAM = {"wm_class": "steam", "wm_name": ""}
 
 JANELA_DA_NAVEGACAO = {"wm_class": "kodi", "wm_name": "Kodi"}
 
-OUTRO_APPID = 1599660
+OUTRO_APPID = 9931993
 
 IDADE_MEDIDA_SEG = 1296
 
@@ -162,7 +162,7 @@ def _proc_falso(tmp_path: Path, *, cmdline: bytes, pid: int | None = None) -> Pa
 
 CMDLINE_MEDIDA = (
     b"/home/x/.steam/steam/ubuntu12_32/reaper\0SteamLaunch\0"
-    b"AppId=2497900\0--\0/x/DontScream-Win64-Shipping.exe\0"
+    b"AppId=9949958\0--\0/x/DontScream-Win64-Shipping.exe\0"
 )
 
 
@@ -370,7 +370,7 @@ def test_pid_reciclado_nao_segura_o_perfil(
 
 
 def test_a_corroboracao_nao_confunde_appid_prefixo(tmp_path: Path) -> None:
-    """`AppId=249790` não é `AppId=2497900` — a fronteira do número é dura."""
+    """`AppId=994995` não é `AppId=9949958` — a fronteira do número é dura."""
     base = _marker(tmp_path)
     proc = _proc_falso(tmp_path, cmdline=b"reaper\0SteamLaunch\0AppId=24979000\0")
 
@@ -380,7 +380,7 @@ def test_a_corroboracao_nao_confunde_appid_prefixo(tmp_path: Path) -> None:
 def test_a_corroboracao_e_insensivel_a_caixa(tmp_path: Path) -> None:
     """A Steam escreve `AppId=`; a casa não aposta na grafia de ninguém."""
     base = _marker(tmp_path)
-    proc = _proc_falso(tmp_path, cmdline=b"reaper\0SteamLaunch\0APPID=2497900\0--\0")
+    proc = _proc_falso(tmp_path, cmdline=b"reaper\0SteamLaunch\0APPID=9949958\0--\0")
 
     assert jogo_do_wrapper_vivo(base_dir=base, proc_dir=proc) == APPID
 

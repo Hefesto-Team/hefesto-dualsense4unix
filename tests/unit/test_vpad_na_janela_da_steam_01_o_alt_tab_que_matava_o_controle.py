@@ -31,7 +31,7 @@ class TestOPredicado:
 
     @pytest.mark.parametrize(
         "wm_class",
-        ["firefox", "gnome-terminal", "steam_app_2497900", "", "steamy", "n"],
+        ["firefox", "gnome-terminal", "steam_app_9949958", "", "steamy", "n"],
     )
     def test_o_que_nao_e_o_cliente_fica_de_fora(self, wm_class: str) -> None:
         assert e_janela_do_cliente_steam(wm_class) is False
@@ -42,8 +42,8 @@ class TestOPredicado:
 
     def test_as_duas_perguntas_sao_disjuntas_e_complementares(self) -> None:
         """Jogo tem appid; cliente não tem. Nenhuma wm_class é as duas coisas."""
-        assert steam_appid_from_wm_class("steam_app_2497900") == 2497900
-        assert e_janela_do_cliente_steam("steam_app_2497900") is False
+        assert steam_appid_from_wm_class("steam_app_9949958") == 9949958
+        assert e_janela_do_cliente_steam("steam_app_9949958") is False
 
         assert steam_appid_from_wm_class("steam") is None
         assert e_janela_do_cliente_steam("steam") is True
@@ -62,7 +62,7 @@ class TestAGuardaNoDaemon:
 
     def test_a_janela_do_jogo_continua_protegida(self, daemon: Daemon) -> None:
         """O caso de 23/07 não pode ter sido trocado pelo novo."""
-        daemon.store.record_window_detect_read("teste", "steam_app_2497900")
+        daemon.store.record_window_detect_read("teste", "steam_app_9949958")
         assert daemon._janela_de_jogo_em_foco() is True
 
     def test_o_desktop_de_verdade_continua_desprotegido(self, daemon: Daemon) -> None:

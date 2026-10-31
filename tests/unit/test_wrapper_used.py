@@ -39,7 +39,7 @@ from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
-APPID = 1599660
+APPID = 9931993
 
 
 @pytest.mark.parametrize(

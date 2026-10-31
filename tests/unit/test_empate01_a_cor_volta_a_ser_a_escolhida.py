@@ -90,7 +90,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-APPID = "3357650"
+APPID = "9967153"
 WM_JOGO = f"steam_app_{APPID}"
 
 RAIZ = Path(__file__).resolve().parents[2]

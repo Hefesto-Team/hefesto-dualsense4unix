@@ -27,7 +27,7 @@ def _perfil_com_todas_as_secoes(nome: str = "Pragmata") -> Profile:
     """Perfil com TODAS as seções do esquema preenchidas — a prova pedida."""
     return Profile(
         name=nome,
-        match=MatchCriteria(window_class=["steam_app_3357650"]),
+        match=MatchCriteria(window_class=["steam_app_9967153"]),
         priority=100,
         triggers=TriggersConfig(
             left=TriggerConfig(mode="SemiAutoGun", params=[3, 6, 8]),
@@ -79,7 +79,7 @@ class TestGatePorSlug:
         salvo = draft.to_profile("Navegacao")
 
         assert isinstance(salvo.match, MatchCriteria)
-        assert salvo.match.window_class == ["steam_app_3357650"]
+        assert salvo.match.window_class == ["steam_app_9967153"]
         assert salvo.priority == 100
         assert salvo.mode is not None and salvo.mode.kind == "gamepad"
         assert salvo.suppress_desktop_emulation is True

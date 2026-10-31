@@ -43,7 +43,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-APPID = 2497900
+APPID = 9949958
 EPOCH = 1000
 
 

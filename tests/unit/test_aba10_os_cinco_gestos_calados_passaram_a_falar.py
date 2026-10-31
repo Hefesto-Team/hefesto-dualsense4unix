@@ -195,7 +195,7 @@ def test_o_campo_do_jogo_diz_em_que_o_perfil_passou_a_valer(
     ctx, ponte = _ctx(), PonteDeMentira()
 
     fora = a10_perfis.editor_jogo(
-        ctx, {"valor": "1599660", "evento": "change"}, ponte)
+        ctx, {"valor": "9931993", "evento": "change"}, ponte)
 
     assert _frase(fora), "o campo do jogo gravou a regra e ficou mudo"
     assert _match_label(todos[0].match) in _frase(fora), (
@@ -206,20 +206,20 @@ def test_o_campo_do_jogo_diz_em_que_o_perfil_passou_a_valer(
 def test_o_campo_do_jogo_traduz_o_numero_no_nome_do_jogo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`1599660` sozinho não diz a quem usa que aquele é o Mortal Kombat 1."""
+    """`9931993` sozinho não diz a quem usa que aquele é o Mortal Kombat 1."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
     monkeypatch.setattr(
         jogos_locais, "catalogo_de_jogos",
-        lambda *a, **k: [jogos_locais.JogoLocal(appid="1599660",
+        lambda *a, **k: [jogos_locais.JogoLocal(appid="9931993",
                                                 nome="Mortal Kombat 1",
                                                 fonte="steam")])
     ctx, ponte = _ctx(), PonteDeMentira()
 
     fora = a10_perfis.editor_jogo(
-        ctx, {"valor": "1599660", "evento": "change"}, ponte)
+        ctx, {"valor": "9931993", "evento": "change"}, ponte)
 
     assert "Mortal Kombat 1" in _frase(fora), (
         f"o número entrou e o nome não voltou: {_frase(fora)!r}. O desfecho é "
@@ -248,7 +248,7 @@ def test_a_biblioteca_ilegivel_nao_vira_recusa(
     ctx, ponte = _ctx(), PonteDeMentira()
 
     fora = a10_perfis.editor_jogo(
-        ctx, {"valor": "1599660", "evento": "change"}, ponte)
+        ctx, {"valor": "9931993", "evento": "change"}, ponte)
 
     assert _frase(fora), "a leitura da biblioteca derrubou o desfecho inteiro"
 

@@ -116,7 +116,7 @@ def _corpo(desenho, lida) -> str:
 def _com_intocavel(desenho, linha: str, **extra):
     """Uma leitura em que HÁ jogo com a linha intocável."""
     return desenho.Leitura(
-        com_wrapper=("620", "440"),
+        com_wrapper=("9900620", "9900440"),
         intocaveis=(("70", "Jogo de linha editada",
                      "linha editada à mão — não vou tocar"),),
         instalados=2, linha=linha, **extra)
@@ -124,7 +124,7 @@ def _com_intocavel(desenho, linha: str, **extra):
 
 def _em_ordem(desenho, linha: str, **extra):
     """Uma leitura em que a biblioteca está inteira em ordem — o dia bom."""
-    return desenho.Leitura(com_wrapper=("620", "440"), instalados=2,
+    return desenho.Leitura(com_wrapper=("9900620", "9900440"), instalados=2,
                            linha=linha, **extra)
 
 
@@ -165,7 +165,7 @@ def test_o_produto_enche_a_linha_com_a_constante_do_motor(
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 
     censo = types.SimpleNamespace(
-        com_wrapper=["620"], reparaveis=[], intocaveis=[], recusados=[],
+        com_wrapper=["9900620"], reparaveis=[], intocaveis=[], recusados=[],
         erros=[], jogo_aberto=False, steam_aberta=False)
     monkeypatch.setattr(sw, "censo_do_wrapper", lambda **_: censo)
     monkeypatch.setattr(sw, "frase_do_aviso", lambda _c: "")
@@ -178,7 +178,7 @@ def test_o_produto_enche_a_linha_com_a_constante_do_motor(
 
 def test_o_jogo_nao_funciona_saiu(a07, desenho):
     """21/09/2026, o desenho aprovado pelo usuário (OS-LANCADORES-IGUAIS-E-A-LISTA-"""
-    lida = desenho.Leitura(com_wrapper=("620",), instalados=1)
+    lida = desenho.Leitura(com_wrapper=("9900620",), instalados=1)
     fileira = desenho.acoes_html(desenho.cartoes(lida)[0])
     assert 'data-gesto="este-jogo-nao-funciona"' not in fileira
     assert not hasattr(a07, "este_jogo_nao_funciona"), (

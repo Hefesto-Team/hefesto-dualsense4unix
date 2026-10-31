@@ -250,7 +250,7 @@ async def test_a_mordida_a_ponte_confirmada_chega_no_state_full(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O editor de perfil sabe do carimbo no MESMO estado que já lê no tique."""
-    carimbo = {"2054970": {"kind": "gamepad", "gamepad_flavor": "dualsense"}}
+    carimbo = {"9941099": {"kind": "gamepad", "gamepad_flavor": "dualsense"}}
     monkeypatch.setattr(ih, "_pontes_confirmadas_seguro", lambda: dict(carimbo))
     daemon = Daemon(controller=FakeController(transport="usb"))
     h = _HandlersCompletos(daemon, daemon.store, daemon.controller)

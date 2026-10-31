@@ -29,7 +29,7 @@ def _casa_com_steam_input(tmp_path: Path, *, global_ligado: bool) -> Path:
         corpo = '\t\t\t\t"SteamController_PSSupport"\t\t"2"\n'
     else:
         corpo = (
-            '"apps"\n{\n\t"1599660"\n\t{\n'
+            '"apps"\n{\n\t"9931993"\n\t{\n'
             '\t\t"UseSteamControllerConfig"\t\t"2"\n\t}\n}\n'
         )
     vdf.write_text(corpo, encoding="utf-8")

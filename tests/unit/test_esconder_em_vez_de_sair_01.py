@@ -13,7 +13,7 @@ import pytest
 import hefesto_dualsense4unix.daemon.subsystems.gamepad as gp
 from hefesto_dualsense4unix.daemon import launch_env as le
 
-MMJ = 2111190
+MMJ = 9942223
 
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 

@@ -176,14 +176,14 @@ def test_materialize_por_appid_e_limpeza_de_rancosos(tmp_path, monkeypatch):
     monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: tmp_path)
     perfil_nativo = SimpleNamespace(mode=SimpleNamespace(kind="native"))
     monkeypatch.setattr(
-        launch_env, "_steam_profiles", lambda daemon: [(1599660, perfil_nativo)]
+        launch_env, "_steam_profiles", lambda daemon: [(9931993, perfil_nativo)]
     )
     rancoso = tmp_path / "steam_app_999.env"
     rancoso.write_text("PROTON_ENABLE_HIDRAW=1\n", encoding="utf-8")
 
     materialize_launch_env(_fake_daemon(backend="uhid"))
 
-    env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")
+    env_jogo = _env_do_arquivo(tmp_path / "steam_app_9931993.env")
     assert _IGNORE not in env_jogo
     assert _DISABLE not in env_jogo
     assert env_jogo["__GL_SHADER_DISK_CACHE"] == "1"
@@ -196,10 +196,10 @@ def test_materialize_por_appid_perfil_sem_opiniao_cai_no_default(
     monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: tmp_path)
     sem_opiniao = SimpleNamespace(mode=None)
     monkeypatch.setattr(
-        launch_env, "_steam_profiles", lambda daemon: [(620, sem_opiniao)]
+        launch_env, "_steam_profiles", lambda daemon: [(9900620, sem_opiniao)]
     )
     materialize_launch_env(_fake_daemon())
-    assert not (tmp_path / "steam_app_620.env").exists()
+    assert not (tmp_path / "steam_app_9900620.env").exists()
     assert (tmp_path / "default.env").exists()
 
 
@@ -235,7 +235,7 @@ def test_nativo_por_titulo_e_arriscado_e_por_appid_nao():
     """Perfil nativo casado por título/processo escapa do steam_app_<id>.env;"""
     arriscado = _perfil(kind="native", title="Rockstar Games Launcher", name="rdr2")
     coberto = _perfil(
-        kind="native", window_class=("steam_app_1599660",), name="sackboy_nativo"
+        kind="native", window_class=("steam_app_9931993",), name="sackboy_nativo"
     )
     gamepad = _perfil(kind="gamepad", title="qualquer", name="jogo")
     sem_modo = _perfil(kind=None, name="viajante")
@@ -266,7 +266,7 @@ def test_nativo_com_appid_mais_titulo_continua_arriscado():
     """O título pode casar OUTRA janela além do appid antecipado — conservador."""
     perfil = _perfil(
         kind="native",
-        window_class=("steam_app_620",),
+        window_class=("steam_app_9900620",),
         title="Launcher",
         name="misto",
     )
@@ -299,7 +299,7 @@ def test_default_env_mantem_ignore_quando_todos_os_nativos_tem_appid(
         lambda daemon: [
             _perfil(
                 kind="native",
-                window_class=("steam_app_1599660",),
+                window_class=("steam_app_9931993",),
                 name="sackboy_nativo",
             )
         ],
@@ -307,6 +307,6 @@ def test_default_env_mantem_ignore_quando_todos_os_nativos_tem_appid(
     materialize_launch_env(_fake_daemon(backend="uhid"))
     env = _env_do_arquivo(tmp_path / "default.env")
     assert set(env[_IGNORE].split(",")) == _IGNORE_ESPERADO
-    env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")
+    env_jogo = _env_do_arquivo(tmp_path / "steam_app_9931993.env")
     assert _IGNORE not in env_jogo
     assert _DISABLE not in env_jogo

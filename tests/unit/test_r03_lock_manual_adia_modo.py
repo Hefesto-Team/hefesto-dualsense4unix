@@ -125,7 +125,7 @@ def _perfil(mode: dict[str, Any] | None, *, nome: str = "sackboy_nativo") -> Pro
     dados: dict[str, Any] = {
         "name": nome,
         "version": 1,
-        "match": {"type": "criteria", "window_class": ["steam_app_1599660"]},
+        "match": {"type": "criteria", "window_class": ["steam_app_9931993"]},
         "priority": 80,
     }
     if mode is not None:

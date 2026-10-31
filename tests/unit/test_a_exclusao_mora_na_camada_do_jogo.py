@@ -47,9 +47,9 @@ _PONTE = {
     "PROTON_ENABLE_MHWILDS_USB_AUDIO": "1",
 }
 
-_GOG_APPID = "1441875624"
-_UMU = "umu-70400"
-_JANELA = "steam_app_70400"
+_GOG_APPID = "1999999997"
+_UMU = "umu-9970400"
+_JANELA = "steam_app_9970400"
 _LUTRIS = "net.lutris.Lutris"
 
 _NAO_VEIO_DO_LEITOR = {
@@ -547,7 +547,7 @@ def _lutris_flatpak_pelo_wine(lar: Path) -> Path:
     yml = _lutris_flatpak(lar, yml=_YML_PELO_WINE)
     con = sqlite3.connect(lar / ".var/app" / _LUTRIS / "data/lutris/pga.db")
     with con:
-        con.execute("UPDATE games SET service = 'steam', service_id = '70400'")
+        con.execute("UPDATE games SET service = 'steam', service_id = '9970400'")
     con.close()
     return yml
 

@@ -145,19 +145,20 @@ def test_o_instalado_sem_recibo_e_so_informacao(tmp_path: Path) -> None:
 
 def test_cada_jogo_aparece_na_versao_em_que_roda(tmp_path: Path) -> None:
     _proton_de_mentira(tmp_path, FIXADA)
-    linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU, mapa={"10": FIXADA, "20": FIXADA, "0": FIXADA})
+    linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU, mapa={"9900010": FIXADA, "9900020": FIXADA,
+                                                            "0": FIXADA})
     do_mapa = [(t, m) for t, m in linhas if m.startswith(f"{FIXADA}: Jogo")]
-    assert do_mapa == [(qp.TAG_INFO, f"{FIXADA}: Jogo 10, Jogo 20")], linhas
+    assert do_mapa == [(qp.TAG_INFO, f"{FIXADA}: Jogo 9900010, Jogo 9900020")], linhas
 
 
 def test_o_jogo_cujo_proton_de_terceiros_sumiu_do_disco_avisa_pelo_nome(tmp_path: Path) -> None:
     _proton_de_mentira(tmp_path, FIXADA)
     linhas = _linhas(
-        tmp_path, recibo=RECIBO_PASSOU, mapa={"10": "GE-Proton10-34", "20": "proton_10"}
+        tmp_path, recibo=RECIBO_PASSOU, mapa={"9900010": "GE-Proton10-34", "9900020": "proton_10"}
     )
     avisos = [m for t, m in linhas if t == qp.TAG_WARN]
-    assert avisos == ["Jogo 10 usa(m) o GE-Proton10-34, que sumiu de " + str(tmp_path)], linhas
-    assert any(m == "proton_10: Jogo 20" for _, m in linhas)
+    assert avisos == ["Jogo 9900010 usa(m) o GE-Proton10-34, que sumiu de " + str(tmp_path)], linhas
+    assert any(m == "proton_10: Jogo 9900020" for _, m in linhas)
 
 
 def test_o_nome_interno_da_pasta_conta_como_presente(tmp_path: Path) -> None:
@@ -167,7 +168,7 @@ def test_o_nome_interno_da_pasta_conta_como_presente(tmp_path: Path) -> None:
         '    "GE-Proton-apelido" // x\n    {\n    }\n  }\n}\n',
         encoding="utf-8",
     )
-    linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU, mapa={"10": "GE-Proton-apelido"})
+    linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU, mapa={"9900010": "GE-Proton-apelido"})
     assert qp.TAG_WARN not in _tags(linhas), linhas
 
 
@@ -257,9 +258,9 @@ def test_sem_steam_o_pino_que_diverge_do_recibo_ainda_avisa(tmp_path: Path) -> N
         recibo=qp.ler_recibo(RECIBO_PASSOU),
         pino={"name": FIXADA, "sha256": "b" * 64},
         compat_dir=tmp_path / "nao-existe",
-        mapa_dos_jogos={"10": "GE-Proton9-1"},
+        mapa_dos_jogos={"9900010": "GE-Proton9-1"},
         nome_do_jogo=lambda appid: f"Jogo {appid}",
         sem_steam="nenhuma Steam encontrada nesta máquina",
     )
     assert _tags(linhas).count(qp.TAG_WARN) == 1, linhas
-    assert not any("Jogo 10" in x for _, x in linhas), linhas
+    assert not any("Jogo 9900010" in x for _, x in linhas), linhas

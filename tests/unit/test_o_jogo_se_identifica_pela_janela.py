@@ -11,8 +11,8 @@ from hefesto_dualsense4unix.integrations.identidade_de_janela import (
     umu_por_chave_do_heroic,
 )
 
-UMU_DO_GOTG = "umu-1088850"
-JANELA_DO_GOTG = "steam_app_1088850"
+UMU_DO_GOTG = "umu-9921777"
+JANELA_DO_GOTG = "steam_app_9921777"
 
 EXECUTAVEL_DO_GOTG = "retail/gotg.exe"
 
@@ -41,7 +41,7 @@ class TestOsTresDegraus:
 
     def test_2_sem_umu_vale_o_appid_da_steam(self):
         """O caminho que já funcionava continua funcionando — toda cura aqui é"""
-        assert classe_de_janela(appid_da_steam="3357650") == "steam_app_3357650"
+        assert classe_de_janela(appid_da_steam="9967153") == "steam_app_9967153"
 
     def test_3_o_nao_sei_e_resposta(self):
         """**O TERCEIRO DEGRAU É ENTREGA, TANTO QUANTO OS OUTROS DOIS.**"""
@@ -54,7 +54,7 @@ class TestOsTresDegraus:
         assert classe_de_janela(umu_id="umu-default") == ""
 
     def test_lixo_nao_vira_chave(self):
-        for entrada in ("", "   ", "1088850", "steam_app_1088850", "umu-"):
+        for entrada in ("", "   ", "9921777", "steam_app_9921777", "umu-"):
             assert classe_do_umu_id(entrada) == "", entrada
 
 
@@ -249,7 +249,7 @@ class TestJogoEmFocoNaoPerguntaSeEDaSteam:
 
     def test_o_jogo_da_steam_continua_respondendo_sim(self):
         """Nada do caminho que funcionava mudou — a cura é aditiva."""
-        assert self._daemon("steam_app_3357650")._janela_de_jogo_em_foco()
+        assert self._daemon("steam_app_9967153")._janela_de_jogo_em_foco()
 
     def test_o_jogo_por_umu_ja_cai_no_primeiro_degrau(self):
         """O Heroic com Proton anuncia `steam_app_<N>` — ele nunca precisou do"""

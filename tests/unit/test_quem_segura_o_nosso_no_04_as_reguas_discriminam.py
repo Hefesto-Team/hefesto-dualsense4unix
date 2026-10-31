@@ -58,7 +58,7 @@ como nosso vpad, com reports e tudo. Cura: o slot passou a ser por thread.
 Guardado por `test_r3_o_espelho_nao_herda_o_nosso_carimbo_da_thread_vizinha`.
 
 RESSALVA HONESTA sobre (b), porque muda o tamanho do achado: no único log
-real desta casa (`steam-2497900.log`, 72956 linhas) as 67 linhas de
+real desta casa (`steam-9949958.log`, 72956 linhas) as 67 linhas de
 `udev_add_device` e as 524 de `get_device_subsystem_info` saem TODAS da thread
 `00b4` — a contaminação era latente, não manifesta. E aquele log **não tinha
 espelho nenhum** (zero ocorrências de `28de`), então ele não prova que a

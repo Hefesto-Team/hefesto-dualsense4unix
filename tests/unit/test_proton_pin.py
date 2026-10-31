@@ -232,27 +232,27 @@ def _config_vdf(ctm_entries: dict[str, str] | None) -> str:
 
 def test_build_cria_o_bloco_quando_ausente_com_global_e_appids():
     texto, changes = pp.build_compat_tool_mapping(
-        _config_vdf(None), tool_name=PIN_NAME, appids=["1599660", "1971870"]
+        _config_vdf(None), tool_name=PIN_NAME, appids=["9931993", "9939437"]
     )
     mapping = pp.extract_compat_tool_mapping(texto)
     assert mapping == {
         "0": PIN_NAME,
-        "1599660": PIN_NAME,
-        "1971870": PIN_NAME,
+        "9931993": PIN_NAME,
+        "9939437": PIN_NAME,
     }
     assert changes["0"]["action"] == "added"
     assert changes["0"]["previous_name"] == ""
     assert changes["0"]["ctm_created"] == "1"
-    assert set(changes) == {"0", "1599660", "1971870"}
+    assert set(changes) == {"0", "9931993", "9939437"}
     assert '"priority"\t\t"75"' in texto
     assert '"priority"\t\t"250"' in texto
     assert '"HasCurrentBucket"\t\t"1"' in texto
 
 
 def test_build_troca_entrada_existente_e_registra_o_nome_anterior():
-    original = _config_vdf({"0": "proton_11", "1971870": PIN_NAME})
+    original = _config_vdf({"0": "proton_11", "9939437": PIN_NAME})
     texto, changes = pp.build_compat_tool_mapping(
-        original, tool_name=PIN_NAME, appids=["1971870"]
+        original, tool_name=PIN_NAME, appids=["9939437"]
     )
     assert pp.extract_compat_tool_mapping(texto)["0"] == PIN_NAME
     assert changes == {"0": {"action": "replaced", "previous_name": "proton_11"}}
@@ -266,9 +266,9 @@ def test_build_troca_entrada_existente_e_registra_o_nome_anterior():
 
 
 def test_build_e_idempotente():
-    original = _config_vdf({"0": PIN_NAME, "1971870": PIN_NAME})
+    original = _config_vdf({"0": PIN_NAME, "9939437": PIN_NAME})
     texto, changes = pp.build_compat_tool_mapping(
-        original, tool_name=PIN_NAME, appids=["1971870"]
+        original, tool_name=PIN_NAME, appids=["9939437"]
     )
     assert texto == original
     assert changes == {}
@@ -283,9 +283,9 @@ def test_build_explode_em_arquivo_que_nao_e_config_vdf():
 
 def test_remove_do_que_foi_adicionado_e_roundtrip_byte_a_byte():
     """add → remove volta ao arquivo ORIGINAL (o uninstall simétrico da casa)."""
-    original = _config_vdf({"1245620": "proton_11"})
+    original = _config_vdf({"9924912": "proton_11"})
     travado, changes = pp.build_compat_tool_mapping(
-        original, tool_name=PIN_NAME, appids=["1599660"]
+        original, tool_name=PIN_NAME, appids=["9931993"]
     )
     revertido, n = pp.remove_compat_tool_mapping(
         travado, tool_name=PIN_NAME, changes=changes
@@ -298,7 +298,7 @@ def test_remove_fecha_roundtrip_no_caso_sem_ctm_previo():
     """Achado #7: sem CompatToolMapping prévio o lock cria o bloco INTEIRO; o"""
     original = _config_vdf(None)
     travado, changes = pp.build_compat_tool_mapping(
-        original, tool_name=PIN_NAME, appids=["1599660", "1971870"]
+        original, tool_name=PIN_NAME, appids=["9931993", "9939437"]
     )
     assert "CompatToolMapping" in travado
     revertido, n = pp.remove_compat_tool_mapping(
@@ -313,7 +313,7 @@ def test_remove_preserva_bloco_criado_por_nos_se_usuaria_assumiu_uma_entrada():
     """Achado #7 (contra-caso): se a usuária mudou UMA entrada do bloco que"""
     original = _config_vdf(None)
     travado, changes = pp.build_compat_tool_mapping(
-        original, tool_name=PIN_NAME, appids=["1599660"]
+        original, tool_name=PIN_NAME, appids=["9931993"]
     )
     mudado = travado.replace(
         f'"name"\t\t"{PIN_NAME}"', '"name"\t\t"proton_experimental"', 1
@@ -341,7 +341,7 @@ def test_remove_restaura_o_nome_anterior_de_entrada_trocada():
 def test_remove_nao_toca_entrada_que_a_usuaria_mudou_depois_do_lock():
     """O usuário trocou o tool depois do nosso lock = assumiu; é dele agora."""
     travado, changes = pp.build_compat_tool_mapping(
-        _config_vdf(None), tool_name=PIN_NAME, appids=["1599660"]
+        _config_vdf(None), tool_name=PIN_NAME, appids=["9931993"]
     )
     mudado = travado.replace(
         f'"name"\t\t"{PIN_NAME}"', '"name"\t\t"proton_experimental"', 1
@@ -368,7 +368,7 @@ def test_lock_recusa_com_steam_aberta_sem_tocar_no_vdf(tmp_path, monkeypatch):
     vdf.write_text(original, encoding="utf-8")
     r = pp.lock_games_to_pinned_proton(
         tool_name=PIN_NAME,
-        appids=["1599660"],
+        appids=["9931993"],
         config_vdf=vdf,
         state_path=tmp_path / "state.json",
     )
@@ -396,13 +396,13 @@ def test_lock_escreve_backup_estado_e_unlock_reverte_tudo(
     tmp_path, steam_fechada
 ):
     vdf = tmp_path / "config.vdf"
-    original = _config_vdf({"1245620": "proton_11"})
+    original = _config_vdf({"9924912": "proton_11"})
     vdf.write_text(original, encoding="utf-8")
     state = tmp_path / "state" / "proton-pin-lock.json"
 
     r = pp.lock_games_to_pinned_proton(
         tool_name=PIN_NAME,
-        appids=["1599660"],
+        appids=["9931993"],
         config_vdf=vdf,
         state_path=state,
     )
@@ -415,7 +415,7 @@ def test_lock_escreve_backup_estado_e_unlock_reverte_tudo(
     assert backups[0].read_text(encoding="utf-8") == original
     registro = json.loads(state.read_text(encoding="utf-8"))
     assert registro["tool_name"] == PIN_NAME
-    assert set(registro["changes"]) == {"0", "1599660"}
+    assert set(registro["changes"]) == {"0", "9931993"}
 
     u = pp.unlock_games_from_pinned_proton(config_vdf=vdf, state_path=state)
     assert u["status"] == "unlocked"
@@ -468,7 +468,7 @@ def test_lock_falha_do_estado_nao_deixa_o_vdf_pinado_sem_reversao(
 
     monkeypatch.setattr(pp, "_merge_lock_state", boom)
     r = pp.lock_games_to_pinned_proton(
-        tool_name=PIN_NAME, appids=["1599660"], config_vdf=vdf, state_path=state
+        tool_name=PIN_NAME, appids=["9931993"], config_vdf=vdf, state_path=state
     )
     assert r["status"] == "erro"
     assert vdf.read_text(encoding="utf-8") == original
@@ -481,11 +481,11 @@ def test_lock_proton_for_all_games_zero_arg_traduz_o_contrato_da_gui(
     """Achado #4: o botão "Travar Proton validado" chama esta função ZERO-ARG."""
     steamapps = tmp_path / ".steam/steam/steamapps"
     steamapps.mkdir(parents=True)
-    (steamapps / "appmanifest_1599660.acf").write_text(
-        '"AppState"\n{\n\t"appid"\t\t"1599660"\n\t"name"\t\t"Sackboy"\n}\n',
+    (steamapps / "appmanifest_9931993.acf").write_text(
+        '"AppState"\n{\n\t"appid"\t\t"9931993"\n\t"name"\t\t"Sackboy"\n}\n',
         encoding="utf-8",
     )
-    (steamapps / "compatdata" / "1599660").mkdir(parents=True)
+    (steamapps / "compatdata" / "9931993").mkdir(parents=True)
     pino = tmp_path / ".steam/steam/compatibilitytools.d" / PIN_NAME
     pino.mkdir(parents=True)
     (pino / "proton").write_text("#!/bin/sh\n", encoding="utf-8")
@@ -504,7 +504,7 @@ def test_lock_proton_for_all_games_zero_arg_traduz_o_contrato_da_gui(
     assert result["locked"] == 2
     mapping = pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
     assert mapping["0"] == PIN_NAME
-    assert mapping["1599660"] == PIN_NAME
+    assert mapping["9931993"] == PIN_NAME
     assert state.exists()
 
 
@@ -550,18 +550,18 @@ def test_report_completo(tmp_path):
     (compat / PIN_NAME / pp.MANIFEST_BASENAME).write_text(
         json.dumps({"sha256": "ab" * 32}), encoding="utf-8"
     )
-    texto = _config_vdf({"0": PIN_NAME, "1245620": "proton_9", "2497900": "proton_11"})
+    texto = _config_vdf({"0": PIN_NAME, "9924912": "proton_9", "9949958": "proton_11"})
     report = pp.proton_pin_report(
         conf,
         compat_dir=compat,
         config_vdf_text=texto,
-        installed_appids=["1245620", "2497900", "1599660"],
+        installed_appids=["9924912", "9949958", "9931993"],
     )
     assert report["pinned_present"] is True
     assert report["pinned_manifest_ok"] is True
     assert report["global_is_pinned"] is True
-    assert report["games_off_pin"] == ["1245620", "2497900"]
-    assert report["games_leaky_proton"] == [("1245620", "proton_9")]
+    assert report["games_off_pin"] == ["9924912", "9949958"]
+    assert report["games_leaky_proton"] == [("9924912", "proton_9")]
 
 
 def test_report_sem_pin_presente_e_global_alheio(tmp_path):
@@ -590,12 +590,12 @@ def test_list_installed_appids_filtra_ferramentas(tmp_path):
             encoding="utf-8",
         )
 
-    manifest("1599660", "Sackboy: A Big Adventure")
-    manifest("1245620", "ELDEN RING")
-    manifest("2805730", "Proton 9.0 (Beta)")
-    manifest("1628350", "Steam Linux Runtime 3.0 (sniper)")
-    manifest("228980", "Steamworks Common Redistributables")
-    assert pp.list_installed_appids(home=tmp_path) == ["1245620", "1599660"]
+    manifest("9931993", "Sackboy: A Big Adventure")
+    manifest("9924912", "ELDEN RING")
+    manifest("9956114", "Proton 9.0 (Beta)")
+    manifest("9932567", "Steam Linux Runtime 3.0 (sniper)")
+    manifest("9904579", "Steamworks Common Redistributables")
+    assert pp.list_installed_appids(home=tmp_path) == ["9924912", "9931993"]
 
 
 _VDF_COM_ESCOLHA_DO_USUARIO = """"UserLocalConfigStore"
@@ -608,7 +608,7 @@ _VDF_COM_ESCOLHA_DO_USUARIO = """"UserLocalConfigStore"
 \t\t\t{
 \t\t\t\t"CompatToolMapping"
 \t\t\t\t{
-\t\t\t\t\t"2497900"
+\t\t\t\t\t"9949958"
 \t\t\t\t\t{
 \t\t\t\t\t\t"name"\t\t"proton_11"
 \t\t\t\t\t\t"config"\t\t""
@@ -627,20 +627,20 @@ def test_o_lock_nao_atropela_o_proton_que_o_usuario_escolheu() -> None:
     texto, changes = pp.build_compat_tool_mapping(
         _VDF_COM_ESCOLHA_DO_USUARIO,
         tool_name="GE-Proton10-34",
-        appids=["2497900"],
+        appids=["9949958"],
     )
 
-    assert changes["2497900"]["action"] == "preservado", (
+    assert changes["9949958"]["action"] == "preservado", (
         "o lock diz ter feito "
-        f"{changes['2497900']['action']} num jogo em que o usuário JÁ tinha escolhido "
+        f"{changes['9949958']['action']} num jogo em que o usuário JÁ tinha escolhido "
         "o Proton — foi assim que o DON'T SCREAM perdeu o microfone em 14/08"
     )
-    assert changes["2497900"]["previous_name"] == "proton_11"
+    assert changes["9949958"]["previous_name"] == "proton_11"
     assert '"name"\t\t"proton_11"' in texto, (
         "a linha do Proton DO USUÁRIO foi reescrita no config.vdf: o produto atropelou "
         "uma escolha deliberada, que é exatamente o defeito de 14/08"
     )
-    corpo = texto.split('"2497900"', 1)[1].split("}", 1)[0]
+    corpo = texto.split('"9949958"', 1)[1].split("}", 1)[0]
     assert "GE-Proton10-34" not in corpo, (
         "o Proton do produto entrou no bloco do jogo do usuário"
     )
@@ -651,21 +651,21 @@ def test_quem_nao_tinha_escolha_continua_ganhando_o_proton_validado() -> None:
     _, changes = pp.build_compat_tool_mapping(
         _VDF_COM_ESCOLHA_DO_USUARIO,
         tool_name="GE-Proton10-34",
-        appids=["2497900", "851100"],
+        appids=["9949958", "9917022"],
     )
-    assert changes["851100"]["action"] == "added", (
+    assert changes["9917022"]["action"] == "added", (
         "jogo que não tinha escolha nenhuma deixou de receber o Proton validado — "
         "a cura foi longe demais"
     )
-    assert changes["2497900"]["action"] == "preservado"
+    assert changes["9949958"]["action"] == "preservado"
 
 
 def test_a_contagem_nao_chama_de_travado_o_que_foi_preservado() -> None:
     """`locked` contava tudo, inclusive o que o produto respeitou."""
     changes = {
         "0": {"action": "added", "previous_name": ""},
-        "851100": {"action": "added", "previous_name": ""},
-        "2497900": {"action": "preservado", "previous_name": "proton_11"},
+        "9917022": {"action": "added", "previous_name": ""},
+        "9949958": {"action": "preservado", "previous_name": "proton_11"},
     }
     locked = sum(
         1 for c in changes.values()

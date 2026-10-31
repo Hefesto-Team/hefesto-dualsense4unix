@@ -38,7 +38,7 @@ LISTA = [
      "ativo": True, "dica": ""},
     {"nome": "Ação", "prioridade": "9", "quando": "Todos — quando nenhum casa",
      "ativo": False, "dica": ""},
-    {"nome": "Elden Ring", "prioridade": "85", "quando": "Jogo da Steam · 1245620",
+    {"nome": "Elden Ring", "prioridade": "85", "quando": "Jogo da Steam · 9924912",
      "ativo": False, "dica": "disputa este jogo com outro perfil"},
 ]
 
@@ -52,7 +52,7 @@ def test_a_lupa_acha_o_nome_do_jogo_sem_acento_e_sem_caixa(
     monkeypatch.setattr(a10_perfis, "_PROCURA", "acao")  # (noqa-acento)
     assert [x["nome"] for x in a10_perfis._filtrada(LISTA)] == ["Ação"]
 
-    monkeypatch.setattr(a10_perfis, "_PROCURA", "1245620")
+    monkeypatch.setattr(a10_perfis, "_PROCURA", "9924912")
     assert [x["nome"] for x in a10_perfis._filtrada(LISTA)] == ["Elden Ring"]
 
     monkeypatch.setattr(a10_perfis, "_PROCURA", "disputa")

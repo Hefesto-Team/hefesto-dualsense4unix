@@ -238,12 +238,12 @@ def test_o_jogo_que_deixa_de_ter_a_receita_perde_o_arquivo(
     pasta = tmp_path / "launch_env"
     pasta.mkdir()
     monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: pasta)
-    raiz = _jogo(lar, "700010")
+    raiz = _jogo(lar, "9914000")
     materialize_launch_env(_daemon_de_mentira())
-    assert (pasta / "steam_app_700010.env").is_file() and raiz.is_dir()
+    assert (pasta / "steam_app_9914000.env").is_file() and raiz.is_dir()
     (rda.pasta_da_peca(_casa(lar)) / "x86_64-windows" / _DLL).unlink()
     materialize_launch_env(_daemon_de_mentira())
-    assert not (pasta / "steam_app_700010.env").exists()
+    assert not (pasta / "steam_app_9914000.env").exists()
 
 
 class _SocketQueResponde:

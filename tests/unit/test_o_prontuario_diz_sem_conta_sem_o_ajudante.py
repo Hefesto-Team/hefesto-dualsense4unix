@@ -160,8 +160,8 @@ def test_sem_conta_e_aviso_e_o_jogo_que_abre_nao_e_impedido(casa: Path) -> None:
 
 
 def test_o_aviso_vai_no_json_com_a_natureza_e_sem_mudar_o_veredito(casa: Path) -> None:
-    _jogo(_biblioteca(casa), "800010")
-    dado = _com_o_wrapper(_ficha("800010")).como_dicionario()
+    _jogo(_biblioteca(casa), "9916000")
+    dado = _com_o_wrapper(_ficha("9916000")).como_dicionario()
     assert dado["sem_conta"] is True
     assert dado["veredito"] == pdj.SEM_IMPEDIMENTO
     (estorvo,) = dado["estorvos"]  # type: ignore[misc]

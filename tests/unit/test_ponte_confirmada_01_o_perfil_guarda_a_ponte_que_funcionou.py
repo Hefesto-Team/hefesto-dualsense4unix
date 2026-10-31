@@ -25,8 +25,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-_DONT_SCREAM = "2054970"
-_SACKBOY = "1599660"
+_DONT_SCREAM = "9941099"
+_SACKBOY = "9931993"
 
 
 def _evidencia() -> object:
@@ -154,7 +154,7 @@ class TestMigracaoSemPerda:
 
 class TestQualEAPonteDesteAppid:
     def test_pergunta_pelo_appid_em_qualquer_das_tres_formas(self) -> None:
-        """`2054970`, `"2054970"` e `"steam_app_2054970"` são o mesmo jogo."""
+        """`9941099`, `"9941099"` e `"steam_app_9941099"` são o mesmo jogo."""
         save_profile(
             carimbar_ponte(
                 _perfil_de_jogo("Dont Scream", _DONT_SCREAM),
@@ -173,17 +173,17 @@ class TestQualEAPonteDesteAppid:
 
     def test_no_empate_vence_quem_sabe_a_ponte(self) -> None:
         """Duas fichas do mesmo jogo é real no disco do usuário (pragmata/pragmata2)."""
-        save_profile(_perfil_de_jogo("Pragmata", "3357650", prioridade=99))
+        save_profile(_perfil_de_jogo("Pragmata", "9967153", prioridade=99))
         save_profile(
             carimbar_ponte(
-                _perfil_de_jogo("Pragmata2", "3357650", prioridade=0),
+                _perfil_de_jogo("Pragmata2", "9967153", prioridade=0),
                 kind="native",
             )
         )
-        vencedor = perfil_do_appid("3357650")
+        vencedor = perfil_do_appid("9967153")
         assert vencedor is not None and vencedor.name == "Pragmata2"
-        assert pontes_confirmadas()["3357650"]["kind"] == "native"
-        assert pdj.pontes_confirmadas()["3357650"].kind == "native"
+        assert pontes_confirmadas()["9967153"]["kind"] == "native"
+        assert pdj.pontes_confirmadas()["9967153"].kind == "native"
 
     def test_a_forma_publicada_so_traz_quem_tem_carimbo(self) -> None:
         """`{appid: ponte}` — quem monta o estado não abre perfil nenhum."""
@@ -215,7 +215,7 @@ class TestQualEAPonteDesteAppid:
         )
         save_profile(_perfil_de_jogo("Sackboy", _SACKBOY))
         save_profile(
-            carimbar_ponte(_perfil_de_jogo("Pragmata", "3357650"), kind="native")
+            carimbar_ponte(_perfil_de_jogo("Pragmata", "9967153"), kind="native")
         )
 
         pelo_manager = pontes_confirmadas()

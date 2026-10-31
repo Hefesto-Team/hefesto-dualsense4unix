@@ -735,7 +735,7 @@ def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina, gravar_maquina
 
     assert censo.lancador_do_jogo("steam") == "steam"
-    assert censo.lancador_do_jogo("desktop", "620") == "steam"
+    assert censo.lancador_do_jogo("desktop", "9900620") == "steam"
     assert censo.lancador_do_jogo("desktop", "") == ""
     assert censo.lancador_do_jogo("heroic") == "heroic"
     assert censo.lancador_do_jogo("lutris") == "", "o Lutris sem a extensão ganhou cartão"
@@ -753,7 +753,7 @@ def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
     assert carregar_maquina().perfil_por_jogo == {"lutris": False}
     assert loader.lancadores_sem_perfil_por_jogo() == frozenset({"lutris"})
 
-    jogos = [jogos_locais.JogoLocal("620", "Portal Dois", "steam"),
+    jogos = [jogos_locais.JogoLocal("9900620", "Portal Dois", "steam"),
              jogos_locais.JogoLocal("", "Celeste", "lutris", lancador="Lutris", chave="celeste")]
     monkeypatch.setattr(jogos_locais, "jogos_da_biblioteca_steam", lambda home=None: jogos[:1])
     monkeypatch.setattr(jogos_locais, "jogos_com_janela", lambda home=None, pastas=None: jogos[1:])

@@ -15,7 +15,7 @@ from hefesto_dualsense4unix.profiles import loader
 
 _PERFIL_DO_USUARIO = {
     "name": "Marvel's Guardians of the Galaxy",
-    "match": {"type": "criteria", "window_class": ["steam_app_1088850"]},
+    "match": {"type": "criteria", "window_class": ["steam_app_9921777"]},
     "priority": 80,
 }
 
@@ -35,7 +35,7 @@ def test_o_jogo_da_janela_steam_app_tem_o_perfil_do_appid(tmp_path: Path) -> Non
         appid="",
         nome="Marvel's Guardians of the Galaxy",
         fonte="janela",
-        chave="steam_app_1088850",
+        chave="steam_app_9921777",
     )
 
     resultado = loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=[jogo])
@@ -43,14 +43,14 @@ def test_o_jogo_da_janela_steam_app_tem_o_perfil_do_appid(tmp_path: Path) -> Non
     assert resultado.por_desfecho("nome_ocupado") == ()
     linhas = resultado.por_desfecho("ja_tinha_perfil")
     assert [(x.arquivo, x.identidade) for x in linhas] == [
-        ("marvels_guardians_of_the_galaxy.json", "1088850")
+        ("marvels_guardians_of_the_galaxy.json", "9921777")
     ]
 
 
 def test_a_identidade_da_janela_steam_app_e_a_do_appid() -> None:
-    assert loader._identidade("", "steam_app_1088850") == "1088850"
-    assert loader._identidade("", "STEAM_APP_1088850") == "1088850"
-    assert loader._identidade("1088850", "") == "1088850"
+    assert loader._identidade("", "steam_app_9921777") == "9921777"
+    assert loader._identidade("", "STEAM_APP_9921777") == "9921777"
+    assert loader._identidade("9921777", "") == "9921777"
 
 
 def test_chave_de_janela_fora_da_steam_segue_janela_classe() -> None:
@@ -90,14 +90,14 @@ def test_a_marca_velha_com_a_forma_da_janela_continua_valendo(tmp_path: Path) ->
     destino = tmp_path / "perfis"
     destino.mkdir()
     (destino / loader.MARCA_DE_SEMEADURA_DE_JOGOS).write_text(
-        "janela:steam_app_1088850\tmarvels_guardians_of_the_galaxy.json\n",
+        "janela:steam_app_9921777\tmarvels_guardians_of_the_galaxy.json\n",
         encoding="utf-8",
     )
     jogo = JogoLocal(
         appid="",
         nome="Marvel's Guardians of the Galaxy",
         fonte="heroic",
-        chave="steam_app_1088850",
+        chave="steam_app_9921777",
     )
 
     resultado = loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=[jogo])

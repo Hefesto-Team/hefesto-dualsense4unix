@@ -79,7 +79,7 @@ def _run_wrapper(
         "HOME": str(tmp_path),
         "XDG_RUNTIME_DIR": str(tmp_path / "run"),
         "XDG_STATE_HOME": str(tmp_path / "state"),
-        "SteamAppId": "1599660",
+        "SteamAppId": "9931993",
         "HEFESTO_GM_POLL_SECS": "0.2",
         "HEFESTO_PLACA_ACORDADA": str(tmp_path / "sem-placa.sh"),
     }

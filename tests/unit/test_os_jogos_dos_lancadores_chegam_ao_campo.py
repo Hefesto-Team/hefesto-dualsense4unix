@@ -40,12 +40,12 @@ def _heroic(
 
 
 UMU_DO_DISCO_DO_USUARIO: dict[str, Any] = {
-    "legendary_63a665088eb1480298f1e57943b225d8": "umu-1088850",
+    "legendary_63a665088eb1480298f1e57943b225d8": "umu-9921777",
     "__timestamp": {"legendary_63a665088eb1480298f1e57943b225d8":
                     "Thu Sep 10 2026 00:17:23 GMT-0300"},
 }
 
-JANELA_DO_GOTG = "steam_app_1088850"
+JANELA_DO_GOTG = "steam_app_9921777"
 
 
 BAIXADO: dict[str, Any] = {
@@ -109,7 +109,7 @@ def test_a_chave_de_janela_vem_do_umu_e_nao_do_executavel(
     jogo = censo.biblioteca_de("Heroic", lar=tmp_path).instalados[0]
 
     assert jogo.executavel == "retail/gotg.exe"
-    assert jogo.umu_id == "umu-1088850"
+    assert jogo.umu_id == "umu-9921777"
     assert jogo.classe_de_janela == JANELA_DO_GOTG
     assert jogo.classe_de_janela != "gotg.exe", (
         "a derivação pelo executável voltou")
@@ -144,7 +144,7 @@ def test_o_jogo_do_lancador_vira_oferta_com_a_wm_class_no_value(
     ofertas = jl.jogos_dos_lancadores(lar=tmp_path)
 
     assert [(j.valor, j.rotulo, j.forma) for j in ofertas] == [
-        ("steam_app_1088850", "Marvel's Guardians of the Galaxy (Heroic)", "janela")]
+        ("steam_app_9921777", "Marvel's Guardians of the Galaxy (Heroic)", "janela")]
 
 
 def test_o_que_o_campo_grava_casa_com_a_janela_de_verdade() -> None:
@@ -168,12 +168,12 @@ def test_o_que_o_campo_grava_casa_com_a_janela_de_verdade() -> None:
 
     assert regra.window_class == ["gotg.exe"]
     assert regra.matches({"wm_class": "gotg.exe", "wm_name": "GOTG"})
-    assert not regra.matches({"wm_class": "steam_app_1245620", "wm_name": ""})
+    assert not regra.matches({"wm_class": "steam_app_9924912", "wm_name": ""})
 
 
 def test_a_steam_desempata_quando_o_mesmo_jogo_vem_das_duas_origens() -> None:
     """Um jogo em duas lojas não pode virar duas linhas na sugestão."""
-    steam = [jl.JogoLocal(appid="1245620", nome="ELDEN RING", fonte="steam")]
+    steam = [jl.JogoLocal(appid="9924912", nome="ELDEN RING", fonte="steam")]
     dos_lancadores = [
         jl.JogoLocal(appid="", nome="Elden Ring", fonte="heroic",
                      lancador="Heroic", chave="eldenring.exe"),
@@ -183,7 +183,7 @@ def test_a_steam_desempata_quando_o_mesmo_jogo_vem_das_duas_origens() -> None:
 
     ofertas = jl.ofertas_do_campo_do_jogo(steam, dos_lancadores)
 
-    assert [j.valor for j in ofertas] == ["1245620", "outro.exe"]
+    assert [j.valor for j in ofertas] == ["9924912", "outro.exe"]
 
 
 def test_o_rotulo_diz_o_nome_do_jogo_do_lancador() -> None:
@@ -236,10 +236,10 @@ def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
             "[Desktop Entry]\nType=Application\nName=Celeste\n"
             "Exec=/casa/celeste/Celeste\nCategories=Game;\n"
             "StartupWMClass=Celeste\n")
-    _atalho(tmp_path, "meow-steam-4145130.desktop",
+    _atalho(tmp_path, "meow-steam-9982902.desktop",
             "[Desktop Entry]\nType=Application\nName=ORPHEUS\n"
-            "Exec=/usr/games/steam steam://rungameid/4145130\n"
-            "Categories=Game;\nStartupWMClass=steam_app_4145130\n")
+            "Exec=/usr/games/steam steam://rungameid/9982902\n"
+            "Categories=Game;\nStartupWMClass=steam_app_9982902\n")
     _atalho(tmp_path, "com.heroicgameslauncher.hgl.desktop",
             "[Desktop Entry]\nType=Application\nName=Heroic Games Launcher\n"
             "Exec=/usr/bin/flatpak run com.heroicgameslauncher.hgl\n"
@@ -281,12 +281,12 @@ def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
     jogos = jl.jogos_com_janela(lar=tmp_path, pastas=[tmp_path])
     achar = lambda c: jl.jogo_da_janela(c, jogos)  # noqa: E731
 
-    assert achar("steam_app_1088850").nome == "Marvel's Guardians of the Galaxy"
-    assert achar("steam_app_1088850").lancador == "Heroic"
+    assert achar("steam_app_9921777").nome == "Marvel's Guardians of the Galaxy"
+    assert achar("steam_app_9921777").lancador == "Heroic"
     assert achar("Celeste.x86_64").lancador == "Lutris"
     assert achar("SUPERZSNES").lancador == jl.LANCADOR_DIRETO
-    assert achar("STEAM_APP_1088850").nome == "Marvel's Guardians of the Galaxy"
-    assert achar("steam_app_3357650") is None
+    assert achar("STEAM_APP_9921777").nome == "Marvel's Guardians of the Galaxy"
+    assert achar("steam_app_9967153") is None
     assert achar("unknown") is None
     assert achar("") is None
     assert achar(None) is None
@@ -301,11 +301,11 @@ def test_o_nome_da_janela_chega_ao_rotulo_sem_a_tela_ler_disco_duas_vezes(
 
     chaves = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
 
-    assert chaves == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
-                      "1088850": "Marvel's Guardians of the Galaxy"}
-    assert jl.frase_do_campo_do_jogo("steam_app_1088850", {}, chaves) == (
+    assert chaves == {"steam_app_9921777": "Marvel's Guardians of the Galaxy",
+                      "9921777": "Marvel's Guardians of the Galaxy"}
+    assert jl.frase_do_campo_do_jogo("steam_app_9921777", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
-    assert jl.frase_do_campo_do_jogo("STEAM_APP_1088850", {}, chaves) == (
+    assert jl.frase_do_campo_do_jogo("STEAM_APP_9921777", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) is chaves
 
@@ -331,23 +331,23 @@ def test_o_caderno_releu_o_disco_quando_o_usuario_instalou_o_segundo_jogo(
     _heroic(tmp_path, [BAIXADO])
 
     antes = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
-    assert antes == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
-                     "1088850": "Marvel's Guardians of the Galaxy"}
+    assert antes == {"steam_app_9921777": "Marvel's Guardians of the Galaxy",
+                     "9921777": "Marvel's Guardians of the Galaxy"}
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) is antes
 
     segundo = dict(BAIXADO, app_name="outro", title="Hades II",
                    install={"executable": "bin/hades2.exe", "is_dlc": False})
     _heroic(tmp_path, [BAIXADO, segundo], umu=dict(
-        UMU_DO_DISCO_DO_USUARIO, legendary_outro="umu-1145350"))
+        UMU_DO_DISCO_DO_USUARIO, legendary_outro="umu-9922907"))
 
     depois = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
 
     assert depois is not antes
-    assert depois == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
-                      "1088850": "Marvel's Guardians of the Galaxy",
-                      "steam_app_1145350": "Hades II",
-                      "1145350": "Hades II"}
-    assert jl.frase_do_campo_do_jogo("steam_app_1145350", {}, depois) == (
+    assert depois == {"steam_app_9921777": "Marvel's Guardians of the Galaxy",
+                      "9921777": "Marvel's Guardians of the Galaxy",
+                      "steam_app_9922907": "Hades II",
+                      "9922907": "Hades II"}
+    assert jl.frase_do_campo_do_jogo("steam_app_9922907", {}, depois) == (
         "Hades II", False)
 
 
@@ -387,26 +387,26 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
         lar=tmp_path, pastas=[tmp_path]))
     monkeypatch.setattr(jl, "assinatura_das_janelas", lambda *_a, **_k: assinar(
         lar=tmp_path, pastas=[tmp_path]))
-    monkeypatch.setattr(a10, "_nomes_dos_jogos", lambda: {"3357650": "PRAGMATA"})
+    monkeypatch.setattr(a10, "_nomes_dos_jogos", lambda: {"9967153": "PRAGMATA"})
 
-    assert a10._jogo_reconhecido("steam_app_1088850") == (
+    assert a10._jogo_reconhecido("steam_app_9921777") == (
         "Marvel's Guardians of the Galaxy", False)
-    assert a10._jogo_reconhecido("3357650") == ("PRAGMATA", False)
+    assert a10._jogo_reconhecido("9967153") == ("PRAGMATA", False)
 
     prof = SimpleNamespace(name="Perfil",
-                           match=from_simple_choice("janela", "steam_app_1088850"))
-    assert a10._agora_vale_em(prof, "steam_app_1088850").endswith(
+                           match=from_simple_choice("janela", "steam_app_9921777"))
+    assert a10._agora_vale_em(prof, "steam_app_9921777").endswith(
         "· Marvel's Guardians of the Galaxy")
 
     html = a10._html_dos_jogos()
-    assert ('<option value="steam_app_1088850" '
+    assert ('<option value="steam_app_9921777" '
             'label="Marvel\'s Guardians of the Galaxy"></option>') in html
-    assert '<option value="3357650" label="PRAGMATA · 3357650">' in html
+    assert '<option value="9967153" label="PRAGMATA · 9967153">' in html
 
-    assert a10._forma_do_que_o_usuario_escolheu("steam_app_1088850") == "steam_game"
+    assert a10._forma_do_que_o_usuario_escolheu("steam_app_9921777") == "steam_game"
     assert a10._forma_do_que_o_usuario_escolheu("Celeste.x86_64") == "janela"
-    assert a10._forma_do_que_o_usuario_escolheu("3357650") == "steam_game"
+    assert a10._forma_do_que_o_usuario_escolheu("9967153") == "steam_game"
     assert a10._forma_do_que_o_usuario_escolheu("Cyberpunk2077.exe") == "game"
-    assert (from_simple_choice("steam_game", "1088850").window_class
-            == from_simple_choice("janela", "steam_app_1088850").window_class
-            == ["steam_app_1088850"])
+    assert (from_simple_choice("steam_game", "9921777").window_class
+            == from_simple_choice("janela", "steam_app_9921777").window_class
+            == ["steam_app_9921777"])

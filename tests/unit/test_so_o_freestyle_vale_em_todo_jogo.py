@@ -66,7 +66,7 @@ def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return alvo
 
 
-@pytest.mark.parametrize("janela", ["firefox", "steam_app_1245620"])
+@pytest.mark.parametrize("janela", ["firefox", "steam_app_9924912"])
 def test_a_frase_segue_o_gerente(disco, monkeypatch, janela) -> None:
     """O gerente de verdade, num disco de mentira: o `any` entra sozinho?
 

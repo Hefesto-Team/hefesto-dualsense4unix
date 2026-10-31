@@ -649,7 +649,7 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
     assert gp.caminho_da_sessao(daemon) is None, "o dono seguiu com o caminho do anterior"
 
 
-APPID_DO_G3 = 1599660
+APPID_DO_G3 = 9931993
 
 
 @pytest.mark.usefixtures("_ensaio")

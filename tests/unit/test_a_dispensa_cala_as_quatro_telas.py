@@ -25,7 +25,7 @@ from hefesto_dualsense4unix.app.actions import home_actions as ha
 
 COM_JOGO_SEM_WRAPPER = {
     "gamepad_emulation": {"wrapper_used": False},
-    "window_detect_current_class": "steam_app_1086940",
+    "window_detect_current_class": "steam_app_9921738",
 }
 
 
@@ -53,7 +53,7 @@ def test_a_pergunta_pura_continua_existindo_e_pura():
 
 
 def test_o_appid_sai_da_janela_em_foco():
-    assert ha.appid_do_jogo_em_foco(COM_JOGO_SEM_WRAPPER) == "1086940"
+    assert ha.appid_do_jogo_em_foco(COM_JOGO_SEM_WRAPPER) == "9921738"
     assert ha.appid_do_jogo_em_foco({}) == ""
     assert ha.appid_do_jogo_em_foco(None) == ""
 
@@ -66,7 +66,7 @@ def test_falha_de_disco_mostra_o_aviso_em_vez_de_escondelo(monkeypatch):
         raise OSError("disco fora do ar")
 
     monkeypatch.setattr(lwd, "load_dismissed_appids", explode)
-    assert ha.o_usuario_ja_respondeu_sobre("1086940") is False, (
+    assert ha.o_usuario_ja_respondeu_sobre("9921738") is False, (
         "um erro de leitura escondeu o aviso — esconder por falha é pior que "
         "mostrar duas vezes"
     )
