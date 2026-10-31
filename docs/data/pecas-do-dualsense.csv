@@ -6,8 +6,8 @@
 # O QUE A FONTE RESOLVE. O SVG do controle nomeava como `l2` e `r2` duas peças que,
 # GEOMETRICAMENTE, são o Share e o Options — ficam ao lado do touchpad, em x 36–39
 # e 89–92. Ninguém percebeu por dois meses porque nenhuma régua comparava o NOME
-# da peça com o LUGAR da peça. O usuário viu passando o mouse: "agora que eu vi tá como
-# gatilho adaptativo r2 e o l2 esses são os options e select."
+# da peça com o LUGAR da peça. A troca apareceu com o mouse passando por cima: a dica
+# dizia gatilho adaptativo R2 e L2 em cima do Options e do Share.
 #
 # COMO SE USA. Este arquivo é o dono. Dele saem: o mapa em
 # novo-layout/mapa-do-controle.html, os ids do SVG, e o portão
@@ -51,7 +51,7 @@ dpad_up,D-pad cima,↑,botao,direcional,dpad_up,dpad_up,25.5,38.46,32.5,47,ALTA,
 dpad_right,D-pad direita,→,botao,direcional,dpad_right,dpad_right,30.96,45.46,39.5,52.46,ALTA,,0,-,dpad
 dpad_down,D-pad baixo,↓,botao,direcional,dpad_down,dpad_down,25.5,50.92,32.5,59.46,ALTA,,0,-,dpad
 dpad_left,D-pad esquerda,←,botao,direcional,dpad_left,dpad_left,18.5,45.46,27.04,52.46,ALTA,,0,-,dpad
-l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — o usuário, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-,gatilhos
+l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — o pedido de 27/08 foi aumentar a altura vertical até tocar o controle.",0,-,gatilhos
 r1,R1,-,botao,ombros,r1,r1,91.07,25.62,101.78,32,ALTA,"Ombro, o de CIMA, encostado no casco.",0,-,gatilhos
 l2,L2,gatilho adaptativo esquerdo,gatilho,gatilhos,l2,l2,19.43,28.13,28.02,33.62,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-,gatilhos
 r2,R2,gatilho adaptativo direito,gatilho,gatilhos,r2,r2,100.07,28.11,108.66,33.61,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-,gatilhos
