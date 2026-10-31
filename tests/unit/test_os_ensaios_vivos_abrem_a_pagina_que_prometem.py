@@ -86,7 +86,7 @@ def test_as_cinco_ensaios_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
         fonte = (_casa(nome) / nome).read_text(encoding="utf-8")
         if not _recusa_a_pagina_ausente(fonte):
             sem_guarda_da_pagina.append(nome)
-        if "a bancada não deu uma volta" not in fonte:
+        if "o ensaio não deu uma volta" not in fonte:
             sem_guarda_da_volta.append(nome)
     assert not sem_guarda_da_pagina, (
         f"{sem_guarda_da_pagina} não conferem se a página existe antes de subir "

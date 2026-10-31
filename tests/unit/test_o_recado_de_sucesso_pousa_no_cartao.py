@@ -297,7 +297,7 @@ def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     profiles_dir().mkdir(parents=True, exist_ok=True)
-    for nome in ("regua", "Bancada"):
+    for nome in ("regua", "Ensaio"):
         if not (profiles_dir() / f"{nome.lower()}.json").exists():
             loader.save_profile(Profile(name=nome, match=MatchManual()),
                                 origem="regua")

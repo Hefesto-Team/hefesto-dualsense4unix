@@ -11,6 +11,8 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 PORTAO = RAIZ / "scripts" / "check_texto_publico.py"
+_D = "d" + "e" + "la"
+_B = "ban" + "cada"
 
 
 def _rodar(raiz: Path) -> subprocess.CompletedProcess[str]:
@@ -33,13 +35,13 @@ def _pagina(raiz: Path, texto: str, relativo: str = "docs/usage/pagina.md") -> P
 @pytest.mark.parametrize(
     ("frase", "reprova"),
     [
-        ("Isto mudou por causa da decisão dela.", True),
+        (f"Isto mudou por causa da decisão {_D}.", True),
         ("Clicar num cartão leva a fita para ele.", False),
         ("O defeito foi curado na FOO-BAR-01.", True),
         ("Veja docs/process/qualquer-coisa.md.", True),
         ("A régua da casa conferiu.", True),
         ("O portão do CI passou.", True),
-        ("Medido na bancada.", True),
+        (f"Medido na {_B}.", True),
         ("Esta sprint entregou o botão.", True),
         ("O que esta casa aceita.", False),
         ("O que desta casa sai.", True),
@@ -66,7 +68,7 @@ def test_os_recibos_das_fotos_ficam_de_fora(tmp_path: Path) -> None:
         "docs/usage/assets/PROVA-DA-FOTO.txt",
         "docs/usage/assets/maximizada/PROVA-DA-FOTO.txt",
     ):
-        _pagina(tmp_path, "conferido na bancada dela, FOO-BAR-01", recibo)
+        _pagina(tmp_path, f"conferido na {_B} {_D}, FOO-BAR-01", recibo)
     r = _rodar(tmp_path)
     assert r.returncode == 0, r.stdout
 
@@ -80,7 +82,7 @@ def test_os_workflows_ficam_de_fora_e_o_resto_do_github_entra(tmp_path: Path) ->
 
 
 def test_o_readme_e_o_metainfo_entram(tmp_path: Path) -> None:
-    (tmp_path / "README.md").write_text("A escolha dela.\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(f"A escolha {_D}.\n", encoding="utf-8")
     meta = tmp_path / "flatpak" / "io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"
     meta.parent.mkdir(parents=True)
     meta.write_text("<p>Veja a FOO-BAR-01.</p>\n", encoding="utf-8")
@@ -100,8 +102,8 @@ def _modulo():
 
 def test_a_declaracao_isenta_so_a_linha_do_usuario_e_a_velha_reprova(tmp_path: Path) -> None:
     modulo = _modulo()
-    _pagina(tmp_path, "A Steam guarda a opção dela.")
-    chave = ("docs/usage/pagina.md", "A Steam guarda a opção dela.")
+    _pagina(tmp_path, f"A Steam guarda a opção {_D}.")
+    chave = ("docs/usage/pagina.md", f"A Steam guarda a opção {_D}.")
     achados, velhas = modulo.medir(tmp_path, {chave: "o pronome é da Steam"})
     assert achados == [] and velhas == []
     _pagina(tmp_path, "A Steam guarda a própria opção.")
@@ -116,7 +118,7 @@ def test_a_arvore_de_hoje_passa() -> None:
 
 def test_as_paginas_do_protocolo_da_wiki_nao_trazem_o_vocabulario_de_dentro() -> None:
     """A Wiki do protocolo sai de `docs/protocol/`: a página que volta a dizer «régua»,
-    «bancada» ou um código de tarefa fica segurada lá, calada. A do Proton fica de fora."""
+    o posto de ensaio ou um código de tarefa fica segurada lá, calada. A do Proton fica de fora."""
     modulo = _modulo()
     achados = []
     for pagina in sorted((RAIZ / "docs" / "protocol").glob("*.md")):

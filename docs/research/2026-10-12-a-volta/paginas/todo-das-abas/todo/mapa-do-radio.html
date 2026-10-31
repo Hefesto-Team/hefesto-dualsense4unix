@@ -1333,7 +1333,7 @@ function pedirParaMover(ap, destinoId, depois) {
     pontesDe(destinoId).length >= PONTES_POR_ADAPTADOR;
   perguntar(
     'Mover ' + comoSeChama(ap) + ' para ' + comoSeChamaOLugar(lug) + '?<br>' +
-    'Só ' + (feminino ? 'ela' : 'ele') + ' sai daqui. ' + comoSeParea(ap) +
+    'Só ' + (feminino ? 'esta' : 'este') + ' sai daqui. ' + comoSeParea(ap) +
     (cheio ? ' Lá o som pode engasgar.' : ''),
     'Mover',
     () => { moverAgora(ap, destinoId); if (depois) depois(); },

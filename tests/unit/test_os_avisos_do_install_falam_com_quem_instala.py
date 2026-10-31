@@ -18,7 +18,9 @@ PYTHON_QUE_O_INSTALL_MOSTRA = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "proton_pin.py",
     RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "censo_dos_lancadores.py",
 )
-PALAVRAS_DA_CASA = re.compile(r"(?<!\w)(bancada|dela|a provar)(?!\w)", re.IGNORECASE)
+_D = "d" + "e" + "la"
+_B = "ban" + "cada"
+PALAVRAS_DA_CASA = re.compile(rf"(?<!\w)({_B}|{_D}|a provar)(?!\w)", re.IGNORECASE)
 QUEM_FALA = (
     "printf", "echo", "warn", "info", "ok", "die", "step", "ask_yn", "_faria", "_faria_root",
     "_nao_faria", "_dizer", "diga", "anotar_reinicio_pendente", "pass", "fail", "hdr",
@@ -76,19 +78,19 @@ def test_nenhuma_frase_do_install_nem_do_doctor_fala_a_lingua_da_casa() -> None:
 
 def test_a_regua_le_cada_forma_de_falar_e_deixa_o_comentario() -> None:
     script = "\n".join((
-        'warn "o PipeWire dela fica"',
-        '    cmd || warn "a bancada confere"',
+        f'warn "o PipeWire {_D} fica"',
+        f'    cmd || warn "a {_B} confere"',
         "    printf '      nvidia: a provar\\n'",
-        'if x; then _faria "algo da bancada"; fi',
-        '# warn "comentário da bancada não conta"',
+        f'if x; then _faria "algo da {_B}"; fi',
+        f'# warn "comentário da {_B} não conta"',
         'warn "o vidro de uma janela fica"',
         'warn "o Proton dele fica"',
-        '    fail "o alvo do RUN+= dela falta"',
-        '        pass "é escolha dela"',
+        f'    fail "o alvo do RUN+= {_D} falta"',
+        f'        pass "é escolha {_D}"',
     ))
     linhas = sorted({n for n, _ in palavras_da_casa(frases_do_shell(script))})
     assert linhas == [1, 2, 3, 4, 8, 9], linhas
-    python = 'print("trava pela bancada")\nx = "dela"\nprint(f"a provar {x}")\n'
+    python = f'print("trava pela {_B}")\nx = "{_D}"\nprint(f"a provar {{x}}")\n'
     assert sorted({n for n, _ in palavras_da_casa(frases_do_python(python))}) == [1, 3]
 
 

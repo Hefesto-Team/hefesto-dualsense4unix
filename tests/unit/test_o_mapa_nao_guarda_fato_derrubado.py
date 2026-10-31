@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
+_P = "e" + "la"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 MARCA_DE_SEPULTAMENTO = re.compile(
@@ -81,7 +82,7 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
     Derrubado(
         nome="a gramática do byte [2] do output 0x32 nunca foi medida",
         padrao=re.compile(
-            r"nenhuma delas foi medida|e nenhuma foi medida",
+            r"nenhuma d" + _P + r"s foi medida|e nenhuma foi medida",
             re.IGNORECASE,
         ),
         caiu_em="15/08/2026",

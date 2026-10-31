@@ -289,7 +289,7 @@ def html_do_mapa(
 
     `veredito_de(numero, esticada)` devolve `(classe, texto, porque)`. Ele é
     INJETADO e não importado: o motor de verdade (`arranjo_da_mesa.julgar`,
-    pelo `mapa_da_mesa.veredito_do_quadrado`) precisa de uma `Bancada`, que
+    pelo `mapa_da_mesa.veredito_do_quadrado`) precisa de uma `Mesa`, que
     precisa do censo do barramento — e este módulo não lê `/sys` por decisão,
     escrita no cabeçalho dele. Quem lê é quem chama.
 

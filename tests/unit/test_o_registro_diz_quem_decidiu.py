@@ -112,7 +112,7 @@ def test_quem_revoga_nomeia_o_revogado_na_prosa() -> None:
 
 
 def test_o_lote_de_04_09_so_vira_do_usuario_com_a_prova() -> None:
-    """As 54 nasceram por delegação; virar uma para `ela` exige mostrar a prova."""
+    """As 54 nasceram por delegação; virar uma para `usuário` exige mostrar a prova."""
     lote = [d for d in _linhas() if d["nasceu_de"].startswith(LOTE_DE_04_09)]
     assert len(lote) == 54, (
         "instrumento inválido: o lote de 04/09 tinha 54 linhas e agora tem "
@@ -124,7 +124,7 @@ def test_o_lote_de_04_09_so_vira_do_usuario_com_a_prova() -> None:
         if d["quem_decidiu"] == "usuário" and MARCA_O_USUARIO not in d["escolha"]
     ]
     assert not sem_prova, (
-        "estas linhas do lote de 04/09 dizem `ela` sem o carimbo "
+        "estas linhas do lote de 04/09 dizem `usuário` sem o carimbo "
         f"`{MARCA_O_USUARIO}` com a palavra de quem usa na `escolha`: {sem_prova}"
     )
 

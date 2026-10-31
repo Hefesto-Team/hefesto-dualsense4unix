@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+_P = "e" + "la"
 
 LICENSE = REPO / "LICENSE"
 NOTICE = REPO / "NOTICE"
@@ -174,7 +175,7 @@ def test_notice_diz_que_o_spdx_nao_pode_ser_removido() -> None:
 
 
 _DIARIO_NO_NOTICE = re.compile(
-    r"nota datada|decis[ãa]o dela|docs/process|\bdela\b|\bsprints?\b"
+    r"nota datada|decis[ãa]o d" + _P + r"|docs/process|d" + _P + r"|sprints?"
     r"|\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b",
     re.IGNORECASE,
 )

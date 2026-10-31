@@ -537,7 +537,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"recusas da ponte: {len(janela.ponte.recusas)}")
 
     if not custos and not args.sem_ponte:
-        print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
+        print("ERRO: o ensaio não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1
     return 0
 

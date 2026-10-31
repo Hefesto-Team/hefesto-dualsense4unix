@@ -157,14 +157,14 @@ def test_as_quatro_colunas_ganham_os_dois_itens_e_criar_nao_muda() -> None:
 
 @pytest.mark.parametrize("chave", NOVOS)
 def test_o_clique_grava_no_perfil_e_a_pintura_poe_a_dica(perfis: Path, chave: str) -> None:  # noqa: F811
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
     gesto = pacotes.gesto_da_pagina("05-vibracao.html", "efeito-imersao")
     assert gesto is not None
-    gesto(_ctx("Bancada"), {"uniq": UNIQ, "valor": chave}, ponte)
+    gesto(_ctx("Ensaio"), {"uniq": UNIQ, "valor": chave}, ponte)
     assert ponte.pedidos == [{"efeito_imersao": chave, "uniq": UNIQ}]
     rumble = _rumble_do_disco()
     assert rumble is not None and rumble.efeito_imersao == chave
-    coluna: dict[str, Any] = next(iter(a05.pacote(_ctx("Bancada"))["colunas"].values()))
+    coluna: dict[str, Any] = next(iter(a05.pacote(_ctx("Ensaio"))["colunas"].values()))
     assert coluna["imersao-escolha"] == chave
     assert coluna["imersao-dica"] == pv.DICAS[chave]

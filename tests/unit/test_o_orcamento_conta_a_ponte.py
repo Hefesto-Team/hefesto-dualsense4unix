@@ -253,7 +253,7 @@ def test_ponte_que_levanta_ao_ser_perguntada_fica_de_fora() -> None:
 def test_o_k_da_ponte_segue_a_tabela_do_ensaio() -> None:
     """A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01: o ``FATIAS_DA_PONTE`` é o ``k`` que o ensaio grava.
 
-    Sem ``tests/fixtures/a_ponte_em_fatias_no_ar/bancada.json`` o ``k`` é provisório no CSV; com
+    Sem ``tests/fixtures/a_ponte_em_fatias_no_ar/medido.json`` o ``k`` é provisório no CSV; com
     o arquivo, a constante, o CSV e o desenho dizem o ``k`` medido, e voltar o 3 antigo reprova.
     """
     caminho = RAIZ / "scripts" / "ensaios" / "a_ponte_em_fatias_no_ar.py"

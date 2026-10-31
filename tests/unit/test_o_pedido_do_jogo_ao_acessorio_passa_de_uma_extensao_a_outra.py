@@ -363,6 +363,7 @@ def test_a_publicacao_recusada_nao_conta_no_teto() -> None:
 def test_a_doc_da_porta_descreve_o_metodo_o_topico_o_zero_e_o_teto() -> None:
     texto = DOC.read_text(encoding="utf-8")
     for pedaco in ("eventos.publicar", "publicar:jogo.acessorio", "ler:jogo.acessorio",
-                   "jogo.acessorio", "-32010", "20 publicações", "cada função que ela usou em 0",
+                   "jogo.acessorio", "-32010", "20 publicações",
+                   "cada função que o usuário usou em 0",
                    "até 16 por extensão", "nunca recebe o próprio evento"):
         assert pedaco in texto, f"a doc da porta não diz «{pedaco}»"

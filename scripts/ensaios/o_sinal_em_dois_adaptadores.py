@@ -80,7 +80,7 @@ SEGUNDOS_DA_FASE_3 = 120.0
 NOME_DO_CONTROLE = "Wireless Controller"
 PERTO_DA_FAIXA_IDEAL_DBM = -2.0
 OUVIU_MINIMO = 0.1
-PARES_GRAVADOS = _RAIZ / "tests" / "fixtures" / INSTRUMENTO / "bancada.json"
+PARES_GRAVADOS = _RAIZ / "tests" / "fixtures" / INSTRUMENTO / "medido.json"
 
 RECUSA_SEM_MEDIR = "sem --medir: só descrevo o plano, nada toca"
 RECUSA_DAEMON = "o daemon está no ar: a varredura é da central dele, e o ensaio não briga com o produto"
@@ -459,7 +459,7 @@ def roteiro(a: str, b: str) -> list[str]:
                      f"--distancia '{DISTANCIAS[2]}' --a {x} --b {y} --segundos {SEGUNDOS_DA_FASE_3:g} "
                      f"--saida <sessão>.jsonl --medir")
     saida.append(f"Depois: {script} resumo <sessão>.jsonl; e, para a régua, copie a sessão (sem "
-                 f"endereço) para tests/fixtures/{INSTRUMENTO}/bancada.json.")
+                 f"endereço) para tests/fixtures/{INSTRUMENTO}/medido.json.")
     return saida
 
 

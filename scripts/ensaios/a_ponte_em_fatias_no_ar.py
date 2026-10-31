@@ -45,7 +45,7 @@ USO
 ---
     a_ponte_em_fatias_no_ar.py medir --adaptador 1 --rotulo "porta direta" --saida x.jsonl --medir
     a_ponte_em_fatias_no_ar.py resumo x.jsonl [--md]
-    a_ponte_em_fatias_no_ar.py gravar x.jsonl     # a tabela vira tests/fixtures/.../bancada.json
+    a_ponte_em_fatias_no_ar.py gravar x.jsonl     # a tabela vira tests/fixtures/.../medido.json
     a_ponte_em_fatias_no_ar.py conferir           # a constante, o CSV e o desenho seguem a tabela
 
 Gravada a tabela, o ``FATIAS_DA_PONTE``, a procedência da linha do ``k`` no
@@ -102,7 +102,7 @@ SINAIS_TENTADOS: tuple[float | None, ...] = (None, -60.0, -40.0, -20.0)
 ESPERA_DA_PONTE_S = 4.0
 FRACAO_DE_PE = 0.9
 
-TABELA_GRAVADA = _RAIZ / "tests" / "fixtures" / "a_ponte_em_fatias_no_ar" / "bancada.json"
+TABELA_GRAVADA = _RAIZ / "tests" / "fixtures" / "a_ponte_em_fatias_no_ar" / "medido.json"
 ORCAMENTO = _RAIZ / "docs" / "data" / "orcamento-de-ar.csv"
 DESENHO = _RAIZ / "mockup" / "mapa-do-radio.html"
 CONSUMIDOR_DO_K = "fatias por relatório de ponte (k)"

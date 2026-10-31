@@ -378,7 +378,7 @@ def main() -> int:
             return 1
 
     if j.voltas == 0 and not args.sem_ponte:
-        print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
+        print("ERRO: o ensaio não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1
     return 0
 

@@ -341,7 +341,7 @@ def test_o_controle_sem_hid_vira_aviso_com_o_gesto() -> None:
     )
     linhas = [linha for linha in saida.splitlines() if "sem o HID" in linha]
     assert linhas, f"o controle parado não foi dito:\n{saida}"
-    assert linhas[0].startswith("WARN Entrada 4.1.3 (3-4.1.3): o controle está nela"), linhas[0]
+    assert linhas[0].startswith("WARN Entrada 4.1.3 (3-4.1.3): o controle está ali"), linhas[0]
     assert "O Hefesto tenta religá-lo sozinho a cada 2 minutos" in linhas[0], linhas[0]
     assert "tire e ponha o cabo desse controle" in linhas[0], linhas[0]
 
@@ -373,7 +373,7 @@ def test_o_controle_com_hid_nao_vira_aviso() -> None:
         ]
     )
     assert "sem o HID" not in saida, saida
-    assert "desistiu dela" not in saida, saida
+    assert "desistiu da entrada" not in saida, saida
 
 
 def test_a_entrada_largada_vira_aviso_com_o_gesto() -> None:
@@ -385,7 +385,7 @@ def test_a_entrada_largada_vira_aviso_com_o_gesto() -> None:
             _linha(1, "usb 3-9-port9: unable to enumerate USB device"),
         ]
     )
-    linhas = [linha for linha in saida.splitlines() if "desistiu dela" in linha]
+    linhas = [linha for linha in saida.splitlines() if "desistiu da entrada" in linha]
     assert linhas, f"a entrada largada não foi dita:\n{saida}"
-    assert linhas[0].startswith("WARN Entrada 9.9 (3-9.9): o kernel desistiu dela"), linhas[0]
+    assert linhas[0].startswith("WARN Entrada 9.9 (3-9.9): o kernel desistiu da entrada"), linhas[0]
     assert "tire e ponha" in linhas[0], linhas[0]

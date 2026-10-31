@@ -250,7 +250,7 @@ else:
                     "resultado": resultado.strip(),
                     "resultado_da_feature": feature,
                     "observado_por": quem,
-                    "fonte": "bancada",
+                    "fonte": "ensaio do mapa",
                     "nota": nota.strip(),
                     "linha_id_v1": "",
                 }
