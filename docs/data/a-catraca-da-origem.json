@@ -240,14 +240,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1171852,
+      "piso": 1171876,
       "por_item": {
         "docs": 107802,
         "scripts": 109592,
         "src": 295967,
-        "tests": 658491
+        "tests": 658515
       },
-      "razao": "tamanho: +264 linhas (1171588 -> 1171852), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo e2ac16d4659b",
+      "razao": "tamanho: +24 linhas (1171852 -> 1171876), pagas por Origem: D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO; registrado no fecho, topo 3461519137d7",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1238,6 +1238,12 @@
           "de": 1171588,
           "para": 1171852,
           "razao": "tamanho: +264 linhas (1171588 -> 1171852), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo e2ac16d4659b"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1171852,
+          "para": 1171876,
+          "razao": "tamanho: +24 linhas (1171852 -> 1171876), pagas por Origem: D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO; registrado no fecho, topo 3461519137d7"
         }
       ],
       "unidade": "linhas",
