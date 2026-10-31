@@ -25,4 +25,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **31/10/2026** — o cabeçalho do controle perde o vão da linha do giroscópio (a frase da máscara Xbox 360, na linha e na dica). Até publicar, o produto ainda tem o vão, que fica vazio: o pacote parou de escrever nele.
 
 ## 09-sistema.html
-- **31/10/2026** — a linha «Nenhum controle no cabo» do Status perde a dica que explicava o transporte («não há som nem vibração para rotear»): a dica é a própria linha.
+- **31/10/2026** — a linha «Nenhum controle no cabo» do Status perde a dica que explicava o transporte («não há som nem vibração para rotear»): a dica é a própria linha. Até publicar, o produto ainda abre a dica velha nessa linha: a página publicada a traz fixa, e o pacote não a reescreve.
