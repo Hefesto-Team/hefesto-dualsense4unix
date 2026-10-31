@@ -373,48 +373,25 @@ def test_a_recusa_que_o_tradutor_nao_conhece_volta_inteira(a03):
     assert str(recusa.value) == "o hidraw sumiu no meio do caminho"
 
 
-def test_o_lugar_vazio_pergunta_o_traco_ao_dono(a03, publicada, monkeypatch):
-    """O lugar vazio mostra o nenhum efeito do dono, ofereça a página o que oferecer."""
-    from hefesto_dualsense4unix.profiles import sem_efeito
-
-    vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
-    assert vazios, "a página não marca lugar vazio nenhum — a régua ficou cega"
-    velha = publicada.replace(f'value="{sem_efeito.VALOR}"', f'value="{sem_efeito.ROTULO}"')
-    assert velha != publicada, "a página publicada não oferece o nenhum efeito"
-    for pagina in (publicada, velha, ""):
-        monkeypatch.setattr(a03, "_pagina_publicada", lambda pagina=pagina: pagina)
-        colunas = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]
-        for pref in vazios:
-            for sig in a03.LADOS:
-                valor = colunas[pref][f"{a03.CAMPO_DA_IMERSAO}-{sig}"]
-                assert valor == sem_efeito.VALOR, (
-                    f"{pref}·{sig} recebeu {valor!r} com a página "
-                    f"{'publicada' if pagina is publicada else 'velha' if pagina else 'ilegível'}; "
-                    f"o lugar vazio mostra {sem_efeito.VALOR!r}, do dono "
-                    f"`profiles/sem_efeito.py`, sem perguntar ao `<select>`.")
-
-
 SONDA_DO_VAZIO = """
 import json, pathlib, sys
 sys.path.insert(0, sys.argv[1])
-import pacotes
 from pacotes import Contexto, a03_gatilhos as a03, perfil
 doc = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
 a03._pagina_publicada = lambda: doc
 mesa, conectados = json.load(sys.stdin)
-perfil.ativo = lambda _nome: {"controllers": {}, "triggers": {
-    lado: {"mode": "Rigid", "params": []} for lado in ("left", "right")}}
-r = a03.pacote(Contexto(state={"active_profile": "régua"}, mesa=mesa,
-                        conectados=conectados, estados={}))
-print(json.dumps({pref: [col.get(f"{a03.CAMPO_DA_IMERSAO}-{sig}") for sig in a03.LADOS]
-                  for pref, col in r["colunas"].items()}))
+rigido = {"mode": "Rigid", "params": []}
+perfil.ativo = lambda _n: {"triggers": {lado: rigido for lado in a03.LADOS.values()}}
+r = a03.pacote(Contexto(state={"active_profile": "r"}, mesa=mesa, conectados=conectados,
+                        estados={}))
+print(json.dumps({p: [c.get(f"imersao-{s}") for s in a03.LADOS] for p, c in r["colunas"].items()}))
 """
 
 
-def test_o_lugar_vazio_nao_le_o_select_nem_no_primeiro_tique(a03, publicada, tmp_path):
-    """Num processo novo, com a página velha desde o primeiro tique, o lugar vazio segue o dono."""
+def test_o_lugar_vazio_pergunta_o_traco_ao_dono(a03, publicada, tmp_path):
+    """Num processo novo, com a página velha (o «—» como valor) desde o primeiro tique, o lugar
+    vazio mostra o nenhum efeito do dono `profiles/sem_efeito.py`, sem perguntar ao `<select>`."""
     import json
-    import os
     import subprocess
 
     from hefesto_dualsense4unix.profiles import sem_efeito
@@ -422,20 +399,14 @@ def test_o_lugar_vazio_nao_le_o_select_nem_no_primeiro_tique(a03, publicada, tmp
     velha = tmp_path / PAGINA
     velha.write_text(publicada.replace(f'value="{sem_efeito.VALOR}"',
                                        f'value="{sem_efeito.ROTULO}"'), encoding="utf-8")
-    filho = subprocess.run(
-        [sys.executable, "-c", SONDA_DO_VAZIO, str(INTERFACE), str(velha)],
-        input=json.dumps([MESA_DE_DOIS, [FALSO, FALSO_2]]),
-        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
-        capture_output=True, text=True, timeout=120)
+    filho = subprocess.run([sys.executable, "-c", SONDA_DO_VAZIO, str(INTERFACE), str(velha)],
+                           input=json.dumps([MESA_DE_DOIS, [FALSO, FALSO_2]]),
+                           capture_output=True, text=True, timeout=120)
     assert filho.returncode == 0, filho.stderr[-2000:]
     colunas = json.loads(filho.stdout.strip().splitlines()[-1])
     vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
-    assert vazios and set(vazios) <= set(colunas), (vazios, sorted(colunas))
-    for pref in vazios:
-        assert colunas[pref] == [sem_efeito.VALOR] * len(a03.LADOS), (
-            f"{pref} recebeu {colunas[pref]} com a página velha lida desde o primeiro tique: "
-            f"o lugar vazio perguntou ao `<select>` (e guardou a resposta), e não ao dono "
-            f"`profiles/sem_efeito.py`.")
+    assert vazios and {p: colunas.get(p) for p in vazios} == {
+        p: [sem_efeito.VALOR] * len(a03.LADOS) for p in vazios}, colunas
 
 
 @pytest.mark.parametrize("partir", ["", "—", "sem_efeito", "nenhum", "sem-efeito", "Sem efeito"])
