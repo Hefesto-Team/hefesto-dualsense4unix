@@ -183,6 +183,26 @@ def _listas_sem_a_roupa(roupa: int) -> tuple[str, str]:
     return valor_ignore_devices(ignore), valor_disable_hidraw(disable)
 
 
+PAR_DA_MASCARA: dict[str, tuple[int, int]] = {
+    "xbox": (0x045E, 0x028E),
+    "nintendo": (0x057E, 0x2009),
+}
+
+
+def _com_os_de_fora(
+    ignore: str, externos: Sequence[tuple[int, int]], vestido: tuple[int, int]
+) -> str:
+    """O IGNORE com os pares dos controles de fora, menos o par que o pad veste.
+
+    O broker esconde o hidraw do controle de fora sentado, mas o nó evdev agarrado segue
+    visível ao SDL como um controle morto (`CoopManager.pares_de_fora_escondidos`).
+    """
+    extra = valor_ignore_devices(p for p in externos if p != vestido)
+    if not extra:
+        return ignore
+    return ",".join(v for v in (ignore, extra) if v)
+
+
 WRAPPER_MARKER_WINDOW_SEC = 900.0
 
 LAUNCH_ARM_WINDOW_SEC = 60.0
@@ -1359,6 +1379,7 @@ def compose_env(
     backends: Sequence[str],
     fisicos: int = 0,
     roupa: int = ROUPA_PADRAO,
+    externos: Sequence[tuple[int, int]] = (),
 ) -> dict[str, str]:
     """Envs de launch para UM estado do daemon. Pura e testável.
 
@@ -1403,13 +1424,17 @@ def compose_env(
             env["SDL_JOYSTICK_HIDAPI"] = "0"
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
             if tem_cobertura:
-                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _com_os_de_fora(
+                    _IGNORE_VALUE, externos, PAR_DA_MASCARA[flavor]
+                )
         elif flavor == "dualsense":
             ignore, disable = _listas_sem_a_roupa(roupa)
             if disable:
                 env["PROTON_DISABLE_HIDRAW"] = disable
             if tem_cobertura:
-                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = ignore
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _com_os_de_fora(
+                    ignore, externos, (VENDOR_SONY, roupa_normalizada(roupa))
+                )
         if not tem_cobertura:
             logger.info(
                 "launch_env_ignore_omitido_sem_cobertura",
@@ -1481,12 +1506,35 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
             vpad = getattr(player, "vpad", None)
             if vpad is not None:
                 backends.append(str(getattr(vpad, "backend", "") or ""))
-    return native, enabled, flavor, backends, _fisicos_na_mesa(daemon)
+    fisicos = _fisicos_na_mesa(daemon)
+    if fisicos > 0:
+        fisicos += _de_fora(daemon, "externos_sentados", 0)
+    return native, enabled, flavor, backends, fisicos
+
+
+def _de_fora(daemon: Any, pergunta: str, vazio: Any) -> Any:
+    coop = getattr(daemon, "_coop_manager", None)
+    metodo = getattr(coop, pergunta, None)
+    if not callable(metodo):
+        return vazio
+    try:
+        return metodo()
+    except Exception:
+        logger.debug("launch_env_de_fora_indisponivel", pergunta=pergunta, exc_info=True)
+        return vazio
+
+
+def _pares_de_fora(daemon: Any) -> tuple[tuple[int, int], ...]:
+    """Os pares dos controles de fora que o jogo pode deixar de ver (vazio sem co-op)."""
+    pares = _de_fora(daemon, "pares_de_fora_escondidos", ())
+    return tuple(p for p in pares if _par_vidpid(p) is not None) if isinstance(pares, tuple) else ()
 
 
 SeloDosPerfis = tuple[tuple[str, int, int], ...]
 
-AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int, bool, SeloDosPerfis]
+AssinaturaDaMesa = tuple[
+    bool, bool, str, tuple[str, ...], int, bool, SeloDosPerfis, tuple[tuple[int, int], ...]
+]
 
 
 def _o_freestyle_na_assinatura(daemon: Any) -> bool:
@@ -1533,7 +1581,7 @@ def a_assinatura(
     """A forma única da assinatura: o vigia e o recibo da foto leem a MESMA conta."""
     return (
         native, enabled, flavor, tuple(backends), fisicos,
-        _o_freestyle_na_assinatura(daemon), selo_dos_perfis(),
+        _o_freestyle_na_assinatura(daemon), selo_dos_perfis(), _pares_de_fora(daemon),
     )
 
 
@@ -1836,7 +1884,9 @@ def _env_for_profile(
     return env_do_modo(modo), modo.motivo
 
 
-def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
+def env_do_modo(
+    modo: ModoAntecipado, *, externos: Sequence[tuple[int, int]] = ()
+) -> dict[str, str]:
     """A `env` que materializa um `ModoAntecipado`."""
     return compose_env(
         native_mode=modo.native,
@@ -1845,6 +1895,7 @@ def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
         backends=list(modo.backends),
         fisicos=modo.fisicos,
         roupa=modo.roupa,
+        externos=externos,
     )
 
 
@@ -2217,7 +2268,7 @@ def _o_ambiente_padrao(foto: _FotoDoLancamento) -> tuple[dict[str, str], str]:
     """O `default.env` da foto e a linha `estado:` dele."""
     padrao = _o_modo_padrao(foto)
     estado = padrao.como_estado()
-    default_env = env_do_modo(padrao)
+    default_env = env_do_modo(padrao, externos=foto.externos)
     if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
         arriscados = _nativos_fora_da_antecipacao(_load_profiles(foto.leitor))
         if arriscados:
@@ -2251,7 +2302,9 @@ def _o_modo_do_jogo(
 
 def _o_ambiente_do_comum(foto: _FotoDoLancamento, default_env: dict[str, str]) -> dict[str, str]:
     """O ambiente do jogo sem perfil cujo pad veste o comum."""
-    do_comum = env_do_modo(replace(_o_modo_padrao(foto), roupa=ROUPA_COMUM))
+    do_comum = env_do_modo(
+        replace(_o_modo_padrao(foto), roupa=ROUPA_COMUM), externos=foto.externos
+    )
     if "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in default_env:
         do_comum.pop("SDL_GAMECONTROLLER_IGNORE_DEVICES", None)
     return do_comum
@@ -2334,7 +2387,8 @@ def o_ambiente_do_jogo(
         if divergencia is not None:
             do_perfil += f" divergente={divergencia}"
         return AmbienteDoJogo(
-            env_do_modo(modo), dict(receita), f"{do_perfil} | vivo: {estado}",
+            env_do_modo(modo, externos=foto.externos), dict(receita),
+            f"{do_perfil} | vivo: {estado}",
             vestida, modo, divergencia,
         )
     vestida = roupa() if freestyle is None and _o_modo_padrao(foto).veste_roupa else None
@@ -2492,6 +2546,7 @@ class _FotoDoLancamento:
     modos_do_arme: Mapping[int, Any] = field(default_factory=dict)
     roupas_do_arme: Mapping[int, int] = field(default_factory=dict)
     modo_do_computador: ModoAntecipado | None = None
+    externos: tuple[tuple[int, int], ...] = ()
 
 
 def _o_dono_esconde(daemon: Any) -> bool:
@@ -2557,6 +2612,7 @@ def _foto_do_lancamento(
         modos_do_arme=_os_modos_dos_armes(daemon),
         roupas_do_arme=_as_roupas_dos_armes(daemon),
         modo_do_computador=modo_do_computador(daemon, modo_vivo=modo_vivo, fisicos=fisicos),
+        externos=recibo[7],
     )
 
 

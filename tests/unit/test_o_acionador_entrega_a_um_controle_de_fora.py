@@ -40,6 +40,7 @@ OITO = "aabbcc000004"
 
 NO_DO_PRO = "/dev/input/event31"
 HIDRAW_DO_PRO = "/dev/hidraw9"
+PAR_DO_PRO = (0x057E, 0x2009)
 
 
 class _DevComFF:
@@ -152,7 +153,9 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         lambda: {P1: "/dev/input/event20", P2: "/dev/input/event22"},
     )
     monkeypatch.setattr(
-        coop_mod, "externos_que_ganham_virtual", lambda: {PRO: (NO_DO_PRO, HIDRAW_DO_PRO)}
+        coop_mod,
+        "externos_que_ganham_virtual",
+        lambda: {PRO: (NO_DO_PRO, HIDRAW_DO_PRO, PAR_DO_PRO)},
     )
 
     def _nasce(_flavor: Any, *, identity: str | None = None, **kw: Any) -> _Vpad:
@@ -271,9 +274,21 @@ def test_so_o_pro_e_o_8bitdo_ganham_virtual() -> None:
     ]
 
     assert coop_mod.os_que_ganham_virtual(vistos) == {
-        PRO: (NO_DO_PRO, HIDRAW_DO_PRO),
-        OITO: ("/dev/input/event32", "/dev/hidraw10"),
+        PRO: (NO_DO_PRO, HIDRAW_DO_PRO, None),
+        OITO: ("/dev/input/event32", "/dev/hidraw10", (0x2DC8, 0x6001)),
     }
+
+
+def test_o_par_que_um_nativo_divide_nao_se_esconde() -> None:
+    """O clone de endereço sintético segue nativo: esconder o 057e:2009 sumiria com ele."""
+    sozinho = [_descoberto(PRO, "057e", "2009", "Pro Controller", NO_DO_PRO, HIDRAW_DO_PRO)]
+    assert coop_mod.os_que_ganham_virtual(sozinho)[PRO][2] == PAR_DO_PRO
+
+    com_o_clone = [
+        *sozinho,
+        _descoberto("dev:0005:057E:2009.0001", "057e", "2009", "Pro", "/dev/input/event35", None),
+    ]
+    assert coop_mod.os_que_ganham_virtual(com_o_clone)[PRO][2] is None
 
 
 def test_o_motor_vibra_o_no_que_o_leitor_tem_aberto() -> None:
@@ -292,3 +307,92 @@ def test_o_motor_vibra_o_no_que_o_leitor_tem_aberto() -> None:
 
     leitor._active_dev = None
     assert not motor.vibrar(10, 10)
+
+
+def _ignore(env: dict[str, str]) -> set[str]:
+    return set(filter(None, env.get("SDL_GAMECONTROLLER_IGNORE_DEVICES", "").split(",")))
+
+
+def test_o_pro_sentado_sai_da_vista_do_jogo_pelo_ignore(mesa: list[str]) -> None:
+    """O broker esconde o hidraw; o nó evdev agarrado sairia no SDL como um Pro morto."""
+    from hefesto_dualsense4unix.daemon import launch_env as le
+
+    mgr = _mesa_de_pe(_Broker())
+    assert mgr.pares_de_fora_escondidos() == (PAR_DO_PRO,)
+
+    env = le.compose_env(
+        native_mode=False, emulation_enabled=True, flavor="dualsense",
+        backends=["uhid", "uhid", "uhid"], fisicos=3, externos=mgr.pares_de_fora_escondidos(),
+    )
+    assert "0x057e/0x2009" in _ignore(env)
+    assert "0x054c/0x0ce6" in _ignore(env)
+    assert "0x057E" not in env.get("PROTON_DISABLE_HIDRAW", "")
+
+
+def test_o_par_que_a_mascara_veste_fica_de_fora_do_ignore() -> None:
+    """Na máscara Nintendo o pad virtual veste o par do Pro: escondê-lo sumiria com o pad."""
+    from hefesto_dualsense4unix.daemon import launch_env as le
+
+    oito = (0x2DC8, 0x6001)
+    nintendo = le.compose_env(
+        native_mode=False, emulation_enabled=True, flavor="nintendo",
+        backends=["uinput", "uinput"], fisicos=2, externos=(PAR_DO_PRO, oito),
+    )
+    assert "0x057e/0x2009" not in _ignore(nintendo)
+    assert "0x2dc8/0x6001" in _ignore(nintendo)
+
+    xbox = le.compose_env(
+        native_mode=False, emulation_enabled=True, flavor="xbox",
+        backends=["uinput", "uinput"], fisicos=2, externos=(PAR_DO_PRO, (0x045E, 0x028E)),
+    )
+    assert "0x057e/0x2009" in _ignore(xbox)
+    assert "0x045e/0x028e" not in _ignore(xbox)
+
+    nativo = le.compose_env(
+        native_mode=True, emulation_enabled=True, flavor="dualsense",
+        backends=["uhid"], fisicos=1, externos=(PAR_DO_PRO,),
+    )
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in nativo
+
+
+def test_o_par_da_mascara_e_o_que_o_pad_veste() -> None:
+    from hefesto_dualsense4unix.daemon.launch_env import PAR_DA_MASCARA
+    from hefesto_dualsense4unix.integrations import uinput_gamepad as ug
+
+    assert PAR_DA_MASCARA == {
+        "xbox": (ug.XBOX360_VENDOR, ug.XBOX360_PRODUCT),
+        "nintendo": (ug.NINTENDO_VENDOR, ug.NINTENDO_PROCON_PRODUCT),
+    }
+
+
+def test_o_pro_sem_pad_ou_com_pad_que_veste_o_par_nao_se_esconde(mesa: list[str]) -> None:
+    mgr = _mesa_de_pe(_Broker())
+    vpad = mgr._players[PRO].vpad
+
+    mgr._players[PRO].vpad = None
+    assert mgr.pares_de_fora_escondidos() == ()
+
+    mgr._players[PRO].vpad = vpad
+    vpad.flavor = "nintendo"
+    assert mgr.pares_de_fora_escondidos() == ()
+
+    vpad.flavor = "dualsense"
+    assert mgr.pares_de_fora_escondidos() == (PAR_DO_PRO,)
+
+
+def test_o_pro_conta_como_fisico_e_o_par_vai_na_assinatura(mesa: list[str]) -> None:
+    """O pad do Pro não cobre um DualSense: o Pro conta na mesa, e a troca dele rematerializa."""
+    from hefesto_dualsense4unix.daemon import launch_env as le
+
+    mgr = _mesa_de_pe(_Broker())
+    daemon = mgr._daemon
+    daemon._coop_manager = mgr
+    daemon.controller.describe_controllers = lambda: [
+        {"connected": True}, {"connected": True}
+    ]
+
+    assert le._snapshot(daemon)[4] == 3
+    assert le._pares_de_fora(daemon) == (PAR_DO_PRO,)
+
+    daemon.controller.describe_controllers = lambda: []
+    assert le._snapshot(daemon)[4] == 0

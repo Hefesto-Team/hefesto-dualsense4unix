@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+EntradaDeFora = tuple[str, str | None, tuple[int, int] | None]
+
 _CALIB_PRAZO_S = 2.0
 
 ESPERA_PELA_ORDEM_S = 4.0
@@ -173,6 +175,7 @@ class CoopManager:
         self._p1_espera_o_jogo = False
         self._esconderijo: dict[str, bool | None] = {}
         self._hidraw_dos_externos: dict[str, str] = {}
+        self._pares_de_fora: dict[str, tuple[int, int] | None] = {}
 
     def should_be_active(self) -> bool:
         """True se o co-op deve estar ativo agora (flag + gamepad + 2+ controles)."""
@@ -902,13 +905,14 @@ class CoopManager:
         return fallback
 
     def _externos_escondidos(
-        self, externos: Mapping[str, tuple[str, str | None]]
+        self, externos: Mapping[str, EntradaDeFora]
     ) -> dict[str, str]:
         """Identidade -> nó evdev de cada controle de fora cujo hidraw o broker já escondeu."""
         for chave in [c for c in self._esconderijo if c not in externos and c not in self._players]:
             self._soltar_o_esconderijo(chave)
+        self._pares_de_fora = {chave: entrada[2] for chave, entrada in externos.items()}
         prontos: dict[str, str] = {}
-        for chave, (no, hidraw) in externos.items():
+        for chave, (no, hidraw, _par) in externos.items():
             if chave not in self._esconderijo:
                 self._pedir_o_esconderijo(chave, hidraw)
             if self._esconderijo.get(chave):
@@ -963,6 +967,40 @@ class CoopManager:
 
         client = broker_client_for(self._daemon)
         broker_call_nonblocking(self._daemon, lambda: client.restore(hidraw))
+
+    def externos_sentados(self) -> int:
+        """Quantos controles de fora estão sentados na mesa, com ou sem o pad virtual."""
+        return sum(1 for p in self._players.values() if p.externo)
+
+    def pares_de_fora_escondidos(self) -> tuple[tuple[int, int], ...]:
+        """Os pares VID/PID dos controles de fora que o jogo pode deixar de ver pelo SDL.
+
+        Um par entra só quando todo controle de fora com ele está sentado com o pad
+        virtual vivo, e nenhum pad virtual da mesa veste o mesmo par.
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import PAR_DA_MASCARA
+
+        vestidos = {PAR_DA_MASCARA.get(f) for f in self._mascaras_vestidas()}
+        grupos: dict[tuple[int, int], list[str]] = {}
+        for chave, par in self._pares_de_fora.items():
+            if par is not None:
+                grupos.setdefault(par, []).append(chave)
+        return tuple(
+            sorted(
+                par
+                for par, chaves in grupos.items()
+                if par not in vestidos
+                and all(
+                    (p := self._players.get(c)) is not None and p.externo and p.vpad is not None
+                    for c in chaves
+                )
+            )
+        )
+
+    def _mascaras_vestidas(self) -> set[str]:
+        vpads = [getattr(self._daemon, "_gamepad_device", None)]
+        vpads += [p.vpad for p in self._players.values()]
+        return {str(getattr(v, "flavor", "") or "") for v in vpads if v is not None}
 
     def _e_externo(self, identity: str) -> bool:
         return bool(getattr(self._players.get(identity), "externo", False))
@@ -2978,32 +3016,51 @@ def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
         logger.debug("vpad_nascimento_nao_contado", err=str(exc))
 
 
-def externos_que_ganham_virtual() -> dict[str, tuple[str, str | None]]:
-    """Identidade -> (nó evdev, hidraw) de cada Pro Controller e 8BitDo na mesa."""
+def externos_que_ganham_virtual() -> dict[str, EntradaDeFora]:
+    """Identidade -> (nó evdev, hidraw, par VID/PID) de cada Pro Controller e 8BitDo na mesa."""
     from hefesto_dualsense4unix.core.evdev_reader import ESPECIE_EXTERNAL, discover_gamepads
 
     return os_que_ganham_virtual(discover_gamepads(especie=ESPECIE_EXTERNAL))
 
 
-def os_que_ganham_virtual(vistos: Iterable[Any]) -> dict[str, tuple[str, str | None]]:
+def os_que_ganham_virtual(vistos: Iterable[Any]) -> dict[str, EntradaDeFora]:
     """Dos controles de fora vistos, os que entram no co-op com pad virtual.
 
-    D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL: o Pro Controller e o 8BitDo entram como o
-    DualSense, com o pad virtual e a mesma cadeia (os acionadores, o perfil, o mapa posicional
-    do leitor). Só o que se identifica pelo endereço: o clone com o endereço sintético do
-    ``hid-nintendo`` não tem chave que sobreviva ao replug, e segue nativo.
+    D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL: o Pro Controller e o 8BitDo, só os que se
+    identificam pelo endereço (o clone de endereço sintético segue nativo). O par VID/PID vai
+    ``None`` quando um controle de fora que fica nativo tem o mesmo par: escondê-lo do SDL
+    sumiria com o nativo.
     """
     from hefesto_dualsense4unix.app.actions.external_controllers import ganha_controle_virtual
     from hefesto_dualsense4unix.core.evdev_reader import ESPECIE_EXTERNAL
 
-    return {
-        gp.identidade: (gp.evdev_path, gp.hidraw)
-        for gp in vistos
-        if gp.especie == ESPECIE_EXTERNAL
-        and len(gp.identidade) == 12
+    de_fora = [gp for gp in vistos if gp.especie == ESPECIE_EXTERNAL]
+    ganham = [
+        gp
+        for gp in de_fora
+        if len(gp.identidade) == 12
         and all(c in "0123456789abcdef" for c in gp.identidade)
         and ganha_controle_virtual(gp.como_entrada_de_inventario())
+    ]
+    nativos = {_par_do_visto(gp) for gp in de_fora if gp not in ganham}
+    return {
+        gp.identidade: (
+            gp.evdev_path,
+            gp.hidraw,
+            par if (par := _par_do_visto(gp)) not in nativos else None,
+        )
+        for gp in ganham
     }
+
+
+def _par_do_visto(gp: Any) -> tuple[int, int] | None:
+    try:
+        vid, pid = int(str(gp.vid), 16), int(str(gp.pid), 16)
+    except (TypeError, ValueError):
+        return None
+    if not (0 < vid <= 0xFFFF and 0 < pid <= 0xFFFF):
+        return None
+    return vid, pid
 
 
 def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
