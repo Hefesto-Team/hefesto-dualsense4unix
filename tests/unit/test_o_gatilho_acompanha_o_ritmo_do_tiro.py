@@ -299,6 +299,7 @@ def _apertar(daemon: Any, leitores: dict[str, Any], uniq: str, valor: int) -> No
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
 def test_cada_controle_tem_o_seu_ritmo(lugar: int, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(tv, "receita_ativa", lambda _d: _RITMO)
+    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
     daemon, backend, leitores = _mesa()
     motor = tv.TatoVivo(tv.atuadores_de_producao(daemon))
     daemon._tato_vivo = motor
@@ -319,7 +320,7 @@ def test_cada_controle_tem_o_seu_ritmo(lugar: int, monkeypatch: pytest.MonkeyPat
         t += 0.035
     do_alvo = [b for u, _l, b in backend.blocos if u == alvo]
     rajada = tv.bloco_do_gatilho(tv.GATILHO_RAJADA, _RITMO)
-    arma = tv.bloco_do_gatilho(tv.GATILHO_ARMA, _RITMO)
+    arma = tv.bloco_do_gatilho(tv.GATILHO_ARMA, _RITMO, "fps")
     assert do_alvo == [arma, rajada]
     for outro in QUATRO:
         if outro != alvo:

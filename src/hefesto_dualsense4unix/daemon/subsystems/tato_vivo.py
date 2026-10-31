@@ -15,7 +15,7 @@ import threading
 import time
 from array import array
 from collections import deque
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -269,7 +269,7 @@ REACAO_DA_LUZ_DO_ESTILO: dict[str, str] = {
 TOQUE_DE_SEMPRE_MS = 40
 TOQUE_MINIMO_MS = 25
 TOQUE_MAXIMO_MS = 60
-ESTILOS_DE_RAJADA = frozenset({"fps"})
+ESTILOS_DE_RAJADA = frozenset({"fps", "acao", "terror"})  # (noqa-acento)
 SOM_NO_CONTROLE_DO_ESTILO = False
 
 
@@ -1006,6 +1006,7 @@ _PRESET_DO_GATILHO = {
     GATILHO_RAJADA: "MultiPositionVibration",
 }
 _LADO_DO_BACKEND = {LADO_ESQUERDO: "left", LADO_DIREITO: "right"}
+ACIONAMENTOS_DE_ARMA = frozenset({"Weapon", "Machine"})
 
 
 def _padroes_do_modo(nome: str) -> dict[str, int]:
@@ -1029,12 +1030,60 @@ def _bloco_do_efeito(efeito: Any) -> bytes:
     return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
 
 
-def bloco_do_gatilho(modo: str, receita: Receita) -> bytes:
-    """O bloco cru de 11 bytes do preset da tela, no layout que o relatório leva."""
-    valores: dict[str, int] = {}
+def lados_da_arma(estilo: str | None) -> frozenset[str]:
+    """Os lados cujo acionamento do estilo é uma arma (Disparo ou Metralhadora): os do ritmo."""
+    if not estilo:
+        return frozenset()
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
+
+    chave = str(chave_do_catalogo(estilo))
+    return frozenset(
+        lado for lado in _LADO_DO_BACKEND
+        if _modo_de_hoje_do_estilo(chave, lado) in ACIONAMENTOS_DE_ARMA)
+
+
+def _lados_do_ritmo(estilo_de: Callable[[str], str | None] | None, uniq: str) -> Collection[str]:
+    """Onde o ritmo do tiro escreve neste controle; sem fonte de estilo, nos dois lados."""
+    return _LADO_DO_BACKEND.keys() if estilo_de is None else lados_da_arma(estilo_de(uniq))
+
+
+def arma_do_estilo(estilo: str | None, lado: str) -> tuple[str, dict[str, int]] | None:
+    """O acionamento e os números que o estilo põe num lado, como o perfil os guarda.
+
+    Com imersão no ``Lado``, os da imersão (com a variante do estilo); sem imersão, o lado do
+    acionamento do estilo leva os ``ajustes_do_gatilho`` da receita e o outro, os de partida.
+    """
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE, chave_do_catalogo
+
+    dele = POR_CHAVE.get(str(chave_do_catalogo(estilo))) if estilo else None
+    lado_do_estilo = getattr(dele, "l2" if lado == LADO_ESQUERDO else "r2", None)
+    if dele is None or lado_do_estilo is None:
+        return None
+    invisivel = dele.receita_invisivel
+    numeros: dict[str, int] = (
+        dict(invisivel.ajustes_do_gatilho)
+        if invisivel is not None and lado_do_estilo.modo == dele.gatilho else {})
+    imersao = POR_CHAVE_DE_IMERSAO.get(lado_do_estilo.imersao or "")
+    if imersao is not None:
+        numeros = ajustes_da_imersao(imersao, lado_do_estilo.modo, dele.chave) or numeros
+    return lado_do_estilo.modo, numeros
+
+
+def bloco_do_gatilho(
+    modo: str, receita: Receita, estilo: str | None = None, lado: str = LADO_DIREITO
+) -> bytes:
+    """O bloco cru de 11 bytes, no layout que o relatório leva.
+
+    A rajada é a vibração oficial na frequência da receita; a arma é a do lado do estilo, com
+    os números dele, e sem estilo a arma semi-automática da tela.
+    """
     if modo == GATILHO_RAJADA:
-        valores["frequency"] = receita.frequencia_da_rajada_hz
-    return _bloco_cru(_PRESET_DO_GATILHO[modo], valores)
+        return _bloco_cru(
+            _PRESET_DO_GATILHO[modo], {"frequency": receita.frequencia_da_rajada_hz})
+    do_estilo = arma_do_estilo(estilo, lado)
+    if do_estilo is not None:
+        return _bloco_cru(*do_estilo)
+    return _bloco_cru(_PRESET_DO_GATILHO[modo], {})
 
 
 def bloco_do_clique() -> bytes:
@@ -1045,7 +1094,11 @@ def bloco_do_clique() -> bytes:
 
 
 class AtuadorDoGatilho:
-    """Arma ou rajada, por lado e por controle, conforme o intervalo entre tiros."""
+    """Arma ou rajada, por controle, conforme o intervalo entre tiros.
+
+    Escreve só no lado em que o estilo daquele controle (``estilo_de``) tem uma arma, e a arma
+    sai com os números do estilo.
+    """
 
     canal = CANAL_GATILHO
 
@@ -1057,6 +1110,7 @@ class AtuadorDoGatilho:
         largar: Callable[[str], object] | None = None,
         cede: Callable[[str, str], bool] | None = None,
         soltar_lado: Callable[[str, str, bytes], object] | None = None,
+        estilo_de: Callable[[str], str | None] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
@@ -1064,6 +1118,7 @@ class AtuadorDoGatilho:
         self._largar = largar
         self._cede = cede
         self._soltar_lado = soltar_lado
+        self._estilo_de = estilo_de
         self._bloco_escrito: dict[tuple[str, str], bytes] = {}
         self._ultimo_tiro: dict[tuple[str, str], float] = {}
         self._desejado: dict[tuple[str, str], str] = {}
@@ -1076,6 +1131,8 @@ class AtuadorDoGatilho:
             lados = [evento.lado] if evento.lado in _LADO_DO_BACKEND else []
         elif evento.tipo == TIPO_RUMBLE and self.apertado is not None:
             lados = [lado for lado in _LADO_DO_BACKEND if self.apertado(evento.uniq, lado)]
+        do_ritmo = _lados_do_ritmo(self._estilo_de, evento.uniq)
+        lados = [lado for lado in lados if lado in do_ritmo]
         if self._cede is None:
             return lados
         return [lado for lado in lados if not self._cede(evento.uniq, lado)]
@@ -1097,7 +1154,7 @@ class AtuadorDoGatilho:
     def _a_trocar(self, uniq: str) -> list[str]:
         return [
             lado
-            for lado in _LADO_DO_BACKEND
+            for lado in _lados_do_ritmo(self._estilo_de, uniq)
             if (uniq, lado) in self._desejado
             and self._desejado[(uniq, lado)] != self._escrito.get((uniq, lado))
         ]
@@ -1121,7 +1178,8 @@ class AtuadorDoGatilho:
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
         for lado in self._a_trocar(evento.uniq):
             modo = self._desejado[(evento.uniq, lado)]
-            bloco = bloco_do_gatilho(modo, receita)
+            estilo = self._estilo_de(evento.uniq) if self._estilo_de is not None else None
+            bloco = bloco_do_gatilho(modo, receita, estilo, lado)
             self._escrever(evento.uniq, _LADO_DO_BACKEND[lado], bloco)
             self._escrito[(evento.uniq, lado)] = modo
             self._bloco_escrito[(evento.uniq, lado)] = bloco
@@ -1773,6 +1831,7 @@ class AtuadorDoDedo:
         cede: Callable[[str, str], bool] | None = None,
         soltar_lado: Callable[[str, str, bytes], object] | None = None,
         radio_cede: Callable[[str], bool] | None = None,
+        estilo_de: Callable[[str], str | None] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
@@ -1781,6 +1840,7 @@ class AtuadorDoDedo:
         self._cede = cede
         self._soltar_lado = soltar_lado
         self._radio_cede = radio_cede
+        self._estilo_de = estilo_de
         self._degrau: dict[tuple[str, str], int] = {}
         self._bloco: dict[tuple[str, str], bytes] = {}
         self._escreveu_em: dict[str, float] = {}
@@ -1829,21 +1889,25 @@ class AtuadorDoDedo:
                     else:
                         self.devolver(uniq, agora)
                 continue
-            if not receita.rumble_no_dedo or receita.gatilho_no_ritmo:
+            do_ritmo = (
+                _lados_do_ritmo(self._estilo_de, uniq) if receita.gatilho_no_ritmo else ())
+            if not receita.rumble_no_dedo or len(do_ritmo) == len(_LADO_DO_BACKEND):
                 if self.segura(uniq):
                     self.devolver(uniq, agora)
                 continue
-            escritas += self._tocar(motor, uniq, agora)
+            escritas += self._tocar(motor, uniq, agora, do_ritmo)
         return escritas
 
-    def _tocar(self, motor: TatoVivo, uniq: str, agora: float) -> int:
+    def _tocar(
+        self, motor: TatoVivo, uniq: str, agora: float, do_ritmo: Collection[str] = ()
+    ) -> int:
         par = self._par_vivo(motor, uniq, agora)
         degrau, nivel = degrau_do_rumble(*par), max(par)
         a_voltar: list[str] = []
         escritas = 0
         for lado, disco in _LADO_DO_BACKEND.items():
             chave = (uniq, lado)
-            quer = (degrau > 0 and self.apertado(uniq, lado)
+            quer = (degrau > 0 and self.apertado(uniq, lado) and lado not in do_ritmo
                     and not (self._cede is not None and self._cede(uniq, lado)))
             if not quer:
                 if chave in self._degrau:
@@ -2658,6 +2722,9 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         chave = chave_de(uniq)
         return chave is not None and bool(cede(chave))
 
+    def estilo_de(_uniq: str) -> str | None:
+        return estilo_ativo(daemon)
+
     def pintar(uniq: str, cor: tuple[int, int, int]) -> object:
         escrever = getattr(controller, "set_game_output_for", None)
         if not callable(escrever):
@@ -2685,6 +2752,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             lambda uniq: sessao.largar(uniq, CANAL_GATILHO),
             do_momento,
             soltar_lado,
+            estilo_de,
         ),
         AtuadorDosMomentos(
             momento,
@@ -2703,6 +2771,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             o_lado_tem_dono,
             soltar_lado,
             radio_cede,
+            estilo_de,
         ),
         corrida,
         AtuadorDaLuz(

@@ -33,7 +33,7 @@ class _Mesa:
         self,
         uniqs: tuple[str, ...] = (P1,),
         *,
-        estilo: str = _ACAO,
+        estilo: str = "luta",
         cede: Callable[[str, str], bool] | None = None,
         radio_cede: Callable[[str], bool] | None = None,
     ) -> None:
@@ -51,6 +51,7 @@ class _Mesa:
             cede,
             lambda u, disco, bloco: self.soltos_por_lado.append((u, disco, bloco)),
             radio_cede,
+            lambda _u: estilo,
         )
         self.motor = tv.TatoVivo([self.atuador])
         self.motor.ligado = True
