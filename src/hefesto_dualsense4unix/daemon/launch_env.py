@@ -63,8 +63,8 @@ import itertools
 import os
 import threading
 import time
-from collections.abc import Callable, Iterable, Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -912,12 +912,32 @@ def arm_launch_profile(
         return _armar_o_jogo(daemon, appid, epoch, base_dir)
 
 
+def _guardar_o_modo_do_arme(daemon: Any, appid: int, mode: Any) -> None:
+    """O modo que o arme impôs ao `appid` (None: nenhum); o ambiente dele sai deste modo."""
+    modos = getattr(daemon, "_modos_dos_armes", None)
+    if not isinstance(modos, dict):
+        modos = {}
+        with contextlib.suppress(Exception):
+            daemon._modos_dos_armes = modos
+    if mode is None:
+        modos.pop(int(appid), None)
+    else:
+        modos[int(appid)] = mode
+
+
+def _os_modos_dos_armes(daemon: Any) -> dict[int, Any]:
+    """Cópia dos modos que os armes desta sessão impuseram, por appid."""
+    modos = getattr(daemon, "_modos_dos_armes", None)
+    return dict(modos) if isinstance(modos, dict) else {}
+
+
 def _armar_o_jogo(
     daemon: DaemonProtocol, appid: int, epoch: int, base_dir: Path | None
 ) -> dict[str, Any] | None:
     """O resto do arme de `arm_launch_profile`: a roupa, o perfil, o modo e a trava do pad."""
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
+    _guardar_o_modo_do_arme(daemon, appid, None)
     if o_freestyle_manda(getattr(daemon, "store", None)):
         logger.info("launch_arm_pulado_freestyle_ligado", appid=appid)
         _vestir_para_o_jogo(daemon, appid, ROUPA_PADRAO)
@@ -1076,6 +1096,7 @@ def _armar_o_jogo(
         permite_uhid=_permite_uhid(daemon),
         fisicos=fisicos_pos,
         vpads_previstos=_vpads_previstos(daemon, fisicos_pos),
+        modo=mode,
     )
     divergencia = divergencia_de_mascara(
         modo_antecipado,
@@ -1092,6 +1113,8 @@ def _armar_o_jogo(
             mascara_viva=flavor_pos,
             motivo=divergencia,
         )
+    if not (veio_da_escada and divergencia is not None):
+        _guardar_o_modo_do_arme(daemon, appid, mode)
     materialize_launch_env(daemon)
     ponte_entregue = ponte_gravada if veio_do_carimbo else ponte_perfil
     if veio_da_escada and comeco.armar is not None:
@@ -1544,9 +1567,10 @@ def _modo_antecipado(
     fisicos: int = 0,
     identidade: str | None = None,
     vpads_previstos: int = 1,
+    modo: Any = None,
 ) -> ModoAntecipado | None:
-    """O `ModoAntecipado` do perfil, ou None quando ele não tem opinião."""
-    mode = getattr(profile, "mode", None)
+    """O `ModoAntecipado` do perfil (ou do `modo` que o arme decidiu), ou None sem opinião."""
+    mode = modo if modo is not None else getattr(profile, "mode", None)
     if mode is None:
         return None
     kind = getattr(mode, "kind", None)
@@ -1925,20 +1949,9 @@ def _a_parte_de_fora(
     target = launch_env_dir(ensure=True)
     native, enabled, flavor = foto.native, foto.enabled, foto.flavor
     backends = list(foto.backends)
-    fisicos = foto.fisicos
     leitor = foto.leitor
     modo_vivo = foto.modo_vivo
-    estado = modo_vivo.como_estado()
-    default_env = env_do_modo(modo_vivo)
-    if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
-        arriscados = _nativos_fora_da_antecipacao(_load_profiles(leitor))
-        if arriscados:
-            del default_env["SDL_GAMECONTROLLER_IGNORE_DEVICES"]
-            estado += " ignore_omitido=perfil_nativo_sem_appid"
-            logger.info(
-                "launch_env_ignore_omitido_por_perfil_nativo",
-                perfis=arriscados,
-            )
+    default_env, estado = _o_ambiente_padrao(foto)
     _write_atomic(target / "default.env", _render(default_env, estado))
     desired = {"default.env"}
     em_cena = foto.em_cena
@@ -1957,16 +1970,10 @@ def _a_parte_de_fora(
         return (ROUPA_COMUM, fonte) if fonte is not None else None
 
     for appid, do_jogo in _steam_profiles(leitor):
+        if f"steam_app_{appid}.env" in desired:
+            continue
         profile = freestyle if freestyle is not None else do_jogo
-        modo = _modo_antecipado(
-            profile,
-            flavor_atual=flavor,
-            backends=backends,
-            identidade=foto.identidade,
-            permite_uhid=foto.permite_uhid,
-            fisicos=fisicos,
-            vpads_previstos=foto.vpads_previstos,
-        )
+        modo = _o_modo_do_jogo(foto, appid, do_jogo, freestyle)
         if modo is None:
             continue
         roupa = roupa_do(appid, modo)
@@ -2008,9 +2015,7 @@ def _a_parte_de_fora(
         name = f"steam_app_{appid_do_comum}.env"
         if name in desired:
             continue
-        do_comum = env_do_modo(replace(modo_vivo, roupa=ROUPA_COMUM))
-        if "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in default_env:
-            do_comum.pop("SDL_GAMECONTROLLER_IGNORE_DEVICES", None)
+        do_comum = _o_ambiente_do_comum(foto, default_env)
         _write_atomic(
             target / name,
             _render(
@@ -2053,6 +2058,115 @@ def _a_parte_de_fora(
         foto_ms=round(foto.foto_ms, 1),
         fora_ms=round((time.perf_counter() - t0) * 1000, 1),
     )
+
+
+def _o_ambiente_padrao(foto: _FotoDoLancamento) -> tuple[dict[str, str], str]:
+    """O `default.env` da foto e a linha `estado:` dele."""
+    estado = foto.modo_vivo.como_estado()
+    default_env = env_do_modo(foto.modo_vivo)
+    if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
+        arriscados = _nativos_fora_da_antecipacao(_load_profiles(foto.leitor))
+        if arriscados:
+            del default_env["SDL_GAMECONTROLLER_IGNORE_DEVICES"]
+            estado += " ignore_omitido=perfil_nativo_sem_appid"
+            logger.info(
+                "launch_env_ignore_omitido_por_perfil_nativo",
+                perfis=arriscados,
+            )
+    return default_env, estado
+
+
+def _o_modo_do_jogo(
+    foto: _FotoDoLancamento, appid: int, do_jogo: Any, freestyle: Any | None
+) -> ModoAntecipado | None:
+    """O modo do arquivo do `appid`: o do Freestyle, o do último arme dele, ou o do perfil."""
+    return _modo_antecipado(
+        freestyle if freestyle is not None else do_jogo,
+        flavor_atual=foto.flavor,
+        backends=list(foto.backends),
+        identidade=foto.identidade,
+        permite_uhid=foto.permite_uhid,
+        fisicos=foto.fisicos,
+        vpads_previstos=foto.vpads_previstos,
+        modo=None if freestyle is not None else foto.modos_do_arme.get(int(appid)),
+    )
+
+
+def _o_ambiente_do_comum(foto: _FotoDoLancamento, default_env: dict[str, str]) -> dict[str, str]:
+    """O ambiente do jogo sem perfil cujo pad veste o comum."""
+    do_comum = env_do_modo(replace(foto.modo_vivo, roupa=ROUPA_COMUM))
+    if "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in default_env:
+        do_comum.pop("SDL_GAMECONTROLLER_IGNORE_DEVICES", None)
+    return do_comum
+
+
+def _o_pad_veste_o_comum(daemon: Any) -> bool:
+    """O pad de pé veste o `0ce6` agora (`gamepad.a_roupa_que_o_pad_veste`)."""
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import a_roupa_que_o_pad_veste
+
+        return roupa_normalizada(a_roupa_que_o_pad_veste(daemon)) == ROUPA_COMUM
+    except Exception:
+        logger.debug("launch_ambiente_roupa_indisponivel", exc_info=True)
+        return False
+
+
+def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]:
+    """Arma o lançamento do `appid` e devolve o ambiente dele, do estado armado, em memória.
+
+    O arquivo é escrito em fundo e pode chegar depois do `exec`; esta resposta é o que o
+    wrapper exporta quando o daemon atende. O modo vem da mesma conta do arquivo
+    (`_o_modo_do_jogo`), e a roupa, da que o pad veste depois do arme.
+    """
+    t0 = time.perf_counter()
+    appid = int(appid)
+    marker = read_last_run_marker()
+    armado: dict[str, Any] | None = None
+    if marker is not None and marker[0] == appid:
+        try:
+            armado = arm_launch_profile(daemon)
+        except Exception as exc:
+            logger.warning("launch_ambiente_arme_falhou", appid=appid, err=str(exc))
+    foto = _foto_do_lancamento(daemon, no_fio=False, com_as_vozes=False)
+    default_env, estado = _o_ambiente_padrao(foto)
+    freestyle = _o_freestyle_que_manda(daemon)
+    do_jogo = next((p for a, p in _steam_profiles(daemon) if a == appid), None)
+    modo = _o_modo_do_jogo(foto, appid, do_jogo, freestyle) if do_jogo is not None else None
+    if modo is not None:
+        if freestyle is None and modo.veste_roupa and _o_pad_veste_o_comum(daemon):
+            modo = replace(modo, roupa=ROUPA_COMUM)
+        env = env_do_modo(modo)
+        estado = f"{modo.motivo} | {modo.como_estado()} | vivo: {estado}"
+    elif freestyle is None and foto.modo_vivo.veste_roupa and _o_pad_veste_o_comum(daemon):
+        env = _o_ambiente_do_comum(foto, default_env)
+        estado = f"roupa do jogo | vivo: {estado}"
+    else:
+        env = default_env
+    linhas = [f"{chave}={valor}" for chave, valor in env.items() if chave in ENV_ALLOWLIST]
+    logger.info(
+        "launch_ambiente_entregue",
+        appid=appid,
+        armado=bool(isinstance(armado, dict) and armado.get("armado")),
+        estado=estado,
+        ms=round((time.perf_counter() - t0) * 1000, 1),
+    )
+    return {"appid": appid, "linhas": linhas, "estado": estado}
+
+
+def o_ambiente_no_status(daemon: DaemonProtocol | None, params: Any) -> dict[str, Any]:
+    """O bloco `ambiente` do `daemon.status` com o `appid`; `{}` sem pedido ou sem resposta."""
+    appid = params.get("appid") if isinstance(params, dict) else None
+    if appid is None:
+        return {}
+    if isinstance(appid, bool) or not isinstance(appid, int) or appid <= 0:
+        raise ValueError("daemon.status: 'appid' deve ser inteiro positivo")
+    if daemon is None:
+        return {}
+    try:
+        return {"ambiente": ambiente_do_lancamento(daemon, appid)}
+    except Exception as exc:
+        logger.warning("launch_ambiente_falhou", appid=appid, err=str(exc))
+        return {}
 
 
 def _receitas_dos_jogos() -> dict[str, dict[str, str]]:
@@ -2135,6 +2249,7 @@ class _FotoDoLancamento:
     foto_ms: float
     o_dono_esconde: Callable[[], bool] = lambda: False
     a_roupa_aqueceu: Callable[[], None] = lambda: None
+    modos_do_arme: Mapping[int, Any] = field(default_factory=dict)
 
 
 def _o_dono_esconde(daemon: Any) -> bool:
@@ -2149,7 +2264,9 @@ def _o_dono_esconde(daemon: Any) -> bool:
 _ORDEM_DAS_FOTOS = itertools.count(1)
 
 
-def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLancamento:
+def _foto_do_lancamento(
+    daemon: DaemonProtocol, *, no_fio: bool, com_as_vozes: bool = True
+) -> _FotoDoLancamento:
     """A foto do daemon vivo, com as vozes do diagnóstico que leem dele."""
     t0 = time.perf_counter()
     native, enabled, flavor, backends, fisicos = _snapshot(daemon)
@@ -2157,26 +2274,8 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         daemon, native=native, enabled=enabled, flavor=flavor,
         backends=backends, fisicos=fisicos,
     )
-    from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
-
-    dedup_ok, dedup_motivos = dedup_status(daemon)
-    if not dedup_ok and not native and enabled and backends:
-        logger.warning("dedup_broken", motivos=dedup_motivos, backends=backends)
-    _avisar_canal_sem_imu(daemon, native=native, enabled=enabled)
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import (
-        sem_dono_do_rumble,
-    )
-
-    if sem_dono_do_rumble(
-        native=native, backends=backends, emulacao=enabled
-    ):
-        logger.warning(
-            "rumble_sem_dono",
-            motivo="sem_vpad_e_sem_modo_nativo",
-            native=native,
-            emulacao=enabled,
-            backends=backends,
-        )
+    if com_as_vozes:
+        _as_vozes_do_diagnostico(daemon, native=native, enabled=enabled, backends=backends)
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
     freestyle_ligado = o_freestyle_manda(getattr(daemon, "store", None))
@@ -2213,7 +2312,34 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         foto_ms=(time.perf_counter() - t0) * 1000,
         o_dono_esconde=lambda: _o_dono_esconde(daemon),
         a_roupa_aqueceu=lambda: _a_roupa_aqueceu(daemon),
+        modos_do_arme=_os_modos_dos_armes(daemon),
     )
+
+
+def _as_vozes_do_diagnostico(
+    daemon: DaemonProtocol, *, native: bool, enabled: bool, backends: list[str]
+) -> None:
+    """O `dedup_broken`, o canal sem IMU e o rumble sem dono, ditos na foto da escrita."""
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
+
+    dedup_ok, dedup_motivos = dedup_status(daemon)
+    if not dedup_ok and not native and enabled and backends:
+        logger.warning("dedup_broken", motivos=dedup_motivos, backends=backends)
+    _avisar_canal_sem_imu(daemon, native=native, enabled=enabled)
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+        sem_dono_do_rumble,
+    )
+
+    if sem_dono_do_rumble(
+        native=native, backends=backends, emulacao=enabled
+    ):
+        logger.warning(
+            "rumble_sem_dono",
+            motivo="sem_vpad_e_sem_modo_nativo",
+            native=native,
+            emulacao=enabled,
+            backends=backends,
+        )
 
 
 class EscreventeDoLancamento:
@@ -2502,6 +2628,7 @@ __all__ = [
     "PAR_DUALSENSE_FISICO",
     "WRAPPER_MARKER_WINDOW_SEC",
     "ModoAntecipado",
+    "ambiente_do_lancamento",
     "appids_em_cena",
     "arm_launch_profile",
     "armar_rematerializacao",
@@ -2514,6 +2641,7 @@ __all__ = [
     "launch_session_appid",
     "materialize_launch_env",
     "modo_do_estado_vivo",
+    "o_ambiente_no_status",
     "pid_is_alive",
     "ponte_do_lancamento",
     "read_last_exit_marker",

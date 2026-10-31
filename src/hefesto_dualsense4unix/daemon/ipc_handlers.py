@@ -1465,7 +1465,7 @@ class IpcHandlersMixin:
 
 
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
-        self._agendar_arming_do_launch()
+        ambiente = self._agendar_arming_do_launch(params)
         snap = self.store.snapshot()
         controller = snap.controller
         return {
@@ -1484,7 +1484,7 @@ class IpcHandlersMixin:
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
             "keyboard_emulation": self._keyboard_emulation_payload(),
-            **self._window_detect_payload(),
+            **self._window_detect_payload(), **ambiente,
         }
 
     def _keyboard_emulation_payload(self) -> dict[str, Any]:
@@ -3079,23 +3079,23 @@ class IpcHandlersMixin:
             first_seen_epoch=first[1],
         )
 
-    def _agendar_arming_do_launch(self) -> None:
-        """Arma o modo do perfil quando o ping veio de um launch em curso."""
-        if self.daemon is None:
-            return
-        marker = self._wrapper_marker_cached()
-        if marker is None:
-            return
-        from hefesto_dualsense4unix.daemon.launch_env import LAUNCH_ARM_WINDOW_SEC
+    def _agendar_arming_do_launch(self, params: Any = None) -> dict[str, Any]:
+        """Arma o modo do perfil no ping de um launch; com o `appid`, devolve o ambiente dele."""
+        from hefesto_dualsense4unix.daemon import launch_env
 
-        if (time.time() - marker[1]) > LAUNCH_ARM_WINDOW_SEC:
-            return
+        ambiente = launch_env.o_ambiente_no_status(self.daemon, params)
+        if self.daemon is None:
+            return ambiente
+        marker = self._wrapper_marker_cached()
+        if marker is None or (time.time() - marker[1]) > launch_env.LAUNCH_ARM_WINDOW_SEC:
+            return ambiente
         if getattr(self.daemon, "_launch_armed_for", None) == marker:
-            return
+            return ambiente
         with contextlib.suppress(RuntimeError):
             tarefa = asyncio.get_running_loop().create_task(self._armar_launch())
             self._launch_arm_task = tarefa
             tarefa.add_done_callback(lambda _t: setattr(self, "_launch_arm_task", None))
+        return ambiente
 
     async def _armar_launch(self) -> None:
         """Corpo do arming agendado — best-effort, nunca derruba o loop."""
