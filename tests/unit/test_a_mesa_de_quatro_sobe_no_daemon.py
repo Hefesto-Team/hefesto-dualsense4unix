@@ -228,11 +228,14 @@ async def test_nenhum_no_da_mesa_nasce_sumidouro(mesa: dict[str, Any]) -> None:
         carregados = [
             " ".join(a) for a in mesa["mandados"] if "load-module" in " ".join(a)
         ]
-        sinks = [linha for linha in carregados if "module-null-sink" in linha]
+        nulos = [linha for linha in carregados if "module-null-sink" in linha]
+        sem_porta = [linha for linha in nulos if "sink_name=hefesto_haptica_" in linha]
+        sinks = [linha for linha in nulos if linha not in sem_porta]
         loopbacks = [linha for linha in carregados if "module-loopback" in linha]
         pontes = daemon._alto_falante_subsystem._pontes
 
         assert len(sinks) == 4, f"esperava quatro nós publicados: {sinks}"
+        assert len(sem_porta) == 4, f"esperava quatro nós de háptica sem porta: {sem_porta}"
         assert len(sinks) <= len(loopbacks) + len(pontes), (
             "algum `module-null-sink` foi publicado sem rota NENHUMA — nem "
             "loopback no cabo, nem ponte no rádio. É o sink que aceita o áudio "

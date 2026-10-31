@@ -16,6 +16,7 @@ from hefesto_dualsense4unix.daemon.subsystems import alto_falante, bt_mic
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as ele
+from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from tests.unit.test_os_quatro_microfones_ficam_no_ar import (
     MESA_DO_USUARIO,
     P1,
@@ -47,6 +48,16 @@ def _ninguem_roda_processo(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(subprocess, "run", _recusa)
     monkeypatch.setattr(subprocess, "Popen", _recusa)
+
+
+@pytest.fixture(autouse=True)
+def _o_no_de_haptica_nao_e_assunto(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O nó de háptica não sobe, como antes de TODAS-AS-FEATURES-VALEM-EM-TODO-MODO-LIGADO-01.
+
+    O assunto desta régua é o nó de som e a ponte que o lê; o nó de háptica de cada modo
+    tem a régua dele.
+    """
+    monkeypatch.setattr(eh.EndpointDeHaptica, "iniciar", lambda _self: False)
 
 
 def _controles(mesa: tuple[tuple[str, str], ...]) -> list[Any]:

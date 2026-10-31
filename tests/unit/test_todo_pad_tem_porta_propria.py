@@ -118,9 +118,10 @@ def test_nenhum_endpoint_fora_da_porta_do_proprio_pad(
 
 @pytest.mark.parametrize("uniq", _TODOS, ids=["p1-cabo", "p2-radio", "p3-cabo", "p4-radio"])
 def test_sem_porta_nenhum_endpoint_e_o_log_diz_por_que_uma_vez(mesa: Any, uniq: str) -> None:
-    """D-1410-TODO-PAD-TEM-PORTA-PROPRIA: sem porta, sem endpoint, e uma linha por motivo.
+    """D-1410-TODO-PAD-TEM-PORTA-PROPRIA: sem porta, sem o nó da Sony, e uma linha por motivo.
 
-    Vale para qualquer um dos quatro, no cabo ou no rádio.
+    Vale para qualquer um dos quatro, no cabo ou no rádio, com o nó sem porta de pé
+    (TODAS-AS-FEATURES-VALEM-EM-TODO-MODO-LIGADO-01).
     """
     controle = _chega(mesa, uniq)
     pad_usb.anotar_sem_porta(uniq, "sem_contrato:vhci_hcd")

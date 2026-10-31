@@ -86,7 +86,7 @@ class _Servidor:
             nome = next(a.split("=", 1)[1] for a in argv if a.startswith("sink_name="))
             props = next(a for a in argv if a.startswith("sink_properties="))
             caminho = next(
-                p.split("=", 1)[1] for p in props.split() if p.startswith("sysfs.path=")
+                (p.split("=", 1)[1] for p in props.split() if p.startswith("sysfs.path=")), ""
             )
             self._proximo += 1
             self.modulos[str(self._proximo)] = (nome, caminho)
@@ -286,13 +286,19 @@ def test_cada_no_nasce_no_gadget_do_seu_pad_na_ordem_dos_assentos(
 
 
 def test_sem_o_gadget_o_no_nao_nasce(mesa: _Mesa) -> None:
-    """TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026): até 14/10 ele nascia numa emprestada."""
+    """TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026): até 14/10 ele nascia numa emprestada.
+
+    Sem o gadget nasce só o nó sem porta, sem o nome da Sony
+    (TODAS-AS-FEATURES-VALEM-EM-TODO-MODO-LIGADO-01).
+    """
     uniqs = _U[:2]
     mesa.assentos = {_U[0]: 2, _U[1]: 1}
     mesa.gadget(_U[1])
     mesa.volta(uniqs, "bluetooth")
     assert mesa.ancora_de(_U[1]) == _interface_do_gadget(2)
-    assert mesa.servidor.cargas == [eh.nome_do_endpoint(_U[1])]
+    assert sorted(mesa.servidor.cargas) == sorted(
+        [eh.nome_do_endpoint(_U[1]), eh.nome_sem_porta(eh.marca_do_aparelho(_U[0]))]
+    )
 
 
 def _sai_e_volta(mesa: _Mesa, transporte: str) -> tuple[list[str], list[str]]:

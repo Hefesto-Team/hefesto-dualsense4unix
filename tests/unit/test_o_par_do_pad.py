@@ -431,10 +431,13 @@ def test_a_porta_que_chega_depois_faz_o_endpoint_nascer(
     controle = _chega(mesa, h._P1, "bt")
     mesa.volta(controle)
     assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P1)) == []
+    sem_porta = eh.nome_sem_porta(eh.marca_do_aparelho(h._P1))
+    (antes,) = [str(no["mid"]) for no in mesa.servidor.do_nome(sem_porta)]
     pad_usb.registrar_gadget(h._P1, _interface(1))
     mesa.volta(controle)
     assert h._ancora_do_aparelho(mesa.servidor, h._P1) == _interface(1)
-    assert mesa.servidor.quedas == []
+    assert mesa.servidor.do_nome(sem_porta) == []
+    assert mesa.servidor.quedas == [antes]
 
 
 def test_com_o_jogo_tocando_o_endpoint_da_porta_velha_fica(

@@ -163,6 +163,8 @@ MOLDE_DO_NOME = (
 )
 MARCA_DO_NOME = "HEFESTO"
 
+MOLDE_DO_NOME_SEM_PORTA = "hefesto_haptica_HEFESTO{marca}"
+
 MARCA_DO_ENSAIO = "hefesto.origem=ensaio"
 
 AGULHAS = (
@@ -194,6 +196,9 @@ class Ancora:
     nome: str = ""
 
 
+SEM_PORTA = Ancora(syspath="", declarado="")
+
+
 def ancora_do_gadget(uniq: str) -> Ancora | None:
     """A âncora do aparelho: a interface do gadget do pad dele, a ÚNICA que ele tem.
 
@@ -211,6 +216,17 @@ def ancora_da_interface(interface: str | None) -> Ancora | None:
     if not interface:
         return None
     return Ancora(syspath=os.path.dirname(interface), declarado=interface)
+
+
+def e_sem_porta(ancora: object) -> bool:
+    """O nó é o do aparelho sem porta USB própria: sem âncora, sem o nome da Sony.
+
+    TODAS-AS-FEATURES-VALEM-EM-TODO-MODO-LIGADO-01 (31/10/2026): o pad que não nasce no
+    gadget (o modo Xbox e o Nintendo vão ao ``uinput``; o gadget que não enumerou) ainda
+    tem a háptica fina, os efeitos e a ponte do rádio. O nó dele é só do Hefesto: nenhum
+    jogo o acha pelo nome nem o casa com HID nenhum, e o engasgo de 14/10 não volta.
+    """
+    return isinstance(ancora, Ancora) and not ancora.declarado
 
 
 def a_porta_e_dele(uniq: str, ancora: Ancora) -> bool:
@@ -289,6 +305,13 @@ def nome_da_marca(marca: str) -> str:
     return nome if len(nome) <= MAX_NOME else ""
 
 
+def nome_sem_porta(marca: str) -> str:
+    """O nome do nó do aparelho sem porta própria, ou "" quando a marca não tem a forma."""
+    if not nome_da_marca(marca):
+        return ""
+    return MOLDE_DO_NOME_SEM_PORTA.format(marca=marca)
+
+
 def nome_do_endpoint(uniq: str) -> str:
     """O nome do nó do controle ``uniq``, ou "" quando ele não dá identidade."""
     return nome_da_marca(marca_do_aparelho(uniq))
@@ -327,7 +350,7 @@ def propriedades_do_endpoint(uniq: str, ancora: Ancora, rotulo: str | None = Non
     rotulo = descricao_da_haptica(uniq) if rotulo is None else rotulo
     campos = (
         *campos_da_identidade(ancora.declarado),
-        *campos_do_nome(),
+        *(() if e_sem_porta(ancora) else campos_do_nome()),
         f"device.description='{rotulo}'",
         f"priority.session={PRIORIDADE_DA_SESSAO}",
         f"priority.driver={PRIORIDADE_DO_RELOGIO}",
@@ -428,6 +451,7 @@ def varrer_endpoints_orfaos(
     runner: Callable[[list[str]], str | None] | None = None,
     *,
     de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
+    sem_porta: Iterable[str] = (),
 ) -> list[str]:
     """Derruba todo endpoint desta casa que não é de um aparelho vivo.
 
@@ -450,7 +474,9 @@ def varrer_endpoints_orfaos(
     Devolve os ``module_id`` derrubados, para o log e para a régua.
     """
     chamar = runner or rodar_pactl
-    esperados = {nome_da_marca(marca) for marca in vivos} - {""}
+    esperados = (
+        {nome_da_marca(marca) for marca in vivos} | {nome_sem_porta(m) for m in sem_porta}
+    ) - {""}
     caidos: list[str] = []
     servidor = endpoints_de_pe(chamar) if de_pe is None else de_pe
     for nome, instancias in servidor.items():
@@ -495,7 +521,9 @@ class EndpointDeHaptica:
         self.uniq = str(uniq)
         self.marca = marca_do_aparelho(self.uniq)
         self.ancora = ancora
-        self.nome = nome_da_marca(self.marca)
+        self.nome = (
+            nome_sem_porta(self.marca) if e_sem_porta(ancora) else nome_da_marca(self.marca)
+        )
         self.canais = canais
         self.taxa_hz = taxa_hz
         self.runner = runner or rodar_pactl
@@ -544,7 +572,7 @@ class EndpointDeHaptica:
         if not self.nome:
             logger.info("haptica_endpoint_sem_identidade")
             return False
-        if not a_porta_e_dele(self.uniq, self.ancora):
+        if not e_sem_porta(self.ancora) and not a_porta_e_dele(self.uniq, self.ancora):
             logger.warning(
                 "haptica_endpoint_recusa_porta_alheia",
                 controle=self.marca,
@@ -1399,6 +1427,7 @@ __all__ = [
     "MARCA_DO_ENSAIO",
     "MARCA_DO_TOCADOR",
     "MOLDE_DO_NOME",
+    "MOLDE_DO_NOME_SEM_PORTA",
     "NOME_DA_HAPTICA_DO_CONTROLE",
     "ORDEM_DOS_NOS",
     "ORDEM_PELO_ASSENTO",
@@ -1408,6 +1437,7 @@ __all__ = [
     "PID_DUALSENSE",
     "PRIORIDADE_DO_RELOGIO",
     "QUADROS_POR_BLOCO",
+    "SEM_PORTA",
     "VID_SONY",
     "Ancora",
     "EndpointDeHaptica",
@@ -1420,6 +1450,7 @@ __all__ = [
     "bloco_da_haptica",
     "conferir_o_destino_do_tocador",
     "descricao_da_haptica",
+    "e_sem_porta",
     "endpoints_de_pe",
     "fluxos_nos_endpoints",
     "forma_do_toque",
@@ -1428,6 +1459,7 @@ __all__ = [
     "nasceu_com_o_relogio",
     "nome_da_marca",
     "nome_do_endpoint",
+    "nome_sem_porta",
     "ordem_dos_nos",
     "plano_da_ordem",
     "propriedades_do_endpoint",

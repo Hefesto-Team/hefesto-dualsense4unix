@@ -1874,14 +1874,12 @@ class AltoFalanteSubsystem:
         return False
 
     def _dizer_sem_porta_propria(self, marca: str, uniq: str) -> None:
-        """O aparelho sem a porta USB própria fica sem endpoint, e o log diz por quê.
+        """O aparelho sem a porta USB própria fica sem o nó da Sony, e o log diz por quê.
 
-        TODO-PAD-TEM-PORTA-PROPRIA-01 (14/10/2026): sem o gadget do pad dele
-        (faltou contrato, o broker recusou além das oito portas, o gadget não
-        enumerou), nenhum endpoint com o nome da Sony nasce para ele. A linha
-        sai na mudança do motivo, porque esta volta roda a cada
-        :data:`RECONCILIA_S`; o motivo é o que o pad anotou
-        (:func:`pad_usb.porque_sem_porta`). Nada vai para a tela.
+        Sem o gadget do pad (TODO-PAD-TEM-PORTA-PROPRIA-01), nenhum endpoint com o nome da
+        Sony nasce; fora do Modo Nativo nasce o nó sem porta, só do Hefesto
+        (TODAS-AS-FEATURES-VALEM-EM-TODO-MODO-LIGADO-01). A linha sai na mudança do motivo
+        (:func:`pad_usb.porque_sem_porta`), porque a volta roda a cada :data:`RECONCILIA_S`.
         """
         from hefesto_dualsense4unix.integrations.pad_usb import porque_sem_porta
 
@@ -1935,9 +1933,11 @@ class AltoFalanteSubsystem:
             o_microfone_esta_no_ar,
         )
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+            SEM_PORTA,
             EndpointDeHaptica,
             ancora_da_interface,
             ancora_do_gadget,
+            e_sem_porta,
             endpoints_de_pe_ou_nada,
             varrer_endpoints_orfaos,
         )
@@ -1982,8 +1982,14 @@ class AltoFalanteSubsystem:
                 m for m, u in de_pe_agora.items()
                 if m in self._endpoints or ancora_do_gadget(u) is not None
             ]
+            sem_porta = [
+                m for m in de_pe_agora
+                if e_sem_porta(getattr(self._endpoints.get(m), "ancora", None))
+            ]
             with contextlib.suppress(Exception):
-                caidos = set(varrer_endpoints_orfaos(com_porta, de_pe=de_pe))
+                caidos = set(
+                    varrer_endpoints_orfaos(com_porta, de_pe=de_pe, sem_porta=sem_porta)
+                )
                 de_pe = {
                     nome: [(m, c) for m, c in instancias if m not in caidos]
                     for nome, instancias in de_pe.items()
@@ -1997,11 +2003,21 @@ class AltoFalanteSubsystem:
             atual = self._endpoints.get(marca)
             if atual is not None:
                 propria = ancora_do_gadget(uniq)
-                if propria is not None and propria.syspath == atual.ancora.syspath:
+                sem_porta_atual = e_sem_porta(atual.ancora)
+                mesma = (
+                    propria is None and not self._o_jogo_manda_nos_motores()
+                    if sem_porta_atual
+                    else propria is not None and propria.syspath == atual.ancora.syspath
+                )
+                if mesma:
+                    if sem_porta_atual:
+                        self._dizer_sem_porta_propria(marca, uniq)
                     self._renovar_o_rotulo_da_haptica(atual)
                     continue
                 lido = {self._endpoint_da_ponte.get(u) for u in self._pontes}
-                if atual.nome in lido or sink_esta_tocando(atual.nome, na_duvida=True):
+                if not sem_porta_atual and (
+                    atual.nome in lido or sink_esta_tocando(atual.nome, na_duvida=True)
+                ):
                     continue
                 self._o_cabo().soltar(marca)
                 self._parar_o_tocador(marca)
@@ -2020,10 +2036,13 @@ class AltoFalanteSubsystem:
             if propria is None:
                 if espera:
                     logger.debug("haptica_endpoint_espera_o_gadget", controle=marca)
-                else:
-                    self._dizer_sem_porta_propria(marca, uniq)
-                continue
-            self._sem_porta.pop(marca, None)
+                    continue
+                self._dizer_sem_porta_propria(marca, uniq)
+                if self._o_jogo_manda_nos_motores():
+                    continue
+                propria = SEM_PORTA
+            else:
+                self._sem_porta.pop(marca, None)
             endpoint = EndpointDeHaptica(uniq=uniq, ancora=propria)
             if endpoint.iniciar():
                 self._endpoints[marca] = endpoint

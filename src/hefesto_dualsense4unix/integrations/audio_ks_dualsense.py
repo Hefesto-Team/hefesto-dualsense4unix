@@ -460,25 +460,45 @@ def _lembrando(
     return perguntar
 
 
+def e_o_endpoint_que_o_jogo_acha(nome: str, marca: str) -> bool:
+    """``nome`` é o endpoint com o nome da Sony do aparelho ``marca``, o que o jogo acha?"""
+    return bool(marca) and nome.startswith("alsa_output.") and f"_HEFESTO{marca}-" in nome
+
+
+def _a_marca_do_laco(fluxo: _Item) -> str:
+    """A marca do aparelho cujo laço do cabo é este fluxo, ou "" quando ele não diz."""
+    for valor in fluxo.propriedades.values():
+        if MARCA_DO_LACO_DO_CABO in valor:
+            achada = re.match(r"[a-z]+", valor.split(MARCA_DO_LACO_DO_CABO, 1)[1])
+            if achada:
+                return achada.group(0).upper()
+    return ""
+
+
 def placas_servidas(
     sysfs: Path = Path("/sys"),
     runner: Callable[[list[str]], str | None] = _pactl,
 ) -> list[tuple[int, int]]:
     """`(BUSNUM, DEVNUM)` de cada placa de DualSense que o endpoint de um aparelho já serve.
 
-    A pergunta é ao SERVIDOR, e não a uma conta de assento: o laço do cabo é
-    um fluxo que toca na placa do controle, e o nome dele carrega
-    :data:`MARCA_DO_LACO_DO_CABO`. Do fluxo sai o sink; do sink, o
-    `sysfs.path`; e do `sysfs.path`, o `usb_device` — a mesma subida que o
-    `winepulse` faz (:func:`pai_usb_device`). Servidor mudo é lista vazia: o
-    cabo segue pela placa, que é o caminho que já vibrava.
+    Só conta o laço (:data:`MARCA_DO_LACO_DO_CABO`) que sai do endpoint com o nome da Sony,
+    o que o jogo acha; o laço do nó sem porta não tira o bloco da placa do registro
+    (TODAS-AS-FEATURES-VALEM-EM-TODO-MODO-LIGADO-01). Do fluxo sai o sink, do sink o
+    `sysfs.path`, e dele o `usb_device`, a subida do `winepulse` (:func:`pai_usb_device`).
+    Servidor mudo é lista vazia: o cabo segue pela placa.
     """
     entradas = _lista_do_pactl("sink-inputs", runner) or ()
-    alvos = {f.alvo for f in entradas if f.alvo and f.carrega(MARCA_DO_LACO_DO_CABO)}
-    if not alvos:
+    lacos = [f for f in entradas if f.alvo and f.carrega(MARCA_DO_LACO_DO_CABO)]
+    if not lacos:
         return []
+    nos = _lista_do_pactl("sinks", runner) or ()
+    nomes = {no.nome for no in nos}
+    alvos = {
+        f.alvo for f in lacos
+        if any(e_o_endpoint_que_o_jogo_acha(n, _a_marca_do_laco(f)) for n in nomes)
+    }
     achadas: list[tuple[int, int]] = []
-    for no in _lista_do_pactl("sinks", runner) or ():
+    for no in nos:
         if str(no.indice) not in alvos:
             continue
         aparelho = pai_usb_device(no.propriedades.get(_PROP_SYSFS, ""), sysfs)

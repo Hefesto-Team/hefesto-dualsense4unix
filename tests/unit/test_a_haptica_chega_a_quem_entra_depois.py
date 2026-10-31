@@ -590,8 +590,13 @@ def test_o_aparelho_sem_porta_deixa_o_cabo_na_placa(
     mesa.volta(p1, p2)
     sem = _P2 if com == _P1 else _P1
     aparelho = {_P1: "3-8", _P2: "3-7"}
-    assert mesa.servidor.nossos() == [eh.nome_do_endpoint(com)]
-    assert set(mesa.lacos.vivos) == {_chave(com)}, "o aparelho sem porta ganhou laço"
+    assert mesa.servidor.nossos() == sorted(
+        [eh.nome_do_endpoint(com), eh.nome_sem_porta(eh.marca_do_aparelho(sem))]
+    )
+    assert set(mesa.lacos.vivos) == {_chave(com), _chave(sem)}
+    assert mesa.lacos.vivos[_chave(sem)]["captura"] == str(
+        mesa.servidor.indice(eh.nome_sem_porta(eh.marca_do_aparelho(sem)))
+    ), "o laço do aparelho sem porta não sai do nó sem porta dele"
     instancias = _instancias(mesa.registro())
     assert _do_aparelho(mesa.sysfs, aparelho[sem]) in instancias, (
         "o controle sem porta ficou sem bloco"
