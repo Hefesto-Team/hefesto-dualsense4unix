@@ -261,9 +261,9 @@ def test_a_troca_pedida_na_primeira_carga_espera_a_pagina_e_nao_fecha_a_janela(
 def test_a_mesma_aba_pedida_na_primeira_carga_nao_recarrega_depois(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """Pedir na primeira carga a aba que ela já traz não é troca: a página instalada fica.
+    """Pedir na primeira carga a aba que a carga já traz não é troca: a página instalada fica.
 
-    Medido em 30/10/2026: o pedido guardado recarregava a mesma aba depois de ela se instalar, e
+    Medido em 30/10/2026: o pedido guardado recarregava a mesma aba depois de instalada, e
     o que o teste tinha posto na página (o vigia do recado) sumia com a carga nova, nos 12 casos
     de `test_o_recado_de_sucesso_pousa_no_cartao`.
     """
