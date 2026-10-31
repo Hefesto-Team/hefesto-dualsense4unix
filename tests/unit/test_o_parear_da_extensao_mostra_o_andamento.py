@@ -15,7 +15,8 @@ de :data:`SILENCIO_QUE_ENCERRA_A_BUSCA_S`, reprova o teste da janela reaberta.
 
 Com cartões a faixa entra acima deles e o miolo cresce 18 px; a janela da extensão tem o topo
 fixo, e o Parear não se move. A âncora do topo arrancada (31/10/2026) devolve a janela centrada,
-que sobe 9 px, e reprova ``o Parear muda de y``.
+que sobe 9 px, e reprova ``o Parear muda de y``; a margem do topo arrancada cola a janela na borda
+de cima e reprova ``não guarda 20 px das bordas``.
 """
 
 from __future__ import annotations
@@ -56,6 +57,10 @@ QUIETA = {**BUSCANDO, "motivo": "Ligue o aparelho"}
 FALHOU = {"id": "usb", "tipo": "Adaptador USB", "transporte": "usb", "estado": "falhou",
           "motivo": "O adaptador não abriu"}
 NOVO = {"id": "ap-9", "nome": "Lush 3", "ligado": True, "estado": "ligado"}
+_POPUP = pathlib.Path(exp.__file__).with_name("monta.py").read_text(encoding="utf-8")
+_TETO = re.search(r"\.tn-cx\{[^}]*max-height:min\((\d+)px,calc\(100vh - (\d+)px\)\)", _POPUP)
+assert _TETO is not None, "a caixa das janelas perdeu a altura máxima"
+TETO_DA_JANELA, BORDA = int(_TETO[1]), int(_TETO[2]) // 2
 
 
 def estado(conexao: dict[str, Any], aparelhos: list[dict[str, Any]] | None = None
@@ -306,4 +311,20 @@ def test_com_aparelho_a_busca_entra_acima_dos_cartoes_sem_mexer_no_parear(
         if abs(com["topo"]["y"] - busca["topo"]["y"]) > 0.5:
             falhas.append(f"{w}x{h}: o topo da janela muda {com['topo']['y']:.1f} -> "
                           f"{busca['topo']['y']:.1f} quando o miolo cresce")
+    assert not falhas, "\n".join(falhas)
+
+
+def test_a_janela_de_topo_fixo_guarda_a_borda_da_tela(
+        cenas: dict[str, dict[str, Any]]) -> None:
+    falhas = []
+    for caso, cena in cenas.items():
+        h = int(caso.rsplit("x", 1)[1])
+        topo = cena["topo"]
+        if topo["y"] < BORDA - 0.5 or topo["b"] > h - BORDA + 0.5:
+            falhas.append(f"{caso}: a janela vai de {topo['y']:.1f} a {topo['b']:.1f} "
+                          f"e não guarda {BORDA} px das bordas de {h}")
+        teto = min(TETO_DA_JANELA, h - 2 * BORDA)
+        if abs((topo["y"] + topo["b"]) / 2 - h / 2) > (teto - topo["h"]) / 2 + 0.5:
+            falhas.append(f"{caso}: a janela de {topo['h']:.1f} px sai do lugar em que a "
+                          f"janela mais alta fica no centro")
     assert not falhas, "\n".join(falhas)
