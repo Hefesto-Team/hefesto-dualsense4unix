@@ -170,6 +170,14 @@ dkms_contra_os_headers() {
     done
     (( ${#reprovados[@]} == 0 )) \
         || falha "módulo(s) que não compilam contra ${k}: ${reprovados[*]}"
+    titulo "o dkms autoinstall -k ${k}, o que a instalação do kernel roda"
+    local rc_auto=0
+    dkms autoinstall -k "${k}" > /tmp/dkms-autoinstall.log 2>&1 || rc_auto=$?
+    if (( rc_auto != 0 )); then
+        tail -20 /tmp/dkms-autoinstall.log | sed 's/^/      /'
+        falha "o dkms autoinstall -k ${k} saiu com ${rc_auto}, e a instalação do kernel reprova junto"
+    fi
+    printf '  o autoinstall sai com 0: quem fica no de fábrica pula com 77\n'
     titulo "APROVADO: todo módulo compila em ${k} ou fica no de fábrica com o motivo"
 }
 
