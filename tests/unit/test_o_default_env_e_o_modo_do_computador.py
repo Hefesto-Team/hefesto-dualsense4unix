@@ -272,3 +272,101 @@ def test_o_modo_escolhido_a_mao_no_jogo_fica_depois_do_fim(
     assert not [r for r in registros if r["event"] == "modo_do_computador_devolvido"]
     le.materialize_launch_env(d)
     assert "SDL_JOYSTICK_HIDAPI=0" in _env(tmp_path / "default.env"), "o computador é o Nintendo"
+
+
+class _NoNativo(_Computador):
+    """O computador no Modo Nativo; o arme do jogo com perfil sai do Nativo e veste o pad."""
+
+    def __init__(self) -> None:
+        super().__init__("dualsense")
+        self.config.gamepad_emulation_enabled = False
+        self._vestir(None)
+        self._native_mode = True
+
+    def apply_profile_mode(self, mode: Any, *, profile: Any = None, origin: str = "") -> str:
+        self.set_native_mode(False)
+        return super().apply_profile_mode(mode, profile=profile, origin=origin)
+
+
+def test_o_nativo_e_o_modo_do_computador_e_volta_no_fim_do_jogo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O Nativo como modo do computador: o ``default.env`` fica nele, e o fim do jogo o devolve."""
+    _a_mesa_do_lancamento(tmp_path, monkeypatch, None, em_disco=[], lenta_s=0.0)  # type: ignore[arg-type]
+    monkeypatch.setattr(le, "_ESCREVENTE", None)
+    monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [])
+    daemon = _NoNativo()
+    le.materialize_launch_env(daemon)
+    antes = _env(tmp_path / "default.env")
+    _armar(tmp_path, monkeypatch, daemon, "xbox")
+    assert not daemon._native_mode and daemon._gamepad_device.flavor == "xbox", "premissa"
+    le.materialize_launch_env(daemon)
+    assert _env(tmp_path / "default.env") == antes, "o default.env herdou o Xbox do jogo"
+    with structlog.testing.capture_logs() as registros:
+        daemon.bus.publish(EventTopic.JOGO_FECHOU, {"appid": APPID, "t": 0.0})
+        assert le.o_fim_do_jogo_devolve_o_modo(daemon) == gp.EMU_BLOQUEADO_POR_JOGO
+        assert not daemon._native_mode, "o Nativo arrancou o pad com o lançamento segurando"
+        lifecycle._soltar_o_pad_do_lancamento(daemon, lifecycle.MOTIVO_DA_AUTORIDADE)  # type: ignore[arg-type]
+        assert le.o_fim_do_jogo_devolve_o_modo(daemon) == gp.EMU_APLICADO
+        assert le.o_fim_do_jogo_devolve_o_modo(daemon) is None
+    assert daemon._native_mode, "o fim do jogo não devolveu o Nativo"
+    voltas = [r for r in registros if r["event"] == "modo_do_computador_devolvido"]
+    assert [(v["de"], v["para"]) for v in voltas] == [("xbox", "nativo")], voltas
+
+
+class _Mouse:
+    def __init__(self) -> None:
+        self.parado = False
+
+    def stop(self) -> None:
+        self.parado = True
+
+
+class _NaNavegacao(_ComOJogo):
+    """O computador na Navegação: o pad desligado e o mouse de pé.
+
+    ``aplicar_o_arranjo_do_desktop`` anota a entrada e liga o mouse, como o do ``Daemon``.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.config.mouse_emulation_enabled = True
+        self._mouse_device: Any = _Mouse()
+        self.arranjos: list[str] = []
+
+    def aplicar_o_arranjo_do_desktop(self, *, origin: str = "manual", **_kw: Any) -> dict[str, str]:
+        assert self._gamepad_device is None, "a Navegação entrou com o pad do jogo de pé"
+        self.arranjos.append(origin)
+        self.config.mouse_emulation_enabled = True
+        self._mouse_device = _Mouse()
+        return {"mouse": lifecycle.APLICADO}
+
+
+def test_a_navegacao_volta_com_o_mouse_e_espera_o_jogo_soltar_o_pad(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Navegação como modo do computador: o fim do jogo desliga o pad e religa o mouse.
+
+    Enquanto o lançamento segura o pad, a volta é recusada e o pad do jogo fica de pé.
+    """
+    loader.save_profile(Profile(name=PERFIL, match=MatchAny()), origem="teste")
+    d = _NaNavegacao()
+    d.store = SimpleNamespace(active_profile=PERFIL)
+    d._coop_manager = CoopManager(d)  # type: ignore[arg-type]
+    _armar(tmp_path, monkeypatch, d, "xbox")
+    d.display_authority = "game"
+    assert d._gamepad_device is not None and d._gamepad_device.flavor == "xbox", "premissa"
+    assert d._mouse_device is None, "premissa: o pad do jogo desligou o mouse"
+    with structlog.testing.capture_logs() as registros:
+        _o_jogo_fecha(d)
+        assert le.o_fim_do_jogo_devolve_o_modo(d) == gp.EMU_BLOQUEADO_POR_JOGO
+        assert d._gamepad_device is not None, "a volta arrancou o pad com o jogo segurando"
+        lifecycle._soltar_o_pad_do_lancamento(d, lifecycle.MOTIVO_DA_AUTORIDADE)  # type: ignore[arg-type]
+        d.display_authority = "daemon"
+        for _ in range(3):
+            le.arm_launch_profile(d)
+    assert d._gamepad_device is None, "o fim do jogo deixou o pad do jogo de pé na Navegação"
+    assert d._mouse_device is not None and d.arranjos == ["profile"], (
+        f"a Navegação voltou sem o mouse: {d.arranjos}")
+    voltas = [r for r in registros if r["event"] == "modo_do_computador_devolvido"]
+    assert len(voltas) == 1 and voltas[0]["ligado"] is False, voltas

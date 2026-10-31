@@ -966,13 +966,14 @@ def _as_roupas_dos_armes(daemon: Any) -> dict[int, int]:
 
 @dataclass(frozen=True)
 class ParDoComputador:
-    """O modo vestido: o Nativo, o pad ligado, o caminho e as máscaras da sessão e do P1."""
+    """O modo vestido: o Nativo, o pad ligado, o caminho, as máscaras da sessão e do P1, o mouse."""
 
     native: bool
     enabled: bool
     caminho: str | None
     flavor: str
     mascara: str
+    mouse: bool = False
 
 
 @dataclass
@@ -996,6 +997,8 @@ def _o_par_vivo(daemon: Any) -> ParDoComputador:
         caminho=caminho if isinstance(caminho, str) else None,
         flavor=str(getattr(cfg, "gamepad_flavor", "dualsense") or "dualsense"),
         mascara=_mascara_do_primario(daemon, cfg),
+        mouse=bool(getattr(cfg, "mouse_emulation_enabled", False))
+        and getattr(daemon, "_mouse_device", None) is not None,
     )
 
 
@@ -1081,14 +1084,35 @@ def o_fim_do_jogo_devolve_o_modo(daemon: Any) -> str | None:
 
 
 def _pedir_o_par(daemon: Any, par: ParDoComputador) -> str:
-    """O par pelo escritor único, com origem de perfil: o Nativo, o pad ligado ou desligado."""
+    """O par pelo escritor único, com origem de perfil: o Nativo, o pad ligado ou desligado.
+
+    Sair do pad (o Nativo, a Navegação, o pad desligado) passa pela mesma trava do jogo aberto
+    que a troca de máscara (`gamepad._recriacao_bloqueada_por_jogo`). O pad sai sem gravar a
+    preferência, e a Navegação volta pelo arranjo do desktop
+    (`Daemon.aplicar_o_arranjo_do_desktop`), que liga o mouse.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+        EMU_APLICADO,
+        EMU_BLOQUEADO_POR_JOGO,
+        _recriacao_bloqueada_por_jogo,
+    )
+
+    if (par.native or not par.enabled) and getattr(
+        daemon, "_gamepad_device", None
+    ) is not None and _recriacao_bloqueada_por_jogo(
+        daemon, origin="profile", motivo="volta_do_modo_do_computador"
+    ):
+        return EMU_BLOQUEADO_POR_JOGO
     if par.native:
         daemon.set_native_mode(True, origin="profile")
-        return "aplicado"
+        return EMU_APLICADO
     if daemon.is_native_mode():
         daemon.set_native_mode(False, reapply=False, origin="profile")
     if not par.enabled:
-        return str(daemon.set_gamepad_emulation_desfecho(False, origin="profile"))
+        desfecho = str(daemon.set_gamepad_emulation_desfecho(False, origin="profile"))
+        if not par.mouse:
+            return desfecho
+        return str(daemon.aplicar_o_arranjo_do_desktop(origin="profile").get("mouse"))
     return str(daemon.set_gamepad_emulation_desfecho(
         True, par.flavor, origin="profile", caminho=par.caminho, caminho_e_escolha=False))
 
