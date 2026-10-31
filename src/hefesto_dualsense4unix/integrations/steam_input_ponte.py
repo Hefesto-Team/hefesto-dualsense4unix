@@ -103,15 +103,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
+import struct
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
+    from .proton_pin import (
+        _APPINFO_CABECALHO_DA_ENTRADA,
+        _APPINFO_MAGICS,
+        _chave,
+        _ler_vdf_binario,
+    )
     from .steam_launch_options import (
         discover_vdfs,
         is_sandboxed_layout,
@@ -123,6 +131,12 @@ try:
     )
     from .vigia_do_jogo_novo import jogos_novos_a_receber
 except ImportError:  # pragma: no cover
+    from proton_pin import (  # type: ignore[no-redef]
+        _APPINFO_CABECALHO_DA_ENTRADA,
+        _APPINFO_MAGICS,
+        _chave,
+        _ler_vdf_binario,
+    )
     from steam_launch_options import (  # type: ignore[no-redef]
         discover_vdfs,
         is_sandboxed_layout,
@@ -170,10 +184,12 @@ PONTE_DESLIGADA = "desligado"
 JA_DESLIGADO = "ja_desligado"
 CONFIG_ILEGIVEL = "configuracao_por_jogo_ilegivel"
 LISTA_ILEGIVEL = "lista_de_excecoes_ilegivel"
+CACHE_DE_APPS_ILEGIVEL = "cache_de_apps_ilegivel"
 
 _PASTA_DAS_CONFIGS = ("steamapps", "common", "Steam Controller Configs")
 _AUTOSAVE = "autosave"
 _APPID_RE = re.compile(r"[0-9]+")
+_MASCARA_DO_DESENVOLVEDOR = "steamconfigurator3rdpartynative"
 
 
 @dataclass(frozen=True)
@@ -770,6 +786,98 @@ def configuracao_por_jogo(pasta: Path) -> set[str] | None:
     return achados
 
 
+def mascara_do_desenvolvedor(vdf_do_app: object) -> int:
+    """O `config/steamconfigurator3rdpartynative` de UM app lido do cache, ou 0. Função PURA."""
+    raiz = _chave(vdf_do_app, "appinfo") or vdf_do_app
+    valor = _chave(_chave(raiz, "config"), _MASCARA_DO_DESENVOLVEDOR)
+    if isinstance(valor, bool):
+        return 0
+    if isinstance(valor, int):
+        return max(valor, 0)
+    if isinstance(valor, str) and _APPID_RE.fullmatch(valor.strip()):
+        return int(valor.strip())
+    return 0
+
+
+def cache_de_apps_da_conta(vdf: Path) -> Path | None:
+    """O `appinfo.vdf` da MESMA raiz de Steam deste `localconfig.vdf`."""
+    partes = vdf.parts
+    if len(partes) < 5 or partes[-4] != "userdata" or partes[-2] != "config":
+        return None
+    return vdf.parents[3] / "appcache" / "appinfo.vdf"
+
+
+def steam_input_do_desenvolvedor(
+    appinfo: Path, appids: Collection[str]
+) -> set[str] | None:
+    """Dos `appids`, os que o desenvolvedor pôs no Steam Input, ou None se o cache não se lê.
+
+    O formato é da Steam e não é prometido: o que sai do esperado devolve None, e
+    quem chama não inventa resposta. Cache que não existe é nenhum jogo declarado.
+    """
+    procurados = {str(a) for a in appids if _APPID_RE.fullmatch(str(a))}
+    if not procurados:
+        return set()
+    achados: set[str] = set()
+    vistos: set[str] = set()
+    try:
+        if not appinfo.exists():
+            return set()
+        with appinfo.open("rb") as fh:
+            cabeca = fh.read(8)
+            if len(cabeca) < 8:
+                return None
+            magia, _universo = struct.unpack("<II", cabeca)
+            versao = _APPINFO_MAGICS.get(magia)
+            if versao is None:
+                return None
+            chaves: list[str] | None = None
+            if versao >= 29:
+                (tabela,) = struct.unpack("<q", fh.read(8))
+                inicio_das_entradas = fh.tell()
+                fh.seek(tabela)
+                bruto = fh.read()
+                (quantas,) = struct.unpack_from("<I", bruto, 0)
+                chaves = [
+                    s.decode("utf-8", "replace")
+                    for s in bruto[4:].split(b"\0")[:quantas]
+                ]
+                fh.seek(inicio_das_entradas)
+            while procurados - vistos:
+                par = fh.read(8)
+                if len(par) < 4:
+                    break
+                (appid,) = struct.unpack_from("<I", par, 0)
+                if appid == 0 or len(par) < 8:
+                    break
+                (tamanho,) = struct.unpack_from("<I", par, 4)
+                if str(appid) not in procurados:
+                    fh.seek(tamanho, os.SEEK_CUR)
+                    continue
+                entrada = fh.read(tamanho)
+                if len(entrada) < tamanho:
+                    return None
+                vdf, _ = _ler_vdf_binario(entrada, _APPINFO_CABECALHO_DA_ENTRADA, chaves)
+                vistos.add(str(appid))
+                if mascara_do_desenvolvedor(vdf):
+                    achados.add(str(appid))
+    except (OSError, ValueError, IndexError, struct.error):
+        return None
+    return achados
+
+
+def _instalados(home: Path | None) -> list[str]:
+    """Os appids com `appmanifest` em disco, sem a infraestrutura da Steam."""
+    try:
+        from .prontuario_dos_jogos import jogos_instalados
+    except ImportError:  # pragma: no cover
+        from prontuario_dos_jogos import jogos_instalados  # type: ignore[no-redef]
+    try:
+        return [appid for appid, _, _ in jogos_instalados(home) if appid.isdigit()]
+    except OSError:  # pragma: no cover
+        return []
+
+
 def _ler_allowlist_estrita(config_home: Path | None = None) -> list[str] | None:
     """A lista de exceções, ou None quando EXISTE e não se deixa ler."""
     caminho = steam_input_allowlist_path(config_home)
@@ -789,7 +897,11 @@ def garantir_fora_da_lista_desligado(
     config_home: Path | None = None,
     dry_run: bool = False,
 ) -> tuple[str, list[dict[str, str]]]:
-    """Grava `"0"` em todo jogo que a Steam configurou por jogo FORA da lista."""
+    """Grava `"0"` em todo jogo FORA da lista que a Steam põe no Steam Input.
+
+    Duas assinaturas em disco, nenhuma lista de jogo: a configuração por jogo da
+    conta e a máscara que o desenvolvedor declara no cache de apps da Steam.
+    """
     detalhe: list[dict[str, str]] = []
     if allowlist is not None:
         lista: list[str] | None = [str(a).strip() for a in allowlist if str(a).strip()]
@@ -803,6 +915,7 @@ def garantir_fora_da_lista_desligado(
     planos: list[tuple[Path, str, list[str]]] = []
     houve_incerteza = False
     houve_erro = False
+    instalados = _instalados(home)
     for vdf in vdfs if vdfs is not None else discover_vdfs(home):
         if is_sandboxed_layout(vdf):
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": SANDBOX})
@@ -813,16 +926,29 @@ def garantir_fora_da_lista_desligado(
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": CONFIG_ILEGIVEL})
             houve_incerteza = True
             continue
-        alvos = sorted(a for a in configurados if a not in na_lista)
-        if not alvos:
-            continue
         try:
             original = vdf.read_text(encoding="utf-8")
         except (OSError, ValueError) as exc:
             detalhe.append({"vdf": str(vdf), "appid": "", "desfecho": str(exc)})
             houve_erro = True
             continue
-        novo, desligados, pulados = desligar_no_texto(original, alvos)
+        conhecidos = {a for arvore in ler_arvores(original) for a in arvore.blocos}
+        cache = cache_de_apps_da_conta(vdf)
+        declarados = (
+            steam_input_do_desenvolvedor(cache, conhecidos | set(instalados))
+            if cache is not None
+            else set()
+        )
+        if declarados is None:
+            detalhe.append(
+                {"vdf": str(vdf), "appid": "", "desfecho": CACHE_DE_APPS_ILEGIVEL}
+            )
+            houve_incerteza = True
+            declarados = set()
+        alvos = sorted(a for a in configurados | declarados if a not in na_lista)
+        if not alvos:
+            continue
+        novo, desligados, pulados = desligar_no_texto(original, alvos, instalados)
         for appid, motivo in pulados:
             detalhe.append({"vdf": str(vdf), "appid": appid, "desfecho": motivo})
             if motivo in (REGUAS_DIVERGEM, ARVORE_DESCONHECIDA):
@@ -904,8 +1030,8 @@ def main(argv: list[str] | None = None) -> int:
         "--desligar-fora-da-lista",
         action="store_true",
         help=(
-            "desliga o Steam Input dos jogos que a Steam configurou por jogo e "
-            "estão fora da lista (exige a Steam fechada)"
+            "desliga o Steam Input dos jogos fora da lista que a Steam configurou "
+            "por jogo ou que o desenvolvedor pôs no Steam Input (exige a Steam fechada)"
         ),
     )
     parser.add_argument(
