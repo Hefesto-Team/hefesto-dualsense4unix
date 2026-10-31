@@ -1101,10 +1101,10 @@ def _lista_do_externo(gesto: str, quem: str, titulo: str, vazio: str,
 def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
     """As três listas (modo, botões, cor) do cartão do externo na Conexões.
 
-    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01, item 2. Só o cartão da Conexões escreve
-    (o da
-    Jogar só mostra), e só quando o controle tem chave no `maquina.json`; a escolha vale para o
-    desenho da tela, nada é remapeado no controle.
+    O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-O-USUARIO-DECLAROU-01, item 2.
+
+    Só o cartão da Conexões escreve (o da Jogar só mostra), e só quando o controle tem chave no
+    `maquina.json`; a escolha vale para o desenho da tela, nada é remapeado no controle.
     """
     try:
         from hefesto_dualsense4unix.app.actions.external_controllers import (

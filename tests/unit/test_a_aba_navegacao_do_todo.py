@@ -117,9 +117,9 @@ def test_a_dica_do_seletor_acompanha_o_valor(pagina) -> None:
 def test_os_tres_de_permitir_navegacao_cabem_numa_linha(pagina) -> None:
     """«Interna», «Steam» e «Uso geral» ficam lado a lado, dentro da linha de «Opções».
 
-    O «Navega com» saiu com o pedido de 16/10 (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, N5), e com
-    ele a
-    linha de chips que encolhia o nome com quatro controles; os três botões são fixos.
+    O «Navega com» saiu com o pedido de 16/10 (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, N5),
+    e com ele a linha de chips que encolhia o nome com quatro controles; os três botões são
+    fixos.
     MORDIDA: `flex-wrap:wrap` no `.seg.mini` com a coluna estreita quebra em duas linhas.
 
     Prova da D-1510-O-NAVEGA-COM-ENCOLHE-O-NOME-COM-QUATRO.

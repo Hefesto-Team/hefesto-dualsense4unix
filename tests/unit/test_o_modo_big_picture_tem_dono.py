@@ -272,9 +272,9 @@ def test_8_permitir_navegacao_liga_e_desliga_pelo_daemon() -> None:
     """«Steam» liga o Big Picture; «Interna» e «Uso geral» o desligam e gravam o tipo.
 
     «Quem navega» e «Tipo de navegação» viraram os três botões de «Permitir navegação»
-    (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, N5, 16/10/2026), com os mesmos donos. O interruptor
-    do
-    topo continua dono de ligar: nenhum dos três manda `ligada`.
+    (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, N5, 16/10/2026), com os mesmos donos.
+    O interruptor do topo continua dono de ligar: nenhum dos três manda
+    `ligada`.
 
     Prova da D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE.
     """
