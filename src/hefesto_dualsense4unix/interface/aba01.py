@@ -131,8 +131,6 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
     font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;white-space:nowrap;cursor:pointer}
   .quadro-topo > .canto{margin-left:auto;border:1px solid var(--border-forte);background:transparent;
                         color:var(--texto-suave)}
-  .quadro-topo > .canto ~ .canto{margin-left:0}
-  .quadro-topo > .canto.calibra{width:auto;text-decoration:none}
   .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
   .quadro-topo > .canto .gira{flex:0 0 auto}
   .cadeado{border:1px solid var(--border-forte);background:var(--app-bg);
@@ -549,7 +547,6 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Status</span>
 {_INTERRUPTOR}
-        {aba02.CALIBRAR_NO_CANTO}
         <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles">{_GIRA}Reconectar</button>
         <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" data-dica="{CADEADO_DICA}"><span class="p"></span>{CADEADO_ROTULO}</button>
       </div>
@@ -1031,13 +1028,15 @@ def _conferir(doc):
 
     topo = status.split('<div class="quadro-topo">', 1)[-1].split('<div class="quadro-corpo hef">', 1)[0]
     ordem = [topo.find(marca) for marca in ('>Status</span>', 'class="hef-pos ligado"',
-                                            'class="hef-pos desligado"', 'href="calibrar-sensores.html"',
-                                            'data-gesto="reconectar"', 'data-gesto="cadeado"')]
+                                            'class="hef-pos desligado"', 'data-gesto="reconectar"',
+                                            'data-gesto="cadeado"')]
     exigir(-1 not in ordem and ordem == sorted(ordem),
-           "a linha do Status não é Status · Ligado · Desligado · Calibrar giroscópio · Reconectar · "
-           "Modo Freestyle, nesta ordem")
-    exigir(corpo.count('href="calibrar-sensores.html"') == 1,
-           "o Calibrar giroscópio dobrou, ou voltou sozinho ao quadro dos controles")
+           "a linha do Status não é Status · Ligado · Desligado · Reconectar · Modo Freestyle, "
+           "nesta ordem")
+    exigir('href="calibrar-sensores.html"' not in status,
+           "o Calibrar giroscópio voltou ao Status, ao lado do Reconectar: ele mora à esquerda do "
+           "Modo automático")
+    exigir(corpo.count('href="calibrar-sensores.html"') == 1, "o Calibrar giroscópio dobrou ou sumiu")
     exigir(corpo.count('data-gesto="reconectar"') == 1, "o Reconectar sumiu ou dobrou")
     folha = "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S))
     exigir(".hef-pos{\n    height:var(--h-acao)" in folha

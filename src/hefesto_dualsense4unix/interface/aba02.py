@@ -1252,19 +1252,19 @@ def abas_dos_controles(mesa=None):
             + "\n".join(linhas) + "\n        </div>")
 
 
-CALIBRAR_NO_CANTO = (f'<a class="canto calibra nativo-nao" href="calibrar-sensores.html" '
-                     f'data-dica="{DICA_DO_CALIBRAR}">{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>')
+CALIBRAR_AO_LADO_DO_AUTOMATICO = (
+    f'<a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">'
+    f'{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>')
 
 
-def _miolo(blocos, depois="", abas=None, calibrar=True):
-    botao = (f'<a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">'
-             f'{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>\n          ') if calibrar else ""
+def _miolo(blocos, depois="", abas=None):
     return f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         <span class="sensores">
-          {botao}{_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
+          {CALIBRAR_AO_LADO_DO_AUTOMATICO}
+          {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
         </span>
       </div>
       <div class="quadro-corpo">
@@ -1279,8 +1279,7 @@ MIOLO = _miolo(BLOCOS)
 VAGA_DOS_EXTERNOS = (
     f'\n    <div class="ext-vaga" data-campo="externos" data-hef-alvo="html">'
     f'{_monta_modulo.NADA_A_DIZER}</div>')
-MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS, abas_dos_controles(),
-                             calibrar=False)
+MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS, abas_dos_controles())
 
 
 LEGENDA = f'''<div class="nota">
@@ -1808,9 +1807,11 @@ def _conferir(doc, aba="02-controles"):
            "o rótulo do Calibrar não é o do todo")
     exigir('data-gesto="modo-dos-controles"' in corpo.split('<div class="quadro-corpo">', 1)[0],
            "o Modo automático saiu do canto do alto")
-    topo = corpo.split('<div class="quadro-corpo">', 1)[0]
-    exigir('href="calibrar-sensores.html"' in topo,
-           "o Calibrar saiu do canto superior direito")
+    topo = corpo.split('<div class="quadro estica">', 1)[-1].split('<div class="quadro-corpo">', 1)[0]
+    exigir(corpo.count('href="calibrar-sensores.html"') == 1, "o Calibrar giroscópio dobrou")
+    exigir(re.search(r'<span class="sensores">\s*<a class="btn nativo-nao" href="calibrar-sensores\.html"'
+                     r'[^>]*>(?:(?!</a>).)*</a>\s*<button class="modo-auto"', topo, re.S) is not None,
+           "o Calibrar giroscópio saiu de imediatamente à esquerda do Modo automático")
     exigir("acoes-da-mesa" not in corpo, "o bloco de ações do FIM do quadro voltou")
 
     exigir('class="rota mic-modo"' not in corpo,
