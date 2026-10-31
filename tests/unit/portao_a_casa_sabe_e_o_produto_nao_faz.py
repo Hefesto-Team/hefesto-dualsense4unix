@@ -100,7 +100,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
         "`scripts/doctor.sh:3801` (`check_exame_da_mesa`) o roda — e o "
-        "`install.sh:3537` (`doctor_saida=`) roda o doctor",
+        "`install.sh:3537` (`bash`) roda o doctor",
     ),
 }
 
