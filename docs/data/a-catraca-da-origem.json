@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1176438,
+      "piso": 1177246,
       "por_item": {
         "docs": 107814,
         "scripts": 110035,
-        "src": 296487,
-        "tests": 662102
+        "src": 296778,
+        "tests": 662619
       },
-      "razao": "tamanho: +207 linhas (1176231 -> 1176438), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo c11d95253443",
+      "razao": "tamanho: +808 linhas (1176438 -> 1177246), pagas por Origem: D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL; registrado no fecho, topo 654545121ee0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1297,10 +1297,16 @@
           "de": 1176231,
           "para": 1176438,
           "razao": "tamanho: +207 linhas (1176231 -> 1176438), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo c11d95253443"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1176438,
+          "para": 1177246,
+          "razao": "tamanho: +808 linhas (1176438 -> 1177246), pagas por Origem: D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL; registrado no fecho, topo 654545121ee0"
         }
       ],
       "unidade": "linhas",
-      "universo": 3284
+      "universo": 3285
     }
   }
 }
