@@ -52,7 +52,7 @@ TARDE = "Tarde"
 BASE: dict[str, Any] = {"id": "pede", "nome": "Pede", "api": ">=2,<3", "tipos": ["tema"],
                         "tema": {}}
 BASE["versao"] = "1.0.0"  # (noqa-acento)
-BASE["licenca"] = "MIT"  # (noqa-acento)
+BASE["licenca"] = "MIT"
 
 
 class PonteDeMentira:

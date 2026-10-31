@@ -249,9 +249,9 @@ def test_o_destaque_ilegivel_nao_liga_e_o_tema_fica(lg: Lugares, nova: Manifesto
 
 
 def _antiga(lg: Lugares, tmp_path: Path) -> Manifesto:
-    manifesto = _manifesto(ANTIGA, versao="1.2.0", tema={  # (noqa-acento)
+    manifesto = _manifesto(ANTIGA, versao="1.2.0", tema={
         "arquivo": "tema.css", "botoes": "esquerda", "cor_pela_opcao": "cores_claras",
-        "botoes_pela_opcao": "botoes_a_esquerda"}, opcoes=[  # (noqa-acento)
+        "botoes_pela_opcao": "botoes_a_esquerda"}, opcoes=[
         {"id": "cores_claras", "rotulo": "Cores claras", "tipo": "ligado",
          "padrao": True},  # (noqa-acento)
         {"id": "botoes_a_esquerda", "rotulo": "Botões à esquerda", "tipo": "ligado",
@@ -309,7 +309,7 @@ def test_o_meu_css_da_antiga_vai_para_a_nova(lg: Lugares, tmp_path: Path) -> Non
     ({"tema": {**BLOCO, "importados_por_escolha": {"Importado": "logo"}}}, "importa outra coisa"),
     ({"tema": {**BLOCO, "destaque_pela_opcao": "destaque"}}, "tipo cor"),
     ({"tema": {**BLOCO, "arquivo": "tema.css"}}, "não dos dois"),
-    ({"tipos": ["processo"], "processo": {"executar": ["true"]}, "tema": None,  # (noqa-acento)
+    ({"tipos": ["processo"], "processo": {"executar": ["true"]}, "tema": None,
       "opcoes": [OPCOES[5]]}, "só uma extensão de tema importa"),  # (noqa-acento)
 ])
 def test_a_regua_do_manifesto_confere_cada_vinculo(mexe: dict[str, Any], trecho: str) -> None:
