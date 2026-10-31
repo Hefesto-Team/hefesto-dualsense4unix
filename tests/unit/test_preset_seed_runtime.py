@@ -10,6 +10,12 @@ import pytest
 from hefesto_dualsense4unix.profiles import loader
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_FABRICA_DE_MENTIRA = ("fabrica_a.json", "fabrica_b.json", "fabrica_nova.json", "semeado.json")
+
+
+@pytest.fixture(autouse=True)
+def _fabrica_de_mentira(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(loader, "ARQUIVOS_DE_FABRICA", _FABRICA_DE_MENTIRA)
 
 
 def _make_source(base: Path, names: list[str]) -> Path:
@@ -29,65 +35,65 @@ def _marker_lines(dest: Path) -> list[str]:
 
 
 def test_primeira_carga_copia_todos_os_presets(tmp_path: Path) -> None:
-    src = _make_source(tmp_path, ["acao.json", "fps.json"])
+    src = _make_source(tmp_path, ["fabrica_a.json", "fabrica_b.json"])
     dest = tmp_path / "perfis"
 
     copied = loader.seed_default_presets(dest_dir=dest, source_dirs=[src])
 
-    assert copied == ["acao.json", "fps.json"]
-    assert (dest / "acao.json").exists()
-    assert (dest / "fps.json").exists()
-    assert sorted(_marker_lines(dest)) == ["acao.json", "fps.json"]
+    assert copied == ["fabrica_a.json", "fabrica_b.json"]
+    assert (dest / "fabrica_a.json").exists()
+    assert (dest / "fabrica_b.json").exists()
+    assert sorted(_marker_lines(dest)) == ["fabrica_a.json", "fabrica_b.json"]
 
 
 def test_nao_sobrescreve_perfil_editado(tmp_path: Path) -> None:
     """Perfil já presente na 1ª execução: registrado no marker SEM cópia."""
-    src = _make_source(tmp_path, ["acao.json", "fps.json"])
+    src = _make_source(tmp_path, ["fabrica_a.json", "fabrica_b.json"])
     dest = tmp_path / "perfis"
     dest.mkdir()
     editado = json.dumps({"name": "Ação editada", "match": {"type": "any"}})
-    (dest / "acao.json").write_text(editado, encoding="utf-8")
+    (dest / "fabrica_a.json").write_text(editado, encoding="utf-8")
 
     copied = loader.seed_default_presets(dest_dir=dest, source_dirs=[src])
 
-    assert copied == ["fps.json"]
-    assert (dest / "acao.json").read_text(encoding="utf-8") == editado
-    assert sorted(_marker_lines(dest)) == ["acao.json", "fps.json"]
+    assert copied == ["fabrica_b.json"]
+    assert (dest / "fabrica_a.json").read_text(encoding="utf-8") == editado
+    assert sorted(_marker_lines(dest)) == ["fabrica_a.json", "fabrica_b.json"]
 
 
 def test_delecao_proposital_nao_ressuscita(tmp_path: Path) -> None:
     """Preset no marker + ausente no disco = usuária deletou → NÃO volta."""
-    src = _make_source(tmp_path, ["acao.json", "fps.json"])
+    src = _make_source(tmp_path, ["fabrica_a.json", "fabrica_b.json"])
     dest = tmp_path / "perfis"
     dest.mkdir()
-    (dest / loader.SEED_MARKER_NAME).write_text("acao.json\n", encoding="utf-8")
+    (dest / loader.SEED_MARKER_NAME).write_text("fabrica_a.json\n", encoding="utf-8")
 
     copied = loader.seed_default_presets(dest_dir=dest, source_dirs=[src])
 
-    assert copied == ["fps.json"]
-    assert not (dest / "acao.json").exists()
+    assert copied == ["fabrica_b.json"]
+    assert not (dest / "fabrica_a.json").exists()
 
 
 def test_preset_novo_chega_em_upgrade(tmp_path: Path) -> None:
     """Marker antigo + preset novo na fonte → só o novo é copiado."""
-    src = _make_source(tmp_path, ["acao.json", "point_and_click.json"])
+    src = _make_source(tmp_path, ["fabrica_a.json", "fabrica_nova.json"])
     dest = tmp_path / "perfis"
     dest.mkdir()
-    (dest / "acao.json").write_text("{}", encoding="utf-8")
-    (dest / loader.SEED_MARKER_NAME).write_text("acao.json\n", encoding="utf-8")
+    (dest / "fabrica_a.json").write_text("{}", encoding="utf-8")
+    (dest / loader.SEED_MARKER_NAME).write_text("fabrica_a.json\n", encoding="utf-8")
 
     copied = loader.seed_default_presets(dest_dir=dest, source_dirs=[src])
 
-    assert copied == ["point_and_click.json"]
-    assert (dest / "point_and_click.json").exists()
-    assert sorted(_marker_lines(dest)) == ["acao.json", "point_and_click.json"]
+    assert copied == ["fabrica_nova.json"]
+    assert (dest / "fabrica_nova.json").exists()
+    assert sorted(_marker_lines(dest)) == ["fabrica_a.json", "fabrica_nova.json"]
 
 
 def test_reexecucao_e_idempotente(tmp_path: Path) -> None:
-    src = _make_source(tmp_path, ["acao.json"])
+    src = _make_source(tmp_path, ["fabrica_a.json"])
     dest = tmp_path / "perfis"
 
-    assert loader.seed_default_presets(dest_dir=dest, source_dirs=[src]) == ["acao.json"]
+    assert loader.seed_default_presets(dest_dir=dest, source_dirs=[src]) == ["fabrica_a.json"]
     assert loader.seed_default_presets(dest_dir=dest, source_dirs=[src]) == []
 
 
@@ -115,7 +121,7 @@ def test_sem_fonte_existente_e_noop(
 
 def test_fallback_de_fontes_usa_a_primeira_existente(tmp_path: Path) -> None:
     """Ordem repo-assets → /usr/share: a primeira EXISTENTE vence."""
-    usr_share = _make_source(tmp_path, ["fps.json"])
+    usr_share = _make_source(tmp_path, ["fabrica_b.json"])
     dest = tmp_path / "perfis"
 
     copied = loader.seed_default_presets(
@@ -123,7 +129,15 @@ def test_fallback_de_fontes_usa_a_primeira_existente(tmp_path: Path) -> None:
         source_dirs=[tmp_path / "repo-inexistente", usr_share],
     )
 
-    assert copied == ["fps.json"]
+    assert copied == ["fabrica_b.json"]
+
+
+def test_o_json_fora_da_lista_nao_e_semeado(tmp_path: Path) -> None:
+    src = _make_source(tmp_path, ["fabrica_a.json", "jogo_ficticio_intruso.json"])
+    dest = tmp_path / "perfis"
+
+    assert loader.seed_default_presets(dest_dir=dest, source_dirs=[src]) == ["fabrica_a.json"]
+    assert not (dest / "jogo_ficticio_intruso.json").exists()
 
 
 def test_marker_criado_mesmo_sem_nada_a_copiar(tmp_path: Path) -> None:
@@ -190,18 +204,20 @@ def test_falha_na_semeadura_nao_impede_a_carga(
     assert loader.load_all_profiles() == []
 
 
-def test_marker_do_shell_script_e_respeitado(tmp_path: Path) -> None:
+def test_marker_do_shell_script_e_respeitado(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """install_profiles.sh semeia primeiro; o semeador Python não re-copia nada."""
     script = REPO_ROOT / "scripts" / "install_profiles.sh"
     if not script.exists():
         pytest.skip("scripts/install_profiles.sh não encontrado")
+    monkeypatch.setattr(loader, "ARQUIVOS_DE_FABRICA", (loader.ARQUIVO_DO_PADRAO,))
 
     fake_root = tmp_path / "repo"
     src = fake_root / "assets" / "profiles_default"
     src.mkdir(parents=True)
-    for name in ("acao.json", "fps.json"):
-        payload = {"name": name.removesuffix(".json"), "match": {"type": "any"}}
-        (src / name).write_text(json.dumps(payload), encoding="utf-8")
+    payload = {"name": "freestyle", "match": {"type": "any"}}
+    (src / "freestyle.json").write_text(json.dumps(payload), encoding="utf-8")
 
     home = tmp_path / "home"
     home.mkdir()
@@ -215,9 +231,9 @@ def test_marker_do_shell_script_e_respeitado(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
 
     dest = home / ".config" / "hefesto-dualsense4unix" / "profiles"
-    assert sorted(_marker_lines(dest)) == ["acao.json", "fps.json"]
+    assert _marker_lines(dest) == ["freestyle.json"]
 
-    (dest / "acao.json").unlink()
+    (dest / "freestyle.json").unlink()
     copied = loader.seed_default_presets(dest_dir=dest, source_dirs=[src])
     assert copied == []
-    assert not (dest / "acao.json").exists()
+    assert not (dest / "freestyle.json").exists()

@@ -337,14 +337,14 @@ def test_o_endereco_do_mockup_e_um_link_para_a_pasta_do_pacote() -> None:
 
 
 def test_o_deb_nao_leva_o_link_do_mockup_quebrado(tmp_path: pathlib.Path) -> None:
-    """O `.deb` copia `assets/` inteiro (`cp -r`, que copia o link como link) e não leva o `src/`:
-    sem a limpeza, `/usr/share/.../assets/fontes` apontaria para nada. Roda o bloco do próprio
-    `build_deb.sh`, do `cp` até a primeira linha em branco.
+    """O `.deb` copia o `assets/` versionado (`cp -P`, que copia o link como link) e não leva o
+    `src/`: sem a limpeza, `/usr/share/.../assets/fontes` apontaria para nada. Roda o bloco do
+    próprio `build_deb.sh`, do `git ls-files` até a primeira linha em branco.
 
     Prova da D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE.
     """
     linhas = (RAIZ / "scripts" / "build_deb.sh").read_text(encoding="utf-8").splitlines()
-    (inicio,) = [i for i, ln in enumerate(linhas) if ln.startswith("cp -r assets/. ")]
+    (inicio,) = [i for i, ln in enumerate(linhas) if ln.startswith("git ls-files -z -- assets ")]
     fim = linhas.index("", inicio)
     bloco = "\n".join(linhas[inicio:fim])
     destino = tmp_path / "usr" / "share" / "hefesto-dualsense4unix" / "assets"

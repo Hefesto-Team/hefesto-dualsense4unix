@@ -88,13 +88,13 @@ SEED_MARKER_NAME = ".seeded_presets"
 
 NOME_DO_PADRAO = "Freestyle"
 ARQUIVO_DO_PADRAO = "freestyle.json"
+ARQUIVOS_DE_FABRICA: tuple[str, ...] = (ARQUIVO_DO_PADRAO,)
 SLUG_DO_PADRAO = "freestyle"
 NOME_DO_PERSONALIZADO = "Personalizado"
 ARQUIVO_DO_PERSONALIZADO = "personalizado.json"
 SLUG_DO_PERSONALIZADO = "personalizado"
 NOME_ANTIGO_DO_PADRAO = "meu_perfil"
 ARQUIVO_ANTIGO_DO_PADRAO = "meu_perfil.json"
-
 BACKUP_DO_PADRAO = "meu_perfil.json.antes-de-personalizado"
 
 _RENAME_PADRAO_MARKER = ".perfil_padrao_renomeado"
@@ -220,7 +220,7 @@ def seed_default_presets(
     dest_dir: Path | None = None,
     source_dirs: Sequence[Path] | None = None,
 ) -> list[str]:
-    """Copia presets default AUSENTES para o diretório de perfis do usuário."""
+    """Copia os `ARQUIVOS_DE_FABRICA` ausentes para o diretório de perfis do usuário, por nome."""
     global _sem_fonte_avisada
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     candidates = _DEFAULT_SEED_SOURCE_DIRS if source_dirs is None else tuple(source_dirs)
@@ -243,9 +243,9 @@ def seed_default_presets(
         if marker.exists():
             seeded = set(marker.read_text(encoding="utf-8").splitlines())
         new_entries: list[str] = []
-        for src in sorted(source.glob("*.json")):
-            fname = src.name
-            if fname in seeded:
+        for fname in ARQUIVOS_DE_FABRICA:
+            src = source / fname
+            if fname in seeded or not src.is_file():
                 continue
             if fname == ARQUIVO_DO_PADRAO and _o_slot_do_usuario_tem_nome_antigo(directory):
                 new_entries.append(fname)

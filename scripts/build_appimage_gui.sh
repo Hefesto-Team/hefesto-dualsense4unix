@@ -76,17 +76,8 @@ if [[ -d "$HERE/assets/glyphs" ]]; then
         "$HERE/assets/glyphs/"*.svg
 fi
 
-if [[ -d "$HERE/assets/profiles_default" ]]; then
-    install -Dm644 -t \
-        "$APPDIR/usr/share/hefesto-dualsense4unix/assets/profiles_default/" \
-        "$HERE/assets/profiles_default/"*.json
-fi
-
-if [[ -d "$HERE/assets/estilos_de_jogo" ]]; then
-    install -Dm644 -t \
-        "$APPDIR/usr/share/hefesto-dualsense4unix/assets/estilos_de_jogo/" \
-        "$HERE/assets/estilos_de_jogo/"*.json
-fi
+git -C "$HERE" ls-files -z -- assets/profiles_default assets/estilos_de_jogo \
+    | xargs -0 -r cp --parents -t "$APPDIR/usr/share/hefesto-dualsense4unix/"
 
 install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/doctor.sh" \

@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT_DIR="${1:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"}"
 readonly SRC_DIR="${ROOT_DIR}/assets/profiles_default"
 readonly DEST_DIR="${HOME}/.config/hefesto-dualsense4unix/profiles"
+readonly ARQUIVOS_DE_FABRICA=(freestyle.json)
 
 if [[ ! -d "${SRC_DIR}" ]]; then
     printf 'ERRO: diretório de perfis não encontrado: %s\n' "${SRC_DIR}" >&2
@@ -16,10 +17,10 @@ mkdir -p "${DEST_DIR}"
 readonly MARKER="${DEST_DIR}/.seeded_presets"
 touch "${MARKER}"
 copied=0
-for src in "${SRC_DIR}"/*.json; do
-    fname="$(basename "${src}")"
+for fname in "${ARQUIVOS_DE_FABRICA[@]}"; do
+    src="${SRC_DIR}/${fname}"
     dest="${DEST_DIR}/${fname}"
-    if grep -qxF "${fname}" "${MARKER}"; then
+    if [[ ! -f "${src}" ]] || grep -qxF "${fname}" "${MARKER}"; then
         continue
     fi
     if [[ "${fname}" == "freestyle.json" && ( -f "${DEST_DIR}/meu_perfil.json" || -f "${DEST_DIR}/personalizado.json" ) ]]; then

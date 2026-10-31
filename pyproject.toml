@@ -86,10 +86,18 @@ include = [
 
 # O perfil de fábrica e os estilos de jogo moram FORA do pacote Python (`assets/`); sem isto o wheel
 # (pip, pipx, uv) os deixava para trás e o Freestyle nunca era semeado. Vão para o `share/` do
-# prefixo, onde `profiles/loader.py` os procura (`bases_de_instalacao`).
+# prefixo, onde `profiles/loader.py` os procura (`bases_de_instalacao`), um arquivo por linha: a pasta
+# inteira levaria qualquer JSON solto no disco de quem empacota (`ARQUIVOS_DE_FABRICA`).
 [tool.hatch.build.targets.wheel.shared-data]
-"assets/profiles_default" = "share/hefesto-dualsense4unix/assets/profiles_default"
-"assets/estilos_de_jogo" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo"
+"assets/profiles_default/freestyle.json" = "share/hefesto-dualsense4unix/assets/profiles_default/freestyle.json"
+"assets/estilos_de_jogo/acao.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/acao.json"
+"assets/estilos_de_jogo/aventura.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/aventura.json"
+"assets/estilos_de_jogo/corrida.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/corrida.json"
+"assets/estilos_de_jogo/esportes.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/esportes.json"
+"assets/estilos_de_jogo/fallback.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/fallback.json"
+"assets/estilos_de_jogo/fps.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/fps.json"
+"assets/estilos_de_jogo/navegacao.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/navegacao.json"
+"assets/estilos_de_jogo/point_and_click.json" = "share/hefesto-dualsense4unix/assets/estilos_de_jogo/point_and_click.json"
 # Os modelos das units de usuário: o `daemon install-service` os procura aí e os veste com o executável em uso.
 "assets/hefesto-dualsense4unix.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix.service"
 "assets/hefesto-dualsense4unix-gui-hotplug.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix-gui-hotplug.service"
@@ -102,9 +110,9 @@ include = [
 "docs/data/cores-do-dualsense.csv" = "share/hefesto-dualsense4unix/docs/data/cores-do-dualsense.csv"
 
 # O sdist leva só o que está listado: sem a lista ele levaria arquivo local que só o
-# `.git/info/exclude` ou o ignore global escondem.
+# `.git/info/exclude` ou o ignore global escondem. Sem `tests/`: a suíte é do repositório.
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "assets/profiles_default", "assets/estilos_de_jogo", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "assets/proton-pin.conf", "docs/data/proton-qualificacao.csv", "docs/data/cores-do-dualsense.csv", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
+only-include = ["src", "assets/profiles_default/freestyle.json", "assets/estilos_de_jogo/acao.json", "assets/estilos_de_jogo/aventura.json", "assets/estilos_de_jogo/corrida.json", "assets/estilos_de_jogo/esportes.json", "assets/estilos_de_jogo/fallback.json", "assets/estilos_de_jogo/fps.json", "assets/estilos_de_jogo/navegacao.json", "assets/estilos_de_jogo/point_and_click.json", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "assets/proton-pin.conf", "docs/data/proton-qualificacao.csv", "docs/data/cores-do-dualsense.csv", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
 
 [tool.ruff]
 line-length = 100

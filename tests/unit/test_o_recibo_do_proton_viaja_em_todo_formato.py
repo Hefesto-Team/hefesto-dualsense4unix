@@ -210,12 +210,13 @@ def test_o_nix_constroi_o_wheel_da_arvore_inteira() -> None:
 
 def test_o_deb_instala_o_pacote_no_venv_e_copia_os_assets() -> None:
     """O .deb põe o pacote num venv (`pip install .`, que traz o `share/` do wheel para o
-    `sys.prefix`, uma das bases do doctor) e copia `assets/` inteiro para o `/usr/share`.
+    `sys.prefix`, uma das bases do doctor) e copia o `assets/` versionado para o `/usr/share`.
 
     MORDIDA: trocar o `pip install .` por cópia dos fontes — o `share/` do wheel se perde.
     """
     texto = _le("scripts/build_deb.sh")
     assert re.search(r"\"\$\{VENV_PIP\}\" install [^\n]*--no-cache-dir \.\s*$", texto, re.M)
-    assert 'cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"' in texto
+    copia = "git ls-files -z -- assets | xargs -0 -r cp -P --parents -t "
+    assert copia + '"${STAGING}/usr/share/hefesto-dualsense4unix/"' in texto
     for relativo in ("control", "postinst", "postrm", "prerm"):
         assert (RAIZ / "packaging/debian" / relativo).is_file(), relativo

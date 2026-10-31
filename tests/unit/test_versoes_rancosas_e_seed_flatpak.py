@@ -266,37 +266,43 @@ def test_flatpak_semeia_presets_no_caminho_que_o_loader_procura() -> None:
         f"instala presets, mas fora de {destino} (o segundo candidato do "
         f"profiles/loader.py). Comandos: {casando}"
     )
-    assert any("assets/profiles_default/*.json" in c for c in casando), (
-        "a origem não é o glob de assets/profiles_default/*.json — um preset "
-        f"novo ficaria de fora. Comandos: {casando}"
+    from hefesto_dualsense4unix.profiles.loader import ARQUIVOS_DE_FABRICA
+
+    for nome in ARQUIVOS_DE_FABRICA:
+        assert any(f"assets/profiles_default/{nome}" in c for c in casando), (
+            f"o manifesto não instala {nome}, que está em ARQUIVOS_DE_FABRICA. "
+            f"Comandos: {casando}"
+        )
+    assert not any("profiles_default/*" in c for c in casando), (
+        "o manifesto voltou ao glob: a fonte `dir` copia o disco de quem empacota, "
+        f"e um JSON solto viraria perfil de fábrica. Comandos: {casando}"
     )
 
 
 def test_flatpak_e_appimage_gui_semeiam_o_mesmo_conjunto() -> None:
-    """Paridade com o FIX-APPIMAGE-PRESET-SEED-01: os dois usam glob, então um"""
+    """Os dois levam só o que o loader lista: o AppImage pelo `git ls-files`, o Flatpak por nome."""
     gui = (REPO / BUILD_GUI_REL).read_text(encoding="utf-8")
-    assert "profiles_default" in gui, (
-        "o build_appimage_gui.sh perdeu a semeadura de presets — era a cura de "
-        "referência deste sprint"
+    assert "ls-files" in gui and "assets/profiles_default" in gui, (
+        "o build_appimage_gui.sh perdeu a semeadura de presets pelo versionado"
     )
-    assert 'profiles_default/"*.json' in gui or "profiles_default/*.json" in gui
-    presets = sorted(p.name for p in (REPO / "assets/profiles_default").glob("*.json"))
-    assert presets, "assets/profiles_default está vazio"
-    from hefesto_dualsense4unix.profiles.loader import ARQUIVO_DO_PADRAO
+    assert "profiles_default/*.json" not in gui and 'profiles_default/"*.json' not in gui
+    from hefesto_dualsense4unix.profiles.loader import (
+        ARQUIVO_DO_PADRAO,
+        ARQUIVOS_DE_FABRICA,
+        ARQUIVOS_DOS_ESTILOS_DE_JOGO,
+    )
 
-    assert ARQUIVO_DO_PADRAO in presets
-
-    assert "estilos_de_jogo" in gui, (
+    assert ARQUIVO_DO_PADRAO in ARQUIVOS_DE_FABRICA
+    assert "assets/estilos_de_jogo" in gui, (
         "o build_appimage_gui.sh não leva assets/estilos_de_jogo/ — a migração "
         "dos gêneros fica sem o asset de referência dentro do AppImage"
     )
     comandos = _comandos_do_modulo_hefesto()
-    assert any("assets/estilos_de_jogo/*.json" in c for c in comandos), (
-        "o manifesto Flatpak não leva assets/estilos_de_jogo/ — mesmo defeito, "
-        "do outro lado da paridade"
-    )
-    estilos = sorted(p.name for p in (REPO / "assets/estilos_de_jogo").glob("*.json"))
-    assert "fallback.json" in estilos, estilos
+    for nome in ARQUIVOS_DOS_ESTILOS_DE_JOGO:
+        assert any(f"assets/estilos_de_jogo/{nome}" in c for c in comandos), (
+            f"o manifesto Flatpak não leva assets/estilos_de_jogo/{nome}"
+        )
+    assert "fallback.json" in ARQUIVOS_DOS_ESTILOS_DE_JOGO
 
 
 def test_manifesto_flatpak_continua_instalando_os_glyphs() -> None:

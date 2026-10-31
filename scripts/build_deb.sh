@@ -81,8 +81,8 @@ if [ -f "${VENV_DIR}/pyvenv.cfg" ]; then
     sed -i "s|${VENV_DIR}|${FINAL_VENV}|g" "${VENV_DIR}/pyvenv.cfg" || true
 fi
 
-echo "Copiando assets/ ..."
-cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"; find "${STAGING}/usr/share/hefesto-dualsense4unix/assets/" -xtype l -delete
+echo "Copiando os assets/ versionados ..."
+git ls-files -z -- assets | xargs -0 -r cp -P --parents -t "${STAGING}/usr/share/hefesto-dualsense4unix/"; find "${STAGING}/usr/share/hefesto-dualsense4unix/assets/" -xtype l -delete
 
 if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"

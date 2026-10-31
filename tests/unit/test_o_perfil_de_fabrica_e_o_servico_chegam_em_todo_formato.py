@@ -92,8 +92,8 @@ def test_o_sys_prefix_de_mentira_acha_a_fabrica(
     prefixo = tmp_path / "prefixo"
     pasta_da_fabrica = prefixo / "share" / NOME / "assets" / pasta
     pasta_da_fabrica.mkdir(parents=True)
-    (pasta_da_fabrica / "x.json").write_text(
-        json.dumps({"name": "x", "match": {"type": "any"}}), encoding="utf-8"
+    (pasta_da_fabrica / loader.ARQUIVO_DO_PADRAO).write_text(
+        json.dumps({"name": "freestyle", "match": {"type": "any"}}), encoding="utf-8"
     )
     monkeypatch.setattr(sys, "prefix", str(prefixo))
 
@@ -103,7 +103,7 @@ def test_o_sys_prefix_de_mentira_acha_a_fabrica(
     copiados = loader.seed_default_presets(
         dest_dir=tmp_path / "perfis", source_dirs=[f for f in fontes if f == pasta_da_fabrica]
     )
-    assert copiados == ["x.json"]
+    assert copiados == [loader.ARQUIVO_DO_PADRAO]
 
 
 def test_a_falta_de_fonte_diz_onde_olhou(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -124,8 +124,8 @@ def test_o_wheel_declara_a_fabrica_e_as_units_no_share() -> None:
     projeto = _pyproject()
     dados = projeto["tool"]["hatch"]["build"]["targets"]["wheel"]["shared-data"]
     esperado = {
-        "assets/profiles_default",
-        "assets/estilos_de_jogo",
+        *(f"assets/profiles_default/{a}" for a in loader.ARQUIVOS_DE_FABRICA),
+        *(f"assets/estilos_de_jogo/{a}" for a in loader.ARQUIVOS_DOS_ESTILOS_DE_JOGO),
         *(f"assets/{u}" for u in uu.UNITS_DE_PACOTE),
     }
     assert esperado <= set(dados), sorted(esperado - set(dados))
