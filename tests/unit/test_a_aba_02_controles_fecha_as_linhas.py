@@ -800,7 +800,8 @@ def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
 def test_o_cabecalho_do_cartao_nao_tem_linha_do_giroscopio(estado: dict[str, Any]) -> None:
     """Os chips Giroscópio e Acelerômetro dizem o que está ligado; o cabeçalho não explica.
 
-    MORDE: devolva o campo `giro-no-jogo` ao pacote e a máscara Xbox volta a emitir a frase.
+    MORDE: devolva o vão `giro-no-jogo` ao cabeçalho do `aba02.py` e o campo dele ao pacote, e a
+    máscara Xbox volta a emitir a frase.
     """
     card = _card({"sensores": {"giroscopio_ligado": True}}, state=estado)
     assert "giro-no-jogo" not in card, card.get("giro-no-jogo")
