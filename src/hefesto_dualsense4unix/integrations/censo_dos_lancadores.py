@@ -1667,3 +1667,189 @@ def lancadores_que_viraram_extensao(lar: Path | None = None, *,
                 achados.append(ViradoExtensao(str(chave), str(nome), str(endereco),
                                               linha.get("proton") is True))
     return tuple(achados)
+
+
+PORQUE_BOTTLES_ABERTO = "o Bottles está aberto: o Proton fixado entra quando ele fechar"
+PORQUE_UMU_AVULSO = "o umu avulso escolhe o Proton a cada lançamento, pelo atalho"
+
+
+def _escrever_com_copia(arquivo: Path, texto: str) -> None:
+    copia = arquivo.with_name(f"{arquivo.name}.bak.hefesto-proton-{int(time.time())}")
+    shutil.copy2(arquivo, copia)
+    temporario = arquivo.with_name(arquivo.name + ".tmp")
+    temporario.write_text(texto, encoding="utf-8")
+    temporario.replace(arquivo)
+
+
+BOTTLES_FLATPAK = "com.usebottles.bottles"
+_CAMPO_DA_GARRAFA = r"^{}:[ \t]*(?P<valor>[^\r\n]*?)[ \t]*$"
+_RUNNER_DA_GARRAFA = re.compile(_CAMPO_DA_GARRAFA.format("Runner"), re.MULTILINE)
+_NOME_DA_GARRAFA = re.compile(_CAMPO_DA_GARRAFA.format("Name"), re.MULTILINE)
+
+
+def casas_do_bottles(lar: Path | None = None) -> tuple[tuple[Path, ...], tuple[ForaDoPino, ...]]:
+    """Toda pasta de dados do Bottles com garrafas, o Flatpak primeiro; a ilegível vira ``fora``."""
+    onde = _onde(lar)
+    candidatas = (onde.lar / ".var/app" / BOTTLES_FLATPAK / "data" / "bottles",
+                  onde.dados / "bottles")
+    try:
+        return tuple(c for c in candidatas if (c / "bottles").is_dir()), ()
+    except OSError:
+        return (), (ForaDoPino("bottles", "", PORQUE_ILEGIVEL),)
+
+
+def bottles_aberto() -> bool:
+    """O Bottles está rodando? Ele regrava a configuração das garrafas: aberto, nada se escreve."""
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        with contextlib.suppress(OSError):
+            argv = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")[:2]
+            if any(Path(a.decode("utf-8", "replace")).name.casefold() == "bottles" for a in argv):
+                return True
+    return False
+
+
+def _escalar(valor: str) -> str:
+    if len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in "'\"":
+        return valor[1:-1]
+    return valor
+
+
+def _runner_pelo_proton(runners: Path, runner: str) -> bool:
+    if not runner or runner.startswith("sys-"):
+        return False
+    pasta = runners / runner
+    if (pasta / "proton").is_file() or (pasta / "toolmanifest.vdf").is_file():
+        return True
+    return not pasta.exists() and "proton" in runner.casefold()
+
+
+@dataclass(frozen=True)
+class _Garrafa:
+    arquivo: Path
+    nome: str
+    texto: str
+    runner: str
+    onde: tuple[int, int]
+
+
+def _garrafas(casa: Path) -> tuple[list[_Garrafa], list[ForaDoPino]]:
+    """As garrafas desta casa, pelo ``bottle.yml``; a que não se lê vira ``fora``."""
+    garrafas: list[_Garrafa] = []
+    fora: list[ForaDoPino] = []
+    for pasta in sorted((casa / "bottles").iterdir()):
+        arquivo = pasta / "bottle.yml"
+        try:
+            if not arquivo.is_file():
+                continue
+            texto = arquivo.read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            fora.append(ForaDoPino("bottles", pasta.name, PORQUE_ILEGIVEL))
+            continue
+        nome = _NOME_DA_GARRAFA.search(texto)
+        rotulo = (_escalar(nome.group("valor")) if nome else "") or pasta.name
+        runner = _RUNNER_DA_GARRAFA.search(texto)
+        if runner is None:
+            fora.append(ForaDoPino("bottles", rotulo, PORQUE_ILEGIVEL))
+            continue
+        garrafas.append(_Garrafa(arquivo, rotulo, texto, _escalar(runner.group("valor")),
+                                 runner.span("valor")))
+    return garrafas, fora
+
+
+def ha_garrafa_pelo_proton(casa: Path) -> bool:
+    """Alguma garrafa desta casa do Bottles roda por um runner Proton? Nunca levanta."""
+    try:
+        garrafas, _fora = _garrafas(casa)
+    except OSError:
+        return False
+    return any(_runner_pelo_proton(casa / "runners", g.runner) for g in garrafas)
+
+
+def fixar_o_bottles(casa: Path, pino_dir: Path | None, *, escrever: bool = True,
+                    aberto: Callable[[], bool] | None = None) -> FixadoNoLancador:
+    """Aponta para ``pino_dir`` o runner de toda garrafa pelo Proton de UMA casa do Bottles.
+
+    ``pino_dir`` mora na ``runners/`` da casa (o ``Runner:`` do ``bottle.yml`` é o nome da pasta
+    dali); ``None`` = ele ainda não chegou ali, e a casa fica de fora, dita, se alguma garrafa roda
+    pelo Proton. A garrafa que roda por runner Wine fica (a troca estragaria o prefixo) e é
+    dita. Com o Bottles aberto nada se escreve. ``escrever=False`` só diz o que está fora. Nunca
+    levanta.
+    """
+    fora: list[ForaDoPino] = []
+    if escrever and pino_dir is not None and (aberto or bottles_aberto)():
+        escrever = False
+        fora.append(ForaDoPino("bottles", "", PORQUE_BOTTLES_ABERTO))
+    try:
+        garrafas, ilegiveis = _garrafas(casa)
+    except OSError:
+        return FixadoNoLancador(0, (*fora, ForaDoPino("bottles", "", PORQUE_ILEGIVEL)))
+    fora.extend(ilegiveis)
+    total = 0
+    sem_o_pino = False
+    for garrafa in garrafas:
+        if pino_dir is not None and garrafa.runner == pino_dir.name:
+            continue
+        if not _runner_pelo_proton(casa / "runners", garrafa.runner):
+            fora.append(ForaDoPino("bottles", garrafa.nome, PORQUE_PELO_WINE))
+        elif pino_dir is None:
+            sem_o_pino = True
+        elif not escrever:
+            fora.append(ForaDoPino("bottles", garrafa.nome, PORQUE_AINDA_NAO))
+        else:
+            inicio, fim = garrafa.onde
+            try:
+                _escrever_com_copia(garrafa.arquivo, garrafa.texto[:inicio] + pino_dir.name
+                                    + garrafa.texto[fim:])
+            except OSError:
+                fora.append(ForaDoPino("bottles", garrafa.nome, PORQUE_ILEGIVEL))
+                continue
+            total += 1
+    if sem_o_pino:
+        fora.insert(0, ForaDoPino("bottles", "", PORQUE_SEM_O_PINO))
+    return FixadoNoLancador(total if escrever else 0, tuple(fora))
+
+
+_CHAMA_O_UMU = re.compile(r"(?:^|[\s/\"'=])umu-run(?:$|[\s\"';])")
+
+
+def atalhos_do_umu_avulso(lar: Path | None = None) -> tuple[str, ...]:
+    """O nome de cada atalho ``.desktop`` que lança o jogo pelo ``umu-run`` direto. Nunca levanta.
+
+    O umu avulso não tem configuração por jogo: o Proton vem do ``PROTONPATH`` de quem o chama a
+    cada lançamento. As pastas são as do XDG, a do usuário primeiro; o mesmo atalho numa pasta
+    seguinte não conta de novo.
+    """
+    import configparser
+
+    from hefesto_dualsense4unix.integrations import jogos_locais
+
+    try:
+        pastas = [_onde(lar).dados / "applications", *jogos_locais.pastas_de_atalhos()]
+    except Exception:
+        return ()
+    vistos: set[str] = set()
+    nomes: list[str] = []
+    for pasta in dict.fromkeys(pastas):
+        try:
+            arquivos = sorted(pasta.glob("*.desktop"))
+        except OSError:
+            continue
+        for arquivo in arquivos:
+            if arquivo.name in vistos:
+                continue
+            vistos.add(arquivo.name)
+            cfg = configparser.ConfigParser(strict=False, interpolation=None)
+            try:
+                cfg.read_string(arquivo.read_text(encoding="utf-8", errors="replace"))
+            except (OSError, configparser.Error):
+                continue
+            if not cfg.has_section("Desktop Entry"):
+                continue
+            entrada = cfg["Desktop Entry"]
+            if entrada.get("Hidden", "").strip().casefold() == "true":
+                continue
+            if _CHAMA_O_UMU.search(entrada.get("Exec", "")):
+                nomes.append(entrada.get("Name", "").strip() or arquivo.stem)
+    return tuple(nomes)

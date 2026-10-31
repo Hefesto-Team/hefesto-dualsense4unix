@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+from hefesto_dualsense4unix.integrations import jogos_locais
 from hefesto_dualsense4unix.integrations import proton_pin as pp
 from hefesto_dualsense4unix.integrations import qualificar_proton as qp
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
@@ -46,7 +47,10 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(pp, "steam_running", lambda: False)
     monkeypatch.setattr(pp, "steam_game_running", lambda: False)
     monkeypatch.setattr(censo, "heroic_aberto", lambda: False)
+    monkeypatch.setattr(censo, "bottles_aberto", lambda: False)
     monkeypatch.setattr(censo, "lancadores_das_extensoes", lambda lugares=None: ())
+    monkeypatch.setattr(jogos_locais, "pastas_de_atalhos",
+                        lambda: [casa / ".local/share/applications", casa / "sistema/applications"])
 
     def _sem_rede(_url: str, _destino: Path) -> None:
         raise AssertionError("a régua foi à rede")
@@ -77,7 +81,8 @@ def _jogo_do_heroic(pasta: Path, app: str, ferramenta: dict[str, str]) -> Path:
 
 
 def _ferramenta(arquivo: Path, app: str) -> dict[str, str]:
-    return json.loads(arquivo.read_text(encoding="utf-8"))[app]["wineVersion"]
+    ferramenta: dict[str, str] = json.loads(arquivo.read_text(encoding="utf-8"))[app]["wineVersion"]
+    return ferramenta
 
 
 def _proton(onde: str, nome: str = VELHO) -> dict[str, str]:

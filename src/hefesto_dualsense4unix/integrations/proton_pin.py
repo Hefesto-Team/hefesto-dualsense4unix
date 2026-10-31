@@ -1727,13 +1727,28 @@ def conf_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> dict[
 PROTON_MINIMO = (11, 7)
 
 
-def _onde_ja_esta(pasta: Path, nome: str, compat: Path) -> Path | None:
-    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import e_da_caixa_do_flatpak
-
-    if not e_da_caixa_do_flatpak(pasta) and pinned_proton_installed(nome, compat):
+def _onde_ja_esta(proprio: Path, nome: str, compat: Path | None) -> Path | None:
+    if compat is not None and pinned_proton_installed(nome, compat):
         return compat / nome
-    proprio = pasta / "tools" / "proton"
     return proprio / nome if pinned_proton_installed(nome, proprio) else None
+
+
+def _o_pino_que_a_casa_ve(proprio: Path, pino: str, *, conf: dict[str, str], compat: Path,
+                          cache: Path, extrair: bool, ve_a_steam: bool) -> Path | None:
+    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
+    da_casa = pino_que_vale(conf, proprio)
+    candidatos = sorted(dict.fromkeys((pino, da_casa)), key=qp.ordem_da_versao, reverse=True)
+    vista = compat if ve_a_steam else None
+    for nome in dict.fromkeys((*candidatos, conf["name"])):
+        achado = _onde_ja_esta(proprio, nome, vista)
+        if achado is not None:
+            return achado
+    if not extrair or not (cache / f"{conf['name']}.tar.gz").is_file():
+        return None
+    proprio.mkdir(parents=True, exist_ok=True)
+    ensure_pinned_proton(conf, compat_dir=proprio, cache_dir=cache, downloader=None)
+    return proprio / conf["name"] if pinned_proton_installed(conf["name"], proprio) else None
 
 
 def onde_o_heroic_ve_o_pino(pasta: Path, pino: str, *, conf: dict[str, str], compat: Path,
@@ -1746,27 +1761,31 @@ def onde_o_heroic_ve_o_pino(pasta: Path, pino: str, *, conf: dict[str, str], com
     sai do tarball conferido do cache para a ``tools/proton`` da casa, sem rede (``extrair``). A
     extração que falha levanta ``OSError``.
     """
-    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import e_da_caixa_do_flatpak
 
-    da_casa = pino_que_vale(conf, pasta / "tools" / "proton")
-    candidatos = sorted(dict.fromkeys((pino, da_casa)), key=qp.ordem_da_versao, reverse=True)
-    for nome in dict.fromkeys((*candidatos, conf["name"])):
-        achado = _onde_ja_esta(pasta, nome, compat)
-        if achado is not None:
-            return achado
-    if not extrair or not (cache / f"{conf['name']}.tar.gz").is_file():
-        return None
-    proprio = pasta / "tools" / "proton"
-    proprio.mkdir(parents=True, exist_ok=True)
-    ensure_pinned_proton(conf, compat_dir=proprio, cache_dir=cache, downloader=None)
-    return proprio / conf["name"] if pinned_proton_installed(conf["name"], proprio) else None
+    return _o_pino_que_a_casa_ve(pasta / "tools" / "proton", pino, conf=conf, compat=compat,
+                                 cache=cache, extrair=extrair,
+                                 ve_a_steam=not e_da_caixa_do_flatpak(pasta))
+
+
+def onde_o_bottles_ve_o_pino(casa: Path, pino: str, *, conf: dict[str, str], compat: Path,
+                             cache: Path, extrair: bool = True) -> Path | None:
+    """A pasta do Proton fixado na ``runners/`` desta casa do Bottles, ou ``None``.
+
+    O ``Runner:`` da garrafa é o nome de uma pasta da ``runners/``, nativo ou Flatpak: o pino da
+    Steam só vale se já estiver ali. A escolha e a extração são as do Heroic
+    (:func:`onde_o_heroic_ve_o_pino`).
+    """
+    return _o_pino_que_a_casa_ve(casa / "runners", pino, conf=conf, compat=compat, cache=cache,
+                                 extrair=extrair, ve_a_steam=False)
 
 
 def quem_usa_o_proton(home: Path | None = None) -> tuple[str, ...]:
     """Os lançadores deste disco que rodam jogo pelo Proton do host, pelo nome. Nunca levanta.
 
-    A Steam nativa, cada casa do Heroic, cada extensão de lançador que diz como fixar o Proton e
-    cada lançador que virou extensão pelo Proton e tem pasta aqui. A Steam do Flatpak ou do Snap
+    A Steam nativa, cada casa do Heroic e do Bottles, o atalho que chama o umu avulso, cada
+    extensão de lançador que diz como fixar o Proton e cada lançador que virou extensão pelo
+    Proton e tem pasta aqui. A Steam do Flatpak ou do Snap
     não entra: o Proton de fora não serve dentro da caixa.
     """
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
@@ -1780,6 +1799,10 @@ def quem_usa_o_proton(home: Path | None = None) -> tuple[str, ...]:
     except OSError as erro:
         print(f"[proton-pin] não consegui ler {erro.filename or 'a pasta'}: {erro.strerror}",
               file=sys.stderr)
+    if censo.casas_do_bottles(home)[0]:
+        quem.append("Bottles")
+    if censo.atalhos_do_umu_avulso(home):
+        quem.append("umu")
     quem += [e.bloco.rotulo for e in censo.lancadores_das_extensoes()
              if e.bloco.fixador is not None]
     quem += [v.nome for v in censo.lancadores_que_viraram_extensao(home) if v.proton]
@@ -1802,13 +1825,12 @@ def apontar_os_lancadores_para_o_pino(
 ) -> FixadoNoLancador:
     """Fixa no Proton que vale todo jogo de todo lançador que não é a Steam (30/10/2026).
 
-    O dono da ordem «o pin vale para qualquer usuário e todo jogo»
-    (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO). A Steam é do lock
-    (:func:`lock_proton_for_all_games`); aqui entram cada casa do Heroic
-    (:func:`censo_dos_lancadores.fixar_o_heroic`, com o pino visível) e cada extensão
-    de lançador ligada, pelo ``fixador`` que o manifesto declara. O que não se fixa vem em
-    ``fora``, com o porquê, para a aba Lançadores dizer. ``escrever=False`` só mede (é o que a aba
-    lê). Nunca levanta.
+    D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO. A Steam é do :func:`lock_proton_for_all_games`;
+    aqui entram cada casa do Heroic (:func:`censo_dos_lancadores.fixar_o_heroic`), cada casa do
+    Bottles (:func:`censo_dos_lancadores.fixar_o_bottles`, o pino na ``runners/`` da casa) e cada
+    extensão de lançador ligada, pelo ``fixador`` do manifesto. O atalho do umu avulso e o que não
+    se fixa vão a ``fora``, com o porquê, para a aba Lançadores dizer. ``escrever=False`` só mede
+    (é o que a aba lê). Nunca levanta.
     """
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
@@ -1833,6 +1855,20 @@ def apontar_os_lancadores_para_o_pino(
         feito = censo.fixar_o_heroic(pasta, pino_dir, escrever=escrever)
         total += feito.reescritas
         fora.extend(feito.fora)
+    casas, ilegiveis = censo.casas_do_bottles(home)
+    fora.extend(ilegiveis)
+    for casa in casas:
+        try:
+            pino_dir = onde_o_bottles_ve_o_pino(
+                casa, pino, conf=conf, compat=compat, cache=cache,
+                extrair=escrever and censo.ha_garrafa_pelo_proton(casa))
+        except OSError:
+            pino_dir = None
+        feito = censo.fixar_o_bottles(casa, pino_dir, escrever=escrever)
+        total += feito.reescritas
+        fora.extend(feito.fora)
+    fora.extend(censo.ForaDoPino("umu", nome, censo.PORQUE_UMU_AVULSO)
+                for nome in censo.atalhos_do_umu_avulso(home))
     cuidadas: set[str] = set()
     pelo_proton = censo.viraram_extensao_pelo_proton()
     for ext in censo.lancadores_das_extensoes():
