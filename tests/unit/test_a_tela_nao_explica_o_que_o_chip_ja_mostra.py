@@ -182,6 +182,22 @@ def test_as_dicas_que_o_script_do_mapa_do_radio_escreve_nao_explicam(arquivo: pa
     assert not achados, "\n".join(achados)
 
 
+@pytest.mark.parametrize("arquivo", MAPA_DO_RADIO, ids=lambda p: p.parent.name)
+def test_a_dica_do_movimento_do_mapa_do_radio_e_a_mesma_da_08(arquivo: pathlib.Path) -> None:
+    """O `DICA_DO_MOVIMENTO` do script do mapa e o gêmeo da 08 dizem a mesma palavra por nível.
+
+    MORDE: troque o «reduzido» só do script da página e reprova.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
+
+    bloco = re.search(r"const DICA_DO_MOVIMENTO = \{(.*?)\};", arquivo.read_text(encoding="utf-8"),
+                      re.S)
+    assert bloco, f"{arquivo.name} perdeu o `DICA_DO_MOVIMENTO`"
+    do_script = {chave.strip("'"): texto
+                 for chave, texto in re.findall(r"(\w+|''):\s*'([^']*)'", bloco.group(1))}
+    assert do_script == a08.DICA_DO_MOVIMENTO, (do_script, a08.DICA_DO_MOVIMENTO)
+
+
 def _estado_do_sistema(**extra: Any) -> dict[str, Any]:
     return {"controllers": [{"uniq": UNIQ, "connected": True}],
             "rumble_ff": {"vpads": 0}, "gamepad_emulation": {"enabled": True}, **extra}
