@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Põe no lugar o fonte do kernel que roda: o de fábrica dele mais a série de `patch/`.
 
-O `PRE_BUILD` de cada pacote DKMS. A ordem: o fonte conferido em `fonte-por-kernel/` (o
-cache); senão, o de fábrica do kernel, achado na árvore do kernel, na fonte da distro ou no
-stable do kernel.org, conferido pelo `srcversion` do módulo de fábrica, com a série aplicada
-sem fuzz. Quando o de fábrica fica, sai com 77 e o motivo vai ao `fonte-<kernel>.txt`.
+A ordem: o fonte conferido em `fonte-por-kernel/` (o cache); senão, o de fábrica do kernel,
+achado na árvore do kernel, na fonte da distro ou no stable do kernel.org da versão que os
+headers declaram, conferido pelo `srcversion` do módulo de fábrica, com a série aplicada sem
+fuzz. O veredito vai ao `fonte-<kernel>.txt` da pasta do veredito.
 
-    preparar-o-fonte.py <kernelver> <kernel_source_dir> [<pasta do veredito>]
+Com `--exclusivo`, roda quando o DKMS lê o `dkms.conf` e imprime o `BUILD_EXCLUSIVE_KERNEL`:
+vazio quando o fonte se preparou (guardado em `fonte-<kernel>.tar`), e um padrão que nenhum
+kernel casa quando o de fábrica fica, para o DKMS pular com 77 e o `autoinstall` não reprovar
+a instalação do kernel. Sem ele, é o `PRE_BUILD`: usa o guardado ou decide na hora.
+
+    preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> [<pasta do veredito>]
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterator, Sequence
@@ -29,6 +35,9 @@ from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
 PULA = 77
+NENHUM_KERNEL = "^/"
+FALHA_VALE = 600
+BEM = ("cache", "fabrica")
 STABLE = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/{caminho}?h={tag}"
 INCLUDE_LOCAL = re.compile(r'^\s*#\s*include\s+"([^"/]+)"', re.M)
 MAIS_PONTOS = 40
@@ -88,7 +97,7 @@ def _build(kver: str) -> str:
     return kver.rsplit("-", 1)[0] if "-" in kver else kver
 
 
-def _do_cache(kver: str, modulo: str) -> str | None:
+def _do_cache(kver: str, modulo: str, destino: Path) -> str | None:
     build = _build(kver)
     por_kernel = AQUI / "fonte-por-kernel"
     main = AQUI / "main-por-kernel" / f"main-{build}.h"
@@ -101,14 +110,14 @@ def _do_cache(kver: str, modulo: str) -> str | None:
     if pasta.is_dir():
         for arquivo in pasta.iterdir():
             if arquivo.is_file():
-                shutil.copyfile(arquivo, AQUI / arquivo.name)
+                shutil.copyfile(arquivo, destino / arquivo.name)
         origem = f"o fonte conferido de {build} no lugar"
     elif build in raiz:
         origem = f"o fonte da raiz serve a {build}"
     else:
         return None
     if main.is_file():
-        shutil.copyfile(main, AQUI / "main.h")
+        shutil.copyfile(main, destino / "main.h")
     return f"hefesto-{modulo}: {origem}"
 
 
@@ -129,23 +138,31 @@ def _modinfo(campo: str, ko: Path) -> list[str]:
     return [linha.strip() for linha in feito.stdout.splitlines() if linha.strip()]
 
 
-def _fecho(principal: str, ler: Leitor) -> dict[str, bytes] | None:
-    pasta = principal.rsplit("/", 1)[0]
+def _pastas_do_include(caminho: str) -> list[str]:
+    pasta = caminho.rsplit("/", 1)[0]
+    return [pasta, pasta.rsplit("/", 1)[0]] if "/" in pasta else [pasta]
+
+
+def _fecho(principal: str, ler: Leitor, faltou: list[str] | None = None) -> dict[str, bytes] | None:
     arquivos: dict[str, bytes] = {}
 
-    def abrir(caminho: str) -> bool:
-        if caminho in arquivos:
-            return True
-        conteudo = ler(caminho)
-        if conteudo is None:
-            return False
-        arquivos[caminho] = conteudo
-        return all(
-            abrir(f"{pasta}/{nome}")
-            for nome in INCLUDE_LOCAL.findall(conteudo.decode("utf-8", errors="replace"))
-        )
+    def abrir(caminhos: list[str]) -> bool:
+        for caminho in caminhos:
+            if caminho in arquivos:
+                return True
+            conteudo = ler(caminho)
+            if conteudo is None:
+                continue
+            arquivos[caminho] = conteudo
+            return all(
+                abrir([f"{p}/{nome}" for p in _pastas_do_include(caminho)])
+                for nome in INCLUDE_LOCAL.findall(conteudo.decode("utf-8", errors="replace"))
+            )
+        if faltou is not None:
+            faltou.append(caminhos[0])
+        return False
 
-    return arquivos if abrir(principal) else None
+    return arquivos if abrir([principal]) else None
 
 
 def _da_arvore(raiz: Path) -> Leitor:
@@ -205,13 +222,48 @@ def _do_stable(tag: str) -> Leitor:
     return ler
 
 
-def _tags(kver: str) -> Iterator[str]:
-    achado = re.match(r"(\d+)\.(\d+)(?:\.(\d+))?", kver)
+def _versao_do_kernel(texto: str) -> tuple[int, int, int] | None:
+    achado = re.match(r"\s*(\d+)\.(\d+)(?:\.(\d+))?", texto)
     if not achado:
-        return
-    maior, menor, ponto = achado.group(1), achado.group(2), int(achado.group(3) or 0)
-    for z in range(ponto, ponto + MAIS_PONTOS):
-        yield f"v{maior}.{menor}" if z == 0 else f"v{maior}.{menor}.{z}"
+        return None
+    return int(achado.group(1)), int(achado.group(2)), int(achado.group(3) or 0)
+
+
+def _tag(versao: tuple[int, int, int]) -> str:
+    maior, menor, ponto = versao
+    return f"v{maior}.{menor}" if ponto == 0 else f"v{maior}.{menor}.{ponto}"
+
+
+def _dos_headers(ksrc: str) -> tuple[int, int, int] | None:
+    if not ksrc or not (Path(ksrc) / "Makefile").is_file():
+        return None
+    try:
+        feito = subprocess.run(
+            ["make", "-s", "-C", ksrc, "kernelversion"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return _versao_do_kernel(feito.stdout) if feito.returncode == 0 else None
+
+
+def _tags(kver: str, ksrc: str, pontos: bool) -> list[str]:
+    dos_headers = _dos_headers(ksrc)
+    if not pontos:
+        return [_tag(dos_headers)] if dos_headers else []
+    tags = [_tag(dos_headers)] if dos_headers else []
+    do_nome = _versao_do_kernel(kver)
+    if do_nome:
+        maior, menor, ponto = do_nome
+        for z in range(ponto, ponto + MAIS_PONTOS):
+            tag = _tag((maior, menor, z))
+            if tag not in tags:
+                tags.append(tag)
+    return tags
 
 
 def _candidatos(
@@ -230,19 +282,27 @@ def _candidatos(
         arquivos = _fecho(principal, _do_tar(tarball, principal.rsplit("/", 1)[0]))
         if arquivos:
             yield f"a fonte da distro em {tarball}", arquivos
-    for tag in _tags(kver):
+    tags = _tags(kver, ksrc, pontos)
+    if not tags:
+        tentei.append(
+            "o stable do kernel.org (os headers não dizem a versão exata, e sem o srcversion "
+            "só a versão exata se confere)"
+        )
+    for tag in tags:
+        faltou: list[str] = []
         try:
-            arquivos = _fecho(principal, _do_stable(tag))
+            arquivos = _fecho(principal, _do_stable(tag), faltou)
         except SemRedeError as erro:
             tentei.append(f"o stable {tag} (sem rede: {erro})")
             return
         if arquivos is None:
-            tentei.append(f"o stable {tag} (não existe)")
+            if faltou and faltou[0] != principal:
+                tentei.append(f"o stable {tag} (o {faltou[0]} que o fonte inclui não veio)")
+            else:
+                tentei.append(f"o stable {tag} (não existe)")
             return
         tentei.append(f"o stable {tag}")
         yield f"o stable {tag} do kernel.org", arquivos
-        if not pontos:
-            return
 
 
 def _md4_do_modpost(dados: bytes) -> str:
@@ -322,7 +382,14 @@ def _texto_do_modpost(conteudo: bytes) -> bytes:
 
 
 def srcversion(arquivos: dict[str, bytes]) -> str:
-    return _md4_do_modpost(b"".join(_texto_do_modpost(c) for c in arquivos.values()))[:23]
+    pasta = next(iter(arquivos)).rsplit("/", 1)[0] if arquivos else ""
+    return _md4_do_modpost(
+        b"".join(
+            _texto_do_modpost(conteudo)
+            for caminho, conteudo in arquivos.items()
+            if caminho.rsplit("/", 1)[0] == pasta
+        )
+    )[:23]
 
 
 def _compilar(ksrc: str, arquivos: dict[str, bytes], pasta: Path) -> None:
@@ -337,11 +404,13 @@ def _compilar(ksrc: str, arquivos: dict[str, bytes], pasta: Path) -> None:
     )
 
 
-def _confere(ksrc: str, modulo: str, arquivos: dict[str, bytes], fabrica: Path) -> bool:
+def _confere(
+    ksrc: str, modulo: str, arquivos: dict[str, bytes], fabrica: Path, destino: Path
+) -> bool:
     de_fabrica = _modinfo("srcversion", fabrica)
     if de_fabrica:
         return [srcversion(arquivos)] == de_fabrica
-    with tempfile.TemporaryDirectory(dir=AQUI, prefix=".fabrica-") as tmp:
+    with tempfile.TemporaryDirectory(dir=destino, prefix=".fabrica-") as tmp:
         _compilar(ksrc, arquivos, Path(tmp))
         ko = next(
             (
@@ -357,9 +426,11 @@ def _confere(ksrc: str, modulo: str, arquivos: dict[str, bytes], fabrica: Path) 
         )
 
 
-def _aplicar(serie: list[Path], arquivos: dict[str, bytes]) -> tuple[dict[str, bytes], list[str]]:
+def _aplicar(
+    serie: list[Path], arquivos: dict[str, bytes], destino: Path
+) -> tuple[dict[str, bytes], list[str]]:
     notas: list[str] = []
-    with tempfile.TemporaryDirectory(dir=AQUI, prefix=".serie-") as tmp:
+    with tempfile.TemporaryDirectory(dir=destino, prefix=".serie-") as tmp:
         arvore = Path(tmp)
         for caminho, conteudo in arquivos.items():
             (arvore / caminho).parent.mkdir(parents=True, exist_ok=True)
@@ -395,10 +466,12 @@ def _aplicar(serie: list[Path], arquivos: dict[str, bytes]) -> tuple[dict[str, b
         return {caminho: (arvore / caminho).read_bytes() for caminho in arquivos}, notas
 
 
-def _do_kernel(kver: str, ksrc: str, modulo: str) -> str:
-    serie = _serie()
-    caminhos = _caminhos_da_serie(serie)
-    principal = next((c for c in caminhos if c.endswith(".c")), "")
+def _principal() -> str:
+    return next((c for c in _caminhos_da_serie(_serie()) if c.endswith(".c")), "")
+
+
+def _do_kernel(kver: str, ksrc: str, modulo: str, destino: Path) -> str:
+    principal = _principal()
     if not principal:
         raise VereditoError(
             "sem-serie", f"hefesto-{modulo}: a série de patch/ não diz qual .c do kernel cura"
@@ -419,12 +492,12 @@ def _do_kernel(kver: str, ksrc: str, modulo: str) -> str:
         if assinatura in vistos:
             continue
         vistos.add(assinatura)
-        if not _confere(ksrc, modulo, arquivos, fabrica):
+        if not _confere(ksrc, modulo, arquivos, fabrica, destino):
             continue
         falhas: list[str] = []
         for rotulo, serie_daqui in _series():
             try:
-                curados, notas = _aplicar(serie_daqui, arquivos)
+                curados, notas = _aplicar(serie_daqui, arquivos, destino)
             except NaoAplicaError as erro:
                 falhas.append(
                     f"na de {rotulo}, o {erro.patch} deixa {erro.pedacos or 'algum'} "
@@ -432,11 +505,12 @@ def _do_kernel(kver: str, ksrc: str, modulo: str) -> str:
                 )
                 continue
             for caminho, conteudo in curados.items():
-                (AQUI / caminho.rsplit("/", 1)[-1]).write_bytes(conteudo)
+                (destino / caminho.rsplit("/", 1)[-1]).write_bytes(conteudo)
             conferencia = (
                 "pelo srcversion"
                 if pontos
-                else "pelos alias e parâmetros, que o kernel não grava srcversion"
+                else "pelos alias e parâmetros no stable da versão que os headers declaram, "
+                "que o kernel não grava srcversion"
             )
             return (
                 f"hefesto-{modulo}: o fonte de fábrica de {kver} é {origem} "
@@ -456,36 +530,132 @@ def _do_kernel(kver: str, ksrc: str, modulo: str) -> str:
     )
 
 
-def _gravar(veredito: Path | None, kver: str, estado: str, frase: str) -> None:
-    print(frase, file=sys.stderr if estado not in ("cache", "fabrica") else sys.stdout)
+def _chave(kver: str) -> str:
+    principal = _principal()
+    fabrica = (
+        _modulo_de_fabrica(kver, principal.rsplit("/", 1)[0], _conf("BUILT_MODULE_NAME[0]"))
+        if principal
+        else None
+    )
+    if fabrica is None:
+        return "sem-fabrica"
+    dados = fabrica.stat()
+    return f"{fabrica}:{dados.st_size}:{dados.st_mtime_ns}"
+
+
+def _gravar(veredito: Path | None, kver: str, estado: str, frase: str, chave: str = "") -> None:
+    print(frase, file=sys.stderr if estado not in BEM else sys.stdout)
     if veredito is None:
         return
     with contextlib.suppress(OSError):
-        (veredito / f"fonte-{kver}.txt").write_text(f"{estado}\n{frase}\n", encoding="utf-8")
+        (veredito / f"fonte-{kver}.txt").write_text(
+            f"{estado}\n{frase}\n{chave}\n", encoding="utf-8"
+        )
+
+
+def _lido(veredito: Path, kver: str) -> tuple[str, str, str, float]:
+    arquivo = veredito / f"fonte-{kver}.txt"
+    try:
+        linhas = arquivo.read_text(encoding="utf-8").split("\n")
+        idade = time.time() - arquivo.stat().st_mtime
+    except OSError:
+        return "", "", "", 0.0
+    linhas += ["", "", ""]
+    return linhas[0], linhas[1], linhas[2], idade
+
+
+def _decidir(kver: str, ksrc: str, modulo: str, destino: Path) -> tuple[str, str]:
+    do_cache = _do_cache(kver, modulo, destino)
+    if do_cache:
+        return "cache", do_cache
+    try:
+        return "fabrica", _do_kernel(kver, ksrc, modulo, destino)
+    except VereditoError as motivo:
+        return motivo.estado, motivo.frase
+
+
+def _exclusivo(kver: str, ksrc: str, veredito: Path | None) -> str:
+    modulo = _conf("BUILT_MODULE_NAME[0]")
+    if not kver or not modulo or veredito is None or (veredito / kver).is_dir():
+        return ""
+    if not (Path(ksrc) / "Makefile").is_file():
+        ksrc = str(_modulos_root() / kver / "build")
+        if not (Path(ksrc) / "Makefile").is_file():
+            return ""
+    if not veredito.is_dir() or not os.access(veredito, os.W_OK):
+        return ""
+    chave = _chave(kver)
+    guardado = veredito / f"fonte-{kver}.tar"
+    estado, _frase, chave_lida, idade = _lido(veredito, kver)
+    if chave_lida == chave and estado in BEM and guardado.is_file():
+        return ""
+    if chave_lida == chave and estado and estado not in BEM and idade < FALHA_VALE:
+        return NENHUM_KERNEL
+    with tempfile.TemporaryDirectory(dir=veredito, prefix=".fonte-") as tmp:
+        with contextlib.redirect_stdout(sys.stderr):
+            estado, frase = _decidir(kver, ksrc, modulo, Path(tmp))
+            _gravar(veredito, kver, estado, frase, chave)
+        if estado not in BEM:
+            guardado.unlink(missing_ok=True)
+            return NENHUM_KERNEL
+        with tarfile.open(guardado, "w") as tar:
+            for arquivo in sorted(Path(tmp).iterdir()):
+                if arquivo.is_file() and not arquivo.name.startswith("."):
+                    tar.add(arquivo, arcname=arquivo.name)
+    return ""
+
+
+def _do_guardado(veredito: Path | None, kver: str) -> bool:
+    if veredito is None:
+        return False
+    estado, frase, chave_lida, _idade = _lido(veredito, kver)
+    guardado = veredito / f"fonte-{kver}.tar"
+    if estado not in BEM or chave_lida != _chave(kver) or not guardado.is_file():
+        return False
+    try:
+        with tarfile.open(guardado) as tar:
+            for info in tar:
+                if not info.isfile() or "/" in info.name or info.name.startswith("."):
+                    continue
+                conteudo = tar.extractfile(info)
+                if conteudo:
+                    (AQUI / info.name).write_bytes(conteudo.read())
+    except (tarfile.TarError, OSError):
+        return False
+    print(frase)
+    return True
 
 
 def main(argv: list[str]) -> int:
+    exclusivo = bool(argv) and argv[0] == "--exclusivo"
+    if exclusivo:
+        argv = argv[1:]
     if len(argv) < 2:
         print(
-            "uso: preparar-o-fonte.py <kernelver> <kernel_source_dir> [<pasta do veredito>]",
+            "uso: preparar-o-fonte.py [--exclusivo] <kernelver> <kernel_source_dir> "
+            "[<pasta do veredito>]",
             file=sys.stderr,
         )
         return 2
     kver, ksrc = argv[0], argv[1]
     veredito = Path(argv[2]) if len(argv) > 2 and argv[2] else None
+    if exclusivo:
+        try:
+            print(_exclusivo(kver, ksrc, veredito))
+        except Exception as erro:
+            print(f"preparar-o-fonte: {erro}", file=sys.stderr)
+            print("")
+        return 0
     modulo = _conf("BUILT_MODULE_NAME[0]")
     if not modulo:
         print("preparar-o-fonte: o dkms.conf não diz o BUILT_MODULE_NAME[0]", file=sys.stderr)
         return 1
-    do_cache = _do_cache(kver, modulo)
-    if do_cache:
-        _gravar(veredito, kver, "cache", do_cache)
+    if _do_guardado(veredito, kver):
         return 0
-    try:
-        _gravar(veredito, kver, "fabrica", _do_kernel(kver, ksrc, modulo))
-    except VereditoError as motivo:
-        _gravar(veredito, kver, motivo.estado, motivo.frase)
-        (AQUI / "Makefile").write_text(f"$(error {motivo.frase})\n", encoding="utf-8")
+    estado, frase = _decidir(kver, ksrc, modulo, AQUI)
+    _gravar(veredito, kver, estado, frase, _chave(kver))
+    if estado not in BEM:
+        (AQUI / "Makefile").write_text(f"$(error {frase})\n", encoding="utf-8")
         return PULA
     return 0
 
