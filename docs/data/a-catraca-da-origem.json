@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1173928,
+      "piso": 1175386,
       "por_item": {
         "docs": 107806,
         "scripts": 110027,
-        "src": 296072,
-        "tests": 660023
+        "src": 296404,
+        "tests": 661149
       },
-      "razao": "tamanho: +12 linhas (1173916 -> 1173928), pagas por Origem: D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA; registrado no fecho, topo 9035aff50bfc",
+      "razao": "tamanho: +1458 linhas (1173928 -> 1175386), pagas por Origem: D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 1611fb885866",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1267,10 +1267,16 @@
           "de": 1173916,
           "para": 1173928,
           "razao": "tamanho: +12 linhas (1173916 -> 1173928), pagas por Origem: D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA; registrado no fecho, topo 9035aff50bfc"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1173928,
+          "para": 1175386,
+          "razao": "tamanho: +1458 linhas (1173928 -> 1175386), pagas por Origem: D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 1611fb885866"
         }
       ],
       "unidade": "linhas",
-      "universo": 3276
+      "universo": 3279
     }
   }
 }
