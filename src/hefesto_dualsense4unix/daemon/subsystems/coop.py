@@ -989,7 +989,7 @@ class CoopManager:
     def _o_p1_esta_livre(self) -> bool:
         return getattr(self._daemon, "_gamepad_device", None) is not None and not any(
             getattr(p, "no_p1", False) for p in self._players.values()
-        ) and not _algum_lugar_guardado(self._daemon)
+        )
 
     def o_de_fora_no_p1(self) -> _SecondaryPlayer | None:
         """O controle de fora que dirige o pad do P1 por estar sozinho na mesa."""
