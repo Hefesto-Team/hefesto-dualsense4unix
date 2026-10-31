@@ -122,7 +122,7 @@ def test_cada_quadrado_leva_o_endereco_da_entrada() -> None:
                "novo_hub": ""})
     assert 'data-entrada="1"' in saiu and 'data-entrada="2"' in saiu
     assert 'data-face="0"' in saiu, "a face sem endereço deixa `nova-entrada` sem alvo"
-    assert "3-1.1.1" in saiu, "a dica não diz como o sistema enumera o aparelho"
+    assert "3-1.1.1" not in saiu, "a dica voltou a dizer como o sistema enumera o aparelho"
 
 
 def test_o_gesto_de_dois_tempos(pac, a08) -> None:

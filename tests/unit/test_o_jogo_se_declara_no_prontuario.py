@@ -193,7 +193,11 @@ class TestOBinarioDiz:
         assert sinais.sony == ()
         assert fd.montar_ficha("1", None, sinais).veredito == fd.NAO_SEI
 
-    def test_0ce6_sem_0df2_gera_o_aviso_e_os_dois_nao(self, tmp_path: Path) -> None:
+    def test_nenhum_par_de_modelos_gera_aviso(self, tmp_path: Path) -> None:
+        """O pad virtual veste o 0CE6 por padrão e o Edge só para o jogo que conhece só ele.
+
+        D-3110-O-JOGO-QUE-CONHECE-OS-DOIS-MODELOS-VESTE-O-COMUM: a ficha não avisa de modelo.
+        """
         so_ce6 = tmp_path / "a"
         so_ce6.mkdir()
         (so_ce6 / "A.exe").write_bytes(b"MZ" + b"\0" * 9 + _VID + _PID_0CE6 + b"\0" * 20)
@@ -209,9 +213,7 @@ class TestOBinarioDiz:
         a = fd.montar_ficha("1", None, fd.examinar_o_binario(so_ce6))
         b = fd.montar_ficha("2", None, fd.examinar_o_binario(ambos))
         c = fd.montar_ficha("3", None, fd.examinar_o_binario(so_df2))
-        assert a.binario.pids == ("0ce6",)
-        assert len(a.avisos) == 1
-        assert "0CE6" in a.avisos[0] and "0DF2" in a.avisos[0]
+        assert a.binario.pids == ("0ce6",) and a.avisos == ()
         assert b.binario.pids == ("0ce6", "0df2") and b.avisos == ()
         assert c.binario.pids == ("0df2",) and c.avisos == ()
 
@@ -274,12 +276,12 @@ class TestOProntuarioMostraAFicha:
         assert not jogo.declarado.binario.examinado
         assert jogo.declarado.veredito == fd.SO_XBOX_DECLARADO
 
-    def test_a_tabela_mostra_a_ficha_e_o_aviso_do_modelo(self, tmp_path: Path) -> None:
+    def test_a_tabela_mostra_a_ficha_sem_aviso_de_modelo(self, tmp_path: Path) -> None:
         texto = _tabela(self._censo(tmp_path))
         assert "declara" in texto.splitlines()[0]
         assert "O que cada jogo declara sobre controle:" in texto
         assert "categoria 57" in texto
-        assert "aviso: o executável conhece o modelo 0CE6" in texto
+        assert "aviso:" not in texto
 
 
 class TestACapaDaSteam:

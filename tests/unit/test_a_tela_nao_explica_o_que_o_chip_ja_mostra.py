@@ -33,7 +33,11 @@ EXPLICACAO = re.compile(
     r"\bAPI\b|segue ativo|não leva (o )?(giroscópio|touchpad)"
     r"|o jogo vê (este|deste) controle|como Xbox 360|Xbox 360[,.:;—]"
     r"|o jogo lê este controle|o jogo ainda vê|sem o Hefesto no meio|pelo rádio, é assim"
-    r"|não há som nem vibração",
+    r"|não há som nem vibração"
+    r"|o jogo vê (um|o próprio) controle|enumera este aparelho"
+    r"|chega tudo o que o jogo usa|menos que pelo USB|os gatilhos não chegam"
+    r"|a borda é a cor do plástico que|uma borda colorida aqui|assumir o registrador"
+    r"|modelo do controle virtual",
     re.IGNORECASE,
 )
 
@@ -91,6 +95,10 @@ def _constantes_de_texto(arquivo: pathlib.Path) -> list[tuple[int, str]]:
 
 GERADORES_E_PACOTES = sorted([
     INTERFACE / "cartao_do_controle.py",
+    INTERFACE / "conexoes.py",
+    INTERFACE / "desenho_da_experimental.py",
+    INTERFACE / "logica_do_mapa.py",
+    RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "impedimentos_da_steam.py",
     *INTERFACE.glob("aba[01][0-9].py"),
     *(INTERFACE / "pacotes").glob("*.py"),
 ])
@@ -154,6 +162,23 @@ def test_o_html_gerado_das_abas_nao_explica_a_api(desenho: pathlib.Path) -> None
     leitor = _TextoDaTela()
     leitor.feed(desenho.read_text(encoding="utf-8"))
     achados = [f"{desenho.name}:{n}: {t[:90]!r}" for n, t in leitor.textos if EXPLICACAO.search(t)]
+    assert not achados, "\n".join(achados)
+
+
+MAPA_DO_RADIO = (*sorted(INTERFACE.glob("*/mapa-do-radio.html")),
+                 RAIZ / "mockup" / "mapa-do-radio.html")
+
+
+@pytest.mark.parametrize("arquivo", MAPA_DO_RADIO, ids=lambda p: p.parent.name)
+def test_as_dicas_que_o_script_do_mapa_do_radio_escreve_nao_explicam(arquivo: pathlib.Path) -> None:
+    """O mapa do rádio monta o `title` do sinal no script, que o leitor de HTML pula.
+
+    MORDE: devolva «chega tudo o que o jogo usa» ao `DICA_DO_MOVIMENTO` da página e reprova.
+    """
+    assert len(MAPA_DO_RADIO) == 2, MAPA_DO_RADIO
+    achados = [f"{arquivo.name}:{n}: {linha.strip()[:90]!r}"
+               for n, linha in enumerate(arquivo.read_text(encoding="utf-8").splitlines(), 1)
+               if EXPLICACAO.search(linha)]
     assert not achados, "\n".join(achados)
 
 
