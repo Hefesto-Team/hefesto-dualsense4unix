@@ -112,7 +112,10 @@ def sem_escrevente(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 def test_o_arme_do_lancamento_nao_espera_a_escrita_do_fio_escrevente(
     sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O arme pede a escrita ao fio escrevente e volta, com a trava da escrita ocupada."""
+    """O arme pede a escrita ao fio escrevente e volta, com a trava da escrita ocupada.
+
+    Prova da D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO.
+    """
     from hefesto_dualsense4unix.profiles import manager
 
     (tmp_path / "last_run").write_text(f"appid={APPID}\nepoch=1000\npid=1\n", encoding="utf-8")
