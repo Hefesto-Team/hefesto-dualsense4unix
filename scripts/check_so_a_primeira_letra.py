@@ -102,6 +102,7 @@ NOMES_DO_DESENHO = (
     "Sackboy: A Big Adventure", "Resident Evil Village", "Hollow Knight: Silksong",
     "Neon Nights", "Planet Lust", "MonGirl Conquest", "Third Crisis",
     "Nora", "Domi", "Ferri", "Intiface Engine", "Game Mode", "Lure of Passion",
+    "Corrida de Inverno", "Wine",
 )
 
 DESIGNADORES = frozenset({"Entrada", "Canal", "Player", "Controle"})

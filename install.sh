@@ -1881,7 +1881,8 @@ _wifi_powersave_motivo_de_pular() {
 }
 
 _wifi_powersave_conf_velho() {
-    [[ -e "$1" ]] && ! cmp -s "$2" "$1" 2>/dev/null
+    [[ -e "$1" ]] || return 1
+    ! cmp -s "$2" "$1" 2>/dev/null
 }
 
 aplicar_wifi_powersave_off() {
@@ -2356,7 +2357,9 @@ _pw_da_casa_serve_aqui() {
 
 _pw_nome_da_distro() {
     local os="${_OS_RELEASE:-/etc/os-release}" nome=""
-    [[ -r "${os}" ]] && nome="$(sed -n 's/^PRETTY_NAME=//p' "${os}" | tr -d '"' | head -1)"
+    if [[ -r "${os}" ]]; then
+        nome="$(sed -n 's/^PRETTY_NAME=//p' "${os}" | tr -d '"' | head -1)"
+    fi
     printf '%s' "${nome:-uma distro sem /etc/os-release}"
 }
 

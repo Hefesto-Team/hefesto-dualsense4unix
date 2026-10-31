@@ -1,5 +1,5 @@
-"""A janela de uma extensão de tema, no arranjo da Lovense: a coluna «Agora» com o tema em uso,
-as abas dos grupos do manifesto à direita e a faixa «Ao vivo» com a paleta que a tela pinta.
+"""A janela de uma extensão de tema, no arranjo C das extensões: a coluna «Agora» com o tema
+em uso, as abas dos grupos do manifesto à direita e a faixa «Ao vivo» com a paleta que a tela pinta.
 
 Cada peça sai do papel que o bloco ``tema`` dá à opção (a cor, o importado, o destaque, os
 botões, a logo e o CSS), nunca do id: qualquer extensão de tema ganha a mesma janela.
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.interface.desenho_da_experimental import (
     GESTO_DE_IMPORTAR,
     GESTO_DE_TIRAR,
@@ -43,10 +44,6 @@ SEM = "—"
 _PECAS_DA_MINI = (("--m-bg", "--app-bg"), ("--m-pn", "--panel"), ("--m-el", "--elevated"),
                   ("--m-fg", "--fg"), ("--m-sv", "--texto-mudo"), ("--m-ac", "--green"),
                   ("--m-rx", "--purple"), ("--m-rs", "--pink"))
-
-
-def _numero(razao: float) -> str:
-    return f"{razao:.1f}".replace(".", ",")
 
 
 def recusa_curta(frase: str) -> str:
@@ -247,7 +244,7 @@ def faixa_html(retrato: Retrato) -> str:
         f'<i style="--c:{_a(retrato.cores[t])}" data-dica="{_a(rt.papel_do_token(t))} · '
         f'{_a(retrato.cores[t])}"></i>' for t, _ in rt.PAPEL_DOS_TOKENS if t in retrato.cores)
     contraste = (f'<span class="tm-contraste" data-dica="{DICA_DO_CONTRASTE}">'
-                 f"{_numero(retrato.contraste)}:1</span>" if retrato.contraste else "")
+                 f"{formata_pt_br(retrato.contraste)}:1</span>" if retrato.contraste else "")
     return (f'<div class="mj-faixa tm-faixa" id="{PEDACO}tema-vivo">'
             f'<div class="mj-faixa-topo"><span class="pc-sub">Ao vivo</span>{contraste}</div>'
             f'<div class="tm-paleta">{pecas}</div></div>')
@@ -256,7 +253,7 @@ def faixa_html(retrato: Retrato) -> str:
 def janela_do_tema_html(nome: str, opcoes: Sequence[OpcaoDaJanela], retrato: Retrato, *,
                         mod: str, aba: str = "", parar: str = "",
                         aparecem: Collection[str] = ()) -> str:
-    """O miolo da janela de uma extensão de tema, no arranjo C da Lovense."""
+    """O miolo da janela de uma extensão de tema, no arranjo C das janelas de extensão."""
     return _arranjo_c(nome, _abas_html(opcoes, retrato, aba, mod, aparecem), mod=mod, agora=(),
                       estado=None, parar=parar, faixa=faixa_html(retrato),
                       coluna=coluna_html(retrato, nome), corpo="tm-corpo")

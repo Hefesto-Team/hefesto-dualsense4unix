@@ -81,6 +81,11 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "o leitor da biblioteca que uma modificação declara, na caixa do `bwrap`: "
         "grupo próprio, prazo da modificação, e o `_parar` mata o grupo no `finally`",
     ),
+    "integrations/censo_dos_lancadores.py::fixar_por_processo": (
+        "ajudante", 1,
+        "o fixador do Proton que uma modificação declara, na caixa do `bwrap`: "
+        "grupo próprio, prazo da modificação, e o `_parar` mata o grupo no `finally`",
+    ),
     "daemon/subsystems/eventos_do_perfil.py::rodar_o_comando": (
         "ajudante", 1,
         "a pergunta do «Meu comando» de um perfil de evento: sem shell, grupo próprio, "
