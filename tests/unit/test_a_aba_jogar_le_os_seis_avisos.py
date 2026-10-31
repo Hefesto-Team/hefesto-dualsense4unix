@@ -368,3 +368,19 @@ def test_a_prova_declarada_pede_o_corpo_e_nao_o_bool() -> None:
     prova = next(p for p in aba.PROVAS if p["gesto"] == "reconectar")
     assert [c[0] for c in prova["chama"]] == ["resultado", "resultado"]
     assert "resultado" in aba.PONTE
+
+
+def test_o_aviso_do_nativo_diz_o_nome_da_posicao_na_jogar() -> None:
+    """Com dois controles no nativo, o aviso diz «Desligado», o nome que a Jogar mostra.
+
+    D-2910-OS-MODOS-SE-CHAMAM-PELO-NOME-DA-TELA: «Conexão Nativa» não existe em tela nenhuma.
+    """
+    from hefesto_dualsense4unix.interface import aba01
+
+    segundo = {"uniq": "aa:bb:cc:00:00:02", "connected": True, "player_slot": 2}
+    frase = painel.aviso_do_modo_nativo(
+        _mesa(native_mode=True, controllers=[*_mesa()["controllers"], segundo]))
+    assert frase, "dois controles no nativo e o aviso calou"
+    desligado = next(rot for chave, _modo, rot, _dica in aba01.INTERRUPTOR if chave == "desligado")
+    assert f"«{desligado}»" in frase, f"o aviso não diz o nome da posição na Jogar: {frase!r}"
+    assert "Conexão Nativa" not in frase, f"o nome que saiu da tela voltou: {frase!r}"
