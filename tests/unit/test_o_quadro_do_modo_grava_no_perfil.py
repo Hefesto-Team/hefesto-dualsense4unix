@@ -244,6 +244,12 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     MÁSCARA vem por cima, independente do modo». Com o PS + R3 gravando a cada aperto, a volta
     pela Navegação apagava a máscara padrão do perfil em silêncio, medido.
 
+    AJUSTADA À REGRA DE PRODUTO — O-GAMEPAD-SEM-MASCARA-TEM-UMA-REGRA-SO-01, 31/10/2026.
+    ANTES a terceira asserção cobrava que a seção gamepad nascida do zero ficasse
+    sem máscara. AGORA cobra o par do DualSense (D-3110-O-PERFIL-MORA-NO-DISCO-NO-
+    FORMATO-DA-ABA-JOGAR: máscara vazia é dualsense em todo computador), e o
+    «mantém a atual» passa a ser cobrado de uma seção que já tem máscara.
+
     MORDIDA: devolva a poda (`campos["gamepad_flavor"] = None` no ramo que não é
     gamepad de `manager.secao_do_modo_com_o_caminho`) e a primeira asserção
     reprova.
@@ -255,5 +261,10 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
         "o modo apagou a máscara padrão do perfil — a máscara não é do modo, e "
         "a volta do PS + R3 pela Navegação a perdia a cada ciclo")
     do_zero = secao_do_modo_com_o_caminho(None, kind="gamepad")
-    assert do_zero.gamepad_flavor is None, (
+    assert (do_zero.caminho, do_zero.gamepad_flavor) == ("dualsense", "dualsense"), (
+        "a seção gamepad sem par nasceu sem o par do DualSense — a regra é do dono "
+        "(`par_da_secao_do_gamepad`), nunca a máscara da máquina")
+    manteve = secao_do_modo_com_o_caminho(
+        ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox"), kind="gamepad")
+    assert manteve.gamepad_flavor == "xbox", (
         "a regra inventou uma máscara — `None` quer dizer «mantém a atual»")
