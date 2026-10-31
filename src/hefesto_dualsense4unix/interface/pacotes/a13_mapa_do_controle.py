@@ -269,7 +269,7 @@ def _moldes_a_vista() -> tuple[Any, ...]:
 
     loader = perfil._com_o_src()
     pedidos = estilos_pedidos()
-    guardados = {chave.removeprefix(MOLDE) for chave in (
+    guardados: set[str | None] = {chave.removeprefix(MOLDE) for chave in (
         str(_EDITANDO.get("chave") or ""), a06._o_point_and_click_de_hoje())
         if chave.startswith(MOLDE)}
     vistos = {m.chave for guardado in (guardados or {None})

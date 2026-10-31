@@ -1066,8 +1066,8 @@ def o_carimbo_da_escolha_ganha_o_nome_novo(dest_dir: Path | None = None) -> list
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     trocados: list[str] = []
     for path in sorted(directory.glob("*.json")):
-        dados = _dados_crus_do_perfil(path)
-        ponte = dados.get("ponte") if dados is not None else None
+        dados = _dados_crus_do_perfil(path) or {}
+        ponte = dados.get("ponte")
         if not isinstance(ponte, dict) or ponte.get("confirmada_por") != CARIMBO_DA_ESCOLHA_ANTIGO:
             continue
         novo = {**dados, "ponte": {**ponte, "confirmada_por": CARIMBO_DA_ESCOLHA}}

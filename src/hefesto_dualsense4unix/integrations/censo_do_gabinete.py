@@ -385,7 +385,8 @@ def ler_do_disco(caminho: str = "") -> dict[str, object]:
         return {}
     if not isinstance(lido, dict):
         return {}
-    novo, trocou = renomear(lido, CHAVES_DO_GABINETE, VALORES_DO_GABINETE)
+    renomeado, trocou = renomear(lido, CHAVES_DO_GABINETE, VALORES_DO_GABINETE)
+    novo: dict[str, object] = renomeado
     if trocou:
         with contextlib.suppress(OSError):
             gravar(novo, alvo)
