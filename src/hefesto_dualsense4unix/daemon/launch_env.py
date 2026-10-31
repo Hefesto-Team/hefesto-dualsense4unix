@@ -987,9 +987,8 @@ class _OModoDoComputador:
 def _o_par_vivo(daemon: Any) -> ParDoComputador:
     """O par que o daemon veste agora."""
     cfg = getattr(daemon, "config", None)
-    native = False
-    with contextlib.suppress(Exception):
-        native = bool(daemon.is_native_mode())
+    ler_o_nativo = getattr(daemon, "is_native_mode", None)
+    native = bool(ler_o_nativo()) if callable(ler_o_nativo) else False
     caminho = getattr(cfg, "gamepad_caminho", None)
     return ParDoComputador(
         native=native,
@@ -2650,8 +2649,10 @@ class EscreventeDoLancamento:
                 chave = next(iter(self._carimbos))
                 gravar = self._carimbos.pop(chave)
                 self._carimbo_gravando = chave
-            with contextlib.suppress(Exception):
+            try:
                 gravar()
+            except Exception as exc:
+                logger.warning("ponte_escada_carimbo_falhou", chave=str(chave), err=str(exc))
 
     def _laco(self) -> None:
         while True:
