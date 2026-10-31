@@ -55,7 +55,7 @@ def pasta_de_perfis(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
         "name": DE_ONTEM, "priority": 10,
         "leds": {"lightbar_brightness": 20},
     }), encoding="utf-8")
-    (pasta / "perfil_que_o_usuario_ativou.json").write_text(json.dumps({
+    (pasta / "perfil_ativado_agora.json").write_text(json.dumps({
         "name": ATIVADO, "priority": 90,
         "leds": {"lightbar_brightness": 90},
     }), encoding="utf-8")
