@@ -179,7 +179,7 @@
       "rodada": 3,
       "ancora_antes": ".ordem-vale",
       "ajuste_r3": {
-        "pedido": "não sei se pedi isso de verdade. Mas recusado a ideia.",
+        "pedido_em_prosa": "recusado; o pedido original não é reconhecido.",
         "feito": "Recusada em 14/10/2026: o segundo controle saiu da página (o campo do Editar e as regras dele). A página volta a ser a da rodada 2, com a tabela dos controles inteira em 740."
       },
       "recusada": "14/10/2026"

@@ -119,7 +119,7 @@
       "seletor": "",
       "conflito": "Os quatro casos estão na página: padrão, ?estado=modo-xbox, ?estado=pro e ?estado=queda. O texto do motivo é de exemplo; o daemon manda o motivo pronto.",
       "ajuste_r4": {
-        "pedido": "sem dica , remove essa zona extra, a seleção do botão já fala tudo.",
+        "pedido_em_prosa": "sem dica: a zona extra sai, porque a seleção do botão já diz tudo.",
         "feito": "A linha «O jogo vê» saiu dos dois cartões, com a dica e os estados de exemplo (modo Xbox, Pro Controller, queda). O cartão volta a ter só a seleção da forma (DualSense, Xbox 360, Nintendo Pro), que já diz o que o jogo vê. A letra do cartão sobe para 12 px e a bateria fica na cor do texto, sem o verde de «ok»."
       },
       "rodada": 4

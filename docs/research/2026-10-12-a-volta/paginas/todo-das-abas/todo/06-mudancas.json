@@ -254,12 +254,12 @@
       },
       "pergunta": "O quadro leva o título «Navegação» com o «i» ao lado (A), ou fica sem título, só com o «i» no canto (B)?",
       "ajuste_r3": {
-        "pedido": "a mas remove o i, deixe que ele apareça se eu deixar o mouse sob a área.",
+        "pedido_em_prosa": "A, mas sem o «i»: a dica aparece quando o mouse para sobre a área.",
         "feito": "Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre essa faixa, onde o «i» ficava, e também no foco do teclado na faixa; some quando o mouse sai. Sobre a tabela a tabela não acende. Não cobre nenhum campo. A leitura B saiu da página."
       },
       "escolha": "A",
       "ajuste_r3b": {
-        "pedido": "esse textão é toolti sobre o nome de navegação. reprovado.",
+        "pedido_em_prosa": "reprovado: esse texto longo vira dica sobre o nome Navegação.",
         "feito": "A faixa de texto comprido saiu. O título ficou só «Navegação», e a explicação virou a dica da casa (data-dica) sobre a palavra: uma caixa pequena e flutuante que aparece com o mouse sobre o nome ou com o foco do teclado nele (o nome recebe o foco com Tab) e some ao sair."
       }
     },

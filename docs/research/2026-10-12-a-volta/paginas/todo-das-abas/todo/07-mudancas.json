@@ -289,16 +289,16 @@
       "rodada": 3,
       "ancora_antes": "[data-modificacao=\"intiface\"] .ext-faz",
       "ajuste_r3": {
-        "pedido": "Não. O botão desligar tem diferença de largura com o botão ligado. Esses 3 features do lovense são uma extensão só. e a ŕea tem que ser melhorna largura o botão e ocom numeros dentro tem um verde distoante do tema tem que ser removido. os alinhamentos não tão legais. a distribuição dos elementos da guia extensões tão muito estranhos. pouco organicos e verdadeiramente feios. esse 2 dentro do verde gritante da steam tá péssimo não deveriamos ter avisos verdes.  na real não temos que ter avisos de ok ali.. só os 3 botões mesmo.",
+        "pedido_em_prosa": "não. Os botões «Desligar» e «Ligar» têm larguras diferentes. Os três recursos da Lovense são uma extensão só. A área precisa de largura melhor, e o botão com números dentro tem um verde que destoa do tema e sai. Os alinhamentos e a distribuição dos elementos da guia Extensões estão estranhos, pouco orgânicos e feios. O número dentro do verde gritante da Steam sai: não há avisos verdes nem avisos de «ok» ali; ficam só os três botões.",
         "feito": "As três Lovense viraram UMA extensão, «Lovense», com as três formas dentro (Pelo Intiface, Pelo celular, DualSense como brinquedo), cada uma com a sua chave. Ligada e Desligada têm a mesma largura (104 px). Saíram o selo verde com número, a coluna de «ok» (✓ Kyty, 3 acessórios, App no Game Mode, Sem apps) e o 2 verde da Steam; cada linha ficou só com os três botões: ligar, configurar e ⋮. Uma grade só para as cinco linhas, com o mesmo espaçamento."
       },
       "ajuste_seis": {
-        "pedido": "A: no lugar do «Para», a linha mostra «2 de 3 ligadas»; quem vai para quem fica só na engrenagem",
+        "pedido_em_prosa": "A: no lugar do «Para», a linha mostra «2 de 3 ligadas»; quem vai para quem fica só na engrenagem",
         "feito": "Na lista das extensões, a linha da Lovense trocou o «Para Todos» por «2 de 3 ligadas», no mesmo lugar e na mesma letra do «Todos» do Kyty. A conta vem das três formas do diálogo da engrenagem (Pelo Intiface e Pelo celular ligadas, DualSense como brinquedo desligada) e se refaz a cada clique. O Kyty segue com «Para Todos»; o Para de cada forma fica só no diálogo."
       },
       "ajuste_v3": {
         "id": "n3",
-        "pedido": "A: a chave da Lovense desliga junto; ao ligar uma forma, volta a «Ligada»",
+        "pedido_em_prosa": "A: a chave da Lovense desliga junto; ao ligar uma forma, volta a «Ligada»",
         "feito": "Quando as três formas do diálogo da engrenagem ficam desligadas, a chave da linha da Lovense passa a «Desligada» e a linha diz «0 de 3 ligadas». Ligar uma forma devolve a chave a «Ligada». Ligar a chave da linha com as três desligadas abre a engrenagem, para você escolher qual ligar. As chaves das formas passaram a ligar e desligar no clique."
       }
     },
@@ -313,11 +313,11 @@
       "rodada": 3,
       "ancora_antes": ".ext-lista",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»; vale a resposta da 29)",
+        "pedido_em_prosa": "(sem texto, voto «ajustar»; vale a resposta da 29)",
         "feito": "«Lovense pelo celular» virou a forma «Pelo celular» dentro da extensão Lovense, com chave e engrenagem próprias, na mesma grade e com a chave do mesmo tamanho das outras."
       },
       "ajuste_r3b": {
-        "pedido": "não. são uma edxtensão só da loven.se",
+        "pedido_em_prosa": "não; são uma extensão só, a da Lovense.",
         "feito": "A «Lovense pelo celular» deixou a lista: a Lovense é UMA linha só, igual à do Kyty (nome, selo, versão, uma linha de descrição, Para, chave Ligada/Desligada, engrenagem e ⋮). A engrenagem da Lovense abre um diálogo com as três formas (Pelo Intiface, Pelo celular e DualSense como brinquedo), cada uma com a sua chave e o seu Para/Quando; «Pelo celular» mora ali, com a chave, o Para e o Quando da chave."
       }
     },
@@ -332,11 +332,11 @@
       "rodada": 3,
       "ancora_antes": ".ext-lista",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»; vale a resposta da 29)",
+        "pedido_em_prosa": "(sem texto, voto «ajustar»; vale a resposta da 29)",
         "feito": "«DualSense como brinquedo» virou a terceira forma da extensão Lovense, nasce desligada, com a chave do mesmo tamanho das outras e sem aviso de estado."
       },
       "ajuste_r3b": {
-        "pedido": "(ajustar, sem texto)",
+        "pedido_em_prosa": "(ajustar, sem texto)",
         "feito": "O «DualSense como brinquedo» também saiu da lista: é a terceira forma dentro do diálogo da engrenagem da Lovense, nasce desligada, com chave do mesmo tamanho das outras (104 px), o Para e a engrenagem para a configuração completa."
       }
     },
@@ -363,11 +363,11 @@
       "rodada": 3,
       "ancora_antes": ".lanc-acoes",
       "ajuste_r3": {
-        "pedido": "remove os botões aí e remove o 1 e 2 e o ok do lado do lançadores.",
+        "pedido_em_prosa": "saem os botões, o 1 e o 2 e o «ok» ao lado de Lançadores.",
         "feito": "Saíram «Detectar o jogo aberto» e «Procurar de novo» e a contagem com o ✓ verde ao lado do título «Lançadores». O título ficou sozinho; a lista das extensões não rola."
       },
       "ajuste_r3b": {
-        "pedido": "o lançadores o nome tá certo mas sem aquele aviso laranja ele sai.",
+        "pedido_em_prosa": "o nome Lançadores está certo, mas o aviso laranja sai.",
         "feito": "Saiu o aviso laranja «2 com impedimento» da linha da Steam; o título «Lançadores» segue como está. Os impedimentos se veem no «Configurar» da Steam: o diálogo ganhou a linha «Impedimentos», com «Ver e resolver», que abre o diálogo deles. Os botões da linha seguem com a mesma largura (76 px)."
       }
     },
@@ -396,7 +396,7 @@
       "pergunta": "A aba fica como o Experimental (A) ou como o B ajustado (B)?",
       "pagina": "07-lancadores.html",
       "ajuste_r3": {
-        "pedido": "A (a aba fica como o Experimental, com as extensões em cima e os lançadores embaixo)",
+        "pedido_em_prosa": "A (a aba fica como o Experimental, com as extensões em cima e os lançadores embaixo)",
         "feito": "A aba é a Experimental. A página do B (07-lancadores-b.html) saiu do índice e ficou no git com uma nota de recusada em 14/10. O que o B trazia e valia entrou no A: os impedimentos da Steam numa linha («2 com impedimento»), e a engrenagem ao lado da chave de cada forma e extensão."
       },
       "escolha": "A"
@@ -414,12 +414,12 @@
       "pagina": "07-lancadores.html",
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»; vale o que o usuário pediu na 36: botões de largura igual, sem verde)",
+        "pedido_em_prosa": "(sem texto, voto «ajustar»; vale o pedido da 36: botões de largura igual, sem verde)",
         "feito": "A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber, e os cartões dos lançadores ficam um pouco mais baixos para a última fileira não sair da moldura."
       },
       "js": "(function(){var l=document.querySelector('.ext-lista');var k=l.querySelector('[data-modificacao=kyty]');for(var i=1;i<=1;i++){var c=k.cloneNode(true);c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade '+i;var o=c.querySelector('.lanc-selo');o.textContent='Comunidade';o.className='lanc-selo comunidade';c.querySelector('.ext-faz').textContent='Uma linha de exemplo, só para medir a lista';c.querySelector('.nj-tog').className='nj-tog';c.querySelector('.nj-tog .txt').textContent='Desligada';l.appendChild(c);}})()",
       "ajuste_r3b": {
-        "pedido": "são só duas extensões. uma linha pra cada, kity e lovense. o resto das configs vc clica e configura.",
+        "pedido_em_prosa": "são só duas extensões, uma linha para cada (Kyty e Lovense); o resto das configurações se abre no clique.",
         "feito": "A lista tem duas linhas, Kyty e Lovense, no mesmo formato. Saiu a linha «Exemplo da comunidade» e a régua passou de seis linhas para duas. O resto se configura clicando na engrenagem; o diálogo da Lovense (fotografado aberto) cabe sem rolar nos três tamanhos."
       }
     },
@@ -437,7 +437,7 @@
       "pagina": "07-lancadores.html",
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
       "ajuste_r3": {
-        "pedido": "padronização de largura dos bortões muito feio.",
+        "pedido_em_prosa": "a largura dos botões está sem padrão e feia.",
         "feito": "No diálogo dos impedimentos, os dois botões de conserto têm a mesma largura (176 px) e os dois de baixo também (Fechar e Resolver os dois, 334 px). Na lista dos lançadores, Identificar, Criar perfis e Configurar têm 76 px em todas as linhas, e «2 com impedimento» ficou na linha da Steam com a mesma altura dos botões, sem selo verde."
       }
     },
@@ -454,7 +454,7 @@
       "pagina": "07-lancadores.html",
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»; vale o que o usuário pediu na 36: botões de largura igual, sem verde)",
+        "pedido_em_prosa": "(sem texto, voto «ajustar»; vale o pedido da 36: botões de largura igual, sem verde)",
         "feito": "A engrenagem de configurações fica ao lado da chave em todas as linhas (30 px de largura, a mesma em Kyty, Pelo Intiface, Pelo celular e DualSense como brinquedo), sem texto e sem aviso verde."
       }
     },
@@ -468,7 +468,7 @@
       "seletor": ".ja-tela.t2 .jg-lista",
       "conflito": "Os nomes são de exemplo (os jogos com perfil). Sem nenhum jogo marcado e com «Os jogos que eu escolher» no «Quando», os acessórios ficam parados.",
       "ajuste_r4": {
-        "pedido": "ajustar os elementos tem muita coisa na tela e tá bagunçada mas a ideia é isso aí",
+        "pedido_em_prosa": "a ideia é essa, mas há muita coisa na tela, bagunçada, e os elementos precisam de ajuste.",
         "feito": "A aba «O que seguem» da janela Lovense virou uma grade de duas colunas iguais e duas linhas da mesma altura. Em cima, «O que os acessórios seguem» e «Como os três tocam juntos» são três botões do mesmo tamanho cada, só com o nome (a explicação foi para a dica). Embaixo, os jogos: a frase «Nenhum jogo marcado…» saiu e cada jogo é uma linha de 36 px, com a caixa e o nome. Toda letra da aba tem 12 px ou mais. Os jogos e a força continuam dentro da janela que a engrenagem abre, nunca na lista."
       },
       "n_na_rodada_4": 34,
@@ -485,7 +485,7 @@
       "seletor": ".ja-tela.t2 .fz-grade",
       "conflito": "O padrão de fábrica dos três é 10/20 (50 %), decidido por delegação, a validar por você.",
       "ajuste_r4": {
-        "pedido": "(ajustar, sem texto)",
+        "pedido_em_prosa": "(ajustar, sem texto)",
         "feito": "A força de cada canal ficou com um título só («Força de cada canal», de 0 a 20) e uma grade de três colunas iguais: Vibração, Gatilho e Háptica no topo, e cada aparelho numa faixa com os três deslizantes alinhados embaixo do nome. Saíram as legendas «dois motores» e «um motor» e o «/20» de cada número; o deslizante tem 24 px de altura."
       },
       "n_na_rodada_4": 35,
