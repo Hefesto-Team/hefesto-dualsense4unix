@@ -992,7 +992,7 @@ class Daemon:
 
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
-            self._mode_from_profile = None
+            self._mode_from_profile = self._par_do_computador = None
         if enabled == self._native_mode:
             if enabled and grava_o_modo:
                 self.gravar_o_modo_escolhido("native", porta=grava_o_modo)
@@ -1745,7 +1745,7 @@ class Daemon:
 
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
-            self._mode_from_profile = None
+            self._mode_from_profile = self._par_do_computador = None
             self._esquecer_mascara_adiada("gesto_manual")
         with self._emu_lock:
             if enabled:

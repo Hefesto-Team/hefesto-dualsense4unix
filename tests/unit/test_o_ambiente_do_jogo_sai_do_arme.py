@@ -103,6 +103,27 @@ def test_o_jogo_sem_perfil_com_a_roupa_comum_responde_o_comum_com_o_pad_ainda_no
         f"a resposta não é o arquivo do jogo:\n{linhas}\n{do_jogo.read_text(encoding='utf-8')}")
 
 
+def test_o_jogo_sem_perfil_depois_de_um_jogo_em_xbox_nao_traz_o_hidapi_desligado(
+    sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A prova (2): o jogo sem perfil sai do modo do computador, e não do Xbox do jogo anterior."""
+    _a_mesa_do_lancamento(
+        tmp_path, monkeypatch,
+        _perfil(APPID, ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")),
+        em_disco=[], lenta_s=0.0)
+    daemon: Any = _Mesa(flavor="dualsense")
+    _marker(tmp_path)
+    le.o_ambiente_no_status(daemon, {"appid": APPID})
+    daemon.o_fio_entrega()
+    assert daemon._gamepad_device.flavor == "xbox", "premissa: o jogo anterior vestiu o Xbox"
+    outro = APPID + 1
+    (tmp_path / "last_run").write_text(
+        f"appid={outro}\nepoch={int(time.time()) + 1}\npid=1\n", encoding="utf-8")
+    linhas = le.o_ambiente_no_status(daemon, {"appid": outro})["ambiente"]["linhas"]
+    assert linhas, "o jogo sem perfil ficou sem ambiente"
+    assert "SDL_JOYSTICK_HIDAPI=0" not in linhas, f"o jogo sem perfil herdou o Xbox: {linhas}"
+
+
 def _a_peca(lar: Path) -> None:
     pasta = lar / ".local" / "share" / "hefesto-dualsense4unix" / "wine" / "x86_64-windows"
     pasta.mkdir(parents=True)

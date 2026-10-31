@@ -908,6 +908,7 @@ def arm_launch_profile(
     """
     with contextlib.suppress(Exception):
         tique_da_escada(daemon)
+    o_fim_do_jogo_devolve_o_modo(daemon)
 
     marker = read_last_run_marker(base_dir)
     if marker is None:
@@ -961,6 +962,136 @@ def _as_roupas_dos_armes(daemon: Any) -> dict[int, int]:
     """Cópia das roupas que os armes desta sessão decidiram, por appid."""
     roupas = getattr(daemon, "_roupas_dos_armes", None)
     return dict(roupas) if isinstance(roupas, dict) else {}
+
+
+@dataclass(frozen=True)
+class ParDoComputador:
+    """O modo vestido: o Nativo, o pad ligado, o caminho e as máscaras da sessão e do P1."""
+
+    native: bool
+    enabled: bool
+    caminho: str | None
+    flavor: str
+    mascara: str
+
+
+@dataclass
+class _OModoDoComputador:
+    """O par de antes do arme dos `jogos` que mudaram o modo, e se a volta está por fazer."""
+
+    par: ParDoComputador
+    jogos: set[int]
+    volta_pendente: bool = False
+
+
+def _o_par_vivo(daemon: Any) -> ParDoComputador:
+    """O par que o daemon veste agora."""
+    cfg = getattr(daemon, "config", None)
+    native = False
+    with contextlib.suppress(Exception):
+        native = bool(daemon.is_native_mode())
+    caminho = getattr(cfg, "gamepad_caminho", None)
+    return ParDoComputador(
+        native=native,
+        enabled=bool(getattr(cfg, "gamepad_emulation_enabled", False)),
+        caminho=caminho if isinstance(caminho, str) else None,
+        flavor=str(getattr(cfg, "gamepad_flavor", "dualsense") or "dualsense"),
+        mascara=_mascara_do_primario(daemon, cfg),
+    )
+
+
+def _o_modo_guardado(daemon: Any) -> _OModoDoComputador | None:
+    guardado = getattr(daemon, "_par_do_computador", None)
+    return guardado if isinstance(guardado, _OModoDoComputador) else None
+
+
+def _guardar_o_par_do_computador(daemon: Any, appid: int, antes: ParDoComputador) -> None:
+    """O arme do `appid` aplica o modo do jogo; o par de `antes` é o do computador.
+
+    Com o par de outro jogo já guardado, ele fica: o computador é o de antes dos dois.
+    """
+    guardado = _o_modo_guardado(daemon)
+    if guardado is None:
+        daemon._par_do_computador = _OModoDoComputador(par=antes, jogos={int(appid)})
+        return
+    guardado.jogos.add(int(appid))
+    guardado.volta_pendente = False
+
+
+def _os_jogos_que_fecharam(daemon: Any) -> list[int]:
+    """Os appids do `JOGO_FECHOU` desde a última leitura; a fila nasce na primeira."""
+    fila = getattr(daemon, "_fila_do_jogo_que_fechou", None)
+    if fila is None:
+        assinar = getattr(getattr(daemon, "bus", None), "subscribe", None)
+        if not callable(assinar):
+            return []
+        from hefesto_dualsense4unix.core.events import EventTopic
+
+        fila = assinar(EventTopic.JOGO_FECHOU)
+        daemon._fila_do_jogo_que_fechou = fila
+    fechados: list[int] = []
+    while isinstance(fila, asyncio.Queue) and not fila.empty():
+        evento = fila.get_nowait()
+        appid = evento.get("appid") if isinstance(evento, dict) else None
+        if isinstance(appid, int) and not isinstance(appid, bool):
+            fechados.append(appid)
+    return fechados
+
+
+def o_fim_do_jogo_devolve_o_modo(daemon: Any) -> str | None:
+    """O fim do jogo cujo arme mudou o par devolve o modo do computador ao pad, P1 a P4.
+
+    A volta vai pelo escritor único (`set_gamepad_emulation_desfecho`), com origem de perfil;
+    recusada porque um jogo ainda segura o pad, a volta espera o tique seguinte. A escolha à mão
+    durante o jogo apaga o par guardado (`Daemon.set_gamepad_emulation_desfecho` e
+    `Daemon.set_native_mode`): o modo escolhido passa a ser o do computador.
+    """
+    fechados = _os_jogos_que_fecharam(daemon)
+    guardado = _o_modo_guardado(daemon)
+    if guardado is None:
+        return None
+    if fechados and guardado.jogos & set(fechados):
+        guardado.jogos.difference_update(fechados)
+        guardado.volta_pendente = not guardado.jogos
+    if not guardado.volta_pendente:
+        return None
+    vivo = _o_par_vivo(daemon)
+    if vivo == guardado.par:
+        daemon._par_do_computador = None
+        return None
+    try:
+        desfecho = _pedir_o_par(daemon, guardado.par)
+    except Exception as exc:
+        daemon._par_do_computador = None
+        logger.warning("modo_do_computador_nao_voltou", err=str(exc))
+        return None
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import EMU_BLOQUEADO_POR_JOGO
+
+    if desfecho == EMU_BLOQUEADO_POR_JOGO:
+        return desfecho
+    daemon._par_do_computador = None
+    daemon._mode_from_profile = None
+    logger.info(
+        "modo_do_computador_devolvido",
+        de=vivo.mascara if not vivo.native else "nativo",
+        para=guardado.par.mascara if not guardado.par.native else "nativo",
+        ligado=guardado.par.enabled,
+        desfecho=desfecho,
+    )
+    return str(desfecho)
+
+
+def _pedir_o_par(daemon: Any, par: ParDoComputador) -> str:
+    """O par pelo escritor único, com origem de perfil: o Nativo, o pad ligado ou desligado."""
+    if par.native:
+        daemon.set_native_mode(True, origin="profile")
+        return "aplicado"
+    if daemon.is_native_mode():
+        daemon.set_native_mode(False, reapply=False, origin="profile")
+    if not par.enabled:
+        return str(daemon.set_gamepad_emulation_desfecho(False, origin="profile"))
+    return str(daemon.set_gamepad_emulation_desfecho(
+        True, par.flavor, origin="profile", caminho=par.caminho, caminho_e_escolha=False))
 
 
 def _armar_o_jogo(
@@ -1121,6 +1252,7 @@ def _armar_o_jogo(
         kind=getattr(mode, "kind", None),
     )
     _vestir_para_o_jogo(daemon, appid, roupa)
+    _guardar_o_par_do_computador(daemon, appid, _o_par_vivo(daemon))
     resultado = applier(mode, profile=profile, origin="launch")
     native_pos, enabled_pos, flavor_pos, backends_pos, fisicos_pos = _snapshot(daemon)
     modo_antecipado = _modo_antecipado(
@@ -2054,8 +2186,8 @@ def _a_parte_de_fora(
 
 
 def _o_modo_padrao(foto: _FotoDoLancamento) -> ModoAntecipado:
-    """O modo do `default.env` e do jogo sem perfil próprio."""
-    return foto.modo_vivo
+    """O modo do `default.env` e do jogo sem perfil próprio: o do computador."""
+    return foto.modo_do_computador if foto.modo_do_computador is not None else foto.modo_vivo
 
 
 def _o_ambiente_padrao(foto: _FotoDoLancamento) -> tuple[dict[str, str], str]:
@@ -2336,6 +2468,7 @@ class _FotoDoLancamento:
     a_roupa_aqueceu: Callable[[], None] = lambda: None
     modos_do_arme: Mapping[int, Any] = field(default_factory=dict)
     roupas_do_arme: Mapping[int, int] = field(default_factory=dict)
+    modo_do_computador: ModoAntecipado | None = None
 
 
 def _o_dono_esconde(daemon: Any) -> bool:
@@ -2400,6 +2533,7 @@ def _foto_do_lancamento(
         a_roupa_aqueceu=lambda: _a_roupa_aqueceu(daemon),
         modos_do_arme=_os_modos_dos_armes(daemon),
         roupas_do_arme=_as_roupas_dos_armes(daemon),
+        modo_do_computador=modo_do_computador(daemon, modo_vivo=modo_vivo, fisicos=fisicos),
     )
 
 
@@ -2737,6 +2871,33 @@ def modo_do_estado_vivo(
     )
 
 
+def modo_do_computador(
+    daemon: Any, *, modo_vivo: ModoAntecipado, fisicos: int
+) -> ModoAntecipado:
+    """O modo do computador, pela regra de `modo_do_estado_vivo`.
+
+    É o vivo, ou o par de antes do arme do jogo que mudou o modo enquanto a volta não acontece.
+    """
+    guardado = _o_modo_guardado(daemon)
+    if guardado is None or guardado.par == _o_par_vivo(daemon):
+        return modo_vivo
+    par, fisicos = guardado.par, max(0, int(fisicos))
+    if par.native:
+        return ModoAntecipado(
+            native=True, emulacao=False, mascara=par.mascara, backends=(),
+            motivo="modo do computador: nativo", fisicos=fisicos,
+        )
+    return ModoAntecipado(
+        native=False, emulacao=par.enabled, mascara=par.mascara,
+        backends=_backends_da_troca(
+            par.mascara, par.caminho, _permite_uhid(daemon),
+            quantos=_vpads_previstos(daemon, fisicos),
+        ),
+        motivo="modo do computador" if par.enabled else "modo do computador: pronto para o PS + R3",
+        fisicos=fisicos, pronto_para_troca=not par.enabled,
+    )
+
+
 def _o_modo_e_o_da_ponte(perfil: Any, ponte: ponte_escada.Ponte) -> bool:
     """O ``mode`` que o carimbo deixou no perfil entrega esta ponte? É o que o diário diz."""
     do_perfil = ponte_escada.ponte_do_perfil(perfil, na_allowlist=ponte.steam_input)
@@ -2753,6 +2914,7 @@ __all__ = [
     "PAR_DUALSENSE_FISICO",
     "WRAPPER_MARKER_WINDOW_SEC",
     "ModoAntecipado",
+    "ParDoComputador",
     "ambiente_do_lancamento",
     "appids_em_cena",
     "arm_launch_profile",
@@ -2765,8 +2927,10 @@ __all__ = [
     "env_do_modo",
     "launch_session_appid",
     "materialize_launch_env",
+    "modo_do_computador",
     "modo_do_estado_vivo",
     "o_ambiente_no_status",
+    "o_fim_do_jogo_devolve_o_modo",
     "pid_is_alive",
     "ponte_do_lancamento",
     "read_last_exit_marker",
