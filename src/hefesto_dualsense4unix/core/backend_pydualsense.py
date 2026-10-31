@@ -769,9 +769,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                         deve_escrever = True
                         self._saida_adiada_pelo_silencio = False
                     if deve_escrever:
-                        self.writeReport(out, geracao=geracao)
-                        self._last_out_report = out
-                        self._last_write_at = now
+                        escrito = self.writeReport(out, geracao=geracao)
+                        self._last_out_report, self._last_write_at = out, now
+                        _o_quadro_saiu(self, out, escrito)
                 self._dormir_a_volta(acordar, lidos=bool(lidos))
             except OSError:
                 self.connected = False
@@ -2838,7 +2838,7 @@ class PyDualSenseController(IController):
             else:
                 device = getattr(handle, "device", handle)
                 escrito = device.write(report)
-            ok = _escrita_completa(escrito, len(report))
+            ok = _a_cor_saiu(handle, cor, _escrita_completa(escrito, len(report)), True)
             with contextlib.suppress(Exception):
                 handle._quadro_da_luz = (cor, players, brilho) if ok else None
             if not ok:
@@ -2972,7 +2972,7 @@ class PyDualSenseController(IController):
         try:
             if cor is not None:
                 escreveu = no.set_rgb(*cor, verify=True) if verify else no.set_rgb(*cor)
-                if escreveu:
+                if _a_cor_saiu(self._handles.get(key), cor, bool(escreveu), False):
                     self.record_sysfs_write(key, cor)
                 ok = bool(escreveu) and ok
             if players is not None:
@@ -3110,7 +3110,7 @@ class PyDualSenseController(IController):
             escreveu_sysfs = False
             if node is not None:
                 try:
-                    escreveu_sysfs = bool(sysfs_op(node))
+                    escreveu_sysfs = _a_cor_saiu(handle, rgb, bool(sysfs_op(node)), False)
                 except Exception as exc:
                     logger.debug(
                         "sysfs_led_falhou_fallback_pydual", op=what, key=key, err=str(exc)
@@ -3209,8 +3209,8 @@ class PyDualSenseController(IController):
         )
 
         try:
-            escritor(list(build_bt_lightbar_report(
-                rgb, players, brilho_das_luzes=brilho_das_luzes)))
+            _a_cor_saiu(handle, rgb, _escreveu_inteiro(escritor, build_bt_lightbar_report(
+                rgb, players, brilho_das_luzes=brilho_das_luzes)), True)
         except Exception as exc:
             logger.debug("lightbar_hidraw_bt_falhou", op=what, key=key, err=str(exc))
             return False
@@ -3293,7 +3293,7 @@ class PyDualSenseController(IController):
             if out.trigger_right is not None:
                 self._apply_trigger(handle, "right", out.trigger_right)
             if out.led is not None and not (
-                node is not None and node.set_rgb(*out.led)
+                node is not None and _a_cor_saiu(handle, out.led, node.set_rgb(*out.led), False)
             ):
                 handle.light.setColorI(*out.led)
             if (
@@ -4804,7 +4804,7 @@ class PyDualSenseController(IController):
             self._output_mute = bool(muted)
             for handle in self._handles.values():
                 with contextlib.suppress(Exception):
-                    handle._output_muted = self._output_mute
+                    handle._output_muted = _esquecer_o_fio(handle, self._output_mute)
                     if not self._output_mute:
                         handle._last_out_report = None
                         handle._quadro_da_luz = None
@@ -5881,3 +5881,39 @@ def _fd_do_broker(abridor: Callable[[str], int | None] | None, no: str) -> int |
         logger.warning("abridor_do_handle_falhou", path=no, err=str(exc))
         return None
     return fd if isinstance(fd, int) and not isinstance(fd, bool) else None
+
+
+def _o_quadro_saiu(handle: Any, out: list[int], escrito: Any) -> None:
+    """Guarda em `_no_fio` o report que o fio aceitou inteiro; o curto ou descartado não."""
+    if _escrita_completa(escrito, len(out)):
+        handle._no_fio = out
+
+
+def _escreveu_inteiro(escritor: Callable[[list[int]], Any], quadro: Any) -> bool:
+    """Escreve `quadro` por `escritor` e diz se os bytes saíram inteiros."""
+    bytes_do_quadro = list(quadro)
+    return _escrita_completa(escritor(bytes_do_quadro), len(bytes_do_quadro))
+
+
+def _a_cor_saiu(handle: Any, cor: Any, aceita: Any = True, pelo_radio: bool = False) -> bool:
+    """Guarda em `_cor_no_fio` a cor da barra que o controle aceitou, pela rota que o alcança.
+
+    No cabo vale o nó do kernel; no rádio só o `0x31` no hidraw (com a Steam no hidraw o nó não
+    muda a barra). A rota que não alcança aquele transporte não vira recibo. Devolve `aceita`.
+    """
+    aceitou = bool(aceita)
+    if not aceitou or handle is None or not isinstance(cor, tuple | list) or len(cor) != 3:
+        return aceitou
+    if not all(isinstance(v, int) for v in cor):
+        return aceitou
+    if (PyDualSenseController._detect_transport(handle) == "bt") == pelo_radio:
+        with contextlib.suppress(Exception):
+            handle._cor_no_fio = (cor[0] & 0xFF, cor[1] & 0xFF, cor[2] & 0xFF)
+    return aceitou
+
+
+def _esquecer_o_fio(handle: Any, mudo: bool) -> bool:
+    """Apaga o recibo do fio na troca do mudo, nos dois sentidos, e devolve `mudo`."""
+    handle._no_fio = None
+    handle._cor_no_fio = None
+    return mudo

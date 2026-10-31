@@ -5,11 +5,16 @@ Sprint O-EFEITO-ESCOLHIDO-MOSTRA-QUE-CHEGOU-AO-CONTROLE-01.
 Medido em 31/10/2026: as quatro listas de efeito (Gatilhos, Iluminação, Efeito háptico e Padrão dos
 motores) mostravam a escolha lida do perfil, o eco do clique, e nada dizia se o controle a recebeu;
 com o daemon parado a tela seguia com a mesma escolha. Hoje o daemon publica `controllers[].efeitos`
-(`daemon/o_recibo_dos_efeitos.py`, o bloco do gatilho e a cor da barra comparados com o último
-report escrito) e cada lista ganha a marca de `interface/a_chegada.py`.
+(`daemon/o_recibo_dos_efeitos.py`: o bloco do gatilho contra o último report que o fio aceitou
+inteiro, e a cor resolvida da barra contra a que saiu pela rota daquele transporte) e cada lista
+ganha a marca de `interface/a_chegada.py`.
 
 MORDIDAS: `chegada` devolvendo sempre `CHEGOU` reprova `test_daemon_parado_o_campo_nao_diz_chegou`
-e as pinturas; um deslocamento errado em `GATILHOS` reprova `test_o_recibo_confere_o_fio`.
+e as pinturas; um deslocamento errado em `GATILHOS` reprova `test_o_recibo_confere_o_fio`; a volta
+guardando `_no_fio` sem conferir a escrita reprova `test_o_quadro_que_o_fio_recusou_nao_e_recibo`;
+a luz comparada com a cor do handle reprova `test_a_luz_pelo_no_ou_pelo_radio_confere_a_rota`;
+o `_a_cor_saiu` sem olhar o transporte reprova
+`test_a_rota_que_nao_alcanca_o_transporte_nao_e_recibo`.
 """
 
 from __future__ import annotations
@@ -62,14 +67,14 @@ def _handle(via: str = "usb") -> Any:
 def _escrever_no_fio(h: Any) -> None:
     comum = h._build_common(rumble_asserted=False)
     feito = rep.build_bt_report(comum) if h._via == "bt" else rep.build_usb_report(comum)
-    h._last_out_report = list(feito)
+    h._no_fio = list(feito)
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_o_recibo_confere_o_fio(via: str) -> None:
     h = _handle(via)
     _escrever_no_fio(h)
-    r = recibo.recibo_do_handle(h)
+    r = recibo.recibo_do_handle(h, desejada=(10, 20, 30))
     assert [r[c]["chegou"] for c in ("gatilho_e", "gatilho_d", "luz")] == [True] * 3, r
 
 
@@ -79,7 +84,7 @@ def test_o_que_mudou_e_nao_saiu_fica_a_caminho(via: str) -> None:
     _escrever_no_fio(h)
     h.triggerR.setForce(0, 90)
     h.light.TouchpadColor = (200, 0, 0)
-    r = recibo.recibo_do_handle(h)
+    r = recibo.recibo_do_handle(h, desejada=(200, 0, 0))
     assert r["gatilho_d"] == {"chegou": False, "porque": recibo.A_CAMINHO}
     assert r["luz"]["chegou"] is False
     assert r["gatilho_e"]["chegou"] is True
@@ -125,22 +130,41 @@ def test_a_haptica_e_os_motores_nunca_dizem_que_chegaram() -> None:
         assert not any((r.get(c) or {}).get("chegou") for c in ("haptica", "motores")), r
 
 
-def _controle(h: Any, *, no_no: Any = None, mudo: bool = False) -> Any:
+def _controle(h: Any, *, cor: Any = None, mudo: bool = False) -> Any:
     return SimpleNamespace(_io_lock=threading.RLock(), _handles={"k": h},
                            _key_for_uniq=lambda u: "k" if u == UNIQ else None,
-                           _sysfs_written={"k": no_no} if no_no else {}, _output_mute=mudo)
+                           resolved_led_for=lambda u: cor if u == UNIQ else None,
+                           _output_mute=mudo)
 
 
-def test_o_recibo_do_controle_le_o_no_de_led_e_a_animacao() -> None:
-    h = _handle()
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_a_luz_pelo_no_ou_pelo_radio_confere_a_rota(via: str) -> None:
+    h = _handle(via)
+    h._suppress_leds = True
     _escrever_no_fio(h)
-    h._last_out_report[1 + 44:1 + 47] = [0, 0, 0]
-    sem_no = recibo.recibo_do_controle(SimpleNamespace(), _controle(h), UNIQ)
-    assert sem_no["luz"]["chegou"] is False
-    pelo_no = recibo.recibo_do_controle(SimpleNamespace(), _controle(h, no_no=(10, 20, 30)), UNIQ)
-    assert pelo_no["luz"]["chegou"] is True
+    h.light.TouchpadColor = (0, 0, 255)
+    sem_rota = recibo.recibo_do_handle(h, desejada=(0, 0, 255))
+    assert sem_rota["luz"]["chegou"] is False, sem_rota
+    h._cor_no_fio = (40, 50, 60)
+    assert recibo.recibo_do_handle(h, desejada=(40, 50, 60))["luz"]["chegou"] is True
+    assert recibo.recibo_do_handle(h, desejada=(41, 50, 60))["luz"]["chegou"] is False
+    assert recibo.recibo_do_handle(h, desejada=None)["luz"]["chegou"] is False
+
+
+def test_o_recibo_do_controle_le_a_cor_resolvida_e_a_animacao() -> None:
+    h = _handle()
+    h._suppress_leds = True
+    h._cor_no_fio = (10, 20, 30)
+    _escrever_no_fio(h)
+    sem_cor = recibo.recibo_do_controle(SimpleNamespace(), _controle(h), UNIQ)
+    assert sem_cor["luz"]["chegou"] is False
+    com_cor = recibo.recibo_do_controle(SimpleNamespace(), _controle(h, cor=(10, 20, 30)), UNIQ)
+    assert com_cor["luz"]["chegou"] is True
+    outra = recibo.recibo_do_controle(SimpleNamespace(), _controle(h, cor=(9, 9, 9)), UNIQ)
+    assert outra["luz"]["chegou"] is False
     animando = SimpleNamespace(_luz_animada=SimpleNamespace(tocando=frozenset({UNIQ})))
-    assert recibo.recibo_do_controle(animando, _controle(h), UNIQ)["luz"]["anima"] is True
+    no_quadro = recibo.recibo_do_controle(animando, _controle(h, cor=(9, 9, 9)), UNIQ)
+    assert no_quadro["luz"] == {"chegou": True, "porque": None, "anima": True}
     assert recibo.recibo_do_controle(SimpleNamespace(), _controle(h), "outro")["luz"] == {
         "chegou": False, "porque": recibo.FORA_DO_FIO, "anima": False}
     assert recibo.recibo_do_controle(
@@ -273,3 +297,101 @@ def test_o_state_full_publica_o_recibo_de_cada_controle(mesa_de: Any) -> None:  
         assert set(e["efeitos"]) == {"gatilho_e", "gatilho_d", "luz"}, e["efeitos"]
         assert e["efeitos"]["gatilho_d"]["chegou"] is False, e["efeitos"]
 
+
+
+class _FioQueResponde:
+    def __init__(self, resposta: Any) -> None:
+        self.resposta = resposta
+
+    def write(self, quadro: bytes) -> Any:
+        return self.resposta(quadro)
+
+
+def _uma_volta(monkeypatch: pytest.MonkeyPatch, resposta: Any, *, geracao_muda: bool = False
+               ) -> Any:
+    import contextlib
+
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+    monkeypatch.setattr(bp, "_hid_set_nonblocking", lambda _d: None)
+    ds: Any = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
+    ds.device = _FioQueResponde(resposta)
+    ds._write_lock = threading.Lock()
+    ds.ds_thread = True
+    ds._acordar = None
+    ds._output_muted = False
+    ds._rumble_active = False
+    ds._rumble_stop_pending = False
+    ds._last_out_report = None
+    ds._no_fio = None
+    ds._last_change_at = 0.0
+    ds._last_write_at = 0.0
+    ds._no_c = contextlib.nullcontext
+    ds._esvaziar_a_fila = list
+    ds._registrar_leitura_vazia = lambda: None
+    ds._a_saida_espera_a_entrada = lambda _agora: False
+
+    def _parar(_acordar: Any, *, lidos: bool) -> None:
+        ds.ds_thread = False
+
+    def _montar() -> list[int]:
+        if geracao_muda:
+            ds._geracao_da_saida += 1
+        return [rep.USB_REPORT_ID, *range(1, 64)]
+
+    ds._dormir_a_volta = _parar
+    ds.prepareReport = _montar
+    ds._girar_a_volta()
+    return ds
+
+
+def test_o_quadro_que_o_fio_aceitou_vira_recibo(monkeypatch: pytest.MonkeyPatch) -> None:
+    ds = _uma_volta(monkeypatch, len)
+    assert ds._no_fio == [rep.USB_REPORT_ID, *range(1, 64)]
+
+
+@pytest.mark.parametrize(("resposta", "geracao_muda"), [
+    (lambda q: len(q) - 1, False),
+    (len, True),
+])
+def test_o_quadro_que_o_fio_recusou_nao_e_recibo(
+    monkeypatch: pytest.MonkeyPatch, resposta: Any, geracao_muda: bool,
+) -> None:
+    ds = _uma_volta(monkeypatch, resposta, geracao_muda=geracao_muda)
+    assert ds._no_fio is None, "a volta guardou como recibo um quadro que não saiu inteiro"
+
+
+@pytest.mark.parametrize(("via", "pelo_radio", "guarda"), [
+    ("USB", False, True), ("USB", True, False), ("BT", True, True), ("BT", False, False),
+])
+def test_a_rota_que_nao_alcanca_o_transporte_nao_e_recibo(
+    via: str, pelo_radio: bool, guarda: bool,
+) -> None:
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+    h = SimpleNamespace(conType=SimpleNamespace(name=via), _cor_no_fio=None)
+    bp._a_cor_saiu(h, (1, 2, 3), pelo_radio=pelo_radio)
+    assert h._cor_no_fio == ((1, 2, 3) if guarda else None)
+
+
+@pytest.mark.parametrize(("via", "escrito_no_radio", "esperado"), [
+    ("USB", None, (7, 8, 9)),
+    ("BT", lambda q: len(q), (7, 8, 9)),
+    ("BT", lambda q: len(q) - 2, None),
+])
+def test_a_escrita_da_cor_guarda_o_que_o_controle_aceitou(
+    via: str, escrito_no_radio: Any, esperado: Any,
+) -> None:
+    from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+    ctl: Any = bp.PyDualSenseController.__new__(bp.PyDualSenseController)
+    ctl._io_lock = threading.RLock()
+    ctl._pinturas_de_lightbar = 0
+    ctl._pode_escrever_player_leds = lambda: False
+    ctl._levar_o_brilho_das_luzes = lambda *_a, **_k: None
+    h = SimpleNamespace(conType=SimpleNamespace(name=via), _cor_no_fio=None,
+                        light=SimpleNamespace(setColorI=lambda *_c: None),
+                        writeReport=escrito_no_radio or (lambda q: len(q)))
+    no = SimpleNamespace(set_rgb=lambda *_c: True, set_players=lambda *_p: True)
+    assert ctl._write_partial_output(h, no, bp._DesiredOutput(led=(7, 8, 9)), what="régua")
+    assert h._cor_no_fio == esperado
