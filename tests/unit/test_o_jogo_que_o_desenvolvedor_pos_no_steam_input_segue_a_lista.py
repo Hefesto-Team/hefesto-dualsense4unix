@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_input_ponte as ponte
 
 _CONTA = "10"
@@ -106,7 +107,7 @@ class TestAMascaraDoDesenvolvedor:
     )
     def test_a_mascara_de_um_app(self, valor: object, esperado: int) -> None:
         config = {} if valor is None else {"steamconfigurator3rdpartynative": valor}
-        assert ponte.mascara_do_desenvolvedor({"appinfo": {"config": config}}) == esperado
+        assert proton_pin.mascara_do_desenvolvedor({"appinfo": {"config": config}}) == esperado
 
     def test_o_cache_diz_quem_o_desenvolvedor_pos_no_steam_input(
         self, tmp_path: Path
@@ -130,7 +131,7 @@ class TestAMascaraDoDesenvolvedor:
         [b"\x00\x01", struct.pack("<IIq", 0x12345678, 1, 16), None],
         ids=["curto", "magia-desconhecida", "entrada-cortada"],
     )
-    def test_cache_que_nao_se_entende_devolve_none(
+    def test_cache_que_nao_se_entende_levanta(
         self, tmp_path: Path, bruto: bytes | None
     ) -> None:
         cache = tmp_path / "appinfo.vdf"
@@ -138,7 +139,8 @@ class TestAMascaraDoDesenvolvedor:
             inteiro = _cache_de_apps({_DECLARADO_ABERTO: 15})
             bruto = inteiro[:40]
         cache.write_bytes(bruto)
-        assert ponte.steam_input_do_desenvolvedor(cache, {_DECLARADO_ABERTO}) is None
+        with pytest.raises(ValueError):
+            ponte.steam_input_do_desenvolvedor(cache, {_DECLARADO_ABERTO})
 
     def test_o_endereco_do_cache_e_o_da_mesma_raiz(self, tmp_path: Path) -> None:
         vdf = tmp_path / "raiz/userdata/77/config/localconfig.vdf"
