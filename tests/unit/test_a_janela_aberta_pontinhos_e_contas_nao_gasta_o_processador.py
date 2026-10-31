@@ -27,8 +27,9 @@ from tests.unit.janela_aberta_comum import (
     _fase,
     _gtk,
     _inteira,
-    _os_primeiros,
+    _roteiro_so_o_giro,
     _sem_fome,
+    _so_o_giro_vai,
     _teto_da_espera_s,
     _teto_da_fase_s,
     publicar_as_de_hoje,
@@ -140,34 +141,12 @@ def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
 @pytest.fixture(scope="module")
 def so_o_giro(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
     """A 02 com dois controles e só o giroscópio mexendo: 15 tiques para a"""
-    def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
-        if "medindo" not in fora.marcos:
-            if _fase(fora, "aquecendo", fora.comeco, 15, _teto_da_fase_s(fora, 15)):
-                fora.marcos["medindo"] = time.monotonic()
-            return True
-        return not _fase(fora, "giro", fora.marcos["medindo"], TIQUES_POR_FASE,
-                         _teto_da_fase_s(fora, TIQUES_POR_FASE))
-
-    return _correr(publicado_de_hoje, "01-jogar.html", 2, roteiro, anda="giro")
+    return _correr(publicado_de_hoje, "01-jogar.html", 2, _roteiro_so_o_giro, anda="giro")
 
 
 def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
-    """Toda pintura que não é inteira leva só as chaves do giroscópio."""
-    _sem_fome(so_o_giro, "aquecendo", "giro")
-    de = so_o_giro.marcos["medindo"]
-    ate = _os_primeiros(so_o_giro, de, TIQUES_POR_FASE)[-1].t
-    pinturas = [c for t, c, _ in so_o_giro.pinturas if de <= t <= ate]
-    assert len(pinturas) >= 25, f"o giro mexeu e só {len(pinturas)} pinturas saíram"
-    inteiras = [c for c in pinturas if _inteira(c)]
-    assert len(inteiras) <= 5, f"{len(inteiras)} cargas inteiras em 40 tiques"
-    outras: set[str] = set()
-    for c in pinturas:
-        if _inteira(c):
-            continue
-        assert set(c) <= {"colunas"}, f"a diferença levou {sorted(c)}"
-        for campos in c["colunas"].values():
-            outras |= {k for k in campos if not k.startswith("giro")}
-    assert not outras, f"só o giro mexeu e a diferença levou {sorted(outras)}"
+    """Todo giro novo pinta, e toda pintura que não é inteira leva só as chaves do giroscópio."""
+    _so_o_giro_vai(so_o_giro)
 
 
 @pytest.fixture(scope="module")

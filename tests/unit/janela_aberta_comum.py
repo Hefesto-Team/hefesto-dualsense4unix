@@ -244,12 +244,15 @@ def _na_cadencia(mp: pytest.MonkeyPatch, hv: Any, ms: int) -> None:
 def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             anda: str = "", teto_s: float | None = None,
             ajuste: Any = None, teto_da_fase_s: float | None = None,
-            tempo_real: bool = False) -> SimpleNamespace:
+            tempo_real: bool = False, atraso_da_pintura_s: float = 0.0) -> SimpleNamespace:
     """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`.
 
     Por padrão a corrida anda na cadência ACELERADA (`CADENCIA_ACELERADA_MS`): o `hv.TIQUE_MS` e
     o intervalo do leitor do estado (que o guarda como padrão de definição) são trocados, e o
-    resto do tempo do cenário anda na mesma razão. `tempo_real=True` é a cadência do produto."""
+    resto do tempo do cenário anda na mesma razão. `tempo_real=True` é a cadência do produto.
+    `atraso_da_pintura_s` segura a volta de cada pintura esse tanto de relógio de parede: o WebKit
+    de uma máquina cheia, sem carregar a máquina. Quando o roteiro acaba, o tique para e a corrida
+    espera a volta das pinturas no ar (até `_teto_da_espera_s`): a que não voltou foi perdida."""
     cadencia_ms = None if tempo_real else CADENCIA_ACELERADA_MS
     gtk = _gtk()
     from gi.repository import GLib
@@ -267,7 +270,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                            pactl=[], ponte=_PonteDeMentira(), mudas=False,
                            avaliados={}, piloto=None, avisos=[], acabou=False,
                            leitura_escondida_s=0.0, comeco=0.0, fases={}, famintas={},
-                           passos=[], lacos={}, voos=[], fim=0.0,
+                           passos=[], lacos={}, voos=[], fim=0.0, drenando=0.0,
                            teto_da_fase_s=teto_da_fase_s, cadencia_ms=cadencia_ms)
     if teto_s is None:
         teto_s = 8 * max(_teto_da_fase_s(fora, TIQUES_POR_FASE), _teto_da_espera_s(fora)) + 30.0
@@ -314,20 +317,40 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 voo[1] = time.monotonic()
                 cb(valor, erro)
 
-            original_perguntar(js, voltou)
+            def segurada(valor: Any, erro: Any) -> None:
+                def solta() -> bool:
+                    voltou(valor, erro)
+                    return False
+
+                GLib.timeout_add(int(atraso_da_pintura_s * 1000), solta)
+
+            original_perguntar(js, segurada if atraso_da_pintura_s else voltou)
 
         piloto.ponte.perguntar = perguntar
         tique_original = piloto._tique
+        mandar_original = piloto._o_que_mandar
+        no_mandar: list[Any] = [None]
+
+        def o_que_mandar(carga: dict[str, Any]) -> dict[str, Any]:
+            no_mandar[0] = _giro_da_carga(carga)
+            enviar: dict[str, Any] = mandar_original(carga)
+            return enviar
+
+        piloto._o_que_mandar = o_que_mandar
 
         def tique() -> bool:
             if fora.acabou:
                 return False
+            if fora.drenando:
+                return True
             no_tique[0] = False
+            no_mandar[0] = None
             no_ar, voos = piloto._pintura_no_ar, piloto._pulados_por_voo
             volta: bool = tique_original()
             fora.ticks.append(SimpleNamespace(
                 t=time.monotonic(), escondida=piloto._escondida, pintou=no_tique[0],
                 voo=no_ar and piloto._pulados_por_voo > voos,
+                livre=no_mandar[0] is not None, giro=no_mandar[0],
                 produtivos=piloto.tiques.get(pagina, 0),
                 leituras=estado.leituras, pactl=len(fora.pactl),
                 batidas=fora.ponte.chamadas.count("rumble_set_checked"),
@@ -348,6 +371,11 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
 
         def passo() -> bool:
             fora.passos.append(time.monotonic())
+            if fora.drenando:
+                no_ar = any(v[1] is None for v in fora.voos)
+                if no_ar and time.monotonic() - fora.drenando < _teto_da_espera_s(fora):
+                    return True
+                return _fechar()
             if not piloto.pronto or not piloto.tela.na_aba:
                 return True
             if piloto.pagina != pagina:
@@ -361,6 +389,10 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 a05._BATEU_EM.clear()
             if roteiro(fora, piloto, time.monotonic() - comeco[0]):
                 return True
+            fora.drenando = time.monotonic()
+            return True
+
+        def _fechar() -> bool:
             with contextlib.suppress(SystemExit):
                 try:
                     piloto._relatar()
@@ -384,6 +416,14 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             ondas_de_som.o_de_sempre().seguir({})
     assert comeco[0], f"a página {pagina} nunca ficou de pé"
     return fora
+
+
+def _giro_da_carga(carga: dict[str, Any]) -> dict[Any, Any]:
+    """Os campos do giroscópio de cada coluna na carga que o tique decide: o que a página vê."""
+    colunas = carga.get("colunas") if isinstance(carga, dict) else None
+    pares = colunas.items() if isinstance(colunas, dict) else enumerate(colunas or ())
+    return {chave: {k: v for k, v in campos.items() if k.startswith("giro")}
+            for chave, campos in pares if isinstance(campos, dict)}
 
 
 def _inteira(carga: dict[str, Any]) -> bool:
@@ -571,29 +611,28 @@ def _parada_pinta_so_as_cargas_inteiras(fora: Any) -> None:
         "inteira")
 
 
-def _sequencias_no_ar(fora: Any, ticks: list[Any]) -> list[tuple[int, int, float, bool]]:
-    """As sequências de tiques pulados por voo: `(início, tamanho, ms no ar, voltou)`.
+def _sequencias_no_ar(fora: Any, ticks: list[Any]) -> list[tuple[int, int, float | None, float]]:
+    """As sequências de tiques pulados por voo: `(início, tamanho, volta, último pulado)`.
 
-    O tempo no ar vai do envio da pintura que prendeu a sequência até o seu último sinal no ar:
-    o último tique pulado ou a volta da pintura, o que vier depois. A que nunca voltou conta até
-    o fim da corrida. É tempo medido, e não tiques vezes a cadência: na cadência real os tiques
-    da abertura saem colados, e dois deles somam 0 ms."""
+    A pintura que prendeu a sequência é a última enviada antes do primeiro tique pulado; `volta`
+    é quando essa pintura voltou (`None`, nunca). O tique e a volta rodam no mesmo laço do GTK,
+    então a ordem entre os dois é exata, e não depende de quanto a máquina demora."""
     saida = []
     for voo, grupo in itertools.groupby(enumerate(ticks), key=lambda par: par[1].voo):
         if not voo:
             continue
         seguidos = list(grupo)
         primeiro, ultimo = seguidos[0][1].t, seguidos[-1][1].t
-        envio, volta = max((v for v in fora.voos if v[0] <= primeiro),
-                           key=lambda v: v[0], default=(primeiro, None))
-        fim = max(ultimo, fora.fim if volta is None else volta)
-        saida.append((seguidos[0][0], len(seguidos), (fim - envio) * 1000.0, volta is not None))
+        _envio, volta = max((v for v in fora.voos if v[0] <= primeiro),
+                            key=lambda v: v[0], default=(primeiro, None))
+        saida.append((seguidos[0][0], len(seguidos), volta, ultimo))
     return saida
 
 
 def _a_aba_quieta_nao_e_muda(fora: Any) -> None:
-    """A aba à vista pinta: nenhuma pintura fica no ar mais que um tique do produto, e cada fase
-    à vista conta tique produtivo. Não é um piso de tiques, que mediria a latência da máquina."""
+    """A aba à vista pinta: toda pintura que vai ao ar volta, nenhum tique se pula por voo depois
+    da volta, e cada fase à vista conta tique produtivo. Não é teto de tempo nem piso de tiques,
+    que mediriam a latência da máquina."""
     _sem_fome(fora, "à vista", "de volta")
     assert "voltou" in fora.marcos, "a página nunca disse que voltou à vista"
     antes = next((x.produtivos for x in reversed(fora.ticks) if x.t < fora.comeco), 0)
@@ -602,14 +641,66 @@ def _a_aba_quieta_nao_e_muda(fora: Any) -> None:
     fases = (("à vista", _entre(fora, fora.comeco, fora.marcos["esconde"]), antes),
              ("de volta", _os_primeiros(fora, de_volta, TIQUES_POR_FASE), depois))
     for nome, ticks, base in fases:
-        for inicio, tamanho, ms, voltou in _sequencias_no_ar(fora, ticks):
-            assert ms <= TIQUE_REAL_MS, (
-                f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: {tamanho} tique(s) "
-                f"seguido(s) pulado(s) por voo, do {inicio + 1}º ao {inicio + tamanho}º da fase, "
-                f"com a pintura no ar por {ms:.0f} ms"
-                f"{'' if voltou else ' (a sequência nunca voltou)'}; o teto é um tique do produto, "
-                f"{TIQUE_REAL_MS} ms")
+        for inicio, tamanho, volta, ultimo in _sequencias_no_ar(fora, ticks):
+            onde_ = (f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: {tamanho} tique(s) "
+                     f"seguido(s) pulado(s) por voo, do {inicio + 1}º ao "
+                     f"{inicio + tamanho}º da fase")
+            assert volta is not None, f"{onde_}, e a pintura que os prendeu nunca voltou"
+            assert ultimo <= volta, (
+                f"{onde_}, e o último saiu {(ultimo - volta) * 1000:.0f} ms depois de a pintura "
+                "voltar: a volta não soltou o tique")
         assert ticks and ticks[-1].produtivos > base, (
             f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: nenhum tique produtivo em "
             f"{len(ticks)} tiques ({sum(1 for x in ticks if x.voo)} pulados por voo)")
     assert not fora.mudas, f"o relato acusou {fora.pagina} de aba muda"
+
+
+def _roteiro_so_o_giro(fora: Any, _piloto: Any, _t: float) -> bool:
+    """15 tiques para a página assentar e 40 com só o giroscópio mexendo."""
+    if "medindo" not in fora.marcos:
+        if _fase(fora, "aquecendo", fora.comeco, 15, _teto_da_fase_s(fora, 15)):
+            fora.marcos["medindo"] = time.monotonic()
+        return True
+    return not _fase(fora, "giro", fora.marcos["medindo"], TIQUES_POR_FASE,
+                     _teto_da_fase_s(fora, TIQUES_POR_FASE))
+
+
+def _o_giro_que_mudou_pintou(fora: Any, de: float, ate: float) -> int:
+    """Todo tique livre em que o giro da carga mudou desde o tique livre anterior pintou.
+
+    Livre é o tique que chegou a decidir a carga (nem pulado por voo, nem pelo custo do anterior):
+    quantos são depende da máquina, e o que se cobra é que nenhum deles cale um giro novo."""
+    anterior = next((x.giro for x in reversed(fora.ticks) if x.t < de and x.livre), None)
+    mudaram = 0
+    for i, x in enumerate(t for t in fora.ticks if de <= t.t <= ate):
+        if not x.livre:
+            continue
+        if x.giro != anterior:
+            mudaram += 1
+            assert x.pintou, (
+                f"o {i + 1}º tique da fase do giro estava livre, o giro da carga mudou, e o "
+                "tique não pintou")
+        anterior = x.giro
+    return mudaram
+
+
+def _so_o_giro_vai(fora: Any) -> None:
+    """Todo giro novo pinta, e toda pintura que não é inteira leva só as chaves do giroscópio."""
+    _sem_fome(fora, "aquecendo", "giro")
+    de = fora.marcos["medindo"]
+    ate = _os_primeiros(fora, de, TIQUES_POR_FASE)[-1].t
+    pinturas = [c for t, c, _ in fora.pinturas if de <= t <= ate]
+    mudaram = _o_giro_que_mudou_pintou(fora, de, ate)
+    assert mudaram, "nenhum tique livre viu o giro mudar: a régua não provou nada"
+    assert any(not _inteira(c) for c in pinturas), (
+        f"{len(pinturas)} pintura(s), todas inteiras: a diferença do giro nunca saiu sozinha")
+    inteiras = [c for c in pinturas if _inteira(c)]
+    assert len(inteiras) <= 5, f"{len(inteiras)} cargas inteiras em 40 tiques"
+    outras: set[str] = set()
+    for c in pinturas:
+        if _inteira(c):
+            continue
+        assert set(c) <= {"colunas"}, f"a diferença levou {sorted(c)}"
+        for campos in c["colunas"].values():
+            outras |= {k for k in campos if not k.startswith("giro")}
+    assert not outras, f"só o giro mexeu e a diferença levou {sorted(outras)}"

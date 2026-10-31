@@ -16,7 +16,9 @@ import pytest
 
 from tests.unit.janela_aberta_comum import (
     CARGAS,
+    TIQUE_REAL_MS,
     TIQUES_POR_FASE,
+    _a_aba_quieta_nao_e_muda,
     _a_escondida_nao_trabalha,
     _com_carga,
     _correr,
@@ -25,11 +27,15 @@ from tests.unit.janela_aberta_comum import (
     _nominal_s,
     _o_coracao_bate_escondido,
     _roteiro_esconde_e_volta,
+    _roteiro_so_o_giro,
+    _so_o_giro_vai,
     publicar_as_de_hoje,
 )
 
 
 NO_TEMPO_REAL = "buraco"
+
+PINTURA_LENTA_S = 0.15
 
 
 @pytest.fixture(scope="module")
@@ -79,3 +85,41 @@ def test_r1_o_teto_batido_diz_que_foi_a_maquina(sob_carga_com_teto_curto: Any) -
             r"a fase escondida juntou \d+ de 40 tiques em \d+,\d s \(maior buraco: "
             r"\d+,\d s\): o laço do GTK andou devagar demais para medir")):
         _a_escondida_nao_trabalha(fora)
+
+
+def _a_pintura_ficou_lenta(fora: Any) -> None:
+    """A pintura segurada passou de um tique do produto: senão a régua não provou nada."""
+    voltas = [(volta - envio) * 1000.0 for envio, volta in fora.voos if volta is not None]
+    assert voltas and min(voltas) > TIQUE_REAL_MS, (
+        f"a pintura segurada voltou em {min(voltas, default=0.0):.0f} ms, e a máquina cheia "
+        f"simulada leva mais que {TIQUE_REAL_MS} ms")
+
+
+@pytest.fixture(scope="module")
+def aba_quieta_com_a_pintura_lenta(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
+    """A 01 com dois controles, esconde e volta, com cada pintura voltando em 150 ms."""
+    fora = _correr(publicado_de_hoje, "01-jogar.html", 2, _roteiro_esconde_e_volta,
+                   atraso_da_pintura_s=PINTURA_LENTA_S)
+    fora.pagina, fora.n = "01-jogar.html", 2
+    return fora
+
+
+def test_a_aba_quieta_com_a_pintura_lenta_nao_e_muda(
+        aba_quieta_com_a_pintura_lenta: Any) -> None:
+    """O WebKit de uma máquina cheia demora a pintar, e a aba quieta continua não sendo muda."""
+    _a_pintura_ficou_lenta(aba_quieta_com_a_pintura_lenta)
+    _a_aba_quieta_nao_e_muda(aba_quieta_com_a_pintura_lenta)
+
+
+@pytest.fixture(scope="module")
+def so_o_giro_com_a_pintura_lenta(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
+    """A 01 com dois controles e só o giroscópio mexendo, com cada pintura voltando em 150 ms."""
+    return _correr(publicado_de_hoje, "01-jogar.html", 2, _roteiro_so_o_giro, anda="giro",
+                   atraso_da_pintura_s=PINTURA_LENTA_S)
+
+
+def test_o_giro_com_a_pintura_lenta_pinta_todo_giro_novo(
+        so_o_giro_com_a_pintura_lenta: Any) -> None:
+    """Com a pintura lenta, menos tiques ficam livres, e cada um deles pinta o giro novo."""
+    _a_pintura_ficou_lenta(so_o_giro_com_a_pintura_lenta)
+    _so_o_giro_vai(so_o_giro_com_a_pintura_lenta)
