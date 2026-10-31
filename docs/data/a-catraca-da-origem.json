@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1175972,
+      "piso": 1175998,
       "por_item": {
-        "docs": 107806,
+        "docs": 107807,
         "scripts": 110028,
         "src": 296467,
-        "tests": 661671
+        "tests": 661696
       },
-      "razao": "tamanho: +586 linhas (1175386 -> 1175972), pagas por Origem: D-0810-O-VERMELHO-DA-SUITE-E-DESTA-CORRIDA; registrado no fecho, topo 173d8fc84332",
+      "razao": "tamanho: +26 linhas (1175972 -> 1175998), pagas por Origem: D-3110-O-CALIBRAR-FICA-A-ESQUERDA-DO-MODO-AUTOMATICO; registrado no fecho, topo 4ac6d8032b95",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1279,6 +1279,12 @@
           "de": 1175386,
           "para": 1175972,
           "razao": "tamanho: +586 linhas (1175386 -> 1175972), pagas por Origem: D-0810-O-VERMELHO-DA-SUITE-E-DESTA-CORRIDA; registrado no fecho, topo 173d8fc84332"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1175972,
+          "para": 1175998,
+          "razao": "tamanho: +26 linhas (1175972 -> 1175998), pagas por Origem: D-3110-O-CALIBRAR-FICA-A-ESQUERDA-DO-MODO-AUTOMATICO; registrado no fecho, topo 4ac6d8032b95"
         }
       ],
       "unidade": "linhas",
