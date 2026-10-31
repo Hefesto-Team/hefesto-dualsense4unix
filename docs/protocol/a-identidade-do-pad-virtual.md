@@ -1,37 +1,40 @@
 # A identidade do pad virtual
 
 Que modelo de DualSense o pad virtual do modo DualSense apresenta a cada jogo, e por quê.
-Escrito em 22/10/2026. O código é
+Escrito em 22/10/2026; a regra se inverteu em 31/10/2026. O código é
 `src/hefesto_dualsense4unix/integrations/a_roupa_do_jogo.py` (`_a_regra`).
 
 ## A regra
 
-O pad veste o DualSense comum (`054c:0ce6`) só quando as três coisas valem juntas:
+O pad veste o Edge (`054c:0df2`) quando qualquer uma vale:
 
-1. o jogo nomeia o comum (um perfil do InControl, o `Sony DualSense` do Rewired, o par
-   `054c:0ce6` no executável);
-2. o jogo não nomeia o Edge (o perfil `…Edge…`, o `DualSense Edge` do Rewired ou da SDL, o par
-   `054c:0df2`);
-3. nada no caminho do jogo pede o Edge: a biblioteca Sony (`libScePad`, `scePad`,
-   `WinDualSense`, `WinDualShock`), o Modo Xbox, a lista do Steam Input, a Launch Option que
-   esconde o `0x054c/0x0ce6`.
+1. o jogo nomeia o Edge (o perfil `…Edge…`, o `DualSense Edge` do Rewired ou da SDL, o par
+   `054c:0df2` no executável);
+2. o caminho do jogo pede o Edge: a biblioteca Sony (`libScePad`, `scePad`, `WinDualSense`,
+   `WinDualShock`), que procura o contêiner USB da háptica, e só o Edge sobe no gadget; o Modo
+   Xbox; a lista do Steam Input; a Launch Option que esconde o `0x054c/0x0ce6`.
 
-Em todo outro caso, o Edge (`054c:0df2`). A regra vale igual para os quatro jogadores, no cabo e
+Em todo outro caso, inclusive quando o jogo não nomeia controle nenhum, o DualSense comum
+(`054c:0ce6`), que todo jogo do DualSense conhece. A fonte da decisão diz o que nomeou o comum
+ou, sem sinal, `nenhum sinal do controle: o DualSense comum`. A regra vale igual para os quatro jogadores, no cabo e
 no rádio, porque o pad é sempre um aparelho USB virtual (`BUS_USB`) e o transporte do controle
 físico não chega ao jogo. Nada se decide por appid, por nome ou por pasta do jogo.
 
-| jogo (22/10/2026) | o que o disco nomeia | roupa | a cláusula que decide |
+| jogo (31/10/2026) | o que o disco nomeia | roupa | a cláusula que decide |
 | --- | --- | --- | --- |
-| Sackboy | `WinDualSense`, `0ce6` e `0df2` no executável | Edge | 2: nomeia o Edge |
-| Minecraft Dungeons II | `WinDualShock`, só `0ce6` no executável | Edge | 3: a biblioteca Sony |
-| Mullet Mad Jack | só os perfis do comum no `global-metadata.dat` | `0ce6` | as três valem |
+| Sackboy | `WinDualSense`, `0ce6` e `0df2` no executável | Edge | 1: nomeia o Edge |
+| Minecraft Dungeons II | `WinDualShock`, só `0ce6` no executável | Edge | 2: a biblioteca Sony |
+| Mina the Hollower | `0ce6` e `0df2` junto do `054c` no executável | Edge | 1: nomeia o Edge |
+| Mullet Mad Jack | só os perfis do comum no `global-metadata.dat` | `0ce6` | nada pede o Edge |
+| REANIMAL | nenhum sinal do controle | `0ce6` | nada pede o Edge |
 
-Nos 43 jogos instalados da biblioteca medida em 22/10/2026, a regra única dá a mesma roupa e a
-mesma fonte da escada anterior, linha a linha: a regra muda a forma da decisão, não o resultado.
+Nos 25 jogos instalados da biblioteca medida em 31/10/2026, a inversão troca a roupa de nove,
+todos do Edge para o comum e todos sem sinal do controle; os que nomeiam o Edge ou levam a
+biblioteca Sony seguem no Edge, e os que nomeiam só o comum seguem no comum.
 
-## Por que o Edge é o padrão
+## Por que o comum é o padrão, e onde o Edge fica
 
-O Edge não nasceu pelo Bluetooth. O que se lê na história:
+O Edge foi o padrão até 31/10/2026, e não nasceu pelo Bluetooth. O que se lê na história:
 
 - **16/07/2026, `389e429ab`:** o pad uhid passou de `0ce6` para `0df2` para ter um
   VID:PID diferente do físico. Com o físico `0ce6` e o pad `0df2`, a Launch Option
@@ -50,6 +53,9 @@ O Edge não nasceu pelo Bluetooth. O que se lê na história:
   `D-0810-PAD-USB-VESTIDOS`); a roupa se lê no disco
   (`D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO`) e vale só enquanto o jogo roda
   (`D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM`).
+- **31/10/2026:** a regra se inverte. O comum é o modelo que todo jogo do DualSense conhece, e o
+  Edge, que só o jogo com tabela própria do `0df2` reconhece, fica onde o jogo o nomeia ou onde o
+  caminho dele só mostra o Edge.
 
 O que muda entre os dois modelos, lido no fonte (os trechos estão em
 [driver-hid-playstation.md](driver-hid-playstation.md) e
@@ -65,15 +71,17 @@ O que muda entre os dois modelos, lido no fonte (os trechos estão em
 | o gadget USB do Hefesto | sobe | fica no uhid (a quirk `n`) |
 
 Nenhuma linha muda pelo transporte do controle físico: o pad é `BUS_USB` nos dois casos. O
-Edge segue padrão porque é o único que sobe no gadget (o contêiner que a biblioteca Sony
-procura) e o único que a Launch Option antiga não esconde; o comum entra onde o jogo não
-reconheceria o Edge.
+comum é o padrão porque todo jogo do DualSense o reconhece; o Edge fica onde ele é o único que
+serve: o gadget (o contêiner que a biblioteca Sony procura), o pad Sony que o Modo Xbox e o
+Steam Input não mostram e o PID que a Launch Option antiga não esconde.
 
 ## O que a regra não cobre ainda
 
-- A SDL só conta pelo `DualSense Edge`: uma SDL2 anterior ao Edge, que só conhece o comum, cai
-  no Edge (nenhum jogo instalado tem uma; não se mediu).
 - O jogo de fora da Steam e o jogo sem o wrapper não têm o arme: o pad fica no Edge.
+- Sem o broker escondendo o físico, a env do comum não se escreve e o pad fica no Edge: o comum
+  divide o par com o físico, e o jogo veria os dois.
+- O jogo que o cache ainda não leu fica sem env própria até o fio da roupa ler o disco, e quem
+  abre nesse intervalo joga com o Edge.
 - A roupa não faz o Minecraft Dungeons II vibrar. Ele pede a vibração só pelo GameInput (o Wwise
   Motion, `AkMotion.dll`, exige o `IGameInput` v2 e um aparelho com motores de rumble), e o
   `GameInputCreate` do Proton é stub: com o Edge ou com o `0ce6`, nenhum `SetRumbleState` chega
