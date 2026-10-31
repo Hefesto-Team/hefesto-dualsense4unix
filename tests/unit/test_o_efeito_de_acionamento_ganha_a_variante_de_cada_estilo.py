@@ -6,8 +6,9 @@ duro da mira trocado pela arma), e o primeiro tiro do R2 escrevia ``254800040000
 arma semi-automática de fábrica, no FPS, na Ação e no Terror, por cima do R2 do estilo.
 
 **A cura:** a Ação e o Terror entram nos estilos de rajada; o ritmo escreve só no lado em que o
-estilo daquele controle tem uma arma (Disparo ou Metralhadora), e a arma sai com os números
-do estilo, os mesmos que o perfil guarda. O rumble no dedo cede só esse lado.
+perfil põe uma arma (Disparo ou Metralhadora) naquele controle, e a arma sai com os números
+dele: no automático, os do estilo; no personalizado, os que a aba escreveu, e o lado que a aba
+tirou da arma o ritmo não toca. O rumble no dedo cede só esse lado.
 
 Sem aparelho: o backend anota os blocos. Endereços da faixa forjada ``aa:bb:cc``.
 """
@@ -21,10 +22,11 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app.actions import trigger_specs as specs
-from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+from hefesto_dualsense4unix.core.trigger_effects import build_from_name, traduzir_chave_velha
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import ESTILOS, POR_CHAVE
+from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MatchAny, Profile
 
 DIREITO, ESQUERDO = tv.LADO_DIREITO, tv.LADO_ESQUERDO
 QUATRO = ("aa:bb:cc:00:00:41", "aa:bb:cc:00:00:42", "aa:bb:cc:00:00:43", "aa:bb:cc:00:00:44")
@@ -32,6 +34,15 @@ P1 = QUATRO[0]
 _ACAO = "acao"  # (noqa-acento)
 DE_RAJADA = ("fps", _ACAO, "terror")
 TIQUE_S = 1.0 / 60.0
+
+
+def _automatico(estilo: str) -> Profile:
+    return Profile(name="Ritmo", match=MatchAny(), estilo=estilo,
+                   triggers={"modo": MODO_AUTOMATICO})
+
+
+def _armas(estilo: str) -> tv.ArmasDoGatilho:
+    return tv.armas_do_gatilho_do_perfil(_automatico(estilo))
 
 
 def _xbox(_uniq: str) -> tv.EstadoDoCanal:
@@ -55,13 +66,22 @@ def _do_perfil(estilo: str, lado: str) -> bytes:
 
 
 class _Mesa:
-    def __init__(self, estilos: dict[str, str], apertado: Any = None) -> None:
+    def __init__(
+        self, estilos: dict[str, str] | None = None, apertado: Any = None,
+        armas: tv.ArmasDoGatilho | None = None,
+    ) -> None:
         self.blocos: list[tuple[str, str, bytes]] = []
+        de_cada = {uniq: _armas(estilo) for uniq, estilo in (estilos or {}).items()}
+
+        def arma_de(uniq: str, lado: str) -> bytes | None:
+            dele = de_cada.get(uniq, armas or tv.SEM_ARMAS)
+            return dele.de(uniq, lado)
+
         self.atuador = tv.AtuadorDoGatilho(
             lambda u, lado, bloco: self.blocos.append((u, lado, bytes(bloco))),
             lambda _u: True,
             apertado,
-            estilo_de=estilos.get,
+            arma_de=arma_de,
         )
         self.motor = tv.TatoVivo([self.atuador])
 
@@ -135,7 +155,7 @@ def test_a_rajada_e_a_vibracao_a_20_hz(estilo: str) -> None:
     assert receita.frequencia_da_rajada_hz == 20
     mesa = _Mesa({P1: estilo})
     mesa.atirar(P1, DIREITO, _cadencia(10.0, 0.07, 12), receita)
-    rajada = tv.bloco_do_gatilho(tv.GATILHO_RAJADA, receita, estilo, DIREITO)
+    rajada = tv.bloco_do_gatilho(tv.GATILHO_RAJADA, receita)
     assert mesa.de(P1) == [_do_perfil(estilo, DIREITO), rajada]
     assert rajada == tv._bloco_cru("MultiPositionVibration", {"frequency": 20})
 
@@ -180,18 +200,20 @@ class _Controle:
         return True
 
 
-def _producao(monkeypatch: pytest.MonkeyPatch, estilo: str | None) -> tuple[Any, tv.TatoVivo]:
+def _producao(monkeypatch: pytest.MonkeyPatch, perfil: Any) -> tuple[Any, tv.TatoVivo]:
+    """O motor de produção com a vista do perfil lida, como a ``receita_ativa`` a deixa."""
     monkeypatch.setattr(tv, "_controle_na_economia", lambda _u: False)
-    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: estilo)
+    monkeypatch.setattr(tv, "_VISTA_LIDA", ("", perfil))
     alvo = SimpleNamespace(controller=_Controle(), _alto_falante_subsystem=None)
     motor = tv.TatoVivo(tv.atuadores_de_producao(alvo))
     motor.ligado = True
+    motor.armas_do_gatilho = tv.armas_do_gatilho_ativas(alvo)
     alvo._tato_vivo = motor
     return alvo, motor
 
 
 def test_a_producao_le_o_estilo_do_perfil_ativo(monkeypatch: pytest.MonkeyPatch) -> None:
-    alvo, motor = _producao(monkeypatch, "terror")
+    alvo, motor = _producao(monkeypatch, _automatico("terror"))
     receita = _receita("terror")
     for t in _cadencia(10.0, 0.4, 2):
         motor.anotar(tv.Evento(t, P1, tv.TIPO_DEDO, ESQUERDO))
@@ -201,7 +223,7 @@ def test_a_producao_le_o_estilo_do_perfil_ativo(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_a_producao_sem_estilo_ativo_nao_escreve(monkeypatch: pytest.MonkeyPatch) -> None:
-    alvo, motor = _producao(monkeypatch, None)
+    alvo, motor = _producao(monkeypatch, Profile(name="Ritmo", match=MatchAny()))
     motor.anotar(tv.Evento(10.0, P1, tv.TIPO_DEDO, DIREITO))
     motor.tique(10.001, _xbox, _receita("fps"), (P1,))
     assert alvo.controller.gatilhos == []
@@ -211,7 +233,7 @@ def test_na_acao_o_rumble_no_dedo_fica_no_l2_e_cede_o_r2_ao_ritmo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """MORDIDA: devolva a cessão do dedo aos dois lados e veja o L2 da Ação calar."""
-    alvo, motor = _producao(monkeypatch, _ACAO)
+    alvo, motor = _producao(monkeypatch, _automatico(_ACAO))
     receita = _receita(_ACAO)
     assert receita.rumble_no_dedo and receita.gatilho_no_ritmo
     motor.borda_do_dedo.ver(P1, 230, 230, 50.0)
@@ -220,3 +242,64 @@ def test_na_acao_o_rumble_no_dedo_fica_no_l2_e_cede_o_r2_ao_ritmo(
     por_lado = {lado: [b for _u, d, b in alvo.controller.gatilhos if d == lado]
                 for lado in ("left", "right")}
     assert por_lado == {"left": [tv.bloco_do_dedo(7)], "right": [_do_perfil(_ACAO, DIREITO)]}
+
+
+def _personalizado(**campos: Any) -> Profile:
+    return Profile(name="Ritmo", match=MatchAny(), estilo="fps", **campos)
+
+
+def test_o_estilo_aplicado_pela_aba_perfis_da_a_mesma_arma_do_automatico() -> None:
+    for estilo in DE_RAJADA:
+        perfil = a10_perfis._com_o_estilo(Profile(name="Ritmo", match=MatchAny()),
+                                          POR_CHAVE[estilo], [])[0]
+        assert tv.armas_do_gatilho_do_perfil(perfil) == _armas(estilo), estilo
+        assert _armas(estilo).geral == {DIREITO: _do_perfil(estilo, DIREITO)}
+
+
+def test_no_personalizado_o_r2_fora_da_arma_nao_recebe_o_ritmo() -> None:
+    """MORDIDA: leia só o estilo no personalizado e veja o Rígido da aba virar arma."""
+    armas = tv.armas_do_gatilho_do_perfil(
+        _personalizado(triggers={"right": {"mode": "Rigid", "params": [2, 150]}}))
+    assert armas == tv.SEM_ARMAS
+    mesa = _Mesa(armas=armas)
+    mesa.atirar(P1, DIREITO, _cadencia(10.0, 0.07, 12), _receita("fps"))
+    assert mesa.blocos == []
+
+
+def test_no_personalizado_a_arma_sai_com_os_numeros_da_aba() -> None:
+    da_aba = {"mode": "Weapon", "params": [2, 6, 120]}
+    armas = tv.armas_do_gatilho_do_perfil(_personalizado(triggers={"right": da_aba}))
+    esperado = tv._bloco_do_efeito(build_from_name("Weapon", [2, 6, 120]))
+    assert armas.geral == {DIREITO: esperado}
+    mesa = _Mesa(armas=armas)
+    receita = _receita("fps")
+    mesa.atirar(P1, DIREITO, _cadencia(10.0, 0.07, 12), receita)
+    assert mesa.de(P1) == [esperado, tv.bloco_do_gatilho(tv.GATILHO_RAJADA, receita)]
+
+
+def test_a_chave_velha_da_arma_vale_pela_de_hoje() -> None:
+    armas = tv.armas_do_gatilho_do_perfil(
+        _personalizado(triggers={"right": {"mode": "SemiAutoGun", "params": [3, 6, 5]}}))
+    traduzida = traduzir_chave_velha("SemiAutoGun", [3, 6, 5])
+    assert traduzida is not None and traduzida[0] == "Weapon"
+    assert armas.geral == {DIREITO: tv._bloco_do_efeito(build_from_name(*traduzida))}
+
+
+def test_no_personalizado_cada_controle_tem_a_arma_que_a_aba_deu_a_ele() -> None:
+    p2, p3 = QUATRO[1], QUATRO[2]
+    perfil = _personalizado(
+        triggers={"right": {"mode": "Machine", "params": [2, 9, 4, 40]}},
+        controllers={
+            p2.replace(":", ""): {"triggers": {"right": {"mode": "Rigid", "params": [2, 150]}}},
+            p3.replace(":", ""): {"triggers": {"right": {"mode": "Weapon", "params": [2, 6, 120]}}},
+        },
+    )
+    armas = tv.armas_do_gatilho_do_perfil(perfil)
+    mesa = _Mesa(armas=armas)
+    receita = _receita("fps")
+    for n, uniq in enumerate(QUATRO):
+        mesa.atirar(uniq, DIREITO, [10.0 + n], receita)
+    assert mesa.de(P1, DIREITO) == [tv._bloco_do_efeito(build_from_name("Machine", [2, 9, 4, 40]))]
+    assert mesa.de(p2) == [], "o P2 deixou o R2 no Rígido"
+    assert mesa.de(p3, DIREITO) == [tv._bloco_do_efeito(build_from_name("Weapon", [2, 6, 120]))]
+    assert mesa.de(QUATRO[3], DIREITO) == mesa.de(P1, DIREITO)

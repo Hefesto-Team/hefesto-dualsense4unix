@@ -51,7 +51,8 @@ class _Mesa:
             cede,
             lambda u, disco, bloco: self.soltos_por_lado.append((u, disco, bloco)),
             radio_cede,
-            lambda _u: estilo,
+            tv.armas_do_gatilho_do_perfil(
+                {"estilo": estilo, "triggers": {"modo": "automatico"}}).de,  # (noqa-acento)
         )
         self.motor = tv.TatoVivo([self.atuador])
         self.motor.ligado = True
