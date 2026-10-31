@@ -783,7 +783,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:211-212` | **ALTA** — lido no código |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:212-213` | **ALTA** — lido no código |
 > | pré-amp, `common[37]` | `core/backend_pydualsense.py:851-855`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1264-1266`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:90` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: um ajuste acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
@@ -809,7 +809,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
      `backend_pydualsense.py`, e as três citações de áudio desceram ~21 linhas.
      As AFIRMAÇÕES não mudaram — só onde as afirmações abrem. -->
 
-> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:252-267` (`_byte_da_rota`) | **MEDIDO** — com a orelha do usuário em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:253-268` (`_byte_da_rota`) | **MEDIDO** — com a orelha do usuário em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
 > apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do
@@ -1637,10 +1637,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
 >   ligados em TODO report, e o `common[41]` vai sempre zero
->   (`core/backend_pydualsense.py:442`) — escolha deliberada, travada por
+>   (`core/backend_pydualsense.py:443`) — escolha deliberada, travada por
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
->   (`core/backend_pydualsense.py:427-432`), porque reengatá-lo em regime
+>   (`core/backend_pydualsense.py:428-433`), porque reengatá-lo em regime
 >   trava a exibição no firmware — é o keepalive da barra de luz.
 >
 > E o perigo registrado, que esta página não carregava: uma
@@ -1720,8 +1720,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > |---|---|---|
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:387` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:156` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:890-925` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1225` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:272` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1212`, offset `_STATUS1_OFFSET = 53` em `:268` | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1229` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:276` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1216`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
@@ -1759,7 +1759,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1236` `forward_battery`, saindo em `:1640`,
+> (`integrations/uhid_gamepad.py:1240` `forward_battery`, saindo em `:1640`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de

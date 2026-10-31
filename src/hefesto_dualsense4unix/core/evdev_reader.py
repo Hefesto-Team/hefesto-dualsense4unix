@@ -1415,6 +1415,13 @@ BOTOES_DO_LEITOR: dict[str, str] = {
     "BTN_THUMBR": "r3",
 }
 
+BOTOES_DO_EDGE: dict[str, str] = {
+    "L4": "fn_esquerdo",
+    "R4": "fn_direito",
+    "L5": "traseira_esquerda",
+    "R5": "traseira_direita",
+}
+
 
 class EvdevReader(_EvdevReconnectLoop):
     """Lê input do DualSense via evdev em thread dedicada.
@@ -2656,6 +2663,7 @@ def _acordar_pelo_movimento(uniq: str | None) -> None:
 
 
 __all__ = [
+    "BOTOES_DO_EDGE",
     "DUALSENSE_ACC_RES_PER_G",
     "DUALSENSE_GYRO_RES_PER_DEG_S",
     "DUALSENSE_PIDS",

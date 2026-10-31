@@ -2097,7 +2097,11 @@ class CoopManager:
             try:
                 snap = player.reader.snapshot()
                 andar_os_acionadores(self._daemon)
-                botoes = com_os_acionadores(self._daemon, player.identity, snap.buttons_pressed)
+                botoes = snap.buttons_pressed
+                do_edge = self._botoes_do_edge(player)
+                if do_edge:
+                    botoes = botoes | do_edge
+                botoes = com_os_acionadores(self._daemon, player.identity, botoes)
                 l2, r2 = cortar_pelo_limiar(store, player.identity, snap.l2_raw, snap.r2_raw)
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
                 soltos = self._apertos_vistos_de(player.identity).soltos(
@@ -2853,6 +2857,21 @@ class CoopManager:
 
 
     _apertos_vistos: dict[str, Any] | None = None
+
+    def _botoes_do_edge(self, player: _SecondaryPlayer) -> frozenset[str]:
+        """As traseiras e os Fn do Edge deste jogador, que o evdev dele não traz."""
+        identidade = getattr(player, "identity", None)
+        if getattr(player, "externo", False) or not isinstance(identidade, str):
+            return frozenset()
+        if identidade.startswith("path:"):
+            return frozenset()
+        ler = getattr(getattr(self._daemon, "controller", None), "botoes_do_edge", None)
+        if not callable(ler):
+            return frozenset()
+        try:
+            return frozenset(ler(identidade))
+        except Exception:
+            return frozenset()
 
     def _apertos_vistos_de(self, identity: str) -> Any:
         """O `gamepad.ApertosVistos` deste jogador, criado na primeira entrega."""

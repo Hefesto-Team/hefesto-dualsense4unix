@@ -317,7 +317,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC": (
         "Ajuste fino do tempo de espera da inicialização do backend "
-        "(`INIT_TIMEOUT_SEC` em `src/hefesto_dualsense4unix/core/backend_pydualsense.py:186`). "
+        "(`INIT_TIMEOUT_SEC` em `src/hefesto_dualsense4unix/core/backend_pydualsense.py:187`). "
         "Número de calibração, não "
         "escolha "
         "de quem usa: não há nada na tela que se reconheça como esta chave. "
@@ -416,7 +416,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC": (
         "Intervalo mínimo entre escritas de report de saída "
         "(`HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC` em "
-        "`src/hefesto_dualsense4unix/core/backend_pydualsense.py:189`). Número de calibração do "
+        "`src/hefesto_dualsense4unix/core/backend_pydualsense.py:190`). Número de calibração do "
         "transporte, "
         "medido com o aparelho na mão; não é superfície de escolha. MEDIDO em "
         "12/08/2026."
@@ -2970,7 +2970,7 @@ class TestOPortaoMorde:
         ), (
             "a varredura não vê chamada direta "
             "(`sync_steam_input_exception` em "
-            "`src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:1224`) — e é a chamada que "
+            "`src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:1225`) — e é a chamada que "
             "prova que a exceção do Steam Input continua viva"
         )
         assert (

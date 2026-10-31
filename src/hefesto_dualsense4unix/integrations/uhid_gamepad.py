@@ -239,6 +239,10 @@ _BUTTONS1_BITS: dict[str, int] = {
 _BUTTONS2_BITS: dict[str, int] = {
     "ps": 0x01,
     "mic_btn": 0x04,
+    "fn_esquerdo": 0x10,
+    "fn_direito": 0x20,
+    "traseira_esquerda": 0x40,
+    "traseira_direita": 0x80,
 }
 
 _TOUCHPAD_BUTTONS = frozenset({

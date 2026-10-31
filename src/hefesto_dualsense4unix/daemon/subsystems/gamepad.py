@@ -66,6 +66,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal
 
+from hefesto_dualsense4unix.core.evdev_reader import BOTOES_DO_EDGE
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import PRAZO_DO_P1_QUE_NASCE_S
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
@@ -2538,6 +2539,9 @@ def dispatch_gamepad(
     if device is None:
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
+    do_edge = _os_do_edge(state)
+    if do_edge:
+        buttons_pressed = buttons_pressed | do_edge
     andar_os_acionadores(daemon)
     buttons_pressed = com_os_acionadores(daemon, primary_identity(daemon), buttons_pressed)
     com_o_ps = buttons_pressed
@@ -2936,6 +2940,15 @@ class ApertosVistos:
 
 
 _ATRIBUTO_DOS_APERTOS_DO_P1 = "_apertos_vistos_do_p1"
+_OS_DO_EDGE = frozenset(BOTOES_DO_EDGE.values())
+
+
+def _os_do_edge(state: Any) -> frozenset[str]:
+    """As traseiras e os Fn do Edge que o estado do primário leu do hidraw dele."""
+    apertados = getattr(state, "buttons_pressed", None)
+    if not isinstance(apertados, frozenset):
+        return frozenset()
+    return apertados & _OS_DO_EDGE
 
 
 def _apertos_do_primario(

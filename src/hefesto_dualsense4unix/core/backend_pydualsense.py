@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.core.controller import (
     TriggerEffect,
 )
 from hefesto_dualsense4unix.core.evdev_reader import (
+    BOTOES_DO_EDGE,
     DUALSENSE_PIDS,
     DUALSENSE_VENDOR,
     EvdevReader,
@@ -1421,6 +1422,13 @@ class PyDualSenseController(IController):
         texto = path.decode("utf-8", "replace")
         return texto if texto.startswith("/dev/hidraw") else None
 
+    def botoes_do_edge(self, uniq: str | None = None) -> frozenset[str]:
+        """As traseiras e os Fn apertados no Edge `uniq` (None = primário), lidos do hidraw dele."""
+        with self._io_lock:
+            key = self._primary_key if uniq is None else self._key_for_uniq(uniq)
+            handle = self._handles.get(key) if key is not None else None
+        return _botoes_do_edge(handle)
+
     def _key_for_uniq(self, uniq: str) -> str | None:
         """Key do handle cujo MAC normalizado é `uniq` (None se não achar)."""
         for key in self._handles:
@@ -2559,7 +2567,7 @@ class PyDualSenseController(IController):
         battery, carga = self._ler_a_carga_do_posto(ds)
         if self._evdev.is_available():
             snap = self._evdev.snapshot()
-            buttons = set(snap.buttons_pressed)
+            buttons = set(snap.buttons_pressed) | _botoes_do_edge(ds)
             try:
                 if bool(getattr(ds.state, "micBtn", False)):
                     buttons.add("mic_btn")
@@ -2581,10 +2589,10 @@ class PyDualSenseController(IController):
         state = ds.state
         l2_raw = int(getattr(state, "L2_value", 0)) & 0xFF
         r2_raw = int(getattr(state, "R2_value", 0)) & 0xFF
-        buttons_fallback: frozenset[str] = frozenset()
+        buttons_fallback = _botoes_do_edge(ds)
         try:
             if bool(getattr(state, "micBtn", False)):
-                buttons_fallback = frozenset({"mic_btn"})
+                buttons_fallback = buttons_fallback | {"mic_btn"}
         except AttributeError:
             logger.debug("ds_state_mic_btn_indisponivel_fallback_path", exc_info=True)
         return ControllerState(
@@ -5661,6 +5669,16 @@ def _entregar_a_luz_do_mic_no_nativo(controle: Any, handle: Any) -> None:
     radio = PyDualSenseController._detect_transport(handle) == "bt"
     if not escrever_so_a_luz_do_mic(handle, radio=radio):
         raise RuntimeError("a luz do microfone não saiu no report mínimo do Modo Nativo")
+
+
+def _botoes_do_edge(handle: Any) -> frozenset[str]:
+    """As traseiras e os Fn que o relatório do Edge traz e o evdev do kernel não mapeia."""
+    if getattr(handle, "is_edge", False) is not True:
+        return frozenset()
+    estado = getattr(handle, "state", None)
+    return frozenset(
+        nome for campo, nome in BOTOES_DO_EDGE.items() if getattr(estado, campo, None) is True
+    )
 
 
 _FEATURE_DO_RADIO_ID = 0x08
