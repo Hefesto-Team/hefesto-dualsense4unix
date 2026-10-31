@@ -30,19 +30,20 @@ Uso::
     python3 scripts/check_texto_sem_pessoa.py --detalhe ARQ # grava cada ocorrência em ARQ
     python3 scripts/check_texto_sem_pessoa.py ARQ...        # só estes caminhos (o gancho do commit)
 
-Os nomes que o disco de quem usa guardava migram na leitura e se montam por
-partes onde moram (`utils/nomes_gravados.py`): a régua não tem formato isento.
+Os nomes que o disco de quem usa guardava migram na leitura e se montam por partes onde
+moram (`utils/nomes_gravados.py`): a régua não tem formato isento.
 
-A fala se pega por quatro sinais: o marcador de isenção de acento que se declara
-citação, a gíria de chat entre «», a fala apresentada (as palavras, a ordem,
-a queixa ou a decisão atribuídas ao usuário ou ao produto) logo antes das aspas,
-e a rotulada (literal, verbatim, textual, palavra de produto, resposta datada, o
-usuário como sujeito, e o ``pedido`` cheio num JSON de ``docs/research/``).
+A fala se pega por cinco sinais: o marcador de isenção de acento que se declara citação,
+a gíria de chat entre «», a fala apresentada (as palavras, a ordem, a queixa ou a decisão
+atribuídas ao usuário ou ao produto) logo antes das aspas, a rotulada (literal, verbatim,
+textual, palavra de produto, resposta datada, o usuário como sujeito, e o ``pedido`` cheio
+num JSON de ``docs/research/``) e a anunciada (pedido, pergunta, resposta, ordem, queixa
+ou fala, com data ou dono perto, e dois-pontos logo antes das aspas).
 
-O que a régua NÃO alcança: a fala entre aspas sem nenhum dos quatro sinais (a
-itálica entre aspas retas, a mais comum, casa também texto de fora); a paráfrase; o pronome masculino; o
-substantivo comum do nome (minúsculo e acentuado, que é a palavra «triunfo»);
-o arquivo binário por dentro; a história do git; e os ignorados de coordenação.
+O que a régua NÃO alcança: a fala entre aspas sem nenhum dos cinco sinais (a itálica entre
+aspas retas, a mais comum, casa também texto de fora); a paráfrase; o pronome masculino; o
+substantivo comum do nome (minúsculo e acentuado, que é a palavra «triunfo»); o arquivo
+binário por dentro; a história do git; e os ignorados de coordenação.
 """
 
 from __future__ import annotations
@@ -83,7 +84,12 @@ _FALA_ROTULADA = re.compile(_SEM_LETRA_ANTES + r"(?:(?:literal|verbatim|textual|
     + r"[\s:,]*|o usuário(?:\s+já)?\s+disse:?)[\s*_]*(?:\"\"|[\"'«“])[*_]*(?=[^\W_]|[(…`])", re.IGNORECASE)
 _ROTULOS = ("literal", "verbatim", "textual", "usuário", "produto", "respondid")
 _PEDIDO_CRU = re.compile(r'"pedido"\s*:\s*"(?!")')
-_GIRIA = re.compile(r"«[^»\n]*?(?<![^\W\d_])(?:vc|vcs|pq|tb|tbm|n[ée]|t[aá]|pra)(?![^\W\d_])[^»\n]*»")
+_VERBO_DA_FALA = r"pediu|queixa|disse|mandou|autorizou|relatou|descreveu|confirmou|corrigiu|recusou"
+_ANUNCIO = re.compile(_SEM_LETRA_ANTES + r"(?:usuário|pedidos?|pergunt(?:as?|ou)|respost[ao]s?|respondeu|palavras?|decis[ãa]o|"
+    r"decidi(?:u|da)|escolh(?:a|eu)|chat|ordem|alerta|falas?(?= d[aeo]s? )|relatad[ao]|" + _VERBO_DA_FALA + ")" + _SEM_LETRA_DEPOIS
+    + r"[^«\"“:|\n]{0,90}:\s*(?:<i>)?[*_]*(?:«|\"\"|“|(?<=[*_>])\")[*_]*(?=[^\W_]|[(…`])", re.IGNORECASE)
+_DONO_DA_FALA = re.compile(r"\d{1,2}/\d{2}|usuário|produto|chat|\bPO\b|mantenedora|\bpedido\b|\bsua\b|você|" + _VERBO_DA_FALA, re.I)
+_GIRIA = re.compile(r"«[^»\n]*?(?<![^\W\d_])(?:vc|vcs|pq|tb|tbm|n[ée]|t[aá]|tão|tava|pra)(?![^\W\d_])[^»\n]*»")
 
 CLASSES = ("pronome", "posto", "nome", "citacao")
 
@@ -103,6 +109,10 @@ def _citacao(texto: str, baixo: str) -> bool:
         return True
     if any(rotulo in baixo for rotulo in _ROTULOS) and _FALA_ROTULADA.search(texto):
         return True
+    if ":" in texto and ("«" in texto or '"' in texto or "“" in texto):
+        for achado in _ANUNCIO.finditer(texto):
+            if _DONO_DA_FALA.search(texto, max(0, achado.start() - 60), achado.end()):
+                return True
     return "«" in texto and bool(_GIRIA.search(texto))
 
 
@@ -122,7 +132,8 @@ def classes_da_linha(linha: str, pesquisa: bool = False) -> list[str]:
 
 def _tem_sinal(texto: str) -> bool:
     baixo = texto.lower()
-    return any(sinal in baixo for sinal in (_P, _POSTO, "vit", "noqa-acento", "«", "de uso", *_ROTULOS))
+    sinais = (_P, _POSTO, "vit", "noqa-acento", "«", "de uso", *_ROTULOS)
+    return any(sinal in baixo for sinal in sinais) or bool(_ANUNCIO.search(texto))
 
 
 def classes_do_caminho(rel: str) -> list[str]:

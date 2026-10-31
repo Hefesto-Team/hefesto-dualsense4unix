@@ -45,35 +45,35 @@ def _repo(tmp_path: Path, arquivos: dict[str, str]) -> Path:
 LIMPO = (
     "A janela abre a tabela; a estrela, a panela, a célula e a cautela ficam.\n"
     "A vitória do time não é nome de ninguém. A querela e a sequela também passam.\n"
-    "«Fica sem perfil» é o rótulo do botão (29/09).\n"
+    "«Fica sem perfil» é o rótulo do botão (29/09).\nA cadeia fala com você: «Na Entrada 4»\n"
     'O botão diz "Aplicar", o rótulo «Desconectado» fica e a célula "Ligado" acende.\n'
+    "a palavra do canto conta: «Sem toque»\no botão diz: «Aplicar»\n"
 )
 
 
 @pytest.mark.parametrize(
     ("linha", "classe"),
     [
-        (f"A aba mostra o que {_P} sabe.", "pronome"),
-        (f"o perfil d{_P} volta", "pronome"),
-        (f"o perfil d{_P}s volta", "pronome"),
-        (f"pensou n{_P}", "pronome"),
-        (f"{_P.upper()} decide", "pronome"),
-        (f"def o_servico_d{_P}():", "pronome"),
-        (f"servicoD{_P} = 1", "pronome"),
-        (f"o ensaio na {_POSTO}", "posto"),
-        (f"from x import {_POSTO}_do_mapa", "posto"),
-        (f"as {_POSTO.upper()}S de BT", "posto"),
-        (f"o controle da {_NOME}", "nome"),
-        (f"com.{_CONTA}.App", "nome"),
+        (f"A aba mostra o que {_P} sabe.", "pronome"), (f"o perfil d{_P} volta", "pronome"),
+        (f"o perfil d{_P}s volta", "pronome"), (f"pensou n{_P}", "pronome"),
+        (f"{_P.upper()} decide", "pronome"), (f"def o_servico_d{_P}():", "pronome"),
+        (f"servicoD{_P} = 1", "pronome"), (f"o ensaio na {_POSTO}", "posto"),
+        (f"from x import {_POSTO}_do_mapa", "posto"), (f"as {_POSTO.upper()}S de BT", "posto"),
+        (f"o controle da {_NOME}", "nome"), (f"com.{_CONTA}.App", "nome"),
         ("o texto  <!-- noqa-acento: " + "cita" + "ção literal -->", "citacao"),
-        ("as palavras do " + "usuário: «isso fica assim»", "citacao"),
+        ("as palavras do " + "usu" + "ário: «isso fica assim»", "citacao"),
         ("ordem de " + "produto, *\"setar o jogo\"*", "citacao"),
-        ("«v" + "c toma a decisão»", "citacao"),
-        ("Lite" + 'ral: ""quero só a letra""', "citacao"),
+        ("«v" + "c toma a decisão»", "citacao"), ("Lite" + 'ral: ""quero só a letra""', "citacao"),
         ("DECISÃO, 05/09/2026, verb" + 'atim:** *"segue os três modos"*', "citacao"),
         ("palavra de " + "produto, 21/09/2026: *\"todos iguais\"*", "citacao"),
         ("o usu" + "ário disse «eu ajusto na mão»", "citacao"),
         ("RESPONDIDA EM 29/08/" + '2026: ""era para funcionar""', "citacao"),
+        ("Ped" + 'ido, 05/09/2026: *"tudo junto"*', "citacao"),
+        ("«estão t" + "ão espremidos»", "citacao"),
+        ("QUEM DECI" + "DIU: o PO no ch" + "at, 02/10: «Só onde paro»", "citacao"),
+        ("pela pergun" + "ta no ch" + "at: «Valido todas»", "citacao"),
+        ("A fa" + "la de 12/10/2026: «isso some»", "citacao"),
+        ("em 03/10, rela" + "tado assim: «sumiu o som»", "citacao"),
     ],
 )
 def test_cada_classe_morde_no_conteudo(portao, linha, classe):
@@ -89,8 +89,7 @@ def test_as_palavras_que_so_contem_as_letras_nao_casam(portao):
     ("rel", "classe"),
     [
         (f"tests/unit/test_o_mapa_que_{_P}_corrige.py", "pronome"),
-        (f"scripts/{_POSTO}_do_radio.py", "posto"),
-        (f"data/com.{_CONTA}.App.desktop", "nome"),
+        (f"scripts/{_POSTO}_do_radio.py", "posto"), (f"data/com.{_CONTA}.App.desktop", "nome"),
     ],
 )
 def test_o_nome_do_caminho_morde(portao, tmp_path, rel, classe):
@@ -136,16 +135,12 @@ def test_a_autoria_legal_passa_so_na_linha_de_identidade(portao, tmp_path):
 
 
 def test_o_relatorio_conta_por_area(portao):
-    ocorre = portao.Ocorrencia
+    oc = portao.Ocorrencia
     achadas = [
-        ocorre("src/a.py", 1, "posto", ""),
-        ocorre("README.md", 1, "pronome", ""),
-        ocorre("docs/a.md", 1, "posto", ""),
-        ocorre("scripts/a.py", 1, "posto", ""),
-        ocorre("tests/unit/test_a_x.py", 1, "posto", ""),
-        ocorre("tests/unit/test_o_x.py", 1, "posto", ""),
-        ocorre("tests/unit/test_bateria.py", 1, "posto", ""),
-        ocorre("tests/conftest.py", 1, "posto", ""),
+        oc("src/a.py", 1, "posto", ""), oc("README.md", 1, "pronome", ""),
+        oc("docs/a.md", 1, "posto", ""), oc("scripts/a.py", 1, "posto", ""),
+        oc("tests/unit/test_a_x.py", 1, "posto", ""), oc("tests/unit/test_o_x.py", 1, "posto", ""),
+        oc("tests/unit/test_bateria.py", 1, "posto", ""), oc("tests/conftest.py", 1, "posto", ""),
     ]
     assert [portao.area(o.rel) for o in achadas] == [
         "produto", "produto", "docs", "scripts", "tests-a", "tests-o", "tests-resto", "tests-resto",
@@ -172,8 +167,7 @@ _D = "d" + _P
         f"o escritor carimba a ponte `por=escolha_{_D}` quando o perfil grava",
         f'novas["declarado_por_{_P}"] = _fato(x, y)',
         f'DECLARADO_PELO_USUARIO = "declarado-por-{_P}"',
-        f'_MARCA_DA_ESCOLHA = ".a_escolha_{_D}_migrada"',
-        f"    recebe: espera-{_P}",
+        f'_MARCA_DA_ESCOLHA = ".a_escolha_{_D}_migrada"', f"    recebe: espera-{_P}",
     ],
 )
 def test_o_nome_gravado_de_antes_nao_tem_isencao(portao, linha):
