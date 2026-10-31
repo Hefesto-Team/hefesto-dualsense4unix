@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1175386,
+      "piso": 1175972,
       "por_item": {
         "docs": 107806,
-        "scripts": 110027,
-        "src": 296404,
-        "tests": 661149
+        "scripts": 110028,
+        "src": 296467,
+        "tests": 661671
       },
-      "razao": "tamanho: +1458 linhas (1173928 -> 1175386), pagas por Origem: D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 1611fb885866",
+      "razao": "tamanho: +586 linhas (1175386 -> 1175972), pagas por Origem: D-0810-O-VERMELHO-DA-SUITE-E-DESTA-CORRIDA; registrado no fecho, topo 173d8fc84332",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1273,10 +1273,16 @@
           "de": 1173928,
           "para": 1175386,
           "razao": "tamanho: +1458 linhas (1173928 -> 1175386), pagas por Origem: D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 1611fb885866"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1175386,
+          "para": 1175972,
+          "razao": "tamanho: +586 linhas (1175386 -> 1175972), pagas por Origem: D-0810-O-VERMELHO-DA-SUITE-E-DESTA-CORRIDA; registrado no fecho, topo 173d8fc84332"
         }
       ],
       "unidade": "linhas",
-      "universo": 3279
+      "universo": 3282
     }
   }
 }
