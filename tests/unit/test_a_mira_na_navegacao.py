@@ -451,32 +451,19 @@ def _com_espelho(jogador: int) -> dict[str, Any]:
          "motion_hz": 250.0}]}}
 
 
-def test_na_mascara_xbox_o_giroscopio_desligado_nao_diz_que_segue_ativo() -> None:
-    """A frase da máscara Xbox termina em «no Hefesto ele segue ativo», e ao"""
-    from hefesto_dualsense4unix.interface.cartao_do_controle import (
-        _FRASE_MASCARA_XBOX,
-        texto_motion,
-    )
-
-    xbox = {**_com_espelho(1), "gamepad_emulation": {"enabled": True, "flavor": "xbox"}}
-    frase = f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
-    base = {"is_primary": True, "uniq": "aa:bb:cc:00:00:01"}
-    assert texto_motion({**base, "sensores": {"giroscopio_ligado": True}}, xbox) == frase
-    assert texto_motion({**base, "mira": {"ligada": True}}, xbox) == frase
-    assert texto_motion({**base, "sensores": {"giroscopio_ligado": False}}, xbox) is None
-
-
-def test_o_giroscopio_desligado_apaga_a_linha_do_cartao() -> None:
-    """Pelo pacote da aba 02, que é quem leva a linha à tela: o vazio a esconde."""
+def test_na_mascara_xbox_o_cartao_nao_tem_linha_do_giroscopio() -> None:
+    """Com a máscara Xbox, ligado ou desligado, o giroscópio fica só no chip do cartão."""
     import pacotes
     import pacotes.a02_controles as a02
 
-    dele = {"uniq": "aa:bb:cc:00:00:02", "transport": "bt", "connected": True,
-            "is_primary": True, "inputs": {}, "audio": {}, "speaker": {},
-            "sensores": {"giroscopio_ligado": False}}
-    ctx = pacotes.Contexto(state=_com_espelho(1), mesa=[], conectados=[dele], estados={})
-    cards = a02.pacote(ctx)["cards"]
-    assert [c["giro-no-jogo"] for c in cards.values()] == [""], cards
+    xbox = {**_com_espelho(1), "gamepad_emulation": {"enabled": True, "flavor": "xbox"}}
+    for sensores in ({"giroscopio_ligado": True}, {"giroscopio_ligado": False}):
+        dele = {"uniq": "aa:bb:cc:00:00:02", "transport": "bt", "connected": True,
+                "is_primary": True, "inputs": {}, "audio": {}, "speaker": {},
+                "sensores": sensores}
+        ctx = pacotes.Contexto(state=xbox, mesa=[], conectados=[dele], estados={})
+        cards = a02.pacote(ctx)["cards"]
+        assert all("giro-no-jogo" not in c for c in cards.values()), cards
 
 
 _ACESA = {"lightbar_rgb": [0, 0, 255], "lightbar_on": True, "lightbar_source": "sysfs"}

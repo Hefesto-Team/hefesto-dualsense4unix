@@ -781,7 +781,6 @@ def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
 from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte,
 )
-from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
 
 def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
@@ -791,62 +790,21 @@ def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": [item]}, **extra}
 
 
-def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
-    """O cartão NÃO redige a frase: ele lê `texto_motion`.
+@pytest.mark.parametrize("estado", [
+    {**_com_vpad(), "gamepad_emulation": {"enabled": True, "flavor": "xbox"}},
+    {**_com_vpad(), "native_mode": True, "gamepad_emulation": {"flavor": "xbox"}},
+    {"native_mode": True},
+    _com_vpad(),
+    _com_vpad(None),
+], ids=["xbox", "nativo-xbox", "nativo", "espelho", "espelho-sem-hz"])
+def test_o_cabecalho_do_cartao_nao_tem_linha_do_giroscopio(estado: dict[str, Any]) -> None:
+    """Os chips Giroscópio e Acelerômetro dizem o que está ligado; o cabeçalho não explica.
 
-    MORDE: troque o `texto_motion(...)` do pacote por qualquer literal e as
-    comparações caem juntas — é o dono que decide, não o pacote e muito menos
-    esta régua.
+    MORDE: devolva o campo `giro-no-jogo` ao pacote e a máscara Xbox volta a emitir a frase.
     """
-    for estado in ({**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}},):
-        card = _card({}, state=estado)
-        esperado = texto_motion({**BASE}, estado)
-        assert esperado, "o dublê não acordou o dono — a régua mediria o vazio"
-        assert card["giro-no-jogo"] == esperado, (
-            "o cartão parou de ler o dono da linha do giroscópio")
-
-
-def test_as_situacoes_dizem_frases_diferentes_no_cartao() -> None:
-    """A máscara Xbox fala; o Nativo e o caso comum calam (o Nativo desde 29/10/2026)."""
-    nativo = _card({}, state={"native_mode": True})
-    xbox = _card({}, state={**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}})
-    comum = _card({}, state=_com_vpad())
-    assert not nativo["giro-no-jogo"] and not comum["giro-no-jogo"]
-    assert xbox["giro-no-jogo"], "a máscara Xbox calou a linha do giroscópio"
-
-
-def test_no_modo_nativo_o_cartao_cala_ate_com_a_mascara_xbox() -> None:
-    """Aviso de modo não existe em aba nenhuma (ordem, 29/10/2026): no Nativo a linha cala.
-
-    MORDE: devolva o ramo `native_mode` de `texto_motion` com qualquer frase, ou tire o ramo e
-    deixe a máscara Xbox falar no Nativo, e o cartão volta a avisar sobre o modo.
-    """
-    for estado in ({"native_mode": True},
-                   {**_com_vpad(), "native_mode": True, "gamepad_emulation": {"flavor": "xbox"}}):
-        assert texto_motion({**BASE}, estado) is None, estado
-        assert not _card({}, state=estado)["giro-no-jogo"], estado
-
-
-def test_a_excecao_da_mascara_xbox_chega_ao_cartao() -> None:
-    """A máscara Xbox apaga três recursos, e o motivo NÃO é defeito nosso."""
-    estado = {**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}}
-    frase = _card({}, state=estado)["giro-no-jogo"]
-    assert frase == texto_motion({**BASE}, estado)
-    assert frase != _card({}, state=_com_vpad())["giro-no-jogo"], (
-        "a máscara Xbox não mudou uma palavra da linha do giroscópio")
-    assert "Hz" not in frase, (
-        f"sob a máscara Xbox o cartão anunciou frequência: o controle de Xbox "
-        f"não TEM giroscópio, e o dado não sai dali — {frase!r}")
-
-
-def test_o_espelho_ativo_nao_diz_fluindo_nem_hertz() -> None:
-    """O «fluindo para o jogo (~N Hz)» saiu do cartão em 19/10/2026, a pedido.
-
-    MORDE: devolva o ramo do `motion_streaming` ao `texto_motion` e o cartão volta a falar.
-    """
-    for hz in (250.0, 61.0, 0.0, None):
-        assert _card({}, state=_com_vpad(hz))["giro-no-jogo"] == "", (
-            f"com o espelho ativo ({hz} Hz) o cartão voltou a dizer que o giroscópio flui")
+    card = _card({"sensores": {"giroscopio_ligado": True}}, state=estado)
+    assert "giro-no-jogo" not in card, card.get("giro-no-jogo")
+    assert 'data-campo="giro-no-jogo"' not in a02_gerador.MIOLO
 
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
@@ -895,63 +853,3 @@ def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
     com_nome = _card({"transport": "bt", "modelo": "Cosmic Red"})
     assert com_nome["peca"] == "Cosmic Red", (
         "a guarda do transporte duplicado comeu o nome do plástico")
-
-
-A_LINHA_DO_GIRO_NA_TELA = r"""
-((A_MAIS_LARGA) => {
-  const card = document.querySelector('.ctl.card[data-controle]');
-  const faixa = card.querySelector('.faixa');
-  const v = card.querySelector('.no-jogo');
-  if (!v) return {ausente: true};
-  const cx = e => { const b = e.getBoundingClientRect();
-                    return {x: b.x, direita: b.right, larg: b.width, alt: b.height}; };
-  const alt_com = faixa.getBoundingClientRect().height;
-  const com = {display: getComputedStyle(v).display, caixa: cx(v),
-               texto: (v.textContent || '').trim()};
-  // O QUE O PRODUTO FAZ QUANDO NÃO HÁ O QUE DIZER: o alvo `atributo` remove o
-  // `aria-label`. A folha tem de apagar o elemento inteiro a partir daí.
-  const titulo = v.getAttribute('title');
-  const marca = v.getAttribute('aria-label');
-  v.removeAttribute('aria-label');
-  const sem = {display: getComputedStyle(v).display,
-               alt_da_faixa: faixa.getBoundingClientRect().height};
-  v.setAttribute('aria-label', marca);
-  // E A FRASE NÃO PODE VAZAR — com A FRASE MAIS LARGA QUE O DONO SABE MONTAR, que
-  // entra por argumento em vez de ser inventada aqui.
-  //
-  // O QUE SE MEDE É A ALTURA DE UMA LINHA, e não a da caixa: a caixa não cresce
-  // de qualquer jeito (o `flex:0 0 var(--h-acao)` da faixa é fixo e o
-  // `min-width:0` segura a largura), então uma régua sobre a frase passa COM A CURA
-  // ARRANCADA — medido em 06/09/2026, e foi assim que a primeira versão desta
-  // régua não mediu nada. Sem o `nowrap` a frase que o dono monta HOJE quebra em
-  // DUAS linhas dentro de um cabeçalho de uma só: 14px viram 28px.
-  //
-  // E `'x'.repeat(400)` NÃO SERVE DE SONDA: uma corrida de caracteres sem
-  // espaço não tem onde quebrar, então a frase fica numa linha com ou sem a cura.
-  // A ALTURA SE MEDE NO DE FORA — 11/09/2026. O recorte subiu para ele (A3-050),
-  // e o de dentro voltou a ser `inline`: `scrollHeight` de um elemento em linha
-  // é 0, e uma régua que o lesse daria verde sobre qualquer quebra.
-  const t = v.querySelector('.no-jogo-t');
-  const antes = t.textContent;
-  const uma_linha = v.getBoundingClientRect().height;
-  t.textContent = A_MAIS_LARGA;
-  // O VÃO APERTADO É O CASO QUE IMPORTA, e sem ele a régua não mede nada: com
-  // os 410px que o cabeçalho tem hoje a frase mais larga do dono cabe INTEIRA,
-  // então tirar o `nowrap` não muda um pixel — medido em 06/09/2026, e foi
-  // assim que a primeira versão desta régua passou com a cura arrancada pela
-  // SEGUNDA vez. O vão não é constante: ele encolhe com o nome do plástico, com
-  // a máscara e com a largura da janela.
-  const largura_do_vao = v.getBoundingClientRect().width;
-  v.style.flex = '0 0 120px';
-  const esticado = {faixa: cx(faixa), no_jogo: cx(v), texto: cx(t),
-                    linhas: v.scrollHeight / (uma_linha || 1),
-                    vao_de_hoje: largura_do_vao,
-                    alt_da_faixa: faixa.getBoundingClientRect().height};
-  v.style.flex = '';
-  t.textContent = antes;
-  return {com, sem, esticado, alt_com, titulo, rotulo: marca,
-          um_endereco_so: card.querySelectorAll('[data-campo="giro-no-jogo"]').length};
-})
-"""
-
-

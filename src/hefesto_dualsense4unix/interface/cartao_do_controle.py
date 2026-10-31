@@ -317,59 +317,8 @@ def rotulo_lightbar(
     return (None, rgb)
 
 
-def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | None:
-    """A linha do giroscópio no cabeçalho do controle; ``None`` = some.
-
-    **O «fluindo para o jogo (~N Hz)» SAIU em 19/10/2026**, a pedido: a linha
-    afirmava o espelho de motion ativo e a taxa, e o caso normal virou silêncio.
-    Ficam só as duas frases que explicam por que o jogo NÃO recebe o giroscópio
-    como ele espera (o Modo nativo e a máscara Xbox). Quem diagnostica silêncio
-    anômalo é o doctor.
-
-    PAINEL-DA-VERDADE-01 acrescentou DOIS casos em que o silêncio deixa de
-    ser a resposta certa, e só dois. A decisão medida acima continua inteira
-    — a ausência da linha não é alarme, e "sem giroscópio" em todo card seria
-    ruído crônico. O que mudou é que há duas situações em que o silêncio faz
-    a tela parecer QUEBRADA quando está certa:
-
-    * **máscara Xbox 360** — o JOGO não recebe giroscópio, e o motivo não é
-      defeito nosso: a API do controle de Xbox não tem esse sensor. Sem a
-      frase, o usuário vê um card com giroscópio desenhado e nenhum sinal de que o
-      dado não sai dali. **O sujeito é o jogo, e não o controle** (21/09/2026,
-      ordem de produto): o aparelho segue publicando movimento, e a Navegação e os
-      gestos seguem usando;
-    * **Modo nativo** — não existe gamepad virtual, e perguntar se o dado
-      "chegou ao vpad" não faz sentido. O jogo abre o hidraw do controle
-      físico e recebe tudo, inclusive o giroscópio.
-
-    Nos dois casos a frase EXPLICA; nos demais o silêncio continua.
-
-    O Nativo vem antes (o jogo lê o `hidraw` do físico, e o interruptor não o
-    alcança). Com o chip Giroscópio desligado (o `False` de
-    `sensores.giroscopio_ligado`, A-MIRA-NA-NAVEGACAO-01), a frase da Xbox cala:
-    a frase «no Hefesto ele segue ativo» contradiria o chip na mesma linha.
-    """
-    if bool(state_global.get("native_mode")):
-        return None
-    sensores = entry.get("sensores")
-    if isinstance(sensores, dict) and sensores.get("giroscopio_ligado") is False:
-        return None
-    if _mascara_e_xbox(state_global, entry):
-        return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
-    return None
-
-
 ATIVIDADE_FRESCA_S: Final[float] = 3.0
 
-
-_FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
-    "giroscopio": (
-        "o jogo vê este controle como Xbox 360, e essa API não leva "
-        "giroscópio — no Hefesto ele segue ativo"),
-    "touchpad": (
-        "o jogo vê este controle como Xbox 360, e essa API não leva "
-        "touchpad — no Hefesto ele segue ativo"),
-}
 
 def _item_do_vpad(
     entry: dict[str, Any], state_global: dict[str, Any]
@@ -427,46 +376,6 @@ def motores_no_fisico(item: Any) -> tuple[int, int] | None:
     if par[0] == 0 and par[1] == 0:
         return None
     return (int(par[0]), int(par[1]))
-
-
-def _mascara_e_xbox(
-    state_global: dict[str, Any], entry: dict[str, Any] | None = None
-) -> bool:
-    """True quando ESTE controle está com a máscara de Xbox 360.
-
-    **O SUJEITO É O CONTROLE, E ATÉ 21/09/2026 ERA A SESSÃO.** A função lia só
-    `gamepad_emulation.flavor` — o GLOBAL —, e a máscara por aparelho existe
-    desde a MASCARA-NO-PERFIL-01 (08/09), com ordem escrita: o degrau 1
-    (`controllers[uniq].mascara` do perfil ativo) **vence** o degrau 2
-    (`mode.gamepad_flavor`). Ler só o degrau 2 é perguntar a quem perde.
-
-    Medido no ensaio naquele dia, com o perfil PRAGMATA:
-
-        flavor (global) = "xbox"
-        por_aparelho    = {os quatro: "dualsense"}
-
-    A máscara efetiva dos quatro era DualSense, e a tela dizia Xbox — e com
-    a máscara vinha a frase do giroscópio, lida e recusada: a frase não
-    deveria existir. **As duas queixas eram o mesmo defeito.**
-
-    O `flavor` continua sendo o FALLBACK, e não some: é o que responde quando
-    aquele controle não escolheu, que é a regra de herança da D-5 (*máscara do
-    JOGADOR, com a do jogo como padrão herdado*).
-
-    `entry` opcional preserva os chamadores que perguntam pela SESSÃO — há
-    um, e ele é legítimo: o custo da máscara na aba Jogar fala do modo inteiro.
-    """
-    gamepad = state_global.get("gamepad_emulation")
-    if not isinstance(gamepad, dict):
-        return False
-    if entry is not None:
-        uniq = uniq_do_entry(entry)
-        por_aparelho = gamepad.get("por_aparelho")
-        if uniq and isinstance(por_aparelho, dict):
-            dele = por_aparelho.get(uniq)
-            if isinstance(dele, str) and dele:
-                return dele == "xbox"
-    return gamepad.get("flavor") == "xbox"
 
 
 def gyro_do_inputs(inputs: Any) -> tuple[float, float, float] | None:
@@ -771,7 +680,6 @@ __all__ = [
     "rotulo_lightbar",
     "saida_muda_do_entry",
     "speaker_do_entry",
-    "texto_motion",
     "touchpad_do_inputs",
     "uniq_do_entry",
 ]

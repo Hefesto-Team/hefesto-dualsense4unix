@@ -21,4 +21,5 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->
+## 01-jogar.html
+- **31/10/2026** — o cabeçalho do controle perde o vão da linha do giroscópio (a frase da máscara Xbox 360, na linha e na dica). Até publicar, o produto ainda tem o vão, que fica vazio: o pacote parou de escrever nele.

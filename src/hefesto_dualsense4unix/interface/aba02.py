@@ -10,7 +10,6 @@ from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
 
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso
-from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 from pacotes import SEM_NINGUEM_AQUI
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, carga_na_tela
 from pacotes.a02_controles import campo_da_onda_calada
@@ -85,8 +84,6 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """  .radio-mesa{position:absolute;width:0;heig
   .faixa > span{line-height:14px}
   .faixa .leia{cursor:help}
   .faixa .div{color:var(--fg)}
-  .faixa .no-jogo{display:none}
-  .faixa .no-jogo > .no-jogo-t{display:inline}
   .gat{display:flex;flex-direction:column;justify-content:space-around;flex:1}
   .gat-linha{display:grid;grid-template-columns:20px 1fr;align-items:center;gap:8px;
              font-size:11px;color:var(--fg);margin-bottom:9px}
@@ -402,21 +399,9 @@ GOVERNA_DO_MODO_AUTOMATICO = (".card-corpo .moldura.touchp, .card-corpo [data-bl
                               ".card-corpo [data-bloco=alto-falante]")
 DICA_DO_MODO_AUTOMATICO = "O jogo decide toque e som; o estilo do jogo ajusta"
 
-_CENA_DO_GIRO = {"player": 1, "is_primary": True, "transport": "usb",
-                 "uniq": "aabbcc000001"}
-_CENA_GLOBAL_DO_GIRO = {
-    "rumble_ff": {"per_vpad": [{"player": 1, "uniq": "aabbcc000001",
-                                "motion_streaming": True, "motion_hz": 250.0}]},
-}
-GIRO_NO_JOGO_DO_DESENHO = texto_motion(_CENA_DO_GIRO, _CENA_GLOBAL_DO_GIRO) or ""
-_ARIA_DO_GIRO = f' aria-label="{GIRO_NO_JOGO_DO_DESENHO}"' if GIRO_NO_JOGO_DO_DESENHO else ""
-
 DICA_LED_JOGADOR = ("As cinco lâmpadas do controle, no padrão do jogador: 1 no "
                     "meio para o P1, as das pontas para o P2, e assim por diante.")
 
-
-DE_ONDE_VEM_A_MASCARA = ("O que o jogo vê deste controle. Para trocar, vá à aba "
-                         "Jogar.")
 
 ABRE_O_CARD = "Clique para abrir este controle — os outros fecham."
 
@@ -526,9 +511,6 @@ def identidade(c, *, bat, carga=None, meio="", com_mascara=True):
     }
     return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}<span class="so-vaga">Player {n_com_endereco} <span class="pt">•</span> {SEM_NINGUEM_AQUI}</span></span>
 {_a_mascara(c["mascara"]) if com_mascara else ""}{meio}
-          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label"{_ARIA_DO_GIRO}><span
-                class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
 {sensores_da_peca(c)}
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
@@ -1081,7 +1063,7 @@ _VAZIO = "—"
 def _a_mascara(mascara):
     """O que o jogo vê deste controle, na linha da Controles; a Jogar mostra o modo uma vez só."""
     return (f'          <span class="div">·</span>\n'
-            f'          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">'
+            f'          <span><b data-campo="mascara">'
             f'{mascara}</b></span>')
 
 
@@ -1194,9 +1176,6 @@ CSS += f"""
   .so-aberto{{display:none}}
   {_aberto(" .so-aberto")}{{display:inline}}
   {_aberto(" .card-nome")}{{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-  {_aberto(" .faixa .no-jogo[aria-label]")}{{display:block;flex:1 1 0;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    color:var(--fg);font-weight:400}}
   {_fechado_de_vez()}{{height:{ALTURA_VAZIA}px;flex:0 0 auto;padding-bottom:0;
     background:transparent}}
   {_fechado_de_vez(" > .faixa")}{{flex:1;margin:0;padding:0 26px;

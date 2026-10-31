@@ -111,7 +111,6 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     rotulo_lightbar,
     saida_muda_do_entry,
     speaker_do_entry,
-    texto_motion,
     uniq_do_entry,
 )
 from hefesto_dualsense4unix.interface.monta import dono_na_linha, luzinhas
@@ -1429,8 +1428,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "via": via_na_tela,
                 "alto-rota": aceso_da_fileira(uniq, c),
                 **_so_se_a_pagina_tiver({"alto-junto": junto_na_tela(uniq, c)}),
-                "giro-no-jogo": texto_motion(
-                    c, getattr(ctx, "state", None) or {}) or "",
                 **leitura_viva(c, estado),
                 **_so_se_a_pagina_tiver({"botoes": str(casa.get("botoes") or "")}),
                 "luz-porque": luz_porque(rotulo_da_luz, base_da_luz),

@@ -178,7 +178,6 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
     height:calc(var(--alt-aba) - 2px);margin:0;padding:0;border:0;background:transparent;
     flex-wrap:nowrap;white-space:nowrap;cursor:default;width:44%;justify-content:flex-end}
   .ctl:not(.off):has(> input:checked) > .faixa .card-nome{display:none}
-  .ctl:has(> input:checked) > .faixa .no-jogo[aria-label]{max-width:200px}
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
   .aba-ctl.off{border-style:dashed;border-color:var(--border-forte);background:transparent;padding:0 7px;
     cursor:default}

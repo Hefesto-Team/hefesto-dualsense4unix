@@ -6,10 +6,6 @@ giroscópio paradas no centro, um medidor de mic vazio ou um touchpad sem
 ponto diriam "o controle está em repouso" — quando a verdade é "não tenho
 esse sensor". Cada módulo some inteiro em vez disso.
 
-Também travam a coexistência com a linha `texto_motion`, que já existia: a linha
-diz se o giroscópio FLUI PARA O JOGO; as barras novas mostram o VALOR. São
-duas perguntas diferentes e as duas continuam respondidas.
-
 A última seção é de STATUS-SIMETRIA-01 e mede o LAYOUT MONTADO numa
 `Gtk.OffscreenWindow` — alinhamento dos analógicos, ordem horizontal da faixa e
 crescimento do glifo com a escala de fonte. A seção existe porque o precedente do

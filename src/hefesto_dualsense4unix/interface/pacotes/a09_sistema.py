@@ -1306,15 +1306,11 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
     native = bool(state.get("native_mode"))
     emulacao = bool(bloco["enabled"])
     if native:
-        return linha(nota, "Modo Nativo: sem gamepad virtual",
-                     "No Modo Nativo não há gamepad virtual: o jogo usa o controle.")
+        return linha(nota, "Modo Nativo: sem gamepad virtual")
     if not emulacao:
-        return linha(nota, "Gamepad virtual: emulação desligada",
-                     "Com a emulação desligada nenhum jogo recebe gamepad virtual.")
+        return linha(nota, "Gamepad virtual: emulação desligada")
     if sem_dono_do_rumble(native=native, backends=("vpad",) * max(0, vpads), emulacao=emulacao):
-        return linha(falha, "Nenhum gamepad virtual subiu",
-                     "A emulação está ligada e nenhum gamepad virtual subiu: o jogo ainda vê "
-                     "o controle físico.")
+        return linha(falha, "Nenhum gamepad virtual subiu")
     if vpads >= conectados:
         return linha(ok, "Um gamepad virtual por jogador")
     return linha(nota, f"{vpads} de {conectados} controles com gamepad virtual")

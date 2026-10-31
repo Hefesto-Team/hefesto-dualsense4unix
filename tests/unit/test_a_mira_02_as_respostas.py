@@ -297,31 +297,24 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     """O MESMO FATO DA RESPOSTA 1, na linha de cima do cartão: com a Mira acesa
     o filtro do report tira o giroscópio da janela daquele controle
     (`virtual_motion.REGISTRO.filtrar`), e o `motion_streaming` do vpad segue
-    ligado pelo acelerômetro. Desde 19/10/2026 o «fluindo para o jogo» saiu de
-    todo caso, e a linha cala com a Mira apagada ou acesa.
-
-    O Nativo e a máscara Xbox continuam com a frase deles — as duas seguem
-    verdadeiras com a Mira acesa.
+    ligado pelo acelerômetro. O cartão não tem linha do giroscópio: o chip diz o que está ligado.
     """
     import pacotes.a02_controles as a02
-
-    from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
     estado: dict[str, Any] = {"rumble_ff": {"per_vpad": [
         {"player": jogador, "uniq": "aa:bb:cc:00:00:01", "motion_streaming": True,
          "motion_hz": 250.0}]}}
     apagada = {**entrada, "mira": {"ligada": False, "virtual": False}}
     acesa = {**entrada, "mira": {"ligada": True, "virtual": True}}
-    assert texto_motion(apagada, estado) is None
-    assert texto_motion(acesa, estado) is None
-    assert texto_motion(acesa, {**estado, "native_mode": True}) is None
-    dele = {"uniq": _P2, "transport": "usb", "connected": True, "inputs": {},
-            "audio": {}, "speaker": {}, **acesa}
     import pacotes
 
-    ctx = pacotes.Contexto(state=estado, mesa=[], conectados=[dele], estados={})
-    cards = a02.pacote(ctx)["cards"]
-    assert [c["giro-no-jogo"] for c in cards.values()] == [""], cards
+    for mira, global_ in ((apagada, estado), (acesa, estado),
+                          (acesa, {**estado, "native_mode": True})):
+        dele = {"uniq": _P2, "transport": "usb", "connected": True, "inputs": {},
+                "audio": {}, "speaker": {}, **mira}
+        ctx = pacotes.Contexto(state=global_, mesa=[], conectados=[dele], estados={})
+        cards = a02.pacote(ctx)["cards"]
+        assert all("giro-no-jogo" not in c for c in cards.values()), cards
 
 
 def test_o_ensaio_tem_a_dica_e_o_cinza_em_cada_controle() -> None:

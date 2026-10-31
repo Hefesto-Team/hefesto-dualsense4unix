@@ -1,6 +1,6 @@
-"""GYRO-03 — telemetria do espelho de motion: emit_hz, state_full e o card.
+"""GYRO-03 — telemetria do espelho de motion: emit_hz e state_full.
 
-Três contratos herméticos (sem hardware, sem GTK, sem daemon real):
+Dois contratos herméticos (sem hardware, sem GTK, sem daemon real):
 
 1. `PhysicalReportReader.emit_hz` — taxa de emissão por EMA com relógio
    injetado: converge para a taxa real de entrega, zera quando o fluxo para
@@ -10,12 +10,6 @@ Três contratos herméticos (sem hardware, sem GTK, sem daemon real):
    bloco `rumble_ff.per_vpad` (P1 via `daemon._motion_reader`; jogador do
    co-op via `player.motion_reader`), com tipagem estrita — um MagicMock no
    lugar do vpad/reader nunca vira True/taxa fantasma no payload.
-3. `texto_motion` (função pura do ControllerCard) — a linha discreta da GUI
-   só aparece com o espelho ATIVO no vpad DESTE controle; nunca acusa
-   ausência (isso é papel do doctor, não do card).
-
-Padrão do repo: NUNCA `import gi` no topo — `texto_motion` é função pura e o
-módulo do card resolve GTK internamente (stub em headless).
 """
 from __future__ import annotations
 
@@ -26,7 +20,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.physical_report_reader import PhysicalReportReader
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
@@ -266,59 +259,3 @@ async def test_state_full_ff_play_count_e_motion_hz_sao_por_vpad(
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("daemon.state_full")
     assert result["rumble_ff"]["plays"] == 10
-
-
-def _state(per_vpad: list[dict[str, Any]]) -> dict[str, Any]:
-    return {"rumble_ff": {"per_vpad": per_vpad}}
-
-
-_U1 = "aabbcc000001"
-_U2 = "aabbcc000002"
-
-
-class TestTextoMotion:
-    def test_com_o_espelho_ativo_a_linha_cala(self) -> None:
-        """O «fluindo para o jogo (~N Hz)» saiu da tela em 19/10/2026, a pedido.
-
-        MORDIDA: devolva o ramo do `motion_streaming` ao `texto_motion` e este reprova.
-        """
-        for hz in (248.3, 0.0, "x"):
-            assert texto_motion(
-                {"is_primary": True, "uniq": _U1},
-                _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
-                         "motion_hz": hz}]),
-            ) is None
-
-    def test_sem_streaming_a_linha_some(self) -> None:
-        """Ausência NUNCA vira alarme no card (uinput/xbox/Nativo não têm"""
-        texto = texto_motion(
-            {"is_primary": True, "uniq": _U1},
-            _state([{"player": 1, "uniq": _U1, "motion_streaming": False,
-                     "motion_hz": 0.0}]),
-        )
-        assert texto is None
-
-    def test_controle_sem_vpad_proprio_nao_mostra_nada(self) -> None:
-        """Controle sem endereço, ou cujo endereço nenhum vpad serve, não fala."""
-        estado = _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
-                          "motion_hz": 250.0}])
-        assert texto_motion({"is_primary": True}, estado) is None
-        assert texto_motion({"uniq": _U2}, estado) is None
-        assert texto_motion({}, estado) is None
-
-    def test_secundario_com_player_1_de_coop_off_nao_mostra(self) -> None:
-        """Co-op OFF numera TODOS os conectados como jogador 1, mas o vpad do
-        P1 serve só o PRIMÁRIO: o item traz o endereço dele, e o secundário,
-        com o mesmo número, não casa."""
-        estado = _state([{"player": 1, "uniq": _U1, "motion_streaming": True,
-                          "motion_hz": 250.0}])
-        assert texto_motion(
-            {"is_primary": False, "player": 1, "uniq": _U2}, estado
-        ) is None
-
-    def test_payload_malformado_nao_explode(self) -> None:
-        dono = {"is_primary": True, "uniq": _U1}
-        assert texto_motion(dono, {}) is None
-        assert texto_motion(dono, {"rumble_ff": None}) is None
-        assert texto_motion(dono, {"rumble_ff": {"per_vpad": "lixo"}}) is None
-        assert texto_motion(dono, _state(["lixo", None])) is None
