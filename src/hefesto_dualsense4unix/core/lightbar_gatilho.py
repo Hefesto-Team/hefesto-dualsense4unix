@@ -5,8 +5,8 @@
   luz.lightbar.cor@dualsense``), e as três que sustentam este arquivo são
   ``btmon-a-rajada-tem-hora``, ``gatilho-1500ms-por-controle`` e
   ``gatilho-escrever-no-silencio``.
-- **A formulação é do usuário:** *"não podemos colocar um gatilho pra sempre que a
-  steam aloprar em sequência algo ativa a sobrescrição automática?"*
+- **A formulação é de produto:** um gatilho que, sempre que a Steam repintar em
+  sequência, ative a sobrescrição automática.
 
 O DEFEITO
 =========

@@ -361,10 +361,10 @@ def test_as_cinco_pecas_da_trava_morreram_com_a_faixa() -> None:
 def test_a_linha_de_mesa_nao_existe_mais() -> None:
     """A linha de mesa e o gesto do usuário saíram da aba — e não voltam calados.
 
-    **DECISÃO, 05/09/2026, verbatim:** *"não é pra ter mesa em nada da
-    interface. (…) segue os três modos sempre. clicou em perfil de energia
-    econômico na aba sistema todos vão pra vibração manual. o resto é
-    desnecessário e só polui e deixa difícil entender"*.
+    **DECISÃO de 05/09/2026:** nenhuma mesa em parte alguma da
+    interface; os três modos valem sempre; o perfil de energia econômico, na
+    aba Sistema, leva todos à vibração manual; o resto é desnecessário, polui
+    e dificulta entender.
 
     A DECISÃO TEM RAZÃO MEDIDA, e é por isso que esta régua guarda a remoção em vez de
     a lamentar: a economia de bateria JÁ tem dono — o Perfil de Bateria da aba
