@@ -2,7 +2,7 @@
 
 A regra (14/10/2026): *«Ele deveria ficar sempre com o perfil do último jogo
 aberto ou ativado. Até que eu mude ou outro jogo inicie»*. Medido no mesmo dia:
-depois do reinício, o daemon subiu na escolha à mão («Lure Of Passion»), com o
+depois do reinício, o daemon subiu na escolha à mão («Jogo Fictício L»), com o
 gamepad desligado, por cima do perfil do jogo que valia. O reinício não é
 mudança de quem usa nem jogo novo.
 """
@@ -185,7 +185,7 @@ def test_o_primeiro_tique_antes_do_boot_escolhe_o_ultimo_jogo(
     """A CORRIDA: o tique do autoswitch chega antes do restauro do boot, com a crença vazia.
 
     Medido às 20h52 de 14/10/2026: o primeiro tique (``from_=None``, o terminal em
-    foco) pôs a escolha à mão («Lure Of Passion») 1,8 s antes de o boot restaurar
+    foco) pôs a escolha à mão («Jogo Fictício L») 1,8 s antes de o boot restaurar
     o Sackboy, e o tique seguinte pôs o «Lure» de novo, por cima. O último jogo
     vale com a crença ``None``, em qualquer ordem, e o disco não se regrava.
 
@@ -228,7 +228,7 @@ def test_a_escolha_que_e_perfil_de_jogo_nao_vira_o_ultimo_jogo(
 ) -> None:
     """A MEMÓRIA CONTAMINADA: a escolha entra pelo «sem candidato» e não grava o último jogo.
 
-    Medido às 20h52 de 14/10/2026: o «Lure Of Passion» (regra ``steam_app_9977031``)
+    Medido às 20h52 de 14/10/2026: o «Jogo Fictício L» (regra ``steam_app_9977031``)
     entrou como escolha à mão, e o ``o_ultimo_jogo_lembrado`` o gravou por cima do
     Sackboy. O perfil que entra pela escolha nunca grava nem apaga a memória do jogo.
 

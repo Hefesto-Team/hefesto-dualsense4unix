@@ -262,7 +262,7 @@ class TestOProntuarioSabeAPonte:
         }
 
     def test_o_balde_bom_continua_recusando_dizer_que_funciona(self) -> None:
-        """A recusa é decisão medida (Duskfade x DON'T SCREAM). Nada afrouxou."""
+        """A recusa é decisão medida (dois jogos de mesma assinatura). Nada afrouxou."""
         assert pdj.SEM_IMPEDIMENTO == "sem_impedimento_conhecido"
         assert "funciona" not in pdj.PONTE_CONFIRMADA
         assert "pronto" not in pdj.PONTE_CONFIRMADA

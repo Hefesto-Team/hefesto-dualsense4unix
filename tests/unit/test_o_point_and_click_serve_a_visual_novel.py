@@ -59,7 +59,7 @@ class _Ponte:
 @pytest.fixture
 def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     guardado: dict[str, Any] = {
-        "perfil": Profile(name="Maid Life", match=MatchAny(), priority=40)}
+        "perfil": Profile(name="Jogo Fictício M", match=MatchAny(), priority=40)}
 
     def _save(prof: Profile, *a: Any, **kw: Any) -> None:
         guardado["perfil"] = prof
@@ -67,7 +67,7 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [guardado["perfil"]])
     monkeypatch.setattr(loader, "load_profile", lambda nome, *a, **k: guardado["perfil"])
     monkeypatch.setattr(loader, "save_profile", _save)
-    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Maid Life", raising=False)
+    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Jogo Fictício M", raising=False)
     monkeypatch.setattr(a10_perfis, "_DESFECHO", None, raising=False)
     return guardado
 

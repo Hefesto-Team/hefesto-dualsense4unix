@@ -183,7 +183,7 @@ def lembrar_o_ultimo_jogo(nome: str) -> None:
     D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): o controle fica
     sempre com o perfil do último jogo aberto ou ativado, até o usuário mudar ou
     outro jogo iniciar, e o reinício do serviço não é mudança do usuário. Medido no
-    mesmo dia: o daemon reiniciou e subiu na escolha à mão («Lure Of Passion»),
+    mesmo dia: o daemon reiniciou e subiu na escolha à mão (o perfil de outro jogo),
     com o gamepad desligado, por cima do perfil do jogo que valia. Quem grava é
     o autoswitch e o lançamento; quem apaga é o gesto do usuário
     (:func:`gravar_a_escolha`) e o perfil apagado (`manager.esquecer_o_perfil_apagado`).

@@ -1338,7 +1338,7 @@ registrado, não resolvido.
 `D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO` (14/10/2026): o perfil do jogo fica depois
 que ele fecha, até quem usa mudar ou outro jogo iniciar, e o reinício do serviço não é
 nenhum dos dois. Medido no mesmo dia: o daemon reiniciou e subiu na escolha à mão
-(«Lure Of Passion»), com o gamepad desligado, por cima do perfil do último jogo,
+(o perfil de outro jogo), com o gamepad desligado, por cima do perfil do último jogo,
 porque a memória dele era só do processo (`AutoSwitcher._perfil_do_ultimo_jogo`).
 
 A cura: o autoswitch e o lançamento (`origin="launch"`) gravam o perfil em
@@ -1352,8 +1352,8 @@ do jogo.
 **A corrida do boot** (medida às 20h52 de 14/10/2026, com o `dev` `7b5901cca`): o
 Sackboy fechou, a Steam saiu e o serviço reiniciou com o terminal em foco. O
 primeiro tique do autoswitch chegou 1,8 s ANTES do restauro, com a crença `None`,
-e a queda do «sem candidato» foi à escolha à mão («Lure Of Passion»); o restauro
-pôs o Sackboy, e o tique seguinte pôs o «Lure» de novo. O `_activate` ainda gravou
+e a queda do «sem candidato» foi à escolha à mão (o perfil de outro jogo); o restauro
+pôs o Sackboy, e o tique seguinte pôs a escolha à mão de novo. O `_activate` ainda gravou
 o «Lure» no `ultimo_jogo.json`, porque ele tem regra `steam_app_3851570` e passava
 por perfil de jogo: o disco perdeu o jogo de verdade. A cura não depende de ordem
 nem de tempo: a queda do «sem candidato» tem um dono, o

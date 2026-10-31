@@ -213,7 +213,7 @@
       "origem": "rodada 4 (o que faltava desenho)",
       "ancora": "[data-todo=\"22\"]",
       "seletor": "#perfil optgroup[label=\"Moldes\"] option",
-      "conflito": "Orpheus e Maid Life SS passam para «Meus perfis», porque são perfis seus e não moldes: a Navegação só lista os quatro moldes.",
+      "conflito": "Orpheus e Jogo Fictício F SS passam para «Meus perfis», porque são perfis seus e não moldes: a Navegação só lista os quatro moldes.",
       "n_na_rodada_4": 19,
       "fusao": "Na rodada 4 era a 19. Disputa com a 21 da r3 (os quatro moldes num grupo «Point and click»): vence a rodada 4, o grupo se chama «Moldes» e guarda os quatro da 21.",
       "rodada": 4
@@ -221,12 +221,12 @@
     {
       "n": 23,
       "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
-      "o_que_muda": "Seus perfis (Orpheus, Maid Life SS) ganham um grupo próprio, «Meus perfis», depois dos moldes",
+      "o_que_muda": "Seus perfis (Orpheus, Jogo Fictício F SS) ganham um grupo próprio, «Meus perfis», depois dos moldes",
       "resposta": "consequência da 19",
       "origem": "rodada 4 (o que faltava desenho)",
       "ancora": "[data-todo=\"23\"]",
       "seletor": "#perfil optgroup[label=\"Meus perfis\"] option",
-      "conflito": "A página do todo tinha Orpheus sob «Point and click» e Maid Life SS sob «Trocar os botões»; ao pôr os moldes nos nomes da Navegação, os dois ficaram sem grupo.",
+      "conflito": "A página do todo tinha Orpheus sob «Point and click» e Jogo Fictício F SS sob «Trocar os botões»; ao pôr os moldes nos nomes da Navegação, os dois ficaram sem grupo.",
       "n_na_rodada_4": 20,
       "fusao": "Na rodada 4 era a 20. O grupo «Meus perfis» (Orpheus e Maid) entra abaixo de «Moldes».",
       "rodada": 4

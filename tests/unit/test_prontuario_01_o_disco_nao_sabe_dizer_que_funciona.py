@@ -25,7 +25,7 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
     _vdf_escape,
 )
 
-_PRAGMATA, _DUSKFADE, _SACKBOY = "9967153", "9950840", "9931993"
+_PRAGMATA, _JOGO_FICTICIO_B, _SACKBOY = "9967153", "9950840", "9931993"
 _COMIDA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 
@@ -40,7 +40,7 @@ class TestNaoPrometeOQueNaoSabe:
         assert "funciona" not in SEM_IMPEDIMENTO
         assert "pronto" not in SEM_IMPEDIMENTO
 
-    def test_duskfade_e_dont_scream_saem_iguais(self) -> None:
+    def test_dois_jogos_de_mesma_assinatura_saem_iguais(self) -> None:
         """A MORDIDA conceitual: o disco não separa os dois, e o veredito diz isso."""
         from hefesto_dualsense4unix.integrations.api_de_entrada import Evidencia
 
@@ -51,11 +51,11 @@ class TestNaoPrometeOQueNaoSabe:
             carrega_xinput_dinamicamente=True,
         )
         quebrado = Prontuario(
-            appid=_DUSKFADE, nome="Duskfade", raiz=Path("/jogo"),
+            appid=_JOGO_FICTICIO_B, nome="Jogo Fictício B", raiz=Path("/jogo"),
             linha=_com_wrapper(), evidencia=assinatura, steam_input="0",
         )
         funciona = Prontuario(
-            appid="9949958", nome="DON'T SCREAM", raiz=Path("/jogo"),
+            appid="9949958", nome="Jogo Fictício C", raiz=Path("/jogo"),
             linha=_com_wrapper(), evidencia=assinatura, steam_input="0",
         )
         assert quebrado.veredito == funciona.veredito == SEM_IMPEDIMENTO
@@ -255,7 +255,7 @@ class TestFiltroDeInfraestrutura:
     def test_ferramentas_da_steam(self, nome: str) -> None:
         assert e_infraestrutura(nome)
 
-    @pytest.mark.parametrize("nome", ["PRAGMATA", "Duskfade", "Protonaut", "Stray"])
+    @pytest.mark.parametrize("nome", ["JOGO FICTÍCIO A", "Jogo Fictício B", "Protonaut", "Stray"])
     def test_jogos_de_verdade(self, nome: str) -> None:
         """`Protonaut` começa com "Proton" e É um jogo — a borda importa."""
         assert not e_infraestrutura(nome)

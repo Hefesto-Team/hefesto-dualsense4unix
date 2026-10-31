@@ -1,13 +1,13 @@
 {
  "perfis": [
   {
-   "name": "Pragmata",
+   "name": "Jogo Fictício A",
    "version": 1,
    "priority": 120,
    "match": {
     "type": "criteria",
     "window_class": [
-     "steam_app_1358160"
+     "steam_app_9900001"
     ],
     "window_title_regex": null,
     "process_name": []
@@ -57,7 +57,7 @@
    }
   },
   {
-   "name": "Mesa de dois",
+   "name": "Jogo Fictício B",
    "version": 1,
    "priority": 60,
    "match": {
@@ -65,18 +65,18 @@
     "window_class": [],
     "window_title_regex": null,
     "process_name": [
-     "portal2_linux"
+     "jogo_ficticio_b"
     ]
    }
   },
   {
-   "name": "Terror (os dez)",
+   "name": "Jogo Fictício C",
    "version": 1,
    "priority": 58,
    "match": {
     "type": "criteria",
     "window_class": [],
-    "window_title_regex": ".*(Faith|Reanimal|Duskfade).*",
+    "window_title_regex": ".*(Jogo Fictício C|Jogo Fictício D).*",
     "process_name": []
    }
   },
@@ -98,7 +98,7 @@
   }
  ],
  "state": {
-  "active_profile": "Pragmata",
+  "active_profile": "Jogo Fictício A",
   "freestyle_ligado": false,
   "battery_pct": 100,
   "bt_mic": {

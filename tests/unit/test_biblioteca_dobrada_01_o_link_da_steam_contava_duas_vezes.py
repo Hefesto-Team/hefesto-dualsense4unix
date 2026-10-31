@@ -44,7 +44,7 @@ def casa_com_link(tmp_path: Path) -> Path:
     (tmp_path / ".steam/steam").symlink_to(real, target_is_directory=True)
 
     steamapps = tmp_path / ".steam/steam/steamapps"
-    _manifest(steamapps, "9950840", "Duskfade")
+    _manifest(steamapps, "9950840", "Jogo Fictício B")
     _manifest(steamapps, "9949958", "DONT SCREAM")
     _libraryfolders(steamapps, [real])
     return tmp_path
@@ -111,7 +111,7 @@ class TestQuemContaNaoContaEmDobro:
 
 class TestOQueJaFuncionavaContinua:
     def test_traducao_de_appid_em_nome(self, casa_com_link: Path) -> None:
-        assert nome_do_appid("9950840", casa_com_link) == "Duskfade"
+        assert nome_do_appid("9950840", casa_com_link) == "Jogo Fictício B"
 
     def test_jogo_ausente_continua_devolvendo_none(self, casa_com_link: Path) -> None:
         assert nome_do_appid("9999999", casa_com_link) is None

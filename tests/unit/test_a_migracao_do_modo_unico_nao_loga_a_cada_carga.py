@@ -49,16 +49,16 @@ def test_cem_cargas_do_mesmo_perfil_contam_uma_vez() -> None:
     controles = {P1: {"mascara": "xbox"}, P2: {"mascara": "xbox"}}
     with structlog.testing.capture_logs() as captured:
         for _ in range(100):
-            perfil = _carregar("Planet Lust", controles)
+            perfil = _carregar("Jogo Fictício A", controles)
     assert len(_linhas(captured)) == 1
     assert perfil.mode.gamepad_flavor == "xbox"
 
 
 def test_o_resultado_que_muda_conta_de_novo() -> None:
     with structlog.testing.capture_logs() as captured:
-        _carregar("Planet Lust", {P1: {"mascara": "xbox"}})
-        _carregar("Planet Lust", {P1: {"mascara": "xbox"}})
-        _carregar("Planet Lust", {P1: {"mascara": "nintendo"}})
+        _carregar("Jogo Fictício A", {P1: {"mascara": "xbox"}})
+        _carregar("Jogo Fictício A", {P1: {"mascara": "xbox"}})
+        _carregar("Jogo Fictício A", {P1: {"mascara": "nintendo"}})
     assert [e["modo"] for e in _linhas(captured)] == ["xbox", "nintendo"]
 
 
@@ -73,7 +73,7 @@ def test_o_som_sem_volume_descartado_conta_uma_vez_por_alvo() -> None:
     with structlog.testing.capture_logs() as captured:
         for _ in range(100):
             Profile.model_validate({
-                "name": "Planet Lust", "match": {"type": "any"}, "speaker": {"rota": 2},
+                "name": "Jogo Fictício A", "match": {"type": "any"}, "speaker": {"rota": 2},
                 "controllers": {P2: {"speaker": {"rota": 3}}},
             })
     linhas = [e for e in captured if e.get("event") == "speaker_sem_volume_descartado"]

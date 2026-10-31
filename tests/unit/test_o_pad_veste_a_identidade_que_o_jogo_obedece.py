@@ -179,7 +179,7 @@ def test_o_sharedassets0_entra_mesmo_com_muitos_assets(
     roupa, fonte = rj.roupa_do_jogo(raiz)
 
     assert roupa == "0ce6" and "sharedassets0" in fonte, (
-        "o InputManager do Rewired mora no sharedassets0 (Scarlet Deer Inn, Spirit Valley)")
+        "o InputManager do Rewired mora no sharedassets0 (nos dois jogos Rewired medidos)")
 
 
 def test_no_laco_so_o_cache_e_o_fio_aquece(

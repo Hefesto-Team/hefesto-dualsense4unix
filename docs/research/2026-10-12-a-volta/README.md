@@ -154,7 +154,7 @@ quatro endpoints de háptica.
   as máscaras Xbox e Nintendo, o Modo Nativo.
 - Os outros jogos da Sony: Minecraft Dungeons II, Wukong (um jogador numa partida
   longa: pela lei, de 15 a 20 min até o tranco), PRAGMATA (o device KS); o Pro Jank
-  Footy, que engasga por outra causa em qualquer configuração; o Spirit Valley
+  Footy, que engasga por outra causa em qualquer configuração; um jogo Rewired
   como controle de não-regressão. Tudo com a Steam aberta do zero.
 - A trava da enumeração e o fio que gira viraram sprint (seção 4.2).
 

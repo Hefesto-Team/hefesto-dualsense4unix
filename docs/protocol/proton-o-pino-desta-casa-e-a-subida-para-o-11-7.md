@@ -174,11 +174,11 @@ mapping             = 29 entradas
 | `proton_11` | 3 | `2497900` (preservado), `1245620`, `4046520` |
 | `GE-Proton10-34` | 1 | `2369580` |
 
-Os 24 jogos que carregam o pino: Grim Fandango Remastered, Touhou Luna Nights,
+Os 24 jogos que carregam o pino (dois deles ficam fora desta página): Grim Fandango Remastered, Touhou Luna Nights,
 FAITH, Stray, Big Walk, Scarlet Deer Inn, Sackboy, Mr. Sleepy Man, Bail or Jail,
 Mina the Hollower, Mortal Kombat 1, Mullet Mad Jack, REANIMAL, Black Myth:
-Wukong, Avatar Legends, Duskfade, DON'T SCREAM TOGETHER, Dark Scrolls, PRAGMATA,
-Wendigo Blue, PEAK, Pro Jank Footy, ORPHEUS e Future Knight.
+Wukong, Avatar Legends, DON'T SCREAM TOGETHER, Dark Scrolls, PRAGMATA,
+PEAK, Pro Jank Footy, ORPHEUS e Future Knight.
 
 **As três entradas que o pino não alcança, e a razão de cada uma:**
 

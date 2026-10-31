@@ -1,7 +1,7 @@
 """O jogo com o kit Bluetooth da Lovense abre no Proton: a DLL do kit se desliga pela pasta.
 
 O WinRT de Bluetooth do Wine é parcial e a `LovenseWinrtBleDll.dll` não trata o erro dele: a exceção
-C++ derruba o processo (Third Crisis: Neon Nights). Sem a DLL, a Unity registra o
+C++ derruba o processo (medido num jogo Unity com o kit). Sem a DLL, a Unity registra o
 `DllNotFoundException` e segue. A receita liga pelo caminho com curinga
 `*_Data/Plugins/x86_64/LovenseWinrtBleDll.dll`, sem appid, e o valor `=d` (desligar) passa nos três
 lugares que conferem a forma: a tabela, o espelho em Python e o wrapper.
@@ -76,7 +76,7 @@ def test_o_jogo_com_a_dll_do_kit_recebe_o_override_mesmo_com_o_nome_da_pasta_dif
     lar: Path,
 ) -> None:
     """Prova da D-1610-A-DLL-DO-KIT-DA-LOVENSE-SE-DESLIGA-PELA-PASTA."""
-    raiz = _jogo_unity(lar, "710001", produto="Third Crisis Neon Nights")
+    raiz = _jogo_unity(lar, "710001", produto="Jogo Fictício Unity")
     assert rda.ambiente_do_jogo(raiz) == {"WINEDLLOVERRIDES": _ESPERADO}
     assert rda.pecas_que_faltam(raiz) == (), "a DLL do sinal é a própria peça: nada falta"
     outro = _jogo_unity(lar, "710002", produto="Outro", sinal_da_pasta="NomeQueNaoEOProduto_Data")
@@ -84,7 +84,7 @@ def test_o_jogo_com_a_dll_do_kit_recebe_o_override_mesmo_com_o_nome_da_pasta_dif
 
 
 def test_o_jogo_com_o_kit_sem_a_dll_ble_nao_recebe_nada_e_nao_acusa_falta(lar: Path) -> None:
-    """O Third Crisis (9925216) traz o kit sem o BLE: a receita não é dele, e nada «falta»."""
+    """O jogo que traz o kit sem o BLE: a receita não é dele, e nada «falta»."""
     raiz = _jogo_unity(lar, "710003", com_a_dll=False)
     assert rda.ambiente_do_jogo(raiz) == {} and rda.pecas_que_faltam(raiz) == ()
     censo = pdj.levantar_censo(allowlist=[], pontes={})

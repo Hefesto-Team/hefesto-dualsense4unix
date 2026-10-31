@@ -125,7 +125,7 @@ def test_o_freestyle_nao_e_acusado() -> None:
     pytest.param(lambda: next(a.mensagem for a in verificar_perfis(
         [_perfil("Sackboy", 100, jogo=False)]) if a.regra == REGRA), id="nome-de-programa"),
     pytest.param(lambda: daemon_actions.interpretar_prontuario_dos_jogos(type(
-        "Censo", (), {"jogos": [type("J", (), {"nome": "Lure of Passion",
+        "Censo", (), {"jogos": [type("J", (), {"nome": "Jogo Fictício L",
                                               "ponte_divergente": True})()]})())[1],
         id="ponte"),
 ])
@@ -137,7 +137,7 @@ def test_as_frases_dizem_o_gesto_na_cabeca(frase: Any) -> None:
     for jargao in ("QUALQUER", "casa com", "'", "Ponte confirmada", "lista de hoje"):
         assert jargao not in texto, f"«{jargao}» em {texto!r}"
     if "Lure" in texto:
-        assert "Lure of Passion" in cabeca, cabeca
+        assert "Jogo Fictício L" in cabeca, cabeca
 
 
 def test_um_glifo_por_selo() -> None:

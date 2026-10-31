@@ -47,7 +47,7 @@ def _mesa(registro: Any, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, dict[str
 
 
 def _do_jogo() -> Profile:
-    return Profile(name="ButtKnight", match=MatchCriteria(window_class=["steam_app_1"]),
+    return Profile(name="Jogo Fictício E", match=MatchCriteria(window_class=["steam_app_1"]),
                    priority=80)
 
 

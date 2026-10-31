@@ -64,6 +64,7 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 ENSAIO = RAIZ / "mockup"
+GERADORES = PUBLICADO.parent
 CORES_CSV = RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 PECAS_CSV = RAIZ / "docs" / "data" / "pecas-do-dualsense.csv"
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
@@ -93,15 +94,14 @@ TECLAS = frozenset({
 UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 
 NOMES_DO_DESENHO = (
-    "Clara", "Ana", "Pedro", "Rafa", "Davi", "Lia",
+    "Clara", "Ana", "Pedro", "Rafa",
     "Mortal Kombat", "Elden Ring", "Don't Scream", "Wendigo Blue",
     "Orpheus: To Hell and Back", "Mina the Hollower",
     "Xiaomi Scale S400", "Xiaomi Band 9",
     "Teclado", "Mouse", "Caixa de som", "Fone", "Celular", "Relógio", "Acessório",
     "Esquerda", "Meio", "Direita",
     "Sackboy: A Big Adventure", "Resident Evil Village", "Hollow Knight: Silksong",
-    "Neon Nights", "Planet Lust", "MonGirl Conquest", "Third Crisis",
-    "Nora", "Domi", "Ferri", "Intiface Engine", "Game Mode", "Lure of Passion",
+    "Lure of Passion",
     "Corrida de Inverno", "Wine",
 )
 
@@ -228,6 +228,14 @@ def rotulos_fantasmas(paginas: list[pathlib.Path]) -> list[str]:
             if not re.search(rf"[>\"]\s*{re.escape(r)}\s*[<\"]", fonte)]
 
 
+def nomes_mortos() -> list[int]:
+    fonte = "\n".join(html.unescape(p.read_text(encoding="utf-8"))
+                      for pasta, forma in ((PUBLICADO, "*.html"), (ENSAIO, "*.html"),
+                                           (GERADORES, "aba*.py"))
+                      for p in sorted(pasta.glob(forma)))
+    return [i for i, nome in enumerate(NOMES_DO_DESENHO, 1) if nome not in fonte]
+
+
 def dividas_mortas(paginas: list[pathlib.Path]) -> list[str]:
     """As entradas da `DIVIDA` que nenhuma página escreve mais: a cura chegou, e a linha sai."""
     lido = " ".join(" ".join(f for _, f in frases(p.read_text(encoding="utf-8")))
@@ -263,6 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     em_toda_palavra = titulo_em_toda_palavra(paginas)
     fantasmas = rotulos_fantasmas(paginas)
     mortas = dividas_mortas(paginas)
+    nomes_sem_dono = nomes_mortos()
     por_palavra: dict[str, list[str]] = {}
     for nome, linha, palavra, frase in achados:
         por_palavra.setdefault(palavra, []).append(f"{nome}:{linha}  «{frase[:110]}»")
@@ -272,6 +281,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {palavra:<16} {len(lugares):>4}  {lugares[0]}")
     for r in fantasmas:
         print(f"  ROTULOS_CITADOS: «{r}» não é rótulo de página nenhuma — tire da lista.")
+    for i in nomes_sem_dono:
+        print(f"  NOMES_DO_DESENHO: o nome nº {i} não está em gerador, desenho nem página "
+              "— tire-o da lista.")
     for d in mortas:
         print(f"  DIVIDA: «{d}» não aparece mais em página nenhuma — a linha sai da lista.")
     for nome in em_toda_palavra:
@@ -279,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if "--lista" in argv:
         return 0
-    if achados or fantasmas or mortas or em_toda_palavra:
+    if achados or fantasmas or mortas or nomes_sem_dono or em_toda_palavra:
         print(f"\nREPROVADO — {len(achados)} maiúscula(s) no meio da frase em "
               f"{alvo.relative_to(RAIZ)}.\n"
               "A regra de produto (09/10/2026): só a primeira letra da frase ou do rótulo é\n"

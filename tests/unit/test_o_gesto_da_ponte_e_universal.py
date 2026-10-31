@@ -15,7 +15,7 @@ EPOCH = 1
 
 QUATRO_JOGOS = [
     ("pragmata", "dualsense", True),
-    ("duskfade", "dualsense", True),
+    ("jogo_ficticio_b", "dualsense", True),
     ("mullet_mad_jack", "dualsense", True),
     ("sackboy", "dualsense", False),
 ]

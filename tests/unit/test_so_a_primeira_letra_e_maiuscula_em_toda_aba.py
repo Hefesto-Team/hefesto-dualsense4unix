@@ -91,6 +91,13 @@ def test_a_divida_que_nenhuma_pagina_escreve_reprova(monkeypatch: pytest.MonkeyP
     assert regua.dividas_mortas(_dez(regua.PUBLICADO)) == ["Linha Curada"]
 
 
+def test_o_nome_do_desenho_que_ninguem_escreve_reprova(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert regua.nomes_mortos() == []
+    monkeypatch.setattr(regua, "NOMES_DO_DESENHO",
+                        (*regua.NOMES_DO_DESENHO, "Nome Que Nenhuma Página Escreve"))
+    assert regua.nomes_mortos() == [len(regua.NOMES_DO_DESENHO)]
+
+
 def test_o_valor_do_selo_da_08_e_peca_propria(monkeypatch: pytest.MonkeyPatch) -> None:
     """«Visto como <b>DualSense</b>»: o `<b>` do `.est` abre bloco (flex), e a régua irmã
     (`test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula`) exige a maiúscula.

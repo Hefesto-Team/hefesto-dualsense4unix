@@ -1,7 +1,7 @@
 """O install com um jogo aberto não derruba o controle que o jogo lê.
 
 O-INSTALL-NAO-DERRUBA-O-CONTROLE-DO-JOGO-ABERTO-01: em 28/10, os installs das 01:26, 02:06 e
-18:02 com o Planet Lust aberto mataram o broker por SIGKILL, desmontaram o pad do jogo e
+18:02 com um jogo aberto mataram o broker por SIGKILL, desmontaram o pad do jogo e
 deixaram o físico visível por nove segundos, no cabo e no BT, em qualquer modo e máscara.
 A cura: com o jogo em cena, o install grava os arquivos e adia a troca do broker, do daemon,
 da janela e da bandeja; o daemon a dispara quando o jogo fecha.

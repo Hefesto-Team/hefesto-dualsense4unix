@@ -151,7 +151,7 @@ veredito, porque parece prudência.
 COMO USAR
 ----------
     .venv/bin/python scripts/ensaios/o_jogo_segura_o_nosso_no.py
-    .venv/bin/python scripts/ensaios/o_jogo_segura_o_nosso_no.py --padrao Duskfade
+    .venv/bin/python scripts/ensaios/o_jogo_segura_o_nosso_no.py --padrao <parte do nome do jogo>
     .venv/bin/python scripts/ensaios/o_jogo_segura_o_nosso_no.py --json
 
 Rode com o jogo NA TELA, não no menu da Steam: o jogo só enumera controle

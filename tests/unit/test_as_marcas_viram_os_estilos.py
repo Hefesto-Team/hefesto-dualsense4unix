@@ -26,7 +26,7 @@ from hefesto_dualsense4unix.profiles.schema import Profile
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
-NOME = "Maid Life"
+NOME = "Jogo Fictício M"
 
 DO_EDITOR = (
     "src/hefesto_dualsense4unix/app/actions/perfis_web.py",

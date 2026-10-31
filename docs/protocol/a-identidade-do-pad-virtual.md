@@ -38,7 +38,7 @@ appid, por nome ou por pasta do jogo.
 | Sackboy | `WinDualSense`, `0ce6` e `0df2` no executável | Edge | 1: a biblioteca Sony |
 | Minecraft Dungeons II | `WinDualShock`, só `0ce6` no executável | Edge | 1: a biblioteca Sony |
 | Mina the Hollower | `0ce6` e `0df2` junto do `054c` no executável (a tabela da SDL) | `0ce6` | conhece os dois |
-| Planet Lust | `DualSense Edge` e `DualSense Wireless Controller` no `SDL3.dll` | `0ce6` | conhece os dois |
+| Um jogo com SDL3 | `DualSense Edge` e `DualSense Wireless Controller` no `SDL3.dll` | `0ce6` | conhece os dois |
 | Mullet Mad Jack | só os perfis do comum no `global-metadata.dat` | `0ce6` | conhece só o comum |
 | REANIMAL | nenhum sinal do controle | `0ce6` | nada pede o Edge |
 
@@ -46,7 +46,7 @@ Nos 25 jogos instalados da biblioteca medida em 31/10/2026, a inversão troca a 
 todos do Edge para o comum e todos sem sinal do controle. Na mesma biblioteca, com 27 jogos,
 a leitura das duas marcas troca mais cinco do Edge para o comum, todos com a tabela da SDL que
 lista os dois modelos (Mina the Hollower, The Dark Queen of Mortholme, Avatar Legends, Godot
-Engine e Planet Lust): ficam no Edge os cinco da biblioteca Sony ou do Steam Input (Sackboy,
+Engine e um jogo com SDL3): ficam no Edge os cinco da biblioteca Sony ou do Steam Input (Sackboy,
 Minecraft Dungeons II, Black Myth: Wukong, PRAGMATA e Pro Jank Footy). O único que conhece só o
 Edge, o Black Myth: Wukong, já ficava pela biblioteca Sony.
 

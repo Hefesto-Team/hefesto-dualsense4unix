@@ -3,8 +3,8 @@
 Esta é a mordida do censo de 16/08/2026. Existe para que ninguém volte a
 ligar a máscara de gamepad ao que o disco diz, porque o disco não sabe.
 
-O caso que a prova: `Duskfade` (quebrado com máscara DualSense) e
-`DON'T SCREAM` (funciona com máscara DualSense) têm a MESMA assinatura —
+O caso que a prova: `Jogo Fictício B` (quebrado com máscara DualSense) e
+`Jogo Fictício C` (funciona com máscara DualSense) têm a MESMA assinatura —
 nenhum import de entrada, `XINPUT1_4.dll` carregado por `LoadLibrary`, zero
 SDL. Os dois fixtures abaixo são exatamente esses dois binários, reduzidos ao
 que importa. Se algum dia um veredito os separar, ele estará inventando.
@@ -14,7 +14,7 @@ Como arrancar a cura e ver morder: em `api_de_entrada.varrer_agulhas`, troque
 reprova com
 
     AssertionError: o XInput carregado por LoadLibrary sumiu:
-    Duskfade-Win64-Shipping.exe teria passado por 'jogo sem entrada nenhuma'
+    JogoFicticioB-Win64-Shipping.exe teria passado por 'jogo sem entrada nenhuma'
 
 e o `test_sdl_e_a_unica_evidencia_que_promove` reprova junto.
 """
@@ -85,11 +85,11 @@ def _forjar_pe(
 
 
 @pytest.fixture
-def duskfade(tmp_path: Path) -> Path:
+def jogo_ficticio_b(tmp_path: Path) -> Path:
     """O jogo QUEBRADO, como ele é no disco do usuário (medido 16/08/2026)."""
-    alvo = tmp_path / "Duskfade" / "Duskfade" / "Binaries" / "Win64"
+    alvo = tmp_path / "JogoFicticioB" / "JogoFicticioB" / "Binaries" / "Win64"
     alvo.mkdir(parents=True)
-    exe = alvo / "Duskfade-Win64-Shipping.exe"
+    exe = alvo / "JogoFicticioB-Win64-Shipping.exe"
     exe.write_bytes(
         _forjar_pe(
             ["WINMM.dll", "USER32.dll", "SETUPAPI.dll", "KERNEL32.dll"],
@@ -100,11 +100,11 @@ def duskfade(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def dont_scream(tmp_path: Path) -> Path:
+def jogo_ficticio_c(tmp_path: Path) -> Path:
     """O jogo que FUNCIONA e tem a mesma assinatura do quebrado."""
-    alvo = tmp_path / "DONT SCREAM" / "DontScream" / "Binaries" / "Win64"
+    alvo = tmp_path / "JogoFicticioC" / "JogoFicticioC" / "Binaries" / "Win64"
     alvo.mkdir(parents=True)
-    exe = alvo / "DontScream-Win64-Shipping.exe"
+    exe = alvo / "JogoFicticioC-Win64-Shipping.exe"
     exe.write_bytes(
         _forjar_pe(
             ["WINMM.dll", "USER32.dll", "KERNEL32.dll"],
@@ -124,30 +124,30 @@ def jogo_sdl(tmp_path: Path) -> Path:
     return exe
 
 
-def test_xinput_dinamico_e_visto_mesmo_sem_import(duskfade: Path) -> None:
+def test_xinput_dinamico_e_visto_mesmo_sem_import(jogo_ficticio_b: Path) -> None:
     """Ler só a tabela de importação cegaria o detector no caso real."""
-    evidencia = examinar(duskfade)
+    evidencia = examinar(jogo_ficticio_b)
     assert "xinput1_4.dll" not in evidencia.imports, (
         "o fixture tem de imitar o binário real: XInput NÃO está nos imports"
     )
     assert Familia.XINPUT in evidencia.familias, (
         "o XInput carregado por LoadLibrary sumiu: "
-        f"{duskfade.name} teria passado por 'jogo sem entrada nenhuma'"
+        f"{jogo_ficticio_b.name} teria passado por 'jogo sem entrada nenhuma'"
     )
     assert evidencia.carrega_xinput_dinamicamente is True
 
 
 def test_o_quebrado_e_o_que_funciona_sao_indistinguiveis(
-    duskfade: Path, dont_scream: Path
+    jogo_ficticio_b: Path, jogo_ficticio_c: Path
 ) -> None:
     """O CORAÇÃO DESTE ARQUIVO.
 
-    Duskfade não funciona com a máscara DualSense; DON'T SCREAM funciona. Se o
+    O Jogo Fictício B não funciona com a máscara DualSense; o C funciona. Se o
     disco pudesse separá-los, a cura de detecção seria possível. Ele não pode —
     e enquanto este teste passar, ninguém deve tentar.
     """
-    a = examinar(duskfade)
-    b = examinar(dont_scream)
+    a = examinar(jogo_ficticio_b)
+    b = examinar(jogo_ficticio_c)
     assert a.familias == b.familias, (
         "as assinaturas divergiram: se isto virou verdade, o censo mudou e a "
         "decisão de 16/08 tem de ser reaberta"

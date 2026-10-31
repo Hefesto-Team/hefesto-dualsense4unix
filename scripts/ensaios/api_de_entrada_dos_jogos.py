@@ -22,7 +22,7 @@ Uma linha por jogo, com os fatos e depois o veredito:
 
 O ACHADO QUE IMPORTA, E ONDE OLHAR NA SAÍDA
 ---------------------------------------------
-Compare as linhas do **Duskfade** e do **DON'T SCREAM**. São idênticas em tudo
+Compare as linhas dos dois jogos Unreal sem import de entrada. São idênticas em tudo
 que o disco mostra. O primeiro não funciona com a máscara DualSense; o segundo
 funciona. É por isso que o veredito máximo dessa família é `indeciso`, e é por
 isso que o produto NÃO troca a máscara sozinho: a troca marcaria Sackboy,

@@ -20,7 +20,7 @@ def _escapado(valor: str) -> str:
 
 _LINHA_COMIDA = "VKD3D_CONFIG=no_upload_hvv %command%"
 _PRAGMATA = "9967153"
-_DUSKFADE = "9950840"
+_JOGO_FICTICIO_B = "9950840"
 
 
 def _bloco_app(appid: str, *pares: tuple[str, str], recuo: str) -> str:
@@ -35,8 +35,8 @@ def _vdf_das_tres_arvores(
 ) -> str:
     """O `localconfig.vdf` do usuário em miniatura: três árvores `apps`, uma boa."""
     bloco_canonico = _bloco_app(_PRAGMATA, ("LaunchOptions", canonica), recuo="\t\t\t\t")
-    bloco_duskfade = _bloco_app(
-        _DUSKFADE, ("LaunchOptions", _escapado(WRAPPER_LAUNCH)), recuo="\t\t\t\t"
+    bloco_ficticio_b = _bloco_app(
+        _JOGO_FICTICIO_B, ("LaunchOptions", _escapado(WRAPPER_LAUNCH)), recuo="\t\t\t\t"
     )
     corpo_outra = ""
     if outra is not None:
@@ -52,7 +52,7 @@ def _vdf_das_tres_arvores(
         '"UserLocalConfigStore"\n{\n'
         '\t"Software"\n\t{\n\t\t"Valve"\n\t\t{\n\t\t\t"Steam"\n\t\t\t{\n'
         '\t\t\t\t"apps"\n\t\t\t\t{\n'
-        f"{bloco_canonico}{bloco_duskfade}"
+        f"{bloco_canonico}{bloco_ficticio_b}"
         "\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n"
         '\t"apps"\n\t{\n'
         f"{corpo_outra}"
@@ -120,7 +120,7 @@ class TestOLeitorNaoLeMaisDaArvoreErrada:
     def test_a_arvore_boa_continua_sendo_lida_inteira(self) -> None:
         """Ancorar não pode virar "não acha mais nada"."""
         lido = read_apps_by_appid(_vdf_das_tres_arvores(canonica=_LINHA_COMIDA))
-        assert set(lido) == {_PRAGMATA, _DUSKFADE}
+        assert set(lido) == {_PRAGMATA, _JOGO_FICTICIO_B}
 
     def test_o_filtro_de_quem_tem_a_linha_herda_a_ancora(self) -> None:
         texto = _vdf_das_tres_arvores(
