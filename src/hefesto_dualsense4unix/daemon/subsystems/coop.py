@@ -3383,8 +3383,10 @@ def _assumir_o_p1(player: Any) -> None:
     if player.vpad is None:
         return
     logger.info("coop_externo_assume_o_p1", identity=player.identity)
-    with contextlib.suppress(Exception):
+    try:
         _parar_fora_do_tique(player.vpad)
+    except Exception as exc:
+        logger.warning("coop_pad_proprio_nao_desceu", identity=player.identity, err=str(exc))
     player.vpad = None
 
 
