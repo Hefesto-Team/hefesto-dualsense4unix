@@ -384,7 +384,7 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   inteiro, um botão por chave: o que falta vale o `padrao`, e sem ele a primeira forma. A `escolha` de id
   `entrada_<chave>` (`l2`, `r2`, `analogico_esquerdo`, `analogico_direito`, `touchpad`, `sacudir`,
   `inclinar`) ganha o glifo da entrada e mora na mesma grade dos botões do `por_botao` vizinho: uma grade só,
-  na ordem do manifesto. A `escolha` cujas `escolhas` são as `formas` de um `por_botao` da extensão (os
+  na ordem do manifesto. A `escolha` cujas `escolhas` estão todas nas `formas` de um `por_botao` da extensão (os
   efeitos) desenha a onda da forma escolhida, pelo mesmo desenho do botão, e aceita as formas do `livre`;
   «Direto» e «Suave», proporcionais à entrada, desenham a rampa reta e a curva ao quadrado.
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela

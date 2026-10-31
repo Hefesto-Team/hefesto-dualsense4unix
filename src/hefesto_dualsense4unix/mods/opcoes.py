@@ -4,9 +4,10 @@ A tela escolhe, a modificação lê o mesmo arquivo na sua pasta de dados. Ler n
 que o manifesto não aceita (arquivo editado, opção que saiu da versão nova) cai no padrão.
 
 As formas gravadas na opção ``livre`` valem também nos ``por_botao`` da MESMA extensão e na
-escolha dos efeitos (a ``escolha`` cujas ``escolhas`` são as ``formas`` de um ``por_botao``): a
-forma se procura pelo nome nas ``formas`` do manifesto e, depois, no valor do ``livre``. O botão
-ou a entrada cuja forma gravada saiu volta sozinho ao padrão, sem levar os outros junto.
+escolha dos efeitos (a ``escolha`` cujas ``escolhas`` estão todas nas ``formas`` de um
+``por_botao``): a forma se procura pelo nome nas ``formas`` do manifesto e, depois, no valor do
+``livre``. O botão ou a entrada cuja forma gravada saiu volta sozinho ao padrão, sem levar os
+outros junto.
 """
 from __future__ import annotations
 
@@ -194,14 +195,14 @@ def formas_do_livre(manifesto: Manifesto, valores: dict[str, Any]) -> Formas:
 
 def por_botao_dos_efeitos(manifesto: Manifesto, opcao: Opcao) -> Opcao | None:
     """O ``por_botao`` cujas formas a opção escolhe: ele mesmo, ou, numa ``escolha``, o primeiro
-    ``por_botao`` da extensão com as ``formas`` iguais às ``escolhas`` (os efeitos); senão
-    ``None``."""
+    ``por_botao`` da extensão em cujas ``formas`` está cada uma das ``escolhas`` (os efeitos);
+    senão ``None``. A entrada que oferece só parte das formas dos botões também é dos efeitos."""
     if opcao.tipo == "por_botao":
         return opcao
-    if opcao.tipo != "escolha":
+    if opcao.tipo != "escolha" or not opcao.escolhas:
         return None
     return next((o for o in manifesto.opcoes
-                 if o.tipo == "por_botao" and set(o.formas) == set(opcao.escolhas)), None)
+                 if o.tipo == "por_botao" and set(opcao.escolhas) <= set(o.formas)), None)
 
 
 def formas_da_opcao(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]) -> Formas:

@@ -16,7 +16,12 @@ MORDIDAS (31/10/2026, executadas sobre a cura e devolvidas):
   ``test_o_duplo_numa_entrada_tem_a_onda_do_duplo`` e ``test_a_forma_gravada_vale_numa_entrada``;
 - a ``escolha`` sem as ``formas_extras`` em ``opcoes.validar``, o ``escolhas_de`` sem as gravadas
   e o ``por_botao_dos_efeitos`` sem comparar as formas com as escolhas reprovam, cada um,
-  ``test_a_forma_gravada_vale_numa_entrada``.
+  ``test_a_forma_gravada_vale_numa_entrada``;
+- o ``por_botao_dos_efeitos`` que exige as ``escolhas`` iguais às ``formas``, e não contidas
+  reprova ``test_a_entrada_com_parte_dos_efeitos_dos_botoes_desenha_e_aceita_a_gravada``: o
+  ``por_botao`` com uma forma a mais que as entradas tirava das entradas a onda e a forma gravada;
+- o ``esquecer_a_forma_do_livre`` sem devolver ao padrão a entrada que usava a forma reprova
+  ``test_a_forma_gravada_vale_numa_entrada``: o ``opcoes.json`` guardava a forma esquecida.
 """
 
 from __future__ import annotations
@@ -92,10 +97,11 @@ GRAVADA = "Meu 1"
 PASSOS_GRAVADOS = [[0.3, 0.1], [0.9, 0.2], [0.5, 0.1]]
 
 
-def _instalar(janela: Any) -> tuple[Any, _Ponte, str]:  # noqa: F811
+def _instalar(janela: Any, opcoes: list[dict[str, Any]] = OPCOES_2_10_0  # noqa: F811
+              ) -> tuple[Any, _Ponte, str]:
     a07, instalar, abrir = janela
     pecas = {**pecas_da_lovense(), "chave": "ligada",
-             "opcoes": OPCOES_2_10_0}  # (noqa-acento)
+             "opcoes": opcoes}  # (noqa-acento)
     instalar(mod_id=MOD, **pecas)
     a07._MEXIDA.limpar()
     ponte = _Ponte(VIVO)
@@ -186,6 +192,28 @@ def test_a_forma_gravada_vale_numa_entrada(janela: Any, ctx: Any, lar: Any) -> N
     a07.esquecer_a_forma_do_livre(
         ctx, {"v": f"{MOD}:ao_vivo:{GRAVADA}", "evento": "click"}, ponte)
     assert opcoes.ler(manifesto, lar)["entrada_inclinar"] == "Nenhum"
+    gravado = json.loads(opcoes.caminho(MOD, lar).read_text(encoding="utf-8"))
+    assert gravado["entrada_inclinar"] == "Nenhum", "a forma esquecida ficou no arquivo"
+
+
+def test_a_entrada_com_parte_dos_efeitos_dos_botoes_desenha_e_aceita_a_gravada(
+        janela: Any, ctx: Any, lar: Any) -> None:  # noqa: F811
+    from hefesto_dualsense4unix.mods import opcoes
+    from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
+
+    mais = [{**o, "formas": {**FORMAS, "Rajada": [[1.0, 0.05], [0.0, 0.05]]}}
+            if o["tipo"] == "por_botao" else o for o in OPCOES_2_10_0]
+    a07, ponte, _html = _instalar(janela, mais)
+    manifesto = manifesto_instalado(MOD, lugares=lar)
+    assert manifesto is not None
+    linha = _linha(_escolher(a07, ctx, ponte, "entrada_l2", "Duplo"), "entrada_l2")
+    assert _onda(linha) == exp._onda_da_forma([tuple(p) for p in FORMAS["Duplo"]])
+    assert "<option>Rajada</option>" not in linha
+    opcoes.guardar(manifesto, "ao_vivo", {GRAVADA: PASSOS_GRAVADOS}, lar)
+    html = _escolher(a07, ctx, ponte, "entrada_sacudir", GRAVADA)
+    assert opcoes.ler(manifesto, lar)["entrada_sacudir"] == GRAVADA
+    assert _onda(_linha(html, "entrada_sacudir")) == exp._onda_da_forma(
+        [tuple(p) for p in PASSOS_GRAVADOS])
 
 
 _ABRIR = """(function(endereco, h){
