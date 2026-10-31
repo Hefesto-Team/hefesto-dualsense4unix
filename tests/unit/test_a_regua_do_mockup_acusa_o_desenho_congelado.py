@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.interface import (
     onde,
     regua_do_mockup as regua,
 )
+from hefesto_dualsense4unix.profiles import sem_efeito
 
 GATILHOS = "03-gatilhos.html"
 
@@ -42,7 +43,7 @@ CASO_ANTIGO = {"p1·aj-nome-e-0": "Início do curso", "p1·aj-val-e-0": "2",
                "p1·aj-nome-e-2": "Força", "p1·aj-val-e-2": "4",
                "p1·aj-nome-e-3": "Frequência", "p1·aj-val-e-3": "40"}
 CASO_DO_TODO = {"p1·imersao-e": "rajada-que-sobe-sozinha", "p1·imersao-d": "corda-que-estica",
-                "p2·imersao-e": "ferrolho-que-volta", "p2·imersao-d": "nenhum"}
+                "p2·imersao-e": "ferrolho-que-volta", "p2·imersao-d": sem_efeito.VALOR}
 
 
 def _caso(campos: dict[str, str]) -> dict[str, str]:

@@ -283,8 +283,10 @@ def test_o_lugar_vazio_nao_rouba_a_marca_do_piloto(a03):
     assert "p3" in r["colunas"] and "p4" in r["colunas"]
 
 
-def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
-    """Com o controle na mesa, `Rigid`; sem ele, o travessão. É o D4 inteiro."""
+def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03, publicada):
+    """Com o controle na mesa, `Rigid`; sem ele, o «—» do nenhum efeito. É o D4 inteiro."""
+    from hefesto_dualsense4unix.profiles import sem_efeito
+
     mesa_de_tres = [
         *MESA_DE_DOIS,
         {"pref": "p3", "jogador": 3, "uniq": "aa:bb:cc:00:00:03",
@@ -299,9 +301,18 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
     assert sem_ele["imersao-e"] != "acionamento:Resistance", (
         "o P3 esvaziou e o campo continuou dizendo `Rigid`. É a tela afirmando "
         "um efeito num lugar onde não há aparelho.")
-    assert sem_ele["imersao-e"] in ("", "—"), (
-        f"o lugar vazio devolveu {sem_ele['imersao-e']!r}. Ele mostra o "
-        "travessão desde a decisão de produto de 02/09")
+    assert sem_ele["imersao-e"] == sem_efeito.VALOR, (
+        f"o lugar vazio devolveu {sem_ele['imersao-e']!r}, e o «—» de toda lista "
+        f"é {sem_efeito.VALOR!r}, do dono `profiles/sem_efeito.py`.")
+    oferece = re.search(r'data-campo="imersao-e"(.*?)</select>', publicada, re.S)
+    assert oferece, "imersao-e não é um `<select>` da página publicada"
+    rotulo = re.search(
+        rf'<option value="{re.escape(sem_efeito.VALOR)}"[^>]*>([^<]*)</option>',
+        oferece.group(1))
+    assert rotulo and rotulo.group(1) == sem_efeito.ROTULO, (
+        f"a opção {sem_efeito.VALOR!r} da página mostra "
+        f"{rotulo.group(1) if rotulo else None!r}, e o lugar vazio tem de mostrar "
+        f"{sem_efeito.ROTULO!r}.")
 
 
 class _PonteQueRecusa:
