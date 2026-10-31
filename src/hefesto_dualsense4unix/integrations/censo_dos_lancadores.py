@@ -1720,7 +1720,7 @@ def _runner_pelo_proton(runners: Path, runner: str) -> bool:
     if not runner or runner.startswith("sys-"):
         return False
     pasta = runners / runner
-    if (pasta / "proton").is_file() or (pasta / "toolmanifest.vdf").is_file():
+    if (pasta / "proton").is_file():
         return True
     return not pasta.exists() and "proton" in runner.casefold()
 
@@ -1821,35 +1821,32 @@ def atalhos_do_umu_avulso(lar: Path | None = None) -> tuple[str, ...]:
     cada lançamento. As pastas são as do XDG, a do usuário primeiro; o mesmo atalho numa pasta
     seguinte não conta de novo.
     """
-    import configparser
-
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     try:
         pastas = [_onde(lar).dados / "applications", *jogos_locais.pastas_de_atalhos()]
     except Exception:
         return ()
-    vistos: set[str] = set()
-    nomes: list[str] = []
+    atalhos: dict[str, Path] = {}
     for pasta in dict.fromkeys(pastas):
-        try:
-            arquivos = sorted(pasta.glob("*.desktop"))
-        except OSError:
+        for arquivo in sorted(pasta.glob("*.desktop")):
+            atalhos.setdefault(arquivo.name, arquivo)
+    nomes: list[str] = []
+    for arquivo in atalhos.values():
+        entrada = _entrada_do_atalho(arquivo)
+        if entrada.get("hidden", "").strip().casefold() == "true":
             continue
-        for arquivo in arquivos:
-            if arquivo.name in vistos:
-                continue
-            vistos.add(arquivo.name)
-            cfg = configparser.ConfigParser(strict=False, interpolation=None)
-            try:
-                cfg.read_string(arquivo.read_text(encoding="utf-8", errors="replace"))
-            except (OSError, configparser.Error):
-                continue
-            if not cfg.has_section("Desktop Entry"):
-                continue
-            entrada = cfg["Desktop Entry"]
-            if entrada.get("Hidden", "").strip().casefold() == "true":
-                continue
-            if _CHAMA_O_UMU.search(entrada.get("Exec", "")):
-                nomes.append(entrada.get("Name", "").strip() or arquivo.stem)
+        if _CHAMA_O_UMU.search(entrada.get("exec", "")):
+            nomes.append(entrada.get("name", "").strip() or arquivo.stem)
     return tuple(nomes)
+
+
+def _entrada_do_atalho(arquivo: Path) -> dict[str, str]:
+    import configparser
+
+    cfg = configparser.ConfigParser(strict=False, interpolation=None)
+    try:
+        cfg.read_string(arquivo.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, configparser.Error):
+        return {}
+    return dict(cfg["Desktop Entry"]) if cfg.has_section("Desktop Entry") else {}
