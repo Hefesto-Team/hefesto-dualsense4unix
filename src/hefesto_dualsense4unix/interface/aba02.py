@@ -1773,7 +1773,7 @@ def _conferir(doc, aba="02-controles"):
         exigir(not re.search(r"\d", visivel),
                f"um número voltou ao rótulo do alto-falante ({visivel.strip()!r}): "
                f"a linha de baixo já mostra o volume no `alto-num`, e o item 2.3 "
-               f"da lista de uso tirou a segunda cópia")
+               f"da lista do usuário tirou a segunda cópia")
 
     for b in ("giroscopio", "acelerometro"):
         exigir(f'data-bloco="{b}"' in corpo, f"a moldura {b} sumiu")

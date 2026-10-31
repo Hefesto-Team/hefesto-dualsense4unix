@@ -356,7 +356,7 @@ e hoje ele quase aconteceu: apontada para a cópia de `novo-layout/` da própria
 árvore `interface/nova`, a cópia **pulou** com
 `ModuleNotFoundError: No module named 'mesa_viva'` — porque aquela cópia é de
 28/08 03:09 e não tem o piloto. A cópia só passa porque o instrumento varre as
-árvores que o `git` declara e escolhe **a mais nova**, que hoje é a a do usuário.
+árvores que o `git` declara e escolhe **a mais nova**, que hoje é a do usuário.
 Quem contar pulos como aprovação vai declarar cobertura sobre uma árvore que não
 tem o que medir.
 
