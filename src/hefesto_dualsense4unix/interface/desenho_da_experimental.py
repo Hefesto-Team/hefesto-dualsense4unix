@@ -495,6 +495,11 @@ def _onda_da_forma(passos: Sequence[tuple[float, float]]) -> str:
 
 
 def _por_botao_da_opcao(o: OpcaoDaJanela) -> str:
+    """A grade dos botões, uma linha por botão (:func:`_linhas_do_por_botao`)."""
+    return f'<div class="tq-lista" aria-label="{_a(o.rotulo)}">{"".join(_linhas_do_por_botao(o))}</div>'
+
+
+def _linhas_do_por_botao(o: OpcaoDaJanela) -> list[str]:
     """Uma linha por botão: o glifo, a onda da forma escolhida e a lista das formas.
 
     A lista age no ``change``, com o botão no ``data-v``; o valor de cada botão é o guardado.
@@ -514,7 +519,7 @@ def _por_botao_da_opcao(o: OpcaoDaJanela) -> str:
             f'<select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" '
             f'data-v="{_a(o.mod)}:{_a(o.id)}:{_a(botao)}" aria-label="{_a(o.rotulo)}">{itens}'
             "</select></div>")
-    return f'<div class="tq-lista" aria-label="{_a(o.rotulo)}">{"".join(linhas)}</div>'
+    return linhas
 
 
 def entrada_da_opcao(o: OpcaoDaJanela) -> str | None:
@@ -544,19 +549,23 @@ def _ao_quadrado(t: float) -> float:
 _FORMA_DA_ENTRADA: dict[str, Callable[[float], float]] = {"direto": _rampa, "suave": _ao_quadrado}
 
 
-def _onda_da_entrada(escolha: object) -> str:
+def _onda_da_entrada(escolha: object,
+                     formas: Mapping[str, Sequence[tuple[float, float]]] | None = None) -> str:
     """O desenho do efeito da entrada contínua, no mesmo traço e tamanho da onda dos toques.
 
-    «Nenhum» é o zero tracejado; «Direto» é a rampa reta (a força segue a entrada) e «Suave» a
-    mesma curva ao quadrado (o começo é leve), como a extensão as aplica. Um valor sem desenho
-    deixa o lugar vazio, do mesmo tamanho.
+    «Direto» é a rampa reta (a força segue a entrada) e «Suave» a mesma curva ao quadrado (o começo
+    é leve), como a extensão as aplica; os outros efeitos são a forma de mesmo nome nas ``formas``,
+    pelo mesmo desenho da onda dos botões (:func:`_onda_da_forma`), e «Nenhum» é o zero tracejado.
+    Um valor sem desenho deixa o lugar vazio, do mesmo tamanho.
     """
     nome = str(escolha).strip().casefold()
     cabeca = '<svg class="onda" width="52" height="14" viewBox="0 0 52 14" aria-hidden="true">'
+    forma = _FORMA_DA_ENTRADA.get(nome)
+    if forma is None and isinstance(escolha, str) and escolha in (formas or {}):
+        return _onda_da_forma((formas or {})[escolha])
     if nome == "nenhum":
         return (f'{cabeca}<line class="onda-zero" x1="2" y1="13" x2="{2 + _ONDA_L:g}" y2="13"/>'
                 "</svg>")
-    forma = _FORMA_DA_ENTRADA.get(nome)
     if forma is None:
         return f"{cabeca}</svg>"
     passo = _ONDA_L / _DEGRAUS_DA_ONDA
@@ -571,7 +580,7 @@ def _onda_da_entrada(escolha: object) -> str:
 def _linha_da_entrada(o: OpcaoDaJanela) -> str:
     """A linha da entrada no arranjo dos botões de cima: o glifo, o desenho do efeito escolhido,
     o rótulo na dica e a lista."""
-    onda = _onda_da_entrada(o.valor) if o.tipo == "escolha" else ""
+    onda = _onda_da_entrada(o.valor, dict(o.formas)) if o.tipo == "escolha" else ""
     return (f'<div class="tql" id="{PEDACO}op-{_a(o.id)}" data-dica="{_a(o.dica or o.rotulo)}">'
             f'<svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">'
             f'<use href="#en-{_a(entrada_da_opcao(o) or "")}"/></svg>'
@@ -744,15 +753,44 @@ def _linha_da_opcao(o: OpcaoDaJanela) -> str:
             f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>')
 
 
+def _vai_na_grade(o: OpcaoDaJanela) -> bool:
+    return o.tipo == "por_botao" or glifo_da_entrada(o) is not None
+
+
+def _grades(juntas: Sequence[OpcaoDaJanela]) -> list[list[OpcaoDaJanela]]:
+    """As grades de uma sequência de botões e entradas: uma só, salvo um segundo ``por_botao``,
+    que abre a dele."""
+    grades: list[list[OpcaoDaJanela]] = [[]]
+    for o in juntas:
+        if o.tipo == "por_botao" and any(x.tipo == "por_botao" for x in grades[-1]):
+            grades.append([])
+        grades[-1].append(o)
+    return grades
+
+
+def _grade(itens: Sequence[OpcaoDaJanela]) -> str:
+    """Os botões do ``por_botao`` e as entradas com glifo numa ``.tq-lista`` só, na ordem do
+    manifesto. Com o ``por_botao``, a grade é o pedaço dele, com o rótulo em cima."""
+    linhas = "".join("".join(_linhas_do_por_botao(o)) if o.tipo == "por_botao"
+                     else _linha_da_entrada(o) for o in itens)
+    dono = next((o for o in itens if o.tipo == "por_botao"), None)
+    if dono is None:
+        return f'<div class="tq-lista">{linhas}</div>'
+    return (f'<div id="{PEDACO}op-{_a(dono.id)}"{_dica_da_linha(dono)}><div class="ky-rot">'
+            f'<span>{_e(dono.rotulo)}</span></div>'
+            f'<div class="tq-lista" aria-label="{_a(dono.rotulo)}">{linhas}</div></div>')
+
+
 def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
-    """Uma linha por opção; as entradas do controle com glifo, juntas, no arranjo dos botões.
+    """Uma linha por opção; os botões do ``por_botao`` e as entradas do controle com glifo, numa
+    grade só (:func:`_grade`).
 
     Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só a opção.
     """
     partes = []
-    for com_glifo, juntas in itertools.groupby(itens, key=lambda o: glifo_da_entrada(o) is not None):
-        if com_glifo:
-            partes.append(f'<div class="tq-lista">{"".join(map(_linha_da_entrada, juntas))}</div>')
+    for na_grade, juntas in itertools.groupby(itens, key=_vai_na_grade):
+        if na_grade:
+            partes.extend(map(_grade, _grades(list(juntas))))
         else:
             partes.extend(map(_linha_da_opcao, juntas))
     return "".join(partes)
