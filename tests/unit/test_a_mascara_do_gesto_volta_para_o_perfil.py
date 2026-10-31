@@ -411,7 +411,7 @@ class TestOQueNenhumaDasDuasFaz:
     async def test_o_silencio_sem_gesto_continua_carimbando_por_silencio(
         self, jogo_do_usuario: int
     ) -> None:
-        """A escada sem gesto nenhum não muda de origem NEM alinha o `mode`."""
+        """A escada sem gesto nenhum não muda de origem, e o perfil sem `mode` ganha o da ponte."""
         sem_modo = Profile(
             name="Jogo Fictício Carimbado",
             match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
@@ -433,7 +433,9 @@ class TestOQueNenhumaDasDuasFaz:
         gravado = _no_disco()
         assert gravado.ponte is not None
         assert gravado.ponte.confirmada_por == "silencio"
-        assert gravado.mode is None, "escreveu `mode` num perfil sem opinião"
+        assert gravado.mode == ProfileModeConfig(
+            kind="gamepad", gamepad_flavor="dualsense", caminho="dualsense"
+        )
 
     def test_a_fixture_e_o_estado_do_usuario_de_29_08(self) -> None:
         """A régua da própria régua: se a cópia mudar, o teste deixa de medir"""
