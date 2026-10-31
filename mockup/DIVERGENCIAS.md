@@ -23,7 +23,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 07-lancadores.html
 - **31/10/2026** — AS-FRASES-QUE-SOBRARAM-DA-TELA-SAEM-01: as linhas de impedimento dizem só «Steam Input ligado» e
-  «Fora do Proton fixado», sem o que o jogo vê; os botões ficam. Até publicar, o produto abre a frase longa do desenho.
+  «Fora do Proton fixado», sem o que o jogo vê; os botões ficam. A lista viva já sai curta do
+  `impedimentos_da_steam`; até publicar, só o exemplo estático da página guarda a frase longa.
 
 ## 08-conexoes.html
 - **31/10/2026** — AS-FRASES-QUE-SOBRARAM-DA-TELA-SAEM-01: a dica de cada entrada do mapa do gabinete perde
