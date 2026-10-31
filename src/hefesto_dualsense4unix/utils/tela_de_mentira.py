@@ -20,6 +20,62 @@ def _ha_sessao_viva() -> bool:
     return bool(os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"))
 
 
+def _dono_do_lock(numero: int) -> int | None:
+    with contextlib.suppress(OSError, ValueError):
+        return int(Path(f"/tmp/.X{numero}-lock").read_text())
+    return None
+
+
+def _vivo(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _escuta_a_tela(pid: int, numero: int) -> bool:
+    nome = f"@/tmp/.X11-unix/X{numero}"
+    with contextlib.suppress(OSError):
+        linhas = Path("/proc/net/unix").read_text().splitlines()[1:]
+        inodes = {
+            f"socket:[{campos[6]}]"
+            for campos in (linha.split() for linha in linhas)
+            if len(campos) >= 8 and campos[7] == nome
+        }
+        for fd in os.listdir(f"/proc/{pid}/fd"):
+            with contextlib.suppress(OSError):
+                if os.readlink(f"/proc/{pid}/fd/{fd}") in inodes:
+                    return True
+    return False
+
+
+def _a_tela_e_deste_xvfb(proc: subprocess.Popen[bytes], numero: int) -> bool:
+    for _ in range(100):
+        if proc.poll() is not None:
+            return False
+        dono = _dono_do_lock(numero)
+        if dono is not None and dono != proc.pid and _vivo(dono):
+            return False
+        if dono == proc.pid and _escuta_a_tela(proc.pid, numero):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _encerrar(proc: subprocess.Popen[bytes]) -> None:
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    with contextlib.suppress(Exception):
+        proc.wait(timeout=5)
+    if proc.poll() is None:
+        proc.kill()
+        proc.wait()
+
+
 def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
     """Aponta o GTK para um ``Xvfb`` próprio. Devolve o ``DISPLAY``, ou ``None``."""
     global _XVFB, _JA_FEITO
@@ -50,11 +106,8 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        for _ in range(100):
-            if Path(f"/tmp/.X11-unix/X{numero}").exists() or proc.poll() is not None:
-                break
-            time.sleep(0.05)
-        if proc.poll() is not None:
+        if not _a_tela_e_deste_xvfb(proc, numero):
+            _encerrar(proc)
             continue
         _XVFB = proc
         os.environ["DISPLAY"] = f":{numero}"
@@ -84,11 +137,6 @@ def derrubar_tela_de_mentira() -> None:
     """Mata o ``Xvfb`` **pelo PID deste processo**, e só ele."""
     global _XVFB
     proc = _XVFB
-    if proc is None or proc.poll() is not None:
-        return
-    proc.terminate()
-    with contextlib.suppress(Exception):
-        proc.wait(timeout=5)
-    if proc.poll() is None:
-        proc.kill()
     _XVFB = None
+    if proc is not None:
+        _encerrar(proc)
