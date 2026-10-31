@@ -1113,8 +1113,7 @@ def _maybe_seed_presets() -> None:
             enxugar_perfis_de_jogo()
         with contextlib.suppress(Exception):
             o_mudo_do_microfone_vai_para_o_controle()
-        with contextlib.suppress(Exception):
-            o_carimbo_da_escolha_ganha_o_nome_novo()
+        o_carimbo_da_escolha_ganha_o_nome_novo()
     except Exception as exc:
         logger.warning(
             "presets_seed_failed",
