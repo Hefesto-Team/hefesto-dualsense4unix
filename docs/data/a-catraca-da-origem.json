@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-28",
+      "data": "2026-10-31",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 32,
+      "piso": 31,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -19,7 +19,6 @@
         "integrations/cor_do_plastico.py::modelo": 1,
         "integrations/cor_do_plastico.py::transporte": 1,
         "integrations/dualsense_bt_audio.py::modelo": 1,
-        "integrations/ponte_escada.py::mascara": 1,
         "integrations/storm_doctor.py::transporte": 1,
         "interface/aba02.py::transporte": 1,
         "interface/aba07.py::transporte": 2,
@@ -46,7 +45,7 @@
         }
       ],
       "unidade": "ramos",
-      "universo": 406
+      "universo": 416
     },
     "remendos-de-sintoma": {
       "data": "2026-10-28",
@@ -240,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1171876,
+      "piso": 1172174,
       "por_item": {
         "docs": 107802,
         "scripts": 109592,
-        "src": 295967,
-        "tests": 658515
+        "src": 295990,
+        "tests": 658790
       },
-      "razao": "tamanho: +24 linhas (1171852 -> 1171876), pagas por Origem: D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO; registrado no fecho, topo 3461519137d7",
+      "razao": "tamanho: +298 linhas (1171876 -> 1172174), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo 7acb02bd0cdc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1244,10 +1243,16 @@
           "de": 1171852,
           "para": 1171876,
           "razao": "tamanho: +24 linhas (1171852 -> 1171876), pagas por Origem: D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO; registrado no fecho, topo 3461519137d7"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1171876,
+          "para": 1172174,
+          "razao": "tamanho: +298 linhas (1171876 -> 1172174), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo 7acb02bd0cdc"
         }
       ],
       "unidade": "linhas",
-      "universo": 3269
+      "universo": 3270
     }
   }
 }
