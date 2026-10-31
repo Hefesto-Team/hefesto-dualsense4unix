@@ -9,7 +9,8 @@ A RÉGUA: no WebKit, com o BOOTSTRAP do piloto, o tique pinta em sequência os e
 rótulo pode mostrar (sem leitura, ATIVO, DESLIGADO com «Saída muda», o traço) nos dois
 transportes, e a altura do cartão e a de cada `.rot-linha` não mudam, e o conteúdo cabe na
 linha, em três larguras: a menor é a vista do desenho, que `tamanho_que_cabe` garante em pixels
-de CSS.
+de CSS. A folha do piso da página aberta é trocada pela de `folha_da_casa.py` de agora, para a
+régua medir a origem e não a cópia gerada no mockup.
 """
 from __future__ import annotations
 
@@ -25,7 +26,12 @@ import pytest
 
 from hefesto_dualsense4unix.interface import pacotes  # isort:skip
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, onde
-from hefesto_dualsense4unix.interface.folha_da_casa import ALVO_MINIMO_PX, VISTA_DO_DESENHO
+from hefesto_dualsense4unix.interface.folha_da_casa import (
+    ALVO_MINIMO_PX,
+    ID_DA_FOLHA_DO_PISO,
+    PISO_POR_PAGINA,
+    VISTA_DO_DESENHO,
+)
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
 from tests.conftest import skip_sem_gi_real
@@ -99,6 +105,11 @@ def tela(request: pytest.FixtureRequest) -> Any:
 
     t = regua_de_tela.Tela(JOGAR, titulo_esperado="Hefesto", largura=request.param, altura=809)
     t.executar(_bootstrap() + ";'ok'")
+    trocada = t.executar(
+        f"(function(){{var s=document.getElementById({json.dumps(ID_DA_FOLHA_DO_PISO)});"
+        f"if(!s)return 'sem';s.textContent={json.dumps(PISO_POR_PAGINA['02-controles'])};"
+        "return 'ok';})()")
+    assert trocada == "ok", "a página da Jogar perdeu a folha do piso"
     yield t
     t.fechar()
 
