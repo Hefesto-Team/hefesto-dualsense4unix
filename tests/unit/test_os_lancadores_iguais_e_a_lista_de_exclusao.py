@@ -319,7 +319,7 @@ def test_steam_app_1_nao_casa_steam_app_15(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
     """As aspas dos dois lados do número: excluir um jogo não exclui o de"""
     antiga.adicionar("steam_app_9931993", lancador="steam", nome="Wo Long")
-    r, _ = _lancar(_runtime_com_daemon, tmp_path, "159966")
+    r, _ = _lancar(_runtime_com_daemon, tmp_path, "993199")
     assert "HIDAPI=0|" in r.stdout, r.stdout
 
 

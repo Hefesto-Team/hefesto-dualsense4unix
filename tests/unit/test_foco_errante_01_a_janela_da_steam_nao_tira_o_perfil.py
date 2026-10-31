@@ -370,9 +370,9 @@ def test_pid_reciclado_nao_segura_o_perfil(
 
 
 def test_a_corroboracao_nao_confunde_appid_prefixo(tmp_path: Path) -> None:
-    """`AppId=994995` não é `AppId=9949958` — a fronteira do número é dura."""
+    """`AppId=99499580` não é `AppId=9949958` — a fronteira do número é dura."""
     base = _marker(tmp_path)
-    proc = _proc_falso(tmp_path, cmdline=b"reaper\0SteamLaunch\0AppId=24979000\0")
+    proc = _proc_falso(tmp_path, cmdline=b"reaper\0SteamLaunch\0AppId=99499580\0")
 
     assert jogo_do_wrapper_vivo(base_dir=base, proc_dir=proc) is None
 
