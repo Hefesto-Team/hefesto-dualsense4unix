@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1173403,
+      "piso": 1173916,
       "por_item": {
         "docs": 107806,
         "scripts": 110027,
-        "src": 295829,
-        "tests": 659741
+        "src": 296072,
+        "tests": 660011
       },
-      "razao": "tamanho: +1491 linhas (1171912 -> 1173403), pagas por Origem: D-0410-A-PONTE-DO-RADIO-LEVA-UM-RELATORIO-SO, D-0609-O-ENSAIO-PROVA-NAO-BLOQUEIA, D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, luz.lightbar.cor; registrado no fecho, topo 6586540921cd",
+      "razao": "tamanho: +513 linhas (1173403 -> 1173916), pagas por Origem: D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo 1318eedc3820",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1255,10 +1255,16 @@
           "de": 1171912,
           "para": 1173403,
           "razao": "tamanho: +1491 linhas (1171912 -> 1173403), pagas por Origem: D-0410-A-PONTE-DO-RADIO-LEVA-UM-RELATORIO-SO, D-0609-O-ENSAIO-PROVA-NAO-BLOQUEIA, D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, luz.lightbar.cor; registrado no fecho, topo 6586540921cd"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1173403,
+          "para": 1173916,
+          "razao": "tamanho: +513 linhas (1173403 -> 1173916), pagas por Origem: D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo 1318eedc3820"
         }
       ],
       "unidade": "linhas",
-      "universo": 3275
+      "universo": 3276
     }
   }
 }
