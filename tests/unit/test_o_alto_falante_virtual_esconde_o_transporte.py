@@ -6,7 +6,7 @@ transporte**. O contrato é o mesmo do vpad: o jogo escolhe um gamepad, não um
 transporte — aqui, quem escolhe a saída escolhe um CONTROLE, não um sink.
 
 **O nome é do usuário** (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`,
-palavra de produto: *"4a"*): «Alto-falante do Controle N», par de «Microfone do
+opção 4a): «Alto-falante do Controle N», par de «Microfone do
 Controle N», com o sufixo da Sony desde 23/09/2026. O `sink_name` segue o
 APARELHO (`hefesto_som_<hex6>`), e por isso sobrevive à troca de assento tanto
 quanto à troca de cabo.

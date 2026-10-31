@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A ABA VIBRAÇÃO NO PERFIL DO USUÁRIO: o degrau herdado acende, e o clique responde.
 
-**QUEIXA, 17/09/2026, com a foto da aba aberta:** *"o botão não tá ativo"*.
+**QUEIXA, 17/09/2026, com a foto da aba aberta:** o botão não estava ativo.
 Nenhum dos três — Economia, Balanceado, Máximo — aceso, e a coluna ao lado
 marcando **150%**. A tela negando a força que a mão do usuário sentia.
 

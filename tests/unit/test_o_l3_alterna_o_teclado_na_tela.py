@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A RÉGUA DO SEGUNDO TOQUE — o L3 abre, e apertado de novo FECHA.
 
-DECISÃO, 02/09/2026, verbatim: *"deixar no preset do botão L3, no
-mapeamento, abrir o teclado virtual e fechar o teclado virtual caso apertado
-novamente."*
+DECISÃO de 02/09/2026: o preset do botão L3, no
+mapeamento, abre o teclado virtual e o fecha se apertado
+de novo.
 
 POR QUE ESTA RÉGUA EXISTE, e por que a régua não mede o primeiro toque: **todo
 alternador desta casa nasce verde medindo só a ida.** `open()` sozinho passa em

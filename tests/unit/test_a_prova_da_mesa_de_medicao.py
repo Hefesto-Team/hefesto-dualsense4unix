@@ -686,7 +686,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_do_usuario(pw, lar, mentira) -> None:
 
 def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
         pw, lar, mentira) -> None:
-    """*"a ideia é ficar fácil pra validarmos as teses, a grande maioria ali já"""
+    """A mesa fica fácil para validar as teses."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1100})
         pg.goto(s.url)
@@ -821,7 +821,7 @@ def test_a_peca_em_foco_acende_como_no_mapa_do_controle(pw, lar, mentira) -> Non
 
 
 def test_a_folha_do_desenho_vem_do_mapa_do_controle() -> None:
-    """*"e cara o contorno não tá pintado (…) abra o playwright e mude o tipo"""
+    """O contorno sem pintura, conferido no Playwright com a troca do tipo."""
     folha = med.folha_do_desenho(["p1", "p2"])
     assert "stroke:var(--z-casca-solida" in folha and "--sem-plastico:" in folha, (
         "a folha do desenho perdeu o contorno na cor do plástico")
@@ -932,7 +932,7 @@ def test_as_21_do_ensaio_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
 
 
 def test_a_espera_longa_nao_prende_o_usuario_na_tela(pw, lar, mentira) -> None:
-    """*"sinceramente não entendi o que diabos é pra fazer aqui"* — 07/09/2026,"""
+    """A tela que não dizia o que fazer — 07/09/2026."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1400, "height": 1050})
         pg.goto(s.url)
@@ -1050,7 +1050,7 @@ def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
 
 
 def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
-    """*"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra"""
+    """Depois dos 21, o novo modelo vale também para o mapa."""
     do_arquivo = med.como_do_mapa()
     assert len(do_arquivo) > 150, (
         f"o arquivo do gesto do mapa publica {len(do_arquivo)} células — "

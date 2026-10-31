@@ -4,7 +4,7 @@ O pedido, 08/09/2026 à noite: os quatro microfones virtuais, um por controle, n
 e no cabo.
 
 E o NOME é decisão de 09/09/2026 (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
-MICROFONE-DO-CONTROLE-N`, palavra de produto: *"4a"*): **«Microfone do Controle N»**,
+MICROFONE-DO-CONTROLE-N`, opção 4a): **«Microfone do Controle N»**,
 com o número do ASSENTO, como na tela.
 
 O QUE ESTE ARQUIVO MORDE, e os três são defeitos MEDIDOS nesta árvore

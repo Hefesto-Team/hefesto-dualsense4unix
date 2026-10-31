@@ -343,7 +343,7 @@ def test_o_piso_da_aba_desceu_com_a_ordem_do_usuario(a04):
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():
-    """*"o que eu não quero é frase da steam ou outras"* — 07/09/2026."""
+    """Nada de frase da Steam ou de outros na célula — 07/09/2026."""
     import re
 
     from hefesto_dualsense4unix.interface import onde

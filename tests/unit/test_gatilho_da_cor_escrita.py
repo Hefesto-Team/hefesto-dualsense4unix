@@ -8,16 +8,16 @@ O QUE ESTE ARQUIVO TRAVA, e cada item é uma medição
 - **a ROTA é hidraw, nunca sysfs.** Ensaios `cor-rota-sysfs-com-steam` (com a
   Steam aberta, escrever por `multi_intensity` NÃO muda a barra) contra
   `cor-rota-hidraw-com-steam` (o mesmo instante, o report 0x31 cru pintou os
-  três — literal: *"todos tao magenta"*);
+  três: todos ficaram magenta);
 - **escreve em TODOS os do rádio**, não só no que chegou: a rajada da Steam é
   por evento e repinta todo mundo (`gatilho-1500ms-por-controle`);
 - **cor E número de jogador no MESMO report**: a Steam repinta os dois, e
   pergunta em 12/08 — *"isso vai servir pro player e pro lightbar,
   certo?"*;
 - **o portão dos dois modos**: em Modo Nativo / Conexão Nativa (Sony) o dono é
-  o jogo, e o gatilho não escreve NADA. Regra de produto, literal: *"no modo nativo
-  devolvemos o controle pra steam e no modo conexão também, todo o resto é o
-  hefesto"*;
+  o jogo, e o gatilho não escreve NADA. Regra de produto: no Modo Nativo
+  o controle volta para a Steam, e na Conexão Nativa também; todo o resto é do
+  Hefesto;
 - **o cabo fica de fora**: lá a barra obedece (ensaio `lightbar-usb-1`), e
   escrever seria trabalho sem defeito para curar;
 - **a escrita é INCONDICIONAL**: nada de consultar cache de nó sysfs. Medido em

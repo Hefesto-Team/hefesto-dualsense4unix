@@ -1,7 +1,7 @@
 """A aba Vibração ganha as duas listas por controle (sprint dos botões de efeito, V3).
 
 Cada controle tem o seu «Efeito háptico» e o seu «Padrão dos motores», listas suspensas (15/10/2026,
-«quero uma lista suspensa em cada escolha»). A primeira é «Do estilo» e a segunda «Sem efeito».
+uma lista suspensa em cada escolha). A primeira é «Do estilo» e a segunda «Sem efeito».
 A escolha vai ao perfil pelo ``rumble.motores.set``, na peça do clique, e «Do estilo» apaga a chave.
 """
 

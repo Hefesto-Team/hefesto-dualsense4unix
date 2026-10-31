@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A TELA NÃO SAMBA — a interface parada não pode mexer no DOM.
 
-**A palavra, 06/09/2026, com o produto aberto e um DualSense no cabo:**
-*"a interface inteira tá sambando"* — e quatro sintomas: pisca/repinta sem
-parar, cliques não aplicam ou atrasam, trava por instantes, e *"botões não
-funcionam, algo ativa o tooltip mas ele se desativa"*.
+**A queixa, 06/09/2026, com o produto aberto e um DualSense no cabo:** a
+interface inteira instável, com quatro sintomas: pisca/repinta sem
+parar, cliques não aplicam ou atrasam, trava por instantes, e botões que não
+funcionam, com a dica que se ativa e logo se desativa.
 
 POR QUE FOTO NENHUMA VIA ISSO, e é a razão de esta régua existir: duas fotos da
 tela do usuário com um minuto de intervalo saem IDÊNTICAS. O defeito não está no

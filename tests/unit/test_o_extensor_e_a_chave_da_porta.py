@@ -1,7 +1,7 @@
 """O extensor é a chave da porta, não o que está ligado na porta.
 
-O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026). O usuário disse: *«marcar Extensor impede
-dizer que há um dispositivo BT ali»*. Antes, «Extensor» era uma das respostas de «O que tem
+O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026). A queixa: marcar Extensor impedia
+dizer que há um dispositivo BT ali. Antes, «Extensor» era uma das respostas de «O que tem
 na entrada», ao lado de «Direto» e «Hub», e criava uma entrada-filha (a ponta). Agora é uma
 chave ``extensor`` da própria entrada, que convive com o que a entrada declara ter ligado, e
 que o motor lê como entrada esticada.

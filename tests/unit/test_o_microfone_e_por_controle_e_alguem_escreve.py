@@ -10,7 +10,7 @@ relatava, e a única forma de subir a ponte era exportar
 A-CASA-SABE-E-O-PRODUTO-NAO-FAZ, e é exatamente o que o
 `portao_a_casa_sabe_e_o_produto_nao_faz` mede.
 
-A decisão de produto, textual em 22/08: *"por controle"*. Um `bool` não sustenta
+A decisão de produto de 22/08: por controle. Um `bool` não sustenta
 quatro independentes — ele só sabe dizer "todos" ou "nenhum" —, e por isso o
 gate virou um CONJUNTO de `uniq`, com a ausência valendo desligado.
 

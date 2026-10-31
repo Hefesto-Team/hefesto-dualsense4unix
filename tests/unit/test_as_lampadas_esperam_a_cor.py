@@ -1,6 +1,6 @@
 """As lâmpadas esperam a cor — APARELHO-NAO-SE-CONTRADIZ-01, PARTE 1.
 
-DECISÃO, 20/09/2026, verbatim: *"As lâmpadas esperam a cor"*. A razão é
+DECISÃO de 20/09/2026: as lâmpadas esperam a cor. A razão é
 do produto, e não do código: **o aparelho nunca se contradiz consigo mesmo.**
 
 ## O que foi medido, com os quatro DualSense no ensaio

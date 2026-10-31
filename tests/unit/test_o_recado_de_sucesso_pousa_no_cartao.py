@@ -58,9 +58,9 @@ defeito inteiro. O que é estado que FICA (a frase no cartão, o botão de volta
 é perguntado até aparecer.
 
 AS SETE COISAS QUE ESTA RÉGUA COBRAVA — E AS CINCO PRIMEIRAS MUDARAM DE CONTRATO
-EM 13/09/2026 (TELA-CALADA-01). Pela palavra de produto, *"essas frases de status que
-aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as abas da
-interface"*, o gesto que deu certo não põe frase na tela — nem a do dono do
+EM 13/09/2026 (TELA-CALADA-01). Pela decisão de produto, as frases de status do
+rodapé não aparecem, em todas as abas da
+interface, e o gesto que deu certo não põe frase na tela — nem a do dono do
 assunto: a frase vai ao diário da janela. A régua do contrato novo é
 ``test_a_tela_nao_narra_o_gesto_que_deu_certo``; aqui os itens 1 a 5 viraram o
 avesso, e as esperas por condição da FLAKE-DO-PISCA continuam as mesmas:

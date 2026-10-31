@@ -22,7 +22,7 @@ hid-playstation.c`, lido no fonte desta árvore):
   mexem sozinhos.
 
 **A segunda consequência é a entrada fantasma relatada duas vezes**
-(*"o teclado fica se mexendo quando vc dá o comando"*). E a medição de 10/09
+(o teclado na tela se mexendo quando o comando sai). E a medição de 10/09
 que deu ZERO em 120 s não a derruba: naquela corrida **o microfone não estava
 no ar**, logo não havia quadro de áudio a ser lido como botão.
 

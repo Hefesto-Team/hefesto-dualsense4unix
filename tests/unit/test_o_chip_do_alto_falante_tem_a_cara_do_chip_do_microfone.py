@@ -194,7 +194,7 @@ class TestACaraDoChip:
     def test_o_chip_do_canal_tem_a_cara_que_os_dois_ja_tinham(
         self, pagina: str
     ) -> None:
-        """*"deixar esse acordado com o mesmo estilo do botao que ta MUDO acima"*."""
+        """O acordado com o mesmo estilo do botão MUDO de cima."""
         canal = _classe_do_campo(pagina, CAMPO_DO_CHIP_DO_CANAL)
         tem = _estilo(pagina, canal)
         falta = {p: v for p, v in _cara_de_chip(pagina).items()

@@ -1,8 +1,8 @@
 """O Proton é sempre o mais recente que passa na ficha.
 
-O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA-NA-FICHA-01, 22/10/2026. Escolha do usuário: «é sempre a
-versão mais recente do próton desde que ele tenha os pré-requisitos e usaremos apenas a nova. As
-demais são excluídas». Os pré-requisitos são a ficha (D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA).
+O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA-NA-FICHA-01, 22/10/2026. Decisão de produto: é sempre a
+versão mais recente do Proton, desde que cumpra os pré-requisitos, e só a nova se usa; as
+demais se excluem. Os pré-requisitos são a ficha (D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA).
 Revoga a parte da D-1610-O-PROTON-QUE-SOBRA-CONTA-O-USO-DE-TODO-LANCADOR que mantinha a versão
 citada por um jogo: todo jogo passa para a nova e a velha sai; o que não dá para repontar
 (o Lutris, que é extensão, e o jogo nomeado em `jogos_fora_do_pino.txt`) mantém a versão dele.

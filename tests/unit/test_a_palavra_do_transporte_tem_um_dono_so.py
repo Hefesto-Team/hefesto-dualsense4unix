@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A palavra do transporte tem UM dono — e quem CONTA não a lê.
 
-ONDA4-S10, 06/09/2026. A decisão é de produto (D-05), verbatim: *"cabo / rádio, pela
-função que já existe."* A função é a dona da frase longa da janela estável,
+ONDA4-S10, 06/09/2026. A decisão é de produto (D-05): cabo / rádio, pela
+função que já existe. A função é a dona da frase longa da janela estável,
 em ``app/actions/home_actions.py:868``; esta régua mede que a interface nova a
 CHAMA em vez de reescrever a tradução, e — o que é mais caro — que **nenhuma
 conta desta casa depende da palavra**.

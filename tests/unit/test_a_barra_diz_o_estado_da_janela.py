@@ -73,7 +73,7 @@ def test_o_botao_do_meio_troca_de_cara_com_o_estado() -> None:
 
 
 def test_a_barra_tem_a_altura_do_vizinho_e_os_botoes_sem_pilula() -> None:
-    """*"altura da barra de navegação tá diferente do padrão e tem um circulo"""
+    """A barra de navegação com a altura fora do padrão e um círculo nos botões."""
     from gi.repository import Gtk
 
     barra, botoes = _barra_de_verdade()

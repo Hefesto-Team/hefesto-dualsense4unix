@@ -1,8 +1,8 @@
 """O portão 5.b — a ponte do mic não ganha porta nova antes da arbitragem.
 
 QUATRO-MICROFONES-01/E3, 25/08/2026. **Este portão é a régua que o
-`O-QUE-FICOU-ABERTO-01` tabelou em 16/08 e que ninguém escreveu.** A linha dele,
-textual: *"`bt_mic_enabled` não ganha escritor antes de 5.a"*.
+`O-QUE-FICOU-ABERTO-01` tabelou em 16/08 e que ninguém escreveu.** A linha dele
+diz que o `bt_mic_enabled` não ganha escritor antes de 5.a.
 
 O QUE ELE VIGIA, E POR QUE NÃO É "A ENTREGA DE 22/08 ERA ERRADA"
 ----------------------------------------------------------------

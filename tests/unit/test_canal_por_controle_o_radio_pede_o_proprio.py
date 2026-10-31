@@ -1,7 +1,7 @@
 """CANAL-POR-CONTROLE-01 — cada controle pede o canal DELE, e ninguém tira de ninguém.
 
-Decisão, 03/09/2026, com as palavras do usuário e sem corrigi-las:
-*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+Decisão de 03/09/2026: com quatro controles, cada um dos quatro tem o próprio canal
+de entrada.
 
 **O QUE ESTAVA MEDIDO**, com os dois controles na mesa: existia UM canal, o do
 cabo. O do rádio não publicava fonte nenhuma, e quem recusava eram duas travas

@@ -301,7 +301,7 @@ def test_o_pedido_recusado_nao_chega_ao_disco(casa: Any) -> None:
 
 
 def test_o_som_de_um_controle_nao_mexe_no_do_outro(casa: Any) -> None:
-    """*"pra cada perfil e dentro dele cada config pra cada comtrole"*.
+    """Para cada perfil, e dentro dele uma configuração para cada controle.
 
     Com dois DualSense na mesa, o volume do P2 é do P2. Esta é a metade do
     pedido que nenhum campo global sabe cumprir.

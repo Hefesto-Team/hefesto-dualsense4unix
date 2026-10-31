@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Só a primeira letra é maiúscula, em toda aba — e a régua MORDE.
 
-SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01 (09/10/2026), escolha do usuário: «Só a 1ª
-maiúscula». No meio da frase ou do rótulo, maiúscula só em nome próprio e marca
+SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01 (09/10/2026), decisão de produto: só a primeira
+letra maiúscula. No meio da frase ou do rótulo, maiúscula só em nome próprio e marca
 (DualSense, Steam, Hefesto, Linux, Proton, Xbox, Freestyle...). A régua é
 `scripts/check_so_a_primeira_letra.py`, nas dez publicadas e nas dez do `mockup/`.
 

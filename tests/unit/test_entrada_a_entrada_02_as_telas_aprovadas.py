@@ -737,7 +737,7 @@ def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
 
 
 def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
-    """Palavra de produto na R9: *«usarmos um dualsense e o USB pra sairmos de porta"""
+    """Decisão de produto na R9: um DualSense e o USB para sair de porta."""
     laco = _em_pe(vazia)
     dongle = vazia.plugar(1, "2", DONGLE_BT)
     foto = laco.olhar()
