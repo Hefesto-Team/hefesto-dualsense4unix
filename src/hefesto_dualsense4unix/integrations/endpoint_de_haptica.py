@@ -148,6 +148,7 @@ from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
     campos_da_identidade,
     campos_do_nome,
     com_o_nome_da_sony,
+    sem_o_nome_da_sony,
 )
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -641,8 +642,9 @@ class EndpointDeHaptica:
 
 
     def rotulo_de_agora(self) -> str:
-        """O rótulo que este nó teria se nascesse AGORA."""
-        return descricao_da_haptica(self.uniq)
+        """O rótulo que este nó teria se nascesse AGORA; o sem porta sai sem o nome da Sony."""
+        rotulo = descricao_da_haptica(self.uniq)
+        return sem_o_nome_da_sony(rotulo) if e_sem_porta(self.ancora) else rotulo
 
     def rotulo_envelheceu(self) -> bool:
         """O rótulo no ar ficou para trás do número de agora? Nunca levanta."""

@@ -3,12 +3,13 @@
 A causa medida em 31/10/2026: desde 14/10 (``6ad94334c``) o nó de háptica só nascia na porta
 do gadget do pad, e o gadget só existe no modo DualSense (``uhid``). No modo Xbox e no
 Nintendo o pad vai ao ``uinput``, o aparelho ficava sem nó, e com ele caíam a vibração como
-háptica fina, os efeitos do Hefesto, o laço do cabo e a ponte do rádio (alto-falante e
-microfone). A cura: o aparelho sem porta própria ganha o nó sem porta, só do Hefesto, sem o
-nome da Sony; o nó com o nome da Sony continua só na porta do próprio pad. O Modo Nativo fica
-como estava.
+háptica fina, os efeitos do Hefesto, o laço do cabo e a háptica pela ponte do rádio (o
+alto-falante e o microfone do rádio não dependem do nó). A cura: o aparelho sem porta própria
+ganha o nó sem porta, só do Hefesto, sem o nome da Sony (nem no rótulo); o nó com o nome da
+Sony continua só na porta do próprio pad. O Modo Nativo fica como estava.
 
-A régua vale para os modos ligados, P1 a P4, dois no cabo e dois no rádio. MORDIDA: troque, em
+A régua vale para os modos ligados sem gadget (Xbox, Nintendo e Navegação), P1 a P4, dois no
+cabo e dois no rádio. MORDIDA: troque, em
 ``_casar_as_pontes``, a atribuição de ``SEM_PORTA`` por ``continue``.
 """
 
@@ -20,6 +21,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import pad_usb
+from hefesto_dualsense4unix.integrations.vestido_de_dualsense import NOME_USB_DA_SONY
 from hefesto_dualsense4unix.integrations.virtual_pad import MODOS, par_do_modo, quer_uhid
 from tests.unit import porta_de_mentira as porta
 from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
@@ -27,7 +29,8 @@ from tests.unit import test_todo_pad_tem_porta_propria as t
 
 _TODOS = t._TODOS
 _IDS = ["p1-cabo", "p2-radio", "p3-cabo", "p4-radio"]
-_MODOS_SEM_GADGET = [m for m in MODOS if not quer_uhid(*par_do_modo(m))]
+_NAVEGACAO = "navegacao"
+_MODOS_SEM_GADGET = [*(m for m in MODOS if not quer_uhid(*par_do_modo(m))), _NAVEGACAO]
 
 
 @pytest.fixture
@@ -37,7 +40,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
 
 def _no_modo(uniq: str, modo: str, n: int) -> None:
     """O pad do aparelho no ``modo``: só o par que pede o ``uhid`` nasce no gadget."""
-    if quer_uhid(*par_do_modo(modo)):
+    if modo in MODOS and quer_uhid(*par_do_modo(modo)):
         porta.dar_porta(uniq, n)
 
 
@@ -46,8 +49,8 @@ def _o_no(mesa: Any, uniq: str) -> dict[str, Any]:
     return no
 
 
-def test_os_modos_ligados_sem_gadget_sao_o_xbox_e_o_nintendo() -> None:
-    assert sorted(_MODOS_SEM_GADGET) == ["nintendo", "xbox"]
+def test_os_modos_ligados_sem_gadget_sao_o_xbox_o_nintendo_e_a_navegacao() -> None:
+    assert sorted(_MODOS_SEM_GADGET) == ["navegacao", "nintendo", "xbox"]
 
 
 @pytest.mark.parametrize("modo", _MODOS_SEM_GADGET)
@@ -79,6 +82,8 @@ def test_o_no_sem_porta_nao_tem_o_nome_nem_a_identidade_da_sony(
     assert "sysfs.path" not in no["props"]
     assert "device.vendor.id" not in no["props"]
     assert "device.product.name" not in no["props"]
+    assert NOME_USB_DA_SONY not in no["props"].get("device.description", "")
+    assert no["props"].get("device.description", "").startswith(eh.NOME_DA_HAPTICA_DO_CONTROLE)
     assert mesa.servidor.do_nome(eh.nome_do_endpoint(uniq)) == []
 
 
@@ -95,7 +100,7 @@ def test_no_cabo_o_laco_leva_o_no_a_placa_em_todo_modo(mesa: Any, modo: str, uni
 
 @pytest.mark.parametrize("modo", _MODOS_SEM_GADGET)
 @pytest.mark.parametrize("uniq", [u for u in _TODOS if u not in t._NO_CABO], ids=["p2", "p4"])
-def test_no_radio_a_ponte_do_som_e_do_microfone_tem_o_no_em_todo_modo(
+def test_no_radio_a_ponte_leva_a_haptica_do_no_em_todo_modo(
     mesa: Any, modo: str, uniq: str
 ) -> None:
     _no_modo(uniq, modo, 1)
