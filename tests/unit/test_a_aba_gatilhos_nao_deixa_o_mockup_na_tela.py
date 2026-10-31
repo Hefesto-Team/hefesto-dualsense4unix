@@ -381,13 +381,14 @@ def test_o_travessao_espera_a_publicacao_do_usuario(a03):
 
 
 def test_o_travessao_esta_no_desenho_de_hoje(a03):
-    """O ENSAIO oferece `—` nos dois campos de escolha, e ele é `disabled`."""
+    """O ENSAIO oferece o «—», o nenhum efeito que o lugar vazio mostra, em todo campo."""
     from hefesto_dualsense4unix.interface import onde
 
     ensaio = onde.pagina(PAGINA).read_text(encoding="utf-8")
     miolo = ensaio.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     quantos = len(re.findall(
-        rf'<option value="{a03.TRAVESSAO}"[^>]*\bdisabled\b', miolo))
+        rf'<option value="{a03.SEM_IMERSAO}"(?![^>]*\b(?:disabled|hidden)\b)[^>]*>'
+        rf'{a03.TRAVESSAO}</option>', miolo))
     campos = len(re.findall(r"<select(?![^>]*data-linha)", miolo))
     assert quantos == campos, (
         f"{quantos} campos oferecem `—` e há {campos} campos de "

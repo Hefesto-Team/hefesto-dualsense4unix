@@ -170,8 +170,10 @@ def test_cada_celula_conectada_tem_o_efeito_e_a_vazia_nao() -> None:
         vazia = 'data-conectado="nao"' in c.split(">", 1)[0]
         assert "g2-imersao" in c and 'data-gesto="imersao"' in c, c[:200]
         assert "g2-acion" not in c and 'data-gesto="modo"' not in c, c[:200]
-        assert ('<option value="—" selected' in c) == vazia, (
-            "o lugar sem controle mostra o travessão e o conectado, não: " + c[:160])
+        if vazia:
+            assert '<option value="sem_efeito" selected' in c, (
+                "o lugar sem controle não mostra o «—»: " + c[:160])
+        assert not re.search(r"<option\b[^>]*\b(hidden|disabled)\b", c), c[:200]
     assert doc.count('data-gesto="imersao"') == 8 and doc.count('data-gesto="modo"') == 0
 
 
@@ -181,7 +183,7 @@ def test_a_lista_do_efeito_oferece_todas_em_grupos_por_familia_e_o_sem_efeito(a0
     chaves = re.findall(r'<option value="([^"]+)"', html)
     da_familia = {c for c in chaves if c in imersao.POR_CHAVE}
     assert da_familia == {i.chave for i in imersao.IMERSOES} - set(imersao.IGUAL_A)
-    assert "nenhum" in chaves
+    assert a03.SEM_IMERSAO in chaves and "nenhum" not in chaves and "—" not in chaves
     assert re.findall(r'<optgroup label="([^"]+)"', html)[:7] == list(imersao.FAMILIAS_DA_PAGINA)
 
 
@@ -267,7 +269,7 @@ def test_escolher_a_imersao_manda_ao_controle_os_numeros_do_usuario(a03, monkeyp
     assert list(args[2]) == a03._params_da_imersao(uma, "Machine", "")
     ponte2 = _Ponte()
     a03.imersao_escolhida(_ctx(), {**o, "valor": "nenhum"}, ponte2)
-    assert ponte2.chamadas[0][0] == "reset", "«Sem efeito» solta o gatilho"
+    assert ponte2.chamadas[0][0] == "reset", "o «—» solta o gatilho"
     with pytest.raises(ValueError, match="não é uma imersão"):
         a03.imersao_escolhida(_ctx(), {**o, "valor": "inventada"}, _Ponte())
     ponte3 = _Ponte()

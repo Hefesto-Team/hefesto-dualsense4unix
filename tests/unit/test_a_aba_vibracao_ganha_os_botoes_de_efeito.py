@@ -1,7 +1,7 @@
 """A aba Vibração ganha as duas listas por controle (sprint dos botões de efeito, V3).
 
 Cada controle tem o seu «Efeito háptico» e o seu «Padrão dos motores», listas suspensas (15/10/2026,
-uma lista suspensa em cada escolha). A primeira é «Do estilo» e a segunda «Sem efeito».
+uma lista suspensa em cada escolha). A primeira é «Do estilo» e a segunda o «—», o nenhum efeito.
 A escolha vai ao perfil pelo ``rumble.motores.set``, na peça do clique, e «Do estilo» apaga a chave.
 """
 
@@ -129,7 +129,7 @@ class TestAsLinhas:
     def test_uma_lista_por_controle_com_as_opcoes_do_produto(self, gesto: str) -> None:
         """Régua: a lista da tela é o vocabulário do produto, na ordem dele.
 
-        «Do estilo» abre e «Sem efeito» vem logo depois (a escolha de 15/10/2026).
+        «Do estilo» abre e o «—» vem logo depois (a escolha de 15/10/2026; o rótulo, de 31/10).
         """
         escolhas, rotulos, _dicas = LISTAS[gesto]
         for html in ("".join(aba05._coluna(c) for c in aba05.MESA),
@@ -142,7 +142,7 @@ class TestAsLinhas:
                 lidas = re.findall(r'<option value="([^"]+)"[^>]*>([^<]+)</option>', opcoes)
                 assert [v for v, _r in lidas] == list(escolhas)
                 assert [r for _v, r in lidas] == [rotulos[c] for c in escolhas]
-                assert lidas[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "Sem efeito")]
+                assert lidas[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "—")]
 
     @pytest.mark.parametrize("gesto", sorted(LISTAS))
     def test_cada_opcao_tem_uma_frase_de_uma_linha(self, gesto: str) -> None:

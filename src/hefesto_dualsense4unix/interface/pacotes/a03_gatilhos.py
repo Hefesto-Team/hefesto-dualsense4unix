@@ -42,6 +42,7 @@ import time
 from typing import Any
 
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
+from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 
 from . import Contexto, jogador_de, perfil, registrar
 from .meus_efeitos import (
@@ -225,7 +226,7 @@ def descricao_do_modo(chave: str) -> str:
     return str(getattr(spec, "description", "") or "")
 
 
-ROTULO_DO_JOGO_DECIDE = "Sem efeito"
+ROTULO_DO_JOGO_DECIDE = _sem_efeito.ROTULO
 
 GESTO_DO_MODO = "modo-dos-gatilhos"
 
@@ -320,7 +321,7 @@ def _modo_do_lado(lado: Any) -> str:
 
 
 def _todos_os_gatilhos_sem_efeito(p: dict[str, Any]) -> bool:
-    """Os dois lados globais e todo lado escrito de cada controle são «Sem efeito»?"""
+    """Os dois lados globais e todo lado escrito de cada controle são «—» (`Off`)?"""
     from hefesto_dualsense4unix.profiles.schema import MODO_SEM_EFEITO_DO_GATILHO
 
     globais = p.get("triggers")
@@ -381,7 +382,7 @@ def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
                              disco: str) -> dict[str, Any]:
     """O gatilho que aquele controle RECEBE daquele lado — `{"mode", "params"}`.
 
-    No modo automático ESCRITO a tela mostra «Sem efeito» nos dois lados de cada controle,
+    No modo automático ESCRITO a tela mostra «—» nos dois lados de cada controle,
     antes de olhar o rascunho: o aparelho recebe `Off` (a vista do `ProfileManager`), e as
     escolhas guardadas ficam no disco para o Personalizado devolver.
     """
@@ -420,7 +421,7 @@ def _o_que_o_perfil_da(p: dict[str, Any] | None, disco: str) -> dict[str, Any]:
 def _a_escolha_e_do_estilo(p: dict[str, Any] | None, uniq: str, disco: str) -> bool:
     """O lado daquele controle segue o estilo: há estilo, e nem o controle nem a sessão o escrevem.
 
-    No modo automático ESCRITO a tela segue no «Sem efeito» (`_o_que_o_controle_recebe`).
+    No modo automático ESCRITO a tela segue no «—» (`_o_que_o_controle_recebe`).
     """
     if not p or not _estilo_do_perfil(p) or _o_modo_escrito_e_automatico(p):
         return False
@@ -489,8 +490,8 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
 
 SEUS_EFEITOS = "Seus efeitos"
 
-SEM_IMERSAO = "nenhum"
-ROTULO_DO_SEM_IMERSAO = "Sem efeito"
+SEM_IMERSAO = _sem_efeito.VALOR
+ROTULO_DO_SEM_IMERSAO = _sem_efeito.ROTULO
 
 PREFIXO_DO_ACIONAMENTO = "acionamento:"
 PREFIXO_DO_SEU_ACIONAMENTO = "meu-acionamento:"
@@ -590,8 +591,8 @@ def _params_inteiros(cfg: dict[str, Any]) -> list[int]:
 def dica_da_imersao(chave: str) -> str:
     """A dica da caixa do efeito do gatilho: «Nome. frase». A frase mora SÓ aqui e no `title`.
 
-    A das criadas e a do «Sem efeito» são fixas. O nome leva a família («Golpe · imersivo»), que
-    a caixa também mostra como etiqueta.
+    A das criadas e a do nenhum efeito («—») são fixas. O nome leva a família
+    («Golpe · imersivo»), que a caixa também mostra como etiqueta.
     """
     imer = _imersoes()
     feita = imer.POR_CHAVE.get(chave) if imer else None
@@ -603,12 +604,12 @@ def dica_da_imersao(chave: str) -> str:
         modo_ = chave[len(PREFIXO_DO_ACIONAMENTO):]
         return f"{_rotulo_do_modo(modo_)}. {descricao_do_modo(modo_)}"
     if chave == SEM_IMERSAO:
-        return f"{ROTULO_DO_SEM_IMERSAO}. {DICA_DO_SEM_IMERSAO}"
+        return DICA_DO_SEM_IMERSAO
     return "O que o gatilho faz no jogo"
 
 
 def familia_da_imersao(chave: str) -> str:
-    """A etiqueta de família da caixa («Golpe»); vazio no «Sem efeito», nos criados e no vazio."""
+    """A etiqueta de família da caixa («Golpe»); vazio no «—», nos criados e no vazio."""
     imer = _imersoes()
     feita = imer.POR_CHAVE.get(chave) if imer else None
     return str(imer.familia_da_pagina(feita)) if imer and feita is not None else ""
@@ -630,7 +631,7 @@ def _imersao_que_casa(
     `cru` é o gatilho como o perfil o guarda quando a chave dele saiu da lista de onze
     (`Rigid`…): a imersão salva com os números de lá segue valendo, e o campo a mostra.
 
-    `nenhum` quando são os padrões do modo; vazio (o campo fica em branco) quando o perfil
+    `sem_efeito` quando são os padrões do modo; vazio (o campo fica em branco) quando o perfil
     guarda números próprios que nenhuma da lista conhece: dizer «Nenhum» seria mentir.
     """
     for nome, item in _meus_efeitos_da("imersao").items():
@@ -659,11 +660,11 @@ def _efeito_da_lista(modo_: str, params: list[int], cru: tuple[str, list[int]] |
                      disco: str, cfg: dict[str, Any]) -> str:
     """O que a lista «Efeito do gatilho» mostra para o gatilho desse jeito.
 
-    Nunca «Sem efeito» se ele resiste.
+    Nunca «—» se ele resiste.
 
     A ordem: o efeito (do produto ou criado) cujos números são estes; o acionamento guardado
     (`meu-acionamento:<nome>`); o acionamento pelo nome dele (`acionamento:<modo>`, o perfil antigo
-    que só tinha o acionamento). `Off` segue sendo «Sem efeito»: ali o gatilho está solto.
+    que só tinha o acionamento). `Off` segue sendo «—»: ali o gatilho está solto.
     """
     feita = _imersao_que_casa(modo_, params, cru)
     if feita not in (SEM_IMERSAO, "") or modo_ in ("Off", ""):
@@ -680,18 +681,17 @@ def _com_maiuscula(texto: str) -> str:
 
 
 def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str = "") -> str:
-    """As opções do «Efeito do gatilho»: Do estilo, Sem efeito, as famílias e «Seus efeitos».
+    """As opções do «Efeito do gatilho»: Do estilo, «—», as famílias e «Seus efeitos».
 
     O texto da opção é a variante e o grupo é a família; a frase de cada efeito mora SÓ no
-    `title`. Com um estilo no perfil, os efeitos dele vão na frente. O `—` é o do lugar sem
-    controle, escondido. `disco` (`left`/`right`) põe em «Seus efeitos» o acionamento que o usuário
-    guardou para aquele gatilho. `do_perfil` (`acionamento:<modo>`) abre o grupo «Do perfil» com
+    `title`. Com um estilo no perfil, os efeitos dele vão na frente. O «—» é o nenhum efeito,
+    a mesma opção de toda lista (`profiles/sem_efeito.py`), e o lugar sem controle o mostra.
+    `disco` (`left`/`right`) põe em «Seus efeitos» o acionamento que o usuário guardou para
+    aquele gatilho. `do_perfil` (`acionamento:<modo>`) abre o grupo «Do perfil» com
     o acionamento de um perfil antigo que nenhum efeito da lista descreve.
     """
-    partes = [f'<option value="{TRAVESSAO}" disabled="" hidden="">{TRAVESSAO}</option>',
-              f'<option value="{DO_ESTILO}">{ROTULO_DO_ESTILO}</option>',
-              f'<option value="{SEM_IMERSAO}" title="{_escapar(DICA_DO_SEM_IMERSAO)}">'
-              f"{ROTULO_DO_SEM_IMERSAO}</option>"]
+    partes = [f'<option value="{DO_ESTILO}">{ROTULO_DO_ESTILO}</option>',
+              _sem_efeito.opcao(DICA_DO_SEM_IMERSAO)]
     if do_perfil.startswith(PREFIXO_DO_ACIONAMENTO):
         modo_ = do_perfil[len(PREFIXO_DO_ACIONAMENTO):]
         partes.append(
@@ -1629,10 +1629,8 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             "modo: o clique não trouxe qual modo foi escolhido. O `<select>` "
             "carrega a chave no `value` de cada opção; quem tem de mandá-la é a "
             "ponte do piloto, no `change` — ver `_escolhido`.")
-    if chave == TRAVESSAO:
-        raise ValueError(
-            "modo: `—` é como esta tela diz que não há controle neste lugar, e "
-            "não um efeito a aplicar. Escolha `Sem efeito` para soltar o gatilho.")
+    if _sem_efeito.e_sem_efeito(chave):
+        chave = "Off"
     if chave.startswith(PREFIXO_DO_MEU):
         nome = chave[len(PREFIXO_DO_MEU):]
         modo_salvo, params = _metade_do_meu(nome, lado)
@@ -1669,20 +1667,16 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     Ele é a receita que o `PRESETS` aceita (`profiles/efeitos_de_imersao.py`), com a variante
     do estilo do perfil. O acionamento fica o que o gatilho tem agora quando o efeito vale nele;
     senão vai ao de nascença do efeito (22/10/2026: o gatilho só tem o efeito, e a linha «Como o
-    gatilho faz» saiu). «Sem efeito» solta o gatilho (`trigger.reset`). `meu:<nome>` leva o
+    gatilho faz» saiu). O «—» solta o gatilho (`trigger.reset`). `meu:<nome>` leva o
     acionamento de onde a pessoa partiu. `acionamento:<modo>` (o perfil antigo) segue com os
     números do gatilho (`_ajustes_de_agora`); `meu-acionamento:<nome>`, com a metade guardada.
     «Do estilo» apaga a escolha daquele controle e lado (`_seguir_o_estilo`).
     """
     _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "imersão"), _lado(o)
-    chave = _escolhido(o)
+    chave = str(_sem_efeito.do_clique(_escolhido(o)))
     if not chave:
         raise ValueError("imersão: o clique não trouxe qual imersão foi escolhida.")
-    if chave == TRAVESSAO:
-        raise ValueError(
-            "imersão: `—` é como esta tela diz que não há controle neste lugar, e não "
-            "um efeito a aplicar. Escolha `Sem efeito` para soltar o gatilho.")
     if chave == DO_ESTILO:
         return _seguir_o_estilo(ctx, p, uniq, lado)
     modo_ = _modo_de_agora(ctx, uniq, lado)
@@ -1900,7 +1894,7 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
 def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O par «Modo automático | Modo personalizado» — e ele MUDA o perfil.
 
-    **O Automático** deixa os gatilhos «Sem efeito» (a chave `Off`) em todos os controles: é o
+    **O Automático** deixa os gatilhos em «—» (a chave `Off`) em todos os controles: é o
     `triggers.modo` escrito como Automático, que o `ProfileManager` lê para mandar `Off` ao
     aparelho. **Nada se apaga:** as escolhas guardadas ficam no disco, e o **Personalizado** as
     devolve. O jogo que comanda o gatilho vence nos dois modos (a saída do jogo chega ao

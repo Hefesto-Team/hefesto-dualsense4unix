@@ -887,7 +887,7 @@ class AtuadorDaHaptica:
     """O toque do tiro, na forma que o controle escolheu, no tocador do rumble dele.
 
     Sem escolha (ou em «Do estilo») o toque é o de hoje. A escolha explícita dispara nos mesmos
-    eventos da receita; «Sem efeito» e o Som no corpo (contínuo, do laço) não respondem a evento.
+    eventos da receita; o «—» e o Som no corpo (contínuo, do laço) não respondem a evento.
     O Toque toca na nota da unidade (a Assinatura, ``nota_de``) onde a Chegada vale.
     """
 

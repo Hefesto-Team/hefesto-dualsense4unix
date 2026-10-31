@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import NamedTuple
 
+from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
+
 Passo = tuple[int, int, int]
 
 ESQUERDO = "esquerdo"
@@ -37,7 +39,7 @@ ROTULOS: dict[str, str] = {
 }
 
 DO_ESTILO = "do_estilo"
-SEM_EFEITO = "sem_efeito"
+SEM_EFEITO = _sem_efeito.VALOR
 ESCOLHAS: tuple[str, ...] = (DO_ESTILO, SEM_EFEITO, "tranco", "batida", "onda", "coice",
                              "pancada_do_lado", "ressoar", "ricochete")
 DICAS: dict[str, str] = {
@@ -99,7 +101,7 @@ POR_ESTILO: dict[str, str] = {
 def padrao_que_vale(escolha: object, estilo: object) -> str | None:
     """O padrão que toca de verdade, ou ``None`` quando os motores deste controle não tocam nada.
 
-    Sem escolha («Do estilo») vale o do estilo, e nenhum quando o estilo não pede; «Sem efeito»
+    Sem escolha («Do estilo») vale o do estilo, e nenhum quando o estilo não pede; o «—»
     cala. A Bateria longa não troca o padrão: só baixa a força, e quem baixa é o chamador.
     """
     if escolha == SEM_EFEITO:

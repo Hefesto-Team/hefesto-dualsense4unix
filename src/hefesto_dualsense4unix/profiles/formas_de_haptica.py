@@ -16,10 +16,12 @@ import sys
 from array import array
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
+
 TAXA = 48_000
 
 DO_ESTILO = "do_estilo"
-SEM_EFEITO = "sem_efeito"
+SEM_EFEITO = _sem_efeito.VALOR
 TOQUE = "toque"
 IMPACTO = "impacto"
 ESTALO = "estalo"
@@ -36,7 +38,7 @@ ESCOLHAS: tuple[str, ...] = (
 
 ROTULOS: dict[str, str] = {
     DO_ESTILO: "Do estilo",
-    SEM_EFEITO: "Sem efeito",
+    SEM_EFEITO: _sem_efeito.ROTULO,
     TOQUE: "Toque",
     IMPACTO: "Impacto",
     ESTALO: "Estalo",

@@ -30,6 +30,7 @@ from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (
 from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
 
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
+from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 from hefesto_dualsense4unix.profiles.schema import (
     MOTOR_PCT_MAX,
     MOTOR_PCT_PADRAO,
@@ -444,18 +445,19 @@ def _linha_da_haptica(valor, ligado, vazio=False):
 
 
 _ROTULOS_DA_IMERSAO = {
-    padroes.DO_ESTILO: "Do estilo", padroes.SEM_EFEITO: "Sem efeito", **padroes.ROTULOS}
+    padroes.DO_ESTILO: "Do estilo", padroes.SEM_EFEITO: _sem_efeito.ROTULO, **padroes.ROTULOS}
 
 
 def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas):
-    """Uma lista suspensa do controle: «Do estilo» primeiro, «Sem efeito» depois, as formas em seguida.
+    """Uma lista suspensa do controle: «Do estilo» primeiro, o «—» depois, as formas em seguida.
 
     O gesto do `<select>` e o campo que a pintura escreve nele têm nomes distintos: o pintor
     acha o valor por `data-campo`, e o clique, por `data-gesto`. A frase da opção escolhida é a
     dica da caixa em volta da lista (16/10/2026), escrita pelo campo da dica a cada tique.
     """
     opcoes = "".join(
-        f'<option value="{chave}"{" selected" if i == 0 else ""}>{rotulos[chave]}</option>'
+        _sem_efeito.opcao(dicas[chave], escolhida=i == 0) if chave == _sem_efeito.VALOR
+        else f'<option value="{chave}"{" selected" if i == 0 else ""}>{rotulos[chave]}</option>'
         for i, chave in enumerate(escolhas))
     return (f'<div class="efeito-lista">'
             f'<span class="vib-efeito-dica" data-campo="{campo_dica}" data-hef-alvo="atributo" '
@@ -689,10 +691,10 @@ MIOLO = f'''
             <div><span class="sec-rot">Modelo</span></div>
             <div><span class="sec-rot" data-dica="{DICA_DA_FORCA}. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
             <div><span class="sec-rot" data-dica="A vibração fina que o jogo envia como som, no cabo e no BT. O risco no meio é 50%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA}">Sensor háptico</span></div>
-            <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
+            <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e o «—» cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">{DIR["rot"]}</span></div>
-            <div><span class="sec-rot" data-dica="O padrão dos motores deste controle. Do estilo segue o estilo e Sem efeito cala os motores; o Testar toca o padrão escolhido">Padrão dos motores</span></div>
+            <div><span class="sec-rot" data-dica="O padrão dos motores deste controle. Do estilo segue o estilo e o «—» cala os motores; o Testar toca o padrão escolhido">Padrão dos motores</span></div>
             <div><span class="sec-rot" data-dica="Vibração treme os motores deste controle até o Parar, seguindo ao vivo as barras da coluna. Háptica toca a vibração fina pelo som, com a força do Sensor háptico. No mesmo controle ligar um desliga o outro, e cada controle tem o seu teste. Parar corta os dois deste controle e devolve a vibração dele ao jogo. {DICA_DOS_VALORES_QUE_PASSAM}">Testar agora</span></div>
           </div>
 {"".join(_coluna(c) for c in MESA)}
@@ -963,8 +965,9 @@ def _conferir(doc):
             exigir(tuple(v for v, _r in _valores) == tuple(escolhas)
                    and [r for _v, r in _valores] == [rotulos[c] for c in escolhas],
                    f"as opções de {gesto!r} não são as da lista do produto, na ordem da lista")
-            exigir(_valores[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "Sem efeito")],
-                   f"a lista {gesto!r} não abre com «Do estilo» e «Sem efeito»")
+            exigir(_valores[:2] == [("do_estilo", "Do estilo"),
+                                    (_sem_efeito.VALOR, _sem_efeito.ROTULO)],
+                   f"a lista {gesto!r} não abre com «Do estilo» e o «—»")
     exigir("grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)" in doc
            and "grid-template-rows:minmax(0,1fr)" in doc,
            "as faixas da grade da aba 05 voltaram a ter altura fixa: a coluna deixa de encher o quadro")

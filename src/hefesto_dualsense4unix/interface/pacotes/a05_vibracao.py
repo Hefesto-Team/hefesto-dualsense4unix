@@ -37,6 +37,7 @@ from hefesto_dualsense4unix.core.rumble import vale_o_padrao
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _padroes
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
 from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
+from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 
 from . import Contexto, registrar
 from . import perfil as _perfil
@@ -111,7 +112,7 @@ def _escolha_da_lista(overrides: dict[str, Any], uniq: str, campo: str,
                       lista: tuple[str, ...]) -> str:
     """A escolha que o perfil guarda para ESTE controle numa das duas listas.
 
-    Sem escolha, ou com texto que a lista não conhece, vale «Do estilo»: nunca «Sem efeito»,
+    Sem escolha, ou com texto que a lista não conhece, vale «Do estilo»: nunca o «—»,
     que cala o controle e só existe quando a pessoa o escolhe.
     """
     dele = overrides.get(_chave_no_perfil(uniq)) or overrides.get(uniq) or {}
@@ -1460,7 +1461,7 @@ def _gravar_a_escolha(o: dict[str, Any], p: Any, campo: str, lista: tuple[str, .
     if not uniq:
         raise RuntimeError(
             "Use a lista dentro da coluna do controle que você quer mudar.")
-    valor = str(o.get("valor") or "").strip()
+    valor = str(_sem_efeito.do_clique(str(o.get("valor") or "").strip()))
     if valor not in lista:
         raise RuntimeError("Escolha uma das opções da lista.")
     ok, corpo = p.rumble_motores_set(**{campo: valor}, uniq=uniq)
@@ -1505,7 +1506,7 @@ SEGUNDOS_DA_FORMA_UNICA = 1.0
 def _tocar_a_forma_uma_vez(p: Any, uniq: str) -> None:
     """O tocador de `uniq` toca a forma que vale uma vez e cala; o que estava em teste para.
 
-    O daemon resolve «Do estilo»; «Sem efeito» e o som fora do ar não tocam nada, e a escolha
+    O daemon resolve «Do estilo»; o «—» e o som fora do ar não tocam nada, e a escolha
     já gravada não vira recusa.
     """
     if uniq in _EM_TESTE:
@@ -1525,7 +1526,7 @@ def _tocar_a_forma_uma_vez(p: Any, uniq: str) -> None:
 def _padrao_escolhido(ctx: Contexto, uniq: str) -> str:
     """O padrão dos motores que este controle guarda, ou `""` quando não há um para tocar.
 
-    «Do estilo» e «Sem efeito» não são um padrão: o «Testar» faz o sustentado de sempre.
+    «Do estilo» e o «—» não são um padrão: o «Testar» faz o sustentado de sempre.
     """
     perfil = _perfil_ativo(ctx).get("controllers")
     escolha = _escolha_da_lista(

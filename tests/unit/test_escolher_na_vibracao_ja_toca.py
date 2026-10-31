@@ -2,7 +2,7 @@
 
 Como o gatilho e a luz aplicam na hora, a escolha nas duas listas da coluna toca uma vez no
 controle daquela coluna: o padrão dos motores pelo `rumble_set_checked` (e devolve ao jogo), a
-forma háptica pelo `haptica_testar` ligado e desligado. «Sem efeito» e a gravação recusada não
+forma háptica pelo `haptica_testar` ligado e desligado. O «—» e a gravação recusada não
 tocam. D-2310-ESCOLHER-NA-VIBRACAO-JA-TOCA.
 """
 

@@ -57,6 +57,7 @@ from hefesto_dualsense4unix.interface.monta import (
     MODO_PERSONALIZADO,
     partes_do_modelo,
 )
+from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 from hefesto_dualsense4unix.profiles.schema import BASES_SEM_COR_DA_LUZ
 
 from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
@@ -1286,7 +1287,7 @@ GESTO_DE_CRIAR_EFEITO = "criar-efeito"
 CAMPO_DO_EFEITO = "efeito"
 CAMPO_DA_DICA_DO_EFEITO = "efeito-dica"
 CAMPO_DA_DICA_DA_IDENTIDADE = "identidade-dica"
-SEM_EFEITO = "sem-efeito"
+SEM_EFEITO = _sem_efeito.VALOR
 LUZ_FIXA = "luz-fixa"
 PREFIXO_DA_BASE = "base:"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
@@ -1352,9 +1353,9 @@ def base_do_token(valor: str) -> str | None:
 
 
 def rotulo_da_opcao(valor: str) -> str:
-    """O rótulo da lista para `sem-efeito`, `luz-fixa` ou `base:<nome>`."""
+    """O rótulo da lista para o nenhum efeito («—»), `luz-fixa` ou `base:<nome>`."""
     if valor == SEM_EFEITO:
-        return "Sem efeito"
+        return _sem_efeito.ROTULO
     if valor == LUZ_FIXA:
         return "Luz fixa"
     return ROTULO_DA_BASE[base_do_token(valor) or ""]
@@ -1448,7 +1449,8 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
     partes = []
     for rotulo_do_grupo, nomes in GRUPOS_DA_LISTA:
         itens = "".join(
-            f'<option value="{v}">{_html.escape(rotulo_da_opcao(v))}</option>'
+            _sem_efeito.opcao(DICA_SEM_EFEITO) if v == SEM_EFEITO
+            else f'<option value="{v}">{_html.escape(rotulo_da_opcao(v))}</option>'
             for v in (n if n in (SEM_EFEITO, LUZ_FIXA) else token_da_base(n) for n in nomes))
         partes.append(f'<optgroup label="{rotulo_do_grupo}">{itens}</optgroup>')
     valores = frozenset(v for _, v in proprios)
@@ -1504,7 +1506,7 @@ def perfil_da_lista_de_efeito(p: dict[str, Any] | None) -> dict[str, Any] | None
 def escolha_da_lista(p: dict[str, Any] | None, uniq: str, brilho: float | None,
                      proprios: frozenset[str] = frozenset(),
                      cor: tuple[int, int, int] | None = None) -> str:
-    """O que a lista de efeitos mostra: Sem efeito (barra apagada), o efeito, ou Luz fixa."""
+    """O que a lista de efeitos mostra: «—» (barra apagada), o efeito, ou Luz fixa."""
     if brilho is not None and brilho <= 0.0:
         return SEM_EFEITO
     return valor_da_lista_para(
@@ -2539,10 +2541,10 @@ def _com_o_efeito_gravado(prof: Any, uniq: str, efeito: str | None, *,
 
 @gesto("04-iluminacao.html", GESTO_DO_EFEITO, grava="gravar_pelo_gesto")
 def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A lista «Efeito» da coluna: Sem efeito, Luz fixa, uma base da lista ou um efeito criado.
+    """A lista «Efeito» da coluna: «—», Luz fixa, uma base da lista ou um efeito criado.
 
     O efeito é do controle da coluna e vai ao perfil (`leds.efeito` no override dele); quem anima é
-    o `luz_animada` do daemon, que cala quando o jogo pinta a barra. «Sem efeito» apaga a barra
+    o `luz_animada` do daemon, que cala quando o jogo pinta a barra. O «—» apaga a barra
     (o 0% do «Desligar» que saiu do topo da coluna) e «Luz fixa» devolve a cor de sempre, acendendo
     a barra se estava apagada. Uma base da lista (`base:respirar`) vira o texto
     `base;cor do controle;ritmo` neste ato, com a cor que a barra acende agora e o ritmo com que a
@@ -2558,7 +2560,7 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     uniq = _uniq(o)
     if not uniq:
         raise ValueError(f"{GESTO_DO_EFEITO}: o clique não disse em qual controle")
-    pedido = str(o.get("valor") or "").strip()
+    pedido = str(_sem_efeito.do_clique(str(o.get("valor") or "").strip()))
     base = base_do_token(pedido)
     if pedido.startswith(PREFIXO_DA_BASE) and base is None:
         raise ValueError(f"{GESTO_DO_EFEITO}: a lista não tem a base {pedido!r}")

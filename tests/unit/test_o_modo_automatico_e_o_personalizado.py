@@ -12,7 +12,7 @@ O QUE ESTE ARQUIVO MEDE, e a mordida de cada um está no docstring do caso:
 3. os gestos gravam o campo certo, reaplicam o perfil e não regravam o modo em que o perfil já
    está; sem a tela, as portas de cor, brilho, número e efeito recusam no Automático;
 4. a luz do jogo saiu da Iluminação (o LED do microfone, que é outra feature, ficou);
-5. o rótulo da chave ``Off`` é «Sem efeito».
+5. o rótulo da chave ``Off`` é o «—», o nenhum efeito de toda lista.
 
 O LAR É DE MENTIRA: o ``conftest`` desvia ``HOME`` e os ``XDG_*``, e os casos que gravam
 escrevem perfil de verdade com ``save_profile``.
@@ -206,7 +206,7 @@ def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04:
 def test_a_regra_dos_gatilhos_sem_o_campo_escrito(
     perfil: Profile, esperado: str, a03: Any
 ) -> None:
-    """Automático sem opinião = todos os gatilhos (globais e de cada controle) em «Sem efeito».
+    """Automático sem opinião = todos os gatilhos (globais e de cada controle) em «—» (``Off``).
 
     MORDIDA: ignore os overrides em ``_todos_os_gatilhos_sem_efeito`` (a 03) e
     ``override-rigido`` reprova.
@@ -412,12 +412,12 @@ def test_no_automatico_a_tela_dos_gatilhos_diz_sem_efeito(a03: Any) -> None:
 
 
 def test_o_rotulo_da_chave_off_e_sem_efeito(a03: Any) -> None:
-    """Resposta de 06/10: o ``Off`` aparece como «Sem efeito»; a chave não muda.
+    """O ``Off`` aparece como «—» (31/10/2026; era «Sem efeito» desde 06/10); a chave não muda.
 
     Prova da D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """
-    assert a03.ROTULO_DO_JOGO_DECIDE == "Sem efeito"
-    assert a03._rotulo_do_modo("Off") == "Sem efeito"
+    assert a03.ROTULO_DO_JOGO_DECIDE == "—"
+    assert a03._rotulo_do_modo("Off") == "—"
 
 
 def test_o_pacote_dos_gatilhos_diz_o_modo_da_aba(

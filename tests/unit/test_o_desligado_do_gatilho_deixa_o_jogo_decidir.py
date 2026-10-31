@@ -4,16 +4,16 @@ A foto de 03/10/2026 ~18h20 (aba Gatilhos, P1, L2): a lista do modo oferecia
 `—` e `Desligado`, que pareciam a mesma entrada. A regra de produto, ~18h15:
 os controles obedecem quando o jogo manda, e na ausência disso o perfil ganha.
 Então o «Desligado» do gatilho é «O jogo decide» (desde 06/10/2026, por ordem de produto, o rótulo
-é «Sem efeito»; a regra é a mesma): sem jogo pintando, o
+é o «—», o nenhum efeito de toda lista; a regra é a mesma): sem jogo pintando, o
 gatilho fica como o controle vem de fábrica (`trigger.reset`), e o que o jogo
 pintar chega. A chave no perfil continua `Off` (a forma do perfil não muda); o
 lado do daemon, que não trava o campo quando ele é `Off`, é do conjunto Microfone.
 
 AS MORDIDAS:
 
-* devolva o rótulo «Desligado» ao «Sem efeito» (`ROTULO_DO_SEM_IMERSAO` do pacote) →
+* devolva o rótulo «Desligado» ao «—» (`ROTULO_DO_SEM_IMERSAO` do pacote) →
   `test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado` reprova;
-* tire o `hidden` do `—` (`_op_vazio`) → `test_o_travessao_nao_e_uma_linha_da_lista`
+* devolva o `—` escondido ao lado do nenhum efeito → `test_o_travessao_e_uma_linha_so_da_lista`
   reprova, nos oito campos e na lista que o pacote monta;
 * troque o `Off` do gesto por `trigger_set` → a prova do gesto em `a03.PROVAS`
   (`test_os_botoes_tem_dono`) reprova;
@@ -90,21 +90,22 @@ def test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado(fonte) -> None:
     assert listas, "nenhuma lista de modo encontrada"
     for dentro in listas:
         vistas = _visiveis(dentro)
-        assert vistas.count("Sem efeito") == 1, vistas
+        assert vistas.count("—") == 1 and "Sem efeito" not in vistas, vistas
         assert len(vistas) > 10, "a lista do efeito do gatilho veio vazia"
         assert "Desligado" not in vistas, (
             "o «Desligado» voltou à lista: o gatilho tem duas palavras para a mesma coisa")
 
 
 @pytest.mark.parametrize("fonte", [_listas_do_ensaio, _listas_do_pacote])
-def test_o_travessao_nao_e_uma_linha_da_lista(fonte) -> None:
-    """O `—` fica no `<select>` (o piloto o escreve no lugar vazio), mas escondido."""
+def test_o_travessao_e_uma_linha_so_da_lista(fonte) -> None:
+    """O «—» é o nenhum efeito: uma linha que se vê e se escolhe, e o lugar vazio a mostra."""
     for dentro in fonte():
         travessoes = [m for m in _OPCAO.finditer(dentro) if m.group("texto") == "—"]
         assert len(travessoes) == 1
         atributos = travessoes[0].group("attrs")
-        assert "hidden" in atributos and "disabled" in atributos, atributos
-        assert "—" not in _visiveis(dentro)
+        assert 'value="sem_efeito"' in atributos, atributos
+        assert "hidden" not in atributos and "disabled" not in atributos, atributos
+        assert _visiveis(dentro).count("—") == 1
 
 
 def test_o_gesto_e_o_rotulo_falam_a_mesma_coisa() -> None:

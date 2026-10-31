@@ -33,11 +33,11 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 
-ROTULOS_NA_ORDEM = ["Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
+ROTULOS_NA_ORDEM = ["—", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
                     "Respira em cores", "Piscar", "Arco-íris", "Onda", "Relâmpago", "Vaivém",
                     "Enche", "Reage ao botão", "Inclinação", "Dedo no touchpad", "Ao som",
                     "Ondulação", "Aurora", "Estrelas", "Cor da bateria", "Cor da temperatura"]
-VALORES_NA_ORDEM = ["sem-efeito", "luz-fixa", "base:respirar", "base:batimento", "base:chama",
+VALORES_NA_ORDEM = ["sem_efeito", "luz-fixa", "base:respirar", "base:batimento", "base:chama",
                     "base:mare", "base:respira-em-cores", "base:piscar", "base:arco-iris",
                     "base:onda", "base:relampago", "base:vaivem", "base:enche",
                     "base:reage-ao-botao", "base:inclinacao", "base:dedo-no-touchpad",

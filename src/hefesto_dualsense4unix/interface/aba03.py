@@ -242,16 +242,6 @@ CSS += "".join(
 CSS += _barras_que_a_base_usa()
 
 
-def _op_vazio(escolhido):
-    """O `—` do lugar vazio: oferecido ao `escrever()` do piloto, e NÃO à lista.
-
-    `hidden` o tira do menu que abre. Ele fica no `<select>` porque o piloto só escreve `—`
-    onde ele existe: sem ele o lugar que esvazia guarda o efeito de quem saiu.
-    """
-    return (f'<option value="{TRAVESSAO}"'
-            f'{" selected" if escolhido == TRAVESSAO else ""} disabled hidden>{TRAVESSAO}</option>')
-
-
 def _grupo_dos_seus(itens):
     """O grupo «Seus efeitos» do desenho: o que foi criado e o acionamento guardado antes."""
     dentro = "".join(f'<option value="{_escapar(valor)}">{_escapar(nome)}</option>'
@@ -262,16 +252,16 @@ def _grupo_dos_seus(itens):
 def opcoes_imersao(escolhida):
     """As opções do efeito do gatilho: as mesmas que o pacote monta, com a escolhida marcada.
 
-    O `—` e «Seus efeitos» são os do desenho, não os do disco de quem gera a página. O grupo leva
-    os dois que o desenho guarda: o acionamento de antes e a imersão nova, na mesma lista.
+    «Seus efeitos» é o do desenho, não o do disco de quem gera a página. O grupo leva os dois que
+    o desenho guarda: o acionamento de antes e a imersão nova, na mesma lista. O «—» é o nenhum
+    efeito de toda lista, e o lugar sem controle o mostra: o piloto escreve «—» nele.
     """
     cru = html_das_opcoes_de_imersao()
-    cru = re.sub(r"^<option value=\"" + TRAVESSAO + r"\"[^>]*>[^<]*</option>", "", cru)
     cru = re.sub(r'<optgroup label="' + SEUS_EFEITOS + r'">.*?</optgroup>', "", cru)
     alvo = f'<option value="{_escapar(escolhida)}"'
     if alvo in cru:
         cru = cru.replace(alvo, alvo + " selected", 1)
-    return _op_vazio(escolhida) + cru + _grupo_dos_seus(
+    return cru + _grupo_dos_seus(
         [(PREFIXO_DO_SEU_ACIONAMENTO + MEU_ACIONAMENTO, MEU_ACIONAMENTO),
          (PREFIXO_DO_MEU + MEU_IMERSAO, MEU_IMERSAO)])
 
@@ -282,7 +272,7 @@ def _celula_da_imersao(pref, sig, vazio):
     A família é a etiqueta à esquerda da caixa (`data-fam`, que o piloto pinta e apaga); a frase
     do efeito mora SÓ na dica da caixa e no `title` de cada opção.
     """
-    imersao = CENA[pref][sig][1] if not vazio else TRAVESSAO
+    imersao = CENA[pref][sig][1] if not vazio else SEM_IMERSAO
     dica = SEM_APARELHO_AQUI if vazio else dica_da_imersao(imersao)
     fam = "" if vazio else familia_da_imersao(imersao)
     atr_fam = f' data-fam="{_escapar(fam)}"' if fam else ""
@@ -559,12 +549,19 @@ def _conferir(doc):
         exigir(f'data-controle="{pref}" data-conectado="nao"' in corpo,
                f"o lugar {pref.upper()} deixou de se dar por vazio")
         exigir(c["nome"] not in corpo, f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
-        exigir(corpo.count(f'<option value="{TRAVESSAO}" selected disabled hidden>')
-               == 2 * len(vazios), "um campo do lugar vazio não mostra o travessão")
-    exigir(f'<option value="{TRAVESSAO}"' in corpo
-           and len(re.findall(rf'<option value="{TRAVESSAO}"[^>]*\bdisabled\b', corpo))
-           == corpo.count('<select class="g2-i'),
-           "um campo de escolha não oferece `—` ao piloto")
+        _celulas = re.findall(
+            rf'<div class="g2-cel[^"]*" data-controle="{pref}" data-conectado="nao">.*?</div>',
+            corpo, re.S)
+        exigir(len(_celulas) == 2 and all(
+            f'<option value="{SEM_IMERSAO}" selected' in cel for cel in _celulas),
+            f"um campo do lugar vazio {pref.upper()} não mostra o «—»")
+    _listas = re.findall(r'<select class="g2-imersao".*?</select>', corpo, re.S)
+    exigir(bool(_listas) and all(
+        lista.count(f">{TRAVESSAO}</option>") == 1 and f'<option value="{SEM_IMERSAO}"' in lista
+        for lista in _listas),
+        "um campo de escolha não oferece o «—» do nenhum efeito, ou o oferece duas vezes")
+    exigir(not re.search(r"<option[^>]*\b(?:hidden|disabled)\b", "".join(_listas)),
+           "voltou uma opção escondida à lista do efeito do gatilho")
     exigir('[data-conectado="nao"] select' in doc,
            "a trava do lugar vazio sumiu do CSS")
 

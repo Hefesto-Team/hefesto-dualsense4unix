@@ -233,7 +233,7 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
         if caminho.parent == onde.PUBLICADO:
             continue
         assert ">Desligar</button>" not in grade, (
-            f"o `Desligar` voltou à célula Efeito de {caminho.name}: «Sem efeito» o substitui")
+            f"o `Desligar` voltou à célula Efeito de {caminho.name}: o «—» o substitui")
         assert grade.count('class="g4-efeito"') == lugares, (
             f"a célula Efeito de {caminho.name} não tem uma lista por lugar")
 

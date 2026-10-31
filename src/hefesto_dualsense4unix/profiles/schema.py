@@ -2167,7 +2167,7 @@ def decidir_o_modo_dos_gatilhos(escrito: str | None, todos_sem_efeito: bool) -> 
 
     O que está escrito (``triggers.modo``) manda. Sem nada escrito vale o que o
     perfil já diz, e nada se reescreve: Automático só quando os dois gatilhos
-    globais e todo lado escrito de cada controle são «Sem efeito» (``Off``);
+    globais e todo lado escrito de cada controle são «—» (``Off``);
     qualquer outra coisa é Personalizado.
     """
     if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
@@ -2205,7 +2205,7 @@ def perfil_no_modo(profile: Profile) -> Profile:
 
     Só o que foi ESCRITO como Automático age: o perfil de antes, sem ``modo``,
     segue como está. No Automático dos gatilhos os dois lados de todo controle
-    saem «Sem efeito» e no da luz nenhuma cor escolhida vale — a cor é a do
+    saem em «—» e no da luz nenhuma cor escolhida vale — a cor é a do
     plástico. As escolhas continuam no disco, e voltam ao Personalizado.
     """
     update: dict[str, Any] = {}
@@ -2396,7 +2396,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "TriggersConfig.modo": Nascimento(
         E_CONTRATO,
         "É a escolha do modo da aba Gatilhos. `None` = ninguém escolheu, e "
-        "`decidir_o_modo_dos_gatilhos` lê o perfil: todo gatilho «Sem efeito» é "
+        "`decidir_o_modo_dos_gatilhos` lê o perfil: todo gatilho em «—» (`Off`) é "
         "Automático, o resto é Personalizado. Nada se reescreve.",
     ),
     "RumbleConfig.modo": Nascimento(

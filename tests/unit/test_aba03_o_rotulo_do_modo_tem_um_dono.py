@@ -142,7 +142,7 @@ def test_a_lista_do_efeito_e_emitida_para_os_oito_campos(a03):
     assert f'value="{a03.PREFIXO_DO_ACIONAMENTO}Bow"' in esquerdo, (
         "o perfil antigo só com acionamento tem de abrir com a opção certa")
     direito = blocos['[data-controle="p1"] select.g2-imersao[data-lado="d"]']
-    assert a03.PREFIXO_DO_ACIONAMENTO not in direito, "o `Off` é «Sem efeito», não um acionamento"
+    assert a03.PREFIXO_DO_ACIONAMENTO not in direito, "o `Off` é o «—», não um acionamento"
 
 
 def test_a_lista_do_efeito_sai_como_o_dom_a_escreve(a03):
@@ -153,9 +153,9 @@ def test_a_lista_do_efeito_sai_como_o_dom_a_escreve(a03):
     assert re.search(r"\sdisabled(?=[\s>])", html) is None, (
         "o `disabled` saiu cru: o navegador devolve `disabled=\"\"` e o piloto "
         "reescreveria os oito campos a cada tique, para sempre")
-    assert 'disabled=""' in html, (
-        "o travessão da decisão 13 perdeu o `disabled` — o lugar vazio "
-        "passaria a ser escolhível com o rato")
+    assert "disabled" not in html and "hidden" not in html, (
+        "voltou uma opção escondida: o «—» é o nenhum efeito, uma linha da lista, e o lugar "
+        "vazio se trava pelo CSS do lugar desconectado")
 
 
 def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):

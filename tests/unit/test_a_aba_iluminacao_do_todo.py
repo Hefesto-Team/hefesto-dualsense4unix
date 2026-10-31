@@ -3,7 +3,7 @@
 MORDIDAS: devolver uma cor ao `FORA_DA_GUIA`, tirar o silêncio com o jogo pintando, tirar o teto
 de 30 quadros por segundo, tirar o `soltar` ao parar, subir o teto do piscar, deixar o Modo
 automático animar, voltar o `?` ou o «Desligar» ao desenho reprovam. E o quadro pela camada da
-usuária, que apaga a cor do perfil daquele controle e o «Sem efeito», e o efeito que não espera o
+usuária, que apaga a cor do perfil daquele controle e o «—», e o efeito que não espera o
 pulso do tiro.
 """
 
@@ -381,7 +381,7 @@ def test_o_fim_do_efeito_devolve_a_cor_do_perfil_daquele_controle(tmp_path: path
 
 def test_o_sem_efeito_fica_apagado_depois_que_o_efeito_para(tmp_path: pathlib.Path,
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «Sem efeito» manda o preto a 0% e grava; o laço relê o disco até meio segundo depois e
+    """O «—» manda o preto a 0% e grava; o laço relê o disco até meio segundo depois e
     para. MORDIDA: o soltar que limpa o `led` da usuária reacende a barra."""
     from hefesto_dualsense4unix.core.controller import OutputSpec
     from hefesto_dualsense4unix.profiles import loader
@@ -539,7 +539,7 @@ def test_o_desenho_nao_tem_interrogacao_nem_desligar() -> None:
     assert 'class="ajuda' not in doc, "o `?` voltou: a dica mora no `data-dica`"
     for fora in ("Desligar", "Opções", "mesa", "Criar efeitos novos"):
         assert fora not in doc, f"o desenho trouxe «{fora}»"
-    for dito in ("Efeito", "Sem efeito", "Luz fixa", "Respirar", "Piscar",
+    for dito in ("Efeito", ">—</option>", "Luz fixa", "Respirar", "Piscar",
                  "Arco-íris", "Modo automático"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
 

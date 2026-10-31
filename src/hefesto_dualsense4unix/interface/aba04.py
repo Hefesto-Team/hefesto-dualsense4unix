@@ -740,13 +740,14 @@ def _conferir(doc):
            "o botão `Automático` voltou à célula Opções — ele saiu com a "
            "ordem de 07/09/2026, e o gesto saiu no mesmo commit")
     exigir(">Desligar</button>" not in corpo,
-           "o botão «Desligar» voltou — a lista Efeito tem «Sem efeito» no lugar (14/10/2026)")
+           "o botão «Desligar» voltou — a lista Efeito tem o «—» no lugar (14/10/2026)")
     exigir(corpo.count('class="g4-efeito"') == len(MESA)
            and corpo.count(f'data-gesto="{_pacote04.GESTO_DO_EFEITO}"') == len(MESA),
            "a célula Efeito não tem uma lista por lugar")
-    exigir(len(re.findall(r'<option value="sem-efeito"', corpo)) == len(MESA)
+    exigir(len(re.findall(rf'<option value="{_pacote04.SEM_EFEITO}"[^>]*>—</option>', corpo))
+           == len(MESA)
            and len(re.findall(r'<option value="luz-fixa" selected', corpo)) == len(MESA),
-           "a lista Efeito não abre em «Luz fixa» com «Sem efeito» ao lado")
+           "a lista Efeito não abre em «Luz fixa» com o «—» ao lado")
     grupos = [rotulo for rotulo, _ in _pacote04.GRUPOS_DA_LISTA]
     exigir(len(re.findall(
         '<optgroup label="(?:' + "|".join(map(re.escape, grupos)) + ')"', corpo))

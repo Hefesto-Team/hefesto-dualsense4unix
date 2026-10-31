@@ -245,7 +245,7 @@ def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
 
 
 def test_a_lista_do_efeito_so_diz_sem_efeito_se_o_gatilho_esta_solto(disco: Disco) -> None:
-    """`_modo_de_agora` é o modo da tela: «Sem efeito» é `Off`, e nada que resiste abre assim."""
+    """`_modo_de_agora` é o modo da tela: o «—» é `Off`, e nada que resiste abre assim."""
     from pacotes import a03_gatilhos, pacote_da_pagina
 
     for caso in ("jogo-sem-secao", "so-o-l2", "um-controle-so"):

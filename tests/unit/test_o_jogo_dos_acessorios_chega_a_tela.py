@@ -44,7 +44,7 @@ def _maiusculas_a_mais(doc: str, so_o_que_se_le: bool = False) -> list[str]:
 
     O nome próprio e a marca são os que a régua declara: a lista tem um dono só. Além do que a
     régua lê, aqui entram as dicas (`data-dica`) das janelas da 07; `so_o_que_se_le` as deixa de
-    fora, porque nas dicas da 05 o nome de um botão («Parar», «Sem efeito») vai citado.
+    fora, porque nas dicas da 05 o nome de um botão («Parar», «—») vai citado.
     """
     nomes = regua.licencas([M05, M07])
     lidas = [frase for _, frase in regua.frases(doc)]

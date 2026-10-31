@@ -122,11 +122,11 @@ def _coluna(a03, monkeypatch, modo_esq: str, params_esq: list[int]) -> dict:
 @pytest.mark.parametrize(("modo", "params"), [("Bow", [3, 7, 4, 5]), ("Galloping", [2, 8, 3, 4, 6]),
                                               ("Vibration", [4, 90, 9])])
 def test_perfil_so_com_acionamento_abre_com_a_opcao_certa(a03, monkeypatch, arquivo, modo, params):
-    """Nunca «Sem efeito» se o gatilho resiste; vale com a página de antes e com a nova."""
+    """Nunca o «—» se o gatilho resiste; vale com a página de antes e com a nova."""
     _caches_do_arquivo(a03, monkeypatch, arquivo)
     col = _coluna(a03, monkeypatch, modo, params)
     escolhida = col["imersao-e"]
-    assert escolhida != a03.SEM_IMERSAO, "o gatilho resiste: a lista não pode dizer «Sem efeito»"
+    assert escolhida != a03.SEM_IMERSAO, "o gatilho resiste: a lista não pode dizer «—»"
     assert escolhida, "a lista abriria sem escolha"
     if escolhida.startswith(a03.PREFIXO_DO_ACIONAMENTO):
         assert escolhida == f"{a03.PREFIXO_DO_ACIONAMENTO}{modo}"

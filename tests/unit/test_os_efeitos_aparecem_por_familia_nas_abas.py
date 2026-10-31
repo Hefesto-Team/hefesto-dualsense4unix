@@ -55,7 +55,7 @@ LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
 FAMILIAS = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 GRUPOS_DA_03 = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 ACIONAMENTOS = ("Resistência", "Metralhadora", "Disparo", "Arco", "Gatilho")
-LUZ_DA_04 = ("Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré", "Piscar",
+LUZ_DA_04 = ("—", "Luz fixa", "Respirar", "Batida", "Chama", "Maré", "Piscar",
              "Arco-íris")
 MOTORES_DA_05 = ("Tranco", "Batida", "Onda", "Coice", "Pancada do lado")
 HAPTICA_NOVA = ("Eco", "Grão", "Motor de época")
@@ -92,7 +92,7 @@ def _selects(doc: str, classe: str, extra: str = "") -> list[str]:
 
 
 def _opcoes(select: str) -> list[str]:
-    return [t for t in re.findall(r"<option\b[^>]*>([^<]*)</option>", select) if t != "—"]
+    return re.findall(r"<option\b[^>]*>([^<]*)</option>", select)
 
 
 def _grupos(select: str) -> list[str]:
@@ -111,8 +111,8 @@ def _problemas_da_lista_do_03(doc: str) -> list[str]:
     for s in efeitos:
         if not set(GRUPOS_DA_03) <= set(_grupos(s)):
             falta.append("a lista não abre em grupos pelas sete famílias")
-        if "Sem efeito" not in _opcoes(s):
-            falta.append("a lista perdeu o «Sem efeito»")
+        if "—" not in _opcoes(s) or "Sem efeito" in _opcoes(s):
+            falta.append("a lista perdeu o «—», o nenhum efeito, ou voltou ao nome velho")
         for t in _opcoes(s):
             if t in ACIONAMENTOS:
                 falta.append(f"o acionamento «{t}» voltou à lista do efeito")
@@ -166,7 +166,8 @@ def test_a_dica_da_caixa_leva_o_nome_e_a_frase() -> None:
         assert dica == f"{imersao.rotulo}. {imersao.dica}"
         assert " · " in imersao.rotulo, imersao.chave
         assert imersoes.familia_da_pagina(imersao) in imersoes.FAMILIAS_DA_PAGINA
-    assert a03_gatilhos.dica_da_imersao(a03_gatilhos.SEM_IMERSAO).startswith("Sem efeito.")
+    sem = a03_gatilhos.SEM_IMERSAO
+    assert a03_gatilhos.dica_da_imersao(sem) == a03_gatilhos.DICA_DO_SEM_IMERSAO
     assert a03_gatilhos.familia_da_imersao(a03_gatilhos.SEM_IMERSAO) == ""
     assert a03_gatilhos.familia_da_imersao("golpe-leve") == "Golpe"
 
@@ -174,7 +175,7 @@ def test_a_dica_da_caixa_leva_o_nome_e_a_frase() -> None:
 def test_o_pacote_monta_a_lista_em_grupos_com_a_frase_no_title() -> None:
     html = a03_gatilhos.html_das_opcoes_de_imersao()
     assert all(f'<optgroup label="{f}">' in html for f in FAMILIAS)
-    assert re.search(r'<option value="nenhum" title="[^"]+">Sem efeito</option>', html)
+    assert re.search(r'<option value="sem_efeito" title="[^"]+">—</option>', html)
     chaves = set(re.findall(r'<option value="([^"]+)" title=', html))
     esperadas = {i.chave for i in imersoes.IMERSOES} - set(imersoes.IGUAL_A)
     assert esperadas <= chaves
@@ -234,7 +235,8 @@ def test_o_05_chama_de_padrao_dos_motores_e_traz_a_haptica_nova() -> None:
     for s in padroes:
         assert 'aria-label="Padrão dos motores"' in s
         opcoes = _opcoes(s)
-        assert "Sem efeito" in opcoes and not any("Só o jogo" in t for t in opcoes)
+        assert "—" in opcoes and "Sem efeito" not in opcoes
+        assert not any("Só o jogo" in t for t in opcoes)
         assert all(t in opcoes for t in MOTORES_DA_05)
     for s in haptica:
         assert all(t in _opcoes(s) for t in HAPTICA_NOVA)
