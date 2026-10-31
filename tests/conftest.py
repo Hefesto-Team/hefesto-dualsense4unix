@@ -1782,9 +1782,19 @@ def _o_produto_nao_roda_neste_ambiente(erro: ModuleNotFoundError) -> bool:
     return bool(nome) and importlib.util.find_spec(nome) is None
 
 
+@pytest.fixture
+def _o_runtime_do_caso() -> Iterator[Path]:
+    """O runtime do caso sai depois de o `monkeypatch` desfazer o `os` que o teste trocou."""
+    runtime = _runtime_do_caso()
+    yield runtime
+    shutil.rmtree(runtime, ignore_errors=True)
+
+
 @pytest.fixture(autouse=True)
 def _hefesto_fake_env(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, request: pytest.FixtureRequest
+    _o_runtime_do_caso: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Ativa HEFESTO_DUALSENSE4UNIX_FAKE=1 e ISOLA os diretórios XDG em todo teste.
 
@@ -1826,9 +1836,7 @@ def _hefesto_fake_env(
     home_dir = xdg_root / "home"
     home_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HOME", str(home_dir))
-    runtime = _runtime_do_caso()
-    request.addfinalizer(lambda: shutil.rmtree(runtime, ignore_errors=True))
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(_o_runtime_do_caso))
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
     monkeypatch.setenv("HEFESTO_DONO_DO_P1", str(xdg_root / "dono-do-p1"))
