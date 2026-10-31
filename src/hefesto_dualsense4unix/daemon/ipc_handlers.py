@@ -5691,7 +5691,7 @@ class IpcHandlersMixin:
         deste arquivo andar.
 
         Responde ``{status, uniq, ligado, leva, forma}``, com ``par`` e ``motivo_da_forma`` quando
-        a forma cede ao par de teste; ``sem_efeito`` na escolha «Sem efeito» e ``sem_som`` quando o
+        a forma cede ao par de teste; ``sem_efeito`` na escolha «—» e ``sem_som`` quando o
         subsystem do som não está no ar, os dois com ``motivo``.
         """
         uniq = params.get("uniq")

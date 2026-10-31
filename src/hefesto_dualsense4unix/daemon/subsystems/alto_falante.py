@@ -1351,7 +1351,7 @@ class AltoFalanteSubsystem:
 
         A forma é a que o tiro tocaria (``tato_vivo.escolhas_ativas`` e a lista de
         :mod:`formas_de_haptica`), pelo mesmo ``tocar_o_toque``, a cada rebate da janela até o
-        «Parar». «Do estilo» e o controle sem escolha tocam o Toque; «Sem efeito» recusa; o Som no
+        «Parar». «Do estilo» e o controle sem escolha tocam o Toque; «—» recusa; o Som no
         corpo toca um trecho fixo de grave. O par de teste só sobra quando a forma não pode tocar
         (o rádio sem fatia livre para a forma longa, o tocador fora do ar), e a resposta diz.
         """
