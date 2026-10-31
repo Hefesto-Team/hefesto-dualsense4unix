@@ -2049,9 +2049,7 @@ class BrokerState:
             return {"ok": False, "cmd": "hide", "node": canon, "error": "hide_node_gone"}
         entrada = self.externos.get(canon)
         if entrada is not None and entrada.pai != pai:
-            del self.externos[canon]
-            for held in self.externos_by_conn.values():
-                held.discard(canon)
+            self._esquecer_o_externo(canon)
             entrada = None
         try:
             modo, acl = self._ops.esconder_externo(canon, base, pai)
@@ -2076,10 +2074,20 @@ class BrokerState:
         canon = f"{self._dev_root}/{base}"
         if canon not in self.externos:
             return None
+        if canon in self.hidden and self._pai_hid(base) != self.externos[canon].pai:
+            self._esquecer_o_externo(canon)
+            self._gravar_os_externos()
+            return None
         self.externos_by_conn.get(conn_id, set()).discard(canon)
         if self._externo_holders(canon) > 0:
             return {"ok": True, "cmd": "restore", "node": canon, "state": "hidden"}
         return self._devolver_o_externo(canon)
+
+    def _esquecer_o_externo(self, canon: str) -> None:
+        """Tira da lista o controle de fora cujo nome já é de outro aparelho, sem tocar no nó."""
+        self.externos.pop(canon, None)
+        for held in self.externos_by_conn.values():
+            held.discard(canon)
 
     def _devolver_o_externo(self, canon: str) -> dict[str, object]:
         so_ele = {canon: self.externos[canon]}

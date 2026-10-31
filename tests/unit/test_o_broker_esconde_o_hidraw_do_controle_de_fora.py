@@ -60,6 +60,11 @@ def _arvore(
         alvo = tmp_path / "sys" / "devices" / "pci0000:00" / "usb1" / "0003:057E:2009.0001"
     elif pai == "uhid":
         alvo = tmp_path / "sys" / "devices" / "virtual" / "misc" / "uhid" / "0005:057E:2009.0002"
+    elif pai == "gadget":
+        usb = tmp_path / "sys" / "devices" / "platform" / "vhci_hcd.0" / "usb3" / "3-1"
+        usb.mkdir(parents=True)
+        (usb / "serial").write_text("hefesto-pad-1\n", encoding="ascii")
+        alvo = usb / "3-1:1.0" / "0003:057E:2009.0009"
     else:
         alvo = tmp_path / "sys" / "devices" / "virtual" / "input" / "input55"
     alvo.mkdir(parents=True)
@@ -107,6 +112,16 @@ def test_o_controle_de_fora_pelo_uhid_do_radio_e_aceito(tmp_path: Path) -> None:
         tmp_path, hid_id="0005:0000057E:00002009", pai="uhid", phys=MAC_ADAPTADOR, uniq=MAC_CONTROLE
     )
     assert _valida(no, raizes) == "hidraw3"
+
+
+@pytest.mark.parametrize(
+    "hid_id", ["0003:0000054C:00000CE6", "0003:0000057E:00002009", "0003:00002DC8:00003106"]
+)
+def test_o_pad_virtual_do_hefesto_no_vhci_nunca_e_controle_de_fora(
+    tmp_path: Path, hid_id: str
+) -> None:
+    no, raizes = _arvore(tmp_path, hid_id=hid_id, pai="gadget")
+    assert _valida(no, raizes) is None
 
 
 @pytest.mark.parametrize(
@@ -294,6 +309,53 @@ def test_o_cinto_do_broker_morto_devolve_a_lista(
     assert hb.main(["--restore-all-and-exit"]) == 0
     assert (disco.modo, disco.acl) == (0o660, b"acl-de-antes")
     assert not caminho.exists()
+
+
+class _DiscoComDualSense(_Disco):
+    """O mesmo nome, ora de um controle de fora, ora de um DualSense, com as operações dos dois."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.fechados = 0
+
+    def hide(self, node: str, base: str) -> None:
+        self.fechados += 1
+
+    def restore(self, node: str, base: str, uid: int) -> None:
+        self.fechados -= 1
+
+    def is_exposed_to(self, node: str, uid: int) -> bool:
+        return True
+
+
+def test_o_nome_do_controle_de_fora_que_virou_dualsense_restaura_pelo_caminho_dele(
+    tmp_path: Path,
+) -> None:
+    disco = _DiscoComDualSense()
+    lista = tmp_path / "sys-class-hidraw"
+    (lista / "hidraw3").mkdir(parents=True)
+    e_dualsense = {"agora": False}
+    st = BrokerState(
+        allowed_uid=UID,
+        ops=disco,
+        validator=lambda n: "hidraw3" if e_dualsense["agora"] else None,
+        validator_externo=lambda n: None if e_dualsense["agora"] else "hidraw3",
+        externos_path=str(tmp_path / "externos"),
+        dev_root="/dev",
+        sys_class_hidraw=str(lista),
+        log=lambda *_a, **_k: None,
+        sleep_fn=lambda _s: None,
+    )
+    assert _pede(st, 1, "hide")["state"] == "hidden"
+    disco.pai, e_dualsense["agora"] = "/sys/devices/dualsense", True
+    assert _pede(st, 2, "hide")["state"] == "hidden"
+    assert "/dev/hidraw3" in st.hidden
+    resposta = _pede(st, 2, "restore")
+    assert resposta["ok"] is True
+    assert resposta["state"] != "gone"
+    assert "/dev/hidraw3" not in st.hidden
+    assert st.externos == {}
+    assert not (tmp_path / "externos").exists()
 
 
 def test_o_dualsense_continua_no_caminho_dele(tmp_path: Path) -> None:
