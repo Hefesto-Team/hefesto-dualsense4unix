@@ -692,7 +692,7 @@ class BtMicSubsystem:
         `subsystems/base.numero_do_assento_na_mesa`, que pergunta o
         `player_slot` ao dono dele — o `identity_registry` — e só então aplica a
         regra da casa. A conta própria que vivia aqui era a TERCEIRA de três
-        para o mesmo rótulo, e era a que mentia na lista de som do usuário: «Microfone
+        para o mesmo rótulo, e era a que mentia na lista de som do sistema: «Microfone
         do Controle 2» no aparelho que o cartão chamava de P1, medido às 22h de
         09/09 com os quatro na mesa.
 

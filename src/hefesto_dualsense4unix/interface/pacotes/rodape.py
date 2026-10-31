@@ -24,8 +24,8 @@ esconderia trabalho.
 O "APLICAR" NÃO É REDUNDANTE, mesmo com a decisão de produto de que clicar já aplica.
 O que ele carrega sozinho é o **depois**: modo e máscara, que o jogo só lê
 quando abre, e que por isso não podem ir na hora. Foi um defeito real de
-08/08/2026, na palavra de produto: *"quando eu clico ali no inferior no verde em
-aplicar, ele não aplica e não abre o pop up"*.
+08/08/2026, na queixa de uso: o clique no Aplicar verde do rodapé não aplicava
+nem abria o pop-up.
 
 A CARONA DO ATALHO DE INICIALIZAÇÃO — QUEM PEGA E QUEM NÃO PEGA (06/09/2026)
 ---------------------------------------------------------------------------

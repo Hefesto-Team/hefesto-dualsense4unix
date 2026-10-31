@@ -43,8 +43,8 @@ O ERRO QUE ENSINOU O DESENHO
 ============================
 A primeira versão do gatilho esperava 1,5 s **depois de cada controle** e
 escrevia só naquele. Falhou: três conexões em três segundos, e só o ÚLTIMO
-ficou magenta (ensaio ``gatilho-1500ms-por-controle``; literal: *"só o
-player 4 que é o controle azul o resto tá no padrão da steam"*). O último
+ficou magenta (ensaio ``gatilho-1500ms-por-controle``: só o jogador 4,
+o controle azul; o resto ficou no padrão da Steam). O último
 sobreviveu apenas porque ninguém conectou depois dele.
 
 Por isso o disparo é no **fim da sequência**, nunca por controle: cada evento

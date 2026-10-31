@@ -1002,7 +1002,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra da Velocidade de cursor, arrastada. `mouse_emulation.speed`.
 
-    Decisão de 05/09/2026: *"velocidade do cursor e da rolagem coloca um slicer pra cada"*. Os
+    Decisão de 05/09/2026: uma barra para a velocidade do cursor e outra para a da rolagem. Os
     gestos `vel-cursor-menos`/`-mais` somavam ±1 ao número do ÚLTIMO TIQUE e saíram com os botões: a
     barra manda o número INTEIRO, sem de onde partir nem passo engolido a curar. A paridade com a
     janela GTK fechou junto: lá é um `Gtk.Scale` de `mouse_speed_adj` (`gui/main.glade`, 1..12,

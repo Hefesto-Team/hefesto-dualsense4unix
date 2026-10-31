@@ -99,8 +99,8 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     daemon/launch_env.launch_session_appid               1º degrau da escada
     daemon/launch_env.read_last_run_marker               3º degrau da escada
 
-O REPARO SAIU DESTA ABA — 21/09/2026, palavra de produto: *"a ideia é termos os
-mesmos botões pra todos os lançadores. sempre."* O «Consertar», o «Ver o que
+O REPARO SAIU DESTA ABA — 21/09/2026, decisão de produto: os
+mesmos botões para todos os lançadores, sempre. O «Consertar», o «Ver o que
 impede», o «Posso fechar a Steam», o «Não perguntar», o «Copiar a linha» e os
 dois do Steam Input saíram, e com eles a vigia de dentro da aba
 (`_VigiaDaSteam`) e os portões do censo. Quem repõe o atalho é o vigia de fora

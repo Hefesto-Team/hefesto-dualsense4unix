@@ -255,7 +255,7 @@ def appid_do_jogo_em_foco(state: dict[str, Any] | None) -> str:
 
 
 def o_usuario_ja_respondeu_sobre(appid: str) -> bool:
-    """O usuário já disse "eu sei, deixa assim" sobre este jogo? — as DUAS recusas.
+    """O usuário já recusou o aviso sobre este jogo? — as DUAS recusas.
 
     São duas listas e as duas contam, porque as duas são o usuário dizendo a mesma
     coisa: `launch_dialog_dismissed.json` ("Não perguntar para este jogo") e

@@ -481,8 +481,8 @@ def fita(ativo: str = "todos", inerte: bool = False,
     três foram o botão de jogador da Iluminação, o primário da Navegação e o
     censo da Conexões.
 
-    **E ELE VOLTOU EM 02/09/2026, por defeitos que moram AQUI.** O usuário viu e
-    disse: *"o controle identificado em todas ta completamente errado"*. Medido
+    **E ELE VOLTOU EM 02/09/2026, por defeitos que moram AQUI.** A queixa foi
+    que o controle identificado estava errado em todas as abas. Medido
     com os dois controles do usuário na mesa (um `usb`, um `bt`), o daemon
     respondendo em 1 ms:
 

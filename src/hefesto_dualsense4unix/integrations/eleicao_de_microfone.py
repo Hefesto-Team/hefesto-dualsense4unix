@@ -42,8 +42,8 @@ o microfone real do usuário quatro degraus para baixo, caladas.
 
 A ELEIÇÃO ENCOLHEU — CANAL-POR-CONTROLE-01, 03/09/2026
 -------------------------------------------------------
-Decisão de produto, com as palavras do usuário e sem corrigi-las:
-*"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
+Decisão de produto: com quatro controles, cada um dos quatro tem o próprio canal
+de entrada.
 
 Duas coisas que este módulo tratava como uma passam a ser duas:
 

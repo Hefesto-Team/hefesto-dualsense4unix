@@ -32,8 +32,8 @@ acusar: *a cura escrita e nunca ligada*. Este módulo é o fio que faltava.
 
 O CENSO DOS GESTOS, e por que estes cinco
 -----------------------------------------
-O usuário disse "aplicar ou salvar o perfil, **seja dentro ou fora da guia de
-perfis**". Todo gesto do produto que aplica ou grava um PERFIL, e o que foi
+O pedido: aplicar ou salvar o perfil, **seja dentro ou fora da guia de
+perfis**. Todo gesto do produto que aplica ou grava um PERFIL, e o que foi
 feito de cada um. (Os "Aplicar" de rumble, lightbar e gatilhos não entram: são
 o gesto de uma feature, não o de um perfil.)
 

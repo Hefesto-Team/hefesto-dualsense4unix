@@ -929,8 +929,8 @@ def _com_os_lugares_vazios(
 ) -> list[Any]:
     """A lista da mesa completada até os quatro lugares do desenho.
 
-    Nasceu em 05/09/2026, da palavra de produto *"os svgs não deveriam aparecer prós demais
-    controles desconectados"*. Antes o pacote mandava só as linhas da mesa e o `forEach` do
+    Nasceu em 05/09/2026, da decisão de produto de que os SVGs não aparecem para os demais
+    controles desconectados. Antes o pacote mandava só as linhas da mesa e o `forEach` do
     bootstrap escrevia `''` no que sobrava, o que serve para APAGAR e nunca para ACENDER, e o lugar
     vazio precisa acender a classe `fora` e escrever `P3 • Desconectado`. ``para_o_vazio`` recebe o
     NÚMERO do lugar (1..4) e devolve o valor da linha (função, pois o rótulo traz o número). Sobra

@@ -188,8 +188,8 @@ def fora_do_pino_html(fora: tuple[tuple[str, str], ...]) -> str:
 def contador_html(pontes: int) -> str:
     """O contador do corpo do cartão — o MESMO nos oito, zero inclusive.
 
-    21/09/2026, palavra de produto: *"falta o mesmo textinho de contador da steam pros demais. (…)
-    todos tem que serem iguais."* Era o carimbo da fileira da Steam; agora abre o corpo de todo
+    21/09/2026, decisão de produto: o mesmo contador da Steam vale para os demais, e todos
+    são iguais. Era o carimbo da fileira da Steam; agora abre o corpo de todo
     cartão LOCALIZADO, onde os outros sete tinham espaço vazio (sem custo de altura). O zero aparece
     (a regra *"zero some"* caiu com o pedido).
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """ensaio_do_radio.py — o CONDUTOR da sentada do rádio, 19/09/2026.
 
-A ENCOMENDA É DO USUÁRIO: *"Prepara todos os testes, deixa tudo pronto (…) pra em
-uma sentada eu conseguir fazer todos os testes sem perdermos muito tempo. Pra
-vc ir conduzindo tudo em software e eu ir executando as etapas do mundo físico
-e te reportando"*.
+A ENCOMENDA É DE PRODUTO: todos os testes prontos para uma sentada só, sem perder
+tempo, com o software conduzido daqui e as etapas do mundo físico executadas e
+reportadas por quem está com o controle.
 
 POR QUE SUBCOMANDOS, E NÃO UM ASSISTENTE INTERATIVO
 ---------------------------------------------------

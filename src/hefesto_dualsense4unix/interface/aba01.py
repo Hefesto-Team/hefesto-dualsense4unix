@@ -577,9 +577,8 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que mudou, e por quê</h2>
   <ul>
-    <li><b>"Trava o perfil ativo" virou <span class="marca">Modo Freestyle</span>, com letra e altura maiores</b> — sua palavra, 23/09:
-      <span class="marca">"Vira Modo Freestyle o botão. E a fonte dele aumenta e a altura do botão
-      aumenta também"</span>. A letra foi de 10,5 para <b>12,5 px</b>, a de todo botão desta janela;
+    <li><b>"Trava o perfil ativo" virou <span class="marca">Modo Freestyle</span>, com letra e altura maiores</b> — sua decisão de 23/09: o botão vira Modo Freestyle, e a letra e a
+      altura dele aumentam. A letra foi de 10,5 para <b>12,5 px</b>, a de todo botão desta janela;
       a altura, de 17 para <b>26 px</b>, a do botão de giroscópio no dia em que você o apontou como
       modelo. O que ele faz não mudou: ligado, o perfil que está valendo continua valendo; só o
       perfil próprio de um jogo entra por cima, como já era.</li>
@@ -588,10 +587,9 @@ LEGENDA = f'''<div class="nota">
       primeiro jogo <b>o topo diz Freestyle</b>, e o que você ajustar nas outras abas cai nele. O jogo
       com perfil próprio entra por cima, com o botão ligado ou não; com ele desligado, fechar o jogo
       devolve o Freestyle. O arquivo de antes fica no histórico, inteiro.</li>
-    <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
-      <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
-      Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
-      — <span class="marca">"qual a diferença de nativo pra dualsense?"</span> —, e a pergunta era
+    <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua decisão de 31/08: desconfundir, com o Hefesto Ligado/Desligado e,
+      quando Ligado, as seções de Modo abertas. A pergunta que abriu isto foi qual a
+      diferença entre o Nativo e o DualSense, e a pergunta era
       boa: a tela punha os dois na <b>mesma</b> fileira, como alternativas do mesmo tipo. Não
       são. <b>Nativo é o Hefesto FORA do meio</b>; os outros são jeitos de ele <b>estar</b> no
       meio. Agora a tela mostra isso: em cima o interruptor, embaixo o que ele abre.</li>
@@ -650,8 +648,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>"Automático" saiu da máscara</b> — substitui a <code>D-A-MASCARA-GANHA-O-AUTOMATICO</code>
       de 26/08, que o queria como terceira opção ligada. A heurística que o moveria
       (<code>api_de_entrada.py</code>) errou em <b>13 dos 14</b> jogos do seu censo.</li>
-    <li><b>"Automático" saiu também do Modo de conexão</b> — sua palavra, 31/08:
-      <span class="marca">"na aba jogar o Botão Automático não existe"</span>. E não existe
+    <li><b>"Automático" saiu também do Modo de conexão</b> — sua decisão de 31/08:
+      na aba Jogar, o botão Automático não existe. E não existe
       mesmo: ele não tinha <b>leitor</b> (<code>painel.CHIPS_DA_ESCADA</code> o declarava com
       <code>ponte=None</code>, e o chip só acendia comparando pontes — nenhum
       estado do produto podia acendê-lo) nem <b>escritor</b> (não há método de IPC que fixe um
@@ -667,10 +665,10 @@ LEGENDA = f'''<div class="nota">
       (<code>app/actions/mode_transition.py</code>), e duas peças pedindo modos diferentes
       não têm resposta. Máscara é do <b>aparelho</b>; modo é da <b>máquina</b>.</li>
     <li><b>O Point and click é do Ligado e a Navegação é do Desligado — os dois são o mesmo modo, e cada fileira tem três chips</b>
-      — em 15/10 a opção A do desenho do todo substituiu a ordem de 31/08 (<i>"tira o point and
-      click e deixa só o navegação"</i>): o Point and click volta, só no Ligado, e a Navegação
-      passa a ser o terceiro chip do Desligado. A ordem de 17/09 segue: <i>"o modo point and click é o modo navegação e o modo que nós mesmos
-      podemos usar e configurar na aba navegação. Ele ativa o modo configurado lá."</i>
+      — em 15/10 a opção A do desenho do todo substituiu a ordem de 31/08 (tirar o Point and
+      click e deixar só a Navegação): o Point and click volta, só no Ligado, e a Navegação
+      passa a ser o terceiro chip do Desligado. A ordem de 17/09 segue: o Point and click é o modo Navegação, o que se usa e se
+      configura na aba Navegação, e ele ativa o modo configurado lá.
       <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
       (<code>apply_mode('desktop')</code>), e desde 17/09 ele
       <b>carrega o seu perfil</b> ao entrar — o mouse, as teclas, os botões e a função do
@@ -713,8 +711,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>Clicar num cartão leva a fita para ele</b> — é a mesma gramática que você fixou hoje
       para o acordeão da Controles ("clicar num card muda a fita").</li>
     <li><b>A ordem dos cinco modos não é a ordem em que você os listou</b>, e é a única coisa
-      em que me afastei do seu texto. Você escreveu <span class="marca">"Steam Input, Xbox, Sony
-      DualSense, Point And Click"</span>; eu pus <b>Sony DualSense · Xbox · Steam Input</b>,
+      em que me afastei do seu texto. A lista pedida era Steam Input, Xbox, Sony
+      DualSense, Point And Click; eu pus <b>Sony DualSense · Xbox · Steam Input</b>,
       que é a ordem <b>medida</b> em que o produto tenta
       (<code>ponte_escada.ESCADA</code>): a DualSense primeiro porque <b>dez</b> linhas do
       <code>mapa-controles.csv</code> só chegam ao jogo pela DualSense, e o Steam Input por último
@@ -728,7 +726,7 @@ LEGENDA = f'''<div class="nota">
       outras linhas desta casa. Nasceu como pagamento de altura — o miolo tinha <b>2px</b> de
       folga em 542 antes do redesenho da manhã, e um rótulo por cima custa 22px. Esse aperto
       passou (a subida devolveu 13px, e a folga hoje é de 41), mas ele <b>continua deitado</b>
-      porque é a forma que você desenhou (<span class="marca">"Hefesto Ligado/Desligado"</span>,
+      porque é a forma desenhada (Hefesto Ligado/Desligado,
       tudo numa linha) — e porque é a da fita do topo da janela, que é o lugar de onde ele
       agora fala.</li>
     <li><b>O "?" dos modos subiu do rótulo "Modo" para o topo do quadro</b> — é consequência de
@@ -737,8 +735,8 @@ LEGENDA = f'''<div class="nota">
       texto se perdeu — ele está inteiro no "?" do <b>Quando o jogo abrir</b>. De quebra os
       rótulos das duas posições ficaram idênticos (texto puro dos dois lados), que é o que já
       tinha custado <b>180 contra 176</b> quando divergiram.</li>
-    <li><b>O nome da seção é "Modo", e não "Modo de conexão"</b> — é a sua palavra
-      (<span class="marca">"Abre as seções de Modo"</span>). O quadro continua se chamando
+    <li><b>O nome da seção é "Modo", e não "Modo de conexão"</b> — é a decisão de 31/08
+      (o Ligado abre as seções de Modo). O quadro continua se chamando
       <b>Quando o jogo abrir</b>, e o de baixo <b>Conectado agora</b>: os dois títulos são seus,
       de 26 e 28/08, e não os troquei sem você pedir.</li>
     <li><b>Continua sem uma linha de JavaScript, mas o combinador mudou</b> — e a troca foi

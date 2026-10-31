@@ -1330,7 +1330,7 @@ class ControllerSensoresOverride(BaseModel):
         o sensor funciona de verdade, os dois, independentes do modo e da
         máscara.
 
-    **DOIS campos e não um**, porque o usuário disse *"ambos"* e cada um por si —
+    **DOIS campos e não um**, porque a decisão foi pelos dois, cada um por si —
     e porque o caminho do report sabe separá-los: giroscópio e acelerômetro
     viajam na mesma janela de 25 bytes, em faixas distintas
     (``core/virtual_motion.FAIXA_GIROSCOPIO`` / ``FAIXA_ACELEROMETRO``), e

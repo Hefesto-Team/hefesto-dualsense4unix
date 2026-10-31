@@ -574,8 +574,8 @@ def _nome_do_plastico(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
 def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     """`P1 · White · cabo · <serial>` — a identidade de fábrica de UM controle.
 
-    DECISÃO 10 DO USUÁRIO, 03/09/2026: *"Serial de fábrica: inteiro, e SÓ na aba
-    Sistema (a de diagnóstico)."* Ele é identificador único como um MAC, o daemon
+    DECISÃO 10 DE PRODUTO, 03/09/2026: o serial de fábrica, inteiro, e SÓ na aba
+    Sistema (a de diagnóstico). Ele é identificador único como um MAC, o daemon
     já o publica (`ipc_handlers._identidade_publicada`, ROTA-A de 02/09) e até
     hoje NENHUMA tela do produto o mostrava — nem esta, nem a GTK.
 
@@ -1623,8 +1623,8 @@ TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
     "parar-ou-retomar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
                 "serviço já está desligado'* — e isso era verdade até 03/09/2026, "
                 "quando ele deixou de ser um botão só de parar. A decisão mandou o "
-                "mesmo botão LIGAR nesse estado (*'um específico pra parar o "
-                "Daemon E Ativar o Daemon'*), e obedecer à trava aqui recusaria "
+                "mesmo botão LIGAR nesse estado (um controle próprio para parar e "
+                "ativar o daemon), e obedecer à trava aqui recusaria "
                 "exatamente o clique pedido para passar a funcionar. A "
                 "cara de parar não precisa da trava: só aparece com o "
                 "serviço de pé. Ver :func:`desligar`.",

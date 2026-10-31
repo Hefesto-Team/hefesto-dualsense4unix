@@ -743,7 +743,7 @@ def dica_da_luz(nome: str, via: str, recado: str) -> str:
     uniq=…)` → `_apply_por_uniq` → `apply_output_for`). Reproduzido em 02/09/2026 com o merge real e
     nenhum aparelho (dublê de `test_troca_de_player_01_a_escolha_sobrepoe.py`): com override
     `[T,F,F,F,T]` a tela dizia "desenho do P2 — automático" e o fio levava `[T,F,F,F,T]`. Regra de
-    produto: *"se não tá mostrando agora, não tem info pra mostrar no produto"*.
+    produto: se não está mostrando agora, não há informação para mostrar no produto.
 
     O que sobra é o que se mede: a frase da BARRA é o primeiro retorno de
     `controller_card.rotulo_lightbar` (a dos cards da GTK, que sabe os quatro estados em que a cor
@@ -1218,8 +1218,8 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
     numeros = " · ".join(str(int(c["jogador"] or 0)) for c in ordenada)
     return "\n".join([
         cabeca,
-        f'{r}<p>O caso é o seu, de 26/08 — <i>"o meu controle azul é o player 2 e '
-        f"antes de irmos pro\n{r}jogo ele tem que ser o player 1\"</i>. Na coluna "
+        f'{r}<p>O caso é o seu, de 26/08 — o controle azul é o jogador 2 e, '
+        f"antes do\n{r}jogo, tem de ser o jogador 1. Na coluna "
         f'do <b>{quer["nome"]}</b>, clique no\n{r}<b>{tem["jogador"]}</b>:</p>',
         "",
         f'{r}<div class="troca">',

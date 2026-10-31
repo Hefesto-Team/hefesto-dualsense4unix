@@ -1631,8 +1631,8 @@ def nomes_internos(pasta: Path) -> tuple[str, ...]:
 def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
     """O nome do Proton que vale como pino: o MAIS RECENTE instalado que passa na ficha.
 
-    22/10/2026, escolha do usuário: «é sempre a versão mais recente do próton desde que ele tenha
-    os pré-requisitos e usaremos apenas a nova». Os pré-requisitos são a ficha de qualificação
+    22/10/2026, decisão de produto: é sempre a versão mais recente do Proton, desde que cumpra
+    os pré-requisitos, e só a nova se usa. Os pré-requisitos são a ficha de qualificação
     (:func:`qualificar_proton.ficha`, contra a do `proton-pin.conf` quando está no disco). Só
     conta versão do GE-Proton que está em ``compat_dir`` e é mais nova que a do conf; nada vem
     da rede. Sem candidata, ou na dúvida (pasta que não se lê), vale a do conf. Nunca levanta.

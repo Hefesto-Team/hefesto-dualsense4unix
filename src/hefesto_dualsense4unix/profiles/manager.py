@@ -1985,8 +1985,8 @@ def gravar_o_modo_no_perfil_ativo(
 ) -> Profile | None:
     """O modo escolhido vai ao perfil ATIVO, na hora. None = não gravou.
 
-    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela palavra de produto: *"inclusive o
-    ps +r3 e isso fica setado no perfil"*. Até aqui o gesto só deixava rastro
+    MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela decisão de produto: inclusive o
+    PS + R3, e isso fica gravado no perfil. Até aqui o gesto só deixava rastro
     depois de 180 s de jogo aberto, e no perfil do JOGO; agora ele grava no
     perfil que está valendo logo que o aparelho confirma, sem esperar e sem
     precisar de jogo.

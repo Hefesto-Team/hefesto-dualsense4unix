@@ -1,10 +1,10 @@
 """conexao_zumbi.py — o controle que conecta e NÃO vira controle.
 
 CONEXAO-ZUMBI-01 (18/09/2026). O produto foi aberto com dois DualSense ligados e
-disse quatro coisas: *"com dois ou mais controles conectados a interface do app
-para de funcionar"*, *"o lightbar tá sem a solução"*, *"a mudança dos leds e
-afins não foram aplicadas pros demais controles"*, *"ambos conectados, ambos
-como player 1 e ambos com lightbar azul"*.
+mostrou quatro coisas: com dois ou mais controles conectados, a interface parava
+de funcionar; a barra de luz ficava sem a cura; a mudança das lâmpadas e afins
+não chegava aos demais controles; e os dois, conectados, viravam jogador 1 com a
+barra azul.
 
 As quatro são UMA causa só, medida às 11h55::
 
