@@ -63,7 +63,7 @@ import itertools
 import os
 import threading
 import time
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1092,8 +1092,7 @@ def _armar_o_jogo(
             mascara_viva=flavor_pos,
             motivo=divergencia,
         )
-    with escrita_na_hora():
-        materialize_launch_env(daemon)
+    materialize_launch_env(daemon)
     ponte_entregue = ponte_gravada if veio_do_carimbo else ponte_perfil
     if veio_da_escada and comeco.armar is not None:
         ponte_entregue = comeco.armar.ponte
@@ -1908,11 +1907,7 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
 def materialize_launch_env(daemon: DaemonProtocol) -> None:
     """Regrava `default.env` + `steam_app_<appid>.env` com o estado REAL."""
     escrevente = _ESCREVENTE
-    no_fio = (
-        escrevente is not None
-        and not getattr(_NA_HORA, "ligada", False)
-        and escrevente.atende_aqui()
-    )
+    no_fio = escrevente is not None and escrevente.atende_aqui()
     foto = _a_foto_ou_nada(daemon, no_fio=no_fio)
     if foto is None:
         return
@@ -2314,9 +2309,6 @@ def _a_escrita_em_voo() -> bool:
     return escrevente is not None and escrevente.vivo() and escrevente.em_voo()
 
 
-_NA_HORA = threading.local()
-
-
 def armar_o_escrevente(
     devolver: Callable[[Callable[[], None]], None],
     laco: asyncio.AbstractEventLoop | None = None,
@@ -2338,17 +2330,6 @@ def desarmar_o_escrevente(escrevente: EscreventeDoLancamento, teto_s: float = 5.
     if _ESCREVENTE is escrevente:
         _ESCREVENTE = None
     escrevente.esvaziar_e_parar(teto_s)
-
-
-@contextlib.contextmanager
-def escrita_na_hora() -> Iterator[None]:
-    """Dentro do bloco, `materialize_launch_env` escreve antes de voltar."""
-    antes = getattr(_NA_HORA, "ligada", False)
-    _NA_HORA.ligada = True
-    try:
-        yield
-    finally:
-        _NA_HORA.ligada = antes
 
 
 def _identidade_do_primario(daemon: Any) -> str | None:

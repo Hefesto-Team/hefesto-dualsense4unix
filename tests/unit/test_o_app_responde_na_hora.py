@@ -473,17 +473,14 @@ class TestUmPedidoAMaisNoMaximo:
             assert fios == [aqui], "o pedido de fora do laço que armou foi ao fio"
 
             async def no_laco() -> None:
-                with launch_env.escrita_na_hora():
-                    launch_env.materialize_launch_env(SimpleNamespace())  # type: ignore[arg-type]
-                assert fios[-1] == aqui, "o arming do lançamento não escreveu na hora"
                 launch_env.materialize_launch_env(SimpleNamespace())  # type: ignore[arg-type]
 
             laco.run_until_complete(no_laco())
         finally:
             launch_env.desarmar_o_escrevente(escrevente)
             laco.close()
-        assert fios[:2] == [aqui, aqui]
-        assert len(fios) == 3 and fios[2] != aqui, (
+        assert fios[:1] == [aqui]
+        assert len(fios) == 2 and fios[1] != aqui, (
             "o pedido de dentro do laço que armou não foi ao fio escrevente")
 
     def test_o_escrevente_de_um_laco_fechado_nao_segura_o_lugar(
