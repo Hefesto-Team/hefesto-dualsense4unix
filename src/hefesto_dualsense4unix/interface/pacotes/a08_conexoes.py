@@ -853,17 +853,6 @@ def _linha(item: Any) -> dict[str, Any]:
     }
 
 
-def _exame() -> list[dict[str, Any]]:
-    """As linhas do Check-up, em dicionário, sem a ordem calada nem a leitura dos controles.
-
-    Ninguém o chama em produção desde 29/10/2026: a Jogar o chamava pelo `_do_exame`, que saiu
-    sem chamador (A-PONTE-MORTA-E-O-CONTROLAR-O-PC-SAEM-01). A história do nome, da calada e da
-    leitura está em `docs/research/o-porque-dos-modulos.md`, na seção do `_exame`.
-    """
-    return [_linha(i) for i in _itens_da_tela()
-            if not _calada(i) and getattr(i, "chave", "") != CHAVE_DA_LEITURA]
-
-
 def _ensaio() -> Any:
     """A mesa do motor montada sobre o rascunho DO USUÁRIO — ou `None` sem censo."""
     censo = _censo()
@@ -2113,7 +2102,7 @@ def receptor_descobrir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Examinar Portas": refaz o exame INTEIRO e a leitura do barramento.
 
-    Não é botão morto: a primeira leva dizia que o exame já roda a cada tique em `_exame()`, o que
+    Não é botão morto: a primeira leva dizia que o exame já roda a cada tique, o que
     valia para TRÊS conferências; o exame tem cinco mais as ordens de serviço, e as outras três não
     cabem no tique: `pareamentos` forka `busctl` (teto de 5 s, `ESPERA_DO_BUSCTL_S`) e `ler_a_mesa`
     proíbe tique no próprio docstring. O botão cumpre o `title` (*"refaz o exame das entradas —

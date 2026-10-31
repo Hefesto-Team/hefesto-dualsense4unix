@@ -3,8 +3,7 @@
 
 **04/10/2026:** a linha do exame saiu da aba Conexões (cada achado virou um cartão de dica,
 AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01). O que fica aqui é o dado da linha (`_linha`, o selo e a dica
-do dono), que a aba Jogar ainda lê pelo `_exame()`; as réguas dos endereços da página
-saíram com o selo.
+do dono); as réguas dos endereços da página saíram com o selo.
 
 **02/09/2026.** As cinco linhas do Check-up da aba Conexões têm três partes: o
 selo, a frase e o `?`. A frase e o selo já vinham do exame do ensaio; as

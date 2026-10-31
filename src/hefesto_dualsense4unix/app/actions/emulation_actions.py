@@ -201,13 +201,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
     )
 
 
-    _GAMEPAD_BUTTON_IDS: ClassVar[dict[str, str]] = {
-        "off": "emulation_gamepad_off_button",
-        "dualsense": "emulation_gamepad_dualsense_button",
-        "xbox": "emulation_gamepad_xbox_button",
-    }
-
-
     _keyboard_guard_refresh: bool = False
 
     _keyboard_confirmado: bool = True

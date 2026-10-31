@@ -362,15 +362,15 @@ class Aviso(NamedTuple):
 
 
 FRASE_DO_MODO_NATIVO = (
-    "Conexão Nativa com {quantos} controles ligados: quem conta os jogadores "
-    "passa a ser o jogo."
+    "«Status» em «Desligado» com {quantos} controles ligados: quem conta os "
+    "jogadores passa a ser o jogo."
 )
 
 SELO_DO_MODO = "MODO"
 
 
 def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
-    """A linha da Conexão Nativa quando há mais de um controle, ou ``None``.
+    """A linha do «Desligado» quando há mais de um controle, ou ``None``.
 
     **SÓ COM DOIS OU MAIS, e o teto é o ponto.** Com um controle só não existe
     pergunta de co-op — a linha seria ruído numa lista de avisos (hoje, a do

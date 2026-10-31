@@ -515,10 +515,8 @@ def test_o_interrogacao_e_a_sugestao_sao_as_duas_metades_do_dono() -> None:
     assert cartao.cura.endswith(cura), "o cartão perdeu o «o que fazer» do dono"
 
 
-def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O exame completo a acrescenta à tira da 08; o contrato da Jogar"""
+def test_a_linha_da_leitura_entra_no_check_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O exame completo a acrescenta à tira da 08."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -529,7 +527,6 @@ def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
     monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", _estado_do_daemon("failed"))
     assert leitura in a08_conexoes._itens_da_tela()
-    assert all(i.get("porque") != "y." for i in a08_conexoes._exame())
 
 
 def test_o_exame_completo_pergunta_pela_leitura(monkeypatch: pytest.MonkeyPatch) -> None:

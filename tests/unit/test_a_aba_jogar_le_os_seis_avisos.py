@@ -82,9 +82,8 @@ def test_a_divergencia_nao_aponta_de_app_para_a_janela() -> None:
 def test_todo_selo_novo_esta_na_escada_da_gravidade() -> None:
     """Selo fora de `ORDEM_DA_GRAVIDADE` é selo que a máquina cheia esconde.
 
-    `a01_jogar._coluna_de_avisos` põe o que não está na tupla DEPOIS DE TUDO, e
-    a coluna mostra `AVISOS_NA_COLUNA` de cada vez. Um selo nomeado neste
-    arquivo e ausente da escada nasce condenado ao `+N`.
+    `a01_jogar._em_ordem` põe o que não está na tupla DEPOIS DE TUDO: um selo
+    nomeado neste arquivo e ausente da escada nasce no fim da coluna.
     """
     selos = [a.selo for a in painel.AVISOS_DA_TELA]
     selos += [str(a["selo"]) for a in aba.coluna_de_atencao(
