@@ -5,7 +5,8 @@ tabela de métodos é pequena e fechada. ``mod.ola`` confere a ficha e o ``SO_PE
 cada leitura pede ``ler:<tópico>``, cada publicação ``publicar:<tópico>``, cada escrita
 ``escrever:<canal>`` com o ``uniq`` de um controle e nunca num canal que o jogo escreve;
 ``lancador.jogos`` pede ``lancador``. Cada assinatura é uma fila do barramento que
-descarta o mais antigo quando enche. O contrato inteiro, com a vibração que se solta na
+descarta o mais antigo quando enche; a de ``botoes`` junta as bordas de um botão e nunca
+perde a última. O contrato inteiro, com a vibração que se solta na
 queda, está em ``docs/protocol/porta-das-modificacoes.md``.
 """
 from __future__ import annotations
@@ -122,6 +123,48 @@ class _Assinatura:
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
 
 
+class _FilaDosBotoes(asyncio.Queue[dict[str, Any]]):
+    """O tópico ``botoes`` de uma conexão: o aperto e a soltura numa fila só, na ordem do tique.
+
+    No teto, as duas bordas seguidas mais antigas de um mesmo botão (o aperto e a soltura, ou
+    a soltura e o reaperto) saem juntas, porque se anulam: nenhum botão perde a última borda.
+    Sem par para juntar, cada borda na fila é de um botão diferente, e a fila passa do teto só até
+    uma borda por botão de cada controle.
+    """
+
+    _queue: deque[dict[str, Any]]
+
+    def __init__(self, teto: int = DEFAULT_QUEUE_MAXSIZE) -> None:
+        super().__init__()
+        self.teto = teto
+
+    def por(self, carga: dict[str, Any]) -> None:
+        """Nunca espera: quem publica é o tique."""
+        if self.qsize() >= self.teto and self._juntou_a(carga):
+            return
+        self.put_nowait(carga)
+
+    def _juntou_a(self, carga: dict[str, Any]) -> bool:
+        """Tira o par mais antigo; ``True`` quando a própria ``carga`` era a segunda borda dele."""
+        primeira: dict[tuple[Any, Any], int] = {}
+        segunda: dict[tuple[Any, Any], int] = {}
+        for indice, borda in enumerate([*self._queue, carga]):
+            chave = borda.get("uniq"), borda.get("botao")
+            if chave not in primeira:
+                primeira[chave] = indice
+            elif chave not in segunda:
+                segunda[chave] = indice
+        if not segunda:
+            return False
+        chave = min(segunda, key=primeira.__getitem__)
+        antiga, seguinte = primeira[chave], segunda[chave]
+        era_a_carga = seguinte == len(self._queue)
+        if not era_a_carga:
+            del self._queue[seguinte]
+        del self._queue[antiga]
+        return era_a_carga
+
+
 @dataclass(eq=False)
 class _Conexao:
     sessao: _Credencial | None = None
@@ -131,7 +174,7 @@ class _Conexao:
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
-    filas_dos_botoes: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
+    filas_dos_botoes: list[_FilaDosBotoes] = field(default_factory=list)
     filas_das_entradas: list[asyncio.Queue[Any]] = field(default_factory=list)
     quer_os_dedos: bool = False
     escritor: asyncio.StreamWriter | None = None
@@ -156,7 +199,7 @@ class _Conexao:
         for topico, fila in feito.barramento:
             bus.unsubscribe(topico, fila)
         self.assinaturas = [a for a in self.assinaturas if a not in feito.barramento]
-        self.filas_dos_botoes = [(t, f) for t, f in self.filas_dos_botoes
+        self.filas_dos_botoes = [f for f in self.filas_dos_botoes
                                  if all(f is not g for g in feito.filas)]
         self.filas_das_entradas = [f for f in self.filas_das_entradas
                                    if all(f is not g for g in feito.filas)]
@@ -910,14 +953,18 @@ class Porta:
         con.quer_os_dedos = con.quer_os_dedos or dedos
         for publico in topicos:
             feito = con.assinados.setdefault(publico, _Assinatura())
+            if publico == TOPICO_DOS_BOTOES:
+                if not self.le_os_botoes():
+                    self._botoes_antes = None
+                bordas = _FilaDosBotoes()
+                con.filas_dos_botoes.append(bordas)
+                feito.filas.append(bordas)
+                con.tarefa(feito, self._encaminhar(con, writer, publico, publico, bordas),
+                           f"mods-{con.sessao.mod_id}-{publico}")
+                continue
             for topico in TOPICOS_DE_LEITURA[publico]:
-                if publico == TOPICO_DOS_BOTOES:
-                    if not self.le_os_botoes():
-                        self._botoes_antes = None
-                    fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
-                    con.filas_dos_botoes.append((topico, fila))
-                    feito.filas.append(fila)
-                elif publico == TOPICO_DAS_ENTRADAS:
+                fila: asyncio.Queue[Any]
+                if publico == TOPICO_DAS_ENTRADAS:
                     self._entradas_enviadas = {
                         uniq: (None, quando, jogador, via)
                         for uniq, (_valores, quando, jogador, via)
@@ -1214,8 +1261,8 @@ class Porta:
         """As bordas deste tique, de cada controle: ``button.down`` e ``button.up`` com o dele.
 
         ``apertados`` é ``{uniq: botões}`` de todo controle lido no tique. O controle que
-        sumiu solta o que segurava. Roda no laço do serviço; nunca espera o socket (a fila que
-        enche descarta o mais antigo, como a do barramento).
+        sumiu solta o que segurava. Roda no laço do serviço; nunca espera o socket (a fila
+        cheia junta as bordas de um botão, :class:`_FilaDosBotoes`).
         """
         filas = [f for con in self._conexoes for f in con.filas_dos_botoes]
         antes, self._botoes_antes = self._botoes_antes, dict(apertados) if filas else None
@@ -1227,15 +1274,12 @@ class Porta:
             if not descidos and not subidos:
                 continue
             jogador = jogador_de(uniq)
-            for nome, apertado, botoes in (
-                (EventTopic.BUTTON_DOWN, True, descidos), (EventTopic.BUTTON_UP, False, subidos),
-            ):
+            for apertado, botoes in ((True, descidos), (False, subidos)):
                 for botao in botoes:
                     carga = {"button": botao, "botao": botao, "pressed": apertado,
                              "uniq": uniq, "jogador": jogador}
-                    for topico, fila in filas:
-                        if topico == nome:
-                            _por_na_fila(fila, carga)
+                    for fila in filas:
+                        fila.por(carga)
 
     def le_as_entradas(self) -> bool:
         """Alguma extensão assinou o tópico ``entradas``? Sem assinante, o tique não lê controle."""
@@ -1406,12 +1450,15 @@ class Porta:
             uniq = carga.get("uniq") if isinstance(carga, dict) else None
             if not isinstance(uniq, str) or not uniq:
                 uniq = self._uniq_do_posto()
+            nome = topico
+            if publico == TOPICO_DOS_BOTOES:
+                nome = EventTopic.BUTTON_DOWN if carga["pressed"] else EventTopic.BUTTON_UP
             evento = {
                 "jsonrpc": PROTOCOL_VERSION,
                 "method": "evento",
                 "params": {
                     "topico": publico,
-                    "nome": topico,
+                    "nome": nome,
                     "uniq": uniq,
                     "dados": _jsonavel(carga),
                 },
