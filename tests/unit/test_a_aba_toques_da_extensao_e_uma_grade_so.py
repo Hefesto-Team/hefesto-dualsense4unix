@@ -17,7 +17,7 @@ MORDIDAS (31/10/2026, executadas sobre a cura e devolvidas):
 - a ``escolha`` sem as ``formas_extras`` em ``opcoes.validar``, o ``escolhas_de`` sem as gravadas
   e o ``por_botao_dos_efeitos`` sem comparar as formas com as escolhas reprovam, cada um,
   ``test_a_forma_gravada_vale_numa_entrada``;
-- o ``por_botao_dos_efeitos`` que exige as ``escolhas`` iguais às ``formas``, e não contidas
+- o ``por_botao_dos_efeitos`` que exige ``escolhas`` iguais às ``formas`` (e não só contidas)
   reprova ``test_a_entrada_com_parte_dos_efeitos_dos_botoes_desenha_e_aceita_a_gravada``: o
   ``por_botao`` com uma forma a mais que as entradas tirava das entradas a onda e a forma gravada;
 - o ``esquecer_a_forma_do_livre`` sem devolver ao padrão a entrada que usava a forma reprova
