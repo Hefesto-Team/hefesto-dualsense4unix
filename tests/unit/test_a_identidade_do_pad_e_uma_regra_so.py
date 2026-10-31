@@ -1,10 +1,10 @@
 """A identidade do pad virtual é uma regra só (A-IDENTIDADE-DO-PAD-VIRTUAL-E-UMA-REGRA-SO-01).
 
-A regra (docs/protocol/a-identidade-do-pad-virtual.md): o pad veste o Edge só quando o jogo
-nomeia o Edge ou o caminho dele pede o Edge (a biblioteca Sony, o Modo Xbox, o Steam Input, a
-Launch Option que esconde o `0ce6`). Em todo outro caso, inclusive sem sinal nenhum, o
-DualSense comum (`0ce6`). A régua confere a regra em todas as combinações de sinais, nos três jogos
-do ensaio de 22/10/2026, e que a decisão mora num lugar só.
+A regra (docs/protocol/a-identidade-do-pad-virtual.md): o pad veste o Edge só quando o caminho
+do jogo pede o Edge (a biblioteca Sony, o Modo Xbox, o Steam Input, a Launch Option que esconde
+o `0ce6`) ou o jogo conhece o Edge e não conhece o comum. Em todo outro caso (os dois modelos,
+só o comum ou sinal nenhum), o DualSense comum (`0ce6`). A régua confere a regra em todas as
+combinações de sinais, nos três jogos do ensaio de 22/10/2026, e que a decisão mora num lugar só.
 """
 from __future__ import annotations
 
@@ -76,16 +76,19 @@ def test_a_regra_em_toda_combinacao(
 
     roupa, fonte = rj.roupa_do_jogo(raiz, **_CAMINHO[caminho])
 
-    pede_o_edge = edge != "nada" or sony != "nada" or caminho != "direto"
+    so_o_edge = edge != "nada" and comum == "nada"
+    pede_o_edge = so_o_edge or sony != "nada" or caminho != "direto"
     assert roupa == ("0df2" if pede_o_edge else "0ce6"), fonte
     assert fonte, "toda roupa diz de onde veio"
+    if edge != "nada" and comum != "nada" and not pede_o_edge:
+        assert "os dois modelos" in fonte or ", o Edge: o DualSense comum" in fonte, fonte
 
 
 _OS_TRES = {
     "sackboy": (
         {"Jogo.exe": b"MZ" + "WinDualSense".encode("utf-16-le") + _SEPARA + _PID_DO_COMUM
          + _SEPARA + _PID_DO_EDGE},
-        ("0df2", "o executável conhece o modelo 0DF2 do Edge"),
+        ("0df2", "a biblioteca Sony (WinDualSense) pede o Edge"),
     ),
     "dungeons-ii": (
         {"Jogo.exe": b"MZ" + "WinDualShock".encode("utf-16-le") + _SEPARA + _PID_DO_COMUM},
@@ -93,7 +96,7 @@ _OS_TRES = {
     ),
     "mullet-mad-jack": (
         {_METADATA: _PERFIL_DO_COMUM, "Jogo.exe": b"MZ"},
-        ("0ce6", f"{_METADATA} declara só o DualSense comum"),
+        ("0ce6", f"{_METADATA} conhece só o DualSense comum"),
     ),
 }
 

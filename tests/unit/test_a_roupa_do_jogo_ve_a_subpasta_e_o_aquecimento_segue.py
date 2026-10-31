@@ -56,7 +56,7 @@ def test_o_arquivo_novo_na_subpasta_muda_a_roupa_sem_limpar_o_cache(tmp_path: Pa
 
     depois, fonte = rj.roupa_do_jogo(raiz)
     assert depois == "0df2", fonte
-    assert fonte == f"{_METADATA} declara o DualSense Edge"
+    assert fonte == f"{_METADATA} conhece só o DualSense Edge"
 
 
 def test_a_chave_guarda_as_subpastas_que_a_varredura_visitou(tmp_path: Path) -> None:

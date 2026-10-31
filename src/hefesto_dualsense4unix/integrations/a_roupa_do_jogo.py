@@ -1,12 +1,12 @@
 """A roupa do pad para UM jogo, por uma regra só (docs/protocol/a-identidade-do-pad-virtual.md).
 
-`roupa_do_jogo(raiz) -> (roupa, fonte)`: o pad veste o Edge só quando o jogo nomeia o Edge
-ou o caminho dele pede o que só o Edge tem (o contêiner USB do gadget, que a biblioteca Sony
-procura; o pad Sony, que o Modo Xbox e o Steam Input não mostram ao jogo; o PID que a Launch
-Option dele não esconde). Em todo outro caso, inclusive sem sinal nenhum do controle, o
-DualSense comum (`0ce6`), que todo jogo do DualSense conhece. O que o jogo nomeia se lê no
-disco (D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO), em cache pela assinatura dos arquivos; a regra
-é `_a_regra`, e nunca troca máscara nem perfil.
+`roupa_do_jogo(raiz) -> (roupa, fonte)`: o pad veste o Edge só quando o caminho do jogo pede o
+que só o Edge tem (o contêiner USB do gadget, que a biblioteca Sony procura; o pad Sony, que o
+Modo Xbox e o Steam Input não mostram ao jogo; o PID que a Launch Option dele não esconde) ou
+quando o jogo conhece o Edge e não conhece o comum. Em todo outro caso (o jogo que conhece os
+dois modelos, só o comum ou nenhum), o DualSense comum (`0ce6`), que todo jogo do DualSense
+conhece. O que o jogo conhece se lê no disco (D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO), em cache
+pela assinatura dos arquivos; a regra é `_a_regra`, e nunca troca máscara nem perfil.
 """
 from __future__ import annotations
 
@@ -53,7 +53,9 @@ _LETRAS_DE_NOME = frozenset(
     b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 )
 _DUALSENSE_EDGE = _grafias("DualSense Edge")
-_SONY_DUALSENSE = _grafias("Sony DualSense")
+_DUALSENSE_COMUM = _grafias("DualSense Wireless Controller")
+_SONY_DUALSENSE = "Sony DualSense"
+_SUFIXO_DO_EDGE = " Edge"
 _DO_INCONTROL = frozenset({"global-metadata.dat", "incontrol.dll"})
 _DA_SDL = frozenset({"sdl2.dll", "sdl3.dll"})
 _DO_REWIRED = "rewired_core.dll"
@@ -61,7 +63,11 @@ _DO_REWIRED = "rewired_core.dll"
 
 @dataclass(frozen=True)
 class _Declarado:
-    """O que o disco do jogo nomeia do controle; cada campo é a fonte, ou `None`."""
+    """O que o disco do jogo conhece do controle.
+
+    `edge` e `comum` dizem QUEM conhece cada modelo (o arquivo ou o executável), ou `None`;
+    `sony` é a frase da biblioteca Sony, ou `None`.
+    """
 
     edge: str | None = None
     comum: str | None = None
@@ -78,7 +84,7 @@ _AQUECENDO = threading.Event()
 
 def _perfis_do_incontrol(mapa: mmap.mmap) -> tuple[bool, bool]:
     """`(edge, comum)` dos nomes `…Profile` com `PlayStation5` ou `DualSense`, fora os `Hori…`."""
-    comum = False
+    edge = comum = False
     for casou in _NOME_DO_PERFIL.finditer(mapa):
         inicio, fim = casou.start(), casou.end()
         while inicio > 0 and mapa[inicio - 1] in _LETRAS_DE_NOME:
@@ -89,17 +95,34 @@ def _perfis_do_incontrol(mapa: mmap.mmap) -> tuple[bool, bool]:
         if not nome.endswith(b"Profile") or nome.startswith(b"Hori"):
             continue
         if b"Edge" in nome:
-            return True, comum
-        comum = True
-    return False, comum
+            edge = True
+        else:
+            comum = True
+        if edge and comum:
+            break
+    return edge, comum
 
 
 def _tem(mapa: mmap.mmap, agulhas: tuple[bytes, ...]) -> bool:
     return any(mapa.find(a) != -1 for a in agulhas)
 
 
+def _nomeia_sem_o_edge(mapa: mmap.mmap, nome: str) -> bool:
+    """O `nome` aparece, em ASCII ou em UTF-16, ao menos uma vez sem o ` Edge` logo depois."""
+    for codificacao in ("ascii", "utf-16-le"):
+        agulha = nome.encode(codificacao)
+        sufixo = _SUFIXO_DO_EDGE.encode(codificacao)
+        posicao = mapa.find(agulha)
+        while posicao != -1:
+            fim = posicao + len(agulha)
+            if mapa[fim:fim + len(sufixo)] != sufixo:
+                return True
+            posicao = mapa.find(agulha, posicao + 1)
+    return False
+
+
 def _sinais_do_arquivo(arquivo: Path, *, rewired: bool) -> tuple[bool, bool]:
-    """`(edge, comum)` que UM arquivo da roupa declara; nada se ele não se lê."""
+    """`(edge, comum)`, as duas marcas independentes, que UM arquivo da roupa conhece."""
     nome = arquivo.name.lower()
     try:
         if arquivo.stat().st_size == 0:
@@ -111,20 +134,20 @@ def _sinais_do_arquivo(arquivo: Path, *, rewired: bool) -> tuple[bool, bool]:
             if nome in _DO_INCONTROL:
                 return _perfis_do_incontrol(mapa)
             if nome in _DA_SDL or nome == _DO_REWIRED:
-                return _tem(mapa, _DUALSENSE_EDGE), False
+                return _tem(mapa, _DUALSENSE_EDGE), _tem(mapa, _DUALSENSE_COMUM)
             if not rewired:
                 return False, False
-            if _tem(mapa, _DUALSENSE_EDGE):
-                return True, False
-            return False, _tem(mapa, _SONY_DUALSENSE)
+            return _tem(mapa, _DUALSENSE_EDGE), _nomeia_sem_o_edge(mapa, _SONY_DUALSENSE)
     except (OSError, ValueError):
         return False, False
 
 
 def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
-    """O que o jogo nomeia, pela leitura do disco, e o que se olhou (a chave do cache).
+    """O que o jogo conhece, pela leitura do disco, e o que se olhou (a chave do cache).
 
-    O que se olhou são as subpastas por onde a varredura andou e os arquivos lidos.
+    Cada fonte (um arquivo da roupa, ou o executável pelos PIDs) dá as duas marcas; quem conhece
+    os dois modelos responde pelos dois. O que se olhou são as subpastas por onde a varredura
+    andou e os arquivos lidos.
     """
     roupa: list[Path] = []
     pastas: list[Path] = []
@@ -135,25 +158,22 @@ def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
         + ([executavel] if executavel is not None else [])
     )
     rewired = any(p.name.lower() == _DO_REWIRED for p in roupa)
-    edge: str | None = None
-    comum: str | None = None
+    fontes: list[tuple[str, bool, bool]] = []
     for arquivo in sorted(roupa):
         do_edge, do_comum = _sinais_do_arquivo(arquivo, rewired=rewired)
-        relativo = _relativo(arquivo, raiz)
-        if do_edge and edge is None:
-            edge = f"{relativo} declara o DualSense Edge"
-        if do_comum and comum is None:
-            comum = f"{relativo} declara só o DualSense comum"
+        if do_edge or do_comum:
+            fontes.append((_relativo(arquivo, raiz), do_edge, do_comum))
     sony: set[str] = {"libScePad"} if bibliotecas else set()
     pids: set[str] = set()
     for arquivo in bibliotecas + ([executavel] if executavel is not None else []):
         do_arquivo, dos_pids = _ler_o_arquivo(arquivo)
         sony |= do_arquivo
         pids |= dos_pids
-    if edge is None and ROUPA_DO_EDGE in pids:
-        edge = "o executável conhece o modelo 0DF2 do Edge"
-    if comum is None and ROUPA_DO_COMUM in pids:
-        comum = "o executável conhece só o modelo 0CE6 do DualSense comum"
+    if ROUPA_DO_EDGE in pids or ROUPA_DO_COMUM in pids:
+        fontes.append(("o executável", ROUPA_DO_EDGE in pids, ROUPA_DO_COMUM in pids))
+    dos_dois = next((quem for quem, e, c in fontes if e and c), None)
+    edge = dos_dois or next((quem for quem, e, _c in fontes if e), None)
+    comum = dos_dois or next((quem for quem, _e, c in fontes if c), None)
     da_sony = f"a biblioteca Sony ({', '.join(sorted(sony))}) pede o Edge" if sony else None
     return _Declarado(edge=edge, comum=comum, sony=da_sony), lidos
 
@@ -171,12 +191,29 @@ def _o_caminho_pede_o_edge(
     return None
 
 
+def _o_que_o_jogo_conhece(declarado: _Declarado) -> str:
+    """A frase de quem conhece cada modelo, para a fonte da roupa."""
+    edge, comum = declarado.edge, declarado.comum
+    if edge is not None and comum is None:
+        return f"{edge} conhece só o DualSense Edge"
+    if edge is None and comum is not None:
+        return f"{comum} conhece só o DualSense comum"
+    if edge is not None and comum is not None:
+        if edge == comum:
+            return f"{comum} conhece os dois modelos: o DualSense comum"
+        return f"{comum} conhece o DualSense comum e {edge}, o Edge: o DualSense comum"
+    return "nenhum sinal do controle: o DualSense comum"
+
+
 def _a_regra(declarado: _Declarado, caminho: str | None) -> tuple[str, str]:
-    """A regra única: o Edge onde o jogo ou o caminho dele o pede; senão, o `0ce6`."""
-    pede_o_edge = caminho or declarado.edge or declarado.sony
+    """A regra única: o Edge onde o caminho o pede ou o jogo conhece só ele; senão, o `0ce6`."""
+    so_o_edge = declarado.edge is not None and declarado.comum is None
+    pede_o_edge = caminho or declarado.sony
+    if pede_o_edge is None and so_o_edge:
+        pede_o_edge = _o_que_o_jogo_conhece(declarado)
     if pede_o_edge is not None:
         return ROUPA_DO_EDGE, pede_o_edge
-    return ROUPA_DO_COMUM, declarado.comum or "nenhum sinal do controle: o DualSense comum"
+    return ROUPA_DO_COMUM, _o_que_o_jogo_conhece(declarado)
 
 
 def _relativo(arquivo: Path, raiz: Path) -> str:

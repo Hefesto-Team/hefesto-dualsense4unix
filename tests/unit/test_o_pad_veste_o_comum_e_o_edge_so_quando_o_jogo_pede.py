@@ -1,13 +1,16 @@
 """O pad veste o DualSense comum, e o Edge só quando o jogo pede.
 
-A sprint O-PAD-VESTE-O-DUALSENSE-COMUM-E-O-EDGE-SO-QUANDO-O-JOGO-PEDE-01. Um teste por
-cláusula da regra (docs/protocol/a-identidade-do-pad-virtual.md): o Edge quando o jogo nomeia o
-Edge ou o caminho dele o pede (a biblioteca Sony, o Modo Xbox, a lista do Steam Input, a Launch
-Option que esconde o `0ce6`); em todo outro caso, inclusive sem sinal nenhum, o `0ce6`. E a
-volta inteira até a env que o jogo lê, com a leitura do disco de verdade.
+As sprints O-PAD-VESTE-O-DUALSENSE-COMUM-E-O-EDGE-SO-QUANDO-O-JOGO-PEDE-01 e
+O-JOGO-QUE-CONHECE-OS-DOIS-MODELOS-VESTE-O-COMUM-01. Um teste por cláusula da regra
+(docs/protocol/a-identidade-do-pad-virtual.md): o Edge quando o caminho do jogo o pede (a
+biblioteca Sony, o Modo Xbox, a lista do Steam Input, a Launch Option que esconde o `0ce6`) ou
+quando o jogo conhece o Edge e não conhece o comum; em todo outro caso (os dois modelos, só o
+comum ou sinal nenhum), o `0ce6`. E a volta inteira até a env que o jogo lê, com a leitura do
+disco de verdade.
 
-MORDIDA: devolver a regra antiga em `_a_regra` (o `0ce6` só com `declarado.comum`) reprova o
-«sem sinal», no `roupa_do_jogo`, no laço e na env.
+MORDIDAS: devolver a regra antiga em `_a_regra` (o `0ce6` só com `declarado.comum`) reprova o
+«sem sinal», no `roupa_do_jogo`, no laço e na env; devolver o «conhece o Edge, veste o Edge»
+(`declarado.edge` pede o Edge sozinho) reprova os jogos dos dois modelos, em toda fonte.
 
 Jogos de mentira em `tmp_path`, com os nomes medidos nos jogos de verdade (não cópia deles).
 """
@@ -91,20 +94,85 @@ def test_o_jogo_que_nomeia_so_o_comum_veste_o_comum(tmp_path: Path, caso: str) -
     assert "comum" in fonte and "nenhum sinal" not in fonte, "a fonte diz quem nomeou o comum"
 
 
-_NOMEIA_O_EDGE: dict[str, dict[str, bytes]] = {
-    "perfil-do-incontrol": {_METADATA: _PERFIL_DO_COMUM + b"\0" + _PERFIL_DO_EDGE},
-    "rewired": {_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense"},
+_SO_O_EDGE: dict[str, dict[str, bytes]] = {
+    "perfil-do-incontrol": {_METADATA: _PERFIL_DO_EDGE, "Jogo.exe": b"MZ"},
+    "rewired": {_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense Edge"},
     "sdl": {"SDL3.dll": b"DualSense Edge\0DualSense", "Jogo.exe": b"MZ"},
-    "pid-no-exe": {"Jogo.exe": b"MZ" + _PID_DO_COMUM + _SEPARA + _PID_DO_EDGE},
+    "pid-no-exe": {"Jogo.exe": b"MZ" + _PID_DO_EDGE},
 }
 
 
-@pytest.mark.parametrize("caso", sorted(_NOMEIA_O_EDGE))
-def test_o_jogo_que_nomeia_o_edge_veste_o_edge(tmp_path: Path, caso: str) -> None:
-    roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", _NOMEIA_O_EDGE[caso]))
+@pytest.mark.parametrize("caso", sorted(_SO_O_EDGE))
+def test_o_jogo_que_conhece_so_o_edge_veste_o_edge(tmp_path: Path, caso: str) -> None:
+    roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", _SO_O_EDGE[caso]))
 
     assert roupa == rj.ROUPA_DO_EDGE, fonte
-    assert "Edge" in fonte or "0DF2" in fonte, fonte
+    assert fonte.endswith("conhece só o DualSense Edge"), fonte
+
+
+_SDL_DOS_DOIS = b"DualSense Edge Wireless Controller\0DualSense Wireless Controller"
+_OS_DOIS_MODELOS: dict[str, tuple[dict[str, bytes], str]] = {
+    "perfil-do-incontrol": (
+        {_METADATA: _PERFIL_DO_COMUM + b"\0" + _PERFIL_DO_EDGE, "Jogo.exe": b"MZ"}, _METADATA),
+    "perfil-do-incontrol-edge-primeiro": (
+        {_METADATA: _PERFIL_DO_EDGE + b"\0" + _PERFIL_DO_COMUM, "Jogo.exe": b"MZ"}, _METADATA),
+    "rewired-na-dll": (
+        {_REWIRED: _u16("DualSense Edge") + b"\0" + _u16("DualSense Wireless Controller"),
+         _ASSETS: b"x"}, _REWIRED),
+    "rewired-nos-assets": (
+        {_REWIRED: _u16("DualSenseDriver"), _ASSETS: b"Sony DualSense Edge\0Sony DualSense"},
+        _ASSETS),
+    "sdl2": ({"SDL2.dll": _SDL_DOS_DOIS, "Jogo.exe": b"MZ"}, "SDL2.dll"),
+    "sdl3-em-utf16": (
+        {"SDL3.dll": _u16("DualSense Edge Wireless Controller") + b"\0\0"
+         + _u16("DualSense Wireless Controller"), "Jogo.exe": b"MZ"}, "SDL3.dll"),
+    "pid-no-exe": ({"Jogo.exe": b"MZ" + _PID_DO_COMUM + _SEPARA + _PID_DO_EDGE}, "o executável"),
+}
+
+
+@pytest.mark.parametrize("caso", sorted(_OS_DOIS_MODELOS))
+def test_o_jogo_que_conhece_os_dois_modelos_veste_o_comum(tmp_path: Path, caso: str) -> None:
+    """Prova da D-3110-O-JOGO-QUE-CONHECE-OS-DOIS-MODELOS-VESTE-O-COMUM.
+
+    Conhecer o Edge numa tabela que também lista o comum não é pedir o Edge: a tabela da SDL do
+    Mina the Hollower, do The Dark Queen of Mortholme e do Godot lista os dois.
+    """
+    arquivos, quem = _OS_DOIS_MODELOS[caso]
+
+    roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", arquivos))
+
+    assert (roupa, fonte) == (
+        rj.ROUPA_DO_COMUM, f"{quem} conhece os dois modelos: o DualSense comum")
+
+
+def test_os_dois_modelos_em_fontes_diferentes_vestem_o_comum(tmp_path: Path) -> None:
+    """O comum num arquivo e o Edge no executável: o jogo conhece os dois, e a fonte diz quem."""
+    raiz = _jogo(tmp_path / "Jogo", {_METADATA: _PERFIL_DO_COMUM, "Jogo.exe": b"MZ" + _PID_DO_EDGE})
+
+    assert rj.roupa_do_jogo(raiz) == (
+        rj.ROUPA_DO_COMUM,
+        f"{_METADATA} conhece o DualSense comum e o executável, o Edge: o DualSense comum",
+    )
+
+
+def test_quem_conhece_os_dois_responde_pelos_dois(tmp_path: Path) -> None:
+    """Um arquivo do Edge só e outro dos dois: a fonte é o que conhece os dois."""
+    raiz = _jogo(tmp_path / "Jogo", {
+        "SDL3.dll": b"DualSense Edge", "Jogo.exe": b"MZ" + _PID_DO_COMUM + _SEPARA + _PID_DO_EDGE})
+
+    assert rj.roupa_do_jogo(raiz) == (
+        rj.ROUPA_DO_COMUM, "o executável conhece os dois modelos: o DualSense comum")
+
+
+@pytest.mark.parametrize("caso", sorted(_OS_DOIS_MODELOS))
+def test_a_biblioteca_sony_com_os_dois_modelos_segue_no_edge(tmp_path: Path, caso: str) -> None:
+    """O Sackboy conhece os dois modelos e leva a biblioteca Sony: o gadget só sobe com o Edge."""
+    arquivos = dict(_OS_DOIS_MODELOS[caso][0])
+    arquivos["Jogo_Data/Plugins/libScePad.dll"] = b"x"
+
+    roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", arquivos))
+
+    assert (roupa, fonte) == (rj.ROUPA_DO_EDGE, "a biblioteca Sony (libScePad) pede o Edge")
 
 
 _BIBLIOTECA_SONY: dict[str, dict[str, bytes]] = {
@@ -131,12 +199,16 @@ _CAMINHO: dict[str, dict[str, Any]] = {
 }
 
 
-@pytest.mark.parametrize("nomeia", ["nada", "o-comum"])
+@pytest.mark.parametrize("nomeia", ["nada", "o-comum", "os-dois"])
 @pytest.mark.parametrize("caminho", sorted(_CAMINHO))
 def test_o_caminho_que_nao_mostra_o_comum_veste_o_edge(
     tmp_path: Path, caminho: str, nomeia: str
 ) -> None:
-    arquivos = _SEM_SINAL["so-o-exe"] if nomeia == "nada" else _SO_O_COMUM["perfil-do-incontrol"]
+    arquivos = {
+        "nada": _SEM_SINAL["so-o-exe"],
+        "o-comum": _SO_O_COMUM["perfil-do-incontrol"],
+        "os-dois": _OS_DOIS_MODELOS["pid-no-exe"][0],
+    }[nomeia]
 
     roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", arquivos), **_CAMINHO[caminho])
 
@@ -149,11 +221,12 @@ def test_o_caminho_que_nao_mostra_o_comum_veste_o_edge(
 
 
 def _dois_jogos(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `10` sem sinal nenhum e o `20` que nomeia o Edge, sem Steam de verdade."""
+    """O `10` sem sinal, o `20` que conhece só o Edge e o `30` dos dois, sem Steam de verdade."""
     sem_sinal = _jogo(tmp_path / "SemSinal", _SEM_SINAL["so-o-exe"])
-    do_edge = _jogo(tmp_path / "DoEdge", _NOMEIA_O_EDGE["pid-no-exe"])
+    do_edge = _jogo(tmp_path / "DoEdge", _SO_O_EDGE["pid-no-exe"])
+    dos_dois = _jogo(tmp_path / "DosDois", _OS_DOIS_MODELOS["pid-no-exe"][0])
     monkeypatch.setattr(prontuario_dos_jogos, "jogos_instalados", lambda home=None: [
-        ("10", "Sem sinal", sem_sinal), ("20", "Do Edge", do_edge)])
+        ("10", "Sem sinal", sem_sinal), ("20", "Do Edge", do_edge), ("30", "Dos dois", dos_dois)])
     monkeypatch.setattr(rj, "_opcoes_de_lancamento", lambda home: {})
 
 
@@ -167,9 +240,9 @@ def test_o_laco_do_servico_da_o_comum_ao_jogo_sem_sinal(
 
     roupas = rj.roupas_dos_jogos(so_o_cache=so_o_cache)
 
-    assert {a: r for a, (r, _f) in roupas.items()} == {"10": "0ce6", "20": "0df2"}
-    assert rj.roupas_dos_jogos(steam_input=["10"])["10"][0] == "0df2"
-    assert rj.roupas_dos_jogos(modo_xbox=True)["10"][0] == "0df2"
+    assert {a: r for a, (r, _f) in roupas.items()} == {"10": "0ce6", "20": "0df2", "30": "0ce6"}
+    assert rj.roupas_dos_jogos(steam_input=["10", "30"])["30"][0] == "0df2"
+    assert rj.roupas_dos_jogos(modo_xbox=True)["30"][0] == "0df2"
 
 
 def _daemon_uhid() -> SimpleNamespace:
@@ -194,8 +267,9 @@ def test_a_env_do_jogo_sem_sinal_veste_o_comum_e_esconde_so_o_fisico(
 ) -> None:
     """A roupa lida no disco chega à env que o wrapper entrega ao jogo, sem dublê da regra.
 
-    O jogo sem sinal ganha a env do `0ce6`, com o par dele fora das listas (o físico fica
-    escondido pelo broker), e o arme lê o `0ce6` na env; o jogo do Edge fica sem env própria.
+    O jogo sem sinal e o dos dois modelos ganham a env do `0ce6`, com o par dele fora das
+    listas (o físico fica escondido pelo broker), e o arme lê o `0ce6` na env; o jogo que
+    conhece só o Edge fica sem env própria.
     """
     _dois_jogos(tmp_path, monkeypatch)
     pasta = tmp_path / "launch_env"
@@ -220,3 +294,7 @@ def test_a_env_do_jogo_sem_sinal_veste_o_comum_e_esconde_so_o_fisico(
     assert le.roupa_gravada(10, pasta) == ROUPA_COMUM
     assert not (pasta / "steam_app_20.env").exists()
     assert le.roupa_gravada(20, pasta) == ROUPA_PADRAO
+    dos_dois = pasta / "steam_app_30.env"
+    assert dos_dois.exists(), "o jogo dos dois modelos não ganhou a env do 0ce6"
+    assert "0x054c/0x0ce6" not in _valores(dos_dois)
+    assert le.roupa_gravada(30, pasta) == ROUPA_COMUM

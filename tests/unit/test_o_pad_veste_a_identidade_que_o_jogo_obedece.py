@@ -81,18 +81,22 @@ def test_o_incontrol_so_do_comum_veste_o_0ce6(tmp_path: Path, onde: str) -> None
 @pytest.mark.parametrize(
     ("arquivos", "esperada"),
     [
-        ({_METADATA: _PERFIS_DO_COMUM + b"\0" + _PERFIL_DO_EDGE}, "0df2"),
-        ({_METADATA: _PERFIS_DO_COMUM, _INCONTROL: b"DualSenseEdgeNativeProfile"}, "0df2"),
+        ({_METADATA: _PERFIL_DO_EDGE}, "0df2"),
+        ({_INCONTROL: b"DualSenseEdgeNativeProfile"}, "0df2"),
+        ({_METADATA: _PERFIS_DO_COMUM + b"\0" + _PERFIL_DO_EDGE}, "0ce6"),
+        ({_METADATA: _PERFIS_DO_COMUM, _INCONTROL: b"DualSenseEdgeNativeProfile"}, "0ce6"),
         ({_METADATA: _PERFIS_DO_COMUM + b"\0" + _HORI}, "0ce6"),
         ({_METADATA: _HORI}, "0ce6"),
-        ({_METADATA: _PERFIS_DO_COMUM, "Jogo.exe": b"MZ\x4c\x05\xf2\x0d"}, "0df2"),
+        ({"Jogo.exe": b"MZ\x4c\x05\xf2\x0d"}, "0df2"),
+        ({_METADATA: _PERFIS_DO_COMUM, "Jogo.exe": b"MZ\x4c\x05\xf2\x0d"}, "0ce6"),
         ({"Jogo.exe": b"MZ\x4c\x05\xe6\x0c"}, "0ce6"),
-        ({"Jogo.exe": b"MZ\x4c\x05\xe6\x0c\0\0\x4c\x05\xf2\x0d"}, "0df2"),
+        ({"Jogo.exe": b"MZ\x4c\x05\xe6\x0c\0\0\x4c\x05\xf2\x0d"}, "0ce6"),
     ],
-    ids=["perfil-do-edge", "edge-no-mono", "hori-nao-conta", "so-hori",
-         "pid-do-edge", "pid-do-comum", "os-dois-pids"],
+    ids=["so-o-perfil-do-edge", "so-o-edge-no-mono", "perfil-dos-dois", "dois-no-mono",
+         "hori-nao-conta", "so-hori", "so-o-pid-do-edge", "perfil-do-comum-e-pid-do-edge",
+         "pid-do-comum", "os-dois-pids"],
 )
-def test_o_sinal_do_edge_ganha(
+def test_o_edge_so_ganha_sem_o_comum(
     tmp_path: Path, arquivos: dict[str, bytes], esperada: str
 ) -> None:
     roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path, arquivos))
@@ -104,14 +108,20 @@ def test_o_sinal_do_edge_ganha(
     ("arquivos", "esperada"),
     [
         ({_REWIRED: _u16("DualSenseDriver"), _ASSETS: b"Sony DualSense"}, "0ce6"),
-        ({_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense"}, "0df2"),
+        ({_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense"}, "0ce6"),
+        ({_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense Edge"}, "0df2"),
         ({_REWIRED: b"DualSenseDriver", _ASSETS: b"Sony DualSense Edge"}, "0df2"),
+        ({_REWIRED: b"DualSenseDriver", _ASSETS: b"Sony DualSense Edge\0Sony DualSense"}, "0ce6"),
         ({_ASSETS: b"Sony DualSense"}, "0ce6"),
-        ({"SDL3.dll": b"DualSense Edge\0DualSense", _METADATA: _PERFIS_DO_COMUM}, "0df2"),
+        ({"SDL3.dll": b"DualSense Edge\0DualSense"}, "0df2"),
+        ({"SDL3.dll": b"DualSense Edge\0DualSense", _METADATA: _PERFIS_DO_COMUM}, "0ce6"),
+        ({"SDL3.dll": b"DualSense Edge Wireless Controller\0DualSense Wireless Controller"},
+         "0ce6"),
         ({"SDL2.dll": b"DualSense"}, "0ce6"),
     ],
-    ids=["rewired-comum", "rewired-edge-na-dll", "rewired-edge-no-assets",
-         "assets-sem-rewired", "sdl3-com-edge", "sdl2-sem-edge"],
+    ids=["rewired-comum", "rewired-dll-edge-assets-comum", "rewired-so-o-edge",
+         "rewired-edge-no-assets", "rewired-assets-com-os-dois", "assets-sem-rewired",
+         "sdl3-so-o-edge", "sdl3-edge-e-perfil-do-comum", "sdl3-com-os-dois", "sdl2-sem-edge"],
 )
 def test_o_rewired_e_a_sdl(tmp_path: Path, arquivos: dict[str, bytes], esperada: str) -> None:
     roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path, arquivos))
@@ -200,7 +210,7 @@ def test_a_roupa_sai_em_cache_pela_assinatura(tmp_path: Path) -> None:
     raiz = _jogo(tmp_path, {_METADATA: _PERFIS_DO_COMUM})
     assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
 
-    (raiz / _METADATA).write_bytes(_PERFIS_DO_COMUM + b"\0" + _PERFIL_DO_EDGE)
+    (raiz / _METADATA).write_bytes(_PERFIL_DO_EDGE)
 
     assert rj.roupa_do_jogo(raiz)[0] == "0df2", "o arquivo mudou e o cache não viu"
 
@@ -261,9 +271,9 @@ def lancamento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         rj,
         "roupas_dos_jogos",
         lambda home=None, **k: {
-            str(_COM_PERFIL): ("0ce6", "global-metadata.dat declara só o DualSense comum"),
-            str(_SEM_PERFIL): ("0ce6", "InControl.dll declara só o DualSense comum"),
-            str(_DO_EDGE): ("0df2", "o executável conhece o modelo 0DF2 do Edge"),
+            str(_COM_PERFIL): ("0ce6", "global-metadata.dat conhece só o DualSense comum"),
+            str(_SEM_PERFIL): ("0ce6", "InControl.dll conhece só o DualSense comum"),
+            str(_DO_EDGE): ("0df2", "o executável conhece só o DualSense Edge"),
         },
     )
     return pasta

@@ -158,7 +158,7 @@ def test_o_arquivo_do_mesmo_tique_aparece_passada_a_margem(
     relogio.avanca(2)
     roupa, fonte = rj.roupa_do_jogo(raiz)
     assert roupa == "0df2", fonte
-    assert fonte == f"{_METADATA} declara o DualSense Edge"
+    assert fonte == f"{_METADATA} conhece só o DualSense Edge"
 
 
 def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roupas(

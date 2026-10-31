@@ -82,7 +82,7 @@ def _o_sackboy(tmp_path: Path) -> Path:
 def test_o_sackboy_veste_o_edge(tmp_path: Path) -> None:
     raiz = _o_sackboy(tmp_path)
 
-    assert rj.roupa_do_jogo(raiz) == ("0df2", "o executável conhece o modelo 0DF2 do Edge")
+    assert rj.roupa_do_jogo(raiz) == ("0df2", "a biblioteca Sony (WinDualSense) pede o Edge")
     assert rj.roupa_do_jogo(raiz, no_steam_input=True)[0] == "0df2"
     assert rj.roupa_do_jogo(raiz, modo_xbox=True)[0] == "0df2"
 
