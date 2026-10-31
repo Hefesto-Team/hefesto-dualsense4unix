@@ -138,6 +138,7 @@ body.por-controle .gat-linha .n{{top:-15px !important;line-height:14px !importan
 body.por-controle .ctl.off,body.por-controle .ctl.off:has(> input:checked),body.por-controle:has(#c-todos:checked) .ctl.off{{height:26px !important;padding-bottom:0 !important}}
 body.por-controle .ctl.off > .faixa{{height:{_A}px !important;display:flex !important;align-items:center !important;font-size:{_L}px !important}}
 body.por-controle .rot[data-dica]{{min-height:{_A}px !important;display:flex !important;align-items:center !important;margin-bottom:0 !important}}
+body.por-controle .rot-linha{{height:{_A}px !important;min-height:{_A}px !important;margin-bottom:0 !important}}
 """,
     "09-sistema": f"""body .selo,body .selo .sg{{font-size:{_L}px !important}}
 body .saude .selo{{flex:0 0 84px !important}}
