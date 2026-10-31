@@ -52,6 +52,7 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
+from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 from hefesto_dualsense4unix.interface.monta import (
     MODO_AUTOMATICO,
     MODO_PERSONALIZADO,
@@ -1565,6 +1566,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "brilho": "—" if pct is None else f"{pct}%",
             CAMPO_DO_EFEITO: na_lista,
             CAMPO_DA_DICA_DO_EFEITO: dica_do_efeito(na_lista),
+            **_a_chegada.campos_da_coluna("luz", _a_chegada.chegada(
+                ctx.state, c, "luz", anima=na_lista not in (SEM_EFEITO, LUZ_FIXA))),
             "brilho-pct": pct,
             "hex": _hex(pedida),
             "tons": fileira_de_tons(uniq, casas, "              "),
@@ -1589,7 +1592,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
     return {
         "colunas": colunas,
-        LUGAR_VAZIO: o_lugar_vazio(),
+        LUGAR_VAZIO: {**o_lugar_vazio(), **_a_chegada.do_lugar_vazio(ctx.state, ("luz",))},
         ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",

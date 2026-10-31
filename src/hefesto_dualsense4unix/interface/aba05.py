@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (
     GESTO_DO_MODO,
 )
 from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
+from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
@@ -141,7 +142,7 @@ CSS = """  .vib{
                        minmax(var(--r-motor),1fr) minmax(var(--r-motor),1fr)
                        minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);
   }
-  .efeito-lista{display:flex;flex-direction:column;justify-content:center;gap:0;min-width:0}
+  .efeito-lista{position:relative;display:flex;flex-direction:column;justify-content:center;gap:0;min-width:0}
   .vib-efeito{flex:0 0 26px;width:100%;min-width:0;height:26px;padding:0 9px;border-radius:7px;
     border:1px solid var(--border-forte);background:var(--app-bg,var(--panel));color:var(--fg);
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
@@ -183,6 +184,7 @@ CSS = """  .vib{
   .vib .ctrl[data-conectado="nao"] .motor > *,
   .vib .ctrl[data-conectado="nao"] .efeito-lista > *,
   .vib .ctrl[data-conectado="nao"] .acoes-col > *{display:none}
+  .vib .ctrl[data-conectado="nao"] .efeito-lista > .chegada{display:block}
   .vib .ctrl[data-conectado="nao"] .motor::after,
   .vib .ctrl[data-conectado="nao"] .acoes-col::after{
     content:"—";color:var(--linha);display:flex;align-items:center;
@@ -448,7 +450,7 @@ _ROTULOS_DA_IMERSAO = {
     padroes.DO_ESTILO: "Do estilo", padroes.SEM_EFEITO: _sem_efeito.ROTULO, **padroes.ROTULOS}
 
 
-def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas):
+def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas, chegada):
     """Uma lista suspensa do controle: «Do estilo» primeiro, o «—» depois, as formas em seguida.
 
     O gesto do `<select>` e o campo que a pintura escreve nele têm nomes distintos: o pintor
@@ -459,12 +461,12 @@ def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas):
         _sem_efeito.opcao(dicas[chave], escolhida=i == 0) if chave == _sem_efeito.VALOR
         else f'<option value="{chave}"{" selected" if i == 0 else ""}>{rotulos[chave]}</option>'
         for i, chave in enumerate(escolhas))
-    return (f'<div class="efeito-lista">'
+    return (f'<div class="efeito-lista"{_a_chegada.dica(chegada)}>'
             f'<span class="vib-efeito-dica" data-campo="{campo_dica}" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-dica" data-dica="{dicas[escolhas[0]]}">'
             f'<select class="vib-efeito" data-gesto="{gesto}" aria-label="{nome}" '
             f'data-campo="{campo}" data-hef-alvo="valor">'
-            f'{opcoes}</select></span></div>')
+            f'{opcoes}</select></span>{_a_chegada.marca(chegada)}</div>')
 
 
 LADOS = (("e", ESQ, "esq"), ("d", DIR, "dir"))
@@ -654,12 +656,12 @@ def _coluna(c, e=None, conectado=None):
             {_linha_da_haptica(e["hap"][1], e["hap"][0], vazio=not conectado)}
             {_lista_do_efeito(GESTO_DO_EFEITO_HAPTICO, CAMPO_DO_EFEITO_HAPTICO,
                               CAMPO_DA_DICA_DO_HAPTICO, "Efeito háptico", formas.ESCOLHAS,
-                              formas.ROTULOS, formas.DICAS)}
+                              formas.ROTULOS, formas.DICAS, "haptica")}
             {linhas[0]}
             {linhas[1]}
             {_lista_do_efeito(GESTO_DO_EFEITO_IMERSAO, CAMPO_DO_EFEITO_IMERSAO,
                               CAMPO_DA_DICA_DA_IMERSAO, "Padrão dos motores", padroes.ESCOLHAS,
-                              _ROTULOS_DA_IMERSAO, padroes.DICAS)}
+                              _ROTULOS_DA_IMERSAO, padroes.DICAS, "motores")}
             <div class="acoes-col">
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
@@ -1043,7 +1045,7 @@ if __name__ == "__main__":
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("05-vibracao", "Vibração", MIOLO,
-              CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28)
+              CSS + CSS_DAS_MEDIDAS + FOLHA_DOS_28 + _a_chegada.CSS)
     _conferir(onde.pagina("05-vibracao.html").read_text())
     shutil.copyfile(_prova / "05-vibracao.html", _real / "05-vibracao.html")
     shutil.rmtree(_prova)

@@ -5,6 +5,7 @@ from itertools import cycle
 from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, player_slot_color, tom_da_casa)
 from pacotes import a04_iluminacao as _pacote04
+from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 
 
 def luz(jogador):
@@ -250,7 +251,7 @@ CSS = """  .luz-grade{
      que é a metade visual do órfão calado. */
   .pad{width:56px;height:20px;border-radius:5px;border:1px solid var(--linha);
        padding-bottom:3px}
-""" + CSS_LUZINHAS.lstrip("\n") + """  .cel-acoes{display:flex;flex-direction:column;align-items:stretch;gap:2px;justify-content:center;
+""" + CSS_LUZINHAS.lstrip("\n") + """  .cel-acoes{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:2px;justify-content:center;
              margin-top:0;min-width:0}
   .g4-efeito{flex:0 0 32px;width:100%;min-width:0;height:32px;padding:0 9px;border-radius:7px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
@@ -419,7 +420,7 @@ def coluna(c):
               + _pacote04.opcoes_do_efeito(CENA_DOS_EFEITOS).replace(
                   f'<option value="{_pacote04.LUZ_FIXA}">',
                   f'<option value="{_pacote04.LUZ_FIXA}" selected>', 1)
-              + '</select></span>\n            ')
+              + '</select></span>' + _a_chegada.marca("luz") + '\n            ')
 
     conectado = "sim" if ligado else "nao"  # (noqa-acento)
     classe = "ctrl" if ligado else "ctrl off"
@@ -446,7 +447,7 @@ def coluna(c):
 {brilhos}
             </div>
           </div>
-          <div class="cel-acoes">
+          <div class="cel-acoes"{_a_chegada.dica("luz")}>
             {opcoes}
             <span class="nada">{VAZIO}</span>
           </div>
@@ -834,7 +835,7 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS,
+    n = monta("04-iluminacao", "Iluminação", MIOLO, CSS + CSS_DAS_MEDIDAS + _a_chegada.CSS,
               legenda=LEGENDA)
     _conferir(onde.pagina("04-iluminacao.html").read_text())
     shutil.copyfile(_prova / "04-iluminacao.html", _real / "04-iluminacao.html")

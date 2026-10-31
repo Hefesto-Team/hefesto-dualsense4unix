@@ -236,6 +236,9 @@ class TestPlayerPorControle:
              "brilho_da_barra": None, "brilho_das_luzes": None,
              "inputs": None, "vpad_backend": None, "vpad_motivo": None,
              "o_que_o_jogo_ve": None,
+             "efeitos": {c: {"chegou": False, "porque": "fora_do_fio"}
+                         for c in ("gatilho_e", "gatilho_d", "haptica", "motores")}
+             | {"luz": {"chegou": False, "porque": "fora_do_fio", "anima": False}},
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None, "sinal_dbm": None,
              "haptica_pct": HAPTICA_PCT_PADRAO, "haptica_alcanca": True,

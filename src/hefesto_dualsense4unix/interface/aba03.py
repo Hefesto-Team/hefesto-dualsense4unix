@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (
     sem_comentarios_de_css,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import FAMILIAS_DA_PAGINA
+from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (
@@ -141,7 +142,8 @@ CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px r
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);gap:7px}
   .g2-rot{display:flex;align-items:center;min-height:36px}
   .g2-rot .sec-rot{white-space:nowrap}
-  .g2-cel{min-height:36px;display:flex;align-items:center;min-width:0}
+  .g2-cel{position:relative;min-height:36px;display:flex;align-items:center;min-width:0}
+  .g2-chegada{display:contents}
   .g2-cel[data-conectado="nao"]{border-radius:7px;border:1px dashed var(--border-sutil);height:36px;
     box-sizing:border-box}
   .g2-cel[data-conectado="nao"] select{visibility:hidden;pointer-events:none}
@@ -240,6 +242,7 @@ CSS += "".join(
     f"i:nth-child(-n+{n}){{background:var(--purple)}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1)) + "\n"
 CSS += _barras_que_a_base_usa()
+CSS += "  " + _a_chegada.CSS + "\n"
 
 
 def _grupo_dos_seus(itens):
@@ -277,13 +280,15 @@ def _celula_da_imersao(pref, sig, vazio):
     fam = "" if vazio else familia_da_imersao(imersao)
     atr_fam = f' data-fam="{_escapar(fam)}"' if fam else ""
     return (f'<div class="g2-cel{_off(vazio)}" data-controle="{pref}"{_marca(vazio)}>'
+            f'<span class="g2-chegada"{_a_chegada.dica(f"gatilho_{sig}")}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{sig}" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-dica" data-dica="{_escapar(dica)}">'
             f'<i class="g2-fam" aria-hidden="true" data-campo="{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}" '
             f'data-hef-alvo="atributo" data-hef-atributo="data-fam"{atr_fam}></i>'
             f'<select class="g2-imersao" data-gesto="imersao" data-campo="imersao-{sig}" '
             f'data-hef-alvo="valor" data-lado="{sig}" '
-            f'aria-label="Efeito do gatilho">{opcoes_imersao(imersao)}</select></span></div>')
+            f'aria-label="Efeito do gatilho">{opcoes_imersao(imersao)}</select></span>'
+            f'{_a_chegada.marca(f"gatilho_{sig}")}</span></div>')
 
 
 def _marca(vazio):

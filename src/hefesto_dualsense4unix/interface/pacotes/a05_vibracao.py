@@ -35,11 +35,12 @@ from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.core.rumble import vale_o_padrao
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _padroes
+from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
 from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
 from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 
-from . import Contexto, registrar
+from . import LUGAR_VAZIO, Contexto, registrar
 from . import perfil as _perfil
 from .nome_do_jogador import nomes_dos_donos, o_nome_de
 
@@ -472,6 +473,9 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     )
 
 
+CHEGADAS = ("haptica", "motores")
+
+
 @registrar("05-vibracao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/telas/vibracao.pacote_da_mesa` — a camada do PRODUTO.
@@ -576,6 +580,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             escolha = _escolha_da_lista(overrides, uniq, CHAVE_DO_PERFIL[campo], lista)
             plano[campo] = escolha
             plano[dica] = textos[escolha]
+        entrada = ctx.por_uniq(uniq)
+        for sufixo in CHEGADAS:
+            plano.update(_a_chegada.campos_da_coluna(
+                sufixo, _a_chegada.chegada(ctx.state, entrada, sufixo)))
         for lado, treme in (col.get("treme") or {}).items():
             plano[f"treme-{lado}"] = "1" if treme else ""
         colunas[uniq] = plano
@@ -588,6 +596,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": colunas,
         "mesa": {},
+        LUGAR_VAZIO: _a_chegada.do_lugar_vazio(ctx.state, CHEGADAS),
         "blocos": {"#vib-estado": estado},
         GESTO_DO_MODO: modo,
         f"{GESTO_DO_MODO}-automatico": "sim" if modo == MODO_AUTOMATICO else "",

@@ -41,10 +41,11 @@ import re
 import time
 from typing import Any
 
+from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
 from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 
-from . import Contexto, jogador_de, perfil, registrar
+from . import LUGAR_VAZIO, Contexto, jogador_de, perfil, registrar
 from .meus_efeitos import (
     PREFIXO_DO_MEU,
     TETO_DO_NOME,
@@ -55,6 +56,7 @@ from .meus_efeitos import meus_efeitos as _meus_efeitos_da
 SEM_DONO: dict[str, str] = {}
 
 LADOS = {"e": "left", "d": "right"}
+CHEGADAS = tuple(f"gatilho_{sig}" for sig in LADOS)
 
 NOME_DO_LADO = {"left": "Gatilho esquerdo (L2)", "right": "Gatilho direito (R2)"}
 
@@ -995,12 +997,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             col[f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}"] = dica_da_imersao(feita)
             col[f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}"] = (
                 "" if do_estilo else familia_da_imersao(feita))
+            col.update(_a_chegada.campos_da_coluna(
+                f"gatilho_{sig}", _a_chegada.chegada(ctx.state, c, f"gatilho_{sig}")))
         colunas[uniq] = col
         pintados += sum(1 for k in col if k in tem_endereco)
         blocos.update(_blocos_da_coluna(pref_de.get(uniq) or uniq, deste, estilo=estilo))
 
     ocupados = {str(m.get("pref") or "") for m in ctx.mesa}
     sem_ninguem = _do_lado({}, specs)
+    chegada_vazia = _a_chegada.do_lugar_vazio(ctx.state, CHEGADAS)
     for pref in sorted(_lugares_que_o_desenho_da_por_vazios() - ocupados):
         vazia: dict[str, Any] = {f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}": SEM_APARELHO_AQUI
                                  for sig in LADOS}
@@ -1010,6 +1015,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
         vazia[CAMPO_DO_PLASTICO] = ""
         vazia.update(dict.fromkeys(CAMPO_DA_FORCA.values(), 0))
+        vazia.update(chegada_vazia)
         colunas[pref] = vazia
         pintados += sum(1 for k in vazia if k in tem_endereco)
 
@@ -1024,6 +1030,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": colunas,
         "blocos": blocos,
+        LUGAR_VAZIO: chegada_vazia,
         CAMPO_DO_ESTILO: _rotulo_do_estilo(estilo),
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",

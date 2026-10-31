@@ -2301,6 +2301,8 @@ class IpcHandlersMixin:
 
         Custo: sysfs no MÁXIMO 1x/s por nó (`_lightbar_read_cached`); nada toca hardware.
         """
+        from hefesto_dualsense4unix.daemon.o_recibo_dos_efeitos import recibo_do_controle
+
         sysfs_map = getattr(self.controller, "_sysfs", None)
         written_map = getattr(self.controller, "_sysfs_written", None)
         node_by_uniq: dict[str, Any] = {}
@@ -2358,6 +2360,7 @@ class IpcHandlersMixin:
                 entry["inputs"] = self._inputs_passivos(entry, uniq, com_leitor_coop)
             self._merge_sensores(entry, uniq)
             self._merge_audio(entry, uniq)
+            entry["efeitos"] = recibo_do_controle(self.daemon, self.controller, uniq)
 
             backend, motivo = (None, None)
             if entry.get("is_primary") and gp_dev is not None:
