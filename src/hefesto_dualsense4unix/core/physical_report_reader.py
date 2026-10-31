@@ -132,7 +132,7 @@ from typing import Any
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
 from hefesto_dualsense4unix.integrations import usb_pai
-from hefesto_dualsense4unix.utils.espera import prontos_para_ler
+from hefesto_dualsense4unix.utils.espera import prontos_ou_acordado
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -482,7 +482,7 @@ class PhysicalReportReader:
         self._uniq_aberto: str | None = None
         self._reopen_flag = threading.Event()
         self._wake_lock = threading.Lock()
-        self._wake_r, self._wake_w = _novo_wake_pipe()
+        self._wake_r, self._wake_w = -1, -1
         self._last_window: bytes | None = None
         self._pending: bytes | None = None
         self._last_emit_at = float("-inf")
@@ -745,7 +745,7 @@ class PhysicalReportReader:
                 self._reopen_flag.clear()
                 return
             try:
-                pronto = prontos_para_ler([fd, self._wake_r], _SELECT_TIMEOUT_S)
+                pronto = prontos_ou_acordado(fd, self._wake_r, _SELECT_TIMEOUT_S)
             except (OSError, ValueError):
                 return
             if self._wake_r in pronto:

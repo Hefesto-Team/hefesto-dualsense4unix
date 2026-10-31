@@ -7,7 +7,6 @@ import json
 import os
 import pathlib
 import re
-import select
 import shutil
 import signal
 import subprocess
@@ -17,6 +16,8 @@ import time
 from typing import Any
 
 import pytest
+
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "scripts"))
@@ -488,7 +489,7 @@ def test_o_lancador_sobe_a_mesa_sem_tela_e_sem_daemon(mentira, tmp_path) -> None
         resto = b""
         prazo = time.monotonic() + 60
         while not endereco and time.monotonic() < prazo:
-            prontos, _, _ = select.select([fd], [], [], 1.0)
+            prontos = prontos_para_ler([fd], 1.0)
             if not prontos:
                 if proc.poll() is not None:
                     break

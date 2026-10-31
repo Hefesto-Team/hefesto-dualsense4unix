@@ -107,7 +107,7 @@ import array
 import errno
 import fcntl
 import os
-import select
+import selectors
 import sys
 import time
 import zlib
@@ -447,21 +447,22 @@ def provar_que_vive(fd: int, aparelho: Aparelho, tamanho_do_firmware: int) -> Pr
     prova.lightbar = estado_da_lightbar(aparelho)
 
     limite = time.monotonic() + SEGUNDOS_DE_ESPERA
-    while time.monotonic() < limite and prova.reports_lidos < REPORTS_QUE_PROVAM_VIDA:
-        prontos, _, _ = select.select([fd], [], [], max(0.0, limite - time.monotonic()))
-        if not prontos:
-            break
-        try:
-            bruto = os.read(fd, 256)
-        except BlockingIOError:
-            continue
-        except OSError as erro:
-            prova.erro = (prova.erro + " | " if prova.erro else "") + f"read: {erro}"
-            break
-        if not bruto:
-            continue
-        prova.reports_lidos += 1
-        prova.ids_vistos[bruto[0]] = prova.ids_vistos.get(bruto[0], 0) + 1
+    with selectors.DefaultSelector() as espera:
+        espera.register(fd, selectors.EVENT_READ)
+        while time.monotonic() < limite and prova.reports_lidos < REPORTS_QUE_PROVAM_VIDA:
+            if not espera.select(max(0.0, limite - time.monotonic())):
+                break
+            try:
+                bruto = os.read(fd, 256)
+            except BlockingIOError:
+                continue
+            except OSError as erro:
+                prova.erro = (prova.erro + " | " if prova.erro else "") + f"read: {erro}"
+                break
+            if not bruto:
+                continue
+            prova.reports_lidos += 1
+            prova.ids_vistos[bruto[0]] = prova.ids_vistos.get(bruto[0], 0) + 1
     return prova
 
 
@@ -894,7 +895,7 @@ def _corpo(argumentos: argparse.Namespace, transcrito: Transcrito) -> int:
         cabecalho_do_instrumento(
             "cor_do_plastico.py",
             "de que cor é o plástico deste controle, perguntado a ELE?",
-            bibliotecas=["fcntl", "array", "select", "zlib"],
+            bibliotecas=["fcntl", "array", "selectors", "zlib"],
             escreve_no_aparelho=argumentos.escrever,
             daemon_precisa_parar=False,
             nos_evdev=nos_de_evdev(escolhido[0]) if escolhido else None,

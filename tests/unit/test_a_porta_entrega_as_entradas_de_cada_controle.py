@@ -21,7 +21,6 @@ import asyncio
 import json
 import os
 import pathlib
-import select
 import socket
 from types import SimpleNamespace
 from typing import Any
@@ -43,6 +42,7 @@ from hefesto_dualsense4unix.mods.porta import (
     Porta,
     entradas_de_todo_controle_no_servico,
 )
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import curto  # noqa: F401
 
 UNIQS = ("aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004")
@@ -77,7 +77,7 @@ class _Extensao:
 
     def _linha(self, segundos: float | None) -> dict[str, Any] | None:
         while b"\n" not in self.buffer:
-            pronto, _, _ = select.select([self.sock], [], [], segundos)
+            pronto = prontos_para_ler([self.sock], segundos)
             if not pronto:
                 return None
             pedaco = self.sock.recv(65536)

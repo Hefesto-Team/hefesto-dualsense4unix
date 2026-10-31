@@ -22,7 +22,7 @@ from typing import Any, ClassVar
 
 from hefesto_dualsense4unix.core import banco_do_udev
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
-from hefesto_dualsense4unix.utils.espera import prontos_para_ler
+from hefesto_dualsense4unix.utils.espera import prontos_ou_acordado, prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1113,7 +1113,7 @@ class _EvdevReconnectLoop:
         """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader)."""
         self._reopen_flag = threading.Event()
         self._wake_lock = threading.Lock()
-        self._wake_r, self._wake_w = self._novo_wake_pipe()
+        self._wake_r, self._wake_w = -1, -1
         self._grab: bool = False
         self._grab_state: str = "off"
 
@@ -1148,7 +1148,7 @@ class _EvdevReconnectLoop:
 
     def _wait_ready(self, dev: Any) -> list[Any]:
         """Espera o fd do `dev` OU o self-pipe de wake ficarem prontos."""
-        return prontos_para_ler([dev.fd, self._wake_r], self._SELECT_TIMEOUT_S)
+        return prontos_ou_acordado(dev.fd, self._wake_r, self._SELECT_TIMEOUT_S)
 
     def _find_device(self) -> Path | None:  # pragma: no cover
         raise NotImplementedError

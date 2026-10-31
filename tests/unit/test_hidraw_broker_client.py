@@ -5,7 +5,6 @@ import contextlib
 import fcntl
 import json
 import os
-import select
 import socket
 import struct
 import tempfile
@@ -19,6 +18,7 @@ import pytest
 
 from hefesto_dualsense4unix.broker.hidraw_broker import Broker, BrokerState
 from hefesto_dualsense4unix.integrations import hidraw_broker_client as hbc
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 
 class FakeOps:
@@ -77,7 +77,7 @@ def _eof_no_pipe(read_fd: int, timeout: float = 2.0) -> bool:
     """True quando TODAS as cópias do write-end fecharam (EOF no read-end)."""
 
     def _ver() -> bool:
-        pronto, _, _ = select.select([read_fd], [], [], 0)
+        pronto = prontos_para_ler([read_fd], 0)
         if not pronto:
             return False
         return os.read(read_fd, 1) == b""

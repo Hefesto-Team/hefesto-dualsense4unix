@@ -23,7 +23,7 @@ import select
 from collections.abc import Sequence
 from typing import Any
 
-__all__ = ["prontos_para_ler"]
+__all__ = ["prontos_ou_acordado", "prontos_para_ler"]
 
 
 def _descritor(alvo: Any) -> int:
@@ -47,3 +47,7 @@ def prontos_para_ler(alvos: Sequence[Any], prazo_s: float | None) -> list[Any]:
             raise OSError(errno.EBADF, f"descritor fechado: {fd}")
         prontos.append(por_descritor[fd])
     return prontos
+
+
+def prontos_ou_acordado(fd: Any, despertador: int, prazo_s: float | None) -> list[Any]:
+    return prontos_para_ler([fd, despertador] if despertador >= 0 else [fd], prazo_s)
