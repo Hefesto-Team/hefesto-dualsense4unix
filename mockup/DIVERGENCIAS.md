@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 01-jogar.html
-- **31/10/2026** — o «Calibrar giroscópio» sai da linha do Status, de perto do Reconectar, e volta para imediatamente à esquerda do «Modo automático», no topo de «Dispositivos conectados». Até publicar, o produto mostra o botão ao lado do Reconectar.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->
