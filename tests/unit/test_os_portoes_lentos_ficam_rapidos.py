@@ -24,6 +24,7 @@ import importlib.util
 import pathlib
 import re
 import sys
+import time
 from typing import Any
 
 import pytest
@@ -86,6 +87,18 @@ def _rede_que_nunca_responde(contexto: Any) -> list[str]:
     return pedidos
 
 
+def _espera_o_pedido(pagina: Any, pedidos: list[str]) -> None:
+    """Espera a rota registrar o pedido externo: o evento, não um relógio.
+
+    Medido em 31/10/2026 com o Chrome preso a um núcleo carregado: o pedido da fonte sai
+    depois do prazo curto do ``goto`` em metade das corridas, e sai sempre (a rota o vê em
+    todas). O prazo folgado é só o teto de quem nunca pede.
+    """
+    limite = time.monotonic() + _PRAZO_FOLGADO_MS / 1000
+    while not pedidos and time.monotonic() < limite:
+        pagina.wait_for_timeout(20)
+
+
 class TestAPaginaNaoPedeARede:
     def test_com_a_rede_fora_a_pagina_abre_e_o_externo_e_recusado(
         self, pagina_com_fonte_de_fora: pathlib.Path
@@ -124,7 +137,12 @@ class TestAPaginaNaoPedeARede:
     def test_sem_o_bloqueio_a_mesma_rede_pendura_de_verdade(
         self, pagina_com_fonte_de_fora: pathlib.Path
     ) -> None:
-        """A MORDIDA DO INSTRUMENTO: arrancado o bloqueio, a rede simulada volta a esperar."""
+        """A MORDIDA DO INSTRUMENTO: arrancado o bloqueio, a rede simulada volta a esperar.
+
+        O ``goto`` curto só mostra que o ``load`` não veio a tempo; o pedido pode sair
+        depois dele com a máquina carregada. A prova do pendurado é o estado da página
+        DEPOIS que a rota segurou o pedido: com ele preso, o ``load`` não chega nunca.
+        """
         playwright = _playwright()
         with playwright.sync_playwright() as pw:
             navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
@@ -135,11 +153,17 @@ class TestAPaginaNaoPedeARede:
                     chrome_sem_rede.abrir_sem_rede(
                         contexto, pagina_com_fonte_de_fora.as_uri(),
                         largura=800, altura=600, bloquear=False, espera_ms=1_500)
+                pagina = contexto.pages[-1]
+                _espera_o_pedido(pagina, pendurados)
+                estado = pagina.evaluate("document.readyState")
             finally:
                 navegador.close()
         assert pendurados == [EXTERNO], (
             "a rede simulada não chegou a ser pedida: o instrumento não mede nada, "
             "porque nada ficaria pendurado nem COM o bloqueio fora")
+        assert estado != "complete", (
+            "a página terminou o load com o pedido externo preso: a rede simulada não "
+            "segura nada, e o bloqueio não teria o que provar")
 
     def test_o_veredito_da_pagina_real_e_o_mesmo_com_a_rede_recusada_e_com_o_usuario_respondendo(
         self, tmp_path: pathlib.Path
