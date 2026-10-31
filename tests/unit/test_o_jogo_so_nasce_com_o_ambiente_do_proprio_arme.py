@@ -28,6 +28,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.daemon import launch_env as le
+from hefesto_dualsense4unix.integrations import ponte_tentativa
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile, ProfileModeConfig
 
 APPID = 9931031
@@ -55,15 +56,21 @@ _BACKEND = {"xbox": "uinput", "dualsense": "uhid"}
 
 
 class _Mesa:
-    """O daemon numa máscara (``xbox``/uinput por padrão); o modo do arme veste a dele."""
+    """O daemon numa máscara (``xbox``/uinput por padrão); o modo do arme veste a dele.
+
+    Como o ``start_gamepad_emulation`` de verdade, a troca derruba o vpad e pede o P1 novo ao fio
+    do co-op: até ``o_fio_entrega``, a foto do daemon vê a emulação desligada e a máscara velha.
+    """
 
     def __init__(self, store: Any = None, flavor: str = "xbox") -> None:
         self.config = SimpleNamespace(gamepad_emulation_enabled=True, gamepad_flavor=flavor)
-        self._gamepad_device = SimpleNamespace(backend=_BACKEND[flavor], flavor=flavor)
+        self._gamepad_device: SimpleNamespace | None = SimpleNamespace(
+            backend=_BACKEND[flavor], flavor=flavor)
         self._coop_manager = None
         self.controller = SimpleNamespace()
         self.store = store
         self.aplicados: list[Any] = []
+        self.pedidos_ao_fio: list[str] = []
 
     def is_native_mode(self) -> bool:
         return False
@@ -74,10 +81,17 @@ class _Mesa:
     def apply_profile_mode(self, mode: Any, *, profile: Any = None, origin: str = "") -> str:
         self.aplicados.append(mode)
         if getattr(mode, "kind", None) == "gamepad":
-            self.config.gamepad_flavor = mode.gamepad_flavor
-            self._gamepad_device = SimpleNamespace(
-                backend=_BACKEND[mode.gamepad_flavor], flavor=mode.gamepad_flavor)
+            self.config.gamepad_emulation_enabled = False
+            self._gamepad_device = None
+            self.pedidos_ao_fio.append(mode.gamepad_flavor)
         return "aplicado"
+
+    def o_fio_entrega(self) -> None:
+        """O P1 pedido nasce: a máscara da sessão e o vpad passam a ser os dele."""
+        flavor = self.pedidos_ao_fio[-1]
+        self.config.gamepad_flavor = flavor
+        self.config.gamepad_emulation_enabled = True
+        self._gamepad_device = SimpleNamespace(backend=_BACKEND[flavor], flavor=flavor)
 
     def apply_profile_suppression(
         self, desired: bool, *, profile: Any = None, origin: str = ""
@@ -114,7 +128,7 @@ def _a_mesa_do_lancamento(
     em_disco: list[str] = _XBOX, lenta_s: float = LENTA_S,
 ) -> Callable[[], int]:
     """O disco com o ``default.env`` de outro jogo, a escrita lenta, e quantas escritas acabaram."""
-    from hefesto_dualsense4unix.integrations import cura_por_estrada
+    from hefesto_dualsense4unix.integrations import cura_por_estrada, uhid_gamepad
     from hefesto_dualsense4unix.profiles import manager
 
     env_dir.mkdir(parents=True, exist_ok=True)
@@ -122,6 +136,8 @@ def _a_mesa_do_lancamento(
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: env_dir)
     monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [(APPID, perfil)])
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
+    monkeypatch.setattr(le, "_permite_uhid", lambda _daemon: True)
+    monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
     monkeypatch.setattr(le, "_receitas_dos_jogos", lambda: {})
     monkeypatch.setattr(le, "_jogos_do_comum", lambda _foto: {})
     monkeypatch.setattr(le, "_device_ks_nos_lancadores", lambda: None)
@@ -152,11 +168,15 @@ def test_o_status_com_o_appid_devolve_o_ambiente_do_arme_sem_esperar_a_escrita(
 ) -> None:
     """O ``daemon.status`` com o ``appid`` arma e responde o DualSense antes da escrita lenta.
 
-    E o arquivo do jogo, quando a escrita acaba, sai do modo desse arme (a escada inclusa).
+    O vpad novo ainda está nascendo no fio quando a resposta sai: o ambiente vem do modo que o
+    arme aplicou, e não da máscara velha da sessão. O degrau da escada em trânsito não se
+    encerra, e o arquivo do jogo, quando a escrita acaba, sai do modo desse arme.
     """
     acabadas = _a_mesa_do_lancamento(tmp_path, monkeypatch, _perfil(_PERFIS[caso]))
     _marker(tmp_path)
     daemon: Any = _Mesa()
+    encerradas: list[Any] = []
+    monkeypatch.setattr(ponte_tentativa, "encerrar", lambda _d, **kw: encerradas.append(kw))
 
     async def corpo() -> tuple[dict[str, Any], float]:
         laco: Any = asyncio.get_running_loop()
@@ -178,6 +198,8 @@ def test_o_status_com_o_appid_devolve_o_ambiente_do_arme_sem_esperar_a_escrita(
     for linha in _DUALSENSE:
         assert linha in linhas
     assert "mascara=dualsense" in bloco["ambiente"]["estado"]
+    assert daemon._gamepad_device is None, "o vpad nasceu antes da resposta: o dublê é frouxo"
+    assert encerradas == [], f"o degrau em trânsito foi encerrado: {encerradas}"
     assert acabadas() >= 1, "a escrita lenta não acabou"
     do_jogo = (tmp_path / f"steam_app_{APPID}.env").read_text(encoding="utf-8")
     assert "mascara=dualsense" in do_jogo and "SDL_JOYSTICK_HIDAPI=0" not in do_jogo, (
