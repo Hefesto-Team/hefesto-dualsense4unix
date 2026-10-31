@@ -89,49 +89,7 @@ receita_do_jogo() {
     return 0
 }
 
-decide_envs() {
-    appid="${SteamAppId:-}"
-    case "$appid" in
-        ''|0) return 0 ;;
-        *[!0-9]*) return 0 ;;
-    esac
-
-    state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hefesto-dualsense4unix/launch_env"
-    envfile="$state_dir/steam_app_${appid}.env"
-    [ -f "$envfile" ] || envfile="$state_dir/default.env"
-    [ -f "$envfile" ] || return 0
-
-    command -v python3 >/dev/null 2>&1 || return 0
-
-    runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    sock="$runtime/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
-    [ -S "$sock" ] || return 0
-
-    LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
-        python3 - "$sock" <<'PYEOF' >/dev/null 2>&1 || return 0
-import json
-import socket
-import sys
-
-s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-s.settimeout(1.0)
-s.connect(sys.argv[1])
-s.sendall(
-    json.dumps(
-        {"jsonrpc": "2.0", "id": 1, "method": "daemon.status", "params": {}}
-    ).encode("utf-8")
-    + b"\n"
-)
-buf = b""
-while not buf.endswith(b"\n"):
-    chunk = s.recv(4096)
-    if not chunk:
-        raise SystemExit(1)
-    buf += chunk
-data = json.loads(buf.decode("utf-8"))
-raise SystemExit(0 if isinstance(data, dict) and "result" in data else 1)
-PYEOF
-
+filtrar_o_ambiente() {
     while IFS= read -r line; do
         case "$line" in
             SDL_GAMECONTROLLER_IGNORE_DEVICES=*) printf '%s\n' "$line" ;;
@@ -144,8 +102,114 @@ PYEOF
             PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE=*) printf '%s\n' "$line" ;;
             PROTON_ENABLE_MHWILDS_USB_AUDIO=*)   printf '%s\n' "$line" ;;
         esac
-    done < "$envfile"
-    receita_do_jogo "$envfile"
+    done
+}
+
+registrar_a_fonte() {
+    mkdir -p "$state_dir" 2>/dev/null || return 0
+    printf 'appid=%s\nfonte=%s\narquivo=%s\nepoch=%s\n' \
+        "$appid" "$1" "${2:-}" "$(date +%s 2>/dev/null)" \
+        > "$state_dir/fonte_do_ambiente" 2>/dev/null || true
+    return 0
+}
+
+decide_envs() {
+    appid="${SteamAppId:-}"
+    case "$appid" in
+        ''|0) return 0 ;;
+        *[!0-9]*) return 0 ;;
+    esac
+
+    state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hefesto-dualsense4unix/launch_env"
+
+    command -v python3 >/dev/null 2>&1 || return 0
+
+    runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    sock="$runtime/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
+    if [ ! -S "$sock" ]; then
+        registrar_a_fonte nenhuma
+        return 0
+    fi
+
+    do_daemon="$(
+        LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
+            python3 - "$sock" "$appid" 2>/dev/null <<'PYEOF'
+import json
+import socket
+import sys
+import time
+
+TETO_DO_AMBIENTE_S = 5.0
+TETO_DO_PING_S = 1.0
+
+
+def pedir(params, teto):
+    fim = time.monotonic() + teto
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(teto)
+    s.connect(sys.argv[1])
+    s.sendall(
+        json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "method": "daemon.status", "params": params}
+        ).encode("utf-8")
+        + b"\n"
+    )
+    buf = b""
+    while not buf.endswith(b"\n"):
+        resto = fim - time.monotonic()
+        if resto <= 0:
+            raise TimeoutError
+        s.settimeout(resto)
+        chunk = s.recv(65536)
+        if not chunk:
+            raise SystemExit(1)
+        buf += chunk
+    return json.loads(buf.decode("utf-8"))
+
+
+try:
+    data = pedir({"appid": int(sys.argv[2])}, TETO_DO_AMBIENTE_S)
+except Exception:
+    raise SystemExit(1)
+resultado = data.get("result") if isinstance(data, dict) else None
+ambiente = resultado.get("ambiente") if isinstance(resultado, dict) else None
+linhas = ambiente.get("linhas") if isinstance(ambiente, dict) else None
+if isinstance(linhas, list) and all(isinstance(x, str) for x in linhas):
+    sys.stdout.write("".join(x + "\n" for x in linhas if "\n" not in x))
+    raise SystemExit(0)
+if isinstance(resultado, dict):
+    raise SystemExit(3)
+try:
+    data = pedir({}, TETO_DO_PING_S)
+except Exception:
+    raise SystemExit(1)
+raise SystemExit(3 if isinstance(data, dict) and "result" in data else 1)
+PYEOF
+    )"
+    pedido=$?
+
+    receita="$state_dir/steam_app_${appid}.env"
+    case "$pedido" in
+        0)
+            registrar_a_fonte daemon
+            printf '%s\n' "$do_daemon" | filtrar_o_ambiente
+            ;;
+        3)
+            envfile="$receita"
+            [ -f "$envfile" ] || envfile="$state_dir/default.env"
+            if [ ! -f "$envfile" ]; then
+                registrar_a_fonte nenhuma
+                return 0
+            fi
+            registrar_a_fonte arquivo "${envfile##*/}"
+            filtrar_o_ambiente < "$envfile"
+            ;;
+        *)
+            registrar_a_fonte nenhuma
+            return 0
+            ;;
+    esac
+    [ -f "$receita" ] && receita_do_jogo "$receita"
     return 0
 }
 
