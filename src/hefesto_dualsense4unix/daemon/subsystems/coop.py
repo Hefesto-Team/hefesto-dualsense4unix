@@ -2436,6 +2436,9 @@ class CoopManager:
         pendurar = getattr(ctrl, "set_espera_do_posto", None)
         if callable(pendurar):
             pendurar(self.o_posto_do_p1_espera)
+        segurar = getattr(ctrl, "set_o_posto_fica_no_jogo", None)
+        if callable(segurar):
+            segurar(self.o_posto_fica_no_jogo)
         logger.debug("coop_aviso_de_primario_ligado")
 
     def o_posto_do_p1_espera(self, uniq: str) -> bool:
@@ -2463,6 +2466,14 @@ class CoopManager:
            do número que a tela e a lâmpada mostram.
         """
         return self.o_lugar_do_jogador_espera(uniq)
+
+    def o_posto_fica_no_jogo(self) -> bool:
+        """Com o co-op de pé e o jogo na autoridade, o posto de P1 fica com quem joga no boneco 1.
+
+        Quem volta depois do prazo recupera o número na tela, e o boneco espera o jogo soltar
+        (D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA).
+        """
+        return self._o_co_op_de_pe() and self._jogo_com_a_autoridade()
 
     def o_lugar_do_jogador_espera(self, uniq: str) -> bool:
         """O lugar de ``uniq`` espera por ele no vpad? A mesma pergunta para os quatro.

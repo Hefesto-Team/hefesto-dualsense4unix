@@ -4952,6 +4952,38 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._espera_do_posto = pergunta
 
+    _posto_fica_no_jogo: Callable[[], bool] | None = None
+    _carta_menor_esperando: str | None = None
+    _voltou_com_o_jogo: frozenset[str] = frozenset()
+    _mesa_da_carta: frozenset[str] = frozenset()
+
+    def set_o_posto_fica_no_jogo(self, pergunta: Callable[[], bool] | None) -> None:
+        """Pendura quem decide se o posto ocupado fica com quem joga nele, mesmo com carta menor."""
+        with self._io_lock:
+            self._posto_fica_no_jogo = pergunta
+
+    def _quem_voltou_com_o_jogo_locked(self, chaves: list[str]) -> frozenset[str]:
+        """Quem entrou na mesa com o jogo segurando o boneco 1: a carta dele não leva o posto."""
+        mesa = frozenset(chaves)
+        if self._o_posto_fica_no_jogo_locked():
+            chegaram = mesa - self._mesa_da_carta
+            self._voltou_com_o_jogo = (self._voltou_com_o_jogo | chegaram) & mesa
+        else:
+            self._voltou_com_o_jogo = frozenset()
+        self._mesa_da_carta = mesa
+        return self._voltou_com_o_jogo
+
+    def _o_posto_fica_no_jogo_locked(self) -> bool:
+        """O jogo segura o boneco 1 com quem está no posto (D-2409, D-3009)."""
+        pergunta = self._posto_fica_no_jogo
+        if pergunta is None:
+            return False
+        try:
+            return bool(pergunta())
+        except Exception as exc:
+            logger.warning("posto_do_p1_pergunta_falhou", err=str(exc))
+            return False
+
     def _uniq_do_dono_do_posto(self) -> str | None:
         """O MAC do dono do posto de P1: o primário, ou quem a vaga espera (o que o `primary_uniq`
         responde).
@@ -5341,9 +5373,21 @@ class PyDualSenseController(IController):
         cartas = self._cartas_locked(chaves)
         if sentado not in cartas:
             return sentado
+        voltaram = self._quem_voltou_com_o_jogo_locked(chaves)
         melhor = min(chaves, key=cartas.__getitem__)
         if cartas[melhor] >= cartas[sentado]:
+            self._carta_menor_esperando = None
             return sentado
+        if melhor in voltaram:
+            if self._carta_menor_esperando != melhor:
+                self._carta_menor_esperando = melhor
+                logger.info(
+                    "primario_fica_no_jogo",
+                    uniq=_endereco_mascarado(self._key_to_uniq(sentado)),
+                    carta_menor=_endereco_mascarado(self._key_to_uniq(melhor)),
+                )
+            return sentado
+        self._carta_menor_esperando = None
         logger.info(
             "primario_segue_a_carta",
             uniq=_endereco_mascarado(self._key_to_uniq(melhor)),

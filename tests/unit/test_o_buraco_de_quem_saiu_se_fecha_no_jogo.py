@@ -405,6 +405,25 @@ class TestAVoltaTardiaDoP1:
         assert [r for r in registros if r["event"] == "coop_ordem_do_p1_espera_o_jogo"]
 
     @MATRIZ
+    def test_o_posto_volta_ao_p1_quando_o_jogo_solta(
+        self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
+    ) -> None:
+        """A carta 1 de volta na mesa espera o jogo, e não o hotplug: o jogo solta, o posto anda."""
+        ensaio = montar(monkeypatch, quantos, transporte)
+        registros = self._p1_sai_e_volta_tarde(ensaio)
+        assert ensaio.inst.primary_uniq == P2, "controle que volta nunca rouba o posto"
+        assert [r for r in registros if r["event"] == "primario_fica_no_jogo"]
+
+        ensaio.daemon.display_authority = "daemon"
+        monkeypatch.setattr(ensaio, "connect", lambda: None)
+        for _ in range(3):
+            ensaio.tique()
+
+        assert ensaio.inst.primary_uniq == P1, "o jogo soltou e o posto não seguiu a carta 1"
+        assert ensaio.dono_do_vpad_do_p1() == P1
+        ensaio.o_jogo_segue_a_tela()
+
+    @MATRIZ
     def test_o_vpad_do_p1_que_volta_nao_repete_o_mac_do_posto(
         self,
         monkeypatch: pytest.MonkeyPatch,
