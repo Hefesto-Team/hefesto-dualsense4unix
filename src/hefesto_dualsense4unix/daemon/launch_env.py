@@ -2078,7 +2078,10 @@ def _o_ambiente_padrao(foto: _FotoDoLancamento) -> tuple[dict[str, str], str]:
 def _o_modo_do_jogo(
     foto: _FotoDoLancamento, appid: int, do_jogo: Any, freestyle: Any | None
 ) -> ModoAntecipado | None:
-    """O modo do arquivo do `appid`: o do Freestyle, o do último arme dele, ou o do perfil."""
+    """O modo do `appid`: o do Freestyle, o do perfil, ou o do último arme no silêncio dele."""
+    do_arme = None
+    if freestyle is None and getattr(do_jogo, "mode", None) is None:
+        do_arme = foto.modos_do_arme.get(int(appid))
     return _modo_antecipado(
         freestyle if freestyle is not None else do_jogo,
         flavor_atual=foto.flavor,
@@ -2087,7 +2090,7 @@ def _o_modo_do_jogo(
         permite_uhid=foto.permite_uhid,
         fisicos=foto.fisicos,
         vpads_previstos=foto.vpads_previstos,
-        modo=None if freestyle is not None else foto.modos_do_arme.get(int(appid)),
+        modo=do_arme,
     )
 
 
