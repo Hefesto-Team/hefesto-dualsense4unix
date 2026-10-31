@@ -5,14 +5,14 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-29 21:16
+ensaio:  2026-10-30 21:58
 abas:    9
 modo:    --todas --publicado --doc --vista 1918x840
 origem:  src/hefesto_dualsense4unix/interface/paginas
 vista:   1918x840
 
 # Toda linha destas imagens é PÁGINA DO REPOSITÓRIO fotografada num
-# Chrome headless — nenhuma das fotos é medição desta ou de qualquer
+# Chrome headless — nenhuma é medição desta ou de qualquer
 # máquina, e o retratista não fala com o daemon (portão:
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
@@ -22,7 +22,7 @@ f319b35dea68202549d54097b00b8a75de5b16aa1d94b5a5100fae1af0797e7f  aba-03-gatilho
 d7968ad058f530f40a652a9bedc38c6a0a8e3eb13f7686c2339029d5bd7353fd  aba-04-iluminacao.png
 b15d05db0533b3feacaa7948ac02591183da3015cc990f0a5e0d997852c00aa3  aba-05-vibracao.png
 9a95f3b728e4d61a800a3cc23bccf87a8c50052f638de8539e04909d832fdac8  aba-06-navegacao.png
-62ced31bf7ed01e204dc485d3a7eda4052943c6f8761b8254b7caeb80a3b387b  aba-07-lancadores.png
+eac5b05b73ecd3da9945168c0e3af293abe770f80cc579c426a9df2c248ceba3  aba-07-lancadores.png
 effd13a8f9817e79cc9b48894246f05cc4bc107709ab986b6fb9c40a74619d75  aba-08-conexoes.png
 9394776d84e2b783c8f25ba60d2c7622d7ccba13ebb25c8192ab138d27cd076f  aba-09-sistema.png
 2edbd4f7e245e7c3199189f14495fc5855cd71e0307bfd7e78d90f88a24bfd0f  aba-10-perfis.png
