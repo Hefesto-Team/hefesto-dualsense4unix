@@ -27,10 +27,13 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
+from hefesto_dualsense4unix.interface.pacotes import camada
 
 EXPLICACAO = re.compile(
     r"\bAPI\b|segue ativo|não leva (o )?(giroscópio|touchpad)"
-    r"|o jogo vê (este|deste) controle|como Xbox 360|Xbox 360[,.:;—]",
+    r"|o jogo vê (este|deste) controle|como Xbox 360|Xbox 360[,.:;—]"
+    r"|o jogo lê este controle|o jogo ainda vê|sem o Hefesto no meio|pelo rádio, é assim"
+    r"|não há som nem vibração",
     re.IGNORECASE,
 )
 
@@ -172,3 +175,16 @@ def test_a_linha_do_gamepad_no_sistema_nao_explica_o_que_o_jogo_ve(estado: dict[
     linha = a09.linha_do_gamepad_por_jogador(estado)
     assert linha["dica"] == linha["txt"], linha
     assert "o jogo" not in linha["dica"].lower(), linha
+
+
+def test_a_recusa_no_modo_nativo_diz_o_modo_e_nao_o_que_o_jogo_le() -> None:
+    """O clique recusado no Modo Nativo diz o modo e o que não grava, sem explicar o jogo.
+
+    MORDE: devolva «Em modo nativo o jogo lê este controle direto, …» a `pacotes/camada.py` e
+    reprova.
+    """
+    frases = {camada.FRASE_NO_NATIVO, *camada.FRASES_NO_NATIVO.values()}
+    assert frases, "a camada parou de ter frase de recusa"
+    for frase in frases:
+        assert frase.startswith("Modo Nativo:"), frase
+        assert not EXPLICACAO.search(frase) and "o jogo" not in frase.lower(), frase

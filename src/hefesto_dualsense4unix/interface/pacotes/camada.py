@@ -208,10 +208,8 @@ GESTOS_DO_MENU = frozenset({"menu-atualizar", "menu-desligar", "menu-reiniciar",
                             "menu-fechar"})
 
 GESTOS_DA_MOLDURA = frozenset({"travar-navegacao"})
-FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
-MIRA_CINZA_NO_NATIVO = (
-    "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."
-)
+FRASE_NO_NATIVO = "Modo Nativo: o Hefesto não grava aqui."
+MIRA_CINZA_NO_NATIVO = "Modo Nativo: o analógico virtual não grava."
 
 FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
     (pagina, "analogico-lado"): MIRA_CINZA_NO_NATIVO for pagina in PAGINAS_DA_SECAO_DOS_CONTROLES

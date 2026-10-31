@@ -351,8 +351,7 @@ ACHADOS = [
           tema="steam-input", href="10-perfis.html",
           dica="A caixinha do Steam Input mudou depois que o Hefesto confirmou o jogo. "
                "Clique para conferir o perfil dele na aba Perfis."),
-    linha("NOTA", "nt", "◆", "Nenhum controle no cabo", tema="audio",
-          dica="Sem controle no cabo, não há som nem vibração para rotear"),
+    linha("NOTA", "nt", "◆", "Nenhum controle no cabo", tema="audio"),
     linha("OK", "ok", "✓", "Um gamepad virtual por jogador", tema="gamepad",
           dica="Cada controle ligado tem o seu gamepad virtual"),
 ]

@@ -677,12 +677,6 @@ ROTULO_LINHA_VOLUME = "Volume"
 
 VAO_DO_MIC_MAXIMO = 2
 
-DICA_MIC_VIRTUAL = ("O microfone deste controle passa pelo Hefesto: pelo rádio, "
-                    "é assim que ele ganha um canal só dele. Quem o põe no ar é "
-                    "o 🎙 acima.")
-DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
-                   "meio. É o que vale quando ninguém escolhe nada.")
-
 
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           touch2=None, tocando2=False,
