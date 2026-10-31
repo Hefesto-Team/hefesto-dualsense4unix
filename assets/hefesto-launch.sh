@@ -151,16 +151,20 @@ def pedir(params, teto):
     return json.loads(buf.decode("utf-8"))
 
 
-def o_ambiente(teto):
-    try:
-        return pedir({"appid": int(sys.argv[2])}, teto)
-    except Exception:
-        return None
-
-
-data = o_ambiente(TETO_DO_AMBIENTE_S) or o_ambiente(TETO_DO_PING_S)
-if data is None:
+fim_do_ambiente = time.monotonic() + TETO_DO_AMBIENTE_S
+try:
+    data = pedir({"appid": int(sys.argv[2])}, TETO_DO_AMBIENTE_S - TETO_DO_PING_S)
+except TimeoutError:
+    data = None
+except Exception:
     raise SystemExit(1)
+if data is None:
+    try:
+        data = pedir(
+            {"appid": int(sys.argv[2])}, max(fim_do_ambiente - time.monotonic(), 0.1)
+        )
+    except Exception:
+        raise SystemExit(1)
 resultado = data.get("result") if isinstance(data, dict) else None
 ambiente = resultado.get("ambiente") if isinstance(resultado, dict) else None
 linhas = ambiente.get("linhas") if isinstance(ambiente, dict) else None
