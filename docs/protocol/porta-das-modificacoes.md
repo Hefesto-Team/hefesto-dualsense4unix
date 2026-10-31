@@ -174,7 +174,9 @@ segue assinada continua recebendo. Um tópico da lista que esta conexão não as
 (`-32003`), sem largar nenhum.
 
 O serviço guarda até 256 eventos por assinatura. Quando a fila enche, o mais antigo sai: quem lê devagar
-perde eventos velhos, e o tique do serviço nunca espera.
+perde eventos velhos, e o tique do serviço nunca espera. Em `botoes`, o aperto e a soltura andam numa fila só,
+na ordem do tique, e a fila cheia tira juntas as duas bordas seguidas mais antigas de um mesmo botão: quem lê
+devagar perde toques velhos, nunca a última borda de um botão.
 
 ## Uma extensão publica para as outras
 
