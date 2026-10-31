@@ -875,8 +875,12 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   - **o bit cala o PCM dos canais 3-4 e fica preso** até chegar um report sem `0x01` nem
     `0x02` (o «leaving emulated rumble bits off» do SDL). O report do kernel que para a
     vibração (`02 02 00 00`) deixa o controle preso; uma soltura (todos os flags a 0) o solta;
-  - no **rádio** o `0x36` da ponte leva o `common` zerado (~94 quadros/s): cada quadro é uma
-    soltura, e o motor pelo `0x31` não dura um quadro enquanto a ponte está de pé;
+  - no **rádio** o `0x36` da ponte levava o `common` zerado em todo quadro (~94 por segundo):
+    cada quadro era uma soltura, e o motor pelo `0x31` não durava um quadro com a ponte de pé.
+    Desde 31/10/2026 o `0x10` neutro vai só junto do bloco `0x12`, que sem ele não vibra
+    (ensaio de 03/10); o quadro só de som sai sem o `0x10` (o som toca sem ele, mesmo ensaio) e
+    não solta o motor que o jogo acendeu. **INFERIDO** do mecanismo; o motor do jogo vivo com o
+    som no alto-falante pelo rádio se mede no aparelho;
   - a vibração tocada **como áudio** (um seno de 60 Hz nos canais 3-4) se sente nos dois
     transportes, e só no controle que o recebe.
   Logo, motor e háptica por áudio não andam juntos pelo report: com a háptica tocando, a

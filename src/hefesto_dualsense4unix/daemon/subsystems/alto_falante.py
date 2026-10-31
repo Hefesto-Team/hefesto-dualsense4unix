@@ -1220,7 +1220,7 @@ class AltoFalanteSubsystem:
     def a_vibracao_vai_pelo_audio_em(self, uniq: str) -> bool:
         """O motor pelo report não serve a este controle agora: a vibração vai como áudio.
 
-        A háptica toca nele (o bit do motor a calaria) ou a ponte do rádio o desliga por quadro.
+        A háptica toca nele (o bit do motor a calaria) ou o ``0x10`` da ponte do rádio o solta.
         """
         try:
             return any(_mesmo_controle(u, uniq) for u in self._com_haptica_de_audio) or any(

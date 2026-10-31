@@ -1473,17 +1473,11 @@ class ContagemDaBomba:
 
 
 class BombaDeSomPeloRadio:
-    """Do monitor dos nós ao fio: o som e a háptica do controle num ``0x36`` por quadro.
+    """Do monitor dos nós ao fio: o som e a háptica num ``0x36`` por quadro, um escritor.
 
-    O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026). UM escritor por
-    controle (:class:`RelatorioCombinado`, um contador só no ``0x11``): a cada
-    quadro lê o PCM do nó de som (:attr:`fonte`) e, quando há endpoint, o bloco
-    da háptica (:attr:`fonte_haptica`), e monta o relatório com o som e a
-    háptica que existirem nele e SEMPRE o ``0x10`` (:attr:`common`, o neutro
-    quando ninguém pede estado): no ensaio de 03/10, sem o ``0x10`` a háptica
-    não tocou. ``leva_a_haptica`` diz se o bloco da háptica vai ao fio (o
-    portão do jogo e o ganho da háptica); a fonte da háptica é lida mesmo quando ele
-    não vai, para o :data:`OUVIDO` saber se há sinal.
+    O ``0x10`` vai com o :attr:`common` dado, ou neutro só junto da háptica: sem ele a
+    háptica cala, e o neutro solta o motor que o ``0x31`` do jogo acendeu. A fonte da
+    háptica é lida mesmo quando ``leva_a_haptica`` a tira do fio.
     """
 
     def __init__(
@@ -1512,7 +1506,7 @@ class BombaDeSomPeloRadio:
         self.escritor = escritor
         self.tag_audio = tag_audio
         self.seco = bool(seco) or escritor is None
-        self.common = bytes(COMMON_LEN) if common is None else bytes(common)
+        self.common: bytes | None = None if common is None else bytes(common)
         self._codificador = codificador
         self._cedendo = False
         self._cedendo_desde: float | None = None
@@ -1624,11 +1618,17 @@ class BombaDeSomPeloRadio:
         report = self._escritor_do_relatorio.relatorio_do_quadro(
             quadro_de_som=quadro,
             haptico=bloco,
-            common=self.common,
+            common=self._o_estado_do_quadro(bloco),
             tag_som=self.tag_audio,
         )
         self.contagem.reports_montados += 1
         return report
+
+    def _o_estado_do_quadro(self, bloco: bytes | None) -> bytes | None:
+        """O ``0x10`` deste relatório: o dado, o neutro com a háptica, ou nenhum."""
+        if self.common is not None:
+            return self.common
+        return bytes(COMMON_LEN) if bloco is not None else None
 
     def _com_a_frente(self, pcm: bytes) -> bytes:
         """Soma ao PCM do alto-falante a frente do endpoint deste quadro, saturando.

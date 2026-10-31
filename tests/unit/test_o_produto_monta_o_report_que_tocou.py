@@ -112,9 +112,8 @@ def test_a_ponte_leva_o_0x11_e_o_quadro_que_tocaram_dentro_do_0x36(
     )
     assert do_produto[0] == af.DEGRAU_COMBINADO
     assert do_produto[2:11] == do_ensaio[2:11], "o 0x11 diverge do que tocou"
-    assert do_produto[11:13] == bytes((0x90, 63)), "o 0x10 vai em todo quadro"
-    assert do_produto[76:78] == do_ensaio[11:13], "a tag do som diverge da que tocou"
-    assert do_produto[78:278] == do_ensaio[13:213], "o quadro Opus saiu fora do lugar"
+    assert do_produto[11:13] == do_ensaio[11:13], "a tag do som diverge da que tocou"
+    assert do_produto[13:213] == do_ensaio[13:213], "o quadro Opus saiu fora do lugar"
 
 
 def test_a_cadencia_e_a_medida_e_nao_a_nominal() -> None:

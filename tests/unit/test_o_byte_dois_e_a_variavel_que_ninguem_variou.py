@@ -136,12 +136,13 @@ def test_o_corpo_que_a_bomba_monta_leva_o_common_do_produto() -> None:
     )
 
 
-def test_a_bomba_sem_estado_manda_o_0x10_neutro() -> None:
-    """No ensaio de 03/10 o ``0x10`` neutro bastou, e sem ele a háptica calou."""
+def test_a_bomba_sem_estado_nao_manda_o_0x10_no_quadro_so_de_som() -> None:
+    """O ``0x10`` neutro solta o motor (26/10) e o som toca sem ele (03/10): só a háptica o leva."""
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import BLOCO_SPEAKER
+
     report = _bomba(None).um_report()
     assert report is not None
-    assert report[11] == af.tag_tlv(BT_TAG), "o 0x10 saiu do quadro"
-    assert bytes(report[13:76]) == bytes(63), "o neutro tem as validades zeradas"
+    assert report[11] == af.tag_tlv(BLOCO_SPEAKER), "o 0x10 neutro foi no quadro só de som"
 
 
 def test_o_envelope_do_ensaio_pede_os_tres_campos_que_o_mapa_nomeia() -> None:

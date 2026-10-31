@@ -359,7 +359,7 @@ def test_a_haptica_que_o_portao_tira_fecha_com_o_silencio_e_o_som_segue() -> Non
     assert blocos[:2] == [[0x11, 0x10, 0x12, 0x13]] * 2
     assert blocos[2] == [0x11, 0x10, 0x12, 0x13], "o motor tinha de parar no zero"
     assert _cadeia(escritas[2])[2][3] == bloco_de_silencio()
-    assert blocos[3:] == [[0x11, 0x10, 0x13]] * 2, "a háptica seguiu no fio sem o portão"
+    assert blocos[3:] == [[0x11, 0x13]] * 2, "a háptica ou o 0x10 seguiu no fio sem o portão"
 
 
 def test_a_ponte_nao_tem_mais_dois_escritores() -> None:
