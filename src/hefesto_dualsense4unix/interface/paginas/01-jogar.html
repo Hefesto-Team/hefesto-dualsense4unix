@@ -410,8 +410,6 @@
   .faixa > span{line-height:14px}
   .faixa .leia{cursor:help}
   .faixa .div{color:var(--fg)}
-  .faixa .no-jogo{display:none}
-  .faixa .no-jogo > .no-jogo-t{display:inline}
   .gat{display:flex;flex-direction:column;justify-content:space-around;flex:1}
   .gat-linha{display:grid;grid-template-columns:20px 1fr;align-items:center;gap:8px;
              font-size:11px;color:var(--fg);margin-bottom:9px}
@@ -697,10 +695,6 @@
   body:has(#c-todos:checked) .ctl .so-aberto{display:inline}
   .ctl:has(> input:checked) .card-nome,
   body:has(#c-todos:checked) .ctl .card-nome{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ctl:has(> input:checked) .faixa .no-jogo[aria-label],
-  body:has(#c-todos:checked) .ctl .faixa .no-jogo[aria-label]{display:block;flex:1 1 0;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    color:var(--fg);font-weight:400}
   .ctl.off:has(> input:checked),
   body:has(#c-todos:checked) .ctl.off{height:24px;flex:0 0 auto;padding-bottom:0;
     background:transparent}
@@ -916,7 +910,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
     height:calc(var(--alt-aba) - 2px);margin:0;padding:0;border:0;background:transparent;
     flex-wrap:nowrap;white-space:nowrap;cursor:default;width:44%;justify-content:flex-end}
   .ctl:not(.off):has(> input:checked) > .faixa .card-nome{display:none}
-  .ctl:has(> input:checked) > .faixa .no-jogo[aria-label]{max-width:200px}
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
   .aba-ctl.off{border-style:dashed;border-color:var(--border-forte);background:transparent;padding:0 7px;
     cursor:default}
@@ -1176,9 +1169,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
           <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">1</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></span> <span class="pt">•</span> </span><span data-campo="peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="via">USB</span><span class="so-vaga">Player <span data-campo="jogador" data-hef-alvo="html">1</span> <span class="pt">•</span> Desconectado</span></span>
 <span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
-          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label"><span
-                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
@@ -1419,9 +1409,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
           <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">2</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></span> <span class="pt">•</span> </span><span data-campo="peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="via">BT</span><span class="so-vaga">Player <span data-campo="jogador" data-hef-alvo="html">2</span> <span class="pt">•</span> Desconectado</span></span>
 <span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span></span>
-          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label"><span
-                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
@@ -1662,9 +1649,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
           <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">3</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">3</span></span> <span class="pt">•</span> </span><span data-campo="peca">—</span> <span class="pt">•</span> <span data-campo="via">—</span><span class="so-vaga">Player <span data-campo="jogador" data-hef-alvo="html">3</span> <span class="pt">•</span> Desconectado</span></span>
 <span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
-          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label"><span
-                class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
@@ -1905,9 +1889,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
           <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P<span data-campo="jogador" data-hef-alvo="html">4</span> <span class="pt">•</span> </span><span class="so-aberto"><span data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">4</span></span> <span class="pt">•</span> </span><span data-campo="peca">—</span> <span class="pt">•</span> <span data-campo="via">—</span><span class="so-vaga">Player <span data-campo="jogador" data-hef-alvo="html">4</span> <span class="pt">•</span> Desconectado</span></span>
 <span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
-          <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label"><span
-                class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
