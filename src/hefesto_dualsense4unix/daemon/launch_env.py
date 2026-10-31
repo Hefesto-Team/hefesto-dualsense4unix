@@ -686,7 +686,7 @@ def tique_da_escada(
             ponte=ponte.chave,
             perfil=getattr(salvo, "name", None),
             por=resultado.por,
-            modo_alinhado=resultado.alinhar is not None,
+            modo_alinhado=_o_modo_e_o_da_ponte(salvo, ponte),
         )
     return resultado.fim
 
@@ -2484,6 +2484,14 @@ def modo_do_estado_vivo(
         motivo="pronto para o PS + R3 (sem vpad agora)",
         fisicos=fisicos, pronto_para_troca=True,
     )
+
+
+def _o_modo_e_o_da_ponte(perfil: Any, ponte: ponte_escada.Ponte) -> bool:
+    """O ``mode`` que o carimbo deixou no perfil entrega esta ponte? É o que o diário diz."""
+    do_perfil = ponte_escada.ponte_do_perfil(perfil, na_allowlist=ponte.steam_input)
+    if do_perfil is None:
+        return False
+    return (do_perfil.kind, do_perfil.mascara) == (ponte.kind, ponte.mascara)
 
 
 __all__ = [

@@ -19,6 +19,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+import structlog
 
 from hefesto_dualsense4unix.daemon import launch_env
 from hefesto_dualsense4unix.integrations import ponte_escada, ponte_tentativa
@@ -223,23 +224,32 @@ class _Daemon:
         self.display_authority = "game"
 
 
-def _escada_confirma_por_silencio(degrau: ponte_escada.Degrau) -> None:
+def _escada_confirma_por_silencio(degrau: ponte_escada.Degrau) -> dict[str, bool]:
+    """Confirma por silêncio e devolve o ``modo_alinhado`` de cada linha do diário do carimbo."""
     daemon = _Daemon()
     daemon._ponte_tentativa = ponte_tentativa.Tentativa(  # type: ignore[attr-defined]
         appid=APPID, epoch=1000, degrau=degrau, ultimo_gesto=0.0, viu_o_jogo=True)
-    fim = launch_env.tique_da_escada(daemon, agora=ponte_escada.SILENCIO_CONFIRMA_SEC + 1.0)  # type: ignore[arg-type]
+    with structlog.testing.capture_logs() as registros:
+        fim = launch_env.tique_da_escada(daemon, agora=ponte_escada.SILENCIO_CONFIRMA_SEC + 1.0)  # type: ignore[arg-type]
     assert fim == ponte_tentativa.FIM_CONFIRMADA
+    return {
+        r["event"]: r["modo_alinhado"] for r in registros
+        if r["event"] in ("ponte_confirmada", "ponte_escada_carimbada")
+    }
 
 
 def test_o_carimbo_por_silencio_grava_a_ponte_e_o_modo_iguais() -> None:
     """**A MORDIDA.** O perfil sem ``mode`` (Mina the Hollower, 05:29:05): o carimbo por
-    silêncio grava a ponte e o ``mode`` da mesma ponte. Com o ``o_carimbo_leva_o_modo`` arrancado
-    (o ``alinhar_o_modo=False`` de antes decidindo sozinho), o ``mode`` fica de fora e reprova."""
+    silêncio grava a ponte e o ``mode`` da mesma ponte, e as duas linhas do diário dizem
+    ``modo_alinhado=True``. Com o ``o_carimbo_leva_o_modo`` arrancado (o ``alinhar_o_modo=False``
+    de antes decidindo sozinho), o ``mode`` fica de fora e reprova; com o diário do carimbo de
+    volta a ``resultado.alinhar``, ele diz ``False`` sobre o modo gravado e reprova."""
     pasta = profiles_dir(ensure=True)
     _escrever(pasta, "jogo_sem_modo", _cru("Jogo Sem Modo", APPID))
 
-    _escada_confirma_por_silencio(ponte_escada.ESCADA[0])
+    diario = _escada_confirma_por_silencio(ponte_escada.ESCADA[0])
 
+    assert diario == {"ponte_confirmada": True, "ponte_escada_carimbada": True}
     dados = json.loads((pasta / "jogo_sem_modo.json").read_text(encoding="utf-8"))
     assert dados["ponte"]["confirmada_por"] == "silencio"
     assert (dados["ponte"]["kind"], dados["ponte"]["gamepad_flavor"]) == ("gamepad", "dualsense")
@@ -254,8 +264,9 @@ def test_o_carimbo_por_silencio_nao_mexe_no_modo_escolhido() -> None:
     escolhido = {"kind": "gamepad", "gamepad_flavor": "xbox", "caminho": "xbox"}
     _escrever(pasta, "jogo_com_modo", _cru("Jogo Com Modo", APPID, mode=escolhido))
 
-    _escada_confirma_por_silencio(ponte_escada.ESCADA[0])
+    diario = _escada_confirma_por_silencio(ponte_escada.ESCADA[0])
 
+    assert diario == {"ponte_confirmada": False, "ponte_escada_carimbada": False}
     dados = json.loads((pasta / "jogo_com_modo.json").read_text(encoding="utf-8"))
     assert dados["ponte"]["confirmada_por"] == "silencio"
     assert dados["mode"] == escolhido
