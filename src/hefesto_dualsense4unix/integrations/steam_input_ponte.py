@@ -872,10 +872,7 @@ def _instalados(home: Path | None) -> list[str]:
         from .prontuario_dos_jogos import jogos_instalados
     except ImportError:  # pragma: no cover
         from prontuario_dos_jogos import jogos_instalados  # type: ignore[no-redef]
-    try:
-        return [appid for appid, _, _ in jogos_instalados(home) if appid.isdigit()]
-    except OSError:  # pragma: no cover
-        return []
+    return [appid for appid, _, _ in jogos_instalados(home) if appid.isdigit()]
 
 
 def _ler_allowlist_estrita(config_home: Path | None = None) -> list[str] | None:
