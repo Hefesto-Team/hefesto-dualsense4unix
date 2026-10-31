@@ -948,6 +948,21 @@ def _os_modos_dos_armes(daemon: Any) -> dict[int, Any]:
     return dict(modos) if isinstance(modos, dict) else {}
 
 
+def _guardar_a_roupa_do_arme(daemon: Any, appid: int, roupa: int) -> None:
+    """A roupa que o arme decidiu para o `appid`, de onde sai o ambiente do jogo sem perfil."""
+    roupas = getattr(daemon, "_roupas_dos_armes", None)
+    if not isinstance(roupas, dict):
+        roupas = {}
+        daemon._roupas_dos_armes = roupas
+    roupas[int(appid)] = roupa_normalizada(roupa)
+
+
+def _as_roupas_dos_armes(daemon: Any) -> dict[int, int]:
+    """Cópia das roupas que os armes desta sessão decidiram, por appid."""
+    roupas = getattr(daemon, "_roupas_dos_armes", None)
+    return dict(roupas) if isinstance(roupas, dict) else {}
+
+
 def _armar_o_jogo(
     daemon: DaemonProtocol, appid: int, epoch: int, base_dir: Path | None
 ) -> dict[str, Any] | None:
@@ -958,11 +973,13 @@ def _armar_o_jogo(
     _guardar_o_modo_do_arme(daemon, appid, None)
     if o_freestyle_manda(getattr(daemon, "store", None)):
         logger.info("launch_arm_pulado_freestyle_ligado", appid=appid)
+        _guardar_a_roupa_do_arme(daemon, appid, ROUPA_PADRAO)
         _vestir_para_o_jogo(daemon, appid, ROUPA_PADRAO)
         return {"appid": appid, "armado": False, "motivo": "freestyle_ligado"}
 
     na_allowlist = appid in steam_input_appids()
     roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir, lido_ate=epoch)
+    _guardar_a_roupa_do_arme(daemon, appid, roupa)
 
     profile = None
     for candidato_appid, candidato in _steam_profiles(daemon):
@@ -1967,7 +1984,6 @@ def _a_parte_de_fora(
     native, enabled, flavor = foto.native, foto.enabled, foto.flavor
     backends = list(foto.backends)
     leitor = foto.leitor
-    modo_vivo = foto.modo_vivo
     default_env, estado = _o_ambiente_padrao(foto)
     _write_atomic(target / "default.env", _render(default_env, estado))
     desired = {"default.env"}
@@ -1975,81 +1991,41 @@ def _a_parte_de_fora(
     divergencias: list[dict[str, Any]] = []
     freestyle = _o_freestyle_que_manda(leitor)
     receitas = _receitas_dos_jogos()
-    comuns: dict[str, str] | None = None
-
-    def roupa_do(appid: int, modo: ModoAntecipado) -> tuple[int, str] | None:
-        nonlocal comuns
-        if freestyle is not None or not modo.veste_roupa:
-            return None
-        if comuns is None:
-            comuns = _jogos_do_comum(foto)
-        fonte = comuns.get(str(appid))
-        return (ROUPA_COMUM, fonte) if fonte is not None else None
-
+    comuns = _OsJogosDoComum(foto)
+    perfis: dict[str, Any] = {}
     for appid, do_jogo in _steam_profiles(leitor):
-        if f"steam_app_{appid}.env" in desired:
+        perfis.setdefault(str(appid), do_jogo)
+    ordem = list(perfis)
+    if freestyle is None and _o_modo_padrao(foto).veste_roupa:
+        ordem += sorted(comuns())
+    ordem += list(receitas)
+    for chave in ordem:
+        name = f"steam_app_{chave}.env"
+        if name in desired:
             continue
-        profile = freestyle if freestyle is not None else do_jogo
-        modo = _o_modo_do_jogo(foto, appid, do_jogo, freestyle)
-        if modo is None:
-            continue
-        roupa = roupa_do(appid, modo)
-        if roupa is not None:
-            modo = replace(modo, roupa=roupa[0])
-        estado_do_perfil = f"{modo.motivo} | {modo.como_estado()}"
-        motivo_divergencia = divergencia_de_mascara(
-            modo,
-            native_vivo=native,
-            emulacao_viva=enabled,
-            flavor_vivo=flavor,
+        def roupa(chave: str = chave) -> tuple[int, str] | None:
+            return comuns.roupa(chave)
+
+        ambiente = o_ambiente_do_jogo(
+            foto, chave, do_jogo=perfis.get(chave), freestyle=freestyle,
+            padrao=(default_env, estado), receita=receitas.get(chave, {}), roupa=roupa,
         )
-        if motivo_divergencia is not None:
-            estado_do_perfil += f" divergente={motivo_divergencia}"
+        if ambiente is None:
+            continue
+        if ambiente.modo is not None and ambiente.divergencia is not None:
+            profile = freestyle if freestyle is not None else perfis.get(chave)
             divergencias.append(
                 {
-                    "appid": appid,
+                    "appid": int(chave),
                     "profile": str(getattr(profile, "name", "?")),
-                    "mascara_perfil": modo.mascara,
+                    "mascara_perfil": ambiente.modo.mascara,
                     "mascara_viva": flavor,
-                    "motivo": motivo_divergencia,
-                    "em_cena": appid in em_cena,
+                    "motivo": ambiente.divergencia,
+                    "em_cena": int(chave) in em_cena,
                 }
             )
-        name = f"steam_app_{appid}.env"
         _write_atomic(
-            target / name,
-            _render(
-                {**env_do_modo(modo), **receitas.get(str(appid), {})},
-                f"{estado_do_perfil} | vivo: {estado}",
-                roupa,
-            ),
-        )
-        desired.add(name)
-    sem_perfil = (
-        _jogos_do_comum(foto) if comuns is None else comuns
-    ) if freestyle is None and modo_vivo.veste_roupa else {}
-    for appid_do_comum, fonte in sorted(sem_perfil.items()):
-        name = f"steam_app_{appid_do_comum}.env"
-        if name in desired:
-            continue
-        do_comum = _o_ambiente_do_comum(foto, default_env)
-        _write_atomic(
-            target / name,
-            _render(
-                {**do_comum, **receitas.get(appid_do_comum, {})},
-                f"roupa do jogo | vivo: {estado}",
-                (ROUPA_COMUM, fonte),
-            ),
-        )
-        desired.add(name)
-    for appid_da_receita, da_receita in receitas.items():
-        name = f"steam_app_{appid_da_receita}.env"
-        if name in desired:
-            continue
-        _write_atomic(
-            target / name,
-            _render({**default_env, **da_receita}, f"receita de ambiente | vivo: {estado}"),
-        )
+            target / name, _render(ambiente.no_arquivo, ambiente.estado, ambiente.roupa))
         desired.add(name)
     devolver(lambda: foto.publicar(divergencias))
     for stale in target.glob("steam_app_*.env"):
@@ -2077,10 +2053,16 @@ def _a_parte_de_fora(
     )
 
 
+def _o_modo_padrao(foto: _FotoDoLancamento) -> ModoAntecipado:
+    """O modo do `default.env` e do jogo sem perfil próprio."""
+    return foto.modo_vivo
+
+
 def _o_ambiente_padrao(foto: _FotoDoLancamento) -> tuple[dict[str, str], str]:
     """O `default.env` da foto e a linha `estado:` dele."""
-    estado = foto.modo_vivo.como_estado()
-    default_env = env_do_modo(foto.modo_vivo)
+    padrao = _o_modo_padrao(foto)
+    estado = padrao.como_estado()
+    default_env = env_do_modo(padrao)
     if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
         arriscados = _nativos_fora_da_antecipacao(_load_profiles(foto.leitor))
         if arriscados:
@@ -2114,29 +2096,110 @@ def _o_modo_do_jogo(
 
 def _o_ambiente_do_comum(foto: _FotoDoLancamento, default_env: dict[str, str]) -> dict[str, str]:
     """O ambiente do jogo sem perfil cujo pad veste o comum."""
-    do_comum = env_do_modo(replace(foto.modo_vivo, roupa=ROUPA_COMUM))
+    do_comum = env_do_modo(replace(_o_modo_padrao(foto), roupa=ROUPA_COMUM))
     if "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in default_env:
         do_comum.pop("SDL_GAMECONTROLLER_IGNORE_DEVICES", None)
     return do_comum
 
 
-def _o_pad_veste_o_comum(daemon: Any) -> bool:
-    """O pad de pé veste o `0ce6` agora (`gamepad.a_roupa_que_o_pad_veste`)."""
-    try:
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import a_roupa_que_o_pad_veste
+class _OsJogosDoComum:
+    """`_jogos_do_comum` lido uma vez, na primeira pergunta."""
 
-        return roupa_normalizada(a_roupa_que_o_pad_veste(daemon)) == ROUPA_COMUM
-    except Exception:
-        logger.debug("launch_ambiente_roupa_indisponivel", exc_info=True)
-        return False
+    def __init__(self, foto: _FotoDoLancamento) -> None:
+        self._foto = foto
+        self._lidos: dict[str, str] | None = None
+
+    def __call__(self) -> dict[str, str]:
+        if self._lidos is None:
+            self._lidos = _jogos_do_comum(self._foto)
+        return self._lidos
+
+    def roupa(self, appid: int | str) -> tuple[int, str] | None:
+        fonte = self().get(str(appid))
+        return (ROUPA_COMUM, fonte) if fonte is not None else None
+
+
+def _a_roupa_do_jogo(
+    foto: _FotoDoLancamento, comuns: _OsJogosDoComum, appid: int | str
+) -> tuple[int, str] | None:
+    """A roupa que o pad do `appid` veste neste lançamento: a do arme dele, ou a dos jogos do comum.
+
+    O arquivo não usa esta: ele é o registro que o próximo arme lê (`roupa_gravada`), e sai só
+    dos jogos do comum, para a roupa do arme que perdeu a corrida com a escrita não se perpetuar.
+    """
+    do_arme = foto.roupas_do_arme.get(int(appid))
+    if do_arme is None:
+        return comuns.roupa(appid)
+    if do_arme != ROUPA_COMUM:
+        return None
+    return comuns.roupa(appid) or (ROUPA_COMUM, "arme")
+
+
+@dataclass(frozen=True)
+class AmbienteDoJogo:
+    """O ambiente de um appid: o mesmo no `steam_app_<id>.env` e no `daemon.status {appid}`."""
+
+    env: dict[str, str]
+    receita: dict[str, str]
+    estado: str
+    roupa: tuple[int, str] | None = None
+    modo: ModoAntecipado | None = None
+    divergencia: str | None = None
+
+    @property
+    def no_arquivo(self) -> dict[str, str]:
+        return {**self.env, **self.receita}
+
+
+def o_ambiente_do_jogo(
+    foto: _FotoDoLancamento,
+    appid: int | str,
+    *,
+    do_jogo: Any,
+    freestyle: Any | None,
+    padrao: tuple[dict[str, str], str],
+    receita: Mapping[str, str],
+    roupa: Callable[[], tuple[int, str] | None],
+) -> AmbienteDoJogo | None:
+    """O ambiente do `appid`; None quando ele vale o `default.env` sem receita.
+
+    O jogo com perfil sai do modo dele; o sem perfil, do modo do `default.env` e da `roupa`
+    que o chamador decide (a do arme, ou a dos jogos do comum). A receita vai junto.
+    """
+    default_env, estado = padrao
+    modo = _o_modo_do_jogo(foto, int(appid), do_jogo, freestyle) if do_jogo is not None else None
+    if modo is not None:
+        vestida = roupa() if freestyle is None and modo.veste_roupa else None
+        if vestida is not None:
+            modo = replace(modo, roupa=vestida[0])
+        divergencia = divergencia_de_mascara(
+            modo, native_vivo=foto.native, emulacao_viva=foto.enabled, flavor_vivo=foto.flavor,
+        )
+        do_perfil = f"{modo.motivo} | {modo.como_estado()}"
+        if divergencia is not None:
+            do_perfil += f" divergente={divergencia}"
+        return AmbienteDoJogo(
+            env_do_modo(modo), dict(receita), f"{do_perfil} | vivo: {estado}",
+            vestida, modo, divergencia,
+        )
+    vestida = roupa() if freestyle is None and _o_modo_padrao(foto).veste_roupa else None
+    if vestida is not None:
+        return AmbienteDoJogo(
+            _o_ambiente_do_comum(foto, default_env), dict(receita),
+            f"roupa do jogo | vivo: {estado}", vestida,
+        )
+    if receita:
+        return AmbienteDoJogo(
+            dict(default_env), dict(receita), f"receita de ambiente | vivo: {estado}")
+    return None
 
 
 def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]:
     """Arma o lançamento do `appid` e devolve o ambiente dele, do estado armado, em memória.
 
     O arquivo é escrito em fundo e pode chegar depois do `exec`; esta resposta é o que o
-    wrapper exporta quando o daemon atende. O modo vem da mesma conta do arquivo
-    (`_o_modo_do_jogo`), e a roupa, da que o pad veste depois do arme.
+    wrapper exporta quando o daemon atende. A conta é a do arquivo (`o_ambiente_do_jogo`),
+    com a roupa que o arme decidiu e a receita lida agora.
     """
     t0 = time.perf_counter()
     appid = int(appid)
@@ -2148,20 +2211,17 @@ def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]
         except Exception as exc:
             logger.warning("launch_ambiente_arme_falhou", appid=appid, err=str(exc))
     foto = _foto_do_lancamento(daemon, no_fio=False, com_as_vozes=False)
-    default_env, estado = _o_ambiente_padrao(foto)
-    freestyle = _o_freestyle_que_manda(daemon)
-    do_jogo = next((p for a, p in _steam_profiles(daemon) if a == appid), None)
-    modo = _o_modo_do_jogo(foto, appid, do_jogo, freestyle) if do_jogo is not None else None
-    if modo is not None:
-        if freestyle is None and modo.veste_roupa and _o_pad_veste_o_comum(daemon):
-            modo = replace(modo, roupa=ROUPA_COMUM)
-        env = env_do_modo(modo)
-        estado = f"{modo.motivo} | {modo.como_estado()} | vivo: {estado}"
-    elif freestyle is None and foto.modo_vivo.veste_roupa and _o_pad_veste_o_comum(daemon):
-        env = _o_ambiente_do_comum(foto, default_env)
-        estado = f"roupa do jogo | vivo: {estado}"
-    else:
-        env = default_env
+    padrao = _o_ambiente_padrao(foto)
+    comuns = _OsJogosDoComum(foto)
+    ambiente = o_ambiente_do_jogo(
+        foto, appid,
+        do_jogo=next((p for a, p in _steam_profiles(daemon) if a == appid), None),
+        freestyle=_o_freestyle_que_manda(daemon), padrao=padrao,
+        receita=_receitas_dos_jogos().get(str(appid), {}),
+        roupa=lambda: _a_roupa_do_jogo(foto, comuns, appid),
+    )
+    env, estado = padrao if ambiente is None else (ambiente.env, ambiente.estado)
+    receita = {} if ambiente is None else ambiente.receita
     linhas = [f"{chave}={valor}" for chave, valor in env.items() if chave in ENV_ALLOWLIST]
     logger.info(
         "launch_ambiente_entregue",
@@ -2170,7 +2230,12 @@ def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]
         estado=estado,
         ms=round((time.perf_counter() - t0) * 1000, 1),
     )
-    return {"appid": appid, "linhas": linhas, "estado": estado}
+    return {
+        "appid": appid,
+        "linhas": linhas,
+        "receita": [f"{chave}={valor}" for chave, valor in receita.items()],
+        "estado": estado,
+    }
 
 
 def o_ambiente_no_status(daemon: DaemonProtocol | None, params: Any) -> dict[str, Any]:
@@ -2270,6 +2335,7 @@ class _FotoDoLancamento:
     o_dono_esconde: Callable[[], bool] = lambda: False
     a_roupa_aqueceu: Callable[[], None] = lambda: None
     modos_do_arme: Mapping[int, Any] = field(default_factory=dict)
+    roupas_do_arme: Mapping[int, int] = field(default_factory=dict)
 
 
 def _o_dono_esconde(daemon: Any) -> bool:
@@ -2333,6 +2399,7 @@ def _foto_do_lancamento(
         o_dono_esconde=lambda: _o_dono_esconde(daemon),
         a_roupa_aqueceu=lambda: _a_roupa_aqueceu(daemon),
         modos_do_arme=_os_modos_dos_armes(daemon),
+        roupas_do_arme=_as_roupas_dos_armes(daemon),
     )
 
 

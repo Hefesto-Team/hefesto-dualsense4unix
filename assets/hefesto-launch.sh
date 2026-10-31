@@ -54,7 +54,6 @@ pasta_da_receita() {
 }
 
 receita_do_jogo() {
-    case "$1" in */steam_app_*.env) ;; *) return 0 ;; esac
     rj_dll=""
     rj_pasta=""
     rj_quebrou=0
@@ -69,7 +68,7 @@ receita_do_jogo() {
                     rj_quebrou=1
                 fi ;;
         esac
-    done < "$1"
+    done
     [ -n "$rj_dll$rj_pasta" ] || [ "$rj_quebrou" = 1 ] || return 0
     if [ "${usuario_pos_dll:-0}" = 1 ] || [ -n "${WINEDLLOVERRIDES+x}" ] || [ -n "${WINEDLLPATH+x}" ]; then
         receita_descartada "o WINEDLLOVERRIDES ou o WINEDLLPATH já vem de quem lançou; o que ele pôs manda"
@@ -168,8 +167,9 @@ if data is None:
 resultado = data.get("result") if isinstance(data, dict) else None
 ambiente = resultado.get("ambiente") if isinstance(resultado, dict) else None
 linhas = ambiente.get("linhas") if isinstance(ambiente, dict) else None
-if isinstance(linhas, list) and all(isinstance(x, str) for x in linhas):
-    sys.stdout.write("".join(x + "\n" for x in linhas if "\n" not in x))
+receita = (ambiente.get("receita") if isinstance(ambiente, dict) else None) or []
+if isinstance(linhas, list) and isinstance(receita, list) and all(isinstance(x, str) for x in linhas + receita):
+    sys.stdout.write("".join(x + "\n" for x in linhas + receita if "\n" not in x))
     raise SystemExit(0)
 if isinstance(resultado, dict):
     raise SystemExit(3)
@@ -223,7 +223,7 @@ PYEOF
     done <<HEFESTO_AMBIENTE_EOF
 $linhas
 HEFESTO_AMBIENTE_EOF
-    [ -f "$receita" ] && receita_do_jogo "$receita"
+    if [ "$pedido" = 0 ]; then printf '%s\n' "$do_daemon" | receita_do_jogo; elif [ -f "$receita" ]; then receita_do_jogo < "$receita"; fi
     return 0
 }
 
