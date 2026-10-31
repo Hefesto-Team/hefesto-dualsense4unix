@@ -197,6 +197,16 @@ cada controle, e o jogo tem a vez. Os dois nomes não dizem que aparelho está d
 cai (parada, morta ou desligada), cada controle que o último `vibracao.set` da extensão deixou acima de zero recebe
 `fraco: 0, forte: 0`, menos aquele em que o jogo está vibrando: nenhum motor fica preso.
 
+O par de um `vibracao.set` vale por 3 s
+(`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:16`): sem um novo pedido
+nesse prazo, o serviço o solta
+(`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:373`). Quem quer uma
+vibração contínua repete o pedido antes dos 3 s. A resposta de sucesso não garante o motor: no Modo Nativo, e com o `uniq` de um controle fora da
+mesa, a resposta traz `status: "recusado"`, o `desfecho` e o `motivo` na frase
+(`RUMBLE_RECUSADO_MODO_NATIVO` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3412`,
+`RUMBLE_RECUSADO_ALVO_AUSENTE` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3428`). Quem acompanha o
+resultado lê o `status`.
+
 Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os controles ligados agora, cada um
 uma vez, com o `jogador` que ele acende (ou `null`). Sem a lista do serviço, vale o controle do posto; a lista
 que falha volta vazia. O método entrou na versão 2 da porta sem mudar a faixa: quem pede `>=2,<3` e não o usa
@@ -371,7 +381,12 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `{nome: [[força, segundos], …]}` (até 16 passos, força de 0 a 1, cada passo de mais de 0 até 10 s; a lista vazia
   é a forma que não toca); `botoes`, opcional, limita a janela a esses (sem ele, os 19 de `cross` a
   `touchpad_right_press`; o PS e o microfone são da casa); `padrao` é `{botão: forma}`. O valor é o objeto
-  inteiro, um botão por chave: o que falta vale o `padrao`, e sem ele a primeira forma.
+  inteiro, um botão por chave: o que falta vale o `padrao`, e sem ele a primeira forma. A `escolha` de id
+  `entrada_<chave>` (`l2`, `r2`, `analogico_esquerdo`, `analogico_direito`, `touchpad`, `sacudir`,
+  `inclinar`) ganha o glifo da entrada e mora na mesma grade dos botões do `por_botao` vizinho: uma grade só,
+  na ordem do manifesto. A `escolha` cujas `escolhas` são as `formas` de um `por_botao` da extensão (os
+  efeitos) desenha a onda da forma escolhida, pelo mesmo desenho do botão, e aceita as formas do `livre`;
+  «Direto» e «Suave», proporcionais à entrada, desenham a rampa reta e a curva ao quadrado.
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba da opção. O `ligado` cujo `rotulo` é o nome do
@@ -454,7 +469,8 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   com o rastro dos últimos 10 s. Arrastar manda `extensao.livre`; «Gravar» guarda o arrastar como uma forma
   `[[força, segundos], …]` (até 16 passos, 160 s); o valor da opção são as formas gravadas, `{nome: passos}`,
   até 16, e o `padrao`, opcional, tem a mesma forma. As formas do `livre` entram nas `formas` das opções
-  `por_botao` da MESMA extensão: um botão pode tocar «Meu 1», e a forma esquecida devolve o botão ao padrão. A
+  `por_botao` e na lista da escolha dos efeitos da MESMA extensão: um botão ou uma entrada pode tocar
+  «Meu 1», e a forma esquecida devolve o botão e a entrada ao padrão. A
   forma de uma extensão nunca aparece na janela de outra, e a escolha na janela de outra a recusa.
   A opção `livre` aceita `modos: true`. Com ele, `extensao.livre` e `mods.livre` levam `modo`, um de
   `"soltar"`, `"segurar"` e `"repetir"` (`"soltar"` por padrão). Sem `modos`, o campo não vai. A faixa ganha os
