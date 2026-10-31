@@ -1756,9 +1756,23 @@ def _avisa_perfil_invalido(path: Path, exc: BaseException) -> None:
 
 
 def _read_profile(path: Path) -> Profile:
-    with FileLock(str(_lock_path(path))):
+    with _trava_da_leitura(path):
         raw = json.loads(path.read_text(encoding="utf-8"))
     return Profile.model_validate(raw)
+
+
+def _trava_da_leitura(path: Path) -> contextlib.AbstractContextManager[object]:
+    """A trava de quem LÊ o perfil: no laço asyncio, nenhuma.
+
+    A gravação é atômica (``_atomic_write_bytes``), então a leitura sem trava vê o arquivo
+    inteiro, o velho ou o novo. O laço que espera o ``FileLock`` de outro processo para
+    a entrada, a saída, a luz e o IPC de todos os controles.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return FileLock(str(_lock_path(path)))
+    return contextlib.nullcontext()
 
 
 def arquivo_do_perfil(identifier: str, directory: Path | None = None) -> Path | None:
@@ -1818,15 +1832,12 @@ def perfil_em_disco(identifier: str) -> Profile | None:
     if not alvo.exists():
         return None
     try:
+        if _ode.armado() or _LEITURA_LIGADA_PELO_PROCESSO:
+            return _PERFIS_PELA_ASSINATURA.ler(alvo, trava=partial(_trava_da_leitura, alvo))
         return _read_profile(alvo)
     except _PROFILE_DECODE_ERRORS as exc:
         _avisa_perfil_invalido(alvo, exc)
         return None
-
-
-def _trava_do_perfil(path: Path) -> FileLock:
-    """O `FileLock` do perfil, o mesmo da leitura de sempre."""
-    return FileLock(str(_lock_path(path)))
 
 
 def _decodificar_o_perfil(path: Path) -> Profile:
@@ -1896,9 +1907,9 @@ def _ler_todos_os_perfis(*, copiar: bool) -> list[Profile]:
             if pela_assinatura:
                 vistos.append(str(path))
                 profiles.append(_PERFIS_PELA_ASSINATURA.ler(
-                    path, trava=partial(_trava_do_perfil, path), copiar=copiar))
+                    path, trava=partial(_trava_da_leitura, path), copiar=copiar))
                 continue
-            with FileLock(str(_lock_path(path))):
+            with _trava_da_leitura(path):
                 raw = json.loads(path.read_text(encoding="utf-8"))
             profiles.append(Profile.model_validate(raw))
         except _PROFILE_DECODE_ERRORS as exc:
