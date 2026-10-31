@@ -64,9 +64,10 @@ identidade do controle: ligar de novo, no cabo ou no rádio, devolve o mesmo
 número.
 
 Quando um controle sai, o lugar dele fica guardado por trinta segundos, e os
-outros não trocam de número nesse tempo. Com um jogo aberto, o controle virtual
-de quem saiu espera parado. Passado o prazo, a fila se fecha: quem estava atrás
-sobe um número, e o jogo pode perder esse controle por cerca de um segundo.
+outros não trocam de número nesse tempo. Com um jogo aberto, o prazo para: o
+controle virtual de quem saiu espera parado até o jogo fechar, e ninguém troca
+de número durante a partida. Sem jogo, passado o prazo, a fila se fecha: quem
+estava atrás sobe um número.
 
 O controle Nintendo Pro e o 8BitDo recebem luz de jogador própria, mas chegam
 ao jogo como o controle que já são, sem controle virtual (ver
