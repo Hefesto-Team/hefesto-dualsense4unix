@@ -1379,7 +1379,6 @@ def compose_env(
     backends: Sequence[str],
     fisicos: int = 0,
     roupa: int = ROUPA_PADRAO,
-    externos: Sequence[tuple[int, int]] = (),
 ) -> dict[str, str]:
     """Envs de launch para UM estado do daemon. Pura e testável.
 
@@ -1424,17 +1423,13 @@ def compose_env(
             env["SDL_JOYSTICK_HIDAPI"] = "0"
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
             if tem_cobertura:
-                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _com_os_de_fora(
-                    _IGNORE_VALUE, externos, PAR_DA_MASCARA[flavor]
-                )
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         elif flavor == "dualsense":
             ignore, disable = _listas_sem_a_roupa(roupa)
             if disable:
                 env["PROTON_DISABLE_HIDRAW"] = disable
             if tem_cobertura:
-                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _com_os_de_fora(
-                    ignore, externos, (VENDOR_SONY, roupa_normalizada(roupa))
-                )
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = ignore
         if not tem_cobertura:
             logger.info(
                 "launch_env_ignore_omitido_sem_cobertura",
@@ -1504,7 +1499,7 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
     if isinstance(players, dict):
         for player in players.values():
             vpad = getattr(player, "vpad", None)
-            if vpad is not None:
+            if vpad is not None and vpad is not primary:
                 backends.append(str(getattr(vpad, "backend", "") or ""))
     fisicos = _fisicos_na_mesa(daemon)
     if fisicos > 0:
@@ -1887,16 +1882,20 @@ def _env_for_profile(
 def env_do_modo(
     modo: ModoAntecipado, *, externos: Sequence[tuple[int, int]] = ()
 ) -> dict[str, str]:
-    """A `env` que materializa um `ModoAntecipado`."""
-    return compose_env(
+    """A `env` que materializa um `ModoAntecipado`, com os controles de fora no IGNORE."""
+    env = compose_env(
         native_mode=modo.native,
         emulation_enabled=modo.emulacao or modo.pronto_para_troca,
         flavor=modo.mascara,
         backends=list(modo.backends),
         fisicos=modo.fisicos,
         roupa=modo.roupa,
-        externos=externos,
     )
+    ignore = env.get("SDL_GAMECONTROLLER_IGNORE_DEVICES")
+    if ignore and externos:
+        vestido = PAR_DA_MASCARA.get(modo.mascara, (VENDOR_SONY, roupa_normalizada(modo.roupa)))
+        env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _com_os_de_fora(ignore, externos, vestido)
+    return env
 
 
 def appids_em_cena(

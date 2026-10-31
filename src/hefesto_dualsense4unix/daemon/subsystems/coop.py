@@ -139,6 +139,8 @@ class _SecondaryPlayer:
     motion_reader: Any = None
     a_espera: bool = False
     externo: bool = False
+    no_p1: bool = False
+    ralo_do_p1: Any = None
 
 
 class CoopManager:
@@ -460,15 +462,14 @@ class CoopManager:
         from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
         primary = self._primary_identity()
-        if primary is None or primary.startswith("path:"):
+        vistos = discover_dualsense_evdevs()
+        sozinho = not vistos and not self._algum_dualsense_conectado()
+        self._seguir_o_p1_emprestado(sozinho)
+        if not sozinho and (primary is None or primary.startswith("path:")):
             logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
             self._retry_spawn = True
             return
-        want = {
-            mac: str(path)
-            for mac, path in discover_dualsense_evdevs().items()
-            if mac != primary
-        }
+        want = {mac: str(path) for mac, path in vistos.items() if mac != primary}
         dualsenses = set(want)
         externos = self._externos_escondidos(externos_que_ganham_virtual())
         want.update(externos)
@@ -480,6 +481,7 @@ class CoopManager:
             player = self._players[mac]
             if self._segura_ou_espera_no_lugar(player, want.get(mac)):
                 continue
+            proprio = None if player.no_p1 else player.vpad
             if mac not in want:
                 self._teardown_player(mac)
             elif player.evdev_path != want[mac]:
@@ -493,14 +495,14 @@ class CoopManager:
             elif player.reader.grab_state == "failed":
                 logger.warning("coop_player_grab_failed_retry", identity=mac)
                 self._teardown_player(mac)
-            elif player.vpad is not None and not vpad_vivo(player.vpad):
+            elif proprio is not None and not vpad_vivo(proprio):
                 logger.warning("coop_player_vpad_morto_respawn", identity=mac)
                 self._teardown_player(mac)
-            elif player.vpad is not None and vpad_ficou_para_tras(
-                getattr(player.vpad, "flavor", None),
+            elif proprio is not None and vpad_ficou_para_tras(
+                getattr(proprio, "flavor", None),
                 mac,
                 desired_flavor,
-                vpad=player.vpad,
+                vpad=proprio,
                 caminho=desired_caminho,
             ):
                 if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
@@ -512,15 +514,21 @@ class CoopManager:
                     new=mascara_efetiva(mac, desired_flavor),
                 )
                 self._teardown_player(mac)
-            elif player.vpad is not None and a_roupa_mudou(player.vpad, desired_roupa):
+            elif proprio is not None and a_roupa_mudou(proprio, desired_roupa):
                 if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
                     continue
                 self._trocar_a_roupa(mac)
 
         for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
-                self._spawn_player(mac, want[mac], externo=mac in externos)
-        self._publicar_a_mesa({*dualsenses, primary})
+                self._spawn_player(
+                    mac,
+                    want[mac],
+                    externo=mac in externos,
+                    no_p1=sozinho and mac in externos and self._o_p1_esta_livre(),
+                )
+        self._sentar_o_de_fora_no_p1(sozinho)
+        self._publicar_a_mesa({*dualsenses, *([primary] if primary else [])})
 
         self._apply_coop_player_leds()
 
@@ -968,6 +976,78 @@ class CoopManager:
         client = broker_client_for(self._daemon)
         broker_call_nonblocking(self._daemon, lambda: client.restore(hidraw))
 
+    def _algum_dualsense_conectado(self) -> bool:
+        ctrl = getattr(self._daemon, "controller", None)
+        conectado = getattr(ctrl, "is_connected", None)
+        if not callable(conectado):
+            return False
+        try:
+            return bool(conectado())
+        except Exception:
+            return False
+
+    def _o_p1_esta_livre(self) -> bool:
+        return getattr(self._daemon, "_gamepad_device", None) is not None and not any(
+            getattr(p, "no_p1", False) for p in self._players.values()
+        )
+
+    def o_de_fora_no_p1(self) -> _SecondaryPlayer | None:
+        """O controle de fora que dirige o pad do P1 por estar sozinho na mesa."""
+        return next((p for p in self._players.values() if getattr(p, "no_p1", False)), None)
+
+    def _sentar_o_de_fora_no_p1(self, sozinho: bool) -> None:
+        """Sem DualSense na mesa, o primeiro controle de fora na carta dirige o pad do P1."""
+        if not sozinho or not self._o_p1_esta_livre():
+            return
+        de_fora = [m for m in self._na_ordem_da_carta(self._players) if self._players[m].externo]
+        if not de_fora:
+            return
+        player = self._players[de_fora[0]]
+        if player.vpad is not None:
+            self._derrubar_para_renascer(player.identity)
+        player.no_p1 = True
+        player.player_index = 1
+        if player.reader.grab_state == "held":
+            self._emprestar_o_p1(player)
+
+    def _emprestar_o_p1(self, player: _SecondaryPlayer) -> None:
+        dev = getattr(self._daemon, "_gamepad_device", None)
+        if dev is None:
+            return
+        player.vpad = dev
+        player.ralo_do_p1 = self._ralo_do_rumble_do_externo(player.identity, player)
+        self._pronto_desde.pop(player.identity, None)
+        logger.info("coop_externo_dirige_o_p1", identity=player.identity)
+        self._materialize_launch_env()
+
+    def _seguir_o_p1_emprestado(self, sozinho: bool) -> None:
+        """O de fora larga o pad do P1 quando um DualSense chega, e segue o pad recriado."""
+        player = self.o_de_fora_no_p1()
+        if player is None:
+            return
+        if not sozinho:
+            self._devolver_o_p1(player)
+            return
+        dev = getattr(self._daemon, "_gamepad_device", None)
+        if player.vpad is not None and player.vpad is not dev:
+            player.vpad = dev
+            player.ralo_do_p1 = (
+                self._ralo_do_rumble_do_externo(player.identity, player) if dev else None
+            )
+
+    def _devolver_o_p1(self, player: _SecondaryPlayer) -> None:
+        if player.a_espera:
+            self._teardown_player(player.identity)
+            return
+        _soltar_o_pad(player.vpad)
+        player.vpad = None
+        player.no_p1 = False
+        player.ralo_do_p1 = None
+        player.player_index = self._next_player_index()
+        self._retry_spawn = True
+        logger.info("coop_externo_larga_o_p1", identity=player.identity)
+        self._materialize_launch_env()
+
     def externos_sentados(self) -> int:
         """Quantos controles de fora estão sentados na mesa, com ou sem o pad virtual."""
         return sum(1 for p in self._players.values() if p.externo)
@@ -1005,7 +1085,9 @@ class CoopManager:
     def _e_externo(self, identity: str) -> bool:
         return bool(getattr(self._players.get(identity), "externo", False))
 
-    def _spawn_player(self, identity: str, path: str, *, externo: bool = False) -> None:
+    def _spawn_player(
+        self, identity: str, path: str, *, externo: bool = False, no_p1: bool = False
+    ) -> None:
         """Cria um jogador secundário para o controle `identity` no node `path`.
 
         BUG-COOP-GRAB-PENDING-VPAD-01: o vpad SÓ nasce com grab CONFIRMADO
@@ -1030,8 +1112,9 @@ class CoopManager:
             identity=identity,
             evdev_path=path,
             reader=reader,
-            player_index=self._next_player_index(),
+            player_index=1 if no_p1 else self._next_player_index(),
             externo=externo,
+            no_p1=no_p1,
         )
         self._players[identity] = player
         if not identity.startswith("path:") and not externo:
@@ -1219,6 +1302,9 @@ class CoopManager:
             o_fio_de_nascimento,
         )
 
+        if player.no_p1:
+            self._emprestar_o_p1(player)
+            return
         if self._na_fila(player.identity):
             return
         calib_pronta, calib = self._calibration_pronta(player.identity)
@@ -1631,7 +1717,9 @@ class CoopManager:
             logger.info("coop_cedido_recolhido_sem_parada", identity=identity)
         elif not externo:
             self._zerar_rumble_do_jogador(identity)
-        if player.vpad is not None:
+        if getattr(player, "no_p1", False):
+            _soltar_o_pad(player.vpad)
+        elif player.vpad is not None:
             if calado:
                 with contextlib.suppress(Exception):
                     player.vpad.rumble_sink = None  # type: ignore[attr-defined]
@@ -2178,6 +2266,9 @@ class CoopManager:
 
     def _nascer_na_ordem(self, player: _SecondaryPlayer) -> None:
         """Dá o vpad a `player` — recriando ANTES quem ficaria fora de ordem."""
+        if player.no_p1:
+            self._emprestar_o_p1(player)
+            return
         if not self._no_fio_do_laco():
             self._promote_player(player)
             self._ordem_pendente = True
@@ -3197,6 +3288,26 @@ __all__ = [
     "player_led_pattern",
     "resolve_player_numbers",
 ]
+
+
+def _soltar_o_pad(vpad: Any) -> None:
+    """O pad emprestado fica de pé e sem nada apertado."""
+    if vpad is None:
+        return
+    with contextlib.suppress(Exception):
+        vpad.forward_buttons(frozenset())
+    with contextlib.suppress(Exception):
+        vpad.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
+
+
+def ralo_do_p1_de_fora(daemon: Any) -> Callable[[int, int], None] | None:
+    """O ralo do rumble do pad do P1 quando um controle de fora o dirige."""
+    manager = getattr(daemon, "_coop_manager", None)
+    if not isinstance(manager, CoopManager):
+        return None
+    player = manager.o_de_fora_no_p1()
+    ralo = getattr(player, "ralo_do_p1", None)
+    return ralo if callable(ralo) else None
 
 
 def _parar_fora_do_tique(vpad: Any) -> None:

@@ -313,17 +313,22 @@ def _ignore(env: dict[str, str]) -> set[str]:
     return set(filter(None, env.get("SDL_GAMECONTROLLER_IGNORE_DEVICES", "").split(",")))
 
 
-def test_o_pro_sentado_sai_da_vista_do_jogo_pelo_ignore(mesa: list[str]) -> None:
-    """O broker esconde o hidraw; o nó evdev agarrado sairia no SDL como um Pro morto."""
+def _env(mascara: str, externos: Any, *, native: bool = False, fisicos: int = 2) -> dict[str, str]:
     from hefesto_dualsense4unix.daemon import launch_env as le
 
+    modo = le.ModoAntecipado(
+        native=native, emulacao=True, mascara=mascara,
+        backends=("uhid",) * fisicos, motivo="teste", fisicos=fisicos,
+    )
+    return le.env_do_modo(modo, externos=externos)
+
+
+def test_o_pro_sentado_sai_da_vista_do_jogo_pelo_ignore(mesa: list[str]) -> None:
+    """O broker esconde o hidraw; o nó evdev agarrado sairia no SDL como um Pro morto."""
     mgr = _mesa_de_pe(_Broker())
     assert mgr.pares_de_fora_escondidos() == (PAR_DO_PRO,)
 
-    env = le.compose_env(
-        native_mode=False, emulation_enabled=True, flavor="dualsense",
-        backends=["uhid", "uhid", "uhid"], fisicos=3, externos=mgr.pares_de_fora_escondidos(),
-    )
+    env = _env("dualsense", mgr.pares_de_fora_escondidos(), fisicos=3)
     assert "0x057e/0x2009" in _ignore(env)
     assert "0x054c/0x0ce6" in _ignore(env)
     assert "0x057E" not in env.get("PROTON_DISABLE_HIDRAW", "")
@@ -331,28 +336,19 @@ def test_o_pro_sentado_sai_da_vista_do_jogo_pelo_ignore(mesa: list[str]) -> None
 
 def test_o_par_que_a_mascara_veste_fica_de_fora_do_ignore() -> None:
     """Na máscara Nintendo o pad virtual veste o par do Pro: escondê-lo sumiria com o pad."""
-    from hefesto_dualsense4unix.daemon import launch_env as le
-
     oito = (0x2DC8, 0x6001)
-    nintendo = le.compose_env(
-        native_mode=False, emulation_enabled=True, flavor="nintendo",
-        backends=["uinput", "uinput"], fisicos=2, externos=(PAR_DO_PRO, oito),
-    )
+    nintendo = _env("nintendo", (PAR_DO_PRO, oito))
     assert "0x057e/0x2009" not in _ignore(nintendo)
     assert "0x2dc8/0x6001" in _ignore(nintendo)
 
-    xbox = le.compose_env(
-        native_mode=False, emulation_enabled=True, flavor="xbox",
-        backends=["uinput", "uinput"], fisicos=2, externos=(PAR_DO_PRO, (0x045E, 0x028E)),
-    )
+    xbox = _env("xbox", (PAR_DO_PRO, (0x045E, 0x028E)))
     assert "0x057e/0x2009" in _ignore(xbox)
     assert "0x045e/0x028e" not in _ignore(xbox)
 
-    nativo = le.compose_env(
-        native_mode=True, emulation_enabled=True, flavor="dualsense",
-        backends=["uhid"], fisicos=1, externos=(PAR_DO_PRO,),
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in _env(
+        "dualsense", (PAR_DO_PRO,), native=True, fisicos=1
     )
-    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in nativo
+    assert _env("dualsense", ()) == _env("dualsense", ())
 
 
 def test_o_par_da_mascara_e_o_que_o_pad_veste() -> None:
@@ -396,3 +392,144 @@ def test_o_pro_conta_como_fisico_e_o_par_vai_na_assinatura(mesa: list[str]) -> N
 
     daemon.controller.describe_controllers = lambda: []
     assert le._snapshot(daemon)[4] == 0
+
+
+class _PadDoP1(_Vpad):
+    def __init__(self) -> None:
+        super().__init__("p1")
+        self.paradas = 0
+        self.analogicos: list[dict[str, int]] = []
+
+    def stop(self) -> None:
+        self.paradas += 1
+
+    def forward_analog(self, **kw: int) -> None:
+        self.analogicos.append(kw)
+
+
+def _mesa_so_de_fora(
+    monkeypatch: pytest.MonkeyPatch, broker: _Broker
+) -> tuple[CoopManager, _PadDoP1, dict[str, str]]:
+    dualsenses: dict[str, str] = {}
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+        lambda: dict(dualsenses),
+    )
+    pad = _PadDoP1()
+    daemon = _daemon(broker)
+    daemon._gamepad_device = pad
+    daemon.controller.primary_uniq = None
+    daemon.controller.is_connected = lambda: bool(dualsenses)
+    mgr = CoopManager(daemon)
+    daemon._coop_manager = mgr
+    mgr.sync()
+    mgr.sync(force=True)
+    return mgr, pad, dualsenses
+
+
+def test_sozinho_o_pro_dirige_o_pad_do_p1(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem DualSense na mesa, o Pro é o jogador 1 do jogo, no pad que o jogo já vê."""
+    mgr, pad, _ = _mesa_so_de_fora(monkeypatch, _Broker())
+
+    pro = mgr._players[PRO]
+    assert pro.no_p1 and pro.vpad is pad
+    assert PRO not in mesa, "o Pro sozinho não cria um segundo pad ao lado do P1"
+    assert mgr.numeros_de_jogador()[PRO] == 1
+    from hefesto_dualsense4unix.daemon import launch_env as le
+
+    assert len(le._snapshot(mgr._daemon)[3]) == 1, "o pad do P1 conta uma vez só"
+
+    pro.reader.snap.buttons_pressed = frozenset({"circle"})
+    mgr.forward_all()
+    assert "circle" in pad.botoes[-1]
+
+
+def test_o_rumble_do_p1_vai_ao_pro_que_o_dirige(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mgr, _pad, _ = _mesa_so_de_fora(monkeypatch, _Broker())
+    monkeypatch.setattr(gamepad_mod, "_mults_por_motor", lambda *_a: (1.0, 1.0))
+    ao_backend: list[Any] = []
+    monkeypatch.setattr(
+        gamepad_mod, "apply_game_rumble", lambda *a, **kw: ao_backend.append((a, kw))
+    )
+
+    gamepad_mod.make_primary_rumble_sink(mgr._daemon)(100, 200)
+
+    enviados = mgr._players[PRO].reader._active_dev.enviados
+    assert enviados, "o rumble do pad do P1 chega ao nó do Pro"
+    assert ao_backend == []
+
+
+def test_o_dualsense_que_chega_toma_o_p1_e_o_pro_ganha_o_proprio_pad(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mgr, pad, dualsenses = _mesa_so_de_fora(monkeypatch, _Broker())
+    pad.botoes.append(frozenset({"circle"}))
+
+    dualsenses[P1] = "/dev/input/event20"
+    mgr._daemon.controller.primary_uniq = P1
+    mgr.sync(force=True)
+    mgr.forward_all()
+
+    pro = mgr._players[PRO]
+    assert not pro.no_p1
+    assert pro.vpad is not pad and PRO in mesa
+    assert pro.player_index >= 2
+    assert pad.botoes[-1] == frozenset() and pad.paradas == 0
+    assert HIDRAW_DO_PRO not in mgr._daemon._hidraw_broker_client.devolvidos
+
+
+def test_o_pro_que_sai_do_p1_nao_derruba_o_pad_do_p1(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mgr, pad, _ = _mesa_so_de_fora(monkeypatch, _Broker())
+
+    monkeypatch.setattr(coop_mod, "externos_que_ganham_virtual", dict)
+    mgr.sync(force=True)
+
+    assert PRO not in mgr._players
+    assert pad.paradas == 0
+    assert pad.botoes[-1] == frozenset()
+    assert pad.analogicos[-1] == {"lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
+
+
+def test_o_segundo_de_fora_ganha_pad_proprio(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        coop_mod,
+        "externos_que_ganham_virtual",
+        lambda: {
+            PRO: (NO_DO_PRO, HIDRAW_DO_PRO, PAR_DO_PRO),
+            OITO: ("/dev/input/event32", "/dev/hidraw10", (0x2DC8, 0x6001)),
+        },
+    )
+    mgr, pad, _ = _mesa_so_de_fora(monkeypatch, _Broker())
+
+    no_p1 = [m for m, p in mgr._players.items() if p.no_p1]
+    assert len(no_p1) == 1 and mgr._players[no_p1[0]].vpad is pad
+    outro = OITO if no_p1 == [PRO] else PRO
+    assert outro in mesa and mgr._players[outro].player_index == 2
+
+
+def test_o_default_env_leva_os_pares_da_foto() -> None:
+    """A foto do daemon carrega os pares até o `default.env` e o ambiente do comum."""
+    from hefesto_dualsense4unix.daemon import launch_env as le
+
+    modo = le.ModoAntecipado(
+        native=False, emulacao=True, mascara="dualsense",
+        backends=("uhid", "uhid"), motivo="teste", fisicos=2,
+    )
+    foto = le._FotoDoLancamento(
+        ordem=0, native=False, enabled=True, flavor="dualsense", backends=("uhid", "uhid"),
+        fisicos=2, modo_vivo=modo, em_cena=frozenset(), identidade=None, permite_uhid=True,
+        vpads_previstos=2, leitor=SimpleNamespace(), publicar=lambda _d: None,
+        carimbar=lambda: None, foto_ms=0.0, externos=(PAR_DO_PRO,),
+    )
+
+    padrao, _estado = le._o_ambiente_padrao(foto)
+    assert "0x057e/0x2009" in _ignore(padrao)
+    assert "0x057e/0x2009" in _ignore(le._o_ambiente_do_comum(foto, padrao))

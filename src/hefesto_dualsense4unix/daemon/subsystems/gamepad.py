@@ -1476,6 +1476,13 @@ def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], Non
 
     def _sink(weak: int, strong: int) -> None:
         uniq = getattr(daemon.controller, "primary_uniq", None)
+        if not (isinstance(uniq, str) and uniq):
+            from hefesto_dualsense4unix.daemon.subsystems.coop import ralo_do_p1_de_fora
+
+            de_fora = ralo_do_p1_de_fora(daemon)
+            if de_fora is not None:
+                de_fora(weak, strong)
+                return
         vpad = getattr(daemon, "_gamepad_device", None)
         efetivo = apply_game_rumble(
             daemon,
