@@ -81,11 +81,16 @@ RumblePolicy = Literal["economia", "balanceado", "max", "auto", "custom"]
 RUMBLE_POLICIES: tuple[str, ...] = get_args(RumblePolicy)
 
 
-def _caminho_da_secao(mode: Any) -> str | None:
-    """O caminho que a seção `mode` de um perfil pede, ou ``None`` = sem opinião."""
-    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+def _o_par_do_pad(mode: Any | None) -> tuple[str | None, str]:
+    """``(caminho, máscara)`` do pad: a da seção pelo dono da regra; sem seção, a da máquina.
 
-    return normalizar_caminho(getattr(mode, "caminho", None))
+    A seção sem máscara é o DualSense em todo computador (``par_da_secao_do_gamepad``)."""
+    from hefesto_dualsense4unix.integrations import virtual_pad as vp
+
+    if mode is None:
+        return None, _mascara_da_maquina()
+    caminho = vp.normalizar_caminho(getattr(mode, "caminho", None))
+    return caminho, vp.par_da_secao_do_gamepad(caminho, getattr(mode, "gamepad_flavor", None))[1]
 
 
 def _caminho_vivo(daemon: Any) -> str | None:
@@ -142,9 +147,8 @@ def _o_perfil_diz_navegacao(profile: Any) -> bool:
 def _o_modo_do_perfil_do_boot(
     store: Any = None, *, appid_em_cena: int | None = None,
 ) -> tuple[str | None, str | None, str | None]:
-    """``(caminho, máscara, nome)`` do perfil que o boot restaura, ou vazios."""
+    """``(caminho, máscara, nome)`` do perfil que o boot restaura (:func:`_o_par_do_pad`)."""
     from hefesto_dualsense4unix.daemon.connection import perfil_que_o_boot_restaura
-    from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
 
     try:
         perfil = perfil_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
@@ -156,9 +160,7 @@ def _o_modo_do_perfil_do_boot(
     mode = getattr(perfil, "mode", None)
     if getattr(mode, "kind", None) != "gamepad":
         return None, None, nome
-    bruta = getattr(mode, "gamepad_flavor", None)
-    mascara = resolver_flavor(bruta) if bruta else None
-    return _caminho_da_secao(mode), mascara, nome
+    return (*_o_par_do_pad(mode), nome)
 
 
 def _o_appid_da_evidencia(inputs: dict[str, Any]) -> int | None:
@@ -282,17 +284,15 @@ def _a_maquina_deixa_o_pad_ligado() -> bool:
 def _o_ramo_do_pad(
     daemon: Any, mode: Any | None, *, profile: Any | None, origin: str
 ) -> str:
-    """O pad de pé no caminho e na máscara da seção — `None` é a da máquina."""
+    """O pad de pé no par da seção (:func:`_o_par_do_pad`): `None` é a máscara da máquina."""
     if daemon._native_mode:
         daemon.set_native_mode(False, reapply=False, origin="profile")
     gamepad_on = (
         daemon.config.gamepad_emulation_enabled
         and daemon._gamepad_device is not None
     )
-    flavor = getattr(mode, "gamepad_flavor", None)
-    flavor_do_jogo = flavor if flavor is not None else _mascara_da_maquina()
+    caminho, flavor_do_jogo = _o_par_do_pad(mode)
     flavor_atual = getattr(daemon._gamepad_device, "flavor", None)
-    caminho = _caminho_da_secao(mode)
     adiada_por_jogo = False
     if (
         not gamepad_on
@@ -2762,14 +2762,14 @@ class Daemon:
             self.config.gamepad_emulation_enabled and self._gamepad_device is not None
         )
         if kind == "gamepad":
-            flavor = getattr(mode, "gamepad_flavor", None)
-            flavor_do_jogo = flavor if flavor is not None else _mascara_da_maquina()
+            caminho, flavor_do_jogo = _o_par_do_pad(mode)
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
+            canal_mudaria = _canal_mudaria(self, caminho)
             return bool(
                 gamepad_on
                 and (
                     _o_p1_vestiria(self, flavor_do_jogo) != flavor_atual
-                    or _canal_mudaria(self, _caminho_da_secao(mode))
+                    or canal_mudaria
                 )
             )
         return bool(gamepad_on or self._native_mode)

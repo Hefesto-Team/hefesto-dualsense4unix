@@ -1871,9 +1871,10 @@ def perfil_no_formato_da_aba_jogar(dados: dict[str, Any]) -> dict[str, Any]:
     Três formatos antigos, uma regra: a máscara por controle vira o ``mode``
     (:func:`~hefesto_dualsense4unix.profiles.schema.a_mascara_de_cada_controle_no_modo`); o
     ``mode`` do ``gamepad`` sem o par ganha o caminho e a máscara pelo escritor único
-    (:func:`secao_do_modo_com_o_caminho`); o perfil sem ``mode`` com a ponte carimbada ganha o
-    modo da ponte (:func:`o_carimbo_leva_o_modo`). O perfil sem ``mode`` e sem ponte fica: quem
-    decide é a escada. Perfil que já está no formato volta o mesmo objeto.
+    (:func:`secao_do_modo_com_o_caminho`), e sem os dois, o par do DualSense; o perfil sem
+    ``mode`` com a ponte carimbada ganha o modo da ponte (:func:`o_carimbo_leva_o_modo`). O
+    perfil sem ``mode`` e sem ponte fica: quem decide é a escada. Perfil que já está no
+    formato volta o mesmo objeto.
     """
     novo = a_mascara_de_cada_controle_no_modo(dados)
     bruto = novo.get("mode")
@@ -1908,26 +1909,23 @@ def secao_do_modo_com_o_caminho(
     D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: no ``gamepad`` o caminho e a máscara
     andam em PAR (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`),
     e o par é o que o jogo vê com o que chegou
-    (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.modo_do_par`). Sem caminho
-    nem máscara, os dois ficam como estão. O `arranjo` do ``desktop`` (D-2710-O-POINT-
-    AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06) só se escreve no ``desktop``; fora dele, fica.
+    (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_da_secao_do_gamepad`).
+    Sem caminho nem máscara pedidos, vale o par da seção de antes, e a seção sem par é o do
+    DualSense. O `arranjo` do ``desktop`` (D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-
+    DA-06) só se escreve no ``desktop``; fora dele, fica.
     """
     from hefesto_dualsense4unix.integrations.virtual_pad import (
-        modo_do_par,
         normalizar_caminho,
         normalizar_modo,
-        par_do_modo,
+        par_da_secao_do_gamepad,
     )
 
     campos: dict[str, object] = {} if atual is None else atual.model_dump()
     campos["kind"] = kind
     if kind == "gamepad":
-        escolhido = normalizar_caminho(caminho)
-        pedida = normalizar_modo(mascara) or escolhido
-        if pedida is not None:
-            campos["caminho"], campos["gamepad_flavor"] = par_do_modo(
-                modo_do_par(escolhido, pedida)
-            )
+        if normalizar_caminho(caminho) is None and normalizar_modo(mascara) is None:
+            caminho, mascara = campos.get("caminho"), campos.get("gamepad_flavor")
+        campos["caminho"], campos["gamepad_flavor"] = par_da_secao_do_gamepad(caminho, mascara)
     else:
         campos["caminho"] = None
     if kind == "desktop" and arranjo in ARRANJOS_DO_DESKTOP:

@@ -123,6 +123,18 @@ def modo_do_par(caminho: object, mascara: object) -> str:
     return mascara_no_jogo(caminho, mascara)
 
 
+def par_da_secao_do_gamepad(caminho: object, mascara: object) -> tuple[str | None, str]:
+    """O par ``(caminho, máscara)`` que a seção `mode` do ``gamepad`` vale; o dono da regra.
+
+    O caminho e a máscara da seção vão em par pelo modo que o jogo vê com eles
+    (:func:`modo_do_par`). A seção sem caminho e sem máscara é o par do DualSense em todo
+    computador, nunca a máscara da máquina (D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR):
+    é o que a aba Jogar mostra. O perfil sem seção `mode` não passa por aqui.
+    """
+    escolhido = normalizar_caminho(caminho)
+    return par_do_modo(modo_do_par(escolhido, normalizar_modo(mascara) or escolhido))
+
+
 def caminho_resolvido(caminho: object, mascara: object) -> str:
     """O caminho que vale: o escolhido, ou — sem escolha — o que sai da máscara."""
     escolhido = normalizar_caminho(caminho)

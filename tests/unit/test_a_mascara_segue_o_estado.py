@@ -149,12 +149,16 @@ class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
         assert lc._mascara_da_maquina() == DaemonConfig.gamepad_flavor == "dualsense"
 
     def test_a_escolha_do_usuario_para_a_maquina_vale(self) -> None:
-        """O usuário escolheu Xbox para tudo (o flag, pela CLI): o jogo sem opinião"""
+        """O usuário escolheu Xbox para tudo (o flag, pela CLI): o perfil sem seção `mode` a veste.
+
+        A seção `gamepad` sem máscara é o par do DualSense em todo computador
+        (``test_o_gamepad_sem_mascara_tem_uma_regra_so.py``); a da máquina é só do perfil sem
+        seção."""
         save_gamepad_emulation(True, "xbox")
         d = _daemon()
         gp.start_gamepad_emulation(d, "dualsense", origin="profile")
 
-        _o_proximo_nao_opina(d, "sem_cartao")
+        _o_proximo_nao_opina(d, "sem_modo")
         gp.reconciliar_as_mascaras(d)
 
         assert d._gamepad_device.flavor == "xbox"

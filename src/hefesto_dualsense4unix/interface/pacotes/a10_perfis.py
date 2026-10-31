@@ -2102,13 +2102,14 @@ def _o_modo_que_o_jogo_pede(regra: Any) -> Any:
     O produto só SABE a máscara de um jogo quando uma ponte foi confirmada nele
     (`prontuario_dos_jogos.pontes_confirmadas`, por appid da Steam): é a tupla que o carimbo
     guarda, e a máscara do carimbo vale para os quatro controles (`mode.gamepad_flavor` é do
-    perfil, cabo e rádio; a de uma peça só mora em `controllers`). Sem ponte de gamepad com
-    máscara, devolve `None` e o perfil segue sem opinião, o padrão que o daemon aplica.
+    perfil, cabo e rádio; a de uma peça só mora em `controllers`). A seção nasce pelo escritor
+    único (`manager.secao_do_modo_com_o_caminho`), com o caminho do par. Sem ponte de gamepad
+    com máscara, devolve `None` e o perfil segue sem opinião, o padrão que o daemon aplica.
     """
     from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import pontes_confirmadas
+    from hefesto_dualsense4unix.profiles.manager import secao_do_modo_com_o_caminho
     from hefesto_dualsense4unix.profiles.schema import (
         MatchCriteria,
-        ProfileModeConfig,
         normalizar_gamepad_flavor,
     )
     from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
@@ -2123,7 +2124,7 @@ def _o_modo_que_o_jogo_pede(regra: Any) -> Any:
         ponte = pontes.get(appid)
         mascara = normalizar_gamepad_flavor(ponte.gamepad_flavor) if ponte is not None else None
         if ponte is not None and ponte.kind == "gamepad" and mascara is not None:
-            return ProfileModeConfig(kind="gamepad", gamepad_flavor=mascara)
+            return secao_do_modo_com_o_caminho(None, kind="gamepad", mascara=mascara)
     return None
 
 

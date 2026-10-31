@@ -67,6 +67,8 @@ OS_FORMATOS: dict[str, dict[str, Any]] = {
         "Ponte Nativa Sem Mode", 9931007,
         ponte={"kind": "native", "gamepad_flavor": None, "steam_input": False,
                "confirmada_por": "silencio"}),
+    "gamepad_sem_par": _cru(
+        "Gamepad Sem Par", 9931013, mode={"kind": "gamepad", "gamepad_flavor": None}),
 }
 
 OS_QUE_FICAM: dict[str, dict[str, Any]] = {
@@ -75,8 +77,6 @@ OS_QUE_FICAM: dict[str, dict[str, Any]] = {
         "Ponte Desktop Sem Mode", 9931012,
         ponte={"kind": "desktop", "gamepad_flavor": None, "steam_input": False,
                "confirmada_por": "escolha_do_usuario"}),
-    "gamepad_da_maquina": _cru(
-        "Gamepad Da Maquina", 9931013, mode={"kind": "gamepad", "gamepad_flavor": None}),
     "ja_no_formato": _cru(
         "Ja No Formato", 9931014, mode={"kind": "gamepad", "gamepad_flavor": "xbox",
                                         "caminho": "xbox"}),
@@ -91,6 +91,7 @@ O_MODO_ESPERADO: dict[str, dict[str, Any]] = {
     "desktop_com_mascara": {"kind": "desktop", "gamepad_flavor": "xbox"},
     "ponte_sem_mode": {"kind": "gamepad", "gamepad_flavor": "dualsense", "caminho": "dualsense"},
     "ponte_nativa_sem_mode": {"kind": "native", "gamepad_flavor": None},
+    "gamepad_sem_par": {"kind": "gamepad", "gamepad_flavor": "dualsense", "caminho": "dualsense"},
 }
 
 
@@ -117,8 +118,7 @@ def _no_formato_da_aba_jogar(mode: dict[str, Any]) -> bool:
         return False
     if atual.kind != "gamepad":
         return atual.caminho is None
-    par = (atual.caminho, atual.gamepad_flavor)
-    return par == (None, None) or par in {par_do_modo(m) for m in MODOS}
+    return (atual.caminho, atual.gamepad_flavor) in {par_do_modo(m) for m in MODOS}
 
 
 @pytest.fixture
@@ -153,7 +153,7 @@ def test_cada_formato_antigo_vai_ao_formato_da_aba_jogar(pasta: Path) -> None:
 
 def test_o_perfil_sem_decisao_e_o_ja_convertido_ficam_byte_a_byte(pasta: Path) -> None:
     """Sem ``mode`` e sem ponte (a escada decide), com a ponte do ``desktop`` (o lançamento não
-    a arma), o ``gamepad`` sem máscara (a da máquina) e o já convertido: nenhum byte muda."""
+    a arma) e o já convertido: nenhum byte muda."""
     antes = {c: h for c, h in _md5(pasta).items() if c.removesuffix(".json") in OS_QUE_FICAM}
 
     loader.todo_perfil_no_formato_da_aba_jogar()
