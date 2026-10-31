@@ -9,10 +9,8 @@ ensaio: true
 
 # O COMO do mapa — o gesto das 178 células
 
-**Ordem, 07/09/2026, depois de ver as 21 prontas:**
-
-> *"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra
-> remodelar os demais testes via agentes."*
+**Ordem de 07/09/2026, depois de ver as 21 prontas:** melhoradas as 21, o
+modelo novo remodela os demais testes, por agentes.
 
 Isto é o modelo das 21 aplicado às 178 células do mapa de canais — as que
 sobram depois do ensaio. Mesma forma, mesmos sete campos, mesma regra: o que

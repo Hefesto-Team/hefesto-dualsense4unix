@@ -351,8 +351,8 @@ aparelho ignora os bytes**.
 parado, um `EV_FF` pelo evdev ligou o motor **esquerdo**. Em seguida saiu **um
 único** report com os bits de vibração **desligados** (`flag0` `0x01|0x02`, a
 atenuação `0x40` do `flag1` e o `0x04` do `flag2`) pedindo `common[2] = 200`
-(direito) e `common[3] = 0` (esquerdo). Literal: *"esquerda e senti que
-foi pra direita e lá morreu"*.
+(direito) e `common[3] = 0` (esquerdo). Resultado: o tremor começou à esquerda,
+passou para a direita e lá morreu.
 
 **O tremor trocou de lado.** Logo o report agiu, e agiu **pelos bytes**. O lado
 que estava parado começou a vibrar e o que estava vibrando parou, sem que
@@ -362,7 +362,7 @@ nenhum bit de autorização estivesse ligado naquele report.
 `keepalive-dose-cabo` e `keepalive-dose-radio`, `docs/data/ensaios.csv:22-23`):
 subindo a constante de keepalive do produto de **0,5 s para 8,0 s**, a vibração
 de terceiros passou a durar **oito segundos exatos** nos dois transportes.
-Literal: *"cibrou ambos por 8 segundos"*. A duração seguiu o valor da
+Resultado: os dois vibraram por 8 segundos. A duração seguiu o valor da
 constante — isso é relação causal, não vizinhança.
 
 **O escopo, dito com todas as letras, porque a generalização aqui é tentadora:**
@@ -633,18 +633,16 @@ deixarmos.
 ### O crédito, que não é de quem escreveu esta seção
 
 A palavra *"impossível"* caiu duas vezes no mesmo dia, e as duas vezes por causa
-da própria medição. De manhã pelo argumento, literal:
-
-> *"se no PlayStation via BT tudo isso funciona e pq tem um meio físico pra isso
-> funcionar e ainda não descobrimos, pq a documentação oficial é focada no cabo.
-> mas muita coisa impossível de fazer acontecer nós fizemos já: lightbar no bt,
-> mic funcionando mesmo com processador AMD e kernel zuado. só falta mapear
-> cientificamente pra tirarmos os achismos nossos do projeto"*
+da própria medição. De manhã pelo argumento: se no PlayStation tudo isso
+funciona pelo BT, existe um meio físico ainda não descoberto, porque a
+documentação oficial é focada no cabo; muita coisa dada como impossível já foi
+feita (a barra de luz no BT, o microfone com processador AMD e kernel
+problemático), e falta mapear com método para tirar os achismos do projeto.
 
 De madrugada pelo aparelho. E a mesa 2+2 — o instrumento sem o qual nenhuma
 linha desta seção existiria — **também foi decisão de produto**.
 
-A regra que a decisão fixou no mesmo dia, *"tirar os achismos do projeto"*, é a que
+A regra que a decisão fixou no mesmo dia, tirar os achismos do projeto, é a que
 manda esta seção parar onde parou. A primeira chance de usá-la foi contra a
 nossa própria vontade de ter achado mais do que achamos.
 
@@ -1223,8 +1221,7 @@ higiene, **não** correção de defeito — e a decisão está medida, não supo
 A tabela do §2 põe `right_trigger_motor_mode` em `common[10]` (autorizado por
 `flag0 0x04`) e `left_trigger_motor_mode` em `common[21]` (`flag0 0x08`). Isso
 era leitura de fonte; agora tem aceite no plástico. Autorizando **só** o
-direito, o R2 endureceu e o L2 ficou solto — literal: *"r2 duro, l2
-solto"*. A suspeita de que o mapeamento de lado estivesse invertido nasceu numa
+direito, o R2 endureceu e o L2 ficou solto. A suspeita de que o mapeamento de lado estivesse invertido nasceu numa
 rodada anterior e foi **eliminada na mesma sessão**.
 
 **A ressalva de método, e a ressalva vale mais que o resultado:** numa das rodadas o
@@ -1275,7 +1272,7 @@ morria em menos de meio segundo. **São mecanismos diferentes**, e o keepalive
 está inocentado para o gatilho.
 
 **O que ficou aberto, e é fenômeno sem suspeito:** aos **120 s** a leitura se
-inverteu — o L2 solto e o R2 *"vivo"*, literal. O resultado **não é
+inverteu — o L2 solto e o R2 vivo. O resultado **não é
 monotônico**, então não é decaimento. A leitura provável (e é **inferência**,
 não medição) é que algo reaplicou o perfil ativo naquele intervalo, apagando o
 efeito de terceiro no esquerdo e ligando o do perfil no direito. **Quem
@@ -1323,13 +1320,13 @@ Consequência, se a decodificação estiver certa: `rigid()`, `simple_rigid()` e
 resistir; e por aí.
 
 **MEDIDO E CURADO em 01/08/2026.** O teste pela aba
-Gatilhos e a decodificação se confirmou: *"rígido e desligado sem diferença"*,
-*"resistência nada também"*, *"arco, galope e pulso e metralhadora funcionam"*.
+Gatilhos e a decodificação se confirmou: o rígido e o desligado sem diferença,
+a resistência sem efeito também, e o arco, o galope, o pulso e a metralhadora funcionando.
 
 E a medição trouxe DUAS correções ao que estava escrito aqui:
 
 1. **a previsão de que os cinco presets de `0x26` seriam idênticos ERROU.**
-   O usuário: *"eles são bem diferentes viu"*. O motivo é instrutivo — os
+   Os cinco se sentem bem diferentes. O motivo é instrutivo — os
    `forces[0]`/`forces[1]` desta árvore caíam em cima do bitmask de zonas, e
    cada preset produzia um bitmask ACIDENTAL diferente. Os parâmetros chegam e
    surtem efeito nos modos não oficiais;
@@ -1338,8 +1335,8 @@ E a medição trouxe DUAS correções ao que estava escrito aqui:
    fez nada. Os modos oficiais VALIDAM os parâmetros; os legados e os não
    oficiais não.
 
-E o aceite de produto mudou o objetivo da correção: *"as duas temos nomes
-perfeitos, pq essa é a sensação de usar ambas"*. Os cinco que funcionam **não
+E o aceite de produto mudou o objetivo da correção: os dois nomes estão
+certos, porque é essa a sensação de usar cada um. Os cinco que funcionam **não
 foram tocados** — os bytes deles viraram dado, travados em
 `tests/unit/test_trigger_canon_01.py`. Os sete que não faziam nada passaram a
 mandar o modo oficial correto COM o bitmask de zonas.
@@ -1380,8 +1377,8 @@ SÃO expressáveis.
 > Gatilhos, com o daemon vivo, e perguntar o que o dedo sente. Se
 > `weapon()` não resistir e `vibration()` não pulsar, é a mesma classe de
 > defeito já curada; se o usuário gostar do que sente, o nome é que está errado, e
-> a decisão em 01/08 já disse qual vence — *"as duas temos nomes
-> perfeitos, pq essa é a sensação de usar ambas"*.
+> a decisão em 01/08 já disse qual vence — os dois nomes estão certos, porque
+> é essa a sensação de usar cada um.
 
 > **NOTA DATADA — 08/10/2026: a Metralhadora saiu da tabela de 01/08.** Os bytes
 > aprovados (`26 00 09 03 03 32 08`) tinham a frequência em zero, e o `0x26` lê o
@@ -1552,7 +1549,7 @@ tem 3 níveis.
 `lightbar-firmware-guarda-a-cor` (`docs/data/ensaios.csv:48`): um controle voltou
 de uma **desconexão completa** exibindo o **magenta** que tinha sido escrito por
 `hidraw` cru vários minutos antes, atravessando um `Disconnect` pelo BlueZ e uma
-reconexão inteira. Literal: *"azul player 4 cor magenta"*.
+reconexão inteira. Resultado: o azul, jogador 4, em magenta.
 
 **E o firmware guarda a cor SEM REFORÇO NENHUM: 136 s cronometrados — MEDIDO
 AQUI em 12/08/2026, à noite.** Ensaio `cor-rota-hidraw-sem-steam-2235`
@@ -1560,7 +1557,7 @@ AQUI em 12/08/2026, à noite.** Ensaio `cor-rota-hidraw-sem-steam-2235`
 fechada** — ou seja, sem escritor nenhum na máquina. Magenta (255,0,255) escrito
 por report `0x31` nos **dois** controles do rádio às 22:35:02; às 22:37:18 as
 duas barras continuavam magenta, **o dobro do prazo de 60 s que o ensaio
-pedia**. Literal: *"dois bt tão magenta... seguem iguais, nenhum mudou"*.
+pedia**. Resultado: os dois do BT em magenta, iguais, nenhum mudou.
 
 **Uma cor escrita não precisa de keepalive para ficar de pé — QUANDO NÃO HÁ
 OUTRO ESCRITOR.** A condição não é detalhe: é o que o ensaio de fato mediu

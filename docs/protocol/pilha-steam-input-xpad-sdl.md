@@ -1499,8 +1499,8 @@ janela.
 
 **E a rajada não é por controle — é por EVENTO.** Um protótipo que escrevia
 1,5 s depois de **cada** conexão nova perdeu dois dos três: só o último ficou
-com a cor pedida (*"só o player 4 que é o controle azul o resto tá no padrão da
-steam"*). **Cada conexão nova faz a Steam repintar todos os controles**, não só
+com a cor pedida (só o jogador 4, o controle azul; o resto ficou no padrão da
+Steam). **Cada conexão nova faz a Steam repintar todos os controles**, não só
 o que chegou.
 
 ### 6-bis.4 Em regime a Steam repinta, não apaga
@@ -1529,8 +1529,8 @@ e por rádio o `sysfs` é a **única** rota que sobra — justamente a que perde
 a Steam.
 
 **E a vitória não encerra a disputa.** O magenta pegou nos três no instante, mas
-**não durou nos três**: *"dois dos controles ficaram magenta e o branco tá
-vermelho no player 2"* — vermelho é a cor de jogador 2 da Steam, ou seja, a Steam
+**não durou nos três**: dois dos controles ficaram magenta, e o branco
+vermelho, no jogador 2 — vermelho é a cor de jogador 2 da Steam, ou seja, a Steam
 repintou **um** e não os outros dois. **O que decide qual controle a Steam
 repinta não foi medido.**
 

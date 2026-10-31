@@ -1162,7 +1162,7 @@ mede quando a suspeita é da própria régua**.
 | D1 | o contraste, 6 minutos antes, com os MESMOS três: Steam fechada **depois** de eles subirem | só **um** dos três obedeceu. Mesmo controle, mesma revisão, resultados opostos — a variável é quem tinha o hidraw na probe |
 | — | as três revisões de hardware (`0x0710`, `0x1111`, `0x0711`) estavam representadas | a suspeita de revisão de hardware cai **com prova**, não por argumento |
 | D2 | `btmon`, duas capturas de 45 s, uma por braço | **98** pacotes de saída na probe suja contra **6** na limpa (dois por controle, que é o que o driver manda sozinho) — dezesseis vezes mais escrita, e o resultado inverso |
-| D2 | os **timestamps** desses pacotes | a Steam não disputa sempre: a Steam escreve em **duas rajadas** (t+0→3 s e t+15→18 s) e depois **cala**. A pergunta foi do usuário: *"se medimos quando a steam pinta o lightbar então sabemos quando sobrescrever, não?"* |
+| D2 | os **timestamps** desses pacotes | a Steam não disputa sempre: a Steam escreve em **duas rajadas** (t+0→3 s e t+15→18 s) e depois **cala**. A pergunta de produto: medindo quando a Steam pinta a barra de luz, sabe-se quando sobrescrever. |
 
 **Limite dito em voz alta, porque não foi medido:** eu contei os pacotes,
 **não decodifiquei** o conteúdo deles. Não sei que report a Steam manda nem se

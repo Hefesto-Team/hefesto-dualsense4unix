@@ -363,8 +363,8 @@ byte de mute (`3d9bb7e`): o keepalive do upstream mandava `common[9]=0x00` a
 funcionar.
 
 **`mic.led.set` é o BYTE VIZINHO, e acender NÃO muta** (01/09/2026). `common[8]` e `common[9]` têm bits de autorização diferentes, e é
-por isso que a inversão que o usuário pediu — *"as pessoas precisam ter um aviso
-visual que o mic tá funcionando"* — cabe sem escrever uma linha no byte do mudo.
+por isso que a inversão pedida — um aviso visual de que o microfone está
+funcionando — cabe sem escrever uma linha no byte do mudo.
 **Neste projeto, ACESO = este microfone está VIVO**, ao contrário da convenção da
 Sony; o contrato do byte não inverteu, quem decide o argumento é o chamador.
 

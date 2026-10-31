@@ -66,8 +66,8 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 > obedeceram a verde puro. **No cabo a assimetria é gritante e foi medida no
 > mesmo instante:** em 11/08, com a Steam aberta e o daemon parado, a mesma
 > escrita acendeu os **dois** controles do cabo e **nenhum** dos dois do rádio
-> (`docs/data/ensaios.csv:26-27`, literal: *"só os cabo ficaram branco e o
-> do bt não"*). A medição no fio, o contraste de 98 contra 6 pacotes de
+> (`docs/data/ensaios.csv:26-27`: só os do cabo ficaram brancos, e os do BT
+> não). A medição no fio, o contraste de 98 contra 6 pacotes de
 > saída e a rota que vence (`hidraw` cru) estão em
 > [a pilha do Steam Input](pilha-steam-input-xpad-sdl.md), seção 6-bis; os
 > ensaios são `docs/data/ensaios.csv:41-51`, todos com o olho de quem confere.

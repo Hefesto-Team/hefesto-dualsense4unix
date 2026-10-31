@@ -472,8 +472,8 @@ podem ser comparados.
 
 <!-- O script que fez a migração (`scripts/migrar-mapa-v2.py`) e os retratos  <!-- ref-externa: `scripts/migrar-mapa-v2.py` foi APAGADO em 05/09/2026 (commit f12978c2). A migração que ele fez já está no mapa; a menção é histórica e o portão a cobrava desde ontem, sem ninguém ver. -->
      congelados (`mapa-controles-v1.csv`, `ensaios-v1.csv`) foram APAGADOS em
-     05/09/2026, com a razão do usuário: "a ideia é termos menos arquivos, se algo
-     vira a v2 deveria ser o mesmo arquivo sobrescrevendo o anterior".
+     05/09/2026, pela razão de produto: menos arquivos, e o que vira v2 é o mesmo
+     arquivo, sobrescrevendo o anterior.
      Rodá-lo de novo escrevia 264 linhas por cima das 308 de hoje, sem backup,
      imprimindo verde. Não se tranca uma arma descarregada: apaga-se. O git os
      guarda em 6155b49d, e a medição que os justificava está acima. -->

@@ -106,7 +106,7 @@ juntas, e é a fonte externa que as junta.
 
 ### A troca é de mão única enquanto o controle estiver ligado
 
-Wiki do SDL3, `SDL_HINT_JOYSTICK_ENHANCED_REPORTS`, literal: *"Once enhanced
+O wiki do SDL3, em `SDL_HINT_JOYSTICK_ENHANCED_REPORTS`, diz: *"Once enhanced
 reports are enabled, they can't be disabled on PlayStation controllers without
 power cycling the controller."*
 

@@ -1091,8 +1091,8 @@ POR CONTROLE, E POR QUE UM `bool` NÃO SERVE (QUATRO-MICROFONES-01, 22/08/2026)
 ------------------------------------------------------------------------------
 
 Até 22/08 o gate era `DaemonConfig.bt_mic_enabled: bool` — **um** campo, lido
-por três lugares e escrito por nenhum. A decisão de produto é literal: *"por
-controle"*, um interruptor por card, quatro independentes ao mesmo tempo.
+por três lugares e escrito por nenhum. A decisão de produto é por
+controle: um interruptor por card, quatro independentes ao mesmo tempo.
 
 **Um `bool` não sustenta quatro independentes** — ele só sabe dizer "todos" ou
 "nenhum", e o ensaio tem quatro DualSense em três adaptadores. Somar um `bool`
@@ -2035,9 +2035,9 @@ outra alcança.
 
 A PALAVRA ENTROU AO LADO DAS FRASES — 06/09/2026, A-PALAVRA-MESA-SAI-01:
 
-O usuário, 06/09: *"Falei do termo mesa que é horrível. Mas as levas anteriores
-entraram na pira de usar isso em tudo no layout. O termo sai e coloca-se termos
-simples pro user comum. feature fica."*
+A decisão de 06/09: o problema era o termo «mesa», que as levas anteriores
+espalharam pelo layout; o termo sai, entram termos simples para o usuário
+comum, e a feature fica.
 
 Uma frase se compara por trecho; uma PALAVRA, não — ``"mesa" in texto`` casa
 com *remessa* e com todo nome de campo que a carrega (``mesa-frase``,
