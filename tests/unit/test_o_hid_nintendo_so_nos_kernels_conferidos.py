@@ -1,9 +1,8 @@
-"""O `hid-nintendo` patchado só se constrói nos kernels conferidos, cada um com o seu fonte."""
+"""O cache do `hid-nintendo`: cada kernel conferido tem o seu fonte, de fábrica mais a série."""
 
 from __future__ import annotations
 
 import hashlib
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -15,7 +14,6 @@ PASTA = RAIZ / "assets" / "dkms" / "hid-nintendo"
 DKMS_CONF = PASTA / "dkms.conf"
 BASELINE = PASTA / "patch" / "BASELINE"
 POR_KERNEL = PASTA / "fonte-por-kernel"
-ESCOLHER = PASTA / "escolher-o-fonte.sh"
 DRIVER = "hid-nintendo"
 
 
@@ -50,21 +48,13 @@ def _por_kernel() -> dict[str, dict[str, str]]:
     return saida
 
 
-def _regex() -> str:
-    casou = re.search(
-        r'^BUILD_EXCLUSIVE_KERNEL="([^"]+)"$', DKMS_CONF.read_text(encoding="utf-8"), re.M
-    )
-    assert casou, "o dkms.conf do hid-nintendo perdeu o BUILD_EXCLUSIVE_KERNEL"
-    return casou.group(1)
-
-
 def _sha(caminho: Path) -> str:
     return hashlib.sha256(caminho.read_bytes()).hexdigest()
 
 
 def _validados() -> list[str]:
     validados = _baseline()["KERNELS_VALIDADOS"].split()
-    assert validados, "KERNELS_VALIDADOS vazio: o pino não teria dono"
+    assert validados, "KERNELS_VALIDADOS vazio: o cache não teria dono"
     return validados
 
 
@@ -74,37 +64,6 @@ def _pastas() -> set[str]:
 
 def _da_raiz() -> set[str]:
     return set((POR_KERNEL / "raiz.txt").read_text(encoding="utf-8").split())
-
-
-def test_o_dkms_do_hid_nintendo_tem_pino_e_escolhe_o_fonte() -> None:
-    _regex()
-    texto = DKMS_CONF.read_text(encoding="utf-8")
-    assert re.search(r'^PRE_BUILD="\./escolher-o-fonte\.sh \$kernelver"$', texto, re.M), (
-        "sem o PRE_BUILD, todo kernel do pino compila o `.c` da raiz"
-    )
-
-
-def test_a_regex_e_a_lista_dizem_o_mesmo_nos_dois_sentidos() -> None:
-    validados = _validados()
-    pino = re.compile(_regex())
-    for build in validados:
-        assert pino.match(f"{build}-generic"), (
-            f"{build} está em KERNELS_VALIDADOS e o dkms.conf não o constrói"
-        )
-    alternativas = re.fullmatch(r"\^\((.+)\)-", _regex())
-    assert alternativas, "a regex do pino deixou de ser a lista de builds exatos"
-    da_regex = {alt.replace("\\.", ".") for alt in alternativas.group(1).split("|")}
-    assert da_regex == set(validados), "a regex constrói um build que a lista não confere"
-
-
-def test_o_pino_nao_aceita_kernel_que_ninguem_conferiu() -> None:
-    validados = set(_validados())
-    pino = re.compile(_regex())
-    for build in ("9.9.9-99999999", "7.2.10-76070210", "7.3.0-76070300", "7.1.13-76070113"):
-        assert build not in validados
-        assert not pino.match(f"{build}-generic"), (
-            f"o pino deixa passar {build}, que ninguém conferiu"
-        )
 
 
 def test_cada_build_conferido_tem_um_fonte_e_so_um() -> None:
@@ -154,47 +113,3 @@ def test_o_fonte_do_7_2_6_guarda_os_consertos_do_kernel_novo() -> None:
     assert "goto err_io_stop;" in fonte, "o 2e0d98dc8 (parar o IO antes do hid_hw_stop) sumiu"
     for parametro in ("bt_probe_retries", "usb_probe_degrade", "register_leds_on_set_failure"):
         assert f"module_param({parametro}," in fonte, f"a série perdeu o {parametro}"
-
-
-def _pacote_como_no_usr_src(destino: Path) -> Path:
-    """O pacote como o `dkms_lib.sh` o deixa em /usr/src: sem o `patch/` da raiz."""
-    shutil.copytree(PASTA, destino)
-    shutil.rmtree(destino / "patch")
-    return destino
-
-
-def _escolher(pasta: Path, kver: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["bash", str(pasta / "escolher-o-fonte.sh"), kver],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-
-
-def test_o_escolher_poe_o_fonte_do_build_exato(tmp_path: Path) -> None:
-    pasta = _pacote_como_no_usr_src(tmp_path / "build")
-    resultado = _escolher(pasta, "7.2.6-76070206-generic")
-    assert resultado.returncode == 0, resultado.stderr
-    campos = _por_kernel()["7.2.6-76070206"]
-    assert _sha(pasta / f"{DRIVER}.c") == campos["SHA256_PATCHED_C"]
-    assert _sha(pasta / "hid-ids.h") == campos["SHA256_HID_IDS_H"]
-
-
-def test_o_escolher_deixa_a_raiz_nos_kernels_do_usuario(tmp_path: Path) -> None:
-    for build in sorted(_da_raiz()):
-        pasta = _pacote_como_no_usr_src(tmp_path / build)
-        resultado = _escolher(pasta, f"{build}-generic")
-        assert resultado.returncode == 0, resultado.stderr
-        assert _sha(pasta / f"{DRIVER}.c") == _baseline()["SHA256_PATCHED_C"]
-        assert _sha(pasta / "hid-ids.h") == _baseline()["SHA256_HID_IDS_H"]
-
-
-def test_o_escolher_recusa_o_build_sem_fonte(tmp_path: Path) -> None:
-    pasta = _pacote_como_no_usr_src(tmp_path / "build")
-    antes = _sha(pasta / f"{DRIVER}.c")
-    resultado = _escolher(pasta, "9.9.9-99999999-generic")
-    assert resultado.returncode != 0
-    assert "9.9.9-99999999" in resultado.stderr
-    assert _sha(pasta / f"{DRIVER}.c") == antes, "a recusa não pode trocar o fonte"

@@ -10,9 +10,7 @@ não foi testado. A página e o código são conferidos juntos por
 |---|---|---|---|
 | Python | `>= 3.10` | `pyproject.toml` | a instalação não começa |
 | BlueZ | `>= 5.79` e `< 5.87` | `hefesto-dualsense4unix doctor` | abaixo de 5.79, reprova (o `bluetoothd` trava com vários controles); de 5.87 em diante, avisa (há um defeito conhecido na desconexão) |
-| Kernel, para o `hid-playstation` e o `uhid` | só `7.1.5-76070105` | o `dkms.conf` de cada módulo | o módulo não é compilado e o driver de fábrica fica. Sem o `hid-playstation` do Hefesto, o microfone pelo Bluetooth não liga |
-| Kernel, para o `rtw88-usb` | `7.0.11-76070011` e `7.1.5-76070105` | `assets/dkms/rtw88-usb/dkms.conf` | o módulo não é compilado e o driver de fábrica fica |
-| Kernel, para o `hid-nintendo` | sem trava | `hefesto-dualsense4unix doctor` | avisa quando o kernel difere do testado (`7.0.11-76070011-generic`): o módulo pode compilar e esconder um driver de fábrica mais novo |
+| Kernel, para os módulos do Hefesto (`hid-playstation`, `hid-nintendo`, `uhid`, `usb-f-hid`, `rtw88-usb`) | o que roda, quando o fonte de fábrica dele se acha e a série de `patch/` aplica sem fuzz | o `preparar-o-fonte.py` de cada módulo, no `dkms build`, e o `hefesto-dualsense4unix doctor` | o módulo não é compilado, o driver de fábrica fica, e o doctor diz o que falta (a fonte do kernel da distro, a rede até o git.kernel.org ou o rebase da série). Sem o `hid-playstation` do Hefesto, o microfone pelo Bluetooth não liga |
 
 As versões das bibliotecas Python que rodaram com os controles estão em
 `constraints.txt`, e o instalador as usa.
@@ -29,9 +27,11 @@ As versões das bibliotecas Python que rodaram com os controles estão em
 
 ## O que não foi testado
 
-- **Outros kernels.** O `hid-nintendo` não tem trava de kernel: em outra série
-  ele pode não compilar, ou compilar e esconder um driver mais novo. É o ponto
-  com mais chance de decidir uma instalação em outra máquina.
+- **Outros kernels.** Medido em contêiner, sem controle: no Arch com o 7.2.11, os cinco
+  módulos compilam do stable v7.2.11 conferido pelo `srcversion` do de fábrica, com a série
+  rebaseada para o 7.2.6 nos módulos que a guardam; no Ubuntu 24.04 com o 7.0.0-42, só o `usb-f-hid`
+  acha o fonte (o kernel da distro traz mudanças que o stable não tem), e os outros ficam no
+  de fábrica com o motivo no doctor.
 - **Secure Boot ligado.** Sem a chave do DKMS inscrita, o instalador não
   instala os módulos e diz como inscrevê-la; o resultado depois da inscrição
   não foi medido.

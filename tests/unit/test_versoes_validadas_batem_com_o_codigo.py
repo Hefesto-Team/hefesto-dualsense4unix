@@ -62,33 +62,17 @@ def test_o_python_minimo_bate():
     )
 
 
-def test_o_kernel_testado_bate():
-    """O kernel que o `doctor.sh` chama de testado aparece na página."""
-    doctor = _doctor()
-    achado = re.search(
-        r'HEFESTO_DKMS_KERNEL_TESTED="([^"]+)"', doctor
+def test_o_kernel_da_pagina_e_o_que_roda():
+    """A página diz quem decide o kernel, e nenhum `dkms.conf` volta a prender uma lista."""
+    pagina = _pagina()
+    assert "preparar-o-fonte.py" in pagina, (
+        f"a página não diz mais quem decide se o módulo compila no kernel. Atualize {PAGINA}."
     )
-    assert achado, "a constante HEFESTO_DKMS_KERNEL_TESTED sumiu do doctor.sh"
-    kernel = achado.group(1)
-    assert kernel in _pagina(), (
-        f"o doctor.sh testa contra o kernel {kernel} e a página não o cita. "
-        f"Atualize {PAGINA}."
-    )
-
-
-def test_o_pino_do_rtw88_bate():
-    """O kernel pinado do `rtw88-usb` aparece na página."""
-    conf = (_raiz_do_repo() / "assets/dkms/rtw88-usb/dkms.conf").read_text(
-        encoding="utf-8"
-    )
-    achado = re.search(r'BUILD_EXCLUSIVE_KERNEL="([^"]+)"', conf)
-    assert achado, "o rtw88-usb perdeu o BUILD_EXCLUSIVE_KERNEL"
-    versao = re.search(r"(\d+\.\d+\.\d+)", achado.group(1).replace("\\", ""))
-    assert versao, f"não consegui ler a versão de {achado.group(1)!r}"
-    assert versao.group(1) in _pagina(), (
-        f"o rtw88-usb é pinado em {versao.group(1)} e a página não o cita. "
-        f"Atualize {PAGINA}."
-    )
+    for conf in sorted((_raiz_do_repo() / "assets/dkms").glob("*/dkms.conf")):
+        assert "BUILD_EXCLUSIVE_KERNEL=" not in conf.read_text(encoding="utf-8"), (
+            f"{conf.parent.name} voltou a prender o build a uma lista de kernels, e a página "
+            "diz que ele compila no kernel que roda"
+        )
 
 
 @pytest.mark.parametrize(

@@ -526,8 +526,9 @@ check_uhid() {
 check_uhid_contrapressao() {
     local conf="${HEFESTO_DOCTOR_UHID_CONF:-/etc/modprobe.d/hefesto-uhid.conf}"
     local param="${HEFESTO_DOCTOR_UHID_PARAM:-/sys/module/uhid/parameters/backpressure}"
-    local baseline="${ROOT_DIR}/assets/dkms/uhid/patch/BASELINE"
-    local kernel="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}" validados="" um valor
+    local pacote="hefesto-uhid" versao="1.0.0"
+    local kernel="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
+    local valor pulo instalado
     [[ -f "${conf}" ]] || return 0
     if [[ -r "${param}" ]]; then
         valor="$(cat "${param}" 2>/dev/null || true)"
@@ -538,18 +539,17 @@ check_uhid_contrapressao() {
         fi
         return
     fi
-    if [[ -r "${baseline}" ]]; then
-        validados="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1 | tr ',' ' ')"
-        for um in ${validados}; do
-            if [[ "${kernel}" == "${um}" || "${kernel}" == "${um}"-* ]]; then
-                info "a contrapressão do uhid foi pedida e entra no PRÓXIMO BOOT (o uhid de fábrica está carregado; recarregá-lo derrubaria todo HID por Bluetooth)"
-                return
-            fi
-        done
-        warn "a contrapressão do uhid foi pedida, mas o kernel ${kernel} não está entre os conferidos (${validados:-nenhum}) — o uhid de fábrica segue, e o pedido não vale neste kernel"
+    pulo="$(_dkms_veredito "${pacote}" "${versao}" "${kernel}")"
+    if [[ -n "${pulo}" ]]; then
+        warn "a contrapressão do uhid foi pedida, e o uhid do Hefesto não se constrói neste kernel — ${pulo}"
         return
     fi
-    info "a contrapressão do uhid foi pedida e o uhid carregado é o de fábrica — não sei dizer se o patchado entra no próximo boot (sem o patch/BASELINE nesta instalação)"
+    instalado="$(modinfo -k "${kernel}" -F filename uhid 2>/dev/null || true)"
+    if [[ "${instalado}" == */updates/dkms/* ]]; then
+        info "a contrapressão do uhid foi pedida e entra no PRÓXIMO BOOT (o uhid de fábrica está carregado; recarregá-lo derrubaria todo HID por Bluetooth)"
+        return
+    fi
+    info "a contrapressão do uhid foi pedida e o uhid carregado é o de fábrica, e o do Hefesto não está instalado para o kernel ${kernel}: $(conselho_de_instalacao)"
 }
 
 check_hid_playstation() {
@@ -5294,7 +5294,16 @@ check_hid_nintendo_bt_cascade() {
 readonly HEFESTO_DKMS_HID_NINTENDO_PKG="hefesto-hid-nintendo"
 readonly HEFESTO_DKMS_HID_NINTENDO_VER="1.0.0"
 
-readonly HEFESTO_DKMS_KERNEL_TESTED="7.0.11-76070011-generic"
+_dkms_veredito() {
+    local arquivo estado frase
+    arquivo="${HEFESTO_DKMS_TREE:-/var/lib/dkms}/$1/$2/fonte-$3.txt"
+    [[ -r "${arquivo}" ]] || return 0
+    { IFS= read -r estado && IFS= read -r frase; } < "${arquivo}" || true
+    case "${estado:-}" in
+        "" | cache | fabrica) ;;
+        *) printf '%s\n' "${frase:-}" ;;
+    esac
+}
 
 check_cmdline_pad_virtual() {
     local cmdline="${HEFESTO_DOCTOR_CMDLINE:-/proc/cmdline}"
@@ -5315,36 +5324,7 @@ check_cmdline_pad_virtual() {
     fi
 }
 
-_dkms_kernels_validados() {
-    local baseline lista=""
-    for baseline in \
-        "${ROOT_DIR}/assets/dkms/rtw88-usb/patch/BASELINE" \
-        "/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/patch/BASELINE" \
-    ; do
-        [[ -r "${baseline}" ]] || continue
-        lista="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1)"
-        [[ -n "${lista}" ]] && break
-    done
-    printf '%s\n' "${lista}"
-}
-
 _DKMS_SB_WARNED=0
-
-_check_dkms_kernel_drift() {
-    local kver validados build
-    kver="$(uname -r)"
-    [[ "${kver}" == "${HEFESTO_DKMS_KERNEL_TESTED}" ]] && return
-
-    validados="$(_dkms_kernels_validados)"
-    for build in ${validados}; do
-        if [[ "${kver%-*}" == "${build}" ]]; then
-            pass "kernel atual (${kver}) está entre os kernels validados na BASELINE do DKMS"
-            return
-        fi
-    done
-
-    warn "kernel atual (${kver}) não está entre os kernels validados dos patches DKMS (${validados:-${HEFESTO_DKMS_KERNEL_TESTED}}) — se o build passou, o módulo do hefesto pode estar MASCARANDO um in-tree mais novo (fixes/suporte a devices); confira o rebase do BASELINE antes de confiar na cura, ou 'sudo dkms remove' para voltar ao in-tree"
-}
 
 _check_dkms_secureboot() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return
@@ -5420,9 +5400,8 @@ check_hefesto_hid_nintendo_dkms() {
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
         pass "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG}/${HEFESTO_DKMS_HID_NINTENDO_VER} construído p/ o kernel atual (${kver})"
-        _check_dkms_kernel_drift
     else
-        warn "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG} instalado mas NÃO p/ o kernel atual (${kver}) — rebase pendente, in-tree em uso; status: ${status}"
+        warn "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG} instalado mas NÃO p/ o kernel atual (${kver}), in-tree em uso — $(_dkms_veredito "${HEFESTO_DKMS_HID_NINTENDO_PKG}" "${HEFESTO_DKMS_HID_NINTENDO_VER}" "${kver}" | grep . || conselho_de_instalacao)"
     fi
     _check_dkms_secureboot
 
@@ -5467,9 +5446,8 @@ check_hefesto_rtw88_usb_dkms() {
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
         pass "DKMS ${HEFESTO_DKMS_RTW88_PKG}/${HEFESTO_DKMS_RTW88_VER} construído p/ o kernel atual (${kver})"
-        _check_dkms_kernel_drift
     else
-        warn "DKMS ${HEFESTO_DKMS_RTW88_PKG} instalado mas NÃO p/ o kernel atual (${kver}) — rebase pendente OU kernel fora do pino BUILD_EXCLUSIVE_KERNEL (7.0.y é EOL, série nova precisa de rebase do BASELINE), in-tree em uso; status: ${status}"
+        warn "DKMS ${HEFESTO_DKMS_RTW88_PKG} instalado mas NÃO p/ o kernel atual (${kver}), in-tree em uso — $(_dkms_veredito "${HEFESTO_DKMS_RTW88_PKG}" "${HEFESTO_DKMS_RTW88_VER}" "${kver}" | grep . || conselho_de_instalacao)"
     fi
     _check_dkms_secureboot
 
@@ -5515,14 +5493,9 @@ _hid_playstation_carregado_guarda_o_audio() {
 check_hefesto_hid_playstation_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
     local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/hid_playstation"
-    local baseline validados="" um na_lista=0 modpath staged=0
+    local baseline modpath staged=0 pulo
     baseline="$(_hid_playstation_baseline || true)"
-    if [[ -n "${baseline}" ]]; then
-        validados="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1 | tr ',' ' ')"
-        for um in ${validados}; do
-            [[ "${kver}" == "${um}" || "${kver}" == "${um}"-* ]] && na_lista=1
-        done
-    fi
+    pulo="$(_dkms_veredito hefesto-hid-playstation 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename hid_playstation 2>/dev/null || true)"
     [[ "${modpath}" == */updates/dkms/* ]] && staged=1
 
@@ -5541,8 +5514,8 @@ check_hefesto_hid_playstation_dkms() {
     local efeito="o microfone do DualSense pelo rádio fica desligado, porque o driver carregado leria o áudio como botão e mexeria o cursor"
     if [[ "${staged}" -eq 1 ]]; then
         warn "${efeito} — o driver do Hefesto já está instalado para este kernel e entra no PRÓXIMO BOOT: reinicie o computador"
-    elif [[ -n "${baseline}" && "${na_lista}" -eq 0 ]]; then
-        warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver do Hefesto não se constrói nele de propósito (patch/BASELINE); o de fábrica segue. Para o microfone voltar, inicie um kernel dessa lista ou espere o Hefesto conferir este"
+    elif [[ -n "${pulo}" ]]; then
+        warn "${efeito} — ${pulo}"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
          && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
         warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem a chave o driver do Hefesto não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
@@ -5553,26 +5526,11 @@ check_hefesto_hid_playstation_dkms() {
     fi
 }
 
-_usb_f_hid_baseline() {
-    local c
-    for c in "${ROOT_DIR}/assets/dkms/usb-f-hid/patch/BASELINE" \
-             "/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid/patch/BASELINE"; do
-        [[ -r "${c}" ]] && { printf '%s\n' "${c}"; return 0; }
-    done
-    return 1
-}
-
 check_hefesto_usb_f_hid_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
     local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/usb_f_hid"
-    local baseline validados="" um na_lista=0 modpath staged=0 marca
-    baseline="$(_usb_f_hid_baseline || true)"
-    if [[ -n "${baseline}" ]]; then
-        validados="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1 | tr ',' ' ')"
-        for um in ${validados}; do
-            [[ "${kver}" == "${um}" || "${kver}" == "${um}"-* ]] && na_lista=1
-        done
-    fi
+    local modpath staged=0 marca pulo
+    pulo="$(_dkms_veredito hefesto-usb-f-hid 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename usb_f_hid 2>/dev/null || true)"
     [[ "${modpath}" == */updates/dkms/* ]] && staged=1
 
@@ -5590,8 +5548,8 @@ check_hefesto_usb_f_hid_dkms() {
     local efeito="a função HID dos pads USB virtuais é a de fábrica: o jogo no Proton espera 5 s por pedido de feature e perde os controles"
     if [[ "${staged}" -eq 1 ]]; then
         fail "${efeito} — a do Hefesto já está instalada para este kernel e não foi trocada: $(conselho_de_instalacao) (ele solta os pads e troca), ou reinicie o computador"
-    elif [[ -n "${baseline}" && "${na_lista}" -eq 0 ]]; then
-        fail "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}); a do Hefesto só se constrói depois de o fonte deste kernel ser conferido e o kernel entrar no patch/BASELINE"
+    elif [[ -n "${pulo}" ]]; then
+        fail "${efeito} — ${pulo}"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
          && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
         fail "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"

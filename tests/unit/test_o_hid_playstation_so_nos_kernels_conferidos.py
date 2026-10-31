@@ -1,4 +1,4 @@
-"""O `hid-playstation` patchado só se constrói nos kernels conferidos — L6."""
+"""O cache do `hid-playstation`: cada kernel conferido tem o seu fonte, de fábrica mais a série."""
 
 from __future__ import annotations
 
@@ -71,58 +71,17 @@ def _desfaz_a_serie(fonte: Path, pasta_da_serie: Path, destino: Path) -> str:
     return _sha(destino)
 
 
-def _pino() -> re.Pattern[str]:
-    casou = re.search(
-        r'^BUILD_EXCLUSIVE_KERNEL="([^"]+)"$', DKMS_CONF.read_text(encoding="utf-8"), re.M
-    )
-    assert casou, "o dkms.conf do hid-playstation perdeu o BUILD_EXCLUSIVE_KERNEL"
-    return re.compile(casou.group(1))
-
-
-def test_o_dkms_do_hid_playstation_tem_pino_de_kernel() -> None:
-    _pino()
-
-
-def test_cada_kernel_validado_casa_o_pino() -> None:
-    validados = _baseline()["KERNELS_VALIDADOS"].split()
-    assert validados, "KERNELS_VALIDADOS vazio: o pino não teria dono"
-    pino = _pino()
-    for build in validados:
-        assert pino.match(f"{build}-generic"), (
-            f"{build} está em KERNELS_VALIDADOS e o dkms.conf não o constrói"
-        )
-
-
-def test_o_pino_nao_aceita_kernel_que_ninguem_conferiu() -> None:
-    validados = set(_baseline()["KERNELS_VALIDADOS"].split())
-    pino = _pino()
-    for build in (
-        "7.2.0-76070200", "7.1.6-76070106", "6.17.9-76061709", "7.1.5-1", "7.0.11-76070011",
-    ):
-        assert build not in validados
-        assert not pino.match(f"{build}-generic"), (
-            f"o pino deixa passar {build}, que ninguém conferiu"
-        )
-
-
 def test_a_base_e_o_stable_de_cada_kernel_pinado() -> None:
-    """O `.c` de base é o da versão EXATA de cada kernel pinado, a da raiz ou a da pasta dele."""
+    """O `.c` de base é o da versão EXATA de cada kernel do cache, a da raiz ou a da pasta dele."""
     base = _baseline()
     por_kernel = _por_kernel()
     for build in base["KERNELS_VALIDADOS"].split():
         kernel_base = por_kernel.get(build, base)["KERNEL_BASE"]
         assert build.split("-", 1)[0] == kernel_base.removeprefix("v"), (
-            f"{build} está pinado sobre a base {kernel_base}: o "
+            f"{build} está no cache sobre a base {kernel_base}: o "
             "`hid-playstation.c` de fábrica dele é o do stable daquela versão"
         )
     assert base["KERNEL_TESTED"].removesuffix("-generic") in base["KERNELS_VALIDADOS"].split()
-
-
-def test_a_regex_e_a_lista_dizem_o_mesmo_nos_dois_sentidos() -> None:
-    casou = re.fullmatch(r"\^\((.+)\)-", _pino().pattern)
-    assert casou, "a regex do pino deixou de ser a lista de builds exatos"
-    da_regex = {alt.replace("\\.", ".") for alt in casou.group(1).split("|")}
-    assert da_regex == set(_baseline()["KERNELS_VALIDADOS"].split())
 
 
 def test_cada_build_conferido_tem_um_fonte_e_so_um() -> None:
@@ -156,50 +115,6 @@ def test_o_fonte_do_7_2_6_guarda_o_edge_do_kernel_e_a_guarda_do_microfone() -> N
     assert "BTN_TRIGGER_HAPPY4" in fonte
     assert "module_param(mic_frames_ignored, bool, 0444);" in fonte
     assert "if (data[1] & DS_INPUT_BT_FLAG_AUDIO)" in fonte
-
-
-def test_o_escolher_e_o_mesmo_arquivo_do_hid_nintendo() -> None:
-    nintendo = RAIZ / "assets" / "dkms" / "hid-nintendo" / "escolher-o-fonte.sh"
-    assert (PASTA / "escolher-o-fonte.sh").read_bytes() == nintendo.read_bytes()
-    assert re.search(
-        r'^PRE_BUILD="\./escolher-o-fonte\.sh \$kernelver"$',
-        DKMS_CONF.read_text(encoding="utf-8"),
-        re.M,
-    ), "sem o PRE_BUILD, todo kernel do pino compila o `.c` da raiz"
-
-
-def _escolher(tmp_path: Path, kver: str) -> tuple[subprocess.CompletedProcess[str], Path]:
-    """Roda o `escolher-o-fonte.sh` no pacote como o `dkms_lib.sh` o deixa: sem `patch/`."""
-    pasta = tmp_path / kver
-    shutil.copytree(PASTA, pasta)
-    shutil.rmtree(pasta / "patch")
-    resultado = subprocess.run(
-        ["bash", str(pasta / "escolher-o-fonte.sh"), kver],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    return resultado, pasta
-
-
-def test_o_escolher_poe_o_fonte_do_build_exato(tmp_path: Path) -> None:
-    for build, campos in _por_kernel().items():
-        resultado, pasta = _escolher(tmp_path, f"{build}-generic")
-        assert resultado.returncode == 0, resultado.stderr
-        assert _sha(pasta / f"{DRIVER}.c") == campos["SHA256_PATCHED_C"]
-        assert _sha(pasta / "hid-ids.h") == campos["SHA256_HID_IDS_H"]
-    for build in _da_raiz():
-        resultado, pasta = _escolher(tmp_path, f"{build}-generic")
-        assert resultado.returncode == 0, resultado.stderr
-        assert _sha(pasta / f"{DRIVER}.c") == _baseline()["SHA256_PATCHED_C"]
-
-
-def test_o_escolher_recusa_o_build_sem_fonte(tmp_path: Path) -> None:
-    resultado, pasta = _escolher(tmp_path, "9.9.9-99999999-generic")
-    assert resultado.returncode != 0
-    assert "9.9.9-99999999" in resultado.stderr
-    assert _sha(pasta / f"{DRIVER}.c") == _baseline()["SHA256_PATCHED_C"]
 
 
 def test_o_c_da_pasta_e_o_patchado_do_baseline() -> None:

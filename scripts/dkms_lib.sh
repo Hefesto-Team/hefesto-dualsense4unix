@@ -2,6 +2,7 @@
 
 _dkms_src_root() { printf '%s' "${HEFESTO_DKMS_SRC_ROOT:-/usr/src}"; }
 _dkms_modules_root() { printf '%s' "${HEFESTO_DKMS_MODULES_ROOT:-/lib/modules}"; }
+_dkms_tree_root() { printf '%s' "${HEFESTO_DKMS_TREE:-/var/lib/dkms}"; }
 _dkms_initramfs_path() {
     printf '%s' "${HEFESTO_INITRAMFS_PATH:-/boot/initrd.img-$(uname -r)}"
 }
@@ -200,6 +201,19 @@ dkms_pkg_version() {
     printf '%s' "${_ver:-${_fallback}}"
 }
 
+dkms_arquivo_do_veredito() {
+    printf '%s/%s/%s/fonte-%s.txt' "$(_dkms_tree_root)" "$1" "$2" "$3"
+}
+
+dkms_veredito_do_fonte() {
+    local _arquivo _estado _frase
+    _arquivo="$(dkms_arquivo_do_veredito "$1" "$2" "$3")"
+    [[ -r "${_arquivo}" ]] || return 0
+    { IFS= read -r _estado && IFS= read -r _frase; } < "${_arquivo}" || true
+    [[ -n "${_estado:-}" ]] && printf '%s\t%s\n' "${_estado}" "${_frase:-}"
+    return 0
+}
+
 dkms_module_from_updates() {
     local _path
     _path="$(modinfo -F filename "$1" 2>/dev/null)" || return 1
@@ -246,7 +260,7 @@ dkms_install_patched_module() {
         return 0
     fi
 
-    if [[ -d "${_srcdst}" ]] && sudo diff -rq -x patch -x LICENSES "${_src}" "${_srcdst}" >/dev/null 2>&1; then
+    if [[ -d "${_srcdst}" ]] && sudo diff -rq -x LICENSES "${_src}" "${_srcdst}" >/dev/null 2>&1; then
         _dkms_log "source ${_pkg}-${_ver} já sincronizado em ${_srcdst}"
     else
         sudo dkms remove "${_pkg}/${_ver}" --all >/dev/null 2>&1 || true
@@ -258,7 +272,6 @@ dkms_install_patched_module() {
             _dkms_warn "falha copiando source p/ ${_srcdst} — pulando ${_pkg} (in-tree continua)"
             return 0
         fi
-        sudo rm -rf "${_srcdst}/patch" || true
     fi
 
     _dkms_lic="$(_dkms_licenses_dir)"
@@ -281,14 +294,19 @@ dkms_install_patched_module() {
     fi
 
     if [[ ! "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" =~ (built|installed) ]]; then
-        local _rc_build=0
+        local _rc_build=0 _veredito
+        sudo rm -f "$(dkms_arquivo_do_veredito "${_pkg}" "${_ver}" "${_kver}")" || true
         sudo dkms build "${_pkg}/${_ver}" -k "${_kver}" || _rc_build=$?
-        if [[ "${_rc_build}" -eq 77 ]]; then
-            _dkms_log "${_pkg} não é para o kernel ${_kver} (BUILD_EXCLUSIVE_KERNEL do dkms.conf) — o in-tree assume, como o pino manda"
-            return 0
-        fi
         if [[ "${_rc_build}" -ne 0 ]]; then
-            _dkms_warn "dkms build FALHOU p/ ${_pkg}/${_ver} no kernel ${_kver} — módulo in-tree continua (fail-safe); log: /var/lib/dkms/${_pkg}/${_ver}/${_kver}/${_arch:-x86_64}/log/make.log"
+            _veredito="$(dkms_veredito_do_fonte "${_pkg}" "${_ver}" "${_kver}")"
+            case "${_veredito%%$'\t'*}" in
+                "" | cache | fabrica)
+                    _dkms_warn "dkms build FALHOU p/ ${_pkg}/${_ver} no kernel ${_kver} — módulo in-tree continua (fail-safe); log: $(_dkms_tree_root)/${_pkg}/${_ver}/build/make.log"
+                    ;;
+                *)
+                    _dkms_warn "${_veredito#*$'\t'}"
+                    ;;
+            esac
             return 0
         fi
     fi

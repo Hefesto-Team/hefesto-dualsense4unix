@@ -24,7 +24,7 @@ import tarfile
 import tempfile
 import urllib.error
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
@@ -32,6 +32,7 @@ PULA = 77
 STABLE = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/{caminho}?h={tag}"
 INCLUDE_LOCAL = re.compile(r'^\s*#\s*include\s+"([^"/]+)"', re.M)
 MAIS_PONTOS = 40
+Leitor = Callable[[str], "bytes | None"]
 
 
 class VereditoError(Exception):
@@ -48,6 +49,28 @@ def _conf(chave: str) -> str:
 
 def _serie() -> list[Path]:
     return sorted((AQUI / "patch").glob("*.patch"))
+
+
+def _versao(build: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(r"\d+", build))
+
+
+def _series() -> list[tuple[str, list[Path]]]:
+    rebases = sorted(
+        (p for p in (AQUI / "fonte-por-kernel").glob("*/patch") if p.is_dir()),
+        key=lambda p: _versao(p.parent.name),
+        reverse=True,
+    )
+    return [
+        (f"fonte-por-kernel/{p.parent.name}/patch/", sorted(p.glob("*.patch"))) for p in rebases
+    ] + [("patch/", _serie())]
+
+
+class NaoAplicaError(Exception):
+    def __init__(self, patch: str, pedacos: int) -> None:
+        super().__init__(patch)
+        self.patch = patch
+        self.pedacos = pedacos
 
 
 def _caminhos_da_serie(serie: list[Path]) -> list[str]:
@@ -106,7 +129,7 @@ def _modinfo(campo: str, ko: Path) -> list[str]:
     return [linha.strip() for linha in feito.stdout.splitlines() if linha.strip()]
 
 
-def _fecho(principal: str, ler) -> dict[str, bytes] | None:
+def _fecho(principal: str, ler: Leitor) -> dict[str, bytes] | None:
     pasta = principal.rsplit("/", 1)[0]
     arquivos: dict[str, bytes] = {}
 
@@ -125,7 +148,7 @@ def _fecho(principal: str, ler) -> dict[str, bytes] | None:
     return arquivos if abrir(principal) else None
 
 
-def _da_arvore(raiz: Path):
+def _da_arvore(raiz: Path) -> Leitor:
     def ler(caminho: str) -> bytes | None:
         arquivo = raiz / caminho
         return arquivo.read_bytes() if arquivo.is_file() else None
@@ -133,7 +156,7 @@ def _da_arvore(raiz: Path):
     return ler
 
 
-def _do_tar(arquivo: str, pasta: str):
+def _do_tar(arquivo: str, pasta: str) -> Leitor:
     membros: dict[str, bytes] = {}
     lido: list[bool] = []
 
@@ -159,7 +182,7 @@ class SemRedeError(Exception):
     pass
 
 
-def _do_stable(tag: str):
+def _do_stable(tag: str) -> Leitor:
     modelo = os.environ.get("HEFESTO_DKMS_STABLE_URL", STABLE)
 
     def ler(caminho: str) -> bytes | None:
@@ -169,7 +192,7 @@ def _do_stable(tag: str):
                 headers={"User-Agent": "hefesto-dualsense4unix-dkms"},
             )
             with urllib.request.urlopen(pedido, timeout=30) as resposta:
-                return resposta.read()
+                return bytes(resposta.read())
         except urllib.error.HTTPError as erro:
             if erro.code == 404:
                 return None
@@ -191,7 +214,9 @@ def _tags(kver: str) -> Iterator[str]:
         yield f"v{maior}.{menor}" if z == 0 else f"v{maior}.{menor}.{z}"
 
 
-def _candidatos(kver: str, ksrc: str, principal: str, tentei: list[str], pontos: bool):
+def _candidatos(
+    kver: str, ksrc: str, principal: str, tentei: list[str], pontos: bool
+) -> Iterator[tuple[str, dict[str, bytes]]]:
     for raiz in (Path(ksrc), _modulos_root() / kver / "source"):
         arquivos = _fecho(principal, _da_arvore(raiz))
         tentei.append(f"a árvore em {raiz}")
@@ -225,16 +250,27 @@ def _md4_do_modpost(dados: bytes) -> str:
         valor &= 0xFFFFFFFF
         return ((valor << casas) | (valor >> (32 - casas))) & 0xFFFFFFFF
 
-    rodadas = (
-        (lambda x, y, z: (x & y) | (~x & z), 0, range(16), (3, 7, 11, 19)),
+    def escolha(x: int, y: int, z: int) -> int:
+        return (x & y) | (~x & z)
+
+    def maioria(x: int, y: int, z: int) -> int:
+        return (x & y) | (x & z) | (y & z)
+
+    def paridade(x: int, y: int, z: int) -> int:
+        return x ^ y ^ z
+
+    rodadas: tuple[
+        tuple[Callable[[int, int, int], int], int, Sequence[int], Sequence[int]], ...
+    ] = (
+        (escolha, 0, range(16), (3, 7, 11, 19)),
         (
-            lambda x, y, z: (x & y) | (x & z) | (y & z),
+            maioria,
             0x5A827999,
             (0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15),
             (3, 5, 9, 13),
         ),
         (
-            lambda x, y, z: x ^ y ^ z,
+            paridade,
             0x6ED9EBA1,
             (0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15),
             (3, 9, 11, 15),
@@ -321,9 +357,7 @@ def _confere(ksrc: str, modulo: str, arquivos: dict[str, bytes], fabrica: Path) 
         )
 
 
-def _aplicar(
-    serie: list[Path], arquivos: dict[str, bytes], origem: str, kver: str, modulo: str
-) -> tuple[dict[str, bytes], list[str]]:
+def _aplicar(serie: list[Path], arquivos: dict[str, bytes]) -> tuple[dict[str, bytes], list[str]]:
     notas: list[str] = []
     with tempfile.TemporaryDirectory(dir=AQUI, prefix=".serie-") as tmp:
         arvore = Path(tmp)
@@ -355,13 +389,8 @@ def _aplicar(
             if desfeito.returncode == 0:
                 notas.append(f"{patch.name[:4]} já está no kernel")
                 continue
-            pedacos = len(re.findall(r"^Hunk #\d+ FAILED", ensaio.stdout, re.M))
-            raise VereditoError(
-                "nao-aplica",
-                f"hefesto-{modulo}: a série de patch/ não aplica no de fábrica de {kver} "
-                f"({origem}): {patch.name} deixa {pedacos or 'algum'} pedaço(s) de fora; "
-                "o de fábrica assume até a série ganhar o rebase deste kernel "
-                "(o ritual está em patch/BASELINE)",
+            raise NaoAplicaError(
+                patch.name, len(re.findall(r"^Hunk #\d+ FAILED", ensaio.stdout, re.M))
             )
         return {caminho: (arvore / caminho).read_bytes() for caminho in arquivos}, notas
 
@@ -392,17 +421,32 @@ def _do_kernel(kver: str, ksrc: str, modulo: str) -> str:
         vistos.add(assinatura)
         if not _confere(ksrc, modulo, arquivos, fabrica):
             continue
-        curados, notas = _aplicar(serie, arquivos, origem, kver, modulo)
-        for caminho, conteudo in curados.items():
-            (AQUI / caminho.rsplit("/", 1)[-1]).write_bytes(conteudo)
-        conferencia = (
-            "pelo srcversion"
-            if pontos
-            else "pelos alias e parâmetros, que o kernel não grava srcversion"
-        )
-        return (
-            f"hefesto-{modulo}: o de fábrica de {kver} veio de {origem} (conferido {conferencia}), "
-            f"e a série de patch/ aplicou ({', '.join(notas)})"
+        falhas: list[str] = []
+        for rotulo, serie_daqui in _series():
+            try:
+                curados, notas = _aplicar(serie_daqui, arquivos)
+            except NaoAplicaError as erro:
+                falhas.append(
+                    f"na de {rotulo}, o {erro.patch} deixa {erro.pedacos or 'algum'} "
+                    "pedaço(s) de fora"
+                )
+                continue
+            for caminho, conteudo in curados.items():
+                (AQUI / caminho.rsplit("/", 1)[-1]).write_bytes(conteudo)
+            conferencia = (
+                "pelo srcversion"
+                if pontos
+                else "pelos alias e parâmetros, que o kernel não grava srcversion"
+            )
+            return (
+                f"hefesto-{modulo}: o de fábrica de {kver} veio de {origem} "
+                f"(conferido {conferencia}), e a série de {rotulo} aplicou ({', '.join(notas)})"
+            )
+        raise VereditoError(
+            "nao-aplica",
+            f"hefesto-{modulo}: nenhuma série guardada aplica no de fábrica de {kver} "
+            f"({origem}): {'; '.join(falhas)}; o de fábrica assume até a série ganhar o rebase "
+            "deste kernel (o ritual está em patch/BASELINE)",
         )
     raise VereditoError(
         "sem-fonte",
