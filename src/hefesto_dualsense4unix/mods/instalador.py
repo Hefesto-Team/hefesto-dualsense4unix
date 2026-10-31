@@ -254,7 +254,7 @@ FRASE_SEM_EXTENSAO = (
     "Confira se ele está escrito certo e se o repositório é público.")
 FRASE_PEDE_LOGIN = (
     "Esse endereço pede login. "
-    "Confira o endereço e use o de um repositório público, que começa com https://.")
+    "Confira se ele está escrito certo e se o repositório é público.")
 FRASE_SEM_VERSAO = (
     "A versão «{ref}» não existe nesse endereço. Confira o nome da versão.")
 FRASE_SEM_CAUSA = (
