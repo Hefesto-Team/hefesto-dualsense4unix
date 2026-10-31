@@ -357,3 +357,24 @@ def test_o_carimbo_gravado_com_o_nome_antigo_se_le_e_se_regrava() -> None:
     assert ponte == {**gravado["ponte"], "confirmada_por": "escolha_do_usuario"}
     assert ponte["confirmada_em"] == CARIMBO_DE_ANTES
     assert loader.o_carimbo_da_escolha_ganha_o_nome_novo() == []
+
+
+def test_a_primeira_carga_dos_perfis_regrava_o_carimbo_antigo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """**A MORDIDA.** Quem regrava o carimbo antigo é a semeadura da primeira carga; sem a chamada
+    em `_maybe_seed_presets`, o disco guarda o nome antigo para sempre."""
+    _perfil_do_jogo_carimbado_por_silencio()
+    arquivo = _arquivo(JOGO)
+    gravado = json.loads(arquivo.read_text(encoding="utf-8"))
+    gravado["ponte"]["confirmada_por"] = nomes_gravados.CARIMBO_DA_ESCOLHA_ANTIGO
+    arquivo.write_text(json.dumps(gravado, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.delenv(loader.SEED_SKIP_ENV_VAR, raising=False)
+    monkeypatch.setattr(loader, "_seed_attempted", False)
+    monkeypatch.setattr(loader, "seed_default_presets", lambda *_a, **_kw: [])
+    monkeypatch.setattr(loader, "_talvez_semear_jogos", lambda: None)
+
+    loader._maybe_seed_presets()
+
+    no_disco = json.loads(arquivo.read_text(encoding="utf-8"))
+    assert no_disco["ponte"]["confirmada_por"] == "escolha_do_usuario"
