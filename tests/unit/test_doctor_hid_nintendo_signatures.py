@@ -138,7 +138,7 @@ class TestCheckReadOnlyEDeteccao:
 
     def test_dkms_instalado_para_outro_kernel_e_warn_de_rebase(self) -> None:
         corpo = _extrai_funcao_bash(DOCTOR, "check_hefesto_hid_nintendo_dkms")
-        assert "rebase pendente" in corpo, (
+        assert "NÃO p/ o kernel atual" in corpo and "_dkms_veredito" in corpo, (
             "kernel novo sem build DKMS = in-tree em uso, a cura não pode sumir "
             "em silêncio"
         )

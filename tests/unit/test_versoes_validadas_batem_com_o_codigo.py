@@ -69,7 +69,12 @@ def test_o_kernel_da_pagina_e_o_que_roda():
         f"a página não diz mais quem decide se o módulo compila no kernel. Atualize {PAGINA}."
     )
     for conf in sorted((_raiz_do_repo() / "assets/dkms").glob("*/dkms.conf")):
-        assert "BUILD_EXCLUSIVE_KERNEL=" not in conf.read_text(encoding="utf-8"), (
+        linhas = conf.read_text(encoding="utf-8").splitlines()
+        assert all(
+            "--exclusivo" in linha
+            for linha in linhas
+            if linha.startswith("BUILD_EXCLUSIVE_KERNEL=")
+        ), (
             f"{conf.parent.name} voltou a prender o build a uma lista de kernels, e a página "
             "diz que ele compila no kernel que roda"
         )

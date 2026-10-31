@@ -22,8 +22,16 @@ PRE_BUILD = (
     'PRE_BUILD="./preparar-o-fonte.py $kernelver ${kernel_source_dir} '
     '${dkms_tree}/${PACKAGE_NAME}/${PACKAGE_VERSION}"'
 )
+EXCLUSIVO = (
+    'BUILD_EXCLUSIVE_KERNEL="$("${BASH_SOURCE[0]%/*}/preparar-o-fonte.py" --exclusivo '
+    '"$kernelver" "${kernel_source_dir}" "${dkms_tree}/${PACKAGE_NAME}/${PACKAGE_VERSION}")"'
+)
+GUARDA_DO_AUTOINSTALL = (
+    "if declare -F autoinstall >/dev/null && ! declare -f autoinstall | grep -qw 77; then"
+)
 KERNEL_NOVO = "7.9.1-1-generic"
 PULA = 77
+NENHUM_KERNEL = "^/"
 
 
 def _baseline(pacote: str, chave: str) -> str:
@@ -38,7 +46,12 @@ def _preparador(pacote: str) -> ModuleType:
     spec = importlib.util.spec_from_file_location(f"preparar_{pacote.replace('-', '_')}", caminho)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(modulo)
+    antes = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(modulo)
+    finally:
+        sys.dont_write_bytecode = antes
     return modulo
 
 
@@ -68,10 +81,15 @@ def test_todo_pacote_traz_o_mesmo_preparador_no_pre_build() -> None:
         assert preparador.read_bytes() == referencia, f"{pacote}: o preparador divergiu do uhid"
         assert os.access(preparador, os.X_OK), f"{pacote}: o preparador não é executável"
         conf = (DKMS / pacote / "dkms.conf").read_text(encoding="utf-8")
-        assert PRE_BUILD in conf.splitlines(), f"{pacote}: o dkms.conf não chama o preparador"
-        assert "BUILD_EXCLUSIVE_KERNEL=" not in conf, (
-            f"{pacote}: o dkms.conf voltou a prender o build a uma lista de kernels"
+        linhas = conf.splitlines()
+        assert PRE_BUILD in linhas, f"{pacote}: o dkms.conf não chama o preparador"
+        assert EXCLUSIVO in linhas, f"{pacote}: o dkms.conf não decide o pulo ao ser lido"
+        assert GUARDA_DO_AUTOINSTALL in linhas, (
+            f"{pacote}: o DKMS que reprova o 77 no autoinstall quebraria o kernel novo"
         )
+        assert [linha for linha in linhas if linha.startswith("BUILD_EXCLUSIVE_KERNEL=")] == [
+            EXCLUSIVO
+        ], f"{pacote}: o dkms.conf voltou a prender o build a uma lista de kernels"
 
 
 @pytest.mark.parametrize(
@@ -103,7 +121,7 @@ def test_o_srcversion_do_preparador_e_o_do_modpost(
 
 
 class Kernel:
-    def __init__(self, raiz: Path, srcversion: str) -> None:
+    def __init__(self, raiz: Path, srcversion: str, versao_dos_headers: str = "") -> None:
         self.raiz = raiz
         self.pacote = raiz / "pacote"
         shutil.copytree(DKMS / "uhid", self.pacote)
@@ -123,9 +141,21 @@ class Kernel:
             f'#!/bin/sh\n[ "$2" = srcversion ] && echo {srcversion}\nexit 0\n', encoding="utf-8"
         )
         modinfo.chmod(0o755)
+        make = self.bin / "make"
+        make.write_text(
+            "#!/bin/sh\n"
+            "for a; do case $a in\n"
+            f"  kernelversion) echo {versao_dos_headers}; exit 0 ;;\n"
+            '  M=*) : > "${a#M=}/uhid.ko" ;;\n'
+            "esac; done\nexit 0\n",
+            encoding="utf-8",
+        )
+        make.chmod(0o755)
+        if versao_dos_headers:
+            (self.ksrc / "Makefile").write_text("kernelversion:\n", encoding="utf-8")
         self.stable = raiz / "stable"
 
-    def rodar(self, kver: str = KERNEL_NOVO) -> subprocess.CompletedProcess[str]:
+    def rodar(self, kver: str = KERNEL_NOVO, *antes: str) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
         env.update(
             PATH=f"{self.bin}{os.pathsep}{env.get('PATH', '')}",
@@ -137,6 +167,7 @@ class Kernel:
             [
                 sys.executable,
                 str(self.pacote / "preparar-o-fonte.py"),
+                *antes,
                 kver,
                 str(self.ksrc),
                 str(self.veredito),
@@ -148,10 +179,8 @@ class Kernel:
         )
 
     def lido(self, kver: str = KERNEL_NOVO) -> tuple[str, str]:
-        estado, frase = (
-            (self.veredito / f"fonte-{kver}.txt").read_text(encoding="utf-8").split("\n", 1)
-        )
-        return estado, frase.strip()
+        linhas = (self.veredito / f"fonte-{kver}.txt").read_text(encoding="utf-8").split("\n")
+        return linhas[0], linhas[1].strip()
 
     def uhid_c(self) -> str:
         return hashlib.sha256((self.pacote / "uhid.c").read_bytes()).hexdigest()
@@ -258,3 +287,138 @@ def test_o_dkms_lib_le_o_veredito_que_o_preparador_grava(tmp_path: Path) -> None
     assert lido.returncode == 0, lido.stderr
     estado, frase = lido.stdout.rstrip("\n").split("\t", 1)
     assert (estado, frase) == kernel.lido()
+
+
+def _uhid_sem_srcversion(kernel: Kernel) -> None:
+    modinfo = kernel.bin / "modinfo"
+    modinfo.write_text(
+        '#!/bin/sh\n[ "$2" = alias ] && echo uhid:devname\nexit 0\n', encoding="utf-8"
+    )
+
+
+def test_sem_srcversion_so_o_stable_da_versao_dos_headers_se_confere(tmp_path: Path) -> None:
+    kver = "7.9.0-3-amd64"
+    kernel = Kernel(tmp_path, "", versao_dos_headers="7.9.4")
+    _uhid_sem_srcversion(kernel)
+    ko = kernel.modulos / kver / "kernel" / "drivers" / "hid" / "uhid.ko"
+    ko.parent.mkdir(parents=True)
+    ko.write_bytes(b"")
+    _uhid_de_fabrica(kernel.stable / "v7.9")
+    _uhid_de_fabrica(kernel.stable / "v7.9.4")
+    feito = kernel.rodar(kver)
+    assert feito.returncode == 0, feito.stderr
+    estado, frase = kernel.lido(kver)
+    assert estado == "fabrica"
+    assert "o stable v7.9.4 do kernel.org" in frase, frase
+    assert "pelos alias e parâmetros no stable da versão que os headers declaram" in frase, frase
+
+
+def test_sem_srcversion_e_sem_a_versao_dos_headers_o_stable_nao_entra(tmp_path: Path) -> None:
+    kver = "7.9.0-3-amd64"
+    kernel = Kernel(tmp_path, "")
+    _uhid_sem_srcversion(kernel)
+    ko = kernel.modulos / kver / "kernel" / "drivers" / "hid" / "uhid.ko"
+    ko.parent.mkdir(parents=True)
+    ko.write_bytes(b"")
+    _uhid_de_fabrica(kernel.stable / "v7.9")
+    feito = kernel.rodar(kver)
+    assert feito.returncode == PULA, feito.stderr
+    estado, frase = kernel.lido(kver)
+    assert estado == "sem-fonte"
+    assert "os headers não dizem a versão exata" in frase, frase
+    assert "o stable v7.9 " not in frase, frase
+
+
+def test_o_include_da_pasta_de_cima_entra_no_fecho_e_fica_fora_do_srcversion() -> None:
+    preparador = _preparador("uhid")
+    arvore = {
+        "drivers/g/function/f_x.c": b'#include "u_x.h"\n#include "u_f.h"\nint a;\n',
+        "drivers/g/function/u_x.h": b"int b;\n",
+        "drivers/g/u_f.h": b"int c;\n",
+    }
+    faltou: list[str] = []
+    arquivos = preparador._fecho("drivers/g/function/f_x.c", arvore.get, faltou)
+    assert arquivos == arvore and not faltou
+    so_da_pasta = {k: v for k, v in arvore.items() if "/function/" in k}
+    assert preparador.srcversion(arquivos) == preparador.srcversion(so_da_pasta)
+    del arvore["drivers/g/u_f.h"]
+    assert preparador._fecho("drivers/g/function/f_x.c", arvore.get, faltou) is None
+    assert faltou == ["drivers/g/function/u_f.h"]
+
+
+def test_o_exclusivo_pula_quando_o_de_fabrica_fica_e_nao_toca_o_fonte(tmp_path: Path) -> None:
+    kernel = Kernel(tmp_path, "0123456789ABCDEF0123456", versao_dos_headers="7.9.1")
+    _uhid_de_fabrica(kernel.ksrc)
+    makefile = (kernel.pacote / "Makefile").read_bytes()
+    antes = kernel.uhid_c()
+    feito = kernel.rodar(KERNEL_NOVO, "--exclusivo")
+    assert feito.returncode == 0, feito.stderr
+    assert feito.stdout == f"{NENHUM_KERNEL}\n"
+    estado, frase = kernel.lido()
+    assert estado == "sem-fonte", frase
+    assert (kernel.pacote / "Makefile").read_bytes() == makefile
+    assert kernel.uhid_c() == antes
+    assert not (kernel.veredito / f"fonte-{KERNEL_NOVO}.tar").exists()
+
+
+def test_o_exclusivo_prepara_e_o_pre_build_usa_o_guardado(tmp_path: Path) -> None:
+    kernel = Kernel(tmp_path, _fabrica(), versao_dos_headers="7.9.1")
+    _uhid_de_fabrica(kernel.ksrc)
+    antes = kernel.uhid_c()
+    feito = kernel.rodar(KERNEL_NOVO, "--exclusivo")
+    assert feito.returncode == 0, feito.stderr
+    assert feito.stdout == "\n"
+    assert kernel.lido()[0] == "fabrica"
+    assert (kernel.veredito / f"fonte-{KERNEL_NOVO}.tar").is_file()
+    assert kernel.uhid_c() == antes
+    shutil.rmtree(kernel.ksrc / "drivers")
+    feito = kernel.rodar()
+    assert feito.returncode == 0, feito.stderr
+    assert kernel.uhid_c() == _baseline("uhid", "SHA256_PATCHED_C")
+
+
+def test_o_exclusivo_nao_decide_sem_headers_nem_no_kernel_ja_construido(tmp_path: Path) -> None:
+    kernel = Kernel(tmp_path, "0123456789ABCDEF0123456")
+    feito = kernel.rodar(KERNEL_NOVO, "--exclusivo")
+    assert (feito.returncode, feito.stdout) == (0, "\n"), feito.stderr
+    assert not (kernel.veredito / f"fonte-{KERNEL_NOVO}.txt").exists()
+    (kernel.ksrc / "Makefile").write_text("kernelversion:\n", encoding="utf-8")
+    (kernel.veredito / KERNEL_NOVO).mkdir()
+    feito = kernel.rodar(KERNEL_NOVO, "--exclusivo")
+    assert (feito.returncode, feito.stdout) == (0, "\n"), feito.stderr
+    assert not (kernel.veredito / f"fonte-{KERNEL_NOVO}.txt").exists()
+
+
+@pytest.mark.parametrize(
+    ("autoinstall", "esperado"),
+    [('[ "$s" = 77 ]', "yes"), ('[ "$s" = 0 ]', ""), (None, "yes")],
+)
+def test_o_dkms_conf_lido_pelo_dkms_pula_e_tira_o_autoinstall_que_reprova_o_77(
+    tmp_path: Path, autoinstall: str | None, esperado: str
+) -> None:
+    kernel = Kernel(tmp_path, "0123456789ABCDEF0123456", versao_dos_headers="7.9.1")
+    _uhid_de_fabrica(kernel.ksrc)
+    funcao = f"autoinstall() {{ {autoinstall}; }}\n" if autoinstall else ""
+    lido = subprocess.run(
+        [
+            BASH,
+            "-c",
+            f"{funcao}kernelver={KERNEL_NOVO}\nkernel_source_dir='{kernel.ksrc}'\n"
+            f"dkms_tree='{kernel.arvore_dkms}'\n"
+            f". '{kernel.pacote / 'dkms.conf'}'\n"
+            'printf "%s|%s" "$BUILD_EXCLUSIVE_KERNEL" "$AUTOINSTALL"',
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={
+            **os.environ,
+            "PATH": f"{kernel.bin}{os.pathsep}{os.environ.get('PATH', '')}",
+            "HEFESTO_DKMS_MODULES_ROOT": str(kernel.modulos),
+            "HEFESTO_DKMS_FONTE_DA_DISTRO": str(tmp_path / "sem-distro-*.tar.xz"),
+            "HEFESTO_DKMS_STABLE_URL": f"file://{kernel.stable}/{{tag}}/{{caminho}}",
+        },
+    )
+    assert lido.returncode == 0, lido.stderr
+    assert lido.stdout == f"{NENHUM_KERNEL}|{esperado}", lido.stderr
+    assert kernel.lido()[0] == "sem-fonte"

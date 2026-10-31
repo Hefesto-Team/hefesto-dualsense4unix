@@ -140,7 +140,11 @@ class TestDkmsConf:
 
     def test_sem_pino_o_pre_build_decide_pelo_kernel_que_roda(self) -> None:
         """O `main.h` vem do cache ou do fonte de fábrica conferido; nunca de outro kernel."""
-        assert "BUILD_EXCLUSIVE_KERNEL=" not in DKMS_CONF
+        assert all(
+            "--exclusivo" in linha
+            for linha in DKMS_CONF.splitlines()
+            if linha.startswith("BUILD_EXCLUSIVE_KERNEL=")
+        ), "o dkms.conf voltou a prender o build a uma lista de kernels"
         assert re.search(r'^PRE_BUILD="\./preparar-o-fonte\.py \$kernelver ', DKMS_CONF, re.M), (
             "o PRE_BUILD sumiu — o build vai usar o `main.h` que estiver na "
             "pasta, e um `main.h` de outro kernel corrompe memória sem avisar"
