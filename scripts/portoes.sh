@@ -55,6 +55,7 @@ rapido|endereco-do-usuario-em-toda-forma|py|scripts/check_o_endereco_em_toda_for
 rapido|serial-de-aparelho|py|scripts/check_numero_de_serie.py
 rapido|faixa-sintetica|py|scripts/check_faixa_sintetica.py
 rapido|codigo-sem-comentario|py|scripts/check_codigo_sem_comentario.py|@sempre
+rapido|biblioteca-pessoal|py|scripts/check_a_biblioteca_pessoal_fica_fora.py|@sempre
 completo|mac-por-oui|pytest|tests/unit/test_docs_mac_anonimato.py
 completo|mac-de-fixture|pytest|tests/unit/test_anonimato_de_fixtures.py
 rapido|autoria-historia|py|scripts/check_autoria.py historia|@sempre
