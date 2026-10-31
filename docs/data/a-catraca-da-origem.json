@@ -240,14 +240,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1171588,
+      "piso": 1171852,
       "por_item": {
         "docs": 107802,
         "scripts": 109592,
-        "src": 295956,
-        "tests": 658238
+        "src": 295967,
+        "tests": 658491
       },
-      "razao": "tamanho: +5059 linhas (1166529 -> 1171588), pagas por Origem: D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 599ec988ab13",
+      "razao": "tamanho: +264 linhas (1171588 -> 1171852), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo e2ac16d4659b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1232,10 +1232,16 @@
           "de": 1166529,
           "para": 1171588,
           "razao": "tamanho: +5059 linhas (1166529 -> 1171588), pagas por Origem: D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 599ec988ab13"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1171588,
+          "para": 1171852,
+          "razao": "tamanho: +264 linhas (1171588 -> 1171852), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo e2ac16d4659b"
         }
       ],
       "unidade": "linhas",
-      "universo": 3268
+      "universo": 3269
     }
   }
 }
