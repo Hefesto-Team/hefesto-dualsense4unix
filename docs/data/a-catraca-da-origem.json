@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1172174,
+      "piso": 1171912,
       "por_item": {
         "docs": 107802,
         "scripts": 109592,
-        "src": 295990,
-        "tests": 658790
+        "src": 295685,
+        "tests": 658833
       },
-      "razao": "tamanho: +298 linhas (1171876 -> 1172174), pagas por Origem: D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR; registrado no fecho, topo 7acb02bd0cdc",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
