@@ -1,0 +1,266 @@
+"""O controle de fora guarda o lugar como o DualSense.
+
+O assento é do jogador, não do tipo de controle (D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA):
+
+1. com o jogo aberto, o Pro (ou o 8BitDo) que dirige o pad do P1 segue no boneco 1 quando um
+   DualSense chega, e o DualSense senta no primeiro lugar livre; sem jogo, a carta manda;
+2. o de fora sentado no P2 assume o P1 que ficou vago só quando o lugar guardado do P1 vence;
+3. o quadro neutro do pad que o de fora larga sai antes do primeiro despacho do DualSense.
+
+O backend é o real no ensaio de queda (``MesaDoJogo``), no cabo e no rádio; o co-op é o real
+com o Pro da mesa do acionador. Nenhum endereço real: faixa forjada ``aa:bb:cc``.
+"""
+from __future__ import annotations
+
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
+from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_mod
+from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
+from tests.unit.test_o_acionador_entrega_a_um_controle_de_fora import (
+    P1,
+    PRO,
+    _Broker,
+    _daemon,
+    _PadDoP1,
+    mesa,
+)
+from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
+    UNIQS,
+    MesaDoJogo,
+    Relogio,
+    config_isolado,
+)
+
+__all__ = ["config_isolado", "mesa"]
+
+MASCARAS = pytest.mark.parametrize("mascara", ["dualsense", "xbox"])
+VIAS = pytest.mark.parametrize("via", ["usb", "bt"])
+NEUTRO = {"lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
+QUADRO_DO_DUALSENSE = {"lx": 7, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
+
+
+class _Backend(SimpleNamespace):
+    """O que o co-op lê do backend: o primário e as perguntas penduradas."""
+
+    def set_o_p1_com_o_de_fora(self, pergunta: Any) -> None:
+        self.p1_com_o_de_fora = pergunta
+
+    def set_primary_change_observer(self, fn: Any) -> None:
+        self.observador = fn
+
+
+def _mesa_com_o_pro(
+    monkeypatch: pytest.MonkeyPatch, mascara: str, *, jogo: bool
+) -> tuple[CoopManager, Any, dict[str, str]]:
+    dualsenses: dict[str, str] = {}
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+        lambda: dict(dualsenses),
+    )
+    pad: Any = _PadDoP1()
+    pad.flavor = mascara
+    daemon: Any = _daemon(_Broker())
+    daemon.config.gamepad_flavor = mascara
+    daemon._gamepad_device = pad
+    daemon.display_authority = "game" if jogo else "daemon"
+    daemon.controller = _Backend(
+        primary_uniq=None,
+        _evdev=SimpleNamespace(_device_path=None),
+        is_connected=lambda: bool(dualsenses),
+    )
+    mgr = CoopManager(daemon)
+    daemon._coop_manager = mgr
+    mgr.sync()
+    mgr.sync(force=True)
+    assert mgr.o_de_fora_no_p1() is mgr._players[PRO]
+    return mgr, pad, dualsenses
+
+
+def _chega_o_dualsense(mgr: CoopManager, dualsenses: dict[str, str]) -> None:
+    """O hotplug: o backend senta o DualSense no posto só se a pergunta pendurada deixa."""
+    ctrl: Any = mgr._daemon.controller
+    dualsenses[P1] = "/dev/input/event20"
+    if not ctrl.p1_com_o_de_fora():
+        ctrl.primary_uniq = P1
+        ctrl.observador(None, P1)
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestOBackendDeixaOPostoComODeFora:
+    """O backend real: a pergunta pendurada segura o posto, no cabo e no rádio."""
+
+    @VIAS
+    def test_o_dualsense_que_chega_nao_senta_no_posto_enquanto_o_de_fora_segue(
+        self, monkeypatch: pytest.MonkeyPatch, via: str
+    ) -> None:
+        relogio = Relogio()
+        ensaio = MesaDoJogo(monkeypatch, relogio=relogio, tempo=relogio, jogo=True)
+        segue = [True]
+        ensaio.inst.set_o_p1_com_o_de_fora(lambda: segue[0])
+        ensaio.mesa.sentar(UNIQS[0], transporte=via)
+        ensaio.connect()
+        ensaio.inst.seguir_a_carta()
+
+        assert ensaio.inst.primary_uniq is None
+        assert ensaio.inst.read_state().connected, "o posto ocupado pelo de fora não é queda"
+
+        segue[0] = False
+        ensaio.inst.seguir_a_carta()
+        assert ensaio.inst.primary_uniq == UNIQS[0]
+
+
+@pytest.mark.usefixtures("mesa")
+class TestComOJogoQuemJogaFicaNoLugar:
+    """Item 1: o Pro no P1 com o jogo aberto, e chega um DualSense."""
+
+    @MASCARAS
+    def test_o_pro_segue_no_p1_e_o_dualsense_senta_no_p2(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses = _mesa_com_o_pro(monkeypatch, mascara, jogo=True)
+        pro = mgr._players[PRO]
+
+        _chega_o_dualsense(mgr, dualsenses)
+        mgr.sync(force=True)
+        mgr.forward_all()
+
+        daemon: Any = mgr._daemon
+        assert daemon.controller.primary_uniq is None
+        assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
+        assert mgr._players[P1].player_index == 2 and mgr._players[P1].vpad is not pad
+        assert coop_mod.o_p1_e_do_de_fora(mgr._daemon)
+
+    @MASCARAS
+    def test_o_despacho_do_posto_vazio_nao_pisa_no_pro(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, _pad, dualsenses = _mesa_com_o_pro(monkeypatch, mascara, jogo=True)
+        _chega_o_dualsense(mgr, dualsenses)
+        mgr.sync(force=True)
+        pisou: list[str] = []
+
+        def _apertos(*_a: Any) -> tuple[frozenset[str], frozenset[str]]:
+            pisou.append("despacho")
+            return frozenset(), frozenset()
+
+        monkeypatch.setattr(gamepad_mod, "_apertos_do_primario", _apertos)
+        for nome in ("_avisar_troca_de_modo", "bater_a_vibracao", "_bater_os_eventos_do_jogo"):
+            monkeypatch.setattr(gamepad_mod, nome, lambda _d: None)
+
+        gamepad_mod.dispatch_gamepad(mgr._daemon, SimpleNamespace(), frozenset())
+
+        assert pisou == [], "o estado vazio do posto foi ao pad que o Pro dirige"
+
+    @MASCARAS
+    def test_sem_jogo_a_carta_manda(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses = _mesa_com_o_pro(monkeypatch, mascara, jogo=False)
+        pro = mgr._players[PRO]
+
+        _chega_o_dualsense(mgr, dualsenses)
+        mgr.sync(force=True)
+
+        daemon: Any = mgr._daemon
+        assert daemon.controller.primary_uniq == P1
+        assert not pro.no_p1 and pro.vpad is not pad and pro.player_index >= 2
+
+    @MASCARAS
+    def test_o_jogo_que_fecha_devolve_a_carta(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses = _mesa_com_o_pro(monkeypatch, mascara, jogo=True)
+        pro = mgr._players[PRO]
+        _chega_o_dualsense(mgr, dualsenses)
+        mgr.sync(force=True)
+
+        daemon: Any = mgr._daemon
+        daemon.display_authority = "daemon"
+        ctrl = daemon.controller
+        assert not ctrl.p1_com_o_de_fora()
+        ctrl.primary_uniq = P1
+        ctrl.observador(None, P1)
+        mgr.sync(force=True)
+
+        assert not pro.no_p1 and pro.vpad is not pad and pro.player_index >= 2
+
+
+@pytest.mark.usefixtures("mesa")
+class TestOQuadroNeutroVemAntes:
+    """Item 3: o pad do P1 não recebe quadro neutro depois do primeiro do DualSense."""
+
+    @MASCARAS
+    def test_nenhum_neutro_depois_do_primeiro_quadro_do_dualsense(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses = _mesa_com_o_pro(monkeypatch, mascara, jogo=False)
+        pad.analogicos.clear()
+
+        _chega_o_dualsense(mgr, dualsenses)
+        pad.forward_analog(**QUADRO_DO_DUALSENSE)
+        mgr.forward_all()
+        mgr.sync(force=True)
+        mgr.forward_all()
+
+        assert QUADRO_DO_DUALSENSE in pad.analogicos
+        depois = pad.analogicos[pad.analogicos.index(QUADRO_DO_DUALSENSE) + 1 :]
+        assert NEUTRO not in depois, f"o neutro caiu depois do DualSense: {pad.analogicos}"
+        assert NEUTRO in pad.analogicos[: pad.analogicos.index(QUADRO_DO_DUALSENSE)]
+
+
+class _Guardados:
+    def __init__(self, lugares: dict[str, float]) -> None:
+        self.lugares = lugares
+
+    def guardados(self) -> dict[str, float]:
+        return dict(self.lugares)
+
+
+@pytest.mark.usefixtures("mesa")
+class TestOP1VagoSoDepoisDoPrazo:
+    """Item 2: o DualSense do P1 sai de vez, e o Pro sentado no P2 espera o prazo."""
+
+    @MASCARAS
+    @pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+    def test_o_pro_do_p2_assume_o_p1_quando_o_lugar_vence(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str, jogo: bool
+    ) -> None:
+        dualsenses = {P1: "/dev/input/event20"}
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+            lambda: dict(dualsenses),
+        )
+        pad: Any = _PadDoP1()
+        pad.flavor = mascara
+        daemon: Any = _daemon(_Broker())
+        daemon.config.gamepad_flavor = mascara
+        daemon._gamepad_device = pad
+        daemon.display_authority = "game" if jogo else "daemon"
+        daemon.controller.is_connected = lambda: bool(dualsenses)
+        registro = _Guardados({})
+        daemon.identity_registry = registro
+        mgr = CoopManager(daemon)
+        daemon._coop_manager = mgr
+        mgr.sync()
+        mgr.sync(force=True)
+        pro = mgr._players[PRO]
+        proprio: Any = pro.vpad
+        assert proprio is not None and proprio is not pad and pro.player_index == 2
+        proprio.flavor = mascara
+
+        dualsenses.clear()
+        daemon.controller.primary_uniq = None
+        registro.lugares = {P1: 20.0}
+        for _ in range(3):
+            mgr.sync(force=True)
+        assert pro.vpad is proprio and not pro.no_p1, "o Pro andou antes de o lugar vencer"
+        assert mgr.o_de_fora_no_p1() is None
+
+        registro.lugares = {}
+        mgr.sync(force=True)
+        assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
+        assert mgr.numeros_de_jogador()[PRO] == 1

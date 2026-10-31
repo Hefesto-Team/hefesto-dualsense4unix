@@ -375,6 +375,7 @@ class CoopManager:
         """O controle `novo` virou o primário — solte-o AGORA, antes do retarget."""
         if novo is None:
             return
+        _largar_o_p1_do_de_fora(self)
         player = self._players.get(novo)
         if player is None or player.cedido_ao_primario:
             return
@@ -386,8 +387,7 @@ class CoopManager:
         self._retry_spawn = True
         logger.info(
             "coop_player_cedido_ao_primario",
-            identity=novo,
-            anterior=anterior,
+            identity=novo, anterior=anterior,
             **self._numero_e_indice(player),
         )
 
@@ -465,7 +465,7 @@ class CoopManager:
         vistos = discover_dualsense_evdevs()
         sozinho = not vistos and not self._algum_dualsense_conectado()
         self._seguir_o_p1_emprestado(sozinho)
-        if not sozinho and (primary is None or primary.startswith("path:")):
+        if not sozinho and _o_posto_sem_mac(self, primary):
             logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
             self._retry_spawn = True
             return
@@ -996,15 +996,15 @@ class CoopManager:
         return next((p for p in self._players.values() if getattr(p, "no_p1", False)), None)
 
     def _sentar_o_de_fora_no_p1(self, sozinho: bool) -> None:
-        """Sem DualSense na mesa, o primeiro de fora na carta sem pad próprio dirige o do P1;
-        quem já joga no pad dele segue no boneco (D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO)."""
+        """Sem DualSense, o de fora dirige o pad do P1 (D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO):
+        na carta, quem não tem pad; quem joga no pad próprio, só vencido o lugar guardado."""
         if not sozinho or not self._o_p1_esta_livre():
             return
-        sem_pad = [m for m, p in self._players.items() if p.externo and p.vpad is None]
-        de_fora = self._na_ordem_da_carta(sem_pad)
+        de_fora = _quem_senta_no_p1_vago(self)
         if not de_fora:
             return
         player = self._players[de_fora[0]]
+        _assumir_o_p1(player)
         player.no_p1 = True
         player.player_index = 1
         if player.reader.grab_state == "held":
@@ -1025,7 +1025,7 @@ class CoopManager:
         player = self.o_de_fora_no_p1()
         if player is None:
             return
-        if not sozinho:
+        if not sozinho and not o_p1_fica_com_o_de_fora(self):
             self._devolver_o_p1(player)
             return
         dev = getattr(self._daemon, "_gamepad_device", None)
@@ -2430,7 +2430,6 @@ class CoopManager:
         self.disable()
         _esperar_as_descidas()
 
-
     def _pendurar_a_espera_do_posto(self, ctrl: Any) -> None:
         """A segunda metade do `_garantir_aviso_de_primario`: a pergunta da vaga."""
         pendurar = getattr(ctrl, "set_espera_do_posto", None)
@@ -2439,6 +2438,7 @@ class CoopManager:
         segurar = getattr(ctrl, "set_o_posto_fica_no_jogo", None)
         if callable(segurar):
             segurar(self.o_posto_fica_no_jogo)
+        _pendurar_o_de_fora(self, ctrl)
         logger.debug("coop_aviso_de_primario_ligado")
 
     def o_posto_do_p1_espera(self, uniq: str) -> bool:
@@ -3353,3 +3353,77 @@ def _esperar_as_descidas() -> None:
     from hefesto_dualsense4unix.integrations.uhid_gamepad import esperar_as_descidas
 
     esperar_as_descidas()
+
+
+def _algum_lugar_guardado(daemon: Any) -> bool:
+    """Algum lugar guardado ainda espera quem saiu; sem o registro, espera."""
+    guardados = getattr(getattr(daemon, "identity_registry", None), "guardados", None)
+    if not callable(guardados):
+        return True
+    try:
+        return bool(guardados())
+    except Exception as exc:
+        logger.warning("coop_lugar_guardado_ilegivel", err=str(exc))
+        return True
+
+
+def _quem_senta_no_p1_vago(manager: CoopManager) -> list[str]:
+    """Primeiro quem não tem pad; vencido o lugar guardado, quem joga no pad próprio, na carta."""
+    jogadores = manager._players.items()
+    de_fora = manager._na_ordem_da_carta([m for m, p in jogadores if p.externo and p.vpad is None])
+    if de_fora or _algum_lugar_guardado(manager._daemon):
+        return de_fora
+    return manager._na_ordem_da_carta(
+        [m for m, p in jogadores if p.externo and p.vpad is not None and not manager._espera(p)]
+    )
+
+
+def _assumir_o_p1(player: Any) -> None:
+    """O de fora que jogava no pad próprio larga esse pad antes de dirigir o do P1."""
+    if player.vpad is None:
+        return
+    logger.info("coop_externo_assume_o_p1", identity=player.identity)
+    with contextlib.suppress(Exception):
+        _parar_fora_do_tique(player.vpad)
+    player.vpad = None
+
+
+def o_p1_fica_com_o_de_fora(manager: CoopManager) -> bool:
+    """O controle de fora segue no boneco 1 quando um DualSense chega com o jogo aberto.
+
+    O assento é do jogador, não do tipo de controle (D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA):
+    quem chega senta no primeiro lugar livre; sem jogo, a carta manda.
+    """
+    return manager.o_de_fora_no_p1() is not None and manager.o_posto_fica_no_jogo()
+
+
+def _o_posto_sem_mac(manager: CoopManager, primary: str | None) -> bool:
+    """O posto sem primário espera o MAC, salvo quando o de fora segue no boneco 1."""
+    if primary is not None and not primary.startswith("path:"):
+        return False
+    ctrl = getattr(manager._daemon, "controller", None)
+    return bool(getattr(ctrl, "primary_uniq", None)) or not o_p1_fica_com_o_de_fora(manager)
+
+
+def _largar_o_p1_do_de_fora(manager: CoopManager) -> None:
+    """O de fora larga o pad do P1 com o quadro neutro antes do primeiro despacho do DualSense."""
+    de_fora = manager.o_de_fora_no_p1()
+    if de_fora is not None:
+        manager._devolver_o_p1(de_fora)
+
+
+def _pendurar_o_de_fora(manager: CoopManager, ctrl: Any) -> None:
+    pendurar = getattr(ctrl, "set_o_p1_com_o_de_fora", None)
+    if callable(pendurar):
+        pendurar(lambda: o_p1_fica_com_o_de_fora(manager))
+
+
+def o_p1_e_do_de_fora(daemon: Any) -> bool:
+    """O pad do P1 é dirigido por um controle de fora, sem primário no backend."""
+    manager = getattr(daemon, "_coop_manager", None)
+    if not isinstance(manager, CoopManager):
+        return False
+    player = manager.o_de_fora_no_p1()
+    if player is None or getattr(getattr(daemon, "controller", None), "primary_uniq", None):
+        return False
+    return player.vpad is not None and player.vpad is getattr(daemon, "_gamepad_device", None)

@@ -2555,7 +2555,7 @@ class PyDualSenseController(IController):
                 **self._carga_do_posto_vago(),
                 l2_raw=0,
                 r2_raw=0,
-                connected=self._posto_vago_de is not None,
+                connected=self._posto_vago_de is not None or self._posto_com_o_de_fora,
                 transport=self._transport,
                 raw_lx=128,
                 raw_ly=128,
@@ -4984,6 +4984,33 @@ class PyDualSenseController(IController):
             logger.warning("posto_do_p1_pergunta_falhou", err=str(exc))
             return False
 
+    _p1_com_o_de_fora: Callable[[], bool] | None = None
+    _posto_com_o_de_fora: bool = False
+
+    def set_o_p1_com_o_de_fora(self, pergunta: Callable[[], bool] | None) -> None:
+        """Pendura quem decide se o controle de fora segue no boneco 1 quando um DualSense chega."""
+        with self._io_lock:
+            self._p1_com_o_de_fora = pergunta
+
+    def _o_posto_segue_com_o_de_fora_locked(self) -> bool:
+        """Com o jogo segurando o boneco 1 com um controle de fora, quem chega não senta no posto.
+
+        O assento é do jogador, não do tipo de controle (D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA):
+        o posto fica sem primário, o DualSense que chega senta no primeiro lugar livre do co-op e o
+        ``read_state`` diz o posto ocupado, como na vaga.
+        """
+        pergunta = self._p1_com_o_de_fora
+        segue = False
+        if pergunta is not None and self._handles:
+            try:
+                segue = bool(pergunta())
+            except Exception as exc:
+                logger.warning("posto_do_p1_pergunta_falhou", err=str(exc))
+        if segue != self._posto_com_o_de_fora:
+            logger.info("posto_do_p1_com_o_de_fora", segue=segue)
+        self._posto_com_o_de_fora = segue
+        return segue
+
     def _uniq_do_dono_do_posto(self) -> str | None:
         """O MAC do dono do posto de P1: o primário, ou quem a vaga espera (o que o `primary_uniq`
         responde).
@@ -5008,6 +5035,8 @@ class PyDualSenseController(IController):
         """
         if sentado is not None and sentado in self._handles:
             return self._a_carta_menor_locked(sentado)
+        if self._o_posto_segue_com_o_de_fora_locked():
+            return None
         reserva = self._primario_deposto
         pergunta = self._espera_do_posto
         if reserva is not None and self._handles and self._a_troca_espera_locked(reserva[0]):

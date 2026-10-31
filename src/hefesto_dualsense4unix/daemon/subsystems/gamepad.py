@@ -2536,7 +2536,7 @@ def dispatch_gamepad(
     bater_a_vibracao(daemon)
     _bater_os_eventos_do_jogo(daemon)
     device = daemon._gamepad_device
-    if device is None:
+    if device is None or _o_p1_e_do_de_fora(daemon):
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
     do_edge = _os_do_edge(state)
@@ -3355,3 +3355,10 @@ __all__ = [
     "vibrar_o_externo",
     "vpad_vivo",
 ]
+
+
+def _o_p1_e_do_de_fora(daemon: Any) -> bool:
+    """O pad do P1 é de um controle de fora: o estado vazio do posto não vai a ele."""
+    from hefesto_dualsense4unix.daemon.subsystems.coop import o_p1_e_do_de_fora
+
+    return o_p1_e_do_de_fora(daemon)
