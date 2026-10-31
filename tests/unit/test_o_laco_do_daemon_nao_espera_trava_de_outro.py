@@ -109,16 +109,10 @@ def sem_escrevente(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         le.desarmar_o_escrevente(escrevente)
 
 
-def test_o_arme_do_lancamento_nao_espera_a_escrita_do_fio_escrevente(
-    sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """O arme pede a escrita ao fio escrevente e volta, com a trava da escrita ocupada.
-
-    Prova da D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO.
-    """
+def _preparar_o_arme(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, epoch: int) -> _DaemonFalso:
     from hefesto_dualsense4unix.profiles import manager
 
-    (tmp_path / "last_run").write_text(f"appid={APPID}\nepoch=1000\npid=1\n", encoding="utf-8")
+    (tmp_path / "last_run").write_text(f"appid={APPID}\nepoch={epoch}\npid=1\n", encoding="utf-8")
     perfil = _perfil()
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [(APPID, perfil)])
@@ -128,7 +122,17 @@ def test_o_arme_do_lancamento_nao_espera_a_escrita_do_fio_escrevente(
     monkeypatch.setattr(
         manager, "gerente_do_daemon",
         lambda daemon, **kw: SimpleNamespace(activate=lambda *a, **k: None))
-    daemon = _DaemonFalso()
+    return _DaemonFalso()
+
+
+def test_o_arme_do_lancamento_nao_espera_a_escrita_do_fio_escrevente(
+    sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O arme pede a escrita ao fio escrevente e volta, com a trava da escrita ocupada.
+
+    Prova da D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO.
+    """
+    daemon = _preparar_o_arme(tmp_path, monkeypatch, 1000)
 
     def armar() -> tuple[Any, Any]:
         laco = asyncio.get_running_loop()
@@ -149,6 +153,69 @@ def test_o_arme_do_lancamento_nao_espera_a_escrita_do_fio_escrevente(
         f"o arme ficou {gasto:.2f} s no laço esperando a trava da escrita de outro fio")
     assert escrevente.em_voo() or escrevente.escritas >= 1, (
         "o arme não pediu a escrita do lançamento ao fio escrevente")
+
+
+def test_o_arme_pelo_ping_do_wrapper_nao_espera_a_escrita_do_fio_escrevente(
+    sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O arme que o ``daemon.status`` do wrapper agenda no laço também só pede a escrita.
+
+    É a pilha de 05:19:39: ``ipc_handlers._armar_launch`` → ``arm_launch_profile`` →
+    ``materialize_launch_env`` escrevendo no laço, 12 s parado.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    daemon = _preparar_o_arme(tmp_path, monkeypatch, int(time.time()))
+    porta = SimpleNamespace(daemon=daemon)
+
+    async def corpo() -> tuple[Any, float]:
+        laco = asyncio.get_running_loop()
+        escrevente = le.armar_o_escrevente(laco.call_soon_threadsafe, laco)
+        assert escrevente is not None
+        with _Dono(le._TRAVA_DA_ESCRITA):
+            t0 = time.perf_counter()
+            await IpcHandlersMixin._armar_launch(porta)  # type: ignore[arg-type]
+            gasto = time.perf_counter() - t0
+        return escrevente, gasto
+
+    escrevente, gasto = asyncio.run(corpo())
+    assert getattr(daemon, "_launch_armed_for", None) is not None, "o ping não armou o jogo"
+    assert gasto < TETO_S, (
+        f"o arme pelo ping ficou {gasto:.2f} s no laço esperando a trava da escrita")
+    assert escrevente.em_voo() or escrevente.escritas >= 1, (
+        "o arme pelo ping não pediu a escrita do lançamento ao fio escrevente")
+
+
+class _TravaDoDiscoLento:
+    """O ``FileLock`` cujo ``ftruncate`` do ``.lock`` demora: a pilha de 05:13:43, sem dono."""
+
+    def __init__(self, *_a: object, **_k: object) -> None:
+        pass
+
+    def __enter__(self) -> _TravaDoDiscoLento:
+        time.sleep(SEGURA_S)
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+
+@pytest.mark.parametrize("pela_assinatura", [False, True], ids=["direto", "pela-assinatura"])
+def test_o_tique_da_luz_nao_escreve_no_disco_da_trava(
+    monkeypatch: pytest.MonkeyPatch, pela_assinatura: bool
+) -> None:
+    """A leitura do perfil no laço não passa pelo ``.lock``, nem quando o disco demora."""
+    monkeypatch.setenv(loader.SEED_SKIP_ENV_VAR, "1")
+    monkeypatch.setattr(loader, "_LEITURA_LIGADA_PELO_PROCESSO", pela_assinatura)
+    loader._PERFIS_PELA_ASSINATURA.esquecer()
+    loader.save_profile(_perfil())
+    monkeypatch.setattr(loader, "FileLock", _TravaDoDiscoLento)
+    daemon = SimpleNamespace(store=SimpleNamespace(active_profile="Jogo da Régua"))
+    perfil, gasto = _no_laco(lambda: luz_animada.perfil_ativo(daemon))
+    loader._PERFIS_PELA_ASSINATURA.esquecer()
+    assert gasto < TETO_S, (
+        f"o tique da luz ficou {gasto:.2f} s no laço no ftruncate do .lock do perfil")
+    assert perfil is not None and perfil.name == "Jogo da Régua"
 
 
 @pytest.mark.parametrize("pela_assinatura", [False, True], ids=["direto", "pela-assinatura"])
