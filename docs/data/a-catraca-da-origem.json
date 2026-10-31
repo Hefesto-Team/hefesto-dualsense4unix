@@ -239,14 +239,14 @@
       "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1177246,
+      "piso": 1177450,
       "por_item": {
-        "docs": 107814,
+        "docs": 107817,
         "scripts": 110035,
-        "src": 296778,
-        "tests": 662619
+        "src": 296826,
+        "tests": 662772
       },
-      "razao": "tamanho: +808 linhas (1176438 -> 1177246), pagas por Origem: D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL; registrado no fecho, topo 654545121ee0",
+      "razao": "tamanho: +204 linhas (1177246 -> 1177450), pagas por Origem: D-3110-A-TELA-DE-MENTIRA-SO-SE-ADOTA-QUANDO-E-DESTE-PROCESSO; registrado no fecho, topo c92a98a98792",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1303,10 +1303,16 @@
           "de": 1176438,
           "para": 1177246,
           "razao": "tamanho: +808 linhas (1176438 -> 1177246), pagas por Origem: D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL; registrado no fecho, topo 654545121ee0"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1177246,
+          "para": 1177450,
+          "razao": "tamanho: +204 linhas (1177246 -> 1177450), pagas por Origem: D-3110-A-TELA-DE-MENTIRA-SO-SE-ADOTA-QUANDO-E-DESTE-PROCESSO; registrado no fecho, topo c92a98a98792"
         }
       ],
       "unidade": "linhas",
-      "universo": 3285
+      "universo": 3286
     }
   }
 }
