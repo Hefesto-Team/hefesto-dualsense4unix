@@ -514,7 +514,7 @@ def test_o_wrapper_com_o_arme_lento_ainda_recebe_o_ambiente_do_daemon(
     def responder(params: dict[str, Any]) -> dict[str, Any]:
         vezes[0] += 1
         if vezes[0] == 1:
-            time.sleep(5.3)
+            time.sleep(4.4)
         if "appid" not in params:
             return {"connected": True}
         return {"connected": True, "ambiente": {
@@ -530,3 +530,27 @@ def test_o_wrapper_com_o_arme_lento_ainda_recebe_o_ambiente_do_daemon(
         "IGNORE=0x054c/0x0ce6,0x28de/0x11ff|HIDAPI=|HIDRAW=0x054C/0x0CE6"), feito.stdout
     assert [p["params"] for p in falso.pedidos] == [{"appid": APPID}, {"appid": APPID}]
     assert _fonte(tmp_path)["fonte"] == "daemon"
+
+
+def test_o_wrapper_com_o_daemon_pendurado_desiste_no_teto_sem_exportar_nada(
+    runtime: Path, tmp_path: Path
+) -> None:
+    """O daemon que aceita e nunca responde: os dois pedidos somam o teto, e o jogo nasce sem nada.
+
+    O segundo pedido existe para o arme lento; ele não estende o teto do lançamento.
+    """
+    (_env_dir(tmp_path) / "default.env").write_text("\n".join(_XBOX) + "\n", encoding="utf-8")
+
+    def pendurado(_params: dict[str, Any]) -> dict[str, Any]:
+        time.sleep(6.5)
+        return {"connected": True}
+
+    falso = _SocketFalso(_sock(runtime), pendurado)
+    try:
+        feito, gasto = _o_wrapper(runtime, tmp_path)
+    finally:
+        falso.parar()
+    assert feito.returncode == 0, feito.stderr
+    assert gasto < 5.8, f"o daemon pendurado atrasou o lançamento em {gasto:.1f} s"
+    assert feito.stdout.strip() == "IGNORE=|HIDAPI=|HIDRAW="
+    assert _fonte(tmp_path)["fonte"] == "nenhuma"
