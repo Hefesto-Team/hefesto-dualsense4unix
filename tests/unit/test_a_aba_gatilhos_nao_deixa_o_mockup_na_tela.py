@@ -394,7 +394,51 @@ def test_o_lugar_vazio_pergunta_o_traco_ao_dono(a03, publicada, monkeypatch):
                     f"`profiles/sem_efeito.py`, sem perguntar ao `<select>`.")
 
 
-@pytest.mark.parametrize("partir", ["", "—", "sem_efeito", "nenhum", "sem-efeito"])
+SONDA_DO_VAZIO = """
+import json, pathlib, sys
+sys.path.insert(0, sys.argv[1])
+import pacotes
+from pacotes import Contexto, a03_gatilhos as a03, perfil
+doc = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
+a03._pagina_publicada = lambda: doc
+mesa, conectados = json.load(sys.stdin)
+perfil.ativo = lambda _nome: {"controllers": {}, "triggers": {
+    lado: {"mode": "Rigid", "params": []} for lado in ("left", "right")}}
+r = a03.pacote(Contexto(state={"active_profile": "régua"}, mesa=mesa,
+                        conectados=conectados, estados={}))
+print(json.dumps({pref: [col.get(f"{a03.CAMPO_DA_IMERSAO}-{sig}") for sig in a03.LADOS]
+                  for pref, col in r["colunas"].items()}))
+"""
+
+
+def test_o_lugar_vazio_nao_le_o_select_nem_no_primeiro_tique(a03, publicada, tmp_path):
+    """Num processo novo, com a página velha desde o primeiro tique, o lugar vazio segue o dono."""
+    import json
+    import os
+    import subprocess
+
+    from hefesto_dualsense4unix.profiles import sem_efeito
+
+    velha = tmp_path / PAGINA
+    velha.write_text(publicada.replace(f'value="{sem_efeito.VALOR}"',
+                                       f'value="{sem_efeito.ROTULO}"'), encoding="utf-8")
+    filho = subprocess.run(
+        [sys.executable, "-c", SONDA_DO_VAZIO, str(INTERFACE), str(velha)],
+        input=json.dumps([MESA_DE_DOIS, [FALSO, FALSO_2]]),
+        env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+        capture_output=True, text=True, timeout=120)
+    assert filho.returncode == 0, filho.stderr[-2000:]
+    colunas = json.loads(filho.stdout.strip().splitlines()[-1])
+    vazios = sorted(a03._lugares_que_o_desenho_da_por_vazios())
+    assert vazios and set(vazios) <= set(colunas), (vazios, sorted(colunas))
+    for pref in vazios:
+        assert colunas[pref] == [sem_efeito.VALOR] * len(a03.LADOS), (
+            f"{pref} recebeu {colunas[pref]} com a página velha lida desde o primeiro tique: "
+            f"o lugar vazio perguntou ao `<select>` (e guardou a resposta), e não ao dono "
+            f"`profiles/sem_efeito.py`.")
+
+
+@pytest.mark.parametrize("partir", ["", "—", "sem_efeito", "nenhum", "sem-efeito", "Sem efeito"])
 def test_criar_sem_ponto_de_partida_recusa_dizendo(a03, partir):
     """O nenhum efeito, em qualquer nome do dono, não é ponto de partida de efeito novo."""
     with pytest.raises(RuntimeError, match=re.escape("Escolha em qual efeito partir.")):
