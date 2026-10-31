@@ -636,6 +636,14 @@ class TestOPlano:
             mesa, {"p1": 1, "b": 2, "c": 3, "d": 5}, fixos=self.FIXO
         ) == (["b", "c"], True)
 
+    def test_na_mesa_fora_de_ordem_so_quem_esta_fora_do_boneco_renasce(self) -> None:
+        """A-FAIXA-NA-MESA-FORA-DE-ORDEM-01: o 3 guardado, o 2 no boneco 5 e o 4 no boneco certo."""
+        mesa = {0: "p1", 4: "p2", 3: "p4"}
+        assert planejar_a_ordem(mesa, {"p1": 1, "p2": 2, "p4": 4}, fixos=self.FIXO) == (
+            ["p2"],
+            True,
+        )
+
     def test_sem_jogo_nada_muda(self) -> None:
         """Sem jogo, o que abrir depois enumera na ordem de nascimento."""
         mesa = {0: "p1", 1: "p3", 2: "p4"}
@@ -703,10 +711,12 @@ def test_a_varredura_das_mesas_do_produto() -> None:
             continue
         mudaram += 1
         assert not compacta, caso
-        assert _fora_do_boneco(
-            _a_mesa_depois(mesa, novo, nascer, cartas, compacta=compacta), cartas
-        ) < _fora_do_boneco(
-            _a_mesa_depois(mesa, antes, nascer, cartas, compacta=compacta), cartas
+        assert (
+            _fora_do_boneco(_a_mesa_depois(mesa, novo, nascer, cartas, compacta=compacta), cartas),
+            len(novo),
+        ) < (
+            _fora_do_boneco(_a_mesa_depois(mesa, antes, nascer, cartas, compacta=compacta), cartas),
+            len(antes),
         ), caso
         lugar_de = {c: lugar for lugar, c in mesa.items()}
         for chave in set(novo) - set(antes):

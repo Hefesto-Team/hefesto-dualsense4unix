@@ -3254,10 +3254,11 @@ def _a_faixa(
     fixos: frozenset[str],
     melhor: tuple[int, list[str], bool],
 ) -> tuple[int, list[str], bool]:
-    """O plano por FAIXA de cartas, para quando o sufixo deixa gente fora do boneco."""
-    parada = _a_mesa_depois(mesa, [], nascer, cartas, compacta=False)
-    if not _em_ordem([cartas[c] for c in parada.values() if c not in fixos]):
-        return melhor
+    """O plano por FAIXA de cartas, para quando o sufixo deixa gente fora do boneco.
+
+    Vale também na mesa fora de ordem: só entra a faixa que senta cada recriado no boneco da
+    carta dele e deixa a mesa em ordem.
+    """
     sentados = [c for _lugar, c in sorted(mesa.items())]
     limites = sorted({*(cartas[c] for c in sentados), *(cartas[c] for c in nascer)})
     for i, piso in enumerate(limites):

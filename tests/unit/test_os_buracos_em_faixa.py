@@ -200,7 +200,10 @@ class TestAVarredura:
         assert fechavam == 2488, fechavam
 
     def test_quem_muda_so_melhora(self) -> None:
-        """Toda mesa que muda: jogo aberto, mesa em ordem, e a faixa melhor que o sufixo."""
+        """Toda mesa que muda: jogo aberto e a faixa melhor que o sufixo, em ordem ou não.
+
+        A-FAIXA-NA-MESA-FORA-DE-ORDEM-01: a mesa parada fora de ordem também ganha a faixa.
+        """
         mudaram: Counter[str] = Counter()
         os_60 = {id(linha) for linha in _os_60()}
         for linha in _a_varredura():
@@ -210,7 +213,7 @@ class TestAVarredura:
             caso = (mesa, cartas, nascer, fixos, compacta)
             assert not compacta, caso
             parada = _a_mesa_depois(mesa, [], nascer, cartas, compacta=False)
-            assert _em_ordem([cartas[c] for c in parada.values() if c not in fixos]), caso
+            em_ordem = _em_ordem([cartas[c] for c in parada.values() if c not in fixos])
             antes = (_fora(mesa, cartas, nascer, da_03[0], False), len(da_03[0]))
             agora = (_fora(mesa, cartas, nascer, hoje[0], False), len(hoje[0]))
             assert agora < antes, caso
@@ -228,6 +231,8 @@ class TestAVarredura:
             )
             if id(linha) in os_60:
                 mudaram["os 60"] += 1
+            elif not em_ordem:
+                mudaram["fora de ordem"] += 1
             elif agora[0] < antes[0]:
                 mudaram["menos gente fora do boneco"] += 1
             else:
@@ -236,6 +241,7 @@ class TestAVarredura:
             "os 60": 60,
             "menos gente fora do boneco": 322,
             "a mesma conta, menos recriações": 270,
+            "fora de ordem": 2278,
         }
 
 
