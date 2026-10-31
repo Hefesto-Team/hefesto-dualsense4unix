@@ -786,6 +786,7 @@ def cache_de_apps_da_conta(vdf: Path) -> Path | None:
         return None
     return cache_de_apps_da_raiz(vdf.parents[3])
 
+
 def _instalados(home: Path | None) -> list[str]:
     """Os appids com `appmanifest` em disco, sem a infraestrutura da Steam."""
     try:

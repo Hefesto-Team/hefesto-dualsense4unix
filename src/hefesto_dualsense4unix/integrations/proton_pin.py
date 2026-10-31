@@ -1500,23 +1500,21 @@ def _chave(mapa: object, nome: str) -> object:
     return None
 
 
-def oslist_do_appinfo(
-    appinfo: Path, appids: Collection[str]
-) -> dict[str, str] | None:
-    """O `common/oslist` de cada appid pedido, lido do `appinfo.vdf` binário."""
-    procurados = {str(a) for a in appids}
-    if not procurados:
-        return {}
-    achados: dict[str, str] = {}
+def _vdfs_do_appinfo(appinfo: Path, procurados: Collection[str]) -> Iterator[tuple[str, object]]:
+    """`(appid, vdf)` de cada appid procurado no `appinfo.vdf` binário.
+
+    O formato é da Steam e não é prometido: o que sai do esperado levanta `ValueError`.
+    """
+    faltam = {str(a) for a in procurados}
     try:
         with appinfo.open("rb") as fh:
             cabeca = fh.read(8)
             if len(cabeca) < 8:
-                return None
+                raise ValueError("o cache de apps é curto demais")
             magia, _universo = struct.unpack("<II", cabeca)
             versao = _APPINFO_MAGICS.get(magia)
             if versao is None:
-                return None
+                raise ValueError(f"o cache de apps tem a magia desconhecida {magia:#x}")
             chaves: list[str] | None = None
             if versao >= 29:
                 (tabela,) = struct.unpack("<q", fh.read(8))
@@ -1529,7 +1527,7 @@ def oslist_do_appinfo(
                     for s in bruto[4:].split(b"\0")[:quantas]
                 ]
                 fh.seek(inicio_das_entradas)
-            while procurados - achados.keys():
+            while faltam:
                 par = fh.read(8)
                 if len(par) < 4:
                     break
@@ -1537,18 +1535,31 @@ def oslist_do_appinfo(
                 if appid == 0 or len(par) < 8:
                     break
                 (tamanho,) = struct.unpack_from("<I", par, 4)
-                if str(appid) not in procurados:
+                if str(appid) not in faltam:
                     fh.seek(tamanho, os.SEEK_CUR)
                     continue
                 entrada = fh.read(tamanho)
                 if len(entrada) < tamanho:
-                    return None
-                vdf, _ = _ler_vdf_binario(
-                    entrada, _APPINFO_CABECALHO_DA_ENTRADA, chaves
-                )
-                oslist = _chave(_chave(_chave(vdf, "appinfo"), "common"), "oslist")
-                achados[str(appid)] = oslist if isinstance(oslist, str) else ""
-    except (OSError, ValueError, IndexError, struct.error):
+                    raise ValueError(f"a entrada do app {appid} acaba antes do tamanho")
+                vdf, _ = _ler_vdf_binario(entrada, _APPINFO_CABECALHO_DA_ENTRADA, chaves)
+                faltam.discard(str(appid))
+                yield str(appid), vdf
+    except (OSError, IndexError, struct.error) as erro:
+        raise ValueError(f"o cache de apps não se lê: {erro}") from erro
+
+
+def oslist_do_appinfo(
+    appinfo: Path, appids: Collection[str]
+) -> dict[str, str] | None:
+    """O `common/oslist` de cada appid pedido, lido do `appinfo.vdf` binário."""
+    if not appids:
+        return {}
+    achados: dict[str, str] = {}
+    try:
+        for appid, vdf in _vdfs_do_appinfo(appinfo, appids):
+            oslist = _chave(_chave(_chave(vdf, "appinfo"), "common"), "oslist")
+            achados[appid] = oslist if isinstance(oslist, str) else ""
+    except ValueError:
         return None
     return achados
 
@@ -1579,58 +1590,17 @@ def steam_input_do_desenvolvedor(
 ) -> set[str]:
     """Dos `appids`, os que o desenvolvedor pôs no Steam Input.
 
-    O formato é da Steam e não é prometido: o que sai do esperado levanta
-    `ValueError`, e quem chama não inventa resposta. Cache ausente é nenhum declarado.
+    Cache ausente é nenhum declarado; o cache que não se entende levanta
+    `ValueError`, e quem chama não inventa resposta.
     """
     procurados = {str(a) for a in appids if str(a).isdigit()}
-    if not procurados:
+    if not procurados or not appinfo.exists():
         return set()
-    achados: set[str] = set()
-    vistos: set[str] = set()
-    try:
-        if not appinfo.exists():
-            return set()
-        with appinfo.open("rb") as fh:
-            cabeca = fh.read(8)
-            if len(cabeca) < 8:
-                raise ValueError("o cache de apps é curto demais")
-            magia, _universo = struct.unpack("<II", cabeca)
-            versao = _APPINFO_MAGICS.get(magia)
-            if versao is None:
-                raise ValueError(f"o cache de apps tem a magia desconhecida {magia:#x}")
-            chaves: list[str] | None = None
-            if versao >= 29:
-                (tabela,) = struct.unpack("<q", fh.read(8))
-                inicio_das_entradas = fh.tell()
-                fh.seek(tabela)
-                bruto = fh.read()
-                (quantas,) = struct.unpack_from("<I", bruto, 0)
-                chaves = [
-                    s.decode("utf-8", "replace")
-                    for s in bruto[4:].split(b"\0")[:quantas]
-                ]
-                fh.seek(inicio_das_entradas)
-            while procurados - vistos:
-                par = fh.read(8)
-                if len(par) < 4:
-                    break
-                (appid,) = struct.unpack_from("<I", par, 0)
-                if appid == 0 or len(par) < 8:
-                    break
-                (tamanho,) = struct.unpack_from("<I", par, 4)
-                if str(appid) not in procurados:
-                    fh.seek(tamanho, os.SEEK_CUR)
-                    continue
-                entrada = fh.read(tamanho)
-                if len(entrada) < tamanho:
-                    raise ValueError(f"a entrada do app {appid} acaba antes do tamanho")
-                vdf, _ = _ler_vdf_binario(entrada, _APPINFO_CABECALHO_DA_ENTRADA, chaves)
-                vistos.add(str(appid))
-                if mascara_do_desenvolvedor(vdf):
-                    achados.add(str(appid))
-    except (OSError, IndexError, struct.error) as erro:
-        raise ValueError(f"o cache de apps não se lê: {erro}") from erro
-    return achados
+    return {
+        appid
+        for appid, vdf in _vdfs_do_appinfo(appinfo, procurados)
+        if mascara_do_desenvolvedor(vdf)
+    }
 
 
 def _declara_linux(oslist: str) -> bool:
