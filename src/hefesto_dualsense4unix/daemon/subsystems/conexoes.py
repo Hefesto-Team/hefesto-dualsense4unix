@@ -103,14 +103,13 @@ def ler_o_diario() -> dict[str, Any]:
 
 def _partida_do_processo(pid: int) -> int | None:
     try:
-        texto = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
-    except (OSError, ValueError):
+        texto = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace")
+    except OSError as erro:
+        logger.debug("conexao_zumbi_processo_sem_stat", pid=pid, erro=str(erro))
         return None
     campos = texto.rsplit(")", 1)[-1].split()
-    try:
-        return int(campos[19])
-    except (IndexError, ValueError):
-        return None
+    partida = campos[19] if len(campos) > 19 else ""
+    return int(partida) if partida.isdigit() else None
 
 
 def o_diario_e_fresco(dado: dict[str, Any] | None) -> bool:
