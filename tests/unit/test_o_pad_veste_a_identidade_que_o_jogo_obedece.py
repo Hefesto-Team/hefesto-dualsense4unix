@@ -112,6 +112,9 @@ def test_o_edge_so_ganha_sem_o_comum(
         ({_REWIRED: _u16("DualSense Edge"), _ASSETS: b"Sony DualSense Edge"}, "0df2"),
         ({_REWIRED: b"DualSenseDriver", _ASSETS: b"Sony DualSense Edge"}, "0df2"),
         ({_REWIRED: b"DualSenseDriver", _ASSETS: b"Sony DualSense Edge\0Sony DualSense"}, "0ce6"),
+        ({_REWIRED: b"DualSenseDriver", _ASSETS: _u16("Sony DualSense Edge")}, "0df2"),
+        ({_REWIRED: b"DualSenseDriver",
+          _ASSETS: _u16("Sony DualSense Edge") + b"\0\0" + _u16("Sony DualSense")}, "0ce6"),
         ({_ASSETS: b"Sony DualSense"}, "0ce6"),
         ({"SDL3.dll": b"DualSense Edge\0DualSense"}, "0df2"),
         ({"SDL3.dll": b"DualSense Edge\0DualSense", _METADATA: _PERFIS_DO_COMUM}, "0ce6"),
@@ -120,7 +123,8 @@ def test_o_edge_so_ganha_sem_o_comum(
         ({"SDL2.dll": b"DualSense"}, "0ce6"),
     ],
     ids=["rewired-comum", "rewired-dll-edge-assets-comum", "rewired-so-o-edge",
-         "rewired-edge-no-assets", "rewired-assets-com-os-dois", "assets-sem-rewired",
+         "rewired-edge-no-assets", "rewired-assets-com-os-dois", "rewired-assets-utf16-so-o-edge",
+         "rewired-assets-utf16-com-os-dois", "assets-sem-rewired",
          "sdl3-so-o-edge", "sdl3-edge-e-perfil-do-comum", "sdl3-com-os-dois", "sdl2-sem-edge"],
 )
 def test_o_rewired_e_a_sdl(tmp_path: Path, arquivos: dict[str, bytes], esperada: str) -> None:

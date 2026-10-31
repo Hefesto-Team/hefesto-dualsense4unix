@@ -175,6 +175,19 @@ def test_a_biblioteca_sony_com_os_dois_modelos_segue_no_edge(tmp_path: Path, cas
     assert (roupa, fonte) == (rj.ROUPA_DO_EDGE, "a biblioteca Sony (libScePad) pede o Edge")
 
 
+@pytest.mark.parametrize("caso", sorted(_SO_O_EDGE))
+def test_a_biblioteca_sony_responde_antes_do_jogo_que_conhece_so_o_edge(
+    tmp_path: Path, caso: str
+) -> None:
+    """O Black Myth conhece só o Edge e leva a biblioteca Sony: a fonte é a biblioteca."""
+    arquivos = dict(_SO_O_EDGE[caso])
+    arquivos["Jogo_Data/Plugins/libScePad.dll"] = b"x"
+
+    roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", arquivos))
+
+    assert (roupa, fonte) == (rj.ROUPA_DO_EDGE, "a biblioteca Sony (libScePad) pede o Edge")
+
+
 _BIBLIOTECA_SONY: dict[str, dict[str, bytes]] = {
     "libScePad": {"Jogo_Data/Plugins/libScePad.dll": b"x", _METADATA: _PERFIL_DO_COMUM},
     "scePad": {"Jogo.exe": b"MZ" + b"scePadOpen" + _SEPARA + _PID_DO_COMUM},
