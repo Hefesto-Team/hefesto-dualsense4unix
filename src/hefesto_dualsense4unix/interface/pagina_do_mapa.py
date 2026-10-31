@@ -162,7 +162,7 @@ CAMPOS_DO_ARRANJO = ("quando", "aparelhos", "faces", "mapa", "leituras")
 FRASES_DA_ORIGEM_DA_VELOCIDADE = {
     "placa": "É o que a placa-mãe diz.",
     "declarada": "É o que você disse.",
-    "aparelho": "Um aparelho está nela a 5 Gbps.",
+    "aparelho": "Um aparelho está nesta entrada a 5 Gbps.",
     "": "A placa-mãe não diz. Diga você.",
 }
 
@@ -2402,7 +2402,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         depois=(
             '        }).join("")\n'
             '      + "</div>" + (lido ? \'<span class="lido">O computador lê um '
-            'hub nela.</span>\' : "") + "</div>"\n'
+            'hub nesta entrada.</span>\' : "") + "</div>"\n'
             '      + \'<div class="edita-linha"><span>Velocidade</span>'
         ),
         porque=(
@@ -3277,7 +3277,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    }\n'
             '    if (aparelhoSemLugar(quem.id)) {\n'
             '      return \'<div class="faz"><span>Esta entrada está sem'
-            ' lugar no gabinete: diga o lugar dela para eu julgar.</spa'
+            ' lugar no gabinete: diga onde fica para eu julgar.</spa'
             "n></div>';\n"
             '    }\n'
             '    var r = planejar({}), para = portaDeEm(r.plano, quem.i'
@@ -3628,11 +3628,11 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     Edicao(
         antes=(
             '      + "</div>" + (lido ? \'<span class="lido">O computado'
-            'r lê um hub nela.</span>\' : "") + "</div>"'
+            'r lê um hub nesta entrada.</span>\' : "") + "</div>"'
         ),
         depois=(
             '      + "</div>" + (lido ? \'<span class="lido">O computado'
-            'r lê um hub nela.</span>\' : "") + "</div>"\n'
+            'r lê um hub nesta entrada.</span>\' : "") + "</div>"\n'
             '      + linhaDoExtensor(editando)'
         ),
         porque=(
@@ -4253,7 +4253,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '}\n'
             '    if (ocupada(alocacao, porta)) return { v: "cheia", t'  # (noqa-acento)
             'xt: "indisponível", porque: porta.filho ? "o extensor es'
-            'tá nela" : "a entrada-mãe está em uso" };\n'
+            'tá nesta entrada" : "a entrada-mãe está em uso" };\n'
             '    if (segurando) {\n'
             '      var reg = regiaoDoCaminho(leitura()[segurando]);\n'
             '      var mesmaRegiao = reg === null || (reg === "hub" ?'
@@ -4323,10 +4323,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    }\n'
             '    if (naMao === "webcam") {\n'
             '      if (porta.usb === 3) return { v: "serve", txt: "se'
-            'rve", porque: "gasta uma entrada azul que ela não precis'
+            'rve", porque: "gasta uma entrada azul que a webcam não precis'
             'a" };\n'
             '      return { v: "melhor", txt: "melhor lugar", porque:'
-            ' "entrada preta, que é o que ela pede" };\n'
+            ' "entrada preta, que é o que a webcam pede" };\n'
             '    }\n'
             '    return null;\n'
             '  }\n'
@@ -4411,10 +4411,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    }\n'
             '    if (naMao === "webcam") {\n'
             '      if (porta.usb === 3) return { v: "serve", txt: "Se'
-            'rve", porque: "gasta uma entrada azul que ela não precis'
+            'rve", porque: "gasta uma entrada azul que a webcam não precis'
             'a" };\n'
             '      return { v: "melhor", txt: "Melhor lugar", porque:'
-            ' "entrada preta, que é o que ela pede" };\n'
+            ' "entrada preta, que é o que a webcam pede" };\n'
             '    }\n'
             '    return null;\n'
             '  }\n'
@@ -5230,7 +5230,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '+ "</button>";\n'
             '        }).join("")\n'
             '      + "</div>" + (lido ? \'<span class="lido">O computa'
-            'dor lê um hub nela.</span>\' : "") + "</div>"\n'
+            'dor lê um hub nesta entrada.</span>\' : "") + "</div>"\n'
             '      + linhaDoExtensor(editando)\n'
             '      + \'<div class="edita-linha"><span>Velocidade</span'
             '><div class="seg dois">\'\n'
@@ -5273,7 +5273,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    }\n'
             '    if (aparelhoSemLugar(quem.id)) {\n'
             '      return \'<div class="faz"><span>Esta entrada está s'
-            'em lugar no gabinete: diga o lugar dela para eu julgar.<'
+            'em lugar no gabinete: diga onde fica para eu julgar.<'
             "/span></div>';\n"
             '    }\n'
             '    var r = planejar({}), para = portaDeEm(r.plano, quem'

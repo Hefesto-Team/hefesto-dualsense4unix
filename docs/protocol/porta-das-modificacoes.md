@@ -302,7 +302,7 @@ conexão não responde. A função `instalar(…, aviso_visto=…)` recusa com
 
 Cada extensão da casa mora no seu repositório, `Hefesto-Team/hefesto-mod-<nome>`, com o
 `hefesto-mod.json` (o `aviso` dentro), o código, os testes (`python3 -m pytest testes`, só a biblioteca
-padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` MIT de Vitória Maria e André Farias e
+padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` MIT com os mesmos autores do Hefesto e
 o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
 
 ## O preparo da extensão

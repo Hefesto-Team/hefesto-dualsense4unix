@@ -1283,7 +1283,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   var ROTULOS = {};
   var HUB_LIDO = {};
   var USB_DE = {};
-  var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nela a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
+  var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nesta entrada a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
   function origemDaVelocidade(n) {
     if (!doProduto() || !podeGravar(n)) return "";
     var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || ""];

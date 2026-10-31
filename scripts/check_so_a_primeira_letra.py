@@ -93,7 +93,7 @@ TECLAS = frozenset({
 UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 
 NOMES_DO_DESENHO = (
-    "Vitória", "Ana", "Pedro", "Rafa", "Davi", "Lia",
+    "Clara", "Ana", "Pedro", "Rafa", "Davi", "Lia",
     "Mortal Kombat", "Elden Ring", "Don't Scream", "Wendigo Blue",
     "Orpheus: To Hell and Back", "Mina the Hollower",
     "Xiaomi Scale S400", "Xiaomi Band 9",

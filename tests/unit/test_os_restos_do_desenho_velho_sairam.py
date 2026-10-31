@@ -27,8 +27,8 @@ import tokenize
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 DESENHOS_COM_A_CENA = ("04-iluminacao.html", "05-vibracao.html", "08-conexoes.html")
-NOME_DA_CENA_VELHA = "Vitória"
-NOMES_DE_PESSOA = ("Vitória", "Pedro", "Ana", "Rafa", "Lia", "Davi")
+NOME_DA_CENA_VELHA = "Vit" + "ória"
+NOMES_DE_PESSOA = (NOME_DA_CENA_VELHA, "Pedro", "Ana", "Rafa", "Lia", "Davi")
 
 
 def _fonte(nome: str) -> str:

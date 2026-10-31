@@ -464,7 +464,7 @@ REGRAS: Mapping[str, tuple[Regra, ...]] = {
     ),
     "webcam": (
         Regra(12, lambda p, c: p.usb == 2, SELO_DERIVADO,
-              texto="entrada preta: ela não usa a velocidade da azul,"
+              texto="entrada preta: a webcam não usa a velocidade da azul,"
                     " e a azul faz falta a quem usa"),
         Regra(6, lambda p, c: p.onde == "pc", SELO_DERIVADO,
               texto="direta do PC, sem gastar entrada do hub"),
@@ -917,8 +917,8 @@ def julgar(
 
     if na_mao == "webcam":
         if entrada.usb == 3:
-            return Veredito("serve", "Serve", "gasta uma entrada azul que ela não precisa")
-        return Veredito("melhor", "Melhor lugar", "entrada preta, que é o que ela pede")
+            return Veredito("serve", "Serve", "gasta uma entrada azul que a webcam não precisa")
+        return Veredito("melhor", "Melhor lugar", "entrada preta, que é o que a webcam pede")
 
     return None
 

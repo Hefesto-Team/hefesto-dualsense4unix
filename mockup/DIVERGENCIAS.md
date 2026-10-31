@@ -26,3 +26,9 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **30/10/2026** — texto sem pessoa (leva do texto neutro): as dicas do mapa das conexões, da extensão nova, da fase em pé e do «não alcanço», a pergunta do Mover («Só este sai daqui») e a dica do acionador. Até publicar, o produto mostra as dicas antigas do publicado; nenhum pixel muda.
+
+## mapa-das-portas.html
+- **30/10/2026** — texto sem pessoa (leva do texto neutro): as frases do motor do arranjo («nesta entrada», «a webcam») e as dicas do hub e do lugar no gabinete, na origem congelada e nas edições do gerador. Até publicar, o produto mostra as frases antigas do publicado; nenhum pixel muda.
+
+## mapa-do-radio.html
+- **30/10/2026** — texto sem pessoa (leva do texto neutro): o nome do primeiro controle do exemplo e a pergunta do Mover («Só este sai daqui»). Até publicar, o produto mostra o texto antigo do publicado; nenhum pixel muda.
