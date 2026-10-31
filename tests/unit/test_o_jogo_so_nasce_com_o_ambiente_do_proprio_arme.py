@@ -62,7 +62,7 @@ class _Mesa:
     do co-op: até ``o_fio_entrega``, a foto do daemon vê a emulação desligada e a máscara velha.
     """
 
-    def __init__(self, store: Any = None, flavor: str = "xbox") -> None:
+    def __init__(self, store: Any = None, flavor: str = "xbox", veredito: str = "aplicado") -> None:
         self.config = SimpleNamespace(gamepad_emulation_enabled=True, gamepad_flavor=flavor)
         self._gamepad_device: SimpleNamespace | None = SimpleNamespace(
             backend=_BACKEND[flavor], flavor=flavor)
@@ -71,6 +71,7 @@ class _Mesa:
         self.store = store
         self.aplicados: list[Any] = []
         self.pedidos_ao_fio: list[str] = []
+        self.veredito = veredito
 
     def is_native_mode(self) -> bool:
         return False
@@ -80,6 +81,8 @@ class _Mesa:
 
     def apply_profile_mode(self, mode: Any, *, profile: Any = None, origin: str = "") -> str:
         self.aplicados.append(mode)
+        if self.veredito != "aplicado":
+            return self.veredito
         if getattr(mode, "kind", None) == "gamepad":
             self.config.gamepad_emulation_enabled = False
             self._gamepad_device = None
@@ -204,6 +207,26 @@ def test_o_status_com_o_appid_devolve_o_ambiente_do_arme_sem_esperar_a_escrita(
     do_jogo = (tmp_path / f"steam_app_{APPID}.env").read_text(encoding="utf-8")
     assert "mascara=dualsense" in do_jogo and "SDL_JOYSTICK_HIDAPI=0" not in do_jogo, (
         f"o arquivo do jogo não é o do último arme dele:\n{do_jogo}")
+
+
+@pytest.mark.parametrize("veredito", ["adiado_lock_manual", "adiado_jogo_aberto"])
+def test_o_arme_que_o_aplicador_adia_responde_o_modo_que_ficou(
+    veredito: str, sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O aplicador adiou a troca: a máscara viva continua Xbox, e o ambiente sai dessa máscara."""
+    from hefesto_dualsense4unix.daemon import lifecycle
+
+    assert veredito in (lifecycle.ADIADO_LOCK_MANUAL, lifecycle.ADIADO_JOGO_ABERTO)
+    _a_mesa_do_lancamento(tmp_path, monkeypatch, _perfil(None), lenta_s=0.0)
+    _marker(tmp_path)
+    daemon: Any = _Mesa(veredito=veredito)
+    bloco = le.o_ambiente_no_status(daemon, {"appid": APPID})
+    assert daemon.aplicados, "o status com o appid não armou o jogo"
+    assert APPID not in le._os_modos_dos_armes(daemon), "o modo adiado ficou guardado como do arme"
+    linhas = bloco["ambiente"]["linhas"]
+    assert "SDL_JOYSTICK_HIDAPI=0" in linhas, (
+        f"o jogo recebeu o DualSense que o aplicador não vestiu: {linhas}")
+    assert "mascara=xbox" in bloco["ambiente"]["estado"]
 
 
 def test_o_status_sem_o_appid_nao_arma_nem_responde_ambiente(
