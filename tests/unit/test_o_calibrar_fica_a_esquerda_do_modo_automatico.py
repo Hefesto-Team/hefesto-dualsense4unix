@@ -26,5 +26,6 @@ def test_o_calibrar_esta_imediatamente_a_esquerda_do_modo_automatico(publicado: 
     vizinhos = re.search(
         rf'<a class="btn nativo-nao" {LINK} data-dica="([^"]+)">(?:(?!</a>).)*</a>\s*'
         r'<button class="modo-auto"', topo, re.S)
-    assert vizinhos, "o Calibrar saiu de imediatamente à esquerda do Modo automático"
+    assert vizinhos, ("D-3110-O-CALIBRAR-FICA-A-ESQUERDA-DO-MODO-AUTOMATICO: o Calibrar saiu de "
+                      "imediatamente à esquerda do Modo automático")
     assert vizinhos.group(1) == "Todos parados numa superfície plana"
