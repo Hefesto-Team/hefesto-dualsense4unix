@@ -1536,10 +1536,7 @@ def _arma_do_lado(cfg: Any) -> bytes | None:
         modo, params = traduzida
     if modo not in ACIONAMENTOS_DE_ARMA:
         return None
-    try:
-        return _bloco_do_efeito(build_from_name(modo, list(params)))
-    except (TypeError, ValueError):
-        return None
+    return _bloco_do_efeito(build_from_name(modo, list(params)))
 
 
 def armas_do_gatilho_do_perfil(perfil: Any) -> ArmasDoGatilho:
