@@ -408,7 +408,7 @@ def _validar_rotulos(rotulos: Any) -> list[str]:
     return erros
 
 
-RECEBE_DO_MARCO = ("aberta", "feita", "espera-ela")
+RECEBE_DO_MARCO = ("aberta", "feita", "espera-teste-no-aparelho")
 
 
 def _validar_milestones(ms: Any) -> list[str]:

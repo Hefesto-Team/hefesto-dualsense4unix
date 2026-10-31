@@ -150,8 +150,8 @@ def marcos_do_arquivo(raiz: Path) -> list[str]:
 
 def marco_que_recebe(raiz: Path, estado: str) -> str | None:
     """O marco em que nasce a issue de uma sprint neste estado (`recebe:` do arquivo do repositório): a feita
-    no da próxima versão, a espera-ela no de quem espera o aparelho e as outras no da série aberta."""
-    chave = estado if estado in {"feita", "espera-ela"} else "aberta"
+    no da próxima versão, a espera-teste-no-aparelho no de quem espera o aparelho e as outras no da série aberta."""
+    chave = estado if estado in {"feita", "espera-teste-no-aparelho"} else "aberta"
     return next((m["titulo"] for m in _marcos(raiz) if m.get("recebe") == chave and m.get("sai") != "true"), None)
 
 

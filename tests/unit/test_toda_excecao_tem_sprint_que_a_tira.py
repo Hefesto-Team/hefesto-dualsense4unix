@@ -24,7 +24,7 @@ _ATRIBUICAO = re.compile(r"^(_?[A-Z][A-Z0-9_]*)\s*(?::[^=\n]*)?=", re.M)
 _MARCA = re.compile(r"#:?\s*(sai com|fica):\s*(\S.*)$")
 _ID = re.compile(r"[A-Z0-9][A-Z0-9-]*[A-Z0-9]")
 _FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
-ESTADOS_VIVOS = frozenset({"aberta", "espera-ela"})
+ESTADOS_VIVOS = frozenset({"aberta", "espera-teste-no-aparelho"})
 _RECIPIENTES = frozenset({"frozenset", "set", "tuple", "list", "dict"})
 _NAO_E_RECIPIENTE = object()
 

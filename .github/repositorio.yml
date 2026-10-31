@@ -140,7 +140,7 @@ rotulos:
 
 # Um marco por versão, na série de `release.serie`. `recebe` diz em que marco a issue nasce, pelo estado do
 # trabalho: `feita` (o que já está pronto e sai na próxima versão), `aberta` (o que vem depois) e
-# `espera-ela` (o que espera o teste no aparelho). A cada versão que sai, os dois números andam uma casa.
+# `espera-teste-no-aparelho` (o que espera o teste no aparelho). A cada versão que sai, os dois números andam uma casa.
 # `sai: true` tira o marco do servidor quando ele não tem issue nenhuma; com issue, o `aplicar.py` diz e
 # quem mantém move as issues à mão. As datas ficam em branco até quem mantém decidir.
 milestones:
@@ -152,7 +152,7 @@ milestones:
     recebe: aberta
   - titulo: "Aguarda o teste no aparelho"
     descrição: "Pronto no código; falta o teste com o controle na mão para entrar numa versão."
-    recebe: espera-ela
+    recebe: espera-teste-no-aparelho
   - titulo: "Primeira versão pública"
     descrição: "O que entra na primeira versão pública do Hefesto."
     sai: true

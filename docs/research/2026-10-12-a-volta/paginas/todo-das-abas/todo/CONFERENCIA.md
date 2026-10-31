@@ -148,8 +148,8 @@ Anotado para o próximo bloco, fora destas ordens:
 
 Conflitos:
 
-- 1: Contra a O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01 (espera-ela; o commit do desenho e13defb77 não existe). Vence a T1 (12/10, decisão de produto); a ZONAS-01 caduca nos botões Cursor/Botões.
-- 2: Contra a O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01 (espera-ela; o commit do desenho e13defb77 não existe). Vence a T1 (12/10, decisão de produto); a ZONAS-01 caduca nos botões Cursor/Botões.
+- 1: Contra a O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01 (espera-teste-no-aparelho; o commit do desenho e13defb77 não existe). Vence a T1 (12/10, decisão de produto); a ZONAS-01 caduca nos botões Cursor/Botões.
+- 2: Contra a O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE-ELE-APERTA-01 (espera-teste-no-aparelho; o commit do desenho e13defb77 não existe). Vence a T1 (12/10, decisão de produto); a ZONAS-01 caduca nos botões Cursor/Botões.
 ## 03
 
 2 mudanças, 2 recomendadas a escolher; 9 por baixo, 27 fora.

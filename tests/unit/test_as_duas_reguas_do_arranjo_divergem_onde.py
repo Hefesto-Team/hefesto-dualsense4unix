@@ -507,7 +507,7 @@ def _sprint_de_papel(nome: str, arquivo: str) -> str:
             "  A:",
             f"    - {arquivo}",
             "cria:",
-            "bancada: false",
+            "ensaio: false",
             "depois_de:",
             "nao_toca:",
             "---",

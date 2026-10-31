@@ -416,7 +416,7 @@ def sprint(
     if fechada:
         cab += f"# fechada {fechada}: 3 commits\n"
     cab += (
-        "bancada: false\ndepois_de: []\nposse:\n  X:\n    - a.py\ncria: []\nnao_toca: []\n---\n\n"
+        "ensaio: false\ndepois_de: []\nposse:\n  X:\n    - a.py\ncria: []\nnao_toca: []\n---\n\n"
     )
     corpo = f"# {ident}\n\nTexto da sprint, com «mesa» e «agente» à vontade: só o bloco sai.\n\n"
     if muda is not None:
@@ -529,7 +529,7 @@ def test_o_marco_da_issue_nasce_do_estado_da_sprint_e_o_que_sai_nao_vale(
     assert modulo.marco_que_recebe(tmp_path, "aberta") in marcos
     recebe = modulo.marco_que_recebe
     assert recebe(tmp_path, "escrita") == recebe(tmp_path, "aberta")
-    assert len({recebe(tmp_path, e) for e in ("aberta", "feita", "espera-ela")}) == 3
+    assert len({recebe(tmp_path, e) for e in ("aberta", "feita", "espera-teste-no-aparelho")}) == 3
     bloco = {"titulo": "Um", "tipo": "adicionado", "muda": "Liga.", "pronto": "Liga.",
              "marco": "Primeira versão pública"}
     assert any("`marco` é um destes" in e for e in modulo.validar(bloco, tmp_path, autoria=False))

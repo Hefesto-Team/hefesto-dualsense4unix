@@ -128,7 +128,7 @@ genéricos (O-CODIGO-SEM-NARRADOR-02 e AS-CITACOES-DE-COMMIT-SEGUEM-O-MAPA) entr
 
 **Falsos «em-voo», sem nada no disco desde 06/10:** A-ARVORE-TEM-UMA-SESSAO-SO, A-GUARDA-FECHA-A-PORTA,
 A-SENHA-SO-PASSA-PELO-ASKPASS, O-DESPACHANTE-DAS-REGRAS-DA-CASA, O-ENDERECO-NUNCA-CHEGA-A-CONVERSA. São da casa (os
-ganchos do zsh, fora do repo) e dependem do gesto do usuário pelo `promover-travas.sh`. Voltam a `espera-ela` na onda 0.
+ganchos do zsh, fora do repo) e dependem do gesto do usuário pelo `promover-travas.sh`. Voltam a `espera-teste-no-aparelho` na onda 0.
 **O-REPOSITORIO-NASCE-VIVO** (github-completo) está pela metade e tem «O que foi feito»; entra na onda 15.
 
 ## 4. Por fazer: todas as 223, por setor
@@ -285,8 +285,8 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO` — O Selecionar acende quem está escolhido. [ensaio] *(no dev: fecha com o olho de quem confere na foto)*
 - `SO-A-PRIMEIRA-LETRA-E-MAIUSCULA…` — Só a primeira letra é maiúscula em toda aba. *(no dev: fecha com o olho de quem confere na foto)*
 - `TODO-TEXTO-QUE-ABRE-UMA-LINHA…` — Todo texto que abre uma linha começa com maiúscula. *(no dev: fecha com o olho de quem confere na foto)*
-- `O-POINT-AND-CLICK-E-A…` — O point-and-click e a acessibilidade se definem na Navegação. [tela] [ensaio] *(conjunto F2-acessibilidade; a ficha diz `espera-ela`: só voa com a palavra de produto)*
-- `OS-ALVOS-E-A-LETRA-CRESCEM…` — Os alvos e a letra crescem, e a interface ganha tamanho. [tela] [ensaio] *(conjunto F2-acessibilidade; a ficha diz `espera-ela`: só voa com a palavra de produto)*
+- `O-POINT-AND-CLICK-E-A…` — O point-and-click e a acessibilidade se definem na Navegação. [tela] [ensaio] *(conjunto F2-acessibilidade; a ficha diz `espera-teste-no-aparelho`: só voa com a palavra de produto)*
+- `OS-ALVOS-E-A-LETRA-CRESCEM…` — Os alvos e a letra crescem, e a interface ganha tamanho. [tela] [ensaio] *(conjunto F2-acessibilidade; a ficha diz `espera-teste-no-aparelho`: só voa com a palavra de produto)*
 - `O-NUMERO-DA-BARRA-NAO-CONGELA…` — O número da barra não congela no valor velho. *(costurada na fds-1: entra na fds-2)*
 - `A-HAPTICA-MORA-EM-VIBRACAO-E…` — A háptica mora em Vibração, e o ícone do app volta. *(espera o usuário)*
 - `A-PALETA-MARCA-A-COR-DE…` — A paleta marca a cor de cada controle. [ensaio] *(espera o usuário)*
@@ -420,7 +420,7 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 
 | onda | conjuntos (agentes) | por que aqui | portão de saída | agentes |
 | --- | --- | --- | --- | --- |
-| **0** a base nova | sem conjunto. Sem agente: CI do `0044399e9` e `--so publicar`; nascer a `integra/fds-2` do `dev` (`git worktree add -b integra/fds-2 /mnt/Apate/Desenvolvimento/hefesto-voo/_integra-fds-2 dev`); **`echo 2 > ~/.local/state/hefesto-casa/leva-fds/ONDA`** (o `leva.env` da fds tira INT e BRANCH desse número, que hoje diz 1); copiar o `docs/process`, os ignorados (`copiar-ignorados.sh`) e as instruções da casa; `cherry-pick` dos 39 em ordem (conflito só em gerado: regera, nunca escolhe lado); acertar o `regerar-conjuntos.py` (Sonnet e `high`) e regerar os args dos 12 cortados contra a fds-2; carimbo das 28 costuradas e a A-SUITE à mão; as 5 da casa voltam a `espera-ela`; as 10 absorvidas saem da fila do `SPRINT_ORDER` (o `sprint.py validar --todas` as acusa); criar `leva-volta/leva.env` e `leva-volta/conjuntos/` (seção 6). **Agentes:** escrever as sprints novas (escritor + crítico, Opus) e, se a fds-2 ficar vermelha, 1 Opus que cura a base | — | `rapido-na-integracao.sh` verde na fds-2; colisão `rc=0` com as novas | 2 (+1) |
+| **0** a base nova | sem conjunto. Sem agente: CI do `0044399e9` e `--so publicar`; nascer a `integra/fds-2` do `dev` (`git worktree add -b integra/fds-2 /mnt/Apate/Desenvolvimento/hefesto-voo/_integra-fds-2 dev`); **`echo 2 > ~/.local/state/hefesto-casa/leva-fds/ONDA`** (o `leva.env` da fds tira INT e BRANCH desse número, que hoje diz 1); copiar o `docs/process`, os ignorados (`copiar-ignorados.sh`) e as instruções da casa; `cherry-pick` dos 39 em ordem (conflito só em gerado: regera, nunca escolhe lado); acertar o `regerar-conjuntos.py` (Sonnet e `high`) e regerar os args dos 12 cortados contra a fds-2; carimbo das 28 costuradas e a A-SUITE à mão; as 5 da casa voltam a `espera-teste-no-aparelho`; as 10 absorvidas saem da fila do `SPRINT_ORDER` (o `sprint.py validar --todas` as acusa); criar `leva-volta/leva.env` e `leva-volta/conjuntos/` (seção 6). **Agentes:** escrever as sprints novas (escritor + crítico, Opus) e, se a fds-2 ficar vermelha, 1 Opus que cura a base | — | `rapido-na-integracao.sh` verde na fds-2; colisão `rc=0` com as novas | 2 (+1) |
 | **1** o que a rodada do Sackboy espera, e as ferramentas | pad (1), som (2, fecha o implementa), portoes (2, com final), ipc (2, com final) | pad e som tocam os arquivos do Sackboy (`uhid_gamepad.py`, `alto_falante.py`, `alto_falante_bt.py`) e têm de costurar antes dele; portoes traz o `--rapido` novo | cada costura com `--rapido` verde; portões completos no fim da onda | 7 |
 | **2** o Sackboy | **sackboy (2, Opus; sprint da onda 0)**, parar (1), solta (1), fora (1, refaz o `wip`), radio (2) | nenhum colide com o sackboy; o sackboy sai assim que pad e som costurarem | idem; o sackboy só fecha com a rodada D1 medida | 7 |
 | **3** o resto da fds | carga (2), lancadores (2), kyty (2), dsx (2) | nenhum par colide; os `depois_de` para a frente se invertem (seção 3) | idem | 8 |
