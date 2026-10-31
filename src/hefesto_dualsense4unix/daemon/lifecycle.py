@@ -82,15 +82,15 @@ RUMBLE_POLICIES: tuple[str, ...] = get_args(RumblePolicy)
 
 
 def _o_par_do_pad(mode: Any | None) -> tuple[str | None, str]:
-    """``(caminho, máscara)`` do pad: a da seção pelo dono da regra; sem seção, a da máquina.
-
-    A seção sem máscara é o DualSense em todo computador (``par_da_secao_do_gamepad``)."""
+    """``(caminho, máscara)`` do pad: os da seção, e sem máscara, a do dono da regra
+    (``par_da_secao_do_gamepad``: o DualSense em todo computador); sem seção, a da máquina."""
     from hefesto_dualsense4unix.integrations import virtual_pad as vp
 
     if mode is None:
         return None, _mascara_da_maquina()
     caminho = vp.normalizar_caminho(getattr(mode, "caminho", None))
-    return caminho, vp.par_da_secao_do_gamepad(caminho, getattr(mode, "gamepad_flavor", None))[1]
+    pedida = vp.normalizar_modo(getattr(mode, "gamepad_flavor", None))
+    return caminho, pedida or vp.par_da_secao_do_gamepad(caminho, None)[1]
 
 
 def _caminho_vivo(daemon: Any) -> str | None:
