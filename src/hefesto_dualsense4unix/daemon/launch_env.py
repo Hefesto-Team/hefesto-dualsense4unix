@@ -934,6 +934,7 @@ def _armar_o_jogo(
     daemon: DaemonProtocol, appid: int, epoch: int, base_dir: Path | None
 ) -> dict[str, Any] | None:
     """O resto do arme de `arm_launch_profile`: a roupa, o perfil, o modo e a trava do pad."""
+    from hefesto_dualsense4unix.daemon.lifecycle import APLICADO
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
     _guardar_o_modo_do_arme(daemon, appid, None)
@@ -1095,7 +1096,6 @@ def _armar_o_jogo(
         permite_uhid=_permite_uhid(daemon),
         fisicos=fisicos_pos,
         vpads_previstos=_vpads_previstos(daemon, fisicos_pos),
-        modo=mode,
     )
     divergencia = divergencia_de_mascara(
         modo_antecipado,
@@ -1112,7 +1112,7 @@ def _armar_o_jogo(
             mascara_viva=flavor_pos,
             motivo=divergencia,
         )
-    if not (veio_da_escada and divergencia is not None):
+    if resultado == APLICADO:
         _guardar_o_modo_do_arme(daemon, appid, mode)
     materialize_launch_env(daemon)
     ponte_entregue = ponte_gravada if veio_do_carimbo else ponte_perfil
