@@ -780,7 +780,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     ],
     webcam: [
       { n: 12, quando: function (p) { return p.usb === 2; }, selo: "derivado",
-        txt: "entrada preta: ela não usa a velocidade da azul, e a azul faz falta a quem usa" },
+        txt: "entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa" },
       { n: 6, quando: function (p) { return p.onde === "pc"; }, selo: "derivado",
         txt: "direta do PC, sem gastar entrada do hub" }
     ],
@@ -1046,8 +1046,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, longe de outro rádio" };
     }
     if (naMao === "webcam") {
-      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que ela não precisa" };
-      return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, que é o que ela pede" };
+      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que a webcam não precisa" };
+      return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, que é o que a webcam pede" };
     }
     return null;
   }
@@ -1276,7 +1276,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   var ROTULOS = {};
   var HUB_LIDO = {};
   var USB_DE = {};
-  var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nela a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
+  var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nesta entrada a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
   function origemDaVelocidade(n) {
     if (!doProduto() || !podeGravar(n)) return "";
     var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || ""];

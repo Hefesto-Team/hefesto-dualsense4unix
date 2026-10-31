@@ -21,17 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 04-iluminacao.html
-- **30/10/2026** — texto sem pessoa (leva do texto neutro): um docstring do gerador que o desenho carrega e a dica do número no lugar sem plástico. Até publicar, o produto mostra o texto antigo do publicado; nenhum pixel muda.
-
-## 07-lancadores.html
-- **30/10/2026** — o «N fora do Proton fixado» sai do bloco do nome e vira selo ao lado dele, com 24 px de alvo e letra de 12, para o cartão do Lutris caber na fileira de 30 px. O pacote vivo já pinta assim no primeiro tique; até publicar, a primeira pintura do publicado ainda empilha a linha embaixo da contagem.
-
-## 08-conexoes.html
-- **30/10/2026** — texto sem pessoa (leva do texto neutro): as dicas do mapa das conexões, da extensão nova, da fase em pé e do «não alcanço», a pergunta do Mover («Só este sai daqui») e a dica do acionador. Até publicar, o produto mostra as dicas antigas do publicado; nenhum pixel muda.
-
-## mapa-das-portas.html
-- **30/10/2026** — texto sem pessoa (leva do texto neutro): as frases do motor do arranjo («nesta entrada», «a webcam») e as dicas do hub e do lugar no gabinete, na origem congelada e nas edições do gerador. Até publicar, o produto mostra as frases antigas do publicado; nenhum pixel muda.
-
-## mapa-do-radio.html
-- **30/10/2026** — texto sem pessoa (leva do texto neutro): o nome do primeiro controle do exemplo e a pergunta do Mover («Só este sai daqui»). Até publicar, o produto mostra o texto antigo do publicado; nenhum pixel muda.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->

@@ -726,7 +726,7 @@ tabela,id,nome,a,b,c,d,e,f,g,h,i
 lugar,L1,,direto,1,4,Traseira,1500,0,USB 2.0
 lugar,L2,,hub,3,4.4,Num hub ou extensão,1500,0,USB 2.0,varrendo
 lugar,L3,,hub,3,4.1.4,Num hub ou extensão,1500,3,USB 2.0
-aparelho,P1,Vitória,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz,L3|L2
+aparelho,P1,Clara,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz,L3|L2
 aparelho,P2,Pedro,controle,#7eb8d4,L3,520.8,32.6,375,Starlight Blue,mic+ponte+luz,L3
 aparelho,P3,Ana,controle,#e35b8c,L3,520.8,32.6,375,Nova Pink,mic+ponte+luz,L3
 aparelho,P4,Rafa,controle,#74588e,L3,520.8,32.6,375,Galactic Purple,mic+ponte+luz,L3|L1
@@ -1295,7 +1295,7 @@ function pedirParaMover(ap, destinoId, depois) {
     pontesDe(destinoId).length >= PONTES_POR_ADAPTADOR;
   perguntar(
     'Mover ' + comoSeChama(ap) + ' para ' + comoSeChamaOLugar(lug) + '?<br>' +
-    'Só ' + (feminino ? 'ela' : 'ele') + ' sai daqui. ' + comoSeParea(ap) +
+    'Só ' + (feminino ? 'esta' : 'este') + ' sai daqui. ' + comoSeParea(ap) +
     (cheio ? ' Lá o som pode engasgar.' : ''),
     'Mover',
     () => { moverAgora(ap, destinoId); if (depois) depois(); },
