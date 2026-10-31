@@ -689,8 +689,8 @@ def test_o_microfone_do_controle_nasce_no_ar_e_a_recusa_o_cala() -> None:
     *"microfone que liga sozinho no boot do daemon é inaceitável"*. Foi o
     desenho desta casa por um mês, com razão escrita no cabeçalho do `bt_mic`.
 
-    A ordem de produto o derrubou: *"todos os controles tem que nascer com tudo mic,
-    giroscopio e afins"*. O preço do desenho antigo tinha sido medido na mesma
+    A ordem de produto o derrubou: todo controle nasce com tudo, microfone,
+    giroscópio e o resto. O preço do desenho antigo tinha sido medido na mesma
     manhã — dos quatro DualSense da máquina de teste, DOIS não tinham microfone,
     porque ninguém sabia que era preciso declarar, e a aba respondia *"o
     sistema não vê um microfone neste controle"*.

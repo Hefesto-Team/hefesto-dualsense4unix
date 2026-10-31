@@ -44,7 +44,7 @@ gatilho.
 
 A CÉLULA GANHOU DICA EM 02/10/2026, e não é a volta das oito: a dica só existe
 onde há o que dizer (*"O controle não diz."* e a máscara que não é a
-DualSense, decisão de 29/09: «a dica diz qual»), vem do pacote
+DualSense, decisão de 29/09 de que a dica diz qual), vem do pacote
 (``guarda.dica``) e não nomeia aparelho. A régua de baixo, que olha TODA dica
 da tabela contra os 28 modelos, continua cobrindo-a.
 

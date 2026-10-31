@@ -1,7 +1,7 @@
 """STATUS-04 — `state_full` publica `inputs` de TODO controle, não só do primário.
 
-A queixa de uso, com dois DualSense na mesa: *"não funciona o touch, analogicos
-... nem giroscopio e acelerometro"*. Parte era taxa de pintura. A outra parte
+O defeito de uso, com dois DualSense na mesa: o touchpad, os analógicos,
+o giroscópio e o acelerômetro não funcionavam. Parte era taxa de pintura. A outra parte
 estava no daemon, e não era falta de dado: era DESENHO.
 
 **O que o `_enrich_controllers_per_controller` fazia** — `inputs` só para o

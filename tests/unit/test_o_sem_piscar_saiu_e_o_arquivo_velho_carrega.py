@@ -1,8 +1,8 @@
 """O «Sem piscar» saiu da tela e do produto, e o `maquina.json` que o tinha ligado carrega
 (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, item I2, 16/10/2026).
 
-O usuário pediu: *«aquele sem piscar some da tela. Já existe o efeito Luz fixa. não devemos ter um
-botão ali pra isso»*. O interruptor era global (`maquina.json`, chave `luz.sem_piscar`) e, ligado,
+O pedido: o «sem piscar» sai da tela, porque o efeito Luz fixa já existe e não cabe
+um botão ali para isso. O interruptor era global (`maquina.json`, chave `luz.sem_piscar`) e, ligado,
 segurava todo efeito a uma subida por segundo. Tirar só o botão deixaria quem o ligou preso no
 modo suave sem jeito de desligar; por isso ele sai inteiro: o desenho, o gesto, o campo do
 caderno e o parâmetro do motor. A chave velha no disco é descartada pela migração, e o efeito

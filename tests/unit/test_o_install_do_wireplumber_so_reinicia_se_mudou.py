@@ -1,6 +1,6 @@
 """O WirePlumber só reinicia quando algo que ele lê MUDOU (D-1410-O-APLICAR-SEGURA, parte 3).
 
-O usuário mandou, em 14/10/2026: «Reinicia só se mudou». O `--install` do
+A ordem de 14/10/2026: reinicia só se mudou. O `--install` do
 `scripts/fix_wireplumber_default_source.sh` reiniciava o WirePlumber a CADA volta, mesmo com
 os drop-ins já iguais; o `install.sh`, o `doctor --fix` e o `doctor --fix-safe` passam todos por
 ele, então o dono da pergunta é um só: `restart_wireplumber_se_alterou`. O «Refazer os consertos»

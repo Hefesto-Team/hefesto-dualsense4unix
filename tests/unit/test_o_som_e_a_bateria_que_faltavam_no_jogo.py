@@ -6,7 +6,7 @@ ingame"*:
 1. **o som do jogo aparece na linha de recursos do card.** O carimbo
    ``audio_do_jogo`` existia no vpad desde 02/08 (PARIDADE-SONY-01/E1), já
    tinha respondido **sim** ao vivo com o jogo aberto, e nada na janela o lia.
-   O usuário decidiu: *"sim, na linha de recursos do card"*, e **sem** o número do
+   A decisão: sim, na linha de recursos do cartão, e **sem** o número do
    volume — a linha diz que o som está chegando, não em que volume;
 2. **a bateria do controle chega ao jogo.** O ``forward_battery`` nasceu em
    15/07 (``69951a7``) e passou 25 dias com **zero chamadores em `src/`**. A

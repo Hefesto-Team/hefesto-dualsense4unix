@@ -419,8 +419,8 @@ def test_inputs_com_leitura_e_sem_touchpad_nao_e_sem_toque(pac, a02):
 def test_a_palavra_do_touchpad_e_a_do_produto(pac, a02):
     """`Sem toque` / `1 toque` — a conta é a MESMA linha que a GTK escreve.
 
-    DECISÃO, 02/09/2026 (item 15): *"o touchpad usa a palavra do produto:
-    '1 toque', '2 toques', 'Sem toque', que é o que o motor já conta"*. A GTK
+    DECISÃO, 02/09/2026 (item 15): o touchpad usa a palavra do produto,
+    '1 toque', '2 toques', 'Sem toque', que é o que o motor já conta. A GTK
     faz `texto_toques(1 if tocando else 0)` (`controller_card.py:2954`), e é
     isso que esta aba passou a fazer — no lugar do `COM_TOQUE = "Tocando"`, que
     era palavra do DESENHO redigitada no pacote.

@@ -27,8 +27,8 @@ E NÃO HÁ RENOMEAR NO LUGAR — medido nesta máquina no mesmo dia: o ``pactl``
 PulseAudio daemon running"* sob o PipeWire. **Renomear é republicar** — o mesmo
 ato que o daemon já faz por rotina quando o controle pisca.
 
-A ORDEM, 20/09/2026: *"corrige tudo que contenha a info incorreta
-sobrescrevendo-a"*.
+A ORDEM, 20/09/2026: tudo que contém a informação incorreta se corrige,
+sobrescrito.
 
 POR QUE UMA RÉGUA DE «TEM NÚMERO» NÃO SERVE
 --------------------------------------------

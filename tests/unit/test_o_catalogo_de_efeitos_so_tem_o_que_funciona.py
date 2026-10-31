@@ -1,6 +1,6 @@
 """O catálogo de efeitos só tem o que funciona e é diferente, e o gatilho ganha o «Do estilo».
 
-O usuário pediu (27/10/2026): *«ver quais efeitos funcionam e são diferentes de fato»*, e os grupos
+O pedido (27/10/2026): saber quais efeitos funcionam e são de fato diferentes, e os grupos
 do gatilho sem grupo de um efeito só, com o «Do estilo» no topo. Medido em 27/10: nenhum efeito sai
 da lista (o único par igual, `arma-pesada`, já estava fora pelo `IGUAL_A`), e os grupos do desenho
 moram agora no rótulo de cada efeito (`efeitos_de_imersao.FAMILIAS_DA_PAGINA`).

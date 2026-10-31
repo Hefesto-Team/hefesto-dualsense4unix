@@ -300,7 +300,7 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
 
     A frase do produto está CERTA na janela GTK (`main.glade:2275` tem o
     interruptor com esse nome). Aqui a frase seria a tela mandando a um lugar que
-    não existe — decisão [02] do PO: *"Isso é fato errado e se substitui."*
+    não existe — decisão [02] do PO: é fato errado, e se substitui.
 
     **O ARGUMENTO DESTA DOCSTRING CADUCOU EM 06/09/2026 — ONDA5-10-01, decisão
     10-Q2.** Ele dizia que a frase *"precisa de um fim que esta tela

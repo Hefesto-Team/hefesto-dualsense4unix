@@ -3,7 +3,7 @@
 O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01, medido no diário de 22/10/2026: às 20:17:12 o
 «Sair» da bandeja parou o serviço, o dock reabriu a janela às 20:17:16 e nada o trouxe de volta. O
 Ativar mandava o `profile.switch` para ninguém, e o topo seguia nomeando o perfil do marcador do
-disco, que ninguém aplicava. A resposta de produto às fotos: «Um clique religa e troca»,
+disco, que ninguém aplicava. A resposta de produto às fotos: um clique religa e troca,
 inclusive depois do Parar da aba Sistema.
 
 AS MORDIDAS (executadas em 22/10/2026):

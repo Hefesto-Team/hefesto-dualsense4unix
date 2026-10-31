@@ -1,7 +1,7 @@
 """O-NO-DE-SOM-FICA-QUANDO-O-CONTROLE-SAI-01 — o nó fica, a rota vai e volta.
 
 **A decisão é de produto** (`D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`, 08/09/2026,
-«concordo com as 5»; a resposta de 13/10/2026: «só os que já entraram»): o nó de
+aprovadas as cinco; e em 13/10/2026, só os que já entraram): o nó de
 som de cada controle nasce quando o controle entra pela primeira vez na sessão e
 fica até o daemon parar. Nó que some quebra o jogo que o escolheu: o servidor
 move o fluxo para a saída padrão, e quando o nó volta (o mesmo nome, outro id) o
@@ -252,7 +252,7 @@ def test_os_quatro_de_pe_um_sai_e_volta_e_os_outros_tres_ficam_intactos(
 
 
 def test_controle_que_nunca_entrou_nao_ganha_no(servidor: ServidorComFluxos) -> None:
-    """A resposta de 13/10: «só os que já entraram»; nenhum nó nasce para quem nunca veio."""
+    """A decisão de 13/10, só os que já entraram; nenhum nó nasce para quem nunca veio."""
     ger = _gerenciador()
     ger.reconciliar([_cabo(_UNIQ_P1)])
     ger.reconciliar([])

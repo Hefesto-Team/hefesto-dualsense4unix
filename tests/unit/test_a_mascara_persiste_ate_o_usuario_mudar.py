@@ -1,7 +1,7 @@
 """MASCARA-PERSISTE-01 — a máscara fica, até QUEM USA mudar na interface.
 
-Decisão, 22/08/2026: *"a máscara deveria ficar independente do jogo, até
-que eu mude na interface novamente."*
+Decisão, 22/08/2026: a máscara fica independente do jogo, até
+que quem usa a mude na interface.
 
 **E «QUEM USA MUDAR» NÃO É «UM PERFIL PASSAR» — corrigido em 21/09/2026.** A leitura
 de 22/08 fez o perfil de um jogo escrever o padrão da MÁQUINA, e o preço está

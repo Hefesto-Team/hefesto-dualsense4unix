@@ -7,8 +7,8 @@ repete o modo para cada controle conectado. Desde 28/10/2026 o chip da máscara 
 saiu da Jogar com o cartão; o `gamepad.mask.set` ficou para o terminal, e a recusa do modo
 desconhecido é medida em `test_a_mascara_do_cartao_vale_com_o_vpad_de_pe.py`.
 
-O PEDIDO É DE PRODUTO, 03/09/2026: *"É uma máscara por controle. Mesmo caso do
-anterior."* — o "anterior" é a decisão dos quatro lugares, do mesmo dia.
+O PEDIDO É DE PRODUTO, 03/09/2026: uma máscara por controle, como no caso
+anterior, a decisão dos quatro lugares, do mesmo dia.
 
 **A CASA JÁ TINHA A METADE DIFÍCIL.** ``external_mask`` guarda a escolha por
 APARELHO desde 15/08/2026 (MÁSCARA-POR-JOGADOR-01, decisão de produto), e

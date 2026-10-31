@@ -1,9 +1,8 @@
 """A aba Navegação grava no PERFIL, e a tela para de prometer por-controle.
 
-O PEDIDO, 05/09/2026: *"ao pular e sair configurando de aba em aba o perfil
-vai se lembrando de cada config de cada aba pra cada controle. aí aplicar aplica
-todas as configs naquele perfil e salvar se lembra disso quando eu for jogar o
-jogo e no dia seguinte e por diante."*
+O PEDIDO, 05/09/2026: ao passar de aba em aba, o perfil guarda cada ajuste de
+cada aba para cada controle; o Aplicar aplica todos os ajustes naquele perfil, e o
+Salvar os mantém para o jogo, o dia seguinte e os outros.
 
 O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
 → quem usa mexe na aba 06 → Salvar do rodapé → relê o disco), em `HOME` de mentira:

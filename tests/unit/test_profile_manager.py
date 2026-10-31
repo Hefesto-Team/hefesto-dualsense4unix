@@ -578,7 +578,7 @@ def _mk_profile_com_mic(
 
 
 def test_ativar_perfil_com_mic_aplica_volume(isolated_profiles_dir: Path):
-    """O pedido inteiro: *"temos que salvar isso no perfil sempre"*."""
+    """O pedido: isto se salva sempre no perfil."""
     save_profile(_mk_profile_com_mic("gravando", volume=70))
     espiao = _MicEspiao()
     manager = ProfileManager(

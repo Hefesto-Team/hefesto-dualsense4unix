@@ -4,8 +4,8 @@ DECISÃO 9 DO USUÁRIO, 03/09/2026::
 
     "Tira da luz: tracejado para 'não sei'; lisa e vazia para 'apagada'."
 
-O QUE ESTAVA NA TELA, e é o defeito que o usuário nomeou: *"a barra está APAGADA"* e
-*"não sei se está acesa"* pintavam a MESMA tira, **byte por byte** —
+O QUE ESTAVA NA TELA, e é o defeito relatado: a barra APAGADA e a barra
+que não se sabe se está acesa pintavam a MESMA tira, **byte por byte** —
 `background:var(--panel);color:transparent;opacity:1` nas duas. A única coisa
 que as separava era o `title`, e quem não passa o mouse não vê.
 

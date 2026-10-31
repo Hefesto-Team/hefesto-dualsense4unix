@@ -20,7 +20,7 @@ O USUÁRIO ESCOLHEU ENTRE QUATRO CAMINHOS e pegou **as duas metades mais a rede*
 1. **a LARGADA** — o piloto devolve ao trocar de página e ao fim da janela;
 2. **o CORAÇÃO** — enquanto a janela vive, a aba rebate a cada 1 s, e por isso
    um teste deixado ligado com a janela aberta NÃO solta sozinho (o pedido
-   de 07/09: *"o botão Testar tem que ficar em estado de ligado"*);
+   de 07/09: o botão Testar fica ligado);
 3. **o TETO** — o daemon solta o rumble fixado que ninguém rebate em 3 s. É a
    rede para a janela que MORRE sem conseguir largar, e cobre TODOS os
    chamadores: o `hef test rumble` da CLI tinha o mesmo buraco.

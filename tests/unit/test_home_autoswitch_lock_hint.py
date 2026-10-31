@@ -2,8 +2,8 @@
 
 `autoswitch_locked` (hoje `freestyle_ligado`) só existia na GUI como o marcador de um checkbox
 (`_render_home`, `set_active`). Na máquina do usuário a flag estava ligada desde
-24/07 20:42 e o que o usuário via era outra coisa: "o modo jogo não ativa", "os
-perfis não mudam". Ninguém relê uma caixinha de 16 px depois de marcá-la.
+24/07 20:42, e o sintoma visto era outro: o modo jogo não ativava, e os
+perfis não mudavam. Ninguém relê uma caixinha de 16 px depois de marcá-la.
 
 A frase é gerada por uma função PURA (mesmo desenho de `vpad_degradation_text`
 e `wrapper_banner_text`).

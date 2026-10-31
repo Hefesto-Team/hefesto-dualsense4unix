@@ -1,7 +1,7 @@
 """EMULACAO-NO-JOGO-01 — o R1 trocava de aplicativo em vez de jogar.
 
-Queixa, 29/07: *"inicio o jogo e ele quando aperto r1 muda de app ao invés
-de funcionar no jogo"*; e, no mesmo relato, o raciocínio que aponta o defeito —
+Defeito de 29/07: com o jogo aberto, o R1 trocava de app em vez
+de funcionar no jogo; e, no mesmo relato, o raciocínio que aponta o defeito —
 com o modo mouse/teclado desligado, isso não deveria impactar. A transcrição
 literal (sem correção de grafia) está na sprint
 a sprint `EMULACAO-NO-JOGO-01`; aqui vem acentuada

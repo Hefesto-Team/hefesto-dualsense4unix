@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Com o serviço parado, a aba Jogar marca Desligado e não escreve frase nenhuma.
 
-A queixa de 15/10/2026: «Sair» pela bandeja, a interface aberta com o serviço fora mostrou o Status
+Defeito de 15/10/2026: com o «Sair» pela bandeja, a interface aberta sem o serviço mostrou o Status
 em Ligado, o topo com «Nenhum controle» ao lado do ponto verde e a mesa vazia sem dizer por quê,
 com o Galactic Purple e o Cosmic Red ligados pelo rádio. O piloto entrega o estado vazio (`{}`)
 depois da folga; o pacote é quem lia esse vazio como Ligado.

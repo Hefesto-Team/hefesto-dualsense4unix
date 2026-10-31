@@ -13,8 +13,8 @@ Desligado o P3 (Cosmic Red), olhando o P4 (Galactic Purple)::
     23:56:49.284  gatilho_da_cor_escrito: rosa → verde       +31,5 s
 
 Por **27 segundos** o mesmo controle mostrava três lâmpadas de Player 3 e a
-barra do Player 4. A palavra de produto, confirmando a predição: *"Rosa e só verde
-meio minuto depois"*.
+barra do Player 4. O relato de produto confirmou a predição: rosa, e só verde
+meio minuto depois.
 
 ## O que esta régua mede, e onde MORDE
 

@@ -719,7 +719,7 @@ def _mesa_dos_secundarios(
 
 
 class TestOsJogadores2a4:
-    """*«cara nenhuma solução pode ser feita só pro p1»* — vale aqui também."""
+    """Nenhuma solução vale só para o P1 — vale aqui também."""
 
     def test_cada_jogador_aperta_a_propria_zona(self, monkeypatch: pytest.MonkeyPatch) -> None:
         dedos = {_P2: _toque(_DEDO_NO_CIMA), _P3: _toque(), _P4: _toque(_DEDO_NO_L1)}

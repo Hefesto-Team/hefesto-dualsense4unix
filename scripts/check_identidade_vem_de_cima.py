@@ -41,8 +41,8 @@ Comentário não conta — `<!-- ... -->` e `/* ... */` são prosa, e contá-los
 inflaria o número. Número inflado é a coisa que esta casa mais derruba.
 
 O que a régua NÃO reprova, de propósito: `P1`, `P2`, `P3`, `P4`. O número do
-jogador é ESTRUTURA — é a posição na mesa, não a identidade do aparelho. O usuário
-disse com todas as letras: *"O p1 ou p2 reflete o player do jogador."*
+jogador é ESTRUTURA — é a posição na mesa, não a identidade do aparelho. A decisão
+de produto é explícita: o P1 ou o P2 reflete o player do jogador.
 
 AS ISENÇÕES
 -----------

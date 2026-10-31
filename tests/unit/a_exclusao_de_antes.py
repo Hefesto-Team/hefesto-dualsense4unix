@@ -1,6 +1,6 @@
 """O «Excluir» da aba Lançadores antiga, guardado só para os testes semearem o disco.
 
-O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01 (19/10/2026, a resposta: «Saem do produto»): o
+O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01 (19/10/2026, decidido que saem do produto): o
 ``lista_de_exclusao.adicionar`` saiu do produto, sem chamador desde a aba antiga. A lista que ele
 escreveu continua no disco de quem a usou, e os leitores (a carona, o device KS, o ``tirar``, o
 uninstall) continuam lendo-a. Para provar esses leitores, os testes precisam de uma entrada IGUAL à

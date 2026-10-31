@@ -28,8 +28,8 @@ OS TRÊS CASOS, e o terceiro é o que fecha
 O caso 3 não é o caso 2 repetido: ele é o que a janela faz no botão "Todo o som
 do PC", e é o único que exercita a troca do PADRÃO do sistema em vez de mirar um
 sink. Rodar só o 2 e concluir o 3 é pular etapa — e foi o erro cometido na
-primeira passada de 15/08, corrigido pelo usuário na hora: *"não pula etapa, nem
-chega em conclusão assim"*.
+primeira passada de 15/08, corrigido na hora: não se pula etapa, nem
+se chega a conclusão assim.
 
 O QUE ESTE ENSAIO ISOLOU, e é a razão de ele existir
 -----------------------------------------------------

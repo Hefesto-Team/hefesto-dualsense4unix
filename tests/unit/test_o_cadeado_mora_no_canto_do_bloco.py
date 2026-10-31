@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """A RÉGUA DA POSIÇÃO: o cadeado do perfil mora no canto do bloco Status.
 
-PEDIDO, 08/09/2026, olhando a aba Jogar: *"esse não trocar de perfil. Pode
-colocar ele no canto superior direito do bloco tipo esse banco de provas na guia
-navegação."*
+PEDIDO, 08/09/2026, olhando a aba Jogar: o «não trocar de perfil» vai para o
+canto superior direito do bloco, como o banco de provas da aba Navegação.
 
 Ele ficava solto LOGO ABAIXO da fileira de modos, dentro do bloco **Modo**, e
 ali lia como um QUINTO modo: na coluna dos modos, no fluxo de leitura dos modos,

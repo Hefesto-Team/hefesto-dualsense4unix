@@ -1,6 +1,6 @@
 """HIDE-SO-O-HIDRAW-02 — os quatro nós de entrada do físico somem como o hidraw.
 
-A palavra, 23/09/2026, escolhida entre as opções: **«Esconder tudo»**. Os
+A decisão, 23/09/2026, escolhida entre as opções: **esconder tudo**. Os
 nós de entrada do DualSense FÍSICO (o gamepad, o touchpad, os sensores de
 movimento e a tomada do fone em `/dev/input/eventN`, e o joystick legado em
 `/dev/input/jsN`) somem para todos menos para o Hefesto, e só o Modo Nativo os

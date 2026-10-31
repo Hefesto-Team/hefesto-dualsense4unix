@@ -443,7 +443,7 @@ def _o_segundo_clique() -> dict[str, str]:
 
 def test_o_primeiro_clique_avisa_e_o_segundo_fecha_liga_e_reabre(
         lar, monkeypatch) -> None:
-    """A escolha do usuário, inteira: *"o primeiro clique avisa, o segundo fecha"*."""
+    """A escolha: o primeiro clique avisa, o segundo fecha."""
     steam = SteamDeMentira(monkeypatch)
     ctx = _ctx()
     ctx.mesa.extend(dict(c) for c in MESA_DE_QUATRO)
@@ -701,8 +701,8 @@ def _alcance_do_gesto(fn: Any, _visto: frozenset[str] = frozenset(),
 def test_so_o_segundo_clique_alcanca_o_fechar_a_steam() -> None:
     """UMA função do alcance do gesto fecha a Steam, e é a do segundo clique.
 
-    A escolha, 23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): *"o
-    primeiro clique avisa, o segundo fecha"*. O gesto alcança
+    A escolha, 23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): o
+    primeiro clique avisa, o segundo fecha. O gesto alcança
     `with_steam_closed` — e só por :func:`a01_jogar._fechar_a_steam_e_ligar`,
     que `modo_steam` só chama depois de `_o_clique_que_confirma`.
 

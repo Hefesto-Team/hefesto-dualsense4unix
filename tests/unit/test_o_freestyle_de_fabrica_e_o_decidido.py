@@ -6,8 +6,8 @@ Freestyle de 24/09, com a vibração sem opinião, o microfone sem seção e as 
 de número no Fraco. O conteúdo de fábrica é o item 1 da sprint, e um dono só
 evita dois «de fábrica».
 
-O QUE O USUÁRIO DISSE, e em que ordem. Nas palavras que abrem a sprint: *«no freestyle a ideia
-é tudo estar no ultra até vibração e afins.»* — e o item 1 da sprint o escreveu
+O QUE O PEDIDO DIZ, e em que ordem. A abertura da sprint: no Freestyle, tudo
+fica no ultra, inclusive a vibração. — e o item 1 da sprint o escreveu
 campo a campo: vibração no Máximo com o jogo passando, alto-falante no teto,
 microfone aberto com o ganho no teto, as luzes no brilho mais forte, os sensores
 ligados. Na noite de 27/09 (a resposta 12), o pedido foi testar algo diferente do

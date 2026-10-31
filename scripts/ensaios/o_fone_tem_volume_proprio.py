@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """o_fone_tem_volume_proprio.py — o byte do fone, variado SOZINHO, na orelha do usuário.
 
-A PERGUNTA QUE ELE DECIDE (FONE-01, decisão de 09/09/2026: *"1-b"*)
+A PERGUNTA QUE ELE DECIDE (FONE-01, decisão de 09/09/2026, opção 1-b)
 --------------------------------------------------------------------------
 O DualSense tem DUAS saídas — o alto-falante e o fone do jack — e o produto
 manda **o mesmo byte** para as duas: `set_audio_volumes(headphone=efetivo,

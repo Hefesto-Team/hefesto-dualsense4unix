@@ -199,7 +199,7 @@ def test_uma_linha_sem_cura_nao_inventa_o_que_fazer():
 
 
 def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
-    """26/09/2026, pedido: *«vamos remover essas infos que aparecem no"""
+    """26/09/2026, pedido para remover essas informações da linha."""
     html = ENSAIO.read_text(encoding="utf-8")
     assert 'data-campo="examinado"' not in html
     assert 'data-campo="conta-gestao"' not in html

@@ -458,7 +458,7 @@ def test_localizar_este_lancador_abre_a_tela_de_registro(desenho):
 
 
 def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
-    """A PALAVRA É DE PRODUTO — 08/09/2026: *"Adicionar novo Lançador? Seria legal um"""
+    """O RÓTULO É DE PRODUTO — 08/09/2026, «Adicionar novo lançador»."""
     do_cartao = desenho.ADICIONAR_ROTULO
     global_ = desenho.ADICIONAR_NOVO_ROTULO
     assert do_cartao != global_, (

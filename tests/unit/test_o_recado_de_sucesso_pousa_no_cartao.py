@@ -611,9 +611,9 @@ def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
     """A PERGUNTA FOI INVERTIDA EM 13/09/2026 — TELA-CALADA-01.
 
     A régua era `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` e exigia a frase
-    de sucesso no cartão do p1. A palavra de produto, com a foto do rodapé: *"essas
-    frases de status que aparecem no rodapé isso não deveria estar
-    aparecendo"*, *"em todas as abas da interface"*. O gesto que devolve
+    de sucesso no cartão do p1. O pedido de produto, com a foto do rodapé: as
+    frases de status do rodapé saem
+    de todas as abas da interface. O gesto que devolve
     `{"recado": …}` continua dando certo e continua piscando; a frase vai ao
     diário da janela, e o cartão fica como estava.
 

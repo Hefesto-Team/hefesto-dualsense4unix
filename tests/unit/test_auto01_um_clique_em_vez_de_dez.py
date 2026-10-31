@@ -1,8 +1,7 @@
 """AUTO-01 (sprint 25/07) — um clique em vez de dez.
 
-O pedido: *"ao clicar em tal coisa, ele não precisar alterar 10 coisas em
-abas, fechar a Steam, abrir, aplicar x, y e z, tudo de forma manual mas de forma
-automática, o máximo que der."*
+O pedido: um clique em vez de dez ajustes em abas, de fechar e abrir a Steam e
+de aplicar cada coisa à mão, tudo automático, o máximo possível.
 
 Este arquivo trava os três itens que impediam **os quatro jogadores**:
 

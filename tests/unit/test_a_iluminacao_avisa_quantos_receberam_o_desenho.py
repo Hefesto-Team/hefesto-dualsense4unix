@@ -290,7 +290,7 @@ def test_o_gesto_poe_a_frase_do_dono_no_canal_de_recado(monkeypatch, a04, pac,
 
     É a entrega da sprint em uma linha: *o pacote lê a conta e devolve a frase
     do dono no `recado`*. **O canal verde caducou em 13/09/2026**
-    (TELA-CALADA-01, pedido: *"em todas as abas da interface"*): o piloto
+    (TELA-CALADA-01, pedido para todas as abas da interface): o piloto
     leva a frase ao diário da janela (`hefesto_vivo._deu_certo_dizendo`, linha
     `[relato]`), e não ao cartão. A chave continua sendo `recado` — ver
     `test_o_canal_e_o_verde_de_seis_segundos`.

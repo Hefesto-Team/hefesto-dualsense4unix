@@ -1,7 +1,7 @@
 """OQ-6 — o touchpad e o giroscópio funcionavam por acidente.
 
-O usuário autorizou, em 09/08/2026: *"autorizo inclusive o touchpad e giroscópio devem
-funcionar por default em todos os modos possíveis"*. A medição do mesmo dia
+Autorizado em 09/08/2026: o touchpad e o giroscópio funcionam
+por padrão em todos os modos possíveis. A medição do mesmo dia
 mostrou que **por default eles não funcionavam** — funcionavam porque a usuária
 desta máquina está no grupo ``input`` **por fora do produto**.
 

@@ -25,11 +25,11 @@ continuava acusando.** O nome do arquivo — `51-hefesto-dualsense-no-default-so
 O OPT-IN QUE EXISTIA NÃO ERA DO USUÁRIO
 =================================
 Havia um opt-in: a variável de ambiente
-`HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1`. Pela regra desta casa — *"tudo
-tem que focar em funcionar na interface do app e no install"* — opt-in que só se
-alcança exportando env não é opt-in de quem usa; é opt-in de quem lê o código. O usuário
-disse, com todas as letras, que quer o microfone do controle: *"sobre o microfone
-tem que gravar minha voz"*.
+`HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1`. Pela regra desta casa — tudo
+funciona pela interface e pelo install — opt-in que só se
+alcança exportando env não é opt-in de quem usa; é opt-in de quem lê o código. O pedido
+de produto é explícito: o microfone do controle grava a voz de quem
+usa.
 
 O promotor no disco, esse sim, é gesto do usuário: só existe se o install rodou sem
 `--keep-dualsense-mic`, ou se o usuário clicou "Ligar" na aba Emulação.

@@ -106,7 +106,7 @@ def test_o_mic_pelo_radio_sem_ponte_nao_e_certo() -> None:
 
 
 def test_conexao_e_bateria_sairam_do_cartao() -> None:
-    """26/09/2026, pedido: *«vamos remover as linhas de conexão estávbel"""
+    """26/09/2026, pedido para remover as linhas de conexão estável."""
     pac = _pac()
     c = {"uniq": UNIQS[0], "transport": "bt", "battery_pct": 40, "hz_movimento": 20}
     assert set(pac.estado_do_controle(c, {}, {}, _Declaracao())) == {

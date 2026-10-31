@@ -1,7 +1,7 @@
 """A-HAPTICA-E-POR-APARELHO-01 — a háptica é por aparelho (e toda feature também).
 
-A palavra de 29/09, ~21h55, à pergunta da háptica de P1 a P4: *«todas as
-features são um por aparelho. sempre.»* De 28/09 a 02/10 o endpoint de quatro
+A decisão de 29/09, ~21h55, à pergunta da háptica de P1 a P4: todo recurso
+é por aparelho, sempre. De 28/09 a 02/10 o endpoint de quatro
 canais era um por LUGAR (a ``D-2909-A-HAPTICA-TEM-UM-ENDPOINT-POR-LUGAR``, que
 foi revogada): o número que andava trocava a ponte e o laço de quem se sentava
 ali. Agora é um por DualSense da mesa, nos dois transportes, com o nome, a

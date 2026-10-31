@@ -2,7 +2,7 @@
 """A RÉGUA DA LARGURA: o desenho acompanha a janela, até um teto.
 
 DECISÃO, 08/09/2026, com o produto instalado e os quatro DualSense na mesa.
-O que o usuário disse foi o sintoma: *"o background fica completamente preto"*.
+O relato foi o sintoma: o fundo fica completamente preto.
 
 MEDIDO, NÃO ERA FALTA DE FUNDO. O `body` do `topo.html` já pinta `#11121a`; o
 que se via era a cor da casa, só que MUITA — a `.janela` parava em 1180px

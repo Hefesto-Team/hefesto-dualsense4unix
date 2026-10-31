@@ -451,7 +451,7 @@ class TestOSilencioDoUsuarioVence:
     async def test_o_controle_sem_opiniao_nasce_ligado(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A ordem de 17/09/2026: *"os jogos e perfis tem que iniciar com"""
+        """A ordem de 17/09/2026: jogos e perfis iniciam com tudo ligado."""
         monkeypatch.setattr(mgr, "load_profile", lambda _n: _perfil(mic={"volume": 100}))
         assert maquina.gravar_o_mudo_do_microfone(P2, False)
         daemon = mesa.daemon(perfil_ativo="o-perfil-do-usuario")
@@ -861,7 +861,7 @@ class TestAEscolhaGravadaDoUsuario:
 
 
 class TestARecusaDoUsuarioVenceONascimento:
-    """*"todos os controles tem que nascer com tudo"* — e só o `False` desliga."""
+    """Todo controle nasce com tudo — e só o `False` desliga."""
 
     @pytest.mark.asyncio
     async def test_o_controle_desligado_nao_nasce(self, mesa) -> None:

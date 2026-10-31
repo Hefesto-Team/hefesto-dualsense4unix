@@ -1,8 +1,8 @@
 """Salvar não pode desfazer o que a aba já gravou.
 
-MEDIDO EM 05/09/2026, atrás do pedido: *"aplicar aplica todas as configs
-naquele perfil e salvar se lembra disso quando eu for jogar o jogo e no dia
-seguinte e por diante"*. Um ciclo inteiro — perfil no disco, quem usa configura nas
+MEDIDO EM 05/09/2026, atrás do pedido: o Aplicar aplica todos os ajustes
+naquele perfil, e o Salvar os mantém para o jogo, o dia
+seguinte e os outros. Um ciclo inteiro — perfil no disco, quem usa configura nas
 abas 02, 04, 05 e 06, volta e clica **Salvar** no rodapé — mostrou que **5 de
 11 campos sobreviviam**, e que três deles não se perdiam por esquecimento: o
 produto já tinha gravado o valor certo no disco e o Salvar o **desfazia**.

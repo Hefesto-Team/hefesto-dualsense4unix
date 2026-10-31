@@ -1,9 +1,9 @@
 """D-1410-O-APLICAR-SEGURA: o «Aplicar» de outro perfil segura contra o autoswitch.
 
-A queixa (14/10/2026): *«Usar o «Aplicar» em outro perfil não segura: em uns 12 s
-a escolha feita à mão volta por cima dele.»* A regra de produto: *«Ele deveria ficar
-sempre com o perfil do último jogo aberto ou ativado. Até que eu mude ou outro
-jogo inicie»*. O «Aplicar» e o «Voltar à de ontem» passam pelo mesmo
+O defeito (14/10/2026): o «Aplicar» em outro perfil não segurava, e em uns 12 s
+a escolha feita à mão voltava por cima dele. A regra de produto: fica sempre
+o perfil do último jogo aberto ou ativado, até quem usa mudar ou outro
+jogo iniciar. O «Aplicar» e o «Voltar à de ontem» passam pelo mesmo
 `ProfileManager.reaplicar(prender=True)`, que arma a trava da troca à mão sem gravar a escolha.
 
 Parte 3 (respostas, 14/10/2026): **só o «Aplicar» prende**. O ajuste numa aba grava e reaplica

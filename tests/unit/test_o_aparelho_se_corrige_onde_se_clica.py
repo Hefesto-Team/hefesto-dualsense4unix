@@ -1,7 +1,7 @@
 """Clicar num aparelho abre o painel dele: nome, tipo, extensor, o que fazer — e o resto.
 
 O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026), com a A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01
-absorvida. O usuário pediu: *«clicar num dispositivo não oferece modificá-lo ou identificá-lo»*.
+absorvida. O defeito relatado: clicar num dispositivo não oferecia modificá-lo nem identificá-lo.
 
 A página sob prova é a do ENSAIO (``publicado=False``): o painel novo só vira o produto no
 ``--publicar`` da costura, depois do olho de quem confere. TUDO É DE MENTIRA: barramento

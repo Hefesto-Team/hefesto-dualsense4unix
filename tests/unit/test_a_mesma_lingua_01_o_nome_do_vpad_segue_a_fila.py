@@ -1,7 +1,7 @@
 """A-MESMA-LINGUA-01 — o número da carta é o número que vai no nome do vpad.
 
-Decisão, 07/09/2026, em cinco palavras: *"precisamos que falem a mesma
-língua."*
+Decisão, 07/09/2026: os dois nomes falam a mesma
+língua.
 
 O DEFEITO, medido no ensaio no mesmo dia com os QUATRO DualSense na mesa
 (`daemon.state_full`, os quatro itens de `coop.mesa`) — e era **4 de 4**,

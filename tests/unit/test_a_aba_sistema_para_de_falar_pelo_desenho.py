@@ -233,8 +233,8 @@ def test_o_que_nao_chega_na_tela_esta_declarado(a09, ctx):
 def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     """A contagem do exame saiu da página, e o endereço saiu dos dois lados.
 
-    Pedido, 25/09/2026, 22h13: *«Remove esse 8 linhas deixa o espaço
-    vazio»*. Um endereço que o pacote escreve sem lugar na página é escritor
+    Pedido de 25/09/2026, 22h13: o «8 linhas» sai e o espaço
+    fica vazio. Um endereço que o pacote escreve sem lugar na página é escritor
     calado; um lugar na página sem quem o escreva mostra o «8» do ensaio.
 
     **A MORDIDA:** devolva `fora["exame-contagem"] = …` no `pacote` e este

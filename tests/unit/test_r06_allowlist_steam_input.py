@@ -25,8 +25,8 @@ de cena.
 NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto)
 ===================================================================
 **As quatro travas do MECANISMO deste arquivo caducaram, e o seu desenho foi
-invertido, não apagado.** A palavra, de 08/08: *"a allowlist do Steam Input
-NÃO tira o Hefesto da frente"*. O que a matou é uma medição, não uma
+invertido, não apagado.** A decisão, de 08/08: a allowlist do Steam Input
+NÃO tira o Hefesto da frente. O que a matou é uma medição, não uma
 preferência: suspender os gamepads virtuais para curar o controle dobrado
 derruba o jogador 2 junto, porque **o jogador 2 é um gamepad virtual** —
 `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências no journal da máquina de teste em

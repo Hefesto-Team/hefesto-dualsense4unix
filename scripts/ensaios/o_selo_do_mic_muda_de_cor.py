@@ -8,8 +8,8 @@ disco passa. O que quem usa vê é outra coisa — a repintura do tique escreve 
 aceita UM alvo de pintura**. O card que nasceu ATIVO e ficou mudo mostrava a
 palavra ``MUDO`` sobre o fundo VERDE.
 
-DECISÃO, 03/09/2026: *"Cor + ícone. Redundante de propósito — quem lê
-rápido pega pela cor, quem não distingue cor pega pelo risco."*
+DECISÃO, 03/09/2026: cor e ícone, redundantes de propósito — quem lê
+rápido pega pela cor, quem não distingue cor pega pelo risco.
 
 Ele NÃO TOCA O APARELHO DO USUÁRIO: não clica no 🎙, que faria ``mic.set`` no
 firmware do DualSense que está no cabo agora. Ele injeta a carga que o TIQUE

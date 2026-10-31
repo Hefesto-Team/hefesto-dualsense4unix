@@ -1025,7 +1025,7 @@ def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
 
 
 def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
-    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido: *«temos o"""
+    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): entrada e dispositivo, nomes separados."""
     banca = Ensaio(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},

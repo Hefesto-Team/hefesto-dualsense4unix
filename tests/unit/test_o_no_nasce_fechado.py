@@ -328,7 +328,7 @@ class TestOBrokerAbreSobPedido:
         assert resposta["error"] == "reject_not_physical_dualsense"
 
     def test_o_hide_cede_a_lease_de_exposicao(self) -> None:
-        """«O Hefesto tem que ter prioridade em tudo» — e a ordem interna também."""
+        """O Hefesto tem prioridade em tudo — e a ordem interna também."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         resposta = pedir(st, 2, {"cmd": "hide", "node": "/dev/hidraw3"})

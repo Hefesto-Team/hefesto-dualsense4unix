@@ -2,8 +2,8 @@
 
 A-NAVEGACAO-DO-CONTROLE-ESCOLHE-O-MODO-DA-VIBRACAO-01.
 
-A queixa (22/10/2026): «o modo de vibração eu não consigo selecionar usando a navegação interna
-do controle». Medido no piloto, em lar de mentira, com os quatro controles: sentado na lista, o X,
+O defeito (22/10/2026): o modo de vibração não se selecionava pela navegação interna
+do controle. Medido no piloto, em lar de mentira, com os quatro controles: sentado na lista, o X,
 o ↓ e o X trocam a opção e a opção fica depois dos tiques (o gesto chega ao daemon e a pintura não a
 devolve). O que falhava era CHEGAR à lista: descendo a coluna dos interruptores, o ↓ do interruptor
 da háptica ia ao do motor esquerdo, e o do motor direito ia ao «Testar», pulando as duas listas

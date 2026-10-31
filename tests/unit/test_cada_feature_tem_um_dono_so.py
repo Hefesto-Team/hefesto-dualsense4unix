@@ -1,6 +1,6 @@
 """Cada feature tem um dono só na interface (CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01).
 
-A fala de 12/10/2026: «Temos que evitar features se repetindo em abas diferentes.»
+O pedido de 12/10/2026: nenhum recurso se repete em abas diferentes.
 
 O mapa `FEATURES` diz, para cada feature, QUEM A ESCREVE: a aba dona e os seus gestos de escrita.
 Dois olhares, e os dois reprovam o mesmo defeito, por caminhos diferentes:

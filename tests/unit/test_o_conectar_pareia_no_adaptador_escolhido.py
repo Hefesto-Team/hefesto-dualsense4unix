@@ -5,7 +5,7 @@ Os relatos de 26/09/2026, com três DualSense e três adaptadores: com um contro
 clique na guia do adaptador da Esquerda e no Conectar correspondente ainda conectava no da
 Direita; nem a guia escolhida nem o botão Conectar eram respeitados.
 
-E a decisão de produto, às 04h: *«No adaptador aberto (a Esquerda)»*.
+E a decisão de produto, às 04h: no adaptador aberto (a Esquerda).
 
 MEDIDO no ``radio-diario.jsonl``: os oito «Conectar» da madrugada abriram
 a busca no ``hci0``, qualquer que fosse o adaptador aberto — o destino era o da

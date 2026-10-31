@@ -1,7 +1,7 @@
 """A-MASCARA-ESCOLHIDA-E-O-QUE-O-JOGO-VE-EM-TODO-MODO-01 — a tabela modo x caminho x máscara.
 
-A pergunta (03/10): *«se na aba jogar a máscara funciona independente do
-modo»*. O que se mediu no código e no diário (08/10): das nove combinações
+A pergunta (03/10): se a máscara da aba Jogar funciona independente do
+modo. O que se mediu no código e no diário (08/10): das nove combinações
 (caminho nenhum, DualSense, Xbox x as três máscaras) e dos dois estados do
 `/dev/uhid`, **uma só troca a máscara** — o caminho Xbox ESCOLHIDO, que veste
 Xbox 360 em qualquer máscara. É decisão medida

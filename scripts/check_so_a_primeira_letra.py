@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_so_a_primeira_letra.py — só a primeira letra da frase é maiúscula.
 
-A REGRA É DE PRODUTO (09/10/2026, escolha no chat: «Só a 1ª maiúscula»), e repete a de
+A REGRA É DE PRODUTO (09/10/2026, escolha no chat, só a 1ª maiúscula), e repete a de
 08/10 no ESCOLHAS.md: *toda frase começa com maiúscula e o resto em minúscula*.
 Rótulo de botão, título e cartão saíam em Title Case, à inglesa — «Salvar
 Perfil», «Gestão de Controles», «Modo Automático», «Perfil de Bateria», «Modo

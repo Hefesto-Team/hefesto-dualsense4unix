@@ -1,7 +1,7 @@
 """R-14 + R-15 (auditoria 23/07) — numeração honesta de controle.
 
-Queixa da mantenedora que estes casos fecham: "aparecem dois 'player 2' e
-dois 'player 1' em vez de 1-2-3-4".
+Defeito que estes casos fecham: apareciam dois 'player 2' e
+dois 'player 1' em vez de 1-2-3-4.
 
 R-14 — ``auto_player_colors`` acoplava TRÊS coisas num flag só (cor,
 numeração e os externos), e a GUI o desligava por engano num clique de cor

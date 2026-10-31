@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01 — Nativo e Steam Input no Desligado.
 
-A escolha, 08/10/2026 (`ESCOLHAS.md`, opção a mudada): *«Desligar o hefesto
-= Nativo na origem. Steam Input sai de Ligado.»* Com o Hefesto Ligado, os botões
+A escolha, 08/10/2026 (`ESCOLHAS.md`, opção a mudada): desligar o Hefesto
+é o Nativo na origem, e o Steam Input sai de Ligado. Com o Hefesto Ligado, os botões
 são Sony DualSense, Xbox e Navegação; com ele Desligado, Nativo e Steam Input,
 no mesmo estilo. O Nativo tira o jogo da vez da lista do Steam Input e o
 `localconfig.vdf` fica em `"0"`; o guarda do vdf repete isso para todo jogo fora
