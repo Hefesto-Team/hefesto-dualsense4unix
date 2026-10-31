@@ -130,10 +130,14 @@ class TestDropinResilience:
 
     def test_watchdog_reafirma_modo_ativo(self) -> None:
         """O watchdog (2 min) delega ao bt_active_mode.sh — cobre adaptador que"""
-        text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(
+        text = (REPO_ROOT / "assets" / "systemd" / "hefesto-bt-health-watchdog.service").read_text(
             encoding="utf-8"
         )
-        assert "bt_active_mode.sh" in text
+        assert re.search(
+            r"^ExecStart=-\+/usr/local/lib/hefesto-dualsense4unix/bt_active_mode\.sh",
+            text,
+            re.M,
+        )
 
     def test_uninstall_reverte_sniff_e_nome(self) -> None:
         """Uninstall simétrico: volta o SNIFF default e tira o prefixo Nintendo."""

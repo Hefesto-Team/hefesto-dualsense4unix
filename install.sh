@@ -1079,7 +1079,7 @@ _ensaio_camada() {
             _faria_root "rodar bt_active_mode.sh AGORA (tira o Pro Controller do modo sniff — não reinicia o bluetoothd)"
             _faria_root "instalar /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf (Restart + WatchdogSec=0 + snapshot na parada)"
             _faria_root "instalar os timers hefesto-bt-bonds-snapshot e hefesto-bt-health-watchdog em /etc/systemd/system/ e habilitá-los"
-            _faria_root "gravar /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf (o watchdog enxerga só o ${HOME}/.config/hefesto-dualsense4unix/maquina.json, só leitura, para dar ao adaptador o nome do lugar)"
+            _faria_root "tirar /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf, se uma instalação anterior o deixou (o nome do lugar vem do maquina.json da conta que está na sessão, e não da casa de quem instalou)"
             _faria_root "criar /var/lib/hefesto-dualsense4unix/bt-bonds (modo 700) para os snapshots"
             ;;
         bt-agent)

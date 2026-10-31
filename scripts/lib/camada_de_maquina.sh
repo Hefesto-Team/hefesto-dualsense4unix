@@ -307,19 +307,6 @@ install_trava_do_radio_host() {
     return 0
 }
 
-_render_dropin_do_watchdog() {
-    local casa="$1" saida="$2"
-    [[ "${casa}" =~ ^/[A-Za-z0-9._@+/-]+$ && "${casa}" != "/" ]] || return 1
-    cat > "${saida}" <<DROPIN
-# instalado por hefesto-dualsense4unix (install.sh) — remoção: uninstall.sh
-# O watchdog do Bluetooth enxerga UM arquivo da casa de quem instalou: o
-# maquina.json, de onde o bt_active_mode.sh lê o nome de cada lugar. A unit
-# roda com ProtectHome=tmpfs; este bind é o único furo, e só de leitura.
-[Service]
-BindReadOnlyPaths=-${casa}/.config/hefesto-dualsense4unix/maquina.json
-DROPIN
-}
-
 _ferramentas_que_faltam_ao_nome_do_lugar() {
     local caminho="${1:-}" f d achou pastas=()
     if [[ -z "${caminho}" ]]; then
@@ -367,16 +354,8 @@ install_bt_resilience_host() {
         sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_btres_u}" \
             "/etc/systemd/system/${_btres_u}" 2>/dev/null || _btres_ok=0
     done
-    local _btres_dropin
-    _btres_dropin="$(mktemp)"
-    if _render_dropin_do_watchdog "${HOME}" "${_btres_dropin}"; then
-        sudo install -Dm644 "${_btres_dropin}" \
-            /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf \
-            2>/dev/null || _btres_ok=0
-    else
-        warn "a casa '${HOME}' tem caractere que o systemd lê como separador — o watchdog do Bluetooth segue sem ver o nome dos lugares (o bluetoothd, no start, vê)"
-    fi
-    rm -f "${_btres_dropin}"
+    sudo rm -f /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf 2>/dev/null || true
+    sudo rmdir /etc/systemd/system/hefesto-bt-health-watchdog.service.d 2>/dev/null || true
     sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds 2>/dev/null || true
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     if sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer \

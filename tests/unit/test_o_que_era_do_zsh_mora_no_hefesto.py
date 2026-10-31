@@ -18,8 +18,6 @@ LIB = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
 PARIDADE = RAIZ / "scripts" / "check_packaging_parity.sh"
 SYSTEMD = RAIZ / "assets" / "systemd"
 DROPIN_BT = SYSTEMD / "bluetooth-dropin-10-hefesto-resilience.conf"
-WATCHDOG = SYSTEMD / "hefesto-bt-health-watchdog.service"
-MODO_ATIVO = RAIZ / "scripts" / "bt_active_mode.sh"
 
 IFC = "wlan-usb0"
 GW = "192.0.2.1"
@@ -918,82 +916,6 @@ def test_o_main_do_doctor_pergunta_pelo_vigia_na_secao_do_wifi() -> None:
     main = _corpo_do_main()
     secao = main[main.index('hdr "DKMS rtw88_usb / WiFi') : main.index('hdr "USB / dropout"')]
     assert re.search(r"^\s*check_wifi_usb\s*$", secao, re.M)
-
-
-def _o_que_o_modo_ativo_le() -> str:
-    achado = re.search(r'arquivo="\$\{casa\}(/[^"]+)"', MODO_ATIVO.read_text(encoding="utf-8"))
-    assert achado, "não achei no bt_active_mode.sh onde ele lê o maquina.json da casa"
-    return achado.group(1)
-
-
-def _render_dropin(tmp_path: Path, casa: str) -> tuple[int, str]:
-    saida = tmp_path / "dropin.conf"
-    r = subprocess.run(
-        [
-            "bash",
-            "-c",
-            f'source "{LIB}"; _render_dropin_do_watchdog "$1" "$2"',
-            "_",
-            casa,
-            str(saida),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-        env={"PATH": "/usr/bin:/bin", "ROOT_DIR": str(RAIZ), "HOME": str(tmp_path)},
-    )
-    return r.returncode, saida.read_text(encoding="utf-8") if saida.exists() else ""
-
-
-def _visivel_no_sandbox(unit: str, dropin: str, caminho: str) -> bool:
-    """O que o systemd deixa a unit ver da casa — o modelo das duas diretivas."""
-    texto = unit + "\n" + dropin
-    valores = re.findall(r"^ProtectHome=(\S+)", texto, re.M)
-    protege = valores[-1] if valores else "no"
-    if protege in {"no", "false"}:
-        return True
-    if protege in {"yes", "true", "read-only"}:
-        return protege == "read-only"
-    binds = []
-    for linha in re.findall(r"^BindReadOnlyPaths=(.+)$", texto, re.M):
-        binds += [b.lstrip("-").split(":", 1)[0] for b in linha.split()]
-    return caminho in binds
-
-
-def test_o_watchdog_enxerga_o_maquina_json_e_so_ele(tmp_path: Path) -> None:
-    casa = "/home/pessoa"
-    rc, dropin = _render_dropin(tmp_path, casa)
-    assert rc == 0
-    unit = WATCHDOG.read_text(encoding="utf-8")
-    lido = casa + _o_que_o_modo_ativo_le()
-    assert _visivel_no_sandbox(unit, dropin, lido), (
-        f"o watchdog não enxerga {lido} — o nome do lugar não chega ao Alias no tique dele"
-    )
-    assert not _visivel_no_sandbox(unit, dropin, casa + "/.ssh/id_ed25519"), (
-        "a casa inteira ficou visível"
-    )
-    assert f"BindReadOnlyPaths=-{lido}" in dropin, (
-        "sem o `-`, a unit não sobe antes do primeiro nome"
-    )
-    assert not _visivel_no_sandbox(unit, "", lido)
-
-
-def test_casa_com_separador_do_systemd_nao_vira_drop_in(tmp_path: Path) -> None:
-    for casa in ("/home/nome com espaco", '/home/aspas"', "relativa/casa", "/"):
-        rc, dropin = _render_dropin(tmp_path, casa)
-        assert rc == 1 and dropin == "", casa
-
-
-def test_o_install_da_resiliencia_escreve_o_drop_in_com_a_casa_de_quem_instalou(
-    tmp_path: Path,
-) -> None:
-    _, sudo, captura = _roda_a_cura(tmp_path, "install_bt_resilience_host", {})
-    destino = "/etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf"
-    assert destino in sudo
-    gravado = (captura / "10-hefesto-maquina.conf").read_text(encoding="utf-8")
-    assert f"BindReadOnlyPaths=-{tmp_path / 'casa'}{_o_que_o_modo_ativo_le()}" in gravado
-    assert sudo.index(destino) < sudo.index("systemctl daemon-reload")
 
 
 def test_o_uninstall_leva_o_drop_in_do_watchdog() -> None:

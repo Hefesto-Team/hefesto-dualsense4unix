@@ -484,8 +484,12 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         || missing+=("scripts/doctor.sh(sem check_bt_rfkill)")
     grep -qE '^[[:space:]]+check_bt_rfkill[[:space:]]*$' <<<"${_wifi_doc}" \
         || missing+=("scripts/doctor.sh(o main não chama check_bt_rfkill)")
-    grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_lib_inst}" \
-        || missing+=("scripts/lib/camada_de_maquina.sh(não escreve o drop-in do watchdog)")
+    if grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_lib_inst}"; then
+        missing+=("scripts/lib/camada_de_maquina.sh(prende o watchdog à casa de quem instalou)")
+    fi
+    grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' \
+        <<<"$(grep -E '(^|[[:space:]])rm[[:space:]]+-f' <<<"${_wifi_lib}" || true)" \
+        || missing+=("scripts/lib/camada_de_maquina.sh(não tira o drop-in velho do watchdog)")
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
         || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
     if [[ -f scripts/install-host-udev.sh ]]; then
@@ -497,7 +501,7 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         done
     fi
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in do watchdog entra e sai; o pacote não liga o vigia"
+        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in velho do watchdog sai nos dois; o pacote não liga o vigia"
     else
         echo "[FAIL] vigia do Wi-Fi USB: FALTANDO em: ${missing[*]}"
         echo "       Peça que o install põe e o uninstall não tira é o defeito que tirou"

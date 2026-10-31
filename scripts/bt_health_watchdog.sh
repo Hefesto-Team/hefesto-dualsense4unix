@@ -230,9 +230,6 @@ fi
 
 _pegar_a_trava || exit 0
 
-_ACTIVE=/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh
-[[ -x "${_ACTIVE}" ]] && "${_ACTIVE}" --quiet 2>/dev/null || true
-
 vigia_rebind_orfaos() {
     local _s
     for _s in \

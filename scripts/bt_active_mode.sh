@@ -209,20 +209,41 @@ if command -v busctl >/dev/null 2>&1; then
         return 0
     }
     declare -A NOME_DO_ADAPTADOR=()
+    _uid_da_sessao_ativa() {
+        local assento sid uid uids=()
+        command -v loginctl >/dev/null 2>&1 || return 0
+        while read -r assento _; do
+            [[ "${assento}" =~ ^[A-Za-z0-9_-]+$ ]] || continue
+            sid="$(timeout 5 loginctl show-seat "${assento}" -p ActiveSession --value 2>/dev/null || true)"
+            [[ "${sid}" =~ ^[A-Za-z0-9_-]+$ ]] || continue
+            uid="$(timeout 5 loginctl show-session "${sid}" -p User --value 2>/dev/null || true)"
+            [[ "${uid}" =~ ^[0-9]+$ ]] || continue
+            [[ " ${uids[*]-} " == *" ${uid} "* ]] || uids+=("${uid}")
+        done < <(timeout 5 loginctl list-seats --no-legend 2>/dev/null || true)
+        [[ "${#uids[@]}" -eq 1 ]] && printf '%s\n' "${uids[0]}"
+        return 0
+    }
     _maquina_json() {
-        local nome uid casa arquivo achados=()
+        local nome uid casa arquivo ativo da_sessao="" achados=()
         if [[ -n "${HEFESTO_MAQUINA_JSON:-}" ]]; then
             printf ':%s\n' "${HEFESTO_MAQUINA_JSON}"
             return 0
         fi
         [[ -n "${HEFESTO_SYS_BLUETOOTH:-}" || -n "${HEFESTO_BT_LIB:-}" ]] && return 0
+        ativo="$(_uid_da_sessao_ativa)"
         while IFS=: read -r nome _ uid _ _ casa _; do
             [[ "${uid}" =~ ^[0-9]+$ ]] || continue
             (( uid >= 1000 && uid < 60000 )) || continue
             arquivo="${casa}/.config/hefesto-dualsense4unix/maquina.json"
-            [[ -f "${arquivo}" && ! -L "${arquivo}" ]] && achados+=("${uid}:${arquivo}")
+            [[ -f "${arquivo}" && ! -L "${arquivo}" ]] || continue
+            achados+=("${uid}:${arquivo}")
+            [[ "${uid}" == "${ativo}" ]] && da_sessao="${uid}:${arquivo}"
         done < <(getent passwd 2>/dev/null || cat /etc/passwd 2>/dev/null || true)
-        [[ "${#achados[@]}" -eq 1 ]] && printf '%s\n' "${achados[0]}"
+        if [[ -n "${da_sessao}" ]]; then
+            printf '%s\n' "${da_sessao}"
+        elif [[ "${#achados[@]}" -eq 1 ]]; then
+            printf '%s\n' "${achados[0]}"
+        fi
         return 0
     }
     _ler_os_nomes_dos_adaptadores() {
