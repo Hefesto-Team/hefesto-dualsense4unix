@@ -48,19 +48,25 @@ def _bloco_do_handle(handle: Any, lado: str) -> bytes | None:
     from hefesto_dualsense4unix.core.backend_pydualsense import _forca_do_gatilho
 
     gatilho = getattr(handle, "triggerL" if lado == "left" else "triggerR", None)
-    try:
-        bloco = bloco_do_gatilho(int(gatilho.mode.value), gatilho.forces)
-        return bytes(_forca_do_gatilho(handle, bloco))
-    except Exception:
+    modo = getattr(getattr(gatilho, "mode", None), "value", None)
+    forcas = getattr(gatilho, "forces", None)
+    if not isinstance(modo, int) or not isinstance(forcas, list | tuple) or len(forcas) < 7:
         return None
+    return bytes(_forca_do_gatilho(handle, bloco_do_gatilho(modo, forcas)))
+
+
+def _rgb(valor: Any) -> tuple[int, int, int] | None:
+    """Três inteiros de cor, cada um num byte; outra forma não é cor."""
+    if not isinstance(valor, list | tuple) or len(valor) != 3:
+        return None
+    if not all(isinstance(v, int) for v in valor):
+        return None
+    r, g, b = (v & 0xFF for v in valor)
+    return (r, g, b)
 
 
 def _cor_da_barra(handle: Any) -> tuple[int, int, int] | None:
-    cor = getattr(getattr(handle, "light", None), "TouchpadColor", None)
-    with contextlib.suppress(Exception):
-        r, g, b = (int(v) & 0xFF for v in cor)
-        return (r, g, b)
-    return None
+    return _rgb(getattr(getattr(handle, "light", None), "TouchpadColor", None))
 
 
 def _todos(porque: str) -> dict[str, dict[str, Any]]:
@@ -128,8 +134,4 @@ def recibo_do_controle(daemon: Any, controller: Any, uniq: str | None) -> dict[s
         escritos = getattr(controller, "_sysfs_written", None)
         no_no = escritos.get(chave) if isinstance(escritos, dict) and chave else None
         mudo = bool(getattr(controller, "_output_mute", False))
-        cor_no_no: tuple[int, int, int] | None = None
-        with contextlib.suppress(Exception):
-            r, g, b = (int(v) for v in no_no)
-            cor_no_no = (r, g, b)
-        return recibo_do_handle(handle, mudo=mudo, escrito_no_no=cor_no_no, anima=anima)
+        return recibo_do_handle(handle, mudo=mudo, escrito_no_no=_rgb(no_no), anima=anima)
