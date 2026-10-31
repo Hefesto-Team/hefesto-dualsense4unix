@@ -12,8 +12,9 @@ nasceram na mão e nunca ganharam script que as repita. Cada subcomando mede uma
 - ``teclado`` (item 2): lê o evdev do teclado virtual do ensaio (``ensaio-teclado``) e conta as
   teclas que chegaram contra as que se mandaram.
 - ``roupa`` (item 4): no diário do daemon, entre dois ``launch_arm_roupa`` da mesma roupa, conta
-  ``roupa_do_pad``, ``launch_arm_roupa`` e as recriações do pad (``gamepad_emulation_started`` e
-  ``coop_player_roupa_trocada``).
+  ``roupa_do_pad``, ``launch_arm_roupa`` e as recriações de cada pad (o P1 pelo
+  ``gamepad_emulation_started``, cada secundário pelo ``coop_player_roupa_trocada``); mede quantas
+  recriações o pad que mais se recriou fez além das trocas de roupa da janela.
 - ``gdk`` (item 5): lista os nós de entrada que os processos do jogo têm abertos e diz se o vpad
   pedido (``Hefesto P3``) está entre eles.
 
@@ -40,7 +41,7 @@ from pathlib import Path
 
 LIMITE_DO_QUADRO_PCT = 5.0
 LIMITE_DA_CPU_PCT = 10.0
-LIMITE_DE_RECRIACOES = 1
+LIMITE_DE_RECRIACOES_A_MAIS = 0
 ROUPA_DOS_DOIS_JOGOS = "0ce6"
 VPAD_DO_P3 = "Hefesto P3"
 TECLADO_DO_ENSAIO = "ensaio-teclado"
@@ -202,20 +203,35 @@ def contar_a_roupa(
         return None
     janela = eventos[marcos[0] + 1: marcos[1] + 1]
     contagem = {nome: 0 for nome in (*EVENTOS_DA_ROUPA, *EVENTOS_DE_RECRIACAO)}
-    for evento, _campos in janela:
+    por_pad: dict[str, int] = {}
+    for evento, campos in janela:
         if evento in contagem:
             contagem[evento] += 1
-    contagem["recriacoes"] = sum(contagem[nome] for nome in EVENTOS_DE_RECRIACAO)
+        if evento in EVENTOS_DE_RECRIACAO:
+            pad = _o_pad_recriado(evento, campos)
+            por_pad[pad] = por_pad.get(pad, 0) + 1
+    maior = max(por_pad.values(), default=0)
+    contagem["recriacoes"] = sum(por_pad.values())
+    contagem["pads"] = len(por_pad)
+    contagem["maior_por_pad"] = maior
+    contagem["a_mais"] = max(0, maior - contagem["roupa_do_pad"])
     return contagem
 
 
+def _o_pad_recriado(evento: str, campos: dict[str, str]) -> str:
+    """O pad que a linha recria: o P1 (``gamepad_emulation_started``) ou um secundário."""
+    if evento == "gamepad_emulation_started":
+        return "p1"
+    return "coop:" + campos.get("identity", "")
+
+
 def linha_da_roupa(contagem: dict[str, int] | None, roupa: str = ROUPA_DOS_DOIS_JOGOS) -> Linha:
+    nome = f"recriacoes-a-mais-entre-dois-{roupa}"
     if contagem is None:
-        return Linha(4, f"recriacoes-entre-dois-{roupa}", None, LIMITE_DE_RECRIACOES, "<=",
+        return Linha(4, nome, None, LIMITE_DE_RECRIACOES_A_MAIS, "<=",
                      nota=f"o diário não tem dois launch_arm_roupa roupa={roupa}")
-    nota = ", ".join(f"{k}={v}" for k, v in contagem.items() if k != "recriacoes")
-    return Linha(4, f"recriacoes-entre-dois-{roupa}", float(contagem["recriacoes"]),
-                 LIMITE_DE_RECRIACOES, "<=", nota=nota)
+    nota = ", ".join(f"{k}={v}" for k, v in contagem.items() if k != "a_mais")
+    return Linha(4, nome, float(contagem["a_mais"]), LIMITE_DE_RECRIACOES_A_MAIS, "<=", nota=nota)
 
 
 def _ler(caminho: Path) -> str:

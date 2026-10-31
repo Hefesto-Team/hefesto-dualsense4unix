@@ -66,6 +66,7 @@ ARME_EDGE = "launch_arm_roupa               appid=2000 roupa=0df2 vestem=['p1']"
 RECRIOU_P1 = "gamepad_emulation_started      caminho=dualsense identity=aabbcc000001"
 RECRIOU_P2 = "coop_player_roupa_trocada      identity=aabbcc000002"
 ROUPA = "roupa_do_pad                   pedida=0ce6 veste=0ce6"
+ROUPA_EDGE = "roupa_do_pad                   pedida=0df2 veste=0df2"
 
 
 @pytest.mark.parametrize(
@@ -148,21 +149,27 @@ def test_o_diario_se_le_no_formato_do_journal() -> None:
 
 
 @pytest.mark.parametrize(
-    ("entre", "recriacoes", "veredito"),
+    ("entre", "recriacoes", "a_mais", "veredito"),
     [
-        ([RECRIOU_P1], 1, "ok"),
-        ([RECRIOU_P1, ROUPA, RECRIOU_P1], 2, "reprovou"),
-        ([RECRIOU_P2, RECRIOU_P1], 2, "reprovou"),
-        ([], 0, "ok"),
+        ([ROUPA_EDGE, RECRIOU_P1, ROUPA, RECRIOU_P1], 2, 0, "ok"),
+        ([ROUPA, RECRIOU_P1], 1, 0, "ok"),
+        ([ROUPA, RECRIOU_P1, RECRIOU_P2], 2, 0, "ok"),
+        ([ROUPA_EDGE, RECRIOU_P2, RECRIOU_P1, ROUPA, RECRIOU_P1, RECRIOU_P2], 4, 0, "ok"),
+        ([ROUPA, RECRIOU_P1, RECRIOU_P1], 2, 1, "reprovou"),
+        ([ROUPA, RECRIOU_P2, RECRIOU_P1, RECRIOU_P2], 3, 1, "reprovou"),
+        ([RECRIOU_P1], 1, 1, "reprovou"),
+        ([RECRIOU_P2, RECRIOU_P1], 2, 1, "reprovou"),
+        ([], 0, 0, "ok"),
     ],
 )
 def test_as_recriacoes_entre_dois_lancamentos_da_mesma_roupa(
-    entre: list[str], recriacoes: int, veredito: str,
+    entre: list[str], recriacoes: int, a_mais: int, veredito: str,
 ) -> None:
     linhas = _diario(RECRIOU_P1, RECRIOU_P1, ARME_0CE6, ARME_EDGE, *entre, ARME_0CE6, RECRIOU_P1)
     contagem = E.contar_a_roupa(E.eventos_do_diario(linhas))
     assert contagem is not None
     assert contagem["recriacoes"] == recriacoes
+    assert contagem["a_mais"] == a_mais
     assert contagem["launch_arm_roupa"] == 2
     linha = E.linha_da_roupa(contagem)
     assert linha.item == 4
@@ -232,10 +239,10 @@ def test_a_receita_do_quadro_so_se_imprime() -> None:
 def test_a_linha_de_comando_devolve_o_veredito(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], roupa_igual: bool, rc: int,
 ) -> None:
-    entre = [RECRIOU_P1, RECRIOU_P1] if roupa_igual else [RECRIOU_P1]
+    entre = [ROUPA, RECRIOU_P1, RECRIOU_P1] if roupa_igual else [ROUPA, RECRIOU_P1]
     diario = tmp_path / "diario.txt"
     diario.write_text("\n".join(_diario(ARME_0CE6, *entre, ARME_0CE6)) + "\n", encoding="utf-8")
     assert E.main(["roupa", "--diario", str(diario)]) == rc
     saida = capsys.readouterr().out.strip()
-    assert saida.startswith("item 4  recriacoes-entre-dois-0ce6  medido=")
+    assert saida.startswith("item 4  recriacoes-a-mais-entre-dois-0ce6  medido=")
     assert saida.split("  ")[4] == ("reprovou" if rc else "ok")
