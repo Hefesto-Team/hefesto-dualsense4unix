@@ -5907,8 +5907,7 @@ def _a_cor_saiu(handle: Any, cor: Any, aceita: Any = True, pelo_radio: bool = Fa
     if not all(isinstance(v, int) for v in cor):
         return aceitou
     if (PyDualSenseController._detect_transport(handle) == "bt") == pelo_radio:
-        with contextlib.suppress(Exception):
-            handle._cor_no_fio = (cor[0] & 0xFF, cor[1] & 0xFF, cor[2] & 0xFF)
+        handle._cor_no_fio = (cor[0] & 0xFF, cor[1] & 0xFF, cor[2] & 0xFF)
     return aceitou
 
 
