@@ -28,12 +28,16 @@ class _SessaoFalsa:
         self.config = None
 
 
-def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def _lar_falso(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, antigos: Mapping[str, Any] | None = None
+) -> Path:
     lar = tmp_path / "lar"
     perfis = lar / ".config" / "hefesto-dualsense4unix" / "profiles"
     (perfis / ".historico" / "viajante").mkdir(parents=True)
     (perfis / "viajante.json").write_text('{"name": "viajante"}\n', encoding="utf-8")
     (perfis / "andarilho.json").write_text('{"name": "andarilho"}\n', encoding="utf-8")
+    for nome, dados in (antigos or {}).items():
+        (perfis / nome).write_text(json.dumps(dados), encoding="utf-8")
     monkeypatch.setenv("HOME", str(lar))
     monkeypatch.delenv(canario._CANARIO_DESLIGADO_ENV, raising=False)
     monkeypatch.setattr(canario, "_CANARIO_FOTO_AVISO", canario._fotografar_tudo_de_aviso())
@@ -167,3 +171,25 @@ def test_a_migracao_anota_cada_arquivo_que_grava_e_nada_quando_nada_muda(
     with structlog.testing.capture_logs() as de_novo:
         assert loader.todo_perfil_no_formato_da_aba_jogar(pasta) == []
     assert _anotados(de_novo) == set()
+
+
+@pytest.mark.parametrize("formato", ["console", "json"])
+def test_a_migracao_de_verdade_na_partida_sai_como_aviso_no_canario(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    formato: str,
+) -> None:
+    perfis = _lar_falso(tmp_path, monkeypatch, {"sem_caminho.json": _ANTIGO})
+    assert not (perfis / ".historico" / "sem_caminho").exists()
+    assert not list(perfis.glob(f"*{loader.LOCK_SUFFIX}"))
+
+    with structlog.testing.capture_logs() as registros:
+        assert loader.todo_perfil_no_formato_da_aba_jogar(perfis) == ["sem_caminho.json"]
+    _diario(monkeypatch, [Path(c) for c in sorted(_anotados(registros))], formato)
+
+    status, saida = _veredito(capsys)
+
+    assert status == 0, saida
+    assert canario._GUARDA_PORTAO not in saida
+    assert str(perfis / "sem_caminho.json") in saida
