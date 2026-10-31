@@ -1740,11 +1740,17 @@ def onde_o_heroic_ve_o_pino(pasta: Path, pino: str, *, conf: dict[str, str], com
                             cache: Path, extrair: bool = True) -> Path | None:
     """A pasta do Proton fixado que ESTA casa do Heroic enxerga, ou ``None``.
 
-    O Heroic nativo usa o da Steam quando ele está lá; a caixa do Flatpak só vê a própria
-    ``tools/proton``. Sem nenhum dos dois, o do conf sai do tarball conferido do cache para a
-    ``tools/proton`` da casa, sem rede (``extrair``). A extração que falha levanta ``OSError``.
+    O pino da casa é o mais novo entre o da Steam (``pino``) e o :func:`pino_que_vale` da
+    ``tools/proton`` da casa, com a mesma ficha (D-2210). O Heroic nativo usa o da Steam quando ele
+    está lá; a caixa do Flatpak só vê a própria ``tools/proton``. Sem nenhum que passe, o do conf
+    sai do tarball conferido do cache para a ``tools/proton`` da casa, sem rede (``extrair``). A
+    extração que falha levanta ``OSError``.
     """
-    for nome in dict.fromkeys((pino, conf["name"])):
+    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
+    da_casa = pino_que_vale(conf, pasta / "tools" / "proton")
+    candidatos = sorted(dict.fromkeys((pino, da_casa)), key=qp.ordem_da_versao, reverse=True)
+    for nome in dict.fromkeys((*candidatos, conf["name"])):
         achado = _onde_ja_esta(pasta, nome, compat)
         if achado is not None:
             return achado

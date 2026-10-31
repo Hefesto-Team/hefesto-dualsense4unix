@@ -25,11 +25,14 @@ from tests.unit.test_o_pino_chega_a_qualquer_computador import (
     _tarball,
     trava_da_rede,  # noqa: F401
 )
+from tests.unit.test_o_proton_novo_so_entra_se_passar import _proton_de_mentira
 
 RAIZ = Path(__file__).resolve().parents[2]
 NATIVO = ".config/heroic"
 FLATPAK = ".var/app/com.heroicgameslauncher.hgl/config/heroic"
 VELHO = "GE-Proton9-20"
+MAIS_NOVO = "GE-Proton11-10"
+SEM_A_STRING = "x86_64-windows/mmdevapi.dll:PROTON_ENABLE_MHWILDS_USB_AUDIO"
 
 
 @pytest.fixture()
@@ -150,6 +153,44 @@ def test_sem_steam_o_heroic_recebe_o_pino_do_cache(lar: Path, conf: dict[str, st
     _apontar(lar, conf)
     assert _ferramenta(jogo, "abc")["bin"] == f"{heroic}/tools/proton/{PINO}/proton"
     assert not (lar / ".steam").exists(), "a casa da Steam nasceu sem a Steam"
+
+
+@pytest.mark.parametrize("rel", [NATIVO, FLATPAK], ids=["nativo", "flatpak"])
+def test_o_ge_mais_novo_da_casa_do_heroic_que_passa_na_ficha_e_o_pino_da_casa(
+        lar: Path, conf: dict[str, str], rel: str) -> None:
+    """O-PINO-DO-HEROIC-E-O-MAIS-NOVO-DA-CASA-DELE-01. Mordida: o pino só da Steam rebaixa."""
+    _pino_na(_steam_de_verdade(lar))
+    casa = lar / rel
+    novo = _proton_de_mentira(casa / "tools" / "proton" / MAIS_NOVO)
+    fica = _jogo_do_heroic(casa, "fica", _proton(f"{casa}/tools/proton", MAIS_NOVO))
+    antes = fica.read_bytes()
+    sobe = _jogo_do_heroic(casa, "sobe", _proton("/outro"))
+
+    feito = _apontar(lar, conf)
+
+    assert fica.read_bytes() == antes
+    assert _ferramenta(sobe, "sobe")["bin"] == f"{novo}/proton"
+    assert feito.reescritas == 1 and feito.fora == ()
+    assert not pp.pinned_proton_installed(PINO, casa / "tools" / "proton"), (
+        "a casa com um GE que passa extraiu o do cache")
+    assert _apontar(lar, conf).reescritas == 0
+
+
+@pytest.mark.parametrize("rel", [NATIVO, FLATPAK], ids=["nativo", "flatpak"])
+def test_o_ge_mais_novo_da_casa_que_reprova_na_ficha_vai_ao_pino(
+        lar: Path, conf: dict[str, str], rel: str) -> None:
+    """Mordida: aceitar o GE da casa sem a ficha deixa o jogo num Proton que reprova."""
+    raiz = _steam_de_verdade(lar)
+    pino = _pino_na(raiz)
+    casa = lar / rel
+    _proton_de_mentira(casa / "tools" / "proton" / "GE-Proton11-9", sem=SEM_A_STRING)
+    jogo = _jogo_do_heroic(casa, "j", _proton(f"{casa}/tools/proton", "GE-Proton11-9"))
+
+    feito = _apontar(lar, conf)
+
+    onde = pino if rel == NATIVO else casa / "tools" / "proton" / PINO
+    assert _ferramenta(jogo, "j")["bin"] == f"{onde}/proton"
+    assert feito.reescritas == 1 and feito.fora == ()
 
 
 def test_o_jogo_pelo_wine_fica_e_e_dito(lar: Path, conf: dict[str, str]) -> None:
