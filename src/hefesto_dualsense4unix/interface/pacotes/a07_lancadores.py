@@ -1589,7 +1589,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     aparecem = opcoes.aparecem(manifesto, valores)
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
-        escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
+        escolhas=opcoes.escolhas_de(manifesto, x, valores), grupo=x.grupo or "",
+        minimo=x.minimo or 0,
         maximo=x.maximo or 0, passo=x.passo or 1,
         jogos=jogos if x.tipo == "jogos" else (),
         nota=notas.get(x.id) or (nota if x.tipo == "css" else ""),
@@ -2644,13 +2645,10 @@ def _formas_da_janela(item: _Instalada) -> tuple[str, ...]:
 
 
 def _formas_da_opcao(manifesto: Any, opcao: Any, valores: dict[str, Any]) -> tuple[Any, ...]:
-    """As formas que a linha da opção mostra: as declaradas e, num ``por_botao``, as gravadas no
-    ``livre`` da mesma extensão (nunca as de outra)."""
+    """As formas que a linha da opção desenha (``opcoes.formas_da_opcao``), como tuplas."""
     from hefesto_dualsense4unix.mods import opcoes
 
-    formas = dict(opcao.formas)
-    if opcao.tipo == "por_botao":
-        formas.update(opcoes.formas_do_livre(manifesto, valores))
+    formas = opcoes.formas_da_opcao(manifesto, opcao, valores)
     return tuple((f, tuple((a, b) for a, b in passos)) for f, passos in formas.items())
 
 
@@ -2952,8 +2950,11 @@ def _validada(opcao: Any, valor: Any, item: _Instalada) -> Any:
     """O valor da opção validado contra o manifesto e as formas gravadas; a recusa aparece."""
     from hefesto_dualsense4unix.mods import opcoes
 
+    efeitos = item.manifesto is not None and opcoes.por_botao_dos_efeitos(
+        item.manifesto, opcao) is not None
     with _dizendo_a_recusa():
-        return opcoes.validar(opcao, valor, formas_extras=_formas_da_janela(item))
+        return opcoes.validar(opcao, valor,
+                              formas_extras=_formas_da_janela(item) if efeitos else ())
 
 
 @gesto("07-lancadores.html", exp.GESTO_DE_GRAVAR, grava="_guardar_a_opcao_da_modificacao")
@@ -2992,9 +2993,11 @@ def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> d
 @gesto("07-lancadores.html", exp.GESTO_DE_ESQUECER_A_FORMA,
        grava="_guardar_a_opcao_da_modificacao")
 def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O «x» de uma forma gravada: sai na hora do ``opcoes.json``, e o botão que a usava volta
-    ao padrão."""
+    """O «x» de uma forma gravada: sai na hora do ``opcoes.json``, e o botão ou a entrada que a
+    usava volta ao padrão."""
     _MEXIDA.armada = ()
+    from hefesto_dualsense4unix.mods import opcoes
+
     mod_id, opcao_id, nome = _partes_do_clique(o, exp.GESTO_DE_ESQUECER_A_FORMA, 3)
     item = _a_instalada(mod_id)
     livre = _o_livre_de(item, opcao_id)
@@ -3002,11 +3005,12 @@ def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
     if nome not in formas:
         raise RuntimeError("Essa forma não está gravada. Nada foi esquecido.")
     valores = {livre.id: _validada(livre, {f: s for f, s in formas.items() if f != nome}, item)}
+    atuais = opcoes.ler(item.manifesto, _lugares()) if item.manifesto else {}
     for opcao in (item.manifesto.opcoes if item.manifesto else ()):
-        if opcao.tipo != "por_botao":
-            continue
-        atual = _valor_na_janela(item, opcao)
-        if isinstance(atual, dict) and nome in atual.values():
+        atual = atuais.get(opcao.id)
+        if opcao.tipo == "escolha" and atual == nome:
+            valores[opcao.id] = opcoes.padrao_de(opcao)
+        elif opcao.tipo == "por_botao" and isinstance(atual, dict) and nome in atual.values():
             valores[opcao.id] = _validada(
                 opcao, {b: f for b, f in atual.items() if f != nome}, item)
     _guardar_a_opcao_da_modificacao(item, valores)

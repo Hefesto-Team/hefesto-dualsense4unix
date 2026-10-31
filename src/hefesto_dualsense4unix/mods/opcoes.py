@@ -3,9 +3,10 @@
 A tela escolhe, a modificação lê o mesmo arquivo na sua pasta de dados. Ler nunca levanta: um valor
 que o manifesto não aceita (arquivo editado, opção que saiu da versão nova) cai no padrão.
 
-As formas gravadas na opção ``livre`` valem também nos ``por_botao`` da MESMA extensão: a forma de
-um botão se procura pelo nome nas ``formas`` do manifesto e, depois, no valor do ``livre``. O botão
-cuja forma gravada saiu volta sozinho ao padrão dele, sem levar os outros botões junto.
+As formas gravadas na opção ``livre`` valem também nos ``por_botao`` da MESMA extensão e na
+escolha dos efeitos (a ``escolha`` cujas ``escolhas`` são as ``formas`` de um ``por_botao``): a
+forma se procura pelo nome nas ``formas`` do manifesto e, depois, no valor do ``livre``. O botão
+ou a entrada cuja forma gravada saiu volta sozinho ao padrão, sem levar os outros junto.
 """
 from __future__ import annotations
 
@@ -65,7 +66,8 @@ def validar(opcao: Opcao, valor: Any, *, formas_extras: Sequence[str] = ()) -> V
     """O valor no tipo da opção, ou a recusa dita em uma frase.
 
     ``formas_extras``: os nomes das formas gravadas no ``livre`` da mesma extensão, que o
-    ``por_botao`` aceita além das que o manifesto declara.
+    ``por_botao`` e a escolha dos efeitos aceitam além do que o manifesto declara
+    (:func:`formas_extras_de`).
     """
     if opcao.tipo in ("ligado", "css"):
         if isinstance(valor, bool):
@@ -76,7 +78,7 @@ def validar(opcao: Opcao, valor: Any, *, formas_extras: Sequence[str] = ()) -> V
             return False
         raise InstalacaoRecusadaError(f"«{opcao.rotulo}» é ligado ou desligado.")
     if opcao.tipo == "escolha":
-        if valor not in opcao.escolhas:
+        if valor not in opcao.escolhas and not (isinstance(valor, str) and valor in formas_extras):
             raise InstalacaoRecusadaError(f"«{valor}» não é uma das escolhas de «{opcao.rotulo}».")
         return str(valor)
     if opcao.tipo == "cor":
@@ -190,6 +192,42 @@ def formas_do_livre(manifesto: Manifesto, valores: dict[str, Any]) -> Formas:
         return {}
 
 
+def por_botao_dos_efeitos(manifesto: Manifesto, opcao: Opcao) -> Opcao | None:
+    """O ``por_botao`` cujas formas a opção escolhe: ele mesmo, ou, numa ``escolha``, o primeiro
+    ``por_botao`` da extensão com as ``formas`` iguais às ``escolhas`` (os efeitos); senão
+    ``None``."""
+    if opcao.tipo == "por_botao":
+        return opcao
+    if opcao.tipo != "escolha":
+        return None
+    return next((o for o in manifesto.opcoes
+                 if o.tipo == "por_botao" and set(o.formas) == set(opcao.escolhas)), None)
+
+
+def formas_da_opcao(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]) -> Formas:
+    """As formas que a opção escolhe, pelo nome: as do :func:`por_botao_dos_efeitos` e as gravadas
+    no ``livre`` da mesma extensão; ``{}`` na opção que não escolhe forma."""
+    dono = por_botao_dos_efeitos(manifesto, opcao)
+    if dono is None:
+        return {}
+    return {**dono.formas, **formas_do_livre(manifesto, valores)}
+
+
+def formas_extras_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]
+                     ) -> tuple[str, ...]:
+    """Os nomes das formas gravadas no ``livre`` que a opção aceita além das declaradas."""
+    if por_botao_dos_efeitos(manifesto, opcao) is None:
+        return ()
+    return tuple(formas_do_livre(manifesto, valores))
+
+
+def escolhas_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]) -> tuple[str, ...]:
+    """O que a lista da escolha oferece: as ``escolhas`` e, na escolha dos efeitos, as formas
+    gravadas no ``livre``, sem repetir nome."""
+    extras = formas_extras_de(manifesto, opcao, valores) if opcao.tipo == "escolha" else ()
+    return tuple(dict.fromkeys((*opcao.escolhas, *extras)))
+
+
 def chave_do_modo(manifesto: Manifesto) -> str | None:
     """A chave do modo do ``livre`` com ``modos`` (``<id>:modo``), ou ``None``."""
     livre = manifesto.opcao_livre
@@ -217,7 +255,7 @@ def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
     saida: dict[str, Valor] = {}
     for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
         bruto = guardados.get(opcao.id)
-        extras = tuple(formas_do_livre(manifesto, saida))
+        extras = formas_extras_de(manifesto, opcao, saida)
         if opcao.tipo == "por_botao" and isinstance(bruto, dict):
             bruto = {b: f for b, f in bruto.items()
                      if isinstance(f, str) and (f in opcao.formas or f in extras)}
@@ -243,7 +281,7 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
         raise InstalacaoRecusadaError(f"«{manifesto.nome}» não tem a opção «{opcao_id}».")
     atuais = ler(manifesto, lugares)
     certo = modo_valido(valor) if opcao is None else validar(
-        opcao, valor, formas_extras=tuple(formas_do_livre(manifesto, atuais)))
+        opcao, valor, formas_extras=formas_extras_de(manifesto, opcao, atuais))
     atuais[opcao_id] = certo
     _gravar(manifesto.id, atuais, lugares)
     return certo
@@ -279,7 +317,7 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
     feitas = _guardados(manifesto.id, lugares)
     herdadas: dict[str, Valor] = {}
     for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
-        extras = tuple(formas_do_livre(manifesto, {**feitas, **herdadas}))
+        extras = formas_extras_de(manifesto, opcao, {**feitas, **herdadas})
         if _escolhida(opcao, feitas, extras):
             continue
         for mod_id in antigas:
@@ -357,5 +395,6 @@ def _escolhida(opcao: Opcao, guardados: dict[str, Any], extras: Sequence[str] = 
         return False
 
 
-__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "aparecem", "chave_do_modo", "formas_do_livre",
-           "guardar", "herdar", "ler", "modo_valido", "padrao_de", "validar"]
+__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "aparecem", "chave_do_modo", "escolhas_de",
+           "formas_da_opcao", "formas_do_livre", "formas_extras_de", "guardar", "herdar", "ler",
+           "modo_valido", "padrao_de", "por_botao_dos_efeitos", "validar"]
