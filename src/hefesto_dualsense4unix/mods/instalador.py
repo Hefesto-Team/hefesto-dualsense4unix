@@ -20,6 +20,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -242,19 +243,67 @@ def _git(
     )
 
 
+FRASE_SEM_REDE = (
+    "Não deu para chegar ao endereço da extensão. "
+    "Confira a internet e se o endereço está escrito certo.")
+FRASE_SEM_CONEXAO_SEGURA = (
+    "O endereço da extensão não tem conexão segura válida. "
+    "Confira o endereço ou tente em outra rede.")
+FRASE_SEM_EXTENSAO = (
+    "Não há extensão nesse endereço. "
+    "Confira se ele está escrito certo e se o repositório é público.")
+FRASE_PEDE_LOGIN = (
+    "Esse endereço pede login. "
+    "Confira o endereço e use o de um repositório público, que começa com https://.")
+FRASE_SEM_VERSAO = (
+    "A versão «{ref}» não existe nesse endereço. Confira o nome da versão.")
+FRASE_SEM_CAUSA = (
+    "Não deu para baixar a extensão. Confira o endereço e a internet e tente de novo.")
+FRASE_DO_PRAZO = (
+    "O download da extensão passou de {minutos} minutos. "
+    "Confira a internet e tente de novo.")
+
+_CAUSAS_DO_GIT: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("remote branch",), FRASE_SEM_VERSAO),
+    (("permission denied", "authentication failed", "could not read username",
+      "could not read password", "terminal prompts disabled", "access denied",
+      "returned error: 401", "returned error: 403"), FRASE_PEDE_LOGIN),
+    (("repository not found", "not found", "does not exist",
+      "does not appear to be a git repository", "not a git repository",
+      "returned error: 404"), FRASE_SEM_EXTENSAO),
+    (("certificate", "ssl_connect", "gnutls", "tls connection"), FRASE_SEM_CONEXAO_SEGURA),
+    (("could not resolve", "failed to connect", "couldn't connect", "connection refused",
+      "timed out", "network is unreachable", "no route to host", "name or service not known",
+      "temporary failure in name resolution", "connection reset", "connection closed",
+      "early eof", "the remote end hung up"), FRASE_SEM_REDE),
+)
+
+
+def frase_da_recusa_do_git(erro: str, ref: str | None = None) -> str:
+    """A frase de quem usa para o erro do ``git clone``: a causa e o gesto, sem o inglês do git.
+
+    O trecho entre aspas sai antes da leitura, porque traz o endereço e o caminho, que
+    podem ter qualquer palavra.
+    """
+    texto = re.sub(r"'[^'\n]*'", "", erro).lower()
+    for marcas, frase in _CAUSAS_DO_GIT:
+        if any(marca in texto for marca in marcas):
+            return frase.format(ref=ref or "")
+    return FRASE_SEM_CAUSA
+
+
 def _clonar(endereco: str, ref: str | None, destino: Path) -> str:
-    """``git clone --depth 1`` e o commit que ficou; recusa com a última linha do git."""
+    """``git clone --depth 1`` e o commit que ficou; recusa com a causa e o gesto."""
     args = ["clone", "--depth", "1", "--quiet"]
     if ref:
         args += ["--branch", ref]
     try:
         feito = _git([*args, "--", endereco, str(destino)])
     except subprocess.TimeoutExpired as exc:
-        raise InstalacaoRecusadaError("O git não terminou de baixar a modificação.") from exc
+        raise InstalacaoRecusadaError(
+            FRASE_DO_PRAZO.format(minutos=round(_PRAZO_DO_GIT_S / 60))) from exc
     if feito.returncode != 0:
-        linhas = [ln for ln in feito.stderr.splitlines() if ln.strip()]
-        motivo = linhas[-1].strip() if linhas else f"código {feito.returncode}"
-        raise InstalacaoRecusadaError(f"O git não baixou a modificação: {motivo}")
+        raise InstalacaoRecusadaError(frase_da_recusa_do_git(feito.stderr, ref))
     commit = _git(["rev-parse", "HEAD"], cwd=destino).stdout.strip()
     if not commit:
         raise InstalacaoRecusadaError("O git baixou a modificação sem commit.")

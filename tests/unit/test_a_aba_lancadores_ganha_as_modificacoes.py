@@ -279,7 +279,9 @@ def test_escolher_a_pasta_instala_o_manifesto_apontado(lar, ctx, tmp_path) -> No
 
 def test_a_recusa_da_infra_chega_como_frase(lar, ctx, tmp_path) -> None:
     a07 = _a07()
-    with pytest.raises(RuntimeError, match="não baixou"):
+    from hefesto_dualsense4unix.mods.instalador import FRASE_SEM_EXTENSAO
+
+    with pytest.raises(RuntimeError, match=re.escape(FRASE_SEM_EXTENSAO)):
         _instalar(a07, ctx, tmp_path / "nao-existe")
 
 

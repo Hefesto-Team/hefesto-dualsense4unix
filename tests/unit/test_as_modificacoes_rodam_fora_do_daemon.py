@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 import json
 import os
+import re
 import shutil
 import signal
 import socket
@@ -883,7 +884,7 @@ def test_o_git_nunca_pergunta_senha(
         return original(args, **k)
 
     monkeypatch.setattr(subprocess, "run", espiao)
-    with pytest.raises(InstalacaoRecusadaError, match="O git não baixou"):
+    with pytest.raises(InstalacaoRecusadaError, match=re.escape(instalador.FRASE_SEM_EXTENSAO)):
         instalar(f"file://{curto}/nao-existe", lugares=lar)
     assert vistos and all(e.get("GIT_TERMINAL_PROMPT") == "0" for e in vistos)
     assert not list(lar.codigo.glob("exemplo"))
