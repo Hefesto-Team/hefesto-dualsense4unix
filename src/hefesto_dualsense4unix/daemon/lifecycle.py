@@ -2430,7 +2430,7 @@ class Daemon:
                     mode_from_profile=self._mode_from_profile,
                 )
                 return IGNORADO_CATCH_ALL
-            self.config.gamepad_flavor = _mascara_da_maquina()
+            self.config.gamepad_caminho, self.config.gamepad_flavor = _o_par_do_pad(None)
             if self._janela_de_jogo_em_foco():
                 logger.info(
                     "profile_mode_revert_skipped",

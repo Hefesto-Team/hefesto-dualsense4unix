@@ -2517,11 +2517,16 @@ def _mascara_prevista(
     A ordem é a de `external_mask.mascara_efetiva` (MASCARA-NO-PERFIL-01): o
     cartão do jogador 1 que o perfil guarda, a máscara padrão do perfil, a
     vigente. O prognóstico lia só a padrão, e o jogo com cartão DualSense e
-    padrão `xbox` abria com a env do Xbox.
+    padrão `xbox` abria com a env do Xbox. A da seção `gamepad` é a que o daemon veste
+    (`lifecycle._o_par_do_pad`, que pergunta ao dono do par); a vigente vale fora da seção.
     """
     do_cartao = _mascara_do_cartao(profile, identidade)
     if do_cartao is not None:
         return do_cartao
+    if getattr(mode, "kind", None) == "gamepad":
+        from hefesto_dualsense4unix.daemon.lifecycle import _o_par_do_pad
+
+        return _o_par_do_pad(mode)[1]
     return str(getattr(mode, "gamepad_flavor", None) or flavor_atual)
 
 

@@ -153,6 +153,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.virtual_pad import par_da_secao_do_gamepad
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -297,12 +298,12 @@ def ponte_do_perfil(profile: Any, *, na_allowlist: bool) -> Ponte | None:
     if kind not in (KIND_GAMEPAD, KIND_NATIVE, KIND_DESKTOP):
         return None
     mascara = (
-        (getattr(mode, "caminho", None) or getattr(mode, "gamepad_flavor", None))
+        par_da_secao_do_gamepad(
+            getattr(mode, "caminho", None), getattr(mode, "gamepad_flavor", None)
+        )[0]
         if kind == KIND_GAMEPAD
         else None
     )
-    if mascara is not None and mascara not in (MASCARA_DUALSENSE, MASCARA_XBOX):
-        mascara = None
     return Ponte(kind=str(kind), mascara=mascara, steam_input=bool(na_allowlist))
 
 
