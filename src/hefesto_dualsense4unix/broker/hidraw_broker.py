@@ -856,7 +856,8 @@ class FsAclOps:
         """O_PATH no nó do controle de fora; None = sumiu ou o nome é de outro aparelho."""
         try:
             fd = os.open(node, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
-        except OSError:
+        except OSError as exc:
+            _log("externo_nao_pinou", node=node, err=str(exc))
             return None
         st = os.fstat(fd)
         if not self._e_char_device(st.st_mode) or self._sysfs_rdev(base) != (
@@ -1717,6 +1718,9 @@ class _HiddenNode:
     pai: str | None = None
 
 
+_HEX_PAR_RE = re.compile(r"(?:[0-9a-f]{2})*")
+
+
 @dataclass
 class _ExternoEscondido:
     """O hidraw de um controle de fora escondido: o aparelho e o estado de antes."""
@@ -1736,12 +1740,9 @@ class _ExternoEscondido:
         pai, modo, acl = dado.get("pai"), dado.get("modo"), dado.get("acl")
         if not isinstance(pai, str) or not pai or not isinstance(modo, int):
             return None
-        if acl is not None and not isinstance(acl, str):
+        if acl is not None and (not isinstance(acl, str) or _HEX_PAR_RE.fullmatch(acl) is None):
             return None
-        try:
-            return cls(pai, modo & 0o7777, None if acl is None else bytes.fromhex(acl))
-        except ValueError:
-            return None
+        return cls(pai, modo & 0o7777, None if acl is None else bytes.fromhex(acl))
 
 
 def ler_os_externos(path: str | None) -> dict[str, _ExternoEscondido]:

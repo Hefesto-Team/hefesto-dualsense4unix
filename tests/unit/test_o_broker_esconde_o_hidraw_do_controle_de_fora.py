@@ -329,3 +329,15 @@ def test_as_operacoes_reais_guardam_e_devolvem_o_modo(
     pai["agora"] = "/sys/devices/pro-controller"
     ops.devolver_externo(str(no), "hidraw3", "/sys/devices/pro-controller", modo, acl)
     assert stat.S_IMODE(no.stat().st_mode) == 0o664
+
+
+def test_a_lista_torta_no_disco_nao_vira_esconderijo(tmp_path: Path) -> None:
+    caminho = tmp_path / "externos"
+    caminho.write_text(json.dumps({
+        "/dev/hidraw3": {"pai": "/sys/devices/a", "modo": 0o660, "acl": "0g"},
+        "/dev/hidraw4": {"pai": "/sys/devices/b", "modo": 0o660, "acl": "abc"},
+        "/dev/hidraw5": {"pai": "", "modo": 0o660, "acl": None},
+        "/dev/hidraw6": {"pai": "/sys/devices/c", "modo": 0o100660, "acl": "0a0b"},
+    }), encoding="utf-8")
+    lidos = hb.ler_os_externos(str(caminho))
+    assert lidos == {"/dev/hidraw6": hb._ExternoEscondido("/sys/devices/c", 0o660, b"\x0a\x0b")}
