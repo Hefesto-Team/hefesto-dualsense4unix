@@ -652,6 +652,18 @@ ROTEIRO = """
       pux.click();
     }, false);
 
+    document.addEventListener('keydown', function(ev){
+      if(ev.key !== 'Delete' || ev.ctrlKey || ev.altKey || ev.metaKey || ev.shiftKey) return;
+      var dentro = ev.target && ev.target.closest
+        ? ev.target.closest('input, textarea, select, [contenteditable]') : null;
+      if(dentro) return;
+      if(!document.querySelector('tr[data-hef-perfil][aria-selected="true"]')) return;
+      var botao = document.querySelector('[data-hef-gesto="remover"]');
+      if(!botao || botao.disabled) return;
+      ev.preventDefault();
+      botao.click();
+    }, false);
+
     function espalhar(tab){
       var bruto = tab.getAttribute('data-larguras') || '';
       if(!bruto || bruto === '\\u2014') return;

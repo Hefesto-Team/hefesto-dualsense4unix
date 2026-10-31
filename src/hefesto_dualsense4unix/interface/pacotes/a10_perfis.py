@@ -654,6 +654,71 @@ def _foto_do_catalogo() -> _FotoDoCatalogo:
     return _FotoDoCatalogo(nomes=nomes, ofertas=_ofertas_de_jogos(nomes))
 
 
+
+_FORA_DO_DISCO: tuple[object, frozenset[str]] | None = None
+
+
+def _chaves_fora_do_disco() -> frozenset[str]:
+    """Os jogos que o censo sabe desinstalados, relidos só quando a biblioteca muda."""
+    global _FORA_DO_DISCO
+    try:
+        from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+        assinatura = censo.assinatura_das_bibliotecas()
+        if _FORA_DO_DISCO is None or _FORA_DO_DISCO[0] != assinatura:
+            _FORA_DO_DISCO = (assinatura, censo.chaves_de_janela_fora_do_disco())
+        return _FORA_DO_DISCO[1]
+    except Exception:
+        return frozenset()
+
+
+def _a_steam_responde() -> bool:
+    """A biblioteca da Steam existe aqui; sem a biblioteca, nenhum jogo da Steam sai."""
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import assinatura_da_biblioteca
+
+        return any(mtime >= 0 for _pasta, mtime in assinatura_da_biblioteca())
+    except Exception:
+        return False
+
+
+def _jogo_fora_do_disco(prof: Any, foto: _FotoDoCatalogo, steam: bool,
+                        fora: frozenset[str]) -> bool:
+    """O perfil é de um jogo que o censo sabe desinstalado."""
+    from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
+    from hefesto_dualsense4unix.profiles.simple_match import (
+        detect_simple_preset,
+        normalize_appid,
+        simple_extra,
+    )
+
+    match = getattr(prof, "match", None)
+    if match is None:
+        return False
+    preset = detect_simple_preset(match)
+    chave = simple_extra(match)
+    if preset == "steam_game":
+        appid = normalize_appid(chave)
+        if appid is None or not steam or appid in foto.nomes:
+            return False
+        return not any(normalize_appid(str(getattr(j, "chave", "") or "")) == appid
+                       for j in foto.ofertas)
+    if preset in ("game", "janela") and chave:
+        return chave.casefold() in fora and jogo_da_janela(chave, foto.ofertas) is None
+    return False
+
+
+def _so_os_instalados(lista: list[dict[str, Any]], todos: list[Any],
+                      foto: _FotoDoCatalogo, ativo: str) -> list[dict[str, Any]]:
+    """A lista sem o perfil de jogo desinstalado; o arquivo fica, e o perfil ativo nunca sai."""
+    steam = _a_steam_responde()
+    fora = _chaves_fora_do_disco()
+    escondidos = {str(getattr(p, "name", "") or "") for p in todos
+                  if _jogo_fora_do_disco(p, foto, steam, fora)}
+    escondidos.discard(ativo)
+    return [linha for linha in lista
+            if str(linha.get("perfil") or linha.get("nome") or "") not in escondidos]
+
 def _ofertas_de(foto: _FotoDoCatalogo | None) -> list[Any]:
     """As ofertas da foto do tique, ou a pergunta de sempre sem a foto."""
     return foto.ofertas if foto is not None else _ofertas_de_jogos()
@@ -954,6 +1019,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         todos = os_perfis_de_escolher(load_all_profiles())
         foto = _foto_do_catalogo()
         ativo = _em_uso(ctx, todos)
+        valendo = _valendo(ctx, todos)
         alvo = _alvo_do_editor(ctx, todos)
         escolhido = str(getattr(alvo, "name", "") or "")
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
@@ -962,14 +1028,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     except Exception:
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
-    lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos, foto)))
+    instalados = _so_os_instalados(bruto.get("lista") or [], todos, foto, valendo)
+    lista = _ordenada(_filtrada(_com_a_procedencia(instalados, todos, foto)))
     editor = bruto.get("editor") or {}
     fora = {
         "perfis.linha.nome": [x.get("nome", "") for x in lista],
         "perfis.linha.criado": [x.get("criado", "") for x in lista],
         "perfis.linha.modificado": [x.get("modificado", "") for x in lista],
         "perfis.procura": _PROCURA,
-        "perfis.procura.conta": (f"{len(bruto.get('lista') or []) - len(lista)} "
+        "perfis.procura.conta": (f"{len(instalados) - len(lista)} "
                                  f"fora da busca" if _PROCURA.strip() else ""),
         **{f"perfis.ordem.{c}": (_seta_da_coluna(c)) for c in COLUNAS_DA_LISTA},
         "perfis.larguras": _larguras_em_texto(TABELA_DA_LISTA),

@@ -1304,6 +1304,21 @@ def jogos_com_chave_de_janela(
     return achados
 
 
+
+def chaves_de_janela_fora_do_disco(lar: Path | None = None) -> frozenset[str]:
+    """As chaves de janela, em minúsculas, dos jogos conhecidos e não instalados.
+
+    Só os leitores de fábrica respondem: o lançador sem leitura não esconde nada.
+    """
+    fora: set[str] = set()
+    dentro: set[str] = set()
+    for nome in _LEITORES:
+        for jogo in biblioteca_de(nome, lar).jogos:
+            chave = jogo.classe_de_janela.casefold()
+            if chave:
+                (dentro if jogo.instalado else fora).add(chave)
+    return frozenset(fora - dentro)
+
 _FONTES: dict[str, tuple[str, ...]] = {
     "Heroic": ("store_cache/*_library.json", "store_cache/umu.json",
                *(rel for rels in _REGISTROS_DO_HEROIC.values() for rel in rels)),
