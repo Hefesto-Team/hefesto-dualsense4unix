@@ -24,7 +24,9 @@ pedido volta ETIMEDOUT aos ~5 s. Com 4 controles, o `winebus` estoura o prazo do
   caducou. O `preparar-o-fonte.py` compila no kernel que roda, do `f_hid.c` de
   fábrica conferido pelo `srcversion`, e o de fábrica só assume quando o fonte não
   se acha ou o patch não aplica, com o motivo no doctor
-  (OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01).*
+  (OS-DKMS-COMPILAM-NO-KERNEL-QUE-RODA-01). O `BUILD_EXCLUSIVE_KERNEL` vem do mesmo
+  preparador, que decide quando o `dkms` lê o `dkms.conf`: com o de fábrica no lugar,
+  ele vira um padrão que nenhum kernel casa, e o `dkms` pula o build com 77.*
 - A marca `get_report_sized` (0444, sempre Y) separa o curado do de fábrica. O pad
   a mede ao montar e o `daemon.state_full` a publica. O `doctor` dá `[FAIL]` sem
   a marca.
