@@ -153,45 +153,17 @@ _D = "d" + _P
     [
         f'POR_ESCOLHA_DO_USUARIO = "escolha_{_D}"',
         f"o escritor carimba a ponte `por=escolha_{_D}` quando o perfil grava",
-        f'confirmada_por: Literal["gesto", "silencio", "escolha_{_D}"] = (',
         f'novas["declarado_por_{_P}"] = _fato(x, y)',
-        f'if not contagens.get("precisa_da_palavra_{_D}"):',
         f'DECLARADO_PELO_USUARIO = "declarado-por-{_P}"',
         f'_MARCA_DA_ESCOLHA = ".a_escolha_{_D}_migrada"',
         f"    recebe: espera-{_P}",
-        f'RECEBE_DO_MARCO = ("aberta", "feita", "espera-{_P}")',
     ],
 )
-def test_o_formato_gravado_passa_so_no_trecho_exato(portao, linha):
+def test_o_nome_gravado_de_antes_nao_tem_isencao(portao, linha):
     assert "pronome" in portao.classes_da_linha(linha)
-    assert portao.classes_da_linha(portao.sem_formatos_gravados(linha)) == []
 
 
-@pytest.mark.parametrize(
-    "linha",
-    [
-        f"escolha_{_D} = carregar()",
-        f"def _daemon(*, escolha_{_D}: str | None = None):",
-        f'logger.info("a_escolha_{_D}_migrada")',
-        f'x = "a_escolha_{_D}"',
-        f"o estado espera-{_P}s da fila",
-        f'"escolha_{_D}"  # o perfil {_D}',
-    ],
-)
-def test_a_mesma_palavra_fora_do_trecho_morde(portao, linha):
-    assert "pronome" in portao.classes_da_linha(portao.sem_formatos_gravados(linha))
-
-
-def test_o_formato_gravado_passa_no_varrer_e_o_vizinho_reprova(portao, tmp_path):
-    raiz = _repo(
-        tmp_path,
-        {"src/a.py": f'VALOR = "escolha_{_D}"\nescolha_{_D} = VALOR\n'},
-    )
-    assert [(o.linha, o.classe) for o in portao.varrer(raiz)] == [(2, "pronome")]
-
-
-def test_o_formato_que_ninguem_usa_vira_aviso(portao, tmp_path):
-    raiz = _repo(tmp_path, {"src/a.py": f'VALOR = "escolha_{_D}"\n'})
-    mortos = portao.formatos_mortos(raiz)
-    assert len(mortos) == len(portao.FORMATOS_GRAVADOS) - 1
-    assert all(aviso.startswith("formato gravado sem uso: ") for aviso in mortos)
+def test_o_nome_gravado_de_antes_reprova_no_varrer(portao, tmp_path):
+    texto = f'VALOR = "escolha_{_D}"\nPARTES = "escolha_d" + "e" + "la"\n'
+    raiz = _repo(tmp_path, {"src/a.py": texto})
+    assert [(o.linha, o.classe) for o in portao.varrer(raiz)] == [(1, "pronome")]

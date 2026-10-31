@@ -35,6 +35,8 @@ rapido|fatos-de-tela|py|scripts/gerar-fatos-de-tela.py --check
 rapido|fala-de-tela|py|scripts/validar-fala-de-tela.py --all|@dia
 rapido|caducos|py|scripts/validar-caducos.py --all
 rapido|texto-publico|py|scripts/check_texto_publico.py
+rapido|texto-sem-pessoa|py|scripts/check_texto_sem_pessoa.py
+rapido|texto-sem-pessoa-morde|pytest|tests/unit/test_o_texto_nao_fala_de_pessoa.py
 rapido|palavra-de-tela|py|scripts/validar-palavra-de-tela.py --all
 rapido|version-consistency|py|scripts/check_version_consistency.py
 rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check

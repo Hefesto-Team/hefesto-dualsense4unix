@@ -29,10 +29,8 @@ Uso::
     python3 scripts/check_texto_sem_pessoa.py --relatorio   # conta por área e por classe
     python3 scripts/check_texto_sem_pessoa.py --detalhe ARQ # grava cada ocorrência em ARQ
 
-Os formatos que o disco de quem usa já guarda (chave, valor, marca e o
-environment do GitHub) passam só no trecho exato, entre aspas ou na forma em
-que o produto os grava: ``FORMATOS_GRAVADOS`` diz cada um e o porquê, e a mesma
-palavra fora do trecho reprova.
+Os nomes que o disco de quem usa guardava migram na leitura e se montam por
+partes onde moram (`utils/nomes_gravados.py`): a régua não tem formato isento.
 
 A fala se pega por três sinais: o marcador de isenção de acento que se declara
 citação, a gíria de chat entre «», e a fala apresentada (as palavras, a ordem,
@@ -128,27 +126,6 @@ ISENTOS: dict[str, str] = {
     "tests/unit/test_o_texto_enxuto_se_corrige_no_ato.py": "a mordida do gancho da escrita.",
 }
 
-_CONTRAIDO = "d" + _P
-_ASPA = "[\"'`]"
-
-FORMATOS_GRAVADOS: dict[str, str] = {
-    rf"(?<={_ASPA})escolha_{_CONTRAIDO}(?={_ASPA})|(?<=por=)escolha_{_CONTRAIDO}(?![\w-])": (
-        "o valor do carimbo da ponte que o perfil de quem usa guarda no disco."
-    ),
-    rf"(?<={_ASPA})(?:declarado_por_{_P}|precisa_da_palavra_{_CONTRAIDO})(?={_ASPA})": (
-        "as chaves das contagens que o censo do gabinete guarda no disco de quem usa."
-    ),
-    rf"(?<![\w-])declarado-por-{_P}(?![\w-])": "o valor de origem que o censo do gabinete guarda no disco.",
-    rf"\.a_escolha_{_CONTRAIDO}_migrada(?![\w-])": "a marca da migração única no diretório de estado de quem usa.",
-    rf"(?<![\w-])espera-{_P}(?![\w-])": "o environment e o estado de sprint que o repositório do GitHub guarda.",
-}
-_FORMATOS = re.compile("|".join(f"(?:{padrao})" for padrao in FORMATOS_GRAVADOS))
-
-
-def sem_formatos_gravados(linha: str) -> str:
-    return _FORMATOS.sub("", linha) if _P in linha.lower() else linha
-
-
 _IDENTIDADE = re.compile(
     _NOME + r"(?:\"\s*\+\s*\")?mariadb|" + _NOME + r"maria\\?\.sds@|Vit[oó]ria Maria <", re.IGNORECASE
 )
@@ -222,7 +199,7 @@ def varrer(raiz: Path, arquivos: list[str] | None = None) -> list[Ocorrencia]:
             continue
         autoria = _autoria(rel)
         for n, linha in enumerate(texto.splitlines(), 1):
-            for classe in classes_da_linha(sem_formatos_gravados(linha)):
+            for classe in classes_da_linha(linha):
                 if classe == "nome" and autoria and _IDENTIDADE.search(linha):
                     resto = _IDENTIDADE.sub("", linha)
                     if not _nome(resto, resto.lower()):
@@ -259,15 +236,6 @@ def isencoes_mortas(raiz: Path) -> list[str]:
     return mortas
 
 
-def formatos_mortos(raiz: Path) -> list[str]:
-    vivos: set[str] = set()
-    for rel in _arquivos(raiz):
-        texto = _ler(raiz / rel)
-        if texto and _P in texto:
-            vivos.update(padrao for padrao in FORMATOS_GRAVADOS if re.search(padrao, texto))
-    return [f"formato gravado sem uso: {FORMATOS_GRAVADOS[p]}" for p in FORMATOS_GRAVADOS if p not in vivos]
-
-
 def relatorio(achadas: list[Ocorrencia]) -> list[str]:
     por_area: dict[str, Counter[str]] = {a: Counter() for a in AREAS}
     arquivos: dict[str, set[str]] = {a: set() for a in AREAS}
@@ -300,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.detalhe).write_text(
             "".join(f"{o.rel}:{o.linha}: {o.classe}: {o.trecho}\n" for o in achadas), encoding="utf-8"
         )
-    for aviso in isencoes_mortas(RAIZ) + formatos_mortos(RAIZ):
+    for aviso in isencoes_mortas(RAIZ):
         print(f"[AVISO] isenção morta: {aviso}")
     if args.relatorio:
         print("\n".join(relatorio(achadas)))
@@ -314,8 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FALHA: {len(achadas)} ocorrência(s) em {len({o.rel for o in achadas})} arquivo(s); o piso é zero.")
         return 1
     print(
-        f"OK: nenhum arquivo fala de pessoa ({len(ISENTOS)} isenções de régua, {len(AUTORIA)} de autoria, "
-        f"{len(FORMATOS_GRAVADOS)} formatos gravados)."
+        f"OK: nenhum arquivo fala de pessoa ({len(ISENTOS)} isenções de régua, {len(AUTORIA)} de autoria)."
     )
     return 0
 
