@@ -649,12 +649,31 @@ def tique_da_escada(
         daemon, jogo_vivo=_jogo_na_autoridade(daemon), agora=agora
     )
     ponte = resultado.carimbar if resultado.carimbar is not None else resultado.alinhar
-    if ponte is None:
+    if ponte is None or resultado.appid is None:
         return resultado.fim
+    controle = daemon.controller
+
+    def gravar() -> None:
+        _gravar_o_carimbo(controle, resultado, ponte)
+
+    escrevente = _ESCREVENTE
+    if escrevente is not None and escrevente.vivo() and escrevente.atende_aqui():
+        escrevente.pedir_o_carimbo(
+            (resultado.appid, ponte.chave, resultado.por, resultado.carimbar is None), gravar
+        )
+    else:
+        gravar()
+    return resultado.fim
+
+
+def _gravar_o_carimbo(
+    controle: Any, resultado: ponte_tentativa.Tique, ponte: ponte_escada.Ponte
+) -> None:
+    """Grava no perfil do jogo o carimbo (ou o modo) que o tique decidiu. Nunca levanta."""
     try:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-        gerente = ProfileManager(controller=daemon.controller)
+        gerente = ProfileManager(controller=controle)
         if resultado.carimbar is None:
             salvo = gerente.alinhar_o_modo_do_appid(
                 resultado.appid, kind=ponte.kind, caminho=ponte.mascara
@@ -675,10 +694,10 @@ def tique_da_escada(
             ponte=ponte.chave,
             err=str(exc),
         )
-        return resultado.fim
+        return
     if salvo is None:
         logger.info("ponte_escada_sem_perfil_para_carimbar", appid=resultado.appid)
-        return resultado.fim
+        return
     if resultado.carimbar is not None:
         logger.info(
             "ponte_escada_carimbada",
@@ -688,7 +707,6 @@ def tique_da_escada(
             por=resultado.por,
             modo_alinhado=_o_modo_e_o_da_ponte(salvo, ponte),
         )
-    return resultado.fim
 
 
 def _soltar_a_trava_do_lancamento(daemon: DaemonProtocol) -> None:
@@ -2356,6 +2374,8 @@ class EscreventeDoLancamento:
         self._laco_que_armou = laco
         self._trava = threading.Lock()
         self._pendente: _FotoDoLancamento | None = None
+        self._carimbos: dict[Any, Callable[[], None]] = {}
+        self._carimbo_gravando: Any = None
         self._tem_pedido = threading.Event()
         self._parar = False
         self.escritas = 0
@@ -2387,6 +2407,23 @@ class EscreventeDoLancamento:
             self._pedida = max(self._pedida, foto.ordem)
             self._tem_pedido.set()
 
+    def pedir_o_carimbo(self, chave: Any, gravar: Callable[[], None]) -> bool:
+        """Põe na fila a gravação do carimbo de `chave`. False = o mesmo já estava na fila."""
+        with self._trava:
+            if chave in self._carimbos or chave == self._carimbo_gravando:
+                return False
+            appid = chave[0]
+            for velha in [c for c in self._carimbos if c[0] == appid]:
+                del self._carimbos[velha]
+            self._carimbos[chave] = gravar
+            self._tem_pedido.set()
+            return True
+
+    def carimbos_na_fila(self) -> int:
+        """Quantos carimbos ainda não foram gravados (os da fila e o que está gravando)."""
+        with self._trava:
+            return len(self._carimbos) + (self._carimbo_gravando is not None)
+
     def em_voo(self) -> bool:
         """Há foto pedida cujo recibo ainda não voltou ao laço?"""
         with self._trava:
@@ -2403,12 +2440,26 @@ class EscreventeDoLancamento:
             self._tem_pedido.set()
         self._fio.join(teto_s)
 
+    def _gravar_os_carimbos(self) -> None:
+        while True:
+            with self._trava:
+                if not self._carimbos:
+                    self._carimbo_gravando = None
+                    return
+                chave = next(iter(self._carimbos))
+                gravar = self._carimbos.pop(chave)
+                self._carimbo_gravando = chave
+            with contextlib.suppress(Exception):
+                gravar()
+
     def _laco(self) -> None:
         while True:
             self._tem_pedido.wait()
             with self._trava:
-                foto, self._pendente = self._pendente, None
                 self._tem_pedido.clear()
+            self._gravar_os_carimbos()
+            with self._trava:
+                foto, self._pendente = self._pendente, None
                 parar = self._parar
             if foto is not None:
                 try:
@@ -2423,7 +2474,7 @@ class EscreventeDoLancamento:
             if not parar:
                 continue
             with self._trava:
-                if self._pendente is None:
+                if self._pendente is None and not self._carimbos:
                     return
                 self._tem_pedido.set()
 

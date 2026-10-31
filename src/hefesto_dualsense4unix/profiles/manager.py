@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import contextlib
 import math
+import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 from hefesto_dualsense4unix.core.controller import IController, OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS, KeyBinding
@@ -1678,15 +1679,16 @@ class ProfileManager:
         O `transformar` que devolve o PRÓPRIO perfil diz «nada a mudar», e nada
         se grava (a guarda da escolha do usuário em :meth:`confirmar_ponte`).
         """
-        profile = perfil_do_appid(appid)
-        if profile is None:
-            logger.info(evento, appid=str(appid))
-            return None
-        novo = transformar(profile)
-        if novo is profile:
-            return profile
-        save_profile(novo, origem=origem)
-        return novo
+        with _TRAVA_DA_MUDANCA_NO_PERFIL:
+            profile = perfil_do_appid(appid)
+            if profile is None:
+                logger.info(evento, appid=str(appid))
+                return None
+            novo = transformar(profile)
+            if novo is profile:
+                return profile
+            save_profile(novo, origem=origem)
+            return novo
 
     @staticmethod
     def pontes_confirmadas() -> dict[str, dict[str, object]]:
@@ -1730,6 +1732,27 @@ def _chave_do_appid(appid: object) -> int | None:
             return pela_classe
         return int(texto) if texto.isdigit() and int(texto) > 0 else None
     return None
+
+
+_TRAVA_DA_MUDANCA_NO_PERFIL = threading.Lock()
+_Extra = TypeVar("_Extra")
+
+
+def mudar_o_perfil(
+    nome: str, mudar: Callable[[Profile], tuple[Profile | None, _Extra]]
+) -> tuple[Profile, bool, _Extra]:
+    """Lê `nome`, aplica `mudar` e grava o perfil que ele devolve, sob uma trava só no processo.
+
+    `mudar` devolve `(None, extra)` quando não há o que gravar. Lê e grava o disco: o laço do
+    serviço a chama por `asyncio.to_thread`. Devolve o perfil que vale, se gravou e o `extra`.
+    """
+    with _TRAVA_DA_MUDANCA_NO_PERFIL:
+        perfil = load_profile(nome)
+        novo, extra = mudar(perfil)
+        if novo is None:
+            return perfil, False, extra
+        save_profile(novo)
+        return novo, True, extra
 
 
 def perfil_do_appid(
@@ -2873,6 +2896,7 @@ __all__ = [
     "e_o_freestyle",
     "gerente_do_daemon",
     "ligar_o_freestyle",
+    "mudar_o_perfil",
     "o_carimbo_leva_o_modo",
     "o_freestyle_manda",
     "os_perfis_de_escolher",

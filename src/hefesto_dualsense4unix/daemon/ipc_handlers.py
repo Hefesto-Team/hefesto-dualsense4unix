@@ -5598,40 +5598,40 @@ class IpcHandlersMixin:
                 ),
             }
 
-        nome = self._perfil_que_grava()
-        perfil: Any = None
-        escritos: dict[str, Any] = {}
-        if nome:
-            from hefesto_dualsense4unix.profiles.loader import load_profile
+        def o_arranjo(mesa: Any, escritos: dict[str, Any]) -> tuple[Any, Any, bool]:
+            try:
+                finais = pedidos
+                if o_virtual:
+                    atual = rot.arranjo_da_peca(
+                        mesa, ProfileMovimentoConfig.model_validate(escritos))
+                    lado = params.get("lado") or rot.lado_do_virtual(atual)
+                    rota = lado if params.get("ligada", True) else rot.DESTINO_NENHUM
+                    finais = {"lado": lado, "destino": rota, "acelerometro": rota, **pedidos}
+                campos = {**escritos, **finais}
+                secao = ProfileMovimentoConfig.model_validate(campos)
+                return secao, rot.arranjo_da_peca(mesa, secao), escritos != campos
+            except ValueError as exc:
+                raise ValueError(f"mira.set recusado: {exc}") from exc
 
-            perfil = load_profile(nome)
-            dele = (perfil.controllers or {}).get(chave)
-            antes = getattr(dele, "movimento", None)
+        def mudar(perfil: Any) -> tuple[Any, Any]:
+            antes = getattr((perfil.controllers or {}).get(chave), "movimento", None)
             escritos = dict(antes.model_dump(exclude_unset=True)) if antes else {}
-        try:
-            mesa = (perfil.movimento if perfil is not None
-                    else rot.parametros_da_peca(self.store, chave))
-            if o_virtual:
-                atual = rot.arranjo_da_peca(
-                    mesa, ProfileMovimentoConfig.model_validate(escritos))
-                lado = params.get("lado") or rot.lado_do_virtual(atual)
-                rota = lado if params.get("ligada", True) else rot.DESTINO_NENHUM
-                pedidos = {"lado": lado, "destino": rota, "acelerometro": rota, **pedidos}
-            campos = {**escritos, **pedidos}
-            secao = ProfileMovimentoConfig.model_validate(campos)
-            arranjo = rot.arranjo_da_peca(mesa, secao)
-        except ValueError as exc:
-            raise ValueError(f"mira.set recusado: {exc}") from exc
-
-        gravado = False
-        if perfil is not None and escritos != campos:
-            from hefesto_dualsense4unix.profiles.loader import save_profile
-
+            secao, arranjo, mudou = o_arranjo(perfil.movimento, escritos)
+            if not mudou:
+                return None, arranjo
             atuais = dict(perfil.controllers or {})
-            dele = atuais.get(chave) or ControllerOverrides()
-            atuais[chave] = dele.model_copy(update={"movimento": secao})
-            save_profile(perfil.model_copy(update={"controllers": atuais}))
-            gravado = True
+            atuais[chave] = (atuais.get(chave) or ControllerOverrides()).model_copy(
+                update={"movimento": secao})
+            return perfil.model_copy(update={"controllers": atuais}), arranjo
+
+        nome = self._perfil_que_grava()
+        if nome:
+            from hefesto_dualsense4unix.profiles.manager import mudar_o_perfil
+
+            _perfil, gravado, arranjo = await asyncio.to_thread(mudar_o_perfil, nome, mudar)
+        else:
+            gravado, (_secao, arranjo, _mudou) = False, o_arranjo(
+                rot.parametros_da_peca(self.store, chave), {})
 
         rot.definir_da_peca(self.store, chave, arranjo)
         rot.sincronizar_o_filtro(self.store)
@@ -5943,28 +5943,28 @@ class IpcHandlersMixin:
                 return {"status": "sem_endereco", "uniq": uniq,
                         "motivo": f"{uniq!r} não é o endereço de rádio de uma peça de plástico"}
 
-        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+        from hefesto_dualsense4unix.profiles.manager import mudar_o_perfil
 
-        perfil = load_profile(nome)
-        dele = (perfil.controllers or {}).get(chave) if chave else None
-        antes = getattr(dele, secao, None) if chave else getattr(perfil, secao, None)
-        escritos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
-        campos = {**escritos, **pedidos}
-        try:
-            nova = modelo.model_validate(campos)
-        except ValueError as exc:
-            raise ValueError(f"{metodo} recusado: {exc}") from exc
+        def mudar(perfil: Any) -> tuple[Any, Any]:
+            dele = (perfil.controllers or {}).get(chave) if chave else None
+            antes = getattr(dele, secao, None) if chave else getattr(perfil, secao, None)
+            escritos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
+            campos = {**escritos, **pedidos}
+            try:
+                nova = modelo.model_validate(campos)
+            except ValueError as exc:
+                raise ValueError(f"{metodo} recusado: {exc}") from exc
+            if escritos == campos:
+                return None, nova
+            if not chave:
+                return perfil.model_copy(update={secao: nova}), nova
+            atuais = dict(perfil.controllers or {})
+            da_peca = atuais.get(chave) or schema.ControllerOverrides()
+            atuais[chave] = da_peca.model_copy(update={secao: nova})
+            return perfil.model_copy(update={"controllers": atuais}), nova
 
-        gravado = escritos != campos
-        if gravado:
-            if chave:
-                atuais = dict(perfil.controllers or {})
-                da_peca = atuais.get(chave) or schema.ControllerOverrides()
-                atuais[chave] = da_peca.model_copy(update={secao: nova})
-                perfil = perfil.model_copy(update={"controllers": atuais})
-            else:
-                perfil = perfil.model_copy(update={secao: nova})
-            save_profile(perfil)
+        perfil, gravado, nova = await asyncio.to_thread(
+            mudar_o_perfil, nome, mudar)
 
         relatorio: dict[str, str] = {}
         aplicar = getattr(self.profile_manager, "apply_acessibilidade", None)

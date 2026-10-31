@@ -1,6 +1,7 @@
 """Subsystem Autoswitch — gerencia troca automática de perfis por janela ativa."""
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from typing import TYPE_CHECKING, Any
@@ -276,7 +277,7 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
     from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
-    _ensure_display_env()
+    await asyncio.to_thread(_ensure_display_env)
     manager = gerente_do_daemon(daemon, store=daemon.store)
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
