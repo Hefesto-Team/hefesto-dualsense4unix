@@ -2559,7 +2559,6 @@ ESQUECER = "Esquecer"
 MENU_DA_LINHA = "\u22ee"
 ESPERA_NA_TELA_S = _central_do_radio.PRAZO_DO_PENDENTE_S
 LEMBRA_O_NAO_CONECTOU_S = _central_do_radio.LEMBRA_O_NAO_CONECTOU_S
-VOLTAS_DO_VIGIA_NA_TELA = 3
 
 TIPO_ACESSORIO = "acessorio"
 CATEGORIA_ACESSORIO = {"glifo": "acessorio", "palavra": "acessório", "legenda": "Acessório",
@@ -4661,7 +4660,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         for a in aparelhos_bz if a.pareado)
     falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, no_ar, pareados)
     falhas += _os_que_nao_viraram_controle(
-        em_fundo.em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas, time.monotonic())
+        em_fundo.em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas)
     aparelhos += falhas
     no_usb = frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados
                        if str(c.get("transport") or "").lower() == "usb")
@@ -4914,7 +4913,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
 
 
 def _ler_os_zumbis() -> dict[str, Any]:
-    """A última volta do vigia de zumbis, do arquivo que ele grava a cada volta."""
+    """O último veredito do vigia de zumbis, do arquivo que ele grava quando o veredito muda."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.daemon.subsystems.conexoes import ler_o_diario
 
@@ -4922,16 +4921,13 @@ def _ler_os_zumbis() -> dict[str, Any]:
 
 
 def _os_que_nao_viraram_controle(diario: dict[str, Any] | None, enderecos: list[str],
-                                 falhas: list[dict[str, Any]],
-                                 agora: float) -> list[dict[str, Any]]:
+                                 falhas: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """A linha «Não Conectou» do controle que conectou no rádio e NÃO virou controle."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.daemon.subsystems.conexoes import INTERVALO_S
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import o_diario_e_fresco
 
     volta = diario if isinstance(diario, dict) else {}
-    carimbo = volta.get("carimbo")
-    idade = agora - float(carimbo) if isinstance(carimbo, int | float) else -1.0
-    fresca = 0.0 <= idade <= VOLTAS_DO_VIGIA_NA_TELA * INTERVALO_S
+    fresca = o_diario_e_fresco(volta)
 
     def pares(chave: str) -> list[tuple[str, str]]:
         return [(nome_do_jogador.mac(link.get("adaptador")),

@@ -101,10 +101,35 @@ def ler_o_diario() -> dict[str, Any]:
     return dado if isinstance(dado, dict) else {}
 
 
-def _gravar_o_diario(veredito: Veredito, agora: float) -> None:
+def _partida_do_processo(pid: int) -> int | None:
+    try:
+        texto = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+    campos = texto.rsplit(")", 1)[-1].split()
+    try:
+        return int(campos[19])
+    except (IndexError, ValueError):
+        return None
+
+
+def o_diario_e_fresco(dado: dict[str, Any] | None) -> bool:
+    """O diário vale enquanto o processo que o gravou é o mesmo e está vivo."""
+    if not isinstance(dado, dict):
+        return False
+    pid, partida = dado.get("pid"), dado.get("partida")
+    if not isinstance(pid, int) or not isinstance(partida, int) or pid <= 0:
+        return False
+    return _partida_do_processo(pid) == partida
+
+
+def _gravar_o_diario(veredito: Veredito) -> bool:
+    """Grava o veredito só quando ele difere do que está no disco."""
     caminho = caminho_do_diario()
-    dado = {
-        "carimbo": agora,
+    pid = os.getpid()
+    dado = json.loads(json.dumps({
+        "pid": pid,
+        "partida": _partida_do_processo(pid),
         "agiu": veredito.agiu,
         "suspeitos": [asdict(link) for link in veredito.suspeitos],
         "zumbis": [asdict(link) for link in veredito.zumbis],
@@ -112,7 +137,9 @@ def _gravar_o_diario(veredito: Veredito, agora: float) -> None:
         "segurados_pelo_teto": [asdict(link) for link in veredito.segurados_pelo_teto],
         "impedimentos": list(veredito.impedimentos),
         "diario": list(veredito.diario),
-    }
+    }, ensure_ascii=False))
+    if ler_o_diario() == dado:
+        return False
     try:
         caminho.parent.mkdir(parents=True, exist_ok=True)
         temporario = caminho.with_suffix(".json.novo")
@@ -121,6 +148,8 @@ def _gravar_o_diario(veredito: Veredito, agora: float) -> None:
         temporario.replace(caminho)
     except OSError:
         logger.debug("conexao_zumbi_diario_nao_gravou", exc_info=True)
+        return False
+    return True
 
 
 class ConexoesSubsystem:
@@ -193,7 +222,7 @@ class ConexoesSubsystem:
             if linha not in self._avisadas:
                 logger.warning("conexao_zumbi", recado=linha)
         self._avisadas = frozenset(veredito.diario)
-        _gravar_o_diario(veredito, agora)
+        _gravar_o_diario(veredito)
         return veredito
 
 
@@ -206,4 +235,5 @@ __all__ = [
     "PonteComTrava",
     "caminho_do_diario",
     "ler_o_diario",
+    "o_diario_e_fresco",
 ]

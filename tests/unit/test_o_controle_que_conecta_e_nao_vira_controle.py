@@ -449,12 +449,23 @@ def test_o_zumbi_derrubado_nao_ganha_linha(a08: Any) -> None:
 
 
 def test_a_volta_velha_do_vigia_nao_vale(a08: Any) -> None:
-    """Um minuto sem volta nova é o daemon parado: o arquivo é passado. E um"""
+    """O diário de um processo que já não está vivo é passado: o daemon parou."""
+    import json
+    import subprocess
+    import sys
+
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import caminho_do_diario
+
     ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])
-    _volta(ponte, [LINK_ZUMBI], quando=time.monotonic() - 60.0)
-    assert _presos(_cena_da_aba(a08)) == []
-    _volta(ponte, [LINK_ZUMBI], quando=time.monotonic() + 3600.0)
-    assert _presos(_cena_da_aba(a08)) == []
+    _volta(ponte, [LINK_ZUMBI])
+    assert len(_presos(_cena_da_aba(a08))) == 1
+    gravado = ler_o_diario()
+    morto = subprocess.run([sys.executable, "-c", "import os; print(os.getpid())"],
+                           capture_output=True, text=True, check=True)
+    for velho in ({**gravado, "pid": int(morto.stdout)},
+                  {**gravado, "partida": gravado["partida"] + 1}):
+        caminho_do_diario().write_text(json.dumps(velho), encoding="utf-8")
+        assert _presos(_cena_da_aba(a08)) == []
 
 
 def test_o_zumbi_de_adaptador_fora_da_tela_nao_aparece(a08: Any) -> None:
