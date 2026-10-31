@@ -472,9 +472,9 @@ def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     medida = mi.medir()
     estados = [linha["estado"] for linha in mi._linhas()]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
-    assert estados.count("caduca") == 43, (
-        "o CSV tem quarenta e três linhas `caduca`; se isso mudou, o laudo tem de dizer")
-    assert medida["decididas"] == medida["linhas"] - 43 - adiante
+    assert estados.count("caduca") == 44, (
+        "o CSV tem quarenta e quatro linhas `caduca`; se isso mudou, o laudo tem de dizer")
+    assert medida["decididas"] == medida["linhas"] - 44 - adiante
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(
