@@ -89,22 +89,6 @@ receita_do_jogo() {
     return 0
 }
 
-filtrar_o_ambiente() {
-    while IFS= read -r line; do
-        case "$line" in
-            SDL_GAMECONTROLLER_IGNORE_DEVICES=*) printf '%s\n' "$line" ;;
-            SDL_JOYSTICK_HIDAPI=*)               printf '%s\n' "$line" ;;
-            SDL_GAMECONTROLLER_USE_BUTTON_LABELS=*) printf '%s\n' "$line" ;;
-            SDL_ACCELEROMETER_AS_JOYSTICK=*)     printf '%s\n' "$line" ;;
-            PROTON_DISABLE_HIDRAW=*)             printf '%s\n' "$line" ;;
-            __GL_SHADER_DISK_CACHE=*)            printf '%s\n' "$line" ;;
-            __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=*) printf '%s\n' "$line" ;;
-            PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE=*) printf '%s\n' "$line" ;;
-            PROTON_ENABLE_MHWILDS_USB_AUDIO=*)   printf '%s\n' "$line" ;;
-        esac
-    done
-}
-
 registrar_a_fonte() {
     mkdir -p "$state_dir" 2>/dev/null || return 0
     printf 'appid=%s\nfonte=%s\narquivo=%s\nepoch=%s\n' \
@@ -192,7 +176,7 @@ PYEOF
     case "$pedido" in
         0)
             registrar_a_fonte daemon
-            printf '%s\n' "$do_daemon" | filtrar_o_ambiente
+            linhas="$do_daemon"
             ;;
         3)
             envfile="$receita"
@@ -202,13 +186,33 @@ PYEOF
                 return 0
             fi
             registrar_a_fonte arquivo "${envfile##*/}"
-            filtrar_o_ambiente < "$envfile"
+            linhas=""
+            while IFS= read -r line || [ -n "$line" ]; do
+                linhas="$linhas$line
+"
+            done < "$envfile"
             ;;
         *)
             registrar_a_fonte nenhuma
             return 0
             ;;
     esac
+
+    while IFS= read -r line; do
+        case "$line" in
+            SDL_GAMECONTROLLER_IGNORE_DEVICES=*) printf '%s\n' "$line" ;;
+            SDL_JOYSTICK_HIDAPI=*)               printf '%s\n' "$line" ;;
+            SDL_GAMECONTROLLER_USE_BUTTON_LABELS=*) printf '%s\n' "$line" ;;
+            SDL_ACCELEROMETER_AS_JOYSTICK=*)     printf '%s\n' "$line" ;;
+            PROTON_DISABLE_HIDRAW=*)             printf '%s\n' "$line" ;;
+            __GL_SHADER_DISK_CACHE=*)            printf '%s\n' "$line" ;;
+            __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=*) printf '%s\n' "$line" ;;
+            PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE=*) printf '%s\n' "$line" ;;
+            PROTON_ENABLE_MHWILDS_USB_AUDIO=*)   printf '%s\n' "$line" ;;
+        esac
+    done <<HEFESTO_AMBIENTE_EOF
+$linhas
+HEFESTO_AMBIENTE_EOF
     [ -f "$receita" ] && receita_do_jogo "$receita"
     return 0
 }
