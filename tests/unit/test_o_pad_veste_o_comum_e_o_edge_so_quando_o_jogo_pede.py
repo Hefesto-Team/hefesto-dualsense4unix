@@ -70,6 +70,7 @@ _SEM_SINAL: dict[str, dict[str, bytes]] = {
 
 @pytest.mark.parametrize("caso", sorted(_SEM_SINAL))
 def test_o_jogo_sem_sinal_veste_o_comum(tmp_path: Path, caso: str) -> None:
+    """Prova da D-3110-O-PAD-VESTE-O-COMUM-POR-PADRAO."""
     roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", _SEM_SINAL[caso]))
 
     assert (roupa, fonte) == (rj.ROUPA_DO_COMUM, "nenhum sinal do controle: o DualSense comum")
