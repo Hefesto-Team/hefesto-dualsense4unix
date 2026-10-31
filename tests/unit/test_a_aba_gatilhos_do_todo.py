@@ -118,7 +118,7 @@ def test_a_ordem_com_estilo_poe_as_dele_na_frente() -> None:
 
 
 def _desenho() -> str:
-    """O desenho (`mockup/`), que é o que o gerador escreve e quem coordena aprova."""
+    """O desenho (`mockup/`), que é o que o gerador escreve e o fecho aprova."""
     return (RAIZ / "mockup" / PAGINA).read_text(encoding="utf-8")
 
 

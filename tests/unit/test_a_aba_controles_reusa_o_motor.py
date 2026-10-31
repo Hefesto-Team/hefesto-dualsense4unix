@@ -568,7 +568,7 @@ def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
     """Toda chave emitida tem onde pousar na página que o piloto ABRE.
 
     O ENSAIO É DO USUÁRIO. O gerador escreve em `mockup/`, e o produto só recebe
-    pelo `--publicar 02`, que é ato de quem coordena. Emitir antes põe as chaves em
+    pelo `--publicar 02`, que é ato do fecho. Emitir antes põe as chaves em
     `casamento.medir(...)["orfaos"]`, e quem reprova é
     `test_o_clique_do_analogico_tem_dono::test_a_aba_controles_nao_emite_para_
     endereco_que_a_pagina_nao_tem` — **não** o `test_o_casamento_das_dez`, que

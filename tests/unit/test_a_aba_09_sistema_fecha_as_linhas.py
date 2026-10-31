@@ -38,7 +38,7 @@ consegue ver:
    volta, as duas colunas irmãs continuam acabando no mesmo `y` nos dois
    estados, e o botão troca de palavra DURANTE a espera e volta inteiro.
 
-POR QUE A CAMADA 3 ABRE O DESENHO E NÃO O PUBLICADO: **publicar é ato de quem coordena**, e
+POR QUE A CAMADA 3 ABRE O DESENHO E NÃO O PUBLICADO: **publicar é ato do fecho**, e
 a [01] move dois pixels (o rótulo e o da espera). A régua aponta o
 `onde.PUBLICADO` para
 uma cópia do ensaio num diretório temporário — que é o desenho de HOJE — em vez

@@ -62,7 +62,7 @@ AS MORDIDAS, todas com ``cp`` para devolver:
   ``test_os_gestos_chegam_na_ordem_do_clique`` reprova.
 
 ONDE A RÉGUA MEDE: no **ENSAIO**, que é onde o gerador escreve e onde os endereços
-existem. A página publicada só os recebe no ``--publicar 05``, que é ato de quem coordena.
+existem. A página publicada só os recebe no ``--publicar 05``, que é ato do fecho.
 """
 from __future__ import annotations
 
