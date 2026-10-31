@@ -382,23 +382,23 @@ def test_o_pronto_vai_por_cima_de_qualquer_outro_momento() -> None:
 
 
 def test_o_ritmo_do_outro_lado_nao_fica_preso(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um momento segura a sessão no direito; o ritmo do tiro escreveu no esquerdo e vence."""
-    perfil = _perfil(estilo="fps", triggers={"right": FPS_MACHINE})
+    """Um momento segura a sessão no esquerdo; o ritmo do tiro escreveu no R2 da arma e vence."""
+    perfil = _perfil(estilo="fps", triggers={"left": FPS_MACHINE})
     mesa = _mesa(monkeypatch, perfil=perfil)
     assert mesa.passo.receita_vigente.gatilho_no_ritmo
-    mesa.apertar(P1, "direito")
+    mesa.apertar(P1, "esquerdo")
     for _ in range(3):
-        mesa.apertar(P1, "esquerdo")
+        mesa.apertar(P1, "direito")
         mesa.rodar(0.1)
-        mesa.soltar(P1, "esquerdo")
+        mesa.soltar(P1, "direito")
         mesa.rodar(0.1)
-    ritmo = [b for _t, b in mesa.backend.de(P1, "left")]
+    ritmo = [b for _t, b in mesa.backend.de(P1, "right")]
     assert ritmo, "o ritmo do tiro escreveu no lado que não tem imersão"
     mesa.rodar(3.0)
-    assert [(u, s, b) for _t, u, s, b in mesa.backend.soltos] == [(P1, "left", ritmo[-1])], (
-        "o ritmo do esquerdo ficou preso: só a sessão inteira o soltaria")
-    assert mesa.backend.sessoes == [], "a sessão segue com o momento do direito"
-    mesa.soltar(P1, "direito")
+    assert [(u, s, b) for _t, u, s, b in mesa.backend.soltos] == [(P1, "right", ritmo[-1])], (
+        "o ritmo do direito ficou preso: só a sessão inteira o soltaria")
+    assert mesa.backend.sessoes == [], "a sessão segue com o momento do esquerdo"
+    mesa.soltar(P1, "esquerdo")
     mesa.rodar(0.2)
     assert mesa.backend.voltou(P1) != []
 

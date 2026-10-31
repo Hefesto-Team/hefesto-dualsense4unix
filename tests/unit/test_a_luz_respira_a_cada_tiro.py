@@ -312,6 +312,7 @@ class _Controller:
 def test_cada_controle_pulsa_a_sua_cor(monkeypatch: pytest.MonkeyPatch) -> None:
     receita = tv.Receita(reacao_ao_tiro="pulsa", gatilho_no_ritmo=True)
     monkeypatch.setattr(tv, "receita_ativa", lambda _d: receita)
+    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
     controller = _Controller()
     leitores = {uniq: _Leitor() for uniq in QUATRO[1:]}
     daemon = SimpleNamespace(

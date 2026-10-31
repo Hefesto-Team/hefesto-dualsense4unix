@@ -333,7 +333,7 @@ def test_o_degrau_do_dedo_e_o_par_cru_do_jogo_em_toda_faixa() -> None:
         motor.cena = ic.IntensidadeDaCena(graduar=True)
         motor.cena.jogo, motor.cena.faixa = True, faixa
         daemon = SimpleNamespace(_tato_vivo=motor)
-        receita = tv.receita_do_estilo(POR_CHAVE[_ACAO])
+        receita = tv.receita_do_estilo(POR_CHAVE["luta"])
         estado = {P1: tv.EstadoDoCanal(tv.MODO_XBOX, ha_jogo=True)}
         agora = 100.0
         for nivel in (40, 120, 200, 255):
