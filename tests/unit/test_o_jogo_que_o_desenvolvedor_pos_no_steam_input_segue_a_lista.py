@@ -13,12 +13,17 @@ Este arquivo trava:
 2. o lar de mentira: o jogo declarado fora da lista ganha `"0"`, inclusive o instalado
    que a Steam ainda não abriu; o da lista e o sem máscara ficam como estão;
 3. a segunda passada não escreve nem faz backup;
-4. o cache ilegível não inventa alvo, e a configuração por jogo continua valendo.
+4. o cache ilegível não inventa alvo, e a configuração por jogo continua valendo;
+5. o `--apply` do install conta o jogo fora da lista como trabalho: sem isso ele dizia
+   «nada a fazer», não fechava a Steam e o `"0"` nunca chegava ao disco.
 """
 from __future__ import annotations
 
 import hashlib
+import os
+import shutil
 import struct
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -233,3 +238,89 @@ class TestOLarDeMentira:
         assert status == ponte.PONTE_DESLIGADA, detalhe
         assert ponte.CACHE_DE_APPS_ILEGIVEL in [d["desfecho"] for d in detalhe]
         assert _valores(lar["vdf"].read_text(encoding="utf-8")) == {_CONFIGURADO: "0"}
+
+
+_RAIZ = Path(__file__).resolve().parents[2]
+_GUARDA = _RAIZ / "scripts" / "disable_steam_input.sh"
+_DONO_DA_PONTE = _RAIZ / "src" / "hefesto_dualsense4unix" / "integrations"
+_BASH = shutil.which("bash") or "/bin/bash"
+
+_PONTE_DO_ENSAIO = """\
+import runpy
+import sys
+
+DONO = {dono!r}
+sys.path.insert(0, DONO)
+import steam_launch_options as slo
+
+_ler = slo.cmdline_de_pid
+
+
+def _sem_o_jogo_da_maquina(pid):
+    cmd = _ler(pid)
+    return "" if slo._STEAM_LAUNCH_RE.search(cmd) else cmd
+
+
+slo._cmdline_of = _sem_o_jogo_da_maquina
+sys.argv[0] = DONO + "/steam_input_ponte.py"
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
+
+
+class TestOInstallContaOJogoForaDaLista:
+    @pytest.fixture()
+    def lar(self, tmp_path: Path) -> dict[str, Path]:
+        casa = _montar_lar(tmp_path)
+        lista = casa["home"] / ".config/hefesto-dualsense4unix/steam_input_apps.txt"
+        lista.write_text("# vazia\n", encoding="utf-8")
+        stubs = tmp_path / "stubs"
+        stubs.mkdir()
+        for nome, corpo in (("pgrep", "exit 1"), ("steam", "exit 0"), ("sleep", "exit 0")):
+            alvo = stubs / nome
+            alvo.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
+            alvo.chmod(0o755)
+        ponte_py = tmp_path / "ponte_do_ensaio.py"
+        ponte_py.write_text(
+            _PONTE_DO_ENSAIO.format(dono=str(_DONO_DA_PONTE)), encoding="utf-8"
+        )
+        return {**casa, "stubs": stubs, "ponte_py": ponte_py}
+
+    def _roda(self, lar: dict[str, Path], modo: str) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        env["HOME"] = str(lar["home"])
+        env["XDG_CONFIG_HOME"] = str(lar["home"] / ".config")
+        env["PATH"] = f"{lar['stubs']}:/usr/bin:/bin"
+        env["PONTE_PY"] = str(lar["ponte_py"])
+        return subprocess.run(
+            [_BASH, str(_GUARDA), modo],
+            capture_output=True, text=True, check=False, env=env, timeout=120,
+        )
+
+    def test_o_apply_grava_o_zero_do_jogo_declarado(self, lar: dict[str, Path]) -> None:
+        """A MORDIDA: arranque o `fora_da_lista_pendente` do `--apply` e isto reprova."""
+        proc = self._roda(lar, "--apply")
+
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "resultado=aplicado" in proc.stdout, proc.stdout
+        assert f"fora da lista pendente: {_DECLARADO_ABERTO}" in proc.stdout
+        depois = _valores(lar["vdf"].read_text(encoding="utf-8"))
+        assert depois[_DECLARADO_ABERTO] == "0"
+        assert depois[_DECLARADO_NUNCA_ABERTO] == "0"
+
+    def test_o_status_pede_a_correcao(self, lar: dict[str, Path]) -> None:
+        foto = _fotografia(lar["home"])
+
+        proc = self._roda(lar, "--status")
+
+        assert "resultado=precisa-corrigir" in proc.stdout, proc.stdout
+        assert _fotografia(lar["home"]) == foto
+
+    def test_a_segunda_passada_e_nada_a_fazer(self, lar: dict[str, Path]) -> None:
+        self._roda(lar, "--apply")
+        foto = _fotografia(lar["home"])
+
+        proc = self._roda(lar, "--apply")
+
+        assert "resultado=nada-a-fazer" in proc.stdout, proc.stdout
+        assert "fora da lista pendente" not in proc.stdout
+        assert _fotografia(lar["home"]) == foto

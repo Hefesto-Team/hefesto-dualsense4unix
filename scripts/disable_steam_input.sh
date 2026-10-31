@@ -214,6 +214,16 @@ sys.exit(0 if pendentes else 1)
 '
 }
 
+fora_da_lista_pendente() {
+    [[ -f "${PONTE_PY}" ]] || return 1
+    command -v python3 >/dev/null 2>&1 || return 1
+    local saida
+    saida="$(python3 "${PONTE_PY}" --desligar-fora-da-lista --dry-run 2>/dev/null)" || return 1
+    grep -qx '\[steam-input-fora-da-lista\] resultado=desligado' <<<"${saida}" || return 1
+    sed -n 's/^\[steam-input-fora-da-lista\] \([0-9][0-9]*\): desligado$/[steam-input] fora da lista pendente: \1/p' <<<"${saida}"
+    return 0
+}
+
 _transform_vdf() {
     awk -v allowfile="${ALLOWLIST_FILE}" '
     BEGIN {
@@ -345,6 +355,9 @@ case "${MODE}" in
         if ponte_pendente; then
             any_needs=1
         fi
+        if fora_da_lista_pendente; then
+            any_needs=1
+        fi
         if [[ "${any_needs}" -eq 1 ]]; then
             log "ação sugerida: scripts/disable_steam_input.sh --apply"
             resultado "precisa-corrigir"
@@ -391,6 +404,9 @@ case "${MODE}" in
             needs_real_fix "$vdf" && any_needs=1
         done
         if ponte_pendente >/dev/null 2>&1; then
+            any_needs=1
+        fi
+        if fora_da_lista_pendente; then
             any_needs=1
         fi
         if [[ "${any_needs}" -eq 0 ]]; then
