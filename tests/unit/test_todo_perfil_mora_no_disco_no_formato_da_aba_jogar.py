@@ -227,7 +227,7 @@ def _escada_confirma_por_silencio(degrau: ponte_escada.Degrau) -> None:
     daemon = _Daemon()
     daemon._ponte_tentativa = ponte_tentativa.Tentativa(  # type: ignore[attr-defined]
         appid=APPID, epoch=1000, degrau=degrau, ultimo_gesto=0.0, viu_o_jogo=True)
-    fim = launch_env.tique_da_escada(daemon, agora=ponte_escada.SILENCIO_CONFIRMA_SEC + 1.0)
+    fim = launch_env.tique_da_escada(daemon, agora=ponte_escada.SILENCIO_CONFIRMA_SEC + 1.0)  # type: ignore[arg-type]
     assert fim == ponte_tentativa.FIM_CONFIRMADA
 
 

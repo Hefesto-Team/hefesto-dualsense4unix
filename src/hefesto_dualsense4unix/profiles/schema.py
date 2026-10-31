@@ -3210,5 +3210,5 @@ def a_mascara_de_cada_controle_no_modo(data: dict[str, Any]) -> dict[str, Any]:
     migração em disco (``loader.todo_perfil_no_formato_da_aba_jogar``) gravar o que a leitura
     já via. Perfil sem a chave volta o mesmo objeto.
     """
-    novo: dict[str, Any] = Profile._a_mascara_de_cada_controle_vira_o_modo(data)
+    novo: dict[str, Any] = Profile._a_mascara_de_cada_controle_vira_o_modo(data)  # type: ignore[operator]
     return novo
