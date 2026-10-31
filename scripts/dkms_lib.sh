@@ -214,6 +214,16 @@ dkms_veredito_do_fonte() {
     return 0
 }
 
+_dkms_esquecer_o_veredito_que_falhou() {
+    local _arquivo _veredito
+    _veredito="$(dkms_veredito_do_fonte "$1" "$2" "$3")"
+    case "${_veredito%%$'\t'*}" in
+        "" | cache | fabrica) return 0 ;;
+    esac
+    _arquivo="$(dkms_arquivo_do_veredito "$1" "$2" "$3")"
+    sudo rm -f "${_arquivo}" "${_arquivo%.txt}.tar" || true
+}
+
 dkms_module_from_updates() {
     local _path
     _path="$(modinfo -F filename "$1" 2>/dev/null)" || return 1
@@ -295,7 +305,7 @@ dkms_install_patched_module() {
 
     if [[ ! "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" =~ (built|installed) ]]; then
         local _rc_build=0 _veredito
-        sudo rm -f "$(dkms_arquivo_do_veredito "${_pkg}" "${_ver}" "${_kver}")" || true
+        _dkms_esquecer_o_veredito_que_falhou "${_pkg}" "${_ver}" "${_kver}"
         sudo dkms build "${_pkg}/${_ver}" -k "${_kver}" || _rc_build=$?
         if [[ "${_rc_build}" -ne 0 ]]; then
             _veredito="$(dkms_veredito_do_fonte "${_pkg}" "${_ver}" "${_kver}")"
