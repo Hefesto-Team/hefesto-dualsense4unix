@@ -130,7 +130,9 @@ def pasta() -> Path:
 
 
 def test_cada_formato_antigo_vai_ao_formato_da_aba_jogar(pasta: Path) -> None:
-    """**A MORDIDA.** Sem a gravação da migração (o ``_atomic_write_json`` arrancado), o disco
+    """Prova da D-3110-O-PERFIL-MORA-NO-DISCO-NO-FORMATO-DA-ABA-JOGAR.
+
+    **A MORDIDA.** Sem a gravação da migração (o ``_atomic_write_json`` arrancado), o disco
     segue nos quatro formatos e esta régua reprova em cada um."""
     convertidos = loader.todo_perfil_no_formato_da_aba_jogar()
 

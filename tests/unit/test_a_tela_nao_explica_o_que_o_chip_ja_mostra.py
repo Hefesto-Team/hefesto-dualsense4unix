@@ -146,7 +146,7 @@ def test_ha_as_paginas_das_abas() -> None:
 
 @pytest.mark.parametrize("desenho", PAGINAS, ids=lambda p: p.name)
 def test_o_html_gerado_das_abas_nao_explica_a_api(desenho: pathlib.Path) -> None:
-    """O texto visível e as dicas do desenho de cada aba, sem frase de explicação.
+    """Prova da D-3110-A-TELA-MOSTRA-E-NAO-DIZ: o texto e as dicas de cada aba, sem explicação.
 
     MORDE: devolva o `title` «O que o jogo vê deste controle» à máscara do `aba02.py`, regere a 02,
     e reprova.
