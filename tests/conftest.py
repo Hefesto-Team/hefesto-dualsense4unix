@@ -1452,7 +1452,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             "e a casa mora em ~/.local/state/hefesto-casa/.",
         ])
 
-    deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, foto_fim)
+    deltas = _sem_a_escrita_do_servico(session, _deltas_do_canario(_CANARIO_FOTO_INICIAL, foto_fim))
     if not deltas:
         return
     config = str(Path(os.path.expanduser("~")) / ".config" / _NOME_DO_PRODUTO)
@@ -3712,3 +3712,70 @@ def _nenhum_teclado_vivo_na_pergunta_da_permissao(
         yield
     finally:
         maquina.RAIZ_DAS_ENTRADAS = antes
+
+_ESCRITA_DO_SERVICO = "escrita_do_servico"
+
+_UNIDADE_DO_SERVICO = f"{_NOME_DO_PRODUTO}.service"
+
+
+def caminhos_da_escrita_do_servico(texto: str) -> frozenset[str]:
+    import json
+    import re
+
+    caminhos: set[str] = set()
+    for linha in texto.splitlines():
+        if _ESCRITA_DO_SERVICO not in linha:
+            continue
+        if linha.lstrip().startswith("{"):
+            with contextlib.suppress(ValueError, AttributeError, KeyError):
+                evento = json.loads(linha)
+                if evento.get("event") == _ESCRITA_DO_SERVICO:
+                    caminhos.add(str(evento["caminho"]))
+            continue
+        achado = re.search(rf"\b{_ESCRITA_DO_SERVICO}\s+caminho=(.+?)\s*$", linha)
+        if achado:
+            caminhos.add(achado.group(1))
+    return frozenset(caminhos)
+
+
+def escritas_do_servico_no_journal(desde: str) -> frozenset[str]:
+    import subprocess
+
+    try:
+        saida = subprocess.run(
+            [
+                "journalctl", "--user", "-u", _UNIDADE_DO_SERVICO,
+                "--since", desde, "--no-pager", "-o", "cat",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return frozenset()
+    if saida.returncode != 0:
+        return frozenset()
+    return caminhos_da_escrita_do_servico(saida.stdout)
+
+
+def _caminho_do_delta(delta: str) -> str:
+    resto = delta.split(None, 1)[-1]
+    return resto.rsplit(" (", 1)[0] if delta.startswith("MUDADO") else resto
+
+
+def _sem_a_escrita_do_servico(session: Any, deltas: list[str]) -> list[str]:
+    if not deltas or not _INICIO_DA_SESSAO:
+        return deltas
+    anotados = escritas_do_servico_no_journal(_INICIO_DA_SESSAO[0])
+    do_servico = [d for d in deltas if _caminho_do_delta(d) in anotados]
+    if not do_servico:
+        return deltas
+    restam = len(do_servico) - _CANARIO_LIMITE_AVISO
+    _escrever_no_terminal(session, [
+        "",
+        "CANARIO-FS-01 (aviso, não é portão): o serviço de verdade anotou no diário "
+        f"({_ESCRITA_DO_SERVICO}) a escrita de {len(do_servico)} caminho(s) durante a sessão:",
+        *[f"  - {d}" for d in do_servico[:_CANARIO_LIMITE_AVISO]],
+        *([f"  ... e mais {restam}"] if restam > 0 else []),
+    ])
+    return [d for d in deltas if d not in do_servico]

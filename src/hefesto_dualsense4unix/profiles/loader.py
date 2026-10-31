@@ -27,7 +27,7 @@ import sys
 import tempfile
 import threading
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -888,7 +888,7 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
     if marker.exists():
         return []
     enxutos: list[str] = []
-    with FileLock(str(_lock_path(marker))):
+    with _anota_o_semeio(directory), FileLock(str(_lock_path(marker))):
         if marker.exists():
             return []
         for path in sorted(directory.glob("*.json")):
@@ -989,7 +989,7 @@ def o_mudo_do_microfone_vai_para_o_controle(
     marker = directory / _MUDO_FOI_PARA_O_CONTROLE_MARKER
     if marker.exists():
         return None
-    with FileLock(str(_lock_path(marker))):
+    with _anota_o_semeio(directory), FileLock(str(_lock_path(marker))):
         if marker.exists():
             return None
         if ativo is None:
@@ -1073,7 +1073,7 @@ def o_carimbo_da_escolha_ganha_o_nome_novo(dest_dir: Path | None = None) -> list
         novo = {**dados, "ponte": {**ponte, "confirmada_por": CARIMBO_DA_ESCOLHA}}
         try:
             Profile.model_validate(novo)
-            _atomic_write_json(path, novo)
+            _regravar_anotado(path, novo)
         except (ValidationError, OSError, ValueError) as exc:
             logger.warning(
                 "carimbo_da_escolha_nao_mudou_de_nome", arquivo=path.name, err=str(exc)[:200]
@@ -1098,7 +1098,7 @@ def todo_perfil_no_formato_da_aba_jogar(dest_dir: Path | None = None) -> list[st
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     convertidos: list[str] = []
     for path in sorted(directory.glob("*.json")):
-        with FileLock(str(_lock_path(path))):
+        with _anota_o_perfil(path), FileLock(str(_lock_path(path))):
             dados = _dados_crus_do_perfil(path)
             if dados is None:
                 continue
@@ -2509,6 +2509,65 @@ def _atomic_write_bytes(target: Path, bruto: bytes) -> None:
         if Path(tmp_name).exists():
             Path(tmp_name).unlink(missing_ok=True)
         raise
+
+
+_EVENTO_DA_ESCRITA_DO_SERVICO = "escrita_do_servico"
+
+
+def _retrato(caminho: Path) -> tuple[int, str]:
+    tamanho = caminho.lstat().st_size
+    if caminho.is_file() and not caminho.is_symlink():
+        return tamanho, hashlib.sha256(caminho.read_bytes()).hexdigest()
+    return tamanho, ""
+
+
+def _foto_da_escrita(raizes: Sequence[Path]) -> dict[Path, tuple[int, str]]:
+    foto: dict[Path, tuple[int, str]] = {}
+    for raiz in raizes:
+        for caminho in [raiz.parent, raiz, *(raiz.rglob("*") if raiz.is_dir() else ())]:
+            with contextlib.suppress(OSError):
+                foto[caminho] = _retrato(caminho)
+    return foto
+
+
+def _ausentes(raizes: Sequence[Path]) -> list[Path]:
+    faltam: list[Path] = []
+    for raiz in raizes:
+        alvo = raiz
+        while not alvo.exists() and alvo.parent != alvo:
+            faltam.append(alvo)
+            alvo = alvo.parent
+    return faltam
+
+
+@contextlib.contextmanager
+def _anota_a_escrita(*raizes: Path) -> Iterator[None]:
+    faltavam = _ausentes(raizes)
+    antes = _foto_da_escrita(raizes)
+    try:
+        yield
+    finally:
+        depois = _foto_da_escrita(raizes)
+        mudados = {c for c in antes.keys() | depois.keys() if antes.get(c) != depois.get(c)}
+        mudados.update(c for c in faltavam if c.exists())
+        for caminho in sorted(mudados):
+            logger.info(_EVENTO_DA_ESCRITA_DO_SERVICO, caminho=str(caminho))
+
+
+def _anota_o_semeio(directory: Path) -> contextlib.AbstractContextManager[None]:
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
+    return _anota_a_escrita(directory, caminho_da_maquina())
+
+
+def _anota_o_perfil(path: Path) -> contextlib.AbstractContextManager[None]:
+    historico = path.parent / HISTORICO_DIR_NAME / path.stem
+    return _anota_a_escrita(path, _lock_path(path), historico)
+
+
+def _regravar_anotado(path: Path, payload: object) -> None:
+    with _anota_a_escrita(path):
+        _atomic_write_json(path, payload)
 
 
 __all__ = [
