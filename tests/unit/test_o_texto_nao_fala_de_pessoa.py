@@ -68,6 +68,11 @@ LIMPO = (
         ("as palavras do " + "usuário: «isso fica assim»", "citacao"),
         ("ordem de " + "produto, *\"setar o jogo\"*", "citacao"),
         ("«v" + "c toma a decisão»", "citacao"),
+        ("Lite" + 'ral: ""quero só a letra""', "citacao"),
+        ("DECISÃO, 05/09/2026, verb" + 'atim:** *"segue os três modos"*', "citacao"),
+        ("palavra de " + "produto, 21/09/2026: *\"todos iguais\"*", "citacao"),
+        ("o usu" + "ário disse «eu ajusto na mão»", "citacao"),
+        ("RESPONDIDA EM 29/08/" + '2026: ""era para funcionar""', "citacao"),
     ],
 )
 def test_cada_classe_morde_no_conteudo(portao, linha, classe):
@@ -178,3 +183,45 @@ def test_o_nome_gravado_de_antes_reprova_no_varrer(portao, tmp_path):
     texto = f'VALOR = "escolha_{_D}"\nPARTES = "escolha_d" + "e" + "la"\n'
     raiz = _repo(tmp_path, {"src/a.py": texto})
     assert [(o.linha, o.classe) for o in portao.varrer(raiz)] == [(1, "pronome")]
+
+
+_ROTULO = "Lite" + "ral"
+_CAMPO = '"ped' + 'ido"'
+
+
+def test_a_fala_rotulada_reprova_no_csv_e_o_rotulo_de_tela_passa(portao, tmp_path):
+    raiz = _repo(
+        tmp_path,
+        {
+            "docs/data/ensaios.csv": (
+                "chave,nota\n"
+                f'r2,"{_ROTULO}' + ': ""r2 duro, l2 solto""."\n'
+                'aplicar,"o botão diz ""Aplicar"" e a aba diz «Fica sem perfil»."\n'
+            ),
+        },
+    )
+    achadas = [(o.rel, o.linha, o.classe) for o in portao.varrer(raiz)]
+    assert achadas == [("docs/data/ensaios.csv", 2, "citacao")]
+
+
+def test_o_rotulo_de_tela_entre_aspas_nao_e_fala(portao):
+    telas = ('o botão diz "Aplicar"', "o rótulo «Desconectado» fica", 'a célula "Ligado" acende')
+    for linha in telas:
+        assert portao.classes_da_linha(linha) == [], linha
+
+
+def test_o_pedido_cru_num_json_da_pesquisa_reprova(portao, tmp_path):
+    cru = "{\n  " + _CAMPO + ': "remove isso, muito confuso"\n}\n'
+    prosa = "{\n  " + _CAMPO[:-1] + '_em_prosa": "sai, por ser confuso"\n}\n'
+    raiz = _repo(
+        tmp_path,
+        {
+            "docs/research/a/01-mudancas.json": cru,
+            "docs/research/a/02-mudancas.json": prosa,
+            "docs/research/a/03-mudancas.json": "{\n  " + _CAMPO + ': ""\n}\n',
+            "src/dados/pedido.json": cru,
+        },
+    )
+    assert [(o.rel, o.linha, o.classe) for o in portao.varrer(raiz)] == [
+        ("docs/research/a/01-mudancas.json", 2, "citacao"),
+    ]

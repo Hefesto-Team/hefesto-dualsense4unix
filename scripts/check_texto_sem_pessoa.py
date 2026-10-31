@@ -33,11 +33,17 @@ Uso::
 Os nomes que o disco de quem usa guardava migram na leitura e se montam por
 partes onde moram (`utils/nomes_gravados.py`): a régua não tem formato isento.
 
-A fala se pega por três sinais: o marcador de isenção de acento que se declara
-citação, a gíria de chat entre «», e a fala apresentada (as palavras, a ordem,
-a queixa ou a decisão atribuídas ao usuário ou ao produto) logo antes das aspas.
+A fala se pega por quatro sinais: o marcador de isenção de acento que se declara
+citação, a gíria de chat entre «», a fala apresentada (as palavras, a ordem,
+a queixa ou a decisão atribuídas ao usuário ou ao produto) logo antes das aspas,
+e a fala rotulada. A rotulada é o rótulo de transcrição (literal, verbatim,
+textual), a palavra de produto, a resposta datada ou o usuário como sujeito,
+com ou sem data, logo antes de dois-pontos e das aspas, inclusive as aspas
+dobradas do CSV; e, num JSON de ``docs/research/``, o campo ``pedido`` com
+conteúdo, que guardava a fala crua (o pedido se guarda em prosa, em
+``pedido_em_prosa``). O rótulo de tela entre aspas, sem apresentador, passa.
 
-O que a régua NÃO alcança: a fala entre aspas sem nenhum dos três sinais (a
+O que a régua NÃO alcança: a fala entre aspas sem nenhum dos quatro sinais (a
 itálica entre aspas retas, a mais comum, casa também texto de fora); a paráfrase; o pronome masculino; o
 substantivo comum do nome (minúsculo e acentuado, que é a palavra «triunfo»);
 o arquivo binário por dentro; a história do git; e os ignorados de coordenação.
@@ -75,6 +81,18 @@ _FALA_APRESENTADA = re.compile(
     r"[^«\"“\n]{0,8}[*_]*[«\"“]",
     re.IGNORECASE,
 )
+_DATA = r"(?:[,\s]+(?:em\s+|de\s+)?\d{1,2}/\d{2}(?:/\d{4})?(?:,?\s*(?:às\s+)?~?\d{1,2}h\d{0,2})?)?"
+_FALA_ROTULADA = re.compile(
+    _SEM_LETRA_ANTES
+    + r"(?:(?:literal|verbatim|textual|(?:o|do)\s+usuário|respondid[ao]\s+em\s+\d{1,2}/\d{2}(?:/\d{4})?)"
+    + _DATA
+    + r"\s*:|palavra de produto"
+    + _DATA
+    + r"[\s:,]*|o usuário(?:\s+já)?\s+disse:?)[\s*_]*(?:\"\"|[\"'«“])[*_]*(?=[^\W_]|[(…`])",
+    re.IGNORECASE,
+)
+_ROTULOS = ("literal", "verbatim", "textual", "usuário", "produto", "respondid")
+_PEDIDO_CRU = re.compile(r'"pedido"\s*:\s*"(?!")')
 _GIRIA = re.compile(r"«[^»\n]*?(?<![^\W\d_])(?:vc|vcs|pq|tb|tbm|n[ée]|t[aá]|pra)(?![^\W\d_])[^»\n]*»")
 
 CLASSES = ("pronome", "posto", "nome", "citacao")
@@ -93,7 +111,13 @@ def _citacao(texto: str, baixo: str) -> bool:
         return True
     if ("usuário" in baixo or "produto" in baixo or "de uso" in baixo) and _FALA_APRESENTADA.search(texto):
         return True
+    if any(rotulo in baixo for rotulo in _ROTULOS) and _FALA_ROTULADA.search(texto):
+        return True
     return "«" in texto and bool(_GIRIA.search(texto))
+
+
+def _pedido_cru(rel: str, linha: str) -> bool:
+    return rel.startswith("docs/research/") and rel.endswith(".json") and bool(_PEDIDO_CRU.search(linha))
 
 
 def classes_da_linha(linha: str) -> list[str]:
@@ -112,7 +136,7 @@ def classes_da_linha(linha: str) -> list[str]:
 
 def _tem_sinal(texto: str) -> bool:
     baixo = texto.lower()
-    return any(sinal in baixo for sinal in (_P, _POSTO, "vit", "noqa-acento", "«", "usuário", "produto", "de uso"))
+    return any(sinal in baixo for sinal in (_P, _POSTO, "vit", "noqa-acento", "«", "de uso", *_ROTULOS))
 
 
 def classes_do_caminho(rel: str) -> list[str]:
@@ -196,11 +220,17 @@ def varrer(raiz: Path, arquivos: list[str] | None = None) -> list[Ocorrencia]:
         if rel in ISENTOS:
             continue
         texto = _ler(caminho)
-        if texto is None or not _tem_sinal(texto):
+        if texto is None:
+            continue
+        pesquisa = rel.startswith("docs/research/") and rel.endswith(".json")
+        if not pesquisa and not _tem_sinal(texto):
             continue
         autoria = _autoria(rel)
         for n, linha in enumerate(texto.splitlines(), 1):
-            for classe in classes_da_linha(linha):
+            classes = classes_da_linha(linha)
+            if pesquisa and "citacao" not in classes and _pedido_cru(rel, linha):
+                classes.append("citacao")
+            for classe in classes:
                 if classe == "nome" and autoria and _IDENTIDADE.search(linha):
                     resto = _IDENTIDADE.sub("", linha)
                     if not _nome(resto, resto.lower()):
