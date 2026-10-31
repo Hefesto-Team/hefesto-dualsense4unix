@@ -1,5 +1,5 @@
---- uhid-original.c	2026-09-22 18:00:33.987884141 -0300
-+++ uhid-param.c	2026-09-22 18:08:09.170717781 -0300
+--- a/drivers/hid/uhid.c
++++ b/drivers/hid/uhid.c
 @@ -26,6 +26,29 @@
  #define UHID_NAME	"uhid"
  #define UHID_BUFSIZE	32
