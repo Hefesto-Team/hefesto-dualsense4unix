@@ -21,7 +21,8 @@ MORDIDAS (todas executadas aqui, sobre cópias do HTML gerado):
 * a folha do piso arrancada da Jogar e da 09 -> `test_a_regua_morde_a_folha_do_piso_arrancada`;
 * uma letra de 11 px na 09 -> `test_a_regua_morde_a_letra_pequena`;
 * um alvo pequeno a mais numa aba de teto -> `test_a_regua_morde_o_teto`;
-* a vaga com os traços de volta -> `test_a_vaga_diz_so_player_n_desconectado`;
+* a faixa do lugar vazio aberto de volta à tela ->
+  `test_o_lugar_vazio_aberto_e_so_o_disco_do_numero`;
 * a janela ignorando `interface_escala` -> `test_a_janela_le_o_tamanho_da_interface`;
 * o 150 % que não cede na vista de 840 -> `test_a_regua_morde_o_tamanho_que_nao_cede` e o modo
   `nao-cede` de `test_a_janela_le_o_tamanho_da_interface`.
@@ -365,37 +366,45 @@ def test_a_regua_morde_o_tamanho_que_nao_cede(
     assert achado & {"o documento rola", "rola por dentro: DIV.miolo"}, achado
 
 
-def _texto_da_vaga(navegador: Browser, arquivo: pathlib.Path, numero: int) -> str:
+def _o_lugar_vazio_aberto(
+    navegador: Browser, arquivo: pathlib.Path, numero: int
+) -> dict[str, str]:
     pg = navegador.new_page(viewport={"width": VISTAS[0][0], "height": VISTAS[0][1]})
     try:
         pg.route("**/*", _so_o_arquivo)
         pg.goto(arquivo.as_uri())
         pg.wait_for_timeout(300)
         pg.evaluate(_ABRE, f"c-p{numero}")
-        texto: str = pg.evaluate(
-            f"() => document.querySelector('label.faixa[for=c-p{numero}]').innerText"
+        lido: dict[str, str] = pg.evaluate(
+            f"""() => {{
+              const c = document.querySelector('label.faixa[for=c-p{numero}]').parentElement;
+              return {{texto: c.innerText, disco: getComputedStyle(c, '::after').content}}; }}"""
         )
-        return re.sub(r"\s+", " ", texto).strip()
+        return {"texto": re.sub(r"\s+", " ", lido["texto"]).strip(), "disco": lido["disco"]}
     finally:
         pg.close()
 
 
 @pytest.mark.parametrize("numero", (3, 4))
-def test_a_vaga_diz_so_player_n_desconectado(
+def test_o_lugar_vazio_aberto_e_so_o_disco_do_numero(
     navegador: Browser, geradas: pathlib.Path, tmp_path: pathlib.Path, numero: int
 ) -> None:
-    """r4-02-18: o lugar sem controle mostra «Player N • Desconectado» e mais nada.
+    """D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO: o lugar vazio aberto não diz palavra, só o número.
 
-    MORDIDA: sem a regra que esconde o resto, a vaga volta a mostrar máscara, microfone e bateria.
+    MORDIDA: sem a regra que esconde a faixa, «Player N • Desconectado» e as peças do cartão
+    voltam à tela.
     """
     doc = (geradas / "01-jogar.html").read_text(encoding="utf-8")
-    esperado = f"Player {numero} • Desconectado"
-    assert _texto_da_vaga(navegador, geradas / "01-jogar.html", numero) == esperado
-    mordido = doc.replace(".ctl.off > .faixa > :not(.card-nome){display:none !important}", "", 1)
+    assert _o_lugar_vazio_aberto(navegador, geradas / "01-jogar.html", numero) == {
+        "texto": "", "disco": f'"{numero}"'}
+    mordido = doc.replace(
+        "body .quadro.estica > .quadro-corpo > .ctl.off:has(> input:checked) > .faixa"
+        "{display:none !important}",
+        "", 1)
     assert mordido != doc
-    alvo = tmp_path / "vaga-com-traco.html"
+    alvo = tmp_path / "vaga-com-palavra.html"
     alvo.write_text(mordido, encoding="utf-8")
-    assert _texto_da_vaga(navegador, alvo, numero) != esperado
+    assert "Desconectado" in _o_lugar_vazio_aberto(navegador, alvo, numero)["texto"]
 
 
 def _escreve(tmp_path: pathlib.Path, nome: str, doc: str) -> pathlib.Path:
