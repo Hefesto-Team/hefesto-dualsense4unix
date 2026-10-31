@@ -67,6 +67,7 @@ def _nomes(valendo: str = "Ativo fora") -> list[str]:
 
 
 def test_a_lista_traz_o_instalado_o_ativo_e_o_sem_jogo_e_o_arquivo_fica() -> None:
+    """Prova da D-3110-A-ABA-PERFIS-SO-MOSTRA-O-JOGO-INSTALADO."""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     _instalar("9100001", "Jogo Instalado")
