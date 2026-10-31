@@ -3164,13 +3164,11 @@ def os_que_ganham_virtual(vistos: Iterable[Any]) -> dict[str, EntradaDeFora]:
 
 
 def _par_do_visto(gp: Any) -> tuple[int, int] | None:
-    try:
-        vid, pid = int(str(gp.vid), 16), int(str(gp.pid), 16)
-    except (TypeError, ValueError):
+    textos = (str(gp.vid), str(gp.pid))
+    if not all(0 < len(t) <= 4 and all(c in "0123456789abcdefABCDEF" for c in t) for t in textos):
         return None
-    if not (0 < vid <= 0xFFFF and 0 < pid <= 0xFFFF):
-        return None
-    return vid, pid
+    vid, pid = (int(t, 16) for t in textos)
+    return (vid, pid) if vid and pid else None
 
 
 def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
@@ -3313,10 +3311,11 @@ def _soltar_o_pad(vpad: Any) -> None:
     """O pad emprestado fica de pé e sem nada apertado."""
     if vpad is None:
         return
-    with contextlib.suppress(Exception):
+    try:
         vpad.forward_buttons(frozenset())
-    with contextlib.suppress(Exception):
         vpad.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
+    except Exception as exc:
+        logger.warning("coop_quadro_neutro_falhou", err=str(exc))
 
 
 def ralo_do_p1_de_fora(daemon: Any) -> Callable[[int, int], None] | None:
