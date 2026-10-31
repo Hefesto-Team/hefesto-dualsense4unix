@@ -11,6 +11,7 @@ lenta (``LENTA_S``), e medem o ambiente que o wrapper recebe.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import shutil
@@ -50,12 +51,15 @@ _DUALSENSE = [
 ]
 
 
-class _Mesa:
-    """O daemon em ``xbox``/uinput; o modo do arme veste ``dualsense``/uhid."""
+_BACKEND = {"xbox": "uinput", "dualsense": "uhid"}
 
-    def __init__(self, store: Any = None) -> None:
-        self.config = SimpleNamespace(gamepad_emulation_enabled=True, gamepad_flavor="xbox")
-        self._gamepad_device = SimpleNamespace(backend="uinput", flavor="xbox")
+
+class _Mesa:
+    """O daemon numa máscara (``xbox``/uinput por padrão); o modo do arme veste a dele."""
+
+    def __init__(self, store: Any = None, flavor: str = "xbox") -> None:
+        self.config = SimpleNamespace(gamepad_emulation_enabled=True, gamepad_flavor=flavor)
+        self._gamepad_device = SimpleNamespace(backend=_BACKEND[flavor], flavor=flavor)
         self._coop_manager = None
         self.controller = SimpleNamespace()
         self.store = store
@@ -71,7 +75,8 @@ class _Mesa:
         self.aplicados.append(mode)
         if getattr(mode, "kind", None) == "gamepad":
             self.config.gamepad_flavor = mode.gamepad_flavor
-            self._gamepad_device = SimpleNamespace(backend="uhid", flavor=mode.gamepad_flavor)
+            self._gamepad_device = SimpleNamespace(
+                backend=_BACKEND[mode.gamepad_flavor], flavor=mode.gamepad_flavor)
         return "aplicado"
 
     def apply_profile_suppression(
@@ -105,14 +110,15 @@ def sem_escrevente(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 def _a_mesa_do_lancamento(
-    env_dir: Path, monkeypatch: pytest.MonkeyPatch, perfil: Profile
+    env_dir: Path, monkeypatch: pytest.MonkeyPatch, perfil: Profile,
+    em_disco: list[str] = _XBOX, lenta_s: float = LENTA_S,
 ) -> Callable[[], int]:
-    """O disco com o ``default.env`` do Xbox, a escrita lenta, e quantas escritas acabaram."""
+    """O disco com o ``default.env`` de outro jogo, a escrita lenta, e quantas escritas acabaram."""
     from hefesto_dualsense4unix.integrations import cura_por_estrada
     from hefesto_dualsense4unix.profiles import manager
 
     env_dir.mkdir(parents=True, exist_ok=True)
-    (env_dir / "default.env").write_text("\n".join(_XBOX) + "\n", encoding="utf-8")
+    (env_dir / "default.env").write_text("\n".join(em_disco) + "\n", encoding="utf-8")
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: env_dir)
     monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [(APPID, perfil)])
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
@@ -127,7 +133,7 @@ def _a_mesa_do_lancamento(
     acabadas = [0]
 
     def lenta(foto: Any, devolver: Any) -> None:
-        time.sleep(LENTA_S)
+        time.sleep(lenta_s)
         original(foto, devolver)
         acabadas[0] += 1
 
@@ -214,13 +220,16 @@ def runtime() -> Iterator[Path]:
 def _o_wrapper(runtime: Path, state_home: Path) -> tuple[subprocess.CompletedProcess[str], float]:
     mudos = runtime / "game-mode-mudo"
     mudos.mkdir(exist_ok=True)
+    lar = runtime / "lar"
+    lar.mkdir(exist_ok=True)
     for nome in ("system76-power", "busctl", "dbus-send", "systemd-run"):
         falso = mudos / nome
         falso.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
         falso.chmod(0o755)
     env = {
         "PATH": f"{mudos}:{os.environ.get('PATH', '/usr/bin:/bin')}",
-        "HOME": os.environ.get("HOME", "/tmp"),
+        "HOME": str(lar),
+        "XDG_CONFIG_HOME": str(lar / ".config"),
         "XDG_RUNTIME_DIR": str(runtime),
         "XDG_STATE_HOME": str(state_home),
         "SteamAppId": str(APPID),
@@ -279,7 +288,8 @@ class _SocketFalso:
                 self.pedidos.append(pedido)
                 resposta = {"jsonrpc": "2.0", "id": pedido.get("id"),
                             "result": self._responder(pedido.get("params") or {})}
-                conn.sendall(json.dumps(resposta).encode("utf-8") + b"\n")
+                with contextlib.suppress(OSError):
+                    conn.sendall(json.dumps(resposta).encode("utf-8") + b"\n")
 
     def parar(self) -> None:
         self._parar.set()
@@ -401,3 +411,77 @@ def test_o_jogo_dualsense_nasce_com_o_ambiente_dualsense_com_o_xbox_em_disco(
         "IGNORE=0x054c/0x0ce6,0x28de/0x11ff|HIDAPI=|HIDRAW=0x054C/0x0CE6"), feito.stdout
     assert gasto < TETO_S, f"o lançamento esperou {gasto:.2f} s"
     assert _fonte(state_home)["fonte"] == "daemon"
+
+
+def test_o_jogo_xbox_nasce_com_o_ambiente_xbox_com_o_dualsense_em_disco(
+    sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O sentido inverso: o daemon em ``dualsense`` e o arquivo do DualSense em disco.
+
+    O jogo do Modo Xbox recebe o ``SDL_JOYSTICK_HIDAPI=0`` do próprio arme, sem esperar a escrita.
+    """
+    xbox = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
+    _a_mesa_do_lancamento(tmp_path, monkeypatch, _perfil(xbox), em_disco=_DUALSENSE, lenta_s=0.0)
+    _marker(tmp_path)
+    daemon: Any = _Mesa(flavor="dualsense")
+    bloco = le.o_ambiente_no_status(daemon, {"appid": APPID})
+    assert daemon.aplicados, "o status com o appid não armou o jogo"
+    linhas = bloco["ambiente"]["linhas"]
+    assert "SDL_JOYSTICK_HIDAPI=0" in linhas, (
+        f"o jogo Xbox recebeu o ambiente do DualSense: {linhas}")
+    assert "mascara=xbox" in bloco["ambiente"]["estado"]
+
+
+def test_o_arquivo_do_jogo_segue_o_perfil_salvo_depois_do_arme(
+    sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O perfil manda no arquivo: o modo guardado do arme só preenche o silêncio do perfil.
+
+    Armado no DualSense, o perfil é salvo no Modo Xbox (o ``launch_env.refresh`` da interface):
+    o ``steam_app_<id>.env`` passa a ser o do Xbox, e não o do arme velho.
+    """
+    dualsense = ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense")
+    _a_mesa_do_lancamento(tmp_path, monkeypatch, _perfil(dualsense), lenta_s=0.0)
+    _marker(tmp_path)
+    daemon: Any = _Mesa()
+    le.o_ambiente_no_status(daemon, {"appid": APPID})
+    do_jogo = tmp_path / f"steam_app_{APPID}.env"
+    assert "mascara=dualsense" in do_jogo.read_text(encoding="utf-8")
+    salvo = _perfil(ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox"))
+    monkeypatch.setattr(le, "_steam_profiles", lambda _daemon: [(APPID, salvo)])
+    le.materialize_launch_env(daemon)
+    texto = do_jogo.read_text(encoding="utf-8")
+    assert "mascara=xbox" in texto and "SDL_JOYSTICK_HIDAPI=0" in texto, (
+        f"o arquivo do jogo ficou com o modo do arme velho, e não com o do perfil salvo:\n{texto}")
+
+
+def test_o_wrapper_com_o_arme_lento_ainda_recebe_o_ambiente_do_daemon(
+    runtime: Path, tmp_path: Path
+) -> None:
+    """O arme que passa do teto do pedido: o segundo pedido também leva o ``appid``.
+
+    O daemon atende os pedidos em fila; quando o arme acaba, o segundo pedido sai da memória
+    em vez de cair no arquivo de outro jogo que está em disco.
+    """
+    (_env_dir(tmp_path) / "default.env").write_text("\n".join(_XBOX) + "\n", encoding="utf-8")
+    vezes = [0]
+
+    def responder(params: dict[str, Any]) -> dict[str, Any]:
+        vezes[0] += 1
+        if vezes[0] == 1:
+            time.sleep(5.3)
+        if "appid" not in params:
+            return {"connected": True}
+        return {"connected": True, "ambiente": {
+            "appid": params["appid"], "linhas": list(_DUALSENSE), "estado": "mascara=dualsense"}}
+
+    falso = _SocketFalso(_sock(runtime), responder)
+    try:
+        feito, _gasto = _o_wrapper(runtime, tmp_path)
+    finally:
+        falso.parar()
+    assert feito.returncode == 0, feito.stderr
+    assert feito.stdout.strip() == (
+        "IGNORE=0x054c/0x0ce6,0x28de/0x11ff|HIDAPI=|HIDRAW=0x054C/0x0CE6"), feito.stdout
+    assert [p["params"] for p in falso.pedidos] == [{"appid": APPID}, {"appid": APPID}]
+    assert _fonte(tmp_path)["fonte"] == "daemon"
