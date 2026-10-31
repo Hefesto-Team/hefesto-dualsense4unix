@@ -12,6 +12,10 @@ MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas): o estado em curso a
 sem o diff dos aparelhos reprova o «Achou»; a razão arrancada reprova a dica do fim sem achar; o
 fim que nunca sai reprova a volta ao aviso; a busca que ninguém viu acabar, esquecida só depois
 de :data:`SILENCIO_QUE_ENCERRA_A_BUSCA_S`, reprova o teste da janela reaberta.
+
+Com cartões a faixa entra acima deles e o miolo cresce 18 px; a janela da extensão tem o topo
+fixo, e o Parear não se move. A âncora do topo arrancada (31/10/2026) devolve a janela centrada,
+que sobe 9 px, e reprova ``o Parear muda de y``.
 """
 
 from __future__ import annotations
@@ -221,7 +225,7 @@ _LER = """(function(){
   return JSON.stringify({botao: r(fileira.querySelector('.mj-acao')), fileira: r(fileira),
     busca: r(busca), texto: busca ? busca.textContent : '',
     dica: busca ? busca.dataset.dica || '' : '',
-    cartao: r(cartao), janela: r(j.querySelector('.mj-abas')),
+    cartao: r(cartao), janela: r(j.querySelector('.mj-abas')), topo: r(j),
     corte: busca ? busca.scrollWidth > busca.clientWidth + 1 : false});
 })()"""
 
@@ -299,4 +303,7 @@ def test_com_aparelho_a_busca_entra_acima_dos_cartoes_sem_mexer_no_parear(
         for lado in ("x", "y", "w", "h"):
             if abs(com["botao"][lado] - busca["botao"][lado]) > 0.5:
                 falhas.append(f"{w}x{h}: o Parear muda de {lado}")
+        if abs(com["topo"]["y"] - busca["topo"]["y"]) > 0.5:
+            falhas.append(f"{w}x{h}: o topo da janela muda {com['topo']['y']:.1f} -> "
+                          f"{busca['topo']['y']:.1f} quando o miolo cresce")
     assert not falhas, "\n".join(falhas)
