@@ -237,17 +237,17 @@
       "universo": 406
     },
     "tamanho": {
-      "data": "2026-10-29",
+      "data": "2026-10-31",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1161105,
+      "piso": 1166530,
       "por_item": {
-        "docs": 107645,
-        "scripts": 109678,
-        "src": 292286,
-        "tests": 651496
+        "docs": 107767,
+        "scripts": 109556,
+        "src": 294780,
+        "tests": 654427
       },
-      "razao": "tamanho: +15 linhas (1161090 -> 1161105), pagas por Origem: D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA; registrado no fecho, topo 61924c3e6143",
+      "razao": "tamanho: +5425 linhas (1161105 -> 1166530), pagas por Origem: D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-2910-A-ABA-VAZIA-E-SO-O-NUMERO, D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS, D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO, D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo b6a3b54dbae0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1220,10 +1220,16 @@
           "de": 1161090,
           "para": 1161105,
           "razao": "tamanho: +15 linhas (1161090 -> 1161105), pagas por Origem: D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA; registrado no fecho, topo 61924c3e6143"
+        },
+        {
+          "data": "2026-10-31",
+          "de": 1161105,
+          "para": 1166530,
+          "razao": "tamanho: +5425 linhas (1161105 -> 1166530), pagas por Origem: D-1310-O-RUNTIME-DECLARADO-VENCE-O-PLATFORMDIRS, D-2910-A-ABA-VAZIA-E-SO-O-NUMERO, D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS, D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO, D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO; registrado no fecho, topo b6a3b54dbae0"
         }
       ],
       "unidade": "linhas",
-      "universo": 3241
+      "universo": 3251
     }
   }
 }
