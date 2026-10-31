@@ -1,7 +1,7 @@
 """A FITA DO TOPO — e a fita aparece nas DEZ abas, o que multiplica todo defeito.
 
-O usuário viu e disse, em 02/09/2026: *"o controle identificado em todas ta
-completamente errado"*. Medido no mesmo dia, com os dois controles do usuário na mesa
+A queixa de 02/09/2026: o controle identificado estava errado em todas as
+abas. Medido no mesmo dia, com os dois controles do usuário na mesa
 (um no cabo, um no rádio) e o daemon respondendo em **1 ms**:
 
     o daemon publica    modelo="White" (usb, do serial) · null (bt)
@@ -191,8 +191,8 @@ def test_o_chip_nao_diz_o_transporte_duas_vezes() -> None:
     transporte.
 
     O último degrau de `identidade_de` é *"o transporte sozinho"*: honesto num
-    card, que só mostra o nome; mudo aqui. Regra, 02/09/2026: *"se não tá
-    mostrando agora, não tem info pra mostrar no produto"*.
+    card, que só mostra o nome; mudo aqui. Regra, 02/09/2026: se não está
+    mostrando agora, não há informação para mostrar no produto.
 
     MORDIDA: tire o ramo `if nome in (c["via"], TRAVESSAO)` e este teste
     reprova com o chip do rádio dizendo `BT` duas vezes.

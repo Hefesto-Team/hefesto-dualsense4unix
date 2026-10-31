@@ -506,8 +506,8 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
 
     E O GESTO SE COMPORTA IGUAL EM TODO JOGO (30/08/2026,
     `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`). Decisão de produto:
-    *"pera, pq isso tá sob a identidade de um jogo específico? Isso deveria ser
-    universal — não é produto, é gambiarra!"*
+    o gesto não fica sob a identidade de um jogo específico; ele é universal,
+    porque o contrário é gambiarra, não produto.
 
     Até esta data o gesto dependia de o jogo ter carimbo. Com carimbo a escada
     não roda e todo aperto anda o `CICLO_DE_PONTES`; sem carimbo, o 2º aperto

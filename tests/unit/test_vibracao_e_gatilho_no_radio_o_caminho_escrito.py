@@ -1,8 +1,8 @@
 """O caminho do RÁDIO de vibração e gatilhos, e a régua que o segura no lugar.
 
-Levantamento de 03/09/2026, sobre o pedido: *"ver o que no código tá setado
-pra funcionar só via cabo e não BT (…) e verificar no specs o caminho do Bt pra
-garantir que lá ele possa funcionar em ambos os modos"*.
+Levantamento de 03/09/2026, sobre o pedido: achar o que no código está feito
+para funcionar só pelo cabo e não pelo BT, e conferir no specs o caminho do BT
+para garantir que funcione nos dois modos.
 
 **O QUE A VARREDURA ACHOU, e é um negativo que vale escrever:** na área de
 vibração e gatilhos do DualSense **não há filtro nosso** — nenhum `if` de

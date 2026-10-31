@@ -1080,8 +1080,8 @@ def folha_da_luz(luzes: dict[str, tuple[str, int | None]],
     lâmpada decide: as cinco apagam primeiro, as do padrão acendem depois (as duas valem (0,3,0) e
     `!important`, o último ganha; na ordem inversa a lâmpada recém-acesa apagaria).
 
-    Sem cor a afirmar, a barra apaga (*"se não tá mostrando agora, não tem info pra mostrar no
-    produto"*), nos quatro lugares: um lugar sem controle recebe as regras de apagado, senão o
+    Sem cor a afirmar, a barra apaga (se não está mostrando agora, não há informação para mostrar no
+    produto), nos quatro lugares: um lugar sem controle recebe as regras de apagado, senão o
     `--luz` do mockup fica aceso num lugar que diz "Desconectado".
 
     :param luzes: por lugar (`p1`…`p4`), o par `(hexadecimal da barra, número)`. Hex vazio ou `—`

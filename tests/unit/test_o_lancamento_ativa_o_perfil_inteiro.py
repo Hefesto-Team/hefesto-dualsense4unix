@@ -7,10 +7,9 @@ microfone esperavam o autoswitch, que espera a CLASSE DA JANELA. A classe respon
 `unknown` por 21 minutos seguidos (`reason="sem_foco_x"`, `useful_age_sec=1276`)
 com o jogo aberto, o perfil certo no disco e o `match` casando.
 
-A queixa de uso, com estas palavras: *"o perfil do sackboy não tá aplicando as
-features das abas que eu seto e clico em salvar, como as abas de rumble,
-gatilhos e deve ter outras"*. Nenhum elo estava quebrado — ninguém chamava a
-ativação.
+A queixa de uso: o perfil do Sackboy não aplicava o que se ajustava e salvava
+nas abas, como as de vibração e de gatilhos, e provavelmente outras. Nenhum
+elo estava quebrado — ninguém chamava a ativação.
 
 E o caminho da ALLOWLIST era ainda mais curto: `return` antes de tudo. Isso
 contraria a decisão registrada — *"a allowlist do Steam Input NÃO é 'o

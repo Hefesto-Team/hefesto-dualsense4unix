@@ -6,9 +6,8 @@
 > `afirmado-no-doc` — leitura cruzada de repositórios de terceiros contra o
 > `hid-playstation.c` que está compilado nesta máquina.
 >
-> Ele nasceu do pedido: *"lançar novo workflow pra agentes procurarem no
-> Github tais canais ou tais id (…) como é só informação eles trouxeram e me
-> ajudaram no mapa do controle"*. O contrato é FATO com ENDEREÇO — um número,
+> Ele nasceu do pedido de uma busca no GitHub por esses canais e IDs, trazida
+> como informação para o mapa do controle. O contrato é FATO com ENDEREÇO — um número,
 > um offset, um formato de comando. Não há uma linha de código de terceiro
 > copiada aqui.
 

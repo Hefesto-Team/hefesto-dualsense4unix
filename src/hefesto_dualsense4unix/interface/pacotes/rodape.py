@@ -6,8 +6,8 @@ nenhum pacote de aba. Os gestos são registrados em `("*", nome)`, que o
 `gesto_da_pagina` resolve depois de não achar o da página.
 
 O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido
-(*"salvar exportar importar. dividir e ver se a feature do botão tá condizendo
-com o output seu"*):
+(salvar, exportar e importar, separados, conferindo se o que cada botão faz
+condiz com o que ele diz):
 
     Aplicar   `profile.reaplicar`, a cadeia da ativação (desde 01/10/2026; o
               `profile.apply_draft` antigo saiu do daemon)

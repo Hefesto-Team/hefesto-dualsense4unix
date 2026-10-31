@@ -502,8 +502,8 @@ def fita(ativo: str = "todos", inerte: bool = False,
        `identidade.cor_do_aparelho`, `radio_aciona = não`). Com um controle no
        BT, a fita viva morria a cada tique e a tela ficava com os dois chips do
        mockup para sempre. Sem cor lida o chip perde a borda colorida — é a
-       regra de produto: *"se não tá mostrando agora, não tem info pra mostrar no
-       produto"*. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
+       regra de produto: se não está mostrando agora, não há informação para mostrar no
+       produto. (O `title` que dizia por quê saiu em 13/09/2026: ver o laço.)
 
     O TEXTO DO CHIP SAI DE `rotulo(c, "curta")`, e não de um f-string próprio:
     a gramática do rótulo já tinha dono, e ter uma segunda cópia aqui é

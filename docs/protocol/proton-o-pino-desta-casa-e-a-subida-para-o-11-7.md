@@ -4,8 +4,8 @@
 nada aqui foi aplicado. O passo que toca o disco do usuário está na §4 e tem dono
 humano.
 
-Pergunta que originou: *"dentro do proton eu gostaria que fossemos pra versão
-11.7 (…) só agora na 11.6 que fomos garantir o mic e o som mesmo que por bt."*
+Pergunta que originou: subir o Proton para a 11.7, sabendo que só na 11.6 o
+microfone e o som ficaram garantidos, inclusive pelo BT.
 
 ---
 

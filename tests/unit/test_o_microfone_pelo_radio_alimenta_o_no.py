@@ -395,7 +395,7 @@ def test_sem_ouvinte_o_ato_do_usuario_liga_o_microfone(pactl, par) -> None:  # t
 
 
 def test_o_mudo_do_usuario_vence_o_gravador(pactl, par) -> None:  # type: ignore[no-untyped-def]
-    """RUNNING + `False`: *"não quero ser ouvida"* vence um app gravando."""
+    """RUNNING + `False`: o pedido de mudo vence um app gravando."""
     pactl.estado = bt.ESTADO_COM_OUVINTE
     ponte = _ponte(P1, par)
     assert ponte.iniciar()

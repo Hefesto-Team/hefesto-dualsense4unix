@@ -245,9 +245,9 @@ nenhum, porque dá sossego falso.
 
 ## O CHECKLIST — o padrão universal de validação de um elemento
 
-- **Acrescentado em:** 11/08/2026, a pedido: *"pra que esse padrão de agora
-  seja o padrão universal de validação de cada elemento, pra que tenhamos um
-  padrão de checklist nesse sentido"*.
+- **Acrescentado em:** 11/08/2026, a pedido: que este padrão
+  seja o padrão universal de validação de cada elemento, com um checklist
+  nesse sentido.
 - **Nasceu de:** a sessão da mesa cheia — quatro DualSense, dois no cabo e dois
   no rádio — em que rumble, lightbar e gatilho foram validados pela mesma
   sequência, e a sequência se mostrou melhor que a soma das partes.

@@ -1550,8 +1550,8 @@ desde 17/07**. Quem for mexer aqui responde antes o que derrubou a conclusão
 anterior — senão é o mesmo erro das quatro vezes passadas, com data nova.
 
 **E há uma regra de produto, definida pelo mantenedor, que decide QUANDO esse gatilho pode
-agir** (12/08/2026): *"no modo nativo devolvemos o controle pra steam e no modo
-conexão também, todo o resto é o hefesto"*. Em **Conexão Nativa (Sony)** e no
+agir** (12/08/2026): no Modo Nativo o controle volta para a Steam, e na Conexão
+Nativa também; todo o resto é do Hefesto. Em **Conexão Nativa (Sony)** e no
 modo em que a entrada é da Steam, o controle é de quem está jogando e o Hefesto
 **não** repinta; em todo o resto, quem manda é o Hefesto. É a mesma cerca do
 silêncio de saída no modo nativo, agora aplicada à cor.

@@ -713,11 +713,10 @@ class ProfileMicConfig(BaseModel):
 
     O VOLUME E O MUDO (MIC-VOLUME-01, 16/08/2026)
     ----------------------------------------------
-    Pedido, olhando a aba Status: *"dá espaço a um slider de microfone pra
-    definir o volume do microfone real (independente de saber se tá via bt ou
-    via cabo), o app deve ser inteligente pra saber qual caminho usar"* — e,
-    sobre gravar: *"ao clicarmos em salvar perfil ou aplicar no perfil ativo ele
-    de fato o faz e na próxima sessão lembra disso"*.
+    Pedido, olhando a aba Status: uma barra para o volume do microfone real,
+    sem importar se pelo BT ou pelo cabo, e o app sabe sozinho qual caminho
+    usar — e, sobre gravar: salvar o perfil ou aplicar no perfil ativo grava
+    de fato, e a próxima sessão se lembra disso.
 
     Até aqui esta seção guardava UM booleano, enquanto a do alto-falante
     (`ProfileSpeakerConfig`) já guardava `volume`, `muted` e `rota`. A

@@ -177,7 +177,7 @@ def test_pelo_cabo_nada_sai_porque_pelo_cabo_a_barra_obedece() -> None:
 
 
 def test_modo_nativo_escreve_a_luz_pelo_radio() -> None:
-    """Era *"no modo nativo devolvemos o controle pra steam"* — zero escrita."""
+    """Era a regra de devolver o controle à Steam no Modo Nativo — zero escrita."""
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle}, mute=True)
 

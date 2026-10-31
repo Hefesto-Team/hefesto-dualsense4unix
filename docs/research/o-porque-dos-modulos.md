@@ -1035,11 +1035,9 @@ de pé"* — privacidade e banda, as duas abaixo. **O usuário revogou as duas e
 (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
 com o pedido do usuário: ligado sempre, nos dois transportes, com a tela dizendo
 o preço; o que caduca é o padrão desligado. A decisão nunca foi implementada,
-e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez:
-
-    *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
-    ativar e ele ser reconhecido. isso deveria ta  #
-    ativado por padrao"*  #, 17/09/2026
+e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez: o microfone
+seguia mudo por padrão, era preciso lembrar de clicar no ícone para ativá-lo e
+ser reconhecido, e o pedido é que ele já nasça ativado.
 
 **O QUE MUDOU, E O QUE NÃO MUDOU.** Quem diz a palavra na CHEGADA do controle é
 `daemon/subsystems/hotkey.nascer_no_ar`, chamado pelo gancho de conexão

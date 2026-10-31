@@ -619,9 +619,9 @@ def pelo_sysfs() -> list[dict[str, Any]]:
     """Quem está na mesa AGORA, lido do `sysfs` — sem daemon e sem escrever.
 
     NASCEU DE UMA QUEIXA, 07/09/2026, com quatro DualSense na mesa e o
-    daemon parado: *"não estamos usando o nosso mapa? pq até agora ele não
-    entendeu qual player deveria aparecer, nem qual controle (…) nem o modo de
-    conexão (qual é bt e qual é cabo) se tá ou não carregando"*. A queixa estava
+    daemon parado: o mapa não estava em uso, e a página não sabia qual jogador
+    devia aparecer, nem qual controle, nem a conexão (qual é BT e qual é cabo),
+    nem se estava carregando. A queixa estava
     certa: a página só sabia perguntar ao daemon, e com ele parado punha
     travessão em tudo — como se não houvesse controle nenhum, tendo QUATRO.
 
