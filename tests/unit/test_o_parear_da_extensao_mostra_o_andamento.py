@@ -372,7 +372,8 @@ def test_a_janela_de_topo_fixo_guarda_a_borda_da_tela(
 def test_o_fim_com_aparelho_ja_ligado_diz_quem_e_sem_a_dica(
         cenas: dict[str, dict[str, Any]]) -> None:
     falhas = []
-    nomes = ", ".join(a["nome"] for a in VIVO["aparelhos"] if a["ligado"])
+    nomes = ", ".join(str(a["nome"]) for a in exp.itens_do_estado(VIVO, "aparelhos")
+                      if a["ligado"])
     for w, h in VISTAS:
         ja = cenas[f"ja@{w}x{h}"]
         if ja["busca"] is None or ja["cartao"] is None:
