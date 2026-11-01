@@ -680,6 +680,15 @@ def _doctor(
         "HEFESTO_DOCTOR_SYSTEMD_DO_SISTEMA": str(tmp_path / "sistema-vazio"),
         "HEFESTO_DOCTOR_PORTAL_CURADAS": str(tmp_path / "curadas.txt"),
     }
+    baseline = tmp_path / "BASELINE"
+    baseline.write_text(
+        (ASSETS / "BASELINE").read_text(encoding="utf-8").replace(
+            f"PORTAL_EXEC={BASE['PORTAL_EXEC']}\n",
+            f"PORTAL_EXEC={tmp_path / 'sem-portal-oficial'}\n",
+        ),
+        encoding="utf-8",
+    )
+    env["HEFESTO_DOCTOR_PORTAL_BASELINE"] = str(baseline)
     if curadas:
         (tmp_path / "curadas.txt").write_text(curadas, encoding="utf-8")
     if programa is not None:
@@ -744,7 +753,7 @@ def test_o_doctor_le_o_programa_que_o_systemd_executa(tmp_path: Path) -> None:
     copia = tmp_path / "xdg-desktop-portal-cosmic"
     copia.write_bytes(Path(sleep).read_bytes() + b"\0/obra/" + MARCA.encode() + b"\0")
     copia.chmod(0o755)
-    processo = subprocess.Popen([str(copia), "30"])
+    processo = subprocess.Popen(["sleep", "30"], executable=copia)
     try:
         saida = _doctor(tmp_path, pid_vivo=processo.pid)
     finally:
@@ -760,7 +769,7 @@ def test_o_doctor_le_o_programa_em_execucao_mesmo_trocado_no_disco(tmp_path: Pat
     copia = tmp_path / "xdg-desktop-portal-cosmic"
     copia.write_bytes(Path(sleep).read_bytes() + b"\0/obra/" + MARCA.encode() + b"\0")
     copia.chmod(0o755)
-    processo = subprocess.Popen([str(copia), "30"])
+    processo = subprocess.Popen(["sleep", "30"], executable=copia)
     try:
         copia.unlink()
         saida = _doctor(tmp_path, pid_vivo=processo.pid)
