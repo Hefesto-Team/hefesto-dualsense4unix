@@ -24,6 +24,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("o hefesto_vivo importa o GTK e o WebKit")
+
 from hefesto_dualsense4unix.interface import pacotes  # isort:skip
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, onde
 from hefesto_dualsense4unix.interface.folha_da_casa import (
