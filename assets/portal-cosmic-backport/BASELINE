@@ -1,4 +1,5 @@
 PORTAL_PACOTE=xdg-desktop-portal-cosmic
+PORTAL_EXEC=/usr/libexec/xdg-desktop-portal-cosmic
 PORTAL_UNIDADE=org.freedesktop.impl.portal.desktop.cosmic.service
 PROTOCOLOS_URL=https://github.com/pop-os/cosmic-protocols
 PROTOCOLOS_PR=92

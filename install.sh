@@ -2490,6 +2490,178 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
     install_pipewire_da_casa
 fi
 
+_pc_ler() {
+    sed -n "s/^$1=//p" "${ROOT_DIR}/assets/portal-cosmic-backport/BASELINE" 2>/dev/null | head -n 1
+}
+
+_pc_portal_no_cosmic() {
+    local pacote
+    pacote="$(_pc_ler PORTAL_PACOTE)"
+    [[ -n "${pacote}" && -n "$(_pw_versao_ii "${pacote}")" ]] || return 1
+    [[ -n "$(_pw_versao_ii cosmic-comp)" || "${XDG_CURRENT_DESKTOP:-}" == *COSMIC* ]]
+}
+
+_pc_trocas_do_exec() {
+    local unidade="$1" oficial="$2" dir arq
+    local dirs=(
+        "${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
+        "${XDG_DATA_HOME:-${HOME}/.local/share}/systemd/user"
+    )
+    local sistema=()
+    [[ -z "${XDG_RUNTIME_DIR:-}" ]] || dirs+=("${XDG_RUNTIME_DIR}/systemd/user")
+    read -r -a sistema <<<"${_PC_SYSTEMD_DO_SISTEMA:-/etc/systemd/user /usr/local/lib/systemd/user /usr/lib/systemd/user}"
+    for dir in "${dirs[@]}" "${sistema[@]}"; do
+        for arq in "${dir}/${unidade}" "${dir}/${unidade}.d"/*.conf; do
+            [[ -f "${arq}" ]] || continue
+            [[ "${arq}" != "${dir}/${unidade}" || "${dir}" != */usr/lib/systemd/user ]] || continue
+            awk -v oficial="${oficial}" '
+                /^[[:space:]]*ExecStart[[:space:]]*=/ {
+                    v = $0
+                    sub(/^[^=]*=[[:space:]]*/, "", v)
+                    sub(/[[:space:]]+$/, "", v)
+                    if (v == "") next
+                    p = v
+                    sub(/^[-@:+!]+/, "", p)
+                    split(p, w, /[[:space:]]+/)
+                    if (w[1] != oficial) { print FILENAME "\t" v; exit }
+                }' "${arq}"
+        done
+    done
+}
+
+_pc_avisa_trocas_do_exec() {
+    local arq valor achou=1
+    while IFS=$'\t' read -r arq valor; do
+        [[ -n "${arq}" ]] || continue
+        achou=0
+        warn "${arq} troca o ExecStart do portal de captura por ${valor} — o arquivo é de outro projeto, e o Hefesto não o apaga; com ele, o portal que roda é o que ele aponta, não o do pacote"
+    done < <(_pc_trocas_do_exec "$@")
+    if [[ "${achou}" -eq 0 ]]; then
+        printf '      para valer o portal do pacote, tire a troca do ExecStart à mão e rode: systemctl --user daemon-reload\n'
+    fi
+    return "${achou}"
+}
+
+_pc_deb_confere() {
+    local dir="$1" nome="$2" sha atual
+    [[ -s "${dir}/SHA256SUMS" && -f "${dir}/${nome}" ]] || return 1
+    sha="$(awk -v n="${nome}" '{ f = $2; sub(/^\*/, "", f) } f == n { print $1; exit }' "${dir}/SHA256SUMS")"
+    atual="$(sha256sum "${dir}/${nome}" 2>/dev/null | awk '{ print $1 }' || true)"
+    [[ -n "${sha}" && "${sha}" == "${atual}" ]]
+}
+
+_pc_reiniciar_o_portal() {
+    timeout 15 systemctl --user try-restart --no-block "$1" >/dev/null 2>&1
+}
+
+install_portal_cosmic_da_casa() {
+    local assets="${ROOT_DIR}/assets/portal-cosmic-backport"
+    local pref="${assets}/apt/hefesto-portal-cosmic.pref"
+    local construtor="${ROOT_DIR}/scripts/construir_portal_cosmic_backport.sh"
+    local cache="${HOME}/.cache/hefesto-dualsense4unix"
+    local dir="${cache}/portal-cosmic-backport"
+    local log="${cache}/portal-cosmic-construir.log"
+    local pacote unidade oficial sufixo pr instalada de_cima alvo arch deb rc
+    pacote="$(_pc_ler PORTAL_PACOTE)"
+    unidade="$(_pc_ler PORTAL_UNIDADE)"
+    oficial="$(_pc_ler PORTAL_EXEC)"
+    sufixo="$(_pc_ler SUFIXO)"
+    pr="$(_pc_ler PROTOCOLOS_PR)"
+    if [[ -z "${pacote}" || -z "${unidade}" || -z "${oficial}" || -z "${sufixo}" ]]; then
+        warn "${assets}/BASELINE não diz o pacote, a unidade e o sufixo do portal da casa — passo pulado (o portal de agora segue)"
+        return 0
+    fi
+    instalada="$(_pw_versao_ii "${pacote}")"
+    _pc_avisa_trocas_do_exec "${unidade}" "${oficial}" || true
+    de_cima="${instalada}"
+    if [[ "${instalada}" == *~hefesto* ]]; then
+        de_cima="${instalada%"${sufixo%%~hefesto*}"~hefesto*}"
+    fi
+    alvo="${de_cima}${sufixo}"
+    if [[ "${instalada}" == "${alvo}" ]]; then
+        printf '      o portal de captura desta máquina já é o da casa (%s, com o cosmic-protocols#%s) — nada a fazer\n' "${instalada}" "${pr}"
+        return 0
+    fi
+    printf '      o portal de captura desta máquina é o %s; a casa o constrói com o cosmic-protocols#%s, e o compartilhamento de tela não cai com «create_frame sent before the previous frame was destroyed»\n' \
+        "${instalada}" "${pr}"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "construir o ${pacote} ${alvo} em ${dir} (scripts/construir_portal_cosmic_backport.sh, uns 10 minutos, sem sudo; se a versão de cima já trouxer o cosmic-protocols#${pr}, nada a fazer)"
+        _faria "gravar ${dir}/VERSOES-ANTERIORES.txt (o caminho de volta)"
+        _faria_root "fixar a prioridade do apt em /etc/apt/preferences.d/hefesto-portal-cosmic (o apt fica com a versão mais nova, a da casa ou a da distro)"
+        _faria_root "instalar o ${pacote} ${alvo}, conferido pelo SHA256SUMS"
+        _faria "REINICIAR o portal de captura (${unidade}): um compartilhamento de tela aberto cai uma vez"
+        return 0
+    fi
+    mkdir -p "${cache}"
+    printf '      construindo pelo scripts/construir_portal_cosmic_backport.sh (uns 10 minutos na primeira vez; o registro fica em %s)\n' "${log}"
+    rc=0
+    HEFESTO_PORTAL_CACHE="${cache}" bash "${construtor}" > "${log}" 2>&1 || rc=$?
+    case "${rc}" in
+        0) ;;
+        9)
+            printf '      o %s de cima já traz o cosmic-protocols#%s — nada a fazer\n' "${de_cima}" "${pr}"
+            return 0
+            ;;
+        3)
+            warn "faltam dependências de build do portal da casa — o portal de agora segue"
+            tail -n 15 "${log}" 2>/dev/null | sed 's/^/      /' || true
+            printf '      a ordem de instalar está na receita: docs/usage/receita-backport-portal-cosmic.md (depois rode ./install.sh de novo)\n'
+            return 0
+            ;;
+        *)
+            warn "a construção do portal da casa parou (código ${rc}; o registro está em ${log}) — o portal de agora segue"
+            return 0
+            ;;
+    esac
+    arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+    deb="${pacote}_${alvo#*:}_${arch}.deb"
+    if ! _pc_deb_confere "${dir}" "${deb}"; then
+        warn "a entrega em ${dir} não confere pelo SHA256SUMS com o ${deb} — nada foi instalado (o portal de agora segue)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — passo do portal da casa pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    if _avisa_pacote_a_meio "o portal da casa"; then
+        printf '      depois, rode ./install.sh de novo (o pacote já está construído em %s)\n' "${dir}"
+        return 0
+    fi
+    printf '\n      >>> AVISO: instalar o portal da casa REINICIA o portal de captura\n'
+    printf '          (um compartilhamento de tela aberto agora cai uma vez e se começa de novo).\n\n'
+    ask_yn "instalar o portal de captura da casa agora?" "${AUTO_YES}" "y"
+    if [[ ! "${REPLY,,}" =~ ^y ]]; then
+        printf '      pulado a pedido — o portal de agora segue\n'
+        return 0
+    fi
+    if [[ "${instalada}" != *~hefesto* && ! -f "${dir}/VERSOES-ANTERIORES.txt" ]]; then
+        printf '%s=%s\n' "${pacote}" "${instalada}" > "${dir}/VERSOES-ANTERIORES.txt"
+        printf '      versão anterior gravada em %s\n' "${dir}/VERSOES-ANTERIORES.txt"
+    fi
+    if ! sudo install -m 0644 "${pref}" /etc/apt/preferences.d/hefesto-portal-cosmic 2>/dev/null; then
+        warn "não consegui gravar /etc/apt/preferences.d/hefesto-portal-cosmic — no Pop!_OS, o próximo apt upgrade voltaria o portal para o da distro"
+    fi
+    if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+            "${dir}/${deb}" >/dev/null 2>&1; then
+        printf '      portal de captura %s instalado\n' "${alvo}"
+        if _pc_reiniciar_o_portal "${unidade}"; then
+            printf '      portal reiniciado — um compartilhamento de tela que estava aberto caiu agora: comece de novo\n'
+        else
+            warn "não consegui pedir o reinício do portal — ele entra na próxima sessão (ou: systemctl --user try-restart ${unidade})"
+        fi
+    else
+        warn "apt-get install do portal da casa falhou — rode à mão com o .deb em ${dir} (a receita: docs/usage/receita-backport-portal-cosmic.md)"
+    fi
+}
+
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
+   && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
+   && _pc_portal_no_cosmic; then
+    step "3f-ter" "portal de captura do COSMIC corrigido (o compartilhamento de tela não cai com «create_frame sent before the previous frame was destroyed»)"
+    install_portal_cosmic_da_casa
+fi
+
 step "3g" "agente de pareamento Bluetooth sempre de pé (evita o pareamento pela metade)"
 install_bt_agent_host
 

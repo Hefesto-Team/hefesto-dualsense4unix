@@ -122,7 +122,7 @@ Steam fechada.
 
 ### O passo `[11c]` do install
 
-`install.sh:2717-2775`, **ligado por default**, opt-out `--no-proton-pin`.
+`install.sh:2889-2947`, **ligado por default**, opt-out `--no-proton-pin`.
 Roda `--ensure`, lê o `rc`, e só então `--lock`:
 
 | rc do `--ensure` | o que o install diz |
@@ -526,7 +526,7 @@ o atendem é que são dois. **A casa deve os dois — um já entrega por rádio
 
 Três lugares afirmavam que *"o GE-Proton 11-4 fechou o casamento do `ContainerId`
 do HID com o MMDevice que o jogo abre, e o 11-6 refez esse caminho pelo
-`dsound`"*: `assets/proton-pin.conf`, `install.sh:3247-3248` e
+`dsound`"*: `assets/proton-pin.conf`, `install.sh:3419-3420` e
 `tests/unit/test_proton_pin.py:53`.
 
 **Medido em 17/09/2026:** as palavras `dsound`, `ContainerId` e `MMDevice` não
