@@ -1421,7 +1421,23 @@ def _gatilhos_do_perfil(
     return gatilhos, escritos, modo
 
 
-def planos_do_perfil(perfil: Any) -> MapaDosMomentos:
+def _suspensos(perfil: Any, modo: str, vivas: frozenset[str]) -> tuple[bool, frozenset[str]]:
+    """O modo de extensão viva suspende o efeito fixo dos gatilhos: no perfil inteiro e nos
+    controles que o escrevem por cima; com a extensão fora, vale o personalizado."""
+    from hefesto_dualsense4unix.profiles.schema import extensao_do_modo, modo_que_vale
+
+    def suspende(escrito: Any) -> bool:
+        return extensao_do_modo(modo_que_vale(escrito if isinstance(escrito, str) else None,
+                                              vivas)) is not None
+
+    controles = _ler(perfil, "controllers")
+    seus = frozenset(
+        alvo for chave, dele in (controles.items() if isinstance(controles, Mapping) else ())
+        if (alvo := norm_mac(str(chave))) and suspende(_ler(_ler(dele, "triggers"), "modo")))
+    return suspende(modo), seus
+
+
+def planos_do_perfil(perfil: Any, vivas: frozenset[str] = frozenset()) -> MapaDosMomentos:
     """Os planos dos momentos de um perfil: por lado, por controle, e o do automático.
 
     O modo da aba é o do esquema (`decidir_o_modo_dos_gatilhos`): no automático, os dois
@@ -1434,12 +1450,17 @@ def planos_do_perfil(perfil: Any) -> MapaDosMomentos:
     gatilhos, escritos, modo = lidos
     from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO
 
+    todo, calados = _suspensos(perfil, modo, vivas)
+    mudos: dict[str, dict[str, PlanoDoGatilho | None]] = {
+        alvo: dict.fromkeys(_LADO_DO_BACKEND) for alvo in calados}
+    if todo:
+        return MapaDosMomentos({}, mudos)
     if modo == MODO_AUTOMATICO:
         estilo = _ler(perfil, "estilo")
         if not isinstance(estilo, str):
-            return SEM_MOMENTOS
+            return MapaDosMomentos({}, mudos) if mudos else SEM_MOMENTOS
         planos = {lado: _plano_do_automatico(estilo, lado) for lado in _LADO_DO_BACKEND}
-        return MapaDosMomentos({lado: p for lado, p in planos.items() if p is not None})
+        return MapaDosMomentos({lado: p for lado, p in planos.items() if p is not None}, mudos)
     geral = {lado: plano for lado, disco in _LADO_DO_BACKEND.items()
              if (plano := _plano_do_lado(_ler(gatilhos, disco))) is not None}
     por_controle: dict[str, dict[str, PlanoDoGatilho | None]] = {}
@@ -1448,7 +1469,7 @@ def planos_do_perfil(perfil: Any) -> MapaDosMomentos:
         if alvo:
             por_controle[alvo] = {lado: _plano_do_lado(_ler(seus, disco))
                                   for lado, disco in _LADO_DO_BACKEND.items() if disco in lados}
-    return MapaDosMomentos(geral, por_controle)
+    return MapaDosMomentos(geral, {**por_controle, **mudos})
 
 
 MODOS_QUE_VIBRAM = frozenset(FAMILIAS["metralhadora"]) | frozenset(
@@ -1484,7 +1505,9 @@ def _o_gatilho_vibra(cfg: Any) -> bool:
     return modo in MODOS_QUE_VIBRAM
 
 
-def vibracao_do_gatilho_do_perfil(perfil: Any) -> VibracaoDoGatilho:
+def vibracao_do_gatilho_do_perfil(
+    perfil: Any, vivas: frozenset[str] = frozenset(),
+) -> VibracaoDoGatilho:
     """Onde o gatilho do perfil vibra: no automático, o acionamento do estilo; senão, o escrito."""
     lidos = _gatilhos_do_perfil(perfil)
     if lidos is None:
@@ -1492,6 +1515,11 @@ def vibracao_do_gatilho_do_perfil(perfil: Any) -> VibracaoDoGatilho:
     gatilhos, escritos, modo = lidos
     from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO
 
+    todo, calados = _suspensos(perfil, modo, vivas)
+    if todo or calados:
+        base = SEM_VIBRACAO if todo else vibracao_do_gatilho_do_perfil(perfil)
+        return VibracaoDoGatilho(
+            base.geral, {**base.por_controle, **dict.fromkeys(calados, False)})
     if modo == MODO_AUTOMATICO:
         estilo = _ler(perfil, "estilo")
         de_hoje = (
@@ -1541,7 +1569,9 @@ def _arma_do_lado(cfg: Any) -> bytes | None:
     return _bloco_do_efeito(build_from_name(modo, list(params)))
 
 
-def armas_do_gatilho_do_perfil(perfil: Any) -> ArmasDoGatilho:
+def armas_do_gatilho_do_perfil(
+    perfil: Any, vivas: frozenset[str] = frozenset(),
+) -> ArmasDoGatilho:
     """Onde o ritmo do tiro escreve, e com que arma: o que o perfil põe em cada gatilho.
 
     No automático, o lado em que o estilo põe uma arma, com os números do estilo; no
@@ -1551,6 +1581,13 @@ def armas_do_gatilho_do_perfil(perfil: Any) -> ArmasDoGatilho:
     lidos = _gatilhos_do_perfil(perfil)
     from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO
 
+    if lidos is not None:
+        todo, calados = _suspensos(perfil, lidos[2], vivas)
+        if todo or calados:
+            base = SEM_ARMAS if todo else armas_do_gatilho_do_perfil(perfil)
+            mudas: dict[str, dict[str, bytes | None]] = {
+                alvo: dict.fromkeys(_LADO_DO_BACKEND) for alvo in calados}
+            return ArmasDoGatilho(base.geral, {**base.por_controle, **mudas})
     if lidos is None or lidos[2] == MODO_AUTOMATICO:
         estilo = _ler(perfil, "estilo")
         if not isinstance(estilo, str):
@@ -2527,6 +2564,80 @@ def receita_ativa(daemon: Any) -> Receita:
         return DESLIGADA
 
 
+SECOES_DO_MODO = ("controles", "gatilhos", "luz", "vibracao")
+_MODO_DA_ABA_DITO: dict[str, dict[str, Any]] = {}
+
+
+def extensoes_vivas_do(daemon: Any) -> frozenset[str]:
+    """As extensões com a sessão aberta na porta deste serviço."""
+    porta = getattr(getattr(daemon, "_mods_supervisor", None), "porta", None)
+    vivas = getattr(porta, "vivas", None)
+    return frozenset(vivas()) if callable(vivas) else frozenset()
+
+
+def secoes_do_perfil(perfil: Any, uniq: str | None = None) -> dict[str, str]:
+    """O modo de cada seção do perfil, como a aba o pinta; o controle que escreve o seu por
+    cima, com o dele."""
+    from hefesto_dualsense4unix.profiles.schema import (
+        MODO_PERSONALIZADO,
+        decidir_o_modo_da_luz,
+    )
+
+    lidos = _gatilhos_do_perfil(perfil)
+    luz = _ler(perfil, "leds")
+    secoes = {
+        "controles": _ler(perfil, "controles_modo"),
+        "gatilhos": lidos[2] if lidos is not None else None,
+        "luz": decidir_o_modo_da_luz(
+            _ler(luz, "modo"), _ler(luz, "auto_player_colors") is not False,
+            tuple(_ler(luz, "lightbar") or (0, 0, 0)) != (0, 0, 0)) if luz is not None else None,
+        "vibracao": _ler(_ler(perfil, "rumble"), "modo"),
+    }
+    controles = _ler(perfil, "controllers")
+    alvo = norm_mac(uniq) if uniq else None
+    for chave, dele in (controles.items() if isinstance(controles, Mapping) else ()):
+        if alvo and norm_mac(str(chave)) == alvo:
+            for secao, campo in (("gatilhos", "triggers"), ("luz", "leds")):
+                seu = _ler(_ler(dele, campo), "modo")
+                if isinstance(seu, str):
+                    secoes[secao] = seu
+    return {s: m if isinstance(m, str) else MODO_PERSONALIZADO for s, m in secoes.items()}
+
+
+def modos_do_perfil_ativo(daemon: Any) -> tuple[str, dict[str, str]]:
+    """O nome e as seções do perfil ativo, da vista que :func:`receita_ativa` leu."""
+    nome = _nome_do_perfil_ativo(daemon)
+    lida = _VISTA_LIDA
+    if lida is None or lida[0] != nome:
+        return nome, {}
+    return nome, secoes_do_perfil(lida[1])
+
+
+def publicar_o_modo_da_aba(daemon: Any, vivas: frozenset[str]) -> None:
+    """O ``modo.aba`` de cada controle, só quando muda: a extensão sabe onde o modo pedido vale."""
+    from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+    from hefesto_dualsense4unix.profiles.schema import modo_que_vale
+
+    bus = getattr(daemon, "bus", None)
+    nome = _nome_do_perfil_ativo(daemon)
+    lida = _VISTA_LIDA
+    if bus is None or lida is None or lida[0] != nome:
+        return
+    for controle in controles_do_daemon(daemon):
+        secoes = {s: modo_que_vale(m, vivas) or m
+                  for s, m in secoes_do_perfil(lida[1], controle.uniq).items()}
+        carga = {"uniq": controle.uniq, "jogador": _jogador_de(daemon, controle.uniq),
+                 "secoes": secoes}
+        if _MODO_DA_ABA_DITO.get(controle.uniq) != carga:
+            _MODO_DA_ABA_DITO[controle.uniq] = carga
+            bus.publish(EventTopic.MODO_ABA, carga)
+
+
+def modos_da_aba_ditos() -> list[dict[str, Any]]:
+    """O último ``modo.aba`` de cada controle, para quem assina depois."""
+    return [dict(c) for c in _MODO_DA_ABA_DITO.values()]
+
+
 def momentos_ativos(daemon: Any) -> MapaDosMomentos:
     """Os planos dos momentos do perfil ativo, da vista que :func:`receita_ativa` leu."""
     nome = _nome_do_perfil_ativo(daemon)
@@ -2534,7 +2645,7 @@ def momentos_ativos(daemon: Any) -> MapaDosMomentos:
     if lida is None or lida[0] != nome:
         return SEM_MOMENTOS
     try:
-        return planos_do_perfil(lida[1])
+        return planos_do_perfil(lida[1], extensoes_vivas_do(daemon))
     except Exception:
         logger.debug("tato_vivo_momentos_ilegiveis", exc_info=True)
         return SEM_MOMENTOS
@@ -2573,7 +2684,7 @@ def vibracao_do_gatilho_ativa(daemon: Any) -> VibracaoDoGatilho:
     if lida is None or lida[0] != nome:
         return SEM_VIBRACAO
     try:
-        return vibracao_do_gatilho_do_perfil(lida[1])
+        return vibracao_do_gatilho_do_perfil(lida[1], extensoes_vivas_do(daemon))
     except Exception:
         logger.debug("tato_vivo_vibracao_do_gatilho_ilegivel", exc_info=True)
         return SEM_VIBRACAO
@@ -2586,7 +2697,7 @@ def armas_do_gatilho_ativas(daemon: Any) -> ArmasDoGatilho:
     if lida is None or lida[0] != nome:
         return SEM_ARMAS
     try:
-        return armas_do_gatilho_do_perfil(lida[1])
+        return armas_do_gatilho_do_perfil(lida[1], extensoes_vivas_do(daemon))
     except Exception:
         logger.debug("tato_vivo_armas_do_gatilho_ilegiveis", exc_info=True)
         return SEM_ARMAS
@@ -3455,6 +3566,7 @@ class Passo:
         self.receita_vigente: Receita = DESLIGADA
         self.jogo = False
         self._lida_em = float("-inf")
+        self._vivas: frozenset[str] = frozenset()
         self._aberta_em: dict[str, float | None] = {}
         self._filtro_do_corpo = formas_de_haptica.FiltroDoCorpo()
         self._corpo: deque[Any] = deque(maxlen=CORPO_MAX_PEDACOS)
@@ -3489,9 +3601,12 @@ class Passo:
             ouvido.tirar()
 
     def receita_de_agora(self, agora: float) -> Receita:
-        if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
+        vivas = extensoes_vivas_do(self.daemon)
+        if agora - self._lida_em >= RELEITURA_DA_RECEITA_S or vivas != self._vivas:
             self._lida_em = agora
+            self._vivas = vivas
             self.receita_vigente = receita_ativa(self.daemon)
+            publicar_o_modo_da_aba(self.daemon, vivas)
             self.motor.momentos = (
                 momentos_ativos(self.daemon)
                 if self.receita_vigente.momentos_da_imersao else SEM_MOMENTOS)

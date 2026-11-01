@@ -45,6 +45,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
     TOPICOS_DE_PUBLICACAO,
 )
 from hefesto_dualsense4unix.profiles.loader import gesto_de_agora
+from hefesto_dualsense4unix.profiles.schema import extensao_do_modo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -870,6 +871,7 @@ class Porta:
         self._livres: dict[tuple[str, str], _Compasso] = {}
         self._opcoes_vivas: dict[tuple[str, str], _Compasso] = {}
         self._movimento_enviado: dict[str | None, tuple[_Movimento | None, float, Any, Any]] = {}
+        self._vivas_de_antes: frozenset[str] = frozenset()
 
     def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
                   *, comandos: tuple[str, ...] = (),
@@ -881,6 +883,28 @@ class Porta:
 
     def esquecer(self, ficha: str) -> None:
         self._fichas.pop(ficha, None)
+
+    def vivas(self) -> frozenset[str]:
+        """As extensões com a sessão aberta agora: o modo de aba de cada uma vale."""
+        return frozenset(con.sessao.mod_id for con in self._conexoes if con.sessao is not None)
+
+    def _mudaram_as_vivas(self) -> None:
+        """Quem entra ou sai pode mudar o efeito fixo de uma seção: o perfil que nomeia o modo
+        de quem mudou volta ao aparelho, e o tato vivo relê no tique seguinte."""
+        if not isinstance(self._escritor, EscritorDoServico):
+            return
+        nome = self._escritor.perfil_que_nomeia(self.vivas() ^ self._vivas_de_antes)
+        self._vivas_de_antes = self.vivas()
+        if nome is None:
+            return
+        try:
+            laco = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.warning("mods_porta_modo_sem_laco", perfil=nome)
+            return
+        tarefa = laco.create_task(self._levar("profile.reaplicar", "profile.reaplicar",
+                                              {"name": nome}))
+        tarefa.add_done_callback(_sem_recusa_solta)
 
     def assinaturas_de(self, mod_id: str) -> list[asyncio.Queue[Any]]:
         """As filas do barramento abertas por ``mod_id`` (para a régua e o diagnóstico)."""
@@ -908,9 +932,12 @@ class Porta:
             os.umask(antiga)
         os.chmod(self.caminho, 0o600)
         self._inode = self.caminho.stat().st_ino
+        _A_PORTA["viva"] = self
         logger.info("mods_porta_aberta", caminho=str(self.caminho))
 
     async def parar(self) -> None:
+        if _A_PORTA["viva"] is self:
+            _A_PORTA["viva"] = None
         server, self._server = self._server, None
         if server is not None:
             server.close()
@@ -969,6 +996,8 @@ class Porta:
             if con.vibrando and con.sessao is not None:
                 await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
+            if con.sessao is not None:
+                self._mudaram_as_vivas()
             with contextlib.suppress(Exception):
                 writer.close()
                 await writer.wait_closed()
@@ -1001,6 +1030,7 @@ class Porta:
                 if metodo != "mod.ola":
                     raise RecusaError(CODE_QUEM_E_VOCE, "a primeira palavra é mod.ola")
                 con.sessao = self._apresentar(params, par)
+                self._mudaram_as_vivas()
                 return _resposta(req_id, {
                     "id": con.sessao.mod_id,
                     "api": API_DAS_MODIFICACOES,
@@ -1105,6 +1135,13 @@ class Porta:
                 else:
                     fila = self.bus.subscribe(topico)
                     con.no_barramento(feito, topico, fila)
+                    if topico == EventTopic.MODO_ABA:
+                        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
+                            modos_da_aba_ditos,
+                        )
+
+                        for carga in modos_da_aba_ditos():
+                            _por_na_fila(fila, carga)
                 con.tarefa(feito, self._encaminhar(con, writer, publico, topico, fila),
                            f"mods-{con.sessao.mod_id}-{topico}")
         return {"assinados": list(topicos)}
@@ -1767,6 +1804,23 @@ class EscritorDoServico:
     def luzes_do_numero(self, uniq: str) -> Any:
         ler = getattr(getattr(self._daemon, "controller", None), "resolved_player_leds_for", None)
         return ler(uniq) if callable(ler) else None
+
+    def perfil_que_nomeia(self, extensoes: frozenset[str]) -> str | None:
+        """O perfil ativo, quando alguma seção dele está no modo de uma destas extensões."""
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import modos_do_perfil_ativo
+
+        nome, secoes = modos_do_perfil_ativo(self._daemon)
+        donas = {extensao_do_modo(modo) for modo in secoes.values()}
+        return nome if nome and donas & extensoes else None
+
+
+_A_PORTA: dict[str, Porta | None] = {"viva": None}
+
+
+def extensoes_vivas() -> frozenset[str]:
+    """As extensões com a sessão aberta na porta do serviço; sem porta, nenhuma."""
+    porta = _A_PORTA["viva"]
+    return porta.vivas() if porta is not None else frozenset()
 
 
 def escritor_do_servico(daemon: Any) -> Escritor:

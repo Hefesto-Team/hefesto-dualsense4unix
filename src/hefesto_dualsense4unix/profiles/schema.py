@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 from datetime import datetime
-from typing import Any, Literal, NamedTuple
+from typing import Annotated, Any, Literal, NamedTuple
 
 from pydantic import (
     BaseModel,
@@ -225,7 +225,7 @@ def _gatilho_de_nascimento() -> TriggerConfig:
 
 MODO_AUTOMATICO = "automatico"  # (noqa-acento)
 MODO_PERSONALIZADO = "personalizado"
-ModoDaAba = Literal["automatico", "personalizado"]  # (noqa-acento)
+ModoDaAba = Annotated[str, Field(pattern=r"^(automatico|personalizado|extensao:[a-z0-9][a-z0-9_-]{0,31})$")]  # noqa: E501  # (noqa-acento)
 AlvoDoPerfil = Literal["jogos", "navegacao", "programas", "eventos"]
 EventoDoPerfil = Literal[
     "cena", "menu", "pausa", "controle_conectado", "programa_aberto", "hora_marcada", "meu_comando",
@@ -2170,7 +2170,7 @@ def decidir_o_modo_dos_gatilhos(escrito: str | None, todos_sem_efeito: bool) -> 
     globais e todo lado escrito de cada controle são «—» (``Off``);
     qualquer outra coisa é Personalizado.
     """
-    if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+    if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO) or extensao_do_modo(escrito):
         return str(escrito)
     return MODO_AUTOMATICO if todos_sem_efeito else MODO_PERSONALIZADO
 
@@ -2184,7 +2184,7 @@ def decidir_o_modo_da_luz(
     perfil já diz: Automático quando as cores automáticas estão ligadas e
     nenhuma cor própria foi guardada; qualquer outra coisa é Personalizado.
     """
-    if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+    if escrito in (MODO_AUTOMATICO, MODO_PERSONALIZADO) or extensao_do_modo(escrito):
         return str(escrito)
     return MODO_AUTOMATICO if cores_automaticas and not tem_cor_propria else MODO_PERSONALIZADO
 
@@ -2200,7 +2200,7 @@ def _leds_sem_a_cor(leds: LedsConfig | None) -> LedsConfig | None:
     return LedsConfig.model_validate(resto) if resto else None
 
 
-def perfil_no_modo(profile: Profile) -> Profile:
+def perfil_no_modo(profile: Profile, vivas: frozenset[str] = frozenset()) -> Profile:
     """A VISTA do perfil que vai ao aparelho, com os modos postos.
 
     Só o que foi ESCRITO como Automático age: o perfil de antes, sem ``modo``,
@@ -2209,12 +2209,12 @@ def perfil_no_modo(profile: Profile) -> Profile:
     plástico. As escolhas continuam no disco, e voltam ao Personalizado.
     """
     update: dict[str, Any] = {}
-    if profile.triggers.modo == MODO_AUTOMATICO:
+    if secao_calada(profile.triggers.modo, vivas):
         update["triggers"] = TriggersConfig(
-            left=_sem_efeito(), right=_sem_efeito(), modo=MODO_AUTOMATICO)
+            left=_sem_efeito(), right=_sem_efeito(), modo=profile.triggers.modo)
     controles = dict(profile.controllers or {})
     mexeu = False
-    if profile.triggers.modo == MODO_AUTOMATICO:
+    if secao_calada(profile.triggers.modo, vivas):
         for chave, dele in controles.items():
             if dele.triggers is None:
                 continue
@@ -2225,7 +2225,7 @@ def perfil_no_modo(profile: Profile) -> Profile:
             controles[chave] = dele.model_copy(
                 update={"triggers": TriggersConfig.model_validate(lados) if lados else None})
             mexeu = True
-    if profile.leds.modo == MODO_AUTOMATICO:
+    if secao_calada(profile.leds.modo, vivas):
         update["leds"] = profile.leds.model_copy(
             update={"lightbar": (0, 0, 0), "auto_player_colors": True})
         for chave, dele in controles.items():
@@ -3212,3 +3212,29 @@ def a_mascara_de_cada_controle_no_modo(data: dict[str, Any]) -> dict[str, Any]:
     """
     novo: dict[str, Any] = Profile._a_mascara_de_cada_controle_vira_o_modo(data)  # type: ignore[operator]
     return novo
+
+
+PREFIXO_DO_MODO_DA_EXTENSAO = "extensao:"
+_MODO_DA_EXTENSAO = re.compile(
+    "^" + re.escape(PREFIXO_DO_MODO_DA_EXTENSAO) + r"[a-z0-9][a-z0-9_-]{0,31}$")
+
+
+def extensao_do_modo(modo: object) -> str | None:
+    """O id da extensão de um modo de extensão; ``None`` para os dois modos fixos."""
+    if isinstance(modo, str) and _MODO_DA_EXTENSAO.match(modo):
+        return modo[len(PREFIXO_DO_MODO_DA_EXTENSAO):]
+    return None
+
+
+def modo_que_vale(modo: str | None, vivas: frozenset[str]) -> str | None:
+    """O modo de uma seção diante das extensões vivas: a extensão fora devolve o efeito fixo."""
+    dona = extensao_do_modo(modo)
+    if dona is None:
+        return modo
+    return modo if dona in vivas else MODO_PERSONALIZADO
+
+
+def secao_calada(modo: str | None, vivas: frozenset[str]) -> bool:
+    """O efeito fixo da seção fica de fora: no Automático e no modo de uma extensão viva."""
+    vale = modo_que_vale(modo, vivas)
+    return vale == MODO_AUTOMATICO or extensao_do_modo(vale) is not None

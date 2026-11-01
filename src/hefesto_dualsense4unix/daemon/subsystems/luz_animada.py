@@ -27,6 +27,7 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     decidir,
     estado_do_controle,
     estilo_ativo,
+    extensoes_vivas_do,
     ha_jogo,
     motor_do,
 )
@@ -59,6 +60,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     economia_da_mesa,
     economia_vale,
     ler_o_efeito_da_luz,
+    secao_calada,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -138,6 +140,7 @@ def plano_do_perfil(
     *,
     mesa_em_economia: bool | None = None,
     em_economia: frozenset[str] | None = None,
+    vivas: frozenset[str] = frozenset(),
 ) -> dict[str, PlanoDoControle]:
     """O plano de cada controle em ``uniqs``; quem não tem efeito (ou não pode tê-lo) fica de fora.
 
@@ -148,7 +151,7 @@ def plano_do_perfil(
     vista que vai ao aparelho) o controle fica de fora: a barra segue fixa na cor do perfil, e ao
     sair da economia o plano o devolve. Sem a economia na mão, lê a declaração viva.
     """
-    if perfil.leds.modo == "automatico":  # (noqa-acento)
+    if secao_calada(perfil.leds.modo, vivas):
         return {}
     mesa = economia_da_mesa() if mesa_em_economia is None else bool(mesa_em_economia)
     ligados = controles_em_economia() if em_economia is None else em_economia
@@ -531,6 +534,7 @@ class Passo:
         self._lido_em = float("-inf")
         self._repinturas: int | None = None
         self._perfil: Profile | None = None
+        self._vivas: frozenset[str] = frozenset()
         self._reacao: str | None = None
         self._cores: dict[str, RGB] = {}
         self._brilho_do_acende: dict[str, BrilhoDoAcende] = {}
@@ -554,8 +558,10 @@ class Passo:
             self._lido_em = agora
             perfil = perfil_ativo(self.daemon)
             self._perfil = perfil
+            self._vivas = extensoes_vivas_do(self.daemon)
             self._plano = (
-                {} if perfil is None else plano_do_perfil(perfil, [c.uniq for c in controles])
+                {} if perfil is None
+                else plano_do_perfil(perfil, [c.uniq for c in controles], vivas=self._vivas)
             )
             self._reacao = reacao_da_luz_do_estilo(estilo_ativo(self.daemon))
             self._cores = self._cores_base(controles) if self._reacao else {}
@@ -626,7 +632,7 @@ class Passo:
         if reacao not in (REACAO_ACENDE, REACAO_BATERIA) or perfil is None:
             self._brilho_do_acende.clear()
             return {}
-        if perfil.leds.modo == "automatico":  # (noqa-acento)
+        if secao_calada(perfil.leds.modo, self._vivas):
             return {}
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
@@ -668,7 +674,7 @@ class Passo:
 
         tel, perfil = telemetria_do(self.daemon), self._perfil
         cor = None if tel is None else tel.cor_da_rotacao(agora)
-        if cor is None or perfil is None or perfil.leds.modo == "automatico":  # (noqa-acento)
+        if cor is None or perfil is None or secao_calada(perfil.leds.modo, self._vivas):
             return {}
         mesa, ligados = economia_da_mesa(), controles_em_economia()
         planos: dict[str, PlanoDoControle] = {}

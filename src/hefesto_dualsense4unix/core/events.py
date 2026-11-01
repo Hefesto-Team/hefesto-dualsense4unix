@@ -45,6 +45,7 @@ class EventTopic:
     JOGO_SOM = "jogo.som"
     MICROFONE_NIVEL = "microfone.nivel"
     JOGO_IDENTIDADE = "jogo.identidade"
+    MODO_ABA = "modo.aba"
 
 
 TOPICOS_RESERVADOS: frozenset[str] = frozenset({

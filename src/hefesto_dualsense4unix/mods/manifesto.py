@@ -68,6 +68,7 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "jogo.som": (EventTopic.JOGO_SOM,),
     "microfone.nivel": (EventTopic.MICROFONE_NIVEL,),
     "jogo.identidade": (EventTopic.JOGO_IDENTIDADE,),
+    "modo.aba": (EventTopic.MODO_ABA,),
 }
 
 TOPICOS_DE_PUBLICACAO: dict[str, str] = {
@@ -122,6 +123,9 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Saber o volume do microfone de cada controle e se o jogo o escuta, sem receber a voz."
     ),
     "ler:jogo.identidade": "Saber qual jogo está aberto, a versão dele e a loja de onde veio.",
+    "ler:modo.aba": (
+        "Saber em que seções de cada controle o modo que a extensão traz está aceso."
+    ),
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
@@ -495,6 +499,36 @@ class LigaDaConexao(BaseModel):
 
 CONEXOES_DA_JANELA = 8
 
+ABAS_DO_MODO = ("02", "03", "04", "05", "10")
+ROTULO_DO_MODO_DE_ABA = 20
+DICA_DO_MODO_DE_ABA = 120
+PREFIXO_DO_MODO_DE_EXTENSAO = "extensao:"
+
+
+class ModoDeAba(BaseModel):
+    """O modo que a extensão traz, irmão do Modo automático nas abas listadas."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    rotulo: str = Field(min_length=1, max_length=ROTULO_DO_MODO_DE_ABA)
+    dica: str = Field(min_length=1, max_length=DICA_DO_MODO_DE_ABA)
+    abas: list[Literal["02", "03", "04", "05", "10"]] = Field(min_length=1)
+
+    @field_validator("id")
+    @classmethod
+    def _id_curto(cls, valor: str) -> str:
+        if not _CHAVE_DE_LANCADOR.match(valor):
+            raise ValueError("modos_de_aba: id fora da forma: minúsculas, dígitos, - e _, até 32")
+        return valor
+
+    @field_validator("abas")
+    @classmethod
+    def _abas_sem_repetir(cls, valor: list[str]) -> list[str]:
+        if len(set(valor)) != len(valor):
+            raise ValueError("modos_de_aba: aba repetida")
+        return valor
+
 
 class Manifesto(BaseModel):
     """O ``hefesto-mod.json`` inteiro."""
@@ -528,6 +562,7 @@ class Manifesto(BaseModel):
     aparelhos: list[dict[str, Any]] | None = None
     substitui: list[str] = Field(default_factory=list)
     estilos: list[str] = Field(default_factory=list)
+    modos_de_aba: list[ModoDeAba] = Field(default_factory=list, max_length=1)
 
     @field_validator("id")
     @classmethod
@@ -793,7 +828,7 @@ def ler_manifesto(pasta: Path, *, exigir_api: bool = True) -> Manifesto:
     return manifesto
 
 
-_PEDIDOS: dict[str, Any] = {"marca": None, "estilos": frozenset()}
+_PEDIDOS: dict[str, Any] = {"marca": None, "estilos": frozenset(), "modos": ()}
 
 
 def _marca_dos_pedidos(lg: Any, registro: dict[str, Any]) -> tuple[Any, ...]:
@@ -809,33 +844,51 @@ def _marca_dos_pedidos(lg: Any, registro: dict[str, Any]) -> tuple[Any, ...]:
         if e.ligada))
 
 
-def _o_que_a_extensao_pede(pasta: Path) -> list[str]:
-    """Os estilos do manifesto; o que não abre não roda (o supervisor a impede) e não pede nada."""
+def _o_que_a_extensao_pede(pasta: Path) -> Manifesto | None:
+    """O manifesto que abre; o que não abre não roda (o supervisor a impede) e não pede nada."""
     try:
-        return ler_manifesto(pasta).estilos
+        return ler_manifesto(pasta)
     except ManifestoRecusadoError:
-        return []
+        return None
 
 
-def estilos_pedidos(lugares: Any = None) -> frozenset[str]:
-    """Os estilos que as extensões instaladas e ligadas pedem; a desligada não pede nada."""
+def _pedidos(lugares: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.mods import instalador
 
     lg = lugares or instalador.Lugares.do_xdg()
     try:
         registro = instalador.ler_registro(lg.registro)
     except instalador.InstalacaoRecusadaError:
-        return frozenset()
+        return {"estilos": frozenset(), "modos": ()}
     marca = _marca_dos_pedidos(lg, registro)
     if _PEDIDOS["marca"] == marca:
-        return frozenset(_PEDIDOS["estilos"])
-    pedidos = frozenset(chave for entrada in registro.values() if entrada.ligada
-                        for chave in _o_que_a_extensao_pede(lg.codigo / entrada.id))
-    _PEDIDOS.update(marca=marca, estilos=pedidos)
-    return pedidos
+        return _PEDIDOS
+    lidos = [m for entrada in sorted(registro.values(), key=lambda e: e.id) if entrada.ligada
+             if (m := _o_que_a_extensao_pede(lg.codigo / entrada.id)) is not None]
+    _PEDIDOS.update(
+        marca=marca,
+        estilos=frozenset(chave for m in lidos for chave in m.estilos),
+        modos=tuple(
+            {"valor": f"{PREFIXO_DO_MODO_DE_EXTENSAO}{m.id}", "rotulo": modo.rotulo,
+             "dica": modo.dica, "abas": tuple(modo.abas)}
+            for m in lidos for modo in m.modos_de_aba),
+    )
+    return _PEDIDOS
+
+
+def estilos_pedidos(lugares: Any = None) -> frozenset[str]:
+    """Os estilos que as extensões instaladas e ligadas pedem; a desligada não pede nada."""
+    return frozenset(_pedidos(lugares)["estilos"])
+
+
+def modos_pedidos(lugares: Any = None) -> tuple[dict[str, Any], ...]:
+    """Os modos de aba que as extensões instaladas e ligadas trazem, um por extensão, com o
+    ``valor`` que o perfil guarda (o prefixo e o id); a desligada não traz nada."""
+    return tuple(dict(m) for m in _pedidos(lugares)["modos"])
 
 
 __all__ = [
+    "ABAS_DO_MODO",
     "ACAO_DE_LIGAR",
     "ACOES_DA_JANELA",
     "ACOES_DO_APARELHO",
@@ -852,6 +905,7 @@ __all__ = [
     "NOME_DO_MOVIMENTO",
     "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
+    "PREFIXO_DO_MODO_DE_EXTENSAO",
     "TIPOS",
     "TOPICOS_DE_LEITURA",
     "TOPICOS_DE_PUBLICACAO",
@@ -859,6 +913,7 @@ __all__ = [
     "AcoesDosAparelhos",
     "Manifesto",
     "ManifestoRecusadoError",
+    "ModoDeAba",
     "Opcao",  # (noqa-acento)
     "Processo",
     "aceita_a_api",
@@ -867,6 +922,7 @@ __all__ = [
     "forma_valida",
     "frase_da_api",
     "ler_manifesto",
+    "modos_pedidos",
     "o_que_a_permissao_deixa",
     "permissao_valida",
     "permissoes_novas",
