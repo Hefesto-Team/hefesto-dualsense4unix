@@ -1235,6 +1235,7 @@ class _Mexida:
     html_imp: str = ""
     html_mod: str = ""
     agora: tuple[str, ...] = ()
+    ligas: dict[str, exp.Liga] = dataclasses.field(default_factory=dict)
     onde_escolhido: str = ""
     conf_da_modificacao: str = ""
     nota_do_css: str = ""
@@ -1250,6 +1251,7 @@ class _Mexida:
         self.vistas = {}
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
+        self.ligas = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
         self.armada = ()
         self.desligada = False
@@ -1483,7 +1485,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, _AGORA.agora(),
             processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
-            porque=do_mod.porque if do_mod else "")
+            porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas)
     carga = _com_os_aparelhos(carga)
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
     return carga
@@ -1583,13 +1585,16 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
     retrato = _retrato_do_tema(manifesto)
     valores = guardados = opcoes.ler(manifesto, _lugares())
+    _MEXIDA.agora = tuple(manifesto.agora)
+    estado = _estado_da_janela(manifesto)
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
     notas = _notas_do_tema(manifesto, mod_id)
     aparecem = opcoes.aparecem(manifesto, valores)
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
-        escolhas=opcoes.escolhas_de(manifesto, x, valores), grupo=x.grupo or "",
+        escolhas=opcoes.escolhas_de(manifesto, x, valores, _publicadas(manifesto, x, estado)),
+        grupo=x.grupo or "",
         minimo=x.minimo or 0,
         maximo=x.maximo or 0, passo=x.passo or 1,
         jogos=jogos if x.tipo == "jogos" else (),
@@ -1605,19 +1610,37 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     _MEXIDA.desligada = chave is False
     _MEXIDA.mod = mod_id
     _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
-    _MEXIDA.agora = tuple(manifesto.agora)
+    _MEXIDA.ligas = _ligas_de(manifesto, mod_id, valores)
     if retrato is not None:
         _MEXIDA.html_mod = dtema.janela_do_tema_html(
             manifesto.nome, linhas, retrato, mod=mod_id, aba=_MEXIDA.aba, aparecem=aparecem,
             parar=exp.chave_da_extensao_html(mod_id, chave) if chave is not None else "")
         return
-    estado = _estado_da_janela(manifesto)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
-        manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
+        manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora, ligas=_MEXIDA.ligas,
         estado=estado, parar_tudo=manifesto.parar_tudo, chave=chave,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
         porque=item.porque, em_abas=bool(manifesto.tema),
         **_pecas_da_janela(manifesto, mod_id))
+
+
+def _ligas_de(manifesto: Any, mod_id: str, valores: dict[str, Any]) -> dict[str, exp.Liga]:
+    """As linhas do mapa das conexões do manifesto, com o valor de agora: cada conexão declarada
+    vira a chave da própria linha na coluna «Conexão»."""
+    return {conexao: exp.Liga(mod_id, liga.liga, valores.get(liga.liga) is True,
+                              liga.escolha or "", str(valores.get(liga.escolha) or "")
+                              if liga.escolha else "")
+            for conexao, liga in manifesto.conexoes.items()}  # (noqa-acento)
+
+
+def _publicadas(manifesto: Any, opcao: Any, estado: dict[str, Any] | None) -> tuple[str, ...]:
+    """Os nomes que a extensão publica na conexão cuja ``escolha`` é a opção (os adaptadores
+    do computador), para a lista da opção oferecer os mesmos nomes da coluna."""
+    ids = {c for c, liga in manifesto.conexoes.items()  # (noqa-acento)
+           if liga.escolha == opcao.id}
+    return tuple(n for c in exp.itens_do_estado(estado, "conexoes")  # (noqa-acento)
+                 if c.get("id") in ids and isinstance(c.get("escolhas"), list)
+                 for n in c["escolhas"] if isinstance(n, str)) if ids else ()
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1778,6 +1801,10 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         if jogo not in opcao.botoes_da_janela:
             raise RuntimeError("Qual botão? O clique não disse. Nada foi guardado.")
         valor = {**_valor_na_janela(item, opcao), jogo: o.get("valor")}
+    elif opcao.tipo == "escolha" and evento == "click":
+        if o.get("tipo") != "button":
+            return None
+        valor = o.get("valor")
     else:
         if evento == "click":
             return None
@@ -2739,7 +2766,7 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     elif gestao and _MEXIDA.agora:
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
-            porque=item.porque, gestao=gestao)
+            porque=item.porque, gestao=gestao, ligas=_MEXIDA.ligas)
     if aba_cc and not (gestao and gestao.controles):
         blocos["#mod-controles"] = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso,
                                                                     _MEXIDA.desligada)
@@ -2952,9 +2979,12 @@ def _validada(opcao: Any, valor: Any, item: _Instalada) -> Any:
 
     efeitos = item.manifesto is not None and opcoes.por_botao_dos_efeitos(
         item.manifesto, opcao) is not None
+    extras = tuple(_formas_da_janela(item)) if efeitos else ()
+    nome = opcoes.nome_de_conexao(valor) if item.manifesto is not None and (
+        opcoes.escolha_de_conexao(item.manifesto, opcao)) else None
     with _dizendo_a_recusa():
         return opcoes.validar(opcao, valor,
-                              formas_extras=_formas_da_janela(item) if efeitos else ())
+                              formas_extras=(*extras, nome) if nome is not None else extras)
 
 
 @gesto("07-lancadores.html", exp.GESTO_DE_GRAVAR, grava="_guardar_a_opcao_da_modificacao")

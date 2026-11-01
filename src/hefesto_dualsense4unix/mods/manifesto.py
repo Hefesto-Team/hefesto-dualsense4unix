@@ -468,6 +468,19 @@ class ControlesDosAparelhos(BaseModel):
     grupo: str = Field(min_length=1, max_length=30)
 
 
+class LigaDaConexao(BaseModel):
+    """O que uma linha da coluna das conexões liga no clique: a opção ``ligado`` (``liga``) e,
+    com ``escolha``, a opção ``escolha`` cujo valor a linha oferece pelo nome."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    liga: str = Field(min_length=1, max_length=40)
+    escolha: str | None = Field(default=None, min_length=1, max_length=40)
+
+
+CONEXOES_DA_JANELA = 8
+
+
 class Manifesto(BaseModel):
     """O ``hefesto-mod.json`` inteiro."""
 
@@ -488,6 +501,8 @@ class Manifesto(BaseModel):
     agora: list[
         Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento)
     ] = Field(default_factory=list)
+    conexoes: dict[str, LigaDaConexao] = Field(  # (noqa-acento)
+        default_factory=dict, max_length=CONEXOES_DA_JANELA)
     parar_tudo: bool = False
     chave: str | None = Field(default=None, min_length=1, max_length=32)
     acoes: list[Acao] = Field(default_factory=list, max_length=ACOES_DA_JANELA)
@@ -582,6 +597,7 @@ class Manifesto(BaseModel):
                 "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
         self._conferir_as_acoes_e_o_livre()
         self._conferir_a_chave()
+        self._conferir_as_ligas()
         self._conferir_o_aparece_com()
         self._conferir_o_lado_e_as_opcoes_do_tema()
         self._conferir_a_opcao_do_css()
@@ -623,6 +639,27 @@ class Manifesto(BaseModel):
                 f"a chave: a opção {self.chave!r} fica sempre à vista, sem aparece_com")
         if not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
             raise ValueError("a chave pede a permissão publicar:acessorios.estado")
+
+    def _conferir_as_ligas(self) -> None:
+        """Cada linha do mapa das conexões tem id de chave, liga uma opção ``ligado`` daqui (nunca a
+        chave do topo) e, com ``escolha``, aponta para uma ``escolha``; e a coluna mostra as
+        conexões."""
+        if not self.conexoes:  # (noqa-acento)
+            return
+        if "conexoes" not in self.agora:  # (noqa-acento)
+            raise ValueError("conexoes pede o pedaço conexoes em agora")  # (noqa-acento)
+        por_id = {o.id: o for o in self.opcoes}
+        for linha, liga in self.conexoes.items():  # (noqa-acento)
+            if not _CHAVE_DE_LANCADOR.match(linha):
+                raise ValueError(f"a conexão {linha!r} fora da forma de chave")
+            opcao = por_id.get(liga.liga)
+            if opcao is None or opcao.tipo != "ligado" or opcao.id == self.chave:
+                raise ValueError(f"a conexão {linha!r} liga {liga.liga!r}, que não é uma opção "
+                                 "ligado daqui (nem a chave)")
+            if liga.escolha is not None and getattr(por_id.get(liga.escolha), "tipo",
+                                                    None) != "escolha":
+                raise ValueError(f"a conexão {linha!r} escolhe {liga.escolha!r}, que não é uma "
+                                 "opção escolha daqui")
 
     @property
     def opcao_da_chave(self) -> Opcao | None:

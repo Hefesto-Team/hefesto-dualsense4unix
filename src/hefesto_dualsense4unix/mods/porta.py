@@ -65,6 +65,7 @@ JOGOS_POR_LANCADOR = 5000
 ESTADOS_DO_ACESSORIO = ("ligado", "procurando", "desligado", "falhou")
 TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
 ITENS_DO_ESTADO = 32
+ESCOLHAS_DA_CONEXAO = 8
 CONTROLES_DO_APARELHO = 6
 TIPOS_DO_CONTROLE = ("chave", "paleta", "escolha")
 ICONES_DO_CONTROLE = ("lampada",)
@@ -583,8 +584,24 @@ def _cor_do_ponto(cor: Any) -> str | list[str]:
     return [c.lower() for c in cores] if isinstance(cor, list) else str(cor).lower()
 
 
+def _escolhas_da_conexao(bruto: dict[str, Any]) -> dict[str, Any]:
+    """``escolhas`` (até ``ESCOLHAS_DA_CONEXAO`` nomes curtos) e ``escolha`` (um deles): os nomes
+    que a linha da conexão oferece, como os adaptadores do computador."""
+    escolhas, escolha = bruto.get("escolhas"), bruto.get("escolha")
+    if escolhas is None and escolha is None:
+        return {}
+    if not isinstance(escolhas, list) or not escolhas:
+        raise _recusa_do_estado("as escolhas de uma conexão são uma lista de nomes.")
+    nomes = list(dict.fromkeys(
+        _curto(n, "a escolha de uma conexão", 40) for n in escolhas[:ESCOLHAS_DA_CONEXAO]))
+    if not isinstance(escolha, str) or escolha.strip() not in nomes:
+        raise _recusa_do_estado("a escolha de uma conexão é uma das escolhas publicadas.")
+    return {"escolhas": nomes, "escolha": escolha.strip()}
+
+
 def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
-    """``{id, tipo, transporte, estado, motivo}``: uma ponte da extensão (um adaptador, a rede)."""
+    """``{id, tipo, transporte, estado, motivo}``: uma ponte da extensão (um adaptador, a rede),
+    com ``escolhas`` e ``escolha`` quando a linha oferece nomes."""
     if not isinstance(bruto, dict):
         raise _recusa_do_estado("cada conexão é um objeto {id, tipo, transporte, estado, motivo}.")
     transporte, motivo = bruto.get("transporte"), bruto.get("motivo")
@@ -597,6 +614,7 @@ def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
         "transporte": transporte,
         "estado": _estado_do_item(bruto, "uma conexão"),
         "motivo": None if motivo in (None, "") else _curto(motivo, "o motivo da conexão", 120),
+        **_escolhas_da_conexao(bruto),
     }
 
 

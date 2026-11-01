@@ -222,11 +222,40 @@ def formas_extras_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]
     return tuple(formas_do_livre(manifesto, valores))
 
 
-def escolhas_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]) -> tuple[str, ...]:
+def escolha_de_conexao(manifesto: Manifesto, opcao: Opcao) -> bool:
+    """A ``escolha`` que uma linha do mapa das conexões oferece pelo nome (o adaptador)."""
+    return opcao.tipo == "escolha" and any(
+        liga.escolha == opcao.id for liga in manifesto.conexoes.values())  # (noqa-acento)
+
+
+def nome_de_conexao(valor: Any) -> str | None:
+    """O nome que a extensão publica numa conexão (1 a 40 caracteres visíveis), ou ``None``."""
+    if not isinstance(valor, str) or not valor.strip() or len(valor) > 40 \
+            or not valor.isprintable():
+        return None
+    return valor
+
+
+def aceitas_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any],
+               valor: Any = None) -> tuple[str, ...]:
+    """As formas extras da opção e, na escolha de uma conexão, o nome ``valor``: o nome que a
+    extensão publica vale além das ``escolhas`` declaradas."""
+    extras = formas_extras_de(manifesto, opcao, valores)
+    nome = nome_de_conexao(valor) if escolha_de_conexao(manifesto, opcao) else None
+    return (*extras, nome) if nome is not None else extras
+
+
+def escolhas_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any],
+                publicadas: Sequence[str] = ()) -> tuple[str, ...]:
     """O que a lista da escolha oferece: as ``escolhas`` e, na escolha dos efeitos, as formas
-    gravadas no ``livre``, sem repetir nome."""
+    gravadas no ``livre``; na escolha de uma conexão, os nomes que a extensão publica e o valor
+    gravado; sem repetir nome."""
     extras = formas_extras_de(manifesto, opcao, valores) if opcao.tipo == "escolha" else ()
-    return tuple(dict.fromkeys((*opcao.escolhas, *extras)))
+    nomes: tuple[str, ...] = ()
+    if escolha_de_conexao(manifesto, opcao):
+        nomes = tuple(n for n in (*publicadas, valores.get(opcao.id))
+                      if isinstance(n, str) and nome_de_conexao(n) is not None)
+    return tuple(dict.fromkeys((*opcao.escolhas, *extras, *nomes)))
 
 
 def chave_do_modo(manifesto: Manifesto) -> str | None:
@@ -256,7 +285,7 @@ def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
     saida: dict[str, Valor] = {}
     for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
         bruto = guardados.get(opcao.id)
-        extras = formas_extras_de(manifesto, opcao, saida)
+        extras = aceitas_de(manifesto, opcao, saida, bruto)
         if opcao.tipo == "por_botao" and isinstance(bruto, dict):
             bruto = {b: f for b, f in bruto.items()
                      if isinstance(f, str) and (f in opcao.formas or f in extras)}
@@ -282,7 +311,7 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
         raise InstalacaoRecusadaError(f"«{manifesto.nome}» não tem a opção «{opcao_id}».")
     atuais = ler(manifesto, lugares)
     certo = modo_valido(valor) if opcao is None else validar(
-        opcao, valor, formas_extras=formas_extras_de(manifesto, opcao, atuais))
+        opcao, valor, formas_extras=aceitas_de(manifesto, opcao, atuais, valor))
     atuais[opcao_id] = certo
     _gravar(manifesto.id, atuais, lugares)
     return certo

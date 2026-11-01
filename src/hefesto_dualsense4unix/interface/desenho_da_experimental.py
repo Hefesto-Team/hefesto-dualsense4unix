@@ -329,6 +329,7 @@ class OpcaoDaJanela(NamedTuple):
     degraus: int = 0
 
 
+GESTO_DA_OPCAO = "guardar-opcao-da-modificacao"
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
 ROTULO_DO_CSS = "Editar"
 GESTO_DE_IMPORTAR = "importar-na-modificacao"
@@ -884,14 +885,48 @@ def itens_do_estado(estado: Mapping[str, Any] | None, chave: str) -> list[dict[s
     return [x if isinstance(x, dict) else {"nome": str(x)} for x in bruto]
 
 
-def _conexao_html(c: Mapping[str, Any]) -> str:
+class Liga(NamedTuple):
+    """O que uma linha da coluna «Conexão» grava no clique: a opção ``ligado`` (``liga``), se está
+    ligada, e a opção ``escolha`` cujos nomes a linha oferece (vazio sem escolha)."""
+
+    mod: str
+    liga: str
+    ligada: bool
+    escolha: str = ""
+    escolhida: str = ""
+
+
+def _escolhas_da_conexao_html(c: Mapping[str, Any], liga: Liga) -> str:
+    """Os nomes que a conexão publica (os adaptadores), um botão cada, o escolhido marcado."""
+    nomes = c.get("escolhas")
+    if not liga.escolha or not liga.ligada or not isinstance(nomes, list) or len(nomes) < 2:
+        return ""
+    atual = liga.escolhida or str(c.get("escolha") or "")
+    botoes = "".join(
+        f'<button class="cx-escolha{" marcada" if n == atual else ""}" value="{_a(n)}" '
+        f'aria-pressed="{"true" if n == atual else "false"}" data-gesto="{GESTO_DA_OPCAO}" '
+        f'data-v="{_a(liga.mod)}:{_a(liga.escolha)}">{_e(n)}</button>'
+        for n in nomes if isinstance(n, str))
+    return f'<div class="cx-escolhas">{botoes}</div>'
+
+
+def _conexao_html(c: Mapping[str, Any], liga: Liga | None = None) -> str:
+    """Uma conexão da coluna. Com ``liga``, a linha é a chave da conexão: o clique grava a opção
+    ``liga`` ao contrário, e a linha ligada fica marcada; os nomes, embaixo, gravam a escolha."""
     estado = str(c.get("estado") or "ligado")
     motivo = c.get("motivo")
     dica = f' data-dica="{_a(motivo)}"' if isinstance(motivo, str) and motivo else ""
     desenho = ICONE_DO_TRANSPORTE.get(str(c.get("transporte")), ICONE_DO_TRANSPORTE["local"])
-    return (f'<div class="cx-linha"{dica}>{icone_html(desenho, COR_DO_ESTADO.get(estado, "mudo"))}'
-            f'<span class="cx-rot">{_e(c.get("tipo") or c.get("id") or SEM_VALOR)}</span>'
-            f"{estado_html(estado)}</div>")
+    conteudo = (f'{icone_html(desenho, COR_DO_ESTADO.get(estado, "mudo"))}'
+                f'<span class="cx-rot">{_e(c.get("tipo") or c.get("id") or SEM_VALOR)}</span>'
+                f"{estado_html(estado)}")
+    if liga is None:
+        return f'<div class="cx-linha"{dica}>{conteudo}</div>'
+    marcada = "true" if liga.ligada else "false"
+    return (f'<div class="cx-linha cx-liga{" marcada" if liga.ligada else ""}"{dica} '
+            f'role="switch" aria-checked="{marcada}" data-gesto="{GESTO_DA_OPCAO}" '
+            f'data-v="{_a(liga.mod)}:{_a(liga.liga)}">{conteudo}</div>'
+            f"{_escolhas_da_conexao_html(c, liga)}")
 
 
 class ComoEsta(NamedTuple):
@@ -931,8 +966,9 @@ def _topo_do_agora(vivo: bool, processo: str, porque: str) -> str:
 
 
 def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, processo: str = "",
-               porque: str = "", gestao: Gestao | None = None) -> str:
-    """O miolo da coluna «Agora»: só os pedaços que o manifesto declara, do ``acessorios.estado``.
+               porque: str = "", gestao: Gestao | None = None,
+               ligas: Mapping[str, Liga] | None = None) -> str:
+    """O miolo da coluna «Agora» («Conexão» com ``ligas``): só os pedaços que o manifesto declara.
 
     Sem estado, ou com a extensão parada (``ligado`` falso), o nível e o perfil ficam vazios: nenhum
     número que a extensão não deu. As conexões e os aparelhos são os que a extensão publicou, parada ou não:
@@ -940,14 +976,17 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     vazio, sem item nenhum). O perfil e os nomes vêm de terceiros: escapados. ``processo`` e
     ``porque`` são os do supervisor: sem conexão, o canto diz se a conexão caiu, liga ou foi recusada.
     ``gestao`` são os aparelhos geridos sem ``grupo``: cada linha ganha a chave e as ações.
+    ``ligas``: pelo id da conexão, cada linha declarada liga e desliga a própria conexão no clique.
     """
     vivo = bool(estado and estado.get("ligado") is True)
-    linhas = ['<div class="ja-ag-topo"><span class="pc-sub">Agora</span>'
+    titulo = "Conexão" if ligas else "Agora"
+    linhas = [f'<div class="ja-ag-topo"><span class="pc-sub">{titulo}</span>'
               f"{_topo_do_agora(vivo, processo, porque)}</div>"]
     declarados = [x for x in PEDACOS_DO_AGORA if x in pedacos]
     for pedaco in declarados:
         if pedaco == "conexoes":  # (noqa-acento)
-            itens = "".join(_conexao_html(c) for c in itens_do_estado(estado, pedaco))
+            itens = "".join(_conexao_html(c, (ligas or {}).get(str(c.get("id"))))
+                            for c in itens_do_estado(estado, pedaco))
             linhas.append(f'<div class="ja-cxs" data-agora="{pedaco}">'
                           f'{itens or f"""<div class="cx-linha vazia"><span class="cx-rot">{SEM_VALOR}</span></div>"""}'
                           "</div>")
@@ -999,7 +1038,7 @@ def chave_da_extensao_html(mod: str, ligada: bool) -> str:
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
                porque: str = "", faixa: str = "", gestao: Gestao | None = None,
-               coluna: str = "", corpo: str = "") -> str:
+               coluna: str = "", corpo: str = "", ligas: Mapping[str, Liga] | None = None) -> str:
     """A janela do arranjo C: a chave (ou o «Parar tudo») e o X no topo, a coluna «Agora» e os
     ajustes. Toda escolha grava no clique: não há rodapé.
 
@@ -1008,8 +1047,8 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
     é a classe a mais do corpo.
     """
     tem_coluna = bool(agora or coluna)
-    miolo = coluna or (agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)
-                       if agora else "")
+    miolo = coluna or (agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao,
+                                  ligas=ligas) if agora else "")
     coluna = f'<div class="ja-agora" id="mod-agora">{miolo}</div>' if tem_coluna else ""
     opcoes = f'<div class="ja-opcoes">{ajustes}</div>' if ajustes else ""
     classe = ("ja-corpo" + ("" if tem_coluna else " sem-agora")
@@ -1180,7 +1219,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
-                           armada: Sequence[str] = (), em_abas: bool = False) -> str:
+                           armada: Sequence[str] = (), em_abas: bool = False,
+                           ligas: Mapping[str, Liga] | None = None) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo (em abas com ``em_abas``, a que
     pinta o tema) e «Para» no topo; toda escolha grava no clique, sem rodapé.
 
@@ -1189,7 +1229,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     desligada apaga as ações. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é o
     arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` e
     ``armada`` são as ações que esperam, ``livre`` a faixa de baixo e ``controles`` a aba dos
-    controles.
+    controles. ``ligas`` faz da coluna a «Conexão» (:func:`agora_html`).
     """
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
@@ -1215,7 +1255,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
-                          processo=processo, porque=porque, faixa=faixa, gestao=gestao)
+                          processo=processo, porque=porque, faixa=faixa, gestao=gestao,
+                          ligas=ligas)
     corpo = ((_abas_das_opcoes(opcoes, aba, mod) if em_abas else _cartoes_das_opcoes(opcoes))
              if opcoes else vazio)
     return f'''    <div class="tn-topo">

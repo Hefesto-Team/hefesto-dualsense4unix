@@ -485,6 +485,15 @@
 #mod-janela .ap-nome { flex:0 1 auto;min-width:0;max-width:104px;font-weight:500;color:var(--fg);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis }
 #mod-janela .vazia .cx-rot, #mod-janela .vazio .ap-nome { color:var(--texto-mudo) }
+#mod-janela .cx-liga { cursor:pointer;border:1px solid transparent;border-radius:6px;padding:0 6px;margin:0 -7px }
+#mod-janela .cx-liga:hover { border-color:var(--border-forte) }
+#mod-janela .cx-liga:not(.marcada) .cx-rot { color:var(--texto-mudo) }
+#mod-janela .cx-liga.marcada { border-color:var(--purple);background:var(--sel-bg) }
+#mod-janela .cx-escolhas { display:flex;flex-wrap:wrap;gap:4px;padding:2px 0 4px 24px }
+#mod-janela .cx-escolha { height:22px;max-width:100%;padding:0 8px;border-radius:6px;font:inherit;font-size:11px;cursor:pointer;
+  border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+#mod-janela .cx-escolha:hover { color:var(--fg) }
+#mod-janela .cx-escolha.marcada { border-color:var(--purple);background:var(--sel-bg);color:var(--fg) }
 #mod-janela .est { display:inline-flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;flex:none }
 #mod-janela .ap > .est { margin-left:auto }
 #mod-janela .est i { width:8px;height:8px;border-radius:50%;display:inline-block }
