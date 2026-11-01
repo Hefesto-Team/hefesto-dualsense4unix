@@ -131,6 +131,7 @@ def test_a_coluna_se_chama_conexao_e_cada_linha_declarada_tem_o_gesto(
 
 
 def test_o_clique_na_linha_grava_a_opcao_declarada(janela: Any, ctx: Any, lar: Any) -> None:  # noqa: F811
+    """Prova da D-0111-AS-CONEXOES-DA-EXTENSAO-SE-SOMAM-E-A-LINHA-LIGA-A-PROPRIA."""
     from hefesto_dualsense4unix.mods import opcoes
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
 

@@ -147,6 +147,7 @@ def _rotulos(bandeja: Any) -> list[str]:
 
 
 def test_cem_tiques_com_a_mesma_lista_nao_criam_widget(mod: Any) -> None:
+    """Prova da D-0111-A-BANDEJA-SO-REFAZ-O-MENU-QUANDO-ELE-MUDA."""
     bandeja = _bandeja(mod)
     assert _tiques(bandeja, _perfis(0), 1) == 31
     mexidas = bandeja._profiles_submenu.mexidas
