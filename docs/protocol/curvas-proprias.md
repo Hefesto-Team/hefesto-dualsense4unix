@@ -65,7 +65,7 @@ _(nenhum ainda)_
 
 **Grau: DECISÃO DE PRODUTO**, 07/08/2026. A pergunta estava aberta desde 25/07 na etapa de
 publicação, cortada em 29/08, e a resposta separa as duas coisas de
-propósito: o **código** é MIT, os **dados medidos** são CC0.
+propósito: o **código** é GPL-3.0-or-later (MIT até a 0.9.5.1), os **dados medidos** são CC0.
 
 O motivo é o objetivo declarado da própria etapa de publicação — que a curva seja **adotada**.
 Exigir crédito num número medido cria uma dúvida ("dado factual tem autoria?")

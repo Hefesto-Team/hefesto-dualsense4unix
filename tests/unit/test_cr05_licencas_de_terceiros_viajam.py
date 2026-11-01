@@ -1,7 +1,8 @@
-"""Portão das licenças: o LICENSE é MIT puro, o NOTICE é dono da ressalva, e o"""
+"""Portão das licenças: o LICENSE é a GPL-3.0 canônica, o NOTICE é dono da ressalva, e o"""
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -15,6 +16,32 @@ NOTICE = REPO / "NOTICE"
 LICENSES = REPO / "LICENSES"
 
 SHA256_GPL2 = "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+SHA256_GPL3 = "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+
+LICENCA_DO_HEFESTO = "GPL-3.0-or-later"
+
+DECLARACOES_DA_LICENCA = [
+    ("pyproject.toml", r'^license = "([^"]+)"$', LICENCA_DO_HEFESTO),
+    (
+        "pyproject.toml",
+        r'^\s*"(License :: [^"]+)",?$',
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    ),
+    ("packaging/arch/PKGBUILD", r"^license=\((.+)\)$", f"'{LICENCA_DO_HEFESTO}'"),
+    (
+        "packaging/fedora/hefesto-dualsense4unix.spec",
+        r"^License:\s+(\S.*?)\s*$",
+        LICENCA_DO_HEFESTO,
+    ),
+    ("packaging/nix/package.nix", r"^\s*license = (.+?);$", "licenses.gpl3Plus"),
+    (
+        "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml",
+        r"<project_license>([^<]*)</project_license>",
+        LICENCA_DO_HEFESTO,
+    ),
+]
+
+MANIFESTOS_DE_FABRICA = REPO / "src" / "hefesto_dualsense4unix" / "mods" / "de_fabrica"
 
 ALVOS_QUE_COPIAM_DKMS = [
     "scripts/build_deb.sh",
@@ -48,13 +75,13 @@ def _linhas_executaveis(texto: str) -> list[str]:
     return linhas
 
 
-def test_license_comeca_no_mit_sem_nada_antes() -> None:
-    """A primeira linha do LICENSE tem de ser ``MIT License``."""
+def test_license_comeca_na_gpl3_sem_nada_antes() -> None:
+    """A primeira linha do LICENSE é o título da GPL-3.0, sem nada antes dele."""
     linhas = _texto(LICENSE).splitlines()
     assert linhas, "LICENSE vazio"
-    assert linhas[0] == "MIT License", (
-        f"a primeira linha do LICENSE é {linhas[0]!r}, e tinha de ser 'MIT License'. "
-        "Decisão de produto de 07/08/2026 (resposta 4): nada antes do texto MIT. "
+    assert linhas[0].strip() == "GNU GENERAL PUBLIC LICENSE", (
+        f"a primeira linha do LICENSE é {linhas[0]!r}, e tinha de ser o título da GPL. "
+        "Decisão de produto de 07/08/2026 (resposta 4): nada antes do texto da licença. "
         "Ressalva de escopo vai para o NOTICE, seção 'ESCOPO DESTE ARQUIVO'."
     )
 
@@ -69,19 +96,66 @@ def test_license_nao_carrega_mais_bloco_de_escopo() -> None:
         )
 
 
-def test_license_tem_o_texto_mit_canonico_inteiro() -> None:
-    """As quatro partes do MIT canônico estão todas lá."""
-    texto = _texto(LICENSE)
+def test_license_e_a_gpl3_canonica_byte_a_byte() -> None:
+    """O LICENSE é o texto da GPL-3.0 da FSF, sem resumo, tradução nem edição."""
+    digest = hashlib.sha256(LICENSE.read_bytes()).hexdigest()
+    assert digest == SHA256_GPL3, (
+        f"o LICENSE tem SHA-256 {digest}, e a GPL-3.0 canônica é {SHA256_GPL3} "
+        "(/usr/share/common-licenses/GPL-3, gnu.org/licenses/gpl-3.0.txt)."
+    )
+    assert "Version 3, 29 June 2007" in _texto(LICENSE)
+
+
+@pytest.mark.parametrize(("arquivo", "padrão", "esperado"), DECLARACOES_DA_LICENCA)
+def test_toda_declaracao_da_licenca_do_hefesto_diz_gpl3(
+    arquivo: str, padrão: str, esperado: str
+) -> None:
+    """Cada empacotamento declara a licença do Hefesto num lugar só, e é a GPL-3.0."""
+    achados = re.findall(padrão, _texto(REPO / arquivo), flags=re.MULTILINE)
+    assert achados, f"{arquivo} não declara mais a licença do Hefesto ({padrão!r})"
+    assert set(achados) == {esperado}, (
+        f"{arquivo} declara {achados}, e a licença do Hefesto é {esperado!r}"
+    )
+
+
+def test_todo_manifesto_de_fabrica_diz_gpl3() -> None:
+    """A lista sai do disco: um manifesto de fábrica novo entra na régua sozinho."""
+    manifestos = sorted(MANIFESTOS_DE_FABRICA.glob("*/hefesto-mod.json"))
+    assert len(manifestos) >= 3, f"a leitura de {MANIFESTOS_DE_FABRICA} parou de achar manifestos"
+    errados = {
+        str(m.relative_to(REPO)): licenca
+        for m in manifestos
+        if (licenca := json.loads(_texto(m)).get("licenca")) != LICENCA_DO_HEFESTO
+    }
+    assert not errados, f"manifestos de fábrica fora da licença do Hefesto: {errados}"
+
+
+def test_o_readme_diz_gpl3_no_selo_e_na_secao() -> None:
+    readme = _texto(REPO / "README.md")
+    selo = re.search(r"\[!\[Licença\]\(https://img\.shields\.io/badge/([^)]+)\)\]", readme)
+    assert selo and "GPL--3.0--or--later" in selo.group(1) and "MIT" not in selo.group(1), (
+        f"o selo de licença do README não diz GPL-3.0-or-later: {selo and selo.group(1)!r}"
+    )
+    secao = readme.split("## Licença", 1)[1].lstrip()
+    assert secao.startswith(LICENCA_DO_HEFESTO), (
+        f"a seção Licença do README não abre com {LICENCA_DO_HEFESTO}: {secao[:60]!r}"
+    )
+
+
+def test_o_notice_diz_o_or_later_e_guarda_a_origem_mit() -> None:
+    """O LICENSE não diz versão; o "or later" e o aviso MIT de origem moram no NOTICE."""
+    texto = _texto(NOTICE)
     for trecho in (
-        "MIT License",
+        "either version 3 of the License, or",
+        "(at your option) any later version.",
+        "A origem MIT",
+        "até a 0.9.5.1 saíram sob a licença MIT",
+        "Copyright (c) 2026 Hefesto Contributors",
         "Permission is hereby granted, free of charge",
         "The above copyright notice and this permission notice shall be included",
         'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND',
     ):
-        assert trecho in texto, f"o LICENSE perdeu o trecho canônico {trecho!r}"
-    assert re.search(r"Copyright \(c\) \d{4} ", texto), (
-        "o LICENSE perdeu a linha de copyright"
-    )
+        assert trecho in texto, f"o NOTICE perdeu {trecho!r}"
 
 
 def test_notice_tem_a_secao_de_escopo() -> None:
@@ -340,7 +414,7 @@ def test_notice_declara_cc0_nas_curvas_proprias() -> None:
     texto = _texto(NOTICE)
     assert "CC0-1.0" in texto, (
         "o NOTICE não declara a licença das curvas próprias. Pela decisão de "
-        "07/08/2026 (resposta 2): MIT no código, CC0-1.0 nas curvas."
+        "07/08/2026 (resposta 2): CC0-1.0 nas curvas, separada da do código."
     )
     assert "docs/protocol/curvas-proprias.md" in texto, (
         "o NOTICE declara a CC0 mas não diz ONDE as curvas vão viver"
@@ -350,7 +424,8 @@ def test_notice_declara_cc0_nas_curvas_proprias() -> None:
 def test_notice_nao_confunde_a_licenca_do_codigo_com_a_das_curvas() -> None:
     """As duas licenças convivem, e a distinção tem de estar escrita."""
     texto = _texto(NOTICE)
-    assert "MIT no código" in texto and "CC0-1.0 nas curvas" in texto, (
-        "o NOTICE não diz, na mesma frase, que o código segue MIT e as curvas "
-        "saem em CC0-1.0"
+    frase = f"{LICENCA_DO_HEFESTO} no código, CC0-1.0 nas curvas"
+    assert frase in texto, (
+        f"o NOTICE não diz, na mesma frase, que o código segue {LICENCA_DO_HEFESTO} "
+        "e as curvas saem em CC0-1.0"
     )

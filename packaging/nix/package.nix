@@ -386,7 +386,7 @@ python3Packages.buildPythonApplication rec {
   meta = with lib; {
     description = "Linux adaptive trigger daemon for the PS5 DualSense controller (GTK3 GUI + CLI + TUI)";
     homepage = "https://github.com/Hefesto-Team/hefesto-dualsense4unix";
-    license = licenses.mit;
+    license = licenses.gpl3Plus;
     platforms = platforms.linux;
     maintainers = [];
   };

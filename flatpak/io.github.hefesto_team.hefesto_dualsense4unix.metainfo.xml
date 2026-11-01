@@ -188,7 +188,7 @@
   </screenshots>
 
   <!-- Licença da aplicação (SPDX) -->
-  <project_license>MIT</project_license>
+  <project_license>GPL-3.0-or-later</project_license>
 
   <!-- Licença dos metadados AppStream (obrigatório) -->
   <metadata_license>CC0-1.0</metadata_license>

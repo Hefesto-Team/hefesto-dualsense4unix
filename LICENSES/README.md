@@ -71,7 +71,7 @@ e nos demais), e é lá que ele tem de estar. O que este arquivo carrega são as
 
 ## O que este diretório NÃO é
 
-Não é a licença do Hefesto. O código próprio do projeto é **MIT**, e o texto
+Não é a licença do Hefesto. O código próprio do projeto é **GPL-3.0-or-later**, e o texto
 está no `LICENSE` da raiz — sozinho, sem nada antes dele, por decisão de
 07/08/2026 (ver `NOTICE`, seção "ESCOPO DESTE ARQUIVO").
 

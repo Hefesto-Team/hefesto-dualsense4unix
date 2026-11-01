@@ -8,13 +8,13 @@ version = "0.9.5.1"
 description = "DualSense no Linux: gatilhos adaptativos, luz, vibração, sensores, áudio e co-op local"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "GPL-3.0-or-later"
 keywords = ["dualsense", "ps5", "adaptive-triggers", "linux", "gamepad", "dualsense4unix", "accessibility"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",

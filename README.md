@@ -6,7 +6,7 @@
 
 O DualSense completo no Linux: gatilhos adaptativos, luz, vibração, giroscópio, áudio e até quatro jogadores.
 
-[![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT%20%2B%20GPL--2.0-blue.svg)](LICENSE)
+[![Licença](https://img.shields.io/badge/licen%C3%A7a-GPL--3.0--or--later%20%2B%20GPL--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.9.5.1%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![CI](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Hefesto-Team/hefesto-dualsense4unix/actions/workflows/ci.yml)
@@ -99,4 +99,4 @@ Issues são bem-vindas, inclusive relatos de outras distribuições com a saída
 
 ## Licença
 
-MIT, exceto os módulos de kernel em `assets/dkms/`, que derivam do Linux e mantêm a licença do próprio cabeçalho: GPL-2.0-or-later para `hid-nintendo`, `hid-playstation` e `uhid`, GPL-2.0-or-later com um cabeçalho GPL-2.0 para `usb-f-hid`, e GPL-2.0 OR BSD-3-Clause para `rtw88-usb`. Eles são distribuídos como fonte e compilados na sua máquina pelo DKMS. Detalhes em [LICENSE](LICENSE) e [NOTICE](NOTICE).
+GPL-3.0-or-later, exceto os módulos de kernel em `assets/dkms/`, que derivam do Linux e mantêm a licença do próprio cabeçalho: GPL-2.0-or-later para `hid-nintendo`, `hid-playstation` e `uhid`, GPL-2.0-or-later com um cabeçalho GPL-2.0 para `usb-f-hid`, e GPL-2.0 OR BSD-3-Clause para `rtw88-usb`. Eles são distribuídos como fonte e compilados na sua máquina pelo DKMS. As versões até a 0.9.5.1 saíram sob MIT, e cada cópia dessas versões segue sob a MIT. Detalhes em [LICENSE](LICENSE) e [NOTICE](NOTICE).

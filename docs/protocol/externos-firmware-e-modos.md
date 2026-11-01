@@ -9,7 +9,7 @@
   driver**. O que faltava era a outra metade: os **modos** e o **firmware**
 - **Limite de escopo, declarado antes de qualquer afirmação:** **nada foi
   baixado, nada foi gravado em aparelho nenhum, e nenhum binário de firmware
-  entra neste repositório.** O `LICENSE` daqui é MIT e o firmware da 8BitDo e o
+  entra neste repositório.** O `LICENSE` daqui é GPL-3.0-or-later e o firmware da 8BitDo e o
   da Nintendo são proprietários; e gravar firmware pode inutilizar o aparelho.
   **Quem decide atualizar é quem usa.** Esta página é documentação, e só
 
