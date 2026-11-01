@@ -224,6 +224,7 @@ def test_os_controladores_de_outra_familia_tiram_o_mapa(
     guardado = _no_disco(casa, "maquina.json.de-outra-placa")
     assert guardado["mapa"] == _mapa(*DA_PLACA)
     assert guardado.get(maquina.CONTROLADORES_USB_FIELD) == gravados
+    assert maquina.CONTROLADORES_USB_FIELD not in _no_disco(casa)
 
 
 def _guarda_da_renumeracao(casa: Path, **extra: Any) -> Path:
@@ -282,8 +283,9 @@ def test_a_gravacao_tambem_devolve_a_guarda_da_renumeracao(
         (DEPOIS, {"placa": _placa("Fabricante A", "Placa A")}),
         ({"0000:01:00.0": CHIPSET}, {}),
         ({"0000:01:00.0": INTEL, "0000:0b:00.3": INTEL}, {maquina.CONTROLADORES_USB_FIELD: ANTES}),
+        (DEPOIS, {"version": 2}),
     ],
-    ids=["troca-de-placa", "um-controlador-falta", "outra-familia"],
+    ids=["troca-de-placa", "um-controlador-falta", "outra-familia", "outra-versao"],
 )
 def test_a_guarda_da_troca_de_computador_nao_volta(
     casa: Path,
@@ -301,6 +303,23 @@ def test_a_guarda_da_troca_de_computador_nao_volta(
 
     assert arquivo.read_bytes() == bytes_antes
     assert _guardas(casa) == ["maquina.json.de-outra-placa"]
+
+
+def test_das_guardas_da_renumeracao_a_mais_nova_volta_primeiro(
+    casa: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _gravar(casa, {"version": 1, "placa": _placa()})
+    _guarda_da_renumeracao(casa)
+    _gravar(casa, {"version": 1, **_secoes("0000:02:00.0", "0000:0c:00.3")},
+            "maquina.json.de-outra-placa-2")
+    _nesta_maquina(tmp_path, monkeypatch, DEPOIS, PONTES)
+
+    lida = maquina.carregar_maquina()
+
+    assert {n: p.lugar for n, p in lida.mapa.portas.items()} == {
+        "1": "pci-0000:01:00.0-usb-0:1", "2": "pci-0000:0b:00.3-usb-0:2"
+    }
+    assert "maquina.json.de-outra-placa-2.devolvida" in _guardas(casa)
 
 
 def test_a_guarda_nao_passa_por_cima_do_mapa_feito_depois(
@@ -343,9 +362,11 @@ def test_sem_placa_legivel_a_guarda_fica_onde_esta(
         ({"0000:02:00.0": CHIPSET}, {"0000:01:00.0": CHIPSET, "0000:0b:00.3": PROCESSADOR},
          ANTES, {"0000:02:00.0": "0000:01:00.0"}),
         (ANTES, {"0000:00:14.0": INTEL}, None, None),
+        ({"0000:02:00.0": CHIPSET, "0000:03:00.0": CHIPSET}, {"0000:01:00.0": CHIPSET},
+         {"0000:02:00.0": CHIPSET}, None),
     ],
     ids=["sem-registro", "com-registro", "sem-renumeracao", "iguais-a-mais", "familia-trocada",
-         "um-do-registro", "outra-forma"],
+         "um-do-registro", "outra-forma", "dois-no-mesmo-vivo"],
 )
 def test_o_reconhecimento_do_controlador(
     gravados: dict[str, str],
