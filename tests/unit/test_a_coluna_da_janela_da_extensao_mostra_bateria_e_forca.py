@@ -190,7 +190,7 @@ def _medir(pagina: pathlib.Path) -> dict[str, Any]:
                                       estado=_estado(), parar_tudo=True, ligas=LIGAS)
     tique = {"#mod-agora": exp.agora_html(AGORA, _estado(forca=0.65), ligas=LIGAS)}
     escolha = '.cx-escolha[value="Direita"]'
-    passos = [["js", hefesto_vivo.BOOTSTRAP],
+    passos: list[list[Any]] = [["js", hefesto_vivo.BOOTSTRAP],
               ["js", _ABRIR % (json.dumps(ENDERECO), json.dumps(html))], ["espera", 0.3],
               ["js", _LER],
               ["js", _CLICAR % json.dumps(".cx-escolhido")], ["espera", 0.1], ["js", _LER],
