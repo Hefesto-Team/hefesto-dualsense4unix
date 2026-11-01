@@ -66,8 +66,8 @@ class Ensaio:
         self.filhos: list[subprocess.Popen[bytes]] = []
         _exec(self.bin / "system76-power", (
             "#!/bin/sh\n"
-            f'if [ "$#" -ge 2 ]; then echo "perfil $2" >> "{self.log}"; '
-            f'printf "%s\\n" "$2" > "{self.perfil}"; exit 0; fi\n'
+            f'if [ "$#" -ge 2 ]; then printf "%s\\n" "$2" > "{self.perfil}.$$"; '
+            f'mv "{self.perfil}.$$" "{self.perfil}"; echo "perfil $2" >> "{self.log}"; exit 0; fi\n'
             f'printf "Power Profile: %s\\n" "$(cat "{self.perfil}")"\n'))
         _exec(self.bin / "sudo", '#!/bin/sh\n[ "$1" = "-n" ] && shift\nexec "$@"\n')
         self.placa = base / "placa.sh"
