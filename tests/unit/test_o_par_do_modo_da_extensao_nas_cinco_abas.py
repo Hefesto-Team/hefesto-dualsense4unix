@@ -252,3 +252,22 @@ def test_o_modo_de_perfis_grava_as_quatro_secoes_e_volta_ao_personalizado(
     assert _modos_no_disco() == (MODO_AUTOMATICO,) * 4
     funcao(_ctx(pac), {"modo": MODO_PERSONALIZADO}, Ponte())
     assert _modos_no_disco() == (MODO_PERSONALIZADO,) * 4
+
+
+def test_sem_perfil_a_luz_no_modo_da_extensao_acende_o_botao_e_volta(
+        lg: instalador.Lugares, pac: Any, pasta_de_perfis: pathlib.Path) -> None:
+    from pacotes import a04_iluminacao
+
+    _instalada(lg)
+    gesto = CINCO["04"][1]
+    ctx = pac.Contexto(state={"active_profile": ""}, mesa=[dict(m) for m in MESA],
+                       conectados=[dict(P1)], estados={})
+    funcao = pac.gesto_da_pagina(CINCO["04"][0], gesto)
+    funcao(ctx, {"modo": MODO, "uniq": UM}, Ponte())
+    dados = dict(a04_iluminacao.pacote(ctx))
+    [botao] = _botoes(dados[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
+    assert (botao["aria-pressed"], botao["data-modo"]) == ("true", MODO_PERSONALIZADO)
+    assert funcao(ctx, {"modo": MODO, "uniq": UM}, Ponte()) is None
+    funcao(ctx, {"modo": MODO_PERSONALIZADO, "uniq": UM}, Ponte())
+    [botao] = _botoes(dict(a04_iluminacao.pacote(ctx))[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
+    assert (botao["aria-pressed"], botao["data-modo"]) == ("false", MODO)

@@ -259,19 +259,19 @@ def _tem_cor_propria(p: dict[str, Any]) -> bool:
 def modo_da_luz_do_perfil(p: dict[str, Any] | None) -> str:
     """O modo da aba (Automático ou Personalizado), lido do perfil CRU.
 
-    A regra é a do esquema (`decidir_o_modo_da_luz`), a mesma do `ProfileManager`: tela e plástico
-    não discordam. Sem perfil, Personalizado: a vista do computador (`perfil.ativo_que_vale`, sem
-    `name`) só diz Automático se ele está escrito; deduzir do perfil pintava Automático no primeiro
-    efeito.
+    A regra é a do esquema (`decidir_o_modo_da_luz`), a mesma do `ProfileManager`. Sem perfil, a
+    vista do computador (`perfil.ativo_que_vale`, sem `name`) só diz o modo que está escrito;
+    deduzir do perfil pintava Automático no primeiro efeito.
     """
-    from hefesto_dualsense4unix.profiles.schema import decidir_o_modo_da_luz
+    from hefesto_dualsense4unix.profiles.schema import decidir_o_modo_da_luz, extensao_do_modo
 
     if not isinstance(p, dict) or not p:
         return MODO_PERSONALIZADO
     leds = p.get("leds")
     escrito = leds.get("modo") if isinstance(leds, dict) else None
     if "name" not in p:
-        return MODO_AUTOMATICO if escrito == MODO_AUTOMATICO else MODO_PERSONALIZADO
+        vale = escrito == MODO_AUTOMATICO or extensao_do_modo(escrito) is not None
+        return str(escrito) if vale else MODO_PERSONALIZADO
     return decidir_o_modo_da_luz(
         escrito if isinstance(escrito, str) else None,
         automatico_do_perfil(p), _tem_cor_propria(p))
