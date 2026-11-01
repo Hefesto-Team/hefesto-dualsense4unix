@@ -396,7 +396,7 @@ compilar() {
 entregar() {
     local arch deb tmp programa
     arch="$(dpkg --print-architecture)"
-    deb="${OBRA}/$(ler PORTAL_PACOTE)_${REVISAO}_${arch}.deb"
+    deb="${OBRA}/$(ler PORTAL_PACOTE)_${REVISAO#*:}_${arch}.deb"
     [[ -f "${deb}" ]] || morra "${RC_BUILD}" "o build não produziu ${deb##*/}"
     tmp="$(mktemp -d)"
     dpkg-deb -x "${deb}" "${tmp}" || morra "${RC_BUILD}" "não consegui abrir ${deb##*/}"
@@ -416,7 +416,7 @@ entregar() {
     (cd "${SAIDA}" && sha256sum -- *.deb > SHA256SUMS.novo)
     mv -f "${SAIDA}/SHA256SUMS.novo" "${SAIDA}/SHA256SUMS"
     origem > "${SAIDA}/ORIGEM.txt"
-    rm -rf "${ARVORE}/target"
+    rm -rf "${ARVORE}/target" "${ARVORE}/vendor" "${ARVORE}/vendor.tar"
     diga "entregue em ${SAIDA}: ${deb##*/}"
 }
 
