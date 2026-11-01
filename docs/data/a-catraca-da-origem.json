@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1180684,
+      "piso": 1182199,
       "por_item": {
-        "docs": 107947,
-        "scripts": 110429,
+        "docs": 108102,
+        "scripts": 110995,
         "src": 297349,
-        "tests": 664959
+        "tests": 665753
       },
-      "razao": "tamanho: +389 linhas (1180295 -> 1180684), pagas por Origem: D-0111-AS-CONEXOES-DA-EXTENSAO-SE-SOMAM-E-A-LINHA-LIGA-A-PROPRIA; registrado no fecho, topo 659e22013113",
+      "razao": "tamanho: +1515 linhas (1180684 -> 1182199), pagas por Origem: D-0111-O-INSTALL-CONSTROI-O-PORTAL-DO-COSMIC-DA-CASA, D-1510-A-VERSAO-MAIS-RECENTE-DE-TUDO; registrado no fecho, topo 1517fb70b568",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1357,10 +1357,16 @@
           "de": 1180295,
           "para": 1180684,
           "razao": "tamanho: +389 linhas (1180295 -> 1180684), pagas por Origem: D-0111-AS-CONEXOES-DA-EXTENSAO-SE-SOMAM-E-A-LINHA-LIGA-A-PROPRIA; registrado no fecho, topo 659e22013113"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1180684,
+          "para": 1182199,
+          "razao": "tamanho: +1515 linhas (1180684 -> 1182199), pagas por Origem: D-0111-O-INSTALL-CONSTROI-O-PORTAL-DO-COSMIC-DA-CASA, D-1510-A-VERSAO-MAIS-RECENTE-DE-TUDO; registrado no fecho, topo 1517fb70b568"
         }
       ],
       "unidade": "linhas",
-      "universo": 3296
+      "universo": 3299
     }
   }
 }
