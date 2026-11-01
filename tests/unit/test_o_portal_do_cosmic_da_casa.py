@@ -680,14 +680,14 @@ def _doctor(
         "HEFESTO_DOCTOR_SYSTEMD_DO_SISTEMA": str(tmp_path / "sistema-vazio"),
         "HEFESTO_DOCTOR_PORTAL_CURADAS": str(tmp_path / "curadas.txt"),
     }
-    baseline = tmp_path / "BASELINE"
-    baseline.write_text(
-        (ASSETS / "BASELINE").read_text(encoding="utf-8").replace(
-            f"PORTAL_EXEC={BASE['PORTAL_EXEC']}\n",
-            f"PORTAL_EXEC={tmp_path / 'sem-portal-oficial'}\n",
-        ),
-        encoding="utf-8",
+    original = (ASSETS / "BASELINE").read_text(encoding="utf-8")
+    de_mentira = original.replace(
+        f"PORTAL_EXEC={BASE['PORTAL_EXEC']}\n",
+        f"PORTAL_EXEC={tmp_path / 'sem-portal-oficial'}\n",
     )
+    assert de_mentira != original, "o BASELINE de mentira manteria o PORTAL_EXEC da máquina"
+    baseline = tmp_path / "BASELINE"
+    baseline.write_text(de_mentira, encoding="utf-8")
     env["HEFESTO_DOCTOR_PORTAL_BASELINE"] = str(baseline)
     if curadas:
         (tmp_path / "curadas.txt").write_text(curadas, encoding="utf-8")
