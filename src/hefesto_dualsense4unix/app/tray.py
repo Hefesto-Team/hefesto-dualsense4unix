@@ -11,8 +11,9 @@ from typing import Any
 
 import gi
 
+gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk
+from gi.repository import Gdk, GLib, Gtk
 
 from hefesto_dualsense4unix.integrations.desktop_notifications import (
     notify,
@@ -100,6 +101,10 @@ class AppTray:
     _servico_item: Any = None
     _servico_de_pe: bool = False
     _pintando_o_modo: bool = False
+    _perfis_no_menu: tuple[tuple[str, bool], ...] | None = None
+    _perfis_esperando_tela: list[dict[str, Any]] | None = None
+    _tela: Any = None
+    _escuta_da_tela: int = 0
 
     def is_available(self) -> bool:
         ok, _ = probe_gi_availability()
@@ -171,6 +176,7 @@ class AppTray:
         quit_item.connect("activate", lambda _w: self._ao_sair())
         self._menu.append(quit_item)
 
+        self._ouvir_as_telas()
         self._render_profiles([])
 
         self._menu.show_all()
@@ -260,6 +266,29 @@ class AppTray:
             except Exception:
                 pass
             self._indicator = None
+        if self._tela is not None and self._escuta_da_tela:
+            self._tela.disconnect(self._escuta_da_tela)
+        self._tela = None
+        self._escuta_da_tela = 0
+
+    def _ouvir_as_telas(self) -> None:
+        """Uma tela que volta aplica a troca de perfis que chegou enquanto não havia nenhuma."""
+        tela = Gdk.Display.get_default()
+        if tela is None or tela is self._tela:
+            return
+        self._tela = tela
+        self._escuta_da_tela = tela.connect("monitor-added", self._ao_chegar_uma_tela)
+
+    def _ao_chegar_uma_tela(self, _tela: Any, _monitor: Any) -> None:
+        pendentes = self._perfis_esperando_tela
+        if pendentes is not None:
+            self._render_profiles(pendentes)
+
+    @staticmethod
+    def _ha_tela_para_perguntar() -> bool:
+        """Cada widget novo pergunta ao GTK a escala da tela 0; sem tela, vira aviso."""
+        tela = Gdk.Display.get_default()
+        return tela is None or tela.get_n_monitors() > 0
 
     def _montar_os_atos_do_jogo(self) -> None:
         """«Ligado/Desligado» e «Reconectar controles» — os da aba Jogar."""
@@ -399,8 +428,9 @@ class AppTray:
         de_pe = isinstance(state, dict)
         self._servico_de_pe = de_pe
         if self._servico_item is not None:
-            self._servico_item.set_label(
-                _("Parar o serviço") if de_pe else _("Ativar o serviço"))
+            rotulo = _("Parar o serviço") if de_pe else _("Ativar o serviço")
+            if self._servico_item.get_label() != rotulo:
+                self._servico_item.set_label(rotulo)
 
         if self._modo_ligado_item is None:
             return
@@ -470,25 +500,42 @@ class AppTray:
         return False
 
 
+    @staticmethod
+    def _o_que_o_submenu_mostra(
+        profiles: list[dict[str, Any]],
+    ) -> tuple[tuple[str, bool], ...]:
+        return tuple(
+            (str(entry.get("name", "")), bool(entry.get("active")))
+            for entry in profiles
+            if entry.get("name")
+        )
+
     def _render_profiles(self, profiles: list[dict[str, Any]]) -> None:
+        """Refaz o submenu só quando a lista ou o perfil ativo mudou, e só com tela."""
         if self._profiles_submenu is None:
             return
+        desejado = self._o_que_o_submenu_mostra(profiles)
+        if desejado == self._perfis_no_menu:
+            self._perfis_esperando_tela = None
+            return
+        if not self._ha_tela_para_perguntar():
+            self._perfis_esperando_tela = profiles
+            return
+        self._perfis_esperando_tela = None
+
         for item in self._profile_menu_items:
             self._profiles_submenu.remove(item)
         self._profile_menu_items = []
 
-        if not profiles:
+        if not desejado:
             item = Gtk.MenuItem.new_with_label(_("(nenhum perfil)"))
             item.set_use_underline(False)
             item.set_sensitive(False)
             self._profiles_submenu.append(item)
             self._profile_menu_items.append(item)
         else:
-            for entry in profiles:
-                name = str(entry.get("name", ""))
-                if not name:
-                    continue
-                label = f"{ACTIVE_MARKER}{name}" if entry.get("active") else name
+            for name, ativo in desejado:
+                label = f"{ACTIVE_MARKER}{name}" if ativo else name
                 item = Gtk.MenuItem.new_with_label(label)
                 item.set_use_underline(False)
                 item.connect(
@@ -498,6 +545,7 @@ class AppTray:
                 self._profile_menu_items.append(item)
 
         self._profiles_submenu.show_all()
+        self._perfis_no_menu = desejado
 
     def _ensinar_o_caminho_do_icone(self, icone: str) -> None:
         """Diz ao PAINEL onde o arquivo do ícone mora, em vez de só o nome."""
