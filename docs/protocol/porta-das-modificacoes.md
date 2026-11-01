@@ -51,6 +51,9 @@ texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado
 `{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
 `usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
 por que o aparelho não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32003`, com a frase).
+Desde 01/11/2026 a conexão pode levar `escolhas` (de 1 a 8 nomes, até 40 letras cada, sem repetir) e `escolha`
+(um deles): os nomes que a extensão oferece para aquela conexão, como os adaptadores Bluetooth do computador, e o
+que vale agora. Os dois vêm juntos, e a `escolha` fora das `escolhas` recusa o estado.
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -425,6 +428,14 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil`, `aparelhos` e `conexoes`, sem repetir.
+- **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
+  «Conexão» (o título muda) a chave de cada conexão. Pede `conexoes` no `agora`; o id tem a forma da chave de um
+  lançador, `liga` é o `id` de uma opção `ligado` da própria extensão (nunca a `chave`) e `escolha` o de uma opção
+  `escolha`. O clique na linha grava `liga` ao contrário, e a linha ligada fica marcada; com a conexão ligada e ao
+  menos dois nomes publicados em `escolhas`, cada nome vira um botão embaixo da linha, e o clique grava aquele
+  nome na `escolha`. A opção `escolha` declarada aqui aceita qualquer nome válido de conexão (até 40 letras, sem
+  quebra de linha), e a caixa da opção nas abas oferece os nomes publicados. A conexão do estado que o mapa não
+  declara segue só mostrando. O Hefesto de antes recusa o manifesto pelo campo.
 - **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda à extensão o gesto `para` (ou o
   `extensao.parar`, a quem não lê o gesto), e o nível e o perfil ficam guardados.
 - **`chave`** (desde 28/10/2026): o `id` de uma opção `ligado` da própria extensão, sem `aparece_com`. A opção vira a

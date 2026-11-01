@@ -1480,9 +1480,9 @@ def telas() -> str:
         texto = texto.replace("{{IMPEDIMENTOS}}", impedimentos_miolo_html("Steam", IMPEDIMENTOS_DE_EXEMPLO))
         texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
             "Minha extensão", OPCOES_DO_DESENHO_DAS_PECAS, mod="exemplo", agora=AGORA_DO_DESENHO,
-            estado=ESTADO_DOS_GERIDOS_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
+            estado=ESTADO_DA_CONEXAO_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
             aparelhos=APARELHOS_DO_DESENHO, em_curso=frozenset({("testar", "ap-2")}),
-            livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO))
+            livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO, ligas=LIGAS_DO_DESENHO))
         partes.append(texto.strip())
     return ("\n".join(partes) + f"\n{sprite_dos_botoes()}"
             f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n")
@@ -2183,3 +2183,21 @@ OPCOES_DO_DESENHO_DAS_PECAS = (
 LIVRE_DO_DESENHO = LivreAoVivo(0.65, False, tuple(
     (t / 10, 0.35 + 0.3 * ((t % 20) / 20 if (t // 20) % 2 == 0 else 1 - (t % 20) / 20))
     for t in range(0, 100, 2)), 10.0)
+
+
+LIGAS_DO_DESENHO: dict[str, Liga] = {
+    "usb": Liga("exemplo", "usar-usb", True),
+    "bt": Liga("exemplo", "usar-bt", True, "adaptador", "Pendrive"),
+    "rede": Liga("exemplo", "usar-rede", False),
+}
+ESTADO_DA_CONEXAO_DO_DESENHO: dict[str, Any] = {
+    **ESTADO_DOS_GERIDOS_DO_DESENHO,
+    "conexoes": [  # (noqa-acento)
+        *ESTADO_DO_DESENHO["conexoes"][:1],  # (noqa-acento)
+        {"id": "bt", "tipo": "Bluetooth", "transporte": "bluetooth", "estado": "procurando",
+         "motivo": "Ligue o aparelho", "escolhas": ["Automático", "Placa-mãe", "Pendrive"],
+         "escolha": "Pendrive"},
+        {"id": "rede", "tipo": "Telefone", "transporte": "rede", "estado": "desligado",
+         "motivo": "Pelo app do telefone"},
+    ],
+}
