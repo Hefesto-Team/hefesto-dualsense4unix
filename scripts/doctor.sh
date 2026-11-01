@@ -6235,6 +6235,91 @@ check_o_basico() {
     done
 }
 
+_portal_cosmic_ler() {
+    sed -n "s/^$1=//p" "$2" 2>/dev/null | head -n 1
+}
+
+_portal_cosmic_trocas_do_exec() {
+    local unidade="$1" oficial="$2" dir arq
+    local dirs=(
+        "${XDG_CONFIG_HOME:-${HOME}/.config}/systemd/user"
+        "${XDG_DATA_HOME:-${HOME}/.local/share}/systemd/user"
+    )
+    local sistema=()
+    [[ -z "${XDG_RUNTIME_DIR:-}" ]] || dirs+=("${XDG_RUNTIME_DIR}/systemd/user")
+    read -r -a sistema <<<"${HEFESTO_DOCTOR_SYSTEMD_DO_SISTEMA:-/etc/systemd/user /usr/local/lib/systemd/user /usr/lib/systemd/user}"
+    for dir in "${dirs[@]}" "${sistema[@]}"; do
+        for arq in "${dir}/${unidade}" "${dir}/${unidade}.d"/*.conf; do
+            [[ -f "${arq}" ]] || continue
+            [[ "${arq}" != "${dir}/${unidade}" || "${dir}" != */usr/lib/systemd/user ]] || continue
+            awk -v oficial="${oficial}" '
+                /^[[:space:]]*ExecStart[[:space:]]*=/ {
+                    v = $0
+                    sub(/^[^=]*=[[:space:]]*/, "", v)
+                    sub(/[[:space:]]+$/, "", v)
+                    if (v == "") next
+                    p = v
+                    sub(/^[-@:+!]+/, "", p)
+                    split(p, w, /[[:space:]]+/)
+                    if (w[1] != oficial) { print FILENAME "\t" v; exit }
+                }' "${arq}"
+        done
+    done
+}
+
+_portal_cosmic_em_execucao() {
+    local unidade="$1" pid
+    pid="$(systemctl --user show -p MainPID --value "${unidade}" 2>/dev/null || true)"
+    [[ -n "${pid}" && "${pid}" != 0 ]] || return 1
+    readlink -f "/proc/${pid}/exe" 2>/dev/null
+}
+
+check_o_portal_de_captura_do_cosmic() {
+    local baseline="${HEFESTO_DOCTOR_PORTAL_BASELINE:-${ROOT_DIR}/assets/portal-cosmic-backport/BASELINE}"
+    local curadas="${HEFESTO_DOCTOR_PORTAL_CURADAS:-${HOME}/.cache/hefesto-dualsense4unix/portal-cosmic-backport/A-ORIGEM-JA-CURA.txt}"
+    local pacote unidade oficial pr sufixo marca ver de_cima vivo arq valor
+    [[ -r "${baseline}" ]] || return 0
+    command -v dpkg-query >/dev/null 2>&1 || return 0
+    pacote="$(_portal_cosmic_ler PORTAL_PACOTE "${baseline}")"
+    unidade="$(_portal_cosmic_ler PORTAL_UNIDADE "${baseline}")"
+    oficial="$(_portal_cosmic_ler PORTAL_EXEC "${baseline}")"
+    pr="$(_portal_cosmic_ler PROTOCOLOS_PR "${baseline}")"
+    sufixo="$(_portal_cosmic_ler SUFIXO "${baseline}")"
+    marca="$(sed -n 's/^MARCA_[^=]*=//p' "${baseline}" 2>/dev/null | head -n 1)"
+    ver="$(dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' "${pacote}" 2>/dev/null | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true)"
+    [[ -n "${ver}" ]] || return 0
+    if [[ "${XDG_CURRENT_DESKTOP:-}" != *COSMIC* ]] \
+       && ! dpkg-query -W -f='${db:Status-Abbrev}\n' cosmic-comp 2>/dev/null | grep -q '^ii'; then
+        return 0
+    fi
+    hdr "o portal de captura do COSMIC (compartilhar a tela)"
+    while IFS=$'\t' read -r arq valor; do
+        [[ -n "${arq}" ]] || continue
+        warn "${arq} troca o ExecStart do portal de captura por ${valor} — o arquivo é de outro projeto, e o doctor não o apaga; com ele, o portal que roda é o que ele aponta, não o do pacote (para valer o do pacote, tire a troca à mão e rode: systemctl --user daemon-reload)"
+    done < <(_portal_cosmic_trocas_do_exec "${unidade}" "${oficial}")
+    vivo="${HEFESTO_DOCTOR_PORTAL_COSMIC:-$(_portal_cosmic_em_execucao "${unidade}" || true)}"
+    [[ -n "${vivo}" ]] || vivo="${oficial}"
+    if [[ -z "${marca}" ]]; then
+        info "não sei conferir o portal de captura: ${baseline} não traz a linha MARCA_"
+        return 0
+    fi
+    if [[ ! -r "${vivo}" ]]; then
+        info "não consigo ler o portal de captura em ${vivo} — pulo a conferência do cosmic-protocols#${pr}"
+        return 0
+    fi
+    de_cima="${ver}"
+    if [[ "${ver}" == *~hefesto* ]]; then
+        de_cima="${ver%"${sufixo%%~hefesto*}"~hefesto*}"
+    fi
+    if grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null; then
+        pass "o portal de captura (${vivo}) traz o cosmic-protocols#${pr}: o compartilhamento de tela não cai com «create_frame sent before the previous frame was destroyed»"
+    elif [[ -r "${curadas}" ]] && grep -q -x -F -- "${de_cima}" "${curadas}" 2>/dev/null; then
+        pass "o portal de captura ${ver} já traz de cima a cura do cosmic-protocols#${pr}"
+    else
+        warn "o portal de captura (${vivo}, pacote ${ver}) não traz o cosmic-protocols#${pr}: o compartilhamento de tela cai com «create_frame sent before the previous frame was destroyed», e o portal aborta — $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f-ter constrói e instala o portal corrigido: scripts/construir_portal_cosmic_backport.sh, pela receita em docs/usage/receita-backport-portal-cosmic.md)")"
+    fi
+}
+
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
@@ -6328,6 +6413,7 @@ main() {
     check_mic_ganho_de_captura
     check_pipewire_cura_do_metadata
     check_o_painel_do_cosmic_ve_o_som
+    check_o_portal_de_captura_do_cosmic
     hdr "Steam Input"
     check_steam_input
     check_steam_input_allowlist
