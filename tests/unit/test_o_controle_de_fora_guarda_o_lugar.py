@@ -119,6 +119,35 @@ class TestOBackendDeixaOPostoComODeFora:
         ensaio.inst.seguir_a_carta()
         assert ensaio.inst.primary_uniq == UNIQS[0]
 
+    @VIAS
+    def test_o_dualsense_deposto_que_volta_nao_retoma_o_posto_do_de_fora(
+        self, monkeypatch: pytest.MonkeyPatch, via: str
+    ) -> None:
+        relogio = Relogio()
+        ensaio = MesaDoJogo(monkeypatch, relogio=relogio, tempo=relogio, jogo=True)
+        segue = [False]
+        ensaio.inst.set_o_p1_com_o_de_fora(lambda: segue[0])
+        ensaio.mesa.sentar(UNIQS[0], transporte=via)
+        ensaio.connect()
+        ensaio.inst.seguir_a_carta()
+        assert ensaio.inst.primary_uniq == UNIQS[0]
+
+        ensaio.mesa.levantar(UNIQS[0])
+        ensaio.connect()
+        segue[0] = True
+        relogio.avancar(5.0)
+        ensaio.mesa.sentar(UNIQS[0], transporte=via)
+        ensaio.connect()
+        ensaio.inst.seguir_a_carta()
+        assert ensaio.inst.primary_uniq is None, (
+            "o DualSense que voltou na janela da reserva retomou o posto que o de fora segura"
+        )
+        assert ensaio.inst.read_state().connected
+
+        segue[0] = False
+        ensaio.inst.seguir_a_carta()
+        assert ensaio.inst.primary_uniq == UNIQS[0]
+
 
 @pytest.mark.usefixtures("mesa")
 class TestComOJogoQuemJogaFicaNoLugar:

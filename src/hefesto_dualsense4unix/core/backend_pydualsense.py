@@ -2390,7 +2390,7 @@ class PyDualSenseController(IController):
         """
         prev = self._primary_key
         retomada = self._posto_reservado_de_volta()
-        if retomada is not None:
+        if retomada is not None and not self._o_posto_segue_com_o_de_fora_locked():
             self._primary_key, self._posto_vago_de = retomada, None
             self._primario_deposto = None
             logger.info("primario_retomou_o_posto", key=retomada)
@@ -4996,8 +4996,8 @@ class PyDualSenseController(IController):
         """Com o jogo segurando o boneco 1 com um controle de fora, quem chega não senta no posto.
 
         O assento é do jogador, não do tipo de controle (D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA):
-        o posto fica sem primário, o DualSense que chega senta no primeiro lugar livre do co-op e o
-        ``read_state`` diz o posto ocupado, como na vaga.
+        o posto fica sem primário, o DualSense que chega (o deposto na reserva também) senta no
+        primeiro lugar livre do co-op, e o ``read_state`` diz o posto ocupado, como na vaga.
         """
         pergunta = self._p1_com_o_de_fora
         segue = False
