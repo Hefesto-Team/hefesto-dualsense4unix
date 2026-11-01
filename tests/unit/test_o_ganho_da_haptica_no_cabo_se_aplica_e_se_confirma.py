@@ -209,3 +209,28 @@ def test_o_laco_que_nao_nasce_diz_a_falha_uma_vez(servidor: _Servidor) -> None:
             cabo.casar({_MARCA: _ROTA}, {_MARCA: 1.0})
     falhas = _linhas(diario, "haptica_do_cabo_portao_falhou")
     assert [r["motivo"] for r in falhas] == ["sem_fluxo_do_laco"]
+
+
+def test_quatro_no_cabo_cada_um_no_seu_ganho(servidor: _Servidor) -> None:
+    """Quatro no cabo: cada laço leva o ganho do dono, e a restauração de um não mexe nos outros."""
+    ganhos = {"APARELHOGHJKMN": 2.0, "APARELHOPQRSTU": 1.0, "APARELHOVWXYZG": 0.5,
+              "APARELHOHJKMNP": 0.0}
+    rotas = {marca: RotaDoCabo(captura=f"{611 + n}", destino=f"{603 + n}",
+                               dono=f"aa:bb:cc:00:00:0{n + 1}")
+             for n, marca in enumerate(ganhos)}
+    nome = {m: f"{MARCA_DO_LACO_DO_CABO}{chave_do_aparelho(m)} output" for m in ganhos}
+    servidor.guardado[nome["APARELHOGHJKMN"]] = [_NORMA, _NORMA, 0, 0]
+    servidor.guardado[nome["APARELHOVWXYZG"]] = [_NORMA, _NORMA, _bruto(2.0), _bruto(2.0)]
+    cabo = HapticaDoCabo(_Lacos())
+    cabo.casar(rotas, ganhos)
+    indice = {marca: servidor.nasce(nome[marca]) for marca in ganhos}
+    cabo.casar(rotas, ganhos)
+    cabo.casar(rotas, ganhos)
+    for marca, ganho in ganhos.items():
+        assert servidor.motores(indice[marca]) == [_bruto(ganho)] * 2, marca
+        assert cabo.leva_os_motores(marca) is (ganho > 0), marca
+    escritas = len(servidor.escritas)
+    servidor.restaura(indice["APARELHOVWXYZG"], [_NORMA, _NORMA, 0, 0])
+    cabo.casar(rotas, ganhos)
+    assert servidor.motores(indice["APARELHOVWXYZG"]) == [_bruto(0.5)] * 2
+    assert [e[2] for e in servidor.escritas[escritas:]] == [str(indice["APARELHOVWXYZG"])]
