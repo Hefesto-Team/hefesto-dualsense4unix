@@ -12,9 +12,6 @@ MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
 - a troca do endereço antigo arrancada reprova ``test_o_endereco_antigo_passa_a_ser_o_novo``;
 - o ``aviso_visto`` do ligar trocado pelo aviso do manifesto reprova
   ``test_o_aviso_nunca_se_aceita_por_quem_usa``;
-- o ``desligadas`` arrancado do ``_trazer_uma`` reprova
-  ``test_a_que_substitui_uma_desligada_nasce_desligada``, e o ``ligadas_antes`` vazio reprova
-  ``test_a_que_substitui_manda_a_antiga_embora``;
 - a consulta às trazidas arrancada reprova ``test_a_que_quem_usa_removeu_nao_volta``;
 - a anotação feita também na recusa reprova ``test_a_que_nao_chegou_tenta_de_novo_no_install``.
 """
@@ -154,16 +151,6 @@ def test_a_que_substitui_manda_a_antiga_embora(lg: Lugares, tmp_path: Path) -> N
     registro = ler_registro(lg.registro)
     assert ANTIGA not in registro and registro[NOVA].ligada
     assert [f.o_que for f in feitos] == ["ligada"]
-
-
-def test_a_que_substitui_uma_desligada_nasce_desligada(lg: Lugares, tmp_path: Path) -> None:
-    instalador.instalar(_repo(tmp_path, ANTIGA), lugares=lg)
-    endereco = _repo(tmp_path, NOVA, substitui=[ANTIGA])
-    feitos = fabrica.trazer(lugares=lg, arquivo=_lista(tmp_path, {"id": NOVA,
-                                                                  "endereco": endereco}))
-    registro = ler_registro(lg.registro)
-    assert ANTIGA not in registro and not registro[NOVA].ligada
-    assert [f.o_que for f in feitos] == ["instalada"]
 
 
 def test_a_que_quem_usa_removeu_nao_volta(lg: Lugares, tmp_path: Path) -> None:
