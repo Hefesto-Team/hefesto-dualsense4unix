@@ -195,7 +195,7 @@ def test_apptray_render_profiles_remove_placeholder_inicial(monkeypatch: pytest.
     )
 
 
-def test_apptray_sem_display_nenhum_a_troca_se_aplica(monkeypatch: pytest.MonkeyPatch):
+def test_apptray_sem_display_nenhum_a_troca_se_aplica(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
     _patch_apptray_module(monkeypatch, fake_gtk, MagicMock(), monitores=None)
 
