@@ -513,7 +513,10 @@ def _correr(
 
 
 def test_no_cosmic_constroi_instala_fixa_o_apt_e_reinicia_sem_prender(tmp_path: Path) -> None:
-    """MORDIDA: sem o --no-block, o systemctl que espera o portal prende o install."""
+    """Prova da D-0111-O-INSTALL-CONSTROI-O-PORTAL-DO-COSMIC-DA-CASA.
+
+    MORDIDA: sem o --no-block, o systemctl que espera o portal prende o install.
+    """
     c = _correr(tmp_path)
     assert c.rc == 0, c.saida
     assert c.chamou("construtor "), c.chamadas
