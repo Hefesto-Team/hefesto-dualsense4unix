@@ -198,6 +198,26 @@ def test_a_troca_desfeita_sem_tela_nao_refaz_nada_quando_a_tela_volta(
     assert _Item.criados - antes == 0
 
 
+def test_o_submenu_que_caiu_no_meio_se_refaz_no_tique_seguinte(
+        monkeypatch: pytest.MonkeyPatch, mod: Any) -> None:
+    bandeja = _bandeja(mod)
+    _tiques(bandeja, _perfis(0), 1)
+    falhas = [RuntimeError("o GTK recusou o item")]
+
+    def quebra_uma_vez(label: str = "") -> _Item:
+        if falhas and label == "perfil-10":
+            raise falhas.pop()
+        return _Item(label)
+
+    monkeypatch.setattr(mod.Gtk.MenuItem, "new_with_label", quebra_uma_vez)
+    with pytest.raises(RuntimeError):
+        bandeja._on_refresh_done((_perfis(5), None))
+
+    assert _tiques(bandeja, _perfis(5), 1) == 31
+    assert _rotulos(bandeja)[5] == "> perfil-05"
+    assert len(bandeja._profiles_submenu.itens) == 31
+
+
 def test_a_lista_vazia_mostra_o_aviso_uma_vez(mod: Any) -> None:
     bandeja = _bandeja(mod)
     assert _tiques(bandeja, [], 100) == 1
