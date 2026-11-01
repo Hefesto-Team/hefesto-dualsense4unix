@@ -285,7 +285,9 @@ def test_flatpak_e_appimage_gui_semeiam_o_mesmo_conjunto() -> None:
     assert "ls-files" in gui and "assets/profiles_default" in gui, (
         "o build_appimage_gui.sh perdeu a semeadura de presets pelo versionado"
     )
-    assert "profiles_default/*.json" not in gui and 'profiles_default/"*.json' not in gui
+    assert not re.search(r'\$HERE/assets/(?:profiles_default|estilos_de_jogo)/"?\*', gui), (
+        "o build_appimage_gui.sh voltou ao glob do disco: um JSON solto viraria perfil de fábrica"
+    )
     from hefesto_dualsense4unix.profiles.loader import (
         ARQUIVO_DO_PADRAO,
         ARQUIVOS_DE_FABRICA,
