@@ -372,10 +372,12 @@ GLIFO_DA_ENTRADA = {"l2": "l2", "r2": "r2", "analogico_esquerdo": "stick_l",
 OPCOES_DO_DESENHO_C = (
     OpcaoDaJanela("exemplo", "toques", "Toque de cada botão", "por_botao",
                   {"cross": "Toque", "circle": "Duplo", "square": "Pulso", "triangle": "Onda",
-                   "touchpad_right_press": "Nada"}, (), "Toques",
+                   "touchpad_right_press": "Nada"}, (), "Controle",
                   formas=FORMAS_DO_DESENHO, botoes=BOTOES_DO_DESENHO),
+    OpcaoDaJanela("exemplo", "forca-dos-toques", "Força", "deslizante", "100", (), "Controle",
+                  0, 100, 5, degraus=20),
     OpcaoDaJanela("exemplo", "endereco", "Endereço do aparelho na rede", "endereco", "", (),
-                  "Ligação"),
+                  "Conexão"),
     *OPCOES_DO_DESENHO,
 )
 AGORA_DO_DESENHO = ("conexoes", "aparelhos")  # (noqa-acento)
@@ -789,12 +791,26 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
     Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só a opção.
     """
     partes: list[str] = []
+    apos_o_por_botao = False
     for na_grade, juntas in itertools.groupby(itens, key=_vai_na_grade):
+        lista = list(juntas)
         if na_grade:
-            partes.extend(map(_grade, _grades(list(juntas))))
-        else:
-            partes.extend(map(_linha_da_opcao, juntas))
+            grades = _grades(lista)
+            partes.extend(map(_grade, grades))
+            apos_o_por_botao = any(o.tipo == "por_botao" for o in grades[-1])
+            continue
+        if apos_o_por_botao and lista[0].tipo == "deslizante":
+            partes.append(_secao_da_opcao(lista.pop(0)))
+        partes.extend(map(_linha_da_opcao, lista))
+        apos_o_por_botao = False
     return "".join(partes)
+
+
+def _secao_da_opcao(o: OpcaoDaJanela) -> str:
+    """O deslizante que segue a grade de um ``por_botao``: uma seção própria, com o rótulo como
+    título (o mesmo da grade) e o controle na linha de baixo."""
+    return (f'<div class="ky-sec" id="{PEDACO}op-{_a(o.id)}"{_dica_da_linha(o)}><div class="ky-rot">'
+            f'<span>{_e(o.rotulo)}</span>{_nota_da_opcao(o)}</div>{_controle_da_opcao(o)}</div>')
 
 
 def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "") -> str:
@@ -896,37 +912,60 @@ class Liga(NamedTuple):
     escolhida: str = ""
 
 
+def _nomes_da_conexao(c: Mapping[str, Any], liga: Liga) -> list[str]:
+    """Os nomes que a conexão ligada oferece para escolher; vazio com menos de dois."""
+    nomes = c.get("escolhas")
+    if not liga.escolha or not liga.ligada or not isinstance(nomes, list):
+        return []
+    nomes = [n for n in nomes if isinstance(n, str)]
+    return nomes if len(nomes) >= 2 else []
+
+
+def _escolhido_da_conexao(c: Mapping[str, Any], liga: Liga) -> str:
+    return liga.escolhida or str(c.get("escolha") or "")
+
+
 def _escolhas_da_conexao_html(c: Mapping[str, Any], liga: Liga) -> str:
     """Os nomes que a conexão publica (os adaptadores), um botão cada, o escolhido marcado."""
-    nomes = c.get("escolhas")
-    if not liga.escolha or not liga.ligada or not isinstance(nomes, list) or len(nomes) < 2:
+    nomes = _nomes_da_conexao(c, liga)
+    if not nomes:
         return ""
-    atual = liga.escolhida or str(c.get("escolha") or "")
+    atual = _escolhido_da_conexao(c, liga)
     botoes = "".join(
         f'<button class="cx-escolha{" marcada" if n == atual else ""}" value="{_a(n)}" '
         f'aria-pressed="{"true" if n == atual else "false"}" data-gesto="{GESTO_DA_OPCAO}" '
         f'data-v="{_a(liga.mod)}:{_a(liga.escolha)}">{_e(n)}</button>'
-        for n in nomes if isinstance(n, str))
+        for n in nomes)
     return f'<div class="cx-escolhas">{botoes}</div>'
 
 
 def _conexao_html(c: Mapping[str, Any], liga: Liga | None = None) -> str:
     """Uma conexão da coluna. Com ``liga``, a linha é a chave da conexão: o clique grava a opção
-    ``liga`` ao contrário, e a linha ligada fica marcada; os nomes, embaixo, gravam a escolha."""
+    ``liga`` ao contrário, e a linha ligada fica marcada; os nomes, embaixo, gravam a escolha.
+    Conectada, a linha mostra o nome escolhido num botão (``cx-escolhido``), e os nomes só se
+    abrem no clique dele (``comportamento.js``)."""
     estado = str(c.get("estado") or "ligado")
     motivo = c.get("motivo")
     dica = f' data-dica="{_a(motivo)}"' if isinstance(motivo, str) and motivo else ""
     desenho = ICONE_DO_TRANSPORTE.get(str(c.get("transporte")), ICONE_DO_TRANSPORTE["local"])
     conteudo = (f'{icone_html(desenho, COR_DO_ESTADO.get(estado, "mudo"))}'
-                f'<span class="cx-rot">{_e(c.get("tipo") or c.get("id") or SEM_VALOR)}</span>'
-                f"{estado_html(estado)}")
+                f'<span class="cx-rot">{_e(c.get("tipo") or c.get("id") or SEM_VALOR)}</span>')
     if liga is None:
-        return f'<div class="cx-linha"{dica}>{conteudo}</div>'
+        return f'<div class="cx-linha"{dica}>{conteudo}{estado_html(estado)}</div>'
+    fechavel = estado == "ligado" and bool(_nomes_da_conexao(c, liga))
     marcada = "true" if liga.ligada else "false"
-    return (f'<div class="cx-linha cx-liga{" marcada" if liga.ligada else ""}"{dica} '
-            f'role="switch" aria-checked="{marcada}" data-gesto="{GESTO_DA_OPCAO}" '
-            f'data-v="{_a(liga.mod)}:{_a(liga.liga)}">{conteudo}</div>'
-            f"{_escolhas_da_conexao_html(c, liga)}")
+    linha = (f'<div class="cx-linha cx-liga{" marcada" if liga.ligada else ""}"{dica} '
+             f'role="switch" aria-checked="{marcada}" data-gesto="{GESTO_DA_OPCAO}" '
+             f'data-v="{_a(liga.mod)}:{_a(liga.liga)}">{conteudo}'
+             f'{"" if fechavel else estado_html(estado)}</div>')
+    if not fechavel:
+        return linha + _escolhas_da_conexao_html(c, liga)
+    cor = COR_DO_ESTADO.get(estado, "mudo")
+    escolhido = (f'<button type="button" class="cx-escolhido est est-{cor}" aria-expanded="false">'
+                 f"<i></i><span>{_e(_escolhido_da_conexao(c, liga) or SEM_VALOR)}</span></button>")
+    return (f'<div class="cx-com-escolhas" data-cx="{_a(liga.mod)}:{_a(liga.liga)}">'
+            f'<div class="cx-par">{linha}{escolhido}</div>'
+            f"{_escolhas_da_conexao_html(c, liga)}</div>")
 
 
 class ComoEsta(NamedTuple):
@@ -947,12 +986,45 @@ def como_esta(ap: Mapping[str, Any]) -> ComoEsta:
     return ComoEsta(False, COR_DO_ESTADO.get(estado, "mudo"), estado_html(estado), " fora")
 
 
+_TRACO_DO_PAR = ('viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" '
+                 'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"')
+ICONE_DA_FORCA = '<path d="M1.5 8 q1.6 -5 3.2 0 t3.2 0 t3.2 0 t3.2 0"/>'
+
+
+def _icone_da_bateria(carga: int) -> str:
+    return (f'<rect x="1" y="4.5" width="12" height="7" rx="1.6"/><path d="M15 7v2"/>'
+            f'<rect x="2.6" y="6.1" width="{8.8 * carga / 100:.1f}" height="3.8" rx=".6" '
+            'fill="currentColor" stroke="none"/>')
+
+
+def _par_html(classe: str, desenho: str, numero: int) -> str:
+    return (f'<span class="ap-par {classe}"><svg class="ic" {_TRACO_DO_PAR}>{desenho}</svg>'
+            f"<b>{numero}%</b></span>")
+
+
+def bateria_em_numero_html(bateria: Any) -> str:
+    """A bateria do aparelho ativo: o ícone da pilha e o percentual; vazio sem a bateria."""
+    if isinstance(bateria, bool) or not isinstance(bateria, int):
+        return ""
+    carga = max(0, min(100, bateria))
+    return _par_html("ap-bateria", _icone_da_bateria(carga), carga)
+
+
+def forca_em_numero_html(forca: Any) -> str:
+    """A força de agora do aparelho ativo: o ícone da onda e o percentual; vazio sem a força."""
+    if isinstance(forca, bool) or not isinstance(forca, (int, float)):
+        return ""
+    return _par_html("ap-forca", ICONE_DA_FORCA, round(max(0.0, min(1.0, float(forca))) * 100))
+
+
 def _aparelho_html(ap: Mapping[str, Any]) -> str:
-    """Um aparelho: o nome, a pilha e, ativo, a onda da força; senão, a pílula do estado."""
+    """Um aparelho: o nome e, ativo, a bateria e a força em percentual, cada uma com o ícone;
+    senão, a pílula do estado."""
     como = como_esta(ap)
+    medidas = (bateria_em_numero_html(ap.get("bateria")) + forca_em_numero_html(ap.get("forca"))
+               if como.ativo else como.vivo)
     return (f'<div class="ap{como.fora}">{icone_html(ICONE_DO_APARELHO, como.cor)}'
-            f'<span class="ap-nome">{_e(ap.get("nome") or SEM_VALOR)}</span>'
-            f'{bateria_html(ap.get("bateria"))}{como.vivo}</div>')
+            f'<span class="ap-nome">{_e(ap.get("nome") or SEM_VALOR)}</span>{medidas}</div>')
 
 
 def _topo_do_agora(vivo: bool, processo: str, porque: str) -> str:
@@ -2208,9 +2280,8 @@ ESTADO_DA_CONEXAO_DO_DESENHO: dict[str, Any] = {
     **ESTADO_DOS_GERIDOS_DO_DESENHO,
     "conexoes": [  # (noqa-acento)
         *ESTADO_DO_DESENHO["conexoes"][:1],  # (noqa-acento)
-        {"id": "bt", "tipo": "Bluetooth", "transporte": "bluetooth", "estado": "procurando",
-         "motivo": "Ligue o aparelho", "escolhas": ["Automático", "Placa-mãe", "Pendrive"],
-         "escolha": "Pendrive"},
+        {"id": "bt", "tipo": "Bluetooth", "transporte": "bluetooth", "estado": "ligado",
+         "escolhas": ["Automático", "Placa-mãe", "Pendrive"], "escolha": "Pendrive"},
         {"id": "rede", "tipo": "Telefone", "transporte": "rede", "estado": "desligado",
          "motivo": "Pelo app do telefone"},
     ],

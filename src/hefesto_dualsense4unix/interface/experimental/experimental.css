@@ -494,6 +494,13 @@
   border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
 #mod-janela .cx-escolha:hover { color:var(--fg) }
 #mod-janela .cx-escolha.marcada { border-color:var(--purple);background:var(--sel-bg);color:var(--fg) }
+#mod-janela .cx-par { display:flex;align-items:center;gap:6px;min-width:0 }
+#mod-janela .cx-par > .cx-liga { flex:1 }
+#mod-janela .cx-escolhido.est { height:22px;max-width:104px;padding:0 8px;border-radius:6px;font:inherit;font-size:11px;cursor:pointer;
+  border:1px solid var(--border-forte);background:var(--panel);color:var(--fg) }
+#mod-janela .cx-escolhido span { min-width:0;overflow:hidden;text-overflow:ellipsis }
+#mod-janela .cx-escolhido:hover, #mod-janela .cx-com-escolhas.aberta .cx-escolhido { border-color:var(--purple) }
+#mod-janela .cx-com-escolhas[data-cx]:not(.aberta) > .cx-escolhas { display:none }
 #mod-janela .est { display:inline-flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;flex:none }
 #mod-janela .ap > .est { margin-left:auto }
 #mod-janela .est i { width:8px;height:8px;border-radius:50%;display:inline-block }
@@ -511,6 +518,12 @@
 #mod-janela .bat { width:34px;height:10px;border:1px solid var(--texto-mudo);border-radius:2px;padding:1px;flex:none;
   box-sizing:content-box;display:inline-block }
 #mod-janela .bat i { display:block;height:100%;background:var(--green);border-radius:1px }
+#mod-janela .ap-par { display:inline-flex;align-items:center;gap:3px;flex:none;font:11px 'JetBrains Mono',ui-monospace,monospace;
+  color:var(--texto-suave) }
+#mod-janela .ap-nome + .ap-par { margin-left:auto }
+#mod-janela .ap-bateria .ic { color:var(--green) }
+#mod-janela .ap-forca .ic { color:var(--pink) }
+#mod-janela .ap-par b { font-weight:500;min-width:30px;text-align:right }
 #mod-janela .vivo { flex:1;height:18px;overflow:hidden;min-width:36px }
 #mod-janela .vivo svg { width:200%;height:18px;animation:mj-correr 1.4s linear infinite }
 #mod-janela .vivo path { fill:none;stroke:var(--pink);stroke-width:2 }
@@ -548,6 +561,7 @@
 #mod-janela .ext-end { width:220px;height:26px;border-radius:6px;padding:0 9px;border:1px solid var(--border-forte);
   background:var(--app-bg);color:var(--fg);font:11.5px 'JetBrains Mono',ui-monospace,monospace }
 #mod-janela .ext-end::placeholder { color:var(--texto-mudo) }
+#mod-janela .ky-sec { display:flex;flex-direction:column;gap:4px;padding:8px 0 4px }
 @media (max-width:1199px) {
   #mod-janela .ja-corpo { grid-template-columns:232px minmax(0,1fr) }
   #mod-janela .tql .ext-sel { flex-basis:104px }

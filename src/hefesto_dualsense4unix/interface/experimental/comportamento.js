@@ -99,6 +99,30 @@
     e.trecho = [];
     aoSoltar(r.dataset.v, oModo(r));
   });
+  var abertas = {};
+  function asEscolhasNoLugar(){
+    var vistas = {};
+    document.querySelectorAll('.cx-com-escolhas[data-cx]').forEach(function(c){
+      var k = c.dataset.cx, a = !!abertas[k];
+      vistas[k] = true;
+      if (c.classList.contains('aberta') !== a) c.classList.toggle('aberta', a);
+      var b = c.querySelector('.cx-escolhido');
+      if (b && b.getAttribute('aria-expanded') !== String(a)) b.setAttribute('aria-expanded', String(a));
+    });
+    Object.keys(abertas).forEach(function(k){ if (!vistas[k]) delete abertas[k]; });
+  }
+  document.addEventListener('click', function(ev){
+    if (!ev.target.closest) return;
+    var b = ev.target.closest('.cx-escolhido');
+    var e = !b && ev.target.closest('.cx-com-escolhas .cx-escolha');
+    var c = (b || e) && (b || e).closest('.cx-com-escolhas[data-cx]');
+    if (!c) return;
+    abertas[c.dataset.cx] = !!b && !abertas[c.dataset.cx];
+    asEscolhasNoLugar();
+  });
+  document.querySelectorAll('#mod-janela').forEach(function(j){
+    new MutationObserver(asEscolhasNoLugar).observe(j, {childList:true, subtree:true});
+  });
   document.addEventListener('click', function(ev){
     var b = ev.target.closest('.mj-modos button[data-modo]');
     var r = b && b.closest('.mj-faixa') && b.closest('.mj-faixa').querySelector('.mj-trilho input[type=range]');
