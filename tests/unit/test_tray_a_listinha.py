@@ -86,6 +86,30 @@ class _Fabrica:
         return _Item(label)
 
 
+class _Tela:
+    def __init__(self, monitores: int) -> None:
+        self.monitores = monitores
+
+    def get_n_monitors(self) -> int:
+        return self.monitores
+
+    def connect(self, _sinal: str, _funcao: Any) -> int:
+        return 1
+
+    def disconnect(self, _escuta: int) -> None:
+        pass
+
+
+class _GdkDeMentira:
+    def __init__(self, tela: _Tela | None) -> None:
+        class _Display:
+            @staticmethod
+            def get_default() -> _Tela | None:
+                return tela
+
+        self.Display = _Display
+
+
 class _GtkDeMentira:
     Menu = _Menu
     SeparatorMenuItem = _Separador
@@ -105,6 +129,7 @@ def gtk_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Any:
     import hefesto_dualsense4unix.app.tray as mod
 
     monkeypatch.setattr(mod, "Gtk", _GtkDeMentira)
+    monkeypatch.setattr(mod, "Gdk", _GdkDeMentira(_Tela(1)))
     return mod
 
 

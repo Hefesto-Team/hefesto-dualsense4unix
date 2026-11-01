@@ -55,6 +55,30 @@ def test_probe_gi_availability_com_gi_mockado(monkeypatch: pytest.MonkeyPatch):
     assert "ok" in msg
 
 
+class _Tela:
+    def __init__(self, monitores: int) -> None:
+        self.monitores = monitores
+
+    def get_n_monitors(self) -> int:
+        return self.monitores
+
+    def connect(self, _sinal: str, _funcao: object) -> int:
+        return 1
+
+    def disconnect(self, _escuta: int) -> None:
+        pass
+
+
+class _GdkDeMentira:
+    def __init__(self, tela: _Tela | None) -> None:
+        class _Display:
+            @staticmethod
+            def get_default() -> _Tela | None:
+                return tela
+
+        self.Display = _Display
+
+
 def _setup_fake_gi_for_apptray(monkeypatch: pytest.MonkeyPatch):
     """Aparelha mocks de gi para `app/tray.py`."""
     fake_gtk = MagicMock()
@@ -96,6 +120,7 @@ def _setup_fake_gi_for_apptray(monkeypatch: pytest.MonkeyPatch):
     fake_repository = MagicMock()
     fake_repository.Gtk = fake_gtk
     fake_repository.GLib = fake_glib
+    fake_repository.Gdk = _GdkDeMentira(_Tela(1))
     fake_repository.AyatanaAppIndicator3 = fake_indicator_enum
     fake_repository.AppIndicator3 = fake_indicator_enum
 
@@ -122,11 +147,14 @@ def _make_apptray():
     return tray
 
 
-def _patch_apptray_module(monkeypatch: pytest.MonkeyPatch, fake_gtk, fake_glib_module=None):
+def _patch_apptray_module(
+    monkeypatch: pytest.MonkeyPatch, fake_gtk, fake_glib_module=None,
+    monitores: int | None = 1,
+):
     monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
     monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
 
-    """Substitui Gtk/GLib já importados em `hefesto_dualsense4unix.app.tray`.
+    """Substitui Gtk/Gdk/GLib já importados em `hefesto_dualsense4unix.app.tray`.
 
     Necessário porque o módulo já fez `from gi.repository import GLib, Gtk` no
     topo — patchar `sys.modules` não basta para rebindings já feitos.
@@ -134,6 +162,8 @@ def _patch_apptray_module(monkeypatch: pytest.MonkeyPatch, fake_gtk, fake_glib_m
     import hefesto_dualsense4unix.app.tray as apptray_mod
 
     monkeypatch.setattr(apptray_mod, "Gtk", fake_gtk)
+    tela = None if monitores is None else _Tela(monitores)
+    monkeypatch.setattr(apptray_mod, "Gdk", _GdkDeMentira(tela))
     if fake_glib_module is not None:
         monkeypatch.setattr(apptray_mod, "GLib", fake_glib_module)
     monkeypatch.setattr(apptray_mod, "probe_gi_availability", lambda: (True, "ok"))
@@ -163,6 +193,17 @@ def test_apptray_render_profiles_remove_placeholder_inicial(monkeypatch: pytest.
     assert final_labels == ["> perfil_a"], (
         f"_profile_menu_items deve refletir o render atual; achei {final_labels}"
     )
+
+
+def test_apptray_sem_display_nenhum_a_troca_se_aplica(monkeypatch: pytest.MonkeyPatch):
+    fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
+    _patch_apptray_module(monkeypatch, fake_gtk, MagicMock(), monitores=None)
+
+    tray = _make_apptray()
+    assert tray.start() is True
+    tray._render_profiles([{"name": "perfil_a", "active": True}])
+
+    assert [it._label for it in tray._profile_menu_items] == ["> perfil_a"]
 
 
 def test_apptray_render_profiles_aplica_use_underline_false(monkeypatch: pytest.MonkeyPatch):
