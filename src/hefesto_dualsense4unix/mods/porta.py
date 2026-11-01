@@ -53,6 +53,8 @@ CODE_SEM_PERMISSAO = -32010
 CODE_O_JOGO_ESCREVE = -32011
 CODE_QUEM_E_VOCE = -32012
 CODE_NAO_ESCREVEU = -32013
+CODE_TETO_CHEIO = -32014
+CODE_SEM_PONTE = -32015
 
 JANELA_DA_VIBRACAO_DO_JOGO_S = 2.0
 
@@ -93,15 +95,17 @@ UniqDoPosto = Callable[[], str | None]
 Controles = Callable[[], list[dict[str, Any]]]
 Pulsador = Callable[[str, dict[str, Any]], dict[str, Any]]
 LigarAChave = Callable[[str], Awaitable[bool]]
+Arbitro = Callable[[], Any]
 
 
 class RecusaError(Exception):
     """Um pedido recusado, com o código e a frase da resposta."""
 
-    def __init__(self, codigo: int, frase: str) -> None:
+    def __init__(self, codigo: int, frase: str, dados: dict[str, Any] | None = None) -> None:
         super().__init__(frase)
         self.codigo = codigo
         self.frase = frase
+        self.dados = dados
 
 
 @dataclass
@@ -277,12 +281,15 @@ def _resposta(req_id: Any, resultado: Any) -> bytes:
     ).encode("utf-8")
 
 
-def _erro(req_id: Any, codigo: int, frase: str) -> bytes:
+def _erro(req_id: Any, codigo: int, frase: str, dados: dict[str, Any] | None = None) -> bytes:
+    erro: dict[str, Any] = {"code": codigo, "message": frase}
+    if dados:
+        erro["data"] = dados
     return json.dumps(
         {
             "jsonrpc": PROTOCOL_VERSION,
             "id": req_id,
-            "error": {"code": codigo, "message": frase},
+            "error": erro,
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -430,7 +437,96 @@ _ESCRITAS: dict[str, tuple[str, str, Callable[[dict[str, Any], str], dict[str, A
     "gatilho.set": ("gatilho", "trigger.set", _pedido_do_gatilho),
 }
 
-_NOME_DO_CANAL = {"luz": "a luz", "vibracao": "a vibração", "gatilho": "o gatilho"}
+_NOME_DO_CANAL = {
+    "luz": "a luz", "vibracao": "a vibração", "gatilho": "o gatilho", "haptica": "a háptica",
+    "som": "o som", "leds": "as luzes de jogador",
+}
+
+_LADOS = ("esquerdo", "direito")
+
+_DE_FORA = {
+    "haptica.registrar": "haptica", "haptica.tocar": "haptica",
+    "som.registrar": "som", "som.tocar": "som",
+    "leds.set": "leds",
+}
+
+
+def _origem(sessao: Any) -> str:
+    return f"extensao:{sessao.mod_id}"
+
+
+def _ident(params: dict[str, Any], metodo: str) -> str:
+    ident = params.get("id")
+    if not isinstance(ident, str) or not re.fullmatch(r"[a-z0-9_-]{1,32}", ident):
+        raise ValueError(f"{metodo} pede o id em minúsculas, de 1 a 32 letras")
+    return ident
+
+
+def _sem_recusa_solta(tarefa: asyncio.Task[Any]) -> None:
+    if not tarefa.cancelled() and tarefa.exception() is not None:
+        logger.warning("mods_porta_reescrita_falhou", err=str(tarefa.exception()))
+
+
+def _prazo_do_pedido(params: dict[str, Any], metodo: str) -> float | None:
+    ate_ms = params.get("ate_ms")
+    if ate_ms is None:
+        return None
+    if not _numero(ate_ms) or ate_ms < 0:
+        raise RecusaError(CODE_INVALID_PARAMS, f"{metodo} pede ate_ms em milissegundos.")
+    return float(ate_ms) / 1000.0
+
+
+def _vagas_do_pedido(canal: str, params: dict[str, Any]) -> dict[str, float]:
+    """A força de cada vaga do canal, de 0 a 1: a régua do mais forte."""
+    from hefesto_dualsense4unix.core.trigger_effects import bloco_do_efeito, build_from_name
+    from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import brilho_da_luz, forca_do_bloco
+
+    if canal == "vibracao":
+        fraco: Any = params.get("fraco")
+        forte: Any = params.get("forte")
+        if not all(_numero(v) and 0 <= v <= 255 for v in (fraco, forte)):
+            raise RecusaError(CODE_INVALID_PARAMS, "vibracao.set pede fraco e forte de 0 a 255.")
+        return {"esquerdo": float(forte) / 255.0, "direito": float(fraco) / 255.0}
+    if canal == "gatilho":
+        valores = params.get("params", [])
+        try:
+            efeito = build_from_name(str(params.get("modo")), list(valores or []))
+        except (TypeError, ValueError) as exc:
+            raise RecusaError(CODE_INVALID_PARAMS, f"gatilho.set: {exc}") from exc
+        return {str(params.get("lado")): forca_do_bloco(bloco_do_efeito(efeito)) / 8.0}
+    rgb = params.get("rgb")
+    if not isinstance(rgb, list) or len(rgb) != 3 or not all(
+            _numero(c) and 0 <= c <= 255 for c in rgb):
+        raise RecusaError(CODE_INVALID_PARAMS, "luz.set pede rgb com três números de 0 a 255.")
+    brilho = params.get("brilho", 1.0)
+    if not _numero(brilho) or not 0 <= brilho <= 1:
+        raise RecusaError(CODE_INVALID_PARAMS, "luz.set pede o brilho de 0 a 1.")
+    return {"centro": brilho_da_luz(rgb, brilho)}
+
+
+def _recusa_do_veredito(veredito: Any, canal: str) -> RecusaError:
+    if veredito.motivo == "teto":
+        return RecusaError(CODE_TETO_CHEIO, "o teto de efeitos deste controle está cheio",
+                           {"canal": canal})
+    if veredito.motivo == "sem_ponte":
+        return RecusaError(CODE_SEM_PONTE, "o rádio deste controle está sem vaga para o som",
+                           {"canal": canal})
+    if veredito.motivo == "sem_no":
+        return RecusaError(CODE_NAO_ESCREVEU, "o controle está sem o alto-falante agora")
+    if veredito.motivo == "modo":
+        return RecusaError(CODE_O_JOGO_ESCREVE, "no Modo Nativo o jogo fala direto com o controle",
+                           {"vence": veredito.vence, "canal": canal, "modo": "nativo"})
+    return RecusaError(
+        CODE_O_JOGO_ESCREVE,
+        f"{_NOME_DO_CANAL[canal]} deste controle tem um pedido mais forte vivo",
+        {"vence": veredito.vence, "canal": canal})
+
+
+def _bits_da_mascara(params: dict[str, Any]) -> list[bool]:
+    mascara = params.get("mascara")
+    if not isinstance(mascara, int) or isinstance(mascara, bool) or not 0 <= mascara <= 0b11111:
+        raise RecusaError(CODE_INVALID_PARAMS, "leds.set pede a mascara de 0 a 31.")
+    return [bool(mascara >> bit & 1) for bit in range(5)]
 
 
 def estado_vazio_dos_acessorios(mod_id: str) -> dict[str, Any]:
@@ -747,8 +843,12 @@ class Porta:
         controles: Controles | None = None,
         ligar_a_chave: LigarAChave | None = None,
         relogio: Callable[[], float] = time.monotonic,
+        arbitro: Arbitro | None = None,
     ) -> None:
         self.caminho = caminho
+        self._arbitro: Arbitro | None = (
+            arbitro if arbitro is not None
+            else escritor.arbitro if isinstance(escritor, EscritorDoServico) else None)
         self._ligar_a_chave = ligar_a_chave
         self._controles = controles
         self.bus = bus
@@ -863,6 +963,9 @@ class Porta:
                     self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
             if con.acessorio_preso() and con.sessao is not None:
                 self._soltar_o_acessorio(con.sessao.mod_id, con.funcoes_do_acessorio)
+            fonte = self._fonte()
+            if fonte is not None and con.sessao is not None:
+                fonte.esquecer(_origem(con.sessao))
             if con.vibrando and con.sessao is not None:
                 await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
@@ -920,6 +1023,8 @@ class Porta:
             if metodo == "controles.lista":
                 return _resposta(req_id, await asyncio.to_thread(
                     self._lista_dos_controles, con.sessao))
+            if metodo in _DE_FORA:
+                return _resposta(req_id, await self._de_fora(con.sessao, metodo, params))
             if metodo in _ESCRITAS:
                 marca_do_gesto = gesto_de_agora.set(f"mod:{con.sessao.mod_id}:{metodo}")
                 try:
@@ -931,7 +1036,7 @@ class Porta:
                 return _resposta(req_id, feito)
             raise RecusaError(CODE_METHOD_NOT_FOUND, f"método desconhecido: {metodo}")
         except RecusaError as recusa:
-            return _erro(req_id, recusa.codigo, recusa.frase)
+            return _erro(req_id, recusa.codigo, recusa.frase, recusa.dados)
 
     def _apresentar(
         self, params: dict[str, Any], par: tuple[int, int, int] | None
@@ -1483,6 +1588,9 @@ class Porta:
             }
             await self._enviar(con, writer, json.dumps(evento, ensure_ascii=False).encode())
 
+    def _fonte(self) -> Any:
+        return self._arbitro() if self._arbitro is not None else None
+
     async def _escrever(
         self, sessao: _Credencial, metodo: str, params: dict[str, Any]
     ) -> Any:
@@ -1491,11 +1599,33 @@ class Porta:
             raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão escrever:{canal}")
         uniq = _uniq_do_pedido(params, metodo)
         pedido = traduzir(params, uniq)
-        if self._o_jogo_escreve(uniq, canal):
-            raise RecusaError(
-                CODE_O_JOGO_ESCREVE,
-                f"o jogo está escrevendo {_NOME_DO_CANAL[canal]} deste controle",
-            )
+        fonte = self._fonte()
+        if fonte is None:
+            if self._o_jogo_escreve(uniq, canal):
+                raise RecusaError(
+                    CODE_O_JOGO_ESCREVE,
+                    f"o jogo está escrevendo {_NOME_DO_CANAL[canal]} deste controle",
+                    {"vence": "jogo", "canal": canal},
+                )
+            return await self._levar(metodo, metodo_do_servico, pedido)
+        vagas = _vagas_do_pedido(canal, params)
+        veredito = fonte.pedir(
+            _origem(sessao), canal, uniq, vagas, fonte.relogio(),
+            ate_s=_prazo_do_pedido(params, metodo),
+            reescrever=lambda: self._reescrever(metodo, metodo_do_servico, pedido),
+        )
+        if not veredito.vale:
+            raise _recusa_do_veredito(veredito, canal)
+        if veredito.coberto:
+            return {"status": "coberto", "vence": veredito.vence}
+        if veredito.motivo == "solto" and any(f > 0 for f in veredito.fortes.values()):
+            return {"status": "solto"}
+        if canal == "vibracao":
+            pedido = {**pedido, "weak": round(veredito.fortes["direito"] * 255),
+                      "strong": round(veredito.fortes["esquerdo"] * 255)}
+        return await self._levar(metodo, metodo_do_servico, pedido)
+
+    async def _levar(self, metodo: str, metodo_do_servico: str, pedido: dict[str, Any]) -> Any:
         try:
             return await self._escritor(metodo_do_servico, pedido)
         except ValueError as exc:
@@ -1504,21 +1634,138 @@ class Porta:
             logger.warning("mods_porta_escrita_falhou", metodo=metodo, err=str(exc))
             raise RecusaError(CODE_NAO_ESCREVEU, f"não escreveu: {type(exc).__name__}") from exc
 
+    def _reescrever(self, metodo: str, metodo_do_servico: str, pedido: dict[str, Any]) -> None:
+        """O pedido com prazo que voltou a ser o mais forte sai de novo, no laço do serviço."""
+        try:
+            laco = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.warning("mods_porta_reescrita_sem_laco", metodo=metodo)
+            return
+        tarefa = laco.create_task(self._levar(metodo, metodo_do_servico, pedido))
+        tarefa.add_done_callback(_sem_recusa_solta)
 
-def escritor_do_servico(daemon: Any) -> Escritor:
+    async def _de_fora(self, sessao: _Credencial, metodo: str, params: dict[str, Any]) -> Any:
+        """A háptica, o som e as luzes de jogador: só pelo tato vivo, que divide o teto."""
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import padrao_de
+
+        canal = _DE_FORA[metodo]
+        if f"escrever:{canal}" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão escrever:{canal}")
+        fonte = self._fonte()
+        if fonte is None:
+            raise RecusaError(CODE_NAO_ESCREVEU, "o tato vivo não subiu")
+        origem = _origem(sessao)
+        try:
+            if metodo == "haptica.registrar":
+                fonte.registrar(origem, _ident(params, metodo), padrao_de(params))
+                return {"status": "ok"}
+            if metodo == "som.registrar":
+                fonte.registrar_som(origem, _ident(params, metodo), padrao_de(params))
+                return {"status": "ok"}
+            uniq = _uniq_do_pedido(params, metodo)
+            agora = fonte.relogio()
+            if metodo == "haptica.tocar":
+                veredito = self._tocar_a_haptica(fonte, origem, uniq, params, agora)
+            elif metodo == "som.tocar":
+                veredito = self._tocar_o_som(fonte, origem, uniq, params, agora)
+            else:
+                return await self._acender_os_leds(fonte, origem, uniq, params, agora)
+        except ValueError as exc:
+            raise RecusaError(CODE_INVALID_PARAMS, f"{metodo}: {exc}") from exc
+        if not veredito.vale:
+            raise _recusa_do_veredito(veredito, canal)
+        resposta: dict[str, Any] = {"status": "coberto" if veredito.coberto else "ok"}
+        if metodo == "haptica.tocar":
+            toque = fonte.toques.get((uniq, params.get("lado")))
+            resposta["pelo_motor"] = bool(toque is not None and toque.pelo_motor)
+        return resposta
+
+    @staticmethod
+    def _tocar_a_haptica(
+        fonte: Any, origem: str, uniq: str, params: dict[str, Any], agora: float,
+    ) -> Any:
+        lado = params.get("lado")
+        if lado not in _LADOS:
+            raise ValueError("pede o lado esquerdo ou direito")
+        forca: Any = params.get("forca")
+        bpm: Any = params.get("bpm")
+        if not _numero(forca) or not 0 <= forca <= 1:
+            raise ValueError("pede a força de 0 a 1")
+        if bpm is not None and (not _numero(bpm) or not 20 <= bpm <= 240):
+            raise ValueError("pede o bpm de 20 a 240")
+        return fonte.tocar(origem, uniq, str(lado), _ident(params, "haptica.tocar"), float(forca),
+                           None if bpm is None else float(bpm), agora,
+                           _prazo_do_pedido(params, "haptica.tocar"))
+
+    @staticmethod
+    def _tocar_o_som(
+        fonte: Any, origem: str, uniq: str, params: dict[str, Any], agora: float,
+    ) -> Any:
+        som, volume, t = params.get("som"), params.get("volume", 1.0), params.get("t")
+        if not isinstance(som, str) or not som:
+            raise ValueError("pede o som pelo id, ou recorte")
+        if not _numero(volume) or not 0 <= volume <= 1:
+            raise ValueError("pede o volume de 0 a 1")
+        if t is not None and not _numero(t):
+            raise ValueError("pede o t do jogo.som")
+        return fonte.som(origem, uniq, som, float(volume), agora,
+                         None if t is None else float(t))
+
+    async def _acender_os_leds(
+        self, fonte: Any, origem: str, uniq: str, params: dict[str, Any], agora: float,
+    ) -> Any:
+        bits = _bits_da_mascara(params)
+        anteriores = self._luzes_do_numero(uniq)
+        veredito = fonte.pedir(
+            origem, "leds", uniq, {"centro": sum(bits) / 5.0}, agora,
+            ate_s=_prazo_do_pedido(params, "leds.set"),
+            ao_vencer=lambda: self._reescrever(
+                "leds.set", "led.player_set", {"uniq": uniq, "bits": anteriores}),
+        )
+        if not veredito.vale:
+            raise _recusa_do_veredito(veredito, "leds")
+        if veredito.coberto:
+            return {"status": "coberto", "vence": veredito.vence}
+        await self._levar("leds.set", "led.player_set", {"uniq": uniq, "bits": bits})
+        return {"status": "ok"}
+
+    def _luzes_do_numero(self, uniq: str) -> list[bool]:
+        escritor = self._escritor
+        lidas = escritor.luzes_do_numero(uniq) if isinstance(escritor, EscritorDoServico) else None
+        if isinstance(lidas, (list, tuple)) and len(lidas) == 5:
+            return [bool(b) for b in lidas]
+        return [False] * 5
+
+class EscritorDoServico:
     """As escritas vão pelos MESMOS handlers do IPC (``led.set``, ``rumble.set``,
-    ``trigger.set``), com ``uniq``: a política de cada canal (Modo Nativo, alvo
-    fora da mesa, teto da vibração) tem um dono só, e a porta não a copia."""
+    ``trigger.set``, ``led.player_set``), com ``uniq``: a política de cada canal (Modo Nativo,
+    alvo fora da mesa, teto da vibração) tem um dono só, e a porta não a copia. O árbitro é a
+    fonte de fora do tato vivo do mesmo serviço."""
 
-    async def escrever(metodo: str, pedido: dict[str, Any]) -> Any:
-        servidor = getattr(daemon, "_ipc_server", None)
+    def __init__(self, daemon: Any) -> None:
+        self._daemon = daemon
+
+    async def __call__(self, metodo: str, pedido: dict[str, Any]) -> Any:
+        servidor = getattr(self._daemon, "_ipc_server", None)
         tabela = getattr(servidor, "_handlers", None)
         handler = tabela.get(metodo) if isinstance(tabela, dict) else None
         if handler is None:
             raise RuntimeError("o serviço está sem o IPC principal")
         return await handler(pedido)
 
-    return escrever
+    def arbitro(self) -> Any:
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import motor_do
+
+        motor = motor_do(self._daemon)
+        return None if motor is None else motor.de_fora
+
+    def luzes_do_numero(self, uniq: str) -> Any:
+        ler = getattr(getattr(self._daemon, "controller", None), "resolved_player_leds_for", None)
+        return ler(uniq) if callable(ler) else None
+
+
+def escritor_do_servico(daemon: Any) -> Escritor:
+    return EscritorDoServico(daemon)
 
 
 def pulsar_no_servico(daemon: Any) -> Pulsador:

@@ -125,6 +125,11 @@ _O_QUE_DEIXA: dict[str, str] = {
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
+    "escrever:haptica": "Tocar na vibração fina de um controle os padrões que a extensão traz.",
+    "escrever:som": (
+        "Tocar no alto-falante de um controle um som curto, ou o estalo que o jogo acabou de fazer."
+    ),
+    "escrever:leds": "Acender por um instante as cinco luzes de jogador de um controle.",
     "rede:nenhuma": "Sem acesso à rede.",
     "rede:local": "Usar a rede desta casa.",
     "rede:internet": "Usar a internet.",
