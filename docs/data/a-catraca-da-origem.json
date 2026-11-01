@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1179980,
+      "piso": 1180295,
       "por_item": {
-        "docs": 107926,
+        "docs": 107934,
         "scripts": 110429,
-        "src": 297110,
-        "tests": 664515
+        "src": 297158,
+        "tests": 664774
       },
-      "razao": "tamanho: +104 linhas (1179876 -> 1179980), pagas por Origem: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO; registrado no fecho, topo 05be43edeb43",
+      "razao": "tamanho: +315 linhas (1179980 -> 1180295), pagas por Origem: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO, D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DO-USUARIO; registrado no fecho, topo 29e1cac495dc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1345,10 +1345,16 @@
           "de": 1179876,
           "para": 1179980,
           "razao": "tamanho: +104 linhas (1179876 -> 1179980), pagas por Origem: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO; registrado no fecho, topo 05be43edeb43"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1179980,
+          "para": 1180295,
+          "razao": "tamanho: +315 linhas (1179980 -> 1180295), pagas por Origem: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO, D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DO-USUARIO; registrado no fecho, topo 29e1cac495dc"
         }
       ],
       "unidade": "linhas",
-      "universo": 3294
+      "universo": 3295
     }
   }
 }
