@@ -2235,7 +2235,7 @@ def perfil_no_modo(profile: Profile, vivas: frozenset[str] = frozenset()) -> Pro
                 mexeu = True
     if mexeu:
         update["controllers"] = controles
-    return profile.model_copy(update=update) if update else profile
+    return _controles_no_modo(profile.model_copy(update=update) if update else profile, vivas)
 
 
 def _mult_da_vibracao(policy: str | None, custom_mult: float | None) -> float | None:
@@ -3232,6 +3232,32 @@ def modo_que_vale(modo: str | None, vivas: frozenset[str]) -> str | None:
     if dona is None:
         return modo
     return modo if dona in vivas else MODO_PERSONALIZADO
+
+
+def _controles_no_modo(profile: Profile, vivas: frozenset[str]) -> Profile:
+    """O controle que escreve por cima o modo de uma extensão viva tem o gatilho e a luz fixos
+    calados só nele; o perfil inteiro calado já os calou."""
+    controles = dict(profile.controllers or {})
+    mexeu = False
+    for chave, dele in controles.items():
+        gatilhos, luz = dele.triggers, dele.leds
+        if (gatilhos is not None and not secao_calada(profile.triggers.modo, vivas)
+                and da_extensao_viva(gatilhos.modo, vivas)):
+            dele = dele.model_copy(update={"triggers": TriggersConfig(
+                left=_sem_efeito(), right=_sem_efeito(), modo=gatilhos.modo,
+                intensidade=gatilhos.intensidade)})
+        if (luz is not None and not secao_calada(profile.leds.modo, vivas)
+                and da_extensao_viva(luz.modo, vivas)):
+            dele = dele.model_copy(update={"leds": _leds_sem_a_cor(luz)})
+        if dele is not controles[chave]:
+            controles[chave] = dele
+            mexeu = True
+    return profile.model_copy(update={"controllers": controles}) if mexeu else profile
+
+
+def da_extensao_viva(modo: str | None, vivas: frozenset[str]) -> bool:
+    """O modo é o de uma extensão que está viva agora."""
+    return extensao_do_modo(modo_que_vale(modo, vivas)) is not None
 
 
 def secao_calada(modo: str | None, vivas: frozenset[str]) -> bool:

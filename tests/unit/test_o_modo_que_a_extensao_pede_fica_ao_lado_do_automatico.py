@@ -172,6 +172,33 @@ def test_o_gatilho_do_p2_se_suspende_com_a_extensao_viva_e_o_do_p1_nao() -> None
     assert armas_vivas.de(P1, "direito") == armas_mortas.de(P2, "direito")
 
 
+def test_o_perfil_que_vai_ao_aparelho_cala_so_o_gatilho_e_a_luz_do_p2() -> None:
+    from hefesto_dualsense4unix.profiles.manager import _controllers_to_specs
+
+    perfil = _perfil(
+        triggers={"right": {"mode": "SemiAutoGun", "params": [4, 6, 7]}},
+        leds={"lightbar": (10, 200, 10), "auto_player_colors": False},
+        controllers={
+            P1: {"leds": {"lightbar": (200, 10, 10)}},
+            P2: {"triggers": {"modo": MODO}, "leds": {"lightbar": (10, 10, 200), "modo": MODO}},
+        })
+    p1, p2 = P1.replace(":", ""), P2.replace(":", "")
+    vivo = perfil_no_modo(perfil, VIVA)
+    specs = _controllers_to_specs(vivo.controllers, vivo.leds)
+    assert specs[p2].trigger_right is not None and specs[p2].trigger_right.mode.name == "OFF"
+    assert specs[p2].led is None
+    assert specs[p1].led is not None and specs[p1].trigger_right is None
+    assert vivo.triggers.right.mode == "SemiAutoGun" and vivo.leds.lightbar == (10, 200, 10)
+    assert (vivo.controllers or {})[p2].triggers.modo == MODO
+    morto = perfil_no_modo(perfil, NENHUMA)
+    specs_mortos = _controllers_to_specs(morto.controllers, morto.leds)
+    assert specs_mortos[p2].trigger_right is None and specs_mortos[p2].led is not None
+    assert luz.plano_do_perfil(
+        _perfil(leds=LedsConfig(efeito="piscar;FF0000;4"),
+                controllers={P2: {"leds": {"modo": MODO}}}),
+        [P1, P2], vivas=VIVA).keys() == {P1}
+
+
 def test_no_perfil_inteiro_o_modo_vivo_suspende_os_quatro_controles() -> None:
     perfil = _perfil(triggers={"right": {"mode": "SemiAutoGun", "params": [4, 6, 7]},
                                "modo": MODO})

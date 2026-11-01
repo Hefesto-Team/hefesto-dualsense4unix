@@ -57,6 +57,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     Profile,
     controles_em_economia,
+    da_extensao_viva,
     economia_da_mesa,
     economia_vale,
     ler_o_efeito_da_luz,
@@ -160,6 +161,8 @@ def plano_do_perfil(
         if _em_economia(uniq, mesa, ligados):
             continue
         leds, campos = _leds_do_controle(perfil, uniq)
+        if leds is not None and da_extensao_viva(leds.modo, vivas):
+            continue
         texto = leds.efeito if leds is not None and "efeito" in campos else perfil.leds.efeito
         efeito = ler_o_efeito_da_luz(texto)
         if efeito is None:
@@ -645,6 +648,8 @@ class Passo:
                 self._brilho_do_acende.pop(c.uniq, None)
                 continue
             leds, campos = _leds_do_controle(perfil, c.uniq)
+            if leds is not None and da_extensao_viva(leds.modo, self._vivas):
+                continue
             brilho = (
                 leds.lightbar_brightness
                 if leds is not None and "lightbar_brightness" in campos
@@ -682,6 +687,8 @@ class Passo:
             if _em_economia(c.uniq, mesa, ligados):
                 continue
             leds, campos = _leds_do_controle(perfil, c.uniq)
+            if leds is not None and da_extensao_viva(leds.modo, self._vivas):
+                continue
             brilho = (
                 leds.lightbar_brightness
                 if leds is not None and "lightbar_brightness" in campos
