@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1179801,
+      "piso": 1179876,
       "por_item": {
         "docs": 107822,
         "scripts": 110429,
         "src": 297110,
-        "tests": 664440
+        "tests": 664515
       },
-      "razao": "tamanho: +950 linhas (1178851 -> 1179801), pagas por Origem: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA; registrado no fecho, topo 43ac1db325e3",
+      "razao": "tamanho: +75 linhas (1179801 -> 1179876), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 21dce742ffc9",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1333,6 +1333,12 @@
           "de": 1178851,
           "para": 1179801,
           "razao": "tamanho: +950 linhas (1178851 -> 1179801), pagas por Origem: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA; registrado no fecho, topo 43ac1db325e3"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1179801,
+          "para": 1179876,
+          "razao": "tamanho: +75 linhas (1179801 -> 1179876), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 21dce742ffc9"
         }
       ],
       "unidade": "linhas",
