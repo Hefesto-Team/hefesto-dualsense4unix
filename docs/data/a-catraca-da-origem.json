@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1180295,
+      "piso": 1180684,
       "por_item": {
-        "docs": 107934,
+        "docs": 107947,
         "scripts": 110429,
-        "src": 297158,
-        "tests": 664774
+        "src": 297349,
+        "tests": 664959
       },
-      "razao": "tamanho: +315 linhas (1179980 -> 1180295), pagas por Origem: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO, D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DO-USUARIO; registrado no fecho, topo 29e1cac495dc",
+      "razao": "tamanho: +389 linhas (1180295 -> 1180684), pagas por Origem: D-0111-AS-CONEXOES-DA-EXTENSAO-SE-SOMAM-E-A-LINHA-LIGA-A-PROPRIA; registrado no fecho, topo 659e22013113",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1351,10 +1351,16 @@
           "de": 1179980,
           "para": 1180295,
           "razao": "tamanho: +315 linhas (1179980 -> 1180295), pagas por Origem: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO, D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DO-USUARIO; registrado no fecho, topo 29e1cac495dc"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1180295,
+          "para": 1180684,
+          "razao": "tamanho: +389 linhas (1180295 -> 1180684), pagas por Origem: D-0111-AS-CONEXOES-DA-EXTENSAO-SE-SOMAM-E-A-LINHA-LIGA-A-PROPRIA; registrado no fecho, topo 659e22013113"
         }
       ],
       "unidade": "linhas",
-      "universo": 3295
+      "universo": 3296
     }
   }
 }
