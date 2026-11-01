@@ -81,6 +81,7 @@ def test_o_repositorio_limpo_passa(repo: Path, lista: Path, tmp_path: Path) -> N
 def test_o_titulo_no_conteudo_reprova_em_qualquer_grafia(
     repo: Path, lista: Path, tmp_path: Path, forma: str
 ) -> None:
+    """Prova da D-3110-A-BIBLIOTECA-PESSOAL-FICA-FORA."""
     _escreve(repo, "docs/nota.md", f"linha um\no jogo {forma} abriu\n")
     r = _roda(repo, "--lista", str(lista), env=_ambiente(tmp_path))
     assert r.returncode == 1

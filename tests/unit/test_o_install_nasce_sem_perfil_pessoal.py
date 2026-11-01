@@ -79,7 +79,10 @@ def _versionados(pasta: str) -> list[str]:
 
 
 def test_o_install_profiles_copia_so_a_fabrica(tmp_path: Path) -> None:
-    """MORDIDA: devolver o `for src in "${SRC_DIR}"/*.json` ao script."""
+    """MORDIDA: devolver o `for src in "${SRC_DIR}"/*.json` ao script.
+
+    Prova da D-3110-A-FABRICA-E-UMA-LISTA.
+    """
     raiz = tmp_path / "repo"
     _fabrica_com_intruso(raiz)
     lar = tmp_path / "lar"
@@ -121,7 +124,10 @@ def test_o_que_o_git_versiona_e_o_que_o_loader_lista() -> None:
 
 
 def test_o_wheel_e_o_sdist_listam_a_fabrica_por_nome() -> None:
-    """MORDIDA: devolver `"assets/profiles_default"` inteiro ao `shared-data`."""
+    """MORDIDA: devolver `"assets/profiles_default"` inteiro ao `shared-data`.
+
+    Prova da D-3110-O-SDIST-SEM-A-SUITE.
+    """
     alvos = _pyproject()["tool"]["hatch"]["build"]["targets"]
     dados = set(alvos["wheel"]["shared-data"])
     so_isto = set(alvos["sdist"]["only-include"])
