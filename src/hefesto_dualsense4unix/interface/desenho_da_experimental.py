@@ -1777,8 +1777,7 @@ class AndamentoDoPareamento:
     @staticmethod
     def _ligados(estado: Mapping[str, Any] | None) -> tuple[str, ...]:
         return tuple(str(ap.get("nome") or ap.get("id"))
-                     for ap in itens_do_estado(estado, "aparelhos")
-                     if str(ap.get("estado") or "ligado") == "ligado")
+                     for ap in itens_do_estado(estado, "aparelhos") if como_esta(ap).ativo)
 
     @staticmethod
     def _razao(estado: Mapping[str, Any] | None) -> str:

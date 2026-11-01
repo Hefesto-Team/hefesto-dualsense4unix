@@ -21,9 +21,10 @@ de cima e reprova ``não guarda 20 px das bordas``.
 O-PAREAR-SEM-APARELHO-NOVO-DIZ-QUEM-JA-ESTA-LIGADO-01 (01/11/2026). Com um aparelho já ligado antes
 da busca, o fim dizia «Não achou nenhum aparelho» com a dica de quem não acha nada, o contrário dos
 cartões logo abaixo. O fim sem aparelho novo diz agora quem já está ligado, sem a dica; o aparelho
-conhecido e fora do alcance não conta como ligado. MORDIDA (01/11/2026, executada sobre a cura e
-devolvida): o ramo velho (``ligados`` sempre vazio) reprova o fim de quem já estava ligado, na
-unidade e no WebKit.
+que o cartão mostra desligado (fora do alcance ou com a chave desligada) não conta como ligado.
+MORDIDAS (01/11/2026, executadas sobre a cura e devolvidas): o ramo velho (``ligados`` sempre vazio)
+reprova o fim de quem já estava ligado, na unidade e no WebKit; o filtro do ``como_esta`` arrancado
+reprova o aparelho que o cartão mostra desligado nos quatro casos.
 """
 
 from __future__ import annotations
@@ -154,11 +155,13 @@ def test_o_novo_e_o_ja_ligado_o_fim_diz_so_o_novo(
     assert "Achou Lush 3" in fim.html(vazio=False) and "Edge 2" not in fim.html(vazio=False)
 
 
-@pytest.mark.parametrize("fora", ["desligado", "procurando", "falhou"])
-def test_o_aparelho_conhecido_fora_do_alcance_nao_e_ja_ligado(
-        dono: tuple[exp.AndamentoDoPareamento, Relogio], fora: str) -> None:
+@pytest.mark.parametrize("fora", [{"estado": "desligado"}, {"estado": "procurando"},
+                                  {"estado": "falhou"}, {"ligado": False}],
+                         ids=["desligado", "procurando", "falhou", "chave-desligada"])
+def test_o_aparelho_que_o_cartao_mostra_desligado_nao_e_ja_ligado(
+        dono: tuple[exp.AndamentoDoPareamento, Relogio], fora: dict[str, Any]) -> None:
     andamento, relogio = dono
-    longe = {**NOVO, "estado": fora}
+    longe = {**NOVO, **fora}
     andamento.ver("lovense", estado(BUSCANDO, [longe]))
     relogio.t += 1
     fim = andamento.ver("lovense", estado(QUIETA, [longe]))
@@ -369,7 +372,7 @@ def test_a_janela_de_topo_fixo_guarda_a_borda_da_tela(
 def test_o_fim_com_aparelho_ja_ligado_diz_quem_e_sem_a_dica(
         cenas: dict[str, dict[str, Any]]) -> None:
     falhas = []
-    nomes = ", ".join(a["nome"] for a in VIVO["aparelhos"])
+    nomes = ", ".join(a["nome"] for a in VIVO["aparelhos"] if a["ligado"])
     for w, h in VISTAS:
         ja = cenas[f"ja@{w}x{h}"]
         if ja["busca"] is None or ja["cartao"] is None:
