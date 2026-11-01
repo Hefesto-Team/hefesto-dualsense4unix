@@ -72,15 +72,17 @@ def buildid_do_acf(texto: str) -> str | None:
     return achado.group(1) if achado else None
 
 
+def _texto(arquivo: pathlib.Path) -> str:
+    try:
+        return arquivo.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
 def buildid_do_appid(appid: int, pastas: Iterable[pathlib.Path]) -> str | None:
     """O `buildid` do `appmanifest_<appid>.acf` da primeira biblioteca que o tem."""
     for pasta in pastas:
-        try:
-            arquivo = pasta / f"appmanifest_{appid}.acf"
-            texto = arquivo.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        buildid = buildid_do_acf(texto)
+        buildid = buildid_do_acf(_texto(pasta / f"appmanifest_{appid}.acf"))
         if buildid:
             return buildid
     return None
@@ -201,11 +203,8 @@ class Identificador:
 
 
 def _appid(daemon: Any) -> int | None:
-    try:
-        valor = getattr(daemon, "appid_em_cena", None)
-    except Exception:
-        return None
-    return valor if isinstance(valor, int) and valor > 0 else None
+    valor = getattr(daemon, "appid_em_cena", None)
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) and valor > 0 else None
 
 
 async def identidade_do_jogo_loop(daemon: DaemonProtocol) -> None:
@@ -216,12 +215,7 @@ async def identidade_do_jogo_loop(daemon: DaemonProtocol) -> None:
     while not daemon._is_stopping():
         appid = _appid(daemon)
         if quem.precisa(appid):
-            try:
-                carga = await asyncio.to_thread(identidade, appid)
-            except Exception:
-                logger.debug("identidade_do_jogo_falhou", exc_info=True)
-            else:
-                quem.receber(appid, carga)
+            quem.receber(appid, await asyncio.to_thread(identidade, appid))
         await asyncio.sleep(INTERVALO_S)
 
 
