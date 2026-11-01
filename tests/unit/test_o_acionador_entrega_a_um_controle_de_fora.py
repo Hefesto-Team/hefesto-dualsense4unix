@@ -627,9 +627,13 @@ def test_o_posto_sem_mac_com_o_dualsense_que_o_backend_ve_espera_sem_varrer(
     mgr.sync(force=True)
     assert P2 in mgr._players
     varreduras: list[int] = []
+
+    def _varrer() -> dict[str, str]:
+        varreduras.append(1)
+        return {P2: "/dev/input/event22"}
+
     monkeypatch.setattr(
-        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
-        lambda: varreduras.append(1) or {P2: "/dev/input/event22"},
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs", _varrer
     )
 
     daemon.controller.primary_uniq = None
