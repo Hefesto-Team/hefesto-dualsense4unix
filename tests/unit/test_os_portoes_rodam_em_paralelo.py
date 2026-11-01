@@ -896,6 +896,8 @@ _DECLARADOS = {
     "paridade-transporte": ("@dia", "date.today(): dívida com prazo que vence"),
     "fala-de-tela": ("@dia", "date.today(): prazo que vence"),
     "codigo-sem-comentario": ("@sempre", "git ls-files: os arquivos versionados do índice"),
+    "biblioteca-pessoal": (
+        "@sempre", "git ls-files, os nomes dos ramos e a lista vedada que mora fora do git"),
     "o-ignorado-fica-fora-do-indice": ("@head", "git ls-files --cached --ignored: o índice"),
     "citacoes-novas": ("@sempre", "merge-base com o dev: a linha acrescentada desde o pé"),
     "texto-enxuto": ("@sempre", "merge-base com o dev e os não rastreados: o que mudou desde o pé"),

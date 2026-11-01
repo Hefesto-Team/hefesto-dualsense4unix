@@ -45,6 +45,7 @@ ONDE_O_APPID_E_FICTICIO = ("tests/fixtures/", "scripts/tela/perfis-duble.json")
 _PAGINAS = "a sprint das páginas publicadas sem a biblioteca (30/10/2026)"
 _DOCSTRINGS = "a sprint das docstrings das integrações (30/10/2026)"
 DIVIDA = {
+    # sai com: A-HISTORIA-SEM-A-BIBLIOTECA-PESSOAL-01
     "docs/data/decisoes-de-produto.csv": "a costura de O-INSTALL-NASCE-SEM-PERFIL-PESSOAL-01",
     "mockup/09-sistema.html": _PAGINAS,
     "mockup/10-perfis.html": _PAGINAS,
