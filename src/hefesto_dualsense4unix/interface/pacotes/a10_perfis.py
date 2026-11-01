@@ -2629,7 +2629,7 @@ ABA_DO_MODO = "10"
 
 def _monta() -> Any:
     """O `monta`, importado na hora do uso: a janela abre sem ler o repositório no import."""
-    from hefesto_dualsense4unix.interface import monta
+    import monta
 
     return monta
 

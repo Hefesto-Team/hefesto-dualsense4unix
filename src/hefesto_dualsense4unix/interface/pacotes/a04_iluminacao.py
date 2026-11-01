@@ -2465,7 +2465,7 @@ ABA_DO_MODO = "04"
 
 def _monta() -> Any:
     """O `monta`, importado na hora do uso, como nos outros pacotes."""
-    from hefesto_dualsense4unix.interface import monta
+    import monta
 
     return monta
 
