@@ -222,8 +222,9 @@ montar_arvore() {
 }
 
 aplicar_o_pr() {
-    local arvore_patch="${OBRA}/$(ler ARVORE_DO_PATCH)" patch="${ASSETS}/patches/$(ler PATCH)"
-    local fonte_tk fonte_pr chave rc=0
+    local arvore_patch patch fonte_tk fonte_pr chave rc=0
+    arvore_patch="${OBRA}/$(ler ARVORE_DO_PATCH)"
+    patch="${ASSETS}/patches/$(ler PATCH)"
     fonte_tk="$(fonte_no_lock "${ARVORE}/Cargo.lock" cosmic-client-toolkit)"
     fonte_pr="$(fonte_no_lock "${ARVORE}/Cargo.lock" cosmic-protocols)"
     [[ -n "${fonte_tk}" ]] || morra "${RC_PATCH}" "o Cargo.lock não tem o cosmic-client-toolkit: a receita não vale para esta versão do portal"
