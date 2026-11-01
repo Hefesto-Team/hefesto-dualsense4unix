@@ -235,6 +235,9 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "tests/unit/test_o_laco_nao_grava_perfil_nem_espera_o_systemctl.py::_FORA_DO_LACO": (
+        "o vocabulário das chamadas que tiram o trabalho do laço (to_thread, run_in_executor, "
+        "Thread, submit): é o contrato que a régua cobra, não caso isento"),
     "tests/unit/test_a_saida_agendada_destroi_a_janela.py::PODEM_ENCERRAR_O_LACO": (
         "os dois donos da saída da interface (o `fechar` e o `_ao_destruir` que ele dispara): é o "
         "contrato que a régua cobra, não um caso isento"),
