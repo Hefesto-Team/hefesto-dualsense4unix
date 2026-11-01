@@ -750,6 +750,34 @@ def test_o_doctor_le_o_programa_que_o_systemd_executa(tmp_path: Path) -> None:
     assert f"[ OK ] o portal de captura ({copia})" in saida, saida
 
 
+def test_o_doctor_le_o_programa_em_execucao_mesmo_trocado_no_disco(tmp_path: Path) -> None:
+    """MORDIDA: ler o caminho do disco, e não o /proc/PID/exe, perde o programa que o apt trocou."""
+    sleep = shutil.which("sleep")
+    assert sleep is not None
+    copia = tmp_path / "xdg-desktop-portal-cosmic"
+    copia.write_bytes(Path(sleep).read_bytes() + b"\0/obra/" + MARCA.encode() + b"\0")
+    copia.chmod(0o755)
+    processo = subprocess.Popen([str(copia), "30"])
+    try:
+        copia.unlink()
+        saida = _doctor(tmp_path, pid_vivo=processo.pid)
+    finally:
+        processo.kill()
+        processo.wait(timeout=10)
+    assert f"[ OK ] o portal de captura ({copia} (deleted))" in saida, saida
+
+
+def test_o_programa_de_outro_projeto_sem_a_marca_e_nao_sei_e_nao_reprovado(
+    tmp_path: Path,
+) -> None:
+    """MORDIDA: sem a guarda do drop-in, o doctor afirma que o programa de outro projeto cai."""
+    texto = "[Service]\nExecStart=\nExecStart=/opt/outro/xdg-desktop-portal-cosmic\n"
+    saida = _doctor(tmp_path, programa=b"\x7fELF outro build", dropins={"outro.conf": texto})
+    assert "o doctor não sabe se ele traz o cosmic-protocols#92" in saida, saida
+    assert "não traz o cosmic-protocols#92" not in saida, saida
+    assert "WARNS=1" in saida, saida
+
+
 def test_a_receita_diz_o_construtor_a_volta_e_o_drop_in() -> None:
     texto = RECEITA.read_text(encoding="utf-8")
     for trecho in (

@@ -6270,14 +6270,14 @@ _portal_cosmic_trocas_do_exec() {
 _portal_cosmic_em_execucao() {
     local unidade="$1" pid
     pid="$(systemctl --user show -p MainPID --value "${unidade}" 2>/dev/null || true)"
-    [[ -n "${pid}" && "${pid}" != 0 ]] || return 1
-    readlink -f "/proc/${pid}/exe" 2>/dev/null
+    [[ -n "${pid}" && "${pid}" != 0 && -r "/proc/${pid}/exe" ]] || return 1
+    printf '%s\n' "/proc/${pid}/exe"
 }
 
 check_o_portal_de_captura_do_cosmic() {
     local baseline="${HEFESTO_DOCTOR_PORTAL_BASELINE:-${ROOT_DIR}/assets/portal-cosmic-backport/BASELINE}"
     local curadas="${HEFESTO_DOCTOR_PORTAL_CURADAS:-${HOME}/.cache/hefesto-dualsense4unix/portal-cosmic-backport/A-ORIGEM-JA-CURA.txt}"
-    local pacote unidade oficial pr sufixo marca ver de_cima vivo arq valor
+    local pacote unidade oficial pr sufixo marca ver de_cima programa vivo arq valor troca=0
     [[ -r "${baseline}" ]] || return 0
     command -v dpkg-query >/dev/null 2>&1 || return 0
     pacote="$(_portal_cosmic_ler PORTAL_PACOTE "${baseline}")"
@@ -6295,15 +6295,18 @@ check_o_portal_de_captura_do_cosmic() {
     hdr "o portal de captura do COSMIC (compartilhar a tela)"
     while IFS=$'\t' read -r arq valor; do
         [[ -n "${arq}" ]] || continue
+        troca=1
         warn "${arq} troca o ExecStart do portal de captura por ${valor} — o arquivo é de outro projeto, e o doctor não o apaga; com ele, o portal que roda é o que ele aponta, não o do pacote (para valer o do pacote, tire a troca à mão e rode: systemctl --user daemon-reload)"
     done < <(_portal_cosmic_trocas_do_exec "${unidade}" "${oficial}")
-    vivo="${HEFESTO_DOCTOR_PORTAL_COSMIC:-$(_portal_cosmic_em_execucao "${unidade}" || true)}"
-    [[ -n "${vivo}" ]] || vivo="${oficial}"
+    programa="${HEFESTO_DOCTOR_PORTAL_COSMIC:-$(_portal_cosmic_em_execucao "${unidade}" || true)}"
+    [[ -n "${programa}" ]] || programa="${oficial}"
+    vivo="$(readlink -f "${programa}" 2>/dev/null || true)"
+    [[ -n "${vivo}" ]] || vivo="${programa}"
     if [[ -z "${marca}" ]]; then
         info "não sei conferir o portal de captura: ${baseline} não traz a linha MARCA_"
         return 0
     fi
-    if [[ ! -r "${vivo}" ]]; then
+    if [[ ! -r "${programa}" ]]; then
         info "não consigo ler o portal de captura em ${vivo} — pulo a conferência do cosmic-protocols#${pr}"
         return 0
     fi
@@ -6311,8 +6314,10 @@ check_o_portal_de_captura_do_cosmic() {
     if [[ "${ver}" == *~hefesto* ]]; then
         de_cima="${ver%"${sufixo%%~hefesto*}"~hefesto*}"
     fi
-    if grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null; then
+    if grep -a -q -F -- "${marca}" "${programa}" 2>/dev/null; then
         pass "o portal de captura (${vivo}) traz o cosmic-protocols#${pr}: o compartilhamento de tela não cai com «create_frame sent before the previous frame was destroyed»"
+    elif [[ "${troca}" -eq 1 && "${vivo% (deleted)}" != "$(readlink -f "${oficial}" 2>/dev/null || printf '%s' "${oficial}")" ]]; then
+        info "o portal de captura em execução é o ${vivo}, de outro projeto: o doctor não sabe se ele traz o cosmic-protocols#${pr}"
     elif [[ -r "${curadas}" ]] && grep -q -x -F -- "${de_cima}" "${curadas}" 2>/dev/null; then
         pass "o portal de captura ${ver} já traz de cima a cura do cosmic-protocols#${pr}"
     else
