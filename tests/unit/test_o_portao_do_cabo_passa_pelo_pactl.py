@@ -94,8 +94,10 @@ def test_a_falha_do_portao_deixa_rastro_em_info_uma_vez() -> None:
 
 
 def test_sem_o_fluxo_do_laco_a_falha_diz_o_motivo() -> None:
+    """A passada em que o laço acabou de subir espera o fluxo; a seguinte, sem ele, é falha."""
     cabo = HapticaDoCabo(_Lacos(), indice_do_fluxo=lambda _no: None, pactl=lambda _a: "")
     with structlog.testing.capture_logs() as diario:
+        cabo.casar({_MARCA: _ROTA}, {_MARCA: 1.0})
         cabo.casar({_MARCA: _ROTA}, {_MARCA: 1.0})
     motivos = [r["motivo"] for r in diario if r["event"] == "haptica_do_cabo_portao_falhou"]
     assert motivos == ["sem_fluxo_do_laco"]
