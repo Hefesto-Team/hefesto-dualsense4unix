@@ -581,3 +581,33 @@ def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
     assert pro.vpad is proprio and pro.player_index == numero
     assert mgr.o_de_fora_no_p1() is None
     assert pad.botoes == []
+
+
+def test_os_dualsenses_que_saem_juntos_passam_o_p1_ao_de_fora(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O backend que descreve a mesa a diz sem DualSense: o P2 sentado sai, e o Pro
+    dirige o pad do P1, sem esperar o MAC de um posto que não volta."""
+    dualsenses = {P1: "/dev/input/event20", P2: "/dev/input/event22"}
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+        lambda: dict(dualsenses),
+    )
+    pad = _PadDoP1()
+    daemon = _daemon(_Broker())
+    daemon._gamepad_device = pad
+    daemon.controller.is_connected = lambda: bool(dualsenses)
+    daemon.controller.describe_controllers = lambda: [{"connected": bool(dualsenses)}]
+    mgr = CoopManager(daemon)
+    daemon._coop_manager = mgr
+    mgr.sync()
+    mgr.sync(force=True)
+    assert P2 in mgr._players and not mgr._players[P2].externo
+
+    dualsenses.clear()
+    daemon.controller.primary_uniq = None
+    mgr.sync(force=True)
+
+    assert P2 not in mgr._players
+    assert mgr.o_de_fora_no_p1() is mgr._players[PRO]
+    assert mgr._players[PRO].vpad is pad
