@@ -21,27 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 01-jogar.html
-- **01/11/2026** — O-MODO-QUE-A-EXTENSAO-PEDE-FICA-AO-LADO-DO-AUTOMATICO-01: a vaga do modo da extensão ao lado do
-  Modo automático na seção dos controles; vazia sem extensão ligada. Até publicar, a página de hoje não tem a
-  vaga: o botão da extensão não aparece e o Modo automático segue sozinho.
-
-## 03-gatilhos.html
-- **01/11/2026** — O-MODO-QUE-A-EXTENSAO-PEDE-FICA-AO-LADO-DO-AUTOMATICO-01: a vaga do modo da extensão ao lado do
-  Modo automático; vazia sem extensão ligada. Até publicar, a página de hoje não tem a vaga: o botão da
-  extensão não aparece e o Modo automático segue sozinho.
-
-## 04-iluminacao.html
-- **01/11/2026** — O-MODO-QUE-A-EXTENSAO-PEDE-FICA-AO-LADO-DO-AUTOMATICO-01: a vaga do modo da extensão ao lado do
-  Modo automático; vazia sem extensão ligada. Até publicar, a página de hoje não tem a vaga: o botão da
-  extensão não aparece e o Modo automático segue sozinho.
-
-## 05-vibracao.html
-- **01/11/2026** — O-MODO-QUE-A-EXTENSAO-PEDE-FICA-AO-LADO-DO-AUTOMATICO-01: a vaga do modo da extensão ao lado do
-  Modo automático; vazia sem extensão ligada. Até publicar, a página de hoje não tem a vaga: o botão da
-  extensão não aparece e o Modo automático segue sozinho.
-
-## 10-perfis.html
-- **01/11/2026** — O-MODO-QUE-A-EXTENSAO-PEDE-FICA-AO-LADO-DO-AUTOMATICO-01: o par do modo do perfil inteiro no
-  editor (Modo automático e a vaga da extensão). Até publicar, o editor de hoje não tem o par e o pacote deixa
-  `editor.modos-*` em `ESPERANDO_A_PUBLICACAO`; no `--publicar`, os dois saem dali.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->

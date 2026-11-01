@@ -286,8 +286,7 @@ SEM_ENDERECO = {
     "travado": "a trava da troca automática não é desenhada nesta aba",
 }
 
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {"editor.modos-automatico": "o par do modo, no mockup",
-                                           "editor.modos-ext": "a vaga da extensão, no mockup"}
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
 
 
 FIM_DA_EXIGENCIA_NA_GTK = "Ligue o Modo avançado para ver e mudar."
