@@ -611,3 +611,31 @@ def test_os_dualsenses_que_saem_juntos_passam_o_p1_ao_de_fora(
     assert P2 not in mgr._players
     assert mgr.o_de_fora_no_p1() is mgr._players[PRO]
     assert mgr._players[PRO].vpad is pad
+
+
+def test_o_posto_sem_mac_com_o_dualsense_que_o_backend_ve_espera_sem_varrer(
+    mesa: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O backend que descreve a mesa vê o DualSense: o posto sem MAC espera, e o tique não
+    varre o ``/dev/input`` enquanto o P1 nasce."""
+    daemon = _daemon(_Broker())
+    daemon.controller.is_connected = lambda: True
+    daemon.controller.describe_controllers = lambda: [{"connected": True}]
+    mgr = CoopManager(daemon)
+    daemon._coop_manager = mgr
+    mgr.sync()
+    mgr.sync(force=True)
+    assert P2 in mgr._players
+    varreduras: list[int] = []
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
+        lambda: varreduras.append(1) or {P2: "/dev/input/event22"},
+    )
+
+    daemon.controller.primary_uniq = None
+    mgr._retry_spawn = False
+    mgr.sync(force=True)
+
+    assert varreduras == []
+    assert mgr._retry_spawn
+    assert P2 in mgr._players

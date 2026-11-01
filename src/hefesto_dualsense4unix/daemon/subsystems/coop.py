@@ -3439,7 +3439,7 @@ def o_p1_e_do_de_fora(daemon: Any) -> bool:
 def _a_mesa_tem_dualsense(manager: CoopManager) -> bool:
     """Há DualSense na mesa, pelo backend que já sabe, sem varrer `/dev/input` no tique.
 
-    O backend que não descreve a mesa (dublê, legado) cede a quem o co-op sentou.
+    O backend que não descreve a mesa cede a quem o co-op sentou.
     """
     if manager._algum_dualsense_conectado():
         return True
