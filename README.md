@@ -81,7 +81,7 @@ Uma extensão acrescenta o que nem todo mundo usa. Cada uma mora no seu reposit�
 | [hefesto-mod-mgba](https://github.com/Hefesto-Team/hefesto-mod-mgba) | o mGBA (Game Boy e Game Boy Advance) |
 | [hefesto-mod-azahar](https://github.com/Hefesto-Team/hefesto-mod-azahar) | o Azahar (Nintendo 3DS) |
 | [hefesto-mod-kytyps5](https://github.com/Hefesto-Team/hefesto-mod-kytyps5) | o KytyPS5 (PlayStation 5) |
-| [hefesto-mod-intiface](https://github.com/Hefesto-Team/hefesto-mod-intiface) | o DualSense como aparelho do protocolo Buttplug (conteúdo para maiores de 18 anos) |
+| [hefesto-mod-lovense](https://github.com/Hefesto-Team/hefesto-mod-lovense) | o DualSense como aparelho do protocolo Buttplug (conteúdo para maiores de 18 anos) |
 
 Nenhuma é afiliada às donas das marcas. Emulador é para o jogo que você comprou e copiou do seu próprio console: não baixe jogo pirata.
 

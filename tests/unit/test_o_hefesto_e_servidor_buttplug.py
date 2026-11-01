@@ -1,7 +1,7 @@
 """O Hefesto servidor Buttplug do DualSense: o servidor mora na extensão, o Hefesto dá a porta.
 
 O servidor (o protocolo Buttplug, o WebSocket, a força e o teto de cada controle) é a extensão
-``intiface``, em repositório próprio (``Hefesto-Team/hefesto-mod-intiface``), com a régua do cliente
+``intiface``, em repositório próprio (``Hefesto-Team/hefesto-mod-lovense``), com a régua do cliente
 Buttplug de mentira e a mordida da escrita direta no hidraw. No Hefesto ficam a porta e a janela
 genérica que o manifesto da extensão desenha. Esta régua prova o lado do Hefesto: nenhum código do
 protocolo no produto (nem no ``plugin_api``), e a porta entrega o que o servidor usa, a lista dos

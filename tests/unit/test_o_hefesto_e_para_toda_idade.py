@@ -1,7 +1,7 @@
 """O Hefesto é para toda idade: o adulto mora na extensão, em repositório próprio.
 
 Os acessórios Lovense, o servidor Buttplug e o reconhecimento do kit que o jogo traz saíram do
-produto em 19/10/2026 para a extensão ``intiface`` (``Hefesto-Team/hefesto-mod-intiface``); a do
+produto em 19/10/2026 para a extensão ``intiface`` (``Hefesto-Team/hefesto-mod-lovense``); a do
 KytyPS5 é a ``kytyps5``. No Hefesto ficam a porta neutra (a vibração de cada controle, o pedido
 para vibrar um, o ``jogo.acessorio`` de uma extensão a outra) e a janela genérica que desenha o
 manifesto de qualquer extensão. A marca «Adulto» dos perfis segue na aba Perfis: é o estilo do

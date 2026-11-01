@@ -213,7 +213,7 @@ Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os c
 uma vez, com o `jogador` que ele acende (ou `null`). Sem a lista do serviço, vale o controle do posto; a lista
 que falha volta vazia. O método entrou na versão 2 da porta sem mudar a faixa: quem pede `>=2,<3` e não o usa
 não muda nada. O servidor Buttplug do próprio DualSense mora na extensão `intiface`
-(`https://github.com/Hefesto-Team/hefesto-mod-intiface`), que usa este método e o `vibracao.set`.
+(`https://github.com/Hefesto-Team/hefesto-mod-lovense`), que usa este método e o `vibracao.set`.
 
 ## A extensão de lançador
 
