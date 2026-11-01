@@ -426,8 +426,9 @@ class TestOP1GuardadoNaoSeTomaNaVolta:
         mgr._teardown_player(PRO)
         mgr.sync(force=True)
         pro = mgr._players[PRO]
-        if pro.vpad is not None and pro.vpad is not pad:
-            pro.vpad.flavor = mascara
+        recriado: Any = pro.vpad
+        if recriado is not None and recriado is not pad:
+            recriado.flavor = mascara
         for _ in range(2):
             mgr.sync(force=True)
         assert not pro.no_p1 and pro.vpad is not None and pro.vpad is not pad, (
@@ -463,6 +464,7 @@ class TestOAvisoDoHotplugNaoDesmontaNinguem:
         mgr.ceder_ao_primario(None, P1)
         assert mgr._players.get(PRO) is pro, "o aviso de troca desmontou o jogador fora do laço"
 
-        mgr._daemon.controller.primary_uniq = P1
+        daemon: Any = mgr._daemon
+        daemon.controller.primary_uniq = P1
         mgr.sync(force=True)
         assert mgr.o_de_fora_no_p1() is None
