@@ -1,0 +1,3 @@
+Package: src:xdg-desktop-portal-cosmic
+Pin: release o=pop-os-release
+Pin-Priority: 500
