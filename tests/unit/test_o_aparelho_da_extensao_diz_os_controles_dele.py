@@ -400,6 +400,17 @@ for chave, (largura, altura, passos) in CASOS.items():
         if tipo == "espera":
             esperar({}, corpo)
             continue
+        if tipo == "ate":
+            condicao, prazo = corpo
+            fim = GLib.get_monotonic_time() + int(prazo * 1_000_000)
+            while GLib.get_monotonic_time() < fim:
+                caixa = {}
+                ponte.perguntar(condicao, lambda v, e: caixa.update(v=v))
+                esperar(caixa, 8)
+                if caixa.get("v") == "ok":
+                    break
+                esperar({}, 0.05)
+            continue
         caixa = {}
         ponte.perguntar(corpo, lambda v, e: caixa.update(v=v, e=repr(e) if e else ""))
         esperar(caixa, 8)

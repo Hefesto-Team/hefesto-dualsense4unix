@@ -48,14 +48,21 @@ from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito i
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 SEM_APARELHOS = {**VIVO, "aparelhos": []}
+PRAZO_DA_JANELA_S = 30.0
+A_JANELA_EXISTE = ("document.readyState === 'complete' && document.getElementById('mod-janela')"
+                   " ? 'ok' : ''")
 
 
 def no_webkit(pagina: pathlib.Path, casos: dict[str, tuple[int, int, list[list[Any]]]]
               ) -> dict[str, list[Any]]:
     """Os passos de cada caso no desenho, num WebKit de verdade na tela de mentira; sem WebKit,
-    o teste é pulado (e pulo não é verde: a suíte roda isto em ``xvfb-run``)."""
+    o teste é pulado (e pulo não é verde: a suíte roda isto em ``xvfb-run``). Cada caso começa
+    quando a página carregou e tem a janela (``A_JANELA_EXISTE``), no prazo, e não num tempo
+    fixo: sob carga, a página demora mais que a espera da sonda."""
     from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import SONDA
 
+    casos = {caso: (w, h, [["ate", [A_JANELA_EXISTE, PRAZO_DA_JANELA_S]], *passos])
+             for caso, (w, h, passos) in casos.items()}
     filho = subprocess.run([sys.executable, "-c", SONDA, str(pagina)], input=json.dumps(casos),
                            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
                            capture_output=True, text=True, timeout=600)
@@ -72,6 +79,7 @@ def montada(janela: Any, estado: dict[str, Any]) -> str:  # noqa: F811
 
 
 _ABRIR = """(function(endereco, h){
+  if (!document.getElementById('mod-janela')) return 'a página não tem a janela #mod-janela';
   location.hash = endereco;
   window.__hef.pintar({blocos: {'#mod-janela': h}});
   const j = document.getElementById('mod-janela');
