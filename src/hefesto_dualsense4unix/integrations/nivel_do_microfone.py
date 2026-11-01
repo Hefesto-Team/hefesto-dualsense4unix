@@ -221,6 +221,7 @@ class _Canal:
     hist: Histerese
     resto: bytearray = field(default_factory=bytearray)
     ultimo_dado: float = 0.0
+    pico: float = 0.0
 
 
 class NivelDoMicrofone:
@@ -275,6 +276,19 @@ class NivelDoMicrofone:
             if uniq not in self._desejado:
                 return None
             return self._resposta(uniq, agora)
+
+    def picos(self) -> dict[str, float | None]:
+        """``{uniq: pico de 0 a 1 desde a última pergunta}``; ``None`` para quem não abriu."""
+        with self._lock:
+            saida: dict[str, float | None] = {}
+            for uniq in self._desejado:
+                canal = self._canais.get(uniq)
+                if canal is None:
+                    saida[uniq] = None
+                    continue
+                saida[uniq] = round(canal.pico, 3)
+                canal.pico = 0.0
+            return saida
 
     def parar(self) -> None:
         """Fecha tudo. Idempotente, e não levanta."""
@@ -425,8 +439,35 @@ class NivelDoMicrofone:
             for i in range(inteiras):
                 pico = struct.unpack_from("<f", canal.resto, i * _TAM_AMOSTRA)[0]
                 canal.hist.aplicar(pico, inicio + passo * (i + 1))
+                if math.isfinite(pico):
+                    canal.pico = max(canal.pico, min(1.0, abs(pico)))
             del canal.resto[: inteiras * _TAM_AMOSTRA]
             canal.ultimo_dado = agora
+
+
+def fontes_que_o_jogo_le(
+    saida_source_outputs: str, nomes_por_indice: Mapping[int, str], pids_do_jogo: set[int]
+) -> frozenset[str]:
+    """As fontes que um processo do jogo captura agora, pelo PID de cada saída de captura."""
+    from hefesto_dualsense4unix.integrations.quem_ouve_o_microfone import streams_de_captura
+
+    return frozenset(
+        nomes_por_indice[stream.fonte]
+        for stream in streams_de_captura(saida_source_outputs)
+        if not stream.corked and stream.pid in pids_do_jogo and stream.fonte in nomes_por_indice
+    )
+
+
+def o_jogo_le(fontes: Mapping[str, str]) -> dict[str, bool | None]:
+    """``{uniq: o jogo em cena captura a fonte dele}``; ``None`` quando não se sabe. BLOQUEIA."""
+    if not fontes:
+        return {}
+    from hefesto_dualsense4unix.integrations.transiente_do_jogo import fontes_capturadas_pelo_jogo
+
+    lidas = fontes_capturadas_pelo_jogo()
+    if lidas is None:
+        return dict.fromkeys(fontes, None)
+    return {uniq: fonte in lidas for uniq, fonte in fontes.items()}
 
 
 __all__ = [
@@ -449,5 +490,7 @@ __all__ = [
     "NivelDoMicrofone",
     "abrir_fluxo",
     "argv_do_medidor",
+    "fontes_que_o_jogo_le",
+    "o_jogo_le",
     "propriedades_do_medidor",
 ]

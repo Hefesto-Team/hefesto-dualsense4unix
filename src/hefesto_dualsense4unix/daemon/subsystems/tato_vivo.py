@@ -19,7 +19,7 @@ from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
 from typing import TYPE_CHECKING, Any, Protocol
 
-from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.core.events import EventTopic, tem_assinante
 from hefesto_dualsense4unix.core.physical_report_reader import TRIGGER_ESTADO_DISPAROU
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.lifecycle import (
@@ -2885,6 +2885,29 @@ class Passo:
         self.fonte_do_som = FonteDoSom()
         self._corpo_discreto: frozenset[str] = frozenset()
 
+    def som_assinado(self) -> bool:
+        """Uma extensão assina o som do jogo pela porta."""
+        return tem_assinante(getattr(self.daemon, "bus", None), EventTopic.JOGO_SOM)
+
+    def _o_tato_quer_o_som(self) -> bool:
+        return self.motor.ligado and pede_o_ouvido(self.receita_vigente)
+
+    def _som_so_da_porta(self) -> bool:
+        return not self._o_tato_quer_o_som() and self.som_assinado()
+
+    def ouvido_quer(self) -> bool:
+        """O ouvido grava com jogo em cena quando o tato vivo pede o som ou a porta o assina."""
+        return (self._o_tato_quer_o_som() or self.som_assinado()) and self.jogo
+
+    def _som_para_a_porta(self) -> None:
+        if not self.som_assinado():
+            return
+        self.jogo = ha_jogo(self.daemon)
+        ouvido = self.motor.ouvido
+        if ouvido is not None:
+            ouvido.comecar()
+            ouvido.tirar()
+
     def receita_de_agora(self, agora: float) -> Receita:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
             self._lida_em = agora
@@ -2903,6 +2926,8 @@ class Passo:
     def alimentar_o_corpo(self, pcm: bytes) -> None:
         """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o quer, e a energia
         do som vai à intensidade da cena."""
+        if self._som_so_da_porta():
+            return
         self.motor.cena.ouvir_o_som(pcm)
         if self.receita_vigente.som_no_corpo_escolhido or self._corpo_discreto:
             self._corpo.append(self._filtro_do_corpo.processar(pcm))
@@ -3072,6 +3097,7 @@ class Passo:
             self._aberta_em.clear()
             self.motor.acordados_pelo_som = self._corpo_discreto = frozenset()
             self.motor.cena.esquecer()
+            self._som_para_a_porta()
             return 0
         self.motor.ligado = True
         controles = controles_do_daemon(self.daemon)
@@ -3094,7 +3120,9 @@ class Passo:
         self._acordar_a_fonte_do_som(receita, controles, jogo, por_uniq.get, agora)
         escritas = self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
         self.motor.cena.andar(
-            agora, jogo=jogo, ouvido=bool(getattr(self.motor.ouvido, "ouvindo", False)),
+            agora, jogo=jogo,
+            ouvido=bool(getattr(self.motor.ouvido, "ouvindo", False))
+            and not self._som_so_da_porta(),
             uniqs=tuple(por_uniq))
         self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
         self._agora_da_continua = agora
@@ -3137,10 +3165,13 @@ class Passo:
         ouvido = self.motor.ouvido
         if ouvido is None:
             return
-        if pede_o_ouvido(receita):
+        if pede_o_ouvido(receita) or self.som_assinado():
             ouvido.comecar()
         batida = receita.reacao_ao_tiro == REACAO_BATIDA
-        for estalo in ouvido.tirar():
+        estalos = ouvido.tirar()
+        if not pede_o_ouvido(receita) and self.som_assinado():
+            return
+        for estalo in estalos:
             for uniq in destinos_do_som(controles, self.dedo, estalo.instante):
                 self.motor.anotar(
                     Evento(estalo.instante, uniq, TIPO_SOM, estalo.lado, estalo.energia,
@@ -3157,10 +3188,15 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
     if motor.ouvido is None:
         from hefesto_dualsense4unix.integrations.transiente_do_jogo import OuvidoDoJogo
 
+        barramento_do_som = getattr(daemon, "bus", None)
         motor.ouvido = OuvidoDoJogo(
-            lambda: motor.ligado and pede_o_ouvido(passo.receita_vigente) and passo.jogo,
+            passo.ouvido_quer,
             recortar=lambda: passo.receita_vigente.som_no_controle,
             ao_pcm=passo.alimentar_o_corpo,
+            publicar=(
+                None if barramento_do_som is None
+                else lambda carga: barramento_do_som.publish(EventTopic.JOGO_SOM, carga)),
+            assinado=passo.som_assinado,
         )
     volta = motor.volta
     barramento = getattr(daemon, "bus", None) if volta is not None else None

@@ -149,9 +149,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import importlib
+import time
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.backend_pydualsense import microfone_chega_sem_ponte
+from hefesto_dualsense4unix.core.events import EventTopic, tem_assinante
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -289,6 +291,7 @@ def _a_medir(
     ouvintes_por_uniq: dict[str, Any] | None,
     transportes: dict[str, str],
     mudos: dict[str, bool | None],
+    assinado: bool = False,
 ) -> list[str]:
     """Os `uniq` que a PEÇA B mede: todo microfone ligado no cabo, e no rádio só quem tem ouvinte.
 
@@ -305,7 +308,7 @@ def _a_medir(
     for uniq in mesa:
         if mudos.get(uniq) is not False:
             continue
-        if uniq in com_ouvinte or microfone_chega_sem_ponte(transportes.get(uniq)):
+        if assinado or uniq in com_ouvinte or microfone_chega_sem_ponte(transportes.get(uniq)):
             escolhidos.append(uniq)
     return escolhidos
 
@@ -561,6 +564,48 @@ def _captando(medidor: Any) -> dict[str, Any] | None:
     return valor if isinstance(valor, dict) else None
 
 
+def _picos(medidor: Any) -> dict[str, Any]:
+    ler = getattr(medidor, "picos", None)
+    if not callable(ler):
+        return {}
+    try:
+        valor = ler()
+    except Exception as exc:
+        logger.warning("luz_do_mic_picos_falharam", err=str(exc))
+        return {}
+    return valor if isinstance(valor, dict) else {}
+
+
+def _o_jogo_le(mesa: list[str]) -> dict[str, bool | None]:
+    """``{uniq: o jogo captura o microfone dele}``. BLOQUEIA: só por `_fora_do_laco`."""
+    from hefesto_dualsense4unix.integrations.nivel_do_microfone import o_jogo_le
+
+    try:
+        return o_jogo_le(_fontes_para(mesa, mesa))
+    except Exception as exc:
+        logger.warning("luz_do_mic_o_jogo_le_falhou", err=str(exc))
+        return {}
+
+
+def niveis_do_microfone(
+    mesa: list[str],
+    picos: dict[str, Any],
+    mudos: dict[str, bool | None],
+    do_jogo: dict[str, bool | None],
+    t: float,
+) -> list[dict[str, Any]]:
+    """Um `microfone.nivel` por controle da mesa: o pico, o mudo e se o jogo o escuta."""
+    cargas = []
+    for uniq in mesa:
+        mudo = mudos.get(uniq)
+        pico = picos.get(uniq)
+        nivel = 0.0 if mudo or not isinstance(pico, (int, float)) else float(pico)
+        cargas.append({
+            "uniq": uniq, "nivel": nivel, "mudo": mudo, "do_jogo": do_jogo.get(uniq), "t": t,
+        })
+    return cargas
+
+
 def _parar_medidor(medidor: Any) -> None:
     """Mata os `parec` e a thread do medidor. **Não é opcional.**"""
     if medidor is None:
@@ -647,6 +692,8 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
     perguntei_em = float("-inf")
     medidor: Any = None
     seguidos: list[str] | None = None
+    o_jogo_ouve: dict[str, bool | None] = {}
+    jogo_lido_em = float("-inf")
 
     fila: Any = None
     fila_do_jogo: Any = None
@@ -705,7 +752,9 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 marca_vista = marca
                 seguidos = None
             mudos = {uniq: _mudo(backend, uniq) for uniq in mesa}
-            a_medir = _a_medir(mesa, ouvintes_por_uniq, _transportes(backend), mudos)
+            assinado = tem_assinante(getattr(daemon, "bus", None), EventTopic.MICROFONE_NIVEL)
+            a_medir = _a_medir(
+                mesa, ouvintes_por_uniq, _transportes(backend), mudos, assinado)
             if a_medir != seguidos:
                 seguidos = a_medir
                 if a_medir and medidor is None:
@@ -717,6 +766,15 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     )
             captando_por_uniq = _captando(medidor)
             baterias = _baterias(backend)
+            if assinado:
+                if (agora - jogo_lido_em) >= INTERVALO_DE_QUEM_OUVE_S:
+                    o_jogo_ouve = await _fora_do_laco(daemon, _o_jogo_le, mesa) or {}
+                    jogo_lido_em = agora
+                for carga in niveis_do_microfone(
+                        mesa, _picos(medidor), mudos, o_jogo_ouve, time.monotonic()):
+                    daemon.bus.publish(EventTopic.MICROFONE_NIVEL, carga)
+            else:
+                o_jogo_ouve, jogo_lido_em = {}, float("-inf")
 
             for uniq in mesa:
                 ouvintes = None

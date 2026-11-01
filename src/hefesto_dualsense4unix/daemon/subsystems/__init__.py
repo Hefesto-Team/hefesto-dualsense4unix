@@ -104,6 +104,14 @@ def _tato_vivo(daemon: Any) -> Any:
     return start_tato_vivo(daemon)
 
 
+def _identidade_do_jogo(daemon: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.subsystems.identidade_do_jogo import (
+        start_identidade_do_jogo,
+    )
+
+    return start_identidade_do_jogo(daemon)
+
+
 def _eventos_do_perfil(daemon: Any) -> Any:
     from hefesto_dualsense4unix.daemon.subsystems.eventos_do_perfil import (
         start_eventos_do_perfil,
@@ -367,6 +375,7 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
     ),
     Passo("luz_do_mic", partida=_luz_do_mic),
     Passo("tato_vivo", partida=_tato_vivo),
+    Passo("identidade_do_jogo", partida=_identidade_do_jogo),
     Passo("luz_animada", partida=_luz_animada),
     Passo("telemetria_do_jogo", partida=_telemetria_do_jogo),
     Passo("ouvinte_do_som", partida=_ouvinte_do_som),

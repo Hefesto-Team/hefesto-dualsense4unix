@@ -42,6 +42,9 @@ class EventTopic:
     JOGO_ACESSORIO = "jogo.acessorio"
     ACESSORIOS_GESTO = "acessorios.gesto"
     ACESSORIOS_ESTADO = "acessorios.estado"
+    JOGO_SOM = "jogo.som"
+    MICROFONE_NIVEL = "microfone.nivel"
+    JOGO_IDENTIDADE = "jogo.identidade"
 
 
 TOPICOS_RESERVADOS: frozenset[str] = frozenset({
@@ -52,7 +55,7 @@ TOPICOS_RESERVADOS: frozenset[str] = frozenset({
 
 
 TOPICOS_DE_ESTADO: frozenset[str] = frozenset(
-    {EventTopic.PERFIL_TROCOU, EventTopic.ACESSORIOS_ESTADO}
+    {EventTopic.PERFIL_TROCOU, EventTopic.ACESSORIOS_ESTADO, EventTopic.JOGO_IDENTIDADE}
 )
 
 
@@ -154,4 +157,18 @@ class EventBus:
         return self._estado.get(topic)
 
 
-__all__ = ["DEFAULT_QUEUE_MAXSIZE", "TOPICOS_DE_ESTADO", "EventBus", "EventTopic"]
+def tem_assinante(bus: Any, topico: str) -> bool:
+    """Alguém assina ``topico`` agora; sem barramento, ninguém."""
+    contar = getattr(bus, "subscriber_count", None)
+    if not callable(contar):
+        return False
+    try:
+        quantos = contar(topico)
+    except Exception:
+        return False
+    return isinstance(quantos, int) and quantos > 0
+
+
+__all__ = [
+    "DEFAULT_QUEUE_MAXSIZE", "TOPICOS_DE_ESTADO", "EventBus", "EventTopic", "tem_assinante",
+]

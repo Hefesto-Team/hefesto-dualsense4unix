@@ -29,8 +29,10 @@ jogo não é sink. Os programas e o formato são os mesmos (``pw-record`` ou
 """
 from __future__ import annotations
 
+import cmath
 import contextlib
 import fcntl
+import functools
 import math
 import operator
 import os
@@ -107,6 +109,107 @@ def lado_da_razao(esquerda: float, direita: float) -> str:
     return LADO_CENTRO
 
 
+def razao_do_lado(esquerda: float, direita: float) -> float:
+    """O lado em número, de -1 (todo à esquerda) a 1 (todo à direita)."""
+    total = esquerda + direita
+    if total <= 0.0:
+        return 0.0
+    return max(-1.0, min(1.0, (direita - esquerda) / total))
+
+
+BANDAS = 24
+PONTOS_DA_IMPRESSAO = 1024
+GRAVE_HZ = 40.0
+AGUDO_HZ = 16_000.0
+PISO_DB = -120.0
+
+
+def _mel(hz: float) -> float:
+    return 2595.0 * math.log10(1.0 + hz / 700.0)
+
+
+def _hz(mel: float) -> float:
+    return 700.0 * (math.pow(10.0, mel / 2595.0) - 1.0)
+
+
+@functools.lru_cache(maxsize=4)
+def _giros(pontos: int) -> tuple[complex, ...]:
+    return tuple(cmath.exp(-2j * math.pi * k / pontos) for k in range(pontos // 2))
+
+
+@functools.lru_cache(maxsize=4)
+def _hann(pontos: int) -> tuple[float, ...]:
+    return tuple(0.5 - 0.5 * math.cos(2.0 * math.pi * k / (pontos - 1)) for k in range(pontos))
+
+
+@functools.lru_cache(maxsize=4)
+def _filtros(pontos: int, bandas: int, taxa: int) -> tuple[tuple[tuple[int, float], ...], ...]:
+    limites = [
+        _hz(_mel(GRAVE_HZ) + (_mel(AGUDO_HZ) - _mel(GRAVE_HZ)) * i / (bandas + 1))
+        for i in range(bandas + 2)
+    ]
+    passo = taxa / pontos
+    filtros = []
+    for b in range(bandas):
+        baixo, meio, alto = limites[b], limites[b + 1], limites[b + 2]
+        pesos = []
+        for k in range(int(baixo / passo), min(pontos // 2, int(alto / passo) + 1) + 1):
+            f = k * passo
+            if baixo < f <= meio:
+                pesos.append((k, (f - baixo) / (meio - baixo)))
+            elif meio < f < alto:
+                pesos.append((k, (alto - f) / (alto - meio)))
+        if not pesos:
+            perto = min(pontos // 2, round(meio / passo))
+            pesos.append((perto, 1.0))
+        filtros.append(tuple(pesos))
+    return tuple(filtros)
+
+
+def _fft(valores: Sequence[float]) -> list[complex]:
+    pontos = len(valores)
+    a = [complex(v) for v in valores]
+    j = 0
+    for i in range(1, pontos):
+        bit = pontos >> 1
+        while j & bit:
+            j ^= bit
+            bit >>= 1
+        j |= bit
+        if i < j:
+            a[i], a[j] = a[j], a[i]
+    giros = _giros(pontos)
+    tamanho = 2
+    while tamanho <= pontos:
+        meio = tamanho // 2
+        salto = pontos // tamanho
+        for inicio in range(0, pontos, tamanho):
+            for k in range(meio):
+                u = a[inicio + k]
+                v = a[inicio + k + meio] * giros[k * salto]
+                a[inicio + k] = u + v
+                a[inicio + k + meio] = u - v
+        tamanho *= 2
+    return a
+
+
+def bandas_log_mel(
+    mono: Sequence[float], *, bandas: int = BANDAS, taxa: int = TAXA
+) -> list[float]:
+    """A impressão de um som: a energia em ``bandas`` faixas mel, em dB, dos graves aos agudos."""
+    pontos = PONTOS_DA_IMPRESSAO
+    trecho = list(mono[:pontos]) + [0.0] * max(0, pontos - len(mono))
+    janela = _hann(pontos)
+    espectro = _fft([v * w for v, w in zip(trecho, janela, strict=True)])
+    potencia = [abs(c) ** 2 for c in espectro[: pontos // 2 + 1]]
+    saida = []
+    for pesos in _filtros(pontos, bandas, taxa):
+        energia = sum(potencia[k] * peso for k, peso in pesos)
+        db = 10.0 * math.log10(energia) if energia > 0.0 else PISO_DB
+        saida.append(round(max(PISO_DB, db), 2))
+    return saida
+
+
 JANELAS_DO_MINIMO = round(RECORTE_MINIMO_S / JANELA_S)
 JANELAS_DO_MAXIMO = round(RECORTE_MAXIMO_S / JANELA_S)
 
@@ -179,6 +282,7 @@ class Transiente:
     lado: str
     energia: float
     recorte: Recorte | None = field(default=None, compare=False)
+    razao: float = field(default=0.0, compare=False)
 
 
 class DetectorDeTransiente:
@@ -192,7 +296,11 @@ class DetectorDeTransiente:
         desvios: float = DESVIOS,
         adapta: bool = True,
         recortar: bool = False,
+        imprimir: bool = False,
     ) -> None:
+        self.imprimir = imprimir
+        self._imprimindo: tuple[Transiente, list[float]] | None = None
+        self._impressos: list[tuple[Transiente, list[float]]] = []
         self.refratario_s = refratario_s
         self.salto = salto
         self.desvios = desvios
@@ -229,7 +337,25 @@ class DetectorDeTransiente:
                 achados.append(achado)
             if self.recortar:
                 self._recortar(achado, janela.tobytes(), max(esquerda, direita))
+            if self.imprimir:
+                self._imprimir(achado, janela)
         return achados
+
+    def _imprimir(self, achado: Transiente | None, janela: Sequence[int]) -> None:
+        if achado is not None:
+            self._imprimindo = (achado, [])
+        if self._imprimindo is None:
+            return
+        estalo, mono = self._imprimindo
+        mono.extend((janela[k] + janela[k + 1]) / (2.0 * ESCALA) for k in range(0, len(janela), 2))
+        if len(mono) >= PONTOS_DA_IMPRESSAO:
+            self._imprimindo = None
+            self._impressos.append((estalo, bandas_log_mel(mono)))
+
+    def tirar_os_impressos(self) -> list[tuple[Transiente, list[float]]]:
+        """Os estalos com a impressão pronta, cada um uma vez só."""
+        prontos, self._impressos = self._impressos, []
+        return prontos
 
     def _recortar(self, achado: Transiente | None, janela: bytes, nivel: float) -> None:
         """O estalo novo abre um recorte (fechando o anterior); os outros o completam."""
@@ -271,6 +397,7 @@ class DetectorDeTransiente:
                     instante, lado_da_razao(esquerda, direita),
                     min(1.0, nivel / ENERGIA_CHEIA),
                     Recorte(instante) if self.recortar else None,
+                    razao_do_lado(esquerda, direita),
                 )
         elif nivel <= REARMA_SALTO * media or nivel < PISO:
             self._armado = True
@@ -429,8 +556,12 @@ class OuvidoDoJogo:
         procura_s: float = PROCURA_S,
         recortar: Callable[[], bool] | None = None,
         ao_pcm: Callable[[bytes], object] | None = None,
+        publicar: Callable[[dict[str, Any]], object] | None = None,
+        assinado: Callable[[], bool] | None = None,
     ) -> None:
         self._querer = querer
+        self._publicar = publicar
+        self._assinado = assinado or (lambda: False)
         self._ao_pcm = ao_pcm
         self._recortar = recortar or (lambda: False)
         self._achar_o_fluxo = achar_o_fluxo or achar_o_fluxo_do_jogo
@@ -477,6 +608,7 @@ class OuvidoDoJogo:
             self._calar()
             return
         self.detector.recortar = bool(self._recortar())
+        self.detector.imprimir = self._imprimir()
         if self._proc is not None and not self._gravando():
             self._calar()
         if self._proc is None:
@@ -500,6 +632,9 @@ class OuvidoDoJogo:
                 return
             self._conferido = True
 
+    def _imprimir(self) -> bool:
+        return self._publicar is not None and bool(self._assinado())
+
     def _gravando(self) -> bool:
         poll = getattr(self._proc, "poll", None)
         return self._proc is not None and (not callable(poll) or poll() is None)
@@ -521,7 +656,8 @@ class OuvidoDoJogo:
         if saida is None:
             self._derrubar_o(proc, None)
             return
-        self.detector = DetectorDeTransiente(recortar=bool(self._recortar()))
+        self.detector = DetectorDeTransiente(
+            recortar=bool(self._recortar()), imprimir=self._imprimir())
         self._fluxo = fluxo
         self._conferido = False
         self._proc = proc
@@ -549,10 +685,21 @@ class OuvidoDoJogo:
                 except Exception:
                     logger.debug("tato_ouvido_ao_pcm_falhou", exc_info=True)
             achados = self.detector.ouvir(pedaco, agora)
+            self._publicar_os_estalos()
             if achados:
                 with self._trava:
                     self._fila.extend(achados)
                     self.contadores["transientes"] += len(achados)
+
+    def _publicar_os_estalos(self) -> None:
+        publicar = self._publicar
+        if publicar is None:
+            return
+        for estalo, bandas in self.detector.tirar_os_impressos():
+            try:
+                publicar(carga_do_estalo(estalo, bandas))
+            except Exception:
+                logger.debug("tato_ouvido_publicar_falhou", exc_info=True)
 
     def _derrubar_o(self, proc: Any, leitor: threading.Thread | None) -> None:
         derrubar = self._derrubar
@@ -595,6 +742,18 @@ class OuvidoDoJogo:
         return achados
 
 
+def carga_do_estalo(estalo: Transiente, bandas: Sequence[float]) -> dict[str, Any]:
+    """O que cruza a porta de um estalo: o derivado, nunca a amostra."""
+    return {
+        "t": estalo.instante,
+        "evento": "estalo",
+        "lado": round(estalo.razao, 3),
+        "energia": round(estalo.energia, 3),
+        "canais": CANAIS,
+        "bandas": list(bandas),
+    }
+
+
 def achar_o_fluxo_do_jogo() -> FluxoDoJogo | None:
     """O fluxo do jogo nesta máquina, perguntado ao servidor de som e ao ``/proc``."""
     from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
@@ -605,6 +764,23 @@ def achar_o_fluxo_do_jogo() -> FluxoDoJogo | None:
     if not fluxos:
         return None
     return fluxo_do_jogo(fluxos, pids_de_jogo())
+
+
+def fontes_capturadas_pelo_jogo() -> frozenset[str] | None:
+    """As fontes que o jogo em cena captura agora; ``None`` quando o servidor não responde."""
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
+    from hefesto_dualsense4unix.integrations.nivel_do_microfone import fontes_que_o_jogo_le
+    from hefesto_dualsense4unix.integrations.porta_do_som import ler_a_lista, ler_nos
+    from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
+
+    pids = pids_de_jogo()
+    if not pids:
+        return frozenset()
+    saida = ler_a_lista("source-outputs", rodar_pactl)
+    nos = ler_nos("sources", rodar_pactl)
+    if saida is None or nos is None:
+        return None
+    return fontes_que_o_jogo_le(saida, {no.indice: no.nome for no in nos}, pids)
 
 
 def montar_o_argv_do_ouvido(fluxo: FluxoDoJogo) -> list[str]:

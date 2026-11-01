@@ -157,6 +157,24 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `lado_unico`, `gestos_no_nativo`, `toque_de_confirmacao`, `pulso_da_barra` e `sem_pisca`; o resto cai. Um `para` sem o `ligado: false` de
   volta em 300 ms faz o serviço encerrar a modificação pelo PID (SIGTERM, depois SIGKILL).
 
+- `jogo.som` (`ler:jogo.som`) entrega `nome: "jogo.som"`: um estalo do som do jogo,
+  `{t, evento: "estalo", lado, energia, canais, bandas}`. `lado` vai de -1 (todo à esquerda) a 1 (todo à direita),
+  `energia` de 0 a 1, `canais` é 2 e `bandas` são 24 números log-mel (dB, dos graves aos agudos) dos primeiros ~21 ms
+  do estalo: dois estalos de timbres diferentes dão bandas distantes, o mesmo timbre repetido dá bandas próximas.
+  Só o derivado cruza a porta, nunca amostra de áudio. O som do jogo é um só para todos os controles, e o
+  envelope não leva `uniq`. O ouvido do jogo grava o fluxo do jogo em cena enquanto houver assinante, mesmo com o
+  tato vivo sem pedir o som; sem jogo, nada sai;
+- `microfone.nivel` (`ler:microfone.nivel`) entrega `nome: "microfone.nivel"`: `{uniq, nivel, mudo, do_jogo, t}`
+  de cada controle, quatro vezes por segundo. `nivel` é o pico de 0 a 1 do último quarto de segundo, `mudo` diz se o
+  microfone está mudo (então `nivel` é 0) e `do_jogo` se o jogo em cena captura a fonte daquele controle (`null`
+  quando não dá para saber). O medidor só abre o microfone enquanto houver assinante, no cabo e no rádio, e nenhum
+  nível vai para arquivo;
+- `jogo.identidade` (`ler:jogo.identidade`) entrega `nome: "jogo.identidade"`:
+  `{chave, executavel, buildid, loja, emulador}`. `chave` é a mesma do `perfil.jogo` (`steam_app_<N>`, ou
+  `null` fora de jogo), `executavel` o nome do arquivo do jogo (ou `null`), `buildid` o da versão instalada, lido do
+  `appmanifest_<N>.acf` (ou `null`), `loja` é `steam` e `emulador` o nome do emulador quando o jogo roda num (ou
+  `null`). Nunca leva PID. É estado: quem assina depois recebe o de agora logo na assinatura.
+
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.
 

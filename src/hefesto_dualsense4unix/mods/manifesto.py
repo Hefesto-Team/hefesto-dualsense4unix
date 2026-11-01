@@ -65,6 +65,9 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "perfil.jogo": (EventTopic.PERFIL_TROCOU,),
     "jogo.acessorio": (EventTopic.JOGO_ACESSORIO,),
     "acessorios.gesto": (EventTopic.ACESSORIOS_GESTO,),
+    "jogo.som": (EventTopic.JOGO_SOM,),
+    "microfone.nivel": (EventTopic.MICROFONE_NIVEL,),
+    "jogo.identidade": (EventTopic.JOGO_IDENTIDADE,),
 }
 
 TOPICOS_DE_PUBLICACAO: dict[str, str] = {
@@ -112,6 +115,13 @@ _O_QUE_DEIXA: dict[str, str] = {
     "pedir:luz.pulso": (
         "Pedir que a barra de luz de um controle pulse na cor escolhida, nos perfis «Adulto»."
     ),
+    "ler:jogo.som": (
+        "Saber quando o som do jogo estala, de que lado e com que timbre, sem receber o áudio."
+    ),
+    "ler:microfone.nivel": (
+        "Saber o volume do microfone de cada controle e se o jogo o escuta, sem receber a voz."
+    ),
+    "ler:jogo.identidade": "Saber qual jogo está aberto, a versão dele e a loja de onde veio.",
     "escrever:luz": "Mudar a cor da luz de um controle.",
     "escrever:vibracao": "Fazer um controle vibrar.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
