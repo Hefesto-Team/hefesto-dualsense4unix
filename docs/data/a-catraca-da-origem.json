@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1182203,
+      "piso": 1182282,
       "por_item": {
-        "docs": 108102,
-        "scripts": 110995,
+        "docs": 108175,
+        "scripts": 111001,
         "src": 297349,
         "tests": 665757
       },
-      "razao": "tamanho: +4 linhas (1182199 -> 1182203), pagas por Origem: D-0609-GTK-LEVA-INTEIRA; registrado no fecho, topo ef31e571f1f8",
+      "razao": "tamanho: +79 linhas (1182203 -> 1182282), pagas por Origem: D-3110-O-SDIST-SEM-A-SUITE; registrado no fecho, topo 62de118aa5d8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1369,6 +1369,12 @@
           "de": 1182199,
           "para": 1182203,
           "razao": "tamanho: +4 linhas (1182199 -> 1182203), pagas por Origem: D-0609-GTK-LEVA-INTEIRA; registrado no fecho, topo ef31e571f1f8"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1182203,
+          "para": 1182282,
+          "razao": "tamanho: +79 linhas (1182203 -> 1182282), pagas por Origem: D-3110-O-SDIST-SEM-A-SUITE; registrado no fecho, topo 62de118aa5d8"
         }
       ],
       "unidade": "linhas",
