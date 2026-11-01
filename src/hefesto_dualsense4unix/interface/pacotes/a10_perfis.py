@@ -2433,7 +2433,7 @@ METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 16
+PISO_DA_ABA = 17
 PROVAS: list[dict[str, Any]] = [
     {"pagina": PAGINA, "gesto": "selecionar",  # (noqa-acento)
      "clique": {"hefPerfil": "Ensaio"},
