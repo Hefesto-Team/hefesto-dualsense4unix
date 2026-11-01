@@ -593,7 +593,7 @@ def test_os_dualsenses_que_saem_juntos_passam_o_p1_ao_de_fora(
         "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
         lambda: dict(dualsenses),
     )
-    pad = _PadDoP1()
+    pad: Any = _PadDoP1()
     daemon = _daemon(_Broker())
     daemon._gamepad_device = pad
     daemon.controller.is_connected = lambda: bool(dualsenses)
