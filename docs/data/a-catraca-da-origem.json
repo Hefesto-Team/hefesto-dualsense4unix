@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1182199,
+      "piso": 1182203,
       "por_item": {
         "docs": 108102,
         "scripts": 110995,
         "src": 297349,
-        "tests": 665753
+        "tests": 665757
       },
-      "razao": "tamanho: +1515 linhas (1180684 -> 1182199), pagas por Origem: D-0111-O-INSTALL-CONSTROI-O-PORTAL-DO-COSMIC-DA-CASA, D-1510-A-VERSAO-MAIS-RECENTE-DE-TUDO; registrado no fecho, topo 1517fb70b568",
+      "razao": "tamanho: +4 linhas (1182199 -> 1182203), pagas por Origem: D-0609-GTK-LEVA-INTEIRA; registrado no fecho, topo ef31e571f1f8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1363,6 +1363,12 @@
           "de": 1180684,
           "para": 1182199,
           "razao": "tamanho: +1515 linhas (1180684 -> 1182199), pagas por Origem: D-0111-O-INSTALL-CONSTROI-O-PORTAL-DO-COSMIC-DA-CASA, D-1510-A-VERSAO-MAIS-RECENTE-DE-TUDO; registrado no fecho, topo 1517fb70b568"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1182199,
+          "para": 1182203,
+          "razao": "tamanho: +4 linhas (1182199 -> 1182203), pagas por Origem: D-0609-GTK-LEVA-INTEIRA; registrado no fecho, topo ef31e571f1f8"
         }
       ],
       "unidade": "linhas",
