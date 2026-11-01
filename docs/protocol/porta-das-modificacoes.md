@@ -179,6 +179,11 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `null` fora de jogo), `executavel` o nome do arquivo do jogo (ou `null`), `buildid` o da versão instalada, lido do
   `appmanifest_<N>.acf` (ou `null`), `loja` é `steam` e `emulador` o nome do emulador quando o jogo roda num (ou
   `null`). Nunca leva PID. É estado: quem assina depois recebe o de agora logo na assinatura.
+- `modo.aba` (`ler:modo.aba`) entrega `nome: "modo.aba"`: `{uniq, jogador, secoes: {controles, gatilhos, luz,
+  vibracao}}`, um por controle, só quando muda. Cada seção diz o modo que vale ali no perfil ativo:
+  `automatico`, `personalizado` ou `extensao:<id>`; o controle que escreve o seu por cima leva o dele. O modo de
+  uma extensão que não está viva sai como `personalizado`. É estado: quem assina depois recebe o de cada controle
+  logo na assinatura.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.
@@ -585,6 +590,30 @@ não publicou no último estado (ou de um manifesto sem `aparelhos_controles`), 
 controle, o `livre` de outro `id`, o `deslizante` que o manifesto não declara ou o valor fora da faixa dele, o `modo` de um `livre` sem `modos` e o `modo` fora dos três. O botão
 diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
 `mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
+
+## O modo de aba (o que o manifesto declara)
+
+`modos_de_aba` traz no máximo um modo por extensão, irmão do «Modo automático» nas abas que ele lista:
+
+```json
+"modos_de_aba": [{"id": "fundo", "rotulo": "Modo da extensão", "dica": "A extensão governa a seção.",
+                  "abas": ["02", "03", "04", "05", "10"]}]
+```
+
+| campo | forma |
+| --- | --- |
+| `id` | minúsculas, dígitos, `-` e `_`, até 32 |
+| `rotulo` | o texto do botão, até 20 caracteres |
+| `dica` | a dica do botão, até 120 caracteres |
+| `abas` | `02` (Controles), `03` (Gatilhos), `04` (Iluminação), `05` (Vibração) e `10` (Perfis, o perfil inteiro), sem repetir |
+
+Só a extensão instalada e ligada traz o botão; sem extensão assim, a página não tem botão nenhum. O perfil guarda
+`extensao:<id da extensão>` no modo da seção (controles, gatilhos, luz ou vibração), e o botão de Perfis grava
+as quatro. O modo aceso e o automático se excluem, e o clique no aceso volta ao
+personalizado. Com a extensão conectada à porta, o efeito fixo da seção (o gatilho, a luz) fica de fora; quando a extensão
+cai, o efeito volta no mesmo tique. Desligada ou desinstalada, a aba mostra o personalizado e o perfil guarda o
+pedido. O que a extensão escreve na seção passa pela porta, como qualquer escrita (`escrever:<canal>`); o tópico
+`modo.aba` diz onde o modo da extensão vale.
 
 ## A extensão de tema
 
