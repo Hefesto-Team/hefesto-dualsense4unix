@@ -1708,16 +1708,19 @@ PRAZO_DA_BUSCA_S = 20.0
 SILENCIO_QUE_ENCERRA_A_BUSCA_S = 5.0
 FIM_DA_BUSCA_VISIVEL_S = 12.0
 SEM_RAZAO_DA_BUSCA = "Ligue o aparelho e deixe-o perto."
+NENHUM_NOVO = "Nenhum novo"
 
 
 class Andamento(NamedTuple):
     """O que a janela diz do «Parear» agora: ``busca`` (os segundos que faltam, ``None`` passado o
-    prazo) ou o fim da busca (``achou``, os nomes; ``razao``, a dica quando não achou nenhum)."""
+    prazo) ou o fim da busca (``achou``, os nomes novos; ``ligados``, os que já estavam ligados
+    quando nenhum novo apareceu; ``razao``, a dica quando não há aparelho ligado)."""
 
     fase: str = ""
     restam: int | None = None
     achou: tuple[str, ...] = ()
     razao: str = ""
+    ligados: tuple[str, ...] = ()
 
     def html(self, *, vazio: bool) -> str:
         """A faixa do andamento; vazia quando não há busca nem fim a mostrar. Sem aparelho, a faixa é a
@@ -1732,6 +1735,10 @@ class Andamento(NamedTuple):
         elif self.achou:
             corpo = f'<span class="mj-busca-fim">Achou {_e(", ".join(self.achou))}</span>'
             dica = ""
+        elif self.ligados:
+            corpo = (f'<span class="mj-busca-fim">{NENHUM_NOVO} · '
+                     f'já ligado: {_e(", ".join(self.ligados))}</span>')
+            dica = ""
         else:
             corpo = '<span class="mj-busca-fim">Não achou nenhum aparelho</span>'
             dica = f' data-dica="{_a(self.razao)}"'
@@ -1743,7 +1750,7 @@ class AndamentoDoPareamento:
     """O dono do andamento do «Parear» de cada extensão, lido do estado que a extensão devolve: a busca
     começa quando uma conexão «procurando» tem o motivo começado por
     :data:`COMECO_DO_MOTIVO_DA_BUSCA` e termina quando a conexão deixa de tê-lo. O fim fica à vista
-    :data:`FIM_DA_BUSCA_VISIVEL_S`, com o que apareceu de novo ou a razão."""
+    :data:`FIM_DA_BUSCA_VISIVEL_S`, com o que apareceu de novo, o que já estava ligado ou a razão."""
 
     def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
         self._relogio = relogio
@@ -1766,6 +1773,12 @@ class AndamentoDoPareamento:
     def _nomes(estado: Mapping[str, Any] | None) -> dict[str, str]:
         return {str(ap.get("id") or ap.get("nome")): str(ap.get("nome") or ap.get("id"))
                 for ap in itens_do_estado(estado, "aparelhos")}
+
+    @staticmethod
+    def _ligados(estado: Mapping[str, Any] | None) -> tuple[str, ...]:
+        return tuple(str(ap.get("nome") or ap.get("id"))
+                     for ap in itens_do_estado(estado, "aparelhos")
+                     if str(ap.get("estado") or "ligado") == "ligado")
 
     @staticmethod
     def _razao(estado: Mapping[str, Any] | None) -> str:
@@ -1791,8 +1804,10 @@ class AndamentoDoPareamento:
             if mod in self._buscas:
                 _, antes, _ = self._buscas.pop(mod)
                 novos = tuple(n for i, n in nomes.items() if i not in antes)
+                ligados = () if novos else self._ligados(estado)
                 self._fins[mod] = (agora, Andamento(
-                    "fim", None, novos, "" if novos else self._razao(estado)))
+                    "fim", None, novos, "" if novos or ligados else self._razao(estado),
+                    ligados))
             quando, fim = self._fins.get(mod, (0.0, Andamento()))
             if fim.fase and agora - quando <= FIM_DA_BUSCA_VISIVEL_S:
                 return fim

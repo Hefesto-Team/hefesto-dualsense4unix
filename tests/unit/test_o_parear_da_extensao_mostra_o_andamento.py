@@ -17,6 +17,13 @@ Com cartões a faixa entra acima deles e o miolo cresce 18 px; a janela da exten
 fixo, e o Parear não se move. A âncora do topo arrancada (31/10/2026) devolve a janela centrada,
 que sobe 9 px, e reprova ``o Parear muda de y``; a margem do topo arrancada cola a janela na borda
 de cima e reprova ``não guarda 20 px das bordas``.
+
+O-PAREAR-SEM-APARELHO-NOVO-DIZ-QUEM-JA-ESTA-LIGADO-01 (01/11/2026). Com um aparelho já ligado antes
+da busca, o fim dizia «Não achou nenhum aparelho» com a dica de quem não acha nada, o contrário dos
+cartões logo abaixo. O fim sem aparelho novo diz agora quem já está ligado, sem a dica; o aparelho
+conhecido e fora do alcance não conta como ligado. MORDIDA (01/11/2026, executada sobre a cura e
+devolvida): o ramo velho (``ligados`` sempre vazio) reprova o fim de quem já estava ligado, na
+unidade e no WebKit.
 """
 
 from __future__ import annotations
@@ -123,14 +130,41 @@ def test_o_fim_com_aparelho_novo_diz_o_nome_dele(
     assert "Achou Lush 3" in fim.html(vazio=False)
 
 
-def test_quem_ja_estava_na_lista_nao_conta_como_achado(
+def test_quem_ja_estava_ligado_nao_conta_como_achado_e_o_fim_diz_o_nome(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
     andamento, relogio = dono
     andamento.ver("lovense", estado(BUSCANDO, [NOVO]))
     andar(andamento, relogio, 7, estado(BUSCANDO, [NOVO]))
     relogio.t += 1
     fim = andamento.ver("lovense", estado(QUIETA, [NOVO]))
-    assert fim.achou == () and "Não achou nenhum aparelho" in fim.html(vazio=False)
+    html = fim.html(vazio=False)
+    assert fim.achou == () and fim.ligados == ("Lush 3",)
+    assert f"{exp.NENHUM_NOVO} · já ligado: Lush 3" in html, html
+    assert "Não achou" not in html and "data-dica" not in html, html
+
+
+def test_o_novo_e_o_ja_ligado_o_fim_diz_so_o_novo(
+        dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
+    andamento, relogio = dono
+    velho = {**NOVO, "id": "ap-1", "nome": "Edge 2"}
+    andamento.ver("lovense", estado(BUSCANDO, [velho]))
+    relogio.t += 1
+    fim = andamento.ver("lovense", estado(QUIETA, [velho, NOVO]))
+    assert (fim.achou, fim.ligados) == (("Lush 3",), ())
+    assert "Achou Lush 3" in fim.html(vazio=False) and "Edge 2" not in fim.html(vazio=False)
+
+
+@pytest.mark.parametrize("fora", ["desligado", "procurando", "falhou"])
+def test_o_aparelho_conhecido_fora_do_alcance_nao_e_ja_ligado(
+        dono: tuple[exp.AndamentoDoPareamento, Relogio], fora: str) -> None:
+    andamento, relogio = dono
+    longe = {**NOVO, "estado": fora}
+    andamento.ver("lovense", estado(BUSCANDO, [longe]))
+    relogio.t += 1
+    fim = andamento.ver("lovense", estado(QUIETA, [longe]))
+    html = fim.html(vazio=False)
+    assert fim.ligados == () and "Não achou nenhum aparelho" in html, html
+    assert 'data-dica="Bluetooth: Ligue o aparelho."' in html, html
 
 
 def test_o_fim_sem_achar_leva_a_razao_na_dica(
@@ -247,6 +281,8 @@ def cenas(janela: Any, pagina_fresca: pathlib.Path,  # noqa: F811
             ("busca", None, {**SEM_APARELHOS, exp.CHAVE_DAS_CONEXOES: [BUSCANDO]}),
             ("fim", {**SEM_APARELHOS, exp.CHAVE_DAS_CONEXOES: [BUSCANDO]},
              {**SEM_APARELHOS, exp.CHAVE_DAS_CONEXOES: [FALHOU]}),
+            ("ja", {**VIVO, exp.CHAVE_DAS_CONEXOES: [BUSCANDO]},
+             {**VIVO, exp.CHAVE_DAS_CONEXOES: [QUIETA]}),
             ("com", None, {**VIVO, exp.CHAVE_DAS_CONEXOES: [QUIETA]}),
             ("busca-com", None, {**VIVO, exp.CHAVE_DAS_CONEXOES: [BUSCANDO]})):
         monkeypatch.setattr(exp, "ANDAMENTO_DO_PAREAR", exp.AndamentoDoPareamento(relogio))
@@ -327,4 +363,25 @@ def test_a_janela_de_topo_fixo_guarda_a_borda_da_tela(
         if abs(topo["y"] - (h - teto) / 2) > 0.5:
             falhas.append(f"{caso}: o topo fica em {topo['y']:.1f}, e não onde a janela mais "
                           f"alta ({teto} px) fica no centro, {(h - teto) / 2:.1f}")
+    assert not falhas, "\n".join(falhas)
+
+
+def test_o_fim_com_aparelho_ja_ligado_diz_quem_e_sem_a_dica(
+        cenas: dict[str, dict[str, Any]]) -> None:
+    falhas = []
+    nomes = ", ".join(a["nome"] for a in VIVO["aparelhos"])
+    for w, h in VISTAS:
+        ja = cenas[f"ja@{w}x{h}"]
+        if ja["busca"] is None or ja["cartao"] is None:
+            falhas.append(f"{w}x{h}: sem faixa ou sem cartão: {ja}")
+            continue
+        esperado = f"{exp.NENHUM_NOVO} · já ligado: {nomes}"
+        if ja["texto"] != esperado:
+            falhas.append(f"{w}x{h}: o fim diz {ja['texto']!r}, e não {esperado!r}")
+        if ja["dica"]:
+            falhas.append(f"{w}x{h}: o fim com aparelho ligado leva a dica {ja['dica']!r}")
+        if ja["corte"]:
+            falhas.append(f"{w}x{h}: a faixa do fim é cortada")
+        if ja["busca"]["b"] > ja["cartao"]["y"] + 0.5:
+            falhas.append(f"{w}x{h}: a faixa não fica acima do cartão")
     assert not falhas, "\n".join(falhas)
