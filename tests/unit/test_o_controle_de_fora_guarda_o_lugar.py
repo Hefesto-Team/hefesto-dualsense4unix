@@ -310,6 +310,61 @@ class TestOP1VagoSoDepoisDoPrazo:
             "o lugar guardado do P3 segurou o P1 que já venceu"
         )
 
+    @MASCARAS
+    def test_o_registro_que_nao_responde_segura_o_p1(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses, registro, relogio = _mesa_com_o_dualsense_no_p1(
+            monkeypatch, mascara, jogo=False
+        )
+        pro = mgr._players[PRO]
+        proprio: Any = pro.vpad
+        proprio.flavor = mascara
+        _o_dualsense_sai(mgr, dualsenses, registro)
+        _o_prazo_passa(relogio)
+
+        calado = [True]
+        de_verdade = registro.o_lugar_1_espera
+
+        def _ilegivel() -> bool:
+            if calado[0]:
+                raise RuntimeError("registro ocupado")
+            return de_verdade()
+
+        monkeypatch.setattr(registro, "o_lugar_1_espera", _ilegivel)
+        mgr.sync(force=True)
+        assert pro.vpad is proprio and not pro.no_p1, "o registro calado soltou o P1"
+
+        calado[0] = False
+        mgr.sync(force=True)
+        assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
+
+    @MASCARAS
+    def test_quem_espera_fora_da_mesa_nao_senta_no_p1_vago(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses, registro, relogio = _mesa_com_o_dualsense_no_p1(
+            monkeypatch, mascara, jogo=False
+        )
+        pro = mgr._players[PRO]
+        proprio: Any = pro.vpad
+        paradas: list[str] = []
+        proprio.stop = lambda: paradas.append("parou")
+        _o_dualsense_sai(mgr, dualsenses, registro)
+        _o_prazo_passa(relogio)
+        assert not registro.o_lugar_1_espera()
+
+        pro.a_espera = True
+        mgr._sentar_o_de_fora_no_p1(True)
+        assert not pro.no_p1 and pro.vpad is proprio and paradas == [], (
+            "quem está fora da mesa, com o pad próprio à espera, tomou o pad do P1"
+        )
+        assert mgr.o_de_fora_no_p1() is None and pad is not proprio
+
+        pro.a_espera = False
+        mgr._sentar_o_de_fora_no_p1(True)
+        assert pro.no_p1 and pro.vpad is pad and paradas == ["parou"]
+
 
 def _o_dualsense_sai(
     mgr: CoopManager,
