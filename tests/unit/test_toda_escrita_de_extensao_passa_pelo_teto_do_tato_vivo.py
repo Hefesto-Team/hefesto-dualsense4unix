@@ -353,3 +353,36 @@ def test_o_escritor_do_servico_entrega_a_fonte_de_fora_do_motor_vivo() -> None:
     motor = tv.TatoVivo()
     daemon._tato_vivo = motor  # type: ignore[attr-defined]
     assert escritor.arbitro() is motor.de_fora
+
+
+@pytest.mark.parametrize("tocando", [True, False])
+def test_no_cabo_com_a_haptica_tocando_o_motor_da_extensao_vira_pcm(tocando: bool) -> None:
+    levados: list[Any] = []
+    motores: list[Any] = []
+
+    class _Falante:
+        def a_vibracao_vai_pelo_audio_em(self, uniq: str) -> bool:
+            return tocando
+
+        def levar_o_rumble(self, uniq: str, fraco: int, forte: int) -> bool:
+            levados.append((uniq, fraco, forte))
+            return tocando
+
+    class _Controle:
+        def set_rumble_for(self, uniq: str, fraco: int, forte: int) -> bool:
+            motores.append((uniq, fraco, forte))
+            return True
+
+    class _Daemon:
+        _alto_falante_subsystem = _Falante()
+        controller = _Controle()
+
+    fonte = tv.ligar_a_fonte_de_fora(_Daemon(), _fonte()[0])
+    assert fonte.motores is not None
+    assert fonte.motores("aa:bb:cc:00:00:01", 50, 230) is True
+    if tocando:
+        assert levados == [("aa:bb:cc:00:00:01", 50, 230)]
+        assert motores == []
+    else:
+        assert levados == [("aa:bb:cc:00:00:01", 0, 0)]
+        assert motores == [("aa:bb:cc:00:00:01", 50, 230)]

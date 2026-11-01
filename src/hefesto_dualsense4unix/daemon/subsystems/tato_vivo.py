@@ -3415,6 +3415,14 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
         return bool(quem is not None and quem.tocar_o_corpo(uniq, amostras, lado))
 
     def motores(uniq: str, fraco: int, forte: int) -> bool:
+        quem = falante()
+        pelo_audio = getattr(quem, "a_vibracao_vai_pelo_audio_em", None)
+        levar = getattr(quem, "levar_o_rumble", None)
+        if callable(levar):
+            converte = callable(pelo_audio) and pelo_audio(uniq) is True
+            leva = levar(uniq, fraco if converte else 0, forte if converte else 0)
+            if converte:
+                return leva is True
         controle = getattr(daemon, "controller", None)
         escrever = getattr(controle, "set_rumble_for", None)
         return bool(callable(escrever) and escrever(uniq, fraco, forte))
