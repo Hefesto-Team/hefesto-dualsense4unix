@@ -532,11 +532,8 @@ class ProfileManager:
                 soltar()
 
         from hefesto_dualsense4unix.mods.porta import extensoes_vivas
-
-        profile = _perfil_na_economia(
-            perfil_no_modo(profile, extensoes_vivas()), economia_da_mesa(),
-            controles_em_economia()
-        )
+        profile = _perfil_na_economia(perfil_no_modo(profile, extensoes_vivas()),
+                                      economia_da_mesa(), controles_em_economia())
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
