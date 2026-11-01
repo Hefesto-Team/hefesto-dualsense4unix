@@ -2207,9 +2207,6 @@ def devolver_a_guarda_da_renumeracao(
             )
         faltam = [secao for secao in faltam if secao not in trazidas]
         devolvidas.append(guarda)
-        logger.warning(
-            "maquina_guarda_da_renumeracao_devolvida", guarda=str(guarda), secoes=trazidas
-        )
         if not faltam:
             break
     if devolvidas:
@@ -2229,6 +2226,8 @@ def _marcar_as_devolvidas(guardas: Sequence[Path]) -> None:
         except OSError as exc:
             logger.warning("maquina_guarda_devolvida_nao_marcada", guarda=str(guarda),
                            err=str(exc)[:200])
+            continue
+        logger.warning("maquina_guarda_da_renumeracao_devolvida", devolvida_em=str(alvo))
 
 
 def _guardar_o_de_outra_placa(guardado: Mapping[str, Any]) -> Path:
