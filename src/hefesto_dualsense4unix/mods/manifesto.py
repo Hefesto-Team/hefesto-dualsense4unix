@@ -844,12 +844,12 @@ def _marca_dos_pedidos(lg: Any, registro: dict[str, Any]) -> tuple[Any, ...]:
         if e.ligada))
 
 
-def _o_que_a_extensao_pede(pasta: Path) -> Manifesto | None:
+def _o_que_a_extensao_pede(pasta: Path) -> list[Manifesto]:
     """O manifesto que abre; o que não abre não roda (o supervisor a impede) e não pede nada."""
     try:
-        return ler_manifesto(pasta)
+        return [ler_manifesto(pasta)]
     except ManifestoRecusadoError:
-        return None
+        return []
 
 
 def _pedidos(lugares: Any) -> dict[str, Any]:
@@ -864,7 +864,7 @@ def _pedidos(lugares: Any) -> dict[str, Any]:
     if _PEDIDOS["marca"] == marca:
         return _PEDIDOS
     lidos = [m for entrada in sorted(registro.values(), key=lambda e: e.id) if entrada.ligada
-             if (m := _o_que_a_extensao_pede(lg.codigo / entrada.id)) is not None]
+             for m in _o_que_a_extensao_pede(lg.codigo / entrada.id)]
     _PEDIDOS.update(
         marca=marca,
         estilos=frozenset(chave for m in lidos for chave in m.estilos),
