@@ -67,7 +67,7 @@ def _declarado(**troca: Any) -> dict[str, Any]:
 
 def test_o_manifesto_aceita_o_conexoes() -> None:
     m = Manifesto.model_validate(_declarado())
-    assert {c: (x.liga, x.escolha) for c, x in m.conexoes.items()} == {  # (noqa-acento)
+    assert {c: (x.liga, x.escolha) for c, x in m.conexoes.items()} == {
         "celular": ("usar_o_celular", None), "bluetooth": ("usar_o_radio", "radio")}
 
 

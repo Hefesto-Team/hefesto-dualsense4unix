@@ -225,7 +225,7 @@ def formas_extras_de(manifesto: Manifesto, opcao: Opcao, valores: dict[str, Any]
 def escolha_de_conexao(manifesto: Manifesto, opcao: Opcao) -> bool:
     """A ``escolha`` que uma linha do mapa das conexões oferece pelo nome (o adaptador)."""
     return opcao.tipo == "escolha" and any(
-        liga.escolha == opcao.id for liga in manifesto.conexoes.values())  # (noqa-acento)
+        liga.escolha == opcao.id for liga in manifesto.conexoes.values())
 
 
 def nome_de_conexao(valor: Any) -> str | None:

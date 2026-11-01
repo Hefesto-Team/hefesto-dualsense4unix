@@ -1630,13 +1630,13 @@ def _ligas_de(manifesto: Any, mod_id: str, valores: dict[str, Any]) -> dict[str,
     return {conexao: exp.Liga(mod_id, liga.liga, valores.get(liga.liga) is True,
                               liga.escolha or "", str(valores.get(liga.escolha) or "")
                               if liga.escolha else "")
-            for conexao, liga in manifesto.conexoes.items()}  # (noqa-acento)
+            for conexao, liga in manifesto.conexoes.items()}
 
 
 def _publicadas(manifesto: Any, opcao: Any, estado: dict[str, Any] | None) -> tuple[str, ...]:
     """Os nomes que a extensão publica na conexão cuja ``escolha`` é a opção (os adaptadores
     do computador), para a lista da opção oferecer os mesmos nomes da coluna."""
-    ids = {c for c, liga in manifesto.conexoes.items()  # (noqa-acento)
+    ids = {c for c, liga in manifesto.conexoes.items()
            if liga.escolha == opcao.id}
     return tuple(n for c in exp.itens_do_estado(estado, "conexoes")  # (noqa-acento)
                  if c.get("id") in ids and isinstance(c.get("escolhas"), list)

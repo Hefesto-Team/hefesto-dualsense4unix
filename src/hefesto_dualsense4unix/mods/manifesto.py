@@ -501,7 +501,7 @@ class Manifesto(BaseModel):
     agora: list[
         Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento)
     ] = Field(default_factory=list)
-    conexoes: dict[str, LigaDaConexao] = Field(  # (noqa-acento)
+    conexoes: dict[str, LigaDaConexao] = Field(
         default_factory=dict, max_length=CONEXOES_DA_JANELA)
     parar_tudo: bool = False
     chave: str | None = Field(default=None, min_length=1, max_length=32)
@@ -644,12 +644,12 @@ class Manifesto(BaseModel):
         """Cada linha do mapa das conexões tem id de chave, liga uma opção ``ligado`` daqui (nunca a
         chave do topo) e, com ``escolha``, aponta para uma ``escolha``; e a coluna mostra as
         conexões."""
-        if not self.conexoes:  # (noqa-acento)
+        if not self.conexoes:
             return
         if "conexoes" not in self.agora:  # (noqa-acento)
             raise ValueError("conexoes pede o pedaço conexoes em agora")  # (noqa-acento)
         por_id = {o.id: o for o in self.opcoes}
-        for linha, liga in self.conexoes.items():  # (noqa-acento)
+        for linha, liga in self.conexoes.items():
             if not _CHAVE_DE_LANCADOR.match(linha):
                 raise ValueError(f"a conexão {linha!r} fora da forma de chave")
             opcao = por_id.get(liga.liga)
