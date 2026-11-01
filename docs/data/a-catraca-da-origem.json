@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1182479,
+      "piso": 1185989,
       "por_item": {
-        "docs": 108176,
-        "scripts": 111001,
-        "src": 297367,
-        "tests": 665935
+        "docs": 108259,
+        "scripts": 111003,
+        "src": 299291,
+        "tests": 667436
       },
-      "razao": "tamanho: +197 linhas (1182282 -> 1182479), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 057f54c6055b",
+      "razao": "tamanho: +3510 linhas (1182479 -> 1185989), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 46f713ade581",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1381,10 +1381,16 @@
           "de": 1182282,
           "para": 1182479,
           "razao": "tamanho: +197 linhas (1182282 -> 1182479), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 057f54c6055b"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1182479,
+          "para": 1185989,
+          "razao": "tamanho: +3510 linhas (1182479 -> 1185989), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 46f713ade581"
         }
       ],
       "unidade": "linhas",
-      "universo": 3299
+      "universo": 3304
     }
   }
 }
