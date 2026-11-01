@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 FORMA_DO_LUGAR = re.compile(
     r"^pci-(?P<pci>[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f])"
@@ -15,6 +15,10 @@ FORMA_DO_CAMINHO = re.compile(r"^[0-9]+-[0-9]+(\.[0-9]+)*$")
 FORMA_DO_NO = re.compile(r"^(?P<hub>usb[0-9]+|[0-9]+-[0-9]+(?:\.[0-9]+)*)-port(?P<n>[0-9]+)$")
 
 _HUB_RAIZ = re.compile(r"^usb([0-9]+)$")
+
+FORMA_DO_PCI = re.compile(
+    r"^(?P<dominio>[0-9a-f]{4}):(?P<barramento>[0-9a-f]{2}):(?P<posicao>[0-9a-f]{2}\.[0-9a-f])$"
+)
 
 
 def lugar_de(controlador_pci: str, devpath: str) -> str:
@@ -104,16 +108,80 @@ def caminho_do_lado_20(nos: Sequence[str]) -> str:
     return caminhos[0] if caminhos else ""
 
 
+def lugar_reapontado(lugar: str, novos: Mapping[str, str]) -> str:
+    """O mesmo lugar no endereço vivo do controlador; o que não anda volta igual."""
+    partes = partes_do_lugar(lugar)
+    if partes is None or partes[0] not in novos:
+        return lugar
+    return lugar_de(novos[partes[0]], partes[1])
+
+
+def _funcao(endereco: str) -> str:
+    return endereco.rpartition(".")[2]
+
+
+def _forma(endereco: str) -> tuple[str, str] | None:
+    casado = FORMA_DO_PCI.match(endereco)
+    return None if casado is None else (casado.group("dominio"), casado.group("posicao"))
+
+
+def _iguais(tabela: Mapping[str, str], familia: str, funcao: str) -> list[str]:
+    return sorted(e for e, f in tabela.items() if f == familia and _funcao(e) == funcao)
+
+
+def reconhecer_os_controladores(
+    gravados: Iterable[str],
+    vivos: Mapping[str, str],
+    identidades: Mapping[str, str] | None = None,
+) -> dict[str, str] | None:
+    """O endereço vivo de cada controlador USB gravado; ``None`` se um deles não se reconhece.
+
+    ``vivos`` e ``identidades`` levam o endereço PCI ao ``vendor:device`` (``""`` quando não
+    se lê). Com a identidade gravada, o controlador é o k-ésimo do mesmo ``vendor:device`` e
+    da mesma função, contados nos dois lados; sem a identidade, o k-ésimo da mesma posição no
+    mesmo domínio. Contagens que não batem só valem pelo endereço que continua vivo e igual.
+    """
+    conhecidos = {e: f for e, f in (identidades or {}).items() if f}
+    familias_vivas = {e: f for e, f in vivos.items() if f}
+    sem_identidade = sorted({g for g in gravados if g not in conhecidos})
+    novos: dict[str, str] = {}
+    for gravado in sorted(set(gravados)):
+        if gravado in conhecidos:
+            familia, funcao = conhecidos[gravado], _funcao(gravado)
+            antes = _iguais(conhecidos, familia, funcao)
+            agora = _iguais(familias_vivas, familia, funcao)
+            mesmo_vivo = familias_vivas.get(gravado) == conhecidos[gravado]
+        else:
+            forma = _forma(gravado)
+            if forma is None:
+                return None
+            antes = [g for g in sem_identidade if _forma(g) == forma]
+            agora = sorted(e for e in vivos if _forma(e) == forma)
+            mesmo_vivo = gravado in vivos
+        if len(antes) == len(agora):
+            novos[gravado] = agora[antes.index(gravado)]
+        elif mesmo_vivo:
+            novos[gravado] = gravado
+        else:
+            return None
+    if len(set(novos.values())) != len(novos):
+        return None
+    return novos
+
+
 __all__ = [
     "FORMA_DO_CAMINHO",
     "FORMA_DO_LUGAR",
     "FORMA_DO_NO",
+    "FORMA_DO_PCI",
     "caminho_do_lado_20",
     "caminho_do_no",
     "caminhos_do_lugar",
     "lugar_de",
     "lugar_do_caminho",
     "lugar_do_no",
+    "lugar_reapontado",
     "no_do_caminho",
     "partes_do_lugar",
+    "reconhecer_os_controladores",
 ]

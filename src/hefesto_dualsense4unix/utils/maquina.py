@@ -41,7 +41,9 @@ from hefesto_dualsense4unix.utils.lugar import (
     FORMA_DO_CAMINHO,
     FORMA_DO_NO,
     caminho_do_lado_20,
+    lugar_reapontado,
     no_do_caminho,
+    reconhecer_os_controladores,
 )
 from hefesto_dualsense4unix.utils.lugar import caminho_do_no as caminho_do_no
 from hefesto_dualsense4unix.utils.lugar import caminhos_do_lugar as caminhos_do_lugar
@@ -79,9 +81,15 @@ RAIZ_DO_SYS_ENV: Final = "HEFESTO_RAIZ_DO_SYS"
 
 _SUFIXO_DE_OUTRA_PLACA = ".de-outra-placa"
 
+_SUFIXO_DA_GUARDA_DEVOLVIDA = ".devolvida"
+
+CONTROLADORES_USB_FIELD: Final = "controladores_usb"
+
 _CLASSE_DO_CONTROLADOR_USB = "0x0c03"
 
 _PLACAS_LIDAS: dict[str, dict[str, Any] | None] = {}
+
+_FAMILIAS_LIDAS: dict[str, tuple[tuple[str, ...], dict[str, str]]] = {}
 
 _CHAVE_DE_CONTROLE = re.compile(r"^[0-9a-f]{12}$")
 
@@ -1606,6 +1614,7 @@ def gravar_maquina_com_descartes(
             except OSError as exc:
                 logger.warning("maquina_save_recusado_de_outra_placa", err=str(exc)[:200])
                 return ResultadoDaGravacao(False, ())
+        bruto, devolvidas = devolver_a_guarda_da_renumeracao(bruto, placa)
         descartados: tuple[str, ...] = ()
         try:
             atual = MaquinaConfig.model_validate(_so_o_que_o_schema_conhece(bruto))
@@ -1638,6 +1647,7 @@ def gravar_maquina_com_descartes(
         ):
             documento[PLACA_FIELD] = _copia_funda(placa)
         _escrever(documento)
+        _marcar_as_devolvidas(devolvidas)
         logger.debug("maquina_gravada", campos=sorted(declaracao))
     return ResultadoDaGravacao(True, descartados)
 
@@ -1900,6 +1910,7 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
     """:func:`migrar_o_documento` e :func:`conferir_a_placa` na leitura, e o arquivo regravado."""
     placa = placa_daqui()
     migrado, _ = conferir_a_placa(migrar_o_documento(bruto), placa)
+    migrado, _ = devolver_a_guarda_da_renumeracao(migrado, placa)
     if migrado == bruto:
         return bruto
     try:
@@ -1908,7 +1919,8 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
             if agora is None or agora.get(VERSION_FIELD) != MAQUINA_SCHEMA_VERSION:
                 return migrado
             de_um_registro = migrar_o_documento(agora)
-            migrado, de_outra_placa = conferir_a_placa(de_um_registro, placa)
+            conferido, de_outra_placa = conferir_a_placa(de_um_registro, placa)
+            migrado, devolvidas = devolver_a_guarda_da_renumeracao(conferido, placa)
             if migrado != agora:
                 if de_um_registro != agora:
                     _guardar_a_copia_de_antes_da_migracao()
@@ -1916,6 +1928,7 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
                 if de_outra_placa is not None:
                     _guardar_o_de_outra_placa(de_outra_placa)
                 _escrever(migrado)
+                _marcar_as_devolvidas(devolvidas)
     except Exception as exc:
         logger.warning("maquina_migracao_nao_gravou", err=str(exc)[:200])
     return migrado
@@ -1949,21 +1962,39 @@ def placa_daqui() -> dict[str, Any] | None:
     return legivel
 
 
-def controladores_usb_daqui() -> frozenset[str] | None:
-    """Os PCI dos controladores USB vivos; ``None`` quando o ``/sys/bus/pci`` não se lê."""
+def familias_dos_controladores_usb() -> dict[str, str] | None:
+    """O ``vendor:device`` de cada controlador USB vivo, pelo PCI; ``None`` sem ``/sys/bus/pci``."""
     raiz = Path(_raiz_do_sys()) / "bus" / "pci" / "devices"
     try:
-        nomes = sorted(os.listdir(raiz))
+        nomes = tuple(sorted(os.listdir(raiz)))
     except OSError as exc:
         logger.debug("maquina_pci_nao_lido", raiz=str(raiz), err=str(exc)[:200])
         return None
     if not nomes:
         return None
-    return frozenset(
-        nome.lower()
+    lida = _FAMILIAS_LIDAS.get(str(raiz))
+    if lida is not None and lida[0] == nomes:
+        return dict(lida[1])
+    familias = {
+        nome.lower(): _familia_do_pci(raiz / nome)
         for nome in nomes
         if _ler_do_sys(raiz / nome / "class").lower().startswith(_CLASSE_DO_CONTROLADOR_USB)
+    }
+    _FAMILIAS_LIDAS[str(raiz)] = (nomes, familias)
+    return dict(familias)
+
+
+def _familia_do_pci(pasta: Path) -> str:
+    vendor, device = (
+        _ler_do_sys(pasta / campo).lower().removeprefix("0x") for campo in ("vendor", "device")
     )
+    return f"{vendor}:{device}" if _CHAVE_DE_RADIO.match(f"{vendor}:{device}") else ""
+
+
+def controladores_usb_daqui() -> frozenset[str] | None:
+    """Os PCI dos controladores USB vivos; ``None`` quando o ``/sys/bus/pci`` não se lê."""
+    familias = familias_dos_controladores_usb()
+    return None if familias is None else frozenset(familias)
 
 
 def _secoes_deste_computador(documento: Mapping[str, Any]) -> dict[str, Any]:
@@ -1988,6 +2019,55 @@ def _controladores_do_mapa(mapa: Any) -> frozenset[str]:
     )
 
 
+def _familias_gravadas(documento: Mapping[str, Any]) -> dict[str, str]:
+    gravadas = documento.get(CONTROLADORES_USB_FIELD)
+    if not isinstance(gravadas, Mapping):
+        return {}
+    return {
+        endereco: familia
+        for endereco, familia in gravadas.items()
+        if isinstance(endereco, str) and isinstance(familia, str)
+    }
+
+
+def _mapa_reapontado(mapa: Any, novos: Mapping[str, str]) -> Any:
+    if not isinstance(mapa, Mapping):
+        return mapa
+    reapontado = _copia_funda(dict(mapa))
+    portas = reapontado.get("portas")
+    if isinstance(portas, dict):
+        for porta in portas.values():
+            if isinstance(porta, dict) and isinstance(porta.get("lugar"), str):
+                porta["lugar"] = lugar_reapontado(porta["lugar"], novos)
+    fora = reapontado.get("fora")
+    if isinstance(fora, list):
+        reapontado["fora"] = [
+            lugar_reapontado(lugar, novos) if isinstance(lugar, str) else lugar for lugar in fora
+        ]
+    return reapontado
+
+
+def _nos_enderecos_vivos(
+    documento: dict[str, Any], vivos: Mapping[str, str] | None
+) -> dict[str, Any] | None:
+    """O documento no endereço vivo de cada controlador do mapa; ``None`` sem reconhecê-los."""
+    do_mapa = _controladores_do_mapa(documento.get("mapa"))
+    if not do_mapa or vivos is None:
+        return None
+    novos = reconhecer_os_controladores(do_mapa, vivos, _familias_gravadas(documento))
+    if novos is None:
+        return None
+    andaram = {antes: depois for antes, depois in novos.items() if antes != depois}
+    vivo = dict(documento)
+    if andaram:
+        vivo["mapa"] = _mapa_reapontado(documento["mapa"], andaram)
+        logger.info("maquina_mapa_seguiu_a_renumeracao_do_pci", andaram=andaram)
+    familias = {endereco: familia for endereco, familia in vivos.items() if familia}
+    if familias:
+        vivo[CONTROLADORES_USB_FIELD] = familias
+    return vivo
+
+
 def _placa_gravada(documento: Mapping[str, Any]) -> dict[str, Any] | None:
     gravada = documento.get(PLACA_FIELD)
     if not isinstance(gravada, Mapping):
@@ -2003,15 +2083,16 @@ def _placa_gravada(documento: Mapping[str, Any]) -> dict[str, Any] | None:
 def conferir_a_placa(
     documento: dict[str, Any],
     placa: Mapping[str, Any] | None,
-    controladores: Callable[[], frozenset[str] | None] = controladores_usb_daqui,
+    controladores: Callable[[], Mapping[str, str] | None] = familias_dos_controladores_usb,
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """O documento que vale nesta placa, e o que ele trouxe de outra (``None`` se nada).
 
     O ``mapa``, a ``mesa`` e os ``adaptadores`` descrevem o computador. Com a
     ``placa`` gravada diferente da lida, os três saem. Sem ``placa`` gravada, o
-    mapa é o juiz: se nenhum ``lugar`` dele cai num controlador USB vivo daqui,
-    os três saem; senão, o documento ganha a placa e não perde nada. Placa ou
-    ``/sys/bus/pci`` que não se leem não carimbam e não esvaziam.
+    mapa é o juiz: os controladores dele reconhecidos aqui pelo que a renumeração
+    do PCI não muda (``utils/lugar.reconhecer_os_controladores``) ficam, com os
+    lugares nos endereços vivos; nenhum reconhecido e nenhum endereço vivo, os três
+    saem. Placa ou ``/sys/bus/pci`` que não se leem não carimbam e não esvaziam.
     """
     if placa is None:
         return documento, None
@@ -2019,26 +2100,135 @@ def conferir_a_placa(
 
     secoes = _secoes_deste_computador(documento)
     gravada = _placa_gravada(documento)
+    do_mapa = _controladores_do_mapa(documento.get("mapa"))
     if gravada is not None:
         if serve_para_esta_placa({PLACA_FIELD: gravada}, dict(placa)):
-            return documento, None
+            vivos = controladores() if do_mapa else None
+            return _nos_enderecos_vivos(documento, vivos) or documento, None
         de_outra_placa = secoes
     elif not secoes:
         return documento, None
     else:
-        do_mapa = _controladores_do_mapa(documento.get("mapa"))
-        vivos = controladores() if do_mapa else frozenset()
+        vivos = controladores() if do_mapa else {}
         if vivos is None:
             return documento, None
-        de_outra_placa = secoes if do_mapa and not do_mapa & vivos else {}
-    conferido = {campo: valor for campo, valor in documento.items() if campo not in de_outra_placa}
+        reconhecido = _nos_enderecos_vivos(documento, vivos)
+        if reconhecido is not None:
+            documento = reconhecido
+        de_outra_placa = (
+            secoes if do_mapa and reconhecido is None and not do_mapa & set(vivos) else {}
+        )
+    deste = (*de_outra_placa, CONTROLADORES_USB_FIELD) if de_outra_placa else ()
+    conferido = {campo: valor for campo, valor in documento.items() if campo not in deste}
     conferido[PLACA_FIELD] = _copia_funda(placa)
     if not de_outra_placa:
         return conferido, None
     guardado = {VERSION_FIELD: documento.get(VERSION_FIELD), **de_outra_placa}
+    if CONTROLADORES_USB_FIELD in documento:
+        guardado[CONTROLADORES_USB_FIELD] = documento[CONTROLADORES_USB_FIELD]
     if gravada is not None:
         guardado[PLACA_FIELD] = gravada
     return conferido, guardado
+
+
+def _guardas_de_outra_placa() -> list[Path]:
+    """As guardas ``.de-outra-placa`` ao lado do documento, da mais nova para a mais velha."""
+    origem = caminho_da_maquina()
+    base = origem.name + _SUFIXO_DE_OUTRA_PLACA
+    try:
+        nomes = os.listdir(origem.parent)
+    except OSError:
+        return []
+    achadas: list[tuple[int, Path]] = []
+    for nome in nomes:
+        resto = nome.removeprefix(base + "-")
+        if nome == base:
+            achadas.append((1, origem.with_name(nome)))
+        elif resto != nome and resto.isdigit():
+            achadas.append((int(resto), origem.with_name(nome)))
+    return [guarda for _, guarda in sorted(achadas, reverse=True)]
+
+
+def _ler_a_guarda(guarda: Path) -> dict[str, Any] | None:
+    try:
+        guardado = json.loads(guarda.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.debug("maquina_guarda_nao_lida", guarda=str(guarda), err=str(exc)[:200])
+        return None
+    return guardado if isinstance(guardado, dict) else None
+
+
+def devolver_a_guarda_da_renumeracao(
+    documento: dict[str, Any],
+    placa: Mapping[str, Any] | None,
+    controladores: Callable[[], Mapping[str, str] | None] = familias_dos_controladores_usb,
+) -> tuple[dict[str, Any], list[Path]]:
+    """O documento com o que a renumeração do PCI tirou dele, e as guardas que voltaram.
+
+    Volta só a guarda sem ``placa`` (tirada pelo mapa, não pela troca de placa), com o
+    documento gravado nesta placa e TODOS os controladores do mapa guardado reconhecidos aqui;
+    cada seção volta só se o documento não a tem. A guarda devolvida ganha o sufixo
+    ``.devolvida`` depois de o documento ser gravado: a volta não se repete.
+    """
+    faltam = [secao for secao in SECOES_DESTE_COMPUTADOR if not documento.get(secao)]
+    gravada = _placa_gravada(documento)
+    if placa is None or gravada is None or not faltam:
+        return documento, []
+    from hefesto_dualsense4unix.integrations.censo_do_gabinete import serve_para_esta_placa
+
+    if not serve_para_esta_placa({PLACA_FIELD: gravada}, dict(placa)):
+        return documento, []
+    devolvidas: list[Path] = []
+    vivos: Mapping[str, str] | None = None
+    for guarda in _guardas_de_outra_placa():
+        guardado = _ler_a_guarda(guarda)
+        if (
+            guardado is None
+            or PLACA_FIELD in guardado
+            or guardado.get(VERSION_FIELD) != documento.get(VERSION_FIELD)
+        ):
+            continue
+        do_mapa = _controladores_do_mapa(guardado.get("mapa"))
+        trazidas = [secao for secao in faltam if guardado.get(secao)]
+        if not do_mapa or not trazidas:
+            continue
+        vivos = controladores() if vivos is None else vivos
+        if vivos is None:
+            break
+        novos = reconhecer_os_controladores(do_mapa, vivos, _familias_gravadas(guardado))
+        if novos is None:
+            continue
+        documento = dict(documento)
+        for secao in trazidas:
+            documento[secao] = (
+                _mapa_reapontado(guardado[secao], novos)
+                if secao == "mapa"
+                else _copia_funda(guardado[secao])
+            )
+        faltam = [secao for secao in faltam if secao not in trazidas]
+        devolvidas.append(guarda)
+        logger.warning(
+            "maquina_guarda_da_renumeracao_devolvida", guarda=str(guarda), secoes=trazidas
+        )
+        if not faltam:
+            break
+    if devolvidas:
+        documento = _nos_enderecos_vivos(documento, vivos) or documento
+    return documento, devolvidas
+
+
+def _marcar_as_devolvidas(guardas: Sequence[Path]) -> None:
+    for guarda in guardas:
+        alvo = guarda.with_name(guarda.name + _SUFIXO_DA_GUARDA_DEVOLVIDA)
+        n = 2
+        while alvo.exists():
+            alvo = guarda.with_name(f"{guarda.name}{_SUFIXO_DA_GUARDA_DEVOLVIDA}-{n}")
+            n += 1
+        try:
+            os.rename(guarda, alvo)
+        except OSError as exc:
+            logger.warning("maquina_guarda_devolvida_nao_marcada", guarda=str(guarda),
+                           err=str(exc)[:200])
 
 
 def _guardar_o_de_outra_placa(guardado: Mapping[str, Any]) -> Path:
