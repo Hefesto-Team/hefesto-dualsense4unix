@@ -35,9 +35,14 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `mod.ola` | `{ficha}` | a ficha e o `SO_PEERCRED` | `{id, api, permissoes}` |
 | `eventos.assinar` | `{topicos: [...], dedos?}` | `ler:<tópico>` para cada um | `{assinados}` |
 | `eventos.desassinar` | `{topicos: [...]}` | os tópicos já assinados pela conexão | `{desassinados}` |
-| `luz.set` | `{uniq, rgb: [r, g, b], brilho?}` | `escrever:luz` | o resultado do `led.set` |
-| `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
-| `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
+| `luz.set` | `{uniq, rgb: [r, g, b], brilho?, ate_ms?}` | `escrever:luz` | o resultado do `led.set`, ou `{status: "coberto", vence}` |
+| `vibracao.set` | `{uniq, fraco, forte, ate_ms?}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set`, ou `{status: "coberto", vence}` |
+| `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params, ate_ms?}` | `escrever:gatilho` | o resultado do `trigger.set`, ou `{status: "coberto", vence}` |
+| `haptica.registrar` | `{id, golpes: [[inicio_ms, dura_ms, frequencia_hz, amplitude]], repete?}` | `escrever:haptica` | `{status}` <!-- ref-externa: método da porta das extensões, não do daemon --> |
+| `haptica.tocar` | `{uniq, id, forca (0 a 1), lado: esquerdo\|direito, bpm?, ate_ms?}` | `escrever:haptica` | `{status, pelo_motor}` <!-- ref-externa: método da porta das extensões, não do daemon --> |
+| `som.registrar` | `{id, golpes: [...]}` (como o da háptica) | `escrever:som` | `{status}` |
+| `som.tocar` | `{uniq, som: <id>\|recorte, volume (0 a 1), t?}` | `escrever:som` | `{status}` |
+| `leds.set` | `{uniq, mascara (0 a 31), ate_ms}` | `escrever:leds` | `{status}` |
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
@@ -216,9 +221,10 @@ mesma fila de 256 por assinatura. Só vale para a lista fechada de tópicos publ
 
 A extensão que acompanha o jogo lê `jogo.vibracao` (a vibração de cada controle, acima) e a que faz um controle
 vibrar pede `vibracao.set {uniq, fraco, forte}`: o serviço aplica pelo `rumble.set`, com o teto e a força de
-cada controle, e o jogo tem a vez. Os dois nomes não dizem que aparelho está do outro lado. Quando a conexão
-cai (parada, morta ou desligada), cada controle que o último `vibracao.set` da extensão deixou acima de zero recebe
-`fraco: 0, forte: 0`, menos aquele em que o jogo está vibrando: nenhum motor fica preso.
+cada controle, e em cada motor sai o pedido mais forte (ver «O teto e o mais forte»). Os dois nomes não dizem que
+aparelho está do outro lado. Quando a conexão cai (parada, morta ou desligada), os pedidos vivos da extensão saem
+e cada controle que o último `vibracao.set` da extensão deixou acima de zero recebe `fraco: 0, forte: 0`, menos aquele
+em que o jogo ou outra extensão ainda vibra: nenhum motor fica preso.
 
 O par de um `vibracao.set` vale por 3 s
 (`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:16`): sem um novo pedido
@@ -235,6 +241,34 @@ uma vez, com o `jogador` que ele acende (ou `null`). Sem a lista do serviço, va
 que falha volta vazia. O método entrou na versão 2 da porta sem mudar a faixa: quem pede `>=2,<3` e não o usa
 não muda nada. O servidor Buttplug do próprio DualSense mora na extensão `intiface`
 (`https://github.com/Hefesto-Team/hefesto-mod-lovense`), que usa este método e o `vibracao.set`.
+
+## O teto e o mais forte
+
+Toda escrita de extensão (`luz.set`, `vibracao.set`, `gatilho.set`, `haptica.tocar`, `som.tocar` e `leds.set`) vai <!-- ref-externa: método da porta das extensões, não do daemon -->
+à fonte de fora do tato vivo (`FonteDeFora` em `src/hefesto_dualsense4unix/daemon/subsystems/tato_vivo.py`), que
+divide o mesmo teto dos efeitos do Hefesto: 12 escritas por segundo por controle e 40 no total. A escrita que não
+cabe recebe `-32014`, nunca o silêncio. A ordem é sempre a mesma: o modo, o mais forte, o teto.
+
+- **O modo.** No Modo Nativo o jogo fala direto com o controle, e toda escrita recusa com `-32011` e
+  `data: {vence: "jogo", modo: "nativo"}`. Sem jogo em cena a escrita sai: não há a quem ceder.
+- **O mais forte.** Em cada canal sai o pedido mais forte, do jogo ou de uma extensão, sem soma e sem dono fixo.
+  A força, de 0 a 1, é a amplitude de cada motor (o esquerdo é o `forte`, o direito o `fraco`); no gatilho, a
+  maior força que o modo aplica em qualquer zona, de 1 a 8 (desligado e frequência 0 valem 0), e o empate fica com
+  o que já vale; na luz, o maior componente do RGB vezes o brilho, e até 10 % de diferença vence o pedido mais
+  recente; na háptica, o pico do padrão vezes a `forca`, por lado, e a troca de vencedor espera 50 ms. Na
+  vibração, o motor que a extensão não venceu fica com o valor de quem vence.
+- **O prazo.** Um pedido sem `ate_ms` vive 3 s. Com `ate_ms` (até 300 s), o pedido que perde fica vivo, responde
+  `{status: "coberto", vence}` e sai sozinho quando volta a ser o mais forte. O pedido sem prazo que perde
+  recebe `-32011` com `data: {vence: "jogo" | "extensao:<id>", canal}`. Um pedido com tudo em zero solta o canal
+  sem gastar o teto.
+- **A háptica e o som.** O áudio nunca cruza a porta: a extensão registra o padrão uma vez (`haptica.registrar`, <!-- ref-externa: método da porta das extensões, não do daemon -->
+  `som.registrar`; até 16 golpes de até 4 s, 32 padrões por extensão; o `id` em minúsculas) e pede pelo `id`.
+  O padrão com `repete` toca no `bpm` pedido até o prazo, e o teto conta o pedido, não cada batida. O
+  `som.tocar` com `som: "recorte"` toca no alto-falante o recorte do estalo do jogo cujo `t` veio no `jogo.som`.
+- **O rádio.** Pelo Bluetooth, sem vaga na ponte do controle, o `haptica.tocar` toca o mesmo padrão em pulsos do <!-- ref-externa: método da porta das extensões, não do daemon -->
+  motor (`pelo_motor: true`) e o `som.tocar` recusa com `-32015`.
+- **As luzes de jogador.** O bit 0 da `mascara` é a luz da esquerda. No fim do `ate_ms` o serviço devolve as luzes
+  que o controle mostrava antes.
 
 ## A extensão de lançador
 
@@ -626,18 +660,19 @@ dizem «Saiu a «Y».» pelo nome que a substituída tinha no registro (sem ele,
 
 ## Os erros
 
-Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, e `-32003` para parâmetro inválido), a porta tem quatro próprios:
+Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, e `-32003` para parâmetro inválido), a porta tem seis próprios:
 
 | código | quando |
 | --- | --- |
 | `-32010` | falta a permissão (a mensagem nomeia: «falta a permissão ler:botoes») |
-| `-32011` | o jogo está escrevendo aquele canal daquele controle |
+| `-32011` | o pedido é mais fraco que o pedido vivo no canal, do jogo ou de outra extensão (`data.vence`), ou o controle está no Modo Nativo |
 | `-32012` | quem é você: ficha desconhecida, processo estranho ou primeira palavra errada |
 | `-32013` | o serviço não conseguiu aplicar a escrita |
+| `-32014` | o teto de efeitos daquele controle está cheio |
+| `-32015` | pelo rádio, sem vaga para o som daquele controle |
 
-Toda escrita sem `uniq` é recusada com `-32003`, porque escrever em todos é proibido. Em toda escrita,
-o jogo tem a vez: se ele está escrevendo a luz, o gatilho ou a vibração daquele controle, a modificação
-espera.
+Toda escrita sem `uniq` é recusada com `-32003`, porque escrever em todos é proibido. Em toda escrita
+vale o pedido mais forte do canal (ver «O teto e o mais forte»).
 
 ## Nota de verificação (20/10/2026)
 

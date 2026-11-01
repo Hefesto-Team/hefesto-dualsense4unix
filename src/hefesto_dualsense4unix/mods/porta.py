@@ -1229,8 +1229,13 @@ class Porta:
 
     async def _soltar_a_vibracao(self, sessao: _Credencial, uniqs: set[str]) -> None:
         """Quem vibrou saiu: os motores que ele deixou ligados param, se o jogo não os tem."""
+        fonte = self._fonte()
         for uniq in sorted(uniqs):
-            if self._o_jogo_escreve(uniq, "vibracao"):
+            if fonte is None and self._o_jogo_escreve(uniq, "vibracao"):
+                continue
+            agora = fonte.relogio() if fonte is not None else 0.0
+            if fonte is not None and any(
+                    fonte.rival(uniq, "vibracao", lado, "", agora)[1] > 0 for lado in _LADOS):
                 continue
             try:
                 await self._escritor("rumble.set", {"uniq": uniq, "weak": 0, "strong": 0})
