@@ -1517,7 +1517,7 @@ def escolha_da_lista(p: dict[str, Any] | None, uniq: str, brilho: float | None,
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
-    modo_da_aba = modo_da_luz_do_perfil(p)
+    modo_da_aba = _monta().modo_na_tela(modo_da_luz_do_perfil(p), ABA_DO_MODO)
 
     from hefesto_dualsense4unix.interface.cartao_do_controle import (
         cor_do_swatch,
@@ -1596,8 +1596,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
-        f"{GESTO_DO_MODO}-{MODO_PERSONALIZADO}":
-            "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
+        f"{GESTO_DO_MODO}-{MODO_PERSONALIZADO}": "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
+        **_monta().campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo_da_aba),
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
                    **listas_de_efeito,
@@ -2460,6 +2460,16 @@ _RECADO_DO_PERSONALIZADO = (
     "se repetir.")
 
 
+ABA_DO_MODO = "04"
+
+
+def _monta() -> Any:
+    """O `monta`, importado na hora do uso, como nos outros pacotes."""
+    from hefesto_dualsense4unix.interface import monta
+
+    return monta
+
+
 @gesto("04-iluminacao.html", GESTO_DO_MODO, grava="gravar_pelo_gesto")
 def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O par «Modo automático | Modo personalizado» — e ele MUDA o perfil.
@@ -2481,7 +2491,7 @@ def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     ativação do perfil (`perfil.reaplicar`, como o `auto-cores` que a precedeu).
     """
     pedido = str(o.get("modo") or "")
-    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+    if not _monta().pedido_da_aba(pedido, ABA_DO_MODO):
         raise ValueError(
             f"{GESTO_DO_MODO}: o clique não disse qual modo. Cada botão do par manda o "
             f"`data-modo`; um pedido sem ele não vem da tela")
@@ -2491,11 +2501,11 @@ def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     cru = perfil.ativo_que_vale(nome)
-    if modo_da_luz_do_perfil(cru) == pedido:
+    if _monta().modo_na_tela(modo_da_luz_do_perfil(cru), ABA_DO_MODO) == pedido:
         return None
 
     def _virar(prof: Any) -> Any:
-        if pedido == MODO_PERSONALIZADO:
+        if pedido != MODO_AUTOMATICO:
             for c in ctx.conectados:
                 uniq = str(c.get("uniq") or "")
                 if not uniq or _a_cor_guardada_que_vale(ctx, cru, c) is not None:
@@ -2508,6 +2518,8 @@ def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     gravar_pelo_gesto("luz", nome, _virar, origem="interface-nova")
     perfil.reaplicar(nome, ctx, p)
+    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+        return {"recado": f"Luz no {_monta().rotulo_do_modo(pedido, ABA_DO_MODO)}."}
     return {"recado": (_RECADO_DO_AUTOMATICO if pedido == MODO_AUTOMATICO
                        else _RECADO_DO_PERSONALIZADO)}
 

@@ -179,6 +179,7 @@ CAMADA: dict[tuple[str, str], str] = {
     ("10-perfis.html", "editor.estilo"): _J,
     ("10-perfis.html", "editor.jogo"): _J,
     ("10-perfis.html", "perfis.renomear"): _J,
+    ("10-perfis.html", "editor.modos"): _J,
     ("10-perfis.html", "editor.ordem"): _J,
     ("10-perfis.html", "editor.quando"): _J,
     ("10-perfis.html", "largura-da-coluna"): _W,

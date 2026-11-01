@@ -1237,7 +1237,7 @@ def _miolo(blocos, depois="", abas=None):
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         <span class="sensores">
           {CALIBRAR_AO_LADO_DO_AUTOMATICO}
-          {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
+          {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}{_monta_modulo.vaga_da_extensao(GESTO_DO_MODO, GOVERNA_DO_MODO_AUTOMATICO)}
         </span>
       </div>
       <div class="quadro-corpo">

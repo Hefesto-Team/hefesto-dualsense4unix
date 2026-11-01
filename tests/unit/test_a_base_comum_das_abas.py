@@ -186,14 +186,15 @@ def test_toda_pagina_tem_a_base_uma_vez_e_identica_ao_arquivo(
         assert f'<script id="base-comum">\n{js}</script>' in doc, f"{nome}: JS diferente do arquivo"
 
 
-def test_o_modo_auto_nao_existe_de_06_a_10(paginas_geradas: dict[str, str]) -> None:
-    """O botão é das abas 01 a 05; as de 06 a 10 não o têm.
+def test_o_modo_auto_nao_existe_de_06_a_09(paginas_geradas: dict[str, str]) -> None:
+    """O botão é das abas 01 a 05 e da 10, onde vale para o perfil inteiro; as de 06 a 09 não o
+    têm.
 
     Que ele APAREÇA em 02 a 05 é da sprint de cada aba, que troca o par pelo `monta.modo_auto`.
     """
     com = sorted(nome for nome, doc in paginas_geradas.items()
-                 if 'class="modo-auto"' in doc and not re.match(r"0[1-5]-", nome))
-    assert not com, f"página(s) com o botão «Modo automático» fora das abas 01 a 05: {com}"
+                 if 'class="modo-auto"' in doc and not re.match(r"0[1-5]-|10-", nome))
+    assert not com, f"página(s) com o botão «Modo automático» fora das abas 01 a 05 e 10: {com}"
 
 
 def test_o_modo_auto_fala_a_lingua_do_piloto() -> None:

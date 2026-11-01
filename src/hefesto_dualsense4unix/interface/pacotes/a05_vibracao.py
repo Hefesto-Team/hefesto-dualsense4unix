@@ -592,7 +592,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     if ressalva:
         linhas_do_estado.append((_tela.ALERTA, ressalva))
     estado = _tela.html_do_estado(linhas_do_estado)
-    modo = modo_da_vibracao_do_perfil(perfil_ativo)
+    modo = _monta().modo_na_tela(modo_da_vibracao_do_perfil(perfil_ativo), ABA_DO_MODO)
     return {
         "colunas": colunas,
         "mesa": {},
@@ -600,6 +600,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "blocos": {"#vib-estado": estado},
         GESTO_DO_MODO: modo,
         f"{GESTO_DO_MODO}-automatico": "sim" if modo == MODO_AUTOMATICO else "",
+        **_monta().campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo),
         "sem_dono": dict(SEM_DONO),
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
@@ -1664,6 +1665,14 @@ def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 GESTO_DO_MODO = "modo-da-vibracao"
+ABA_DO_MODO = "05"
+
+
+def _monta() -> Any:
+    """O `monta`, importado na hora do uso, como nos outros pacotes."""
+    from hefesto_dualsense4unix.interface import monta
+
+    return monta
 
 
 def modo_da_vibracao_do_perfil(p: dict[str, Any] | None) -> str:
@@ -1672,11 +1681,17 @@ def modo_da_vibracao_do_perfil(p: dict[str, Any] | None) -> str:
     Só o que está ESCRITO em ``rumble.modo`` vale: sem perfil, sem seção ou sem o campo, a aba segue
     como sempre foi, no Personalizado — o Automático nunca se deduz.
     """
-    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
+    from hefesto_dualsense4unix.profiles.schema import (
+        MODO_AUTOMATICO,
+        MODO_PERSONALIZADO,
+        extensao_do_modo,
+    )
 
     rumble = p.get("rumble") if isinstance(p, dict) else None
     escrito = rumble.get("modo") if isinstance(rumble, dict) else None
-    return MODO_AUTOMATICO if escrito == MODO_AUTOMATICO else MODO_PERSONALIZADO
+    if escrito == MODO_AUTOMATICO or extensao_do_modo(escrito) is not None:
+        return str(escrito)
+    return MODO_PERSONALIZADO
 
 
 @gesto("05-vibracao.html", GESTO_DO_MODO, grava="save_profile")
@@ -1688,10 +1703,9 @@ def modo_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O modo só diz quem manda; a receita do estilo que o Automático lê é do motor do tato.
     """
     loader = _perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
 
     pedido = str(o.get("modo") or "")
-    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+    if not _monta().pedido_da_aba(pedido, ABA_DO_MODO):
         raise ValueError(
             f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
             f"um pedido sem ele não vem da tela")
@@ -1699,7 +1713,8 @@ def modo_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not nome:
         raise RuntimeError(
             "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
-    if modo_da_vibracao_do_perfil(_perfil.ativo_que_vale(nome)) == pedido:
+    if _monta().modo_na_tela(
+            modo_da_vibracao_do_perfil(_perfil.ativo_que_vale(nome)), ABA_DO_MODO) == pedido:
         return
     prof = loader.load_profile(nome)
     novo = prof.model_copy(update={"rumble": prof.rumble.model_copy(update={"modo": pedido})})

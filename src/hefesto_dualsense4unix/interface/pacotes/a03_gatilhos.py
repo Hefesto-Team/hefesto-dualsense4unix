@@ -999,7 +999,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
     blocos[SELETOR_DOS_SEUS] = html_dos_seus_efeitos()
-    modo_da_aba = modo_dos_gatilhos_do_perfil(p)
+    modo_da_aba = _monta().modo_na_tela(modo_dos_gatilhos_do_perfil(p), ABA_DO_MODO)
     return {
         "colunas": colunas,
         "blocos": blocos,
@@ -1008,6 +1008,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
         f"{GESTO_DO_MODO}-personalizado": "sim" if modo_da_aba == "personalizado" else "",
+        **_monta().campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo_da_aba),
         "sem_dono": {},
         "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO),
                       "sem_endereco": sum(1 for col in colunas.values()
@@ -1870,6 +1871,16 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
     p.chamar("launch_env.refresh")
 
 
+ABA_DO_MODO = "03"
+
+
+def _monta() -> Any:
+    """O `monta`, importado na hora do uso, como nos outros pacotes."""
+    from hefesto_dualsense4unix.interface import monta
+
+    return monta
+
+
 @gesto("03-gatilhos.html", GESTO_DO_MODO, grava="_gravar_so_o_gatilho")
 def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O par «Modo automático | Modo personalizado» — e ele MUDA o perfil.
@@ -1887,7 +1898,7 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     `perfil.reaplicar` é o dono desse tempo. O `_gravar_so_o_gatilho` sozinho só grava.
     """
     pedido = str(o.get("modo") or "")
-    if pedido not in (MODO_AUTOMATICO, "personalizado"):
+    if not _monta().pedido_da_aba(pedido, ABA_DO_MODO):
         raise ValueError(
             f"{GESTO_DO_MODO}: o clique não disse qual modo. Cada botão do par manda o "
             f"`data-modo`; um pedido sem ele não vem da tela")
@@ -1895,7 +1906,8 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     if not nome:
         raise RuntimeError(
             "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
-    if modo_dos_gatilhos_do_perfil(perfil.ativo_que_vale(nome)) == pedido:
+    if _monta().modo_na_tela(
+            modo_dos_gatilhos_do_perfil(perfil.ativo_que_vale(nome)), ABA_DO_MODO) == pedido:
         return None
     loader = perfil._com_o_src()
     prof = loader.load_profile(nome)
@@ -1903,6 +1915,8 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         "triggers": prof.triggers.model_copy(update={"modo": pedido})})
     _gravar_so_o_gatilho(novo, p)
     perfil.reaplicar(nome, ctx, p)
+    if pedido not in (MODO_AUTOMATICO, "personalizado"):
+        return {"recado": f"Gatilhos no {_monta().rotulo_do_modo(pedido, ABA_DO_MODO)}."}
     return {"recado": ("Gatilhos no modo automático: o jogo decide; o estilo ajusta."
                        if pedido == MODO_AUTOMATICO
                        else "Gatilhos no modo personalizado: valem as suas escolhas.")}

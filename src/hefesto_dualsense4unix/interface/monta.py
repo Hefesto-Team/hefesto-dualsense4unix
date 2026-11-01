@@ -441,6 +441,89 @@ def modo_auto(gesto: str, ligado: bool = False, governa: str = "",
             f'<span class="p"></span>{ROTULO_DO_MODO[MODO_AUTOMATICO]}</button>')
 
 
+CAMPO_DA_EXTENSAO = "ext"
+
+CSS_DO_MODO_DA_EXTENSAO = (
+    ".vaga-da-extensao{display:contents}"
+    ".modo-ext{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;"
+    "margin-left:8px;border-radius:999px;border:1px solid var(--border-forte,#44475a);"
+    "background:transparent;color:var(--texto-suave,#c8ccda);"
+    "font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;white-space:nowrap;"
+    "transition:background .15s,border-color .15s,color .15s,box-shadow .15s}"
+    ".modo-ext .p{width:11px;height:11px;border-radius:50%;"
+    "border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;transition:all .15s}"
+    ".modo-ext:hover{border-color:#5fd3e6;color:#fff}"
+    '.modo-ext[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;'
+    "box-shadow:0 0 0 3px rgba(95,211,230,.18)}"
+    '.modo-ext[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}'
+    ".modo-ext:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}"
+)
+
+
+def vaga_da_extensao(gesto: str, governa: str = "") -> str:
+    """A vaga do modo que uma extensão traz, irmã do Modo automático: vazia (nenhum botão no DOM)
+    até o pacote a encher com o botão de uma extensão ligada que o pede. Aceso, esmaece a mesma
+    área que o automático governa."""
+    campo = f"{gesto}-{CAMPO_DA_EXTENSAO}"
+    esmaece = (
+        f'body:has([data-campo="{campo}"] .modo-ext[aria-pressed="true"]) :is({governa})'
+        "{opacity:.42;pointer-events:none;filter:saturate(.6)}" if governa else "")
+    return (f"<style>{CSS_DO_MODO_DA_EXTENSAO}{esmaece}</style>"
+            f'<span class="vaga-da-extensao" data-campo="{campo}" data-hef-alvo="html"></span>')
+
+
+def modos_da_aba(aba: str) -> tuple[dict[str, Any], ...]:
+    """Os modos que as extensões ligadas trazem para a aba ``aba`` (``"02"``…``"10"``)."""
+    from hefesto_dualsense4unix.mods.manifesto import modos_pedidos
+
+    return tuple(m for m in modos_pedidos() if aba in m["abas"])
+
+
+def modo_na_tela(modo: str, aba: str) -> str:
+    """O modo que a aba pinta: o de uma extensão que não está ligada (ou não pede esta aba) vale
+    como o Personalizado, sem apagar a escolha do perfil."""
+    from hefesto_dualsense4unix.profiles.schema import extensao_do_modo
+
+    if extensao_do_modo(modo) is None:
+        return modo
+    return modo if any(m["valor"] == modo for m in modos_da_aba(aba)) else MODO_PERSONALIZADO
+
+
+def pedido_da_aba(pedido: str, aba: str) -> bool:
+    """O ``data-modo`` do clique é um dos modos que a aba oferece agora."""
+    return pedido in (MODO_AUTOMATICO, MODO_PERSONALIZADO) or any(
+        m["valor"] == pedido for m in modos_da_aba(aba))
+
+
+def rotulo_do_modo(pedido: str, aba: str) -> str:
+    """O nome do modo pedido, para o recado do gesto."""
+    for m in modos_da_aba(aba):
+        if m["valor"] == pedido:
+            return str(m["rotulo"])
+    return ROTULO_DO_MODO.get(pedido, pedido)
+
+
+def modos_da_extensao(gesto: str, aba: str, modo: str) -> str:
+    """O botão de cada modo que uma extensão ligada traz para a aba, com o `modo` da seção aceso.
+    O clique pede o modo apagado e, aceso, o Personalizado (os dois botões apagados)."""
+    botoes = []
+    for m in modos_da_aba(aba):
+        aceso = m["valor"] == modo
+        pedido = MODO_PERSONALIZADO if aceso else m["valor"]
+        botoes.append(
+            f'<button class="modo-ext" type="button" data-gesto="{gesto}"'
+            f' data-modo="{html.escape(pedido, quote=True)}"'
+            f' aria-pressed="{str(aceso).lower()}"'
+            f' data-dica="{html.escape(str(m["dica"]), quote=True)}">'
+            f'<span class="p"></span>{html.escape(str(m["rotulo"]))}</button>')
+    return "".join(botoes)
+
+
+def campo_da_extensao(gesto: str, aba: str, modo: str) -> dict[str, str]:
+    """O campo que enche a vaga da extensão: vazio sem extensão ligada que peça a aba."""
+    return {f"{gesto}-{CAMPO_DA_EXTENSAO}": modos_da_extensao(gesto, aba, modo)}
+
+
 def rotulo_do_chip(c: dict[str, Any]) -> str:
     """O rótulo curto com a VIA marcada, para o chip da fita."""
     texto = rotulo(c, "curta")

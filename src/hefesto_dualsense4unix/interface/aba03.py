@@ -437,7 +437,7 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Uma coluna por controle; vale na hora">Gatilhos</span>
-        {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
+        {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}{monta_.vaga_da_extensao(GESTO_DO_MODO, GOVERNA)}
       </div>
       <div class="quadro-corpo">
         <div class="g2-grade">

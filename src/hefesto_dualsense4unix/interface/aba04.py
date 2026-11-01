@@ -461,7 +461,7 @@ MIOLO = f'''
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
-        {monta_.modo_auto(GESTO_DO_MODO, governa=".luz-grade .ctrl", dica="O jogo pinta a barra; o estilo do perfil ajusta")}
+        {monta_.modo_auto(GESTO_DO_MODO, governa=".luz-grade .ctrl", dica="O jogo pinta a barra; o estilo do perfil ajusta")}{monta_.vaga_da_extensao(GESTO_DO_MODO, ".luz-grade .ctrl")}
       </div>
       <div class="quadro-corpo">
 

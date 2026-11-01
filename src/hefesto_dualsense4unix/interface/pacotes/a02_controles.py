@@ -1445,6 +1445,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "alto-canal-porque": "",
             }),
         }
+    modo_da_aba = _monta().modo_na_tela(modo_dos_controles_do_perfil(_perfil.ativo_que_vale(
+        _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip() or None)), ABA_DO_MODO)
     da_pagina = _so_se_a_pagina_tiver({
         "plastico-css": folha_do_plastico(ctx.mesa),
         "fita-peca": [
@@ -1452,10 +1454,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             for m in ctx.mesa
         ],
         "fita-via": [str(m.get("via") or "") for m in ctx.mesa],
-        f"{GESTO_DO_MODO}-automatico": (
-            "sim" if modo_dos_controles_do_perfil(_perfil.ativo_que_vale(
-                _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip() or None))
-            == MODO_AUTOMATICO else ""),
+        f"{GESTO_DO_MODO}-automatico": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
+        **_monta().campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo_da_aba),
     })
     return {"cards": cards, "mesa": da_pagina, "sem_dono": {},
             LUGAR_VAZIO: {"alto-canal": TRAVESSAO, **_so_se_a_pagina_tiver(ABA_DO_LUGAR_VAZIO)},
@@ -2504,6 +2504,7 @@ def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 GESTO_DO_MODO = "modo-dos-controles"
+ABA_DO_MODO = "02"
 
 
 def modo_dos_controles_do_perfil(p: dict[str, Any] | None) -> str:
@@ -2512,10 +2513,16 @@ def modo_dos_controles_do_perfil(p: dict[str, Any] | None) -> str:
     Só o que está ESCRITO em ``controles_modo`` vale: sem perfil ou sem o campo, a aba segue como
     sempre foi, no Personalizado — o Automático nunca se deduz.
     """
-    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
+    from hefesto_dualsense4unix.profiles.schema import (
+        MODO_AUTOMATICO,
+        MODO_PERSONALIZADO,
+        extensao_do_modo,
+    )
 
     escrito = p.get("controles_modo") if isinstance(p, dict) else None
-    return MODO_AUTOMATICO if escrito == MODO_AUTOMATICO else MODO_PERSONALIZADO
+    if escrito == MODO_AUTOMATICO or extensao_do_modo(escrito) is not None:
+        return str(escrito)
+    return MODO_PERSONALIZADO
 
 
 @gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, GESTO_DO_MODO, grava="save_profile")
@@ -2527,10 +2534,9 @@ def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     grava nada. Nada se apaga: as escolhas da aba ficam no perfil, e o Personalizado as devolve.
     """
     loader = _perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MODO_PERSONALIZADO
 
     pedido = str(o.get("modo") or "")
-    if pedido not in (MODO_AUTOMATICO, MODO_PERSONALIZADO):
+    if not _monta().pedido_da_aba(pedido, ABA_DO_MODO):
         raise ValueError(
             f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
             f"um pedido sem ele não vem da tela")
@@ -2538,7 +2544,8 @@ def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not nome:
         raise RuntimeError(
             "sem perfil ativo não há onde guardar o modo. Escolha um perfil na aba Perfis.")
-    if modo_dos_controles_do_perfil(_perfil.ativo_que_vale(nome)) == pedido:
+    if _monta().modo_na_tela(
+            modo_dos_controles_do_perfil(_perfil.ativo_que_vale(nome)), ABA_DO_MODO) == pedido:
         return
     novo = loader.load_profile(nome).model_copy(update={"controles_modo": pedido})
     loader.save_profile(novo, origem="interface-nova")

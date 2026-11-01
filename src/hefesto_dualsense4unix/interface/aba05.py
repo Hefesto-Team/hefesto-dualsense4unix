@@ -681,7 +681,7 @@ MIOLO = f'''
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Quanto do que o jogo pede chega a cada controle. A fita do topo não escolhe nada aqui">Vibração</span>
-        {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
+        {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}{monta_.vaga_da_extensao(GESTO_DO_MODO, GOVERNA)}
       </div>
       <div class="quadro-corpo">
         <div class="vib">
