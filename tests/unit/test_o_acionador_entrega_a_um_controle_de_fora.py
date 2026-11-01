@@ -30,6 +30,8 @@ from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_mod
 from hefesto_dualsense4unix.daemon.subsystems import external_mask  # noqa: F401
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
+from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
+from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import config_isolado  # noqa: F401
 
 DECISAO = "D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL"
 
@@ -536,6 +538,7 @@ def test_o_default_env_leva_os_pares_da_foto() -> None:
     assert "0x057e/0x2009" in _ignore(le._o_ambiente_do_comum(foto, padrao))
 
 
+@pytest.mark.usefixtures("config_isolado")
 @pytest.mark.parametrize("mascara", ["dualsense", "xbox"])
 def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
     mesa: list[str], monkeypatch: pytest.MonkeyPatch, mascara: str
@@ -553,6 +556,10 @@ def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
     daemon.config.gamepad_flavor = mascara
     daemon._gamepad_device = pad
     daemon.controller.is_connected = lambda: bool(dualsenses)
+    registro = ControllerIdentityRegistry(clock=lambda: 1000.0)
+    registro.slot_for(P1)
+    registro.sync_connected([P1])
+    daemon.identity_registry = registro
     mgr = CoopManager(daemon)
     daemon._coop_manager = mgr
     mgr.sync()
@@ -565,7 +572,8 @@ def test_o_de_fora_sentado_nao_anda_para_o_p1_quando_o_dualsense_cai(
 
     dualsenses.clear()
     daemon.controller.primary_uniq = None
-    daemon.identity_registry = SimpleNamespace(guardados=lambda: {P1: 20.0})
+    registro.sync_connected([])
+    assert registro.o_lugar_1_espera()
     mgr.sync(force=True)
     mgr.forward_all()
 

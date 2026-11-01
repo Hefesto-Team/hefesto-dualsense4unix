@@ -4,11 +4,14 @@ O assento é do jogador, não do tipo de controle (D-3009-COM-O-JOGO-O-LUGAR-GUA
 
 1. com o jogo aberto, o Pro (ou o 8BitDo) que dirige o pad do P1 segue no boneco 1 quando um
    DualSense chega, e o DualSense senta no primeiro lugar livre; sem jogo, a carta manda;
-2. o de fora sentado no P2 assume o P1 que ficou vago só quando o lugar guardado do P1 vence;
+2. o de fora sentado no P2 assume o P1 que ficou vago só quando o lugar guardado do número 1
+   vence (com o jogo, o prazo para e só o «Renumerar agora» solta); o guardado de outro número
+   não o atrasa;
 3. o quadro neutro do pad que o de fora larga sai antes do primeiro despacho do DualSense.
 
 O backend é o real no ensaio de queda (``MesaDoJogo``), no cabo e no rádio; o co-op é o real
-com o Pro da mesa do acionador. Nenhum endereço real: faixa forjada ``aa:bb:cc``.
+com o Pro da mesa do acionador, e o lugar guardado é o do ``ControllerIdentityRegistry`` de
+verdade. Nenhum endereço real: faixa forjada ``aa:bb:cc``.
 """
 from __future__ import annotations
 
@@ -20,6 +23,10 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
+from hefesto_dualsense4unix.daemon.subsystems.identity import (
+    ControllerIdentityRegistry,
+    prazo_do_lugar_guardado,
+)
 from tests.unit.test_o_acionador_entrega_a_um_controle_de_fora import (
     P1,
     PRO,
@@ -212,63 +219,118 @@ class TestOQuadroNeutroVemAntes:
         assert NEUTRO in pad.analogicos[: pad.analogicos.index(QUADRO_DO_DUALSENSE)]
 
 
-class _Guardados:
-    def __init__(self, lugares: dict[str, float]) -> None:
-        self.lugares = lugares
-
-    def guardados(self) -> dict[str, float]:
-        return dict(self.lugares)
+RANK_DO_PRO = 2
+P3 = "aabbcc000005"
 
 
-@pytest.mark.usefixtures("mesa")
+def _registro(relogio: Relogio, outros: tuple[str, ...]) -> ControllerIdentityRegistry:
+    """O registro de verdade: o P1 no lugar 1 da fila, o Pro no 2 e os ``outros`` depois."""
+    registro = ControllerIdentityRegistry(clock=relogio)
+    registro.slot_for(P1)
+    registro.set_external_reserve_provider(lambda: {RANK_DO_PRO})
+    registro.set_external_presence_provider(lambda: {RANK_DO_PRO})
+    for uniq in outros:
+        registro.slot_for(uniq)
+    registro.sync_connected([P1, *outros])
+    assert registro.posto_na_fila(P1) == 1
+    return registro
+
+
+def _o_prazo_passa(relogio: Relogio) -> None:
+    relogio.avancar(prazo_do_lugar_guardado() + 1.0)
+
+
+@pytest.mark.usefixtures("mesa", "config_isolado")
 class TestOP1VagoSoDepoisDoPrazo:
     """Item 2: o DualSense do P1 sai de vez, e o Pro sentado no P2 espera o prazo."""
 
     @MASCARAS
-    @pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
     def test_o_pro_do_p2_assume_o_p1_quando_o_lugar_vence(
-        self, monkeypatch: pytest.MonkeyPatch, mascara: str, jogo: bool
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
     ) -> None:
-        dualsenses = {P1: "/dev/input/event20"}
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
-            lambda: dict(dualsenses),
+        mgr, pad, dualsenses, registro, relogio = _mesa_com_o_dualsense_no_p1(
+            monkeypatch, mascara, jogo=False
         )
-        pad: Any = _PadDoP1()
-        pad.flavor = mascara
-        daemon: Any = _daemon(_Broker())
-        daemon.config.gamepad_flavor = mascara
-        daemon._gamepad_device = pad
-        daemon.display_authority = "game" if jogo else "daemon"
-        daemon.controller.is_connected = lambda: bool(dualsenses)
-        registro = _Guardados({})
-        daemon.identity_registry = registro
-        mgr = CoopManager(daemon)
-        daemon._coop_manager = mgr
-        mgr.sync()
-        mgr.sync(force=True)
         pro = mgr._players[PRO]
         proprio: Any = pro.vpad
-        assert proprio is not None and proprio is not pad and pro.player_index == 2
         proprio.flavor = mascara
 
-        dualsenses.clear()
-        daemon.controller.primary_uniq = None
-        registro.lugares = {P1: 20.0}
+        _o_dualsense_sai(mgr, dualsenses, registro)
+        relogio.avancar(prazo_do_lugar_guardado() - 1.0)
         for _ in range(3):
             mgr.sync(force=True)
         assert pro.vpad is proprio and not pro.no_p1, "o Pro andou antes de o lugar vencer"
         assert mgr.o_de_fora_no_p1() is None
 
-        registro.lugares = {}
+        relogio.avancar(2.0)
         mgr.sync(force=True)
         assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
         assert mgr.numeros_de_jogador()[PRO] == 1
 
+    @MASCARAS
+    def test_com_o_jogo_o_prazo_para_e_so_o_renumerar_solta_o_p1(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses, registro, relogio = _mesa_com_o_dualsense_no_p1(
+            monkeypatch, mascara, jogo=True
+        )
+        pro = mgr._players[PRO]
+        proprio: Any = pro.vpad
+        proprio.flavor = mascara
+
+        _o_dualsense_sai(mgr, dualsenses, registro)
+        for _ in range(3):
+            _o_prazo_passa(relogio)
+            mgr.sync(force=True)
+        assert pro.vpad is proprio and not pro.no_p1, "com o jogo o prazo andou e o Pro trocou"
+
+        registro.soltar_os_lugares_guardados()
+        mgr.sync(force=True)
+        assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
+
+    @MASCARAS
+    def test_o_guardado_de_outro_numero_nao_segura_o_p1(
+        self, monkeypatch: pytest.MonkeyPatch, mascara: str
+    ) -> None:
+        mgr, pad, dualsenses, registro, relogio = _mesa_com_o_dualsense_no_p1(
+            monkeypatch, mascara, jogo=False, outros=(P3,)
+        )
+        pro = mgr._players[PRO]
+        proprio: Any = pro.vpad
+        proprio.flavor = mascara
+
+        _o_dualsense_sai(mgr, dualsenses, registro, ficam=(P3,))
+        relogio.avancar(prazo_do_lugar_guardado() - 5.0)
+        registro.sync_connected([])
+        relogio.avancar(6.0)
+        mgr.sync(force=True)
+
+        assert registro.guardados().keys() == {P3}, "o P3 ainda tem o lugar guardado"
+        assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1, (
+            "o lugar guardado do P3 segurou o P1 que já venceu"
+        )
+
+
+def _o_dualsense_sai(
+    mgr: CoopManager,
+    dualsenses: dict[str, str],
+    registro: ControllerIdentityRegistry,
+    ficam: tuple[str, ...] = (),
+) -> None:
+    daemon: Any = mgr._daemon
+    dualsenses.clear()
+    daemon.controller.primary_uniq = None
+    registro.sync_connected(list(ficam))
+    assert registro.o_lugar_1_espera()
+
 
 def _mesa_com_o_dualsense_no_p1(
-    monkeypatch: pytest.MonkeyPatch, mascara: str, *, jogo: bool
-) -> tuple[CoopManager, Any, dict[str, str], _Guardados]:
+    monkeypatch: pytest.MonkeyPatch,
+    mascara: str,
+    *,
+    jogo: bool,
+    outros: tuple[str, ...] = (),
+) -> tuple[CoopManager, Any, dict[str, str], ControllerIdentityRegistry, Relogio]:
     dualsenses = {P1: "/dev/input/event20"}
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
@@ -281,17 +343,18 @@ def _mesa_com_o_dualsense_no_p1(
     daemon._gamepad_device = pad
     daemon.display_authority = "game" if jogo else "daemon"
     daemon.controller.is_connected = lambda: bool(dualsenses)
-    registro = _Guardados({})
+    relogio = Relogio()
+    registro = _registro(relogio, outros)
     daemon.identity_registry = registro
     mgr = CoopManager(daemon)
     daemon._coop_manager = mgr
     mgr.sync()
     mgr.sync(force=True)
     assert mgr._players[PRO].vpad is not pad and mgr._players[PRO].player_index == 2
-    return mgr, pad, dualsenses, registro
+    return mgr, pad, dualsenses, registro, relogio
 
 
-@pytest.mark.usefixtures("mesa")
+@pytest.mark.usefixtures("mesa", "config_isolado")
 class TestOP1GuardadoNaoSeTomaNaVolta:
     """Item 2 na volta do de fora: com o lugar do P1 guardado, quem volta não toma o pad do P1."""
 
@@ -300,14 +363,11 @@ class TestOP1GuardadoNaoSeTomaNaVolta:
     def test_o_pro_que_volta_com_o_p1_guardado_senta_no_pad_proprio(
         self, monkeypatch: pytest.MonkeyPatch, mascara: str, jogo: bool
     ) -> None:
-        mgr, pad, dualsenses, registro = _mesa_com_o_dualsense_no_p1(
+        mgr, pad, dualsenses, registro, relogio = _mesa_com_o_dualsense_no_p1(
             monkeypatch, mascara, jogo=jogo
         )
-        daemon: Any = mgr._daemon
 
-        dualsenses.clear()
-        daemon.controller.primary_uniq = None
-        registro.lugares = {P1: 20.0}
+        _o_dualsense_sai(mgr, dualsenses, registro)
         mgr._teardown_player(PRO)
         mgr.sync(force=True)
         pro = mgr._players[PRO]
@@ -323,7 +383,10 @@ class TestOP1GuardadoNaoSeTomaNaVolta:
         proprio: Any = pro.vpad
         paradas: list[str] = []
         proprio.stop = lambda: paradas.append("parou")
-        registro.lugares = {}
+        if jogo:
+            registro.soltar_os_lugares_guardados()
+        else:
+            _o_prazo_passa(relogio)
         mgr.sync(force=True)
         assert pro.no_p1 and pro.vpad is pad and pro.player_index == 1
         assert paradas == ["parou"], "o pad próprio do Pro ficou de pé junto com o do P1"

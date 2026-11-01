@@ -1535,6 +1535,12 @@ class ControllerIdentityRegistry:
         with self._lock:
             return self._ordem.get(key)
 
+    def o_lugar_1_espera(self) -> bool:
+        """O número 1 da mesa é de quem saiu e ainda tem o lugar guardado? Leitura pura."""
+        with self._lock:
+            guardados = set(self._guardados_locked())
+            return any(n == 1 for k, n in self._assentos_locked().items() if k in guardados)
+
 
 def make_auto_output_provider(
     registry: ControllerIdentityRegistry,

@@ -989,7 +989,7 @@ class CoopManager:
     def _o_p1_esta_livre(self) -> bool:
         return getattr(self._daemon, "_gamepad_device", None) is not None and not any(
             getattr(p, "no_p1", False) for p in self._players.values()
-        ) and not _algum_lugar_guardado(self._daemon)
+        ) and not _o_lugar_1_guardado(self._daemon)
 
     def o_de_fora_no_p1(self) -> _SecondaryPlayer | None:
         """O controle de fora que dirige o pad do P1 por estar sozinho na mesa."""
@@ -3355,16 +3355,17 @@ def _esperar_as_descidas() -> None:
     esperar_as_descidas()
 
 
-def _algum_lugar_guardado(daemon: Any) -> bool:
-    """Algum lugar guardado ainda espera quem saiu; o registro que não responde conta como espera.
+def _o_lugar_1_guardado(daemon: Any) -> bool:
+    """O número 1 ainda espera quem saiu; o registro que não responde conta como espera.
 
-    Sem registro de identidade não há lugar guardado nenhum a esperar.
+    Só o lugar 1 segura o pad do P1: o guardado de outro número não atrasa quem senta nele, como o
+    DualSense que assume o posto. Sem registro de identidade não há lugar guardado a esperar.
     """
-    guardados = getattr(getattr(daemon, "identity_registry", None), "guardados", None)
-    if not callable(guardados):
+    pergunta = getattr(getattr(daemon, "identity_registry", None), "o_lugar_1_espera", None)
+    if not callable(pergunta):
         return False
     try:
-        return bool(guardados())
+        return bool(pergunta())
     except Exception as exc:
         logger.warning("coop_lugar_guardado_ilegivel", err=str(exc))
         return True
