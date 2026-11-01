@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import math
 import threading
 import time
 from array import array
@@ -444,6 +445,7 @@ class TatoVivo:
     ) -> None:
         self.atuadores: list[Atuador] = list(atuadores)
         self.teto = teto if teto is not None else Teto()
+        self.de_fora = FonteDeFora(self.teto)
         self._fila: deque[Evento] = deque(maxlen=512)
         self._lock = threading.Lock()
         self._pendentes: dict[tuple[str, str], float] = {}
@@ -2860,6 +2862,576 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     ]
 
 
+ORIGEM_DO_JOGO = "jogo"
+PREFIXO_DA_EXTENSAO = "extensao:"
+VIDA_SEM_PRAZO_S = 3.0
+PRAZO_MAXIMO_DE_FORA_S = 300.0
+EMPATE_DO_BRILHO = 0.10
+TROCA_DA_HAPTICA_S = 0.05
+CANAIS_DO_MAIS_NOVO = frozenset({"luz", "leds"})
+ESTALOS_GUARDADOS = 16
+SOM_DO_RECORTE = "recorte"
+JANELA_DO_ESTALO_S = 0.05
+TAXA_DE_FORA = 48000
+ADIANTE_S = 0.05
+GOLPES_POR_PADRAO = 16
+DURACAO_MAXIMA_MS = 4000.0
+PADROES_POR_EXTENSAO = 32
+BPM_DE_FORA = (20.0, 240.0)
+_TRES_BITS = frozenset({0x21, 0x26})
+_FORCA_NO_BYTE_3 = frozenset({0x22, 0x25})
+
+
+def o_modo_cala_a_extensao(modo: str | None) -> bool:
+    """O modo em que o Hefesto não fala cala a extensão; a falta de jogo, não."""
+    return modo is not None and not o_hefesto_fala_no_modo(modo)
+
+
+def forca_do_bloco(bloco: bytes | bytearray | None) -> int:
+    """A força de um bloco de gatilho, de 0 a 8: a maior que o modo aplica em qualquer zona."""
+    if not bloco or len(bloco) < 7 or bloco[0] == 0:
+        return 0
+    modo = bloco[0]
+    if modo in _TRES_BITS:
+        zonas = bloco[1] | (bloco[2] << 8)
+        empacotado = bloco[3] | (bloco[4] << 8) | (bloco[5] << 16) | (bloco[6] << 24)
+        if modo == 0x26 and (len(bloco) < 10 or bloco[9] == 0):
+            return 0
+        return max((((empacotado >> (3 * z)) & 0x07) + 1 for z in range(10)
+                    if zonas & (1 << z)), default=0)
+    if modo in _FORCA_NO_BYTE_3:
+        return (bloco[3] & 0x07) + 1 if bloco[1] | bloco[2] else 0
+    maior = max(bloco[1:7])
+    return 0 if maior <= 0 else max(1, min(8, round(maior / 255 * 8)))
+
+
+def brilho_da_luz(rgb: Sequence[Any], brilho: Any = 1.0) -> float:
+    """O brilho de uma cor: o maior componente vezes o brilho global, de 0 a 1."""
+    try:
+        maior = max(float(c) for c in rgb)
+        fator = 1.0 if brilho is None else float(brilho)
+    except (TypeError, ValueError):
+        return 0.0
+    return max(0.0, min(1.0, maior / 255.0 * max(0.0, min(1.0, fator))))
+
+
+@dataclass
+class PedidoVivo:
+    """Um pedido de fora num canal de um controle: de quem, com que força e até quando."""
+
+    origem: str
+    forca: float
+    em: float
+    ate: float
+    prazo: bool = False
+    coberto: bool = False
+    reescrever: Callable[[], object] | None = field(default=None, compare=False)
+    ao_vencer: Callable[[], object] | None = field(default=None, compare=False)
+
+
+@dataclass(frozen=True)
+class Veredito:
+    """O que o tato vivo responde a uma escrita de fora."""
+
+    vale: bool
+    motivo: str = ""
+    vence: str | None = None
+    fortes: Mapping[str, float] = field(default_factory=dict)
+    coberto: bool = False
+
+
+@dataclass(frozen=True)
+class Golpe:
+    inicio_ms: float
+    dura_ms: float
+    frequencia_hz: float
+    amplitude: float
+
+
+@dataclass(frozen=True)
+class PadraoDeFora:
+    golpes: tuple[Golpe, ...]
+    repete: bool
+
+    @property
+    def dura_ms(self) -> float:
+        return max(g.inicio_ms + g.dura_ms for g in self.golpes)
+
+    @property
+    def pico(self) -> float:
+        return max(g.amplitude for g in self.golpes)
+
+
+def padrao_de(dados: Any) -> PadraoDeFora:
+    """O padrão registrado: ``{golpes: [[inicio_ms, dura_ms, hz, amplitude]], repete}``."""
+    golpes = dados.get("golpes") if isinstance(dados, Mapping) else None
+    if not isinstance(golpes, list) or not 1 <= len(golpes) <= GOLPES_POR_PADRAO:
+        raise ValueError(f"o padrão pede de 1 a {GOLPES_POR_PADRAO} golpes")
+    lidos = []
+    for golpe in golpes:
+        if not isinstance(golpe, list) or len(golpe) != 4 or not all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) for v in golpe):
+            raise ValueError("cada golpe é [inicio_ms, dura_ms, frequencia_hz, amplitude]")
+        inicio, dura, hz, amplitude = (float(v) for v in golpe)
+        if (inicio < 0 or not 0 < dura <= DURACAO_MAXIMA_MS or not 1 <= hz <= 1000
+                or not 0 <= amplitude <= 1 or inicio + dura > DURACAO_MAXIMA_MS):
+            raise ValueError("golpe fora da faixa")
+        lidos.append(Golpe(inicio, dura, hz, amplitude))
+    return PadraoDeFora(tuple(lidos), bool(dados.get("repete", False)))
+
+
+def _posicao_ms(padrao: PadraoDeFora, decorrido_ms: float, bpm: float | None) -> float | None:
+    if decorrido_ms < 0:
+        return None
+    if not padrao.repete:
+        return decorrido_ms if decorrido_ms < padrao.dura_ms else None
+    periodo = 60_000.0 / bpm if bpm else padrao.dura_ms
+    return decorrido_ms % max(periodo, 1.0)
+
+
+def envelope_de(padrao: PadraoDeFora, decorrido_ms: float, bpm: float | None = None) -> float:
+    """A amplitude do padrão naquele instante, de 0 a 1: o que o motor imita."""
+    posicao = _posicao_ms(padrao, decorrido_ms, bpm)
+    if posicao is None:
+        return 0.0
+    return max((g.amplitude for g in padrao.golpes
+                if g.inicio_ms <= posicao < g.inicio_ms + g.dura_ms), default=0.0)
+
+
+def amostras_de(
+    padrao: PadraoDeFora, de_ms: float, quantas: int, forca: float, bpm: float | None = None,
+    taxa: int = TAXA_DE_FORA,
+) -> array[float]:
+    """As amostras do padrão a partir de ``de_ms``: cada golpe é uma senoide que cai."""
+    saida = array("f", bytes(4 * max(0, quantas)))
+    for i in range(len(saida)):
+        posicao = _posicao_ms(padrao, de_ms + i * 1000.0 / taxa, bpm)
+        if posicao is None:
+            continue
+        soma = 0.0
+        for golpe in padrao.golpes:
+            dentro = posicao - golpe.inicio_ms
+            if 0 <= dentro < golpe.dura_ms:
+                queda = 1.0 - dentro / golpe.dura_ms
+                soma += golpe.amplitude * queda * math.sin(
+                    2 * math.pi * golpe.frequencia_hz * dentro / 1000.0)
+        saida[i] = max(-1.0, min(1.0, soma * forca))
+    return saida
+
+
+def pcm_do_padrao(padrao: PadraoDeFora, volume: float, taxa: int = TAXA_DE_FORA) -> bytes:
+    """O padrão inteiro em s16 estéreo, para o alto-falante."""
+    mono = amostras_de(padrao, 0.0, int(taxa * padrao.dura_ms / 1000.0), volume, taxa=taxa)
+    estereo = array("h", bytes(4 * len(mono)))
+    for i, amostra in enumerate(mono):
+        valor = int(amostra * 32767)
+        estereo[2 * i] = estereo[2 * i + 1] = valor
+    return estereo.tobytes()
+
+
+@dataclass
+class ToqueDeFora:
+    origem: str
+    padrao: PadraoDeFora
+    forca: float
+    bpm: float | None
+    inicio: float
+    ate: float
+    pelo_motor: bool
+    tocado_ate: float = 0.0
+    motor_escrito: float = -1.0
+
+
+class FonteDeFora:
+    """A fonte de fora do tato vivo: as escritas das extensões dividem o teto dele.
+
+    Em cada canal sai o pedido mais forte, do jogo ou de uma extensão, sem soma e sem dono
+    fixo; o pedido com prazo fica vivo até ele e volta a sair quando for de novo o mais forte.
+    """
+
+    def __init__(
+        self,
+        teto: Teto,
+        *,
+        modo_de: Callable[[str], str | None] = lambda uniq: None,
+        do_jogo: Callable[[str, str, str], float] = lambda uniq, canal, vaga: 0.0,
+        radio_cede: Callable[[str], bool] = lambda uniq: False,
+        tocar_haptica: Callable[[str, Any, str], object] = lambda uniq, amostras, lado: False,
+        motores: Callable[[str, int, int], object] = lambda uniq, fraco, forte: False,
+        tocar_som: Callable[[str, Any], object] = lambda uniq, recorte: False,
+        relogio: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.relogio = relogio
+        self.teto = teto
+        self.modo_de = modo_de
+        self.do_jogo = do_jogo
+        self.radio_cede = radio_cede
+        self.tocar_haptica = tocar_haptica
+        self.motores = motores
+        self.tocar_som = tocar_som
+        self._vivos: dict[tuple[str, str, str], list[PedidoVivo]] = {}
+        self._vencedor: dict[tuple[str, str, str], tuple[str, float]] = {}
+        self.padroes: dict[tuple[str, str], PadraoDeFora] = {}
+        self.sons: dict[tuple[str, str], PadraoDeFora] = {}
+        self._devolver: list[tuple[str, str, Callable[[], object]]] = []
+        self.toques: dict[tuple[str, str], ToqueDeFora] = {}
+        self._estalos: deque[tuple[float, Any]] = deque(maxlen=ESTALOS_GUARDADOS)
+        self._trava = threading.Lock()
+        self.contadores: dict[str, int] = {
+            "pedidos": 0, "escritas": 0, "recusas_do_modo": 0, "recusas_do_teto": 0,
+            "mais_fracos": 0, "pelo_motor": 0,
+        }
+
+    def _podar(self, chave: tuple[str, str, str], agora: float) -> list[PedidoVivo]:
+        vivos = []
+        for pedido in self._vivos.get(chave, ()):
+            if pedido.ate > agora:
+                vivos.append(pedido)
+            elif pedido.ao_vencer is not None:
+                self._devolver.append((chave[0], chave[1], pedido.ao_vencer))
+        if vivos:
+            self._vivos[chave] = vivos
+        else:
+            self._vivos.pop(chave, None)
+        return vivos
+
+    def rival(
+        self, uniq: str, canal: str, vaga: str, origem: str, agora: float,
+    ) -> tuple[str, float, float]:
+        """O mais forte do canal fora de ``origem``: ``(origem, força, desde)``."""
+        melhor = (ORIGEM_DO_JOGO, float(self.do_jogo(uniq, canal, vaga)), float("-inf"))
+        for pedido in self._podar((uniq, canal, vaga), agora):
+            if pedido.origem != origem and pedido.forca > melhor[1]:
+                melhor = (pedido.origem, pedido.forca, pedido.em)
+        return melhor
+
+    def _vence(self, canal: str, forca: float, rival: tuple[str, float, float]) -> bool:
+        if canal in CANAIS_DO_MAIS_NOVO and rival[1] > 0:
+            return forca >= rival[1] * (1.0 - EMPATE_DO_BRILHO)
+        return forca > rival[1]
+
+    def _segura_a_troca(
+        self, uniq: str, canal: str, vaga: str, origem: str, agora: float,
+    ) -> bool:
+        if canal != "haptica":
+            return False
+        dono = self._vencedor.get((uniq, canal, vaga))
+        return dono is not None and dono[0] != origem and agora - dono[1] < TROCA_DA_HAPTICA_S
+
+    def pedir(
+        self,
+        origem: str,
+        canal: str,
+        uniq: str,
+        vagas: Mapping[str, float],
+        agora: float,
+        *,
+        ate_s: float | None = None,
+        reescrever: Callable[[], object] | None = None,
+        ao_vencer: Callable[[], object] | None = None,
+        vida_s: float = VIDA_SEM_PRAZO_S,
+    ) -> Veredito:
+        """Uma escrita de fora: o modo, o mais forte em cada vaga e o teto, nesta ordem."""
+        self.contadores["pedidos"] += 1
+        if o_modo_cala_a_extensao(self.modo_de(uniq)):
+            self.contadores["recusas_do_modo"] += 1
+            return Veredito(False, "modo", ORIGEM_DO_JOGO)
+        prazo = ate_s is not None
+        ate = agora + (min(max(ate_s or 0.0, 0.0), PRAZO_MAXIMO_DE_FORA_S) if prazo else vida_s)
+        if all(forca <= 0 for forca in vagas.values()):
+            self.soltar(origem, canal, uniq, vagas)
+            fortes = {v: self.rival(uniq, canal, v, origem, agora)[1] for v in vagas}
+            return Veredito(True, "solto", fortes=fortes)
+        rivais = {v: self.rival(uniq, canal, v, origem, agora) for v in vagas}
+        ganhas = [v for v, forca in vagas.items()
+                  if forca > 0 and self._vence(canal, forca, rivais[v])
+                  and not self._segura_a_troca(uniq, canal, v, origem, agora)]
+        if not ganhas:
+            vence = max(rivais.values(), key=lambda r: r[1])[0]
+            if not prazo:
+                self.contadores["mais_fracos"] += 1
+                return Veredito(False, "fraco", vence)
+            self._guardar(origem, canal, uniq, vagas, agora, ate, True, reescrever, ao_vencer)
+            return Veredito(True, "coberto", vence, coberto=True)
+        if not self.teto.cabe(uniq, agora):
+            self.contadores["recusas_do_teto"] += 1
+            return Veredito(False, "teto")
+        self.teto.gastar(uniq, agora)
+        self.contadores["escritas"] += 1
+        self._guardar(origem, canal, uniq, vagas, agora, ate, prazo, reescrever, ao_vencer)
+        for vaga in ganhas:
+            self._vencedor[(uniq, canal, vaga)] = (origem, agora)
+        fortes = {v: max(forca, rivais[v][1]) for v, forca in vagas.items()}
+        return Veredito(True, fortes=fortes)
+
+    def _guardar(
+        self, origem: str, canal: str, uniq: str, vagas: Mapping[str, float], agora: float,
+        ate: float, prazo: bool, reescrever: Callable[[], object] | None,
+        ao_vencer: Callable[[], object] | None = None,
+    ) -> None:
+        for vaga, forca in vagas.items():
+            chave = (uniq, canal, vaga)
+            vence = forca > 0 and self._vence(
+                canal, forca, self.rival(uniq, canal, vaga, origem, agora))
+            vivos = self._podar(chave, agora)
+            outros = [p for p in vivos if p.origem != origem]
+            herdado = next((p.ao_vencer for p in vivos
+                            if p.origem == origem and p.ao_vencer is not None), ao_vencer)
+            if forca > 0 and (vence or prazo):
+                outros.append(PedidoVivo(origem, forca, agora, ate, prazo, not vence, reescrever,
+                                         herdado))
+            if outros:
+                self._vivos[chave] = outros
+            else:
+                self._vivos.pop(chave, None)
+
+    def soltar(self, origem: str, canal: str, uniq: str, vagas: Iterable[str]) -> None:
+        for vaga in vagas:
+            chave = (uniq, canal, vaga)
+            outros = [p for p in self._vivos.get(chave, ()) if p.origem != origem]
+            self._devolver.extend(
+                (uniq, canal, p.ao_vencer) for p in self._vivos.get(chave, ())
+                if p.origem == origem and p.ao_vencer is not None)
+            if outros:
+                self._vivos[chave] = outros
+            else:
+                self._vivos.pop(chave, None)
+
+    def esquecer(self, origem: str) -> None:
+        """A extensão que sai leva os pedidos, os padrões e os toques que eram seus."""
+        for chave in list(self._vivos):
+            self.soltar(origem, chave[1], chave[0], (chave[2],))
+        self.padroes = {k: p for k, p in self.padroes.items() if k[0] != origem}
+        self.sons = {k: p for k, p in self.sons.items() if k[0] != origem}
+        self.toques = {k: t for k, t in self.toques.items() if t.origem != origem}
+
+    def registrar(self, origem: str, ident: str, padrao: PadraoDeFora) -> None:
+        if (origem, ident) not in self.padroes and sum(
+                1 for k in self.padroes if k[0] == origem) >= PADROES_POR_EXTENSAO:
+            raise ValueError(f"no máximo {PADROES_POR_EXTENSAO} padrões por extensão")
+        self.padroes[(origem, ident)] = padrao
+
+    def tocar(
+        self, origem: str, uniq: str, lado: str, ident: str, forca: float,
+        bpm: float | None, agora: float, ate_s: float | None,
+    ) -> Veredito:
+        """O padrão registrado na háptica; pelo rádio sem ponte livre, no motor."""
+        padrao = self.padroes.get((origem, ident))
+        if padrao is None:
+            raise ValueError(f"padrão não registrado: {ident}")
+        chave = (uniq, lado)
+        if forca <= 0 or ate_s == 0:
+            atual = self.toques.get(chave)
+            if atual is not None and atual.origem == origem:
+                del self.toques[chave]
+            return self.pedir(origem, "haptica", uniq, {lado: 0.0}, agora)
+        prazo = ate_s if ate_s is not None else (
+            padrao.dura_ms / 1000.0 if not padrao.repete else VIDA_SEM_PRAZO_S)
+        veredito = self.pedir(origem, "haptica", uniq, {lado: forca * padrao.pico}, agora,
+                              ate_s=ate_s)
+        if not veredito.vale:
+            return veredito
+        pelo_motor = bool(self.radio_cede(uniq))
+        if pelo_motor:
+            self.contadores["pelo_motor"] += 1
+        self.toques[chave] = ToqueDeFora(origem, padrao, forca, bpm, agora,
+                                         agora + min(prazo, PRAZO_MAXIMO_DE_FORA_S), pelo_motor,
+                                         tocado_ate=agora)
+        self.andar(agora)
+        return veredito
+
+    def registrar_som(self, origem: str, ident: str, padrao: PadraoDeFora) -> None:
+        if (origem, ident) not in self.sons and sum(
+                1 for k in self.sons if k[0] == origem) >= PADROES_POR_EXTENSAO:
+            raise ValueError(f"no máximo {PADROES_POR_EXTENSAO} sons por extensão")
+        self.sons[(origem, ident)] = padrao
+
+    def som(
+        self, origem: str, uniq: str, ident: str, volume: float, agora: float,
+        t: float | None = None,
+    ) -> Veredito:
+        """Um som curto no alto-falante: o da extensão, ou o recorte do estalo do jogo."""
+        from hefesto_dualsense4unix.integrations.transiente_do_jogo import recorte_pronto
+
+        padrao = self.sons.get((origem, ident))
+        recorte = self.recorte_do(t) if ident == SOM_DO_RECORTE and t is not None else None
+        if ident == SOM_DO_RECORTE and recorte is None:
+            raise ValueError("nenhum estalo do jogo com esse t")
+        if ident != SOM_DO_RECORTE and padrao is None:
+            raise ValueError(f"som não registrado: {ident}")
+        dura_s = (padrao.dura_ms / 1000.0 if padrao is not None
+                  else float(getattr(recorte, "duracao_s", 0.0)))
+        if o_modo_cala_a_extensao(self.modo_de(uniq)):
+            self.contadores["recusas_do_modo"] += 1
+            return Veredito(False, "modo", ORIGEM_DO_JOGO)
+        if self.radio_cede(uniq):
+            return Veredito(False, "sem_ponte")
+        veredito = self.pedir(origem, "som", uniq, {"centro": volume}, agora,
+                              vida_s=max(dura_s, JANELA_DO_ESTALO_S))
+        if not veredito.vale:
+            return veredito
+        if padrao is not None and ident != SOM_DO_RECORTE:
+            recorte = recorte_pronto(pcm_do_padrao(padrao, volume), agora)
+        if not self.tocar_som(uniq, recorte):
+            return Veredito(False, "sem_no")
+        return veredito
+
+    def guardar_o_estalo(self, estalo: Any) -> None:
+        """O estalo que a porta publicou: o recorte dele pode voltar ao alto-falante pelo ``t``."""
+        recorte = getattr(estalo, "recorte", None)
+        if recorte is not None:
+            with self._trava:
+                self._estalos.append((float(estalo.instante), recorte))
+
+    def recorte_do(self, t: float) -> Any:
+        with self._trava:
+            perto = [(abs(instante - t), recorte) for instante, recorte in self._estalos]
+        melhor = min(perto, key=lambda par: par[0], default=None)
+        return melhor[1] if melhor is not None and melhor[0] <= JANELA_DO_ESTALO_S else None
+
+    def andar(self, agora: float) -> int:
+        """O tique: os toques seguem, os prazos vencem e o pedido coberto volta se venceu."""
+        escritas = 0
+        for chave, toque in list(self.toques.items()):
+            uniq, lado = chave
+            if agora >= toque.ate:
+                del self.toques[chave]
+                if toque.pelo_motor:
+                    self.motores(uniq, 0, 0)
+                continue
+            if self._segura_a_troca(uniq, "haptica", lado, toque.origem, agora):
+                continue
+            escritas += self._levar(uniq, lado, toque, agora)
+        for vivo in list(self._vivos):
+            for pedido in self._podar(vivo, agora):
+                if not pedido.coberto or pedido.reescrever is None:
+                    continue
+                rival = self.rival(vivo[0], vivo[1], vivo[2], pedido.origem, agora)
+                if self._vence(vivo[1], pedido.forca, rival) and self.teto.cabe(vivo[0], agora):
+                    self.teto.gastar(vivo[0], agora)
+                    pedido.coberto = False
+                    pedido.reescrever()
+                    escritas += 1
+        return escritas + self._devolver_o_que_venceu()
+
+    def _devolver_o_que_venceu(self) -> int:
+        pendentes, self._devolver = self._devolver, []
+        feitas = 0
+        for uniq, canal, devolver in pendentes:
+            if any(c[0] == uniq and c[1] == canal for c in self._vivos):
+                continue
+            try:
+                devolver()
+            except Exception:
+                logger.warning("tato_de_fora_nao_devolveu", uniq=uniq, canal=canal, exc_info=True)
+                continue
+            feitas += 1
+        return feitas
+
+    def _levar(self, uniq: str, lado: str, toque: ToqueDeFora, agora: float) -> int:
+        decorrido_ms = (agora - toque.inicio) * 1000.0
+        if toque.pelo_motor:
+            nivel = round(255 * toque.forca * envelope_de(toque.padrao, decorrido_ms, toque.bpm))
+            if nivel == toque.motor_escrito:
+                return 0
+            toque.motor_escrito = nivel
+            forte, fraco = (nivel, 0) if lado == LADO_ESQUERDO else (0, nivel)
+            self.motores(uniq, fraco, forte)
+            return 1
+        ate = min(agora + ADIANTE_S, toque.ate)
+        quantas = int((ate - toque.tocado_ate) * TAXA_DE_FORA)
+        if quantas <= 0:
+            return 0
+        de_ms = (toque.tocado_ate - toque.inicio) * 1000.0
+        amostras = amostras_de(toque.padrao, de_ms, quantas, toque.forca, toque.bpm)
+        toque.tocado_ate += quantas / TAXA_DE_FORA
+        self.tocar_haptica(uniq, amostras, lado)
+        return 1
+
+
+def _do_jogo_de_producao(daemon: Any) -> Callable[[str, str, str], float]:
+    from hefesto_dualsense4unix.core.trigger_effects import bloco_do_efeito
+    from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import par_nos_motores
+
+    def saida_do_jogo(uniq: str) -> Any:
+        pintado = getattr(getattr(daemon, "controller", None), "_game_output_by_uniq", None)
+        alvo = norm_mac(uniq)
+        if not isinstance(pintado, dict) or alvo is None:
+            return None
+        return next((v for k, v in pintado.items() if norm_mac(k) == alvo), None)
+
+    def do_jogo(uniq: str, canal: str, vaga: str) -> float:
+        if canal == "vibracao":
+            fraco, forte = par_nos_motores(daemon, uniq)
+            return (forte if vaga == LADO_ESQUERDO else fraco) / 255.0
+        if canal == "luz":
+            led = getattr(saida_do_jogo(uniq), "led", None)
+            return brilho_da_luz(led) if led is not None else 0.0
+        if canal == "gatilho":
+            blocos = getattr(getattr(daemon, "controller", None), "_game_triggers_by_uniq", None)
+            alvo = norm_mac(uniq)
+            lado = "left" if vaga == LADO_ESQUERDO else "right"
+            do_controle = next((v for k, v in blocos.items() if norm_mac(k) == alvo), None) if (
+                isinstance(blocos, dict) and alvo is not None) else None
+            bloco = do_controle.get(lado) if isinstance(do_controle, dict) else None
+            if bloco is None:
+                efeito = getattr(saida_do_jogo(uniq), f"trigger_{lado}", None)
+                bloco = bloco_do_efeito(efeito) if efeito is not None else None
+            return forca_do_bloco(bloco) / 8.0
+        if canal == "haptica":
+            entradas = getattr(daemon, "_envelopes_da_haptica_vistos", None)
+            alvo = norm_mac(uniq)
+            entrada = next((v for k, v in entradas.items() if norm_mac(k) == alvo), None) if (
+                isinstance(entradas, dict) and alvo is not None) else None
+            nivel = getattr(getattr(entrada, "envelope", None), "ultimo", None)  # (noqa-acento)
+            if not nivel:
+                return 0.0
+            return float(nivel[0] if vaga == LADO_ESQUERDO else nivel[1])
+        return 0.0
+
+    return do_jogo
+
+
+def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
+    """A fonte de fora com os olhos e as mãos do daemon: o modo, o jogo, o rádio e as saídas."""
+
+    def modo_de(uniq: str) -> str | None:
+        alvo = norm_mac(uniq)
+        controle = next((c for c in controles_do_daemon(daemon) if norm_mac(c.uniq) == alvo), None)
+        return modo_do_pad(controle.vpad) if controle is not None else None
+
+    def falante() -> Any:
+        return getattr(daemon, "_alto_falante_subsystem", None)
+
+    def radio_cede(uniq: str) -> bool:
+        quem = falante()
+        chave = quem._chave_do_rumble(uniq) if quem is not None else None
+        if quem is None or chave is None:
+            return False
+        return bool(quem._o_radio_cede(chave))
+
+    def tocar_haptica(uniq: str, amostras: Any, lado: str) -> bool:
+        quem = falante()
+        return bool(quem is not None and quem.tocar_o_corpo(uniq, amostras, lado))
+
+    def motores(uniq: str, fraco: int, forte: int) -> bool:
+        controle = getattr(daemon, "controller", None)
+        escrever = getattr(controle, "set_rumble_for", None)
+        return bool(callable(escrever) and escrever(uniq, fraco, forte))
+
+    def tocar_som(uniq: str, recorte: Any) -> bool:
+        quem = falante()
+        return bool(quem is not None and quem.tocar_o_estalo(uniq, recorte))
+
+    fonte.modo_de = modo_de
+    fonte.do_jogo = _do_jogo_de_producao(daemon)
+    fonte.radio_cede = radio_cede
+    fonte.tocar_haptica = tocar_haptica
+    fonte.motores = motores
+    fonte.tocar_som = tocar_som
+    return fonte
+
+
 def motor_do(daemon: Any) -> TatoVivo | None:
     motor = getattr(daemon, "_tato_vivo", None)
     return motor if isinstance(motor, TatoVivo) else None
@@ -3191,12 +3763,13 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         barramento_do_som = getattr(daemon, "bus", None)
         motor.ouvido = OuvidoDoJogo(
             passo.ouvido_quer,
-            recortar=lambda: passo.receita_vigente.som_no_controle,
+            recortar=lambda: passo.receita_vigente.som_no_controle or passo.som_assinado(),
             ao_pcm=passo.alimentar_o_corpo,
             publicar=(
                 None if barramento_do_som is None
                 else lambda carga: barramento_do_som.publish(EventTopic.JOGO_SOM, carga)),
             assinado=passo.som_assinado,
+            ao_estalo=motor.de_fora.guardar_o_estalo,
         )
     volta = motor.volta
     barramento = getattr(daemon, "bus", None) if volta is not None else None
@@ -3211,6 +3784,7 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
             if gestos is not None and estados is not None:
                 volta.drenar(gestos, estados, agora)
             passo.tique_do_laco(agora)
+            motor.de_fora.andar(agora)
     finally:
         if barramento is not None:
             barramento.unsubscribe(EventTopic.ACESSORIOS_GESTO, gestos)
@@ -3232,6 +3806,7 @@ def start_tato_vivo(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.daemon.subsystems.volta_dos_acessorios import volta_de_producao
 
     motor = TatoVivo(atuadores_de_producao(daemon))
+    ligar_a_fonte_de_fora(daemon, motor.de_fora)
     try:
         motor.volta = volta_de_producao(daemon)
     except Exception:
@@ -3275,18 +3850,23 @@ __all__ = [
     "Controle",
     "EstadoDoCanal",
     "Evento",
+    "FonteDeFora",
     "FonteDoSom",
     "MapaDosMomentos",
+    "PadraoDeFora",
     "Passo",
+    "PedidoVivo",
     "PlanoDoGatilho",
     "Receita",
     "SessaoDoMotor",
     "TatoVivo",
     "Teto",
+    "Veredito",
     "VibracaoDoGatilho",
     "anotar_o_rumble",
     "bloco_do_dedo",
     "bloco_do_gatilho",
+    "brilho_da_luz",
     "controles_do_daemon",
     "decidir",
     "degrau_do_rumble",
@@ -3298,11 +3878,14 @@ __all__ = [
     "estilo_ativo",
     "fator_da_cena",
     "fica_no_degrau",
+    "forca_do_bloco",
+    "ligar_a_fonte_de_fora",
     "meus_toques_ativos",
     "modo_do_pad",
     "momentos_ativos",
     "momentos_em_efeito",
     "motor_do",
+    "padrao_de",
     "pede_o_ouvido",
     "pico_do_pulso",
     "planos_do_perfil",

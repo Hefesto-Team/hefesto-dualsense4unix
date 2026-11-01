@@ -274,6 +274,14 @@ class Recorte:
         self._pronto.set()
 
 
+def recorte_pronto(pcm: bytes, instante: float = 0.0) -> Recorte:
+    """Um recorte já fechado de um PCM s16 estéreo pronto: o som curto que alguém registrou."""
+    recorte = Recorte(instante)
+    recorte.fechar()
+    recorte.pcm = bytes(pcm)
+    return recorte
+
+
 @dataclass(frozen=True)
 class Transiente:
     """Um estalo do som do jogo: quando, de que lado e com que força (0 a 1)."""
@@ -558,9 +566,11 @@ class OuvidoDoJogo:
         ao_pcm: Callable[[bytes], object] | None = None,
         publicar: Callable[[dict[str, Any]], object] | None = None,
         assinado: Callable[[], bool] | None = None,
+        ao_estalo: Callable[[Transiente], object] | None = None,
     ) -> None:
         self._querer = querer
         self._publicar = publicar
+        self._ao_estalo = ao_estalo
         self._assinado = assinado or (lambda: False)
         self._ao_pcm = ao_pcm
         self._recortar = recortar or (lambda: False)
@@ -697,6 +707,8 @@ class OuvidoDoJogo:
             return
         for estalo, bandas in self.detector.tirar_os_impressos():
             try:
+                if self._ao_estalo is not None:
+                    self._ao_estalo(estalo)
                 publicar(carga_do_estalo(estalo, bandas))
             except Exception:
                 logger.debug("tato_ouvido_publicar_falhou", exc_info=True)
@@ -1173,5 +1185,6 @@ __all__ = [
     "montar_o_argv_do_ouvido",
     "o_jogo_toca_no_no",
     "outro_fluxo_no_no",
+    "recorte_pronto",
     "rotulo_do_estalo",
 ]
