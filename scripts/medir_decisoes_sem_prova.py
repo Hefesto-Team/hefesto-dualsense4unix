@@ -72,6 +72,12 @@ CAMPOS_DA_TRIAGEM = ("titulo", "a_pergunta", "escolha", "onde_mora",
                      "recomendacao", "caminhos")
 
 COLISOES_DECLARADAS = {
+    "D-3110-O-SDIST-SEM-A-SUITE": (
+        "É de PRODUTO: a decisão diz o que o pacote de fonte publica, e `test_o_install_nasce_sem_"
+        "perfil_pessoal.py::test_o_wheel_e_o_sdist_listam_a_fabrica_por_nome` mede o sdist montado. "
+        "A triagem a chama de processo porque «leva» é o verbo da pergunta («o sdist leva a pasta "
+        "tests/?»), e «sdist» e «pacote» não estão no vocabulário de produto (01/11/2026)."
+    ),
     "D-2610-O-DESENHO-DA-ONDA-DO-DIRETO-E-DO-SUAVE": (
         "É de PRODUTO: a decisão diz o desenho que a janela da extensão mostra para as entradas "
         "contínuas Direto e Suave, e `test_o_efeito_direto_e_suave_tem_o_desenho_da_onda.py::"
