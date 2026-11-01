@@ -2,15 +2,15 @@
   "_LEIA": "O PISO DO TEMPO DA CASA, em segundos. Não se edita à mão: `scripts/o-tempo-da-casa.py --casa <casa> --aceitar` desce, `--fechar` sobe o que um `Tempo: <medida> <razão>` da faixa paga. `folga` é o porcento de ruído que o piso tolera.",
   "medidas": {
     "completo-parede-s": {
-      "data": "2026-10-17",
+      "data": "2026-11-01",
       "folga": 20,
       "nota": "parede do último portoes.sh completo do fecho",
       "o_que_conta": "segundos de parede do portão completo",
-      "piso": 52,
+      "piso": 9,
       "por_item": {
-        "portoes-0515.out": 52
+        "portoes-1930.out": 9
       },
-      "razao": "o tempo desceu: 69 -> 52 s",
+      "razao": "o tempo desceu: 52 -> 9 s",
       "subidas": [
         {
           "data": "2026-10-17",
@@ -23,23 +23,31 @@
       "universo": 1
     },
     "rapido-mediana-s": {
-      "data": "2026-10-16",
+      "data": "2026-11-01",
       "folga": 15,
       "nota": "mediana da parede das últimas 9 corridas do rápido",
       "o_que_conta": "mediana, em segundos, da parede do portão rápido",
-      "piso": 30,
+      "piso": 36,
       "por_item": {
-        "rapido-02abdf981-2150.log": 30,
-        "rapido-0e9b64794-1455.log": 31,
-        "rapido-2409f494d-1208.log": 28,
-        "rapido-3488854d1-1619.log": 32,
-        "rapido-58f8ab9b3-1207.log": 31,
-        "rapido-7ce21dbb7-1329.log": 26,
-        "rapido-9004a424e-1324.log": 51,
-        "rapido-9ea06eeac-1457.log": 29,
-        "rapido-a9add12dc-1621.log": 26
+        "rapido-1812e574e-0138.log": 26,
+        "rapido-21dce742f-0219.log": 29,
+        "rapido-43ac1db32-0207.log": 36,
+        "rapido-64beb94ba-0137.log": 26,
+        "rapido-925a98525-1703.log": 30,
+        "rapido-975487021-0133.log": 70,
+        "rapido-ab4f0e453-1655.log": 55,
+        "rapido-c82424fbd-1704.log": 36,
+        "rapido-e4fc9818c-1653.log": 42
       },
-      "razao": "o tempo desceu: 58 -> 30 s",
+      "razao": "a camada rápida passou de 62 para 66 portões desde o piso de 16/10 (o texto sem pessoa e a biblioteca pessoal, de 30 e 31/10)",
+      "subidas": [
+        {
+          "data": "2026-11-01",
+          "de": 30,
+          "para": 36,
+          "razao": "a camada rápida passou de 62 para 66 portões desde o piso de 16/10 (o texto sem pessoa e a biblioteca pessoal, de 30 e 31/10)"
+        }
+      ],
       "unidade": "s",
       "universo": 9
     },
