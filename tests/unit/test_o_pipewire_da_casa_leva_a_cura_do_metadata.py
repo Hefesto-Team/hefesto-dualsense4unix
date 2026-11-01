@@ -212,9 +212,20 @@ def _bin(pasta: Path, nome: str, corpo: str) -> None:
     alvo.chmod(alvo.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def _doctor(tmp_path: Path, pipewire: str, wireplumber: str = "", binario: str = "") -> str:
+OS_RELEASE = {
+    "pop": 'NAME="Pop!_OS"\nID=pop\nID_LIKE="ubuntu debian"\nVERSION_ID="24.04"\n',
+    "ubuntu": 'NAME="Ubuntu"\nID=ubuntu\nID_LIKE=debian\nVERSION_ID="24.04"\n',
+}
+
+
+def _doctor(
+    tmp_path: Path, pipewire: str, wireplumber: str = "", binario: str = "",
+    distro: str = "pop",
+) -> str:
     fake = tmp_path / "fakebin"
     fake.mkdir(exist_ok=True)
+    os_release = tmp_path / "os-release"
+    os_release.write_text(OS_RELEASE[distro], encoding="utf-8")
     _bin(fake, "pipewire", f'printf "%s\\n" "{binario}"' if binario else "exit 1")
     _bin(
         fake,
@@ -231,7 +242,12 @@ def _doctor(tmp_path: Path, pipewire: str, wireplumber: str = "", binario: str =
         text=True,
         timeout=30,
         check=False,
-        env={"PATH": f"{fake}:/usr/bin:/bin", "DOCTOR_SH": str(DOCTOR), "HOME": str(tmp_path)},
+        env={
+            "PATH": f"{fake}:/usr/bin:/bin",
+            "DOCTOR_SH": str(DOCTOR),
+            "HOME": str(tmp_path),
+            "HEFESTO_OS_RELEASE": str(os_release),
+        },
     )
     assert res.returncode == 0, res.stderr
     return res.stdout
@@ -244,6 +260,12 @@ class TestODoctor:
         assert "a Steam não fecha" in saida
         assert "receita-backport-pipewire.md" in saida
         assert "o da distro" in saida
+
+    def test_o_do_ubuntu_avisa_e_aponta_o_apt_da_distro(self, tmp_path: Path) -> None:
+        saida = _doctor(tmp_path, PW_DO_POP, distro="ubuntu")
+        assert saida.startswith("[WARN]"), saida
+        assert "a cura vem da distro: sudo apt upgrade" in saida
+        assert "receita-backport-pipewire.md" not in saida
 
     @pytest.mark.parametrize("numero", ["1.6.9-0~hefesto24.04.1", "1.6.9", "1.7.0", "1:1.6.10-1"])
     def test_da_169_em_diante_passa(self, tmp_path: Path, numero: str) -> None:
