@@ -462,8 +462,8 @@ class CoopManager:
         from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
         primary = self._primary_identity()
-        vistos = discover_dualsense_evdevs()
-        sozinho = not vistos and not self._algum_dualsense_conectado()
+        vistos = {} if _o_posto_espera_o_mac(self, primary) else discover_dualsense_evdevs()
+        sozinho = not vistos and not _a_mesa_tem_dualsense(self)
         self._seguir_o_p1_emprestado(sozinho)
         if not sozinho and _o_posto_sem_mac(self, primary):
             logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
@@ -3434,3 +3434,21 @@ def o_p1_e_do_de_fora(daemon: Any) -> bool:
     if player is None or getattr(getattr(daemon, "controller", None), "primary_uniq", None):
         return False
     return player.vpad is not None and player.vpad is getattr(daemon, "_gamepad_device", None)
+
+
+def _a_mesa_tem_dualsense(manager: CoopManager) -> bool:
+    """Há DualSense na mesa, pelo backend que já sabe, sem varrer `/dev/input` no tique.
+
+    O backend que não descreve a mesa (dublê, legado) cede a quem o co-op sentou.
+    """
+    if manager._algum_dualsense_conectado():
+        return True
+    ctrl = getattr(manager._daemon, "controller", None)
+    if callable(getattr(ctrl, "describe_controllers", None)):
+        return False
+    return any(not p.externo for p in manager._players.values())
+
+
+def _o_posto_espera_o_mac(manager: CoopManager, primary: str | None) -> bool:
+    """O posto sem MAC com DualSense na mesa espera sem varrer: a varredura não muda a espera."""
+    return _o_posto_sem_mac(manager, primary) and _a_mesa_tem_dualsense(manager)
