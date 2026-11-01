@@ -843,7 +843,7 @@ DICA_DA_CASA = r"""
   document.addEventListener('focusin', function(ev){
     var el = ev.target, visivel = false;
     try { visivel = !!(el && el.matches && el.matches(':focus-visible')); } catch(_){ visivel = false; }
-    if(!visivel) return;
+    if(!visivel || window.__hefFocoDoCodigo === el) return;
     var a = achar(el);
     if(!a) return;
     var r = el.getBoundingClientRect();
