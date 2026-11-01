@@ -1242,6 +1242,8 @@ class _Mexida:
     aba: str = ""
     armada: tuple[str, ...] = ()
     desligada: bool = False
+    recusa_do_importar: dict[str, str] = dataclasses.field(default_factory=dict)
+    pinta: bool = True
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
 
     def limpar(self) -> None:
@@ -1255,6 +1257,8 @@ class _Mexida:
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
         self.armada = ()
         self.desligada = False
+        self.recusa_do_importar = {}
+        self.pinta = True
         self.pintura.esquecer()
 
 
@@ -1541,13 +1545,20 @@ def _jogos_com_perfil() -> tuple[tuple[str, str], ...]:
 
 
 def _seguir_o_meu_css(instaladas: Sequence[_Instalada]) -> None:
-    """A janela da extensão aberta segue o ``meu.css`` salvo, como a página segue a folha: a frase
-    da recusa entra e sai sem reabrir a janela. Usa só o que o registro já leu."""
+    """A janela da extensão aberta segue o ``meu.css`` salvo e o ligar e desligar feitos de fora,
+    como a página segue a folha: a frase da recusa e o tema em uso entram e saem sem reabrir a
+    janela. Usa só o que o registro já leu."""
     if not (_MEXIDA.html_mod and _MEXIDA.mod):
         return
     item = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
-    if item is not None and item.manifesto is not None and item.nota_do_css != _MEXIDA.nota_do_css:
+    if item is not None and item.manifesto is not None and (
+            item.nota_do_css != _MEXIDA.nota_do_css or _pinta(item) != _MEXIDA.pinta):
         _montar_a_janela_da_extensao(_MEXIDA.mod, item)
+
+
+def _pinta(item: _Instalada) -> bool:
+    """A extensão pinta a tela: ligada e com a permissão ``tema`` aceita (o ``tema_da_casa``)."""
+    return bool(item.entrada.ligada) and "tema" in item.entrada.permissoes_aceitas
 
 
 def _notas_do_tema(manifesto: Any, mod_id: str) -> dict[str, str]:
@@ -1565,13 +1576,13 @@ def _notas_do_tema(manifesto: Any, mod_id: str) -> dict[str, str]:
     return {str(opcao): frase for opcao, frase in pares if opcao and frase}
 
 
-def _retrato_do_tema(manifesto: Any) -> Any:
+def _retrato_do_tema(manifesto: Any, pinta: bool = True) -> Any:
     """O tema da extensão para a própria janela, ou ``None`` quando não pinta tema."""
     from hefesto_dualsense4unix.mods import retrato_do_tema
 
     if "tema" not in manifesto.tipos or not manifesto.tema:
         return None
-    return retrato_do_tema.retratar(manifesto, _lugares())
+    return retrato_do_tema.retratar(manifesto, _lugares(), pinta=pinta)
 
 
 def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) -> None:
@@ -1583,13 +1594,14 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     manifesto = item.manifesto
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
-    retrato = _retrato_do_tema(manifesto)
+    _MEXIDA.pinta = _pinta(item)
+    retrato = _retrato_do_tema(manifesto, _MEXIDA.pinta)
     valores = guardados = opcoes.ler(manifesto, _lugares())
     _MEXIDA.agora = tuple(manifesto.agora)
     estado = _estado_da_janela(manifesto)
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
-    notas = _notas_do_tema(manifesto, mod_id)
+    notas = {**_notas_do_tema(manifesto, mod_id), **_MEXIDA.recusa_do_importar}
     aparecem = opcoes.aparecem(manifesto, valores)
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
@@ -1703,6 +1715,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     """
     _MEXIDA.armada = ()
     _MEXIDA.menu = _MEXIDA.permissoes = ""
+    _MEXIDA.recusa_do_importar = {}
     mod_id = _id_do_clique(o, "configurar-modificacao")
     anterior = _VIVA.mod
     recusa = _desfazer_o_modo(anterior, p) if anterior else None
@@ -1779,6 +1792,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     A caixa e o número agem no ``change``; a chave de ligado, no clique.
     """
     _MEXIDA.armada = ()
+    _MEXIDA.recusa_do_importar = {}
     mod_id, _, resto = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
     opcao_id, _, jogo = resto.partition(":")
     item = _a_instalada(mod_id)
@@ -1900,11 +1914,28 @@ def importar_na_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[st
     caminho = p.escolher_arquivo(TITULO_DO_IMPORTAR[formato], padrao=FILTRO_DO_IMPORTAR[formato])
     if not caminho:
         return None
-    nome = _importar_na_modificacao(item, opcao.id, str(caminho))
-    _escolher_o_importado(item, opcao.id)
+    _MEXIDA.recusa_do_importar = {}
     _MEXIDA.aba = opcao.grupo or ""
+    try:
+        nome = _importar_na_modificacao(item, opcao.id, str(caminho))
+    except RuntimeError as exc:
+        _MEXIDA.recusa_do_importar = {_linha_do_importar(item, opcao.id): str(exc)}
+        _montar_a_janela_da_extensao(item.entrada.id)
+        raise
+    _escolher_o_importado(item, opcao.id)
     _montar_a_janela_da_extensao(item.entrada.id)
     return {**_a_pintura_agora(ctx), "recado": f"Importado: {nome}."}
+
+
+def _linha_do_importar(item: _Instalada, opcao_id: str) -> str:
+    """A opção em cuja linha a recusa do importar aparece: a do tema, quando o arquivo é o tema
+    importado de uma das escolhas da cor; senão, a própria opção."""
+    from hefesto_dualsense4unix.mods import retrato_do_tema
+
+    if not (item.manifesto and item.manifesto.tema):
+        return opcao_id
+    p = retrato_do_tema.papeis(item.manifesto)
+    return p.cor if p.cor and opcao_id in p.importados.values() else opcao_id
 
 
 def _escolher_o_importado(item: _Instalada, opcao_id: str) -> None:
@@ -1951,6 +1982,7 @@ def exportar_o_tema_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any
 def tirar_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Tirar»: apaga a cópia importada, e a opção volta a vazia."""
     _MEXIDA.armada = ()
+    _MEXIDA.recusa_do_importar = {}
     item, opcao = _opcao_de_importar(o, exp.GESTO_DE_TIRAR, "importar")
     _tirar_da_modificacao(item, opcao.id)
     _MEXIDA.aba = opcao.grupo or ""

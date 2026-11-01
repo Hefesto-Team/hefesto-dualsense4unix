@@ -159,8 +159,10 @@ def _primeiras_linhas(mod_id: str, lugares: Any) -> tuple[str, ...]:
 
 
 def retratar(manifesto: Any, lugares: Any, *, casa: dict[str, str] | None = None,
-             apelidos: dict[str, str] | None = None) -> Retrato | None:
-    """O retrato da extensão de tema (``None`` sem bloco ``tema``), pelas escolhas guardadas."""
+             apelidos: dict[str, str] | None = None, pinta: bool = True) -> Retrato | None:
+    """O retrato da extensão de tema (``None`` sem bloco ``tema``), pelas escolhas guardadas.
+    Com ``pinta`` falso (a extensão desligada ou sem a permissão), o que a tela pinta é a casa:
+    as cartas continuam, e as cores, o destaque, o lado, a logo e o CSS em uso são os da casa."""
     if not manifesto.tema:
         return None
     from hefesto_dualsense4unix.mods import opcoes
@@ -171,23 +173,23 @@ def retratar(manifesto: Any, lugares: Any, *, casa: dict[str, str] | None = None
     p = papeis(manifesto)
     pasta = Path(lugares.codigo) / manifesto.id
     cartas = _cartas(manifesto, pasta, lugares, valores, p, casa, apelidos)
-    escolhida = str(valores.get(p.cor) or "")
+    escolhida = str(valores.get(p.cor) or "") if pinta else ""
     carta = next((c for c in cartas if c.escolha == escolhida), None)
     base = carta.cores if carta and carta.cores else _so_cores(
         tema.valores_pintados(casa, {}, apelidos))
     destaque = ""
-    if p.destaque and (not p.destaque_ligado or valores.get(p.destaque_ligado) is True):
+    if pinta and p.destaque and (not p.destaque_ligado or valores.get(p.destaque_ligado) is True):
         valor = valores.get(p.destaque)
         destaque = valor if isinstance(valor, str) and tema.cor(valor) is not None else ""
     cores = _com_o_destaque(base, destaque)
-    lado_escolhido = str(valores.get(p.botoes) or "")
+    lado_escolhido = str(valores.get(p.botoes) or "") if pinta else ""
     return Retrato(
         papeis=p, cartas=cartas, escolhida=escolhida, cores=cores,
         contraste=_menor_contraste(cores),
         destaque=destaque if cores.get(tema.TOKEN_DO_DESTAQUE) == destaque else "",
         lado=p.lados.get(lado_escolhido, ""), botoes=lado_escolhido,
-        logo=str(valores.get(p.logo) or "") if p.logo else "",
-        css_ligado=bool(p.css) and valores.get(p.css) is True,
+        logo=str(valores.get(p.logo) or "") if p.logo and pinta else "",
+        css_ligado=pinta and bool(p.css) and valores.get(p.css) is True,
         css_linhas=_primeiras_linhas(manifesto.id, lugares) if p.css else ())
 
 
