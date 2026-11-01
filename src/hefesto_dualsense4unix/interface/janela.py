@@ -155,22 +155,24 @@ button:active {
 
 
 def css_da_cor_da_barra(folha_do_tema: str) -> str:
-    """A barra da janela nas cores do tema ligado: o fundo é o ``--panel`` e a letra o ``--fg``.
+    """A barra da janela nas cores da interface, com e sem tema: o fundo é o ``--panel``, a letra o
+    ``--fg`` e, fora de foco, os botões o ``--texto-mudo`` (do tema, senão da casa).
 
-    Sem tema, vazio: a barra fica com a cor da sessão (no COSMIC, o ``gtk.css`` que a sessão gera).
-    Decisão de 20/10/2026, a validar pelo usuário
-    (O-TEMA-LIGA-SEM-REABRIR-A-JANELA-E-O-GTK-SEGUE-O-TEMA-01).
+    Decisão de 01/11/2026 (O-GERENCIADOR-DE-TEMA-NASCE-LIGADO-E-VESTE-OS-BOTOES-DA-JANELA-01): sem
+    tema, a barra veste a casa, e não a cor da sessão de 20/10/2026, porque com a sessão clara a
+    letra da casa sumia no fundo claro. Vazio só sem cor legível.
     """
-    if not folha_do_tema:
-        return ""
-    tokens = _tema_das_mods.tokens_da_folha(folha_do_tema)
+    tokens = _tema_das_mods.tokens_da_folha(folha_do_tema) if folha_do_tema else {}
     casa = _tokens_da_casa_ou_nada()
     fundo = tokens.get("--panel") or casa.get("--panel")
     letra = tokens.get("--fg") or casa.get("--fg")
     if not (fundo and letra):
         return ""
+    fora = tokens.get("--texto-mudo") or (
+        f"alpha({letra}, 0.6)" if "--fg" in tokens else casa.get("--texto-mudo")) or letra
     return (f"headerbar {{ background: {fundo}; color: {letra}; }}\n"
-            f"button {{ color: {letra}; }}\n")
+            f"button {{ color: {letra}; }}\n"
+            f"button.titlebutton:backdrop {{ color: {fora}; }}\n")
 
 
 _VAR = re.compile(r"var\(\s*(--[\w-]+)\s*(?:,\s*([^()]*))?\)")
@@ -286,6 +288,55 @@ BOTOES_DA_BARRA = (
 )
 
 ORDEM_DA_DIREITA = tuple(reversed(BOTOES_DA_BARRA))
+
+LADO_DO_GLIFO = 16
+
+ESPESSURA_DO_GLIFO = 2
+
+REDONDO_NO_CAIRO = 1
+
+GLIFOS: dict[str, tuple[tuple[tuple[float, float], ...], ...]] = {
+    "window-close-symbolic": (((4, 4), (12, 12)), ((12, 4), (4, 12))),
+    "window-maximize-symbolic": (((4, 4), (12, 4), (12, 12), (4, 12), (4, 4)),),
+    "window-restore-symbolic": (
+        ((3, 6), (10, 6), (10, 13), (3, 13), (3, 6)),
+        ((6, 6), (6, 3), (13, 3), (13, 10), (10, 10)),
+    ),
+    "window-minimize-symbolic": (((4, 11), (12, 11)),),
+}
+
+
+class GlifoDaBarra(Gtk.Image):  # type: ignore[misc]
+    """O ícone de um botão da janela, desenhado aqui na cor do botão: o nome do ícone diz o
+    glifo, e o tema de ícones da sessão não entra (o de traço vira quadrado cheio no GTK 3)."""
+
+    def do_draw(self, cr: Any) -> bool:
+        tracos = GLIFOS.get(str(self.get_icon_name()[0] or ""))
+        if tracos is None:
+            return bool(Gtk.Image.do_draw(self, cr))
+        ctx = self.get_style_context()
+        cor = ctx.get_color(ctx.get_state())
+        cr.translate((self.get_allocated_width() - LADO_DO_GLIFO) / 2,
+                     (self.get_allocated_height() - LADO_DO_GLIFO) / 2)
+        cr.set_source_rgba(cor.red, cor.green, cor.blue, cor.alpha)
+        cr.set_line_width(ESPESSURA_DO_GLIFO)
+        cr.set_line_cap(REDONDO_NO_CAIRO)
+        cr.set_line_join(REDONDO_NO_CAIRO)
+        for traco in tracos:
+            cr.move_to(*traco[0])
+            for ponto in traco[1:]:
+                cr.line_to(*ponto)
+            if traco[0] == traco[-1]:
+                cr.close_path()
+        cr.stroke()
+        return False
+
+
+def glifo_da_barra(nome_do_icone: str) -> GlifoDaBarra:
+    glifo = GlifoDaBarra()
+    glifo.set_from_icon_name(nome_do_icone, Gtk.IconSize.MENU)
+    glifo.set_pixel_size(LADO_DO_GLIFO)
+    return glifo
 
 
 def botoes_na_ordem(lado: str) -> tuple[tuple[str, str, str], ...]:
@@ -471,7 +522,7 @@ def montar_a_barra(
         for provedor, prioridade in provedores:
             botao.get_style_context().add_provider(provedor, prioridade)
         botao.set_valign(Gtk.Align.CENTER)
-        botao.set_image(Gtk.Image.new_from_icon_name(nome_do_icone, Gtk.IconSize.MENU))
+        botao.set_image(glifo_da_barra(nome_do_icone))
         botao.set_relief(Gtk.ReliefStyle.NONE)
         botao.set_tooltip_text(dica)
         botao.get_style_context().add_class("titlebutton")

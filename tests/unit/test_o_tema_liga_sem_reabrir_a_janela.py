@@ -128,8 +128,9 @@ def test_e_escuro_diz_escuro_para_a_casa_e_claro_para_o_tema_claro() -> None:
     assert tema.e_escuro({"--fg": "#1c1e29"}, CASA)
 
 
-def test_a_barra_pinta_as_cores_do_tema_so_com_tema() -> None:
-    assert janela.css_da_cor_da_barra("") == ""
+def test_a_barra_pinta_as_cores_do_tema_e_sem_tema_as_da_casa() -> None:
+    sem_tema = janela.css_da_cor_da_barra("")
+    assert f"headerbar {{ background: {CASA['--panel']}; color: {CASA['--fg']}; }}" in sem_tema
     css = janela.css_da_cor_da_barra(CLARO)
     assert "headerbar { background: #ffffff; color: #1c1e29; }" in css
     assert "button { color: #1c1e29; }" in css
