@@ -92,6 +92,12 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "esperada com o prazo de 5 s e morta pelo grupo quando passa dele; não é "
         "programa que fica de pé",
     ),
+    "integrations/leitor_do_estado.py::_ser_pai": (
+        "outro processo", 2,
+        "o `fork` e o `execvp` do jogo no leitor do estado, que o `argv_com_o_leitor` põe na "
+        "frente do jogo no lançador: roda no processo do lançador, como pai do jogo, nunca no "
+        "daemon, e espera o filho pelo `waitpid`",
+    ),
     "integrations/fora_do_servico.py::abrir": (
         "o dono", 1,
         "o `Popen` de reserva: quem chama já é da pessoa, ou não há systemd de "
