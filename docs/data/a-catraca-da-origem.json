@@ -239,14 +239,14 @@
       "data": "2026-11-02",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1192292,
+      "piso": 1193337,
       "por_item": {
-        "docs": 108311,
-        "scripts": 111006,
-        "src": 301479,
-        "tests": 671496
+        "docs": 108313,
+        "scripts": 111015,
+        "src": 301695,
+        "tests": 672314
       },
-      "razao": "tamanho: +287 linhas (1192005 -> 1192292), pagas por Origem: D-1610-O-CINZA-SAI-DA-LETRA, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-AO-USUARIO; registrado no fecho, topo bbef2f0cf54a",
+      "razao": "tamanho: +1045 linhas (1192292 -> 1193337), pagas por Origem: D-1610-O-CINZA-SAI-DA-LETRA; registrado no fecho, topo d5c9dd87459b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1435,10 +1435,16 @@
           "de": 1192005,
           "para": 1192292,
           "razao": "tamanho: +287 linhas (1192005 -> 1192292), pagas por Origem: D-1610-O-CINZA-SAI-DA-LETRA, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-AO-USUARIO; registrado no fecho, topo bbef2f0cf54a"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 1192292,
+          "para": 1193337,
+          "razao": "tamanho: +1045 linhas (1192292 -> 1193337), pagas por Origem: D-1610-O-CINZA-SAI-DA-LETRA; registrado no fecho, topo d5c9dd87459b"
         }
       ],
       "unidade": "linhas",
-      "universo": 3323
+      "universo": 3327
     }
   }
 }
