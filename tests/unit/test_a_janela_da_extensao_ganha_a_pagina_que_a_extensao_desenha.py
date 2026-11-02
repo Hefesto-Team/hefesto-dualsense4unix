@@ -373,6 +373,11 @@ if(h){ h.postMessage(JSON.stringify({gesto: 'instalar-modificacao', v: 'forjado'
 hefesto.enviar({oi: 1}).catch(function(){});
 </script>"""
 
+CASA_DEPOIS_DO_LIXO = """setTimeout(function(){
+  for(var k = 0; k < 20; k++){ var a = []; for(var i = 0; i < 300000; i++){ a.push({x: i}); } }
+  window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify({gesto: 'clique', v: 'casa'}));
+}, 300);"""
+
 
 @pytest.mark.skipif(not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"),
                     reason="sem sessão gráfica: o WebKit não abre")
@@ -393,7 +398,8 @@ def test_no_webkit_a_pagina_nao_forja_gesto_pela_ponte_da_casa() -> None:
                            folha=None, tema_de_cores=None, meu_css="")
     area = exp.pagina_html("toque", exp.PaginaDaJanela(PAGINA_QUE_FORJA, "Prova", 120))
     pagina = (f"<html><body><div id=\"mod-janela\">{area}</div>"
-              f"<script>{exp.SCRIPT_DA_PAGINA}</script></body></html>")
+              f"<script>{exp.SCRIPT_DA_PAGINA}</script><script>{CASA_DEPOIS_DO_LIXO}</script>"
+              "</body></html>")
     janela = Gtk.OffscreenWindow()
     janela.add(ponte.view)
     janela.show_all()
@@ -404,9 +410,9 @@ def test_no_webkit_a_pagina_nao_forja_gesto_pela_ponte_da_casa() -> None:
     finally:
         GLib.source_remove(guarda)
         janela.destroy()
-    assert [r.get("v") for r in recebidos] == ["toque"], (
-        f"a página forjou gesto pela ponte da casa: {recebidos}")
-    assert recebidos[0]["gesto"] == exp.GESTO_DA_PAGINA
+    assert sorted(str(r.get("v")) for r in recebidos) == ["casa", "toque"], (
+        f"a página forjou gesto, ou a casa perdeu o selo depois do coletor: {recebidos}")
+    assert next(r for r in recebidos if r.get("v") == "toque")["gesto"] == exp.GESTO_DA_PAGINA
     assert any("forjado" in r for r in recusas), recusas
 
 

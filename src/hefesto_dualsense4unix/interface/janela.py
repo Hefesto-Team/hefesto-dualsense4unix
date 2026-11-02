@@ -126,6 +126,7 @@ ROTEIRO_DA_ESPERA = (
 ROTEIRO_DO_SELO = (
     "(function(){{var m=window.webkit&&window.webkit.messageHandlers;"
     "var h=m&&m[{canal}];if(!h)return;var cru=h.postMessage;"
+    "Object.defineProperty(window,Symbol(),{{value:h}});"
     "Object.defineProperty(h,'postMessage',{{value:function(x){{"
     "return cru.call(h,{selo}+String(x));}}}});}})();"
 )
