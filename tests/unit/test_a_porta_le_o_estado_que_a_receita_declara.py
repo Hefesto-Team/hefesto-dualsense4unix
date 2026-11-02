@@ -123,17 +123,26 @@ def test_a_varredura_devolve_contagem_e_token_e_o_endereco_so_quando_sobra_um(fi
     assert caca.endereco() == valor
     _mudar(proc, VALOR + 3)
     assert caca.refinar("desceu") == 1
-    zeros = leitor.Varredura(proc.pid, "u8", chave_ligada=True, valor=0)
-    assert zeros.contagem > 1
+    varios = leitor.Varredura(proc.pid, "u8", chave_ligada=True, valor=0xED)
+    assert varios.contagem > 1
     with pytest.raises(leitor.LeituraRecusadaError, match="sobra um"):
-        zeros.endereco()
+        varios.endereco()
 
 
 def test_a_varredura_com_candidatos_de_mais_pede_um_valor(monkeypatch, filho) -> None:
     proc, _, _ = filho
-    monkeypatch.setattr(leitor, "CANDIDATOS_SEM_VALOR", 10)
+    monkeypatch.setattr(leitor, "CANDIDATOS_GUARDADOS", 10)
     with pytest.raises(leitor.LeituraRecusadaError, match="comece por um valor"):
         leitor.Varredura(proc.pid, "u8", chave_ligada=True)
+
+
+def test_a_varredura_com_valor_comum_de_mais_pede_outro_valor(monkeypatch, filho) -> None:
+    proc, _, _ = filho
+    monkeypatch.setattr(leitor, "CANDIDATOS_GUARDADOS", 10)
+    with pytest.raises(leitor.LeituraRecusadaError, match="valor menos comum"):
+        leitor.Varredura(proc.pid, "u8", chave_ligada=True, valor=0)
+    caca = leitor.Varredura(proc.pid, "i32", chave_ligada=True, valor=VALOR)
+    assert 1 <= caca.contagem <= 10
 
 
 def test_a_chave_nasce_desligada_e_o_anticheat_pede_o_aviso(tmp_path) -> None:

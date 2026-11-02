@@ -36,7 +36,7 @@ TIPOS: dict[str, str] = {
 COMPARACOES = ("igual", "subiu", "desceu", "nao_mudou")
 TETO_DA_VARREDURA = 256 * 1024 * 1024
 BLOCO_DA_VARREDURA = 1024 * 1024
-CANDIDATOS_SEM_VALOR = 1_000_000
+CANDIDATOS_GUARDADOS = 1_000_000
 NOME_DA_ENTRADA = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 TOPICO_DA_MEMORIA = "jogo.memoria"
 ANTICHEAT = Path(__file__).with_name("anticheat_conhecido.json")
@@ -311,11 +311,14 @@ class Varredura:
             achado = bloco.find(agulha)
             while achado >= 0:
                 if achado % self._passo == 0:
+                    if len(self._candidatos) >= CANDIDATOS_GUARDADOS:
+                        raise LeituraRecusadaError(
+                            "Candidatos de mais para guardar: comece por um valor menos comum.")
                     self._candidatos[endereco + achado] = valor
                 achado = bloco.find(agulha, achado + 1)
             return
         util = len(bloco) - len(bloco) % self._passo
-        if len(self._candidatos) + util // self._passo > CANDIDATOS_SEM_VALOR:
+        if len(self._candidatos) + util // self._passo > CANDIDATOS_GUARDADOS:
             raise LeituraRecusadaError(
                 "Candidatos de mais para guardar: comece por um valor conhecido.")
         for i, (lido,) in enumerate(struct.iter_unpack(self._formato, bloco[:util])):
@@ -401,7 +404,7 @@ def main(args: Sequence[str] | None = None) -> int:
 
 
 __all__ = [
-    "CANDIDATOS_SEM_VALOR",
+    "CANDIDATOS_GUARDADOS",
     "COMPARACOES",
     "HZ_MAXIMO",
     "TIPOS",
