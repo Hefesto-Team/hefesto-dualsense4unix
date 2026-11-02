@@ -250,3 +250,17 @@ def test_o_diario_dos_gestos_tem_teto_e_o_canario_le_a_volta(
     assert len(gestos) == linhas
     assert {g for g, _c in gestos} == {f"[gesto] mod ligar {MOD}", f"[gesto] mod desligar {MOD}"}
     assert all(str(lugares.registro) in c for _g, c in gestos)
+
+
+def test_o_diario_que_nao_abre_nunca_barra_o_gesto(
+    real: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _diario(real).mkdir()
+    _fonte(tmp_path, versao="1.1.0")
+    _mod("atualizar", MOD)
+    _mod("ligar", MOD, "--sim")
+
+    lugares = instalador.Lugares.do_xdg()
+    registro = instalador.ler_registro(lugares.registro)
+    assert registro[MOD].versao == "1.1.0" and registro[MOD].ligada
+    assert _diario(real).is_dir() and not any(_diario(real).iterdir())
