@@ -79,6 +79,7 @@ class Extensao(NamedTuple):
     processo: str = ""
     porque: str = ""
     pede: str = ""
+    espera: str = ""
 
 
 PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo"),
@@ -86,6 +87,7 @@ PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo
             "desligada": ("Desligada", "mudo")}
 DICA_DE_TENTAR = "Desligue e ligue para tentar de novo."
 ROTULO_DO_SIM = "Aceitar e ligar"
+ROTULO_DA_ESPERA = "Espera o sim"
 
 
 def processo_de(ligada: bool, estado: str) -> str:
@@ -170,13 +172,15 @@ def fila_html(fila: Fila) -> str:
 
 
 def _chave_html(ext: Extensao) -> str:
-    """A chave da linha: Ligada, Desligada, Aceitar e ligar ou, ligada e sem rodar, a palavra do processo.
+    """A chave da linha: Ligada, Desligada, Espera o sim, Aceitar e ligar ou a palavra do processo.
 
     O clique segue o registro (a ligada desliga): a vermelha diz na dica como tentar de novo.
     """
     palavra, cor = PROCESSO.get(ext.processo, ("", "")) if ext.ligada else ("", "")
     if not ext.ligada and ext.pede:
         classe, texto, dica = "nj-tog pede", ROTULO_DO_SIM, ext.pede
+    elif not ext.ligada and ext.espera:
+        classe, texto, dica = "nj-tog", ROTULO_DA_ESPERA, ext.espera
     elif not ext.ligada:
         classe, texto, dica = "nj-tog", "Desligada", "Liga ou desliga"
     elif palavra:

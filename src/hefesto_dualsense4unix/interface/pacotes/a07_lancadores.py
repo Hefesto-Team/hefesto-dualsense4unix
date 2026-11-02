@@ -1414,7 +1414,8 @@ def _extensao_de(item: _Instalada) -> Any:
         chave=e.id, nome=e.nome, dica=dica, janela=JANELA_DA_EXTENSAO,
         versao=versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
         ligada=e.ligada, menu=menu, processo=exp.processo_de(e.ligada, item.estado),
-        porque=item.porque, pede=_o_que_pede(item))
+        porque=item.porque, pede=_o_que_pede(item),
+        espera=aviso_por_ver(e, item.manifesto) if item.manifesto is not None else "")
 
 
 def _o_que_pede(item: _Instalada) -> str:
