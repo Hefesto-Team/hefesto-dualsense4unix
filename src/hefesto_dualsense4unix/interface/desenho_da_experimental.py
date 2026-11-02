@@ -1003,7 +1003,7 @@ def _par_html(classe: str, desenho: str, numero: int) -> str:
 
 
 def bateria_em_numero_html(bateria: Any) -> str:
-    """A bateria do aparelho ativo: o ícone da pilha e o percentual; vazio sem a bateria."""
+    """A bateria do aparelho: o ícone da pilha e o percentual; vazio sem a bateria."""
     if isinstance(bateria, bool) or not isinstance(bateria, int):
         return ""
     carga = max(0, min(100, bateria))
@@ -1018,11 +1018,11 @@ def forca_em_numero_html(forca: Any) -> str:
 
 
 def _aparelho_html(ap: Mapping[str, Any]) -> str:
-    """Um aparelho: o nome e, ativo, a bateria e a força em percentual, cada uma com o ícone;
-    senão, a pílula do estado."""
+    """Um aparelho: o nome, a bateria em percentual com o ícone e, ativo, a força em percentual
+    com o ícone; senão, a pílula do estado."""
     como = como_esta(ap)
-    medidas = (bateria_em_numero_html(ap.get("bateria")) + forca_em_numero_html(ap.get("forca"))
-               if como.ativo else como.vivo)
+    medidas = bateria_em_numero_html(ap.get("bateria")) + (
+        forca_em_numero_html(ap.get("forca")) if como.ativo else como.vivo)
     return (f'<div class="ap{como.fora}">{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="ap-nome">{_e(ap.get("nome") or SEM_VALOR)}</span>{medidas}</div>')
 

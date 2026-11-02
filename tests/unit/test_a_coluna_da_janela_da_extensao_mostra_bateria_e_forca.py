@@ -18,7 +18,11 @@ MORDIDAS (01/11/2026, executadas sobre a cura e devolvidas):
 - o observador do ``comportamento.js`` arrancado (o tique repinta a coluna e fecha as escolhas)
   reprova ``test_no_webkit_a_coluna_cabe_e_o_adaptador_abre_e_fecha``;
 - ``_secao_da_opcao`` trocada por ``_linha_da_opcao`` reprova
-  ``test_o_deslizante_depois_da_grade_abre_uma_secao`` e a régua do WebKit.
+  ``test_o_deslizante_depois_da_grade_abre_uma_secao`` e a régua do WebKit;
+- a bateria só no ativo reprova os dois testes do aparelho fora; sem o ``margin-left:0`` da
+  pílula depois da bateria, a régua do WebKit reprova com «a pílula saiu da direita»;
+- sem o ``display:none``, sem o fecho na escolha ou sem o ``margin-right`` do ``.cx-par``, a
+  régua do WebKit reprova.
 """
 
 from __future__ import annotations
@@ -87,9 +91,19 @@ def test_sem_bateria_so_a_forca() -> None:
     assert "<b>0%</b>" in ap
 
 
-def test_o_aparelho_fora_segue_com_a_pilula_do_estado() -> None:
+def test_o_aparelho_fora_mostra_a_bateria_e_a_pilula_do_estado() -> None:
     ap = _aparelhos(exp.agora_html(AGORA, _estado(), ligas=LIGAS))[2]
-    assert "ap-par" not in ap and 'class="est est-mudo"' in ap and " fora" in ap, ap
+    pares = re.findall(r'<span class="ap-par (ap-\w+)"><svg class="ic".*?</svg><b>(\d+)%</b>', ap)
+    assert pares == [("ap-bateria", "40")], ap
+    assert 'class="est est-mudo"' in ap and " fora" in ap, ap
+
+
+def test_o_aparelho_desligado_pela_chave_segue_com_a_bateria() -> None:
+    estado = _estado()
+    estado["aparelhos"][0]["ligado"] = False
+    ap = _aparelhos(exp.agora_html(AGORA, estado, ligas=LIGAS))[0]
+    assert re.findall(r'class="ap-par (ap-\w+)"', ap) == ["ap-bateria"], ap
+    assert "<b>80%</b>" in ap and " fora" in ap and 'class="est ' in ap, ap
 
 
 class _Arvore(HTMLParser):
@@ -161,6 +175,7 @@ _LER = """(function(){
   const caixa = j.querySelector('.cx-com-escolhas');
   const esc = caixa && caixa.querySelector('.cx-escolhas');
   const aps = [...j.querySelectorAll('#mod-agora .ap')].map(a => ({ap: r(a),
+    est: r(a.querySelector('.est')),
     pares: [...a.querySelectorAll('.ap-par')].map(p => ({p: r(p), t: p.textContent.trim()}))}));
   const sec = j.querySelector('#mod-op-forca_dos_toques');
   return JSON.stringify({
@@ -222,6 +237,10 @@ def test_no_webkit_a_coluna_cabe_e_o_adaptador_abre_e_fecha(
         assert ativo["ap"]["y"] <= p["p"]["y"] and p["p"]["b"] <= ativo["ap"]["b"], ativo
         assert p["p"]["d"] <= antes["coluna"]["d"] + 1, "o percentual sai da coluna"
     assert ativo["ap"]["h"] == 28, ativo
+    fora = antes["aps"][2]
+    assert [p["t"] for p in fora["pares"]] == ["40%"] and fora["est"], fora
+    assert fora["pares"][0]["p"]["d"] <= fora["est"]["x"], "a bateria cobre a pílula"
+    assert abs(fora["est"]["d"] - ativo["pares"][-1]["p"]["d"]) <= 1, "a pílula saiu da direita"
     assert antes["titulo"] and antes["faixa"], antes
     assert antes["faixa"]["y"] >= antes["titulo"]["b"], "o deslizante segue na linha do rótulo"
     assert m["aberta"]["aberta"] and m["aberta"]["expandido"] == "true", "o clique não abriu"

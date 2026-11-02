@@ -503,6 +503,7 @@
 #mod-janela .cx-com-escolhas[data-cx]:not(.aberta) > .cx-escolhas { display:none }
 #mod-janela .est { display:inline-flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;flex:none }
 #mod-janela .ap > .est { margin-left:auto }
+#mod-janela .ap > .ap-par ~ .est { margin-left:0 }
 #mod-janela .est i { width:8px;height:8px;border-radius:50%;display:inline-block }
 #mod-janela .est-verde { color:var(--green) }
 #mod-janela .est-verde i { background:var(--green);box-shadow:0 0 6px var(--green) }
