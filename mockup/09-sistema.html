@@ -743,7 +743,7 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
   }, true);
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
-      if (window.__hefDica) return;
+      if (window.__hefDica || (f === 'in' && window.__hefFocoDoCodigo === e.target)) return;
       const el = e.target.closest && e.target.closest('[data-dica]');
       if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
@@ -844,16 +844,20 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
     const a = e.target.closest && e.target.closest('a[href^="#"]');
     if (a && !a.closest('.tela-nova')) ultimo = a;
   }, true);
+  const focarSemDica = el => {
+    window.__hefFocoDoCodigo = el;
+    try { el.focus(); } finally { window.__hefFocoDoCodigo = null; }
+  };
   const aoMudar = () => {
     const tela = aberta();
     if (tela && !estavaAberta) {
       quemAbriu = ultimo;
       const caixa = caixaDe(tela);
       const alvo = caixa && (caixa.querySelector('[autofocus]') || paradasDe(caixa)[0]);
-      if (alvo) alvo.focus();
-      else if (caixa) { caixa.setAttribute('tabindex', '-1'); caixa.focus(); }
+      if (alvo) focarSemDica(alvo);
+      else if (caixa) { caixa.setAttribute('tabindex', '-1'); focarSemDica(caixa); }
     } else if (!tela && estavaAberta && quemAbriu && quemAbriu.isConnected) {
-      quemAbriu.focus(); quemAbriu = null;
+      focarSemDica(quemAbriu); quemAbriu = null;
     }
     estavaAberta = !!tela;
   };
