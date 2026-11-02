@@ -1494,12 +1494,13 @@ class DonoVivo(LeitorDoBluez):
                 self._fila = []
                 self._ultima_foto = time.monotonic()
             foto = self._barramento.objetos(espera=ESPERA_DA_FOTO_S)
-            dono = self._barramento.dono_do_nome(SERVICO) if foto is not None else ""
+            dono = self._barramento.dono_do_nome(SERVICO)
             avisos: list[tuple[str, dict[str, Any]]] = []
             with self._tranca:
                 self._objetos = foto or {}
                 self._bluez_de_pe = foto is not None
-                self._dono_do_bluez = dono
+                if dono:
+                    self._dono_do_bluez = dono
                 fila, self._fila = self._fila or [], None
                 for sinal in fila:
                     avisos.extend(self._aplicar(sinal))
@@ -1508,6 +1509,8 @@ class DonoVivo(LeitorDoBluez):
     def _ao_sinal(self, sinal: Sinal) -> None:
         if sinal.tipo == "dono":
             if sinal.dono_novo:
+                with self._tranca:
+                    self._dono_do_bluez = sinal.dono_novo
                 _registrar("bluez_voltou_ao_barramento")
                 self._em_segundo_plano(self._fotografar)
                 return

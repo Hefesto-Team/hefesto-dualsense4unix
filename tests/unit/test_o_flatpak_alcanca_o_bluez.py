@@ -220,6 +220,9 @@ def test_a_pasta_de_execucao_e_a_mesma_do_host() -> None:
     )
 
 
+_GUARDA_S = 30.0
+
+
 def _ha_proxy() -> bool:
     return shutil.which("xdg-dbus-proxy") is not None and bm.ha_dbus_daemon()
 
@@ -309,7 +312,7 @@ def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> N
             bluez.reiniciar()
             novo = bluez.nome_do_bluez
             assert novo != velho
-            assert bm.esperar(lambda: dono.dono_do_bluez() == novo, teto=5.0), (
+            assert bm.esperar(lambda: dono.dono_do_bluez() == novo, teto=_GUARDA_S), (
                 "o NameOwnerChanged do org.bluez não atravessou o proxy: o agente segue "
                 f"esperando {dono.dono_do_bluez()!r}, e o bluetoothd novo é {novo!r}"
             )
@@ -317,6 +320,34 @@ def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> N
             assert escrita.feita, escrita
             assert bluez.o_padrao_atendeu == []
             assert list(dono._agente.historico).count(("RequestConfirmation", True)) == 2
+        finally:
+            dono.fechar()
+
+
+@pede_o_proxy
+def test_a_foto_que_falha_na_volta_do_bluetoothd_nao_apaga_o_dono(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A foto da volta falha (o timeout e o ``UnknownMethod`` medidos sob carga), e o dono novo
+    chega pelo sinal: o agente atende o bluetoothd novo."""
+    with (
+        bm.BluezParticular(tmp_path) as bluez,
+        _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
+    ):
+        dono = _dono(endereco)
+        try:
+            monkeypatch.setattr(bd.BarramentoGio, "objetos", lambda _self, *, espera: None)
+            bluez.reiniciar()
+            novo = bluez.nome_do_bluez
+            assert bm.esperar(lambda: dono.dono_do_bluez() == novo, teto=_GUARDA_S), (
+                "a foto da volta falhou e levou junto o dono que o NameOwnerChanged anunciou: "
+                f"o agente segue esperando {dono.dono_do_bluez()!r}, e o bluetoothd novo é "
+                f"{novo!r}"
+            )
+            assert dono.caminhos() is None
+            escrita = dono.parear(DISPOSITIVO)
+            assert escrita.feita, escrita
+            assert bluez.o_padrao_atendeu == []
         finally:
             dono.fechar()
 
