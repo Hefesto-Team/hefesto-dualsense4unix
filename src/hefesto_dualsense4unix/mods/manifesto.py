@@ -70,6 +70,7 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "jogo.identidade": (EventTopic.JOGO_IDENTIDADE,),
     "modo.aba": (EventTopic.MODO_ABA,),
     "jogo.memoria": ("jogo.memoria",),
+    "jogo.tela": ("jogo.tela",),
 }
 
 TOPICOS_DE_PUBLICACAO: dict[str, str] = {
@@ -127,6 +128,10 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:jogo.memoria": (
         "Ler do jogo só os valores que a receita declara, como a vida, com a chave «Memória» "
         "daquele jogo ligada."
+    ),
+    "ler:jogo.tela": (
+        "Saber do dano, do clarão, do escuro e do tremor na tela do jogo, em números, sem "
+        "receber a imagem."
     ),
     "ler:modo.aba": (
         "Saber em que seções de cada controle o modo que a extensão traz está aceso."

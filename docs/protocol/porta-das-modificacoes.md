@@ -192,6 +192,14 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   (`integrations/anticheat_conhecido.json`), ligar a chave pede o aviso visto antes. Com o `buildid` fora da faixa
   `{min, max}` da receita, nada se lê. O caçador (`Varredura`) devolve só `{token, contagem}`, e o endereço sai
   quando sobra um candidato. Até o wrapper virar pai do jogo, o tópico não tem fonte.
+- `jogo.tela` (`ler:jogo.tela`, ensaio) entrega `nome: "jogo.tela"`: `{t, dano, flash, escuro, tremor, saturacao}`,
+  cada um de 0 a 1, até 15 vezes por segundo (`integrations/tela_do_jogo.py`). Cada quadro do portal de captura vira
+  uma grade de 32 por 18 cores médias. `dano` é o vermelho que sobe nas bordas, `flash` o brilho que salta, `escuro`
+  o quanto falta de luz, `tremor` o deslocamento da cena inteira e `saturacao` a cor viva. Com regiões declaradas
+  pela receita (até 8, `{nome, x, y, largura, altura, cor, tolerancia}`, em frações da tela), vem também
+  `regioes: {nome: fração}`. Nenhum pixel cruza a porta. Sem assinante o portal não abre; sem portal, ou com ele
+  caído, os cinco chegam `null` uma vez (ausente, nunca zero) e a captura tenta de novo sozinha. A fonte do portal
+  ainda não está ligada: até lá, o tópico não tem fonte.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.
