@@ -489,19 +489,32 @@ def na_tela() -> dict:
             fora[rotulo] = f"ERRO {erro}" if erro is not None else str(valor)
         return _leu
 
+    marcos: dict[str, int] = {}
+
+    def pintou_desde(marco: str, voltas: int) -> bool:
+        if not (piloto.pronto and piloto.pagina == PAGINA
+                and not piloto.view.is_loading()):
+            marcos.pop(marco, None)
+            return False
+        feitas = piloto.tiques.get(PAGINA, 0)
+        return feitas - marcos.setdefault(marco, feitas) >= voltas
+
     def com_o_modo_improvisado() -> bool:
-        if not piloto.pronto:
+        if not pintou_desde("instalada", 1):
             return True
         piloto.ponte.perguntar(LER_A_TELA, ler("com-o-modo"))
-        GLib.timeout_add(700, sem_o_modo_improvisado)
+        GLib.idle_add(sem_o_modo_improvisado)
         return False
 
     def sem_o_modo_improvisado() -> bool:
         carga["o_que"] = {a09.CAMPO_DO_MODO_AVULSO: ""}
-        GLib.timeout_add(700, leu_sem_o_modo)
+        pintou_desde("sem-o-modo", 2)
+        GLib.timeout_add(50, leu_sem_o_modo)
         return False
 
     def leu_sem_o_modo() -> bool:
+        if not pintou_desde("sem-o-modo", 2):
+            return True
         piloto.ponte.perguntar(LER_A_TELA, ler("sem-o-modo"))
         GLib.timeout_add(300, clicar)
         return False
@@ -522,7 +535,7 @@ def na_tela() -> dict:
         return False
 
     GLib.timeout_add(400, lambda: piloto._ir(PAGINA))
-    GLib.timeout_add(1800, com_o_modo_improvisado)
+    GLib.timeout_add(50, com_o_modo_improvisado)
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
         limite = _time.monotonic() + 60.0
