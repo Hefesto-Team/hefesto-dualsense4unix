@@ -554,6 +554,7 @@ PORTAS: dict[tuple[str, str], str] = {
     ("integrations/eleicao_de_microfone.py", "_ler"): "eleicao_de_microfone._rodar",
     ("integrations/eleicao_de_microfone.py", "_texto"): "eleicao_de_microfone._rodar",
     ("integrations/endpoint_de_haptica.py", "chamar"): "alto_falante_bt._rodar",
+    ("integrations/haptica_do_cabo.py", "ler"): "haptica_do_cabo.ler_o_fluxo_do_laco",
     ("integrations/ganho_do_microfone.py", "audio_saida.rodar_leitura"):
         "audio_saida.rodar_leitura",
     ("integrations/quem_ouve_o_microfone.py", "_rodar"): "eleicao_de_microfone._rodar",
@@ -580,6 +581,7 @@ def _executores() -> dict[str, Callable[[list[str]], Any]]:
     from hefesto_dualsense4unix.integrations import audio_ks_dualsense as aks
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as em
+    from hefesto_dualsense4unix.integrations import haptica_do_cabo as hc
     from hefesto_dualsense4unix.integrations import teste_do_microfone as tdm
 
     def pelo_recuo(argv: list[str]) -> Any:
@@ -598,6 +600,8 @@ def _executores() -> dict[str, Callable[[list[str]], Any]]:
         "audio_ks_dualsense._pactl": aks._pactl,
         "dualsense_bt_audio._rodar": dba._rodar,
         "eleicao_de_microfone._rodar": lambda a: em._rodar(a)[1],
+        "haptica_do_cabo.ler_o_fluxo_do_laco": lambda _a: hc.ler_o_fluxo_do_laco(
+            f"{hc.MARCA_DO_LACO_DO_CABO}{HEX[0]}"),
         "teste_do_microfone.fonte_do_controle": lambda _a: tdm.fonte_do_controle(UNIQS[0]),
     }
 

@@ -79,10 +79,17 @@ def _motores_do_volume(volume: object) -> tuple[int, ...] | None:
 
 
 def ler_o_fluxo_do_laco(
-    no_do_laco: str, correr: Callable[[list[str]], str | None]
+    no_do_laco: str, correr: Callable[[list[str]], str | None] | None = None
 ) -> FluxoDoLaco | None:
-    """O fluxo que carrega ``no_do_laco``, pelo JSON do ``pactl``. ``None`` = não há."""
-    objetos = lista_do_json(correr(["pactl", "--format=json", "list", "sink-inputs"]))
+    """O fluxo que carrega ``no_do_laco``, pelo JSON do ``pactl``. ``None`` = não há.
+
+    Sem ``correr``, a pergunta vai pelo executor do som (:func:`alto_falante_bt.rodar_pactl`),
+    que responde pelo retrato do servidor quando ele está vivo, como todo outro leitor.
+    """
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
+
+    ler = correr if correr is not None else rodar_pactl
+    objetos = lista_do_json(ler(["pactl", "--format=json", "list", "sink-inputs"]))
     for o in objetos or ():
         indice = o.get("index")
         props = o.get("properties")
@@ -214,9 +221,7 @@ class HapticaDoCabo:
         if self._indice_do_fluxo is not None:
             indice = self._indice_do_fluxo(no_do_laco)
             return None if indice is None else FluxoDoLaco(indice)
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
-
-        return ler_o_fluxo_do_laco(no_do_laco, self._pactl or rodar_pactl)
+        return ler_o_fluxo_do_laco(no_do_laco, self._pactl)
 
     def _seguem_no_fluxo(self, marca: str, motores: str) -> bool:
         """Os motores aplicados seguem no fluxo? Só a leitura de outro valor diz que não."""
