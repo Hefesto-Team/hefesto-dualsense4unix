@@ -442,7 +442,7 @@
   flex-wrap:nowrap;padding:8px;gap:6px;background:var(--panel);border:1px solid var(--border-forte);
   border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
 .ext-pop.aberto:has(.ext-perm) { flex-wrap:wrap;width:360px;top:calc(100% + 4px);transform:none }
-.ext-pop .btn.mini.apagado { opacity:.45;cursor:default }
+.ext-pop .btn.mini.apagado { cursor:default }
 #lanc-janela .tn-topo .ext-mais { margin-left:auto }
 #lanc-janela .tn-topo .ext-mais + .ext-pop { right:90px;top:6px;transform:none }
 #lanc-janela .tn-topo .ext-pop + .tn-x, #lanc-janela .tn-topo .ext-mais + .tn-x { margin-left:4px }
