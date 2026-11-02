@@ -1656,11 +1656,37 @@ _tela_presente() {
     [[ -x "${_py}" ]] || _py="${_VENV_PYTHON:-python3}"
     "${_py}" -c "import sys, gi; gi.require_version('Gst', '1.0'); from gi.repository import Gst; Gst.init(None); sys.exit(0 if Gst.ElementFactory.find('pipewiresrc') else 1)" >/dev/null 2>&1
 }
+_tela_deb_da_casa() {
+    local dir="${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport" ver deb sha
+    ver="$(dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' libpipewire-0.3-0t64 2>/dev/null \
+        | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true)"
+    [[ "${ver}" == *~hefesto* ]] || return 1
+    deb="gstreamer1.0-pipewire_${ver}_amd64.deb"
+    [[ -f "${dir}/${deb}" && -s "${dir}/SHA256SUMS" ]] || return 1
+    sha="$(awk -v n="${deb}" '{ m = $2; sub(/^\*/, "", m); sub(/.*\//, "", m) } m == n { print $1; exit }' "${dir}/SHA256SUMS")"
+    [[ -n "${sha}" && "$(sha256sum "${dir}/${deb}" | awk '{ print $1 }')" == "${sha}" ]] || return 1
+    printf '%s\n' "${dir}/${deb}"
+}
+_tela_pela_casa() {
+    local deb="$1"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "instalar ${deb##*/} (o pipewiresrc da mesma versão do PipeWire da casa) e o gir1.2-gstreamer-1.0"
+        return 0
+    fi
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "${deb}" gir1.2-gstreamer-1.0 >/dev/null 2>&1
+}
 if ! _tela_presente; then
     printf '\n      Tela do jogo para as extensões (o sentido «Tela» do Modo imersão): falta o pipewiresrc do GStreamer\n'
     ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
     if [[ "${REPLY,,}" =~ ^y ]]; then
-        if run_pkg gst-pipewire; then
+        if _tela_deb="$(_tela_deb_da_casa)"; then
+            _tela_ok=0
+            _tela_pela_casa "${_tela_deb}" || _tela_ok=$?
+        else
+            _tela_ok=0
+            run_pkg gst-pipewire || _tela_ok=$?
+        fi
+        if [[ "${_tela_ok}" -eq 0 ]]; then
             printf '      ok — a tela do jogo chega às extensões pelo portal\n'
         else
             warn "não instalei o pipewiresrc — o jogo.tela fica ausente para as extensões"
@@ -1670,6 +1696,7 @@ if ! _tela_presente; then
             "$(comando_manual_pkg gst-pipewire)"
     fi
 fi
+unset _tela_deb _tela_ok
 
 printf '      instalando pacote Python...\n'
 if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
