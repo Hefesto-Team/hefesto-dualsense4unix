@@ -496,7 +496,7 @@ def na_tela() -> dict:
                 and not piloto.view.is_loading()):
             marcos.pop(marco, None)
             return False
-        feitas = piloto.tiques.get(PAGINA, 0)
+        feitas: int = piloto.tiques.get(PAGINA, 0)
         return feitas - marcos.setdefault(marco, feitas) >= voltas
 
     def com_o_modo_improvisado() -> bool:
