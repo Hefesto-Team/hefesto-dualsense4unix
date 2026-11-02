@@ -493,7 +493,7 @@ def modo_na_tela(modo: str, aba: str) -> str:
 
 
 def pedido_da_aba(pedido: str, aba: str) -> bool:
-    """O ``data-modo`` do clique é um dos modos que a aba oferece agora."""
+    """O ``data-modo`` do clique (o ``data-pede``, na Perfis) é um dos modos da aba agora."""
     return pedido in (MODO_AUTOMATICO, MODO_PERSONALIZADO) or any(
         m["valor"] == pedido for m in modos_da_aba(aba))
 
