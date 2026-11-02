@@ -264,3 +264,38 @@ def test_o_diario_que_nao_abre_nunca_barra_o_gesto(
     registro = instalador.ler_registro(lugares.registro)
     assert registro[MOD].versao == "1.1.0" and registro[MOD].ligada
     assert _diario(real).is_dir() and not any(_diario(real).iterdir())
+
+
+def test_o_canario_vigia_o_diario_que_o_produto_escreve_no_lar_real(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert canario._DIARIO_DOS_GESTOS, "a sessão não marcou o diário dos gestos"
+    monkeypatch.setenv("HOME", str(canario.lar_real()))
+    for var in ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+        valor = canario._LAR_ENV_ANTES.get(var)
+        if valor:
+            monkeypatch.setenv(var, valor)
+        else:
+            monkeypatch.delenv(var, raising=False)
+
+    assert canario._DIARIO_DOS_GESTOS[0] == instalador.Lugares.do_xdg().diario_dos_gestos
+
+
+def test_o_gesto_que_corre_enquanto_o_canario_fotografa_tambem_e_aviso(
+    real: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _armar(real, monkeypatch)
+    _fonte(tmp_path, versao="1.1.0")
+    fotografar = canario._fotografar_tudo
+
+    def _com_o_gesto_no_meio(*argumentos: Any) -> Any:
+        _mod("atualizar", MOD)
+        return fotografar(*argumentos)
+
+    monkeypatch.setattr(canario, "_fotografar_tudo", _com_o_gesto_no_meio)
+
+    status, saida = _fechar(capsys)
+
+    assert status == 0 and _portao(saida) == [], saida
+    assert f"gesto: [gesto] mod atualizar {MOD}" in saida, saida

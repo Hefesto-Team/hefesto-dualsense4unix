@@ -1510,8 +1510,9 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
 
-    gestos_das_extensoes = _gestos_das_extensoes_na_sessao()
     foto_aviso = _fotografar_tudo_de_aviso(_CANARIO_FOTO_AVISO)
+    foto_fim = _fotografar_tudo(_CANARIO_FOTO_INICIAL)
+    gestos_das_extensoes = _gestos_das_extensoes_na_sessao()
     do_gesto, deltas_aviso = _pelos_gestos_das_extensoes(
         _deltas_do_canario(_CANARIO_FOTO_AVISO, foto_aviso), gestos_das_extensoes)
     if deltas_aviso:
@@ -1530,7 +1531,6 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             "  daemon vivo é trabalho real, e desfazê-la seria o dano maior.",
         ])
 
-    foto_fim = _fotografar_tudo(_CANARIO_FOTO_INICIAL)
     relato = _relato_do_canario(
         {**foto_aviso, **foto_fim},
         [*_canario_raizes(), *_canario_raizes_de_aviso()],
