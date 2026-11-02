@@ -558,6 +558,18 @@ def arquivo_da_pagina(pasta: Path, pagina: Pagina) -> Path:
         raise ManifestoRecusadoError("A página da extensão não é HTML.")
     return alvo
 
+
+def texto_da_pagina(pasta: Path, pagina: Pagina) -> str:
+    """O HTML da página, conferido por :func:`arquivo_da_pagina`; só recusa com
+    :class:`ManifestoRecusadoError`."""
+    alvo = arquivo_da_pagina(pasta, pagina)
+    try:
+        return alvo.read_bytes().decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ManifestoRecusadoError("A página da extensão não é HTML em UTF-8.") from exc
+    except OSError as exc:
+        raise ManifestoRecusadoError("A página da extensão não pôde ser lida.") from exc
+
 ABAS_DO_MODO = ("02", "03", "04", "05", "10")
 ROTULO_DO_MODO_DE_ABA = 20
 DICA_DO_MODO_DE_ABA = 120
@@ -990,4 +1002,5 @@ __all__ = [
     "o_que_a_permissao_deixa",
     "permissao_valida",
     "permissoes_novas",
+    "texto_da_pagina",
 ]

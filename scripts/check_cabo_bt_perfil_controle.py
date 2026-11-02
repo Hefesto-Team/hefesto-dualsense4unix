@@ -266,6 +266,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                                        "1/20 s — é do serviço da extensão, não de um controle",
     "soltar-o-livre-da-modificacao": "o soltar do controle livre zera o que a extensão toca — é "
                                      "do serviço da extensão",
+    "mensagem-da-pagina-da-modificacao": "a mensagem da página própria vai só àquela extensão "
+                                         "e a resposta volta à página — é do serviço da "
+                                         "extensão, não de um controle",
     "gravar-o-livre-da-modificacao": "grava o arrastar numa forma do rascunho da janela — é da "
                                      "tela até o «Guardar»",
     "esquecer-a-forma-do-livre": "tira uma forma gravada do rascunho da janela — é da tela até "

@@ -1148,11 +1148,13 @@ VAZIO_DA_JANELA = '<div class="ext-vazia">Esta extensão não tem opções para 
 
 class PaginaDaJanela(NamedTuple):
     """A página própria da extensão (a do manifesto): o HTML do arquivo, o rótulo, que
-    vira a dica da área, e a altura fixa da área, em pixels."""
+    vira a dica da área, a altura fixa da área, em pixels, e a frase da recusa quando o
+    arquivo não serve."""
 
     html: str
     rotulo: str
     altura: int
+    recusa: str = ""
 
 
 GESTO_DA_PAGINA = "mensagem-da-pagina-da-modificacao"
@@ -1216,7 +1218,10 @@ def documento_da_pagina(html: str) -> str:
 def pagina_html(mod: str, pagina: PaginaDaJanela) -> str:
     """A área da página da extensão, num pedaço próprio: um ``iframe`` isolado (só
     ``allow-scripts``, origem opaca), da altura que o manifesto declara, e o campo escondido
-    por onde volta a resposta da extensão."""
+    por onde volta a resposta da extensão. A página recusada mostra só a frase da recusa."""
+    if pagina.recusa:
+        return (f'<div class="mj-pagina" id="mod-pagina" data-dica="{_a(pagina.rotulo)}">'
+                f'<p class="mj-pagina-recusa">{_e(pagina.recusa)}</p></div>')
     quadro = (f'<iframe class="mj-pagina-quadro" sandbox="allow-scripts" '
               f'referrerpolicy="no-referrer" title="{_a(pagina.rotulo)}" data-mod="{_a(mod)}" '
               f'style="height:{int(pagina.altura)}px" '
@@ -1229,6 +1234,7 @@ def pagina_html(mod: str, pagina: PaginaDaJanela) -> str:
 ESTILO_DA_PAGINA = """#mod-janela .mj-pagina { margin-top:8px;border:1px solid var(--border-sutil);
   border-radius:8px;background:var(--panel);overflow:hidden }
 #mod-janela .mj-pagina-quadro { display:block;width:100%;border:0;background:transparent }
+#mod-janela .mj-pagina-recusa { margin:0;padding:10px 12px;color:var(--texto-suave) }
 """
 _FORA_DA_PAGINA = """(function(){
   if(window.__hefPaginaDaExtensao) return;

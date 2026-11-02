@@ -277,7 +277,10 @@ def test_a_janela_le_a_pagina_da_pasta_instalada(
     assert a07._pagina_da_janela(m, "toque") == exp.PaginaDaJanela(HTML_DA_EXTENSAO, "Estúdio",
                                                                    240)
     (pasta / "estudio" / "pagina.html").unlink()
-    assert a07._pagina_da_janela(m, "toque") is None
+    recusada = a07._pagina_da_janela(m, "toque")
+    assert recusada is not None and "não está na pasta" in recusada.recusa
+    area = exp.pagina_html("toque", recusada)
+    assert "<iframe" not in area and "não está na pasta" in area
 
 
 PAGINA_DE_PROVA = """<script>

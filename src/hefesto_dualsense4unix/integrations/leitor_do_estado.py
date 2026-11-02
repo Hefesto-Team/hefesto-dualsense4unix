@@ -191,19 +191,16 @@ def anticheat_do_jogo(pasta: Path | None, appid: str | None = None,
 
 
 def _arquivos_rasos(pasta: Path, fundo: int = 3) -> Iterable[Path]:
-    pendentes = [(pasta, 0)]
+    raiz = len(pasta.parts)
     vistos = 0
-    while pendentes and vistos < 20_000:
-        atual, nivel = pendentes.pop()
-        try:
-            filhos = list(atual.iterdir())
-        except OSError:
-            continue
-        for filho in filhos:
+    for atual, pastas, arquivos in os.walk(pasta):
+        for nome in (*pastas, *arquivos):
             vistos += 1
-            yield filho
-            if nivel < fundo and filho.is_dir() and not filho.is_symlink():
-                pendentes.append((filho, nivel + 1))
+            if vistos > 20_000:
+                return
+            yield Path(atual) / nome
+        if len(Path(atual).parts) - raiz >= fundo:
+            pastas.clear()
 
 
 class ChavesDaMemoria:

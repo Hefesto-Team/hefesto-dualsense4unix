@@ -1646,15 +1646,15 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
 def _pagina_da_janela(manifesto: Any, mod_id: str) -> exp.PaginaDaJanela | None:
     """A página própria da extensão, lida da pasta do código instalado e conferida de novo
     (dentro da pasta, HTML em UTF-8); ``None`` sem página no manifesto ou sem o arquivo."""
-    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, arquivo_da_pagina
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, texto_da_pagina
 
     pagina = manifesto.pagina
     if pagina is None:
         return None
     try:
-        texto = arquivo_da_pagina(_lugares().codigo / mod_id, pagina).read_text(encoding="utf-8")
-    except (ManifestoRecusadoError, OSError, UnicodeDecodeError):
-        return None
+        texto = texto_da_pagina(_lugares().codigo / mod_id, pagina)
+    except ManifestoRecusadoError as exc:
+        return exp.PaginaDaJanela("", pagina.rotulo, pagina.altura_max, exc.frase)
     return exp.PaginaDaJanela(texto, pagina.rotulo, pagina.altura_max)
 
 
