@@ -211,14 +211,20 @@ def gravar_registro(caminho: Path, registro: dict[str, Entrada]) -> None:
         raise
 
 
-def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str]) -> None:
+def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str], *,
+                   tocados: Sequence[Path] | None = None) -> None:
     """Uma linha ``[gesto]`` com os caminhos que o gesto vai tocar, antes de tocá-los.
 
     O canário da suíte lê o diário do lar de verdade e reconhece por essa linha a escrita de
-    quem usa. A volta passa do teto para o ``.1``; o diário que não abre nunca barra o gesto.
+    quem usa. Sem ``tocados``, os caminhos são o código e os dados de cada id e o registro; com
+    ele, só os que o gesto toca. A volta passa do teto para o ``.1``; o diário que não abre nunca
+    barra o gesto.
     """
-    caminhos = [str(p) for mod_id in ids for p in (lg.codigo / mod_id, lg.dados / mod_id)]
-    caminhos.append(str(lg.registro))
+    if tocados is None:
+        caminhos = [str(p) for mod_id in ids for p in (lg.codigo / mod_id, lg.dados / mod_id)]
+        caminhos.append(str(lg.registro))
+    else:
+        caminhos = [str(p) for p in tocados]
     diario = lg.diario_dos_gestos
     with contextlib.suppress(OSError):
         linha = (f"{time.strftime('%Y-%m-%d %H:%M:%S')} [gesto] mod {verbo} {' '.join(ids)} → "

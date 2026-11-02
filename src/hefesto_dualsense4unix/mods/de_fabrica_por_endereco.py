@@ -21,6 +21,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     AvisoParaVerError,
     InstalacaoRecusadaError,
     Lugares,
+    anotar_o_gesto,
     gravar_registro,
     instalar,
     ler_registro,
@@ -32,6 +33,7 @@ ARQUIVO = Path(__file__).resolve().parent / "de_fabrica_por_endereco.json"
 TRAZIDAS = "mods-de-fabrica.json"
 REVISTAS = "revistas"
 FRASE_DA_REMOVIDA = "Quem usa a removeu; não volta sozinha."
+VERBO = "de-fabrica"
 
 OQueFez = Literal["instalada", "ligada", "ja_estava", "endereco_novo", "recusada", "removida"]
 
@@ -90,6 +92,7 @@ def _anotar(lg: Lugares, mod_id: str) -> None:
     if mod_id in trazidas and mod_id in revistas:
         return
     alvo = _caminho_das_trazidas(lg)
+    anotar_o_gesto(lg, VERBO, [mod_id], tocados=[alvo])
     alvo.parent.mkdir(parents=True, exist_ok=True)
     provisorio = alvo.with_suffix(".tmp")
     provisorio.write_text(json.dumps({"trazidas": sorted(trazidas | {mod_id}),
@@ -134,6 +137,7 @@ def _trazer_uma(item: DeFabrica, lg: Lugares, instalar_: Callable[..., Any],
         if entrada.origem != "local" and any(
                 _o_mesmo(entrada.endereco, antigo) for antigo in item.enderecos_antigos):
             entrada.endereco = item.endereco
+            anotar_o_gesto(lg, VERBO, [item.id], tocados=[lg.registro])
             gravar_registro(lg.registro, registro)
             o_que = "endereco_novo"
         if not _nasceu_desligada(item, lg, entrada):
