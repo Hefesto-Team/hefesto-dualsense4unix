@@ -300,7 +300,7 @@ def test_a_extensao_de_mentira_assina_os_tres_e_sem_permissao_e_recusada() -> No
                 bus.publish(EventTopic.MICROFONE_NIVEL, {
                     "uniq": P2, "nivel": 0.3, "mudo": False, "do_jogo": True, "t": 2.0})
                 bus.publish(EventTopic.JOGO_IDENTIDADE, {
-                    "chave": "steam_app_10", "executavel": "a.exe", "buildid": "7",
+                    "chave": "steam_app_9900010", "executavel": "a.exe", "buildid": "7",
                     "loja": "steam", "emulador": None})
                 eventos = [
                     await asyncio.wait_for(asyncio.to_thread(com.evento), 3) for _ in range(3)]
@@ -413,8 +413,8 @@ def test_a_identidade_tem_chave_executavel_e_buildid_sem_pid(tmp_path: Path) -> 
 def test_o_emulador_se_reconhece_pelo_executavel(tmp_path: Path) -> None:
     proc = tmp_path / "proc"
     _processo(
-        proc, 20, ["/opt/retroarch/retroarch", "-L", "x.so"], {"STEAM_COMPAT_APP_ID": "1118310"})
-    carga = ij.identidade(1118310, raiz_proc=proc, pastas=[])
+        proc, 20, ["/opt/retroarch/retroarch", "-L", "x.so"], {"STEAM_COMPAT_APP_ID": "9900020"})
+    carga = ij.identidade(9900020, raiz_proc=proc, pastas=[])
     assert carga["emulador"] == "retroarch" and carga["executavel"] == "retroarch"
 
 
