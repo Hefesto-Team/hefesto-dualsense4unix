@@ -659,22 +659,6 @@ _DO_RATO: dict[str, str] = {
 }
 
 
-def _o_mouse_gravado_no_computador() -> dict[str, Any]:
-    """O `mouse` do padrão do computador como está no disco AGORA, relido no gesto.
-
-    O perfil sem `mouse` não traz o do computador na vista (`perfil_que_vale`), e o tique é o
-    retrato de antes do gesto anterior: dois arrastes seguidos partiam dele e o segundo regravava
-    o número velho por cima do primeiro.
-    """
-    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
-
-    try:
-        mouse = o_computador().global_.mouse
-    except Exception:
-        return {}
-    return mouse.model_dump(mode="json", exclude_unset=True) if mouse is not None else {}
-
-
 def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
     """A seção `mouse` do perfil com o que este clique mudou, ou `None`.
 
@@ -683,9 +667,9 @@ def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
     VALENDO: `enabled` é obrigatório no `ProfileMouseConfig`, e a única coisa verdadeira é o estado
     vivo (inventar `False` faria o perfil DESLIGAR, na próxima ativação, emulação que estava
     ligada). Sem o bloco do daemon a seção não nasce: valor chutado valeria para todo jogo que casar
-    com o perfil, para sempre. As velocidades e o Point and click partem do que o computador tem
-    gravado (`_o_mouse_gravado_no_computador`); o tique só completa o que ele não tem.
+    com o perfil, para sempre. A velocidade parte da gravada (`velocidades_do_computador`).
     """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import velocidades_do_computador
     from hefesto_dualsense4unix.profiles.schema import ProfileMouseConfig
 
     atual = getattr(prof, "mouse", None)
@@ -696,13 +680,10 @@ def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
         vivo = _rato(ctx)
         if vivo.get("speed") is None and "point_and_click" not in campos:
             return None
-        gravado = _o_mouse_gravado_no_computador()
+        speed, scroll = velocidades_do_computador()
         base = {"enabled": bool(vivo.get("enabled")),
-                "speed": int(gravado.get("speed") or vivo.get("speed") or DEFAULT_MOUSE_SPEED),
-                "scroll_speed": int(gravado.get("scroll_speed") or vivo.get("scroll_speed")
-                                    or SCROLL_SPEED_MIN)}
-        if gravado.get("point_and_click"):
-            base["point_and_click"] = gravado["point_and_click"]
+                "speed": int(speed or vivo.get("speed") or DEFAULT_MOUSE_SPEED),
+                "scroll_speed": int(scroll or vivo.get("scroll_speed") or SCROLL_SPEED_MIN)}
     novo = {**base, **campos}
     if atual is not None and novo == base:
         return None

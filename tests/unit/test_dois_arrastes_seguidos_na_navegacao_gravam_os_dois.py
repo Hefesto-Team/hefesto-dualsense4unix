@@ -158,3 +158,33 @@ def test_o_campo_que_ninguem_mexeu_fica_como_estava_no_computador(
     _cursor(a06, ctx, PonteDeMentira())
     assert _gravado("computador")["scroll_speed"] == 3, (
         "o gesto do cursor regravou a rolagem com o número do tique, e não com o gravado")
+
+
+def _semear_o_point_and_click_no_computador() -> None:
+    from hefesto_dualsense4unix.utils import maquina as m
+
+    assert m.gravar_o_computador({"global": {"mouse": {
+        "speed": 2, "scroll_speed": 3, "point_and_click": "perfil:Corrida"}}})
+
+
+@pytest.mark.parametrize("gesto", ["cursor", "rolagem"])
+def test_a_velocidade_no_computador_nao_mexe_no_point_and_click(
+        pac: Any, a06: Any, gesto: str) -> None:
+    _semear_o_point_and_click_no_computador()
+    _GESTOS[gesto][0](a06, _ctx(pac, perfil="", conectados=1), PonteDeMentira())
+    assert _gravado("computador")["point_and_click"] == "perfil:Corrida"
+
+
+@pytest.mark.parametrize("gesto", ["cursor", "rolagem"])
+def test_a_velocidade_no_jogo_nao_copia_o_point_and_click_do_computador(
+        pac: Any, a06: Any, gesto: str) -> None:
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    _semear_o_jogo_sem_mouse()
+    _semear_o_point_and_click_no_computador()
+    _GESTOS[gesto][0](a06, _ctx(pac, perfil="regua", conectados=1), PonteDeMentira())
+    mouse = load_profile("regua").mouse
+    assert mouse is not None and _GESTOS[gesto][1] in mouse.model_fields_set
+    assert "point_and_click" not in mouse.model_fields_set, (
+        "o gesto da velocidade congelou no jogo o Point and click do computador: "
+        f"{mouse.model_dump(exclude_unset=True)}")
