@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-11-01 23:59
+ensaio:  2026-11-02 02:10
 abas:    9
 modo:    --todas --publicado --doc
 origem:  src/hefesto_dualsense4unix/interface/paginas
