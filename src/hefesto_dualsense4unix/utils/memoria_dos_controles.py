@@ -520,6 +520,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "opcoes.json": (CASA, "os valores das opções de uma modificação; não identifica controle"),
     "diario.log": (CASA, "o diário de cada modificação, na pasta de dados da modificação"),
     "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta de dados"),
+    "gestos-das-extensoes.log": (CASA, "o diário dos gestos que mudam as modificações; não "
+                                       "identifica controle"),
     "mods.sock": ("install", "a porta das modificações (pasta de execução)"),
     "mods-estado.json": ("install", "o estado vivo das modificações (pasta de execução)"),
     "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
