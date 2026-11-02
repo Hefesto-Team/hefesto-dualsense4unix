@@ -1246,11 +1246,15 @@ def _identidade_valida(identidade: str) -> bool:
 
 def _linhas_da_marca(marca: Path) -> list[tuple[str, str]]:
     """``[(identidade, arquivo)]`` da marca. Ausente/ilegível = vazio."""
+    return _linhas_da_marca_do_texto(_texto_da_marca(marca))
+
+
+def _texto_da_marca(marca: Path) -> str:
+    """O texto da marca; ausente ou ilegível é a marca vazia."""
     try:
-        bruto = marca.read_text(encoding="utf-8")
+        return marca.read_text(encoding="utf-8")
     except OSError:
-        return []
-    return _linhas_da_marca_do_texto(bruto)
+        return ""
 
 
 def _linhas_da_marca_do_texto(bruto: str) -> list[tuple[str, str]]:
@@ -1560,11 +1564,8 @@ def _ler_as_fontes_dos_jogos(home: Path | None) -> tuple[list[JogoLocal], _Fonte
 
 def _esquecer_os_jogos_que_sairam(marca: Path, fontes: _FontesLidas) -> None:
     """Tira da marca a linha do jogo que saiu de uma fonte lida inteira; chamar sob a trava."""
-    if not (fontes.steam_lida or fontes.janelas_lidas):
-        return
-    try:
-        bruto = marca.read_text(encoding="utf-8")
-    except OSError:
+    bruto = _texto_da_marca(marca)
+    if not bruto or not (fontes.steam_lida or fontes.janelas_lidas):
         return
     ficam: list[str] = []
     esquecidas: list[str] = []
@@ -1581,15 +1582,14 @@ def _esquecer_os_jogos_que_sairam(marca: Path, fontes: _FontesLidas) -> None:
     if not esquecidas:
         return
     _gravar_a_marca(marca, ficam)
-    with contextlib.suppress(Exception):
-        for identidade in esquecidas:
-            if identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA):
-                logger.info(
-                    "perfil_de_jogo_esquecido_na_marca",
-                    classe=identidade[len(PREFIXO_DA_CHAVE_DE_JANELA) :],
-                )
-            else:
-                logger.info("perfil_de_jogo_esquecido_na_marca", appid=identidade)
+    for identidade in esquecidas:
+        if identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA):
+            logger.info(
+                "perfil_de_jogo_esquecido_na_marca",
+                classe=identidade[len(PREFIXO_DA_CHAVE_DE_JANELA) :],
+            )
+        else:
+            logger.info("perfil_de_jogo_esquecido_na_marca", appid=identidade)
 
 
 def _gravar_a_marca(marca: Path, linhas: Sequence[str]) -> None:
