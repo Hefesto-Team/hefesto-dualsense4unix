@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 import threading
 from pathlib import Path
@@ -187,6 +188,10 @@ def test_a_marca_de_quem_morreu_no_meio_nao_segura_a_extensao(lar: Lugares, curt
             quem_troca.wait()
     _marcar_com(lar, "1:0")
     assert not instalador.troca_viva(ler_registro(lar.registro)["exemplo"])
+    _marcar_com(lar, f"{os.getpid()}:0")
+    assert not instalador.troca_viva(ler_registro(lar.registro)["exemplo"]), "o PID reaproveitado"
+    _marcar_com(lar, f"{os.getpid()}:{instalador._inicio_do_processo(os.getpid())}")
+    assert instalador.troca_viva(ler_registro(lar.registro)["exemplo"])
 
 
 def test_a_troca_que_falha_antes_do_codigo_tira_a_marca_e_segue_ligada(
@@ -205,3 +210,25 @@ def test_a_troca_que_falha_antes_do_codigo_tira_a_marca_e_segue_ligada(
         instalar(str(pasta), lugares=lar)
     entrada = ler_registro(lar.registro)["exemplo"]
     assert entrada.em_troca == "" and entrada.ligada and entrada.versao == "0.1.0"
+
+
+def test_a_troca_que_falha_depois_do_codigo_tira_a_marca_e_fica_desligada(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pasta = _pasta_do_mod(curto / "fontes")
+    instalar(str(pasta), lugares=lar)
+    _ligar_vendo("exemplo", lar)
+    _nova_versao(pasta, "0.1.1")
+
+    class _RelogioQueRecusa:
+        @staticmethod
+        def now(tz: object = None) -> object:
+            raise OSError("o relógio recusou")
+
+    monkeypatch.setattr(instalador, "datetime", _RelogioQueRecusa)
+    with pytest.raises(OSError):
+        instalar(str(pasta), lugares=lar)
+    entrada = ler_registro(lar.registro)["exemplo"]
+    assert entrada.em_troca == "" and not entrada.ligada and entrada.versao == "0.1.0"
+    no_disco = json.loads((lar.codigo / "exemplo" / "hefesto-mod.json").read_text(encoding="utf-8"))
+    assert no_disco["versao"] == "0.1.1", "o código já tinha sido trocado"  # (noqa-acento)
