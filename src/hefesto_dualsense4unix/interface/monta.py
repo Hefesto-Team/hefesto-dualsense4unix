@@ -746,7 +746,7 @@ CSS_FOLHA = """  [data-controle][data-conectado="nao"]:not(.vazia) button,
     visibility:hidden !important}
 
   .btn.apagado,.seg button.apagado{
-    border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
+    border-color:var(--border-sutil);color:var(--fg);opacity:.45;cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
     border-color:var(--border-sutil);color:var(--fg)}
 
