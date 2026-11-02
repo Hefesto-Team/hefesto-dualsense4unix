@@ -409,16 +409,16 @@ class FonteDoPortal:
         conexao, self._conexao = self._conexao, None
         if conexao is None:
             return
-        with contextlib.suppress(Exception):
-            if self._sessao:
-                from jeepney import DBusAddress, new_method_call
+        from jeepney import DBusAddress, DBusErrorResponse, new_method_call
 
+        with contextlib.suppress(OSError, TimeoutError, DBusErrorResponse):
+            if self._sessao:
                 sessao = DBusAddress(self._sessao, bus_name=_PORTAL,
                                      interface="org.freedesktop.portal.Session")
                 conexao.send_and_get_reply(new_method_call(sessao, "Close"),
                                            timeout=PRAZO_DO_DBUS_S)
         self._sessao = ""
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(OSError):
             conexao.close()
 
 

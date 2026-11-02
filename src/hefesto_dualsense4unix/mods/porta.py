@@ -1264,8 +1264,7 @@ class Porta:
         finally:
             self._regioes_da_tela.clear()
             if captura.aberta:
-                with contextlib.suppress(Exception):
-                    fonte.fechar()
+                fonte.fechar()
 
     def _desassinar(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
         """Larga cada tópico: sem fila de ``movimento`` (ou de dedos), o tique para de pedir o

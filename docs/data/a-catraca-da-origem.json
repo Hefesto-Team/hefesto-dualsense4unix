@@ -51,7 +51,7 @@
       "data": "2026-11-02",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 960,
+      "piso": 961,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -159,6 +159,7 @@
         "integrations/steam_input_ponte.py": 3,
         "integrations/steam_launch_options.py": 6,
         "integrations/storm_doctor.py": 6,
+        "integrations/tela_do_jogo.py": 1,
         "integrations/teste_do_microfone.py": 2,
         "integrations/transiente_do_jogo.py": 5,
         "integrations/uhid_gamepad.py": 7,
@@ -200,7 +201,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "o leitor do estado lê o /proc e o manifesto de um jogo que pode sair no meio da leitura (OSError é a resposta certa, e o processo seguinte se lê), e a porta espera o soquete do leitor que só nasce com o jogo aberto e a chave Memória ligada (A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02, 02/11/2026)",
+      "razao": "a tela do jogo lê a ficha do portal guardada, que falta na primeira vez (OSError devolve None e o portal pede a escolha de novo); os fechamentos do portal levantam só a exceção nomeada (A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-02, 02/11/2026)",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -237,6 +238,12 @@
           "de": 956,
           "para": 960,
           "razao": "o leitor do estado lê o /proc e o manifesto de um jogo que pode sair no meio da leitura (OSError é a resposta certa, e o processo seguinte se lê), e a porta espera o soquete do leitor que só nasce com o jogo aberto e a chave Memória ligada (A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02, 02/11/2026)"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 960,
+          "para": 961,
+          "razao": "a tela do jogo lê a ficha do portal guardada, que falta na primeira vez (OSError devolve None e o portal pede a escolha de novo); os fechamentos do portal levantam só a exceção nomeada (A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-02, 02/11/2026)"
         }
       ],
       "unidade": "remendos",
