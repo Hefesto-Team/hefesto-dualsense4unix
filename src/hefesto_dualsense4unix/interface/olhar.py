@@ -7,6 +7,7 @@ import json
 import pathlib
 import re
 import sys
+from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import monta
@@ -23,6 +24,82 @@ SUBPASTA_DA_VISTA = "maximizada"
 PREFIXO_NOVO = "aba-"
 
 NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
+
+PRAZO_DE_CADA_SINAL_MS = 20_000
+
+A_CAIXA = ".janela, .cx, .pagina"
+
+AS_FONTES = "() => document.fonts.ready.then(() => true)"
+
+DOIS_QUADROS = ("() => new Promise(r => requestAnimationFrame("
+                "() => requestAnimationFrame(() => r(true))))")
+
+AS_ANIMACOES_QUE_ACABAM = """() => Promise.all(document.getAnimations()
+  .filter(a => a.effect && a.effect.getComputedTiming().endTime !== Infinity)
+  .map(a => a.finished.catch(() => null))).then(() => true)"""
+
+
+class PaginaNaoFicouProntaError(RuntimeError):
+    """O sinal que a página não deu dentro do prazo, com o nome dele."""
+
+    def __init__(self, endereco: str, sinal: str, prazo_ms: int) -> None:
+        self.endereco, self.sinal, self.prazo_ms = endereco, sinal, prazo_ms
+        super().__init__(
+            f"a página não ficou pronta: faltou {sinal} em {prazo_ms} ms ({endereco})")
+
+
+def endereco_da_pagina(alvo: pathlib.Path | str) -> str:
+    if isinstance(alvo, pathlib.Path):
+        return alvo.resolve().as_uri()
+    return alvo if "://" in alvo else pathlib.Path(alvo).resolve().as_uri()
+
+
+def _esperar(pg: Any, endereco: str, passos: list[tuple[str, Any]], prazo_ms: int) -> None:
+    from playwright.sync_api import TimeoutError as Estourou
+
+    for sinal, esperar in passos:
+        try:
+            esperar()
+        except Estourou:
+            raise PaginaNaoFicouProntaError(endereco, sinal, prazo_ms) from None
+
+
+def abrir_pronta(pg: Any, alvo: pathlib.Path | str, *, seletor: str | None = None,
+                 prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> str:
+    """Abre ``alvo`` e só volta com a página desenhada: o ``load``, o
+    ``document.fonts.ready``, dois quadros pintados (o que o motor da página faz depois do
+    ``load`` roda antes do quadro) e, pedido, o ``seletor`` no DOM. Nenhuma página pede nada
+    à rede depois do ``load``: a rede quieta só somava espera e estourava com a máquina
+    carregada. Cada sinal tem prazo; o que não vem sai em ``PaginaNaoFicouProntaError``."""
+    endereco = endereco_da_pagina(alvo)
+    passos: list[tuple[str, Any]] = [
+        ("o load do documento",
+         lambda: pg.goto(endereco, wait_until="load", timeout=prazo_ms)),
+        ("o document.fonts.ready",
+         lambda: pg.wait_for_function(AS_FONTES, timeout=prazo_ms)),
+        ("dois quadros pintados",
+         lambda: pg.wait_for_function(DOIS_QUADROS, timeout=prazo_ms)),
+    ]
+    if seletor is not None:
+        passos.append((f"o seletor {seletor!r} no DOM",
+                       lambda: pg.wait_for_selector(seletor, state="attached",
+                                                    timeout=prazo_ms)))
+    _esperar(pg, endereco, passos, prazo_ms)
+    return endereco
+
+
+def assentar(pg: Any, endereco: str, prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> None:
+    """Depois de uma folha posta por cima: as fontes, o fim de toda animação e transição
+    que acaba (a cor do tema transita) e dois quadros pintados."""
+    _esperar(pg, endereco, [
+        ("o document.fonts.ready",
+         lambda: pg.wait_for_function(AS_FONTES, timeout=prazo_ms)),
+        ("o fim das animações que acabam",
+         lambda: pg.wait_for_function(AS_ANIMACOES_QUE_ACABAM, timeout=prazo_ms)),
+        ("dois quadros pintados",
+         lambda: pg.wait_for_function(DOIS_QUADROS, timeout=prazo_ms)),
+    ], prazo_ms)
+
 
 MEDIDA_NA_VISTA = """() => {
   const d = document.documentElement;
@@ -94,13 +171,16 @@ def _navegador(pw):
 
 def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
               so_a_janela: bool = False,
-              vista: tuple[int, int] | None = None, tema: str = "") -> dict:
-    """Uma página, já assentada, medida e fotografada."""
+              vista: tuple[int, int] | None = None, tema: str = "",
+              prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> dict:
+    """Uma página, assentada pelos próprios sinais, medida e fotografada; sem um sinal no
+    prazo, o erro com o nome dele e nenhuma foto. A animação que não acaba (um pulso) sai
+    no estado de base, o mesmo que a página declara para o movimento reduzido: a foto não
+    depende do instante em que foi tirada."""
     larg, alt = vista or (LARG, ALT)
     pg = navegador.new_page(viewport={"width": larg, "height": alt}, device_scale_factor=1)
     try:
-        pg.goto(f"file://{alvo}")
-        pg.wait_for_load_state("networkidle")
+        endereco = abrir_pronta(pg, alvo, seletor=A_CAIXA, prazo_ms=prazo_ms)
         from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
         pg.add_style_tag(
@@ -108,7 +188,7 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         )
         if tema:
             pg.add_style_tag(content=tema)
-        pg.wait_for_timeout(400)
+        assentar(pg, endereco, prazo_ms)
         cx = pg.evaluate(MEDIDA_NA_VISTA)
         if cx.get("erro"):
             return {"erro": cx["erro"]}
@@ -116,12 +196,14 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         moldura = (pg.query_selector(".janela") or pg.query_selector(".cx")
                    or pg.query_selector(".pagina"))
         if vista is not None:
-            pg.screenshot(path=str(saida))
+            pg.screenshot(path=str(saida), animations="disabled")
         elif so_a_janela and moldura is not None:
-            moldura.screenshot(path=str(saida))
+            moldura.screenshot(path=str(saida), animations="disabled")
         else:
-            pg.screenshot(path=str(saida), full_page=True)
+            pg.screenshot(path=str(saida), full_page=True, animations="disabled")
         return {"png": str(saida), **cx}
+    except PaginaNaoFicouProntaError as exc:
+        return {"erro": str(exc)}
     finally:
         pg.close()
 
