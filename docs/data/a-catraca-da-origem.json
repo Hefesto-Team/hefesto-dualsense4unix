@@ -239,14 +239,14 @@
       "data": "2026-11-02",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1193501,
+      "piso": 1193599,
       "por_item": {
-        "docs": 108320,
+        "docs": 108321,
         "scripts": 111018,
-        "src": 301698,
-        "tests": 672465
+        "src": 301689,
+        "tests": 672571
       },
-      "razao": "tamanho: +14 linhas (1193487 -> 1193501), pagas por Origem: D-0211-A-MARCA-ESQUECE-SO-COM-A-FONTE-LIDA, D-IMERSAO-TETOS; registrado no fecho, topo 67643b4e901e",
+      "razao": "tamanho: +98 linhas (1193501 -> 1193599), pagas por Origem: identidade.pareamento; registrado no fecho, topo 1f9aa643643c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1453,6 +1453,12 @@
           "de": 1193487,
           "para": 1193501,
           "razao": "tamanho: +14 linhas (1193487 -> 1193501), pagas por Origem: D-0211-A-MARCA-ESQUECE-SO-COM-A-FONTE-LIDA, D-IMERSAO-TETOS; registrado no fecho, topo 67643b4e901e"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 1193501,
+          "para": 1193599,
+          "razao": "tamanho: +98 linhas (1193501 -> 1193599), pagas por Origem: identidade.pareamento; registrado no fecho, topo 1f9aa643643c"
         }
       ],
       "unidade": "linhas",
