@@ -106,6 +106,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "chave-da-modificacao": "a chave Ligado/Desligado da janela grava a opção da extensão no "
                             "`opcoes.json` da extensão e, desligada, pede que zere os aparelhos — é da "
                             "máquina e do serviço, não de um controle",
+    "memoria-do-jogo-da-modificacao": "a chave Memória do jogo em cena grava a escolha do jogo no "
+                                      "`memoria_dos_jogos.json` da casa — é do jogo e da máquina, "
+                                      "não de um controle",
     "escolher-o-lancador": "abre o seletor do sistema para apontar o atalho do lançador — é da máquina",
     "guardar-lancador": "guarda o atalho e o perfil por jogo do lançador — é da máquina",
     "instalar-modificacao": "instala uma extensão de um endereço git ou de uma pasta — é da máquina",
