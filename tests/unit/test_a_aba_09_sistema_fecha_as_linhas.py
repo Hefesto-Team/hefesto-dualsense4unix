@@ -391,6 +391,28 @@ CLICAR_NO_ATUALIZAR = r"""
 })()
 """
 
+CLICAR_NO_CINZA = r"""
+(function(){
+  const b = document.querySelector('[data-gesto="reiniciar"]');
+  if(!b) return JSON.stringify({achei: false});
+  const r = b.getBoundingClientRect();
+  const no_meio = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  const alcanca = !!no_meio && (no_meio === b || b.contains(no_meio));
+  const cinza = b.classList.contains('apagado') && b.getAttribute('aria-disabled') === 'true';
+  if(alcanca) no_meio.click();
+  return JSON.stringify({achei: true, alcanca: alcanca, cinza_no_clique: cinza,
+                         quem: no_meio ? no_meio.tagName + '.' + no_meio.className : null});
+})()
+"""
+
+LER_O_CINZA_DEPOIS = r"""
+(function(){
+  const b = document.querySelector('[data-gesto="reiniciar"]');
+  return JSON.stringify(b ? {recusou: b.classList.contains('hef-recusou'),
+                             apagado: b.classList.contains('apagado')} : null);
+})()
+"""
+
 GESTO_LENTO_S = 1.4
 
 
@@ -419,6 +441,8 @@ def na_tela() -> dict:
     chave = (PAGINA, "atualizar")
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,
                 hv.pacotes.PACOTES.get(PAGINA), hv.pacotes.GESTOS.get(chave))
+    chave_do_cinza = (PAGINA, "reiniciar")
+    do_cinza_antigo = hv.pacotes.GESTOS.get(chave_do_cinza)
     hv.onde.PUBLICADO = berco / "paginas"  # type: ignore[assignment]  # (noqa-acento)
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: {"active_profile": "regua"}  # type: ignore[assignment]
 
@@ -478,7 +502,29 @@ def na_tela() -> dict:
 
         if os.environ.get("A9_FOTO"):
             piloto.tela.fotografar(os.environ["A9_FOTO"])
-        GLib.timeout_add(600, sem_o_cinza)
+        GLib.timeout_add(600, clicar_no_cinza)
+        return False
+
+    chegou_ao_gesto: list[str] = []
+
+    def recusa_como_o_produto(ctx, o, p):  # type: ignore[no-untyped-def]
+        chegou_ao_gesto.append(str(o.get("gesto") or ""))
+        raise RuntimeError(com_razao[f"reiniciar{a09.SUFIXO_DA_RAZAO}"])
+
+    def clicar_no_cinza() -> bool:
+        hv.pacotes.GESTOS[chave_do_cinza] = recusa_como_o_produto  # type: ignore[assignment]
+        piloto.ponte.perguntar(CLICAR_NO_CINZA, ler("clique-no-cinza"))
+        GLib.timeout_add(500, leu_o_cinza_depois)
+        return False
+
+    def leu_o_cinza_depois() -> bool:
+        fora["o-cinza-chegou-ao-gesto"] = list(chegou_ao_gesto)
+        piloto.ponte.perguntar(LER_O_CINZA_DEPOIS, ler("depois-do-clique-no-cinza"))
+        import os
+
+        if os.environ.get("A9_FOTO"):
+            piloto.tela.fotografar(os.environ["A9_FOTO"].replace(".png", "-clique.png"))
+        GLib.timeout_add(1700, sem_o_cinza)
         return False
 
     def sem_o_cinza() -> bool:
@@ -535,6 +581,10 @@ def na_tela() -> dict:
             hv.pacotes.GESTOS[chave] = gesto_antigo
         else:
             hv.pacotes.GESTOS.pop(chave, None)
+        if do_cinza_antigo is not None:
+            hv.pacotes.GESTOS[chave_do_cinza] = do_cinza_antigo
+        else:
+            hv.pacotes.GESTOS.pop(chave_do_cinza, None)
         shutil.rmtree(berco, ignore_errors=True)
     if "depois-do-pouso" not in fora:
         pytest.fail(f"o roteiro não chegou ao fim: {sorted(fora)}")
@@ -552,6 +602,19 @@ class TestNaTelaViva:
             assert visto["apagado"] is True, (nome, visto)
             assert visto["aria"] == "true", (nome, visto)
             assert visto["razao"] == do_produto[f"{nome}{a09.SUFIXO_DA_RAZAO}"]
+
+    def test_o_cinza_ainda_responde_ao_clique(self, na_tela: dict) -> None:
+        """D-09S-BOTAO-SEM-TRABALHO, a metade do clique: o meio do botão apagado chega ao gesto."""
+        visto = na_tela["clique-no-cinza"]
+        assert visto["achei"] is True, "o botão de reiniciar sumiu da página"
+        assert visto["cinza_no_clique"] is True, visto
+        assert visto["alcanca"] is True, (
+            f"o meio do botão apagado é {visto['quem']!r}: o clique não chega a ele")
+        assert na_tela["o-cinza-chegou-ao-gesto"] == ["reiniciar"], (
+            na_tela["o-cinza-chegou-ao-gesto"])
+        depois = na_tela["depois-do-clique-no-cinza"]
+        assert depois and depois["recusou"] is True, (
+            f"o gesto recusou e o botão apagado não piscou a recusa: {depois}")
 
     def test_a_razao_vira_a_dica_do_botao(self, na_tela: dict) -> None:
         for nome, visto in na_tela["com-razao"]["botoes"].items():
