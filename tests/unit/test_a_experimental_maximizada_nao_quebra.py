@@ -80,6 +80,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.interface.janela import PonteDaTela
+from gi.repository import WebKit2
 
 PAGINA = pathlib.Path(sys.argv[1])
 CASOS = json.loads(sys.stdin.read())
@@ -126,8 +127,11 @@ for chave, (largura, altura, fila, lista) in CASOS.items():
     janela.set_default_size(largura, altura)
     janela.add(ponte.view)
     janela.show_all()
+    carregada = {}
+    ponte.view.connect("load-changed", lambda _v, ev, c=carregada: (
+        c.update(v=True) if ev == WebKit2.LoadEvent.FINISHED else None))
     ponte.view.load_uri(PAGINA.as_uri())
-    esperar({}, 4)
+    esperar(carregada, 60)
     pos = {}
     ponte.perguntar(POR % (json.dumps(fila), json.dumps(lista)),
                     lambda v, e: pos.update(v=v, e=repr(e) if e else ""))
@@ -136,7 +140,8 @@ for chave, (largura, altura, fila, lista) in CASOS.items():
     caixa = {}
     ponte.perguntar(MEDIR, lambda v, e: caixa.update(v=v, e=repr(e) if e else ""))
     esperar(caixa, 8)
-    saida[chave] = json.loads(caixa["v"]) if caixa.get("v") else {"erro": caixa, "pos": pos}
+    lido = caixa.get("v") if pos.get("v") == "ok" else None
+    saida[chave] = json.loads(lido) if lido else {"erro": caixa, "pos": pos}
     janela.destroy()
 print(json.dumps(saida))
 """
