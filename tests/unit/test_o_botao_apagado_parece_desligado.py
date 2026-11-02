@@ -24,6 +24,9 @@ duas primeiras réguas (o contraste cai e a opacidade muda) e reprova a da letra
 """
 from __future__ import annotations
 
+import pathlib
+import re
+import sys
 from typing import Any
 
 import pytest
@@ -83,7 +86,7 @@ ACESOS = COMUM + r"""
     if(!(el.textContent || '').trim()) return;
     el.setAttribute('data-regua-apagado', String(i));
     fora.push(Object.assign({i: i, rotulo: el.textContent.trim().slice(0, 24),
-                             classe: el.getAttribute('class')},
+                             classe: el.getAttribute('class'), lf: !!el.closest('.lf')},
                             window.__apagado.medir(el)));
     el.classList.add('apagado');
   });
@@ -147,3 +150,28 @@ def test_a_regua_mede_botoes_de_verdade() -> None:
     com_botao = [aba for aba in PAGINAS if _pares(aba)]
     for aba in ("09-sistema.html", "10-perfis.html"):
         assert aba in com_botao, f"a régua não achou botão nenhum em {aba}: {com_botao}"
+
+
+def _a_opacidade_do_apagado_da_casa() -> float:
+    interface = str(pathlib.Path(onde.__file__).parent)
+    if interface not in sys.path:
+        sys.path.insert(0, interface)
+    import monta
+
+    regra = re.search(r"\.btn\.apagado,\.seg button\.apagado\{([^}]*)\}", monta.CSS_FOLHA)
+    assert regra, "a regra do apagado saiu do `monta.CSS_FOLHA`"
+    opacidade = re.search(r"opacity:\s*([\d.]+)", regra.group(1))
+    assert opacidade, "a regra do apagado da casa perdeu a opacidade"
+    return float(opacidade.group(1))
+
+
+def test_o_mini_apagado_da_experimental_tem_a_opacidade_da_casa() -> None:
+    """O-BOTAO-APAGADO-DA-EXPERIMENTAL-SEGUE-A-REGRA-DA-CASA-01: nenhuma regra local o acende."""
+    casa = _a_opacidade_do_apagado_da_casa()
+    minis = [par for par in _pares("07-lancadores.html") if par["lf"]]
+    assert minis, "a régua não achou um único botão das linhas dos lançadores na 07"
+    fora = [(par["rotulo"], par["apagado"]["opacidade"]) for par in minis
+            if abs(float(par["apagado"]["opacidade"]) - casa) > 1e-3]
+    assert not fora, (
+        f"07-lancadores.html: botões apagados das linhas dos lançadores com opacidade diferente "
+        f"da da casa ({casa}): {fora}")
