@@ -69,6 +69,7 @@ import pathlib
 import re
 import shutil
 import sys
+from typing import Any
 
 import pytest
 
@@ -512,7 +513,7 @@ def na_tela() -> dict:
         raise RuntimeError(com_razao[f"reiniciar{a09.SUFIXO_DA_RAZAO}"])
 
     def clicar_no_cinza() -> bool:
-        hv.pacotes.GESTOS[chave_do_cinza] = recusa_como_o_produto  # type: ignore[assignment]
+        hv.pacotes.GESTOS[chave_do_cinza] = recusa_como_o_produto
         piloto.ponte.perguntar(CLICAR_NO_CINZA, ler("clique-no-cinza"))
         GLib.timeout_add(500, leu_o_cinza_depois)
         return False
@@ -603,7 +604,7 @@ class TestNaTelaViva:
             assert visto["aria"] == "true", (nome, visto)
             assert visto["razao"] == do_produto[f"{nome}{a09.SUFIXO_DA_RAZAO}"]
 
-    def test_o_cinza_ainda_responde_ao_clique(self, na_tela: dict) -> None:
+    def test_o_cinza_ainda_responde_ao_clique(self, na_tela: dict[str, Any]) -> None:
         """D-09S-BOTAO-SEM-TRABALHO, a metade do clique: o meio do botão apagado chega ao gesto."""
         visto = na_tela["clique-no-cinza"]
         assert visto["achei"] is True, "o botão de reiniciar sumiu da página"
