@@ -15,7 +15,7 @@ Três contratos, medidos no Chrome sobre os DESENHOS (`mockup/`), em todas as p�
 
 MORDIDAS (cada uma tira UMA cura de uma cópia da página e a régua tem de reprovar): sem o
 contrato do alcance; sem o `tabindex` posto; sem `a[href],button` no seletor; sem o
-`presente(d)` do `aberta()`; sem o `el.click()` do Enter; sem o `quemAbriu.focus()`; sem o
+`presente(d)` do `aberta()`; sem o `el.click()` do Enter; sem o `focarSemDica(quemAbriu)`; sem o
 clique que lembra quem abriu.
 """
 
@@ -384,7 +384,7 @@ def test_enter_e_espaco_clicam_o_gesto_e_o_esc_devolve_o_foco(navegador: Any) ->
 def test_morde_sem_o_clique_do_enter_e_sem_o_foco_que_volta(
     navegador: Any, tmp_path: pathlib.Path,
 ) -> None:
-    for cura, chave in (("    el.click();\n", "cliques"), ("quemAbriu.focus(); ", "voltou")):
+    for cura, chave in (("    el.click();\n", "cliques"), ("focarSemDica(quemAbriu); ", "voltou")):
         copias = []
         for pagina in ("01-jogar.html", "06-navegacao.html"):
             texto = (MOCKUP / pagina).read_text(encoding="utf-8")
