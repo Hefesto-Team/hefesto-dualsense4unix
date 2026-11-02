@@ -325,11 +325,12 @@ def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> N
 
 
 @pede_o_proxy
+@pytest.mark.parametrize("o_nome_tambem_falha", [False, True], ids=["so-a-foto", "foto-e-nome"])
 def test_a_foto_que_falha_na_volta_do_bluetoothd_nao_apaga_o_dono(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, o_nome_tambem_falha: bool
 ) -> None:
     """A foto da volta falha (o timeout e o ``UnknownMethod`` medidos sob carga), e o dono novo
-    chega pelo sinal: o agente atende o bluetoothd novo."""
+    chega pelo sinal: o agente atende o bluetoothd novo, mesmo com o ``GetNameOwner`` mudo."""
     with (
         bm.BluezParticular(tmp_path) as bluez,
         _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
@@ -337,6 +338,8 @@ def test_a_foto_que_falha_na_volta_do_bluetoothd_nao_apaga_o_dono(
         dono = _dono(endereco)
         try:
             monkeypatch.setattr(bd.BarramentoGio, "objetos", lambda _self, *, espera: None)
+            if o_nome_tambem_falha:
+                monkeypatch.setattr(bd.BarramentoGio, "dono_do_nome", lambda _self, _nome: "")
             bluez.reiniciar()
             novo = bluez.nome_do_bluez
             assert bm.esperar(lambda: dono.dono_do_bluez() == novo, teto=_GUARDA_S), (
