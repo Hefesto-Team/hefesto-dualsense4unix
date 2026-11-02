@@ -144,6 +144,9 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Tocar no alto-falante de um controle um som curto, ou o estalo que o jogo acabou de fazer."
     ),
     "escrever:leds": "Acender por um instante as cinco luzes de jogador de um controle.",
+    "escrever:mira": (
+        "Deixar a mira do giroscópio mais pesada por alguns segundos; o peso some sozinho."
+    ),
     "rede:nenhuma": "Sem acesso à rede.",
     "rede:local": "Usar a rede desta casa.",
     "rede:internet": "Usar a internet.",

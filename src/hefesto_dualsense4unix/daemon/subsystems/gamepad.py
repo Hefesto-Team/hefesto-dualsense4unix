@@ -2331,11 +2331,11 @@ def aplicar_o_movimento(
                 return lx, ly, rx, ry
             mouse = getattr(daemon, "_mouse_device", None)
             if mouse is not None:
-                dx, dy = roteador.pixels(angulo, arranjo)
+                dx, dy = roteador.pixels(angulo, arranjo, roteador.PESO_DA_MIRA.ganho(uniq))
                 mouse.emit_gyro_move(dx, dy)
             return lx, ly, rx, ry
 
-        dh, dv = roteador.deflexao(velocidade, arranjo)
+        dh, dv = roteador.deflexao(velocidade, arranjo, roteador.PESO_DA_MIRA.ganho(uniq))
         if dh == 0 and dv == 0:
             return lx, ly, rx, ry
         if arranjo.destino == roteador.DESTINO_ANALOGICO_ESQUERDO:

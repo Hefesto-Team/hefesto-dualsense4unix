@@ -14,7 +14,7 @@ o estudo «estudo-imu-touchpad-vpad» de 18/07/2026): uma thread
 abre um 2º fd SOMENTE-LEITURA no hidraw do físico, extrai VERBATIM a janela
 `raw[base+15 : base+40]` de cada report cru (0x01 USB, base 1; 0x31 BT, base 2
 com CRC-32 validado — seed 0xA1, o `PS_INPUT_CRC32_SEED` do kernel) e a entrega
-em `vpad.forward_motion(window)`. Cópia byte a byte: zero matemática, e o
+em `vpad.forward_motion(window)`. Cópia byte a byte, salvo o peso da mira no giro, e o
 `sensor_timestamp` (que o SDL usa como dt de integração do gyro e que o evdev
 NÃO expõe) vem de graça. Sticks/botões continuam no caminho evdev endurecido.
 
@@ -130,7 +130,7 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
-from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+from hefesto_dualsense4unix.core.roteador_de_movimento import janela_que_sai
 from hefesto_dualsense4unix.integrations import usb_pai
 from hefesto_dualsense4unix.utils.espera import prontos_ou_acordado
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -1041,7 +1041,7 @@ class PhysicalReportReader:
         self._last_emit_at = now
         self._last_window = window
         try:
-            self._vpad.forward_motion(REGISTRO.filtrar(self._uniq_aberto, window))
+            self._vpad.forward_motion(janela_que_sai(self._uniq_aberto, window))
             self._windows_emitted += 1
         except Exception as exc:
             logger.warning("motion_reader_forward_failed", err=str(exc))

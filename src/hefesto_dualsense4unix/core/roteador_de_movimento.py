@@ -33,7 +33,10 @@ não recebe canal nenhum da fábrica — mas TODAS passam `store=daemon.store`.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping, Sequence
+import struct
+import threading
+import time
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, fields, replace
 from types import MappingProxyType
 from typing import Final
@@ -179,7 +182,7 @@ def _fator_radial(
 
 
 def deflexao(
-    giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
+    giro: tuple[float, float, float], arranjo: ArranjoDeMovimento, ganho: float = 1.0
 ) -> tuple[int, int]:
     """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico."""
     if not passa_da_zona_morta(giro, arranjo):
@@ -189,11 +192,86 @@ def deflexao(
     if fator <= 0.0:
         return 0, 0
     magnitude = math.hypot(horizontal, vertical)
-    alcance = fator * DEFLEXAO_MAXIMA * (arranjo.sensibilidade / SENSIBILIDADE_MAX)
+    alcance = fator * DEFLEXAO_MAXIMA * (arranjo.sensibilidade / SENSIBILIDADE_MAX) * ganho
     return (
         round(alcance * horizontal / magnitude),
         round(alcance * vertical / magnitude),
     )
+
+
+GANHO_MINIMO_DA_MIRA: Final = 0.3
+PRAZO_MAXIMO_DO_PESO_MS: Final = 10_000
+TODOS_OS_CONTROLES: Final = "todos"
+
+
+class PesoDaMira:
+    """O ganho que uma extensão pede para o giro, por controle ou para ``todos``, com prazo.
+
+    Sem pedido vivo o ganho é 1; com mais de um, vale o menor. O pedido some no prazo e quando
+    quem o fez é solto.
+    """
+
+    def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
+        self.relogio = relogio
+        self._trava = threading.Lock()
+        self._pedidos: dict[tuple[str, str], tuple[float, float]] = {}
+
+    def pedir(self, dono: str, alvo: str, ganho: float, ate_ms: int) -> None:
+        if not GANHO_MINIMO_DA_MIRA <= ganho <= 1.0:
+            raise ValueError(f"o ganho vai de {GANHO_MINIMO_DA_MIRA} a 1")
+        if not 0 < ate_ms <= PRAZO_MAXIMO_DO_PESO_MS:
+            raise ValueError(f"o prazo vai de 1 a {PRAZO_MAXIMO_DO_PESO_MS} ms")
+        chave = alvo if alvo == TODOS_OS_CONTROLES else chave_de_sensor(alvo)
+        with self._trava:
+            self._pedidos[(dono, chave)] = (ganho, self.relogio() + ate_ms / 1000.0)
+
+    def ganho(self, uniq: str | None) -> float:
+        if not self._pedidos:
+            return 1.0
+        agora = self.relogio()
+        chave = chave_de_sensor(uniq) if uniq else None
+        menor = 1.0
+        with self._trava:
+            for par, (ganho, ate) in list(self._pedidos.items()):
+                if ate <= agora:
+                    del self._pedidos[par]
+                elif par[1] in (TODOS_OS_CONTROLES, chave):
+                    menor = min(menor, ganho)
+        return menor
+
+    def soltar(self, dono: str | None = None, uniq: str | None = None) -> None:
+        """Solta os pedidos de ``dono`` (de todos, sem ``dono``), só os de ``uniq`` quando dito."""
+        chave = chave_de_sensor(uniq) if uniq else None
+        with self._trava:
+            for par in list(self._pedidos):
+                if dono is not None and par[0] != dono:
+                    continue
+                if chave is not None and par[1] not in (chave, TODOS_OS_CONTROLES):
+                    continue
+                del self._pedidos[par]
+
+    def donos(self) -> frozenset[str]:
+        with self._trava:
+            return frozenset(dono for dono, _alvo in self._pedidos)
+
+
+PESO_DA_MIRA = PesoDaMira()
+
+
+_GIRO = struct.Struct("<3h")
+
+
+def pesar_a_janela(janela: bytes, ganho: float) -> bytes:
+    """Os três eixos do giro da janela vezes ``ganho``; com ganho 1, a mesma janela, byte a byte."""
+    if ganho >= 1.0 or len(janela) < _GIRO.size:
+        return janela
+    eixos = (max(-32768, min(32767, round(v * ganho))) for v in _GIRO.unpack_from(janela))
+    return _GIRO.pack(*eixos) + janela[_GIRO.size:]
+
+
+def janela_que_sai(uniq: str | None, janela: bytes) -> bytes:
+    """A janela de movimento como sai para a peça ``uniq``: os sensores da peça e o peso da mira."""
+    return pesar_a_janela(REGISTRO.filtrar(uniq, janela), PESO_DA_MIRA.ganho(uniq))
 
 
 def _saturar(valor: int) -> int:
@@ -207,13 +285,13 @@ def misturar(eixo_h: int, eixo_v: int, dh: int, dv: int) -> tuple[int, int]:
 
 
 def pixels(
-    angulo: tuple[float, float, float], arranjo: ArranjoDeMovimento
+    angulo: tuple[float, float, float], arranjo: ArranjoDeMovimento, ganho: float = 1.0
 ) -> tuple[float, float]:
     """Ângulo percorrido (graus) → deslocamento de cursor, em pixels FLOAT."""
     if not arranjo.ligado:
         return 0.0, 0.0
     horizontal, vertical = _componentes(angulo, arranjo)
-    fator = arranjo.pixels_por_grau * (arranjo.sensibilidade / SENSIBILIDADE_PADRAO)
+    fator = arranjo.pixels_por_grau * (arranjo.sensibilidade / SENSIBILIDADE_PADRAO) * ganho
     return horizontal * fator, vertical * fator
 
 
@@ -960,13 +1038,16 @@ __all__ = [
     "EIXO_YAW",
     "EXPO_DO_GIRO",
     "FRACAO_DO_DIRECIONAL",
+    "GANHO_MINIMO_DA_MIRA",
     "GRAVIDADE_DO_PARADO_GRAUS",
     "GRAVIDADE_MINIMA_G",
     "LIMIAR_DO_ASSENTO_GRAUS_S",
     "MINIMO_DE_AMOSTRAS_DO_ZERO",
     "MIOLO_DO_DIRECIONAL",
+    "PESO_DA_MIRA",
     "PIXELS_POR_GRAU_PADRAO",
     "PIXELS_POR_UNIDADE_DO_TOQUE",
+    "PRAZO_MAXIMO_DO_PESO_MS",
     "SAIDA_DO_PARADO_GRAUS",
     "SEGUNDOS_DO_ZERO",
     "SENSIBILIDADE_MAX",
@@ -978,6 +1059,7 @@ __all__ = [
     "TEMPO_DO_PARADO_S",
     "TETO_DA_INCLINACAO_GRAUS",
     "TETO_PADRAO_GRAUS_S",
+    "TODOS_OS_CONTROLES",
     "TOQUES",
     "TOQUE_CURSOR",
     "TOQUE_ZONAS",
@@ -986,6 +1068,7 @@ __all__ = [
     "ZONA_MORTA_PADRAO_GRAUS_S",
     "ArranjoDeMovimento",
     "ArranjoRecusadoError",
+    "PesoDaMira",
     "ZeroDoControle",
     "angulo_do_tique",
     "arranjo_da_peca",
@@ -1004,6 +1087,7 @@ __all__ = [
     "inclina_agora",
     "inclinacao",
     "inclinacao_parada",
+    "janela_que_sai",
     "medir_o_zero",
     "misturar",
     "montar",
@@ -1012,6 +1096,7 @@ __all__ = [
     "parametros_da_peca",
     "passa_da_zona_morta",
     "pecas_que_miram",
+    "pesar_a_janela",
     "pixels",
     "pixels_do_toque",
     "por_peca",

@@ -43,12 +43,20 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `som.registrar` | `{id, golpes: [...]}` (como o da háptica) | `escrever:som` | `{status}` |
 | `som.tocar` | `{uniq, som: <id>\|recorte, volume (0 a 1), t?}` | `escrever:som` | `{status}` |
 | `leds.set` | `{uniq, mascara (0 a 31), ate_ms}` | `escrever:leds` | `{status}` |
+| `mira.peso` | `{uniq\|"todos", ganho (0,3 a 1), ate_ms (até 10000)}` | `escrever:mira` | `{status}` |
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
 | `chave.ligar` | `{}` | a `chave` no manifesto instalado | `{ligada}` |
+
+O `mira.peso` (ensaio) multiplica o giro de um controle, ou de todos, pelo ganho, até o prazo: na máscara Xbox, a
+deflexão do analógico e o cursor que o giro move; na máscara DualSense, os três eixos do giro que o pad virtual
+recebe. Sem pedido, a janela do movimento passa byte a byte. Com mais de um pedido, vale o menor ganho. O ganho
+volta a 1 no prazo, quando a extensão sai da porta, no «Parar tudo», quando o jogo fecha e quando a seção Controles
+do controle deixa de estar no modo da extensão. Num jogo com anticheat, o pedido recusa (`-32013`) até a chave «Peso
+da mira» do jogo estar gravada, com o aviso do risco à conta visto, em `peso_da_mira_dos_jogos.json`.
 
 Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
@@ -766,3 +774,5 @@ vale o pedido mais forte do canal (ver «O teto e o mais forte»).
 ## Nota de verificação (20/10/2026)
 
 `perfil.jogo` é uma permissão de leitura da porta (`ler:perfil.jogo`), não um método do IPC: o espaço de nomes `perfil.` ganhou métodos de IPC (`perfil.ativacao.set` e os dois irmãos), e o nome da permissão continua certo.
+
+`mira.peso` é um método da porta, não do IPC: o espaço de nomes `mira.` é também o do `mira.set` do IPC, e os dois não se cruzam.

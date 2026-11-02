@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core.events import DEFAULT_QUEUE_MAXSIZE, EventBus, EventTopic
+from hefesto_dualsense4unix.core.roteador_de_movimento import PESO_DA_MIRA
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_INVALID_PARAMS,
     CODE_INVALID_REQUEST,
@@ -38,7 +39,10 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
 )
 from hefesto_dualsense4unix.integrations.leitor_do_estado import (
     TOPICO_DA_MEMORIA,
+    ChavesDaMemoria,
     LeituraRecusadaError,
+    anticheat_do_jogo,
+    arquivo_das_chaves,
     caminho_do_soquete,
     entradas_da_receita,
 )
@@ -110,6 +114,7 @@ TOPICO_DO_MOVIMENTO = "movimento"
 MOVIMENTO_POR_SEGUNDO = 30
 FAIXA_MORTA_DO_GIRO = 2.0
 FAIXA_MORTA_DA_ACEL = 0.02
+ARQUIVO_DO_PESO_DA_MIRA = "peso_da_mira_dos_jogos.json"
 ESPERA_DO_LEITOR_S = 1.0
 PRAZO_DO_LEITOR_S = 30.0
 
@@ -919,6 +924,7 @@ class Porta:
         self._fonte_da_tela = fonte_da_tela
         self._regioes_da_tela: dict[str, Regiao] = {}
         self._captura_da_tela: asyncio.Task[None] | None = None
+        self._vigia_do_peso: asyncio.Task[None] | None = None
         self._arbitro: Arbitro | None = (
             arbitro if arbitro is not None
             else escritor.arbitro if isinstance(escritor, EscritorDoServico) else None)
@@ -1018,6 +1024,8 @@ class Porta:
             server.close()
         if self._captura_da_tela is not None:
             self._captura_da_tela.cancel()
+        if self._vigia_do_peso is not None:
+            self._vigia_do_peso.cancel()
         for con in list(self._conexoes):
             for tarefa in con.tarefas:
                 tarefa.cancel()
@@ -1074,6 +1082,7 @@ class Porta:
                 await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
             if con.sessao is not None:
+                PESO_DA_MIRA.soltar(con.sessao.mod_id)
                 self._mudaram_as_vivas()
             with contextlib.suppress(Exception):
                 writer.close()
@@ -1130,6 +1139,8 @@ class Porta:
             if metodo == "controles.lista":
                 return _resposta(req_id, await asyncio.to_thread(
                     self._lista_dos_controles, con.sessao))
+            if metodo == "mira.peso":
+                return _resposta(req_id, self._pesar_a_mira(con.sessao, params))
             if metodo in _DA_MEMORIA:
                 return _resposta(req_id, await self._varrer(con.sessao, metodo, params))
             if metodo in _DE_FORA:
@@ -1236,6 +1247,74 @@ class Porta:
             self._regioes_da_tela.update({r.nome: r for r in regioes})
             self._ligar_a_captura()
         return {"assinados": list(topicos)}
+
+    def _pesar_a_mira(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
+        """O ``mira.peso``: o ganho do giro de um controle (ou de ``todos``) por ``ate_ms``. Num
+        jogo com anticheat, só com a chave «Peso da mira» do jogo ligada."""
+        if "escrever:mira" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão escrever:mira")
+        alvo = params.get("uniq")
+        ganho, ate_ms = params.get("ganho"), params.get("ate_ms")
+        if not isinstance(alvo, str) or not alvo:
+            raise RecusaError(CODE_INVALID_PARAMS, "mira.peso pede o uniq, ou «todos»")
+        if (isinstance(ganho, bool) or not isinstance(ganho, (int, float))
+                or isinstance(ate_ms, bool) or not isinstance(ate_ms, int)):
+            raise RecusaError(CODE_INVALID_PARAMS, "mira.peso pede ganho e ate_ms em números")
+        jogo = self._jogo_aberto()
+        if jogo is not None:
+            anticheat = anticheat_do_jogo(None, jogo.removeprefix("steam_app_"))
+            chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(ARQUIVO_DO_PESO_DA_MIRA))
+            if anticheat and not chaves.liberada(jogo, anticheat):
+                raise RecusaError(
+                    CODE_NAO_ESCREVEU,
+                    f"este jogo usa {anticheat}: o peso da mira pede a chave do jogo ligada")
+        try:
+            PESO_DA_MIRA.pedir(sessao.mod_id, alvo, float(ganho), ate_ms)
+        except ValueError as exc:
+            raise RecusaError(CODE_INVALID_PARAMS, str(exc)) from exc
+        self._vigiar_o_peso()
+        return {"status": "ok"}
+
+    def _jogo_aberto(self) -> str | None:
+        identidade = self.bus.ultimo(EventTopic.JOGO_IDENTIDADE)
+        chave = identidade.get("chave") if isinstance(identidade, dict) else None
+        return chave if isinstance(chave, str) and chave else None
+
+    def _vigiar_o_peso(self) -> None:
+        if self._vigia_do_peso is None or self._vigia_do_peso.done():
+            self._vigia_do_peso = asyncio.get_running_loop().create_task(
+                self._soltar_o_peso_quando_preciso(), name="mods-porta-peso-da-mira")
+
+    async def _soltar_o_peso_quando_preciso(self) -> None:
+        """O peso volta a 1 quando o jogo fecha e quando a seção Controles de um controle deixa de
+        estar no modo de quem pesou."""
+        fechou = self.bus.subscribe(EventTopic.JOGO_FECHOU)
+        modos = self.bus.subscribe(EventTopic.MODO_ABA)
+        try:
+            while PESO_DA_MIRA.donos():
+                do_fim = asyncio.ensure_future(fechou.get())
+                do_modo = asyncio.ensure_future(modos.get())
+                feitos, pendentes = await asyncio.wait(
+                    {do_fim, do_modo}, timeout=1.0, return_when=asyncio.FIRST_COMPLETED)
+                for pendente in pendentes:
+                    pendente.cancel()
+                if do_fim in feitos:
+                    PESO_DA_MIRA.soltar()
+                if do_modo in feitos:
+                    self._soltar_fora_do_modo(do_modo.result())
+        finally:
+            self.bus.unsubscribe(EventTopic.JOGO_FECHOU, fechou)
+            self.bus.unsubscribe(EventTopic.MODO_ABA, modos)
+
+    @staticmethod
+    def _soltar_fora_do_modo(carga: Any) -> None:
+        if not isinstance(carga, dict) or not isinstance(carga.get("secoes"), dict):
+            return
+        modo = carga["secoes"].get("controles")
+        uniq = carga.get("uniq")
+        for dono in PESO_DA_MIRA.donos():
+            if modo != f"extensao:{dono}":
+                PESO_DA_MIRA.soltar(dono, uniq if isinstance(uniq, str) else None)
 
     def _ligar_a_captura(self) -> None:
         if self._captura_da_tela is None or self._captura_da_tela.done():
@@ -1436,6 +1515,7 @@ class Porta:
                  if con.sessao is not None and con.sessao.mod_id == mod_id]
         if not conexoes_do_mod:
             return False
+        PESO_DA_MIRA.soltar(mod_id)
         for con in conexoes_do_mod:
             assert con.sessao is not None
             if "ler:acessorios.gesto" not in con.sessao.permissoes and con.escritor is not None:

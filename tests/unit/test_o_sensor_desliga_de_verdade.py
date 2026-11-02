@@ -170,8 +170,10 @@ def test_o_cache_do_reader_guarda_o_que_o_fisico_mandou() -> None:
 def test_o_filtro_e_a_ultima_coisa_antes_do_vpad() -> None:
     """A ordem no `_emit` é o contrato, e é legível na fonte."""
     fonte = inspect.getsource(prr.PhysicalReportReader._emit)
-    assert "REGISTRO.filtrar(self._uniq_aberto, window)" in fonte
-    assert fonte.index("self._last_window = window") < fonte.index("REGISTRO.filtrar")
+    assert "forward_motion(janela_que_sai(self._uniq_aberto, window))" in fonte
+    assert fonte.index("self._last_window = window") < fonte.index("janela_que_sai")
+    saida = inspect.getsource(prr.janela_que_sai)
+    assert "pesar_a_janela(REGISTRO.filtrar(uniq, janela)" in saida
 
 
 def test_uniq_do_hidraw_recusa_caminho_que_nao_e_hidraw() -> None:
