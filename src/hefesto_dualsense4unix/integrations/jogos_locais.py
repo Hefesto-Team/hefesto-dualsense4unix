@@ -162,6 +162,30 @@ def jogos_da_biblioteca_steam(home: Path | None = None) -> list[JogoLocal]:
     return list(achados.values())
 
 
+_MANIFESTO_DA_STEAM_RE = re.compile(r"^appmanifest_(\d+)\.acf$")
+
+
+def appids_instalados_na_steam(home: Path | None = None) -> frozenset[str] | None:
+    """Os appids com `appmanifest_<N>.acf` em toda biblioteca, pelo NOME do arquivo.
+
+    ``None`` diz que a biblioteca não se leu: nenhuma `steamapps` existe, ou alguma não se lista
+    (o `glob` devolve vazio calado na pasta sem permissão; o `listdir` levanta). O manifesto que
+    não se lê ainda conta como instalado.
+    """
+    pastas = pastas_steamapps(home)
+    appids: set[str] = set()
+    for pasta in pastas:
+        try:
+            nomes = os.listdir(pasta)
+        except OSError:
+            return None
+        for nome in nomes:
+            achado = _MANIFESTO_DA_STEAM_RE.match(nome)
+            if achado is not None:
+                appids.add(achado.group(1))
+    return frozenset(appids) if pastas else None
+
+
 def assinatura_da_biblioteca(home: Path | None = None) -> tuple[tuple[str, int], ...]:
     """Impressão BARATA da biblioteca: ``(pasta, mtime_ns)`` de cada `steamapps`."""
     linhas: list[tuple[str, int]] = []
@@ -286,19 +310,33 @@ def catalogo_de_jogos(
     return sorted(por_appid.values(), key=lambda j: (chave_de_busca(j.nome), j.appid))
 
 
+@dataclass(frozen=True)
+class LeituraDosJogos:
+    """Os jogos de uma origem e se a origem se leu inteira (``lida`` falso: algo tropeçou)."""
+
+    jogos: list[JogoLocal]
+    lida: bool
+
+
 def jogos_dos_lancadores(lar: Path | None = None) -> list[JogoLocal]:
     """A SEGUNDA ORIGEM — os jogos dos cinco lançadores que não são a Steam."""
+    return _leitura_dos_lancadores(lar).jogos
+
+
+def _leitura_dos_lancadores(lar: Path | None) -> LeituraDosJogos:
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-        jogos_com_chave_de_janela,
+        leitura_das_chaves_de_janela,
     )
 
+    lidos, lida = leitura_das_chaves_de_janela(lar)
     achados: dict[str, JogoLocal] = {}
-    for lancador, jogo in jogos_com_chave_de_janela(lar):
+    for lancador, jogo in lidos:
         classe = jogo.classe_de_janela
         achados.setdefault(classe, JogoLocal(
             appid="", nome=jogo.nome, fonte=lancador.casefold(),
             lancador=lancador, chave=classe))
-    return sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave))
+    return LeituraDosJogos(
+        sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave)), lida)
 
 
 _CATEGORIA_QUE_NAO_E_JOGO = "packagemanager"
@@ -374,17 +412,27 @@ def jogos_diretos_dos_atalhos(
     jogo nativo comum) entra com o id do atalho como chave
     (:func:`_chave_do_atalho_sem_classe`).
     """
+    return _leitura_dos_atalhos(pastas).jogos
+
+
+def _leitura_dos_atalhos(pastas: Sequence[Path] | None) -> LeituraDosJogos:
     alvos = list(pastas) if pastas is not None else pastas_de_atalhos()
     achados: dict[str, JogoLocal] = {}
+    lida = True
     for pasta in alvos:
         try:
-            arquivos = sorted(pasta.glob("*.desktop"))
+            arquivos = sorted(pasta / nome for nome in os.listdir(pasta)
+                              if nome.endswith(".desktop"))
+        except FileNotFoundError:
+            continue
         except OSError:
+            lida = False
             continue
         for arquivo in arquivos:
             try:
                 texto = arquivo.read_text(encoding="utf-8", errors="replace")
             except OSError:
+                lida = False
                 continue
             cfg = configparser.ConfigParser(strict=False, interpolation=None)
             try:
@@ -419,7 +467,8 @@ def jogos_diretos_dos_atalhos(
             achados.setdefault(classe.casefold(), JogoLocal(
                 appid="", nome=nome, fonte="desktop",
                 lancador=LANCADOR_DIRETO, chave=classe))
-    return sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave))
+    return LeituraDosJogos(
+        sorted(achados.values(), key=lambda j: (chave_de_busca(j.nome), j.chave)), lida)
 
 
 def jogos_com_janela(
@@ -427,11 +476,22 @@ def jogos_com_janela(
     pastas: Sequence[Path] | None = None,
 ) -> list[JogoLocal]:
     """**AS TRÊS ORIGENS DE FORA DA STEAM, numa lista só** — o motor da sprint."""
-    jogos = list(jogos_dos_lancadores(lar))
+    return leitura_das_janelas(lar, pastas).jogos
+
+
+def leitura_das_janelas(
+    lar: Path | None = None,
+    pastas: Sequence[Path] | None = None,
+) -> LeituraDosJogos:
+    """Os jogos de :func:`jogos_com_janela` e se as três origens se leram inteiras."""
+    lancadores = _leitura_dos_lancadores(lar)
+    atalhos = _leitura_dos_atalhos(pastas)
+    jogos = list(lancadores.jogos)
     vistos = {j.chave.casefold() for j in jogos}
-    jogos += [j for j in jogos_diretos_dos_atalhos(pastas)
-              if j.chave.casefold() not in vistos]
-    return sorted(jogos, key=lambda j: (chave_de_busca(j.nome), j.chave))
+    jogos += [j for j in atalhos.jogos if j.chave.casefold() not in vistos]
+    return LeituraDosJogos(
+        sorted(jogos, key=lambda j: (chave_de_busca(j.nome), j.chave)),
+        lancadores.lida and atalhos.lida)
 
 
 def jogo_da_janela(
@@ -560,6 +620,8 @@ __all__ = [
     "MSG_NAO_RECONHECI",
     "PASTAS_DE_ATALHOS",
     "JogoLocal",
+    "LeituraDosJogos",
+    "appids_instalados_na_steam",
     "assinatura_da_biblioteca",
     "assinatura_das_janelas",
     "catalogo_de_jogos",
@@ -573,6 +635,7 @@ __all__ = [
     "jogos_diretos_dos_atalhos",
     "jogos_dos_atalhos_desktop",
     "jogos_dos_lancadores",
+    "leitura_das_janelas",
     "nomes_das_janelas",
     "nomes_por_appid",
     "ofertas_do_campo_do_jogo",

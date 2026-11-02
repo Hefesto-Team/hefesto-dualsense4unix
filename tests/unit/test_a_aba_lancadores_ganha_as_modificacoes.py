@@ -756,7 +756,9 @@ def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
     jogos = [jogos_locais.JogoLocal("9900620", "Portal Dois", "steam"),
              jogos_locais.JogoLocal("", "Celeste", "lutris", lancador="Lutris", chave="celeste")]
     monkeypatch.setattr(jogos_locais, "jogos_da_biblioteca_steam", lambda home=None: jogos[:1])
-    monkeypatch.setattr(jogos_locais, "jogos_com_janela", lambda home=None, pastas=None: jogos[1:])
+    monkeypatch.setattr(
+        jogos_locais, "leitura_das_janelas",
+        lambda home=None, pastas=None: jogos_locais.LeituraDosJogos(jogos[1:], False))
     destino = tmp_path / "perfis"
     feito = loader.semear_perfis_dos_jogos(dest_dir=destino, home=casa)
     assert len(feito.criados) == 1 and len(feito.linhas) == 1, feito

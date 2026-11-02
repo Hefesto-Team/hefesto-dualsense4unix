@@ -1250,6 +1250,10 @@ def _linhas_da_marca(marca: Path) -> list[tuple[str, str]]:
         bruto = marca.read_text(encoding="utf-8")
     except OSError:
         return []
+    return _linhas_da_marca_do_texto(bruto)
+
+
+def _linhas_da_marca_do_texto(bruto: str) -> list[tuple[str, str]]:
     lidas: list[tuple[str, str]] = []
     for linha in bruto.splitlines():
         identidade, _, arquivo = linha.strip().partition("\t")
@@ -1480,20 +1484,16 @@ def semear_perfis_dos_jogos(
     """Cria um perfil para cada jogo INSTALADO que ainda não tem — venha de onde vier."""
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     directory.mkdir(parents=True, exist_ok=True)
+    fontes = _FontesLidas()
     if jogos is None:
-        from hefesto_dualsense4unix.integrations.jogos_locais import (
-            jogos_com_janela,
-            jogos_da_biblioteca_steam,
-        )
-
-        pastas = None if home is None else [Path(home) / ".local/share/applications"]
-        jogos = [*jogos_da_biblioteca_steam(home), *jogos_com_janela(home, pastas)]
+        jogos, fontes = _ler_as_fontes_dos_jogos(home)
         jogos = _so_os_de_lancador_com_perfil(jogos)
 
     marca = _caminho_da_marca(directory)
     linhas: list[PerfilSemeado] = []
     criados: list[str] = []
     with FileLock(str(_lock_path(marca))):
+        _esquecer_os_jogos_que_sairam(marca, fontes)
         ja_processados = {identidade for identidade, _ in _linhas_da_marca(marca)}
         donos = _donos_dos_jogos(directory)
         ocupados = {p.name for p in directory.glob("*.json")}
@@ -1523,6 +1523,90 @@ def semear_perfis_dos_jogos(
     return ResultadoDaSemeadura(
         linhas=tuple(linhas), criados=tuple(criados), avisos_da_loja=tuple(avisos)
     )
+
+
+@dataclass(frozen=True)
+class _FontesLidas:
+    """O que a varredura leu inteiro: só a fonte lida esquece a linha do jogo que saiu da fonte.
+
+    ``presentes`` são as identidades achadas em qualquer fonte, antes de tirar o lançador
+    desligado. A linha da Steam (appid) se esquece só com ``steam_lida``; a ``janela:<classe>``,
+    só com ``janelas_lidas``.
+    """
+
+    presentes: frozenset[str] = frozenset()
+    steam_lida: bool = False
+    janelas_lidas: bool = False
+
+
+def _ler_as_fontes_dos_jogos(home: Path | None) -> tuple[list[JogoLocal], _FontesLidas]:
+    """Os jogos instalados de toda fonte, e o que cada fonte deixou saber de si."""
+    from hefesto_dualsense4unix.integrations.jogos_locais import (
+        appids_instalados_na_steam,
+        jogos_da_biblioteca_steam,
+        leitura_das_janelas,
+    )
+
+    pastas = None if home is None else [Path(home) / ".local/share/applications"]
+    da_steam = jogos_da_biblioteca_steam(home)
+    janelas = leitura_das_janelas(home, pastas)
+    manifestos = appids_instalados_na_steam(home)
+    jogos = [*da_steam, *janelas.jogos]
+    presentes = {_identidade(j.appid, j.chave) for j in jogos} | set(manifestos or ())
+    return jogos, _FontesLidas(
+        frozenset(presentes) - {""}, manifestos is not None, janelas.lida
+    )
+
+
+def _esquecer_os_jogos_que_sairam(marca: Path, fontes: _FontesLidas) -> None:
+    """Tira da marca a linha do jogo que saiu de uma fonte lida inteira; chamar sob a trava."""
+    if not (fontes.steam_lida or fontes.janelas_lidas):
+        return
+    try:
+        bruto = marca.read_text(encoding="utf-8")
+    except OSError:
+        return
+    ficam: list[str] = []
+    esquecidas: list[str] = []
+    for linha in bruto.splitlines():
+        lidas = _linhas_da_marca_do_texto(linha)
+        identidade = lidas[0][0] if lidas else ""
+        da_janela = identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA)
+        lida = fontes.janelas_lidas if da_janela else fontes.steam_lida
+        if identidade and lida and identidade not in fontes.presentes:
+            if identidade not in esquecidas:
+                esquecidas.append(identidade)
+            continue
+        ficam.append(linha)
+    if not esquecidas:
+        return
+    _gravar_a_marca(marca, ficam)
+    with contextlib.suppress(Exception):
+        for identidade in esquecidas:
+            if identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA):
+                logger.info(
+                    "perfil_de_jogo_esquecido_na_marca",
+                    classe=identidade[len(PREFIXO_DA_CHAVE_DE_JANELA) :],
+                )
+            else:
+                logger.info("perfil_de_jogo_esquecido_na_marca", appid=identidade)
+
+
+def _gravar_a_marca(marca: Path, linhas: Sequence[str]) -> None:
+    """Regrava a marca inteira de uma vez: quem lê vê a velha ou a nova, nunca a metade."""
+    bruto = "".join(f"{linha}\n" for linha in linhas)
+    fd, tmp_nome = tempfile.mkstemp(
+        prefix=f".{marca.name}.", suffix=".tmp", dir=str(marca.parent)
+    )
+    tmp = Path(tmp_nome)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(bruto)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, marca)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def _declarar_as_classes_de_jogo(

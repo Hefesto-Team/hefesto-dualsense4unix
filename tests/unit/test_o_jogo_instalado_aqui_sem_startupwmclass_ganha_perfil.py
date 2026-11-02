@@ -132,8 +132,8 @@ def test_a_varredura_automatica_acorda_com_o_atalho_novo(
     )
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.censo_dos_lancadores."
-        "jogos_com_chave_de_janela",
-        lambda *_a, **_k: [],
+        "leitura_das_chaves_de_janela",
+        lambda *_a, **_k: ([], True),
     )
 
     loader._talvez_semear_jogos()

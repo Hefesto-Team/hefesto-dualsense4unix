@@ -559,7 +559,8 @@ def _chamados_por(alvo: str) -> set[str]:
 def test_a_semeadura_le_os_lancadores_e_declara_as_classes() -> None:
     chamados = _chamados_por("semear_perfis_dos_jogos")
 
-    assert "jogos_com_janela" in chamados, (
+    assert "_ler_as_fontes_dos_jogos" in chamados, "a semeadura parou de ler as fontes"
+    assert "leitura_das_janelas" in _chamados_por("_ler_as_fontes_dos_jogos"), (
         "a semeadura voltou a ler SÓ a Steam. A decisão é que todo jogo "
         "instalado de um lançador que o produto lê ganhe perfil sozinho."
     )

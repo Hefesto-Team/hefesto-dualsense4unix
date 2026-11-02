@@ -1286,22 +1286,43 @@ def jogos_com_chave_de_janela(
     lar: Path | None = None,
 ) -> list[tuple[str, JogoDoLancador]]:
     """``[(lançador, jogo)]`` — só os jogos que dá para RECONHECER numa janela."""
+    return leitura_das_chaves_de_janela(lar)[0]
+
+
+def _lida_inteira(biblioteca: BibliotecaDoLancador) -> bool:
+    """A biblioteca se leu sem tropeço: nem ilegível, nem com erro de leitura."""
+    return biblioteca.estado != ILEGIVEL and not biblioteca.erros
+
+
+def leitura_das_chaves_de_janela(
+    lar: Path | None = None,
+) -> tuple[list[tuple[str, JogoDoLancador]], bool]:
+    """Os jogos de :func:`jogos_com_chave_de_janela` e se TODA biblioteca se leu inteira.
+
+    O ``False`` diz que algum jogo pode faltar por tropeço de leitura, e não por ter saído.
+    """
     achados: list[tuple[str, JogoDoLancador]] = []
+    lida = True
     for nome in _LEITORES:
-        for jogo in biblioteca_de(nome, lar).jogos:
+        biblioteca = biblioteca_de(nome, lar)
+        lida = lida and _lida_inteira(biblioteca)
+        for jogo in biblioteca.jogos:
             if jogo.instalado and jogo.classe_de_janela:
                 achados.append((nome, jogo))
     try:
         extensoes = lancadores_das_extensoes()
     except Exception:
         extensoes = ()
+        lida = False
     for ext in extensoes:
         if ext.bloco.leitor is None:
             continue
-        for jogo in ler_por_processo(ext.bloco.leitor).jogos:
+        biblioteca = ler_por_processo(ext.bloco.leitor)
+        lida = lida and _lida_inteira(biblioteca)
+        for jogo in biblioteca.jogos:
             if jogo.instalado and jogo.classe_de_janela:
                 achados.append((ext.bloco.rotulo, jogo))
-    return achados
+    return achados, lida
 
 
 def chaves_de_janela_fora_do_disco(lar: Path | None = None) -> frozenset[str]:
