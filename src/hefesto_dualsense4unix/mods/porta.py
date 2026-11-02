@@ -36,6 +36,12 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     MAX_PAYLOAD_BYTES,
     PROTOCOL_VERSION,
 )
+from hefesto_dualsense4unix.integrations.leitor_do_estado import (
+    TOPICO_DA_MEMORIA,
+    LeituraRecusadaError,
+    caminho_do_soquete,
+    entradas_da_receita,
+)
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.manifesto import (
     FUNCOES_POR_PEDIDO,
@@ -93,6 +99,8 @@ TOPICO_DO_MOVIMENTO = "movimento"
 MOVIMENTO_POR_SEGUNDO = 30
 FAIXA_MORTA_DO_GIRO = 2.0
 FAIXA_MORTA_DA_ACEL = 0.02
+ESPERA_DO_LEITOR_S = 1.0
+PRAZO_DO_LEITOR_S = 30.0
 
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
@@ -448,6 +456,38 @@ _NOME_DO_CANAL = {
 }
 
 _LADOS = ("esquerdo", "direito")
+
+_DA_MEMORIA = {"memoria.varrer": "varrer", "memoria.refinar": "refinar"}
+
+
+def _pedido_da_memoria(params: dict[str, Any]) -> dict[str, Any]:
+    """O ``memoria`` da assinatura de ``jogo.memoria``: as linhas que a receita declara e a faixa
+    do ``buildid``, conferidas antes de chegar ao leitor."""
+    memoria = params.get("memoria")
+    if not isinstance(memoria, dict):
+        raise RecusaError(CODE_INVALID_PARAMS, "jogo.memoria pede as entradas da receita")
+    try:
+        entradas_da_receita(memoria.get("entradas") or ())
+    except LeituraRecusadaError as exc:
+        raise RecusaError(CODE_INVALID_PARAMS, exc.frase) from exc
+    faixa = memoria.get("faixa")
+    if faixa is not None and not isinstance(faixa, dict):
+        raise RecusaError(CODE_INVALID_PARAMS, "a faixa do buildid é {min, max}")
+    return {"entradas": list(memoria["entradas"]), "faixa": faixa}
+
+
+async def _perguntar(reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+                     pedido: dict[str, Any]) -> dict[str, Any]:
+    writer.write(json.dumps(pedido, ensure_ascii=False).encode("utf-8") + b"\n")
+    await writer.drain()
+    linha = await asyncio.wait_for(reader.readline(), timeout=PRAZO_DO_LEITOR_S)
+    if not linha:
+        raise asyncio.IncompleteReadError(b"", None)
+    resposta = json.loads(linha.decode("utf-8"))
+    if not isinstance(resposta, dict):
+        raise ValueError("resposta do leitor fora da forma")
+    return resposta
+
 
 _DE_FORA = {
     "haptica.registrar": "haptica", "haptica.tocar": "haptica",
@@ -1060,6 +1100,8 @@ class Porta:
             if metodo == "controles.lista":
                 return _resposta(req_id, await asyncio.to_thread(
                     self._lista_dos_controles, con.sessao))
+            if metodo in _DA_MEMORIA:
+                return _resposta(req_id, await self._varrer(con.sessao, metodo, params))
             if metodo in _DE_FORA:
                 return _resposta(req_id, await self._de_fora(con.sessao, metodo, params))
             if metodo == "extensao.resposta":
@@ -1113,6 +1155,7 @@ class Porta:
         if not isinstance(dedos, bool) or (dedos and TOPICO_DAS_ENTRADAS not in topicos):
             raise RecusaError(CODE_INVALID_PARAMS, "dedos é true ou false, com o tópico entradas")
         con.quer_os_dedos = con.quer_os_dedos or dedos
+        memoria = _pedido_da_memoria(params) if TOPICO_DA_MEMORIA in topicos else None
         for publico in topicos:
             feito = con.assinados.setdefault(publico, _Assinatura())
             if publico == TOPICO_DOS_BOTOES:
@@ -1141,6 +1184,11 @@ class Porta:
                                f"mods-{con.sessao.mod_id}-entradas-quedas")
                 elif publico == TOPICO_DO_MOVIMENTO:
                     fila = self._assinar_o_movimento(con, feito)
+                elif publico == TOPICO_DA_MEMORIA and memoria is not None:
+                    fila = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
+                    feito.filas.append(fila)
+                    con.tarefa(feito, self._ler_a_memoria(fila, memoria),
+                               f"mods-{con.sessao.mod_id}-memoria-leitor")
                 else:
                     fila = self.bus.subscribe(topico)
                     con.no_barramento(feito, topico, fila)
@@ -1691,6 +1739,55 @@ class Porta:
 
     def _fonte(self) -> Any:
         return self._arbitro() if self._arbitro is not None else None
+
+    async def _ler_a_memoria(self, fila: asyncio.Queue[Any], pedido: dict[str, Any]) -> None:
+        """Pede ao leitor, pai do jogo, os valores declarados; sem leitor (sem jogo, ou com a
+        chave desligada), espera e tenta de novo, sem nada publicar."""
+        passo = 1.0 / max(float(e.get("hz", 30)) for e in pedido["entradas"])
+        while True:
+            try:
+                reader, writer = await asyncio.open_unix_connection(str(caminho_do_soquete()))
+            except OSError:
+                await asyncio.sleep(ESPERA_DO_LEITOR_S)
+                continue
+            try:
+                while True:
+                    resposta = await _perguntar(reader, writer, {"verbo": "ler", **pedido})
+                    valores = resposta.get("valores")
+                    if isinstance(valores, dict) and len(valores) > 1:
+                        _por_na_fila(fila, valores)
+                    elif "recusa" in resposta:
+                        await asyncio.sleep(ESPERA_DO_LEITOR_S)
+                        continue
+                    await asyncio.sleep(passo)
+            except (OSError, ValueError, asyncio.IncompleteReadError, asyncio.TimeoutError):
+                await asyncio.sleep(ESPERA_DO_LEITOR_S)
+            finally:
+                with contextlib.suppress(Exception):
+                    writer.close()
+
+    async def _varrer(self, sessao: _Credencial, metodo: str,
+                      params: dict[str, Any]) -> dict[str, Any]:
+        """O caçador: ``memoria.varrer`` e ``memoria.refinar`` vão ao leitor, que guarda os
+        candidatos; volta ``{token, contagem}``, e o ``endereco`` só quando sobra um."""
+        if f"ler:{TOPICO_DA_MEMORIA}" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão ler:{TOPICO_DA_MEMORIA}")
+        pedido: dict[str, Any] = {
+            k: params[k] for k in ("tipo", "valor", "token", "comparacao") if k in params}
+        try:
+            reader, writer = await asyncio.open_unix_connection(str(caminho_do_soquete()))
+        except OSError as exc:
+            raise RecusaError(CODE_NAO_ESCREVEU, "nenhum jogo aberto com a chave Memória") from exc
+        try:
+            resposta = await _perguntar(reader, writer, {"verbo": _DA_MEMORIA[metodo], **pedido})
+        except (OSError, ValueError, asyncio.IncompleteReadError, asyncio.TimeoutError) as exc:
+            raise RecusaError(CODE_NAO_ESCREVEU, "o leitor do jogo não respondeu") from exc
+        finally:
+            with contextlib.suppress(Exception):
+                writer.close()
+        if "recusa" in resposta:
+            raise RecusaError(CODE_NAO_ESCREVEU, str(resposta["recusa"]))
+        return resposta
 
     async def _escrever(
         self, sessao: _Credencial, metodo: str, params: dict[str, Any]

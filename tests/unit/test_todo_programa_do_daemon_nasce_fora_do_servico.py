@@ -93,10 +93,11 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "programa que fica de pé",
     ),
     "integrations/leitor_do_estado.py::_ser_pai": (
-        "outro processo", 2,
-        "o `fork` e o `execvp` do jogo no leitor do estado, que o `argv_com_o_leitor` põe na "
-        "frente do jogo no lançador: roda no processo do lançador, como pai do jogo, nunca no "
-        "daemon, e espera o filho pelo `waitpid`",
+        "outro processo", 3,
+        "o `execvp` do jogo direto com a chave desligada, e o `fork` e o `execvp` dele com o "
+        "leitor como pai, no leitor do estado, que o `hefesto-launch.sh` põe na "
+        "frente do jogo (`por_o_leitor_na_frente`): roda no processo do lançador, como pai do "
+        "jogo, nunca no daemon, e espera o filho pelo `waitpid`",
     ),
     "integrations/fora_do_servico.py::abrir": (
         "o dono", 1,

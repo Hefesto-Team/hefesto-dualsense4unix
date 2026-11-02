@@ -7,6 +7,7 @@ descendente dele, por ``process_vm_readv``. A trava vem antes de qualquer leitur
 from __future__ import annotations
 
 import asyncio
+import os
 import pathlib
 import subprocess
 import sys
@@ -194,11 +195,14 @@ def test_a_permissao_e_o_topico_da_memoria() -> None:
     assert "Memória" in frase and frase != "ler:jogo.memoria"
 
 
-def test_o_leitor_e_pai_do_jogo_e_sem_permissao_o_argv_sai_igual() -> None:
+def test_o_leitor_e_pai_do_jogo_com_a_chave_ligada(curto) -> None:  # noqa: F811
     jogo = [sys.executable, "-I", "-c", "import os; print(os.getppid())"]
-    assert leitor.argv_com_o_leitor(jogo, permitido=False) == jogo
-    argv = leitor.argv_com_o_leitor(jogo, permitido=True)
-    proc = subprocess.Popen(argv, stdout=subprocess.PIPE, text=True)
+    argv = [sys.executable, "-m", "hefesto_dualsense4unix.integrations.leitor_do_estado",
+            "--pai", "--", *jogo]
+    env = {**os.environ, "SteamAppId": "4242", "XDG_CONFIG_HOME": str(curto / "config"),
+           "XDG_RUNTIME_DIR": str(curto)}
+    leitor.ChavesDaMemoria(leitor.arquivo_das_chaves(env)).gravar("steam_app_4242", True)
+    proc = subprocess.Popen(argv, stdout=subprocess.PIPE, text=True, env=env)
     saida, _ = proc.communicate(timeout=30)
     assert proc.returncode == 0
     assert int(saida.strip()) == proc.pid

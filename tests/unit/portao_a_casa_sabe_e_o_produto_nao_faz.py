@@ -1525,15 +1525,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
 }
 
-_RAZAO_DO_LEITOR = (
-    "02/11/2026 — o leitor do estado do jogo, ensaio da imersão "
-    "(A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-01). O caminho se perde no lançador: o "
-    "`assets/hefesto-launch.sh` ainda não põe o leitor como pai do jogo "
-    "(`src/hefesto_dualsense4unix/integrations/leitor_do_estado.py:379` (`argv_com_o_leitor`)), "
-    "e a porta não publica o `jogo.memoria`. Fecha quando a -02 ligar o lançador e a porta ao "
-    "leitor."
-)
-
 _RAZAO_DA_TELA = (
     "02/11/2026 — a redução da tela do jogo a cinco números, ensaio da imersão "
     "(A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-01). O caminho se perde na fonte "
@@ -1566,18 +1557,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "passa pelo desenho."
     ),
     # sai com: A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02
-    "integrations/leitor_do_estado.py::AvisoDoAnticheatError": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::ChavesDaMemoria": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::Leitor": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::LeituraRecusadaError": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::Varredura": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::anticheat_do_jogo": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::argv_com_o_leitor": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::base_do_modulo": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::conferir_buildid": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::entradas_da_receita": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::ler_bytes": _RAZAO_DO_LEITOR,
-    "integrations/leitor_do_estado.py::ler_valor": _RAZAO_DO_LEITOR,
     "integrations/receitas_de_ambiente.py::override_do_carregador": (
         "02/11/2026 — o override do carregador de mod (o UE4SS) só com a chave «Memória» ligada "
         "(A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-01). O caminho se perde no ambiente que o "

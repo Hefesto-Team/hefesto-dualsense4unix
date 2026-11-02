@@ -192,7 +192,14 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   (`integrations/anticheat_conhecido.json`), ligar a chave pede o aviso visto antes. Com o `buildid` fora da faixa
   `{min, max}` da receita, nada se lê. O caçador (`Varredura`) devolve só `{token, contagem}`, e o endereço sai
   quando sobra um candidato; acima de 1 000 000 de candidatos guardados, recusa e pede um valor menos comum.
-  Até o wrapper virar pai do jogo, o tópico não tem fonte.
+  O `hefesto-launch.sh` põe o leitor na frente do jogo (`por_o_leitor_na_frente`) só quando a chave daquele jogo
+  está gravada; o leitor confere a chave de novo e, desligada, abre o jogo direto, sem ficar de pai. Ligado, ele
+  atende a porta em `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/leitor-do-estado.sock` (0600) e some com o jogo. A
+  assinatura leva as linhas: `eventos.assinar` com `topicos: ["jogo.memoria"]` e
+  `memoria: {entradas: [...], faixa: {min, max}}`; sem as linhas, ou fora da forma, recusa. Sem jogo com o leitor, nada
+  chega, e a porta tenta de novo a cada segundo. A chave desligada no meio do jogo para a leitura no pedido seguinte.
+  O caçador fala por `memoria.varrer` (`tipo`, `valor`) e `memoria.refinar` (`token`, `comparacao`, `valor`), com a
+  mesma permissão; voltam `{token, contagem}`, e o `endereco` quando sobra um.
 - `jogo.tela` (`ler:jogo.tela`, ensaio) entrega `nome: "jogo.tela"`: `{t, dano, flash, escuro, tremor, saturacao}`,
   cada um de 0 a 1, até 15 vezes por segundo (`integrations/tela_do_jogo.py`). Cada quadro do portal de captura vira
   uma grade de 32 por 18 cores médias. `dano` é o vermelho que sobe nas bordas, `flash` o brilho que salta, `escuro`

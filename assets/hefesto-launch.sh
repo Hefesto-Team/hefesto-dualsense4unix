@@ -608,6 +608,48 @@ jogo_excluido() {
     return 1
 }
 
+leitor_na_frente() {
+    ln_appid="${SteamAppId:-}"
+    case "$ln_appid" in
+        ''|0) return 1 ;;
+        *[!0-9]*) return 1 ;;
+    esac
+    ln_base="${XDG_CONFIG_HOME:-}"
+    if [ -z "$ln_base" ]; then
+        [ -n "${HOME:-}" ] || return 1
+        ln_base="$HOME/.config"
+    fi
+    ln_chaves="$ln_base/hefesto-dualsense4unix/memoria_dos_jogos.json"
+    [ -f "$ln_chaves" ] || return 1
+    grep -qF "\"steam_app_$ln_appid\"" "$ln_chaves" 2>/dev/null || return 1
+    ln_leitor="${HOME:-}/.local/share/hefesto-dualsense4unix/bin/hefesto-leitor-do-estado"
+    [ -f "$ln_leitor" ] || return 1
+    command -v python3 >/dev/null 2>&1 || return 1
+    return 0
+}
+
+por_o_leitor_na_frente() {
+    ln_feito=0
+    ln_total=$#
+    ln_i=0
+    while [ "$ln_i" -lt "$ln_total" ]; do
+        ln_arg="$1"
+        shift
+        if [ "$ln_feito" = 0 ]; then
+            case "$ln_arg" in
+                *=*) ;;
+                *)
+                    set -- "$@" python3 -I "$ln_leitor" --pai --
+                    ln_feito=1
+                    ;;
+            esac
+        fi
+        set -- "$@" "$ln_arg"
+        ln_i=$((ln_i + 1))
+    done
+    exec env "$@"
+}
+
 if jogo_excluido; then
     exec env "$@"
 fi
@@ -670,5 +712,9 @@ enter_game_mode || true
 acordar_a_placa || true
 
 limpar_ambiente_do_interpretador || true
+
+if leitor_na_frente; then
+    por_o_leitor_na_frente "$@"
+fi
 
 exec env "$@"

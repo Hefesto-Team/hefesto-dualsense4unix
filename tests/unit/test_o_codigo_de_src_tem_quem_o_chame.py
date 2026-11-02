@@ -74,12 +74,6 @@ _FORA_DO_PRODUTO: dict[str, str] = {
         "`docs/data/orcamento-de-ar.csv` aponta por este caminho, e que "
         "`tests/unit/test_o_orcamento_conta_a_ponte.py` importa de lá"
     ),
-    "integrations.leitor_do_estado": (
-        "ensaio da imersão (A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-01, 01/11/2026): o "
-        "`assets/hefesto-launch.sh` ainda não põe o leitor como pai do jogo e a porta não tem o "
-        "`jogo.memoria`; a A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02 liga o fio e tira esta "
-        "linha"
-    ),
     "integrations.tela_do_jogo": (
         "ensaio da imersão (A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-01, 01/11/2026): a "
         "`FonteDaTela` do portal ScreenCast não existe e a `Captura` não entra no daemon; a "

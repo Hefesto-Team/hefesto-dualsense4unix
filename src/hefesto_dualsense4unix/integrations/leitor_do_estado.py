@@ -11,6 +11,7 @@ Hefesto, nunca a extensão), o aviso de anticheat visto quando o jogo está na l
 """
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import ctypes.util
 import errno
@@ -18,6 +19,9 @@ import json
 import os
 import re
 import secrets
+import select
+import signal
+import socket
 import struct
 import sys
 import time
@@ -40,6 +44,9 @@ CANDIDATOS_GUARDADOS = 1_000_000
 NOME_DA_ENTRADA = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 TOPICO_DA_MEMORIA = "jogo.memoria"
 ANTICHEAT = Path(__file__).with_name("anticheat_conhecido.json")
+SOQUETE_DO_LEITOR = "leitor-do-estado.sock"
+ARQUIVO_DAS_CHAVES = "memoria_dos_jogos.json"
+TETO_DO_PEDIDO = 256 * 1024
 
 
 class LeituraRecusadaError(Exception):
@@ -222,6 +229,12 @@ class ChavesDaMemoria:
     def ligada(self, jogo: str) -> bool:
         return bool(self._ler().get(jogo, {}).get("ligada"))
 
+    def liberada(self, jogo: str, anticheat: str) -> bool:
+        """Ligada e, num jogo com anticheat, gravada com o aviso dele visto."""
+        registro = self._ler().get(jogo, {})
+        return bool(registro.get("ligada")) and (
+            not anticheat or registro.get("anticheat") == anticheat)
+
     def gravar(self, jogo: str, ligada: bool, *, anticheat: str = "",
                aviso_visto: bool = False) -> None:
         if ligada and anticheat and not aviso_visto:
@@ -376,23 +389,257 @@ class Varredura:
         return next(iter(self._candidatos))
 
 
-def argv_com_o_leitor(argv: Sequence[str], *, permitido: bool) -> list[str]:
-    """O ``argv`` do jogo com o leitor na frente, como pai; sem a permissão e a chave, igual."""
-    if not permitido:
-        return list(argv)
-    return [sys.executable, "-m", "hefesto_dualsense4unix.integrations.leitor_do_estado",
-            "--pai", "--", *argv]
+def caminho_do_soquete(ambiente: Mapping[str, str] | None = None) -> Path:
+    """Onde o leitor atende a porta: na pasta de execução da pessoa, nunca noutro lugar."""
+    env = os.environ if ambiente is None else ambiente
+    base = env.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    return Path(base) / "hefesto-dualsense4unix" / SOQUETE_DO_LEITOR
 
 
-def _ser_pai(argv: Sequence[str]) -> int:
+def arquivo_das_chaves(ambiente: Mapping[str, str] | None = None) -> Path:
+    env = os.environ if ambiente is None else ambiente
+    base = env.get("XDG_CONFIG_HOME") or str(Path(env.get("HOME") or Path.home()) / ".config")
+    return Path(base) / "hefesto-dualsense4unix" / ARQUIVO_DAS_CHAVES
+
+
+def jogo_do_ambiente(ambiente: Mapping[str, str]) -> str:
+    """A chave do jogo que a Steam lança (``steam_app_<N>``); vazia fora da Steam."""
+    appid = str(ambiente.get("SteamAppId") or "")
+    return f"steam_app_{appid}" if appid.isdigit() and appid != "0" else ""
+
+
+def buildid_do_ambiente(ambiente: Mapping[str, str]) -> str | None:
+    """O ``buildid`` da versão instalada, do ``appmanifest`` ao lado da pasta do jogo."""
+    appid = str(ambiente.get("SteamAppId") or "")
+    pasta = ambiente.get("STEAM_COMPAT_INSTALL_PATH") or ""
+    if not appid.isdigit() or not pasta:
+        return None
+    manifesto = Path(pasta).parent.parent / f"appmanifest_{appid}.acf"
+    try:
+        achado = re.search(r'"buildid"\s+"(\d+)"', manifesto.read_text(encoding="utf-8",
+                                                                     errors="replace"))
+    except OSError:
+        return None
+    return achado.group(1) if achado else None
+
+
+def descendentes(raiz: int) -> list[int]:
+    """Os processos que descendem de ``raiz``, pelo ``PPid`` de cada um."""
+    pais: dict[int, int] = {}
+    for entrada in Path("/proc").iterdir():
+        if not entrada.name.isdigit():
+            continue
+        try:
+            estado = (entrada / "stat").read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        campos = estado[estado.rfind(")") + 2:].split()
+        if len(campos) > 1 and campos[1].isdigit():
+            pais[int(entrada.name)] = int(campos[1])
+    achados = []
+    for pid in sorted(pais):
+        atual, passos = pid, 0
+        while atual in pais and atual != raiz and passos < 64:
+            atual, passos = pais[atual], passos + 1
+        if atual == raiz and pid != raiz:
+            achados.append(pid)
+    return achados
+
+
+def _memoria_residente(pid: int) -> int:
+    try:
+        for linha in Path(f"/proc/{pid}/status").read_text(encoding="utf-8").splitlines():
+            if linha.startswith("VmRSS:"):
+                return int(linha.split()[1])
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+def processo_do_jogo(raiz: int, modulo: str = "") -> int:
+    """Entre os descendentes do leitor, o que carrega o módulo; sem ele, o de mais memória.
+
+    Pelo Proton o filho direto é o lançador, e o jogo é um neto."""
+    candidatos = descendentes(raiz) or [raiz]
+    if modulo:
+        for pid in reversed(candidatos):
+            with contextlib.suppress(LeituraRecusadaError):
+                base_do_modulo(pid, modulo)
+                return pid
+    return max(candidatos, key=_memoria_residente)
+
+
+class ServicoDoLeitor:
+    """O que o leitor responde à porta: ``ler`` as entradas declaradas, ``varrer`` e ``refinar``.
+
+    A chave do jogo se relê a cada pedido: desligada no meio, a próxima leitura recusa.
+    """
+
+    VARREDURAS = 4
+
+    def __init__(self, pid: int, jogo: str, chaves: ChavesDaMemoria, *,
+                 buildid: str | None = None, pasta: Path | None = None) -> None:
+        self.pid = pid
+        self.jogo = jogo
+        self.chaves = chaves
+        self.buildid = buildid
+        self.pasta = pasta
+        self._leitores: dict[str, Leitor] = {}
+        self._varreduras: dict[str, Varredura] = {}
+
+    def _ligada(self) -> bool:
+        return bool(self.jogo) and self.chaves.ligada(self.jogo)
+
+    def atender(self, pedido: Mapping[str, Any]) -> dict[str, Any]:
+        try:
+            return self._atender(pedido)
+        except LeituraRecusadaError as exc:
+            return {"recusa": exc.frase}
+
+    def _atender(self, pedido: Mapping[str, Any]) -> dict[str, Any]:
+        verbo = pedido.get("verbo")
+        if not self._ligada():
+            self._leitores.clear()
+            self._varreduras.clear()
+            raise LeituraRecusadaError("A chave «Memória» deste jogo está desligada.")
+        if verbo == "ler":
+            entradas = entradas_da_receita(pedido.get("entradas") or ())
+            faixa = pedido.get("faixa") if isinstance(pedido.get("faixa"), Mapping) else None
+            marca = json.dumps([pedido.get("entradas"), faixa], sort_keys=True, default=str)
+            leitor = self._leitores.get(marca)
+            if leitor is None:
+                modulo = next((e.modulo for e in entradas if e.modulo), "")
+                alvo = processo_do_jogo(self.pid, modulo)
+                leitor = Leitor(alvo, entradas, chave_ligada=True, buildid=self.buildid,
+                                faixa=faixa)
+                self._leitores = {marca: leitor}
+            try:
+                return {"valores": leitor.ler()}
+            except LeituraRecusadaError:
+                self._leitores.clear()
+                raise
+        if verbo == "varrer":
+            valor = pedido.get("valor")
+            varredura = Varredura(processo_do_jogo(self.pid), str(pedido.get("tipo")),
+                                  chave_ligada=True,
+                                  valor=valor if isinstance(valor, int | float) else None)
+            while len(self._varreduras) >= self.VARREDURAS:
+                self._varreduras.pop(next(iter(self._varreduras)))
+            self._varreduras[varredura.token] = varredura
+            return varredura.resumo()
+        if verbo == "refinar":
+            varredura_achada = self._varreduras.get(str(pedido.get("token")))
+            if varredura_achada is None:
+                raise LeituraRecusadaError("Essa varredura não existe mais.")
+            valor = pedido.get("valor")
+            varredura_achada.refinar(str(pedido.get("comparacao")),
+                                     valor if isinstance(valor, int | float) else None)
+            resumo = varredura_achada.resumo()
+            if varredura_achada.contagem == 1:
+                resumo["endereco"] = varredura_achada.endereco()
+            return resumo
+        raise LeituraRecusadaError(f"O pedido «{verbo}» não existe.")
+
+
+def _abrir_o_soquete(caminho: Path) -> socket.socket:
+    caminho.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with contextlib.suppress(FileNotFoundError):
+        caminho.unlink()
+    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    antiga = os.umask(0o177)
+    try:
+        servidor.bind(str(caminho))
+    finally:
+        os.umask(antiga)
+    servidor.listen(4)
+    servidor.setblocking(False)
+    return servidor
+
+
+def _responder(cliente: socket.socket, buffers: dict[socket.socket, bytes],
+               servico: ServicoDoLeitor) -> bool:
+    try:
+        pedaco = cliente.recv(65536)
+    except (BlockingIOError, InterruptedError):
+        return True
+    except OSError:
+        return False
+    if not pedaco:
+        return False
+    buffers[cliente] = buffers.get(cliente, b"") + pedaco
+    if len(buffers[cliente]) > TETO_DO_PEDIDO:
+        return False
+    while b"\n" in buffers[cliente]:
+        linha, buffers[cliente] = buffers[cliente].split(b"\n", 1)
+        try:
+            pedido = json.loads(linha.decode("utf-8") or "null")
+        except (UnicodeDecodeError, ValueError):
+            pedido = None
+        resposta = (servico.atender(pedido) if isinstance(pedido, dict)
+                    else {"recusa": "O pedido não tem a forma declarada."})
+        try:
+            cliente.setblocking(True)
+            cliente.sendall(json.dumps(resposta, ensure_ascii=False).encode("utf-8") + b"\n")
+            cliente.setblocking(False)
+        except OSError:
+            return False
+    return True
+
+
+def _atender_enquanto_vive(filho: int, servico: ServicoDoLeitor, caminho: Path) -> int:
+    servidor = _abrir_o_soquete(caminho)
+    clientes: dict[socket.socket, bytes] = {}
+    try:
+        while True:
+            pid, status = os.waitpid(filho, os.WNOHANG)
+            if pid == filho:
+                return os.waitstatus_to_exitcode(status)
+            prontos, _, _ = select.select([servidor, *clientes], [], [], 0.25)
+            for pronto in prontos:
+                if pronto is servidor:
+                    with contextlib.suppress(BlockingIOError, InterruptedError):
+                        cliente, _ = servidor.accept()
+                        cliente.setblocking(False)
+                        clientes[cliente] = b""
+                elif not _responder(pronto, clientes, servico):
+                    clientes.pop(pronto, None)
+                    pronto.close()
+    finally:
+        for cliente in clientes:
+            cliente.close()
+        servidor.close()
+        with contextlib.suppress(OSError):
+            if caminho.is_socket():
+                caminho.unlink()
+
+
+def _ser_pai(argv: Sequence[str], ambiente: Mapping[str, str] | None = None) -> int:
+    env = os.environ if ambiente is None else ambiente
+    jogo = jogo_do_ambiente(env)
+    chaves = ChavesDaMemoria(arquivo_das_chaves(env))
+    pasta = env.get("STEAM_COMPAT_INSTALL_PATH")
+    try:
+        liberada = bool(jogo) and chaves.liberada(jogo, anticheat_do_jogo(
+            Path(pasta) if pasta else None, jogo.removeprefix("steam_app_")))
+    except (OSError, ValueError):
+        liberada = False
+    if not liberada:
+        os.execvp(argv[0], list(argv))
     filho = os.fork()
     if filho == 0:
         try:
             os.execvp(argv[0], list(argv))
         finally:
             os._exit(127)
-    _, status = os.waitpid(filho, 0)
-    return os.waitstatus_to_exitcode(status)
+    for sinal in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        signal.signal(sinal, lambda numero, _quadro: os.kill(filho, numero))
+    servico = ServicoDoLeitor(filho, jogo, chaves, buildid=buildid_do_ambiente(env),
+                              pasta=Path(pasta) if pasta else None)
+    try:
+        return _atender_enquanto_vive(filho, servico, caminho_do_soquete(env))
+    except OSError:
+        _, status = os.waitpid(filho, 0)
+        return os.waitstatus_to_exitcode(status)
 
 
 def main(args: Sequence[str] | None = None) -> int:
@@ -407,6 +654,7 @@ __all__ = [
     "CANDIDATOS_GUARDADOS",
     "COMPARACOES",
     "HZ_MAXIMO",
+    "SOQUETE_DO_LEITOR",
     "TIPOS",
     "TOPICO_DA_MEMORIA",
     "AvisoDoAnticheatError",
@@ -414,14 +662,20 @@ __all__ = [
     "Entrada",
     "Leitor",
     "LeituraRecusadaError",
+    "ServicoDoLeitor",
     "Varredura",
     "anticheat_do_jogo",
-    "argv_com_o_leitor",
+    "arquivo_das_chaves",
     "base_do_modulo",
+    "buildid_do_ambiente",
+    "caminho_do_soquete",
     "conferir_buildid",
+    "descendentes",
     "entradas_da_receita",
+    "jogo_do_ambiente",
     "ler_bytes",
     "ler_valor",
+    "processo_do_jogo",
     "resolver",
 ]
 
