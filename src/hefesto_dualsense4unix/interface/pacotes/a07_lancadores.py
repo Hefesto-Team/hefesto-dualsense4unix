@@ -2775,9 +2775,10 @@ def _muda_com_o_estado(manifesto: Any) -> bool:
 
 
 def _o_que_muda_a_janela(manifesto: Any, estado: dict[str, Any] | None
-                         ) -> tuple[tuple[str, ...], str, bool] | None:
+                         ) -> tuple[tuple[str, ...] | None, str, bool] | None:
     """O que redesenha as opções sem gesto: os ``presentes`` que a extensão publica, o jogo em
-    cena e a chave «Memória» dele; ``None`` quando nenhuma opção depende disso."""
+    cena e a chave «Memória» dele; ``None`` quando nenhuma opção depende disso. Sem estado
+    publicado, os ``presentes`` são ``None``: a extensão desligada mostra todas as opções."""
     if not _muda_com_o_estado(manifesto):
         return None
     from hefesto_dualsense4unix.integrations.leitor_do_estado import (
@@ -2786,7 +2787,7 @@ def _o_que_muda_a_janela(manifesto: Any, estado: dict[str, Any] | None
     )
 
     bruto = (estado or {}).get("presentes")
-    presentes = tuple(n for n in bruto if isinstance(n, str)) if isinstance(bruto, list) else ()
+    presentes = tuple(n for n in bruto if isinstance(n, str)) if isinstance(bruto, list) else None
     jogo = (estado or {}).get("jogo")
     jogo = jogo if isinstance(jogo, str) else ""
     return presentes, jogo, bool(jogo) and ChavesDaMemoria(arquivo_das_chaves()).ligada(jogo)

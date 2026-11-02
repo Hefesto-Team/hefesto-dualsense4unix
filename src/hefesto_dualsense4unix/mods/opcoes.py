@@ -395,11 +395,12 @@ def _o_que_a_antiga_passa(opcao: Opcao, mod_id: str, lugares: Lugares,
 
 
 def aparecem(manifesto: Manifesto, valores: dict[str, Any],
-             presentes: Collection[str] = ()) -> frozenset[str]:
+             presentes: Collection[str] | None = ()) -> frozenset[str]:
     """As opções que a janela mostra com ``valores`` (o guardado, com o rascunho por cima): a que
     declara ``aparece_com`` aparece quando cada outra vale o pedido E também aparece, e o
-    ``@presente`` quando um dos nomes pedidos está nos ``presentes`` que a extensão publica. Só da
-    tela: a escondida segue guardada e indo à extensão."""
+    ``@presente`` quando um dos nomes pedidos está nos ``presentes`` que a extensão publica, ou
+    quando a extensão ainda não publicou nenhum (``None``). Só da tela: a escondida segue guardada
+    e indo à extensão."""
     por_id = {o.id: o for o in manifesto.opcoes}
     vistas: dict[str, bool] = {}
 
@@ -415,7 +416,9 @@ def aparecem(manifesto: Manifesto, valores: dict[str, Any],
     return frozenset(o.id for o in manifesto.opcoes if aparece(o))
 
 
-def _presente(pedido: str | bool | list[str], presentes: Collection[str]) -> bool:
+def _presente(pedido: str | bool | list[str], presentes: Collection[str] | None) -> bool:
+    if presentes is None:
+        return True
     return any(n in presentes for n in (pedido if isinstance(pedido, list) else [pedido]))
 
 
