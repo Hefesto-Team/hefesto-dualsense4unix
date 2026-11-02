@@ -19,6 +19,7 @@ import pytest
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
 from hefesto_dualsense4unix.integrations.leitor_do_estado import (
     ChavesDaMemoria,
     arquivo_das_chaves,
@@ -31,7 +32,9 @@ JANELA = struct.pack("<3h", 1000, -2000, 3000) + bytes(range(22))
 
 
 @pytest.fixture(autouse=True)
-def _sem_peso() -> Iterator[None]:
+def _sem_peso(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setattr(tato_vivo, "_MODO_DA_ABA_DITO", {P1: {
+        "uniq": P1, "jogador": 1, "secoes": {"controles": "extensao:mira"}}})  # (noqa-acento)
     roteador.PESO_DA_MIRA.soltar()
     yield
     roteador.PESO_DA_MIRA.soltar()
@@ -172,3 +175,28 @@ def test_jogo_com_anticheat_recusa_sem_a_chave_e_aceita_com_a_chave_ligada(
     sem_chave, com_chave = asyncio.run(corrida())
     assert sem_chave["error"]["code"] == CODE_NAO_ESCREVEU
     assert com_chave["result"] == {"status": "ok"}
+
+
+def test_com_a_secao_controles_fora_do_modo_da_extensao_o_pedido_recusa(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(tato_vivo, "_MODO_DA_ABA_DITO", {P1: {
+        "uniq": P1, "jogador": 1, "secoes": {"controles": "personalizado"}}})
+
+    async def corrida() -> tuple[dict[str, Any], dict[str, Any], float]:
+        with tempfile.TemporaryDirectory(prefix="pm") as pasta:
+            bus = EventBus()
+            porta, com = await _sessao(Path(pasta) / "f.sock", bus, ["escrever:mira"])
+            try:
+                um = await asyncio.to_thread(com.pedir, "mira.peso", _pedido())
+                todos = await asyncio.to_thread(com.pedir, "mira.peso", {
+                    "uniq": roteador.TODOS_OS_CONTROLES, "ganho": 0.5, "ate_ms": 5000})
+                ganho = roteador.PESO_DA_MIRA.ganho(P1)
+            finally:
+                com.fechar()
+                await porta.parar()
+            return um, todos, ganho
+
+    um, todos, ganho = asyncio.run(corrida())
+    assert um["error"]["code"] == CODE_NAO_ESCREVEU
+    assert todos["error"]["code"] == CODE_NAO_ESCREVEU
+    assert ganho == 1.0

@@ -55,7 +55,8 @@ O `mira.peso` (ensaio) multiplica o giro de um controle, ou de todos, pelo ganho
 deflexão do analógico e o cursor que o giro move; na máscara DualSense, os três eixos do giro que o pad virtual
 recebe. Sem pedido, a janela do movimento passa byte a byte. Com mais de um pedido, vale o menor ganho. O ganho
 volta a 1 no prazo, quando a extensão sai da porta, no «Parar tudo», quando o jogo fecha e quando a seção Controles
-do controle deixa de estar no modo da extensão. Num jogo com anticheat, o pedido recusa (`-32013`) até a chave «Peso
+do controle deixa de estar no modo da extensão; só vale no controle cuja seção Controles está no modo da extensão
+(`todos` são esses), e sem nenhum recusa (`-32013`). Num jogo com anticheat, o pedido recusa (`-32013`) até a chave «Peso
 da mira» do jogo estar gravada, com o aviso do risco à conta visto, em `peso_da_mira_dos_jogos.json`.
 
 Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um

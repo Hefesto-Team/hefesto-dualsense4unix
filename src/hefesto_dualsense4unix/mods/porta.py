@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core.events import DEFAULT_QUEUE_MAXSIZE, EventBus, EventTopic
-from hefesto_dualsense4unix.core.roteador_de_movimento import PESO_DA_MIRA
+from hefesto_dualsense4unix.core.roteador_de_movimento import PESO_DA_MIRA, TODOS_OS_CONTROLES
+from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_INVALID_PARAMS,
     CODE_INVALID_REQUEST,
@@ -1268,12 +1269,28 @@ class Porta:
                 raise RecusaError(
                     CODE_NAO_ESCREVEU,
                     f"este jogo usa {anticheat}: o peso da mira pede a chave do jogo ligada")
+        no_modo = self._no_modo_da_extensao(sessao)
+        alvos = sorted(no_modo) if alvo == TODOS_OS_CONTROLES else [
+            a for a in (chave_de_sensor(alvo),) if a in no_modo]
+        if not alvos:
+            raise RecusaError(
+                CODE_NAO_ESCREVEU, "a seção Controles deste controle não está no modo da extensão")
         try:
-            PESO_DA_MIRA.pedir(sessao.mod_id, alvo, float(ganho), ate_ms)
+            for um in alvos:
+                PESO_DA_MIRA.pedir(sessao.mod_id, um, float(ganho), ate_ms)
         except ValueError as exc:
             raise RecusaError(CODE_INVALID_PARAMS, str(exc)) from exc
         self._vigiar_o_peso()
         return {"status": "ok"}
+
+    @staticmethod
+    def _no_modo_da_extensao(sessao: _Credencial) -> frozenset[str]:
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import modos_da_aba_ditos
+
+        return frozenset(
+            chave_de_sensor(c["uniq"]) for c in modos_da_aba_ditos()
+            if isinstance(c.get("uniq"), str) and isinstance(c.get("secoes"), dict)
+            and c["secoes"].get("controles") == _origem(sessao))
 
     def _jogo_aberto(self) -> str | None:
         identidade = self.bus.ultimo(EventTopic.JOGO_IDENTIDADE)
