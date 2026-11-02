@@ -9,6 +9,9 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import onde  # noqa: E402
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src"))
+from hefesto_dualsense4unix.interface.olhar import abrir_pronta
+
 D = onde.ENSAIO
 
 RESPIRO = 20
@@ -203,12 +206,11 @@ def alvos_de(arq: pathlib.Path):
 
 def mede(pg, arq, ident, css_extra=""):
     pg.goto("about:blank")
-    pg.goto(f"file://{D / arq}#{ident}")
-    pg.wait_for_load_state("networkidle")
+    endereco = f"file://{D / arq}#{ident}"
+    abrir_pronta(pg, endereco, lambda **ir: pg.goto(endereco, **ir))
     pg.add_style_tag(content=".tela-nova:target .dica{display:block !important}")
     if css_extra:
         pg.add_style_tag(content=css_extra)
-    pg.wait_for_timeout(250)
     return pg.evaluate(SONDA, {"respiro": RESPIRO, "foraDeProposito": FORA_DE_PROPOSITO})
 
 

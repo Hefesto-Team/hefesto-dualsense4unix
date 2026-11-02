@@ -27,6 +27,7 @@ from hefesto_dualsense4unix.core.led_control import (
 
 SVG = RAIZ / "assets/control-svg/dualsense.svg"
 from hefesto_dualsense4unix.interface import onde
+from hefesto_dualsense4unix.interface.olhar import abrir_pronta
 
 MAPA = onde.PUBLICADO / "mapa-do-controle.html"
 CSV_CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
@@ -196,9 +197,8 @@ with sync_playwright() as pw:
 
     erros: list[str] = []
     pg.on("pageerror", lambda e: erros.append(str(e)))
-    pg.goto(f"file://{MAPA}")
-    pg.wait_for_load_state("networkidle")
-    pg.wait_for_timeout(400)
+    abrir_pronta(pg, MAPA.as_uri(), lambda **ir: pg.goto(f"file://{MAPA}", **ir),
+                 seletor="svg.ds")
 
     diz(not erros, f"o mapa abre sem exceção de JavaScript — {erros[:3]}")
 

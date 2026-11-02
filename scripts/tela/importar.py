@@ -84,11 +84,13 @@ def medir_glifo_contra_peca(caminho):
 def medir_no_mapa():
     """Quais glifos ficaram longe da peça DEPOIS de o mapa ser gerado."""
     from playwright.sync_api import sync_playwright
+    _sys.path.insert(0, str(R / "src"))
+    from hefesto_dualsense4unix.interface.olhar import abrir_pronta
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
         pg = b.new_page(viewport={"width": 1920, "height": 1080})
-        pg.goto(f"file://{R}/layout/mapa-do-controle.html")
-        pg.wait_for_load_state("networkidle"); pg.wait_for_timeout(500)
+        mapa = R / "layout" / "mapa-do-controle.html"
+        abrir_pronta(pg, mapa.as_uri(), lambda **ir: pg.goto(f"file://{mapa}", **ir))
         r = pg.evaluate("""() => {const o={};
           document.querySelectorAll('.sobre').forEach(g=>{
             const id=[...g.classList].find(c=>c.startsWith('s-')).slice(2);

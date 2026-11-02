@@ -14,23 +14,26 @@ página pedir de fora aparece em `recusadas` (quem reprova a página é o
 
 A CURA, NA ORIGEM: toda requisição que não é local é RECUSADA na hora (`route.abort`),
 então o `load` não tem mais recurso externo a esperar e a medida deixa de depender de a
-rede responder, de demorar ou de chegar no meio da medida; a fonte vem do pacote. A espera é pela condição
-que o portão mede: o `load` (que agora é imediato), as fontes aplicadas e dois quadros de
-layout, no lugar do `networkidle` e dos 250 ms fixos.
+rede responder, de demorar ou de chegar no meio da medida; a fonte vem do pacote. A espera é a do
+dono único, o `abrir_pronta` de `interface/olhar.py`: o `load` (que agora é imediato), as fontes
+aplicadas e dois quadros pintados, com prazo por sinal e o nome do que faltou.
 
 O que o portão MEDE não muda: a geometria que ele lê é a do desenho, não a de um CSS
 que alguém serve de fora.
 """
 from __future__ import annotations
 
+import pathlib
+import sys
 from typing import Any
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+
+from hefesto_dualsense4unix.interface.olhar import abrir_pronta
 
 CHROME = "/usr/bin/google-chrome"
 
 _LOCAIS = ("file:", "data:", "blob:", "about:")
-
-_ESPERA_O_DESENHO_ASSENTAR = """() => document.fonts.ready.then(
-  () => new Promise((fim) => requestAnimationFrame(() => requestAnimationFrame(fim))))"""
 
 
 def e_local(url: str) -> bool:
@@ -70,10 +73,11 @@ def abrir_sem_rede(
 
     `bloquear=False` existe só para a régua provar que o bloqueio é o que segura o
     portão: sem ele, uma rede que não responde volta a pendurar o `load`.
+
+    `espera_ms` é o prazo de cada sinal; o que não vem sai em `PaginaNaoFicouProntaError`.
     """
     pagina = navegador.new_page(**opcoes)
     pagina.set_viewport_size({"width": largura, "height": altura})
     recusadas = recusar_a_rede(pagina) if bloquear else []
-    pagina.goto(uri, wait_until="load", timeout=espera_ms)
-    pagina.evaluate(_ESPERA_O_DESENHO_ASSENTAR)
+    abrir_pronta(pagina, uri, lambda **ir: pagina.goto(uri, **ir), prazo_ms=espera_ms)
     return pagina, recusadas

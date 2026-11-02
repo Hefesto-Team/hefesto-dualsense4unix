@@ -37,6 +37,8 @@ for _caminho in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" 
 
 import chrome_sem_rede
 
+from hefesto_dualsense4unix.interface.olhar import PaginaNaoFicouProntaError, abrir_pronta
+
 CHROME = pathlib.Path(chrome_sem_rede.CHROME)
 EXTERNO = "https://exemplo.invalid/fonte.css"
 
@@ -120,7 +122,7 @@ class TestAPaginaNaoPedeARede:
                     pagina, recusadas = chrome_sem_rede.abrir_sem_rede(
                         contexto, pagina_com_fonte_de_fora.as_uri(),
                         largura=800, altura=600, espera_ms=_PRAZO_FOLGADO_MS)
-                except playwright.TimeoutError:
+                except PaginaNaoFicouProntaError:
                     pytest.fail(
                         "a página esperou a rede que nunca responde até estourar o prazo: "
                         "o portão voltou a depender da rede para medir a página")
@@ -149,7 +151,7 @@ class TestAPaginaNaoPedeARede:
             try:
                 contexto = navegador.new_context()
                 pendurados = _rede_que_nunca_responde(contexto)
-                with pytest.raises(playwright.TimeoutError):
+                with pytest.raises(PaginaNaoFicouProntaError, match="faltou o load do documento"):
                     chrome_sem_rede.abrir_sem_rede(
                         contexto, pagina_com_fonte_de_fora.as_uri(),
                         largura=800, altura=600, bloquear=False, espera_ms=1_500)
@@ -184,8 +186,8 @@ class TestAPaginaNaoPedeARede:
                     "**/*",
                     lambda rota: rota.fulfill(status=200, content_type="text/css", body="")
                     if not chrome_sem_rede.e_local(rota.request.url) else rota.continue_())
-                respondendo.goto(arquivo.as_uri(), wait_until="load")
-                respondendo.evaluate(chrome_sem_rede._ESPERA_O_DESENHO_ASSENTAR)
+                uri = arquivo.as_uri()
+                abrir_pronta(respondendo, uri, lambda **ir: respondendo.goto(uri, **ir))
                 lido_com_rede = respondendo.evaluate(a01.O_QUE_O_NAVEGADOR_DESENHA)
             finally:
                 navegador.close()

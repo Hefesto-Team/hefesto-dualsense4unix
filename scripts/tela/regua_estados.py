@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Régua dos ESTADOS: a mesma aba, medida em cada posição do acordeão."""
+import functools
 import pathlib
 import sys
 
@@ -7,6 +8,9 @@ from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import onde  # noqa: E402
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src"))
+from hefesto_dualsense4unix.interface.olhar import abrir_pronta
 
 D = onde.ENSAIO
 
@@ -82,10 +86,9 @@ if __name__ == "__main__":
                                ignore_default_args=["--hide-scrollbars"])
         for arq in alvos:
             pg = b.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
-            pg.goto(f"file://{D / arq}")
-            pg.wait_for_load_state("networkidle")
+            pagina = D / arq
+            abrir_pronta(pg, pagina.as_uri(), functools.partial(pg.goto, f"file://{pagina}"))
             pg.add_style_tag(content=".nota{display:none}")
-            pg.wait_for_timeout(300)
             medir(pg, arq)
             pg.close()
         b.close()

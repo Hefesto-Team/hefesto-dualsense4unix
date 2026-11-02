@@ -29,6 +29,7 @@ import sys as _sys
 _sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface.mapa import SEM_BOTAO
+from hefesto_dualsense4unix.interface.olhar import abrir_pronta
 _MAPA = _onde.PUBLICADO / "mapa-do-controle.html"
 ROSA = "rgb(255, 121, 198)"
 PINTAVEL = ":is(.peca, rect, circle, path, ellipse)"
@@ -41,8 +42,7 @@ falhas = []
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
     pg = b.new_page(viewport={"width": 1920, "height": 1080})
-    pg.goto(f"file://{_MAPA}")
-    pg.wait_for_load_state("networkidle"); pg.wait_for_timeout(400)
+    abrir_pronta(pg, _MAPA.as_uri(), lambda **ir: pg.goto(f"file://{_MAPA}", **ir), seletor=".cx")
     print(f"=== o mapa · {len(pecas)} peças, cruzamento nos dois sentidos ===")
     for p in pecas:
         i = p["id"]; desenhada = p["x1"] != "-"
@@ -89,9 +89,7 @@ with sync_playwright() as pw:
         if not ok: falhas.append(i)
         print(("  OK   " if ok else "  FALHA") + f" {i:22} glifo→peça={ida}  peça→glifo={volta}")
 
-    pg.reload()
-    pg.wait_for_load_state("networkidle")
-    pg.wait_for_timeout(300)
+    abrir_pronta(pg, _MAPA.as_uri(), lambda **ir: pg.reload(**ir), seletor=".cx")
     fora = pg.evaluate("""() => {const cx=document.querySelector('.cx').getBoundingClientRect();
       return [...document.querySelectorAll('.item')].filter(e=>{const b=e.getBoundingClientRect();
         return b.right>cx.right+1 || b.left<cx.left-1 || b.width===0;})
