@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1188283,
+      "piso": 1188289,
       "por_item": {
         "docs": 108259,
         "scripts": 111003,
-        "src": 299987,
-        "tests": 669034
+        "src": 299974,
+        "tests": 669053
       },
-      "razao": "tamanho: +22 linhas (1188261 -> 1188283), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C; registrado no fecho, topo 0e797bb983d0",
+      "razao": "tamanho: +6 linhas (1188283 -> 1188289), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 1f2ac87daee1",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1399,6 +1399,12 @@
           "de": 1188261,
           "para": 1188283,
           "razao": "tamanho: +22 linhas (1188261 -> 1188283), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C; registrado no fecho, topo 0e797bb983d0"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1188283,
+          "para": 1188289,
+          "razao": "tamanho: +6 linhas (1188283 -> 1188289), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 1f2ac87daee1"
         }
       ],
       "unidade": "linhas",
