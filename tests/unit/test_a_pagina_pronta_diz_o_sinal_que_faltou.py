@@ -27,9 +27,9 @@ addEventListener('load', () => {
   const f = new FontFace('Lenta', 'url(lenta.ttf)');
   document.fonts.add(f);
   f.load().catch(() => {});
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(() => {
     document.body.dataset.pintou = 'sim';
-  }));
+  })));
 });
 </script></body></html>"""
 
