@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1188261,
+      "piso": 1188283,
       "por_item": {
         "docs": 108259,
         "scripts": 111003,
-        "src": 299985,
-        "tests": 669014
+        "src": 299987,
+        "tests": 669034
       },
-      "razao": "tamanho: +2272 linhas (1185989 -> 1188261), pagas por Origem: D-1310-O-TEMA-DE-CORES-ENTRA-POR-MODIFICACAO-COM-A-PERMISSAO-TEMA; registrado no fecho, topo 01deef04ff1e",
+      "razao": "tamanho: +22 linhas (1188261 -> 1188283), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C; registrado no fecho, topo 0e797bb983d0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1393,6 +1393,12 @@
           "de": 1185989,
           "para": 1188261,
           "razao": "tamanho: +2272 linhas (1185989 -> 1188261), pagas por Origem: D-1310-O-TEMA-DE-CORES-ENTRA-POR-MODIFICACAO-COM-A-PERMISSAO-TEMA; registrado no fecho, topo 01deef04ff1e"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1188261,
+          "para": 1188283,
+          "razao": "tamanho: +22 linhas (1188261 -> 1188283), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C; registrado no fecho, topo 0e797bb983d0"
         }
       ],
       "unidade": "linhas",
