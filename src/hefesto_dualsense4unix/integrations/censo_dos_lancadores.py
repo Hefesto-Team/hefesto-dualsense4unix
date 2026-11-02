@@ -1577,7 +1577,7 @@ def lancador_do_jogo(fonte: str, appid: str = "") -> str:
 
     O atalho ``.desktop`` com o número da Steam é da Steam; os outros vêm pelo programa de
     fábrica ou pela extensão ligada que o leu (a ``fonte`` é o rótulo, em minúsculas, como
-    `jogos_locais.jogos_dos_lancadores` o grava).
+    `jogos_locais.leitura_das_janelas` o grava).
     """
     if fonte == _SERVICO_DA_STEAM or (fonte == "desktop" and appid.isdigit()):
         return _SERVICO_DA_STEAM

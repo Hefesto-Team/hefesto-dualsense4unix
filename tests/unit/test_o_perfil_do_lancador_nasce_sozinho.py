@@ -34,7 +34,7 @@ UMU_DO_GOTG = "umu-9921777"
 
 
 def _do_heroic(chave: str, nome: str) -> JogoLocal:
-    """Um jogo de lançador como `jogos_dos_lancadores` o entrega: SEM appid."""
+    """Um jogo de lançador como `leitura_das_janelas` o entrega: SEM appid."""
     return JogoLocal(
         appid="", nome=nome, fonte="heroic", lancador="Heroic", chave=chave
     )

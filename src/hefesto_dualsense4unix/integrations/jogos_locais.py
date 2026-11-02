@@ -322,12 +322,8 @@ class LeituraDosJogos:
     lida: bool
 
 
-def jogos_dos_lancadores(lar: Path | None = None) -> list[JogoLocal]:
-    """A SEGUNDA ORIGEM — os jogos dos cinco lançadores que não são a Steam."""
-    return _leitura_dos_lancadores(lar).jogos
-
-
 def _leitura_dos_lancadores(lar: Path | None) -> LeituraDosJogos:
+    """A SEGUNDA ORIGEM — os jogos dos cinco lançadores que não são a Steam."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
         leitura_das_chaves_de_janela,
     )
@@ -407,19 +403,13 @@ def _chave_do_atalho_sem_classe(
     return chave
 
 
-def jogos_diretos_dos_atalhos(
-    pastas: Sequence[Path] | None = None,
-) -> list[JogoLocal]:
+def _leitura_dos_atalhos(pastas: Sequence[Path] | None) -> LeituraDosJogos:
     """A TERCEIRA ORIGEM — o jogo que não é de lançador nenhum, pelo `.desktop`.
 
     O atalho que declara `StartupWMClass` entra com essa classe. O que não declara (o
     jogo nativo comum) entra com o id do atalho como chave
     (:func:`_chave_do_atalho_sem_classe`).
     """
-    return _leitura_dos_atalhos(pastas).jogos
-
-
-def _leitura_dos_atalhos(pastas: Sequence[Path] | None) -> LeituraDosJogos:
     alvos = list(pastas) if pastas is not None else pastas_de_atalhos()
     achados: dict[str, JogoLocal] = {}
     lida = True
@@ -636,9 +626,7 @@ __all__ = [
     "jogos_com_janela",
     "jogos_da_biblioteca_steam",
     "jogos_de_janela",
-    "jogos_diretos_dos_atalhos",
     "jogos_dos_atalhos_desktop",
-    "jogos_dos_lancadores",
     "leitura_das_janelas",
     "nomes_das_janelas",
     "nomes_por_appid",

@@ -26,10 +26,16 @@ def _atalho(pasta: Path, arquivo: str, texto: str) -> None:
     (pasta / arquivo).write_text(texto, encoding="utf-8")
 
 
+def _diretos(pasta: Path) -> list[jl.JogoLocal]:
+    leitura = jl.leitura_das_janelas(pasta, [pasta])
+    assert leitura.lida
+    return leitura.jogos
+
+
 def test_o_atalho_de_jogo_sem_startupwmclass_aparece(tmp_path: Path) -> None:
     _atalho(tmp_path, "forja.desktop", FORJA)
 
-    diretos = jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])
+    diretos = _diretos(tmp_path)
 
     assert [(j.chave, j.nome, j.lancador) for j in diretos] == [
         ("forja", "FORJA", jl.LANCADOR_DIRETO)
@@ -48,7 +54,7 @@ def test_o_que_ja_ficava_fora_segue_fora(tmp_path: Path) -> None:
         "[Desktop Entry]\nName=Editor\nExec=/bin/editor\nCategories=Utility;\n",
     )
 
-    assert jl.jogos_diretos_dos_atalhos(pastas=[tmp_path]) == []
+    assert _diretos(tmp_path) == []
 
 
 def test_o_que_nao_e_jogo_com_janela_propria_fica_fora_sem_a_classe(
@@ -67,14 +73,14 @@ def test_o_que_nao_e_jogo_com_janela_propria_fica_fora_sem_a_classe(
     for arquivo, (n, e, c) in casos.items():
         _atalho(tmp_path, arquivo, corpo.format(n=n, e=e, c=c))
 
-    assert jl.jogos_diretos_dos_atalhos(pastas=[tmp_path]) == []
+    assert _diretos(tmp_path) == []
 
 
 def test_o_atalho_com_a_classe_declarada_segue_com_o_usuario(tmp_path: Path) -> None:
     texto = FORJA.replace("FORJA", "Celeste") + "StartupWMClass=CelesteWin\n"
     _atalho(tmp_path, "celeste.desktop", texto)
 
-    achados = jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])
+    achados = _diretos(tmp_path)
 
     assert [j.chave for j in achados] == ["CelesteWin"]
 
@@ -168,7 +174,7 @@ def test_o_atalho_do_lutris_e_de_outro_programa_e_fica_fora(tmp_path: Path) -> N
         "Exec=flatpak run --command=bottles-cli com.usebottles.bottles run -p Jogo -b B\n",
     )
 
-    assert jl.jogos_diretos_dos_atalhos(pastas=[tmp_path]) == []
+    assert _diretos(tmp_path) == []
 
 
 def test_o_jogo_nativo_com_env_e_caminho_segue_dentro(tmp_path: Path) -> None:
@@ -179,7 +185,7 @@ def test_o_jogo_nativo_com_env_e_caminho_segue_dentro(tmp_path: Path) -> None:
         "Exec=env LD_LIBRARY_PATH=/opt/n/lib:/usr/lib /opt/n/nativo.x86_64 --tela=C:\n",
     )
 
-    assert [j.chave for j in jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])] == [
+    assert [j.chave for j in _diretos(tmp_path)] == [
         "jogo-nativo"
     ]
 

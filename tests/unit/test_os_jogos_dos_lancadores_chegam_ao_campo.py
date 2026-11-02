@@ -141,7 +141,7 @@ def test_o_jogo_do_lancador_vira_oferta_com_a_wm_class_no_value(
     """A mesma divisão da Steam: `value` é o ENDEREÇO, `label` é o que quem usa lê."""
     _heroic(tmp_path, [BAIXADO, A_ROUPA, SO_NA_CONTA])
 
-    ofertas = jl.jogos_dos_lancadores(lar=tmp_path)
+    ofertas = jl.leitura_das_janelas(tmp_path, []).jogos
 
     assert [(j.valor, j.rotulo, j.forma) for j in ofertas] == [
         ("steam_app_9921777", "Marvel's Guardians of the Galaxy (Heroic)", "janela")]
@@ -201,7 +201,7 @@ def test_nenhum_lancador_instalado_e_lista_so_da_steam(
     tmp_path: pathlib.Path,
 ) -> None:
     """Máquina sem Heroic: a oferta é a de sempre, e nada quebra."""
-    assert jl.jogos_dos_lancadores(lar=tmp_path) == []
+    assert jl.leitura_das_janelas(tmp_path, []) == jl.LeituraDosJogos([], lida=True)
     assert censo.jogos_com_chave_de_janela(lar=tmp_path) == []
     assert jl.jogos_com_janela(lar=tmp_path, pastas=[tmp_path]) == []
 
@@ -256,7 +256,7 @@ def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
             "[Desktop Entry]\nType=Application\nName=Editor\n"
             "Exec=/bin/true\nCategories=Utility;\nStartupWMClass=gedit\n")
 
-    diretos = jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])
+    diretos = jl.leitura_das_janelas(tmp_path, [tmp_path]).jogos
 
     assert [(j.chave, j.nome) for j in diretos] == [
         ("Celeste", "Celeste"), ("retroarch", "RetroArch")]
@@ -365,7 +365,7 @@ def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
             "Exec=/casa/zsnes/rodar.sh\nCategories=Game;Emulator;\n"
             "StartupWMClass=SUPERZSNES\n")
 
-    diretos = jl.jogos_diretos_dos_atalhos(pastas=[tmp_path])
+    diretos = jl.leitura_das_janelas(tmp_path, [tmp_path]).jogos
 
     assert [j.chave for j in diretos] == ["SUPERZSNES"]
     assert diretos[0].lancador == jl.LANCADOR_DIRETO
