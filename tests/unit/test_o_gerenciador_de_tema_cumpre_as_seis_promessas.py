@@ -25,10 +25,12 @@ MORDIDAS (01/11/2026, executadas sobre a cura e devolvidas, md5 conferido):
   ``test_d4_a_logo_recusada_diz_na_linha_da_logo``;
 - o ``_pinta`` fora da comparação do ``_seguir_o_meu_css`` reprova
   ``test_d5_a_janela_aberta_segue_o_desligar_de_fora``; o ``pinta`` ignorado no ``retratar``
-  também;
+  também, e o ``pinta`` ignorado só no tema escolhido reprova
+  ``test_d5_o_claro_escolhido_sai_da_coluna_quando_desligam_de_fora``;
 - o ``focarSemDica`` trocado por ``focus()`` na base comum, e a guarda
   ``__hefFocoDoCodigo`` arrancada da camada da dica do produto, reprovam cada um
-  ``test_d5_o_foco_que_a_janela_da_nao_abre_a_dica``.
+  ``test_d5_o_foco_que_a_janela_da_nao_abre_a_dica``; a guarda arrancada da camada da base
+  comum reprova ``test_d5_sem_a_camada_do_produto_a_base_comum_tambem_cala``.
 """
 from __future__ import annotations
 
@@ -279,7 +281,10 @@ _PAGINA_DA_JANELA = """<!doctype html><html><head><meta charset="utf-8">
 
 _JS_DA_JANELA = """(function(){
   const abre = document.getElementById('abre'), r = {};
-  const aberta = () => !!(window.__hefDica && window.__hefDica.aberta());
+  const base = () => document.querySelector('#hef-dica.visivel');
+  const aberta = () => window.__hefDica ? window.__hefDica.aberta() : !!base();
+  const texto = () => window.__hefDica ? window.__hefDica.texto()
+    : (base() ? base().textContent : '');
   abre.focus();
   setTimeout(() => {
     r.foco_do_controle_abre = aberta();
@@ -289,7 +294,7 @@ _JS_DA_JANELA = """(function(){
       r.dica_no_foco_inicial = aberta();
       document.getElementById('aplicar').focus();
       setTimeout(() => {
-        r.dica_no_aplicar = window.__hefDica ? window.__hefDica.texto() : '';
+        r.dica_no_aplicar = texto();
         location.hash = '';
         setTimeout(() => {
           r.foco_de_volta = document.activeElement && document.activeElement.id;
@@ -372,3 +377,40 @@ def test_d5_o_foco_que_a_janela_da_nao_abre_a_dica(tmp_path: Path) -> None:
     assert not m["dica_no_foco_inicial"], f"a dica «Fechar» nasceu aberta: {m}"
     assert m["dica_no_aplicar"] == "Aplicar o tema", f"o foco seguinte não abriu a dica: {m}"
     assert m["foco_de_volta"] == "abre" and not m["dica_na_volta"], m
+
+
+def test_d5_sem_a_camada_do_produto_a_base_comum_tambem_cala(tmp_path: Path) -> None:
+    m = _janela_no_webkit(tmp_path, dica="void 0")
+    assert not m.get("erro"), m
+    assert m["foco_do_controle_abre"], f"o foco dado de fora deixou de abrir a dica da base: {m}"
+    assert m["foco_inicial"] == "tn-x", m
+    assert not m["dica_no_foco_inicial"], f"a dica «Fechar» da base nasceu aberta: {m}"
+    assert m["dica_no_aplicar"] == "Aplicar o tema", f"o foco seguinte não abriu a dica: {m}"
+    assert m["foco_de_volta"] == "abre" and not m["dica_na_volta"], m
+
+
+def _nome_agora(html: str) -> str:
+    achado = re.search(r'class="tm-nome"[^>]*>([^<]*)<', html)
+    assert achado, "o nome do tema em uso não está na janela"
+    return achado.group(1)
+
+
+def test_d5_o_claro_escolhido_sai_da_coluna_quando_desligam_de_fora(
+        a07: Any, lg: Lugares, tmp_path: Path) -> None:
+    manifesto = _ligada(lg, _pasta(tmp_path, _manifesto()))
+    opcoes.guardar(manifesto, "tema", "Claro", lg)
+    a07._montar_a_janela_da_extensao(NOVA)
+    ligada = a07._MEXIDA.html_mod
+    assert _nome_agora(ligada) == "Claro"
+    assert "#ffffff" in _faixa(ligada)
+    instalador.desligar(NOVA, lugares=lg)
+    a07.REGISTRO.esquecer()
+    a07._seguir_o_meu_css(a07.REGISTRO.ler())
+    desligada = a07._MEXIDA.html_mod
+    assert _nome_agora(desligada) != "Claro", "a coluna ainda diz o Claro com a extensão desligada"
+    assert "#ffffff" not in _faixa(desligada), "a faixa ainda mostra o Claro"
+    assert tema.tokens_da_casa()["--panel"] in _faixa(desligada)
+    instalador.ligar(NOVA, permissoes_vistas=manifesto.permissoes, lugares=lg)
+    a07.REGISTRO.esquecer()
+    a07._seguir_o_meu_css(a07.REGISTRO.ler())
+    assert a07._MEXIDA.html_mod == ligada, "religar não devolveu o Claro"
