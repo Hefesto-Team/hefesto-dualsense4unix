@@ -239,14 +239,14 @@
       "data": "2026-11-01",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1185989,
+      "piso": 1188261,
       "por_item": {
         "docs": 108259,
         "scripts": 111003,
-        "src": 299291,
-        "tests": 667436
+        "src": 299985,
+        "tests": 669014
       },
-      "razao": "tamanho: +3510 linhas (1182479 -> 1185989), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 46f713ade581",
+      "razao": "tamanho: +2272 linhas (1185989 -> 1188261), pagas por Origem: D-1310-O-TEMA-DE-CORES-ENTRA-POR-MODIFICACAO-COM-A-PERMISSAO-TEMA; registrado no fecho, topo 01deef04ff1e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1387,10 +1387,16 @@
           "de": 1182479,
           "para": 1185989,
           "razao": "tamanho: +3510 linhas (1182479 -> 1185989), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 46f713ade581"
+        },
+        {
+          "data": "2026-11-01",
+          "de": 1185989,
+          "para": 1188261,
+          "razao": "tamanho: +2272 linhas (1185989 -> 1188261), pagas por Origem: D-1310-O-TEMA-DE-CORES-ENTRA-POR-MODIFICACAO-COM-A-PERMISSAO-TEMA; registrado no fecho, topo 01deef04ff1e"
         }
       ],
       "unidade": "linhas",
-      "universo": 3304
+      "universo": 3309
     }
   }
 }
