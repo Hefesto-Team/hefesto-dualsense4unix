@@ -108,7 +108,7 @@ def _de_outra_placa(casa: Path) -> list[str]:
 def test_a_suite_nao_le_a_placa_da_maquina_que_a_roda() -> None:
     assert os.environ[maquina.RAIZ_DO_SYS_ENV].startswith("/dev/null/")
     assert maquina.placa_daqui() is None
-    assert maquina.controladores_usb_daqui() is None
+    assert maquina.familias_dos_controladores_usb() is None
 
 
 def test_o_mapa_da_placa_a_lido_na_placa_b_sai_inteiro_para_o_lado(
@@ -218,7 +218,7 @@ def test_a_placa_ou_o_pci_que_nao_se_leem_nao_carimbam_nem_esvaziam(
         if pci == {}:
             if "placa" in documento:
                 continue
-            assert maquina.controladores_usb_daqui() is None
+            assert maquina.familias_dos_controladores_usb() is None
         else:
             assert maquina.placa_daqui() is None
 

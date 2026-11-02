@@ -512,27 +512,6 @@ def placas_servidas(
     return achadas
 
 
-def indice_do_fluxo(
-    marca: str,
-    runner: Callable[[list[str]], str | None] = _pactl,
-) -> str | None:
-    """O índice do fluxo (sink-input) cujo bloco carrega ``marca``. ``None`` = não achei.
-
-    O portão dos motores do cabo é o volume do fluxo do laço
-    (`integrations/haptica_do_cabo`), e o índice muda a cada laço que sobe; o
-    nome que o dono dos laços dá ao nó (:data:`MARCA_DO_LACO_DO_CABO` mais a
-    marca do aparelho) aparece nas propriedades do fluxo, e é por ele que se acha.
-    Mora aqui, ao lado de :func:`placas_servidas`, porque as duas leem o MESMO
-    fluxo pela mesma marca: uma para o registro, a outra para o portão.
-    """
-    if not marca:
-        return None
-    for fluxo in _lista_do_pactl("sink-inputs", runner) or ():
-        if fluxo.carrega(marca):
-            return str(fluxo.indice)
-    return None
-
-
 def controles_do_registro(
     sysfs: Path = Path("/sys"),
     usec_do: LeitorDoUsec | None = None,

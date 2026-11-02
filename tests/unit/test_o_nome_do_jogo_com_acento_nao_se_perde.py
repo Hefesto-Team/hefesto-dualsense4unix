@@ -262,7 +262,8 @@ def test_o_endpoint_ve_o_jogo_de_nome_perdido_como_outro(nome: str) -> None:
 def test_o_laco_do_cabo_se_acha_entre_fluxos_de_nome_perdido(nome: str) -> None:
     laco = _sink_input(300, 366, 76, nome=f"output.{ks.MARCA_DO_LACO_DO_CABO}x", pid=1)
     texto = _pactl_do_jogo(nome, extra=(laco,))
-    assert ks.indice_do_fluxo(f"{ks.MARCA_DO_LACO_DO_CABO}x", lambda _argv: texto) == "366"
+    fluxo = hc.ler_o_fluxo_do_laco(f"{ks.MARCA_DO_LACO_DO_CABO}x", lambda _argv: texto)
+    assert fluxo is not None and fluxo.indice == "366"
 
 
 @pytest.mark.parametrize("nome", NOMES)

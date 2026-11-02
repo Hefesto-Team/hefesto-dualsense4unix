@@ -1991,12 +1991,6 @@ def _familia_do_pci(pasta: Path) -> str:
     return f"{vendor}:{device}" if _CHAVE_DE_RADIO.match(f"{vendor}:{device}") else ""
 
 
-def controladores_usb_daqui() -> frozenset[str] | None:
-    """Os PCI dos controladores USB vivos; ``None`` quando o ``/sys/bus/pci`` não se lê."""
-    familias = familias_dos_controladores_usb()
-    return None if familias is None else frozenset(familias)
-
-
 def _secoes_deste_computador(documento: Mapping[str, Any]) -> dict[str, Any]:
     return {secao: documento[secao] for secao in SECOES_DESTE_COMPUTADOR if documento.get(secao)}
 

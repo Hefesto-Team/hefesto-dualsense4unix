@@ -558,7 +558,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_RAIZ_DO_SYS": (
         "28/10/2026 — a raiz do `/sys` de onde o `maquina.json` lê a placa-mãe e os "
-        "controladores USB (`utils/maquina.placa_daqui` e `controladores_usb_daqui`, "
+        "controladores USB (`utils/maquina.placa_daqui` e `familias_dos_controladores_usb`, "
         "pelo `RAIZ_DO_SYS_ENV`). O `tests/conftest.py` a desvia para um caminho que não "
         "existe, para a suíte não ler a placa da máquina de quem roda e não mandar o mapa local "
         "para o `maquina.json.de-outra-placa`; o "
@@ -904,6 +904,13 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "geradores da 02 à 05 (`interface/aba02.py` a `aba05.py`, a chamada "
         "`monta_.modo_auto`) escrevem com a função o botão único do «Modo automático»; o "
         "produto o acende pelo `aria-pressed` da base comum."
+    ),
+    "interface/monta.py::vaga_da_extensao": (
+        "01/11/2026 — é do gerador do desenho, não do produto, como o `modo_auto` ao lado: os "
+        "geradores da 02 à 05 e da 10 (`interface/aba02.py` a `aba05.py` e `aba10.py`, a chamada "
+        "`vaga_da_extensao`) escrevem com a função a vaga vazia ao lado do Modo automático; o "
+        "produto a enche pelo `pacote` da aba (`monta.campo_da_extensao`, chamado de "
+        "`a02_controles` a `a05_vibracao` e de `a10_perfis`)."
     ),
     "interface/monta.py::par_de_modos": (
         "08/10/2026, O-MODO-AUTOMATICO — é do gerador do desenho, não do produto: os geradores "
