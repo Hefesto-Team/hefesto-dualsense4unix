@@ -500,6 +500,10 @@ _pkg_nome() {
         wlrctl)
             _apt="wlrctl";            _dnf="wlrctl"
             _pacman="wlrctl" ;;
+        gst-pipewire)
+            _apt="gstreamer1.0-pipewire gir1.2-gstreamer-1.0"
+            _dnf="pipewire-gstreamer gstreamer1"
+            _pacman="gst-plugin-pipewire gstreamer" ;;
         usbutils)
             _apt="usbutils";          _dnf="usbutils"
             _pacman="usbutils" ;;
@@ -1646,6 +1650,26 @@ if (( ${#_btmic_faltando[@]} )); then
     fi
 fi
 unset _btmic_faltando
+
+_tela_presente() {
+    local _py="${VENV_DIR}/bin/python"
+    [[ -x "${_py}" ]] || _py="${_VENV_PYTHON:-python3}"
+    "${_py}" -c "import sys, gi; gi.require_version('Gst', '1.0'); from gi.repository import Gst; Gst.init(None); sys.exit(0 if Gst.ElementFactory.find('pipewiresrc') else 1)" >/dev/null 2>&1
+}
+if ! _tela_presente; then
+    printf '\n      Tela do jogo para as extensões (o sentido «Tela» do Modo imersão): falta o pipewiresrc do GStreamer\n'
+    ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        if run_pkg gst-pipewire; then
+            printf '      ok — a tela do jogo chega às extensões pelo portal\n'
+        else
+            warn "não instalei o pipewiresrc — o jogo.tela fica ausente para as extensões"
+        fi
+    else
+        printf '      pulando (a tela do jogo fica ausente para as extensões; instale depois: %s)\n' \
+            "$(comando_manual_pkg gst-pipewire)"
+    fi
+fi
 
 printf '      instalando pacote Python...\n'
 if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
