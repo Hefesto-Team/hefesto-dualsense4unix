@@ -522,6 +522,10 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta de dados"),
     "gestos-das-extensoes.log": (CASA, "o diário dos gestos que mudam as modificações; não "
                                        "identifica controle"),
+    "memoria_dos_jogos.json": (CASA, "a chave Memória de cada jogo; não identifica controle"),
+    "peso_da_mira_dos_jogos.json": (CASA, "a chave do peso da mira de cada jogo com anticheat; "
+                                          "não identifica controle"),
+    "tela-do-portal.ficha": (CASA, "a ficha de restauração da captura da tela pelo portal"),
     "mods.sock": ("install", "a porta das modificações (pasta de execução)"),
     "mods-estado.json": ("install", "o estado vivo das modificações (pasta de execução)"),
     "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
