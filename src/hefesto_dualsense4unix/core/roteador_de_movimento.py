@@ -208,13 +208,14 @@ class PesoDaMira:
     """O ganho que uma extensão pede para o giro, por controle ou para ``todos``, com prazo.
 
     Sem pedido vivo o ganho é 1; com mais de um, vale o menor. O pedido some no prazo e quando
-    quem o fez é solto.
+    quem o fez é solto; quem ouve :meth:`ao_esvaziar` é avisado quando o último some.
     """
 
     def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
         self.relogio = relogio
         self._trava = threading.Lock()
         self._pedidos: dict[tuple[str, str], tuple[float, float]] = {}
+        self._avisos: list[Callable[[], None]] = []
 
     def pedir(self, dono: str, alvo: str, ganho: float, ate_ms: int) -> None:
         if not GANHO_MINIMO_DA_MIRA <= ganho <= 1.0:
@@ -232,23 +233,54 @@ class PesoDaMira:
         chave = chave_de_sensor(uniq) if uniq else None
         menor = 1.0
         with self._trava:
+            havia = bool(self._pedidos)
             for par, (ganho, ate) in list(self._pedidos.items()):
                 if ate <= agora:
                     del self._pedidos[par]
                 elif par[1] in (TODOS_OS_CONTROLES, chave):
                     menor = min(menor, ganho)
+        self._avisar_se_esvaziou(havia)
         return menor
+
+    def vencer(self) -> None:
+        """Tira os pedidos cujo prazo passou, sem esperar a leitura do giro."""
+        self.ganho(None)
+
+    def ultimo_prazo(self) -> float | None:
+        """O instante, no ``relogio``, em que o último pedido vivo vence; ``None`` sem pedido."""
+        with self._trava:
+            return max((ate for _ganho, ate in self._pedidos.values()), default=None)
+
+    def ao_esvaziar(self, aviso: Callable[[], None]) -> Callable[[], None]:
+        """Chama ``aviso`` cada vez que o último pedido some; devolve quem o desliga."""
+        with self._trava:
+            self._avisos.append(aviso)
+
+        def esquecer() -> None:
+            with self._trava:
+                if aviso in self._avisos:
+                    self._avisos.remove(aviso)
+
+        return esquecer
+
+    def _avisar_se_esvaziou(self, havia: bool) -> None:
+        with self._trava:
+            avisos = list(self._avisos) if havia and not self._pedidos else []
+        for aviso in avisos:
+            aviso()
 
     def soltar(self, dono: str | None = None, uniq: str | None = None) -> None:
         """Solta os pedidos de ``dono`` (de todos, sem ``dono``), só os de ``uniq`` quando dito."""
         chave = chave_de_sensor(uniq) if uniq else None
         with self._trava:
+            havia = bool(self._pedidos)
             for par in list(self._pedidos):
                 if dono is not None and par[0] != dono:
                     continue
                 if chave is not None and par[1] not in (chave, TODOS_OS_CONTROLES):
                     continue
                 del self._pedidos[par]
+        self._avisar_se_esvaziou(havia)
 
     def donos(self) -> frozenset[str]:
         with self._trava:

@@ -4,6 +4,11 @@
 três eixos da janela da máscara DualSense saem pelo ganho, e sem pedido a janela sai byte a byte.
 O ganho volta a 1 no prazo, quando a extensão cai, quando o jogo fecha e quando a seção Controles
 deixa de estar no modo da extensão. Num jogo com anticheat, só com a chave do jogo ligada.
+
+A vigia que solta o peso acaba pelo aviso de «sem donos» do ``PESO_DA_MIRA`` (o prazo vencido, a
+queda da extensão), e não por uma volta de um segundo (02/11/2026). MORDIDA: sem o aviso no
+``ganho`` (o caminho do ``vencer``), a vigia segue viva depois do prazo e
+``test_o_prazo_vencido_encerra_a_vigia_sem_volta_de_um_segundo`` reprova.
 """
 from __future__ import annotations
 
@@ -202,4 +207,61 @@ def test_com_a_secao_controles_fora_do_modo_da_extensao_o_pedido_recusa(
     um, todos, ganho = asyncio.run(corrida())
     assert um["error"]["code"] == CODE_NAO_ESCREVEU
     assert todos["error"]["code"] == CODE_NAO_ESCREVEU
+    assert ganho == 1.0
+
+
+def test_o_peso_avisa_quando_o_ultimo_pedido_some() -> None:
+    agora = [0.0]
+    peso = roteador.PesoDaMira(relogio=lambda: agora[0])
+    avisos: list[int] = []
+    esquecer = peso.ao_esvaziar(lambda: avisos.append(1))
+    assert peso.ultimo_prazo() is None
+    peso.pedir("a", P1, 0.8, 1000)
+    peso.pedir("b", P1, 0.6, 500)
+    assert peso.ultimo_prazo() == 1.0
+    agora[0] = 0.6
+    peso.vencer()
+    assert avisos == [] and peso.donos() == {"a"}
+    agora[0] = 1.1
+    peso.vencer()
+    assert avisos == [1] and not peso.donos()
+    peso.vencer()
+    peso.pedir("a", P1, 0.8, 1000)
+    peso.soltar("a")
+    assert avisos == [1, 1]
+    esquecer()
+    peso.pedir("a", P1, 0.8, 1000)
+    peso.soltar()
+    assert avisos == [1, 1]
+
+
+def test_o_prazo_vencido_encerra_a_vigia_sem_volta_de_um_segundo() -> None:
+    async def corrida() -> tuple[float, float, float]:
+        with tempfile.TemporaryDirectory(prefix="pm") as pasta:
+            bus = EventBus()
+            bus.bind_loop(asyncio.get_running_loop())
+            porta, com = await _sessao(Path(pasta) / "p.sock", bus, ["escrever:mira"])
+            try:
+                await asyncio.to_thread(com.pedir, "mira.peso", {**_pedido(), "ate_ms": 100})
+                vigia = porta._vigia_do_peso
+                assert vigia is not None
+                inicio = asyncio.get_running_loop().time()
+                await asyncio.wait_for(asyncio.shield(vigia), 0.8)
+                pelo_prazo = asyncio.get_running_loop().time() - inicio
+                await asyncio.to_thread(com.pedir, "mira.peso", _pedido())
+                vigia = porta._vigia_do_peso
+                assert vigia is not None and not vigia.done()
+                inicio = asyncio.get_running_loop().time()
+                com.fechar()
+                await asyncio.wait_for(asyncio.shield(vigia), 0.8)
+                pela_queda = asyncio.get_running_loop().time() - inicio
+                ganho = roteador.PESO_DA_MIRA.ganho(P1)
+            finally:
+                com.fechar()
+                await porta.parar()
+            return pelo_prazo, pela_queda, ganho
+
+    pelo_prazo, pela_queda, ganho = asyncio.run(corrida())
+    assert pelo_prazo < 0.5, pelo_prazo
+    assert pela_queda < 0.5, pela_queda
     assert ganho == 1.0

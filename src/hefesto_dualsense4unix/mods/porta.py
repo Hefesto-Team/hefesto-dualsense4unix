@@ -952,6 +952,7 @@ class Porta:
         self._regioes_da_tela: dict[str, Regiao] = {}
         self._captura_da_tela: asyncio.Task[None] | None = None
         self._vigia_do_peso: asyncio.Task[None] | None = None
+        self._prazo_do_peso: asyncio.TimerHandle | None = None
         self._anticheat_por_appid: dict[str, str] = {}
         self._arbitro: Arbitro | None = (
             arbitro if arbitro is not None
@@ -1054,6 +1055,8 @@ class Porta:
             self._captura_da_tela.cancel()
         if self._vigia_do_peso is not None:
             self._vigia_do_peso.cancel()
+        if self._prazo_do_peso is not None:
+            self._prazo_do_peso.cancel()
         for con in list(self._conexoes):
             for tarefa in con.tarefas:
                 tarefa.cancel()
@@ -1335,21 +1338,40 @@ class Porta:
         return chave if isinstance(chave, str) and chave else None
 
     def _vigiar_o_peso(self) -> None:
+        loop = asyncio.get_running_loop()
+        if self._prazo_do_peso is not None:
+            self._prazo_do_peso.cancel()
+        ultimo = PESO_DA_MIRA.ultimo_prazo()
+        self._prazo_do_peso = None if ultimo is None else loop.call_later(
+            max(0.0, ultimo - PESO_DA_MIRA.relogio()), PESO_DA_MIRA.vencer)
         if self._vigia_do_peso is None or self._vigia_do_peso.done():
             self._vigia_do_peso = asyncio.get_running_loop().create_task(
                 self._soltar_o_peso_quando_preciso(), name="mods-porta-peso-da-mira")
 
     async def _soltar_o_peso_quando_preciso(self) -> None:
         """O peso volta a 1 quando o jogo fecha e quando a seção Controles de um controle deixa de
-        estar no modo de quem pesou."""
+        estar no modo de quem pesou; a vigia acaba quando o peso fica sem donos (o prazo, a queda
+        da extensão), pelo aviso dele."""
+        loop = asyncio.get_running_loop()
+        vazio = asyncio.Event()
         fechou = self.bus.subscribe(EventTopic.JOGO_FECHOU)
         modos = self.bus.subscribe(EventTopic.MODO_ABA)
+
+        def avisar() -> None:
+            if not loop.is_closed():
+                loop.call_soon_threadsafe(vazio.set)
+
+        esquecer = PESO_DA_MIRA.ao_esvaziar(avisar)
         try:
-            while PESO_DA_MIRA.donos():
+            while True:
+                vazio.clear()
+                if not PESO_DA_MIRA.donos():
+                    break
                 do_fim = asyncio.ensure_future(fechou.get())
                 do_modo = asyncio.ensure_future(modos.get())
+                do_vazio = asyncio.ensure_future(vazio.wait())
                 feitos, pendentes = await asyncio.wait(
-                    {do_fim, do_modo}, timeout=1.0, return_when=asyncio.FIRST_COMPLETED)
+                    {do_fim, do_modo, do_vazio}, return_when=asyncio.FIRST_COMPLETED)
                 for pendente in pendentes:
                     pendente.cancel()
                 if do_fim in feitos:
@@ -1357,6 +1379,7 @@ class Porta:
                 if do_modo in feitos:
                     self._soltar_fora_do_modo(do_modo.result())
         finally:
+            esquecer()
             self.bus.unsubscribe(EventTopic.JOGO_FECHOU, fechou)
             self.bus.unsubscribe(EventTopic.MODO_ABA, modos)
 
