@@ -247,6 +247,7 @@ class TestODesenhoCarregaAPeca:
 
     @pytest.mark.parametrize("nome", a09.BOTOES_CINZAS)
     def test_o_botao_tem_as_quatro_metades(self, nome: str) -> None:
+        """D-09S-BOTAO-SEM-TRABALHO: cinza com o `aria-disabled`; o `data-gesto` leva o clique."""
         import re
 
         campo = f"{nome}{a09.SUFIXO_DA_RAZAO}"
@@ -275,7 +276,7 @@ class TestODesenhoCarregaAPeca:
             "o «?» voltou ao lado do botão")
 
     def test_nenhum_botao_cinza_emite_disabled(self) -> None:
-        """*"Apagado e ainda assim responde."* `disabled` mata o clique."""
+        """D-09S-BOTAO-SEM-TRABALHO: apagado e ainda responde; `disabled` mataria o clique."""
         import re
 
         for achado in re.finditer(r"<button[^>]*data-hef-classe=\"apagado\"[^>]*>",
@@ -544,6 +545,7 @@ class TestNaTelaViva:
     """A peça medida onde vive: no motor que a usa."""
 
     def test_a_razao_acende_o_cinza_e_veste_o_aria(self, na_tela: dict) -> None:
+        """D-09S-BOTAO-SEM-TRABALHO no WebKit: a razão pinta o cinza e o `aria-disabled`."""
         do_produto = na_tela["do_produto"]["com_razao"]
         for nome, visto in na_tela["com-razao"]["botoes"].items():
             assert visto is not None, f"{nome} sumiu da página"
