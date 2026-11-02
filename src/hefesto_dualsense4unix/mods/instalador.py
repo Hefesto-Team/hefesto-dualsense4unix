@@ -145,6 +145,7 @@ class Entrada(BaseModel):
     preparo_aceito: list[str] = []
     preparada_em: str = ""
     motivo_do_preparo: str = ""
+    em_troca: str = ""
 
 
 @dataclass(frozen=True)
@@ -525,6 +526,8 @@ def instalar(
     pasta_local = Path(origem).expanduser()
     lg.codigo.mkdir(parents=True, exist_ok=True)
     temporaria = Path(tempfile.mkdtemp(prefix=".baixando-", dir=lg.codigo))
+    troca: tuple[str, str] | None = None
+    trocou = False
     try:
         baixada = temporaria / "mod"
         tipo: Origem
@@ -570,7 +573,7 @@ def instalar(
         seguia_ligada = anterior is not None and anterior.ligada
         antigas_ligadas = _parar_as_substituidas(lg, a_substituir)
         if seguia_ligada:
-            desligar(manifesto.id, lugares=lg)
+            troca = (manifesto.id, _marcar_a_troca(lg, manifesto.id))
             if not esperar_parar(manifesto.id, lugares=lg):
                 _religar_a_que_seguia(lg, manifesto.id)
                 for mod_id in antigas_ligadas:
@@ -580,6 +583,7 @@ def instalar(
                     "não troquei o código."
                 )
         _trocar_o_codigo(baixada, lg.codigo / manifesto.id)
+        trocou = True
         pronta = not novas and manifesto.aviso in ("", aviso_aceito)
         prepara_agora = bool(manifesto.preparar) and pronta and anterior is not None and (
             anterior.ligada and (not sozinha or anterior.preparo_aceito == manifesto.preparar))
@@ -611,12 +615,15 @@ def instalar(
         registro = ler_registro(lg.registro)
         registro[manifesto.id] = entrada
         gravar_registro(lg.registro, registro)
+        troca = None
         _mandar_embora(lg, manifesto, a_substituir)
         if entrada.motivo_do_preparo:
             raise InstalacaoRecusadaError(
                 f"«{manifesto.nome}» foi instalada e ficou desligada. {entrada.motivo_do_preparo}")
         return Resultado(entrada, manifesto, novas, substituidas=a_substituir)
     finally:
+        if troca is not None:
+            _desfazer_a_troca(lg, *troca, desligar=trocou)
         shutil.rmtree(temporaria, ignore_errors=True)
 
 
@@ -707,11 +714,54 @@ def _marcar_a_espera(lg: Lugares, manifesto: Manifesto, commit: str, motivo: str
 
 
 def _religar_a_que_seguia(lg: Lugares, mod_id: str) -> None:
-    """Desfaz o ``desligar`` do instalar que não chegou a trocar o código."""
+    """Desfaz o ``desligar`` (ou a marca da troca) do instalar que não chegou a trocar o código."""
     registro = ler_registro(lg.registro)
     entrada = registro.get(mod_id)
-    if entrada is not None and not entrada.ligada:
+    if entrada is not None and (not entrada.ligada or entrada.em_troca):
         entrada.ligada = True
+        entrada.em_troca = ""
+        gravar_registro(lg.registro, registro)
+
+
+def _inicio_do_processo(pid: int) -> str:
+    try:
+        corpo = Path(f"/proc/{pid}/stat").read_text(encoding="ascii", errors="replace")
+    except OSError:
+        return ""
+    campos = corpo.rpartition(")")[2].split()
+    return campos[19] if len(campos) > 19 else ""
+
+
+def troca_viva(entrada: Entrada) -> bool:
+    """A linha está em troca do código, e quem a começou (PID e início) ainda vive.
+
+    A extensão em troca segue ligada no registro: o supervisor a para e a mostra
+    «atualizando», nunca «desligada». A marca de quem morreu no meio não vale.
+    """
+    pid, _, inicio = entrada.em_troca.partition(":")
+    if not pid.isdigit() or int(pid) <= 1 or not _pid_vivo(int(pid)):
+        return False
+    return _inicio_do_processo(int(pid)) == inicio
+
+
+def _marcar_a_troca(lg: Lugares, mod_id: str) -> str:
+    """Pede ao serviço que pare a versão viva sem desligá-la: a marca é deste processo."""
+    marca = f"{os.getpid()}:{_inicio_do_processo(os.getpid())}"
+    registro = ler_registro(lg.registro)
+    registro[mod_id].em_troca = marca
+    gravar_registro(lg.registro, registro)
+    return marca
+
+
+def _desfazer_a_troca(lg: Lugares, mod_id: str, marca: str, *, desligar: bool) -> None:
+    """A troca que não chegou ao registro novo tira a marca; com o código já trocado, desliga."""
+    with contextlib.suppress(InstalacaoRecusadaError, OSError):
+        registro = ler_registro(lg.registro)
+        entrada = registro.get(mod_id)
+        if entrada is None or entrada.em_troca != marca:
+            return
+        entrada.em_troca = ""
+        entrada.ligada = entrada.ligada and not desligar
         gravar_registro(lg.registro, registro)
 
 
@@ -1002,4 +1052,5 @@ __all__ = [
     "o_css_que_fica",
     "origem_da_tag",
     "remover",
+    "troca_viva",
 ]

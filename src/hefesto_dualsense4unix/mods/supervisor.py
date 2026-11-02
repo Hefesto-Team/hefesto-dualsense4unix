@@ -48,6 +48,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     commit_novo,
     ler_registro,
     manifesto_instalado,
+    troca_viva,
 )
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
@@ -607,12 +608,20 @@ class Supervisor:
         return False
 
     async def _conferir_o_registro(self) -> None:
-        """Uma volta da vigia: o registro mudou (outro mtime ou outro inode)?"""
+        """Uma volta da vigia: o registro mudou (outro mtime ou outro inode), ou a troca que
+        segurava uma extensão parada acabou sem ele mudar?"""
         try:
-            if self._marca() != self._marca_do_registro:
+            if self._marca() != self._marca_do_registro or self._troca_que_acabou():
                 await self.reconciliar()
         except Exception as exc:
             logger.warning("mods_registro_falhou", err=str(exc), exc_info=True)
+
+    def _troca_que_acabou(self) -> bool:
+        return any(
+            estado.estado == "atualizando"
+            and (m not in self._registro_lido or not troca_viva(self._registro_lido[m]))
+            for m, estado in self._estados.items()
+        )
 
     def _marca(self) -> tuple[int, int] | None:
         if not self.lugares.registro.is_file():
@@ -630,14 +639,17 @@ class Supervisor:
             self._registro_lido = {}
             return
         self._registro_lido = registro
-        ligadas = {k: v for k, v in registro.items() if v.ligada}
+        em_troca = {k for k, v in registro.items() if v.ligada and troca_viva(v)}
+        ligadas = {k: v for k, v in registro.items() if v.ligada and k not in em_troca}
         for mod_id in [m for m in self._vigiadas if m not in ligadas]:
-            await self._parar_uma(mod_id)
+            await self._parar_uma(mod_id, "atualizando" if mod_id in em_troca else "desligada")
         for mod_id in [m for m in self._estados if m not in registro]:
             self._estados.pop(mod_id, None)
         for mod_id, entrada in registro.items():
             if not entrada.ligada:
                 self._estados[mod_id] = EstadoDaModificacao("desligada")
+            elif mod_id in em_troca:
+                self._estados[mod_id] = EstadoDaModificacao("atualizando")
         for mod_id, entrada in ligadas.items():
             vigiada = self._vigiadas.get(mod_id)
             if vigiada is None or vigiada.instalacao != _instalacao(entrada):
@@ -804,7 +816,7 @@ class Supervisor:
         logger.info("mods_chave_ligada_pela_extensao", mod=mod_id)
         return True
 
-    async def _parar_uma(self, mod_id: str) -> None:
+    async def _parar_uma(self, mod_id: str, estado: str = "desligada") -> None:
         vigiada = self._vigiadas.pop(mod_id, None)
         if vigiada is None:
             return
@@ -817,7 +829,7 @@ class Supervisor:
         copia, vigiada.copia = vigiada.copia, None
         await _esvaziar_a_copia(copia, 0)
         self.porta.esquecer(vigiada.ficha)
-        self._marcar(mod_id, EstadoDaModificacao("desligada"))
+        self._marcar(mod_id, EstadoDaModificacao(estado))
 
 
 async def parar_o_grupo(processo: asyncio.subprocess.Process, prazo: float) -> int | None:
