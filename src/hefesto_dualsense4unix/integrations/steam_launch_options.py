@@ -1517,10 +1517,10 @@ def leitura_das_pastas_steamapps(home: Path | None = None) -> tuple[list[Path], 
                 encoding="utf-8", errors="replace"
             )
         except FileNotFoundError:
-            continue
+            texto = ""
         except OSError:
             alcancadas = False
-            continue
+            texto = ""
         for linha in texto.splitlines():
             par = _PAR_ACF.match(linha)
             if par is None or par.group("chave").lower() != "path":
