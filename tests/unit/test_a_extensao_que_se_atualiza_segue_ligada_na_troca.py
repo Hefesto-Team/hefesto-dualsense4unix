@@ -57,34 +57,54 @@ def _atualizar_e_listar(saidas: list[Any]) -> None:
     saidas.append(runner.invoke(cmd_mod.app, ["listar"]))
 
 
-def _trocar_vendo(lugares: Lugares, pasta: Path, **mais: Any) -> tuple[list[tuple[str, str]],
-                                                                        list[Any], Any]:
-    """Atualiza a extensão viva e lê o estado a cada 10 ms do pedido até a volta."""
-    vistos: list[tuple[str, str]] = []
-    saidas: list[Any] = []
+class _Troca:
+    """O que se leu e o que o supervisor gravou, do pedido de atualizar até a volta."""
 
-    async def corrida() -> Any:
+    def __init__(self) -> None:
+        self.vistos: list[tuple[str, str]] = []
+        self.gravados: list[str] = []
+        self.saidas: list[Any] = []
+        self.pids: tuple[int | None, int | None] = (None, None)
+
+
+def _trocar_vendo(lugares: Lugares, pasta: Path, **mais: Any) -> _Troca:
+    """Atualiza a extensão viva; lê o estado a cada 10 ms e guarda cada estado gravado."""
+    troca = _Troca()
+
+    async def corrida() -> None:
         sup = _supervisor(lugares, procurar_bwrap=False, intervalo_s=0.3)
+        gravar = sup._gravar_estado
+
+        def gravar_vendo() -> None:
+            estado = sup.estado_de("exemplo")
+            troca.gravados.append(estado.estado if estado else "")
+            gravar()
+
         await sup.iniciar()
         try:
             await _ate(lambda: _o_que_se_le(lugares)[0] == "rodando")
-            pid_velho = sup.pid_de("exemplo")
+            troca.pids = (sup.pid_de("exemplo"), None)
+            sup._gravar_estado = gravar_vendo  # type: ignore[method-assign]
             _nova_versao(pasta, "0.1.1", **mais)
-            gesto = threading.Thread(target=_atualizar_e_listar, args=(saidas,))
+            gesto = threading.Thread(target=_atualizar_e_listar, args=(troca.saidas,))
             gesto.start()
             while gesto.is_alive():
-                vistos.append(_o_que_se_le(lugares))
+                troca.vistos.append(_o_que_se_le(lugares))
                 await asyncio.sleep(0.01)
             gesto.join()
             assert ler_registro(lugares.registro)["exemplo"].versao == "0.1.1"
             final = "rodando" if ler_registro(lugares.registro)["exemplo"].ligada else "desligada"
-            await _ate(lambda: _o_que_se_le(lugares)[0] == final)
-            vistos.append(_o_que_se_le(lugares))
-            return pid_velho, sup.pid_de("exemplo")
+            while troca.vistos[-1][0] != final:
+                assert len(troca.vistos) < 2000, troca.vistos[-20:]
+                await asyncio.sleep(0.01)
+                troca.vistos.append(_o_que_se_le(lugares))
+            troca.pids = (troca.pids[0], sup.pid_de("exemplo"))
         finally:
+            sup._gravar_estado = gravar  # type: ignore[method-assign]
             await sup.parar()
 
-    return vistos, saidas, asyncio.run(corrida())
+    asyncio.run(corrida())
+    return troca
 
 
 def test_a_ligada_que_se_atualiza_nunca_aparece_desligada_e_volta_a_rodar(
@@ -94,17 +114,20 @@ def test_a_ligada_que_se_atualiza_nunca_aparece_desligada_e_volta_a_rodar(
     instalar(str(pasta), lugares=lar)
     _ligar_vendo("exemplo", lar)
 
-    vistos, (atualizou, listou), (pid_velho, pid_novo) = _trocar_vendo(lar, pasta)
+    troca = _trocar_vendo(lar, pasta)
 
+    atualizou, listou = troca.saidas
     assert atualizou.exit_code == 0, atualizou.output
     assert listou.exit_code == 0, listou.output
     assert "desligada" not in listou.output, listou.output
-    na_lista = [lista for lista, _ in vistos]
-    na_tela = [tela for _, tela in vistos]
+    na_lista = [lista for lista, _ in troca.vistos]
+    na_tela = [tela for _, tela in troca.vistos]
     assert "desligada" not in na_lista, na_lista
     assert "desligada" not in na_tela, na_tela
-    assert "atualizando" in na_lista, "a troca do código é um estado próprio"
-    assert na_lista[-1] == "rodando"
+    assert "desligada" not in troca.gravados, troca.gravados
+    assert "atualizando" in troca.gravados, "a troca do código é um estado próprio"
+    assert na_lista[-1] == "rodando" and troca.gravados[-1] == "rodando"
+    pid_velho, pid_novo = troca.pids
     assert pid_novo is not None and pid_novo != pid_velho, "o serviço reabriu a versão nova"
     assert ler_registro(lar.registro)["exemplo"].ligada
 
@@ -116,13 +139,16 @@ def test_a_versao_que_pede_permissao_nova_termina_desligada_com_o_motivo(
     instalar(str(pasta), lugares=lar)
     _ligar_vendo("exemplo", lar)
 
-    vistos, (atualizou, _listou), (_pid_velho, pid_novo) = _trocar_vendo(
-        lar, pasta, permissoes=["ler:estado", "escrever:luz", "ler:bateria"])
+    troca = _trocar_vendo(lar, pasta, permissoes=["ler:estado", "escrever:luz", "ler:bateria"])
 
+    atualizou = troca.saidas[0]
     assert atualizou.exit_code == 0, atualizou.output
     assert "ler:bateria" in atualizou.output and "mod ligar exemplo" in atualizou.output
-    assert vistos[-1] == ("desligada", "desligada")
-    assert pid_novo is None
+    assert troca.vistos[-1] == ("desligada", "desligada")
+    primeira = troca.gravados.index("desligada")
+    assert "atualizando" in troca.gravados[:primeira], troca.gravados
+    assert set(troca.gravados[primeira:]) == {"desligada"}, troca.gravados
+    assert troca.pids[1] is None
     assert not ler_registro(lar.registro)["exemplo"].ligada
 
 
