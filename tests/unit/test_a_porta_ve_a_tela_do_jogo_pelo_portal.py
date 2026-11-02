@@ -121,6 +121,9 @@ def test_a_regiao_fora_da_forma_e_recusada() -> None:
                    {**base, "nome": "Vida!"}, {k: v for k, v in base.items() if k != "y"}):
         with pytest.raises(tj.TelaRecusadaError):
             tj.regioes_da_receita([errada])
+    for medida in ("x", "y", "largura", "altura"):
+        with pytest.raises(tj.TelaRecusadaError, match="sai da tela"):
+            tj.regioes_da_receita([{**base, medida: float("nan")}])
     with pytest.raises(tj.TelaRecusadaError):
         tj.regioes_da_receita([base] * (tj.REGIOES_POR_RECEITA + 1))
     with pytest.raises(tj.TelaRecusadaError, match="repete"):

@@ -185,7 +185,8 @@ def regioes_da_receita(lista: Sequence[Mapping[str, Any]]) -> tuple[Regiao, ...]
         if (len(cor) != 3 or any(not 0 <= v <= 255 for v in cor)
                 or not 0 <= tolerancia <= 255):
             raise TelaRecusadaError(f"A cor de «{nome}» precisa de três valores de 0 a 255.")
-        if (min(x, y) < 0 or largura <= 0 or altura <= 0
+        if (not all(math.isfinite(v) for v in (x, y, largura, altura))
+                or min(x, y) < 0 or largura <= 0 or altura <= 0
                 or x + largura > 1 or y + altura > 1):
             raise TelaRecusadaError(f"«{nome}» sai da tela.")
         regioes.append(Regiao(nome, x, y, largura, altura, (cor[0], cor[1], cor[2]), tolerancia))
