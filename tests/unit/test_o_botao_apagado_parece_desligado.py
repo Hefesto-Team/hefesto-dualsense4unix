@@ -19,6 +19,8 @@ de opacidade, de borda ou de peso.
 A MORDIDA (02/11/2026): tirar a `opacity:.45` do `.btn.apagado` do `CSS_FOLHA` e regerar as abas
 reprova a letra em sete abas (01, 02, 05, 06, 07, 09 e 10) e a mudança em duas (05 e 09, o
 Parar de regra local); a 08 já tinha opacidade na folha própria, e a 03 e a 04 não mostram botão.
+Trocar a letra do apagado por `var(--comment)` no `CSS_FOLHA` e regerar as abas mantém verdes as
+duas primeiras réguas (o contraste cai e a opacidade muda) e reprova a da letra cinza.
 """
 from __future__ import annotations
 
@@ -31,6 +33,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("abre a página num WebKit")
 
 from hefesto_dualsense4unix.interface import onde
+from tests.unit.test_a_letra_cinza_saiu_das_abas import CINZAS
 from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
 
 PAGINAS = [
@@ -129,6 +132,14 @@ def test_o_apagado_muda_pela_opacidade_pela_borda_ou_pelo_peso(aba: str) -> None
     iguais = [par["rotulo"] for par in _pares(aba)
               if all(par[k] == par["apagado"][k] for k in ("opacidade", "borda", "peso"))]
     assert not iguais, f"{aba}: apagados sem opacidade, borda nem peso próprios: {iguais}"
+
+
+@pytest.mark.parametrize("aba", PAGINAS)
+def test_a_letra_do_apagado_nunca_e_cinza(aba: str) -> None:
+    """D-1610-O-CINZA-SAI-DA-LETRA: o apagado esmaece sem pintar a letra de um dos três cinzas."""
+    cinzas = [(par["rotulo"], par["apagado"]["cor"]) for par in _pares(aba)
+              if par["apagado"]["cor"] in CINZAS]
+    assert not cinzas, f"{aba}: apagados com a letra cinza (rótulo, cor): {cinzas}"
 
 
 def test_a_regua_mede_botoes_de_verdade() -> None:
