@@ -1763,8 +1763,7 @@ class Porta:
             except (OSError, ValueError, asyncio.IncompleteReadError, asyncio.TimeoutError):
                 await asyncio.sleep(ESPERA_DO_LEITOR_S)
             finally:
-                with contextlib.suppress(Exception):
-                    writer.close()
+                writer.close()
 
     async def _varrer(self, sessao: _Credencial, metodo: str,
                       params: dict[str, Any]) -> dict[str, Any]:
@@ -1783,8 +1782,7 @@ class Porta:
         except (OSError, ValueError, asyncio.IncompleteReadError, asyncio.TimeoutError) as exc:
             raise RecusaError(CODE_NAO_ESCREVEU, "o leitor do jogo não respondeu") from exc
         finally:
-            with contextlib.suppress(Exception):
-                writer.close()
+            writer.close()
         if "recusa" in resposta:
             raise RecusaError(CODE_NAO_ESCREVEU, str(resposta["recusa"]))
         return resposta
