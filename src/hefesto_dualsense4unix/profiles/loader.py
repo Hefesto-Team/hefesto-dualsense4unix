@@ -1534,8 +1534,8 @@ class _FontesLidas:
     """O que a varredura leu inteiro: só a fonte lida esquece a linha do jogo que saiu da fonte.
 
     ``presentes`` são as identidades achadas em qualquer fonte, antes de tirar o lançador
-    desligado. A linha da Steam (appid) se esquece só com ``steam_lida``; a ``janela:<classe>``,
-    só com ``janelas_lidas``.
+    desligado. A ``janela:<classe>`` se esquece só com ``janelas_lidas``; a linha numérica, só
+    com as duas lidas, porque o jogo de lançador que anuncia ``steam_app_<N>`` também é ``<N>``.
     """
 
     presentes: frozenset[str] = frozenset()
@@ -1565,7 +1565,7 @@ def _ler_as_fontes_dos_jogos(home: Path | None) -> tuple[list[JogoLocal], _Fonte
 def _esquecer_os_jogos_que_sairam(marca: Path, fontes: _FontesLidas) -> None:
     """Tira da marca a linha do jogo que saiu de uma fonte lida inteira; chamar sob a trava."""
     bruto = _texto_da_marca(marca)
-    if not bruto or not (fontes.steam_lida or fontes.janelas_lidas):
+    if not bruto:
         return
     ficam: list[str] = []
     esquecidas: list[str] = []
@@ -1573,7 +1573,7 @@ def _esquecer_os_jogos_que_sairam(marca: Path, fontes: _FontesLidas) -> None:
         lidas = _linhas_da_marca_do_texto(linha)
         identidade = lidas[0][0] if lidas else ""
         da_janela = identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA)
-        lida = fontes.janelas_lidas if da_janela else fontes.steam_lida
+        lida = fontes.janelas_lidas and (da_janela or fontes.steam_lida)
         if identidade and lida and identidade not in fontes.presentes:
             if identidade not in esquecidas:
                 esquecidas.append(identidade)

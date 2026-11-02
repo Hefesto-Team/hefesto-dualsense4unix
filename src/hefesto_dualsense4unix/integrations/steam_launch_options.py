@@ -1486,6 +1486,16 @@ def raizes_de_jogos(home: Path | None = None) -> list[Path]:
 
 def pastas_steamapps(home: Path | None = None) -> list[Path]:
     """A `steamapps` de CADA raiz de Steam mais as bibliotecas do `libraryfolders.vdf`."""
+    return leitura_das_pastas_steamapps(home)[0]
+
+
+def leitura_das_pastas_steamapps(home: Path | None = None) -> tuple[list[Path], bool]:
+    """As pastas de :func:`pastas_steamapps` e se TODA biblioteca da Steam se alcançou.
+
+    O ``False`` diz que um `libraryfolders.vdf` existe e não se lê, ou que ele lista uma
+    biblioteca cuja `steamapps` não está no disco (o disco desmontado): os jogos do usuário podem
+    faltar sem terem saído.
+    """
     try:
         from .proton_pin import default_steam_root
     except ImportError:  # pragma: no cover
@@ -1496,24 +1506,32 @@ def pastas_steamapps(home: Path | None = None) -> list[Path]:
         raizes = [default_steam_root(home)]
     pastas: list[Path] = []
     vistas: set[Path] = set()
+    alcancadas = True
     for raiz in raizes:
         base_apps = raiz / "steamapps"
         if _real(base_apps) not in vistas:
             pastas.append(base_apps)
             vistas.add(_real(base_apps))
-        with contextlib.suppress(OSError):
+        try:
             texto = (base_apps / "libraryfolders.vdf").read_text(
                 encoding="utf-8", errors="replace"
             )
-            for linha in texto.splitlines():
-                par = _PAR_ACF.match(linha)
-                if par is None or par.group("chave").lower() != "path":
-                    continue
-                candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
-                if candidata.is_dir() and _real(candidata) not in vistas:
-                    pastas.append(candidata)
-                    vistas.add(_real(candidata))
-    return pastas
+        except FileNotFoundError:
+            continue
+        except OSError:
+            alcancadas = False
+            continue
+        for linha in texto.splitlines():
+            par = _PAR_ACF.match(linha)
+            if par is None or par.group("chave").lower() != "path":
+                continue
+            candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
+            if not candidata.is_dir():
+                alcancadas = False
+            elif _real(candidata) not in vistas:
+                pastas.append(candidata)
+                vistas.add(_real(candidata))
+    return pastas, alcancadas
 
 
 def nome_do_appid(appid: str, home: Path | None = None) -> str | None:

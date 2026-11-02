@@ -14,6 +14,7 @@ from pathlib import Path
 from hefesto_dualsense4unix.integrations.steam_launch_options import (
     _PAR_ACF,
     _desescapar_acf,
+    leitura_das_pastas_steamapps,
     pastas_steamapps,
 )
 from hefesto_dualsense4unix.profiles.steam_app import (
@@ -168,11 +169,14 @@ _MANIFESTO_DA_STEAM_RE = re.compile(r"^appmanifest_(\d+)\.acf$")
 def appids_instalados_na_steam(home: Path | None = None) -> frozenset[str] | None:
     """Os appids com `appmanifest_<N>.acf` em toda biblioteca, pelo NOME do arquivo.
 
-    ``None`` diz que a biblioteca não se leu: nenhuma `steamapps` existe, ou alguma não se lista
-    (o `glob` devolve vazio calado na pasta sem permissão; o `listdir` levanta). O manifesto que
-    não se lê ainda conta como instalado.
+    ``None`` diz que a biblioteca não se leu: nenhuma `steamapps` existe, alguma não se lista
+    (o `glob` devolve vazio calado na pasta sem permissão; o `listdir` levanta), ou o
+    `libraryfolders.vdf` não se lê ou lista uma biblioteca fora do disco. O manifesto que não
+    se lê ainda conta como instalado.
     """
-    pastas = pastas_steamapps(home)
+    pastas, alcancadas = leitura_das_pastas_steamapps(home)
+    if not alcancadas:
+        return None
     appids: set[str] = set()
     for pasta in pastas:
         try:
