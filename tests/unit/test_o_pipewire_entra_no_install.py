@@ -86,6 +86,9 @@ FUNCOES_EXTRAIDAS = (
     "_avisa_pacote_a_meio",
     "_pw_da_casa_serve_aqui",
     "_pw_nome_da_distro",
+    "_pw_entrega_confere",
+    "_pw_publica_o_repositorio",
+    "_pw_fonte_no_curado",
     "install_pipewire_da_casa",
 )
 
@@ -274,6 +277,9 @@ def _correr(
             "AUTO_YES": "1",
             "DRY_RUN": "1" if dry_run else "0",
             "_OS_RELEASE": str(os_release),
+            "_PW_REPO": str(tmp_path / "repo"),
+            "_PW_FONTE": str(tmp_path / "hefesto-pipewire.sources"),
+            "TMPDIR": str(tmp_path),
         },
         capture_output=True,
         text=True,
@@ -438,12 +444,12 @@ def test_nunca_rebaixa(tmp_path: Path) -> None:
     assert c.instalados() == INSTALADOS_DO_POP - {"wireplumber", "libwireplumber-0.5-0"}
 
 
-def test_com_a_cura_ja_instalada_nem_constroi(tmp_path: Path) -> None:
+def test_com_a_cura_ja_instalada_pela_distro_nem_constroi(tmp_path: Path) -> None:
     maquina = dict(MAQUINA_DO_POP)
-    maquina["libpipewire-0.3-modules"] = ("ii ", "libpipewire-0.3-modules:amd64", PW)
-    maquina["wireplumber"] = ("ii ", "wireplumber", WP)
+    maquina["libpipewire-0.3-modules"] = ("ii ", "libpipewire-0.3-modules:amd64", "1.6.10-1")
+    maquina["wireplumber"] = ("ii ", "wireplumber", "0.5.19-1")
     c = _correr(tmp_path, maquina=maquina)
-    assert "nada a fazer" in c.saida, c.saida
+    assert "nada a trocar" in c.saida, c.saida
     assert not c.chamou("construtor"), c.chamadas
 
 

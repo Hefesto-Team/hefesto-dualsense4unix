@@ -21,8 +21,11 @@ Constrói o `1.6.9-0~hefesto24.04.1` e o `0.5.18-0~hefesto24.04.1` e entrega os
 usa sudo.** Quem instala é o `./install.sh`, no passo 3f-bis, e só no Pop!_OS
 24.04 (o empacotamento é o dele; em outra distro o passo fica de fora): ele chama este
 script, confere o `SHA256SUMS`, grava o caminho de volta, fixa a prioridade do
-apt, instala só os pacotes que a máquina já tem e reinicia o som. Com a Steam
-aberta, ele recusa e manda fechá-la pelo menu. A instalação à mão é a de
+apt, instala só os pacotes que a máquina já tem, publica a entrega conferida
+como fonte local do apt (`/var/lib/hefesto-dualsense4unix/apt-pipewire`, lida pela
+`/etc/apt/sources.list.d/hefesto-pipewire.sources`) e reinicia o som. Com a
+1.6.9 já instalada, ele só publica a fonte. Com a Steam aberta, ele recusa e
+manda fechá-la pelo menu. A instalação à mão é a de
 [Instalar](#instalar).
 
 ## De onde vem cada peça
@@ -172,12 +175,31 @@ Steam antes.
    1.6.8 exata, e a 1.6.9 não o constrói. Só a câmera pelo PipeWire perde o
    caminho do libcamera; a pelo V4L2 continua.
 
-5. Reinicie o som: `systemctl --user restart pipewire pipewire-pulse wireplumber`.
-6. Meça o depois: `pipewire --version` diz 1.6.9, `wpctl status` responde, e o
+5. Publique a entrega como fonte do apt. A 1.6.9 instalada por arquivo só existe
+   no `/var/lib/dpkg/status`, e um pacote irmão pedido depois (o
+   `gstreamer1.0-pipewire`, o `pipewire-jack`) cairia no do Pop, que exige a
+   versão exata dele: o apt acusa pacotes quebrados. Com a fonte, o apt acha a
+   1.6.9 de cada irmão, e a prioridade do passo 3 decide pela versão mais nova:
+
+   ```bash
+   sudo install -d -m 0755 /var/lib/hefesto-dualsense4unix/apt-pipewire
+   sudo install -m 0644 SHA256SUMS *.deb /var/lib/hefesto-dualsense4unix/apt-pipewire/
+   cd /var/lib/hefesto-dualsense4unix/apt-pipewire && sha256sum -c SHA256SUMS
+   apt-ftparchive packages . | sudo tee Packages >/dev/null
+   apt-ftparchive release . | sudo tee Release >/dev/null
+   printf 'Types: deb\nURIs: file:/var/lib/hefesto-dualsense4unix/apt-pipewire\nSuites: ./\nTrusted: yes\n' \
+       | sudo tee /etc/apt/sources.list.d/hefesto-pipewire.sources >/dev/null
+   sudo apt-get update -o Dir::Etc::SourceList=/etc/apt/sources.list.d/hefesto-pipewire.sources \
+       -o Dir::Etc::SourceParts=- -o APT::Get::List-Cleanup=0
+   ```
+
+6. Reinicie o som: `systemctl --user restart pipewire pipewire-pulse wireplumber`.
+7. Meça o depois: `pipewire --version` diz 1.6.9, `wpctl status` responde, e o
    `doctor` não tem WARN em `pipewire`. Teste o som e o microfone de cada
    controle e feche a Steam pelo menu depois de jogar.
 
-Para voltar: apague o `/etc/apt/preferences.d/hefesto-pipewire` e rode
+Para voltar: apague o `/etc/apt/preferences.d/hefesto-pipewire`, a
+`/etc/apt/sources.list.d/hefesto-pipewire.sources` e o `/var/lib/hefesto-dualsense4unix/apt-pipewire`, e rode
 `sudo apt install --allow-downgrades $(cat VERSOES-ANTERIORES.txt)`.
 
 ## O que muda para o Hefesto

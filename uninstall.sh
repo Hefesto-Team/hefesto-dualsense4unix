@@ -219,6 +219,7 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
 [[ -e /etc/apt/preferences.d/hefesto-pipewire ]] && _NEEDS_SUDO=1
+[[ -e /etc/apt/sources.list.d/hefesto-pipewire.sources || -e /var/lib/hefesto-dualsense4unix/apt-pipewire ]] && _NEEDS_SUDO=1
 [[ -f "${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt" ]] \
     && [[ "${RESTORE_PIPEWIRE}" -eq 1 || ( "${AUTO_YES}" -eq 0 && -t 0 ) ]] && _NEEDS_SUDO=1
 [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1
@@ -1158,11 +1159,13 @@ else
 fi
 
 PIPEWIRE_PREF=/etc/apt/preferences.d/hefesto-pipewire
+PIPEWIRE_FONTE=/etc/apt/sources.list.d/hefesto-pipewire.sources
+PIPEWIRE_REPO=/var/lib/hefesto-dualsense4unix/apt-pipewire
 devolver_o_pipewire() {
     local registro="${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt"
     local devolver=0 steam=0 pacote ver atual resp sairia
     local pkgs=()
-    if [[ ! -f "${registro}" && ! -e "${PIPEWIRE_PREF}" ]]; then
+    if [[ ! -f "${registro}" && ! -e "${PIPEWIRE_PREF}" && ! -e "${PIPEWIRE_FONTE}" && ! -e "${PIPEWIRE_REPO}" ]]; then
         log "sem registro do PipeWire de antes (${registro} ausente) — nada a devolver"
         return 0
     fi
@@ -1252,6 +1255,17 @@ devolver_o_pipewire() {
         else
             log "sudo indisponível — a trava do apt NÃO foi removida"
             log "  sudo rm -f ${PIPEWIRE_PREF}"
+        fi
+    fi
+    if [[ -e "${PIPEWIRE_FONTE}" || -e "${PIPEWIRE_REPO}" ]]; then
+        if sudo -n true 2>/dev/null && sudo rm -f "${PIPEWIRE_FONTE}" \
+            && sudo rm -rf "${PIPEWIRE_REPO}" "${PIPEWIRE_REPO}.novo" \
+            && sudo find /var/lib/apt/lists -maxdepth 1 -name '_var_lib_hefesto-dualsense4unix_apt-pipewire_*' -delete; then
+            sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
+            log "removida a fonte do apt do PipeWire da casa (${PIPEWIRE_FONTE} e ${PIPEWIRE_REPO})"
+        else
+            log "sudo indisponível — a fonte do apt do PipeWire da casa NÃO foi removida"
+            log "  sudo rm -rf ${PIPEWIRE_FONTE} ${PIPEWIRE_REPO}"
         fi
     fi
 }
