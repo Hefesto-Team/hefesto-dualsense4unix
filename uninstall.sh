@@ -1648,6 +1648,13 @@ if [[ -e "${AUDIO_KS_TARGET}" ]]; then
     log "removendo o curador do device KS ${AUDIO_KS_TARGET}"
     rm -f "${AUDIO_KS_TARGET}"
 fi
+for _leitor in "${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-leitor-do-estado" \
+               "${HOME}/.local/share/hefesto-dualsense4unix/bin/anticheat_conhecido.json"; do
+    if [[ -e "${_leitor}" ]]; then
+        log "removendo o leitor do estado do jogo ${_leitor}"
+        rm -f "${_leitor}"
+    fi
+done
 
 readonly LAUNCH_WRAPPER="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 if [[ -e "${LAUNCH_WRAPPER}" ]]; then

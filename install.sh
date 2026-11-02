@@ -2904,6 +2904,19 @@ else
     warn "audio_ks_dualsense.py ausente — a háptica nativa do DualSense não chega aos jogos RE Engine"
 fi
 
+readonly LEITOR_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/leitor_do_estado.py"
+readonly LEITOR_ANTICHEAT_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/anticheat_conhecido.json"
+readonly LEITOR_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-leitor-do-estado"
+readonly LEITOR_ANTICHEAT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/anticheat_conhecido.json"
+if [[ "${DRY_RUN:-0}" -eq 1 && -f "${LEITOR_SRC}" ]]; then
+    _faria "instalar o leitor do estado do jogo em ${LEITOR_TARGET}"
+elif [[ -f "${LEITOR_SRC}" && -f "${LEITOR_ANTICHEAT_SRC}" ]]; then
+    install -Dm755 "${LEITOR_SRC}" "${LEITOR_TARGET}"
+    install -Dm644 "${LEITOR_ANTICHEAT_SRC}" "${LEITOR_ANTICHEAT_TARGET}"
+else
+    warn "leitor_do_estado.py ou anticheat_conhecido.json ausente — a chave Memória do Modo imersão não lê o jogo"
+fi
+
 readonly PECA_GDK_PINO="${ROOT_DIR}/assets/gdk-runtime/pino.txt"
 readonly PECA_GDK_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/x86_64-windows/xgameruntime.dll"
 readonly PECA_GAMEINPUT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/nativa/gameinput.dll"
