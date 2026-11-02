@@ -219,11 +219,10 @@ def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str]) -> None:
     """
     caminhos = [str(p) for mod_id in ids for p in (lg.codigo / mod_id, lg.dados / mod_id)]
     caminhos.append(str(lg.registro))
-    quando = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    linha = (f"{quando} [gesto] mod {verbo} {' '.join(ids)} → "
-             f"{json.dumps(caminhos, ensure_ascii=False)}\n")
     diario = lg.diario_dos_gestos
     with contextlib.suppress(OSError):
+        linha = (f"{time.strftime('%Y-%m-%d %H:%M:%S')} [gesto] mod {verbo} {' '.join(ids)} → "
+                 f"{json.dumps(caminhos, ensure_ascii=False)}\n")
         diario.parent.mkdir(parents=True, exist_ok=True)
         with contextlib.suppress(FileNotFoundError):
             if diario.stat().st_size > TETO_DO_DIARIO_DOS_GESTOS_BYTES:

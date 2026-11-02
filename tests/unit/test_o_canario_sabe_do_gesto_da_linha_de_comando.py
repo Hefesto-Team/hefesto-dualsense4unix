@@ -73,7 +73,7 @@ def real(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (lar / "run").mkdir()
     _morar_em(lar, monkeypatch)
     _mod("instalar", str(_fonte(tmp_path)))
-    _diario(lar).unlink()
+    _diario(lar).unlink(missing_ok=True)
     return lar
 
 
