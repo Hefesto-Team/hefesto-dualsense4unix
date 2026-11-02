@@ -2655,22 +2655,25 @@ def o_modo_do_perfil(prof: Any) -> dict[str, str]:
         return {}
     modo = modo_do_perfil(prof)
     return {f"{GESTO_DO_MODO}-{m.MODO_AUTOMATICO}": "sim" if modo == m.MODO_AUTOMATICO else "",
-            **m.campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo)}
+            **m.campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo, pede=True)}
 
 
 @gesto("10-perfis.html", GESTO_DO_MODO, grava="_gravar")
 def editor_modos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O modo do perfil inteiro: grava o pedido nas quatro seções (controles, gatilhos, luz e
-    vibração), que cada aba mostra na sua. Pedir o modo em que o perfil já está não grava nada."""
+    vibração), que cada aba mostra na sua. O botão diz o modo que ele é (`data-pede`): o clique
+    liga esse modo e, no botão do modo em que o perfil já está, volta ao Personalizado."""
     m = _monta()
-    pedido = str(o.get("modo") or "")
-    if not m.pedido_da_aba(pedido, ABA_DO_MODO):
+    pede = str(o.get("pede") or "")
+    if not m.pedido_da_aba(pede, ABA_DO_MODO):
         raise ValueError(
-            f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-modo`; "
+            f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-pede`; "
             f"um pedido sem ele não vem da tela")
     nome = _perfil_do_editor(ctx)
     prof = _o_perfil_no_disco(nome)
-    if modo_do_perfil(prof) == pedido:
+    agora = modo_do_perfil(prof)
+    pedido = m.MODO_PERSONALIZADO if agora == pede else pede
+    if agora == pedido:
         return None
     _gravar(prof.model_copy(update={
         "controles_modo": pedido,

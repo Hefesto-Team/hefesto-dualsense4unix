@@ -826,7 +826,7 @@ MIOLO = f'''
               </div>
               <div class="campo">
                 <span data-dica="O modo do perfil inteiro; cada aba o mostra na sua seção">Modo:</span>
-                <span class="val">{modo_auto("editor.modos", dica="O jogo decide em todas as abas; o estilo ajusta o resto")}{vaga_da_extensao("editor.modos")}</span>
+                <span class="val">{modo_auto("editor.modos", dica="O jogo decide em todas as abas; o estilo ajusta o resto", pede=True)}{vaga_da_extensao("editor.modos")}</span>
               </div>
               <div class="ordem-vale on" data-hef="editor.ordem.ha" data-hef-alvo="classe" data-hef-classe="on">
                 <div class="cab" data-dica="Arraste: o de cima vale quando os dois servem">Qual vale primeiro</div>
@@ -1137,10 +1137,10 @@ def _conferir(html: str) -> None:
     exigir('<div class="campo modo">' not in html,
            "o quadro Modo voltou ao editor de Perfis — ele sai por ordem "
            "de 11/09/2026, e a aba onde o modo se escolhe é a Jogar")
-    exigir(re.search(r'<button(?![^>]*class="modo-(?:auto|ext)")[^>]*data-modo="', html) is None,
-           "um botão desta aba voltou a carregar `data-modo` — fora do par do Modo automático "
-           "(o contrato da base comum), o atributo é do quadro que saiu, e a régua de ponteiros "
-           "da casa o lê como modo")
+    exigir('data-modo="' not in html,
+           "um botão desta aba voltou a carregar `data-modo` — o atributo é do quadro que saiu; "
+           "o modo do perfil inteiro leva o `data-pede`, porque a régua de ponteiros da casa lê "
+           "o `data-modo` como modo")
     exigir('data-hef="editor.modo"' not in html,
            "o endereço `editor.modo` voltou à página — o gesto que o gravava "
            "saiu de `a10_perfis` junto com o quadro, e um endereço sem gesto é "

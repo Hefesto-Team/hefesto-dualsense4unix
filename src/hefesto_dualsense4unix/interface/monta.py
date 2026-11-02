@@ -422,7 +422,7 @@ DICA_DO_MODO_AUTO = "O jogo decide; o estilo do perfil ajusta o resto"
 
 
 def modo_auto(gesto: str, ligado: bool = False, governa: str = "",
-              dica: str = DICA_DO_MODO_AUTO) -> str:
+              dica: str = DICA_DO_MODO_AUTO, *, pede: bool = False) -> str:
     """O Modo automático como UM botão (A-BASE-COMUM-DAS-ABAS-01, 13/10/2026).
 
     Ligado (`aria-pressed="true"`), o botão fica ciano e a área que o `governa` (um seletor
@@ -430,11 +430,14 @@ def modo_auto(gesto: str, ligado: bool = False, governa: str = "",
     e no produto. O clique alterna os dois modos no MESMO gesto de hoje (`data-modo` leva o
     que o clique PEDE, e a base o mantém no sentido contrário do estado).
     O campo é o do botão «automático» do par antigo, e o piloto o pinta pelo `aria-pressed`.
+    Com ``pede``, o botão diz só o modo que ele é (`data-pede`) e o gesto alterna pelo modo
+    gravado: a forma da aba Perfis, onde o `data-modo` é do quadro que saiu.
     """
     pedido = MODO_PERSONALIZADO if ligado else MODO_AUTOMATICO
     alvo = f' data-governa="{html.escape(governa, quote=True)}"' if governa else ""
+    atributo = f'data-pede="{MODO_AUTOMATICO}"' if pede else f'data-modo="{pedido}"'
     return (f'<button class="modo-auto" type="button" data-gesto="{gesto}"'
-            f' data-modo="{pedido}" data-campo="{gesto}-{MODO_AUTOMATICO}"'
+            f' {atributo} data-campo="{gesto}-{MODO_AUTOMATICO}"'
             f' data-hef-alvo="classe" data-hef-classe="ligado"'
             f' data-hef-atributo="aria-pressed" aria-pressed="{str(ligado).lower()}"'
             f' data-dica="{html.escape(dica, quote=True)}"{alvo}>'
@@ -503,25 +506,28 @@ def rotulo_do_modo(pedido: str, aba: str) -> str:
     return ROTULO_DO_MODO.get(pedido, pedido)
 
 
-def modos_da_extensao(gesto: str, aba: str, modo: str) -> str:
+def modos_da_extensao(gesto: str, aba: str, modo: str, *, pede: bool = False) -> str:
     """O botão de cada modo que uma extensão ligada traz para a aba, com o `modo` da seção aceso.
-    O clique pede o modo apagado e, aceso, o Personalizado (os dois botões apagados)."""
+    O clique pede o modo apagado e, aceso, o Personalizado (os dois botões apagados). Com
+    ``pede``, o botão diz só o modo que ele é (`data-pede`), como o :func:`modo_auto`."""
     botoes = []
     for m in modos_da_aba(aba):
         aceso = m["valor"] == modo
         pedido = MODO_PERSONALIZADO if aceso else m["valor"]
+        atributo = (f'data-pede="{html.escape(str(m["valor"]), quote=True)}"' if pede
+                    else f'data-modo="{html.escape(pedido, quote=True)}"')
         botoes.append(
             f'<button class="modo-ext" type="button" data-gesto="{gesto}"'
-            f' data-modo="{html.escape(pedido, quote=True)}"'
+            f' {atributo}'
             f' aria-pressed="{str(aceso).lower()}"'
             f' data-dica="{html.escape(str(m["dica"]), quote=True)}">'
             f'<span class="p"></span>{html.escape(str(m["rotulo"]))}</button>')
     return "".join(botoes)
 
 
-def campo_da_extensao(gesto: str, aba: str, modo: str) -> dict[str, str]:
+def campo_da_extensao(gesto: str, aba: str, modo: str, *, pede: bool = False) -> dict[str, str]:
     """O campo que enche a vaga da extensão: vazio sem extensão ligada que peça a aba."""
-    return {f"{gesto}-{CAMPO_DA_EXTENSAO}": modos_da_extensao(gesto, aba, modo)}
+    return {f"{gesto}-{CAMPO_DA_EXTENSAO}": modos_da_extensao(gesto, aba, modo, pede=pede)}
 
 
 def rotulo_do_chip(c: dict[str, Any]) -> str:

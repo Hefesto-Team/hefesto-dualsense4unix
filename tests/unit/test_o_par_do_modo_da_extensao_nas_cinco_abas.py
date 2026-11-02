@@ -4,7 +4,8 @@ Sem extensão ligada que peça a aba, nenhum botão no DOM: a vaga nasce vazia e
 seção que mora no Jogar), Gatilhos, Iluminação, Vibração e Perfis. Com uma extensão de mentira
 ligada, o botão aparece nas cinco; aceso, apaga o automático (e o clique nele pede o
 Personalizado); desligar a extensão o tira, e o perfil guarda a escolha. O gesto de cada aba grava
-o pedido na própria seção, o de Perfis nas quatro. Lar de mentira: o ``conftest`` desvia ``HOME`` e
+o pedido na própria seção, o de Perfis nas quatro, pelo `data-pede` (o `data-modo` é do quadro que
+saiu da Perfis). Lar de mentira: o ``conftest`` desvia ``HOME`` e
 os ``XDG_*``.
 """
 from __future__ import annotations
@@ -178,20 +179,19 @@ def test_a_extensao_ligada_traz_o_botao_nas_cinco_e_desligada_o_tira(
 def test_o_pedido_aceso_apaga_o_automatico_e_o_clique_nele_pede_o_personalizado(
         lg: instalador.Lugares, pac: Any, pasta_de_perfis: pathlib.Path) -> None:
     _instalada(lg)
-    _salvar(MODO)
-    for aba in ("03", "04", "05", "10"):
-        gesto = CINCO[aba][1]
-        dados = _pacote(pac, aba)
-        assert dados[f"{gesto}-{MODO_AUTOMATICO}"] == "", aba
-        [botao] = _botoes(dados[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
-        assert (botao["aria-pressed"], botao["data-modo"]) == ("true", MODO_PERSONALIZADO), aba
-    _salvar(MODO_AUTOMATICO)
-    for aba in ("03", "04", "05", "10"):
-        gesto = CINCO[aba][1]
-        dados = _pacote(pac, aba)
-        assert dados[f"{gesto}-{MODO_AUTOMATICO}"] == "sim", aba
-        [botao] = _botoes(dados[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
-        assert (botao["aria-pressed"], botao["data-modo"]) == ("false", MODO), aba
+    for modo, aceso, pedido, auto in ((MODO, "true", MODO_PERSONALIZADO, ""),
+                                      (MODO_AUTOMATICO, "false", MODO, "sim")):
+        _salvar(modo)
+        for aba in ("03", "04", "05", "10"):
+            gesto = CINCO[aba][1]
+            dados = _pacote(pac, aba)
+            assert dados[f"{gesto}-{MODO_AUTOMATICO}"] == auto, aba
+            [botao] = _botoes(dados[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
+            if aba == "10":
+                assert "data-modo" not in botao
+                assert (botao["aria-pressed"], botao["data-pede"]) == (aceso, MODO)
+            else:
+                assert (botao["aria-pressed"], botao["data-modo"]) == (aceso, pedido), aba
 
 
 def test_desligada_a_aba_pinta_o_personalizado_e_o_perfil_guarda_o_pedido(
@@ -233,8 +233,9 @@ def test_o_gesto_recusa_o_modo_da_extensao_desligada(
     _salvar()
     for aba in ("02", "03", "04", "05", "10"):
         pagina, gesto = CINCO[aba]
+        chave = "pede" if aba == "10" else "modo"
         with pytest.raises(ValueError):
-            pac.gesto_da_pagina(pagina, gesto)(_ctx(pac), {"modo": MODO, "uniq": UM}, Ponte())
+            pac.gesto_da_pagina(pagina, gesto)(_ctx(pac), {chave: MODO, "uniq": UM}, Ponte())
     assert MODO not in _modos_no_disco()
 
 
@@ -243,15 +244,21 @@ def test_o_modo_de_perfis_grava_as_quatro_secoes_e_volta_ao_personalizado(
     _instalada(lg)
     _salvar()
     funcao = pac.gesto_da_pagina("10-perfis.html", "editor.modos")
-    with pytest.raises(ValueError):
-        funcao(_ctx(pac), {"modo": OUTRO}, Ponte())
-    funcao(_ctx(pac), {"modo": MODO}, Ponte())
+    for ruim in ({"pede": OUTRO}, {"modo": MODO}, {"modo": MODO_AUTOMATICO}):
+        with pytest.raises(ValueError):
+            funcao(_ctx(pac), ruim, Ponte())
+    funcao(_ctx(pac), {"pede": MODO}, Ponte())
     assert _modos_no_disco() == (MODO,) * 4
-    assert funcao(_ctx(pac), {"modo": MODO}, Ponte()) is None
-    funcao(_ctx(pac), {"modo": MODO_AUTOMATICO}, Ponte())
+    funcao(_ctx(pac), {"pede": MODO_AUTOMATICO}, Ponte())
     assert _modos_no_disco() == (MODO_AUTOMATICO,) * 4
-    funcao(_ctx(pac), {"modo": MODO_PERSONALIZADO}, Ponte())
+    funcao(_ctx(pac), {"pede": MODO_AUTOMATICO}, Ponte())
     assert _modos_no_disco() == (MODO_PERSONALIZADO,) * 4
+    assert funcao(_ctx(pac), {"pede": MODO_PERSONALIZADO}, Ponte()) is None
+    funcao(_ctx(pac), {"pede": MODO}, Ponte())
+    funcao(_ctx(pac), {"pede": MODO}, Ponte())
+    assert _modos_no_disco() == (MODO_PERSONALIZADO,) * 4
+    html = (RAIZ / "mockup" / "10-perfis.html").read_text(encoding="utf-8")
+    assert 'data-gesto="editor.modos" data-pede="automatico"' in html
 
 
 def test_sem_perfil_a_luz_no_modo_da_extensao_acende_o_botao_e_volta(
