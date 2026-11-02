@@ -191,15 +191,16 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   «Memória» daquele jogo ligada, que nasce desligada e só a janela grava; num jogo com anticheat conhecido
   (`integrations/anticheat_conhecido.json`), ligar a chave pede o aviso visto antes. Com o `buildid` fora da faixa
   `{min, max}` da receita, nada se lê. O caçador (`Varredura`) devolve só `{token, contagem}`, e o endereço sai
-  quando sobra um candidato. Até o wrapper virar pai do jogo, o tópico não tem fonte.
+  quando sobra um candidato; acima de 1 000 000 de candidatos guardados, recusa e pede um valor menos comum.
+  Até o wrapper virar pai do jogo, o tópico não tem fonte.
 - `jogo.tela` (`ler:jogo.tela`, ensaio) entrega `nome: "jogo.tela"`: `{t, dano, flash, escuro, tremor, saturacao}`,
   cada um de 0 a 1, até 15 vezes por segundo (`integrations/tela_do_jogo.py`). Cada quadro do portal de captura vira
   uma grade de 32 por 18 cores médias. `dano` é o vermelho que sobe nas bordas, `flash` o brilho que salta, `escuro`
   o quanto falta de luz, `tremor` o deslocamento da cena inteira e `saturacao` a cor viva. Com regiões declaradas
-  pela receita (até 8, `{nome, x, y, largura, altura, cor, tolerancia}`, em frações da tela), vem também
-  `regioes: {nome: fração}`. Nenhum pixel cruza a porta. Sem assinante o portal não abre; sem portal, ou com ele
-  caído, os cinco chegam `null` uma vez (ausente, nunca zero) e a captura tenta de novo sozinha. A fonte do portal
-  ainda não está ligada: até lá, o tópico não tem fonte.
+  pela receita (até 8, `{nome, x, y, largura, altura, cor, tolerancia}`, em frações da tela; medida que não é
+  número, ou que sai da tela, recusa a receita), vem também `regioes: {nome: fração}`. Nenhum pixel cruza a porta.
+  Sem assinante o portal não abre; sem portal, ou com ele caído, os cinco chegam `null` uma vez (ausente, nunca
+  zero) e a captura tenta de novo sozinha. A fonte do portal ainda não está ligada: até lá, o tópico não tem fonte.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.
@@ -609,15 +610,16 @@ diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada est
 
 ### A página da extensão
 
-`pagina` traz uma página própria, mostrada abaixo das opções da janela, numa área da altura declarada:
+`pagina` traz uma página própria numa área da altura declarada. Na janela com abas, a página é a última aba; na janela
+sem abas, fica abaixo das opções:
 
 ```json
 "pagina": {"arquivo": "estudio/pagina.html", "rotulo": "Estúdio", "altura_max": 320}
 ```
 
 - `arquivo` é um `.html` (ou `.htm`) dentro da pasta do código, em UTF-8 e até 1 MB; caminho absoluto, `..`, link
-  que sai da pasta e arquivo que não é HTML recusam o manifesto. `rotulo` (até 40 letras) é a dica da área;
-  `altura_max` vai de 80 a 720 pixels, e a área tem essa altura fixa, sem rolagem.
+  que sai da pasta e arquivo que não é HTML recusam o manifesto. `rotulo` (até 40 letras) é o nome da aba e a dica
+  da área; `altura_max` vai de 80 a 720 pixels, e a área tem essa altura fixa, sem rolagem.
 - A página roda num `iframe` com `sandbox="allow-scripts"` (origem opaca: sem acesso ao DOM, aos cookies nem ao
   armazenamento do Hefesto) e com a CSP `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';
   img-src data:; font-src data:; media-src data:; form-action 'none'; base-uri 'none'`: sem rede, sem `fetch` e sem
@@ -629,6 +631,8 @@ diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada est
 - A página fala só com a própria extensão: `window.hefesto.enviar(dados)` devolve uma `Promise` com a resposta.
   `dados` é qualquer valor JSON até 64 000 bytes (medidos no JSON com escape ASCII), e passam até 30 mensagens por
   segundo por extensão. Sem resposta em 1 s, a `Promise` falha com a frase; acima do teto, também.
+- A ponte da janela só aceita a mensagem que leva o selo do quadro de cima, sorteado a cada abertura: o que a
+  página manda direto pela ponte da janela é recusado como gesto forjado.
 
 A extensão recebe a mensagem como o evento `extensao.mensagem` com `dados: {mod, id, dados}`, e responde pelo método
 `extensao.resposta {para: id, dados}` (volta `{entregue: true}`), em até 1 s e uma vez só. A resposta segue o mesmo
