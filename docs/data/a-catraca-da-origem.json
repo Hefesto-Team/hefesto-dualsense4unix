@@ -51,7 +51,7 @@
       "data": "2026-11-02",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 961,
+      "piso": 962,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -187,7 +187,7 @@
         "interface/pacotes/perfil.py": 4,
         "interface/pacotes/rodape.py": 1,
         "interface/regua_do_mockup.py": 4,
-        "mods/porta.py": 3,
+        "mods/porta.py": 4,
         "profiles/loader.py": 38,
         "profiles/manager.py": 2,
         "profiles/o_padrao_do_computador.py": 4,
@@ -201,7 +201,7 @@
         "utils/single_instance.py": 9,
         "utils/tela_de_mentira.py": 3
       },
-      "razao": "a tela do jogo lê a ficha do portal guardada, que falta na primeira vez (OSError devolve None e o portal pede a escolha de novo); os fechamentos do portal levantam só a exceção nomeada (A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-02, 02/11/2026)",
+      "razao": "a vigia do peso da mira (mods/porta.py, 615144f6c) espera o fim do jogo e a troca de modo com prazo de 1 s para reler os donos; a cura pelo evento de «sem donos» é a O-PESO-DA-MIRA-SE-SOLTA-PELO-EVENTO-E-NAO-PELA-VOLTA-DE-UM-SEGUNDO-01",
       "subidas": [
         {
           "data": "2026-10-10",
@@ -244,6 +244,12 @@
           "de": 960,
           "para": 961,
           "razao": "a tela do jogo lê a ficha do portal guardada, que falta na primeira vez (OSError devolve None e o portal pede a escolha de novo); os fechamentos do portal levantam só a exceção nomeada (A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-02, 02/11/2026)"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 961,
+          "para": 962,
+          "razao": "a vigia do peso da mira (mods/porta.py, 615144f6c) espera o fim do jogo e a troca de modo com prazo de 1 s para reler os donos; a cura pelo evento de «sem donos» é a O-PESO-DA-MIRA-SE-SOLTA-PELO-EVENTO-E-NAO-PELA-VOLTA-DE-UM-SEGUNDO-01"
         }
       ],
       "unidade": "remendos",
