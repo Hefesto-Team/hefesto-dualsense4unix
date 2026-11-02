@@ -351,6 +351,28 @@ def test_a_entrega_que_nao_confere_nao_vira_fonte(tmp_path: Path) -> None:
     assert not b.fonte.exists() and not b.repo.exists()
 
 
+def test_a_entrega_com_versao_alheia_nao_vira_fonte(tmp_path: Path) -> None:
+    """MORDIDA: sem a conferência da versão, um .deb de outra revisão entraria na fonte."""
+    b = _cenario(tmp_path)
+    alheio = _deb(b.entrega, "pipewire-v4l2", PW_POP, "pipewire", f"pipewire (= {PW_POP})")
+    with (b.entrega / "SHA256SUMS").open("a", encoding="utf-8") as somas:
+        somas.write(f"{hashlib.sha256(alheio.read_bytes()).hexdigest()}  {alheio.name}\n")
+    saida = b.passo()
+    assert "não confere pelo SHA256SUMS" in saida, saida
+    assert not b.fonte.exists() and not b.repo.exists()
+
+
+@pytest.mark.parametrize("pronta", [True, False])
+def test_no_curado_a_construcao_so_se_anuncia_sem_a_entrega(tmp_path: Path, pronta: bool) -> None:
+    b = _cenario(tmp_path)
+    if not pronta:
+        (b.entrega / "SHA256SUMS").unlink()
+    saida = b.passo()
+    assert ("construindo pelo scripts/construir_pipewire_backport.sh" in saida) is not pronta, saida
+    ensaio = b.passo(dry_run=True)
+    assert ("FARIA        construir o PipeWire" in ensaio) is not pronta, ensaio
+
+
 def test_com_a_cura_da_distro_nao_ha_fonte_nem_construcao(tmp_path: Path) -> None:
     b = _cenario(tmp_path, instalada="1.6.10-1")
     b.passo()

@@ -2433,10 +2433,12 @@ _pw_fonte_no_curado() {
     [[ "$(_pw_versao_ii libpipewire-0.3-modules)" == *~hefesto* ]] || return 0
     _pw_da_casa_serve_aqui || return 0
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        [[ -s "${dir}/SHA256SUMS" ]] || _faria "construir o PipeWire ${alvo_pw} e o WirePlumber ${alvo_wp} em ${dir} (scripts/construir_pipewire_backport.sh, uns 5 minutos, sem sudo)"
         _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
         return 0
     fi
     mkdir -p "${cache}"
+    [[ -s "${dir}/SHA256SUMS" ]] || printf '      construindo pelo scripts/construir_pipewire_backport.sh (uns 5 minutos; o registro fica em %s)\n' "${log}"
     if ! HEFESTO_PIPEWIRE_CACHE="${cache}" bash "${construtor}" > "${log}" 2>&1; then
         warn "a entrega do PipeWire da casa não está em ${dir} (o registro está em ${log}) — o PipeWire da casa não vira fonte do apt"
         return 0

@@ -393,6 +393,11 @@ def test_a_flag_esta_no_roteiro_na_ajuda_e_no_preparo_do_sudo() -> None:
         r"\[\[ -e /etc/apt/preferences\.d/hefesto-pipewire \]\] && _NEEDS_SUDO=1", FONTE
     ), "o passo pede root: sem o preparo da credencial, ele cai em «sudo indisponível»"
     assert re.search(
+        r"\[\[ -e /etc/apt/sources\.list\.d/hefesto-pipewire\.sources "
+        r"\|\| -e /var/lib/hefesto-pipewire \]\] && _NEEDS_SUDO=1",
+        FONTE,
+    ), "a fonte do apt da casa pede root: sem o preparo da credencial, a fonte fica"
+    assert re.search(
         r'pipewire-backport/VERSOES-ANTERIORES\.txt" \]\] \\\n'
         r'\s+&& \[\[ "\$\{RESTORE_PIPEWIRE\}" -eq 1 \|\| '
         r'\( "\$\{AUTO_YES\}" -eq 0 && -t 0 \) \]\] && _NEEDS_SUDO=1', FONTE
