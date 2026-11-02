@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**70 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **29** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**71 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **30** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -105,6 +105,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mods.acao` | `daemon/ipc_handlers.py:6076` (`_handle_mods_acao`) | O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``. | **não** |
 | `mods.livre` | `daemon/ipc_handlers.py:6103` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
 | `mods.opcao` | `daemon/ipc_handlers.py:6134` (`_handle_mods_opcao`) | O arrastar de um deslizante da janela: ``extensao.opcao`` só à extensão ``{mod}``. | **não** |
+| `mods.mensagem` | `daemon/ipc_handlers.py:6157` (`_handle_mods_mensagem`) | O que a página da janela manda: ``extensao.mensagem`` só à extensão ``{mod}``. | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5352` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
 | `radio.mover` | `daemon/ipc_handlers.py:5382` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
 | `mira.set` | `daemon/ipc_handlers.py:5475` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |

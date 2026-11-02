@@ -1144,6 +1144,165 @@ def _o_x(mod: str) -> str:
 
 
 VAZIO_DA_JANELA = '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
+
+
+class PaginaDaJanela(NamedTuple):
+    """A página própria da extensão (a do manifesto): o HTML do arquivo, o rótulo, que
+    vira a dica da área, e a altura fixa da área, em pixels."""
+
+    html: str
+    rotulo: str
+    altura: int
+
+
+GESTO_DA_PAGINA = "mensagem-da-pagina-da-modificacao"
+CAMPO_DA_RESPOSTA = "mod-pagina-resposta"
+TETO_DA_MENSAGEM_DA_PAGINA = 64_000
+MENSAGENS_DA_PAGINA_POR_SEGUNDO = 30
+PRAZO_DA_PAGINA_MS = 3000
+CSP_DA_PAGINA = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+                 "img-src data:; font-src data:; media-src data:; form-action 'none'; "
+                 "base-uri 'none'")
+CORES_DA_PAGINA = ("--app-bg", "--panel", "--elevated", "--fg", "--texto-suave", "--texto-mudo",
+                   "--comment", "--linha", "--border-sutil", "--border-forte", "--sel-bg",
+                   "--purple", "--pink", "--cyan", "--green", "--orange", "--red", "--yellow",
+                   "--fundo-da-pagina")
+_DOCTYPE = re.compile(r"\A\s*<!doctype[^>]*>", re.I)
+_DENTRO_DA_PAGINA = """(function(){
+  var serie = 0, esperas = {};
+  function vestir(d){
+    var r = document.documentElement, c = d.cores || {};
+    Object.keys(c).forEach(function(k){ if(c[k]) r.style.setProperty(k, c[k]); });
+    r.dataset.tema = d.tema === 'claro' ? 'claro' : 'escuro';
+  }
+  window.addEventListener('message', function(ev){
+    if(ev.source !== window.parent) return;
+    var d = ev.data;
+    if(!d || typeof d !== 'object') return;
+    if(d.hefesto === 'tema'){ vestir(d); return; }
+    if(d.hefesto !== 'resposta') return;
+    var e = esperas[d.n];
+    if(!e) return;
+    delete esperas[d.n];
+    clearTimeout(e[2]);
+    if(d.ok) e[0](d.dados); else e[1](new Error(d.erro || 'A extensão não respondeu.'));
+  });
+  window.hefesto = Object.freeze({enviar: function(dados){
+    return new Promise(function(ok, falha){
+      serie += 1;
+      var n = serie;
+      esperas[n] = [ok, falha, setTimeout(function(){
+        if(esperas[n]){ delete esperas[n]; falha(new Error('A extensão não respondeu.')); }
+      }, %(prazo)d)];
+      window.parent.postMessage({hefesto: 'mensagem', n: n, dados: dados}, '*');
+    });
+  }});
+})();"""
+_BASE_DA_PAGINA = ("html,body{margin:0;background:transparent;color:var(--fg,#f8f8f2);"
+                   "font:12px/1.45 system-ui,sans-serif}")
+
+
+def documento_da_pagina(html: str) -> str:
+    """O documento que vai no ``srcdoc``: a CSP sem rede, o ``window.hefesto.enviar`` (a ponte
+    por ``postMessage`` até a extensão), o vestir das cores da casa e, depois, o HTML da
+    extensão, sem o ``doctype`` do arquivo."""
+    return ('<!doctype html><meta charset="utf-8">'
+            f'<meta http-equiv="Content-Security-Policy" content="{CSP_DA_PAGINA}">'
+            f"<style>{_BASE_DA_PAGINA}</style>"
+            f"<script>{_DENTRO_DA_PAGINA % {'prazo': PRAZO_DA_PAGINA_MS}}</script>"
+            + _DOCTYPE.sub("", html, count=1))
+
+
+def pagina_html(mod: str, pagina: PaginaDaJanela) -> str:
+    """A área da página da extensão, num pedaço próprio: um ``iframe`` isolado (só
+    ``allow-scripts``, origem opaca), da altura que o manifesto declara, e o campo escondido
+    por onde volta a resposta da extensão."""
+    quadro = (f'<iframe class="mj-pagina-quadro" sandbox="allow-scripts" '
+              f'referrerpolicy="no-referrer" title="{_a(pagina.rotulo)}" data-mod="{_a(mod)}" '
+              f'style="height:{int(pagina.altura)}px" '
+              f'srcdoc="{_a(documento_da_pagina(pagina.html))}"></iframe>')
+    return (f'<div class="mj-pagina" id="mod-pagina" data-dica="{_a(pagina.rotulo)}">{quadro}'
+            f'</div><output class="mj-pagina-resposta" data-campo="{CAMPO_DA_RESPOSTA}" '
+            f'data-gesto="{GESTO_DA_PAGINA}" hidden></output>')
+
+
+ESTILO_DA_PAGINA = """#mod-janela .mj-pagina { margin-top:8px;border:1px solid var(--border-sutil);
+  border-radius:8px;background:var(--panel);overflow:hidden }
+#mod-janela .mj-pagina-quadro { display:block;width:100%;border:0;background:transparent }
+"""
+_FORA_DA_PAGINA = """(function(){
+  if(window.__hefPaginaDaExtensao) return;
+  window.__hefPaginaDaExtensao = true;
+  var TETO = %(teto)d, POR_SEGUNDO = %(por_segundo)d;
+  var GESTO = '%(gesto)s', CORES = %(cores)s;
+  var janela = [], fila = {}, serie = 0, lida = '';
+  function quadros(){
+    return Array.prototype.slice.call(document.querySelectorAll('iframe.mj-pagina-quadro'));
+  }
+  function responder(q, n, ok, dados, erro){
+    try{
+      q.contentWindow.postMessage({hefesto: 'resposta', n: n, ok: ok, dados: dados, erro: erro}, '*');
+    }catch(e){}
+  }
+  function claro(cor){
+    var m = /rgba?\\(\\s*(\\d+)[,\\s]+(\\d+)[,\\s]+(\\d+)/.exec(cor || '');
+    if(!m) return false;
+    return (0.2126 * m[1] + 0.7152 * m[2] + 0.0722 * m[3]) / 255 > 0.5;
+  }
+  function vestir(q){
+    var est = getComputedStyle(document.documentElement), cores = {};
+    CORES.forEach(function(k){ cores[k] = est.getPropertyValue(k).trim(); });
+    var tema = claro(getComputedStyle(document.body).backgroundColor) ? 'claro' : 'escuro';
+    try{ q.contentWindow.postMessage({hefesto: 'tema', cores: cores, tema: tema}, '*'); }catch(e){}
+  }
+  document.addEventListener('load', function(ev){
+    var q = ev.target;
+    if(q && q.classList && q.classList.contains('mj-pagina-quadro')) vestir(q);
+  }, true);
+  new MutationObserver(function(){ quadros().forEach(vestir); }).observe(
+    document.documentElement,
+    {attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-tema']});
+  window.addEventListener('message', function(ev){
+    var q = quadros().find(function(x){ return x.contentWindow === ev.source; });
+    var d = ev.data;
+    if(!q || !d || typeof d !== 'object' || d.hefesto !== 'mensagem') return;
+    var dados = d.dados === undefined ? null : d.dados, texto;
+    try{ texto = JSON.stringify(dados); }catch(e){
+      responder(q, d.n, false, null, 'A mensagem não é JSON.'); return;
+    }
+    if(texto.length > TETO){ responder(q, d.n, false, null, 'A mensagem passa de 64 KB.'); return; }
+    var agora = Date.now();
+    janela = janela.filter(function(t){ return agora - t < 1000; });
+    if(janela.length >= POR_SEGUNDO){
+      responder(q, d.n, false, null, 'Mais de 30 mensagens por segundo.'); return;
+    }
+    var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hefesto;
+    if(!h){ responder(q, d.n, false, null, 'A janela não está ligada ao serviço.'); return; }
+    janela.push(agora);
+    serie += 1;
+    fila[serie] = {q: q, n: d.n};
+    h.postMessage(JSON.stringify({gesto: GESTO, v: q.dataset.mod,
+                                  pagina: location.pathname.split('/').pop(),
+                                  valor: JSON.stringify({n: serie, dados: dados})}));
+  });
+  function chegou(){
+    var el = document.querySelector('output.mj-pagina-resposta');
+    var t = el ? el.textContent : '';
+    if(!t || t === lida) return;
+    lida = t;
+    var r;
+    try{ r = JSON.parse(t); }catch(e){ return; }
+    var f = r && fila[r.n];
+    if(!f) return;
+    delete fila[r.n];
+    responder(f.q, f.n, !!r.ok, r.dados === undefined ? null : r.dados, r.erro || '');
+  }
+  new MutationObserver(chegou).observe(
+    document.body, {subtree: true, childList: true, characterData: true});
+})();"""
+SCRIPT_DA_PAGINA = _FORA_DA_PAGINA % {
+    "teto": TETO_DA_MENSAGEM_DA_PAGINA, "por_segundo": MENSAGENS_DA_PAGINA_POR_SEGUNDO,
+    "gesto": GESTO_DA_PAGINA, "cores": json.dumps(CORES_DA_PAGINA)}
 GESTO_DO_CANCELAR = "cancelar-modificacao"
 
 
@@ -1292,7 +1451,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
                            armada: Sequence[str] = (), em_abas: bool = False,
-                           ligas: Mapping[str, Liga] | None = None) -> str:
+                           ligas: Mapping[str, Liga] | None = None,
+                           pagina: PaginaDaJanela | None = None) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo (em abas com ``em_abas``, a que
     pinta o tema) e «Para» no topo; toda escolha grava no clique, sem rodapé.
 
@@ -1301,14 +1461,15 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     desligada apaga as ações. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é o
     arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` e
     ``armada`` são as ações que esperam, ``livre`` a faixa de baixo e ``controles`` a aba dos
-    controles. ``ligas`` faz da coluna a «Conexão» (:func:`agora_html`).
+    controles. ``ligas`` faz da coluna a «Conexão»; a página própria fica sob as opções.
     """
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
     desligada = chave is False and bool(mod)
     agora = agora if mod else ()
     livre_op = next((o for o in opcoes if o.tipo == "livre"), None) if mod else None
-    vazio = "" if livre_op else VAZIO_DA_JANELA
+    na_pagina = pagina_html(mod, pagina) if pagina is not None and mod else ""
+    vazio = "" if livre_op or na_pagina else VAZIO_DA_JANELA
     opcoes = [o for o in opcoes if o.tipo != "livre"]
     acoes = tuple(acoes) if mod else ()
     controles = controles if mod else ""
@@ -1323,6 +1484,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                                          controles=cc, armada=armada, desligada=desligada)
         else:
             ajustes = _abas_das_opcoes(opcoes, aba, mod) if opcoes else vazio
+        ajustes += na_pagina
         fora = dica_da_barra_fora(nome, processo, gestao)
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
@@ -1330,7 +1492,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                           processo=processo, porque=porque, faixa=faixa, gestao=gestao,
                           ligas=ligas)
     corpo = ((_abas_das_opcoes(opcoes, aba, mod) if em_abas else _cartoes_das_opcoes(opcoes))
-             if opcoes else vazio)
+             if opcoes else vazio) + na_pagina
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
@@ -1538,6 +1700,17 @@ def _fragmento(nome: str) -> str:
     return (_PASTA / f"{nome}.html").read_text(encoding="utf-8")
 
 
+PAGINA_DO_DESENHO = PaginaDaJanela(
+    "<style>.l{display:flex;gap:8px;align-items:center;padding:10px 12px}"
+    ".l b{font-weight:600;color:var(--cyan)}.l button{margin-left:auto;padding:5px 12px;"
+    "border-radius:6px;border:1px solid var(--border-forte);background:var(--elevated);"
+    "color:var(--fg);font:inherit;cursor:pointer}.l output{color:var(--texto-suave)}</style>"
+    '<div class="l"><b>Página da extensão</b><output id="r">Desenhada pela própria extensão.'
+    '</output><button id="b">Perguntar</button></div><script>document.getElementById("b")'
+    '.onclick=function(){hefesto.enviar({pergunta:"oi"}).then(function(d){'
+    'document.getElementById("r").textContent=JSON.stringify(d)},function(e){'
+    'document.getElementById("r").textContent=e.message})}</script>',
+    "Página da extensão", 80)
 JANELAS = ("novo-lancador", "escolher-jogo", "impedimentos", "lanc-conf",
            "modificacao")  # (noqa-acento)
 
@@ -1554,10 +1727,13 @@ def telas() -> str:
             "Minha extensão", OPCOES_DO_DESENHO_DAS_PECAS, mod="exemplo", agora=AGORA_DO_DESENHO,
             estado=ESTADO_DA_CONEXAO_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
             aparelhos=APARELHOS_DO_DESENHO, em_curso=frozenset({("testar", "ap-2")}),
-            livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO, ligas=LIGAS_DO_DESENHO))
+            livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO, ligas=LIGAS_DO_DESENHO,
+            pagina=PAGINA_DO_DESENHO))
         partes.append(texto.strip())
     return ("\n".join(partes) + f"\n{sprite_dos_botoes()}"
-            f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n")
+            f"\n<style data-aba=\"experimental\">\n{ESTILO_DA_PAGINA}</style>"
+            f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>"
+            f"\n<script data-aba=\"experimental\">\n{SCRIPT_DA_PAGINA}</script>\n")
 
 
 class AcaoDaJanela(NamedTuple):

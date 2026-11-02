@@ -1475,6 +1475,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
     instaladas = REGISTRO.ler()
     carga["mesa"][CAMPO_DA_CONTA] = exp.conta_das_extensoes(len(instaladas))
     carga["mesa"][exp.CAMPO_DA_BARRA_FORA] = ""
+    carga["mesa"][exp.CAMPO_DA_RESPOSTA] = ""
     blocos = carga["blocos"]
     blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
     blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
@@ -1638,7 +1639,23 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         estado=estado, parar_tudo=manifesto.parar_tudo, chave=chave,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
         porque=item.porque, em_abas=bool(manifesto.tema),
+        pagina=_pagina_da_janela(manifesto, mod_id),
         **_pecas_da_janela(manifesto, mod_id))
+
+
+def _pagina_da_janela(manifesto: Any, mod_id: str) -> exp.PaginaDaJanela | None:
+    """A página própria da extensão, lida da pasta do código instalado e conferida de novo
+    (dentro da pasta, HTML em UTF-8); ``None`` sem página no manifesto ou sem o arquivo."""
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, arquivo_da_pagina
+
+    pagina = manifesto.pagina
+    if pagina is None:
+        return None
+    try:
+        texto = arquivo_da_pagina(_lugares().codigo / mod_id, pagina).read_text(encoding="utf-8")
+    except (ManifestoRecusadoError, OSError, UnicodeDecodeError):
+        return None
+    return exp.PaginaDaJanela(texto, pagina.rotulo, pagina.altura_max)
 
 
 def _ligas_de(manifesto: Any, mod_id: str, valores: dict[str, Any]) -> dict[str, exp.Liga]:
@@ -3157,8 +3174,46 @@ def arrastar_a_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any],
     return {}
 
 
-METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE, METODO_DA_OPCAO}
+METODO_DA_MENSAGEM = "mods.mensagem"
+PRAZO_DA_MENSAGEM_S = 1.5
+
+
+@gesto("07-lancadores.html", exp.GESTO_DA_PAGINA)
+def mensagem_da_pagina_da_modificacao(ctx: Contexto, o: dict[str, Any],
+                                      p: Any) -> dict[str, Any]:
+    """O que a página da extensão mandou (``data-v`` é o ``mod``; ``valor``, ``{n, dados}``): o
+    serviço leva à extensão, e a resposta da extensão volta à página pelo campo escondido, com o
+    ``n`` do pedido. Nunca levanta: a falha volta à página, como ``{ok: false, erro}``."""
+    import json
+
+    mod_id = str(o.get("v") or "")
+    try:
+        pedido = json.loads(str(o.get("valor") or ""))
+        n = int(pedido["n"])
+    except (ValueError, TypeError, KeyError):
+        return {}
+    volta: dict[str, Any] = {"n": n, "ok": False, "dados": None}
+    try:
+        corpo = p.resultado(METODO_DA_MENSAGEM, timeout=PRAZO_DA_MENSAGEM_S, mod=mod_id,
+                            dados=pedido.get("dados"))
+    except Exception:
+        corpo = None
+    if not isinstance(corpo, dict):
+        volta["erro"] = "O serviço não respondeu. Nada foi enviado."
+    elif corpo.get("recusa"):
+        volta["erro"] = str(corpo["recusa"])
+    elif corpo.get("enviada") is not True:
+        volta["erro"] = _nao_esta_rodando(mod_id) if _a_instalada_ou_nada(mod_id) else (
+            "Esta extensão não está instalada. Nada foi enviado.")
+    elif corpo.get("respondeu") is not True:
+        volta["erro"] = "A extensão não respondeu a tempo."
+    else:
+        volta.update(ok=True, dados=corpo.get("resposta"))
+    return {"mesa": {exp.CAMPO_DA_RESPOSTA: json.dumps(volta, ensure_ascii=False)}}
+
+
+METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE, METODO_DA_OPCAO, METODO_DA_MENSAGEM}
 SEM_ECO = (*SEM_ECO, exp.GESTO_DA_ACAO, exp.GESTO_DO_LIVRE, exp.GESTO_DE_SOLTAR,
-           exp.GESTO_DA_OPCAO_VIVA,
+           exp.GESTO_DA_OPCAO_VIVA, exp.GESTO_DA_PAGINA,
            exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA, exp.GESTO_DO_MODO,
            exp.GESTO_DO_CANCELAR)

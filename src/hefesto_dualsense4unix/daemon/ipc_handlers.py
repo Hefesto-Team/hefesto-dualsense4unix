@@ -6154,6 +6154,28 @@ class IpcHandlersMixin:
             raise ValueError(f"o valor de «{opcao.id}» vai de {opcao.minimo:g} a {opcao.maximo:g}")
         return {"enviado": bool(porta.opcao_viva(mod, opcao.id, valor))}
 
+    async def _handle_mods_mensagem(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O que a página da janela manda: ``extensao.mensagem`` só à extensão ``{mod}``.
+
+        ``{mod, dados}``; só vale para a extensão que declara página no manifesto. A porta
+        espera a ``extensao.resposta`` por até 1 s e recusa acima de 64 000 bytes ou de 30 por
+        segundo: a recusa volta em ``{recusa}``, numa frase. ``{enviada, respondeu, resposta}``.
+        """
+        from hefesto_dualsense4unix.mods.porta import RecusaError
+
+        mod = self._mod_do_pedido(params)
+        achado = await self._manifesto_da_janela(mod)
+        if achado is None:
+            return {"enviada": False, "respondeu": False, "resposta": None}
+        manifesto, porta = achado
+        if manifesto.pagina is None:
+            raise ValueError(f"«{manifesto.nome}» não declara página na janela.")
+        try:
+            return dict(await porta.mensagem(mod, params.get("dados")))
+        except RecusaError as recusa:
+            return {"enviada": False, "respondeu": False, "resposta": None,
+                    "recusa": recusa.frase}
+
 
 def _conferir_a_acao(manifesto: Any, porta: Any, mod: str, alvo: str | None, acao: str,
                      valor: Any, declarada: bool) -> None:

@@ -137,6 +137,9 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "soltar-o-livre-da-modificacao"):
         "ato: o soltar da barra do controle livre vai à extensão com o valor final; nada fica "
         "guardado",
+    ("07-lancadores.html", "mensagem-da-pagina-da-modificacao"):
+        "ato: a mensagem da página própria vai só àquela extensão (`mods.mensagem`), e a "
+        "resposta volta à página; nada se grava no Hefesto",
     ("07-lancadores.html", "ver-impedimentos"):
         "leitura: sonda a Steam de novo e abre a lista dos impedimentos; quem cura é o "
         "«Resolver», que declara `grava=`",

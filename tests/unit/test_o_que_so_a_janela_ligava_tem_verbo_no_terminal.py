@@ -68,6 +68,8 @@ ISENTOS: dict[str, str] = {
                   "por segundo)",
     "mods.opcao": _GESTO_DA_TELA + " (o arrastar de um deslizante da janela da extensão, a 20 "
                   "por segundo; o valor gravado mora no `opcoes.json` da extensão)",
+    "mods.mensagem": _GESTO_DA_TELA + " (o que a página da janela da extensão manda à "
+                     "extensão e a resposta que volta)",
     "sequencia.gravar": _GESTO_DA_TELA + " (a gravação segue os toques com a aba Sequência "
                         "aberta, e o controle fica com a aba enquanto grava)",
     "sequencia.tocar": _GESTO_DA_TELA + " (o «Tocar para ouvir» do editor da sequência)",

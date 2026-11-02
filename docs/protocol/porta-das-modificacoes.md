@@ -591,6 +591,36 @@ controle, o `livre` de outro `id`, o `deslizante` que o manifesto não declara o
 diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
 `mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
 
+### A página da extensão
+
+`pagina` traz uma página própria, mostrada abaixo das opções da janela, numa área da altura declarada:
+
+```json
+"pagina": {"arquivo": "estudio/pagina.html", "rotulo": "Estúdio", "altura_max": 320}
+```
+
+- `arquivo` é um `.html` (ou `.htm`) dentro da pasta do código, em UTF-8 e até 1 MB; caminho absoluto, `..`, link
+  que sai da pasta e arquivo que não é HTML recusam o manifesto. `rotulo` (até 40 letras) é a dica da área;
+  `altura_max` vai de 80 a 720 pixels, e a área tem essa altura fixa, sem rolagem.
+- A página roda num `iframe` com `sandbox="allow-scripts"` (origem opaca: sem acesso ao DOM, aos cookies nem ao
+  armazenamento do Hefesto) e com a CSP `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';
+  img-src data:; font-src data:; media-src data:; form-action 'none'; base-uri 'none'`: sem rede, sem `fetch` e sem
+  arquivo de fora. Script, estilo, imagem e fonte vão dentro do próprio HTML.
+- A página recebe as cores da casa como variáveis CSS (`--app-bg`, `--panel`, `--elevated`, `--fg`, `--texto-suave`,
+  `--texto-mudo`, `--comment`, `--linha`, `--border-sutil`, `--border-forte`, `--sel-bg`, `--purple`, `--pink`,
+  `--cyan`, `--green`, `--orange`, `--red`, `--yellow`, `--fundo-da-pagina`) e o tema de agora em
+  `document.documentElement.dataset.tema` (`escuro` ou `claro`), de novo a cada troca de tema.
+- A página fala só com a própria extensão: `window.hefesto.enviar(dados)` devolve uma `Promise` com a resposta.
+  `dados` é qualquer valor JSON até 64 000 bytes (medidos no JSON com escape ASCII), e passam até 30 mensagens por
+  segundo por extensão. Sem resposta em 1 s, a `Promise` falha com a frase; acima do teto, também.
+
+A extensão recebe a mensagem como o evento `extensao.mensagem` com `dados: {mod, id, dados}`, e responde pelo método
+`extensao.resposta {para: id, dados}` (volta `{entregue: true}`), em até 1 s e uma vez só. A resposta segue o mesmo
+teto de 64 000 bytes; `para` que não é de uma mensagem desta extensão, ou que já foi respondida ou venceu, recusa com
+`-32003`. A janela pede ao serviço por `mods.mensagem {mod, dados}`, que volta `{enviada, respondeu, resposta}`
+(`enviada` falso sem a extensão na porta) ou `{recusa}` com a frase, quando o teto ou o ritmo recusam; a extensão sem
+`pagina` no manifesto recusa (`-32003`).
+
 ## O modo de aba (o que o manifesto declara)
 
 `modos_de_aba` traz no máximo um modo por extensão, irmão do «Modo automático» nas abas que ele lista:

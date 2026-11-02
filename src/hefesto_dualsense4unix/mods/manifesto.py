@@ -499,6 +499,55 @@ class LigaDaConexao(BaseModel):
 
 CONEXOES_DA_JANELA = 8
 
+SUFIXOS_DA_PAGINA = (".html", ".htm")
+ROTULO_DA_PAGINA = 40
+ALTURA_DA_PAGINA = (80, 720)
+TETO_DO_ARQUIVO_DA_PAGINA = 1_048_576
+
+
+class Pagina(BaseModel):
+    """A página própria da extensão: um HTML da pasta do código, mostrado isolado abaixo das
+    opções da janela, que fala só com a própria extensão (``extensao.mensagem``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    arquivo: str = Field(min_length=1, max_length=200)
+    rotulo: str = Field(min_length=1, max_length=ROTULO_DA_PAGINA)
+    altura_max: int = Field(ge=ALTURA_DA_PAGINA[0], le=ALTURA_DA_PAGINA[1])
+
+    @field_validator("arquivo")
+    @classmethod
+    def _html_dentro_da_pasta(cls, valor: str) -> str:
+        caminho = Path(valor)
+        if valor.startswith("/") or "\\" in valor or ".." in caminho.parts:
+            raise ValueError("pagina.arquivo aponta para fora da pasta do código")
+        if caminho.suffix.lower() not in SUFIXOS_DA_PAGINA:
+            raise ValueError("pagina.arquivo precisa ser um arquivo .html")
+        return valor
+
+
+def arquivo_da_pagina(pasta: Path, pagina: Pagina) -> Path:
+    """O arquivo da página, conferido: dentro da pasta (inclusive por link), um arquivo comum, até
+    ``TETO_DO_ARQUIVO_DA_PAGINA`` bytes e em UTF-8; recusa com :class:`ManifestoRecusadoError`."""
+    raiz = pasta.resolve()
+    alvo = (pasta / pagina.arquivo).resolve()
+    if not alvo.is_relative_to(raiz):
+        raise ManifestoRecusadoError("A página da extensão aponta para fora da pasta do código.")
+    try:
+        if not alvo.is_file():
+            raise ManifestoRecusadoError(
+                f"A página da extensão ({pagina.arquivo}) não está na pasta do código.")
+        if alvo.stat().st_size > TETO_DO_ARQUIVO_DA_PAGINA:
+            raise ManifestoRecusadoError("A página da extensão passa de 1 MB.")
+        texto = alvo.read_bytes().decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ManifestoRecusadoError("A página da extensão não é HTML em UTF-8.") from exc
+    except OSError as exc:
+        raise ManifestoRecusadoError("A página da extensão não pôde ser lida.") from exc
+    if "<" not in texto:
+        raise ManifestoRecusadoError("A página da extensão não é HTML.")
+    return alvo
+
 ABAS_DO_MODO = ("02", "03", "04", "05", "10")
 ROTULO_DO_MODO_DE_ABA = 20
 DICA_DO_MODO_DE_ABA = 120
@@ -563,6 +612,7 @@ class Manifesto(BaseModel):
     substitui: list[str] = Field(default_factory=list)
     estilos: list[str] = Field(default_factory=list)
     modos_de_aba: list[ModoDeAba] = Field(default_factory=list, max_length=1)
+    pagina: Pagina | None = None
 
     @field_validator("id")
     @classmethod
@@ -825,6 +875,8 @@ def ler_manifesto(pasta: Path, *, exigir_api: bool = True) -> Manifesto:
         raise ManifestoRecusadoError(_frase_do_esquema(exc)) from exc
     if exigir_api and not manifesto.api_aceita():
         raise ManifestoRecusadoError(frase_da_api(manifesto))
+    if manifesto.pagina is not None:
+        arquivo_da_pagina(pasta, manifesto.pagina)
     return manifesto
 
 
@@ -915,8 +967,10 @@ __all__ = [
     "ManifestoRecusadoError",
     "ModoDeAba",
     "Opcao",  # (noqa-acento)
+    "Pagina",  # (noqa-acento)
     "Processo",
     "aceita_a_api",
+    "arquivo_da_pagina",
     "endereco_valido",
     "estilos_pedidos",
     "forma_valida",

@@ -80,6 +80,10 @@ EVENTO_DA_ACAO = "extensao.acao"
 EVENTO_DO_LIVRE = "extensao.livre"
 EVENTO_DA_OPCAO = "extensao.opcao"
 LIVRE_POR_SEGUNDO = 20
+EVENTO_DA_MENSAGEM = "extensao.mensagem"
+TETO_DA_MENSAGEM = 64_000
+MENSAGENS_POR_SEGUNDO = 30
+PRAZO_DA_RESPOSTA_S = 1.0
 TOPICO_DOS_BOTOES = "botoes"
 TOPICO_DAS_ENTRADAS = "entradas"
 ENTRADAS_POR_SEGUNDO = 30
@@ -872,6 +876,9 @@ class Porta:
         self._opcoes_vivas: dict[tuple[str, str], _Compasso] = {}
         self._movimento_enviado: dict[str | None, tuple[_Movimento | None, float, Any, Any]] = {}
         self._vivas_de_antes: frozenset[str] = frozenset()
+        self._mensagens: dict[str, deque[float]] = {}
+        self._esperas: dict[str, tuple[str, asyncio.Future[Any]]] = {}
+        self._serie_da_mensagem = 0
 
     def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
                   *, comandos: tuple[str, ...] = (),
@@ -1055,6 +1062,8 @@ class Porta:
                     self._lista_dos_controles, con.sessao))
             if metodo in _DE_FORA:
                 return _resposta(req_id, await self._de_fora(con.sessao, metodo, params))
+            if metodo == "extensao.resposta":
+                return _resposta(req_id, self._responder(con.sessao.mod_id, params))
             if metodo in _ESCRITAS:
                 marca_do_gesto = gesto_de_agora.set(f"mod:{con.sessao.mod_id}:{metodo}")
                 try:
@@ -1413,6 +1422,56 @@ class Porta:
                 1.0 / LIVRE_POR_SEGUNDO, self._fim_do_compasso, chave, self._opcoes_vivas,
                 EVENTO_DA_OPCAO)
         return True
+
+    async def mensagem(self, mod_id: str, dados: Any) -> dict[str, Any]:
+        """O que a página da janela de ``mod_id`` mandou: ``extensao.mensagem {mod, id, dados}``
+        só para ``mod_id``, que responde com ``extensao.resposta {para: id, dados}`` em até
+        :data:`PRAZO_DA_RESPOSTA_S`. ``dados`` cabe em :data:`TETO_DA_MENSAGEM` bytes, e passam
+        até :data:`MENSAGENS_POR_SEGUNDO` por segundo por extensão (o resto é recusado).
+
+        ``{enviada, respondeu, resposta}``: ``enviada`` falso sem a extensão na porta;
+        ``respondeu`` falso quando a extensão não respondeu a tempo.
+        """
+        if _tamanho_da_mensagem(dados) > TETO_DA_MENSAGEM:
+            raise RecusaError(CODE_INVALID_PARAMS, "a mensagem da página passa de 64 KB")
+        if not self._conexoes_de(mod_id):
+            return {"enviada": False, "respondeu": False, "resposta": None}
+        agora = self._relogio()
+        janela = self._mensagens.setdefault(mod_id, deque())
+        while janela and agora - janela[0] >= 1.0:
+            janela.popleft()
+        if len(janela) >= MENSAGENS_POR_SEGUNDO:
+            raise RecusaError(
+                CODE_INVALID_PARAMS,
+                f"a página manda até {MENSAGENS_POR_SEGUNDO} mensagens por segundo")
+        janela.append(agora)
+        self._serie_da_mensagem += 1
+        ident = f"m{self._serie_da_mensagem}"
+        espera: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+        self._esperas[ident] = (mod_id, espera)
+        try:
+            self._avisar_a(mod_id, EVENTO_DA_MENSAGEM, {"mod": mod_id, "id": ident, "dados": dados})
+            try:
+                resposta, respondeu = await asyncio.wait_for(espera, PRAZO_DA_RESPOSTA_S), True
+            except TimeoutError:
+                resposta, respondeu = None, False
+        finally:
+            self._esperas.pop(ident, None)
+        return {"enviada": True, "respondeu": respondeu, "resposta": resposta}
+
+    def _responder(self, mod_id: str, params: dict[str, Any]) -> dict[str, Any]:
+        """``extensao.resposta {para, dados}``: a resposta à mensagem ``para`` volta à página; só a
+        extensão a quem a mensagem foi pode respondê-la, e uma vez."""
+        para = params.get("para")
+        achada = self._esperas.get(para) if isinstance(para, str) else None
+        if achada is None or achada[0] != mod_id or achada[1].done():
+            raise RecusaError(CODE_INVALID_PARAMS,
+                              "extensao.resposta pede o id de uma mensagem desta extensão")
+        dados = params.get("dados")
+        if _tamanho_da_mensagem(dados) > TETO_DA_MENSAGEM:
+            raise RecusaError(CODE_INVALID_PARAMS, "a resposta à página passa de 64 KB")
+        achada[1].set_result(dados)
+        return {"entregue": True}
 
     def le_os_botoes(self) -> bool:
         """Alguma extensão assinou o tópico ``botoes``? Sem assinante, o tique não lê controle."""
@@ -2127,6 +2186,13 @@ def _primario(controle: Any) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
+def _tamanho_da_mensagem(dados: Any) -> int:
+    try:
+        return len(json.dumps(dados, separators=(",", ":")))
+    except (TypeError, ValueError):
+        return TETO_DA_MENSAGEM + 1
+
+
 __all__ = [
     "CODE_NAO_ESCREVEU",
     "CODE_O_JOGO_ESCREVE",
@@ -2134,13 +2200,17 @@ __all__ = [
     "CODE_SEM_PERMISSAO",
     "ENTRADAS_POR_SEGUNDO",
     "EVENTO_DA_ACAO",
+    "EVENTO_DA_MENSAGEM",
     "EVENTO_DA_OPCAO",
     "EVENTO_DO_LIVRE",
     "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
     "LIVRE_POR_SEGUNDO",
+    "MENSAGENS_POR_SEGUNDO",
     "MOVIMENTO_POR_SEGUNDO",
+    "PRAZO_DA_RESPOSTA_S",
     "PUBLICACOES_POR_SEGUNDO",
+    "TETO_DA_MENSAGEM",
     "Controles",
     "Porta",
     "RecusaError",

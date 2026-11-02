@@ -34,10 +34,10 @@ async def test_payload_pequeno_normal_nao_rejeita() -> None:
 
 
 @pytest.mark.asyncio
-async def test_payload_no_limite_30kib_nao_rejeita() -> None:
-    """30 KiB — abaixo do limite de 32 KiB, deve passar pelo check de tamanho."""
+async def test_payload_no_limite_63kib_nao_rejeita() -> None:
+    """63 KiB — abaixo do limite de 64 KiB, deve passar pelo check de tamanho."""
     srv = _server()
-    padding = "a" * 30_000
+    padding = "a" * 63_000
     raw = _make_raw({"jsonrpc": "2.0", "id": 2, "method": "daemon.status", "padding": padding})
     assert len(raw) < MAX_PAYLOAD_BYTES
     resp = await srv._dispatch(raw)
@@ -48,16 +48,16 @@ async def test_payload_no_limite_30kib_nao_rejeita() -> None:
 
 @pytest.mark.asyncio
 async def test_payload_acima_limite_rejeita() -> None:
-    """33 KiB (acima de 32 KiB) — deve retornar erro -32600."""
+    """66 KiB (acima de 64 KiB) — deve retornar erro -32600."""
     srv = _server()
-    padding = "a" * 33_000
+    padding = "a" * 66_000
     raw = _make_raw({"jsonrpc": "2.0", "id": 3, "method": "daemon.status", "padding": padding})
     assert len(raw) > MAX_PAYLOAD_BYTES
     resp = await srv._dispatch(raw)
     assert resp is not None
     body = json.loads(resp.decode("utf-8"))
     assert body["error"]["code"] == CODE_INVALID_REQUEST
-    assert "32768" in body["error"]["message"]
+    assert "65536" in body["error"]["message"]
 
 
 @pytest.mark.asyncio
@@ -75,4 +75,4 @@ async def test_payload_muito_grande_rejeita() -> None:
 @pytest.mark.asyncio
 async def test_max_payload_bytes_exportado() -> None:
     """Constante exportada com o valor canônico (ajustável em uma linha)."""
-    assert MAX_PAYLOAD_BYTES == 32_768
+    assert MAX_PAYLOAD_BYTES == 65_536
