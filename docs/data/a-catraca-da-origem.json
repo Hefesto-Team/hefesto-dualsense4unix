@@ -239,14 +239,14 @@
       "data": "2026-11-02",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1191970,
+      "piso": 1192005,
       "por_item": {
         "docs": 108306,
         "scripts": 111006,
         "src": 301428,
-        "tests": 671230
+        "tests": 671265
       },
-      "razao": "tamanho: +863 linhas (1191107 -> 1191970), pagas por Origem: D-09S-BOTAO-SEM-TRABALHO; registrado no fecho, topo 80895cf78a30",
+      "razao": "tamanho: +35 linhas (1191970 -> 1192005), pagas por Origem: D-1310-OS-LUGARES-DAS-MODIFICACOES-SAO-CASA-NO-CENSO; registrado no fecho, topo 990fd9f96d41",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1423,6 +1423,12 @@
           "de": 1191107,
           "para": 1191970,
           "razao": "tamanho: +863 linhas (1191107 -> 1191970), pagas por Origem: D-09S-BOTAO-SEM-TRABALHO; registrado no fecho, topo 80895cf78a30"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 1191970,
+          "para": 1192005,
+          "razao": "tamanho: +35 linhas (1191970 -> 1192005), pagas por Origem: D-1310-OS-LUGARES-DAS-MODIFICACOES-SAO-CASA-NO-CENSO; registrado no fecho, topo 990fd9f96d41"
         }
       ],
       "unidade": "linhas",
