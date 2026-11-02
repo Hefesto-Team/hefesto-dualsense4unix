@@ -1525,14 +1525,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
 }
 
-_RAZAO_DA_TELA = (
-    "02/11/2026 — a redução da tela do jogo a cinco números, ensaio da imersão "
-    "(A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-01). O caminho se perde na fonte "
-    "(`src/hefesto_dualsense4unix/integrations/tela_do_jogo.py:237` (`FonteDaTela`)), que não "
-    "tem a implementação do portal ScreenCast, e a `Captura` não entra no daemon. Fecha quando "
-    "a -02 abrir a fonte com assinante e a porta publicar os números."
-)
-
 _SEM_CAMINHO_HOJE: dict[str, str] = {
     # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
     "integrations/radio_da_mesa.py::ordem_de_ceder": (
@@ -1556,26 +1548,16 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
         "passa pelo desenho."
     ),
-    # sai com: A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02
+    # sai com: O-CARREGADOR-DE-MOD-SO-COM-A-CHAVE-MEMORIA-01
     "integrations/receitas_de_ambiente.py::override_do_carregador": (
         "02/11/2026 — o override do carregador de mod (o UE4SS) só com a chave «Memória» ligada "
         "(A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-01). O caminho se perde no ambiente que o "
         "daemon entrega ao wrapper "
         "(`src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py:297` "
-        "(`ambiente_do_jogo`)), que não o pede, porque a chave ainda não chega ao lançamento. "
-        "Fecha quando a -02 levar a chave ao jogo e o ambiente ganhar o override."
+        "(`ambiente_do_jogo`)), que não o pede, porque o pedido do carregador não chega a ele. "
+        "A chave já chega ao lançamento (A-PORTA-LE-O-ESTADO-QUE-A-RECEITA-DECLARA-02); fecha "
+        "quando o pedido do carregador chegar ao ambiente com a chave."
     ),
-    # sai com: A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-02
-    "integrations/tela_do_jogo.py::Captura": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::FonteDaTela": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::Quadro": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::Regiao": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::TelaDoJogo": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::TelaRecusadaError": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::deslocamento": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::fracao": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::reduzir": _RAZAO_DA_TELA,
-    "integrations/tela_do_jogo.py::regioes_da_receita": _RAZAO_DA_TELA,
 
 
     # fica: a decisão D-COSTURA-BLUEZ (25/08) deixa o script dono do alias,

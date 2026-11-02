@@ -201,13 +201,15 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   O caçador fala por `memoria.varrer` (`tipo`, `valor`) e `memoria.refinar` (`token`, `comparacao`, `valor`), com a
   mesma permissão; voltam `{token, contagem}`, e o `endereco` quando sobra um.
 - `jogo.tela` (`ler:jogo.tela`, ensaio) entrega `nome: "jogo.tela"`: `{t, dano, flash, escuro, tremor, saturacao}`,
-  cada um de 0 a 1, até 15 vezes por segundo (`integrations/tela_do_jogo.py`). Cada quadro do portal de captura vira
-  uma grade de 32 por 18 cores médias. `dano` é o vermelho que sobe nas bordas, `flash` o brilho que salta, `escuro`
+  cada um de 0 a 1, até 5 vezes por segundo, o teto que custa 1% de um núcleo (`integrations/tela_do_jogo.py`).
+  Cada quadro do portal de captura vira uma grade de 32 por 18 cores médias. `dano` é o vermelho que sobe nas bordas, `flash` o brilho que salta, `escuro`
   o quanto falta de luz, `tremor` o deslocamento da cena inteira e `saturacao` a cor viva. Com regiões declaradas
   pela receita (até 8, `{nome, x, y, largura, altura, cor, tolerancia}`, em frações da tela; medida que não é
   número, ou que sai da tela, recusa a receita), vem também `regioes: {nome: fração}`. Nenhum pixel cruza a porta.
   Sem assinante o portal não abre; sem portal, ou com ele caído, os cinco chegam `null` uma vez (ausente, nunca
-  zero) e a captura tenta de novo sozinha. A fonte do portal ainda não está ligada: até lá, o tópico não tem fonte.
+  zero) e a captura tenta de novo sozinha. A fonte é o portal `ScreenCast` pelo PipeWire (o `pipewiresrc` do
+  GStreamer): a primeira abertura pede ao sistema a escolha da tela, e a ficha que volta reabre sem pedir de novo. As
+  regiões vão na assinatura: `eventos.assinar` com `topicos: ["jogo.tela"]` e `tela: {regioes: [...]}`.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.

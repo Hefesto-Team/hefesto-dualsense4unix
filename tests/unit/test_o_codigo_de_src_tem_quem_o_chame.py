@@ -74,11 +74,6 @@ _FORA_DO_PRODUTO: dict[str, str] = {
         "`docs/data/orcamento-de-ar.csv` aponta por este caminho, e que "
         "`tests/unit/test_o_orcamento_conta_a_ponte.py` importa de lá"
     ),
-    "integrations.tela_do_jogo": (
-        "ensaio da imersão (A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-01, 01/11/2026): a "
-        "`FonteDaTela` do portal ScreenCast não existe e a `Captura` não entra no daemon; a "
-        "A-PORTA-VE-A-TELA-DO-JOGO-PELO-PORTAL-02 liga o fio e tira esta linha"
-    ),
 }
 
 _PONTUADO = re.compile(r"hefesto_dualsense4unix(?:\.[A-Za-z_]\w*)+")

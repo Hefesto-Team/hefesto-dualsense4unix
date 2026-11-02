@@ -8,17 +8,30 @@ os cinco como ``None`` (ausente), nunca zero, e tenta de novo sozinho.
 """
 from __future__ import annotations
 
+import contextlib
 import math
+import os
 import re
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from operator import sub
+from pathlib import Path
 from typing import Any, Protocol
 
 GRADE_X = 32
 GRADE_Y = 18
-HZ_DA_TELA = 15
+HZ_DA_TELA = 5
 TOPICO_DA_TELA = "jogo.tela"
+LARGURA_DA_FONTE = 64
+ALTURA_DA_FONTE = 36
+PRAZO_DO_DBUS_S = 5.0
+PRAZO_DA_ESCOLHA_S = 120.0
+PRAZO_DO_QUADRO_S = 0.5
+_PORTAL = "org.freedesktop.portal.Desktop"
+_CAMINHO_DO_PORTAL = "/org/freedesktop/portal/desktop"
+_SCREENCAST = "org.freedesktop.portal.ScreenCast"
+_PEDIDO = "org.freedesktop.portal.Request"
 SINAIS = ("dano", "flash", "escuro", "tremor", "saturacao")
 REGIOES_POR_RECEITA = 8
 AMOSTRAS_DA_REGIAO = 64
@@ -75,21 +88,20 @@ class Quadro:
 
 def reduzir(quadro: Quadro) -> Grade:
     """A grade 32 por 18, por linhas: em cada célula, a média de quatro amostras espalhadas."""
+    r, g, b, bpp = CANAIS[quadro.formato]
+    d = quadro.dados
+    colunas = [[min(quadro.largura - 1, int((gx + f) * quadro.largura / GRADE_X)) * bpp
+                for f in (0.25, 0.75)] for gx in range(GRADE_X)]
     celulas: list[Cor] = []
     for gy in range(GRADE_Y):
-        ys = [min(quadro.altura - 1, int((gy + f) * quadro.altura / GRADE_Y))
-              for f in (0.25, 0.75)]
-        for gx in range(GRADE_X):
-            xs = [min(quadro.largura - 1, int((gx + f) * quadro.largura / GRADE_X))
+        linhas = [min(quadro.altura - 1, int((gy + f) * quadro.altura / GRADE_Y)) * quadro.passo
                   for f in (0.25, 0.75)]
-            soma_r = soma_g = soma_b = 0.0
-            for y in ys:
-                for x in xs:
-                    r, g, b = quadro.cor(x, y)
-                    soma_r += r
-                    soma_g += g
-                    soma_b += b
-            celulas.append((soma_r / 4, soma_g / 4, soma_b / 4))
+        y0, y1 = linhas
+        for x0, x1 in colunas:
+            a, c, e, f = y0 + x0, y0 + x1, y1 + x0, y1 + x1
+            celulas.append(((d[a + r] + d[c + r] + d[e + r] + d[f + r]) / 1020,
+                            (d[a + g] + d[c + g] + d[e + g] + d[f + g]) / 1020,
+                            (d[a + b] + d[c + b] + d[e + b] + d[f + b]) / 1020))
     return tuple(celulas)
 
 
@@ -106,6 +118,9 @@ def _na_borda(i: int) -> bool:
     return x < 3 or x >= GRADE_X - 3 or y < 2 or y >= GRADE_Y - 2
 
 
+BORDA = tuple(i for i in range(GRADE_X * GRADE_Y) if _na_borda(i))
+
+
 def _limitar(valor: float) -> float:
     return min(1.0, max(0.0, valor))
 
@@ -114,12 +129,15 @@ def deslocamento(antes: Sequence[float], agora: Sequence[float],
                  alcance: int = ALCANCE_DO_TREMOR) -> tuple[int, int]:
     """O deslocamento global (em células) que melhor leva ``antes`` a ``agora``; ``(0, 0)``
     quando nenhum outro é claramente melhor."""
+    linhas = range(alcance, GRADE_Y - alcance)
+    n = len(linhas) * (GRADE_X - 2 * alcance)
+    trechos = [agora[y * GRADE_X + alcance:(y + 1) * GRADE_X - alcance] for y in linhas]
+
     def erro(dx: int, dy: int) -> float:
-        soma, n = 0.0, 0
-        for y in range(alcance, GRADE_Y - alcance):
-            for x in range(alcance, GRADE_X - alcance):
-                soma += abs(agora[y * GRADE_X + x] - antes[(y - dy) * GRADE_X + (x - dx)])
-                n += 1
+        soma = 0.0
+        for y, trecho in zip(linhas, trechos, strict=True):
+            inicio = (y - dy) * GRADE_X + alcance - dx
+            soma += sum(map(abs, map(sub, trecho, antes[inicio:inicio + len(trecho)])))
         return soma / n
 
     parado = erro(0, 0)
@@ -137,9 +155,10 @@ def sinais(antes: Grade | None, agora: Grade) -> dict[str, float]:
     """Os cinco sinais, de 0 a 1. Sem quadro anterior, o que depende de mudança é 0."""
     luma = [_luma(c) for c in agora]
     media = sum(luma) / len(luma)
-    saturacao = sum((max(c) - min(c)) / max(c) if max(c) > 0 else 0.0
+    saturacao = sum((alto - min(c)) / alto if (alto := max(c)) > 0 else 0.0
                     for c in agora) / len(agora)
-    borda = [i for i in range(len(agora)) if _na_borda(i)]
+    borda = BORDA if len(agora) == GRADE_X * GRADE_Y else [
+        i for i in range(len(agora)) if _na_borda(i)]
     vermelho = sum(_vermelho(agora[i]) for i in borda) / len(borda)
     dano = flash = tremor = 0.0
     if antes is not None:
@@ -245,6 +264,173 @@ class FonteDaTela(Protocol):
     def fechar(self) -> None: ...
 
 
+class FonteAusente:
+    """A fonte do modo de mentira: nunca abre, e o tópico fica ausente."""
+
+    def abrir(self) -> bool:
+        return False
+
+    def quadro(self) -> Quadro | None:
+        return None
+
+    def fechar(self) -> None:
+        return None
+
+
+def _caminho_do_pedido(nome_unico: str, ficha: str) -> str:
+    return f"{_CAMINHO_DO_PORTAL}/request/{nome_unico.lstrip(':').replace('.', '_')}/{ficha}"
+
+
+class FonteDoPortal:
+    """O portal ``ScreenCast`` pelo PipeWire: a primeira abertura pede a escolha da tela ao
+    sistema, e a ficha de volta guardada em ``guarda`` reabre sem pedir de novo. O quadro chega
+    reduzido a ``LARGURA_DA_FONTE`` por ``ALTURA_DA_FONTE`` pelo GStreamer, sem ``pipewiresrc``
+    a fonte não abre."""
+
+    def __init__(self, guarda: Path) -> None:
+        self.guarda = guarda
+        self._conexao: Any = None
+        self._sessao = ""
+        self._tubo: Any = None
+        self._ralo: Any = None
+        self._serie = 0
+
+    def _ficha(self) -> str:
+        self._serie += 1
+        return f"hefesto{os.getpid()}_{self._serie}"
+
+    def _pedir(self, metodo: str, assinatura: str, corpo: tuple[Any, ...],
+               opcoes: dict[str, tuple[str, Any]]) -> dict[str, Any]:
+        from jeepney import DBusAddress, MatchRule, new_method_call
+        from jeepney.bus_messages import message_bus
+
+        ficha = self._ficha()
+        regra = MatchRule(type="signal", interface=_PEDIDO, member="Response",
+                          path=_caminho_do_pedido(self._conexao.unique_name, ficha))
+        self._conexao.send_and_get_reply(message_bus.AddMatch(regra), timeout=PRAZO_DO_DBUS_S)
+        endereco = DBusAddress(_CAMINHO_DO_PORTAL, bus_name=_PORTAL, interface=_SCREENCAST)
+        opcoes = {**opcoes, "handle_token": ("s", ficha)}
+        with self._conexao.filter(regra) as fila:
+            self._conexao.send_and_get_reply(
+                new_method_call(endereco, metodo, assinatura, (*corpo, opcoes)),
+                timeout=PRAZO_DO_DBUS_S)
+            sinal = self._conexao.recv_until_filtered(fila, timeout=PRAZO_DA_ESCOLHA_S)
+        codigo, resultados = sinal.body
+        if codigo != 0:
+            raise RuntimeError(f"o portal respondeu {codigo} a {metodo}")
+        return {nome: valor for nome, (_tipo, valor) in resultados.items()}
+
+    def _ficha_guardada(self) -> str | None:
+        try:
+            return self.guarda.read_text(encoding="utf-8").strip() or None
+        except OSError:
+            return None
+
+    def _guardar(self, ficha: object) -> None:
+        if isinstance(ficha, str) and ficha:
+            with contextlib.suppress(OSError):
+                self.guarda.parent.mkdir(parents=True, exist_ok=True)
+                self.guarda.write_text(ficha, encoding="utf-8")
+
+    def abrir(self) -> bool:
+        try:
+            import gi
+
+            gi.require_version("Gst", "1.0")
+            from gi.repository import Gst
+            from jeepney import DBusAddress, new_method_call
+            from jeepney.io.blocking import open_dbus_connection
+        except (ImportError, ValueError):
+            return False
+        Gst.init(None)
+        if Gst.ElementFactory.find("pipewiresrc") is None:
+            return False
+        self._conexao = open_dbus_connection(bus="SESSION", enable_fds=True)
+        try:
+            criada = self._pedir("CreateSession", "a{sv}", (),
+                                 {"session_handle_token": ("s", self._ficha())})
+            self._sessao = str(criada["session_handle"])
+            escolha: dict[str, tuple[str, Any]] = {
+                "types": ("u", 3), "multiple": ("b", False), "persist_mode": ("u", 2)}
+            if (guardada := self._ficha_guardada()) is not None:
+                escolha["restore_token"] = ("s", guardada)
+            self._pedir("SelectSources", "oa{sv}", (self._sessao,), escolha)
+            comecou = self._pedir("Start", "osa{sv}", (self._sessao, ""), {})
+            self._guardar(comecou.get("restore_token"))
+            fluxos = comecou.get("streams") or []
+            if not fluxos:
+                raise RuntimeError("o portal não entregou fluxo")
+            endereco = DBusAddress(_CAMINHO_DO_PORTAL, bus_name=_PORTAL, interface=_SCREENCAST)
+            resposta = self._conexao.send_and_get_reply(
+                new_method_call(endereco, "OpenPipeWireRemote", "oa{sv}", (self._sessao, {})),
+                timeout=PRAZO_DO_DBUS_S)
+            descritor = resposta.body[0].to_raw_fd()
+            self._tubo = Gst.parse_launch(
+                f"pipewiresrc fd={descritor} path={int(fluxos[0][0])} do-timestamp=true"
+                f" ! videorate drop-only=true max-rate={HZ_DA_TELA}"
+                " ! videoscale method=nearest-neighbour ! videoconvert"
+                f" ! video/x-raw,format=BGRx,width={LARGURA_DA_FONTE},height={ALTURA_DA_FONTE}"
+                " ! appsink name=ralo max-buffers=1 drop=true sync=false")
+            self._ralo = self._tubo.get_by_name("ralo")
+            self._tubo.set_state(Gst.State.PLAYING)
+        except Exception:
+            self.fechar()
+            raise
+        return True
+
+    def quadro(self) -> Quadro | None:
+        if self._ralo is None:
+            return None
+        from gi.repository import Gst
+
+        if self._tubo.get_bus().pop_filtered(Gst.MessageType.ERROR) is not None:
+            return None
+        amostra = self._ralo.emit("try-pull-sample", int(PRAZO_DO_QUADRO_S * Gst.SECOND))
+        if amostra is None:
+            return None
+        estrutura = amostra.get_caps().get_structure(0)
+        largura, altura = estrutura.get_value("width"), estrutura.get_value("height")
+        buffer = amostra.get_buffer()
+        ok, mapa = buffer.map(Gst.MapFlags.READ)
+        if not ok:
+            return None
+        try:
+            dados = bytes(mapa.data)
+        finally:
+            buffer.unmap(mapa)
+        return Quadro(largura, altura, len(dados) // altura, "BGRx", dados)
+
+    def fechar(self) -> None:
+        tubo, self._tubo, self._ralo = self._tubo, None, None
+        if tubo is not None:
+            from gi.repository import Gst
+
+            tubo.set_state(Gst.State.NULL)
+        conexao, self._conexao = self._conexao, None
+        if conexao is None:
+            return
+        with contextlib.suppress(Exception):
+            if self._sessao:
+                from jeepney import DBusAddress, new_method_call
+
+                sessao = DBusAddress(self._sessao, bus_name=_PORTAL,
+                                     interface="org.freedesktop.portal.Session")
+                conexao.send_and_get_reply(new_method_call(sessao, "Close"),
+                                           timeout=PRAZO_DO_DBUS_S)
+        self._sessao = ""
+        with contextlib.suppress(Exception):
+            conexao.close()
+
+
+def fonte_do_sistema() -> FonteDaTela:
+    """O portal, ou a fonte ausente no modo de mentira."""
+    from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled, state_dir
+
+    if fake_mode_enabled():
+        return FonteAusente()
+    return FonteDoPortal(state_dir() / "tela-do-portal.ficha")
+
+
 class Captura:
     """Abre a fonte só com assinante e publica um quadro por passo; a fonte que falta ou cai
     vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``."""
@@ -307,12 +493,15 @@ __all__ = [
     "SINAIS",
     "TOPICO_DA_TELA",
     "Captura",
+    "FonteAusente",
     "FonteDaTela",
+    "FonteDoPortal",
     "Quadro",
     "Regiao",
     "TelaDoJogo",
     "TelaRecusadaError",
     "deslocamento",
+    "fonte_do_sistema",
     "fracao",
     "reduzir",
     "regioes_da_receita",

@@ -42,6 +42,17 @@ from hefesto_dualsense4unix.integrations.leitor_do_estado import (
     caminho_do_soquete,
     entradas_da_receita,
 )
+from hefesto_dualsense4unix.integrations.tela_do_jogo import (
+    HZ_DA_TELA,
+    TOPICO_DA_TELA,
+    Captura,
+    FonteDaTela,
+    Regiao,
+    TelaDoJogo,
+    TelaRecusadaError,
+    fonte_do_sistema,
+    regioes_da_receita,
+)
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.manifesto import (
     FUNCOES_POR_PEDIDO,
@@ -476,6 +487,19 @@ def _pedido_da_memoria(params: dict[str, Any]) -> dict[str, Any]:
     return {"entradas": list(memoria["entradas"]), "faixa": faixa}
 
 
+def _regioes_do_pedido(params: dict[str, Any]) -> tuple[Regiao, ...]:
+    """As regiões que a receita declara em ``tela: {regioes: [...]}``; sem ``tela``, nenhuma."""
+    tela = params.get("tela")
+    if tela is None:
+        return ()
+    if not isinstance(tela, dict) or not isinstance(tela.get("regioes", []), list):
+        raise RecusaError(CODE_INVALID_PARAMS, "jogo.tela pede tela: {regioes: [...]}")
+    try:
+        return regioes_da_receita(tela.get("regioes", []))
+    except TelaRecusadaError as exc:
+        raise RecusaError(CODE_INVALID_PARAMS, exc.frase) from exc
+
+
 async def _perguntar(reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
                      pedido: dict[str, Any]) -> dict[str, Any]:
     writer.write(json.dumps(pedido, ensure_ascii=False).encode("utf-8") + b"\n")
@@ -889,8 +913,12 @@ class Porta:
         ligar_a_chave: LigarAChave | None = None,
         relogio: Callable[[], float] = time.monotonic,
         arbitro: Arbitro | None = None,
+        fonte_da_tela: Callable[[], FonteDaTela] = fonte_do_sistema,
     ) -> None:
         self.caminho = caminho
+        self._fonte_da_tela = fonte_da_tela
+        self._regioes_da_tela: dict[str, Regiao] = {}
+        self._captura_da_tela: asyncio.Task[None] | None = None
         self._arbitro: Arbitro | None = (
             arbitro if arbitro is not None
             else escritor.arbitro if isinstance(escritor, EscritorDoServico) else None)
@@ -988,6 +1016,8 @@ class Porta:
         server, self._server = self._server, None
         if server is not None:
             server.close()
+        if self._captura_da_tela is not None:
+            self._captura_da_tela.cancel()
         for con in list(self._conexoes):
             for tarefa in con.tarefas:
                 tarefa.cancel()
@@ -1156,6 +1186,7 @@ class Porta:
             raise RecusaError(CODE_INVALID_PARAMS, "dedos é true ou false, com o tópico entradas")
         con.quer_os_dedos = con.quer_os_dedos or dedos
         memoria = _pedido_da_memoria(params) if TOPICO_DA_MEMORIA in topicos else None
+        regioes = _regioes_do_pedido(params) if TOPICO_DA_TELA in topicos else ()
         for publico in topicos:
             feito = con.assinados.setdefault(publico, _Assinatura())
             if publico == TOPICO_DOS_BOTOES:
@@ -1201,7 +1232,40 @@ class Porta:
                             _por_na_fila(fila, carga)
                 con.tarefa(feito, self._encaminhar(con, writer, publico, topico, fila),
                            f"mods-{con.sessao.mod_id}-{topico}")
+        if TOPICO_DA_TELA in topicos:
+            self._regioes_da_tela.update({r.nome: r for r in regioes})
+            self._ligar_a_captura()
         return {"assinados": list(topicos)}
+
+    def _ligar_a_captura(self) -> None:
+        if self._captura_da_tela is None or self._captura_da_tela.done():
+            self._captura_da_tela = asyncio.get_running_loop().create_task(
+                self._capturar_a_tela(), name="mods-porta-tela")
+
+    async def _capturar_a_tela(self) -> None:
+        """Um passo da :class:`Captura` por vez, fora do laço: a fonte abre só com assinante de
+        ``jogo.tela`` e, sem nenhum, fecha, e a tarefa acaba."""
+        laco = asyncio.get_running_loop()
+        fonte = self._fonte_da_tela()
+
+        def publicar(carga: dict[str, Any]) -> None:
+            laco.call_soon_threadsafe(self.bus.publish, TOPICO_DA_TELA, carga)
+
+        captura = Captura(fonte, TelaDoJogo(tuple(self._regioes_da_tela.values())),
+                          publicar=publicar,
+                          assinantes=lambda: self.bus.subscriber_count(TOPICO_DA_TELA))
+        try:
+            while True:
+                captura.tela.regioes = tuple(self._regioes_da_tela.values())
+                await asyncio.to_thread(captura.passo)
+                if self.bus.subscriber_count(TOPICO_DA_TELA) <= 0 and not captura.aberta:
+                    return
+                await asyncio.sleep(1.0 / HZ_DA_TELA)
+        finally:
+            self._regioes_da_tela.clear()
+            if captura.aberta:
+                with contextlib.suppress(Exception):
+                    fonte.fechar()
 
     def _desassinar(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
         """Larga cada tópico: sem fila de ``movimento`` (ou de dedos), o tique para de pedir o
