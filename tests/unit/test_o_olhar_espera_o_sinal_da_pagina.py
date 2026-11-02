@@ -94,7 +94,8 @@ def _pagina(pasta: pathlib.Path, nome: str, html: str) -> pathlib.Path:
     return alvo
 
 
-def _retrato(navegador: Any, pasta: pathlib.Path, nome: str, html: str, **opcoes: Any) -> dict:
+def _retrato(navegador: Any, pasta: pathlib.Path, nome: str, html: str,
+             **opcoes: Any) -> dict[str, Any]:
     return olhar._retratar(navegador, _pagina(pasta, nome, html), pasta / f"{nome}.png",
                            so_a_janela=True, **opcoes)
 

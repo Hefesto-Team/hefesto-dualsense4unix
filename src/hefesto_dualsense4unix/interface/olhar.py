@@ -143,7 +143,7 @@ def _meu_endereco() -> str:
         return f"hefesto_dualsense4unix.interface.{meu.stem}"
 
 
-def _navegador(pw):
+def _navegador(pw: Any) -> Any:
     return pw.chromium.launch(
         executable_path="/usr/bin/google-chrome",
         args=["--no-sandbox"],
