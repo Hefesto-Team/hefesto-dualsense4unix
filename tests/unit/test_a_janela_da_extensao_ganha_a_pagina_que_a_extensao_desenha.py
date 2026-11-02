@@ -269,6 +269,39 @@ def test_o_gesto_leva_a_mensagem_e_devolve_a_resposta_pelo_campo(ctx: Any) -> No
     assert exp.GESTO_DA_PAGINA in a07.SEM_ECO and "mods.mensagem" in a07.METODOS
 
 
+def test_o_teto_mede_a_linha_do_servico_e_nao_o_json_compacto(
+        ctx: Any, curto: pathlib.Path) -> None:  # noqa: F811
+    """Trinta mil zeros dão 60 001 bytes no ``JSON.stringify`` da página e 90 000 na linha até
+    o serviço, que lê até 64 KiB por linha: passavam pelo teto compacto e a linha caía calada."""
+    a07 = _a07()
+    densa = [0] * 30_000
+    assert len(json.dumps(densa, separators=(",", ":"))) <= pt.TETO_DA_MENSAGEM
+    linha = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "mods.mensagem",
+                        "params": {"mod": "toque", "dados": densa}}, ensure_ascii=False)
+    assert len(linha.encode("utf-8")) > pt.MAX_PAYLOAD_BYTES
+
+    async def na_porta(dados: Any) -> str:
+        porta = await _porta(curto, EventBus())
+        try:
+            with pytest.raises(pt.RecusaError) as recusa:
+                await porta.mensagem("acessorios", dados)
+            return recusa.value.frase
+        finally:
+            await porta.parar()
+
+    assert "64 KB" in asyncio.run(na_porta(densa))
+    ponte = _PonteDaPagina({"enviada": True, "respondeu": True, "resposta": 1})
+    volta = a07.mensagem_da_pagina_da_modificacao(
+        ctx, {"v": "toque", "valor": json.dumps({"n": 3, "dados": densa})}, ponte)
+    assert ponte.chamadas == [], "a mensagem larga demais foi ao serviço"
+    assert json.loads(volta["mesa"][exp.CAMPO_DA_RESPOSTA]) == {
+        "n": 3, "ok": False, "dados": None, "erro": "A mensagem passa de 64 KB."}
+    no_limite = "x" * (pt.TETO_DA_MENSAGEM - 2)
+    a07.mensagem_da_pagina_da_modificacao(
+        ctx, {"v": "toque", "valor": json.dumps({"n": 4, "dados": no_limite})}, ponte)
+    assert [c[1]["dados"] for c in ponte.chamadas] == [no_limite]
+
+
 def test_a_janela_le_a_pagina_da_pasta_instalada(
         tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     a07 = _a07()

@@ -3193,6 +3193,9 @@ def mensagem_da_pagina_da_modificacao(ctx: Contexto, o: dict[str, Any],
     except (ValueError, TypeError, KeyError):
         return {}
     volta: dict[str, Any] = {"n": n, "ok": False, "dados": None}
+    if _tamanho_da_pagina(pedido.get("dados")) > exp.TETO_DA_MENSAGEM_DA_PAGINA:
+        volta["erro"] = "A mensagem passa de 64 KB."
+        return {"mesa": {exp.CAMPO_DA_RESPOSTA: json.dumps(volta, ensure_ascii=False)}}
     try:
         corpo = p.resultado(METODO_DA_MENSAGEM, timeout=PRAZO_DA_MENSAGEM_S, mod=mod_id,
                             dados=pedido.get("dados"))
@@ -3210,6 +3213,17 @@ def mensagem_da_pagina_da_modificacao(ctx: Contexto, o: dict[str, Any],
     else:
         volta.update(ok=True, dados=corpo.get("resposta"))
     return {"mesa": {exp.CAMPO_DA_RESPOSTA: json.dumps(volta, ensure_ascii=False)}}
+
+
+def _tamanho_da_pagina(dados: Any) -> int:
+    """O tamanho de ``dados`` como a porta o mede (``mods.porta._tamanho_da_mensagem``): a linha
+    até o serviço leva os espaços dos separadores, que o ``JSON.stringify`` da página não conta."""
+    import json
+
+    try:
+        return len(json.dumps(dados))
+    except (TypeError, ValueError):
+        return exp.TETO_DA_MENSAGEM_DA_PAGINA + 1
 
 
 METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE, METODO_DA_OPCAO, METODO_DA_MENSAGEM}

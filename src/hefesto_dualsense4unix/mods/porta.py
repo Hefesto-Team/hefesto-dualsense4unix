@@ -2187,8 +2187,11 @@ def _primario(controle: Any) -> str | None:
 
 
 def _tamanho_da_mensagem(dados: Any) -> int:
+    """O tamanho de ``dados`` na linha mais larga que ele atravessa: o ``json.dumps`` padrão, com os
+    espaços dos separadores e o escape de todo caractere fora do ASCII: o teto da linha da
+    interface até o serviço, na ida e na volta."""
     try:
-        return len(json.dumps(dados, separators=(",", ":")))
+        return len(json.dumps(dados))
     except (TypeError, ValueError):
         return TETO_DA_MENSAGEM + 1
 

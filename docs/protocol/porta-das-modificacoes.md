@@ -24,7 +24,7 @@ disso tira antes a metade velha.
 
 ## O enquadramento
 
-É o mesmo do IPC principal: um objeto JSON-RPC 2.0 por linha, terminado em `\n`, com até 32 KiB por
+É o mesmo do IPC principal: um objeto JSON-RPC 2.0 por linha, terminado em `\n`, com até 64 KiB por
 pedido. A conexão começa obrigatoriamente com `mod.ola`. Qualquer outra primeira palavra, uma ficha
 desconhecida ou um processo que não foi o supervisor que abriu fecham a conexão.
 
@@ -629,8 +629,9 @@ sem abas, fica abaixo das opções:
   `--cyan`, `--green`, `--orange`, `--red`, `--yellow`, `--fundo-da-pagina`) e o tema de agora em
   `document.documentElement.dataset.tema` (`escuro` ou `claro`), de novo a cada troca de tema.
 - A página fala só com a própria extensão: `window.hefesto.enviar(dados)` devolve uma `Promise` com a resposta.
-  `dados` é qualquer valor JSON até 64 000 bytes (medidos no JSON com escape ASCII), e passam até 30 mensagens por
-  segundo por extensão. Sem resposta em 1 s, a `Promise` falha com a frase; acima do teto, também.
+  `dados` é qualquer valor JSON até 64 000 bytes, medidos no `json.dumps` padrão do Python (o escape ASCII e os
+  espaços dos separadores: a forma mais larga que a linha até o serviço leva), e passam até 30 mensagens por segundo
+  por extensão. Sem resposta em 1 s, a `Promise` falha com a frase; acima do teto, também.
 - A ponte da janela só aceita a mensagem que leva o selo do quadro de cima, sorteado a cada abertura: o que a
   página manda direto pela ponte da janela é recusado como gesto forjado.
 
