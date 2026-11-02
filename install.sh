@@ -1651,53 +1651,6 @@ if (( ${#_btmic_faltando[@]} )); then
 fi
 unset _btmic_faltando
 
-_tela_presente() {
-    local _py="${VENV_DIR}/bin/python"
-    [[ -x "${_py}" ]] || _py="${_VENV_PYTHON:-python3}"
-    "${_py}" -c "import sys, gi; gi.require_version('Gst', '1.0'); from gi.repository import Gst; Gst.init(None); sys.exit(0 if Gst.ElementFactory.find('pipewiresrc') else 1)" >/dev/null 2>&1
-}
-_tela_deb_da_casa() {
-    local dir="${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport" ver deb sha
-    ver="$(dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' libpipewire-0.3-0t64 2>/dev/null \
-        | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true)"
-    [[ "${ver}" == *~hefesto* ]] || return 1
-    deb="gstreamer1.0-pipewire_${ver}_amd64.deb"
-    [[ -f "${dir}/${deb}" && -s "${dir}/SHA256SUMS" ]] || return 1
-    sha="$(awk -v n="${deb}" '{ m = $2; sub(/^\*/, "", m); sub(/.*\//, "", m) } m == n { print $1; exit }' "${dir}/SHA256SUMS")"
-    [[ -n "${sha}" && "$(sha256sum "${dir}/${deb}" | awk '{ print $1 }')" == "${sha}" ]] || return 1
-    printf '%s\n' "${dir}/${deb}"
-}
-_tela_pela_casa() {
-    local deb="$1"
-    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria_root "instalar ${deb##*/} (o pipewiresrc da mesma versão do PipeWire da casa) e o gir1.2-gstreamer-1.0"
-        return 0
-    fi
-    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "${deb}" gir1.2-gstreamer-1.0 >/dev/null 2>&1
-}
-if ! _tela_presente; then
-    printf '\n      Tela do jogo para as extensões (o sentido «Tela» do Modo imersão): falta o pipewiresrc do GStreamer\n'
-    ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
-    if [[ "${REPLY,,}" =~ ^y ]]; then
-        if _tela_deb="$(_tela_deb_da_casa)"; then
-            _tela_ok=0
-            _tela_pela_casa "${_tela_deb}" || _tela_ok=$?
-        else
-            _tela_ok=0
-            run_pkg gst-pipewire || _tela_ok=$?
-        fi
-        if [[ "${_tela_ok}" -eq 0 ]]; then
-            printf '      ok — a tela do jogo chega às extensões pelo portal\n'
-        else
-            warn "não instalei o pipewiresrc — o jogo.tela fica ausente para as extensões"
-        fi
-    else
-        printf '      pulando (a tela do jogo fica ausente para as extensões; instale depois: %s)\n' \
-            "$(comando_manual_pkg gst-pipewire)"
-    fi
-fi
-unset _tela_deb _tela_ok
-
 printf '      instalando pacote Python...\n'
 if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
 "${VENV_DIR}/bin/python" -m pip install \
@@ -2414,6 +2367,87 @@ _pw_nome_da_distro() {
     printf '%s' "${nome:-uma distro sem /etc/os-release}"
 }
 
+_pw_entrega_confere() {
+    local dir="$1" alvo_pw="$2" alvo_wp="$3" sha nome resto ver atual
+    [[ -s "${dir}/SHA256SUMS" ]] || return 1
+    while read -r sha nome; do
+        [[ -n "${sha}" ]] || continue
+        nome="${nome#\*}"
+        nome="${nome##*/}"
+        resto="${nome#*_}"
+        ver="${resto%_*}"
+        [[ "${nome}" == *.deb && ( "${ver}" == "${alvo_pw}" || "${ver}" == "${alvo_wp}" ) ]] || return 1
+        atual="$(sha256sum "${dir}/${nome}" 2>/dev/null | awk '{ print $1 }' || true)"
+        [[ -n "${atual}" && "${atual}" == "${sha}" ]] || return 1
+        printf '%s\n' "${nome}"
+    done < "${dir}/SHA256SUMS"
+}
+
+_pw_publica_o_repositorio() {
+    local dir="$1" alvo_pw="$2" alvo_wp="$3"
+    local repo="${_PW_REPO:-/var/lib/hefesto-dualsense4unix/apt-pipewire}"
+    local fonte="${_PW_FONTE:-/etc/apt/sources.list.d/hefesto-pipewire.sources}"
+    local novo="${repo}.novo" obra nomes rc=0
+    local debs=()
+    if ! command -v apt-ftparchive >/dev/null 2>&1; then
+        warn "sem o apt-ftparchive (pacote apt-utils), o PipeWire da casa não vira fonte do apt — instale o apt-utils e rode ./install.sh de novo"
+        return 1
+    fi
+    if ! nomes="$(_pw_entrega_confere "${dir}" "${alvo_pw}" "${alvo_wp}")" || [[ -z "${nomes}" ]]; then
+        warn "a entrega em ${dir} não confere pelo SHA256SUMS — o PipeWire da casa não vira fonte do apt"
+        return 1
+    fi
+    mapfile -t debs <<<"${nomes}"
+    obra="$(mktemp -d)" || return 1
+    sudo rm -rf "${novo}" \
+        && sudo install -d -m 0755 "${novo}" \
+        && sudo install -m 0644 "${dir}/SHA256SUMS" "${debs[@]/#/${dir}/}" "${novo}/" \
+        && _pw_entrega_confere "${novo}" "${alvo_pw}" "${alvo_wp}" >/dev/null \
+        && (cd "${novo}" && apt-ftparchive packages .) > "${obra}/Packages" 2>/dev/null \
+        && sudo install -m 0644 "${obra}/Packages" "${novo}/Packages" \
+        && (cd "${novo}" && apt-ftparchive \
+                -o APT::FTPArchive::Release::Origin=hefesto-dualsense4unix \
+                -o APT::FTPArchive::Release::Label=hefesto-pipewire release .) > "${obra}/Release" 2>/dev/null \
+        && sudo install -m 0644 "${obra}/Release" "${novo}/Release" \
+        && sudo rm -rf "${repo}" \
+        && sudo mv "${novo}" "${repo}" \
+        && printf 'Types: deb\nURIs: file:%s\nSuites: ./\nTrusted: yes\n' "${repo}" > "${obra}/fonte" \
+        && sudo install -m 0644 "${obra}/fonte" "${fonte}" \
+        || rc=1
+    rm -rf "${obra}"
+    if [[ "${rc}" -ne 0 ]]; then
+        sudo rm -rf "${novo}" 2>/dev/null || true
+        warn "não consegui publicar o PipeWire da casa como fonte do apt em ${repo} — um pacote do PipeWire pedido depois pode quebrar o apt"
+        return 1
+    fi
+    if ! sudo apt-get update -o Dir::Etc::SourceList="${fonte}" -o Dir::Etc::SourceParts=- \
+            -o APT::Get::List-Cleanup=0 >/dev/null 2>&1; then
+        warn "o apt não leu a fonte ${fonte} — rode: sudo apt update"
+        return 1
+    fi
+    printf '      o PipeWire da casa é fonte do apt (%s): os pacotes irmãos saem na mesma versão\n' "${repo}"
+}
+
+_pw_fonte_no_curado() {
+    local construtor="$1" cache="$2" dir="$3" log="$4" alvo_pw="$5" alvo_wp="$6"
+    [[ "$(_pw_versao_ii libpipewire-0.3-modules)" == *~hefesto* ]] || return 0
+    _pw_da_casa_serve_aqui || return 0
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-dualsense4unix/apt-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
+        return 0
+    fi
+    mkdir -p "${cache}"
+    if ! HEFESTO_PIPEWIRE_CACHE="${cache}" bash "${construtor}" > "${log}" 2>&1; then
+        warn "a entrega do PipeWire da casa não está em ${dir} (o registro está em ${log}) — o PipeWire da casa não vira fonte do apt"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — o PipeWire da casa não vira fonte do apt (re-execute ./install.sh)"
+        return 0
+    fi
+    _pw_publica_o_repositorio "${dir}" "${alvo_pw}" "${alvo_wp}" || true
+}
+
 install_pipewire_da_casa() {
     local baseline="${ROOT_DIR}/assets/pipewire-backport/BASELINE"
     local pref="${ROOT_DIR}/assets/pipewire-backport/apt/hefesto-pipewire.pref"
@@ -2431,7 +2465,8 @@ install_pipewire_da_casa() {
     fi
     case "$(_pw_veredito "${alvo_pw}" "${alvo_wp}")" in
         curado)
-            printf '      o PipeWire desta máquina já tem a cura do metadata (o %s ou mais novo) — nada a fazer\n' "${alvo_pw}"
+            printf '      o PipeWire desta máquina já tem a cura do metadata (o %s ou mais novo) — nada a trocar\n' "${alvo_pw}"
+            _pw_fonte_no_curado "${construtor}" "${cache}" "${dir}" "${log}" "${alvo_pw}" "${alvo_wp}"
             return 0
             ;;
         sem-pipewire)
@@ -2451,6 +2486,7 @@ install_pipewire_da_casa() {
         _faria "gravar ${dir}/VERSOES-ANTERIORES.txt (o caminho de volta, só com os pacotes que trocam)"
         _faria_root "fixar a prioridade do apt em /etc/apt/preferences.d/hefesto-pipewire (o apt fica com a versão mais nova, a da casa ou a da distro)"
         _faria_root "instalar só os pacotes do PipeWire e do WirePlumber que a máquina já tem, conferidos pelo SHA256SUMS — com a Steam aberta, o passo recusa"
+        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-dualsense4unix/apt-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
         _faria "REINICIAR o som da sessão (pipewire, pipewire-pulse e wireplumber): os controles perdem o som e o microfone por alguns segundos"
         return 0
     fi
@@ -2521,6 +2557,7 @@ install_pipewire_da_casa() {
             -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
             "${debs[@]}" >/dev/null 2>&1; then
         printf '      PipeWire %s e WirePlumber %s instalados (%d pacotes)\n' "${alvo_pw}" "${alvo_wp}" "${#debs[@]}"
+        _pw_publica_o_repositorio "${dir}" "${alvo_pw}" "${alvo_wp}" || true
         if reiniciar_o_som_da_sessao; then
             printf '      som reiniciado — confira o som e o microfone de cada controle\n'
             case "${SOM_PAINEL_DO_COSMIC}" in
@@ -2539,6 +2576,26 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
     step "3f-bis" "PipeWire corrigido (1.6.9 com o WirePlumber 0.5.18: a Steam fecha mesmo depois de o som reiniciar)"
     install_pipewire_da_casa
+fi
+
+_tela_presente() {
+    local _py="${VENV_DIR}/bin/python"
+    [[ -x "${_py}" ]] || _py="${_VENV_PYTHON:-python3}"
+    "${_py}" -c "import sys, gi; gi.require_version('Gst', '1.0'); from gi.repository import Gst; Gst.init(None); sys.exit(0 if Gst.ElementFactory.find('pipewiresrc') else 1)" >/dev/null 2>&1
+}
+if ! _tela_presente; then
+    printf '\n      Tela do jogo para as extensões (o sentido «Tela» do Modo imersão): falta o pipewiresrc do GStreamer\n'
+    ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        if run_pkg gst-pipewire; then
+            printf '      ok — a tela do jogo chega às extensões pelo portal\n'
+        else
+            warn "não instalei o pipewiresrc — o jogo.tela fica ausente para as extensões"
+        fi
+    else
+        printf '      pulando (a tela do jogo fica ausente para as extensões; instale depois: %s)\n' \
+            "$(comando_manual_pkg gst-pipewire)"
+    fi
 fi
 
 _pc_ler() {
