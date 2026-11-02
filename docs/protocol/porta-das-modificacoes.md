@@ -184,6 +184,14 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `automatico`, `personalizado` ou `extensao:<id>`; o controle que escreve o seu por cima leva o dele. O modo de
   uma extensão que não está viva sai como `personalizado`. É estado: quem assina depois recebe o de cada controle
   logo na assinatura.
+- `jogo.memoria` (`ler:jogo.memoria`, ensaio) é o nome dos valores que a receita declara, lidos da memória do jogo:
+  `{<nome>: valor, t}`. Quem lê é o leitor (`integrations/leitor_do_estado.py`), pai do jogo, por
+  `process_vm_readv`; a extensão nunca recebe acesso ao processo. A receita declara de 1 a 64 linhas
+  `{nome, modulo, cadeia_de_ponteiros (1 a 8), tipo (i8 a u64, f32, f64), hz (até 30)}`. Nada se lê sem a chave
+  «Memória» daquele jogo ligada, que nasce desligada e só a janela grava; num jogo com anticheat conhecido
+  (`integrations/anticheat_conhecido.json`), ligar a chave pede o aviso visto antes. Com o `buildid` fora da faixa
+  `{min, max}` da receita, nada se lê. O caçador (`Varredura`) devolve só `{token, contagem}`, e o endereço sai
+  quando sobra um candidato. Até o wrapper virar pai do jogo, o tópico não tem fonte.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
 fonte, e uma modificação que peça um deles é recusada como qualquer permissão desconhecida.

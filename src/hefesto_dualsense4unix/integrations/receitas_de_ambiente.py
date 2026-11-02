@@ -140,6 +140,18 @@ def override_valido(valor: str) -> bool:
     return True
 
 
+CARREGADORES_DE_MOD: dict[str, str] = {"ue4ss": "dwmapi=n,b"}
+
+
+def override_do_carregador(nome: str, *, chave_ligada: bool) -> str:
+    """O override do carregador de mod que a extensão pede, só da lista fechada e só com a chave
+    «Memória» do jogo ligada; vazio em qualquer outro caso."""
+    valor = CARREGADORES_DE_MOD.get(nome, "")
+    if not chave_ligada or not valor or not override_valido(valor):
+        return ""
+    return valor
+
+
 @dataclass(frozen=True)
 class Receita:
     """Uma linha da tabela."""
@@ -346,6 +358,7 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
 
 
 __all__ = [
+    "CARREGADORES_DE_MOD",
     "MODOS_DO_OVERRIDE",
     "NOME_DA_PECA_DO_HEFESTO",
     "NOME_DO_AJUDANTE",
@@ -368,6 +381,7 @@ __all__ = [
     "gameinput_do_hefesto_instalado",
     "jogo_gdk_sem_ajudante",
     "ler_jogo",
+    "override_do_carregador",
     "override_valido",
     "pasta_da_peca",
     "peca_do_hefesto_instalada",

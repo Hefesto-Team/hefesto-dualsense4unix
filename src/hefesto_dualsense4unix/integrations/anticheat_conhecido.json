@@ -1,0 +1,12 @@
+{
+  "formato": 1,
+  "fontes": ["AreWeAntiCheatYet (MIT), https://github.com/AreWeAntiCheatYet/AreWeAntiCheatYet"],
+  "por_appid": {},
+  "marcadores": {
+    "Easy Anti-Cheat": ["EasyAntiCheat", "EasyAntiCheat_EOS", "EasyAntiCheat_x64.dll", "EasyAntiCheat_EOS_Setup.exe"],
+    "BattlEye": ["BattlEye", "BEClient_x64.dll", "BEService_x64.exe"],
+    "nProtect GameGuard": ["GameGuard", "GameMon.des"],
+    "XIGNCODE3": ["XIGNCODE", "x3.xem"],
+    "Denuvo": ["denuvo64.dll", "Denuvo Anti-Cheat"]
+  }
+}

@@ -69,6 +69,7 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "microfone.nivel": (EventTopic.MICROFONE_NIVEL,),
     "jogo.identidade": (EventTopic.JOGO_IDENTIDADE,),
     "modo.aba": (EventTopic.MODO_ABA,),
+    "jogo.memoria": ("jogo.memoria",),
 }
 
 TOPICOS_DE_PUBLICACAO: dict[str, str] = {
@@ -123,6 +124,10 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Saber o volume do microfone de cada controle e se o jogo o escuta, sem receber a voz."
     ),
     "ler:jogo.identidade": "Saber qual jogo está aberto, a versão dele e a loja de onde veio.",
+    "ler:jogo.memoria": (
+        "Ler do jogo só os valores que a receita declara, como a vida, com a chave «Memória» "
+        "daquele jogo ligada."
+    ),
     "ler:modo.aba": (
         "Saber em que seções de cada controle o modo que a extensão traz está aceso."
     ),
