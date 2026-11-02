@@ -34,10 +34,6 @@ AS_FONTES = "() => document.fonts.ready.then(() => true)"
 DOIS_QUADROS = ("() => new Promise(r => requestAnimationFrame("
                 "() => requestAnimationFrame(() => r(true))))")
 
-AS_ANIMACOES_QUE_ACABAM = """() => Promise.all(document.getAnimations()
-  .filter(a => a.effect && a.effect.getComputedTiming().endTime !== Infinity)
-  .map(a => a.finished.catch(() => null))).then(() => true)"""
-
 
 class PaginaNaoFicouProntaError(RuntimeError):
     """O sinal que a página não deu dentro do prazo, com o nome dele."""
@@ -65,7 +61,7 @@ def _esperar(pg: Any, endereco: str, passos: list[tuple[str, Any]], prazo_ms: in
 
 
 def abrir_pronta(pg: Any, alvo: pathlib.Path | str, *, seletor: str | None = None,
-                 prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> str:
+                 prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> None:
     """Abre ``alvo`` e só volta com a página desenhada: o ``load``, o
     ``document.fonts.ready``, dois quadros pintados (o que o motor da página faz depois do
     ``load`` roda antes do quadro) e, pedido, o ``seletor`` no DOM. Nenhuma página pede nada
@@ -85,20 +81,6 @@ def abrir_pronta(pg: Any, alvo: pathlib.Path | str, *, seletor: str | None = Non
                        lambda: pg.wait_for_selector(seletor, state="attached",
                                                     timeout=prazo_ms)))
     _esperar(pg, endereco, passos, prazo_ms)
-    return endereco
-
-
-def assentar(pg: Any, endereco: str, prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> None:
-    """Depois de uma folha posta por cima: as fontes, o fim de toda animação e transição
-    que acaba (a cor do tema transita) e dois quadros pintados."""
-    _esperar(pg, endereco, [
-        ("o document.fonts.ready",
-         lambda: pg.wait_for_function(AS_FONTES, timeout=prazo_ms)),
-        ("o fim das animações que acabam",
-         lambda: pg.wait_for_function(AS_ANIMACOES_QUE_ACABAM, timeout=prazo_ms)),
-        ("dois quadros pintados",
-         lambda: pg.wait_for_function(DOIS_QUADROS, timeout=prazo_ms)),
-    ], prazo_ms)
 
 
 MEDIDA_NA_VISTA = """() => {
@@ -174,13 +156,14 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
               vista: tuple[int, int] | None = None, tema: str = "",
               prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> dict:
     """Uma página, assentada pelos próprios sinais, medida e fotografada; sem um sinal no
-    prazo, o erro com o nome dele e nenhuma foto. A animação que não acaba (um pulso) sai
-    no estado de base, o mesmo que a página declara para o movimento reduzido: a foto não
-    depende do instante em que foi tirada."""
+    prazo, o erro com o nome dele e nenhuma foto. Na foto, a animação e a transição que
+    acabam (a cor do tema transita) saem no fim, e a que não acaba (um pulso) sai no estado
+    de base, o mesmo que a página declara para o movimento reduzido: a foto não depende do
+    instante em que foi tirada."""
     larg, alt = vista or (LARG, ALT)
     pg = navegador.new_page(viewport={"width": larg, "height": alt}, device_scale_factor=1)
     try:
-        endereco = abrir_pronta(pg, alvo, seletor=A_CAIXA, prazo_ms=prazo_ms)
+        abrir_pronta(pg, alvo, seletor=A_CAIXA, prazo_ms=prazo_ms)
         from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
         pg.add_style_tag(
@@ -188,7 +171,6 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
         )
         if tema:
             pg.add_style_tag(content=tema)
-        assentar(pg, endereco, prazo_ms)
         cx = pg.evaluate(MEDIDA_NA_VISTA)
         if cx.get("erro"):
             return {"erro": cx["erro"]}
