@@ -50,7 +50,7 @@ PW_POP = "1.6.8-1pop1~1787688714~24.04~fdff050"
 WP_POP = "0.5.12-2pop1~1766191027~24.04~d4bf441"
 PW_POP_NOVO = "1.6.10-1pop1~1799999999~24.04~0000000"
 
-REPO = "/var/lib/hefesto-dualsense4unix/apt-pipewire"
+REPO = "/var/lib/hefesto-pipewire"
 FONTE = "/etc/apt/sources.list.d/hefesto-pipewire.sources"
 
 

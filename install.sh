@@ -2385,7 +2385,7 @@ _pw_entrega_confere() {
 
 _pw_publica_o_repositorio() {
     local dir="$1" alvo_pw="$2" alvo_wp="$3"
-    local repo="${_PW_REPO:-/var/lib/hefesto-dualsense4unix/apt-pipewire}"
+    local repo="${_PW_REPO:-/var/lib/hefesto-pipewire}"
     local fonte="${_PW_FONTE:-/etc/apt/sources.list.d/hefesto-pipewire.sources}"
     local novo="${repo}.novo" obra nomes rc=0
     local debs=()
@@ -2433,7 +2433,7 @@ _pw_fonte_no_curado() {
     [[ "$(_pw_versao_ii libpipewire-0.3-modules)" == *~hefesto* ]] || return 0
     _pw_da_casa_serve_aqui || return 0
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-dualsense4unix/apt-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
+        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
         return 0
     fi
     mkdir -p "${cache}"
@@ -2486,7 +2486,7 @@ install_pipewire_da_casa() {
         _faria "gravar ${dir}/VERSOES-ANTERIORES.txt (o caminho de volta, só com os pacotes que trocam)"
         _faria_root "fixar a prioridade do apt em /etc/apt/preferences.d/hefesto-pipewire (o apt fica com a versão mais nova, a da casa ou a da distro)"
         _faria_root "instalar só os pacotes do PipeWire e do WirePlumber que a máquina já tem, conferidos pelo SHA256SUMS — com a Steam aberta, o passo recusa"
-        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-dualsense4unix/apt-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
+        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
         _faria "REINICIAR o som da sessão (pipewire, pipewire-pulse e wireplumber): os controles perdem o som e o microfone por alguns segundos"
         return 0
     fi

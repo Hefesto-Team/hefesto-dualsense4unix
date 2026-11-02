@@ -70,6 +70,9 @@ class Corrida:
     saida: str
     chamadas: list[str]
     pref: Path
+    fonte: Path
+    repo: Path
+    listas: Path
 
     def chamou(self, trecho: str) -> bool:
         return any(trecho in linha for linha in self.chamadas)
@@ -95,6 +98,7 @@ def _correr(
     sudo_ok: bool = True,
     remv: tuple[str, ...] = (),
     simulacao_recusada: bool = False,
+    fonte_da_casa: bool = False,
 ) -> Corrida:
     maquina = MAQUINA_DA_CASA if maquina is None else maquina
     lar = tmp_path / "lar"
@@ -106,6 +110,19 @@ def _correr(
     trava.parent.mkdir()
     if pref:
         trava.write_text("Package: src:pipewire\nPin-Priority: 500\n", encoding="utf-8")
+    fonte = tmp_path / "sources.list.d" / "hefesto-pipewire.sources"
+    repo = tmp_path / "var-lib" / "hefesto-pipewire"
+    listas = tmp_path / "lists"
+    listas.mkdir()
+    if fonte_da_casa:
+        fonte.parent.mkdir()
+        fonte.write_text(
+            f"Types: deb\nURIs: file:{repo}\nSuites: ./\nTrusted: yes\n", encoding="utf-8"
+        )
+        repo.mkdir(parents=True)
+        (repo / "Packages").write_text("", encoding="utf-8")
+        (listas / "_var_lib_hefesto-pipewire_._Packages").write_text("", encoding="utf-8")
+        (listas / "deb.debian.org_dists_Packages").write_text("", encoding="utf-8")
     diario = tmp_path / "chamadas.log"
     fakes = tmp_path / "fakes"
     casos = "\n".join(f'  {pkg}) echo "ii |{ver}" ;;' for pkg, ver in maquina.items())
@@ -143,6 +160,9 @@ def _correr(
         "set -euo pipefail\n"
         "log() { printf '[uninstall] %s\\n' \"$*\"; }\n"
         f"PIPEWIRE_PREF={trava}\n"
+        f"PIPEWIRE_FONTE={fonte}\n"
+        f"PIPEWIRE_REPO={repo}\n"
+        f"PIPEWIRE_LISTAS={listas}\n"
         f'source "{RAIZ}/scripts/lib/som_da_sessao.sh"\n'
         + _funcao("devolver_o_pipewire")
         + "devolver_o_pipewire\n"
@@ -173,7 +193,7 @@ def _correr(
             os.close(escravo)
         rc, saida = r.returncode, r.stdout + r.stderr
     chamadas = diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
-    return Corrida(rc, saida, chamadas, trava)
+    return Corrida(rc, saida, chamadas, trava, fonte, repo, listas)
 
 
 def test_a_flag_devolve_sem_perguntar_com_as_versoes_do_arquivo(tmp_path: Path) -> None:
@@ -259,6 +279,32 @@ def test_preservar_sem_a_trava_diz_que_o_pop_volta_ao_da_distro(
     c = _correr(tmp_path, **parametros)
     assert c.rc == 0, c.saida
     assert ("próximo apt upgrade volta o PipeWire" in c.saida) is avisa, c.saida
+
+
+@pytest.mark.parametrize(
+    "caso", ["devolvendo", "preservando", "sem-registro", "steam-aberta"],
+)
+def test_a_fonte_do_apt_da_casa_sai_em_todo_caso(tmp_path: Path, caso: str) -> None:
+    """MORDIDA: tirar a remoção da fonte ou da pasta deixa o apt lendo o PipeWire da casa."""
+    parametros: dict[str, dict[str, Any]] = {
+        "devolvendo": {"flag": True},
+        "preservando": {},
+        "sem-registro": {"registro": None, "pref": False},
+        "steam-aberta": {"flag": True, "steam_aberta": True},
+    }
+    c = _correr(tmp_path, fonte_da_casa=True, **parametros[caso])
+    assert c.rc == 0, c.saida
+    assert not c.fonte.exists(), f"a fonte do apt ficou ({caso}):\n{c.saida}"
+    assert not c.repo.exists(), f"a pasta do repositório ficou ({caso}):\n{c.saida}"
+    assert sorted(x.name for x in c.listas.iterdir()) == ["deb.debian.org_dists_Packages"]
+    assert "removida a fonte do apt do PipeWire da casa" in c.saida
+
+
+def test_sem_sudo_a_fonte_do_apt_fica_e_a_fala_diz_o_comando(tmp_path: Path) -> None:
+    c = _correr(tmp_path, fonte_da_casa=True, sudo_ok=False)
+    assert c.fonte.exists()
+    assert c.repo.exists()
+    assert f"sudo rm -rf {c.fonte} {c.repo}" in c.saida
 
 
 def test_sem_sudo_a_trava_fica_e_a_fala_diz_o_comando(tmp_path: Path) -> None:

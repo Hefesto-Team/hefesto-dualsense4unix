@@ -22,7 +22,7 @@ usa sudo.** Quem instala é o `./install.sh`, no passo 3f-bis, e só no Pop!_OS
 24.04 (o empacotamento é o dele; em outra distro o passo fica de fora): ele chama este
 script, confere o `SHA256SUMS`, grava o caminho de volta, fixa a prioridade do
 apt, instala só os pacotes que a máquina já tem, publica a entrega conferida
-como fonte local do apt (`/var/lib/hefesto-dualsense4unix/apt-pipewire`, lida pela
+como fonte local do apt (`/var/lib/hefesto-pipewire`, lida pela
 `/etc/apt/sources.list.d/hefesto-pipewire.sources`) e reinicia o som. Com a
 1.6.9 já instalada, ele só publica a fonte. Com a Steam aberta, ele recusa e
 manda fechá-la pelo menu. A instalação à mão é a de
@@ -182,12 +182,12 @@ Steam antes.
    1.6.9 de cada irmão, e a prioridade do passo 3 decide pela versão mais nova:
 
    ```bash
-   sudo install -d -m 0755 /var/lib/hefesto-dualsense4unix/apt-pipewire
-   sudo install -m 0644 SHA256SUMS *.deb /var/lib/hefesto-dualsense4unix/apt-pipewire/
-   cd /var/lib/hefesto-dualsense4unix/apt-pipewire && sha256sum -c SHA256SUMS
+   sudo install -d -m 0755 /var/lib/hefesto-pipewire
+   sudo install -m 0644 SHA256SUMS *.deb /var/lib/hefesto-pipewire/
+   cd /var/lib/hefesto-pipewire && sha256sum -c SHA256SUMS
    apt-ftparchive packages . | sudo tee Packages >/dev/null
    apt-ftparchive release . | sudo tee Release >/dev/null
-   printf 'Types: deb\nURIs: file:/var/lib/hefesto-dualsense4unix/apt-pipewire\nSuites: ./\nTrusted: yes\n' \
+   printf 'Types: deb\nURIs: file:/var/lib/hefesto-pipewire\nSuites: ./\nTrusted: yes\n' \
        | sudo tee /etc/apt/sources.list.d/hefesto-pipewire.sources >/dev/null
    sudo apt-get update -o Dir::Etc::SourceList=/etc/apt/sources.list.d/hefesto-pipewire.sources \
        -o Dir::Etc::SourceParts=- -o APT::Get::List-Cleanup=0
@@ -199,7 +199,7 @@ Steam antes.
    controle e feche a Steam pelo menu depois de jogar.
 
 Para voltar: apague o `/etc/apt/preferences.d/hefesto-pipewire`, a
-`/etc/apt/sources.list.d/hefesto-pipewire.sources` e o `/var/lib/hefesto-dualsense4unix/apt-pipewire`, e rode
+`/etc/apt/sources.list.d/hefesto-pipewire.sources` e o `/var/lib/hefesto-pipewire`, e rode
 `sudo apt install --allow-downgrades $(cat VERSOES-ANTERIORES.txt)`.
 
 ## O que muda para o Hefesto
