@@ -166,6 +166,7 @@ _LER = """(function(){
   return JSON.stringify({
     coluna: r(j.querySelector('#mod-agora')),
     linha: r(caixa && caixa.querySelector('.cx-liga')),
+    outra: r([...j.querySelectorAll('#mod-agora .cx-liga')].find(l => !l.closest('.cx-par'))),
     botao: r(caixa && caixa.querySelector('.cx-escolhido')),
     nome: caixa && caixa.querySelector('.cx-escolhido').textContent.trim(),
     aberta: !!(esc && esc.getClientRects().length && esc.getBoundingClientRect().height > 0),
@@ -213,6 +214,8 @@ def test_no_webkit_a_coluna_cabe_e_o_adaptador_abre_e_fecha(
     meio = (antes["botao"]["y"] + antes["botao"]["b"]) / 2
     assert antes["linha"]["y"] <= meio <= antes["linha"]["b"], "o botão não está na linha"
     assert antes["botao"]["d"] <= antes["coluna"]["d"] + 1, "o botão sai da coluna"
+    assert antes["botao"]["x"] >= antes["linha"]["d"] + 4, "o botão encosta na linha"
+    assert abs(antes["botao"]["d"] - antes["outra"]["d"]) <= 1, "o botão não acaba com as linhas"
     ativo = antes["aps"][0]
     assert [p["t"] for p in ativo["pares"]] == ["80%", "30%"], ativo
     for p in ativo["pares"]:

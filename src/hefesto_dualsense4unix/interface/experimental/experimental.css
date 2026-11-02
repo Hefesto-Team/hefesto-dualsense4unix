@@ -494,8 +494,8 @@
   border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
 #mod-janela .cx-escolha:hover { color:var(--fg) }
 #mod-janela .cx-escolha.marcada { border-color:var(--purple);background:var(--sel-bg);color:var(--fg) }
-#mod-janela .cx-par { display:flex;align-items:center;gap:6px;min-width:0 }
-#mod-janela .cx-par > .cx-liga { flex:1 }
+#mod-janela .cx-par { display:flex;align-items:center;gap:6px;min-width:0;margin-right:-7px }
+#mod-janela .cx-par > .cx-liga { flex:1;min-width:0;margin-right:0 }
 #mod-janela .cx-escolhido.est { height:22px;max-width:104px;padding:0 8px;border-radius:6px;font:inherit;font-size:11px;cursor:pointer;
   border:1px solid var(--border-forte);background:var(--panel);color:var(--fg) }
 #mod-janela .cx-escolhido span { min-width:0;overflow:hidden;text-overflow:ellipsis }
