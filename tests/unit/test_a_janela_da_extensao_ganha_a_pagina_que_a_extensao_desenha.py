@@ -166,6 +166,7 @@ def test_sem_resposta_a_tempo_a_mensagem_volta_sem_resposta(curto: pathlib.Path)
 
 
 def test_acima_de_64_kb_e_de_30_por_segundo_recusa(curto: pathlib.Path) -> None:  # noqa: F811
+    """Prova da D-PAGINA-PAYLOAD."""
     async def corrida() -> tuple[str, str, int]:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})

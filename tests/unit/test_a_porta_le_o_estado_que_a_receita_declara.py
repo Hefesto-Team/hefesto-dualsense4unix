@@ -130,6 +130,7 @@ def test_a_varredura_devolve_contagem_e_token_e_o_endereco_so_quando_sobra_um(fi
 
 
 def test_a_varredura_com_candidatos_de_mais_pede_um_valor(monkeypatch, filho) -> None:
+    """Prova da D-IMERSAO-TETOS."""
     proc, _, _ = filho
     monkeypatch.setattr(leitor, "CANDIDATOS_GUARDADOS", 10)
     with pytest.raises(leitor.LeituraRecusadaError, match="comece por um valor"):
@@ -146,6 +147,7 @@ def test_a_varredura_com_valor_comum_de_mais_pede_outro_valor(monkeypatch, filho
 
 
 def test_a_chave_nasce_desligada_e_o_anticheat_pede_o_aviso(tmp_path) -> None:
+    """Prova da D-IMERSAO-MEMORIA-CHAVE."""
     chaves = leitor.ChavesDaMemoria(tmp_path / "chaves.json")
     assert not chaves.ligada("steam:1")
     with pytest.raises(leitor.AvisoDoAnticheatError, match="Easy Anti-Cheat"):

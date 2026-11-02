@@ -71,6 +71,7 @@ def _a_da_fabrica() -> fabrica.DeFabrica:
 
 
 def test_a_lista_de_fabrica_traz_a_extensao_ligada() -> None:
+    """Prova da D-IMERSAO-ID."""
     item = _a_da_fabrica()
     assert item.endereco == ENDERECO
     assert item.ligar is True

@@ -270,6 +270,7 @@ def _biblioteca_listada(casa: Path, caminho: Path) -> Path:
 def test_a_biblioteca_de_disco_fora_nao_esquece_o_jogo_da_steam(
     tmp_path: Path, lancadores_ligados: None
 ) -> None:
+    """Prova da D-0211-A-MARCA-ESQUECE-SO-COM-A-FONTE-LIDA."""
     casa, destino, disco = tmp_path / "casa", tmp_path / "perfis", tmp_path / "disco"
     manifesto = _instala(casa)
     _biblioteca_listada(casa, disco)

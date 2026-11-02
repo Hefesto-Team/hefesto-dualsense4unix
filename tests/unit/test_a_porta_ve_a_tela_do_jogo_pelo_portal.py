@@ -83,6 +83,7 @@ def test_o_quadro_deslocado_e_tremor() -> None:
 
 
 def test_a_luz_que_muda_devagar_numa_cena_lisa_nao_e_tremor() -> None:
+    """Prova da D-IMERSAO-TREMOR-PISO."""
     def rampa(soma: int) -> Pintor:
         return lambda x, _y: ((x // 2) * 4 + soma,) * 3
 
@@ -198,6 +199,7 @@ def test_a_fonte_que_cai_vira_ausente_uma_vez_e_volta_sozinha() -> None:
 
 
 def test_a_fonte_que_falta_e_ausente_e_nunca_zero() -> None:
+    """Prova da D-IMERSAO-AUSENTE-NONE."""
     fonte, assinantes, agora = _Fonte(abre=False), [1], [0.0]
     captura, publicadas = _captura(fonte, assinantes, agora)
     for _ in range(3):
