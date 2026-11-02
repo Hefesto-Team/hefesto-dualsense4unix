@@ -39,14 +39,21 @@ def grupos(texto):
     return fora
 
 
+def _abrir(pg, caminho):
+    """Abre o arquivo pelo dono da espera da página pintada."""
+    _sys.path.insert(0, str(R / "src"))
+    from hefesto_dualsense4unix.interface.olhar import abrir_pronta
+    endereco = pathlib.Path(caminho).as_uri()
+    abrir_pronta(pg, endereco, lambda **ir: pg.goto(endereco, **ir))
+
+
 def medir_matriz(caminho):
     """A matriz de cada glifo no espaço do viewBox, e o `--lado` que ele declara."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
         pg = b.new_page(viewport={"width": 1200, "height": 900})
-        pg.goto(f"file://{caminho}")
-        pg.wait_for_timeout(500)
+        _abrir(pg, caminho)
         r = pg.evaluate("""() => {const R=n=>Math.round(n*100000)/100000, o={};
           const raiz=document.querySelector('svg');
           document.querySelectorAll('[id^="glifo-"]').forEach(g=>{
@@ -66,8 +73,7 @@ def medir_glifo_contra_peca(caminho):
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
         pg = b.new_page(viewport={"width": 1200, "height": 900})
-        pg.goto(f"file://{caminho}")
-        pg.wait_for_timeout(500)
+        _abrir(pg, caminho)
         r = pg.evaluate("""() => {const o={};
           document.querySelectorAll('[id^="glifo-"]').forEach(g=>{
             const pid=g.id.slice(6);
@@ -84,13 +90,10 @@ def medir_glifo_contra_peca(caminho):
 def medir_no_mapa():
     """Quais glifos ficaram longe da peça DEPOIS de o mapa ser gerado."""
     from playwright.sync_api import sync_playwright
-    _sys.path.insert(0, str(R / "src"))
-    from hefesto_dualsense4unix.interface.olhar import abrir_pronta
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
         pg = b.new_page(viewport={"width": 1920, "height": 1080})
-        mapa = R / "layout" / "mapa-do-controle.html"
-        abrir_pronta(pg, mapa.as_uri(), lambda **ir: pg.goto(f"file://{mapa}", **ir))
+        _abrir(pg, R / "layout" / "mapa-do-controle.html")
         r = pg.evaluate("""() => {const o={};
           document.querySelectorAll('.sobre').forEach(g=>{
             const id=[...g.classList].find(c=>c.startsWith('s-')).slice(2);
@@ -109,8 +112,7 @@ def caixas(caminho):
     with sync_playwright() as pw:
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
         pg = b.new_page(viewport={"width": 1200, "height": 900})
-        pg.goto(f"file://{caminho}")
-        pg.wait_for_timeout(500)
+        _abrir(pg, caminho)
         r = pg.evaluate("""() => {const R=n=>Math.round(n*100)/100, o={};
           const raiz = document.querySelector('svg');
           document.querySelectorAll('svg g[id]').forEach(g=>{

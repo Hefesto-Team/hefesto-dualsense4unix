@@ -4,9 +4,9 @@ Ele espera o ``load``, o ``document.fonts.ready``, dois quadros pintados e, pedi
 com prazo por sinal e o nome do que faltou. A rede quieta não é sinal de página ``file://``:
 estoura o prazo com a máquina carregada ou chega antes do quadro pintado. Esta régua prova que
 nenhum código a espera, que nenhum outro lugar de ``scripts/`` e ``src/`` refaz a espera das
-fontes e dos quadros, que quem abria a página pela rede quieta abre pelo dono, sem relógio fixo
-depois dele, e que o ponto comum dos portões de página (``scripts/chrome_sem_rede.py``) passa
-por ele.
+fontes e dos quadros, que quem abre a página abre pelo dono, sem relógio fixo depois dele nem
+de um ``goto`` solto, e que o ponto comum dos portões de página (``scripts/chrome_sem_rede.py``)
+passa por ele.
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ REDE_QUIETA = re.compile(r"""(['"])networkidle\1""")
 ESPERA_DO_DESENHO = re.compile(
     r"fonts\.ready|requestAnimationFrame\(\s*\(\)\s*=>\s*requestAnimationFrame")
 
-DEPOIS_DO_DONO = {"abrir_pronta", "add_style_tag"}
+DEPOIS_DE_ABRIR = {"abrir_pronta", "add_style_tag", "goto", "reload"}
 
 
 def _codigo(*pastas: str, sufixos: tuple[str, ...] = (".py",)) -> list[pathlib.Path]:
@@ -63,7 +63,13 @@ def _nome_chamado(no: ast.stmt) -> str | None:
     return None
 
 
-def _relogio_depois_do_dono(arvore: ast.AST) -> list[int]:
+def _abre(no: ast.stmt) -> bool:
+    if isinstance(no, ast.If):
+        return any(bool(ramo) and _abre(ramo[-1]) for ramo in (no.body, no.orelse))
+    return _nome_chamado(no) in DEPOIS_DE_ABRIR
+
+
+def _relogio_depois_de_abrir(arvore: ast.AST) -> list[int]:
     linhas = []
     for no in ast.walk(arvore):
         for campo in ("body", "orelse", "finalbody", "handlers"):
@@ -71,8 +77,7 @@ def _relogio_depois_do_dono(arvore: ast.AST) -> list[int]:
             if not isinstance(bloco, list):
                 continue
             for antes, depois in itertools.pairwise(bloco):
-                if (_nome_chamado(antes) in DEPOIS_DO_DONO
-                        and _nome_chamado(depois) == "wait_for_timeout"):
+                if _abre(antes) and _nome_chamado(depois) == "wait_for_timeout":
                     linhas.append(depois.lineno)
     return linhas
 
@@ -108,16 +113,18 @@ def test_quem_abre_a_pagina_espera_pelo_dono_e_sem_relogio_depois(relativo: str)
     assert "abrir_pronta" in chamadas, f"{relativo} abre a página sem passar pelo dono"
     assert "wait_for_load_state" not in chamadas, (
         f"{relativo} espera um estado de carga por conta própria, fora do dono")
-    relogio = _relogio_depois_do_dono(arvore)
+    relogio = _relogio_depois_de_abrir(arvore)
     assert relogio == [], (
-        f"{relativo}:{relogio} soma um relógio fixo depois da página pronta: o dono já "
-        "esperou os quadros pintados, e o relógio só some com a máquina carregada")
+        f"{relativo}:{relogio} espera a página por relógio fixo: o dono espera os quadros "
+        "pintados, e o relógio só some com a máquina carregada")
 
 
-def test_o_relogio_depois_do_dono_e_achado() -> None:
-    plantado = ast.parse("def f(pg):\n    abrir_pronta(pg, 'u', ir)\n"
-                         "    pg.wait_for_timeout(400)\n")
-    assert _relogio_depois_do_dono(plantado) == [3], "instrumento inválido: não acha o plantado"
+@pytest.mark.parametrize("abre", ["abrir_pronta(pg, 'u', ir)", "pg.goto('u')", "pg.reload()",
+                                  "if css:\n        pg.add_style_tag(content=css)"])
+def test_o_relogio_depois_de_abrir_e_achado(abre: str) -> None:
+    plantado = ast.parse(f"def f(pg, css):\n    {abre}\n    pg.wait_for_timeout(400)\n")
+    assert _relogio_depois_de_abrir(plantado) == [3 + abre.count("\n")], (
+        "instrumento inválido: não acha o plantado")
 
 
 class _PaginaDeMentira:
