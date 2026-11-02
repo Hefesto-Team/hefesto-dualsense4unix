@@ -11,7 +11,6 @@ import json
 import os
 import subprocess
 import threading
-import time
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +19,7 @@ from typer.testing import CliRunner
 
 from hefesto_dualsense4unix.cli import cmd_mod
 from hefesto_dualsense4unix.interface.desenho_da_experimental import processo_de
-from hefesto_dualsense4unix.mods import instalador
+from hefesto_dualsense4unix.mods import instalador, supervisor
 from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
     gravar_registro,
@@ -67,13 +66,35 @@ class _Troca:
         self.gravados: list[str] = []
         self.saidas: list[Any] = []
         self.pids: tuple[int | None, int | None] = (None, None)
+        self.segurou = False
 
 
 def _trocar_vendo(
-    lugares: Lugares, pasta: Path, *, segurar_o_atualizando_s: float = 0.0, **mais: Any
+    lugares: Lugares, pasta: Path, *, parada_lenta: bool = False, **mais: Any
 ) -> _Troca:
-    """Atualiza a extensão viva; lê o estado a cada 10 ms e guarda cada estado gravado."""
+    """Atualiza a extensão viva; lê o estado a cada 10 ms e guarda cada estado gravado.
+
+    Com ``parada_lenta``, o serviço só grava a parada depois de o gesto acabar, e o estado
+    segue dizendo «rodando» o processo que já morreu enquanto isso.
+    """
     troca = _Troca()
+    acabou = threading.Event()
+    parar_o_grupo = supervisor.parar_o_grupo
+
+    async def parar_depois_do_gesto(processo: Any, prazo: float) -> int | None:
+        codigo = await parar_o_grupo(processo, prazo)
+        if parada_lenta and not acabou.is_set():
+            troca.segurou = True
+            while not acabou.is_set():
+                await asyncio.sleep(0.01)
+            await asyncio.sleep(0.2)
+        return codigo
+
+    def gesto_inteiro() -> None:
+        try:
+            _atualizar_e_listar(troca.saidas)
+        finally:
+            acabou.set()
 
     async def corrida() -> None:
         sup = _supervisor(lugares, procurar_bwrap=False, intervalo_s=0.3)
@@ -84,22 +105,14 @@ def _trocar_vendo(
             troca.gravados.append(estado.estado if estado else "")
             gravar()
 
-        marcar = sup._marcar
-
-        def marcar_devagar(mod_id: str, estado: Any) -> None:
-            if estado.estado == "atualizando":
-                time.sleep(segurar_o_atualizando_s)
-            marcar(mod_id, estado)
-
-        if segurar_o_atualizando_s:
-            sup._marcar = marcar_devagar  # type: ignore[method-assign]
         await sup.iniciar()
         try:
             await _ate(lambda: _o_que_se_le(lugares)[0] == "rodando")
+            supervisor.parar_o_grupo = parar_depois_do_gesto
             troca.pids = (sup.pid_de("exemplo"), None)
             sup._gravar_estado = gravar_vendo  # type: ignore[method-assign]
             _nova_versao(pasta, "0.1.1", **mais)
-            gesto = threading.Thread(target=_atualizar_e_listar, args=(troca.saidas,))
+            gesto = threading.Thread(target=gesto_inteiro)
             gesto.start()
             while gesto.is_alive():
                 troca.vistos.append(_o_que_se_le(lugares))
@@ -121,6 +134,7 @@ def _trocar_vendo(
                 await asyncio.sleep(0.01)
             troca.pids = (troca.pids[0], sup.pid_de("exemplo"))
         finally:
+            supervisor.parar_o_grupo = parar_o_grupo
             sup._gravar_estado = gravar  # type: ignore[method-assign]
             await sup.parar()
 
@@ -160,8 +174,9 @@ def test_o_servico_que_grava_o_atualizando_depois_do_gesto_termina_rodando(
     instalar(str(pasta), lugares=lar)
     _ligar_vendo("exemplo", lar)
 
-    troca = _trocar_vendo(lar, pasta, segurar_o_atualizando_s=0.5)
+    troca = _trocar_vendo(lar, pasta, parada_lenta=True)
 
+    assert troca.segurou, "o serviço parou antes de o gesto acabar: a troca lenta não se montou"
     assert troca.saidas[0].exit_code == 0, troca.saidas[0].output
     assert "atualizando" in troca.gravados, troca.gravados
     assert troca.vistos[-1][0] == "rodando" and troca.gravados[-1] == "rodando", (
