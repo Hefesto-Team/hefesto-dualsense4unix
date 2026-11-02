@@ -466,8 +466,11 @@ def na_tela() -> dict:
             fora[rotulo] = f"ERRO {erro}" if erro is not None else str(valor)
         return _leu
 
+    def pintados() -> int:
+        return piloto.tiques.get(PAGINA, 0) if piloto.pagina == PAGINA else 0
+
     def com_o_cinza() -> bool:
-        if not piloto.pronto:
+        if pintados() < 1:
             return True
         piloto.ponte.perguntar(LER_A_TELA, ler("com-razao"))
         import os
@@ -479,10 +482,13 @@ def na_tela() -> dict:
 
     def sem_o_cinza() -> bool:
         carga["o_que"] = dict(sem_razao)
-        GLib.timeout_add(600, leu_sem_o_cinza)
+        antes = pintados()
+        GLib.timeout_add(100, lambda: leu_sem_o_cinza(antes))
         return False
 
-    def leu_sem_o_cinza() -> bool:
+    def leu_sem_o_cinza(antes: int) -> bool:
+        if pintados() < antes + 2:
+            return True
         piloto.ponte.perguntar(LER_A_TELA, ler("sem-razao"))
         GLib.timeout_add(300, o_voo)
         return False
@@ -510,7 +516,7 @@ def na_tela() -> dict:
         return False
 
     GLib.timeout_add(400, lambda: piloto._ir(PAGINA))
-    GLib.timeout_add(1800, com_o_cinza)
+    GLib.timeout_add(100, com_o_cinza)
     guarda = GLib.timeout_add(60000, Gtk.main_quit)
     try:
         limite = _time.monotonic() + 60.0
