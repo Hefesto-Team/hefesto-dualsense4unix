@@ -239,14 +239,14 @@
       "data": "2026-11-02",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1192005,
+      "piso": 1192292,
       "por_item": {
-        "docs": 108306,
+        "docs": 108311,
         "scripts": 111006,
-        "src": 301428,
-        "tests": 671265
+        "src": 301479,
+        "tests": 671496
       },
-      "razao": "tamanho: +35 linhas (1191970 -> 1192005), pagas por Origem: D-1310-OS-LUGARES-DAS-MODIFICACOES-SAO-CASA-NO-CENSO; registrado no fecho, topo 990fd9f96d41",
+      "razao": "tamanho: +287 linhas (1192005 -> 1192292), pagas por Origem: D-1610-O-CINZA-SAI-DA-LETRA, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-AO-USUARIO; registrado no fecho, topo bbef2f0cf54a",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1429,10 +1429,16 @@
           "de": 1191970,
           "para": 1192005,
           "razao": "tamanho: +35 linhas (1191970 -> 1192005), pagas por Origem: D-1310-OS-LUGARES-DAS-MODIFICACOES-SAO-CASA-NO-CENSO; registrado no fecho, topo 990fd9f96d41"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 1192005,
+          "para": 1192292,
+          "razao": "tamanho: +287 linhas (1192005 -> 1192292), pagas por Origem: D-1610-O-CINZA-SAI-DA-LETRA, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-AO-USUARIO; registrado no fecho, topo bbef2f0cf54a"
         }
       ],
       "unidade": "linhas",
-      "universo": 3322
+      "universo": 3323
     }
   }
 }
