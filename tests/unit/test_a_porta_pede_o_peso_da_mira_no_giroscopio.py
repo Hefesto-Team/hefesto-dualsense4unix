@@ -20,6 +20,7 @@ import pytest
 from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
+from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
 from hefesto_dualsense4unix.integrations.leitor_do_estado import (
     ChavesDaMemoria,
     arquivo_das_chaves,
@@ -153,8 +154,10 @@ def test_o_jogo_que_fecha_e_o_modo_que_sai_devolvem_o_ganho_1() -> None:
 
 
 def test_jogo_com_anticheat_recusa_sem_a_chave_e_aceita_com_a_chave_ligada(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(porta_mod, "anticheat_do_jogo", lambda _p, appid: "EasyAntiCheat")
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    (tmp_path / "EasyAntiCheat").mkdir()
+    monkeypatch.setattr(prontuario_dos_jogos, "jogos_instalados",
+                        lambda: [("4242", "Jogo", tmp_path)])
     chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(porta_mod.ARQUIVO_DO_PESO_DA_MIRA))
 
     async def corrida() -> tuple[dict[str, Any], dict[str, Any]]:
@@ -164,7 +167,7 @@ def test_jogo_com_anticheat_recusa_sem_a_chave_e_aceita_com_a_chave_ligada(
             porta, com = await _sessao(Path(pasta) / "c.sock", bus, ["escrever:mira"])
             try:
                 sem_chave = await asyncio.to_thread(com.pedir, "mira.peso", _pedido())
-                chaves.gravar("steam_app_4242", True, anticheat="EasyAntiCheat",
+                chaves.gravar("steam_app_4242", True, anticheat="Easy Anti-Cheat",
                               aviso_visto=True)
                 com_chave = await asyncio.to_thread(com.pedir, "mira.peso", _pedido())
             finally:

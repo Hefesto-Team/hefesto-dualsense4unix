@@ -926,6 +926,7 @@ class Porta:
         self._regioes_da_tela: dict[str, Regiao] = {}
         self._captura_da_tela: asyncio.Task[None] | None = None
         self._vigia_do_peso: asyncio.Task[None] | None = None
+        self._anticheat_por_appid: dict[str, str] = {}
         self._arbitro: Arbitro | None = (
             arbitro if arbitro is not None
             else escritor.arbitro if isinstance(escritor, EscritorDoServico) else None)
@@ -1141,7 +1142,7 @@ class Porta:
                 return _resposta(req_id, await asyncio.to_thread(
                     self._lista_dos_controles, con.sessao))
             if metodo == "mira.peso":
-                return _resposta(req_id, self._pesar_a_mira(con.sessao, params))
+                return _resposta(req_id, await self._pesar_a_mira(con.sessao, params))
             if metodo in _DA_MEMORIA:
                 return _resposta(req_id, await self._varrer(con.sessao, metodo, params))
             if metodo in _DE_FORA:
@@ -1249,7 +1250,8 @@ class Porta:
             self._ligar_a_captura()
         return {"assinados": list(topicos)}
 
-    def _pesar_a_mira(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
+    async def _pesar_a_mira(self, sessao: _Credencial,
+                            params: dict[str, Any]) -> dict[str, Any]:
         """O ``mira.peso``: o ganho do giro de um controle (ou de ``todos``) por ``ate_ms``. Num
         jogo com anticheat, só com a chave «Peso da mira» do jogo ligada."""
         if "escrever:mira" not in sessao.permissoes:
@@ -1263,7 +1265,7 @@ class Porta:
             raise RecusaError(CODE_INVALID_PARAMS, "mira.peso pede ganho e ate_ms em números")
         jogo = self._jogo_aberto()
         if jogo is not None:
-            anticheat = anticheat_do_jogo(None, jogo.removeprefix("steam_app_"))
+            anticheat = await asyncio.to_thread(self._anticheat_do_jogo, jogo)
             chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(ARQUIVO_DO_PESO_DA_MIRA))
             if anticheat and not chaves.liberada(jogo, anticheat):
                 raise RecusaError(
@@ -1291,6 +1293,15 @@ class Porta:
             chave_de_sensor(c["uniq"]) for c in modos_da_aba_ditos()
             if isinstance(c.get("uniq"), str) and isinstance(c.get("secoes"), dict)
             and c["secoes"].get("controles") == _origem(sessao))
+
+    def _anticheat_do_jogo(self, jogo: str) -> str:
+        from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import jogos_instalados
+
+        appid = jogo.removeprefix("steam_app_")
+        if appid not in self._anticheat_por_appid:
+            raiz = next((r for a, _nome, r in jogos_instalados() if a == appid), None)
+            self._anticheat_por_appid[appid] = anticheat_do_jogo(raiz, appid)
+        return self._anticheat_por_appid[appid]
 
     def _jogo_aberto(self) -> str | None:
         identidade = self.bus.ultimo(EventTopic.JOGO_IDENTIDADE)
