@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """O CAMINHO DE VOLTA: lê o SVG arrumado no editor e traz para o mapa."""
 import csv, io, pathlib, re, subprocess, sys
+from typing import Any
 
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
@@ -39,7 +40,7 @@ def grupos(texto):
     return fora
 
 
-def _abrir(pg, caminho):
+def _abrir(pg: Any, caminho: str | pathlib.Path) -> None:
     """Abre o arquivo pelo dono da espera da página pintada."""
     _sys.path.insert(0, str(R / "src"))
     from hefesto_dualsense4unix.interface.olhar import abrir_pronta
