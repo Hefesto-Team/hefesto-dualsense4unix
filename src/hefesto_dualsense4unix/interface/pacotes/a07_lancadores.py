@@ -1576,8 +1576,13 @@ def _notas_do_tema(manifesto: Any, mod_id: str) -> dict[str, str]:
     return {str(opcao): frase for opcao, frase in pares if opcao and frase}
 
 
-def _retrato_do_tema(manifesto: Any, pinta: bool = True) -> Any:
-    """O tema da extensão para a própria janela, ou ``None`` quando não pinta tema."""
+def _retrato_do_tema(manifesto: Any) -> Any:
+    """O tema que a extensão pinta quando ligada, ou ``None`` quando não pinta tema."""
+    return _retrato_da_janela(manifesto, pinta=True)
+
+
+def _retrato_da_janela(manifesto: Any, pinta: bool) -> Any:
+    """O tema para a janela da extensão: com ``pinta`` falso, o que a tela pinta sem a extensão."""
     from hefesto_dualsense4unix.mods import retrato_do_tema
 
     if "tema" not in manifesto.tipos or not manifesto.tema:
@@ -1595,7 +1600,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
     _MEXIDA.pinta = _pinta(item)
-    retrato = _retrato_do_tema(manifesto, _MEXIDA.pinta)
+    retrato = _retrato_da_janela(manifesto, _MEXIDA.pinta)
     valores = guardados = opcoes.ler(manifesto, _lugares())
     _MEXIDA.agora = tuple(manifesto.agora)
     estado = _estado_da_janela(manifesto)
