@@ -12,6 +12,7 @@ import asyncio
 import json
 import os
 import pathlib
+import re
 from types import SimpleNamespace
 from typing import Any
 
@@ -363,3 +364,67 @@ def test_no_webkit_a_mensagem_vai_e_volta_e_acima_de_64_kb_recusa(
     assert fim["cor"] == "#8be9fd" and fim["tema"] == "escuro", "as cores da casa não chegaram"
     assert all(g["gesto"] == exp.GESTO_DA_PAGINA and g["v"] == "toque" for g in gestos)
     assert len(gestos) == 2, f"a mensagem grande saiu da janela: {len(gestos)} gestos"
+
+
+PAGINA_QUE_FORJA = """<script>
+var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hefesto;
+if(h){ h.postMessage(JSON.stringify({gesto: 'instalar-modificacao', v: 'forjado',
+                                     pagina: '07-lancadores.html'})); }
+hefesto.enviar({oi: 1}).catch(function(){});
+</script>"""
+
+
+@pytest.mark.skipif(not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"),
+                    reason="sem sessão gráfica: o WebKit não abre")
+def test_no_webkit_a_pagina_nao_forja_gesto_pela_ponte_da_casa() -> None:
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk
+
+    from hefesto_dualsense4unix.interface import janela as jn
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica: o WebKit não abre")
+    recebidos: list[dict[str, Any]] = []
+    recusas: list[str] = []
+    ponte = jn.PonteDaTela(ao_receber=recebidos.append,
+                           ao_recusar=lambda motivo, bruto: recusas.append(bruto),
+                           folha=None, tema_de_cores=None, meu_css="")
+    area = exp.pagina_html("toque", exp.PaginaDaJanela(PAGINA_QUE_FORJA, "Prova", 120))
+    pagina = (f"<html><body><div id=\"mod-janela\">{area}</div>"
+              f"<script>{exp.SCRIPT_DA_PAGINA}</script></body></html>")
+    janela = Gtk.OffscreenWindow()
+    janela.add(ponte.view)
+    janela.show_all()
+    ponte.view.load_html(pagina, "file:///07-lancadores.html")
+    guarda = GLib.timeout_add(4000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert [r.get("v") for r in recebidos] == ["toque"], (
+        f"a página forjou gesto pela ponte da casa: {recebidos}")
+    assert recebidos[0]["gesto"] == exp.GESTO_DA_PAGINA
+    assert any("forjado" in r for r in recusas), recusas
+
+
+def test_no_arranjo_c_a_pagina_e_a_ultima_aba_e_nao_rouba_altura() -> None:
+    pagina = exp.PaginaDaJanela(HTML_DA_EXTENSAO, "Estúdio", 240)
+
+    def janela(aba: str = "") -> str:
+        return exp.modificacao_miolo_html(
+            "Toque", exp.OPCOES_DO_DESENHO_DAS_PECAS, mod="toque", agora=exp.AGORA_DO_DESENHO,
+            acoes=exp.ACOES_DO_DESENHO, aba=aba, pagina=pagina)
+
+    html = janela()
+    rotulos = re.findall(r'<label for="mj-aba-(\d+)">([^<]*)', html)
+    assert rotulos and rotulos[-1][1] == "Estúdio", f"a página não virou a última aba: {rotulos}"
+    ultima = rotulos[-1][0]
+    tela = html.split(f'id="mod-tela-{ultima}"', 1)[1]
+    assert tela.index('id="mod-pagina"') < tela.index("</iframe>"), (
+        "a página ficou fora da própria aba: a janela cresce e as outras abas rolam")
+    assert html.count('id="mod-pagina"') == 1
+    assert f'id="mj-aba-{ultima}" checked' in janela("Estúdio"), (
+        "a aba da página aberta volta à primeira ao redesenhar")

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import secrets
 import signal
 import sys
 import time
@@ -121,6 +122,23 @@ ROTEIRO_DA_ESPERA = (
     "if(document.readyState==='complete')armar();"
     "else window.addEventListener('load',armar,{once:true});})();"
 )
+
+ROTEIRO_DO_SELO = (
+    "(function(){{var m=window.webkit&&window.webkit.messageHandlers;"
+    "var h=m&&m[{canal}];if(!h)return;var cru=h.postMessage;"
+    "Object.defineProperty(h,'postMessage',{{value:function(x){{"
+    "return cru.call(h,{selo}+String(x));}}}});}})();"
+)
+
+
+def roteiro_do_selo(canal: str, selo: str) -> str:
+    """O script do quadro de cima que põe o ``selo`` na frente de toda mensagem do ``canal``.
+
+    Um ``iframe`` (a página de uma extensão) tem o próprio ``window.webkit``, que não se apaga
+    nem se troca, e alcança o mesmo canal; o selo vive só no quadro de cima, e o que chega sem
+    ele não é da página da casa."""
+    return ROTEIRO_DO_SELO.format(canal=json.dumps(canal), selo=json.dumps(selo))
+
 
 LARGURA_DO_DESENHO, PISO_DA_VISTA = VISTA_DO_DESENHO
 
@@ -599,6 +617,16 @@ class PonteDaTela:
         ucm = WebKit2.UserContentManager()
         ucm.register_script_message_handler(canal)
         ucm.connect(f"script-message-received::{canal}", self._da_tela)
+        self.selo = secrets.token_hex(16)
+        ucm.add_script(
+            WebKit2.UserScript(
+                roteiro_do_selo(canal, self.selo),
+                WebKit2.UserContentInjectedFrames.TOP_FRAME,
+                WebKit2.UserScriptInjectionTime.START,
+                None,
+                None,
+            )
+        )
         self.folha_da_casa = folha or ""
         self.tema_de_cores = _a_folha_do_tema(tema_de_cores)
         self.meu_css = (css_de_quem_usa() if meu_css is None and isinstance(
@@ -684,7 +712,10 @@ class PonteDaTela:
         except Exception as erro:
             self._recusar("a mensagem não virou texto", repr(erro))
             return
-        self.receber_texto(bruto)
+        if not bruto.startswith(self.selo):
+            self._recusar("a mensagem não veio do quadro de cima", bruto)
+            return
+        self.receber_texto(bruto[len(self.selo):])
 
     def receber_texto(self, bruto: str) -> None:
         """A metade da ponte que NÃO precisa de WebView: o texto vira gesto."""

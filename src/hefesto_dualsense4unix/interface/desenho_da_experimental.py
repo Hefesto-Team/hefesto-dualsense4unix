@@ -813,7 +813,16 @@ def _secao_da_opcao(o: OpcaoDaJanela) -> str:
             f'<span>{_e(o.rotulo)}</span>{_nota_da_opcao(o)}</div>{_controle_da_opcao(o)}</div>')
 
 
-def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "") -> str:
+def _aba_da_pagina(n: int, pagina: tuple[str, str], aberta: str, mod: str) -> str:
+    """A aba da página própria da extensão no arranjo C: o rótulo do manifesto e a área isolada,
+    empilhada com as abas das opções sem roubar altura das outras."""
+    rotulo, area = pagina
+    return (f'{_radio_da_aba(n, rotulo, aberta, mod)}<label for="mj-aba-{n}">{_e(rotulo)}</label>'
+            f'<div class="mj-tela" id="{PEDACO}tela-{n}">{area}</div>')
+
+
+def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "",
+                     pagina: tuple[str, str] | None = None) -> str:
     """O lado dos ajustes do arranjo C: os grupos do manifesto em abas, um cartão só.
 
     As abas são rádios (o navegador troca a tela, e o rádio avisa o Hefesto); ``aba`` é o grupo
@@ -822,9 +831,12 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "") -
     maior e não pula sob o clique. Com um grupo só, é o cartão de sempre.
     """
     grupos = _grupos_das_opcoes(opcoes)
-    if len(grupos) < 2:
+    if len(grupos) < 2 and pagina is None:
         return _cartoes_das_opcoes(opcoes)
-    aberta = aba if aba in grupos else next(iter(grupos))
+    if pagina is not None and list(grupos) == [""]:
+        grupos = {"Opções": grupos[""]}
+    da_pagina = pagina is not None and aba == pagina[0]
+    aberta = aba if aba in grupos or da_pagina else next(iter(grupos))
     telas = []
     for n, (nome, itens) in enumerate(grupos.items()):
         chave, linhas = chave_da_aba(nome, itens)
@@ -832,8 +844,10 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "") -
             f'{_radio_da_aba(n, nome, aberta, mod)}'
             f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
             f'<div class="mj-tela" id="{PEDACO}tela-{n}">{_linhas_da_aba(n, linhas, chave)}</div>')
+    if pagina is not None:
+        telas.append(_aba_da_pagina(len(telas), pagina, aberta, mod))
     partes = "".join(telas)
-    return f'<div class="ac-card mj-abas" style="--n:{len(grupos)}">{partes}</div>'
+    return f'<div class="ac-card mj-abas" style="--n:{len(telas)}">{partes}</div>'
 
 
 PEDACOS_DO_AGORA = ("conexoes", "nivel", "perfil", "aparelhos")  # (noqa-acento)
@@ -1465,9 +1479,9 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     ``agora`` (com ``estado``) é a coluna «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e
     ``chave`` (o valor guardado da opção ``chave`` do manifesto) a chave Ligado/Desligado, que
     desligada apaga as ações. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é o
-    arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` e
-    ``armada`` são as ações que esperam, ``livre`` a faixa de baixo e ``controles`` a aba dos
-    controles. ``ligas`` faz da coluna a «Conexão»; a página própria fica sob as opções.
+    arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta), a página própria na
+    última (fora dele, sob as opções); ``em_curso`` e ``armada`` são as ações que esperam, ``livre``
+    a faixa de baixo, ``controles`` a aba dos controles e ``ligas`` faz da coluna a «Conexão».
     """
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
@@ -1485,12 +1499,14 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     cc = ((controles, controles_dos_aparelhos_html(mod, estado, em_curso, desligada))
           if controles else ("", ""))
     if agora or acoes or gestao or livre_op or controles:
+        aba_da_pagina = (pagina.rotulo, na_pagina) if pagina is not None and na_pagina else None
         if acoes or (gestao and gestao.aparelhos.grupo) or controles:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
-                                         controles=cc, armada=armada, desligada=desligada)
+                                         controles=cc, armada=armada, desligada=desligada,
+                                         pagina=aba_da_pagina)
         else:
-            ajustes = _abas_das_opcoes(opcoes, aba, mod) if opcoes else vazio
-        ajustes += na_pagina
+            ajustes = (_abas_das_opcoes(opcoes, aba, mod, aba_da_pagina) if opcoes
+                       else na_pagina or vazio)
         fora = dica_da_barra_fora(nome, processo, gestao)
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
@@ -2247,7 +2263,7 @@ def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDa
 def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        acoes: Sequence[AcaoDaJanela], gestao: Gestao | None,
                        controles: tuple[str, str] = ("", ""), armada: Sequence[str] = (),
-                       desligada: bool = False) -> str:
+                       desligada: bool = False, pagina: tuple[str, str] | None = None) -> str:
     """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
 
     Cada aba é: a fileira das próprias ações (``#mod-acoes-<n>``), a lista dos aparelhos se a aba é a do
@@ -2266,7 +2282,8 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
     acoes_da: dict[str, list[AcaoDaJanela]] = {n: [] for n in nomes}
     for a in acoes:
         acoes_da[a.grupo or primeiro].append(a)
-    aberta = aba if aba in por_aba else primeiro
+    da_pagina = pagina is not None and aba == pagina[0]
+    aberta = aba if aba in por_aba or da_pagina else primeiro
     em_curso = gestao.em_curso if gestao else frozenset()
     telas = []
     for n, nome in enumerate(nomes):
@@ -2289,7 +2306,9 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
             f'{_radio_da_aba(n, nome, aberta, mod)}'
             f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
             f'<div class="mj-tela" id="{PEDACO}tela-{n}">{"".join(partes)}</div>')
-    return f'<div class="ac-card mj-abas" style="--n:{len(nomes)}">{"".join(telas)}</div>'
+    if pagina is not None:
+        telas.append(_aba_da_pagina(len(telas), pagina, aberta, mod))
+    return f'<div class="ac-card mj-abas" style="--n:{len(telas)}">{"".join(telas)}</div>'
 
 
 def acoes_por_aba(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
