@@ -20,7 +20,7 @@ MORDIDAS (01/11/2026, executadas sobre a cura e devolvidas):
 - ``_secao_da_opcao`` trocada por ``_linha_da_opcao`` reprova
   ``test_o_deslizante_depois_da_grade_abre_uma_secao`` e a régua do WebKit;
 - a bateria só no ativo reprova os dois testes do aparelho fora; sem o ``margin-left:0`` da
-  pílula depois da bateria, a régua do WebKit reprova com «a pílula saiu da direita»;
+  pílula depois da bateria, a régua do WebKit reprova com «a bateria não fica junto da pílula»;
 - sem o ``display:none``, sem o fecho na escolha ou sem o ``margin-right`` do ``.cx-par``, a
   régua do WebKit reprova.
 """
@@ -239,7 +239,8 @@ def test_no_webkit_a_coluna_cabe_e_o_adaptador_abre_e_fecha(
     assert ativo["ap"]["h"] == 28, ativo
     fora = antes["aps"][2]
     assert [p["t"] for p in fora["pares"]] == ["40%"] and fora["est"], fora
-    assert fora["pares"][0]["p"]["d"] <= fora["est"]["x"], "a bateria cobre a pílula"
+    vao = fora["est"]["x"] - fora["pares"][0]["p"]["d"]
+    assert 0 <= vao <= 9, f"a bateria não fica junto da pílula: {vao}"
     assert abs(fora["est"]["d"] - ativo["pares"][-1]["p"]["d"]) <= 1, "a pílula saiu da direita"
     assert antes["titulo"] and antes["faixa"], antes
     assert antes["faixa"]["y"] >= antes["titulo"]["b"], "o deslizante segue na linha do rótulo"
