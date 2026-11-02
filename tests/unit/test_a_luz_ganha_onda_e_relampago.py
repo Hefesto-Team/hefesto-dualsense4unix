@@ -24,6 +24,8 @@ from itertools import pairwise
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 from hefesto_dualsense4unix.daemon.subsystems import luz_animada as luz
 from hefesto_dualsense4unix.profiles import efeitos_de_luz as fx
 from hefesto_dualsense4unix.profiles.schema import (
@@ -337,8 +339,7 @@ def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
                                  ignore_default_args=["--hide-scrollbars"])
         for larg, alt in VISTAS_DA_04:
             pg = nav.new_page(viewport={"width": larg, "height": alt})
-            pg.goto(PUBLICADA.as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, PUBLICADA.as_uri())
             pg.add_style_tag(content=escondidos)
             pg.wait_for_timeout(300)
             m = pg.evaluate(medir)

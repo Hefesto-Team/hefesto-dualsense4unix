@@ -36,6 +36,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 
 from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import PREFIXO_DO_MEU
@@ -303,8 +305,7 @@ _ROLADORES = """() => { const d = document.documentElement;
 def _medir(navegador: Browser, arquivo: pathlib.Path, larg: int, alt: int) -> dict[str, Any]:
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
-        pg.goto(arquivo.as_uri())
-        pg.wait_for_load_state("networkidle")
+        abrir(pg, arquivo.as_uri())
         medida: dict[str, Any] = pg.evaluate(_ROLADORES)
         return medida
     finally:

@@ -6,6 +6,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
@@ -134,8 +136,7 @@ def as_duas_paginas() -> dict[str, dict[str, Any]]:
         try:
             for nome, publicado in (("desenho", False), ("publicada", True)):
                 pg = nav.new_page(viewport={"width": 1212, "height": 809})
-                pg.goto(onde.pagina("01-jogar.html", publicado=publicado).as_uri())
-                pg.wait_for_load_state("networkidle")
+                abrir(pg, onde.pagina("01-jogar.html", publicado=publicado).as_uri())
                 pg.add_style_tag(content=esconde)
                 pg.wait_for_timeout(200)
                 saida[nome] = dict(pg.evaluate(_MEDE))

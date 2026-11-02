@@ -16,6 +16,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
@@ -145,8 +147,7 @@ def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
                 pg = nav.new_page(viewport={"width": largura, "height": 900},
                                   device_scale_factor=1)
                 try:
-                    pg.goto(pagina)
-                    pg.wait_for_load_state("networkidle")
+                    abrir(pg, pagina)
                     pg.add_style_tag(content=FOLHA_DA_CASA)
                     pg.evaluate(cena, argumento)
                     pg.wait_for_timeout(50)
@@ -200,8 +201,7 @@ def _medir_no_chrome(largura: int, cenas: tuple[tuple[str, str], ...],
                 pg = nav.new_page(viewport={"width": largura, "height": 900},
                                   device_scale_factor=1)
                 try:
-                    pg.goto(pagina)
-                    pg.wait_for_load_state("networkidle")
+                    abrir(pg, pagina)
                     pg.add_style_tag(content=FOLHA_DA_CASA)
                     pg.evaluate(cena, argumento)
                     pg.wait_for_timeout(50)

@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import skip_sem_gi_real
+from tests.unit.pagina_pronta import abrir
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -84,8 +85,7 @@ def medido() -> dict[str, dict[str, Any]]:
                 pg = nav.new_page(viewport={"width": larg, "height": alt})
                 lido: dict[str, Any] = {}
                 for nome, alvo in paginas.items():
-                    pg.goto(alvo.as_uri())
-                    pg.wait_for_load_state("networkidle")
+                    abrir(pg, alvo.as_uri())
                     pg.add_style_tag(content=esconde)
                     lido[nome] = pg.evaluate(olhar.MEDIDA_NA_VISTA)
                     lido[nome]["lugar"] = pg.evaluate(LUGAR)

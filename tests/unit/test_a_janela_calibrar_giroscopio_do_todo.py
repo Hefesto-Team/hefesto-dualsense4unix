@@ -24,6 +24,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
@@ -91,8 +93,7 @@ def test_todo_alvo_clicavel_mede_24_px_ou_mais(largura: int) -> None:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": largura, "height": 809})
-            pg.goto(PAGINA.as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, PAGINA.as_uri())
             lido: dict[str, Any] = pg.evaluate("""() => ({
               alvos: [...document.querySelectorAll('[data-gesto]')].filter(e => e.offsetParent)
                 .map(e => [e.getAttribute('data-gesto'),
@@ -119,8 +120,7 @@ def test_a_coluna_da_mira_cabe_na_janela_estreita() -> None:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 940, "height": 809})
-            pg.goto(PAGINA.as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, PAGINA.as_uri())
             sobra = pg.evaluate("""() => [...document.querySelectorAll('.mira')]
               .filter(m => m.scrollWidth > m.clientWidth).length""")
         finally:

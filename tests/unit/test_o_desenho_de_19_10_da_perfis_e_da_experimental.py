@@ -32,6 +32,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
@@ -68,8 +70,7 @@ def _no_chrome(arquivo: pathlib.Path, vista: tuple[int, int], script: str,
         navegador = olhar._navegador(pw)
         try:
             pg = navegador.new_page(viewport={"width": vista[0], "height": vista[1]})
-            pg.goto(f"file://{arquivo}")
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, f"file://{arquivo}")
             if antes:
                 pg.evaluate(antes)
                 pg.wait_for_timeout(200)

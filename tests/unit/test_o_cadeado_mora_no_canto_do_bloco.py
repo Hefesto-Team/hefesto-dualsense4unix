@@ -65,6 +65,8 @@ import sys
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
@@ -188,8 +190,7 @@ def medido(request: pytest.FixtureRequest) -> dict:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
-            pg.goto(pagina.as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, pagina.as_uri())
             saida = pg.evaluate(O_QUE_O_MOTOR_DESENHA)
         finally:
             nav.close()
@@ -306,8 +307,7 @@ def test_o_clique_no_rotulo_chega_ao_dono_do_gesto() -> None:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
-            pg.goto(JOGAR.as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, JOGAR.as_uri(), seletor=".cadeado")
             caixa = pg.evaluate(O_CAMINHO_DO_CLIQUE)
             pg.click(".cadeado", position={"x": caixa["largura"] - 6,
                                            "y": caixa["altura"] / 2})

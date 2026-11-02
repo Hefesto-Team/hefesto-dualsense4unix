@@ -43,6 +43,8 @@ import sys
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
@@ -94,8 +96,7 @@ def medido() -> dict:
         try:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
             for p in paginas:
-                pg.goto(p.as_uri())
-                pg.wait_for_load_state("networkidle")
+                abrir(pg, p.as_uri())
                 fora[p.name] = pg.evaluate(O_QUE_O_MOTOR_DESENHA)
         finally:
             nav.close()
@@ -163,8 +164,7 @@ def test_o_apagado_tem_outra_cara() -> None:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
-            pg.goto(alvo.as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, alvo.as_uri(), seletor=".fita .chip.plastico")
             pg.evaluate("""() => {
               const plastico = [...document.querySelectorAll('.fita .chip')]
                 .find(c => c.classList.contains('plastico'));

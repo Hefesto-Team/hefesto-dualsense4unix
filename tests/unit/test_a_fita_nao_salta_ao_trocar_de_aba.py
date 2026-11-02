@@ -7,6 +7,8 @@ import sys
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
@@ -72,8 +74,7 @@ def medido() -> dict[str, dict[str, dict]]:
             pg = nav.new_page(viewport=VISTA)
             for estado, js in ESTADOS.items():
                 for p in paginas:
-                    pg.goto(p.as_uri())
-                    pg.wait_for_load_state("networkidle")
+                    abrir(pg, p.as_uri(), seletor=".fita-linha")
                     if js:
                         pg.evaluate("() => {" + js + "}")
                     r = pg.evaluate(O_QUE_O_MOTOR_DESENHA)

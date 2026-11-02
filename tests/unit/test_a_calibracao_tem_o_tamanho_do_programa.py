@@ -8,6 +8,8 @@ from typing import Any
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
@@ -134,8 +136,7 @@ def medido(calibrar_mod: Any) -> dict[str, dict[str, Any]]:
                 pg = nav.new_page(viewport={"width": larg, "height": alt})
                 lido: dict[str, Any] = {}
                 for nome, alvo in (("aba", aba), ("dois", calibrar)):
-                    pg.goto(alvo.as_uri())
-                    pg.wait_for_load_state("networkidle")
+                    abrir(pg, alvo.as_uri())
                     pg.add_style_tag(content=esconde)
                     lido[nome] = pg.evaluate(MEDIR)
                 for nome, quem in MESAS.items():

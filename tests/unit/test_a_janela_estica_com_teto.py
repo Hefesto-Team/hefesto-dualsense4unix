@@ -46,6 +46,8 @@ import sys
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
@@ -108,8 +110,7 @@ def medido() -> dict:
             for larg in (PISO, MEIO, ACIMA_DO_TETO):
                 pg = nav.new_page(viewport={"width": larg, "height": 1000})
                 for p in paginas:
-                    pg.goto(p.as_uri())
-                    pg.wait_for_load_state("networkidle")
+                    abrir(pg, p.as_uri())
                     pg.add_style_tag(content=esconde)
                     fora.setdefault(p.name, {})[larg] = pg.evaluate(O_QUE_O_MOTOR_DESENHA)
                 pg.close()

@@ -40,6 +40,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import exigir_gi_real
+from tests.unit.pagina_pronta import abrir
 
 exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
 
@@ -108,8 +109,7 @@ def dez(navegador) -> dict[str, dict[str, Any]]:
     fora: dict[str, dict[str, Any]] = {}
     pg = navegador.new_page(viewport={"width": 1600, "height": 900})
     for nome in COM_FITA:
-        pg.goto((DESENHO / nome).as_uri())
-        pg.wait_for_load_state("networkidle")
+        abrir(pg, (DESENHO / nome).as_uri())
         r = pg.evaluate(MOTOR)
         assert "erro" not in r, f"{nome}: {r.get('erro')}"
         fora[nome] = r
@@ -162,8 +162,7 @@ def test_a_fita_de_leitura_nao_tem_balao(dez: dict, nome: str) -> None:
 
 def test_o_clique_no_todos_acende_os_tres_e_o_clique_no_p2_so_o_p2(navegador) -> None:
     pg = navegador.new_page(viewport={"width": 1600, "height": 900})
-    pg.goto((DESENHO / "02-controles.html").as_uri())
-    pg.wait_for_load_state("networkidle")
+    abrir(pg, (DESENHO / "02-controles.html").as_uri(), seletor=".fita label.chip")
 
     def acesos() -> list[str]:
         return [c["texto"].split()[0] for c in pg.evaluate(MOTOR)["chips"] if c["aceso"]]

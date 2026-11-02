@@ -69,6 +69,8 @@ import sys
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 for _p in (str(RAIZ / "src"), str(INTERFACE)):
@@ -410,8 +412,7 @@ def pagina_no_chrome():
                                ignore_default_args=["--hide-scrollbars"])
         pg = b.new_page(viewport={"width": 1920, "height": 1080},
                         device_scale_factor=1)
-        pg.goto(f"file://{onde.pagina(PAGINA)}")
-        pg.wait_for_load_state("networkidle")
+        abrir(pg, f"file://{onde.pagina(PAGINA)}")
         pg.add_style_tag(content=".nota{display:none}")
         pg.wait_for_timeout(300)
         yield pg

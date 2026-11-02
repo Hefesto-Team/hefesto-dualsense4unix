@@ -38,6 +38,8 @@ import zlib
 
 import pytest
 
+from tests.unit.pagina_pronta import abrir
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
@@ -282,8 +284,7 @@ def test_a_03_e_a_05_nao_rolam_na_vertical_nas_quatro_vistas() -> None:
         for pagina in ("03-gatilhos.html", "05-vibracao.html"):
             for larg, alt in VISTAS:
                 pg = nav.new_page(viewport={"width": larg, "height": alt})
-                pg.goto((RAIZ / "mockup" / pagina).as_uri())
-                pg.wait_for_load_state("networkidle")
+                abrir(pg, (RAIZ / "mockup" / pagina).as_uri())
                 pg.wait_for_timeout(300)
                 m = pg.evaluate(medir)
                 if m["rola"] or m["lateral"]:
@@ -315,8 +316,7 @@ def test_a_linha_da_03_tem_a_altura_e_as_colunas_da_linha_da_forca_da_05() -> No
         for pagina, seletor in (("03-gatilhos.html", '.g2-int:not(.off) input.trilho'),
                                 ("05-vibracao.html", 'input.trilho[data-papel="intensidade"]')):
             pg = nav.new_page(viewport={"width": 1272, "height": 860})
-            pg.goto((RAIZ / "mockup" / pagina).as_uri())
-            pg.wait_for_load_state("networkidle")
+            abrir(pg, (RAIZ / "mockup" / pagina).as_uri(), seletor=seletor)
             medidas[pagina] = pg.evaluate(medir, seletor)
             pg.close()
         nav.close()
