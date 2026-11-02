@@ -1497,7 +1497,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
             porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas)
     carga = _com_os_aparelhos(carga)
-    _redesenhar_se_mudou()
+    _redesenhar_se_mudou(instaladas)
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
     return carga
 
@@ -2792,12 +2792,13 @@ def _o_que_muda_a_janela(manifesto: Any, estado: dict[str, Any] | None
     return presentes, jogo, bool(jogo) and ChavesDaMemoria(arquivo_das_chaves()).ligada(jogo)
 
 
-def _redesenhar_se_mudou() -> None:
+def _redesenhar_se_mudou(instaladas: Sequence[_Instalada]) -> None:
     """A cada tique, a janela aberta cuja opção depende do estado se redesenha quando ele muda:
-    a linha do ``@presente`` some e volta, e a «Memória» segue o jogo em cena."""
+    a linha do ``@presente`` some e volta, e a «Memória» segue o jogo em cena. Lê a lista que o
+    tique já leu, sem esvaziar a memória do registro."""
     if _MEXIDA.vivas is None or not (_MEXIDA.html_mod and _MEXIDA.mod):
         return
-    item = _a_instalada_ou_nada(_MEXIDA.mod)
+    item = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
     if item is None or item.manifesto is None:
         return
     if _o_que_muda_a_janela(item.manifesto, _AGORA.agora()) != _MEXIDA.vivas:

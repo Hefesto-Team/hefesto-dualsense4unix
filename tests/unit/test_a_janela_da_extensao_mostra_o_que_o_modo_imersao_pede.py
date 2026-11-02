@@ -20,6 +20,8 @@ MORDIDAS (02/11/2026, executadas sobre a cura e devolvidas, md5 conferido):
 - sem o ``@presente`` no ``aparecem``, reprova ``test_a_linha_do_presente_some_e_volta``;
 - sem o aviso armado no gesto da memória, reprova
   ``test_com_anticheat_o_primeiro_clique_mostra_o_aviso``.
+- com o tique relendo a instalada pelo ``_a_instalada_ou_nada``, reprova
+  ``test_o_tique_com_a_janela_aberta_nao_rele_as_instaladas``.
 """
 
 from __future__ import annotations
@@ -257,3 +259,16 @@ def test_a_memoria_nao_se_grava_no_arquivo_das_opcoes(janela: Any, lar: Any) -> 
     assert "memoria" not in opcoes.caminho("toque", lar).read_text(encoding="utf-8")
     with pytest.raises(InstalacaoRecusadaError, match="chave do jogo em cena"):
         opcoes.guardar(manifesto, "memoria", True, lar)
+
+
+def test_o_tique_com_a_janela_aberta_nao_rele_as_instaladas(janela: Any, ctx: Any,  # noqa: F811
+                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    a07, abrir = janela
+    abrir(_Ponte({"ligado": True, "presentes": ["pulso"]}))
+    lidas: list[int] = []
+    ler = a07._ler_as_instaladas
+    monkeypatch.setattr(a07, "_ler_as_instaladas", lambda: lidas.append(1) or ler())
+    monkeypatch.setattr(a07, "TTL_DO_REGISTRO_S", 3600.0)
+    for _ in range(5):
+        a07._a_pintura_agora(ctx)
+    assert len(lidas) <= 1, f"o tique releu as instaladas {len(lidas)} vezes com a janela aberta"
