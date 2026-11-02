@@ -136,7 +136,8 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
                                   "chave-da-modificacao",
                                   "importar-na-modificacao",
                                   "tirar-da-modificacao",
-                                  "exportar-o-tema-da-modificacao"}, (
+                                  "exportar-o-tema-da-modificacao",
+                                  "memoria-do-jogo-da-modificacao"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 

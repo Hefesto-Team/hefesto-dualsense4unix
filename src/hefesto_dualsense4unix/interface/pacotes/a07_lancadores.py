@@ -1245,6 +1245,8 @@ class _Mexida:
     recusa_do_importar: dict[str, str] = dataclasses.field(default_factory=dict)
     pinta: bool = True
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
+    aviso_da_memoria: tuple[str, ...] = ()
+    vivas: tuple[Any, ...] | None = None
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1260,6 +1262,8 @@ class _Mexida:
         self.recusa_do_importar = {}
         self.pinta = True
         self.pintura.esquecer()
+        self.aviso_da_memoria = ()
+        self.vivas = None
 
 
 _MEXIDA = _Mexida()
@@ -1493,6 +1497,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
             porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas)
     carga = _com_os_aparelhos(carga)
+    _redesenhar_se_mudou()
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
     return carga
 
@@ -1609,7 +1614,10 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
     notas = {**_notas_do_tema(manifesto, mod_id), **_MEXIDA.recusa_do_importar}
-    aparecem = opcoes.aparecem(manifesto, valores)
+    vivas = _MEXIDA.vivas = _o_que_muda_a_janela(manifesto, estado)
+    presentes, jogo, memoria = vivas or ((), "", False)
+    valores = {**valores, **{x.id: memoria for x in manifesto.opcoes if x.tipo == "memoria"}}
+    aparecem = opcoes.aparecem(manifesto, valores, presentes)
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
         escolhas=opcoes.escolhas_de(manifesto, x, valores, _publicadas(manifesto, x, estado)),
@@ -1622,9 +1630,12 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         botoes=x.botoes_da_janela if x.tipo == "por_botao" else (),
         modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "",
         dica=x.dica or "", unidade=x.unidade or "", zero=x.zero or "",
-        degraus=x.degraus or 0)
+        degraus=x.degraus or 0,
+        pede=_MEXIDA.aviso_da_memoria[2] if _MEXIDA.aviso_da_memoria[:2] == (mod_id, jogo)
+        and x.tipo == "memoria" else "")
         for x in manifesto.opcoes
-        if (x.id in aparecem or retrato is not None) and x.id != manifesto.chave]
+        if (x.id in aparecem or retrato is not None) and x.id != manifesto.chave
+        and (x.tipo != "memoria" or jogo)]
     chave = bool(guardados[manifesto.chave]) if manifesto.chave else None
     _MEXIDA.desligada = chave is False
     _MEXIDA.mod = mod_id
@@ -2751,9 +2762,96 @@ def _o_modo_de(manifesto: Any, valores: dict[str, Any]) -> str:
 
 def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
     """O ``acessorios.estado`` que a janela desenha: com a coluna «Agora», com aparelhos ou com
-    os controles deles."""
+    os controles deles, com a chave «Memória» ou com uma opção que aparece com ``@presente``."""
     return (_AGORA.agora() if _MEXIDA.agora or manifesto.aparelhos_acoes
-            or manifesto.aparelhos_controles else None)
+            or manifesto.aparelhos_controles or _muda_com_o_estado(manifesto) else None)
+
+
+def _muda_com_o_estado(manifesto: Any) -> bool:
+    from hefesto_dualsense4unix.mods.manifesto import PRESENTE_NO_ESTADO
+
+    return any(x.tipo == "memoria" or PRESENTE_NO_ESTADO in (x.aparece_com or {})
+               for x in manifesto.opcoes)
+
+
+def _o_que_muda_a_janela(manifesto: Any, estado: dict[str, Any] | None
+                         ) -> tuple[tuple[str, ...], str, bool] | None:
+    """O que redesenha as opções sem gesto: os ``presentes`` que a extensão publica, o jogo em
+    cena e a chave «Memória» dele; ``None`` quando nenhuma opção depende disso."""
+    if not _muda_com_o_estado(manifesto):
+        return None
+    from hefesto_dualsense4unix.integrations.leitor_do_estado import (
+        ChavesDaMemoria,
+        arquivo_das_chaves,
+    )
+
+    bruto = (estado or {}).get("presentes")
+    presentes = tuple(n for n in bruto if isinstance(n, str)) if isinstance(bruto, list) else ()
+    jogo = (estado or {}).get("jogo")
+    jogo = jogo if isinstance(jogo, str) else ""
+    return presentes, jogo, bool(jogo) and ChavesDaMemoria(arquivo_das_chaves()).ligada(jogo)
+
+
+def _redesenhar_se_mudou() -> None:
+    """A cada tique, a janela aberta cuja opção depende do estado se redesenha quando ele muda:
+    a linha do ``@presente`` some e volta, e a «Memória» segue o jogo em cena."""
+    if _MEXIDA.vivas is None or not (_MEXIDA.html_mod and _MEXIDA.mod):
+        return
+    item = _a_instalada_ou_nada(_MEXIDA.mod)
+    if item is None or item.manifesto is None:
+        return
+    if _o_que_muda_a_janela(item.manifesto, _AGORA.agora()) != _MEXIDA.vivas:
+        with contextlib.suppress(RuntimeError):
+            _montar_a_janela_da_extensao(_MEXIDA.mod, item)
+
+
+@gesto("07-lancadores.html", exp.GESTO_DA_MEMORIA, grava="_gravar_a_memoria_do_jogo")
+def memoria_do_jogo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """A chave «Memória» do jogo em cena, que só o Hefesto grava (D-IMERSAO-MEMORIA-CHAVE): o
+    clique liga ou desliga. Num jogo com anticheat, o primeiro clique mostra o aviso («Aceitar e
+    ligar») e só o segundo liga; o aviso não impede."""
+    _MEXIDA.armada = ()
+    mod_id = _id_do_clique(o, exp.GESTO_DA_MEMORIA)
+    item = _a_instalada(mod_id)
+    vivas = _o_que_muda_a_janela(item.manifesto, _AGORA.ler(mod_id, p)) if item.manifesto else None
+    jogo = vivas[1] if vivas else ""
+    if not jogo:
+        raise RuntimeError("Nenhum jogo aberto agora. Nada foi gravado.")
+    ligar = not vivas[2]  # type: ignore[index]
+    anticheat = _anticheat_de(jogo) if ligar else ""
+    if anticheat and _MEXIDA.aviso_da_memoria[:2] != (mod_id, jogo):
+        from hefesto_dualsense4unix.integrations.leitor_do_estado import AvisoDoAnticheatError
+
+        try:
+            _gravar_a_memoria_do_jogo(jogo, True, anticheat, aviso_visto=False)
+        except AvisoDoAnticheatError as aviso:
+            _MEXIDA.aviso_da_memoria = (mod_id, jogo, str(aviso))
+    else:
+        _gravar_a_memoria_do_jogo(jogo, ligar, anticheat, aviso_visto=bool(anticheat))
+        _MEXIDA.aviso_da_memoria = ()
+    _montar_a_janela_da_extensao(mod_id, item)
+    return _a_pintura_agora(ctx)
+
+
+def _gravar_a_memoria_do_jogo(jogo: str, ligada: bool, anticheat: str, *,
+                              aviso_visto: bool) -> None:
+    from hefesto_dualsense4unix.integrations.leitor_do_estado import (
+        ChavesDaMemoria,
+        arquivo_das_chaves,
+    )
+
+    ChavesDaMemoria(arquivo_das_chaves()).gravar(jogo, ligada, anticheat=anticheat,
+                                                 aviso_visto=aviso_visto)
+
+
+def _anticheat_de(jogo: str) -> str:
+    """O anticheat do jogo, pela pasta dele, como o leitor o lê ao abrir o jogo."""
+    from hefesto_dualsense4unix.integrations.leitor_do_estado import anticheat_do_jogo
+    from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import jogos_instalados
+
+    appid = jogo.removeprefix("steam_app_")
+    raiz = next((r for a, _nome, r in jogos_instalados() if a == appid), None)
+    return anticheat_do_jogo(raiz, appid)
 
 
 def _aba_dos_controles(manifesto: Any) -> str:

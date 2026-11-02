@@ -91,6 +91,9 @@ ESTADOS_DO_ACESSORIO = ("ligado", "procurando", "desligado", "falhou")
 TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
 ITENS_DO_ESTADO = 32
 ESCOLHAS_DA_CONEXAO = 8
+LINHAS_DO_AGORA = 6
+ROTULO_DA_LINHA = 20
+VALOR_DA_LINHA = 40
 CONTROLES_DO_APARELHO = 6
 TIPOS_DO_CONTROLE = ("chave", "paleta", "escolha")
 ICONES_DO_CONTROLE = ("lampada",)
@@ -826,7 +829,30 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any], *,
         "aparelhos": [_aparelho(a, acoes_dos_aparelhos) for a in aparelhos[:ITENS_DO_ESTADO]],
         "conexoes": as_conexoes,  # (noqa-acento)
         "ajustes": {k: v for k, v in opcoes.items() if k in OPCOES_DOS_GESTOS},
+        **_linhas_e_presentes(params),
     }
+
+
+def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
+    """``linhas`` (o pedaço «linhas» do «Agora»: até ``LINHAS_DO_AGORA`` pares ``{rotulo,
+    valor}``, o resto cai) e ``presentes`` (os nomes que o ``aparece_com`` de ``@presente`` lê, até
+    ``ITENS_DO_ESTADO``); cada um só sai quando a extensão o manda."""
+    saida: dict[str, Any] = {}
+    if params.get("linhas") is not None:
+        linhas = params["linhas"]
+        if not isinstance(linhas, list) or not all(isinstance(x, dict) for x in linhas):
+            raise _recusa_do_estado("as linhas do «Agora» são uma lista de {rotulo, valor}.")
+        saida["linhas"] = [
+            {"rotulo": _curto(x.get("rotulo"), "o rótulo de uma linha", ROTULO_DA_LINHA),
+             "valor": _curto(x.get("valor"), "o valor de uma linha", VALOR_DA_LINHA)}
+            for x in linhas[:LINHAS_DO_AGORA]]
+    if params.get("presentes") is not None:
+        presentes = params["presentes"]
+        if not isinstance(presentes, list):
+            raise _recusa_do_estado("os presentes são uma lista de nomes.")
+        saida["presentes"] = list(dict.fromkeys(
+            _curto(n, "um presente", 40) for n in presentes[:ITENS_DO_ESTADO]))
+    return saida
 
 
 OPCOES_DOS_GESTOS = frozenset({
@@ -1395,7 +1421,8 @@ class Porta:
         return {"ligada": True}
 
     def _lista_dos_controles(self, sessao: _Credencial) -> dict[str, Any]:
-        """Os controles ligados agora, ``{controles: [{uniq, jogador}]}``, a quem lê a conexão.
+        """Os controles ligados agora, ``{controles: [{uniq, jogador, cor?}]}``, a quem lê a
+        conexão; ``cor`` é o nome do plástico, quando o serviço o sabe.
 
         Sem a lista do serviço, vale o controle do posto. Nunca levanta: a lista que falha é vazia.
         """
@@ -1418,7 +1445,10 @@ class Porta:
                 continue
             jogador = bruto.get("jogador")
             ok = isinstance(jogador, int) and not isinstance(jogador, bool) and jogador >= 1
-            controles.append({"uniq": uniq, "jogador": jogador if ok else None})
+            cor = bruto.get("cor")
+            controles.append({"uniq": uniq, "jogador": jogador if ok else None,
+                              **({"cor": cor.strip()[:40]}
+                                 if isinstance(cor, str) and cor.strip() else {})})
         return {"controles": controles}
 
     def _publicar(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
@@ -1518,10 +1548,13 @@ class Porta:
         """O último ``acessorios.estado`` de ``mod_id``; sem conexão viva, o estado vazio.
 
         A coluna «Agora» da janela lê daqui: extensão parada ou que nunca devolveu o estado
-        mostra a coluna vazia, sem número inventado.
+        mostra a coluna vazia, sem número inventado. Com um jogo em cena, ``jogo`` é a chave
+        dele, a da linha «Memória neste jogo».
         """
         estado = self.ultimo_estado_de(mod_id)
-        return estado_vazio_dos_acessorios(mod_id) if estado is None else dict(estado)
+        saida = estado_vazio_dos_acessorios(mod_id) if estado is None else dict(estado)
+        jogo = self._jogo_aberto()
+        return {**saida, "jogo": jogo} if jogo else saida
 
     def ultimo_estado_de(self, mod_id: str) -> dict[str, Any] | None:
         """O ``acessorios.estado`` guardado de ``mod_id`` (o próprio objeto), com conexão viva."""
@@ -2232,23 +2265,41 @@ def _vibrou_ha_pouco(vpad: Any) -> bool:
 
 
 def controles_no_servico(daemon: Any) -> Controles:
-    """Os controles que o backend adotou e estão ligados, com o número que cada um acende."""
+    """Os controles que o backend adotou e estão ligados, com o número que cada um acende e o
+    nome do plástico, quando se sabe."""
 
     def controles() -> list[dict[str, Any]]:
         from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
 
+        def um(uniq: str) -> dict[str, Any]:
+            cor = cor_do_plastico_no_servico(daemon, uniq)
+            return {"uniq": uniq, "jogador": _jogador_de(daemon, uniq),
+                    **({"cor": cor} if cor else {})}
+
         descrever = getattr(getattr(daemon, "controller", None), "describe_controllers", None)
         if not callable(descrever):
             posto = _primario(getattr(daemon, "controller", None))
-            return [{"uniq": posto, "jogador": _jogador_de(daemon, posto)}] if posto else []
-        saida: list[dict[str, Any]] = []
-        for item in descrever():
-            uniq = item.get("uniq") if isinstance(item, dict) else None
-            if isinstance(uniq, str) and uniq and item.get("connected"):
-                saida.append({"uniq": uniq, "jogador": _jogador_de(daemon, uniq)})
-        return saida
+            return [um(posto)] if posto else []
+        return [um(item["uniq"]) for item in descrever()
+                if isinstance(item, dict) and isinstance(item.get("uniq"), str)
+                and item["uniq"] and item.get("connected")]
 
     return controles
+
+
+def cor_do_plastico_no_servico(daemon: Any, uniq: str) -> str:
+    """O nome do plástico que a interface mostra: o que quem usa declarou e, sem ele, o de
+    fábrica já lido; vazio quando não se sabe. Só leitura, sem perguntar ao aparelho."""
+    declaracao = getattr(getattr(getattr(daemon, "_maquina", None), "controles", None),
+                         "get", lambda _u: None)(uniq)
+    declarado = getattr(declaracao, "cor", None)
+    if isinstance(declarado, str) and declarado.strip():
+        return declarado.strip()
+    registro = getattr(daemon, "identity_registry", None)
+    ler = getattr(registro, "identidade_de_fabrica", None)
+    achado = ler(uniq) if callable(ler) else None
+    nome = getattr(getattr(achado, "cor", None), "nome", None)
+    return nome if isinstance(nome, str) else ""
 
 
 def uniq_do_posto_no_servico(daemon: Any) -> UniqDoPosto:
@@ -2474,6 +2525,7 @@ __all__ = [
     "EVENTO_DO_LIVRE",
     "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
+    "LINHAS_DO_AGORA",
     "LIVRE_POR_SEGUNDO",
     "MENSAGENS_POR_SEGUNDO",
     "MOVIMENTO_POR_SEGUNDO",
@@ -2485,6 +2537,7 @@ __all__ = [
     "RecusaError",
     "botoes_de_todo_controle_no_servico",
     "controles_no_servico",
+    "cor_do_plastico_no_servico",
     "credencial_do_par",
     "descende_de",
     "entradas_de_todo_controle_no_servico",

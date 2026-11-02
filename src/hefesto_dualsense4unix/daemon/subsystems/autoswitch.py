@@ -110,7 +110,8 @@ class AnunciadorDoJogo:
             self._estilo = _estilo_do_perfil(nome)
             self._arquivo = arquivo
         controles = self._controles(nome)
-        dito = (nome, self._estilo, _chave_do_jogo(self._em_cena()), controles)
+        jogo = _chave_do_jogo(self._em_cena())
+        dito = (nome, self._estilo, jogo, controles, _memoria_ligada(jogo))
         if dito == self._perfil:
             return
         self._perfil = dito
@@ -121,6 +122,7 @@ class AnunciadorDoJogo:
                 "estilo": dito[1],
                 "jogo": dito[2],
                 "controles": [dict(c) for c in controles],
+                "memoria": dito[4],
                 "t": time.monotonic(),
             },
         )
@@ -188,6 +190,18 @@ def _estilo_do_perfil(nome: str | None) -> str | None:
 def _chave_do_jogo(appid: int | None) -> str | None:
     """A chave do jogo no evento: a classe de janela da Steam, ou `None` fora de jogo."""
     return f"steam_app_{appid}" if appid is not None and appid > 0 else None
+
+
+def _memoria_ligada(jogo: str | None) -> bool:
+    """A chave «Memória» do jogo em cena, a mesma que o leitor lê; fora de jogo, desligada."""
+    if not jogo:
+        return False
+    from hefesto_dualsense4unix.integrations.leitor_do_estado import (
+        ChavesDaMemoria,
+        arquivo_das_chaves,
+    )
+
+    return ChavesDaMemoria(arquivo_das_chaves()).ligada(jogo)
 
 
 def _anunciador_do(bus: object, store: Any, daemon: object) -> AnunciadorDoJogo | None:

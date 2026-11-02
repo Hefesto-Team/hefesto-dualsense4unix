@@ -137,6 +137,7 @@ ESCREVEM = {
     "_guardar_a_opcao_da_modificacao",
     "_guardar_a_chave_da_modificacao",
     "_curar_o_impedimento",
+    "_gravar_a_memoria_do_jogo",
 
 }
 

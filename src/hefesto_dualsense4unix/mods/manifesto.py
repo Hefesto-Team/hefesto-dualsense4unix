@@ -190,6 +190,8 @@ def forma_valida(nome: object, passos: object) -> bool:
 COR_HEXA = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 PERMISSOES_DO_ESTADO = ("ler:acessorios.gesto", "publicar:acessorios.estado")
+PRESENTE_NO_ESTADO = "@presente"
+TOPICO_DA_MEMORIA_DO_JOGO = "jogo.memoria"
 
 _NOME_DE_HOST = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
                            r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")
@@ -299,7 +301,7 @@ class Opcao(BaseModel):
     rotulo: str = Field(min_length=1, max_length=60)
     tipo: Literal[
         "escolha", "ligado", "numero", "cor", "deslizante", "jogos", "css", "endereco", "por_botao",
-        "livre", "importar",
+        "livre", "importar", "memoria",
     ]
     escolhas: list[str] = Field(default_factory=list)
     padrao: (str | bool | float | list[str] | dict[str, str] | dict[str, list[list[float]]]
@@ -363,6 +365,8 @@ class Opcao(BaseModel):
             raise ValueError(f"a opção {self.id} não é deslizante e declara unidade ou zero")
         elif self.degraus is not None:
             raise ValueError(f"a opção {self.id} não é deslizante e declara degraus")
+        if self.tipo == "memoria" and self.padrao is not None:
+            raise ValueError(f"a opção {self.id} é a memória do jogo em cena e não tem padrão")
         if (self.tipo == "importar") != (self.formato is not None) or (
                 self.tipo == "importar" and self.padrao not in (None, "")):
             raise ValueError(f"a opção {self.id}: importar e formato andam juntos, sem padrão")
@@ -622,7 +626,7 @@ class Manifesto(BaseModel):
     permissoes: list[str] = Field(default_factory=list)
     opcoes: list[Opcao] = Field(default_factory=list)
     agora: list[
-        Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento)
+        Literal["nivel", "perfil", "aparelhos", "conexoes", "linhas"]  # (noqa-acento)
     ] = Field(default_factory=list)
     conexoes: dict[str, LigaDaConexao] = Field(
         default_factory=dict, max_length=CONEXOES_DA_JANELA)
@@ -724,6 +728,7 @@ class Manifesto(BaseModel):
         self._conferir_a_chave()
         self._conferir_as_ligas()
         self._conferir_o_aparece_com()
+        self._conferir_a_memoria()
         self._conferir_o_lado_e_as_opcoes_do_tema()
         self._conferir_a_opcao_do_css()
         return self
@@ -791,12 +796,26 @@ class Manifesto(BaseModel):
         """A opção ``ligado`` que a chave do topo da janela liga e desliga, quando declarada."""
         return next((o for o in self.opcoes if o.id == self.chave), None) if self.chave else None
 
+    def _conferir_a_memoria(self) -> None:
+        """A opção ``memoria`` (a chave «Memória» do jogo em cena, que só o Hefesto grava): uma
+        só, e só com a permissão de ler a memória do jogo."""
+        memorias = [o.id for o in self.opcoes if o.tipo == "memoria"]
+        if len(memorias) > 1:
+            raise ValueError("mais de uma opção de memória")
+        if memorias and f"ler:{TOPICO_DA_MEMORIA_DO_JOGO}" not in self.permissoes:
+            raise ValueError(f"a opção {memorias[0]} pede a permissão "
+                             f"ler:{TOPICO_DA_MEMORIA_DO_JOGO}")
+
     def _conferir_o_aparece_com(self) -> None:
         """Cada ``aparece_com`` aponta para outra ``escolha`` ou ``ligado`` daqui, com um valor que
-        a opção tem, e nenhuma cadeia volta à opção de onde saiu."""
+        a opção tem, ou para ``@presente``, com os nomes que a extensão publica no estado; nenhuma
+        cadeia volta à opção de onde saiu."""
         por_id = {o.id: o for o in self.opcoes}
         for opcao in self.opcoes:
             for alvo, valor in (opcao.aparece_com or {}).items():
+                if alvo == PRESENTE_NO_ESTADO:
+                    self._conferir_o_presente(opcao.id, valor)
+                    continue
                 outra = por_id.get(alvo)
                 if outra is None:
                     raise ValueError(f"a opção {opcao.id} aparece com {alvo!r}, que não existe")
@@ -812,7 +831,8 @@ class Manifesto(BaseModel):
                 else:
                     raise ValueError(f"a opção {opcao.id} aparece com {alvo!r}, que não é "
                                      "escolha nem ligado")
-        aponta = {o.id: tuple(o.aparece_com or ()) for o in self.opcoes}
+        aponta = {o.id: tuple(a for a in (o.aparece_com or ()) if a != PRESENTE_NO_ESTADO)
+                  for o in self.opcoes}
         for inicio in aponta:
             pilha: list[tuple[str, tuple[str, ...]]] = [(inicio, (inicio,))]
             vistos = {inicio}
@@ -825,6 +845,18 @@ class Manifesto(BaseModel):
                     if alvo not in vistos:
                         vistos.add(alvo)
                         pilha.append((alvo, (*caminho, alvo)))
+
+    def _conferir_o_presente(self, opcao_id: str, valor: Any) -> None:
+        """O ``@presente``: um nome, ou a lista deles, que a extensão publica em ``presentes``
+        no ``acessorios.estado`` (por isso pede a permissão do estado)."""
+        nomes = valor if isinstance(valor, list) else [valor]
+        if not nomes or not all(isinstance(n, str) and n.strip() and len(n) <= 40
+                                for n in nomes):
+            raise ValueError(f"a opção {opcao_id} aparece com {PRESENTE_NO_ESTADO!r} valendo "
+                             f"{valor!r}: um nome de até 40 letras, ou a lista deles")
+        if not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
+            raise ValueError(f"a opção {opcao_id} aparece com {PRESENTE_NO_ESTADO!r}, que pede a "
+                             "permissão publicar:acessorios.estado ou ler:acessorios.gesto")
 
     @property
     def opcao_livre(self) -> Opcao | None:
@@ -983,6 +1015,7 @@ __all__ = [
     "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
     "PREFIXO_DO_MODO_DE_EXTENSAO",
+    "PRESENTE_NO_ESTADO",
     "TIPOS",
     "TOPICOS_DE_LEITURA",
     "TOPICOS_DE_PUBLICACAO",

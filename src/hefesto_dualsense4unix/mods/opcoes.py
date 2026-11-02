@@ -15,7 +15,7 @@ import contextlib
 import json
 import os
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
     CHAVE_DE_JOGO,
     COR_HEXA,
     MODOS_DO_LIVRE,
+    PRESENTE_NO_ESTADO,
     Manifesto,
     Opcao,
     endereco_valido,
@@ -60,7 +61,7 @@ def padrao_de(opcao: Opcao) -> Valor:
         return "#ffffff"
     if opcao.tipo == "jogos":
         return []
-    return False if opcao.tipo in ("ligado", "css") else 0.0
+    return False if opcao.tipo in ("ligado", "css", "memoria") else 0.0
 
 
 def validar(opcao: Opcao, valor: Any, *, formas_extras: Sequence[str] = ()) -> Valor:
@@ -70,7 +71,7 @@ def validar(opcao: Opcao, valor: Any, *, formas_extras: Sequence[str] = ()) -> V
     ``por_botao`` e a escolha dos efeitos aceitam além do que o manifesto declara
     (:func:`formas_extras_de`).
     """
-    if opcao.tipo in ("ligado", "css"):
+    if opcao.tipo in ("ligado", "css", "memoria"):
         if isinstance(valor, bool):
             return valor
         if str(valor).strip().lower() in ("true", "1", "ligado", "sim"):
@@ -309,11 +310,14 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
     modo = opcao_id == chave_do_modo(manifesto)
     if opcao is None and not modo:
         raise InstalacaoRecusadaError(f"«{manifesto.nome}» não tem a opção «{opcao_id}».")
+    if opcao is not None and opcao.tipo == "memoria":
+        raise InstalacaoRecusadaError(f"«{opcao.rotulo}» é a chave do jogo em cena, não uma opção.")
     atuais = ler(manifesto, lugares)
     certo = modo_valido(valor) if opcao is None else validar(
         opcao, valor, formas_extras=aceitas_de(manifesto, opcao, atuais, valor))
     atuais[opcao_id] = certo
-    _gravar(manifesto.id, atuais, lugares)
+    memorias = {o.id for o in manifesto.opcoes if o.tipo == "memoria"}
+    _gravar(manifesto.id, {k: v for k, v in atuais.items() if k not in memorias}, lugares)
     return certo
 
 
@@ -390,10 +394,12 @@ def _o_que_a_antiga_passa(opcao: Opcao, mod_id: str, lugares: Lugares,
     return valores
 
 
-def aparecem(manifesto: Manifesto, valores: dict[str, Any]) -> frozenset[str]:
+def aparecem(manifesto: Manifesto, valores: dict[str, Any],
+             presentes: Collection[str] = ()) -> frozenset[str]:
     """As opções que a janela mostra com ``valores`` (o guardado, com o rascunho por cima): a que
-    declara ``aparece_com`` aparece quando cada outra vale o pedido E também aparece. Só da tela:
-    a escondida segue guardada e indo à extensão."""
+    declara ``aparece_com`` aparece quando cada outra vale o pedido E também aparece, e o
+    ``@presente`` quando um dos nomes pedidos está nos ``presentes`` que a extensão publica. Só da
+    tela: a escondida segue guardada e indo à extensão."""
     por_id = {o.id: o for o in manifesto.opcoes}
     vistas: dict[str, bool] = {}
 
@@ -401,11 +407,16 @@ def aparecem(manifesto: Manifesto, valores: dict[str, Any]) -> frozenset[str]:
         if opcao.id not in vistas:
             vistas[opcao.id] = False
             vistas[opcao.id] = all(
-                alvo in por_id and aparece(por_id[alvo]) and _vale(valores.get(alvo), pedido)
+                _presente(pedido, presentes) if alvo == PRESENTE_NO_ESTADO
+                else alvo in por_id and aparece(por_id[alvo]) and _vale(valores.get(alvo), pedido)
                 for alvo, pedido in (opcao.aparece_com or {}).items())
         return vistas[opcao.id]
 
     return frozenset(o.id for o in manifesto.opcoes if aparece(o))
+
+
+def _presente(pedido: str | bool | list[str], presentes: Collection[str]) -> bool:
+    return any(n in presentes for n in (pedido if isinstance(pedido, list) else [pedido]))
 
 
 def _vale(valor: Any, pedido: str | bool | list[str]) -> bool:

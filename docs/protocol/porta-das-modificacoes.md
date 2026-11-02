@@ -45,10 +45,10 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `leds.set` | `{uniq, mascara (0 a 31), ate_ms}` | `escrever:leds` | `{status}` |
 | `mira.peso` | `{uniq\|"todos", ganho (0,3 a 1), ate_ms (até 10000)}` | `escrever:mira` | `{status}` |
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
-| `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
+| `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?, linhas?, presentes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
-| `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
+| `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador, cor?}]}` |
 | `chave.ligar` | `{}` | a `chave` no manifesto instalado | `{ligada}` |
 
 O `mira.peso` (ensaio) multiplica o giro de um controle, ou de todos, pelo ganho, até o prazo: na máscara Xbox, a
@@ -69,6 +69,10 @@ por que o aparelho não liga. Até 32 de cada. Um item torto recusa o estado int
 Desde 01/11/2026 a conexão pode levar `escolhas` (de 1 a 8 nomes, até 40 letras cada, sem repetir) e `escolha`
 (um deles): os nomes que a extensão oferece para aquela conexão, como os adaptadores Bluetooth do computador, e o
 que vale agora. Os dois vêm juntos, e a `escolha` fora das `escolhas` recusa o estado.
+Desde 02/11/2026 o estado pode levar `linhas`, até 6 pares `{rotulo, valor}` (rótulo até 20 letras, valor até 40)
+que o pedaço `linhas` do «Agora» mostra como estão, e `presentes`, até 32 nomes (até 40 letras cada) do que a
+extensão tem agora, como as entradas da receita ativa, que o `aparece_com` lê pela chave `@presente`. A linha a mais
+se corta; o texto longo, o par torto ou o nome vazio recusa o estado.
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -128,12 +132,14 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `nome: "jogo.fechou"` (`{appid, t}`) diz que o jogo em cena saiu; quem vibrava recebe antes o zero que
   faltava. A batida roda no tique do gamepad virtual do P1, e `jogo.fechou` sai do tique do autoswitch (só com
   ele ligado): no Modo Nativo o Hefesto não vê a vibração;
-- `perfil.jogo` (`ler:perfil.jogo`) entrega `nome: "perfil.trocou"`: `{perfil, jogo, estilo, controles: [...], t}`,
+- `perfil.jogo` (`ler:perfil.jogo`) entrega `nome: "perfil.trocou"`: `{perfil, jogo, estilo, controles: [...], memoria, t}`,
   em que `jogo` é a chave do jogo em cena (`steam_app_<N>`, ou `null` fora de jogo), `perfil` o nome do perfil
   efetivo e `estilo` a chave do estilo dele (ou `null`). `controles` tem um item por controle,
   `{jogador, perfil, jogo, estilo}`, com o número que o controle acende (ou `null`): a extensão segue o
   controle cujo `jogo` está na lista que a pessoa escolheu. Sai a cada troca de perfil, de jogo ou de estilo
   (no arquivo do perfil), e quando um controle entra ou sai; quando o jogo fecha, sai depois do `jogo.fechou`.
+  `memoria` (desde 02/11/2026) diz se a chave «Memória» do jogo em cena está ligada, pelo mesmo arquivo que o
+  leitor lê ao abrir o jogo (`false` fora de jogo), e sai de novo quando a chave muda;
   É estado, não evento: o serviço guarda o último, e quem assina depois recebe o de agora logo na assinatura.
   O `estilo` é a chave da lista de estilos de jogo, `visual_novel` e `adulto` inclusive, e o envelope leva o
   `uniq` do posto;
@@ -278,7 +284,8 @@ mesa, a resposta traz `status: "recusado"`, o `desfecho` e o `motivo` na frase
 resultado lê o `status`.
 
 Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os controles ligados agora, cada um
-uma vez, com o `jogador` que ele acende (ou `null`). Sem a lista do serviço, vale o controle do posto; a lista
+uma vez, com o `jogador` que ele acende (ou `null`) e, desde 02/11/2026, a `cor`: o nome do plástico que a
+interface mostra (o que se deu ao controle, senão o de fábrica), só quando o serviço o sabe. Sem a lista do serviço, vale o controle do posto; a lista
 que falha volta vazia. O método entrou na versão 2 da porta sem mudar a faixa: quem pede `>=2,<3` e não o usa
 não muda nada. O servidor Buttplug do próprio DualSense mora na extensão `intiface`
 (`https://github.com/Hefesto-Team/hefesto-mod-lovense`), que usa este método e o `vibracao.set`.
@@ -467,7 +474,7 @@ A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-
 código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao`, `grupo`,
 `aparece_com`, `dica`, `unidade` e `zero`.
 
-- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos`, `endereco`, `por_botao`, `livre` (ver «As ações, os aparelhos e o controle livre») e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
+- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos`, `endereco`, `por_botao`, `livre` (ver «As ações, os aparelhos e o controle livre»), `memoria` e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
   seletor de cor da interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa
   o manifesto. O `deslizante` declara `minimo`, `maximo` e `passo` (`minimo` menor que `maximo`, `passo`
   maior que zero) e o `padrao`, **obrigatório** e dentro da faixa: é a posição inicial; a janela desenha um
@@ -485,6 +492,10 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   na ordem do manifesto. A `escolha` cujas `escolhas` estão todas nas `formas` de um `por_botao` da extensão (os
   efeitos) desenha a onda da forma escolhida, pelo mesmo desenho do botão, e aceita as formas do `livre`;
   «Direto» e «Suave», proporcionais à entrada, desenham a rampa reta e a curva ao quadrado.
+  A `memoria` (desde 02/11/2026) é a chave «Memória» do jogo em cena, a que o leitor da receita lê ao abrir o
+  jogo: uma por manifesto, sem `padrao`, e pede `ler:jogo.memoria`. Só o Hefesto a grava, pelo clique na janela;
+  a chave não vai a `opcoes.json`, e a linha só aparece com um jogo em cena. No jogo com anticheat, o primeiro clique
+  mostra o aviso («Aceitar e ligar», com o risco à conta na dica) e o segundo liga; vale na próxima abertura do jogo.
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba da opção. O `ligado` cujo `rotulo` é o nome do
@@ -498,6 +509,9 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   que não existe, a opção que aponta para si mesma, o ciclo, o alvo que não é `escolha` nem `ligado`, o valor
   que não é escolha do alvo, o `ligado` com valor que não é `true`/`false` (o `1` não é `true`) e o `livre`
   que declara o campo.
+  A chave `@presente` (desde 02/11/2026) vale um nome ou uma lista: a opção aparece quando algum deles está nos
+  `presentes` do último `acessorios.estado`, e some e volta sozinha quando a extensão publica outros. Pede
+  `publicar:acessorios.estado` ou `ler:acessorios.gesto`; o nome vazio ou com mais de 40 letras recusa.
   Por exemplo, o endereço que só serve quando a ligação é pela rede:
   `{"id": "servidor", "tipo": "endereco", "rotulo": "Servidor", "aparece_com": {"ligacao": "Pela rede"}}`.
   O campo entra depois da 0.9.5, com a mesma `api` 2; um Hefesto até a 0.9.5 recusa o manifesto que o
@@ -520,7 +534,7 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
   primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
-  `nivel`, `perfil`, `aparelhos` e `conexoes`, sem repetir.
+  `nivel`, `perfil`, `aparelhos`, `conexoes` e `linhas` (os pares que a extensão publica), sem repetir.
 - **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
   «Conexão» (o título muda) a chave de cada conexão. Pede `conexoes` no `agora`; o id tem a forma da chave de um
   lançador, `liga` é o `id` de uma opção `ligado` da própria extensão (nunca a `chave`) e `escolha` o de uma opção
@@ -545,7 +559,7 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 `ipc.sock`, não esta porta):
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
-  aparelhos, conexoes, ajustes}`. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
+  aparelhos, conexoes, ajustes}`, mais `linhas`, `presentes` e `jogo` (o jogo em cena) quando os há. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
   coluna mostra cada pedaço vazio, sem número. Com o `ligado: false` da própria extensão (o «Parar tudo»), o nível
   e o perfil ficam vazios e as conexões e os aparelhos seguem como a extensão os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;

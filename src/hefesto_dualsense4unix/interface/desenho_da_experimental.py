@@ -331,9 +331,11 @@ class OpcaoDaJanela(NamedTuple):
     unidade: str = ""
     zero: str = ""
     degraus: int = 0
+    pede: str = ""
 
 
 GESTO_DA_OPCAO = "guardar-opcao-da-modificacao"
+GESTO_DA_MEMORIA = "memoria-do-jogo-da-modificacao"
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
 ROTULO_DO_CSS = "Editar"
 GESTO_DE_IMPORTAR = "importar-na-modificacao"
@@ -400,8 +402,21 @@ ESTADO_DO_DESENHO: dict[str, Any] = {
 }
 
 
+def _chave_da_memoria(o: OpcaoDaJanela) -> str:
+    """A chave «Memória» do jogo em cena: Ligado, Desligado ou, com o aviso do anticheat por ver,
+    «Aceitar e ligar» com o aviso na dica."""
+    if o.pede:
+        classe, texto, dica = "nj-tog pede", ROTULO_DO_SIM, f' data-dica="{_a(o.pede)}"'
+    else:
+        classe, texto, dica = ("nj-tog ligado", "Ligado", "") if o.valor else ("nj-tog", "Desligado", "")
+    return (f'<span class="{classe}" data-gesto="{GESTO_DA_MEMORIA}" data-v="{_a(o.mod)}"{dica}>'
+            f'<span class="pino"></span><span class="txt">{texto}</span></span>')
+
+
 def _controle_da_opcao(o: OpcaoDaJanela) -> str:
     alvo = f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}"'
+    if o.tipo == "memoria":
+        return _chave_da_memoria(o)
     if o.tipo == "escolha":
         itens = "".join(
             f'<option{" selected" if e == o.valor else ""}>{_e(e)}</option>' for e in o.escolhas)
@@ -854,7 +869,7 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "",
     return f'<div class="ac-card mj-abas" style="--n:{len(telas)}">{partes}</div>'
 
 
-PEDACOS_DO_AGORA = ("conexoes", "nivel", "perfil", "aparelhos")  # (noqa-acento)
+PEDACOS_DO_AGORA = ("conexoes", "nivel", "perfil", "linhas", "aparelhos")  # (noqa-acento)
 NIVEL_MAXIMO = 10
 SEM_VALOR = "—"
 DICA_DO_PARAR = "Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."
@@ -1098,6 +1113,8 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
             texto = _e(perfil) if isinstance(perfil, str) and perfil.strip() else SEM_VALOR
             linhas.append('<div class="ja-perfil-linha" data-agora="perfil"><span class="ja-rot">'
                           f'Perfil</span><span class="ja-perfil-nome">{texto}</span></div>')
+        elif pedaco == "linhas":
+            linhas.append(_linhas_do_agora_html(estado if vivo else None))
         else:
             itens = (aparelhos_na_coluna_html(gestao) if gestao and not gestao.aparelhos.grupo
                      else "".join(_aparelho_html(a) for a in itens_do_estado(estado, pedaco)))
@@ -1105,6 +1122,19 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
                      f'<span class="ap-nome">{SEM_VALOR}</span></div>')
             linhas.append(f'<div class="ja-aps" data-agora="aparelhos">{itens or vazio}</div>')
     return "".join(linhas)
+
+
+def _linhas_do_agora_html(estado: Mapping[str, Any] | None) -> str:
+    """O pedaço «linhas»: cada ``{rotulo, valor}`` que a extensão publicou (a porta já cortou no
+    teto), escapado; sem linha, o traço."""
+    pares = [(x.get("rotulo"), x.get("valor")) for x in itens_do_estado(estado, "linhas")]
+    itens = "".join(
+        f'<div class="ja-perfil-linha"><span class="ja-rot">{_e(r)}</span>'
+        f'<span class="ja-perfil-nome">{_e(v)}</span></div>'
+        for r, v in pares if isinstance(r, str) and isinstance(v, str))
+    vazio = (f'<div class="ja-perfil-linha"><span class="ja-rot">{SEM_VALOR}</span>'
+             "</div>")
+    return f'<div class="ja-linhas" data-agora="linhas">{itens or vazio}</div>'
 
 
 def parar_tudo_html(mod: str) -> str:
