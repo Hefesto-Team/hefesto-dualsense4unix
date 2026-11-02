@@ -20,6 +20,9 @@ MORDIDAS (02/11/2026, executadas sobre a cura e devolvidas, md5 conferido):
 - sem o ``@presente`` no ``aparecem``, reprova ``test_a_linha_do_presente_some_e_volta``;
 - sem o aviso armado no gesto da memória, reprova
   ``test_com_anticheat_o_primeiro_clique_mostra_o_aviso``.
+- sem as regras ``.ja-linhas``/``.ja-par`` no ``experimental.css``, reprova
+  ``test_o_pedaco_linhas_pinta_o_que_a_extensao_publicou`` (na tela, os valores de 40 letras
+  quebravam em três linhas e encavalavam);
 - com o tique relendo a instalada pelo ``_a_instalada_ou_nada``, reprova
   ``test_o_tique_com_a_janela_aberta_nao_rele_as_instaladas``.
 """
@@ -144,6 +147,10 @@ def test_o_pedaco_linhas_pinta_o_que_a_extensao_publicou() -> None:
                                          {"rotulo": "Sentem", "valor": "<b>Cosmic Red</b>"}]}
     html = exp.agora_html(["linhas"], estado)
     assert re.findall(r'<span class="ja-rot">([^<]*)</span>', html) == ["Último", "Sentem"]
+    assert re.findall(r'<span class="ja-par-valor">([^<]*)</span>', html)[0] == "coração, 92 bpm"
+    for regra in (".ja-linhas {", ".ja-par {", ".ja-par > span {"):
+        assert regra in exp.CSS, f"o pedaço linhas perdeu a regra {regra!r}"
+    assert "text-overflow:ellipsis" in exp.CSS.split(".ja-par > span {")[1].split("}")[0]
     assert "&lt;b&gt;Cosmic Red" in html, "o valor de terceiro não foi escapado"
     parada = exp.agora_html(["linhas"], {**estado, "ligado": False})
     assert "Último" not in parada and exp.SEM_VALOR in parada

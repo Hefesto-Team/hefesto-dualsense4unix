@@ -145,6 +145,13 @@
 .ja-perfil-nome .ja-mini { color:var(--pink) }
 .ja-perfil-linha .passo { width:26px;height:28px }
 .ja-perfil-linha .un { font-size:10.5px;color:var(--fg);white-space:nowrap }
+.ja-linhas { display:grid;grid-template-columns:fit-content(50%) minmax(0,1fr) }
+.ja-par { display:contents }
+.ja-par > span { min-width:0;height:30px;line-height:30px;border-bottom:1px solid var(--border-sutil); white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.ja-par:last-child > span { border-bottom:0 }
+.ja-par > .ja-rot { padding-right:10px }
+.ja-par > .ja-rot:only-child { grid-column:1 / -1 }
+.ja-par-valor { font-size:12px;font-weight:500;color:var(--fg) }
 .ja-aps-topo { display:flex;align-items:center;gap:8px }
 .ja-aps-topo .conta { margin-left:auto;font-size:10.5px;color:var(--fg) }
 .ja-ap { border-top:1px solid var(--border-sutil);padding:7px 0 0;display:flex;flex-direction:column;gap:5px }

@@ -1129,11 +1129,10 @@ def _linhas_do_agora_html(estado: Mapping[str, Any] | None) -> str:
     teto), escapado; sem linha, o traço."""
     pares = [(x.get("rotulo"), x.get("valor")) for x in itens_do_estado(estado, "linhas")]
     itens = "".join(
-        f'<div class="ja-perfil-linha"><span class="ja-rot">{_e(r)}</span>'
-        f'<span class="ja-perfil-nome">{_e(v)}</span></div>'
+        f'<div class="ja-par"><span class="ja-rot">{_e(r)}</span>'
+        f'<span class="ja-par-valor">{_e(v)}</span></div>'
         for r, v in pares if isinstance(r, str) and isinstance(v, str))
-    vazio = (f'<div class="ja-perfil-linha"><span class="ja-rot">{SEM_VALOR}</span>'
-             "</div>")
+    vazio = f'<div class="ja-par"><span class="ja-rot">{SEM_VALOR}</span></div>'
     return f'<div class="ja-linhas" data-agora="linhas">{itens or vazio}</div>'
 
 
