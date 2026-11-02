@@ -7,6 +7,7 @@ import json
 import pathlib
 import re
 import sys
+from collections.abc import Callable
 from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -44,13 +45,7 @@ class PaginaNaoFicouProntaError(RuntimeError):
             f"a página não ficou pronta: faltou {sinal} em {prazo_ms} ms ({endereco})")
 
 
-def endereco_da_pagina(alvo: pathlib.Path | str) -> str:
-    if isinstance(alvo, pathlib.Path):
-        return alvo.resolve().as_uri()
-    return alvo if "://" in alvo else pathlib.Path(alvo).resolve().as_uri()
-
-
-def _esperar(pg: Any, endereco: str, passos: list[tuple[str, Any]], prazo_ms: int) -> None:
+def _esperar(endereco: str, passos: list[tuple[str, Any]], prazo_ms: int) -> None:
     from playwright.sync_api import TimeoutError as Estourou
 
     for sinal, esperar in passos:
@@ -60,17 +55,17 @@ def _esperar(pg: Any, endereco: str, passos: list[tuple[str, Any]], prazo_ms: in
             raise PaginaNaoFicouProntaError(endereco, sinal, prazo_ms) from None
 
 
-def abrir_pronta(pg: Any, alvo: pathlib.Path | str, *, seletor: str | None = None,
-                 prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> None:
-    """Abre ``alvo`` e só volta com a página desenhada: o ``load``, o
-    ``document.fonts.ready``, dois quadros pintados (o que o motor da página faz depois do
-    ``load`` roda antes do quadro) e, pedido, o ``seletor`` no DOM. Nenhuma página pede nada
-    à rede depois do ``load``: a rede quieta só somava espera e estourava com a máquina
-    carregada. Cada sinal tem prazo; o que não vem sai em ``PaginaNaoFicouProntaError``."""
-    endereco = endereco_da_pagina(alvo)
+def abrir_pronta(pg: Any, endereco: str, ir: Callable[..., Any], *,
+                 seletor: str | None = None, prazo_ms: int = PRAZO_DE_CADA_SINAL_MS) -> None:
+    """Navega por ``ir`` (o ``goto`` do chamador, que decide o que se abre) e só volta com a
+    página desenhada: o ``load``, o ``document.fonts.ready``, dois quadros pintados (o que o
+    motor da página faz depois do ``load`` roda antes do quadro) e, pedido, o ``seletor`` no
+    DOM. Nenhuma página pede nada à rede depois do ``load``: a rede quieta só somava espera e
+    estourava com a máquina carregada. Cada sinal tem prazo; o que não vem sai em
+    ``PaginaNaoFicouProntaError``, com ``endereco`` no texto."""
     passos: list[tuple[str, Any]] = [
         ("o load do documento",
-         lambda: pg.goto(endereco, wait_until="load", timeout=prazo_ms)),
+         lambda: ir(wait_until="load", timeout=prazo_ms)),
         ("o document.fonts.ready",
          lambda: pg.wait_for_function(AS_FONTES, timeout=prazo_ms)),
         ("dois quadros pintados",
@@ -80,7 +75,7 @@ def abrir_pronta(pg: Any, alvo: pathlib.Path | str, *, seletor: str | None = Non
         passos.append((f"o seletor {seletor!r} no DOM",
                        lambda: pg.wait_for_selector(seletor, state="attached",
                                                     timeout=prazo_ms)))
-    _esperar(pg, endereco, passos, prazo_ms)
+    _esperar(endereco, passos, prazo_ms)
 
 
 MEDIDA_NA_VISTA = """() => {
@@ -163,7 +158,8 @@ def _retratar(navegador, alvo: pathlib.Path, saida: pathlib.Path,
     larg, alt = vista or (LARG, ALT)
     pg = navegador.new_page(viewport={"width": larg, "height": alt}, device_scale_factor=1)
     try:
-        abrir_pronta(pg, alvo, seletor=A_CAIXA, prazo_ms=prazo_ms)
+        abrir_pronta(pg, alvo.resolve().as_uri(), lambda **ir: pg.goto(f"file://{alvo}", **ir),
+                     seletor=A_CAIXA, prazo_ms=prazo_ms)
         from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
 
         pg.add_style_tag(
