@@ -6,6 +6,11 @@
       "endereco": "https://github.com/Hefesto-Team/hefesto-mod-tema",
       "enderecos_antigos": ["https://github.com/Hefesto-Team/hefesto-mod-tema-claro"],
       "ligar": true
+    },
+    {
+      "id": "imersao",
+      "endereco": "https://github.com/Hefesto-Team/hefesto-mod-imersao",
+      "ligar": true
     }
   ]
 }
