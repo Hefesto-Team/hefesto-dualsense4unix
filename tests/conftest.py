@@ -1278,6 +1278,95 @@ def _gestos_da_janela_do_usuario() -> list[str]:
     return [linha.strip() for linha in novo.splitlines() if "[gesto]" in linha]
 
 
+_NOME_DO_DIARIO_DOS_GESTOS = "gestos-das-extensoes.log"
+
+_DIARIO_DOS_GESTOS: list[Path] = []
+
+_Gesto = tuple[str, tuple[str, ...]]
+
+
+def _marcar_o_diario_dos_gestos() -> None:
+    """O diário em que o instalador das extensões do lar real anota cada gesto que o muda."""
+    if not _DIARIO_DOS_GESTOS:
+        _DIARIO_DOS_GESTOS.append(_interface_log_real().with_name(_NOME_DO_DIARIO_DOS_GESTOS))
+
+
+def gestos_das_extensoes(texto: str, desde: str) -> list[_Gesto]:
+    """Os ``[gesto]`` do diário das extensões anotados a partir de ``desde``, com os caminhos."""
+    import json
+    import re
+
+    forma = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (\[gesto\] .+?) → (\[.*\])$")
+    gestos: list[_Gesto] = []
+    for linha in texto.splitlines():
+        achado = forma.match(linha.strip())
+        if achado is None or achado.group(1) < desde:
+            continue
+        with contextlib.suppress(ValueError):
+            caminhos = json.loads(achado.group(3))
+            if isinstance(caminhos, list) and caminhos and all(
+                    isinstance(c, str) and os.path.isabs(c) for c in caminhos):
+                gestos.append((achado.group(2), tuple(os.path.normpath(c) for c in caminhos)))
+    return gestos
+
+
+def _gestos_das_extensoes_na_sessao() -> list[_Gesto]:
+    """Os gestos que o lar real anotou desde o começo da sessão, inclusive no ``.1`` da volta."""
+    if not _DIARIO_DOS_GESTOS or not _INICIO_DA_SESSAO:
+        return []
+    diario = _DIARIO_DOS_GESTOS[0]
+    partes: list[str] = []
+    for arquivo in (diario.with_name(f"{diario.name}.1"), diario):
+        try:
+            with open(arquivo, "rb") as aberto:
+                partes.append(aberto.read(_CANARIO_LIMITE_RESUMO).decode("utf-8", "replace"))
+        except OSError:
+            continue
+    return gestos_das_extensoes("\n".join(partes), _INICIO_DA_SESSAO[0])
+
+
+def _o_gesto_cobre(caminho: str, alvos: tuple[str, ...]) -> bool:
+    """O caminho é um dos do gesto, mora dentro de um, ou é a pasta que o contém."""
+    caminho = os.path.normpath(caminho)
+    for alvo in alvos:
+        if caminho == alvo or caminho.startswith(alvo + os.sep):
+            return True
+        if alvo.startswith(caminho + os.sep) and os.path.isdir(caminho):
+            return True
+    return False
+
+
+def _pelos_gestos_das_extensoes(
+    deltas: list[str], gestos: list[_Gesto]
+) -> tuple[list[str], list[str]]:
+    """(as mudanças que um gesto anotado cobre, as que nenhum cobre)."""
+    if not gestos or not deltas:
+        return [], deltas
+    diario = _DIARIO_DOS_GESTOS[0]
+    proprios = (str(diario), str(diario.with_name(f"{diario.name}.1")))
+    cobertos = [
+        d for d in deltas
+        if any(_o_gesto_cobre(_caminho_do_delta(d), alvos) for alvos in (proprios, *(
+            c for _g, c in gestos)))
+    ]
+    return cobertos, [d for d in deltas if d not in cobertos]
+
+
+def _avisar_dos_gestos(session: Any, cobertos: list[str], gestos: list[_Gesto]) -> None:
+    if not cobertos:
+        return
+    nomes = list(dict.fromkeys(g for g, _c in gestos))
+    restam = len(cobertos) - _CANARIO_LIMITE_AVISO
+    _escrever_no_terminal(session, [
+        "",
+        "CANARIO-FS-01 (aviso, não é portão): extensão mexida por quem usa, e o gesto anotou "
+        f"os caminhos no diário ({len(cobertos)} mudança(s)):",
+        *[f"  - {d}" for d in cobertos[:_CANARIO_LIMITE_AVISO]],
+        *([f"  ... e mais {restam}"] if restam > 0 else []),
+        *[f"  gesto: {g}" for g in nomes[-_CANARIO_LIMITE_AVISO:]],
+    ])
+
+
 _MODULO_DA_IDENTIDADE = "hefesto_dualsense4unix.daemon.subsystems.identity"
 
 
@@ -1302,6 +1391,7 @@ def pytest_sessionstart(session: Any) -> None:
         _RUNTIME_REAL.append(runtime_real())
     _armar_a_guarda_do_real()
     _marcar_o_diario_da_janela()
+    _marcar_o_diario_dos_gestos()
     _armar_berco(session)
     _instalar_popen_da_sessao()
     _armar_som_de_mentira()
@@ -1420,8 +1510,10 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
 
+    gestos_das_extensoes = _gestos_das_extensoes_na_sessao()
     foto_aviso = _fotografar_tudo_de_aviso(_CANARIO_FOTO_AVISO)
-    deltas_aviso = _deltas_do_canario(_CANARIO_FOTO_AVISO, foto_aviso)
+    do_gesto, deltas_aviso = _pelos_gestos_das_extensoes(
+        _deltas_do_canario(_CANARIO_FOTO_AVISO, foto_aviso), gestos_das_extensoes)
     if deltas_aviso:
         mostrados = deltas_aviso[:_CANARIO_LIMITE_AVISO]
         restam = len(deltas_aviso) - len(mostrados)
@@ -1453,6 +1545,8 @@ def _sessionfinish_das_guardas(session: Any) -> None:
         ])
 
     deltas = _sem_a_escrita_do_servico(session, _deltas_do_canario(_CANARIO_FOTO_INICIAL, foto_fim))
+    cobertos, deltas = _pelos_gestos_das_extensoes(deltas, gestos_das_extensoes)
+    _avisar_dos_gestos(session, [*do_gesto, *cobertos], gestos_das_extensoes)
     if not deltas:
         return
     config = str(Path(os.path.expanduser("~")) / ".config" / _NOME_DO_PRODUTO)

@@ -70,6 +70,9 @@ PRAZO_DO_PREPARO_S = 600.0
 DIARIO_DO_PREPARO = "preparo.log"
 TETO_DO_DIARIO_DO_PREPARO_BYTES = 256 * 1024
 
+DIARIO_DOS_GESTOS = "gestos-das-extensoes.log"
+TETO_DO_DIARIO_DOS_GESTOS_BYTES = 64 * 1024
+
 _DA_SESSAO_NO_PREPARO = (
     "PATH", "LANG", "HOME", "USER", "LOGNAME",
     "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_RUNTIME_DIR",
@@ -118,6 +121,11 @@ class Lugares:
             registro=xdg_paths.mods_registro_path(),
             estado=xdg_paths.mods_estado_path(),
         )
+
+    @property
+    def diario_dos_gestos(self) -> Path:
+        """O diário dos gestos que mudam o lar, ao lado da pasta dos dados."""
+        return self.dados.parent / DIARIO_DOS_GESTOS
 
 
 class Entrada(BaseModel):
@@ -201,6 +209,27 @@ def gravar_registro(caminho: Path, registro: dict[str, Entrada]) -> None:
         with contextlib.suppress(FileNotFoundError):
             os.unlink(nome)
         raise
+
+
+def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str]) -> None:
+    """Uma linha ``[gesto]`` com os caminhos que o gesto vai tocar, antes de tocá-los.
+
+    O canário da suíte lê o diário do lar de verdade e reconhece por essa linha a escrita de
+    quem usa. A volta passa do teto para o ``.1``; o diário que não abre nunca barra o gesto.
+    """
+    caminhos = [str(p) for mod_id in ids for p in (lg.codigo / mod_id, lg.dados / mod_id)]
+    caminhos.append(str(lg.registro))
+    quando = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    linha = (f"{quando} [gesto] mod {verbo} {' '.join(ids)} → "
+             f"{json.dumps(caminhos, ensure_ascii=False)}\n")
+    diario = lg.diario_dos_gestos
+    with contextlib.suppress(OSError):
+        diario.parent.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(FileNotFoundError):
+            if diario.stat().st_size > TETO_DO_DIARIO_DOS_GESTOS_BYTES:
+                os.replace(diario, diario.with_name(f"{diario.name}.1"))
+        with diario.open("a", encoding="utf-8") as arquivo:
+            arquivo.write(linha)
 
 
 def ler_estado(caminho: Path) -> dict[str, dict[str, Any]]:
@@ -564,6 +593,8 @@ def instalar(
                 raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
             aviso_aceito = manifesto.aviso
         a_substituir = [i for i in manifesto.substitui if i in registro]
+        anotar_o_gesto(lg, "instalar" if anterior is None else "atualizar",
+                       [manifesto.id, *a_substituir])
         if sozinha and anterior is not None:
             motivo = _o_que_segura_a_atualizacao(lg, anterior, tipo, manifesto, a_substituir)
             if motivo:
@@ -860,6 +891,7 @@ def ligar(
     if aviso_por_ver(entrada, manifesto) and aviso_visto != manifesto.aviso:
         raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
     _conferir_o_tema(manifesto, lg.codigo / mod_id)
+    anotar_o_gesto(lg, "ligar", [mod_id])
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.aviso_aceito = manifesto.aviso
     if manifesto.preparar and entrada.preparada_em != entrada.instalada_em:
@@ -893,6 +925,7 @@ def desligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:
     if entrada is None:
         raise InstalacaoRecusadaError(f"«{mod_id}» não está instalada.")
     if entrada.ligada:
+        anotar_o_gesto(lg, "desligar", [mod_id])
         entrada.ligada = False
         gravar_registro(lg.registro, registro)
     return entrada
@@ -1015,6 +1048,7 @@ def remover(
     _conferir_id(mod_id)
     if not conferir_remocao(mod_id, lugares=lg):
         raise InstalacaoRecusadaError(f"«{mod_id}» não está instalada.")
+    anotar_o_gesto(lg, "remover", [mod_id])
     if mod_id in ler_registro(lg.registro):
         desligar(mod_id, lugares=lg)
     if not esperar_parar(mod_id, lugares=lg, prazo=prazo):
@@ -1027,6 +1061,7 @@ def remover(
 
 __all__ = [
     "CHAVES_OFICIAIS",
+    "DIARIO_DOS_GESTOS",
     "DIARIO_DO_PREPARO",
     "INTERVALO_DA_ATUALIZACAO_S",
     "PRAZO_DO_PREPARO_S",
@@ -1036,6 +1071,7 @@ __all__ = [
     "InstalacaoRecusadaError",
     "Lugares",
     "Resultado",
+    "anotar_o_gesto",
     "atualizar",
     "aviso_por_ver",
     "commit_novo",
