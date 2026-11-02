@@ -239,14 +239,14 @@
       "data": "2026-11-02",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1191043,
+      "piso": 1191107,
       "por_item": {
         "docs": 108306,
         "scripts": 111006,
         "src": 301327,
-        "tests": 670404
+        "tests": 670468
       },
-      "razao": "tamanho: +2754 linhas (1188289 -> 1191043), pagas por Origem: D-09S-BOTAO-SEM-TRABALHO, D-1610-O-INSTALAR-RECUSA-SE-A-ANTERIOR-NAO-PAROU, D-2110-A-FILA-DOS-LANCADORES-ROLA-POR-DENTRO, D-3110-A-FABRICA-E-UMA-LISTA, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 583799f19b11",
+      "razao": "tamanho: +64 linhas (1191043 -> 1191107), pagas por Origem: D-09S-BOTAO-SEM-TRABALHO; registrado no fecho, topo a04b5d9a01a2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1411,6 +1411,12 @@
           "de": 1188289,
           "para": 1191043,
           "razao": "tamanho: +2754 linhas (1188289 -> 1191043), pagas por Origem: D-09S-BOTAO-SEM-TRABALHO, D-1610-O-INSTALAR-RECUSA-SE-A-ANTERIOR-NAO-PAROU, D-2110-A-FILA-DOS-LANCADORES-ROLA-POR-DENTRO, D-3110-A-FABRICA-E-UMA-LISTA, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 583799f19b11"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 1191043,
+          "para": 1191107,
+          "razao": "tamanho: +64 linhas (1191043 -> 1191107), pagas por Origem: D-09S-BOTAO-SEM-TRABALHO; registrado no fecho, topo a04b5d9a01a2"
         }
       ],
       "unidade": "linhas",
