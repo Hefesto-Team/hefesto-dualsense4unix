@@ -14,7 +14,8 @@ MORDIDAS:
 * devolva o rótulo antigo em `sem_efeito.ROTULO` → `test_toda_lista_de_efeito_tem_um_traco_so`
   reprova nas três abas; escrito à mão num gerador, `test_o_nome_velho_nao_volta_ao_codigo_da_tela`;
 * devolva o «—» escondido à lista do gatilho → `test_nenhuma_lista_de_efeito_esconde_opcao`;
-* tire `"sem-efeito"` de `NOMES_VELHOS` → `test_a_luz_le_o_nome_velho_e_apaga_a_barra` e a vibração.
+* tire `"sem-efeito"` de `NOMES_VELHOS` → `test_a_luz_le_o_nome_velho_e_fica_na_cor_parada`
+  e a vibração.
 """
 
 from __future__ import annotations
@@ -139,7 +140,9 @@ def test_o_gatilho_le_o_nome_velho_e_solta(valor: str, tmp_path: pathlib.Path,
 
 
 @pytest.mark.parametrize("valor", ["sem-efeito", NOME_VELHO, sem_efeito.VALOR])
-def test_a_luz_le_o_nome_velho_e_apaga_a_barra(valor: str, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_luz_le_o_nome_velho_e_fica_na_cor_parada(
+    valor: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador
 
     gravado: list[Any] = []
@@ -154,7 +157,7 @@ def test_a_luz_le_o_nome_velho_e_apaga_a_barra(valor: str, monkeypatch: pytest.M
                         lambda _ctx, _p, uniq, cor, **k: escrito.append((uniq, cor, k)))
     a04.efeito_da_luz(_ctx_do_gatilho(), {"uniq": UNIQ, "valor": valor}, object())
     assert len(gravado) == 1
-    assert escrito == [(UNIQ, (0, 0, 0), {"apagando": True, "brilho": 0.0})], (valor, escrito)
+    assert escrito == [], (valor, escrito)
 
 
 class _PonteDaVibracao:

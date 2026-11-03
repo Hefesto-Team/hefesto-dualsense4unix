@@ -1923,7 +1923,7 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não consegui ligar o retorno do microfone deste controle")
 
 
-@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mudo", grava="gravar_pelo_gesto")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mudo", grava="mic_canal_set_detalhado")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙, o botão de calar o microfone, e ele ALTERNA o que a tela mostra.
 
