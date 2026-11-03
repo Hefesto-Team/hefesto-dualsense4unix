@@ -19,6 +19,7 @@ import contextlib
 import os
 import random
 import struct
+from collections.abc import Iterator
 from types import SimpleNamespace
 from typing import Any
 
@@ -232,8 +233,8 @@ def _solto(visto: dict[str, Any], peca: _Peca) -> bool:
 
 def _segurando(visto: dict[str, Any], peca: _Peca) -> bool:
     if peca.caminho == "xbox":
-        return visto["eixos"] == _SEGURADO and visto["botoes"] == _APERTADO
-    return visto["eixos"] == _SEGURADO and visto["giro"] == _GIRO
+        return bool(visto["eixos"] == _SEGURADO and visto["botoes"] == _APERTADO)
+    return bool(visto["eixos"] == _SEGURADO and visto["giro"] == _GIRO)
 
 
 def _andar(pecas: list[_Peca], relogio: _Relogio, segundos: float, calada: _Peca | None) -> None:
@@ -250,7 +251,7 @@ def _andar(pecas: list[_Peca], relogio: _Relogio, segundos: float, calada: _Peca
 
 
 @pytest.fixture
-def mesa():
+def mesa() -> Iterator[list[_Peca]]:
     pecas: list[_Peca] = []
     yield pecas
     for peca in pecas:
@@ -315,7 +316,12 @@ def test_o_silencio_curto_nao_mexe_em_nada(
 
 
 def _intervalos_do_radio(semente: int, segundos: float) -> list[float]:
-    """Rajadas na medida da canônica §5: p05 1,255 ms, p95 187 ms, de 38 a 392 Hz."""
+    """Rajadas com o p05 (1,255 ms) e o p95 (187 ms) da canônica §5, de 38 a 392 Hz.
+
+    O maior intervalo sorteado é duas vezes o p95 (374 ms), abaixo do piso: a régua prova que
+    o silêncio abaixo de `REPOUSO_DO_MUDO_S` nunca vira repouso. O maior intervalo de um rádio
+    são não foi medido, e é o aparelho que diz se ele cabe abaixo do piso.
+    """
     sorteio = random.Random(semente)
     saida: list[float] = []
     total = 0.0
@@ -345,6 +351,7 @@ class _PollDeMentira:
         self.fim = fim
         self.peca = peca
         self.esperas: list[float] = []
+        self._escrita = -1
 
     def __call__(self, fd: int, wake_r: int, espera: float) -> list[int]:
         self.esperas.append(espera)
@@ -395,7 +402,9 @@ def test_trinta_segundos_de_radio_cheio_sem_repouso_falso(
     inicio = relogio.agora
     chegadas: list[float] = []
     t = inicio
-    for passo in _intervalos_do_radio(semente, 30.0):
+    intervalos = _intervalos_do_radio(semente, 30.0)
+    assert max(intervalos) < REPOUSO_DO_MUDO_S
+    for passo in intervalos:
         t += passo
         chegadas.append(t)
     _rodar_o_leitor_de_verdade(monkeypatch, peca, chegadas, inicio + 30.0)
@@ -486,7 +495,7 @@ def test_dispatch_do_p1_pergunta_ao_leitor_e_nao_reescreve(monkeypatch: pytest.M
     for nome in ("_avisar_troca_de_modo", "bater_a_vibracao", "_bater_os_eventos_do_jogo"):
         monkeypatch.setattr(gamepad_mod, nome, lambda _d: None)
     monkeypatch.setattr(gamepad_mod, "_o_p1_e_do_de_fora", lambda _d: False)
-    gamepad_mod.dispatch_gamepad(daemon, SimpleNamespace(), _APERTADO)  # type: ignore[arg-type]
+    gamepad_mod.dispatch_gamepad(daemon, SimpleNamespace(), _APERTADO)
     assert escrito == [_CENTRO, frozenset(), "pump"], escrito
 
 
@@ -539,6 +548,6 @@ def test_o_xbox_ganha_o_leitor_do_mudo(monkeypatch: pytest.MonkeyPatch) -> None:
         _motion_reader=None,
         controller=SimpleNamespace(hidraw_path=lambda: "/dev/hidraw-de-mentira"),
     )
-    gamepad_mod.start_motion_reader(daemon, pad)  # type: ignore[arg-type]
+    gamepad_mod.start_motion_reader(daemon, pad)
     assert subiu == [pad]
     assert daemon._motion_reader is not None

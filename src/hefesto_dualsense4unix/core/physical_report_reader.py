@@ -4,8 +4,8 @@ Uma thread por jogador lê o hidraw (0x01 no cabo, 0x31 com CRC no rádio) e é 
 entrega a janela de movimento (`forward_motion`), o clique do touchpad, o botão do microfone, o
 fone e a bateria. Passado `REPOUSO_DO_MUDO_S` sem report válido, declara a peça muda
 (`soltar_por_mudo` e `a_peca_calou`); o primeiro report válido desfaz. O número: o p95 do
-intervalo do rádio é 187 ms (canônica §5), duas vezes dá 374 ms, o piso é 0,4 s. A história
-está em `docs/research/o-porque-dos-modulos.md`, seção `physical_report_reader`.
+intervalo do rádio é 187 ms (canônica §5), o dobro dá 374 ms, o piso é 0,4 s, e o maior do
+rádio são segue a medir. A história: `docs/research/o-porque-dos-modulos.md`, seção do módulo.
 """
 from __future__ import annotations
 

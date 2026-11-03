@@ -372,3 +372,74 @@ def test_no_modo_xbox_o_pad_uinput_mantem_o_pedido_pelo_tempo_do_jogo() -> None:
         pad._refresh_ff()
         assert motor == [(40, 0), (0, 0)]
         relogio.agora = inicio
+
+
+@pytest.mark.parametrize("duvida", ["nao_sei", "a_consulta_cai"])
+@MODOS
+@CAMINHOS
+def test_o_nao_sei_mantem_o_motor(
+    mesa_de: Any, relogio: _Relogio, diario: _Diario, monkeypatch: pytest.MonkeyPatch,
+    caminho: str, modo: int, duvida: str,
+) -> None:
+    """O pad sem nó, o `/proc` ilegível, o orçamento estourado e a consulta que cai não soltam."""
+
+    def consulta(_pad: uhid.UhidDualSense) -> tuple[bool | None, str]:
+        if duvida == "a_consulta_cai":
+            raise OSError("o /proc sumiu")
+        return None, "a varredura estourou o orçamento"
+
+    monkeypatch.setattr(uhid, "CONSULTAR_O_LEITOR", consulta)
+    mesa = mesa_de(caminho, modo)
+    for pad in mesa.pads:
+        mesa.o_jogo_vibra(pad, *PEDIDOS[pad.player])
+    for _tique in range(120):
+        relogio.agora += 0.5
+        for pad in mesa.pads:
+            mesa.bombear(pad)
+    for pad in mesa.pads:
+        assert mesa.motores[pad.player] == [PEDIDOS[pad.player]], (
+            f"P{pad.player}: o «não sei» cortou o motor: {mesa.motores[pad.player]}"
+        )
+    assert not diario.de("uhid_rumble_do_jogo_morto")
+
+
+@CAMINHOS
+def test_o_event_do_pad_conta_como_leitor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relogio: _Relogio, caminho: str,
+) -> None:
+    """O jogo que lê o pad só pelo evdev (o FF do `event`) segura o motor como o do `hidraw`."""
+    from hefesto_dualsense4unix.integrations import no_do_vpad
+
+    dev, dev_input = tmp_path / "dev", tmp_path / "dev-input"
+    classe = tmp_path / "sys" / "class"
+    for pasta in (dev, dev_input, classe / "input"):
+        pasta.mkdir(parents=True)
+    (dev / "hidraw41").touch()
+    (dev_input / "event19").touch()
+    monkeypatch.setattr(no_do_vpad, "RAIZ_CLASS_INPUT", str(classe / "input"))
+    monkeypatch.setattr(no_do_vpad, "RAIZ_DEV_INPUT", str(dev_input))
+    monkeypatch.setattr(no_do_vpad, "RAIZ_DEV", str(dev))
+    pad = uhid.UhidDualSense(
+        player=1, identity="aa:bb:cc:00:00:01", product=EDGE,
+        blueprint=canonical_blueprint(), time_fn=relogio, sleep_fn=lambda _s: None,
+    )
+    if caminho == "gadget":
+        (classe / "hidraw" / "hidraw41" / "device" / "input" / "input9" / "event19").mkdir(
+            parents=True
+        )
+        pad._gadget = uhid._GadgetDoPad(
+            cliente=None, fd=-1, gadget="hefesto-pad-1", serial="serial-1",
+            hidraw="hidraw41", interface="1-1:1.0",
+        )
+    else:
+        monkeypatch.setattr(
+            no_do_vpad, "resolver_no_do_vpad",
+            lambda **_k: {"hidraw": str(dev / "hidraw41"), "evdev": str(dev_input / "event19")},
+        )
+    nos = uhid._nos_do_pad(pad)
+    pad._gadget = None
+    assert str(dev_input / "event19") in nos, nos
+    (tmp_path / "p").mkdir()
+    arvore = _ProcDeMentira(tmp_path / "p")
+    arvore.jogo(101, [str(dev_input / "event19")])
+    assert uhid.o_jogo_le_os_nos(nos, raiz_proc=str(arvore.raiz), meu_pid=1)[0] is True

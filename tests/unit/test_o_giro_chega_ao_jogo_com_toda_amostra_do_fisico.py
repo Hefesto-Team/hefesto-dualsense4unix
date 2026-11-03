@@ -414,3 +414,33 @@ def test_no_modo_xbox_nenhum_giro_chega_ao_uinput(aparelho: str, transporte: str
     assert no.escritas == []
     assert leitor.amostras["lidos"] == 0
     assert leitor.amostras["entregues"] == 0
+
+
+@pytest.mark.parametrize("caminho", ["uhid", "gadget"])
+@pytest.mark.parametrize("transporte", ["cabo", "janela_3"])
+def test_o_mesmo_carimbo_e_a_mesma_amostra_e_o_carimbo_zero_separa_pelo_valor(
+    mesa: list[_Peca], os_do_gadget: _OsDoGadget, caminho: str, transporte: str
+) -> None:
+    """O carimbo repetido com outro valor não se repete no jogo; sem carimbo, o valor separa."""
+    relogio = _Relogio()
+    peca = _Peca(3, _EDGE, caminho, relogio, os_do_gadget)
+    mesa.append(peca)
+    if caminho == "gadget":
+        peca.assentar(transporte, relogio.agora)
+    else:
+        peca.chega(_report(transporte, 1, 0, 4000), relogio.agora)
+        peca.host_le()
+        peca.do_uhid.clear()
+    antes = dict(peca.leitor.amostras)
+    for contador, amostra in ((2, 11), (3, 12)):
+        relogio.agora += 0.004
+        peca.chega(_report(transporte, contador, amostra, 9000), relogio.agora)
+        peca.host_le()
+    assert peca.no_jogo() == [(9000).to_bytes(4, "little")]
+    for contador, amostra in ((4, 21), (5, 22)):
+        relogio.agora += 0.004
+        peca.chega(_report(transporte, contador, amostra, 0), relogio.agora)
+        peca.host_le()
+    depois = peca.leitor.amostras
+    assert depois["entregues"] - antes["entregues"] == 3
+    assert depois["duplicados"] - antes["duplicados"] == 1
