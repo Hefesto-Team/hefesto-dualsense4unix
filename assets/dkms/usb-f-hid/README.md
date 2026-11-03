@@ -69,10 +69,13 @@ id volta com `err=EPIPE`, que o kernel entrega ao `hidraw` como `EIO`.
 `0002`), as duas 0444 e sempre Y, em `/sys/module/usb_f_hid/parameters/`. Nada
 mais no sysfs separa este módulo do de fábrica, e a segunda é a versão que o
 daemon e o doctor podem ler: a `PACKAGE_VERSION` fica em 1.0.0 (o motivo está
-no `dkms.conf`). O daemon a guarda no `daemon.state_full`
-(`gamepad_emulation.get_report_sized`), e o doctor reprova nomeando a marca
-que falta (`check_hefesto_usb_f_hid_dkms`). A lista das marcas tem
-um dono só: `DKMS_MARCAS_DO_USB_F_HID`, em `scripts/dkms_lib.sh`.
+no `dkms.conf`). O daemon só chama de curado o módulo com as duas: o
+`daemon.state_full` diz `gamepad_emulation.get_report_sized` (todas as marcas
+no ar) e `gamepad_emulation.f_hid_marcas_que_faltam`, e o doctor reprova
+nomeando a marca que falta (`check_hefesto_usb_f_hid_dkms`). A lista das
+marcas tem um dono só: `DKMS_MARCAS_DO_USB_F_HID`, em `scripts/dkms_lib.sh`; a
+`pad_usb.MARCAS_DO_F_HID` do daemon é conferida contra essa lista e contra o
+`f_hid.c` (`tests/unit/test_o_daemon_olha_todas_as_marcas_do_f_hid.py`).
 
 ## A troca a quente
 
@@ -81,9 +84,13 @@ troca o módulo carregado quando falta a ele uma das marcas e o curado está em
 `updates/dkms`:
 
 - sem gadget nenhum (refcnt 0): troca na hora;
-- com gadgets `hefesto-pad-*`: para o daemon de usuário, o broker desmonta os
-  pads no EOF da conexão, o refcnt chega a 0 (com prazo), troca e sobe o
-  daemon se ele estava no ar;
+- com o refcnt acima de 0, com ou sem gadget `hefesto-pad-*`: para o daemon
+  de usuário, espera o processo dele sair e o refcnt chegar a 0 (com prazo; o
+  broker desmonta os pads no EOF da conexão, e o `/dev/hidgN` se fecha com o
+  processo), desmonta o `hefesto-pad-*` que sobrou sem ninguém com o
+  `/dev/hidg*` aberto, troca e sobe o daemon se ele estava no ar;
+- quem ainda abre um `/dev/hidg*` depois disso impede a troca: o aviso diz o
+  PID e o nome (de `/proc/*/fd`), e o curado vale no próximo boot;
 - com gadget alheio: não troca, e o módulo curado vale no próximo boot;
 - com todas as marcas: não toca. Rodar o install duas vezes dá o mesmo estado.
 
