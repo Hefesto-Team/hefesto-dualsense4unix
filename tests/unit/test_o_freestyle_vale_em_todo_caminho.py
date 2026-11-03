@@ -158,10 +158,19 @@ def _o_gatilho_no_fio(handle: Any, envelope: EnvelopeDeTransporte) -> dict[str, 
     return lidos
 
 
+GATILHO_DO_FREESTYLE = {"mode": "Rigid", "params": [5, 200]}
+
+
 def _o_gatilho_de_nascimento() -> tuple[int, ...]:
     """O que o gatilho de nascimento do produto põe no fio — lido do DONO."""
     efeito = build_from_name(esquema.MODO_DE_NASCIMENTO_DO_GATILHO,
                              list(esquema.PARAMS_DE_NASCIMENTO_DO_GATILHO))
+    return (int(efeito.mode), *efeito.forces)
+
+
+def _o_gatilho_do_freestyle() -> tuple[int, ...]:
+    """O que o gatilho escrito no asset do Freestyle põe no fio."""
+    efeito = build_from_name(GATILHO_DO_FREESTYLE["mode"], GATILHO_DO_FREESTYLE["params"])
     return (int(efeito.mode), *efeito.forces)
 
 
@@ -191,8 +200,12 @@ def test_o_boot_deixa_valendo_o_que_o_usuario_escolheu_nos_quatro(
     if esperado_nome is None:
         assert all(h.device.quadros == [] for h, _ in pecas), "sem escolha, nada vai ao fio"
         return
-    nascimento = _o_gatilho_de_nascimento()
-    assert nascimento[0] != int(off().mode)
+    if esperado_nome == loader.NOME_DO_PADRAO:
+        nascimento = _o_gatilho_do_freestyle()
+        assert nascimento[0] != int(off().mode)
+    else:
+        nascimento = _o_gatilho_de_nascimento()
+        assert nascimento[0] == int(off().mode)
     no_fio = {f"{mac} ({transporte})": _o_gatilho_no_fio(handle, envelope)
               for (mac, transporte), (handle, envelope) in zip(MESA, pecas, strict=True)}
     esperado = {chave: {"right": nascimento, "left": nascimento} for chave in no_fio}
@@ -381,12 +394,10 @@ def _gatilhos(dados: dict[str, Any]) -> dict[str, Any]:
     return dados.get("triggers") or {}
 
 
-def test_a_fabrica_do_freestyle_nasce_com_o_gatilho_de_nascimento_do_produto() -> None:
-    """Os dois lados do asset trazem o gatilho de nascimento do DONO, escrito."""
+def test_a_fabrica_do_freestyle_traz_o_gatilho_rigido_escrito() -> None:
+    """Os dois lados do asset trazem o Rígido escrito; o perfil gravado não segue o nascimento."""
     dados = json.loads(ASSET.read_text(encoding="utf-8"))
-    esperado = {"mode": esquema.MODO_DE_NASCIMENTO_DO_GATILHO,
-                "params": list(esquema.PARAMS_DE_NASCIMENTO_DO_GATILHO)}
-    assert _gatilhos(dados) == {"left": esperado, "right": esperado}
+    assert _gatilhos(dados) == {"left": GATILHO_DO_FREESTYLE, "right": GATILHO_DO_FREESTYLE}
     assert Profile.model_validate(dados).triggers.left.mode != "Off"
 
 
@@ -396,10 +407,10 @@ def test_a_lista_das_fabricas_de_antes_e_fechada() -> None:
     hoje = json.loads(ASSET.read_text(encoding="utf-8"))
     assert hoje not in antigas
     assert len({json.dumps(v, sort_keys=True) for v in antigas}) == len(antigas) == 6
-    nascimento = esquema.MODO_DE_NASCIMENTO_DO_GATILHO
+    rigido = GATILHO_DO_FREESTYLE["mode"]
     modos = [{lado: g["mode"] for lado, g in _gatilhos(v).items()} for v in antigas]
     assert modos == [{"left": "Off", "right": "Off"}] * 5 + [
-        {"left": nascimento, "right": nascimento}]
+        {"left": rigido, "right": rigido}]
     for versao in antigas:
         assert versao["name"] == loader.NOME_DO_PADRAO
         assert versao["match"] == {"type": "any"}

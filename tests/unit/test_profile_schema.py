@@ -116,7 +116,7 @@ class TestTriggerConfig:
 
 class TestProfile:
     def test_construcao_minima(self):
-        """NOTA DATADA — 20/09/2026, NASCE-LIGADO-01."""
+        """D-0311-A-LISTA-SEM-ESCOLHA-SEGUE-O-ESTILO-DO-PERFIL: o gatilho mínimo nasce no «—»."""
         from hefesto_dualsense4unix.core.trigger_effects import build_from_name, off
 
         p = Profile(name="test", match=MatchAny())
@@ -124,8 +124,8 @@ class TestProfile:
         assert p.priority == 0
         for lado in ("left", "right"):
             cfg = getattr(p.triggers, lado)
-            assert build_from_name(cfg.mode, cfg.params) != off(), (
-                f"o perfil mínimo nasce com o gatilho {lado} sem resistência."
+            assert build_from_name(cfg.mode, cfg.params) == off(), (
+                f"o perfil mínimo nasce com o gatilho {lado} resistindo."
             )
 
     def test_name_vazio_rejeita(self):

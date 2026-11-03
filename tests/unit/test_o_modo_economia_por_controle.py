@@ -228,6 +228,8 @@ def _perfil(controllers: dict[str, ControllerOverrides] | None = None) -> Profil
         match=MatchAny(),
         leds=LedsConfig(lightbar=(0, 0, 255), lightbar_brightness=1.0),
         rumble=RumbleConfig(policy="balanceado"),
+        triggers=TriggersConfig(left=TriggerConfig(mode="Rigid", params=[5, 200]),
+                                right=TriggerConfig(mode="Rigid", params=[5, 200])),
         controllers=controllers or {},
     )
 

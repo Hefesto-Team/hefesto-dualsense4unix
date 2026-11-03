@@ -182,7 +182,7 @@ def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04:
 
 
 @pytest.mark.parametrize(("perfil", "esperado"), [
-    (Profile(name="a", match=MatchAny()), "personalizado"),
+    (Profile(name="a", match=MatchAny()), AUTOMATICO),
     (Profile(name="a", match=MatchAny(),
              triggers=TriggersConfig(left=_trigger("Off"), right=_trigger("Off"))), AUTOMATICO),
     (Profile(name="a", match=MatchAny(),
@@ -200,7 +200,7 @@ def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04:
      AUTOMATICO),
     (Profile(name="a", match=MatchAny(), triggers=TriggersConfig(modo="personalizado")),
      "personalizado"),
-], ids=["vazio-nasce-com-efeito", "todos-off", "global-rigido", "override-rigido",
+], ids=["vazio-nasce-no-traco", "todos-off", "global-rigido", "override-rigido",
         "override-off", "escrito-vence",
         "escrito-personalizado"])
 def test_a_regra_dos_gatilhos_sem_o_campo_escrito(

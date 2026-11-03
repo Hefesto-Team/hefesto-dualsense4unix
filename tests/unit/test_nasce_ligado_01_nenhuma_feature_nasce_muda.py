@@ -52,9 +52,6 @@ class _SemDefault:
 _SEM_DEFAULT = _SemDefault()
 
 
-PERGUNTE_AO_APARELHO = object()
-
-
 O_QUE_E_MUDO: dict[str, Any] = {
     "ControllerSensoresOverride.touchpad": "desligado",
     "LedsConfig.auto_player_colors": False,
@@ -63,8 +60,6 @@ O_QUE_E_MUDO: dict[str, Any] = {
     "Profile.suppress_desktop_emulation": True,
     "ProfileSpeakerConfig.muted": True,
     "RumbleConfig.passthrough": False,
-    "TriggersConfig.left": PERGUNTE_AO_APARELHO,
-    "TriggersConfig.right": PERGUNTE_AO_APARELHO,
 }
 
 
@@ -136,13 +131,6 @@ class TestOQueNasceNoEsquemaNaoNasceMudo:
         modelo, campo = CAMPOS_VIVOS[endereco]
         nasce = _valor_de_nascimento(modelo, campo)
         mudo = O_QUE_E_MUDO[endereco]
-        if mudo is PERGUNTE_AO_APARELHO:
-            efeito = build_from_name(nasce.mode, nasce.params)
-            assert efeito != off(), (
-                f"{endereco} nasce com o modo {nasce.mode!r}, e o efeito que "
-                f"ele constrói é idêntico ao de `off()`: {efeito!r}."
-            )
-            return
         assert nasce != mudo, (
             f"{endereco} nasce {nasce!r}, que é exatamente o silêncio deste "
             f"campo. A ordem de 17/09 é que nenhuma feature nasça sem "
@@ -151,32 +139,20 @@ class TestOQueNasceNoEsquemaNaoNasceMudo:
         )
 
 
-class TestOGatilhoNasceRigidoDeVerdade:
-    """A cura desta sprint, medida em três canais que não conversam entre si."""
+class TestOGatilhoNasceNoTraco:
+    """D-0311-A-LISTA-SEM-ESCOLHA-SEGUE-O-ESTILO-DO-PERFIL: o gatilho novo nasce no «—»."""
 
-    def test_o_nascimento_nao_e_off(self) -> None:
+    def test_o_nascimento_e_o_off_que_o_aparelho_sente(self) -> None:
         nascido = esquema.TriggersConfig()
-        for lado in ("left", "right"):
-            modo = getattr(nascido, lado).mode
-            assert modo != "Off", (
-                f"o gatilho {lado} voltou a nascer 'Off'. O produto decidiu em "
-                "16/09: gatilho RÍGIDO em todo perfil sem configuração "
-                "alterada, e esta é a única das catorze features que nascia "
-                "muda de verdade."
-            )
-
-    def test_o_aparelho_ve_diferenca_entre_o_nascimento_e_o_desligado(self) -> None:
-        """O oráculo é o efeito construído, não a palavra escrita no modo."""
-        nascido = esquema.TriggersConfig()
-        desligado = off()
         for lado in ("left", "right"):
             cfg = getattr(nascido, lado)
-            efeito = build_from_name(cfg.mode, cfg.params)
-            assert efeito != desligado, (
-                f"o gatilho {lado} nasce com o modo {cfg.mode!r}, mas o efeito "
-                f"que ele constrói é idêntico ao de `off()`: {efeito!r}. A "
-                "palavra mudou e o aparelho não sentiu."
-            )
+            assert cfg.mode == "Off", f"o gatilho {lado} nasce {cfg.mode!r}, e não no «—»"
+            assert build_from_name(cfg.mode, cfg.params) == off()
+
+    def test_o_gatilho_nasce_por_contrato_e_nao_no_esquema(self) -> None:
+        for lado in ("left", "right"):
+            linha = esquema.NASCIMENTO_DOS_CAMPOS[f"TriggersConfig.{lado}"]
+            assert linha.onde == esquema.E_CONTRATO
 
     def test_os_parametros_saem_do_dono_deles(self) -> None:
         """Nos DOIS sentidos, contra quem a tela lê."""
@@ -192,34 +168,30 @@ class TestOGatilhoNasceRigidoDeVerdade:
             f"dono={do_dono}. Quem mudar um muda o outro."
         )
 
-    def test_o_perfil_recem_nascido_ja_chega_rigido(self) -> None:
+    def test_o_perfil_recem_nascido_chega_no_traco(self) -> None:
         """O caminho que a pessoa percorre: perfil de jogo enxuto, sem seção."""
         perfil = esquema.Profile(
             name="um jogo qualquer",
             match=esquema.MatchCriteria(window_class=["steam_app_12345"]),
         )
-        desligado = off()
         for lado in ("left", "right"):
             cfg = getattr(perfil.triggers, lado)
-            assert build_from_name(cfg.mode, cfg.params) != desligado, (
-                f"o perfil de jogo recém-criado chega com o gatilho {lado} "
-                "sem resistência nenhuma — é o caminho que a pessoa percorre "
-                "sem tocar em nada, e é dele que a ordem de 17/09 fala."
-            )
+            assert build_from_name(cfg.mode, cfg.params) == off()
 
     def test_o_perfil_que_o_usuario_configurou_continua_mandando(self) -> None:
         """A trava do alcance: nascimento não pisa em escolha gravada."""
         perfil = esquema.Profile(
             name="o que ficou solto",
             match=esquema.MatchAny(),
-            triggers=esquema.TriggersConfig(left=esquema.TriggerConfig(mode="Off")),
+            triggers=esquema.TriggersConfig(
+                left=esquema.TriggerConfig(mode="Rigid", params=[5, 200])),
         )
-        assert perfil.triggers.left.mode == "Off", (
-            "o nascimento pisou no `Off` que o perfil declarou. Um default "
+        assert (perfil.triggers.left.mode, perfil.triggers.left.params) == ("Rigid", [5, 200]), (
+            "o nascimento pisou no gatilho que o perfil declarou. Um default "
             "que vence o disco apaga trabalho do usuário."
         )
         direito = perfil.triggers.right
-        assert build_from_name(direito.mode, direito.params) != off(), (
+        assert build_from_name(direito.mode, direito.params) == off(), (
             "o lado que o perfil NÃO declarou deixou de herdar o nascimento."
         )
 

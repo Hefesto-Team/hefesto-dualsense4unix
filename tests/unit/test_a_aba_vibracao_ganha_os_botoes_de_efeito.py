@@ -188,15 +188,16 @@ class TestAPintura:
     def test_valor_que_a_lista_nao_conhece_volta_ao_traco(self) -> None:
         escolha = a05._escolha_da_lista(
             {BRANCO: {"rumble": {"efeito_haptico": "xpto"}}}, BRANCO, "efeito_haptico",
-            formas.ESCOLHAS)
+            formas.ESCOLHAS, None)
         assert escolha == "sem_efeito"
-        sem_rumble = a05._escolha_da_lista({BRANCO: {}}, BRANCO, "efeito_imersao", padroes.ESCOLHAS)
+        sem_rumble = a05._escolha_da_lista(
+            {BRANCO: {}}, BRANCO, "efeito_imersao", padroes.ESCOLHAS, None)
         assert sem_rumble == "sem_efeito"
 
     def test_do_estilo_guardado_chega_a_lista(self) -> None:
         guardado = {BRANCO: {"rumble": {"efeito_haptico": "do_estilo"}}}
         assert a05._escolha_da_lista(
-            guardado, BRANCO, "efeito_haptico", formas.ESCOLHAS) == "do_estilo"
+            guardado, BRANCO, "efeito_haptico", formas.ESCOLHAS, None) == "do_estilo"
 
 
 class TestOGesto:

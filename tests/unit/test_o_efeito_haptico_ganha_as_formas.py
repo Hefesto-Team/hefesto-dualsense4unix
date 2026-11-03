@@ -138,12 +138,14 @@ def test_a_bateria_longa_troca_as_longas_por_toque_e_cala_o_som_no_corpo() -> No
 def test_sem_escolha_vale_o_traco_e_so_o_do_estilo_toca_a_forma_dele(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert fh.forma_que_vale(None, "fps") is None
-    assert fh.forma_que_vale("trovao", "fps") is None
+    assert fh.forma_que_vale(None, None) is None
+    assert fh.forma_que_vale("trovao", None) is None
+    assert fh.forma_que_vale(None, "fps") == fh.TOQUE
+    assert fh.forma_que_vale("trovao", "fps") == fh.TOQUE
     assert fh.forma_que_vale(fh.DO_ESTILO, "fps") == fh.TOQUE
     assert fh.forma_que_vale(fh.DO_ESTILO, None) == fh.TOQUE
     monkeypatch.setitem(fh.POR_ESTILO, "fps", fh.IMPACTO)
-    assert fh.forma_que_vale(None, "fps") is None
+    assert fh.forma_que_vale(None, "fps") == fh.IMPACTO
     assert fh.forma_que_vale(fh.DO_ESTILO, "fps") == fh.IMPACTO
     assert fh.forma_que_vale(fh.ESTALO, "fps") == fh.ESTALO
     assert fh.forma_que_vale(fh.SEM_EFEITO, "fps") is None

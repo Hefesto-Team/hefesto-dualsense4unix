@@ -137,8 +137,8 @@ def test_o_disco_guarda_o_ajuste_sem_opiniao(monkeypatch: pytest.MonkeyPatch) ->
     dados = loader.load_profile("Tiro").controllers
     assert "triggers" not in dados[P2].model_fields_set
     assert dados[P2].rumble is not None
-    assert dados[P2].rumble.model_fields_set == {
-        "motor_forte_pct", "efeito_haptico", "efeito_imersao"}, "o estilo grava «Do estilo»"
+    assert dados[P2].rumble.model_fields_set == {"motor_forte_pct"}, (
+        "o estilo não grava as listas: a chave ausente já segue o estilo do perfil")
     assert "triggers" not in dados[FORA].model_fields_set
     assert "2 controles deixaram o ajuste próprio" in str(resposta), (
         f"o relato não diz quantos controles deixaram o ajuste: {resposta!r}")

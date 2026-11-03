@@ -43,7 +43,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import VOLUME_PADRAO_DO_SOM
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 from hefesto_dualsense4unix.integrations.ganho_do_microfone import GANHO_PADRAO_PCT
 from hefesto_dualsense4unix.profiles import loader
-from hefesto_dualsense4unix.profiles import schema as esquema
 from hefesto_dualsense4unix.profiles.schema import Profile
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -80,9 +79,9 @@ def _o_que_falta(perfil: Profile) -> list[str]:
         sensores = do_usuario.sensores
         if sensores is not None and False in (sensores.giroscopio, sensores.acelerometro):
             falta.append(f"sensor desligado em {peca}")
-    nascimento = esquema.MODO_DE_NASCIMENTO_DO_GATILHO
-    if (perfil.triggers.left.mode, perfil.triggers.right.mode) != (nascimento, nascimento):
-        falta.append("os gatilhos não nascem no modo de nascimento do produto")
+    for lado in (perfil.triggers.left, perfil.triggers.right):
+        if (lado.mode, lado.params) != ("Rigid", [5, 200]):
+            falta.append("os gatilhos do Freestyle não trazem o Rígido escrito")
     return falta
 
 

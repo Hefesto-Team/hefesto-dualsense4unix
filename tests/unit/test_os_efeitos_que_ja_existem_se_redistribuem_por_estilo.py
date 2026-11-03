@@ -243,5 +243,6 @@ def test_o_motor_do_tato_liga_o_que_a_receita_do_estilo_pede(chave: str) -> None
     assert receita.pancada_escolhida == (motores == "pancada_do_lado"), chave
     vale = fh.forma_que_vale(fh.DO_ESTILO, chave)
     assert vale == (None if forma == fh.SEM_EFEITO else forma), chave
-    assert fh.forma_que_vale(None, chave) is None, chave
+    assert fh.forma_que_vale(None, chave) == vale, chave
+    assert fh.forma_que_vale(fh.SEM_EFEITO, chave) is None, chave
     assert pv.padrao_que_vale(pv.DO_ESTILO, chave) == motores, chave

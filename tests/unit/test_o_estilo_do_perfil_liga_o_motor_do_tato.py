@@ -9,6 +9,7 @@ teste: o `Profile` real não guardava o estilo, e o vocabulário do estilo
 from __future__ import annotations
 
 import importlib.util
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -62,7 +63,10 @@ def test_todo_estilo_se_traduz_numa_receita(estilo: ej.Estilo) -> None:
     assert isinstance(receita, tv.Receita)
     assert receita.reacao_ao_tiro in tv.REACOES_DA_LUZ
     assert receita.gatilho_no_ritmo == (estilo.chave in tv.ESTILOS_DE_RAJADA)
-    assert tv.receita_do_perfil(_perfil(estilo=estilo.chave)) == receita
+    perfil = _perfil(estilo=estilo.chave)
+    com_o_gatilho_do_estilo = bool(tv.planos_do_perfil(perfil))
+    assert tv.receita_do_perfil(perfil) == replace(
+        receita, momentos_da_imersao=receita.momentos_da_imersao or com_o_gatilho_do_estilo)
 
 
 def test_o_gatilho_no_ritmo_e_so_da_arma_de_rajada() -> None:

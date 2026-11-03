@@ -74,14 +74,15 @@ def test_padrao_que_vale_segue_a_escolha_e_o_estilo_que_nao_pede_nenhum_fica_mud
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     assert pv.padrao_que_vale(pv.DO_ESTILO, "fps") == "coice"
-    assert pv.padrao_que_vale(None, "fps") is None
+    assert pv.padrao_que_vale(None, "fps") == "coice"
+    assert pv.padrao_que_vale(None, None) is None
     assert pv.padrao_que_vale(pv.DO_ESTILO, "retro") is None
     assert pv.padrao_que_vale(pv.DO_ESTILO, "corrida") is None
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "fps") is None
     assert pv.padrao_que_vale("onda", "fps") == "onda"
     assert pv.padrao_que_vale("trovao", "retro") is None
     monkeypatch.setitem(pv.POR_ESTILO, "retro", "tranco")
-    assert pv.padrao_que_vale(None, "retro") is None
+    assert pv.padrao_que_vale(None, "retro") == "tranco"
     assert pv.padrao_que_vale(pv.DO_ESTILO, "retro") == "tranco"
     assert pv.padrao_que_vale("onda", "retro") == "onda"
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "retro") is None

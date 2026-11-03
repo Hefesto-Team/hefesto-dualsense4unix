@@ -110,7 +110,8 @@ FORMA_DO_ESTILO = {
 def test_o_estilo_escolhe_a_forma_do_toque(chave: str, forma: str | None) -> None:
     """D-1910-O-POINT-AND-CLICK-E-A-MARATONA-TOCAM-O-TOQUE: a forma de cada estilo."""
     assert fh.forma_que_vale(fh.DO_ESTILO, chave) == forma
-    assert fh.forma_que_vale(None, chave) is None
+    assert fh.forma_que_vale(None, chave) == forma
+    assert fh.forma_que_vale(fh.SEM_EFEITO, chave) is None
 
 
 def test_todo_estilo_de_fabrica_tem_a_forma_na_tabela() -> None:
