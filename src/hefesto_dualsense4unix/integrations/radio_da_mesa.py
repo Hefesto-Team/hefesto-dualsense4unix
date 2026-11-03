@@ -114,7 +114,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.fala_do_mapa import Numero
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
-from hefesto_dualsense4unix.core.physical_report_reader import MOTION_EMIT_MAX_HZ
+from hefesto_dualsense4unix.core.physical_report_reader import HZ_DO_CABO
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     NIVEL_ENGASGA,
@@ -357,7 +357,7 @@ MODOS_DA_PONTE = frozenset({"som", "haptica"})
 
 
 HZ_QUE_ENGASGA = 1000.0 / 8
-HZ_DO_JOGO = MOTION_EMIT_MAX_HZ
+HZ_DO_JOGO = HZ_DO_CABO
 SEGURA_O_NIVEL_S = 3.0
 
 

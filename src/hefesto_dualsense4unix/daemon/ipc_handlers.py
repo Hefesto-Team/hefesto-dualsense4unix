@@ -2180,6 +2180,7 @@ class IpcHandlersMixin:
                             ),
                             "visto_ha_s": _visto_ha_s(vp),
                             "audio_do_jogo_amostra": _audio_do_jogo_amostra(vp),
+                            "motion_amostras": _amostras_do_leitor(motion_reader),
                         }
                     )
             result["rumble_ff"] = {
@@ -6339,3 +6340,18 @@ def _o_arranjo_pedido(params: dict[str, Any]) -> dict[str, str]:
 
 
 __all__ = ["IpcHandlersMixin"]
+
+
+def _amostras_do_leitor(leitor: Any) -> dict[str, int] | None:
+    """As pontas do movimento do leitor (`lidos`, `pulados_no_ar`, `duplicados`, `entregues`).
+
+    None sem leitor; só inteiros de verdade passam, como no `_contador_do_vpad`.
+    """
+    amostras = getattr(leitor, "amostras", None) if leitor is not None else None
+    if not isinstance(amostras, dict):
+        return None
+    return {
+        str(nome): valor
+        for nome, valor in amostras.items()
+        if isinstance(valor, int) and not isinstance(valor, bool)
+    }

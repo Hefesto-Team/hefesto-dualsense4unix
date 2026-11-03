@@ -1497,22 +1497,43 @@ nem como média nem como mediana.
 A medição completa, com as cinco janelas e as medianas, está em
 [o driver `hid-playstation` por dentro](driver-hid-playstation.md), seção 6.
 
-**O que isto NÃO fecha, e é a divergência que continua aberta:** o SDL
-**declara** DualSense por USB 250 Hz, por Bluetooth 1000 Hz, e **Edge por USB
-1000 Hz**. O gamepad virtual deste projeto se declara **Edge** (`VPAD_PRODUCT =
-0x0DF2`, `integrations/uhid_gamepad.py:102`) e entrega os 250 Hz do físico. Um
-jogo que integre velocidade angular pela taxa declarada teria escala 4× errada.
-O lado do **aparelho** está medido acima; o lado do **SDL** não.
+**O que o SDL declara ao jogo — MEDIDO em 02/11/2026** (a Forja, sobre a SDL3
+3.4.14 que a Steam distribui): DualSense por USB 250 Hz, por Bluetooth 1000 Hz, e
+**Edge por USB 1000 Hz**. O gamepad virtual deste projeto se declara **Edge**
+(`VPAD_PRODUCT = 0x0DF2`, `integrations/uhid_gamepad.py:102`), e o jogo vê 1000 Hz
+declarados.
+
+**O que o pad virtual entrega — desde 03/11/2026, toda amostra do físico.** Pelo
+cabo, 250 Hz; pelo rádio, o que o rádio trouxer (as janelas acima: de ~38 a ~392 Hz
+sustentados, em rajadas de ~797 Hz). Uma amostra é distinta pelo carimbo do sensor;
+a de carimbo ou valor repetido não sai. No gadget USB, o endpoint é de 1 ms
+(`ep_81 1ms Interrupt`, lido no sysfs em 02/11) e o report que ele ainda não levou
+espera na fila, que não descarta.
+
+**A divergência, como fato:** o declarado (1000 Hz) não é o entregue. O jogo que
+integra a velocidade angular pelo carimbo do sensor não sente; o que integra pela
+taxa declarada sente a escala errada. Trocar a máscara do pad não é desta medição.
+
+> **NOTA DATADA — 03/11/2026: o teto de 250 Hz saiu.** O reader emitia numa grade
+> de 4 ms (`MOTION_EMIT_MAX_HZ = 250.0`, de 13/08, mantido em 19/08 pelo preço de
+> ~3.200 escritas/s com quatro pads em co-op), e a janela que chegava antes do prazo
+> sobrescrevia a guardada: numa rajada de k reports em 4 ms, só o primeiro chegava.
+> A Forja mediu na partida de 02/11, os quatro físicos pelo rádio: P1 com 247,0 Hz
+> no jogo e P2 com 178,1 Hz, os dois com o relógio do controle concordando. O que
+> faltava eram amostras, não tempo. O reader agora conta as pontas por peça
+> (`lidos`, `pulados_no_ar`, `duplicados`, `entregues`): uma linha
+> `motion_reader_amostras_da_sessao` no diário ao fim de cada sessão de jogo, e
+> `motion_amostras` no `state_full`. O custo em CPU com quatro peças segue a medir
+> no aparelho.
 
 > **NOTA DATADA — 11/08/2026: o método é metade do ensaio, e ele custou um
 > alarme falso inteiro.**
 >
-> A metade que falta só vale medida contra a **SDL3 que a Steam distribui**,
+> A metade do SDL só vale medida contra a **SDL3 que a Steam distribui**,
 > que é a biblioteca que os jogos usam — **nunca** contra a `libSDL2` do
 > sistema. Medir contra a biblioteca errada já produziu, neste projeto, um alarme
-> falso inteiro (é a armadilha do topo desta página). Enquanto o número não
-> vier de lá, o grau daquela metade é **BAIXA**, e a frase honesta é *"não
-> medido"*.
+> falso inteiro (é a armadilha do topo desta página). A medida de 02/11/2026 veio
+> de lá (SDL3 3.4.14).
 >
 > **A taxa do giroscópio do Edge é uma divergência registrada, não um trabalho
 > em curso.** O apelido está registrado em
@@ -1718,8 +1739,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:299` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:44` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:885-920` (`_observe_jack`) | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:300` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:44` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:903-938` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1291` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:290` | **ALTA** |
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1278`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
 >
@@ -1748,7 +1769,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > `assets/dkms/hid-playstation/hid-playstation.c:196-197`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
 > `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
-> (`core/physical_report_reader.py:333-368`, `decodificar_bateria`):
+> (`core/physical_report_reader.py:334-369`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
 > |---|---|---|
@@ -2221,20 +2242,15 @@ cinco canais para um.
 | 1 | **o que carregam os bytes ALÉM do `common`** nos degraus `0x32`-`0x39`? (a pergunta antiga — *"`0x32` ou `0x39`?"* — foi respondida em 15/08 e estava mal feita: existem **nove** outputs, e os dois candidatos são reais) | mandar o mesmo degrau com **conteúdo variado nos bytes extras** e ver se a cor ainda obedece. Obedecendo sempre, o excedente é ignorado ali; quebrando, ele tem estrutura | *"Os reports de saída por transporte"* |
 | 1-bis | o `0xF6` — FEATURE de 546 B **só no rádio** — é negociação de codec/taxa? | lê-lo **depois** de um comando da mesma família, já que sem pedido prévio ele volta vazio (censo dos dezessete) | *"Os reports de saída por transporte"* |
 | 2 | `weapon()` e `vibration()` fazem alguma coisa no gatilho? | aplicar os dois pela aba Gatilhos, daemon vivo, e perguntar o que o dedo sente | §4 |
-| 3 | a taxa que o **SDL declara** ao jogo para o vpad Edge: 250 ou 1000 Hz? | medir **contra a SDL3 que a Steam distribui** — nunca contra a `libSDL2` do sistema. A taxa do **aparelho** já está medida (§5) | §5 |
 | 4 | o bit `0x10` (autorização do volume do fone) existe neste firmware? | com headset no jack, variar `common[4]` com e sem o bit e ouvir | §2 |
 | 5 | a curva do volume do alto-falante **com** o pré-amp ligado | refazer a curva pelo caminho de hoje; a de 01/08 mediu um código que não existe mais | §3 |
 
 **Duas perguntas saíram desta lista em 11/08, e é bom saber para onde foram:**
 o padrão do player LED do **jogador 4** foi respondido pelo **fonte do driver**,
 e a §5 traz a tabela e a ressalva do que o fonte não cobre (o console PS5); e a
-**taxa do aparelho** foi medida nos dois transportes, também na §5 — o que
-sobrou é a pergunta 3 acima, que é do lado do SDL, não do lado do controle.
-
-A pergunta 3 tem irmão já medido no aparelho vizinho (o Pro declara 8 ms e
-entrega 11,2 ms) — ver a
-[canônica dos externos](externos-referencia-canonica.md), seção 3.5. Isso torna
-a hipótese plausível; **não** a torna provada aqui.
+**taxa do aparelho** foi medida nos dois transportes, também na §5. A antiga
+pergunta 3, a taxa que o SDL declara ao vpad Edge, saiu em 03/11/2026: 1000 Hz,
+medidos contra a SDL3 3.4.14 (§5).
 
 O critério de paridade entre transportes, e o que já está medido em cada um, mora
 em [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md).

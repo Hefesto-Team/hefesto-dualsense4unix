@@ -354,7 +354,6 @@ class TestABateriaChegaAoJogo:
         reader = PhysicalReportReader(
             path_provider=lambda: "/dev/hidraw-fake",
             vpad=pad,
-            max_hz=0,
             opener=lambda _path: os.dup(lido),
         )
         try:
@@ -430,7 +429,7 @@ class TestOReaderNaoInventaBateria:
     """As três defesas do `_observe_battery`, sem thread nenhuma."""
 
     def _reader(self, vpad: Any) -> PhysicalReportReader:
-        return PhysicalReportReader(path_provider=lambda: None, vpad=vpad, max_hz=0)
+        return PhysicalReportReader(path_provider=lambda: None, vpad=vpad)
 
     def test_report_ruim_nao_mexe_no_estado(self) -> None:
         recebidos: list[tuple[int | None, bool]] = []

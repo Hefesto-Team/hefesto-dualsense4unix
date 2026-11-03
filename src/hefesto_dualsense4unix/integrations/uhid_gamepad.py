@@ -2278,7 +2278,7 @@ _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
 _GADGET_RETOMA_S = 10.0
 _GADGET_VIGIA_S = 0.25
-_GADGET_VEZ_DA_ESCRITA_MS = 8
+_GADGET_FILA_TETO = 1000
 _GADGET_LEITURA = 512
 _GADGET_PERGUNTA_A_CADA = 8
 _GADGET_RAJADA_LONGA_S = 60.0
@@ -2307,6 +2307,8 @@ class _GadgetDoPad:
     leitura_erro: str = ""
     leitura_falhou_desde: float = 0.0
     a_caminho_s: float = _GADGET_A_CAMINHO_S
+    fila: collections.deque[bytes] = field(default_factory=collections.deque)
+    fila_cheia: int = 0
     par: tuple[int, int] = (DUALSENSE_VENDOR, VPAD_PRODUCT)
 
     def desmontar(self) -> None:
@@ -2830,13 +2832,24 @@ def _fio_do_gadget(pad: UhidDualSense) -> Callable[[int, int, threading.Event], 
             espera = _GADGET_VIGIA_S if not pad._started or pad._last_body is None else (
                 _UHID_FIO_ACORDA_S
             )
+            gadget = pad._gadget
+            com_fila = gadget is not None and bool(gadget.fila)
             try:
+                sondador.modify(
+                    fd, select.POLLIN | select.POLLPRI | (select.POLLOUT if com_fila else 0)
+                )
                 prontos = dict(sondador.poll(int(espera * 1000)))
             except (OSError, ValueError) as exc:
                 logger.warning("pad_usb_fio_saiu", err=str(exc), player=pad.player)
                 return
             if pare.is_set():
                 return
+            if despertador in prontos:
+                with contextlib.suppress(OSError):
+                    os.read(despertador, 64)
+            if gadget is not None and prontos.get(fd, 0) & select.POLLOUT:
+                with pad._lock:
+                    _escoar_a_fila(pad, gadget, fd)
             if not pad._started:
                 _vigiar_a_enumeracao(pad)
             elif pad._last_body is None:
@@ -2889,41 +2902,71 @@ def _bombear_o_gadget(pad: UhidDualSense) -> None:
         fio = pad._fio_do_uhid
         if fio is not None and fio.is_alive():
             return
+        gadget = pad._gadget
+        if gadget is not None and gadget.fila:
+            with pad._lock:
+                _escoar_a_fila(pad, gadget, fd)
         _vigiar_a_enumeracao(pad)
         _drenar_o_gadget(pad, fd, select.POLLIN | select.POLLPRI)
 
 
 def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
-    """Um input report no `/dev/hidgN`. O `f_hid` guarda UM em voo por vez."""
-    import select
+    """Um input report no `/dev/hidgN`, sem esperar o endpoint e sem descartar.
 
+    O `f_hid` guarda UM em voo por vez: o report que o endpoint ainda não levou espera na
+    fila, pela ordem, e o fio do gadget a escoa no `POLLOUT`. A fila só recusa quando passa
+    de `_GADGET_FILA_TETO`, que é o host que parou de ler, e não a rajada do rádio.
+    """
     with pad._lock:
         gadget, fd = pad._gadget, pad._fd
         if gadget is None or fd is None:
             return False
-        for tentativa in (0, 1):
-            try:
-                os.write(fd, report)
-                gadget.falhas_seguidas = 0
-                return True
-            except BlockingIOError:
-                if tentativa:
-                    break
-                sondador = select.poll()
-                sondador.register(fd, select.POLLOUT)
-                with contextlib.suppress(OSError):
-                    sondador.poll(_GADGET_VEZ_DA_ESCRITA_MS)
-            except OSError as exc:
-                if pad._started:
-                    if not gadget.escrita_falhou:
-                        logger.warning("pad_usb_escrita_falhou", err=str(exc),
-                                       player=pad.player)
-                    gadget.escrita_falhou += 1
-                    gadget.falhas_seguidas += 1
-                    _o_gadget_caiu(pad, gadget)
-                break
+        if len(gadget.fila) >= _GADGET_FILA_TETO:
+            if not gadget.fila_cheia:
+                logger.warning("pad_usb_fila_parada", player=pad.player,
+                               fila=len(gadget.fila))
+            gadget.fila_cheia += 1
+            pad._last_body = None
+            return False
+        gadget.fila.append(report)
+        if _escoar_a_fila(pad, gadget, fd):
+            return True
         pad._last_body = None
         return False
+
+
+def _escoar_a_fila(pad: UhidDualSense, gadget: _GadgetDoPad, fd: int) -> bool:
+    """Escreve a fila do gadget pela ordem até o endpoint encher. False = a escrita falhou."""
+    fila = gadget.fila
+    while fila:
+        try:
+            os.write(fd, fila[0])
+        except BlockingIOError:
+            _acordar_o_fio_do_gadget(pad)
+            return True
+        except OSError as exc:
+            fila.clear()
+            if pad._started:
+                if not gadget.escrita_falhou:
+                    logger.warning("pad_usb_escrita_falhou", err=str(exc),
+                                   player=pad.player)
+                gadget.escrita_falhou += 1
+                gadget.falhas_seguidas += 1
+                _o_gadget_caiu(pad, gadget)
+            return False
+        fila.popleft()
+        gadget.falhas_seguidas = 0
+    gadget.fila_cheia = 0
+    return True
+
+
+def _acordar_o_fio_do_gadget(pad: UhidDualSense) -> None:
+    """Um byte no despertador: o fio passa a esperar o `POLLOUT` da fila."""
+    despertador: tuple[int, int] | None = pad.__dict__.get("_despertador")
+    if despertador is None:
+        return
+    with contextlib.suppress(OSError):
+        os.write(despertador[1], b"f")
 
 
 def _o_gadget_caiu(

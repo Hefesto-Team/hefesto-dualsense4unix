@@ -208,7 +208,6 @@ def _rodar_pelo_pipe(fake: _UhidPorFd, reports: list[bytes]) -> list[bytes]:
     leitor = PhysicalReportReader(
         path_provider=lambda: "/dev/hidraw-de-mentira",
         vpad=pad,
-        max_hz=0,
         opener=lambda _path: os.dup(lido),
     )
     try:
@@ -282,7 +281,7 @@ class _VpadQueGuarda:
 
 
 def _leitor(vpad: Any) -> PhysicalReportReader:
-    return PhysicalReportReader(path_provider=lambda: None, vpad=vpad, max_hz=0)
+    return PhysicalReportReader(path_provider=lambda: None, vpad=vpad)
 
 
 class TestONaoSeiNaoSolta:
@@ -689,7 +688,6 @@ class TestOLacoEsqueceNaPerda:
         leitor = PhysicalReportReader(
             path_provider=lambda: "/dev/hidraw-de-mentira",
             vpad=pad,
-            max_hz=0,
             opener=_abrir,
         )
         try:

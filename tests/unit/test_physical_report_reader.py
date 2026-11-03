@@ -9,8 +9,8 @@ O que estes testes travam:
 2. **CRC validado de verdade** (vetor conhecido + report corrompido descartado):
    os DOIS DualSense da máquina alvo estão em BT — rádio corrompido não pode
    virar motion no vpad.
-3. **Throttle**: cap de taxa com dedup por valor e coalescência do último valor
-   (a 765 Hz de BT x 4 vpads, sem cap seriam ~3000 writes/s no /dev/uhid).
+3. **Toda amostra**: sai toda janela distinta, sem teto de taxa; a de valor repetido ou de
+   carimbo repetido não sai.
 4. **Bordas do streaming**: abrir o device liga `set_motion_streaming(True)` no
    vpad; perder/parar desliga (fail-safe: o vpad volta ao ritmo do poll com IMU
    neutra). O device é um pipe — nenhum hidraw/uhid real é tocado.
@@ -139,46 +139,33 @@ class _FakeClock:
         return self.now
 
 
-def _reader(
-    vpad: _FakeVpad, clock: _FakeClock, *, max_hz: float = 250.0
-) -> PhysicalReportReader:
-    return PhysicalReportReader(
-        path_provider=lambda: None, vpad=vpad, max_hz=max_hz, time_fn=clock
-    )
+def _reader(vpad: _FakeVpad, clock: _FakeClock) -> PhysicalReportReader:
+    return PhysicalReportReader(path_provider=lambda: None, vpad=vpad, time_fn=clock)
 
 
-class TestThrottle:
+def _janela_com_carimbo(valor: int, carimbo: int) -> bytes:
+    """Janela de 25 B com o giro em `valor` e o carimbo do sensor em `carimbo`."""
+    janela = bytearray(MOTION_WINDOW_LEN)
+    janela[0] = valor & 0xFF
+    janela[12:16] = carimbo.to_bytes(4, "little")
+    return bytes(janela)
+
+
+class TestTodaAmostra:
     def test_primeira_janela_sai_na_hora(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
         reader = _reader(vpad, clock)
         reader._maybe_emit(_WINDOW)
         assert vpad.windows == [_WINDOW]
 
-    def test_janela_dentro_do_intervalo_e_retida_e_coalescida(self) -> None:
+    def test_a_rajada_do_radio_sai_inteira(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
         reader = _reader(vpad, clock)
-        w2 = bytes([2]) * MOTION_WINDOW_LEN
-        w3 = bytes([3]) * MOTION_WINDOW_LEN
-        reader._maybe_emit(_WINDOW)
-        clock.now += 0.001
-        reader._maybe_emit(w2)
-        clock.now += 0.001
-        reader._maybe_emit(w3)
-        assert vpad.windows == [_WINDOW]
-        assert reader._pending == w3
-
-    def test_janela_apos_o_intervalo_sai_e_derruba_a_retida(self) -> None:
-        vpad, clock = _FakeVpad(), _FakeClock()
-        reader = _reader(vpad, clock)
-        w2 = bytes([2]) * MOTION_WINDOW_LEN
-        w3 = bytes([3]) * MOTION_WINDOW_LEN
-        reader._maybe_emit(_WINDOW)
-        clock.now += 0.001
-        reader._maybe_emit(w2)
-        clock.now += 0.010
-        reader._maybe_emit(w3)
-        assert vpad.windows == [_WINDOW, w3]
-        assert reader._pending is None
+        janelas = [_janela_com_carimbo(i, 1000 + i) for i in range(77)]
+        for janela in janelas:
+            reader._maybe_emit(janela)
+            clock.now += 1.0 / 765.0
+        assert vpad.windows == janelas
 
     def test_valor_repetido_nao_reemite(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
@@ -187,27 +174,22 @@ class TestThrottle:
         clock.now += 1.0
         reader._maybe_emit(_WINDOW)
         assert vpad.windows == [_WINDOW]
+        assert reader.amostras["duplicados"] == 1
 
-    def test_flush_entrega_a_retida_quando_o_fluxo_para(self) -> None:
+    def test_carimbo_repetido_e_a_mesma_amostra(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
         reader = _reader(vpad, clock)
-        w2 = bytes([2]) * MOTION_WINDOW_LEN
-        reader._maybe_emit(_WINDOW)
-        clock.now += 0.001
-        reader._maybe_emit(w2)
-        reader._flush_pending()
-        assert vpad.windows == [_WINDOW]
-        clock.now += 0.010
-        reader._flush_pending()
-        assert vpad.windows == [_WINDOW, w2]
+        reader._maybe_emit(_janela_com_carimbo(1, 77))
+        reader._maybe_emit(_janela_com_carimbo(2, 77))
+        assert vpad.windows == [_janela_com_carimbo(1, 77)]
 
-    def test_cap_de_taxa_segura_uma_rajada_de_bt(self) -> None:
+    def test_carimbo_zero_separa_pelo_valor(self) -> None:
         vpad, clock = _FakeVpad(), _FakeClock()
         reader = _reader(vpad, clock)
-        for i in range(77):
-            reader._maybe_emit(bytes([i % 256]) * MOTION_WINDOW_LEN)
-            clock.now += 1.0 / 765.0
-        assert len(vpad.windows) <= 27
+        janelas = [_janela_com_carimbo(i, 0) for i in (1, 2, 3)]
+        for janela in janelas:
+            reader._maybe_emit(janela)
+        assert vpad.windows == janelas
 
     def test_vpad_que_explode_nao_derruba_o_reader(self) -> None:
         class _Bomba(_FakeVpad):
@@ -217,13 +199,6 @@ class TestThrottle:
         vpad, clock = _Bomba(), _FakeClock()
         reader = _reader(vpad, clock)
         reader._maybe_emit(_WINDOW)
-
-    def test_max_hz_zero_desliga_o_cap(self) -> None:
-        vpad, clock = _FakeVpad(), _FakeClock()
-        reader = _reader(vpad, clock, max_hz=0)
-        for i in range(5):
-            reader._maybe_emit(bytes([i + 1]) * MOTION_WINDOW_LEN)
-        assert len(vpad.windows) == 5
 
 
 class TestLoopComPipe:

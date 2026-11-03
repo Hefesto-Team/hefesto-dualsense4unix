@@ -112,7 +112,7 @@ class _Ponta:
                 cliente=None, fd=saida_w, gadget="g", serial=f"hefesto-pad-{player}"
             )
         self.pad._fd = saida_w
-        self.leitor = PhysicalReportReader(lambda: None, self.pad, max_hz=0)
+        self.leitor = PhysicalReportReader(lambda: None, self.pad)
         self.leitor._uniq_aberto = MACS[player]
         self._marca = 0
 

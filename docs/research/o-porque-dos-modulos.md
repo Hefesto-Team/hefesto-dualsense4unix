@@ -2087,16 +2087,19 @@ NÃO expõe) vem de graça. Sticks/botões continuam no caminho evdev endurecido
 
 O reader é o RELÓGIO: ao abrir o device ele liga `set_motion_streaming(True)`
 no vpad — os forwards do poll loop (60 Hz) viram só-cache e cada janela nova
-sai na taxa do físico, com throttle. Ao perder o device (hotplug, BT caiu,
+sai na taxa do físico. Ao perder o device (hotplug, BT caiu,
 retarget) desliga o streaming: o vpad volta ao delta de 60 Hz com IMU neutra —
 fail-safe por construção, nunca um gyro congelado.
 
-Throttle (obrigatório, não otimização): o BT desta máquina entrega em rajada,
-com PICO de ~797 Hz por controle; sem cap, 4 vpads em co-op seriam ~3200
-writes/s no /dev/uhid. A emissão é capada em `MOTION_EMIT_MAX_HZ` (250 Hz — a
-taxa nativa USB, e a mesma faixa do rate-limit do REPLICA-03) com dedup por
-valor e COALESCÊNCIA: janela retida é sobrescrita pela mais nova e a última
-nunca se perde (flush no timeout do select).
+Sem teto de taxa (desde 03/11/2026): o BT desta máquina entrega em rajada, com
+PICO de ~797 Hz por controle, e toda amostra distinta sai ao vpad. Distinta é
+pelo carimbo do sensor (`janela[12:16]`) e pelo valor: a de carimbo ou valor
+repetido não sai, e o carimbo zero, do aparelho que não o preenche, separa só
+pelo valor. O teto de 250 Hz de 13/08 saiu porque a rajada de k reports em 4 ms
+chegava ao jogo como um só (a partida de 02/11 deu 247 e 178 Hz). O preço, ~3.200
+escritas/s com quatro pads em co-op, segue a medir no aparelho. As pontas de
+cada peça (`lidos`, `pulados_no_ar`, `duplicados`, `entregues`) saem no
+`state_full` e numa linha do diário por sessão de jogo.
 
 O teto é uma GRADE DE PRAZO, e isso não é detalhe (GRADE-QUE-NAO-BATIA-01,
 19/08/2026): ele pergunta "já chegou o próximo prazo?", nunca "já passou um
@@ -2130,9 +2133,9 @@ e longe de 1000 Hz" (:740-761 e :902):
   (55,4 Hz na mesma janela). O teto (~392 Hz) é o mesmo nas duas. Quem citar
   um piso, cite junto de qual régua ele veio.
 
-Isto NÃO é licença para afrouxar o teto de emissão — veja a nota do
-`MOTION_EMIT_MAX_HZ`, mais abaixo. Nenhuma constante mudou por causa desta
-remedição: o que estava errado era o número que as justificava, não as constantes.
+Nenhuma constante mudou por causa desta remedição: o que estava errado era o
+número que as justificava, não as constantes. O teto de emissão saiu depois, em
+03/11/2026, por outra medida (a nota do reader, acima).
 
 Leitura NÃO reabre a guerra de escritores: a guerra (2026-07-18) é sobre
 WRITERS no hidraw; o kernel replica cada input report para TODOS os fds

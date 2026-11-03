@@ -54,7 +54,8 @@ _CARGA_DESCARREGANDO = 0x0
 _CARGA_CARREGANDO = 0x1
 _CARGA_CHEIO = 0x2
 
-MOTION_EMIT_MAX_HZ = 250.0
+HZ_DO_CABO = 250.0
+_CARIMBO_NA_JANELA = slice(12, 16)
 
 _READ_LEN = 128
 
@@ -376,13 +377,11 @@ class PhysicalReportReader:
         path_provider: Callable[[], str | None],
         vpad: Any,
         *,
-        max_hz: float = MOTION_EMIT_MAX_HZ,
         time_fn: Callable[[], float] = time.monotonic,
         opener: Callable[[str], int] | None = None,
     ) -> None:
         self._path_provider = path_provider
         self._vpad = vpad
-        self._min_interval = 1.0 / float(max_hz) if max_hz > 0 else 0.0
         self._time_fn = time_fn
         self._opener: Callable[[str], int] = (
             opener if opener is not None else _open_por_caminho
@@ -396,9 +395,11 @@ class PhysicalReportReader:
         self._wake_lock = threading.Lock()
         self._wake_r, self._wake_w = -1, -1
         self._last_window: bytes | None = None
-        self._pending: bytes | None = None
+        self._last_carimbo: bytes | None = None
         self._last_emit_at = float("-inf")
-        self._next_emit_at = float("-inf")
+        self._lidos = 0
+        self._duplicados = 0
+        self._sessao_de_jogo: dict[str, int] | None = None
         self._touchpad_click: bool | None = None
         self._touchpad_clicks = 0
         self._mic_button: bool | None = None
@@ -488,10 +489,25 @@ class PhysicalReportReader:
         return self._battery_forwards
 
     @property
+    def amostras(self) -> dict[str, int]:
+        """As pontas do movimento: `lidos`, `pulados_no_ar`, `duplicados` e `entregues`.
+
+        `lidos` conta as amostras que o hidraw trouxe a um pad que leva movimento;
+        `pulados_no_ar` são as que o contador do aparelho diz que não chegaram. Sem perda
+        no Hefesto, `entregues == lidos - duplicados`.
+        """
+        return {
+            "lidos": self._lidos,
+            "pulados_no_ar": self._reports_perdidos,
+            "duplicados": self._duplicados,
+            "entregues": self._windows_emitted,
+        }
+
+    @property
     def emit_hz(self) -> float:
         """Taxa de emissão ao vpad (Hz, EMA) — 0.0 quando o fluxo parou.
 
-        GYRO-03: é ESTA taxa (pós-throttle, o que o vpad de fato recebe) que
+        GYRO-03: é ESTA taxa (o que o vpad de fato recebe) que
         o `state_full` publica como `motion_hz`. "Parou" = nenhuma entrega há
         mais de `_HZ_STALE_S` — a EMA antiga de um fluxo morto não vale nada.
         """
@@ -573,6 +589,7 @@ class PhysicalReportReader:
         self._reset_battery()
         self._reset_gatilho()
         self._voltar_do_mudo(self._time_fn(), motivo="leitor_parou")
+        self._fechar_a_sessao_de_jogo(motivo="leitor_parou")
         with contextlib.suppress(Exception):
             self._vpad.set_motion_streaming(False)
 
@@ -692,7 +709,6 @@ class PhysicalReportReader:
                 continue
             if not pronto:
                 silencio += espera
-                self._flush_pending()
                 self._conferir_o_mudo(self._time_fn())
                 if silencio >= silencio_max:
                     logger.info(
@@ -737,6 +753,8 @@ class PhysicalReportReader:
         window = _janela_com_base(data, base)
         if window is None:
             return
+        self._acompanhar_a_sessao_de_jogo()
+        self._lidos += 1
         self._maybe_emit(window)
 
     def _espera_ate_o_mudo(self) -> float:
@@ -762,7 +780,7 @@ class PhysicalReportReader:
         self._mudos += 1
         self._mudo_desde = self._valido_em
         self._last_window = None
-        self._pending = None
+        self._last_carimbo = None
         self._touchpad_click = None
         self._mic_button = None
         logger.info(
@@ -991,30 +1009,17 @@ class PhysicalReportReader:
         self._gatilho_desde = float("-inf")
 
     def _maybe_emit(self, window: bytes, now: float | None = None) -> None:
-        """Dedup por valor + cap de taxa com coalescência do último valor."""
-        if window == self._last_window:
-            return
-        if now is None:
-            now = self._time_fn()
-        if now < self._next_emit_at:
-            self._pending = window
-            return
-        self._pending = None
-        self._emit(window, now)
+        """Entrega toda amostra distinta: a de valor repetido ou de carimbo repetido não sai.
 
-    def _flush_pending(self, now: float | None = None) -> None:
-        """Entrega a janela retida quando o cap venceu e o fluxo parou."""
-        pending = self._pending
-        if pending is None:
+        O carimbo zero é o do aparelho que não o preenche, e aí só o valor separa as amostras.
+        """
+        carimbo = window[_CARIMBO_NA_JANELA]
+        if window == self._last_window or (
+            carimbo == self._last_carimbo and any(carimbo)
+        ):
+            self._duplicados += 1
             return
-        if now is None:
-            now = self._time_fn()
-        if now < self._next_emit_at:
-            return
-        self._pending = None
-        if pending == self._last_window:
-            return
-        self._emit(pending, now)
+        self._emit(window, self._time_fn() if now is None else now)
 
     def _emit(self, window: bytes, now: float) -> None:
         intervalo = now - self._last_emit_at
@@ -1027,30 +1032,45 @@ class PhysicalReportReader:
             )
         elif intervalo >= _HZ_STALE_S:
             self._emit_hz_ema = 0.0
-        proximo = self._next_emit_at + self._min_interval
-        self._next_emit_at = (
-            proximo
-            if proximo >= now - self._min_interval
-            else now + self._min_interval
-        )
         self._last_emit_at = now
         self._last_window = window
+        self._last_carimbo = window[_CARIMBO_NA_JANELA]
         try:
             self._vpad.forward_motion(janela_que_sai(self._uniq_aberto, window))
             self._windows_emitted += 1
         except Exception as exc:
             logger.warning("motion_reader_forward_failed", err=str(exc))
 
+    def _acompanhar_a_sessao_de_jogo(self) -> None:
+        """Abre a conta da sessão quando o jogo abre o pad, e a fecha quando ele larga."""
+        aberto = getattr(self._vpad, "game_open", False) is True
+        if aberto and self._sessao_de_jogo is None:
+            self._sessao_de_jogo = self.amostras
+        elif not aberto:
+            self._fechar_a_sessao_de_jogo(motivo="jogo_largou")
+
+    def _fechar_a_sessao_de_jogo(self, *, motivo: str) -> None:
+        """Uma linha do diário com as pontas da sessão de jogo que terminou."""
+        inicio, self._sessao_de_jogo = self._sessao_de_jogo, None
+        if inicio is None:
+            return
+        agora = self.amostras
+        logger.info(
+            "motion_reader_amostras_da_sessao",
+            player=getattr(self._vpad, "player", "?"),
+            motivo=motivo,
+            **{nome: agora[nome] - inicio[nome] for nome in agora},
+        )
 
 __all__ = [
     "BATTERY_STATUS_OFFSET",
     "BUTTONS2_OFFSET",
+    "HZ_DO_CABO",
     "INPUT_REPORT_BT",
     "INPUT_REPORT_BT_SIZE",
     "INPUT_REPORT_USB",
     "JACK_STATUS_OFFSET",
     "MIC_BUTTON_BIT",
-    "MOTION_EMIT_MAX_HZ",
     "MOTION_WINDOW_LEN",
     "MOTION_WINDOW_OFFSET",
     "REPOUSO_DO_MUDO_S",

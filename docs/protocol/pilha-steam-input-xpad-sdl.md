@@ -1026,6 +1026,15 @@ perda"*. **É decimação legítima, e é a que o usuário decidiu manter em 19/
 preço na mesa: sem o teto, quatro vpads em co-op seriam ~3.200 `writes/s` no
 `/dev/uhid`. A linha do mapa foi substituída.
 
+> **NOTA DATADA — 03/11/2026: o teto saiu.** A decimação de 19/08 deixou de ser
+> legítima quando a Forja (SDL3 3.4.14) mediu, na partida de 02/11, o que a decimação
+> custava pelo rádio: a rajada de k reports em 4 ms chegava ao jogo como um só, e
+> dois controles na mesma partida deram 247 e 178 Hz. O reader agora entrega
+> toda amostra distinta pelo carimbo do sensor, e as pontas (`lidos`,
+> `pulados_no_ar`, `duplicados`, `entregues`) saem no diário por sessão de jogo.
+> A medida e o custo moram na
+> [referência canônica](dualsense-referencia-canonica.md), §5.
+
 Na mesma janela, 3 s de `hidraw5` isolados: **747 pacotes, todos report `0x01`**,
 com **211** tuplas de giro distintas, **745** de acelerômetro e **747**
 `sensor_timestamp` distintos. O dado é vivo, não é cache.

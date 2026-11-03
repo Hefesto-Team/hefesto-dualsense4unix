@@ -247,7 +247,6 @@ class TestOCliqueChegaAoJogo:
         reader = PhysicalReportReader(
             path_provider=lambda: "/dev/hidraw-fake",
             vpad=pad,
-            max_hz=0,
             opener=lambda _path: os.dup(lido),
         )
         try:

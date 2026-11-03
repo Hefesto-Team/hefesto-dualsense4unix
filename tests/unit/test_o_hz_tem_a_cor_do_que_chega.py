@@ -67,17 +67,17 @@ def _atribuicoes(caminho: Path) -> dict[str, ast.expr]:
 
 
 def test_os_cortes_tem_dono_e_o_dono_nao_e_a_tela() -> None:
-    """O ``HZ_DO_JOGO`` é o NOME do teto do pad virtual, e não um 250 digitado"""
+    """O ``HZ_DO_JOGO`` é o NOME da taxa do cabo (``HZ_DO_CABO``), e não um 250 digitado"""
     from hefesto_dualsense4unix.core import physical_report_reader as prr
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import radio_da_mesa as dono
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
-    assert dono.HZ_DO_JOGO == prr.MOTION_EMIT_MAX_HZ
+    assert dono.HZ_DO_JOGO == prr.HZ_DO_CABO
     do_dono = _atribuicoes(SRC / "integrations" / "radio_da_mesa.py")
     jogo = do_dono.get("HZ_DO_JOGO")
-    assert isinstance(jogo, ast.Name) and jogo.id == "MOTION_EMIT_MAX_HZ", (
-        "o `HZ_DO_JOGO` não lê o teto do pad virtual pelo nome")
+    assert isinstance(jogo, ast.Name) and jogo.id == "HZ_DO_CABO", (
+        "o `HZ_DO_JOGO` não lê a taxa do cabo pelo nome")
     assert dono.HZ_QUE_ENGASGA * 8 == 1000
     assert ar.CANAIS_MINIMOS_DO_AFH == 20
     assert a08_conexoes.CANAIS_DO_BT is ar.CANAIS_DO_BT
@@ -109,7 +109,7 @@ HZ_ENGASGA = [28.0, 97.0, 35.0, 13.5,
     (None, ""), (True, ""), ("359", ""), (float("nan"), ""),
 ])
 def test_o_nivel_do_movimento_pelos_numeros_da_casa(hz: Any, nivel: str) -> None:
-    """MORDIDAS: o verde cortado no ``HZ_INPUT_SEM_MIC`` (260,4) em vez do teto"""
+    """MORDIDAS: o verde cortado no ``HZ_INPUT_SEM_MIC`` (260,4) em vez da taxa do cabo"""
     from hefesto_dualsense4unix.integrations import radio_da_mesa as dono
 
     assert dono.nivel_do_movimento(hz) == nivel

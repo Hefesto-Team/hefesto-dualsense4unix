@@ -57,11 +57,10 @@ class _VpadGravador:
         pass
 
 
-def _reader(relogio: _RelogioFake, max_hz: float = 250.0) -> PhysicalReportReader:
+def _reader(relogio: _RelogioFake) -> PhysicalReportReader:
     return PhysicalReportReader(
         path_provider=lambda: None,
         vpad=_VpadGravador(),
-        max_hz=max_hz,
         time_fn=relogio,
     )
 
