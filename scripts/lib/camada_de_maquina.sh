@@ -811,6 +811,62 @@ _usb_f_hid_refcnt() {
     cat "${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid/refcnt" 2>/dev/null || printf '?'
 }
 
+_usb_f_hid_esperar_o_refcnt() {
+    local _prazo="$1" _espera=0
+    while [[ "$(_usb_f_hid_refcnt)" != "0" && "${_espera}" -lt $((_prazo * 2)) ]]; do
+        sleep 0.5
+        _espera=$((_espera + 1))
+    done
+    [[ "$(_usb_f_hid_refcnt)" == "0" ]]
+}
+
+_usb_f_hid_esperar_o_processo() {
+    local _pid="$1" _prazo="$2" _proc="${HEFESTO_RAIZ_PROC:-/proc}" _espera=0
+    [[ "${_pid}" =~ ^[1-9][0-9]*$ ]] || return 0
+    while [[ -d "${_proc}/${_pid}" && "${_espera}" -lt $((_prazo * 2)) ]]; do
+        sleep 0.5
+        _espera=$((_espera + 1))
+    done
+    [[ ! -d "${_proc}/${_pid}" ]]
+}
+
+_usb_f_hid_quem_segura() {
+    local _proc="${HEFESTO_RAIZ_PROC:-/proc}" _elo _pid _quem=""
+    while IFS= read -r _elo; do
+        _pid="${_elo#"${_proc}"/}"
+        _pid="${_pid%%/*}"
+        [[ "${_pid}" =~ ^[0-9]+$ ]] || continue
+        case " ${_quem} " in *" ${_pid} ("*) continue ;; esac
+        _quem="${_quem:+${_quem}, }${_pid} ($(cat "${_proc}/${_pid}/comm" 2>/dev/null || printf '?'))"
+    done < <(find "${_proc}" -mindepth 3 -maxdepth 3 -path "${_proc}/[0-9]*/fd/*" \
+                 -lname '/dev/hidg*' 2>/dev/null)
+    printf '%s' "${_quem}"
+}
+
+_usb_f_hid_desmontar_o_que_sobrou() {
+    local _gadgets="$1" _g _l _d _sobrou=0
+    for _g in "${_gadgets}"/hefesto-pad-*/; do
+        [[ -d "${_g}" ]] || continue
+        _g="${_g%/}"
+        _sobrou=1
+        if [[ -n "$(cat "${_g}/UDC" 2>/dev/null)" ]]; then
+            printf '\n' | sudo tee "${_g}/UDC" >/dev/null 2>&1 || true
+        fi
+        for _l in "${_g}"/configs/*/*; do
+            if [[ -L "${_l}" ]]; then
+                sudo rm -f "${_l}" 2>/dev/null || true
+            fi
+        done
+        for _d in "${_g}"/configs/*/strings/* "${_g}"/configs/* "${_g}"/functions/* "${_g}"/strings/* "${_g}"; do
+            if [[ -d "${_d}" ]]; then
+                sudo rmdir "${_d}" 2>/dev/null || true
+            fi
+        done
+        printf '      o gadget %s sobrou sem daemon — desmontado\n' "$(basename "${_g}")"
+    done
+    [[ "${_sobrou}" -eq 1 ]]
+}
+
 trocar_usb_f_hid_a_quente() {
     local _sys="${HEFESTO_SYS_MODULE:-/sys/module}"
     local _gadgets="${HEFESTO_USB_GADGET_ROOT:-/sys/kernel/config/usb_gadget}"
@@ -843,29 +899,29 @@ trocar_usb_f_hid_a_quente() {
         anotar_reinicio_pendente "${_pendente}"
         return 0
     fi
-    local _daemon_parado=0 _espera=0
+    local _daemon_parado=0 _pid="" _quem
     if [[ "$(_usb_f_hid_refcnt)" != "0" ]]; then
-        if [[ "${_nossos}" -eq 0 ]]; then
-            warn "o usb_f_hid sem ${_faltam} está preso (refcnt $(_usb_f_hid_refcnt)) sem gadget do Hefesto — não troco; o curado vale no próximo boot"
-            anotar_reinicio_pendente "${_pendente}"
-            return 0
-        fi
         if jogo_em_cena; then
             printf '      com um jogo aberto, os pads USB virtuais ficam de pé: o usb_f_hid curado vale no próximo boot\n'
             anotar_reinicio_pendente "${_pendente}"
             return 0
         fi
         if systemctl --user is-active --quiet "${_servico}" 2>/dev/null; then
-            printf '      %s pad(s) USB virtual(is) no ar — paro o daemon para o broker soltá-los\n' "${_nossos}"
+            _pid="$(systemctl --user show -p MainPID --value "${_servico}" 2>/dev/null || true)"
+            printf '      usb_f_hid preso (refcnt %s, %s pad(s) USB virtual(is) no ar) — paro o daemon para ele soltar os pads e o /dev/hidg\n' "$(_usb_f_hid_refcnt)" "${_nossos}"
             systemctl --user stop "${_servico}" 2>/dev/null && _daemon_parado=1
+            _usb_f_hid_esperar_o_processo "${_pid}" "${_prazo}" \
+                || warn "o daemon parado (PID ${_pid}) não saiu em ${_prazo} s"
         fi
-        while [[ "$(_usb_f_hid_refcnt)" != "0" && "${_espera}" -lt $((_prazo * 2)) ]]; do
-            sleep 0.5
-            _espera=$((_espera + 1))
-        done
+        if ! _usb_f_hid_esperar_o_refcnt "${_prazo}" \
+           && [[ -z "$(_usb_f_hid_quem_segura)" ]] \
+           && _usb_f_hid_desmontar_o_que_sobrou "${_gadgets}"; then
+            _usb_f_hid_esperar_o_refcnt "${_prazo}" || true
+        fi
     fi
     if [[ "$(_usb_f_hid_refcnt)" != "0" ]]; then
-        warn "os pads USB virtuais não se soltaram em ${_prazo} s (refcnt $(_usb_f_hid_refcnt)) — não troco; o curado vale no próximo boot"
+        _quem="$(_usb_f_hid_quem_segura)"
+        warn "os pads USB virtuais não se soltaram em ${_prazo} s (refcnt $(_usb_f_hid_refcnt); o /dev/hidg aberto por: ${_quem:-ninguém que eu veja}) — não troco; o curado vale no próximo boot"
         anotar_reinicio_pendente "${_pendente}"
     elif sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null \
          && _faltam="$(_usb_f_hid_sem)" && [[ -z "${_faltam}" ]]; then

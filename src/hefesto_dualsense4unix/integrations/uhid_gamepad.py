@@ -3055,6 +3055,8 @@ def _fio_do_gadget(pad: UhidDualSense) -> Callable[[int, int, threading.Event], 
                     falhou = False
                 if falhou:
                     pare.wait(_GADGET_VIGIA_S)
+            if pad._gadget_caiu:
+                return
 
     def atender_e_fechar(fd: int, despertador: int, pare: threading.Event) -> None:
         try:
@@ -3180,7 +3182,31 @@ def _o_gadget_caiu(
         return
     if HIDRAW_DO_GADGET(gadget.serial) is None:
         pad._gadget_caiu = True
+        if pad._gadget is gadget:
+            _largar_o_hidg(gadget)
         logger.warning("pad_usb_caiu_fica_o_uhid", gadget=gadget.gadget, player=pad.player)
+
+
+def _largar_o_hidg(gadget: _GadgetDoPad) -> None:
+    """O gadget que caiu solta o `/dev/hidgN` na hora em que a queda se sabe.
+
+    A função do gadget já saiu (o broker que reinicia desmonta o órfão), e o `hidg` aberto
+    é a única coisa que prende o `usb_f_hid`: sem o tique do controle, o pad o segurava até
+    o daemon sair, e a troca a quente do install achava o módulo preso sem gadget nenhum.
+    O número do fd fica, apontado para o `/dev/null`, e a descida do tique o fecha como
+    sempre: quem já leu o número escreve no nada, nunca num arquivo que o reaproveitou.
+    """
+    try:
+        nulo = os.open(os.devnull, os.O_RDWR | os.O_CLOEXEC)
+    except OSError as exc:
+        logger.warning("pad_usb_hidg_sem_devnull", err=str(exc), gadget=gadget.gadget)
+        return
+    try:
+        os.dup2(nulo, gadget.fd, inheritable=False)
+    except OSError as exc:
+        logger.debug("pad_usb_hidg_nao_largou", err=str(exc), gadget=gadget.gadget)
+    finally:
+        os.close(nulo)
 
 
 def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
