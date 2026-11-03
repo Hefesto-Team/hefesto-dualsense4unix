@@ -113,7 +113,8 @@ def _pad(
         pad = UinputGamepad.for_flavor("xbox")
         no = raiz / "dev/input" / f"event{60 + player}"
         no.write_bytes(b"")
-        pad._device = SimpleNamespace(device=SimpleNamespace(path=str(no)))
+        pad._sysname = f"input{60 + player}"
+        (raiz / "sys/class/input" / pad._sysname / no.name).mkdir(parents=True)
         return pad, (no,)
     pad = UhidDualSense(player=player, identity=identidade, product=PRODUTO[modo])
     nos = _sysfs_do_pad(raiz, player, pad, caminho)

@@ -94,8 +94,9 @@ def nos_do_pad(
 
     - uhid (DualSense e Edge): o ``evdev`` e o ``hidraw`` do `no_do_vpad`, pelo ``uniq`` forjado;
     - gadget USB: o mesmo, e o ``hidraw`` do lado do jogo que o gadget anotou;
-    - uinput (Xbox): o nó que o próprio dispositivo criou (``UI_GET_SYSNAME``, lido pelo evdev),
-      que vale com os pads homônimos do co-op e nunca casa um Xbox de verdade pelo nome.
+    - uinput (Xbox): os ``event`` e ``js`` do ``inputN`` que o kernel deu ao pad
+      (``UI_GET_SYSNAME``, pelo `_nos_do_uinput`), que vale com os pads homônimos do co-op e
+      nunca casa um Xbox de verdade pelo nome.
     """
     raiz_dev = RAIZ_DEV if raiz_dev is None else raiz_dev
     nos: dict[str, int | None] = {}
@@ -112,10 +113,11 @@ def nos_do_pad(
     hidraw_do_gadget = _caminho(getattr(gadget, "hidraw", None))
     if hidraw_do_gadget:
         nos.setdefault(os.path.join(raiz_dev, os.path.basename(hidraw_do_gadget)), None)
-    do_uinput = getattr(getattr(vpad, "_device", None), "device", None)
-    caminho_uinput = _caminho(getattr(do_uinput, "path", None))
-    if caminho_uinput:
-        nos.setdefault(caminho_uinput, None)
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad, _nos_do_uinput
+
+    if isinstance(vpad, UinputGamepad):
+        for caminho_uinput in _nos_do_uinput(vpad):
+            nos.setdefault(caminho_uinput, None)
     return nos
 
 
