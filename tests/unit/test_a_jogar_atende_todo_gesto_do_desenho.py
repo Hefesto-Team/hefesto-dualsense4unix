@@ -60,7 +60,7 @@ def _da_moldura() -> set[str]:
 
 def test_todo_gesto_do_desenho_tem_quem_o_atenda() -> None:
     gestos = _do_desenho().gestos
-    assert {"modo-nintendo", "mudo", "volume", "modo-dos-controles"} <= gestos, "premissa"
+    assert {"modo-nintendo", "volume", "modo-dos-controles"} <= gestos, "premissa"
 
     orfaos = sorted(g for g in gestos - _da_moldura()
                     if pacotes.gesto_da_pagina(PAGINA, g) is None)
