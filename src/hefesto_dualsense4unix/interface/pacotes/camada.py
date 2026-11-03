@@ -23,7 +23,6 @@ _DA_SECAO_DOS_CONTROLES: dict[str, str] = {
     "analogico-lado": _J,
     "mic-retorno": _W,
     "modo-dos-controles": _J,
-    "mudo": _C,
     "rota": _C,
     "sensor": _C,
     "touchpad": _C,

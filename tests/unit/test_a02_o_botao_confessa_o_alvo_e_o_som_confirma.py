@@ -195,6 +195,8 @@ def _gesto(nome: str) -> Any:
     import pacotes
     import pacotes.a02_controles
 
+    if nome == "mudo":
+        return pacotes.a02_controles.mudo
     fn = pacotes.gesto_da_pagina("01-jogar.html", nome)
     assert fn is not None, f"01-jogar.html:{nome} não tem dono"
     return fn

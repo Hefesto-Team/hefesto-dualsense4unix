@@ -1923,12 +1923,11 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não consegui ligar o retorno do microfone deste controle")
 
 
-@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mudo", grava="mic_canal_set_detalhado")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O 🎙, o botão de calar o microfone, e ele ALTERNA o que a tela mostra.
+    """Calar o microfone, e ele ALTERNA o que a tela mostra; quem chama é o 🎙 da Conexões.
 
-    O alto-falante não tem botão de calar desde 02/11/2026: o volume em 0 cala, e o volume
-    que sobe solta o mudo (o gesto `volume`).
+    A Jogar não tem botão de mudo desde 02/11/2026: o volume do alto-falante em 0 cala, e o
+    volume que sobe solta o mudo (o gesto `volume`).
 
     O `mic.set` é o MUDO NO FIRMWARE (camada 3, `ipc_handlers.py:4091`): é o único que apaga
     a luz vermelha do plástico, e a partir dele o botão físico do controle deixa de valer — é

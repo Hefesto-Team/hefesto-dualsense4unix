@@ -214,8 +214,8 @@ class TestUmEscritor:
                                conectados=[dele], estados={})
         ponte = _PonteQueGravaComoODaemon()
 
-        fn = pacotes.gesto_da_pagina("01-jogar.html", "mudo")
-        fn(ctx, {"uniq": uniq, "mudo": "microfone"}, ponte)
+        fn = pacotes.gesto_da_pagina("08-conexoes.html", "custo-mic")
+        fn(ctx, {"alvo": uniq}, ponte)
 
         assert ponte.chamadas == ["mic_canal_set_detalhado"]
         assert gravacoes == ["maquina"], f"o clique gravou {len(gravacoes)} vezes no dono"
