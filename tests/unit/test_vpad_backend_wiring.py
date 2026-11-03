@@ -134,7 +134,8 @@ def _pedidos_do_hidraw(
 
     def _pede(uniq: str | None = None) -> str | None:
         pedidos.append((uniq, len(chamadas)))
-        return original(uniq)
+        resposta: str | None = original(uniq)
+        return resposta
 
     daemon.controller.hidraw_path = _pede
     return pedidos
