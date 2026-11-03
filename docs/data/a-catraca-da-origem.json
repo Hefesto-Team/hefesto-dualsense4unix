@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1199764,
+      "piso": 1200694,
       "por_item": {
-        "docs": 108570,
+        "docs": 108583,
         "scripts": 111191,
-        "src": 303213,
-        "tests": 676790
+        "src": 303473,
+        "tests": 677447
       },
-      "razao": "tamanho: +673 linhas (1199091 -> 1199764), pagas por Origem: identidade.leitura_de_feature; registrado no fecho, topo 2c1a468ab503",
+      "razao": "tamanho: +930 linhas (1199764 -> 1200694), pagas por Origem: luz.replica_output_jogo; registrado no fecho, topo 315d660a07e3",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1527,10 +1527,16 @@
           "de": 1199091,
           "para": 1199764,
           "razao": "tamanho: +673 linhas (1199091 -> 1199764), pagas por Origem: identidade.leitura_de_feature; registrado no fecho, topo 2c1a468ab503"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1199764,
+          "para": 1200694,
+          "razao": "tamanho: +930 linhas (1199764 -> 1200694), pagas por Origem: luz.replica_output_jogo; registrado no fecho, topo 315d660a07e3"
         }
       ],
       "unidade": "linhas",
-      "universo": 3344
+      "universo": 3346
     }
   }
 }
