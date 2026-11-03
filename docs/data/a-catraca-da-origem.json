@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202502,
+      "piso": 1202486,
       "por_item": {
         "docs": 108613,
         "scripts": 111277,
-        "src": 303667,
-        "tests": 678945
+        "src": 303655,
+        "tests": 678941
       },
-      "razao": "tamanho: +24 linhas (1202478 -> 1202502), pagas por Origem: plataforma.vpad; registrado no fecho, topo a9c042292f2b",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
