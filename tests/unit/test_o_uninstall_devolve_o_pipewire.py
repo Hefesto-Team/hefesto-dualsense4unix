@@ -73,6 +73,7 @@ class Corrida:
     fonte: Path
     repo: Path
     listas: Path
+    chave: Path
 
     def chamou(self, trecho: str) -> bool:
         return any(trecho in linha for linha in self.chamadas)
@@ -112,13 +113,16 @@ def _correr(
         trava.write_text("Package: src:pipewire\nPin-Priority: 500\n", encoding="utf-8")
     fonte = tmp_path / "sources.list.d" / "hefesto-pipewire.sources"
     repo = tmp_path / "var-lib" / "hefesto-pipewire"
+    chave = tmp_path / "keyrings" / "hefesto-pipewire.gpg"
     listas = tmp_path / "lists"
     listas.mkdir()
     if fonte_da_casa:
         fonte.parent.mkdir()
         fonte.write_text(
-            f"Types: deb\nURIs: file:{repo}\nSuites: ./\nTrusted: yes\n", encoding="utf-8"
+            f"Types: deb\nURIs: file:{repo}\nSuites: ./\nSigned-By: {chave}\n", encoding="utf-8"
         )
+        chave.parent.mkdir()
+        chave.write_bytes(b"\x99chave")
         repo.mkdir(parents=True)
         (repo / "Packages").write_text("", encoding="utf-8")
         (listas / "_var_lib_hefesto-pipewire_._Packages").write_text("", encoding="utf-8")
@@ -162,6 +166,7 @@ def _correr(
         f"PIPEWIRE_PREF={trava}\n"
         f"PIPEWIRE_FONTE={fonte}\n"
         f"PIPEWIRE_REPO={repo}\n"
+        f"PIPEWIRE_CHAVE={chave}\n"
         f"PIPEWIRE_LISTAS={listas}\n"
         f'source "{RAIZ}/scripts/lib/som_da_sessao.sh"\n'
         + _funcao("devolver_o_pipewire")
@@ -193,7 +198,7 @@ def _correr(
             os.close(escravo)
         rc, saida = r.returncode, r.stdout + r.stderr
     chamadas = diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
-    return Corrida(rc, saida, chamadas, trava, fonte, repo, listas)
+    return Corrida(rc, saida, chamadas, trava, fonte, repo, listas, chave)
 
 
 def test_a_flag_devolve_sem_perguntar_com_as_versoes_do_arquivo(tmp_path: Path) -> None:
@@ -296,6 +301,7 @@ def test_a_fonte_do_apt_da_casa_sai_em_todo_caso(tmp_path: Path, caso: str) -> N
     assert c.rc == 0, c.saida
     assert not c.fonte.exists(), f"a fonte do apt ficou ({caso}):\n{c.saida}"
     assert not c.repo.exists(), f"a pasta do repositório ficou ({caso}):\n{c.saida}"
+    assert not c.chave.exists(), f"a chave do repositório ficou ({caso}):\n{c.saida}"
     assert sorted(x.name for x in c.listas.iterdir()) == ["deb.debian.org_dists_Packages"]
     assert "removida a fonte do apt do PipeWire da casa" in c.saida
 
@@ -304,7 +310,8 @@ def test_sem_sudo_a_fonte_do_apt_fica_e_a_fala_diz_o_comando(tmp_path: Path) -> 
     c = _correr(tmp_path, fonte_da_casa=True, sudo_ok=False)
     assert c.fonte.exists()
     assert c.repo.exists()
-    assert f"sudo rm -rf {c.fonte} {c.repo}" in c.saida
+    assert c.chave.exists()
+    assert f"sudo rm -rf {c.fonte} {c.chave} {c.repo}" in c.saida
 
 
 def test_sem_sudo_a_trava_fica_e_a_fala_diz_o_comando(tmp_path: Path) -> None:

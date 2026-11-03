@@ -27,7 +27,16 @@ import pytest
 from tests.unit.test_o_pipewire_entra_no_install import FUNCOES_EXTRAIDAS, OS_RELEASE, _funcao
 
 BASH = shutil.which("bash") or "/bin/bash"
-FERRAMENTAS = ("apt-get", "apt-cache", "apt-ftparchive", "dpkg-deb", "dpkg-query", "dpkg")
+FERRAMENTAS = (
+    "apt-get",
+    "apt-cache",
+    "apt-ftparchive",
+    "dpkg-deb",
+    "dpkg-query",
+    "dpkg",
+    "gpg",
+    "gpgv",
+)
 FALTAM = [f for f in FERRAMENTAS if shutil.which(f) is None]
 pytestmark = pytest.mark.skipif(bool(FALTAM), reason=f"sem {FALTAM} para o apt de verdade")
 
@@ -52,6 +61,7 @@ PW_POP_NOVO = "1.6.10-1pop1~1799999999~24.04~0000000"
 
 REPO = "/var/lib/hefesto-pipewire"
 FONTE = "/etc/apt/sources.list.d/hefesto-pipewire.sources"
+CHAVE = "/etc/apt/keyrings/hefesto-pipewire.gpg"
 
 
 def _pacotes(pw: str, wp: str) -> dict[str, tuple[str, str, str]]:
@@ -128,6 +138,7 @@ class Cenario:
     entrega: Path
     repo: Path
     fonte: Path
+    chave: Path
 
     def apt(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -286,6 +297,7 @@ def _cenario(
     os_release.write_text(OS_RELEASE["pop-24.04"], encoding="utf-8")
     repo = t / "var" / "apt-pipewire"
     fonte_da_casa = etc / "sources.list.d" / "hefesto-pipewire.sources"
+    chave = etc / "keyrings" / "hefesto-pipewire.gpg"
     env = {
         "PATH": f"{fakes}:/usr/bin:/bin",
         "HOME": str(lar),
@@ -299,8 +311,9 @@ def _cenario(
         "_OS_RELEASE": str(os_release),
         "_PW_REPO": str(repo),
         "_PW_FONTE": str(fonte_da_casa),
+        "_PW_CHAVE": str(chave),
     }
-    b = Cenario(raiz, env, diario, entrega, repo, fonte_da_casa)
+    b = Cenario(raiz, env, diario, entrega, repo, fonte_da_casa, chave)
     r = b.apt("update")
     assert r.returncode == 0, r.stdout + r.stderr
     return b
@@ -342,6 +355,77 @@ def test_quando_o_pop_passa_da_casa_o_apt_fica_com_o_do_pop(tmp_path: Path) -> N
     assert b.fonte.is_file()
     assert b.candidato("gstreamer1.0-pipewire") == PW_POP_NOVO
     assert b.candidato("pipewire") == PW_POP_NOVO
+
+
+def _linhas_do_apt_sobre_a_fonte(b: Cenario) -> list[str]:
+    r = b.apt("update")
+    assert r.returncode == 0, r.stdout + r.stderr
+    return [
+        linha
+        for linha in (r.stdout + r.stderr).splitlines()
+        if str(b.repo) in linha and linha.startswith(("N:", "W:", "E:"))
+    ]
+
+
+def _confere(b: Cenario, arquivo: str) -> subprocess.CompletedProcess[str]:
+    alvo = b.repo / arquivo
+    args = ["gpgv", "--keyring", str(b.chave)]
+    args += [str(alvo), str(b.repo / "Release")] if arquivo == "Release.gpg" else [str(alvo)]
+    ambiente = {"LC_ALL": "C", "PATH": "/usr/bin:/bin"}
+    return subprocess.run(args, capture_output=True, text=True, check=False, env=ambiente)
+
+
+def test_a_fonte_e_assinada_e_o_apt_le_sem_aviso(tmp_path: Path) -> None:
+    """MORDIDAS: `Trusted: yes` sem `Signed-By`, ou chave de assinar diferente da instalada."""
+    b = _cenario(tmp_path)
+    b.passo()
+    fonte = b.fonte.read_text(encoding="utf-8")
+    assert f"Signed-By: {b.chave}\n" in fonte, fonte
+    assert "Trusted" not in fonte, fonte
+    assert b.chave.is_file() and stat.S_IMODE(b.chave.stat().st_mode) == 0o644
+    assert _linhas_do_apt_sobre_a_fonte(b) == []
+    assert b.candidato("gstreamer1.0-pipewire") == PW
+
+
+def test_o_inrelease_e_o_release_gpg_conferem_com_a_chave_instalada(tmp_path: Path) -> None:
+    b = _cenario(tmp_path)
+    b.passo()
+    for arquivo in ("InRelease", "Release.gpg"):
+        r = _confere(b, arquivo)
+        assert r.returncode == 0, arquivo + r.stdout + r.stderr
+        assert "Good signature" in r.stderr, r.stderr
+
+
+def test_publicar_de_novo_troca_a_chave_e_o_apt_segue_lendo(tmp_path: Path) -> None:
+    b = _cenario(tmp_path)
+    b.passo()
+    antes = b.chave.read_bytes()
+    b.passo()
+    assert b.chave.read_bytes() != antes
+    assert _confere(b, "InRelease").returncode == 0
+    assert _linhas_do_apt_sobre_a_fonte(b) == []
+    assert b.apt("-s", "install", "gstreamer1.0-pipewire").returncode == 0
+
+
+def test_nada_secreto_fica_no_disco_depois_de_publicar(tmp_path: Path) -> None:
+    b = _cenario(tmp_path)
+    b.passo()
+    privadas = ("secring.gpg", "private-keys-v1.d")
+    sobras = [p.name for p in tmp_path.rglob("*") if p.name in privadas]
+    assert sobras == [], sobras
+
+
+def test_sem_o_gpg_a_fonte_nao_entra(tmp_path: Path) -> None:
+    b = _cenario(tmp_path)
+    sem = tmp_path / "sem-gpg"
+    sem.mkdir()
+    for p in Path("/usr/bin").iterdir():
+        if not p.name.startswith("gpg"):
+            (sem / p.name).symlink_to(p)
+    b.env["PATH"] = f"{b.raiz / 'fakes'}:{sem}"
+    saida = b.passo()
+    assert "sem o gpg" in saida, saida
+    assert not b.fonte.exists() and not b.repo.exists() and not b.chave.exists()
 
 
 def test_a_entrega_que_nao_confere_nao_vira_fonte(tmp_path: Path) -> None:
@@ -418,16 +502,19 @@ def test_a_copia_se_confere_antes_de_a_fonte_ser_escrita() -> None:
     corpo = _funcao("_pw_publica_o_repositorio")
     copia = corpo.index('_pw_entrega_confere "${novo}"')
     assert copia < corpo.index("apt-ftparchive packages") < corpo.index('"${fonte}"')
+    assert corpo.index("--clearsign") < corpo.index('sudo mv "${novo}" "${repo}"')
     assert corpo.index('sudo mv "${novo}" "${repo}"') < corpo.index('"${obra}/fonte" "${fonte}"')
 
 
 def test_os_caminhos_do_install_e_do_uninstall_sao_os_mesmos() -> None:
     assert f"_PW_REPO:-{REPO}" in INSTALL and f"_PW_FONTE:-{FONTE}" in INSTALL
+    assert f"_PW_CHAVE:-{CHAVE}" in INSTALL
     assert f"PIPEWIRE_REPO={REPO}\n" in UNINSTALL
     assert f"PIPEWIRE_FONTE={FONTE}\n" in UNINSTALL
+    assert f"PIPEWIRE_CHAVE={CHAVE}\n" in UNINSTALL
     corpo = UNINSTALL[UNINSTALL.index("devolver_o_pipewire() {") :]
     corpo = corpo[: corpo.index("\n}\n")]
-    assert 'sudo rm -f "${PIPEWIRE_FONTE}"' in corpo
+    assert 'sudo rm -f "${PIPEWIRE_FONTE}" "${PIPEWIRE_CHAVE}"' in corpo
     assert 'sudo rm -rf "${PIPEWIRE_REPO}"' in corpo
     lista = REPO.lstrip("/").replace("/", "_")
     assert f"-name '_{lista}_*' -delete" in corpo
@@ -436,7 +523,9 @@ def test_os_caminhos_do_install_e_do_uninstall_sao_os_mesmos() -> None:
 def test_a_receita_publica_e_tira_a_fonte() -> None:
     assert f"URIs: file:{REPO}" in RECEITA
     volta = RECEITA[RECEITA.index("Para voltar:") :]
-    assert FONTE in volta[:400] and REPO in volta[:400]
+    assert FONTE in volta[:400] and REPO in volta[:400] and CHAVE in volta[:400]
+    assert f"Signed-By: {CHAVE}" in RECEITA
+    assert "Trusted" not in RECEITA
 
 
 def test_o_curativo_do_pipewiresrc_saiu_e_a_tela_vem_depois_do_passo() -> None:

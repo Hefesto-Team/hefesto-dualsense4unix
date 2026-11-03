@@ -2387,10 +2387,16 @@ _pw_publica_o_repositorio() {
     local dir="$1" alvo_pw="$2" alvo_wp="$3"
     local repo="${_PW_REPO:-/var/lib/hefesto-pipewire}"
     local fonte="${_PW_FONTE:-/etc/apt/sources.list.d/hefesto-pipewire.sources}"
-    local novo="${repo}.novo" obra nomes rc=0
+    local chave="${_PW_CHAVE:-/etc/apt/keyrings/hefesto-pipewire.gpg}"
+    local novo="${repo}.novo" obra gnupg nomes rc=0
     local debs=()
+    local gpg_lote=(--batch --yes --quiet --pinentry-mode loopback --passphrase '')
     if ! command -v apt-ftparchive >/dev/null 2>&1; then
         warn "sem o apt-ftparchive (pacote apt-utils), o PipeWire da casa não vira fonte do apt — instale o apt-utils e rode ./install.sh de novo"
+        return 1
+    fi
+    if ! command -v gpg >/dev/null 2>&1; then
+        warn "sem o gpg (pacote gnupg), o PipeWire da casa não vira fonte assinada do apt — instale o gnupg e rode ./install.sh de novo"
         return 1
     fi
     if ! nomes="$(_pw_entrega_confere "${dir}" "${alvo_pw}" "${alvo_wp}")" || [[ -z "${nomes}" ]]; then
@@ -2399,6 +2405,7 @@ _pw_publica_o_repositorio() {
     fi
     mapfile -t debs <<<"${nomes}"
     obra="$(mktemp -d)" || return 1
+    gnupg="${obra}/gnupg"
     sudo rm -rf "${novo}" \
         && sudo install -d -m 0755 "${novo}" \
         && sudo install -m 0644 "${dir}/SHA256SUMS" "${debs[@]/#/${dir}/}" "${novo}/" \
@@ -2408,12 +2415,21 @@ _pw_publica_o_repositorio() {
         && (cd "${novo}" && apt-ftparchive \
                 -o APT::FTPArchive::Release::Origin=hefesto-dualsense4unix \
                 -o APT::FTPArchive::Release::Label=hefesto-pipewire release .) > "${obra}/Release" 2>/dev/null \
-        && sudo install -m 0644 "${obra}/Release" "${novo}/Release" \
+        && install -d -m 0700 "${gnupg}" \
+        && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --quick-generate-key hefesto-pipewire default default never >/dev/null 2>&1 \
+        && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --clearsign -o "${obra}/InRelease" "${obra}/Release" >/dev/null 2>&1 \
+        && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --armor --detach-sign -o "${obra}/Release.gpg" "${obra}/Release" >/dev/null 2>&1 \
+        && gpg --homedir "${gnupg}" --batch --yes --quiet --export -o "${obra}/chave.gpg" >/dev/null 2>&1 \
+        && [[ -s "${obra}/chave.gpg" ]] \
+        && sudo install -m 0644 "${obra}/Release" "${obra}/InRelease" "${obra}/Release.gpg" "${novo}/" \
+        && sudo install -d -m 0755 "$(dirname "${chave}")" \
+        && sudo install -m 0644 "${obra}/chave.gpg" "${chave}" \
         && sudo rm -rf "${repo}" \
         && sudo mv "${novo}" "${repo}" \
-        && printf 'Types: deb\nURIs: file:%s\nSuites: ./\nTrusted: yes\n' "${repo}" > "${obra}/fonte" \
+        && printf 'Types: deb\nURIs: file:%s\nSuites: ./\nSigned-By: %s\n' "${repo}" "${chave}" > "${obra}/fonte" \
         && sudo install -m 0644 "${obra}/fonte" "${fonte}" \
         || rc=1
+    gpgconf --homedir "${gnupg}" --kill all >/dev/null 2>&1 || true
     rm -rf "${obra}"
     if [[ "${rc}" -ne 0 ]]; then
         sudo rm -rf "${novo}" 2>/dev/null || true

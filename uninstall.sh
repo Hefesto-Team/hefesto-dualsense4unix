@@ -1160,13 +1160,14 @@ fi
 
 PIPEWIRE_PREF=/etc/apt/preferences.d/hefesto-pipewire
 PIPEWIRE_FONTE=/etc/apt/sources.list.d/hefesto-pipewire.sources
+PIPEWIRE_CHAVE=/etc/apt/keyrings/hefesto-pipewire.gpg
 PIPEWIRE_REPO=/var/lib/hefesto-pipewire
 PIPEWIRE_LISTAS=/var/lib/apt/lists
 devolver_o_pipewire() {
     local registro="${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt"
     local devolver=0 steam=0 pacote ver atual resp sairia
     local pkgs=()
-    if [[ ! -f "${registro}" && ! -e "${PIPEWIRE_PREF}" && ! -e "${PIPEWIRE_FONTE}" && ! -e "${PIPEWIRE_REPO}" ]]; then
+    if [[ ! -f "${registro}" && ! -e "${PIPEWIRE_PREF}" && ! -e "${PIPEWIRE_FONTE}" && ! -e "${PIPEWIRE_CHAVE}" && ! -e "${PIPEWIRE_REPO}" ]]; then
         log "sem registro do PipeWire de antes (${registro} ausente) — nada a devolver"
         return 0
     fi
@@ -1258,14 +1259,14 @@ devolver_o_pipewire() {
             log "  sudo rm -f ${PIPEWIRE_PREF}"
         fi
     fi
-    if [[ -e "${PIPEWIRE_FONTE}" || -e "${PIPEWIRE_REPO}" ]]; then
-        if sudo -n true 2>/dev/null && sudo rm -f "${PIPEWIRE_FONTE}" \
+    if [[ -e "${PIPEWIRE_FONTE}" || -e "${PIPEWIRE_CHAVE}" || -e "${PIPEWIRE_REPO}" ]]; then
+        if sudo -n true 2>/dev/null && sudo rm -f "${PIPEWIRE_FONTE}" "${PIPEWIRE_CHAVE}" \
             && sudo rm -rf "${PIPEWIRE_REPO}" "${PIPEWIRE_REPO}.novo" \
             && sudo find "${PIPEWIRE_LISTAS}" -maxdepth 1 -name '_var_lib_hefesto-pipewire_*' -delete; then
-            log "removida a fonte do apt do PipeWire da casa (${PIPEWIRE_FONTE} e ${PIPEWIRE_REPO})"
+            log "removida a fonte do apt do PipeWire da casa (${PIPEWIRE_FONTE}, ${PIPEWIRE_CHAVE} e ${PIPEWIRE_REPO})"
         else
             log "sudo indisponível — a fonte do apt do PipeWire da casa NÃO foi removida"
-            log "  sudo rm -rf ${PIPEWIRE_FONTE} ${PIPEWIRE_REPO}"
+            log "  sudo rm -rf ${PIPEWIRE_FONTE} ${PIPEWIRE_CHAVE} ${PIPEWIRE_REPO}"
         fi
     fi
 }
