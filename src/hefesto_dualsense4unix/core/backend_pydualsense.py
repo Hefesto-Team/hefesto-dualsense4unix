@@ -329,39 +329,9 @@ _LAYER_USER = "usuaria"
 
 _COOP_LAYER_FIELDS = ("player_leds",)
 
-_CAMPOS_QUE_O_HEFESTO_NUMERA: frozenset[str] = frozenset({"player_leds"})
-
 _CAMPOS_QUE_O_NATIVO_ESCREVE: frozenset[str] = frozenset(
     {"led", "player_leds", "player_led_brightness"}
 )
-
-PALETA_DE_JOGADOR_DO_SDL: frozenset[tuple[int, int, int]] = frozenset(
-    {
-        (0x00, 0x00, 0x40),
-        (0x40, 0x00, 0x00),
-        (0x00, 0x40, 0x00),
-        (0x20, 0x00, 0x20),
-        (0x20, 0x10, 0x00),
-        (0x00, 0x10, 0x10),
-        (0x10, 0x10, 0x10),
-    }
-)
-
-
-def numeracao_do_jogo(campos: Mapping[str, Any]) -> frozenset[str]:
-    """Os campos de uma réplica de exibição que são NÚMERO de jogador."""
-    numero = {
-        nome
-        for nome, valor in campos.items()
-        if nome in _CAMPOS_QUE_O_HEFESTO_NUMERA and valor is not None
-    }
-    cor = campos.get("led")
-    if cor is not None:
-        with contextlib.suppress(TypeError, ValueError):
-            if tuple(int(c) for c in cor) in PALETA_DE_JOGADOR_DO_SDL:
-                numero.add("led")
-    return frozenset(numero)
-
 
 _MODOS_DE_GATILHO_SEM_EFEITO = frozenset({0x00, 0x05})
 
@@ -1819,12 +1789,7 @@ class PyDualSenseController(IController):
         )
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         if game is not None and self._game_wins():
-            nao_pinta = numeracao_do_jogo(
-                {nome: getattr(game, nome) for nome in _OUTPUT_FIELDS}
-            )
-            game = _sem_os_campos(game, nao_pinta)
-            if game is not None:
-                resolved = _merge_desired(resolved, game)
+            resolved = _merge_desired(resolved, game)
         return resolved
 
     def _assentar_mesa_locked(self) -> None:
@@ -4389,21 +4354,6 @@ class PyDualSenseController(IController):
             return True
         defender = False
         with self._io_lock:
-            numero = numeracao_do_jogo(fields)
-            if numero:
-                recusa = {campo: fields.pop(campo) for campo in sorted(numero)}
-                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
-                marcas = {f"numero:{campo}" for campo in recusa}
-                if not marcas <= ja_dito:
-                    ja_dito.update(marcas)
-                    logger.info(
-                        "game_output_recusado_o_hefesto_numera",
-                        uniq=alvo,
-                        campos=sorted(recusa),
-                        **self._luz_para_o_journal(recusa),
-                    )
-                if not fields:
-                    return True
             if (
                 fields.get("led") == (0, 0, 0)
                 and alvo not in self._jogo_provou_a_luz

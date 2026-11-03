@@ -11,8 +11,9 @@ handle. A regra era o `_campos_do_perfil_locked` (`core/backend_pydualsense.py`)
 consultado no merge, no `set_game_output_for` e no `set_game_trigger_for`, e o
 carimbo do perfil que soltava o gatilho do jogo.
 
-O número do jogador segue do Hefesto, e o gesto do usuário na interface (a ordem mais
-nova) vale até o jogo pintar de novo. Vale para os quatro controles, os modos
+O gesto do usuário na interface (a ordem mais nova) vale até o jogo pintar de novo. Nota de
+03/11/2026: o número do jogador também é saída do jogo (D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO, que
+caducou a D-2309-O-HEFESTO-MANDA-NO-NUMERO). Vale para os quatro controles, os modos
 DualSense e Xbox, cabo e rádio: a regra é do backend, por `uniq`, antes do
 transporte.
 """
@@ -128,14 +129,17 @@ class TestOJogoManda:
 
         assert handle._raw_trigger_right == BLOCO_DO_JOGO
 
-    def test_o_numero_do_jogador_segue_do_hefesto(self) -> None:
+    def test_o_numero_do_jogador_e_do_jogo_quando_ele_pinta(self) -> None:
         ctl, no, _ = _controle(campos_do_usuario={"player_leds": PADRAO_DO_USUARIO})
 
         ctl.set_game_output_for(MAC_1, player_leds=PADRAO_DO_JOGO)
 
         with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_1).player_leds == PADRAO_DO_JOGO
+        assert PADRAO_DO_JOGO in no.player_calls
+        ctl.end_game_session_for(MAC_1)
+        with ctl._io_lock:
             assert ctl._merged_desired_for_key(MAC_1).player_leds == PADRAO_DO_USUARIO
-        assert PADRAO_DO_JOGO not in no.player_calls
 
     def test_ninguem_recusa_mais_pelo_perfil(self) -> None:
         efeito = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
@@ -325,14 +329,14 @@ class TestPerfilAteOJogoProvar:
         with ctl._io_lock:
             assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_USUARIO
 
-    def test_o_preto_junto_do_numero_nao_perde_o_numero_recusado(self) -> None:
-        """O número do jogador segue do Hefesto, e o preto sozinho não pinta."""
+    def test_o_preto_junto_do_numero_nao_perde_o_numero(self) -> None:
+        """O preto sozinho não pinta, e o número que veio junto chega."""
         ctl, no, _ = _controle(campos_do_usuario={"led": COR_DO_USUARIO})
 
         ctl.set_game_output_for(MAC_1, led=(0, 0, 0), player_leds=PADRAO_DO_JOGO)
 
         assert not no.rgb_calls
-        assert PADRAO_DO_JOGO not in no.player_calls
+        assert PADRAO_DO_JOGO in no.player_calls
 
     @pytest.mark.parametrize("n", [1, 2, 3, 4])
     def test_cada_controle_prova_por_conta_propria(self, n: int) -> None:

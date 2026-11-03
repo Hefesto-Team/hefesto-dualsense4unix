@@ -1,4 +1,11 @@
-"""STEAM-NO-FISICO-01 — o número do jogador e a barra que o diz são do Hefesto."""
+"""STEAM-NO-FISICO-01 — o número do jogador e a barra que o diz: a camada de baixo é do Hefesto.
+
+Nota de 03/11/2026: a D-2309-O-HEFESTO-MANDA-NO-NUMERO caducou pela
+D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO (A-LUZ-QUE-O-JOGO-PINTA-CHEGA-A-TODO-CONTROLE-01). Com a
+autoridade no jogo, o número e a cor de índice do SDL que o jogo escreve chegam ao físico; fora
+da autoridade (o cliente da Steam fora de jogo), ficam retidos, e o número do Hefesto volta no fim
+da sessão.
+"""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -87,114 +94,97 @@ def _eventos(registros: list[dict[str, Any]], nome: str) -> list[dict[str, Any]]
     return [r for r in registros if r["event"] == nome]
 
 
-class TestOPredicado:
-    def test_player_leds_e_numero_sempre(self) -> None:
-        assert bp.numeracao_do_jogo({"player_leds": NUMERO_DO_SDL_2}) == {"player_leds"}
-
-    @pytest.mark.parametrize("cor", PALETA_MEDIDA + PALETA_DO_FONTE)
-    def test_a_paleta_do_sdl_e_numero(self, cor: tuple[int, int, int]) -> None:
-        assert bp.numeracao_do_jogo({"led": cor}) == {"led"}
-
-    def test_a_cor_escolhida_pelo_jogo_nao_e_numero(self) -> None:
-        assert bp.numeracao_do_jogo({"led": COR_DE_GAMEPLAY}) == frozenset()
-
-    def test_valor_ausente_nao_e_numero(self) -> None:
-        assert bp.numeracao_do_jogo({"led": None, "player_leds": None}) == frozenset()
-
-    def test_a_paleta_tem_as_sete_do_fonte(self) -> None:
-        """A tabela é a do `SetLedsForPlayerIndex` do SDL, inteira."""
-        assert set(bp.PALETA_DE_JOGADOR_DO_SDL) == set(PALETA_MEDIDA + PALETA_DO_FONTE)
+class TestNaoHaMaisVeto:
+    def test_o_veto_do_numero_saiu_do_backend(self) -> None:
+        veto = ("numeracao_do_jogo", "PALETA_DE_JOGADOR_DO_SDL", "_CAMPOS_QUE_O_HEFESTO_NUMERA")
+        for nome in veto:
+            assert not hasattr(bp, nome), nome
 
 
-class TestONumeroDoJogoNaoChegaAoFisico:
-    @pytest.mark.parametrize("autoridade", ["game", "unknown", "daemon", None])
-    def test_nem_camada_nem_escrita_nem_retencao(self, autoridade: str | None) -> None:
-        """A MORDIDA da peneira da ENTRADA: sem a peneira, sob `game`/`unknown`/sem"""
+class TestComOJogoNaAutoridade:
+    @pytest.mark.parametrize("autoridade", ["game", "unknown", None])
+    def test_o_numero_do_jogo_chega(self, autoridade: str | None) -> None:
         ctl, nos = _mesa(autoridade)
 
         assert ctl.set_game_output_for(MAC_1, player_leds=NUMERO_DO_SDL_2) is True
 
-        assert NUMERO_DO_SDL_2 not in nos[MAC_1].player_calls
-        assert UNIQ_1 not in ctl._game_output_by_uniq
+        assert NUMERO_DO_SDL_2 in nos[MAC_1].player_calls
         assert ctl._retained_game_outputs == {}
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).player_leds == NUMERO_1
+            assert ctl._merged_desired_for_key(MAC_1).player_leds == NUMERO_DO_SDL_2
 
-    @pytest.mark.parametrize("cor", PALETA_MEDIDA)
-    def test_a_barra_que_diz_o_numero_do_sdl_nao_chega(
-        self, cor: tuple[int, int, int]
-    ) -> None:
-        ctl, nos = _mesa("unknown")
+    @pytest.mark.parametrize("cor", PALETA_MEDIDA + PALETA_DO_FONTE)
+    def test_a_barra_da_paleta_do_sdl_chega(self, cor: tuple[int, int, int]) -> None:
+        ctl, nos = _mesa("game")
 
         ctl.set_game_output_for(MAC_1, led=cor, player_leds=NUMERO_DO_SDL_2)
 
-        assert cor not in nos[MAC_1].rgb_calls
+        assert cor in nos[MAC_1].rgb_calls
         with ctl._io_lock:
             resolvido = ctl._merged_desired_for_key(MAC_1)
-        assert resolvido.led == COR_DO_NUMERO_1
-        assert resolvido.player_leds == NUMERO_1
+        assert resolvido.led == cor
+        assert resolvido.player_leds == NUMERO_DO_SDL_2
 
     def test_a_cor_de_gameplay_continua_passando(self) -> None:
-        """REPLICA-03 intacta para o que não é número: a barra do jogo pinta."""
         ctl, nos = _mesa("game")
 
-        ctl.set_game_output_for(
-            MAC_1, led=COR_DE_GAMEPLAY, player_leds=NUMERO_DO_SDL_2
-        )
+        ctl.set_game_output_for(MAC_1, led=COR_DE_GAMEPLAY)
 
         assert nos[MAC_1].rgb_calls == [COR_DE_GAMEPLAY]
-        assert nos[MAC_1].player_calls == []
         with ctl._io_lock:
             resolvido = ctl._merged_desired_for_key(MAC_1)
         assert resolvido.led == COR_DE_GAMEPLAY
         assert resolvido.player_leds == NUMERO_1
 
 
-class TestMesmoEmCoop:
-    def test_o_jogo_numera_os_dois_e_os_dois_ficam_com_o_numero_da_mesa(self) -> None:
-        """«Mesmo em co-op»: o SDL numera cada vpad (o P1 da mesa vira o 2 do"""
+class TestOClienteDaSteamForaDeJogo:
+    @pytest.mark.parametrize("cor", PALETA_MEDIDA)
+    def test_a_pintura_dele_fica_retida(self, cor: tuple[int, int, int]) -> None:
+        ctl, nos = _mesa("daemon")
+
+        ctl.set_game_output_for(MAC_1, led=cor, player_leds=NUMERO_DO_SDL_2)
+
+        assert cor not in nos[MAC_1].rgb_calls
+        assert NUMERO_DO_SDL_2 not in nos[MAC_1].player_calls
+        assert UNIQ_1 not in ctl._game_output_by_uniq
+        assert ctl._retained_game_outputs[UNIQ_1]["player_leds"] == NUMERO_DO_SDL_2
+        with ctl._io_lock:
+            resolvido = ctl._merged_desired_for_key(MAC_1)
+        assert resolvido.led == COR_DO_NUMERO_1
+        assert resolvido.player_leds == NUMERO_1
+
+
+class TestEmCoop:
+    def test_o_jogo_numera_os_dois(self) -> None:
         ctl, nos = _mesa("game", dois=True)
 
         ctl.set_game_output_for(MAC_1, led=(64, 0, 0), player_leds=NUMERO_DO_SDL_2)
         ctl.set_game_output_for(MAC_2, led=(0, 64, 0), player_leds=NUMERO_DO_SDL_3)
 
         with ctl._io_lock:
-            assert ctl._merged_desired_for_key(MAC_1).player_leds == NUMERO_1
-            assert ctl._merged_desired_for_key(MAC_2).player_leds == NUMERO_2
-        for no in nos.values():
-            assert no.player_calls == []
-            assert no.rgb_calls == []
+            assert ctl._merged_desired_for_key(MAC_1).player_leds == NUMERO_DO_SDL_2
+            assert ctl._merged_desired_for_key(MAC_2).player_leds == NUMERO_DO_SDL_3
+        assert nos[MAC_1].player_calls == [NUMERO_DO_SDL_2]
+        assert nos[MAC_2].player_calls == [NUMERO_DO_SDL_3]
 
-    def test_a_camada_de_coop_do_hefesto_continua_numerando(self) -> None:
-        """O co-op que numera é o do HEFESTO (`set_coop_outputs`) — ele não é o"""
-        ctl, nos = _mesa("game", dois=True)
-
+    def test_a_camada_de_coop_do_hefesto_fica_por_baixo(self) -> None:
+        ctl, _nos = _mesa("game", dois=True)
         ctl.set_coop_outputs(
             {MAC_1: OutputSpec(player_leds=NUMERO_1), MAC_2: OutputSpec(player_leds=NUMERO_2)}
         )
-        ctl.set_game_output_for(MAC_2, player_leds=NUMERO_DO_SDL_3)
 
         with ctl._io_lock:
             assert ctl._merged_desired_for_key(MAC_2).player_leds == NUMERO_2
-        assert NUMERO_DO_SDL_3 not in nos[MAC_2].player_calls
-
-
-class TestOPortaoDoMerge:
-    def test_camada_escrita_antes_da_regra_nao_volta_pelo_resolve(self) -> None:
-        """A MORDIDA da peneira do MERGE: a camada GAME já tem o número e a cor"""
-        ctl, _nos = _mesa("game")
-        ctl._game_output_by_uniq[UNIQ_1] = bp._DesiredOutput(
-            led=(0, 64, 0), player_leds=NUMERO_DO_SDL_3
-        )
-
+        ctl.set_game_output_for(MAC_2, player_leds=NUMERO_DO_SDL_3)
         with ctl._io_lock:
-            resolvido = ctl._merged_desired_for_key(MAC_1)
+            assert ctl._merged_desired_for_key(MAC_2).player_leds == NUMERO_DO_SDL_3
+        ctl.end_game_session_for(MAC_2)
+        with ctl._io_lock:
+            assert ctl._merged_desired_for_key(MAC_2).player_leds == NUMERO_2
 
-        assert resolvido.player_leds == NUMERO_1
-        assert resolvido.led == COR_DO_NUMERO_1
 
-    def test_o_gatilho_da_cor_pelo_radio_leva_o_numero_da_mesa(self) -> None:
-        """O que chega ao plástico pelo rádio sai do mesmo merge."""
+class TestOFimDaSessaoDevolveOHefesto:
+    def test_pelo_merge_e_pelo_radio(self) -> None:
         ctl, _nos = _mesa("game")
         escritos: list[list[int]] = []
         handle = ctl._handles[MAC_1]
@@ -204,36 +194,29 @@ class TestOPortaoDoMerge:
 
         with structlog.testing.capture_logs() as registros:
             ctl.reescrever_lightbar_por_hidraw()
+        escrita = _eventos(registros, "gatilho_da_cor_escrito")
+        assert escrita[0]["players"] == NUMERO_DO_SDL_2
+        assert escrita[0]["cor"] == (64, 0, 0)
 
+        ctl.end_game_session_for(MAC_1)
+        with structlog.testing.capture_logs() as registros:
+            ctl.reescrever_lightbar_por_hidraw()
         escrita = _eventos(registros, "gatilho_da_cor_escrito")
         assert escrita[0]["players"] == NUMERO_1
         assert escrita[0]["cor"] == COR_DO_NUMERO_1
 
 
-class TestOJournalDizARecusa:
+class TestOJournalDizAReplica:
     def test_uma_vez_por_campo_e_por_sessao(self) -> None:
         ctl, _nos = _mesa("game")
 
         with structlog.testing.capture_logs() as registros:
             for _ in range(10):
-                ctl.set_game_output_for(
-                    MAC_1, led=(64, 0, 0), player_leds=NUMERO_DO_SDL_2
-                )
+                ctl.set_game_output_for(MAC_1, led=(64, 0, 0), player_leds=NUMERO_DO_SDL_2)
 
-        ditos = _eventos(registros, "game_output_recusado_o_hefesto_numera")
+        ditos = _eventos(registros, "game_output_replicado")
         assert len(ditos) == 1
         assert ditos[0]["campos"] == ["led", "player_leds"]
-        assert ditos[0]["cor"] == (64, 0, 0)
         assert ditos[0]["players"] == NUMERO_DO_SDL_2
         assert ditos[0]["autoridade"] == "game"
-        assert not _eventos(registros, "game_output_replicado")
-
-    def test_a_sessao_seguinte_volta_a_dizer(self) -> None:
-        ctl, _nos = _mesa("game")
-        ctl.set_game_output_for(MAC_1, player_leds=NUMERO_DO_SDL_2)
-        ctl.end_game_session_for(MAC_1)
-
-        with structlog.testing.capture_logs() as registros:
-            ctl.set_game_output_for(MAC_1, player_leds=NUMERO_DO_SDL_2)
-
-        assert len(_eventos(registros, "game_output_recusado_o_hefesto_numera")) == 1
+        assert not _eventos(registros, "game_output_recusado_o_hefesto_numera")

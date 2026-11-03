@@ -1150,12 +1150,11 @@ class TestONumeroQueOJogoEscreveu:
         assert par(escreve(2)) == [(2, 2, True)]
         gp.end_game_output_session(daemon, target_uniq=P2)
         assert par(escreve(2)) == [(2, 2, True)], "a sessão nova diz desde a primeira escrita"
+        assert [c.player_leds for c in inst._game_output_by_uniq.values()] == [_desenho(2)], (
+            "D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO: o número que o jogo escreve é a camada do jogo"
+        )
+        gp.end_game_output_session(daemon, target_uniq=P2)
         assert all(
             getattr(camada, "player_leds", None) is None
-            for camadas in (
-                inst._game_output_by_uniq,
-                inst._desired_coop_by_uniq,
-                inst._desired_by_uniq,
-            )
-            for camada in camadas.values()
-        ), "o padrão do jogo virou camada no backend"
+            for camada in inst._game_output_by_uniq.values()
+        ), "o fim da sessão devolve o número do Hefesto"

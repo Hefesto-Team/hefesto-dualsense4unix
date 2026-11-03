@@ -840,7 +840,7 @@ def apply_game_player_leds(
 ) -> None:
     """Oferece ao físico os player-LEDs que o JOGO acendeu no vpad (REPLICA-03)."""
     if target_uniq is not None:
-        _o_numero_que_o_jogo_escreveu(daemon, bits, target_uniq)
+        _o_numero_do_jogo(daemon, bits, target_uniq)
     fn: Any = getattr(daemon.controller, "set_game_output_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_player_leds_sem_alvo_descartado", target=target_uniq)
@@ -853,7 +853,7 @@ def apply_game_player_leds(
 
 def end_game_output_session(daemon: DaemonProtocol, *, target_uniq: str | None = None) -> None:
     """Fim da sessão uhid do jogador: devolve perfil/paleta/co-op (REPLICA-03)."""
-    _esquecer_o_numero_do_jogo(daemon, target_uniq)
+    _esquecer_o_numero_e_a_luz_de_fora(daemon, target_uniq)
     if target_uniq is not None:
         soltar_a_ativacao(daemon, target_uniq)
         from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_o_cursor
@@ -3295,6 +3295,110 @@ def vibrar_o_externo(
     if not motor.vibrar(*par):
         return None
     return par
+
+
+_ATRIBUTO_DA_LUZ_DE_FORA = "_luz_do_jogo_nos_de_fora"
+
+
+@dataclass
+class _LuzDeFora:
+    """O controle de fora em que o jogo acendeu o número: o nó, o retrato de antes e o último."""
+
+    hidraw: str
+    retrato: dict[str, int]
+    numero: int | None = None
+
+
+def _o_numero_do_jogo(daemon: Any, bits: Any, target_uniq: str) -> None:
+    """O número que o jogo acendeu no pad: dito no diário e levado ao controle de fora."""
+    _o_numero_que_o_jogo_escreveu(daemon, bits, target_uniq)
+    _o_numero_do_jogo_no_controle_de_fora(daemon, bits, target_uniq)
+
+
+def _luzes_de_fora(daemon: Any) -> dict[str, _LuzDeFora] | None:
+    luzes = getattr(daemon, _ATRIBUTO_DA_LUZ_DE_FORA, None)
+    if isinstance(luzes, dict):
+        return luzes
+    novas: dict[str, _LuzDeFora] = {}
+    try:
+        setattr(daemon, _ATRIBUTO_DA_LUZ_DE_FORA, novas)
+    except Exception:
+        return None
+    return novas
+
+
+def _e_um_dualsense_aberto(daemon: Any, target_uniq: str) -> bool:
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    abertos: set[str | None] = set()
+    for nome in ("nos_hidraw_por_uniq", "alvos_conectados"):
+        fonte: Any = getattr(daemon.controller, nome, None)
+        if not callable(fonte):
+            continue
+        try:
+            achados = fonte()
+            uniqs = achados.values() if nome == "alvos_conectados" else achados
+            abertos.update(norm_mac(uniq) for uniq in uniqs)
+        except Exception:
+            continue
+    return norm_mac(target_uniq) in abertos
+
+
+def _o_numero_do_jogo_no_controle_de_fora(daemon: Any, bits: Any, target_uniq: str) -> None:
+    """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO: fora da autoridade do Hefesto (o mesmo portão do
+    backend), as luzes de jogador do controle de fora mostram o número que o jogo acendeu no pad
+    virtual dele, e o retrato de antes volta no fim da sessão. O DualSense recebe pelo backend."""
+    try:
+        if getattr(daemon, "display_authority", "unknown") == "daemon":
+            return
+        if _e_um_dualsense_aberto(daemon, target_uniq):
+            return
+        from hefesto_dualsense4unix.core import external_leds
+        from hefesto_dualsense4unix.core.backend_pydualsense import (
+            _endereco_mascarado,
+            numero_do_desenho,
+        )
+
+        numero = numero_do_desenho(bits)
+        luzes = _luzes_de_fora(daemon)
+        if numero is None or luzes is None:
+            return
+        luz = luzes.get(target_uniq)
+        if luz is None:
+            hidraw = external_leds.hidraw_do_uniq(target_uniq)
+            caminhos = external_leds.luzes_do_externo(hidraw) if hidraw else []
+            if hidraw is None or not caminhos:
+                return
+            luz = _LuzDeFora(hidraw=hidraw, retrato=external_leds.retrato_das_luzes(caminhos))
+            luzes[target_uniq] = luz
+        if luz.numero == numero:
+            return
+        if external_leds.acender_o_numero_do_jogo(luz.hidraw, numero):
+            luz.numero = numero
+            logger.info(
+                "luz_do_jogo_no_controle_de_fora",
+                uniq=_endereco_mascarado(target_uniq) or "?",
+                numero=numero,
+            )
+    except Exception as exc:
+        logger.debug("luz_do_jogo_no_controle_de_fora_falhou", err=str(exc))
+
+
+def _esquecer_o_numero_e_a_luz_de_fora(daemon: Any, target_uniq: str | None) -> None:
+    """O fim da sessão do pad zera a marca do número e devolve as luzes do controle de fora."""
+    _esquecer_o_numero_do_jogo(daemon, target_uniq)
+    if target_uniq is None:
+        return
+    luzes = getattr(daemon, _ATRIBUTO_DA_LUZ_DE_FORA, None)
+    luz = luzes.pop(target_uniq, None) if isinstance(luzes, dict) else None
+    if luz is None or luz.numero is None:
+        return
+    try:
+        from hefesto_dualsense4unix.core import external_leds
+
+        external_leds.devolver_as_luzes(luz.retrato)
+    except Exception as exc:
+        logger.debug("luz_do_controle_de_fora_nao_voltou", err=str(exc))
 
 
 __all__ = [

@@ -1,4 +1,10 @@
-"""LIGHTBAR-NA-STEAM-01 — a paleta do cliente Steam não vira camada do jogo."""
+"""LIGHTBAR-NA-STEAM-01 — a paleta do cliente Steam não vira camada do jogo.
+
+Nota de 03/11/2026: a D-2309-O-HEFESTO-MANDA-NO-NUMERO caducou pela
+D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO. A paleta de índice do SDL e o número que o jogo escreve seguem a
+autoridade, como toda saída do jogo: sob `daemon` (o cliente da Steam fora de jogo) ficam retidos e
+são descartados na abertura; sob `game`, chegam.
+"""
 from __future__ import annotations
 
 import struct
@@ -99,7 +105,10 @@ class TestAPaletaRetidaNaoVoltaComoJogo:
             )
             is True
         )
-        assert ctl._retained_game_outputs[UNIQ_1] == {"led": COR_RETIDA}
+        assert ctl._retained_game_outputs[UNIQ_1] == {
+            "led": COR_RETIDA,
+            "player_leds": PADRAO_DA_PALETA,
+        }
         with ctl._io_lock:
             antes = ctl._merged_desired_for_key(MAC_1)
         assert antes.led == COR_DO_PERFIL
@@ -120,19 +129,33 @@ class TestAPaletaRetidaNaoVoltaComoJogo:
         assert COR_RETIDA not in no.rgb_calls
         assert PADRAO_DA_PALETA not in no.player_calls
 
-    def test_a_paleta_nem_chega_a_ser_retida(self) -> None:
-        """STEAM-NO-FISICO-01: a paleta é número, e o número é do Hefesto —"""
-        for valor in ("daemon", "game", "unknown"):
-            ctl, no, _ = _controle_com_perfil(_Autoridade(valor))
+    def test_a_paleta_fora_de_jogo_fica_retida(self) -> None:
+        """D-0211: sob `daemon` o cliente da Steam pinta a paleta e nada chega ao físico."""
+        ctl, no, _ = _controle_com_perfil(_Autoridade("daemon"))
 
-            ctl.set_game_output_for(
-                MAC_1, led=COR_DA_PALETA, player_leds=PADRAO_DA_PALETA
-            )
+        ctl.set_game_output_for(MAC_1, led=COR_DA_PALETA, player_leds=PADRAO_DA_PALETA)
 
-            assert ctl._retained_game_outputs == {}, valor
-            assert UNIQ_1 not in ctl._game_output_by_uniq, valor
-            assert COR_DA_PALETA not in no.rgb_calls, valor
-            assert PADRAO_DA_PALETA not in no.player_calls, valor
+        assert ctl._retained_game_outputs[UNIQ_1] == {
+            "led": COR_DA_PALETA,
+            "player_leds": PADRAO_DA_PALETA,
+        }
+        assert UNIQ_1 not in ctl._game_output_by_uniq
+        assert COR_DA_PALETA not in no.rgb_calls
+        assert PADRAO_DA_PALETA not in no.player_calls
+
+    @pytest.mark.parametrize("valor", ["game", "unknown"])
+    def test_a_paleta_do_jogo_chega(self, valor: str) -> None:
+        """D-0211: com o jogo na autoridade, a paleta e o número dele vencem o perfil."""
+        ctl, no, _ = _controle_com_perfil(_Autoridade(valor))
+
+        ctl.set_game_output_for(MAC_1, led=COR_DA_PALETA, player_leds=PADRAO_DA_PALETA)
+
+        assert ctl._retained_game_outputs == {}
+        assert COR_DA_PALETA in no.rgb_calls
+        assert PADRAO_DA_PALETA in no.player_calls
+        with ctl._io_lock:
+            merged = ctl._merged_desired_for_key(MAC_1)
+        assert (merged.led, merged.player_leds) == (COR_DA_PALETA, PADRAO_DA_PALETA)
 
     def test_o_gatilho_da_cor_pinta_o_perfil_depois_do_replay(self) -> None:
         """O que o plástico recebe pelo rádio sai do mesmo merge: o `0x31` do"""
@@ -215,12 +238,9 @@ class TestOJournalDizOValorEAAutoridade:
         assert len(retidos) == 1
         assert retidos[0]["uniq"] == UNIQ_1
         assert retidos[0]["cor"] == COR_RETIDA
-        assert retidos[0]["players"] is None
+        assert retidos[0]["players"] == PADRAO_DA_PALETA
         assert retidos[0]["autoridade"] == "daemon"
-        numerados = _eventos(registros, "game_output_recusado_o_hefesto_numera")
-        assert len(numerados) == 1
-        assert numerados[0]["players"] == PADRAO_DA_PALETA
-        assert numerados[0]["autoridade"] == "daemon"
+        assert not _eventos(registros, "game_output_recusado_o_hefesto_numera")
 
     def test_o_descarte_na_abertura_diz_o_que_foi_descartado(self) -> None:
         autoridade = _Autoridade("daemon")
@@ -234,9 +254,9 @@ class TestOJournalDizOValorEAAutoridade:
         descartes = _eventos(registros, "game_output_retido_descartado_na_abertura")
         assert len(descartes) == 1
         assert descartes[0]["uniq"] == UNIQ_1
-        assert descartes[0]["campos"] == ["led"]
+        assert descartes[0]["campos"] == ["led", "player_leds"]
         assert descartes[0]["cor"] == COR_RETIDA
-        assert descartes[0]["players"] is None
+        assert descartes[0]["players"] == PADRAO_DA_PALETA
         assert descartes[0]["autoridade"] == "game"
         assert not _eventos(registros, "game_output_replicado"), (
             "o replay voltou a entregar o retido como réplica de jogo"
@@ -251,14 +271,14 @@ class TestOJournalDizOValorEAAutoridade:
             ctl.set_game_output_for(MAC_1, player_leds=PADRAO_DA_PALETA)
 
         replicas = _eventos(registros, "game_output_replicado")
-        assert [r["campos"] for r in replicas] == [["led"]], (
+        assert [r["campos"] for r in replicas] == [["led"], ["player_leds"]], (
             "1x por categoria por sessão — sem inundar o journal a cada cor"
         )
         assert replicas[0]["cor"] == COR_DO_JOGO
         assert replicas[0]["players"] is None
         assert replicas[0]["autoridade"] == "game"
-        numerados = _eventos(registros, "game_output_recusado_o_hefesto_numera")
-        assert [r["players"] for r in numerados] == [PADRAO_DA_PALETA]
+        assert replicas[1]["players"] == PADRAO_DA_PALETA
+        assert not _eventos(registros, "game_output_recusado_o_hefesto_numera")
 
     def test_a_sessao_nova_volta_a_dizer_a_primeira_replica(self) -> None:
         ctl, _no, _ = _controle_com_perfil(_Autoridade("game"))
@@ -293,7 +313,7 @@ class TestOJournalDizOValorEAAutoridade:
         assert len(fechados) == 1
         assert fechados[0]["uniq"] == UNIQ_1
         assert fechados[0]["cor"] == COR_RETIDA
-        assert fechados[0]["players"] is None
+        assert fechados[0]["players"] == PADRAO_DA_PALETA
         assert fechados[0]["autoridade"] == "daemon"
         assert ctl._retained_game_outputs == {}
 
@@ -381,7 +401,10 @@ class TestOPrecoPeloVpad:
 
         leituras.append(_report_de_luz(COR_RETIDA, PADRAO_DA_PALETA))
         pad.pump_ff()
-        assert ctl._retained_game_outputs[UNIQ_1] == {"led": COR_RETIDA}
+        assert ctl._retained_game_outputs[UNIQ_1] == {
+            "led": COR_RETIDA,
+            "player_leds": PADRAO_DA_PALETA,
+        }
 
         autoridade.valor = "game"
         ctl.replay_retained_game_outputs()

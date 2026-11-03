@@ -593,15 +593,17 @@ def test_a_dica_do_jogador_nao_diz_que_o_jogo_manda_no_numero() -> None:
 
 
 def test_o_segundo_da_dica_e_a_conta_da_vigia() -> None:
-    """A dica promete UM segundo, e a promessa é a conta do dono."""
+    """A dica promete UM segundo, e a promessa é a conta do dono.
+
+    Nota de 03/11/2026: o veto do número (D-2309-O-HEFESTO-MANDA-NO-NUMERO) caducou pela
+    D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO; a vigia reafirma o merge, e o número que volta é o do
+    Hefesto fora de jogo e o do jogo com a autoridade nele.
+    """
     import math
 
     from hefesto_dualsense4unix.core import escritor_cru
-    from hefesto_dualsense4unix.core.backend_pydualsense import numeracao_do_jogo
 
     passo = escritor_cru.PASSO_DA_VIGIA_S
     reescrita = math.ceil(escritor_cru.INTERVALO_DA_REAFIRMACAO_S / passo) * passo
     assert reescrita <= 1.0, (
         f"a vigia reescreve a cada {reescrita} s e a dica promete um segundo")
-    assert "player_leds" in numeracao_do_jogo(
-        {"player_leds": (True, False, False, False, False)})

@@ -496,23 +496,27 @@ class TestOsBuracosDaPrimeiraVolta:
 
         assert ctl.resolved_led_for(UNIQS[0]) == player_slot_color(1)
 
-    def test_a_paleta_de_jogador_do_sdl_nao_pinta_por_cima_da_cor_do_usuario(
+    def test_a_paleta_de_jogador_do_sdl_pinta_por_cima_com_o_jogo_na_autoridade(
         self, tmp_path: Path
     ) -> None:
-        """O número do jogador é do Hefesto: o ``(0, 64, 0)`` da paleta do SDL não pinta.
+        """O ``(0, 64, 0)`` da paleta do SDL é saída do jogo, e com o jogo na autoridade pinta.
 
         A regra de 16/09 («meu perfil manda») foi revogada em 03/10/2026: a cor
         que o jogo pinta vence a do perfil (``test_o_jogo_manda_e_na_ausencia_o_perfil_ganha``).
-        A paleta de jogador do SDL que a Steam manda não é cor do jogo, é número,
-        e segue recusada (``numeracao_do_jogo``).
+        Nota de 03/11/2026: a recusa da paleta caiu com a D-2309-O-HEFESTO-MANDA-NO-NUMERO,
+        que caducou pela D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO; fora de jogo a paleta fica retida.
         """
         _s, ctl, _n = _mesa_de_quatro(tmp_path)
-        ctl.set_game_authority_provider(lambda: "game")
+        autoridade = ["daemon"]
+        ctl.set_game_authority_provider(lambda: autoridade[0])
         antes = ctl.resolved_led_for(UNIQS[1])
 
         assert ctl.set_game_output_for(MACS[1], led=(0, 64, 0)) is True
-
         assert ctl.resolved_led_for(UNIQS[1]) == antes
+
+        autoridade[0] = "game"
+        assert ctl.set_game_output_for(MACS[1], led=(0, 64, 0)) is True
+        assert ctl.resolved_led_for(UNIQS[1]) == (0, 64, 0)
 
 
 class TestARecusaComAMesaCheia:

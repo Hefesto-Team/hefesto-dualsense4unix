@@ -753,9 +753,9 @@ def dica_da_luz(nome: str, via: str, recado: str) -> str:
 
     A frase do co-op saiu (O-CO-OP-LOCAL-SAI-01, 25/09/2026, D-2409-O-CO-OP-LOCAL-SAI): tratava o
     co-op como modo que se liga, mas o Hefesto dá um controle virtual a cada jogador sempre e numera
-    as lâmpadas (D-2309-O-HEFESTO-MANDA-NO-NUMERO); e o que explicava (escolher desenho à mão não
-    adianta) perdeu o assunto em 07/09, quando a botoeira saiu. **A dica é a mesma com um jogador ou
-    quatro**; régua: `tests/unit/test_o_co_op_local_saiu.py`.
+    as lâmpadas até o jogo numerar (D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO); e o que explicava (escolher
+    desenho à mão não adianta) perdeu o assunto em 07/09, quando a botoeira saiu. **A dica é a mesma
+    com um jogador ou quatro**; régua: `tests/unit/test_o_co_op_local_saiu.py`.
 
     :param nome: o modelo VIVO, o que a mesa sabe, nunca o do desenho.
     :param via: `USB`/`BT` de agora; `—` ou vazio some da frase (um travessão entre parênteses não

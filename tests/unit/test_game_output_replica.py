@@ -76,7 +76,11 @@ class TestCamadaGameNoMerge:
         assert ctl._merged_desired_for_key(MAC_1).led == (0, 255, 0)
 
     def test_merge_por_campo_game_parcial_herda_o_resto(self) -> None:
-        """GAME só com player_leds: o número é RECUSADO e nada muda embaixo."""
+        """GAME só com player_leds: o número do jogo vence e a cor vem de baixo.
+
+        Nota de 03/11/2026: dizia «o número é RECUSADO» (D-2309-O-HEFESTO-MANDA-NO-NUMERO), que
+        caducou pela D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO.
+        """
         ctl = _ctl_com(_fake_handle(), _FakeNode())
         ctl._desired_default.led = (10, 20, 30)
 
@@ -84,8 +88,7 @@ class TestCamadaGameNoMerge:
 
         merged = ctl._merged_desired_for_key(MAC_1)
         assert merged.led == (10, 20, 30)
-        assert merged.player_leds is None
-        assert UNIQ_1 not in ctl._game_output_by_uniq
+        assert merged.player_leds == (True, False, False, False, True)
 
     def test_escreve_no_hardware_pela_rota_sysfs(self) -> None:
         node = _FakeNode()
@@ -96,7 +99,7 @@ class TestCamadaGameNoMerge:
         )
 
         assert node.rgb_calls == [(1, 2, 3)]
-        assert node.player_calls == []
+        assert node.player_calls == [(False, True, False, False, False)]
 
     def test_reassert_reafirm_a_cor_do_jogo_nao_a_paleta(self) -> None:
         """O reassert periódico (reconnect_loop) durante a sessão reafirma a"""
@@ -198,7 +201,7 @@ class TestFimDaSessao:
 
         assert node.invalidated == 1
         assert node.rgb_calls == [(0, 0, 153)]
-        assert node.player_calls == []
+        assert node.player_calls == [(True, False, False, False, False)]
         assert ctl._game_output_by_uniq == {}
 
     def test_trigger_volta_ao_perfil_quando_ha_perfil(self) -> None:

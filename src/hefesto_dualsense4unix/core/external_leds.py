@@ -352,14 +352,92 @@ def apply_player_number(
     return False
 
 
+def hidraw_do_uniq(uniq: str | None) -> str | None:
+    """O ``/dev/hidrawN`` do aparelho cujo ``HID_UNIQ`` normalizado é ``uniq``, lido no sysfs."""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    alvo = norm_mac(uniq)
+    if not alvo:
+        return None
+    for uevent in sorted(glob.glob(f"{RAIZ_HIDRAW}/hidraw*/device/uevent")):
+        try:
+            with open(uevent, encoding="ascii", errors="replace") as fh:
+                linhas = fh.read().splitlines()
+        except OSError:
+            continue
+        for linha in linhas:
+            if linha.startswith("HID_UNIQ=") and norm_mac(linha[9:]) == alvo:
+                return "/dev/" + os.path.basename(os.path.dirname(os.path.dirname(uevent)))
+    return None
+
+
+def luzes_do_externo(hidraw_dev: str | None, leds_root: str | None = None) -> list[str]:
+    """Os ``brightness`` que mostram o número no controle de fora, no modo em que ele está."""
+    root = leds_root if leds_root is not None else LEDS_ROOT
+    kind, ident = resolve_external_leds(hidraw_dev, root)
+    if kind == "nintendo" and ident:
+        verdes = [
+            f"{root}/{ident}:green:player-{i}/brightness"
+            for i in range(1, _MAX_PLAYER_LEDS + 1)
+        ]
+        azul = _blue_node(root, ident)
+        return [p for p in (*verdes, azul) if os.path.exists(p)]
+    if kind == "ds4" and ident:
+        cores = [f"{root}/{ident}:{c}/brightness" for c in ("red", "green", "blue", "global")]
+        return [p for p in cores if os.path.exists(p)]
+    return []
+
+
+def retrato_das_luzes(caminhos: list[str]) -> dict[str, int]:
+    """O valor de cada ``brightness`` agora, para devolver no fim da sessão do jogo."""
+    retrato: dict[str, int] = {}
+    for caminho in caminhos:
+        try:
+            with open(caminho, encoding="ascii") as fh:
+                retrato[caminho] = int(fh.read().strip() or 0)
+        except (OSError, ValueError):
+            continue
+    return retrato
+
+
+def devolver_as_luzes(retrato: dict[str, int]) -> bool:
+    """Escreve de volta o retrato tirado antes de o jogo acender o número."""
+    escreveu = False
+    for caminho, valor in retrato.items():
+        escreveu = _set_brightness(caminho, valor) or escreveu
+    return escreveu
+
+
+def acender_o_numero_do_jogo(
+    hidraw_dev: str | None, numero: int, leds_root: str | None = None
+) -> bool:
+    """Mostra no controle de fora o número que o jogo acendeu no pad virtual; 0 apaga."""
+    if numero >= 1:
+        return apply_player_number(hidraw_dev, numero, leds_root)
+    root = leds_root if leds_root is not None else LEDS_ROOT
+    kind, _ident = resolve_external_leds(hidraw_dev, root)
+    apagar = luzes_do_externo(hidraw_dev, root)
+    if kind == "ds4":
+        apagar = [p for p in apagar if not p.endswith(":global/brightness")]
+    escreveu = False
+    for caminho in apagar:
+        escreveu = _set_brightness(caminho, 0) or escreveu
+    return escreveu
+
+
 __all__ = [
     "LEDS_ROOT",
+    "acender_o_numero_do_jogo",
     "apply_player_number",
     "build_enable_imu_packet",
+    "devolver_as_luzes",
     "enable_imu",
     "hid_instance_for_hidraw",
+    "hidraw_do_uniq",
+    "luzes_do_externo",
     "read_player_pattern",
     "resolve_external_leds",
+    "retrato_das_luzes",
     "write_lightbar_slot",
     "write_player_number",
 ]

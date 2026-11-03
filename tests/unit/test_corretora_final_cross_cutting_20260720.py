@@ -118,8 +118,9 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
         )
 
         assert resultado["status"] == "ok"
-        assert node.player_calls[-1] == (True, False, False, False, False)
-        assert (False, False, True, False, False) not in node.player_calls
+        assert node.player_calls[-1] == (False, False, True, False, False), (
+            "D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO: o número do jogo vence na hora, como a cor"
+        )
 
     @pytest.mark.asyncio
     async def test_sem_jogo_a_cor_manual_gruda_normalmente(self) -> None:

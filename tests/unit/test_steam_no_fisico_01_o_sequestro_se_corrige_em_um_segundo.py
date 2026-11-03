@@ -401,17 +401,18 @@ class TestOQueSaiNoFio:
         assert radio.escritos == []
         assert no.rgb_calls == [COR_DO_NUMERO_2]
 
-    def test_o_numero_do_jogo_nao_volta_pela_reescrita(self) -> None:
-        """As duas obrigações juntas: o jogo numerou o vpad, a vigia reescreve —"""
+    def test_a_reescrita_reafirma_o_que_o_jogo_pintou(self) -> None:
+        """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO: com o jogo na autoridade, vale o que ele pintou."""
         ctl, radio, _ = _backend(nativo=False)
         ctl.set_game_authority_provider(lambda: "game")
-        ctl.set_game_output_for(MAC_1, led=(64, 0, 0), player_leds=(True, True, False, True, True))
+        do_jogo = (True, True, False, True, True)
+        ctl.set_game_output_for(MAC_1, led=(64, 0, 0), player_leds=do_jogo)
 
         ctl.reafirmar_barra_e_numero([UNIQ_1])
 
         common = radio.escritos[-1][3:50]
-        assert common[COMMON_PLAYER_LEDS] == mascara_de_player_leds(NUMERO_1)
-        assert tuple(common[COMMON_LIGHTBAR_R : COMMON_LIGHTBAR_B + 1]) == COR_DO_NUMERO_1
+        assert common[COMMON_PLAYER_LEDS] == mascara_de_player_leds(do_jogo)
+        assert tuple(common[COMMON_LIGHTBAR_R : COMMON_LIGHTBAR_B + 1]) == (64, 0, 0)
 
     def test_nao_conta_como_pintura(self) -> None:
         """Se contasse, cada reescrita armaria o gatilho do fim da sequência."""
