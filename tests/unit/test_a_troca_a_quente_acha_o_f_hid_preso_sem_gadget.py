@@ -7,8 +7,10 @@ do install rodam com `/sys/module`, `/proc` e a pasta de gadgets de mentira, e `
 `systemctl` de mentira que anotam o que foi pedido: nada toca o kernel. O do daemon usa a
 mesa do pad em USB das outras réguas.
 
-AS MORDIDAS: tirar o `_usb_f_hid_esperar_o_processo` e o `_usb_f_hid_esperar_o_refcnt`
-reprova `test_o_hidg_do_daemon_que_sai_solta_no_prazo_e_troca`; tirar o
+AS MORDIDAS: tirar o `_usb_f_hid_esperar_o_refcnt` reprova
+`test_o_hidg_do_daemon_que_sai_solta_no_prazo_e_troca` (o `refcnt` cai ~0,6 s depois de o
+processo sair, como na medida); tirar o `_usb_f_hid_esperar_o_processo` reprova
+`test_o_daemon_que_demora_a_sair_ainda_troca_e_o_aviso_diz`; tirar o
 `_usb_f_hid_desmontar_o_que_sobrou` reprova `test_a_funcao_que_sobrou_sai_e_troca`;
 tirar o `_usb_f_hid_quem_segura` do aviso reprova
 `test_quem_segura_o_hidg_impede_a_troca_e_o_aviso_diz_quem`; tirar o `_largar_o_hidg`
@@ -65,8 +67,12 @@ def _gadget_que_sobrou(raiz: Path, nome: str) -> Path:
     return g
 
 
-def _bin(tmp_path: Path, sys_module: Path, proc: Path, *, ativo: bool, pid: int) -> Path:
-    """Os dublês: o `stop` volta na hora e o processo sai depois, como o daemon que sai.
+def _bin(
+    tmp_path: Path, sys_module: Path, proc: Path, *, ativo: bool, pid: int,
+    sai_em: float, solta_em: float,
+) -> Path:
+    """Os dublês: o `stop` volta na hora, o processo sai em ``sai_em`` e o `refcnt` cai em
+    ``solta_em`` (na medida de 03/11, o `hidg0` sem dono às 46,5 e o `refcnt` 0 às 47,1).
 
     O `sudo` executa o `rmdir`, o `rm` e o `tee` na árvore de mentira, como o configfs:
     o grupo vazio de dentro sai junto com o de fora, e o `rmdir` da função solta
@@ -96,8 +102,8 @@ def _bin(tmp_path: Path, sys_module: Path, proc: Path, *, ativo: bool, pid: int)
         'case "$*" in\n'
         f"  *is-active*) exit {0 if ativo else 3};;\n"
         f"  *MainPID*) echo {pid};;\n"
-        f'  *stop*) (sleep 1.2; rm -rf "{proc}/{pid}"; echo 0 > "{modulo}/refcnt") '
-        ">/dev/null 2>&1 &;;\n"
+        f'  *stop*) (sleep {sai_em}; rm -rf "{proc}/{pid}"; sleep {round(solta_em - sai_em, 3)};'
+        f' echo 0 > "{modulo}/refcnt") >/dev/null 2>&1 &;;\n'
         "esac\n"
         "exit 0\n",
         encoding="utf-8",
@@ -115,6 +121,8 @@ def _trocar(
     pid: int = 4242,
     segura: tuple[tuple[int, str], ...] = (),
     sobrou: tuple[str, ...] = (),
+    sai_em: float = 1.2,
+    solta_em: float = 1.8,
 ) -> tuple[str, list[str], Path]:
     sys_module = _sys_module(tmp_path, refcnt)
     proc = tmp_path / "proc"
@@ -126,7 +134,9 @@ def _trocar(
     gadgets.mkdir()
     for nome in sobrou:
         _gadget_que_sobrou(gadgets, nome)
-    bin_ = _bin(tmp_path, sys_module, proc, ativo=ativo, pid=pid)
+    bin_ = _bin(
+        tmp_path, sys_module, proc, ativo=ativo, pid=pid, sai_em=sai_em, solta_em=solta_em
+    )
     script = "\n".join(
         (
             "set -euo pipefail",
@@ -168,6 +178,16 @@ def test_o_hidg_do_daemon_que_sai_solta_no_prazo_e_troca(tmp_path: Path) -> None
     assert chamadas.index("sudo modprobe usb_f_hid") < chamadas.index(subir), chamadas
     assert "trocado a quente" in saida, saida
     assert "PENDENTE: \n" in saida or saida.rstrip().endswith("PENDENTE:"), saida
+
+
+def test_o_daemon_que_demora_a_sair_ainda_troca_e_o_aviso_diz(tmp_path: Path) -> None:
+    """O processo passa do prazo para sair: o aviso diz o PID, e a troca espera o `refcnt`."""
+    saida, chamadas, _ = _trocar(
+        tmp_path, refcnt=1, ativo=True, segura=((4242, "python3"),), sai_em=4.0, solta_em=4.6
+    )
+    assert "o daemon parado (PID 4242) não saiu em 3 s" in saida, saida
+    assert "sudo modprobe -r usb_f_hid" in chamadas, saida
+    assert "trocado a quente" in saida, saida
 
 
 def test_a_funcao_que_sobrou_sai_e_troca(tmp_path: Path) -> None:
