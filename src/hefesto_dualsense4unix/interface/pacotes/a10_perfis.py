@@ -1605,23 +1605,6 @@ def _sem_o_ajuste_do_estilo(controllers: Any, *, gatilho: bool,
     return saida, largaram
 
 
-def _com_o_estilo_nas_listas(dele: Any) -> Any:
-    """O controle com «Do estilo» nas listas de vibração que ninguém escolheu.
-
-    Escolher o estilo em Perfis é um ato de definir: a forma do toque e o padrão dos motores que
-    estão sem escolha passam a seguir o estilo, e uma lista em que a pessoa escolheu algo (o «—»
-    inclusive) fica como está. Sem isto, o estilo escolhido deixaria as duas listas no «—».
-    """
-    from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
-
-    rumble = dele.rumble if dele.rumble is not None else ControllerRumbleOverride()
-    sem_escolha = {campo: "do_estilo" for campo in ("efeito_haptico", "efeito_imersao")
-                   if getattr(rumble, campo) is None}
-    if not sem_escolha:
-        return dele
-    return dele.model_copy(update={"rumble": rumble.model_copy(update=sem_escolha)})
-
-
 def _tabela_do_molde(chave: str | None) -> dict[str, str]:
     """A tabela de botões de um molde de estilo (`estilos_de_jogo.MOLDES`); `{}` sem molde."""
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import MOLDES
@@ -1793,12 +1776,11 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
             lightbar_brightness=estilo.brilho,
             lightbar_para_o_numero=jogador,
             **_efeito_da_luz_do_estilo(invisivel, cor))
-        atuais[uniq] = _com_o_estilo_nas_listas(dele.model_copy(
-            update={"leds": com_o_brilho_das_luzes_de(dele.leds, novos)}))
+        atuais[uniq] = dele.model_copy(
+            update={"leds": com_o_brilho_das_luzes_de(dele.leds, novos)})
         pintados += 1
-    nas_listas = {u: _com_o_estilo_nas_listas(dele) for u, dele in atuais.items()}
-    if pintados or largaram or nas_listas != atuais:
-        mudanca["controllers"] = nas_listas
+    if pintados or largaram:
+        mudanca["controllers"] = atuais
     _sai_do_nativo(prof, mudanca)
     return prof.model_copy(update=mudanca), pintados
 

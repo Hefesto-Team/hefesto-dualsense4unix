@@ -99,11 +99,14 @@ POR_ESTILO: dict[str, str] = {
 def padrao_que_vale(escolha: object, estilo: object) -> str | None:
     """O padrão que toca de verdade, ou ``None`` quando os motores deste controle não tocam nada.
 
-    Sem escolha vale o «—», que cala; «Do estilo» toca o do estilo, e nenhum quando o estilo não
-    pede. A Bateria longa não troca o padrão: só baixa a força, e quem baixa é o chamador.
+    A escolha vale por ``formas_de_haptica.escolha_que_vale``. O «—» cala; «Do estilo» toca o do
+    estilo, e nenhum quando o estilo não pede. A Bateria longa não troca o padrão: só baixa a
+    força, e quem baixa é o chamador.
     """
-    escolhido = escolha_valida(escolha)
-    if escolhido is None or escolhido == SEM_EFEITO:
+    from hefesto_dualsense4unix.profiles.formas_de_haptica import escolha_que_vale
+
+    escolhido = escolha_que_vale(escolha, estilo, ESCOLHAS)
+    if escolhido == SEM_EFEITO:
         return None
     if escolhido != DO_ESTILO:
         return escolhido

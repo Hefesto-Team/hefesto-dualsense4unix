@@ -110,16 +110,15 @@ def teto_da_barra() -> int:
 
 
 def _escolha_da_lista(overrides: dict[str, Any], uniq: str, campo: str,
-                      lista: tuple[str, ...]) -> str:
-    """A escolha que o perfil guarda para ESTE controle numa das duas listas.
+                      lista: tuple[str, ...], estilo: object) -> str:
+    """O que uma das duas listas vale para ESTE controle, pelo dono (`escolha_que_vale`).
 
-    Sem escolha, ou com texto que a lista não conhece, vale o «—»: o controle que ninguém
-    escolheu não toca efeito do Hefesto. «Do estilo» é uma escolha, e fica guardada.
+    A escolha guardada vale como está; sem escolha, «Do estilo» num perfil com estilo e «—» sem.
     """
     dele = overrides.get(_chave_no_perfil(uniq)) or overrides.get(uniq) or {}
     seu = dele.get("rumble") if isinstance(dele, dict) else None
     valor = seu.get(campo) if isinstance(seu, dict) else None
-    return valor if isinstance(valor, str) and valor in lista else _sem_efeito.VALOR
+    return _formas.escolha_que_vale(valor, estilo, lista)
 
 
 def _chave_no_perfil(uniq: str) -> str:
@@ -574,7 +573,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             (CAMPO_DO_EFEITO_HAPTICO, CAMPO_DA_DICA_DO_HAPTICO, _formas.ESCOLHAS, _formas.DICAS),
             (CAMPO_DO_EFEITO_IMERSAO, CAMPO_DA_DICA_DA_IMERSAO, _padroes.ESCOLHAS, _padroes.DICAS),
         ):
-            escolha = _escolha_da_lista(overrides, uniq, CHAVE_DO_PERFIL[campo], lista)
+            escolha = _escolha_da_lista(
+                overrides, uniq, CHAVE_DO_PERFIL[campo], lista, perfil_ativo.get("estilo"))
             plano[campo] = escolha
             plano[dica] = textos[escolha]
         entrada = ctx.por_uniq(uniq)
@@ -1462,7 +1462,7 @@ def _gravar_a_escolha(o: dict[str, Any], p: Any, campo: str, lista: tuple[str, .
     """Grava a escolha de uma das duas listas pelo `rumble.motores.set`, no controle do clique.
 
     Valor que a lista não tem é recusado aqui, antes de ir ao daemon; ele recusa de novo.
-    «Do estilo» e o «—» ficam guardados como escolhas; só a chave ausente é o «—» sem escolha.
+    «Do estilo» e o «—» ficam guardados como escolhas; a chave ausente segue o estilo do perfil.
     """
     uniq = _uniq(o)
     if not uniq:
@@ -1535,9 +1535,10 @@ def _padrao_escolhido(ctx: Contexto, uniq: str) -> str:
 
     «Do estilo» e o «—» não são um padrão: o «Testar» faz o sustentado de sempre.
     """
-    perfil = _perfil_ativo(ctx).get("controllers")
-    escolha = _escolha_da_lista(
-        perfil if isinstance(perfil, dict) else {}, uniq, "efeito_imersao", _padroes.ESCOLHAS)
+    ativo = _perfil_ativo(ctx)
+    perfil = ativo.get("controllers")
+    escolha = _escolha_da_lista(perfil if isinstance(perfil, dict) else {}, uniq,
+                                "efeito_imersao", _padroes.ESCOLHAS, ativo.get("estilo"))
     return escolha if escolha in _padroes.PADROES else ""
 
 

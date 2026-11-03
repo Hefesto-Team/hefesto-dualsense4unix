@@ -1,8 +1,8 @@
-"""O «—» é a primeira opção e o padrão de toda lista que ninguém escolheu (03/11/2026).
+"""O «—» é a primeira opção de toda lista, e o padrão da que ninguém escolheu num perfil sem estilo.
 
-Gatilhos e Vibração: o controle sem escolha mostra o «—» e não toca efeito do Hefesto; «Do estilo»
-é uma escolha guardada, a segunda opção. Escolher o estilo em Perfis grava «Do estilo» só nas
-listas de vibração sem escolha, e o «—» que a pessoa pôs de propósito fica.
+Gatilhos e Vibração: num perfil sem estilo, o controle sem escolha mostra o «—» e não toca efeito
+do Hefesto; «Do estilo» é uma escolha guardada, a segunda opção. Num perfil com estilo a lista sem
+escolha vale «Do estilo» (D-0311-A-LISTA-SEM-ESCOLHA-SEGUE-O-ESTILO-DO-PERFIL, no teste da sprint).
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as pv
 from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos, a05_vibracao, a10_perfis
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.profiles import schema
-from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, ControllerRumbleOverride
+from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
 
 UNIQ = "aa:bb:cc:00:00:11"
 CAMPOS = (("efeito_haptico", formas.ESCOLHAS), ("efeito_imersao", pv.ESCOLHAS))
@@ -34,19 +34,19 @@ def test_a_lista_do_gatilho_abre_no_traco_e_depois_no_do_estilo() -> None:
 @pytest.mark.parametrize(("campo", "lista"), CAMPOS)
 def test_a_lista_de_vibracao_sem_escolha_mostra_o_traco(campo: str, lista: tuple[str, ...]) -> None:
     for sem in ({}, {UNIQ: {}}, {UNIQ: {"rumble": {}}}, {UNIQ: {"rumble": {campo: "xpto"}}}):
-        assert a05_vibracao._escolha_da_lista(sem, UNIQ, campo, lista) == "sem_efeito"
+        assert a05_vibracao._escolha_da_lista(sem, UNIQ, campo, lista, None) == "sem_efeito"
 
 
 @pytest.mark.parametrize(("campo", "lista"), CAMPOS)
 def test_do_estilo_guardado_chega_a_lista(campo: str, lista: tuple[str, ...]) -> None:
     guardado = {UNIQ: {"rumble": {campo: "do_estilo"}}}
-    assert a05_vibracao._escolha_da_lista(guardado, UNIQ, campo, lista) == "do_estilo"
+    assert a05_vibracao._escolha_da_lista(guardado, UNIQ, campo, lista, None) == "do_estilo"
 
 
 def test_o_controle_sem_escolha_nao_toca_forma_nem_padrao() -> None:
-    assert formas.forma_que_vale(None, "fps") is None
+    assert formas.forma_que_vale(None, None) is None
     assert formas.forma_que_vale(formas.SEM_EFEITO, "fps") is None
-    assert pv.padrao_que_vale(None, "fps") is None
+    assert pv.padrao_que_vale(None, None) is None
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "fps") is None
 
 
@@ -61,32 +61,11 @@ def test_do_estilo_sem_estilo_no_perfil_nao_toca_padrao() -> None:
     assert pv.padrao_que_vale(pv.DO_ESTILO, None) is None
 
 
-def _com(rumble: ControllerRumbleOverride | None) -> ControllerOverrides:
-    return ControllerOverrides(rumble=rumble)
-
-
-def test_escolher_o_estilo_grava_do_estilo_so_nas_listas_sem_escolha() -> None:
-    for sem in (None, ControllerRumbleOverride()):
-        gravado = a10_perfis._com_o_estilo_nas_listas(_com(sem)).rumble
-        assert gravado is not None
-        assert (gravado.efeito_haptico, gravado.efeito_imersao) == ("do_estilo", "do_estilo")
-
-
-def test_escolher_o_estilo_respeita_o_traco_e_a_forma_ja_escolhida() -> None:
-    rumble = ControllerRumbleOverride(efeito_haptico="sem_efeito", efeito_imersao="batida")
-    assert a10_perfis._com_o_estilo_nas_listas(_com(rumble)).rumble == rumble
-    meio = ControllerRumbleOverride(efeito_haptico="estalo", motor_forte_pct=40)
-    gravado = a10_perfis._com_o_estilo_nas_listas(_com(meio)).rumble
-    assert gravado is not None
-    assert (gravado.efeito_haptico, gravado.efeito_imersao, gravado.motor_forte_pct) == (
-        "estalo", "do_estilo", 40)
-
-
-def test_o_perfil_antigo_sem_as_chaves_carrega_no_traco() -> None:
+def test_o_perfil_antigo_sem_as_chaves_e_sem_estilo_carrega_no_traco() -> None:
     antigo = ControllerRumbleOverride()
     assert antigo.efeito_haptico is None and antigo.efeito_imersao is None
-    assert formas.forma_que_vale(antigo.efeito_haptico, "fps") is None
-    assert pv.padrao_que_vale(antigo.efeito_imersao, "fps") is None
+    assert formas.forma_que_vale(antigo.efeito_haptico, None) is None
+    assert pv.padrao_que_vale(antigo.efeito_imersao, None) is None
 
 
 def _toques_do_tiro(escolha: str | None) -> list[str]:
@@ -112,7 +91,7 @@ def test_o_tiro_so_toca_no_controle_que_escolheu() -> None:
 
 
 @pytest.mark.parametrize("jogadores", [1, 2, 3, 4])
-def test_escolher_o_estilo_em_perfis_grava_do_estilo_em_cada_lugar(jogadores: int) -> None:
+def test_escolher_o_estilo_em_perfis_poe_do_estilo_em_cada_lugar(jogadores: int) -> None:
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -120,7 +99,9 @@ def test_escolher_o_estilo_em_perfis_grava_do_estilo_em_cada_lugar(jogadores: in
     mesa = [{"uniq": u, "jogador": n} for n, u in enumerate(uniqs, start=1)]
     novo, _ = a10_perfis._com_o_estilo(Profile(name="Lista", match=MatchAny()), POR_CHAVE["fps"],
                                        mesa)
+    guardados = novo.model_dump(mode="json")["controllers"]
     for uniq in uniqs:
-        rumble = novo.controllers[uniq].rumble
-        assert rumble is not None
-        assert (rumble.efeito_haptico, rumble.efeito_imersao) == ("do_estilo", "do_estilo")
+        assert "efeito_haptico" not in (guardados[uniq].get("rumble") or {})
+        for campo, lista in CAMPOS:
+            assert a05_vibracao._escolha_da_lista(
+                guardados, uniq, campo, lista, novo.estilo) == "do_estilo"

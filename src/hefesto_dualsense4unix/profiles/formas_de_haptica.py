@@ -179,10 +179,37 @@ CAUDA_SOBE_MS = 20
 def escolha_valida(valor: object) -> str | None:
     """A escolha do perfil como chave conhecida; ``None`` quando não há escolha ou não se lê.
 
-    ``None`` quer dizer «—»: o controle que ninguém escolheu não toca efeito do Hefesto.
-    «Do estilo» é uma escolha, e vem como ``DO_ESTILO``.
+    ``None`` é a lista que ninguém escolheu, e :func:`escolha_que_vale` diz o que vale.
     """
     return valor if isinstance(valor, str) and valor in ESCOLHAS else None
+
+
+def tem_estilo(estilo: object) -> bool:
+    """O perfil tem um estilo que pede efeito? O Nativo, o Personalizado e a chave que não se
+    conhece são como o perfil sem estilo: a mão da pessoa manda."""
+    if not isinstance(estilo, str) or not estilo:
+        return False
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import (
+        POR_CHAVE,
+        SEM_COR,
+        chave_do_catalogo,
+    )
+
+    chave = chave_do_catalogo(estilo)
+    return chave in POR_CHAVE and chave not in SEM_COR
+
+
+def escolha_que_vale(valor: object, estilo: object,
+                     escolhas: tuple[str, ...] = ESCOLHAS) -> str:
+    """O que uma lista de efeito do controle vale: a escolha guardada, «—» e «Do estilo» inclusive.
+
+    Sem escolha (ou com texto que a lista não conhece), vale «Do estilo» num perfil com estilo e
+    «—» num perfil sem. O dono único das três listas (gatilho, efeito háptico e padrão dos
+    motores), na tela e no daemon (D-0311-A-LISTA-SEM-ESCOLHA-SEGUE-O-ESTILO-DO-PERFIL).
+    """
+    if isinstance(valor, str) and valor in escolhas:
+        return valor
+    return DO_ESTILO if tem_estilo(estilo) else SEM_EFEITO
 
 
 def forma_do_estilo(estilo: object) -> str:
@@ -200,11 +227,11 @@ def forma_do_estilo(estilo: object) -> str:
 def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> str | None:
     """A forma que toca de verdade, ou ``None`` quando este controle não toca.
 
-    Sem escolha vale o «—»: nenhuma forma. «Do estilo» toca a que o estilo pede.
-    ``economia`` é a Bateria longa: Guarda, Aparo e Eco viram o Toque, e as contínuas calam.
+    A escolha vale por :func:`escolha_que_vale`. O «—» não toca; «Do estilo» toca a que o estilo
+    pede. ``economia`` é a Bateria longa: Guarda, Aparo e Eco viram o Toque, e as contínuas calam.
     """
-    chave = escolha_valida(escolha)
-    if chave is None or chave == SEM_EFEITO:
+    chave = escolha_que_vale(escolha, estilo)
+    if chave == SEM_EFEITO:
         return None
     if chave == DO_ESTILO:
         chave = forma_do_estilo(estilo)
@@ -557,9 +584,11 @@ __all__ = [
     "GeradorDoMotorDeEpoca",
     "amostras",
     "ciclos_do_timbre",
+    "escolha_que_vale",
     "escolha_valida",
     "forma_da_nota",
     "forma_do_estilo",
     "forma_que_vale",
+    "tem_estilo",
     "timbre_do_rumble",
 ]

@@ -43,6 +43,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.interface import a_chegada as _a_chegada
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
+from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
 from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 
 from . import LUGAR_VAZIO, Contexto, jogador_de, perfil, registrar
@@ -395,11 +396,10 @@ def _o_que_o_perfil_da(p: dict[str, Any] | None, disco: str) -> dict[str, Any]:
 
 
 def _a_escolha_e_do_estilo(p: dict[str, Any] | None, uniq: str, disco: str) -> bool:
-    """O lado daquele controle segue o estilo: há estilo, e nem o controle nem a sessão o escrevem.
-
-    No modo automático ESCRITO a tela segue no «—» (`_o_que_o_controle_recebe`).
-    """
-    if not p or not _estilo_do_perfil(p) or _o_modo_escrito_e_automatico(p):
+    """O lado daquele controle segue o estilo: há estilo (`_formas.tem_estilo`), e nem o controle
+    nem a sessão o escrevem. No modo automático ESCRITO a tela segue no «—»
+    (`_o_que_o_controle_recebe`)."""
+    if not p or not _formas.tem_estilo(_estilo_do_perfil(p)) or _o_modo_escrito_e_automatico(p):
         return False
     if _do_rascunho(uniq, disco):
         return False

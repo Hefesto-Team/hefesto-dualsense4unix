@@ -211,12 +211,12 @@ class TriggerConfig(BaseModel):
         return bool(self.params) and isinstance(self.params[0], list)
 
 
-MODO_DE_NASCIMENTO_DO_GATILHO = "Rigid"
-PARAMS_DE_NASCIMENTO_DO_GATILHO: list[int] = [5, 200]
+MODO_DE_NASCIMENTO_DO_GATILHO = "Off"
+PARAMS_DE_NASCIMENTO_DO_GATILHO: list[int] = []
 
 
 def _gatilho_de_nascimento() -> TriggerConfig:
-    """O gatilho com que um perfil sem opinião nasce. Um lugar só, dois lados."""
+    """O gatilho de um perfil sem opinião: o «—» (`Off`), nos dois lados. Um lugar só."""
     return TriggerConfig(
         mode=MODO_DE_NASCIMENTO_DO_GATILHO,
         params=list(PARAMS_DE_NASCIMENTO_DO_GATILHO),
@@ -2350,13 +2350,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "que é a borda certa.",
     ),
     "TriggersConfig.left": Nascimento(
-        NASCE_NO_ESQUEMA,
-        "NASCE RÍGIDO desde 20/09/2026 — a decisão de 16/09 e a única "
-        "das catorze que nascia muda de verdade. A razão da camada está em "
-        "`MODO_DE_NASCIMENTO_DO_GATILHO`.",
+        E_CONTRATO,
+        "Nasce no «—» (`Off`) desde 03/11/2026: o gatilho de perfil novo não resiste até alguém "
+        "escolher. De 20/09 a 03/11 nascia Rígido `[5, 200]`; o perfil gravado nesse tempo "
+        "guarda o gatilho escrito e não muda.",
     ),
     "TriggersConfig.right": Nascimento(
-        NASCE_NO_ESQUEMA, "Ver `TriggersConfig.left`; os dois lados, sempre juntos."
+        E_CONTRATO, "Ver `TriggersConfig.left`; os dois lados, sempre juntos."
     ),
     "LedsConfig.lightbar": Nascimento(
         NASCE_NO_LEITOR,
@@ -2575,14 +2575,14 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ControllerRumbleOverride.efeito_haptico": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` vale «—»: o controle que ninguém escolheu não toca forma do Hefesto. «Do estilo» "
-        "é uma escolha, e toca a forma que o estilo pede. Nenhuma forma nasce ligada sozinha.",
+        "`None` vale «Do estilo» num perfil com estilo e «—» num perfil sem "
+        "(`escolha_que_vale`). «—» e «Do estilo» guardados valem como escolhas.",
         dono="hefesto_dualsense4unix.profiles.formas_de_haptica:forma_que_vale",
     ),
     "ControllerRumbleOverride.efeito_imersao": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` vale «—»: o controle que ninguém escolheu não toca padrão do Hefesto. «Do estilo» "
-        "é uma escolha, e toca o padrão que o estilo pede. Nenhum padrão nasce ligado sozinho.",
+        "`None` vale «Do estilo» num perfil com estilo e «—» num perfil sem "
+        "(`formas_de_haptica.escolha_que_vale`). «—» e «Do estilo» guardados valem como escolhas.",
         dono="hefesto_dualsense4unix.daemon.subsystems.padroes_de_vibracao:padrao_que_vale",
     ),
     "ControllerMicOverride.muted": Nascimento(

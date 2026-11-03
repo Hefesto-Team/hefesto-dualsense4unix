@@ -331,8 +331,8 @@ def _escolhas_do_campo(
 def escolhas_do_perfil(perfil: Any) -> dict[str, str]:
     """A forma do toque que cada controle escolheu (``rumble.efeito_haptico``), por ``norm_mac``.
 
-    Só entra quem escolheu, «—» e «Do estilo» inclusive: o controle sem escolha não toca forma
-    nenhuma, como no «—». Escolha que não se lê também fica fora.
+    Só entra quem escolheu, «—» e «Do estilo» inclusive; escolha que não se lê também fica fora.
+    O controle fora daqui vale o que ``formas_de_haptica.escolha_que_vale`` diz pelo estilo.
     """
     return _escolhas_do_campo(perfil, "efeito_haptico", formas_de_haptica.escolha_valida)
 
@@ -934,9 +934,9 @@ class AtuadorDaHaptica:
             self._escolha_de(uniq), self._estilo_de(), bool(self._na_economia(uniq)))
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
-        escolha = formas_de_haptica.escolha_valida(self._escolha_de(evento.uniq))
-        if (escolha is None or escolha == formas_de_haptica.SEM_EFEITO
-                or escolha in formas_de_haptica.CONTINUAS):
+        escolha = formas_de_haptica.escolha_que_vale(
+            self._escolha_de(evento.uniq), self._estilo_de())
+        if escolha == formas_de_haptica.SEM_EFEITO or escolha in formas_de_haptica.CONTINUAS:
             return False
         do_estilo = escolha == formas_de_haptica.DO_ESTILO
         forma_do_estilo = formas_de_haptica.forma_do_estilo(self._estilo_de())
