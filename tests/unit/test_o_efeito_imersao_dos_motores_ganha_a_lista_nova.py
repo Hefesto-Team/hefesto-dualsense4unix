@@ -38,7 +38,7 @@ ESTILO_ACAO = "acao"  # (noqa-acento)
 def test_a_lista_final_e_a_da_sprint_sem_o_ronco() -> None:
     assert tuple(pv.PADROES) == ("batida", "onda", "tranco", "coice", "pancada_do_lado",
                                  "ressoar", "ricochete")
-    assert pv.ESCOLHAS == (pv.DO_ESTILO, pv.SEM_EFEITO, "tranco", "batida", "onda", "coice",
+    assert pv.ESCOLHAS == (pv.SEM_EFEITO, pv.DO_ESTILO, "tranco", "batida", "onda", "coice",
                            "pancada_do_lado", "ressoar", "ricochete")
     assert "ronco" not in pv.PADROES and "ronco" not in pv.ESCOLHAS
     assert set(pv.ROTULOS) == set(pv.PADROES)
@@ -73,14 +73,16 @@ def test_a_pancada_respeita_o_motor_escolhido(motores: str, esperado: tuple[int,
 def test_padrao_que_vale_segue_a_escolha_e_o_estilo_que_nao_pede_nenhum_fica_mudo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert pv.padrao_que_vale(None, "fps") == "coice"
+    assert pv.padrao_que_vale(pv.DO_ESTILO, "fps") == "coice"
+    assert pv.padrao_que_vale(None, "fps") is None
     assert pv.padrao_que_vale(pv.DO_ESTILO, "retro") is None
-    assert pv.padrao_que_vale(None, "corrida") is None
+    assert pv.padrao_que_vale(pv.DO_ESTILO, "corrida") is None
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "fps") is None
     assert pv.padrao_que_vale("onda", "fps") == "onda"
     assert pv.padrao_que_vale("trovao", "retro") is None
     monkeypatch.setitem(pv.POR_ESTILO, "retro", "tranco")
-    assert pv.padrao_que_vale(None, "retro") == "tranco"
+    assert pv.padrao_que_vale(None, "retro") is None
+    assert pv.padrao_que_vale(pv.DO_ESTILO, "retro") == "tranco"
     assert pv.padrao_que_vale("onda", "retro") == "onda"
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "retro") is None
 
@@ -474,7 +476,7 @@ def test_do_estilo_sem_efeito_e_ilegivel_nao_ligam_o_motor(escolha: str) -> None
 
 def test_os_padroes_do_perfil_saem_por_mac_normalizado() -> None:
     padroes = tv.padroes_do_perfil(_perfil(**{"AA:BB:CC:00:00:11": "coice", BRANCO: "do_estilo"}))
-    assert padroes == {norm_mac(AZUL): "coice"}
+    assert padroes == {norm_mac(AZUL): "coice", norm_mac(BRANCO): "do_estilo"}
 
 
 def _gatilhos(esq: str, dir_: str, modo: str = "personalizado") -> dict[str, Any]:

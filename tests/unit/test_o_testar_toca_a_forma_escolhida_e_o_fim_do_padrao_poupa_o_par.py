@@ -119,13 +119,15 @@ def test_a_volta_do_laco_emenda_no_tocador_de_verdade() -> None:
     tocador.parar()
 
 
-def test_sem_escolha_e_do_estilo_tocam_o_toque_do_que_o_jogo_faria(
+def test_do_estilo_toca_o_toque_do_que_o_jogo_faria_e_sem_escolha_nao_toca(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
     com_toque.mesa.volta(*_no_cabo_os_quatro(com_toque))
-    _escolher(monkeypatch, {})
+    _escolher(monkeypatch, {_QUATRO[0]: formas.DO_ESTILO})
     assert com_toque.sub.testar_a_haptica(_QUATRO[0], True)["forma"] == formas.TOQUE
     assert _toques(com_toque, _QUATRO[0]) == [formas.TOQUE]
+    sem = com_toque.sub.testar_a_haptica(_QUATRO[1], True)
+    assert sem["status"] == "sem_efeito" and "forma" not in sem
 
 
 def test_do_estilo_toca_a_forma_que_o_estilo_do_perfil_pede_como_o_tiro(
@@ -146,9 +148,10 @@ def test_o_teste_le_a_escolha_do_perfil_que_esta_ativo_agora(
 ) -> None:
     """A vista de outro perfil (a troca ainda não relida) não vale: toca o que o tiro tocaria."""
     com_toque.mesa.volta(*_no_cabo_os_quatro(com_toque))
-    vista = {"controllers": {_QUATRO[0]: {"rumble": {"efeito_haptico": formas.SEM_EFEITO}}}}
+    vista = {"controllers": {_QUATRO[0]: {"rumble": {"efeito_haptico": formas.IMPACTO}}}}
     monkeypatch.setattr(tato_vivo, "_VISTA_LIDA", ("outro-perfil", vista))
-    assert com_toque.sub.testar_a_haptica(_QUATRO[0], True)["forma"] == formas.TOQUE
+    resposta = com_toque.sub.testar_a_haptica(_QUATRO[0], True)
+    assert resposta["status"] == "sem_efeito" and "forma" not in resposta
 
 
 def test_o_clique_em_outra_grafia_do_endereco_acha_a_escolha_dele(

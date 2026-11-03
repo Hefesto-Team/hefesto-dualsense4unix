@@ -129,7 +129,7 @@ class TestAsLinhas:
     def test_uma_lista_por_controle_com_as_opcoes_do_produto(self, gesto: str) -> None:
         """Régua: a lista da tela é o vocabulário do produto, na ordem dele.
 
-        «Do estilo» abre e o «—» vem logo depois (a escolha de 15/10/2026; o rótulo, de 31/10).
+        O «—» abre, escolhido, e «Do estilo» vem logo depois (a regra de 03/11/2026).
         """
         escolhas, rotulos, _dicas = LISTAS[gesto]
         for html in ("".join(aba05._coluna(c) for c in aba05.MESA),
@@ -142,7 +142,8 @@ class TestAsLinhas:
                 lidas = re.findall(r'<option value="([^"]+)"[^>]*>([^<]+)</option>', opcoes)
                 assert [v for v, _r in lidas] == list(escolhas)
                 assert [r for _v, r in lidas] == [rotulos[c] for c in escolhas]
-                assert lidas[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "—")]
+                assert lidas[:2] == [("sem_efeito", "—"), ("do_estilo", "Do estilo")]
+                assert re.findall(r'<option value="([^"]+)"[^>]*selected', opcoes) == ["sem_efeito"]
 
     @pytest.mark.parametrize("gesto", sorted(LISTAS))
     def test_cada_opcao_tem_uma_frase_de_uma_linha(self, gesto: str) -> None:
@@ -166,12 +167,12 @@ class TestAsLinhas:
 
 
 class TestAPintura:
-    def test_sem_escolha_vale_do_estilo_e_nunca_sem_efeito(self) -> None:
+    def test_sem_escolha_vale_o_traco_e_nunca_do_estilo(self) -> None:
         coluna = next(iter(a05.pacote(_ctx()).get("colunas", {}).values()))
-        assert coluna["haptico-escolha"] == "do_estilo"
-        assert coluna["imersao-escolha"] == "do_estilo"
-        assert coluna["haptico-dica"] == formas.DICAS["do_estilo"]
-        assert coluna["imersao-dica"] == padroes.DICAS["do_estilo"]
+        assert coluna["haptico-escolha"] == "sem_efeito"
+        assert coluna["imersao-escolha"] == "sem_efeito"
+        assert coluna["haptico-dica"] == formas.DICAS["sem_efeito"]
+        assert coluna["imersao-dica"] == padroes.DICAS["sem_efeito"]
 
     def test_a_escolha_do_perfil_chega_a_lista_do_controle(self, perfis: Path) -> None:
         save_profile(Profile(
@@ -184,13 +185,18 @@ class TestAPintura:
         assert coluna["imersao-escolha"] == "pancada_do_lado"
         assert coluna["imersao-dica"] == padroes.DICAS["pancada_do_lado"]
 
-    def test_valor_que_a_lista_nao_conhece_volta_a_do_estilo(self) -> None:
+    def test_valor_que_a_lista_nao_conhece_volta_ao_traco(self) -> None:
         escolha = a05._escolha_da_lista(
             {BRANCO: {"rumble": {"efeito_haptico": "xpto"}}}, BRANCO, "efeito_haptico",
             formas.ESCOLHAS)
-        assert escolha == "do_estilo"
+        assert escolha == "sem_efeito"
         sem_rumble = a05._escolha_da_lista({BRANCO: {}}, BRANCO, "efeito_imersao", padroes.ESCOLHAS)
-        assert sem_rumble == "do_estilo"
+        assert sem_rumble == "sem_efeito"
+
+    def test_do_estilo_guardado_chega_a_lista(self) -> None:
+        guardado = {BRANCO: {"rumble": {"efeito_haptico": "do_estilo"}}}
+        assert a05._escolha_da_lista(
+            guardado, BRANCO, "efeito_haptico", formas.ESCOLHAS) == "do_estilo"
 
 
 class TestOGesto:
@@ -210,11 +216,11 @@ class TestOGesto:
         assert rumble is not None and getattr(rumble, campo) == valor
 
     @pytest.mark.parametrize("campo", sorted(GESTOS))
-    def test_do_estilo_apaga_a_chave_e_nao_vira_sem_efeito(
+    def test_do_estilo_fica_guardado_e_nao_vira_sem_efeito(
             self, perfis: Path, campo: str) -> None:
-        """MORDIDA: gravar o texto `do_estilo` em vez de apagar a chave reprova.
+        """MORDIDA: apagar a chave em vez de gravar `do_estilo` reprova (a lista voltaria ao «—»).
 
-        Prova da D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA.
+        Em 03/11/2026 «Do estilo» passou a ser escolha guardada: sem chave a lista mostra o «—».
         """
         save_profile(Profile(
             name="Ensaio", match=MatchAny(),
@@ -225,8 +231,8 @@ class TestOGesto:
         assert gesto is not None
         gesto(_ctx("Ensaio"), {"uniq": UNIQ, "valor": "do_estilo"}, ponte)
         rumble = _rumble_do_disco()
-        assert rumble is not None, "apagar a escolha levou a barra junto"
-        assert campo not in rumble.model_fields_set and rumble.motor_forte_pct == 50
+        assert rumble is not None, "trocar a escolha levou a barra junto"
+        assert getattr(rumble, campo) == "do_estilo" and rumble.motor_forte_pct == 50
 
     def test_uma_lista_nao_mexe_na_outra_nem_nas_barras(self, perfis: Path) -> None:
         save_profile(Profile(

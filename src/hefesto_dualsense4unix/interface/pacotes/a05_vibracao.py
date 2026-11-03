@@ -113,16 +113,13 @@ def _escolha_da_lista(overrides: dict[str, Any], uniq: str, campo: str,
                       lista: tuple[str, ...]) -> str:
     """A escolha que o perfil guarda para ESTE controle numa das duas listas.
 
-    Sem escolha, ou com texto que a lista não conhece, vale «Do estilo»: nunca o «—»,
-    que cala o controle e só existe quando a pessoa o escolhe.
+    Sem escolha, ou com texto que a lista não conhece, vale o «—»: o controle que ninguém
+    escolheu não toca efeito do Hefesto. «Do estilo» é uma escolha, e fica guardada.
     """
     dele = overrides.get(_chave_no_perfil(uniq)) or overrides.get(uniq) or {}
     seu = dele.get("rumble") if isinstance(dele, dict) else None
     valor = seu.get(campo) if isinstance(seu, dict) else None
-    return valor if isinstance(valor, str) and valor in lista else _DO_ESTILO
-
-
-_DO_ESTILO = _formas.DO_ESTILO
+    return valor if isinstance(valor, str) and valor in lista else _sem_efeito.VALOR
 
 
 def _chave_no_perfil(uniq: str) -> str:
@@ -1465,7 +1462,7 @@ def _gravar_a_escolha(o: dict[str, Any], p: Any, campo: str, lista: tuple[str, .
     """Grava a escolha de uma das duas listas pelo `rumble.motores.set`, no controle do clique.
 
     Valor que a lista não tem é recusado aqui, antes de ir ao daemon; ele recusa de novo.
-    «Do estilo» apaga a chave do perfil.
+    «Do estilo» e o «—» ficam guardados como escolhas; só a chave ausente é o «—» sem escolha.
     """
     uniq = _uniq(o)
     if not uniq:

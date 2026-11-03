@@ -3713,10 +3713,7 @@ class IpcHandlersMixin:
                 else:
                     campos[campo] = valor
             for campo, escolha in escolhas.items():
-                if escolha == "do_estilo":
-                    campos.pop(campo, None)
-                else:
-                    campos[campo] = escolha
+                campos[campo] = escolha
             novo = ControllerRumbleOverride.model_validate(campos) if campos else None
             visto["novo"] = novo
             antes_campos = (
@@ -3733,7 +3730,7 @@ class IpcHandlersMixin:
         efetivos = self._pcts_efetivos(visto.get("novo"))
         haptica = pct_da_haptica(visto.get("novo"))
         efeitos = {
-            campo: getattr(visto.get("novo"), campo, None) or "do_estilo"
+            campo: getattr(visto.get("novo"), campo, None) or "sem_efeito"
             for campo in ("efeito_haptico", "efeito_imersao")
         }
         if not visto.get("gravado"):

@@ -135,13 +135,16 @@ def test_a_bateria_longa_troca_as_longas_por_toque_e_cala_o_som_no_corpo() -> No
     assert fh.forma_que_vale(fh.GUARDA, None, economia=False) == fh.GUARDA
 
 
-def test_sem_escolha_vale_o_estilo_e_o_toque_quando_ele_nao_pede(
+def test_sem_escolha_vale_o_traco_e_so_o_do_estilo_toca_a_forma_dele(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert fh.forma_que_vale(None, "fps") == fh.TOQUE
+    assert fh.forma_que_vale(None, "fps") is None
+    assert fh.forma_que_vale("trovao", "fps") is None
     assert fh.forma_que_vale(fh.DO_ESTILO, "fps") == fh.TOQUE
+    assert fh.forma_que_vale(fh.DO_ESTILO, None) == fh.TOQUE
     monkeypatch.setitem(fh.POR_ESTILO, "fps", fh.IMPACTO)
-    assert fh.forma_que_vale(None, "fps") == fh.IMPACTO
+    assert fh.forma_que_vale(None, "fps") is None
+    assert fh.forma_que_vale(fh.DO_ESTILO, "fps") == fh.IMPACTO
     assert fh.forma_que_vale(fh.ESTALO, "fps") == fh.ESTALO
     assert fh.forma_que_vale(fh.SEM_EFEITO, "fps") is None
 
@@ -181,14 +184,20 @@ def _tocar(
     return toques
 
 
-def test_sem_escolha_o_toque_e_o_de_hoje_com_quatro_argumentos() -> None:
-    toques = _tocar({}, tv.Receita(vibracao_por_tiro=True), P1)
+def test_do_estilo_toca_o_toque_de_hoje_com_quatro_argumentos() -> None:
+    toques = _tocar({P1: fh.DO_ESTILO}, tv.Receita(vibracao_por_tiro=True), P1)
     assert [t[0] for t in toques.feitos] == [P1]
     assert len(toques.feitos[0]) == 4
 
 
+def test_o_controle_sem_escolha_nao_toca_forma_nenhuma() -> None:
+    sem = _tocar({}, tv.Receita(vibracao_por_tiro=True, efeitos_escolhidos=True), P1)
+    assert sem.feitos == []
+
+
 def test_a_forma_escolhida_chega_ao_tocador_de_quem_escolheu() -> None:
-    toques = _tocar({P1: fh.IMPACTO}, tv.Receita(vibracao_por_tiro=True), P1, P2)
+    toques = _tocar(
+        {P1: fh.IMPACTO, P2: fh.DO_ESTILO}, tv.Receita(vibracao_por_tiro=True), P1, P2)
     formas = {t[0]: (t[4] if len(t) > 4 else fh.TOQUE) for t in toques.feitos}
     assert formas == {P1: fh.IMPACTO, P2: fh.TOQUE}
 
@@ -201,7 +210,8 @@ def test_a_escolha_dispara_mesmo_quando_o_estilo_nao_pede_toque() -> None:
 
 
 def test_sem_efeito_cala_so_o_controle_que_escolheu() -> None:
-    toques = _tocar({P1: fh.SEM_EFEITO}, tv.Receita(vibracao_por_tiro=True), P1, P2)
+    toques = _tocar(
+        {P1: fh.SEM_EFEITO, P2: fh.DO_ESTILO}, tv.Receita(vibracao_por_tiro=True), P1, P2)
     assert [t[0] for t in toques.feitos] == [P2]
 
 
@@ -217,9 +227,11 @@ def test_o_som_no_corpo_nao_responde_a_tiro() -> None:
     assert toques.feitos == []
 
 
-def test_o_estilo_pede_a_forma_quando_ninguem_escolheu(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_estilo_pede_a_forma_quando_a_escolha_e_do_estilo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setitem(fh.POR_ESTILO, "fps", fh.ESTALO)
-    toques = _tocar({}, tv.Receita(vibracao_por_tiro=True), P1, estilo="fps")
+    toques = _tocar({P1: fh.DO_ESTILO}, tv.Receita(vibracao_por_tiro=True), P1, estilo="fps")
     assert toques.feitos[0][4] == fh.ESTALO
 
 
@@ -259,7 +271,7 @@ def test_do_estilo_sem_efeito_e_ilegivel_nao_ligam_o_motor(escolha: str) -> None
 
 def test_as_escolhas_do_perfil_saem_por_mac_normalizado() -> None:
     escolhas = tv.escolhas_do_perfil(_perfil(**{"AA:BB:CC:00:00:11": fh.APARO, P2: fh.DO_ESTILO}))
-    assert escolhas == {norm_mac(P1): fh.APARO}
+    assert escolhas == {norm_mac(P1): fh.APARO, norm_mac(P2): fh.DO_ESTILO}
 
 
 def _pcm(hz: float, quadros: int = 9600, amplitude: float = 0.5, inicio: int = 0) -> bytes:

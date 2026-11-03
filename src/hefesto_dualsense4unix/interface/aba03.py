@@ -598,8 +598,9 @@ def _conferir(doc):
            "a lista do efeito do gatilho não abre em grupos por família")
     for _lista in re.findall(r'<select class="g2-imersao".*?</select>', corpo, re.S):
         exigir(re.search(r'^<select[^>]*>(?:<option[^>]*hidden>[^<]*</option>)?'
+                         rf'<option value="{SEM_IMERSAO}"[^>]*>{TRAVESSAO}</option>'
                          rf'<option value="{DO_ESTILO}"', _lista) is not None,
-               "a lista do efeito do gatilho não abre com «Do estilo»")
+               "a lista do efeito do gatilho não abre com o «—» e «Do estilo»")
         _sos = [g for g, d in re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', _lista, re.S)
                 if g != SEUS_EFEITOS and d.count("<option") == 1]
         exigir(not _sos, f"grupo de um efeito só na lista do efeito do gatilho: {_sos}")

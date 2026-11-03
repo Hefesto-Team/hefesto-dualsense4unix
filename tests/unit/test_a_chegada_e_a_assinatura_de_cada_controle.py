@@ -443,7 +443,7 @@ def test_sem_chegada_montada_ninguem_segura_a_luz() -> None:
     assert ch.segurando_a_luz(SimpleNamespace()) == frozenset()
 
 
-def _toque_do_tiro(estilo: str | None, escolha: str | None = None,
+def _toque_do_tiro(estilo: str | None, escolha: str | None = fh.DO_ESTILO,
                    uniqs: tuple[str, ...] = (AZUL, BRANCO, VERMELHO, ROXO)) -> dict[str, str]:
     """A forma que o Toque do tiro leva a cada controle (pelo tocador de lista)."""
     from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
@@ -491,6 +491,9 @@ def test_a_producao_liga_a_nota_da_unidade_ao_toque_do_tiro(
         controller=None)
     monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
     monkeypatch.setattr(tv, "_controle_na_economia", lambda _u: False)
+    motor = tv.TatoVivo([])
+    motor.escolhas = {ROXO.replace(":", "").lower(): fh.DO_ESTILO}
+    monkeypatch.setattr(tv, "motor_do", lambda _d: motor)
     atuador = next(a for a in tv.atuadores_de_producao(daemon)
                    if isinstance(a, tv.AtuadorDaHaptica))
     atuador.escrever(tv.Evento(0.0, ROXO, tv.TIPO_RUMBLE, tv.LADO_ESQUERDO, 1.0),

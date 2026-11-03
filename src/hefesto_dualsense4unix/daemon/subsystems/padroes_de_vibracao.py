@@ -40,7 +40,7 @@ ROTULOS: dict[str, str] = {
 
 DO_ESTILO = "do_estilo"
 SEM_EFEITO = _sem_efeito.VALOR
-ESCOLHAS: tuple[str, ...] = (DO_ESTILO, SEM_EFEITO, "tranco", "batida", "onda", "coice",
+ESCOLHAS: tuple[str, ...] = (SEM_EFEITO, DO_ESTILO, "tranco", "batida", "onda", "coice",
                              "pancada_do_lado", "ressoar", "ricochete")
 DICAS: dict[str, str] = {
     DO_ESTILO: "O que o estilo pede",
@@ -80,10 +80,8 @@ TETO_MS = 2000
 
 
 def escolha_valida(valor: object) -> str | None:
-    """A escolha do perfil como padrão; ``None`` quando não há escolha ou é «Do estilo»."""
-    if isinstance(valor, str) and valor in ESCOLHAS and valor != DO_ESTILO:
-        return valor
-    return None
+    """A escolha do perfil como chave conhecida; ``None`` quando não há escolha ou não se lê."""
+    return valor if isinstance(valor, str) and valor in ESCOLHAS else None
 
 
 POR_ESTILO: dict[str, str] = {
@@ -101,13 +99,13 @@ POR_ESTILO: dict[str, str] = {
 def padrao_que_vale(escolha: object, estilo: object) -> str | None:
     """O padrão que toca de verdade, ou ``None`` quando os motores deste controle não tocam nada.
 
-    Sem escolha («Do estilo») vale o do estilo, e nenhum quando o estilo não pede; o «—»
-    cala. A Bateria longa não troca o padrão: só baixa a força, e quem baixa é o chamador.
+    Sem escolha vale o «—», que cala; «Do estilo» toca o do estilo, e nenhum quando o estilo não
+    pede. A Bateria longa não troca o padrão: só baixa a força, e quem baixa é o chamador.
     """
-    if escolha == SEM_EFEITO:
-        return None
     escolhido = escolha_valida(escolha)
-    if escolhido is not None:
+    if escolhido is None or escolhido == SEM_EFEITO:
+        return None
+    if escolhido != DO_ESTILO:
         return escolhido
     if not isinstance(estilo, str):
         return None

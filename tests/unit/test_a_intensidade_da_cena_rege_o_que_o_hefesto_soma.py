@@ -201,6 +201,9 @@ class _Mesa:
         monkeypatch.setattr(tv, "receita_ativa", lambda _d: receita)
         monkeypatch.setattr(tv, "estilo_ativo", lambda _d: estilo)
         monkeypatch.setattr(tv, "_controle_na_economia", lambda _u: False)
+        monkeypatch.setattr(
+            tv, "escolhas_ativas",
+            lambda _d: {u.replace(":", ""): "do_estilo" for u in jogadores})
         self.pads = {uniq: _Pad() for uniq in jogadores}
         self.alto_falante = _AltoFalante()
         self.daemon = SimpleNamespace(

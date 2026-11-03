@@ -451,7 +451,7 @@ _ROTULOS_DA_IMERSAO = {
 
 
 def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas, chegada):
-    """Uma lista suspensa do controle: «Do estilo» primeiro, o «—» depois, as formas em seguida.
+    """Uma lista suspensa do controle: o «—» primeiro e escolhido, «Do estilo» depois, as formas em seguida.
 
     O gesto do `<select>` e o campo que a pintura escreve nele têm nomes distintos: o pintor
     acha o valor por `data-campo`, e o clique, por `data-gesto`. A frase da opção escolhida é a
@@ -967,9 +967,11 @@ def _conferir(doc):
             exigir(tuple(v for v, _r in _valores) == tuple(escolhas)
                    and [r for _v, r in _valores] == [rotulos[c] for c in escolhas],
                    f"as opções de {gesto!r} não são as da lista do produto, na ordem da lista")
-            exigir(_valores[:2] == [("do_estilo", "Do estilo"),
-                                    (_sem_efeito.VALOR, _sem_efeito.ROTULO)],
-                   f"a lista {gesto!r} não abre com «Do estilo» e o «—»")
+            exigir(_valores[:2] == [(_sem_efeito.VALOR, _sem_efeito.ROTULO),
+                                    ("do_estilo", "Do estilo")],
+                   f"a lista {gesto!r} não abre com o «—» e «Do estilo»")
+            exigir(_re.findall(r'<option value="([^"]+)"[^>]*selected', opcoes) == [_sem_efeito.VALOR],
+                   f"a lista {gesto!r} não nasce com o «—» escolhido")
     exigir("grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)" in doc
            and "grid-template-rows:minmax(0,1fr)" in doc,
            "as faixas da grade da aba 05 voltaram a ter altura fixa: a coluna deixa de encher o quadro")

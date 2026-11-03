@@ -609,11 +609,11 @@ def rumble_motores_set(
     """As barras de cada motor, a háptica e as duas listas de efeito, no perfil, POR PEÇA.
 
     ``None`` em um campo = não mexe nele (todos em `None` é erro). ``uniq`` omitido = o primário.
-    ``efeito_haptico`` e ``efeito_imersao`` levam a chave da escolha; ``"do_estilo"`` volta ao
-    automático e o daemon recusa chave que não existe. Devolve ``(ok, corpo)``: o corpo é o do
-    daemon (`status`, `motivo` quando recusa, `perfil`, `gravado` e os valores que passaram a
-    valer); `None` quer dizer daemon fora do ar. A faixa 0-100, também na háptica, é da borda do
-    esquema, e o porquê está em docs/research/o-porque-dos-modulos.md.
+    ``efeito_haptico`` e ``efeito_imersao`` levam a chave da escolha; ``"do_estilo"`` e
+    ``"sem_efeito"`` ficam guardados como escolhas e o daemon recusa chave que não existe. Devolve
+    ``(ok, corpo)``: o corpo é o do daemon (`status`, `motivo` quando recusa, `perfil`, `gravado` e
+    os valores que passaram a valer); `None` quer dizer daemon fora do ar. A faixa 0-100, também na
+    háptica, é da borda do esquema, e o porquê está em docs/research/o-porque-dos-modulos.md.
     """
     params: dict[str, Any] = {}
     if forte_pct is not None:

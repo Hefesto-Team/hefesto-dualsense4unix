@@ -15,6 +15,7 @@ import pytest
 
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af_sub
+from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.interface import aba05, pacotes
@@ -423,6 +424,8 @@ def com_toque(mundo: _Mundo, monkeypatch: pytest.MonkeyPatch) -> _Mundo:  # noqa
     """A mesa do cabo e do rádio com o tocador que toca de verdade (o toque e o corpo)."""
     monkeypatch.setattr(eh, "TocadorDoRumble", _TocadorComToque)
     mundo.sub._daemon = SimpleNamespace(store=SimpleNamespace(active_profile="prova"))
+    vista = {"controllers": {u: {"rumble": {"efeito_haptico": formas.DO_ESTILO}} for u in _QUATRO}}
+    monkeypatch.setattr(tato_vivo, "_VISTA_LIDA", ("prova", vista))
     return mundo
 
 

@@ -331,8 +331,8 @@ def _escolhas_do_campo(
 def escolhas_do_perfil(perfil: Any) -> dict[str, str]:
     """A forma do toque que cada controle escolheu (``rumble.efeito_haptico``), por ``norm_mac``.
 
-    Só entra quem escolheu: «Do estilo» e o perfil sem opinião ficam fora, e o controle sem
-    escolha se comporta como sempre. Escolha que não se lê também fica fora.
+    Só entra quem escolheu, «—» e «Do estilo» inclusive: o controle sem escolha não toca forma
+    nenhuma, como no «—». Escolha que não se lê também fica fora.
     """
     return _escolhas_do_campo(perfil, "efeito_haptico", formas_de_haptica.escolha_valida)
 
@@ -376,7 +376,8 @@ def receita_do_perfil(perfil: Any) -> Receita:
         base = replace(
             base,
             padroes_escolhidos=base.padroes_escolhidos or any(
-                v != padroes_de_vibracao.SEM_EFEITO for v in padroes.values()),
+                v not in (padroes_de_vibracao.SEM_EFEITO, padroes_de_vibracao.DO_ESTILO)
+                for v in padroes.values()),
             pancada_escolhida=base.pancada_escolhida or "pancada_do_lado" in padroes.values(),
         )
     desvio = _ler(perfil, CAMPO_DA_RECEITA)
@@ -889,8 +890,9 @@ ECO_A_PARTIR_DE = 0.7
 class AtuadorDaHaptica:
     """O toque do tiro, na forma que o controle escolheu, no tocador do rumble dele.
 
-    Sem escolha (ou em «Do estilo») o toque é o de hoje. A escolha explícita dispara nos mesmos
-    eventos da receita; o «—» e o Som no corpo (contínuo, do laço) não respondem a evento.
+    Em «Do estilo» o toque é o do estilo. A escolha explícita dispara nos mesmos eventos da
+    receita; o «—», o controle sem escolha e o Som no corpo (contínuo, do laço) não respondem a
+    evento.
     O Toque toca na nota da unidade (a Assinatura, ``nota_de``) onde a Chegada vale.
     """
 
@@ -933,17 +935,19 @@ class AtuadorDaHaptica:
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
         escolha = formas_de_haptica.escolha_valida(self._escolha_de(evento.uniq))
-        if escolha == formas_de_haptica.SEM_EFEITO or escolha in formas_de_haptica.CONTINUAS:
+        if (escolha is None or escolha == formas_de_haptica.SEM_EFEITO
+                or escolha in formas_de_haptica.CONTINUAS):
             return False
+        do_estilo = escolha == formas_de_haptica.DO_ESTILO
         forma_do_estilo = formas_de_haptica.forma_do_estilo(self._estilo_de())
-        if escolha is None and (forma_do_estilo == formas_de_haptica.SEM_EFEITO
-                                or forma_do_estilo in formas_de_haptica.CONTINUAS):
+        if do_estilo and (forma_do_estilo == formas_de_haptica.SEM_EFEITO
+                          or forma_do_estilo in formas_de_haptica.CONTINUAS):
             return False
         if evento.tipo == TIPO_SOM:
             if receita.som_quando_o_jogo_cala:
                 return self._acordada(evento.uniq)
             return receita.lado_do_som
-        quer = receita.vibracao_por_tiro or escolha is not None
+        quer = receita.vibracao_por_tiro or not do_estilo
         if evento.tipo != TIPO_RUMBLE or not quer:
             return False
         if receita.som_quando_o_jogo_cala:

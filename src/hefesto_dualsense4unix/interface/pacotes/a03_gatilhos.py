@@ -657,7 +657,7 @@ def _com_maiuscula(texto: str) -> str:
 
 
 def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str = "") -> str:
-    """As opções do «Efeito do gatilho»: Do estilo, «—», as famílias e «Seus efeitos».
+    """As opções do «Efeito do gatilho»: «—», Do estilo, as famílias e «Seus efeitos».
 
     O texto da opção é a variante e o grupo é a família; a frase de cada efeito mora SÓ no
     `title`. Com um estilo no perfil, os efeitos dele vão na frente. O «—» é o nenhum efeito,
@@ -666,8 +666,8 @@ def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str
     aquele gatilho. `do_perfil` (`acionamento:<modo>`) abre o grupo «Do perfil» com
     o acionamento de um perfil antigo que nenhum efeito da lista descreve.
     """
-    partes = [f'<option value="{DO_ESTILO}">{ROTULO_DO_ESTILO}</option>',
-              _sem_efeito.opcao(DICA_DO_SEM_IMERSAO)]
+    partes = [_sem_efeito.opcao(DICA_DO_SEM_IMERSAO),
+              f'<option value="{DO_ESTILO}">{ROTULO_DO_ESTILO}</option>']
     if do_perfil.startswith(PREFIXO_DO_ACIONAMENTO):
         modo_ = do_perfil[len(PREFIXO_DO_ACIONAMENTO):]
         partes.append(

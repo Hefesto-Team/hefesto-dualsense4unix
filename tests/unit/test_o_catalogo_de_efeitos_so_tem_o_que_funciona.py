@@ -164,7 +164,7 @@ def _primeira_lista_do_desenho() -> str:
 
 
 def test_a_lista_do_produto_e_a_do_desenho_grupo_por_grupo() -> None:
-    from pacotes.a03_gatilhos import DO_ESTILO, ROTULO_DO_ESTILO, html_das_opcoes_de_imersao
+    from pacotes.a03_gatilhos import DO_ESTILO, html_das_opcoes_de_imersao
 
     produto, desenho = html_das_opcoes_de_imersao(), _primeira_lista_do_desenho()
     assert list(_grupos(produto)) == list(imersoes.FAMILIAS_DA_PAGINA), _grupos(produto)
@@ -173,7 +173,8 @@ def test_a_lista_do_produto_e_a_do_desenho_grupo_por_grupo() -> None:
     assert not sozinhos, f"grupo com um efeito só: {sozinhos}"
     for lista in (produto, desenho):
         visiveis = re.findall(r'<option value="([^"]+)"(?! disabled)', lista)
-        assert visiveis[0] == DO_ESTILO, f"a lista não abre com «{ROTULO_DO_ESTILO}»: {visiveis}"
+        assert visiveis[:2] == ["sem_efeito", DO_ESTILO], (
+            f"a lista não abre com «—» e «Do estilo»: {visiveis}")
 
 
 def test_todo_efeito_da_lista_esta_no_grupo_do_rotulo_dele() -> None:

@@ -33,7 +33,7 @@ GRAO = "grao"
 MOTOR_DE_EPOCA = "motor_de_epoca"
 
 ESCOLHAS: tuple[str, ...] = (
-    DO_ESTILO, SEM_EFEITO, TOQUE, IMPACTO, ESTALO, GUARDA, APARO, SOM_NO_CORPO,
+    SEM_EFEITO, DO_ESTILO, TOQUE, IMPACTO, ESTALO, GUARDA, APARO, SOM_NO_CORPO,
     ECO, GRAO, MOTOR_DE_EPOCA)
 
 ROTULOS: dict[str, str] = {
@@ -179,9 +179,10 @@ CAUDA_SOBE_MS = 20
 def escolha_valida(valor: object) -> str | None:
     """A escolha do perfil como chave conhecida; ``None`` quando não há escolha ou não se lê.
 
-    ``None`` quer dizer «Do estilo»: o perfil que não escolheu nada se comporta como sempre.
+    ``None`` quer dizer «—»: o controle que ninguém escolheu não toca efeito do Hefesto.
+    «Do estilo» é uma escolha, e vem como ``DO_ESTILO``.
     """
-    return valor if isinstance(valor, str) and valor in ESCOLHAS and valor != DO_ESTILO else None
+    return valor if isinstance(valor, str) and valor in ESCOLHAS else None
 
 
 def forma_do_estilo(estilo: object) -> str:
@@ -199,12 +200,13 @@ def forma_do_estilo(estilo: object) -> str:
 def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> str | None:
     """A forma que toca de verdade, ou ``None`` quando este controle não toca.
 
+    Sem escolha vale o «—»: nenhuma forma. «Do estilo» toca a que o estilo pede.
     ``economia`` é a Bateria longa: Guarda, Aparo e Eco viram o Toque, e as contínuas calam.
     """
     chave = escolha_valida(escolha)
-    if chave == SEM_EFEITO:
+    if chave is None or chave == SEM_EFEITO:
         return None
-    if chave is None:
+    if chave == DO_ESTILO:
         chave = forma_do_estilo(estilo)
         if chave == SEM_EFEITO:
             return None

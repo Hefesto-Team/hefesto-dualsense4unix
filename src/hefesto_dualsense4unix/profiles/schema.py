@@ -2575,14 +2575,14 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ControllerRumbleOverride.efeito_haptico": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` vale «Do estilo»: a forma que o estilo pede, e o Toque de hoje quando ele não "
-        "pede nenhuma. Nenhuma forma nova nasce ligada sozinha.",
+        "`None` vale «—»: o controle que ninguém escolheu não toca forma do Hefesto. «Do estilo» "
+        "é uma escolha, e toca a forma que o estilo pede. Nenhuma forma nasce ligada sozinha.",
         dono="hefesto_dualsense4unix.profiles.formas_de_haptica:forma_que_vale",
     ),
     "ControllerRumbleOverride.efeito_imersao": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` vale «Do estilo»: o padrão que o estilo pede, e nenhum quando ele não pede. "
-        "Nenhum padrão nasce ligado sozinho.",
+        "`None` vale «—»: o controle que ninguém escolheu não toca padrão do Hefesto. «Do estilo» "
+        "é uma escolha, e toca o padrão que o estilo pede. Nenhum padrão nasce ligado sozinho.",
         dono="hefesto_dualsense4unix.daemon.subsystems.padroes_de_vibracao:padrao_que_vale",
     ),
     "ControllerMicOverride.muted": Nascimento(
@@ -3133,7 +3133,7 @@ __all__ = [
 HAPTICA_PCT_PADRAO = 75
 
 ESCOLHAS_DE_IMERSAO = (
-    "do_estilo", "sem_efeito", "tranco", "batida", "onda", "coice", "pancada_do_lado", "ressoar",
+    "sem_efeito", "do_estilo", "tranco", "batida", "onda", "coice", "pancada_do_lado", "ressoar",
     "ricochete")
 
 HAPTICA_PCT_MAX = 100

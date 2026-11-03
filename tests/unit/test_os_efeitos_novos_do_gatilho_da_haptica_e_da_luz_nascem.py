@@ -116,6 +116,7 @@ def _passo(monkeypatch: pytest.MonkeyPatch, estilo: str) -> tuple[tv.Passo, _Alt
     alto = _AltoFalante()
     monkeypatch.setattr(tv, "estilo_ativo", lambda _d: estilo)
     passo = tv.Passo(SimpleNamespace(_alto_falante_subsystem=alto), tv.TatoVivo([]))
+    passo.motor.escolhas = {u.replace(":", ""): fh.DO_ESTILO for u in QUATRO}
     return passo, alto
 
 
@@ -208,7 +209,7 @@ class _Toques:
 def _golpe(estilo: str, energia: float, uniq: str = AZUL) -> _Toques:
     toques = _Toques()
     motor = tv.TatoVivo([tv.AtuadorDaHaptica(
-        toques, None, lambda _u: None, lambda: estilo, lambda _u: False)])
+        toques, None, lambda _u: fh.DO_ESTILO, lambda: estilo, lambda _u: False)])
     motor.anotar(tv.Evento(0.0, uniq, tv.TIPO_RUMBLE, tv.LADO_ESQUERDO, energia))
     motor.tique(1.0, lambda _u: JOGO_LIVRE, tv.Receita(vibracao_por_tiro=True))
     return toques
@@ -242,7 +243,7 @@ def _onda_do_furtivo(eventos: list[tv.Evento]) -> list[tuple[float, int, int]]:
 
     atuador = tv.AtuadorDosMotores(
         escrever,
-        lambda _u: pv.padrao_que_vale(None, "furtivo"),
+        lambda _u: pv.padrao_que_vale(pv.DO_ESTILO, "furtivo"),
         lambda _u: False,
         lambda _u: 1.0,
         lambda: "furtivo",
@@ -268,7 +269,7 @@ def test_a_onda_do_furtivo_toca_ao_soltar_o_l2_segurado_e_nao_ao_apertar(uniq: s
     reprova.
     """
     apertou = tv.Evento(0.5, uniq, tv.TIPO_DEDO, tv.LADO_ESQUERDO, 1.0)
-    assert pv.padrao_que_vale(None, "furtivo") == "onda"
+    assert pv.padrao_que_vale(pv.DO_ESTILO, "furtivo") == "onda"
     assert _onda_do_furtivo([apertou]) == [], "o aperto não toca a Onda"
 
     solta_cedo = tv.Evento(1.0, uniq, tv.TIPO_SOLTA, tv.LADO_ESQUERDO, 1.0, None, 1.9)
