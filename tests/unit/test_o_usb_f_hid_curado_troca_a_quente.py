@@ -383,7 +383,6 @@ def test_o_pad_usb_le_a_marca(
 
     sys_module = _sys_module(tmp_path, carregado=carregado, marca=marca, refcnt=0)
     caminho = str(sys_module / "usb_f_hid" / "parameters")
-    assert pad_usb.f_hid_fecha_a_resposta(caminho) is esperado
     assert pad_usb.medir_a_marca_do_f_hid(caminho) is esperado
     assert pad_usb.marca_do_f_hid_medida() is esperado
 

@@ -661,17 +661,6 @@ def marcas_do_f_hid_que_faltam(
     )
 
 
-def f_hid_fecha_a_resposta(
-    parametros: str = PARAMETROS_DO_F_HID,
-    *,
-    ler: Callable[[str], str] = _ler_atributo,
-    existe: Callable[[str], bool] = os.path.exists,
-) -> bool | None:
-    """O ``usb_f_hid`` carregado é o curado, com todas as marcas? None = fora do ar."""
-    faltam = marcas_do_f_hid_que_faltam(parametros, ler=ler, existe=existe)
-    return None if faltam is None else not faltam
-
-
 def medir_a_marca_do_f_hid(parametros: str = PARAMETROS_DO_F_HID) -> bool | None:
     """Lê as marcas e anota as que faltam, para o estado do daemon (só da memória)."""
     faltam = marcas_do_f_hid_que_faltam(parametros)
@@ -813,7 +802,6 @@ __all__ = [
     "encurtar_a_caminho",
     "escrever_get_report",
     "esquecer_gadget",
-    "f_hid_fecha_a_resposta",
     "gadget_chegou",
     "hidraw_do_gadget",
     "interface_do_aparelho",

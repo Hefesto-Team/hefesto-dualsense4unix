@@ -60,7 +60,6 @@ def test_so_a_marca_velha_nao_e_curado_e_o_aviso_diz_a_que_falta(
 ) -> None:
     parametros = _parametros(tmp_path, VELHA)
     assert pad_usb.marcas_do_f_hid_que_faltam(parametros) == (NOVA,)
-    assert pad_usb.f_hid_fecha_a_resposta(parametros) is False
     assert pad_usb.medir_a_marca_do_f_hid(parametros) is False
     uhid_gamepad._avisar_o_f_hid_sem_marca()
     uhid_gamepad._avisar_o_f_hid_sem_marca()
@@ -76,7 +75,6 @@ def test_so_a_marca_velha_nao_e_curado_e_o_aviso_diz_a_que_falta(
 def test_as_duas_marcas_e_curado(tmp_path: Path, avisos: list[dict[str, Any]]) -> None:
     parametros = _parametros(tmp_path, VELHA, NOVA)
     assert pad_usb.marcas_do_f_hid_que_faltam(parametros) == ()
-    assert pad_usb.f_hid_fecha_a_resposta(parametros) is True
     assert pad_usb.medir_a_marca_do_f_hid(parametros) is True
     assert _estado() == {"enabled": True, "get_report_sized": True, "f_hid_marcas_que_faltam": []}
 
@@ -91,7 +89,6 @@ def test_o_de_fabrica_nao_tem_nenhuma(tmp_path: Path, avisos: list[dict[str, Any
 def test_sem_o_modulo_no_ar_e_none(tmp_path: Path, avisos: list[dict[str, Any]]) -> None:
     parametros = _parametros(tmp_path, carregado=False)
     assert pad_usb.marcas_do_f_hid_que_faltam(parametros) is None
-    assert pad_usb.f_hid_fecha_a_resposta(parametros) is None
     assert pad_usb.medir_a_marca_do_f_hid(parametros) is None
     assert _estado() == {
         "enabled": True,
