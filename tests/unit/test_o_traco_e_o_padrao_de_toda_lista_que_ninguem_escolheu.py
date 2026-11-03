@@ -22,7 +22,8 @@ CAMPOS = (("efeito_haptico", formas.ESCOLHAS), ("efeito_imersao", pv.ESCOLHAS))
 
 @pytest.mark.parametrize("escolhas", [formas.ESCOLHAS, pv.ESCOLHAS, schema.ESCOLHAS_DE_IMERSAO])
 def test_toda_lista_abre_no_traco_e_depois_do_estilo(escolhas: tuple[str, ...]) -> None:
-    assert escolhas[:2] == ("sem_efeito", "do_estilo")
+    assert escolhas[:2] == ("sem_efeito", "do_estilo"), (
+        "D-0311-TODA-LISTA-SEM-ESCOLHA-ABRE-NO-TRACO")
 
 
 def test_a_lista_do_gatilho_abre_no_traco_e_depois_no_do_estilo() -> None:
