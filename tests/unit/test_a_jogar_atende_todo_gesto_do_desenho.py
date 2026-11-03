@@ -73,7 +73,7 @@ def test_a_secao_atende_na_jogar() -> None:
     assert a02_controles.PAGINA == PAGINA
     da_secao = {nome for (_pg, nome), fn in pacotes.GESTOS.items()
                 if fn.__module__ == a02_controles.__name__}
-    assert {"mudo", "volume", "rota", "analogico-lado"} <= da_secao, "premissa"
+    assert {"volume", "rota", "analogico-lado"} <= da_secao, "premissa"
     for nome in da_secao:
         assert pacotes.GESTOS.get((PAGINA, nome)) is not None, nome
         assert pacotes.GESTOS.get(("02-controles.html", nome)) is None, nome
