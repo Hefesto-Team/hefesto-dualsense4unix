@@ -38,6 +38,8 @@ from hefesto_dualsense4unix.integrations import uhid_gamepad
 
 MAC_P1 = "aabbcc001100"
 MAC_P2 = "aabbcc001122"
+HIDRAW_P1 = "/dev/hidraw-de-ensaio-p1"
+HIDRAW_P2 = "/dev/hidraw-de-ensaio-p2"
 
 
 class _FakePad:
@@ -168,7 +170,7 @@ class TestGamepadPrimario:
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(gamepad_mod, "_set_controller_grab", lambda *_a: None)
-        daemon = _daemon(hidraw={None: "/dev/hidraw4"})
+        daemon = _daemon(hidraw={None: HIDRAW_P1})
         pedidos = _pedidos_do_hidraw(daemon, chamadas)
 
         try:
@@ -207,7 +209,7 @@ class TestGamepadPrimario:
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
             lambda *_a, **_k: None,
         )
-        daemon = _daemon(hidraw={None: "/dev/hidraw4"})
+        daemon = _daemon(hidraw={None: HIDRAW_P1})
 
         assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is False
         assert daemon._gamepad_device is None
@@ -235,7 +237,7 @@ class TestCoopPorJogador:
         self, chamadas: list[dict[str, Any]]
     ) -> None:
         """MAC próprio por jogador: o vpad do P2 não pode nascer com `player=1`."""
-        daemon = _daemon(hidraw={None: "/dev/hidraw4", MAC_P2: "/dev/hidraw7"})
+        daemon = _daemon(hidraw={None: HIDRAW_P1, MAC_P2: HIDRAW_P2})
         daemon._gamepad_device = _FakePad()
         pedidos = _pedidos_do_hidraw(daemon, chamadas)
         mgr = CoopManager(daemon)
@@ -264,7 +266,7 @@ class TestCoopPorJogador:
             lambda: {MAC_P1: Path("/dev/input/event5"),
                      "path:/dev/input/event7": Path("/dev/input/event7")},
         )
-        daemon = _daemon(hidraw={None: "/dev/hidraw4"})
+        daemon = _daemon(hidraw={None: HIDRAW_P1})
         daemon._gamepad_device = _FakePad()
         CoopManager(daemon).sync()
 
@@ -278,7 +280,7 @@ class TestCoopPorJogador:
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
             lambda *_a, **_k: None,
         )
-        daemon = _daemon(hidraw={None: "/dev/hidraw4", MAC_P2: "/dev/hidraw7"})
+        daemon = _daemon(hidraw={None: HIDRAW_P1, MAC_P2: HIDRAW_P2})
         daemon._gamepad_device = _FakePad()
         mgr = CoopManager(daemon)
         mgr.sync()

@@ -396,3 +396,72 @@ def test_no_xbox_o_jogo_que_cai_com_a_steam_aberta_solta_em_duas_consultas(
     soltos = registro.de("uinput_rumble_do_jogo_morto")
     assert len(soltos) == 4
     assert all("só quem não é jogo lê" in linha["motivo"] for linha in soltos), soltos
+
+
+@CAMINHOS
+def test_o_motor_que_a_steam_acende_depois_do_jogo_parar_fica_com_a_steam(
+    mesa_de: Any, proc: _ProcDeMentira, diario: _Diario, caminho: str,
+) -> None:
+    """O jogo para o motor e fecha; o Steam Input acende o seguinte, que não é do jogo."""
+    mesa = mesa_de(caminho, EDGE)
+    _a_mesa_com_a_steam_e_os_jogos(mesa, proc)
+    mesa.passar(6.0)
+    for pad in mesa.pads:
+        assert pad._jogo_no_motor
+        mesa.o_jogo_vibra(pad, 0, 0)
+        proc.morre(100 + pad.player)
+        mesa.o_jogo_vibra(pad, *PEDIDOS[pad.player])
+    mesa.passar(60.0)
+    for pad in mesa.pads:
+        assert mesa.pedidos(pad.player) == [PEDIDOS[pad.player], (0, 0), PEDIDOS[pad.player]], (
+            f"P{pad.player}: {mesa.pedidos(pad.player)}"
+        )
+        assert not pad._jogo_no_motor
+    assert not diario.de("uhid_rumble_do_jogo_morto")
+
+
+def test_o_pad_xbox_que_nasce_guarda_o_input_que_o_kernel_deu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem o `inputN` do `UI_GET_SYSNAME`, a consulta do Xbox nunca acha o nó do jogo."""
+    import sys
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.integrations import uinput_gamepad as uinput
+
+    pedidos: list[int] = []
+
+    def _sysname(fd: int) -> str:
+        pedidos.append(fd)
+        return "input77"
+
+    monkeypatch.setitem(sys.modules, "evdev._uinput", SimpleNamespace(get_sysname=_sysname))
+    monkeypatch.setattr(
+        uinput.UinputGamepad, "_create_device", lambda _self, *, with_ff: SimpleNamespace(fd=41)
+    )
+    monkeypatch.setattr(uinput.UinputGamepad, "_iniciar_o_fio_da_vibracao", lambda _self: None)
+    pad = uinput.UinputGamepad.for_flavor("xbox")
+    assert pad.start() is True
+    assert pedidos == [41]
+    assert pad._sysname == "input77"
+
+
+def test_o_pad_xbox_sem_o_nome_do_kernel_diz_por_que(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.integrations import uinput_gamepad as uinput
+
+    def _recusa(_fd: int) -> str:
+        raise OSError(25, "Inappropriate ioctl for device")
+
+    registro = _Diario()
+    monkeypatch.setattr(uinput, "logger", registro)
+    monkeypatch.setitem(sys.modules, "evdev._uinput", SimpleNamespace(get_sysname=_recusa))
+    assert uinput._sysname_do_uinput(SimpleNamespace(fd=41)) is None
+    assert [linha["err"] for linha in registro.de("uinput_sem_sysname")] == [
+        "[Errno 25] Inappropriate ioctl for device"
+    ]
+    assert uinput._consultar_o_leitor_do_pad(uinput.UinputGamepad.for_flavor("xbox")) == (
+        None, "o pad sem nó"
+    )
