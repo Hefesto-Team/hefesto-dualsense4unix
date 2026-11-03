@@ -1741,8 +1741,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > |---|---|---|
 > | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:300` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:44` | **ALTA** — lido no código |
 > | entrega ao vpad na borda | `core/physical_report_reader.py:903-938` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1291` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:290` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1278`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1301` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:296` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1288`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
@@ -1780,7 +1780,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1302` `forward_battery`, saindo em `:1640`,
+> (`integrations/uhid_gamepad.py:1312` `forward_battery`, saindo em `:1640`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de
@@ -1898,6 +1898,18 @@ O discriminador que separa os dois casos é limpo:
 > intenção ao SDL — ninguém aqui perguntou aos autores dele por que a parada tem
 > essa forma. A hipótese explica o que **já** funcionava, que é a regra do projeto: a parada do SDL sempre funcionou no controle físico, e agora se sabe por
 > quê.
+
+> **NOTA DATADA — 03/11/2026: a rede do relógio saiu.** Além da parada do SDL, o
+> vpad zerava o motor depois de 3 s sem pedido novo, e isso cortava a vibração que o
+> jogo vivo segura sem repetir: sete cortes em uma hora de jogo em 02/11, todos aos
+> 3,0 s, seis com o motor fraco `(40, 0)`. Desde 03/11 o tempo não decide: o vpad só
+> solta o motor quando ninguém mais lê o pad (nenhum descritor aberto no nó dele, ou só
+> processos zumbis ou parados) por duas consultas seguidas ao `/proc`, feitas fora da
+> bomba, e o diário diz `uhid_rumble_do_jogo_morto` com o motivo. O `UHID_CLOSE`, o
+> `UHID_STOP` e a parada do SDL continuam soltando na hora.
+>
+> **GRAU: MEDIDO AQUI** para os cortes (o diário de 02/11); a régua é
+> `tests/unit/test_o_rumble_que_o_jogo_segura_nao_expira_em_tres_segundos.py`.
 
 ---
 

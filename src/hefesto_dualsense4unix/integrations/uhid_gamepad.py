@@ -111,7 +111,13 @@ _RUMBLE_STRONG_OFFSET = 3
 
 _VIBRATION_FLAGS = 0x03
 
-_RUMBLE_STALE_SEC = 3.0
+_CONFERE_O_LEITOR_S = 3.0
+
+_MORTO_POR_SEGUIDAS = 2
+
+_ESTADOS_SEM_LEITOR = frozenset("ZTX")
+
+RAIZ_DO_PROC = "/proc"
 
 _TOQUE_MINIMO_TIQUES = 1
 
@@ -544,7 +550,10 @@ class UhidDualSense:
     _fd: int | None = None
     _features: dict[int, bytes] = field(default_factory=dict)
     _last_sent: tuple[int, int] = (0, 0)
-    _rumble_visto_em: float | None = None
+    _leitor_consulta: threading.Thread | None = None
+    _leitor_conferido_em: float | None = None
+    _leitor_mortos: int = 0
+    _leitor_motivo: str = ""
     _output_count: int = 0
     _rumble_count: int = 0
     _rumble_nao_nulo_count: int = 0
@@ -1011,7 +1020,8 @@ class UhidDualSense:
         O vpad some e ninguém mais mandaria o stop — sem isto o DualSense fica
         vibrando para sempre (mesma proteção do UinputGamepad.stop).
         """
-        self._rumble_visto_em = None
+        self._leitor_mortos = 0
+        self._leitor_conferido_em = None
         if self._last_sent == (0, 0) or self.rumble_sink is None:
             return
         if self._no_fio_do_uhid():
@@ -1389,7 +1399,7 @@ class UhidDualSense:
         with self._a_trava_da_saida():
             self._entregar_o_pendente()
             self._flush_replicas()
-            self._expirar_rumble_preso()
+            self._soltar_o_rumble_do_jogo_morto()
             fio = self._fio_do_uhid
             if fio is not None and fio.is_alive():
                 return
@@ -1467,7 +1477,6 @@ class UhidDualSense:
             return
         if _e_a_parada_do_sdl(body):
             self._carimbar(ATIVIDADE_RUMBLE)
-            self._rumble_visto_em = None
             self._rumble_parada_sdl_count += 1
             self._anotar_no_anel(body, 0, 0, RAMO_PARADA_SDL)
             if self._last_sent != (0, 0):
@@ -1505,7 +1514,8 @@ class UhidDualSense:
             self._rumble_maior_pedido = pedido_mais_forte(
                 self._rumble_maior_pedido, (weak, strong)
             )
-        self._rumble_visto_em = self.time_fn() if (weak or strong) else None
+        if weak or strong:
+            self._leitor_mortos = 0
         self._carimbar(ATIVIDADE_RUMBLE)
         if (weak, strong) == self._last_sent:
             return
@@ -1533,23 +1543,53 @@ class UhidDualSense:
         if len(self._rumble_anel) > _ANEL_DE_VIBRACAO_MAX:
             del self._rumble_anel[:-_ANEL_DE_VIBRACAO_MAX]
 
-    def _expirar_rumble_preso(self) -> None:
-        """Zera um rumble do jogo que ficou pendurado além do teto de silêncio."""
-        if self._last_sent == (0, 0) or self._rumble_visto_em is None:
+    def _soltar_o_rumble_do_jogo_morto(self) -> None:
+        """Solta o motor que o jogo pediu só quando ninguém mais lê este pad.
+
+        O tempo não decide: o jogo que segura a vibração sem repetir o pedido a mantém. A
+        pergunta «o jogo ainda lê este controle?» sai num fio curto a cada
+        `_CONFERE_O_LEITOR_S`, só com motor ligado; a bomba lê o último veredito e nunca
+        espera o `/proc`. Duas consultas seguidas sem leitor soltam o motor.
+        """
+        if self._last_sent == (0, 0):
+            self._leitor_mortos = 0
+            self._leitor_conferido_em = None
             return
-        silencio = self.time_fn() - self._rumble_visto_em
-        if silencio < _RUMBLE_STALE_SEC:
+        if self._leitor_mortos >= _MORTO_POR_SEGUIDAS:
+            logger.warning(
+                "uhid_rumble_do_jogo_morto",
+                player=self.player,
+                ultimo=self._last_sent,
+                motivo=self._leitor_motivo,
+            )
+            self._silence_rumble()
             return
-        logger.warning(
-            "uhid_rumble_preso_expirado",
-            player=self.player,
-            ultimo=self._last_sent,
-            teto_s=_RUMBLE_STALE_SEC,
-            silencio_s=round(silencio, 2),
+        consulta = self._leitor_consulta
+        if consulta is not None and consulta.is_alive():
+            return
+        agora = self.time_fn()
+        conferido = self._leitor_conferido_em
+        if conferido is not None and agora - conferido < _CONFERE_O_LEITOR_S:
+            return
+        self._leitor_conferido_em = agora
+        fio = threading.Thread(
+            target=self._consultar_o_leitor, name=f"hefesto-leitor-p{self.player}", daemon=True
         )
-        self._rumble_visto_em = None
-        self._last_sent = (0, 0)
-        self._emit_rumble(0, 0)
+        self._leitor_consulta = fio
+        fio.start()
+
+    def _consultar_o_leitor(self) -> None:
+        """O veredito de `CONSULTAR_O_LEITOR`: o morto soma; o vivo e o «não sei» zeram."""
+        try:
+            vivo, motivo = CONSULTAR_O_LEITOR(self)
+        except Exception as exc:
+            vivo, motivo = None, f"a consulta falhou: {exc}"
+        with self._lock:
+            self._leitor_motivo = motivo
+            if vivo is False and self._last_sent != (0, 0):
+                self._leitor_mortos += 1
+            else:
+                self._leitor_mortos = 0
 
     def _emit_rumble(self, weak: int, strong: int) -> None:
         if self._no_fio_do_uhid():
@@ -2439,6 +2479,109 @@ PEDIR_O_PAD_USB: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | Non
     _pedir_ao_broker
 )
 HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
+
+
+def _nos_do_pad(pad: UhidDualSense) -> list[str]:
+    """Os nós pelos quais um jogo lê o pad: o `hidraw` e os `event` irmãos dele."""
+    from hefesto_dualsense4unix.integrations import no_do_vpad
+
+    gadget = pad._gadget
+    if gadget is not None:
+        if not gadget.hidraw:
+            return []
+        hidraw: str | None = os.path.join(no_do_vpad.RAIZ_DEV, os.path.basename(gadget.hidraw))
+        nos: list[str] = [hidraw] if hidraw else []
+    else:
+        no = no_do_vpad.resolver_no_do_vpad(uniq=pad.mac, nome=pad.name)
+        hidraw = no.get("hidraw")
+        nos = [n for n in (hidraw, no.get("evdev")) if isinstance(n, str) and n]
+    if isinstance(hidraw, str) and hidraw:
+        sysfs = os.path.join(os.path.dirname(no_do_vpad.RAIZ_CLASS_INPUT), "hidraw",
+                             os.path.basename(hidraw), "device", "input")
+        with contextlib.suppress(OSError):
+            for entrada in sorted(os.listdir(sysfs)):
+                with contextlib.suppress(OSError):
+                    nos.extend(
+                        os.path.join(no_do_vpad.RAIZ_DEV_INPUT, filho)
+                        for filho in sorted(os.listdir(os.path.join(sysfs, entrada)))
+                        if filho.startswith("event")
+                    )
+    return [n for n in dict.fromkeys(nos) if os.path.exists(n)]
+
+
+def _estado_do_processo(raiz_proc: str, pid: str) -> str:
+    """A letra do estado em `/proc/<pid>/stat`, ou `X` quando o processo sumiu."""
+    try:
+        with open(os.path.join(raiz_proc, pid, "stat"), encoding="utf-8",
+                  errors="replace") as arquivo:
+            stat = arquivo.read()
+    except OSError:
+        return "X"
+    campos = stat.rpartition(")")[2].split()
+    return campos[0] if campos else "X"
+
+
+def o_jogo_le_os_nos(
+    nos: list[str],
+    *,
+    raiz_proc: str | None = None,
+    meu_pid: int | None = None,
+    orcamento_s: float = 0.5,
+) -> tuple[bool | None, str]:
+    """`(True, …)` com um leitor vivo, `(False, motivo)` sem nenhum e `(None, motivo)` sem saber.
+
+    Leitor é o processo, fora o daemon, com um descritor num dos `nos`. O zumbi, o parado e
+    o que sumiu (`Z`, `T`, `X`) não leem. O descritor casa pelo alvo do link, que não abre
+    nem toca o arquivo, e a varredura que estoura o orçamento devolve «não sei», nunca
+    «ninguém». O processo cujos descritores não se leem (de outro usuário, ou que saiu no
+    meio) entra no motivo pela conta, para o diário dizer o que a varredura não viu.
+    """
+    raiz = RAIZ_DO_PROC if raiz_proc is None else raiz_proc
+    eu = str(os.getpid() if meu_pid is None else meu_pid)
+    alvos = {caminho for no in nos for caminho in (no, os.path.realpath(no))}
+    if not alvos:
+        return None, "o pad sem nó"
+    try:
+        pids = [p for p in os.listdir(raiz) if p.isdigit() and p != eu]
+    except OSError as exc:
+        return None, f"o /proc ilegível: {exc}"
+    prazo = time.monotonic() + orcamento_s
+    parados: list[str] = []
+    ilegiveis = 0
+    for pid in pids:
+        fd_dir = os.path.join(raiz, pid, "fd")
+        try:
+            descritores = os.listdir(fd_dir)
+        except OSError:
+            ilegiveis += 1
+            continue
+        for fd in descritores:
+            if time.monotonic() > prazo:
+                return None, "a varredura estourou o orçamento"
+            try:
+                alvo = os.readlink(os.path.join(fd_dir, fd))
+            except OSError:
+                alvo = ""
+            if alvo not in alvos:
+                continue
+            estado = _estado_do_processo(raiz, pid)
+            if estado not in _ESTADOS_SEM_LEITOR:
+                return True, f"o pid {pid} lê ({estado})"
+            parados.append(f"{pid}:{estado}")
+            break
+    sem_leitura = f" ({ilegiveis} processos sem leitura)" if ilegiveis else ""
+    if parados:
+        return False, "só leitores parados ou zumbis: " + ", ".join(parados) + sem_leitura
+    return False, "nenhum leitor" + sem_leitura
+
+
+def _consultar_o_leitor_do_pad(pad: UhidDualSense) -> tuple[bool | None, str]:
+    return o_jogo_le_os_nos(_nos_do_pad(pad))
+
+
+CONSULTAR_O_LEITOR: Callable[[UhidDualSense], tuple[bool | None, str]] = (
+    _consultar_o_leitor_do_pad
+)
 JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
 APARELHO_PRESENTE: Callable[[str], bool] = pad_usb.aparelho_presente
 CONTRATO_QUE_FALTA: Callable[[], list[str]] = system_check.contrato_do_pad_em_usb
@@ -2911,7 +3054,7 @@ def _bombear_o_gadget(pad: UhidDualSense) -> None:
     with pad._a_trava_da_saida():
         pad._entregar_o_pendente()
         pad._flush_replicas()
-        pad._expirar_rumble_preso()
+        pad._soltar_o_rumble_do_jogo_morto()
         fio = pad._fio_do_uhid
         if fio is not None and fio.is_alive():
             return
