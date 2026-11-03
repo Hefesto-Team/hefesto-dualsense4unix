@@ -157,7 +157,6 @@ class CabecaDeMentira(controles_vivos.Janela):
         self.ondas = {}
         self.eco_sensor = {}
         self.eco_rota = {}
-        self.eco_mudo = {}
         self.gestos = []
         self.valores = []
         self.remontagens = 0
@@ -226,7 +225,6 @@ def ensaio():
 def mesa(ensaio):
     """Cada teste começa com a mesa no centro e o rodapé limpo."""
     tela, cabeca = ensaio
-    cabeca.eco_mudo.clear()
     cabeca.eco_rota.clear()
     cabeca.eco_sensor.clear()
     cabeca.pintar(_estado())
@@ -316,7 +314,7 @@ def test_os_tres_botoes_de_som_existem_na_tela(mesa):
     """Antes de perguntar se respondem, perguntar se estão lá."""
     tela, _ = mesa
     for botao, quem in (('[data-gesto="mic-retorno"]', "🎙"),
-                        ('[data-mudo="alto-falante"]', "♪")):
+                        ('[data-gesto="volume-padrao"]', "Padrão")):
         assert tela.existe(f'{_cartao()} {botao}'), (
             f"o botão {quem} ({botao}) sumiu do cartão. Sem ele a régua "
             "não teria como reprovar quem o quebrasse."
@@ -326,8 +324,9 @@ def test_os_tres_botoes_de_som_existem_na_tela(mesa):
 def test_o_gesto_do_som_tem_dono_declarado(mesa):
     """Todo gesto que chega ao Python tem de saber QUEM o aplicaria."""
     tela, _cabeca = mesa
-    recados = tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="alto-falante"]')
-    chave = f'mudo:{recados[0].objeto["bloco"]}'
+    recados = tela.clicar_e_ouvir(f'{_cartao()} [data-bloco="alto-falante"] '
+                                  '.rota button[data-rota="jogo"]')
+    chave = f'rota:{recados[0].objeto["rota"]}'
     dono = controles_vivos.DONOS_DOS_GESTOS.get(chave)
     assert dono, f"{chave} chegou à ponte sem linha em DONOS_DOS_GESTOS"
     assert "speaker.set" in dono, dono
@@ -385,9 +384,9 @@ def test_arrancar_os_enderecos_faz_a_pintura_desabar(mesa):
 
     tela.executar(
         "for(const e of document.querySelectorAll('[data-glifo],[data-eixo],"
-        "[data-bloco],[data-gatilho],[data-stick],[data-xy],[data-campo],"
-        "[data-mudo]')){for(const a of ['glifo','eixo','bloco','gatilho',"
-        "'stick','xy','campo','mudo']) delete e.dataset[a];}"
+        "[data-bloco],[data-gatilho],[data-stick],[data-xy],[data-campo]'))"
+        "{for(const a of ['glifo','eixo','bloco','gatilho',"
+        "'stick','xy','campo']) delete e.dataset[a];}"
     )
     depois = cabeca.pintar(_estado(), remontar=False)
 
@@ -396,7 +395,7 @@ def test_arrancar_os_enderecos_faz_a_pintura_desabar(mesa):
         f"{inteiro} valores ({depois / inteiro:.0%}); o medido na árvore sã é "
         "121 → 17 (14%). Ou os `data-*` não estavam sendo usados, ou as "
         "escritas do bootstrap voltaram a contar cego (`return 1` sem elemento, "
-        "em vez do `return 0` de txt/est/cls/trava)."
+        "em vez do `return 0` de txt/est/cls)."
     )
     print(f"[mordida] pintura {inteiro} → {depois} valores com os data-* fora")
 
@@ -404,7 +403,7 @@ def test_arrancar_os_enderecos_faz_a_pintura_desabar(mesa):
 def test_o_seletor_que_nao_casa_e_erro_e_nao_silencio(mesa):
     """A régua da régua. Se o instrumento mentir, tudo acima é enfeite."""
     tela, _ = mesa
-    inexistente = '.ctl [data-mudo="botao-que-nunca-existiu"]'
+    inexistente = '.ctl [data-gesto="botao-que-nunca-existiu"]'
     assert tela.contar(inexistente) == 0
     assert not tela.existe(inexistente)
     for chamada in (
@@ -437,7 +436,8 @@ def test_o_instrumento_declara_o_que_nao_faz():
 def test_a_ponte_leva_json_nos_dois_sentidos(mesa):
     """O recado é JSON — e um recado ilegível não pode virar `None` calado."""
     tela, _ = mesa
-    recados = tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="alto-falante"]')
+    recados = tela.clicar_e_ouvir(f'{_cartao()} [data-bloco="alto-falante"] '
+                                  '.rota button[data-rota="jogo"]')
     assert isinstance(recados[0].objeto, dict), recados[0].bruto
     assert json.loads(recados[0].bruto) == recados[0].objeto
     assert recados[0].aos > 0, "o recado chegou sem hora"

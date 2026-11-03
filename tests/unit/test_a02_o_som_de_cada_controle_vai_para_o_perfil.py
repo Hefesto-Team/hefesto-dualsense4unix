@@ -210,14 +210,14 @@ def test_o_mudo_do_microfone_nao_vai_ao_perfil(casa: Any) -> None:
         f"o clique no mudo pediu mais que o ato ao daemon: {p.nomes!r}")
 
 
-def test_o_mudo_do_alto_falante_grava_volume_e_mudo_juntos(casa: Any) -> None:
-    """A seção do alto-falante é ALL-OR-NOTHING, e o volume vem junto."""
+def test_o_volume_em_zero_do_alto_falante_grava_a_secao_inteira(casa: Any) -> None:
+    """A seção do alto-falante é ALL-OR-NOTHING: o volume em 0 cala, e o mudo vai junto."""
     p = Ponte()
-    _gesto("mudo")(_ctx(), {"uniq": P1, "mudo": "alto-falante"}, p)
+    _gesto("volume")(_ctx(), {"uniq": P1, "volume": "alto-falante", "valor": "0"}, p)
 
-    assert _do_controle(CHAVE_P1).get("speaker") == {"volume": 100, "muted": True}, (
-        "o mudo do alto-falante não chegou ao perfil com o volume junto — e "
-        "sem o volume o esquema recusaria a seção inteira")
+    assert _do_controle(CHAVE_P1).get("speaker") == {"volume": 0, "muted": False}, (
+        "o volume em 0 do alto-falante não chegou ao perfil com a seção inteira — e "
+        "sem o mudo junto o esquema recusaria a seção")
 
 
 def test_a_rota_do_som_vai_para_o_perfil(casa: Any) -> None:
@@ -407,8 +407,8 @@ def test_sem_endereco_estavel_ele_avisa(casa: Any) -> None:
     avulso = _dele("path:/dev/hidraw3")
     p = Ponte()
     with pytest.raises(RuntimeError) as erro:
-        _gesto("mudo")(_ctx(avulso), {"uniq": "path:/dev/hidraw3",
-                                      "mudo": "alto-falante"}, p)
+        _gesto("volume")(_ctx(avulso), {"uniq": "path:/dev/hidraw3",
+                                        "volume": "alto-falante", "valor": "0"}, p)
 
     frase = str(erro.value)
     assert frase.startswith(SOM_SEM_ENDERECO), (

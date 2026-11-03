@@ -66,7 +66,7 @@ def test_todo_passo_do_roteiro_acha_alvo_na_tela(alvo: Path) -> None:
 def test_o_roteiro_cobre_o_microfone_e_o_alto_falante() -> None:
     """MORDIDA 2: os DOIS botões da coluna do som continuam no roteiro."""
     seletores = [s for _ms, s in _roteiro()]
-    for botao in ('[data-gesto="mic-retorno"]', '[data-mudo="alto-falante"]'):
+    for botao in ('[data-gesto="mic-retorno"]', '[data-gesto="volume-padrao"]'):
         assert any(botao in s for s in seletores), (
             f"o roteiro deixou de clicar {botao} — é o defeito de 29/08 "
             f"voltando: {seletores}"

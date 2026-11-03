@@ -17,7 +17,7 @@ Esta régua cobra as três, no piloto do produto, com a janela OCULTA:
 2. **a recusa também não fica — 13/09/2026, FRASES-E-DICAS-01.** Até ali a recusa
    ficava 30 s no cartão, e só na página em que nascera. A caixa laranja da foto
    no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DO-USUARIO-INDICE.md`, linha
-   19) era essa recusa, e a recusa saiu: recusa no 🎙 do p1 da 02, navega para a 03,
+   19) era essa recusa, e a recusa saiu: recusa no «Padrão» do p1 da 02, navega para a 03,
    volta à 02 — zero recado nas três leituras, e o piloto sem depósito;
 3. **o rodapé não devolve recado.** `rodape._recado` relata e devolve `None`;
    quem repõe o atalho da Steam é a carona, não a frase.
@@ -58,14 +58,14 @@ CHAVE_P1 = "aabbcc000001"
 
 FRASES = {
     "reconectar": "regua-calada: os controles voltaram na ordem de antes",
-    "mic": "regua-calada: o microfone ligou e o canal está mudo",
-    "recusa": "regua-calada: o Hefesto não confirmou o mudo do microfone",
+    "som": "regua-calada: o alto-falante voltou ao volume do jogo",
+    "recusa": "regua-calada: o Hefesto não confirmou o volume do alto-falante",
 }
 
 PAGINA_01 = "01-jogar.html"
 PAGINA_02 = PAGINA_01
 PAGINA_03 = "03-gatilhos.html"
-MIC_P1 = '[data-controle="p1"] [data-mudo="alto-falante"]'
+PADRAO_P1 = '[data-controle="p1"] [data-gesto="volume-padrao"]'
 RECONECTAR = 'button[data-gesto="reconectar"]'
 
 ASSENTAR_MS = 1200
@@ -137,7 +137,7 @@ def medido() -> dict:
     """Abre o piloto DE VERDADE, oculto, e anda 01 → 03 → 01.
 
     A seção Controles mora na Jogar desde 28/10/2026 (a 02 saiu do produto):
-    os passos que eram da 02 clicam o 🎙 do p1 na própria 01, sem navegar.
+    os passos que eram da 02 clicam o «Padrão» do p1 na própria 01, sem navegar.
     """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
@@ -153,7 +153,7 @@ def medido() -> dict:
     import hefesto_vivo as hv
 
     chave_01 = (PAGINA_01, "reconectar")
-    chave_02 = (PAGINA_02, "mudo")
+    chave_02 = (PAGINA_02, "volume-padrao")
     guardado_gestos = {k: hv.pacotes.GESTOS.get(k) for k in (chave_01, chave_02)}
     guardado_estado = hv.mesa_viva.estado_do_daemon
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO  # type: ignore[assignment]
@@ -161,14 +161,14 @@ def medido() -> dict:
     def reconectar_que_diz(ctx, o, p):
         return {"recado": FRASES["reconectar"]}
 
-    def mudo_que_diz(ctx, o, p):
-        return {"recado": FRASES["mic"]}
+    def padrao_que_diz(ctx, o, p):
+        return {"recado": FRASES["som"]}
 
-    def mudo_que_recusa(ctx, o, p):
+    def padrao_que_recusa(ctx, o, p):
         raise RuntimeError(FRASES["recusa"])
 
     hv.pacotes.GESTOS[chave_01] = reconectar_que_diz
-    hv.pacotes.GESTOS[chave_02] = mudo_que_diz
+    hv.pacotes.GESTOS[chave_02] = padrao_que_diz
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
@@ -231,7 +231,7 @@ def medido() -> dict:
 
     def na_02() -> bool:
         ler_a_tela("02-antes")
-        clicar(MIC_P1, "02-clique-sucesso")
+        clicar(PADRAO_P1, "02-clique-sucesso")
         GLib.timeout_add(DEPOIS_DO_CLIQUE_MS, leu_o_sucesso_da_02)
         return False
 
@@ -243,8 +243,8 @@ def medido() -> dict:
         return False
 
     def a_recusa_da_02() -> bool:
-        hv.pacotes.GESTOS[chave_02] = mudo_que_recusa
-        clicar(MIC_P1, "02-clique-recusa")
+        hv.pacotes.GESTOS[chave_02] = padrao_que_recusa
+        clicar(PADRAO_P1, "02-clique-recusa")
         GLib.timeout_add(DEPOIS_DO_CLIQUE_MS, leu_a_recusa_da_02)
         return False
 
@@ -333,8 +333,8 @@ def test_o_sucesso_da_02_nao_pousa_no_cartao(medido: dict) -> None:
     depois = _leitura(medido, "02-depois-do-sucesso")
     assert depois["tem_p1"], "a 02 sem o cartão do p1 — não há cartão a medir"
     assert depois["recados"] == [], (
-        f"o 🎙 deu certo e o cartão do p1 ganhou recado: {depois['recados']!r}")
-    assert not depois["vistas"]["mic"], (
+        f"o «Padrão» deu certo e o cartão do p1 ganhou recado: {depois['recados']!r}")
+    assert not depois["vistas"]["som"], (
         "a frase do gesto que deu certo chegou ao texto da 02 por outro caminho")
     assert medido["02-deposito-sucesso"] == [], medido["02-deposito-sucesso"]
 
@@ -343,7 +343,7 @@ def test_a_frase_do_sucesso_vai_ao_diario(medido: dict) -> None:
     """A frase não some: vai ao diário da janela, que é o `interface.log`."""
     diario = str(medido["diario"])
     for linha in (f"[relato] {PAGINA_01} · reconectar: {FRASES['reconectar']}",
-                  f"[relato] {PAGINA_02} · mudo: {FRASES['mic']}"):
+                  f"[relato] {PAGINA_02} · volume-padrao: {FRASES['som']}"):
         assert linha in diario, (
             f"o relato {linha!r} não chegou ao diário — a frase do sucesso "
             f"sumiu inteira, e quem depura perde o que o gesto disse. "
@@ -399,14 +399,14 @@ def test_o_gesto_que_deu_certo_nao_deposita_e_relata(capsys) -> None:
 
     anotador = _PilotoQueAnota()
     volta = hv.Piloto._deu_certo_dizendo(
-        anotador, PAGINA_02, "mudo", CHAVE_P1,
+        anotador, PAGINA_02, "volume-padrao", CHAVE_P1,
         {"recado": "  a frase do dono  ", "colunas": {"p1": {"x": "1"}}})
     assert volta is False
     assert anotador.depositos == [], (
         f"o sucesso foi depositado: {anotador.depositos!r} — é a porta do cartão e "
         f"da faixa que se decidiu fechar")
     assert anotador.respostas == [{"colunas": {"p1": {"x": "1"}}}], anotador.respostas
-    assert f"[relato] {PAGINA_02} · mudo: a frase do dono" in capsys.readouterr().err
+    assert f"[relato] {PAGINA_02} · volume-padrao: a frase do dono" in capsys.readouterr().err
 
 
 def test_sem_frase_o_sucesso_nem_relata(capsys) -> None:
@@ -414,7 +414,7 @@ def test_sem_frase_o_sucesso_nem_relata(capsys) -> None:
     import hefesto_vivo as hv
 
     anotador = _PilotoQueAnota()
-    hv.Piloto._deu_certo_dizendo(anotador, PAGINA_02, "mudo", CHAVE_P1,
+    hv.Piloto._deu_certo_dizendo(anotador, PAGINA_02, "volume-padrao", CHAVE_P1,
                                  {"recado": "   "})
     assert anotador.depositos == []
     assert anotador.respostas == [{}]

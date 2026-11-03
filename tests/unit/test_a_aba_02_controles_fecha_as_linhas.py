@@ -414,10 +414,10 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     return {cor: c.color, borda: c.borderTopColor, cursor: c.cursor,
             display: c.display, largura: e.getBoundingClientRect().width};
   };
-  // O ♪ E A SUA LINHA. A régua acende o cinza pelo MESMO caminho do produto —
+  // O 🎙 E A SUA LINHA. A régua acende o cinza pelo MESMO caminho do produto —
   // o atributo que o alvo `atributo` escreve —, e não por uma classe posta à
   // mão: medir uma classe que o produto não escreve mediria este arquivo.
-  const bloco = card.querySelector('[data-bloco="alto-falante"]');
+  const bloco = card.querySelector('[data-bloco="microfone"]');
   const linha = bloco.querySelector('.vol');
   const botao = bloco.querySelector('.mudo-i');
   const antes = cs(botao);

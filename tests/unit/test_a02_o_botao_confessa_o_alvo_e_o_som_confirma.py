@@ -330,7 +330,7 @@ def test_o_ato_do_microfone_ainda_nao_diz_de_quem_e_o_microfone() -> None:
     ("gesto", "clique"),
     [
         ("volume", {"volume": "alto-falante", "valor": "42"}),
-        ("mudo", {"mudo": "alto-falante"}),
+        ("volume-padrao", {}),
         ("rota", {"rota": "jogo"}),
     ],
 )

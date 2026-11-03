@@ -162,24 +162,6 @@ ROTA_DO_CANAL: Final[dict[str, int]] = {
     CANAL_NADA_NO_CONTROLE: 0,
 }
 
-TEXTO_BOTAO_SPEAKER_ATIVAR: Final[str] = "Ativar"
-TEXTO_BOTAO_SPEAKER_SILENCIAR: Final[str] = "Silenciar"
-TEXTO_BOTAO_SPEAKER_SEM_DADO: Final[str] = "Silenciar"
-
-
-DICA_SPEAKER_SILENCIAR: Final[str] = (
-    "O alto-falante está no volume que o hefesto mandou. Silenciar manda zero "
-    "sem perder esse volume — Ativar o devolve."
-)
-DICA_SPEAKER_ATIVAR: Final[str] = (
-    "O alto-falante está mudo por ordem nossa. Ativar devolve o mesmo volume "
-    "de antes do mudo."
-)
-DICA_SPEAKER_SEM_DADO: Final[str] = (
-    "Ainda não há volume conhecido — use o controle deslizante primeiro"
-)
-
-
 DICA_AUDIO_SEM_ENDERECO: Final[str] = (
     "Este controle não publicou endereço, e sem ele todo comando de som iria "
     "para o controle PRIMÁRIO — outro controle, com o título deste na frente. "
@@ -507,60 +489,6 @@ def acao_mic(entry: Any) -> AcaoMic:
     return AcaoMic(TEXTO_BOTAO_MIC_SILENCIAR, True, True, "")
 
 
-class AcaoSpeaker(NamedTuple):
-    """O que um botão do alto-falante diz e o que ele manda quando clicado.
-
-    ``muted`` é o argumento homônimo de ``ipc_bridge.speaker_set`` (``None`` =
-    não mexer no mudo) e ``release`` pede a DEVOLUÇÃO da posse. Nenhum dos dois
-    carrega volume: volume só sai do controle deslizante, e sempre explícito.
-    """
-
-    rotulo: str
-    muted: bool | None
-    release: bool
-    sensivel: bool
-    dica: str
-
-
-def acao_speaker_mudo(entry: Any) -> AcaoSpeaker:
-    """Estado do botão de MUDO do alto-falante (SOM-02, entrega 2).
-
-    A tabela, e cada linha vem de medição:
-
-    ==============================  ==========  ===================
-    estado                          rótulo      manda
-    ==============================  ==========  ===================
-    sem volume conhecido            sem dado    (insensível)
-    tocando, posse nossa            Silenciar   ``muted=True``
-    mudo por nossa ordem            Ativar      ``muted=False``
-    ==============================  ==========  ===================
-
-    **A primeira linha é INSENSÍVEL, e isso é a entrega.** A chave ``speaker``
-    só existe depois de um ``speaker.set`` nosso com volume; antes desse set, um
-    ``muted=True`` faria o backend assumir a posse com preferência ZERO, e o
-    ``muted=False`` seguinte "restauraria" essa preferência — o par tranca o
-    alto-falante em ``{'volume': 0, 'muted': True}`` e o próprio botão não tem
-    como soltá-lo (armadilha 2 da SOM-02, executada contra o backend real).
-
-    O botão fica insensível em vez de sumir, pela mesma regra do microfone:
-    sumir muda a largura dos vizinhos e é indistinguível de "este controle não
-    tem alto-falante" (MIC-PRESENTE-01).
-    """
-    dados = speaker_do_entry(entry)
-    if dados is None:
-        return AcaoSpeaker(
-            TEXTO_BOTAO_SPEAKER_SEM_DADO, None, False, False, DICA_SPEAKER_SEM_DADO
-        )
-    _volume, muted = dados
-    if muted:
-        return AcaoSpeaker(
-            TEXTO_BOTAO_SPEAKER_ATIVAR, False, False, True, DICA_SPEAKER_ATIVAR
-        )
-    return AcaoSpeaker(
-        TEXTO_BOTAO_SPEAKER_SILENCIAR, True, False, True, DICA_SPEAKER_SILENCIAR
-    )
-
-
 def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
     """A CAMADA 1 (o sink do PipeWire) está muda? ``None`` = não dá para saber.
 
@@ -635,9 +563,6 @@ __all__ = [
     "ALL_BUTTONS",
     "DICA_AUDIO_SEM_ENDERECO",
     "DICA_MIC_SEM_LEITURA",
-    "DICA_SPEAKER_ATIVAR",
-    "DICA_SPEAKER_SEM_DADO",
-    "DICA_SPEAKER_SILENCIAR",
     "DICA_TITULO_SEM_VPAD",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
@@ -646,15 +571,10 @@ __all__ = [
     "TEXTO_BOTAO_MIC_DEVOLVER",
     "TEXTO_BOTAO_MIC_SEM_LEITURA",
     "TEXTO_BOTAO_MIC_SILENCIAR",
-    "TEXTO_BOTAO_SPEAKER_ATIVAR",
-    "TEXTO_BOTAO_SPEAKER_SEM_DADO",
-    "TEXTO_BOTAO_SPEAKER_SILENCIAR",
     "TEXTO_MIC_ALVO_NAO_HONRADO",
     "TEXTO_SELO_SAIDA_MUDA",
     "AcaoMic",
-    "AcaoSpeaker",
     "acao_mic",
-    "acao_speaker_mudo",
     "accel_do_inputs",
     "cor_do_swatch",
     "dedos_do_inputs",

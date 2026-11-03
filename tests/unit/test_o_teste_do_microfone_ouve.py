@@ -23,12 +23,16 @@ class TestOBotaoTrocouDeAtoNaTela:
             "o gesto do retorno não chegou à página publicada"
         )
 
-    def test_o_alto_falante_continua_com_o_mudo(self):
-        """**A régua que impede a cura de passar do ponto.**"""
-        pagina = PAGINA.read_text(encoding="utf-8")
-        assert 'data-mudo="alto-falante"' in pagina, (
-            "o ♪ perdeu o mudo — e ele não tem botão no plástico"
-        )
+    def test_o_alto_falante_nao_tem_mais_o_mudo(self):
+        """O volume em 0 cala o alto-falante, e o ♪ não volta ao gerador nem à página."""
+        import aba02
+
+        for onde, texto in (("o gerador", aba02.MIOLO),
+                            ("a página publicada", PAGINA.read_text(encoding="utf-8"))):
+            assert 'data-mudo="alto-falante"' not in texto, (
+                f"o ♪ voltou ao alto-falante em {onde}: o volume em 0 já cala")
+            assert 'data-gesto="volume-padrao"' in texto, (
+                f"o «Padrão» do alto-falante saiu de {onde}")
 
     def test_a_dica_diz_onde_se_cala_agora(self):
         """Tirar o ato sem dizer para onde ele foi deixa quem lê procurando."""

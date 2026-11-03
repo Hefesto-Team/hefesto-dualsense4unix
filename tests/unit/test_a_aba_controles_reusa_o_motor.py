@@ -499,7 +499,6 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
         "texto_toques": texto_toques,
         "dedos_do_inputs": motor.dedos_do_inputs,
         "acao_mic": motor.acao_mic,
-        "acao_speaker_mudo": motor.acao_speaker_mudo,
         "percentual_do_volume": percentual_do_volume,
     }
     reescritos = [

@@ -263,12 +263,21 @@ def test_sem_perfil_ida_e_volta_guarda_o_volume_que_o_usuario_escolheu(casa: Any
     assert (_do_computador().get("speaker") or {}).get("volume_padrao") is False
 
 
-def test_sem_perfil_o_mudo_e_a_rota_tambem_ficam_no_computador(casa: Any) -> None:  # noqa: F811
+def test_sem_perfil_o_volume_em_zero_e_a_rota_tambem_ficam_no_computador(casa: Any) -> None:  # noqa: F811
     p = Ponte()
-    _gesto("mudo")(_ctx_sem_perfil(), {"uniq": P1, "mudo": "alto-falante"}, p)
-    assert (_do_computador().get("speaker") or {}).get("muted") is True, _do_computador()
+    _gesto("volume")(_ctx_sem_perfil(), {"uniq": P1, "volume": "alto-falante", "valor": "0"}, p)
+    assert (_do_computador().get("speaker") or {}).get("volume") == 0, _do_computador()
     _gesto("rota")(_ctx_sem_perfil(), {"uniq": P1, "rota": "jogo"}, p)
     assert (_do_computador().get("speaker") or {}).get("rota") == 2, _do_computador()
+
+
+def test_o_mudo_nao_cala_o_alto_falante(casa: Any) -> None:  # noqa: F811
+    """O alto-falante se cala pelo volume em 0; o ``mudo`` só atende o microfone."""
+    p = Ponte()
+    with pytest.raises(ValueError, match="volume em 0"):
+        _gesto("mudo")(_ctx_sem_perfil(), {"uniq": P1, "mudo": "alto-falante"}, p)
+    assert "speaker_set" not in p.nomes, p.nomes
+    assert _do_computador() == {}, _do_computador()
 
 
 def test_sem_perfil_o_computador_e_por_controle_e_o_outro_nao_muda(casa: Any) -> None:  # noqa: F811

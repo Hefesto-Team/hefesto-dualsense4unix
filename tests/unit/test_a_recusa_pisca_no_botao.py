@@ -14,7 +14,7 @@ clique pelo sinal do botão.
 O QUE ESTA RÉGUA COBRA, no piloto do produto com a janela OCULTA e UM controle
 na mesa dublê:
 
-1. **a recusa não pousa recado nem frase**, COM coluna (`player` da 04, `mudo`
+1. **a recusa não pousa recado nem frase**, COM coluna (`player` da 04, `volume-padrao`
    da 02) e SEM coluna (o cadeado da 01): zero `.hef-recado`, e a frase ausente
    do texto visível, de todo `data-hef-dica` e de todo `title`;
 2. **o botão veste a recusa e a perde sozinho**: `hef-recusou` acende no pouso,
@@ -86,7 +86,7 @@ PAGINA_09 = "09-sistema.html"
 BOTOES = {
     "04": (PAGINA_04, "player",
            '[data-controle="p1"] .players button.fora[data-player="2"]'),
-    "02": (PAGINA_02, "mudo", '[data-controle="p1"] [data-mudo="alto-falante"]'),
+    "02": (PAGINA_02, "volume-padrao", '[data-controle="p1"] [data-gesto="volume-padrao"]'),
     "01": (PAGINA_01, "cadeado", '[data-gesto="cadeado"]'),
     "06": (PAGINA_06, "na-steam", '[data-gesto="na-steam"][value="padrao"]'),
     "09": (PAGINA_09, "copiar-registro", '[data-gesto="copiar-registro"]'),
@@ -94,7 +94,7 @@ BOTOES = {
 }
 CASOS = ("04", "02", "01", "06", "09", "09v")
 
-RECUSA_DO_MIC = "o volume deste alto-falante ainda é desconhecido"
+RECUSA_DO_SOM = "o Hefesto não confirmou o volume do alto-falante"
 RECUSA_DA_AREA = "Não consegui usar a área de transferência."
 RECUSA_DO_VAZIO = "O registro ainda está vazio — não há o que copiar."
 NO_PAINEL = "linha 1 do registro\nlinha 2 do registro"
@@ -258,7 +258,7 @@ def medido() -> dict:
     from hefesto_dualsense4unix.utils import area_de_transferencia as area
 
     armar: dict[str, str] = {}
-    frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_MIC,
+    frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_SOM,
               "01": a01.CADEADO_RECUSA, "06": a06.FRASE_DO_STEAM_PADRAO,
               "09": RECUSA_DA_AREA, "09v": RECUSA_DO_VAZIO}
     a09 = sys.modules[hv.pacotes.gesto_da_pagina(PAGINA_09, "copiar-registro").__module__]
@@ -269,21 +269,19 @@ def medido() -> dict:
     hv.pacotes.PACOTES[PAGINA_09] = lambda _ctx: {a09.REGISTRO: a09._no_painel(None)}
 
     chave_01 = (PAGINA_01, "cadeado")
-    chave_02 = (PAGINA_02, "mudo")
+    chave_02 = (PAGINA_02, "volume-padrao")
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.identity_number_set,
-                hv.ponte.mic_canal_set_detalhado)
+                hv.ponte.speaker_set)
     guardado_gestos = {k: hv.pacotes.GESTOS.get(k) for k in (chave_01, chave_02)}
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO  # type: ignore[assignment]
     hv.ponte.identity_number_set = (  # type: ignore[assignment]
         lambda uniq, n: (False, frases["04"]))
-    hv.ponte.mic_canal_set_detalhado = lambda *a, **k: {  # type: ignore[assignment]
-        "status": "incompleto", "canal_feito": False, "firmware_pedido": True,
-        "motivo": RECUSA_DO_MIC}
+    hv.ponte.speaker_set = lambda *a, **k: False  # type: ignore[assignment]
 
     def cadeado_que_recusa(ctx, o, p):
         raise RuntimeError(frases["01"])
 
-    def mudo_que_so_arma(ctx, o, p):
+    def padrao_que_so_arma(ctx, o, p):
         return {"armou": True}
 
     hv.pacotes.GESTOS[chave_01] = cadeado_que_recusa
@@ -396,7 +394,7 @@ def medido() -> dict:
         clicar_e_esperar_a_recusa("02", o_clique_que_so_arma)
 
     def o_clique_que_so_arma() -> None:
-        hv.pacotes.GESTOS[chave_02] = mudo_que_so_arma
+        hv.pacotes.GESTOS[chave_02] = padrao_que_so_arma
         piloto.ponte.perguntar(
             VIGIAR_E_CLICAR % (js(BOTOES["02"][2]), js("02-armou"), "null"),
             lambda v, e: fora.__setitem__("02-armou-clique", str(v)))
@@ -414,7 +412,7 @@ def medido() -> dict:
 
         def depois() -> None:
             fora["02-armou-desfecho"] = list(
-                piloto.desfechos.get(f"{PAGINA_02}:mudo", ()))
+                piloto.desfechos.get(f"{PAGINA_02}:volume-padrao", ()))
             recusa_da_01()
 
         esperar("02-armou", LER_A_TRILHA % js("02-armou"),
@@ -454,7 +452,7 @@ def medido() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon, hv.ponte.identity_number_set,
-         hv.ponte.mic_canal_set_detalhado) = guardado
+         hv.ponte.speaker_set) = guardado
         a09._faixa_lenta, pacote_da_09, area._A_DA_MOLDURA[:] = guardado_da_09
         a09._limpar_o_painel()
         if pacote_da_09 is None:

@@ -137,7 +137,7 @@ MESA = {"estado": ESTADO}
 
 VENCE_EM_S = 8.0
 
-RECUSA_DO_ATO = "o volume deste alto-falante ainda é desconhecido"
+RECUSA_DO_ATO = "o Hefesto não confirmou o volume do alto-falante"
 
 LER_A_TELA = r"""
 (function(){
@@ -163,10 +163,10 @@ LER_A_TELA = r"""
 })()
 """.replace("__FRASE__", json.dumps(RECUSA_DO_ATO))
 
-CLICAR_NO_MIC = r"""
+CLICAR_NO_PADRAO = r"""
 (function(){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
-  if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
+  const b = document.querySelector('[data-controle="p1"] [data-gesto="volume-padrao"]');
+  if(!b) return 'NAO ACHEI O PADRAO DO ALTO-FALANTE NO CARTAO DO P1';
   b.click();
   return 'cliquei';
 })()
@@ -205,13 +205,11 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
 
-    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado)
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.speaker_set)
     fora_do_produto = hasattr(hv, "SEGUNDOS_DO_RECADO")
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
-    hv.ponte.mic_canal_set_detalhado = lambda *a, **k: {  # type: ignore[assignment]
-        "status": "incompleto", "canal_feito": False, "firmware_pedido": True,
-        "motivo": RECUSA_DO_ATO}
+    hv.ponte.speaker_set = lambda *a, **k: False  # type: ignore[assignment]
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
@@ -238,7 +236,7 @@ def medido() -> dict:
         if not piloto.pronto:
             return True
         piloto.ponte.perguntar(LER_A_TELA, ler("antes"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO, anotar("clique"))
         GLib.timeout_add(700, logo_depois)
         return False
 
@@ -255,7 +253,7 @@ def medido() -> dict:
 
     def voltou() -> bool:
         piloto.ponte.perguntar(LER_A_TELA, ler("depois-da-troca-de-bloco"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("segundo-clique"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO, anotar("segundo-clique"))
         GLib.timeout_add(900, depois_do_segundo)
         return False
 
@@ -267,7 +265,7 @@ def medido() -> dict:
     def com_o_tique_parado() -> bool:
         piloto.pronto = False
         piloto.ponte.perguntar(APAGAR_OS_RECADOS, anotar("apaguei-os-recados"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("terceiro-clique"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO, anotar("terceiro-clique"))
         GLib.timeout_add(600, mediu_a_pintura_na_hora)
         return False
 
@@ -312,7 +310,7 @@ def medido() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon,
-         hv.ponte.mic_canal_set_detalhado) = guardado
+         hv.ponte.speaker_set) = guardado
         MESA["estado"] = ESTADO
     fora["prazo-no-produto"] = fora_do_produto
     assert "depois-de-vencer" in fora, (
@@ -340,9 +338,9 @@ def test_o_gesto_recusou_dizendo(medido: dict) -> None:
     assert medido["clique"] == "cliquei", medido["clique"]
     desfechos = medido["desfechos"]
     assert isinstance(desfechos, dict)
-    assert "01-jogar.html:mudo" in desfechos, (
+    assert "01-jogar.html:volume-padrao" in desfechos, (
         f"o clique não chegou ao gesto — os desfechos foram {desfechos}")
-    classe, frase = desfechos["01-jogar.html:mudo"]
+    classe, frase = desfechos["01-jogar.html:volume-padrao"]
     assert classe == "recusou dizendo", (classe, frase)
     assert frase.startswith("RuntimeError:"), frase
     assert RECUSA_DO_ATO in frase, frase

@@ -1353,7 +1353,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/actions/mode_transition.py::apply_mode": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "
-        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:725` (`apply_mode`) a chama "
+        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:699` (`apply_mode`) a chama "
         "(instrumento, fora do "
         "fecho do "
         "`hefesto_vivo`). A janela viva monta a MESMA sequência pelo dono "
@@ -1376,7 +1376,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/mic_monitor.py::MicMonitor": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "
-        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:808` (`MicMonitor`) o instancia "
+        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:782` (`MicMonitor`) o instancia "
         "(instrumento). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "

@@ -133,8 +133,8 @@ de hoje lê a tabela, que tem dono. O que não caduca é a lição:
 > **O que tem GESTO migrou. O que é LEITURA AO VIVO não.**
 
 Os botões funcionam, e funcionam bem: reusam o motor da GTK **função por
-função** — `rumble_policy_set_checked`, `acao_mic`, `acao_speaker_mudo`,
-`LogicaDoMapa`, `ordem_de_exibicao`, `politica_do_rotulo`. É a lei 0 sendo
+função** — `rumble_policy_set_checked`, `acao_mic`, `LogicaDoMapa`,
+`ordem_de_exibicao`, `politica_do_rotulo`. É a lei 0 sendo
 cumprida: quase nada foi reescrito.
 
 A leitura viva não migrou quase nada. E **isso não é tela vazia — é tela que

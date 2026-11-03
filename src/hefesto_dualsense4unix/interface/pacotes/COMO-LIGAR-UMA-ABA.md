@@ -115,7 +115,7 @@ Ele é lido por ele, e é o que dá território exclusivo a cada aba:
 
 ```python
 PAGINA = "NN-x.html"
-PISO_DA_ABA = 3          # quantos gestos esta aba tem. Só sobe.
+PISO_DA_ABA = 3          # quantos gestos esta aba tem. Só sobe; desce só no commit que tira um gesto da tela.
 PROVAS = [
     {"pagina": PAGINA, "gesto": "nome-do-gesto",
      "clique": {"lado": "e"},                       # o que o botão manda

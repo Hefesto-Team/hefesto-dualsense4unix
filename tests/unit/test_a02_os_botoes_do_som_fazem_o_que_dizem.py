@@ -221,7 +221,7 @@ class TestOGestoEntregaAFonte:
 
 
 class TestATabelaDosBotoes:
-    DA_COLUNA_DO_SOM = ("mudo", "volume", "rota")
+    DA_COLUNA_DO_SOM = ("mic-retorno", "volume", "rota")
 
     def test_todo_gesto_de_som_da_pagina_tem_dono(self) -> None:
         """MORDIDA: apague um `@gesto` da coluna de som."""
@@ -239,7 +239,6 @@ class TestATabelaDosBotoes:
         ("o", "metodo"),  # (noqa-acento)
         [
             ({"mudo": "microfone"}, "mic_canal_set_detalhado"),
-            ({"mudo": "alto-falante"}, "speaker_set"),
             ({"volume": "microfone", "valor": "42"}, "mic_volume_set_detalhado"),
             ({"volume": "alto-falante", "valor": "42"}, "speaker_set"),
             ({"rota": "jogo"}, "speaker_set"),

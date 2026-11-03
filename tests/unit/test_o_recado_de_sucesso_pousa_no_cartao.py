@@ -35,7 +35,7 @@ POR QUE A RÉGUA ABRE UM WebKit DE VERDADE, com o piloto do produto: porque a fo
 de defeito mais cara desta casa é *alguém curar o caminho e provar a cura num
 caminho que o produto não usa*. Foi assim com a recusa em 02/09 — dois cliques deram
 duas linhas no terminal, o ``desfechos`` guardou a frase certa e o DOM não tinha
-uma letra da frase. Aqui o clique é no botão do produto, com o ``data-mudo`` que a
+uma letra da frase. Aqui o clique é no botão do produto, com o ``data-gesto`` que a
 página publicada traz, e a leitura é do DOM.
 
 A JANELA É OCULTA. A máquina tem UMA tela.
@@ -134,7 +134,7 @@ TETO_DO_ROTEIRO_S = 120.0
 
 FOLGA_DA_PISCADA_MS = 1500
 
-FRASE_DO_DONO = "o microfone ligou, mas o canal dele está mudo no sistema"
+FRASE_DO_DONO = "o alto-falante voltou ao volume do jogo, mas o perfil não guardou"
 
 _LEITURA = r"""
 function(){
@@ -153,7 +153,7 @@ function(){
       borda: cs.borderTopColor,
     });
   }
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
+  const b = document.querySelector('[data-controle="p1"] [data-gesto="volume-padrao"]');
   return {
     // O RELÓGIO DA PÁGINA, o mesmo do `setTimeout` que apaga a piscada. É ele
     // que mede quanto a piscada durou: o do Python somaria o atraso da pergunta.
@@ -198,7 +198,7 @@ LER_A_TELA = "(function(){ return JSON.stringify((" + _LEITURA + ")()); })()"
 _VIGIA = r"""
 function(ler){
   if(!(window.__hef && window.__hef.voltouDoVoo)) return 'sem ponte';
-  const seletor = '[data-controle="p1"] [data-mudo="alto-falante"]';
+  const seletor = '[data-controle="p1"] [data-gesto="volume-padrao"]';
   if(!document.querySelector(seletor)) return 'sem botão';
   if(window.__reguaTrilha) return 'vigiando';
   const trilha = window.__reguaTrilha = [];
@@ -221,10 +221,10 @@ function(ler){
 
 VIGIAR_O_BOTAO = "JSON.stringify((" + _VIGIA + ")(" + _LEITURA + "))"
 
-_CLICAR_NO_MIC = r"""
+_CLICAR_NO_PADRAO = r"""
 function(marco){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
-  if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
+  const b = document.querySelector('[data-controle="p1"] [data-gesto="volume-padrao"]');
+  if(!b) return 'NAO ACHEI O PADRAO DO ALTO-FALANTE NO CARTAO DO P1';
   if(!window.__reguaTrilha) return 'SEM O VIGIA — o clique não teria marco na trilha';
   window.__reguaTrilha.push({marco: marco, t: performance.now()});
   b.click();
@@ -245,8 +245,8 @@ function(marco){
 """
 
 
-def _clicar_no_mic(marco: str) -> str:
-    return "(" + _CLICAR_NO_MIC + ")(" + json.dumps(marco) + ")"
+def _clicar_no_padrao(marco: str) -> str:
+    return "(" + _CLICAR_NO_PADRAO + ")(" + json.dumps(marco) + ")"
 
 
 def _trilha_desde(marco: str) -> str:
@@ -255,7 +255,7 @@ def _trilha_desde(marco: str) -> str:
 
 PUBLICAR_O_ROTULO = r"""
 (function(){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
+  const b = document.querySelector('[data-controle="p1"] [data-gesto="volume-padrao"]');
   if(!b) return 'sem botao';
   b.setAttribute('data-hef-em-voo', 'Calando…');
   return b.innerHTML;
@@ -264,7 +264,7 @@ PUBLICAR_O_ROTULO = r"""
 
 
 def _pouso(trilha: object) -> dict | None:
-    """A foto em que o 🎙 SAIU do voo depois de ter entrado nele — ou nada ainda."""
+    """A foto em que o «Padrão» SAIU do voo depois de ter entrado nele — ou nada ainda."""
     voou = False
     for foto in trilha if isinstance(trilha, list) else []:
         botao = foto.get("botao")
@@ -320,9 +320,9 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
 
-    chave = ("01-jogar.html", "mudo")
-    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-                hv.ponte.speaker_set, hv.pacotes.GESTOS.get(chave))
+    chave = ("01-jogar.html", "volume-padrao")
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.speaker_set,
+                hv.pacotes.GESTOS.get(chave))
     do_produto = {
         "prazos_do_recado": [n for n in ("SEGUNDOS_DO_RECADO",
                                          "SEGUNDOS_DO_RECADO_DE_SUCESSO")
@@ -331,9 +331,6 @@ def medido() -> dict:
     }
     MESA["estado"] = ESTADO
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: MESA["estado"]  # type: ignore[assignment]
-    hv.ponte.mic_canal_set_detalhado = (  # type: ignore[assignment]
-        lambda *a, **k: {"status": "ok", "canal_feito": True,
-                         "firmware_pedido": True})
     hv.ponte.speaker_set = lambda *a, **k: True  # type: ignore[assignment]
 
     args = argparse.Namespace(
@@ -362,7 +359,7 @@ def medido() -> dict:
         return _leu
 
     def por_gesto(fn) -> None:
-        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho."""
+        """Troca quem atende o «Padrão» — pelo REGISTRO do produto, não por atalho."""
         hv.pacotes.GESTOS[chave] = fn
 
     def esperar(marco: str, pergunta: str, achar, depois, o_que: str,
@@ -405,15 +402,15 @@ def medido() -> dict:
         esperar("vigia", VIGIAR_O_BOTAO,
                 lambda v: v if v == "vigiando" and piloto.pronto else None,
                 o_sucesso_calado,
-                "a página 02 de pé, com a ponte do piloto e o 🎙 do p1",
+                "a página 02 de pé, com a ponte do piloto e o «Padrão» do p1",
                 teto_s=TETO_DA_PAGINA_S)
         return False
 
     def o_sucesso_calado() -> None:
         piloto.ponte.perguntar(LER_A_TELA, ler("antes"))
-        piloto.ponte.perguntar(_clicar_no_mic("clique-1"), anotar("clique-1"))
+        piloto.ponte.perguntar(_clicar_no_padrao("clique-1"), anotar("clique-1"))
         esperar("depois-do-sucesso", _trilha_desde("clique-1"), _pouso,
-                a_piscada_apaga, "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 1")
+                a_piscada_apaga, "o «Padrão» pousar (o `data-hef-voo` sair) depois do clique 1")
 
     def a_piscada_apaga() -> None:
         esperar("depois-de-muitos-tiques", _trilha_desde("clique-1"), _apagou,
@@ -423,9 +420,9 @@ def medido() -> dict:
     def com_a_frase_do_dono() -> None:
         por_gesto(lambda ctx, o, p: {"recado": FRASE_DO_DONO,
                                      "mesa": {"perfil-ativo": "regua"}})
-        piloto.ponte.perguntar(_clicar_no_mic("clique-2"), anotar("clique-2"))
+        piloto.ponte.perguntar(_clicar_no_padrao("clique-2"), anotar("clique-2"))
         esperar("com-a-frase-do-dono", _trilha_desde("clique-2"), _pouso,
-                a_frase_vence, "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 2")
+                a_frase_vence, "o «Padrão» pousar (o `data-hef-voo` sair) depois do clique 2")
 
     def a_frase_vence() -> None:
         esperar("depois-de-vencer", LER_A_TELA,
@@ -434,18 +431,18 @@ def medido() -> dict:
                     and not leitura["botao"]["deu_certo"]) else None,
                 agora_a_recusa,
                 f"a frase do dono sair do cartão ({VENCE_EM_S:.0f} s de prazo "
-                f"nesta medição), com o 🎙 em repouso",
+                f"nesta medição), com o «Padrão» em repouso",
                 teto_s=VENCE_EM_S + TETO_S)
 
     def agora_a_recusa() -> None:
         def recusa(ctx, o, p):
-            raise RuntimeError("o daemon não confirmou o mudo do microfone")
+            raise RuntimeError("o daemon não confirmou o volume do alto-falante")
 
         por_gesto(recusa)
-        piloto.ponte.perguntar(_clicar_no_mic("clique-3"), anotar("clique-3"))
+        piloto.ponte.perguntar(_clicar_no_padrao("clique-3"), anotar("clique-3"))
         esperar("com-a-recusa", _trilha_desde("clique-3"), _pouso,
                 o_gesto_lento,
-                "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 3, o que recusa")
+                "o «Padrão» pousar (o `data-hef-voo` sair) depois do clique 3, o que recusa")
 
     def o_gesto_lento() -> None:
         def lento(ctx, o, p):
@@ -470,10 +467,10 @@ def medido() -> dict:
 
         por_gesto(lento)
         piloto.ponte.perguntar(PUBLICAR_O_ROTULO, anotar("rotulo-original"))
-        piloto.ponte.perguntar(_clicar_no_mic("clique-4"), anotar("clique-4"))
+        piloto.ponte.perguntar(_clicar_no_padrao("clique-4"), anotar("clique-4"))
         esperar("pouso-do-lento", _trilha_desde("clique-4"), _pouso,
                 depois_do_pouso,
-                "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do gesto lento",
+                "o «Padrão» pousar (o carimbo `data-hef-voo` sair) depois do gesto lento",
                 teto_s=GESTO_LENTO_S + 2 * TETO_S)
 
     def depois_do_pouso() -> None:
@@ -504,8 +501,8 @@ def medido() -> dict:
         GLib.source_remove(guarda)
         piloto.pronto = False
         piloto.tela.janela.destroy()
-        (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-         hv.ponte.speaker_set, velho) = guardado
+        (hv.mesa_viva.estado_do_daemon, hv.ponte.speaker_set,
+         velho) = guardado
         if velho is None:
             hv.pacotes.GESTOS.pop(chave, None)
         else:
@@ -540,7 +537,7 @@ def _frases(leitura: object) -> list[str]:
 def test_o_gesto_aplicou(medido: dict) -> None:
     assert _leitura(medido, "vigia") == "vigiando"
     assert medido["clique-1"] == "cliquei", medido["clique-1"]
-    assert medido["desfechos"].get("01-jogar.html:mudo"), medido["desfechos"]
+    assert medido["desfechos"].get("01-jogar.html:volume-padrao"), medido["desfechos"]
 
 
 def test_a_tela_estava_muda_antes(medido: dict) -> None:
@@ -699,7 +696,7 @@ def test_os_prazos_do_recado_sairam_com_o_canal(medido: dict) -> None:
 def test_o_botao_diz_que_esta_trabalhando(medido: dict) -> None:
     antes = _leitura(medido, "antes")["botao"]
     voando = _leitura(medido, "no-meio-do-voo")["botao"]
-    assert antes and voando, "não achei o botão do microfone no cartão do p1"
+    assert antes and voando, "não achei o «Padrão» do alto-falante no cartão do p1"
     assert not antes["em_voo"], "o botão já nasceu em voo — não há o que medir"
     assert voando["em_voo"], (
         "o botão ficou IGUAL durante a espera. É a decisão `09` [03] em uma "

@@ -132,6 +132,7 @@ ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = 
     (2950, '.rota button[data-rota="pc"]'),
     (3100, '.rota button[data-rota="jogo"]'),
     (3700, '[data-gesto="mic-retorno"]', "so-existe"),
+    (3800, '[data-gesto="volume-padrao"]', "so-existe"),
 )
 
 
@@ -182,13 +183,6 @@ DONOS_DOS_GESTOS = {
     "controles com rotas diferentes é pergunta que o produto ainda não responde.",
     "alvo": "app/alvo_de_edicao.definir_alvo (janela) + controller.target.set "
     "(daemon). Nesta leva o acordeão só RELATA quem está aberto.",
-    "mudo:microfone": "mic.set {muted: bool} (daemon/ipc_handlers.py) pela ponte "
-    "app/ipc_bridge.mic_set — é o botão de três caras do "
-    "interface/cartao_do_controle.py. Clicar faz o Hefesto ASSUMIR o registrador "
-    "do mudo, e o botão físico do controle para de valer até o Liberar.",
-    "mudo:mic-liberar": "mic.set {muted: null} — a MESMA chamada com `null`, que "
-    "devolve a posse ao kernel (hid_playstation). É o TEXTO_BOTAO_MIC_DEVOLVER "
-    "do produto, e ele nasce insensível porque sem posse não há o que devolver.",
 }
 
 SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço que "
@@ -279,7 +273,6 @@ window.HEF = (function(){
   function txt(el,v){ if(!el) return 0; if(el.textContent !== v) el.textContent = v; return 1; }
   function est(el,o){ if(!el) return 0; for(const k in o){ if(el.style[k]!==o[k]) el.style[k]=o[k]; } return 1; }
   function cls(el,c,on){ if(!el) return 0; el.classList.toggle(c, !!on); return 1; }
-  function trava(el,off){ if(!el) return 0; if(el.disabled!==!!off) el.disabled=!!off; return 1; }
   function onda(el, vals){
     if(!el) return 0; const barras = el.children; let k=0;
     for(let i=0;i<barras.length && i<vals.length;i++){
@@ -329,7 +322,6 @@ window.HEF = (function(){
     if(bm){
       n += onda(q('.onda', bm), d.mic.onda);
       n += est(q('.vol .cheio', bm), {width:d.mic.vol_w}) + txt(q('.vol .n', bm), d.mic.vol_n);
-      n += trava(q('[data-mudo="mic-liberar"]', bm), !d.mic.posse);
     }
     const ba = q('[data-bloco="alto-falante"]', c);
     if(ba){
@@ -395,16 +387,6 @@ window.HEF = (function(){
                controle:b.closest('.ctl').dataset.controle});
       });
     }
-    for(const b of qa('[data-mudo]')){
-      if(b.dataset.ligado) continue; b.dataset.ligado='1';
-      b.addEventListener('click', ev=>{
-        ev.preventDefault(); ev.stopPropagation();
-        if(b.disabled) return;
-        manda({gesto:'mudo', bloco:b.dataset.mudo,
-               controle:b.closest('.ctl').dataset.controle,
-               estava: b.classList.contains('on') ? 'on' : 'off'});
-      });
-    }
     for(const r of qa('.radio-mesa')){
       if(r.dataset.ligado) continue; r.dataset.ligado='1';
       r.addEventListener('change', ()=>{
@@ -424,13 +406,6 @@ window.HEF = (function(){
     if(o.gesto==='rota'){
       const c = card(o.controle); if(!c) return;
       for(const b of qa('.rota button', c)) b.classList.toggle('on', b.dataset.rota===o.rota);
-    }
-    if(o.gesto==='mudo'){
-      const c = card(o.controle); if(!c) return;
-      const b = q('[data-mudo="'+o.bloco+'"]', c);
-      if(b && o.estado!==undefined) b.classList.toggle('on', o.estado==='on');
-      const lib = q('[data-mudo="mic-liberar"]', c);
-      if(lib && o.posse!==undefined) lib.disabled = !o.posse;
     }
   }
 
@@ -573,7 +548,6 @@ class Janela:
         self.valores: list[int] = []
         self.eco_sensor: dict[str, dict[str, str]] = {}
         self.eco_rota: dict[str, str] = {}
-        self.eco_mudo: dict[str, dict[str, Any]] = {}
         self.ondas: dict[str, deque] = {}
         self.lento: dict[str, dict[str, Any]] = {}
         self.leitor_de_cor = mesa_viva.LeitorDeCor(
@@ -768,9 +742,9 @@ class Janela:
                         self._js(
                             "for(const e of document.querySelectorAll('[data-glifo],"
                             "[data-eixo],[data-bloco],[data-gatilho],[data-stick],"
-                            "[data-xy],[data-campo],[data-mudo]'))"
+                            "[data-xy],[data-campo]'))"
                             "{for(const a of ['glifo','eixo','bloco','gatilho','stick',"
-                            "'xy','campo','mudo'])"
+                            "'xy','campo'])"
                             " delete e.dataset[a];} window.__hefN=-1;"
                         ),
                         False,
@@ -994,11 +968,9 @@ class Janela:
                 "e pode não ser a acesa."
             )
         alto_pct = e["alto_pct"]
-        eco = self.eco_mudo.get(c["uniq"], {})
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
-        selo_do_mic = (mesa_viva.selo_do_mic(eco["microfone"] == "on", True)
-                       if "microfone" in eco else a02.selo_composto(entrada.get("audio") or {}))
+        selo_do_mic = a02.selo_composto(entrada.get("audio") or {})
         _, dedos = a02.dedos_do_controle(entrada.get("inputs") or {})
         eixos = {}
         for eixo, texto, estilo in e["giro"]:
@@ -1046,7 +1018,6 @@ class Janela:
                 "onda": e["mic_v"],
                 "vol_w": f'{e["mic_vol"]}%',
                 "vol_n": str(e["mic_vol"]),
-                "posse": bool(eco.get("mic_posse", e["mic_posse"])),
             },
             "alto": {
                 "estado": "· Não ajustado" if alto_pct is None else f"· {alto_pct} %",
@@ -1152,26 +1123,6 @@ class Janela:
             print(f'[gesto] {chave} no controle {o.get("controle")} (ECO, não aplica)')
             print(f"         dono real: {DONOS_DOS_GESTOS.get(chave, SEM_DONO)}")
             self.ponte.dizer("HEF.eco", o)
-            return
-        if gesto == "mudo":
-            chave = f'mudo:{o.get("bloco")}'
-            uniq = str(o.get("controle") or "")
-            estado = self.eco_mudo.setdefault(uniq, {})
-            if o.get("bloco") == "mic-liberar":
-                estado.pop("microfone", None)
-                estado["mic_posse"] = False
-                resposta = {**o, "bloco": "microfone", "estado": "off", "posse": False}
-            else:
-                novo = "off" if o.get("estava") == "on" else "on"
-                estado[str(o.get("bloco"))] = novo
-                if o.get("bloco") == "microfone":
-                    estado["mic_posse"] = True
-                resposta = {**o, "estado": novo,
-                            "posse": bool(estado.get("mic_posse"))}
-            print(f'[gesto] {chave} no controle {uniq} → '
-                  f'{resposta["estado"]} (ECO, não manda um byte)')
-            print(f"         dono real: {DONOS_DOS_GESTOS.get(chave, SEM_DONO)}")
-            self.ponte.dizer("HEF.eco", resposta)
             return
 
     def relato(self) -> str:

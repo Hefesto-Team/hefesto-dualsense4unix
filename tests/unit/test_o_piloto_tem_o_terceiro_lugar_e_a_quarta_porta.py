@@ -21,7 +21,7 @@ PAGINA = "01-jogar.html"
 
 PAGINA_DO_SVG = "05-vibracao.html"
 
-GESTO_DO_CLIQUE = "mudo"
+GESTO_DO_CLIQUE = "volume-padrao"
 
 VIVO = "regua-vivo"
 VIVO_QUE_GRAVA = "regua-vivo-que-grava"
@@ -75,19 +75,19 @@ LER_A_TELA = r"""
 })()
 """.replace("ROTULO", CAMPO_DO_ROTULO)
 
-CLICAR_NO_MIC = r"""
+CLICAR_NO_PADRAO = r"""
 (function(){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
-  if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
+  const b = document.querySelector('[data-controle="p1"] [data-gesto="volume-padrao"]');
+  if(!b) return 'NAO ACHEI O PADRAO DO ALTO-FALANTE NO CARTAO DO P1';
   b.click();
   return 'cliquei';
 })()
 """
 
-CLICAR_NO_MIC_DE = r"""
+CLICAR_NO_PADRAO_DE = r"""
 (function(pref){
-  const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="alto-falante"]');
-  if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE EM ' + pref;
+  const b = document.querySelector('[data-controle="' + pref + '"] [data-gesto="volume-padrao"]');
+  if(!b) return 'NAO ACHEI O PADRAO DO ALTO-FALANTE EM ' + pref;
   b.click();
   return 'cliquei em ' + pref;
 })(%s)
@@ -97,7 +97,7 @@ LER_OS_DOIS_BOTOES = r"""
 (function(){
   const fora = {};
   for(const pref of ['p1', 'p2']){
-    const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="alto-falante"]');
+    const b = document.querySelector('[data-controle="' + pref + '"] [data-gesto="volume-padrao"]');
     fora[pref] = b ? {deu_certo: b.classList.contains('hef-deu-certo'),
                       recusou: b.classList.contains('hef-recusou'),
                       em_voo: b.classList.contains('hef-em-voo')} : null;
@@ -255,14 +255,14 @@ def medido() -> dict:
         return O_CAMPO_VIVO % (js(vivo), js(gesto), js(evento), js(valor))
 
     def por_gesto(fn) -> None:
-        """Troca quem atende o 🎙 — pelo REGISTRO do produto, não por atalho."""
+        """Troca quem atende o «Padrão» — pelo REGISTRO do produto, não por atalho."""
         hv.pacotes.GESTOS[(PAGINA, GESTO_DO_CLIQUE)] = fn
 
     def sem_faixa() -> bool:
         if not piloto.pronto:
             return True
         piloto.ponte.perguntar(POR_AS_FAIXAS % 0, anotar("faixas-0"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-1"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO, anotar("clique-1"))
         GLib.timeout_add(700, leu_sem_faixa)
         return False
 
@@ -273,7 +273,7 @@ def medido() -> dict:
 
     def com_uma_faixa() -> bool:
         piloto.ponte.perguntar(POR_AS_FAIXAS % 1, anotar("faixas-1"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-2"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO, anotar("clique-2"))
         GLib.timeout_add(700, leu_com_uma_faixa)
         return False
 
@@ -284,7 +284,7 @@ def medido() -> dict:
 
     def com_duas_faixas() -> bool:
         piloto.ponte.perguntar(POR_AS_FAIXAS % 2, anotar("faixas-2"))
-        piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("clique-3"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO, anotar("clique-3"))
         GLib.timeout_add(700, leu_com_duas_faixas)
         return False
 
@@ -393,18 +393,18 @@ def medido() -> dict:
             qual = str(o.get("controle") or "")
             chamados.append(f"corrida:{qual}")
             if qual == "p1":
-                raise RuntimeError("o daemon não confirmou o mudo do microfone")
+                raise RuntimeError("o daemon não confirmou o volume do alto-falante")
             recusou.wait(timeout=5.0)
             return None
 
         por_gesto(por_controle)
         hv.pacotes.GESTOS_QUE_MEXEM.pop((PAGINA, GESTO_DO_CLIQUE), None)
-        piloto.ponte.perguntar(CLICAR_NO_MIC_DE % js("p1"), anotar("corrida-p1"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO_DE % js("p1"), anotar("corrida-p1"))
         GLib.timeout_add(150, a_corrida_do_p2)
         return False
 
     def a_corrida_do_p2() -> bool:
-        piloto.ponte.perguntar(CLICAR_NO_MIC_DE % js("p2"), anotar("corrida-p2"))
+        piloto.ponte.perguntar(CLICAR_NO_PADRAO_DE % js("p2"), anotar("corrida-p2"))
         GLib.timeout_add(700, leu_a_corrida)
         return False
 
@@ -475,7 +475,7 @@ def _r(leitura: object) -> list[dict]:
 def test_sem_o_atributo_nenhum_recado_no_cartao(medido: dict) -> None:
     """ERA `test_sem_o_atributo_o_recado_continua_no_cartao` — 13/09/2026."""
     assert medido["clique-1"] == "cliquei", (
-        f"o clique no 🎙 do p1 não aconteceu — a régua passaria sobre nada: "
+        f"o clique no «Padrão» do p1 não aconteceu — a régua passaria sobre nada: "
         f"{medido['clique-1']!r}")
     recados = _r(medido["sem-faixa"])
     assert recados == [], recados
@@ -616,7 +616,7 @@ def test_o_botao_que_recusou_nao_pisca_verde_pelo_vizinho(medido: dict) -> None:
     lido = medido["a-corrida"]
     assert isinstance(lido, dict), lido
     assert lido["p1"] and lido["p2"], (
-        f"a régua não achou os dois botões de microfone: {lido!r} — sem os "
+        f"a régua não achou os dois «Padrão» do alto-falante: {lido!r} — sem os "
         f"dois não há corrida a medir")
     assert lido["p2"]["deu_certo"], (
         "o botão do p2 (que APLICOU) não piscou verde — a régua está medindo "

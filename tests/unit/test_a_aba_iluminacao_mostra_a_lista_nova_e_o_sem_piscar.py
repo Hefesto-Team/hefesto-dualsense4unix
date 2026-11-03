@@ -180,11 +180,11 @@ def test_o_efeito_com_outra_cor_nao_finge_ser_a_base() -> None:
     from pacotes import a04_iluminacao as a04
 
     cru = {"leds": {"efeito": "respirar;00FFFF;2"}}
-    assert a04.escolha_da_lista(cru, JOGADORES[0], 1.0, frozenset(), (255, 0, 0)) == \
+    assert a04.escolha_da_lista(cru, JOGADORES[0], frozenset(), (255, 0, 0)) == \
         "respirar;00FFFF;2"
-    assert a04.escolha_da_lista(cru, JOGADORES[0], 1.0, frozenset(), (0, 255, 255)) == \
+    assert a04.escolha_da_lista(cru, JOGADORES[0], frozenset(), (0, 255, 255)) == \
         "base:respirar"
-    assert a04.escolha_da_lista(cru, JOGADORES[0], 1.0, frozenset({"respirar;00FFFF;2"}),
+    assert a04.escolha_da_lista(cru, JOGADORES[0], frozenset({"respirar;00FFFF;2"}),
                                 (0, 255, 255)) == "respirar;00FFFF;2"
     assert 'value="respirar;00FFFF;2"' in a04.opcoes_do_efeito({}, "respirar;00FFFF;2",
                                                                 (255, 0, 0))
