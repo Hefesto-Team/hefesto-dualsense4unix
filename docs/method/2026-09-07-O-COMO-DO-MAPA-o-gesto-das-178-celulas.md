@@ -1067,7 +1067,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a leitura dos dois controles do cabo continua chegando de forma lisa, sem engasgo, com dois controles no rádio ligados e sendo mexidos ao lado.
 
-**Onde olhar.** Na aba Controles, dentro do cartão de cada controle. Duas coisas: os três números da moldura «Giroscópio», que mudam quando você gira o controle no ar, e o pontinho de cada analógico, que anda quando você mexe. No alto do cartão aberto, ao lado do nome, pode aparecer uma linha discreta que começa com «Giroscópio:» e traz um número por segundo — algo como «Giroscópio: fluindo para o jogo (~250 Hz)». A linha só aparece no cartão do controle cujo movimento está sendo entregue ao jogo como giroscópio; nos outros cartões a linha simplesmente não existe, e isso não é defeito — a linha some também no controle com o «Analógico virtual» aceso, porque ali o giro vai ao jogo pelo analógico do lado escolhido, e no controle com o «Giroscópio» desligado. Quantas leituras um controle do CABO entrega no fio não aparece em campo nenhum do produto: a contagem por segundo que existe, na seção «Rádio e adaptadores» da aba Conexões, mostra só os controles do rádio.
+**Onde olhar.** Na aba Controles, dentro do cartão de cada controle. Duas coisas: os três números da moldura «Giroscópio», que mudam quando você gira o controle no ar, e o pontinho de cada analógico, que anda quando você mexe. A taxa com que o giro chega ao jogo não tem frase no cartão: a linha «Giroscópio: fluindo para o jogo (~N Hz)» saiu em 19/10/2026, e o número vive no `motion_hz` de cada controle em `rumble_ff.per_vpad`, no estado do daemon (`daemon.state_full`). Quantas leituras um controle do CABO entrega no fio não aparece em campo nenhum do produto: a contagem por segundo que existe, na seção «Rádio e adaptadores» da aba Conexões, mostra só os controles do rádio.
 
 **Os passos.**
 
@@ -4621,7 +4621,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o interruptor «Giroscópio» de um controle do cabo mira naquele controle e só naquele sensor — sem levar junto o «Acelerômetro» nem as outras três linhas.
 
-**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Analógico virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com o «Analógico virtual» aceso a dica passa a dizer «Com o analógico virtual aceso, o giro deste controle vai ao jogo pelo analógico direito.», e na Navegação «Com o analógico virtual aceso, o giro deste controle move o cursor.». No modo nativo o «Analógico virtual» fica cinza e o clique nele não grava. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Quando o giro daquele controle está indo para um jogo, a linha diz também «Giroscópio: fluindo para o jogo», com o número por segundo — menos com o analógico virtual aceso ou com o «Giroscópio» desligado, quando a linha some. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
+**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Analógico virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com o «Analógico virtual» aceso a dica passa a dizer «Com o analógico virtual aceso, o giro deste controle vai ao jogo pelo analógico direito.», e na Navegação «Com o analógico virtual aceso, o giro deste controle move o cursor.». No modo nativo o «Analógico virtual» fica cinza e o clique nele não grava. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
 
 **Os passos.**
 
@@ -4631,10 +4631,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Anote a cor das doze bolinhas: «Giroscópio», «Acelerômetro» e «Analógico virtual» das quatro linhas.
 5. Clique no interruptor «Giroscópio» da linha do P1.
 6. Confira que a bolinha dele trocou de cor, e anote a cor em que a borda piscou.
-7. Confira que a frase «Giroscópio: fluindo para o jogo», se estava na linha do P1, sumiu da linha.
+7. Confira que o resto da linha do P1, o nome e o USB ou BT, não mudou.
 8. Confira que o «Acelerômetro» e o «Analógico virtual» da mesma linha e os três interruptores do P2, do P3 e do P4 não mudaram.
 9. Anote o que a moldura «Giroscópio» do card do P1 passou a mostrar: números vivos, números parados ou traço.
-10. Clique de novo no «Giroscópio» do P1, para devolvê-lo, e confira que a frase voltou.
+10. Clique de novo no «Giroscópio» do P1, para devolvê-lo, e confira que a bolinha voltou à cor anotada.
 11. Clique no interruptor «Giroscópio» da linha do P2.
 12. Confira que só a bolinha dele trocou de cor, e anote a cor da borda.
 13. Clique de novo no «Giroscópio» do P2, para devolvê-lo.
@@ -4642,7 +4642,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 15. Acenda o «Analógico virtual» do P1, passe o mouse no «Giroscópio» do P1 e depois no do P2, e anote as duas dicas.
 16. Apague o «Analógico virtual» do P1 e passe o mouse de novo no «Giroscópio» dele.
 
-**Passa quando.** O clique no «Giroscópio» do P1 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P2. O «Acelerômetro», o «Analógico virtual» da mesma linha e as linhas dos outros não se mexem. Com o «Giroscópio» do P1 desligado, a frase «Giroscópio: fluindo para o jogo» sai da linha dele e volta quando ele religa. No fim, os doze voltam ao que eram. E com o analógico virtual aceso só no P1, só a dica do «Giroscópio» do P1 muda — a do P2 continua a de sempre —, e a dica volta quando o analógico virtual apaga.
+**Passa quando.** O clique no «Giroscópio» do P1 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P2. O «Acelerômetro», o «Analógico virtual» da mesma linha e as linhas dos outros não se mexem. No fim, os doze voltam ao que eram. E com o analógico virtual aceso só no P1, só a dica do «Giroscópio» do P1 muda — a do P2 continua a de sempre —, e a dica volta quando o analógico virtual apaga.
 
 **Por controle.**
 
@@ -4661,7 +4661,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o interruptor «Giroscópio» de um controle do rádio mira naquele controle e só naquele sensor, igual aos do cabo.
 
-**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Analógico virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com o «Analógico virtual» aceso a dica passa a dizer «Com o analógico virtual aceso, o giro deste controle vai ao jogo pelo analógico direito.», e na Navegação «Com o analógico virtual aceso, o giro deste controle move o cursor.». No modo nativo o «Analógico virtual» fica cinza e o clique nele não grava. Quando o giro daquele controle está indo para um jogo, a linha diz também «Giroscópio: fluindo para o jogo», com o número por segundo — menos com o analógico virtual aceso ou com o «Giroscópio» desligado, quando a linha some. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
+**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Analógico virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com o «Analógico virtual» aceso a dica passa a dizer «Com o analógico virtual aceso, o giro deste controle vai ao jogo pelo analógico direito.», e na Navegação «Com o analógico virtual aceso, o giro deste controle move o cursor.». No modo nativo o «Analógico virtual» fica cinza e o clique nele não grava. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
 
 **Os passos.**
 
@@ -4671,9 +4671,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Anote a cor das doze bolinhas: «Giroscópio», «Acelerômetro» e «Analógico virtual» das quatro linhas.
 5. Clique no interruptor «Giroscópio» da linha do P3.
 6. Confira que a bolinha dele trocou de cor, e anote a cor em que a borda piscou.
-7. Confira que a frase «Giroscópio: fluindo para o jogo», se estava na linha do P3, sumiu da linha.
+7. Confira que o resto da linha do P3, o nome e o USB ou BT, não mudou.
 8. Confira que o «Acelerômetro» e o «Analógico virtual» da mesma linha e os três interruptores do P1, do P2 e do P4 não mudaram.
-9. Clique de novo no «Giroscópio» do P3, para devolvê-lo, e confira que a frase voltou.
+9. Clique de novo no «Giroscópio» do P3, para devolvê-lo, e confira que a bolinha voltou à cor anotada.
 10. Clique no interruptor «Giroscópio» da linha do P4.
 11. Confira que só a bolinha dele trocou de cor, e anote a cor da borda.
 12. Clique de novo no «Giroscópio» do P4, para devolvê-lo.
@@ -4681,7 +4681,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 14. Acenda o «Analógico virtual» do P3, passe o mouse no «Giroscópio» do P3 e depois no do P4, e anote as duas dicas.
 15. Apague o «Analógico virtual» do P3 e passe o mouse de novo no «Giroscópio» dele.
 
-**Passa quando.** O clique no «Giroscópio» do P3 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P4. Com o «Giroscópio» do P3 desligado, a frase «Giroscópio: fluindo para o jogo» sai da linha dele e volta quando ele religa. No fim, tudo volta ao que era. E com o analógico virtual aceso só no P3, só a dica do «Giroscópio» do P3 muda, e a dica volta quando o analógico virtual apaga.
+**Passa quando.** O clique no «Giroscópio» do P3 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P4. No fim, tudo volta ao que era. E com o analógico virtual aceso só no P3, só a dica do «Giroscópio» do P3 muda, e a dica volta quando o analógico virtual apaga.
 
 **Por controle.**
 
@@ -4700,31 +4700,31 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o giro de um controle do cabo chega ao jogo a 250 vezes por segundo, e que esse número segue o transporte, não o número do jogador. O que o programa de jogos DECLARA ao jogo não tem tela, e este teste não o alcança.
 
-**Onde olhar.** Aba Controles, na linha de cada controle: depois do nome e do USB ou BT, a frase «Giroscópio: fluindo para o jogo (~250 Hz)» diz quantas vezes por segundo o Hefesto entrega o giro daquele controle ao jogo AGORA. No cabo o número é perto de 250. Para quem está no rádio o número varia com o que o rádio traz, sem teto desde 03/11/2026.
+**Onde olhar.** No estado do daemon (`daemon.state_full`), o `motion_hz` de cada controle em `rumble_ff.per_vpad` diz quantas vezes por segundo o Hefesto entrega o giro daquele controle ao jogo AGORA; a tela não mostra mais esse número. No cabo o número é perto de 250. Para quem está no rádio o número varia com o que o rádio traz, sem teto desde 03/11/2026.
 
 **Os passos.**
 
 1. Abra a aba Controles.
 2. Clique no chip «Todos», na fita do topo.
-3. Anote o número da frase «Giroscópio: fluindo para o jogo» nas linhas do P1 e do P2.
+3. Leia o estado do daemon e anote o `motion_hz` do P1 e do P2.
 4. Confira que os dois estão perto de 250.
-5. Anote o número das linhas do P3 e do P4.
+5. Anote o `motion_hz` do P3 e do P4.
 6. Pegue o P3, que está no rádio, e plugue um cabo nele.
-7. Espere a linha dele passar a dizer USB.
-8. Anote o número da frase na linha do P3 agora.
+7. Espere o chip dele passar a terminar em USB.
+8. Anote o `motion_hz` do P3 agora.
 9. Desplugue o cabo do P3 e, em menos de trinta segundos, dê um toque no botão PS dele para devolvê-lo ao rádio.
-10. Confira que a linha dele voltou a dizer BT e que o número dele voltou a variar.
+10. Confira que o chip dele voltou a terminar em BT e que o `motion_hz` dele voltou a variar.
 
-**Passa quando.** As linhas do P1 e do P2 dizem perto de 250, e ficam assim. Quando o P3 passa para o cabo, o número dele vai para perto de 250 — o que prova que ele segue o transporte, e não o número do jogador. No fim, o P3 volta ao rádio e o número volta com ele.
+**Passa quando.** O `motion_hz` do P1 e o do P2 dizem perto de 250, e ficam assim. Quando o P3 passa para o cabo, o número dele vai para perto de 250 — o que prova que ele segue o transporte, e não o número do jogador. No fim, o P3 volta ao rádio e o número volta com ele.
 
 **Por controle.**
 
-* **P1** — No cabo, e a frase dele diz perto de 250.
-* **P2** — No cabo, e a frase dele diz o mesmo que a do P1. Dois números muito diferentes para dois controles no mesmo transporte é o defeito.
+* **P1** — No cabo, e o `motion_hz` dele diz perto de 250.
+* **P2** — No cabo, e o `motion_hz` dele diz o mesmo que o do P1. Dois números muito diferentes para dois controles no mesmo transporte é o defeito.
 * **P3** — No rádio, testemunha até o fim, quando vira o sujeito: é ele que você pluga no cabo para ver o número mudar.
 * **P4** — No rádio, a testemunha que fica. Não encoste nele: o número dele segue o do rádio do começo ao fim.
 
-**A armadilha.** Três. (1) Este número é o que o Hefesto ENTREGA ao jogo, sem teto de taxa desde 03/11/2026; a metade DECLARADA — quantas vezes por segundo o programa de jogos diz ao jogo que o giro chega — nunca foi medida e não aparece em tela nenhuma. É a metade que segura esta linha em PARCIAL. (2) A frase só aparece quando o giro daquele controle está indo para um jogo: se alguma linha não tiver a frase, anote, e não conte como zero. (3) O RELÓGIO DO REPLUGUE: entre desplugar o cabo e tocar o PS, o lugar do P3 fica guardado por trinta segundos e ninguém troca de número; passado o prazo, o P4 desce a P3 até o P3 voltar — é a regra do produto funcionando, e o P3 recupera o número dele de qualquer jeito. Refaça mais rápido, para a leitura não trocar de linha no meio.
+**A armadilha.** Três. (1) Este número é o que o Hefesto ENTREGA ao jogo, sem teto de taxa desde 03/11/2026; a metade DECLARADA — quantas vezes por segundo o programa de jogos diz ao jogo que o giro chega — nunca foi medida e não aparece em tela nenhuma. É a metade que segura esta linha em PARCIAL. (2) O `motion_hz` fica em zero enquanto o giro daquele controle não está indo para um jogo: se algum vier zerado, anote, e não conte como medida. (3) O RELÓGIO DO REPLUGUE: entre desplugar o cabo e tocar o PS, o lugar do P3 fica guardado por trinta segundos e ninguém troca de número; passado o prazo, o P4 desce a P3 até o P3 voltar — é a regra do produto funcionando, e o P3 recupera o número dele de qualquer jeito. Refaça mais rápido, para a leitura não trocar de linha no meio.
 
 ---
 
@@ -4734,7 +4734,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova quantas vezes por segundo um controle do rádio manda movimento de verdade — é uma faixa, não um ponto —, e que o que chega ao jogo acompanha o que o controle manda, sem teto desde 03/11/2026. O que o programa de jogos DECLARA ao jogo não tem tela, e este teste não o alcança.
 
-**Onde olhar.** Dois lugares. Na aba Conexões, a seção «Rádio e adaptadores»: dentro de cada adaptador (o ▶ mostra os aparelhos dele), a linha de cada controle do rádio traz um número em Hz ao lado do ícone de sinal — a dica diz «Movimento por segundo». É quanto movimento aquele controle manda AGORA; ele fica laranja abaixo de 125. Na aba Controles, a frase «Giroscópio: fluindo para o jogo» na linha de cada controle, com o número por segundo entre parênteses, diz quanto disso o Hefesto entrega ao jogo.
+**Onde olhar.** Dois lugares. Na aba Conexões, a seção «Rádio e adaptadores»: dentro de cada adaptador (o ▶ mostra os aparelhos dele), a linha de cada controle do rádio traz um número em Hz ao lado do ícone de sinal — a dica diz «Movimento por segundo». É quanto movimento aquele controle manda AGORA; ele fica laranja abaixo de 125. No estado do daemon, o `motion_hz` de cada controle em `rumble_ff.per_vpad` diz quanto disso o Hefesto entrega ao jogo.
 
 **Os passos.**
 
@@ -4744,16 +4744,16 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Anote o número em Hz das linhas do P3 e do P4.
 5. Espere trinta segundos, com os controles parados.
 6. Anote de novo os dois números.
-7. Abra a aba Controles.
-8. Clique no chip «Todos», na fita do topo.
-9. Anote o número da frase «Giroscópio: fluindo para o jogo» nas linhas do P3 e do P4.
-10. Confira que as linhas do P1 e do P2 dizem perto de 250.
+7. Leia o estado do daemon (`daemon.state_full`).
+8. Ache o `rumble_ff.per_vpad`, onde cada controle tem o seu `motion_hz`.
+9. Anote o `motion_hz` do P3 e do P4.
+10. Confira que o do P1 e o do P2 dizem perto de 250.
 
-**Passa quando.** Os números do P3 e do P4 em «Rádio e adaptadores» são reais e mudam entre uma leitura e outra — dois aparelhos do mesmo rádio podem diferir bastante —, e nenhum chega perto dos 1000 que o programa de jogos declara para o rádio. O número que vai ao jogo, na aba Controles, nunca passa de perto de 250. Os do cabo ficam em perto de 250.
+**Passa quando.** Os números do P3 e do P4 em «Rádio e adaptadores» são reais e mudam entre uma leitura e outra — dois aparelhos do mesmo rádio podem diferir bastante —, e nenhum chega perto dos 1000 que o programa de jogos declara para o rádio. O `motion_hz` dos dois, que é o que vai ao jogo, acompanha o que cada um manda e não tem teto; os do cabo ficam em perto de 250.
 
 **Por controle.**
 
-* **P1** — No cabo, testemunha: a frase dele fica em perto de 250 do começo ao fim.
+* **P1** — No cabo, testemunha: o `motion_hz` dele fica em perto de 250 do começo ao fim.
 * **P2** — No cabo, segunda testemunha, com a mesma leitura do P1.
 * **P3** — No rádio, e é um dos dois desta célula: os dois números dele, em Conexões e em Controles.
 * **P4** — No rádio, e é o outro. Se o P3 e o P4 derem números muito diferentes entre si, anote os dois: já se mediu isso nesta casa, e é do aparelho.
@@ -4848,7 +4848,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, no cabo, a leitura de movimento não engasga: os números andam sem travar enquanto você move o controle sem parar.
 
-**Onde olhar.** Aba Controles. O chip «Todos», na fita do topo, abre os quatro cards; em cada card, na coluna da direita, as molduras «Giroscópio» e «Acelerômetro», com X, Y e Z e uma barrinha ao lado de cada número. A barrinha denuncia engasgo melhor que o número: a barrinha anda contínua enquanto o controle se move e para de vez quando a leitura para. Na linha de cada controle, a frase «Giroscópio: fluindo para o jogo (~250 Hz)» diz quanto giro está indo ao jogo. Uma contagem de perdas não existe em tela nenhuma — no cabo o produto nem a conta.
+**Onde olhar.** Aba Controles. O chip «Todos», na fita do topo, abre os quatro cards; em cada card, na coluna da direita, as molduras «Giroscópio» e «Acelerômetro», com X, Y e Z e uma barrinha ao lado de cada número. A barrinha denuncia engasgo melhor que o número: a barrinha anda contínua enquanto o controle se move e para de vez quando a leitura para. Quanto giro está indo ao jogo não tem tela: lê-se no `motion_hz` e em `motion_amostras` do estado do daemon. Uma contagem de perdas não existe em tela nenhuma — no cabo o produto nem a conta.
 
 **Os passos.**
 
@@ -4883,7 +4883,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, no rádio, o movimento que chega cai quando o sinal piora — e volta quando ele melhora —, enquanto os do cabo continuam lisos no mesmo instante.
 
-**Onde olhar.** Na aba Conexões, a seção «Rádio e adaptadores»: dentro de cada adaptador (o ▶ mostra os aparelhos dele), a linha de cada controle do rádio traz um número em Hz ao lado do ícone de sinal — a dica diz «Movimento por segundo». É quanto movimento o computador está recebendo daquele controle AGORA: quando o rádio come pacotes, o número cai, e abaixo de 125 ele fica laranja. Na aba Controles, a frase «Giroscópio: fluindo para o jogo (~250 Hz)» na linha de cada controle do cabo serve de testemunha. Uma contagem de perdas não existe em tela nenhuma.
+**Onde olhar.** Na aba Conexões, a seção «Rádio e adaptadores»: dentro de cada adaptador (o ▶ mostra os aparelhos dele), a linha de cada controle do rádio traz um número em Hz ao lado do ícone de sinal — a dica diz «Movimento por segundo». É quanto movimento o computador está recebendo daquele controle AGORA: quando o rádio come pacotes, o número cai, e abaixo de 125 ele fica laranja. O `motion_hz` dos controles do cabo, no estado do daemon, serve de testemunha. Uma contagem de perdas não existe em tela nenhuma.
 
 **Os passos.**
 
@@ -4899,14 +4899,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Volte para perto do computador.
 11. Confira que o número do P3 voltou para perto do que você anotou no começo.
 12. Faça a mesma caminhada com o P4, anotando o número perto, longe e com o corpo no caminho.
-13. Abra a aba Controles.
-14. Confira que as linhas do P1 e do P2 continuam dizendo perto de 250.
+13. Leia o estado do daemon (`daemon.state_full`).
+14. Confira que o `motion_hz` do P1 e o do P2 continuam perto de 250.
 
 **Passa quando.** Perto do computador, os dois do rádio mostram um número estável. Longe, ou com o seu corpo no caminho, é honesto que o número caia — e fique laranja —; voltando para perto, ele se recupera. E os do cabo não mudam em momento nenhum: é essa diferença que o teste procura.
 
 **Por controle.**
 
-* **P1** — No cabo, testemunha. Não encoste nele. Se a frase dele cair junto com o número do P3, o engasgo não é do rádio — é do Hefesto ou da máquina.
+* **P1** — No cabo, testemunha. Não encoste nele. Se o `motion_hz` dele cair junto com o número do P3, o engasgo não é do rádio — é do Hefesto ou da máquina.
 * **P2** — No cabo, segunda testemunha. Dois do cabo lisos e dois do rádio caindo é a assinatura que este teste quer.
 * **P3** — No rádio, e é o primeiro a se afastar. É nele que a queda tem de aparecer.
 * **P4** — No rádio, e é o segundo. Se o P3 caiu e o P4 não, ou o contrário, anote os dois: unidades do mesmo rádio já entregaram números quase duas vezes diferentes entre si.
@@ -5082,7 +5082,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o buraco do cabo — dez coisas que o controle promete e recusa quando lhe perguntam — não chega à tela: tudo o que o Hefesto lê do aparelho pelo fio aparece preenchido.
 
-**Onde olhar.** Na fita do topo, o chip de cada controle: o número, o nome da cor do plástico e a borda pintada com essa cor. Na aba Controles, dentro do quadro «Dispositivos conectados», o cartão de cada controle: no alto, a frase «Giroscópio: fluindo para o jogo», o selo do «Microfone» (ATIVO ou DESLIGADO) e a «Bateria» com número; dentro, o bloco «Giroscópio» com X, Y e Z. No alto do quadro, o botão «Calibrar giroscópio», que abre a página da calibração no lugar da aba; embaixo das leituras de cada cartão da página ficam os ajustes do analógico virtual daquele controle, que este teste não toca. E na aba Iluminação, a linha «Controle», com o desenho de cada controle pintado na cor do plástico. A recusa em si — o «não» que o controle devolve a dez perguntas quando está no fio — não aparece em tela nenhuma, porque o produto nunca faz essas dez perguntas.
+**Onde olhar.** Na fita do topo, o chip de cada controle: o número, o nome da cor do plástico e a borda pintada com essa cor. Na aba Controles, dentro do quadro «Dispositivos conectados», o cartão de cada controle: no alto, o selo do «Microfone» (ATIVO ou DESLIGADO) e a «Bateria» com número; dentro, o bloco «Giroscópio» com X, Y e Z. No alto do quadro, o botão «Calibrar giroscópio», que abre a página da calibração no lugar da aba; embaixo das leituras de cada cartão da página ficam os ajustes do analógico virtual daquele controle, que este teste não toca. E na aba Iluminação, a linha «Controle», com o desenho de cada controle pintado na cor do plástico. A recusa em si — o «não» que o controle devolve a dez perguntas quando está no fio — não aparece em tela nenhuma, porque o produto nunca faz essas dez perguntas.
 
 **Os passos.**
 
@@ -5092,26 +5092,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Pegue o P1 na mão e compare o plástico com o nome do chip.
 5. Repita a leitura do chip com o P2, com o P3 e com o P4.
 6. Clique no chip «Todos» da fita, para abrir os quatro cartões.
-7. No cartão do P1, leia a frase «Giroscópio: fluindo para o jogo» no alto; gire o P1 na mão e confira que os números X, Y e Z do bloco «Giroscópio» andam.
+7. No cartão do P1, gire o P1 na mão e confira que os números X, Y e Z do bloco «Giroscópio» andam.
 8. Leia a «Bateria» e o selo do «Microfone» do P1 e anote os dois.
 9. Repita os dois passos acima no P2, no P3 e no P4.
 10. Clique em «Calibrar giroscópio», no alto do quadro «Dispositivos conectados».
 11. Pouse os quatro controles parados numa superfície plana e clique em «Começar».
 12. Espere os quatro cartões da página dizerem «Calibrado» — são 5 segundos, e encostar num controle recomeça a conta dele.
-13. Clique em «← Voltar» e confira que a frase «Giroscópio: fluindo para o jogo» continua nos quatro cartões.
+13. Clique em «← Voltar» e confira que os quatro cartões continuam com os números do bloco «Giroscópio».
 14. Abra a aba Iluminação e confira, na linha «Controle», que os quatro desenhos estão pintados na cor do plástico, e não cinza.
 15. Anote qualquer campo, de qualquer um dos quatro, que tenha vindo vazio, cinza ou com um travessão.
 
-**Passa quando.** Os quatro trazem nome de cor e borda pintada, o desenho pintado, o giroscópio andando com a mão e fluindo onde o «Analógico virtual» está apagado e o «Giroscópio» ligado, a bateria com número e o microfone com selo, e os quatro chegam a «Calibrado». Nenhum campo do P1 e do P2 — os dois do cabo — vem mais vazio que o do P3 e o do P4.
+**Passa quando.** Os quatro trazem nome de cor e borda pintada, o desenho pintado, o giroscópio andando com a mão, a bateria com número e o microfone com selo, e os quatro chegam a «Calibrado». Nenhum campo do P1 e do P2 — os dois do cabo — vem mais vazio que o do P3 e o do P4.
 
 **Por controle.**
 
-* **P1** — USB, e é um dos dois que provam este lado. Todos os campos preenchidos: cor com nome e borda, desenho pintado, giroscópio fluindo, bateria com número, microfone com selo.
+* **P1** — USB, e é um dos dois que provam este lado. Todos os campos preenchidos: cor com nome e borda, desenho pintado, giroscópio andando, bateria com número, microfone com selo.
 * **P2** — USB, o segundo. Mesma conferência. Se um campo faltar no P1 e no P2 e estiver cheio no P3 e no P4, o achado é do cabo — anote qual campo.
 * **P3** — BT, e é comparação. Pelo rádio não há buraco nenhum: tudo o que o controle promete, ele entrega. Os campos dele são a régua contra a qual você lê os do cabo.
 * **P4** — BT, a segunda comparação. Mesma conferência.
 
-**A armadilha.** A cor de fábrica é lida por uma pergunta que o cabo ENTREGA — e a pergunta vizinha, de número quase igual, é uma das dez que ele RECUSA. Então, se a cor faltar num controle do cabo, não conclua «é o buraco do cabo»: não é. As dez recusas são de LEITURA, o produto não faz nenhuma das dez em lugar nenhum, e a que ele usa para a cor é uma das que respondem. Segunda: o travessão num número quer dizer que a leitura ainda não chegou — não é zero, e não conta como passa. Terceira: a frase «Giroscópio: fluindo para o jogo» some no controle com o «Analógico virtual» aceso — ali o giro vai ao jogo pelo analógico do lado escolhido —, e isso não conta como campo vazio. E o degrau: esta linha parou em SAIU NO FIO — o byte saiu e o controle respondeu, com um «não» de um lado e com dado do outro, mas ninguém viu nada acender, girar nem soar. Os passos acima são exatamente o degrau que falta, e é o seu olho que o dá.
+**A armadilha.** A cor de fábrica é lida por uma pergunta que o cabo ENTREGA — e a pergunta vizinha, de número quase igual, é uma das dez que ele RECUSA. Então, se a cor faltar num controle do cabo, não conclua «é o buraco do cabo»: não é. As dez recusas são de LEITURA, o produto não faz nenhuma das dez em lugar nenhum, e a que ele usa para a cor é uma das que respondem. Segunda: o travessão num número quer dizer que a leitura ainda não chegou — não é zero, e não conta como passa. E o degrau: esta linha parou em SAIU NO FIO — o byte saiu e o controle respondeu, com um «não» de um lado e com dado do outro, mas ninguém viu nada acender, girar nem soar. Os passos acima são exatamente o degrau que falta, e é o seu olho que o dá.
 
 ---
 
@@ -5121,7 +5121,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, pelo rádio, não falta nada: tudo o que o controle promete, ele entrega — e o que ele entrega vazio é resposta, não recusa.
 
-**Onde olhar.** Na fita do topo, o chip de cada controle, com o número, o nome da cor do plástico e a borda pintada. Na aba Controles, dentro do quadro «Dispositivos conectados», o cartão de cada controle: no alto, a frase «Giroscópio: fluindo para o jogo», o selo do «Microfone» — ATIVO, DESLIGADO ou um travessão — e a «Bateria» com número; dentro, o bloco «Giroscópio» com X, Y e Z. O travessão quer dizer «não consegui ler» e não é nenhum dos dois. E na aba Iluminação, a linha «Controle», com o desenho de cada controle pintado na cor do plástico.
+**Onde olhar.** Na fita do topo, o chip de cada controle, com o número, o nome da cor do plástico e a borda pintada. Na aba Controles, dentro do quadro «Dispositivos conectados», o cartão de cada controle: no alto, o selo do «Microfone» — ATIVO, DESLIGADO ou um travessão — e a «Bateria» com número; dentro, o bloco «Giroscópio» com X, Y e Z. O travessão quer dizer «não consegui ler» e não é nenhum dos dois. E na aba Iluminação, a linha «Controle», com o desenho de cada controle pintado na cor do plástico.
 
 **Os passos.**
 
@@ -5131,7 +5131,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Pegue o P3 na mão e compare o plástico com o nome do chip dele.
 5. Faça o mesmo com o P4.
 6. Clique no chip «Todos» da fita, para abrir os quatro cartões.
-7. Leia, no cartão do P3, a frase do giroscópio, os números do bloco «Giroscópio» enquanto você gira o P3, a «Bateria» e o selo do «Microfone» — e anote os quatro.
+7. Leia, no cartão do P3, os números do bloco «Giroscópio» enquanto você gira o P3, a «Bateria» e o selo do «Microfone» — e anote os três.
 8. Repita a leitura no cartão do P4.
 9. Repita a leitura nos cartões do P1 e do P2, que estão no cabo.
 10. Abra a aba Iluminação e anote, na linha «Controle», quais dos quatro desenhos estão pintados e quais estão cinza.
@@ -5140,7 +5140,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 13. Leia o mesmo campo de novo e anote se ele encheu.
 14. Puxe o cabo do P3 e confirme que o chip dele volta a terminar em BT; se ele não voltar sozinho, dê um toque curto no PS dele.
 
-**Passa quando.** Os dois do rádio trazem exatamente os mesmos campos preenchidos que os dois do cabo: nome de cor e borda, desenho pintado, giroscópio fluindo, bateria com número e microfone com selo — ATIVO ou DESLIGADO, nunca travessão. Nada falta do lado do rádio, e é isso que a linha afirma.
+**Passa quando.** Os dois do rádio trazem exatamente os mesmos campos preenchidos que os dois do cabo: nome de cor e borda, desenho pintado, giroscópio andando, bateria com número e microfone com selo — ATIVO ou DESLIGADO, nunca travessão. Nada falta do lado do rádio, e é isso que a linha afirma.
 
 **Por controle.**
 
@@ -6113,9 +6113,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.taxa_relatorios @ cabo`
 
-**O que isto prova.** Prova que o Hefesto mostra, para cada controle do cabo, com que frequência o giroscópio dele está sendo entregue ao controle virtual que o jogo enxerga — e que pelo cabo esse número fica firme.
+**O que isto prova.** Prova que o Hefesto informa, para cada controle do cabo, com que frequência o giroscópio dele está sendo entregue ao controle virtual que o jogo enxerga — e que pelo cabo esse número fica firme.
 
-**Onde olhar.** Na aba Controles, no cabeçalho do cartão de cada controle — a linha com a cor do plástico e USB ou BT. Com o cartão ABERTO, ali aparece a frase «Giroscópio: fluindo para o jogo (~250 Hz)», com o número do momento, e ao lado da frase os três botões, «Giroscópio», «Acelerômetro» e «Analógico virtual». A frase só aparece com o cartão aberto; o chip «Todos», no começo da fita do topo, abre os quatro de uma vez. Na aba Jogar, a linha «Status» diz Ligado ou Desligado, e o cartão de cada controle mostra a máscara escolhida para ele — DualSense, Xbox 360 ou Nintendo Pro.
+**Onde olhar.** No estado do daemon (`daemon.state_full`), o `motion_hz` e o `motion_streaming` de cada controle em `rumble_ff.per_vpad`; a tela não mostra mais esse número. Na aba Jogar, a linha «Status» diz Ligado ou Desligado, e o cartão de cada controle mostra a máscara escolhida para ele — DualSense, Xbox 360 ou Nintendo Pro. Na aba Controles, o chip «Todos», no começo da fita do topo, abre os quatro cartões, onde ficam os três botões, «Giroscópio», «Acelerômetro» e «Analógico virtual».
 
 **Os passos.**
 
@@ -6123,24 +6123,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Abra a aba Jogar e confira que a linha «Status» está em «Ligado».
 3. Confira, no cartão de cada um dos quatro, qual máscara está escolhida, e anote; não troque nenhuma.
 4. Abra a aba Controles, clique no chip «Todos», no começo da fita do topo, e anote em quais cartões o «Analógico virtual» está aceso e em quais o «Giroscópio» está desligado.
-5. Leia a frase do P1 no cabeçalho do cartão dele e anote o número.
-6. Conte até dez e leia o número do P1 de novo; anote o segundo valor embaixo do primeiro.
+5. Leia o estado do daemon e anote o `motion_hz` do P1.
+6. Conte até dez e leia o `motion_hz` do P1 de novo; anote o segundo valor embaixo do primeiro.
 7. Leia o número do P2 e anote; conte até dez e leia de novo.
 8. Anote também o que aparece no P3 e no P4, sem mexer em nenhum dos dois.
 9. Pegue o P1 na mão e gire-o devagar de um lado para o outro por uns cinco segundos.
 10. Leia o número do P1 outra vez e anote o terceiro valor.
 11. Deixe o P1 parado, apoiado, por dez segundos e leia uma quarta vez.
 
-**Passa quando.** Nos dois controles do cabo com a máscara DualSense, o «Analógico virtual» apagado e o «Giroscópio» ligado, a frase aparece com um número, e o número fica firme perto de 250 nas quatro leituras — não vai a zero, não some e não pula para valores muito diferentes a cada olhada, nem com o controle girando, nem parado. Cada um dos quatro cartões mostra a SUA frase.
+**Passa quando.** Nos dois controles do cabo com a máscara DualSense, o «Analógico virtual» apagado e o «Giroscópio» ligado, o `motion_streaming` é verdadeiro e o `motion_hz` é um número firme perto de 250 nas quatro leituras — não vai a zero, não some e não pula para valores muito diferentes a cada olhada, nem com o controle girando, nem parado. Cada um dos quatro controles tem o SEU `motion_hz`.
 
 **Por controle.**
 
 * **P1** — USB, e é o que você lê quatro vezes, girando e parado. Esperado: número firme, perto de 250.
 * **P2** — USB, e é o segundo a ser lido, duas vezes. Mesmo esperado: firme, perto de 250. Se os dois do cabo derem números bem diferentes um do outro, anote os dois lado a lado — é aí que a diferença aparece.
 * **P3** — BT, e é testemunha. Anote o número dele sem tocar em nada: ele é a comparação com a linha do rádio deste mesmo par.
-* **P4** — BT, a segunda testemunha. Mesma coisa. Os quatro juntos mostram que cada cartão fala do controle virtual DELE, e não de um só para todos.
+* **P4** — BT, a segunda testemunha. Mesma coisa. Os quatro juntos mostram que cada `motion_hz` fala do controle virtual DELE, e não de um só para todos.
 
-**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega não tem teto desde 03/11/2026. Por isso 250 no cabo é o esperado, e o rádio mostra o que trouxer. Segunda: a frase muda de texto, ou some, e isso é o certo, em cinco casos. No modo nativo a frase diz «Giroscópio: o jogo fala direto com o controle». Com a máscara Xbox 360 a frase diz que essa API não leva giroscópio e que no Hefesto ele segue ativo. Com a máscara Nintendo Pro a frase some — esse controle virtual não leva giroscópio nenhum —, e a frase some também no controle com o «Analógico virtual» aceso, porque ali o giro vai ao jogo pelo analógico do lado escolhido, e no controle com o «Giroscópio» desligado, porque ali o giro não vai ao jogo. Confira o Status, a máscara, o analógico virtual e o Giroscópio que você anotou antes de reprovar por ausência. Terceira: os botões «Giroscópio» e «Analógico virtual» não são o instrumento desta linha, e nenhum dos dois se clica aqui — o «Giroscópio» desligado corta o giro no que vai ao jogo e a frase some junto, desde 24/09; o «Analógico virtual» aceso também a faz sumir. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
+**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega não tem teto desde 03/11/2026. Por isso 250 no cabo é o esperado, e o rádio mostra o que trouxer. Segunda: nem todo controle leva o giro ao jogo. No modo nativo o jogo fala direto com o controle; na máscara Nintendo Pro o controle virtual não leva giroscópio; com o «Analógico virtual» aceso o giro vai ao jogo pelo analógico do lado escolhido; com o «Giroscópio» desligado ele não vai. Nesses casos o `motion_streaming` não é verdadeiro, e isso é o certo. Confira o Status, a máscara, o analógico virtual e o Giroscópio que você anotou antes de reprovar por ausência. Terceira: os botões «Giroscópio» e «Analógico virtual» não são o instrumento desta linha, e nenhum dos dois se clica aqui. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
 
 ---
 
@@ -6148,9 +6148,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.taxa_relatorios @ rádio`
 
-**O que isto prova.** Prova que a mesma frase de entrega do giroscópio aparece nos dois controles do rádio — e revela que o número mostrado ali é o teto do Hefesto, não o que o aparelho entrega.
+**O que isto prova.** Prova que o Hefesto informa a entrega do giroscópio dos dois controles do rádio — e que o número é o que chega do rádio, sem teto, e não os 1000 que o programa de jogos declara.
 
-**Onde olhar.** Dois lugares, e é a comparação entre eles que mede. Primeiro, na aba Controles, o cabeçalho do cartão de cada controle, com o cartão ABERTO: a frase «Giroscópio: fluindo para o jogo (~250 Hz)» — o que o Hefesto ENTREGA ao controle virtual, sem teto de taxa. O chip «Todos», no começo da fita do topo, abre os quatro cartões de uma vez. Segundo, na aba Conexões, a seção «Rádio e adaptadores», que abre pelo título: o ▶ de cada adaptador abre a lista dos controles que estão nele, e cada linha traz, ao lado do ícone de sinal, o movimento que CHEGA do controle agora, em Hz — esse número não tem teto. Na aba Jogar, a linha «Status» tem de estar em «Ligado».
+**Onde olhar.** Dois lugares, e é a comparação entre eles que mede. Primeiro, o `motion_hz` de cada controle no estado do daemon (`daemon.state_full`, em `rumble_ff.per_vpad`) — o que o Hefesto ENTREGA ao controle virtual, sem teto de taxa; a tela não o mostra. Segundo, na aba Conexões, a seção «Rádio e adaptadores», que abre pelo título: o ▶ de cada adaptador abre a lista dos controles que estão nele, e cada linha traz, ao lado do ícone de sinal, o movimento que CHEGA do controle agora, em Hz — esse número não tem teto. Na aba Jogar, a linha «Status» tem de estar em «Ligado».
 
 **Os passos.**
 
@@ -6159,26 +6159,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Abra a aba Jogar, confira que a linha «Status» está em «Ligado» e anote a máscara escolhida no cartão do P3 e no do P4.
 4. Abra a aba Controles, clique no chip «Todos», no começo da fita do topo, e anote em quais cartões o «Analógico virtual» está aceso e em quais o «Giroscópio» está desligado.
 5. Confira, no cabeçalho do cartão do P3, que depois da cor do plástico está escrito BT.
-6. Leia a frase do P3 e anote o número; conte até dez e leia de novo; conte até dez e leia uma terceira vez.
+6. Leia o `motion_hz` do P3 no estado do daemon e anote; conte até dez e leia de novo; conte até dez e leia uma terceira vez.
 7. Faça as três leituras também no P4, anotando os três valores.
 8. Abra a aba Conexões, clique no título «Rádio e adaptadores» e clique no ▶ de cada adaptador.
 9. Ache a linha do P3 e a do P4 e anote o Hz de movimento de cada uma, três vezes, contando até dez entre as leituras.
 10. Anote também se o P3 e o P4 estão no MESMO adaptador ou em adaptadores diferentes.
-11. Ponha lado a lado, no papel, os números do cartão e os da lista do adaptador, para cada um dos dois.
+11. Ponha lado a lado, no papel, os `motion_hz` do estado e os da lista do adaptador, para cada um dos dois.
 12. Leve o P3 para o outro lado da sala, o mais longe do PC que der, e leia o Hz de movimento dele na lista; anote.
 13. Traga o P3 de volta e leia mais uma vez.
-14. Volte à aba Controles e confira que os números do P1 e do P2 não mudaram em nenhuma dessas leituras.
+14. Leia o estado do daemon de novo e confira que o `motion_hz` do P1 e o do P2 não mudaram em nenhuma dessas leituras.
 
-**Passa quando.** A frase aparece nos dois controles do rádio com a máscara DualSense, o «Analógico virtual» apagado e o «Giroscópio» ligado, com um número, e não some enquanto eles estiverem ligados. O número do cartão nunca passa de 250, e o da lista do adaptador pode passar: se o cartão mostrar perto de 250 enquanto a lista mostra bem mais, isso não é você errando — é o teto achatando o que passava por cima, e é justamente o achado desta linha. Anote os números dos dois lugares lado a lado.
+**Passa quando.** O `motion_streaming` dos dois controles do rádio é verdadeiro com a máscara DualSense, o «Analógico virtual» apagado e o «Giroscópio» ligado, e o `motion_hz` é um número. Esse número acompanha o da lista do adaptador, porque desde 03/11/2026 não há teto: passa de 250 quando o rádio traz mais, e uma diferença grande entre os dois lugares é o achado desta linha. Anote os números dos dois lugares lado a lado.
 
 **Por controle.**
 
-* **P1** — USB, e é testemunha. Não toque nele. O número dele no cartão tem de continuar firme enquanto você lê e passeia com os do rádio. Ele é a régua de comparação: sem o número dele no papel, o do rádio não diz nada.
+* **P1** — USB, e é testemunha. Não toque nele. O `motion_hz` dele tem de continuar firme enquanto você lê e passeia com os do rádio. Ele é a régua de comparação: sem o número dele no papel, o do rádio não diz nada.
 * **P2** — USB, a segunda testemunha. Mesma coisa. Se o número do P1 ou do P2 se mexer quando você afasta o P3, anote — a distância de um não devia alcançar o outro.
-* **P3** — BT, e é ESTE. Três leituras paradas no cartão e na lista, uma leitura longe do PC e uma de volta. Pelo rádio o movimento chega em rajadas, então oscilar entre leituras é o normal, não o defeito.
+* **P3** — BT, e é ESTE. Três leituras paradas no estado e na lista, uma leitura longe do PC e uma de volta. Pelo rádio o movimento chega em rajadas, então oscilar entre leituras é o normal, não o defeito.
 * **P4** — BT, o segundo. Três leituras paradas, sem sair do lugar. Ele mostra se a variação é do rádio inteiro ou só do controle que você afastou.
 
-**A armadilha.** O número do cartão é a entrega do Hefesto ao controle virtual, sem teto desde 03/11/2026: ele acompanha o que chega do rádio. E o que chega não é uma taxa do controle: o adaptador tem um orçamento, repartido entre os controles que estão nele — medido nesta casa, um controle SOZINHO num adaptador chegou perto de 800 por segundo, e dois dividindo um adaptador ficaram perto de 400 cada. Por isso anote se o P3 e o P4 dividem o adaptador: é isso que explica boa parte da diferença entre eles. Segunda: número que oscila muito entre uma leitura e outra pelo rádio não é defeito. Terceira: a frase muda de texto, e isso é o certo, no modo nativo e com a máscara Xbox 360, e some com a máscara Nintendo Pro, no controle com o «Analógico virtual» aceso e no controle com o «Giroscópio» desligado. Confira a máscara, o analógico virtual e o Giroscópio que você anotou antes de reprovar por ausência. Quarta: nada aqui prova que o jogo recebeu o giro nessa velocidade — o mapa não registra medição do lado do jogo.
+**A armadilha.** O `motion_hz` é a entrega do Hefesto ao controle virtual, sem teto desde 03/11/2026: ele acompanha o que chega do rádio. E o que chega não é uma taxa do controle: o adaptador tem um orçamento, repartido entre os controles que estão nele — medido nesta casa, um controle SOZINHO num adaptador chegou perto de 800 por segundo, e dois dividindo um adaptador ficaram perto de 400 cada. Por isso anote se o P3 e o P4 dividem o adaptador: é isso que explica boa parte da diferença entre eles. Segunda: número que oscila muito entre uma leitura e outra pelo rádio não é defeito. Terceira: o `motion_streaming` não é verdadeiro, e isso é o certo, no modo nativo, com a máscara Nintendo Pro, no controle com o «Analógico virtual» aceso e no controle com o «Giroscópio» desligado. Confira a máscara, o analógico virtual e o Giroscópio que você anotou antes de reprovar por ausência. Quarta: nada aqui prova que o jogo recebeu o giro nessa velocidade — o mapa não registra medição do lado do jogo.
 
 ---
 
