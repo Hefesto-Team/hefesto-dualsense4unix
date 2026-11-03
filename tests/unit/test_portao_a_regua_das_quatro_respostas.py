@@ -40,16 +40,16 @@ def test_a_tela_de_hoje_passa(regua, capsys):
 
 def test_divida_aberta_sai_nomeada_e_nao_reprova(regua, monkeypatch, capsys):
     """A dívida DECLARADA fica verde, mas nunca fica calada."""
-    monkeypatch.setitem(regua.DO_APARELHO, "mudo", ("luz.lightbar.brilho",))
+    monkeypatch.setitem(regua.DO_APARELHO, "custo-mic", ("luz.lightbar.brilho",))
     monkeypatch.setitem(
-        regua.A_DIVIDA_CONHECIDA, "mudo",
+        regua.A_DIVIDA_CONHECIDA, "custo-mic",
         ("2026-01-01-DE-MENTIRA.md", "dívida de mentira, só para provar que a "
                                      "declarada sai nomeada"))
     quantas = len(regua.A_DIVIDA_CONHECIDA)
     assert regua.main() == 0
     saida = capsys.readouterr().out
     assert f"{quantas} em dívida declarada" in saida
-    assert "dívida: mudo" in saida
+    assert "dívida: custo-mic" in saida
     assert "2026-01-01-DE-MENTIRA.md" in saida
 
 
@@ -151,7 +151,7 @@ def test_morde_o_transporte_rebaixado_no_mapa(regua, monkeypatch, capsys):
 def test_o_mudo_do_microfone_responde_no_controle(regua):
     """O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo não fica no perfil."""
     linhas = {linha[0]: linha for linha in regua.tabela()}
-    for gesto in ("mudo", "custo-mic"):
+    for gesto in ("custo-mic",):
         _g, _abas, _cabo, _radio, perfil, controle, _falta = linhas[gesto]
         assert (perfil, controle) == ("no controle", "sim"), (
             f"o `{gesto}` não responde pelo dono do mudo: {perfil!r}, {controle!r}")
@@ -160,7 +160,7 @@ def test_o_mudo_do_microfone_responde_no_controle(regua):
 
 
 def test_morde_o_mudo_arrancado_do_controle(regua, monkeypatch, capsys):
-    """Tirar `microfone_mudo` de `ControleDeclarado` reprova o `mudo` e o `custo-mic`."""
+    """Tirar `microfone_mudo` de `ControleDeclarado` reprova o `custo-mic`."""
     real = regua._campos_do_esquema
 
     def sem_o_mudo(classe: str, *fonte: object) -> set[str]:
@@ -170,7 +170,7 @@ def test_morde_o_mudo_arrancado_do_controle(regua, monkeypatch, capsys):
     monkeypatch.setattr(regua, "_campos_do_esquema", sem_o_mudo)
     assert regua.main() == 1
     saida = capsys.readouterr().out
-    for gesto in ("mudo", "custo-mic"):
+    for gesto in ("custo-mic",):
         assert f"{gesto}: não está no perfil" in saida
 
 

@@ -29,7 +29,7 @@ def test_o_inventario_de_hoje_passa(regua, capsys):
     assert regua.main() == 0
     saida = capsys.readouterr().out
     assert "VERDE" in saida
-    for gesto in ("sensor", "rota", "mudo"):
+    for gesto in ("sensor", "rota", "custo-mic"):
         assert gesto in saida, "a falta sai nomeada, nunca em silêncio"
     assert "os custos NÃO se somam" in saida
 
@@ -85,12 +85,12 @@ def test_morde_o_custo_fora_do_vocabulario(regua, monkeypatch, capsys):
 
 def test_morde_a_dona_que_nao_e_a_que_a_razao_nomeia(regua, monkeypatch, capsys):
     """MORDIDA 4c — a razão diz de quem é o resto, e a coluna da dona segue."""
-    custo, dona, razao = regua.A_PROVA_QUE_FALTA["mudo"]
-    monkeypatch.setitem(regua.A_PROVA_QUE_FALTA, "mudo",
+    custo, dona, razao = regua.A_PROVA_QUE_FALTA["custo-mic"]
+    monkeypatch.setitem(regua.A_PROVA_QUE_FALTA, "custo-mic",
                         (custo, dona, f"{razao}; o registro é da MIC-VOLUME-02"))
     assert regua.main() == 1
     saida = capsys.readouterr().out
-    assert "mudo" in saida
+    assert "custo-mic" in saida
     assert "MIC-VOLUME-02" in saida
     assert "a razão diz" in saida
 

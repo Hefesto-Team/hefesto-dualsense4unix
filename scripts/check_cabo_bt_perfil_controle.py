@@ -291,7 +291,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
-    "mudo": ("audio.microfone.mudo",),
     "volume": ("audio.microfone.volume", "audio.alto_falante.volume"),
     "rota": ("audio.alto_falante.rota",),
     "volume-padrao": ("audio.alto_falante.volume",),
@@ -362,7 +361,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
 
 
 NO_CONTROLE: dict[str, str] = {
-    "mudo": "microfone_mudo",
     "custo-mic": "microfone_mudo",
 }
 

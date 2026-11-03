@@ -82,7 +82,7 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "e `-radio` do ensaio (25/09); ninguém viu ainda qual degrau o firmware "
         "acende ao ligar",
     ),
-    "mudo": (
+    "custo-mic": (
         "horas",
         "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
         "`audio.microfone.mudo@dualsense` está em MONTOU nos dois, e no rádio "
@@ -90,14 +90,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "07/09 (`mic-radio-negativo-do-mudo-0907`) e a célula não subiu: o que "
         "falta é o registro do degrau, não o comportamento. É a linha 20 do "
         "roteiro da mesa",
-    ),
-    "custo-mic": (
-        "horas",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
-        "é o MESMO ato do `mudo` da aba 02 — o gesto do usuário, chamado pela linha do "
-        "controle na seção do rádio —, e para na mesma célula "
-        "`audio.microfone.mudo@dualsense` (MONTOU nos dois). O que falta é o "
-        "registro do degrau, e é a linha 20 do roteiro da mesa, como a do `mudo`",
     ),
     "volume": (
         "horas",
