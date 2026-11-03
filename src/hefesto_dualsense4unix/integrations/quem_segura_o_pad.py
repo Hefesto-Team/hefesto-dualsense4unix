@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -218,25 +218,6 @@ def jogos_por_pad(
     return achados
 
 
-def jogo_no_pad(
-    vpads: Iterable[Any],
-    *,
-    raiz_proc: str | None = None,
-    resolver: Callable[..., dict[str, Any]] = resolver_no_do_vpad,
-    raiz_dev: str | None = None,
-    meu_pid: int | None = None,
-) -> Segurador | None:
-    """O primeiro processo de JOGO que segura o nó de um dos ``vpads``, ou ``None``."""
-    por_pad = jogos_por_pad(
-        {str(indice): vpad for indice, vpad in enumerate(vpads)},
-        raiz_proc=raiz_proc,
-        resolver=resolver,
-        raiz_dev=raiz_dev,
-        meu_pid=meu_pid,
-    )
-    return next(iter(por_pad.values()), None)
-
-
 __all__ = [
     "AGULHAS_DO_HEFESTO",
     "ARVORE_DA_STEAM",
@@ -246,7 +227,6 @@ __all__ = [
     "Segurador",
     "conta_como_jogo",
     "inodes",
-    "jogo_no_pad",
     "jogos_por_pad",
     "nos_do_pad",
     "seguradores",

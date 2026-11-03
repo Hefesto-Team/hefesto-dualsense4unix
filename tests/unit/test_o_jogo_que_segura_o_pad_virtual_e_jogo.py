@@ -184,8 +184,13 @@ def _mesa(
     return Mesa(raiz=raizes, nos=nos), pads
 
 
+def _o_jogo(pads: list[Any]) -> Any:
+    por_pad = qsp.jogos_por_pad({str(i): pad for i, pad in enumerate(pads)}, meu_pid=MEU_PID)
+    return next(iter(por_pad.values()), None)
+
+
 def _veredito(pads: list[Any]) -> str:
-    segurador = qsp.jogo_no_pad(pads, meu_pid=MEU_PID)
+    segurador = _o_jogo(pads)
     return classify(**SEM_OUTRA_EVIDENCIA, processo_no_pad=segurador.nome if segurador else None)
 
 
@@ -203,7 +208,7 @@ def test_o_jogo_de_fora_no_no_do_pad_e_jogo(
     mesa, pads = _mesa(raizes, player, modo, caminho, via)
     assert _veredito(pads) == "daemon"
     mesa.processo(jogo, JOGOS[jogo], mesa.nos[player][-1])
-    segurador = qsp.jogo_no_pad(pads, meu_pid=MEU_PID)
+    segurador = _o_jogo(pads)
     assert segurador is not None and segurador.nome == jogo
     assert _veredito(pads) == "game"
 
@@ -225,7 +230,7 @@ def test_a_steam_a_mesa_e_o_hefesto_no_no_nao_sao_jogo(
         mesa.processo("forja", JOGOS["forja"], *todos, pid=MEU_PID)
     else:
         mesa.processo(COMM_DE.get(quem, quem), NAO_JOGOS.get(quem, f"/usr/bin/{quem}"), *todos)
-    assert qsp.jogo_no_pad(pads, meu_pid=MEU_PID) is None
+    assert _o_jogo(pads) is None
     assert _veredito(pads) == "daemon"
 
 
