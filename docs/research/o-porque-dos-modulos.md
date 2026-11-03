@@ -624,7 +624,7 @@ Medido ao vivo (2026-07-25, A/B no mesmo controle, 3 s por janela)::
 O TOTAL de pacotes por segundo é praticamente o mesmo: o áudio não abre um
 canal novo, ele ocupa lugar na mesma fila. Ligar o mic custa ~35% dos reports
 de input. 170 Hz segue muito acima do poll de 60 Hz do daemon (jogar não
-piora), mas o espelho de motion — que mira 250 Hz — entrega menos janelas de
+piora), mas o espelho de motion entrega menos janelas de
 gyro enquanto o mic está no ar. Por isso a ponte é sempre um gesto explícito da
 usuária, nunca algo que sobe sozinho: quem usa gyro aiming precisa saber que
 está trocando uma coisa pela outra. E a recuperação é total no desligar (a

@@ -175,8 +175,8 @@ nenhum dos 47 é intervalo. A `struct dualsense` do driver não tem
 
 **O que isso responde, e é uma resposta de verdade:** na mesa cheia **não há
 botão no aparelho** para trocar taxa por espaço no ar. Não adianta procurar. O
-único freio disponível é do host — neste projeto, o cap de
-`core/physical_report_reader.py`.
+único freio possível seria do host — e neste projeto ele não existe mais: o cap de
+250 Hz do `core/physical_report_reader.py` saiu em 03/11/2026, e toda amostra distinta chega ao jogo.
 
 De quebra, o comentário do DS4 é uma **confirmação independente** do que este
 projeto mediu por `readlink`/`lsusb` em 15/08: 4 ms no cabo, ou seja 250 Hz, e não

@@ -762,7 +762,7 @@ sustentado entre 38 e 392 Hz, e **nunca** os 1000 Hz que o SDL declara (ver
 
 **O que continua sem medição é outra coisa:** a taxa que o **vpad** entrega ao
 jogo, que não é obrigatoriamente a do físico — entre os dois há o espelho de
-motion, o rate-limit de 250 Hz do `uhid_gamepad.py` e o poll do daemon. E
+motion e o poll do daemon (o rate-limit de 250 Hz do espelho saiu em 03/11/2026: toda amostra distinta chega). E
 continua não havendo linha nesta árvore que reconcilie a taxa declarada com a
 entregue: nem conversão, nem aviso, nem um número guardado.
 
@@ -1018,7 +1018,7 @@ janela de **12,02 s**, controle parado no rádio. **GRAU: MEDIDO AQUI,
 perda entre o espelho e o jogo: o evdev e o `hidraw` do vpad são a mesma
 emissão vista de dois lados.
 
-E 248,4 Hz é o teto: `MOTION_EMIT_MAX_HZ = 250.0`
+E 248,4 Hz era o teto: `MOTION_EMIT_MAX_HZ = 250.0`
 (`core/physical_report_reader.py`). A razão 248,4/675,8 dá **36,8%** — que é o
 mesmo "~37%" que a medição de 16/08/2026 achou (7.231 contra 19.435) e deixou
 escrito no `mapa-controles.csv` como *"ninguém sabe se é decimação legítima ou
@@ -1236,7 +1236,7 @@ outra coisa que não o produto"*. **GRAU: MEDIDO AQUI** para a divergência;
   segundo controle — sem giroscópio e mudo, porque o daemon o tem em
   `EVIOCGRAB`. Ninguém mediu;
 - **o transporte.** Tudo aqui é o controle no RÁDIO. No cabo o físico entrega
-  250,88 Hz contra os 675,8 Hz medidos aqui, e a razão contra o teto muda.
+  250,88 Hz contra os 675,8 Hz medidos aqui, e a razão contra o declarado muda.
 
 ---
 

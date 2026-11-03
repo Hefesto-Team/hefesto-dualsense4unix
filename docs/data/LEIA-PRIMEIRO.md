@@ -10,8 +10,8 @@ nele. **O que ele não é:** um resumo do mapa. Nada aqui substitui a prosa das
 células — ele te dá o endereço da prosa.
 
 **A conta que justifica este arquivo.** Até hoje havia duas portas: ler o CSV
-inteiro (<!--@caracteres-do-mapa-->1.512.189<!--/--> caracteres em células,
-~<!--@tokens-do-mapa-->378<!--/--> mil tokens) ou não ler nada. O
+inteiro (<!--@caracteres-do-mapa-->1.515.855<!--/--> caracteres em células,
+~<!--@tokens-do-mapa-->379<!--/--> mil tokens) ou não ler nada. O
 veredito por lado das <!--@linhas-do-mapa-->326<!--/--> linhas, sem uma linha de prosa, custa 27.828
 caracteres — **4,2%**. A porta barata sempre existiu; faltava alguém dizer onde
 a porta fica.
@@ -36,10 +36,10 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 
 | Arquivo | Bytes | O que é | Quando abrir |
 |---|---:|---|---|
-| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->1.574.610<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->326<!--/--> linhas x <!--@colunas-do-mapa-->50<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
+| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->1.578.271<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->326<!--/--> linhas x <!--@colunas-do-mapa-->50<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
 | `docs/data/ensaios.csv` | <!--@bytes:docs/data/ensaios.csv-->221.821<!--/--> | **O LASTRO.** <!--@linhas-do-caderno-->251<!--/--> ensaios x <!--@colunas-do-caderno-->14<!--/--> colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e quase ninguém as respondeu:** `ponte` está vazia em <!--@caderno-sem-ponte-->251<!--/--> ensaios e `degrau` em <!--@caderno-sem-degrau-->206<!--/-->. Não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
-| `docs/specs.html` | <!--@bytes:docs/specs.html-->2.389.017<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mora em `docs/` desde 28/09/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
-| `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->131.174<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
+| `docs/specs.html` | <!--@bytes:docs/specs.html-->2.392.652<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mora em `docs/` desde 28/09/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
+| `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->132.919<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.399<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
 | `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->64.088<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
 | `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->104.979<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — a docstring vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->350<!--/-->. |
@@ -72,8 +72,8 @@ são `dualsense` (<!--@mapa-linhas-dualsense-->118<!--/--> linhas), `pro` (<!--@
 vêm em pares `cabo_*` / `radio_*` (<!--@pares-de-transporte-->14<!--/--> pares) —
 cabo e rádio respondidos lado a lado na mesma linha. As que importam para decidir:
 
-- `existe` — a peça existe no aparelho? (`tem` <!--@mapa-existe-tem-->162<!--/--> · `desconhecido` <!--@mapa-existe-desconhecido-->47<!--/--> ·
-  `nao-tem` <!--@mapa-existe-nao-tem-->96<!--/--> · `parcial` <!--@mapa-existe-parcial-->21<!--/-->)
+- `existe` — a peça existe no aparelho? (`tem` <!--@mapa-existe-tem-->164<!--/--> · `desconhecido` <!--@mapa-existe-desconhecido-->47<!--/--> ·
+  `nao-tem` <!--@mapa-existe-nao-tem-->94<!--/--> · `parcial` <!--@mapa-existe-parcial-->21<!--/-->)
 - `cabo_aceita` / `radio_aceita` — o **aparelho** aceita o comando por ali?
 - `cabo_aciona` / `radio_aciona` — o **Hefesto** aciona aquilo hoje? É a coluna
   do produto, e é a que o portão lê para dizer o que é afirmação forte.
@@ -81,10 +81,10 @@ cabo e rádio respondidos lado a lado na mesma linha. As que importam para decid
   `radio_ate_onde_foi` — **as duas réguas**, seção 3.
 - `ponte_alcanca` / `ponte_de_onde_sei` — **o eixo de ponte** (20/08/2026), e
   ele não é um par cabo/rádio: pergunta por qual ponte a feature chega ao jogo
-  (`gamepad/dualsense`, `gamepad/xbox360`, `mouse+teclado`). Preenchido em <!--@mapa-com-ponte-alcanca-->10<!--/--> de
+  (`gamepad/dualsense`, `gamepad/xbox360`, `mouse+teclado`). Preenchido em <!--@mapa-com-ponte-alcanca-->12<!--/--> de
   <!--@linhas-do-mapa-->326<!--/--> linhas hoje, todas com `gamepad/dualsense` + `inferido-do-codigo`. Quem
   filtrar o mapa sem estas duas colunas não enxerga a direção inteira.
-- `teste_que_morde` (<!--@mapa-com-teste-que-morde-->117<!--/--> linhas) e `mordida_provada_em` (<!--@mapa-com-mordida-provada-->67<!--/-->) — o teste que
+- `teste_que_morde` (<!--@mapa-com-teste-que-morde-->119<!--/--> linhas) e `mordida_provada_em` (<!--@mapa-com-mordida-provada-->70<!--/-->) — o teste que
   reprova quando a cura é arrancada, e a prova de que alguém arrancou e viu.
 - `provado_em` (<!--@mapa-com-provado-em-->87<!--/--> linhas, data pura) — quando. Cuidado: `mordida_provada_em`
   tem o mesmo sufixo `_em` e **é prosa**, não data.
