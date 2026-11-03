@@ -340,13 +340,11 @@ def xbox(
         nos = uinput._nos_do_uinput(pad)
         assert nos == [str(proc.dev / f"event{20 + player}"), str(proc.dev / f"js{player}")]
         todos += nos
-        pad.player_de_teste = player
         pads.append(pad)
         motores[player] = motor
     proc.processo(STEAM, "steam", "/home/u/.steam/steam/ubuntu12_32/steam", todos)
     proc.processo(OSK, "cosmic-osk", "/usr/bin/cosmic-osk", todos)
-    for pad in pads:
-        player = pad.player_de_teste
+    for player, pad in enumerate(pads, start=1):
         proc.processo(100 + player, JOGOS[player], f"C:\\jogo\\{JOGOS[player]}",
                       uinput._nos_do_uinput(pad))
         pad._ff_effects[0] = pad._parse_ff_effect(_Efeito(ecodes, *PEDIDOS[player]))
@@ -375,8 +373,7 @@ def test_no_xbox_o_efeito_de_duracao_zero_dura_60_s_com_o_jogo_vivo(
 ) -> None:
     pads, motores, registro = xbox
     _passar(pads, relogio, 60.0)
-    for pad in pads:
-        player = pad.player_de_teste
+    for player, pad in enumerate(pads, start=1):
         assert motores[player] == [PEDIDOS[player]], (
             f"P{player}: o jogo vivo segurava o efeito de duração 0 e o motor recebeu "
             f"{motores[player]}"
@@ -392,8 +389,7 @@ def test_no_xbox_o_jogo_que_cai_com_a_steam_aberta_solta_em_duas_consultas(
 
     pads, motores, registro = xbox
     _passar(pads, relogio, 6.0)
-    for pad in pads:
-        player = pad.player_de_teste
+    for player in range(1, len(pads) + 1):
         proc.morre(100 + player)
         _passar(pads, relogio, 2 * uinput._CONFERE_O_LEITOR_S + 1.0)
         assert motores[player] == [PEDIDOS[player], (0, 0)], f"P{player}: {motores[player]}"
