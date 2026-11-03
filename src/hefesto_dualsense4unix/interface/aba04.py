@@ -477,7 +477,7 @@ MIOLO = f'''
             </div>
             <div><div class="sec-rot">Brilho</div></div>
             <div>
-              <div class="sec-rot" data-dica="Dá o número do jogador a este controle, o das cinco luzinhas. Dar um número que já é de outro faz os dois trocarem. O número é do Hefesto: se um jogo o trocar, ele volta em até um segundo">Jogador</div>
+              <div class="sec-rot" data-dica="Dá o número do jogador a este controle, o das cinco luzinhas. Dar um número que já é de outro faz os dois trocarem. Com um jogo aberto, vale o número que o jogo acender">Jogador</div>
             </div>
             <div><div class="sec-rot">LEDs</div></div>
             <div><div class="sec-rot">Efeito</div></div>

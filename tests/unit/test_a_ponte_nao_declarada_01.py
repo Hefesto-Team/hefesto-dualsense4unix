@@ -16,8 +16,8 @@ duas coisas contraditórias ao mesmo tempo — que a feature funciona, e nada so
 a única condição que a faz funcionar — e fica verde nas duas.
 
 A regressão que a regra nomeia é reproduzível numa linha só: marcar
-`luz.replica_output_jogo@pro` como forte e medida. A célula é `uhid` nos dois
-transportes, tem `ponte_alcanca` vazia, e antes da regra o portão devolvia
+`luz.replica_output_jogo@pro` como forte e medida, com `ponte_alcanca` vazia. A célula
+é `uhid` nos dois transportes, e antes da regra o portão devolvia
 `exit 0` com a mentira inteira dentro.
 
 POR QUE A REGRA SÓ COBRA ONDE A PROMESSA É MÁXIMA
@@ -118,6 +118,7 @@ def _promove_sem_dizer_a_ponte(mapa: Path) -> None:
         mapa,
         LINHA_SEM_PONTE,
         {
+            "ponte_alcanca": "",
             "cabo_aciona": "sim",
             "radio_aciona": "sim",
             "cabo_de_onde_sei": "medido",

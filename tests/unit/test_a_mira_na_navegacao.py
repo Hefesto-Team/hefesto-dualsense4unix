@@ -585,20 +585,18 @@ def _dica_do_jogador() -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", bloco).split())
 
 
-def test_a_dica_do_jogador_nao_diz_que_o_jogo_manda_no_numero() -> None:
-    """MORDIDA: devolva «Um jogo em co-op pode mandar o próprio número por"""
+def test_a_dica_do_jogador_diz_que_o_jogo_pinta_o_numero() -> None:
+    """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO. MORDIDA: devolva «O número é do Hefesto: se um jogo o
+    trocar, ele volta em até um segundo» ao gerador da 04."""
     texto = _dica_do_jogador()
-    assert "por cima" not in texto, texto
-    assert "volta em até um segundo" in texto, texto
+    for velho in ("é do Hefesto", "volta em até um segundo", "por cima"):
+        assert velho not in texto, texto
+    assert "vale o número que o jogo acender" in texto, texto
 
 
-def test_o_segundo_da_dica_e_a_conta_da_vigia() -> None:
-    """A dica promete UM segundo, e a promessa é a conta do dono.
-
-    Nota de 03/11/2026: o veto do número (D-2309-O-HEFESTO-MANDA-NO-NUMERO) caducou pela
-    D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO; a vigia reafirma o merge, e o número que volta é o do
-    Hefesto fora de jogo e o do jogo com a autoridade nele.
-    """
+def test_fora_de_jogo_a_vigia_reafirma_o_numero_em_um_segundo() -> None:
+    """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO, a metade em que a saída do jogo fica retida: fora de
+    jogo, a vigia reafirma o número do Hefesto em até um segundo."""
     import math
 
     from hefesto_dualsense4unix.core import escritor_cru
@@ -606,4 +604,5 @@ def test_o_segundo_da_dica_e_a_conta_da_vigia() -> None:
     passo = escritor_cru.PASSO_DA_VIGIA_S
     reescrita = math.ceil(escritor_cru.INTERVALO_DA_REAFIRMACAO_S / passo) * passo
     assert reescrita <= 1.0, (
-        f"a vigia reescreve a cada {reescrita} s e a dica promete um segundo")
+        f"a vigia reafirma o número do Hefesto a cada {reescrita} s, e fora de jogo ele "
+        f"volta em até um segundo")
