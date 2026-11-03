@@ -14,11 +14,13 @@ uhid ser um DualSense de verdade em vez de um device mudo:
 E o que o daemon NÃO entrega mais (VPAD-03/BT-01): o hidraw do físico. O
 blueprint é o canônico embutido — o caminho de criação nunca pergunta hidraw ao
 backend, então nem o boot sem controle nem o EIO do BT dormindo decidem o
-backend do vpad.
+backend do vpad. Quem pergunta é o leitor do físico, que sobe DEPOIS do vpad, em
+todo modo, e pede o hidraw do próprio jogador (`1b20d6c17`, o relógio do mudo).
 """
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -123,6 +125,27 @@ def _daemon(*, hidraw: dict[str | None, str] | None = None) -> Any:
     )
 
 
+def _pedidos_do_hidraw(
+    daemon: Any, chamadas: list[dict[str, Any]]
+) -> list[tuple[str | None, int]]:
+    """Cada pedido de hidraw ao backend, com quantos vpads já tinham nascido nele."""
+    pedidos: list[tuple[str | None, int]] = []
+    original = daemon.controller.hidraw_path
+
+    def _pede(uniq: str | None = None) -> str | None:
+        pedidos.append((uniq, len(chamadas)))
+        return original(uniq)
+
+    daemon.controller.hidraw_path = _pede
+    return pedidos
+
+
+def _esperar_um_pedido(pedidos: list[tuple[str | None, int]]) -> None:
+    prazo = time.monotonic() + 5.0
+    while not pedidos and time.monotonic() < prazo:
+        time.sleep(0.01)
+
+
 class TestControllerAllowsUhid:
     def test_backend_real_libera_o_uhid(self) -> None:
         assert controller_allows_uhid(_daemon(hidraw={})) is True
@@ -145,8 +168,13 @@ class TestGamepadPrimario:
     ) -> None:
         monkeypatch.setattr(gamepad_mod, "_set_controller_grab", lambda *_a: None)
         daemon = _daemon(hidraw={None: "/dev/hidraw4"})
+        pedidos = _pedidos_do_hidraw(daemon, chamadas)
 
-        assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
+        try:
+            assert start_gamepad_emulation(daemon, flavor="dualsense", origin="manual") is True
+            _esperar_um_pedido(pedidos)
+        finally:
+            gamepad_mod.stop_motion_reader(daemon)
         assert len(chamadas) == 1
         chamada = chamadas[0]
         assert chamada["flavor"] == "dualsense"
@@ -157,7 +185,9 @@ class TestGamepadPrimario:
             "trigger_sink", "lightbar_sink", "player_led_sink", "session_end_sink"
         ):
             assert callable(chamada[sink]), f"sink ausente na fiação do P1: {sink}"
-        assert daemon.hidraw_calls == []
+        assert pedidos, "o leitor do físico do P1 não pediu o hidraw"
+        assert {uniq for uniq, _ in pedidos} == {None}, pedidos
+        assert all(nascidos == 1 for _, nascidos in pedidos), pedidos
 
     def test_backend_fake_passa_o_veto_a_factory(
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
@@ -206,12 +236,22 @@ class TestCoopPorJogador:
         """MAC próprio por jogador: o vpad do P2 não pode nascer com `player=1`."""
         daemon = _daemon(hidraw={None: "/dev/hidraw4", MAC_P2: "/dev/hidraw7"})
         daemon._gamepad_device = _FakePad()
-        CoopManager(daemon).sync()
+        pedidos = _pedidos_do_hidraw(daemon, chamadas)
+        mgr = CoopManager(daemon)
+        try:
+            mgr.sync()
+            _esperar_um_pedido(pedidos)
+        finally:
+            for jogador in mgr._players.values():
+                if jogador.motion_reader is not None:
+                    jogador.motion_reader.stop()
 
         assert len(chamadas) == 1
         assert chamadas[0]["player"] == 2
         assert chamadas[0]["allow_uhid"] is True
-        assert daemon.hidraw_calls == []
+        assert pedidos, "o leitor do físico do P2 não pediu o hidraw"
+        assert {uniq for uniq, _ in pedidos} == {MAC_P2}, pedidos
+        assert all(nascidos == 1 for _, nascidos in pedidos), pedidos
 
     def test_jogador_sem_mac_tambem_ganha_uhid(
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch
