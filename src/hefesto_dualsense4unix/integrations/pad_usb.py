@@ -78,7 +78,9 @@ MODULOS_DO_GADGET = ("libcomposite", "usb_f_hid", "usbip_vudc", "vhci_hcd")
 
 CONTRATO_DO_IOCTL = "GADGET_HID_WRITE_GET_REPORT"
 
-MARCA_DO_F_HID = "/sys/module/usb_f_hid/parameters/get_report_sized"
+PARAMETROS_DO_F_HID = "/sys/module/usb_f_hid/parameters"
+
+MARCAS_DO_F_HID = ("get_report_sized", "get_report_refuses")
 
 BUS_USB = 0x0003
 BUS_BT = 0x0005
@@ -364,7 +366,7 @@ _INTERFACE_DO_APARELHO: dict[str, str] = {}
 _SEM_PORTA: dict[str, str] = {}
 SEM_GADGET = "sem_gadget"
 _CONTRATO_QUE_FALTOU: list[str] = []
-_MARCA_DO_F_HID: list[bool | None] = [None]
+_MARCAS_QUE_FALTAM: list[tuple[str, ...] | None] = [None]
 _A_CAMINHO: dict[str, tuple[str, float]] = {}
 _CHAVE_DO_APARELHO = "aparelho:"
 _A_MESA_VIU: tuple[frozenset[str], float] | None = None
@@ -643,30 +645,51 @@ def quem_ficou_no_uhid(linhas: Iterable[str]) -> dict[int, str] | None:
     return no_uhid
 
 
+def marcas_do_f_hid_que_faltam(
+    parametros: str = PARAMETROS_DO_F_HID,
+    *,
+    ler: Callable[[str], str] = _ler_atributo,
+    existe: Callable[[str], bool] = os.path.exists,
+) -> tuple[str, ...] | None:
+    """As marcas de `MARCAS_DO_F_HID` que o ``usb_f_hid`` carregado não tem; None = fora do ar."""
+    if not existe(os.path.dirname(parametros)):
+        return None
+    return tuple(
+        marca
+        for marca in MARCAS_DO_F_HID
+        if ler(os.path.join(parametros, marca)).upper() not in ("Y", "1")
+    )
+
+
 def f_hid_fecha_a_resposta(
-    caminho: str = MARCA_DO_F_HID,
+    parametros: str = PARAMETROS_DO_F_HID,
     *,
     ler: Callable[[str], str] = _ler_atributo,
     existe: Callable[[str], bool] = os.path.exists,
 ) -> bool | None:
-    """O ``usb_f_hid`` carregado é o curado? None = o módulo não está no ar."""
-    if existe(caminho):
-        return ler(caminho).upper() in ("Y", "1")
-    modulo = os.path.dirname(os.path.dirname(caminho))
-    return False if existe(modulo) else None
+    """O ``usb_f_hid`` carregado é o curado, com todas as marcas? None = fora do ar."""
+    faltam = marcas_do_f_hid_que_faltam(parametros, ler=ler, existe=existe)
+    return None if faltam is None else not faltam
 
 
-def medir_a_marca_do_f_hid(caminho: str = MARCA_DO_F_HID) -> bool | None:
-    """Lê a marca e a anota para o ``daemon.state_full`` (só da memória)."""
-    marca = f_hid_fecha_a_resposta(caminho)
+def medir_a_marca_do_f_hid(parametros: str = PARAMETROS_DO_F_HID) -> bool | None:
+    """Lê as marcas e anota as que faltam, para o estado do daemon (só da memória)."""
+    faltam = marcas_do_f_hid_que_faltam(parametros)
     with _TRAVA:
-        _MARCA_DO_F_HID[0] = marca
-    return marca
+        _MARCAS_QUE_FALTAM[0] = faltam
+    return None if faltam is None else not faltam
 
 
 def marca_do_f_hid_medida() -> bool | None:
     with _TRAVA:
-        return _MARCA_DO_F_HID[0]
+        faltam = _MARCAS_QUE_FALTAM[0]
+    return None if faltam is None else not faltam
+
+
+def marcas_do_f_hid_que_faltaram() -> tuple[str, ...] | None:
+    """As marcas que faltaram na última medida; None = nenhum pad USB mediu."""
+    with _TRAVA:
+        return _MARCAS_QUE_FALTAM[0]
 
 
 QUIRKS_DO_USBCORE = "/sys/module/usbcore/parameters/quirks"
@@ -765,7 +788,7 @@ __all__ = [
     "FALHAS_ATE_A_PORTA_SAIR",
     "GADGET_HID_READ_GET_REPORT_ID",
     "GADGET_HID_WRITE_GET_REPORT",
-    "MARCA_DO_F_HID",
+    "MARCAS_DO_F_HID",
     "MAX_PADS_USB",
     "MODULOS_DO_GADGET",
     "SEM_GADGET",
@@ -797,6 +820,8 @@ __all__ = [
     "interface_do_gadget",
     "ler_o_id_do_get_report",
     "marca_do_f_hid_medida",
+    "marcas_do_f_hid_que_faltam",
+    "marcas_do_f_hid_que_faltaram",
     "medir_a_marca_do_f_hid",
     "pacote_do_get_report",
     "pad_decidido",

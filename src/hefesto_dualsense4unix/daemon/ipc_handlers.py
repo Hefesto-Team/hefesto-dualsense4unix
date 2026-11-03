@@ -6296,9 +6296,9 @@ def _a_luz_do_jogo_no_controle(status: dict[str, Any], uniq: Any) -> None:
 
 
 def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
-    """O ``usb_f_hid`` dos pads USB virtuais é o curado? Só da memória do pad.
+    """O ``usb_f_hid`` dos pads USB virtuais é o curado, e que marca falta? Só da memória do pad.
 
-    O pad anota a marca ``get_report_sized`` ao montar o gadget; o
+    O pad anota as marcas de `pad_usb.MARCAS_DO_F_HID` ao montar o gadget; o
     ``state_full`` não lê o sysfs. None = nenhum pad USB mediu ainda.
     """
     emulacao = result.get("gamepad_emulation")
@@ -6306,6 +6306,8 @@ def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
         from hefesto_dualsense4unix.integrations import pad_usb
 
         emulacao["get_report_sized"] = pad_usb.marca_do_f_hid_medida()
+        faltam = pad_usb.marcas_do_f_hid_que_faltaram()
+        emulacao["f_hid_marcas_que_faltam"] = None if faltam is None else list(faltam)
 
 
 def _na_steam(handlers: Any) -> bool:

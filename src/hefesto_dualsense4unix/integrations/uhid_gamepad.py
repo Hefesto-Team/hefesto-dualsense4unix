@@ -2770,13 +2770,13 @@ def _avisar_o_contrato_que_falta(faltam: list[str]) -> None:
 
 
 def _avisar_o_f_hid_sem_marca() -> None:
-    """Uma linha só: o pad sobe no ``usb_f_hid`` de fábrica, mais lento no Proton."""
+    """Uma linha só: o pad sobe no ``usb_f_hid`` sem todas as marcas, mais lento no Proton."""
     if _F_HID_SEM_MARCA_AVISADO:
         return
     _F_HID_SEM_MARCA_AVISADO.append(True)
     logger.warning(
         "pad_usb_f_hid_de_fabrica",
-        marca=pad_usb.MARCA_DO_F_HID,
+        faltam=list(pad_usb.marcas_do_f_hid_que_faltaram() or ()),
         efeito="o jogo no Proton espera 5 s por pedido de feature",
         cura=f"{como_atualizar_esta_instalacao()} (o hefesto-usb-f-hid pelo DKMS)",
     )

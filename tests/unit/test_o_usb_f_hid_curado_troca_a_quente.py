@@ -382,7 +382,7 @@ def test_o_pad_usb_le_a_marca(
     from hefesto_dualsense4unix.integrations import pad_usb
 
     sys_module = _sys_module(tmp_path, carregado=carregado, marca=marca, refcnt=0)
-    caminho = str(sys_module / "usb_f_hid" / "parameters" / "get_report_sized")
+    caminho = str(sys_module / "usb_f_hid" / "parameters")
     assert pad_usb.f_hid_fecha_a_resposta(caminho) is esperado
     assert pad_usb.medir_a_marca_do_f_hid(caminho) is esperado
     assert pad_usb.marca_do_f_hid_medida() is esperado
@@ -396,7 +396,7 @@ def test_o_pad_anota_a_marca_ao_montar(
 
     medidas: list[bool] = []
 
-    def medir(caminho: str = pad_usb.MARCA_DO_F_HID) -> bool:
+    def medir(caminho: str = pad_usb.PARAMETROS_DO_F_HID) -> bool:
         medidas.append(True)
         return False
 
@@ -446,9 +446,14 @@ def test_o_state_full_publica_so_da_memoria(monkeypatch: pytest.MonkeyPatch) -> 
     from hefesto_dualsense4unix.integrations import pad_usb
 
     monkeypatch.setattr(pad_usb, "marca_do_f_hid_medida", lambda: False)
+    monkeypatch.setattr(pad_usb, "marcas_do_f_hid_que_faltaram", lambda: ("get_report_refuses",))
     result: dict[str, object] = {"gamepad_emulation": {"enabled": True}}
     ipc_handlers._com_a_marca_do_f_hid(result)
-    assert result["gamepad_emulation"] == {"enabled": True, "get_report_sized": False}
+    assert result["gamepad_emulation"] == {
+        "enabled": True,
+        "get_report_sized": False,
+        "f_hid_marcas_que_faltam": ["get_report_refuses"],
+    }
     sem_bloco: dict[str, object] = {}
     ipc_handlers._com_a_marca_do_f_hid(sem_bloco)
     assert sem_bloco == {}

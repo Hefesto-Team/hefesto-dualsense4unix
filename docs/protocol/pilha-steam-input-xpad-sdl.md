@@ -1618,7 +1618,7 @@ do `winedevice`. Prova direta: `HIDIOCGFEATURE` por Python no hidraw de cada pad
   o master de 14/10) responde com `min(wLength, report_length, 64)` e
   `req->zero = 0`. Ele ignora o `length` que o Hefesto grava pelo
   `GADGET_HID_WRITE_GET_REPORT`
-  (`pacote_do_get_report` em `src/hefesto_dualsense4unix/integrations/pad_usb.py:300`). Toda resposta sai com 64 bytes, sem o pacote vazio, e
+  (`pacote_do_get_report` em `src/hefesto_dualsense4unix/integrations/pad_usb.py:302`). Toda resposta sai com 64 bytes, sem o pacote vazio, e
   todo pedido de 128 volta `-110` aos ~5,1 s. Com 4 pads e várias features por
   pad, o `winebus` estoura o prazo de 10 s do `services.exe` (`1053`) e o jogo sobe
   sem controle nenhum.
