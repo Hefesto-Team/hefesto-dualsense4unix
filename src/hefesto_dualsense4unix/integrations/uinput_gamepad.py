@@ -134,7 +134,7 @@ def _sysname_do_uinput(device: Any) -> str | None:
         uinput_c = importlib.import_module("evdev._uinput")
         return str(uinput_c.get_sysname(fd)) or None
     except (ImportError, OSError, TypeError, ValueError, AttributeError) as exc:
-        logger.warning("uinput_sysname_indisponivel_jogo_no_pad_cego", err=str(exc))
+        logger.info("uinput_sem_sysname", err=str(exc))
         return None
 
 
