@@ -259,14 +259,14 @@
       "data": "2026-11-02",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1193599,
+      "piso": 1196415,
       "por_item": {
-        "docs": 108321,
-        "scripts": 111018,
-        "src": 301689,
-        "tests": 672571
+        "docs": 108388,
+        "scripts": 111021,
+        "src": 302807,
+        "tests": 674199
       },
-      "razao": "tamanho: +98 linhas (1193501 -> 1193599), pagas por Origem: identidade.pareamento; registrado no fecho, topo 1f9aa643643c",
+      "razao": "tamanho: +2816 linhas (1193599 -> 1196415), pagas por Origem: D-0211-O-PIPEWIRE-DA-CASA-E-FONTE-DO-APT; registrado no fecho, topo 54a54358bffd",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1479,10 +1479,16 @@
           "de": 1193501,
           "para": 1193599,
           "razao": "tamanho: +98 linhas (1193501 -> 1193599), pagas por Origem: identidade.pareamento; registrado no fecho, topo 1f9aa643643c"
+        },
+        {
+          "data": "2026-11-02",
+          "de": 1193599,
+          "para": 1196415,
+          "razao": "tamanho: +2816 linhas (1193599 -> 1196415), pagas por Origem: D-0211-O-PIPEWIRE-DA-CASA-E-FONTE-DO-APT; registrado no fecho, topo 54a54358bffd"
         }
       ],
       "unidade": "linhas",
-      "universo": 3327
+      "universo": 3334
     }
   }
 }
