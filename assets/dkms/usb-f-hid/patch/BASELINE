@@ -1,8 +1,9 @@
 # Baseline do módulo DKMS hefesto-usb-f-hid (14/10/2026)
-# O f_hid.c deste diretório == o de fábrica do STABLE v7.1.5 + o patch da
-# lista PATCH abaixo. O u_hid.h é o de fábrica, sem modificação: está aqui
+# O f_hid.c deste diretório == o de fábrica do STABLE v7.1.5 + os patches da
+# lista PATCH abaixo, na ordem. O u_hid.h é o de fábrica, sem modificação: está aqui
 # porque o pacote linux-headers não o distribui e o f_hid.c o inclui.
-# Paridade verificável (reverte):
+# Paridade verificável (reverte, do último ao primeiro):
+#   patch -R -p5 f_hid.c < patch/0002-*.patch
 #   patch -R -p5 f_hid.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 #
@@ -24,6 +25,9 @@
 # A MARCA: o patch expõe `get_report_sized` (0444, sempre Y), em
 # /sys/module/usb_f_hid/parameters/get_report_sized. Nada mais no sysfs separa
 # este módulo do de fábrica, e o daemon e o doctor leem por esse parâmetro.
+# O 0002 (03/11/2026) expõe a segunda, `get_report_refuses` (0444, sempre Y):
+# o id recusado (gravado com tamanho zero) ou sem resposta volta stall, e não
+# zeros. A marca separa o módulo com o 0002 do que só tem o 0001.
 #
 # O 7.2.6-76070206 (17/10/2026): o f_hid.c e o u_hid.h de fábrica dele são
 # BYTE A BYTE os do v7.1.5 (os mesmos SHA256_VANILLA_C e SHA256_U_HID_H), no
@@ -55,9 +59,10 @@ KERNEL_TESTED_2=7.2.6-76070206-generic
 KERNELS_VALIDADOS=7.1.5-76070105,7.2.6-76070206
 POP_LINUX_COMMIT=38a419fc95c5eae36afa2f13e459a7fc4f4a68f5
 SHA256_VANILLA_C=cfa52338bd467506d4fd3786de67fd556124226733ea1a7f8d9730165282e036
-SHA256_PATCHED_C=e293200fc7789b66b45a2d7e6dbd9377bd33d93eab953b4e23b46c93ca252f99
+SHA256_PATCHED_C=dadc6065c22a6ec424dba45d3cae0b5c7cb6f11b94c0960aded498b28c91795c
 SHA256_U_HID_H=5a0d6537a7f78e5ad4593889f8df07be6375c03a3f6a37ea8c7e546800dce595
 PATCH=0001-usb-gadget-f_hid-size-GET_REPORT-responses-to-the-s.patch
+PATCH=0002-usb-gadget-f_hid-stall-a-GET_REPORT-with-no-answer-in.patch
 # O de fábrica do 7.2.6-76070206, medido em 17/10/2026 (o passo 1 do ritual):
 POP_LINUX_COMMIT_7_2_6_76070206=cb46eb86556705fcc040e436bab75eef1e71518e
 SHA256_FABRICA_C_7_2_6_76070206=cfa52338bd467506d4fd3786de67fd556124226733ea1a7f8d9730165282e036

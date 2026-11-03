@@ -1778,13 +1778,22 @@ class UhidDualSense:
             )
 
     def _reply_get_report(self, data: bytes) -> None:
-        """struct uhid_get_report_req { __u32 id; __u8 rnum; __u8 rtype; }"""
+        """struct uhid_get_report_req { __u32 id; __u8 rnum; __u8 rtype; }
+
+        O id que o pad não guarda volta como erro, que o kernel entrega ao `hidraw` como
+        `EIO`: o aparelho recusa o id que não serve, e um sucesso zerado é o firmware 0x0000.
+        """
         if self._fd is None:
             return
         request_id = struct.unpack("<I", data[4:8])[0]
         report_num = data[8]
-        payload = self._features.get(report_num, b"")
-        reply = struct.pack("<IIH", UHID_GET_REPORT_REPLY, request_id, 0)
+        payload = self._features.get(report_num)
+        erro = 0
+        if payload is None:
+            logger.debug("uhid_get_report_recusado", report=hex(report_num),
+                         player=self.player)
+            payload, erro = b"", errno.EPIPE
+        reply = struct.pack("<IIH", UHID_GET_REPORT_REPLY, request_id, erro)
         reply += struct.pack("<H", len(payload))
         reply += payload.ljust(HID_MAX_DESCRIPTOR_SIZE, b"\0")[:HID_MAX_DESCRIPTOR_SIZE]
         with contextlib.suppress(OSError):
@@ -2767,7 +2776,11 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> bool:
     if eventos & select.POLLPRI:
         try:
             report_id = pad_usb.ler_o_id_do_get_report(fd)
-            pad_usb.escrever_get_report(fd, report_id, pad._features.get(report_id, b""))
+            dados = pad._features.get(report_id)
+            if dados is None:
+                pad_usb.recusar_get_report(fd, report_id)
+            else:
+                pad_usb.escrever_get_report(fd, report_id, dados)
         except (OSError, ValueError) as exc:
             logger.debug("pad_usb_get_report_falhou", err=str(exc), player=pad.player)
     if not eventos & select.POLLIN:

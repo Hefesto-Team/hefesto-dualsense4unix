@@ -45,12 +45,31 @@ entrada dos 4 pads a ~170 relatórios/s cada.
 
 `f_hidg_size_get_report()`, chamada nos dois ramos antes do `usb_ep_queue`:
 corta ao `length` gravado e liga `req->zero` quando a resposta é menor que o
-`wLength`. Sem relatório gravado para o id, o tamanho fica o de antes (o
-buffer zerado).
+`wLength`.
 
-**A marca:** `get_report_sized` (0444, sempre Y), em
-`/sys/module/usb_f_hid/parameters/get_report_sized`. Nada mais no sysfs separa
-este módulo do de fábrica. O daemon a guarda no `daemon.state_full`
+## A recusa, medida em 02/11/2026 (`patch/0002`)
+
+No hidraw do pad pelo gadget, o `0x22`, que o pad não guarda, voltou como 64
+bytes zerados com sucesso. Três ramos davam o buffer zerado: o id gravado com
+tamanho zero (o que o Hefesto grava para o id que não serve), o id a que o
+espaço de usuário não respondeu em 2500 ms e o pedido que o `hidg_disable`
+largou, que ainda liberava o `get_req` e deixava todo GET_REPORT seguinte sem
+resposta até o rebind. Um feature zerado com sucesso é o firmware `0x0000` que
+o jogo lê; o DualSense no cabo responde `EPIPE` ao id que não serve.
+
+O `0002` troca os três: o id recusado e o sem resposta saem como stall no ep0
+(`usb_ep_set_halt`), que o host lê como `EPIPE`; o pedido largado pelo disable
+sai sem resposta, e o `get_req` fica para o próximo bind. O pedido largado não
+leva stall porque um stall que cruza com o SETUP seguinte faria o `vudc`
+reprovar a enumeração. O Hefesto grava a recusa com
+`pad_usb.recusar_get_report` (o relatório de tamanho zero); pelo uhid, o mesmo
+id volta com `err=EPIPE`, que o kernel entrega ao `hidraw` como `EIO`.
+
+**As marcas:** `get_report_sized` (o `0001`) e `get_report_refuses` (o
+`0002`), as duas 0444 e sempre Y, em `/sys/module/usb_f_hid/parameters/`. Nada
+mais no sysfs separa este módulo do de fábrica, e a segunda é a versão que o
+daemon e o doctor podem ler: a `PACKAGE_VERSION` fica em 1.0.0 (o motivo está
+no `dkms.conf`). O daemon a guarda no `daemon.state_full`
 (`gamepad_emulation.get_report_sized`), e o doctor reprova sem a marca
 (`check_hefesto_usb_f_hid_dkms`).
 
@@ -67,17 +86,22 @@ troca o módulo carregado quando ele não tem a marca e o curado está em
 - com gadget alheio: não troca, e o módulo curado vale no próximo boot;
 - com a marca: não toca. Rodar o install duas vezes dá o mesmo estado.
 
+A troca, o doctor e o install olham só a `get_report_sized`: com o `0001`
+carregado, o módulo com o `0002` entra no próximo boot.
+
 A troca mora na função do host e nunca no `scripts/dkms_lib.sh`, cujo
 contrato proíbe `modprobe` e `rmmod`.
 
 ## Proveniência
 
-- `f_hid.c` = **o de fábrica do stable v7.1.5** + `patch/0001-*.patch`.
+- `f_hid.c` = **o de fábrica do stable v7.1.5** + a série `PATCH=` do
+  `patch/BASELINE`, na ordem (`0001` e `0002`).
   `u_hid.h` = o de fábrica, sem modificação (o `linux-headers` não o traz).
   Invariante verificável:
 
   ```bash
   cp f_hid.c /tmp/prova.c
+  patch -R -p5 /tmp/prova.c < patch/0002-*.patch
   patch -R -p5 /tmp/prova.c < patch/0001-*.patch
   sha256sum /tmp/prova.c   # == SHA256_VANILLA_C de patch/BASELINE
   ```

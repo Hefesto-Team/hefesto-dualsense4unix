@@ -2,11 +2,11 @@
 
 O de fábrica responde todo pedido de feature com 64 bytes e sem o pacote vazio;
 o Wine e o SDL pedem 128, e cada pedido volta ETIMEDOUT aos ~5 s. O fonte em
-`assets/dkms/usb-f-hid/` é o stable v7.1.5 com um patch, e esta régua cobra a
+`assets/dkms/usb-f-hid/` é o stable v7.1.5 com a série de `patch/`, e esta régua cobra a
 proveniência dele: o cache (`fonte-por-kernel/raiz.txt`) e os KERNELS_VALIDADOS dizem
-o mesmo, o `.c` da pasta é o do BASELINE, o patch desfeito devolve o de fábrica, a
-marca `get_report_sized` está no fonte e todo kernel de OUTRA versão do cache (o
-7.2.6) tem o de fábrica dele medido igual ao da base.
+o mesmo, o `.c` da pasta é o do BASELINE, a série desfeita devolve o de fábrica, as
+marcas `get_report_sized` e `get_report_refuses` estão no fonte e todo kernel de OUTRA
+versão do cache (o 7.2.6) tem o de fábrica dele medido igual ao da base.
 
 A MORDIDA: trocar um byte do `f_hid.c`, tirar a marca, pôr no cache um kernel sem
 medida ou mandar o módulo para `/kernel` em vez de `/updates/dkms` reprova pelo
@@ -37,6 +37,15 @@ def _baseline() -> dict[str, str]:
         chave, valor = linha.split("=", 1)
         saida[chave.strip()] = valor.strip()
     return saida
+
+
+def _serie() -> list[str]:
+    """Os `PATCH=` do BASELINE, na ordem em que se aplicam."""
+    return [
+        linha.split("=", 1)[1].strip()
+        for linha in BASELINE.read_text(encoding="utf-8").splitlines()
+        if linha.startswith("PATCH=")
+    ]
 
 
 def _conf(chave: str) -> str:
@@ -103,6 +112,8 @@ def test_a_marca_esta_no_fonte() -> None:
     fonte = (PASTA / "f_hid.c").read_text(encoding="utf-8")
     assert "static bool get_report_sized = true;" in fonte
     assert "module_param(get_report_sized, bool, 0444);" in fonte
+    assert "static bool get_report_refuses = true;" in fonte
+    assert "module_param(get_report_refuses, bool, 0444);" in fonte
 
 
 def _patch(*args: str, entrada: bytes) -> subprocess.CompletedProcess[bytes]:
@@ -115,19 +126,24 @@ def test_o_patch_desfeito_devolve_o_de_fabrica_e_refeito_o_da_pasta(tmp_path: Pa
     if shutil.which("patch") is None:  # pragma: no cover
         pytest.skip("sem o patch(1) nesta máquina")
     base = _baseline()
-    remendo = (PASTA / "patch" / base["PATCH"]).read_bytes()
+    serie = [(PASTA / "patch" / nome).read_bytes() for nome in _serie()]
+    assert sorted(_serie()) == sorted(p.name for p in (PASTA / "patch").glob("*.patch"))
     copia = tmp_path / "f_hid.c"
     copia.write_bytes((PASTA / "f_hid.c").read_bytes())
-    desfeito = _patch("-R", "-p5", "-s", str(copia), entrada=remendo)
-    assert desfeito.returncode == 0, desfeito.stderr.decode()
+    for remendo in reversed(serie):
+        desfeito = _patch("-R", "-p5", "-s", str(copia), entrada=remendo)
+        assert desfeito.returncode == 0, desfeito.stderr.decode()
     assert hashlib.sha256(copia.read_bytes()).hexdigest() == base["SHA256_VANILLA_C"]
-    refeito = _patch("-p5", "-s", "--dry-run", str(copia), entrada=remendo)
-    assert refeito.returncode == 0, refeito.stderr.decode()
-    _patch("-p5", "-s", str(copia), entrada=remendo)
+    for remendo in serie:
+        refeito = _patch("-p5", "-s", str(copia), entrada=remendo)
+        assert refeito.returncode == 0, refeito.stderr.decode()
     assert hashlib.sha256(copia.read_bytes()).hexdigest() == base["SHA256_PATCHED_C"]
 
 
 def test_o_patch_traz_a_marca() -> None:
     """A marca nasce do patch, não de uma edição solta no `.c` da pasta."""
-    remendo = (PASTA / "patch" / _baseline()["PATCH"]).read_text(encoding="utf-8")
-    assert "+module_param(get_report_sized, bool, 0444);" in remendo
+    primeiro, segundo = (
+        (PASTA / "patch" / nome).read_text(encoding="utf-8") for nome in _serie()
+    )
+    assert "+module_param(get_report_sized, bool, 0444);" in primeiro
+    assert "+module_param(get_report_refuses, bool, 0444);" in segundo

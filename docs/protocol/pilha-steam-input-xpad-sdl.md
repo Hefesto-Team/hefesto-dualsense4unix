@@ -1624,7 +1624,7 @@ do `winedevice`. Prova direta: `HIDIOCGFEATURE` por Python no hidraw de cada pad
   sem controle nenhum.
 - **A cura** é o `usb_f_hid` da casa (`assets/dkms/usb-f-hid/`). A resposta fecha
   no tamanho gravado, e o pacote vazio vai quando a resposta é menor que o
-  `wLength` (`f_hidg_size_get_report` em `assets/dkms/usb-f-hid/f_hid.c:578`).
+  `wLength` (`f_hidg_size_get_report` em `assets/dkms/usb-f-hid/f_hid.c:591`).
   Medido com ele: 41, 20 e 64 bytes em 2 a 6 ms nos 4 pads, nenhum `1053`.
   A marca dele é `/sys/module/usb_f_hid/parameters/get_report_sized`, e o
   `doctor` dá `[FAIL]` sem a marca.

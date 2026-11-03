@@ -319,6 +319,20 @@ def escrever_get_report(
     ioctl(fd, GADGET_HID_WRITE_GET_REPORT, pacote_do_get_report(report_id, dados))
 
 
+def recusar_get_report(
+    fd: int,
+    report_id: int,
+    *,
+    ioctl: Callable[[int, int, bytes], object] = fcntl.ioctl,
+) -> None:
+    """Guarda no ``f_hid`` a recusa de ``report_id``: o relatório de tamanho zero.
+
+    O ``f_hid`` da casa responde stall a todo GET_REPORT deste id, que é o ``EPIPE`` do
+    aparelho ao id que ele não serve. O de fábrica responde o buffer zerado.
+    """
+    ioctl(fd, GADGET_HID_WRITE_GET_REPORT, pacote_do_get_report(report_id, b""))
+
+
 def ler_o_id_do_get_report(
     fd: int, *, ioctl: Callable[[int, int, bytes], object] = fcntl.ioctl
 ) -> int:

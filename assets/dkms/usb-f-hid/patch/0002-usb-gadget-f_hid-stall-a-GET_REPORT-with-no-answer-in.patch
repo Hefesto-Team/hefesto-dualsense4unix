@@ -1,0 +1,172 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 05:00:00 -0300
+Subject: [PATCH] usb: gadget: f_hid: stall a GET_REPORT with no answer instead
+ of returning zeros
+
+get_report_workqueue_handler() answers a GET_REPORT for which userspace
+stored nothing, or did not answer within GET_REPORT_TIMEOUT_MS, with a
+zeroed buffer and a successful status. A host reads that as a valid report:
+a feature report that carries a firmware version reads as version 0x0000.
+A real device stalls the report ids it does not serve; a DualSense on USB
+returns -EPIPE for the feature reports its descriptor declares and its
+firmware does not deliver. Userspace serving feature reports has no way to
+say "this report id is not served", since storing a report of zero length
+is also answered with the zeroed buffer.
+
+Stall ep0 instead:
+
+- a report id stored with a zero @length, which is how userspace refuses
+  it, answered on the immediate path;
+- a report id still without a stored report when userspace answered, or
+  when the wait timed out.
+
+hidg_disable() freed get_req when a GET_REPORT was waiting for userspace,
+and nothing allocates it again until the function is bound once more, so
+every later GET_REPORT went unanswered until the host timed out. Keep
+get_req, mark the waiting request as dropped and wake the handler, which
+lets it go without answering: the transfer it belonged to ended with the
+function.
+
+Also expose a read-only module parameter, get_report_refuses, that is
+always Y, for the same reason as get_report_sized.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+  drivers/usb/gadget/function/f_hid.c |   69 +++++++++++++++++++++++++++---------
+  1 file changed, 53 insertions(+), 16 deletions(-)
+
+--- a/drivers/usb/gadget/function/f_hid.c
++++ b/drivers/usb/gadget/function/f_hid.c
+@@ -44,6 +44,18 @@
+ MODULE_PARM_DESC(get_report_sized,
+ 		 "GET_REPORT responses end at the stored report length, with a zero-length packet when they fill ep0 packets (always Y)");
+ 
++/*
++ * Read-only mark for the GET_REPORT refusal: a report id with no answer is
++ * stalled, like a device stalls a report it does not serve, instead of being
++ * answered with a zeroed buffer that reads as valid data. Userspace refuses a
++ * report id by storing it with a zero @length. The refusal itself never reads
++ * the parameter.
++ */
++static bool get_report_refuses = true;
++module_param(get_report_refuses, bool, 0444);
++MODULE_PARM_DESC(get_report_refuses,
++		 "GET_REPORT for a report id stored with zero length, or left unanswered, stalls instead of returning zeros (always Y)");
++
+ static int major, minors;
+ 
+ static const struct class hidg_class = {
+@@ -110,6 +122,7 @@
+ 	struct usb_request		*get_req;
+ 	struct usb_hidg_report		get_report;
+ 	bool				get_report_returned;
++	bool				get_report_dropped;
+ 	int				get_report_req_report_id;
+ 	int				get_report_req_report_length;
+ 	spinlock_t			get_report_spinlock;
+@@ -583,6 +596,12 @@
+ 	req->zero = req->length < hidg->get_report_req_report_length;
+ }
+ 
++/* A refused report id is stored with a zero length. */
++static bool f_hidg_report_refused(struct report_entry *ptr)
++{
++	return !ptr || !ptr->report_data.length;
++}
++
+ static void get_report_workqueue_handler(struct work_struct *work)
+ {
+ 	struct f_hidg *hidg = container_of(work, struct f_hidg, work);
+@@ -608,11 +627,16 @@
+ 	ptr = f_hidg_search_for_report(hidg, hidg->get_report_req_report_id);
+ 	if (ptr && !ptr->report_data.userspace_req) {
+ 		/* Report exists in list and it is to be used for immediate response */
+-		req->buf = ptr->report_data.data;
+-		f_hidg_size_get_report(hidg, req, ptr);
+-		status = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
+ 		hidg->get_report_returned = true;
+-		spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
++		if (f_hidg_report_refused(ptr)) {
++			spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
++			status = usb_ep_set_halt(cdev->gadget->ep0);
++		} else {
++			req->buf = ptr->report_data.data;
++			f_hidg_size_get_report(hidg, req, ptr);
++			status = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
++			spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
++		}
+ 	} else {
+ 		/*
+ 		 * Report does not exist in list or should not be immediately sent
+@@ -631,6 +655,12 @@
+ 			spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
+ 			return;
+ 		}
++		if (hidg->get_report_dropped) {
++			/* hidg_disable() ended the transfer this request belonged to */
++			hidg->get_report_dropped = false;
++			spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
++			return;
++		}
+ 		if (status == 0 && !hidg->get_report_returned) {
+ 			/* GET_REPORT request was not serviced by userspace within timeout period */
+ 			VDBG(cdev, "get_report : userspace timeout.\n");
+@@ -639,23 +669,24 @@
+ 
+ 		/* Search again for report ID in list and respond to GET_REPORT request */
+ 		ptr = f_hidg_search_for_report(hidg, hidg->get_report_req_report_id);
+-		if (ptr) {
+-			/*
+-			 * Either get an updated response just serviced by userspace
+-			 * or send the latest response in the list
+-			 */
+-			req->buf = ptr->report_data.data;
+-		} else {
+-			/* If there are no prevoiusly sent reports send empty report */
+-			req->buf = hidg->get_report.data;
+-			memset(req->buf, 0x0, req->length);
++		if (f_hidg_report_refused(ptr)) {
++			/* Nothing, or a refusal, was stored for this report id */
++			spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
++			status = usb_ep_set_halt(cdev->gadget->ep0);
++			goto out;
+ 		}
++		/*
++		 * Either get an updated response just serviced by userspace
++		 * or send the latest response in the list
++		 */
++		req->buf = ptr->report_data.data;
+ 		f_hidg_size_get_report(hidg, req, ptr);
+ 
+ 		status = usb_ep_queue(cdev->gadget->ep0, req, GFP_ATOMIC);
+ 		spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
+ 	}
+ 
++out:
+ 	if (status < 0)
+ 		VDBG(cdev, "usb_ep_queue error on ep0 responding to GET_REPORT\n");
+ }
+@@ -1025,11 +1056,17 @@
+ 		spin_unlock_irqrestore(&hidg->read_spinlock, flags);
+ 	}
+ 
++	/*
++	 * A GET_REPORT still waiting for userspace belonged to a transfer that
++	 * ended with the function. Wake the handler so it lets it go, and keep
++	 * get_req: freed here, every later GET_REPORT would go unanswered until
++	 * the function is bound again.
++	 */
+ 	spin_lock_irqsave(&hidg->get_report_spinlock, flags);
+ 	if (!hidg->get_report_returned) {
+-		usb_ep_free_request(f->config->cdev->gadget->ep0, hidg->get_req);
+-		hidg->get_req = NULL;
++		hidg->get_report_dropped = true;
+ 		hidg->get_report_returned = true;
++		wake_up(&hidg->get_queue);
+ 	}
+ 	spin_unlock_irqrestore(&hidg->get_report_spinlock, flags);
+ 
+-- 
+2.43.0
+
