@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1196246,
+      "piso": 1197704,
       "por_item": {
-        "docs": 108393,
+        "docs": 108397,
         "scripts": 111026,
-        "src": 302649,
-        "tests": 674178
+        "src": 303041,
+        "tests": 675240
       },
-      "razao": "tamanho: +203 linhas (1196043 -> 1196246), pagas por Origem: D-0311-TODA-LISTA-SEM-ESCOLHA-ABRE-NO-TRACO; registrado no fecho, topo 9c113fd2dab2",
+      "razao": "tamanho: +1458 linhas (1196246 -> 1197704), pagas por Origem: luz.replica_output_jogo; registrado no fecho, topo d4eb4f1522bb",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1491,10 +1491,16 @@
           "de": 1196043,
           "para": 1196246,
           "razao": "tamanho: +203 linhas (1196043 -> 1196246), pagas por Origem: D-0311-TODA-LISTA-SEM-ESCOLHA-ABRE-NO-TRACO; registrado no fecho, topo 9c113fd2dab2"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1196246,
+          "para": 1197704,
+          "razao": "tamanho: +1458 linhas (1196246 -> 1197704), pagas por Origem: luz.replica_output_jogo; registrado no fecho, topo d4eb4f1522bb"
         }
       ],
       "unidade": "linhas",
-      "universo": 3335
+      "universo": 3339
     }
   }
 }
