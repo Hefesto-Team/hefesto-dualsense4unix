@@ -3621,6 +3621,7 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.profiles.formas_de_haptica import (
             ESCOLHAS as FORMAS_DE_HAPTICA,
         )
+        from hefesto_dualsense4unix.profiles.formas_de_haptica import escolha_que_vale
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             chave_no_perfil,
             gravar_pelo_gesto,
@@ -3700,6 +3701,7 @@ class IpcHandlersMixin:
         visto: dict[str, Any] = {}
 
         def _com_as_barras(perfil: Any) -> Any:
+            visto["estilo"] = getattr(perfil, "estilo", None)
             atuais = dict(perfil.controllers or {})
             original = chave_no_perfil(perfil, chave)
             dele = atuais.get(original) or ControllerOverrides()
@@ -3731,8 +3733,13 @@ class IpcHandlersMixin:
         efetivos = self._pcts_efetivos(visto.get("novo"))
         haptica = pct_da_haptica(visto.get("novo"))
         efeitos = {
-            campo: getattr(visto.get("novo"), campo, None) or "sem_efeito"
-            for campo in ("efeito_haptico", "efeito_imersao")
+            campo: escolha_que_vale(
+                getattr(visto.get("novo"), campo, None), visto.get("estilo"), vocabulario
+            )
+            for campo, vocabulario in (
+                ("efeito_haptico", FORMAS_DE_HAPTICA),
+                ("efeito_imersao", ESCOLHAS_DE_IMERSAO),
+            )
         }
         if not visto.get("gravado"):
             logger.info("rumble_motores_sem_mudanca", uniq=chave, perfil=nome, onde=onde)
