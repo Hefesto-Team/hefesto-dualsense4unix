@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.integrations.quem_segura_o_pad import jogo_no_pad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     _GAME_REPLICA_GRACE_S,
     HID_MAX_DESCRIPTOR_SIZE,
+    UHID_CLOSE,
     UHID_OPEN,
     UHID_OUTPUT,
     UHID_START,
@@ -297,17 +298,23 @@ def test_o_retido_de_um_jogo_que_ja_saiu_nao_chega_no_seguinte(tmp_path: Path) -
     assert COR_DO_JOGO not in nos[1].rgb_calls
 
 
-def test_o_fim_da_sessao_esquece_o_autor_do_retido(tmp_path: Path) -> None:
+@pytest.mark.parametrize("caminho", ["uhid", "gadget"])
+def test_o_fim_da_sessao_esquece_o_autor_do_retido(caminho: str, tmp_path: Path) -> None:
+    """MORDIDA: o fim da sessão sem esquecer o autor e o número da sessão velha volta na nova."""
     proc = _Proc(tmp_path)
     proc.segura(PID_DO_JOGO, True)
     ctl, nos, daemon = _mesa("cabo", proc)
-    ctl.set_game_output_for(MACS[3], led=COR_DO_JOGO)
-    ctl.end_game_session_for(MACS[3])
+    pad = _pad(daemon, 3, caminho)
+    _escreve(pad, caminho, 1, COR_DA_PALETA)
+    pad._handle_event(struct.pack("<I", UHID_CLOSE))
+    pad._handle_event(struct.pack("<I", UHID_OPEN))
 
+    ctl.set_game_output_for(MACS[3], led=COR_DO_JOGO)
     _abre_o_portao(ctl, daemon)
 
-    assert ctl._retido_por_autor == {}
-    assert COR_DO_JOGO not in nos[3].rgb_calls
+    assert _o_que_vale(ctl, 3) == (player_led_pattern(3), COR_DO_JOGO)
+    assert player_led_pattern(1) not in nos[3].player_calls
+    assert COR_DA_PALETA not in nos[3].rgb_calls
 
 
 def test_o_leitor_que_falha_vale_como_ninguem(tmp_path: Path) -> None:
