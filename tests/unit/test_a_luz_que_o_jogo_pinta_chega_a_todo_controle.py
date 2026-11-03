@@ -92,6 +92,7 @@ def _handle(produto: int, via: str) -> SimpleNamespace:
         _raw_trigger_left=None,
         _raw_trigger_right=None,
         is_edge=produto == PRODUTO["edge"],
+        connected=True,
         escritos=[],
     )
     if via == "radio":
@@ -209,9 +210,11 @@ COMBINACOES_DUALSENSE = [
 
 @pytest.mark.parametrize(("player", "aparelho", "modo", "via", "caminho"), COMBINACOES_DUALSENSE)
 def test_com_o_jogo_na_autoridade_o_numero_e_a_cor_chegam_e_voltam(
-    player: int, aparelho: str, modo: str, via: str, caminho: str
+    player: int, aparelho: str, modo: str, via: str, caminho: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """MORDIDA: devolver o veto do número na entrada e a luz de jogador do jogo não chega."""
+    procurados: list[str | None] = []
+    monkeypatch.setattr(external_leds, "hidraw_do_uniq", lambda uniq: procurados.append(uniq))
     ctl, nos, handles, daemon = _mesa(aparelho, via, "game")
     pad = _pad_em_sessao(daemon, player, MACS[player], modo, caminho)
     numero = _numero_do_jogo(player)
@@ -219,6 +222,7 @@ def test_com_o_jogo_na_autoridade_o_numero_e_a_cor_chegam_e_voltam(
 
     _o_jogo_escreve(pad, caminho, _report_do_jogo(numero, cor))
 
+    assert procurados == [], "o DualSense foi procurado entre os controles de fora"
     no = nos[player]
     assert player_led_pattern(numero) in no.player_calls
     assert cor in no.rgb_calls
@@ -364,6 +368,54 @@ def test_o_controle_de_fora_fora_de_jogo_nao_muda(
     assert _valores(luzes) == antes
     _o_jogo_fecha(pad)
     assert _valores(luzes) == antes
+
+
+@pytest.mark.parametrize("via", VIAS)
+@pytest.mark.parametrize("caminho", CAMINHOS)
+def test_na_mesa_mista_cada_controle_mostra_o_numero_do_jogo_pelo_seu_caminho(
+    raiz_de_fora: Path, via: str, caminho: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MORDIDA: sem o `_e_um_dualsense_aberto`, o DualSense é procurado entre os de fora.
+
+    P1 e P3 são DualSense, P2 e P4 são de fora (Nintendo e DS4), na mesma mesa.
+    """
+    externos = {2: "nintendo", 4: "ds4"}
+    luzes = {n: _luzes_de_fora(raiz_de_fora, n, modo, via) for n, modo in externos.items()}
+    antes = {n: _valores(c) for n, c in luzes.items()}
+    ctl, nos, _handles, daemon = _mesa("dualsense", via, "game")
+    for n in externos:
+        del ctl._handles[MACS[n]]
+        del ctl._sysfs[MACS[n]]
+    procurados: list[str | None] = []
+    original = external_leds.hidraw_do_uniq
+
+    def procura(uniq: str | None) -> str | None:
+        procurados.append(uniq)
+        return original(uniq)
+
+    monkeypatch.setattr(external_leds, "hidraw_do_uniq", procura)
+    identidades = {n: _uniq(MACS[n]) if n in externos else MACS[n] for n in JOGADORES}
+    pads = {
+        n: _pad_em_sessao(daemon, n, identidade, "dualsense", caminho)
+        for n, identidade in identidades.items()
+    }
+    for n, pad in pads.items():
+        numero = _numero_do_jogo(n)
+        _o_jogo_escreve(pad, caminho, _report_do_jogo(numero, COR_DO_SDL[numero]))
+
+    assert sorted(procurados) == sorted(_uniq(MACS[n]) for n in externos)
+    for n in (1, 3):
+        assert player_led_pattern(_numero_do_jogo(n)) in nos[n].player_calls
+    numero_do_p2 = _numero_do_jogo(2)
+    assert _valores(luzes[2])["green:player-1"] == 1
+    assert _valores(luzes[2])[f"green:player-{numero_do_p2}"] == 1
+    r, g, b = player_slot_color(_numero_do_jogo(4))
+    assert _valores(luzes[4]) == {"red": r, "green": g, "blue": b, "global": 1}
+
+    for pad in pads.values():
+        _o_jogo_fecha(pad)
+
+    assert {n: _valores(c) for n, c in luzes.items()} == antes
 
 
 def test_o_pad_xbox_nao_tem_canal_de_luz_do_jogo() -> None:
