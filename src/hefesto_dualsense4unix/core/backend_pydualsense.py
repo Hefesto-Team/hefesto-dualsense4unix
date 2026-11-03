@@ -1361,6 +1361,8 @@ class PyDualSenseController(IController):
         self._jogo_provou_a_luz: set[str] = set()
         self._game_authority_provider: Callable[[], str] | None = None
         self._retained_game_outputs: dict[str, dict[str, Any]] = {}
+        self._retido_por_autor: dict[str, dict[int | None, dict[str, Any]]] = {}
+        self._quem_segura_o_pad: Callable[[], Any] | None = None
         self._retained_log_armed = True
         self._defend_last_at: float | None = None
         self._recusa_ao_jogo_logada: dict[str, set[str]] = {}
@@ -1602,6 +1604,26 @@ class PyDualSenseController(IController):
         """Injeta (ou remove, com None) o provider da autoridade de exibição."""
         with self._io_lock:
             self._game_authority_provider = fn
+
+    def set_quem_segura_o_pad(self, fn: Callable[[], Any] | None) -> None:
+        """Injeta (ou remove, com None) o leitor do processo de jogo que segura um pad virtual."""
+        with self._io_lock:
+            self._quem_segura_o_pad = fn
+
+    def _o_jogo_que_segura_o_pad(self) -> tuple[int, str] | None:
+        """``(pid, nome)`` do processo de jogo que segura um pad virtual agora, ou ``None``."""
+        leitor = self._quem_segura_o_pad
+        if leitor is None:
+            return None
+        try:
+            segurador = leitor()
+        except Exception as exc:
+            logger.debug("quem_segura_o_pad_falhou", err=str(exc))
+            return None
+        pid = getattr(segurador, "pid", None)
+        if not isinstance(pid, int) or pid <= 0:
+            return None
+        return pid, str(getattr(segurador, "nome", "") or pid)
 
     def _game_wins(self) -> bool:
         """True quando a camada GAME participa do merge (autoridade ≠ 'daemon')."""
@@ -4352,6 +4374,7 @@ class PyDualSenseController(IController):
             fields["player_leds"] = tuple(bool(x) for x in player_leds)
         if not fields:
             return True
+        autor = self._autor_da_escrita_retida(alvo, fields)
         defender = False
         with self._io_lock:
             if (
@@ -4372,7 +4395,12 @@ class PyDualSenseController(IController):
                 self._jogo_provou_a_luz.add(alvo)
             if fields and not wins:
                 retido = self._retained_game_outputs.setdefault(alvo, {})
+                mudou = {k: v for k, v in fields.items() if retido.get(k) != v}
                 retido.update(fields)
+                if mudou:
+                    por_autor = self._retido_por_autor.setdefault(alvo, {})
+                    pid = autor[0] if autor is not None else None
+                    por_autor.setdefault(pid, {}).update(mudou)
                 if self._retained_log_armed:
                     logger.info(
                         "game_output_retido_sem_jogo",
@@ -4408,22 +4436,67 @@ class PyDualSenseController(IController):
         )
         return True
 
+    def _autor_da_escrita_retida(
+        self, alvo: str, fields: dict[str, Any]
+    ) -> tuple[int, str] | None:
+        """Quem segura o pad quando a escrita vai ficar retida e muda o retido; senão ``None``."""
+        if self._quem_segura_o_pad is None or self._game_wins():
+            return None
+        with self._io_lock:
+            retido = dict(self._retained_game_outputs.get(alvo, {}))
+        if all(retido.get(k) == v for k, v in fields.items()):
+            return None
+        return self._o_jogo_que_segura_o_pad()
+
     def replay_retained_game_outputs(self) -> None:
-        """Abertura do gate (NUMA-02): a luz RETIDA sob 'daemon' é DESCARTADA."""
+        """Abertura do gate (NUMA-02): chega o retido do processo que é o jogo agora.
+
+        O retido de qualquer outro processo (o cliente da Steam, a mesa) é DESCARTADO.
+        """
+        jogo = self._o_jogo_que_segura_o_pad()
         with self._io_lock:
             retidos = self._retained_game_outputs
+            por_autor = self._retido_por_autor
             self._retained_game_outputs = {}
+            self._retido_por_autor = {}
             self._retained_log_armed = True
-            descartes = [
-                (alvo, sorted(campos), self._luz_para_o_journal(campos))
-                for alvo, campos in retidos.items()
-            ]
-        for alvo, campos, luz in descartes:
+            reaplicar: list[tuple[str, dict[str, Any]]] = []
+            descartes: list[tuple[str, list[str], dict[str, Any]]] = []
+            for alvo, campos in retidos.items():
+                autores = por_autor.get(alvo, {})
+                do_jogo = autores.get(jogo[0]) if jogo is not None else None
+                if do_jogo:
+                    reaplicar.append((alvo, dict(do_jogo)))
+                fora = {
+                    k: v
+                    for pid, escritos in autores.items()
+                    if jogo is None or pid != jogo[0]
+                    for k, v in escritos.items()
+                }
+                if fora or not do_jogo:
+                    resto = fora or campos
+                    descartes.append(
+                        (alvo, sorted(resto), self._luz_para_o_journal(resto))
+                    )
+        for alvo, nomes, luz in descartes:
             logger.info(
                 "game_output_retido_descartado_na_abertura",
                 uniq=alvo,
-                campos=campos,
+                campos=nomes,
                 **luz,
+            )
+        for alvo, escritos in reaplicar:
+            logger.info(
+                "game_output_retido_do_jogo_chega_na_abertura",
+                uniq=alvo,
+                campos=sorted(escritos),
+                processo=jogo[1] if jogo is not None else None,
+                **self._luz_para_o_journal(escritos),
+            )
+            self.set_game_output_for(
+                alvo,
+                led=escritos.get("led"),
+                player_leds=escritos.get("player_leds"),
             )
 
     def _autoridade_de_exibicao(self) -> str:
@@ -4453,6 +4526,7 @@ class PyDualSenseController(IController):
             game = self._game_output_by_uniq.pop(alvo, None)
             triggers = self._game_triggers_by_uniq.pop(alvo, None)
             retido = self._retained_game_outputs.pop(alvo, None)
+            self._retido_por_autor.pop(alvo, None)
             self._recusa_ao_jogo_logada.pop(alvo, None)
             self._jogo_provou_o_gatilho.discard(alvo)
             self._jogo_provou_a_luz.discard(alvo)
