@@ -1289,7 +1289,6 @@ CAMPO_DO_EFEITO = "efeito"
 CAMPO_DA_DICA_DO_EFEITO = "efeito-dica"
 CAMPO_DA_DICA_DA_IDENTIDADE = "identidade-dica"
 SEM_EFEITO = _sem_efeito.VALOR
-LUZ_FIXA = "luz-fixa"
 PREFIXO_DA_BASE = "base:"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "arco-iris": "Arco-íris",
@@ -1305,8 +1304,7 @@ RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,
                  "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5, "ao-som": 5,
                  "aurora": 5, "estrelas": 5, "cor-da-bateria": 5, "cor-da-temperatura": 5,
                  "ondulacao": 5, "vaivem": 5, "enche": 5, "respira-em-cores": 2}
-DICA_SEM_EFEITO = "A barra fica apagada."
-DICA_LUZ_FIXA = "A cor do controle, parada."
+DICA_SEM_EFEITO = "A cor do controle, parada."
 DICA_DO_EFEITO_CRIADO = "Um efeito que você montou."
 DICA_DA_BASE = {
     "respirar": "A cor sobe e desce devagar.",
@@ -1331,7 +1329,7 @@ DICA_DA_BASE = {
     "respira-em-cores": "Cada respiração numa cor.",
 }
 GRUPOS_DA_LISTA = (
-    ("Parado", (SEM_EFEITO, LUZ_FIXA)),
+    ("Parado", (SEM_EFEITO,)),
     ("Que respira", ("respirar", "batimento", "chama", "mare", "respira-em-cores")),
     ("Que se move", ("piscar", "arco-iris",
                      "onda", "relampago", "vaivem", "enche")),
@@ -1354,20 +1352,16 @@ def base_do_token(valor: str) -> str | None:
 
 
 def rotulo_da_opcao(valor: str) -> str:
-    """O rótulo da lista para o nenhum efeito («—»), `luz-fixa` ou `base:<nome>`."""
+    """O rótulo da lista para o nenhum efeito («—») ou `base:<nome>`."""
     if valor == SEM_EFEITO:
         return _sem_efeito.ROTULO
-    if valor == LUZ_FIXA:
-        return "Luz fixa"
     return ROTULO_DA_BASE[base_do_token(valor) or ""]
 
 
 def dica_do_efeito(valor: str) -> str:
     """A frase de uma linha sob a lista: a da opção escolhida; um efeito criado diz o que é."""
-    if valor == SEM_EFEITO:
+    if valor == SEM_EFEITO or not valor:
         return DICA_SEM_EFEITO
-    if valor == LUZ_FIXA or not valor:
-        return DICA_LUZ_FIXA
     base = base_do_token(valor)
     return DICA_DA_BASE[base] if base else DICA_DO_EFEITO_CRIADO
 
@@ -1396,7 +1390,7 @@ def valor_da_lista_para(texto: str | None, proprios: frozenset[str] = frozenset(
     from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
 
     if not texto:
-        return LUZ_FIXA
+        return SEM_EFEITO
     if texto in proprios:
         return texto
     lido = ler_o_efeito_da_luz(texto)
@@ -1437,7 +1431,7 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
 
     `escolhido` é o efeito do perfil quando nem a lista nem a biblioteca o dizem (um perfil
     importado, ou um efeito que a pessoa apagou da biblioteca): ele entra com o nome da base, para a
-    lista nunca ficar em branco nem mentir que a luz é fixa.
+    lista nunca ficar em branco nem mentir que a luz está parada.
     """
     import html as _html
 
@@ -1452,7 +1446,7 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
         itens = "".join(
             _sem_efeito.opcao(DICA_SEM_EFEITO) if v == SEM_EFEITO
             else f'<option value="{v}">{_html.escape(rotulo_da_opcao(v))}</option>'
-            for v in (n if n in (SEM_EFEITO, LUZ_FIXA) else token_da_base(n) for n in nomes))
+            for v in (n if n == SEM_EFEITO else token_da_base(n) for n in nomes))
         partes.append(f'<optgroup label="{rotulo_do_grupo}">{itens}</optgroup>')
     valores = frozenset(v for _, v in proprios)
     if (escolhido and escolhido not in valores
@@ -1471,7 +1465,7 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
 
 
 def efeito_do_controle(p: dict[str, Any] | None, uniq: str) -> str | None:
-    """O efeito do controle no perfil CRU: o do override, senão o do perfil. `None` = luz fixa."""
+    """O efeito do controle no perfil CRU: o do override, senão o do perfil. `None` = sem efeito."""
     if not isinstance(p, dict):
         return None
     leds = p.get("leds")
@@ -1489,7 +1483,7 @@ def perfil_da_lista_de_efeito(p: dict[str, Any] | None) -> dict[str, Any] | None
     """O perfil de onde a lista de efeitos lê: o ativo, ou, SEM perfil ativo, o do computador.
 
     O efeito que a pessoa escolheu sem perfil ativo vai ao ``maquina.json`` (o padrão do
-    computador); ler o perfil vazio ali mostrava «Luz fixa» sobre um efeito guardado.
+    computador); ler o perfil vazio ali mostrava «—» sobre um efeito guardado.
     """
     if p:
         return p
@@ -1504,12 +1498,11 @@ def perfil_da_lista_de_efeito(p: dict[str, Any] | None) -> dict[str, Any] | None
         return p
 
 
-def escolha_da_lista(p: dict[str, Any] | None, uniq: str, brilho: float | None,
+def escolha_da_lista(p: dict[str, Any] | None, uniq: str,
                      proprios: frozenset[str] = frozenset(),
                      cor: tuple[int, int, int] | None = None) -> str:
-    """O que a lista de efeitos mostra: «—» (barra apagada), o efeito, ou Luz fixa."""
-    if brilho is not None and brilho <= 0.0:
-        return SEM_EFEITO
+    """O que a lista de efeitos mostra: o efeito guardado, ou «—» sem efeito. A barra apagada é
+    o Brilho em 0%, e a lista continua dizendo o efeito que volta com a luz."""
     return valor_da_lista_para(
         efeito_do_controle(perfil_da_lista_de_efeito(p), uniq), proprios, cor)
 
@@ -1558,8 +1551,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
             listas_de_efeito[f'[data-controle="{casa["pref"]}"] select.g4-efeito'] = (
                 opcoes_do_efeito(biblioteca, efeito_do_controle(do_efeito, uniq), cor_dele))
-        na_lista = escolha_da_lista(
-            do_efeito, uniq, None if b is None else float(b), criados, cor_dele)
+        na_lista = escolha_da_lista(do_efeito, uniq, criados, cor_dele)
         identidade = " • ".join(partes_do_modelo(
             {"jogador": n, "dono": o_nome_de(nomes_do_usuario, uniq), "nome": nome, "via": via}))
         colunas[uniq] = {
@@ -1567,7 +1559,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             CAMPO_DO_EFEITO: na_lista,
             CAMPO_DA_DICA_DO_EFEITO: dica_do_efeito(na_lista),
             **_a_chegada.campos_da_coluna("luz", _a_chegada.chegada(
-                ctx.state, c, "luz", anima=na_lista not in (SEM_EFEITO, LUZ_FIXA))),
+                ctx.state, c, "luz", anima=na_lista != SEM_EFEITO)),
             "brilho-pct": pct,
             "hex": _hex(pedida),
             "tons": fileira_de_tons(uniq, casas, "              "),
@@ -2526,9 +2518,9 @@ def modo_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
 def _com_o_efeito_gravado(prof: Any, uniq: str, efeito: str | None, *,
                           religar: bool = False) -> Any:
-    """O perfil com o efeito DESTE controle escrito no override dele (`None` = luz fixa).
+    """O perfil com o efeito DESTE controle escrito no override dele (`None` = sem efeito).
 
-    O `None` é escrito, e não tirado: o controle diz «luz fixa» mesmo quando o perfil todo tem um
+    O `None` é escrito, e não tirado: o controle diz «sem efeito» mesmo quando o perfil todo tem um
     efeito. `religar` tira o 0% do controle (e põe 100% se o perfil todo está em 0%), porque um
     efeito escolhido numa barra apagada tem de aparecer; é a mesma conta da cor escolhida em
     `_com_a_cor_gravada`.
@@ -2556,15 +2548,14 @@ def _com_o_efeito_gravado(prof: Any, uniq: str, efeito: str | None, *,
 
 @gesto("04-iluminacao.html", GESTO_DO_EFEITO, grava="gravar_pelo_gesto")
 def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A lista «Efeito» da coluna: «—», Luz fixa, uma base da lista ou um efeito criado.
+    """A lista «Efeito» da coluna: «—», uma base da lista ou um efeito criado.
 
     O efeito é do controle da coluna e vai ao perfil (`leds.efeito` no override dele); quem anima é
-    o `luz_animada` do daemon, que cala quando o jogo pinta a barra. O «—» apaga a barra
-    (o 0% do «Desligar» que saiu do topo da coluna) e «Luz fixa» devolve a cor de sempre, acendendo
-    a barra se estava apagada. Uma base da lista (`base:respirar`) vira o texto
-    `base;cor do controle;ritmo` neste ato, com a cor que a barra acende agora e o ritmo com que a
-    base nasce (`RITMO_DA_BASE`); o arco-íris não leva cor. Um valor que não é nenhum dos quatro é
-    recusado.
+    o `luz_animada` do daemon, que cala quando o jogo pinta a barra. O «—» tira o efeito e deixa a
+    cor do controle parada; apagar a barra é o Brilho em 0%. Uma base da lista (`base:respirar`)
+    vira o texto `base;cor do controle;ritmo` neste ato, com a cor que a barra acende agora e o
+    ritmo com que a base nasce (`RITMO_DA_BASE`); o arco-íris não leva cor. Um valor que não é
+    nenhum dos três é recusado.
     """
     from hefesto_dualsense4unix.profiles.schema import (
         escrever_o_efeito_da_luz,
@@ -2579,11 +2570,11 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     base = base_do_token(pedido)
     if pedido.startswith(PREFIXO_DA_BASE) and base is None:
         raise ValueError(f"{GESTO_DO_EFEITO}: a lista não tem a base {pedido!r}")
-    efeito = None if pedido in (SEM_EFEITO, LUZ_FIXA) else pedido
+    efeito = None if pedido == SEM_EFEITO else pedido
     if base is None and efeito is not None and ler_o_efeito_da_luz(efeito) is None:
         raise ValueError(
             f"{GESTO_DO_EFEITO}: o valor {pedido!r} não é um efeito. A lista oferece "
-            f"{SEM_EFEITO!r}, {LUZ_FIXA!r}, uma base ou um efeito que você criou")
+            f"{SEM_EFEITO!r}, uma base ou um efeito que você criou")
 
     nome = perfil.nome_do_ativo(ctx.state).strip()
     perfil._com_o_src()
@@ -2596,18 +2587,12 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
         r, g, b = cor_da_base(cor)
         cores = [] if base in BASES_SEM_COR_DA_LUZ else [f"{r:02X}{g:02X}{b:02X}"]
         efeito = escrever_o_efeito_da_luz(base, cores, RITMO_DA_BASE[base])
-    atual = brilho_do_controle(cru, uniq)
-    apagada = atual is not None and atual <= 0.0
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     gravar_pelo_gesto(
         "luz", nome,
         lambda prof: _com_o_efeito_gravado(prof, uniq, efeito, religar=efeito is not None),
         uniq=uniq, origem="interface-nova")
-    if pedido == SEM_EFEITO:
-        _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True, brilho=0.0)
-    elif pedido == LUZ_FIXA and apagada and dele is not None:
-        _escrever_a_cor(ctx, p, uniq, _a_cor_de_agora(ctx, cru, dele), escolha=True)
     return None
 
 

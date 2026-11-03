@@ -178,7 +178,7 @@ CLIQUES: dict[str, dict[str, Any]] = {
     "apagar": {},
     "brilho-luzes": {"luzes": "forte"},
     "modo-da-luz": {"tipo": "button", "evento": "click", "modo": "personalizado"},
-    "efeito-da-luz": {"valor": "luz-fixa"},
+    "efeito-da-luz": {"valor": "sem_efeito"},
 }
 
 PINTADO = ("brilho", "brilho-pct", "hex", "brilho-luzes")

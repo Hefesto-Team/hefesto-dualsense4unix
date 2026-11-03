@@ -413,13 +413,13 @@ def coluna(c):
         BRILHO_DAS_LUZES_PADRAO, "              ") if ligado else "")
     opcoes = (f'<span class="g4-efeito-dica" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
               f'data-hef-alvo="atributo" data-hef-atributo="data-dica" '
-              f'data-dica="{_pacote04.DICA_LUZ_FIXA}">'
+              f'data-dica="{_pacote04.DICA_SEM_EFEITO}">'
               f'<select class="g4-efeito" data-gesto="{_pacote04.GESTO_DO_EFEITO}" '
               f'aria-label="Efeito da barra" data-campo="{_pacote04.CAMPO_DO_EFEITO}" '
               f'data-hef-alvo="valor">'
               + _pacote04.opcoes_do_efeito(CENA_DOS_EFEITOS).replace(
-                  f'<option value="{_pacote04.LUZ_FIXA}">',
-                  f'<option value="{_pacote04.LUZ_FIXA}" selected>', 1)
+                  f'<option value="{_pacote04.SEM_EFEITO}"',
+                  f'<option value="{_pacote04.SEM_EFEITO}" selected', 1)
               + '</select></span>' + _a_chegada.marca("luz") + '\n            ')
 
     conectado = "sim" if ligado else "nao"  # (noqa-acento)
@@ -745,10 +745,11 @@ def _conferir(doc):
     exigir(corpo.count('class="g4-efeito"') == len(MESA)
            and corpo.count(f'data-gesto="{_pacote04.GESTO_DO_EFEITO}"') == len(MESA),
            "a célula Efeito não tem uma lista por lugar")
-    exigir(len(re.findall(rf'<option value="{_pacote04.SEM_EFEITO}"[^>]*>—</option>', corpo))
-           == len(MESA)
-           and len(re.findall(r'<option value="luz-fixa" selected', corpo)) == len(MESA),
-           "a lista Efeito não abre em «Luz fixa» com o «—» ao lado")
+    exigir(len(re.findall(rf'<optgroup label="Parado"><option value="{_pacote04.SEM_EFEITO}" '
+                          r'selected[^>]*>—</option></optgroup>', corpo)) == len(MESA)
+           and "luz-fixa" not in doc and "Luz fixa" not in doc,
+           "a lista Efeito não abre no «—», sozinho no «Parado» e primeiro da lista: a «Luz fixa» "
+           "saiu em 02/11/2026, o «—» é a cor parada e o Brilho em 0% apaga a barra")
     grupos = [rotulo for rotulo, _ in _pacote04.GRUPOS_DA_LISTA]
     exigir(len(re.findall(
         '<optgroup label="(?:' + "|".join(map(re.escape, grupos)) + ')"', corpo))
@@ -759,7 +760,7 @@ def _conferir(doc):
            and "g4-dica-do-efeito" not in doc,
            "a frase do efeito voltou para a tela: a frase é a dica da lista (16/10), uma por lugar")
     exigir("sem-piscar" not in doc and "Sem piscar" not in doc,
-           "o «Sem piscar» voltou à aba: ele saiu em 16/10, a «Luz fixa» já é a luz parada")
+           "o «Sem piscar» voltou à aba: ele saiu em 16/10, o «—» já é a luz parada")
     exigir('class="quadro criar"' not in corpo and "Criar efeitos novos" not in corpo
            and f'data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}"' not in corpo,
            "o «Criar efeitos novos» voltou à Iluminação: ele não criava nada que se usasse")

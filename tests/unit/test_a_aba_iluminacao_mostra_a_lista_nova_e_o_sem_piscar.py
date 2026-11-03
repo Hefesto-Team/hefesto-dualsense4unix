@@ -33,11 +33,11 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 
-ROTULOS_NA_ORDEM = ["—", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
+ROTULOS_NA_ORDEM = ["—", "Respirar", "Batida", "Chama", "Maré",
                     "Respira em cores", "Piscar", "Arco-íris", "Onda", "Relâmpago", "Vaivém",
                     "Enche", "Reage ao botão", "Inclinação", "Dedo no touchpad", "Ao som",
                     "Ondulação", "Aurora", "Estrelas", "Cor da bateria", "Cor da temperatura"]
-VALORES_NA_ORDEM = ["sem_efeito", "luz-fixa", "base:respirar", "base:batimento", "base:chama",
+VALORES_NA_ORDEM = ["sem_efeito", "base:respirar", "base:batimento", "base:chama",
                     "base:mare", "base:respira-em-cores", "base:piscar", "base:arco-iris",
                     "base:onda", "base:relampago", "base:vaivem", "base:enche",
                     "base:reage-ao-botao", "base:inclinacao", "base:dedo-no-touchpad",
@@ -110,7 +110,7 @@ def test_cada_frase_e_de_uma_linha_com_a_primeira_maiuscula() -> None:
     """Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES."""
     from pacotes import a04_iluminacao as a04
 
-    frases = [a04.DICA_SEM_EFEITO, a04.DICA_LUZ_FIXA, a04.DICA_DO_EFEITO_CRIADO,
+    frases = [a04.DICA_SEM_EFEITO, a04.DICA_DO_EFEITO_CRIADO,
               *a04.DICA_DA_BASE.values()]
     assert len(set(frases)) == len(frases), "duas opções com a mesma frase não se distinguem"
     for frase in frases:
@@ -197,11 +197,14 @@ def test_uma_base_que_a_lista_nao_tem_e_recusada() -> None:
         _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "base:inventada"}, None)
 
 
-def test_sem_efeito_e_luz_fixa_continuam_a_valer() -> None:
+def test_o_traco_tira_o_efeito_e_a_luz_fixa_saiu() -> None:
+    """MORDIDA: devolva a «Luz fixa» ao «Parado» e a recusa do fim deixa de acontecer."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "base:chama"}, None)
-    _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "luz-fixa"}, None)
+    _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "sem_efeito"}, None)
+    with pytest.raises(ValueError):
+        _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "luz-fixa"}, None)
     dele = o_computador().controles.get("aabbcc000001")
     assert dele is None or dele.leds is None or dele.leds.efeito is None
 

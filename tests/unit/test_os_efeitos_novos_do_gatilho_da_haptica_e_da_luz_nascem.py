@@ -292,7 +292,7 @@ def test_a_regra_da_soltura_e_so_do_furtivo_e_so_da_onda() -> None:
 
 
 def _perfil() -> Profile:
-    """Luz fixa (sem efeito) e sem modo: quem anima é só a luz do estilo."""
+    """Sem efeito e sem modo: quem anima é só a luz do estilo."""
     return Profile(name="regua", match=MatchAny(), leds=LedsConfig())
 
 

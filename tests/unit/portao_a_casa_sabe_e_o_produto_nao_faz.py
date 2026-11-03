@@ -1353,7 +1353,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/actions/mode_transition.py::apply_mode": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "
-        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:731` (`apply_mode`) a chama "
+        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:725` (`apply_mode`) a chama "
         "(instrumento, fora do "
         "fecho do "
         "`hefesto_vivo`). A janela viva monta a MESMA sequência pelo dono "
@@ -1376,7 +1376,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/mic_monitor.py::MicMonitor": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "
-        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:814` (`MicMonitor`) o instancia "
+        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:808` (`MicMonitor`) o instancia "
         "(instrumento). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
@@ -1511,7 +1511,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "promessa ao produto: o único leitor no produto era o aviso do opt-out antigo da Jogar, "
         "que saiu por decisão de produto em b99bac069 "
         "(O-AVISO-DO-OPT-OUT-ANTIGO-SAI-COM-OS-NOMES-VELHOS-01). "
-        "Hoje só `src/hefesto_dualsense4unix/interface/controles_vivos.py:661` (`modo_lembrado`) a "
+        "Hoje só `src/hefesto_dualsense4unix/interface/controles_vivos.py:655` (`modo_lembrado`) a "
         "chama (instrumento, fora do fecho do `hefesto_vivo`), e a "
         "`tests/unit/test_o_desligado_de_ontem_01.py:47` (`modo_lembrado`) prova pela função que o "
         "opt-out continua gravado. Sai com o piloto da aba Controles."

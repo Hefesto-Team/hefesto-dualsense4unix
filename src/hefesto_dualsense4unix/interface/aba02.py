@@ -15,8 +15,7 @@ from pacotes.a02_controles import ROTULO_DO_CLIQUE, carga_na_tela
 from pacotes.a02_controles import campo_da_onda_calada
 from pacotes.a02_controles import meias_da_barra as _meias_da_barra
 from pacotes.a02_controles import texto_do_xy as _texto_do_xy
-from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
-                                   DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
+from pacotes.a02_controles import DICA_DA_LUZ as DE_QUEM_E_A_LUZ
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
                                    DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
 from pacotes.a02_controles import GESTO_DO_MODO, INCLINACAO_PARADA, regiao_do_toque
@@ -220,7 +219,6 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """  .radio-mesa{position:absolute;width:0;heig
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .mudo-i,
   .moldura[data-bloco="microfone"][data-apagado] .puxa-vol,
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota button,
-  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .mudo-i,
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .puxa-vol,
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota button{cursor:not-allowed}
 
@@ -535,7 +533,6 @@ SELO_SOM_DESLIGADO = mesa_viva.selo_do_alto_falante(True, True)
 ATRIBUTO_DA_LUZ_DO_MIC = "data-mic-luz"
 MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 
-ATRIBUTO_DO_SOM = "data-som"
 
 
 _RAIO = ('<svg class="g-raio" viewBox="0 0 24 24" width="11" height="11"'
@@ -621,17 +618,15 @@ DICA_TUDO_NO_CONTROLE = "Todo o som sai no controle; o PC fica mudo"
 
 ROTULO_PADRAO = "Padrão"
 DICA_ALTO_PADRAO = "Volume do jogo, sem ajuste"
-DICA_ALTO_MUDO = "Cala o alto-falante sem perder o volume"
 
 
 def linha_de_volume(campo, razao=""):
     """A abertura da `<div class="vol">` do bloco, com o endereço da recusa.
 
-    **O CINZA NÃO NASCE NO BOTÃO, E A RAZÃO É O MECANISMO.** O ♪ já usa o seu
-    único par alvo/campo para dizer em QUAL dos dois estados o alto-falante está
-    (`alto-mudo`, decisão [09] e 02-Q9), e um elemento aceita UM alvo — não há como o
-    mesmo botão receber também a classe `apagado`. Então quem recebe o endereço
-    é a LINHA: o alvo `atributo` põe `data-porque` ali quando há razão e o
+    **O CINZA NÃO NASCE NO BOTÃO, E A RAZÃO É O MECANISMO.** Um botão da linha já
+    usa o seu único par alvo/campo para dizer o estado dele, e um elemento aceita UM
+    alvo — não há como o mesmo botão receber também a classe `apagado`. Então quem
+    recebe o endereço é a LINHA: o alvo `atributo` põe `data-porque` ali quando há razão e o
     REMOVE quando não há (o ramo `vazio || t === '—'` do piloto), e o CSS
     apaga o botão de dentro. É a mesma forma do `data-apagado` das molduras de
     som desta aba, e existe pelo mesmo motivo: um campo que diz duas coisas.
@@ -681,7 +676,7 @@ VAO_DO_MIC_MAXIMO = 2
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           touch2=None, tocando2=False,
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada, junto=False,
-          alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
+          mic_posse=False, tocando=True,
           accel=None, conectado=True,
           no_jogo=None, com_mascara=True):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
@@ -747,7 +742,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 f'<span class="pj{on}" data-campo="{ACENDE_O_JOGO[alvo]}" data-hef-alvo="classe" '
                 f'title="{DICA_DO_PONTO_DO_JOGO}"></span></span>')
     selo_do_mic = selo_do_microfone(mic_mudo, estilo=' style="margin-left:5px"')
-    alto_som = SELO_MUDO if alto_mudo else SELO_ATIVO
     regiao = regiao_do_toque(touch) if tocando else ""
     tercas = "".join(
         f'<span class="todo-terca{" on" if regiao == lado else ""}" data-campo="touch-regiao"'
@@ -852,12 +846,11 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
             </div>
             {onda(alto_v, lado="alto")}
-            {linha_de_volume("alto-porque", "" if alto_pode else DICA_ALTO_SEM_POSSE)}
+            {linha_de_volume("alto-porque")}
               <button class="padrao-i" type="button" data-gesto="volume-padrao" data-campo="alto-padrao" data-hef-alvo="classe" data-hef-classe="on" data-dica="{DICA_ALTO_PADRAO}">{ROTULO_PADRAO}</button>
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:{alto_v[0]}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{alto_v[0]}" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_ALTO}" data-dica="{DICA_VOL_ALTO}"></span>
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DO_SOM}" {ATRIBUTO_DO_SOM}="{alto_som}" data-dica="{DICA_ALTO_MUDO}">♪</button>
             </div></div>
             <div class="rota trio">
               <span class="fonte-mix{' junto' if junto and not rota_nada else ''}" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}</button></span>
@@ -931,9 +924,7 @@ def _so_o_travessao(html_do_card: str) -> str:
         sai do desenho pelo mesmo motivo: um
         `aria-label` com a frase do giroscópio num assento sem
         controle é o desenho AFIRMANDO o que não existe, e é a mesma família da
-        barra de bateria a 64% que a folha veio matar em 03/09. É por ele, e não
-        por CSS, que o ♪ de um lugar vazio perde o `data-som` e cai no cinza de
-        "ninguém leu este alto-falante".
+        barra de bateria a 64% que a folha veio matar em 03/09.
       · `classe` — `aceso = (quando ? t === quando : ligado(t))`, e `—` não é
         nenhum dos dois: o piloto APAGA a classe. Sem isto o assento vazio
         nasceria com o `on` do mockup — o botão Círculo apertado, o selo
@@ -1187,9 +1178,6 @@ CSS += f"""
   .fita label.chip{{cursor:pointer}}
   .nota li.foi{{color:var(--fg);border-left:2px solid var(--border-forte);
     padding-left:9px;list-style:none;margin-left:-16px}}
-  .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_ATIVO}"]{{border-color:var(--green);color:var(--green)}}
-  .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_MUDO}"]{{border-color:var(--orange);color:var(--orange);
-    background:rgba(255,184,108,.1)}}
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"]{{
     border-color:var(--green);color:var(--green)}}
 """
@@ -1695,7 +1683,7 @@ def _conferir(doc, aba="02-controles"):
     trilhos = {"volume": 2}
     exigir(corpo.count('type="range"') == sum(trilhos.values()) * len(MESA),
            f"os {sum(trilhos.values()) * len(MESA)} deslizantes sumiram — os "
-           f"volumes voltam a ser pintura e o ♪ volta a travar para sempre")
+           f"volumes voltam a ser pintura")
     for gesto_do_trilho, quantos in trilhos.items():
         vistos = len(re.findall(
             r'type="range"[^>]*data-gesto="' + gesto_do_trilho + r'"'
@@ -1710,29 +1698,10 @@ def _conferir(doc, aba="02-controles"):
 
     exigir("alto-estado" not in corpo,
            "o `alto-estado` voltou ao desenho — ele era um valor vivo num vão "
-           "invisível, e é o ♪ que mostra o mudo agora")
-    alvos_do_mudo = re.findall(r'<[^>]*data-campo="alto-mudo"[^>]*>', corpo)
-    exigir(len(alvos_do_mudo) == len(MESA),
-           "o ♪ perdeu o endereço `alto-mudo` — ele volta a pintar pelo que o "
-           "gerador escreveu, nunca pelo que o aparelho diz")
-    exigir(all('data-hef-alvo="atributo"' in t for t in alvos_do_mudo),
-           "o `alto-mudo` perdeu o alvo `atributo`: a pintura escreveria a "
-           "palavra ATIVO dentro do botão, no lugar do glifo ♪")
-    exigir(all(f'data-hef-atributo="{ATRIBUTO_DO_SOM}"' in t for t in alvos_do_mudo),
-           f"o `alto-mudo` perdeu o `data-hef-atributo={ATRIBUTO_DO_SOM}`: o "
-           f"piloto recusa o nome vazio e NÃO PINTA, calado — o ♪ ficaria "
-           f"congelado na cor que o gerador escreveu")
-    com_palavra = [t for t in alvos_do_mudo
-                   if re.search(rf"\s{re.escape(ATRIBUTO_DO_SOM)}=", t)]
-    exigir(len(com_palavra) == len(CONECTADOS),
-           f"o `{ATRIBUTO_DO_SOM}` está em {len(com_palavra)} ♪ e a mesa tem "
-           f"{len(CONECTADOS)} conectado(s) — ou um cheio perdeu a palavra, ou "
-           f"um lugar VAZIO ganhou uma que ninguém leu")
-    exigir(all(re.search(rf'\s{re.escape(ATRIBUTO_DO_SOM)}="(?:{SELO_ATIVO}'
-                         rf'|{SELO_MUDO})"', t) for t in com_palavra),
-           f"o `{ATRIBUTO_DO_SOM}` do desenho não é `{SELO_ATIVO}` nem "
-           f"`{SELO_MUDO}` — a palavra deixou de vir de "
-           f"`mesa_viva.selo_do_mic` e o CSS parou de casar, sem barulho")
+           "invisível")
+    exigir(not re.search(r'data-mudo="', corpo) and "alto-mudo" not in corpo,
+           "o ♪ voltou ao alto-falante — o volume em 0 já cala, e o volume que sobe solta o "
+           "mudo (02/11/2026)")
 
     rotulos_do_alto = re.findall(r'<div class="rot(?: rot-linha)?">Alto-falante.*?</div>',
                                  corpo, flags=re.S)

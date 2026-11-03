@@ -1,12 +1,11 @@
-"""O botão do modo que a extensão pede, irmão do Modo automático, nas cinco abas.
+"""O botão do modo que a extensão pede, irmão do Modo automático, nas abas de cada seção.
 
 Sem extensão ligada que peça a aba, nenhum botão no DOM: a vaga nasce vazia em Controles (a
-seção que mora no Jogar), Gatilhos, Iluminação, Vibração e Perfis. Com uma extensão de mentira
-ligada, o botão aparece nas cinco; aceso, apaga o automático (e o clique nele pede o
-Personalizado); desligar a extensão o tira, e o perfil guarda a escolha. O gesto de cada aba grava
-o pedido na própria seção, o de Perfis nas quatro, pelo `data-pede` (o `data-modo` é do quadro que
-saiu da Perfis). Lar de mentira: o ``conftest`` desvia ``HOME`` e
-os ``XDG_*``.
+seção que mora no Jogar), Gatilhos, Iluminação e Vibração. Com uma extensão de mentira ligada, o
+botão aparece nas abas; aceso, apaga o automático (e o clique nele pede o Personalizado); desligar a
+extensão o tira, e o perfil guarda a escolha. O gesto de cada aba grava o pedido na própria
+seção; a aba Perfis não tem o par, porque cada aba já mostra o modo da sua seção. Lar de
+mentira: o ``conftest`` desvia ``HOME`` e os ``XDG_*``.
 """
 from __future__ import annotations
 
@@ -47,8 +46,7 @@ ROTULO = "Modo da extensão"
 CINCO = {"02": ("01-jogar.html", "modo-dos-controles"),
          "03": ("03-gatilhos.html", "modo-dos-gatilhos"),
          "04": ("04-iluminacao.html", "modo-da-luz"),
-         "05": ("05-vibracao.html", "modo-da-vibracao"),
-         "10": ("10-perfis.html", "editor.modos")}
+         "05": ("05-vibracao.html", "modo-da-vibracao")}
 MESA = [{"pref": "p1", "uniq": UM, "jogador": 1, "cor": "white", "nome": "White",
          "via": "USB", "mascara": "DualSense"}]
 P1 = {"uniq": UM, "index": 0, "transport": "usb", "connected": True, "player": 1,
@@ -140,9 +138,9 @@ def _botoes(texto: str) -> list[dict[str, str]]:
 
 
 def _pacote(pac: Any, aba: str) -> dict[str, Any]:
-    from pacotes import a03_gatilhos, a04_iluminacao, a05_vibracao, a10_perfis
+    from pacotes import a03_gatilhos, a04_iluminacao, a05_vibracao
 
-    modulo = {"03": a03_gatilhos, "04": a04_iluminacao, "05": a05_vibracao, "10": a10_perfis}[aba]
+    modulo = {"03": a03_gatilhos, "04": a04_iluminacao, "05": a05_vibracao}[aba]
     return dict(modulo.pacote(_ctx(pac)))
 
 
@@ -182,23 +180,19 @@ def test_o_pedido_aceso_apaga_o_automatico_e_o_clique_nele_pede_o_personalizado(
     for modo, aceso, pedido, auto in ((MODO, "true", MODO_PERSONALIZADO, ""),
                                       (MODO_AUTOMATICO, "false", MODO, "sim")):
         _salvar(modo)
-        for aba in ("03", "04", "05", "10"):
+        for aba in ("03", "04", "05"):
             gesto = CINCO[aba][1]
             dados = _pacote(pac, aba)
             assert dados[f"{gesto}-{MODO_AUTOMATICO}"] == auto, aba
             [botao] = _botoes(dados[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
-            if aba == "10":
-                assert "data-modo" not in botao
-                assert (botao["aria-pressed"], botao["data-pede"]) == (aceso, MODO)
-            else:
-                assert (botao["aria-pressed"], botao["data-modo"]) == (aceso, pedido), aba
+            assert (botao["aria-pressed"], botao["data-modo"]) == (aceso, pedido), aba
 
 
 def test_desligada_a_aba_pinta_o_personalizado_e_o_perfil_guarda_o_pedido(
         lg: instalador.Lugares, pac: Any, pasta_de_perfis: pathlib.Path) -> None:
     _instalada(lg, ligada=False)
     _salvar(MODO)
-    for aba in ("03", "04", "05", "10"):
+    for aba in ("03", "04", "05"):
         gesto = CINCO[aba][1]
         dados = _pacote(pac, aba)
         assert dados[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"] == "", aba
@@ -231,34 +225,10 @@ def test_o_gesto_recusa_o_modo_da_extensao_desligada(
         lg: instalador.Lugares, pac: Any, pasta_de_perfis: pathlib.Path) -> None:
     _instalada(lg, ligada=False)
     _salvar()
-    for aba in ("02", "03", "04", "05", "10"):
-        pagina, gesto = CINCO[aba]
-        chave = "pede" if aba == "10" else "modo"
+    for pagina, gesto in CINCO.values():
         with pytest.raises(ValueError):
-            pac.gesto_da_pagina(pagina, gesto)(_ctx(pac), {chave: MODO, "uniq": UM}, Ponte())
+            pac.gesto_da_pagina(pagina, gesto)(_ctx(pac), {"modo": MODO, "uniq": UM}, Ponte())
     assert MODO not in _modos_no_disco()
-
-
-def test_o_modo_de_perfis_grava_as_quatro_secoes_e_volta_ao_personalizado(
-        lg: instalador.Lugares, pac: Any, pasta_de_perfis: pathlib.Path) -> None:
-    _instalada(lg)
-    _salvar()
-    funcao = pac.gesto_da_pagina("10-perfis.html", "editor.modos")
-    for ruim in ({"pede": OUTRO}, {"modo": MODO}, {"modo": MODO_AUTOMATICO}):
-        with pytest.raises(ValueError):
-            funcao(_ctx(pac), ruim, Ponte())
-    funcao(_ctx(pac), {"pede": MODO}, Ponte())
-    assert _modos_no_disco() == (MODO,) * 4
-    funcao(_ctx(pac), {"pede": MODO_AUTOMATICO}, Ponte())
-    assert _modos_no_disco() == (MODO_AUTOMATICO,) * 4
-    funcao(_ctx(pac), {"pede": MODO_AUTOMATICO}, Ponte())
-    assert _modos_no_disco() == (MODO_PERSONALIZADO,) * 4
-    assert funcao(_ctx(pac), {"pede": MODO_PERSONALIZADO}, Ponte()) is None
-    funcao(_ctx(pac), {"pede": MODO}, Ponte())
-    funcao(_ctx(pac), {"pede": MODO}, Ponte())
-    assert _modos_no_disco() == (MODO_PERSONALIZADO,) * 4
-    html = (RAIZ / "mockup" / "10-perfis.html").read_text(encoding="utf-8")
-    assert 'data-gesto="editor.modos" data-pede="automatico"' in html
 
 
 def test_sem_perfil_a_luz_no_modo_da_extensao_acende_o_botao_e_volta(
@@ -278,3 +248,12 @@ def test_sem_perfil_a_luz_no_modo_da_extensao_acende_o_botao_e_volta(
     funcao(ctx, {"modo": MODO_PERSONALIZADO, "uniq": UM}, Ponte())
     [botao] = _botoes(dict(a04_iluminacao.pacote(ctx))[f"{gesto}-{monta.CAMPO_DA_EXTENSAO}"])
     assert (botao["aria-pressed"], botao["data-modo"]) == ("false", MODO)
+
+
+def test_o_botao_da_extensao_nao_tem_margem_e_o_vao_e_o_da_fileira() -> None:
+    """MORDIDA: devolva a margem ao `.modo-ext` e o vão dele ao vizinho dobra (02/11/2026)."""
+    regra = re.search(r"\.modo-ext\{([^}]*)\}", monta.CSS_DO_MODO_DA_EXTENSAO)
+    assert regra, "a folha perdeu a regra do botão da extensão"
+    assert "margin" not in regra.group(1), (
+        "o botão da extensão ganhou margem própria — o vão entre os três botões deixa de ser "
+        "o mesmo")

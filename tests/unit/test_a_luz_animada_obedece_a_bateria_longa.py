@@ -201,7 +201,7 @@ def _ctx() -> Any:
 
 
 def test_sem_perfil_ativo_a_lista_mostra_o_efeito_que_o_computador_guarda() -> None:
-    """O ``maquina.json`` guarda o respirar; sem perfil ativo a lista dizia «Luz fixa».
+    """O ``maquina.json`` guarda o respirar; sem perfil ativo a lista dizia «—».
     MORDIDA: devolver o perfil vazio à lista."""
     import pacotes
     from pacotes import a04_iluminacao as a04
@@ -212,11 +212,11 @@ def test_sem_perfil_ativo_a_lista_mostra_o_efeito_que_o_computador_guarda() -> N
     assert colunas[JOGADORES[0]][a04.CAMPO_DO_EFEITO] == "respirar;00FFFF;2"
 
 
-def test_sem_perfil_e_sem_efeito_guardado_a_lista_diz_luz_fixa() -> None:
+def test_sem_perfil_e_sem_efeito_guardado_a_lista_diz_o_traco() -> None:
     from pacotes import a04_iluminacao as a04
 
     colunas = a04.pacote(_ctx())["colunas"]
-    assert colunas[JOGADORES[0]][a04.CAMPO_DO_EFEITO] == a04.LUZ_FIXA
+    assert colunas[JOGADORES[0]][a04.CAMPO_DO_EFEITO] == a04.SEM_EFEITO
 
 
 def test_o_efeito_e_so_o_da_luz_animada() -> None:

@@ -416,12 +416,12 @@ def test_backend_sem_a_ponte_nao_escreve() -> None:
     assert soltar(UNIQ) is None
 
 
-def test_a_lista_de_efeitos_tem_sem_efeito_luz_fixa_e_os_seus() -> None:
+def test_a_lista_de_efeitos_tem_sem_efeito_e_os_seus() -> None:
     import pacotes  # noqa: F401
     from pacotes import a04_iluminacao as a04
 
     sozinha = a04.opcoes_do_efeito({})
-    assert f'value="{a04.SEM_EFEITO}"' in sozinha and f'value="{a04.LUZ_FIXA}"' in sozinha
+    assert f'value="{a04.SEM_EFEITO}"' in sozinha and 'value="luz-fixa"' not in sozinha
     assert 'optgroup label="Seus efeitos"' not in sozinha
     biblioteca = {"Alerta": {"nome": "Alerta", "base": "piscar",
                              "parametros": {"cores": "#FF0000", "ritmo": 6}}}
@@ -438,17 +438,16 @@ def test_o_efeito_do_perfil_que_a_biblioteca_nao_tem_entra_com_o_nome_da_base() 
     assert 'value="respirar;00FFFF;2"' in html and ">Respirar<" in html
 
 
-def test_a_lista_mostra_luz_fixa_sem_efeito_e_o_que_o_controle_tem() -> None:
+def test_a_lista_mostra_o_traco_sem_efeito_e_o_que_o_controle_tem() -> None:
     from pacotes import a04_iluminacao as a04
 
     cru = {"leds": {"efeito": "piscar;FF0000;4"},
            "controllers": {"aabbcc000001": {"leds": {"efeito": None}}}}
-    assert a04.escolha_da_lista(cru, UNIQ, 1.0) == a04.LUZ_FIXA
-    assert a04.escolha_da_lista(cru, OUTRO, 1.0) == "piscar;FF0000;4"
-    assert a04.escolha_da_lista(cru, OUTRO, 0.0) == a04.SEM_EFEITO
+    assert a04.escolha_da_lista(cru, UNIQ) == a04.SEM_EFEITO
+    assert a04.escolha_da_lista(cru, OUTRO) == "piscar;FF0000;4"
 
 
-def test_o_efeito_vai_para_o_override_do_controle_e_luz_fixa_e_escrita() -> None:
+def test_o_efeito_vai_para_o_override_do_controle_e_o_traco_e_escrito() -> None:
     from pacotes import a04_iluminacao as a04
 
     base = Profile(name="regua", match=MatchAny(), leds=LedsConfig(efeito="piscar;FF0000;4"))
@@ -511,7 +510,7 @@ def test_o_gesto_do_efeito_sem_controle_recusa() -> None:
 
     with pytest.raises(ValueError, match="em qual controle"):
         pacotes.gesto_da_pagina("04-iluminacao.html", "efeito-da-luz")(
-            _ctx(), {"valor": "luz-fixa"}, None)
+            _ctx(), {"valor": "sem_efeito"}, None)
 
 
 def test_a_guia_tem_o_branco_e_as_cores_de_jogador_e_nenhuma_das_de_fora() -> None:
@@ -539,7 +538,8 @@ def test_o_desenho_nao_tem_interrogacao_nem_desligar() -> None:
     assert 'class="ajuda' not in doc, "o `?` voltou: a dica mora no `data-dica`"
     for fora in ("Desligar", "Opções", "mesa", "Criar efeitos novos"):
         assert fora not in doc, f"o desenho trouxe «{fora}»"
-    for dito in ("Efeito", ">—</option>", "Luz fixa", "Respirar", "Piscar",
+    assert "Luz fixa" not in doc, "a «Luz fixa» voltou ao «Parado»"
+    for dito in ("Efeito", ">—</option>", "Respirar", "Piscar",
                  "Arco-íris", "Modo automático"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
 
@@ -558,7 +558,7 @@ def test_cada_coluna_viva_tem_a_lista_de_efeitos_e_o_gesto_do_usuario() -> None:
     efeitos = [s for s in listas if "g4-efeito" in s]
     assert len(efeitos) == 4, "uma lista por coluna, viva ou vazia"
     assert all('data-gesto="efeito-da-luz"' in s for s in efeitos), efeitos
-    assert 'value="luz-fixa" selected' in doc.replace("\n", " ")
+    assert 'value="sem_efeito" selected' in doc.replace("\n", " ")
     assert doc.count('data-gesto="criar-efeito"') == 0
 
 

@@ -1038,7 +1038,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "guarda.larguras": _larguras_em_texto(TABELA_DA_GUARDA),
         "quantos": len(lista),
         "travado": bool(ctx.state.get("freestyle_ligado")),
-        "sem_dono": {}, **o_modo_do_perfil(alvo),
+        "sem_dono": {},
     }
     for chave in ("jogo", "estilo"):
         fora.setdefault(f"editor.{chave}", "—")
@@ -2622,63 +2622,3 @@ def _entrada_viva(conectados: Any, uniq: str) -> dict[str, Any]:
     return {}
 
 
-GESTO_DO_MODO = "editor.modos"
-ABA_DO_MODO = "10"
-
-
-def _monta() -> Any:
-    """O `monta`, importado na hora do uso: a janela abre sem ler o repositório no import."""
-    import monta
-
-    return monta
-
-
-def modo_do_perfil(prof: Any) -> str:
-    """O modo do perfil inteiro: o mesmo escrito nas quatro seções, senão o Personalizado."""
-    from hefesto_dualsense4unix.profiles.schema import MODO_PERSONALIZADO
-
-    if prof is None:
-        return MODO_PERSONALIZADO
-    escritos = {getattr(prof, "controles_modo", None), prof.triggers.modo, prof.leds.modo,
-                prof.rumble.modo}
-    modo = escritos.pop() if len(escritos) == 1 else None
-    return str(_monta().modo_na_tela(modo or MODO_PERSONALIZADO, ABA_DO_MODO))
-
-
-def o_modo_do_perfil(prof: Any) -> dict[str, str]:
-    """Os campos do par do editor: o Modo automático e a vaga do modo que uma extensão pede.
-
-    Sem o `monta` (sem repositório), nenhum campo: a página fica sem o par, como a cor da fita."""
-    try:
-        m = _monta()
-    except (Exception, SystemExit):
-        return {}
-    modo = modo_do_perfil(prof)
-    return {f"{GESTO_DO_MODO}-{m.MODO_AUTOMATICO}": "sim" if modo == m.MODO_AUTOMATICO else "",
-            **m.campo_da_extensao(GESTO_DO_MODO, ABA_DO_MODO, modo, pede=True)}
-
-
-@gesto("10-perfis.html", GESTO_DO_MODO, grava="_gravar")
-def editor_modos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O modo do perfil inteiro: grava o pedido nas quatro seções (controles, gatilhos, luz e
-    vibração), que cada aba mostra na sua. O botão diz o modo que ele é (`data-pede`): o clique
-    liga esse modo e, no botão do modo em que o perfil já está, volta ao Personalizado."""
-    m = _monta()
-    pede = str(o.get("pede") or "")
-    if not m.pedido_da_aba(pede, ABA_DO_MODO):
-        raise ValueError(
-            f"{GESTO_DO_MODO}: o clique não disse qual modo. O botão manda o `data-pede`; "
-            f"um pedido sem ele não vem da tela")
-    nome = _perfil_do_editor(ctx)
-    prof = _o_perfil_no_disco(nome)
-    agora = modo_do_perfil(prof)
-    pedido = m.MODO_PERSONALIZADO if agora == pede else pede
-    if agora == pedido:
-        return None
-    _gravar(prof.model_copy(update={
-        "controles_modo": pedido,
-        "triggers": prof.triggers.model_copy(update={"modo": pedido}),
-        "leds": prof.leds.model_copy(update={"modo": pedido}),
-        "rumble": prof.rumble.model_copy(update={"modo": pedido}),
-    }), ctx, p)
-    return _dizer(f"“{prof.name}” no {m.rotulo_do_modo(pedido, ABA_DO_MODO)}, nas quatro seções.")

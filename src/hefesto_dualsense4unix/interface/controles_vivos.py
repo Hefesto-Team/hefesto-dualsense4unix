@@ -131,7 +131,6 @@ ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = 
     (2500, '.rota button[data-rota="nada"]'),
     (2950, '.rota button[data-rota="pc"]'),
     (3100, '.rota button[data-rota="jogo"]'),
-    (3400, '[data-mudo="alto-falante"]'),
     (3700, '[data-gesto="mic-retorno"]', "so-existe"),
 )
 
@@ -190,9 +189,6 @@ DONOS_DOS_GESTOS = {
     "mudo:mic-liberar": "mic.set {muted: null} — a MESMA chamada com `null`, que "
     "devolve a posse ao kernel (hid_playstation). É o TEXTO_BOTAO_MIC_DEVOLVER "
     "do produto, e ele nasce insensível porque sem posse não há o que devolver.",
-    "mudo:alto-falante": "speaker.set {muted: bool} (daemon/ipc_handlers.py) pela "
-    "ponte app/ipc_bridge.speaker_set. O daemon RECUSA sem volume conhecido — "
-    "por isso o ícone nasce travado enquanto o volume for desconhecido.",
 }
 
 SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço que "
@@ -340,8 +336,6 @@ window.HEF = (function(){
       n += txt(q('[data-campo="alto-estado"]', ba), d.alto.estado);
       n += onda(q('.onda', ba), d.alto.onda);
       n += est(q('.vol .cheio', ba), {width:d.alto.vol_w}) + txt(q('.vol .n', ba), d.alto.vol_n);
-      n += cls(q('[data-mudo="alto-falante"]', ba), 'on', d.alto.mudo);
-      n += trava(q('[data-mudo="alto-falante"]', ba), !d.alto.pode);
       for(const b of qa('.rota button[data-rota]', ba)) n += cls(b,'on', b.dataset.rota===d.alto.rota);
     }
     for(const b of qa('.sw[data-sensor]', c)) n += cls(b,'off', d.sw[b.dataset.sensor]==='off');
@@ -1006,7 +1000,6 @@ class Janela:
         selo_do_mic = (mesa_viva.selo_do_mic(eco["microfone"] == "on", True)
                        if "microfone" in eco else a02.selo_composto(entrada.get("audio") or {}))
         _, dedos = a02.dedos_do_controle(entrada.get("inputs") or {})
-        eco_alto_mudo = (eco["alto-falante"] == "on") if "alto-falante" in eco else e["alto_mudo"]
         eixos = {}
         for eixo, texto, estilo in e["giro"]:
             estilo_d = dict(p.split(":", 1) for p in estilo.split(";") if p)
@@ -1060,8 +1053,6 @@ class Janela:
                 "onda": [mesa_viva.PISO_DA_ONDA] * 14,
                 "vol_w": "0%" if alto_pct is None else f"{alto_pct}%",
                 "vol_n": "—" if alto_pct is None else str(alto_pct),
-                "mudo": eco_alto_mudo,
-                "pode": e["alto_pode"],
                 "rota": self.eco_rota.get(
                     c["uniq"], "nada" if e["rota_nada"] else "jogo"),
             },

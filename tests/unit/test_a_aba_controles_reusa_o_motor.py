@@ -141,24 +141,12 @@ def test_o_talo_do_registrador_nao_vira_duzentos_e_cinquenta_e_cinco_por_cento(
         "01/08/2026) — uma conta linear diria 50 % sobre o volume máximo")
 
 
-def test_o_mudo_vence_a_porcentagem(pac, a02):
-    """Calado, o campo diz "Mudo" — a régua não pode virar "sempre por cento"."""
-    d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": True}})
-    import mesa_viva
-
-    assert d["alto-mudo"] == mesa_viva.DESLIGADO
-    aceso = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
-    assert aceso["alto-mudo"] == "ATIVO", (
-        "sem o par, a régua passaria com um campo que diz MUDO para sempre")
-
-
 def test_sem_alto_falante_a_tela_nao_diz_zero(pac, a02):
     """Ausência não é zero. O daemon só publica `speaker` depois do primeiro set."""
     import mesa_viva
 
     d = _card(pac, a02, BASE)
     assert d["alto-num"] == mesa_viva.SEM_LEITOR
-    assert d["alto-mudo"] == mesa_viva.SEM_LEITOR
     assert "0" not in str(d["alto-num"])
 
 
@@ -169,36 +157,14 @@ def test_o_bloco_do_alto_falante_e_lido_nas_duas_posicoes(pac, a02):
     assert _card(pac, a02, dentro)["alto-num"] == 34
 
 
-def test_o_mudo_do_alto_falante_le_a_segunda_posicao(pac, a02):
-    """Clicar no ♪ com o volume só em `inputs.speaker` manda o volume junto."""
-    entrada = {k: v for k, v in BASE.items() if k != "speaker"}
-    entrada["inputs"] = {"speaker": {"volume": 60, "muted": True}}
-    ctx = pac.Contexto(state={}, mesa=[], conectados=[entrada], estados={})
-    p = PonteDeMentira()
-    a02.mudo(ctx, {"uniq": UNIQ, "mudo": "alto-falante"}, p)
-    assert p.chamadas == [
-        ("speaker_set", (), {"muted": False, "uniq": UNIQ, "volume": 60})
-    ], "o gesto não leu o bloco que o daemon publicou dentro de `inputs`"
-
-
-def test_sem_volume_conhecido_o_botao_do_alto_falante_recusa_aqui(pac, a02):
-    """Sem volume conhecido o ♪ não manda nada — e diz por quê."""
-    ctx = pac.Contexto(state={}, mesa=[], conectados=[BASE], estados={})
-    p = PonteDeMentira()
-    with pytest.raises(RuntimeError) as erro:
-        a02.mudo(ctx, {"uniq": UNIQ, "mudo": "alto-falante"}, p)
-    assert p.chamadas == [], "o clique chegou ao daemon com o volume desconhecido"
-    assert "volume" in str(erro.value)
-
-
-def test_com_volume_conhecido_o_pedido_leva_o_numero(pac, a02):
-    """A metade que prova que a guarda não é "o botão nunca mais funciona"."""
+def test_o_alto_falante_nao_tem_mais_botao_de_calar(pac, a02):
+    """O ♪ saiu em 02/11/2026: o gesto `mudo` recusa o alto-falante sem chamar o daemon."""
     dele = {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}}
     ctx = pac.Contexto(state={}, mesa=[], conectados=[dele], estados={})
     p = PonteDeMentira()
-    a02.mudo(ctx, {"uniq": UNIQ, "mudo": "alto-falante"}, p)
-    assert p.chamadas == [
-        ("speaker_set", (), {"muted": True, "uniq": UNIQ, "volume": VOLUME_VIVO})]
+    with pytest.raises(ValueError):
+        a02.mudo(ctx, {"uniq": UNIQ, "mudo": "alto-falante"}, p)
+    assert p.chamadas == []
 
 
 def test_sem_leitura_de_audio_o_microfone_nao_chuta(pac, a02):

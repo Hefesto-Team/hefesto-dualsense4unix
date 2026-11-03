@@ -57,7 +57,7 @@ LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
 FAMILIAS = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 GRUPOS_DA_03 = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 ACIONAMENTOS = ("Resistência", "Metralhadora", "Disparo", "Arco", "Gatilho")
-LUZ_DA_04 = ("—", "Luz fixa", "Respirar", "Batida", "Chama", "Maré", "Piscar",
+LUZ_DA_04 = ("—", "Respirar", "Batida", "Chama", "Maré", "Piscar",
              "Arco-íris")
 MOTORES_DA_05 = ("Tranco", "Batida", "Onda", "Coice", "Pancada do lado")
 HAPTICA_NOVA = ("Eco", "Grão", "Motor de época")

@@ -200,15 +200,10 @@ class TestAGuardaSemEndereco:
         assert porques == {"mic-porque": DICA_AUDIO_SEM_ENDERECO,
                            "alto-porque": DICA_AUDIO_SEM_ENDERECO}
 
-    def test_o_endereco_ganha_da_razao_da_posse(self) -> None:
-        """Sem endereço, "arraste o volume ao lado" manda fazer o estrago."""
-        assert mod.DICA_ALTO_SEM_POSSE not in mod.porques_do_som(
-            _entrada(uniq=None)).values()
-
-    def test_com_endereco_a_razao_volta_a_ser_a_da_posse(self) -> None:
-        """A guarda não engole o estado normal: com MAC, quem decide é o motor."""
+    def test_com_endereco_o_alto_falante_nao_recusa(self) -> None:
+        """A guarda não engole o estado normal: com MAC, o volume do alto-falante age."""
         porques = mod.porques_do_som(_entrada())
-        assert porques["alto-porque"] == mod.DICA_ALTO_SEM_POSSE
+        assert porques["alto-porque"] == ""
         assert DICA_AUDIO_SEM_ENDERECO not in porques.values()
 
 
@@ -322,7 +317,7 @@ class TestOQuartoSeloSaiuDaTela:
         assert isinstance(rota, dict) and rota["aciona"] == "sim"
         card = _card(_entrada(transport="bt"))
         assert card["alto-apagado"] == ""
-        assert card["alto-porque"] == mod.DICA_ALTO_SEM_POSSE
+        assert card["alto-porque"] == ""
 
 
 class TestODesenho:

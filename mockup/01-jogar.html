@@ -546,7 +546,6 @@
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .mudo-i,
   .moldura[data-bloco="microfone"][data-apagado] .puxa-vol,
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota button,
-  .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .mudo-i,
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .puxa-vol,
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota button{cursor:not-allowed}
 
@@ -725,9 +724,6 @@
   .fita label.chip{cursor:pointer}
   .nota li.foi{color:var(--fg);border-left:2px solid var(--border-forte);
     padding-left:9px;list-style:none;margin-left:-16px}
-  .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
-  .mudo-i[data-som="DESLIGADO"]{border-color:var(--orange);color:var(--orange);
-    background:rgba(255,184,108,.1)}
   .mudo-i[data-mic-luz="retorno"]{
     border-color:var(--green);color:var(--green)}
   .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
@@ -1152,7 +1148,7 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
   <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <ellipse cx="16" cy="16" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2"/>
 </svg>Calibrar giroscópio</a>
-          <button class="modo-auto" type="button" data-gesto="modo-dos-controles" data-modo="automatico" data-campo="modo-dos-controles-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo decide toque e som; o estilo do jogo ajusta" data-governa=".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]"><span class="p"></span>Modo automático</button><style>.vaga-da-extensao{display:contents}.modo-ext{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;margin-left:8px;border-radius:999px;border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}.modo-ext .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;transition:all .15s}.modo-ext:hover{border-color:#5fd3e6;color:#fff}.modo-ext[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}.modo-ext[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}.modo-ext:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}body:has([data-campo="modo-dos-controles-ext"] .modo-ext[aria-pressed="true"]) :is(.card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]){opacity:.42;pointer-events:none;filter:saturate(.6)}</style><span class="vaga-da-extensao" data-campo="modo-dos-controles-ext" data-hef-alvo="html"></span>
+          <button class="modo-auto" type="button" data-gesto="modo-dos-controles" data-modo="automatico" data-campo="modo-dos-controles-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo decide toque e som; o estilo do jogo ajusta" data-governa=".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]"><span class="p"></span>Modo automático</button><style>.vaga-da-extensao{display:contents}.modo-ext{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}.modo-ext .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;transition:all .15s}.modo-ext:hover{border-color:#5fd3e6;color:#fff}.modo-ext[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}.modo-ext[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}.modo-ext:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}body:has([data-campo="modo-dos-controles-ext"] .modo-ext[aria-pressed="true"]) :is(.card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]){opacity:.42;pointer-events:none;filter:saturate(.6)}</style><span class="vaga-da-extensao" data-campo="modo-dos-controles-ext" data-hef-alvo="html"></span>
         </span>
       </div>
       <div class="quadro-corpo">
@@ -1344,7 +1340,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">100</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" data-dica="Cala o alto-falante sem perder o volume">♪</button>
             </div></div>
             <div class="rota trio">
               <span class="fonte-mix junto" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
@@ -1584,7 +1579,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:70%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="70" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">70</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-som="ATIVO" data-dica="Cala o alto-falante sem perder o volume">♪</button>
             </div></div>
             <div class="rota trio">
               <span class="fonte-mix" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
@@ -1824,7 +1818,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:55%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="55" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">—</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-dica="Cala o alto-falante sem perder o volume">♪</button>
             </div></div>
             <div class="rota trio">
               <span class="fonte-mix" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
@@ -2064,7 +2057,6 @@ body.por-controle .rot-linha{height:24px !important;min-height:24px !important;m
               <span class="trilho"><span class="cheio" data-campo="alto-barra"
                 data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="alto-falante" data-campo="alto-barra" data-hef-alvo="valor" aria-label="Volume do alto-falante deste controle" data-dica="Volume do alto-falante deste controle"></span>
               <span class="n" data-campo="alto-num">—</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="data-som" data-dica="Cala o alto-falante sem perder o volume">♪</button>
             </div></div>
             <div class="rota trio">
               <span class="fonte-mix" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>

@@ -104,7 +104,6 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     TEXTO_SELO_SAIDA_MUDA,
     _markup_xy,
     acao_mic,
-    acao_speaker_mudo,
     dedos_do_inputs,
     dica_do_titulo,
     frase_do_alvo_do_mic,
@@ -1011,40 +1010,22 @@ def selo_composto(a: dict[str, Any]) -> str:
     return str(mesa_viva.selo_do_mic(False, True))
 
 
-DICA_ALTO_SEM_POSSE = ("O ♪ só funciona depois de o volume ser ajustado uma "
-                       "vez. Arraste o volume ao lado.")
-
 NADA_A_DIZER = '<i class="nada"></i>'
 
 
 def porques_do_som(entry: Any) -> dict[str, str]:
     """`{"mic-porque": …, "alto-porque": …}` — vazio quando o botão está vivo.
 
-    **A do ♪ NÃO é a do motor, e a diferença está medida.** O
-    `DICA_SPEAKER_SEM_DADO` da GTK manda *"use o controle deslizante primeiro"*,
-    e até 04/09/2026 esta janela não tinha deslizante nenhum — mandar alguém a
-    um controle que não está na tela é pior que não dizer nada. **Hoje ele
-    existe** (D-08, o `<input type="range">` dos dois blocos), então a frase
-    daqui aponta para ELE, que é o que destrava o botão: é a mesma frase que o
-    gerador já escrevia no `title` desde 03/09 (`DICA_ALTO_SEM_POSSE`), e
-    escrevê-la nos dois lugares seria a segunda cópia — o gerador passa a
-    importá-la daqui.
-
-    **O "DEVOLVER" FICA FORA, E É A DICA QUE DIZ O PREÇO — decisão [06].** É a
-    decisão de 31/08 sobre o gêmeo (o "Liberar" do microfone): *"o botão
-    do Controle sempre controla a interface, por isso não faz sentido o liberar
-    ali"*. O preço do ♪ é menor que o do 🎙 e continua sendo um preço — quem
-    diz isso é o `title` do botão, e ele mora no gerador, ao lado do rótulo que
-    explica.
+    O alto-falante só recusa sem endereço de áudio: o volume que se arrasta é o que o
+    Hefesto escreve, e não depende de leitura anterior.
     """
     if uniq_do_entry(entry) is None:
         return {"mic-porque": DICA_AUDIO_SEM_ENDERECO,
                 "alto-porque": DICA_AUDIO_SEM_ENDERECO}
     do_mic = acao_mic(entry)
-    do_alto = acao_speaker_mudo(entry)
     return {
         "mic-porque": "" if do_mic.sensivel else str(do_mic.dica),
-        "alto-porque": "" if do_alto.sensivel else DICA_ALTO_SEM_POSSE,
+        "alto-porque": "",
     }
 
 
@@ -1383,10 +1364,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "alto-estado": (
                     texto_volume(*sp_lido) if sp_lido is not None
                     else mesa_viva.SEM_LEITOR
-                ),
-                "alto-mudo": mesa_viva.selo_do_mic(
-                    estado["alto_mudo"],
-                    sp_lido is not None and sp_lido[1] is not None,
                 ),
                 "alto-num": (
                     PALAVRA_DO_PADRAO if alto_em_padrao
@@ -1948,22 +1925,17 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mudo", grava="gravar_pelo_gesto")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O 🎙 e o ♪ — os dois botões de calar, e eles ALTERNAM o que a tela mostra.
+    """O 🎙, o botão de calar o microfone, e ele ALTERNA o que a tela mostra.
 
-    UM GESTO PARA OS DOIS porque a página os marca com o mesmo `data-mudo`, e o
-    valor dele diz qual. Separá-los em dois nomes inventaria um vocabulário que
-    o desenho não tem.
+    O alto-falante não tem botão de calar desde 02/11/2026: o volume em 0 cala, e o volume
+    que sobe solta o mudo (o gesto `volume`).
 
-    **São métodos diferentes, e não é detalhe.** O `mic.set` é o MUDO NO
-    FIRMWARE (camada 3, `ipc_handlers.py:4091`): é o único que apaga a luz
-    vermelha do plástico, e a partir dele o botão físico do controle deixa de
-    valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers._handle_speaker_set`).
-    Trocar um pelo outro calaria a coisa errada.
+    O `mic.set` é o MUDO NO FIRMWARE (camada 3, `ipc_handlers.py:4091`): é o único que apaga
+    a luz vermelha do plástico, e a partir dele o botão físico do controle deixa de valer — é
+    o que o `title` do desenho já promete.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
-    `audio.mic_mudo` é LEITURA do byte que vem em todo report de input, e
-    `speaker.muted` é o que nós mandamos (o aparelho não devolve). Guardar o
+    `audio.mic_mudo` é LEITURA do byte que vem em todo report de input. Guardar o
     valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:904-905`
     nomeia como o que o que fez a tela parecer mentirosa quando nunca mentiu.
 
@@ -2006,27 +1978,8 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             raise RuntimeError(confissao)
         return
 
-    if qual == "alto-falante":
-        if not acao_speaker_mudo(dele).sensivel:
-            raise RuntimeError(
-                "o volume deste alto-falante ainda é desconhecido, e calar "
-                "antes de saber o volume tranca-o em zero — nem o próprio "
-                "botão o solta depois. O daemon só publica o volume depois de "
-                "o Hefesto escrever um.")
-        lido = speaker_do_entry(dele)
-        pedido_mudo = not bool(lido and lido[1])
-        if not p.speaker_set(muted=pedido_mudo, uniq=uniq,
-                             **_volume_conhecido(dele)):
-            raise RuntimeError(
-                "o Hefesto não confirmou o mudo do alto-falante. Se o volume "
-                "deste controle ainda é desconhecido, ele recusa de propósito: "
-                "calar antes de saber o volume tranca o alto-falante em zero")
-        _confirmar_com_som(ctx, uniq)
-        _lembrar_do_som(ctx, uniq, speaker={"muted": pedido_mudo})
-        return
-
-    raise ValueError(f"mudo: não sei calar {qual!r} — a página manda 'microfone' "
-                     f"ou 'alto-falante'")
+    raise ValueError(f"mudo: não sei calar {qual!r} — a página manda 'microfone'; o "
+                     f"alto-falante se cala pelo volume em 0")
 
 
 def _dizer_a_fonte_ao_daemon(p: Any, uniq: str, fonte: str) -> None:
@@ -2452,12 +2405,12 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     if qual == "alto-falante":
         registrador = volume_do_percentual(pedido)
-        if not p.speaker_set(volume=registrador, uniq=uniq):
+        if not p.speaker_set(volume=registrador, muted=False, uniq=uniq):
             raise RuntimeError(
                 "o Hefesto não confirmou o volume do alto-falante: ou ele "
                 "parou, ou este controle se desligou")
         _confirmar_com_som(ctx, uniq)
-        _lembrar_do_som(ctx, uniq, speaker={"volume": registrador})
+        _lembrar_do_som(ctx, uniq, speaker={"volume": registrador, "muted": False})
         return
 
     raise ValueError(f"volume: não sei ajustar {qual!r} — a página manda "
@@ -2466,7 +2419,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "volume-padrao", grava="gravar_pelo_gesto")
 def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O botão «Padrão» do volume do alto-falante: um interruptor, como o ♪ ao lado.
+    """O botão «Padrão» do volume do alto-falante: um interruptor.
 
     04/10/2026, desenho aprovado. Ligado, o volume é o do JOGO (os 100% de sempre, sem ajuste do
     Hefesto) e a barra fica verde e travada; desligado, o usuário ajusta, e o volume escolhido

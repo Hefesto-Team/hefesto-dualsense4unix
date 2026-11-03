@@ -82,7 +82,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | aba | feats | IGUAL | DIFER | FALTA | SO_HTML | ? | paridade |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 01-jogar | 40 | 10 | 23 | 4 | 2 | 1 | 25% |
-| 02-controles | 48 | 14 | 24 | 6 | 4 | 0 | 29% |
+| 02-controles | 48 | 14 | 23 | 7 | 4 | 0 | 29% |
 | 03-gatilhos | 31 | 8 | 10 | 7 | 5 | 1 | 26% |
 | 04-iluminacao | 34 | 8 | 13 | 6 | 6 | 1 | 24% |
 | 05-vibracao | 31 | 12 | 11 | 5 | 3 | 0 | 39% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 44 | 12 | 23 | 9 | 0 | 0 | 27% |
 | 09-sistema | 38 | 12 | 19 | 4 | 3 | 0 | 32% |
 | 10-perfis | 48 | 12 | 21 | 9 | 6 | 0 | 25% |
-| TODAS | 378 | 103 | 170 | 61 | 41 | 3 | 27% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 378 | 103 | 169 | 62 | 41 | 3 | 27% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -763,3 +763,7 @@ de `IGUAL` a `DIFERENTE`, **«a dica da disputa»** de `IGUAL` a `FALTA_NO_HTML`
 a `FALTA_NO_HTML`. A tabela acima foi recontada do CSV: `04-iluminacao` vai de `35 · 7 SO_HTML · 23%` para `34 · 6 · 24%`,
 `09-sistema` de `13 IGUAL · 18 DIFER · 34%` para `12 · 19 · 32%`, `10-perfis` de `15 · 20 · 7 FALTA · 31%` para
 `12 · 21 · 9 · 25%`, e `TODAS` de `381 · 109 · 170 · 55 · 44 · 29%` para `380 · 105 · 172 · 57 · 43 · 28%`.
+
+**02/11/2026 — o ♪ do alto-falante sai da tela.** O volume em 0 já cala, e o volume que sobe solta o mudo. A linha
+**«Alto-falante — o botão de mudo»** vai de `DIFERENTE` a `FALTA_NO_HTML`: `02-controles` vai de `24 DIFER · 6 FALTA`
+para `23 · 7`, e `TODAS` de `170 · 61` para `169 · 62`.

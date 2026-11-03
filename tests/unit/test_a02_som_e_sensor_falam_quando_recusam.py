@@ -313,13 +313,13 @@ class TestOsDoisDeslizantes:
         assert p.chamadas == [("mic_volume_set_detalhado", (42,), {"uniq": UNIQ})]
 
     def test_o_deslizante_do_alto_falante_passa_pela_curva_medida(self) -> None:
-        """MORDIDA: mande o número cru e isto reprova."""
+        """MORDIDA: mande o número cru, ou deixe o mudo preso, e isto reprova."""
         p = PonteDeMentira()
         _gesto("volume")(_ctx(), {"uniq": UNIQ, "volume": "alto-falante",
                                   "valor": "80"}, p)
         assert p.chamadas == [
             ("speaker_set", (), {"volume": volume_do_percentual(80),
-                                 "uniq": UNIQ})
+                                 "muted": False, "uniq": UNIQ})
         ]
         assert volume_do_percentual(80) != 80, (
             "a curva virou identidade — se isso for verdade um dia, esta régua "
@@ -361,41 +361,8 @@ class TestOAltoFalanteMostraOMudo:
             "vê é o defeito que a decisão [09] fechou"
         )
 
-    def test_o_simbolo_acende_pelo_que_o_aparelho_diz(self) -> None:
-        """MORDIDA: tire o `data-campo="alto-mudo"` do ♪ e isto reprova."""
+    def test_o_alto_falante_nao_tem_botao_de_calar(self) -> None:
+        """O ♪ saiu em 02/11/2026: o volume em 0 cala, e o volume que sobe solta o mudo."""
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
-        assert doc.count('data-campo="alto-mudo"') >= 1
-        import mesa_viva
-
-        assert doc.count(f'data-hef-quando="{mesa_viva.DESLIGADO}"') >= 1, (
-            "o ♪ perdeu o valor que o acende — ele volta a acender por desenho"
-        )
-
-    def test_o_pacote_emite_os_tres_estados_do_mudo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """São TRÊS, e o terceiro é a razão de o campo não ser um `bool`."""
-        import mesa_viva
-
-        import pacotes.a02_controles as a02
-
-        assert mesa_viva.selo_do_mic(True, True) == mesa_viva.DESLIGADO
-        assert mesa_viva.selo_do_mic(False, True) == "ATIVO"
-        assert mesa_viva.selo_do_mic(False, False) == mesa_viva.SEM_LEITOR
-
-        monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
-
-        def _campo(speaker: Any) -> str:
-            entrada: dict[str, Any] = {
-                "uniq": UNIQ, "transport": "usb", "connected": True,
-                "inputs": {}, "audio": {}}
-            if speaker is not None:
-                entrada["speaker"] = speaker
-            cards = a02.pacote(_ctx(**entrada))["cards"]
-            assert cards, "o pacote não montou card nenhum — régua cega"
-            return next(iter(cards.values())).get("alto-mudo", "AUSENTE")
-
-        assert _campo({"volume": 102, "muted": True}) == mesa_viva.DESLIGADO
-        assert _campo({"volume": 102, "muted": False}) == "ATIVO"
-        assert _campo({"volume": 102}) == mesa_viva.SEM_LEITOR
-        assert _campo(None) == mesa_viva.SEM_LEITOR
+        assert 'data-mudo="alto-falante"' not in doc
+        assert 'data-campo="alto-mudo"' not in doc

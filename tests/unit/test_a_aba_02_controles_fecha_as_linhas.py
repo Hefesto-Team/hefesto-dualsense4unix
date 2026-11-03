@@ -237,22 +237,15 @@ def test_com_leitura_o_botao_do_microfone_nao_fica_cinza() -> None:
         "mic-porque"] == ""
 
 
-def test_a_razao_do_alto_falante_aponta_para_o_deslizante() -> None:
-    """A frase do ♪ manda para o que DESTRAVA o botão, e ele existe desde a D-08."""
-    razao = a02.porques_do_som({**BASE, "speaker": {}})["alto-porque"]
-    assert razao == a02.DICA_ALTO_SEM_POSSE
-    assert "deslizante" in razao or "Arraste" in razao
-
-
-def test_com_volume_conhecido_o_alto_falante_nao_fica_cinza() -> None:
-    assert a02.porques_do_som(
-        {**BASE, "speaker": {"volume": 102, "muted": False}})["alto-porque"] == ""
+def test_o_alto_falante_so_recusa_sem_endereco() -> None:
+    """O volume que se arrasta é escrito pelo Hefesto, e não depende de leitura anterior."""
+    assert a02.porques_do_som({**BASE, "speaker": {}})["alto-porque"] == ""
 
 
 def test_as_duas_razoes_chegam_ao_card() -> None:
     """O caminho inteiro — o pacote emite os dois `?` no card daquele controle."""
     campos = _card({"audio": {}, "speaker": {}})
-    assert campos["mic-porque"] and campos["alto-porque"]
+    assert campos["mic-porque"] and campos["alto-porque"] == ""
 
 
 BYTE_PC = audio_saida.BYTE_TODO_O_SOM_DO_PC
@@ -574,12 +567,6 @@ def test_o_nada_a_dizer_nao_divergiu_do_da_folha() -> None:
 
 O_SOM_EM_TRES_ESTADOS = r"""
 (() => {
-  const card = document.querySelector('.ctl[data-controle="p1"]');
-  const bloco = card.querySelector('[data-bloco="alto-falante"]');
-  const botao = bloco.querySelector('.mudo-i[data-mudo="alto-falante"]');
-  const linha = bloco.querySelector('.vol');
-  // A SONDA: um elemento que a própria página pinta com a variável, para o
-  // motor devolver `rgb(...)` em vez do hexadecimal escrito na folha.
   const cor_de = variavel => {
     const p = document.createElement('span');
     p.style.color = 'var(' + variavel + ')';
@@ -588,32 +575,8 @@ O_SOM_EM_TRES_ESTADOS = r"""
     p.remove();
     return c;
   };
-  const borda = () => getComputedStyle(botao).borderTopColor;
-  // AS TRÊS PALAVRAS SÃO AS DO DONO (`mesa_viva.ATIVO`/`DESLIGADO` e o
-  // travessão de `SEM_LEITOR`). As palavras estão digitadas aqui porque este trecho é
-  // JAVASCRIPT que roda no navegador, longe do import do Python — e é por isso
-  // que a asserção lá embaixo lê `mesa_viva`: se o dono mudar a palavra de
-  // novo, a régua reprova com a divergência na cara, em vez de medir nada.
-  const tique = v => {
-    window.__hef.pintar({colunas: {p1: {'alto-mudo': v}}});
-    return {valor: v, som: botao.getAttribute('data-som'), borda: borda()};
-  };
-
-  const por_tique = ['—', 'ATIVO', 'DESLIGADO', 'ATIVO', '—'].map(tique);
-
-  // O CINZA DA RAZÃO CONTRA O VERDE DO ATIVO: o produto escreve as duas coisas
-  // pelos seus caminhos — o `data-porque` da LINHA e o `data-som` do botão —,
-  // e um botão que o produto vai recusar não pode aparecer verde.
-  window.__hef.pintar({colunas: {p1: {'alto-mudo': 'ATIVO',
-                                      'alto-porque': 'razão de prova'}}});
-  const cinza_com_ativo = borda();
-  window.__hef.pintar({colunas: {p1: {'alto-porque': '—'}}});
-  const sem_razao_com_ativo = borda();
-
-  // O CLIQUE, e ele passa pelo ouvinte do piloto: o que sai é o gesto de
-  // verdade, com o dono e o campo.
-  window.__cartas.length = 0;
-  botao.click();
+  const card = document.querySelector('.ctl[data-controle="p1"]');
+  const bloco = card.querySelector('[data-bloco="alto-falante"]');
 
   // O 🎙 DOS DOIS CARDS: nenhuma cor congelada, e nenhum endereço — quem diz o
   // estado do microfone é o selo ao lado, que é vivo.
@@ -626,15 +589,8 @@ O_SOM_EM_TRES_ESTADOS = r"""
                 borda: getComputedStyle(m).borderTopColor}));
 
   return {
-    verde: cor_de('--green'), ambar: cor_de('--orange'), vermelho: cor_de('--red'),
-    por_tique: por_tique,
-    cinza_com_ativo: cinza_com_ativo,
-    sem_razao_com_ativo: sem_razao_com_ativo,
-    alvo_do_som: botao.dataset.hefAlvo || '',
-    atributo_do_som: botao.dataset.hefAtributo || '',
-    texto_do_botao: botao.textContent.trim(),
-    cartas: window.__cartas.map(c => ({gesto: c.gesto, mudo: c.mudo,
-                                       controle: c.controle, campo: c.campo})),
+    vermelho: cor_de('--red'),
+    alto_mudo: bloco.querySelectorAll('[data-mudo], [data-campo="alto-mudo"]').length,
     mics: mics,
     // A REGRA ÓRFÃ: `.mudo-i.on` perdeu os dois escritores e saiu da folha.
     on_na_folha: [...document.styleSheets].some(f => {
@@ -673,69 +629,12 @@ def som() -> dict[str, Any]:
 
 
 @skip_sem_gi_real
-def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
+def test_o_alto_falante_nao_tem_botao_de_calar_e_a_regra_orfa_saiu(
         som: dict[str, Any]) -> None:
-    """02-Q9 — *"borda VERDE se ligado, ÂMBAR se desligado"*, e o cinza de "não sei"."""
-    import mesa_viva
-
-    por_valor = {t["valor"]: t for t in som["por_tique"]}
-    assert por_valor[mesa_viva.ATIVO]["borda"] == som["verde"], (
-        f"o ♪ {mesa_viva.ATIVO} não pintou o `--green` da própria página "
-        f"({por_valor[mesa_viva.ATIVO]['borda']} ≠ {som['verde']})")
-    assert por_valor[mesa_viva.DESLIGADO]["borda"] == som["ambar"], (
-        f"o ♪ {mesa_viva.DESLIGADO} não pintou o `--orange` da própria página "
-        f"({por_valor[mesa_viva.DESLIGADO]['borda']} ≠ {som['ambar']})")
-    assert por_valor[mesa_viva.ATIVO]["borda"] != por_valor[mesa_viva.DESLIGADO]["borda"], (
-        "os dois estados do ♪ pintam a MESMA cor — a tela voltou a não "
-        "distinguir o alto-falante que toca do que está calado")
-    assert por_valor["—"]["som"] is None, (
-        "o travessão não apagou o `data-som` — um controle sem leitura ficaria "
-        "afirmando um estado que ninguém mediu")
-    assert por_valor["—"]["borda"] not in (som["verde"], som["ambar"]), (
-        "o ♪ sem leitura pintou uma das duas cores de estado")
-    assert som["vermelho"] not in (por_valor["ATIVO"]["borda"],
-                                   por_valor[mesa_viva.DESLIGADO]["borda"],
-                                   por_valor["—"]["borda"]), (
-        "o ♪ voltou a pintar a cor da falha sobre um estado que quem usa escolheu")
+    """O ♪ saiu em 02/11/2026: o volume em 0 cala, e o volume que sobe solta o mudo."""
+    assert som["alto_mudo"] == 0, "o ♪ voltou ao bloco do alto-falante"
     assert not som["on_na_folha"], (
-        "`.mudo-i.on` continua na folha sem nenhum escritor — CSS de elemento "
-        "que ninguém mais escreve é promessa esperando alguém tropeçar na promessa")
-
-
-@skip_sem_gi_real
-def test_o_cinza_da_razao_vence_o_verde_do_ativo(som: dict[str, Any]) -> None:
-    """Um botão que o produto VAI RECUSAR não pode aparecer verde."""
-    assert som["cinza_com_ativo"] != som["verde"], (
-        "o ♪ apagado pela razão pintou o verde do ATIVO — a tela oferece "
-        "em cor cheia um botão que o produto vai recusar")
-    assert som["sem_razao_com_ativo"] == som["verde"], (
-        "tirar a razão não devolveu o verde — o cinza virou permanente, e o "
-        "botão deixou de dizer que voltou a funcionar")
-
-
-@skip_sem_gi_real
-def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
-        som: dict[str, Any]) -> None:
-    """O CLIQUE e a RESPOSTA, e a resposta é a do tique seguinte."""
-    assert len(som["cartas"]) == 1, (
-        f"o clique no ♪ não saiu UMA vez: {som['cartas']}")
-    carta = som["cartas"][0]
-    assert carta["gesto"] == "mudo"
-    assert carta["mudo"] == "alto-falante"
-    assert carta["controle"] == "p1", (
-        "o clique saiu sem dizer em QUAL controle — sem alvo o gesto não sabe "
-        "qual alto-falante calar")
-    bordas = [t["borda"] for t in som["por_tique"]]
-    assert bordas[1] == bordas[3], (
-        "o ♪ não voltou ao verde depois de passar pelo âmbar — a cor ficou "
-        "presa no estado anterior")
-    assert bordas[0] == bordas[4], (
-        "o ♪ não voltou ao neutro quando a leitura sumiu de novo")
-    assert som["texto_do_botao"] == "♪", (
-        f"o piloto escreveu {som['texto_do_botao']!r} dentro do botão, no "
-        f"lugar do glifo — o alvo deixou de ser `atributo`")
-    assert som["alvo_do_som"] == "atributo"
-    assert som["atributo_do_som"] == a02_gerador.ATRIBUTO_DO_SOM
+        "`.mudo-i.on` continua na folha sem nenhum escritor")
 
 
 @skip_sem_gi_real
@@ -759,8 +658,7 @@ def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
 
 def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
     """As duas dicas mandavam para uma janela sem lançador desde 01/09/2026."""
-    for nome, dica in (("🎙", a02_gerador.DICA_MIC_TESTAR),
-                       ("♪", a02_gerador.DICA_ALTO_MUDO)):
+    for nome, dica in (("🎙", a02_gerador.DICA_MIC_TESTAR),):
         assert "janela" not in dica.lower(), (
             f"a dica do {nome} continua mandando para uma janela: {dica!r}")
         assert "hefesto-dualsense4unix" not in dica, (

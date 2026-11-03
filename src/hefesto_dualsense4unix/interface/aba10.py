@@ -2,7 +2,7 @@ import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import collections
 import re
 import onde
-from monta import monta, glifo, cor_da_zona, rotulo, botao_cinza, CSS_GLIFO, MESA, SEPARADOR, R, modo_auto, vaga_da_extensao
+from monta import monta, glifo, cor_da_zona, rotulo, botao_cinza, CSS_GLIFO, MESA, SEPARADOR, R
 
 sys.path.insert(0, str(R.parents[1]))
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import (
@@ -824,10 +824,6 @@ MIOLO = f'''
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
               </div>
-              <div class="campo">
-                <span data-dica="O modo do perfil inteiro; cada aba o mostra na sua seção">Modo:</span>
-                <span class="val">{modo_auto("editor.modos", dica="O jogo decide em todas as abas; o estilo ajusta o resto", pede=True)}{vaga_da_extensao("editor.modos")}</span>
-              </div>
               <div class="ordem-vale on" data-hef="editor.ordem.ha" data-hef-alvo="classe" data-hef-classe="on">
                 <div class="cab" data-dica="Arraste: o de cima vale quando os dois servem">Qual vale primeiro</div>
                 <ol data-hef="editor.ordem">
@@ -1138,9 +1134,11 @@ def _conferir(html: str) -> None:
            "o quadro Modo voltou ao editor de Perfis — ele sai por ordem "
            "de 11/09/2026, e a aba onde o modo se escolhe é a Jogar")
     exigir('data-modo="' not in html,
-           "um botão desta aba voltou a carregar `data-modo` — o atributo é do quadro que saiu; "
-           "o modo do perfil inteiro leva o `data-pede`, porque a régua de ponteiros da casa lê "
-           "o `data-modo` como modo")
+           "um botão desta aba voltou a carregar `data-modo` — o atributo é do quadro que saiu, "
+           "e a régua de ponteiros da casa o lê como modo")
+    exigir('data-gesto="editor.modos"' not in html and "modo-ext" not in html,
+           "o Modo automático ou o modo da extensão voltou à aba Perfis — cada aba já mostra o "
+           "modo da sua seção, e o par aqui repetia o que mora nas abas")
     exigir('data-hef="editor.modo"' not in html,
            "o endereço `editor.modo` voltou à página — o gesto que o gravava "
            "saiu de `a10_perfis` junto com o quadro, e um endereço sem gesto é "
