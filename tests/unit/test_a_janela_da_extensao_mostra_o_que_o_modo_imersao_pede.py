@@ -67,6 +67,7 @@ PULSO = {"id": "efeito-pulso", "rotulo": "Pulso", "tipo": "ligado",
 
 
 def test_a_lista_leva_a_cor_quando_se_sabe(curto: pathlib.Path) -> None:  # noqa: F811
+    """Prova da D-0211-A-LISTA-DOS-CONTROLES-LEVA-A-COR."""
     def controles() -> list[dict[str, Any]]:
         return [{"uniq": UM, "jogador": 1, "cor": "Starlight Blue"},
                 {"uniq": DOIS, "jogador": 2, "cor": ""}]
@@ -127,6 +128,7 @@ def test_a_porta_diz_o_jogo_em_cena_a_janela(curto: pathlib.Path) -> None:  # no
 
 
 def test_as_linhas_cortam_no_teto() -> None:
+    """Prova da D-0211-AS-LINHAS-DO-AGORA-TEM-TETO."""
     from hefesto_dualsense4unix.mods.porta import (
         LINHAS_DO_AGORA,
         RecusaError,
@@ -208,6 +210,7 @@ def _ligada() -> bool:
 
 
 def test_a_memoria_liga_e_desliga_o_jogo_em_cena(janela: Any, ctx: Any) -> None:  # noqa: F811
+    """Prova da D-0211-A-MEMORIA-E-UMA-CHAVE-DO-JOGO-EM-CENA."""
     a07, abrir = janela
     assert _chave_da_memoria(abrir(_Ponte({"ligado": True}))) is None, "sem jogo, a linha ficou"
     ponte = _Ponte({"ligado": True, "jogo": JOGO})

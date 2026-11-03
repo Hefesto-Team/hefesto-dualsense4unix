@@ -20,6 +20,7 @@ from tests.unit.test_a_janela_da_extensao_mostra_o_que_o_modo_imersao_pede impor
 
 
 def test_presentes_sem_publicar_mostram_e_lista_publicada_decide() -> None:
+    """Prova da D-0211-O-PRESENTE-SEM-ESTADO-MOSTRA-A-OPCAO."""
     m = Manifesto.model_validate(_manifesto(opcoes=[PULSO]))
     assert opcoes.aparecem(m, {}, None) == {"efeito-pulso"}
     assert opcoes.aparecem(m, {}, ["pulso"]) == {"efeito-pulso"}

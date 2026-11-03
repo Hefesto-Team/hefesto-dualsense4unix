@@ -211,6 +211,7 @@ def test_com_a_secao_controles_fora_do_modo_da_extensao_o_pedido_recusa(
 
 
 def test_o_peso_avisa_quando_o_ultimo_pedido_some() -> None:
+    """Prova da D-0211-O-PESO-DA-MIRA-SE-SOLTA-PELO-AVISO."""
     agora = [0.0]
     peso = roteador.PesoDaMira(relogio=lambda: agora[0])
     avisos: list[int] = []

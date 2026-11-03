@@ -50,6 +50,7 @@ def _chave(lista: str, mod_id: str = "toque") -> tuple[str, str, str]:
 
 
 def test_a_de_fabrica_com_aviso_chega_e_espera_o_sim(lar, ctx, tmp_path) -> None:  # noqa: F811
+    """Prova da D-0211-A-EXTENSAO-DE-FABRICA-COM-AVISO-ESPERA-O-SIM."""
     a07 = _a07()
     feito = _trazer_de_fabrica(lar, tmp_path, _fonte(tmp_path, extra={"aviso": _AVISO}))
     entrada = _entrada(lar, "toque")

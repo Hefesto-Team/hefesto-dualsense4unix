@@ -381,7 +381,10 @@ def test_com_a_cura_da_distro_nao_ha_fonte_nem_construcao(tmp_path: Path) -> Non
 
 
 def test_no_caminho_que_instala_a_fonte_entra_depois_do_apt_install(tmp_path: Path) -> None:
-    """MORDIDA: publicar antes do install deixaria um `apt upgrade` trocar o PipeWire recusado."""
+    """MORDIDA: publicar antes do install deixaria um `apt upgrade` trocar o PipeWire recusado.
+
+    Prova da D-0211-O-PIPEWIRE-DA-CASA-E-FONTE-DO-APT.
+    """
     b = _cenario(tmp_path, instalada=PW_POP)
     b.passo()
     chamadas = b.chamadas()
