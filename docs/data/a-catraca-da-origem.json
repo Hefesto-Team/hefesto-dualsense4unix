@@ -256,17 +256,17 @@
       "universo": 419
     },
     "tamanho": {
-      "data": "2026-11-02",
+      "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1196415,
+      "piso": 1196043,
       "por_item": {
-        "docs": 108388,
-        "scripts": 111021,
-        "src": 302807,
-        "tests": 674199
+        "docs": 108392,
+        "scripts": 111019,
+        "src": 302625,
+        "tests": 674007
       },
-      "razao": "tamanho: +2816 linhas (1193599 -> 1196415), pagas por Origem: D-0211-O-PIPEWIRE-DA-CASA-E-FONTE-DO-APT; registrado no fecho, topo 54a54358bffd",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
