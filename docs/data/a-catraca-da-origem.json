@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202509,
+      "piso": 1202741,
       "por_item": {
-        "docs": 108639,
+        "docs": 108657,
         "scripts": 111267,
         "src": 303653,
-        "tests": 678950
+        "tests": 679164
       },
-      "razao": "tamanho: +1 linhas (1202508 -> 1202509), pagas por Origem: audio.alto_falante, plataforma.vpad; registrado no fecho, topo 0c85ce2db31c",
+      "razao": "tamanho: +232 linhas (1202509 -> 1202741), pagas por Origem: audio.alto_falante, plataforma.vpad; registrado no fecho, topo d1fe97ab419c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1629,6 +1629,12 @@
           "de": 1202508,
           "para": 1202509,
           "razao": "tamanho: +1 linhas (1202508 -> 1202509), pagas por Origem: audio.alto_falante, plataforma.vpad; registrado no fecho, topo 0c85ce2db31c"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1202509,
+          "para": 1202741,
+          "razao": "tamanho: +232 linhas (1202509 -> 1202741), pagas por Origem: audio.alto_falante, plataforma.vpad; registrado no fecho, topo d1fe97ab419c"
         }
       ],
       "unidade": "linhas",
