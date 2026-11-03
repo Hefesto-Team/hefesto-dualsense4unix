@@ -355,17 +355,13 @@ def apply_player_number(
 def hidraw_do_uniq(uniq: str | None) -> str | None:
     """O ``/dev/hidrawN`` do aparelho cujo ``HID_UNIQ`` normalizado é ``uniq``, lido no sysfs."""
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
     alvo = norm_mac(uniq)
     if not alvo:
         return None
     for uevent in sorted(glob.glob(f"{RAIZ_HIDRAW}/hidraw*/device/uevent")):
-        try:
-            with open(uevent, encoding="ascii", errors="replace") as fh:
-                linhas = fh.read().splitlines()
-        except OSError:
-            continue
-        for linha in linhas:
+        for linha in ler_texto(uevent).splitlines():
             if linha.startswith("HID_UNIQ=") and norm_mac(linha[9:]) == alvo:
                 return "/dev/" + os.path.basename(os.path.dirname(os.path.dirname(uevent)))
     return None
@@ -390,13 +386,13 @@ def luzes_do_externo(hidraw_dev: str | None, leds_root: str | None = None) -> li
 
 def retrato_das_luzes(caminhos: list[str]) -> dict[str, int]:
     """O valor de cada ``brightness`` agora, para devolver no fim da sessão do jogo."""
+    from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
+
     retrato: dict[str, int] = {}
     for caminho in caminhos:
-        try:
-            with open(caminho, encoding="ascii") as fh:
-                retrato[caminho] = int(fh.read().strip() or 0)
-        except (OSError, ValueError):
-            continue
+        texto = ler_texto(caminho).strip()
+        if texto.isdigit():
+            retrato[caminho] = int(texto)
     return retrato
 
 

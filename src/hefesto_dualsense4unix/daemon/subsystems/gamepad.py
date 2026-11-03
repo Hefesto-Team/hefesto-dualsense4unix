@@ -3315,15 +3315,12 @@ def _o_numero_do_jogo(daemon: Any, bits: Any, target_uniq: str) -> None:
     _o_numero_do_jogo_no_controle_de_fora(daemon, bits, target_uniq)
 
 
-def _luzes_de_fora(daemon: Any) -> dict[str, _LuzDeFora] | None:
+def _luzes_de_fora(daemon: Any) -> dict[str, _LuzDeFora]:
     luzes = getattr(daemon, _ATRIBUTO_DA_LUZ_DE_FORA, None)
     if isinstance(luzes, dict):
         return luzes
     novas: dict[str, _LuzDeFora] = {}
-    try:
-        setattr(daemon, _ATRIBUTO_DA_LUZ_DE_FORA, novas)
-    except Exception:
-        return None
+    setattr(daemon, _ATRIBUTO_DA_LUZ_DE_FORA, novas)
     return novas
 
 
@@ -3335,12 +3332,9 @@ def _e_um_dualsense_aberto(daemon: Any, target_uniq: str) -> bool:
         fonte: Any = getattr(daemon.controller, nome, None)
         if not callable(fonte):
             continue
-        try:
-            achados = fonte()
-            uniqs = achados.values() if nome == "alvos_conectados" else achados
-            abertos.update(norm_mac(uniq) for uniq in uniqs)
-        except Exception:
-            continue
+        achados = fonte()
+        uniqs = achados.values() if nome == "alvos_conectados" else achados
+        abertos.update(norm_mac(uniq) for uniq in uniqs)
     return norm_mac(target_uniq) in abertos
 
 
@@ -3361,7 +3355,7 @@ def _o_numero_do_jogo_no_controle_de_fora(daemon: Any, bits: Any, target_uniq: s
 
         numero = numero_do_desenho(bits)
         luzes = _luzes_de_fora(daemon)
-        if numero is None or luzes is None:
+        if numero is None:
             return
         luz = luzes.get(target_uniq)
         if luz is None:

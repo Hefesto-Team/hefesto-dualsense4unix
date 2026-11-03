@@ -56,6 +56,30 @@ def _texto(caminho: str) -> str:
         return ""
 
 
+def _entradas(pasta: str) -> list[str]:
+    """O ``listdir``; ``[]`` quando o processo saiu entre a lista e a leitura."""
+    try:
+        return os.listdir(pasta)
+    except OSError:
+        return []
+
+
+def _alvo_do_link(link: str) -> str:
+    """O ``readlink``; ``""`` quando o descritor fechou no meio da varredura."""
+    try:
+        return os.readlink(link)
+    except OSError:
+        return ""
+
+
+def _inode(caminho: str) -> int:
+    """O inode por ``os.stat``, que não abre o nó; ``0`` (nenhum inode válido) quando ele sumiu."""
+    try:
+        return os.stat(caminho).st_ino
+    except OSError:
+        return 0
+
+
 def _caminho(valor: Any) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
@@ -100,11 +124,9 @@ def inodes(nos: dict[str, int | None]) -> dict[int, str]:
     achados: dict[int, str] = {}
     for caminho, ino in nos.items():
         if ino is None:
-            try:
-                ino = os.stat(caminho).st_ino
-            except OSError:
-                continue
-        achados[ino] = caminho
+            ino = _inode(caminho)
+        if ino:
+            achados[ino] = caminho
     return achados
 
 
@@ -132,28 +154,17 @@ def seguradores(
     nomes_dos_nos = {os.path.basename(caminho) for caminho in alvos.values()}
     achados: list[Segurador] = []
     prazo = relogio() + orcamento_s
-    try:
-        entradas = os.listdir(raiz_proc)
-    except OSError:
-        return achados
-    for entrada in entradas:
+    for entrada in _entradas(raiz_proc):
         if not entrada.isdigit():
             continue
         pasta = os.path.join(raiz_proc, entrada, "fd")
-        try:
-            descritores = os.listdir(pasta)
-        except OSError:
-            continue
-        for descritor in descritores:
+        for descritor in _entradas(pasta):
             if relogio() > prazo:
                 return achados
             link = os.path.join(pasta, descritor)
-            try:
-                if os.path.basename(os.readlink(link)) not in nomes_dos_nos:
-                    continue
-                ino = os.stat(link).st_ino
-            except OSError:
+            if os.path.basename(_alvo_do_link(link)) not in nomes_dos_nos:
                 continue
+            ino = _inode(link)
             no = alvos.get(ino)
             if no is None:
                 continue
