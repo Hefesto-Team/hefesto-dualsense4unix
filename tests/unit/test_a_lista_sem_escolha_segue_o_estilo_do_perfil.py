@@ -137,3 +137,38 @@ def test_o_perfil_com_gatilho_gravado_nao_muda() -> None:
     assert (antigo.triggers.left.mode, antigo.triggers.left.params) == ("Rigid", [5, 200])
     lista = _as_tres_listas(antigo.model_dump(mode="json"), _uniqs(1)[0])
     assert lista[2:] != ["sem_efeito", "sem_efeito"]
+
+
+def _pelos_pacotes(monkeypatch: pytest.MonkeyPatch, cru: dict[str, Any], uniqs: list[str],
+                   ) -> list[list[str]]:
+    """As três listas como a 03 e a 05 pintam, pelo `pacote()` de cada aba."""
+    from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil
+
+    monkeypatch.setattr(perfil, "ativo", lambda _n: cru)
+    monkeypatch.setattr(perfil, "ativo_que_vale", lambda _n: cru)
+    conectados = [{"uniq": u, "connected": True, "player": n, "transport": "usb",
+                   "inputs": {"l2_raw": 0, "r2_raw": 0}} for n, u in enumerate(uniqs, start=1)]
+    mesa = [{"uniq": u, "pref": f"p{n}", "jogador": n, "nome": "Prova", "cor": "",
+             "transporte": "usb", "via": "cabo", "alvo": n == 1, "mascara": "dualsense"}
+            for n, u in enumerate(uniqs, start=1)]
+    ctx = Contexto(state={"controllers": conectados, "active_profile": cru["name"]},
+                   mesa=mesa, conectados=conectados, estados={}, externos=[])
+    c05 = a05_vibracao.pacote(ctx)["colunas"]
+    c03 = a03_gatilhos.pacote(ctx)["colunas"]
+    return [[c05[u]["haptico-escolha"], c05[u]["imersao-escolha"],
+             c03[u][f"{a03_gatilhos.CAMPO_DA_IMERSAO}-e"],
+             c03[u][f"{a03_gatilhos.CAMPO_DA_IMERSAO}-d"]] for u in uniqs]
+
+
+@pytest.mark.parametrize("jogadores", [1, 4])
+def test_os_pacotes_das_abas_pintam_o_estilo_do_perfil(
+    monkeypatch: pytest.MonkeyPatch, jogadores: int,
+) -> None:
+    """A pintura real da 03 e da 05: o estilo do perfil chega ao dono, não só nas peças."""
+    uniqs = _uniqs(jogadores)
+    novo, _ = a10_perfis._com_o_estilo(
+        Profile(name="Com estilo", match=MatchAny()), POR_CHAVE["fps"], [])
+    com = novo.model_dump(mode="json")
+    assert _pelos_pacotes(monkeypatch, com, uniqs) == [["do_estilo"] * 4] * jogadores, DECISAO
+    sem = Profile(name="Perfil novo", match=MatchAny()).model_dump(mode="json")
+    assert _pelos_pacotes(monkeypatch, sem, uniqs) == [["sem_efeito"] * 4] * jogadores, DECISAO
