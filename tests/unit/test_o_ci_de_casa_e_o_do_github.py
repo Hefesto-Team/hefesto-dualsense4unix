@@ -197,6 +197,7 @@ echo "ARGS: $*"
 echo "CWD: $(pwd)"
 echo "ARQUIVOS: $(ls -A | tr '\n' ' ')"
 echo "ENV: ${RUNNER_TOOL_CACHE:-}"
+echo "SEGREDO: ${HEFESTO_BIBLIOTECA_VEDADA:+veio}"
 for ((i = 0; i < ${#args[@]}; i++)); do
   [ "${args[i]}" = "--action-cache-path" ] && cache="${args[i+1]}"
 done
@@ -691,3 +692,37 @@ def test_o_ci_de_casa_nao_tem_lista_propria_de_portoes() -> None:
         if runner != "bin" and argv.split()[0] in texto
     )
     assert not citados, f"o ci-local.sh cita o comando de portão da tabela: {citados}"
+
+
+TITULO_DE_MENTIRA = "Jogo Vedado De Mentira"
+
+
+def _linha(log: str, prefixo: str) -> str:
+    return next(ln for ln in log.splitlines() if ln.startswith(prefixo))
+
+
+def test_a_lista_vedada_de_casa_chega_ao_act_como_segredo_e_o_valor_nao_vaza(mundo: Mundo) -> None:
+    lista = mundo.base / ".config" / "hefesto" / "biblioteca-vedada"
+    lista.parent.mkdir(parents=True)
+    lista.write_text(TITULO_DE_MENTIRA + "\n", encoding="utf-8")
+    r = mundo.rodar("--job", "glifos")
+    log = mundo.log("glifos")
+    assert "-s HEFESTO_BIBLIOTECA_VEDADA" in _linha(log, "ARGS:")
+    assert _linha(log, "SEGREDO:") == "SEGREDO: veio"
+    assert TITULO_DE_MENTIRA not in log + r.stdout + r.stderr
+
+
+def test_o_segredo_do_ambiente_vence_a_lista_de_casa(mundo: Mundo) -> None:
+    r = mundo.rodar("--job", "glifos", HEFESTO_BIBLIOTECA_VEDADA=TITULO_DE_MENTIRA)
+    log = mundo.log("glifos")
+    assert "-s HEFESTO_BIBLIOTECA_VEDADA" in _linha(log, "ARGS:")
+    assert _linha(log, "SEGREDO:") == "SEGREDO: veio"
+    assert TITULO_DE_MENTIRA not in log + r.stdout + r.stderr
+
+
+def test_sem_a_lista_o_act_roda_sem_segredo_e_o_script_diz(mundo: Mundo) -> None:
+    r = mundo.rodar("--job", "glifos")
+    log = mundo.log("glifos")
+    assert "HEFESTO_BIBLIOTECA_VEDADA" not in _linha(log, "ARGS:")
+    assert _linha(log, "SEGREDO:").strip() == "SEGREDO:"
+    assert "sem a lista da biblioteca vedada" in r.stderr

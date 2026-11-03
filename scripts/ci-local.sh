@@ -232,6 +232,16 @@ if [ -n "$GITDIR" ] && [ -d "$GITDIR" ]; then
 fi
 OPCOES=()
 [ "${#OPCOES_DOCKER[@]}" -gt 0 ] && OPCOES=(--container-options "${OPCOES_DOCKER[*]}")
+LISTA_VEDADA="$HOME/.config/hefesto/biblioteca-vedada"
+if [ -z "${HEFESTO_BIBLIOTECA_VEDADA:-}" ] && [ -r "$LISTA_VEDADA" ]; then
+  HEFESTO_BIBLIOTECA_VEDADA="$(cat "$LISTA_VEDADA")"
+  export HEFESTO_BIBLIOTECA_VEDADA
+fi
+if [ -n "${HEFESTO_BIBLIOTECA_VEDADA:-}" ]; then
+  OPCOES+=(-s HEFESTO_BIBLIOTECA_VEDADA)
+else
+  echo "ci-local: sem a lista da biblioteca vedada ($LISTA_VEDADA): o passo da biblioteca no job anonymity reprova, como no GitHub sem o segredo" >&2
+fi
 
 tirar_passo() {
   awk -v job="$2" -v passo="$3" '
