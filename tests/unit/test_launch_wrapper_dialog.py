@@ -199,6 +199,7 @@ _DISPLAY_OK = False
 with contextlib.suppress(Exception):
     import gi as _gi
 
+    _gi.require_version("Gdk", "3.0")
     _gi.require_version("Gtk", "3.0")
     from gi.repository import Gdk as _Gdk
 
