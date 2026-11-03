@@ -1908,7 +1908,7 @@ O discriminador que separa os dois casos é limpo:
 > bomba, e o diário diz `uhid_rumble_do_jogo_morto` com o motivo. O `UHID_CLOSE`, o
 > `UHID_STOP` e a parada do SDL continuam soltando na hora.
 >
-> **GRAU: MEDIDO AQUI** para os cortes (o diário de 02/11); a régua é
+> **GRAU: MEDIDO AQUI** para os cortes (o diário de 02/11); o teste é
 > `tests/unit/test_o_rumble_que_o_jogo_segura_nao_expira_em_tres_segundos.py`.
 
 ---
