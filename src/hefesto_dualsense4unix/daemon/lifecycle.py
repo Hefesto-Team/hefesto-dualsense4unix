@@ -3922,17 +3922,14 @@ class Daemon:
 
     def _any_game_session_open(self) -> bool:
         """Agregado `game_open` de TODOS os vpads (P1 + co-op, NUMA-01)."""
-        vpads: list[Any] = []
-        primary = self._gamepad_device
-        if primary is not None:
-            vpads.append(primary)
-        players = getattr(self._coop_manager, "_players", None)
-        if isinstance(players, dict):
-            for player in players.values():
-                vpad = getattr(player, "vpad", None)
-                if vpad is not None:
-                    vpads.append(vpad)
-        return any(bool(getattr(vpad, "game_open", False)) for vpad in vpads)
+        return any(bool(getattr(vpad, "game_open", False)) for vpad in _os_pads_virtuais(self))
+
+    def _processo_no_pad(self) -> str | None:
+        """O nome do processo de jogo que segura o nó de um pad virtual, ou ``None``."""
+        from hefesto_dualsense4unix.integrations.quem_segura_o_pad import jogo_no_pad
+
+        segurador = jogo_no_pad(_os_pads_virtuais(self))
+        return (segurador.nome or str(segurador.pid)) if segurador is not None else None
 
     def _manager_de_selecao(self) -> Any:
         """`ProfileManager` de LEITURA do daemon, cacheado (MODO-01/B5)."""
@@ -4033,6 +4030,7 @@ class Daemon:
             "exit_marker": exit_marker,
             "exit_pid": exit_pid,
             "appid_de_jogo_vivo": steam_game_running_appid(),
+            "processo_no_pad": self._processo_no_pad(),
             "session_open": self._any_game_session_open(),
             "now": time.time(),
         }
@@ -4056,7 +4054,9 @@ class Daemon:
             anterior = signal.authority
             raw = classify(**inputs)
             appid = self._appid_da_evidencia = _o_appid_da_evidencia(inputs)
-            signal.evaluate(raw, session_open=bool(inputs["session_open"]), appid=appid)
+            pad = _so_o_pad(inputs, raw)
+            sessao = bool(inputs["session_open"])
+            signal.evaluate(raw, session_open=sessao, appid=appid, processo_no_pad=pad)
         novo = signal.authority
         if anterior == "game" and novo == "daemon":
             _soltar_o_pad_do_lancamento(self, MOTIVO_DA_AUTORIDADE)
@@ -5130,6 +5130,31 @@ def _o_p1_fora_do_par_sem_caminho(daemon: Any, flavor_do_jogo: str) -> bool:
         getattr(device, "flavor", None), primary_identity(daemon), flavor_do_jogo,
         vpad=device, caminho=None,
     )
+
+
+def _os_pads_virtuais(daemon: Any) -> list[Any]:
+    """Todo pad virtual de pé: o do P1 e os do co-op."""
+    vpads: list[Any] = []
+    primary = getattr(daemon, "_gamepad_device", None)
+    if primary is not None:
+        vpads.append(primary)
+    players = getattr(getattr(daemon, "_coop_manager", None), "_players", None)
+    if isinstance(players, dict):
+        for player in players.values():
+            vpad = getattr(player, "vpad", None)
+            if vpad is not None:
+                vpads.append(vpad)
+    return vpads
+
+
+def _so_o_pad(inputs: dict[str, Any], raw: str) -> str | None:
+    """O processo no pad quando só ele deu `game`: a transição diz quem a deu."""
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
+
+    pad = inputs.get("processo_no_pad")
+    if raw != "game" or not pad:
+        return None
+    return pad if classify(**{**inputs, "processo_no_pad": None}) != "game" else None
 
 
 __all__ = [

@@ -34,6 +34,7 @@ def classify(
     marker_pid: int | None = None,
     exit_pid: int | None = None,
     appid_de_jogo_vivo: int | None = None,
+    processo_no_pad: str | None = None,
 ) -> Authority:
     """Classifica a autoridade de exibição num instante — 100% pura, sem I/O.
 
@@ -117,7 +118,8 @@ def classify(
         now=now,
     )
     ev_processo = appid_de_jogo_vivo is not None and appid_de_jogo_vivo > 0
-    if ev_janela or ev_perfil or ev_marker or ev_processo:
+    ev_pad = bool(processo_no_pad)
+    if ev_janela or ev_perfil or ev_marker or ev_processo or ev_pad:
         return "game"
     if window_healthy:
         return "daemon"
@@ -137,6 +139,8 @@ def outro_jogo_vivo(inputs: dict[str, Any], appid_do_lancamento: int) -> bool:
     """
     vivo = inputs.get("appid_de_jogo_vivo")
     if isinstance(vivo, int) and vivo > 0 and vivo != appid_do_lancamento:
+        return True
+    if inputs.get("processo_no_pad") and not (isinstance(vivo, int) and vivo > 0):
         return True
     marker = inputs.get("marker")
     if (
@@ -254,16 +258,25 @@ class GameSignal:
         return self._appid if self._authority == "game" else None
 
     def evaluate(
-        self, raw: Authority, *, session_open: bool, appid: int | None = None
+        self,
+        raw: Authority,
+        *,
+        session_open: bool,
+        appid: int | None = None,
+        processo_no_pad: str | None = None,
     ) -> Authority:
         """Aplica a histerese sobre um veredito CRU de `classify()` (1 tick).
 
         `appid` é o da evidência do tique (`lifecycle._o_appid_da_evidencia`, o dono
-        dessa leitura); só vale com o veredito `game`.
+        dessa leitura); só vale com o veredito `game`. `processo_no_pad` é o processo quando
+        só a evidência do pad deu `game`: a transição diz quem a deu.
         """
         if raw != "daemon":
             self._non_game_since = None
-            self._transition(raw, evidencia=raw)
+            if raw == "game" and processo_no_pad:
+                self._transition(raw, evidencia="processo_no_pad", processo=processo_no_pad)
+            else:
+                self._transition(raw, evidencia=raw)
             if raw == "game" and appid is not None and appid > 0:
                 self._appid = appid
             return self._authority
@@ -323,13 +336,24 @@ class GameSignal:
         self._transition("unknown", evidencia=f"degradado:{motivo}")
         return self._authority
 
-    def _transition(self, novo: Authority, *, evidencia: str) -> None:
+    def _transition(
+        self, novo: Authority, *, evidencia: str, processo: str | None = None
+    ) -> None:
         anterior = self._authority
         if novo == anterior:
             return
         self._authority = novo
         if novo != "game":
             self._appid = None
+        if processo:
+            logger.info(
+                "game_signal_transition",
+                de=anterior,
+                para=novo,
+                evidencia=evidencia,
+                processo=processo,
+            )
+            return
         logger.info("game_signal_transition", de=anterior, para=novo, evidencia=evidencia)
 
 
