@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1201742,
+      "piso": 1201813,
       "por_item": {
         "docs": 108583,
         "scripts": 111221,
         "src": 303614,
-        "tests": 678324
+        "tests": 678395
       },
-      "razao": "tamanho: +4 linhas (1201738 -> 1201742), pagas por Origem: D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO; registrado no fecho, topo ae15a78bc707",
+      "razao": "tamanho: +71 linhas (1201742 -> 1201813), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo 06732d4168b1",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1569,6 +1569,12 @@
           "de": 1201738,
           "para": 1201742,
           "razao": "tamanho: +4 linhas (1201738 -> 1201742), pagas por Origem: D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO; registrado no fecho, topo ae15a78bc707"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1201742,
+          "para": 1201813,
+          "razao": "tamanho: +71 linhas (1201742 -> 1201813), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo 06732d4168b1"
         }
       ],
       "unidade": "linhas",
