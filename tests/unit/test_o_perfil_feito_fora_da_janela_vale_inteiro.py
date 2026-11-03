@@ -3,8 +3,9 @@
 Duas réguas, as duas em lar de mentira (o ``conftest`` desvia ``HOME`` e ``XDG_*``):
 
 1. ``profile create`` grava o perfil enxuto — nome, alvo e prioridade — e o
-   que o perfil não diz herda o padrão do computador. Mordida: devolvido o
-   ``TriggerConfig(mode="Off")`` / a luz apagada, o computador deixa de valer.
+   que o perfil não diz herda o padrão do computador; o gatilho sem escolha nasce no «—»
+   (D-0311-TODA-LISTA-SEM-ESCOLHA-ABRE-NO-TRACO). Mordida: devolvida a luz apagada, o
+   computador deixa de valer.
 2. A assinatura da mesa, que o vigia compara, enxerga o perfil gravado por outro
    processo; depois do sossego o ``steam_app_<appid>.env`` do jogo novo nasce.
    Mordida: tirado o selo da assinatura, o arquivo não nasce.
@@ -56,8 +57,8 @@ class TestOPerfilDoTerminalHerdaOComputador:
         vale = opc.carregar_o_que_vale("Meu Jogo")
         assert vale.leds.lightbar == (10, 20, 200), "a barra apagada venceu o computador"
         assert vale.rumble.policy == "max", "a vibração sem política venceu o computador"
-        assert vale.triggers.left.mode != "Off", "o gatilho nasceu desligado"
-        assert vale.triggers.right.mode != "Off"
+        assert vale.triggers.left.mode == "Off", "o gatilho sem escolha não nasceu no «—»"
+        assert vale.triggers.right.mode == "Off"
 
     def test_o_fallback_e_o_manual_tambem_nascem_enxutos(self) -> None:
         for nome, flag in (("Reserva", "--fallback"), ("Avulso", "--manual")):
