@@ -69,6 +69,7 @@ def _toques(uniqs: list[str], escolhas: dict[str, str | None], estilo: str | Non
 def test_com_estilo_a_lista_sem_escolha_e_do_estilo_e_toca_o_do_estilo(
     estilo: str, jogadores: int,
 ) -> None:
+    """D-0311-A-LISTA-SEM-ESCOLHA-SEGUE-O-ESTILO-DO-PERFIL, de um a quatro controles."""
     uniqs = _uniqs(jogadores)
     perfil = {"name": "Com estilo", "estilo": estilo, "controllers": {u: {} for u in uniqs}}
     for uniq in uniqs:
