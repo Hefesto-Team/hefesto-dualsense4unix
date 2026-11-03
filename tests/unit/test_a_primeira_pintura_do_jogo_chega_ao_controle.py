@@ -236,7 +236,9 @@ def test_a_escrita_retida_do_jogo_chega_na_abertura(
 def test_a_escrita_retida_da_steam_e_descartada(
     player: int, via: str, caminho: str, tmp_path: Path
 ) -> None:
-    """MORDIDA: reaplicar todo retido e a paleta da Steam vira o número e a cor do jogador."""
+    """D-0311-A-PRIMEIRA-PINTURA-DO-JOGO.
+
+    MORDIDA: reaplicar todo retido e a paleta da Steam vira o número e a cor do jogador."""
     proc = _Proc(tmp_path)
     proc.segura(PID_DA_STEAM, True)
     ctl, nos, daemon = _mesa(via, proc)

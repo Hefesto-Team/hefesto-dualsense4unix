@@ -212,7 +212,9 @@ COMBINACOES_DUALSENSE = [
 def test_com_o_jogo_na_autoridade_o_numero_e_a_cor_chegam_e_voltam(
     player: int, aparelho: str, modo: str, via: str, caminho: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MORDIDA: devolver o veto do número na entrada e a luz de jogador do jogo não chega."""
+    """D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO.
+
+    MORDIDA: devolver o veto do número na entrada e a luz de jogador do jogo não chega."""
     procurados: list[str | None] = []
     monkeypatch.setattr(external_leds, "hidraw_do_uniq", lambda uniq: procurados.append(uniq))
     ctl, nos, handles, daemon = _mesa(aparelho, via, "game")
