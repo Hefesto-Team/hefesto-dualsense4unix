@@ -198,6 +198,7 @@ def test_o_motor_que_o_jogo_segura_dura_enquanto_o_jogo_le(
     mesa_de: Any, proc: _ProcDeMentira, relogio: _Relogio, diario: _Diario,
     caminho: str, modo: int,
 ) -> None:
+    """`D-0311-O-TEMPO-NAO-SOLTA-O-MOTOR-QUE-O-JOGO-PEDIU`: o tempo não solta o motor."""
     mesa = mesa_de(caminho, modo)
     for pad in mesa.pads:
         proc.jogo(100 + pad.player, [proc.no(pad.player)])

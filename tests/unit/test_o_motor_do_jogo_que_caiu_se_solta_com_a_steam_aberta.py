@@ -222,6 +222,7 @@ def test_o_jogo_que_cai_com_a_steam_e_o_teclado_da_tela_abertos_solta_em_duas_co
     mesa_de: Any, proc: _ProcDeMentira, relogio: _Relogio, diario: _Diario,
     caminho: str, modo: int,
 ) -> None:
+    """`D-0311-QUEM-NAO-E-JOGO-NAO-SEGURA-MOTOR`: a Steam e o teclado não seguram o motor."""
     mesa = mesa_de(caminho, modo)
     _a_mesa_com_a_steam_e_os_jogos(mesa, proc)
     mesa.passar(6.0)

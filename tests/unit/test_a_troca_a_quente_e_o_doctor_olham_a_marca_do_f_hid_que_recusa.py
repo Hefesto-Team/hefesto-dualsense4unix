@@ -141,7 +141,10 @@ def test_a_lista_do_dono_e_a_das_marcas_do_fonte() -> None:
 
 
 def test_so_a_marca_velha_troca_a_quente(tmp_path: Path) -> None:
-    """O `0001` carregado e o `0002` staged: a troca troca, sem esperar o boot."""
+    """O `0001` carregado e o `0002` staged: a troca troca, sem esperar o boot.
+
+    `D-0311-O-USB-F-HID-CARREGADO-E-O-CURADO-SO-COM-TODAS-AS-MARCAS`.
+    """
     saida, chamadas, sys_module = _trocar(tmp_path, (VELHA,))
     assert chamadas == ["sudo modprobe -r usb_f_hid", "sudo modprobe usb_f_hid"], chamadas
     assert f"sem {NOVA}" in saida and "trocado a quente" in saida, saida

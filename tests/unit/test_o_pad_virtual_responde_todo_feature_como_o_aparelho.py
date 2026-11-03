@@ -216,6 +216,7 @@ CAMINHOS = pytest.mark.parametrize("caminho", ["uhid", "gadget"])
 def test_todo_id_guardado_sai_igual_ao_do_fisico_e_o_desconhecido_sai_como_erro(
     mesa_de: Any, caminho: str, modo: int, transporte: str
 ) -> None:
+    """`D-0311-O-FEATURE-QUE-O-PAD-VIRTUAL-NAO-GUARDA-VOLTA-COMO-ERRO`."""
     mesa = mesa_de(caminho, modo)
     pads = [mesa.criar(player, transporte) for player in (1, 2, 3, 4)]
     for pad in pads:
