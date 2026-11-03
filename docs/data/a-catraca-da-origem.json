@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1200921,
+      "piso": 1201454,
       "por_item": {
         "docs": 108583,
         "scripts": 111191,
-        "src": 303480,
-        "tests": 677667
+        "src": 303634,
+        "tests": 678046
       },
-      "razao": "tamanho: +117 linhas (1200804 -> 1200921), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo 5e61318f6211",
+      "razao": "tamanho: +533 linhas (1200921 -> 1201454), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo ffccf7849594",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1545,10 +1545,16 @@
           "de": 1200804,
           "para": 1200921,
           "razao": "tamanho: +117 linhas (1200804 -> 1200921), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo 5e61318f6211"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1200921,
+          "para": 1201454,
+          "razao": "tamanho: +533 linhas (1200921 -> 1201454), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo ffccf7849594"
         }
       ],
       "unidade": "linhas",
-      "universo": 3347
+      "universo": 3348
     }
   }
 }
