@@ -14,18 +14,24 @@ processo sair, como na medida); tirar o `_usb_f_hid_esperar_o_processo` reprova
 `_usb_f_hid_desmontar_o_que_sobrou` reprova `test_a_funcao_que_sobrou_sai_e_troca`;
 tirar o `_usb_f_hid_quem_segura` do aviso reprova
 `test_quem_segura_o_hidg_impede_a_troca_e_o_aviso_diz_quem`; tirar o `_largar_o_hidg`
-do `_o_gadget_caiu` reprova `test_o_pad_que_caiu_solta_o_hidg_sem_esperar_o_tique`.
+do `_o_gadget_caiu` reprova `test_o_pad_que_caiu_solta_o_hidg_sem_esperar_o_tique`; o
+`pad_usb_hidg_nao_largou` abaixo do nível do diário reprova
+`test_o_hidg_que_nao_se_larga_diz_por_que_no_diario`.
 """
 
 from __future__ import annotations
 
+import errno
 import os
 import shutil
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+
+from hefesto_dualsense4unix.integrations import uhid_gamepad
 
 from tests.unit.test_o_gadget_que_desce_no_tique_fala_com_o_broker_fora_dele import (
     _ate_a_queda,
@@ -239,3 +245,19 @@ def test_o_pad_que_caiu_solta_o_hidg_sem_esperar_o_tique(
             assert not fio.is_alive(), "o fio do gadget que caiu segue rodando no /dev/null"
     finally:
         _fechar(m, pads)
+
+
+def test_o_hidg_que_nao_se_larga_diz_por_que_no_diario(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem `/dev/null` para o fd, o `hidg` segue preso: a linha sai no nível que o diário guarda."""
+    avisos: list[tuple[str, dict[str, Any]]] = []
+    monkeypatch.setattr(
+        uhid_gamepad.logger, "warning", lambda evento, **kw: avisos.append((evento, kw))
+    )
+
+    def _sem_fd(*_a: Any, **_k: Any) -> int:
+        raise OSError(errno.EMFILE, "Too many open files")
+
+    monkeypatch.setattr(uhid_gamepad.os, "open", _sem_fd)
+    uhid_gamepad._largar_o_hidg(SimpleNamespace(fd=-1, gadget="hefesto-pad-0"))  # type: ignore[arg-type]
+    assert [evento for evento, _ in avisos] == ["pad_usb_hidg_nao_largou"], avisos
+    assert avisos[0][1]["gadget"] == "hefesto-pad-0"

@@ -3201,7 +3201,7 @@ def _largar_o_hidg(gadget: _GadgetDoPad) -> None:
         nulo = os.open(os.devnull, os.O_RDWR | os.O_CLOEXEC)
         os.dup2(nulo, gadget.fd, inheritable=False)
     except OSError as exc:
-        logger.debug("pad_usb_hidg_nao_largou", err=str(exc), gadget=gadget.gadget)
+        logger.warning("pad_usb_hidg_nao_largou", err=str(exc), gadget=gadget.gadget)
     finally:
         if nulo >= 0:
             os.close(nulo)
