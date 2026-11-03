@@ -794,8 +794,17 @@ install_dkms_usb_f_hid_host() {
     return 0
 }
 
-_usb_f_hid_tem_a_marca() {
-    [[ -e "${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid/parameters/get_report_sized" ]]
+_usb_f_hid_marcas_que_faltam() {
+    # shellcheck source=scripts/dkms_lib.sh
+    declare -F dkms_usb_f_hid_marcas_que_faltam >/dev/null \
+        || source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_usb_f_hid_marcas_que_faltam "${HEFESTO_SYS_MODULE:-/sys/module}"
+}
+
+_usb_f_hid_sem() {
+    local _faltam
+    _faltam="$(_usb_f_hid_marcas_que_faltam 2>/dev/null)" || _faltam="as marcas que não sei ler"
+    printf '%s' "${_faltam}"
 }
 
 _usb_f_hid_refcnt() {
@@ -812,10 +821,13 @@ trocar_usb_f_hid_a_quente() {
         printf '      usb_f_hid descarregado — o curado entra no próximo carregamento\n'
         return 0
     fi
-    if _usb_f_hid_tem_a_marca; then
-        printf '      usb_f_hid curado JÁ carregado (get_report_sized visível) — nada a trocar\n'
+    local _faltam
+    _faltam="$(_usb_f_hid_sem)"
+    if [[ -z "${_faltam}" ]]; then
+        printf '      usb_f_hid curado JÁ carregado (todas as marcas visíveis) — nada a trocar\n'
         return 0
     fi
+    printf '      usb_f_hid carregado sem %s — o curado entra no lugar dele\n' "${_faltam}"
     local _g _nome _alheios="" _nossos=0
     for _g in "${_gadgets}"/*/; do
         [[ -d "${_g}" ]] || continue
@@ -827,14 +839,14 @@ trocar_usb_f_hid_a_quente() {
         esac
     done
     if [[ -n "${_alheios}" ]]; then
-        warn "o usb_f_hid de fábrica serve um gadget que não é do Hefesto (${_alheios}) — não troco; o curado vale no próximo boot"
+        warn "o usb_f_hid sem ${_faltam} serve um gadget que não é do Hefesto (${_alheios}) — não troco; o curado vale no próximo boot"
         anotar_reinicio_pendente "${_pendente}"
         return 0
     fi
     local _daemon_parado=0 _espera=0
     if [[ "$(_usb_f_hid_refcnt)" != "0" ]]; then
         if [[ "${_nossos}" -eq 0 ]]; then
-            warn "o usb_f_hid de fábrica está preso (refcnt $(_usb_f_hid_refcnt)) sem gadget do Hefesto — não troco; o curado vale no próximo boot"
+            warn "o usb_f_hid sem ${_faltam} está preso (refcnt $(_usb_f_hid_refcnt)) sem gadget do Hefesto — não troco; o curado vale no próximo boot"
             anotar_reinicio_pendente "${_pendente}"
             return 0
         fi
@@ -856,10 +868,10 @@ trocar_usb_f_hid_a_quente() {
         warn "os pads USB virtuais não se soltaram em ${_prazo} s (refcnt $(_usb_f_hid_refcnt)) — não troco; o curado vale no próximo boot"
         anotar_reinicio_pendente "${_pendente}"
     elif sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null \
-         && _usb_f_hid_tem_a_marca; then
-        printf '      usb_f_hid trocado a quente: o curado já responde o GET_REPORT no tamanho certo\n'
+         && _faltam="$(_usb_f_hid_sem)" && [[ -z "${_faltam}" ]]; then
+        printf '      usb_f_hid trocado a quente: o carregado tem todas as marcas do curado\n'
     else
-        warn "não consegui trocar o usb_f_hid a quente — o curado vale no próximo boot"
+        warn "não consegui trocar o usb_f_hid a quente (o carregado segue sem ${_faltam}) — o curado vale no próximo boot"
         anotar_reinicio_pendente "${_pendente}"
     fi
     if [[ "${_daemon_parado}" -eq 1 ]]; then

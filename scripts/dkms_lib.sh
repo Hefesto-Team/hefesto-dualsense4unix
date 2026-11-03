@@ -230,6 +230,17 @@ dkms_module_from_updates() {
     [[ "${_path}" == */updates/dkms/* ]]
 }
 
+DKMS_MARCAS_DO_USB_F_HID=(get_report_sized get_report_refuses)
+
+dkms_usb_f_hid_marcas_que_faltam() {
+    local _pasta="${1:-/sys/module}/usb_f_hid/parameters" _marca _valor _faltam=()
+    for _marca in "${DKMS_MARCAS_DO_USB_F_HID[@]}"; do
+        _valor="$(cat "${_pasta}/${_marca}" 2>/dev/null || true)"
+        [[ "${_valor}" == "Y" || "${_valor}" == "1" ]] || _faltam+=("${_marca}")
+    done
+    printf '%s\n' "${_faltam[*]}"
+}
+
 dkms_module_loaded() {
     [[ -d "/sys/module/${1//-/_}" ]]
 }

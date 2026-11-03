@@ -5529,7 +5529,7 @@ check_hefesto_hid_playstation_dkms() {
 check_hefesto_usb_f_hid_dkms() {
     local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
     local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/usb_f_hid"
-    local modpath staged=0 marca pulo
+    local modpath staged=0 faltam pulo
     pulo="$(_dkms_veredito hefesto-usb-f-hid 1.0.0 "${kver}")"
     modpath="$(modinfo -k "${kver}" -F filename usb_f_hid 2>/dev/null || true)"
     [[ "${modpath}" == */updates/dkms/* ]] && staged=1
@@ -5540,12 +5540,19 @@ check_hefesto_usb_f_hid_dkms() {
         fi
         return
     fi
-    marca="$(cat "${modulo}/parameters/get_report_sized" 2>/dev/null || true)"
-    if [[ "${marca}" == "Y" || "${marca}" == "1" ]]; then
-        pass "a função HID dos pads USB virtuais é a do Hefesto: a resposta do pedido de feature fecha no tamanho certo"
+    # shellcheck source=scripts/dkms_lib.sh
+    if ! faltam="$( source "${ROOT_DIR}/scripts/dkms_lib.sh" 2>/dev/null \
+                    && dkms_usb_f_hid_marcas_que_faltam "${modulo%/usb_f_hid}" )"; then
+        warn "não sei conferir as marcas da função HID dos pads USB virtuais (sem o scripts/dkms_lib.sh desta instalação)"
+        return
+    fi
+    if [[ -z "${faltam}" ]]; then
+        pass "a função HID dos pads USB virtuais é a do Hefesto, com todas as marcas: a resposta do pedido de feature fecha no tamanho certo, e o que o pad recusa volta recusado"
         return
     fi
     local efeito="a função HID dos pads USB virtuais é a de fábrica: o jogo no Proton espera 5 s por pedido de feature e perde os controles"
+    [[ " ${faltam} " == *" get_report_sized "* ]] \
+        || efeito="a função HID dos pads USB virtuais é uma do Hefesto mais velha, sem a marca ${faltam}: o pedido de feature que o pad virtual recusa volta zeros, e o jogo os lê como dado"
     if [[ "${staged}" -eq 1 ]]; then
         fail "${efeito} — a do Hefesto já está instalada para este kernel e não foi trocada: $(conselho_de_instalacao) (ele solta os pads e troca), ou reinicie o computador"
     elif [[ -n "${pulo}" ]]; then

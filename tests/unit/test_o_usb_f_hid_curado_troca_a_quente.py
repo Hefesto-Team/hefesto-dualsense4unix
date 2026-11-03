@@ -1,12 +1,12 @@
 """O install troca o `usb_f_hid` a quente, o doctor e o pad leem a marca.
 
 O-F-HID-FECHA-A-RESPOSTA (14/10/2026). O de fábrica faz o jogo no Proton esperar
-5 s por pedido de feature. O curado se reconhece só pela marca
-`/sys/module/usb_f_hid/parameters/get_report_sized`. Tudo aqui roda com um
+5 s por pedido de feature. O curado se reconhece pelas marcas de
+`DKMS_MARCAS_DO_USB_F_HID` (`scripts/dkms_lib.sh`), todas. Tudo aqui roda com um
 `/sys/module` e uma pasta de gadgets de mentira, e com `sudo`, `systemctl` e
 `modprobe` de mentira que anotam o que foi pedido: nada toca o kernel.
 
-AS MORDIDAS: tirar o `_usb_f_hid_tem_a_marca` da volta cedo da troca reprova
+AS MORDIDAS: tirar o `[[ -z "${_faltam}" ]]` da volta cedo da troca reprova
 `test_com_a_marca_nao_toca`; trocar a lista de gadgets alheios por nada reprova
 `test_gadget_alheio_nao_troca_e_pede_o_reinicio`; tirar o `systemctl --user stop`
 reprova `test_pads_nossos_param_o_daemon_trocam_e_sobem`; trocar o `fail` do
@@ -30,6 +30,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 CAMADA = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 KERNEL_CONFERIDO = "7.1.5-76070105-generic"
+MARCAS = ("get_report_sized", "get_report_refuses")
 
 
 def _sys_module(tmp_path: Path, *, carregado: bool, marca: bool, refcnt: int) -> Path:
@@ -40,7 +41,8 @@ def _sys_module(tmp_path: Path, *, carregado: bool, marca: bool, refcnt: int) ->
         (modulo / "parameters").mkdir(parents=True)
         (modulo / "refcnt").write_text(f"{refcnt}\n", encoding="ascii")
         if marca:
-            (modulo / "parameters" / "get_report_sized").write_text("Y\n", encoding="ascii")
+            for nome in MARCAS:
+                (modulo / "parameters" / nome).write_text("Y\n", encoding="ascii")
     return raiz
 
 
@@ -64,7 +66,8 @@ def _bin(tmp_path: Path, sys_module: Path, *, daemon_ativo: bool) -> Path:
         'case "$*" in\n'
         f'  "modprobe -r usb_f_hid") rm -rf "{modulo}";;\n'
         f'  "modprobe usb_f_hid") mkdir -p "{modulo}/parameters"; echo 0 > "{modulo}/refcnt";'
-        f' echo Y > "{modulo}/parameters/get_report_sized";;\n'
+        f' echo Y > "{modulo}/parameters/get_report_sized";'
+        f' echo Y > "{modulo}/parameters/get_report_refuses";;\n'
         "esac\n"
         "exit 0\n",
         encoding="utf-8",
@@ -198,6 +201,7 @@ def test_o_install_chama_a_troca_depois_do_dkms(tmp_path: Path) -> None:
     raiz = tmp_path / "raiz"
     (raiz / "scripts").mkdir(parents=True)
     (raiz / "scripts" / "dkms_lib.sh").write_text(
+        f"source '{RAIZ}/scripts/dkms_lib.sh'\n"
         "dkms_warn_secureboot_once() { :; }\n"
         "dkms_pkg_version() { echo 1.0.0; }\n"
         f'dkms_install_patched_module() {{ echo "dkms $*" >> "{tmp_path}/chamadas.log"; }}\n'
@@ -246,6 +250,7 @@ def _passo_do_install(
     raiz = tmp_path / "raiz"
     (raiz / "scripts").mkdir(parents=True)
     (raiz / "scripts" / "dkms_lib.sh").write_text(
+        f"source '{RAIZ}/scripts/dkms_lib.sh'\n"
         "dkms_warn_secureboot_once() { :; }\n"
         "dkms_pkg_version() { echo 1.0.0; }\n"
         f'dkms_install_patched_module() {{ echo "dkms $*" >> "{tmp_path}/chamadas.log"; }}\n'

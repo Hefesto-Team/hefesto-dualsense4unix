@@ -1188,7 +1188,7 @@ _ensaio_camada() {
                 return 0
             fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-usb-f-hid (a resposta do GET_REPORT dos pads USB virtuais; do fonte de fábrica do kernel que roda, conferido)"
-            _faria_root "trocar o usb_f_hid carregado sem a marca get_report_sized: o daemon solta os pads, modprobe -r usb_f_hid e modprobe usb_f_hid, e o daemon sobe de novo (com gadget alheio, só no próximo boot)"
+            _faria_root "trocar o usb_f_hid carregado sem todas as marcas do curado (get_report_sized, get_report_refuses): o daemon solta os pads, modprobe -r usb_f_hid e modprobe usb_f_hid, e o daemon sobe de novo (com gadget alheio, só no próximo boot)"
             ;;
         ucm)
             if [[ "${NO_UCM}" -eq 1 ]]; then

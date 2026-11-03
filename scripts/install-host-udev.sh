@@ -597,7 +597,7 @@ if [[ -n "${FHID_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
             "${FHID_DKMS_SRC}" usb_f_hid
         if ! dkms_module_from_updates usb_f_hid; then
             echo "  módulo patchado NÃO staged (avisos acima) — o de fábrica continua: o jogo no Proton espera 5 s por pedido de feature"
-        elif [[ ! -d /sys/module/usb_f_hid || -e /sys/module/usb_f_hid/parameters/get_report_sized ]]; then
+        elif [[ ! -d /sys/module/usb_f_hid || -z "$(dkms_usb_f_hid_marcas_que_faltam /sys/module)" ]]; then
             echo "  módulo patchado staged (o curado já está carregado, ou entra no próximo carregamento)"
         elif [[ "$(cat /sys/module/usb_f_hid/refcnt 2>/dev/null)" == "0" ]] \
              && sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null; then
