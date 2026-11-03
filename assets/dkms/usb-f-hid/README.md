@@ -70,13 +70,14 @@ id volta com `err=EPIPE`, que o kernel entrega ao `hidraw` como `EIO`.
 mais no sysfs separa este módulo do de fábrica, e a segunda é a versão que o
 daemon e o doctor podem ler: a `PACKAGE_VERSION` fica em 1.0.0 (o motivo está
 no `dkms.conf`). O daemon a guarda no `daemon.state_full`
-(`gamepad_emulation.get_report_sized`), e o doctor reprova sem a marca
-(`check_hefesto_usb_f_hid_dkms`).
+(`gamepad_emulation.get_report_sized`), e o doctor reprova nomeando a marca
+que falta (`check_hefesto_usb_f_hid_dkms`). A lista das marcas tem
+um dono só: `DKMS_MARCAS_DO_USB_F_HID`, em `scripts/dkms_lib.sh`.
 
 ## A troca a quente
 
 O install (`install_dkms_usb_f_hid_host`, em `scripts/lib/camada_de_maquina.sh`)
-troca o módulo carregado quando ele não tem a marca e o curado está em
+troca o módulo carregado quando falta a ele uma das marcas e o curado está em
 `updates/dkms`:
 
 - sem gadget nenhum (refcnt 0): troca na hora;
@@ -84,10 +85,10 @@ troca o módulo carregado quando ele não tem a marca e o curado está em
   pads no EOF da conexão, o refcnt chega a 0 (com prazo), troca e sobe o
   daemon se ele estava no ar;
 - com gadget alheio: não troca, e o módulo curado vale no próximo boot;
-- com a marca: não toca. Rodar o install duas vezes dá o mesmo estado.
+- com todas as marcas: não toca. Rodar o install duas vezes dá o mesmo estado.
 
-A troca, o doctor e o install olham só a `get_report_sized`: com o `0001`
-carregado, o módulo com o `0002` entra no próximo boot.
+Com o `0001` carregado (só a `get_report_sized`), o módulo com o `0002` entra
+na mesma troca, sem reiniciar.
 
 A troca mora na função do host e nunca no `scripts/dkms_lib.sh`, cujo
 contrato proíbe `modprobe` e `rmmod`.
