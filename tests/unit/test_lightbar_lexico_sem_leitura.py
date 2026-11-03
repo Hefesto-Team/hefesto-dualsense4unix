@@ -29,19 +29,10 @@ outra frente nesta leva; o conserto está nomeado no relatório A4.
 
 from __future__ import annotations
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("lightbar lexico sem leitura")
-
 import csv
 from pathlib import Path
 
 import pytest
-
-gi = pytest.importorskip("gi")
-
-gi.require_version("Gdk", "3.0")
-gi.require_version("Gtk", "3.0")
 
 
 RAIZ = Path(__file__).resolve().parents[2]

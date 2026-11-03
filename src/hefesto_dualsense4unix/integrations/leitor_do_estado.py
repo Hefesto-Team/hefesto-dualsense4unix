@@ -19,7 +19,7 @@ import json
 import os
 import re
 import secrets
-import select
+import selectors
 import signal
 import socket
 import struct
@@ -589,22 +589,27 @@ def _responder(cliente: socket.socket, buffers: dict[socket.socket, bytes],
 def _atender_enquanto_vive(filho: int, servico: ServicoDoLeitor, caminho: Path) -> int:
     servidor = _abrir_o_soquete(caminho)
     clientes: dict[socket.socket, bytes] = {}
+    espera = selectors.DefaultSelector()
+    espera.register(servidor, selectors.EVENT_READ, servidor)
     try:
         while True:
             pid, status = os.waitpid(filho, os.WNOHANG)
             if pid == filho:
                 return os.waitstatus_to_exitcode(status)
-            prontos, _, _ = select.select([servidor, *clientes], [], [], 0.25)
-            for pronto in prontos:
+            for chave, _ in espera.select(0.25):
+                pronto: socket.socket = chave.data
                 if pronto is servidor:
                     with contextlib.suppress(BlockingIOError, InterruptedError):
                         cliente, _ = servidor.accept()
                         cliente.setblocking(False)
                         clientes[cliente] = b""
+                        espera.register(cliente, selectors.EVENT_READ, cliente)
                 elif not _responder(pronto, clientes, servico):
                     clientes.pop(pronto, None)
+                    espera.unregister(pronto)
                     pronto.close()
     finally:
+        espera.close()
         for cliente in clientes:
             cliente.close()
         servidor.close()

@@ -99,6 +99,13 @@ COLISOES_DECLARADAS = {
         "e «versão» são o assunto da própria decisão (o que a extensão baixa), e «extensão» e "
         "«serviço» não estão no vocabulário de produto (20/10/2026)."
     ),
+    "D-0211-O-PIPEWIRE-DA-CASA-E-FONTE-DO-APT": (
+        "É de PRODUTO: a decisão diz como o PipeWire corrigido pela casa fica instalado, e "
+        "`test_o_pipewire_da_casa_e_um_repositorio_do_apt.py::test_no_caminho_que_instala_a_fonte_"
+        "entra_depois_do_apt_install` mede a ordem dentro do install. A triagem a chama de "
+        "processo porque «versão» é o assunto da `recomendacao` (a distro passa da versão da "
+        "casa), e «PipeWire», «apt» e «install» não estão no vocabulário de produto (03/11/2026)."
+    ),
     "D-0609-GTK-LEVA-INTEIRA": (
         "É de PRODUTO: a decisão tira a janela GTK inteira do disco, e quinze "
         "funções de teste medem o que sobrou — entre as quinze "

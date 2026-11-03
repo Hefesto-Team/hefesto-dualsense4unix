@@ -59,8 +59,8 @@ from tests.unit.test_a_porta_lista_os_controles import (  # noqa: F401
 DOIS = "aa:bb:cc:00:00:02"
 ESTADO = "publicar:acessorios.estado"
 MEMORIA = "ler:jogo.memoria"
-JOGO = "steam_app_570"
-CHAVE = {"id": "memoria", "rotulo": "Memória neste jogo", "tipo": "memoria",  # (noqa-acento)
+JOGO = "steam_app_9900001"
+CHAVE = {"id": "memoria", "rotulo": "Memória neste jogo", "tipo": "memoria",
          "grupo": "Sentidos"}
 PULSO = {"id": "efeito-pulso", "rotulo": "Pulso", "tipo": "ligado",
          "padrao": True, "aparece_com": {"@presente": "pulso"}}  # (noqa-acento)
@@ -101,7 +101,7 @@ def test_o_perfil_trocou_leva_a_memoria_e_muda_com_a_chave() -> None:
 
     bus = EventBus()
     fila = bus.subscribe(EventTopic.PERFIL_TROCOU)
-    daemon = _daemon(570, bus, dois=False)
+    daemon = _daemon(9900001, bus, dois=False)
     anunciador = AnunciadorDoJogo(bus, _store("geral"), daemon)
     anunciador.ver()
     ChavesDaMemoria(arquivo_das_chaves()).gravar(JOGO, True)
