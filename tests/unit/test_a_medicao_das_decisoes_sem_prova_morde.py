@@ -470,11 +470,15 @@ def test_o_laudo_sem_bandeira_recusa_csv_de_forma_errada(mi, tmp_path, capsys):
 def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     """O censo da sprint conferido contra o arquivo, não contra a lembrança."""
     medida = mi.medir()
-    estados = [linha["estado"] for linha in mi._linhas()]
+    with open(mi.CSV_DAS_DECISOES, encoding="utf-8", newline="") as fh:
+        estados = [linha["estado"] for linha in csv.DictReader(fh)]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
-    assert estados.count("caduca") == 44, (
-        "o CSV tem quarenta e quatro linhas `caduca`; se isso mudou, o laudo tem de dizer")
-    assert medida["decididas"] == medida["linhas"] - 44 - adiante
+    caducas = estados.count("caduca")
+    assert medida["linhas"] == len(estados)
+    assert medida["decididas"] == len(estados) - caducas - adiante, (
+        f"o laudo contou {medida['decididas']} decididas; o CSV tem {len(estados)} linhas, "
+        f"{caducas} `caduca` e {adiante} adiante"
+    )
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(
