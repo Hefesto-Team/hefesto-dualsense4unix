@@ -339,7 +339,7 @@ def test_o_clique_do_piloto_com_alvo_acha_o_cartao_e_nao_para_na_aba(tela: Any) 
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     _pintar(tela, ["p1", "p2", "p3"], "p1")
-    js = hefesto_vivo.TOCAR + hefesto_vivo.CLIQUE_COM_ALVO % (json.dumps("mudo"),
+    js = hefesto_vivo.TOCAR + hefesto_vivo.CLIQUE_COM_ALVO % (json.dumps("sensor"),
                                                               json.dumps(["p3"]))
     assert tela.executar(js) == "no bloco de p3"
 
