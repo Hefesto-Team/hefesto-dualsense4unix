@@ -99,6 +99,11 @@ TAMANHO_DA_JANELA = 25
 DESLIGADO_FORA_DO_JOGO = "cursor"
 
 
+DESTINO_JOGO = "jogo"
+DESTINO_ROTA = "rota"
+DESTINO_MUDO = "mudo"
+
+
 class EstadoDosSensores(NamedTuple):
     """O que está LIGADO para uma peça. Ausência = os dois ligados."""
 
@@ -189,7 +194,7 @@ class RegistroDeSensores:
         """A janela como deve SAIR para a peça `uniq`."""
         estado = self.estado(uniq)
         giro = estado.giroscopio and not self.roteado(uniq)
-        toque = not (self.toque_roteado(uniq) or self.toque_calado(uniq))
+        toque = self.destino_do_toque(uniq) == DESTINO_JOGO
         if giro and estado.acelerometro and toque:
             return janela
         return janela_com_sensores(
@@ -269,6 +274,14 @@ class RegistroDeSensores:
         with self._lock:
             return self._toque_roteado.get(chave_de_sensor(uniq), self._toque_roteado_sem_chip)
 
+    def destino_do_toque(self, uniq: str | None) -> str:
+        """Para onde vão o dedo e o clique desta peça: o jogo, a rota (cursor ou zonas) ou nada."""
+        if self.toque_calado(uniq):
+            return DESTINO_MUDO
+        if self.toque_roteado(uniq):
+            return DESTINO_ROTA
+        return DESTINO_JOGO
+
     def roteado(self, uniq: str | None) -> bool:
         """Esta peça está mirando — o giro da peça vai ao analógico, não ao jogo?"""
         if not uniq:
@@ -305,6 +318,9 @@ REGISTRO = RegistroDeSensores()
 __all__ = [
     "CONTATOS_DO_TOQUE",
     "DESLIGADO_FORA_DO_JOGO",
+    "DESTINO_JOGO",
+    "DESTINO_MUDO",
+    "DESTINO_ROTA",
     "FAIXA_ACELEROMETRO",
     "FAIXA_GIROSCOPIO",
     "REGISTRO",

@@ -131,6 +131,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
 from hefesto_dualsense4unix.core.roteador_de_movimento import janela_que_sai
+from hefesto_dualsense4unix.core.virtual_motion import DESTINO_JOGO, REGISTRO
 from hefesto_dualsense4unix.integrations import usb_pai
 from hefesto_dualsense4unix.utils.espera import prontos_ou_acordado
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -824,26 +825,19 @@ class PhysicalReportReader:
     def _observe_touchpad_click(self, report: bytes, base: int | None = None) -> None:
         """Entrega ao vpad a BORDA do clique do touchpad deste report cru.
 
-        Só borda: o report vem a 250 Hz no cabo e em rajada no rádio (pico de
-        ~797 Hz, 11/08/2026), e repetir "ainda apertado" em cada um seria um
-        write no /dev/uhid por report, justamente o que o throttle do motion
-        existe para evitar.
-
-        `None` do extrator (report de outro id, curto, ou CRC de BT ruim) é
-        "não sei" e NÃO mexe no estado — nem entrega, nem solta. Vpad sem o
-        método (uinput, fakes de teste) degrada calado: é o mesmo contrato
-        duck-typed do `forward_motion`.
-
-        `base` é a saída de `_struct_base` para ESTE report, quando quem chama
-        já a tem (DAEMON-ACORDADO-01: o laço quente resolve uma vez e passa
-        para os quatro consumidores). Omitir é a forma de quem só tem o report
-        na mão — e a função resolve a base aqui, como sempre fez.
+        Só borda: repetir "ainda apertado" a 250-800 Hz seria um write no /dev/uhid por report.
+        `None` do extrator (outro id, curto, CRC ruim) não mexe no estado, e vpad sem o método
+        degrada calado, o contrato duck-typed do `forward_motion`. `base` é a de `_struct_base`
+        quando quem chama já a tem (DAEMON-ACORDADO-01). O clique segue o destino do dedo
+        (`REGISTRO.destino_do_toque`): fora do jogo não chega ao vpad, e o apertado se solta.
         """
         pressed = (
             _clique_com_base(report, base)
             if base is not None
             else extract_touchpad_click(report)
         )
+        if REGISTRO.destino_do_toque(self._uniq_aberto) != DESTINO_JOGO:
+            pressed = False if self._touchpad_click else None
         if pressed is None or pressed == self._touchpad_click:
             return
         forward = getattr(self._vpad, "forward_touchpad_click", None)

@@ -1718,8 +1718,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:387` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:156` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:890-925` (`_observe_jack`) | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:388` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:157` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:884-919` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1229` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:276` | **ALTA** |
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1216`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
 >
@@ -1748,7 +1748,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > `assets/dkms/hid-playstation/hid-playstation.c:196-197`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
 > `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
-> (`core/physical_report_reader.py:421-456`, `decodificar_bateria`):
+> (`core/physical_report_reader.py:422-457`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
 > |---|---|---|
