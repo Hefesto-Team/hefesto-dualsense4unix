@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202478,
+      "piso": 1202502,
       "por_item": {
-        "docs": 108589,
+        "docs": 108613,
         "scripts": 111277,
         "src": 303667,
         "tests": 678945
       },
-      "razao": "tamanho: +44 linhas (1202434 -> 1202478), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID; registrado no fecho, topo 5b4056e11676",
+      "razao": "tamanho: +24 linhas (1202478 -> 1202502), pagas por Origem: plataforma.vpad; registrado no fecho, topo a9c042292f2b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1593,6 +1593,12 @@
           "de": 1202434,
           "para": 1202478,
           "razao": "tamanho: +44 linhas (1202434 -> 1202478), pagas por Origem: D-0710-O-PAD-E-UM-GADGET-SO-HID; registrado no fecho, topo 5b4056e11676"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1202478,
+          "para": 1202502,
+          "razao": "tamanho: +24 linhas (1202478 -> 1202502), pagas por Origem: plataforma.vpad; registrado no fecho, topo a9c042292f2b"
         }
       ],
       "unidade": "linhas",
