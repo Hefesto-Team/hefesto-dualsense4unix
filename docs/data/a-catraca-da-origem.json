@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1201454,
+      "piso": 1201439,
       "por_item": {
         "docs": 108583,
         "scripts": 111191,
-        "src": 303634,
-        "tests": 678046
+        "src": 303614,
+        "tests": 678051
       },
-      "razao": "tamanho: +533 linhas (1200921 -> 1201454), pagas por Origem: vibracao.rumble.passthrough; registrado no fecho, topo ffccf7849594",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
