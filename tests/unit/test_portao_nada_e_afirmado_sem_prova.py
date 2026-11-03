@@ -10,7 +10,7 @@ MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
 TETO_SEM_PROVA_NEM_RESSALVA = 35
 
-TETO_SEM_PROVA = 113
+TETO_SEM_PROVA = 117
 
 _SIM = {"sim", "1", "true"}
 
