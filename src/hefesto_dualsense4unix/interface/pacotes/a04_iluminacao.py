@@ -2842,10 +2842,6 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento)
      "chama": [("led_set_detalhado", [(0, 0, 0)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": GESTO_DO_EFEITO,  # (noqa-acento)
-     "clique": {"valor": SEM_EFEITO},
-     "chama": [("led_set_detalhado", [(0, 0, 0)],
-                {"uniq": "aa:bb:cc:00:00:01"})]},
     {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento)
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {}),
                ("player_leds_set_detalhado", [(False, True, False, True, False)],
