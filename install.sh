@@ -2415,12 +2415,15 @@ _pw_publica_o_repositorio() {
         && (cd "${novo}" && apt-ftparchive \
                 -o APT::FTPArchive::Release::Origin=hefesto-dualsense4unix \
                 -o APT::FTPArchive::Release::Label=hefesto-pipewire release .) > "${obra}/Release" 2>/dev/null \
-        && install -d -m 0700 "${gnupg}" \
-        && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --quick-generate-key hefesto-pipewire default default never >/dev/null 2>&1 \
-        && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --clearsign -o "${obra}/InRelease" "${obra}/Release" >/dev/null 2>&1 \
-        && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --armor --detach-sign -o "${obra}/Release.gpg" "${obra}/Release" >/dev/null 2>&1 \
-        && gpg --homedir "${gnupg}" --batch --yes --quiet --export -o "${obra}/chave.gpg" >/dev/null 2>&1 \
-        && [[ -s "${obra}/chave.gpg" ]] \
+        && (
+            trap 'gpgconf --homedir "${gnupg}" --kill all >/dev/null 2>&1; gpgconf --homedir "${gnupg}" --remove-socketdir >/dev/null 2>&1; rm -rf "${gnupg}"' EXIT
+            install -d -m 0700 "${gnupg}" \
+                && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --quick-generate-key hefesto-pipewire default default never >/dev/null 2>&1 \
+                && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --clearsign -o "${obra}/InRelease" "${obra}/Release" >/dev/null 2>&1 \
+                && gpg --homedir "${gnupg}" "${gpg_lote[@]}" --armor --detach-sign -o "${obra}/Release.gpg" "${obra}/Release" >/dev/null 2>&1 \
+                && gpg --homedir "${gnupg}" --batch --yes --quiet --export -o "${obra}/chave.gpg" >/dev/null 2>&1 \
+                && [[ -s "${obra}/chave.gpg" ]]
+        ) \
         && sudo install -m 0644 "${obra}/Release" "${obra}/InRelease" "${obra}/Release.gpg" "${novo}/" \
         && sudo install -d -m 0755 "$(dirname "${chave}")" \
         && sudo install -m 0644 "${obra}/chave.gpg" "${chave}" \
@@ -2429,7 +2432,6 @@ _pw_publica_o_repositorio() {
         && printf 'Types: deb\nURIs: file:%s\nSuites: ./\nSigned-By: %s\n' "${repo}" "${chave}" > "${obra}/fonte" \
         && sudo install -m 0644 "${obra}/fonte" "${fonte}" \
         || rc=1
-    gpgconf --homedir "${gnupg}" --kill all >/dev/null 2>&1 || true
     rm -rf "${obra}"
     if [[ "${rc}" -ne 0 ]]; then
         sudo rm -rf "${novo}" 2>/dev/null || true
@@ -2450,7 +2452,7 @@ _pw_fonte_no_curado() {
     _pw_da_casa_serve_aqui || return 0
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         [[ -s "${dir}/SHA256SUMS" ]] || _faria "construir o PipeWire ${alvo_pw} e o WirePlumber ${alvo_wp} em ${dir} (scripts/construir_pipewire_backport.sh, uns 5 minutos, sem sudo)"
-        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
+        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS e assinado pela chave /etc/apt/keyrings/hefesto-pipewire.gpg) e ler só essa fonte"
         return 0
     fi
     mkdir -p "${cache}"
@@ -2504,7 +2506,7 @@ install_pipewire_da_casa() {
         _faria "gravar ${dir}/VERSOES-ANTERIORES.txt (o caminho de volta, só com os pacotes que trocam)"
         _faria_root "fixar a prioridade do apt em /etc/apt/preferences.d/hefesto-pipewire (o apt fica com a versão mais nova, a da casa ou a da distro)"
         _faria_root "instalar só os pacotes do PipeWire e do WirePlumber que a máquina já tem, conferidos pelo SHA256SUMS — com a Steam aberta, o passo recusa"
-        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS) e ler só essa fonte"
+        _faria_root "publicar o PipeWire da casa como fonte do apt (/var/lib/hefesto-pipewire, conferido pelo SHA256SUMS e assinado pela chave /etc/apt/keyrings/hefesto-pipewire.gpg) e ler só essa fonte"
         _faria "REINICIAR o som da sessão (pipewire, pipewire-pulse e wireplumber): os controles perdem o som e o microfone por alguns segundos"
         return 0
     fi

@@ -152,7 +152,7 @@ class Cenario:
         m = re.search(r"Candidate: (\S+)", r.stdout)
         return m.group(1) if m else r.stdout + r.stderr
 
-    def passo(self, *, dry_run: bool = False, steam_aberta: bool = False) -> str:
+    def passo(self, *, dry_run: bool = False, steam_aberta: bool = False, cai: bool = False) -> str:
         env = dict(self.env, DRY_RUN="1" if dry_run else "0")
         _exe(
             self.raiz / "fakes",
@@ -171,9 +171,15 @@ class Cenario:
             + "install_pipewire_da_casa\n"
         )
         r = subprocess.run(
-            [BASH, "-c", script], env=env, capture_output=True, text=True, timeout=120, check=False
+            [BASH, "-c", script],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+            start_new_session=True,
         )
-        assert r.returncode == 0, r.stdout + r.stderr
+        assert (r.returncode != 0) if cai else (r.returncode == 0), r.stdout + r.stderr
         return r.stdout + r.stderr
 
     def chamadas(self) -> list[str]:
@@ -403,8 +409,120 @@ def test_publicar_de_novo_troca_a_chave_e_o_apt_segue_lendo(tmp_path: Path) -> N
     b.passo()
     assert b.chave.read_bytes() != antes
     assert _confere(b, "InRelease").returncode == 0
+    velha = tmp_path / "chave-velha.gpg"
+    velha.write_bytes(antes)
+    r = subprocess.run(
+        ["gpgv", "--keyring", str(velha), str(b.repo / "InRelease")],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={"LC_ALL": "C", "PATH": "/usr/bin:/bin"},
+    )
+    assert r.returncode != 0, r.stderr
     assert _linhas_do_apt_sobre_a_fonte(b) == []
     assert b.apt("-s", "install", "gstreamer1.0-pipewire").returncode == 0
+
+
+def _gpg_que_conta(b: Cenario, *, cai_em: str = "") -> None:
+    corpo = (
+        'h=""; [[ "${1:-}" == --homedir ]] && h="$2"\n'
+        '/usr/bin/gpg "$@"; rc=$?\n'
+        '[[ -n "$h" ]] && printf "gpg-casa %s %s\\n" "$h" '
+        f'"$(/usr/bin/gpgconf --homedir "$h" --list-dirs socketdir)" >> "{b.diario}"\n'
+    )
+    if cai_em:
+        corpo += (
+            f'if [[ " $* " == *" {cai_em} "* ]]; then\n'
+            '    grupo="$(ps -o pgid= -p $$ | tr -d " ")"\n'
+            '    sessao="$(ps -o sid= -p $$ | tr -d " ")"\n'
+            '    [[ "$grupo" == "$sessao" ]] && kill -TERM -- "-$grupo"\n'
+            "fi\n"
+        )
+    _exe(b.raiz / "fakes", "gpg", corpo + "exit $rc\n")
+
+
+def _casas_do_gpg(b: Cenario) -> list[tuple[Path, Path]]:
+    casas = {}
+    for linha in b.chamadas():
+        if linha.startswith("gpg-casa "):
+            _, casa, soquetes = linha.split(" ", 2)
+            casas[Path(casa)] = Path(soquetes)
+    return list(casas.items())
+
+
+def _processos_com(trecho: str) -> list[str]:
+    achados = []
+    for cmd in Path("/proc").glob("[0-9]*/cmdline"):
+        try:
+            linha = cmd.read_bytes().replace(b"\0", b" ").decode(errors="replace")
+        except OSError:
+            continue
+        if trecho in linha:
+            achados.append(linha)
+    return achados
+
+
+def test_a_privada_o_agente_e_o_soquete_morrem_com_a_publicacao(tmp_path: Path) -> None:
+    """MORDIDA: sem o `--remove-socketdir` (ou sem o `--kill all`), sobra rastro do gpg."""
+    b = _cenario(tmp_path)
+    _gpg_que_conta(b)
+    b.passo()
+    casas = _casas_do_gpg(b)
+    assert len(casas) == 1, b.chamadas()
+    casa, soquetes = casas[0]
+    assert not casa.exists(), casa
+    assert not soquetes.exists(), soquetes
+    assert _processos_com(str(casa)) == []
+    assert _confere(b, "InRelease").returncode == 0
+
+
+def test_a_privada_morre_mesmo_se_o_install_cai_no_meio(tmp_path: Path) -> None:
+    """MORDIDA: com a geração e a assinatura fora do subshell com `trap EXIT`, a privada fica."""
+    b = _cenario(tmp_path)
+    _gpg_que_conta(b, cai_em="--clearsign")
+    b.passo(cai=True)
+    casas = _casas_do_gpg(b)
+    assert len(casas) == 1, b.chamadas()
+    casa, soquetes = casas[0]
+    privadas = list(tmp_path.rglob("private-keys-v1.d"))
+    assert privadas == [], privadas
+    assert not casa.exists() and not soquetes.exists(), (casa, soquetes)
+    assert not b.fonte.exists()
+
+
+def test_a_fonte_velha_que_se_dizia_confiavel_migra_sem_sobra(tmp_path: Path) -> None:
+    b = _cenario(tmp_path)
+    b.repo.mkdir(parents=True)
+    for deb in b.entrega.glob("*.deb"):
+        shutil.copy(deb, b.repo / deb.name)
+    _fonte_plana(b.repo, "hefesto-dualsense4unix")
+    release = subprocess.run(
+        [
+            "apt-ftparchive",
+            "-o",
+            "APT::FTPArchive::Release::Origin=hefesto-dualsense4unix",
+            "-o",
+            "APT::FTPArchive::Release::Label=hefesto-pipewire",
+            "release",
+            ".",
+        ],
+        cwd=b.repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    (b.repo / "Release").write_text(release, encoding="utf-8")
+    b.fonte.write_text(
+        f"Types: deb\nURIs: file:{b.repo}\nSuites: ./\nTrusted: yes\n", encoding="utf-8"
+    )
+    assert b.apt("update").returncode == 0
+    b.passo()
+    fonte = b.fonte.read_text(encoding="utf-8")
+    assert "Trusted" not in fonte and f"Signed-By: {b.chave}\n" in fonte, fonte
+    assert _linhas_do_apt_sobre_a_fonte(b) == []
+    assert not Path(f"{b.repo}.novo").exists()
+    assert sorted(p.name for p in b.fonte.parent.iterdir()) == [b.fonte.name]
+    assert b.candidato("gstreamer1.0-pipewire") == PW
 
 
 def test_nada_secreto_fica_no_disco_depois_de_publicar(tmp_path: Path) -> None:

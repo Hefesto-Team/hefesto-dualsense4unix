@@ -189,7 +189,8 @@ Steam antes.
    sudo install -m 0644 SHA256SUMS *.deb /var/lib/hefesto-pipewire/
    cd /var/lib/hefesto-pipewire && sha256sum -c SHA256SUMS
    apt-ftparchive packages . | sudo tee Packages >/dev/null
-   apt-ftparchive release . | sudo tee Release >/dev/null
+   apt-ftparchive -o APT::FTPArchive::Release::Origin=hefesto-dualsense4unix \
+       -o APT::FTPArchive::Release::Label=hefesto-pipewire release . | sudo tee Release >/dev/null
    obra="$(mktemp -d)"; export GNUPGHOME="$obra"
    gpg --batch --pinentry-mode loopback --passphrase '' \
        --quick-generate-key hefesto-pipewire default default never
@@ -199,7 +200,7 @@ Steam antes.
    sudo install -m 0644 "$obra/InRelease" "$obra/Release.gpg" .
    sudo install -d -m 0755 /etc/apt/keyrings
    sudo install -m 0644 "$obra/chave.gpg" /etc/apt/keyrings/hefesto-pipewire.gpg
-   gpgconf --kill all; rm -rf "$obra"; unset GNUPGHOME
+   gpgconf --kill all; gpgconf --remove-socketdir; rm -rf "$obra"; unset GNUPGHOME
    printf 'Types: deb\nURIs: file:/var/lib/hefesto-pipewire\nSuites: ./\nSigned-By: /etc/apt/keyrings/hefesto-pipewire.gpg\n' \
        | sudo tee /etc/apt/sources.list.d/hefesto-pipewire.sources >/dev/null
    sudo apt-get update -o Dir::Etc::SourceList=/etc/apt/sources.list.d/hefesto-pipewire.sources \
