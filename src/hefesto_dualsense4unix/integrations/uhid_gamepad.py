@@ -3196,17 +3196,15 @@ def _largar_o_hidg(gadget: _GadgetDoPad) -> None:
     O número do fd fica, apontado para o `/dev/null`, e a descida do tique o fecha como
     sempre: quem já leu o número escreve no nada, nunca num arquivo que o reaproveitou.
     """
+    nulo = -1
     try:
         nulo = os.open(os.devnull, os.O_RDWR | os.O_CLOEXEC)
-    except OSError as exc:
-        logger.warning("pad_usb_hidg_sem_devnull", err=str(exc), gadget=gadget.gadget)
-        return
-    try:
         os.dup2(nulo, gadget.fd, inheritable=False)
     except OSError as exc:
         logger.debug("pad_usb_hidg_nao_largou", err=str(exc), gadget=gadget.gadget)
     finally:
-        os.close(nulo)
+        if nulo >= 0:
+            os.close(nulo)
 
 
 def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
