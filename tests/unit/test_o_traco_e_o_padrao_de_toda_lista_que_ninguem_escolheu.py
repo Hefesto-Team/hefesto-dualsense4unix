@@ -87,3 +87,40 @@ def test_o_perfil_antigo_sem_as_chaves_carrega_no_traco() -> None:
     assert antigo.efeito_haptico is None and antigo.efeito_imersao is None
     assert formas.forma_que_vale(antigo.efeito_haptico, "fps") is None
     assert pv.padrao_que_vale(antigo.efeito_imersao, "fps") is None
+
+
+def _toques_do_tiro(escolha: str | None) -> list[str]:
+    from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+
+    feitos: list[str] = []
+    motor = tv.TatoVivo([tv.AtuadorDaHaptica(
+        lambda uniq, *_a, **_k: feitos.append(uniq) or True, escolha_de=lambda _u: escolha)])
+    borda = tv.BordaDoRumble()
+    for instante, forte in ((0.0, 0), (0.008, 200)):
+        for evento in borda.ver(UNIQ, 0, forte, instante):
+            motor.anotar(evento)
+    motor.tique(0.01, lambda _u: tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True),
+                tv.Receita(vibracao_por_tiro=True))
+    return feitos
+
+
+def test_o_tiro_so_toca_no_controle_que_escolheu() -> None:
+    assert _toques_do_tiro(None) == []
+    assert _toques_do_tiro(formas.SEM_EFEITO) == []
+    assert _toques_do_tiro(formas.DO_ESTILO) == [UNIQ]
+    assert _toques_do_tiro(formas.ESTALO) == [UNIQ]
+
+
+@pytest.mark.parametrize("jogadores", [1, 2, 3, 4])
+def test_escolher_o_estilo_em_perfis_grava_do_estilo_em_cada_lugar(jogadores: int) -> None:
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    uniqs = [f"aabbcc0000{n:02x}" for n in range(1, jogadores + 1)]
+    mesa = [{"uniq": u, "jogador": n} for n, u in enumerate(uniqs, start=1)]
+    novo, _ = a10_perfis._com_o_estilo(Profile(name="Lista", match=MatchAny()), POR_CHAVE["fps"],
+                                       mesa)
+    for uniq in uniqs:
+        rumble = novo.controllers[uniq].rumble
+        assert rumble is not None
+        assert (rumble.efeito_haptico, rumble.efeito_imersao) == ("do_estilo", "do_estilo")

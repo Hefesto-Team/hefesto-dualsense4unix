@@ -33,6 +33,10 @@ P2 = "aa:bb:cc:00:00:12"
 _VIBRA = tv.Receita(vibracao_por_tiro=True)
 
 
+def _do_estilo(_uniq: str) -> str:
+    return "do_estilo"
+
+
 def _bordas(sequencia: list[tuple[float, int, int]], uniq: str = P1) -> list[tv.Evento]:
     borda = tv.BordaDoRumble()
     eventos: list[tv.Evento] = []
@@ -89,7 +93,7 @@ def _xbox(_uniq: str) -> tv.EstadoDoCanal:
 
 def test_um_tiro_no_xbox_e_um_toque_no_controle_dele() -> None:
     toques = Toques()
-    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques)])
+    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques, escolha_de=_do_estilo)])
     for evento in _bordas([(0.0, 0, 0), (0.008, 0, 200)], P2):
         motor.anotar(evento)
     motor.tique(0.01, _xbox, _VIBRA)
@@ -98,7 +102,7 @@ def test_um_tiro_no_xbox_e_um_toque_no_controle_dele() -> None:
 
 def test_o_jogo_com_audio_nos_canais_3_e_4_gera_zero() -> None:
     toques = Toques()
-    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques)])
+    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques, escolha_de=_do_estilo)])
     estado = tv.EstadoDoCanal(
         modo=tv.MODO_DUALSENSE, visto_ha_s={"audio_do_jogo": 0.2},
         sessao_aberta=True, ha_jogo=True,
@@ -111,7 +115,7 @@ def test_o_jogo_com_audio_nos_canais_3_e_4_gera_zero() -> None:
 
 def test_a_rajada_de_tiros_para_no_teto_de_12_por_segundo() -> None:
     toques = Toques()
-    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques)])
+    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques, escolha_de=_do_estilo)])
     for i in range(25):
         agora = i * 0.04
         for evento in _bordas([(agora, 0, 0), (agora + 0.001, 0, 230)]):
@@ -122,7 +126,7 @@ def test_a_rajada_de_tiros_para_no_teto_de_12_por_segundo() -> None:
 
 def test_sem_a_vibracao_por_tiro_na_receita_nao_ha_toque() -> None:
     toques = Toques()
-    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques)])
+    motor = tv.TatoVivo([tv.AtuadorDaHaptica(toques, escolha_de=_do_estilo)])
     for evento in _bordas([(0.0, 0, 0), (0.008, 0, 200)]):
         motor.anotar(evento)
     motor.tique(0.01, _xbox, tv.Receita(reacao_ao_tiro="pulsa"))
@@ -199,6 +203,7 @@ def com_toque(mundo: _Mundo, monkeypatch: pytest.MonkeyPatch) -> _Mundo:  # noqa
     monkeypatch.setattr(_Tocador, "tocar_o_toque", tocar_o_toque, raising=False)
     motor = tv.TatoVivo(tv.atuadores_de_producao(mundo.daemon))
     motor.ligado = True
+    motor.escolhas = {u.replace(":", "").lower(): "do_estilo" for u in _QUATRO}
     mundo.daemon._tato_vivo = motor
     return mundo
 

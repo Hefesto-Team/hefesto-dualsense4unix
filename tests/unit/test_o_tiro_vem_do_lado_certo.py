@@ -317,6 +317,9 @@ class _Mesa:
         receita: tv.Receita,
     ) -> None:
         monkeypatch.setattr(tv, "receita_ativa", lambda _d: receita)
+        monkeypatch.setattr(
+            tv, "escolhas_ativas",
+            lambda _d: {u.replace(":", "").lower(): "do_estilo" for u in jogadores})
         self.leitores = {uniq: _Leitor() for uniq in jogadores[1:]}
         self.pads = {uniq: _Pad() for uniq in jogadores}
         self.alto_falante = _AltoFalante()
