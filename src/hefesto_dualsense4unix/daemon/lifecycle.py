@@ -3776,7 +3776,7 @@ class Daemon:
             )
             quem_segura = getattr(self.controller, "set_quem_segura_o_pad", None)
             if callable(quem_segura):
-                quem_segura(self._jogo_que_segura_o_pad)
+                quem_segura(self._jogos_nos_pads)
             logger.info("game_signal_wired")
         except Exception as exc:
             logger.warning("game_signal_wire_failed", err=str(exc))
@@ -3927,15 +3927,22 @@ class Daemon:
         """Agregado `game_open` de TODOS os vpads (P1 + co-op, NUMA-01)."""
         return any(bool(getattr(vpad, "game_open", False)) for vpad in _os_pads_virtuais(self))
 
-    def _jogo_que_segura_o_pad(self) -> Any:
-        """O processo de jogo (`Segurador`) que segura o nó de um pad virtual, ou ``None``."""
-        from hefesto_dualsense4unix.integrations.quem_segura_o_pad import jogo_no_pad
+    def _jogos_nos_pads(self) -> dict[str, Any]:
+        """``{identidade do físico: Segurador}`` de cada pad que um jogo segura, numa varredura."""
+        from hefesto_dualsense4unix.integrations.quem_segura_o_pad import jogos_por_pad
 
-        return jogo_no_pad(_os_pads_virtuais(self))
+        return jogos_por_pad(_os_pads_por_alvo(self))
 
     def _processo_no_pad(self) -> str | None:
-        """O nome do processo de jogo que segura o nó de um pad virtual, ou ``None``."""
-        segurador = self._jogo_que_segura_o_pad()
+        """O nome do primeiro jogo que segura um pad virtual, ou ``None``.
+
+        A resposta por pad da mesma varredura fica no backend, para a abertura do portão.
+        """
+        jogos = self._jogos_nos_pads()
+        guardar = getattr(self.controller, "set_jogos_nos_pads", None)
+        if callable(guardar):
+            guardar(jogos)
+        segurador = next(iter(jogos.values()), None)
         return (segurador.nome or str(segurador.pid)) if segurador is not None else None
 
     def _manager_de_selecao(self) -> Any:
@@ -5152,6 +5159,27 @@ def _os_pads_virtuais(daemon: Any) -> list[Any]:
             if vpad is not None:
                 vpads.append(vpad)
     return vpads
+
+
+def _os_pads_por_alvo(daemon: Any) -> dict[str, Any]:
+    """Todo pad virtual de pé pela identidade do físico: o P1 pelo primário, o co-op pelo jogador.
+
+    O pad sem identidade entra por uma chave de posição, que conta para o produto e não casa alvo.
+    """
+    pads: dict[str, Any] = {}
+    primary = getattr(daemon, "_gamepad_device", None)
+    if primary is not None:
+        pads[primary_identity(daemon) or "#p1"] = primary
+    players = getattr(getattr(daemon, "_coop_manager", None), "_players", None)
+    if isinstance(players, dict):
+        for indice, player in enumerate(list(players.values())):
+            vpad = getattr(player, "vpad", None)
+            if vpad is None:
+                continue
+            identidade = getattr(player, "identity", None)
+            chave = identidade if isinstance(identidade, str) and identidade else f"#{indice}"
+            pads[chave if chave not in pads else f"#{indice}"] = vpad
+    return pads
 
 
 def _so_o_pad(inputs: dict[str, Any], raw: str) -> str | None:

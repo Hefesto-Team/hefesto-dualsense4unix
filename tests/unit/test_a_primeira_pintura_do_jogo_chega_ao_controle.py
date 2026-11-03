@@ -2,14 +2,15 @@
 
 O jogo escreve o número e a cor na abertura, antes de o tique do sinal de jogo abrir o portão: a
 escrita fica retida sob ``daemon``. Na abertura, chega o retido do processo que segura o pad e é o
-jogo; o do cliente da Steam continua descartado. Quem segura o pad é o leitor do produto
-(`quem_segura_o_pad.jogo_no_pad`) sobre um ``/proc`` de mentira.
+jogo; o do cliente da Steam continua descartado. Quem segura cada pad é o leitor do produto
+(`quem_segura_o_pad.jogos_por_pad`) sobre um ``/proc`` de mentira, com um nó por pad.
 """
 from __future__ import annotations
 
 import os
 import select
 import struct
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -22,7 +23,7 @@ from hefesto_dualsense4unix.core.led_control import player_led_pattern, player_s
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.integrations import uhid_gamepad
-from hefesto_dualsense4unix.integrations.quem_segura_o_pad import jogo_no_pad
+from hefesto_dualsense4unix.integrations.quem_segura_o_pad import jogos_por_pad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     _GAME_REPLICA_GRACE_S,
     HID_MAX_DESCRIPTOR_SIZE,
@@ -75,8 +76,9 @@ class _Proc:
         self.proc = raiz / "proc"
         self.dev = raiz / "dev"
         self.dev.mkdir(parents=True)
-        self.no = self.dev / "hidraw9"
-        self.no.write_bytes(b"")
+        self.nos = {n: self.dev / f"hidraw1{n}" for n in MACS}
+        for no in self.nos.values():
+            no.write_bytes(b"")
         self._criar(PID_DA_STEAM, "steam", "/home/u/.steam/ubuntu12_32/steam")
         self._criar(PID_DO_JOGO, "Jogo.exe", "Z:\\jogo\\Jogo.exe")
 
@@ -86,20 +88,23 @@ class _Proc:
         (pasta / "comm").write_text(nome + "\n")
         (pasta / "cmdline").write_bytes(cmdline.encode() + b"\0")
 
-    def segura(self, pid: int, segura: bool) -> None:
-        link = self.proc / str(pid) / "fd" / "7"
-        if segura and not link.is_symlink():
-            link.symlink_to(self.no)
-        elif not segura and link.is_symlink():
-            link.unlink()
+    def segura(self, pid: int, segura: bool, players: tuple[int, ...] = tuple(MACS)) -> None:
+        for n in players:
+            link = self.proc / str(pid) / "fd" / f"1{n}"
+            if segura and not link.is_symlink():
+                link.symlink_to(self.nos[n])
+            elif not segura and link.is_symlink():
+                link.unlink()
 
     def leitor(self) -> Any:
-        vpad = SimpleNamespace(mac="02:fe:00:00:00:09", name="pad")
-        ino = os.stat(self.no).st_ino
-        return lambda: jogo_no_pad(
-            [vpad],
+        vpads = {MACS[n]: SimpleNamespace(mac=f"02:fe:00:00:00:0{n}", name="pad") for n in MACS}
+        nos = {
+            f"02:fe:00:00:00:0{n}": (str(self.nos[n]), os.stat(self.nos[n]).st_ino) for n in MACS
+        }
+        return lambda: jogos_por_pad(
+            vpads,
             raiz_proc=str(self.proc),
-            resolver=lambda **_k: {"hidraw": str(self.no), "hidraw_ino": ino},
+            resolver=lambda uniq, **_k: {"hidraw": nos[uniq][0], "hidraw_ino": nos[uniq][1]},
             raiz_dev=str(self.dev),
             meu_pid=1,
         )
@@ -140,8 +145,11 @@ def _mesa(via: str, proc: _Proc) -> tuple[bp.PyDualSenseController, dict[int, _N
         }
     sinal = SimpleNamespace(valor="daemon")
     ctl.set_game_authority_provider(lambda: sinal.valor)
-    ctl.set_quem_segura_o_pad(proc.leitor())
-    daemon = SimpleNamespace(controller=ctl, display_authority="daemon", sinal=sinal)
+    leitor = proc.leitor()
+    ctl.set_quem_segura_o_pad(leitor)
+    daemon = SimpleNamespace(
+        controller=ctl, display_authority="daemon", sinal=sinal, leitor=leitor
+    )
     return ctl, nos, daemon
 
 
@@ -192,7 +200,17 @@ def _escreve(pad: UhidDualSense, caminho: str, numero: int, cor: tuple[int, int,
         os.close(escrita)
 
 
+def _espera_os_autores(ctl: bp.PyDualSenseController) -> None:
+    """O fio de fundo deu autor a toda escrita retida."""
+    prazo = time.monotonic() + 5.0
+    while ctl._fio_dos_autores is not None or ctl._retido_sem_autor:
+        assert time.monotonic() < prazo, "o fio de fundo não resolveu o autor das escritas retidas"
+        time.sleep(0.005)
+
+
 def _abre_o_portao(ctl: bp.PyDualSenseController, daemon: Any) -> None:
+    """O tique: a varredura em `_run_blocking` guarda a resposta por pad e a borda abre o portão."""
+    ctl.set_jogos_nos_pads(daemon.leitor())
     daemon.sinal.valor = "game"
     ctl.replay_retained_game_outputs()
 
@@ -245,6 +263,7 @@ def test_a_escrita_retida_da_steam_e_descartada(
     pad = _pad(daemon, player, caminho)
 
     _escreve(pad, caminho, _numero(player), COR_DA_PALETA)
+    _espera_os_autores(ctl)
     proc.segura(PID_DO_JOGO, True)
     _abre_o_portao(ctl, daemon)
 
@@ -263,6 +282,7 @@ def test_a_steam_e_o_jogo_no_mesmo_controle_so_o_do_jogo_chega(
     pad = _pad(daemon, player, caminho)
 
     _escreve(pad, caminho, _numero(player) % 4 + 1, COR_DA_PALETA)
+    _espera_os_autores(ctl)
     proc.segura(PID_DO_JOGO, True)
     _escreve(pad, caminho, _numero(player), COR_DO_JOGO)
     _abre_o_portao(ctl, daemon)
@@ -276,9 +296,11 @@ def test_a_ultima_escrita_do_jogo_vence_a_da_steam_que_veio_depois(tmp_path: Pat
     proc.segura(PID_DO_JOGO, True)
     ctl, nos, daemon = _mesa("cabo", proc)
     ctl.set_game_output_for(MACS[2], led=COR_DO_JOGO)
+    _espera_os_autores(ctl)
     proc.segura(PID_DO_JOGO, False)
     proc.segura(PID_DA_STEAM, True)
     ctl.set_game_output_for(MACS[2], led=COR_DA_PALETA)
+    _espera_os_autores(ctl)
     proc.segura(PID_DO_JOGO, True)
 
     _abre_o_portao(ctl, daemon)
@@ -292,6 +314,7 @@ def test_o_retido_de_um_jogo_que_ja_saiu_nao_chega_no_seguinte(tmp_path: Path) -
     proc.segura(PID_DO_JOGO, True)
     ctl, nos, daemon = _mesa("cabo", proc)
     ctl.set_game_output_for(MACS[1], led=COR_DO_JOGO)
+    _espera_os_autores(ctl)
     proc.segura(PID_DO_JOGO, False)
 
     _abre_o_portao(ctl, daemon)
@@ -342,10 +365,12 @@ def test_o_daemon_liga_ao_backend_o_leitor_de_quem_segura_o_pad(
 
     ctl = bp.PyDualSenseController()
     daemon = Daemon(controller=ctl, config=DaemonConfig(ipc_enabled=False, udp_enabled=False))
-    jogo = SimpleNamespace(pid=PID_DO_JOGO, nome="Jogo.exe", no="/dev/hidraw9")
-    monkeypatch.setattr(quem_segura_o_pad, "jogo_no_pad", lambda _vpads: jogo)
+    jogo = SimpleNamespace(pid=PID_DO_JOGO, nome="Jogo.exe", no="/dev/hidraw12")
+    monkeypatch.setattr(quem_segura_o_pad, "jogos_por_pad", lambda _pads: {MACS[2]: jogo})
 
     daemon._wire_game_signal()
 
-    assert ctl._o_jogo_que_segura_o_pad() == (PID_DO_JOGO, "Jogo.exe")
+    uniq = MACS[2].replace(":", "").lower()
+    assert ctl._os_jogos_nos_pads() == {uniq: (PID_DO_JOGO, "Jogo.exe")}
     assert daemon._processo_no_pad() == "Jogo.exe"
+    assert ctl._jogo_por_alvo == {uniq: (PID_DO_JOGO, "Jogo.exe")}

@@ -147,8 +147,12 @@ def seguradores(
     raiz_proc: str = RAIZ_PROC,
     relogio: Callable[[], float] = time.monotonic,
     orcamento_s: float = ORCAMENTO_DA_VARREDURA_S,
+    todos_os_nos: bool = False,
 ) -> list[Segurador]:
-    """Todo processo com um descritor num dos ``alvos`` (``{inode: caminho}``), sem abrir o nó."""
+    """Todo processo com um descritor num dos ``alvos`` (``{inode: caminho}``), sem abrir o nó.
+
+    Com ``todos_os_nos``, um processo entra uma vez por nó que segura; sem, só pelo primeiro.
+    """
     if not alvos:
         return []
     nomes_dos_nos = {os.path.basename(caminho) for caminho in alvos.values()}
@@ -158,6 +162,7 @@ def seguradores(
         if not entrada.isdigit():
             continue
         pasta = os.path.join(raiz_proc, entrada, "fd")
+        vistos: set[str] = set()
         for descritor in _entradas(pasta):
             if relogio() > prazo:
                 return achados
@@ -166,11 +171,50 @@ def seguradores(
                 continue
             ino = _inode(link)
             no = alvos.get(ino)
-            if no is None:
+            if no is None or no in vistos:
                 continue
+            vistos.add(no)
             nome = _texto(os.path.join(raiz_proc, entrada, "comm"))
             achados.append(Segurador(pid=int(entrada), nome=nome, no=no))
-            break
+            if not todos_os_nos:
+                break
+    return achados
+
+
+def jogos_por_pad(
+    pads: dict[str, Any],
+    *,
+    raiz_proc: str | None = None,
+    resolver: Callable[..., dict[str, Any]] = resolver_no_do_vpad,
+    raiz_dev: str | None = None,
+    meu_pid: int | None = None,
+) -> dict[str, Segurador]:
+    """``{chave: jogo}`` de cada pad de ``pads`` (``{chave: vpad}``) que um jogo segura.
+
+    Uma varredura só para todos os pads; o primeiro valor é o primeiro jogo achado no ``/proc``.
+    """
+    raiz_proc = RAIZ_PROC if raiz_proc is None else raiz_proc
+    raiz_dev = RAIZ_DEV if raiz_dev is None else raiz_dev
+    alvos: dict[int, str] = {}
+    dono_do_no: dict[str, str] = {}
+    for chave, vpad in pads.items():
+        for ino, caminho in inodes(nos_do_pad(vpad, resolver=resolver, raiz_dev=raiz_dev)).items():
+            alvos[ino] = caminho
+            dono_do_no[caminho] = chave
+    eu = os.getpid() if meu_pid is None else meu_pid
+    e_jogo: dict[int, bool] = {}
+    achados: dict[str, Segurador] = {}
+    for segurador in seguradores(alvos, raiz_proc=raiz_proc, todos_os_nos=True):
+        dono = dono_do_no.get(segurador.no)
+        if dono is None or dono in achados:
+            continue
+        if segurador.pid not in e_jogo:
+            cmdline = _texto(os.path.join(raiz_proc, str(segurador.pid), "cmdline"))
+            e_jogo[segurador.pid] = conta_como_jogo(
+                segurador.nome, cmdline, pid=segurador.pid, meu_pid=eu
+            )
+        if e_jogo[segurador.pid]:
+            achados[dono] = segurador
     return achados
 
 
@@ -183,17 +227,14 @@ def jogo_no_pad(
     meu_pid: int | None = None,
 ) -> Segurador | None:
     """O primeiro processo de JOGO que segura o nó de um dos ``vpads``, ou ``None``."""
-    raiz_proc = RAIZ_PROC if raiz_proc is None else raiz_proc
-    raiz_dev = RAIZ_DEV if raiz_dev is None else raiz_dev
-    alvos: dict[int, str] = {}
-    for vpad in vpads:
-        alvos.update(inodes(nos_do_pad(vpad, resolver=resolver, raiz_dev=raiz_dev)))
-    eu = os.getpid() if meu_pid is None else meu_pid
-    for segurador in seguradores(alvos, raiz_proc=raiz_proc):
-        cmdline = _texto(os.path.join(raiz_proc, str(segurador.pid), "cmdline"))
-        if conta_como_jogo(segurador.nome, cmdline, pid=segurador.pid, meu_pid=eu):
-            return segurador
-    return None
+    por_pad = jogos_por_pad(
+        {str(indice): vpad for indice, vpad in enumerate(vpads)},
+        raiz_proc=raiz_proc,
+        resolver=resolver,
+        raiz_dev=raiz_dev,
+        meu_pid=meu_pid,
+    )
+    return next(iter(por_pad.values()), None)
 
 
 __all__ = [
@@ -206,6 +247,7 @@ __all__ = [
     "conta_como_jogo",
     "inodes",
     "jogo_no_pad",
+    "jogos_por_pad",
     "nos_do_pad",
     "seguradores",
 ]

@@ -325,6 +325,8 @@ _OUTPUT_FIELDS = (
 )
 
 _LAYER_PROFILE = "perfil"
+
+_ESPERA_DA_RAJADA_S = 0.05
 _LAYER_USER = "usuaria"
 
 _COOP_LAYER_FIELDS = ("player_leds",)
@@ -1362,6 +1364,10 @@ class PyDualSenseController(IController):
         self._game_authority_provider: Callable[[], str] | None = None
         self._retained_game_outputs: dict[str, dict[str, Any]] = {}
         self._retido_por_autor: dict[str, dict[int | None, dict[str, Any]]] = {}
+        self._retido_sem_autor: dict[str, list[dict[str, Any]]] = {}
+        self._jogo_por_alvo: dict[str, tuple[int, str]] = {}
+        self._fio_dos_autores: threading.Thread | None = None
+        self._espera_da_rajada_s = _ESPERA_DA_RAJADA_S
         self._quem_segura_o_pad: Callable[[], Any] | None = None
         self._retained_log_armed = True
         self._defend_last_at: float | None = None
@@ -1606,24 +1612,73 @@ class PyDualSenseController(IController):
             self._game_authority_provider = fn
 
     def set_quem_segura_o_pad(self, fn: Callable[[], Any] | None) -> None:
-        """Injeta (ou remove, com None) o leitor do processo de jogo que segura um pad virtual."""
+        """Injeta (ou remove, com None) o leitor de ``{uniq do físico: jogo}`` (uma varredura)."""
         with self._io_lock:
             self._quem_segura_o_pad = fn
 
-    def _o_jogo_que_segura_o_pad(self) -> tuple[int, str] | None:
-        """``(pid, nome)`` do processo de jogo que segura um pad virtual agora, ou ``None``."""
+    def set_jogos_nos_pads(self, resposta: dict[str, Any]) -> None:
+        """Guarda a resposta por pad da varredura do tique do sinal de jogo, que a abertura usa."""
+        jogos = self._jogos_por_alvo(resposta)
+        with self._io_lock:
+            self._jogo_por_alvo = jogos
+
+    def _jogos_por_alvo(self, resposta: Any) -> dict[str, tuple[int, str]]:
+        """``{alvo: (pid, nome)}`` de uma resposta do leitor, com o alvo normalizado."""
+        jogos: dict[str, tuple[int, str]] = {}
+        if not isinstance(resposta, dict):
+            return jogos
+        for chave, segurador in resposta.items():
+            alvo = self._key_to_uniq(chave) if isinstance(chave, str) else None
+            pid = getattr(segurador, "pid", None)
+            if alvo is None or not isinstance(pid, int) or pid <= 0:
+                continue
+            jogos[alvo] = (pid, str(getattr(segurador, "nome", "") or pid))
+        return jogos
+
+    def _os_jogos_nos_pads(self) -> dict[str, tuple[int, str]]:
+        """Uma varredura do leitor; ``{}`` sem leitor ou quando ele falha."""
         leitor = self._quem_segura_o_pad
         if leitor is None:
-            return None
+            return {}
         try:
-            segurador = leitor()
+            return self._jogos_por_alvo(leitor())
         except Exception as exc:
             logger.debug("quem_segura_o_pad_falhou", err=str(exc))
-            return None
-        pid = getattr(segurador, "pid", None)
-        if not isinstance(pid, int) or pid <= 0:
-            return None
-        return pid, str(getattr(segurador, "nome", "") or pid)
+            return {}
+
+    def _anotar_sem_autor_locked(self, alvo: str, mudou: dict[str, Any]) -> None:
+        """A escrita retida espera o autor, que o fio de fundo resolve, nunca o fio que escreveu."""
+        self._retido_sem_autor.setdefault(alvo, []).append(dict(mudou))
+        if self._fio_dos_autores is not None:
+            return
+        fio = threading.Thread(
+            target=self._resolver_os_autores_em_fundo,
+            name="hefesto-autor-da-escrita",
+            daemon=True,
+        )
+        self._fio_dos_autores = fio
+        fio.start()
+
+    def _resolver_os_autores_em_fundo(self) -> None:
+        """Uma varredura por rajada para todos os pads, fora do laço que entrega a entrada."""
+        time.sleep(self._espera_da_rajada_s)
+        jogos = self._os_jogos_nos_pads()
+        with self._io_lock:
+            self._juntar_os_sem_autor_locked(jogos)
+            self._fio_dos_autores = None
+
+    def _juntar_os_sem_autor_locked(self, jogos: dict[str, tuple[int, str]]) -> None:
+        """Dá a cada escrita que espera o autor o jogo que segura o pad do mesmo alvo."""
+        pendentes = self._retido_sem_autor
+        self._retido_sem_autor = {}
+        for alvo, escritas in pendentes.items():
+            if alvo not in self._retained_game_outputs:
+                continue
+            jogo = jogos.get(alvo)
+            pid = jogo[0] if jogo is not None else None
+            do_autor = self._retido_por_autor.setdefault(alvo, {}).setdefault(pid, {})
+            for escrita in escritas:
+                do_autor.update(escrita)
 
     def _game_wins(self) -> bool:
         """True quando a camada GAME participa do merge (autoridade ≠ 'daemon')."""
@@ -4374,7 +4429,6 @@ class PyDualSenseController(IController):
             fields["player_leds"] = tuple(bool(x) for x in player_leds)
         if not fields:
             return True
-        autor = self._autor_da_escrita_retida(alvo, fields)
         defender = False
         with self._io_lock:
             if (
@@ -4397,10 +4451,11 @@ class PyDualSenseController(IController):
                 retido = self._retained_game_outputs.setdefault(alvo, {})
                 mudou = {k: v for k, v in fields.items() if retido.get(k) != v}
                 retido.update(fields)
-                if mudou:
+                if mudou and self._quem_segura_o_pad is not None:
+                    self._anotar_sem_autor_locked(alvo, mudou)
+                elif mudou:
                     por_autor = self._retido_por_autor.setdefault(alvo, {})
-                    pid = autor[0] if autor is not None else None
-                    por_autor.setdefault(pid, {}).update(mudou)
+                    por_autor.setdefault(None, {}).update(mudou)
                 if self._retained_log_armed:
                     logger.info(
                         "game_output_retido_sem_jogo",
@@ -4436,37 +4491,28 @@ class PyDualSenseController(IController):
         )
         return True
 
-    def _autor_da_escrita_retida(
-        self, alvo: str, fields: dict[str, Any]
-    ) -> tuple[int, str] | None:
-        """Quem segura o pad quando a escrita vai ficar retida e muda o retido; senão ``None``."""
-        if self._quem_segura_o_pad is None or self._game_wins():
-            return None
-        with self._io_lock:
-            retido = dict(self._retained_game_outputs.get(alvo, {}))
-        if all(retido.get(k) == v for k, v in fields.items()):
-            return None
-        return self._o_jogo_que_segura_o_pad()
-
     def replay_retained_game_outputs(self) -> None:
-        """Abertura do gate (NUMA-02): chega o retido do processo que é o jogo agora.
+        """Abertura do gate (NUMA-02): em cada alvo chega o retido do jogo que segura o pad dele.
 
-        O retido de qualquer outro processo (o cliente da Steam, a mesa) é DESCARTADO.
+        Quem segura cada pad é a resposta da varredura do tique (`set_jogos_nos_pads`): a abertura
+        não varre. O retido de qualquer outro processo (o cliente da Steam, a mesa) é DESCARTADO.
         """
-        jogo = self._o_jogo_que_segura_o_pad()
         with self._io_lock:
+            jogos = dict(self._jogo_por_alvo)
+            self._juntar_os_sem_autor_locked(jogos)
             retidos = self._retained_game_outputs
             por_autor = self._retido_por_autor
             self._retained_game_outputs = {}
             self._retido_por_autor = {}
             self._retained_log_armed = True
-            reaplicar: list[tuple[str, dict[str, Any]]] = []
+            reaplicar: list[tuple[str, dict[str, Any], str]] = []
             descartes: list[tuple[str, list[str], dict[str, Any]]] = []
             for alvo, campos in retidos.items():
                 autores = por_autor.get(alvo, {})
+                jogo = jogos.get(alvo)
                 do_jogo = autores.get(jogo[0]) if jogo is not None else None
-                if do_jogo:
-                    reaplicar.append((alvo, dict(do_jogo)))
+                if do_jogo and jogo is not None:
+                    reaplicar.append((alvo, dict(do_jogo), jogo[1]))
                 fora = {
                     k: v
                     for pid, escritos in autores.items()
@@ -4485,12 +4531,12 @@ class PyDualSenseController(IController):
                 campos=nomes,
                 **luz,
             )
-        for alvo, escritos in reaplicar:
+        for alvo, escritos, processo in reaplicar:
             logger.info(
                 "game_output_retido_do_jogo_chega_na_abertura",
                 uniq=alvo,
                 campos=sorted(escritos),
-                processo=jogo[1] if jogo is not None else None,
+                processo=processo,
                 **self._luz_para_o_journal(escritos),
             )
             self.set_game_output_for(
@@ -4527,6 +4573,7 @@ class PyDualSenseController(IController):
             triggers = self._game_triggers_by_uniq.pop(alvo, None)
             retido = self._retained_game_outputs.pop(alvo, None)
             self._retido_por_autor.pop(alvo, None)
+            self._retido_sem_autor.pop(alvo, None)
             self._recusa_ao_jogo_logada.pop(alvo, None)
             self._jogo_provou_o_gatilho.discard(alvo)
             self._jogo_provou_a_luz.discard(alvo)
