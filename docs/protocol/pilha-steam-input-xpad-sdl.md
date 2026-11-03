@@ -1626,8 +1626,11 @@ do `winedevice`. Prova direta: `HIDIOCGFEATURE` por Python no hidraw de cada pad
   no tamanho gravado, e o pacote vazio vai quando a resposta é menor que o
   `wLength` (`f_hidg_size_get_report` em `assets/dkms/usb-f-hid/f_hid.c:591`).
   Medido com ele: 41, 20 e 64 bytes em 2 a 6 ms nos 4 pads, nenhum `1053`.
-  A marca dele é `/sys/module/usb_f_hid/parameters/get_report_sized`, e o
-  `doctor` dá `[FAIL]` sem a marca.
+  As marcas dele são os parâmetros `get_report_sized` (patch `0001`) e
+  `get_report_refuses` (patch `0002`) em `/sys/module/usb_f_hid/parameters/`.
+  Só o módulo com todas conta como curado: a lista tem dono no
+  `DKMS_MARCAS_DO_USB_F_HID` de `scripts/dkms_lib.sh` e no `MARCAS_DO_F_HID` de
+  `pad_usb.py`, e o `doctor` dá `[FAIL]` nomeando a que falta.
 
 ## 7. O que continua em aberto por falta de medição
 
