@@ -1550,7 +1550,7 @@ class CoopManager:
 
         Gates — todos ESTRUTURAIS, isto é, verdades que não mudam enquanto este
         jogador existir (fail-safe: sem reader o vpad segue com a IMU neutra):
-        - vpad em uhid (o uinput é evdev puro, sem `forward_motion`);
+        - vpad de pé (no uinput do Xbox o leitor dá só o relógio do mudo, sem movimento);
         - identidade com MAC (o hidraw por-uniq vem do backend pydualsense);
         - backend que expõe `hidraw_path` (o `FakeController` não tem físico).
 
@@ -1582,7 +1582,7 @@ class CoopManager:
         é por isso que o P1 nunca sofreu deste defeito.
         """
         vpad = player.vpad
-        if getattr(vpad, "backend", None) != "uhid":
+        if vpad is None:
             return
         identity = player.identity
         if identity.startswith("path:") or self._e_externo(identity):
@@ -2093,6 +2093,8 @@ class CoopManager:
             if player.vpad is None or self._espera(player):
                 continue
             if player.cedido_ao_primario:
+                continue
+            if o_pad_da_peca_muda_repousa(player.vpad, player.motion_reader):
                 continue
             try:
                 snap = player.reader.snapshot()
@@ -3007,6 +3009,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     filtrar_o_botao,
     gatilhos_dos_acionadores,
     moldar_os_analogicos,
+    o_pad_da_peca_muda_repousa,
     ralos_do_mic,
     sem_o_eixo_do_gesto,
     sem_o_gesto_do_ps,

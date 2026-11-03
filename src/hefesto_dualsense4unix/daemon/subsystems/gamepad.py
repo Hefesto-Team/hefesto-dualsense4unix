@@ -1412,9 +1412,13 @@ def read_primary_calibration(daemon: DaemonProtocol) -> bytes | None:
 
 
 def start_motion_reader(daemon: DaemonProtocol, device: Any) -> None:
-    """Sobe o espelho de motion do P1 (GYRO-01): hidraw do físico → vpad."""
+    """Sobe o leitor do hidraw do P1 em todo modo: o relógio do mudo e, no uhid, o movimento.
+
+    No Xbox o pad é uinput e não tem canal de movimento: o leitor dá só o relógio do mudo
+    (`physical_report_reader.a_peca_calou`), pelo mesmo fd do broker.
+    """
     stop_motion_reader(daemon)
-    if getattr(device, "backend", None) != "uhid":
+    if device is None:
         return
     hidraw_fn: Any = getattr(daemon.controller, "hidraw_path", None)
     if not callable(hidraw_fn):
@@ -2528,6 +2532,29 @@ def _bater_os_eventos_do_jogo(daemon: Any) -> None:
         logger.debug("eventos_do_jogo_no_tique_falharam", err=str(exc))
 
 
+def o_pad_da_peca_muda_repousa(device: Any, leitor: Any) -> bool:
+    """A peça calou: o pad fica em repouso, só a vibração do jogo segue. Nunca levanta.
+
+    A pergunta é a do leitor da peça (`a_peca_calou`), sem relógio no laço. O mesmo vale
+    para o P1 (`dispatch_gamepad`) e do P2 ao P4 (`CoopManager.forward_all`).
+    """
+    from hefesto_dualsense4unix.core.physical_report_reader import (
+        a_peca_calou,
+        soltar_o_pad_da_peca_muda,
+    )
+
+    if not a_peca_calou(leitor):
+        return False
+    soltar_o_pad_da_peca_muda(device)
+    pump = getattr(device, "pump_ff", None)
+    if callable(pump):
+        try:
+            pump()
+        except Exception as exc:
+            logger.warning("gamepad_dispatch_failed", err=str(exc))
+    return True
+
+
 def dispatch_gamepad(
     daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]
 ) -> None:
@@ -2537,6 +2564,8 @@ def dispatch_gamepad(
     _bater_os_eventos_do_jogo(daemon)
     device = daemon._gamepad_device
     if device is None or _o_p1_e_do_de_fora(daemon):
+        return
+    if o_pad_da_peca_muda_repousa(device, getattr(daemon, "_motion_reader", None)):
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
     do_edge = _os_do_edge(state)
@@ -3432,6 +3461,7 @@ __all__ = [
     "notify_vpad_degradado",
     "o_p1_nasce_pelo_fio",
     "o_p1_que_nasce",
+    "o_pad_da_peca_muda_repousa",
     "parar_os_acionadores",
     "ponte_dos_acionadores",
     "ralos_do_mic",

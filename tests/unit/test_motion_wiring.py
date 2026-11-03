@@ -145,15 +145,16 @@ class TestP1:
         assert eventos.index("reader.stop") < eventos.index("device.stop")
         assert daemon.controller.attached[-1] is None
 
-    def test_fallback_uinput_nao_ganha_reader(
+    def test_o_pad_uinput_ganha_o_leitor_do_mudo(
         self, monkeypatch: pytest.MonkeyPatch, wired: tuple[_FakeDaemon, dict[str, Any]]
     ) -> None:
+        """O pad do Xbox também tem relógio de mudo: o leitor nasce em todo modo."""
         daemon, _ = wired
         monkeypatch.setattr(
             vp, "make_virtual_pad", lambda *_a, **_k: _FakeVpad(backend="uinput")
         )
         gp.start_gamepad_emulation(daemon, flavor="dualsense", origin="manual")
-        assert daemon._motion_reader is None
+        assert daemon._motion_reader is not None
 
     def test_backend_sem_hidraw_nao_ganha_reader(
         self, wired: tuple[_FakeDaemon, dict[str, Any]]
@@ -298,14 +299,15 @@ class TestCoop:
         manager._start_player_motion_reader(player)
         assert player.motion_reader is None
 
-    def test_vpad_uinput_fica_sem_espelho(
+    def test_vpad_uinput_ganha_o_leitor_do_mudo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """O pad do Xbox também tem relógio de mudo: o leitor nasce em todo modo."""
         monkeypatch.setattr(prr, "PhysicalReportReader", _FakeReader)
         manager = self._manager(_FakeController())
         player = self._player("aabbccddee02", vpad=_FakeVpad(backend="uinput"))
         manager._start_player_motion_reader(player)
-        assert player.motion_reader is None
+        assert player.motion_reader is not None
 
     def test_calibracao_por_jogador_e_fail_safe(self) -> None:
         manager = self._manager(_FakeController())

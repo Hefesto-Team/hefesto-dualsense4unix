@@ -1718,10 +1718,10 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:388` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:157` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:884-919` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1229` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:276` | **ALTA** |
-> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1216`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:299` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:44` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:885-920` (`_observe_jack`) | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1291` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:290` | **ALTA** |
+> | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1278`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
 > dois**, porque sobreviveria mesmo se a cura nunca tivesse sido feita. Os bits
@@ -1748,7 +1748,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > `assets/dkms/hid-playstation/hid-playstation.c:196-197`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
 > `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
-> (`core/physical_report_reader.py:422-457`, `decodificar_bateria`):
+> (`core/physical_report_reader.py:333-368`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
 > |---|---|---|
@@ -1759,7 +1759,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > A escala **não é percentual**: são **11 níveis** (5, 15, ..., 95, 100) num
 > nibble. E este byte também é espelhado ao vpad desde 09/08
-> (`integrations/uhid_gamepad.py:1240` `forward_battery`, saindo em `:1640`,
+> (`integrations/uhid_gamepad.py:1302` `forward_battery`, saindo em `:1640`,
 > offset `_STATUS_OFFSET = 52` em `:504`) — a mesma leva do byte 53.
 >
 > **Grau: FONTE DESTA MÁQUINA** — o `switch` de `charging_status` dentro de

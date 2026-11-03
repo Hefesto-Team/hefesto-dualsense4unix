@@ -1,124 +1,11 @@
-"""Espelho de MOTION: hidraw cru do DualSense físico → vpad uhid (GYRO-01).
+"""Espelho do hidraw cru de cada DualSense físico para o pad virtual, e o relógio do mudo dele.
 
-Por que este módulo existe
---------------------------
-O vpad uhid (máscara DualSense Edge) monta o report 0x01 a partir do evdev do
-físico — sticks/botões/d-pad — e deixava a janela de motion (bytes 15..39 do
-payload: gyro, accel, sensor_timestamp e os 2 pontos de toque) NEUTRA. Medido
-ao vivo (2026-07-19): o físico emite gyro a 250 Hz no USB e, no BT, em RAJADA
-(veja "A taxa do rádio é RAJADA", abaixo) — e o nó Motion do vpad emite ZERO:
-gyro aiming morto para quem joga pelo hefesto.
-
-A cura é um espelho de report PARCIAL (ARCH-1 do estudo
-o estudo «estudo-imu-touchpad-vpad» de 18/07/2026): uma thread
-abre um 2º fd SOMENTE-LEITURA no hidraw do físico, extrai VERBATIM a janela
-`raw[base+15 : base+40]` de cada report cru (0x01 USB, base 1; 0x31 BT, base 2
-com CRC-32 validado — seed 0xA1, o `PS_INPUT_CRC32_SEED` do kernel) e a entrega
-em `vpad.forward_motion(window)`. Cópia byte a byte, salvo o peso da mira no giro, e o
-`sensor_timestamp` (que o SDL usa como dt de integração do gyro e que o evdev
-NÃO expõe) vem de graça. Sticks/botões continuam no caminho evdev endurecido.
-
-O reader é o RELÓGIO: ao abrir o device ele liga `set_motion_streaming(True)`
-no vpad — os forwards do poll loop (60 Hz) viram só-cache e cada janela nova
-sai na taxa do físico, com throttle. Ao perder o device (hotplug, BT caiu,
-retarget) desliga o streaming: o vpad volta ao delta de 60 Hz com IMU neutra —
-fail-safe por construção, nunca um gyro congelado.
-
-Throttle (obrigatório, não otimização): o BT desta máquina entrega em rajada,
-com PICO de ~797 Hz por controle; sem cap, 4 vpads em co-op seriam ~3200
-writes/s no /dev/uhid. A emissão é capada em `MOTION_EMIT_MAX_HZ` (250 Hz — a
-taxa nativa USB, e a mesma faixa do rate-limit do REPLICA-03) com dedup por
-valor e COALESCÊNCIA: janela retida é sobrescrita pela mais nova e a última
-nunca se perde (flush no timeout do select).
-
-O teto é uma GRADE DE PRAZO, e isso não é detalhe (GRADE-QUE-NAO-BATIA-01,
-19/08/2026): ele pergunta "já chegou o próximo prazo?", nunca "já passou um
-período desde a última entrega?". A segunda forma esteve no lugar até 19/08 e
-custava 36% das amostras NO CABO — cada entrega carimbava o instante REAL da
-chegada, empurrando a referência à frente, e o report seguinte chegava cedo por
-essa mesma diferença. Basta a fonte estar um pelo ACIMA do teto (o cabo entrega
-250,88 Hz contra 250,0 de cap) para meia amostra cair fora, e a taxa colapsar
-para perto da metade. Quem usa sentiu isso como giroscópio aos saltos, com os valores
-todos certos. Jogos integram gyro bem em
-250 Hz; o timestamp do sensor segue exato em cada janela entregue.
-
-A taxa do rádio é RAJADA, não uma taxa (medido em 11/08/2026)
--------------------------------------------------------------
-Este módulo dizia "~765 Hz" para o BT. Aquilo era a média de UMA janela curta,
-e a remedição de 11/08/2026 — cinco janelas de 8 a 10 s no mesmo controle, por
-duas réguas (o relógio do host e o `sensor_timestamp` do próprio controle) —
-mostrou que o rádio não tem "uma taxa". Fonte:
-`docs/protocol/driver-hid-playstation.md`, seção "Rádio: variável, em rajadas,
-e longe de 1000 Hz" (:740-761 e :902):
-
-* **PICO, dentro da rajada:** o p05 do intervalo é teimosamente 1255 us —
-  ~797 Hz instantâneos (:757-758). É este o número que dimensiona o
-  /dev/uhid, porque é a taxa que chega quando chega.
-* **SUSTENTADO:** não é estável. Caiu de ~334 Hz para ~55 Hz entre duas
-  janelas consecutivas de 8 s, sem nada ter mudado; o p95 do intervalo chega
-  a 187 ms. A faixa registrada é "entre ~55 e ~392 Hz" (:902).
-* **Divergência de RÉGUA, registrada e não resolvida:**
-  `docs/protocol/pilha-steam-input-xpad-sdl.md:753` escreve o piso como
-  38 Hz — é a régua do controle (janela 4, 38,3 Hz); a de :902 é a do host
-  (55,4 Hz na mesma janela). O teto (~392 Hz) é o mesmo nas duas. Quem citar
-  um piso, cite junto de qual régua ele veio.
-
-Isto NÃO é licença para afrouxar o teto de emissão — veja a nota do
-`MOTION_EMIT_MAX_HZ`, mais abaixo. Nenhuma constante mudou por causa desta
-remedição: o que estava errado era o número que as justificava, não as constantes.
-
-Leitura NÃO reabre a guerra de escritores: a guerra (2026-07-18) é sobre
-WRITERS no hidraw; o kernel replica cada input report para TODOS os fds
-abertos (fila própria por leitor) — este fd O_RDONLY não rouba nada da
-pydualsense nem do jogo, e não gera tráfego novo de rádio/USB.
-
-O clique do touchpad pega carona (TOUCH-CLICK-01)
--------------------------------------------------
-O mesmo report cru carrega, no byte de botões `payload[9]`, o
-`DS_BUTTONS2_TOUCHPAD` — o clique do touchpad. Ele NÃO viajava: a janela
-espelhada começa no byte 15, e o conjunto de botões que o caminho do jogo
-repassa (`dispatch_gamepad`, `CoopManager.forward_all`) vem do nó evdev
-PRINCIPAL, cujo `BUTTON_MAP` não tem touchpad. Quem produz os nomes
-`touchpad_*_press` é o `TouchpadReader`, que lê o nó SEPARADO e cujo consumidor
-é o teclado virtual — o jogo nunca via o botão acender.
-
-Este reader passou a extrair também esse bit e a entregá-lo em
-`vpad.forward_touchpad_click(bool)`, por BORDA. A escolha do lugar é o
-requisito: o reader é POR JOGADOR (o do P1 nasce em
-`daemon/subsystems/gamepad.py:start_motion_reader`, os do co-op em
-`CoopManager._start_player_motion_reader`) e vive com o daemon — não com a
-janela. O leitor por controle do `daemon/sensor_hub.py` é sob demanda da aba
-Status, então amarrar o clique a ele faria o botão do jogador 2 depender de a
-janela do Hefesto estar aberta.
-
-O fone e o microfone pegam a mesma carona (JACK-QUE-NAO-LIGOU-01)
-----------------------------------------------------------------
-O byte 53 do payload (`status[1]`) diz ao jogo se há fone plugado no controle,
-se há microfone e se ele está mudo. O vpad tinha o `forward_jack` desde 02/08
-e ele NUNCA foi chamado — a sprint `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já o
-tinha declarado órfão, e seis dias depois continuava com zero referências. Pior:
-mesmo fiado ele não emitiria, porque escrevia o cache e não chamava
-`_emit_if_changed`. Os dois defeitos foram curados em 09/08/2026 — o chamador é
-este reader, pela mesma razão do clique: o byte mora no report cru, fora da
-janela de motion, e o reader é por jogador e vive com o daemon.
-
-E a bateria, que é o mesmo defeito com 25 dias a mais (BATERIA-QUE-NAO-CHEGOU-01)
---------------------------------------------------------------------------------
-O byte 52 diz ao jogo quanta carga o controle tem. O `forward_battery` do vpad
-nasceu em 15/07 (`69951a7`) e nunca teve um único chamador em `src/` — e a
-consequência estava escrita na docstring dele desde o primeiro dia: *"o vpad
-anuncia 5% descarregando para sempre e o jogo mostra alerta de bateria fraca num
-controle cheio"*. Ele tinha também o segundo defeito do jack, numa forma mais
-sorrateira: chamava `_emit_if_changed()` **sem** `from_reader=True`, e o gate do
-`_motion_streaming` — que está LIGADO exatamente quando há reader, o caso normal
-— engolia a emissão. Fiado sem isso, ele continuaria não chegando ao jogo.
-
-Nada aqui toca o cursor: o clique é um BIT no report do vpad, não um evento de
-mouse. O descarte do movimento do dedo para o cursor enquanto o vpad está de pé
-(`daemon/subsystems/mouse.discard_touchpad_motion`) e a exclusão do nó do vpad
-do libinput (`assets/76-dualsense-touchpad-libinput-ignore.rules`) seguem
-intocados — é o `TouchpadReader`/`UinputMouseDevice` que mexem em cursor, e
-este módulo não fala com nenhum dos dois.
+Uma thread por jogador lê o hidraw (0x01 no cabo, 0x31 com CRC no rádio) e é o relógio do pad:
+entrega a janela de movimento (`forward_motion`), o clique do touchpad, o botão do microfone, o
+fone e a bateria. Passado `REPOUSO_DO_MUDO_S` sem report válido, declara a peça muda
+(`soltar_por_mudo` e `a_peca_calou`); o primeiro report válido desfaz. O número: o p95 do
+intervalo do rádio é 187 ms (canônica §5), duas vezes dá 374 ms, o piso é 0,4 s. A história
+está em `docs/research/o-porque-dos-modulos.md`, seção `physical_report_reader`.
 """
 from __future__ import annotations
 
@@ -176,6 +63,9 @@ _SELECT_TIMEOUT_S = 0.25
 _SILENCE_REOPEN_USB_S = 1.0
 _SILENCE_REOPEN_BT_S = 30.0
 
+REPOUSO_DO_MUDO_S = 0.4
+_ESPERA_MINIMA_S = 0.005
+
 _BUS_USB = 0x03
 _BUS_BLUETOOTH = 0x05
 
@@ -221,6 +111,27 @@ def uniq_do_hidraw(path: str) -> str | None:
             valor = linha[len("HID_UNIQ=") :].strip().lower()
             return valor or None
     return None
+
+
+def a_peca_calou(leitor: Any) -> bool:
+    """A peça deste leitor está muda: o pad fica em repouso e o laço não o reescreve."""
+    return bool(getattr(leitor, "mudo", False))
+
+
+def soltar_o_pad_da_peca_muda(pad: Any) -> None:
+    """Põe em repouso o pad que não tem repouso próprio (o uinput do Xbox). Nunca levanta.
+
+    O pad do uhid e do gadget recebe o repouso do próprio leitor (`soltar_por_mudo`), na
+    thread dele e sob a trava do pad; aqui sobra o que só sabe `forward_analog` e
+    `forward_buttons`, chamado pelo laço que o alimenta.
+    """
+    if pad is None or callable(getattr(pad, "soltar_por_mudo", None)):
+        return
+    try:
+        pad.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
+        pad.forward_buttons(frozenset())
+    except Exception as exc:
+        logger.warning("pad_da_peca_muda_soltar_falhou", err=str(exc))
 
 
 def _open_por_caminho(path: str) -> int:
@@ -509,7 +420,21 @@ class PhysicalReportReader:
         self._ilegiveis_no_meio = 0
         self._reports_perdidos = 0
         self._emit_hz_ema = 0.0
+        self._valido_em: float | None = None
+        self._mudo = False
+        self._mudos = 0
+        self._mudo_desde = 0.0
 
+
+    @property
+    def mudo(self) -> bool:
+        """A peça calou por mais de `REPOUSO_DO_MUDO_S` e ainda não voltou."""
+        return self._mudo
+
+    @property
+    def mudos(self) -> int:
+        """Quantas vezes a peça calou desde que o leitor nasceu."""
+        return self._mudos
 
     @property
     def is_running(self) -> bool:
@@ -647,6 +572,7 @@ class PhysicalReportReader:
         self._reset_jack()
         self._reset_battery()
         self._reset_gatilho()
+        self._voltar_do_mudo(self._time_fn(), motivo="leitor_parou")
         with contextlib.suppress(Exception):
             self._vpad.set_motion_streaming(False)
 
@@ -737,16 +663,23 @@ class PhysicalReportReader:
     def _read_until_lost(
         self, fd: int, silencio_max: float = _SILENCE_REOPEN_BT_S
     ) -> None:
-        """Lê reports até o fd morrer (ENODEV), silêncio longo ou sinal de fora."""
+        """Lê reports até o fd morrer (ENODEV), silêncio longo ou sinal de fora.
+
+        O silêncio maior que `REPOUSO_DO_MUDO_S` declara a peça muda (`_conferir_o_mudo`),
+        e o primeiro report válido depois dele declara a volta. O mudo atravessa a
+        reabertura: só um report válido, ou o leitor parado, o desfaz.
+        """
         silencio = 0.0
         self._contador_anterior = None
         self._ilegiveis_no_meio = 0
+        self._valido_em = self._time_fn()
         while not self._stop_flag.is_set():
             if self._reopen_flag.is_set():
                 self._reopen_flag.clear()
                 return
+            espera = self._espera_ate_o_mudo()
             try:
-                pronto = prontos_ou_acordado(fd, self._wake_r, _SELECT_TIMEOUT_S)
+                pronto = prontos_ou_acordado(fd, self._wake_r, espera)
             except (OSError, ValueError):
                 return
             if self._wake_r in pronto:
@@ -758,8 +691,9 @@ class PhysicalReportReader:
                     return
                 continue
             if not pronto:
-                silencio += _SELECT_TIMEOUT_S
+                silencio += espera
                 self._flush_pending()
+                self._conferir_o_mudo(self._time_fn())
                 if silencio >= silencio_max:
                     logger.info(
                         "motion_reader_silencio_reabrindo", limite_s=silencio_max
@@ -773,28 +707,95 @@ class PhysicalReportReader:
                 return
             if not data:
                 return
-            self._reports_seen += 1
-            base = _struct_base(data)
-            if base is None:
-                if data[0] == INPUT_REPORT_BT:
-                    self._bt_drops += 1
-                    self._ilegiveis_no_meio += 1
-                    de_audio = len(data) == INPUT_REPORT_BT_SIZE and bool(
-                        data[1] & INPUT_FLAG_AUDIO
-                    )
-                    if not de_audio:
-                        self._reports_estragados += 1
-                continue
-            self._observe_contador(data, base)
-            self._observe_touchpad_click(data, base)
-            self._observe_mic_button(data, base)
-            self._observe_jack(data, base)
-            self._observe_battery(data, base)
-            self._observe_gatilho(data, base)
-            window = _janela_com_base(data, base)
-            if window is None:
-                continue
-            self._maybe_emit(window)
+            self._processar(data, self._time_fn())
+
+    def _processar(self, data: bytes, agora: float) -> None:
+        """Um report cru lido do hidraw: o relógio do mudo, os bytes de estado e a janela."""
+        self._reports_seen += 1
+        base = _struct_base(data)
+        if base is None:
+            if data[0] == INPUT_REPORT_BT:
+                self._bt_drops += 1
+                self._ilegiveis_no_meio += 1
+                de_audio = len(data) == INPUT_REPORT_BT_SIZE and bool(
+                    data[1] & INPUT_FLAG_AUDIO
+                )
+                if not de_audio:
+                    self._reports_estragados += 1
+            self._conferir_o_mudo(agora)
+            return
+        self._voltar_do_mudo(agora)
+        self._valido_em = agora
+        self._observe_contador(data, base)
+        self._observe_touchpad_click(data, base)
+        self._observe_mic_button(data, base)
+        self._observe_jack(data, base)
+        self._observe_battery(data, base)
+        self._observe_gatilho(data, base)
+        if not callable(getattr(self._vpad, "forward_motion", None)):
+            return
+        window = _janela_com_base(data, base)
+        if window is None:
+            return
+        self._maybe_emit(window)
+
+    def _espera_ate_o_mudo(self) -> float:
+        """O prazo do `poll`: o de sempre, encurtado para acordar no instante do mudo."""
+        if self._mudo or self._valido_em is None:
+            return _SELECT_TIMEOUT_S
+        falta = self._valido_em + REPOUSO_DO_MUDO_S - self._time_fn()
+        return min(_SELECT_TIMEOUT_S, max(_ESPERA_MINIMA_S, falta))
+
+    def _conferir_o_mudo(self, agora: float) -> None:
+        """Declara a peça muda quando o último report válido passou de `REPOUSO_DO_MUDO_S`.
+
+        Uma vez por mudo: o pad recebe `soltar_por_mudo` (o repouso), e os caches de
+        borda do clique e do botão do microfone se esquecem, para a volta reentregar o
+        que o primeiro report disser.
+        """
+        if self._mudo or self._valido_em is None:
+            return
+        silencio = agora - self._valido_em
+        if silencio < REPOUSO_DO_MUDO_S:
+            return
+        self._mudo = True
+        self._mudos += 1
+        self._mudo_desde = self._valido_em
+        self._last_window = None
+        self._pending = None
+        self._touchpad_click = None
+        self._mic_button = None
+        logger.info(
+            "motion_reader_peca_muda",
+            player=getattr(self._vpad, "player", "?"),
+            silencio_s=round(silencio, 3),
+        )
+        soltar = getattr(self._vpad, "soltar_por_mudo", None)
+        if not callable(soltar):
+            return
+        try:
+            soltar()
+        except Exception as exc:
+            logger.warning("motion_reader_repouso_falhou", err=str(exc))
+
+    def _voltar_do_mudo(self, agora: float, motivo: str = "report_valido") -> None:
+        """Desfaz o mudo: primeiro o leitor, depois o pad, para o laço nunca o refazer."""
+        if not self._mudo:
+            return
+        self._mudo = False
+        logger.info(
+            "motion_reader_peca_voltou",
+            player=getattr(self._vpad, "player", "?"),
+            segundos=round(agora - self._mudo_desde, 3),
+            motivo=motivo,
+        )
+        voltar = getattr(self._vpad, "voltar_do_mudo", None)
+        if not callable(voltar):
+            return
+        try:
+            voltar()
+        except Exception as exc:
+            logger.warning("motion_reader_volta_falhou", err=str(exc))
 
 
     def _observe_contador(self, report: bytes, base: int) -> None:
@@ -1052,17 +1053,20 @@ __all__ = [
     "MOTION_EMIT_MAX_HZ",
     "MOTION_WINDOW_LEN",
     "MOTION_WINDOW_OFFSET",
+    "REPOUSO_DO_MUDO_S",
     "TOUCHPAD_CLICK_BIT",
     "TRIGGER_ESTADO_DISPAROU",
     "TRIGGER_L2_STATUS_OFFSET",
     "TRIGGER_R2_STATUS_OFFSET",
     "TRIGGER_STATE_SHIFT",
     "PhysicalReportReader",
+    "a_peca_calou",
     "decodificar_bateria",
     "extract_battery_status",
     "extract_estado_do_gatilho",
     "extract_estado_do_mic",
     "extract_jack_status",
     "extract_touchpad_click",
+    "soltar_o_pad_da_peca_muda",
     "uniq_do_hidraw",
 ]

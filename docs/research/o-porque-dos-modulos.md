@@ -2059,3 +2059,145 @@ regex: é a linha do glossário. `mesa` é nome interno vivo — `mesa_viva.py`,
 sprint diz com todas as letras que *o nome fica*. Quem trocasse identificador
 por causa desta lista faria estrago, não cura.
 ~~~~
+
+## physical_report_reader
+
+`src/hefesto_dualsense4unix/core/physical_report_reader.py (docstring do módulo)`. O espelho do hidraw cru para o pad virtual, e o relógio do mudo (03/11/2026).
+
+~~~~text
+Espelho de MOTION: hidraw cru do DualSense físico → vpad uhid (GYRO-01).
+
+Por que este módulo existe
+--------------------------
+O vpad uhid (máscara DualSense Edge) monta o report 0x01 a partir do evdev do
+físico — sticks/botões/d-pad — e deixava a janela de motion (bytes 15..39 do
+payload: gyro, accel, sensor_timestamp e os 2 pontos de toque) NEUTRA. Medido
+ao vivo (2026-07-19): o físico emite gyro a 250 Hz no USB e, no BT, em RAJADA
+(veja "A taxa do rádio é RAJADA", abaixo) — e o nó Motion do vpad emite ZERO:
+gyro aiming morto para quem joga pelo hefesto.
+
+A cura é um espelho de report PARCIAL (ARCH-1 do estudo
+o estudo «estudo-imu-touchpad-vpad» de 18/07/2026): uma thread
+abre um 2º fd SOMENTE-LEITURA no hidraw do físico, extrai VERBATIM a janela
+`raw[base+15 : base+40]` de cada report cru (0x01 USB, base 1; 0x31 BT, base 2
+com CRC-32 validado — seed 0xA1, o `PS_INPUT_CRC32_SEED` do kernel) e a entrega
+em `vpad.forward_motion(window)`. Cópia byte a byte, salvo o peso da mira no giro, e o
+`sensor_timestamp` (que o SDL usa como dt de integração do gyro e que o evdev
+NÃO expõe) vem de graça. Sticks/botões continuam no caminho evdev endurecido.
+
+O reader é o RELÓGIO: ao abrir o device ele liga `set_motion_streaming(True)`
+no vpad — os forwards do poll loop (60 Hz) viram só-cache e cada janela nova
+sai na taxa do físico, com throttle. Ao perder o device (hotplug, BT caiu,
+retarget) desliga o streaming: o vpad volta ao delta de 60 Hz com IMU neutra —
+fail-safe por construção, nunca um gyro congelado.
+
+Throttle (obrigatório, não otimização): o BT desta máquina entrega em rajada,
+com PICO de ~797 Hz por controle; sem cap, 4 vpads em co-op seriam ~3200
+writes/s no /dev/uhid. A emissão é capada em `MOTION_EMIT_MAX_HZ` (250 Hz — a
+taxa nativa USB, e a mesma faixa do rate-limit do REPLICA-03) com dedup por
+valor e COALESCÊNCIA: janela retida é sobrescrita pela mais nova e a última
+nunca se perde (flush no timeout do select).
+
+O teto é uma GRADE DE PRAZO, e isso não é detalhe (GRADE-QUE-NAO-BATIA-01,
+19/08/2026): ele pergunta "já chegou o próximo prazo?", nunca "já passou um
+período desde a última entrega?". A segunda forma esteve no lugar até 19/08 e
+custava 36% das amostras NO CABO — cada entrega carimbava o instante REAL da
+chegada, empurrando a referência à frente, e o report seguinte chegava cedo por
+essa mesma diferença. Basta a fonte estar um pelo ACIMA do teto (o cabo entrega
+250,88 Hz contra 250,0 de cap) para meia amostra cair fora, e a taxa colapsar
+para perto da metade. Quem usa sentiu isso como giroscópio aos saltos, com os valores
+todos certos. Jogos integram gyro bem em
+250 Hz; o timestamp do sensor segue exato em cada janela entregue.
+
+A taxa do rádio é RAJADA, não uma taxa (medido em 11/08/2026)
+-------------------------------------------------------------
+Este módulo dizia "~765 Hz" para o BT. Aquilo era a média de UMA janela curta,
+e a remedição de 11/08/2026 — cinco janelas de 8 a 10 s no mesmo controle, por
+duas réguas (o relógio do host e o `sensor_timestamp` do próprio controle) —
+mostrou que o rádio não tem "uma taxa". Fonte:
+`docs/protocol/driver-hid-playstation.md`, seção "Rádio: variável, em rajadas,
+e longe de 1000 Hz" (:740-761 e :902):
+
+* **PICO, dentro da rajada:** o p05 do intervalo é teimosamente 1255 us —
+  ~797 Hz instantâneos (:757-758). É este o número que dimensiona o
+  /dev/uhid, porque é a taxa que chega quando chega.
+* **SUSTENTADO:** não é estável. Caiu de ~334 Hz para ~55 Hz entre duas
+  janelas consecutivas de 8 s, sem nada ter mudado; o p95 do intervalo chega
+  a 187 ms. A faixa registrada é "entre ~55 e ~392 Hz" (:902).
+* **Divergência de RÉGUA, registrada e não resolvida:**
+  `docs/protocol/pilha-steam-input-xpad-sdl.md:753` escreve o piso como
+  38 Hz — é a régua do controle (janela 4, 38,3 Hz); a de :902 é a do host
+  (55,4 Hz na mesma janela). O teto (~392 Hz) é o mesmo nas duas. Quem citar
+  um piso, cite junto de qual régua ele veio.
+
+Isto NÃO é licença para afrouxar o teto de emissão — veja a nota do
+`MOTION_EMIT_MAX_HZ`, mais abaixo. Nenhuma constante mudou por causa desta
+remedição: o que estava errado era o número que as justificava, não as constantes.
+
+Leitura NÃO reabre a guerra de escritores: a guerra (2026-07-18) é sobre
+WRITERS no hidraw; o kernel replica cada input report para TODOS os fds
+abertos (fila própria por leitor) — este fd O_RDONLY não rouba nada da
+pydualsense nem do jogo, e não gera tráfego novo de rádio/USB.
+
+O clique do touchpad pega carona (TOUCH-CLICK-01)
+-------------------------------------------------
+O mesmo report cru carrega, no byte de botões `payload[9]`, o
+`DS_BUTTONS2_TOUCHPAD` — o clique do touchpad. Ele NÃO viajava: a janela
+espelhada começa no byte 15, e o conjunto de botões que o caminho do jogo
+repassa (`dispatch_gamepad`, `CoopManager.forward_all`) vem do nó evdev
+PRINCIPAL, cujo `BUTTON_MAP` não tem touchpad. Quem produz os nomes
+`touchpad_*_press` é o `TouchpadReader`, que lê o nó SEPARADO e cujo consumidor
+é o teclado virtual — o jogo nunca via o botão acender.
+
+Este reader passou a extrair também esse bit e a entregá-lo em
+`vpad.forward_touchpad_click(bool)`, por BORDA. A escolha do lugar é o
+requisito: o reader é POR JOGADOR (o do P1 nasce em
+`daemon/subsystems/gamepad.py:start_motion_reader`, os do co-op em
+`CoopManager._start_player_motion_reader`) e vive com o daemon — não com a
+janela. O leitor por controle do `daemon/sensor_hub.py` é sob demanda da aba
+Status, então amarrar o clique a ele faria o botão do jogador 2 depender de a
+janela do Hefesto estar aberta.
+
+O fone e o microfone pegam a mesma carona (JACK-QUE-NAO-LIGOU-01)
+----------------------------------------------------------------
+O byte 53 do payload (`status[1]`) diz ao jogo se há fone plugado no controle,
+se há microfone e se ele está mudo. O vpad tinha o `forward_jack` desde 02/08
+e ele NUNCA foi chamado — a sprint `2026-08-03-ENTREGA-QUE-NAO-LIGOU-01` já o
+tinha declarado órfão, e seis dias depois continuava com zero referências. Pior:
+mesmo fiado ele não emitiria, porque escrevia o cache e não chamava
+`_emit_if_changed`. Os dois defeitos foram curados em 09/08/2026 — o chamador é
+este reader, pela mesma razão do clique: o byte mora no report cru, fora da
+janela de motion, e o reader é por jogador e vive com o daemon.
+
+E a bateria, que é o mesmo defeito com 25 dias a mais (BATERIA-QUE-NAO-CHEGOU-01)
+--------------------------------------------------------------------------------
+O byte 52 diz ao jogo quanta carga o controle tem. O `forward_battery` do vpad
+nasceu em 15/07 (`69951a7`) e nunca teve um único chamador em `src/` — e a
+consequência estava escrita na docstring dele desde o primeiro dia: *"o vpad
+anuncia 5% descarregando para sempre e o jogo mostra alerta de bateria fraca num
+controle cheio"*. Ele tinha também o segundo defeito do jack, numa forma mais
+sorrateira: chamava `_emit_if_changed()` **sem** `from_reader=True`, e o gate do
+`_motion_streaming` — que está LIGADO exatamente quando há reader, o caso normal
+— engolia a emissão. Fiado sem isso, ele continuaria não chegando ao jogo.
+
+Nada aqui toca o cursor: o clique é um BIT no report do vpad, não um evento de
+mouse. O descarte do movimento do dedo para o cursor enquanto o vpad está de pé
+(`daemon/subsystems/mouse.discard_touchpad_motion`) e a exclusão do nó do vpad
+do libinput (`assets/76-dualsense-touchpad-libinput-ignore.rules`) seguem
+intocados — é o `TouchpadReader`/`UinputMouseDevice` que mexem em cursor, e
+este módulo não fala com nenhum dos dois.
+
+A peça muda leva o repouso ao jogo (O-PAD-VIRTUAL-SOLTA-O-QUE-O-FISICO-MUDO-SEGURAVA-01)
+-----------------------------------------------------------------------------------------
+Em 02/11/2026 a entrada do rádio do P2 emudeceu sete vezes em 198 s (de 1,09 s a 3,14 s;
+86 vezes no dia, a maior de 12 s), e o pad segurava no jogo o último report. Passado
+`REPOUSO_DO_MUDO_S` sem report válido, o leitor declara a peça muda uma vez: o pad uhid
+recebe `soltar_por_mudo` (centro, botões soltos, giro zero, a última aceleração), e o laço
+(`dispatch_gamepad`, `CoopManager.forward_all`) pergunta `a_peca_calou` e não reescreve o
+estado guardado; no Xbox o leitor nasce só para este relógio, e o laço manda o centro pelo
+`forward_analog` e pelo `forward_buttons`. O primeiro report válido desfaz o mudo.
+
+O número: o p95 do intervalo do rádio é 187 ms (`dualsense-referencia-canonica.md` §5), e
+duas vezes ele dá 374 ms; o piso é 0,4 s, no cabo e no rádio. O maior intervalo de um rádio
+são em 10 min nunca foi medido, e é a medida que confirma o piso no aparelho.
+~~~~

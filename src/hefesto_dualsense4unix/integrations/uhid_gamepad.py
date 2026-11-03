@@ -263,6 +263,20 @@ _MOTION_NEUTRAL = bytes(
     for offset in range(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
 )
 
+_GIRO_NA_JANELA = slice(0, 6)
+
+
+def janela_em_repouso(janela: bytes) -> bytes:
+    """A janela de movimento da peça muda: giro zero, a última aceleração, os dedos fora."""
+    if len(janela) != _MOTION_WINDOW_LEN:
+        return _MOTION_NEUTRAL
+    repouso = bytearray(janela)
+    repouso[_GIRO_NA_JANELA] = bytes(6)
+    for offset in _TOUCH_POINT_OFFSETS:
+        repouso[offset - _MOTION_WINDOW_START] |= _TOUCH_INACTIVE
+    return bytes(repouso)
+
+
 _CALIBRATION_FEATURE_ID = 0x05
 _CALIBRATION_FEATURE_SIZE = 41
 
@@ -580,6 +594,8 @@ class UhidDualSense:
     _battery_forward_count: int = 0
     _motion_window: bytes = _MOTION_NEUTRAL
     _motion_streaming: bool = False
+    _mudo: bool = False
+    _repousos_pelo_mudo: int = 0
     _motion_count: int = 0
     _touchpad_click: bool = False
     _touchpad_click_count: int = 0
@@ -1030,8 +1046,11 @@ class UhidDualSense:
         """Guarda os analógicos do controle físico e emite o report (se mudou)."""
         if self._fd is None:
             return
-        self._axes = (lx & 0xFF, ly & 0xFF, rx & 0xFF, ry & 0xFF, l2 & 0xFF, r2 & 0xFF)
-        self._emit_if_changed()
+        with self._lock:
+            if self._mudo:
+                return
+            self._axes = (lx & 0xFF, ly & 0xFF, rx & 0xFF, ry & 0xFF, l2 & 0xFF, r2 & 0xFF)
+            self._emit_if_changed()
 
     def forward_buttons(self, pressed: frozenset[str]) -> None:
         """Idem para os botões (vocabulário do `EvdevReader.BUTTON_MAP` + d-pad).
@@ -1042,6 +1061,8 @@ class UhidDualSense:
         if self._fd is None:
             return
         with self._lock:
+            if self._mudo:
+                return
             novos = frozenset(pressed) - self._buttons
             self._pendentes = self._pendentes | novos
             self._buttons = frozenset(pressed)
@@ -1147,6 +1168,47 @@ class UhidDualSense:
     def motion_streaming(self) -> bool:
         """True enquanto um `PhysicalReportReader` dita o ritmo da emissão."""
         return self._motion_streaming
+
+    def soltar_por_mudo(self) -> None:
+        """A peça calou: o jogo recebe o repouso e o pad segura a emissão até a volta.
+
+        Analógicos no centro, botões, gatilhos, o clique do touchpad e o botão do
+        microfone soltos, e a janela de movimento com o giro zero e a última aceleração.
+        Enquanto mudo, `forward_analog` e `forward_buttons` não reescrevem o estado
+        guardado, e o que sair (a reentrega do gadget, a bateria) sai em repouso.
+        Idempotente; chamado pelo `PhysicalReportReader` da peça.
+        """
+        with self._lock:
+            if self._mudo:
+                return
+            self._axes = _AXES_NEUTRAL
+            self._buttons = frozenset()
+            self._pendentes = frozenset()
+            self._touchpad_click = False
+            self._mic_button = False
+            self._motion_window = janela_em_repouso(self._motion_window)
+            self._mudo = True
+            self._emit_if_changed(from_reader=True)
+            self._repousos_pelo_mudo += 1
+            logger.info("uhid_repouso_pelo_mudo", player=self.player)
+
+    def voltar_do_mudo(self) -> None:
+        """A peça voltou: o laço volta a escrever, e o próximo report leva o estado real."""
+        with self._lock:
+            if not self._mudo:
+                return
+            self._mudo = False
+            logger.info("uhid_volta_do_mudo", player=self.player)
+
+    @property
+    def peca_muda(self) -> bool:
+        """True entre o `soltar_por_mudo` e o `voltar_do_mudo`."""
+        return self._mudo
+
+    @property
+    def repousos_pelo_mudo(self) -> int:
+        """Quantos repousos a peça muda já levou ao jogo."""
+        return self._repousos_pelo_mudo
 
     @property
     def motion_forward_count(self) -> int:

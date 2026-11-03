@@ -296,7 +296,6 @@ class TestOJogoSeguinteNaoHerdaOCanal:
             "TEM de voltar a uinput. Se isto é 'uhid', a régua está medindo o "
             "dublê e não o produto — conserte a régua"
         )
-        assert daemon._motion_reader is None
 
 
 class TestAMesaNaoHerdaOCanalDoJogoAnterior:
