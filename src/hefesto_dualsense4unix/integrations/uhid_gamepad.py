@@ -554,6 +554,7 @@ class UhidDualSense:
     _leitor_conferido_em: float | None = None
     _leitor_mortos: int = 0
     _leitor_motivo: str = ""
+    _jogo_no_motor: bool = False
     _output_count: int = 0
     _rumble_count: int = 0
     _rumble_nao_nulo_count: int = 0
@@ -1022,6 +1023,7 @@ class UhidDualSense:
         """
         self._leitor_mortos = 0
         self._leitor_conferido_em = None
+        self._jogo_no_motor = False
         if self._last_sent == (0, 0) or self.rumble_sink is None:
             return
         if self._no_fio_do_uhid():
@@ -1544,16 +1546,18 @@ class UhidDualSense:
             del self._rumble_anel[:-_ANEL_DE_VIBRACAO_MAX]
 
     def _soltar_o_rumble_do_jogo_morto(self) -> None:
-        """Solta o motor que o jogo pediu só quando ninguém mais lê este pad.
+        """Solta o motor que o jogo pediu só quando nenhum jogo lê mais este pad.
 
         O tempo não decide: o jogo que segura a vibração sem repetir o pedido a mantém. A
         pergunta «o jogo ainda lê este controle?» sai num fio curto a cada
         `_CONFERE_O_LEITOR_S`, só com motor ligado; a bomba lê o último veredito e nunca
-        espera o `/proc`. Duas consultas seguidas sem leitor soltam o motor.
+        espera o `/proc`. Duas consultas seguidas sem jogo soltam o motor: a Steam e o
+        teclado da tela leem todo pad e não seguram o motor de um jogo que caiu.
         """
         if self._last_sent == (0, 0):
             self._leitor_mortos = 0
             self._leitor_conferido_em = None
+            self._jogo_no_motor = False
             return
         if self._leitor_mortos >= _MORTO_POR_SEGUIDAS:
             logger.warning(
@@ -1579,13 +1583,19 @@ class UhidDualSense:
         fio.start()
 
     def _consultar_o_leitor(self) -> None:
-        """O veredito de `CONSULTAR_O_LEITOR`: o morto soma; o vivo e o «não sei» zeram."""
+        """O veredito de `CONSULTAR_O_LEITOR`: o morto soma; o vivo e o «não sei» zeram.
+
+        O vivo é um jogo lendo o pad, e marca o motor como do jogo: dali em diante, quem
+        não é jogo lendo sozinho é morto.
+        """
         try:
             vivo, motivo = CONSULTAR_O_LEITOR(self)
         except Exception as exc:
             vivo, motivo = None, f"a consulta falhou: {exc}"
         with self._lock:
             self._leitor_motivo = motivo
+            if vivo is True and self._last_sent != (0, 0):
+                self._jogo_no_motor = True
             if vivo is False and self._last_sent != (0, 0):
                 self._leitor_mortos += 1
             else:
@@ -2521,20 +2531,38 @@ def _estado_do_processo(raiz_proc: str, pid: str) -> str:
     return campos[0] if campos else "X"
 
 
+def _o_leitor_e_jogo(raiz: str, pid: str, eu: str) -> tuple[bool, str]:
+    """O leitor é jogo pelo `quem_segura_o_pad.conta_como_jogo`, e o nome dele."""
+    from hefesto_dualsense4unix.integrations.quem_segura_o_pad import conta_como_jogo
+
+    def _ler(arquivo: str) -> str:
+        try:
+            with open(os.path.join(raiz, pid, arquivo), "rb") as fonte:
+                bruto = fonte.read()
+        except OSError:
+            return ""
+        return bruto.replace(b"\0", b" ").decode("utf-8", "replace").strip()
+
+    nome = _ler("comm")
+    return conta_como_jogo(nome, _ler("cmdline"), pid=int(pid), meu_pid=int(eu)), nome
+
+
 def o_jogo_le_os_nos(
     nos: list[str],
     *,
     raiz_proc: str | None = None,
     meu_pid: int | None = None,
     orcamento_s: float = 0.5,
+    autor_fora_do_jogo: bool = False,
 ) -> tuple[bool | None, str]:
-    """`(True, …)` com um leitor vivo, `(False, motivo)` sem nenhum e `(None, motivo)` sem saber.
+    """`(True, …)` com um jogo lendo, `(False, motivo)` sem nenhum e `(None, motivo)` sem saber.
 
-    Leitor é o processo, fora o daemon, com um descritor num dos `nos`. O zumbi, o parado e
-    o que sumiu (`Z`, `T`, `X`) não leem. O descritor casa pelo alvo do link, que não abre
-    nem toca o arquivo, e a varredura que estoura o orçamento devolve «não sei», nunca
-    «ninguém». O processo cujos descritores não se leem (de outro usuário, ou que saiu no
-    meio) entra no motivo pela conta, para o diário dizer o que a varredura não viu.
+    Leitor é o processo, fora o daemon, com um descritor num dos `nos` (casado pelo alvo do
+    link, sem abrir o nó); o zumbi, o parado e o que sumiu (`Z`, `T`, `X`) não leem. Jogo é o
+    leitor que `conta_como_jogo` aceita: a Steam, o teclado da tela e o Hefesto não são. Só
+    eles lendo é `False`, ou `None` com `autor_fora_do_jogo` (o motor que nenhum jogo segurou
+    é da Steam, que manda a parada). O orçamento estourado é «não sei», nunca «ninguém», e o
+    processo sem descritores legíveis entra no motivo pela conta.
     """
     raiz = RAIZ_DO_PROC if raiz_proc is None else raiz_proc
     eu = str(os.getpid() if meu_pid is None else meu_pid)
@@ -2547,6 +2575,7 @@ def o_jogo_le_os_nos(
         return None, f"o /proc ilegível: {exc}"
     prazo = time.monotonic() + orcamento_s
     parados: list[str] = []
+    fora_do_jogo: list[str] = []
     ilegiveis = 0
     for pid in pids:
         fd_dir = os.path.join(raiz, pid, "fd")
@@ -2565,18 +2594,25 @@ def o_jogo_le_os_nos(
             if alvo not in alvos:
                 continue
             estado = _estado_do_processo(raiz, pid)
-            if estado not in _ESTADOS_SEM_LEITOR:
+            if estado in _ESTADOS_SEM_LEITOR:
+                parados.append(f"{pid}:{estado}")
+                break
+            e_jogo, nome = _o_leitor_e_jogo(raiz, pid, eu)
+            if e_jogo:
                 return True, f"o pid {pid} lê ({estado})"
-            parados.append(f"{pid}:{estado}")
+            fora_do_jogo.append(f"{nome or '?'}:{pid}")
             break
     sem_leitura = f" ({ilegiveis} processos sem leitura)" if ilegiveis else ""
+    if fora_do_jogo:
+        motivo = "só quem não é jogo lê: " + ", ".join(fora_do_jogo) + sem_leitura
+        return (None if autor_fora_do_jogo else False), motivo
     if parados:
         return False, "só leitores parados ou zumbis: " + ", ".join(parados) + sem_leitura
     return False, "nenhum leitor" + sem_leitura
 
 
 def _consultar_o_leitor_do_pad(pad: UhidDualSense) -> tuple[bool | None, str]:
-    return o_jogo_le_os_nos(_nos_do_pad(pad))
+    return o_jogo_le_os_nos(_nos_do_pad(pad), autor_fora_do_jogo=not pad._jogo_no_motor)
 
 
 CONSULTAR_O_LEITOR: Callable[[UhidDualSense], tuple[bool | None, str]] = (

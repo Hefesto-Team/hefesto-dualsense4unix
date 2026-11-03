@@ -42,6 +42,9 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import importlib
+import math
+import os
 import threading
 import time
 from collections.abc import Callable
@@ -96,7 +99,9 @@ def _uinput_sem_no_proprio(base: type) -> type:
     _UInputSemNoProprio.__name__ = f"{base.__name__}SemNoProprio"
     return _UInputSemNoProprio
 
-FF_TETO_SEM_DURACAO_S = 30.0
+_CONFERE_O_LEITOR_S = 3.0
+
+_MORTO_POR_SEGUIDAS = 2
 
 FLAVORS: dict[str, dict[str, Any]] = {
     "dualsense": {
@@ -118,6 +123,47 @@ FLAVORS: dict[str, dict[str, Any]] = {
 DEFAULT_FLAVOR = "xbox"
 
 DEVICE_NAME = XBOX360_NAME
+
+
+def _sysname_do_uinput(device: Any) -> str | None:
+    """O `inputN` que o kernel deu ao pad (`UI_GET_SYSNAME`), sem abrir o nó dele."""
+    fd = getattr(device, "fd", None)
+    if not isinstance(fd, int) or fd < 0:
+        return None
+    try:
+        uinput_c = importlib.import_module("evdev._uinput")
+        return str(uinput_c.get_sysname(fd)) or None
+    except (ImportError, OSError, TypeError, ValueError, AttributeError) as exc:
+        logger.warning("uinput_sysname_indisponivel_jogo_no_pad_cego", err=str(exc))
+        return None
+
+
+def _nos_do_uinput(pad: UinputGamepad) -> list[str]:
+    """Os nós pelos quais um jogo lê o pad: os `event` e `js` do `inputN` dele."""
+    if not pad._sysname:
+        return []
+    from hefesto_dualsense4unix.integrations import no_do_vpad
+
+    pasta = os.path.join(no_do_vpad.RAIZ_CLASS_INPUT, pad._sysname)
+    try:
+        filhos = sorted(os.listdir(pasta))
+    except OSError:
+        return []
+    nos = [
+        os.path.join(no_do_vpad.RAIZ_DEV_INPUT, filho)
+        for filho in filhos
+        if filho.startswith(("event", "js"))
+    ]
+    return [no for no in nos if os.path.exists(no)]
+
+
+def _consultar_o_leitor_do_pad(pad: UinputGamepad) -> tuple[bool | None, str]:
+    nos = _nos_do_uinput(pad)
+    if not nos:
+        return None, "o pad sem nó"
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import o_jogo_le_os_nos
+
+    return o_jogo_le_os_nos(nos, autor_fora_do_jogo=not pad._jogo_no_motor)
 
 
 FLAVOR_SINONIMOS: dict[str, str] = {
@@ -432,6 +478,13 @@ class UinputGamepad:
     _ff_fio: threading.Thread | None = None
     _ff_trava: threading.Lock = field(default_factory=threading.Lock)
     _ff_pare: threading.Event = field(default_factory=threading.Event)
+    _sysname: str | None = None
+    _leitor_trava: threading.Lock = field(default_factory=threading.Lock)
+    _leitor_consulta: threading.Thread | None = None
+    _leitor_conferido_em: float | None = None
+    _leitor_mortos: int = 0
+    _leitor_motivo: str = ""
+    _jogo_no_motor: bool = False
 
     @classmethod
     def for_flavor(
@@ -501,6 +554,7 @@ class UinputGamepad:
             logger.warning("uinput_ff_indisponivel_vpad_sem_rumble", name=self.name)
         self._device = device
         self._ecodes = ecodes
+        self._sysname = _sysname_do_uinput(device)
         if self._ff_supported:
             self._iniciar_o_fio_da_vibracao()
         logger.info("uinput_device_created", name=self.name, flavor=self.flavor,
@@ -607,6 +661,11 @@ class UinputGamepad:
         self._ff_onda = None
         self._ff_ultima_forma = None
         self._ff_linha = classe_do_rumble.LinhaDoTempo()
+        self._sysname = None
+        with self._leitor_trava:
+            self._leitor_mortos = 0
+            self._leitor_conferido_em = None
+            self._jogo_no_motor = False
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -859,10 +918,9 @@ class UinputGamepad:
             return
         inicio = self.time_fn() + self._ff_atrasos.get(effect_id, 0.0)
         duration_ms = params[2]
-        if duration_ms <= 0:
-            deadline = inicio + FF_TETO_SEM_DURACAO_S
-        else:
-            deadline = inicio + (duration_ms * max(1, repeats)) / 1000.0
+        deadline = (
+            math.inf if duration_ms <= 0 else inicio + (duration_ms * max(1, repeats)) / 1000.0
+        )
         self._ff_playing[effect_id] = deadline
         self._ff_inicio[effect_id] = inicio
         self._ff_devidos.add(effect_id)
@@ -875,8 +933,67 @@ class UinputGamepad:
         if inicio is not None and self.time_fn() < inicio:
             self._ff_devidos.discard(effect_id)
 
+    def _soltar_o_motor_do_jogo_morto(self) -> None:
+        """Solta os efeitos quando nenhum jogo lê mais este pad, pelo veredito do uhid.
+
+        O efeito de duração 0 toca até o jogo mandar parar, sem teto de tempo. A pergunta
+        «o jogo ainda lê este controle?» sai num fio curto a cada `_CONFERE_O_LEITOR_S`, só
+        com motor ligado; duas consultas seguidas sem jogo soltam todo efeito que toca.
+        """
+        if self._ff_last_sent == (0, 0):
+            with self._leitor_trava:
+                self._leitor_mortos = 0
+                self._leitor_conferido_em = None
+                self._jogo_no_motor = False
+            return
+        if self._leitor_mortos >= _MORTO_POR_SEGUIDAS:
+            logger.warning(
+                "uinput_rumble_do_jogo_morto",
+                name=self.name,
+                ultimo=self._ff_last_sent,
+                motivo=self._leitor_motivo,
+            )
+            self._ff_playing.clear()
+            self._ff_inicio.clear()
+            self._ff_devidos.clear()
+            with self._leitor_trava:
+                self._leitor_mortos = 0
+                self._leitor_conferido_em = None
+                self._jogo_no_motor = False
+            return
+        consulta = self._leitor_consulta
+        if consulta is not None and consulta.is_alive():
+            return
+        agora = self.time_fn()
+        conferido = self._leitor_conferido_em
+        if conferido is not None and agora - conferido < _CONFERE_O_LEITOR_S:
+            return
+        self._leitor_conferido_em = agora
+        fio = threading.Thread(
+            target=self._consultar_o_leitor, name=f"hefesto-leitor-{self.mascara_no_jogo}",
+            daemon=True,
+        )
+        self._leitor_consulta = fio
+        fio.start()
+
+    def _consultar_o_leitor(self) -> None:
+        """O veredito de `CONSULTAR_O_LEITOR`: o morto soma; o vivo e o «não sei» zeram."""
+        try:
+            vivo, motivo = CONSULTAR_O_LEITOR(self)
+        except Exception as exc:
+            vivo, motivo = None, f"a consulta falhou: {exc}"
+        with self._leitor_trava:
+            self._leitor_motivo = motivo
+            if vivo is True and self._ff_last_sent != (0, 0):
+                self._jogo_no_motor = True
+            if vivo is False and self._ff_last_sent != (0, 0):
+                self._leitor_mortos += 1
+            else:
+                self._leitor_mortos = 0
+
     def _refresh_ff(self) -> None:
         """Soma os efeitos que tocam e os devidos, expira os vencidos e entrega ao sink."""
+        self._soltar_o_motor_do_jogo_morto()
         now = self.time_fn()
         contam = {
             i
@@ -944,6 +1061,11 @@ class UinputGamepad:
         if ultimo is None:
             return None
         return (ultimo[0], ultimo[1], ultimo[2], ultimo[3])
+
+
+CONSULTAR_O_LEITOR: Callable[[UinputGamepad], tuple[bool | None, str]] = (
+    _consultar_o_leitor_do_pad
+)
 
 
 __all__ = [
