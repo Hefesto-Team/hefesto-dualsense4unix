@@ -94,11 +94,12 @@ _AQUECENDO = threading.Event()
 _NOME_NO_DISCO = "roupa-dos-jogos.json"
 
 
-def _perfis_da_janela(janela: bytes, ultima: bool) -> tuple[bool, bool]:
+def _perfis_da_janela(janela: bytes, primeira: bool, ultima: bool) -> tuple[bool, bool]:
     """`(edge, comum)` dos nomes `…Profile` com `PlayStation5` ou `DualSense`, fora os `Hori…`.
 
     O nome que encosta no fim de uma janela que não é a última fica para a seguinte, que o traz
-    inteiro na sobra.
+    inteiro na sobra; o que encosta no começo de uma que não é a primeira já se julgou inteiro na
+    anterior, e cortado perderia o `Hori` do começo.
     """
     edge = comum = False
     for agulha in _NOMES_DO_PERFIL:
@@ -110,7 +111,8 @@ def _perfis_da_janela(janela: bytes, ultima: bool) -> tuple[bool, bool]:
             while fim < len(janela) and janela[fim] in _LETRAS_DE_NOME:
                 fim += 1
             nome = janela[inicio:fim]
-            if (fim < len(janela) or ultima) and nome.endswith(b"Profile") and not (
+            inteiro = (inicio > 0 or primeira) and (fim < len(janela) or ultima)
+            if inteiro and nome.endswith(b"Profile") and not (
                 nome.startswith(b"Hori")
             ):
                 if b"Edge" in nome:
@@ -144,10 +146,10 @@ def _nomeia_sem_o_edge(janela: bytes, ultima: bool, nome: str) -> bool:
 
 
 def _sinais_da_janela(
-    janela: bytes, ultima: bool, nome: str, rewired: bool
+    janela: bytes, primeira: bool, ultima: bool, nome: str, rewired: bool
 ) -> tuple[bool, bool]:
     if nome in _DO_INCONTROL:
-        return _perfis_da_janela(janela, ultima)
+        return _perfis_da_janela(janela, primeira, ultima)
     if nome in _DA_SDL or nome == _DO_REWIRED:
         return _tem(janela, _DUALSENSE_EDGE), _tem(janela, _DUALSENSE_COMUM)
     return _tem(janela, _DUALSENSE_EDGE), _nomeia_sem_o_edge(janela, ultima, _SONY_DUALSENSE)
@@ -162,8 +164,8 @@ def _sinais_do_arquivo(arquivo: Path, *, rewired: bool) -> tuple[bool, bool]:
     try:
         if arquivo.stat().st_size == 0:
             return False, False
-        for janela, _primeira, ultima in _janelas(arquivo):
-            do_edge, do_comum = _sinais_da_janela(janela, ultima, nome, rewired)
+        for janela, primeira, ultima in _janelas(arquivo):
+            do_edge, do_comum = _sinais_da_janela(janela, primeira, ultima, nome, rewired)
             edge, comum = edge or do_edge, comum or do_comum
             if edge and comum:
                 break

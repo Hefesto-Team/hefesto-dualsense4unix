@@ -142,6 +142,35 @@ def test_o_nome_que_acaba_na_emenda_ve_o_edge_do_outro_lado(tmp_path: Path) -> N
     assert rj._sinais_do_arquivo(perfil, rewired=False) == (True, False)
 
 
+def test_o_perfil_que_segue_depois_da_emenda_nao_se_julga_cortado(tmp_path: Path) -> None:
+    """`…Profile` acaba no fim do bloco, mas o nome segue no seguinte e não termina em `Profile`.
+
+    MORDIDA: julgar o nome que encosta no fim de uma janela que não é a última devolve o comum.
+    """
+    antes = b"\0DualSenseWindowsProfile"
+    perfil = _esparso(
+        tmp_path / "global-metadata.dat", antes + b"Ajudante\0",
+        _EMENDA - len(antes), 3 * fd._BLOCO,
+    )
+
+    assert rj._sinais_do_arquivo(perfil, rewired=False) == (False, False)
+
+
+@pytest.mark.parametrize("recuo", [1, 3, 4, 5])
+def test_o_hori_cortado_no_comeco_da_janela_nao_vira_o_comum(tmp_path: Path, recuo: int) -> None:
+    """O `Hori…Profile` que atravessa o começo da segunda janela segue fora, como inteiro.
+
+    MORDIDA: julgar o nome que encosta no começo de uma janela que não é a primeira devolve o comum,
+    porque o corte come o `Hori` do começo.
+    """
+    perfil = _esparso(
+        tmp_path / "global-metadata.dat", b"\0HoriDualSenseWindowsProfile\0",
+        fd._BLOCO - recuo, 3 * fd._BLOCO,
+    )
+
+    assert rj._sinais_do_arquivo(perfil, rewired=False) == (False, False)
+
+
 def _datar(raiz: Path, ns: int = _UMA_HORA_ATRAS) -> None:
     for caminho in [raiz, *raiz.rglob("*")]:
         os.utime(caminho, ns=(ns, ns))
