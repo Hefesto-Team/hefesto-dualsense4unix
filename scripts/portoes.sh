@@ -402,6 +402,8 @@ if [ "$SEM_MEMORIA" -eq 0 ] && [ "$N" -gt 0 ]; then
   done
 fi
 
+_ANOTA_O_RC='"$@"; r=$?; printf %d "$r" > "$0"; exit "$r"'
+
 _comando_do_portao() {
   local i="$1" runner="${G_RUN[$1]}" argv="${G_ARGV[$1]}" cmd
   if [ "$runner" = pytest ]; then
@@ -413,7 +415,7 @@ _comando_do_portao() {
     py)   cmd="$PY $argv" ;;
     bash) cmd="bash $argv" ;;
     bin)  cmd="$(_bin "${argv%% *}") ${argv#* }" ;;
-    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $PREFIXO_DE_TELA $PY -m pytest -q -p no:cacheprovider $argv"
+    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $PREFIXO_DE_TELA bash -c '$_ANOTA_O_RC' $LAR_DE_MENTIRA/$i/pytest.rc $PY -m pytest -q -p no:cacheprovider $argv"
             [ -n "$SEMAFORO" ] && cmd="$SEMAFORO $cmd" ;;
   esac
   echo "$cmd"
@@ -422,9 +424,20 @@ _comando_do_portao() {
 _roda_um() {
   local n="$1" cmd inicio fim rc
   cmd="$(_comando_do_portao "$n")"
+  rm -f "$LAR_DE_MENTIRA/$n/pytest.rc"
   inicio=$(date +%s%N)
   ( cd "$RAIZ" && eval "$cmd" ) > "$OUT/$n.out" 2>&1
   rc=$?
+  if [ "${G_RUN[$n]}" = pytest ] && [ -s "$LAR_DE_MENTIRA/$n/pytest.rc" ]; then
+    cp "$LAR_DE_MENTIRA/$n/pytest.rc" "$OUT/$n.rc.pytest"
+    prc="$(cat "$OUT/$n.rc.pytest")"
+    if [ "$prc" != "$rc" ]; then
+      printf 'portoes.sh: o invólucro (vaga, bus e tela) saiu com rc=%d e o pytest com rc=%s; o portão reprova.\n' \
+        "$rc" "$prc" >> "$OUT/$n.out"
+      printf '%s rc=%d\n' "${G_ID[$n]}" "$rc" >> "$OUT/involucro-mentiu.txt"
+      [ "$prc" != 0 ] && [ "$rc" -eq 0 ] && rc=1
+    fi
+  fi
   fim=$(date +%s%N)
   printf '%d' $(( (fim - inicio) / 1000000 )) > "$OUT/$n.ms"
   printf '%d' "$rc" > "$OUT/$n.rc.tmp" && mv -f "$OUT/$n.rc.tmp" "$OUT/$n.rc"
@@ -570,6 +583,8 @@ fi
 
 PAREDE=$(( $(date +%s) - INICIO_DA_CORRIDA ))
 echo
+[ -s "$OUT/involucro-mentiu.txt" ] \
+  && echo "invólucro com rc diferente do pytest (o portão reprova; a camada que mente fica no involucro-mentiu.txt): $(tr '\n' ' ' < "$OUT/involucro-mentiu.txt")"
 echo "tempo: ${PAREDE} s de parede; $((SOMA_MS / 1000)) s de portão somados; ${#LEMBRADOS[@]} lembrado(s) sem rodar."
 if [ ${#AUSENTES[@]} -gt 0 ]; then
   echo "PORTÕES DECLARADOS E AUSENTES DA ÁRVORE (${#AUSENTES[@]}):"
