@@ -393,10 +393,8 @@ def _ler_o_arquivo(arquivo: Path) -> tuple[set[str], set[str]]:
 
 
 def _arquivo_do_cache(nome: str) -> Path | None:
-    try:
-        from hefesto_dualsense4unix.utils.xdg_paths import cache_dir
-    except ImportError:  # pragma: no cover
-        return None
+    from hefesto_dualsense4unix.utils.xdg_paths import cache_dir
+
     return cache_dir() / nome
 
 
