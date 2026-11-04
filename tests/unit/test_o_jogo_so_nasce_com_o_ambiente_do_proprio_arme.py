@@ -126,10 +126,22 @@ def sem_escrevente(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         le.desarmar_o_escrevente(escrevente)
 
 
+class _Escritas:
+    def __init__(self) -> None:
+        self.acabadas = 0
+        self.solta = threading.Event()
+
+    def __call__(self) -> int:
+        return self.acabadas
+
+    def soltar(self) -> None:
+        self.solta.set()
+
+
 def _a_mesa_do_lancamento(
     env_dir: Path, monkeypatch: pytest.MonkeyPatch, perfil: Profile,
     em_disco: list[str] = _XBOX, lenta_s: float = LENTA_S,
-) -> Callable[[], int]:
+) -> _Escritas:
     """O disco com o ``default.env`` de outro jogo, a escrita lenta, e quantas escritas acabaram."""
     from hefesto_dualsense4unix.integrations import cura_por_estrada, uhid_gamepad
     from hefesto_dualsense4unix.profiles import manager
@@ -149,15 +161,16 @@ def _a_mesa_do_lancamento(
         manager, "gerente_do_daemon",
         lambda daemon, **kw: SimpleNamespace(activate=lambda *a, **k: None))
     original = le._a_parte_de_fora
-    acabadas = [0]
+    escritas = _Escritas()
 
     def lenta(foto: Any, devolver: Any) -> None:
-        time.sleep(lenta_s)
+        if lenta_s:
+            escritas.solta.wait(lenta_s)
         original(foto, devolver)
-        acabadas[0] += 1
+        escritas.acabadas += 1
 
     monkeypatch.setattr(le, "_a_parte_de_fora", lenta)
-    return lambda: acabadas[0]
+    return escritas
 
 
 def _marker(env_dir: Path) -> None:
@@ -187,6 +200,7 @@ def test_o_status_com_o_appid_devolve_o_ambiente_do_arme_sem_esperar_a_escrita(
         t0 = time.perf_counter()
         bloco = le.o_ambiente_no_status(daemon, {"appid": APPID})
         gasto = time.perf_counter() - t0
+        acabadas.soltar()
         fim = time.monotonic() + LENTA_S * 3
         while acabadas() < 1 and time.monotonic() < fim:
             await asyncio.sleep(0.05)
@@ -437,7 +451,7 @@ def test_o_jogo_dualsense_nasce_com_o_ambiente_dualsense_com_o_xbox_em_disco(
     from hefesto_dualsense4unix.testing import FakeController
 
     state_home = tmp_path / "state"
-    _a_mesa_do_lancamento(_env_dir(state_home), monkeypatch, _perfil(_PERFIS[caso]))
+    escritas = _a_mesa_do_lancamento(_env_dir(state_home), monkeypatch, _perfil(_PERFIS[caso]))
     fc = FakeController(transport="usb")
     fc.connect()
     store = StateStore()
@@ -449,6 +463,7 @@ def test_o_jogo_dualsense_nasce_com_o_ambiente_dualsense_com_o_xbox_em_disco(
     try:
         feito, gasto = _o_wrapper(runtime, state_home)
     finally:
+        escritas.soltar()
         no_ar.parar()
     assert feito.returncode == 0, feito.stderr
     assert daemon.aplicados, "o wrapper não armou o jogo"
