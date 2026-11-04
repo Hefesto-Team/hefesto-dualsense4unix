@@ -6,6 +6,7 @@ import ast
 import asyncio
 import contextlib
 import errno
+import functools
 import json
 import os
 import shutil
@@ -646,6 +647,7 @@ def _pergunta_da_porta(no: ast.Call) -> tuple[str, str] | None:
     return None
 
 
+@functools.cache
 def _censo() -> list[tuple[str, int, str, list[str | None]]]:
     """Toda pergunta de leitura ao servidor escrita em `src/`: (arquivo, linha, porta, argv)."""
     achados: list[tuple[str, int, str, list[str | None]]] = []
@@ -1094,11 +1096,15 @@ def test_o_padrao_nao_segura_o_laco_do_daemon(monkeypatch: pytest.MonkeyPatch) -
     _correr(cenario)
 
 
-def test_a_rajada_que_acabou_nao_fica_guardada(servidor: Servidor) -> None:
+def test_a_rajada_que_acabou_nao_fica_guardada(
+    servidor: Servidor, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Cada rajada é uma tarefa; a que acabou sai da lista da volta."""
     import gc
 
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
+
+    monkeypatch.setattr(ods, "RAJADA_S", 0.005)
 
     def rajadas_guardadas() -> int:
         gc.collect()
