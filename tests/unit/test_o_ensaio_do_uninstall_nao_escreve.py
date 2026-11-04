@@ -174,18 +174,35 @@ def _ensaiar(
     return r, chamados, _retrato(lar) == antes
 
 
-@pytest.mark.parametrize(
-    "flags",
-    [(), ("--purge-config", "--restore-bluez"), ("--so-o-applet",)],
-    ids=["sem-flag", "purge-e-restore", "so-o-applet"],
-)
-def test_o_ensaio_nao_chama_binario_que_escreve(tmp_path: Path, flags: tuple[str, ...]) -> None:
-    r, chamados, _ = _ensaiar(tmp_path, *flags)
+@pytest.fixture(scope="module")
+def ensaio_sem_flag(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[subprocess.CompletedProcess[str], str, bool]:
+    """O ensaio sem flag, rodado UMA vez para as duas réguas que o leem."""
+    return _ensaiar(tmp_path_factory.mktemp("sem-flag"))
+
+
+def _nao_chama_binario_que_escreve(r: subprocess.CompletedProcess[str], chamados: str) -> None:
     assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
     assert chamados == "", (
         "o ensaio chamou binário que escreve — falta um dublê em uninstall.sh "
         "(«O ENSAIO»):\n" + chamados
     )
+
+
+def test_o_ensaio_sem_flag_nao_chama_binario_que_escreve(ensaio_sem_flag) -> None:
+    r, chamados, _ = ensaio_sem_flag
+    _nao_chama_binario_que_escreve(r, chamados)
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [("--purge-config", "--restore-bluez"), ("--so-o-applet",)],
+    ids=["purge-e-restore", "so-o-applet"],
+)
+def test_o_ensaio_nao_chama_binario_que_escreve(tmp_path: Path, flags: tuple[str, ...]) -> None:
+    r, chamados, _ = _ensaiar(tmp_path, *flags)
+    _nao_chama_binario_que_escreve(r, chamados)
 
 
 def test_sem_adaptador_no_sysfs_nem_no_barramento_o_ensaio_pergunta_ao_btmgmt(
@@ -221,8 +238,8 @@ def test_o_ensaio_deixa_a_casa_byte_a_byte(tmp_path: Path) -> None:
     assert igual, "o ensaio mudou a casa de mentira"
 
 
-def test_o_ensaio_diz_o_que_faria_nesta_casa(tmp_path: Path) -> None:
-    r, _, _ = _ensaiar(tmp_path)
+def test_o_ensaio_diz_o_que_faria_nesta_casa(ensaio_sem_flag) -> None:
+    r, _, _ = ensaio_sem_flag
     saida = r.stdout
     assert "[uninstall · ensaio] ENSAIO:" in saida, saida[:2000]
     assert "ENSAIO — nada foi removido" in saida, saida[-1500:]
