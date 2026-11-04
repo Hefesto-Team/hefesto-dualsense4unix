@@ -235,6 +235,9 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "scripts/reapontar-citacoes.py::_HOJE": (
+        "o cache do texto de hoje e das definições de cada arquivo, para a leitura da história não "
+        "reler o mesmo arquivo: nenhum caso fica de fora de regra nenhuma"),
     "tests/unit/test_o_laco_nao_grava_perfil_nem_espera_o_systemctl.py::_FORA_DO_LACO": (
         "o vocabulário das chamadas que tiram o trabalho do laço (to_thread, run_in_executor, "
         "Thread, submit): é o contrato que a régua cobra, não caso isento"),
