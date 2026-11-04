@@ -64,6 +64,8 @@ CADERNO = Path("docs/data/a-catraca-da-origem.json")
 DONOS = Path("docs/data/donos-de-comportamento.csv")
 MAPA = Path("docs/data/mapa-controles.csv")
 DECISOES = Path("docs/data/decisoes-de-produto.csv")
+TEMPOS_DA_SUITE = Path("docs/data/tempos-da-suite.csv")
+GERADOS_PELO_FECHO = frozenset({CADERNO, TEMPOS_DA_SUITE})
 
 VEREDITO_DE_EIXO = "EIXO"
 CASOS = "casos-especiais-fora-do-dono"
@@ -374,7 +376,8 @@ def censo_do_tamanho(raiz: Path) -> Censo:
     por_pasta = dict.fromkeys(_PASTAS, 0)
     arquivos = 0
     for p in _versionados(raiz):
-        if p.suffix not in _EXTENSOES or not p.is_file() or p == raiz / CADERNO:
+        gerado = p.relative_to(raiz) in GERADOS_PELO_FECHO
+        if p.suffix not in _EXTENSOES or not p.is_file() or gerado:
             continue
         try:
             texto = p.read_text(encoding="utf-8")
