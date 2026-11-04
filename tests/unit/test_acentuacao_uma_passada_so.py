@@ -76,17 +76,31 @@ def test_a_alternancia_devolve_o_mesmo_que_as_314_passadas(texto: str) -> None:
     )
 
 
+LINHAS_POR_ARQUIVO = 150
+
+
 def test_a_arvore_inteira_da_o_mesmo_resultado() -> None:
-    """A igualdade sobre dado real, e não só sobre casos escolhidos por mim."""
+    """A igualdade sobre dado real, e não só sobre casos escolhidos por mim.
+
+    A referência de 314 passadas custa por linha: um só documento de 7 800 linhas
+    pagava 4 s dos 12 da régua, sem dizer nada que as 150 primeiras linhas dele não
+    digam. A amostra continua a mesma centena de arquivos, cada um pelas primeiras
+    150 linhas (3 s), e cobra que a amostra traga palavra errada para casar.
+    """
     mod = _modulo()
     amostra = sorted(RAIZ.glob("docs/**/*.md"))[:60] + sorted(RAIZ.glob("src/**/*.py"))[:40]
     assert amostra, "instrumento inválido: a amostra ficou vazia"
 
     divergentes = []
+    achados = 0
     for f in amostra:
-        texto = f.read_text(encoding="utf-8", errors="replace")
-        if _do_jeito_novo(mod, texto) != _do_jeito_antigo(mod, texto):
+        linhas = f.read_text(encoding="utf-8", errors="replace").splitlines()
+        texto = "\n".join(linhas[:LINHAS_POR_ARQUIVO])
+        do_antigo = _do_jeito_antigo(mod, texto)
+        achados += len(do_antigo)
+        if _do_jeito_novo(mod, texto) != do_antigo:
             divergentes.append(str(f.relative_to(RAIZ)))
+    assert achados, "instrumento inválido: a amostra não tem uma palavra errada para casar"
 
     assert not divergentes, (
         "a alternância diverge das 314 passadas nestes arquivos:\n  "
