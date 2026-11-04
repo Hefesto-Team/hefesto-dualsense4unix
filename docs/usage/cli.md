@@ -28,6 +28,7 @@ instala o completar pelo Tab no bash e no zsh.
 | `mic …` | o microfone do controle |
 | `speaker …` | o alto-falante e o fone do controle |
 | `esquecer-controles` | esquece os controles, como numa máquina nova, e os devolve |
+| `mod instalar/de-fabrica/atualizar/listar/permissoes/ligar/desligar/remover` | as extensões ([README](../../README.md#extensões)); `de-fabrica` traz de novo as que o instalador traz |
 | `plugin list/reload/ligar/desligar` | os plugins (ligados só pela mão, valem na próxima subida do serviço) |
 | `metrics ligar/desligar` | as métricas Prometheus (desligadas por padrão, valem na próxima subida do serviço) |
 | `tui` / `tray` | a interface de terminal / o ícone da bandeja |
@@ -205,7 +206,8 @@ volume já escrito. `--uniq` escolhe o controle.
 
 `doctor` confere a instalação de ponta a ponta; `--fix` corrige o que puder.
 Sai com `0` quando tudo está certo, `1` com algum aviso e `2` com alguma falha.
-Um serviço que atende e não responde conta como falha. Os demais comandos que
+Um serviço que atende e não responde conta como falha, e o serviço habilitado e
+parado também. Os demais comandos que
 falam com o serviço esperam no máximo o prazo do método e dizem «o daemon não
 respondeu»; sem controle ao alcance, `battery` e `test led` dizem «nenhum
 controle ao alcance» e saem com `1`. O terminal só mostra avisos e erros do
