@@ -272,11 +272,16 @@ _LER = """(function(){
 })()"""
 
 
+_CENAS: dict[str, dict[str, Any]] = {}
+
+
 @pytest.fixture
 def cenas(janela: Any, pagina_fresca: pathlib.Path,  # noqa: F811
           monkeypatch: pytest.MonkeyPatch) -> dict[str, dict[str, Any]]:
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
+    if _CENAS:
+        return _CENAS
     relogio = Relogio()
     casos = {}
     for nome, antes, depois in (
@@ -303,7 +308,8 @@ def cenas(janela: Any, pagina_fresca: pathlib.Path,  # noqa: F811
         assert abriu == "ok", (caso, abriu)
         saida[caso] = json.loads(lido)
     print(json.dumps(saida, ensure_ascii=False))
-    return saida
+    _CENAS.update(saida)
+    return _CENAS
 
 
 def test_a_faixa_da_busca_divide_a_linha_do_parear_e_nada_se_move(

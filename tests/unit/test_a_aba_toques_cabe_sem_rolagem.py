@@ -81,10 +81,15 @@ _TERCEIRA = """(function(){
 })()"""
 
 
+_MEDIDAS: dict[str, Any] = {}
+
+
 @pytest.fixture
 def medidas(janela: Any, pagina_fresca: pathlib.Path) -> dict[str, Any]:  # noqa: F811
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
+    if _MEDIDAS:
+        return _MEDIDAS
     html = montada(janela, VIVO)
     casos = {}
     for w, h in LARGURAS:
@@ -99,7 +104,8 @@ def medidas(janela: Any, pagina_fresca: pathlib.Path) -> dict[str, Any]:  # noqa
     for caso, (_, abriu, abas, terceira) in lidos.items():
         assert abriu == "ok", (caso, abriu)
         saida[caso] = {"abas": json.loads(abas), "terceira": json.loads(terceira)}
-    return saida
+    _MEDIDAS.update(saida)
+    return _MEDIDAS
 
 
 def test_nenhuma_aba_rola_e_nenhum_seletor_corta(medidas: dict[str, Any]) -> None:

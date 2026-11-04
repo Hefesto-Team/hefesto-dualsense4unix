@@ -99,10 +99,15 @@ _LER = """(function(){
 })()""".replace("FILEIRA", '[id^="mod-acoes-"]')
 
 
+_MEDIDAS: dict[str, dict[str, Any]] = {}
+
+
 @pytest.fixture
 def medidas(janela: Any, pagina_fresca: pathlib.Path) -> dict[str, dict[str, Any]]:  # noqa: F811
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
+    if _MEDIDAS:
+        return _MEDIDAS
     casos = {}
     for nome, estado in (("sem", SEM_APARELHOS), ("com", VIVO)):
         html = montada(janela, estado)
@@ -117,7 +122,8 @@ def medidas(janela: Any, pagina_fresca: pathlib.Path) -> dict[str, dict[str, Any
         assert abriu == "ok", (caso, abriu)
         saida[caso] = json.loads(lido)
     print(json.dumps(saida, ensure_ascii=False))
-    return saida
+    _MEDIDAS.update(saida)
+    return _MEDIDAS
 
 
 def test_o_aviso_divide_a_linha_com_o_parear_a_direita_dele(

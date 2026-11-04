@@ -82,10 +82,15 @@ _ABA = """(function(n){
 })(%d)"""
 
 
+_ABAS: dict[str, list[dict[str, Any]]] = {}
+
+
 @pytest.fixture
 def abas(janela: Any, pagina_fresca: Any) -> dict[str, list[dict[str, Any]]]:  # noqa: F811
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
+    if _ABAS:
+        return _ABAS
     html = montada(janela, SEM_APARELHOS)
     casos = {}
     for w, h in (*VISTAS, BAIXA):
@@ -102,7 +107,8 @@ def abas(janela: Any, pagina_fresca: Any) -> dict[str, list[dict[str, Any]]]:  #
         assert 3 <= quantas <= QUANTAS_ABAS, (caso, quantas)
         saida[caso] = [json.loads(x) for x in resultados[2:2 + quantas]]
     print(json.dumps(saida, ensure_ascii=False))
-    return saida
+    _ABAS.update(saida)
+    return _ABAS
 
 
 def test_a_rolagem_de_cada_aba_acaba_no_ultimo_controle(
