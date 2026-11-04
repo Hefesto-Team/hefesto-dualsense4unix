@@ -58,7 +58,9 @@ O pareamento que some sozinho está em «Quando o pareamento some», em
 
 ## O serviço não sobe
 
-`systemctl --user status hefesto-dualsense4unix.service` mostra `failed`.
+O `hefesto-dualsense4unix doctor` dá `[FAIL]` ao serviço habilitado e parado,
+e `systemctl --user status hefesto-dualsense4unix.service` mostra `failed` ou
+`inactive`. O controle fica sem o Hefesto até o serviço voltar.
 
 ```bash
 systemctl --user reset-failed hefesto-dualsense4unix.service
@@ -72,6 +74,9 @@ suba de novo:
 rm -f "$XDG_RUNTIME_DIR"/hefesto-dualsense4unix/*.pid "$XDG_RUNTIME_DIR"/hefesto-dualsense4unix/*.sock
 systemctl --user restart hefesto-dualsense4unix.service
 ```
+
+Parar e reiniciar o serviço levam poucos segundos. Um reinício que demora mais
+que isso é defeito: abra uma issue com o diário.
 
 ## O perfil do jogo não entra
 

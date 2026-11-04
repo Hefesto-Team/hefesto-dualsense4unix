@@ -38,6 +38,12 @@ senha de administrador uma vez e pergunta antes de cada passo opcional. Enter
 aceita a resposta padrão em todas. Não rode com `sudo` na frente: o `HOME`
 passaria a ser o do root.
 
+No fim, o instalador para o serviço que estava rodando, que sai na hora, e só
+termina com o novo no ar. Se o serviço não voltar em 90 segundos, ele avisa e
+aponta o diário (`journalctl --user -u hefesto-dualsense4unix.service -n 50`), e
+o `hefesto-dualsense4unix doctor` passa a dar `[FAIL]` ao serviço habilitado e
+parado.
+
 | Opção | Efeito |
 |---|---|
 | `--yes`, `-y` | responde sim a tudo e usa o formato nativo (sem terminal interativo, use esta) |
