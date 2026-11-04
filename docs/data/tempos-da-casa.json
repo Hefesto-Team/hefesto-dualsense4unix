@@ -2,21 +2,27 @@
   "_LEIA": "O PISO DO TEMPO DA CASA, em segundos. Não se edita à mão: `scripts/o-tempo-da-casa.py --casa <casa> --aceitar` desce, `--fechar` sobe o que um `Tempo: <medida> <razão>` da faixa paga. `folga` é o porcento de ruído que o piso tolera.",
   "medidas": {
     "completo-parede-s": {
-      "data": "2026-11-01",
+      "data": "2026-11-04",
       "folga": 20,
       "nota": "parede do último portoes.sh completo do fecho",
       "o_que_conta": "segundos de parede do portão completo",
-      "piso": 9,
+      "piso": 64,
       "por_item": {
-        "portoes-1930.out": 9
+        "portoes-1736.out": 64
       },
-      "razao": "o tempo desceu: 52 -> 9 s",
+      "razao": "o piso de 9 s era de uma corrida com 72 portões lembrados; a medida agora só lê a corrida que roda todos, como em dab08cc37",
       "subidas": [
         {
           "data": "2026-10-17",
           "de": 53,
           "para": 69,
           "razao": "dentro do fecho, com as vagas presas, o completo mede 69 s; sozinho, 50 s"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 9,
+          "para": 64,
+          "razao": "o piso de 9 s era de uma corrida com 72 portões lembrados; a medida agora só lê a corrida que roda todos, como em dab08cc37"
         }
       ],
       "unidade": "s",
@@ -52,44 +58,50 @@
       "universo": 9
     },
     "suite-pytest-s": {
-      "data": "2026-10-17",
+      "data": "2026-11-04",
       "folga": 10,
       "nota": "segundos de pytest das 24 partes do último fecho da suíte",
       "o_que_conta": "segundos de pytest da suíte inteira (24 partes)",
-      "piso": 3583,
+      "piso": 5681,
       "por_item": {
-        "parte-00": 151,
-        "parte-01": 153,
-        "parte-02": 152,
-        "parte-03": 285,
-        "parte-04": 141,
-        "parte-05": 151,
-        "parte-06": 134,
-        "parte-07": 139,
-        "parte-08": 120,
-        "parte-09": 149,
-        "parte-10": 139,
-        "parte-11": 143,
-        "parte-12": 122,
-        "parte-13": 138,
-        "parte-14": 154,
-        "parte-15": 139,
-        "parte-16": 123,
-        "parte-17": 148,
-        "parte-18": 163,
-        "parte-19": 147,
-        "parte-20": 146,
-        "parte-21": 145,
-        "parte-22": 152,
-        "parte-23": 148
+        "parte-00": 235,
+        "parte-01": 235,
+        "parte-02": 237,
+        "parte-03": 235,
+        "parte-04": 235,
+        "parte-05": 234,
+        "parte-06": 236,
+        "parte-07": 230,
+        "parte-08": 246,
+        "parte-09": 239,
+        "parte-10": 242,
+        "parte-11": 238,
+        "parte-12": 240,
+        "parte-13": 233,
+        "parte-14": 233,
+        "parte-15": 234,
+        "parte-16": 240,
+        "parte-17": 242,
+        "parte-18": 234,
+        "parte-19": 236,
+        "parte-20": 240,
+        "parte-21": 237,
+        "parte-22": 236,
+        "parte-23": 235
       },
-      "razao": "o tempo desceu: 4572 -> 3583 s",
+      "razao": "os 1868 arquivos de 17/10 caíram de 3699 para 3461 s no tempos-da-suite.csv; o crescimento é dos 405 arquivos de teste novos desde então, medido em b60a63dbe",
       "subidas": [
         {
           "data": "2026-10-17",
           "de": 3950,
           "para": 4572,
           "razao": "as partes da triagem rodaram com pytest isolado ao lado; por arquivo a suíte cresceu 143 s, 129 nos 47 arquivos novos"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 3583,
+          "para": 5681,
+          "razao": "os 1868 arquivos de 17/10 caíram de 3699 para 3461 s no tempos-da-suite.csv; o crescimento é dos 405 arquivos de teste novos desde então, medido em b60a63dbe"
         }
       ],
       "unidade": "s",
