@@ -7,7 +7,8 @@ Três medidas, lidas dos registros que o fecho e o rápido já deixam em ``$CASA
   corrida: a marca de cada parte (a árvore, o número de arquivos e a partição) tem de bater, e o fecho
   que reaproveitou o recibo de uma parte não alimenta o piso;
 * ``rapido-mediana-s``: a mediana de parede das últimas corridas do rápido (``rapido-*.log``);
-* ``completo-parede-s``: a parede do último ``portoes.sh`` completo (``fecho/portoes-*.out``).
+* ``completo-parede-s``: a parede do último ``portoes.sh`` completo SEM nenhum portão lembrado
+  (``fecho/portoes-*.out``): a corrida que reaproveitou o recibo mede o atalho, não os portões.
 
 Tempo é ruído: cada medida leva uma ``folga`` em porcento no caderno
 (``docs/data/tempos-da-casa.json``). Dentro da folga nada muda. Acima, reprova, e só passa com
@@ -59,6 +60,9 @@ _MARCA = re.compile(r"^\s*corrida árvore=(\S+) arquivos=(\d+) partição=(\S+)\
 _CABECALHO = re.compile(r"^suíte — (\d+) arquivos em (\d+) partes", re.M)
 REAPROVEITADAS = "reaproveitadas.txt"
 _PAREDE = re.compile(r"^tempo: (\d+) s de parede", re.M)
+_PAREDE_E_LEMBRADOS = re.compile(
+    r"^tempo: (\d+) s de parede;.*?(?:; (\d+) lembrado\(s\) sem rodar)?\.?$", re.M
+)
 _CAMADAS = re.compile(r"^\s*camadas .*\bcompleto\b", re.M)
 _TRAILER = re.compile(r"^Tempo:[ \t]+(\S+)[ \t]+(\S.*?)[ \t]*$", re.M)
 
@@ -148,15 +152,30 @@ def censo_do_rapido(casa: Path | None) -> Censo:
 
 
 def censo_do_completo(casa: Path | None) -> Censo:
-    """A parede do último ``portoes.sh`` completo do fecho (o que traz a camada ``completo``)."""
+    """A parede do último ``portoes.sh`` completo do fecho, entre os que não lembraram nenhum portão.
+
+    A corrida que reaproveita o recibo de portões verdes leva 9 s; a que roda todos leva de 50 a 214 s:
+    comparar as duas acusa «subida» que é só a falta do atalho. Só a corrida com 0 lembrados é medida
+    (e piso); a linha sem a conta de lembrados é de antes da conta e não prova que rodou tudo.
+    """
     if casa is None:
         return _sem_casa("a casa não foi informada (`--casa` ou $CASA)")
+    com_atalho: list[str] = []
     for saida in _mais_novos(list((casa / "fecho").glob("portoes-*.out"))):
         texto = saida.read_text(encoding="utf-8", errors="replace")
-        achou = _PAREDE.findall(texto)
-        if _CAMADAS.search(texto) and achou:
-            return Censo(numero=int(achou[-1]), universo=1, por_item={saida.name: int(achou[-1])},
-                         nota="parede do último portoes.sh completo do fecho")
+        achou = _PAREDE_E_LEMBRADOS.findall(texto)
+        if not (_CAMADAS.search(texto) and achou):
+            continue
+        parede, lembrados = achou[-1]
+        if lembrados != "0":
+            com_atalho.append(f"{saida.name} ({lembrados or 'sem a conta'} lembrados)")
+            continue
+        return Censo(numero=int(parede), universo=1, por_item={saida.name: int(parede)},
+                     nota="parede do último portoes.sh completo do fecho, sem portão lembrado")
+    if com_atalho:
+        return Censo(numero=None, universo=1,
+                     indisponivel=("nenhum portoes-*.out completo rodou todos os portões em "
+                                   f"{casa}/fecho; os que lembraram: {', '.join(com_atalho)}"))
     return Censo(numero=None, universo=1,
                  indisponivel=f"nenhum portoes-*.out completo com a linha `tempo:` em {casa}/fecho")
 
