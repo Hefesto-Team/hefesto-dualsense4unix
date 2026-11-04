@@ -81,9 +81,9 @@ def _tique(m: Mesa, pads: list[Any], segundos: float) -> float:
 
 
 def _fechar(m: Mesa, pads: list[Any]) -> None:
+    m.broker.fechar()
     for pad in pads:
         pad.stop()
-    m.broker.fechar()
     for pedido in m.pedidos_vistos:
         pedido.esperar(5.0)
     for lado in m.__dict__.get("lados_do_jogo", []):
@@ -180,6 +180,8 @@ def test_o_stop_no_meio_do_pedido_desmonta_o_gadget_que_chega_tarde(
 ) -> None:
     """Mordida: tire o ``largar`` do ``stop``, e o gadget fica montado sem pad."""
     m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
+    monkeypatch.setattr(m.ug, "_DESCIDA_AO_BROKER", m.ug._DescidaAoBroker())
+    monkeypatch.setattr(m.ug, "_DESCIDA_ESPERA_S", 0.0)
     pads: list[Any] = []
     try:
         pads = _de_pe(m, jogadores, quem_volta, "caiu")
@@ -192,6 +194,7 @@ def test_o_stop_no_meio_do_pedido_desmonta_o_gadget_que_chega_tarde(
         volta.stop()
         solta.set()
         assert pedido.esperar(5.0), "o pedido largado não terminou"
+        assert m.ug.esperar_as_descidas(5.0), "a descida do gadget tardio não terminou"
         assert len(m.b.clientes) == clientes + 1
         assert m.b.clientes[-1].desmontados, "o gadget que chegou depois do stop ficou montado"
         assert volta._gadget is None and not volta.is_active()
