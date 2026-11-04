@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import textwrap
@@ -164,7 +166,16 @@ def _motor(tmp_path: Path, quem: str, segura: float) -> subprocess.Popen[str]:
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        start_new_session=True,
     )
+
+
+def _soltar(dono: subprocess.Popen[str]) -> None:
+    """Encerra quem segura a trava de propósito, com os filhos dele: o que a régua provou já foi
+    provado, e esperar o fim do `sleep` do dono custava de três a quatro segundos por caso."""
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(dono.pid, signal.SIGKILL)
+    dono.communicate(timeout=30)
 
 
 def _espera_a_entrada(alvo: Path, quem: str, o_que: str, prazo_s: float = 15.0) -> None:
@@ -219,7 +230,7 @@ def test_quem_nao_consegue_no_prazo_desiste_e_diz(tmp_path: Path) -> None:
         ):
             raise AssertionError("entrou com a trava na mão do watchdog")
     finally:
-        primeiro.communicate(timeout=30)
+        _soltar(primeiro)
     assert pego.value.dono.startswith("watchdog ")
     desistencias = [
         e for e in diario.ler(caminhos=[alvo]) if e["o_que"] == diario.DESISTIU_DA_TRAVA
@@ -632,6 +643,7 @@ def _watchdog(tmp_path: Path, *args: str, prazo: str = "5") -> subprocess.Popen[
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        start_new_session=True,
     )
 
 
@@ -660,7 +672,7 @@ def test_o_watchdog_pula_o_tique_quando_nao_consegue_a_trava(tmp_path: Path) -> 
         watchdog = _watchdog(tmp_path, "--so-a-trava", "0", prazo="1")
         watchdog.communicate(timeout=30)
     finally:
-        primeiro.communicate(timeout=30)
+        _soltar(primeiro)
     assert watchdog.returncode == 3
     [desistencia] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
     assert desistencia["o_que"] == diario.DESISTIU_DA_TRAVA
@@ -809,7 +821,7 @@ def test_com_a_trava_na_mao_do_watchdog_o_vigia_nao_derruba_nada(
         ponte = PonteComTrava(interna=interna, prazo_s=0.3)  # type: ignore[arg-type]
         agiu, motivo = ponte.desconectar(_link())  # type: ignore[arg-type]
     finally:
-        watchdog.communicate(timeout=30)
+        _soltar(watchdog)
     assert (agiu, interna.pedidos) == (False, []), "derrubou o link com o watchdog agindo"
     assert "próxima volta" in motivo
     [desistencia] = diario.ler(caminhos=[tmp_path / "usuario.jsonl"])
