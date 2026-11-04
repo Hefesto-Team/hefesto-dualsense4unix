@@ -381,10 +381,23 @@ from hefesto_dualsense4unix.interface.janela import PonteDaTela
 PAGINA = pathlib.Path(sys.argv[1])
 CASOS = json.loads(sys.stdin.read())
 
+PRONTA = ("location.protocol === 'file:' && document.readyState === 'complete'"
+          " && document.fonts.status === 'loaded' ? 'ok' : ''")
+
 def esperar(caixa, segundos):
     fim = GLib.get_monotonic_time() + int(segundos * 1_000_000)
     while "v" not in caixa and GLib.get_monotonic_time() < fim:
         Gtk.main_iteration_do(False)
+
+def ate_pronta(ponte, prazo=30):
+    fim = GLib.get_monotonic_time() + int(prazo * 1_000_000)
+    while GLib.get_monotonic_time() < fim:
+        caixa = {}
+        ponte.perguntar(PRONTA, lambda v, e: caixa.update(v=v))
+        esperar(caixa, 8)
+        if caixa.get("v") == "ok":
+            return
+        esperar({}, 0.02)
 
 saida = {}
 for chave, (largura, altura, passos) in CASOS.items():
@@ -394,7 +407,7 @@ for chave, (largura, altura, passos) in CASOS.items():
     janela.add(ponte.view)
     janela.show_all()
     ponte.view.load_uri(PAGINA.as_uri())
-    esperar({}, 4)
+    ate_pronta(ponte)
     lidos = []
     for tipo, corpo in passos:
         if tipo == "espera":
