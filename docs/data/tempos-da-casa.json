@@ -29,23 +29,23 @@
       "universo": 1
     },
     "rapido-mediana-s": {
-      "data": "2026-11-01",
+      "data": "2026-11-04",
       "folga": 15,
       "nota": "mediana da parede das últimas 9 corridas do rápido",
       "o_que_conta": "mediana, em segundos, da parede do portão rápido",
-      "piso": 36,
+      "piso": 27,
       "por_item": {
-        "rapido-1812e574e-0138.log": 26,
-        "rapido-21dce742f-0219.log": 29,
-        "rapido-43ac1db32-0207.log": 36,
-        "rapido-64beb94ba-0137.log": 26,
-        "rapido-925a98525-1703.log": 30,
-        "rapido-975487021-0133.log": 70,
-        "rapido-ab4f0e453-1655.log": 55,
-        "rapido-c82424fbd-1704.log": 36,
-        "rapido-e4fc9818c-1653.log": 42
+        "rapido-579a5d671-0057.log": 31,
+        "rapido-5f6a3f7cc-0007.log": 26,
+        "rapido-927b55902-0033.log": 27,
+        "rapido-a756f9a31-0922.log": 36,
+        "rapido-b0e09a591-1612.log": 27,
+        "rapido-b9d98e964-1607.log": 27,
+        "rapido-c0240885b-0007.log": 31,
+        "rapido-d3f9eb743-0009.log": 26,
+        "rapido-dfbe9c12c-0913.log": 31
       },
-      "razao": "a camada rápida passou de 62 para 66 portões desde o piso de 16/10 (o texto sem pessoa e a biblioteca pessoal, de 30 e 31/10)",
+      "razao": "o tempo desceu: 36 -> 27 s",
       "subidas": [
         {
           "data": "2026-11-01",
