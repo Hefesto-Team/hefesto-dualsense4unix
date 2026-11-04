@@ -1427,7 +1427,9 @@ class EvdevReader(_EvdevReconnectLoop):
     """Lê input do DualSense via evdev em thread dedicada.
 
     `start()` abre o device e inicia o loop. `snapshot()` retorna o estado
-    atual (thread-safe). `stop()` encerra limpo.
+    atual (thread-safe). `stop()` encerra limpo. Montar não procura nó: quem
+    procura é o `refresh_device()`, que o backend chama ao conectar e o
+    `start()` chama antes de abrir.
     """
 
     BUTTON_MAP: ClassVar[dict[str, str]] = BOTOES_DO_LEITOR
@@ -1437,7 +1439,7 @@ class EvdevReader(_EvdevReconnectLoop):
     def __init__(self, device_path: Path | None = None, target_uniq: str | None = None) -> None:
         super().__init__()
         self._target_uniq = target_uniq
-        self._device_path = device_path or self._locate()
+        self._device_path = device_path
         self._lock = threading.RLock()
         self._snapshot = EvdevSnapshot()
         self._thread: threading.Thread | None = None
@@ -1452,6 +1454,10 @@ class EvdevReader(_EvdevReconnectLoop):
         self._sintetizar_r2: bool = False
         self._ancora: tuple[int, ...] = self._eixos_do_quadro()
 
+    def start(self) -> bool:
+        self.refresh_device()
+        return super().start()
+
     def retarget(self, uniq: str | None) -> None:
         """Re-aponta o reader para o controle de MAC `uniq` (normalizado)."""
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -1460,6 +1466,8 @@ class EvdevReader(_EvdevReconnectLoop):
         if norm == self._target_uniq:
             return
         self._target_uniq = norm
+        if self._device_path is None and (self._thread is None or not self._thread.is_alive()):
+            return
         current = self._locate()
         if current is not None and current == self._device_path:
             return
