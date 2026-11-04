@@ -24,7 +24,7 @@ import pytest
 from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
-from hefesto_dualsense4unix.core import external_leds
+from hefesto_dualsense4unix.core import evdev_reader, external_leds
 from hefesto_dualsense4unix.core.led_control import player_led_pattern, player_slot_color
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
@@ -54,6 +54,11 @@ MODOS_DO_PAD = ("dualsense", "edge")
 def _numero_do_jogo(player: int) -> int:
     """O jogo numera diferente do Hefesto, para que a régua veja quem venceu."""
     return player % 4 + 1
+
+
+@pytest.fixture(autouse=True)
+def _sem_os_nos_de_entrada_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(evdev_reader, "find_dualsense_evdev", lambda: None)
 
 
 class _NoDeLed:
