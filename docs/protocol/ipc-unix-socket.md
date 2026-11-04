@@ -815,8 +815,8 @@ no boot e sai do disco.
 ### Os métodos fora da tabela v1 — os parâmetros e o retorno
 
 O servidor (`daemon/ipc_server.py`) é JSON-RPC 2.0 em NDJSON UTF-8 (V2-3, ADR-005); os handlers
-moram em `daemon/ipc_handlers.py` e a política de rumble em `daemon/ipc_rumble_policy.py`
-(AUDIT-FINDING-IPC-SERVER-SPLIT-01). Este documento é o único lugar do contrato: a lista de
+moram em `daemon/ipc_handlers.py` e a política de rumble em `daemon/ipc_rumble_policy.py`.
+Este documento é o único lugar do contrato: a lista de
 métodos do código saiu da docstring do servidor em 03/11/2026, e o que só a docstring dizia está aqui.
 
 | Método | Parâmetros | Retorno |
@@ -843,7 +843,7 @@ métodos do código saiu da docstring do servidor em 03/11/2026, e o que só a d
 - **`desktop.status.set`** é o «Status do Modo» da aba Navegação: o mouse, depois o teclado, e com `origin: manual`
   o `enabled` da seção `mouse` e o `teclado_emulado` no perfil ativo, numa gravação só.
 - **`speaker.set`, a `rota`**, é o `OUTPUT_PATH_SEL` do firmware: 0 estéreo no fone, 1 mono no fone, 2 L no fone ou
-  na TV e R no alto-falante («Efeitos do Jogo»), 3 só no alto-falante (desde a SOM-ROTA-01).
+  na TV e R no alto-falante («Efeitos do Jogo»), 3 só no alto-falante.
 - **`speaker.set`, a `fonte`**, é a camada do PipeWire (20/09/2026): `sfx` deixa o nó daquele controle livre para o
   som que o jogo endereça ao controle, `mix` derrama no nó todo o som da máquina sem tirar o som da TV. A `fonte`
   exige `uniq` e não toma a posse do volume; a resposta traz `fonte` com o que ficou valendo.
