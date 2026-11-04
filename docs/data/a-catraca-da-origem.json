@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202050,
+      "piso": 1202108,
       "por_item": {
-        "docs": 106379,
+        "docs": 106419,
         "scripts": 111589,
-        "src": 303968,
-        "tests": 680114
+        "src": 303878,
+        "tests": 680222
       },
-      "razao": "tamanho: +299 linhas (1201751 -> 1202050), pagas por Origem: entrada.botoes; registrado no fecho, topo 8f679cb3d023",
+      "razao": "tamanho: +58 linhas (1202050 -> 1202108), pagas por Origem: D-2409-O-CO-OP-LOCAL-SAI, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo dcbc8f4c4de8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1659,10 +1659,16 @@
           "de": 1201751,
           "para": 1202050,
           "razao": "tamanho: +299 linhas (1201751 -> 1202050), pagas por Origem: entrada.botoes; registrado no fecho, topo 8f679cb3d023"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1202050,
+          "para": 1202108,
+          "razao": "tamanho: +58 linhas (1202050 -> 1202108), pagas por Origem: D-2409-O-CO-OP-LOCAL-SAI, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo dcbc8f4c4de8"
         }
       ],
       "unidade": "linhas",
-      "universo": 3356
+      "universo": 3357
     }
   }
 }
