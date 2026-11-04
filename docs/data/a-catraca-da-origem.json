@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202823,
+      "piso": 1202835,
       "por_item": {
-        "docs": 106419,
+        "docs": 106431,
         "scripts": 111614,
         "src": 303912,
         "tests": 680878
       },
-      "razao": "tamanho: +201 linhas (1202622 -> 1202823), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 4cdc247d7546",
+      "razao": "04/11/2026, fecho da leva: +12 linhas do caderno do tempo da casa, que o passo tempo do fecho commita depois do passo catraca (556157a07); ferramental sem decisão",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1689,6 +1689,12 @@
           "de": 1202622,
           "para": 1202823,
           "razao": "tamanho: +201 linhas (1202622 -> 1202823), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 4cdc247d7546"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1202823,
+          "para": 1202835,
+          "razao": "04/11/2026, fecho da leva: +12 linhas do caderno do tempo da casa, que o passo tempo do fecho commita depois do passo catraca (556157a07); ferramental sem decisão"
         }
       ],
       "unidade": "linhas",
