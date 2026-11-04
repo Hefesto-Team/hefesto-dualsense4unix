@@ -99,13 +99,18 @@ def _backend(ds: pydualsense) -> PyDualSenseController:
 
 
 class _NoDeMentira:
-    """O nó do uinput sem kernel: guarda o último valor de cada tecla escrita."""
+    """O nó do uinput sem kernel: guarda o último valor de cada tecla escrita.
 
-    def __init__(self) -> None:
+    Como o kernel, descarta a tecla que o nó não declarou ao nascer: o repasse para um código fora
+    das capacidades não chega ao jogo.
+    """
+
+    def __init__(self, declaradas: list[int]) -> None:
+        self.declaradas = frozenset(declaradas)
         self.teclas: dict[int, int] = {}
 
     def write(self, tipo: int, codigo: int, valor: int) -> None:
-        if tipo == ecodes.EV_KEY:
+        if tipo == ecodes.EV_KEY and codigo in self.declaradas:
             self.teclas[codigo] = valor
 
     def syn(self) -> None:
@@ -136,7 +141,8 @@ class _Pad:
         uinput = ug.UinputGamepad.for_flavor(sabor)
         if roupa == "xbox-vestido":
             uinput.vestir("xbox")
-        self.no = _NoDeMentira()
+        caps = ug._build_capabilities(with_ff=False, flavor=uinput.mascara_no_jogo)
+        self.no = _NoDeMentira(caps[ecodes.EV_KEY])
         uinput._device = self.no
         uinput._ecodes = ecodes
         self.pad = uinput
