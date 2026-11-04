@@ -1493,7 +1493,9 @@ def test_o_retrato_sem_o_python_do_produto_nao_escreve(tmp_path: Path) -> None:
     )
     assert "rc=1" in saida, saida
     assert not destino.exists(), "o retrato escreveu sem a máscara do dono"
-    assert "34" not in saida.replace("rc=1", ""), "a saída crua foi para a tela"
+    assert "34" not in saida.replace("rc=1", "").replace(str(tmp_path), ""), (
+        "a saída crua foi para a tela"
+    )
 
 
 def test_mordida_o_sed_de_antes_deixa_o_quinto_octeto() -> None:
