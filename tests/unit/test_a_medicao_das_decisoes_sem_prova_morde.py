@@ -1,6 +1,7 @@
 """AS MORDIDAS DA MEDIÇÃO — ``DECISAO-SEM-DONO-01``."""
 from __future__ import annotations
 
+import copy
 import csv
 import importlib.util
 import pathlib
@@ -24,7 +25,24 @@ def _carregar():
 
 @pytest.fixture(scope="module")
 def mi():
-    return _carregar()
+    """O instrumento, medindo a árvore viva UMA vez: as quatro réguas que a leem dividem o laudo.
+
+    Árvore de mentira e CSV de mentira seguem medidos na hora, cada vez que se pedem.
+    """
+    modulo = _carregar()
+    original = modulo.medir
+    viva = (modulo.RAIZ, modulo.CSV_DAS_DECISOES)
+    guardada: list[dict] = []
+
+    def medir_uma_vez(raiz=None, csv_path=None):
+        if (raiz or modulo.RAIZ, csv_path or modulo.CSV_DAS_DECISOES) != viva:
+            return original(raiz, csv_path)
+        if not guardada:
+            guardada.append(original(raiz, csv_path))
+        return copy.deepcopy(guardada[0])
+
+    modulo.medir = medir_uma_vez
+    return modulo
 
 
 def _csv_de_mentira(destino: pathlib.Path, linhas, colunas=None):
