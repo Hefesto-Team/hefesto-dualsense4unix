@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202302,
+      "piso": 1202365,
       "por_item": {
         "docs": 106419,
         "scripts": 111612,
-        "src": 303878,
-        "tests": 680393
+        "src": 303880,
+        "tests": 680454
       },
-      "razao": "04/11/2026, costura do fecho-2: +194 linhas de ferramental do fecho sem decisão de produto (o reapontar que não prende o script quando o pai cai, 765d13595, e o portão pytest que grava o rc do pytest e reprova pelos dois); ferramenta da casa, não comportamento do produto",
+      "razao": "tamanho: +63 linhas (1202302 -> 1202365), pagas por Origem: entrada.botoes; registrado no fecho, topo ddff8a412d38",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1671,6 +1671,12 @@
           "de": 1202108,
           "para": 1202302,
           "razao": "04/11/2026, costura do fecho-2: +194 linhas de ferramental do fecho sem decisão de produto (o reapontar que não prende o script quando o pai cai, 765d13595, e o portão pytest que grava o rc do pytest e reprova pelos dois); ferramenta da casa, não comportamento do produto"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1202302,
+          "para": 1202365,
+          "razao": "tamanho: +63 linhas (1202302 -> 1202365), pagas por Origem: entrada.botoes; registrado no fecho, topo ddff8a412d38"
         }
       ],
       "unidade": "linhas",
