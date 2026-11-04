@@ -47,6 +47,16 @@ CLIENTE_DO_PAINEL = (
 )
 
 
+ESPERA_EM_UM_QUINTO = (
+    'exec /usr/bin/sleep "$(/usr/bin/awk \'BEGIN { printf "%.4f", ARGV[1] / 5 }\' "$1")"\n'
+)
+"""O `sleep` de mentira da lib: cada espera da lib vale um quinto, na mesma ordem.
+
+A lib espera o daemon morrer (30 x 0,1 s), 1 s para o painel renascer e 20 x 0,5 s para
+o cliente voltar; o caso «nunca volta» gastava 11 s só esperando. Os dublês respondem na
+hora, então a ordem das esperas é o que a régua mede, e não o relógio.
+"""
+
 LEVA_O_PIPEWIRE = "# NEEDED libpipewire-0.3.so.0\nexit 0\n"
 
 
@@ -167,6 +177,7 @@ def ensaio(tmp_path: Path) -> Iterator[Ensaio]:
         f'[ -f "{estado}/nunca-volta" ] || touch "{estado}/cliente-do-painel"\n'
         "exit 0\n",
     )
+    _exe(fakes, "sleep", ESPERA_EM_UM_QUINTO)
     (estado / "clientes").write_text(CLIENTES_BASE, encoding="utf-8")
     (estado / "cliente-do-painel-texto").write_text(CLIENTE_DO_PAINEL, encoding="utf-8")
     daemon_bin = _exe(tmp_path / "usr-bin", "cosmic-settings-daemon", LEVA_O_PIPEWIRE)
