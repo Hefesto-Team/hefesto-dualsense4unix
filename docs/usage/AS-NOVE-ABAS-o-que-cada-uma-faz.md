@@ -142,7 +142,7 @@ desligado.
 - **Perfil jogo - navegação**: os botões de **Point and click**, **Visual
   novel**, **Mouse** ou **Mouse e teclado**.
 - **Função do teclado** (**Só dentro do jogo**, **Só fora do jogo**, **Sempre**
-  ou **Desativado**) e as velocidades do ponteiro e da rolagem.
+  ou **Desativado**) e as velocidades do cursor e da rolagem. <!-- ia-artifact:manter -->
 - **Gestos do PS**: segure o PS e outro botão; vale em qualquer um dos quatro
   controles, e **+ Gesto** acrescenta um ([hotkeys.md](hotkeys.md)). PS + R3 e
   PS + Options são as duas saídas quando o jogo não responde.
