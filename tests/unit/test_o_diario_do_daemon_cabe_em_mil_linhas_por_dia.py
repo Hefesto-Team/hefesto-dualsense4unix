@@ -142,11 +142,11 @@ def _fontes() -> Iterator[tuple[Path, str]]:
 def _lidos_por_outro(nomes: set[str]) -> dict[str, list[str]]:
     """Os nomes que mais de um arquivo cita: o emissor e quem lê o diário atrás dele."""
     achados: dict[str, list[str]] = {n: [] for n in nomes}
-    regras = {n: re.compile(rf"\b{re.escape(n)}\b") for n in nomes}
+    alternativas = "|".join(re.escape(n) for n in sorted(nomes, key=len, reverse=True))
+    regra = re.compile(rf"\b(?:{alternativas})\b")
     for arquivo, texto in _fontes():
-        for nome, regra in regras.items():
-            if regra.search(texto):
-                achados[nome].append(str(arquivo.relative_to(RAIZ)))
+        for nome in sorted(set(regra.findall(texto))):
+            achados[nome].append(str(arquivo.relative_to(RAIZ)))
     return {n: f for n, f in achados.items() if len(f) > 1}
 
 
