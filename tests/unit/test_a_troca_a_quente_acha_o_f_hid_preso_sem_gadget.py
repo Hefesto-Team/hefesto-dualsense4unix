@@ -45,6 +45,14 @@ RAIZ = Path(__file__).resolve().parents[2]
 CAMADA = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
 MARCAS = ("get_report_sized", "get_report_refuses")
 SERVICO = "hefesto-dualsense4unix.service"
+ESPERA_EM_UM_QUINTO = (
+    "#!/bin/sh\n"
+    'exec /usr/bin/sleep "$(/usr/bin/awk \'BEGIN { printf "%.4f", ARGV[1] / 5 }\' "$1")"\n'
+)
+"""O `sleep` de mentira: a camada espera em passos de 0,5 s até o prazo, e os dublês saem e
+soltam o `refcnt` em segundos. Cada espera vale um quinto, na mesma ordem (o prazo, a saída
+do processo e a soltura do `refcnt` guardam as proporções), e a troca deixa de gastar de 3 a
+5 s só esperando."""
 
 
 def _sys_module(tmp_path: Path, refcnt: int) -> Path:
@@ -114,7 +122,8 @@ def _bin(
         "exit 0\n",
         encoding="utf-8",
     )
-    for nome in ("sudo", "systemctl"):
+    (bin_ / "sleep").write_text(ESPERA_EM_UM_QUINTO, encoding="utf-8")
+    for nome in ("sudo", "systemctl", "sleep"):
         (bin_ / nome).chmod(0o755)
     return bin_
 
