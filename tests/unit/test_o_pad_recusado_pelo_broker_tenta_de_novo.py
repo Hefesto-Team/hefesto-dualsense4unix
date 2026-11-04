@@ -368,9 +368,9 @@ def test_o_broker_preso_nao_prende_o_tique(
         )
         assert all(pad.is_active() and pad._gadget is None for pad in pads)
     finally:
+        m.broker.fechar()
         for pad in pads:
             pad.stop()
-        m.broker.fechar()
         for pedido in m.pedidos_vistos:
             pedido.esperar(5.0)
 
