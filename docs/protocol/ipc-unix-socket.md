@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**71 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **30** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**71 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **23** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -49,7 +49,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 |---|---|---|---|
 | `profile.switch` | `daemon/ipc_handlers.py:530` (`_handle_profile_switch`) | Aplica perfil escolhido pelo usuário (entrada manual via IPC). | sim |
 | `profile.list` | `daemon/ipc_handlers.py:579` (`_handle_profile_list`) | _(o handler não tem docstring)_ | sim |
-| `profile.reaplicar` | `daemon/ipc_handlers.py:594` (`_handle_profile_reaplicar`) | O «Aplicar»: o perfil inteiro de novo aos controles, sem virar escolha | **não** |
+| `profile.reaplicar` | `daemon/ipc_handlers.py:594` (`_handle_profile_reaplicar`) | O «Aplicar»: o perfil inteiro de novo aos controles, sem virar escolha | sim |
 | `trigger.set` | `daemon/ipc_handlers.py:796` (`_handle_trigger_set`) | _(o handler não tem docstring)_ | sim |
 | `trigger.reset` | `daemon/ipc_handlers.py:831` (`_handle_trigger_reset`) | Grava ``Off`` no gatilho: sem efeito do Hefesto, e o jogo decide (R-19). | sim |
 | `led.set` | `daemon/ipc_handlers.py:897` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
@@ -60,7 +60,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `rumble.policy_set` | `daemon/ipc_handlers.py:3556` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble. | **não** |
 | `rumble.policy_custom` | `daemon/ipc_handlers.py:3572` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito. | **não** |
 | `rumble.motores.set` | `daemon/ipc_handlers.py:3618` (`_handle_rumble_motores_set`) | `rumble.motores.set` — a barra de CADA motor, no perfil. | sim |
-| `sensor.set` | `daemon/ipc_handlers.py:3785` (`_handle_sensor_set`) | `sensor.set` — desliga giroscópio, acelerômetro e touchpad DE VERDADE, por controle. | **não** |
+| `sensor.set` | `daemon/ipc_handlers.py:3785` (`_handle_sensor_set`) | `sensor.set` — desliga giroscópio, acelerômetro e touchpad DE VERDADE, por controle. | sim |
 | `daemon.status` | `daemon/ipc_handlers.py:1467` (`_handle_daemon_status`) | _(o handler não tem docstring)_ | sim |
 | `daemon.state_full` | `daemon/ipc_handlers.py:1740` (`_handle_daemon_state_full`) | Estado completo pra GUI consumir a 20Hz. | sim |
 | `daemon.pause` | `daemon/ipc_handlers.py:1652` (`_handle_daemon_pause`) | Pausa o despacho de input sem matar o daemon. | **não** |
@@ -68,21 +68,21 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `freestyle.set` | `daemon/ipc_handlers.py:1662` (`_handle_freestyle_set`) | Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar. | sim |
 | `native.mode.set` | `daemon/ipc_handlers.py:1720` (`_handle_native_mode_set`) | Liga/desliga o Modo Nativo — "release total" do controle. | sim |
 | `controller.list` | `daemon/ipc_handlers.py:3197` (`_handle_controller_list`) | Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01. | sim |
-| `controller.target.set` | `daemon/ipc_handlers.py:3310` (`_handle_controller_target_set`) | Define o ALVO das ações de output. | **não** |
+| `controller.target.set` | `daemon/ipc_handlers.py:3310` (`_handle_controller_target_set`) | Define o ALVO das ações de output. | sim |
 | `daemon.reload` | `daemon/ipc_handlers.py:3960` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime. | sim |
-| `launch_env.refresh` | `daemon/ipc_handlers.py:3988` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper sob demanda. | **não** |
+| `launch_env.refresh` | `daemon/ipc_handlers.py:3988` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper sob demanda. | sim |
 | `lightbar.reset` | `daemon/ipc_handlers.py:3344` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | **não** |
 | `debug.player_leds` | `daemon/ipc_handlers.py:3355` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
 | `speaker.set` | `daemon/ipc_handlers.py:4005` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante. | sim |
 | `mic.set` | `daemon/ipc_handlers.py:4155` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle. | sim |
-| `mic.canal.set` | `daemon/ipc_handlers.py:4208` (`_handle_mic_canal_set`) | `mic.canal.set` — O ATO INTEIRO do microfone. | **não** |
+| `mic.canal.set` | `daemon/ipc_handlers.py:4208` (`_handle_mic_canal_set`) | `mic.canal.set` — O ATO INTEIRO do microfone. | sim |
 | `mic.led.set` | `daemon/ipc_handlers.py:4285` (`_handle_mic_led_set`) | `mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele. | sim |
 | `mic.volume.set` | `daemon/ipc_handlers.py:4333` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema. | sim |
 | `mouse.emulation.set` | `daemon/ipc_handlers.py:4420` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
-| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4479` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
+| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4479` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | sim |
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4496` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click. | sim |
 | `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6049` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4699` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4699` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | sim |
 | `desktop.status.set` | `daemon/ipc_handlers.py:4526` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
 | `navegacao.interna.set` | `daemon/ipc_handlers.py:4574` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |
 | `navegacao.foco` | `daemon/ipc_handlers.py:4598` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
@@ -129,12 +129,12 @@ dispatcher. A tabela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 | Método              | Parâmetros                                    | Retorno                                |
 |---------------------|-----------------------------------------------|----------------------------------------|
 | `profile.switch`    | `{name: str}`                                 | `{status: "ok", active_profile: str}`  |
-| `profile.list`      | `{}`                                          | `{profiles: [{name, priority, match}]}` |
+| `profile.list`      | `{}`                                          | `{profiles: [{name, priority, match_type}]}` |
 | `trigger.set`       | `{side, mode, params: [int]}`                 | `{status, aplicado_em, guardado_em}`   |
 | `trigger.reset`     | `{side?: "left"\|"right"\|"both"}`            | `{status, aplicado_em, guardado_em}`   |
 | `led.set`           | `{rgb: [r,g,b], player_leds?: [bool]*5}`      | `{status, aplicado_em, guardado_em}`   |
 | `daemon.status`     | `{appid?: int}`                               | `{connected, battery_pct, transport, active_profile, ambiente?: {appid, linhas, estado}}` |
-| `controller.list`   | `{}`                                          | `{controllers: [{vid, pid, transport, firmware, edge}]}` |
+| `controller.list`   | `{external?: bool}`                           | `{controllers: [{index, uniq, connected, transport, is_primary, battery_pct, battery_state, camada_da_usuaria, player_slot, numero}], external?: [{name, vid, pid, bus, uniq, driver, evdev_path, hidraw}]}` |
 | `daemon.reload`     | `{}`                                          | `{status}`                             |
 | `mouse.emulation.set` | `{enabled?: bool, speed?: 1-12, scroll_speed?: 1-5}` | `{status, enabled}`             |
 | `native.mode.set`   | `{enabled?: bool}` (ausente = toggle)         | `{status, native_mode}`                |
@@ -318,7 +318,7 @@ dele; no rádio, a ponte em háptica com sinal), e `haptica_pct_padrao` traz o p
 |---------------|------------------------------------------------------------------|------------------------------------------------|
 | `mic.set`     | `{muted: bool\|null, uniq?: str}`                                | `{status, audio, mic_mudo_desejado}`           |
 | `mic.led.set` | `{aceso: bool\|null, uniq?: str}`                                | `{status, aceso}`                              |
-| `speaker.set` | `{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}`     | `{status, speaker}`                            |
+| `speaker.set` | `{volume?: 0-255, muted?: bool, rota?: 0-3, fonte?: "mix"\|"sfx", release?: bool, uniq?: str}` | `{status, speaker, fonte?}` |
 
 Os dois escrevem no MESMO bloco do report de saída (`common[4..9]`) e seguem a mesma disciplina: o hefesto só toca o campo depois de
 alguém pedir, e o que não tem dono sai com o bit de validação apagado — o
@@ -740,7 +740,7 @@ fixado (`rumble.TETO_DO_RUMBLE_FIXADO_S`) sem rebate. `status` pode ser `"ok"`,
 
 | Método                   | Parâmetros                                   | Retorno                                        |
 |--------------------------|----------------------------------------------|------------------------------------------------|
-| `navegacao.interna.set`  | `{ligada?: bool, tipo?: "interna" \| "computador"}` | `{status, navegacao: {interna_ligada, tipo, foco}}` |
+| `navegacao.interna.set`  | `{ligada?: bool, tipo?: "interna" \| "computador", origin?}` | `{status, navegacao: {interna_ligada, tipo, foco}}` |
 | `navegacao.foco`         | `{ativa: bool}`                              | `{status, foco, toques: {uniq: {r1, l1, x, o, quadrado, triangulo, cima, baixo, esquerda, direita, start}}}` |
 
 `navegacao.interna.set`
@@ -764,7 +764,7 @@ daemon, o bloco não sai.
 
 | Método                      | Parâmetros        | Retorno                                            |
 |-----------------------------|-------------------|----------------------------------------------------|
-| `navegacao.big_picture.set` | `{ligado: bool}`  | `{status, big_picture: {ligado, agindo, quem_le}}` |
+| `navegacao.big_picture.set` | `{ligado: bool, origin?}`  | `{status, big_picture: {ligado, agindo, quem_le}}` |
 
 É a lista
 «Modo Big Picture na Steam» da aba Navegação, da máquina e não do perfil (a flag
@@ -811,6 +811,46 @@ de modo; o `uniq` não escolhe controle. Modo vazio ou desconhecido é erro de p
 O `gamepad.emulation.set` manual com `flavor` ou `caminho` passa pelo mesmo escritor, e
 o par (caminho, máscara) se grava junto. O `controller_masks.json` de antes vira o modo
 no boot e sai do disco.
+
+### Os métodos fora da tabela v1 — os parâmetros e o retorno
+
+O servidor (`daemon/ipc_server.py`) é JSON-RPC 2.0 em NDJSON UTF-8 (V2-3, ADR-005); os handlers
+moram em `daemon/ipc_handlers.py` e a política de rumble em `daemon/ipc_rumble_policy.py`
+(AUDIT-FINDING-IPC-SERVER-SPLIT-01). Este documento é o único lugar do contrato: a lista de
+métodos do código saiu da docstring do servidor em 03/11/2026, e o que só a docstring dizia está aqui.
+
+| Método | Parâmetros | Retorno |
+|---|---|---|
+| `profile.reaplicar` | `{name: str, prender?: bool}` | `{active_profile, mode_aplicado: bool, secoes: {seção: estado}}` |
+| `led.player_set` | `{bits: [bool]*5, uniq?: str}` | `{status, bits, aplicado_em, guardado_em}` |
+| `rumble.set` | `{weak: 0-255, strong: 0-255, uniq?: str}` | `{status, desfecho, weak, strong}`; recusado, com `motivo` e `passthrough` |
+| `rumble.stop` | `{uniq?: str}` | `{status, desfecho}`; no Modo Nativo, com `motivo` e `passthrough: true` |
+| `rumble.passthrough` | `{enabled: bool, uniq?: str}` | `{status, passthrough}` |
+| `controller.target.set` | `{index: int \| null}`, ou `jogador` ou `uniq` | `{status, target_index}` |
+| `launch_env.refresh` | `{}` | `{status}` |
+| `mouse.emulation.restore` | `{}` | `{status, enabled}` |
+| `keyboard.emulation.set` | `{enabled: bool}` | `{status, enabled, keyboard_emulation}` |
+| `desktop.arranjo.apply` | `{origin?, arranjo?}` | `{status, arranjo}` |
+| `desktop.status.set` | `{enabled: bool, origin?}` | `{status, enabled, mouse_emulation, keyboard_emulation, perfil, gravado}` |
+| `mic.canal.set` | `{ligado: bool, uniq?: str}` | `{status, uniq, ligado, canal_feito, canal_motivo, firmware_pedido, firmware_motivo, ativo, motivo}` |
+| `sensor.set` | `{uniq?, giroscopio?: bool, acelerometro?: bool, touchpad?: "ligado" \| "desligado"}` | `{status, uniq, perfil, gravado, giroscopio, acelerometro, alcance: {report, evdev}, ressalva}` |
+
+- **`desktop.arranjo.apply`** carrega o `desktop` (arranjo `navegacao` ou `point_and_click`) com o que a aba
+  Navegação gravou no perfil ATIVO (teclas, botões, `teclado_emulado` e a queda da supressão) e liga o mouse com as
+  velocidades do perfil: entrar na Navegação liga o mouse, pelo chip e pelo PS + R3
+  (D-2909-A-NAVEGACAO-LIGA-O-MOUSE). `arranjo` é `seção → estado` no vocabulário de `apply_profile_suppression`. Com
+  `origin: manual`, o modo e o mouse ligado vão ao perfil ativo.
+- **`desktop.status.set`** é o «Status do Modo» da aba Navegação: o mouse, depois o teclado, e com `origin: manual`
+  o `enabled` da seção `mouse` e o `teclado_emulado` no perfil ativo, numa gravação só.
+- **`speaker.set`, a `rota`**, é o `OUTPUT_PATH_SEL` do firmware: 0 estéreo no fone, 1 mono no fone, 2 L no fone ou
+  na TV e R no alto-falante («Efeitos do Jogo»), 3 só no alto-falante (desde a SOM-ROTA-01).
+- **`speaker.set`, a `fonte`**, é a camada do PipeWire (20/09/2026): `sfx` deixa o nó daquele controle livre para o
+  som que o jogo endereça ao controle, `mix` derrama no nó todo o som da máquina sem tirar o som da TV. A `fonte`
+  exige `uniq` e não toma a posse do volume; a resposta traz `fonte` com o que ficou valendo.
+- **`mic.canal.set`** é o ato inteiro do microfone: `status` só é `"ok"` com as DUAS metades feitas (o canal e o
+  firmware).
+- **`sensor.set`**: `alcance` diz QUAL metade pegou. Em Modo Nativo o jogo lê o movimento pelo hidraw do FÍSICO e o
+  daemon não escreve ali; a `ressalva` carrega esse limite. Campo omitido não mexe naquele sensor.
 
 ## Perfil com seção `mouse`
 
