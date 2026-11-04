@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202918,
+      "piso": 1202920,
       "por_item": {
         "docs": 106511,
         "scripts": 111614,
         "src": 303912,
-        "tests": 680881
+        "tests": 680883
       },
-      "razao": "tamanho: +83 linhas (1202835 -> 1202918), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 508dca308028",
+      "razao": "tamanho: +2 linhas (1202918 -> 1202920), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo e8f9f17f5d90",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1701,6 +1701,12 @@
           "de": 1202835,
           "para": 1202918,
           "razao": "tamanho: +83 linhas (1202835 -> 1202918), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 508dca308028"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1202918,
+          "para": 1202920,
+          "razao": "tamanho: +2 linhas (1202918 -> 1202920), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo e8f9f17f5d90"
         }
       ],
       "unidade": "linhas",
