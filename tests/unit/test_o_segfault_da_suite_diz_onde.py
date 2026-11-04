@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import faulthandler
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -169,8 +170,16 @@ def _importados(nos: list[ast.stmt] | list[ast.AST], modulo: str = "") -> set[st
     return nomes
 
 
+_TRECHO_DE_IMPORT = re.compile(r"\b(?:from|import)\b[^\n]*(?:\([^)]*\))?")
+
+
 def _carregam_o_webkit() -> set[str]:
-    """Os arquivos de teste que importam um módulo que carrega o WebKit ao ser"""
+    """Os arquivos de teste que importam um módulo que carrega o WebKit ao ser importado.
+
+    Quem importa um módulo do fecho escreve a folha dele na linha do import (ou no
+    parêntese que a segue): só o arquivo que a tem ali paga o `ast.parse` (2 300
+    arquivos, 8 dos 12 segundos da régua). O pré-filtro só poupa leitura; quem decide é o AST.
+    """
     modulos: dict[str, ast.Module] = {}
     for caminho in sorted((RAIZ / "src").rglob("*.py")) + sorted((RAIZ / "scripts").rglob("*.py")):
         partes = list(caminho.relative_to(RAIZ / "src").with_suffix("").parts
@@ -195,7 +204,11 @@ def _carregam_o_webkit() -> set[str]:
     folhas = {m.rsplit(".", 1)[-1] for m in fecho}
     achados = set()
     for teste in (RAIZ / "tests" / "unit").glob("test_*.py"):
-        nomes = _importados(list(ast.walk(ast.parse(teste.read_text(encoding="utf-8")))))
+        texto = teste.read_text(encoding="utf-8")
+        trechos = " ".join(_TRECHO_DE_IMPORT.findall(texto))
+        if not any(folha in trechos for folha in folhas):
+            continue
+        nomes = _importados(list(ast.walk(ast.parse(texto))))
         if alcanca(nomes) or nomes & folhas:
             achados.add(teste.relative_to(RAIZ).as_posix())
     return achados
@@ -203,14 +216,20 @@ def _carregam_o_webkit() -> set[str]:
 
 def test_todo_arquivo_que_carrega_o_webkit_roda_sozinho(tmp_path: Path) -> None:
     """A árvore de verdade: o runner diz quem roda em processo próprio, e o AST confere."""
-    feito = subprocess.run(
-        ["bash", str(SUITE)], cwd=RAIZ, capture_output=True, text=True, timeout=300,
-        check=False, env=_ambiente(PY=sys.executable, SAIDA=str(tmp_path / "saida"),
-                                   LISTAR_O_WEBKIT="1"),
+    runner = subprocess.Popen(
+        ["bash", str(SUITE)], cwd=RAIZ, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, env=_ambiente(PY=sys.executable, SAIDA=str(tmp_path / "saida"),
+                                 LISTAR_O_WEBKIT="1"),
     )
-    assert feito.returncode == 0, feito.stdout + feito.stderr
-    sozinhos = set(feito.stdout.split())
-    esperados = _carregam_o_webkit()
+    try:
+        esperados = _carregam_o_webkit()
+        saida, erro = runner.communicate(timeout=300)
+    finally:
+        if runner.poll() is None:
+            runner.kill()
+            runner.wait()
+    assert runner.returncode == 0, saida + erro
+    sozinhos = set(saida.split())
     assert len(esperados) >= 20, f"o AST achou só {len(esperados)}: a régua ficou cega"
     faltam = sorted(esperados - sozinhos)
     assert not faltam, (
