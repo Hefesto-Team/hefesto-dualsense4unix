@@ -477,6 +477,14 @@ _FILHO = textwrap.dedent(
     if modo == "nao-cede":
         jn.tamanho_que_cabe = lambda escolhido, _l, _a: escolhido  # o zoom sem olhar a vista
     carregou = []
+    feitas, vistas = [0], [0]
+    aplicar = jn.JanelaDaAba.aplicar_o_tamanho
+
+    def contada(self):
+        feitas[0] += 1
+        return aplicar(self)
+
+    jn.JanelaDaAba.aplicar_o_tamanho = contada
     # a vista alta (1300 px) comporta o 150 %; a de 840 px, a de quem usa, só 103 %
     tela = jn.JanelaDaAba(arquivo=arq, titulo_esperado="Prova do zoom", tamanho=(1918, 1300),
                           ao_carregar=lambda: carregou.append(1), oculta=True)
@@ -500,7 +508,10 @@ _FILHO = textwrap.dedent(
         return dict(json.loads(lido["v"]))
 
     def zoom(alvo):
-        bombear(lambda: abs(tela.view.get_zoom_level() - alvo) < 1e-6, 3.0)
+        contexto = GLib.MainContext.default()
+        bombear(lambda: abs(tela.view.get_zoom_level() - alvo) < 1e-6
+                or (feitas[0] > vistas[0] and not contexto.pending()), 3.0)
+        vistas[0] = feitas[0]
         return tela.view.get_zoom_level()
 
     bombear(lambda: bool(carregou))
