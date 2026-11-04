@@ -122,7 +122,7 @@ Steam fechada.
 
 ### O passo `[11c]` do install
 
-`install.sh:3577-3627` (o `--ensure`, passo `11a`) e `install.sh:3800-3823` (o `--lock`), **ligado por default**, opt-out `--no-proton-pin`.
+`install.sh:3587-3637` (o `--ensure`, passo `11a`) e `install.sh:3810-3833` (o `--lock`), **ligado por default**, opt-out `--no-proton-pin`.
 Roda `--ensure`, lê o `rc`, e só então `--lock`:
 
 | rc do `--ensure` | o que o install diz |
@@ -132,7 +132,7 @@ Roda `--ensure`, lê o `rc`, e só então `--lock`:
 | 3 (do `--lock`) | Steam aberta — trava ADIADA, com a instrução |
 | 8 | nenhum lançador de jogos instalado — nada baixado, e o vigia baixa quando um aparecer |
 
-E o doctor confere no fim (`check_proton_pin` em `scripts/doctor.sh:3860`), com
+E o doctor confere no fim (`check_proton_pin` em `scripts/doctor.sh:3862`), com
 `proton_pin_report` — read-only.
 
 ---

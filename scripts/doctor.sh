@@ -195,6 +195,8 @@ check_service() {
     state="$(systemctl --user is-active "${APP_ID}.service" 2>/dev/null || true)"
     if [[ "${state}" == "active" ]]; then
         pass "serviço ${APP_ID}.service ativo"
+    elif [[ "$(systemctl --user is-enabled "${APP_ID}.service" 2>/dev/null || true)" == "enabled" ]]; then
+        fail "serviço ${APP_ID}.service habilitado mas ${state:-inativo}: o controle está sem o Hefesto (suba com: systemctl --user reset-failed ${APP_ID}.service; systemctl --user start ${APP_ID}.service)"
     elif systemctl --user cat "${APP_ID}.service" >/dev/null 2>&1; then
         warn "serviço instalado mas ${state:-inativo} (start: systemctl --user start ${APP_ID}.service, ou abra a GUI)"
     else

@@ -3246,6 +3246,14 @@ DAEMON_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix.service"
 DAEMON_USER_UNIT_DIR="${HOME}/.config/systemd/user"
 DAEMON_UNIT_TARGET="${DAEMON_USER_UNIT_DIR}/hefesto-dualsense4unix.service"
 DAEMON_UNIT_NAME="hefesto-dualsense4unix.service"
+PRAZO_DO_DAEMON_NO_AR_S=90
+
+_devolver_o_daemon_ao_ar() {
+    systemctl --user reset-failed "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 || true
+    timeout "${PRAZO_DO_DAEMON_NO_AR_S}" systemctl --user start "${DAEMON_UNIT_NAME}" >/dev/null 2>&1
+    systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"
+}
+
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
 elif [[ ! -f "${DAEMON_UNIT_SRC}" ]]; then
@@ -3303,16 +3311,18 @@ else
     elif [[ "${enable_daemon}" -eq 1 ]]; then
         cumprir_a_troca daemon
         if systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
-           && systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1; then
+           && { timeout "${PRAZO_DO_DAEMON_NO_AR_S}" systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
+                || _devolver_o_daemon_ao_ar; }; then
             printf '      daemon habilitado e no ar\n'
         else
-            warn "enable/restart do daemon falhou — suba com: systemctl --user enable --now hefesto-dualsense4unix.service"
+            warn "o daemon não ficou habilitado e no ar em ${PRAZO_DO_DAEMON_NO_AR_S} s — veja: journalctl --user -u hefesto-dualsense4unix.service -n 50"
         fi
     else
         if systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"; then
             cumprir_a_troca daemon
-            systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
-                || warn "restart do daemon já em execução falhou"
+            timeout "${PRAZO_DO_DAEMON_NO_AR_S}" systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
+                || _devolver_o_daemon_ao_ar \
+                || warn "o daemon que estava no ar não voltou em ${PRAZO_DO_DAEMON_NO_AR_S} s — veja: journalctl --user -u hefesto-dualsense4unix.service -n 50"
             printf '      unit atualizada; auto-start NÃO habilitado (respeitando a resposta do passo 6)\n'
         else
             printf '      unit copiada; auto-start NÃO habilitado (respeitando a resposta do passo 6) — suba quando quiser: systemctl --user start hefesto-dualsense4unix.service\n'
