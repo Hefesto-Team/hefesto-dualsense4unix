@@ -1,4 +1,4 @@
-"""O CSV dos tempos que o fecho gera não conta como crescimento de código na catraca da origem."""
+"""Os cadernos de tempo que o fecho gera não contam como código na catraca da origem."""
 
 from __future__ import annotations
 
@@ -7,8 +7,11 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 RAIZ = Path(__file__).resolve().parents[2]
 CSV_DOS_TEMPOS = "docs/data/tempos-da-suite.csv"
+CADERNO_DO_TEMPO = "docs/data/tempos-da-casa.json"
 
 
 def _portao() -> ModuleType:
@@ -28,14 +31,17 @@ def _escreve(raiz: Path, rel: str, linhas: int) -> None:
     destino.write_text("".join(f"linha {n}\n" for n in range(linhas)), encoding="utf-8")
 
 
-def test_o_csv_dos_tempos_com_24_linhas_a_mais_nao_muda_o_tamanho(tmp_path: Path) -> None:
-    """Teste novo entra no CSV gerado: a Origem já foi paga no commit do teste."""
+@pytest.mark.parametrize("gerado", [CSV_DOS_TEMPOS, CADERNO_DO_TEMPO])
+def test_o_caderno_de_tempo_com_24_linhas_a_mais_nao_muda_o_tamanho(
+    tmp_path: Path, gerado: str
+) -> None:
+    """O CSV e o piso do tempo da casa são do fecho: o passo tempo os commita depois da catraca."""
     portao = _portao()
     _escreve(tmp_path, "src/hefesto_dualsense4unix/a.py", 10)
-    _escreve(tmp_path, CSV_DOS_TEMPOS, 100)
+    _escreve(tmp_path, gerado, 100)
     antes = portao.censo_do_tamanho(tmp_path).numero
 
-    _escreve(tmp_path, CSV_DOS_TEMPOS, 124)
+    _escreve(tmp_path, gerado, 124)
 
     assert portao.censo_do_tamanho(tmp_path).numero == antes == 10
 

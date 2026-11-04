@@ -65,7 +65,8 @@ DONOS = Path("docs/data/donos-de-comportamento.csv")
 MAPA = Path("docs/data/mapa-controles.csv")
 DECISOES = Path("docs/data/decisoes-de-produto.csv")
 TEMPOS_DA_SUITE = Path("docs/data/tempos-da-suite.csv")
-GERADOS_PELO_FECHO = frozenset({CADERNO, TEMPOS_DA_SUITE})
+TEMPOS_DA_CASA = Path("docs/data/tempos-da-casa.json")
+GERADOS_PELO_FECHO = frozenset({CADERNO, TEMPOS_DA_SUITE, TEMPOS_DA_CASA})
 
 VEREDITO_DE_EIXO = "EIXO"
 CASOS = "casos-especiais-fora-do-dono"
