@@ -11,18 +11,25 @@ pela assinatura dos arquivos; a regra é `_a_regra`, e nunca troca máscara nem 
 from __future__ import annotations
 
 import logging
-import mmap
 import os
-import re
 import threading
 import time
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 try:
     from .api_de_entrada import escolher_executavel
-    from .ficha_declarada import _bibliotecas_e_manifesto, _grafias, _ler_o_arquivo
+    from .ficha_declarada import (
+        _bibliotecas_e_manifesto,
+        _grafias,
+        _gravar_no_disco,
+        _guardado_no_disco,
+        _janelas,
+        _lote,
+        _sinais_guardados,
+    )
     from .steam_launch_options import (
         discover_vdfs,
         has_poison,
@@ -34,7 +41,11 @@ except ImportError:  # pragma: no cover
     from ficha_declarada import (  # type: ignore[no-redef]
         _bibliotecas_e_manifesto,
         _grafias,
-        _ler_o_arquivo,
+        _gravar_no_disco,
+        _guardado_no_disco,
+        _janelas,
+        _lote,
+        _sinais_guardados,
     )
     from steam_launch_options import (  # type: ignore[no-redef]
         discover_vdfs,
@@ -48,7 +59,7 @@ logger = logging.getLogger(__name__)
 ROUPA_DO_EDGE = "0df2"
 ROUPA_DO_COMUM = "0ce6"
 
-_NOME_DO_PERFIL = re.compile(rb"PlayStation5|DualSense")
+_NOMES_DO_PERFIL = (b"PlayStation5", b"DualSense")
 _LETRAS_DE_NOME = frozenset(
     b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 )
@@ -80,66 +91,85 @@ _LIDO_EM: dict[str, int] = {}
 _MARGEM_NS = 2 * 10**9
 _TRAVA_DO_CACHE = threading.Lock()
 _AQUECENDO = threading.Event()
+_NOME_NO_DISCO = "roupa-dos-jogos.json"
 
 
-def _perfis_do_incontrol(mapa: mmap.mmap) -> tuple[bool, bool]:
-    """`(edge, comum)` dos nomes `…Profile` com `PlayStation5` ou `DualSense`, fora os `Hori…`."""
+def _perfis_da_janela(janela: bytes, ultima: bool) -> tuple[bool, bool]:
+    """`(edge, comum)` dos nomes `…Profile` com `PlayStation5` ou `DualSense`, fora os `Hori…`.
+
+    O nome que encosta no fim de uma janela que não é a última fica para a seguinte, que o traz
+    inteiro na sobra.
+    """
     edge = comum = False
-    for casou in _NOME_DO_PERFIL.finditer(mapa):
-        inicio, fim = casou.start(), casou.end()
-        while inicio > 0 and mapa[inicio - 1] in _LETRAS_DE_NOME:
-            inicio -= 1
-        while fim < len(mapa) and mapa[fim] in _LETRAS_DE_NOME:
-            fim += 1
-        nome = mapa[inicio:fim]
-        if not nome.endswith(b"Profile") or nome.startswith(b"Hori"):
-            continue
-        if b"Edge" in nome:
-            edge = True
-        else:
-            comum = True
-        if edge and comum:
-            break
+    for agulha in _NOMES_DO_PERFIL:
+        posicao = janela.find(agulha)
+        while posicao != -1:
+            inicio, fim = posicao, posicao + len(agulha)
+            while inicio > 0 and janela[inicio - 1] in _LETRAS_DE_NOME:
+                inicio -= 1
+            while fim < len(janela) and janela[fim] in _LETRAS_DE_NOME:
+                fim += 1
+            nome = janela[inicio:fim]
+            if (fim < len(janela) or ultima) and nome.endswith(b"Profile") and not (
+                nome.startswith(b"Hori")
+            ):
+                if b"Edge" in nome:
+                    edge = True
+                else:
+                    comum = True
+                if edge and comum:
+                    return edge, comum
+            posicao = janela.find(agulha, fim)
     return edge, comum
 
 
-def _tem(mapa: mmap.mmap, agulhas: tuple[bytes, ...]) -> bool:
-    return any(mapa.find(a) != -1 for a in agulhas)
+def _tem(janela: bytes, agulhas: tuple[bytes, ...]) -> bool:
+    return any(a in janela for a in agulhas)
 
 
-def _nomeia_sem_o_edge(mapa: mmap.mmap, nome: str) -> bool:
+def _nomeia_sem_o_edge(janela: bytes, ultima: bool, nome: str) -> bool:
     """O `nome` aparece, em ASCII ou em UTF-16, ao menos uma vez sem o ` Edge` logo depois."""
     for codificacao in ("ascii", "utf-16-le"):
         agulha = nome.encode(codificacao)
         sufixo = _SUFIXO_DO_EDGE.encode(codificacao)
-        posicao = mapa.find(agulha)
+        posicao = janela.find(agulha)
         while posicao != -1:
             fim = posicao + len(agulha)
-            if mapa[fim:fim + len(sufixo)] != sufixo:
+            if (fim + len(sufixo) <= len(janela) or ultima) and (
+                janela[fim:fim + len(sufixo)] != sufixo
+            ):
                 return True
-            posicao = mapa.find(agulha, posicao + 1)
+            posicao = janela.find(agulha, posicao + 1)
     return False
+
+
+def _sinais_da_janela(
+    janela: bytes, ultima: bool, nome: str, rewired: bool
+) -> tuple[bool, bool]:
+    if nome in _DO_INCONTROL:
+        return _perfis_da_janela(janela, ultima)
+    if nome in _DA_SDL or nome == _DO_REWIRED:
+        return _tem(janela, _DUALSENSE_EDGE), _tem(janela, _DUALSENSE_COMUM)
+    return _tem(janela, _DUALSENSE_EDGE), _nomeia_sem_o_edge(janela, ultima, _SONY_DUALSENSE)
 
 
 def _sinais_do_arquivo(arquivo: Path, *, rewired: bool) -> tuple[bool, bool]:
     """`(edge, comum)`, as duas marcas independentes, que UM arquivo da roupa conhece."""
     nome = arquivo.name.lower()
+    if not (nome in _DO_INCONTROL or nome in _DA_SDL or nome == _DO_REWIRED or rewired):
+        return False, False
+    edge = comum = False
     try:
         if arquivo.stat().st_size == 0:
             return False, False
-        with (
-            arquivo.open("rb") as fh,
-            mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mapa,
-        ):
-            if nome in _DO_INCONTROL:
-                return _perfis_do_incontrol(mapa)
-            if nome in _DA_SDL or nome == _DO_REWIRED:
-                return _tem(mapa, _DUALSENSE_EDGE), _tem(mapa, _DUALSENSE_COMUM)
-            if not rewired:
-                return False, False
-            return _tem(mapa, _DUALSENSE_EDGE), _nomeia_sem_o_edge(mapa, _SONY_DUALSENSE)
+        for janela, _primeira, ultima in _janelas(arquivo):
+            do_edge, do_comum = _sinais_da_janela(janela, ultima, nome, rewired)
+            edge, comum = edge or do_edge, comum or do_comum
+            if edge and comum:
+                break
     except (OSError, ValueError):
         return False, False
+    return edge, comum
 
 
 def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
@@ -166,7 +196,7 @@ def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
     sony: set[str] = {"libScePad"} if bibliotecas else set()
     pids: set[str] = set()
     for arquivo in bibliotecas + ([executavel] if executavel is not None else []):
-        do_arquivo, dos_pids = _ler_o_arquivo(arquivo)
+        do_arquivo, dos_pids = _sinais_guardados(arquivo)
         sony |= do_arquivo
         pids |= dos_pids
     if ROUPA_DO_EDGE in pids or ROUPA_DO_COMUM in pids:
@@ -253,15 +283,63 @@ def _a_releitura_venceu(chave: _Chave, comecou: int | None) -> bool:
     return bool(suspeitos) and _agora_ns() > max(suspeitos) + _MARGEM_NS
 
 
-def _do_cache(raiz: Path) -> tuple[_Declarado | None, bool]:
+def _para_o_disco(raiz: Path, chave: _Chave, declarado: _Declarado, comecou: int) -> object:
+    base = str(raiz) + os.sep
+    return {
+        "chave": [[c.removeprefix(base), t, m] for c, t, m in chave],
+        "edge": declarado.edge,
+        "comum": declarado.comum,
+        "sony": declarado.sony,
+        "lido_em": comecou,
+    }
+
+
+def _texto_ou_nada(valor: object) -> bool:
+    return valor is None or isinstance(valor, str)
+
+
+def _do_disco(raiz: Path) -> tuple[_Chave, _Declarado, int] | None:
+    """A leitura que o disco guarda para o jogo; `None` se falta ou não tem a forma esperada."""
+    entrada: Any = _guardado_no_disco(_NOME_NO_DISCO).get(str(raiz))
+    if not isinstance(entrada, dict):
+        return None
+    bruta, comecou = entrada.get("chave"), entrada.get("lido_em")
+    edge, comum, sony = entrada.get("edge"), entrada.get("comum"), entrada.get("sony")
+    if not (
+        isinstance(bruta, list) and bruta and isinstance(comecou, int)
+        and _texto_ou_nada(edge) and _texto_ou_nada(comum) and _texto_ou_nada(sony)
+    ):
+        return None
+    chave: list[tuple[str, int, int]] = []
+    for item in bruta:
+        if not (
+            isinstance(item, list) and len(item) == 3 and isinstance(item[0], str)
+            and isinstance(item[1], int) and isinstance(item[2], int)
+        ):
+            return None
+        caminho = item[0] if os.path.isabs(item[0]) else str(raiz / item[0])
+        chave.append((caminho, item[1], item[2]))
+    return tuple(chave), _Declarado(edge=edge, comum=comum, sony=sony), comecou
+
+
+def _do_cache(raiz: Path, *, do_disco: bool) -> tuple[_Declarado | None, bool]:
     """A leitura guardada, se nada mudou desde então, e se pede uma releitura.
 
     Sem leitura útil: `(None, False)`. Com leitura: `(declarado, a_reler)`, e quem não pode esperar
-    o disco usa o `declarado` assim mesmo.
+    o disco usa o `declarado` assim mesmo. Com `do_disco` (fora do laço), o jogo que a memória
+    não tem se procura no cache em disco, que sobrevive ao reinício do daemon.
     """
     with _TRAVA_DO_CACHE:
         guardado = _CACHE.get(str(raiz))
         comecou = _LIDO_EM.get(str(raiz))
+    if guardado is None and do_disco:
+        do_disco_lido = _do_disco(raiz)
+        if do_disco_lido is not None:
+            with _TRAVA_DO_CACHE:
+                _CACHE.setdefault(str(raiz), do_disco_lido[:2])
+                _LIDO_EM.setdefault(str(raiz), do_disco_lido[2])
+                guardado = _CACHE[str(raiz)]
+                comecou = _LIDO_EM.get(str(raiz))
     if guardado is None:
         return None, False
     chave, declarado = guardado
@@ -272,14 +350,16 @@ def _do_cache(raiz: Path) -> tuple[_Declarado | None, bool]:
 
 def _o_que_o_jogo_declara(raiz: Path, *, so_o_cache: bool) -> tuple[_Declarado | None, bool]:
     """`(declarado, a_reler)`: o que o jogo nomeia e se o cache pede leitura nova, fora do laço."""
-    declarado, a_reler = _do_cache(raiz)
+    declarado, a_reler = _do_cache(raiz, do_disco=not so_o_cache)
     if so_o_cache or (declarado is not None and not a_reler):
         return declarado, a_reler
     comecou = _agora_ns()
     declarado, lidos = _ler_o_disco(raiz)
+    chave = _chave(raiz, lidos)
     with _TRAVA_DO_CACHE:
-        _CACHE[str(raiz)] = (_chave(raiz, lidos), declarado)
+        _CACHE[str(raiz)] = (chave, declarado)
         _LIDO_EM[str(raiz)] = comecou
+    _gravar_no_disco(_NOME_NO_DISCO, {str(raiz): _para_o_disco(raiz, chave, declarado, comecou)})
     return declarado, False
 
 
@@ -311,11 +391,12 @@ def roupa_do_jogo(
 def _aquecer(raizes: list[Path], ao_aquecer: Callable[[], None] | None) -> None:
     """Lê, fora do laço, os jogos que o cache ainda não tem, e avisa quem pediu."""
     try:
-        for raiz in raizes:
-            try:
-                roupa_do_jogo(raiz)
-            except Exception:
-                logger.debug("a roupa de %s não aqueceu", raiz, exc_info=True)
+        with _lote():
+            for raiz in raizes:
+                try:
+                    roupa_do_jogo(raiz)
+                except Exception:
+                    logger.debug("a roupa de %s não aqueceu", raiz, exc_info=True)
     finally:
         _AQUECENDO.clear()
     if ao_aquecer is not None:
@@ -360,16 +441,17 @@ def roupas_dos_jogos(
     opcoes = _opcoes_de_lancamento(home)
     roupas: dict[str, tuple[str, str]] = {}
     frios: list[Path] = []
-    for appid, _nome, raiz in jogos_instalados(home):
-        if raiz is None:
-            continue
-        resposta, a_reler = _a_roupa(
-            raiz, opcoes.get(appid, ""), appid in na_lista, modo_xbox, so_o_cache=so_o_cache
-        )
-        if resposta is not None:
-            roupas[appid] = resposta
-        if resposta is None or a_reler:
-            frios.append(raiz)
+    with _lote():
+        for appid, _nome, raiz in jogos_instalados(home):
+            if raiz is None:
+                continue
+            resposta, a_reler = _a_roupa(
+                raiz, opcoes.get(appid, ""), appid in na_lista, modo_xbox, so_o_cache=so_o_cache
+            )
+            if resposta is not None:
+                roupas[appid] = resposta
+            if resposta is None or a_reler:
+                frios.append(raiz)
     if frios and not _AQUECENDO.is_set():
         _AQUECENDO.set()
         threading.Thread(

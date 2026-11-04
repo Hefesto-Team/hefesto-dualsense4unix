@@ -9,14 +9,18 @@ importa este módulo. A busca de modelo é por proximidade de bytes: ausência n
 """
 from __future__ import annotations
 
+import contextlib
+import json
 import logging
-import mmap
 import os
 import re
 import struct
-from collections.abc import Collection, Iterable
+import threading
+import time
+from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 try:
     from .api_de_entrada import Evidencia, escolher_executavel
@@ -91,6 +95,18 @@ _ARQUIVOS_DA_ROUPA = frozenset(
     {"global-metadata.dat", "incontrol.dll", "rewired_core.dll", "sdl2.dll", "sdl3.dll"}
 )
 _TETO_DE_ASSETS = 8
+
+_BLOCO = 1 << 20
+_SOBRA = 4096
+_VERSAO_DO_CACHE = 1
+_NOME_DOS_SINAIS = "sinais-dos-arquivos.json"
+_MARGEM_NS = 2 * 10**9
+_POR_ARQUIVO: dict[str, tuple[int, int, frozenset[str], frozenset[str]]] = {}
+_TRAVA_DOS_SINAIS = threading.Lock()
+_LIDO_DO_DISCO: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
+_TRAVA_DO_DISCO = threading.Lock()
+_TRAVA_DA_GRAVACAO = threading.Lock()
+_LOTE = threading.local()
 
 
 @dataclass(frozen=True)
@@ -317,29 +333,201 @@ def _ordem_do_asset(nome: str) -> int | None:
     return int(casou.group(1)) if casou else None
 
 
-def _ler_o_arquivo(arquivo: Path) -> tuple[set[str], set[str]]:
-    """`(sinais Sony, modelos Sony)` achados num arquivo; vazio se ele não se lê."""
+def _janelas(arquivo: Path) -> Iterator[tuple[bytes, bool, bool]]:
+    """`(janela, primeira, última)`: o arquivo em blocos de `_BLOCO` lidos por `readinto`.
+
+    A leitura solta o GIL, e cada busca fica num bloco só: o fio de fora nunca espera o arquivo
+    inteiro. Cada janela começa com os últimos `_SOBRA` bytes da anterior, e a agulha (ou o nome,
+    ou a vizinhança do PID) que cruza o corte cabe inteira numa das duas.
+    """
+    buffer = bytearray(_SOBRA + _BLOCO)
+    vista = memoryview(buffer)
+    guardados = 0
+    primeira = True
+    with arquivo.open("rb", buffering=0) as fh:
+        while True:
+            fim = guardados
+            while fim < len(buffer):
+                lidos = fh.readinto(vista[fim:])
+                if not lidos:
+                    break
+                fim += lidos
+            ultima = fim < len(buffer)
+            yield bytes(vista[:fim]), primeira, ultima
+            if ultima:
+                return
+            primeira = False
+            buffer[:_SOBRA] = vista[fim - _SOBRA:fim]
+            guardados = _SOBRA
+
+
+def _pids_da_janela(janela: bytes, pids: set[str]) -> None:
+    posicao = janela.find(_VID_SONY)
+    while posicao != -1 and len(pids) < len(_PIDS_SONY):
+        vizinhanca = janela[max(0, posicao - _JANELA_DO_PID): posicao + _JANELA_DO_PID + 2]
+        for nome_pid, bytes_pid in _PIDS_SONY.items():
+            if bytes_pid in vizinhanca:
+                pids.add(nome_pid)
+        posicao = janela.find(_VID_SONY, posicao + 1)
+
+
+def _varrer_o_arquivo(arquivo: Path) -> tuple[set[str], set[str]]:
+    """`(sinais Sony, modelos Sony)` de um arquivo, num passe só; `OSError` se não se lê."""
     sony: set[str] = set()
     pids: set[str] = set()
+    for janela, _primeira, _ultima in _janelas(arquivo):
+        for nome, agulhas in _SINAIS_SONY:
+            if nome not in sony and any(a in janela for a in agulhas):
+                sony.add(nome)
+        if len(pids) < len(_PIDS_SONY):
+            _pids_da_janela(janela, pids)
+    return sony, pids
+
+
+def _ler_o_arquivo(arquivo: Path) -> tuple[set[str], set[str]]:
+    """`(sinais Sony, modelos Sony)` achados num arquivo; vazio se ele não se lê."""
     try:
-        if arquivo.stat().st_size == 0:
-            return sony, pids
-        with (
-            arquivo.open("rb") as fh,
-            mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mapa,
-        ):
-            for nome, agulhas in _SINAIS_SONY:
-                if any(mapa.find(a) != -1 for a in agulhas):
-                    sony.add(nome)
-            posicao = mapa.find(_VID_SONY)
-            while posicao != -1 and len(pids) < len(_PIDS_SONY):
-                janela = mapa[max(0, posicao - _JANELA_DO_PID): posicao + _JANELA_DO_PID + 2]
-                for nome_pid, bytes_pid in _PIDS_SONY.items():
-                    if bytes_pid in janela:
-                        pids.add(nome_pid)
-                posicao = mapa.find(_VID_SONY, posicao + 1)
+        return _varrer_o_arquivo(arquivo)
     except (OSError, ValueError):
         return set(), set()
+
+
+def _arquivo_do_cache(nome: str) -> Path | None:
+    try:
+        from hefesto_dualsense4unix.utils.xdg_paths import cache_dir
+    except ImportError:  # pragma: no cover
+        return None
+    return cache_dir() / nome
+
+
+def _guardado_no_disco(nome: str) -> dict[str, Any]:
+    """As entradas de `cache_dir()/nome`; vazio se ele falta, corrompeu ou é de outra versão."""
+    caminho = _arquivo_do_cache(nome)
+    if caminho is None:
+        return {}
+    try:
+        st = os.stat(caminho)
+    except OSError:
+        return {}
+    assinatura = (st.st_size, st.st_mtime_ns)
+    with _TRAVA_DO_DISCO:
+        lembrado = _LIDO_DO_DISCO.get(str(caminho))
+    if lembrado is not None and lembrado[0] == assinatura:
+        return lembrado[1]
+    try:
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        dados = None
+    entradas = (
+        dados.get("entradas")
+        if isinstance(dados, dict) and dados.get("versão") == _VERSAO_DO_CACHE
+        else None
+    )
+    if not isinstance(entradas, dict):
+        entradas = {}
+    with _TRAVA_DO_DISCO:
+        _LIDO_DO_DISCO[str(caminho)] = (assinatura, entradas)
+    return entradas
+
+
+def _escrever_no_disco(nome: str, novas: dict[str, Any]) -> None:
+    caminho = _arquivo_do_cache(nome)
+    if caminho is None:
+        return
+    with _TRAVA_DA_GRAVACAO:
+        entradas = {**_guardado_no_disco(nome), **novas}
+        temporario = caminho.with_name(f".{caminho.name}.{os.getpid()}.{threading.get_ident()}")
+        try:
+            caminho.parent.mkdir(parents=True, exist_ok=True)
+            with temporario.open("w", encoding="utf-8") as fh:
+                json.dump({"versão": _VERSAO_DO_CACHE, "entradas": entradas}, fh)
+            os.replace(temporario, caminho)
+            st = os.stat(caminho)
+        except OSError as erro:
+            logger.debug("o cache %s não se gravou: %s", caminho, erro)
+            with contextlib.suppress(OSError):
+                temporario.unlink()
+            return
+        with _TRAVA_DO_DISCO:
+            _LIDO_DO_DISCO[str(caminho)] = ((st.st_size, st.st_mtime_ns), entradas)
+
+
+def _gravar_no_disco(nome: str, novas: dict[str, Any]) -> None:
+    """Junta `novas` ao cache `nome` em disco; dentro de um `_lote`, só no fim dele.
+
+    Quem chama é o fio que leu os arquivos, nunca o laço. O `json.dump` em arquivo escreve aos
+    pedaços e solta o GIL entre eles.
+    """
+    pendentes: dict[str, dict[str, Any]] | None = getattr(_LOTE, "pendentes", None)
+    if pendentes is not None:
+        pendentes.setdefault(nome, {}).update(novas)
+        return
+    _escrever_no_disco(nome, novas)
+
+
+@contextlib.contextmanager
+def _lote() -> Iterator[None]:
+    """As gravações do cache dentro do bloco saem juntas, uma por arquivo, no fim."""
+    if getattr(_LOTE, "pendentes", None) is not None:
+        yield
+        return
+    _LOTE.pendentes = {}
+    try:
+        yield
+    finally:
+        pendentes, _LOTE.pendentes = _LOTE.pendentes, None
+        for nome, novas in pendentes.items():
+            _escrever_no_disco(nome, novas)
+
+
+def _agora_ns() -> int:
+    return time.time_ns()
+
+
+def _sinais_do_disco(chave: str) -> tuple[int, int, frozenset[str], frozenset[str]] | None:
+    entrada = _guardado_no_disco(_NOME_DOS_SINAIS).get(chave)
+    if not isinstance(entrada, list) or len(entrada) != 4:
+        return None
+    tamanho, mtime, sony, pids = entrada
+    if not (
+        isinstance(tamanho, int) and isinstance(mtime, int)
+        and isinstance(sony, list) and isinstance(pids, list)
+        and all(isinstance(s, str) for s in sony + pids)
+    ):
+        return None
+    return tamanho, mtime, frozenset(sony), frozenset(pids)
+
+
+def _sinais_guardados(arquivo: Path) -> tuple[set[str], set[str]]:
+    """`_ler_o_arquivo` com cache por arquivo, na memória e em disco, pela `(tamanho, mtime_ns)`.
+
+    O arquivo cujo `mtime` cai a menos de uma margem do início da leitura não se guarda: num disco
+    de tempo grosso, a mudança no mesmo tique deixaria a chave igual.
+    """
+    comecou = _agora_ns()
+    try:
+        st = os.stat(arquivo)
+    except OSError:
+        return set(), set()
+    chave = str(arquivo)
+    with _TRAVA_DOS_SINAIS:
+        guardado = _POR_ARQUIVO.get(chave)
+    if guardado is None:
+        guardado = _sinais_do_disco(chave)
+    if guardado is not None and guardado[:2] == (st.st_size, st.st_mtime_ns):
+        with _TRAVA_DOS_SINAIS:
+            _POR_ARQUIVO[chave] = guardado
+        return set(guardado[2]), set(guardado[3])
+    try:
+        sony, pids = _varrer_o_arquivo(arquivo) if st.st_size else (set(), set())
+    except (OSError, ValueError):
+        return set(), set()
+    if st.st_mtime_ns < comecou - _MARGEM_NS:
+        with _TRAVA_DOS_SINAIS:
+            _POR_ARQUIVO[chave] = (st.st_size, st.st_mtime_ns, frozenset(sony), frozenset(pids))
+        _gravar_no_disco(
+            _NOME_DOS_SINAIS, {chave: [st.st_size, st.st_mtime_ns, sorted(sony), sorted(pids)]}
+        )
     return sony, pids
 
 
@@ -351,7 +539,7 @@ def examinar_o_binario(raiz: Path, evidencia: Evidencia | None = None) -> Sinais
     pids: set[str] = set()
     arquivos = ([executavel] if executavel is not None else []) + bibliotecas
     for arquivo in arquivos:
-        do_arquivo, dos_pids = _ler_o_arquivo(arquivo)
+        do_arquivo, dos_pids = _sinais_guardados(arquivo)
         sony |= do_arquivo
         pids |= dos_pids
     familias = (
@@ -434,14 +622,15 @@ def fichas_dos_jogos(
         caminho_do_cache_da_steam(home), [appid for appid, _, _ in lista]
     )
     fichas: dict[str, FichaDeclarada] = {}
-    for appid, raiz, evidencia in lista:
-        binario = (
-            examinar_o_binario(raiz, evidencia)
-            if examinar and raiz is not None
-            else SinaisDoBinario()
-        )
-        decl = declaracoes.get(str(appid)) if declaracoes is not None else None
-        fichas[str(appid)] = montar_ficha(appid, decl, binario)
+    with _lote():
+        for appid, raiz, evidencia in lista:
+            binario = (
+                examinar_o_binario(raiz, evidencia)
+                if examinar and raiz is not None
+                else SinaisDoBinario()
+            )
+            decl = declaracoes.get(str(appid)) if declaracoes is not None else None
+            fichas[str(appid)] = montar_ficha(appid, decl, binario)
     return fichas
 
 
