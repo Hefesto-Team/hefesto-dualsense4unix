@@ -250,6 +250,7 @@ _BUTTONS2_BITS: dict[str, int] = {
     "traseira_esquerda": 0x40,
     "traseira_direita": 0x80,
 }
+_BITS_SO_DO_EDGE = 0xF0
 
 _TOUCHPAD_BUTTONS = frozenset({
     "touchpad", "touchpad_press",
@@ -1297,6 +1298,8 @@ class UhidDualSense:
             buttons2 |= _TOUCHPAD_BIT
         if self._mic_button:
             buttons2 |= _BUTTONS2_BITS["mic_btn"]
+        if self.product != VPAD_PRODUCT:
+            buttons2 &= ~_BITS_SO_DO_EDGE
         body[_BUTTONS2_OFFSET] = buttons2
         return body
 

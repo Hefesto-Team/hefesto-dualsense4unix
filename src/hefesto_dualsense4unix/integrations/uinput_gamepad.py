@@ -237,10 +237,31 @@ def botoes_posicionais(mapa: dict[str, str] | None = None) -> dict[str, str]:
 
 BOTOES_POSICIONAIS: dict[str, str] = botoes_posicionais()
 
+_TRASEIRAS_DO_HID_PLAYSTATION: dict[str, str] = {
+    "fn_esquerdo": "BTN_TRIGGER_HAPPY1",
+    "fn_direito": "BTN_TRIGGER_HAPPY2",
+    "traseira_esquerda": "BTN_TRIGGER_HAPPY3",
+    "traseira_direita": "BTN_TRIGGER_HAPPY4",
+}
+_TRASEIRAS_DO_XPAD: dict[str, str] = {
+    "traseira_direita": "BTN_TRIGGER_HAPPY5",
+    "fn_direito": "BTN_TRIGGER_HAPPY6",
+    "traseira_esquerda": "BTN_TRIGGER_HAPPY7",
+    "fn_esquerdo": "BTN_TRIGGER_HAPPY8",
+}
+
+TRASEIRAS_POR_FLAVOR: dict[str, dict[str, str]] = {
+    "dualsense": _TRASEIRAS_DO_HID_PLAYSTATION,
+    "xbox": _TRASEIRAS_DO_XPAD,
+    "nintendo": _TRASEIRAS_DO_HID_PLAYSTATION,
+}
+
+_BOTOES_DA_SONY: dict[str, str] = {**BOTOES_POSICIONAIS, **_TRASEIRAS_DO_HID_PLAYSTATION}
+
 BOTOES_POR_FLAVOR: dict[str, dict[str, str]] = {
-    "dualsense": BOTOES_POSICIONAIS,
-    "xbox": BUTTON_TO_UINPUT,
-    "nintendo": BOTOES_POSICIONAIS,
+    "dualsense": _BOTOES_DA_SONY,
+    "xbox": {**BUTTON_TO_UINPUT, **_TRASEIRAS_DO_XPAD},
+    "nintendo": _BOTOES_DA_SONY,
 }
 
 LIMIAR_GATILHO_PRESSIONADO = 32
@@ -408,9 +429,25 @@ CAPACIDADES_POR_FLAVOR: dict[str, _FabricaDeCapacidades] = {
 
 
 def _build_capabilities(*, with_ff: bool, flavor: str = DEFAULT_FLAVOR) -> dict[int, Any]:
-    """Capabilities da máscara `flavor`. Sabor desconhecido cai no padrão."""
+    """Capabilities da máscara `flavor`, com as traseiras e os Fn do Edge no fim.
+
+    Os quatro vão aos botões extras de `TRASEIRAS_POR_FLAVOR`: a tabela Sony (DualSense e
+    Nintendo) segue o Edge do `hid-playstation` do 7.2 (`BTN_TRIGGER_HAPPY1` a `4`); o Xbox, as
+    paddles do Elite no `xpad` (`HAPPY5` a `8`). Os códigos vêm depois de todo botão que o SDL
+    conta por posição, e nenhum `bN` se desloca. Sabor desconhecido cai no padrão, sem os quatro;
+    o código que a `python-evdev` não traz fica de fora, como no `_resolve_evdev`.
+    """
+    from evdev import ecodes
+
     construtor = CAPACIDADES_POR_FLAVOR.get(flavor, _capacidades_padrao)
-    return construtor(with_ff=with_ff)
+    caps = construtor(with_ff=with_ff)
+    traseiras = TRASEIRAS_POR_FLAVOR.get(flavor, {})
+    codigos = (getattr(ecodes, nome, None) for nome in traseiras.values())
+    caps[ecodes.EV_KEY] = [
+        *caps[ecodes.EV_KEY],
+        *sorted(c for c in codigos if isinstance(c, int)),
+    ]
+    return caps
 
 
 def _forma_do_periodico(periodico: Any, ec: Any) -> classe_do_rumble.FormaDoPeriodico:
@@ -1090,6 +1127,7 @@ __all__ = [
     "NINTENDO_PROCON_NAME",
     "NINTENDO_PROCON_PRODUCT",
     "NINTENDO_VENDOR",
+    "TRASEIRAS_POR_FLAVOR",
     "XBOX360_NAME",
     "XBOX360_PRODUCT",
     "XBOX360_VENDOR",
