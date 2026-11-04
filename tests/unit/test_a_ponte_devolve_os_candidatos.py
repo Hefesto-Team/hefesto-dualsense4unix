@@ -77,13 +77,15 @@ def _ambiente(raiz: Path) -> dict[str, str]:
 ENTRADA = f"{ADAPTADOR}\n"
 
 
-def _descobrir(barramento: Path, segundos: str) -> subprocess.CompletedProcess[str]:
+def _descobrir(
+    barramento: Path, segundos: str, extra: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["bash", str(PONTE), "descobrir", segundos],
         capture_output=True,
         text=True,
         input=ENTRADA,
-        env=_ambiente(barramento),
+        env={**_ambiente(barramento), **(extra or {})},
         timeout=60,
         check=False,
     )
@@ -110,9 +112,24 @@ def _linhas(saida: str) -> list[list[str]]:
     return [linha.split("\t") for linha in saida.splitlines() if linha.strip()]
 
 
-def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(barramento: Path) -> None:
+@pytest.fixture(scope="module")
+def corrida(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[Path, subprocess.CompletedProcess[str]]:
+    """UMA janela de três segundos para as sete réguas que leem a mesma saída.
+
+    Antes cada régua abria a sua e pagava os 3 s do barramento de mentira; a
+    saída, o marcador e o roteiro são os mesmos em todas, então a janela corre
+    uma vez só. O marcador do segundo 1 ainda não existe quando a janela abre.
+    """
+    raiz = montar(tmp_path_factory.mktemp("ponte"))
+    assert not (raiz / "marcador").exists()
+    return raiz, _descobrir(raiz, "3", {"HEFESTO_BT_LOG_DEST": str(raiz / "diario.txt")})
+
+
+def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(corrida) -> None:
     """Quatro colunas por candidato: MAC, nome, novo|pareado e a classe."""
-    feito = _descobrir(barramento, "3")
+    _, feito = corrida
     assert feito.returncode == 0, feito.stderr
     linhas = _linhas(feito.stdout)
     assert len(linhas) == 2, feito.stdout
@@ -126,35 +143,32 @@ def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(barramento: Path) -> Non
     assert controle[3] == CLASSE_NA_COLUNA
 
 
-def test_o_candidato_ja_pareado_se_declara(barramento: Path) -> None:
+def test_o_candidato_ja_pareado_se_declara(corrida) -> None:
     """`pareado` não é enfeite: é o que impede a tela de mandá-la repetir"""
-    feito = _descobrir(barramento, "3")
+    _, feito = corrida
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][2] == "pareado"
 
 
-def test_a_classe_ausente_sai_vazia_e_nao_inventada(barramento: Path) -> None:
+def test_a_classe_ausente_sai_vazia_e_nao_inventada(corrida) -> None:
     """O vizinho não publica `Class`. A coluna tem de ficar vazia."""
-    feito = _descobrir(barramento, "3")
+    _, feito = corrida
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][3] == ""
 
 
-def test_o_nome_com_tabulacao_nao_quebra_a_coluna(barramento: Path) -> None:
+def test_o_nome_com_tabulacao_nao_quebra_a_coluna(corrida) -> None:
     """O nome vem do BlueZ, que é terceiro. `\\t` e `\\n` nele viram espaço."""
-    feito = _descobrir(barramento, "3")
+    _, feito = corrida
     for linha in _linhas(feito.stdout):
         assert len(linha) == 4, f"o TSV ganhou colunas: {linha!r}"
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][1] == "fone da vizinha"
 
 
-def test_o_aparelho_que_aparece_no_meio_da_janela_tambem_sai(
-    barramento: Path,
-) -> None:
+def test_o_aparelho_que_aparece_no_meio_da_janela_tambem_sai(corrida) -> None:
     """Quem chega no segundo 1 é candidato como quem já estava lá."""
-    assert not (barramento / "marcador").exists()
-    feito = _descobrir(barramento, "3")
+    barramento, feito = corrida
     assert (barramento / "marcador").exists(), "a janela nem chegou a abrir"
     macs = {linha[0] for linha in _linhas(feito.stdout)}
     assert VIZINHO.upper() in macs, feito.stdout
@@ -183,11 +197,9 @@ def test_o_candidato_sai_enquanto_a_janela_ainda_esta_aberta(
         processo.wait(timeout=10)
 
 
-def test_o_roteiro_pede_pairable_e_scan_no_adaptador_escolhido(
-    barramento: Path,
-) -> None:
+def test_o_roteiro_pede_pairable_e_scan_no_adaptador_escolhido(corrida) -> None:
     """Sem `pairable on` a janela vê e não deixa parear."""
-    _descobrir(barramento, "3")
+    barramento, _ = corrida
     roteiro = (barramento / "roteiro").read_text(encoding="utf-8")
     assert f"select {ADAPTADOR.upper()}" in roteiro
     assert "pairable on" in roteiro
@@ -212,20 +224,9 @@ def test_o_dry_run_anuncia_a_lista_e_nao_abre_janela(barramento: Path) -> None:
     assert "novo|pareado" in feito.stdout, feito.stdout
 
 
-def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(barramento: Path) -> None:
+def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(corrida) -> None:
     """Uma varredura vê o celular de quem passa na rua."""
-    diario = barramento / "diario.txt"
-    env = _ambiente(barramento)
-    env["HEFESTO_BT_LOG_DEST"] = str(diario)
-    subprocess.run(
-        ["bash", str(PONTE), "descobrir", "3"],
-        capture_output=True,
-        text=True,
-        input=ENTRADA,
-        env=env,
-        timeout=60,
-        check=False,
-    )
+    diario = corrida[0] / "diario.txt"
     texto = diario.read_text(encoding="utf-8")
     assert "2 candidato(s)" in texto, texto
     assert CONTROLE.upper() not in texto, "o diário nomeou um candidato"
