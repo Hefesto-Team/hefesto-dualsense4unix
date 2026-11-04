@@ -36,6 +36,7 @@ from tests.unit.test_o_gatilho_vira_clique_sem_ligar_o_cursor import (
 
 CENTRO = 128
 PRAZO_S = 5.0
+TIQUES_DA_PROVA = 60
 
 
 class _MouseDoDesktop:
@@ -56,6 +57,13 @@ class _MouseDoDesktop:
 
 def _teclas(mod: _UinputPorDevice) -> list[tuple[str, int]]:
     return [(n, v) for n, v in _saidas(mod)[1] if n.startswith("KEY_")]
+
+
+async def _ate(condicao: Any) -> None:
+    prazo = time.monotonic() + PRAZO_S
+    while not condicao() and time.monotonic() < prazo:
+        await asyncio.sleep(0.005)
+    assert condicao(), f"o laço não chegou lá em {PRAZO_S:.0f} s"
 
 
 async def _rodar_o_laco(
@@ -103,12 +111,10 @@ async def _rodar_o_laco(
         teclado_so_no_jogo=so_no_jogo))
 
     run_task = asyncio.create_task(daemon.run())
-    prazo = time.monotonic() + PRAZO_S
-    while daemon.store.counter("input.settling.tick") < 3 and time.monotonic() < prazo:
-        await asyncio.sleep(0.005)
-    fim = time.monotonic() + (PRAZO_S if not (so_no_jogo or suspensa or not teclado) else 0.3)
-    while not _teclas(mod) and time.monotonic() < fim:
-        await asyncio.sleep(0.005)
+    await _ate(lambda: daemon.store.counter("poll.tick") >= 3)
+    largada = daemon.store.counter("poll.tick")
+    await _ate(lambda: bool(_teclas(mod))
+               or daemon.store.counter("poll.tick") >= largada + TIQUES_DA_PROVA)
     daemon.stop()
     await run_task
     return _teclas(mod)
