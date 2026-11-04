@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1203035,
+      "piso": 1203196,
       "por_item": {
         "docs": 106511,
         "scripts": 111614,
         "src": 303912,
-        "tests": 680998
+        "tests": 681159
       },
-      "razao": "tamanho: +115 linhas (1202920 -> 1203035), pagas por Origem: D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO, D-1610-O-CINZA-SAI-DA-LETRA, D-2210-OS-CARTOES-DOS-LANCADORES-TEM-A-ALTURA-DO-CONTEUDO, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE, D-2610-O-ANDAMENTO-DO-PAREAR-LE-O-ESTADO-DA-EXTENSAO, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 578fba7a8463",
+      "razao": "04/11/2026, suite-magra: +161 linhas de teste, a régua que reprova o pulo por caminho versionado que saiu do produto (87de4cbcd) menos os ramos mortos que saíram (131015d15); ferramental da suíte sem decisão",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1713,10 +1713,16 @@
           "de": 1202920,
           "para": 1203035,
           "razao": "tamanho: +115 linhas (1202920 -> 1203035), pagas por Origem: D-0211-A-LUZ-DE-JOGADOR-E-DO-JOGO, D-1610-O-CINZA-SAI-DA-LETRA, D-2210-OS-CARTOES-DOS-LANCADORES-TEM-A-ALTURA-DO-CONTEUDO, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE, D-2610-O-ANDAMENTO-DO-PAREAR-LE-O-ESTADO-DA-EXTENSAO, D-3110-O-JOGO-SO-NASCE-COM-O-AMBIENTE-DO-PROPRIO-ARME; registrado no fecho, topo 578fba7a8463"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1203035,
+          "para": 1203196,
+          "razao": "04/11/2026, suite-magra: +161 linhas de teste, a régua que reprova o pulo por caminho versionado que saiu do produto (87de4cbcd) menos os ramos mortos que saíram (131015d15); ferramental da suíte sem decisão"
         }
       ],
       "unidade": "linhas",
-      "universo": 3360
+      "universo": 3361
     }
   }
 }
