@@ -19,14 +19,16 @@ Na maioria dos jogos não é preciso escolher nada. Quando precisar:
 ## Jogos que pedem o Steam Input ligado
 
 Alguns jogos pedem os recursos do DualSense à Steam, e o suporte deles só
-funciona com o Steam Input daquele jogo ligado. Para um desses, use o chip
-"Steam Input" da aba **Jogar**: ele liga a entrada da Steam só naquele jogo, que
-é a exceção por jogo, e o vigia do instalador deixa de desligá-la.
+funciona com o Steam Input daquele jogo ligado. Para um desses, escolha o modo
+"Steam Input" na aba **Jogar**, com o jogo aberto ou logo depois de fechá-lo:
+ele liga a entrada da Steam só naquele jogo, que é a exceção por jogo, e o vigia
+do instalador deixa de desligá-la.
 
 Com a Steam aberta, a escolha espera, porque a Steam regrava as próprias opções
-ao sair: a aba diz «Liga quando a Steam fechar». Um segundo clique no chip, em até
-20 segundos, fecha a Steam, liga o Steam Input daquele jogo e a abre de novo.
-Com um jogo aberto, o chip não oferece fechar a Steam.
+ao sair: o botão passa a perguntar «Fechar a Steam?». Um segundo clique, em até
+20 segundos, fecha a Steam, liga o Steam Input daquele jogo e a abre de novo;
+sem ele, a escolha se completa quando a Steam fechar. Com um jogo aberto, o
+botão não oferece fechar a Steam.
 
 Numa instalação com `--keep-steam-input` o vigia não mexe no Steam Input, e os
 pacotes (.deb, AppImage, Flatpak) não o instalam: nesses casos, só o segundo
@@ -38,10 +40,8 @@ você escolheu continuam valendo.
 
 ### Desfazer
 
-Na aba **Perfis**, abra o perfil do jogo (com «Jogo da Steam» e o número do jogo
-preenchidos) e desmarque «Esconder os controles físicos neste jogo». A marca sai
-na hora. Com um jogo aberto, a janela pergunta antes: feche e abra o jogo para
-valer.
+Na aba **Jogar**, escolha outro modo para o jogo: ele sai da exceção, e o vigia
+volta a desligar o Steam Input dele.
 
 Pela linha de comando:
 
@@ -50,10 +50,10 @@ hefesto-dualsense4unix gamepad steam-input list              # os jogos marcados
 hefesto-dualsense4unix gamepad steam-input remove <nome ou appid>
 ```
 
-### O contrário: um jogo sem o Hefesto
+### O contrário: um jogo que fala direto com o controle
 
-«Adicionar à lista de exclusão», no cartão da Steam da aba **Lançadores**, faz o
-jogo escolhido ver o controle como se o Hefesto não estivesse instalado.
+Escolha o modo **Nativo** com o jogo aberto: o jogo recebe o controle físico,
+sem o Hefesto no meio, e o perfil próprio do jogo guarda a escolha.
 
 ## Jogos medidos
 
@@ -77,8 +77,9 @@ modos, e se ele precisou do Steam Input ligado.
 Salve um perfil (aba **Perfis**) com o modo e a máscara certos e diga como
 reconhecer o jogo. Ele entra sozinho quando o jogo abre.
 
-O botão «Detectar» lê o jogo aberto e monta a regra por você. Se for escrever à
-mão, use a classe da janela: a Steam a marca como `steam_app_<número do jogo>`,
+No editor da aba Perfis, **Nome do jogo** lista os jogos desta máquina, e o
+perfil leva o nome e a regra do jogo escolhido. Se for escrever à mão, use a
+classe da janela: a Steam a marca como `steam_app_<número do jogo>`,
 e é o único campo que funciona tanto no X11 quanto no Wayland. O nome do
 processo não funciona no Wayland (o sistema não o entrega) e, com o Proton, é o
 do Wine e não o do jogo. Os campos preenchidos precisam casar todos: um campo
