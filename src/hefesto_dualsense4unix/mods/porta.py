@@ -84,6 +84,7 @@ JANELA_DA_VIBRACAO_DO_JOGO_S = 2.0
 PUBLICACOES_POR_SEGUNDO = 20
 
 PRAZO_PARA_FECHAR_S = 2.0
+PRAZO_DA_CAPTURA_SAIR_S = 2.0
 
 JOGOS_POR_LANCADOR = 5000
 
@@ -1051,8 +1052,10 @@ class Porta:
         server, self._server = self._server, None
         if server is not None:
             server.close()
-        if self._captura_da_tela is not None:
-            self._captura_da_tela.cancel()
+        captura_da_tela = self._captura_da_tela
+        if captura_da_tela is not None:
+            captura_da_tela.cancel()
+            await asyncio.wait({captura_da_tela}, timeout=PRAZO_DA_CAPTURA_SAIR_S)
         if self._vigia_do_peso is not None:
             self._vigia_do_peso.cancel()
         if self._prazo_do_peso is not None:
@@ -1410,14 +1413,19 @@ class Porta:
         captura = Captura(fonte, TelaDoJogo(tuple(self._regioes_da_tela.values())),
                           publicar=publicar,
                           assinantes=lambda: self.bus.subscriber_count(TOPICO_DA_TELA))
+        passo: asyncio.Future[None] | None = None
         try:
             while True:
                 captura.tela.regioes = tuple(self._regioes_da_tela.values())
-                await asyncio.to_thread(captura.passo)
+                passo = laco.run_in_executor(None, captura.passo)
+                await asyncio.shield(passo)
                 if self.bus.subscriber_count(TOPICO_DA_TELA) <= 0 and not captura.aberta:
                     return
                 await asyncio.sleep(1.0 / HZ_DA_TELA)
         finally:
+            if passo is not None and not passo.done():
+                captura.parar()
+                await asyncio.wait({passo}, timeout=PRAZO_DA_CAPTURA_SAIR_S)
             self._regioes_da_tela.clear()
             if captura.aberta:
                 fonte.fechar()

@@ -12,6 +12,8 @@ import contextlib
 import math
 import os
 import re
+import socket
+import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -255,13 +257,15 @@ class TelaDoJogo:
 
 class FonteDaTela(Protocol):
     """A fonte dos quadros (o portal de captura). ``abrir`` devolve se abriu; ``quadro``
-    devolve ``None`` quando a fonte caiu."""
+    devolve ``None`` quando a fonte caiu; ``interromper``, de outro fio, solta a espera em voo."""
 
     def abrir(self) -> bool: ...
 
     def quadro(self) -> Quadro | None: ...
 
     def fechar(self) -> None: ...
+
+    def interromper(self) -> None: ...
 
 
 class FonteAusente:
@@ -271,6 +275,9 @@ class FonteAusente:
         return False
 
     def quadro(self) -> Quadro | None:
+        return None
+
+    def interromper(self) -> None:
         return None
 
     def fechar(self) -> None:
@@ -294,6 +301,7 @@ class FonteDoPortal:
         self._tubo: Any = None
         self._ralo: Any = None
         self._serie = 0
+        self._interrompida = False
 
     def _ficha(self) -> str:
         self._serie += 1
@@ -347,6 +355,8 @@ class FonteDoPortal:
             return False
         self._conexao = open_dbus_connection(bus="SESSION", enable_fds=True)
         try:
+            if self._interrompida:
+                raise InterruptedError("a fonte foi interrompida antes de abrir")
             criada = self._pedir("CreateSession", "a{sv}", (),
                                  {"session_handle_token": ("s", self._ficha())})
             self._sessao = str(criada["session_handle"])
@@ -400,6 +410,14 @@ class FonteDoPortal:
             buffer.unmap(mapa)
         return Quadro(largura, altura, len(dados) // altura, "BGRx", dados)
 
+    def interromper(self) -> None:
+        """Solta a espera do portal: o soquete desliga, e o pedido em voo cai em ``OSError``."""
+        self._interrompida = True
+        conexao = self._conexao
+        if conexao is not None:
+            with contextlib.suppress(OSError):
+                conexao.sock.shutdown(socket.SHUT_RDWR)
+
     def fechar(self) -> None:
         tubo, self._tubo, self._ralo = self._tubo, None, None
         if tubo is not None:
@@ -448,18 +466,24 @@ class Captura:
         self.aberta = False
         self._proxima = 0.0
         self._ausente_dito = False
+        self._parada = threading.Event()
+
+    def parar(self) -> None:
+        """A parada, de qualquer fio: o passo em voo cai e nenhum outro abre a fonte."""
+        self._parada.set()
+        self.fonte.interromper()
 
     def _cair(self) -> None:
         if self.aberta:
             self.fonte.fechar()
         self.aberta = False
         self._proxima = self._relogio() + self._espera
-        if not self._ausente_dito:
+        if not self._ausente_dito and not self._parada.is_set():
             self._ausente_dito = True
             self._publicar(self.tela.ausente())
 
     def passo(self) -> None:
-        if self._assinantes() <= 0:
+        if self._parada.is_set() or self._assinantes() <= 0:
             if self.aberta:
                 self.fonte.fechar()
                 self.aberta = False
