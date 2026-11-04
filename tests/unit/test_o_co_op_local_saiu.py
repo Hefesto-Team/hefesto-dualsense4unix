@@ -30,6 +30,27 @@ RECEITA_QUE_SAIU = estilos_de_jogo.Estilo(
     "quatro na mesa: a família é a paleta canônica de jogador, que é a que se "
     "já conhece de olhar")
 
+DIARIO_DE_MENTIRA = (
+    "Traceback (most recent call last):\n"
+    "  File hefesto_dualsense4unix/daemon/subsystems/coop.py, line 12, in aplicar\n"
+    "RuntimeError: despejo de pilha que cita o arquivo coop.py"
+)
+DIARIO_PINTADO = json.dumps(DIARIO_DE_MENTIRA, ensure_ascii=False)[1:-1]
+
+
+@pytest.fixture(autouse=True)
+def diario_de_mentira(monkeypatch: pytest.MonkeyPatch) -> str:
+    """O pacote da aba Sistema lê o diário da unit da máquina: a régua mede o código, não ele.
+
+    O diário de mentira cita `coop.py` de propósito (o despejo de pilha de uma máquina real faz
+    isso): o diário é texto da máquina, e o que a tela diz fora dele é o que a régua lê.
+    """
+    import pacotes
+
+    monkeypatch.setattr(pacotes.a09_sistema, "_diario", lambda: DIARIO_DE_MENTIRA)
+    return DIARIO_DE_MENTIRA
+
+
 MESA = [
     {"pref": f"p{n}", "uniq": f"aa:bb:cc:00:00:0{n}", "jogador": n,
      "nome": f"Controle {n}", "via": via, "transporte": via.lower()}
@@ -261,6 +282,11 @@ def test_nenhum_dos_dez_pacotes_pinta_co_op(jogadores: int) -> None:
                                conectados=list(conectados), estados={})
         pintado = json.dumps(pacotes.pacote_da_pagina(pagina.name, ctx),
                              ensure_ascii=False, default=str)
+        if pagina.name.startswith("09-"):
+            assert DIARIO_PINTADO in pintado, (
+                "o diário de mentira não chegou à 09 como foi dado: a régua não sabe mais "
+                "onde ele está para deixá-lo de fora")
+        pintado = pintado.replace(DIARIO_PINTADO, "")
         achados += [f"{pagina.name}: …{pintado[max(0, m.start() - 80):m.end() + 60]}…"
                     for m in CO_OP.finditer(pintado)]
     assert not achados, (
