@@ -39,6 +39,7 @@ perfil não mexe naquilo quando entra.
 | `mouse`, `teclado_emulado`, `suppress_desktop_emulation` | o mouse e o teclado do controle |
 | `mic`, `speaker` | o microfone e o alto-falante |
 | `mode` | o modo que o perfil pede ([modos.md](modos.md)) |
+| `estilo` | o Estilo de jogo (`fps`, `corrida`, `acao`, `terror`, `retro` e outros). Num perfil com estilo, a lista de efeito que ninguém escolheu vale «Do estilo»; sem estilo, vale «—» |
 | `controllers` | ajustes de um controle só ([Por controle](#por-controle)) |
 | `ponte` | o que o Hefesto aprendeu sobre o jogo ([O que o Hefesto aprende](#o-que-o-hefesto-aprende)) |
 
@@ -77,7 +78,8 @@ xdotool getactivewindow getwindowname   # o título
 xdotool getactivewindow getwindowpid    # o processo; depois, readlink /proc/<pid>/exe
 ```
 
-O botão **Detectar** da aba Perfis faz isso por você com o jogo aberto.
+No editor da aba Perfis, escolher o jogo em **Nome do jogo** monta a regra por
+você.
 
 ## Os modos de gatilho
 
@@ -174,5 +176,5 @@ hefesto-dualsense4unix profile activate corrida
 hefesto-dualsense4unix profile delete corrida --yes
 ```
 
-O perfil criado pela linha de comando nasce com os gatilhos desligados; edite o
-arquivo para o resto.
+O perfil criado pela linha de comando nasce com os gatilhos no «—», sem
+resistência do Hefesto; edite o arquivo para o resto.

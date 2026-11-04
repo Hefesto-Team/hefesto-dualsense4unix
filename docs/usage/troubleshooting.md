@@ -85,8 +85,8 @@ O perfil existe e o jogo abre com outro.
 1. **Um `process_name` na regra.** Os campos da regra precisam casar todos, e
    com o Proton o nome do processo é o do Wine, nunca o `.exe` do jogo. Tire o
    `process_name` do arquivo do perfil e deixe a classe da janela
-   (`steam_app_<número>`), ou refaça a regra com o botão «Detectar» da aba
-   Perfis, com o jogo aberto ([creating-profiles.md](creating-profiles.md)).
+   (`steam_app_<número>`), ou refaça a regra escolhendo o jogo em **Nome do
+   jogo**, no editor da aba Perfis ([creating-profiles.md](creating-profiles.md)).
 2. **O Modo Freestyle está ligado** na aba Jogar: com ele, o perfil ativo vale
    em qualquer jogo.
 3. **Uma janela Wayland nativa fora do COSMIC e dos compositores wlroots**: no
