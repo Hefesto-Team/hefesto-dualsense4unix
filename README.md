@@ -71,10 +71,12 @@ Referência completa em [cli.md](docs/usage/cli.md).
 
 ## Extensões
 
-Uma extensão acrescenta o que nem todo mundo usa. Cada uma mora no seu repositório, com o aviso de uso e os testes, e se instala na aba Experimental (**Instalar de um endereço**) ou com `hefesto-dualsense4unix mod instalar <endereço>`. O contrato está em [porta-das-modificacoes.md](docs/protocol/porta-das-modificacoes.md).
+Uma extensão acrescenta o que nem todo mundo usa. Cada uma mora no seu repositório, com o aviso de uso e os testes, e se instala na aba Experimental (**Instalar de um endereço**) ou com `hefesto-dualsense4unix mod instalar <endereço>`. O contrato está em [porta-das-modificacoes.md](docs/protocol/porta-das-modificacoes.md). O instalador já traz e liga o Modo imersão e o Gerenciador de tema; a extensão que você remover não volta sozinha.
 
 | extensão | o que traz |
 | --- | --- |
+| [hefesto-mod-imersao](https://github.com/Hefesto-Team/hefesto-mod-imersao) | o Modo imersão: o controle reage ao que acontece no jogo, com o som, a vibração, a luz e os gatilhos |
+| [hefesto-mod-tema](https://github.com/Hefesto-Team/hefesto-mod-tema) | o Gerenciador de tema da janela |
 | [hefesto-mod-lutris](https://github.com/Hefesto-Team/hefesto-mod-lutris) | o Lutris e os jogos da biblioteca dele |
 | [hefesto-mod-retroarch](https://github.com/Hefesto-Team/hefesto-mod-retroarch) | o RetroArch e os jogos das listas dele |
 | [hefesto-mod-dolphin](https://github.com/Hefesto-Team/hefesto-mod-dolphin) | o Dolphin (GameCube e Wii) |
