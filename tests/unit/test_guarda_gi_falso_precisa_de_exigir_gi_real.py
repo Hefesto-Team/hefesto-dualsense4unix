@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -217,8 +218,23 @@ def falta_de_guarda(fonte: str) -> Falta | None:
     )
 
 
+@functools.cache
+def _da_arvore_viva() -> dict[str, Falta]:
+    return _varrer(TESTS_UNIT)
+
+
 def arquivos_em_falta(pasta: Path = TESTS_UNIT) -> dict[str, Falta]:
-    """`{nome: falta}` de todo `test_*.py` da pasta que planta gi falso sem guarda antes."""
+    """`{nome: falta}` de todo `test_*.py` da pasta que planta gi falso sem guarda antes.
+
+    A árvore viva (2 300 arquivos, 6 s) se varre uma vez por processo, para as três réguas
+    que a leem; a pasta de mentira, na hora.
+    """
+    if pasta == TESTS_UNIT:
+        return dict(_da_arvore_viva())
+    return _varrer(pasta)
+
+
+def _varrer(pasta: Path) -> dict[str, Falta]:
     achados: dict[str, Falta] = {}
     for caminho in sorted(pasta.glob("test_*.py")):
         if caminho.name == ESTE_ARQUIVO:
