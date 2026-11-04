@@ -18,15 +18,20 @@ import argparse
 import bisect
 import ast
 import collections
+import concurrent.futures
+import contextlib
 import csv
 import dataclasses
 import functools
 import importlib.util
 import io
+import multiprocessing
+import os
 import re
 import subprocess
 import sys
 from collections.abc import Callable, Iterator, Sequence
+from typing import Any
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
@@ -144,21 +149,28 @@ def _levar_linha(linha: int, hunks: list[tuple[int, int, int, int]]) -> int | No
 
 
 def levar(
-    raiz: Path, relativo: str, a: int, b: int, nomes: set[str], *, historico: int = HISTORICO
+    raiz: Path,
+    relativo: str,
+    a: int,
+    b: int,
+    nomes: set[str],
+    *,
+    historico: int = HISTORICO,
+    cat: _Cat | None = None,
 ) -> tuple[int, int] | None:
     """A faixa ``a-b`` de ``relativo``, levada para onde o trecho prometido está hoje."""
     atual = (raiz / relativo).read_text(encoding="utf-8", errors="replace").splitlines()
     if _contem(atual, a, b, nomes, relativo):
         return a, b
-    commits = _git(raiz, "log", f"-n{historico}", "--format=%H", "--", relativo)
-    for sha in commits.stdout.split():
-        mostrado = _git(raiz, "show", f"{sha}:{relativo}")
-        if mostrado.returncode != 0:
-            continue
-        velho = mostrado.stdout.splitlines()
-        if not _contem(velho, a, b, nomes, relativo):
-            continue
-        return _mapear(raiz, sha, relativo, velho, atual, a, b, nomes)
+    with _Cat(raiz) if cat is None else contextlib.nullcontext(cat) as leitor:
+        for sha in leitor.commits(relativo, historico):
+            mostrado = leitor.texto(f"{sha}:{relativo}")
+            if mostrado is None:
+                continue
+            velho = mostrado.splitlines()
+            if not _contem(velho, a, b, nomes, relativo):
+                continue
+            return _mapear(raiz, sha, relativo, velho, atual, a, b, nomes)
     return None
 
 
@@ -204,16 +216,30 @@ _DEFINICOES: dict[tuple[str, str], dict[str, list[tuple[int, int]]]] = {}
 
 
 def _definicoes(texto: str) -> dict[str, list[tuple[int, int]]]:
-    """``{nome: [(início, fim)]}`` de toda função e classe do arquivo."""
+    """``{nome: [(início, fim)]}`` de toda função e classe do arquivo.
+
+    Função e classe só nascem em lista de instruções (``body``, ``orelse``, ``handlers``…): o
+    percurso desce só pelas listas de instruções; as expressões, que são quase todos os nós, não
+    escondem definição.
+    """
     try:
         arvore = ast.parse(texto)
     except (SyntaxError, ValueError):
         return {}
     achadas: dict[str, list[tuple[int, int]]] = {}
-    for no in ast.walk(arvore):
+    pilha: list[ast.AST] = [arvore]
+    while pilha:
+        no = pilha.pop()
         if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
             achadas.setdefault(no.name, []).append((no.lineno, no.end_lineno or no.lineno))
+        for campo in _CAMPOS_DE_INSTRUCOES:
+            filhos = getattr(no, campo, None)
+            if isinstance(filhos, list):
+                pilha.extend(f for f in filhos if isinstance(f, ast.stmt | ast.excepthandler | ast.match_case))
     return achadas
+
+
+_CAMPOS_DE_INSTRUCOES = ("body", "orelse", "finalbody", "handlers", "cases")
 
 
 def _unica(definicoes: dict[str, list[tuple[int, int]]], nome: str) -> tuple[int, int] | None:
@@ -221,15 +247,53 @@ def _unica(definicoes: dict[str, list[tuple[int, int]]], nome: str) -> tuple[int
     return faixas[0] if len(faixas) == 1 else None
 
 
+_ABREM: dict[tuple[str, str], frozenset[int] | None] = {}
+"""Por (arquivo, commit): as linhas em que uma função ou classe pode começar; ``None`` = qualquer uma."""
+
+
+_ABRE_DEFINICAO = re.compile(r"^[^\S\n]*(?:def|async|class)", re.MULTILINE)
+
+
+def _linhas_que_abrem_definicao(texto: str) -> frozenset[int] | None:
+    """As linhas (base 1) que começam com ``def``, ``async`` ou ``class``: o ``lineno`` do ``ast`` de
+    uma definição é a linha dessa palavra, então nenhuma outra linha pode abri-la. Quebra de linha
+    que não é ``\\n`` muda a contagem do ``ast``: aí não se afirma nada (``None``)."""
+    if "\r" in texto.replace("\r\n", ""):
+        return None
+    linhas: set[int] = set()
+    linha, desde = 1, 0
+    for achado in _ABRE_DEFINICAO.finditer(texto):
+        linha += texto.count("\n", desde, achado.start())
+        desde = achado.start()
+        linhas.add(linha)
+    return frozenset(linhas)
+
+
+_HOJE: dict[str, tuple[str, dict[str, list[tuple[int, int]]]]] = {}
+
+
 def pelo_simbolo(
-    raiz: Path, relativo: str, a: int, b: int, nome: str, *, historico: int = HISTORICO_DA_DERIVA
+    raiz: Path,
+    relativo: str,
+    a: int,
+    b: int,
+    nome: str,
+    *,
+    historico: int = HISTORICO_DA_DERIVA,
+    cat: _Cat | None = None,
 ) -> tuple[int, int] | None:
-    """A citação da função (ou classe) INTEIRA, ou da linha do ``def``, que ficou à deriva."""
+    """A citação da função (ou classe) INTEIRA, ou da linha do ``def``, que ficou à deriva.
+
+    O histórico só se lê no commit em que a linha ``a`` abre uma definição (a resposta exige
+    ``antes[0] == a``): os outros não precisam de ``ast``, que é o custo.
+    """
     if not relativo.endswith(".py"):
         return None
-    hoje = _unica(
-        _definicoes((raiz / relativo).read_text(encoding="utf-8", errors="replace")), nome
-    )
+    texto_de_hoje = (raiz / relativo).read_text(encoding="utf-8", errors="replace")
+    lembrado = _HOJE.get(f"{raiz}:{relativo}")
+    if lembrado is None or lembrado[0] != texto_de_hoje:
+        lembrado = _HOJE[f"{raiz}:{relativo}"] = (texto_de_hoje, _definicoes(texto_de_hoje))
+    hoje = _unica(lembrado[1], nome)
     if hoje is None:
         return None
     inicio, fim = hoje
@@ -237,19 +301,26 @@ def pelo_simbolo(
         return None
     if b > a and b - a == fim - inicio:
         return inicio, fim
-    commits = _git(raiz, "log", f"-n{historico}", "--format=%H", "--", relativo)
-    for sha in commits.stdout.split():
-        chave = (relativo, sha)
-        if chave not in _DEFINICOES:
-            mostrado = _git(raiz, "show", f"{sha}:{relativo}")
-            _DEFINICOES[chave] = _definicoes(mostrado.stdout) if mostrado.returncode == 0 else {}
-        antes = _unica(_DEFINICOES[chave], nome)
-        if antes is None:
-            continue
-        if (a, b) == antes:
-            return inicio, fim
-        if a == b == antes[0]:
-            return inicio, inicio
+    with _Cat(raiz) if cat is None else contextlib.nullcontext(cat) as leitor:
+        for sha in leitor.commits(relativo, historico):
+            chave = (relativo, sha)
+            if chave not in _DEFINICOES:
+                if chave not in _ABREM:
+                    mostrado = leitor.texto(f"{sha}:{relativo}")
+                    _ABREM[chave] = (
+                        frozenset() if mostrado is None else _linhas_que_abrem_definicao(mostrado)
+                    )
+                abrem = _ABREM[chave]
+                if abrem is not None and a not in abrem:
+                    continue
+                _DEFINICOES[chave] = _definicoes(leitor.texto(f"{sha}:{relativo}") or "")
+            antes = _unica(_DEFINICOES[chave], nome)
+            if antes is None:
+                continue
+            if (a, b) == antes:
+                return inicio, fim
+            if a == b == antes[0]:
+                return inicio, inicio
     return None
 
 
@@ -529,6 +600,7 @@ class _Cat:
         self._linhas: dict[tuple[str, str], list[str] | None] = {}
         self._raiz = raiz
         self._tamanho: dict[str, int] = {}
+        self._commits: dict[tuple[str, int], list[str]] = {}
 
     def __enter__(self) -> _Cat:
         return self
@@ -555,6 +627,28 @@ class _Cat:
         self._p.stdout.readline()
         texto: str = dados.decode("utf-8", errors="replace")
         return texto
+
+    def commits(self, relativo: str, quantos: int) -> list[str]:
+        """Os ``quantos`` commits mais novos que tocaram ``relativo``: o ``git log`` de UM arquivo
+        é o mesmo para toda citação dele, então é pago uma vez só."""
+        chave = (relativo, quantos)
+        if chave not in self._commits:
+            feito = _git(self._raiz, "log", f"-n{quantos}", "--format=%H", "--", relativo)
+            self._commits[chave] = feito.stdout.split()
+        return self._commits[chave]
+
+    def precarregar_commits(self, relativos: Sequence[str], quantos: int) -> None:
+        """Pede em paralelo o ``git log`` de cada arquivo (cada um é um processo de ~20 ms, e a
+        espera é do git, não do Python), para que ``commits`` já os ache prontos."""
+        faltam = sorted({r for r in relativos if (r, quantos) not in self._commits})
+        if len(faltam) < 2:
+            return
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            logs = pool.map(
+                lambda r: _git(self._raiz, "log", f"-n{quantos}", "--format=%H", "--", r), faltam
+            )
+            for relativo, feito in zip(faltam, logs, strict=True):
+                self._commits[(relativo, quantos)] = feito.stdout.split()
 
     def arquivos(self, sha: str) -> int:
         """Quantos arquivos o commit ``sha`` tocou (o tamanho da varredura, se foi uma)."""
@@ -716,6 +810,47 @@ def _achar(
             )
 
 
+def _achados(
+    unidade: str, val: ModuleType, modo: str, resolve: Callable[[str], bool] | None
+) -> tuple[Endereco, ...]:
+    """O ``_achar`` de uma unidade, lembrado: a história repete as mesmas células em cada versão.
+
+    O cache mora no módulo do validador (``val``), que é quem dá a forma do endereço, e a chave
+    guarda o ``resolve`` (quem resolve o arquivo citado), então outro ``val`` ou outro ``resolve``
+    nunca lê a resposta de um anterior.
+    """
+    memoria: dict[tuple[object, str, str], tuple[Endereco, ...]] = val.__dict__.setdefault(
+        "_achados_lembrados", {}
+    )
+    chave = (resolve, modo, unidade)
+    if chave not in memoria:
+        memoria[chave] = tuple(_achar(unidade, val, modo, resolve))
+    return memoria[chave]
+
+
+def _contados(
+    unidade: str, val: ModuleType, modo: str, resolve: Callable[[str], bool] | None
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """``(todos, inteiros)``: os endereços canônicos de UMA unidade, e só os da forma inteira.
+
+    Lembrado como o ``_achados``: o laço de ``_contagens`` só soma listas prontas."""
+    memoria: dict[tuple[object, str, str], tuple[tuple[str, ...], tuple[str, ...]]] = (
+        val.__dict__.setdefault("_contados_lembrados", {})
+    )
+    chave = (resolve, modo, unidade)
+    if chave not in memoria:
+        achados = _achados(unidade, val, modo, resolve)
+        memoria[chave] = (
+            tuple(_canonico(arq, a, b, faixa) for _i, _f, arq, a, b, faixa, _c, _v in achados),
+            tuple(
+                _canonico(arq, a, b, faixa)
+                for _i, _f, arq, a, b, faixa, curta, _v in achados
+                if not curta
+            ),
+        )
+    return memoria[chave]
+
+
 def _canonico(arquivo: str, a: int, b: int, faixa: bool) -> str:
     return f"{arquivo}:{a}-{b}" if faixa else f"{arquivo}:{a}"
 
@@ -787,6 +922,11 @@ def _registros_do_csv(texto: str) -> Iterator[list[Celula]]:
         yield registro
 
 
+_LINHAS_COM_ENDERECO = re.compile(r"^[^\n]*:\d[^\n]*$", re.MULTILINE)
+"""As linhas do texto (as de ``split("\\n")``) com ``:`` e um dígito: só essas podem ter endereço, e
+o regex as acha em C, sem um passo de Python por linha."""
+
+
 def _contagens(
     texto: str, val: ModuleType, modo: str, resolve: Callable[[str], bool] | None = None
 ) -> tuple[collections.Counter[str], collections.Counter[str]]:
@@ -795,22 +935,26 @@ def _contagens(
     todas: collections.Counter[str] = collections.Counter()
     inteiras: collections.Counter[str] = collections.Counter()
 
+    todas_l: list[str] = []
+    inteiras_l: list[str] = []
+
     def somar(unidade: str) -> None:
-        for _i, _f, arquivo, a, b, faixa, curta, _vao in _achar(unidade, val, modo, resolve):
-            endereco = _canonico(arquivo, a, b, faixa)
-            todas[endereco] += 1
-            if not curta:
-                inteiras[endereco] += 1
+        de_todas, das_inteiras = _contados(unidade, val, modo, resolve)
+        todas_l.extend(de_todas)
+        inteiras_l.extend(das_inteiras)
 
     if modo == "csv":
         for registro in csv.reader(io.StringIO(texto, newline="")):
+            if ":" not in "\0".join(registro):
+                continue
             for celula in registro:
                 if _DOIS_PONTOS_E_NUMERO.search(celula) is not None:
                     somar(celula)
-        return todas, inteiras
-    for linha in texto.split("\n"):
-        if _DOIS_PONTOS_E_NUMERO.search(linha) is not None:
+    else:
+        for linha in _LINHAS_COM_ENDERECO.findall(texto):
             somar(linha)
+    todas.update(todas_l)
+    inteiras.update(inteiras_l)
     return todas, inteiras
 
 
@@ -871,7 +1015,7 @@ class _Memoria:
 
     def __init__(self) -> None:
         self._historico: dict[str, list[tuple[str, str, bool]]] = {}
-        self._contagens: dict[str, collections.Counter[str]] = {}
+        self._lidas: dict[str, tuple[collections.Counter[str], collections.Counter[str]]] = {}
         self._tirados: dict[tuple[str, str], int] = {}
         self._diffs: dict[tuple[str, str], tuple[dict[str, set[str]], dict[str, str]]] = {}
 
@@ -889,14 +1033,30 @@ class _Memoria:
         sha: str,
         caminho: str,
     ) -> collections.Counter[str]:
-        chave = f"{sha}:{caminho}"
-        if chave not in self._contagens:
+        return self._ler(cat, val, modo, resolve, f"{sha}:{caminho}")[0]
+
+    def _ler(
+        self,
+        cat: _Cat,
+        val: ModuleType,
+        modo: str,
+        resolve: Callable[[str], bool] | None,
+        chave: str,
+    ) -> tuple[collections.Counter[str], collections.Counter[str]]:
+        """``(todas, inteiras)`` do documento naquele commit, lido UMA vez (a entrada e a saída da
+        contagem de «tirados» leem o mesmo commit que o laço da história já leu)."""
+        if chave not in self._lidas:
             texto = cat.texto(chave)
-            conta = _contagens(texto, val, modo, resolve)[0] if texto is not None else None
-            self._contagens[chave] = collections.Counter(
-                {sys.intern(k): n for k, n in (conta or {}).items()}
+            todas, inteiras = (
+                _contagens(texto, val, modo, resolve)
+                if texto is not None
+                else (collections.Counter(), collections.Counter())
             )
-        return self._contagens[chave]
+            self._lidas[chave] = (
+                collections.Counter({sys.intern(k): n for k, n in todas.items()}),
+                collections.Counter({sys.intern(k): n for k, n in inteiras.items()}),
+            )
+        return self._lidas[chave]
 
     def tirados(
         self,
@@ -909,14 +1069,10 @@ class _Memoria:
     ) -> int:
         """Quantos endereços INTEIROS o commit ``de`` tirou do documento (o mais velho tinha, ele não)."""
         if (de[0], mais_velho[0]) not in self._tirados:
-            inteiras = []
-            for sha, caminho in (mais_velho, de):
-                texto = cat.texto(f"{sha}:{caminho}")
-                inteiras.append(
-                    _contagens(texto, val, modo, resolve)[1]
-                    if texto is not None
-                    else collections.Counter()
-                )
+            inteiras = [
+                self._ler(cat, val, modo, resolve, f"{sha}:{caminho}")[1]
+                for sha, caminho in (mais_velho, de)
+            ]
             self._tirados[(de[0], mais_velho[0])] = sum((inteiras[0] - inteiras[1]).values())
         return self._tirados[(de[0], mais_velho[0])]
 
@@ -956,7 +1112,7 @@ def _enderecos_da_linha(
 ) -> list[str]:
     return [
         _canonico(arquivo, a, b, faixa)
-        for _i, _f, arquivo, a, b, faixa, _curta, _vao in _achar(linha, val, modo, resolve)
+        for _i, _f, arquivo, a, b, faixa, _curta, _vao in _achados(linha, val, modo, resolve)
     ]
 
 
@@ -970,8 +1126,30 @@ def _celulas_por_linha(texto: str) -> tuple[list[list[str]], dict[int, int]]:
 
     O registro de uma célula com quebra de linha (entre aspas) ocupa mais de uma linha física; o
     diff fala de linhas, e a curta só se prende à inteira da PRÓPRIA célula.
+
+    O ``csv.reader`` (em C) diz a linha em que cada registro acaba (``line_num``); a leitura
+    caractere a caractere de ``_registros_do_csv`` fica para o texto com ``\\r`` solto, em que
+    o ``csv`` e o git contam linhas de jeitos diferentes.
     """
-    quebras = [i for i, letra in enumerate(texto) if letra == "\n"]
+    if "\r" in texto.replace("\r\n", ""):
+        return _celulas_por_linha_pelo_cru(texto)
+    registros: list[list[str]] = []
+    dono: dict[int, int] = {}
+    leitor = csv.reader(io.StringIO(texto, newline=""))
+    ultima = 0
+    for registro in leitor:
+        primeira, ultima = ultima + 1, leitor.line_num
+        if not registro:
+            continue
+        for numero in range(primeira, ultima + 1):
+            dono[numero] = len(registros)
+        registros.append(registro)
+    return registros, dono
+
+
+def _celulas_por_linha_pelo_cru(texto: str) -> tuple[list[list[str]], dict[int, int]]:
+    """O mesmo que ``_celulas_por_linha``, lendo o texto cru (as quebras são só as de ``\\n``)."""
+    quebras = [m.start() for m in re.finditer("\n", texto)]
     registros: list[list[str]] = []
     dono: dict[int, int] = {}
     for registro in _registros_do_csv(texto):
@@ -1482,98 +1660,203 @@ def cruas(raiz: Path) -> list[Citacao]:
     return list(achadas.values())
 
 
-def pelo_historico(
+_DOCUMENTOS_PARA_PARALELO = 4
+"""Com menos documentos que isto a história se lê em série: o fork custa mais que a conta."""
+
+_Tarefa = tuple[list[tuple[int, str]], list[str], collections.Counter[str], dict[str, str]]
+
+
+def _um_documento(
+    raiz: Path,
+    val: ModuleType,
+    resolve: Callable[[str], bool],
+    documento: Path,
+    lista: Sequence[Citacao],
+) -> _Tarefa:
+    """Leva as citações cruas de UM documento pela história dele.
+
+    Devolve ``(trocas, à mão, estatística, estado da mão)``, com as trocas como ``(posição na
+    lista, endereço novo)``: o documento não mexe em nada fora de si, então documentos distintos
+    correm em processos distintos e o resultado é o mesmo, na mesma ordem.
+    """
+    trocas: list[tuple[int, str]] = []
+    a_mao: list[str] = []
+    estatistica: collections.Counter[str] = collections.Counter()
+    estado_da_mao: dict[str, str] = {}
+    alvos: dict[Path, list[str]] = {}
+    with _Cat(raiz) as cat:
+        texto = documento.read_text(encoding="utf-8", errors="replace")
+        atuais = _contagem(texto, val, _modo_de(documento), resolve)
+        memo = _Memoria()
+        entradas = _introducoes(raiz, cat, val, documento, atuais, resolve, memo=memo)
+        escritas: collections.Counter[str] = collections.Counter()
+        for cit in lista:
+            escritas[_canonico(cit.arquivo, cit.a, cit.b, cit.faixa)] += cit.vezes
+        for posicao, cit in enumerate(lista):
+            estatistica["conferidas"] += 1
+            endereco = _canonico(cit.arquivo, cit.a, cit.b, cit.faixa)
+            rotulo = f"{documento.relative_to(raiz)}: `{cit.texto}`"
+            if cit.curta:
+                rotulo += f" (forma curta `{cit.texto[len(cit.arquivo) :]}`)"
+                if documento.suffix == ".csv":
+                    estatistica["curtas_de_csv"] += cit.vezes
+            sha, mista, nasceu, reescritos = entradas.get(endereco, (None, False, True, 0))
+            if mista:
+                estatistica["a_mao"] += 1
+                estatistica["a_mao:misturada"] += 1
+                a_mao.append(
+                    f"{rotulo}: o mesmo endereço entrou em épocas diferentes neste "
+                    "documento: não há como saber qual cópia vale por qual código"
+                )
+                estado_da_mao[a_mao[-1]] = "misturada"
+                continue
+            if escritas[endereco] != atuais[endereco]:
+                estatistica["a_mao"] += 1
+                estatistica["a_mao:misturada"] += 1
+                a_mao.append(
+                    f"{rotulo}: o mesmo texto também está escrito com símbolo prometido: "
+                    "trocar um trocaria o outro"
+                )
+                estado_da_mao[a_mao[-1]] = "misturada"
+                continue
+            relativo = _relativo(raiz, cit.alvo)
+            if cit.alvo not in alvos:
+                alvos[cit.alvo] = cit.alvo.read_text(
+                    encoding="utf-8", errors="replace"
+                ).splitlines()
+            estado, novo, motivo = levar_crua(
+                cat,
+                relativo,
+                alvos[cit.alvo],
+                cit.a,
+                cit.b,
+                sha,
+                cit.pistas,
+                nasceu,
+                reescritos,
+            )
+            if estado == "varredura":
+                estado, novo, motivo = segunda_chance(
+                    raiz,
+                    cat,
+                    val,
+                    resolve,
+                    memo,
+                    documento,
+                    cit,
+                    sha or "",
+                    alvos[cit.alvo],
+                    relativo,
+                    motivo,
+                )
+                estatistica["segunda_chance"] += 1
+                if estado in ("no_lugar", "andou"):
+                    estatistica[f"segunda_chance:{estado}"] += 1
+            if estado == "no_lugar":
+                estatistica["recentes" if sha is None else "no_lugar"] += 1
+            elif estado == "andou" and novo is not None:
+                estatistica["andaram"] += 1
+                trocas.append((posicao, cit.novo_texto(*novo)))
+            else:
+                estatistica["a_mao"] += 1
+                estatistica[f"a_mao:{estado}"] += 1
+                a_mao.append(f"{rotulo}: {motivo}")
+                estado_da_mao[a_mao[-1]] = estado
+    return trocas, a_mao, estatistica, estado_da_mao
+
+
+def _por_documento_em_paralelo(
+    documentos: list[tuple[Path, list[Citacao]]],
+    tarefa: Callable[[Path, list[Citacao]], _Tarefa],
+) -> Callable[[], list[_Tarefa]]:
+    """Começa ``tarefa`` sobre cada documento e devolve o que COLHE os resultados, na ordem dada.
+
+    Com vários documentos correm em processos (``fork``) e quem chamou segue trabalhando até
+    colher; com poucos, a colheita faz a conta em série. Os documentos se repartem em grupos de
+    tamanho parecido (o maior primeiro), um processo por grupo; o filho herda tudo o que o pai já
+    leu e devolve só o resultado pelo cano.
+    """
+    trabalhadores = min(len(documentos), os.cpu_count() or 1, 8)
+    if len(documentos) < _DOCUMENTOS_PARA_PARALELO or trabalhadores < 2:
+        return lambda: [tarefa(documento, lista) for documento, lista in documentos]
+    grupos: list[list[int]] = [[] for _ in range(trabalhadores)]
+    pesos = [0] * trabalhadores
+    tamanhos = [d.stat().st_size for d, _l in documentos]
+    for n in sorted(range(len(documentos)), key=lambda n: -tamanhos[n]):
+        menor = pesos.index(min(pesos))
+        grupos[menor].append(n)
+        pesos[menor] += tamanhos[n] + 1
+    contexto = multiprocessing.get_context("fork")
+
+    def filho(grupo: list[int], cano: Any) -> None:
+        try:
+            cano.send([(n, tarefa(*documentos[n])) for n in grupo])
+        finally:
+            cano.close()
+
+    processos = []
+    for grupo in grupos:
+        ponta_pai, ponta_filha = contexto.Pipe(duplex=False)
+        processo = contexto.Process(target=filho, args=(grupo, ponta_filha))
+        processo.start()
+        ponta_filha.close()
+        processos.append((processo, ponta_pai))
+
+    def colher() -> list[_Tarefa]:
+        resultados: dict[int, _Tarefa] = {}
+        try:
+            for processo, ponta_pai in processos:
+                try:
+                    resultados.update(dict(ponta_pai.recv()))
+                except EOFError as erro:
+                    raise RuntimeError(
+                        "um processo de leitura da história caiu antes de responder"
+                    ) from erro
+                processo.join()
+        finally:
+            for processo, _ponta_pai in processos:
+                if processo.is_alive():
+                    processo.terminate()
+                    processo.join()
+        return [resultados[n] for n in range(len(documentos))]
+
+    return colher
+
+
+def iniciar_pelo_historico(
     raiz: Path, candidatas: Sequence[Citacao]
-) -> tuple[list[tuple[Citacao, str]], list[str]]:
-    """Leva cada citação crua pelo histórico do SEU documento. Devolve (trocas, à mão)."""
+) -> Callable[[], tuple[list[tuple[Citacao, str]], list[str]]]:
+    """Começa a levar as citações cruas pela história; o que devolve COLHE ``(trocas, à mão)``."""
     val = _validador(raiz)
     resolve = _resolvedor(raiz, val)
     por_documento: dict[Path, list[Citacao]] = {}
     for cit in candidatas:
         por_documento.setdefault(cit.documento, []).append(cit)
-    trocas: list[tuple[Citacao, str]] = []
-    a_mao: list[str] = []
-    alvos: dict[Path, list[str]] = {}
-    with _Cat(raiz) as cat:
-        for documento, lista in por_documento.items():
-            texto = documento.read_text(encoding="utf-8", errors="replace")
-            atuais = _contagem(texto, val, _modo_de(documento), resolve)
-            memo = _Memoria()
-            entradas = _introducoes(raiz, cat, val, documento, atuais, resolve, memo=memo)
-            escritas: collections.Counter[str] = collections.Counter()
-            for cit in lista:
-                escritas[_canonico(cit.arquivo, cit.a, cit.b, cit.faixa)] += cit.vezes
-            for cit in lista:
-                ESTATISTICA["conferidas"] += 1
-                endereco = _canonico(cit.arquivo, cit.a, cit.b, cit.faixa)
-                rotulo = f"{documento.relative_to(raiz)}: `{cit.texto}`"
-                if cit.curta:
-                    rotulo += f" (forma curta `{cit.texto[len(cit.arquivo) :]}`)"
-                    if documento.suffix == ".csv":
-                        ESTATISTICA["curtas_de_csv"] += cit.vezes
-                sha, mista, nasceu, reescritos = entradas.get(endereco, (None, False, True, 0))
-                if mista:
-                    ESTATISTICA["a_mao"] += 1
-                    ESTATISTICA["a_mao:misturada"] += 1
-                    a_mao.append(
-                        f"{rotulo}: o mesmo endereço entrou em épocas diferentes neste "
-                        "documento: não há como saber qual cópia vale por qual código"
-                    )
-                    ESTADO_DA_MAO[a_mao[-1]] = "misturada"
-                    continue
-                if escritas[endereco] != atuais[endereco]:
-                    ESTATISTICA["a_mao"] += 1
-                    ESTATISTICA["a_mao:misturada"] += 1
-                    a_mao.append(
-                        f"{rotulo}: o mesmo texto também está escrito com símbolo prometido: "
-                        "trocar um trocaria o outro"
-                    )
-                    ESTADO_DA_MAO[a_mao[-1]] = "misturada"
-                    continue
-                relativo = _relativo(raiz, cit.alvo)
-                if cit.alvo not in alvos:
-                    alvos[cit.alvo] = cit.alvo.read_text(
-                        encoding="utf-8", errors="replace"
-                    ).splitlines()
-                estado, novo, motivo = levar_crua(
-                    cat,
-                    relativo,
-                    alvos[cit.alvo],
-                    cit.a,
-                    cit.b,
-                    sha,
-                    cit.pistas,
-                    nasceu,
-                    reescritos,
-                )
-                if estado == "varredura":
-                    estado, novo, motivo = segunda_chance(
-                        raiz,
-                        cat,
-                        val,
-                        resolve,
-                        memo,
-                        documento,
-                        cit,
-                        sha or "",
-                        alvos[cit.alvo],
-                        relativo,
-                        motivo,
-                    )
-                    ESTATISTICA["segunda_chance"] += 1
-                    if estado in ("no_lugar", "andou"):
-                        ESTATISTICA[f"segunda_chance:{estado}"] += 1
-                if estado == "no_lugar":
-                    ESTATISTICA["recentes" if sha is None else "no_lugar"] += 1
-                elif estado == "andou" and novo is not None:
-                    ESTATISTICA["andaram"] += 1
-                    trocas.append((cit, cit.novo_texto(*novo)))
-                else:
-                    ESTATISTICA["a_mao"] += 1
-                    ESTATISTICA[f"a_mao:{estado}"] += 1
-                    a_mao.append(f"{rotulo}: {motivo}")
-                    ESTADO_DA_MAO[a_mao[-1]] = estado
-    return trocas, a_mao
+    documentos = list(por_documento.items())
+    colher = _por_documento_em_paralelo(
+        documentos, lambda documento, lista: _um_documento(raiz, val, resolve, documento, lista)
+    )
+
+    def juntar() -> tuple[list[tuple[Citacao, str]], list[str]]:
+        trocas: list[tuple[Citacao, str]] = []
+        a_mao: list[str] = []
+        for (_documento, lista), (feitas, mao, estatistica, estado_da_mao) in zip(
+            documentos, colher(), strict=True
+        ):
+            trocas += [(lista[posicao], endereco) for posicao, endereco in feitas]
+            a_mao += mao
+            ESTATISTICA.update(estatistica)
+            ESTADO_DA_MAO.update(estado_da_mao)
+        return trocas, a_mao
+
+    return juntar
+
+
+def pelo_historico(
+    raiz: Path, candidatas: Sequence[Citacao]
+) -> tuple[list[tuple[Citacao, str]], list[str]]:
+    """Leva cada citação crua pelo histórico do SEU documento. Devolve (trocas, à mão)."""
+    return iniciar_pelo_historico(raiz, candidatas)()
 
 
 def _padrao_da_inteira(velho: str) -> re.Pattern[str]:
@@ -1759,33 +2042,40 @@ def reapontar(
         ja = do_historico.setdefault((cit.documento, cit.texto, cit.curta), cit)
         if ja.curta and not ja.trechos:
             ja.trechos = list(cit.trechos)
-    for cit in pelo_nome:
-        vistos.add((cit.documento, cit.texto))
-        relativo = cit.alvo.resolve().relative_to(raiz.resolve()).as_posix()
-        novo = levar(raiz, relativo, cit.a, cit.b, cit.nomes)
-        rotulo = (
-            f"{cit.documento.relative_to(raiz)}: `{cit.texto}` ({', '.join(sorted(cit.nomes))})"
+    colher_cruas = iniciar_pelo_historico(raiz, list(do_historico.values()))
+    promessas = com_promessa(raiz)
+    with _Cat(raiz) as cat:
+        cat.precarregar_commits(
+            [_relativo(raiz, c.alvo) for c in promessas if c.alvo.suffix == ".py"],
+            HISTORICO_DA_DERIVA,
         )
-        if novo is None:
-            a_mao.append(f"{rotulo}: nenhuma versão do histórico acha o trecho sem chute")
-            continue
-        planos.setdefault(cit.documento, []).append((cit, cit.novo_texto(*novo)))
-    for cit in com_promessa(raiz):
-        if (cit.documento, cit.texto) in vistos:
-            continue
-        relativo = cit.alvo.resolve().relative_to(raiz.resolve()).as_posix()
-        destinos = {pelo_simbolo(raiz, relativo, cit.a, cit.b, nome) for nome in cit.nomes}
-        destinos.discard(None)
-        if len(destinos) == 1:
-            (novo,) = destinos
-            assert novo is not None
-            planos.setdefault(cit.documento, []).append((cit, cit.novo_texto(*novo)))
-        elif len(destinos) > 1:
-            a_mao.append(
-                f"{cit.documento.relative_to(raiz)}: `{cit.texto}` promete "
-                f"{', '.join(sorted(cit.nomes))}, e cada um manda para um lugar"
+        for cit in pelo_nome:
+            vistos.add((cit.documento, cit.texto))
+            relativo = cit.alvo.resolve().relative_to(raiz.resolve()).as_posix()
+            novo = levar(raiz, relativo, cit.a, cit.b, cit.nomes, cat=cat)
+            rotulo = (
+                f"{cit.documento.relative_to(raiz)}: `{cit.texto}` ({', '.join(sorted(cit.nomes))})"
             )
-    trocas_cruas, a_mao_cruas = pelo_historico(raiz, list(do_historico.values()))
+            if novo is None:
+                a_mao.append(f"{rotulo}: nenhuma versão do histórico acha o trecho sem chute")
+                continue
+            planos.setdefault(cit.documento, []).append((cit, cit.novo_texto(*novo)))
+        for cit in promessas:
+            if (cit.documento, cit.texto) in vistos:
+                continue
+            relativo = cit.alvo.resolve().relative_to(raiz.resolve()).as_posix()
+            destinos = {pelo_simbolo(raiz, relativo, cit.a, cit.b, nome, cat=cat) for nome in cit.nomes}
+            destinos.discard(None)
+            if len(destinos) == 1:
+                (novo,) = destinos
+                assert novo is not None
+                planos.setdefault(cit.documento, []).append((cit, cit.novo_texto(*novo)))
+            elif len(destinos) > 1:
+                a_mao.append(
+                    f"{cit.documento.relative_to(raiz)}: `{cit.texto}` promete "
+                    f"{', '.join(sorted(cit.nomes))}, e cada um manda para um lugar"
+                )
+    trocas_cruas, a_mao_cruas = colher_cruas()
     a_mao += a_mao_cruas
     for cit, endereco in trocas_cruas:
         planos.setdefault(cit.documento, []).append((cit, endereco))
