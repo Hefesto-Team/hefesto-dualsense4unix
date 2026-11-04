@@ -100,6 +100,10 @@ MEDIR_MAPA = r"""
 """
 
 
+PRONTA = ("document.readyState === 'complete' && document.fonts.status === 'loaded'"
+          " ? 'ok' : ''")
+
+
 def _no_webkit(uri: str, tamanho: tuple[int, int], passos: list[str]) -> list[Any]:
     import gi
 
@@ -135,9 +139,20 @@ def _no_webkit(uri: str, tamanho: tuple[int, int], passos: list[str]) -> list[An
         view.evaluate_javascript(fila.pop(0), -1, None, None, None, respondeu, None)
         return False
 
+    def pronta(v: Any, res: Any, _u: Any = None) -> None:
+        try:
+            ok = v.evaluate_javascript_finish(res).to_string() == "ok"
+        except Exception:
+            ok = False
+        GLib.timeout_add(0 if ok else 20, seguinte if ok else perguntar)
+
+    def perguntar() -> bool:
+        view.evaluate_javascript(PRONTA, -1, None, None, None, pronta, None)
+        return False
+
     def carregou(_v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
-            GLib.timeout_add(400, seguinte)
+            perguntar()
 
     view.connect("load-changed", carregou)
     view.load_uri(uri)
