@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202786,
+      "piso": 1203872,
       "por_item": {
         "docs": 108657,
-        "scripts": 111277,
-        "src": 303653,
-        "tests": 679199
+        "scripts": 111567,
+        "src": 303926,
+        "tests": 679722
       },
-      "razao": "tamanho: +45 linhas (1202741 -> 1202786), pagas por Origem: D-3110-A-BIBLIOTECA-PESSOAL-FICA-FORA; registrado no fecho, topo 03115fe77307",
+      "razao": "tamanho: +1086 linhas (1202786 -> 1203872), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO; registrado no fecho, topo 4df6d41e9fd4",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1641,10 +1641,16 @@
           "de": 1202741,
           "para": 1202786,
           "razao": "tamanho: +45 linhas (1202741 -> 1202786), pagas por Origem: D-3110-A-BIBLIOTECA-PESSOAL-FICA-FORA; registrado no fecho, topo 03115fe77307"
+        },
+        {
+          "data": "2026-11-03",
+          "de": 1202786,
+          "para": 1203872,
+          "razao": "tamanho: +1086 linhas (1202786 -> 1203872), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO; registrado no fecho, topo 4df6d41e9fd4"
         }
       ],
       "unidade": "linhas",
-      "universo": 3352
+      "universo": 3354
     }
   }
 }
