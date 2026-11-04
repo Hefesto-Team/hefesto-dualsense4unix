@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202622,
+      "piso": 1202823,
       "por_item": {
         "docs": 106419,
-        "scripts": 111612,
+        "scripts": 111614,
         "src": 303912,
-        "tests": 680679
+        "tests": 680878
       },
-      "razao": "tamanho: +257 linhas (1202365 -> 1202622), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 72e6e9f5d4d4",
+      "razao": "tamanho: +201 linhas (1202622 -> 1202823), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 4cdc247d7546",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1683,10 +1683,16 @@
           "de": 1202365,
           "para": 1202622,
           "razao": "tamanho: +257 linhas (1202365 -> 1202622), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 72e6e9f5d4d4"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1202622,
+          "para": 1202823,
+          "razao": "tamanho: +201 linhas (1202622 -> 1202823), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 4cdc247d7546"
         }
       ],
       "unidade": "linhas",
-      "universo": 3359
+      "universo": 3360
     }
   }
 }
