@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -201,3 +203,88 @@ def test_o_paralelo_por_documento_da_o_mesmo_que_a_serie(repo: Path) -> None:
     assert resultados[0] == resultados[1]
     for nome in ("y.md", "z.md", "r.md"):
         assert any(nome in f for f in resultados[0][0]), (nome, resultados[0][0])
+
+
+_PAI_QUE_CAI = """
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("reapontar_citacoes", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+sys.modules["reapontar_citacoes"] = m
+spec.loader.exec_module(m)
+m._DOCUMENTOS_PARA_PARALELO = 1
+original = m._um_documento
+
+def maior_que_o_cano(*args, **kwargs):
+    trocas, a_mao, estatistica, estado = original(*args, **kwargs)
+    return trocas, a_mao + [f"{n:05d}" + "x" * 200 for n in range(2000)], estatistica, estado
+
+def cai(raiz):
+    raise RuntimeError("o pai caiu antes de colher")
+
+m._um_documento = maior_que_o_cano
+m.com_promessa = cai
+m.reapontar(__import__("pathlib").Path(sys.argv[2]), escrever=False)
+"""
+
+
+def test_o_pai_que_cai_antes_de_colher_nao_trava_esperando_os_filhos(repo: Path) -> None:
+    """Os filhos correm enquanto o pai segue; se o pai cair, o script sai com o erro, não trava.
+
+    Com o resultado do filho maior que o cano, o filho espera o pai ler; o pai, ao sair, esperava
+    o filho: a saída nunca vinha, e no fecho isso é um passo que não termina.
+    """
+    try:
+        feito = subprocess.run(
+            [sys.executable, "-c", _PAI_QUE_CAI, str(SCRIPT), str(repo)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail("o pai caiu e o script ficou esperando os filhos: nunca saiu")
+    assert feito.returncode != 0, feito
+    assert "o pai caiu antes de colher" in feito.stderr, feito.stderr[-2000:]
+
+
+def _vivo(pid: int) -> bool:
+    try:
+        estado = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8").rsplit(")", 1)[1].split()[0]
+    except (OSError, IndexError):
+        return False
+    return estado != "Z"
+
+
+def test_o_pai_que_morre_nao_deixa_filho_preso_no_cano(repo: Path, tmp_path: Path) -> None:
+    """O pai morto por sinal (o `timeout` de quem roda o fecho) não deixa filho órfão para sempre.
+
+    O filho que herda a ponta de leitura do próprio cano (ou a de uma irmã) nunca vê o cano sem
+    leitor: com o pai morto, ele fica preso no `send` e não sai mais.
+    """
+    pids = tmp_path / "filhos.txt"
+    morre = _PAI_QUE_CAI.replace(
+        '    raise RuntimeError("o pai caiu antes de colher")',
+        "    import multiprocessing, os, signal\n"
+        "    filhos = [p.pid for p in multiprocessing.active_children()]\n"
+        "    open(sys.argv[3], 'w').write(' '.join(map(str, filhos)))\n"
+        "    os.kill(os.getpid(), signal.SIGKILL)",
+    )
+    assert morre != _PAI_QUE_CAI
+    subprocess.run(
+        [sys.executable, "-c", morre, str(SCRIPT), str(repo), str(pids)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=60,
+    )
+    filhos = [int(p) for p in pids.read_text(encoding="utf-8").split()]
+    assert filhos, "o pai morreu antes de abrir os filhos: a régua não mediu nada"
+    try:
+        for _ in range(300):
+            if not any(_vivo(p) for p in filhos):
+                break
+            time.sleep(0.1)
+        presos = [p for p in filhos if _vivo(p)]
+        assert not presos, f"filhos presos no cano depois de o pai morrer: {presos}"
+    finally:
+        for p in filhos:
+            if _vivo(p):
+                os.kill(p, signal.SIGKILL)

@@ -1774,7 +1774,10 @@ def _por_documento_em_paralelo(
     Com vários documentos correm em processos (``fork``) e quem chamou segue trabalhando até
     colher; com poucos, a colheita faz a conta em série. Os documentos se repartem em grupos de
     tamanho parecido (o maior primeiro), um processo por grupo; o filho herda tudo o que o pai já
-    leu e devolve só o resultado pelo cano.
+    leu e devolve só o resultado pelo cano. O filho é ``daemon`` e fecha as pontas de leitura que
+    herdou (a dele e as das irmãs): se quem chamou cair antes de colher, a saída do interpretador
+    o encerra, e se quem chamou morrer, o cano sem leitor o derruba, em vez de ele esperar para
+    sempre que alguém leia um resultado maior que o cano.
     """
     trabalhadores = min(len(documentos), os.cpu_count() or 1, 8)
     if len(documentos) < _DOCUMENTOS_PARA_PARALELO or trabalhadores < 2:
@@ -1788,16 +1791,21 @@ def _por_documento_em_paralelo(
         pesos[menor] += tamanhos[n] + 1
     contexto = multiprocessing.get_context("fork")
 
-    def filho(grupo: list[int], cano: Any) -> None:
+    def filho(grupo: list[int], cano: Any, herdadas: list[Any]) -> None:
+        for ponta in herdadas:
+            ponta.close()
         try:
             cano.send([(n, tarefa(*documentos[n])) for n in grupo])
         finally:
             cano.close()
 
-    processos = []
+    processos: list[tuple[Any, Any]] = []
     for grupo in grupos:
         ponta_pai, ponta_filha = contexto.Pipe(duplex=False)
-        processo = contexto.Process(target=filho, args=(grupo, ponta_filha))
+        herdadas = [ponta_pai, *(ponta for _processo, ponta in processos)]
+        processo = contexto.Process(
+            target=filho, args=(grupo, ponta_filha, herdadas), daemon=True
+        )
         processo.start()
         ponta_filha.close()
         processos.append((processo, ponta_pai))
