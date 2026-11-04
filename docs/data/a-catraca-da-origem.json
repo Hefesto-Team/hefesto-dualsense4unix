@@ -256,17 +256,17 @@
       "universo": 419
     },
     "tamanho": {
-      "data": "2026-11-03",
+      "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1201751,
+      "piso": 1202050,
       "por_item": {
         "docs": 106379,
         "scripts": 111589,
-        "src": 303926,
-        "tests": 679857
+        "src": 303968,
+        "tests": 680114
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +299 linhas (1201751 -> 1202050), pagas por Origem: entrada.botoes; registrado no fecho, topo 8f679cb3d023",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1653,10 +1653,16 @@
           "de": 1203872,
           "para": 1203972,
           "razao": "tamanho: +100 linhas (1203872 -> 1203972), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO; registrado no fecho, topo 48816e40b093"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1201751,
+          "para": 1202050,
+          "razao": "tamanho: +299 linhas (1201751 -> 1202050), pagas por Origem: entrada.botoes; registrado no fecho, topo 8f679cb3d023"
         }
       ],
       "unidade": "linhas",
-      "universo": 3355
+      "universo": 3356
     }
   }
 }
