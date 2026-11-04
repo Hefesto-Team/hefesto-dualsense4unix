@@ -118,12 +118,22 @@ decide_envs() {
         LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
             python3 - "$sock" "$appid" 2>/dev/null <<'PYEOF'
 import json
+import os
 import socket
 import sys
 import time
 
-TETO_DO_AMBIENTE_S = 5.0
-TETO_DO_PING_S = 1.0
+
+def teto(nome, sempre):
+    try:
+        valor = float(os.environ.get(nome, ""))
+    except ValueError:
+        return sempre
+    return valor if valor > 0 else sempre
+
+
+TETO_DO_AMBIENTE_S = teto("HEFESTO_TETO_DO_AMBIENTE_S", 5.0)
+TETO_DO_PING_S = min(teto("HEFESTO_TETO_DO_PING_S", 1.0), TETO_DO_AMBIENTE_S / 2)
 
 
 def pedir(params, teto):

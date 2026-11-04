@@ -14,6 +14,7 @@ import asyncio
 import contextlib
 import json
 import os
+import select
 import shutil
 import socket
 import subprocess
@@ -34,6 +35,7 @@ from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile, Profi
 APPID = 9931031
 LENTA_S = 3.0
 TETO_S = 1.0
+TETOS_CURTOS = {"HEFESTO_TETO_DO_AMBIENTE_S": "1.0", "HEFESTO_TETO_DO_PING_S": "0.2"}
 _ROOT = Path(__file__).resolve().parents[2]
 _WRAPPER = _ROOT / "assets" / "hefesto-launch.sh"
 _PROBE = (
@@ -276,7 +278,9 @@ def runtime() -> Iterator[Path]:
     shutil.rmtree(base, ignore_errors=True)
 
 
-def _o_wrapper(runtime: Path, state_home: Path) -> tuple[subprocess.CompletedProcess[str], float]:
+def _o_wrapper(
+    runtime: Path, state_home: Path, tetos: dict[str, str] | None = None
+) -> tuple[subprocess.CompletedProcess[str], float]:
     mudos = runtime / "game-mode-mudo"
     mudos.mkdir(exist_ok=True)
     lar = runtime / "lar"
@@ -294,6 +298,7 @@ def _o_wrapper(runtime: Path, state_home: Path) -> tuple[subprocess.CompletedPro
         "SteamAppId": str(APPID),
         "HEFESTO_PLACA_ACORDADA": str(runtime / "sem-placa"),
         "HEFESTO_SYSFS": str(runtime / "sys-vazio"),
+        **(tetos or {}),
     }
     t0 = time.monotonic()
     feito = subprocess.run(
@@ -325,6 +330,14 @@ class _SocketFalso:
         self._parar = threading.Event()
         self._fio = threading.Thread(target=self._servir, daemon=True)
         self._fio.start()
+
+    def ate_o_proximo_pedido(self, teto_s: float) -> bool:
+        """Espera o pedido seguinte bater à porta, sem aceitá-lo."""
+        prontos, _, _ = select.select([self._sock], [], [], teto_s)
+        return bool(prontos)
+
+    def ate_parar(self) -> None:
+        self._parar.wait(30)
 
     def _servir(self) -> None:
         while not self._parar.is_set():
@@ -527,19 +540,21 @@ def test_o_wrapper_com_o_arme_lento_ainda_recebe_o_ambiente_do_daemon(
     """
     (_env_dir(tmp_path) / "default.env").write_text("\n".join(_XBOX) + "\n", encoding="utf-8")
     vezes = [0]
+    porta: list[_SocketFalso] = []
 
     def responder(params: dict[str, Any]) -> dict[str, Any]:
         vezes[0] += 1
         if vezes[0] == 1:
-            time.sleep(4.4)
+            assert porta[0].ate_o_proximo_pedido(10.0), "o wrapper não refez o pedido"
         if "appid" not in params:
             return {"connected": True}
         return {"connected": True, "ambiente": {
             "appid": params["appid"], "linhas": list(_DUALSENSE), "estado": "mascara=dualsense"}}
 
     falso = _SocketFalso(_sock(runtime), responder)
+    porta.append(falso)
     try:
-        feito, _gasto = _o_wrapper(runtime, tmp_path)
+        feito, _gasto = _o_wrapper(runtime, tmp_path, TETOS_CURTOS)
     finally:
         falso.parar()
     assert feito.returncode == 0, feito.stderr
@@ -558,16 +573,43 @@ def test_o_wrapper_com_o_daemon_pendurado_desiste_no_teto_sem_exportar_nada(
     """
     (_env_dir(tmp_path) / "default.env").write_text("\n".join(_XBOX) + "\n", encoding="utf-8")
 
+    porta: list[_SocketFalso] = []
+
     def pendurado(_params: dict[str, Any]) -> dict[str, Any]:
-        time.sleep(6.5)
+        porta[0].ate_parar()
         return {"connected": True}
 
     falso = _SocketFalso(_sock(runtime), pendurado)
+    porta.append(falso)
     try:
-        feito, gasto = _o_wrapper(runtime, tmp_path)
+        feito, gasto = _o_wrapper(runtime, tmp_path, TETOS_CURTOS)
     finally:
         falso.parar()
+    teto = float(TETOS_CURTOS["HEFESTO_TETO_DO_AMBIENTE_S"])
     assert feito.returncode == 0, feito.stderr
-    assert gasto < 5.8, f"o daemon pendurado atrasou o lançamento em {gasto:.1f} s"
+    assert teto <= gasto < teto + 0.8, f"o daemon pendurado atrasou o lançamento em {gasto:.1f} s"
     assert feito.stdout.strip() == "IGNORE=|HIDAPI=|HIDRAW="
     assert _fonte(tmp_path)["fonte"] == "nenhuma"
+
+
+def _os_tetos_do_wrapper(
+    monkeypatch: pytest.MonkeyPatch, ambiente: dict[str, str]
+) -> tuple[float, float]:
+    """Roda o começo do Python do wrapper, até os tetos, com este ambiente."""
+    texto = _WRAPPER.read_text(encoding="utf-8")
+    python = texto.split("<<'PYEOF'\n", 1)[1].split("\nPYEOF", 1)[0]
+    prologo = python.split("\ndef pedir(", 1)[0]
+    for nome in TETOS_CURTOS:
+        monkeypatch.delenv(nome, raising=False)
+    for nome, valor in ambiente.items():
+        monkeypatch.setenv(nome, valor)
+    lugar: dict[str, Any] = {}
+    exec(compile(prologo, str(_WRAPPER), "exec"), lugar)
+    return lugar["TETO_DO_AMBIENTE_S"], lugar["TETO_DO_PING_S"]
+
+
+def test_o_teto_do_wrapper_e_o_de_sempre_sem_a_variavel(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _os_tetos_do_wrapper(monkeypatch, {}) == (5.0, 1.0)
+    assert _os_tetos_do_wrapper(monkeypatch, {"HEFESTO_TETO_DO_AMBIENTE_S": "x",
+                                              "HEFESTO_TETO_DO_PING_S": "-1"}) == (5.0, 1.0)
+    assert _os_tetos_do_wrapper(monkeypatch, TETOS_CURTOS) == (1.0, 0.2)

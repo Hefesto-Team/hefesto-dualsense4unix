@@ -99,9 +99,12 @@ class _Kernel(FakeController):  # type: ignore[misc]
         self._pedido: dict[str, bool] = {}
         self._posse: dict[str, bool] = {}
         self.escritas_do_mudo: list[tuple[bool | None, str | None]] = []
+        self.varreduras: list[float] = []
+        self.apertos = 0
 
     def apertar(self, uniq: str) -> None:
         """Todo aperto é UMA borda; a mão devolve a posse e o kernel escreve."""
+        self.apertos += 1
         self._pedido[uniq] = not self._firmware_mudo[uniq]
         self._posse.pop(uniq, None)
         self._seq[uniq] += 1
@@ -109,6 +112,7 @@ class _Kernel(FakeController):  # type: ignore[misc]
         self._firmware_mudo[uniq] = self._kernel_mudo[uniq]
 
     def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
+        self.varreduras.append(asyncio.get_running_loop().time())
         return {
             u: (self._seq[u], self._pedido.get(u, self._firmware_mudo[u]), None)
             for u in self.uniqs
@@ -262,24 +266,60 @@ async def _drenar(segundos: float) -> None:
         await asyncio.sleep(0.01)
 
 
-async def _apertar(daemon: _Daemon, *uniqs: str) -> None:
-    """Os dois laços do produto no ar, as guardas vencidas, e os apertos de quem usa."""
-    consumidor = asyncio.create_task(hotkey.mic_button_loop(daemon))
-    for _ in range(40):
+async def _ate(condicao: Any, teto_s: float, porque: str) -> None:
+    """Espera a condição, sem relógio: o teto só existe para a régua não pendurar."""
+    fim = asyncio.get_running_loop().time() + teto_s
+    while not condicao():
+        assert asyncio.get_running_loop().time() < fim, porque
         await asyncio.sleep(0.005)
-        if daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA):
-            break
-    assert daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA) == 1, "a cena mediria o vazio"
-    bordas = asyncio.create_task(mic_da_mesa.mic_da_mesa_loop(daemon))
+
+
+async def _as_confirmacoes(daemon: _Daemon, teto_s: float) -> None:
+    """As tarefas que o ato pendurou acabam, ou o teto de antes as corta."""
+    vivas = [t for t in daemon._tasks if not t.done()]
+    if vivas:
+        await asyncio.wait(vivas, timeout=teto_s)
+
+
+async def _apertar(daemon: _Daemon, *uniqs: str) -> None:
+    """Os dois laços do produto no ar, as guardas vencidas, e os apertos de quem usa.
+
+    Cada espera é por um evento: a carência vence quando o laço das bordas já varreu por
+    `INPUT_GRACE_SEC`, e o aperto acaba quando o ato dele termina e as tarefas que ele
+    pendurou acabam.
+    """
+    kernel = daemon.controller
+    atos: list[str] = []
+    ligar = hotkey.ligar_o_microfone
+
+    async def ligar_e_contar(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return await ligar(*args, **kwargs)
+        finally:
+            atos.append(str(args[1]))
+
+    hotkey.ligar_o_microfone = ligar_e_contar
+    consumidor = asyncio.create_task(hotkey.mic_button_loop(daemon))
+    bordas: asyncio.Task[Any] | None = None
     try:
-        await _drenar(ESPERA_DAS_GUARDAS_S)
+        await _ate(lambda: daemon.bus.subscriber_count(EventTopic.MIC_DA_MESA) == 1, 0.2,
+                   "a cena mediria o vazio")
+        varridas = len(kernel.varreduras)
+        bordas = asyncio.create_task(mic_da_mesa.mic_da_mesa_loop(daemon))
+        await _ate(lambda: len(kernel.varreduras) > varridas, 2.0, "o laço das bordas não varreu")
+        primeira = kernel.varreduras[varridas]
+        await _ate(lambda: kernel.varreduras[-1] - primeira >= INPUT_GRACE_SEC, 2.0,
+                   "a carência não venceu")
         for uniq in uniqs:
-            daemon.controller.apertar(uniq)
-            await _drenar(0.4)
-        await _drenar(0.3)
+            feitos = len(atos)
+            kernel.apertar(uniq)
+            await _ate(lambda f=feitos: len(atos) > f, 2.0, f"o aperto de {uniq} não virou ato")
+            await _as_confirmacoes(daemon, 0.4)
+        await _as_confirmacoes(daemon, 0.3)
     finally:
+        hotkey.ligar_o_microfone = ligar
         daemon._parando = True
-        tarefas = [bordas, consumidor, *daemon._tasks]
+        tarefas = [t for t in (bordas, consumidor) if t is not None] + list(daemon._tasks)
         for t in tarefas:
             t.cancel()
         await asyncio.gather(*tarefas, return_exceptions=True)
