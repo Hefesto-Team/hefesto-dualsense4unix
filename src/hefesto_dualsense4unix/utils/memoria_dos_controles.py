@@ -526,6 +526,10 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "peso_da_mira_dos_jogos.json": (CASA, "a chave do peso da mira de cada jogo com anticheat; "
                                           "não identifica controle"),
     "tela-do-portal.ficha": (CASA, "a ficha de restauração da captura da tela pelo portal"),
+    "roupa-dos-jogos.json": (CASA, "o controle que cada jogo instalado conhece; não "
+                                   "identifica controle"),
+    "sinais-dos-arquivos.json": (CASA, "os sinais Sony de cada arquivo de jogo; não "
+                                       "identifica controle"),
     "mods.sock": ("install", "a porta das modificações (pasta de execução)"),
     "mods-estado.json": ("install", "o estado vivo das modificações (pasta de execução)"),
     "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
