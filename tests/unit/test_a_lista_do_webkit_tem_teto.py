@@ -28,9 +28,11 @@ AS MORDIDAS (executadas em 23/10/2026; as duas primeiras rodam aqui, numa árvor
 from __future__ import annotations
 
 import ast
+import functools
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -93,6 +95,21 @@ def _importados(nos: list[ast.AST], pacote: str) -> set[str]:
     return saida
 
 
+def _todos_os_imports(arvore: ast.Module) -> list[ast.AST]:
+    """Os `import` de qualquer profundidade: eles são comandos, então só se desce por comandos."""
+    achados: list[ast.AST] = []
+    pilha: list[ast.AST] = list(arvore.body)
+    while pilha:
+        no = pilha.pop()
+        if isinstance(no, (ast.Import, ast.ImportFrom)):
+            achados.append(no)
+            continue
+        for campo in ("body", "orelse", "finalbody", "handlers", "cases"):
+            pilha.extend(getattr(no, campo, None) or [])
+    return achados
+
+
+@functools.lru_cache(maxsize=4)
 def _modulos(raiz: Path) -> dict[str, tuple[set[str], set[str], bool]]:
     """`rel → (nomes, importados, pede o WebKit)`: `src/` e `scripts/` só pelo topo."""
     modulos = {}
@@ -110,7 +127,7 @@ def _modulos(raiz: Path) -> dict[str, tuple[set[str], set[str], bool]]:
         except SyntaxError:
             continue
         if rel.startswith("tests/"):
-            nos = list(ast.walk(arvore))
+            nos = _todos_os_imports(arvore)
             modulos[rel] = (nomes, _importados(nos, pacote), "WebKit2" in texto)
         else:
             nos = _do_topo(arvore)
@@ -154,8 +171,10 @@ def _cabe_no_teto(lista: list[str], chegam: set[str]) -> None:
 
 
 def test_a_lista_do_webkit_da_arvore_cabe_no_teto(tmp_path: Path) -> None:
-    lista = _listar(RAIZ, SUITE, tmp_path / "saida")
-    chegam = _chegam_ao_webkit(RAIZ)
+    with ThreadPoolExecutor(max_workers=1) as fio:
+        listagem = fio.submit(_listar, RAIZ, SUITE, tmp_path / "saida")
+        chegam = _chegam_ao_webkit(RAIZ)
+        lista = listagem.result()
     assert len(chegam) >= 20, f"o AST achou só {len(chegam)}: a régua ficou cega"
     _cabe_no_teto(lista, chegam)
 
@@ -242,7 +261,7 @@ def test_a_logica_nao_importa_a_moldura() -> None:
     for rel in sorted(set(modulos) - moldura):
         arvore = ast.parse((RAIZ / rel).read_text(encoding="utf-8"))
         pacote = _nomes(rel)[1]
-        chama = _importados(list(ast.walk(arvore)), pacote) & nomes_da_moldura
+        chama = _importados(_todos_os_imports(arvore), pacote) & nomes_da_moldura
         if chama:
             ruins.append(f"{rel} importa {sorted(chama)[-1]}")
     assert not ruins, "a lógica importa a moldura:\n  " + "\n  ".join(ruins)
