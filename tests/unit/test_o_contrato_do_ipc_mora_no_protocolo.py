@@ -48,7 +48,11 @@ def _citado(metodo: str, texto: str) -> bool:
 
 
 def test_todo_metodo_do_dispatcher_esta_no_protocolo() -> None:
-    """MORDIDA: tirar o `daemon.status` do protocolo reprova aqui."""
+    """O dispatcher e o documento contam os mesmos métodos; a prosa de cada um é o teste seguinte.
+
+    O bloco gerado cita todo método, e por isso este teste só reprova com o bloco fora de dia ou
+    arrancado; tirar a prosa do `daemon.status` reprova o `test_o_que_a_docstring_dizia…`.
+    """
     metodos = [m for m, _h in _o_gerador().metodos_do_dispatcher(RAIZ)]
     documento = PROTOCOLO.read_text(encoding="utf-8")
 
