@@ -8,6 +8,7 @@ nó de mentira que só anota o que se escreve. Nenhum nó de verdade nasce.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -141,10 +142,14 @@ class _Pad:
         self.pad = uinput
 
     def chegou(self) -> int:
-        """Os bits das quatro que o jogo vê agora, no formato do relatório do Edge."""
+        """Os bits das quatro que o jogo vê agora, no formato do relatório do Edge.
+
+        No pad Sony, quem lê o relatório é o `hid-playstation`, que só lê os quatro no 0DF2
+        (`test_o_driver_so_le_os_quatro_no_edge`): no 0CE6 eles não chegam ao jogo.
+        """
         if hasattr(self, "reports"):
             assert self.reports, "o pad não emitiu relatório"
-            return self.reports[-1][10] & TODOS
+            return self.reports[-1][10] & TODOS if self.pad.product == 0x0DF2 else 0
         tabela = DECLARADO[self.roupa]
         assert tabela is not None
         return sum(
@@ -239,12 +244,29 @@ def test_os_quatro_nascem_declarados_depois_de_todo_botao_da_mascara(mascara: st
     assert set(ug.TRASEIRAS_POR_FLAVOR[mascara]) == set(BOTOES_DO_EDGE.values())
 
 
-def test_as_mascaras_de_tabela_sony_seguem_o_hid_playstation_do_edge() -> None:
-    """O par bit -> tecla do `hid-playstation` do 7.2, lido no fonte que a casa guarda."""
-    fonte = (
+def _o_driver_do_7_2() -> str:
+    return (
         Path(__file__).resolve().parents[2]
         / "assets/dkms/hid-playstation/fonte-por-kernel/7.2.6-76070206/hid-playstation.c"
     ).read_text(encoding="utf-8")
+
+
+def test_o_driver_so_le_os_quatro_no_edge() -> None:
+    """O `is_edge` nasce só no PID do Edge, e só com ele o driver escreve os quatro."""
+    fonte = _o_driver_do_7_2()
+    ramo = re.search(
+        r"\} else if \(hdev->product == USB_DEVICE_ID_SONY_PS5_CONTROLLER_2\) \{\n"
+        r"(?:\t\t[^\n]*\n)*?\t\tds->is_edge = true;",
+        fonte,
+    )
+    assert ramo is not None
+    assert fonte.count("ds->is_edge = true;") == 1
+    assert "\tif (ds->is_edge) {\n\t\tinput_report_key(ds->gamepad, BTN_TRIGGER_HAPPY1," in fonte
+
+
+def test_as_mascaras_de_tabela_sony_seguem_o_hid_playstation_do_edge() -> None:
+    """O par bit -> tecla do `hid-playstation` do 7.2, lido no fonte que a casa guarda."""
+    fonte = _o_driver_do_7_2()
     pares = {
         "DS_EDGE_BUTTONS_FN1": ("BTN_TRIGGER_HAPPY1", "fn_esquerdo"),
         "DS_EDGE_BUTTONS_FN2": ("BTN_TRIGGER_HAPPY2", "fn_direito"),
