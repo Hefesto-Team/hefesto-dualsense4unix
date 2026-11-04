@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1202835,
+      "piso": 1202918,
       "por_item": {
-        "docs": 106431,
+        "docs": 106511,
         "scripts": 111614,
         "src": 303912,
-        "tests": 680878
+        "tests": 680881
       },
-      "razao": "04/11/2026, fecho da leva: +12 linhas do caderno do tempo da casa, que o passo tempo do fecho commita depois do passo catraca (556157a07); ferramental sem decisão",
+      "razao": "tamanho: +83 linhas (1202835 -> 1202918), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 508dca308028",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1695,6 +1695,12 @@
           "de": 1202823,
           "para": 1202835,
           "razao": "04/11/2026, fecho da leva: +12 linhas do caderno do tempo da casa, que o passo tempo do fecho commita depois do passo catraca (556157a07); ferramental sem decisão"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1202835,
+          "para": 1202918,
+          "razao": "tamanho: +83 linhas (1202835 -> 1202918), pagas por Origem: D-1310-O-IPC-E-ESSENCIAL-NO-BOOT-DO-DAEMON; registrado no fecho, topo 508dca308028"
         }
       ],
       "unidade": "linhas",
