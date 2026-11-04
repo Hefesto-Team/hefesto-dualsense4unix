@@ -86,6 +86,9 @@ CAMINHOS = [CAMINHO_VIRTUAL, CAMINHO_XBOX, CAMINHO_NATIVO]
 @pytest.fixture
 def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
     """O kernel de mentira da O-VPAD: nenhum ``/dev/uhid`` ou ``/dev/uinput`` de verdade."""
+    from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+    monkeypatch.setattr(uhid_gamepad, "_BIND_SETTLE_S", 0.0)
     with kernel_de_mentira(monkeypatch) as k:
         yield k
 
