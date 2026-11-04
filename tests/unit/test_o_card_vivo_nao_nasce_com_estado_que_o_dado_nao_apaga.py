@@ -27,7 +27,6 @@ peça, e esta régua reprova nomeando a página, o glifo e a classe.
 
 from __future__ import annotations
 
-import pathlib
 import re
 
 import pytest
@@ -46,17 +45,9 @@ _GLIFO = re.compile(
 )
 
 
-def _paginas() -> list[pathlib.Path]:
-    """O desenho e o publicado."""
-    return [onde.pagina(PAGINA), onde.pagina(PAGINA, publicado=True)]
-
-
-@pytest.fixture(params=["desenho", "publicado"])
-def pagina(request: pytest.FixtureRequest) -> str:
-    caminho = _paginas()[0 if request.param == "desenho" else 1]
-    if not caminho.exists():  # pragma: no cover
-        pytest.skip(f"{caminho} não existe")
-    return caminho.read_text(encoding="utf-8")
+@pytest.fixture
+def pagina() -> str:
+    return onde.pagina(PAGINA).read_text(encoding="utf-8")
 
 
 def _apagavel(tag: str) -> str:

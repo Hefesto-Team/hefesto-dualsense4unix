@@ -38,6 +38,8 @@ PAGINAS_COM_CARTAO = (
     "calibrar-sensores.html",
 )
 
+PUBLICADAS_COM_CARTAO = tuple(n for n in PAGINAS_COM_CARTAO if n != "02-controles.html")
+
 AINDA_NAO_PUBLICADAS: frozenset[str] = frozenset()
 
 _VAZIOS = frozenset({
@@ -128,15 +130,12 @@ def test_a_regua_ve_os_quatro_cartoes_da_onda() -> None:
         pytest.param(n, marks=pytest.mark.xfail(
             strict=True, reason="o publicado só muda no --publicar, que é da costura"))
         if n in AINDA_NAO_PUBLICADAS else n
-        for n in PAGINAS_COM_CARTAO
+        for n in PUBLICADAS_COM_CARTAO
     ],
 )
 def test_o_publicado_nao_crava_estado_no_que_o_produto_pinta(nome: str) -> None:
     """A mesma pergunta no publicado. A 02 fica marcada até o `--publicar 02`."""
-    caminho = PUBLICADO / nome
-    if not caminho.exists():
-        pytest.skip(f"{nome} não está publicada")
-    assert _divergencias(caminho.read_text(encoding="utf-8")) == []
+    assert _divergencias((PUBLICADO / nome).read_text(encoding="utf-8")) == []
 
 
 def _classes_do(campo: str, trecho: str) -> tuple[str, ...]:

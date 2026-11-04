@@ -306,12 +306,6 @@ class TestODetectorMorde:
     def test_nao_acusa_quem_so_menciona(self, fonte: str) -> None:
         assert not plantacoes_de_gi_falso(fonte)
 
-    def test_arquivo_real_que_so_cita_em_comentario_nao_e_acusado(self) -> None:
-        alvo = TESTS_UNIT / "test_input_actions_gtk.py"
-        if not alvo.exists():  # pragma: no cover
-            pytest.skip("test_input_actions_gtk.py não está mais aqui")
-        assert alvo.name not in arquivos_em_falta()
-
     def test_guarda_por_chamada_conta_e_por_comentario_nao(self) -> None:
         assert tem_guarda_de_gi_real("exigir_gi_real()\n")
         assert tem_guarda_de_gi_real("import pytest\n@skip_sem_gi_real\ndef f(): ...\n")

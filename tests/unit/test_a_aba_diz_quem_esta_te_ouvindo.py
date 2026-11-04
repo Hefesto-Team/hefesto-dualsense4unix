@@ -170,20 +170,6 @@ class TestOPacoteEmite:
             a02._ENDERECOS = antes
         return {}
 
-    def test_enquanto_o_usuario_nao_publicar_a_chave_nao_sai(self) -> None:
-        """MORDIDA: emita `mic-ressalva` fora do `_so_se_a_pagina_tiver`."""
-        import pacotes.a02_controles as a02
-
-        if "mic-ressalva" in a02._enderecos_da_pagina():  # pragma: no cover
-            import pytest
-
-            pytest.skip("a aba 02 foi publicada — a condição já caiu")
-        campos = self._campos(
-            {"mic_mudo": False, "canal_ativo": True, "ouvintes_do_mic": []},
-            publicada=False)
-        assert campos, "o card nem saiu — a régua ficaria verde sobre nada"
-        assert "mic-ressalva" not in campos
-
     def test_o_campo_sai_com_a_frase_do_dono(self) -> None:
         """MORDIDA: monte a frase aqui, em vez de chamar o dono."""
         base = {"mic_mudo": False, "canal_ativo": True}

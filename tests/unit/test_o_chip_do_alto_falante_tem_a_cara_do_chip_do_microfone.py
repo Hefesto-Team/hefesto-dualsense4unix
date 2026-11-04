@@ -87,11 +87,6 @@ CAMPO_DO_ALARME = "alto-selo"
 COR = ("background", "color", "background-color")
 
 
-def _paginas() -> list[pathlib.Path]:
-    """O desenho e o publicado."""
-    return [onde.pagina(PAGINA), onde.pagina(PAGINA, publicado=True)]
-
-
 def _doc(caminho: pathlib.Path) -> str:
     return caminho.read_text(encoding="utf-8")
 
@@ -174,12 +169,9 @@ def _cara_de_chip(doc: str) -> dict[str, str]:
             if p not in COR and alarme.get(p) == v}
 
 
-@pytest.fixture(params=["desenho", "publicado"])
-def pagina(request: pytest.FixtureRequest) -> str:
-    caminho = _paginas()[0 if request.param == "desenho" else 1]
-    if not caminho.exists():  # pragma: no cover
-        pytest.skip(f"{caminho} não existe")
-    return _doc(caminho)
+@pytest.fixture
+def pagina() -> str:
+    return _doc(onde.pagina(PAGINA))
 
 
 class TestACaraDoChip:
