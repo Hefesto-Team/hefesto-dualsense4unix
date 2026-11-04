@@ -1,7 +1,7 @@
 """O-P1-QUE-NASCE-FORA-DO-TIQUE-NASCE-NO-FIO-DE-NASCIMENTO-01 — todo P1 nasce no fio.
 
 O `Daemon` REAL, com o `CoopManager` real, o fio de nascimento do daemon
-(`virtual_pad.FioDeNascimento`) e o broker de mentira que leva 2 s para responder ao
+(`virtual_pad.FioDeNascimento`) e o broker de mentira que leva 0,8 s para responder ao
 pedido do P1 (o teto do cliente, `hidraw_broker_client._TIMEOUT_S`). O laço do tique é
 emulado a 60 Hz na thread do teste: a cada volta, o `forward_all` dos secundários, o
 `fechar_o_p1_que_nasceu` que o `_poll_loop` roda depois dele, e a entrada do White.
@@ -42,9 +42,9 @@ from hefesto_dualsense4unix.testing import FakeController
 _P1 = "aabbcc000001"
 _WHITE = "aabbcc000002"
 _CALIB = bytes([0x05]) + bytes([0xAB]) * 40
-_BROKER_S = 2.0
+_BROKER_S = 0.8
 _TIQUE_S = 1.0 / 60.0
-_NA_HORA_S = _BROKER_S / 4
+_NA_HORA_S = 0.25
 _BURACO_S = 2 * _TIQUE_S + 0.05
 
 
@@ -119,7 +119,7 @@ def mesa(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNames
     estado = SimpleNamespace(falhar=False, pedidos=[], pads={})
 
     def _fabrica(flavor: Any, **kwargs: Any) -> _Pad | None:
-        """A fábrica do pad: o do P1 espera o broker de mentira (2 s); o do White, não."""
+        """A fábrica do pad: o do P1 espera o broker de mentira (0,8 s); o do White, não."""
         identidade = kwargs.get("identity")
         if identidade is None:
             estado.pedidos.append(threading.current_thread().name)

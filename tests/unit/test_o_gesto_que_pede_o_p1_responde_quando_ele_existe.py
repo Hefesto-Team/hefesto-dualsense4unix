@@ -1,7 +1,7 @@
 """O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01 — o desfecho de verdade.
 
 O ensaio é o do P1 que nasce pelo fio (o `Daemon` real, o `CoopManager` real, o fio de
-nascimento e o broker de mentira de 2 s), com o P1 dono de um endereço forjado, para que
+nascimento e o broker de mentira de 0,8 s), com o P1 dono de um endereço forjado, para que
 a máscara dele se escolha. Três pontas:
 
 1. o `gamepad.mask.set` (e o PS + L3, pelo mesmo escritor) responde depois do pad, e o
