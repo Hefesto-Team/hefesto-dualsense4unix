@@ -29,6 +29,8 @@ ROUPAS_DO_PAD = frozenset({ROUPA_EDGE, ROUPA_COMUM})
 
 ROUPA_PADRAO = ROUPA_EDGE
 
+BOTOES2_DA_ROUPA = {ROUPA_EDGE: 0xFF, ROUPA_COMUM: 0x0F}
+
 PAR_DUALSENSE_FISICO = (VENDOR_SONY, PID_DUALSENSE)
 
 HID_PHYS_DO_PAD = "hefesto-vpad"
@@ -42,6 +44,7 @@ def roupa_normalizada(roupa: object) -> int:
 
 
 __all__ = [
+    "BOTOES2_DA_ROUPA",
     "HID_PHYS_DO_PAD",
     "PAR_DUALSENSE_FISICO",
     "PIDS_DUALSENSE",

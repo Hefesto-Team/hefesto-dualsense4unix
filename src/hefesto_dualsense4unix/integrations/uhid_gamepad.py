@@ -65,7 +65,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core import system_check
-from hefesto_dualsense4unix.core.numeros_da_sony import roupa_normalizada
+from hefesto_dualsense4unix.core.numeros_da_sony import BOTOES2_DA_ROUPA, roupa_normalizada
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import pad_usb, usb_pai
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
@@ -250,7 +250,6 @@ _BUTTONS2_BITS: dict[str, int] = {
     "traseira_esquerda": 0x40,
     "traseira_direita": 0x80,
 }
-_BITS_SO_DO_EDGE = 0xF0
 
 _TOUCHPAD_BUTTONS = frozenset({
     "touchpad", "touchpad_press",
@@ -1298,8 +1297,7 @@ class UhidDualSense:
             buttons2 |= _TOUCHPAD_BIT
         if self._mic_button:
             buttons2 |= _BUTTONS2_BITS["mic_btn"]
-        if self.product != VPAD_PRODUCT:
-            buttons2 &= ~_BITS_SO_DO_EDGE
+        buttons2 &= BOTOES2_DA_ROUPA[self.product]
         body[_BUTTONS2_OFFSET] = buttons2
         return body
 
