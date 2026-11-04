@@ -259,14 +259,14 @@
       "data": "2026-11-03",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1203972,
+      "piso": 1201751,
       "por_item": {
-        "docs": 108657,
-        "scripts": 111586,
+        "docs": 106379,
+        "scripts": 111589,
         "src": 303926,
-        "tests": 679803
+        "tests": 679857
       },
-      "razao": "tamanho: +100 linhas (1203872 -> 1203972), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO; registrado no fecho, topo 48816e40b093",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
