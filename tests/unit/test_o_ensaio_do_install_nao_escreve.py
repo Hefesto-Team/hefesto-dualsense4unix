@@ -202,6 +202,15 @@ def _roda_ensaio(
     return resultado, lar, diario
 
 
+Ensaiado = tuple[subprocess.CompletedProcess[str], Path, Path]
+
+
+@pytest.fixture(scope="module")
+def ensaio_padrao(tmp_path_factory: pytest.TempPathFactory) -> Ensaiado:
+    """O ensaio com tudo em ordem e credencial, rodado UMA vez para as seis réguas que o leem."""
+    return _roda_ensaio(tmp_path_factory.mktemp("ensaio"))
+
+
 class TestOEnsaioExiste:
     def test_a_flag_esta_no_parser_nas_duas_grafias(self) -> None:
         """A MORDIDA: apague `--dry-run|-n)` do `case` e isto reprova."""
@@ -226,8 +235,8 @@ class TestOEnsaioExiste:
             "para quem usa olhar ANTES de deixar rodar — escondê-la anula o motivo"
         )
 
-    def test_o_ensaio_sai_bem(self, tmp_path: Path) -> None:
-        resultado, _lar, _diario = _roda_ensaio(tmp_path)
+    def test_o_ensaio_sai_bem(self, ensaio_padrao: Ensaiado) -> None:
+        resultado, _lar, _diario = ensaio_padrao
         assert resultado.returncode == 0, (
             f"o ensaio saiu com rc={resultado.returncode}.\n"
             f"stdout final:\n{resultado.stdout[-3000:]}\n"
@@ -290,9 +299,9 @@ class TestOPlanoNaoDependeDoDpkgDeQuemRoda:
 class TestOEnsaioNaoEscreve:
     """O coração da régua: o ATO, não a palavra."""
 
-    def test_nao_cria_nenhum_arquivo_do_hefesto_no_lar(self, tmp_path: Path) -> None:
+    def test_nao_cria_nenhum_arquivo_do_hefesto_no_lar(self, ensaio_padrao: Ensaiado) -> None:
         """A MORDIDA: tire um `if [[ "${DRY_RUN:-0}" -eq 1 ]]` de qualquer passo"""
-        _resultado, lar, _diario = _roda_ensaio(tmp_path)
+        _resultado, lar, _diario = ensaio_padrao
         nossos = [
             str(p.relative_to(lar))
             for p in lar.rglob("*")
@@ -305,9 +314,9 @@ class TestOEnsaioNaoEscreve:
             + ", ".join(sorted(nossos))
         )
 
-    def test_nao_chama_nenhum_comando_que_mude_a_maquina(self, tmp_path: Path) -> None:
+    def test_nao_chama_nenhum_comando_que_mude_a_maquina(self, ensaio_padrao: Ensaiado) -> None:
         """A MORDIDA: troque um `_ensaio_camada broker` de volta por"""
-        _resultado, _lar, diario = _roda_ensaio(tmp_path)
+        _resultado, _lar, diario = ensaio_padrao
         chamadas = diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
         culpadas = [
             linha
@@ -334,9 +343,9 @@ class TestOEnsaioNaoEscreve:
             "o ensaio PEDIU A SENHA do sudo:\n  " + "\n  ".join(sorted(set(pedidos)))
         )
 
-    def test_nao_arma_o_keepalive_da_credencial(self, tmp_path: Path) -> None:
+    def test_nao_arma_o_keepalive_da_credencial(self, ensaio_padrao: Ensaiado) -> None:
         """O `_start_sudo_keepalive` põe um laço em segundo plano que renova a"""
-        resultado, _lar, _diario = _roda_ensaio(tmp_path, com_credencial=True)
+        resultado, _lar, _diario = ensaio_padrao
         assert resultado.returncode == 0, resultado.stderr[-2000:]
 
     def test_nao_apaga_os_caches_da_arvore(self, tmp_path: Path) -> None:
@@ -469,9 +478,9 @@ class TestOPlanoNaoEnvelhece:
             f"descrição em `{descritora}` envelheceu: " + "; ".join(orfaos)
         )
 
-    def test_o_plano_nomeia_o_que_mais_assusta(self, tmp_path: Path) -> None:
+    def test_o_plano_nomeia_o_que_mais_assusta(self, ensaio_padrao: Ensaiado) -> None:
         """As mudanças que uma pessoa PRECISA ver antes de dizer sim."""
-        resultado, _lar, _diario = _roda_ensaio(tmp_path)
+        resultado, _lar, _diario = ensaio_padrao
         exigidas = {
             "a regra do sudoers": "/etc/sudoers.d/49-hefesto-bt-ponte",
             "as regras udev": "/etc/udev/rules.d/",
@@ -492,9 +501,9 @@ class TestOPlanoNaoEnvelhece:
             "antes de autorizar: " + "; ".join(sumiram)
         )
 
-    def test_o_ensaio_diz_no_fim_que_nada_aconteceu(self, tmp_path: Path) -> None:
+    def test_o_ensaio_diz_no_fim_que_nada_aconteceu(self, ensaio_padrao: Ensaiado) -> None:
         """Quem rola oitenta linhas de plano não se lembra do cabeçalho."""
-        resultado, _lar, _diario = _roda_ensaio(tmp_path)
+        resultado, _lar, _diario = ensaio_padrao
         assert "NADA foi escrito" in resultado.stdout
         assert re.search(r"\d+ mudanças planejadas, \d+ com root", resultado.stdout), (
             "o fecho do ensaio não conta quantas mudanças o plano tem — o "
