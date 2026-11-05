@@ -5,7 +5,8 @@ cores médias, e da grade e da anterior saem os cinco sinais de ``jogo.tela``, d
 Nenhum pixel sai daqui: uma região declarada pela receita (a barra de vida) publica só a fração
 da cor declarada. Sem assinante a fonte não abre; sem fonte, ou com a fonte caída, o tópico publica
 os cinco como ``None`` (ausente), nunca zero, e tenta de novo sozinho; a escolha de tela que a
-pessoa cancela só se pede de novo com assinante novo.
+pessoa cancela ou deixa esgotar, e a ficha guardada que o portal recusa, só se pedem de novo com
+assinante novo. A fonte nunca acorda o portal antes de a sessão gráfica existir.
 """
 from __future__ import annotations
 
@@ -37,6 +38,14 @@ _PORTAL = "org.freedesktop.portal.Desktop"
 _CAMINHO_DO_PORTAL = "/org/freedesktop/portal/desktop"
 _SCREENCAST = "org.freedesktop.portal.ScreenCast"
 _PEDIDO = "org.freedesktop.portal.Request"
+_SYSTEMD = "org.freedesktop.systemd1"
+_CAMINHO_DO_SYSTEMD = "/org/freedesktop/systemd1"
+_GERENTE = "org.freedesktop.systemd1.Manager"
+_DESKTOP = "XDG_CURRENT_DESKTOP"
+_SEM_A_INTERFACE = frozenset({"org.freedesktop.DBus.Error.UnknownMethod",
+                              "org.freedesktop.DBus.Error.UnknownInterface"})
+_CONSERTO_DO_PORTAL = ("o portal subiu sem a captura da tela; o conserto é"
+                       " systemctl --user restart xdg-desktop-portal")
 SINAIS = ("dano", "flash", "escuro", "tremor", "saturacao")
 REGIOES_POR_RECEITA = 8
 AMOSTRAS_DA_REGIAO = 64
@@ -68,7 +77,9 @@ class TelaRecusadaError(Exception):
 
 
 class EscolhaCanceladaError(RuntimeError):
-    """A pessoa cancelou a janela de escolha da tela (o código 1 do ``Response``)."""
+    """A escolha da tela não veio: a pessoa cancelou a janela (o código 1 do ``Response``), o
+    prazo da escolha esgotou, ou a ficha guardada não abriu a tela. Só assinante novo pede de
+    novo."""
 
 
 @dataclass(frozen=True)
@@ -299,13 +310,42 @@ def _caminho_do_pedido(nome_unico: str, ficha: str) -> str:
 
 def _aceita(resposta: Any, pedido: str) -> Any:
     """A resposta do barramento, ou :class:`RuntimeError` diante de um erro: o portal sem a
-    interface ``ScreenCast`` recusa na hora, e nenhum ``Response`` sai depois de uma recusa."""
-    from jeepney import MessageType
+    interface ``ScreenCast`` recusa na hora, e nenhum ``Response`` sai depois de uma recusa. O
+    motivo do portal sem a interface diz o conserto; reiniciar o portal é de quem usa, porque
+    cortaria o compartilhamento de tela em curso de outro programa."""
+    from jeepney import HeaderFields, MessageType
 
     if resposta.header.message_type == MessageType.error:
         motivo = resposta.body[0] if resposta.body else ""
+        if resposta.header.fields.get(HeaderFields.error_name) in _SEM_A_INTERFACE:
+            motivo = f"{motivo}; {_CONSERTO_DO_PORTAL}"
         raise RuntimeError(f"o portal recusou {pedido}: {motivo}")
     return resposta
+
+
+def _tem_o_desktop(ambiente: Sequence[str]) -> bool:
+    return any(nome == _DESKTOP and valor
+               for nome, _, valor in (item.partition("=") for item in ambiente))
+
+
+def _sessao_ainda_nao_subiu(conexao: Any) -> bool:
+    """Verdadeiro só com as duas provas: o portal sem dono (``NameHasOwner`` não ativa nada) e o
+    ambiente de quem o ativaria sem ``XDG_CURRENT_DESKTOP``. Quem ativa é o gerente do usuário
+    (``Manager.Environment`` do ``systemd1``, lido sem ativar); sem ele no barramento, vale o
+    ambiente deste processo. Com o ``NameHasOwner`` em erro, falso: o pedido segue como era."""
+    from jeepney import DBusAddress, MessageFlag, MessageType, Properties
+    from jeepney.bus_messages import message_bus
+
+    dono = conexao.send_and_get_reply(message_bus.NameHasOwner(_PORTAL), timeout=PRAZO_DO_DBUS_S)
+    if dono.header.message_type == MessageType.error or dono.body[0]:
+        return False
+    leitura = Properties(DBusAddress(_CAMINHO_DO_SYSTEMD, bus_name=_SYSTEMD,
+                                     interface=_GERENTE)).get("Environment")
+    leitura.header.flags |= MessageFlag.no_auto_start
+    resposta = conexao.send_and_get_reply(leitura, timeout=PRAZO_DO_DBUS_S)
+    if resposta.header.message_type != MessageType.error:
+        return not _tem_o_desktop(resposta.body[0][1])
+    return not os.environ.get(_DESKTOP)
 
 
 class FonteDoPortal:
@@ -343,7 +383,12 @@ class FonteDoPortal:
             _aceita(self._conexao.send_and_get_reply(
                 new_method_call(endereco, metodo, assinatura, (*corpo, opcoes)),
                 timeout=PRAZO_DO_DBUS_S), metodo)
-            sinal = self._conexao.recv_until_filtered(fila, timeout=PRAZO_DA_ESCOLHA_S)
+            try:
+                sinal = self._conexao.recv_until_filtered(fila, timeout=PRAZO_DA_ESCOLHA_S)
+            except TimeoutError as erro:
+                raise EscolhaCanceladaError(
+                    f"a escolha da tela não veio em {PRAZO_DA_ESCOLHA_S:.0f} s ({metodo})"
+                ) from erro
         codigo, resultados = sinal.body
         if codigo == 1:
             raise EscolhaCanceladaError(f"a pessoa cancelou {metodo}")
@@ -363,6 +408,10 @@ class FonteDoPortal:
                 self.guarda.parent.mkdir(parents=True, exist_ok=True)
                 self.guarda.write_text(ficha, encoding="utf-8")
 
+    def _esquecer(self) -> None:
+        with contextlib.suppress(OSError):
+            self.guarda.unlink(missing_ok=True)
+
     def abrir(self) -> bool:
         try:
             import gi
@@ -380,6 +429,9 @@ class FonteDoPortal:
         try:
             if self._interrompida:
                 raise InterruptedError("a fonte foi interrompida antes de abrir")
+            if _sessao_ainda_nao_subiu(self._conexao):
+                raise RuntimeError(
+                    "a sessão gráfica ainda não subiu; o portal não se acorda antes da sessão")
             criada = self._pedir("CreateSession", "a{sv}", (),
                                  {"session_handle_token": ("s", self._ficha())})
             self._sessao = str(criada["session_handle"])
@@ -387,12 +439,22 @@ class FonteDoPortal:
                 "types": ("u", 3), "multiple": ("b", False), "persist_mode": ("u", 2)}
             if (guardada := self._ficha_guardada()) is not None:
                 escolha["restore_token"] = ("s", guardada)
-            self._pedir("SelectSources", "oa{sv}", (self._sessao,), escolha)
-            comecou = self._pedir("Start", "osa{sv}", (self._sessao, ""), {})
+            try:
+                self._pedir("SelectSources", "oa{sv}", (self._sessao,), escolha)
+                comecou = self._pedir("Start", "osa{sv}", (self._sessao, ""), {})
+                fluxos = comecou.get("streams") or []
+                if not fluxos:
+                    raise RuntimeError("o portal não entregou fluxo")
+            except EscolhaCanceladaError:
+                if guardada is not None and not self._interrompida:
+                    self._esquecer()
+                raise
+            except RuntimeError as erro:
+                if guardada is None or self._interrompida:
+                    raise
+                self._esquecer()
+                raise EscolhaCanceladaError(f"o portal recusou a ficha guardada: {erro}") from erro
             self._guardar(comecou.get("restore_token"))
-            fluxos = comecou.get("streams") or []
-            if not fluxos:
-                raise RuntimeError("o portal não entregou fluxo")
             endereco = DBusAddress(_CAMINHO_DO_PORTAL, bus_name=_PORTAL, interface=_SCREENCAST)
             resposta = _aceita(self._conexao.send_and_get_reply(
                 new_method_call(endereco, "OpenPipeWireRemote", "oa{sv}", (self._sessao, {})),
@@ -475,7 +537,8 @@ def fonte_do_sistema() -> FonteDaTela:
 class Captura:
     """Abre a fonte só com assinante e publica um quadro por passo; a fonte que falta ou cai
     vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``. A escolha
-    cancelada não volta sozinha: só com mais assinantes do que havia, ou depois de todos saírem."""
+    que não veio (cancelada, esgotada ou com a ficha recusada) não volta sozinha: só com mais
+    assinantes do que havia, ou depois de todos saírem."""
 
     def __init__(self, fonte: FonteDaTela, tela: TelaDoJogo, *,
                  publicar: Callable[[dict[str, Any]], None],
