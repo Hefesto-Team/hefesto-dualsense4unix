@@ -7,9 +7,9 @@ E, com o portal de pé, o prazo da escolha esgotado e a ficha guardada recusada 
 de escolha a cada volta da ``espera``. Aqui o barramento é um ``dbus-daemon`` particular, com um
 portal ATIVÁVEL que conta as ativações, um ``systemd1`` de mentira e um relógio na mão do teste.
 
-MORDIDA: arrancar a guarda do ``abrir`` (o ``_sessao_ainda_nao_subiu``), a troca do prazo
-esgotado por ``EscolhaCanceladaError`` no ``_pedir`` ou o ``_esquecer`` da ficha recusada, e a
-régua reprova.
+MORDIDA: arrancar a guarda do ``abrir`` (o ``_sessao_ainda_nao_subiu``), o ``no_auto_start`` da
+leitura do gerente, a troca do prazo esgotado por ``EscolhaCanceladaError`` no ``_pedir`` ou o
+``_esquecer`` da ficha recusada, e a régua reprova.
 """
 from __future__ import annotations
 
@@ -50,9 +50,12 @@ echo ativado >> "{contagem}"
 exit 1
 """
 
+_SERVICO = "[D-BUS Service]\nName={nome}\nExec=/bin/sh {ativador}\n"
+
 _CRIA = f"{tj._SCREENCAST}.CreateSession"
 _ESCOLHE = f"{tj._SCREENCAST}.SelectSources"
 _COMECA = f"{tj._SCREENCAST}.Start"
+_FECHA = "org.freedesktop.portal.Session.Close"
 _PASSO_S = 1.0 / tj.HZ_DA_TELA
 _SYSTEMD = "org.freedesktop.systemd1"
 _GERENTE = "org.freedesktop.systemd1.Manager"
@@ -65,16 +68,21 @@ _PRECISA_DO_PORTAL = pytest.mark.skipif(
 
 class Barramento:
     """O ``dbus-daemon`` particular com o portal ativável: cada ativação vira uma linha em
-    ``contagem``, e o ativador sai sem tomar o nome, como o portal que não sobe."""
+    ``contagem``, e o ativador sai sem tomar o nome, como o portal que não sobe. O ``systemd1``
+    também é ativável, como no barramento da sessão (o ``org.freedesktop.systemd1.service`` do
+    systemd), e as ativações dele vão para ``contagem_do_gerente``."""
 
     def __init__(self, pasta: Path) -> None:
         servicos = pasta / "ativaveis"
         servicos.mkdir()
         self.contagem = pasta / "ativacoes"
-        ativador = pasta / "ativador.sh"
-        ativador.write_text(_ATIVADOR.format(contagem=self.contagem), encoding="utf-8")
-        (servicos / f"{tj._PORTAL}.service").write_text(
-            f"[D-BUS Service]\nName={tj._PORTAL}\nExec=/bin/sh {ativador}\n", encoding="utf-8")
+        self.contagem_do_gerente = pasta / "ativacoes-do-gerente"
+        for nome, contagem in ((tj._PORTAL, self.contagem),
+                               (_SYSTEMD, self.contagem_do_gerente)):
+            ativador = pasta / f"ativador-{nome}.sh"
+            ativador.write_text(_ATIVADOR.format(contagem=contagem), encoding="utf-8")
+            (servicos / f"{nome}.service").write_text(
+                _SERVICO.format(nome=nome, ativador=ativador), encoding="utf-8")
         config = pasta / "barramento.conf"
         config.write_text(_CONFIG.format(soquete=pasta / "barramento", servicos=servicos),
                           encoding="utf-8")
@@ -87,13 +95,20 @@ class Barramento:
         assert self.endereco, "o dbus-daemon particular não disse o endereço"
 
     def ativacoes(self) -> int:
-        if not self.contagem.exists():
-            return 0
-        return len(self.contagem.read_text(encoding="utf-8").splitlines())
+        return _linhas(self.contagem)
+
+    def ativacoes_do_gerente(self) -> int:
+        return _linhas(self.contagem_do_gerente)
 
     def fechar(self) -> None:
         self._processo.terminate()
         self._processo.wait(timeout=5)
+
+
+def _linhas(contagem: Path) -> int:
+    if not contagem.exists():
+        return 0
+    return len(contagem.read_text(encoding="utf-8").splitlines())
 
 
 class Atendente:
@@ -301,6 +316,7 @@ def test_sem_o_gerente_vale_o_ambiente_do_proprio_processo(
     else:
         assert _MOTIVO in str(erro)
         assert barramento.ativacoes() == 0
+    assert barramento.ativacoes_do_gerente() == 0
 
 
 @_PRECISA_DO_PORTAL
@@ -316,6 +332,8 @@ def test_a_captura_espera_a_sessao_e_abre_quando_a_sessao_sobe(
     ditos = [r for r in diario if r["event"] == "tela_do_jogo_ausente"]
     assert len(ditos) == 1 and _MOTIVO in ditos[0]["motivo"], diario
     gerente_sem_desktop.ambiente.append("XDG_CURRENT_DESKTOP=COSMIC")
+    cena.correr(3.0)
+    assert barramento.ativacoes() >= 1
     portal = PortalDeTeste(barramento.endereco)
     try:
         cena.correr(3.0)
@@ -354,6 +372,7 @@ def test_o_prazo_esgotado_nao_reabre_a_escolha_em_laco(
         cena.agora[0] += tj.PRAZO_DA_ESCOLHA_S + 125.0
         cena.correr(10.0)
         assert portal.pedidos.count(_ESCOLHE) == 1, portal.pedidos
+        assert portal.pedidos.count(_FECHA) == 1, portal.pedidos
         assert len(cena.publicados) == 1
         assert not cena.captura.aberta
         cena.assinantes[0] = 2
@@ -364,7 +383,7 @@ def test_o_prazo_esgotado_nao_reabre_a_escolha_em_laco(
 
 
 @_PRECISA_DO_PORTAL
-@pytest.mark.parametrize("recusa", ["dois", "sem_fluxo", "erro", "prazo"])
+@pytest.mark.parametrize("recusa", ["dois", "sem_fluxo", "erro", "prazo", "cancelada"])
 def test_a_ficha_recusada_se_apaga_e_nao_vira_janela_pela_espera(
     barramento: Barramento, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, recusa: str
 ) -> None:
@@ -376,6 +395,7 @@ def test_a_ficha_recusada_se_apaga_e_nao_vira_janela_pela_espera(
         "sem_fluxo": {"sem_fluxo": True},
         "erro": {"erro_em": frozenset({"Start"})},
         "prazo": {"respostas": {"Start": None}},
+        "cancelada": {"respostas": {"Start": 1}},
     }
     portal = PortalDeTeste(barramento.endereco, **jeitos[recusa])
     try:
