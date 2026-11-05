@@ -259,14 +259,14 @@
       "data": "2026-11-04",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1203610,
+      "piso": 1203615,
       "por_item": {
         "docs": 106400,
         "scripts": 111615,
         "src": 303934,
-        "tests": 681661
+        "tests": 681666
       },
-      "razao": "04/11/2026, lentos-e-involucro: +158 linhas de teste dos 17 lentos de 31 a 100 que provam sem esperar o relógio (73dd7bf35..7e77ef23c); ferramental da suíte sem decisão",
+      "razao": "tamanho: +5 linhas (1203610 -> 1203615), pagas por Origem: D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA; registrado no fecho, topo 93a24cba8832",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1737,6 +1737,12 @@
           "de": 1203452,
           "para": 1203610,
           "razao": "04/11/2026, lentos-e-involucro: +158 linhas de teste dos 17 lentos de 31 a 100 que provam sem esperar o relógio (73dd7bf35..7e77ef23c); ferramental da suíte sem decisão"
+        },
+        {
+          "data": "2026-11-04",
+          "de": 1203610,
+          "para": 1203615,
+          "razao": "tamanho: +5 linhas (1203610 -> 1203615), pagas por Origem: D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA; registrado no fecho, topo 93a24cba8832"
         }
       ],
       "unidade": "linhas",
