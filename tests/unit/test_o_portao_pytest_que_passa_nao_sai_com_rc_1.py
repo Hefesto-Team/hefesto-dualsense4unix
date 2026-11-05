@@ -168,6 +168,13 @@ def test_o_xvfb_que_troca_o_rc_diz_que_foi_ele(tmp_path: Path) -> None:
     assert status == {"pytest-tela": "VERMELHO"}, saida
     assert "externo=1 dbus=1 xvfb=1 pytest=0" in saida, saida
     assert "trocou o rc: xvfb (0 -> 1)" in saida, saida
+    resumo = [
+        linha for linha in saida.splitlines() if linha.startswith("invólucro com rc diferente")
+    ]
+    assert resumo and "pytest-tela rc=1 camadas: externo=1 dbus=1 xvfb=1 pytest=0" in resumo[0], (
+        "o involucro-mentiu.txt, que a corrida resume, perdeu a camada que trocou o rc:\n" + saida
+    )
+    assert "trocou o rc: xvfb (0 -> 1)" in resumo[0], saida
 
 
 def test_o_dbus_que_troca_o_rc_diz_que_foi_ele(tmp_path: Path) -> None:
