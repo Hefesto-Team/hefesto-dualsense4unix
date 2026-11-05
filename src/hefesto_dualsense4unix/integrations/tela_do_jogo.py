@@ -21,6 +21,8 @@ from operator import sub
 from pathlib import Path
 from typing import Any, Protocol
 
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
 GRADE_X = 32
 GRADE_Y = 18
 HZ_DA_TELA = 5
@@ -52,6 +54,8 @@ CANAIS: Mapping[str, tuple[int, int, int, int]] = {
 
 Cor = tuple[float, float, float]
 Grade = tuple[Cor, ...]
+
+logger = get_logger(__name__)
 
 
 class TelaRecusadaError(Exception):
@@ -485,13 +489,14 @@ class Captura:
         self._parada.set()
         self.fonte.interromper()
 
-    def _cair(self) -> None:
+    def _cair(self, motivo: str) -> None:
         if self.aberta:
             self.fonte.fechar()
         self.aberta = False
         self._proxima = self._relogio() + self._espera
         if not self._ausente_dito and not self._parada.is_set():
             self._ausente_dito = True
+            logger.info("tela_do_jogo_ausente", motivo=motivo)
             self._publicar(self.tela.ausente())
 
     def passo(self) -> None:
@@ -504,19 +509,23 @@ class Captura:
         if not self.aberta:
             if self._relogio() < self._proxima:
                 return
+            motivo = "a fonte não abriu"
             try:
                 self.aberta = self.fonte.abrir()
-            except (OSError, RuntimeError):
+            except (OSError, RuntimeError) as erro:
                 self.aberta = False
+                motivo = str(erro) or motivo
             if not self.aberta:
-                self._cair()
+                self._cair(motivo)
                 return
+        motivo = "a fonte parou de entregar quadro"
         try:
             quadro = self.fonte.quadro()
-        except (OSError, RuntimeError, TelaRecusadaError):
+        except (OSError, RuntimeError, TelaRecusadaError) as erro:
             quadro = None
+            motivo = str(erro) or motivo
         if quadro is None:
-            self._cair()
+            self._cair(motivo)
             return
         self._ausente_dito = False
         self._publicar(self.tela.medir(quadro))

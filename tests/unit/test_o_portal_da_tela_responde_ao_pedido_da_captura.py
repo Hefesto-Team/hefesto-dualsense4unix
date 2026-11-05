@@ -4,7 +4,8 @@ A medida, no barramento da sessão: o ``xdg-desktop-portal`` vivo não exporta
 ``org.freedesktop.portal.ScreenCast`` (o ``cosmic.portal`` não casou com o ambiente dele), e o
 ``CreateSession`` volta na hora como erro ``UnknownMethod``. A fonte lia esse erro como resposta
 boa e esperava ``PRAZO_DA_ESCOLHA_S`` por um ``Response`` que nunca sai. Aqui o portal é de
-mentira, num ``dbus-daemon`` particular: um responde como o daquele dia, o outro abre a sessão.
+mentira, num ``dbus-daemon`` particular: um responde como o daquele dia, outro abre a sessão,
+e o terceiro vai até o ``Start`` e recusa o ``OpenPipeWireRemote``.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import structlog.testing
 
 from hefesto_dualsense4unix.integrations import tela_do_jogo as tj
 
@@ -53,15 +55,18 @@ _SEM_DBUS = shutil.which("dbus-daemon") is None
 _POR_QUE = "sem dbus-daemon não há barramento particular para o portal de mentira"
 
 
-class PortalDeMentira:
-    """Atende o ``org.freedesktop.portal.Desktop`` num fio; ``com_captura`` diz se a interface
-    ``ScreenCast`` existe. Sem a interface, todo pedido volta como o erro do portal medido."""
+_ATE_O_COMECO = frozenset({"CreateSession", "SelectSources", "Start"})
 
-    def __init__(self, endereco: str, *, com_captura: bool) -> None:
+
+class PortalDeMentira:
+    """Atende o ``org.freedesktop.portal.Desktop`` num fio; ``atende`` diz quais métodos da
+    ``ScreenCast`` respondem com o ``Response``. O resto volta como o erro do portal medido."""
+
+    def __init__(self, endereco: str, *, atende: frozenset[str]) -> None:
         from jeepney.bus_messages import message_bus
         from jeepney.io.blocking import open_dbus_connection
 
-        self.com_captura = com_captura
+        self.atende = atende
         self.pedidos: list[str] = []
         self.pedido = threading.Event()
         self._parar = threading.Event()
@@ -92,7 +97,7 @@ class PortalDeMentira:
         metodo = campos.get(HeaderFields.member, "")
         self.pedidos.append(f"{interface}.{metodo}")
         self.pedido.set()
-        if not self.com_captura or interface != tj._SCREENCAST or metodo != "CreateSession":
+        if interface != tj._SCREENCAST or metodo not in self.atende:
             self._conexao.send(new_error(
                 mensagem, _SEM_INTERFACE, "s",
                 (f"Nenhuma interface “{interface}” no objeto no caminho {tj._CAMINHO_DO_PORTAL}",)))
@@ -100,10 +105,16 @@ class PortalDeMentira:
         opcoes = mensagem.body[-1]
         remetente = campos[HeaderFields.sender]
         caminho = tj._caminho_do_pedido(remetente, opcoes["handle_token"][1])
-        sessao = f"{tj._CAMINHO_DO_PORTAL}/session/mentira/{opcoes['session_handle_token'][1]}"
+        resultados: dict[str, tuple[str, Any]] = {}
+        if metodo == "CreateSession":
+            token = opcoes["session_handle_token"][1]
+            resultados["session_handle"] = ("o", f"{tj._CAMINHO_DO_PORTAL}/session/mentira/{token}")
+        elif metodo == "Start":
+            resultados["streams"] = ("a(ua{sv})", [(7, {})])
+            resultados["restore_token"] = ("s", "ficha-de-mentira")
         self._conexao.send(new_method_return(mensagem, "o", (caminho,)))
         pedido = DBusAddress(caminho, interface=tj._PEDIDO)
-        sinal = new_signal(pedido, "Response", "ua{sv}", (0, {"session_handle": ("o", sessao)}))
+        sinal = new_signal(pedido, "Response", "ua{sv}", (0, resultados))
         sinal.header.fields[HeaderFields.destination] = remetente
         self._conexao.send(sinal)
 
@@ -134,7 +145,16 @@ def barramento(tmp_path: Path) -> Iterator[str]:
 
 @pytest.fixture
 def sem_captura(barramento: str) -> Iterator[PortalDeMentira]:
-    portal = PortalDeMentira(barramento, com_captura=False)
+    portal = PortalDeMentira(barramento, atende=frozenset())
+    try:
+        yield portal
+    finally:
+        portal.fechar()
+
+
+@pytest.fixture
+def sem_o_remoto(barramento: str) -> Iterator[PortalDeMentira]:
+    portal = PortalDeMentira(barramento, atende=_ATE_O_COMECO)
     try:
         yield portal
     finally:
@@ -143,7 +163,7 @@ def sem_captura(barramento: str) -> Iterator[PortalDeMentira]:
 
 @pytest.fixture
 def com_captura(barramento: str) -> Iterator[PortalDeMentira]:
-    portal = PortalDeMentira(barramento, com_captura=True)
+    portal = PortalDeMentira(barramento, atende=frozenset({"CreateSession"}))
     try:
         yield portal
     finally:
@@ -196,17 +216,21 @@ def test_o_passo_publica_ausente_logo_e_tenta_de_novo_depois_da_espera(
                          publicar=publicados.append, assinantes=lambda: 1,
                          relogio=lambda: agora[0])
     fio = threading.Thread(target=captura.passo, name="passo-da-captura", daemon=True)
-    fio.start()
-    fio.join(timeout=3)
-    try:
-        assert not fio.is_alive(), "o passo ficou preso num pedido que o portal já recusou"
-    finally:
-        captura.parar()
-        fio.join(timeout=2)
+    with structlog.testing.capture_logs() as diario:
+        fio.start()
+        fio.join(timeout=3)
+        try:
+            assert not fio.is_alive(), "o passo ficou preso num pedido que o portal já recusou"
+        finally:
+            captura.parar()
+            fio.join(timeout=2)
     assert not captura.aberta
     assert len(publicados) == 1
     assert all(publicados[0][s] is None for s in tj.SINAIS)
     assert captura._proxima == pytest.approx(102.0)
+    quedas = [r for r in diario if r["event"] == "tela_do_jogo_ausente"]
+    assert len(quedas) == 1, diario
+    assert "CreateSession" in quedas[0]["motivo"]
 
 
 @pytest.mark.skipif(_SEM_DBUS, reason=_POR_QUE)
@@ -252,3 +276,29 @@ def test_o_pedido_recusado_vira_runtimeerror_sem_esperar(
         fonte.fechar()
     assert len(erros) == 1 and isinstance(erros[0], RuntimeError), erros
     assert "SelectSources" in str(erros[0])
+
+
+@pytest.mark.skipif(_SEM_DBUS or not _ha_pipewiresrc(),
+                    reason="sem dbus-daemon ou sem o pipewiresrc, a fonte nem chega a pedir")
+def test_o_remoto_recusado_vira_runtimeerror_e_fecha_a_sessao(
+    barramento: str, sem_o_remoto: PortalDeMentira, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", barramento)
+    fonte = tj.FonteDoPortal(tmp_path / "ficha")
+    with pytest.raises(RuntimeError, match="OpenPipeWireRemote"):
+        fonte.abrir()
+    assert fonte._conexao is None
+    assert "org.freedesktop.portal.Session.Close" in sem_o_remoto.pedidos
+    assert (tmp_path / "ficha").read_text(encoding="utf-8") == "ficha-de-mentira"
+
+    agora = [100.0]
+    publicados: list[dict[str, object]] = []
+    captura = tj.Captura(tj.FonteDoPortal(tmp_path / "ficha"),
+                         tj.TelaDoJogo(relogio=lambda: agora[0]),
+                         publicar=publicados.append, assinantes=lambda: 1,
+                         relogio=lambda: agora[0])
+    captura.passo()
+    assert not captura.aberta
+    assert len(publicados) == 1
+    assert all(publicados[0][s] is None for s in tj.SINAIS)
