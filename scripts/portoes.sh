@@ -354,9 +354,6 @@ else
 fi
 VAGAS_PYTEST="${PORTOES_VAGAS_PYTEST:-$VAGAS_PYTEST}"
 [ "$EM_SERIE" -eq 1 ] && { VAGAS_GERAIS=1; VAGAS_PYTEST=1; }
-PREFIXO_DE_TELA=""
-command -v dbus-run-session >/dev/null 2>&1 && PREFIXO_DE_TELA="dbus-run-session --"
-command -v xvfb-run >/dev/null 2>&1 && PREFIXO_DE_TELA="${PREFIXO_DE_TELA:+$PREFIXO_DE_TELA }xvfb-run -a"
 
 _tres_campos() {
   local resto
@@ -404,6 +401,45 @@ fi
 
 _ANOTA_O_RC='"$@"; r=$?; printf %d "$r" > "$0"; exit "$r"'
 
+_prefixo_de_tela() {
+  local lar="$1" prefixo=""
+  command -v dbus-run-session >/dev/null 2>&1 \
+    && prefixo="bash -c '$_ANOTA_O_RC' $lar/dbus.rc dbus-run-session --"
+  command -v xvfb-run >/dev/null 2>&1 \
+    && prefixo="${prefixo:+$prefixo }bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a"
+  echo "$prefixo"
+}
+
+_camada_existe() {
+  case "$1" in
+    dbus) command -v dbus-run-session >/dev/null 2>&1 ;;
+    xvfb) command -v xvfb-run >/dev/null 2>&1 ;;
+  esac
+}
+
+_camadas_do_portao() {
+  local lar="$1" externo="$2" prc="$3" c v valor="$3" trocou="" semrc="" linha
+  linha="externo=$externo"
+  for c in dbus xvfb; do
+    _camada_existe "$c" || continue
+    if [ -s "$lar/$c.rc" ]; then linha+=" $c=$(cat "$lar/$c.rc")"; else linha+=" $c=?"; fi
+  done
+  linha+=" pytest=${prc:-?}"
+  if [ -n "$prc" ]; then
+    for c in xvfb dbus; do
+      _camada_existe "$c" || continue
+      [ -s "$lar/$c.rc" ] || { semrc+=" $c"; continue; }
+      v="$(cat "$lar/$c.rc")"
+      [ -z "$trocou" ] && [ "$v" != "$valor" ] && trocou="$c ($valor -> $v)"
+      valor="$v"
+    done
+    [ -z "$trocou" ] && [ "$externo" != "$valor" ] && trocou="externo ($valor -> $externo)"
+  fi
+  [ -n "$trocou" ] && linha+=" · trocou o rc: $trocou"
+  [ -n "$semrc" ] && linha+=" · sem rc gravado:$semrc"
+  echo "$linha"
+}
+
 _comando_do_portao() {
   local i="$1" runner="${G_RUN[$1]}" argv="${G_ARGV[$1]}" cmd
   if [ "$runner" = pytest ]; then
@@ -415,7 +451,7 @@ _comando_do_portao() {
     py)   cmd="$PY $argv" ;;
     bash) cmd="bash $argv" ;;
     bin)  cmd="$(_bin "${argv%% *}") ${argv#* }" ;;
-    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $PREFIXO_DE_TELA bash -c '$_ANOTA_O_RC' $LAR_DE_MENTIRA/$i/pytest.rc $PY -m pytest -q -p no:cacheprovider $argv"
+    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $(_prefixo_de_tela "$LAR_DE_MENTIRA/$i") bash -c '$_ANOTA_O_RC' $LAR_DE_MENTIRA/$i/pytest.rc $PY -m pytest -q -p no:cacheprovider $argv"
             [ -n "$SEMAFORO" ] && cmd="$SEMAFORO $cmd" ;;
   esac
   echo "$cmd"
@@ -424,17 +460,25 @@ _comando_do_portao() {
 _roda_um() {
   local n="$1" cmd inicio fim rc
   cmd="$(_comando_do_portao "$n")"
-  rm -f "$LAR_DE_MENTIRA/$n/pytest.rc"
+  rm -f "$LAR_DE_MENTIRA/$n"/{pytest,dbus,xvfb}.rc
   inicio=$(date +%s%N)
   ( cd "$RAIZ" && eval "$cmd" ) > "$OUT/$n.out" 2>&1
   rc=$?
-  if [ "${G_RUN[$n]}" = pytest ] && [ -s "$LAR_DE_MENTIRA/$n/pytest.rc" ]; then
-    cp "$LAR_DE_MENTIRA/$n/pytest.rc" "$OUT/$n.rc.pytest"
-    prc="$(cat "$OUT/$n.rc.pytest")"
-    if [ "$prc" != "$rc" ]; then
+  if [ "${G_RUN[$n]}" = pytest ]; then
+    prc=""
+    if [ -s "$LAR_DE_MENTIRA/$n/pytest.rc" ]; then
+      cp "$LAR_DE_MENTIRA/$n/pytest.rc" "$OUT/$n.rc.pytest"
+      prc="$(cat "$OUT/$n.rc.pytest")"
+    fi
+    camadas="$(_camadas_do_portao "$LAR_DE_MENTIRA/$n" "$rc" "$prc")"
+    if [ -z "$prc" ] && [ "$rc" -ne 0 ]; then
+      printf 'portoes.sh: o pytest nem gravou o rc; camadas: %s\n' "$camadas" >> "$OUT/$n.out"
+    fi
+    if [ -n "$prc" ] && [ "$prc" != "$rc" ]; then
       printf 'portoes.sh: o invólucro (vaga, bus e tela) saiu com rc=%d e o pytest com rc=%s; o portão reprova.\n' \
         "$rc" "$prc" >> "$OUT/$n.out"
-      printf '%s rc=%d\n' "${G_ID[$n]}" "$rc" >> "$OUT/involucro-mentiu.txt"
+      printf 'portoes.sh: camadas: %s\n' "$camadas" >> "$OUT/$n.out"
+      printf '%s rc=%d camadas: %s\n' "${G_ID[$n]}" "$rc" "$camadas" >> "$OUT/involucro-mentiu.txt"
       [ "$prc" != 0 ] && [ "$rc" -eq 0 ] && rc=1
     fi
   fi
