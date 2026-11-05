@@ -95,18 +95,25 @@ class Ensaio:
     diario: Path
     daemon_bin: Path
     pids: dict[int, str] = field(default_factory=dict)
+    pais: list[subprocess.Popen[str]] = field(default_factory=list)
 
     def processo(self, argv0: str, env: dict[str, str] | None = None) -> int:
-        """Um ``sleep`` órfão (o init o recolhe ao morrer), com o argv0 pedido."""
-        r = subprocess.run(
-            [BASH, "-c", 'exec -a "$0" sleep 120 >/dev/null 2>&1 &\necho $!', argv0],
+        """Um ``sleep`` com o argv0 pedido, filho de um pai que o recolhe ao morrer.
+
+        Como o daemon de verdade, que é filho da sessão: sem o pai, o ``sleep`` morto ficaria
+        zumbi onde o PID 1 não recolhe órfãos (o contêiner do CI), e o ``kill -0`` o daria vivo.
+        """
+        pai = subprocess.Popen(
+            [BASH, "-c", 'exec -a "$0" sleep 120 >/dev/null 2>&1 &\necho $!\nwait', argv0],
             env=env if env is not None else {"PATH": "/usr/bin:/bin"},
-            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             text=True,
-            timeout=10,
-            check=True,
         )
-        pid = int(r.stdout.strip())
+        self.pais.append(pai)
+        assert pai.stdout is not None
+        pid = int(pai.stdout.readline().strip())
         for _ in range(100):
             if _argv0(pid) == argv0:
                 break
@@ -130,6 +137,8 @@ class Ensaio:
         for pid, argv0 in self.pids.items():
             if _vivo(pid) and _argv0(pid) == argv0:
                 os.kill(pid, signal.SIGKILL)
+        for pai in self.pais:
+            pai.communicate(timeout=10)
 
 
 @pytest.fixture
