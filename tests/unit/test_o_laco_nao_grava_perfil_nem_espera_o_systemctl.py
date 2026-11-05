@@ -37,9 +37,9 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-DORME_S = 2.0
+DORME_S = 0.8
 TETO_TIQUE_S = 0.05
-TETO_IPC_S = 1.0
+TETO_IPC_S = 0.4
 APPID = 9931101
 JOGO = "Jogo da Régua do Laço"
 _P1 = "aa:bb:cc:00:00:01"
