@@ -138,7 +138,7 @@ def _por_que_o_rapido_nao_conta(texto: str) -> tuple[int | None, str]:
     """A parede do rápido que rodou todos os portões com todas as vagas, ou o motivo de ficar fora.
 
     A linha sem a conta de lembrados, ou o log sem a linha das vagas, é de antes da conta e não prova
-    que a corrida rodou tudo com a máquina do usuário. O log sem a linha ``tempo:`` não é corrida medida.
+    que a corrida rodou tudo com todas as vagas. O log sem a linha ``tempo:`` não é corrida medida.
     """
     achou = _PAREDE_E_LEMBRADOS.findall(texto)
     if not achou:
