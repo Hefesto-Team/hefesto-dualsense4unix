@@ -402,11 +402,11 @@ fi
 _ANOTA_O_RC='"$@"; r=$?; printf %d "$r" > "$0"; exit "$r"'
 
 _prefixo_de_tela() {
-  local lar="$1" prefixo=""
+  local lar="$1" n="$2" prefixo=""
   command -v dbus-run-session >/dev/null 2>&1 \
     && prefixo="bash -c '$_ANOTA_O_RC' $lar/dbus.rc dbus-run-session --"
   command -v xvfb-run >/dev/null 2>&1 \
-    && prefixo="${prefixo:+$prefixo }bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a"
+    && prefixo="${prefixo:+$prefixo }bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a -n $((100 + n)) -e $lar/xvfb.err"
   echo "$prefixo"
 }
 
@@ -451,7 +451,7 @@ _comando_do_portao() {
     py)   cmd="$PY $argv" ;;
     bash) cmd="bash $argv" ;;
     bin)  cmd="$(_bin "${argv%% *}") ${argv#* }" ;;
-    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $(_prefixo_de_tela "$LAR_DE_MENTIRA/$i") bash -c '$_ANOTA_O_RC' $LAR_DE_MENTIRA/$i/pytest.rc $PY -m pytest -q -p no:cacheprovider $argv"
+    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $(_prefixo_de_tela "$LAR_DE_MENTIRA/$i" "$i") bash -c '$_ANOTA_O_RC' $LAR_DE_MENTIRA/$i/pytest.rc $PY -m pytest -q -p no:cacheprovider $argv"
             [ -n "$SEMAFORO" ] && cmd="$SEMAFORO $cmd" ;;
   esac
   echo "$cmd"
@@ -460,7 +460,7 @@ _comando_do_portao() {
 _roda_um() {
   local n="$1" cmd inicio fim rc
   cmd="$(_comando_do_portao "$n")"
-  rm -f "$LAR_DE_MENTIRA/$n"/{pytest,dbus,xvfb}.rc
+  rm -f "$LAR_DE_MENTIRA/$n"/{pytest,dbus,xvfb}.rc "$LAR_DE_MENTIRA/$n/xvfb.err"
   inicio=$(date +%s%N)
   ( cd "$RAIZ" && eval "$cmd" ) > "$OUT/$n.out" 2>&1
   rc=$?
@@ -478,6 +478,8 @@ _roda_um() {
       printf 'portoes.sh: o invólucro (vaga, bus e tela) saiu com rc=%d e o pytest com rc=%s; o portão reprova.\n' \
         "$rc" "$prc" >> "$OUT/$n.out"
       printf 'portoes.sh: camadas: %s\n' "$camadas" >> "$OUT/$n.out"
+      [ -s "$LAR_DE_MENTIRA/$n/xvfb.err" ] \
+        && { echo 'portoes.sh: o que o Xvfb escreveu:'; tail -n 8 "$LAR_DE_MENTIRA/$n/xvfb.err"; } >> "$OUT/$n.out"
       printf '%s rc=%d camadas: %s\n' "${G_ID[$n]}" "$rc" "$camadas" >> "$OUT/involucro-mentiu.txt"
       [ "$prc" != 0 ] && [ "$rc" -eq 0 ] && rc=1
     fi

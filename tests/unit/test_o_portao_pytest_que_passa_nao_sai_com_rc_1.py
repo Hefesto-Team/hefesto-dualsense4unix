@@ -107,6 +107,32 @@ def test_morde_o_pytest_vermelho_atras_do_involucro_verde(tmp_path: Path) -> Non
     assert status == {"pytest-tela": "ok"}, saida
 
 
+_DBUS_DE_MENTIRA = """#!/usr/bin/env bash
+[ "$1" = -- ] && shift
+"$@"
+r=$?
+exit {saida}
+"""
+
+_XVFB_DE_MENTIRA = """#!/usr/bin/env bash
+erro=/dev/null
+display=""
+while true; do
+  case "$1" in
+    -a) shift ;;
+    -n) display="$2"; shift 2 ;;
+    -e) erro="$2"; shift 2 ;;
+    *) break ;;
+  esac
+done
+printf '%s\\n' "$display" >> "{pasta}/displays"
+echo "Xvfb de mentira: o servidor saiu antes da hora" > "$erro"
+"$@"
+r=$?
+exit {saida}
+"""
+
+
 def _camadas_de_mentira(
     tmp_path: Path, *, dbus: int | None = None, xvfb: int | None = None
 ) -> dict[str, str]:
@@ -114,10 +140,14 @@ def _camadas_de_mentira(
     (sem pedido, com o do comando, como os de verdade)."""
     pasta = tmp_path / "camadas"
     pasta.mkdir()
-    corpo = '#!/usr/bin/env bash\n[ "$1" = {tira} ] && shift\n"$@"\nr=$?\nexit {saida}\n'
-    for nome, tira, pedido in (("dbus-run-session", "--", dbus), ("xvfb-run", "-a", xvfb)):
-        saida = '"$r"' if pedido is None else str(pedido)
-        (pasta / nome).write_text(corpo.format(tira=tira, saida=saida), encoding="utf-8")
+    saida = {None: '"$r"'}
+    (pasta / "dbus-run-session").write_text(
+        _DBUS_DE_MENTIRA.format(saida=saida.get(dbus, dbus)), encoding="utf-8"
+    )
+    (pasta / "xvfb-run").write_text(
+        _XVFB_DE_MENTIRA.format(saida=saida.get(xvfb, xvfb), pasta=pasta), encoding="utf-8"
+    )
+    for nome in ("dbus-run-session", "xvfb-run"):
         (pasta / nome).chmod(0o755)
     return {"PATH": f"{pasta}:{os.environ['PATH']}"}
 
@@ -160,7 +190,7 @@ def test_as_camadas_honestas_nao_acusam_ninguem(tmp_path: Path) -> None:
 def test_morde_a_sonda_do_xvfb_arrancada(tmp_path: Path) -> None:
     """Sem a sonda no `xvfb-run`, o `rc` dele some e a culpa não cai nele."""
     texto = (RAIZ / "scripts" / "portoes.sh").read_text(encoding="utf-8")
-    velho = "bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a"
+    velho = "bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a -n $((100 + n)) -e $lar/xvfb.err"
     assert texto.count(velho) == 1
     ambiente = _camadas_de_mentira(tmp_path, xvfb=1)
     status, saida = _corre(
@@ -170,3 +200,24 @@ def test_morde_a_sonda_do_xvfb_arrancada(tmp_path: Path) -> None:
 
     assert status == {"pytest-tela": "VERMELHO"}, saida
     assert "trocou o rc: xvfb (0 -> 1)" not in saida, saida
+
+
+def test_cada_portao_tem_o_seu_display_e_o_que_o_xvfb_escreveu_fica_na_saida(
+    tmp_path: Path,
+) -> None:
+    """Dois portões de pytest ao mesmo tempo não disputam o mesmo `:99` do `xvfb-run -a`."""
+    ambiente = _camadas_de_mentira(tmp_path, xvfb=1)
+    tabela = TABELA + "\n" + TABELA.replace("pytest-tela", "pytest-tela-2")
+    paralelo = _paralelo()
+    vez = tmp_path / "vez-do-pytest.sh"
+    vez.write_text('#!/usr/bin/env bash\n"$@"\n', encoding="utf-8")
+    repo = paralelo._monta(tmp_path, tabela, arquivos={"dados/tela.txt": "limpo\n"})
+    r = paralelo._corre(
+        repo, "--rapido", "--sem-memoria",
+        env={"HEFESTO_VEZ_DO_PYTEST": str(vez), **ambiente},
+    )
+
+    pedidos = (tmp_path / "camadas" / "displays").read_text(encoding="utf-8").split()
+    assert len(set(pedidos)) == 2 and all(p.isdigit() for p in pedidos), pedidos
+    assert "o que o Xvfb escreveu:" in r.stdout, r.stdout
+    assert "Xvfb de mentira: o servidor saiu antes da hora" in r.stdout, r.stdout
