@@ -3,17 +3,18 @@
 O fio da janela é o do GTK. Medido no lar de mentira em 21/10/2026, antes da cura, ele
 fazia em três minutos 6.103 aberturas no `/sys`, 178 no `/proc`, 187 varreduras do
 `/sys/bus/usb/devices`, cinco subprocessos e uma conexão ao serviço; depois da primeira, nenhuma.
-A régua de tempo roda o piloto oculto de verdade por três minutos, no relógio do
-produto (a regressão de 29/08 só aparecia aos 181 s), e reprova o tique acima do teto e
-a espera proibida no fio da janela. As outras são as de cada cura, sem a janela.
+A régua de tempo roda o piloto oculto de verdade por 181 s de relógio de mentira, tique a
+tique, sem pular nenhum (a regressão de 29/08 só aparecia aos 181 s), e reprova o tique acima
+do teto e a espera proibida no fio da janela. As outras são as de cada cura, sem a janela.
 """
 from __future__ import annotations
 
 import ast
+import math
 import sys
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -38,7 +39,11 @@ def _as_abas() -> tuple[str, ...]:
 
 ABAS = _as_abas()
 
-SEGUNDOS_POR_ABA = 20.0
+SEGUNDOS_DA_REGUA = 181.0
+
+SEGUNDOS_POR_ABA = SEGUNDOS_DA_REGUA / len(ABAS)
+
+TETO_REAL_DE_UMA_ESPERA_S = 30.0
 
 TETO_DO_TIQUE_MS = 400.0
 
@@ -124,21 +129,92 @@ def _o_piloto_sem_servico(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Any, An
     return gtk, hv, ondas_de_som
 
 
+class _RelogioDeMentira:
+    """O relógio e o agendador do piloto: o tempo só anda quando a régua manda."""
+
+    def __init__(self) -> None:
+        self.agora = 1000.0
+        self.agendados: list[list[Any]] = []
+
+    def __call__(self) -> float:
+        return self.agora
+
+    def agendar(self, intervalo_ms: int, fn: Callable[[], bool]) -> int:
+        self.agendados.append([self.agora + intervalo_ms / 1000.0, intervalo_ms / 1000.0, fn])
+        return len(self.agendados)
+
+    def andar(self, segundos: float) -> int:
+        """Anda `segundos`, disparando na ordem cada agendado que venceu; devolve quantos."""
+        alvo = self.agora + segundos
+        disparos = 0
+        while True:
+            vencidos = [a for a in self.agendados if a[0] <= alvo + 1e-9]
+            if not vencidos:
+                break
+            proximo = min(vencidos, key=lambda a: a[0])
+            self.agora = max(self.agora, proximo[0])
+            disparos += 1
+            if proximo[2]():
+                proximo[0] += proximo[1]
+            else:
+                self.agendados.remove(proximo)
+        self.agora = alvo
+        return disparos
+
+
+class _TempoDeMentira:
+    """O módulo `time` com o `monotonic` do relógio de mentira."""
+
+    def __init__(self, relogio: _RelogioDeMentira) -> None:
+        self.monotonic = relogio
+
+    def __getattr__(self, nome: str) -> Any:
+        return getattr(time, nome)
+
+
+def _a_interface_no_relogio(monkeypatch: pytest.MonkeyPatch, relogio: _RelogioDeMentira) -> None:
+    """Os módulos da interface, fora o piloto (que recebe o relógio pela porta), no de mentira."""
+    tempo = _TempoDeMentira(relogio)
+    for modulo in list(sys.modules.values()):
+        arquivo = str(getattr(modulo, "__file__", "") or "")
+        if not arquivo.startswith(str(INTERFACE)) or arquivo.endswith("hefesto_vivo.py"):
+            continue
+        for nome, valor in list(vars(modulo).items()):
+            if valor is time:
+                monkeypatch.setattr(modulo, nome, tempo)
+            elif valor is time.monotonic:
+                monkeypatch.setattr(modulo, nome, relogio)
+
+
+def _drenar_ate(gtk: Any, condicao: Callable[[], bool], teto_s: float) -> bool:
+    """Roda o laço do GTK até a condição valer; o teto real só impede a régua de pendurar."""
+    fim = time.perf_counter() + teto_s
+    while not condicao():
+        if time.perf_counter() > fim:
+            return False
+        gtk.main_iteration_do(True)
+    while gtk.events_pending():
+        gtk.main_iteration_do(False)
+    return True
+
+
 def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """O piloto oculto passa pelas abas no relógio dele, com o gancho no fio da janela."""
+    """O piloto oculto passa pelas abas no relógio de mentira, com o gancho no fio da janela."""
     gtk, hv, ondas_de_som = _o_piloto_sem_servico(monkeypatch)
     from gi.repository import GLib
 
-    fora = SimpleNamespace(tiques={aba: [] for aba in ABAS}, achados=[], i=-1, acabou=False,
-                           prazo=time.monotonic() + SEGUNDOS_POR_ABA * len(ABAS) + 60,
-                           antes=[], parada="", t0=time.monotonic(), morreu=None)
+    relogio = _RelogioDeMentira()
+    _a_interface_no_relogio(monkeypatch, relogio)
+    tiques_por_aba = math.ceil(SEGUNDOS_POR_ABA * 1000 / hv.TIQUE_MS)
+    fora = SimpleNamespace(tiques={aba: [] for aba in ABAS}, achados=[], i=-1,
+                           antes=[], parada="", t0=relogio.agora, morreu=None,
+                           disparos=0, agendados=0, segundos=0.0)
+    acordador = GLib.timeout_add(20, lambda: True)
     with hv._o_processo_da_janela():
-        piloto = hv.Piloto(_args(sem_ondas=True))
+        piloto = hv.Piloto(_args(sem_ondas=True), relogio=relogio, agendar=relogio.agendar)
         tique_original = piloto._tique
 
         def tique() -> bool:
-            if fora.acabou:
-                return False
             t0 = time.perf_counter()
             volta = bool(tique_original())
             custo = (time.perf_counter() - t0) * 1000
@@ -146,36 +222,44 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
                 fora.tiques[ABAS[fora.i]].append(custo)
             else:
                 fora.antes.append(custo)
-            if custo > TETO_DO_TIQUE_MS or time.monotonic() > fora.prazo:
+            if custo > TETO_DO_TIQUE_MS:
                 fora.parada = fora.parada or (
-                    f"o laço parou aos {time.monotonic() - fora.t0:.1f} s, na aba {fora.i} "
-                    f"({piloto.pagina}), com um tique de {custo:.0f} ms")
-                gtk.main_quit()
+                    f"o tique de {custo:.0f} ms aos {relogio.agora - fora.t0:.1f} s, na aba "
+                    f"{fora.i} ({piloto.pagina})")
             return volta
 
         monkeypatch.setattr(piloto, "_tique", tique)
 
-        def proxima() -> bool:
-            fora.i += 1
-            if fora.i >= len(ABAS):
-                gtk.main_quit()
-                return False
-            piloto._ir(ABAS[fora.i])
-            GLib.timeout_add(int(SEGUNDOS_POR_ABA * 1000), proxima)
-            return False
+        def assentou() -> bool:
+            return bool(piloto.pagina == ABAS[fora.i] and piloto.pronto)
 
-        guarda = GLib.timeout_add(int((SEGUNDOS_POR_ABA * len(ABAS) + 60) * 1000),
-                                  gtk.main_quit)
-        GLib.idle_add(proxima)
         try:
             with _vigiando() as achados:
-                gtk.main()
+                for fora.i, aba in enumerate(ABAS):
+                    piloto._ir(aba)
+                    if not _drenar_ate(gtk, lambda: assentou() or bool(piloto.tela.morreu),
+                                       TETO_REAL_DE_UMA_ESPERA_S):
+                        fora.parada = fora.parada or f"a aba {aba} não assentou"
+                        break
+                    for _ in range(tiques_por_aba):
+                        fora.disparos += relogio.andar(hv.TIQUE_MS / 1000.0)
+                        if not _drenar_ate(gtk, lambda: not piloto._pintura_no_ar,
+                                           TETO_REAL_DE_UMA_ESPERA_S):
+                            fora.parada = fora.parada or (
+                                f"a pintura não voltou aos {relogio.agora - fora.t0:.1f} s, "
+                                f"na aba {aba}")
+                            break
+                        if piloto.tela.morreu or fora.parada:
+                            break
+                    if piloto.tela.morreu or fora.parada:
+                        break
             fora.achados = list(achados)
         finally:
+            fora.segundos = relogio.agora - fora.t0
+            fora.agendados = len(relogio.agendados)
             fora.morreu = piloto.tela.morreu
-            fora.acabou = True
             piloto.pronto = False
-            GLib.source_remove(guarda)
+            GLib.source_remove(acordador)
             piloto._estado_vivo.parar()
             piloto.tela.janela.destroy()
             ondas_de_som.o_de_sempre().seguir({})
@@ -186,13 +270,18 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 def test_tres_minutos_sem_o_fio_da_janela_esperar(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """Nove abas, três minutos: nenhum tique acima do teto e nenhuma espera no fio da janela.
+    """Nove abas, 181 s de relógio de mentira: nenhum tique acima do teto e nenhuma espera.
 
     Prova da D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA.
     """
     assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
     fora = _tres_minutos(monkeypatch)
     assert fora.morreu is None, f"a janela fechou sozinha, antes da régua: {fora.morreu}"
+    assert fora.agendados == 1, (
+        f"o tique não nasceu no agendador que o piloto recebeu ({fora.agendados} agendados)")
+    assert fora.segundos >= SEGUNDOS_DA_REGUA, (
+        f"a régua viveu {fora.segundos:.1f} s de relógio, e não {SEGUNDOS_DA_REGUA:.0f}: "
+        f"{fora.parada or 'sem parada'}")
     assert not fora.achados, (
         "o fio da janela esperou por fora do processo (subprocesso, IPC, `/sys`, `/proc`):\n  "
         + "\n  ".join(sorted(set(fora.achados))[:20]))
@@ -203,7 +292,7 @@ def test_tres_minutos_sem_o_fio_da_janela_esperar(
         f"tique fora das abas acima do teto de {TETO_DO_TIQUE_MS:.0f} ms: {fora.parada}")
     famintas = {aba: len(t) for aba, t in fora.tiques.items() if len(t) < TIQUES_MINIMOS_POR_ABA}
     assert not famintas, (
-        f"abas com menos de {TIQUES_MINIMOS_POR_ABA} tiques em {SEGUNDOS_POR_ABA:.0f} s: "
+        f"abas com menos de {TIQUES_MINIMOS_POR_ABA} tiques em {SEGUNDOS_POR_ABA:.1f} s: "
         f"{famintas} (o tique parou, ou o laço andou devagar); {fora.parada or 'sem parada'}; "
         f"tiques fora das abas: {len(fora.antes)}, o maior de "
         f"{max(fora.antes, default=0):.0f} ms")

@@ -1710,10 +1710,19 @@ class Piloto:
     TIQUES_ENTRE_CARGAS_INTEIRAS = 10
     CUSTOS_GUARDADOS = 6000
 
-    def __init__(self, args: argparse.Namespace) -> None:
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        *,
+        relogio: Callable[[], float] = time.monotonic,
+        agendar: Callable[[int, Callable[[], bool]], Any] = GLib.timeout_add,
+    ) -> None:
+        """O relógio e o agendador do tique são portas: o padrão é o do GLib."""
         from collections import deque
 
-        self._abertura: dict[str, float] = {"piloto": time.monotonic()}
+        self._relogio = relogio
+        self._agendar_o_tique = agendar
+        self._abertura: dict[str, float] = {"piloto": relogio()}
         self.args = args
         self.pronto = False
         self.agendado = False
@@ -1786,7 +1795,7 @@ class Piloto:
         self.ponte = self.tela.ponte
         _FECHAR_A_JANELA[:] = [self.tela.fechar]
         self.view.connect("load-changed", self._carregou)
-        self._abertura["janela"] = time.monotonic()
+        self._abertura["janela"] = self._relogio()
         _importar_as_abas(self.tela)
         self._ctx_de_agora = pacotes.Contexto(state={})
         self._estado_vivo = LeitorDoEstado(avisar=self._a_primeira_resposta_chegou)
@@ -1976,7 +1985,7 @@ class Piloto:
         _esquecer_a_pintura(self)
         if escondida:
             self._geracao_na_volta = None
-            self._escondida_desde = time.monotonic()
+            self._escondida_desde = _agora(self)
             self._estado_vivo.pausar()
             _soltar_as_ondas()
             print("[janela] escondida: o tique parou", file=sys.stderr)
@@ -1984,7 +1993,7 @@ class Piloto:
         self._geracao_na_volta = self._estado_vivo.ultimo()[2]
         self._estado_vivo.retomar()
         desde = getattr(self, "_escondida_desde", 0.0)
-        ficou = time.monotonic() - desde if desde else 0.0
+        ficou = _agora(self) - desde if desde else 0.0
         self._escondida_desde = 0.0
         print(f"[janela] à vista: o tique voltou · escondida por {ficou:.0f} s", file=sys.stderr)
 
@@ -2288,7 +2297,7 @@ class Piloto:
         self._tique()
         if not self.agendado:
             self.agendado = True
-            GLib.timeout_add(TIQUE_MS, self._tique)
+            self._agendar_o_tique(TIQUE_MS, self._tique)
             self._agendar()
 
     def _contexto(self, st: dict[str, Any], *,
@@ -2311,7 +2320,7 @@ class Piloto:
 
     def _talvez_ler_os_externos(self) -> None:
         """Pede `controller.list {external: true}` no tique LENTO, em thread."""
-        agora = time.monotonic()
+        agora = _agora(self)
         if self._externos_no_ar:
             return
         if (agora - self._externos_lidos_em
@@ -2513,7 +2522,7 @@ class Piloto:
 
     def _contar_a_abertura(self) -> None:
         """A linha `[abertura]`, uma vez — O-APP-RESPONDE-NA-HORA-01, cura 3."""
-        agora = time.monotonic()
+        agora = _agora(self)
         self._abertura["pintura"] = agora
         vida = _segundos_de_vida()
         piloto = self._abertura["piloto"]
@@ -3584,6 +3593,11 @@ def _ligar_as_abas() -> None:
     PERIGOSOS = pacotes.perigosos()
     SELETOR_DO_DONO = '[data-uniq],[data-controle=""],' + ",".join(
         f'[data-controle="{lugar}"]' for lugar in sorted(pacotes.TODOS_OS_LUGARES))
+
+
+def _agora(piloto: Any) -> float:
+    """O relógio do piloto; o monotônico de sempre para quem não o recebeu."""
+    return float(getattr(piloto, "_relogio", time.monotonic)())
 
 
 def _segundos_de_vida() -> float | None:
