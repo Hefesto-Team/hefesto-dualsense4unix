@@ -121,6 +121,7 @@ while true; do
   case "$1" in
     -a) shift ;;
     -n) display="$2"; shift 2 ;;
+    -s) printf '%s\\n' "$2" >> "{pasta}/servidores"; shift 2 ;;
     -e) erro="$2"; shift 2 ;;
     *) break ;;
   esac
@@ -200,7 +201,10 @@ def test_as_camadas_honestas_nao_acusam_ninguem(tmp_path: Path) -> None:
 def test_morde_a_sonda_do_xvfb_arrancada(tmp_path: Path) -> None:
     """Sem a sonda no `xvfb-run`, o `rc` dele some e a culpa não cai nele."""
     texto = (RAIZ / "scripts" / "portoes.sh").read_text(encoding="utf-8")
-    velho = "bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a -n $((100 + n)) -e $lar/xvfb.err"
+    velho = (
+        "bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a -n $((100 + n))"
+        ' -s \\"$_SERVIDOR_DE_TELA\\" -e $lar/xvfb.err'
+    )
     assert texto.count(velho) == 1
     ambiente = _camadas_de_mentira(tmp_path, xvfb=1)
     status, saida = _corre(
@@ -229,5 +233,7 @@ def test_cada_portao_tem_o_seu_display_e_o_que_o_xvfb_escreveu_fica_na_saida(
 
     pedidos = (tmp_path / "camadas" / "displays").read_text(encoding="utf-8").split()
     assert len(set(pedidos)) == 2 and all(p.isdigit() for p in pedidos), pedidos
+    servidores = (tmp_path / "camadas" / "servidores").read_text(encoding="utf-8").splitlines()
+    assert len(servidores) == 2 and all("-nolisten local" in s for s in servidores), servidores
     assert "o que o Xvfb escreveu:" in r.stdout, r.stdout
     assert "Xvfb de mentira: o servidor saiu antes da hora" in r.stdout, r.stdout

@@ -401,12 +401,14 @@ fi
 
 _ANOTA_O_RC='"$@"; r=$?; printf %d "$r" > "$0"; exit "$r"'
 
+_SERVIDOR_DE_TELA='-nolisten tcp -nolisten local -screen 0 1280x1024x24'
+
 _prefixo_de_tela() {
   local lar="$1" n="$2" prefixo=""
   command -v dbus-run-session >/dev/null 2>&1 \
     && prefixo="bash -c '$_ANOTA_O_RC' $lar/dbus.rc dbus-run-session --"
   command -v xvfb-run >/dev/null 2>&1 \
-    && prefixo="${prefixo:+$prefixo }bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a -n $((100 + n)) -e $lar/xvfb.err"
+    && prefixo="${prefixo:+$prefixo }bash -c '$_ANOTA_O_RC' $lar/xvfb.rc xvfb-run -a -n $((100 + n)) -s \"$_SERVIDOR_DE_TELA\" -e $lar/xvfb.err"
   echo "$prefixo"
 }
 
