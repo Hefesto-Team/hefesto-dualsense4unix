@@ -6,7 +6,9 @@ Três medidas, lidas dos registros que o fecho e o rápido já deixam em ``$CASA
 * ``suite-pytest-s``: a soma do tempo de pytest das 24 partes (``fecho/suite/parte-NN.txt``) de UMA
   corrida: a marca de cada parte (a árvore, o número de arquivos e a partição) tem de bater, e o fecho
   que reaproveitou o recibo de uma parte não alimenta o piso;
-* ``rapido-mediana-s``: a mediana de parede das últimas corridas do rápido (``rapido-*.log``);
+* ``rapido-mediana-s``: a mediana de parede das últimas corridas do rápido (``rapido-*.log``) que
+  rodaram todos os portões com todas as vagas pedidas: a que lembrou portão mede o atalho, e a que
+  pegou menos vagas mede a carga dos outros;
 * ``completo-parede-s``: a parede do último ``portoes.sh`` completo SEM nenhum portão lembrado
   (``fecho/portoes-*.out``): a corrida que reaproveitou o recibo mede o atalho, não os portões.
 
@@ -59,10 +61,10 @@ _PROCESSO_PROPRIO = re.compile(r"^\s+\S+, em processo próprio: .* in ([\d.]+)s"
 _MARCA = re.compile(r"^\s*corrida árvore=(\S+) arquivos=(\d+) partição=(\S+)\s*$", re.M)
 _CABECALHO = re.compile(r"^suíte — (\d+) arquivos em (\d+) partes", re.M)
 REAPROVEITADAS = "reaproveitadas.txt"
-_PAREDE = re.compile(r"^tempo: (\d+) s de parede", re.M)
 _PAREDE_E_LEMBRADOS = re.compile(
     r"^tempo: (\d+) s de parede;.*?(?:; (\d+) lembrado\(s\) sem rodar)?\.?$", re.M
 )
+_VAGAS = re.compile(r"^vez-do-pytest: (\d+) de (\d+) vaga\(s\) pedida\(s\)", re.M)
 _CAMADAS = re.compile(r"^\s*camadas .*\bcompleto\b", re.M)
 _TRAILER = re.compile(r"^Tempo:[ \t]+(\S+)[ \t]+(\S.*?)[ \t]*$", re.M)
 
@@ -132,23 +134,55 @@ def _mais_novos(arquivos: list[Path]) -> list[Path]:
     return sorted(arquivos, key=lambda p: (p.stat().st_mtime, p.name), reverse=True)
 
 
+def _por_que_o_rapido_nao_conta(texto: str) -> tuple[int | None, str]:
+    """A parede do rápido que rodou todos os portões com todas as vagas, ou o motivo de ficar fora.
+
+    A linha sem a conta de lembrados, ou o log sem a linha das vagas, é de antes da conta e não prova
+    que a corrida rodou tudo com a máquina do usuário. O log sem a linha ``tempo:`` não é corrida medida.
+    """
+    achou = _PAREDE_E_LEMBRADOS.findall(texto)
+    if not achou:
+        return None, ""
+    parede, lembrados = achou[-1]
+    if lembrados != "0":
+        return None, f"{lembrados} lembrados" if lembrados else "sem a conta de lembrados"
+    vagas = _VAGAS.search(texto)
+    if vagas is None:
+        return None, "sem a linha das vagas"
+    if int(vagas[1]) < int(vagas[2]):
+        return None, f"{vagas[1]} de {vagas[2]} vagas"
+    return int(parede), ""
+
+
 def censo_do_rapido(casa: Path | None) -> Censo:
-    """A mediana de parede das últimas corridas do rápido: uma corrida lenta não vira piso."""
+    """A mediana de parede das últimas corridas do rápido: uma corrida lenta não vira piso.
+
+    Só conta a corrida que rodou os portões: a que lembrou portão (8 s de parede com 57 lembrados)
+    baixaria a mediana sem medir nada, e a que pegou menos vagas que pediu (os agentes ocupando o
+    semáforo) a subiria com a carga dos outros (A-MEDIANA-DO-RAPIDO-SO-CONTA-A-CORRIDA-QUE-RODOU-01).
+    """
     if casa is None:
         return _sem_casa("a casa não foi informada (`--casa` ou $CASA)")
     tempos: dict[str, int] = {}
+    fora: list[str] = []
     for log in _mais_novos(list(casa.glob("rapido-*.log"))):
-        achou = _PAREDE.findall(log.read_text(encoding="utf-8", errors="replace"))
-        if achou:
-            tempos[log.name] = int(achou[-1])
+        parede, motivo = _por_que_o_rapido_nao_conta(
+            log.read_text(encoding="utf-8", errors="replace"))
+        if parede is not None:
+            tempos[log.name] = parede
+        elif motivo:
+            fora.append(f"{log.name} ({motivo})")
         if len(tempos) == CORRIDAS_DO_RAPIDO:
             break
+    puladas = f"; {len(fora)} pulada(s), a mais nova {fora[0]}" if fora else ""
     if len(tempos) < MINIMO_DE_CORRIDAS:
         return Censo(numero=None, universo=max(len(tempos), 1),
-                     indisponivel=(f"só {len(tempos)} corrida(s) do rápido com tempo em {casa} "
-                                   f"(mínimo {MINIMO_DE_CORRIDAS})"))
+                     indisponivel=(f"só {len(tempos)} corrida(s) do rápido com todos os portões e "
+                                   f"todas as vagas em {casa} (mínimo {MINIMO_DE_CORRIDAS}){puladas}"))
     return Censo(numero=round(statistics.median(tempos.values())), universo=len(tempos),
-                 por_item=tempos, nota=f"mediana da parede das últimas {len(tempos)} corridas do rápido")
+                 por_item=tempos,
+                 nota=(f"mediana da parede das últimas {len(tempos)} corridas do rápido com todos "
+                       f"os portões e todas as vagas{puladas}"))
 
 
 def censo_do_completo(casa: Path | None) -> Censo:

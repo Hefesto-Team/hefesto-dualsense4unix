@@ -176,6 +176,22 @@ def _parte(n: int, segundos: float, marca: str = _MARCA, total: int = 72) -> str
             f"  parte-{n:02d} (3 arq): 10 passed in {segundos:.2f}s (0:01:40)\n")
 
 
+def _rapido(parede: int, lembrados: int | None = 0, vagas: tuple[int, int] | None = (3, 3)) -> str:
+    """Um `rapido-*.log` como o rápido da integração escreve: as vagas que pegou e a parede."""
+    linha_das_vagas = (f"vez-do-pytest: {vagas[0]} de {vagas[1]} vaga(s) pedida(s) às 22:50:38\n"
+                       if vagas else "")
+    conta = f"; {lembrados} lembrado(s) sem rodar" if lembrados is not None else ""
+    return f"{linha_das_vagas}tempo: {parede} s de parede; 90 s de portão somados{conta}.\n"
+
+
+def _rapidos(casa: Path, corridas: list[str], desde: int = 1_000_000) -> None:
+    """Os logs na ordem dada, do mais velho ao mais novo."""
+    for i, texto in enumerate(corridas):
+        log = casa / f"rapido-{desde + i}.log"
+        log.write_text(texto, encoding="utf-8")
+        os.utime(log, (desde + i, desde + i))
+
+
 def _escreve_casa(casa: Path, suite_s: float = 2400.0, rapido_s: int = 40, completo_s: int = 60,
                   com_rapido: bool = True) -> None:
     """Os registros do fecho, de mentira: 24 partes de uma corrida que somam `suite_s`, rápidos e um
@@ -188,8 +204,7 @@ def _escreve_casa(casa: Path, suite_s: float = 2400.0, rapido_s: int = 40, compl
     if com_rapido:
         for i in range(7):
             log = casa / f"rapido-{i:04d}.log"
-            log.write_text(f"tempo: {rapido_s} s de parede; 90 s de portão somados.\n",
-                           encoding="utf-8")
+            log.write_text(_rapido(rapido_s), encoding="utf-8")
             os.utime(log, (1_000_000 + i, 1_000_000 + i))
     (casa / "fecho" / "portoes-1.out").write_text(
         f"portões — árvore x\n         camadas rapido completo\ntempo: {completo_s} s de parede; "
@@ -308,11 +323,41 @@ def test_descer_dentro_da_folga_nao_regrava(mundo: tuple[Path, Path]) -> None:
 def test_a_mediana_ignora_uma_corrida_lenta(mundo: tuple[Path, Path]) -> None:
     raiz, casa = mundo
     lenta = casa / "rapido-0099.log"
-    lenta.write_text("tempo: 400 s de parede; 900 s de portão somados.\n", encoding="utf-8")
+    lenta.write_text(_rapido(400), encoding="utf-8")
     os.utime(lenta, (2_000_000, 2_000_000))
     censo = TEMPO.censo_do_rapido(casa)
     assert censo.numero == 40 and censo.universo == 8
     assert _roda(raiz, casa) == 0
+
+
+def test_a_mediana_pula_a_corrida_que_lembrou_portoes(tmp_path: Path) -> None:
+    """MORDIDA: sem o pulo, as cinco corridas de 8 s com 57 lembrados levam a mediana a 8."""
+    _rapidos(tmp_path, [_rapido(30)] * 5 + [_rapido(8, lembrados=57)] * 5)
+    censo = TEMPO.censo_do_rapido(tmp_path)
+    assert (censo.numero, censo.universo) == (30, 5), censo
+    assert "5 pulada(s)" in censo.nota and "57 lembrados" in censo.nota, censo.nota
+
+
+def test_a_mediana_pula_a_corrida_que_pegou_menos_vagas(tmp_path: Path) -> None:
+    """MORDIDA: sem o pulo, as cinco corridas de 40 s com 2 de 3 vagas levam a mediana a 40."""
+    _rapidos(tmp_path, [_rapido(26)] * 5 + [_rapido(40, vagas=(2, 3))] * 5)
+    censo = TEMPO.censo_do_rapido(tmp_path)
+    assert (censo.numero, censo.universo) == (26, 5), censo
+    assert "2 de 3 vagas" in censo.nota, censo.nota
+
+
+@pytest.mark.parametrize(("corrida", "motivo"), [
+    (_rapido(8, lembrados=None), "sem a conta de lembrados"),
+    (_rapido(8, vagas=None), "sem a linha das vagas"),
+    (_rapido(8, lembrados=6), "6 lembrados"),
+    (_rapido(8, vagas=(1, 3)), "1 de 3 vagas"),
+], ids=["sem-a-conta", "sem-as-vagas", "alguns-lembrados", "uma-vaga"])
+def test_a_corrida_que_nao_prova_que_rodou_tudo_fica_fora(
+        tmp_path: Path, corrida: str, motivo: str) -> None:
+    _rapidos(tmp_path, [_rapido(30)] * 4 + [corrida] * 5)
+    censo = TEMPO.censo_do_rapido(tmp_path)
+    assert censo.numero is None, censo
+    assert "só 4 corrida(s)" in censo.indisponivel and motivo in censo.indisponivel, censo
 
 
 def test_medida_sem_dado_avisa_no_fecho_e_reprova_no_modo_simples(
