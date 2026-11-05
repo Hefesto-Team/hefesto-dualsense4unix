@@ -256,17 +256,17 @@
       "universo": 419
     },
     "tamanho": {
-      "data": "2026-11-04",
+      "data": "2026-11-05",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204161,
+      "piso": 1204165,
       "por_item": {
         "docs": 106400,
-        "scripts": 111661,
+        "scripts": 111665,
         "src": 303955,
         "tests": 682145
       },
-      "razao": "04/11/2026, lentos-e-involucro: a sonda do rc por camada do portão, o display próprio por portão e as correções do conferente (588c40138..517867252, sem o 3781e6d9d); ferramental da suíte e do portão sem decisão",
+      "razao": "tamanho: +4 linhas (1204161 -> 1204165), pagas por Origem: D-2210-O-PAD-SE-RECONHECE-PELA-POSSE; registrado no fecho, topo a6a411f6f837",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1755,6 +1755,12 @@
           "de": 1203940,
           "para": 1204161,
           "razao": "04/11/2026, lentos-e-involucro: a sonda do rc por camada do portão, o display próprio por portão e as correções do conferente (588c40138..517867252, sem o 3781e6d9d); ferramental da suíte e do portão sem decisão"
+        },
+        {
+          "data": "2026-11-05",
+          "de": 1204161,
+          "para": 1204165,
+          "razao": "tamanho: +4 linhas (1204161 -> 1204165), pagas por Origem: D-2210-O-PAD-SE-RECONHECE-PELA-POSSE; registrado no fecho, topo a6a411f6f837"
         }
       ],
       "unidade": "linhas",
