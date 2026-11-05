@@ -75,6 +75,7 @@ alcançados — nenhum é código morto.
 from __future__ import annotations
 
 import ast
+import functools
 import asyncio
 import inspect
 import re
@@ -187,13 +188,20 @@ _A_MAO_COM_RAZAO: dict[tuple[str, str], Razao] = {
 }
 
 
-def _construcoes() -> list[Construcao]:
-    """Toda chamada a ``ProfileManager(...)`` em ``src/``, derivada por AST."""
+@functools.cache
+def _construcoes() -> tuple[Construcao, ...]:
+    """Toda chamada a ``ProfileManager(...)`` em ``src/``, derivada por AST.
+
+    Só o arquivo que traz o nome no texto paga o parse, e a árvore se lê uma vez por processo.
+    """
     achados: list[Construcao] = []
     for arquivo in sorted(_SRC.rglob("*.py")):
         if "__pycache__" in arquivo.parts:
             continue
-        arvore = ast.parse(arquivo.read_text(encoding="utf-8"), filename=str(arquivo))
+        texto = arquivo.read_text(encoding="utf-8")
+        if "ProfileManager" not in texto:
+            continue
+        arvore = ast.parse(texto, filename=str(arquivo))
         partes = arquivo.relative_to(_SRC).with_suffix("").parts
         if partes[-1] == "__init__":
             partes = partes[:-1]
@@ -225,7 +233,7 @@ def _construcoes() -> list[Construcao]:
                     appliers=frozenset(kwargs & _NOMES_DE_APPLIER),
                 )
             )
-    return achados
+    return tuple(achados)
 
 
 def test_a_lista_de_appliers_bate_com_o_dataclass() -> None:
