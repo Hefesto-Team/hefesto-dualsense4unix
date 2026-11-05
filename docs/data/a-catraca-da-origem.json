@@ -259,14 +259,14 @@
       "data": "2026-11-05",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204589,
+      "piso": 1204608,
       "por_item": {
         "docs": 106400,
         "scripts": 111699,
         "src": 303976,
-        "tests": 682514
+        "tests": 682533
       },
-      "razao": "tamanho: +79 linhas (1204510 -> 1204589), pagas por Origem: D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC, D-1610-O-TEMPO-DA-CASA-SO-DESCE; registrado no fecho, topo 79aab771a432",
+      "razao": "05/11/2026, testes-e-medida: +19 linhas de teste do conferente (9edb5370b), a espera curta no laço deixa «esperou» na ordem do P1; ferramental da suíte sem decisão",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1785,6 +1785,12 @@
           "de": 1204510,
           "para": 1204589,
           "razao": "tamanho: +79 linhas (1204510 -> 1204589), pagas por Origem: D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC, D-1610-O-TEMPO-DA-CASA-SO-DESCE; registrado no fecho, topo 79aab771a432"
+        },
+        {
+          "data": "2026-11-05",
+          "de": 1204589,
+          "para": 1204608,
+          "razao": "05/11/2026, testes-e-medida: +19 linhas de teste do conferente (9edb5370b), a espera curta no laço deixa «esperou» na ordem do P1; ferramental da suíte sem decisão"
         }
       ],
       "unidade": "linhas",
