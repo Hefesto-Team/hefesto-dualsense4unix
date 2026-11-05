@@ -4,7 +4,8 @@ Cada quadro que a fonte entrega (o portal de captura do sistema) vira uma grade 
 cores médias, e da grade e da anterior saem os cinco sinais de ``jogo.tela``, de 0 a 1.
 Nenhum pixel sai daqui: uma região declarada pela receita (a barra de vida) publica só a fração
 da cor declarada. Sem assinante a fonte não abre; sem fonte, ou com a fonte caída, o tópico publica
-os cinco como ``None`` (ausente), nunca zero, e tenta de novo sozinho.
+os cinco como ``None`` (ausente), nunca zero, e tenta de novo sozinho; a escolha de tela que a
+pessoa cancela só se pede de novo com assinante novo.
 """
 from __future__ import annotations
 
@@ -64,6 +65,10 @@ class TelaRecusadaError(Exception):
     def __init__(self, frase: str) -> None:
         super().__init__(frase)
         self.frase = frase
+
+
+class EscolhaCanceladaError(RuntimeError):
+    """A pessoa cancelou a janela de escolha da tela (o código 1 do ``Response``)."""
 
 
 @dataclass(frozen=True)
@@ -340,6 +345,8 @@ class FonteDoPortal:
                 timeout=PRAZO_DO_DBUS_S), metodo)
             sinal = self._conexao.recv_until_filtered(fila, timeout=PRAZO_DA_ESCOLHA_S)
         codigo, resultados = sinal.body
+        if codigo == 1:
+            raise EscolhaCanceladaError(f"a pessoa cancelou {metodo}")
         if codigo != 0:
             raise RuntimeError(f"o portal respondeu {codigo} a {metodo}")
         return {nome: valor for nome, (_tipo, valor) in resultados.items()}
@@ -467,7 +474,8 @@ def fonte_do_sistema() -> FonteDaTela:
 
 class Captura:
     """Abre a fonte só com assinante e publica um quadro por passo; a fonte que falta ou cai
-    vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``."""
+    vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``. A escolha
+    cancelada não volta sozinha: só com mais assinantes do que havia, ou depois de todos saírem."""
 
     def __init__(self, fonte: FonteDaTela, tela: TelaDoJogo, *,
                  publicar: Callable[[dict[str, Any]], None],
@@ -482,6 +490,7 @@ class Captura:
         self.aberta = False
         self._proxima = 0.0
         self._ausente_dito = False
+        self._recusada_com: int | None = None
         self._parada = threading.Event()
 
     def parar(self) -> None:
@@ -500,18 +509,29 @@ class Captura:
             self._publicar(self.tela.ausente())
 
     def passo(self) -> None:
-        if self._parada.is_set() or self._assinantes() <= 0:
+        assinantes = self._assinantes()
+        if self._parada.is_set() or assinantes <= 0:
             if self.aberta:
                 self.fonte.fechar()
                 self.aberta = False
             self._ausente_dito = False
+            self._recusada_com = None
             return
         if not self.aberta:
+            if self._recusada_com is not None:
+                if assinantes <= self._recusada_com:
+                    self._recusada_com = assinantes
+                    return
+                self._recusada_com = None
             if self._relogio() < self._proxima:
                 return
             motivo = "a fonte não abriu"
             try:
                 self.aberta = self.fonte.abrir()
+            except EscolhaCanceladaError as erro:
+                self.aberta = False
+                self._recusada_com = assinantes
+                motivo = str(erro)
             except (OSError, RuntimeError) as erro:
                 self.aberta = False
                 motivo = str(erro) or motivo
@@ -538,6 +558,7 @@ __all__ = [
     "SINAIS",
     "TOPICO_DA_TELA",
     "Captura",
+    "EscolhaCanceladaError",
     "FonteAusente",
     "FonteDaTela",
     "FonteDoPortal",
