@@ -530,7 +530,7 @@ class Captura:
                 self.aberta = self.fonte.abrir()
             except EscolhaCanceladaError as erro:
                 self.aberta = False
-                self._recusada_com = assinantes
+                self._recusada_com = max(assinantes, self._assinantes())
                 motivo = str(erro)
             except (OSError, RuntimeError) as erro:
                 self.aberta = False

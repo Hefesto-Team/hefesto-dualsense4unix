@@ -25,6 +25,7 @@ from tests.unit.test_o_portal_da_tela_responde_ao_pedido_da_captura import (  # 
 
 _CRIA = f"{tj._SCREENCAST}.CreateSession"
 _ESCOLHE = f"{tj._SCREENCAST}.SelectSources"
+_COMECA = f"{tj._SCREENCAST}.Start"
 _PASSO_S = 1.0 / tj.HZ_DA_TELA
 
 _PRECISA_DO_PORTAL = pytest.mark.skipif(
@@ -33,15 +34,17 @@ _PRECISA_DO_PORTAL = pytest.mark.skipif(
 
 
 class PortalQueResponde:
-    """O ``CreateSession`` abre a sessão; o ``SelectSources`` responde com o código pedido, como a
+    """O ``CreateSession`` abre a sessão; o método ``em`` responde com o código pedido, como a
     janela de escolha do portal: 1 quando a pessoa cancela, 2 quando o pedido acaba de outro
-    jeito."""
+    jeito. ``ao_responder`` roda antes da resposta, com a janela ainda aberta."""
 
-    def __init__(self, endereco: str, codigo: int) -> None:
+    def __init__(self, endereco: str, codigo: int, em: str = "SelectSources") -> None:
         from jeepney.bus_messages import message_bus
         from jeepney.io.blocking import open_dbus_connection
 
         self.codigo = codigo
+        self.em = em
+        self.ao_responder: Any = None
         self.pedidos: list[str] = []
         self._parar = threading.Event()
         self._conexao = open_dbus_connection(bus=endereco)
@@ -71,13 +74,16 @@ class PortalQueResponde:
         interface = campos.get(HeaderFields.interface, "")
         metodo = campos.get(HeaderFields.member, "")
         self.pedidos.append(f"{interface}.{metodo}")
-        if interface != tj._SCREENCAST or metodo not in ("CreateSession", "SelectSources"):
+        if interface != tj._SCREENCAST or metodo not in ("CreateSession", "SelectSources",
+                                                         "Start"):
             self._conexao.send(new_error(mensagem, _SEM_INTERFACE, "s", (metodo,)))
             return
         opcoes = mensagem.body[-1]
         remetente = campos[HeaderFields.sender]
         caminho = tj._caminho_do_pedido(remetente, opcoes["handle_token"][1])
-        codigo, resultados = self.codigo, {}
+        codigo, resultados = (self.codigo if metodo == self.em else 0), {}
+        if metodo == self.em and self.ao_responder is not None:
+            self.ao_responder()
         if metodo == "CreateSession":
             token = opcoes["session_handle_token"][1]
             codigo = 0
@@ -98,6 +104,18 @@ class PortalQueResponde:
 def cancela(barramento: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[PortalQueResponde]:  # noqa: F811
     monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", barramento)
     portal = PortalQueResponde(barramento, codigo=1)
+    try:
+        yield portal
+    finally:
+        portal.fechar()
+
+
+@pytest.fixture
+def cancela_no_comeco(
+    barramento: str, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> Iterator[PortalQueResponde]:
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", barramento)
+    portal = PortalQueResponde(barramento, codigo=1, em="Start")
     try:
         yield portal
     finally:
@@ -147,6 +165,32 @@ def test_o_cancelamento_nao_reabre_a_escolha_em_dez_segundos(
     ditos = [r for r in diario if r["event"] == "tela_do_jogo_ausente"]
     assert len(ditos) == 1, diario
     assert not (tmp_path / "ficha").exists()
+
+
+@_PRECISA_DO_PORTAL
+def test_o_cancelamento_no_start_tambem_nao_reabre(
+    cancela_no_comeco: PortalQueResponde, tmp_path: Path
+) -> None:
+    cena = Cena(tj.FonteDoPortal(tmp_path / "ficha"))
+    cena.correr(10.0)
+    assert cancela_no_comeco.pedidos.count(_CRIA) == 1, cancela_no_comeco.pedidos
+    assert cancela_no_comeco.pedidos.count(_COMECA) == 1, cancela_no_comeco.pedidos
+    assert len(cena.publicados) == 1
+    assert not (tmp_path / "ficha").exists()
+
+
+@_PRECISA_DO_PORTAL
+def test_quem_chega_com_a_janela_aberta_ouve_o_mesmo_cancelamento(
+    cancela: PortalQueResponde, tmp_path: Path
+) -> None:
+    cena = Cena(tj.FonteDoPortal(tmp_path / "ficha"))
+
+    def chega_outro() -> None:
+        cena.assinantes[0] = 2
+
+    cancela.ao_responder = chega_outro
+    cena.correr(10.0)
+    assert cancela.pedidos.count(_ESCOLHE) == 1, cancela.pedidos
 
 
 @_PRECISA_DO_PORTAL
