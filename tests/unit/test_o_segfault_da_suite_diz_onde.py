@@ -170,7 +170,7 @@ def _importados(nos: list[ast.stmt] | list[ast.AST], modulo: str = "") -> set[st
     return nomes
 
 
-_TRECHO_DE_IMPORT = re.compile(r"\b(?:from|import)\b[^\n]*(?:\([^)]*\))?")
+_TRECHO_DE_IMPORT = re.compile(r"\b(?:from|import)\b(?:\\\n|[^\n(])*(?:\([^)]*\)|[^\n]*)")
 
 
 def _carregam_o_webkit() -> set[str]:
@@ -213,6 +213,21 @@ def _carregam_o_webkit() -> set[str]:
             achados.add(teste.relative_to(RAIZ).as_posix())
     return achados
 
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        "from hefesto_dualsense4unix.interface import hefesto_vivo\n",
+        "from hefesto_dualsense4unix.interface import (\n    outro,\n    hefesto_vivo,\n)\n",
+        "from hefesto_dualsense4unix.interface import outro, \\\n    hefesto_vivo\n",
+    ],
+    ids=["numa-linha", "no-parentese", "na-continuacao"],
+)
+def test_o_pre_filtro_le_a_folha_em_toda_forma_de_import(texto: str) -> None:
+    """MORDIDA: o pré-filtro que para no fim da linha do `(` não vê a folha da linha de baixo,
+    e o arquivo que a importa assim nunca chega ao AST."""
+    assert "hefesto_vivo" in " ".join(_TRECHO_DE_IMPORT.findall(texto))
 
 def test_todo_arquivo_que_carrega_o_webkit_roda_sozinho(tmp_path: Path) -> None:
     """A árvore de verdade: o runner diz quem roda em processo próprio, e o AST confere."""
