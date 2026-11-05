@@ -288,6 +288,17 @@ def _caminho_do_pedido(nome_unico: str, ficha: str) -> str:
     return f"{_CAMINHO_DO_PORTAL}/request/{nome_unico.lstrip(':').replace('.', '_')}/{ficha}"
 
 
+def _aceita(resposta: Any, pedido: str) -> Any:
+    """A resposta do barramento, ou :class:`RuntimeError` diante de um erro: o portal sem a
+    interface ``ScreenCast`` recusa na hora, e nenhum ``Response`` sai depois de uma recusa."""
+    from jeepney import MessageType
+
+    if resposta.header.message_type == MessageType.error:
+        motivo = resposta.body[0] if resposta.body else ""
+        raise RuntimeError(f"o portal recusou {pedido}: {motivo}")
+    return resposta
+
+
 class FonteDoPortal:
     """O portal ``ScreenCast`` pelo PipeWire: a primeira abertura pede a escolha da tela ao
     sistema, e a ficha de volta guardada em ``guarda`` reabre sem pedir de novo. O quadro chega
@@ -315,13 +326,14 @@ class FonteDoPortal:
         ficha = self._ficha()
         regra = MatchRule(type="signal", interface=_PEDIDO, member="Response",
                           path=_caminho_do_pedido(self._conexao.unique_name, ficha))
-        self._conexao.send_and_get_reply(message_bus.AddMatch(regra), timeout=PRAZO_DO_DBUS_S)
+        _aceita(self._conexao.send_and_get_reply(message_bus.AddMatch(regra),
+                                                 timeout=PRAZO_DO_DBUS_S), "AddMatch")
         endereco = DBusAddress(_CAMINHO_DO_PORTAL, bus_name=_PORTAL, interface=_SCREENCAST)
         opcoes = {**opcoes, "handle_token": ("s", ficha)}
         with self._conexao.filter(regra) as fila:
-            self._conexao.send_and_get_reply(
+            _aceita(self._conexao.send_and_get_reply(
                 new_method_call(endereco, metodo, assinatura, (*corpo, opcoes)),
-                timeout=PRAZO_DO_DBUS_S)
+                timeout=PRAZO_DO_DBUS_S), metodo)
             sinal = self._conexao.recv_until_filtered(fila, timeout=PRAZO_DA_ESCOLHA_S)
         codigo, resultados = sinal.body
         if codigo != 0:
@@ -371,9 +383,9 @@ class FonteDoPortal:
             if not fluxos:
                 raise RuntimeError("o portal não entregou fluxo")
             endereco = DBusAddress(_CAMINHO_DO_PORTAL, bus_name=_PORTAL, interface=_SCREENCAST)
-            resposta = self._conexao.send_and_get_reply(
+            resposta = _aceita(self._conexao.send_and_get_reply(
                 new_method_call(endereco, "OpenPipeWireRemote", "oa{sv}", (self._sessao, {})),
-                timeout=PRAZO_DO_DBUS_S)
+                timeout=PRAZO_DO_DBUS_S), "OpenPipeWireRemote")
             descritor = resposta.body[0].to_raw_fd()
             self._tubo = Gst.parse_launch(
                 f"pipewiresrc fd={descritor} path={int(fluxos[0][0])} do-timestamp=true"
