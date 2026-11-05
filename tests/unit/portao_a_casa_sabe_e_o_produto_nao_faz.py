@@ -1388,7 +1388,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "integrations/cor_do_plastico.py::ler_pelo_cabo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
-        "ensaio, não promessa ao produto: `scripts/mesa_de_medicao.py:727` (`ler_pelo_cabo`) e "
+        "ensaio, não promessa ao produto: `scripts/mesa_de_medicao.py:731` (`ler_pelo_cabo`) e "
         "`scripts/ensaios/a_folha_dos_ensaios.py:390` (`ler_pelo_cabo`) leem a cor do plástico "
         "pelo cabo com a função. O produto lê pela porta do broker "
         "(`tests/unit/test_a_cor_do_plastico_entra_pela_porta_do_broker.py`), "

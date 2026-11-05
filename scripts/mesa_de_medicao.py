@@ -644,8 +644,12 @@ def pelo_sysfs() -> list[dict[str, Any]]:
     fica vazia e quem a preenche é o daemon, quando está vivo, ou quem usa, uma vez
     por controle, pelo seletor — e a escolha do usuário fica guardada pelo endereço.
     """
+    from hefesto_dualsense4unix.integrations.pad_usb import e_hidraw_de_pad_nosso
+
     achados = []
     for no in sorted(pathlib.Path("/sys/class/hidraw").glob("hidraw*")):
+        if e_hidraw_de_pad_nosso(no.name):
+            continue
         dev = no / "device"
         campos = dict(
             linha.split("=", 1)

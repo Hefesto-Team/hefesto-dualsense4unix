@@ -601,17 +601,17 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
         alvos = {f"HID_ID=0003:{vid}:{pid}", f"HID_ID=0005:{vid}:{pid}"}
         return any(linha.strip() in alvos for linha in texto.splitlines())
 
+    from hefesto_dualsense4unix.integrations.pad_usb import e_hidraw_de_pad_nosso
+
     todos = sorted(pathlib.Path("/sys/class/hidraw").glob("hidraw*"))
-    nos = [n for n in todos if _e_dualsense(n)]
+    nos = [n for n in todos if _e_dualsense(n) and not e_hidraw_de_pad_nosso(n.name)]
     if not nos:
         pytest.skip("nenhum DualSense nesta máquina agora")
     vistos = med.pelo_sysfs()
     assert len(vistos) == len(nos), (
         f"o kernel mostra {len(nos)} DualSense e a leitura devolveu "
         f"{len(vistos)} — a segunda fonte não está lendo")
-    emulados = [n for n in todos
-                if "Hefesto" in (n / "device" / "uevent").read_text(
-                    encoding="utf-8", errors="replace")]
+    emulados = [n for n in todos if _e_dualsense(n) and e_hidraw_de_pad_nosso(n.name)]
     enderecos = {v["uniq_cru"] for v in vistos}
     for e in emulados:
         cru = (e / "device" / "uevent").read_text(
