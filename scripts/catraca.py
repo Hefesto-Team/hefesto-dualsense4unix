@@ -10,6 +10,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 PENDENTE = "PENDENTE"
 
@@ -101,11 +102,12 @@ class Catraca:
         if len(set(nomes)) != len(nomes):
             raise CatracaTorta(f"duas medidas com o mesmo nome: {nomes}")
 
-    def _ler_caderno(self) -> dict:
+    def _ler_caderno(self) -> dict[str, Any]:
         """Lê o caderno do DISCO, toda vez. Nunca de um cache em memória."""
         if not self.caderno.exists():
             return {}
-        return json.loads(self.caderno.read_text(encoding="utf-8"))
+        caderno: dict[str, Any] = json.loads(self.caderno.read_text(encoding="utf-8"))
+        return caderno
 
     def ler_piso(self, nome: str) -> Piso:
         """O piso gravado, ou um :class:`Piso` com ``existe=False``."""
@@ -363,7 +365,7 @@ class Catraca:
         self._gravar(caderno)
         return f"{piso.numero if piso.existe else '(sem piso)'} -> {censo.numero}"
 
-    def _gravar(self, caderno: dict) -> None:
+    def _gravar(self, caderno: dict[str, Any]) -> None:
         caderno.setdefault(
             "_LEIA",
             "O PISO DAS CATRACAS. Não se edita à mão: "
