@@ -1,8 +1,8 @@
 """O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01 — o desfecho de verdade.
 
 O ensaio é o do P1 que nasce pelo fio (o `Daemon` real, o `CoopManager` real, o fio de
-nascimento e o broker de mentira de 0,8 s), com o P1 dono de um endereço forjado, para que
-a máscara dele se escolha. Três pontas:
+nascimento e o broker de mentira que o tique solta), com o P1 dono de um endereço forjado,
+para que a máscara dele se escolha. Três pontas, provadas pela ordem dos eventos:
 
 1. o `gamepad.mask.set` (e o PS + L3, pelo mesmo escritor) responde depois do pad, e o
    perfil só recebe o modo que ficou de pé;
@@ -21,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
-from collections.abc import Callable, Coroutine, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -36,13 +36,15 @@ from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.utils import xdg_paths
 from tests.unit.test_o_p1_que_nasce_fora_do_tique_nasce_no_fio_de_nascimento import (
-    _BROKER_S,
+    _GUARDA_S,
+    _PEDIDO,
     _TIQUE_S,
     _ate,
     _Ipc,
+    _no_laco,
     _Pad,
+    _respondeu_depois_do_pad,
     _tique,
-    _tique_sem_dormir,
     mesa,
 )
 
@@ -98,37 +100,10 @@ def _o_p1_novo(b: SimpleNamespace) -> Any:
     return atual if atual is not None and atual is novo else None
 
 
-def _no_laco(
-    b: SimpleNamespace, pedido: Callable[[], Coroutine[Any, Any, Any]],
-) -> tuple[Any, float]:
-    """O pedido no mesmo laço do asyncio que roda o tique, como no daemon."""
-
-    async def _correr() -> tuple[Any, float]:
-        parar = asyncio.Event()
-
-        async def _laco() -> None:
-            while not parar.is_set():
-                _tique_sem_dormir(b.m)
-                await asyncio.sleep(_TIQUE_S)
-
-        laco = asyncio.create_task(_laco())
-        await asyncio.sleep(_TIQUE_S)
-        inicio = time.monotonic()
-        try:
-            resposta = await pedido()
-        finally:
-            gasto = time.monotonic() - inicio
-            parar.set()
-            await laco
-        return resposta, gasto
-
-    return asyncio.run(_correr())
-
-
-def _mascara_pela_ipc(b: SimpleNamespace, flavor: str) -> tuple[Any, float]:
+def _mascara_pela_ipc(b: SimpleNamespace, flavor: str) -> Any:
     ipc = _Ipc(b.m.daemon)
     cast(Any, ipc).store = None
-    return _no_laco(b, lambda: ipc._handle_gamepad_mask_set({"flavor": flavor}))
+    return _no_laco(b.m, lambda: ipc._handle_gamepad_mask_set({"flavor": flavor}))
 
 
 @pytest.mark.parametrize("pedida", _PEDIDAS)
@@ -137,8 +112,8 @@ def test_o_modo_pela_ipc_diz_falhou_e_nao_grava(
 ) -> None:
     """A fábrica do P1 demora e falha: a resposta é «falhou», e o perfil não muda."""
     ensaio.m.estado.falhar = True
-    resposta, gasto = _mascara_pela_ipc(ensaio, pedida)
-    assert gasto >= _BROKER_S, f"o modo respondeu antes do desfecho ({gasto * 1000:.0f} ms)"
+    resposta = _mascara_pela_ipc(ensaio, pedida)
+    _respondeu_depois_do_pad(ensaio.m)
     assert resposta["status"] == "failed" and resposta["enabled"] is False, resposta
     assert resposta["motivo"] == "aparelho_nao_vestiu", resposta
     assert ensaio.gravadas == [], "o perfil guardou o modo que não vestiu"
@@ -148,10 +123,10 @@ def test_o_modo_pela_ipc_diz_falhou_e_nao_grava(
 def test_o_modo_pela_ipc_responde_depois_do_pad_vestido(
     ensaio: SimpleNamespace, pedida: str,
 ) -> None:
-    resposta, gasto = _mascara_pela_ipc(ensaio, pedida)
+    resposta = _mascara_pela_ipc(ensaio, pedida)
     novo = _o_p1_novo(ensaio)
     assert novo is not None and novo.flavor == pedida, "o P1 não nasceu no modo pedido"
-    assert gasto >= _BROKER_S, f"o modo respondeu antes do pad ({gasto * 1000:.0f} ms)"
+    _respondeu_depois_do_pad(ensaio.m)
     assert resposta["status"] == "ok" and resposta["flavor"] == pedida, resposta
     assert ensaio.gravadas == [(pedida, novo)], (
         "o perfil guarda o modo uma vez, depois de o pad existir", ensaio.gravadas)
@@ -161,7 +136,8 @@ def test_o_modo_pela_ipc_responde_depois_do_pad_vestido(
 def test_o_ps_l3_grava_quando_o_p1_existe(ensaio: SimpleNamespace, falha: bool) -> None:
     """O gesto espera o desfecho no laço, e o perfil só recebe o modo que ficou de pé."""
     ensaio.m.estado.falhar = falha
-    _no_laco(ensaio, hotkey.build_next_mask_callback(ensaio.m.daemon))
+    _no_laco(ensaio.m, hotkey.build_next_mask_callback(ensaio.m.daemon))
+    _respondeu_depois_do_pad(ensaio.m)
     _tique(ensaio.m)
     if falha:
         assert ensaio.gravadas == [], "o modo que não vestiu foi ao perfil"
@@ -203,14 +179,18 @@ def test_dois_pedidos_iguais_pela_ipc_esperam_o_mesmo_pad(ensaio: SimpleNamespac
 
     async def _dois() -> list[Any]:
         primeiro = asyncio.ensure_future(ipc._handle_gamepad_emulation_set(dict(params)))
-        await asyncio.sleep(2 * _TIQUE_S)
+        limite = time.monotonic() + _GUARDA_S
+        while _PEDIDO not in ensaio.m.estado.ordem:
+            assert time.monotonic() < limite, "o primeiro pedido não chegou ao broker"
+            await asyncio.sleep(_TIQUE_S)
+        assert not ensaio.m.estado.soltar.is_set(), "o segundo pedido chegou fora do voo"
         segundo = asyncio.ensure_future(ipc._handle_gamepad_emulation_set(dict(params)))
         return list(await asyncio.gather(primeiro, segundo))
 
-    respostas, gasto = _no_laco(ensaio, _dois)
+    respostas = _no_laco(ensaio.m, _dois)
     novo = _o_p1_novo(ensaio)
     assert novo is not None and len(ensaio.m.estado.pedidos) == 1
-    assert gasto >= _BROKER_S, "uma das respostas veio antes do pad"
+    _respondeu_depois_do_pad(ensaio.m)
     assert all(r["status"] == "ok" and r["enabled"] is True for r in respostas), respostas
     assert ensaio.m.gravados == [("gamepad", novo)], ensaio.m.gravados
     assert ensaio.tabelas == [novo], ensaio.tabelas

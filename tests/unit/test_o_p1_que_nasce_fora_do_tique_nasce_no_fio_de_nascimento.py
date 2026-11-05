@@ -1,15 +1,18 @@
 """O-P1-QUE-NASCE-FORA-DO-TIQUE-NASCE-NO-FIO-DE-NASCIMENTO-01 — todo P1 nasce no fio.
 
 O `Daemon` REAL, com o `CoopManager` real, o fio de nascimento do daemon
-(`virtual_pad.FioDeNascimento`) e o broker de mentira que leva 0,8 s para responder ao
-pedido do P1 (o teto do cliente, `hidraw_broker_client._TIMEOUT_S`). O laço do tique é
-emulado a 60 Hz na thread do teste: a cada volta, o `forward_all` dos secundários, o
-`fechar_o_p1_que_nasceu` que o `_poll_loop` roda depois dele, e a entrada do White.
+(`virtual_pad.FioDeNascimento`) e o broker de mentira, que segura o pedido do P1 até o
+tique o soltar. O laço do tique é emulado a 60 Hz na thread do teste: a cada volta, o
+`forward_all` dos secundários, o `fechar_o_p1_que_nasceu` que o `_poll_loop` roda depois
+dele, e a entrada do White. O tique solta o broker depois de o White jogar três voltas com
+o pedido em voo.
 
 Os cinco caminhos que sobem o P1 fora do `reerguer_o_p1` (o passo `coop_gamepad`, o
-PS + R3, a troca de roupa, a saída do Modo Nativo e a IPC) voltam na hora, o White
-recebe a entrada a cada volta enquanto o P1 nasce, e o P1 nasce quando a resposta chega.
-A IPC responde o desfecho de verdade, depois de o pad existir.
+PS + R3, a troca de roupa, a saída do Modo Nativo e a IPC) voltam antes de o broker ser
+solto, o White joga enquanto o P1 nasce, e o P1 nasce quando a resposta chega. A IPC
+responde o desfecho de verdade, depois de o broker ser solto. Tudo se prova pela ORDEM dos
+eventos, nunca pela duração: quem espera o P1 no laço fica preso até a guarda do broker, e
+a guarda deixa a marca «prazo» na ordem.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -19,8 +22,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from collections.abc import Callable, Iterator
-from itertools import pairwise
+from collections.abc import Callable, Coroutine, Iterator
 from types import SimpleNamespace
 from typing import Any
 
@@ -42,10 +44,16 @@ from hefesto_dualsense4unix.testing import FakeController
 _P1 = "aabbcc000001"
 _WHITE = "aabbcc000002"
 _CALIB = bytes([0x05]) + bytes([0xAB]) * 40
-_BROKER_S = 0.8
 _TIQUE_S = 1.0 / 60.0
-_NA_HORA_S = 0.25
-_BURACO_S = 2 * _TIQUE_S + 0.05
+_TIQUES_DO_WHITE = 3
+_GUARDA_DO_BROKER_S = 5.0
+_GUARDA_S = 2 * _GUARDA_DO_BROKER_S
+_PEDIDO = "pedido"
+_SOLTO = "solto"
+_PRAZO = "prazo"
+_TIQUE_DO_WHITE = "tique do White"
+_GESTO_VOLTOU = "gesto voltou"
+_RESPONDEU = "respondeu"
 
 
 class _Pad:
@@ -116,14 +124,20 @@ def mesa(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNames
     monkeypatch.setattr(gp, "_ha_jogo_em_foco", lambda _d: False)
     monkeypatch.setattr(gp, "make_primary_rumble_sink", lambda _d: None)
     monkeypatch.setattr(gp, "make_primary_replica_sinks", lambda _d: {})
-    estado = SimpleNamespace(falhar=False, pedidos=[], pads={})
+    estado = SimpleNamespace(falhar=False, pedidos=[], pads={}, ordem=[],
+                             soltar=threading.Event())
 
     def _fabrica(flavor: Any, **kwargs: Any) -> _Pad | None:
-        """A fábrica do pad: o do P1 espera o broker de mentira (0,8 s); o do White, não."""
+        """A fábrica do pad: o do P1 espera o tique soltar o broker de mentira; o do White, não.
+
+        Ninguém soltou até a guarda: o broker responde pelo relógio dele e deixa «prazo».
+        """
         identidade = kwargs.get("identity")
         if identidade is None:
             estado.pedidos.append(threading.current_thread().name)
-            time.sleep(_BROKER_S)
+            estado.ordem.append(_PEDIDO)
+            if not estado.soltar.wait(_GUARDA_DO_BROKER_S):
+                estado.ordem.append(_PRAZO)
             if estado.falhar:
                 return None
         pad = _Pad(identidade, flavor, kwargs.get("caminho"), kwargs.get("roupa"))
@@ -147,6 +161,7 @@ def mesa(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNames
                         estado=estado)
     _ate(m, lambda: white.vpad is not None)
     yield m
+    estado.soltar.set()
     daemon._fio_de_nascimento.parar()
 
 
@@ -157,23 +172,69 @@ def _fechar(daemon: Any) -> None:
         fechar(daemon)
 
 
-def _tique(m: SimpleNamespace) -> None:
-    """Uma volta do laço, na ordem do `_poll_loop`: os secundários e o que nasceu."""
-    inicio = time.monotonic()
+def _soltar(m: SimpleNamespace) -> None:
+    m.estado.ordem.append(_SOLTO)
+    m.estado.soltar.set()
+
+
+def _tique_sem_dormir(m: SimpleNamespace) -> None:
+    """Uma volta do laço, na ordem do `_poll_loop`: os secundários, o que nasceu e o White.
+
+    A volta em que o White jogou entra na ordem; com o pedido do P1 em voo há
+    `_TIQUES_DO_WHITE` voltas, o tique solta o broker.
+    """
+    entradas = len(m.white.vpad.entradas) if m.white.vpad is not None else 0
     m.manager.forward_all()
     _fechar(m.daemon)
     if m.white.vpad is not None:
         m.white.vpad.forward_buttons(frozenset())
+        if len(m.white.vpad.entradas) > entradas:
+            m.estado.ordem.append(_TIQUE_DO_WHITE)
+    ordem = m.estado.ordem
+    if (not m.estado.soltar.is_set() and _PEDIDO in ordem
+            and ordem[ordem.index(_PEDIDO):].count(_TIQUE_DO_WHITE) >= _TIQUES_DO_WHITE):
+        _soltar(m)
+
+
+def _tique(m: SimpleNamespace) -> None:
+    inicio = time.monotonic()
+    _tique_sem_dormir(m)
     sobra = _TIQUE_S - (time.monotonic() - inicio)
     if sobra > 0:
         time.sleep(sobra)
 
 
-def _ate(m: SimpleNamespace, pronto: Callable[[], bool], prazo_s: float = 4 * _BROKER_S) -> None:
+def _ate(m: SimpleNamespace, pronto: Callable[[], bool], prazo_s: float = _GUARDA_S) -> None:
+    """Tiques até `pronto`; o prazo é só a guarda contra o teste que nunca termina."""
     limite = time.monotonic() + prazo_s
     while not pronto():
         assert time.monotonic() < limite, "o pad não nasceu no prazo"
         _tique(m)
+
+
+def _antes(ordem: list[str], primeiro: str, depois: str) -> bool:
+    return (primeiro in ordem and depois in ordem
+            and ordem.index(primeiro) < ordem.index(depois))
+
+
+def _ninguem_esperou_o_p1(m: SimpleNamespace, marco: str, quem: str) -> None:
+    """Ninguém esperou o broker no laço: ele respondeu porque o tique o soltou.
+
+    `quem` é o suspeito antes de `marco`; a guarda que vence depois dele é do tique.
+    """
+    ordem = m.estado.ordem
+    if _PRAZO in ordem:
+        if marco in ordem and ordem.index(marco) < ordem.index(_PRAZO):
+            quem = "o tique"
+        pytest.fail(f"{quem} esperou o P1 no laço: o broker respondeu pela guarda, "
+                    f"sem que o tique o soltasse ({ordem})")
+
+
+def _o_white_jogou_com_o_p1_em_voo(m: SimpleNamespace) -> None:
+    ordem = m.estado.ordem
+    assert _antes(ordem, _PEDIDO, _SOLTO), f"o broker não foi solto ({ordem})"
+    jogadas = ordem[ordem.index(_PEDIDO):ordem.index(_SOLTO)].count(_TIQUE_DO_WHITE)
+    assert jogadas >= _TIQUES_DO_WHITE, f"o White parou enquanto o P1 nascia ({ordem})"
 
 
 def _o_p1_vivo(m: SimpleNamespace, velho: Any = None) -> Any:
@@ -186,18 +247,17 @@ def _o_p1_vivo(m: SimpleNamespace, velho: Any = None) -> Any:
 def _o_gesto_volta_na_hora_e_o_p1_nasce_pelo_fio(
     m: SimpleNamespace, gesto: Callable[[], Any], *, velho: Any = None,
 ) -> Any:
-    """O caminho volta na hora, o White joga a cada tique, e o P1 nasce quando o broker
-    responde. Devolve o que o gesto devolveu."""
-    inicio = time.monotonic()
+    """O caminho volta antes de o broker ser solto, o White joga enquanto o pedido está em
+    voo, e o P1 nasce quando o broker responde. Devolve o que o gesto devolveu."""
     devolvido = gesto()
-    gasto = time.monotonic() - inicio
-    assert gasto < _NA_HORA_S, f"o P1 nasceu no laço do tique ({gasto * 1000:.0f} ms)"
-    antes = len(m.white.vpad.entradas)
+    m.estado.ordem.append(_GESTO_VOLTOU)
     _ate(m, lambda: _o_p1_vivo(m, velho) is not None)
     assert len(m.estado.pedidos) == 1, m.estado.pedidos
     assert m.estado.pedidos[0] == "hefesto-nascimento-do-pad", "o P1 não nasceu no fio"
-    buraco = max((b - a for a, b in pairwise(m.white.vpad.entradas[antes:])), default=0.0)
-    assert buraco <= _BURACO_S, f"o White parou {buraco * 1000:.0f} ms enquanto o P1 nascia"
+    _ninguem_esperou_o_p1(m, _GESTO_VOLTOU, "o gesto")
+    assert _antes(m.estado.ordem, _GESTO_VOLTOU, _SOLTO), (
+        f"o P1 nasceu no laço do tique: o gesto voltou depois do broker ({m.estado.ordem})")
+    _o_white_jogou_com_o_p1_em_voo(m)
     assert m.daemon.config.gamepad_emulation_enabled
     return devolvido
 
@@ -270,10 +330,13 @@ def test_a_saida_do_modo_nativo_devolve_o_p1_pelo_fio(mesa: SimpleNamespace) -> 
     assert not mesa.daemon.is_native_mode()
 
 
-def _ipc_com_o_laco_no_ar(m: SimpleNamespace, params: dict[str, Any]) -> tuple[Any, float]:
-    """O pedido pela IPC no mesmo laço do asyncio que roda o tique, como no daemon."""
+def _no_laco(m: SimpleNamespace, pedido: Callable[[], Coroutine[Any, Any, Any]]) -> Any:
+    """O pedido no mesmo laço do asyncio que roda o tique, como no daemon.
 
-    async def _correr() -> tuple[Any, float]:
+    A resposta entra na ordem como «respondeu».
+    """
+
+    async def _correr() -> Any:
         parar = asyncio.Event()
 
         async def _laco() -> None:
@@ -283,35 +346,30 @@ def _ipc_com_o_laco_no_ar(m: SimpleNamespace, params: dict[str, Any]) -> tuple[A
 
         laco = asyncio.create_task(_laco())
         await asyncio.sleep(_TIQUE_S)
-        inicio = time.monotonic()
         try:
-            resposta = await _Ipc(m.daemon)._handle_gamepad_emulation_set(params)
+            return await pedido()
         finally:
-            gasto = time.monotonic() - inicio
+            m.estado.ordem.append(_RESPONDEU)
             parar.set()
             await laco
-        return resposta, gasto
 
     return asyncio.run(_correr())
 
 
-def _tique_sem_dormir(m: SimpleNamespace) -> None:
-    m.manager.forward_all()
-    _fechar(m.daemon)
-    if m.white.vpad is not None:
-        m.white.vpad.forward_buttons(frozenset())
+def _respondeu_depois_do_pad(m: SimpleNamespace) -> None:
+    """A IPC não segurou o laço e só respondeu depois de o broker ser solto."""
+    _ninguem_esperou_o_p1(m, _RESPONDEU, "o laço (a IPC ou o tique)")
+    assert _antes(m.estado.ordem, _SOLTO, _RESPONDEU), (
+        f"a IPC respondeu antes de o pad existir ({m.estado.ordem})")
+    _o_white_jogou_com_o_p1_em_voo(m)
 
 
 def test_a_ipc_liga_pelo_fio_e_responde_depois_do_pad_existir(mesa: SimpleNamespace) -> None:
     mesa.daemon._gamepad_device = None
-    antes = len(mesa.white.vpad.entradas)
-    resposta, gasto = _ipc_com_o_laco_no_ar(
-        mesa, {"enabled": True, "caminho": "xbox", "origin": "manual"})
+    resposta = _no_laco(mesa, lambda: _Ipc(mesa.daemon)._handle_gamepad_emulation_set(
+        {"enabled": True, "caminho": "xbox", "origin": "manual"}))
     assert mesa.estado.pedidos == ["hefesto-nascimento-do-pad"], "o P1 não nasceu no fio"
-    buraco = max((b - a for a, b in pairwise(mesa.white.vpad.entradas[antes:])), default=0.0)
-    assert buraco <= _BURACO_S + _TIQUE_S, (
-        f"o White parou {buraco * 1000:.0f} ms enquanto a IPC esperava o P1")
-    assert gasto >= _BROKER_S, "a IPC respondeu antes de o pad existir"
+    _respondeu_depois_do_pad(mesa)
     assert resposta["status"] == "ok" and resposta["enabled"] is True, resposta
     assert resposta["caminho"] == vp.CAMINHO_XBOX, resposta
     assert _o_p1_vivo(mesa) is not None
@@ -321,7 +379,9 @@ def test_a_ipc_diz_falhou_quando_o_pad_nao_nasce(mesa: SimpleNamespace) -> None:
     """O desfecho de verdade: o broker respondeu sem pad, e a IPC não diz «ok»."""
     mesa.daemon._gamepad_device = None
     mesa.estado.falhar = True
-    resposta, _gasto = _ipc_com_o_laco_no_ar(mesa, {"enabled": True, "origin": "manual"})
+    resposta = _no_laco(mesa, lambda: _Ipc(mesa.daemon)._handle_gamepad_emulation_set(
+        {"enabled": True, "origin": "manual"}))
+    _respondeu_depois_do_pad(mesa)
     assert resposta["status"] == "failed" and resposta["enabled"] is False, resposta
     assert mesa.daemon._gamepad_device is None
     assert mesa.gravados == [], "o modo que não ficou de pé não se grava"
@@ -334,7 +394,14 @@ def test_fora_do_laco_a_borda_nasce_na_hora(mesa: SimpleNamespace) -> None:
     fio = threading.Thread(target=lambda: feito.append(mesa.daemon.set_gamepad_emulation(
         True, origin="profile")))
     fio.start()
-    fio.join(timeout=4 * _BROKER_S)
+    limite = time.monotonic() + _GUARDA_S
+    while _PEDIDO not in mesa.estado.ordem:
+        assert time.monotonic() < limite, "a borda não pediu o pad"
+        time.sleep(_TIQUE_S)
+    assert not feito, "a borda voltou antes de o pad existir"
+    _soltar(mesa)
+    fio.join(timeout=_GUARDA_S)
     assert feito == [True]
+    assert _PRAZO not in mesa.estado.ordem, mesa.estado.ordem
     assert mesa.estado.pedidos == [fio.name]
     assert mesa.daemon._gamepad_device is mesa.estado.pads["None"]

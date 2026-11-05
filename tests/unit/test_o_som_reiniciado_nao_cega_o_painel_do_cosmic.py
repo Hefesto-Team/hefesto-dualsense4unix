@@ -47,15 +47,18 @@ CLIENTE_DO_PAINEL = (
 )
 
 
-ESPERA_EM_UM_QUINTO = (
-    'exec /usr/bin/sleep "$(/usr/bin/awk \'BEGIN { printf "%.4f", ARGV[1] / 5 }\' "$1")"\n'
-)
-"""O `sleep` de mentira da lib: cada espera da lib vale um quinto, na mesma ordem.
+def _espera_que_avisa(diario: Path) -> str:
+    """O `sleep` de mentira da lib: avisa cada espera no diário, na ordem, e dura um quinto.
 
-A lib espera o daemon morrer (30 x 0,1 s), 1 s para o painel renascer e 20 x 0,5 s para
-o cliente voltar; o caso «nunca volta» gastava 11 s só esperando. Os dublês respondem na
-hora, então a ordem das esperas é o que a régua mede, e não o relógio.
-"""
+    A lib espera o daemon morrer (30 x 0,1 s), 1 s para o painel renascer e 20 x 0,5 s para
+    o cliente voltar; o caso «nunca volta» gastava 11 s só esperando. Os dublês respondem na
+    hora, então a régua confere a ordem das esperas no diário, e não a duração.
+    """
+    return (
+        f'printf "sleep %s\\n" "$1" >> "{diario}"\n'
+        'exec /usr/bin/sleep "$(/usr/bin/awk \'BEGIN { printf "%.4f", ARGV[1] / 5 }\' "$1")"\n'
+    )
+
 
 LEVA_O_PIPEWIRE = "# NEEDED libpipewire-0.3.so.0\nexit 0\n"
 
@@ -186,7 +189,7 @@ def ensaio(tmp_path: Path) -> Iterator[Ensaio]:
         f'[ -f "{estado}/nunca-volta" ] || touch "{estado}/cliente-do-painel"\n'
         "exit 0\n",
     )
-    _exe(fakes, "sleep", ESPERA_EM_UM_QUINTO)
+    _exe(fakes, "sleep", _espera_que_avisa(diario))
     (estado / "clientes").write_text(CLIENTES_BASE, encoding="utf-8")
     (estado / "cliente-do-painel-texto").write_text(CLIENTE_DO_PAINEL, encoding="utf-8")
     daemon_bin = _exe(tmp_path / "usr-bin", "cosmic-settings-daemon", LEVA_O_PIPEWIRE)
@@ -262,6 +265,12 @@ def test_no_cosmic_o_daemon_conferido_sai_e_volta_com_o_ambiente_da_sessao(
     restart = chamadas.index("systemctl --user restart pipewire pipewire-pulse wireplumber")
     subida = next(i for i, c in enumerate(chamadas) if c.startswith("systemd-run "))
     assert restart < subida, chamadas
+    esperas = [c for c in chamadas[restart:subida] if c.startswith("sleep ")]
+    assert esperas[-1:] == ["sleep 1"], ("o painel não teve a vez de renascer", chamadas)
+    assert set(esperas[:-1]) <= {"sleep 0.1"}, chamadas
+    volta = chamadas[subida:]
+    assert volta[1].startswith("pw-cli ls Client") and "sleep 0.5" not in volta, (
+        "a volta não foi conferida logo depois da subida", chamadas)
     for _ in range(50):
         if not _vivo(p["daemon"]):
             break
@@ -344,6 +353,13 @@ def test_se_nao_volta_o_aviso_diz_o_comando(ensaio: Ensaio) -> None:
     assert (rc, painel) == ("0", "nao-voltou"), resto
     cura = resto.splitlines()[0]
     assert f"systemd-run --user --collect {ensaio.daemon_bin}" in cura, cura
+    chamadas = ensaio.chamadas()
+    subida = next(i for i, c in enumerate(chamadas) if c.startswith("systemd-run "))
+    volta = [c for c in chamadas[subida + 1 :] if c.startswith(("pw-cli ", "sleep "))]
+    assert volta == ["pw-cli ls Client", "sleep 0.5"] * 20, (
+        "a lib desistiu antes de conferir a volta vinte vezes, meio segundo de intervalo",
+        volta,
+    )
 
 
 def test_o_daemon_que_nao_le_o_pipewire_fica_quieto(ensaio: Ensaio) -> None:
