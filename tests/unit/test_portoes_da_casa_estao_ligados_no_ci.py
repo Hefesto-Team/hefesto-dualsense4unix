@@ -66,7 +66,8 @@ def portoes_da_casa() -> list[str]:
     return vistos
 
 
-def passos_do_ci() -> list[dict]:
+@functools.cache
+def passos_do_ci() -> tuple[dict, ...]:
     """Todo passo de todo job do CI, já com o nome do job e o job inteiro junto."""
     passos: list[dict] = []
     for fluxo in (CI, AUTORIA):
@@ -74,7 +75,7 @@ def passos_do_ci() -> list[dict]:
         for nome_do_job, job in (dados.get("jobs") or {}).items():
             for passo in job.get("steps") or []:
                 passos.append({**passo, "__job__": nome_do_job, "__do_job__": job})
-    return passos
+    return tuple(passos)
 
 
 INTERPRETADORES = frozenset(
@@ -161,9 +162,13 @@ def desligado_por_if(valor: object) -> bool:
     return bool(_IF_MORTO.fullmatch(" ".join(str(valor).split())))
 
 
-def passos_que_rodam(agulha: str) -> list[dict]:
-    """Os passos que EXECUTAM o comando — não os que o mencionam."""
-    return [passo for passo in passos_do_ci() if linhas_que_rodam(passo, agulha)]
+@functools.cache
+def passos_que_rodam(agulha: str) -> tuple[dict, ...]:
+    """Os passos que EXECUTAM o comando — não os que o mencionam.
+
+    Uma leitura por portão e por processo: as réguas que perguntam por ele dividem a resposta.
+    """
+    return tuple(passo for passo in passos_do_ci() if linhas_que_rodam(passo, agulha))
 
 
 def test_a_ancora_da_lista_de_portoes_continua_de_pe() -> None:
