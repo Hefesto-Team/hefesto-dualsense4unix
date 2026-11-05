@@ -41,6 +41,7 @@ from tests.unit.test_o_p1_que_nasce_fora_do_tique_nasce_no_fio_de_nascimento imp
     _TIQUE_S,
     _ate,
     _Ipc,
+    _ninguem_esperou_o_p1,
     _no_laco,
     _Pad,
     _respondeu_depois_do_pad,
@@ -166,6 +167,7 @@ def test_o_ps_r3_repetido_em_voo_grava_o_modo_uma_vez_depois_do_pad(
     _tique(ensaio.m)
     novo = _o_p1_novo(ensaio)
     assert len(ensaio.m.estado.pedidos) == 1, "o pedido igual pediu outro pad"
+    _ninguem_esperou_o_p1(ensaio.m, "", "o PS + R3 ou o tique")
     assert ensaio.m.gravados == [("gamepad", novo)], ensaio.m.gravados
     assert ensaio.tabelas == [novo], ensaio.tabelas
 

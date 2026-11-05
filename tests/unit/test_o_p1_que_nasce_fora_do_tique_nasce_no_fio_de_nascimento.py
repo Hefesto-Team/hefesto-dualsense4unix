@@ -12,7 +12,8 @@ PS + R3, a troca de roupa, a saída do Modo Nativo e a IPC) voltam antes de o br
 solto, o White joga enquanto o P1 nasce, e o P1 nasce quando a resposta chega. A IPC
 responde o desfecho de verdade, depois de o broker ser solto. Tudo se prova pela ORDEM dos
 eventos, nunca pela duração: quem espera o P1 no laço fica preso até a guarda do broker, e
-a guarda deixa a marca «prazo» na ordem.
+a guarda deixa a marca «prazo» na ordem; quem espera a entrega no laço por um prazo curto,
+antes de o broker ser solto, deixa a marca «esperou».
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -51,6 +52,7 @@ _GUARDA_S = 2 * _GUARDA_DO_BROKER_S
 _PEDIDO = "pedido"
 _SOLTO = "solto"
 _PRAZO = "prazo"
+_ESPEROU = "esperou"
 _TIQUE_DO_WHITE = "tique do White"
 _GESTO_VOLTOU = "gesto voltou"
 _RESPONDEU = "respondeu"
@@ -126,6 +128,16 @@ def mesa(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNames
     monkeypatch.setattr(gp, "make_primary_replica_sinks", lambda _d: {})
     estado = SimpleNamespace(falhar=False, pedidos=[], pads={}, ordem=[],
                              soltar=threading.Event())
+    laco = threading.current_thread()
+    esperar = vp.PedidoDePad.esperar
+
+    def _esperar(pedido: vp.PedidoDePad, prazo_s: float | None = None) -> bool:
+        """A espera da entrega, que só a borda fora do laço faz."""
+        if threading.current_thread() is laco and not estado.soltar.is_set():
+            estado.ordem.append(_ESPEROU)
+        return esperar(pedido, prazo_s)
+
+    monkeypatch.setattr(vp.PedidoDePad, "esperar", _esperar)
 
     def _fabrica(flavor: Any, **kwargs: Any) -> _Pad | None:
         """A fábrica do pad: o do P1 espera o tique soltar o broker de mentira; o do White, não.
@@ -223,6 +235,11 @@ def _ninguem_esperou_o_p1(m: SimpleNamespace, marco: str, quem: str) -> None:
     `quem` é o suspeito antes de `marco`; a guarda que vence depois dele é do tique.
     """
     ordem = m.estado.ordem
+    if _ESPEROU in ordem:
+        if marco in ordem and ordem.index(marco) < ordem.index(_ESPEROU):
+            quem = "o tique"
+        pytest.fail(f"{quem} esperou o P1 no laço: esperou a entrega antes de o broker "
+                    f"ser solto ({ordem})")
     if _PRAZO in ordem:
         if marco in ordem and ordem.index(marco) < ordem.index(_PRAZO):
             quem = "o tique"
