@@ -129,7 +129,7 @@ def teto(nome, sempre):
         valor = float(os.environ.get(nome, ""))
     except ValueError:
         return sempre
-    return valor if valor > 0 else sempre
+    return valor if 0 < valor <= sempre else sempre
 
 
 TETO_DO_AMBIENTE_S = teto("HEFESTO_TETO_DO_AMBIENTE_S", 5.0)

@@ -333,8 +333,9 @@ class _SocketFalso:
 
     def ate_o_proximo_pedido(self, teto_s: float) -> bool:
         """Espera o pedido seguinte bater à porta, sem aceitá-lo."""
-        prontos, _, _ = select.select([self._sock], [], [], teto_s)
-        return bool(prontos)
+        vigia = select.poll()
+        vigia.register(self._sock, select.POLLIN)
+        return bool(vigia.poll(teto_s * 1000))
 
     def ate_parar(self) -> None:
         self._parar.wait(30)
@@ -612,4 +613,8 @@ def test_o_teto_do_wrapper_e_o_de_sempre_sem_a_variavel(monkeypatch: pytest.Monk
     assert _os_tetos_do_wrapper(monkeypatch, {}) == (5.0, 1.0)
     assert _os_tetos_do_wrapper(monkeypatch, {"HEFESTO_TETO_DO_AMBIENTE_S": "x",
                                               "HEFESTO_TETO_DO_PING_S": "-1"}) == (5.0, 1.0)
+    assert _os_tetos_do_wrapper(monkeypatch, {"HEFESTO_TETO_DO_AMBIENTE_S": "inf",
+                                              "HEFESTO_TETO_DO_PING_S": "nan"}) == (5.0, 1.0)
+    assert _os_tetos_do_wrapper(monkeypatch, {"HEFESTO_TETO_DO_AMBIENTE_S": "60",
+                                              "HEFESTO_TETO_DO_PING_S": "9"}) == (5.0, 1.0)
     assert _os_tetos_do_wrapper(monkeypatch, TETOS_CURTOS) == (1.0, 0.2)
