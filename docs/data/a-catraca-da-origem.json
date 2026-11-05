@@ -259,14 +259,14 @@
       "data": "2026-11-05",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204610,
+      "piso": 1204618,
       "por_item": {
         "docs": 106400,
-        "scripts": 111701,
+        "scripts": 111703,
         "src": 303976,
-        "tests": 682533
+        "tests": 682539
       },
-      "razao": "05/11/2026: +2 linhas da tipagem do caderno da catraca (o mypy de scripts/catraca.py fecha limpo); ferramental sem decisão",
+      "razao": "05/11/2026: +8 linhas do Xvfb dos portões sem o soquete abstrato (as pernas do ci-local com --network host roubavam o display); ferramental do portão sem decisão",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1797,6 +1797,12 @@
           "de": 1204608,
           "para": 1204610,
           "razao": "05/11/2026: +2 linhas da tipagem do caderno da catraca (o mypy de scripts/catraca.py fecha limpo); ferramental sem decisão"
+        },
+        {
+          "data": "2026-11-05",
+          "de": 1204610,
+          "para": 1204618,
+          "razao": "05/11/2026: +8 linhas do Xvfb dos portões sem o soquete abstrato (as pernas do ci-local com --network host roubavam o display); ferramental do portão sem decisão"
         }
       ],
       "unidade": "linhas",
