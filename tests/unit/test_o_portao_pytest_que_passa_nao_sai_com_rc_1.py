@@ -133,6 +133,10 @@ exit {saida}
 """
 
 
+def _saida_da_camada(rc: int | None) -> str:
+    return '"$r"' if rc is None else str(rc)
+
+
 def _camadas_de_mentira(
     tmp_path: Path, *, dbus: int | None = None, xvfb: int | None = None
 ) -> dict[str, str]:
@@ -140,12 +144,11 @@ def _camadas_de_mentira(
     (sem pedido, com o do comando, como os de verdade)."""
     pasta = tmp_path / "camadas"
     pasta.mkdir()
-    saida = {None: '"$r"'}
     (pasta / "dbus-run-session").write_text(
-        _DBUS_DE_MENTIRA.format(saida=saida.get(dbus, dbus)), encoding="utf-8"
+        _DBUS_DE_MENTIRA.format(saida=_saida_da_camada(dbus)), encoding="utf-8"
     )
     (pasta / "xvfb-run").write_text(
-        _XVFB_DE_MENTIRA.format(saida=saida.get(xvfb, xvfb), pasta=pasta), encoding="utf-8"
+        _XVFB_DE_MENTIRA.format(saida=_saida_da_camada(xvfb), pasta=pasta), encoding="utf-8"
     )
     for nome in ("dbus-run-session", "xvfb-run"):
         (pasta / nome).chmod(0o755)

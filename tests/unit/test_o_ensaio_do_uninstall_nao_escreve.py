@@ -174,10 +174,11 @@ def _ensaiar(
     return r, chamados, _retrato(lar) == antes
 
 
+Ensaiado = tuple[subprocess.CompletedProcess[str], str, bool]
+
+
 @pytest.fixture(scope="module")
-def ensaio_sem_flag(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> tuple[subprocess.CompletedProcess[str], str, bool]:
+def ensaio_sem_flag(tmp_path_factory: pytest.TempPathFactory) -> Ensaiado:
     """O ensaio sem flag, rodado UMA vez para as duas réguas que o leem."""
     return _ensaiar(tmp_path_factory.mktemp("sem-flag"))
 
@@ -190,7 +191,7 @@ def _nao_chama_binario_que_escreve(r: subprocess.CompletedProcess[str], chamados
     )
 
 
-def test_o_ensaio_sem_flag_nao_chama_binario_que_escreve(ensaio_sem_flag) -> None:
+def test_o_ensaio_sem_flag_nao_chama_binario_que_escreve(ensaio_sem_flag: Ensaiado) -> None:
     r, chamados, _ = ensaio_sem_flag
     _nao_chama_binario_que_escreve(r, chamados)
 
@@ -238,7 +239,7 @@ def test_o_ensaio_deixa_a_casa_byte_a_byte(tmp_path: Path) -> None:
     assert igual, "o ensaio mudou a casa de mentira"
 
 
-def test_o_ensaio_diz_o_que_faria_nesta_casa(ensaio_sem_flag) -> None:
+def test_o_ensaio_diz_o_que_faria_nesta_casa(ensaio_sem_flag: Ensaiado) -> None:
     r, _, _ = ensaio_sem_flag
     saida = r.stdout
     assert "[uninstall · ensaio] ENSAIO:" in saida, saida[:2000]

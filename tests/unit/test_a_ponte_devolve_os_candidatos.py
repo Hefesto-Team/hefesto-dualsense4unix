@@ -112,10 +112,11 @@ def _linhas(saida: str) -> list[list[str]]:
     return [linha.split("\t") for linha in saida.splitlines() if linha.strip()]
 
 
+Corrida = tuple[Path, subprocess.CompletedProcess[str]]
+
+
 @pytest.fixture(scope="module")
-def corrida(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> tuple[Path, subprocess.CompletedProcess[str]]:
+def corrida(tmp_path_factory: pytest.TempPathFactory) -> Corrida:
     """UMA janela de três segundos para as sete réguas que leem a mesma saída.
 
     Antes cada régua abria a sua e pagava os 3 s do barramento de mentira; a
@@ -127,7 +128,7 @@ def corrida(
     return raiz, _descobrir(raiz, "3", {"HEFESTO_BT_LOG_DEST": str(raiz / "diario.txt")})
 
 
-def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(corrida) -> None:
+def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(corrida: Corrida) -> None:
     """Quatro colunas por candidato: MAC, nome, novo|pareado e a classe."""
     _, feito = corrida
     assert feito.returncode == 0, feito.stderr
@@ -143,21 +144,21 @@ def test_descobrir_devolve_a_lista_de_candidatos_em_tsv(corrida) -> None:
     assert controle[3] == CLASSE_NA_COLUNA
 
 
-def test_o_candidato_ja_pareado_se_declara(corrida) -> None:
+def test_o_candidato_ja_pareado_se_declara(corrida: Corrida) -> None:
     """`pareado` não é enfeite: é o que impede a tela de mandá-la repetir"""
     _, feito = corrida
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][2] == "pareado"
 
 
-def test_a_classe_ausente_sai_vazia_e_nao_inventada(corrida) -> None:
+def test_a_classe_ausente_sai_vazia_e_nao_inventada(corrida: Corrida) -> None:
     """O vizinho não publica `Class`. A coluna tem de ficar vazia."""
     _, feito = corrida
     por_mac = {linha[0]: linha for linha in _linhas(feito.stdout)}
     assert por_mac[VIZINHO.upper()][3] == ""
 
 
-def test_o_nome_com_tabulacao_nao_quebra_a_coluna(corrida) -> None:
+def test_o_nome_com_tabulacao_nao_quebra_a_coluna(corrida: Corrida) -> None:
     """O nome vem do BlueZ, que é terceiro. `\\t` e `\\n` nele viram espaço."""
     _, feito = corrida
     for linha in _linhas(feito.stdout):
@@ -166,7 +167,7 @@ def test_o_nome_com_tabulacao_nao_quebra_a_coluna(corrida) -> None:
     assert por_mac[VIZINHO.upper()][1] == "fone da vizinha"
 
 
-def test_o_aparelho_que_aparece_no_meio_da_janela_tambem_sai(corrida) -> None:
+def test_o_aparelho_que_aparece_no_meio_da_janela_tambem_sai(corrida: Corrida) -> None:
     """Quem chega no segundo 1 é candidato como quem já estava lá."""
     barramento, feito = corrida
     assert (barramento / "marcador").exists(), "a janela nem chegou a abrir"
@@ -197,7 +198,7 @@ def test_o_candidato_sai_enquanto_a_janela_ainda_esta_aberta(
         processo.wait(timeout=10)
 
 
-def test_o_roteiro_pede_pairable_e_scan_no_adaptador_escolhido(corrida) -> None:
+def test_o_roteiro_pede_pairable_e_scan_no_adaptador_escolhido(corrida: Corrida) -> None:
     """Sem `pairable on` a janela vê e não deixa parear."""
     barramento, _ = corrida
     roteiro = (barramento / "roteiro").read_text(encoding="utf-8")
@@ -224,7 +225,7 @@ def test_o_dry_run_anuncia_a_lista_e_nao_abre_janela(barramento: Path) -> None:
     assert "novo|pareado" in feito.stdout, feito.stdout
 
 
-def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(corrida) -> None:
+def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(corrida: Corrida) -> None:
     """Uma varredura vê o celular de quem passa na rua."""
     diario = corrida[0] / "diario.txt"
     texto = diario.read_text(encoding="utf-8")
