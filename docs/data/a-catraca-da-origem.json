@@ -259,14 +259,14 @@
       "data": "2026-11-06",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1205353,
+      "piso": 1205357,
       "por_item": {
         "docs": 106418,
         "scripts": 111703,
         "src": 304115,
-        "tests": 683117
+        "tests": 683121
       },
-      "razao": "tamanho: +735 linhas (1204618 -> 1205353), pagas por Origem: D-IMERSAO-AUSENTE-NONE, movimento.imu.calibracao; registrado no fecho, topo 95681cbcf445",
+      "razao": "tamanho: +4 linhas (1205353 -> 1205357), pagas por Origem: movimento.imu.calibracao; registrado no fecho, topo 0da1ff686876",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1809,6 +1809,12 @@
           "de": 1204618,
           "para": 1205353,
           "razao": "tamanho: +735 linhas (1204618 -> 1205353), pagas por Origem: D-IMERSAO-AUSENTE-NONE, movimento.imu.calibracao; registrado no fecho, topo 95681cbcf445"
+        },
+        {
+          "data": "2026-11-06",
+          "de": 1205353,
+          "para": 1205357,
+          "razao": "tamanho: +4 linhas (1205353 -> 1205357), pagas por Origem: movimento.imu.calibracao; registrado no fecho, topo 0da1ff686876"
         }
       ],
       "unidade": "linhas",
