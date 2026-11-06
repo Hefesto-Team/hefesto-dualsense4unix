@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 12 | 11 | 5 | 3 | 0 | 39% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
 | 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
-| 08-conexoes | 44 | 12 | 23 | 9 | 0 | 0 | 27% |
+| 08-conexoes | 44 | 11 | 22 | 11 | 0 | 0 | 25% |
 | 09-sistema | 38 | 12 | 19 | 4 | 3 | 0 | 32% |
 | 10-perfis | 48 | 12 | 21 | 9 | 6 | 0 | 25% |
-| TODAS | 378 | 103 | 169 | 62 | 41 | 3 | 27% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 378 | 102 | 168 | 64 | 41 | 3 | 27% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -767,3 +767,7 @@ a `FALTA_NO_HTML`. A tabela acima foi recontada do CSV: `04-iluminacao` vai de `
 **02/11/2026 — o ♪ do alto-falante sai da tela.** O volume em 0 já cala, e o volume que sobe solta o mudo. A linha
 **«Alto-falante — o botão de mudo»** vai de `DIFERENTE` a `FALTA_NO_HTML`: `02-controles` vai de `24 DIFER · 6 FALTA`
 para `23 · 7`, e `TODAS` de `170 · 61` para `169 · 62`.
+
+**06/11/2026:** a palavra do selo e o `?` por linha da aba Conexões saíram com o código sem chamador, e a aba mostra os
+cartões de `integrations/dicas_da_conexao.py`. `08-conexoes` vai de `12 · 23 · 9 · 27%` para `11 · 22 · 11 · 25%`, e
+`TODAS` de `103 · 169 · 62` para `102 · 168 · 64`, sem mudar os 27%.
