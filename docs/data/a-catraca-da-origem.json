@@ -259,14 +259,14 @@
       "data": "2026-11-06",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1205365,
+      "piso": 1204775,
       "por_item": {
         "docs": 106418,
         "scripts": 111703,
-        "src": 304115,
-        "tests": 683129
+        "src": 303827,
+        "tests": 682827
       },
-      "razao": "tamanho: +8 linhas (1205357 -> 1205365), pagas por Origem: movimento.imu.calibracao; registrado no fecho, topo ef596ec72406",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1824,7 +1824,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3365
+      "universo": 3364
     }
   }
 }
