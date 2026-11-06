@@ -3873,3 +3873,11 @@ def _sem_a_escrita_do_servico(session: Any, deltas: list[str]) -> list[str]:
         *([f"  ... e mais {restam}"] if restam > 0 else []),
     ])
     return [d for d in deltas if d not in do_servico]
+
+
+@pytest.fixture(autouse=True)
+def _a_aba_perfis_nao_herda_o_ultimo_tique() -> None:
+    """`_VISTO` é estado de módulo: o par do teste anterior moveria a linha do seguinte."""
+    modulo = sys.modules.get("hefesto_dualsense4unix.interface.pacotes.a10_perfis")
+    if modulo is not None:
+        modulo._VISTO = ("", "")
