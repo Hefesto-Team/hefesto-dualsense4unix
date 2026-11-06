@@ -44,8 +44,26 @@ def test_o_roteiro_acende_e_tem_prazo() -> None:
     from hefesto_dualsense4unix.interface import janela as pt
 
     assert f"classList.add('{CLASSE_DA_ESPERA}')" in pt.ROTEIRO_DA_ESPERA
-    assert f"classList.remove('{CLASSE_DA_ESPERA}')" in pt.ROTEIRO_DA_ESPERA
+    assert f"classList.remove('{CLASSE_DA_ESPERA}')" not in pt.ROTEIRO_DA_ESPERA, (
+        "o prazo soltava a aba sem pintura, e o exemplo do desenho aparecia")
+    assert f"classList.add('{pt.CLASSE_SEM_RESPOSTA}')" in pt.ROTEIRO_DA_ESPERA
     assert str(pt.PRAZO_DA_ESPERA_MS) in pt.ROTEIRO_DA_ESPERA
+
+
+def test_o_aviso_diz_que_espera_e_a_pintura_o_apaga() -> None:
+    from hefesto_dualsense4unix.interface.folha_da_casa import (
+        AVISO_SEM_RESPOSTA,
+        CLASSE_SEM_RESPOSTA,
+    )
+
+    assert f'.{CLASSE_SEM_RESPOSTA} body::after{{content:"{AVISO_SEM_RESPOSTA}"' in FOLHA_DA_CASA
+    assert f"remove('{CLASSE_DA_ESPERA}', '{CLASSE_SEM_RESPOSTA}')" in _corpo_do_pintar()
+
+
+@pytest.mark.parametrize("janela", ["#lanc-escolha", "#lanc-janela", "#imp-janela"])
+def test_a_janela_so_mostra_a_lista_que_a_pintura_trouxe(janela: str) -> None:
+    assert f"{janela}:not([data-hef-real]) .tn-corpo" in FOLHA_DA_CASA
+    assert "alvo.dataset.hefReal = '1'" in _corpo_do_pintar()
 
 
 def _corpo_do_pintar() -> str:
@@ -59,7 +77,8 @@ def _corpo_do_pintar() -> str:
 def test_quem_apaga_a_espera_e_o_fim_do_pintar() -> None:
     """E NÃO o início: apagar antes de escrever mostraria o desenho de novo."""
     corpo = _corpo_do_pintar()
-    linha = f"document.documentElement.classList.remove('{CLASSE_DA_ESPERA}');"
+    linha = ("document.documentElement.classList.remove("
+             f"'{CLASSE_DA_ESPERA}', 'hef-sem-resposta');")
     assert linha in corpo, "o `pintar` não devolve mais a página à tela"
     assert corpo.rstrip().endswith(linha), (
         "a espera tem de sair DEPOIS de tudo escrito, na última linha do `pintar`")
@@ -155,15 +174,17 @@ def test_a_pagina_nasce_sem_o_desenho_e_aparece_na_primeira_pintura() -> None:
 
 
 @pytest.mark.usefixtures("_tela_de_teste")
-def test_sem_pintura_a_pagina_aparece_no_prazo() -> None:
-    """A rede de segurança: piloto travado não deixa a janela sem miolo."""
+def test_sem_pintura_o_prazo_acende_o_aviso_e_o_desenho_nao_aparece() -> None:
+    """Piloto travado: a tela diz que espera, e o exemplo do desenho não passa por dado."""
     from hefesto_dualsense4unix.interface import janela as pt
 
     aba = _Aba(esperar=True)
+    pergunta = f"document.documentElement.classList.contains('{pt.CLASSE_SEM_RESPOSTA}')"
     try:
         prazo = pt.PRAZO_DA_ESPERA_MS / 1000 + 1.0
-        assert _bombear(lambda: aba.opacidades()["div.miolo"] == "1", prazo), (
-            "sem pintura a página ficou escondida depois do prazo")
+        assert _bombear(lambda: str(aba.ler(pergunta)).lower() == "true", prazo), (
+            "o aviso não acendeu no prazo")
+        assert aba.opacidades()["div.miolo"] == "0", "o prazo soltou o desenho sem pintura"
     finally:
         aba.janela.janela.destroy()
 
@@ -247,8 +268,8 @@ def test_a_carga_lenta_nao_gasta_o_prazo(tmp_path: pathlib.Path) -> None:
             _bombear(lambda: bool(resposta), 10.0)
             return str(resposta.get("v"))
 
-        assert _bombear(lambda: miolo() == "1", prazo + 1.0), (
-            "depois da carga lenta, sem pintura, a página ficou escondida além do prazo")
+        _bombear(lambda: False, prazo + 0.5)
+        assert miolo() == "0", "depois da carga lenta, o prazo soltou o desenho sem pintura"
     finally:
         janela.janela.destroy()
         lenta.fechar()

@@ -391,6 +391,7 @@ BOOTSTRAP = r"""
       }
       alvo.innerHTML = html;
       alvo.__hefBloco = html;
+      if(alvo.dataset.hefReal !== '1') alvo.dataset.hefReal = '1';
       n += 1;
     }
     for(const caixa of document.querySelectorAll('[data-hef-molde]')){
@@ -474,7 +475,7 @@ BOOTSTRAP = r"""
     }
     n += window.__hef.abaQueVale();
     if(document.documentElement.classList.contains('hef-esperando'))
-      document.documentElement.classList.remove('hef-esperando');
+      document.documentElement.classList.remove('hef-esperando', 'hef-sem-resposta');
     return n;
   };
   if(!window.__hef.ouvindo){

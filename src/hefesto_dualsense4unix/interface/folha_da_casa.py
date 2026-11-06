@@ -57,6 +57,10 @@ def tamanho_que_cabe(escolhido: int, largura: int, altura: int) -> int:
 
 CLASSE_DA_ESPERA = "hef-esperando"
 
+CLASSE_SEM_RESPOSTA = "hef-sem-resposta"
+
+AVISO_SEM_RESPOSTA = "Esperando o Hefesto responder"
+
 SEM_OS_DADOS = "html:not(.hef-dados-na-tela)"
 
 FOLHA_DA_CASA = (
@@ -73,6 +77,12 @@ FOLHA_DA_CASA = (
     f"{SEM_OS_DADOS} tbody[data-hef=\"perfis.lista\"] tr,"
     f"{SEM_OS_DADOS} input[data-hef=\"editor.jogo\"],"
     f"{SEM_OS_DADOS} ol[data-hef=\"editor.ordem\"] li{{visibility:hidden !important}}"
+    "#lanc-escolha:not([data-hef-real]) .tn-corpo,"
+    "#lanc-janela:not([data-hef-real]) .tn-corpo,"
+    "#imp-janela:not([data-hef-real]) .tn-corpo{visibility:hidden !important}"
+    f".{CLASSE_SEM_RESPOSTA} body::after{{content:\"{AVISO_SEM_RESPOSTA}\";position:fixed;inset:0;"
+    "display:flex;align-items:center;justify-content:center;pointer-events:none;"
+    "color:var(--fg,#f8f8f2)}"
 )
 
 

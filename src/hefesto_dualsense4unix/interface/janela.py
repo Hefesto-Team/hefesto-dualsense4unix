@@ -23,6 +23,7 @@ from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 from hefesto_dualsense4unix.interface import tema_da_sessao as tema  # noqa: E402
 from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     CLASSE_DA_ESPERA,
+    CLASSE_SEM_RESPOSTA,
     FOLHA_DA_CASA,
     MENOR_QUE_CEDE,
     VISTA_DO_DESENHO,
@@ -111,14 +112,14 @@ SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 
 CANAL_PADRAO = "hefesto"
 
-PRAZO_DA_ESPERA_MS = 1500
+PRAZO_DA_ESPERA_MS = 3000
 
 ROTEIRO_DA_ESPERA = (
     "(function(){var h=document.documentElement;if(!h)return;"
     f"h.classList.add('{CLASSE_DA_ESPERA}');"
     "function armar(){"
-    f"setTimeout(function(){{h.classList.remove('{CLASSE_DA_ESPERA}');}},"
-    f"{PRAZO_DA_ESPERA_MS});}}"
+    f"setTimeout(function(){{if(h.classList.contains('{CLASSE_DA_ESPERA}'))"
+    f"h.classList.add('{CLASSE_SEM_RESPOSTA}');}},{PRAZO_DA_ESPERA_MS});}}"
     "if(document.readyState==='complete')armar();"
     "else window.addEventListener('load',armar,{once:true});})();"
 )
