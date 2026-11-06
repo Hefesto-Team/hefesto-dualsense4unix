@@ -198,7 +198,7 @@ def catraca(achadas: dict[str, Lista], dividas: dict[str, int]) -> list[str]:
 
 
 DIVIDAS: dict[str, int] = {
-    "scripts/check_a_biblioteca_pessoal_fica_fora.py::DIVIDA": 10,
+    "scripts/check_a_biblioteca_pessoal_fica_fora.py::DIVIDA": 8,
     "scripts/check_a_cor_vem_do_aparelho.py::ISENCOES": 0,
     "scripts/check_a_maiuscula_decorativa.py::DIVIDA": 0,
     "scripts/check_a_tela_nao_confessa.py::A_DIVIDA": 0,
