@@ -50,7 +50,7 @@ FRASES_QUE_SAIRAM = {
     "a dica da extensão": r"Foi você quem disse|leitura do sistema distingue",
     "DICA_DOS_HUBS": r"não enxerga hubs",
     "a cauda do ap_botao": r"O objeto:",
-    "a dica da borda": r"A borda é a cor lida",
+    "a dica da borda": r"A borda é a cor lida|^A borda é a cor|title=\"A borda é a cor",
     "BOTAO_DICA": r"botão físico do microfone",
     "DICA_MIC_SEM_LEITURA": r"ainda não leu o estado do microfone|seria chute",
 }

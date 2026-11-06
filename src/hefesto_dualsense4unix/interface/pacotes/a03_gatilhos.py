@@ -796,8 +796,7 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     if not conectado:
         dica = SEM_APARELHO_AQUI
     elif cor:
-        dica = (f"{nome} — a borda é a cor do plástico" if nome
-                else "A borda é a cor do plástico deste controle.")
+        dica = f"{nome} — a borda é a cor do plástico" if nome else ""
     elif plastico:
         dica = (f"{nome} — o acabamento deste modelo não cabe num hexadecimal, "
                 f"e a borda fica neutra" if nome else

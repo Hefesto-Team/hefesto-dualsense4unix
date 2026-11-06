@@ -394,8 +394,7 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
         slug = str(lugar.get("cor") or "")
         if slug and monta.o_desenho_conhece(slug):
             chips.append(f'<label class="chip plastico{aceso}" data-campo="{CAMPO_DO_CHIP}"'
-                         f' style="--plastico:{monta.cor_da_zona(slug)}"'
-                         ' title="A borda é a cor do plástico">'
+                         f' style="--plastico:{monta.cor_da_zona(slug)}">'
                          f"{rotulo}</label>")
         else:
             chips.append(f'<label class="chip{aceso}" data-campo="{CAMPO_DO_CHIP}">'

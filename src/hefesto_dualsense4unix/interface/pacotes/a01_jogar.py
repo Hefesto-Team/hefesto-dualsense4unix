@@ -336,7 +336,7 @@ def _abas_dos_externos(ctx: Contexto) -> str:
     """Uma aba por externo na fileira das abas da Jogar, com o número, a marca e o glifo da via.
 
     O externo é um controle conectado como o DualSense, e ganha a aba dele ao lado das dos
-    assentos (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR). A borda é a cor que o usuário declarou,
+    assentos (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR). A cor da borda é a que o usuário declarou,
     pelo mesmo `tom_para_a_borda` do assento, e o neutro sem declaração. O clique só abre o
     cartão: o Hefesto não escreve no externo, e por isso a aba não leva gesto nem `data-controle`.
     """
