@@ -8,6 +8,10 @@ from __future__ import annotations
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("a aba Perfis que abre no perfil ativo")
+
 from hefesto_dualsense4unix.interface import folha_da_casa, hefesto_vivo, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis as a10
 
