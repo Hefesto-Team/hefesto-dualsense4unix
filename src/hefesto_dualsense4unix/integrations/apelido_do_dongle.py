@@ -3,27 +3,26 @@
 O PROBLEMA QUE ESTE MÓDULO RESOLVE
 -----------------------------------
 
-A máquina de teste tem TRÊS adaptadores Bluetooth ``2357:0604``, todos atrás do mesmo hub.
+Uma máquina pode ter vários adaptadores Bluetooth do mesmo ``vid:pid``, todos atrás do mesmo hub.
 Idênticos no barramento e no ``lsusb``. A única coisa que os separa é o BD
-Address, e endereço não é nome: ninguém olha para ``AC:A7:F1:...`` e sabe qual
+Address, e endereço não é nome: ninguém olha para ``AA:BB:CC:...`` e sabe qual
 é o do sofá.
 
 E **o modelo deles não é uma pergunta que o barramento responda** — MEDIDO em
-22/08/2026, e é por isso que a frase acima não diz "UB500"::
+22/08/2026, e é por isso que a frase acima não diz o modelo::
 
-    3-3.1.1   2357:0604  bcdDevice=0200  product="TP-Link UB500 Adapter"
-    3-3.1.4   2357:0604  bcdDevice=0200  product="TP-Link Bluetooth USB Adapter"
-    3-3.2     2357:0604  bcdDevice=0200  product="TP-Link UB500 Adapter"
+    3-3.1.1   aaaa:bbbb  bcdDevice=0200  product="Adaptador A"
+    3-3.1.4   aaaa:bbbb  bcdDevice=0200  product="Adaptador USB"
+    3-3.2     aaaa:bbbb  bcdDevice=0200  product="Adaptador A"
 
-O ``vid:pid`` NÃO distingue: UB500, UB5A e UB500 Plus são os três
-``2357:0604``, com o mesmo chip RTL8761BUV, e aqui nem o ``bcdDevice`` os
-separa. O único campo que varia é o ``product``, e ele é frágil: três unidades
-da mesma máquina de teste devolvem DUAS strings diferentes, e há na natureza uma
-terceira com erro de digitação de fábrica (``TP-Lifk UB5A Adapter``).
+O ``vid:pid`` NÃO distingue: modelos diferentes dividem o mesmo par, com o mesmo
+chip, e aqui nem o ``bcdDevice`` os separa. O único campo que varia é o
+``product``, e ele é frágil: três unidades iguais devolveram DUAS strings
+diferentes, e há na natureza uma terceira com erro de digitação de fábrica.
 
 **Consequência que precisa estar escrita:** nenhuma regra de udev, linha do
 mapa de canais ou caminho de decisão deste produto pode depender de distinguir
-modelo de dongle TP-Link. Não dá. O que identifica um adaptador aqui é o BD
+modelo de dongle. Não dá. O que identifica um adaptador aqui é o BD
 Address; o que quem usa lê na tela é o apelido que escreveu. É a mesma
 recusa do ``censo_do_barramento`` a heurística por ``product`` — adivinhar por
 texto é como se erra com confiança.
@@ -52,7 +51,7 @@ POR QUE PREFIXO, E NÃO SUFIXO — três razões, nenhuma de gosto
 
 1. **O firmware do Pro casa o COMEÇO do nome.** A verificação é ``Nintendo*``,
    literalmente o glob de ``bt_active_mode.sh:141``. Sufixo não satisfaz.
-2. **O BlueZ corta pela CAUDA.** Medido nesta máquina de teste em 22/08/2026, BlueZ 5.86:
+2. **O BlueZ corta pela CAUDA.** Medido em 22/08/2026, BlueZ 5.86:
    um alias de 300 caracteres ASCII volta com 247 — ele trunca, e o que
    desaparece é o fim. Um sufixo protetor sumiria calado justamente nos nomes
    longos; um prefixo sobrevive ao corte.
@@ -64,7 +63,7 @@ POR QUE PREFIXO, E NÃO SUFIXO — três razões, nenhuma de gosto
 O TETO DO ALIAS, MEDIDO — e por que o produto trunca antes do BlueZ
 --------------------------------------------------------------------
 
-Nesta máquina de teste, em 22/08/2026, BlueZ 5.86, como uid 1000::
+Em 22/08/2026, BlueZ 5.86, como usuário comum::
 
     300 x "N"  (300 bytes)  -> aceito, volta com 247 caracteres
     123 x "á"  (246 bytes)  -> aceito inteiro
@@ -81,7 +80,7 @@ A ESCRITA NÃO PRECISA DE PRIVILÉGIO — medido, não suposto
 ----------------------------------------------------------
 
 22/08/2026, nesta máquina: ``busctl set-property`` do ``Alias`` devolve ``0``
-como uid 1000 **e também como ``nobody``**, um usuário sem sessão e sem assento.
+como usuário comum **e também como ``nobody``**, um usuário sem sessão e sem assento.
 A política do BlueZ em ``/usr/share/dbus-1/system.d/bluetooth.conf`` tem
 ``<policy context="default"><allow send_destination="org.bluez"/>``, e o
 ``Alias`` não passa por polkit. **Não há helper privilegiado a pedir aqui.**

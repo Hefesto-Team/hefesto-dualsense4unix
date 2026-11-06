@@ -38,7 +38,7 @@ JOGO-01 (25/07): o ramo da allowlist do Steam Input rotulava-se "sem dedup" e
 era literalmente isso — omitia `SDL_GAMECONTROLLER_IGNORE_DEVICES` e
 `PROTON_DISABLE_HIDRAW` e não fazia mais nada. Só que omitir o dedup COM o
 gamepad virtual de pé é o próprio duplicado: medido ao vivo com UM DualSense
-no cabo, o Mullet Mad Jack (2111190) enxergava js0=vpad e js2=físico (mais os
+no cabo, o jogo enxergava js0=vpad e js2=físico (mais os
 dois pads que o Steam Input cria), atribuía jogador 1 a um e jogador 2 ao
 outro e metade dos comandos do usuário ia para o controle que o jogo não estava
 lendo. O invariante que faltava, e que segue valendo nos dois lados desta
@@ -408,7 +408,7 @@ def steam_input_appids(path: Path | None = None) -> set[int]:
     """AppIDs da allowlist do Steam Input (`steam_input_apps.txt`) — R-06.
 
     A allowlist é opt-in EXPLÍCITO da usuária: jogos cuja via oficial de
-    DualSense é o Steam Input per-app (medido: Mullet Mad Jack, appid 2111190,
+    DualSense é o Steam Input per-app (medido: um jogo da Steam,
     chama `SetDualSenseTriggerEffect` da API Steamworks, que só funciona com o
     Steam Input DAQUELE jogo ligado). Até aqui o arquivo só era lido pelo guard
     de VDF (`disable_steam_input.sh`/`storm_doctor`) — o caminho de LANÇAMENTO
@@ -560,7 +560,7 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
       nem acelerômetro no descritor HID — dez linhas de `mapa-controles.csv`
       dizem `gamepad/dualsense` na coluna `ponte_alcanca`.
 
-    Medido no daemon do usuário em 22/08/2026: perfil Sackboy pedindo
+    Medido no daemon do usuário em 22/08/2026: perfil de jogo pedindo
     `gamepad_flavor="dualsense"`, quatro vpads uinput com máscara `xbox` e
     `mode_from_profile=null`. Ou seja, marcar o jogo REMOVIA features em vez de
     preservá-las — o oposto exato da decisão de produto: a allowlist do Steam Input

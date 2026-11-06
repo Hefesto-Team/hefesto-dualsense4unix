@@ -67,9 +67,9 @@ come o aperto do usuário.
   nada dentro do jogo — ele pertence ao lançamento.
 
 **FATO CORRIGIDO (29→30/08/2026).** Esta seção dizia *"não pula, porque pular
-o `native` deixaria de fora a classe de jogos que escreve no hidraw direto
-(Sackboy), e pular o `steam_input` deixaria de fora a classe 'só aceita Steam
-Input' (DON'T SCREAM). Pular é perder de vez os dois jogos que motivaram a
+o `native` deixaria de fora a classe de jogos que escreve no hidraw direto,
+e pular o `steam_input` deixaria de fora a classe 'só aceita Steam
+Input'. Pular é perder de vez os dois jogos que motivaram a
 escada existir; parar é só adiar."*
 
 **A premissa era falsa, e a medição é curta:** o degrau caro já não era
@@ -102,7 +102,7 @@ carimbo em jogo nenhum, tinha o comportamento pior em TODOS eles.
 DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026)
 ----------------------------------------------------
 O parar acima custava DUAS coisas, e as duas foram medidas três vezes no
-journal da máquina de teste (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
+journal (26/08 03:40:45, 29/08 00:26:17, 29/08
 03:19:14), sempre na mesma sequência de quatro linhas:
 
     ponte_escada_parou_no_degrau_caro  de=gamepad/xbox proximo=native/- ...

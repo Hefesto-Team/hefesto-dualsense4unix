@@ -4,17 +4,17 @@ SENTINELA-WRAPPER-01 — 16/08/2026, defeito pego AO VIVO.
 
 O QUE ACONTECEU
 ---------------
-O Pragmata (appid 3357650) funcionou no CABO. No Bluetooth, no início
+Um jogo funcionou no CABO. No Bluetooth, no início
 travou alguns inputs e logo em seguida o controle deixou de ser reconhecido
-no jogo, enquanto o perfil do Pragmata seguia ativo no controle, com tudo
+no jogo, enquanto o perfil do jogo seguia ativo no controle, com tudo
 funcionando fora do jogo.
 
 O daemon estava SAUDÁVEL o tempo todo — vpad P1 com os quatro nós, grab retido
-(`grab=True ok=True state=held`), `launch_env/steam_app_3357650.env`
+(`grab=True ok=True state=held`), `launch_env/steam_app_100040.env`
 materializado com o conteúdo certo. Ele fez a parte dele. O arquivo nunca foi
 lido, **porque quem o lê é o wrapper, e o wrapper não rodou**.
 
-As Opções de Inicialização do Pragmata eram::
+As Opções de Inicialização do jogo eram::
 
     VKD3D_CONFIG=no_upload_hvv %command%
 
@@ -55,7 +55,7 @@ O QUE ESTE MÓDULO FAZ, em três camadas independentes
 
 A COMPOSIÇÃO QUE PRESERVA A LINHA DO USUÁRIO (medida, não suposta)
 -------------------------------------------------------------
-O reparo do Pragmata tem de manter o wrapper **e** o `VKD3D_CONFIG` — soltar
+O reparo do jogo tem de manter o wrapper **e** o `VKD3D_CONFIG` — soltar
 um dos dois troca um defeito por outro. A linha que o `migrate_value` já emite
 faz exatamente isso::
 
@@ -195,7 +195,7 @@ class Censo:
 
     @property
     def regressoes(self) -> list[JogoSemWrapper]:
-        """Os que TINHAM o wrapper e perderam — o defeito confuso do Pragmata."""
+        """Os que TINHAM o wrapper e perderam — o defeito confuso do jogo."""
         return [j for j in self.faltantes if j.motivo == MOTIVO_REGRESSAO]
 
     @property
@@ -453,7 +453,7 @@ def reparar_ou_adiar(
     engolida na saída da Steam), e só então a escrita.
 
     O que a escrita preserva, e por quê importa aqui mais que em qualquer
-    outro lugar: o Pragmata precisa do wrapper **e** do `VKD3D_CONFIG` que
+    outro lugar: o jogo precisa do wrapper **e** do `VKD3D_CONFIG` que
     cura o crash de 14/08. Repor o wrapper jogando fora a linha do usuário trocaria
     "o jogo não vê o controle" por "o jogo fecha sozinho", que não é conserto
     nenhum. Quem garante isso é o `migrate_value`, que PREPENDE.

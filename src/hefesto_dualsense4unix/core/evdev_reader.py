@@ -64,7 +64,7 @@ class EixoAbsoluto:
     `flat` (zona morta declarada pelo aparelho; 0 no DualSense, 500 no Pro) e
     `fuzz` viajam junto porque quem for tratá-los depois precisa do número do
     APARELHO, não de uma tabela de "controles conhecidos" — que é a versão que
-    só funciona nesta máquina de teste. **Nenhum dos dois é aplicado hoje**, e isso é
+    só funciona numa máquina. **Nenhum dos dois é aplicado hoje**, e isso é
     escolha declarada: aplicar zona morta é decisão de produto, não de leitura.
     """
 
@@ -2284,7 +2284,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
 
     ONDA-CONTROLES-04 (29/08/2026): o acelerômetro passou a ser LIDO. Esta
     docstring dizia que `ABS_X/Y/Z` "não entram aqui", e era descrição do que
-    faltava, não do aparelho — o node já os entregava. Medido nesta máquina de teste,
+    faltava, não do aparelho — o node já os entregava. Medido,
     dois DualSense no cabo, `EVIOCGABS` fora deste código: `res=8192` nos três
     eixos, e o módulo do vetor em repouso deu 0,996 g e 0,992 g.
     """

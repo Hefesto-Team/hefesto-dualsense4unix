@@ -244,8 +244,8 @@ class AutoSwitcher:
         `_activate` — e NADA o sincronizava com `store.active_profile`. Um
         `profile.switch` do usuário (janela, CLI, PS+D-pad) trocava o perfil de
         verdade e o autoswitch seguia acreditando no que ELE tinha ativado por
-        último. A prova está no journal da máquina de teste: `profile_autoswitch from_=None
-        to=sackboy_nativo` com outro perfil ativo havia horas — o autoswitch
+        último. A prova está no journal: `profile_autoswitch from_=None
+        to=jogo_nativo` com outro perfil ativo havia horas — o autoswitch
         "entrando" num perfil que já era o ativo, reescrevendo gatilhos, LEDs,
         modo e política de rumble por cima do que o usuário tinha escolhido na mão.
 

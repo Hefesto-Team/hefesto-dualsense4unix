@@ -24,7 +24,7 @@ estáveis, lido onde só o índice e o nome bastam.
 
 * texto com acento vira `null` no campo inteiro (`Invalid non-ASCII character`
   no stderr, e o valor sai como a cadeia `(null)`): a descrição «Estéreo digital» de
-  uma placa e o `node.name` do Sackboy™ vêm `(null)`. O leitor desta porta
+  uma placa e o `node.name` do jogo™ vêm `(null)`. O leitor desta porta
   (:func:`ler_a_lista`) completa o que se perdeu pelo grafo do PipeWire (o
   ``pw-dump``, que fala UTF-8), casando pela identidade do nó, numa leitura só
   por pergunta e só quando algo se perdeu (:func:`completar_o_json`). Sem o

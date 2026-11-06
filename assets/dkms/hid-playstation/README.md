@@ -124,7 +124,7 @@ Três medidas encadeadas, todas verificadas nesta máquina:
 
    ```
    bluetoothd: profiles/input/device.c:hidp_report_req_timeout()
-               Device A0:FA:9C:00:00:02 HIDP GET_REPORT request timed out
+               Device AA:BB:CC:00:00:02 HIDP GET_REPORT request timed out
    ```
 
    `REPORT_REQ_TIMEOUT` é **3 s** no `profiles/input/device.c` do BlueZ 5.86 —
@@ -314,7 +314,7 @@ Separando o que é **fato medido** do que é **hipótese fundamentada**:
 > **A conta que faltava fazer era aritmética.** Cada tentativa já custa os
 > **3 s inteiros** do BlueZ; o backoff entre as tentativas era de **100 ms e 200 ms**;
 > logo as três tentativas caíam **dentro da mesma janela de contenção** — no
-> journal do ensaio, `00:17:04 → :07 → :10 → aborto`. O espaçamento era ~30× pequeno
+> journal, `00:17:04 → :07 → :10 → aborto`. O espaçamento era ~30× pequeno
 > demais para o problema que se propunha a atravessar. Único efeito medido:
 > **encarecer a falha de ~3,3 s para ~10 s**.
 >

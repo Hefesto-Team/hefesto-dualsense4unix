@@ -1077,7 +1077,7 @@ class BtMicSubsystem:
         de um calado herdava o padrão sem a pergunta ser feita.
 
         **E QUANDO NÃO HÁ PARA ONDE VOLTAR, a recusa vai para o diário.** Foi o
-        caso medido nesta máquina de teste: o único microfone do usuário é o do DualSense, e
+        caso medido: o único microfone do usuário é o do DualSense, e
         com o controle fora da mesa e ninguém mais no ar não sobra captura com
         porta usável que não seja controle. Aí nada é escrito, e o que fica no
         journal é o NOME do nó que herdou a eleição — porque uma denúncia sem o

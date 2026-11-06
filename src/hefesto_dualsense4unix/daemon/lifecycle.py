@@ -950,7 +950,7 @@ class Daemon:
     ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
 
-        FEAT-NATIVE-MODE-01. Para jogar Sackboy & cia com os gatilhos adaptativos
+        FEAT-NATIVE-MODE-01. Para jogar com os gatilhos adaptativos
         NATIVOS da Sony (dirigidos pelo jogo), sem o hefesto no meio.
 
         `enabled=True`: solta o controle — gatilhos Off/Off (o jogo impõe os
@@ -969,7 +969,7 @@ class Daemon:
         `restore_stash=True` com `reapply=False` restaura SÓ a emulação do
         stash (BUG-NATIVE-REVERT-DROPS-STASH-01: a reversão por
         perfil-sem-opinião deixava a usuária SEM gamepad ao sair do jogo —
-        flagrado ao vivo no Sackboy: alt-tab → nativo off → gamepad nunca
+        flagrado ao vivo no jogo: alt-tab → nativo off → gamepad nunca
         voltava).
 
         NOTA (BUG-NATIVE-* da auditoria): o Modo Nativo NÃO usa mais `pause()` —
@@ -2098,7 +2098,7 @@ class Daemon:
            PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): **catch-all não liga**, pela
            mesma razão pela qual ele não libera (item 3) — ver o comentário no
            corpo. Sem essa metade, um catch-all com `suppress: true` (o
-           `sackboy_nativo` do disco do usuário) criava um estado do qual nenhum
+           `jogo_nativo` do disco do usuário) criava um estado do qual nenhum
            outro catch-all conseguia sair.
         3. **desired=False** — LIBERA a supressão apenas se a supressão veio de perfil
            (`_suppress_from_profile`). Supressão de origem manual (lock já
@@ -2301,7 +2301,7 @@ class Daemon:
 
         Medido em 17/08 com par fechado, mesma máquina, mesmo minuto::
 
-            profile activate "Dont Scream"  ->  /dev/hidraw4 NASCE
+            profile activate "Jogo um"  ->  /dev/hidraw4 NASCE
             profile activate "Navegação"    ->  /dev/hidraw4 SOME
 
         A pergunta desta guarda nunca foi "isto é um jogo?", e sim "reverter
@@ -2388,7 +2388,7 @@ class Daemon:
           commitada normalmente — nada de flap a 2 Hz — e a seção fica numa
           pendência ÚNICA (`ModoAdiado`) que o `_poll_loop` drena UMA vez,
           quando o lock vencer. Era esta a queixa medida: o usuário mexia na máscara,
-          abria o Sackboy em menos de 30 s, o `mode` do perfil era pulado em
+          abria o jogo em menos de 30 s, o `mode` do perfil era pulado em
           silêncio e a máscara ficava errada a SESSÃO INTEIRA, com a GUI
           mostrando o perfil ativo como se tudo tivesse valido.
         """

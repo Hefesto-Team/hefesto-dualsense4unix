@@ -10,15 +10,15 @@ sozinha (``CALIBRAR-AS-ENTRADAS-01`` §1).
 
 O que torna a tela possível é uma medição de 25/08/2026: **o nó da entrada
 existe com a entrada vazia**. ``state`` responde em todos eles — ``configured``
-quando há aparelho, ``not attached`` quando não há. Nesta máquina de teste são 22 nós de
+quando há aparelho, ``not attached`` quando não há. Numa máquina medida são 22 nós de
 raiz, e a leitura custa 6,87 ms.
 
 O NÓ NÃO É O BURACO — E ESSA É A ARMADILHA CENTRAL
 ---------------------------------------------------
 
 Um buraco USB 3.x do gabinete aparece no ``/sys`` como **dois** nós de entrada:
-um no hub-raiz 2.0 e outro no 3.x, amarrados pelo symlink ``peer``. Medido nesta
-máquina de teste em 25/08/2026::
+um no hub-raiz 2.0 e outro no 3.x, amarrados pelo symlink ``peer``. Medido
+em 25/08/2026::
 
     usb1-port5  peer -> usb2-port1     (nenhum dos dois com aparelho)
     usb1-port6  peer -> usb2-port2     (o mouse, do lado 2.0)

@@ -230,7 +230,7 @@ identidade veio **real**, não sintetizada. A prova está na forma da linha de
 log. O journal traz
 
 ```
-nintendo 0003:057E:2009.0008: controller MAC = E4:17:D8:00:00:1A
+nintendo 0003:057E:2009.0008: controller MAC = AA:BB:CC:00:00:1A
 ```
 
 que é o `hid_info` de dentro do `joycon_read_info` (`hid-nintendo.c:2727`), **e

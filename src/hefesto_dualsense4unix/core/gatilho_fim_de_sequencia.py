@@ -58,7 +58,7 @@ relógios dariam duas sequências para o mesmo silêncio::
 
 A **ação resolve o conteúdo na hora de agir, nunca antes**. Isto é requisito,
 não estilo: o autoswitch troca de perfil quando o jogo abre (medido em 12/08 —
-o perfil `Sackboy` tem cor própria `[80,60,220]` e foi aplicado no meio do
+o perfil de um jogo tem cor própria `[80,60,220]` e foi aplicado no meio do
 ensaio), então uma ação que guardasse o valor no momento de armar reafirmaria
 o que o produto queria ANTES, e brigaria com o próprio produto.
 """

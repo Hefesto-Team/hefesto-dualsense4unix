@@ -34,7 +34,7 @@ O limite que CONFIG-02 escreveu — *"o que amarra controle a adaptador é o bon
 em `/var/lib/bluetooth`, árvore 700, e a janela é sudo-zero"* — estava FALSO, e
 foi derrubado em 22/08/2026: o uevent do nó hidraw publica `HID_PHYS` = MAC do
 adaptador para BT real (`broker/hidraw_broker.py:318`), e
-`/sys/class/hidraw/*/device/uevent` abre como uid 1000. É por aí que o medidor
+`/sys/class/hidraw/*/device/uevent` abre como usuário comum. É por aí que o medidor
 sabe qual controle está em qual adaptador, sem tocar em `sudo`.
 
 A conta, a procedência de cada número e a fronteira que a tela NÃO atravessa
@@ -59,7 +59,7 @@ A ordem de precedência tem três degraus, e essa é o desenho:
 2. **o que o kernel leu vence o botão vazio** — a linha nasce preenchida, com
    o selo `(lido)`, e o seletor só aparece se quem usa clicar em "Corrigir";
 3. **quando ninguém sabe** — classe `ff`, em que o fabricante declinou de
-   classificar — a linha nasce com o seletor aberto e o `▲`. Na máquina de teste,
+   classificar — a linha nasce com o seletor aberto e o `▲`. Medido,
    das quatro linhas de rádio vizinho, só UMA cai aqui.
 
 A junção entre as duas leituras é o `no` — o caminho real no sysfs, a mesma
@@ -70,7 +70,7 @@ O NOME DE CADA ADAPTADOR (22/08/2026)
 --------------------------------------
 
 Decisão de produto: quem usa escreve, o produto protege o prefixo. Três adaptadores
-`2357:0604` idênticos no barramento, e a única coisa que os separa é o BD
+`aaaa:bbbb` idênticos no barramento, e a única coisa que os separa é o BD
 Address — que não é nome. Quem lê e escreve o `org.bluez.Adapter1.Alias` é
 `integrations/apelido_do_dongle`, o segundo módulo que estava sem consumidor.
 

@@ -275,7 +275,7 @@ def adaptador_por_uniq(
     MAC do adaptador"*, e o belt de ``:395-397`` só confirma quando o sysfs de
     Bluetooth está legível.
 
-    **A regra de honestidade, com controle negativo medido nesta máquina de teste
+    **A regra de honestidade, com controle negativo medido
     em 22/08/2026:** controle no CABO traz ``HID_PHYS`` de barramento USB
     (``usb-0000:0c:00.3-1/input3``), não MAC. Ele devolve ``""``, porque
     controle no fio não ocupa fatia de rádio nenhuma. O mesmo vale para o nosso

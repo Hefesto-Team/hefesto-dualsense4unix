@@ -21,7 +21,7 @@ As três perguntas que ele responde, e nada além disso:
 O QUE ELE NÃO É
 ----------------
 
-Não entrega o **endereço** (MAC) do adaptador. Medido nesta máquina de teste em
+Não entrega o **endereço** (MAC) do adaptador. Medido em
 22/08/2026, kernel 7.0.11-76070011-generic: ``/sys/class/bluetooth/hci0/`` não
 tem arquivo ``address`` — o ``_adapter_addresses`` do próprio projeto
 (``broker/hidraw_broker.py:224``) devolve ``set()`` sobre ``/sys``. O endereço
@@ -49,9 +49,9 @@ adaptadores — quem responde é o sysfs do kernel. Lista vazia e ``""`` são
 respostas legítimas, e **zero adaptadores é o caso mais comum lá fora**: a
 máquina sem Bluetooth nenhum.
 
-Esta máquina de teste NÃO é esse caso: tem TRÊS (``hci0``, ``hci1``, ``hci2``,
+Há máquina que NÃO é esse caso: tem TRÊS (``hci0``, ``hci1``, ``hci2``,
 medido em 22/08/2026). A frase anterior aqui dizia o contrário, e um fato
-errado sobre a máquina de teste é justamente o tipo de linha que a próxima pessoa cita
+errado sobre a máquina é justamente o tipo de linha que a próxima pessoa cita
 como prova (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A6).
 
 Todas as raízes e todos os leitores entram por argumento com default do sistema

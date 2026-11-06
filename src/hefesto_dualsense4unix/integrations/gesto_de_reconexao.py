@@ -18,7 +18,7 @@ botão PS do usuário e `reconectar` ausente de propósito. A decisão do dia:
 o reconectar toca no rádio, porque não faz sentido ele ficar de
 fora.
 
-E O DIA MEDIU POR QUÊ. A máquina de teste caiu num estado que o botão PS **não**
+E O DIA MEDIU POR QUÊ. A máquina caiu num estado que o botão PS **não**
 resolve: o BlueZ dizendo ``Connected: true`` para quatro controles com o kernel
 sem HID nenhum deles — elo de pé, sessão de entrada morta. Para o rádio já
 estava tudo certo, então apertar PS não fazia nada; o que destrava é derrubar o
@@ -41,8 +41,8 @@ porque um DualSense desligado não atende chamado. Por isso o estado
 ENDEREÇAMENTO POR MAC, NUNCA POR ``hciN``
 ==========================================
 O caminho de um dispositivo no BlueZ carrega o adaptador
-(``/org/bluez/hci2/dev_D4_2F_4B_00_00_D8``), e o índice ``hciN`` **inverte entre
-boots**: os três adaptadores desta mesa são o MESMO modelo atrás do mesmo hub, e
+(``/org/bluez/hci2/dev_AA_BB_CC_00_00_01``), e o índice ``hciN`` **inverte entre
+boots**: adaptadores do MESMO modelo ficam atrás do mesmo hub, e
 qual deles vira ``hci0`` é sorteio de enumeração. Por isso nada aqui recebe
 ``hciN``: :func:`caminho_do_controle` VARRE a árvore e casa pelo MAC, que é o
 que não muda. É a mesma doença que o ``bt_active_mode.sh:86`` tem com o seu
@@ -50,7 +50,7 @@ que não muda. É a mesma doença que o ``bt_active_mode.sh:86`` tem com o seu
 
 SEM SUDO, E ISSO É MEDIDO
 =========================
-``Disconnect`` em ``org.bluez.Device1`` responde para o uid 1000 nesta mesa
+``Disconnect`` em ``org.bluez.Device1`` responde para o usuário comum
 (medido em 22/08/2026, com o ``busctl introspect`` respondendo e a propriedade
 ``Connected`` legível). Este gesto **não** passa pelo helper privilegiado do
 install — pedir senha para algo que não precisa de senha ensina a pessoa a digitar
@@ -216,7 +216,7 @@ def _modalias_dos_dualsense() -> tuple[str, ...]:
 
     Os números SÃO os do broker (`broker/hidraw_broker.PHYS_VENDOR` e
     `PHYS_PRODUCTS`), lidos de lá, e a pergunta é por PROPRIEDADE, nunca pelo
-    `Alias`: o nome é editável e a máquina de teste tem quatro aparelhos com o mesmo,
+    `Alias`: o nome é editável e quatro aparelhos podem ter o mesmo,
     que é a doença que esta casa já pagou casando nó de som por rótulo.
 
     **O EDGE ENTROU EM 25/09/2026** (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01).

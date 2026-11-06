@@ -12,7 +12,7 @@ arquivo existir com esta forma e não com outra.
 O CENSO DE 16/08/2026 DERRUBOU A HEURÍSTICA QUE ESTE MÓDULO IA TER
 -------------------------------------------------------------------
 O desenho pedido era: *detectar o jogo que só fala XInput e trocar a máscara
-para Xbox sozinho*. O censo dos 24 jogos instalados na máquina de teste (instrumento
+para Xbox sozinho*. O censo dos 24 jogos instalados (instrumento
 `scripts/ensaios/api_de_entrada_dos_jogos.py`) mostrou que **a assinatura de
 disco não separa**:
 
@@ -20,15 +20,14 @@ Dos 24 jogos, **14 caem no mesmo balde** — a assinatura "XInput e mais nada":
 
 | jogo | imports do PE | agulhas | funciona hoje com máscara DualSense? |
 |---|---|---|---|
-| **Duskfade** | (nenhum de entrada) | `rawinput,xinput` | **NÃO** — é o defeito |
-| **DON'T SCREAM** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil do usuário) |
-| **Big Walk** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil do usuário) |
-| **Sackboy** | `xinput1_4.dll` | `rawinput,xinput` | **SIM** (perfil do usuário) |
-| **Stray** | `xinput1_3.dll` | `rawinput,xinput` | **SIM** |
-| PEAK, MMJ, Mad King, Mr. Sleepy Man, Scarlet Deer Inn, オバケイドロ, REANIMAL,
-  DON'T SCREAM TOGETHER | (nenhum de entrada) | `rawinput,xinput` | sem perfil |
+| **Jogo A** | (nenhum de entrada) | `rawinput,xinput` | **NÃO** — é o defeito |
+| **Jogo B** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil do usuário) |
+| **Jogo C** | (nenhum de entrada) | `rawinput,xinput` | **SIM** (perfil do usuário) |
+| **Jogo D** | `xinput1_4.dll` | `rawinput,xinput` | **SIM** (perfil do usuário) |
+| **Jogo E** | `xinput1_3.dll` | `rawinput,xinput` | **SIM** |
+| mais oito jogos | (nenhum de entrada) | `rawinput,xinput` | sem perfil |
 
-Duskfade e DON'T SCREAM têm a **mesma** assinatura na forma que importa:
+O Jogo A e o Jogo B têm a **mesma** assinatura na forma que importa:
 nenhum import de entrada, `XINPUT1_4.dll` carregado por `LoadLibrary`, zero
 SDL na pasta. Um está quebrado, o outro funciona.
 
@@ -55,11 +54,11 @@ AS QUATRO FONTES QUE FORAM PESADAS, E POR QUE TRÊS PERDERAM
    0,02 s a 2,15 s por jogo (medido; o pior caso é um PE de 379 MB). É a única
    fonte que não exige que o jogo já tenha rodado.
 2. **O log do Unreal** (`*/Saved/Logs/*.log`, que lista os plugins montados).
-   Foi assim que se soube que o Duskfade só monta `XInputDevice`. PERDEU por
+   Foi assim que se soube que o Jogo A só monta `XInputDevice`. PERDEU por
    cobertura: varrendo `steamapps/common` E os prefixos de `compatdata`, o log
    existe para **1 dos 24** jogos, e só depois da primeira execução. Nenhum
    jogo que FUNCIONA tem log — então nem como contraprova ele serve, porque não
-   há com que comparar o `XInputDevice` do Duskfade. Um sinal que só aparece na
+   há com que comparar o `XInputDevice` do Jogo A. Um sinal que só aparece na
    segunda execução e cobre 4% da biblioteca não sustenta decisão de produto.
 3. **`ControllerTypesUsed` do `localconfig.vdf`.** PERDEU por escopo: medido em
    16/08/2026, a chave é **uma só, global da conta** (`localconfig.vdf:1346`),

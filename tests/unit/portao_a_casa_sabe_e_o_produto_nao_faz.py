@@ -1565,7 +1565,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
         "promessa ao produto e o caminho está DELIBERADAMENTE fechado — o "
         "docstring de hoje (`reparo` em "
-        "`src/hefesto_dualsense4unix/integrations/apelido_do_dongle.py:375`) "
+        "`src/hefesto_dualsense4unix/integrations/apelido_do_dongle.py:374`) "
         "diz só o que a função faz, e a razão mora na "
         "`D-COSTURA-BLUEZ`, abaixo. Desde `a75a514` (22/08, "
         "21h26) o `scripts/bt_active_mode.sh:172` (`COM_NINTENDO`) itera TODOS os adaptadores "

@@ -261,7 +261,7 @@ def ensaio_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.En
 def classe_do_escolhido(ensaio: mapa_das_portas.Ensaio, caminho: str) -> str:
     """A classe que o motor julga para o aparelho na mão — ``""`` se ele não a tem.
 
-    ``""`` acontece de verdade e não é borda: o Archer T3U da máquina de teste
+    ``""`` acontece de verdade e não é borda: um Wi-Fi USB
     declina de se classificar e o DualSense por cabo é HID sem protocolo de
     arranque. Para eles não há regra no motor, e o quadrado cala em vez de
     julgar pelo aparelho errado.

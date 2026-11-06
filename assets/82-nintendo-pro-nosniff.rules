@@ -12,7 +12,7 @@
 # ESCOPO — E POR QUE ELE DEIXOU DE SER UMA FAIXA (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01
 # / E1, 25/08/2026).
 #
-# Até 25/08 esta regra casava SÓ `e0:f6:b5:*`, a faixa do Pro da máquina de teste. A
+# Até 25/08 esta regra casava SÓ `e0:f6:b5:*`, uma faixa só do Pro. A
 # Nintendo tem OITENTA E DUAS faixas MA-L registradas e a 8BitDo tem UMA (medido
 # contra `/usr/share/ieee-data/oui.csv` em 22/08/2026): uma amostra de tamanho um
 # tinha virado a definição de "Pro", e quem tem um Pro de outra safra não recebia
@@ -47,7 +47,7 @@
 # AS DUAS LINHAS DE FAIXA CONTINUAM, e continuam ANTES da linha do nome: quem já
 # recebia a cura não passa a depender de um dado novo. Essas linhas existem também para
 # o caso de o nome não ter sido resolvido no instante do `add`. O `GOTO` é o que
-# impede o Pro da máquina de teste de casar as duas rotas e chamar o helper duas vezes.
+# impede o Pro de casar as duas rotas e chamar o helper duas vezes.
 #
 # Reverter: remover este arquivo, `udevadm control --reload`, e devolver o link
 # com `hcitool lp <MAC> RSWITCH,HOLD,SNIFF,PARK`.

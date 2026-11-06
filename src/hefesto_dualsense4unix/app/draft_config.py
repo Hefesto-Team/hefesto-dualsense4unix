@@ -137,7 +137,7 @@ class MicDraft(BaseModel):
     ``volume`` (0-100, o por cento da FONTE de captura no sistema) e ``muted``
     (o mudo do FIRMWARE do controle) espelham os dois campos homônimos de
     ``ProfileMicConfig``. Eles entraram em 18/08/2026, a pedido — depois
-    de o microfone ficar mudo e o DON'T SCREAM não ouvir nada: *"informação de
+    de o microfone ficar mudo e o jogo não ouvir nada: *"informação de
     microfone e som, touch, acelerômetro, giroscópio e afins. cara, temos que
     salvar isso no perfil sempre."*
 
@@ -529,7 +529,7 @@ class DraftConfig(BaseModel):
         número vem do perfil de ORIGEM quando é o mesmo perfil e, na falta dele,
         do DEFAULT DO ESQUEMA. Nunca de um literal inventado aqui: o antigo
         default 5 desta assinatura era a assinatura digital dos perfis do usuário
-        salvos pelo rodapé (``pragmata.json`` e ``pragmata2.json``, prioridade 5
+        salvos pelo rodapé (``jogo.json`` e ``jogo2.json``, prioridade 5
         sem o usuário ter tocado no slider, empatados entre si e com os outros
         catch-all). Um portão de busca em
         ``tests/unit/test_perfil_salva_tudo_rascunho.py`` impede a volta dele.

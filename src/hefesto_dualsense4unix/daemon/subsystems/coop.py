@@ -847,7 +847,7 @@ class CoopManager:
         `INPUT2` — e nada mais); o uinput é igual, o nome vai no `UI_DEV_SETUP`
         antes do `UI_DEV_CREATE`. Renomear é DERRUBAR e RECRIAR.
 
-        **O PREÇO DE RECRIAR, medido no journal do ensaio, 07/09/2026**
+        **O PREÇO DE RECRIAR, medido no journal, 07/09/2026**
         (um replug real do controle branco, `uhid_device_created` →
         `vpad_uhid_ativo` → sinks de volta → `launch_env` reassentado):
 
@@ -897,7 +897,7 @@ class CoopManager:
         a medição inteira em `integrations.uinput_gamepad.NINTENDO_PROCON_NAME`.
 
         E `SDL_JoystickGetDevicePlayerIndex` não é saída: ele devolve a ordem
-        de ENUMERAÇÃO (0..7 nesta máquina de teste), nunca a carta.
+        de ENUMERAÇÃO (0..7), nunca a carta.
 
         **O QUE ISSO NÃO DERRUBA:** a cura continua certa e continua valendo.
         O defeito que a cura fechou era a casa falar duas línguas sobre si mesma

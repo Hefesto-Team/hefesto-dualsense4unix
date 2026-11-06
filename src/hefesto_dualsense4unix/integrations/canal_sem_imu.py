@@ -3,9 +3,9 @@
 A QUEIXA QUE ORIGINOU ESTE ARQUIVO, e é do usuário
 ------------------------------------------------
     *"joguei um jogo com controle por movimento e na hora do vamos ver o
-    controle não deu resposta (pragmata)"*
+    controle não deu resposta"*
 
-O perfil do PRAGMATA não tem a chave ``caminho``. Ele herdou o
+O perfil do jogo não tem a chave ``caminho``. Ele herdou o
 ``config.gamepad_caminho`` que o jogo anterior deixou de pé, e o jogo anterior
 era um em que o usuário escolheu Xbox — de propósito, e funcionou lá. Com o caminho
 Xbox o vpad nasce em ``uinput``, e em ``uinput`` não há giroscópio: dez linhas
@@ -140,7 +140,7 @@ def canal_sem_imu(*, mascara: object, caminho: object, backend: object) -> bool:
       linhas `uhid`"*) — é escolha coerente, não silêncio, e não é este evento;
     - **caminho resolvido `== "xbox"`** — o canal escolhido é o comum. É a
       metade que a herança de `config.gamepad_caminho` liga sem ninguém pedir
-      NAQUELE jogo, e é por essa metade que o PRAGMATA caiu;
+      NAQUELE jogo, e é por essa metade que o jogo caiu;
     - **`backend == "uinput"`** — o vpad de pé é mesmo o evdev. Sem esta, um
       vpad `uhid` que ainda não sabe dizer o caminho responderia "sem IMU" com
       a IMU no ar, que é a mentira cara num painel de diagnóstico.

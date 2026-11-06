@@ -68,7 +68,7 @@ def e_pro_genuino(
 
     Verdadeiro quando o aparelho se apresenta como Pro (:func:`parece_pro`) e o
     endereço dele **não** está numa faixa de clone conhecida. Qualquer faixa da
-    Nintendo serve, inclusive as 81 que esta máquina de teste nunca viu.
+    Nintendo serve, inclusive as 81 que nenhum ensaio viu.
 
     ``False`` sem endereço legível: sem OUI não dá para descartar o clone.
     """

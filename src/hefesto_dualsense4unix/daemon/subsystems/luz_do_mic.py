@@ -94,7 +94,7 @@ nomes de função em cada uma, e para a PEÇA B nenhum dos quatro existia:
   segura processos `parec` VIVOS, e por isso o laço é dono da peça: quem a cria é
   quem a PARA no `finally`. Um medidor que vaza prende a fonte de captura da peça
   aberta indefinidamente — um `parec` órfão com o stdout em `/dev/null` nunca
-  toma `SIGPIPE` e vive para sempre. Já aconteceu nesta máquina de teste.
+  toma `SIGPIPE` e vive para sempre. Já aconteceu.
 
 **O `seguir` precisa do NOME DA FONTE, e a PEÇA A não o devolve.** A peça responde
 QUEM ouve, não POR ONDE. O nome sai das réguas que a casa já tem

@@ -4,7 +4,7 @@ O PROBLEMA QUE ESTE MÓDULO RESOLVE
 -----------------------------------
 
 O PipeWire publica o áudio do DualSense com um nome que **não carrega
-identidade**. Medido nesta máquina de teste em 15/08/2026, com dois controles no cabo::
+identidade**. Medido em 15/08/2026, com dois controles no cabo::
 
     alsa_output.usb-Sony_..._DualSense_Wireless_Controller-00.analog-surround-40
     alsa_output.usb-Sony_..._DualSense_Wireless_Controller-00.2.analog-surround-40
@@ -18,7 +18,7 @@ controle errado é pior que não exibir nenhuma.
 Mas existe um casamento que não depende de nome nenhum: **a placa de som e o
 HID do mesmo controle penduram no MESMO dispositivo USB**. No cabo, a interface
 ``:1.0`` é o áudio e a ``:1.3`` é o HID, e as duas são filhas do nó que tem
-``busnum``/``devnum``. Medido na mesma máquina de teste::
+``busnum``/``devnum``. Medido::
 
     hidraw8  -> .../usb3/3-2/3-2:1.3/...   card3 -> .../usb3/3-2/3-2:1.0
     hidraw10 -> .../usb3/3-3/3-3:1.3/...   card2 -> .../usb3/3-3/3-3:1.0

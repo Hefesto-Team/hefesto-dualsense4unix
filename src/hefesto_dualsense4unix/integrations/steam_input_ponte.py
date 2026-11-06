@@ -10,7 +10,7 @@ perfeito e uma cura que o produto não aplicava: o defeito mais caro desta casa.
 
 O PREÇO, medido na noite de 18→19/08/2026
 ------------------------------------------
-DON'T SCREAM (appid 2497900) é da classe *"só aceita Steam Input"*: motor
+Há jogo da classe *"só aceita Steam Input"*: motor
 Unreal, fala XInput, e quem lhe entregava um dispositivo XInput era o espelho
 Xbox do Steam Input. Com o Steam Input desligado o jogo não via controle
 nenhum, e o guarda (`scripts/disable_steam_input.sh`) desligava a única ponte
@@ -56,7 +56,7 @@ Se as duas discordarem, existe uma ocorrência que a navegação não soube
 atribuir — e o módulo **recusa escrever** (`reguas_divergem`). Depois da
 escrita, a régua estrutural relê o texto produzido e confere valor por valor
 (`conferir_escrita`): escrever e acreditar é como o censo do wrapper passou uma
-noite verde com o Pragmata quebrado.
+noite verde com o jogo quebrado.
 
 O QUE O PRODUTO PODE PROMETER HONESTAMENTE
 ------------------------------------------

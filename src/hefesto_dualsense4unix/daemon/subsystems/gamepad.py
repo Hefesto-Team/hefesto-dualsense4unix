@@ -37,7 +37,7 @@ Política:
     os gamepads virtuais** (`suspend_vpads_for_steam_input`). Curava o duplicado
     com UM controle e derrubava o jogador 2 junto, porque o jogador 2 **é** um
     gamepad virtual — `coop_derrubado_pela_excecao_steam_input`, vinte
-    ocorrências no journal do ensaio em 08/08. O raciocínio antigo não estava errado
+    ocorrências no journal em 08/08. O raciocínio antigo não estava errado
     sobre o duplicado; estava errado sobre o preço, que ninguém tinha declarado.
     As funções da suspensão saíram em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01):
     sem chamador desde 09/08, o flag que as duas armavam nunca podia ser verdade.
@@ -48,7 +48,7 @@ Política:
     **Nenhum caminho fecha o handle de saída**: os chamadores de
     `steam_input_excecao_ativa` estão todos NESTE arquivo, nenhum em `core/`, e
     por isso lightbar, gatilhos, vibração e LED de jogador seguem sendo
-    escritos no físico durante a exceção inteira. Com o Mullet Mad Jack aberto,
+    escritos no físico durante a exceção inteira. Com o jogo aberto,
     os gatilhos seguraram duros e o vermelho escolhido ficou. Com a inversão de
     09/08 isso deixou de ser meia verdade e virou verdade inteira: a entrada
     também continua sendo do Hefesto.
@@ -265,7 +265,7 @@ def sync_steam_input_exception(
       hidraw, e o jogo cuja via oficial de DualSense é a API Steamworks não
       achava controle nenhum da Sony;
     - **JOGO-01 (25/07)** — expor o físico COM o vpad de pé é o duplicado: o
-      Mullet Mad Jack enumerava js0=vpad e js2=físico e repartia os dois entre
+      O jogo enumerava js0=vpad e js2=físico e repartia os dois entre
       dois jogadores. Daí a suspensão do vpad.
 
     O que ninguém tinha declarado é o preço, e ele foi MEDIDO no ensaio em
@@ -1566,8 +1566,8 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     `gamepad_caminho.flag`), nunca o caminho da sessão que está correndo.
 
     ATÉ 17/09 ESTA RESPOSTA SAÍA DE `config.gamepad_caminho` — o slot da SESSÃO
-    —, e era o vazamento inteiro: o `"xbox"` que o perfil do DON'T SCREAM pede
-    ficava lá e virava lei sobre os 29 perfis que não opinam. O PRAGMATA, que
+    —, e era o vazamento inteiro: o `"xbox"` que o perfil do jogo pede
+    ficava lá e virava lei sobre os 29 perfis que não opinam. O jogo, que
     não tem sequer seção `mode`, abria em uinput, e com ele iam embora as dez
     linhas do mapa que só existem no caminho DualSense — a IMU entre as dez. A
     queixa de uso: num jogo com controle por movimento, na hora de usar o
@@ -1586,9 +1586,9 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     A O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança — do slot da sessão para a
     escolha do usuário — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
     é escrito por TODO gesto manual, e o PS + R3 dentro de um jogo é manual.
-    Medido em 18/09: um aperto no DON'T SCREAM carimbou `xbox` no arquivo
+    Medido em 18/09: um aperto no jogo carimbou `xbox` no arquivo
     global, e **26 dos 29 perfis não têm `mode.caminho`** — herdaram todos, o
-    PRAGMATA entre eles, com giroscópio e touchpad fora do jogo.
+    jogo medido entre eles, com giroscópio e touchpad fora do jogo.
 
     **A CURA NÃO É UMA FONTE MELHOR, É NENHUMA FONTE.** Enquanto um start sem
     opinião herdar de qualquer lugar, existe um lugar a envenenar; a terceira
@@ -1610,7 +1610,7 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
         caminho_resolvido(None, "xbox")       ->  xbox
 
     A máscara nasce `dualsense`, então o default É DualSense para todo perfil
-    que não opina — que é o PRAGMATA e os outros 25. Cravar `dualsense` aqui
+    que não opina — que é o jogo e os outros 25. Cravar `dualsense` aqui
     daria o mesmo resultado nesse caso e um resultado ERRADO no outro: com o
     cartão do P1 em «Xbox 360» (escolha do usuário, máscara `xbox`), o slot passaria
     a dizer `dualsense` sobre um aparelho que `quer_uhid` mantém em uinput — a
@@ -1680,7 +1680,7 @@ def caminho_da_sessao(daemon: Any) -> str | None:
     automação de dois controles) lê daqui e não escolhe nada.
 
     Medido na sessão do usuário de 27/09 às 21h07 e às 23h28: o lançamento do
-    PRAGMATA pôs o pad em DualSense e, segundos depois, um restart o devolveu
+    jogo pôs o pad em DualSense e, segundos depois, um restart o devolveu
     ao Xbox sem que o diário dissesse quem pediu. Cada restart tinha a sua
     fonte (a foto da suspensão, o caminho do pad velho, nenhuma).
     """

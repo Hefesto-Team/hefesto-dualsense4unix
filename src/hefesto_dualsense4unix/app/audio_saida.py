@@ -17,7 +17,7 @@ hoje não: o som do sistema vai para o HDMI e o controle deslizante ajusta um
 alto-falante que não está recebendo áudio nenhum. A rota manda a saída padrão
 do sistema para o sink do controle, e desfaz.
 
-O FATO QUE ORGANIZA ESTE MÓDULO INTEIRO, medido nesta máquina de teste em 01/08/2026::
+O FATO QUE ORGANIZA ESTE MÓDULO INTEIRO, medido em 01/08/2026::
 
     $ paplay --device=nao_existe_mesmo bell.oga ; echo $?
     0
@@ -393,7 +393,7 @@ def tocar_confirmacao(
       com ele acordado (ver :func:`estados_dos_sinks`).
 
     Num som de 67 ms, "o começo" é o som inteiro. E a suspensão é o estado
-    NORMAL entre dois gestos do usuário: os dois sinks de DualSense desta máquina de teste
+    NORMAL entre dois gestos do usuário: os dois sinks de DualSense
     estavam `SUSPENDED` na leitura desta data, com os controles ligados no
     cabo. Nada disto aparecia como falha — o `paplay` abria o fluxo, saía com
     zero, e o tocador devolvia :data:`MOTIVO_TOCOU`.

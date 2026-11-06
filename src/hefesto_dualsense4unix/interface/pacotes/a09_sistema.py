@@ -161,7 +161,7 @@ def _no_painel(repouso: Any) -> str:
 
     O QUE ISSO ARRANCA DA TELA, e é o ponto inteiro: enquanto ninguém escrevia
     neste endereço, o painel continuava com as quatro linhas do mockup —
-    `[23:41:02] daemon pronto · 2 controles`, `perfil "Mortal Kombat" aplicado
+    `[23:41:02] daemon pronto · 2 controles`, `perfil "Jogo um" aplicado
     aos 2`, `gatilho L2 escrito, sem leitura de volta`. Nenhuma dessas aconteceu.
     Um registro técnico inventado é a pior espécie de mentira desta aba: ele
     parece a prova.

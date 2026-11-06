@@ -7,7 +7,7 @@ O pad virtual nascia só por ``/dev/uhid``: um HID sem ``usb_device`` pai. Os do
 lados do Wine (o ``winebus`` e o ``winepulse``) calculam o contêiner do aparelho
 pela mesma fórmula, a partir do ``usb_device`` pai; sem esse pai comum, o jogo
 com a biblioteca da Sony não acha o som do pad e não desiste de procurar (o
-engasgo do Sackboy, causa provada em 07/10/2026). A cura dá ao pad um pai USB de
+engasgo do jogo, causa provada em 07/10/2026). A cura dá ao pad um pai USB de
 verdade: um gadget ``libcomposite`` só HID na roupa do pad, preso ao
 ``usbip-vudc`` e ligado pelo ``vhci_hcd``; quem o separa do físico é a posse.
 

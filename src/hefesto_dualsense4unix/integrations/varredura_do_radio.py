@@ -23,7 +23,7 @@ estado de agora e cobre de graça a **cauda** — na corrida 3 o adaptador varre
 por mais 21 segundos depois de a janela fechar.
 
 E ele não pressupõe máquina nenhuma. A ordem de 11/09 é que o produto é
-para qualquer usuário; uma reserva que pressupõe três adaptadores é a máquina de teste no código, e
+para qualquer usuário; uma reserva que pressupõe três adaptadores é uma máquina só no código, e
 é por isso que a reserva morreu e esta leitura ficou.
 
 AUSÊNCIA É RESPOSTA, E É O CONTRATO INTEIRO DESTE MÓDULO

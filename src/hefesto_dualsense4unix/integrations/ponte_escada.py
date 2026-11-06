@@ -59,7 +59,7 @@ lida contra o mapa, e não uma opinião nova.
 **O que NÃO sustenta pôr o Xbox primeiro, e parece sustentar:** o censo de
 16/08 achou 14 jogos `indeciso` (XInput no binário e nada de SDL) contra 7
 `entende_dualsense`. É tentador ler "a maioria quer Xbox". O mesmo estudo mediu
-que essa leitura **erraria em 13 dos 14**: DON'T SCREAM, Big Walk e Sackboy são
+que essa leitura **erraria em 13 dos 14**: três deles são
 `indeciso` e funcionaram com a máscara `dualsense`. `indeciso` é ausência de
 evidência, não evidência de Xbox.
 
@@ -95,7 +95,7 @@ mantendo a SAÍDA. Medido em `CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*: c
 o jogo na allowlist, os ajustes do usuário (lightbar, gatilhos, LED de jogador)
 VENCEM o jogo; fora da allowlist, o jogo vence. É a única ponte que inverte essa
 disputa a favor do usuário — e é a única que funciona para a classe *"só aceita Steam
-Input"*, medida na noite de 18→19/08 com DON'T SCREAM: sem Steam Input o jogo
+Input"*, medida na noite de 18→19/08: sem Steam Input o jogo
 não via controle nenhum.
 
 A conta que o põe por último: os três primeiros degraus custam três gestos
@@ -104,13 +104,13 @@ de um reinício é mais barato, para a biblioteca inteira, do que pagar um
 reinício antes de três gestos.
 
 A máscara que viaja debaixo dele é a `dualsense`, e isso tem medição: o
-`virtualgamepadinfo.txt` da máquina de teste (16/08) registra o nosso vpad no slot 0 como
+`virtualgamepadinfo.txt` (16/08) registra o nosso vpad no slot 0 como
 `054c:0df2`, **type `ps5`** — é o que deixa os pedidos DualSense da própria
 Steam (Steamworks) terem por onde chegar.
 
 UMA CONTRADIÇÃO VIVA, REGISTRADA E NÃO ESCONDIDA
 ------------------------------------------------
-DON'T SCREAM (2497900) aparece nas duas medições desta casa com desfechos
+Um mesmo jogo aparece nas duas medições desta casa com desfechos
 opostos: a tabela de 16/08 o lista como *"SIM (perfil do usuário, dualsense)"*, e a
 rodada de 18→19/08 mediu que **sem Steam Input ele não via controle nenhum**.
 As duas não podem estar certas ao mesmo tempo sobre o mesmo estado da máquina.
@@ -143,7 +143,7 @@ para isso ficar velho.
 
 **Subir um degrau sozinho com o jogo aberto.** Cada degrau ao vivo recria o
 vpad, e recriar o vpad com o jogo aberto arranca o controle da mão do usuário (R-04,
-medido em 23/07/2026; medido DE NOVO em 19/08 no journal da máquina de teste). O gate
+medido em 23/07/2026; medido DE NOVO em 19/08 no journal). O gate
 `_recriacao_bloqueada_por_jogo` já implementa a metade defensiva disto: origem
 automática é barrada, origem que é gesto do usuário nunca é. Este módulo declara a
 outra metade — `como_subir` NUNCA responde "agora" com o jogo vivo.
@@ -255,7 +255,7 @@ ESCADA: tuple[Degrau, ...] = (
         ponte=Ponte(KIND_NATIVE),
         porque=(
             "Sem vpad: o jogo fala com o DualSense físico. É a ponte dos jogos "
-            "que escrevem no hidraw direto (Sackboy, medido em 06/08) e "
+            "que escrevem no hidraw direto (medido em 06/08) e "
             "recusam um intermediário. Só vale no próximo lançamento — com o "
             "jogo aberto, o IGNORE congelado na env esconde o físico e o "
             "resultado é ZERO controles (`launch_env._nativos_fora_da_"
@@ -271,7 +271,7 @@ ESCADA: tuple[Degrau, ...] = (
             "A Steam entrega a ENTRADA e o Hefesto fica inteiro na SAÍDA — os "
             "ajustes do usuário vencem o jogo (CONTROLE-SONY-MEDIDO-01, A INVERSÃO). "
             "É a única ponte da classe 'só aceita Steam Input', medida em "
-            "18→19/08 com DON'T SCREAM. Fica por último por ser a mais cara de "
+            "18→19/08. Fica por último por ser a mais cara de "
             "tentar: exige fechar a Steam, reabrir a Steam e reabrir o jogo."
         ),
         recria_vpad=False,
@@ -341,7 +341,7 @@ def divergencia_com_o_carimbo(
     ``None`` quando não discordam, **ou quando não há o que comparar**, que é o
     caso que esta função nasceu para separar.
 
-    O DEFEITO CURADO, medido no journal da máquina de teste em 17/09/2026 às 10:45:02:
+    O DEFEITO CURADO, medido no journal em 17/09/2026 às 10:45:02:
 
         ``ponte_confirmada_diverge_do_perfil ponte_do_perfil=gamepad/xbox
         ponte_gravada=gamepad/dualsense``
@@ -354,7 +354,7 @@ def divergencia_com_o_carimbo(
     `launch_env.tique_da_escada`, passa `gamepad_flavor=ponte.mascara` com a
     `ponte` sendo o degrau ao vivo, que é um caminho.
 
-    Então um perfil SEM `caminho` — e o do PRAGMATA é um deles — tinha a
+    Então um perfil SEM `caminho` — e o do jogo é um deles — tinha a
     própria máscara comparada com o caminho carimbado, e o alarme disparava
     sobre uma discordância que não existia. Pior: ele soava como o aviso mais
     grave da casa e mandava quem lesse procurar defeito em lugar nenhum.

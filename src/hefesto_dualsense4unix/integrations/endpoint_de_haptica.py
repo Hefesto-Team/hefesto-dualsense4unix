@@ -10,7 +10,7 @@ vestido de DualSense, um por APARELHO — ver «UM ENDPOINT POR APARELHO», abai
 
 O QUE O GE-PROTON LÊ, E POR QUE UM NÓ BASTA
 --------------------------------------------
-Lido no fonte em 18/09/2026 e medido no PRAGMATA no mesmo dia:
+Lido no fonte em 18/09/2026 e medido no jogo no mesmo dia:
 
 * ``fill_device_info`` (``winepulse.drv/pulse.c:668``) lê ``device.bus``,
   ``device.vendor.id`` e ``device.product.id`` **do proplist do sink** — não
@@ -37,7 +37,7 @@ traz ``sysfs.path`` e que sobe ao **pai** ``usb_device`` desse caminho.
   que não é USB, então o jogo poderia abrir a háptica na caixa de som da
   pessoa;
 * **com o caminho de um ``usb_device``** o GUID sai do PAI dele. Medido no
-  PRAGMATA às 03h40 de 18/09: declarando o hub âncora, o jogo gravou o GUID do
+  jogo às 03h40 de 18/09: declarando o hub âncora, o jogo gravou o GUID do
   **hub raiz**, e o device KS nunca casou.
 
 Por isso o nó declara a INTERFACE da âncora (``<bus>-<porta>:1.0``), que é a
@@ -325,7 +325,7 @@ def rotulo_da_haptica(numero: int | None) -> str:
     para o alto-falante e o microfone em 23/09 (A-FORJA-VALIDA-O-SOM-01, E6): o
     nome do controle na frente, o ``iProduct`` da Sony atrás, e nada de endereço. O
     rótulo de antes, «DualSense <hex6> (háptica)», punha o rabo do endereço do
-    controle na lista de som da máquina — e fazia a máquina de teste contar quatro placas
+    controle na lista de som da máquina — e fazia a máquina contar quatro placas
     DualSense onde há duas.
 
     ``None``, ``bool`` e número que não seja positivo valem como *"não sei o

@@ -18,7 +18,7 @@ O CANAL QUE O MODO PEDE TEM UM DONO, e ele é perguntado, não reescrito:
 metade dessa pergunta, porque com uma máscara que o `uhid` não veste os dois
 modos dão o mesmo aparelho no `uinput` (é a mesma regra de
 `external_mask.vpad_ficou_para_tras`). Sem a regra, o modo DualSense com o cartão
-em Xbox 360 sairia FALHA, e o PRAGMATA de 27/09 (a sessão em DualSense, o pad
+em Xbox 360 sairia FALHA, e o jogo de 27/09 (a sessão em DualSense, o pad
 renascido no Xbox com a máscara DualSense) sairia OK.
 
 Funções puras: recebem o que o daemon publica e o texto do diário, não abrem

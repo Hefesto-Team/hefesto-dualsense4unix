@@ -9,7 +9,7 @@
 # remove TUDO entre as sentinelas ">>> hefesto JustWorksRepairing >>>" e
 # "<<< hefesto JustWorksRepairing <<<".
 # O [General] repetido é seguro: o GKeyFile do bluetoothd FUNDE grupos
-# duplicados (provado ao vivo em 2026-07-18 com o GLib desta máquina) — este
+# duplicados (provado ao vivo em 2026-07-18) — este
 # bloco pode ser APENSADO ao FIM do /etc/bluetooth/main.conf sem tocar o resto
 # do arquivo (main.conf é conffile do dpkg: sempre com backup antes).
 # Vale no próximo start do bluetoothd — NUNCA forçar restart do serviço por

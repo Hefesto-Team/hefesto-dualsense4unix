@@ -106,7 +106,7 @@ def a_suite_esta_rodando() -> bool:
 
     É o sinal que ``gesto_de_reconexao`` usava sozinho desde 22/09/2026, quando
     a primeira corrida de 457 testes chamou ``Disconnect`` e ``Connect`` nos
-    quatro DualSense da máquina de teste, ao vivo. Agora ele guarda a BORDA: toda
+    quatro DualSense, ao vivo. Agora ele guarda a BORDA: toda
     escrita passa por :meth:`LeitorDoBluez.chamar` ou
     :meth:`LeitorDoBluez.escrever_propriedade`, e as duas perguntam aqui.
     """
@@ -772,7 +772,7 @@ class LeitorDoBluez:
     def escrever_alias(
         self, caminho_do_adaptador: str, texto: str, *, quem: str = QUEM_PADRAO
     ) -> Escrita:
-        """O ``Alias`` do adaptador. Sem privilégio: medido como uid 1000 em 22/08."""
+        """O ``Alias`` do adaptador. Sem privilégio: medido como usuário comum em 22/08."""
         return self.escrever_propriedade(
             caminho_do_adaptador, ADAPTADOR, "Alias", "s", texto, quem=quem
         )

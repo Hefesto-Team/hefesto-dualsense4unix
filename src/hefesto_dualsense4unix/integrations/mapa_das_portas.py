@@ -417,7 +417,7 @@ _CLASSE_DO_TIPO_DECLARADO = {
 def _classe_do_motor(aparelho: Aparelho, tipos: Mapping[str, str] | None = None) -> str:
     """A classe que o motor julga, ou ``""`` quando o kernel não disse.
 
-    ``""`` é resposta, e é a resposta certa para o Archer T3U (``ff/ff/ff``) e
+    ``""`` é resposta, e é a resposta certa para um Wi-Fi USB que declara ``ff/ff/ff`` e
     para o DualSense por cabo (``03/00/00``, HID sem protocolo de arranque):
     nenhuma regra do motor fala deles, e forçá-los numa classe faria o quadrado
     julgar pelo aparelho errado.

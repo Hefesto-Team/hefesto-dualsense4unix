@@ -25,7 +25,7 @@
 # "uaccess" em ACL para regras numeradas < 73 (é o 73-seat-late.rules, do
 # próprio systemd, quem faz essa conversão — ver reference_udev_uaccess_ordem_73
 # na memória do projeto). Numa regra ≥73 a TAG fica presente no device mas
-# nunca vira ACL: era morta/inerte desde sempre nesta máquina, sem efeito
+# nunca vira ACL: era morta/inerte desde sempre, sem efeito
 # funcional (o chmod 0666 abaixo já cobre 100% do acesso). Removida para não
 # sugerir uma garantia que a ordem de carga do udev não entrega.
 

@@ -450,7 +450,7 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     cabeçalho de `assets/76-dualsense-touchpad-libinput-ignore.rules`). Nem a
     descoberta olha transporte: `_discover_dualsense_por_nome` filtra por
     vendor/product e marcador de nome, sem uma linha sobre `bustype`. Medido de
-    novo em 25/08 no DualSense do CABO desta máquina de teste: gamepad em `event21` e
+    novo em 25/08 no DualSense do CABO: gamepad em `event21` e
     touchpad em `event23`, a mesma identidade nos dois.
 
     O que faz as três regiões não dispararem tecla HOJE é outra coisa, e é

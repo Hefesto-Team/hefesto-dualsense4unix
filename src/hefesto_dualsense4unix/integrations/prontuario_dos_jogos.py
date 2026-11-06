@@ -7,8 +7,8 @@ jogável pelo cabo ou pelo rádio. Este módulo
 O QUE ELE NUNCA DIZ
 -------------------
 **"Este jogo funciona."** O disco não sabe disso, e fingir que sabe seria
-repetir o defeito mais caro daqui. Medido em 16/08/2026: `Duskfade` e
-`DON'T SCREAM` têm a MESMA assinatura no disco — mesmo motor, mesmas famílias
+repetir o defeito mais caro daqui. Medido em 16/08/2026: dois jogos
+têm a MESMA assinatura no disco — mesmo motor, mesmas famílias
 de API (`rawinput`, `xinput` por `LoadLibrary`), mesmo wrapper na linha, mesmo
 Steam Input desligado — e um funciona e o outro não. Qualquer prontuário que
 pintasse os dois de verde estaria certo sobre um e errado sobre o outro, sem
@@ -22,7 +22,7 @@ Por isso o veredito é **impedimento**, não aprovação:
 - ``NAO_SEI`` — o disco não deixou ler (pasta ausente, executável ilegível).
 
 É a mesma disciplina do `WRAPPER-EM-TODOS-01`, o portão que passou a noite
-verde com o Pragmata quebrado por contar jogos em vez de nomear o que faltava:
+verde com o jogo quebrado por contar jogos em vez de nomear o que faltava:
 **um censo que só conta mente na direção mais cara, a de parecer completo.**
 
 O QUE ELE DIZ, E ISSO É NOVO
@@ -489,8 +489,8 @@ class Prontuario:
           mais neste módulo, porque não foi lido do disco: foi confirmado com o
           jogo aberto, na máquina do usuário.
 
-        O que ele NÃO faz, e a recusa é decisão medida (16/08, Duskfade x
-        DON'T SCREAM): promover ninguém a "funciona". `SEM_IMPEDIMENTO`
+        O que ele NÃO faz, e a recusa é decisão medida (16/08):
+        promover ninguém a "funciona". `SEM_IMPEDIMENTO`
         continua sendo `sem_impedimento_conhecido` e continua NÃO sendo
         promessa; e o balde da ponte confirmada vale para UMA combinação, a
         carimbada — trocar a máscara ou a lista devolve o jogo à divergência,

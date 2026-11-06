@@ -18,7 +18,7 @@ O serial de fábrica de 17 caracteres carrega a cor nos caracteres 5 e 6, e ele
 não está em report nenhum de graça: é preciso PEDIR, e pedir é escrever. O
 comando é a família ``SET_FEATURE 0x80``, a mesma em que ``[1, 1]`` RESETA o
 controle e ``[12, 1, ...]`` grava calibração na memória não-volátil. Não há
-desfazer, e a máquina de teste tem quatro controles sem reposição.
+desfazer, e quem usa pode não ter reposição.
 
 Por isso o payload é montado por uma função **sem parâmetro** e conferido byte a
 byte por outra imediatamente antes de sair. Uma função que aceitasse ``base`` e
@@ -817,7 +817,7 @@ class AgendaDaPergunta:
     (``interface/mesa_viva.LeitorDeCor``) e o daemon
     (``daemon/ipc_handlers._identidade_de_fabrica``) guardavam a primeira
     resposta PARA SEMPRE, e a falha de um instante virava «este controle não
-    tem cor». Medido no ``interface.log`` e no journal da máquina de teste: a janela das 23:36
+    tem cor». Medido no ``interface.log`` e no journal: a janela das 23:36
     abriu 28 s depois do segundo controle entrar pelo rádio, no meio de um
     engasgo de 5 s em que o daemon perdia um terceiro nó (``ENODEV``). O broker
     serviu um descritor na hora, e a pergunta por ele não trouxe cor; serviu o

@@ -430,7 +430,7 @@ def e_a_arvore_canonica(pilha: Sequence[str]) -> bool:
        Inócuo, mas é escrever em arquivo de outro dono sem saber onde.
     2. **O leitor MENTIU, e essa é a cara.** Um appid presente nas duas árvores
        era lido duas vezes, e o dicionário guardava o ÚLTIMO — a árvore errada,
-       que vem depois no arquivo. O PRAGMATA estava assim: sem o wrapper na
+       que vem depois no arquivo. O jogo estava assim: sem o wrapper na
        árvore canônica (o ``VKD3D_CONFIG=no_upload_hvv`` do usuário o havia comido de
        novo) e com o wrapper na outra. O `censo_do_wrapper` respondeu
        **"faltantes: 0"** com o defeito vivo, e o jogo do usuário sem reconhecer o

@@ -431,7 +431,7 @@ def classificar(
     """A resposta da procura: a faixa, o salto de canal, a falta de mapa ou o mapa parado.
 
     ``minimos`` e ``salto`` trocam :data:`CANAIS_MINIMOS_DA_BANDA` e
-    :data:`CANAIS_QUE_PROVAM_O_SALTO` (o ensaio na máquina de teste).
+    :data:`CANAIS_QUE_PROVAM_O_SALTO` (o ensaio).
     """
     novos = _canais_novos(sem, com)
     if novos is None:

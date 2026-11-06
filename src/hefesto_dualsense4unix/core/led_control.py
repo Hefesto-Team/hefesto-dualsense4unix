@@ -335,7 +335,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     fóssil, do legado e da cor repetida ao primeiro tom livre não tem decisão
     de pé: é o que evita duas luzes iguais sem apagar nenhuma, e a
     A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01 o registra como o que é
-    (29/09/2026). A barra é como quem usa sabe de quem é o controle — na máquina de teste
+    (29/09/2026). A barra é como quem usa sabe de quem é o controle —
     quatro DualSense são do MESMO modelo, e a luz os separa.
 
     AS PERGUNTAS DE COR SÃO PELO TOM, e não pelo byte (29/09/2026): o fóssil

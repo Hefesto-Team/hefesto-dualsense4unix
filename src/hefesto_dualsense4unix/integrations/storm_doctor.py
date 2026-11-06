@@ -5,8 +5,8 @@ standalone dsx.sh foi removido — teoria de HW refutada; a cura de raiz do stor
 é o quirk do snd_usb_audio). NÃO muta nada; NÃO precisa de root. Cada função
 recebe os paths por parâmetro (default = sistema real) para testes com fixtures.
 
-Fronteira Aurora: o quirk `054c:0ce6:gn` do cmdline e as regras 99-usb são do
-ritual-Aurora — aqui só REPORTAMOS o estado, não mexemos.
+Fronteira: o quirk `054c:0ce6:gn` do cmdline e as regras 99-usb são de quem
+administra a máquina — aqui só REPORTAMOS o estado, não mexemos.
 
 A PALAVRA «STORM» TEM QUATRO FAMÍLIAS (O-DIARIO-DO-RADIO-01, 23/09/2026). A
 frase acima — «a cura de raiz do storm é o quirk» — vale só para a família 1a

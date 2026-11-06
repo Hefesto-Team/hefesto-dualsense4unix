@@ -37,7 +37,7 @@ lançador que ninguém olhou é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na cor verde
 
 E O NÚMERO ANDOU NO MESMO DIA, o que é o argumento inteiro desta aba: às 19h20
 de 02/09, `censo_do_wrapper(anotar=False)` respondia **62** appids com o wrapper
-e **um reparável — o PRAGMATA, com motivo `regressao`** (*"tinha o atalho e
+e **um reparável — o jogo, com motivo `regressao`** (*"tinha o atalho e
 perdeu"*). Às 15h a mesma leitura dava 63 e zero reparáveis. A Steam comeu a
 linha de novo entre as duas medições, e **nada a repôs**: a carona
 (`carona_do_wrapper.pegar_carona_no_gesto`) nunca migrou para a interface nova
@@ -105,7 +105,7 @@ impede», o «Posso fechar a Steam», o «Não perguntar», o «Copiar a linha»
 dois do Steam Input saíram, e com eles a vigia de dentro da aba
 (`_VigiaDaSteam`) e os portões do censo. Quem repõe o atalho é o vigia de fora
 (`hefesto-steam-input-guard`, a cada 30 min e a cada escrita da Steam), que
-na mesma noite repôs o do PRAGMATA sem clique nenhum. Os parágrafos abaixo
+na mesma noite repôs o do jogo sem clique nenhum. Os parágrafos abaixo
 contam como a aba chegou até ali, e ficam como registro.
 
 O QUE ENTROU EM 03/09/2026, e é PONTE e não código novo: a interface nova
@@ -478,7 +478,7 @@ def _ler_do_disco() -> desenho.Leitura:
     `wrapper-visto.json`, que é a memória que separa *"perdeu o wrapper"* de
     *"nunca teve"*. Uma PINTURA que anotasse transformaria todo jogo novo em
     "já visto" antes de o usuário ver o aviso uma única vez — e a regressão do
-    Pragmata, que essa memória existe para nomear, ficaria muda para sempre.
+    jogo, que essa memória existe para nomear, ficaria muda para sempre.
 
     A PRESENÇA DOS LANÇADORES FICA FORA DO `try` DO CENSO, e de propósito: a
     Steam quebrada não pode apagar a resposta sobre o Heroic. Eram duas

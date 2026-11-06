@@ -15,7 +15,7 @@ ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
 # 2) O wrapper hefesto-launch, na carona do MESMO gatilho (CARONA-NO-GUARD-01,
 #    16/08/2026). A Steam guarda UMA linha de LaunchOptions por jogo, e
 #    qualquer coisa escrita ali SUBSTITUI o wrapper em silêncio — medido duas
-#    vezes no PRAGMATA, e o sintoma é traiçoeiro: funciona no cabo, quebra no
+#    vezes num jogo, e o sintoma é traiçoeiro: funciona no cabo, quebra no
 #    rádio, o controle continua vivo e SÓ o jogo não enxerga.
 #
 #    Este é o instante certo para repor, e ele já existia: o momento em que a
@@ -43,7 +43,7 @@ ExecStart=-__PYTHON_DO_PINO__ __PROTON_PIN__ --manter
 # 4) As opções de inicialização que o usuário declarou, na mesma carona (21/09/2026,
 #    OPCOES-POR-JOGO-01). A Steam guarda UMA linha de LaunchOptions por jogo, e
 #    a tabela declarativa que o usuário mantinha fora do produto reescrevia essa
-#    linha sem o atalho — medido no diário de um dia inteiro: o PRAGMATA
+#    linha sem o atalho — medido no diário de um dia inteiro: o jogo
 #    perdia o atalho de hora em hora e o passo 2 o repunha, das 04:31 às 22:00.
 #    Agora a tabela é do Hefesto (`opcoes_por_jogo.txt`) e a linha sai COMPOSTA:
 #    o atalho na frente, as opções de quem joga atrás.

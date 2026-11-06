@@ -41,7 +41,7 @@ entrada, não há bateria — nenhum consumidor da máquina alcança aquele link
 Derrubá-lo não pode interromper nada que esteja funcionando, porque nada está
 funcionando por ele. O fone, o mouse, o celular e o teclado do usuário têm objeto no
 BlueZ enquanto conectados, e por isso ficam FORA por construção — sem lista de
-OUI, sem casar por nome, sem depender da máquina de teste.
+OUI, sem casar por nome, sem depender de uma máquina.
 
 A terceira é também o que separa este defeito do **"conectado sem hidraw"** que
 o ``scripts/doctor.sh`` já pega (``check_bt_connected_sem_hidraw``): lá o BlueZ

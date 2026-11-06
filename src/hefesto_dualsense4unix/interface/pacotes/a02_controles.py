@@ -61,7 +61,7 @@ de produto (item 16).** Eram o `<span class="n">100</span>` e a `.cheio` de
 `width:100%` do desenho, sem `data-campo` nenhum: o volume na tela do usuário era
 **100 cravado, para todo controle**. O gerador passou a endereçá-los
 (`alto-num` e `alto-barra`), e o pacote os emite quando a página publicada os
-tiver — a máquina de teste é do usuário, e publicar também.
+tiver — publicar é do usuário.
 
 **E O DESENHO AO LADO DO CAMPO CONTRADIZIA O CAMPO, em dois lugares.**
 Fotografado nesta aba em 02/09/2026 às 19h, com os dois controles do usuário na mesa:
@@ -758,7 +758,7 @@ def no_do_microfone(entry: Any) -> str:
 
     **O `audio` VEM PRIMEIRO, e a ordem foi medida.** O daemon publica
     `canal_fonte` em TRÊS posições no mesmo controle — `audio`, `speaker` e
-    `inputs.speaker` (conferido no `state_full` da máquina de teste em 05/09/2026) —, e
+    `inputs.speaker` (conferido no `state_full` em 05/09/2026) —, e
     `audio` é a casa dele: é o bloco do MICROFONE, que é de quem esta fonte é.
     As outras duas ficam como recuo, pela mesma razão que `_bloco_do_speaker`
     aceita duas: *"quem publica é o daemon, e o widget não pode quebrar por

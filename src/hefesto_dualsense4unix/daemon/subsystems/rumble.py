@@ -448,7 +448,7 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     fique girando por esse buraco: pelos escritores do próprio daemon ele não
     fica — `apply_game_rumble` ignora o FF do jogo com par fixado, e a entrada
     do Modo Nativo solta o par. Quem alcança o buraco é escritor de FORA
-    (jogo no hidraw direto, Steam Input), que esta máquina de teste não tem como medir.
+    (jogo no hidraw direto, Steam Input), que o ensaio não tem como medir.
     """
     par = daemon.config.rumble_active
     if par is not None and any(par):

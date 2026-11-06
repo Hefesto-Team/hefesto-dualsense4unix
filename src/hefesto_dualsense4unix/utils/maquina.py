@@ -289,7 +289,7 @@ class PortaDeclarada(BaseModel):
 
     ``nos`` nomeia o BURACO (``usb1-port5``), e o nó do buraco responde
     ``state=not attached`` com o buraco vazio — MEDIDO em 25/08/2026: 38 nós de
-    entrada nesta máquina de teste, todos respondendo ``state`` e ``connect_type``, com e
+    entrada, todos respondendo ``state`` e ``connect_type``, com e
     sem aparelho. Os nós carregam o número do barramento do boot em que foram
     lidos: com o ``lugar`` na mão, é ele que responde onde a entrada está.
 

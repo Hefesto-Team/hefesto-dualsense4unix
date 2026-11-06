@@ -12,7 +12,7 @@ estar ali disputa a mesma linha. Na máquina do usuário havia DOIS donos:
   as variáveis de vídeo do jogo — e apagava o atalho ao fazê-lo.
 
 O resultado foi medido no diário de um dia inteiro: **de hora em hora** o
-PRAGMATA perdia o atalho e o vigia o repunha, das 04:31 às 22:00. Quem abrisse
+jogo perdia o atalho e o vigia o repunha, das 04:31 às 22:00. Quem abrisse
 o jogo na janela errada jogava sem controle. *Duas ferramentas escrevendo a
 mesma linha não é configuração; é sorteio.*
 
@@ -30,7 +30,7 @@ atrás**. É o mesmo arranjo que o reparo do wrapper já produzia quando
 preservava o que estava escrito; a diferença é que agora existe uma FONTE, e
 o que a Steam apagar volta inteiro — não só o atalho.
 
-    tabela:   3357650  VKD3D_CONFIG=no_upload_hvv %command%
+    tabela:   100040  VKD3D_CONFIG=no_upload_hvv %command%
     no disco: <atalho do hefesto-launch> VKD3D_CONFIG=no_upload_hvv %command%
 
 O JOGO QUE O USUÁRIO TIROU DO ATALHO continua fora dele: o appid que está no
@@ -51,7 +51,7 @@ metade dos jogos tem blocos filhos (``cloud``, ``autocloud``…) ANTES dessa
 linha. O escritor antigo fechava o jogo no primeiro ``}`` que via, que era o
 do filho, e inseria a linha lá dentro: o relato dizia ``aplicado``, o vdf
 ganhava uma linha que ninguém lê, e a Steam lançava o jogo com a opção velha
-(o Sackboy, 06/10: ``apps/1599660/cloud/LaunchOptions`` com o MangoHud, e a
+(06/10: ``apps/<id>/cloud/LaunchOptions`` com o MangoHud, e a
 do jogo intacta). Não era a conta errada (a máquina tem uma só), nem a nuvem
 regravando (a linha sobreviveu a todas as subidas da Steam do dia).
 

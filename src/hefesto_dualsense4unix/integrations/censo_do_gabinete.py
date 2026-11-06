@@ -325,8 +325,8 @@ def montar_censo(
         "faces": [],
         "por_que_faces_vazias": (
             "O firmware dá o inventário de conectores, não a face em que cada um "
-            "está — e o kernel também não: medido em 25/08/2026, o teclado e o "
-            "mouse desta máquina de teste têm physical_location idêntico. Quem sabe qual "
+            "está — e o kernel também não: dois aparelhos em faces diferentes podem "
+            "ter physical_location idêntico. Quem sabe qual "
             "buraco é da frente é você."
         ),
         "placa": placa if placa is not None else {},

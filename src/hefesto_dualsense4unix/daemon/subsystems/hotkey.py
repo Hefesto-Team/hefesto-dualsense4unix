@@ -513,7 +513,7 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
     não roda e todo aperto anda o `CICLO_DE_PONTES`; sem carimbo, o 2º aperto
     pedia o degrau `native`, que exige REABRIR o jogo, e morria ali. Medido com
     os quatro jogos do usuário, quatro apertos cada: **3 trocas em 4 apertos no
-    Sackboy (sem carimbo) contra 4 em 4 nos três carimbados** — e o usuário
+    jogo sem carimbo contra 4 em 4 nos três carimbados** — e o usuário
     novo, que não tem carimbo em jogo nenhum, tinha o pior comportamento em
     todos.
 
@@ -1689,7 +1689,7 @@ class MicrofonesNoAr:
         `None` é *"não sei"* e não conta para nada — nem para sair, nem para
         zerar a conta de quem já faltou uma vez.
 
-        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal do ensaio,
+        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal,
         com dois DualSense no rádio: o P2 nasceu no ar às 13:51:53, este laço
         contou duas faltas e o tirou às 13:51:56, e o canal dele só foi
         publicado às 13:52:01. O nascimento (`nascer_no_ar`) põe o controle

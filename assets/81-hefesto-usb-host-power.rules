@@ -16,10 +16,10 @@
 # atributo — um glob /sys/bus/pci/devices/*/power/control escreveria "on" em TODA
 # a PCI (GPU, NVMe), destruindo runtime PM alheio; e não reage a hotplug nem a
 # "change". udev filtra por classe, tem coldplug garantido pelo
-# systemd-udev-trigger.service e re-assert em change (precedente da Aurora).
+# systemd-udev-trigger.service e re-assert em change.
 #
-# ATRIBUIÇÃO: a Aurora cobre os hosts via 99-storage-no-link-pm.rules
-# (DRIVER=="xhci_hcd"); esta regra existe para a máquina virgem e escreve o
-# MESMO valor (inócua por cima). Instalada/removida pelo install/uninstall do
+# ATRIBUIÇÃO: outra regra do sistema pode cobrir os hosts (DRIVER=="xhci_hcd");
+# esta regra existe para a máquina virgem e escreve o MESMO valor (inócua por
+# cima). Instalada/removida pelo install/uninstall do
 # hefesto (default, sem flag).
 ACTION=="add|change", SUBSYSTEM=="pci", ATTR{class}=="0x0c03*", TEST!="/sys/class/power_supply/BAT0", TEST!="/sys/class/power_supply/BAT1", TEST=="power/control", ATTR{power/control}="on"

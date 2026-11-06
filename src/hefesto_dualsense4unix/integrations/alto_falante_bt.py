@@ -337,7 +337,7 @@ class Arranjo:
     pos_tag_haptico: int
     len_haptico: int
     pos_haptico: int
-    de_onde_sei: str = "leitura de fonte externa — NÃO medido nesta máquina de teste"
+    de_onde_sei: str = "leitura de fonte externa — NÃO medido"
     intervalo_de_envio_s: float | None = None
     controle_conta_quadros: bool = False
     haptico_duplo: bool = True
@@ -449,7 +449,7 @@ ARRANJOS: tuple[Arranjo, ...] = (ARRANJO_DS5DONGLE, ARRANJO_SENSHI)
 ARRANJO_COMMON_PRIMEIRO = Arranjo(
     nome="common-preservado",
     fonte=(
-        "esta máquina de teste — plataforma.escada_de_output@dualsense, 15/08/2026: o "
+        "plataforma.escada_de_output@dualsense, 15/08/2026: o "
         "`common` de 47 B por 0x32 e 0x39 acendeu a cor na lightbar por rádio, "
         "a olho. NÃO é leitura de fonte externa."
     ),
@@ -464,7 +464,7 @@ ARRANJO_COMMON_PRIMEIRO = Arranjo(
     len_haptico=0,
     pos_haptico=0,
     de_onde_sei=(
-        "MEDIDO nesta máquina de teste quanto ao envelope ([2]=0x10 e o common em "
+        "MEDIDO quanto ao envelope ([2]=0x10 e o common em "
         "[3..49]); a POSIÇÃO DO OPUS depois dele é hipótese não medida"
     ),
     common_preservado=True,
@@ -516,7 +516,7 @@ def controle_de_audio_035(
 ARRANJO_035 = Arranjo(
     nome="0x35",
     fonte=(
-        "ESTA MÁQUINA DE TESTE, 10/09/2026 — o alto-falante tocou por rádio, 70 s "
+        "MEDIDO em 10/09/2026 — o alto-falante tocou por rádio, 70 s "
         "contínuos, com a orelha e a mordida do CRC. O layout é o do "
         "`HeadsetPlayMusic` de awalol/dualsense-bt-haptics, e o achado [8.19] "
         "da pesquisa de 31/08 já trazia o tamanho: «0x35 com 334 (CRC em "
@@ -533,7 +533,7 @@ ARRANJO_035 = Arranjo(
     len_haptico=0,
     pos_haptico=0,
     de_onde_sei=(
-        "MEDIDO NESTA MÁQUINA DE TESTE, 10/09/2026, com som audível: 70 s contínuos "
+        "MEDIDO em 10/09/2026, com som audível: 70 s contínuos "
         "pelo alto-falante, alcance testado, e o som CALA com o CRC invertido"
     ),
     intervalo_de_envio_s=INTERVALO_DE_ENVIO_035,
@@ -1652,7 +1652,7 @@ class BombaDeSomPeloRadio:
     def _o_som_vai(self, pcm: bytes) -> bool:
         """O quadro de som vai neste relatório? Sinal, ou o silêncio que fecha o último.
 
-        **SILÊNCIO É ZERO EXATO**, e isso é medido: o PRAGMATA no menu manda
+        **SILÊNCIO É ZERO EXATO**, e isso é medido: o jogo no menu manda
         RMS e pico 0 (27/09). Depois do último sinal vai UM quadro mudo, e o
         alto-falante para no zero. Sem ``so_com_sinal`` (o ensaio) o som vai
         sempre.

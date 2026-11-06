@@ -594,8 +594,8 @@ def _html_dos_jogos(procedencia: str = "", foto: _FotoDoCatalogo | None = None) 
     `value` é o APPID e `label` o NOME, ordem não livre: num `<datalist>` o navegador escreve o
     `value` NO CAMPO e o campo grava um appid (`from_simple_choice("steam_game", …)` quer o número);
     é a divisão das duas colunas do `Gtk.EntryCompletion` da GTK, e trocar criaria perfil
-    `steam_app_Sea of Stars`, que nunca casa com janela. Escapar é o `_atr`, não o `html.escape`: os
-    nomes vêm dos `.acf` e `.desktop` DO USUÁRIO (`DON'T SCREAM` está no catálogo) e escapar a mais
+    `steam_app_Jogo um`, que nunca casa com janela. Escapar é o `_atr`, não o `html.escape`: os
+    nomes vêm dos `.acf` e `.desktop` DO USUÁRIO (há título com apóstrofo) e escapar a mais
     faria o `blocos` reescrever a cada 500 ms.
 
     **Os jogos de fora da Steam entram (11/09/2026)**, queixa de uso: faltava ao perfil detectar os
@@ -737,7 +737,7 @@ def _nome_no_campo(valor: str, nomes: dict[str, str]) -> str:
     """O «Nome do jogo» mostra o nome que o catálogo conhece; o número só quando ele não sabe.
 
     A página do todo tirou o rótulo do lado (BRIEF-T4: «Saem o número, o título do lado»), e o
-    campo com `1245620` sozinho voltava a ser o número que não diz nada (JOGO-QUE-SE-DIZ-01).
+    campo com `100020` sozinho voltava a ser o número que não diz nada (JOGO-QUE-SE-DIZ-01).
     """
     from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
 
@@ -906,7 +906,7 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
     **O `find_by_slug` no fim impede DOIS vereditos na mesma tela** (02/09/2026): o nome do daemon
     ou do marcador é DIGITADO e seguia cru para o realce (`perfis_web._linhas_da_lista`, `p.name ==
     ativo`) e para as guardas (`mesmo_slug`, R-10, em `ativar` e `voltar…`). Medido com 33 perfis,
-    daemon calado, marcador `sackboy` e perfil `Sackboy`: realce `[]` (nenhuma das 33 linhas acende)
+    daemon calado, marcador `jogo-um` e perfil `Jogo um`: realce `[]` (nenhuma das 33 linhas acende)
     e Ativar → "já é o perfil que está valendo". O nome é resolvido aqui contra os perfis do disco e
     sai já sendo o `p.name` de uma linha, e o `==` de lá não discorda do `mesmo_slug`. **O marcador
     órfão cai junto** (perfil renomeado ou apagado por fora; `resolve_boot_profile` *"só resolve
@@ -917,7 +917,7 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
     class="pa-nome" data-campo="perfil">` do `topo.html` (das dez abas), pintado por
     `pacotes.topo()` com `ctx.state.get("active_profile")` CRU. Medido (`pacote_da_pagina` →
     `normalizar` → `topo`, dois perfis, dublê de ponte): daemon `"Perfil Que Foi Apagado"` → chip
-    igual, linhas `[]`; `"sackboy"` → chip `"sackboy"`, linhas `["Sackboy"]` (a mesma tela com dois
+    igual, linhas `[]`; `"jogo-um"` → chip `"jogo-um"`, linhas `["Jogo um"]` (a mesma tela com dois
     nomes para a mesma pergunta). A cura mora no dono compartilhado (`pacotes/__init__.py`, `topo`),
     não aqui: pacote de aba que emitisse `perfil` seria o segundo dono do cabeçalho (defeito
     fotografado às 04:23 de 02/09 na aba Sistema, em `a09_sistema.pacote`). A dívida tem régua em
@@ -971,17 +971,17 @@ def _rotulo_do_remover(alvo: str) -> str:
     ponte, ninguém valendo; ANTES = rótulo sem o `== alvo`, DEPOIS = o de hoje):
 
         passo                          ANTES                      DEPOIS
-        1 clicou na linha do Pragmata  "Remover"                  "Remover"
-        2 CLIQUE em Remover            arma o Pragmata, levanta   igual
-        3 o rótulo, no tique seguinte  "Remover “Pragmata”? …"    igual
-        4 clicou na linha do Sackboy   "Remover “Pragmata”? …"    "Remover"
-        5 CLIQUE em Remover            arma o SACKBOY, levanta    igual
-        6 o rótulo, no tique seguinte  "Remover “Sackboy”? …"     igual
-        7 CLIQUE em Remover            APAGA o Sackboy            igual
+        1 clicou na linha do Jogo A    "Remover"                  "Remover"
+        2 CLIQUE em Remover            arma o Jogo A, levanta     igual
+        3 o rótulo, no tique seguinte  "Remover “Jogo A”? …"      igual
+        4 clicou na linha do Jogo B    "Remover “Jogo A”? …"      "Remover"
+        5 CLIQUE em Remover            arma o Jogo B, levanta     igual
+        6 o rótulo, no tique seguinte  "Remover “Jogo B”? …"      igual
+        7 CLIQUE em Remover            APAGA o Jogo B             igual
 
-    Só o passo 4 difere: o botão anuncia que o próximo clique apaga o Pragmata e o próximo clique
-    arma o Sackboy. O clique que APAGA nunca ocorre sob botão dizendo "Pragmata" (no passo 6 o
-    rótulo já diz "Sackboy", dentro de um tique de 500 ms). Com o alvo o rótulo volta a "Remover" ao
+    Só o passo 4 difere: o botão anuncia que o próximo clique apaga o Jogo A e o próximo clique
+    arma o Jogo B. O clique que APAGA nunca ocorre sob botão dizendo "Jogo A" (no passo 6 o
+    rótulo já diz "Jogo B", dentro de um tique de 500 ms). Com o alvo o rótulo volta a "Remover" ao
     trocar de linha, o que é a verdade: o próximo clique ARMA.
     """
     if (_ARMADO and _ARMADO[0] == alvo
@@ -1340,7 +1340,7 @@ def _o_perfil_no_disco(nome: str) -> Any:
     O gesto lê o perfil do disco, muda o campo editado e grava o perfil inteiro, sem nada do
     aparelho (`D-2709-O-SALVAR-LE-O-PERFIL`): as outras abas gravam as escolhas no clique e o estado
     vivo não é escolha do usuário (até 27/09 esta base punha o vivo por cima, e mudar a PRIORIDADE
-    ligava o microfone de um controle no PRAGMATA). A volta é pelo nome que o perfil TEM: quem
+    ligava o microfone de um controle no jogo). A volta é pelo nome que o perfil TEM: quem
     renomeia (`perfis_renomear`) o faz DEPOIS, por `model_copy`, porque `DraftConfig.to_profile` com
     nome novo zera `match`, `mode` e `suppress_desktop_emulation` de propósito (R-11); por isso
     nenhum gesto do editor passa pelo rascunho.
@@ -1437,7 +1437,7 @@ def _forma_do_que_o_usuario_escolheu(texto: str) -> str:
 def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[str, bool]:
     """``(frase, é_alerta)`` para o campo do jogo — a decisão da janela estável.
 
-    JOGO-QUE-SE-DIZ-01: `851100` sozinho não diz nada a ninguém, e a estável põe o nome ao lado do
+    JOGO-QUE-SE-DIZ-01: `100010` sozinho não diz nada a ninguém, e a estável põe o nome ao lado do
     campo (`profile_jogo_reconhecido`, `profiles_actions._atualizar_frase_do_jogo`). Esta aba ganhou
     o rótulo em 06/09/2026 (decisão 10-Q4), ao lado e ao vivo, à direita do campo, com o
     nome do jogo (…), ou «não está nesta máquina», ou «não reconheci este endereço»; o desfecho do
@@ -1451,7 +1451,7 @@ def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[
 
     **A quinta resposta veio com o terceiro argumento (11/09/2026, queixa de uso)**: o `<datalist>`
     passou a oferecer jogo de lançador, cujo `value` é a `wm_class` (``gotg.exe``), e o «Detectar»
-    sempre gravou essa classe; sem as `chaves` o rótulo ficava MUDO (*"PRAGMATA"* para jogo da Steam
+    sempre gravou essa classe; sem as `chaves` o rótulo ficava MUDO (*"Jogo um"* para jogo da Steam
     e **nada** para um do Heroic).
 
     Nunca levanta (contrato de `_com_a_carona`): é acabamento de gesto que JÁ GRAVOU e também
@@ -1516,7 +1516,7 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     restore <nome-antigo>`.
 
     Duas recusas: nome vazio (apagar o campo não vira arquivo `.json`) e nome que já é de OUTRO
-    perfil (`save_profile` grava por SLUG, então renomear "Elden Ring" para "Pragmata" gravaria por
+    perfil (`save_profile` grava por SLUG, então renomear "Jogo um" para "Jogo dois" gravaria por
     cima, calado; o `_nome_livre` evita o mesmo no Duplicar).
 
     Diz que renomeou (03/09/2026, ver `_dizer`): o gesto que APAGA um `.json` e cria outro terminava
@@ -1944,11 +1944,11 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     Qual das duas: `normalize_appid` decide (só dígitos, ou endereço da loja, é "Jogo da Steam"; o
     resto é "Jogo", com o nome do programa), e só quando o seletor NÃO estava numa das TRÊS com
     campo livre ("Jogo", "Jogo da Steam", "Jogo (pela janela)", a terceira de ONDA5-10-01,
-    06/09/2026): a escolha do usuário manda, e "1245620" digitado num perfil em "Jogo" não vira
+    06/09/2026): a escolha do usuário manda, e "100020" digitado num perfil em "Jogo" não vira
     perfil da Steam pelas costas do usuário.
 
     R-12: o nome do programa vai **como o usuário digitar**, sem `.lower()`: o matcher compara com o
-    basename cru de `/proc/PID/exe` e `Cyberpunk2077.exe` nunca casaria com `cyberpunk2077.exe`.
+    basename cru de `/proc/PID/exe` e `JogoUm.exe` nunca casaria com `jogoum.exe`.
 
     Diz o que gravou (03/09/2026): reescreve a regra INTEIRA e movia o seletor calado. O desfecho
     nomeia o rótulo novo do "Quando usar" e, se o número é de jogo que a máquina conhece, o NOME
@@ -1956,7 +1956,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     **O campo se corrige (04/09/2026, decisão [04] do PO).** Colar o endereço da loja funciona
     (`normalize_appid` lê o número e a regra grava o número), mas a TELA seguia mostrando
-    `https://store.steampowered.com/app/1599660/…` sobre regra que já guardava `1599660`. A correção
+    `https://store.steampowered.com/app/100010/…` sobre regra que já guardava `100010`. A correção
     só cabe aqui: `editor.jogo` está em `CAMPOS_QUE_O_USUARIO_DIGITA`, o tique NÃO o repinta no
     mesmo perfil (senão apagaria a segunda tecla) e a resposta deste gesto é o único instante em que
     a tela devolve a forma canônica, pintada na hora. O valor sai de `jogo_do_perfil`, a mesma
@@ -2142,7 +2142,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     conta *"mora num mixin GTK que depende de widget"*; não depende:
     `_prioridade_acima_dos_catch_all` lê UM atributo, `self._profiles_cache`, e faltava só entregar
     a lista, que esta aba tem. O defeito (medido em 26/07, em jogo): perfil criado para o
-    Pragmata nasceu 0 e NUNCA valia, pois o catch-all (100) vencia o resto; **a janela não
+    jogo nasceu 0 e NUNCA valia, pois o catch-all (100) vencia o resto; **a janela não
     tinha saída**. Medido no disco do usuário, os catch-all são `meu_perfil` (1) e `fallback` (0),
     folga **11**, e os perfis de jogo dele estão em 80: a conta promete vencer os "vale sempre", não
     todo mundo. Chama a função da janela e não uma segunda conta (`max(catch-all) + 10`): teto

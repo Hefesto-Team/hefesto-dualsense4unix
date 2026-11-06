@@ -1,7 +1,7 @@
 # hefesto-rtw88-usb (DKMS) — Onda W
 
 Módulo `rtw88_usb` patchado para curar o **fantasma USB** do dongle WiFi
-(Archer T3U / RTL8822BU): device removido cujo `USB disconnect` nunca é
+(RTL8822BU): device removido cujo `USB disconnect` nunca é
 processado vive 13h em lsusb/sysfs segurando o nome `wlx...` (medido
 20/07: colisão "Arquivo existe" no replug), teardown flooda `-71` contra
 hardware morto e vaza ack frames (WARN do mac80211).

@@ -148,7 +148,7 @@ def _plan_autosuspend(tokens: Sequence[str], com_bateria: bool = False) -> Cmdli
             op=OP_NONE,
             token=AUTOSUSPEND_TOKEN,
             owner=OWNER_TERCEIRO,
-            reason="já provido por terceiro (Aurora/manual) — não tocar; uninstall não remove",
+            reason="já provido por terceiro — não tocar; uninstall não remove",
         )
     if present:
         return CmdlineAction(

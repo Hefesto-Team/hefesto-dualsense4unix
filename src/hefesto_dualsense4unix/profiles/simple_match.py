@@ -25,11 +25,11 @@ MSG_JOGO_SEM_NOME = (
     "contexto em \"Aplica a\"."
 )
 MSG_STEAM_SEM_APPID = (
-    "Diga o número do jogo na Steam (ex.: 1599660). Com o jogo aberto, o "
+    "Diga o número do jogo na Steam (ex.: 100010). Com o jogo aberto, o "
     "campo é preenchido sozinho."
 )
 MSG_STEAM_APPID_INVALIDO = (
-    "O número do jogo na Steam é só dígitos (ex.: 1599660). Cole o endereço "
+    "O número do jogo na Steam é só dígitos (ex.: 100010). Cole o endereço "
     "da página do jogo na loja e o número sai dele sozinho."
 )
 MSG_JANELA_SEM_CLASSE = (
@@ -142,7 +142,7 @@ _PRESETS_HISTORICOS: dict[str, tuple[list[str], ...]] = {
 
 
 def normalize_appid(raw: str | None) -> str | None:
-    """Extrai o appid de ``1599660`` / ``steam_app_1599660`` / ``  1599660 ``."""
+    """Extrai o appid de ``100010`` / ``steam_app_100010`` / ``  100010 ``."""
     appid = steam_appid_de_texto(raw)
     return None if appid is None else str(appid)
 
@@ -186,7 +186,7 @@ def from_simple_choice(
     R-12 item 3: o nome do programa é gravado **como o usuário digitou**. Antes vinha
     um ``.lower()`` aqui, e o casamento do outro lado
     (``MatchCriteria.matches``) compara com o basename CRU de ``/proc/PID/exe``
-    — ``Cyberpunk2077.exe`` nunca casaria com ``cyberpunk2077.exe``. Os presets
+    — ``JogoUm.exe`` nunca casaria com ``jogoum.exe``. Os presets
     de fábrica (``fps.json``, ``acao.json``…) já gravam o basename com as
     maiúsculas originais; o helper é que estava corrompendo o dado. A cura
     completa (comparar sem diferenciar maiúsculas) mora no matcher do schema e
@@ -325,14 +325,14 @@ def _detect_steam_appid(match: Match) -> str | None:
     Por que ``process_name`` é diferente — e é MEDIDO, não deduzido:
 
     1. Ele designa o MESMO jogo que a ``steam_app_<id>``, não um segundo alvo.
-       Trocar "3357650 E PRAGMATA.exe" por "Jogo da Steam 3357650" na tela não
+       Trocar "100040 E Jogo.exe" por "Jogo da Steam 100040" na tela não
        muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
        que o seletor "Aplica a" faz.
-    2. A precisão que a recusa dizia proteger não existia. No journal da máquina de teste de
-       10/08, com a janela ``steam_app_3357650`` em foco, o daemon registrou
+    2. A precisão que a recusa dizia proteger não existia. No journal de
+       10/08, com a janela ``steam_app_100040`` em foco, o daemon registrou
        ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
-       — o perfil ``Pragmata`` NÃO era candidato ao próprio jogo. Sob Proton o
-       basename de ``/proc/PID/exe`` é o binário do wine, nunca ``PRAGMATA.exe``
+       — o perfil do jogo NÃO era candidato ao próprio jogo. Sob Proton o
+       basename de ``/proc/PID/exe`` é o binário do wine, nunca ``Jogo.exe``
        (é a razão de "steam_game" existir; ver o cabeçalho deste módulo), então
        o AND com ``process_name`` não estreita o casamento: ele o ANULA.
     3. O preço da recusa era a janela. Com ``detect_simple_preset`` devolvendo
@@ -350,7 +350,7 @@ def _detect_steam_appid(match: Match) -> str | None:
     UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
     (`profiles/steam_app.py`), que já absorveu o ``.strip()`` daqui. O
     alargamento para caixa é a cura de uma mentira do editor: um perfil salvo
-    com ``Steam_App_2111190`` CASA com o jogo (o matcher compara sem caixa) e
+    com ``Steam_App_100010`` CASA com o jogo (o matcher compara sem caixa) e
     abria no editor AVANÇADO, como se não fosse perfil de jogo da Steam — e
     ``simple_extra`` devolvia "" no campo que pede o número. A conversão para
     `str` é do callsite: a fonte devolve `int` e a GUI escreve texto no campo.
@@ -403,11 +403,11 @@ def exigencia_invisivel(match: Match) -> str:
     isso é certo: salvar pela janela não pode apagar o que a tela não mostra
     (ESCONDER-EM-VEZ-DE-SAIR-01). O que estava errado era o silêncio em volta.
 
-    Na foto do editor, o perfil "Pragmata" aparecia assim:
+    Na foto do editor, o perfil "Jogo um" aparecia assim:
 
-        Aplica a: [Jogo da Steam]   Nome do jogo: 3357650
+        Aplica a: [Jogo da Steam]   Nome do jogo: 100040
 
-    e no arquivo estava `process_name: ["PRAGMATA.exe"]`. O `matches` é AND, e o
+    e no arquivo estava `process_name: ["Jogo.exe"]`. O `matches` é AND, e o
     campo invisível é o que decidia — o perfil não entrava sozinho, medido seis
     vezes num intervalo de dois minutos com o usuário jogando. A tela mostrava uma
     regra que não era a regra.

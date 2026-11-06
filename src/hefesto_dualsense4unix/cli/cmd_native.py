@@ -1,7 +1,7 @@
 """Subcomando `hefesto-dualsense4unix native ...` (FEAT-NATIVE-MODE-01).
 
 Modo Nativo: "release total" do controle — solta o DualSense para o jogo usar
-os gatilhos adaptativos NATIVOS da Sony (Sackboy & cia), sem o hefesto no meio.
+os gatilhos adaptativos NATIVOS da Sony, sem o hefesto no meio.
 Tudo via IPC (`native.mode.set` e `daemon.state_full`).
 
 Subcomandos:

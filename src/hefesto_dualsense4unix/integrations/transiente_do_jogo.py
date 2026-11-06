@@ -479,8 +479,8 @@ def e_o_fluxo_pedido(origem: OrigemDoGravador | str | None, fluxo: FluxoDoJogo) 
 
     O-NOME-DO-JOGO-COM-ACENTO-NAO-SE-PERDE-NO-PACTL-01 (24/10/2026): compara a
     IDENTIDADE do nó, o serial e depois o id do grafo. O nome do fluxo vem do
-    ``pactl``, que entrega ``(null)`` no lugar de todo texto fora do ASCII (o ™ do
-    Sackboy™), e o da origem vem do ``pw-dump``, inteiro: comparar os dois calava o
+    ``pactl``, que entrega ``(null)`` no lugar de todo texto fora do ASCII (o ™ de um
+    título), e o da origem vem do ``pw-dump``, inteiro: comparar os dois calava o
     ouvido a cada volta. O nome só decide quando nenhum dos lados tem identidade e o
     do fluxo não se perdeu. Uma origem que é só um texto é uma origem sem identidade.
     """

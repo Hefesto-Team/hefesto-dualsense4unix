@@ -391,7 +391,7 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
 
     **Nomeia, nunca só conta.** É a regra do WRAPPER-EM-TODOS-01, e a razão de
     a regra existir tem nome próprio: *"3 jogos com pendência"* é o texto que
-    deixou o Pragmata quebrado a noite inteira.
+    deixou o jogo quebrado a noite inteira.
 
     Pura de propósito (recebe o censo pronto): a leitura do disco é lenta o
     bastante para nunca rodar na linha do GTK, e uma função pura é o que
@@ -460,7 +460,7 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     dele"*, e a frase está **refutada** pela medição de 06/08
     (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, grau MEDIDO): com o jogo
     marcado o Hefesto **mantém a saída inteira** — os gatilhos seguraram
-    duros e o vermelho do perfil ficou na lightbar, com o Mullet Mad Jack aberto.
+    duros e o vermelho do perfil ficou na lightbar, com o jogo aberto.
     Quem lia "sai da frente" esperava perder cor e gatilho, que é o contrário
     do que acontece.
 

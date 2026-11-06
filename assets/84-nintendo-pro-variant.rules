@@ -8,7 +8,7 @@
 # udev e para o hefesto os dois são literalmente o mesmo device — daí o
 # "nunca sei o que é o quê", e daí "os dois viram um só".
 #
-# O DISCRIMINADOR: `bcdDevice`. Medido nesta máquina, estável, textual e
+# O DISCRIMINADOR: `bcdDevice`. Medido, estável, textual e
 # legível ANTES da probe do driver (é descritor USB, não depende de driver
 # nenhum ter dado certo):
 #
@@ -47,7 +47,7 @@
 # (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 / E2, 22/08/2026).
 #
 # `bcdDevice` é o número de REVISÃO do descritor USB: ele muda com o firmware.
-# Os dois valores acima são de UMA unidade de cada, da máquina de teste. Um Pro
+# Os dois valores acima são de UMA unidade de cada. Um Pro
 # genuíno atualizado que reporte `0211`, ou um clone com outro firmware, não
 # casava NENHUMA das duas linhas — e aí a ausência de
 # `HEFESTO_CONTROLLER_VARIANT` e de `/dev/hefesto/*` era lida, pelo comentário

@@ -22,8 +22,7 @@ Type=simple
 ExecStart=/usr/bin/bt-agent --capability=NoInputNoOutput
 # AGENTE-QUE-SOME-01 (08/08/2026) — a terceira camada desta mesma história, e a
 # medição que faltava: quantas vezes o agente cai, e por quanto tempo ele fica
-# fora. MEDIDO no journal do ensaio: **36 quedas e 36 SIGKILL desde 29/07** — cem por
-# cento, porque o `bt-agent` não trata SIGTERM e NUNCA sai sozinho. Cada ciclo
+# fora. MEDIDO no journal: toda parada termina em SIGKILL, porque o `bt-agent` não trata SIGTERM e NUNCA sai sozinho. Cada ciclo
 # deixava de 3 a 5 s sem agente registrado.
 #
 # Por que esses segundos custam caro: com `JustWorksRepairing=confirm` no nosso
@@ -79,7 +78,7 @@ SendSIGKILL=yes
 # não cobre a morte durante um `stop` pedido por outro serviço (o
 # `bluetooth.service` reiniciando), e a unit fica parada em `failed`.
 #
-# Medido na máquina de teste: `failed` desde 02:32:41, e o efeito é grave e silencioso
+# Medido: `failed` por horas, e o efeito é grave e silencioso
 # — SEM o agente de pareamento, conexão ENTRANTE de controle é recusada:
 #
 #     profiles/input/server.c:confirm_event_cb() Refusing connection from <MAC>
@@ -100,7 +99,7 @@ SuccessExitStatus=SIGKILL
 # `Result: timeout` — que é o veredito do STOP, não do processo. As duas coisas
 # são independentes, e nenhuma linha acima toca na segunda.
 #
-# REPRODUZIDO na máquina de teste, com a unit exatamente como estava (instalada ==
+# REPRODUZIDO com a unit exatamente como estava (instalada ==
 # fonte, conferido por `diff`):
 #
 #     systemctl stop hefesto-bt-agent.service
@@ -115,7 +114,7 @@ SuccessExitStatus=SIGKILL
 # O QUE ISSO CUSTOU, e é o motivo de a cura valer uma linha: em 14/08/2026 o
 # `bt_bonds_restore.sh` parou o `bluetooth.service` para restaurar bonds; o
 # agente caiu junto (Requires=), ficou `failed`, e o restore religou o BlueZ
-# **sem religar o agente**. Das 16:17 às 00:31 a máquina de teste ficou sem agente
+# **sem religar o agente**. Por oito horas a máquina ficou sem agente
 # de pareamento — e sem ele TODO bond novo nasce meio-salvo e some, que é
 # exatamente o "conectam sozinhos e desligam em sequência" que se relatou.
 # Os bonds que o restore tinha acabado de devolver sumiram de novo em horas.

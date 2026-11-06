@@ -14,7 +14,7 @@ pluga ou tira um controle, **sem recarregar a página**.
 AS DUAS MORDIDAS, e as duas foram medidas:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
-                          mockup (quatro controles, Mortal Kombat, o P1 com o
+                          mockup (quatro controles, o P1 com o
                           gatilho em 200/255). Se mostrar o mockup, o
                           dado não está vindo do daemon.
     --arranca-enderecos   apaga os `data-*` que o `aba02.py` escreve: a pintura

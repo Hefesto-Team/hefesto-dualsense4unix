@@ -1,6 +1,6 @@
 """O device de áudio KS do DualSense — o alvo que a RE Engine procura para vibrar.
 
-HAPTICA-NATIVA-01 (17/09/2026). Lido no trace do PRAGMATA
+HAPTICA-NATIVA-01 (17/09/2026). Lido no trace do jogo
 (`PROTON_LOG=+setupapi,+mmdevapi`), o jogo acha o alvo da vibração assim:
 
 1. `EnumAudioEndpoints` → lê o `ContainerId` de cada endpoint de áudio;

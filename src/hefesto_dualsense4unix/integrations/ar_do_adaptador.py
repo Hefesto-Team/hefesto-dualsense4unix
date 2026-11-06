@@ -5,7 +5,7 @@ régua de 79 canais com o que cada adaptador DE FATO evita. Nada estimado.
 
 O QUE ESTE MÓDULO LÊ, e por que nada disto pede root
 =====================================================
-Três leituras, as três como uid 1000, sem subprocesso:
+Três leituras, as três como usuário comum, sem subprocesso:
 
 * ``HCIGETDEVINFO`` — os contadores do adaptador (``acl_rx``, ``acl_tx``,
   ``byte_rx``, ``byte_tx``, ``err_*``) e os créditos ``acl_mtu:acl_pkts``.

@@ -17,15 +17,15 @@ O QUE O KERNEL CLASSIFICA SOZINHO
 ----------------------------------
 
 A espécie de cada aparelho não é palpite: sai de
-``bInterfaceClass``/``SubClass``/``Protocol`` da **interface 0**, medido nesta
-máquina de teste em 22/08/2026::
+``bInterfaceClass``/``SubClass``/``Protocol`` da **interface 0**, medido
+em 22/08/2026::
 
     1-3        25a7:fa07   03/01/02   mouse
     1-4        3554:fa09   03/01/01   teclado
     3-3        05e3:0610   09/00/00   hub
-    3-3.1.1    2357:0604   e0/01/01   Bluetooth
+    3-3.1.1    aaaa:bbbb   e0/01/01   Bluetooth
     3-3.3      258a:010c   03/01/01   teclado
-    4-1        2357:012d   ff/ff/ff   do fabricante — o kernel NÃO nomeia
+    4-1        aaaa:cccc   ff/ff/ff   do fabricante — o kernel NÃO nomeia
     4-3        05e3:0626   09/00/00   hub
 
 Por isso o grau. ``GRAU_LIDO`` é *"o kernel disse, e temos palavra para isso"*;
@@ -41,7 +41,7 @@ A CLASSE SAI DA INTERFACE, NÃO DO APARELHO
 -------------------------------------------
 
 ``bDeviceClass`` vale ``00`` em todo aparelho composto — medido: o mouse, o
-teclado e o Wi-Fi desta máquina de teste são todos ``00`` no descritor do aparelho e só
+teclado e o Wi-Fi são todos ``00`` no descritor do aparelho e só
 dizem o que são na interface. Ler o descritor do aparelho classificaria a mesa
 inteira como "não identificado", com exceção dos hubs.
 
@@ -63,8 +63,8 @@ o mesmo aparelho, com um hub encadeado dentro. Quem responde é
 O hub-RAIZ é a exceção que torna a resposta útil: todo aparelho pendura sob um,
 sempre, em qualquer PC. ``mesa_de_radio.py`` chegou ao hub raiz pelo nome
 (``^usb[0-9]+$``); aqui a régua é ``devpath == "0"``, que é a mesma medição por
-outro lado — porta 0 não existe no barramento, e os quatro ``usbN`` desta
-máquina de teste são os únicos nós com ``devpath`` ``0``.
+outro lado — porta 0 não existe no barramento, e os ``usbN`` são os
+únicos nós com ``devpath`` ``0``.
 
 ENERGIA — E O QUE NÃO DÁ PARA SABER
 ------------------------------------
@@ -84,7 +84,7 @@ Sem root o ``/sys`` dá três números e nenhuma medição de corrente:
 1. ``bMaxPower`` não distingue — o hub USB 3.1 alimentado reporta ``0mA`` e o
    USB 2.1 alimentado reporta ``100mA`` (já era a nota de ``mesa_de_radio.py``);
 2. o bit de autoalimentado de ``bmAttributes`` é **declaração, não medição** —
-   os três adaptadores TP-Link desta máquina de teste declaram ``e0`` (bit ``0x40``
+   três adaptadores iguais declaram ``e0`` (bit ``0x40``
    ligado) e no mesmo descritor pedem ``bMaxPower=500mA`` da porta. Um aparelho
    com fonte própria pode tirar do barramento no máximo uma carga unitária, 100
    mA; pedir 500 e dizer que não depende da porta é o descritor se contradizendo.

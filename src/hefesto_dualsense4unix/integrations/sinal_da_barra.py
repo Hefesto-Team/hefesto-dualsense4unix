@@ -17,7 +17,7 @@ e nenhuma foi derrubada:
 E a bateria não salva: o ``ps-controller-battery`` do ``hid-playstation``
 registra ``capacity``, ``present``, ``scope`` e ``status``, e **mais nada** —
 não há ``current_now`` nem ``voltage_now`` para inferir consumo de barra acesa
-(MEDIDO 22/08/2026 nos quatro nós da máquina de teste). Quem for tentar "medir a
+(MEDIDO 22/08/2026 nos quatro nós). Quem for tentar "medir a
 corrente" está tentando ler um arquivo que o driver não cria.
 
 O QUE ESTE MÓDULO FAZ ENTÃO

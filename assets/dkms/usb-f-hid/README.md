@@ -7,7 +7,7 @@ transferência. É a função HID dos pads USB virtuais (os gadgets
 
 ## O defeito, medido em 14/10/2026
 
-Com 4 controles, o jogo no Proton (Sackboy, GE-Proton11-7) subia sem controle
+Com 4 controles, o jogo no Proton (GE-Proton11-7) subia sem controle
 nenhum em 5 rodadas seguidas. O `services.exe` dizia
 `Auto-start service L"winebus" failed to start: 1053` (o prazo é de 10 s), e
 caía com um `page fault` aos ~72 s.
