@@ -256,17 +256,17 @@
       "universo": 419
     },
     "tamanho": {
-      "data": "2026-11-05",
+      "data": "2026-11-06",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204618,
+      "piso": 1205353,
       "por_item": {
-        "docs": 106400,
+        "docs": 106418,
         "scripts": 111703,
-        "src": 303976,
-        "tests": 682539
+        "src": 304115,
+        "tests": 683117
       },
-      "razao": "05/11/2026: +8 linhas do Xvfb dos portões sem o soquete abstrato (as pernas do ci-local com --network host roubavam o display); ferramental do portão sem decisão",
+      "razao": "tamanho: +735 linhas (1204618 -> 1205353), pagas por Origem: D-IMERSAO-AUSENTE-NONE, movimento.imu.calibracao; registrado no fecho, topo 95681cbcf445",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1803,10 +1803,16 @@
           "de": 1204610,
           "para": 1204618,
           "razao": "05/11/2026: +8 linhas do Xvfb dos portões sem o soquete abstrato (as pernas do ci-local com --network host roubavam o display); ferramental do portão sem decisão"
+        },
+        {
+          "data": "2026-11-06",
+          "de": 1204618,
+          "para": 1205353,
+          "razao": "tamanho: +735 linhas (1204618 -> 1205353), pagas por Origem: D-IMERSAO-AUSENTE-NONE, movimento.imu.calibracao; registrado no fecho, topo 95681cbcf445"
         }
       ],
       "unidade": "linhas",
-      "universo": 3363
+      "universo": 3365
     }
   }
 }
