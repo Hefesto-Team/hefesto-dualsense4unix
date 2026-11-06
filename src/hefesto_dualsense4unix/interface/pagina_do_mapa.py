@@ -86,21 +86,21 @@ QUANDO_DO_EXEMPLO = "leitura de exemplo · 24/08/2026"
 CENSO_DE_EXEMPLO: dict[str, Any] = {
     "quando": QUANDO_DO_EXEMPLO,
     "aparelhos": [
-        {"id": "bt-a", "tipo": "Bluetooth", "nome": "TP-Link UB500",
+        {"id": "bt-a", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth",
          "sementeDoCaminho": "3-1.2", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
-        {"id": "bt-b", "tipo": "Bluetooth", "nome": "TP-Link UB500",
+        {"id": "bt-b", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth",
          "sementeDoCaminho": "3-1.1.4", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
-        {"id": "bt-c", "tipo": "Bluetooth", "nome": "TP-Link UB500",
+        {"id": "bt-c", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth",
          "sementeDoCaminho": "3-3", "cor": "#bd93f9", "classe": "bt", "usb": 2, "mA": 500},
-        {"id": "wifi", "tipo": "Wi-Fi", "nome": "Archer T3U",
+        {"id": "wifi", "tipo": "Wi-Fi", "nome": "Adaptador Wi-Fi",
          "sementeDoCaminho": "4-1.1.2", "cor": "#ff5555", "classe": "wifi", "usb": 3, "mA": 504},
-        {"id": "webcam", "tipo": "Webcam", "nome": "Logitech C920",
+        {"id": "webcam", "tipo": "Webcam", "nome": "Webcam USB",
          "sementeDoCaminho": "3-4", "cor": "#8be9fd", "classe": "webcam", "usb": 2, "mA": 500},
         {"id": "teclado", "tipo": "Teclado", "nome": "Receptor 2,4 GHz",
          "sementeDoCaminho": "3-1.4", "cor": "#ffb86c", "classe": "teclado", "usb": 2, "mA": 100},
         {"id": "mouse", "tipo": "Mouse", "nome": "Receptor 2,4 GHz",
          "sementeDoCaminho": "1-3", "cor": "#f1fa8c", "classe": "mouse", "usb": 2, "mA": 98},
-        {"id": "hub", "tipo": "Hub", "nome": "TP-Link UH700",
+        {"id": "hub", "tipo": "Hub", "nome": "Hub USB",
          "sementeDoCaminho": "3-1", "cor": "#6272a4", "classe": "hub", "usb": 3, "mA": 100},
     ],
     "faces": [
@@ -5734,16 +5734,16 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""  var DICA_DO_ENLACE = __DICA_DO_ENLACE__;
   var DA_CENA = {
     hubFisico: { "hub": "Hub USB 3 · 7 entradas" },
     enlace: { "hub": "480 Mb/s · Sabe 5 Gb/s" },
-    sumiram: [{ "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9" }],
+    sumiram: [{ "tipo": "Bluetooth", "nome": "Adaptador de reserva", "cor": "#bd93f9" }],
     registro: { "ouvindo": "Ouvindo desde 13:02", "linhas": [
-      { "hora": "13:41", "evento": "Ficou mais lento", "tom": "lento", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
-      { "hora": "13:40", "evento": "Voltou", "tom": "", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
-      { "hora": "13:40", "evento": "Saiu", "tom": "sai", "tipo": "Hub", "nome": "TP-Link UH700", "cor": "#f8f8f2", "onde": "Entrada 4" },
-      { "hora": "13:38", "evento": "Entrou", "tom": "", "tipo": "Bluetooth", "nome": "TP-Link UB500", "cor": "#bd93f9", "onde": "Sem entrada marcada" },
-      { "hora": "13:25", "evento": "Entrou", "tom": "", "tipo": "Wi-Fi", "nome": "Archer T3U", "cor": "#ff5555", "onde": "Sem entrada marcada" },
-      { "hora": "13:24", "evento": "Saiu", "tom": "sai", "tipo": "Wi-Fi", "nome": "Archer T3U", "cor": "#ff5555", "onde": "Entrada 11" },
+      { "hora": "13:41", "evento": "Ficou mais lento", "tom": "lento", "tipo": "Hub", "nome": "Hub USB", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:40", "evento": "Voltou", "tom": "", "tipo": "Hub", "nome": "Hub USB", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:40", "evento": "Saiu", "tom": "sai", "tipo": "Hub", "nome": "Hub USB", "cor": "#f8f8f2", "onde": "Entrada 4" },
+      { "hora": "13:38", "evento": "Entrou", "tom": "", "tipo": "Bluetooth", "nome": "Adaptador Bluetooth", "cor": "#bd93f9", "onde": "Sem entrada marcada" },
+      { "hora": "13:25", "evento": "Entrou", "tom": "", "tipo": "Wi-Fi", "nome": "Adaptador Wi-Fi", "cor": "#ff5555", "onde": "Sem entrada marcada" },
+      { "hora": "13:24", "evento": "Saiu", "tom": "sai", "tipo": "Wi-Fi", "nome": "Adaptador Wi-Fi", "cor": "#ff5555", "onde": "Entrada 11" },
       { "hora": "13:10", "evento": "Entrou", "tom": "", "tipo": "Teclado", "nome": "Receptor 2,4 GHz", "cor": "#ffb86c", "onde": "Entrada 1" },
-      { "hora": "13:02", "evento": "Não apareceu", "tom": "sumiu", "tipo": "Bluetooth", "nome": "Asus USB-BT500", "cor": "#bd93f9", "onde": "—" }
+      { "hora": "13:02", "evento": "Não apareceu", "tom": "sumiu", "tipo": "Bluetooth", "nome": "Adaptador de reserva", "cor": "#bd93f9", "onde": "—" }
     ] }
   };
 

@@ -337,18 +337,18 @@ def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
 
 
 ESTILOS = [e.rotulo for e in estilos_a_vista()]
-PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
-          ("Mortal Kombat online", 88, "Steam · Mortal Kombat 1 · 1971870", False),
-          ("Elden Ring", 85, "Steam · Elden Ring · 1245620", False),
-          ("Orpheus", 82, "RetroArch · Orpheus: To Hell and Back", False),
-          ("Pragmata", 80, "Steam · Pragmata · 1358160", False),
-          ("Don't Scream", 78, "Steam · Don't Scream · 2380050", False),
-          ("Reanimal", 76, "Heroic · Reanimal", False),
-          ("Faith", 74, "Instalado aqui · faith.exe", False),
-          ("Wendigo Blue", 72, "Lutris · Wendigo Blue", False),
-          ("Duskfade", 70, "Heroic · Duskfade", False),
-          ("Mina the Hollower", 68, "Instalado aqui · mina.exe", False),
-          ("Terror (os dez)", 60, "Só neste programa", False),
+PERFIS = [("Jogo um", 90, "Steam · Jogo um · 100010", True),
+          ("Jogo um online", 88, "Steam · Jogo um · 100010", False),
+          ("Jogo dois", 85, "Steam · Jogo dois · 100020", False),
+          ("Jogo três", 82, "RetroArch · Jogo três", False),
+          ("Jogo quatro", 80, "Steam · Jogo quatro · 100040", False),
+          ("Jogo cinco", 78, "Steam · Jogo cinco · 100050", False),
+          ("Jogo seis", 76, "Heroic · Jogo seis", False),
+          ("Jogo sete", 74, "Instalado aqui · jogo-sete.exe", False),
+          ("Jogo oito", 72, "Lutris · Jogo oito", False),
+          ("Jogo nove", 70, "Heroic · Jogo nove", False),
+          ("Jogo dez", 68, "Instalado aqui · jogo-dez.exe", False),
+          ("Terror", 60, "Só neste programa", False),
           ("Luta", 58, "Só neste programa", False),
           ("Navegação", 40, ROTULO_SO_QUANDO_ESCOLHER, False),
           ("Universal", 0, ROTULO_SO_QUANDO_ESCOLHER, False)]
@@ -357,16 +357,16 @@ PROCEDENCIA_DO_DESENHO = PERFIS[0][2].split(SEPARADOR_DA_PROCEDENCIA)[0]
 
 SEM_DATA = ("—", "—")
 DATAS_DO_DESENHO = {
-    "Mortal Kombat": ("03/09/2026", "11/10/2026"),
-    "Mortal Kombat online": ("10/10/2026", "10/10/2026"),
-    "Elden Ring": ("21/08/2026", "02/10/2026"),
-    "Orpheus": ("14/09/2026", "14/09/2026"),
-    "Pragmata": ("18/09/2026", "07/10/2026"),
-    "Faith": ("26/09/2026", "01/10/2026"),
-    "Duskfade": ("30/09/2026", "30/09/2026"),
-    "Mina the Hollower": ("02/10/2026", "09/10/2026"),
+    "Jogo um": ("03/09/2026", "11/10/2026"),
+    "Jogo um online": ("10/10/2026", "10/10/2026"),
+    "Jogo dois": ("21/08/2026", "02/10/2026"),
+    "Jogo três": ("14/09/2026", "14/09/2026"),
+    "Jogo quatro": ("18/09/2026", "07/10/2026"),
+    "Jogo sete": ("26/09/2026", "01/10/2026"),
+    "Jogo nove": ("30/09/2026", "30/09/2026"),
+    "Jogo dez": ("02/10/2026", "09/10/2026"),
 }
-ORDEM_DO_DESENHO = ["Mortal Kombat", "Mortal Kombat online"]
+ORDEM_DO_DESENHO = ["Jogo um", "Jogo um online"]
 
 ALVOS_DO_DESENHO = [
     ("jogos", "Jogos", "Vale quando o jogo abre"),
@@ -796,7 +796,7 @@ MIOLO = f'''
                   <input type="text" data-hef="editor.jogo" data-hef-gesto="editor.jogo"
                          data-hef-alvo="valor" list="jogos-desta-maquina"
                          data-dica="Escolha um jogo desta máquina; o perfil leva o nome dele"
-                         value="Mortal Kombat 1">{marca_com_dica(
+                         value="Jogo um">{marca_com_dica(
                            "exige", "editor.jogo.exige", "editor.jogo.exigencia")}
                   <datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista"></datalist>
                 </span>

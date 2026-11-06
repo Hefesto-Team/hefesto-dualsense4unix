@@ -129,17 +129,17 @@ ABA_DO_TETO_GLOBAL = _aba_conexoes.ABA_DO_TETO_GLOBAL
 
 SEM_NOME = _pacote08.SEM_NOME
 ADAPTADORES = [
-    {"nome": "Sala", "modelo": "TP-Link UB500", "onde": "Entrada 3",
+    {"nome": "Sala", "modelo": "Adaptador USB", "onde": "Entrada 3",
      "detalhe": "traseira", "prefs": ["p2", "p3"]},
-    {"nome": SEM_NOME, "modelo": "Intel AX211", "onde": "Interno",
+    {"nome": SEM_NOME, "modelo": "Adaptador interno", "onde": "Interno",
      "detalhe": "M.2", "prefs": []},
 ]
 
 RADIOS_VIZINHOS = [
-    ("Intel AX211 (banda 2,4)", "Wi-Fi", False),
-    ("Logitech Unifying", "Teclado", False),
+    ("Wi-Fi interno (banda 2,4)", "Wi-Fi", False),
+    ("Receptor sem fio", "Teclado", False),
     ("2.4G Wireless Rcvr", "— O que é? —", True),
-    ("Unknown 0e8d:0608", "— O que é? —", True),
+    ("Unknown aaaa:bbbb", "— O que é? —", True),
 ]
 
 def sel(opcoes, escolhida, classe="pronto", dica="", gesto="", campo=""):

@@ -347,7 +347,7 @@ ACHADOS = [
           f"{'controle' if _NO_RADIO == 1 else 'controles'}",
           ident="status-bluetooth", tema="bluetooth", href="08-conexoes.html#rd-secao",
           dica="Clique para ver os adaptadores na aba Conexões."),
-    linha("AVISO", "aviso", "!", "O Steam Input de Lure of Passion mudou",
+    linha("AVISO", "aviso", "!", "O Steam Input de Jogo um mudou",
           tema="steam-input", href="10-perfis.html",
           dica="A caixinha do Steam Input mudou depois que o Hefesto confirmou o jogo. "
                "Clique para conferir o perfil dele na aba Perfis."),
@@ -440,9 +440,9 @@ MIOLO = f'''
           <div class="log" data-id="{_id("registro-texto")}" data-campo="{_id("registro-texto")}" data-hef-rolar="fim">[23:41:02] daemon pronto · {N} controles · {N} gamepads virtuais · controle virtual ok
 [23:41:02] {" · ".join(f'{c["nome"]} {c["via"].lower()}' for c in CONECTADOS)} · fw 0x0356 nos {N} · cor de fábrica lida nos {N}
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
-[23:41:09] perfil "Mortal Kombat" aplicado aos {N} · gatilho L2 escrito, sem leitura de volta
+[23:41:09] perfil "Jogo um" aplicado aos {N} · gatilho L2 escrito, sem leitura de volta
 [23:41:12] rádio: 1 adaptador · {_NO_RADIO} {'controle' if _NO_RADIO == 1 else 'controles'} · sem fila
-[23:41:15] janela da frente: steam_app_1971870 · perfil "Mortal Kombat" mantido</div>
+[23:41:15] janela da frente: steam_app_100010 · perfil "Jogo um" mantido</div>
         </div>
 
       </div>

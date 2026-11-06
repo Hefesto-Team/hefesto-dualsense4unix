@@ -1735,19 +1735,19 @@ def _numero(n: int) -> str:
 CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2,
                        ("~/Jogos/SteamLibrary",), True)
 IMPEDIMENTOS_DE_EXEMPLO = (
-    LinhaDeImpedimento("entrada:1", "Sackboy: A Big Adventure",
+    LinhaDeImpedimento("entrada:1", "Jogo um",
                        "Steam Input ligado", "Desligar o Steam Input"),
-    LinhaDeImpedimento("proton:2", "Resident Evil Village",
+    LinhaDeImpedimento("proton:2", "Jogo dois",
                        "Fora do Proton fixado", "Usar o Proton fixado"),
 )
 
 
 JOGOS_DA_STEAM = (
-    JogoDaLista("steam_app_1", "Sackboy: A Big Adventure", True),
-    JogoDaLista("steam_app_2", "Resident Evil Village"),
-    JogoDaLista("steam_app_3", "Mortal Kombat 1", True),
-    JogoDaLista("steam_app_4", "Hades II"),
-    JogoDaLista("steam_app_5", "Hollow Knight: Silksong"),
+    JogoDaLista("steam_app_1", "Jogo um", True),
+    JogoDaLista("steam_app_2", "Jogo dois"),
+    JogoDaLista("steam_app_3", "Jogo três", True),
+    JogoDaLista("steam_app_4", "Jogo quatro"),
+    JogoDaLista("steam_app_5", "Jogo cinco"),
 )
 
 

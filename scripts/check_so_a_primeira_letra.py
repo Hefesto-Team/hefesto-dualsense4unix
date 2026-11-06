@@ -82,7 +82,7 @@ MARCAS = frozenset({
     "DualSense", "DualSense4Unix", "Hefesto", "Steam", "Linux", "Unix", "Proton",
     "Xbox", "Freestyle", "Nintendo", "Pro", "Sony", "PlayStation", "Windows",
     "Wi-Fi", "Bluetooth", "Vulkan", "Big", "Picture", "Input", "Ryujinx",
-    "Lutris", "Heroic", "Wayland", "AppImage", "Flatpak", "Xiaomi", "Edge",
+    "Lutris", "Heroic", "Wayland", "AppImage", "Flatpak", "Edge",
     "Lovense", "Intiface", "Kyty",
 })
 
@@ -95,13 +95,8 @@ UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 
 NOMES_DO_DESENHO = (
     "Clara", "Ana", "Pedro", "Rafa",
-    "Mortal Kombat", "Elden Ring", "Don't Scream", "Wendigo Blue",
-    "Orpheus: To Hell and Back", "Mina the Hollower",
-    "Xiaomi Scale S400", "Xiaomi Band 9",
     "Teclado", "Mouse", "Caixa de som", "Fone", "Celular", "Relógio", "Acessório",
     "Esquerda", "Meio", "Direita",
-    "Sackboy: A Big Adventure", "Resident Evil Village", "Hollow Knight: Silksong",
-    "Lure of Passion",
     "Corrida de Inverno", "Wine",
 )
 
