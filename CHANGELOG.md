@@ -4,6 +4,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ## [Unreleased]
 
+### Corrigido
+
+- O Hefesto não quebra mais o compartilhamento de tela do sistema: a captura espera o ambiente gráfico subir.
+- A aba Perfis abre no perfil ativo e acompanha o jogo aberto.
+- Cada aba só aparece com os dados reais, e a janela Criar perfis não oferece mais jogos de exemplo. Se o serviço demorar, a tela diz que está esperando.
+- A calibração do giroscópio aceita soltar o controle na mesa depois do clique em Começar: bastam 3 segundos parado dentro dos 5 da medida.
+
 ## [0.9.5.1] — 2026-10-29
 
 ### Adicionado

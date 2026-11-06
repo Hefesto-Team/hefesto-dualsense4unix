@@ -169,6 +169,18 @@ vem no pacote.
   botões e mexe o cursor. O módulo do Hefesto corrige isso; reinicie o
   computador depois de instalar ([bluetooth.md](bluetooth.md)).
 
+## A calibração diz «Mexeu»
+
+A medida dura 5 segundos e guarda o zero se o controle ficou parado por 3 deles. Apoie o controle numa mesa e clique em **Começar**: na mão, o tremor passa do limite e nada se guarda. Com vibração tocando, pare o som antes.
+
+## A tela diz «Esperando o Hefesto responder»
+
+A aba só aparece com os dados reais. O aviso surge quando o serviço leva mais de 3 segundos para responder: ele some sozinho com a resposta. Se ficar, veja [O serviço não sobe](#o-serviço-não-sobe).
+
+## O direcional não responde em jogo do Pixel Game Maker MV
+
+Nesses jogos (a pasta tem `player.exe` e `Resources/data/project.json`), o «Controller 02» espera o direcional depois de 14 botões, e o DualSense tem 15: cima anda para a direita, baixo para a esquerda. O conserto é no arquivo do jogo, que o Hefesto não altera. Com o jogo fechado, guarde uma cópia de `Resources/save/config.json` e troque o `custom2Input` das entradas de `keyId` 9, 10, 11 e 12 para 15, 17, 18 e 16. O botão **Reset to Default** do jogo desfaz a troca.
+
 ## O pydantic do sistema é antigo
 
 `AttributeError: module 'pydantic' has no attribute 'ConfigDict'`, no Ubuntu e
