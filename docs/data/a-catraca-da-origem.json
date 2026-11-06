@@ -259,14 +259,14 @@
       "data": "2026-11-06",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204845,
+      "piso": 1204936,
       "por_item": {
         "docs": 106422,
-        "scripts": 111690,
-        "src": 303827,
-        "tests": 682906
+        "scripts": 111687,
+        "src": 303825,
+        "tests": 683002
       },
-      "razao": "tamanho: +70 linhas (1204775 -> 1204845), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 62186aa1ef91",
+      "razao": "tamanho: +91 linhas (1204845 -> 1204936), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 186b8848975e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1827,10 +1827,16 @@
           "de": 1204775,
           "para": 1204845,
           "razao": "tamanho: +70 linhas (1204775 -> 1204845), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 62186aa1ef91"
+        },
+        {
+          "data": "2026-11-06",
+          "de": 1204845,
+          "para": 1204936,
+          "razao": "tamanho: +91 linhas (1204845 -> 1204936), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 186b8848975e"
         }
       ],
       "unidade": "linhas",
-      "universo": 3365
+      "universo": 3366
     }
   }
 }
