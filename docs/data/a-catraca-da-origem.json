@@ -259,14 +259,14 @@
       "data": "2026-11-06",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204775,
+      "piso": 1204845,
       "por_item": {
-        "docs": 106418,
-        "scripts": 111703,
+        "docs": 106422,
+        "scripts": 111690,
         "src": 303827,
-        "tests": 682827
+        "tests": 682906
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +70 linhas (1204775 -> 1204845), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 62186aa1ef91",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1821,10 +1821,16 @@
           "de": 1205357,
           "para": 1205365,
           "razao": "tamanho: +8 linhas (1205357 -> 1205365), pagas por Origem: movimento.imu.calibracao; registrado no fecho, topo ef596ec72406"
+        },
+        {
+          "data": "2026-11-06",
+          "de": 1204775,
+          "para": 1204845,
+          "razao": "tamanho: +70 linhas (1204775 -> 1204845), pagas por Origem: D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO; registrado no fecho, topo 62186aa1ef91"
         }
       ],
       "unidade": "linhas",
-      "universo": 3364
+      "universo": 3365
     }
   }
 }
