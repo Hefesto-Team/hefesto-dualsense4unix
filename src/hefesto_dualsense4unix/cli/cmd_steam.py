@@ -110,7 +110,7 @@ def cmd_remove(
     jogo: str = typer.Argument(
         ...,
         metavar="JOGO",
-        help="AppID (100010) ou parte do nome do jogo ('jogo').",
+        help="AppID (9900010) ou parte do nome do jogo ('jogo').",
     ),
 ) -> None:
     """Tira um jogo da exceção — o guarda volta a desligar o Steam Input nele."""

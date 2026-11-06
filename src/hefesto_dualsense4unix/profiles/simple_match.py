@@ -21,15 +21,15 @@ from hefesto_dualsense4unix.profiles.steam_app import (
 )
 
 MSG_JOGO_SEM_NOME = (
-    "Diga o nome do programa do jogo (ex.: eldenring) ou escolha outro "
+    "Diga o nome do programa do jogo (ex.: jogo) ou escolha outro "
     "contexto em \"Aplica a\"."
 )
 MSG_STEAM_SEM_APPID = (
-    "Diga o número do jogo na Steam (ex.: 100010). Com o jogo aberto, o "
+    "Diga o número do jogo na Steam (ex.: 9900010). Com o jogo aberto, o "
     "campo é preenchido sozinho."
 )
 MSG_STEAM_APPID_INVALIDO = (
-    "O número do jogo na Steam é só dígitos (ex.: 100010). Cole o endereço "
+    "O número do jogo na Steam é só dígitos (ex.: 9900010). Cole o endereço "
     "da página do jogo na loja e o número sai dele sozinho."
 )
 MSG_JANELA_SEM_CLASSE = (
@@ -142,7 +142,7 @@ _PRESETS_HISTORICOS: dict[str, tuple[list[str], ...]] = {
 
 
 def normalize_appid(raw: str | None) -> str | None:
-    """Extrai o appid de ``100010`` / ``steam_app_100010`` / ``  100010 ``."""
+    """Extrai o appid de ``9900010`` / ``steam_app_9900010`` / ``  9900010 ``."""
     appid = steam_appid_de_texto(raw)
     return None if appid is None else str(appid)
 
@@ -270,7 +270,7 @@ def simple_extra(match: Match) -> str:
     "game" → o nome do programa; "steam_game" → o appid; "janela" → a classe
     da janela; o resto → "".
     Existe para o `_populate_editor` não repetir a lógica de extração (e não
-    voltar a mostrar ``steam_app_1599660`` num campo que pede o número).
+    voltar a mostrar ``steam_app_9900010`` num campo que pede o número).
 
     A ORDEM É A DE `detect_simple_preset`, e tem de continuar sendo: o appid
     primeiro (um `steam_app_<id>` é `window_class` de um elemento), o
@@ -325,11 +325,11 @@ def _detect_steam_appid(match: Match) -> str | None:
     Por que ``process_name`` é diferente — e é MEDIDO, não deduzido:
 
     1. Ele designa o MESMO jogo que a ``steam_app_<id>``, não um segundo alvo.
-       Trocar "100040 E Jogo.exe" por "Jogo da Steam 100040" na tela não
+       Trocar "9900040 E Jogo.exe" por "Jogo da Steam 9900040" na tela não
        muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
        que o seletor "Aplica a" faz.
     2. A precisão que a recusa dizia proteger não existia. No journal de
-       10/08, com a janela ``steam_app_100040`` em foco, o daemon registrou
+       10/08, com a janela ``steam_app_9900040`` em foco, o daemon registrou
        ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
        — o perfil do jogo NÃO era candidato ao próprio jogo. Sob Proton o
        basename de ``/proc/PID/exe`` é o binário do wine, nunca ``Jogo.exe``
@@ -350,7 +350,7 @@ def _detect_steam_appid(match: Match) -> str | None:
     UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
     (`profiles/steam_app.py`), que já absorveu o ``.strip()`` daqui. O
     alargamento para caixa é a cura de uma mentira do editor: um perfil salvo
-    com ``Steam_App_100010`` CASA com o jogo (o matcher compara sem caixa) e
+    com ``Steam_App_9900010`` CASA com o jogo (o matcher compara sem caixa) e
     abria no editor AVANÇADO, como se não fosse perfil de jogo da Steam — e
     ``simple_extra`` devolvia "" no campo que pede o número. A conversão para
     `str` é do callsite: a fonte devolve `int` e a GUI escreve texto no campo.
@@ -405,7 +405,7 @@ def exigencia_invisivel(match: Match) -> str:
 
     Na foto do editor, o perfil "Jogo um" aparecia assim:
 
-        Aplica a: [Jogo da Steam]   Nome do jogo: 100040
+        Aplica a: [Jogo da Steam]   Nome do jogo: 9900040
 
     e no arquivo estava `process_name: ["Jogo.exe"]`. O `matches` é AND, e o
     campo invisível é o que decidia — o perfil não entrava sozinho, medido seis

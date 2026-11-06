@@ -11,9 +11,9 @@ Address, e endereço não é nome: ninguém olha para ``AA:BB:CC:...`` e sabe qu
 E **o modelo deles não é uma pergunta que o barramento responda** — MEDIDO em
 22/08/2026, e é por isso que a frase acima não diz o modelo::
 
-    3-3.1.1   aaaa:bbbb  bcdDevice=0200  product="Adaptador A"
-    3-3.1.4   aaaa:bbbb  bcdDevice=0200  product="Adaptador USB"
-    3-3.2     aaaa:bbbb  bcdDevice=0200  product="Adaptador A"
+    3-1.1.1   aaaa:bbbb  bcdDevice=0200  product="Adaptador A"
+    3-1.1.2   aaaa:bbbb  bcdDevice=0200  product="Adaptador USB"
+    3-1.2     aaaa:bbbb  bcdDevice=0200  product="Adaptador A"
 
 O ``vid:pid`` NÃO distingue: modelos diferentes dividem o mesmo par, com o mesmo
 chip, e aqui nem o ``bcdDevice`` os separa. O único campo que varia é o

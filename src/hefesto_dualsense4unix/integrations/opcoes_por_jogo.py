@@ -30,7 +30,7 @@ atrás**. É o mesmo arranjo que o reparo do wrapper já produzia quando
 preservava o que estava escrito; a diferença é que agora existe uma FONTE, e
 o que a Steam apagar volta inteiro — não só o atalho.
 
-    tabela:   100040  VKD3D_CONFIG=no_upload_hvv %command%
+    tabela:   9900040  VKD3D_CONFIG=no_upload_hvv %command%
     no disco: <atalho do hefesto-launch> VKD3D_CONFIG=no_upload_hvv %command%
 
 O JOGO QUE O USUÁRIO TIROU DO ATALHO continua fora dele: o appid que está no

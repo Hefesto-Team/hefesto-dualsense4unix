@@ -70,7 +70,7 @@ CHAVE = "usb:{vid}:{pid}"
 
 
 def chave_do_aparelho(vid: str, pid: str) -> str:
-    """``usb:25a7:fa07`` — o que sobrevive a trocar de porta e de nó."""
+    """``usb:aaaa:bbbb`` — o que sobrevive a trocar de porta e de nó."""
     return CHAVE.format(vid=vid.lower(), pid=pid.lower())
 
 

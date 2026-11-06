@@ -337,12 +337,12 @@ def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
 
 
 ESTILOS = [e.rotulo for e in estilos_a_vista()]
-PERFIS = [("Jogo um", 90, "Steam · Jogo um · 100010", True),
-          ("Jogo um online", 88, "Steam · Jogo um · 100010", False),
-          ("Jogo dois", 85, "Steam · Jogo dois · 100020", False),
+PERFIS = [("Jogo um", 90, "Steam · Jogo um · 9900010", True),
+          ("Jogo um online", 88, "Steam · Jogo um · 9900010", False),
+          ("Jogo dois", 85, "Steam · Jogo dois · 9900020", False),
           ("Jogo três", 82, "RetroArch · Jogo três", False),
-          ("Jogo quatro", 80, "Steam · Jogo quatro · 100040", False),
-          ("Jogo cinco", 78, "Steam · Jogo cinco · 100050", False),
+          ("Jogo quatro", 80, "Steam · Jogo quatro · 9900040", False),
+          ("Jogo cinco", 78, "Steam · Jogo cinco · 9900050", False),
           ("Jogo seis", 76, "Heroic · Jogo seis", False),
           ("Jogo sete", 74, "Instalado aqui · jogo-sete.exe", False),
           ("Jogo oito", 72, "Lutris · Jogo oito", False),

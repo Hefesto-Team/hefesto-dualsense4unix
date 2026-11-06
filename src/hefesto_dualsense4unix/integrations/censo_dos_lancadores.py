@@ -67,7 +67,7 @@ class JogoDoLancador:
             chave**."*
 
         **EM 21/09/2026 O JOGO FOI ABERTO E A RESPOSTA FOI A SEGUNDA:**
-        ``WM_CLASS = "steam_app_1088850"``. O Heroic lança por `umu`, que monta
+        ``WM_CLASS = "steam_app_9900010"``. O Heroic lança por `umu`, que monta
         a pilha da Steam e exporta `SteamAppId`; o Proton batiza a janela por
         ele. O `executavel` deixou de ser a chave no mesmo minuto.
 

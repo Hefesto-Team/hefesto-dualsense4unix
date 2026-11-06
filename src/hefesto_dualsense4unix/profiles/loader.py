@@ -1755,9 +1755,9 @@ def reapontar_perfis_com_chave_de_executavel(
     IDENTIFICAR ID DO JOGO AUTOMATICAMENTE COMO É NA STEAM NÃO OCORRRE ISSO E
     POR CONSEQUENCIA O HEFESTO NÃO É IDENTIFICADO E NÃO FUNCIONA LÁ."*
 
-    O perfil do usuário tinha ``window_class: ["gotg.exe"]`` — a derivação que a
+    O perfil do usuário tinha ``window_class: ["jogo.exe"]`` — a derivação que a
     LANCADOR-AGNOSTICO-01 derrubou. A janela do jogo anuncia
-    ``steam_app_1088850``, e a regra nunca casava: nenhum perfil ativava e
+    ``steam_app_9900010``, e a regra nunca casava: nenhum perfil ativava e
     nenhuma feature chegava ao jogo.
 
     Curar a origem faz o PRÓXIMO perfil nascer certo. Este consertos os que já

@@ -575,7 +575,7 @@ def ofertas_do_campo_do_jogo(
 
 
 def nomes_por_appid(jogos: Iterable[JogoLocal]) -> dict[str, str]:
-    """``{"100010": "Jogo um"}`` — o que a frase da tela consulta."""
+    """``{"9900010": "Jogo um"}`` — o que a frase da tela consulta."""
     return {jogo.appid: jogo.nome for jogo in jogos}
 
 

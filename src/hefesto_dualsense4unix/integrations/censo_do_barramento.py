@@ -20,13 +20,13 @@ A espécie de cada aparelho não é palpite: sai de
 ``bInterfaceClass``/``SubClass``/``Protocol`` da **interface 0**, medido
 em 22/08/2026::
 
-    1-3        25a7:fa07   03/01/02   mouse
-    1-4        3554:fa09   03/01/01   teclado
-    3-3        05e3:0610   09/00/00   hub
-    3-3.1.1    aaaa:bbbb   e0/01/01   Bluetooth
-    3-3.3      258a:010c   03/01/01   teclado
+    1-1        aaaa:0001   03/01/02   mouse
+    1-2        aaaa:0002   03/01/01   teclado
+    3-1        aaaa:0003   09/00/00   hub
+    3-1.1      aaaa:bbbb   e0/01/01   Bluetooth
+    3-1.2      aaaa:0004   03/01/01   teclado
     4-1        aaaa:cccc   ff/ff/ff   do fabricante — o kernel NÃO nomeia
-    4-3        05e3:0626   09/00/00   hub
+    4-2        aaaa:0005   09/00/00   hub
 
 Por isso o grau. ``GRAU_LIDO`` é *"o kernel disse, e temos palavra para isso"*;
 ``GRAU_DESCONHECIDO`` é *"ninguém disse"* — a classe ``ff``, em que o fabricante
@@ -54,8 +54,8 @@ TOPOLOGIA
 ----------
 
 ``pai`` é o nó imediatamente acima, e ele **não basta**. Medido em 22/08/2026:
-os três adaptadores Bluetooth desta casa NÃO têm o mesmo pai — ``3-3.1.1`` e
-``3-3.1.4`` penduram no hub interno ``3-3.1``, e ``3-3.2`` pendura no ``3-3``.
+três adaptadores Bluetooth numa extensão NÃO têm o mesmo pai — ``3-1.1.1`` e
+``3-1.1.2`` penduram no hub interno ``3-1.1``, e ``3-1.2`` pendura no ``3-1``.
 Comparar o pai responderia "estão em hubs diferentes", que é falso no metal: são
 o mesmo aparelho, com um hub encadeado dentro. Quem responde é
 ``hub_em_comum()``, que sobe a cadeia inteira.

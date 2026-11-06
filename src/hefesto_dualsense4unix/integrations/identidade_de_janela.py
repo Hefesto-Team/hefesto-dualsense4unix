@@ -19,7 +19,7 @@ _UMU_RE = re.compile(rf"^{re.escape(PREFIXO_UMU)}(\d+)$", re.IGNORECASE)
 
 
 def classe_do_umu_id(umu_id: str) -> str:
-    """`umu-1088850` -> `steam_app_1088850`. `""` quando não é um id numérico."""
+    """`umu-9900010` -> `steam_app_9900010`. `""` quando não é um id numérico."""
     achado = _UMU_RE.match(str(umu_id or "").strip())
     return f"steam_app_{achado.group(1)}" if achado else ""
 

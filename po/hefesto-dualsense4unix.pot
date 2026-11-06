@@ -1351,10 +1351,6 @@ msgstr ""
 msgid "Nome do jogo:"
 msgstr ""
 
-#: src/hefesto_dualsense4unix/gui/main.glade:2405
-msgid "ex.: eldenring"
-msgstr ""
-
 #: src/hefesto_dualsense4unix/gui/main.glade:2406
 msgid "Nome do executável do jogo (sem extensão no Linux)"
 msgstr ""
@@ -1801,22 +1797,6 @@ msgid ""
 "prompts de Xbox (A/B/X/Y). A vibração do jogo chega aos controles, medida no "
 "cabo e no rádio. É a única máscara que jogos XInput-only entendem; nessa API "
 "não existe giroscópio."
-msgstr ""
-
-#: src/hefesto_dualsense4unix/gui/main.glade:3462
-msgid ""
-"Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, "
-"Pragmata, Mad King Redemption, Mullet Mad Jack) usam \"DualSense (PS)\": o "
-"giroscópio chega ao jogo e a lightbar obedece, e os dois estão medidos no "
-"cabo e no rádio. A vibração do jogo chega aos controles, medida no cabo e no "
-"rádio. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — "
-"neles escolha \"Xbox 360\" (nessa API não existe giroscópio). Sinal típico "
-"de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do "
-"jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do "
-"Mullet Mad Jack), não há nada a marcar: desde 09/08/2026 o Hefesto esconde "
-"os controles físicos em TODO jogo, e cada um vira um dispositivo só — a "
-"marca por jogo deixou de ser necessária para curar os seus controles "
-"dobrados. Guia completo: docs/usage/jogos-e-mascaras.md"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:3490

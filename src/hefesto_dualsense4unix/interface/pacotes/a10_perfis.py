@@ -737,7 +737,7 @@ def _nome_no_campo(valor: str, nomes: dict[str, str]) -> str:
     """O «Nome do jogo» mostra o nome que o catálogo conhece; o número só quando ele não sabe.
 
     A página do todo tirou o rótulo do lado (BRIEF-T4: «Saem o número, o título do lado»), e o
-    campo com `100020` sozinho voltava a ser o número que não diz nada (JOGO-QUE-SE-DIZ-01).
+    campo com `9900020` sozinho voltava a ser o número que não diz nada (JOGO-QUE-SE-DIZ-01).
     """
     from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
 
@@ -1437,7 +1437,7 @@ def _forma_do_que_o_usuario_escolheu(texto: str) -> str:
 def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[str, bool]:
     """``(frase, é_alerta)`` para o campo do jogo — a decisão da janela estável.
 
-    JOGO-QUE-SE-DIZ-01: `100010` sozinho não diz nada a ninguém, e a estável põe o nome ao lado do
+    JOGO-QUE-SE-DIZ-01: `9900010` sozinho não diz nada a ninguém, e a estável põe o nome ao lado do
     campo (`profile_jogo_reconhecido`, `profiles_actions._atualizar_frase_do_jogo`). Esta aba ganhou
     o rótulo em 06/09/2026 (decisão 10-Q4), ao lado e ao vivo, à direita do campo, com o
     nome do jogo (…), ou «não está nesta máquina», ou «não reconheci este endereço»; o desfecho do
@@ -1944,7 +1944,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     Qual das duas: `normalize_appid` decide (só dígitos, ou endereço da loja, é "Jogo da Steam"; o
     resto é "Jogo", com o nome do programa), e só quando o seletor NÃO estava numa das TRÊS com
     campo livre ("Jogo", "Jogo da Steam", "Jogo (pela janela)", a terceira de ONDA5-10-01,
-    06/09/2026): a escolha do usuário manda, e "100020" digitado num perfil em "Jogo" não vira
+    06/09/2026): a escolha do usuário manda, e "9900020" digitado num perfil em "Jogo" não vira
     perfil da Steam pelas costas do usuário.
 
     R-12: o nome do programa vai **como o usuário digitar**, sem `.lower()`: o matcher compara com o
@@ -1956,7 +1956,7 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     **O campo se corrige (04/09/2026, decisão [04] do PO).** Colar o endereço da loja funciona
     (`normalize_appid` lê o número e a regra grava o número), mas a TELA seguia mostrando
-    `https://store.steampowered.com/app/100010/…` sobre regra que já guardava `100010`. A correção
+    `https://store.steampowered.com/app/9900010/…` sobre regra que já guardava `9900010`. A correção
     só cabe aqui: `editor.jogo` está em `CAMPOS_QUE_O_USUARIO_DIGITA`, o tique NÃO o repinta no
     mesmo perfil (senão apagaria a segunda tecla) e a resposta deste gesto é o único instante em que
     a tela devolve a forma canônica, pintada na hora. O valor sai de `jogo_do_perfil`, a mesma

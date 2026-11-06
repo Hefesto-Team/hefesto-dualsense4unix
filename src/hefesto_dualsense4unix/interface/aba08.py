@@ -1564,13 +1564,13 @@ def _cena_do_desenho() -> dict:
     evitados.append({"lugar": lugares[0]["id"], "ini": 8, "fim": 16})
     wifi = [{"no": f"/sys/usb/{x['id']}", "mhz": 5805, "largura": 80}
             for x in linhas if x["tabela"] == "espectro" and x["a"] == "wifi"]
-    wifi.append({"no": "", "mhz": 2437, "largura": 20, "chave": "usb:2357:012d",
+    wifi.append({"no": "", "mhz": 2437, "largura": 20, "chave": "usb:aaaa:dddd",
                  "quedas": QUEDAS_DO_DESENHO_5})
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
                "grupo": re.sub(r"\bmesa\b", "escrivaninha", x["d"]), "rotulo": x["a"]}
               for x in linhas if x["tabela"] == "porta"]
     portas.append({"id": "porta-wifi-2-4", "caminho": "3-1.2", "usb": "3.0",
-                   "ocupa": "wifi-usb-2357-012d", "grupo": "", "rotulo": "3-1.2"})
+                   "ocupa": "wifi-usb-aaaa-dddd", "grupo": "", "rotulo": "3-1.2"})
     cheio = max(lugares, key=lambda lg: sum(1 for a in aparelhos
                                             if a["lugar"] == lg["id"] and a["ponte"]))
     vazio = min(lugares, key=lambda lg: (sum(1 for a in aparelhos

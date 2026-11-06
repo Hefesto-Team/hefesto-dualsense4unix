@@ -15,7 +15,7 @@ from pathlib import Path
 def extract_steam_appid(wm_class: object) -> str | None:
     """Appid do jogo Steam em foco a partir do ``window_detect_last_class``.
 
-    ``steam_app_100010`` → ``"100010"``; qualquer outra coisa (None, classe
+    ``steam_app_9900010`` → ``"9900010"``; qualquer outra coisa (None, classe
     de app comum, "unknown") → None. O campo do state_full é a última wm_class
     ÚTIL vista pelo detector — pode ficar "grudado" no jogo por alguns
     segundos depois de o foco mudar; inofensivo aqui, porque o anti-spam

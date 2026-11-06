@@ -1720,7 +1720,7 @@ def _appids_do_perfil(profile: Profile) -> set[int]:
 
 
 def _chave_do_appid(appid: object) -> int | None:
-    """Aceita `2054970`, `"2054970"` e `"steam_app_2054970"` — um dono só."""
+    """Aceita `9900010`, `"9900010"` e `"steam_app_9900010"` — um dono só."""
     if isinstance(appid, bool):
         return None
     if isinstance(appid, int):
@@ -1794,7 +1794,7 @@ def pontes_confirmadas(
     Chave `str` porque é JSON, como o resto do estado; valor no formato do
     `PonteConfirmada.model_dump(mode="json")`.
 
-    Só entram os appids COM carimbo. Publicar `{"2054970": null}` para todo
+    Só entram os appids COM carimbo. Publicar `{"9900010": null}` para todo
     jogo sem confirmação seria enviar a biblioteca inteira a 10 Hz para dizer
     "não sei" — e "não sei" já é a ausência da chave.
 
