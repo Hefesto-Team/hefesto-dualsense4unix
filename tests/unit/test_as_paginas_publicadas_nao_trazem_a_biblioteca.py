@@ -1,4 +1,6 @@
-"""Nenhuma página nem gerador traz jogo, adaptador ou id de uma biblioteca real de exemplo.
+"""Nenhuma página nem gerador traz adaptador ou id de uma biblioteca real de exemplo.
+
+Os títulos de jogo moram na régua `scripts/check_a_biblioteca_pessoal_fica_fora.py`.
 
 A interface é a mesma em qualquer computador: o exemplo do desenho é fictício, e o dado de verdade
 vem do pacote da aba. A publicada entra na régua quando sai de `mockup/DIVERGENCIAS.md`.
@@ -21,9 +23,7 @@ if str(RAIZ / "src") not in sys.path:
 from hefesto_dualsense4unix.interface import onde
 
 NOMES = re.compile(
-    r"Mortal Kombat|\bMK1\b|Elden Ring|Orpheus|Pragmata|Don't Scream|Reanimal|Wendigo Blue"
-    r"|Duskfade|Mina the Hollower|Sackboy|Resident Evil|Hades II|Silksong|Lure of Passion"
-    r"|TP-Link|UB500|UH700|AX211|Archer T3U|Logitech|C920|USB-BT500|Xiaomi|0e8d:0608"
+    r"TP-Link|UB500|UH700|AX211|Archer T3U|Logitech|C920|USB-BT500|Xiaomi|0e8d:0608"
     r"|\b(?:1971870|1245620|1358160|2380050)\b"
 )
 

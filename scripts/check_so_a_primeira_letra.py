@@ -97,7 +97,7 @@ NOMES_DO_DESENHO = (
     "Clara", "Ana", "Pedro", "Rafa",
     "Teclado", "Mouse", "Caixa de som", "Fone", "Celular", "Relógio", "Acessório",
     "Esquerda", "Meio", "Direita",
-    "Corrida de Inverno", "Wine",
+    "Corrida de Inverno", "Wine", "Jogo um",
 )
 
 DESIGNADORES = frozenset({"Entrada", "Canal", "Player", "Controle"})

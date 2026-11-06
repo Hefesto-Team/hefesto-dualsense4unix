@@ -42,18 +42,10 @@ LUGARES_DE_PERFIL = (
 CATALOGO_DO_PRODUTO = ("assets/profiles_default/", "assets/estilos_de_jogo/")
 ONDE_O_APPID_E_FICTICIO = ("tests/fixtures/", "scripts/tela/perfis-duble.json")
 
-_PAGINAS = "a sprint das páginas publicadas sem a biblioteca (30/10/2026)"
 _DOCSTRINGS = "a sprint das docstrings das integrações (30/10/2026)"
 DIVIDA = {
     # sai com: A-HISTORIA-SEM-A-BIBLIOTECA-PESSOAL-01
     "docs/data/decisoes-de-produto.csv": "a costura de O-INSTALL-NASCE-SEM-PERFIL-PESSOAL-01",
-    "mockup/09-sistema.html": _PAGINAS,
-    "mockup/10-perfis.html": _PAGINAS,
-    "src/hefesto_dualsense4unix/interface/aba09.py": _PAGINAS,
-    "src/hefesto_dualsense4unix/interface/aba10.py": _PAGINAS,
-    "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html": _PAGINAS,
-    "src/hefesto_dualsense4unix/interface/paginas/10-perfis.html": _PAGINAS,
-    "scripts/check_so_a_primeira_letra.py": _PAGINAS,
     "src/hefesto_dualsense4unix/integrations/api_de_entrada.py": _DOCSTRINGS,
     "src/hefesto_dualsense4unix/integrations/prontuario_dos_jogos.py": _DOCSTRINGS,
 }
