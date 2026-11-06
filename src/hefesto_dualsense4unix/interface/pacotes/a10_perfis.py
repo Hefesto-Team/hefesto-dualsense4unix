@@ -96,24 +96,26 @@ ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
 
 _ESCOLHIDO: str = ""
 
-_ATIVO_VISTO: str = ""
+_VISTO: tuple[str, str] = ("", "")
 
 
 def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     """A linha aberta no editor: a última clicada, ou o perfil ativo.
 
-    O ativo que muda leva a linha junto; reabrir a aba volta ao ativo (`_a_aba_abriu`). A escolha
+    O ativo que muda leva a linha, salvo se alguém escolheu desde o último tique (`_VISTO`, o par
+    ativo e linha). Reabrir a aba volta ao ativo (`_a_aba_abriu`). A escolha
     cai quando o perfil sai do disco, e a sincronização só grava nome que está na lista.
     """
-    global _ATIVO_VISTO, _ESCOLHIDO
+    global _ESCOLHIDO, _VISTO
     nomes = {p["nome"] for p in todos}
     if _ESCOLHIDO and _ESCOLHIDO not in nomes:
         _ESCOLHIDO = ""
-    if _ATIVO_VISTO and ativo != _ATIVO_VISTO and ativo in nomes:
+    ativo_visto, linha_vista = _VISTO
+    if ativo_visto and ativo != ativo_visto and ativo in nomes and linha_vista == _ESCOLHIDO:
         _ESCOLHIDO = ativo
-    _ATIVO_VISTO = ativo
     if not _ESCOLHIDO and ativo in nomes:
         _ESCOLHIDO = ativo
+    _VISTO = (ativo, _ESCOLHIDO)
     return _ESCOLHIDO or ativo
 
 

@@ -18,7 +18,7 @@ TODOS = [{"nome": "Klaroro"}, {"nome": "Future Fragments"}, {"nome": "Faith"}]
 @pytest.fixture(autouse=True)
 def limpo(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10, "_ESCOLHIDO", "")
-    monkeypatch.setattr(a10, "_ATIVO_VISTO", "")
+    monkeypatch.setattr(a10, "_VISTO", ("", ""))
     monkeypatch.setattr(a10, "_PINTADO_PARA", "")
     monkeypatch.setattr(a10, "_ULTIMO_TIQUE", 0.0)
 
@@ -32,6 +32,12 @@ def test_o_clique_continua_valendo_enquanto_o_ativo_nao_muda() -> None:
     a10._escolhido(TODOS, "Klaroro")
     a10._ESCOLHIDO = "Faith"
     assert a10._escolhido(TODOS, "Klaroro") == "Faith"
+
+
+def test_o_clique_vence_o_ativo_que_ainda_nao_trocou() -> None:
+    a10._escolhido(TODOS, "Klaroro")
+    a10._ESCOLHIDO = "Faith"
+    assert a10._escolhido(TODOS, "Future Fragments") == "Faith"
 
 
 def test_ativo_fora_da_lista_nao_leva_a_linha() -> None:
