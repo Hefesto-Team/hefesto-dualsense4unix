@@ -137,10 +137,7 @@ TEXTO_BOTAO_MIC_SILENCIAR: Final[str] = "Silenciar"
 TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Liberar"
 TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "Silenciar"
 
-DICA_MIC_SEM_LEITURA: Final[str] = (
-    "O daemon ainda não leu o estado do microfone deste controle. Sem saber "
-    "se ele está mudo, mandar mutar ou desmutar seria chute."
-)
+DICA_MIC_SEM_LEITURA: Final[str] = "Sem leitura do microfone"
 
 
 TEXTO_MIC_ALVO_NAO_HONRADO: Final[str] = (

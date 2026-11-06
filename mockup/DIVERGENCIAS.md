@@ -21,4 +21,29 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->
+## 01-jogar.html
+- **06/11/2026** — as dicas dos chips do Desligado viram o nome deles. Até publicar, quem usa vê a página de antes.
+
+## 03-gatilhos.html
+- **06/11/2026** — sai o CSS sem uso do topo. Até publicar, quem usa vê a página de antes.
+
+## 04-iluminacao.html
+- **06/11/2026** — sai o CSS sem uso do topo. Até publicar, quem usa vê a página de antes.
+
+## 05-vibracao.html
+- **06/11/2026** — sai o CSS sem uso do topo. Até publicar, quem usa vê a página de antes.
+
+## 06-navegacao.html
+- **06/11/2026** — sai o CSS sem uso do topo. Até publicar, quem usa vê a página de antes.
+
+## 07-lancadores.html
+- **06/11/2026** — o resumo da linha «Impedimentos» diz a conta. Até publicar, quem usa vê a página de antes.
+
+## 08-conexoes.html
+- **06/11/2026** — saem as dicas do mapa e da borda. Até publicar, quem usa vê a página de antes.
+
+## 09-sistema.html
+- **06/11/2026** — sai o CSS sem uso do topo. Até publicar, quem usa vê a página de antes.
+
+## 10-perfis.html
+- **06/11/2026** — sai o CSS sem uso do topo. Até publicar, quem usa vê a página de antes.

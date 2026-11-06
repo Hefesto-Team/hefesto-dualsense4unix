@@ -603,15 +603,6 @@ EXAMINAR_PORTAS = "Examinar entradas"
 RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
-BOTAO_DICA = (
-    "O botão físico do microfone faz o mesmo que o desta tela: liga o microfone "
-    "<b>e</b> o canal dele. O que ele cala vale para o computador todo, não só "
-    "para este controle.")
-
-BOTAO_DICA_CURTA = (
-    "O que o botão físico do microfone cala. É um ajuste do computador, um só "
-    "para todos os controles.")
-
 SO_ESTE_DICA = ("Escolhe só este controle: a luz, os gatilhos e a vibração "
                 "passam a mirar nele.")
 
@@ -747,8 +738,6 @@ def linha_do_controle(c):
 
     dica_linha = (f"{SO_ESTE_DICA} A fita do topo passa a apontar para ele."
                   if conectado else "Nenhum controle neste lugar.")
-    dica_da_borda = (' title="A borda é a cor lida deste aparelho."'
-                     if (conectado and not no_radio) else "")
     return f'''          <div class="gc-item gc-{c["pref"]}{marca}" data-controle="{c["pref"]}"{diz}>
             {barra}
             <div class="gc-cabeca">
@@ -760,7 +749,7 @@ def linha_do_controle(c):
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="{DONO_DICA}">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.nome_com_a_bateria(_pacote08.rotulo_curto_do_controle(c), DA_CONTROLES[c["pref"]]["bat"]), nome_do_lugar_vazio(c))}</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{vale(_pacote08.nome_com_a_bateria(_pacote08.rotulo_curto_do_controle(c), DA_CONTROLES[c["pref"]]["bat"]), nome_do_lugar_vazio(c))}</span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -850,14 +839,13 @@ DICA_DO_MAPEAR_PORTAS = "Use o mesmo DualSense em todas as entradas"
 
 
 CENSO = [
-    ("Aparelho de entrada", "1-2", "1",   f'o P{CONECTADOS[0]["jogador"]} {CONECTADOS[0]["nome"]}, no {"BT" if e_radio(CONECTADOS[0]) else "USB"}'),
-    ("Mouse",               "1-3", "7",   "o receptor do mouse"),
-    ("Aparelho de entrada", "1-5", "2",   f'o P{CONECTADOS[1]["jogador"]} {CONECTADOS[1]["nome"]}, no {"BT" if e_radio(CONECTADOS[1]) else "USB"}'),
-    ("Bluetooth",           "3-3", "3",   f'o adaptador “{ADAPTADORES[0]["nome"]}”'
-                                          f' — {ADAPTADORES[0]["modelo"]}'),
-    ("Teclado",             "3-4", "4",   "o receptor do teclado que o exame desta aba cita"),
-    ("Câmera",              "3-5", None,  "a webcam, plugada agora e ainda sem lugar"),
-    ("Não identificado",    "4-1", "5",   "o sistema não diz o que é"),
+    ("Aparelho de entrada", "1-2", "1"),
+    ("Mouse",               "1-3", "7"),
+    ("Aparelho de entrada", "1-5", "2"),
+    ("Bluetooth",           "3-3", "3"),
+    ("Teclado",             "3-4", "4"),
+    ("Câmera",              "3-5", None),
+    ("Não identificado",    "4-1", "5"),
 ]
 
 ESCOLHIDO = "3-3"
@@ -869,8 +857,8 @@ FACES = [
 
 EXTENSAO = {"10": "10a"}
 
-ONDE_ESTA = {no: em for _, no, em, _ in CENSO if em}
-QUEM_ESTA = {em: (esp, no) for esp, no, em, _ in CENSO if em}
+ONDE_ESTA = {no: em for _, no, em in CENSO if em}
+QUEM_ESTA = {em: (esp, no) for esp, no, em in CENSO if em}
 
 
 def _irmas():
@@ -915,25 +903,21 @@ CONFISSAO_NA_TELA = (
     f'<b data-campo="confissao-conta">{_POR_EXTENSO[len(LACUNAS)]}</b>.'
     f'</span></div>')
 
-from hefesto_dualsense4unix.interface.logica_do_mapa import (  # noqa: E402
-    DICA_EXTENSAO,
-    DICA_JA_COLOCADO,
-)
+from hefesto_dualsense4unix.interface.logica_do_mapa import DICA_JA_COLOCADO  # noqa: E402
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase  # noqa: E402
 
 _MAPA_PY = R / "src/hefesto_dualsense4unix/interface/logica_do_mapa.py"
 _confere_no_produto(_MAPA_PY, [
     "Você já colocou este aparelho {onde}.",
-    "Foi você quem disse que há uma extensão aqui.",
 ])
 
 
-def ap_botao(esp, no, em, quem):
+def ap_botao(esp, no, em):
     """Um aparelho da lista — o `Gtk.ToggleButton` de `_desenhar_aparelhos`."""
     dica = DICA_JA_COLOCADO.format(onde=com_artigo(na_frase(em), em=True)) if em else ""
+    titulo = f' title="{dica}"' if dica else ""
     return (f'<button class="mm-ap{" on" if no == ESCOLHIDO else ""}" '
-            f'data-gesto="escolher-aparelho" '
-            f'title="{dica} · O objeto: {quem}.">{esp}'
+            f'data-gesto="escolher-aparelho"{titulo}>{esp}'
             f'<span class="pt">·</span><code>{no}</code></button>')
 
 
@@ -942,17 +926,13 @@ def quadrado(n, esticada=False):
     estado, texto, porque = veredito(n, esticada)
     dentro = QUEM_ESTA.get(n)
     corpo = dentro[0] if dentro else MAPA["ROTULO_VAZIA"]
-    dizeres = []
-    if esticada:
-        dizeres.append(DICA_EXTENSAO)
-    dizeres.append(porque)
     linhas = [f'<span class="mm-n">{n}</span>',
               f'<span class="mm-c{"" if dentro else " mm-vazia"}">{corpo}</span>']
     if esticada:
         linhas.append(f'<span class="mm-ext">{MAPA["ROTULO_POR_EXTENSAO"]}</span>')
     linhas.append(f'<span class="mm-v">{texto}</span>')
     return (f'<button class="mm-sq" data-v="{estado}" data-gesto="escolher-entrada" '
-            f'title="{" ".join(dizeres)}">'
+            f'title="{porque}">'
             + "".join(linhas) + "</button>")
 
 
@@ -972,8 +952,7 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     rotulos={"vazia": MAPA["ROTULO_VAZIA"],
              "por_extensao": MAPA["ROTULO_POR_EXTENSAO"],
              "nova_entrada": MAPA["ROTULO_NOVA_ENTRADA"]},
-    dicas={"esticada": DICA_EXTENSAO,
-           "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA},
+    dicas={"nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA},
     pergunta={"aberta": True, "entradas": [n for _nome, ns in FACES for n in ns]})
 
 
@@ -2327,7 +2306,7 @@ TELA_MAPEAR_PORTAS = f'''
 </script>
 '''
 
-SEM_LUGAR = [(esp, no) for esp, no, em, _q in CENSO if not em]
+SEM_LUGAR = [(esp, no) for esp, no, em in CENSO if not em]
 
 VAGAS_NO_DESENHO = (sum(len(ns) for _n, ns in FACES) + len(EXTENSAO)
                     - len(ONDE_ESTA))

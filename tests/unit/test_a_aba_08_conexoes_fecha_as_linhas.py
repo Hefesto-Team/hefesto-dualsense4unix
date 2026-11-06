@@ -322,7 +322,7 @@ def test_a_ordem_calada_continua_na_tira(pacote, cena, mesa) -> None:
     assert len(tira) == len(cena), (
         f"a tira perdeu itens: {[i.chave for i in tira]} — a ordem calada "
         "sumiu, que é a porta de mão única que a 08-Q5 fecha")
-    caladas = [i.chave for i in tira if pacote._calada(i)]
+    caladas = [i.chave for i in tira if pacote._ordem_calada(i.ordem)]
     assert caladas == [next(i.chave for i in cena if i.ordem is not None)], (
         f"a marca da linha calada não caiu na linha certa: {caladas}")
 
@@ -346,26 +346,23 @@ def test_a_ordem_calada_com_arranjo_vazio_nao_cala(pacote, cena, mesa) -> None:
          {sem_assinatura.chave: ""})
     tira = pacote._itens_da_tela()
     assert len(tira) == 1
-    assert not pacote._calada(tira[0]), (
+    assert not pacote._ordem_calada(tira[0].ordem), (
         "uma ordem VIVA sem assinatura de arranjo nasceu calada — o vazio "
         "guardado pelo desfazer casou com o vazio do padrão")
 
 
-def test_a_linha_que_voltou_apaga_a_tinta(pacote, cena, mesa) -> None:
-    """Passo 3 — a chave `calada` vai em TODO tique, inclusive vazia."""
+def test_a_ordem_que_voltou_deixa_de_estar_calada(pacote, cena, mesa) -> None:
+    """O desfazer devolve a ordem à lista: nenhuma fica calada e a tira não muda de tamanho."""
     dispensada = _dispensa_a_primeira(cena)
     mesa(cena, dispensada)
-    antes = [pacote._linha(i)["calada"] for i in pacote._itens_da_tela()]
-    assert antes.count("sim") == 1, f"a cena não calou uma linha só: {antes}"
+    antes = [pacote._ordem_calada(i.ordem) for i in pacote._itens_da_tela()]
+    assert antes.count(True) == 1, f"a cena não calou uma linha só: {antes}"
 
     pacote._DISPENSADAS[next(iter(dispensada))] = ""
-    depois = [pacote._linha(i)["calada"] for i in pacote._itens_da_tela()]
+    depois = [pacote._ordem_calada(i.ordem) for i in pacote._itens_da_tela()]
     assert len(depois) == len(antes), "a tira mudou de tamanho no desfazer"
-    assert depois.count("sim") == 0, (
+    assert not any(depois), (
         f"a linha continuou marcada como calada depois do desfazer: {depois}")
-    assert all(v == "" for v in depois), (
-        "a chave sumiu em vez de vir VAZIA — o piloto não visitaria o elemento "
-        f"e a tinta do tique anterior ficaria: {depois}")
 
 
 def test_o_desenho_esmaece_a_dica_calada_e_o_botao_de_voltar_responde(pacote, cena, mesa) -> None:
@@ -438,14 +435,14 @@ def test_o_mesmo_gesto_desfaz(pacote, cena, mesa) -> None:
     pacote._reler_a_declaracao = lambda: None
     try:
         gesto(None, {"v": str(posicao)}, _Ponte())
-        assert pacote._calada(cena[posicao]), "o primeiro clique não calou"
+        assert pacote._ordem_calada(cena[posicao].ordem), "o primeiro clique não calou"
         assert gravado[-1][ordem.chave]["arranjo"] == ordem.arranjo
         assert gravado[-1][ordem.chave]["quando"], (
             "a dispensa foi gravada sem data — `quando` é o que diz quando a dispensa "
             "decidiu")
 
         gesto(None, {"v": str(posicao)}, _Ponte())
-        assert not pacote._calada(cena[posicao]), (
+        assert not pacote._ordem_calada(cena[posicao].ordem), (
             "o segundo clique não desfez — o ⊘ continua sendo porta de mão única")
         assert gravado[-1][ordem.chave] == {"quando": "", "arranjo": ""}, (
             f"o desfazer não escreveu os dois vazios: {gravado[-1]}")
@@ -476,7 +473,7 @@ def test_a_recusa_do_disco_nao_cala_a_linha(pacote, cena, mesa) -> None:
     posicao = next(i for i, item in enumerate(cena) if item.ordem is not None)
     with pytest.raises(RuntimeError):
         gesto(None, {"v": str(posicao)}, _PonteQueRecusa())
-    assert not pacote._calada(cena[posicao]), (
+    assert not pacote._ordem_calada(cena[posicao].ordem), (
         "a linha calou com o disco tendo RECUSADO — a tela num estado que o "
         "disco não tem, e a linha volta sozinha no tique seguinte")
 

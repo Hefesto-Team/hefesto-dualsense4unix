@@ -44,11 +44,6 @@ ROTULO_CANCELAR = "Cancelar"
 DICA_NOVO_HUB = "Pergunta em qual entrada o hub está ligado e acrescenta a face dele."
 
 DICA_JA_COLOCADO = "Você já colocou este aparelho {onde}."
-DICA_EXTENSAO = (
-    "Foi você quem disse que há uma extensão aqui. Nenhuma "
-    "leitura do sistema distingue isto de um aparelho na "
-    "própria entrada do hub."
-)
 
 
 ESPERA_O_APLICAR = (

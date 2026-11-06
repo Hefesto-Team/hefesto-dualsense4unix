@@ -392,11 +392,6 @@ def _pedir_o_exame_de_entrada() -> None:
     fios.soltar("hefesto-exame-de-entrada", correr)
 
 
-def _calada(item: Any) -> bool:
-    """Esta linha é uma ordem que o usuário mandou calar, **neste arranjo**?"""
-    return _ordem_calada(getattr(item, "ordem", None))
-
-
 def _ordem_calada(ordem: Any) -> bool:
     """A mesma pergunta, feita sobre a ORDEM — é o que o gesto `ignorar` tem na mão."""
     if ordem is None:
@@ -418,8 +413,6 @@ def _itens_da_tela() -> list[Any]:
         conferidas.append(item)
     return sorted(conferidas, key=lambda i: getattr(i, "ordem", None) is None)
 
-
-_SELO_DESCONHECIDO = ("info", "NOTA")
 
 ENDERECO_DO_VEREDITO = {
     "certo": "veredito-certo",
@@ -505,101 +498,6 @@ def _frase_do_selo(estado: str) -> str:
 
         return str(FRASE_DO_SELO.get(estado, ""))
     return ""
-
-
-def _selo_do_estado(estado: str) -> tuple[str, str]:
-    """``(a classe CSS, a palavra)`` do selo — do dono, `interface.conexoes`.
-
-    O mapa já traduzia os quatro estados do `exame_da_mesa` para as três palavras do desenho;
-    mora na camada de tela porque é vocabulário, não máquina (o módulo do exame "responde por
-    máquina, não por vocabulário"). O import é tardio: `interface.conexoes` puxa a cadeia de tela e
-    o topo deste módulo tem de seguir importável numa árvore sem `src/` no caminho.
-
-    A palavra de `problema` ainda é a de `atencao` (02/09/2026)  (noqa-acento)
-    por espera do usuário: o mapa manda os dois estados para **AJUSTAR** e ele decidiu que *"o que
-    está quebrado agora não pode parecer igual ao que só podia estar melhor"*. A COR já saiu (o
-    `nivel-grave` do cartão de dica, por `dicas_da_conexao._nivel_do_estado`); a PALAVRA é de
-    produto e trocá-la aqui seria escolher no lugar do usuário. Quando o usuário disser, muda
-    `interface.conexoes.SELO_DO_ESTADO`, o mapa é um só.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.interface.conexoes import SELO_DO_ESTADO
-
-    return SELO_DO_ESTADO.get(estado, _SELO_DESCONHECIDO)
-
-
-def _dica_da_linha(item: Any) -> str:
-    """O `?` de uma linha do Check-up, em HTML: o que importa e a cura.
-
-    Duas metades, não três (02/09/2026: *"o ponto de interrogação para de repetir a linha"*): a
-    linha mostra a MEDIÇÃO (`Item.porque`, chave `achado` do :func:`pacote`), então a dica traz o
-    que a linha NÃO diz: **por que importa** (`DICAS_DAS_LINHAS`, por chave de regra) e **o que
-    fazer** (`PREFIXO_DA_CURA` + `Item.cura`). As frases são do produto, as mesmas constantes de
-    `secao_exame._dica_do_item`; aqui só a ORDEM das dicas (uma frase reescrita aqui seria a quarta
-    grafia).
-
-    Por que o pacote pede a metade e o dono não muda: `_dica_do_item` é do GTK também
-    (`secao_exame.PainelDoExame`), onde a linha mostra `item.rotulo` (o NOME da conferência) e a
-    dica é o ÚNICO caminho de `Item.porque` até a tela; cortar a metade do meio no dono apagaria a
-    medição da janela estável para curar uma repetição que só existe AQUI.
-
-    Só a quebra de linha é nossa: o dono junta com `\\n\\n` (`set_tooltip_text` do GTK) e em HTML o
-    `?` sairia com as frases coladas; `<br><br>` é a tradução, a que o desenho já usa. O texto é
-    escapado antes (alvo `html`: `&` ou `<` do exame viraria marcação) por `interface.conexoes._e`,
-    o do gerador. O `<b>` do rótulo é o da janela estável e entra DEPOIS do escape (rótulo e texto
-    passam por `_e` separados; escapar a frase montada mostraria `<b>`).
-
-    Uma ordem da mesa sem verbete (02/09/2026, o achado de pé: o `?` de uma linha sem verbete e
-    sem cura abre uma caixa VAZIA de 330px): `DICAS_DAS_LINHAS` é indexada por chave de REGRA
-    (`energia_do_radio`, `energia_das_portas`, `pareamentos`, `suporte_ao_controle`,
-    `vizinhanca_das_portas`) e o item do catálogo de ORDENS traz `chave=ordem.chave` (o slug do
-    arranjo, nenhuma parte) e `cura=ordem.acao or None`, talvez vazio; `partes` ficava só com `""` e
-    o `?` mostrava o travessão (a decisão 9 tirou a metade do meio e quem não tinha as outras duas
-    ficou sem nada).
-
-    A cura é reuso: uma `Ordem` traz TRÊS linhas (`ordens_da_mesa.Ordem.linhas`, rótulos de
-    `exame_da_mesa.ROTULOS_DA_ORDEM`: *"O que eu vi aqui"*, *"Por que importa"*, *"Ganho
-    esperado"*). A primeira a linha já mostra (`Item.porque`) e fica de fora; as outras duas são o
-    que o `?` promete, o par do card do GTK (`secao_exame._linha_da_ordem`) e do `--exame`
-    (`exame_da_mesa._imprimir_relatorio`).
-
-    O selo de procedência (`Linha.selo`) não vem: duas frases dividem uma dica de 330px e um
-    `[medido]` em cinza competiria com o texto (para quem desenhar a dica maior). O `except` largo é
-    de propósito e devolve vazio (o `escrever()` põe o travessão, "não tenho o que dizer aqui"):
-    levantar derrubaria a pintura da aba INTEIRA por uma dica, e não emitir a chave deixaria a dica
-    do MOCKUP ao lado do achado.
-    """
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_exame import (
-            DICAS_DAS_LINHAS,
-            PREFIXO_DA_CURA,
-        )
-        from hefesto_dualsense4unix.integrations.exame_da_mesa import (
-            ROTULOS_DA_ORDEM,
-        )
-        from hefesto_dualsense4unix.interface.conexoes import _e
-        from hefesto_dualsense4unix.utils.i18n import _
-
-        chave = str(getattr(item, "chave", ""))
-        verbete = DICAS_DAS_LINHAS.get(chave, "")
-        if not verbete and chave == CHAVE_DA_LEITURA:
-            verbete = _o_porque_e_a_cura_do_dono()[0]
-        partes: list[tuple[str, str]] = [("", _(str(verbete)))]
-        ordem = getattr(item, "ordem", None)
-        if ordem is not None:
-            for rotulo, linha in zip(ROTULOS_DA_ORDEM[1:], ordem.linhas[1:],
-                                     strict=True):
-                partes.append((_(str(rotulo)),
-                               _(str(getattr(linha, "texto", "") or ""))))
-        cura = str(getattr(item, "cura", "") or "")
-        if cura:
-            partes.append(("", _(PREFIXO_DA_CURA) + _(cura)))
-        return "<br><br>".join(
-            (f"<b>{_e(r)}:</b> {_e(t)}" if r else _e(t))
-            for r, t in partes if t)
-    except Exception:
-        return ""
 
 
 def _a_entrada_na_frase(numero: str, *, em: bool = False, maiuscula: bool = False) -> str:
@@ -820,39 +718,6 @@ def _leitura_das_ordens_da_maquina(declaracao: Any) -> Any:
     return lambda: leitura_das_ordens(declaracao)
 
 
-def _linha(item: Any) -> dict[str, Any]:
-    """Um `Item` do exame na forma que a tela consome.
-
-    Os campos são `rotulo`, `estado` e `porque`, do dataclass `exame_da_mesa.Item`. Um `getattr` com
-    reserva (`titulo` com `or str(it)`) é o disfarce perfeito para campo inexistente: não levanta, e
-    o `repr` do objeto Python foi parar na tela (foto de 01/09: `Item(chave='energia_do_radio',
-    rotulo='Economia de energia desligada', estado='a`).
-
-    A palavra do selo e a dica são do produto (02/09/2026; antes montadas à mão, erradas):
-
-    * o selo saía de `"AJUSTAR" if grave else "CERTO"`, mas o `Item` tem QUATRO estados e
-    `interface.conexoes.SELO_DO_ESTADO` os mapeia em TRÊS palavras, e sumia a **NOTA** do `nao_sei`
-    (a quarta linha do desenho): "não deu para olhar" chegava como "AJUSTAR", a tela afirmando
-    problema que ninguém mediu; * o `?` da linha não era montado (ver `dica` abaixo).
-    """
-    estado = str(getattr(item, "estado", "") or "")
-    ordem = getattr(item, "ordem", None)
-    return {
-        "chave": str(getattr(item, "chave", "")),
-        "titulo": str(getattr(item, "rotulo", "") or ""),
-        "porque": str(getattr(item, "porque", "") or ""),
-        "estado": estado,
-        "selo": _selo_do_estado(estado)[1],
-        "classe": _selo_do_estado(estado)[0],
-        "dica": _dica_da_linha(item),
-        "grave": estado.lower() not in {"certo", ""},
-        "ordem": "" if ordem is None else str(ordem.chave),
-        "arranjo": "" if ordem is None else str(ordem.arranjo),
-        "calada": "sim" if _calada(item) else "",
-        "dica-do-ignorar": DICA_DO_DESFAZER if _calada(item) else DICA_DO_IGNORAR,
-    }
-
-
 def _ensaio() -> Any:
     """A mesa do motor montada sobre o rascunho DO USUÁRIO — ou `None` sem censo."""
     censo = _censo()
@@ -957,8 +822,7 @@ def _html_do_mapa() -> str:
         rotulos={"vazia": mm.ROTULO_VAZIA,
                  "por_extensao": mm.ROTULO_POR_EXTENSAO,
                  "nova_entrada": mm.ROTULO_NOVA_ENTRADA},
-        dicas={"esticada": mm.DICA_EXTENSAO,
-               "nova_entrada": _tela.DICA_NOVA_ENTRADA},
+        dicas={"nova_entrada": _tela.DICA_NOVA_ENTRADA},
         nomes={n: str(p["nome"]) for n, p in logica.portas.items()
                if p.get("filha_de") and p.get("nome")},
         nomes_das_entradas={n: str(p["nome"]) for n, p in logica.portas.items()

@@ -89,14 +89,6 @@
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
     border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
-  .visto-fixo,.visto-legenda{display:none}
-  body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
-    gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
-    background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
-  body.nativo .visto-fixo .cad{color:var(--fg)}
-  body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
-    justify-content:center;color:var(--fg);font-size:11.5px}
-  body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
   .chip{
@@ -1957,7 +1949,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB <span class="pt">•</span> 100%</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Cosmic Red <span class="pt">•</span> USB <span class="pt">•</span> 100%</span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -3616,13 +3608,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="moldura">
         <div class="mm-rot-linha"><span class="mm-rot" title="Tudo o que está ligado ao computador. O que já tem lugar continua na lista: clique nele para mudar de entrada.">O que o Hefesto encontrou</span></div>
         <div class="mm-lista" data-campo="aparelhos" data-hef-alvo="html">
-          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 1. · O objeto: o P1 Cosmic Red, no USB.">Aparelho de entrada<span class="pt">·</span><code>1-2</code></button>
-          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 7. · O objeto: o receptor do mouse.">Mouse<span class="pt">·</span><code>1-3</code></button>
-          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 2. · O objeto: o P2 Starlight Blue, no BT.">Aparelho de entrada<span class="pt">·</span><code>1-5</code></button>
-          <button class="mm-ap on" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 3. · O objeto: o adaptador “Sala” — TP-Link UB500.">Bluetooth<span class="pt">·</span><code>3-3</code></button>
-          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 4. · O objeto: o receptor do teclado que o exame desta aba cita.">Teclado<span class="pt">·</span><code>3-4</code></button>
-          <button class="mm-ap" data-gesto="escolher-aparelho" title=" · O objeto: a webcam, plugada agora e ainda sem lugar.">Câmera<span class="pt">·</span><code>3-5</code></button>
-          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 5. · O objeto: o sistema não diz o que é.">Não identificado<span class="pt">·</span><code>4-1</code></button>
+          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 1.">Aparelho de entrada<span class="pt">·</span><code>1-2</code></button>
+          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 7.">Mouse<span class="pt">·</span><code>1-3</code></button>
+          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 2.">Aparelho de entrada<span class="pt">·</span><code>1-5</code></button>
+          <button class="mm-ap on" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 3.">Bluetooth<span class="pt">·</span><code>3-3</code></button>
+          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 4.">Teclado<span class="pt">·</span><code>3-4</code></button>
+          <button class="mm-ap" data-gesto="escolher-aparelho">Câmera<span class="pt">·</span><code>3-5</code></button>
+          <button class="mm-ap" data-gesto="escolher-aparelho" title="Você já colocou este aparelho na Entrada 5.">Não identificado<span class="pt">·</span><code>4-1</code></button>
         </div>
         <div class="mm-faces">
             <div class="mm-face" data-face="0">
@@ -3636,7 +3628,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <div class="mm-grade"><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="3" title="Bluetooth — clique para tirar"><span class="mm-n">3</span><span class="mm-c">Bluetooth</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="4" title="Teclado — clique para tirar"><span class="mm-n">4</span><span class="mm-c">Teclado</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="5" title="Não identificado — clique para tirar"><span class="mm-n">5</span><span class="mm-c">Não identificado</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="serve" data-gesto="escolher-entrada" data-entrada="6" title="Entrada direta, mas na altura da escrivaninha"><span class="mm-n">6</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Serve</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="7" title="Mouse — clique para tirar"><span class="mm-n">7</span><span class="mm-c">Mouse</span><span class="mm-v">Ocupada</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="evite" data-gesto="escolher-entrada" data-entrada="8" title="Colada no Mouse, na Entrada 7"><span class="mm-n">8</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Vale evitar</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="serve" data-gesto="escolher-entrada" data-entrada="9" title="Entrada direta, mas na altura da escrivaninha"><span class="mm-n">9</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-v">Serve</span></button></div><div class="mm-cel"><button class="mm-sq" data-v="cheia" data-gesto="escolher-entrada" data-entrada="10" title="Com o extensor"><span class="mm-n">10</span><span class="mm-c">Com o extensor</span><span class="mm-v">Ocupada</span></button></div></div>
             </div>
             <div class="mm-face" data-face="hubs">
-              <div class="mm-face-cab"><span class="mm-face-nome" title="O sistema não enxerga hubs nem extensões — quem diz onde estão é você.">Hubs e extensões</span>
+              <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
                 <button class="btn mini" data-gesto="novo-hub" aria-expanded="true" title="Pergunta em qual entrada o hub está ligado e acrescenta a face dele.">Acrescentar hub</button></div>
               <div class="hub-pergunta" id="hub-pergunta">
                 <label class="hub-rot">Ligado
@@ -3647,7 +3639,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <button class="btn" data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta">Acrescentar</button>
                 <button class="btn" data-gesto="novo-hub-cancelar">Cancelar</button>
               </div>
-              <div class="mm-grade mm-grade-hubs"><div class="mm-cel"><button class="mm-sq" data-v="melhor" data-gesto="escolher-entrada" data-entrada="10a" title="Foi você quem disse que há uma extensão aqui. Nenhuma leitura do sistema distingue isto de um aparelho na própria entrada do hub. Na ponta do extensor: a antena mais longe das outras"><span class="mm-n">10a</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-ext">Por extensão</span><span class="mm-v">Melhor lugar</span></button><span class="mm-ligado">Ligado na <b>Entrada 10</b> <span class="mudo">· Traseira</span></span></div></div>
+              <div class="mm-grade mm-grade-hubs"><div class="mm-cel"><button class="mm-sq" data-v="melhor" data-gesto="escolher-entrada" data-entrada="10a" title="Na ponta do extensor: a antena mais longe das outras"><span class="mm-n">10a</span><span class="mm-c mm-vazia">Vazia</span><span class="mm-ext">Por extensão</span><span class="mm-v">Melhor lugar</span></button><span class="mm-ligado">Ligado na <b>Entrada 10</b> <span class="mudo">· Traseira</span></span></div></div>
             </div>
         </div>
 

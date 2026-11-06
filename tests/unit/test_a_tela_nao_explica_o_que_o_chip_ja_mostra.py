@@ -24,6 +24,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
@@ -40,6 +41,23 @@ EXPLICACAO = re.compile(
     r"|modelo do controle virtual",
     re.IGNORECASE,
 )
+
+FRASES_QUE_SAIRAM = {
+    "DO_DESLIGADO": r"como ele é, sem Steam|A Steam traduz o controle|Vira mouse e teclado;",
+    "FRASE_DO_MODO_NATIVO": r"quem conta os\s+jogadores",
+    "o resumo dos impedimentos": r"não recebem? gatilhos e vibração",
+    "nintendo_bt_warning": r"modo Switch pode travar|driver do kernel",
+    "a dica da extensão": r"Foi você quem disse|leitura do sistema distingue",
+    "DICA_DOS_HUBS": r"não enxerga hubs",
+    "a cauda do ap_botao": r"O objeto:",
+    "a dica da borda": r"A borda é a cor lida",
+    "BOTAO_DICA": r"botão físico do microfone",
+    "DICA_MIC_SEM_LEITURA": r"ainda não leu o estado do microfone|seria chute",
+}
+
+
+def _frases_que_voltaram(texto: str) -> list[str]:
+    return [nome for nome, frase in FRASES_QUE_SAIRAM.items() if re.search(frase, texto, re.I)]
 
 UNIQ = "aa:bb:cc:00:00:01"
 
@@ -99,6 +117,8 @@ GERADORES_E_PACOTES = sorted([
     INTERFACE / "desenho_da_experimental.py",
     INTERFACE / "logica_do_mapa.py",
     RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "impedimentos_da_steam.py",
+    RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "external_controllers.py",
+    RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "jogar" / "painel.py",
     *INTERFACE.glob("aba[01][0-9].py"),
     *(INTERFACE / "pacotes").glob("*.py"),
 ])
@@ -118,6 +138,17 @@ def test_nenhum_texto_dos_geradores_e_dos_pacotes_explica_a_api(arquivo: pathlib
     """
     achados = [f"{arquivo.name}:{n}: {t[:90]!r}"
                for n, t in _constantes_de_texto(arquivo) if EXPLICACAO.search(t)]
+    assert not achados, "\n".join(achados)
+
+
+@pytest.mark.parametrize("arquivo", GERADORES_E_PACOTES, ids=lambda p: p.name)
+def test_as_frases_que_sairam_nao_voltam_aos_geradores(arquivo: pathlib.Path) -> None:
+    """Inclui o pedaço de um `title=` montado em f-string, que também é constante de texto.
+
+    MORDE: devolva o texto antigo do `DICA_MIC_SEM_LEITURA` e reprova com o nome da constante.
+    """
+    achados = [f"{nome}: {arquivo.name}:{n}: {t[:90]!r}"
+               for n, t in _constantes_de_texto(arquivo) for nome in _frases_que_voltaram(t)]
     assert not achados, "\n".join(achados)
 
 
@@ -162,6 +193,26 @@ def test_o_html_gerado_das_abas_nao_explica_a_api(desenho: pathlib.Path) -> None
     leitor = _TextoDaTela()
     leitor.feed(desenho.read_text(encoding="utf-8"))
     achados = [f"{desenho.name}:{n}: {t[:90]!r}" for n, t in leitor.textos if EXPLICACAO.search(t)]
+    assert not achados, "\n".join(achados)
+
+
+def _publicadas_sem_declaracao() -> list[pathlib.Path]:
+    corpo = (onde.ENSAIO / "DIVERGENCIAS.md").read_text(encoding="utf-8").partition("\n---\n")[2]
+    em_trabalho = set(re.findall(r"^##\s+(\S+\.html)\s*$", corpo, re.M))
+    return sorted(p for p in onde.PUBLICADO.glob("[01][0-9]-*.html") if p.name not in em_trabalho)
+
+
+@pytest.mark.parametrize("desenho", [*PAGINAS, *_publicadas_sem_declaracao()],
+                         ids=lambda p: f"{p.parent.name}/{p.name}")
+def test_as_frases_que_sairam_nao_voltam_as_paginas(desenho: pathlib.Path) -> None:
+    """O `title` e o `data-dica` de cada aba; a publicada entra quando sai da DIVERGENCIAS.md.
+
+    MORDE: devolva o `title` da borda em `aba08.py`, regere a 08, e reprova com o nome dele.
+    """
+    leitor = _TextoDaTela()
+    leitor.feed(desenho.read_text(encoding="utf-8"))
+    achados = [f"{nome}: {desenho.name}:{n}: {t[:90]!r}"
+               for n, t in leitor.textos for nome in _frases_que_voltaram(t)]
     assert not achados, "\n".join(achados)
 
 

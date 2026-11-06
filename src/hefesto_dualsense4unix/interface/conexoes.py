@@ -177,14 +177,6 @@ CASA_DO_TETO_GLOBAL = "Perfil de bateria"
 ABA_DO_TETO_GLOBAL = "Sistema"
 
 
-SELO_DO_ESTADO = {
-    "certo": ("ok", "CERTO"),
-    "atencao": ("warn", "AJUSTAR"),  # (noqa-acento)
-    "problema": ("warn", "AJUSTAR"),
-    "nao_sei": ("info", "NOTA"),
-}
-
-
 def _o_botao_da_dica(acao: Any, classe: str) -> str:
     """O botão de um cartão: âncora quando navega, botão quando faz gesto."""
     rotulo = _e(acao.rotulo)
@@ -253,9 +245,6 @@ RESPOSTAS_DO_VIZINHO = (
 
 
 DICA_NOVA_ENTRADA = "Cria uma entrada nova nesta face, com o próximo número livre."
-DICA_DOS_HUBS = (
-    "O sistema não enxerga hubs nem extensões — quem diz onde estão é você."
-)
 
 
 def _primeira_maiuscula(frase: str) -> str:
@@ -304,10 +293,6 @@ def html_do_mapa(
         tomada = not dentro and classe == "cheia" and bool(porque)
         corpo = _primeira_maiuscula(
             dentro[0] if dentro else porque if tomada else rotulos["vazia"])
-        dizeres = []
-        if esticada:
-            dizeres.append(dicas["esticada"])
-        dizeres.append(porque)
         linhas = [f'<span class="mm-n">{_e(numero)}</span>',
                   f'<span class="mm-c{"" if dentro or tomada else " mm-vazia"}">{_e(corpo)}</span>']
         if esticada:
@@ -316,7 +301,7 @@ def html_do_mapa(
         linhas.append(f'<span class="mm-v">{_e(texto)}</span>')
         return (f'<button class="mm-sq" data-v="{_e(classe)}" '
                 f'data-gesto="escolher-entrada" data-entrada="{_e(numero)}" '
-                f'title="{_e(" ".join(dizeres))}">' + "".join(linhas) + "</button>")
+                f'title="{_e(porque)}">' + "".join(linhas) + "</button>")
 
     face_da_entrada = {n: str(f.get("nome", "")) for f in faces for n in f.get("portas", [])}
 
@@ -381,8 +366,7 @@ def html_do_mapa(
     expandido = "true" if aberta else "false"
     blocos.append(
         f'''            <div class="mm-face" data-face="hubs">
-              <div class="mm-face-cab"><span class="mm-face-nome" '''
-        f'''title="{_e(DICA_DOS_HUBS)}">Hubs e extensões</span>
+              <div class="mm-face-cab"><span class="mm-face-nome">Hubs e extensões</span>
                 <button class="btn mini" data-gesto="novo-hub" aria-expanded="{expandido}" '''
         f'''title="{_e(_mm.DICA_NOVO_HUB)}">{_e(_mm.ROTULO_NOVO_HUB)}</button></div>{pergunta_html}
               <div class="mm-grade mm-grade-hubs">{celulas}</div>

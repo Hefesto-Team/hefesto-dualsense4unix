@@ -121,28 +121,20 @@ def test_a_ordem_de_servico_e_da_maquina_do_usuario() -> None:
     assert ordem.por_que_importa.texto in card, "o porquê (a primeira frase) mora atrás do ⓘ"
 
 
-def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
-    """O `?` que fica é o da linha do exame, e ele traz o que saiu do card. (D-ORDEM-DE-SERVICO)"""
+def test_o_cartao_da_ordem_traz_o_porque_e_o_que_fazer() -> None:
+    """A ordem do exame vira cartão de dica, com o porquê e o que fazer. (D-ORDEM-DE-SERVICO)"""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
-    from hefesto_dualsense4unix.integrations.exame_da_mesa import (
-        ESTADO_ATENCAO,
-        ROTULOS_DA_ORDEM,
-        Item,
-    )
+    from hefesto_dualsense4unix.integrations.dicas_da_conexao import uma_frase
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_ATENCAO, Item
 
     p = _pacote()
     ordem = _uma_ordem()
     item = Item(chave=ordem.chave, rotulo="A", estado=ESTADO_ATENCAO,
                 porque=ordem.o_que_eu_vi.texto, cura=ordem.acao, ordem=ordem)
-    dica = p._dica_da_linha(item)
+    cartao = p._o_painel_das_dicas([item], None).visiveis[0]
 
-    for rotulo, linha in zip(ROTULOS_DA_ORDEM[1:], ordem.linhas[1:], strict=True):
-        assert f"<b>{rotulo}:</b>" in dica, (
-            f"o `?` da linha perdeu o rótulo {rotulo!r}, que é de "
-            "`exame_da_mesa.ROTULOS_DA_ORDEM`")
-        assert linha.texto in dica, f"o `?` perdeu a frase {linha.texto!r}"
-    assert PREFIXO_DA_CURA in dica and ordem.acao in dica, (
-        f"o `?` da linha perdeu o que fazer, que saiu do card: {dica!r}")
+    assert cartao.porque == uma_frase(ordem.por_que_importa.texto), cartao
+    assert cartao.cura == PREFIXO_DA_CURA + ordem.acao.strip(), cartao
 
 
 def test_sem_destino_o_cartao_nao_desenha_um_de_para_de_travessoes() -> None:

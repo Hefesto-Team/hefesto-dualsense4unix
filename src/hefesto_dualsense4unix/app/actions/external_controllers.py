@@ -147,14 +147,11 @@ def slot_label(slot: int | None) -> str:
 
 
 def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
-    """Aviso honesto quando é um controle Nintendo-mode POR Bluetooth."""
+    """O estado do controle Nintendo-mode POR Bluetooth, em palavra curta."""
     vid = str(entry.get("vid") or "").lower()
     bus = str(entry.get("bus") or "").lower()
     if vid in _NINTENDO_MODE_VIDS and bus in ("bluetooth", "bt"):
-        return (
-            "Pelo BT o modo Switch pode travar (driver do kernel); "
-            "pelo USB é estável."
-        )
+        return "Instável no BT"
     return None
 
 

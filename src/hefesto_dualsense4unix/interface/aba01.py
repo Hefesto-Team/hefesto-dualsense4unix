@@ -29,8 +29,6 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
 BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 
 
-NATIVO_E_OS_JOGADORES = "quem conta os jogadores passa a ser o jogo."
-
 INTERRUPTOR = [
     ("ligado", "gamepad", "Ligado",
      "Luz, vibração, gatilho e número do jogador pelo Hefesto"),
@@ -54,13 +52,13 @@ MODO_ACESO = "dualsense"
 DO_DESLIGADO = [
     {"chave": CHIP_DO_NATIVO, "rot": ROTULO_DO_NATIVO, "modo": "",
      "sem_dono": False,
-     "dica": "O jogo vê o controle como ele é, sem Steam"},
+     "dica": ROTULO_DO_NATIVO},
     {"chave": "steam", "rot": "Steam Input", "modo": "",
      "sem_dono": False,
-     "dica": "A Steam traduz o controle para o jogo"},
+     "dica": "Steam Input"},
     {"chave": "navegacao", "rot": "Navegação", "modo": "desktop",
      "sem_dono": False,
-     "dica": "Vira mouse e teclado; o Hefesto segue lendo o controle"},
+     "dica": "Navegação"},
 ]
 NATIVO_ACESO = CHIP_DO_NATIVO
 

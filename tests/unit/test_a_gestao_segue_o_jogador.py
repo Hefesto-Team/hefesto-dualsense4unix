@@ -436,22 +436,17 @@ _PRO_NO_BT: dict[str, Any] = {
 
 
 def test_o_aviso_do_externo_na_08_diz_a_palavra_do_dono(a08: Any) -> None:
-    """«Pelo BT o modo Switch pode travar (driver do kernel); pelo USB é
-    estável.» — a linha de um externo Nintendo na Gestão da 08
-    (`_html_dos_externos`), pelo dono `external_controllers.nintendo_bt_warning`.
+    """A linha de um externo Nintendo na Gestão da 08 (`_html_dos_externos`) diz o estado
+    pelo dono `external_controllers.nintendo_bt_warning`, na língua do mapa.
 
-    A LISTA MEDIDA POR GREP NÃO O TINHA: a conferência achou-o entre os donos
-    que a 08 pinta, dizendo «por cabo» ao lado do «BT» da mesma linha.
-
-    MORDIDA: devolva «por cabo é estável» ao `nintendo_bt_warning` — reprova.
+    MORDIDA: devolva «por cabo» ou «no Bluetooth» ao `nintendo_bt_warning` — reprova.
     """
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     linha = a08._html_dos_externos(Contexto(state={}, externos=[_PRO_NO_BT]))
     texto = html.unescape(re.sub(r"<[^>]+>", " ", linha))
-    assert "modo Switch" in texto, (
-        f"a linha do externo perdeu o aviso do `hid-nintendo` — a régua ficou cega: {texto!r}")
-    assert f"pelo {palavra('usb')} é estável" in texto, texto
+    assert f"Instável no {palavra('bt')}" in texto, (
+        f"a linha do externo perdeu o estado do `hid-nintendo` — a régua ficou cega: {texto!r}")
     assert not _transporte_na_lingua_do_mapa(texto), texto
 
 

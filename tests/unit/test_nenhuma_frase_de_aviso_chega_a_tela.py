@@ -81,14 +81,16 @@ def _cena(destino: str) -> list[Any]:
     ]
 
 
-def test_o_interrogacao_do_exame_continua_dizendo_o_que_fazer() -> None:
-    """O que saiu da coluna mora no `?` da linha — e continua lá."""
+def test_o_cartao_do_exame_continua_dizendo_o_que_fazer() -> None:
+    """O que saiu da coluna mora no cartão da dica — e continua lá."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
-    for item in _cena(""):
-        dica = _sem_etiqueta(p._dica_da_linha(item))
-        assert str(PREFIXO_DA_CURA).strip() in dica and item.cura in dica, dica
+    itens = _cena("")
+    painel = p._o_painel_das_dicas(itens, None)
+    curas = [c.cura for c in (*painel.visiveis, *painel.demais)]
+    assert len(curas) == len(itens) and all(c.startswith(PREFIXO_DA_CURA) for c in curas), curas
+    assert PREFIXO_DA_CURA + "desligue a economia de energia" in curas, curas
 
 
 def test_a_dica_do_canal_nao_chega_a_tela() -> None:

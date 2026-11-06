@@ -361,10 +361,7 @@ class Aviso(NamedTuple):
     nome: str
 
 
-FRASE_DO_MODO_NATIVO = (
-    "«Status» em «Desligado» com {quantos} controles ligados: quem conta os "
-    "jogadores passa a ser o jogo."
-)
+FRASE_DO_MODO_NATIVO = "«Status» em «Desligado» com {quantos} controles ligados."
 
 SELO_DO_MODO = "MODO"
 

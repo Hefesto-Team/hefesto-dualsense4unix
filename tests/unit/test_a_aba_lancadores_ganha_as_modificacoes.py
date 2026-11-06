@@ -594,7 +594,7 @@ def test_configurar_o_lancador_abre_a_janela_igual_para_todos(lar, ctx, casa, mo
     steam = a07.configurar_lancador(ctx, {"v": "steam"}, _Ponte())
     janela = steam["blocos"]["#lanc-janela"]
     assert "Configurar · Steam" in janela and "Como entrou" in janela
-    assert "2 jogos não recebem" in janela and 'data-gesto="ver-impedimentos"' in janela
+    assert "2 jogos com impedimento" in janela and 'data-gesto="ver-impedimentos"' in janela
     assert "<span>Pastas dos jogos</span>" in janela
     assert "<code>~/Jogos/SteamLibrary</code>" in janela
     assert 'data-gesto="escolher-o-lancador" data-v="steam">Escolher o arquivo…' in janela

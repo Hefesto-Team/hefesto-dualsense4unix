@@ -89,14 +89,6 @@
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
     border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
-  .visto-fixo,.visto-legenda{display:none}
-  body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
-    gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
-    background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
-  body.nativo .visto-fixo .cad{color:var(--fg)}
-  body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
-    justify-content:center;color:var(--fg);font-size:11.5px}
-  body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
   .chip{
@@ -1511,7 +1503,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="lc-linha"><span>Como entrou</span><span class="lc-val">Do sistema</span></div>
       <div class="lc-linha"><span>Onde ele está</span><span class="lc-val"><code data-dica="~/.steam/steam">~/.steam/steam</code><button class="btn mini" data-gesto="escolher-o-lancador" data-v="steam">Escolher o arquivo…</button></span></div>
       <div class="lc-linha"><span>Pastas dos jogos</span><span class="lc-val"><code>~/Jogos/SteamLibrary</code><small>48 jogos</small></span></div>
-      <div class="lc-linha"><span>Impedimentos</span><span class="lc-val"><small>2 jogos não recebem gatilhos e vibração</small><a class="btn mini" href="#impedimentos" data-gesto="ver-impedimentos" data-v="steam">Ver e resolver</a></span></div>
+      <div class="lc-linha"><span>Impedimentos</span><span class="lc-val"><small>2 jogos com impedimento</small><a class="btn mini" href="#impedimentos" data-gesto="ver-impedimentos" data-v="steam">Ver e resolver</a></span></div>
       <div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">Cada jogo ganha o seu perfil</span><span class="lc-val"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado" data-linha="perfil-por-jogo"><span class="pino"></span><span class="txt">Ligado</span></span></span></div>
     </div>
     <div class="tn-rod">

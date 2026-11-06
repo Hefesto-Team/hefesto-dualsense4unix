@@ -114,25 +114,6 @@ FRASE_DO_SELO = {
 }
 
 
-DICAS_DAS_LINHAS = {
-    "energia_do_radio": (
-        "O sistema está proibido de desligar os adaptadores para poupar "
-        "energia. Se desligar, o controle cai sozinho no meio do jogo."
-    ),
-    "energia_das_portas": (
-        "Nenhuma porta está entregando menos corrente do que o aparelho pede."
-    ),
-    "pareamentos": (
-        "Todos os controles têm pareamento salvo e válido. Pareamento pela "
-        "metade faz o controle cair logo depois de conectar."
-    ),
-    "suporte_ao_controle": "O módulo que fala com o DualSense está carregado.",
-    "vizinhanca_das_portas": (
-        "Há um Wi-Fi USB 3.0 na porta ao lado de um adaptador Bluetooth. Ele "
-        "emite ruído bem em cima da faixa dos controles. Vale mudar de porta."
-    ),
-}
-
 PREFIXO_DA_CURA = "O que fazer: "
 
 

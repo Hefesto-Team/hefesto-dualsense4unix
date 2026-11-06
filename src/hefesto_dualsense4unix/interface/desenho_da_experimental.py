@@ -1669,8 +1669,8 @@ def lanc_conf_miolo_html(c: Conf) -> str:
         linhas.append(_linha_conf("Jogos", f"<small>{_e(c.jogos)}</small>"))
     if c.impedimentos is not None:
         if c.impedimentos:
-            frase = (f"{c.impedimentos} jogo não recebe gatilhos e vibração" if c.impedimentos == 1
-                     else f"{c.impedimentos} jogos não recebem gatilhos e vibração")
+            frase = (f"{c.impedimentos} jogo com impedimento" if c.impedimentos == 1
+                     else f"{c.impedimentos} jogos com impedimento")
             valor = (f'<small>{frase}</small><a class="btn mini" href="#impedimentos" '
                      f'data-gesto="ver-impedimentos" data-v="{_a(c.chave)}">Ver e resolver</a>')
         else:

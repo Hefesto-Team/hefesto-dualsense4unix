@@ -92,10 +92,9 @@ class TestAvisoBluetooth:
 
         aviso = nintendo_bt_warning(_8BITDO_BT)
         assert aviso is not None
-        assert f"pelo {palavra('usb')}" in aviso
         assert palavra("bt") in aviso
-        assert "driver" in aviso
-        assert len(aviso) < 120
+        assert "driver" not in aviso
+        assert len(aviso) < 24
 
     def test_nintendo_cabo_nao_avisa(self) -> None:
         assert nintendo_bt_warning(_8BITDO_CABO) is None

@@ -188,7 +188,7 @@ def _estado(nativo: bool, quantos: int) -> dict[str, Any]:
     }
 
 
-def test_o_texto_do_modo_nativo_fala_de_jogadores() -> None:
+def test_o_texto_do_modo_nativo_diz_o_estado() -> None:
     """Com dois controles na Conexão Nativa, a tela diz de quem é a conta."""
     linhas = painel.avisos_do_estado(_estado(nativo=True, quantos=2))
     do_modo = [a for a in linhas if a["fonte"] == "painel.aviso_do_modo_nativo"]
@@ -197,8 +197,8 @@ def test_o_texto_do_modo_nativo_fala_de_jogadores() -> None:
         f"o que a tela publicou foi {[a['selo'] for a in linhas]}"
     )
     texto = do_modo[0]["texto"]
-    assert "jogadores" in texto, (
-        f"a linha do modo não fala de jogadores: {texto!r}")
+    assert "2 controles" in texto and "jogadores" not in texto, (
+        f"a linha do modo não diz o estado: {texto!r}")
     assert "2 controles" in texto, (
         f"a linha do modo não diz quantos controles estão ligados: {texto!r}")
     assert do_modo[0]["selo"] == "MODO"
@@ -228,8 +228,8 @@ def test_a_linha_do_modo_chega_a_coluna_da_aba() -> None:
     assert "MODO" in selos, (
         f"o selo do modo não chegou à lista que a aba Sistema recebe: {selos}")
     escritos = [a["texto"] for a in fora]
-    assert any("jogadores" in t for t in escritos), (
-        f"a lista publicou {escritos} e nenhuma linha fala de jogadores")
+    assert any("2 controles" in t for t in escritos), (
+        f"a lista publicou {escritos} e nenhuma linha diz o estado")
 
 
 def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
@@ -242,35 +242,20 @@ def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
     ), "a linha do modo saiu de junto do GAMEPAD, que responde à mesma pergunta"
 
 
-def test_a_dica_do_desligado_e_curta_e_a_conta_dos_jogadores_mora_no_aviso() -> None:
-    """A dica da posição Desligado é a frase curta do desenho do todo; a oração de quem conta
-    os jogadores (herdeira do ``TEXTO_NATIVO``) vive na frase do aviso.
-
-    MUDOU EM 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, sem «?»): a aba Jogar não repete a oração —
-    a tela diz «Nenhum jogo recebe controle do Hefesto» no mouse, e quem lista a conta dos
-    jogadores é o aviso do modo (``painel.FRASE_DO_MODO_NATIVO``), que a aba Sistema recebe.
+def test_a_dica_do_desligado_e_curta_e_o_aviso_diz_so_o_estado() -> None:
+    """A dica da posição Desligado é a frase curta do desenho do todo, e o aviso que a aba
+    Sistema recebe diz o estado: «Status» em «Desligado» e quantos controles estão ligados.
     """
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}
     assert dicas["desligado"] == "Nenhum jogo recebe controle do Hefesto", dicas["desligado"]
-    assert aba01.NATIVO_E_OS_JOGADORES in painel.FRASE_DO_MODO_NATIVO, (
-        "o aviso do Modo Nativo deixou de dizer de quem é a conta dos jogadores")
-
-
-def test_a_pagina_nao_repete_a_oracao_e_o_aviso_e_o_dono_unico() -> None:
-    """Antes a oração estava no ``title`` do Desligado e no ``?`` do Status (duas vezes na
-    página); sem o «?» e com a dica curta, a página não a traz e o aviso é o dono único."""
-    quantas = aba01.MIOLO.count(aba01.NATIVO_E_OS_JOGADORES)
-    assert quantas == 0, (
-        f"a oração do Modo Nativo voltou à página ({quantas} vez(es)); o dono é o aviso do modo")
+    assert painel.FRASE_DO_MODO_NATIVO.format(quantos=2) == (
+        "«Status» em «Desligado» com 2 controles ligados.")
 
 
 def test_nenhuma_das_duas_frases_afirma_o_que_ninguem_mediu() -> None:
     """A §4.2 é INFERIDO DO CÓDIGO, e a tela não pode publicá-la como medida."""
     dicas = {chave: dica for chave, _modo, _rot, dica in aba01.INTERRUPTOR}
-    conta = aba01.NATIVO_E_OS_JOGADORES.rstrip(".").lower()
     for frase in (dicas["desligado"], painel.FRASE_DO_MODO_NATIVO):
         baixo = frase.lower()
         assert "o jogo vê dois" not in baixo, (
             f"a tela afirmou o resultado da §5, que ninguém mediu: {frase!r}")
-    assert conta in painel.FRASE_DO_MODO_NATIVO.lower(), (
-        "a frase do aviso deixou de dizer de quem é a conta")
