@@ -376,6 +376,10 @@ BOOTSTRAP = r"""
         }
       }
     }
+    if(Object.keys(p.blocos || {}).length
+       && !document.documentElement.classList.contains('hef-dados-na-tela')){
+      document.documentElement.classList.add('hef-dados-na-tela');
+    }
     for(const [seletor, html] of Object.entries(p.blocos || {})){
       const alvo = document.querySelector(seletor);
       if(!alvo) continue;
@@ -2293,6 +2297,7 @@ class Piloto:
             self._entregar_o_arranjo()
         self._estado_vivo.comecar()
         _esquecer_a_pintura(self)
+        pacotes.a_aba_abriu(self.pagina)
         _soltar_as_ondas()
         self._tique()
         if not self.agendado:

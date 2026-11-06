@@ -918,6 +918,7 @@ def quer_cursor(dono: object) -> bool:
 
 SEGUNDOS_DO_ZERO: Final = 5.0
 MINIMO_DE_AMOSTRAS_DO_ZERO: Final = 20
+FRACAO_QUIETA_DO_ZERO: Final = TEMPO_DO_PARADO_S / SEGUNDOS_DO_ZERO
 
 _ATRIBUTO_DO_ZERO: Final = "_roteador_de_movimento_zero"
 
@@ -941,28 +942,49 @@ def _media(vetores: Sequence[Vetor]) -> Vetor:
     )
 
 
-def medir_o_zero(amostras: Sequence[tuple[Vetor, Vetor]]) -> ZeroDoControle | None:
-    """O zero de uma peça a partir das amostras `(giro, acel)` da medida; `None` se mexeu.
-
-    A régua é a do parado: a janela quieta que recomeça quando o giro varia mais de
-    `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico ou a gravidade anda mais de
-    `GRAVIDADE_DO_PARADO_GRAUS`. Recomeçou uma vez, a peça mexeu e nada se guarda.
-    """
-    lista = list(amostras)
-    if len(lista) < MINIMO_DE_AMOSTRAS_DO_ZERO:
-        return None
+def _trecho_quieto(lista: Sequence[tuple[Vetor, Vetor]]) -> Sequence[tuple[Vetor, Vetor]]:
+    """O trecho contínuo mais longo em que a peça ficou parada, pela régua do parado."""
     giro0, acel0 = lista[0]
     estado = _Repouso(
         neutro=acel0, carimbo=0.0, inicio=0.0,
         menor=[float(v) for v in giro0], maior=[float(v) for v in giro0],
         gravidade_do_inicio=acel0,
     )
-    for giro, acel in lista[1:]:
+    inicio, melhor = 0, (0, 1)
+    for i, (giro, acel) in enumerate(lista[1:], 1):
+        estado.virgem = True
         _o_tique_da_janela(estado, giro, acel, 0.0)
         if not estado.virgem:
-            return None
+            inicio = i
+        if i + 1 - inicio > melhor[1] - melhor[0]:
+            melhor = (inicio, i + 1)
+    return lista[melhor[0]:melhor[1]]
+
+
+def fracao_quieta(amostras: Sequence[tuple[Vetor, Vetor]]) -> float:
+    """Quanto da medida a peça passou parada, de 0 a 1, para o diário."""
+    lista = list(amostras)
+    return len(_trecho_quieto(lista)) / len(lista) if lista else 0.0
+
+
+def medir_o_zero(amostras: Sequence[tuple[Vetor, Vetor]]) -> ZeroDoControle | None:
+    """O zero de uma peça a partir das amostras `(giro, acel)` da medida; `None` se mexeu.
+
+    A régua é a do parado: a janela quieta que recomeça quando o giro varia mais de
+    `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico ou a gravidade anda mais de
+    `GRAVIDADE_DO_PARADO_GRAUS`. Vale o trecho quieto mais longo, se durou ao menos os
+    `TEMPO_DO_PARADO_S` que a mesma régua exige: quem clica em Começar e solta o controle na mesa
+    mexe nele no começo da medida, e o repouso que vem depois é um repouso de verdade.
+    """
+    lista = list(amostras)
+    if len(lista) < MINIMO_DE_AMOSTRAS_DO_ZERO:
+        return None
+    quieto = _trecho_quieto(lista)
+    minimo = len(lista) * FRACAO_QUIETA_DO_ZERO
+    if len(quieto) < max(MINIMO_DE_AMOSTRAS_DO_ZERO, minimo):
+        return None
     return ZeroDoControle(
-        giro=_media([g for g, _ in lista]), gravidade=_media([a for _, a in lista])
+        giro=_media([g for g, _ in quieto]), gravidade=_media([a for _, a in quieto])
     )
 
 
@@ -1116,6 +1138,7 @@ __all__ = [
     "deflexao_da_inclinacao",
     "delta_do_toque",
     "descontar_o_vies",
+    "fracao_quieta",
     "inclina_agora",
     "inclinacao",
     "inclinacao_parada",

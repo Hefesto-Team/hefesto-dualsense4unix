@@ -5866,7 +5866,8 @@ class IpcHandlersMixin:
             if zero is None:
                 lidas = len(amostras) >= rot.MINIMO_DE_AMOSTRAS_DO_ZERO
                 estados[chave] = self._ZERO_MEXEU if lidas else self._ZERO_PARADO
-                logger.info("zero_nao_guardado", uniq=uniq, amostras=len(amostras))
+                logger.info("zero_nao_guardado", uniq=uniq, amostras=len(amostras),
+                            quieto=round(rot.fracao_quieta(amostras), 2))
                 return
             anterior = rot.zero_de(self.store, uniq)
             rot.definir_o_zero(self.store, uniq, zero)

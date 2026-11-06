@@ -93,6 +93,27 @@ GESTOS: dict[tuple[str, str], Gesto] = {}
 GESTOS_QUE_MEXEM: dict[tuple[str, str], str] = {}
 
 
+AO_ABRIR: dict[str, Callable[[], None]] = {}
+
+
+def ao_abrir(pagina: str) -> Callable[[Callable[[], None]], Callable[[], None]]:
+    """Decorador: a função roda toda vez que a página carrega, antes da primeira pintura.
+
+    É o que separa «a aba abriu de novo» de «o tique seguinte»: o estado do módulo sobrevive à
+    troca de aba, e a página volta do zero, com os valores do desenho."""
+    def dentro(fn: Callable[[], None]) -> Callable[[], None]:
+        AO_ABRIR[pagina] = fn
+        return fn
+    return dentro
+
+
+def a_aba_abriu(pagina: str) -> None:
+    """Avisa o dono da página: a carga acabou."""
+    fn = AO_ABRIR.get(pagina)
+    if fn is not None:
+        fn()
+
+
 def gesto(pagina: str | tuple[str, ...], nome: str, *,
           grava: str = "") -> Callable[[Gesto], Gesto]:
     """Decorador: `@gesto("04-iluminacao.html", "cor")` liga um botão.

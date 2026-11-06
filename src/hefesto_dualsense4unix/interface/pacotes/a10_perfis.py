@@ -79,6 +79,7 @@ from . import (
     TODOS_OS_LUGARES,
     TRAVESSAO,
     Contexto,
+    ao_abrir,
     perfil,
     registrar,
 )
@@ -95,25 +96,22 @@ ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
 
 _ESCOLHIDO: str = ""
 
+_ATIVO_VISTO: str = ""
+
 
 def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     """A linha aberta no editor: a última clicada, ou o perfil ativo.
 
-    Deixa de valer sozinha quando o perfil sai do disco (apagado por fora, renomeado,
-    `HEFESTO_VARIANTE` trocado); sem a queda, "Voltar à de ontem" miraria arquivo inexistente e o
-    erro falaria de perfil que não se vê. A sincronização inicial é escrita aqui de propósito e a
-    guarda a torna segura de repetir: só grava quando a lista tem aquele nome (na régua dos botões o
-    `active_profile` é "regua", nenhum perfil se chama assim, e o estado do módulo fica limpo).
-
-    Sob o `pytest` `load_all_profiles()` devolve `[]`: a `conftest.py` põe
-    `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em TODO teste, o que desliga o `_maybe_seed_presets`
-    (os 9 perfis de fábrica só existem em processo SEM o pytest). Com a lista vazia o `ativo` nunca
-    está em `nomes` e nada é gravado.
+    O ativo que muda leva a linha junto; reabrir a aba volta ao ativo (`_a_aba_abriu`). A escolha
+    cai quando o perfil sai do disco, e a sincronização só grava nome que está na lista.
     """
-    global _ESCOLHIDO
+    global _ATIVO_VISTO, _ESCOLHIDO
     nomes = {p["nome"] for p in todos}
     if _ESCOLHIDO and _ESCOLHIDO not in nomes:
         _ESCOLHIDO = ""
+    if _ATIVO_VISTO and ativo != _ATIVO_VISTO and ativo in nomes:
+        _ESCOLHIDO = ativo
+    _ATIVO_VISTO = ativo
     if not _ESCOLHIDO and ativo in nomes:
         _ESCOLHIDO = ativo
     return _ESCOLHIDO or ativo
@@ -332,6 +330,14 @@ def _uma_vez_so(alvo: str) -> tuple[str, ...]:
         _PINTADO_PARA = alvo
         return ()
     return CAMPOS_QUE_O_USUARIO_DIGITA
+
+
+@ao_abrir("10-perfis.html")
+def _a_aba_abriu() -> None:
+    """A página voltou do zero, com os valores do desenho: o editor abre no ativo e pinta tudo."""
+    global _ESCOLHIDO, _PINTADO_PARA
+    _ESCOLHIDO = ""
+    _PINTADO_PARA = ""
 
 
 SEPARADOR_EM_TEXTO = " • "
@@ -1021,7 +1027,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
                                     mesa=_mesa_com_rotulo(ctx.mesa, getattr(ctx, "conectados", ())),
                                     editado=alvo)
-    except Exception:
+    except Exception as e:
+        print(f"[10-perfis.html] o pacote não montou: {e!r}", file=sys.stderr)
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos, foto)))

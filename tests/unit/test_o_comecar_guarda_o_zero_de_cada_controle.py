@@ -63,8 +63,27 @@ def test_a_peca_que_mexe_nao_guarda_nada() -> None:
     amostras[50] = ((_VIES[0] + 4.0, _VIES[1], _VIES[2]), _GRAVIDADE)
     assert rot.medir_o_zero(amostras) is None
     inclinada = _parado()
-    inclinada[60] = (_VIES, (0.0, 0.2, 0.98))
+    inclinada[50] = (_VIES, (0.0, 0.2, 0.98))
     assert rot.medir_o_zero(inclinada) is None, "a gravidade andou e o zero ficou"
+
+
+def test_a_peca_que_assenta_no_comeco_guarda_o_repouso_que_veio_depois() -> None:
+    """Clicar em Começar e soltar o controle na mesa mexe nele nos primeiros instantes."""
+    amostras = _parado()
+    for i in range(30):
+        amostras[i] = ((40.0 * (-1) ** i, 25.0, -30.0), (0.3, 0.1, 0.9))
+    zero = rot.medir_o_zero(amostras)
+    assert zero is not None
+    assert zero.giro == pytest.approx((0.65, -2.4, 1.05))
+    assert zero.gravidade == pytest.approx(_GRAVIDADE)
+    assert rot.fracao_quieta(amostras) == pytest.approx(0.7)
+
+
+def test_repouso_mais_curto_que_a_regua_do_parado_nao_e_medida() -> None:
+    amostras = _parado()
+    for i in range(50):
+        amostras[i] = ((40.0 * (-1) ** i, 25.0, -30.0), (0.3, 0.1, 0.9))
+    assert rot.medir_o_zero(amostras) is None
 
 
 def test_poucas_amostras_nao_sao_medida() -> None:

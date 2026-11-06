@@ -57,6 +57,8 @@ def tamanho_que_cabe(escolhido: int, largura: int, altura: int) -> int:
 
 CLASSE_DA_ESPERA = "hef-esperando"
 
+SEM_OS_DADOS = "html:not(.hef-dados-na-tela)"
+
 FOLHA_DA_CASA = (
     ".nota{display:none !important}"
     ".hef-sem-item{display:none !important}"
@@ -68,6 +70,9 @@ FOLHA_DA_CASA = (
     "outline:1px solid var(--orange,#ffb86c) !important}"
     ".hef-esperando div.miolo,.hef-esperando .fita,.hef-esperando .conectado,"
     ".hef-esperando .perfil-ativo{opacity:0 !important}"
+    f"{SEM_OS_DADOS} tbody[data-hef=\"perfis.lista\"] tr,"
+    f"{SEM_OS_DADOS} input[data-hef=\"editor.jogo\"],"
+    f"{SEM_OS_DADOS} ol[data-hef=\"editor.ordem\"] li{{visibility:hidden !important}}"
 )
 
 

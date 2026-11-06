@@ -2204,3 +2204,7 @@ O número: o p95 do intervalo do rádio é 187 ms (`dualsense-referencia-canonic
 duas vezes ele dá 374 ms; o piso é 0,4 s, no cabo e no rádio. O maior intervalo de um rádio
 são em 10 min nunca foi medido, e é a medida que confirma o piso no aparelho.
 ~~~~
+
+## `_escolhido` da aba Perfis (a10_perfis.py)
+
+A escolha deixa de valer quando o perfil sai do disco (apagado por fora, renomeado, `HEFESTO_VARIANTE` trocado): sem a queda, "Voltar à de ontem" miraria arquivo inexistente. Sob o `pytest`, `load_all_profiles()` devolve `[]` (a `conftest.py` liga `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`), o `ativo` nunca está nos nomes e nada é gravado. Em 06/11/2026 a linha passou a seguir o ativo que muda: abrir um jogo troca o perfil, e a linha velha deixava o editor em outro perfil.
