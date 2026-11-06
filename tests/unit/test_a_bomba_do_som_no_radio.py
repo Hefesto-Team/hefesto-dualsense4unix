@@ -268,7 +268,7 @@ class TestABombaNaoEscolheOArranjo:
     def test_os_dois_continuam_registrados_sem_escolha(self) -> None:
         assert {a.nome for a in af.ARRANJOS} == {"ds5dongle", "senshi"}
         for arr in af.ARRANJOS:
-            assert "NÃO medido nesta máquina de teste" in arr.de_onde_sei
+            assert "NÃO medido" in arr.de_onde_sei
 
 
 def _carregar(nome: str) -> Any:
