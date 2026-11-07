@@ -2649,6 +2649,7 @@ class CentralDoRadio:
                     return None
                 escrita = dono.conectar(no, espera=ESPERA_DO_CONNECT_DO_RELIGADOR_S, quem=QUEM)
         except TravaOcupadaError:
+            logger.info("central_religador_esperou_a_trava", no=bluez_dbus.hci_do_aparelho(no))
             return None
         if escrita.erro == bluez_dbus.TRAVA_OCUPADA:
             return None
