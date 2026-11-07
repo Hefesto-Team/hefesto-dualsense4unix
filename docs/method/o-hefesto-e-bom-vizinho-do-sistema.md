@@ -19,14 +19,17 @@ diário vale nessa janela. O que veio só da leitura do código diz «lido».
    serviço de sessão é tocado.
 3. **Diálogo do sistema só com gesto e com nome.** Janela que nasce de processo de fundo, sem pedido de quem usa e
    sem dizer quem pede, é defeito.
-4. **Serviço alheio não se reinicia** fora de dois casos: o gesto de instalar, avisando o que cai, e o vigia do
-   rádio, com as três travas que o inventário lista.
+4. **Serviço alheio não se reinicia** fora de dois casos: o gesto de instalar ou desinstalar, avisando o que cai, e
+   o vigia do rádio, com as três travas que o inventário lista.
 5. **O que muda a máquina toda é pergunta ou tem medida.** Efeito sobre aparelho que não é controle precisa de
    resposta de quem usa no install ou de um limite escrito (sem bateria, só driver X).
 6. **Tudo tem desfazer**, no `uninstall.sh`. O que ele preserva de propósito, ele diz na saída e na ajuda.
 7. **Falha nossa fica com a gente.** Vigia que se repete não enche o diário do sistema, e parada pedida não é falha.
+   A exceção escrita é a troca do broker, no inventário.
 
 ## A ordem da subida, medida
+
+Boot de 06/11, 18:21.
 
 | quando | o quê |
 | --- | --- |
@@ -44,7 +47,7 @@ metade. O comando é `journalctl --user -b 0 -t systemd`, filtrado pelas unidade
 | nome | ativável aqui | quem fala | proteção | estado |
 | --- | --- | --- | --- | --- |
 | `org.freedesktop.portal.Desktop` | sim | `integrations/tela_do_jogo.py` | só depois da sessão (`_sessao_ainda_nao_subiu`), e a leitura do `systemd1` vai com `no_auto_start` | curado em 05/11 |
-| `org.bluez` | sim, pelo `dbus-org.bluez.service` | `integrations/bluez_dbus.py`, `scripts/bt_active_mode.sh`, `scripts/bt_health_watchdog.sh`, `scripts/bt_ponte_privilegiada.sh` | nenhuma | **risco 1** |
+| `org.bluez` | sim, pelo `dbus-org.bluez.service` | `integrations/bluez_dbus.py`, `scripts/bt_active_mode.sh`, `scripts/bt_health_watchdog.sh`, `scripts/bt_ponte_privilegiada.sh`; por gesto de diagnóstico, `scripts/doctor.sh` e `scripts/retrato_do_estado.sh` | nenhuma | **risco 1** |
 | `org.freedesktop.Notifications` | aqui não; `dunst` e `mako` trazem arquivo de ativação (lido) | `integrations/desktop_notifications.py` | nenhuma | **risco 2** |
 | `org.kde.StatusNotifierWatcher` | não | `desktop_notifications.statusnotifierwatcher_available` | `NameHasOwner`, que não ativa | ok |
 | `org.freedesktop.NetworkManager` | não | `integrations/faixa_do_wifi.py` | não é ativável, e o serviço está sempre de pé | ok |
@@ -73,7 +76,7 @@ pediu; **5** como desfazer.
 
 | item | 1 | 2 | 3 | 4 | 5 | medida |
 | --- | --- | --- | --- | --- | --- | --- |
-| `hefesto-dualsense4unix.service` | abre os controles; `pactl`, `pw-*` e `parec`; portal só depois da sessão; `org.bluez` sem proteção | sim, 124 s; alvo ausente vira «sem som» ou «sem janela», sem erro | o Hefesto; o rádio pode acordar (risco 1) | janela do portal com a chave «Tela» (riscos 3 e 4 abaixo); notificações do modo jogo | `uninstall.sh` | `journalctl --user -b 0` |
+| `hefesto-dualsense4unix.service` | abre os controles; `pactl`, `pw-*` e `parec`; portal só depois da sessão; `org.bluez` sem proteção | sim, 124 s; alvo ausente vira «sem som» ou «sem janela», sem erro | o Hefesto; o rádio pode acordar (risco 1) | janela do portal com a chave «Tela» (problemas #3 e #4 abaixo); notificações do modo jogo | `uninstall.sh` | `journalctl --user -b 0` |
 | `-gui-hotplug` | abre a janela no início da sessão | não, vem depois do `graphical-session.target` | o Hefesto | a janela do Hefesto, por escolha feita no install (`--enable-hotplug-gui`) | `uninstall.sh`, ou `--no-hotplug-gui` | subiu às 18:23:48,871 |
 | `-presenca` | um `--ping` no soquete do broker | sim; broker ausente não muda nada (`ExecStart=-`) | ninguém | nada | `uninstall.sh` | 9 inícios e 27 linhas em 24 h |
 | `-storm-watch` | só lê o diário e chama o religar quando a porta perde a sonda | sim, e não depende de sessão | a própria unit: parada contada como falha (curado na sprint do storm-watch) | nada | `uninstall.sh` | 8 paradas contadas como falha desde 06/11, 10:30; 637 linhas «terminou inesperadamente» no registro |
@@ -89,8 +92,8 @@ produto e fica fora da auditoria.
 | --- | --- | --- | --- | --- | --- | --- |
 | `hefesto-hidraw-broker` (`.service`, `.socket`) | tira o físico dos outros programas; `modprobe` de `libcomposite`, `usb_f_hid`, `vhci-hcd` e `usbip-vudc num=8` em todo boot, com controle ou sem | sim, e não depende de sessão | **todo programa que quer o controle**; a saída é a `ExecStopPost`, que reabre os nós, e o `OnFailure` do serviço de usuário | nada | `uninstall.sh` | soquete 0666, com a autorização por `SO_PEERCRED` e pelo usuário da frente (lido); 6 `Failed with result 'signal'` em 06/11, ver abaixo |
 | `hefesto-bt-agent` | agente `NoInputNoOutput` para o **rádio inteiro**, com qualquer aparelho | sim | **quem pareia outra coisa**: o pedido não chega ao aplicativo do sistema (lido; risco 4) | nada: o pareamento passa sem pergunta | `uninstall.sh` | no ar havia 45.115 s |
-| `hefesto-desempenho` | perfil de energia em Desempenho, em todo boot | sim | a conta de luz e a bateria | só a pergunta do install | `desempenho.sh remover`, pelo `uninstall.sh` | só existe com resposta sim; sem terminal, o padrão é não |
-| `hefesto-bt-health-watchdog` | `busctl` em `org.bluez`, a cada 2 min; `Trusted=true` só em controle (`_e_controle`); `Connect` em aparelho HID sem registro; pode reiniciar o `bluetooth.service` | sim; `bt_active_mode.sh` roda antes de conferir se o rádio está no ar (risco 1) | fone e teclado Bluetooth, no reinício; o diário | nada | `uninstall.sh` | 0 reinícios no diário; as travas são recusas repetidas, zero conectado e intervalo mínimo; **4.872 linhas em 24 h**, sendo 3.052 a mesma frase (risco 5) |
+| `hefesto-desempenho` | perfil de energia em Desempenho, em todo boot; `nvidia`, `audio` e `aspm` só entram com prova no aparelho, e o padrão é nenhum | sim | a conta de luz e a bateria | só a pergunta do install | `desempenho.sh remover`, pelo `uninstall.sh` | só existe com resposta sim; sem terminal, o padrão é não |
+| `hefesto-bt-health-watchdog` | `busctl` em `org.bluez`, a cada 2 min; `Trusted=true` só em controle (`_e_controle`); `Connect` em aparelho HID sem registro; pode reiniciar o `bluetooth.service` e, pela ponte, a porta do adaptador travado | sim; `bt_active_mode.sh` roda antes de conferir se o rádio está no ar (risco 1) | fone e teclado Bluetooth, no reinício; o diário | nada | `uninstall.sh` | 0 reinícios no diário; as travas são recusas repetidas, zero conectado e intervalo mínimo; **4.872 linhas em 24 h**, sendo 3.052 a mesma frase (risco 5) |
 | `hefesto-bt-bonds-snapshot` | copia `/var/lib/bluetooth` para `/var/lib/hefesto-dualsense4unix` | sim | ninguém | nada | `uninstall.sh`; a cópia sai só com `--purge-config` | 284 linhas em 24 h |
 | `hefesto-wifi-usb-vigia` | a cada 1 min, zera o scan de fundo e **reinicia a porta** do Wi-Fi USB travado | sim; sem Wi-Fi USB não faz nada | a rede de quem usa, se o diagnóstico errar | a queda de 2 s na rede, no reinício | `uninstall.sh` | as travas são 3 falhas seguidas, 600 s entre reinícios e 3 reinícios sem cura; 0 reinícios no diário; **3.902 linhas em 24 h** (risco 5) |
 
@@ -100,8 +103,11 @@ esconderia um `SIGKILL` de verdade, que o `Restart=on-failure` precisa ver. Fica
 
 ### Regras udev
 
+Lido de `assets/`; a remoção foi conferida em `uninstall.sh`, regra por regra. O `--keep-udev` as preserva.
+
 | regra | 1 | 2 | 3 | 4 | 5 |
 | --- | --- | --- | --- | --- | --- |
+| `71-uinput`, `71-uhid` | `/dev/uinput` e `/dev/uhid` em 0660 no grupo `hefesto`, com `uaccess` | independe; o grupo vale desde o nó, antes do login | quem está no grupo cria aparelho de entrada virtual | nada | `uninstall.sh`, que tira também o grupo |
 | `72-hefesto-touchpad-motion-uaccess` | acesso e `uaccess` nos nós de toque e movimento de Sony (`054c`) e Nintendo (`057e`); fecha o físico quando o soquete do broker existe | independe | só controles | nada | `uninstall.sh` |
 | `72-ps5-controller-autosuspend` | energia do USB, só `054c:0ce6` e `054c:0df2` | independe | só controles | nada | `uninstall.sh` |
 | `73-hefesto-ps5-controller` | `hidraw` do físico em 0600 de root; o virtual fica aberto | independe; o físico fechado não depende do broker estar de pé | sem o serviço no ar, o `hidraw` fica fechado para a Steam até o broker devolver o nó, avisado pela `-presenca` | nada | `uninstall.sh` |
@@ -118,18 +124,18 @@ esconderia um `SIGKILL` de verdade, que o `Restart=on-failure` precisa ver. Fica
 | `84-nintendo-pro-variant` | marca a variante do Pro Controller | independe | só controles | nada | `uninstall.sh` |
 | `85-hefesto-o-cabo-assume` | na saída de um DualSense, reapresenta os outros ao driver | independe | só controles | nada | `uninstall.sh` |
 
-A `85-redragon-reinjetar.rules` da máquina de referência não é do produto.
-
 **Sem sprint, e por quê:** a `77` não fere outro aparelho de verdade, e `chmod` em LED é o caminho sem daemon privilegiado.
-Fica no inventário.
+A `81-hefesto-usb-power` só tira o sono USB de periférico daqueles fabricantes. As duas ficam no inventário, como o limite
+da regra 5.
 
 ### Módulos do kernel
 
 | arquivo | 1 | 2 | 3 | 4 | 5 |
 | --- | --- | --- | --- | --- | --- |
-| `hefesto-btusb-no-autosuspend` | `btusb enable_autosuspend=0`: **todo adaptador Bluetooth** | no carregar do módulo | a bateria do notebook | nada | `uninstall.sh` |
+| `hefesto-btusb-no-autosuspend` | `btusb enable_autosuspend=0`: **todo adaptador Bluetooth**, sem olhar a bateria (risco 8) | no carregar do módulo | a bateria do notebook | nada | `uninstall.sh` |
 | `hefesto-dualsense-storm` | `snd_usb_audio quirk_flags` só de `054c:0ce6` e `054c:0df2` | idem | só controles | nada | `uninstall.sh` |
 | `hefesto-uhid`, `hefesto-hid-playstation`, `hefesto-hid-nintendo` | parâmetros dos módulos DKMS nossos | idem | só controles | nada | `uninstall.sh` |
+| `/etc/modules-load.d/hefesto-dualsense4unix.conf` | carrega `uinput` e `uhid` em todo boot, com controle ou sem | no boot | ninguém | nada | `uninstall.sh` |
 | `hefesto-wifi-powersave` (NetworkManager) | economia do Wi-Fi desligada, só nos drivers `rtw88` listados | idem | a rede daquele adaptador; recusa em máquina com bateria | nada | `uninstall.sh` |
 
 ### As regras de sudo e de som
@@ -148,9 +154,11 @@ Fica no inventário.
 | `pactl subscribe` | só escuta; o `pipewire-pulse` já estava de pé 19 ms antes | sim; sem som, o Hefesto segue sem ele | o Hefesto | nada | morre com a unit |
 | `parec` | abre o microfone do controle | sim, se houver controle | o Hefesto; o nó fica aberto | nada | morre com a unit |
 | `pw-loopback`, `pw-record` | nós `hefesto-*` no grafo de som | idem | aparecem na lista de fluxos do sistema, com o nome | nada | morrem com a unit |
-| `bwrap` da extensão | sandbox, com `/home` e `/run/user/1000` em `tmpfs` | sim, se a extensão estiver ligada | a extensão; o barramento da sessão não entra na sandbox | nada | morre com o serviço (`setsid` e `PR_SET_PDEATHSIG`) |
+| `bwrap` da extensão | sandbox, com `/home` e `/run/user/<uid>` em `tmpfs` | sim, se a extensão estiver ligada | a extensão; o barramento da sessão não entra na sandbox | nada | morre com o serviço (`setsid` e `PR_SET_PDEATHSIG`) |
 
 ### O que o inventário de 05/11 não listava
+
+Tudo aqui vale desde o boot, sem depender da sessão, e sem nada visível: as colunas 2 e 4 são iguais em todas as linhas.
 
 | item | 1 | 3 | 5 |
 | --- | --- | --- | --- |
@@ -163,6 +171,9 @@ Fica no inventário.
 | `/etc/bluetooth/main.conf` e os dois `main.conf.d` | `FastConnectable` e `JustWorksRepairing=confirm` | todo o rádio | `bluez_config.sh remover`, pelo `uninstall.sh` |
 | drop-in do `bluetooth.service` | `Restart=on-failure` e cópia dos pareamentos na parada | todo o rádio | `uninstall.sh` |
 | perfil UCM do DualSense | cartão de som do controle | só controles | `uninstall.sh` |
+| grupo de sistema `hefesto` | a conta de quem instala entra nele | quem está no grupo: `uinput`, `uhid`, a trava do rádio e os verbos do `sudo` | `uninstall.sh` |
+| `hefesto-dualsense4unix-radio` (`tmpfiles.d`) | `/run/hefesto-dualsense4unix/radio.lock`, a trava comum do rádio | o Hefesto | `uninstall.sh` |
+| `/etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb` | a cada `up` de rede, zera o scan de fundo do Wi-Fi USB | a rede daquele adaptador; sem Wi-Fi USB não faz nada | `uninstall.sh` |
 
 ## Os seis problemas de 05/11
 
@@ -194,6 +205,7 @@ no `PermissionStore`, gravada pelo portal depois do clique, e não há `conf.d` 
 | 5 | **Os vigias repetem a mesma frase:** ~12 mil linhas por dia, 3,4% das 355 mil do diário, e a guarda da Steam roda 135 vezes. Risco baixo: quem enche o diário é o `cosmic-session`, com 246 mil | as contagens do inventário | `OS-VIGIAS-NAO-ENCHEM-O-DIARIO-DO-SISTEMA-01` |
 | 6 | **O uninstall deixa o portal nosso e o pino do apt** | `grep -c portal-cosmic uninstall.sh` dá 0 | `O-UNINSTALL-DEVOLVE-O-PORTAL-DA-DISTRIBUICAO-01` |
 | 7 | **Nada impede o próximo contato sem proteção** | a tabela dos nomes D-Bus foi feita à mão | `A-REGUA-DO-BOM-VIZINHO-01` |
+| 8 | **O rádio do notebook nunca dorme.** A `81-hefesto-usb-power` guarda o adaptador com a bateria; o `btusb enable_autosuspend=0` vale em toda máquina | o passo 3d do install grava sem olhar a bateria (lido); o custo em bateria falta medir | `O-RADIO-DO-NOTEBOOK-DORME-NA-BATERIA-01` |
 
 ## O que caiu na medição
 
