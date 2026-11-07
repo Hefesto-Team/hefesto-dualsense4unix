@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1226613,
+      "piso": 1229369,
       "por_item": {
-        "docs": 106748,
+        "docs": 106749,
         "scripts": 111918,
-        "src": 309232,
-        "tests": 698715
+        "src": 309934,
+        "tests": 700768
       },
-      "razao": "tamanho: +1326 linhas (1225287 -> 1226613), pagas por Origem: plataforma.vigia_zumbi; registrado no fecho, topo 1a6ec507d918",
+      "razao": "tamanho: +2756 linhas (1226613 -> 1229369), pagas por Origem: D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR, entrada.botoes, plataforma.vigia_zumbi; registrado no fecho, topo 9fbffc74b4e5",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1905,10 +1905,16 @@
           "de": 1225287,
           "para": 1226613,
           "razao": "tamanho: +1326 linhas (1225287 -> 1226613), pagas por Origem: plataforma.vigia_zumbi; registrado no fecho, topo 1a6ec507d918"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1226613,
+          "para": 1229369,
+          "razao": "tamanho: +2756 linhas (1226613 -> 1229369), pagas por Origem: D-2810-O-INSTALL-COM-JOGO-ABERTO-ESPERA-O-JOGO-PARA-TROCAR, entrada.botoes, plataforma.vigia_zumbi; registrado no fecho, topo 9fbffc74b4e5"
         }
       ],
       "unidade": "linhas",
-      "universo": 3412
+      "universo": 3417
     }
   }
 }
