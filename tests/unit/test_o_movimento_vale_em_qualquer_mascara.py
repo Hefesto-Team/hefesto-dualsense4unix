@@ -53,6 +53,17 @@ def _arranjo(**kw: Any) -> rot.ArranjoDeMovimento:
     return rot.ArranjoDeMovimento(**base)
 
 
+def _um_tique(
+    giro: tuple[float, float, float],
+    arranjo: rot.ArranjoDeMovimento,
+    ganho: float = 1.0,
+    gravidade: tuple[float, float, float] | None = None,
+) -> tuple[int, int]:
+    return rot.deflexao_do_tique(
+        SimpleNamespace(), "aa:bb:cc:00:00:01", giro, arranjo, ganho, gravidade
+    )
+
+
 DERIVA_MEDIDA_GRAUS_S = 0.85
 
 
@@ -63,9 +74,9 @@ def test_a_deriva_do_controle_do_usuario_nao_move_a_mira() -> None:
     a queixa mais comum de mira por giroscópio em qualquer produto. Este teste
     usa a deriva MEDIDA no aparelho do usuário, não um número inventado.
     """
-    assert rot.deflexao((0.0, 0.0, 0.0), _arranjo()) == (0, 0)
+    assert _um_tique((0.0, 0.0, 0.0), _arranjo()) == (0, 0)
     for sensibilidade in (1, 4, 10):
-        assert rot.deflexao(
+        assert _um_tique(
             (0.0, DERIVA_MEDIDA_GRAUS_S, 0.0), _arranjo(sensibilidade_h=sensibilidade)
         ) == (0, 0), (
             f"a deriva de {DERIVA_MEDIDA_GRAUS_S} graus/s moveu a mira na "
@@ -76,22 +87,22 @@ def test_a_zona_morta_alta_e_o_dial_de_quem_tem_tremor() -> None:
     """ARRANQUE a zona morta e este teste reprova — e é o ÚNICO que reprova."""
     tremor = (0.0, 25.0, 0.0)
     forte = _arranjo(sensibilidade_h=10, sensibilidade_v=10)
-    assert rot.deflexao(tremor, forte) != (0, 0), (
+    assert _um_tique(tremor, forte) != (0, 0), (
         "a premissa caiu: 25 graus/s já não passa nem sem zona morta")
     com_dial = _arranjo(sensibilidade_h=10, sensibilidade_v=10, zona_morta_graus_s=30.0)
-    assert rot.deflexao(tremor, com_dial) == (0, 0), (
+    assert _um_tique(tremor, com_dial) == (0, 0), (
         "a zona morta alta não cortou o tremor — o dial não faz nada")
 
 
 def test_um_gesto_de_verdade_move() -> None:
     """A entrega da E1 numa linha: 120 graus/s viram deflexão."""
-    dh, _ = rot.deflexao((0.0, 120.0, 0.0), _arranjo())
+    dh, _ = _um_tique((0.0, 120.0, 0.0), _arranjo())
     assert dh != 0, "um giro de 120 graus/s não moveu nada"
 
 
 def test_o_teto_satura_e_nao_estoura_o_eixo() -> None:
     """ARRANQUE o teto e este teste reprova: um giro brusco mandaria um valor"""
-    dh, _ = rot.deflexao((0.0, 5000.0, 0.0), _arranjo())
+    dh, _ = _um_tique((0.0, 5000.0, 0.0), _arranjo())
     assert abs(dh) <= rot.DEFLEXAO_MAXIMA, (
         f"deflexão {dh} passou do máximo {rot.DEFLEXAO_MAXIMA}")
 
@@ -443,7 +454,7 @@ def test_sem_no_de_mouse_a_mira_nao_inventa_um(
 
 
 def test_a_deriva_nao_passeia_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o portão `deflexao(velocidade) == (0, 0)` do ramo do mouse e"""
+    """ARRANQUE o portão `passa_da_zona_morta` do ramo do mouse e"""
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=_Hub(velocidade=(0.0, 1.0, 0.0)), mouse=mouse, tiques=2)

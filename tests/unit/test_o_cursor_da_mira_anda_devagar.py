@@ -291,5 +291,6 @@ def test_o_predicado_e_a_deflexao_dizem_a_mesma_zona() -> None:
     arranjo = rot.ArranjoDeMovimento(destino=rot.DESTINO_ANALOGICO_DIREITO)
     assert not rot.passa_da_zona_morta((0.0, 3.0, 0.0), arranjo)
     assert rot.passa_da_zona_morta((0.0, 3.01, 0.0), arranjo)
-    assert rot.deflexao((0.0, 3.0, 0.0), arranjo) == (0, 0)
+    giro = (0.0, 3.0, 0.0)
+    assert rot.deflexao_do_tique(SimpleNamespace(), "aa:bb:cc:00:00:01", giro, arranjo) == (0, 0)
     assert not rot.passa_da_zona_morta((0.0, 50.0, 0.0), rot.ArranjoDeMovimento())

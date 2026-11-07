@@ -44,6 +44,8 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 MACS = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 PRAZO_DO_EVENTO_S = 1.0
 
+_DERRUBAR_REAL = oce.derrubar_o_radio
+
 
 class Controle:
     """O backend da volta, em dublê: conta os `connect`."""
@@ -699,8 +701,15 @@ class TestATrocaNaoSeguraAVolta:
         monkeypatch.setattr(oce, "cabos_em_espera", lambda: cabos)
         monkeypatch.setattr(oce, "impedimentos_da_troca", lambda: [])
         bluez = BlueZLento(0.05)
-        passaram = asyncio.run(conn.vigiar_o_cabo_em_espera(daemon, leitor_do_bluez=bluez))
-        assert passaram == quantos and len(iniciadas) == quantos
+        monkeypatch.setattr(
+            oce, "derrubar_o_radio", lambda uniq, leitor=None: _derruba(bluez, uniq)
+        )
+
+        async def _ensaio() -> list[int]:
+            conn._passar_os_cabos_sem_segurar_a_volta(daemon)
+            return await asyncio.gather(*daemon._trocas_em_fundo)
+
+        assert asyncio.run(_ensaio()) == [quantos] and len(iniciadas) == quantos
         assert len(bluez.pedidos) == quantos
 
     def test_a_volta_segue_enquanto_o_bluez_responde(
@@ -725,11 +734,12 @@ class TestATrocaNaoSeguraAVolta:
 
         gasto, marcadas = asyncio.run(_ensaio())
         assert marcadas == 1, "a troca tem de estar marcada antes de a volta olhar a mesa"
+        assert len(bluez.pedidos) == 1, "o `Disconnect` não chegou ao BlueZ"
         assert gasto < 0.1, f"a volta ficou parada {gasto:.2f} s no Disconnect"
 
 
 def _derruba(bluez: BlueZLento, uniq: str) -> tuple[bool, str]:
-    return oce.derrubar_o_radio(uniq, leitor=bluez)
+    return _DERRUBAR_REAL(uniq, leitor=bluez)
 
 
 class _Pontas:

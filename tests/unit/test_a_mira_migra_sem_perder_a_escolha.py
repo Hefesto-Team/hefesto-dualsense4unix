@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -135,7 +136,8 @@ def test_o_innocent_assault_fica_com_h_v_um_e_zona_60_e_anda() -> None:
     assert (arranjo.sensibilidade_h, arranjo.sensibilidade_v) == (1, 1)
     assert arranjo.zona_morta_graus_s == 60.0
     assert not arranjo.inverter_horizontal
-    assert rot.deflexao((0.0, 120.0, 0.0), arranjo)[0] != 0
+    giro = (0.0, 120.0, 0.0)
+    assert rot.deflexao_do_tique(SimpleNamespace(), "aa:bb:cc:00:00:01", giro, arranjo)[0] != 0
 
 
 def test_a_peca_so_leva_ao_disco_o_que_escolheu() -> None:

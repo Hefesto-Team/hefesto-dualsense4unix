@@ -85,11 +85,11 @@ async def _plugar_e_tirar(
     async def _nada(*args: Any, **kwargs: Any) -> int:
         return 0
 
-    for nome in ("vigiar_escritor_cru", "carimbar_o_nascimento", "vigiar_o_cabo_em_espera",
+    for nome in ("vigiar_escritor_cru", "carimbar_o_nascimento",
                  "reaplicar_som_em_todos_os_alvos", "reapply_speaker_after_connect",
                  "reapply_mic_after_connect"):
-        if hasattr(conn_mod, nome):
-            monkeypatch.setattr(conn_mod, nome, _nada)
+        monkeypatch.setattr(conn_mod, nome, _nada)
+    monkeypatch.setattr(conn_mod, "_passar_os_cabos_sem_segurar_a_volta", lambda d: None)
     monkeypatch.setattr(conn_mod, "restore_last_profile", _nada)
     monkeypatch.setattr(conn_mod, "registrar_gatilho_da_lightbar", lambda d: None)
     monkeypatch.setattr(conn_mod, "armar_gatilho_da_cor", lambda d: 0)

@@ -26,7 +26,7 @@ O ENSAIO
 Código de produto de verdade: o ``PyDualSenseController`` (``connect``,
 ``read_state``, ``describe_controllers``, a eleição do primário), o
 ``CoopManager`` (``sync``/``forward_all``), o ``ControllerIdentityRegistry``
-(o número que a tela mostra), o ``vigiar_o_cabo_em_espera`` e o
+(o número que a tela mostra), o ``_passar_os_cabos_sem_segurar_a_volta`` e o
 ``reconnect_loop`` do daemon.
 
 Os dublês, e por que nenhum é mais frouxo que o real:
@@ -404,6 +404,12 @@ class MesaDoCabo:
             regra.parent.mkdir(parents=True, exist_ok=True)
             regra.write_text("", encoding="utf-8")
         monkeypatch.setattr(oce, "RAIZ_DO_BARRAMENTO_HID", str(self.kernel.raiz))
+        monkeypatch.setattr(
+            oce,
+            "derrubar_o_radio",
+            lambda uniq, leitor=None: _DERRUBAR_REAL(uniq, leitor=self.bluez),
+        )
+        monkeypatch.setattr(conn_mod, "time", SimpleNamespace(monotonic=self.relogio))
         monkeypatch.setattr(oce, "REGRAS_QUE_RELIGAM", (str(regra),))
 
         self.leitor_p1 = _LeitorDoP1(self.kernel)  # type: ignore[arg-type]
@@ -482,18 +488,17 @@ class MesaDoCabo:
     def connect(self) -> None:
         _connect_na_mesa(self.inst, self.kernel)
 
+    async def _passar_os_cabos(self) -> None:
+        """A passagem do produto; o `Disconnect` em fundo termina dentro do tique."""
+        conn_mod._passar_os_cabos_sem_segurar_a_volta(self.daemon)  # type: ignore[arg-type]
+        await asyncio.gather(*getattr(self.daemon, "_trocas_em_fundo", ()))
+
     def tique(self, segundos: float = TIQUE) -> None:
         self.relogio.avancar(segundos)
         self.kernel.os_handles_percebem()
         self.connect()
         self.kernel.a_regra_atrasada_roda()
-        asyncio.run(
-            conn_mod.vigiar_o_cabo_em_espera(
-                self.daemon,  # type: ignore[arg-type]
-                agora=self.relogio.t,
-                leitor_do_bluez=self.bluez,
-            )
-        )
+        asyncio.run(self._passar_os_cabos())
         self.inst.read_state()
         self.reg.sync_connected(
             [u for u in self.inst.alvos_conectados().values() if isinstance(u, str)]
@@ -1355,11 +1360,6 @@ class _DaemonDoLaco:
         return fn(*args)
 
 
-def _derrubar_no_ensaio(mesa: MesaDoCabo, uniq: str) -> tuple[bool, str]:
-    """O `derrubar_o_radio` de verdade, falando com o :class:`BlueZ` do ensaio."""
-    return _DERRUBAR_REAL(uniq, leitor=mesa.bluez)
-
-
 @pytest.mark.usefixtures("config_isolado")
 @pytest.mark.parametrize("quantos", [1, 2])
 @pytest.mark.parametrize(
@@ -1397,9 +1397,6 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
     monkeypatch.setattr(
         "hefesto_dualsense4unix.daemon.subsystems.gamepad.rehide_physical_hidraw",
         lambda _d: None,
-    )
-    monkeypatch.setattr(
-        oce, "derrubar_o_radio", lambda uniq, leitor=None: _derrubar_no_ensaio(mesa, uniq)
     )
     estado = {"armada": False}
 

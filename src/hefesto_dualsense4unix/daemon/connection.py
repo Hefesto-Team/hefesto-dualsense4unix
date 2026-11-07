@@ -475,7 +475,6 @@ async def _derrubar_os_radios(
     daemon: DaemonProtocol,
     pedidos: Sequence[tuple[Any, str, str]],
     agora: float,
-    leitor_do_bluez: Any = None,
 ) -> int:
     """Derruba o rádio de cada par, cada um no seu fio.
 
@@ -485,7 +484,7 @@ async def _derrubar_os_radios(
 
     async def _derrubar(par: str) -> tuple[bool, str]:
         try:
-            return await asyncio.to_thread(oce.derrubar_o_radio, par, leitor_do_bluez)
+            return await asyncio.to_thread(oce.derrubar_o_radio, par)
         except Exception as exc:
             return False, str(exc)
 
@@ -520,22 +519,10 @@ async def _derrubar_os_radios(
     return passaram
 
 
-async def vigiar_o_cabo_em_espera(
-    daemon: DaemonProtocol,
-    *,
-    agora: float | None = None,
-    leitor_do_bluez: Any = None,
-) -> int:
-    """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram."""
-    agora = time.monotonic() if agora is None else float(agora)
-    pedidos = _quem_passa_para_o_cabo(daemon, agora)
-    if not pedidos:
-        return 0
-    return await _derrubar_os_radios(daemon, pedidos, agora, leitor_do_bluez)
-
-
 def _passar_os_cabos_sem_segurar_a_volta(daemon: DaemonProtocol) -> None:
-    """A decisão sai aqui; o `Disconnect` do BlueZ corre em fundo e acorda a volta ao terminar.
+    """O controle do rádio que ganhou cabo passa para o cabo.
+
+    A decisão sai aqui; o `Disconnect` do BlueZ corre em fundo e acorda a volta ao terminar.
 
     Medido em 06/11: o `Disconnect` levou 2,4 s, e o kernel registrou o cabo no meio deles. A volta
     parada ali era o tempo do jogo sem controle.
@@ -1839,6 +1826,5 @@ __all__ = [
     "vigia_do_cabo_de",
     "vigia_do_sequestro_de",
     "vigiar_escritor_cru",
-    "vigiar_o_cabo_em_espera",
     "vigiar_o_sequestro",
 ]

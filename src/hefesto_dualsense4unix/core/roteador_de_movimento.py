@@ -217,17 +217,6 @@ def _deflexao_exata(
     )
 
 
-def deflexao(
-    giro: tuple[float, float, float],
-    arranjo: ArranjoDeMovimento,
-    ganho: float = 1.0,
-    gravidade: tuple[float, float, float] | None = None,
-) -> tuple[int, int]:
-    """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico, eixo a eixo."""
-    horizontal, vertical = _deflexao_exata(giro, arranjo, ganho, gravidade)
-    return round(horizontal), round(vertical)
-
-
 GANHO_MINIMO_DA_MIRA: Final = 0.3
 PRAZO_MAXIMO_DO_PESO_MS: Final = 10_000
 TODOS_OS_CONTROLES: Final = "todos"
@@ -705,7 +694,10 @@ def deflexao_do_tique(
     ganho: float = 1.0,
     gravidade: tuple[float, float, float] | None = None,
 ) -> tuple[int, int]:
-    """A `deflexao` do tique: o que o arredondamento perde vai ao tique seguinte, por eixo."""
+    """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico, eixo a eixo.
+
+    O que o arredondamento perde vai ao tique seguinte, por eixo.
+    """
     horizontal, vertical = _deflexao_exata(velocidade, arranjo, ganho, gravidade)
     estado = _mira_da_peca(dono, uniq)
     dh, estado.resto_h = _com_o_resto(horizontal, estado.resto_h)
@@ -1329,7 +1321,6 @@ __all__ = [
     "definir_da_peca",
     "definir_o_zero",
     "definir_por_peca",
-    "deflexao",
     "deflexao_da_rampa",
     "deflexao_do_tique",
     "delta_do_toque",

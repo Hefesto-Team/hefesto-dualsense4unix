@@ -224,9 +224,10 @@ def test_o_arranjo_desligado_nao_move_nada() -> None:
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     desligado = _mira(destino=rot.DESTINO_NENHUM, sensibilidade_h=10)
-    assert rot.deflexao((0.0, 200.0, 0.0), desligado) == (0, 0)
+    uniq, giro = "aa:bb:cc:00:00:01", (0.0, 200.0, 0.0)
+    assert rot.deflexao_do_tique(SimpleNamespace(), uniq, giro, desligado) == (0, 0)
     assert rot.pixels((0.0, 30.0, 0.0), desligado) == (0.0, 0.0)
-    assert rot.deflexao((0.0, 200.0, 0.0), rot.SO_NAS_PECAS) == (0, 0)
+    assert rot.deflexao_do_tique(SimpleNamespace(), uniq, giro, rot.SO_NAS_PECAS) == (0, 0)
 
 
 def test_o_arranjo_desligado_guarda_os_numeros_do_usuario() -> None:

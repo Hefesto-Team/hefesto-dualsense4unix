@@ -238,7 +238,7 @@ def test_cada_um_com_o_seu_lado_sentido_e_sensibilidade(
     mesa = _Mesa(monkeypatch, tmp_path, "usb", _arranjos())
     mesa.botoes[P4] = frozenset({GATILHOS["l2"]})
     base = rot.ArranjoDeMovimento(destino=rot.DESTINO_ANALOGICO_DIREITO)
-    padrao = 128 + rot.deflexao(A_ESQUERDA, base)[0]
+    padrao = 128 + rot.deflexao_do_tique(SimpleNamespace(), P1, A_ESQUERDA, base)[0]
     assert mesa.gira(P1, A_ESQUERDA)["rx"] == pytest.approx(padrao, abs=1)
     forte = mesa.gira(P2, A_ESQUERDA)["rx"]
     assert forte > 128 and forte - 128 > 128 - padrao, "o P2 é invertido e mais sensível"

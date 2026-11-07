@@ -27,6 +27,17 @@ ALTURAS = (0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0)
 FRACAO_A_60_GRAUS_S = 0.6168
 
 
+def _um_tique(
+    giro: tuple[float, float, float],
+    arranjo: rot.ArranjoDeMovimento,
+    ganho: float = 1.0,
+    gravidade: tuple[float, float, float] | None = None,
+) -> tuple[int, int]:
+    return rot.deflexao_do_tique(
+        SimpleNamespace(), "aa:bb:cc:00:00:01", giro, arranjo, ganho, gravidade
+    )
+
+
 def _gravidade(theta: float) -> tuple[float, float, float]:
     return 0.0, math.cos(math.radians(theta)), -math.sin(math.radians(theta))
 
@@ -48,14 +59,14 @@ def _volante(theta: float, esquerda: float) -> tuple[float, float, float]:
 
 @pytest.mark.parametrize("theta", ALTURAS)
 def test_virar_da_a_mesma_saida_em_qualquer_altura_da_mao(theta: float) -> None:
-    dh, dv = rot.deflexao(_virar(theta, 60.0), MIRA, gravidade=_gravidade(theta))
+    dh, dv = _um_tique(_virar(theta, 60.0), MIRA, gravidade=_gravidade(theta))
     assert dv == 0
     assert dh == pytest.approx(-FRACAO_A_60_GRAUS_S * rot.DEFLEXAO_MAXIMA, abs=1)
 
 
 @pytest.mark.parametrize("theta", ALTURAS)
 def test_levantar_o_nariz_da_a_mesma_saida_em_qualquer_altura_da_mao(theta: float) -> None:
-    dh, dv = rot.deflexao((60.0, 0.0, 0.0), MIRA, gravidade=_gravidade(theta))
+    dh, dv = _um_tique((60.0, 0.0, 0.0), MIRA, gravidade=_gravidade(theta))
     assert dh == 0
     assert dv == pytest.approx(-FRACAO_A_60_GRAUS_S * rot.DEFLEXAO_MAXIMA, abs=1)
 
@@ -66,7 +77,7 @@ def test_o_volante_vira_como_virar_em_qualquer_altura_da_mao(
     theta: float, esquerda: float, sinal: int
 ) -> None:
     """O gesto medido em 06/11 com o controle de pé sai em `ABS_RY` e tem de mover a câmera."""
-    dh, dv = rot.deflexao(_volante(theta, esquerda), MIRA, gravidade=_gravidade(theta))
+    dh, dv = _um_tique(_volante(theta, esquerda), MIRA, gravidade=_gravidade(theta))
     assert dv == 0
     assert dh == pytest.approx(sinal * FRACAO_A_60_GRAUS_S * rot.DEFLEXAO_MAXIMA, abs=1)
 
@@ -77,7 +88,7 @@ def test_o_gesto_entre_virar_e_volante_nao_vale_em_dobro() -> None:
         (a + b) / math.sqrt(2)
         for a, b in zip(_virar(theta, 60.0), _volante(theta, 60.0), strict=True)
     )
-    dh, _dv = rot.deflexao(meio, MIRA, gravidade=_gravidade(theta))
+    dh, _dv = _um_tique(meio, MIRA, gravidade=_gravidade(theta))
     assert dh == pytest.approx(-FRACAO_A_60_GRAUS_S * rot.DEFLEXAO_MAXIMA, abs=1)
 
 
@@ -86,34 +97,34 @@ def test_o_volante_segue_andando_com_a_gravidade_saindo_para_o_lado() -> None:
     uy, uz = _gravidade(90.0)[1:]
     rolada = (math.sin(math.radians(45.0)), uy * math.cos(math.radians(45.0)),
               uz * math.cos(math.radians(45.0)))
-    dh = rot.deflexao(_volante(90.0, 60.0), MIRA, gravidade=rolada)[0]
+    dh = _um_tique(_volante(90.0, 60.0), MIRA, gravidade=rolada)[0]
     assert dh == pytest.approx(-FRACAO_A_60_GRAUS_S * rot.DEFLEXAO_MAXIMA, abs=1)
 
 
 def test_o_controle_deitado_de_lado_nao_divide_por_zero() -> None:
-    assert rot.deflexao((0.0, 60.0, 0.0), MIRA, gravidade=(1.0, 0.0, 0.0)) == (0, 0)
+    assert _um_tique((0.0, 60.0, 0.0), MIRA, gravidade=(1.0, 0.0, 0.0)) == (0, 0)
 
 
 def test_o_sentido_e_o_da_mao_medido_em_06_11() -> None:
-    assert rot.deflexao((0.0, 60.0, 0.0), MIRA)[0] < 0, "esquerda tem de ir à esquerda"
-    assert rot.deflexao((0.0, -60.0, 0.0), MIRA)[0] > 0
-    assert rot.deflexao((60.0, 0.0, 0.0), MIRA)[1] < 0, "nariz para cima tem de ir para cima"
-    assert rot.deflexao((-60.0, 0.0, 0.0), MIRA)[1] > 0
+    assert _um_tique((0.0, 60.0, 0.0), MIRA)[0] < 0, "esquerda tem de ir à esquerda"
+    assert _um_tique((0.0, -60.0, 0.0), MIRA)[0] > 0
+    assert _um_tique((60.0, 0.0, 0.0), MIRA)[1] < 0, "nariz para cima tem de ir para cima"
+    assert _um_tique((-60.0, 0.0, 0.0), MIRA)[1] > 0
 
 
 def test_inverter_troca_cada_eixo_sozinho() -> None:
     giro = (60.0, 60.0, 0.0)
-    normal = rot.deflexao(giro, MIRA)
-    assert rot.deflexao(
+    normal = _um_tique(giro, MIRA)
+    assert _um_tique(
         giro, rot.ArranjoDeMovimento(destino=MIRA.destino, inverter_horizontal=True)
     ) == (-normal[0], normal[1])
-    assert rot.deflexao(
+    assert _um_tique(
         giro, rot.ArranjoDeMovimento(destino=MIRA.destino, inverter_vertical=True)
     ) == (normal[0], -normal[1])
 
 
 def test_o_gesto_diagonal_passa_nos_dois_eixos() -> None:
-    dh, dv = rot.deflexao((40.0, 100.0, 0.0), MIRA)
+    dh, dv = _um_tique((40.0, 100.0, 0.0), MIRA)
     assert abs(dh) / rot.DEFLEXAO_MAXIMA > rot.PISO_PADRAO
     assert abs(dv) / rot.DEFLEXAO_MAXIMA > rot.PISO_PADRAO
     assert (dh, dv) == pytest.approx((-109, -64), abs=2)
@@ -124,7 +135,7 @@ def test_a_mao_lenta_sai_da_zona_morta_do_jogo_em_toda_sensibilidade(sens: int) 
     arranjo = rot.ArranjoDeMovimento(
         destino=MIRA.destino, sensibilidade_h=sens, sensibilidade_v=sens
     )
-    dh, dv = rot.deflexao((20.0, 20.0, 0.0), arranjo)
+    dh, dv = _um_tique((20.0, 20.0, 0.0), arranjo)
     assert abs(dh) >= 34
     assert abs(dv) >= 34
 
@@ -134,30 +145,30 @@ def test_o_tremor_abaixo_da_zona_nao_anda(sens: int) -> None:
     arranjo = rot.ArranjoDeMovimento(
         destino=MIRA.destino, sensibilidade_h=sens, sensibilidade_v=sens
     )
-    assert rot.deflexao((3.0, 3.0, 0.0), arranjo) == (0, 0)
+    assert _um_tique((3.0, 3.0, 0.0), arranjo) == (0, 0)
 
 
 def test_com_a_zona_em_zero_o_ruido_do_sensor_nao_acende_o_piso() -> None:
     arranjo = rot.ArranjoDeMovimento(destino=MIRA.destino, zona_morta_graus_s=0.0)
-    assert rot.deflexao((0.85, 0.85, 0.0), arranjo) == (0, 0)
-    assert rot.deflexao((0.0, 2.0, 0.0), arranjo)[0] != 0
+    assert _um_tique((0.85, 0.85, 0.0), arranjo) == (0, 0)
+    assert _um_tique((0.0, 2.0, 0.0), arranjo)[0] != 0
 
 
 def test_a_sensibilidade_zero_desliga_so_aquele_eixo() -> None:
     giro = (60.0, 60.0, 0.0)
     sem_h = rot.ArranjoDeMovimento(destino=MIRA.destino, sensibilidade_h=0)
     sem_v = rot.ArranjoDeMovimento(destino=MIRA.destino, sensibilidade_v=0)
-    assert rot.deflexao(giro, sem_h)[0] == 0
-    assert rot.deflexao(giro, sem_h)[1] != 0
-    assert rot.deflexao(giro, sem_v)[1] == 0
-    assert rot.deflexao(giro, sem_v)[0] != 0
+    assert _um_tique(giro, sem_h)[0] == 0
+    assert _um_tique(giro, sem_h)[1] != 0
+    assert _um_tique(giro, sem_v)[1] == 0
+    assert _um_tique(giro, sem_v)[0] != 0
 
 
 def test_a_sensibilidade_nao_muda_o_outro_eixo() -> None:
     giro = (60.0, 60.0, 0.0)
     forte = rot.ArranjoDeMovimento(destino=MIRA.destino, sensibilidade_h=10)
-    assert rot.deflexao(giro, forte)[1] == rot.deflexao(giro, MIRA)[1]
-    assert abs(rot.deflexao(giro, forte)[0]) > abs(rot.deflexao(giro, MIRA)[0])
+    assert _um_tique(giro, forte)[1] == _um_tique(giro, MIRA)[1]
+    assert abs(_um_tique(giro, forte)[0]) > abs(_um_tique(giro, MIRA)[0])
 
 
 def test_o_innocent_assault_anda_com_o_que_ficou_no_perfil() -> None:
@@ -165,24 +176,24 @@ def test_o_innocent_assault_anda_com_o_que_ficou_no_perfil() -> None:
     arranjo = rot.ArranjoDeMovimento(
         destino=MIRA.destino, sensibilidade_h=1, sensibilidade_v=1, zona_morta_graus_s=60.0
     )
-    assert rot.deflexao((0.0, 120.0, 0.0), arranjo)[0] == pytest.approx(
+    assert _um_tique((0.0, 120.0, 0.0), arranjo)[0] == pytest.approx(
         -0.361 * rot.DEFLEXAO_MAXIMA, abs=1
     )
 
 
 def test_o_piso_e_a_velocidade_do_jogo_sao_do_arranjo() -> None:
     sem_piso = rot.ArranjoDeMovimento(destino=MIRA.destino, piso=0.0)
-    assert abs(rot.deflexao((0.0, 4.0, 0.0), sem_piso)[0]) <= 2
+    assert abs(_um_tique((0.0, 4.0, 0.0), sem_piso)[0]) <= 2
     lento = rot.ArranjoDeMovimento(destino=MIRA.destino, velocidade_do_jogo=90.0)
-    assert abs(rot.deflexao((0.0, 60.0, 0.0), lento)[0]) > abs(
-        rot.deflexao((0.0, 60.0, 0.0), MIRA)[0]
+    assert abs(_um_tique((0.0, 60.0, 0.0), lento)[0]) > abs(
+        _um_tique((0.0, 60.0, 0.0), MIRA)[0]
     )
 
 
 def test_com_o_peso_da_imersao_a_mira_fica_acima_do_piso() -> None:
     for velocidade in (20.0, 60.0, 120.0):
-        pesada = rot.deflexao((0.0, velocidade, 0.0), MIRA, 0.3)[0]
-        inteira = rot.deflexao((0.0, velocidade, 0.0), MIRA)[0]
+        pesada = _um_tique((0.0, velocidade, 0.0), MIRA, 0.3)[0]
+        inteira = _um_tique((0.0, velocidade, 0.0), MIRA)[0]
         assert abs(pesada) >= 34
         assert abs(pesada) < abs(inteira)
 
@@ -287,7 +298,7 @@ def test_sem_gravidade_lida_o_horizontal_e_o_gy() -> None:
     dono = SimpleNamespace()
     assert rot.gravidade_do_tique(dono, "a1", None, 1.0) is None
     assert rot.gravidade_do_tique(dono, "a1", (0.0, 0.0, 0.0), 1.0) is None
-    assert rot.deflexao((0.0, 60.0, 0.0), MIRA, gravidade=None)[0] != 0
+    assert _um_tique((0.0, 60.0, 0.0), MIRA, gravidade=None)[0] != 0
 
 
 def test_o_tique_de_quatro_pecas_fica_no_teto_medido() -> None:

@@ -18,6 +18,7 @@ import struct
 import tempfile
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -58,8 +59,9 @@ def test_sem_pedido_a_janela_sai_byte_a_byte_e_com_meio_ganho_o_giro_sai_pela_me
 def test_com_meio_ganho_a_deflexao_da_mascara_xbox_sai_pela_metade() -> None:
     arranjo = roteador.ArranjoDeMovimento(destino=roteador.DESTINO_ANALOGICO_DIREITO)
     giro = (40.0, 60.0, 0.0)
-    inteira = roteador.deflexao(giro, arranjo)
-    metade = roteador.deflexao(giro, arranjo, 0.5)
+    uniq = "aa:bb:cc:00:00:01"
+    inteira = roteador.deflexao_do_tique(SimpleNamespace(), uniq, giro, arranjo)
+    metade = roteador.deflexao_do_tique(SimpleNamespace(), uniq, giro, arranjo, 0.5)
     piso = arranjo.piso * roteador.DEFLEXAO_MAXIMA
     for peso, cheia in zip(metade, inteira, strict=True):
         assert abs(peso) - piso == pytest.approx((abs(cheia) - piso) / 2, abs=1)

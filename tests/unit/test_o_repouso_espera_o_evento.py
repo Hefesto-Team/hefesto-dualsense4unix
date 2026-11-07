@@ -1206,7 +1206,7 @@ class _VoltaDeMentira:
         monkeypatch.setattr(cx, "vigiar_escritor_cru", sondar)
         monkeypatch.setattr(cx, "vigiar_o_sequestro", nada)
         monkeypatch.setattr(cx, "carimbar_o_nascimento", nada)
-        monkeypatch.setattr(cx, "vigiar_o_cabo_em_espera", nada)
+        monkeypatch.setattr(cx, "_passar_os_cabos_sem_segurar_a_volta", lambda _d: None)
         monkeypatch.setattr(hidraw_broker_client, "broker_executor_for", lambda _d: None)
 
     def rodar(self) -> None:
