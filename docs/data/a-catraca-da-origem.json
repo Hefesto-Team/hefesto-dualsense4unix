@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1224388,
+      "piso": 1225287,
       "por_item": {
         "docs": 106740,
         "scripts": 111831,
-        "src": 308989,
-        "tests": 696828
+        "src": 309170,
+        "tests": 697546
       },
-      "razao": "tamanho: +1048 linhas (1223340 -> 1224388), pagas por Origem: D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO; registrado no fecho, topo 8980b0068484",
+      "razao": "tamanho: +899 linhas (1224388 -> 1225287), pagas por Origem: D-0210-O-APERTO-ACORDA-O-TIQUE, D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO; registrado no fecho, topo 51974123c64c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1893,10 +1893,16 @@
           "de": 1223340,
           "para": 1224388,
           "razao": "tamanho: +1048 linhas (1223340 -> 1224388), pagas por Origem: D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO; registrado no fecho, topo 8980b0068484"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1224388,
+          "para": 1225287,
+          "razao": "tamanho: +899 linhas (1224388 -> 1225287), pagas por Origem: D-0210-O-APERTO-ACORDA-O-TIQUE, D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO; registrado no fecho, topo 51974123c64c"
         }
       ],
       "unidade": "linhas",
-      "universo": 3405
+      "universo": 3406
     }
   }
 }
