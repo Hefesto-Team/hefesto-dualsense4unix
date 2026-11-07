@@ -9,12 +9,14 @@ MORDIDAS: pôr `moldar_os_analogicos` de volta depois de `aplicar_o_movimento` n
 `dispatch_gamepad` reprova o P1; no `forward_all` reprova de P2 a P4; tirá-la de um dos dois
 reprova o analógico físico daquele caminho; moldar o físico dentro de `entregar_os_analogicos`
 também reprova a mira; tirar a inversão ou a troca de `entregar_os_analogicos` reprova
-`test_a_inversao_e_a_troca_seguem_valendo_para_a_mira`.
+`test_a_inversao_e_a_troca_seguem_valendo_para_a_mira`; comer só o `ry` ou o `ly` na entrega
+reprova `test_os_dois_eixos_dos_dois_lados_chegam_inteiros`; moldar o P1 pelo `uniq` da mira,
+que é `None` sem mira, reprova `test_a_curva_da_peca_vale_sem_mira_nenhuma`.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -27,6 +29,7 @@ from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO, chave_de_sensor
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
+from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
@@ -46,9 +49,12 @@ from tests.unit.test_a_mira_vale_nos_quatro import (
     _Mesa,
     _NoDoPad,
 )
+from tests.unit.test_uhid_replica import _blueprint
 
 GESTO_LENTO = (0.0, 20.0, 0.0)
 GESTO_NO_PISO = (0.0, 4.0, 0.0)
+GESTO_VERTICAL = (20.0, 0.0, 0.0)
+GESTO_DIAGONAL = (20.0, 20.0, 0.0)
 CENTRO = (128, 128, 128, 128)
 NO_DIREITO = {"destino": "analogico_direito"}
 PISO_EM_CONTAGENS = round(rot.PISO_PADRAO * rot.DEFLEXAO_MAXIMA)
@@ -204,6 +210,57 @@ def test_o_analogico_fisico_segue_moldado(
     assert moldado != FORA_DA_ZONA
     assert (eixos["lx"], eixos["rx"]) == (moldado, moldado)
 
+    mesa.fisico[quem] = (128, FORA_DA_ZONA, 128, FORA_DA_ZONA)
+    mesa.tiques(2)
+    eixos = mesa.pads[quem].analog[-1]
+    moldado = cv.moldar(molde, 128, FORA_DA_ZONA)[1]
+    assert moldado != FORA_DA_ZONA
+    assert (eixos["ly"], eixos["ry"]) == (moldado, moldado)
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+@pytest.mark.parametrize("quem", QUATRO)
+def test_a_curva_da_peca_vale_sem_mira_nenhuma(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str, quem: str
+) -> None:
+    """Sem mira no perfil, a forma segue a identidade de cada peça."""
+    mesa = _MesaDaCurva(
+        monkeypatch, tmp_path, transporte, {}, curva_por_peca={quem: {"zona_morta": 30}})
+    for uniq in QUATRO:
+        mesa.fisico[uniq] = (PEQUENO, 128, PEQUENO, 128)
+    mesa.tiques(2)
+    for uniq in QUATRO:
+        esperado = 128 if uniq == quem else PEQUENO
+        assert mesa.pads[uniq].analog[-1]["lx"] == esperado, uniq
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+@pytest.mark.parametrize("quem", QUATRO)
+@pytest.mark.parametrize(
+    ("destino", "horizontal", "vertical"),
+    [("analogico_direito", "rx", "ry"), ("analogico_esquerdo", "lx", "ly")],
+)
+@pytest.mark.parametrize("giro", [GESTO_VERTICAL, GESTO_DIAGONAL])
+def test_os_dois_eixos_dos_dois_lados_chegam_inteiros(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    transporte: str,
+    quem: str,
+    destino: str,
+    horizontal: str,
+    vertical: str,
+    giro: tuple[float, float, float],
+) -> None:
+    pecas = {uniq: {"destino": destino} for uniq in QUATRO}
+    pasta = tmp_path / "sem-curva"
+    pasta.mkdir()
+    livre = _MesaDaCurva(monkeypatch, pasta, transporte, pecas).gesto(quem, giro)
+    assert any(q[vertical] != 128 for q in livre), livre
+    if giro == GESTO_DIAGONAL:
+        assert any(q[horizontal] != 128 for q in livre), livre
+    mesa = _MesaDaCurva(monkeypatch, tmp_path, transporte, pecas, mesa={"zona_morta": 30})
+    assert mesa.gesto(quem, giro) == livre
+
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("quem", QUATRO)
@@ -332,6 +389,21 @@ def test_a_rampa_da_calibracao_chega_inteira(
     assert mesa.pads[quem].analog[-1]["rx"] == 128 + rot.deflexao_da_rampa(pedido)[0]
 
 
+def _pad_da_mascara(mascara: str) -> tuple[Any, Callable[[], int]]:
+    """O pad do produto em cada máscara, e como ler o `rx` que o jogo recebe dele."""
+    if mascara == "dualsense":
+        relatorios: list[bytes] = []
+        uhid: Any = UhidDualSense(player=1, blueprint=_blueprint())
+        uhid._fd = -1
+        uhid.send_report = lambda relatorio: relatorios.append(relatorio) or True
+        return uhid, lambda: relatorios[-1][3]
+    no = _NoDoPad()
+    pad = UinputGamepad(flavor=mascara)
+    pad._device = no
+    pad._ecodes = ecodes
+    return pad, lambda: no.eixos[ecodes.ABS_RX]
+
+
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize(
     "mascaras",
@@ -351,17 +423,17 @@ def test_toda_mascara_recebe_a_mira_inteira(
         pasta.mkdir()
         mesa = _MesaDaCurva(
             monkeypatch, pasta, transporte, _todos_no_direito(), mesa={"zona_morta": zona})
-        nos = {uniq: _NoDoPad() for uniq in QUATRO}
+        leituras = {}
         for uniq, mascara in mascaras.items():
-            pad = UinputGamepad(flavor=mascara)
-            pad._device = nos[uniq]
-            pad._ecodes = ecodes
+            pad, leituras[uniq] = _pad_da_mascara(mascara)
             if uniq == P1:
                 mesa.daemon._gamepad_device = pad
             else:
                 mesa.coop._players[uniq].vpad = pad
             mesa.nos[uniq].giro = GESTO_LENTO
         mesa.tiques(4)
-        return {uniq: no.eixos[ecodes.ABS_RX] for uniq, no in nos.items()}
+        return {uniq: ler() for uniq, ler in leituras.items()}
 
-    assert eixo_do_jogo(30, tmp_path / "com") == eixo_do_jogo(0, tmp_path / "sem"), mascaras
+    com_zona = eixo_do_jogo(30, tmp_path / "com")
+    assert com_zona == eixo_do_jogo(0, tmp_path / "sem"), mascaras
+    assert all(valor != 128 for valor in com_zona.values()), com_zona
