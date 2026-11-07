@@ -228,13 +228,13 @@ def test_a_foto_nao_le_a_sessao_e_a_escrita_sim(casa: SimpleNamespace) -> None:
     """A foto, no laço, sabe só o foco; a sessão vem da parte de fora, sem atraso nenhum."""
     _com_jogo(casa)
     daemon = SimpleNamespace(
-        store=SimpleNamespace(window_detect_current_class="steam_app_5150")
+        store=SimpleNamespace(window_detect_current_class="steam_app_9900020")
     )
 
     em_cena = le._em_cena_de_memoria(daemon)
 
-    assert em_cena == frozenset({5150})
-    assert le._em_cena_com_a_sessao(em_cena) == {5150, APPID}
+    assert em_cena == frozenset({9900020})
+    assert le._em_cena_com_a_sessao(em_cena) == {9900020, APPID}
 
 
 def _sentar(daemon: _Daemon, transportes: tuple[str, ...], mascara: str) -> None:
