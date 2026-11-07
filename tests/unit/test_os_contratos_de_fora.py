@@ -54,6 +54,7 @@ def _linha(arquivo: str, alvo: str, **mais: str) -> dict[str, str]:
         "como_o_doctor_ve": "contrato:bluez-dbus",
         "motivo": "",
         "sprint_filha": "",
+        "ativa": "",
     }
     base.update(mais)
     return base

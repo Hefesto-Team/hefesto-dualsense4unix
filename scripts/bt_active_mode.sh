@@ -29,6 +29,11 @@ fi
 QUIET=0
 [[ "${1:-}" == "--quiet" ]] && QUIET=1
 
+_bluez_de_pe() {
+    command -v busctl >/dev/null 2>&1 || return 1
+    busctl status org.bluez >/dev/null 2>&1
+}
+
 _adaptadores() {
     local p nome achou=0
     for p in "${SYS_BLUETOOTH}"/hci*; do
@@ -39,7 +44,7 @@ _adaptadores() {
         achou=1
     done
     [[ "${achou}" -eq 1 ]] && return 0
-    if command -v busctl >/dev/null 2>&1; then
+    if _bluez_de_pe; then
         nome="$(busctl tree org.bluez --list 2>/dev/null \
             | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u || true)"
         if [[ -n "${nome}" ]]; then printf '%s\n' "${nome}"; return 0; fi
@@ -54,7 +59,7 @@ _adaptadores() {
 
 _macs_conectados() {
     local p mac saida="" achou=0
-    if command -v busctl >/dev/null 2>&1; then
+    if _bluez_de_pe; then
         while IFS= read -r p; do
             [[ -z "${p}" ]] && continue
             [[ "$(busctl get-property org.bluez "${p}" org.bluez.Device1 Connected 2>/dev/null \
@@ -101,7 +106,7 @@ _e_linhagem_nintendo() {
 _nome_do_controle() {
     local mac="${1^^}" alvo caminho nome
     alvo="dev_${mac//:/_}"
-    if command -v busctl >/dev/null 2>&1; then
+    if _bluez_de_pe; then
         caminho="$(busctl tree org.bluez --list 2>/dev/null \
             | grep -oE "/org/bluez/hci[0-9]+/${alvo}$" | head -1 || true)"
         if [[ -n "${caminho}" ]]; then
@@ -134,7 +139,7 @@ _prop_adaptador() {
 
 _hci_com_nintendo() {
     local caminho mac nome info dir end
-    if command -v busctl >/dev/null 2>&1; then
+    if _bluez_de_pe; then
         while IFS= read -r caminho; do
             [[ -n "${caminho}" ]] || continue
             mac="${caminho##*/dev_}"
@@ -164,7 +169,7 @@ _hci_com_nintendo() {
 mapfile -t ADAPTADORES < <(_adaptadores)
 [[ "${#ADAPTADORES[@]}" -eq 0 ]] && { log "nenhum adaptador HCI — nada a fazer"; exit 0; }
 
-if command -v busctl >/dev/null 2>&1; then
+if _bluez_de_pe; then
     for HCI in "${ADAPTADORES[@]}"; do
         END="$(_prop_adaptador "${HCI}" Address)"
         [[ -n "${END}" ]] && HCI_DE["${END^^}"]="${HCI}"
@@ -318,7 +323,7 @@ for chave, dele in sorted(adaptadores.items() if isinstance(adaptadores, dict) e
             log "NÃO prefixei o alias de ${HCI}: outro motor segura a trava do rádio há mais de ${PRAZO_DA_TRAVA_S} s — o watchdog re-tenta"
             break
         fi
-        if busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
+        if _bluez_de_pe && busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
             if [[ -n "${NOME}" ]]; then
                 log "alias do adaptador ${HCI} -> '${NOVO}' (o nome dado a ele na aba Conexões)"
             else

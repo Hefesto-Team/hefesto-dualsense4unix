@@ -7,7 +7,7 @@ E, com o portal de pé, o prazo da escolha esgotado e a ficha guardada recusada 
 de escolha a cada volta da ``espera``. Aqui o barramento é um ``dbus-daemon`` particular, com um
 portal ATIVÁVEL que conta as ativações, um ``systemd1`` de mentira e um relógio na mão do teste.
 
-MORDIDA: arrancar a guarda do ``abrir`` (o ``_sessao_ainda_nao_subiu``), o ``no_auto_start`` da
+MORDIDA: arrancar a guarda do ``abrir`` (o ``sessao_ainda_nao_subiu``), o ``no_auto_start`` da
 leitura do gerente, a troca do prazo esgotado por ``EscolhaCanceladaError`` no ``_pedir`` ou o
 ``_esquecer`` da ficha recusada, e a régua reprova.
 """
@@ -23,6 +23,7 @@ from typing import Any
 import pytest
 import structlog.testing
 
+from hefesto_dualsense4unix.integrations import barramento_do_sistema
 from hefesto_dualsense4unix.integrations import tela_do_jogo as tj
 from tests.unit.test_o_portal_da_tela_responde_ao_pedido_da_captura import (
     _SEM_DBUS,
@@ -457,7 +458,7 @@ def test_a_parada_no_meio_da_escolha_nao_apaga_a_ficha(
 
 
 def test_o_ambiente_do_gerente_casa_so_o_desktop_com_valor() -> None:
-    assert tj._tem_o_desktop(["XDG_CURRENT_DESKTOP=COSMIC"])
-    assert not tj._tem_o_desktop(["XDG_CURRENT_DESKTOP="])
-    assert not tj._tem_o_desktop(["XDG_CURRENT_DESKTOPX=COSMIC", "HOME=/lar"])
-    assert not tj._tem_o_desktop([])
+    assert barramento_do_sistema.tem_o_desktop(["XDG_CURRENT_DESKTOP=COSMIC"])
+    assert not barramento_do_sistema.tem_o_desktop(["XDG_CURRENT_DESKTOP="])
+    assert not barramento_do_sistema.tem_o_desktop(["XDG_CURRENT_DESKTOPX=COSMIC", "HOME=/lar"])
+    assert not barramento_do_sistema.tem_o_desktop([])

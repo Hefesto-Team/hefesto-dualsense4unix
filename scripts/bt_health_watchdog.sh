@@ -96,11 +96,16 @@ _pegar_a_trava() {
     return 0
 }
 
+_bluez_de_pe() {
+    busctl status org.bluez >/dev/null 2>&1
+}
 _dbus_device_paths() {
+    _bluez_de_pe || return 0
     busctl tree org.bluez --list 2>/dev/null \
         | grep -oE '/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+$' | sort -u || true
 }
 _dbus_device_prop() {
+    _bluez_de_pe || return 0
     busctl get-property org.bluez "$1" org.bluez.Device1 "$2" 2>/dev/null \
         | awk '{print $2}' || true
 }
@@ -130,8 +135,18 @@ fi
 STAMP_DIR="${HEFESTO_BT_STAMP_DIR:-${STAMP_DIR}}"
 install -d -m 700 "${STAMP_DIR}"
 
+_dizer_os_adaptadores_ausentes() {
+    local memoria="${STAMP_DIR}/adaptadores-sem-objeto" agora ADP N
+    agora="$(printf '%s' "$1" | grep . | sort | uniq -c | awk '{print $2, $1}' || true)"
+    while read -r ADP N; do
+        [[ -n "${ADP}" ]] || continue
+        log "adaptador ${ADP}: ${N} bond(s) em disco sem objeto D-Bus (adaptador ausente?) — pulando até mudar"
+    done < <(comm -13 <(sort "${memoria}" 2>/dev/null || true) <(printf '%s\n' "${agora}" | sort))
+    printf '%s\n' "${agora}" 2>/dev/null >"${memoria}" || true
+}
+
 vigia_sdp_cache() {
-    local UNIQS PATHS INFO DEVDIR MAC ADPDIR CACHE OBJ TENTATIVA
+    local UNIQS PATHS INFO DEVDIR MAC ADPDIR CACHE OBJ TENTATIVA AUSENTES=""
     UNIQS="$(_uniqs_hidraw)"
     PATHS="$(_dbus_device_paths)"
     while IFS= read -r INFO; do
@@ -145,7 +160,7 @@ vigia_sdp_cache() {
 
         OBJ="$(grep -im1 "/dev_${MAC//:/_}\$" <<<"${PATHS}" || true)"
         if [[ -z "${OBJ}" ]]; then
-            log "device ${MAC} tem bond em disco mas nenhum objeto D-Bus (adaptador ausente?) — pulando nesta rodada"
+            AUSENTES+="$(basename "${ADPDIR}")"$'\n'
             continue
         fi
         [[ "$(_dbus_device_prop "${OBJ}" Connected)" == "true" ]] || continue
@@ -156,7 +171,7 @@ vigia_sdp_cache() {
         _diario "forçou o SDP por Connect()" "conectado, sem registro SDP e sem hidraw" \
             "{\"sdp\": false}" null "\"controle\": $(_json_texto "${MAC}")"
         for TENTATIVA in 1 2 3 4 5 6; do
-            busctl call org.bluez "${OBJ}" org.bluez.Device1 Connect >/dev/null 2>&1 || true
+            busctl call org.bluez "${OBJ}" org.bluez.Device1 Connect --auto-start=no >/dev/null 2>&1 || true
             sleep 2
             if grep -q '^\[ServiceRecords\]' "${CACHE}" 2>/dev/null; then
                 log "SDP de ${MAC} resolvido na tentativa ${TENTATIVA} — [ServiceRecords] gravado; o HID sobe sozinho"
@@ -177,6 +192,7 @@ vigia_sdp_cache() {
             fi
         fi
     done < <(find "${BT_STORAGE}" -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | sort)
+    _dizer_os_adaptadores_ausentes "${AUSENTES}"
 }
 
 if [[ "${1:-}" == "--sdp-cache-only" ]]; then
@@ -307,7 +323,7 @@ while IFS= read -r OBJ; do
     _e_controle "${OBJ}" || continue
     MAC_TRUST="${OBJ##*dev_}"
     MAC_TRUST="${MAC_TRUST//_/:}"
-    if busctl set-property org.bluez "${OBJ}" org.bluez.Device1 Trusted b true 2>/dev/null; then
+    if _bluez_de_pe && busctl set-property org.bluez "${OBJ}" org.bluez.Device1 Trusted b true 2>/dev/null; then
         log "device ${MAC_TRUST} tinha bond mas estava SEM trust (reconexão entrante recusada como 'unknown device') — Trusted=true aplicado"
         _diario "aplicou Trusted=true" "bond sem trust: a reconexão entrante era recusada" \
             "{\"trusted\": false}" "{\"trusted\": true}" \

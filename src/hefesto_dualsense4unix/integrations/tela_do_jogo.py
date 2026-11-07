@@ -23,6 +23,7 @@ from operator import sub
 from pathlib import Path
 from typing import Any, Protocol
 
+from hefesto_dualsense4unix.integrations.barramento_do_sistema import sessao_ainda_nao_subiu
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 GRADE_X = 32
@@ -38,10 +39,6 @@ _PORTAL = "org.freedesktop.portal.Desktop"
 _CAMINHO_DO_PORTAL = "/org/freedesktop/portal/desktop"
 _SCREENCAST = "org.freedesktop.portal.ScreenCast"
 _PEDIDO = "org.freedesktop.portal.Request"
-_SYSTEMD = "org.freedesktop.systemd1"
-_CAMINHO_DO_SYSTEMD = "/org/freedesktop/systemd1"
-_GERENTE = "org.freedesktop.systemd1.Manager"
-_DESKTOP = "XDG_CURRENT_DESKTOP"
 _SEM_A_INTERFACE = frozenset({"org.freedesktop.DBus.Error.UnknownMethod",
                               "org.freedesktop.DBus.Error.UnknownInterface"})
 _CONSERTO_DO_PORTAL = ("o portal subiu sem a captura da tela; o conserto é"
@@ -323,31 +320,6 @@ def _aceita(resposta: Any, pedido: str) -> Any:
     return resposta
 
 
-def _tem_o_desktop(ambiente: Sequence[str]) -> bool:
-    return any(nome == _DESKTOP and valor
-               for nome, _, valor in (item.partition("=") for item in ambiente))
-
-
-def _sessao_ainda_nao_subiu(conexao: Any) -> bool:
-    """Verdadeiro só com as duas provas: o portal sem dono (``NameHasOwner`` não ativa nada) e o
-    ambiente de quem o ativaria sem ``XDG_CURRENT_DESKTOP``. Quem ativa é o gerente do usuário
-    (``Manager.Environment`` do ``systemd1``, lido sem ativar); sem ele no barramento, vale o
-    ambiente deste processo. Com o ``NameHasOwner`` em erro, falso: o pedido segue como era."""
-    from jeepney import DBusAddress, MessageFlag, MessageType, Properties
-    from jeepney.bus_messages import message_bus
-
-    dono = conexao.send_and_get_reply(message_bus.NameHasOwner(_PORTAL), timeout=PRAZO_DO_DBUS_S)
-    if dono.header.message_type == MessageType.error or dono.body[0]:
-        return False
-    leitura = Properties(DBusAddress(_CAMINHO_DO_SYSTEMD, bus_name=_SYSTEMD,
-                                     interface=_GERENTE)).get("Environment")
-    leitura.header.flags |= MessageFlag.no_auto_start
-    resposta = conexao.send_and_get_reply(leitura, timeout=PRAZO_DO_DBUS_S)
-    if resposta.header.message_type != MessageType.error:
-        return not _tem_o_desktop(resposta.body[0][1])
-    return not os.environ.get(_DESKTOP)
-
-
 class FonteDoPortal:
     """O portal ``ScreenCast`` pelo PipeWire: a primeira abertura pede a escolha da tela ao
     sistema, e a ficha de volta guardada em ``guarda`` reabre sem pedir de novo. O quadro chega
@@ -429,7 +401,7 @@ class FonteDoPortal:
         try:
             if self._interrompida:
                 raise InterruptedError("a fonte foi interrompida antes de abrir")
-            if _sessao_ainda_nao_subiu(self._conexao):
+            if sessao_ainda_nao_subiu(self._conexao, _PORTAL, PRAZO_DO_DBUS_S):
                 raise RuntimeError(
                     "a sessão gráfica ainda não subiu; o portal não se acorda antes da sessão")
             criada = self._pedir("CreateSession", "a{sv}", (),

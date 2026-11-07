@@ -40,6 +40,7 @@ _BUSCTL = """#!/usr/bin/env bash
 set -u
 raiz="${BUSCTL_FALSO_RAIZ}"
 case "${1:-}" in
+    status) exit 0 ;;
     tree)
         cat "${raiz}/tree"
         [[ -e "${raiz}/marcador" && -f "${raiz}/tree-tarde" ]] && cat "${raiz}/tree-tarde"

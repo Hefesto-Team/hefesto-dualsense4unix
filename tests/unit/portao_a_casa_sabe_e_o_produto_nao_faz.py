@@ -67,14 +67,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
         "`install.sh:3759` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
-        "`uninstall.sh:1622` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
+        "`uninstall.sh:1713` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1855` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
         "`install.sh:3605` (`PROTON_PIN_PY`, com `--ensure`) e "
-        "`uninstall.sh:1551` (`PROTON_PIN_PY`) o rodam; "
+        "`uninstall.sh:1642` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3862` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
@@ -93,7 +93,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3028` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:497` (`curar_audio_ks`) o roda a cada jogo lançado; "
-        "`uninstall.sh:1656-1657` (`AUDIO_KS_PY`) o "
+        "`uninstall.sh:1747-1748` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
@@ -1568,8 +1568,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`src/hefesto_dualsense4unix/integrations/apelido_do_dongle.py:374`) "
         "diz só o que a função faz, e a razão mora na "
         "`D-COSTURA-BLUEZ`, abaixo. Desde `a75a514` (22/08, "
-        "21h26) o `scripts/bt_active_mode.sh:172` (`COM_NINTENDO`) itera TODOS os adaptadores "
-        "que hospedam Nintendo (`_hci_com_nintendo` em `scripts/bt_active_mode.sh:135`), e o mesmo "
+        "21h26) o `scripts/bt_active_mode.sh:177` (`COM_NINTENDO`) itera TODOS os adaptadores "
+        "que hospedam Nintendo (`_hci_com_nintendo` em `scripts/bt_active_mode.sh:140`), e o mesmo "
         "commit "
         "registra que resolveu 'a duplicidade … dois escritores do mesmo "
         "alias'. "
@@ -3413,11 +3413,11 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "`uninstall.sh:1312` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
+            "`uninstall.sh:1403` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
             "o extrator engoliu o COMENTÁRIO de "
-            "`uninstall.sh:1297-1297` (`CMDLINE_OWNERS_FILE`) junto com o "
+            "`uninstall.sh:1388-1388` (`CMDLINE_OWNERS_FILE`) junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 

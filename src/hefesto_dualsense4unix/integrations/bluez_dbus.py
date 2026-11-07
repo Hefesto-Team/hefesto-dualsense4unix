@@ -373,8 +373,25 @@ def _e_o_do_sistema(achado: str) -> bool:
     return os.path.realpath(achado) == os.path.realpath(do_sistema)
 
 
+def _o_bluez_tem_dono(espera: float, ambiente: Mapping[str, str]) -> bool:
+    """``busctl status`` não ativa nada. É a pergunta que vem antes dos verbos do ``busctl`` que
+    ignoram ``--auto-start=no``: a opção só vale em ``call`` e ``emit``."""
+    try:
+        saida = subprocess.run(
+            [FERRAMENTA, "status", SERVICO],
+            capture_output=True,
+            timeout=max(_MINIMO_POR_PERGUNTA, espera),
+            check=False,
+            env=ambiente,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return saida.returncode == 0
+
+
 def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> str | None:
-    """Roda um ``busctl`` de usuário no barramento de sistema. ``None`` = não deu."""
+    """Roda um ``busctl`` de usuário no barramento de sistema. ``None`` = não deu, e sem o
+    ``org.bluez`` de pé nada aqui o ativa."""
     verbo = argumentos[0] if argumentos else ""
     if verbo not in _LEITURAS_DO_BUSCTL and not getattr(_POR_FIO, "na_borda", False):
         _registrar("bluez_escrita_fora_da_borda", nivel="warning", verbo=verbo)
@@ -387,12 +404,17 @@ def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> 
     modo = ["--json=short"] if verbo == "get-property" else []
     ambiente = dict(os.environ)
     ambiente["LC_ALL"] = "C"
+    prazo = time.monotonic() + max(_MINIMO_POR_PERGUNTA, espera)
+    if verbo == "call":
+        modo.append("--auto-start=no")
+    elif SERVICO in argumentos[1:2] and not _o_bluez_tem_dono(espera, ambiente):
+        return None
     try:
         saida = subprocess.run(
             [FERRAMENTA, *argumentos, *modo],
             capture_output=True,
             text=True,
-            timeout=max(_MINIMO_POR_PERGUNTA, espera),
+            timeout=max(_MINIMO_POR_PERGUNTA, prazo - time.monotonic()),
             check=False,
             env=ambiente,
         )
@@ -1345,7 +1367,7 @@ class BarramentoGio:
                 metodo,
                 parametros,
                 None,
-                gio.DBusCallFlags.NONE,
+                gio.DBusCallFlags.NO_AUTO_START,
                 int(max(_MINIMO_POR_PERGUNTA, espera) * 1000),
                 None,
             )

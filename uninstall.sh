@@ -36,6 +36,7 @@ SO_O_APPLET=0
 KEEP_STEAM_INPUT=0
 KEEP_BLUEZ=1
 RESTORE_PIPEWIRE=0
+RESTORE_PORTAL=0
 AUTO_YES=0
 DRY_RUN=0
 
@@ -64,6 +65,9 @@ Opções:
   --restore-pipewire    DEVOLVE o PipeWire de antes do install, sem perguntar (sem a
                         flag, pergunta; com --yes ou sem TTY, preserva). Reinicia o
                         som e recusa com a Steam aberta.
+  --restore-portal      DEVOLVE o portal de captura da distribuição, sem perguntar (sem
+                        a flag, pergunta; com --yes ou sem TTY, preserva). O pino do
+                        apt sai sempre. Um compartilhamento de tela aberto cai uma vez.
   --keep-bluez          [no-op] preservar já é o padrão desde 02/08/2026
   --yes, -y             não pergunta nada (necessário sem TTY)
   --dry-run, -n         ensaio: diz o que removeria nesta máquina e não remove
@@ -86,6 +90,7 @@ for arg in "$@"; do
         --keep-bluez)        KEEP_BLUEZ=1 ;;
         --restore-bluez)     KEEP_BLUEZ=0 ;;
         --restore-pipewire)  RESTORE_PIPEWIRE=1 ;;
+        --restore-portal)    RESTORE_PORTAL=1 ;;
         --yes|-y)            AUTO_YES=1 ;;
         --dry-run|-n)        DRY_RUN=1 ;;
         --help|-h)           uso; exit 0 ;;
@@ -222,6 +227,9 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /etc/apt/sources.list.d/hefesto-pipewire.sources || -e /var/lib/hefesto-pipewire ]] && _NEEDS_SUDO=1
 [[ -f "${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt" ]] \
     && [[ "${RESTORE_PIPEWIRE}" -eq 1 || ( "${AUTO_YES}" -eq 0 && -t 0 ) ]] && _NEEDS_SUDO=1
+[[ -e /etc/apt/preferences.d/hefesto-portal-cosmic ]] && _NEEDS_SUDO=1
+[[ -f "${HOME}/.cache/hefesto-dualsense4unix/portal-cosmic-backport/VERSOES-ANTERIORES.txt" ]] \
+    && [[ "${RESTORE_PORTAL}" -eq 1 || ( "${AUTO_YES}" -eq 0 && -t 0 ) ]] && _NEEDS_SUDO=1
 [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1
 [[ -e /run/hefesto-dualsense4unix || -e /run/hefesto-bt-ponte || -e /run/hefesto-bt-rebind || -e /run/hefesto-bt-watchdog ]] && _NEEDS_SUDO=1
 compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1 && _NEEDS_SUDO=1
@@ -1271,6 +1279,89 @@ devolver_o_pipewire() {
     fi
 }
 devolver_o_pipewire
+
+PORTAL_PREF=/etc/apt/preferences.d/hefesto-portal-cosmic
+PORTAL_UNIDADE=org.freedesktop.impl.portal.desktop.cosmic.service
+devolver_o_portal() {
+    local registro="${HOME}/.cache/hefesto-dualsense4unix/portal-cosmic-backport/VERSOES-ANTERIORES.txt"
+    local devolver=0 pacote="" ver="" atual resp sairia alvo=""
+    if [[ ! -f "${registro}" && ! -e "${PORTAL_PREF}" ]]; then
+        log "sem registro do portal de captura de antes (${registro} ausente) — nada a devolver"
+        return 0
+    fi
+    if [[ ! -f "${registro}" ]]; then
+        log "sem registro do portal de captura de antes (${registro} ausente) — só o pino do apt sai"
+    else
+        IFS='=' read -r pacote ver < "${registro}" || true
+        atual="$(dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' "${pacote}" 2>/dev/null \
+            | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true)"
+        if [[ -z "${ver}" || "${atual}" != *~hefesto* ]]; then
+            log "o portal de captura desta máquina não é o da casa — nada a devolver"
+        else
+            alvo="${pacote}=${ver}"
+            if [[ "${RESTORE_PORTAL}" -eq 1 ]]; then
+                devolver=1
+            elif [[ "${AUTO_YES}" -eq 1 || ! -t 0 ]]; then
+                log "portal de captura da casa preservado (o padrão sem pergunta; --restore-portal devolve o da distribuição: ${alvo})"
+            else
+                printf '[uninstall] AVISO: devolver o portal de captura da distribuição (%s)\n' "${alvo}"
+                printf '[uninstall]   REINICIA o portal: um compartilhamento de tela aberto cai uma vez.\n'
+                printf '[uninstall] Devolver o portal da distribuição? [s/N] '
+                read -r resp || resp=""
+                case "${resp}" in
+                    [sS]*) devolver=1 ;;
+                    *)     log "portal de captura da casa preservado a pedido (rode depois: ./uninstall.sh --restore-portal)" ;;
+                esac
+            fi
+        fi
+        if [[ "${devolver}" -eq 1 ]] && ! sudo -n true 2>/dev/null; then
+            log "sudo indisponível — portal de captura NÃO devolvido"
+            log "  reverta à mão: sudo apt-get install --allow-downgrades ${alvo}"
+            devolver=0
+        fi
+        if [[ "${devolver}" -eq 1 && "${DRY_RUN}" -ne 1 ]]; then
+            if ! sairia="$(LC_ALL=C apt-get install -s --allow-downgrades "${alvo}" 2>&1)"; then
+                log "o apt não aceita devolver ${alvo} (a versão pode ter saído do archive) — nada foi trocado"
+                log "  sem o pino, o próximo apt upgrade traz o portal da distribuição"
+                devolver=0
+            else
+                sairia="$(awk '$1 == "Remv" { print $2 }' <<<"${sairia}" | tr '\n' ' ')"
+                if [[ -n "${sairia}" ]]; then
+                    log "devolver o portal de captura tiraria da máquina: ${sairia}— nada foi trocado"
+                    devolver=0
+                fi
+            fi
+        fi
+        if [[ "${devolver}" -eq 1 ]]; then
+            log "devolvendo o portal de captura da distribuição: ${alvo}"
+            if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+                    -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+                    "${alvo}"; then
+                log "  portal de captura da distribuição devolvido"
+                if timeout 15 systemctl --user try-restart --no-block "${PORTAL_UNIDADE}" >/dev/null 2>&1; then
+                    log "  portal reiniciado — um compartilhamento de tela que estava aberto caiu agora: comece de novo"
+                else
+                    log "  não consegui pedir o reinício do portal — ele entra na próxima sessão"
+                fi
+            else
+                log "  ERRO: apt-get install --allow-downgrades falhou — devolva à mão:"
+                log "        sudo apt-get install --allow-downgrades ${alvo}"
+            fi
+        fi
+    fi
+    if [[ -e "${PORTAL_PREF}" ]]; then
+        if sudo -n true 2>/dev/null && sudo rm -f "${PORTAL_PREF}"; then
+            log "removido o pino do apt do portal de captura (${PORTAL_PREF})"
+            if [[ -n "${alvo}" && "${devolver}" -eq 0 ]]; then
+                log "  sem o pino, no Pop!_OS o próximo apt upgrade volta o portal para o da distribuição"
+            fi
+        else
+            log "sudo indisponível — o pino do apt do portal NÃO foi removido"
+            log "  sudo rm -f ${PORTAL_PREF}"
+        fi
+    fi
+}
+devolver_o_portal
 
 for _bz_sobra in "${HOME}/.cache/hefesto-dualsense4unix/bluez-obra" \
                  "${HOME}/.cache/hefesto-dualsense4unix/bluez-fontes"; do

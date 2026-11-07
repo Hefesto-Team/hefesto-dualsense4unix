@@ -19,6 +19,10 @@ ExecStart=/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --vigiar
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=hefesto-wifi-usb
+# O timer roda a cada minuto: o início e o fim são info e saem do diário; a saída do script sobe a
+# notice para ficar, e a falha da unit também fica.
+SyslogLevel=notice
+LogLevelMax=notice
 Nice=10
 # Roda como root e não lê casa nenhuma: o wifi_usb.sh só olha o /sys, o /dev
 # do reset da porta, o `wpa_cli` e o próprio estado em /run/hefesto-wifi-usb.

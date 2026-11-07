@@ -574,6 +574,7 @@ def _busctl_que_trava(tmp_path: Path, quantos: int) -> Path:
     alvo.write_text(
         "#!/usr/bin/env bash\n"
         'case "${1:-}" in\n'
+        "  status) exit 0 ;;\n"
         f"  tree) printf '/org/bluez\\n{nos}'; exit 0 ;;\n"
         "  get-property) sleep 600 ;;\n"
         "esac\n"

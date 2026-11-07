@@ -27,6 +27,12 @@ também chamam o mundo do outro, e sem ``.py`` no meio: o bloco ``lancador`` dec
 ``reposicao.nativo``, e o ``leitor.executar`` pode ser uma ferramenta do ``PATH``. Cada um é um
 ``cmd:<nome>`` com o manifesto como arquivo e ``*`` como ``onde``.
 
+A coluna ``ativa`` diz o que uma pergunta faz a cada ``dbus:``: ``não`` (não é ativável, ou é só um
+nome), ``sim`` (sobe o serviço, e reprova) e ``sim-protegido`` (é ativável, e o arquivo passa pela
+porta ``integrations/barramento_do_sistema.py`` ou pelo ``NO_AUTO_START`` da borda do Gio). Fora de
+``src/``, ``busctl`` no ``org.bluez`` exige a guarda ``_bluez_de_pe`` no arquivo, salvo o ``call``
+com ``--auto-start=no`` e o gesto de quem usa (o diagnóstico e o uninstall).
+
 A régua reprova: contato sem linha; linha cujo contato sumiu (ou cujo símbolo não existe
 mais); linha ``interna``/``versão``/``comando`` sem ``motivo`` e sem ``sprint_filha`` que
 exista; ``como_o_doctor_ve`` que cita um contrato do doctor que não existe. E há UMA
@@ -67,13 +73,27 @@ MODULO_DO_DOCTOR = Path("src/hefesto_dualsense4unix/integrations/contratos_de_fo
 
 COLUNAS = (
     "dono", "arquivo", "alvo", "onde", "porta", "pergunta", "forma",
-    "o_que_quebra_se_mudar", "como_o_doctor_ve", "motivo", "sprint_filha",
+    "o_que_quebra_se_mudar", "como_o_doctor_ve", "motivo", "sprint_filha", "ativa",
 )
 PORTAS = {"oficial", "interna"}
 PERGUNTAS = {"capacidade", "versão"}
 FORMAS = {"converge", "comando"}
 SEM_DOCTOR = "-"
 FRAGEIS = "linhas-frageis"
+ATIVA_NAO = "não"
+ATIVA_SIM = "sim"
+ATIVA_PROTEGIDO = "sim-protegido"
+ATIVAS = {ATIVA_NAO, ATIVA_SIM, ATIVA_PROTEGIDO}
+PORTA_DO_BARRAMENTO = "barramento_do_sistema"
+BORDA_DO_GIO = "NO_AUTO_START"
+GUARDA_DOS_SCRIPTS = "_bluez_de_pe()"
+_BUSCTL_NO_BLUEZ_RX = re.compile(
+    r"\bbusctl\s+(?:--\S+\s+)*(?:tree|get-property|introspect|set-property|call)\s+org\.bluez\b.*")
+_SEM_ATIVAR_NO_CALL = "--auto-start=no"
+_GESTO_DE_QUEM_USA = frozenset({
+    "scripts/doctor.sh", "scripts/retrato_do_estado.sh", "scripts/medir_a_varredura.sh",
+    "uninstall.sh",
+})
 
 FERRAMENTAS = (
     "pactl", "wpctl", "pw-dump", "pw-cli", "pw-cat", "pw-play", "pw-record", "pw-loopback",
@@ -487,6 +507,8 @@ def julgar(raiz: Path, contatos: Iterable[Contato] | None = None) -> list[str]:
                 "Fato errado se substitui: tire a linha.")
             continue
         queixas.extend(_julgar_a_linha(raiz, linha))
+        queixas.extend(_julgar_a_ativacao(raiz, linha))
+    queixas.extend(julgar_os_scripts(raiz))
     return queixas
 
 
@@ -529,6 +551,43 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
                 f"`{linha['alvo']}` (o `cobre` do contrato): o doctor daria [ OK ] com o alvo "
                 "quebrado. Use `-` ou faça a sonda perguntar.")
     return q
+
+
+def _julgar_a_ativacao(raiz: Path, linha: dict[str, str]) -> list[str]:
+    rotulo = f"{linha['arquivo']} `{linha['alvo']}`"
+    ativa = linha.get("ativa", "")
+    if not linha["alvo"].startswith("dbus:"):
+        return [f"{rotulo}: `ativa` só vale em `dbus:`"] if ativa else []
+    if ativa not in ATIVAS:
+        return [f"{rotulo}: SEM a coluna `ativa` ({ativa!r} não é um de {sorted(ATIVAS)}): "
+                "diga se perguntar a esse nome sobe o serviço"]
+    if ativa == ATIVA_SIM:
+        return [f"{rotulo}: nome ativável SEM proteção: perguntar sobe o serviço. Passe pela porta "
+                f"integrations/{PORTA_DO_BARRAMENTO}.py"]
+    if ativa == ATIVA_PROTEGIDO and Path(linha["arquivo"]).stem != PORTA_DO_BARRAMENTO:
+        texto = (raiz / linha["arquivo"]).read_text(encoding="utf-8")
+        if PORTA_DO_BARRAMENTO not in texto and BORDA_DO_GIO not in texto:
+            return [f"{rotulo}: `sim-protegido`, e o arquivo não usa a porta "
+                    f"integrations/{PORTA_DO_BARRAMENTO}.py"]
+    return []
+
+
+def julgar_os_scripts(raiz: Path) -> list[str]:
+    """``busctl`` no ``org.bluez`` fora de ``src/`` só com a guarda no arquivo: o ``--auto-start=no``
+    só vale no ``call``."""
+    queixas: list[str] = []
+    for rel in _arquivos_versionados(raiz):
+        if rel in _GESTO_DE_QUEM_USA or rel in _NAO_SE_VARRE or rel.startswith(("tests/", "docs/", "src/")):
+            continue
+        caminho = raiz / rel
+        if not rel.endswith(".sh") or not caminho.is_file():
+            continue
+        texto = caminho.read_text(encoding="utf-8", errors="replace")
+        acorda = any(_SEM_ATIVAR_NO_CALL not in achado for achado in _BUSCTL_NO_BLUEZ_RX.findall(texto))
+        if acorda and GUARDA_DOS_SCRIPTS not in texto:
+            queixas.append(f"{rel}: busctl no org.bluez sem a guarda {GUARDA_DOS_SCRIPTS}: "
+                           "o rádio parado acorda")
+    return queixas
 
 
 def censo_das_frageis(raiz: Path) -> Censo:

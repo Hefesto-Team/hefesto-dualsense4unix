@@ -14,7 +14,8 @@ diário vale nessa janela. O que veio só da leitura do código diz «lido».
 ## As regras da casa
 
 1. **Perguntar não pode mudar o sistema.** Falar com um nome D-Bus ativável sobe o serviço. Leitura vai com
-   `no_auto_start` (jeepney) ou `--auto-start=no` (`busctl`). Sem o dono de pé, a resposta é «não sei», e nada sobe.
+   `no_auto_start` (jeepney) ou `NO_AUTO_START` (Gio). No `busctl`, `--auto-start=no` só vale em `call` e `emit`; os outros
+   verbos vêm depois de um `busctl status <nome>`, que não ativa. Sem o dono de pé, a resposta é «não sei», e nada sobe.
 2. **Nada antes da sessão gráfica.** O serviço sobe no `default.target`, antes da sessão. Até a sessão existir, nenhum
    serviço de sessão é tocado.
 3. **Diálogo do sistema só com gesto e com nome.** Janela que nasce de processo de fundo, sem pedido de quem usa e
@@ -46,16 +47,16 @@ metade. O comando é `journalctl --user -b 0 -t systemd`, filtrado pelas unidade
 
 | nome | ativável aqui | quem fala | proteção | estado |
 | --- | --- | --- | --- | --- |
-| `org.freedesktop.portal.Desktop` | sim | `integrations/tela_do_jogo.py` | só depois da sessão (`_sessao_ainda_nao_subiu`), e a leitura do `systemd1` vai com `no_auto_start` | curado em 05/11 |
-| `org.bluez` | sim, pelo `dbus-org.bluez.service` | `integrations/bluez_dbus.py`, `scripts/bt_active_mode.sh`, `scripts/bt_health_watchdog.sh`, `scripts/bt_ponte_privilegiada.sh`; por gesto de diagnóstico, `scripts/doctor.sh` e `scripts/retrato_do_estado.sh` | nenhuma | **risco 1** |
-| `org.freedesktop.Notifications` | aqui não; `dunst` e `mako` trazem arquivo de ativação (lido) | `integrations/desktop_notifications.py` | nenhuma | **risco 2** |
+| `org.freedesktop.portal.Desktop` | sim | `integrations/tela_do_jogo.py` | só depois da sessão (`sessao_ainda_nao_subiu`, em `integrations/barramento_do_sistema.py`), e a leitura do `systemd1` vai com `no_auto_start` | curado em 05/11 |
+| `org.bluez` | sim, pelo `dbus-org.bluez.service` | `integrations/bluez_dbus.py`, `scripts/bt_active_mode.sh`, `scripts/bt_health_watchdog.sh`, `scripts/bt_ponte_privilegiada.sh`; por gesto de diagnóstico, `scripts/doctor.sh` e `scripts/retrato_do_estado.sh` | `NO_AUTO_START` no Gio, `--auto-start=no` no `call` e `busctl status` nos outros verbos; o gesto de diagnóstico fica sem guarda | curado em 07/11, medido em barramento próprio; falta o rádio de verdade |
+| `org.freedesktop.Notifications` | aqui não; `dunst` e `mako` trazem arquivo de ativação (lido) | `integrations/desktop_notifications.py` | `no_auto_start` antes da sessão, pela porta | curado em 07/11, medido em barramento próprio; falta uma sessão com `dunst` ou `mako` |
 | `org.kde.StatusNotifierWatcher` | não | `desktop_notifications.statusnotifierwatcher_available` | `NameHasOwner`, que não ativa | ok |
-| `org.freedesktop.NetworkManager` | não | `integrations/faixa_do_wifi.py` | não é ativável, e o serviço está sempre de pé | ok |
-| `org.freedesktop.systemd1` (sessão) | o arquivo existe, com `Exec=/bin/false` | `tela_do_jogo.py` | `no_auto_start` | ok |
+| `org.freedesktop.NetworkManager` | não | `integrations/faixa_do_wifi.py` | `NO_AUTO_START`, pela borda do Gio | ok |
+| `org.freedesktop.systemd1` (sessão) | o arquivo existe, com `Exec=/bin/false` | `integrations/barramento_do_sistema.py` | `no_auto_start` | ok |
 | `ca.desrt.dconf` | sim | a interface, por `Gio.Settings` em `interface/tema_da_sessao.py` | só roda com a janela aberta, logo depois da sessão | ok |
 
 A base é `ls /usr/share/dbus-1/services /usr/share/dbus-1/system-services` e as linhas `dbus:` do
-`docs/data/contratos-de-fora.csv`. O CSV tem dois falsos contatos: `dbus:org.gnome` e `dbus:org.kde` em
+`docs/data/contratos-de-fora.csv`, cuja coluna `ativa` o portão confere. O CSV tem dois falsos contatos: `dbus:org.gnome` e `dbus:org.kde` em
 `profiles/simple_match.py` são nomes de janela, e não barramento.
 
 **Prova da ativação por pergunta.** Num `dbus-daemon` próprio, com um `org.bluez` de mentira ativável:
@@ -63,7 +64,9 @@ A base é `ls /usr/share/dbus-1/services /usr/share/dbus-1/system-services` e as
 | comando | ativou? |
 | --- | --- |
 | `busctl --address=<próprio> tree org.bluez --list`, o que `bt_active_mode.sh` faz | **sim** |
-| o mesmo com `--auto-start=no` | não |
+| o mesmo com `--auto-start=no`, e também `get-property`, `introspect` e `set-property` (systemd 255) | **sim** |
+| `busctl call` com `--auto-start=no` | não |
+| `busctl status org.bluez` | não |
 | `desktop_notifications.notify()`, do produto | **sim** |
 
 ## O inventário
@@ -76,7 +79,7 @@ pediu; **5** como desfazer.
 
 | item | 1 | 2 | 3 | 4 | 5 | medida |
 | --- | --- | --- | --- | --- | --- | --- |
-| `hefesto-dualsense4unix.service` | abre os controles; `pactl`, `pw-*` e `parec`; portal só depois da sessão; `org.bluez` sem proteção | sim, 124 s; alvo ausente vira «sem som» ou «sem janela», sem erro | o Hefesto; o rádio pode acordar (risco 1) | janela do portal com a chave «Tela» (problemas #3 e #4 abaixo); notificações do modo jogo | `uninstall.sh` | `journalctl --user -b 0` |
+| `hefesto-dualsense4unix.service` | abre os controles; `pactl`, `pw-*` e `parec`; portal só depois da sessão; `org.bluez` sem ativar | sim, 124 s; alvo ausente vira «sem som» ou «sem janela», sem erro | o Hefesto | janela do portal com a chave «Tela» (problemas #3 e #4 abaixo); notificações do modo jogo | `uninstall.sh` | `journalctl --user -b 0` |
 | `-gui-hotplug` | abre a janela no início da sessão | não, vem depois do `graphical-session.target` | o Hefesto | a janela do Hefesto, por escolha feita no install (`--enable-hotplug-gui`) | `uninstall.sh`, ou `--no-hotplug-gui` | subiu às 18:23:48,871 |
 | `-presenca` | um `--ping` no soquete do broker | sim; broker ausente não muda nada (`ExecStart=-`) | ninguém | nada | `uninstall.sh` | 9 inícios e 27 linhas em 24 h |
 | `-storm-watch` | só lê o diário e chama o religar quando a porta perde a sonda | sim, e não depende de sessão | a própria unit: parada contada como falha (curado na sprint do storm-watch) | nada | `uninstall.sh` | 8 paradas contadas como falha desde 06/11, 10:30; 637 linhas «terminou inesperadamente» no registro |
@@ -91,9 +94,9 @@ produto e fica fora da auditoria.
 | item | 1 | 2 | 3 | 4 | 5 | medida |
 | --- | --- | --- | --- | --- | --- | --- |
 | `hefesto-hidraw-broker` (`.service`, `.socket`) | tira o físico dos outros programas; `modprobe` de `libcomposite`, `usb_f_hid`, `vhci-hcd` e `usbip-vudc num=8` em todo boot, com controle ou sem | sim, e não depende de sessão | **todo programa que quer o controle**; a saída é a `ExecStopPost`, que reabre os nós, e o `OnFailure` do serviço de usuário | nada | `uninstall.sh` | soquete 0666, com a autorização por `SO_PEERCRED` e pelo usuário da frente (lido); 6 `Failed with result 'signal'` em 06/11, ver abaixo |
-| `hefesto-bt-agent` | agente `NoInputNoOutput` para o **rádio inteiro**, com qualquer aparelho | sim | **quem pareia outra coisa**: o pedido não chega ao aplicativo do sistema (lido; risco 4) | nada: o pareamento passa sem pergunta | `uninstall.sh` | no ar havia 45.115 s |
+| `hefesto-bt-agent` | agente `NoInputNoOutput` para o **rádio inteiro**, com qualquer aparelho | sim | **quem pareia outra coisa**: é o agente padrão, e o que chega a ele sai recusado (medido em BlueZ de mentira; risco 4) | nada: o pedido não chega a quem usa | `uninstall.sh` | no ar havia 45.115 s |
 | `hefesto-desempenho` | perfil de energia em Desempenho, em todo boot; `nvidia`, `audio` e `aspm` só entram com prova no aparelho, e o padrão é nenhum | sim | a conta de luz e a bateria | só a pergunta do install | `desempenho.sh remover`, pelo `uninstall.sh` | só existe com resposta sim; sem terminal, o padrão é não |
-| `hefesto-bt-health-watchdog` | `busctl` em `org.bluez`, a cada 2 min; `Trusted=true` só em controle (`_e_controle`); `Connect` em aparelho HID sem registro; pode reiniciar o `bluetooth.service` e, pela ponte, a porta do adaptador travado | sim; `bt_active_mode.sh` roda antes de conferir se o rádio está no ar (risco 1) | fone e teclado Bluetooth, no reinício; o diário | nada | `uninstall.sh` | 0 reinícios no diário; as travas são recusas repetidas, zero conectado e intervalo mínimo; **4.872 linhas em 24 h**, sendo 3.052 a mesma frase (risco 5) |
+| `hefesto-bt-health-watchdog` | `busctl` em `org.bluez`, a cada 2 min; `Trusted=true` só em controle (`_e_controle`); `Connect` em aparelho HID sem registro; pode reiniciar o `bluetooth.service` e, pela ponte, a porta do adaptador travado | sim; com o `org.bluez` sem dono, as duas pulam o `busctl` | fone e teclado Bluetooth, no reinício; o diário | nada | `uninstall.sh` | 0 reinícios no diário; as travas são recusas repetidas, zero conectado e intervalo mínimo; **4.872 linhas em 24 h**, sendo 3.052 a mesma frase (risco 5) |
 | `hefesto-bt-bonds-snapshot` | copia `/var/lib/bluetooth` para `/var/lib/hefesto-dualsense4unix` | sim | ninguém | nada | `uninstall.sh`; a cópia sai só com `--purge-config` | 284 linhas em 24 h |
 | `hefesto-wifi-usb-vigia` | a cada 1 min, zera o scan de fundo e **reinicia a porta** do Wi-Fi USB travado | sim; sem Wi-Fi USB não faz nada | a rede de quem usa, se o diagnóstico errar | a queda de 2 s na rede, no reinício | `uninstall.sh` | as travas são 3 falhas seguidas, 600 s entre reinícios e 3 reinícios sem cura; 0 reinícios no diário; **3.902 linhas em 24 h** (risco 5) |
 
@@ -164,7 +167,7 @@ Tudo aqui vale desde o boot, sem depender da sessão, e sem nada visível: as co
 | --- | --- | --- | --- |
 | backport do BlueZ | troca o pacote do sistema | todo aparelho Bluetooth | `--restore-bluez`, destrutivo; o padrão preserva, e a ajuda diz |
 | backport do PipeWire e do WirePlumber, com `hefesto-pipewire` no apt | idem | todo o som da máquina | `--restore-pipewire`; o uninstall pergunta |
-| **backport do portal do COSMIC**, com `hefesto-portal-cosmic` no apt | idem | toda captura de tela | **nenhum: o `uninstall.sh` não cita o portal** (risco 6) |
+| **backport do portal do COSMIC**, com `hefesto-portal-cosmic` no apt | idem | toda captura de tela | `--restore-portal`; o uninstall pergunta, e o pino sai sempre |
 | módulos DKMS (`hid-playstation`, `hid-nintendo`, `uhid`, `usb-f-hid`, `rtw88-usb`) | trocam o módulo do kernel | controles e o Wi-Fi USB | `uninstall.sh` |
 | `usbcore.autosuspend=-1` na cmdline | **todo USB**; o install olha a bateria | todo USB | o `uninstall.sh` devolve pelo registro de posse |
 | `usbcore.quirks=054c:0ce6:gn` na cmdline | só o controle | só controles | `--remove-usb-quirk`; o padrão preserva, e a saída diz |
@@ -198,10 +201,10 @@ no `PermissionStore`, gravada pelo portal depois do clique, e não há `conf.d` 
 
 | # | risco | medida | sprint |
 | --- | --- | --- | --- |
-| 1 | **Rádio parado acorda com uma pergunta.** Quem para o Bluetooth de propósito o vê voltar em até 2 min | `busctl` sem `--auto-start=no` ativou o nome no barramento próprio; `bt_active_mode.sh` roda antes da conferência do `is-active` | `O-RADIO-PARADO-NAO-ACORDA-COM-UMA-PERGUNTA-01` |
+| 1 | **Rádio parado acorda com uma pergunta.** Quem para o Bluetooth de propósito o vê voltar em até 2 min | `busctl tree` ativou o nome no barramento próprio; `bt_active_mode.sh` roda antes da conferência do `is-active` | `O-RADIO-PARADO-NAO-ACORDA-COM-UMA-PERGUNTA-01` |
 | 2 | **Notificação acorda serviço antes da sessão,** onde o serviço é ativável | `notify()` ativou o nome no barramento próprio, sem olhar a sessão; o perfil aplicado na subida alcança esse caminho (lido) | `A-NOTIFICACAO-NAO-ACORDA-O-SERVICO-ANTES-DA-SESSAO-01` |
 | 3 | os problemas #3, #4 e #5 acima | ver a tabela | as duas sprints citadas |
-| 4 | **O agente responde pelo rádio inteiro.** Pareamento de qualquer aparelho passa sem pergunta | lido da unit e da capacidade; falta medir o pedido de fora | `O-AGENTE-DE-PAREAMENTO-SO-RESPONDE-AO-GESTO-01` |
+| 4 | **O agente responde pelo rádio inteiro.** Pareamento de qualquer aparelho não chega a quem usa | o `bt-agent` de verdade pede `RequestDefaultAgent` e, com a entrada nula da unit, recusa `RequestConfirmation`, `RequestAuthorization` e `AuthorizeService`, em BlueZ de mentira; falta medir com um fone de verdade | `O-AGENTE-DE-PAREAMENTO-SO-RESPONDE-AO-GESTO-01` |
 | 5 | **Os vigias repetem a mesma frase:** ~12 mil linhas por dia, 3,4% das 355 mil do diário, e a guarda da Steam roda 135 vezes. Risco baixo: quem enche o diário é o `cosmic-session`, com 246 mil | as contagens do inventário | `OS-VIGIAS-NAO-ENCHEM-O-DIARIO-DO-SISTEMA-01` |
 | 6 | **O uninstall deixa o portal nosso e o pino do apt** | `grep -c portal-cosmic uninstall.sh` dá 0 | `O-UNINSTALL-DEVOLVE-O-PORTAL-DA-DISTRIBUICAO-01` |
 | 7 | **Nada impede o próximo contato sem proteção** | a tabela dos nomes D-Bus foi feita à mão | `A-REGUA-DO-BOM-VIZINHO-01` |
@@ -224,14 +227,17 @@ Para ninguém gastar de novo:
 
 ## A proposta de régua
 
-Três peças, em `A-REGUA-DO-BOM-VIZINHO-01`:
+Três peças, de pé desde `A-REGUA-DO-BOM-VIZINHO-01`:
 
-1. **Coluna `ativa` no `docs/data/contratos-de-fora.csv`**, para cada `dbus:`: `nao`, `sim`, ou `sim-protegido`.
-   `scripts/check_os_contratos_de_fora.py` reprova `sim` sem proteção.
-2. **Uma porta só para o barramento.** Um módulo guarda a pergunta com `no_auto_start` e a guarda da sessão, e o portão
-   reprova chamada a nome do sistema fora desse módulo. `_sessao_ainda_nao_subiu` sai de `tela_do_jogo.py` para essa porta.
-3. **Prova de boot.** Um `dbus-daemon` próprio, com todo nome que o produto cita ativável e de mentira, sobe o serviço sem
-   sessão e conta o que ativou. O certo é zero, e a mordida é tirar a guarda de um deles.
+1. **Coluna `ativa` no `docs/data/contratos-de-fora.csv`**, para cada `dbus:`: `não`, `sim`, ou `sim-protegido`.
+   `scripts/check_os_contratos_de_fora.py` reprova a linha sem a coluna e o `sim`.
+2. **Uma porta só para o barramento.** `integrations/barramento_do_sistema.py` guarda a pergunta com `no_auto_start` e a
+   guarda da sessão. O portão reprova `sim-protegido` num arquivo sem a porta, salvo a borda do Gio em `bluez_dbus.py`, e
+   `busctl` no `org.bluez` em script sem o `_bluez_de_pe`, salvo o `call` com `--auto-start=no` e o gesto de quem usa.
+3. **Prova de boot.** `tests/unit/test_a_regua_do_bom_vizinho.py`: um `dbus-daemon` próprio, com todo nome `dbus:` do
+   censo ativável e de mentira, inclusive os `não`, roda sem sessão cada caminho do produto que fala com o nome. O certo
+   é zero. Ficam fora o próprio barramento e o `org.gnome`, que é nome de janela. O serviço inteiro não sobe ali, porque
+   abriria os nós da máquina: nome novo no censo sem caminho na prova reprova.
 
 ## Como medir de novo
 

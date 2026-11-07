@@ -12,6 +12,10 @@ After=bluetooth.service
 Type=oneshot
 ExecStart=-+/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh --quiet
 ExecStart=/usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh
+# O timer roda a cada 2 min: o início e o fim são info e saem do diário; a saída do script sobe a
+# notice para ficar, e a falha da unit também fica.
+SyslogLevel=notice
+LogLevelMax=notice
 NoNewPrivileges=yes
 ProtectHome=yes
 PrivateTmp=yes

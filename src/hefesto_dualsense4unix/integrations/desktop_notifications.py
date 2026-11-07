@@ -5,6 +5,7 @@ import contextlib
 import os
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import barramento_do_sistema
 from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -28,12 +29,15 @@ def notify(
     once_key: str | None = None,
     actions: list[tuple[str, str]] | None = None,
 ) -> bool:
-    """Emite uma notification D-Bus padrão freedesktop."""
+    """Emite uma notification D-Bus padrão freedesktop.
+
+    Antes da sessão gráfica o pedido só chega a quem já está de pé: ativar o serviço de avisos
+    agora o faria nascer sem ``WAYLAND_DISPLAY``. Recusado, o aviso não gasta o ``once_key``."""
     if _a_suite_esta_rodando() or (once_key is not None and once_key in _announced_once):
         return False
 
     try:
-        from jeepney import DBusAddress, new_method_call
+        from jeepney import DBusAddress, MessageType, new_method_call
         from jeepney.io.blocking import open_dbus_connection
     except ImportError:
         logger.debug("notify_jeepney_missing")
@@ -59,7 +63,12 @@ def notify(
     conn = None
     try:
         conn = open_dbus_connection(bus="SESSION")
-        conn.send_and_get_reply(msg, timeout=_DBUS_TIMEOUT_SECONDS)
+        if not barramento_do_sistema.sessao_de_pe(conn, _DBUS_TIMEOUT_SECONDS):
+            barramento_do_sistema.sem_ativar(msg)
+        resposta = conn.send_and_get_reply(msg, timeout=_DBUS_TIMEOUT_SECONDS)
+        if resposta.header.message_type == MessageType.error:
+            logger.debug("notify_recusado", motivo=resposta.body)
+            return False
     except Exception as exc:
         logger.debug("notify_failed", err=str(exc))
         return False

@@ -5,14 +5,20 @@ import sys
 import types
 from typing import Any, ClassVar
 
+import jeepney
 import pytest
+from jeepney import HeaderFields, MessageType
+from jeepney.io import blocking
 
 from hefesto_dualsense4unix.integrations import desktop_notifications
+
+captured_calls: list[Any] = []
 
 
 class _FakeReply:
     def __init__(self, body: tuple[Any, ...]) -> None:
         self.body = body
+        self.header = types.SimpleNamespace(message_type=MessageType.method_return)
 
 
 class _FakeConn:
@@ -33,6 +39,8 @@ class _FakeConn:
         self.calls.append({"msg": msg, "timeout": timeout})
         if self.raise_on_send is not None:
             raise self.raise_on_send
+        if msg.header.fields.get(HeaderFields.member) == "Get":
+            return _FakeReply((("as", ["XDG_CURRENT_DESKTOP=COSMIC"]),))
         return _FakeReply(self.reply_body)
 
     def close(self) -> None:
@@ -53,29 +61,15 @@ def _install_fake_jeepney(
             raise raise_on_open
         return _FakeConn(reply_body=reply_body, raise_on_send=raise_on_send)
 
-    class _DBusAddress:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            self.args = args
-            self.kwargs = kwargs
+    real_new_method_call = jeepney.new_method_call
+    captured_calls.clear()
 
-    captured_calls: list[Any] = []
-
-    def _new_method_call(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    def _new_method_call(*args: Any, **kwargs: Any) -> Any:
         captured_calls.append({"args": args, "kwargs": kwargs})
-        return {"call": True, "args": args}
+        return real_new_method_call(*args, **kwargs)
 
-    jeepney_mod = types.ModuleType("jeepney")
-    jeepney_mod.DBusAddress = _DBusAddress  # type: ignore[attr-defined]
-    jeepney_mod.new_method_call = _new_method_call  # type: ignore[attr-defined]
-    jeepney_mod._captured_calls = captured_calls  # type: ignore[attr-defined]
-
-    jeepney_io = types.ModuleType("jeepney.io")
-    jeepney_io_blocking = types.ModuleType("jeepney.io.blocking")
-    jeepney_io_blocking.open_dbus_connection = _open_dbus_connection  # type: ignore[attr-defined]
-
-    monkeypatch.setitem(sys.modules, "jeepney", jeepney_mod)
-    monkeypatch.setitem(sys.modules, "jeepney.io", jeepney_io)
-    monkeypatch.setitem(sys.modules, "jeepney.io.blocking", jeepney_io_blocking)
+    monkeypatch.setattr(jeepney, "new_method_call", _new_method_call)
+    monkeypatch.setattr(blocking, "open_dbus_connection", _open_dbus_connection)
     monkeypatch.setenv(desktop_notifications.AVISO_DE_VERDADE_NA_SUITE, "1")
 
     return _FakeConn.instances
@@ -109,9 +103,8 @@ class TestNotify:
             icon="ic",
             timeout_ms=2000,
         )
-        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
-        assert captured
-        last = captured[-1]
+        assert captured_calls
+        last = captured_calls[-1]
         assert last["args"][1] == "Notify"
         assert last["args"][2] == "susssasa{sv}i"
         notify_args = last["args"][3]
@@ -142,8 +135,7 @@ class TestNotify:
             "corpo",
             actions=[("open", "Abrir Hefesto"), ("dismiss", "Ignorar")],
         )
-        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
-        notify_args = captured[-1]["args"][3]
+        notify_args = captured_calls[-1]["args"][3]
         assert notify_args[5] == ["open", "Abrir Hefesto", "dismiss", "Ignorar"]
 
     def test_actions_default_lista_vazia(
@@ -152,8 +144,7 @@ class TestNotify:
         """Sem actions kwarg, mantém [] (não quebra callers v3.2.x)."""
         _install_fake_jeepney(monkeypatch, reply_body=(8,))
         desktop_notifications.notify("a")
-        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
-        notify_args = captured[-1]["args"][3]
+        notify_args = captured_calls[-1]["args"][3]
         assert notify_args[5] == []
 
     def test_conexao_sempre_fechada(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -229,7 +220,7 @@ class TestStatusNotifierWatcherAvailable:
     def test_dbus_args_corretos(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_fake_jeepney(monkeypatch, reply_body=(True,))
         desktop_notifications.statusnotifierwatcher_available()
-        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
+        captured = captured_calls
         last = captured[-1]
         assert last["args"][1] == "NameHasOwner"
         assert last["args"][2] == "s"

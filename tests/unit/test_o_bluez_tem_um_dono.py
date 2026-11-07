@@ -269,7 +269,7 @@ def test_o_busctl_so_escreve_de_dentro_da_borda(
     escrita = bd.PeloBusctl().desconectar(no, quem="régua")
     assert escrita.feita, escrita
     assert anotado.read_text(encoding="utf-8").split() == [
-        "call", bd.SERVICO, no, bd.APARELHO, "Disconnect"
+        "call", bd.SERVICO, no, bd.APARELHO, "Disconnect", "--auto-start=no"
     ]
 
 

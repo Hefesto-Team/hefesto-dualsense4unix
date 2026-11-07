@@ -199,10 +199,15 @@ _onde() {
     fi
 }
 
+_bluez_de_pe() {
+    command -v busctl >/dev/null 2>&1 || return 1
+    busctl status org.bluez >/dev/null 2>&1
+}
+
 _hci_do_mac() {
     local alvo="$1" caminho hci endereco
     [[ "${LIB}" == "${LIB_REAL}" || -n "${BIN_DE_TESTE}" ]] || return 1
-    command -v busctl >/dev/null 2>&1 || return 1
+    _bluez_de_pe || return 1
     while read -r caminho; do
         [[ -n "${caminho}" ]] || continue
         hci="${caminho##*/}"
@@ -219,7 +224,7 @@ _hci_do_mac() {
 
 verbo_adaptadores() {
     local caminho hci endereco apelido ligado achou=0
-    if command -v busctl >/dev/null 2>&1; then
+    if _bluez_de_pe; then
         while read -r caminho; do
             [[ -n "${caminho}" ]] || continue
             hci="${caminho##*/}"
@@ -373,6 +378,7 @@ _fechar_a_busca() {
 
 _candidatos_novos() {
     local hci="$1" javistos="$2" caminho endereco nome pareado classe
+    _bluez_de_pe || return 0
     while read -r caminho; do
         [[ -n "${caminho}" ]] || continue
         grep -qxF -- "${caminho}" "${javistos}" 2>/dev/null && continue
@@ -775,6 +781,7 @@ FIM
 
 _vinculado() {
     local nome valor
+    _bluez_de_pe || return 1
     for nome in Paired Bonded; do
         valor="$(busctl get-property org.bluez "$1" org.bluez.Device1 "${nome}" 2>/dev/null \
             | sed -E 's/^b //' || true)"

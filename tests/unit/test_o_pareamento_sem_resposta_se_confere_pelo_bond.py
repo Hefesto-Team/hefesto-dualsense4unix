@@ -193,6 +193,7 @@ _BUSCTL_DA_PONTE = """#!/usr/bin/env bash
 set -u
 raiz="${BUSCTL_FALSO_RAIZ}"
 case "${1:-}" in
+    status) exit 0 ;;
     tree) cat "${raiz}/tree"; exit 0 ;;
     get-property)
         arquivo="${raiz}/props/${3//\\//__}.${5:-}"

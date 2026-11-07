@@ -49,6 +49,7 @@ _JEEPNEY_DE_MENTIRA = textwrap.dedent(
     jeepney = types.ModuleType("jeepney")
     jeepney.DBusAddress = lambda *a, **k: None
     jeepney.new_method_call = lambda *a, **k: None
+    jeepney.MessageType = None
     jeepney_io = types.ModuleType("jeepney.io")
     jeepney_io_blocking = types.ModuleType("jeepney.io.blocking")
     jeepney_io_blocking.open_dbus_connection = _abrir
