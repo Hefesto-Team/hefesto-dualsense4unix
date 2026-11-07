@@ -1,11 +1,14 @@
 """Os jogos que JÁ ESTÃO nesta máquina, para o campo "Nome do jogo:"."""
 from __future__ import annotations
 
+import asyncio
 import configparser
 import contextlib
 import os
 import re
 import shlex
+import threading
+import time
 import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -22,6 +25,9 @@ from hefesto_dualsense4unix.profiles.steam_app import (
     parece_endereco,
     steam_appid_de_texto,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 PASTAS_DE_ATALHOS: tuple[str, ...] = (
     "~/.local/share/applications",
@@ -504,6 +510,14 @@ def jogo_da_janela(
 
 _NOMES_DAS_JANELAS: tuple[object, list[JogoLocal], dict[str, str]] | None = None
 
+RELOGIO_DO_CADERNO_S = 5.0
+TETO_DA_RELEITURA_S = 10.0
+
+_TRAVA_DA_RELEITURA = threading.Lock()
+_relendo = False
+_relido_em = float("-inf")
+_assinatura_que_estourou: object = None
+
 
 def assinatura_das_janelas(
     lar: Path | None = None,
@@ -524,19 +538,10 @@ def assinatura_das_janelas(
     return tuple(linhas)
 
 
-def _caderno_das_janelas(
-    lar: Path | None,
-    pastas: Sequence[Path] | None,
-) -> tuple[list[JogoLocal], dict[str, str]]:
-    """A leitura das três origens, memoizada — a LISTA e o índice, de uma vez."""
+def _publicar_o_caderno(assinatura: object, jogos: list[JogoLocal]) -> tuple[
+    list[JogoLocal], dict[str, str]
+]:
     global _NOMES_DAS_JANELAS
-    try:
-        assinatura = assinatura_das_janelas(lar, pastas)
-        if _NOMES_DAS_JANELAS is not None and _NOMES_DAS_JANELAS[0] == assinatura:
-            return _NOMES_DAS_JANELAS[1], _NOMES_DAS_JANELAS[2]
-        jogos = list(jogos_com_janela(lar, pastas))
-    except Exception:  # pragma: no cover
-        return [], {}
     nomes = {j.chave.casefold(): j.nome for j in jogos if j.chave}
     for jogo in jogos:
         numero = steam_appid_de_texto(jogo.chave)
@@ -544,6 +549,88 @@ def _caderno_das_janelas(
             nomes.setdefault(str(numero), jogo.nome)
     _NOMES_DAS_JANELAS = (assinatura, jogos, nomes)
     return jogos, nomes
+
+
+def _reler_o_caderno(
+    lar: Path | None,
+    pastas: Sequence[Path] | None,
+) -> tuple[list[JogoLocal], dict[str, str]]:
+    """A leitura das três origens neste fio, freada pela assinatura."""
+    global _relido_em
+    _relido_em = time.monotonic()
+    try:
+        assinatura = assinatura_das_janelas(lar, pastas)
+        if _NOMES_DAS_JANELAS is not None and _NOMES_DAS_JANELAS[0] == assinatura:
+            return _NOMES_DAS_JANELAS[1], _NOMES_DAS_JANELAS[2]
+        jogos = list(jogos_com_janela(lar, pastas))
+    except Exception:  # pragma: no cover
+        return [], {}
+    return _publicar_o_caderno(assinatura, jogos)
+
+
+def _reler_em_fundo() -> None:
+    """A releitura do relógio lento, em fio próprio e com teto conjunto.
+
+    Teto estourado deixa o caderno anterior valendo, e a mesma assinatura não tenta de novo.
+    """
+    global _assinatura_que_estourou, _relendo
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import teto_conjunto
+
+    try:
+        assinatura = assinatura_das_janelas()
+        pronto = _NOMES_DAS_JANELAS
+        if (pronto is None or pronto[0] != assinatura) and assinatura != _assinatura_que_estourou:
+            with teto_conjunto(TETO_DA_RELEITURA_S) as teto:
+                jogos = list(jogos_com_janela())
+            if teto.estourou and pronto is not None:
+                _assinatura_que_estourou = assinatura
+            else:
+                _publicar_o_caderno(assinatura, jogos)
+    except Exception as exc:
+        logger.warning("caderno_das_janelas_nao_releu", err=str(exc))
+    finally:
+        _relendo = False
+
+
+def _pedir_a_releitura() -> None:
+    """Dispara a releitura de fundo, no máximo uma por relógio. Não toca o disco."""
+    global _relendo, _relido_em
+    agora = time.monotonic()
+    if agora - _relido_em < RELOGIO_DO_CADERNO_S:
+        return
+    with _TRAVA_DA_RELEITURA:
+        if _relendo or agora - _relido_em < RELOGIO_DO_CADERNO_S:
+            return
+        _relendo, _relido_em = True, agora
+    threading.Thread(
+        target=_reler_em_fundo, name="hefesto-caderno-das-janelas", daemon=True
+    ).start()
+
+
+def _no_laco_asyncio() -> bool:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
+
+
+def _caderno_das_janelas(
+    lar: Path | None,
+    pastas: Sequence[Path] | None,
+) -> tuple[list[JogoLocal], dict[str, str]]:
+    """O último caderno pronto, sem esperar: a LISTA e o índice, de uma vez.
+
+    A releitura corre num relógio lento, fora de quem pergunta. Só lê aqui quem nomeia o lar, e
+    quem chega antes do primeiro caderno sem estar no laço do serviço.
+    """
+    if lar is not None or pastas is not None:
+        return _reler_o_caderno(lar, pastas)
+    pronto = _NOMES_DAS_JANELAS
+    if pronto is None and not _no_laco_asyncio():
+        return _reler_o_caderno(None, None)
+    _pedir_a_releitura()
+    return ([], {}) if pronto is None else (pronto[1], pronto[2])
 
 
 def nomes_das_janelas(
@@ -613,6 +700,8 @@ __all__ = [
     "MSG_FORA_DA_MAQUINA",
     "MSG_NAO_RECONHECI",
     "PASTAS_DE_ATALHOS",
+    "RELOGIO_DO_CADERNO_S",
+    "TETO_DA_RELEITURA_S",
     "JogoLocal",
     "LeituraDosJogos",
     "appids_instalados_na_steam",

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import json
 import os
 import re
@@ -10,7 +11,7 @@ import shutil
 import signal
 import subprocess
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -1127,6 +1128,33 @@ def biblioteca_da_porta(rotulo: str, jogos: object) -> BibliotecaDoLancador:
     return BibliotecaDoLancador(rotulo, LIDO, None, fora, [])
 
 
+class TetoConjunto:
+    """O tempo de uma releitura inteira, dividido por todos os leitores."""
+
+    def __init__(self, teto_s: float) -> None:
+        self.fim = time.monotonic() + teto_s
+        self.estourou = False
+
+    def resto(self) -> float:
+        return self.fim - time.monotonic()
+
+
+_TETO_DA_RELEITURA: contextvars.ContextVar[TetoConjunto | None] = contextvars.ContextVar(
+    "teto_da_releitura", default=None
+)
+
+
+@contextlib.contextmanager
+def teto_conjunto(teto_s: float) -> Iterator[TetoConjunto]:
+    """Cada ``ler_por_processo`` aqui dentro gasta do mesmo ``teto_s``, em vez de ter o seu."""
+    teto = TetoConjunto(teto_s)
+    marca = _TETO_DA_RELEITURA.set(teto)
+    try:
+        yield teto
+    finally:
+        _TETO_DA_RELEITURA.reset(marca)
+
+
 def ler_por_processo(leitor: LeitorPorProcesso, *,
                      bwrap: str | bool | None = True) -> BibliotecaDoLancador:
     """A biblioteca que o leitor da modificação devolve — e nunca levanta.
@@ -1144,6 +1172,13 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     if comando is None:
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
                                     ["o leitor da modificação não está na pasta da modificação"])
+    teto = _TETO_DA_RELEITURA.get()
+    prazo_s = leitor.prazo_s if teto is None else min(leitor.prazo_s, teto.resto())
+    if prazo_s <= 0:
+        if teto is not None:
+            teto.estourou = True
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
+                                    ["a releitura passou do teto conjunto"])
     caixa = shutil.which("bwrap") if bwrap is True else (bwrap or None)
     try:
         processo = subprocess.Popen(
@@ -1154,12 +1189,14 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     except OSError as erro:
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [], [str(erro)])
     try:
-        saida, motivo = _saida_do_leitor(processo, leitor.prazo_s)
+        saida, motivo = _saida_do_leitor(processo, prazo_s)
     finally:
-        _parar(processo, leitor.prazo_s)
+        _parar(processo, prazo_s)
         if processo.stdout is not None:
             processo.stdout.close()
     if saida is None:
+        if teto is not None and teto.resto() <= 0:
+            teto.estourou = True
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [], [motivo])
     try:
         bruto = json.loads(saida.decode("utf-8"))

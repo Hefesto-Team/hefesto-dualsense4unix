@@ -355,6 +355,108 @@ def test_so_o_p3_de_pe_mede_o_mesmo_atraso() -> None:
     assert c["poll.laco.lentas"] == 1, c
 
 
+@pytest.mark.parametrize(
+    ("mesa", "quem"),
+    [
+        (("usb", "usb", "usb", "bt"), 2),
+        (("usb", "bt", "bt", "bt"), 3),
+        (("usb", "usb", "bt", "bt"), 4),
+        (("bt", "bt", "bt", "bt"), 2),
+    ],
+    ids=["3-cabos-1-radio-do-p2", "1-cabo-3-radios-do-p3", "2-e-2-do-p4", "4-radios-do-p2"],
+)
+def test_o_gesto_de_modo_de_um_nao_para_a_entrada_dos_outros_tres(
+    mesa: tuple[str, ...], quem: int, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Os três custos do gesto dormindo: o disco, a descoberta e a gravação, e os outros jogando.
+
+    MORDIDA: devolva `descobrir_os_nos` ou a gravação do modo ao fio do laço, e a parada aparece.
+    """
+    from hefesto_dualsense4unix.core import evdev_reader
+    from hefesto_dualsense4unix.profiles import manager
+
+    def dorme(*_a: Any, **_k: Any) -> Any:
+        time.sleep(0.25)
+        return {}
+
+    monkeypatch.setattr(evdev_reader, "discover_dualsense_evdevs", dorme)
+    monkeypatch.setattr(co, "externos_que_ganham_virtual", dict)
+    monkeypatch.setattr(manager, "gravar_o_modo_no_perfil_ativo", dorme)
+    monkeypatch.setattr(manager, "nome_do_perfil_que_grava", lambda *_a: "Ensaio")
+    monkeypatch.setattr(co.CoopManager, "should_be_active", lambda self: False)
+    daemon = _Laco(mesa)
+    daemon.config.mouse_speed = daemon.config.mouse_scroll_speed = 1
+    outros = [n for n in daemon.pads if n != quem]
+    ditos: list[tuple[str, dict[str, Any]]] = []
+
+    def gesto() -> None:
+        laco = asyncio.get_running_loop()
+
+        def fazer() -> None:
+            daemon._coop_manager._nos_de_agora(True, "manual")
+            Daemon.gravar_o_modo_escolhido(daemon, "gamepad",  # type: ignore[arg-type]
+                                           caminho="xbox", mascara="xbox", porta="controle")
+
+        laco.call_later(0.1, fazer)
+        evento = SimpleNamespace(type=ecodes.EV_KEY, code=ecodes.BTN_SOUTH, value=1)
+        for n in outros:
+            laco.call_later(0.2, daemon.leitores[n]._handle_event, evento, ecodes)
+
+    _rodar_vigiado(daemon, gesto, ditos=ditos)
+    manager.FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
+
+    c = daemon.contadores()
+    assert c["poll.laco.lentas"] == 0, ditos
+    assert c["poll.tique.atraso_pior_us"] < 100_000, c
+    assert all(daemon.pads[n].chegadas >= 1 for n in outros), "um dos três parou com o gesto"
+
+
+@pytest.mark.parametrize(
+    "mesa",
+    [("usb", "usb", "usb", "bt"), ("usb", "bt", "bt", "bt"), ("usb", "usb", "bt", "bt")],
+    ids=["3-cabos-1-radio", "1-cabo-3-radios", "2-e-2"],
+)
+def test_a_troca_de_cabo_de_um_nao_fura_o_tique_dos_outros_tres(
+    mesa: tuple[str, ...], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O cabo que entra suja a assinatura: a releitura presa fica fora do tique e dos três.
+
+    MORDIDA: devolva a releitura ao fio do laço em `_caderno_das_janelas`.
+    """
+    from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+    monkeypatch.setattr(jl, "RELOGIO_DO_CADERNO_S", 0.05)
+    monkeypatch.setattr(jl, "_relendo", False)
+    monkeypatch.setattr(jl, "_relido_em", float("-inf"))
+    monkeypatch.setattr(jl, "assinatura_das_janelas", lambda *_a, **_k: ("cabo novo",))
+    solta = threading.Event()
+    monkeypatch.setattr(jl, "jogos_com_janela", lambda *_a, **_k: [solta.wait(3.0), ][:0])
+    monkeypatch.setattr(jl, "_NOMES_DAS_JANELAS", (("cabo velho",), [], {}))
+    daemon = _Laco(mesa)
+    janela = SimpleNamespace(store=SimpleNamespace(window_detect_current_class="firefox"))
+    ditos: list[tuple[str, dict[str, Any]]] = []
+
+    def agendar() -> None:
+        laco = asyncio.get_running_loop()
+        evento = SimpleNamespace(type=ecodes.EV_KEY, code=ecodes.BTN_SOUTH, value=1)
+
+        def perguntar(vezes: int) -> None:
+            Daemon._janela_de_jogo_em_foco(janela)  # type: ignore[arg-type]
+            if vezes:
+                laco.call_later(1 / 60, perguntar, vezes - 1)
+
+        perguntar(30)
+        for leitor in daemon.leitores.values():
+            laco.call_later(0.3, leitor._handle_event, evento, ecodes)
+
+    _rodar_vigiado(daemon, agendar, ditos=ditos)
+    solta.set()
+
+    c = daemon.contadores()
+    assert c["poll.laco.lentas"] == 0, ditos
+    assert all(pad.chegadas >= 1 for pad in daemon.pads.values())
+
+
 def test_a_medida_nao_escreve_no_tique() -> None:
     """O acréscimo não escreve no store fora do fechamento da janela: só os dois de sempre."""
     store = StateStore()
@@ -475,7 +577,7 @@ def test_o_doctor_diz_o_atraso_e_quem_prendeu() -> None:
         "poll.pool.lentas": 2, "poll.pool.ocupante.segura_o_fio": 300_000,
     })
 
-    assert linha == ("[ OK ]", "atraso do serviço: 3 acima de 100 ms, a pior 1.234,0 ms em "
+    assert linha == ("[ OK ]", "atraso do serviço: 3 acima de 100 ms, a pior 1234,0 ms em "
                      "«poll_loop»; 2 na fila do pool, a pior 300,0 ms atrás de «segura_o_fio»")
 
 
