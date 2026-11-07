@@ -37,13 +37,14 @@ construção, não tem `docs/process/`):
 A distância entre 136 e 28 é o ponto inteiro: **quase toda menção é prosa**, e
 prosa não quebra clone nenhum. Quem quebrava era um punhado de sete arquivos.
 
-## OS SETE, e quem lê cada um
+## OS ARQUIVOS, e quem lê cada um
 
 | arquivo | morava em | quem o lê |
 | --- | --- | --- |
 | `METODO-DE-ISOLAMENTO.md` | `docs/process/` | `scripts/check_paridade_transporte.py` (o caderno de ensaios) |
 | `COMO-OLHAR-A-TELA.md` | `docs/process/` | `tests/unit/test_a_tabela_dos_scripts_de_tela.py` (a tabela dos scripts de tela) |
 | `POLITICA-core-nunca-sai-da-maquina.md` | `docs/process/` | `tests/unit/test_radio_aberto_e7_e9.py` (E7) |
+| `o-hefesto-e-bom-vizinho-do-sistema.md` | nasceu aqui | a régua do bom vizinho (o inventário do que o Hefesto muda na máquina) |
 | `2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md` | `docs/process/` | `scripts/regua_de_tela.py` e `scripts/check_regua_de_tela.py` |
 | `2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md` | `docs/process/` | `scripts/check_paridade_gtk_html.py` |
 | `2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md` | `docs/process/sprints/arquivados/` | `scripts/mesa_de_medicao.py` (o gesto das 21) |
