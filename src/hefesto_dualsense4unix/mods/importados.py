@@ -19,6 +19,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.mods import meu_css, tema
 from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError
+from hefesto_dualsense4unix.mods.leitura_da_caixa import ler_ou_vazio
 
 SUFIXO = ".importado"
 TAMANHO_DA_LOGO = 256 * 1024
@@ -36,32 +37,25 @@ def caminho(mod_id: str, opcao_id: str, lugares: Any) -> Path:
 _NAO_LEU = "O arquivo não pôde ser lido."
 
 
-def _bytes_ou_recusa(alvo: Path, teto: int) -> bytes | str:
-    """Os bytes de um arquivo comum até ``teto``, ou a frase da recusa."""
+def _ler_pequeno(alvo: Path, teto: int) -> bytes:
+    """Os bytes do arquivo que a pessoa escolheu (um link vale), comum e até ``teto``; o resto
+    é a recusa dita."""
     try:
         modo = alvo.stat()
     except OSError:
-        return _NAO_LEU
+        raise InstalacaoRecusadaError(_NAO_LEU) from None
     if not stat.S_ISREG(modo.st_mode):
-        return "Escolha um arquivo comum."
+        raise InstalacaoRecusadaError("Escolha um arquivo comum.")
     if modo.st_size > teto:
-        return f"O arquivo passa de {teto // 1024} KB."
+        raise InstalacaoRecusadaError(f"O arquivo passa de {teto // 1024} KB.")
     try:
         with alvo.open("rb") as arquivo:
             dados = arquivo.read(teto + 1)
     except OSError:
-        return _NAO_LEU
+        raise InstalacaoRecusadaError(_NAO_LEU) from None
     if len(dados) > teto:
-        return f"O arquivo passa de {teto // 1024} KB."
+        raise InstalacaoRecusadaError(f"O arquivo passa de {teto // 1024} KB.")
     return dados
-
-
-def _ler_pequeno(alvo: Path, teto: int) -> bytes:
-    """Os bytes de um arquivo comum até ``teto``; o resto é a recusa dita."""
-    lido = _bytes_ou_recusa(alvo, teto)
-    if isinstance(lido, str):
-        raise InstalacaoRecusadaError(lido)
-    return lido
 
 
 def _medidas_do_jpeg(dados: bytes) -> tuple[int, int] | None:
@@ -208,18 +202,10 @@ def tirar(manifesto: Any, opcao_id: str, lugares: Any) -> None:
     opcoes.guardar(manifesto, opcao_id, "", lugares)
 
 
-def _copia(mod_id: str, opcao_id: str, lugares: Any, teto: int) -> bytes | None:
-    lido = _bytes_ou_recusa(caminho(mod_id, opcao_id, lugares), teto)
-    return lido if isinstance(lido, bytes) else None
-
-
 def ler_o_tema(mod_id: str, opcao_id: str, lugares: Any) -> str:
     """A folha do tema importado (vazia sem cópia). Quem a aplica passa de novo pela régua."""
-    dados = _copia(mod_id, opcao_id, lugares, tema.TAMANHO_MAXIMO)
-    if dados is None:
-        return ""
     try:
-        return dados.decode("utf-8")
+        return ler_ou_vazio(caminho(mod_id, opcao_id, lugares), tema.TAMANHO_MAXIMO).decode("utf-8")
     except UnicodeDecodeError:
         return ""
 
@@ -227,9 +213,7 @@ def ler_o_tema(mod_id: str, opcao_id: str, lugares: Any) -> str:
 def css_da_logo(mod_id: str, opcao_id: str, lugares: Any) -> str:
     """A folha que troca a logo do canto pela importada, montada só de bytes que passam de novo
     pela régua (a cópia pode ter sido trocada à mão); vazia sem logo que sirva."""
-    dados = _copia(mod_id, opcao_id, lugares, TAMANHO_DA_LOGO)
-    if dados is None:
-        return ""
+    dados = ler_ou_vazio(caminho(mod_id, opcao_id, lugares), TAMANHO_DA_LOGO)
     try:
         mime = logo_valida(dados)
     except InstalacaoRecusadaError:

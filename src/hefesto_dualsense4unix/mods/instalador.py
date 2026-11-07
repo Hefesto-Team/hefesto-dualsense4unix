@@ -35,6 +35,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES, meu_css
+from hefesto_dualsense4unix.mods.leitura_da_caixa import (
+    abrir_sem_seguir,
+    ler_ou_vazio,
+)
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     ManifestoRecusadoError,
@@ -698,11 +702,12 @@ def _levar_o_meu_css(lg: Lugares, manifesto: Manifesto, ids: Sequence[str]) -> N
     if manifesto.opcao_do_css is None or destino.exists():
         return
     for mod_id in ids:
-        origem = meu_css.caminho(mod_id, lg)
-        if origem.is_file() and not origem.is_symlink():
+        dados = ler_ou_vazio(meu_css.caminho(mod_id, lg), meu_css.TAMANHO_MAXIMO)
+        if dados:
             destino.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(origem, destino)
-            os.chmod(destino, 0o600)
+            with contextlib.suppress(FileExistsError), open(
+                    destino, "xb", opener=abrir_sem_seguir) as novo:
+                novo.write(dados)
             return
 
 

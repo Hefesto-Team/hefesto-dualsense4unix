@@ -10,13 +10,20 @@ A regra ``headerbar`` vale também na barra da janela, que é GTK (:func:`regras
 from __future__ import annotations
 
 import re
-import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.mods.leitura_da_caixa import (
+    GRANDE_DEMAIS,
+    NAO_E_COMUM,
+    LeituraRecusadaError,
+    ler_da_caixa,
+)
+
 NOME_DO_ARQUIVO = "meu.css"
 TAMANHO_MAXIMO = 16 * 1024
+FUNDO_MAXIMO = 32
 
 _AGRUPAM = frozenset(
     {"media", "supports", "container", "layer"})  # (noqa-acento)
@@ -133,6 +140,7 @@ class _Leitor:
     def __init__(self, limpo: str) -> None:
         self.t = limpo
         self.na_janela = False
+        self.fundo = 0
 
     def linha(self, indice: int) -> int:
         return self.t.count("\n", 0, indice) + 1
@@ -163,6 +171,9 @@ class _Leitor:
     def reescrever(self, ini: int, fim: int, modo: str) -> str:
         """``modo``: ``regras`` (folha, ``@media``), ``declaracoes`` (dentro de uma regra) ou
         ``quadros`` (dentro de ``@keyframes``: as regras são quadros, sem ``!important``)."""
+        self.fundo += 1
+        if self.fundo > FUNDO_MAXIMO:
+            raise self.recusar(ini, "aninha chaves demais", "chaves demais")
         saida: list[str] = []
         inicio, i, parenteses = ini, ini, 0
         while i < fim:
@@ -188,6 +199,7 @@ class _Leitor:
                 inicio, i = fecha + 1, fecha
             i += 1
         saida.append(self._declaracao(inicio, fim, modo))
+        self.fundo -= 1
         return "".join(saida)
 
     def _regra(self, inicio: int, abre: int, fecha: int, modo: str) -> str:
@@ -331,25 +343,22 @@ def aplicar(texto: str) -> str:
 def ler(mod_id: str, lugares: Any) -> FolhaDeQuemUsa:
     """A folha do ``meu.css`` da extensão: vazia sem arquivo; a recusa dita quando ele não serve.
 
-    Só lê arquivo comum e pequeno: um atalho para um dispositivo ou para uma fila não trava a
-    janela. Nada aqui escreve.
+    O arquivo mora na pasta que a caixa da extensão escreve: link, fila e dispositivo não se
+    abrem. Nada aqui escreve.
     """
-    alvo = caminho(mod_id, lugares)
     try:
-        modo = alvo.stat()
+        texto = ler_da_caixa(caminho(mod_id, lugares), TAMANHO_MAXIMO).decode("utf-8")
     except FileNotFoundError:
         return FolhaDeQuemUsa()
-    except OSError:
+    except LeituraRecusadaError as exc:
+        if exc.motivo == NAO_E_COMUM:
+            nao_e = CssRecusadoError("precisa ser um arquivo comum.", _NAO_E_COMUM)
+            return FolhaDeQuemUsa(recusa=nao_e.frase, recusa_curta=nao_e.curta)
+        if exc.motivo == GRANDE_DEMAIS:
+            grande = CssRecusadoError("passa de 16 KB.", _MUITO_GRANDE)
+            return FolhaDeQuemUsa(recusa=grande.frase, recusa_curta=grande.curta)
         return FolhaDeQuemUsa(recusa=_NAO_LEU, recusa_curta=_NAO_LEU_CURTA)
-    if not stat.S_ISREG(modo.st_mode):
-        nao_e = CssRecusadoError("precisa ser um arquivo comum.", _NAO_E_COMUM)
-        return FolhaDeQuemUsa(recusa=nao_e.frase, recusa_curta=nao_e.curta)
-    if modo.st_size > TAMANHO_MAXIMO:
-        grande = CssRecusadoError("passa de 16 KB.", _MUITO_GRANDE)
-        return FolhaDeQuemUsa(recusa=grande.frase, recusa_curta=grande.curta)
-    try:
-        texto = alvo.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+    except UnicodeDecodeError:
         return FolhaDeQuemUsa(recusa=_NAO_LEU, recusa_curta=_NAO_LEU_CURTA)
     try:
         return FolhaDeQuemUsa(folha=aplicar(texto))

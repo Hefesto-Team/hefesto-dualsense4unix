@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, Lugares
+from hefesto_dualsense4unix.mods.leitura_da_caixa import dizer_a_recusa, ler_da_caixa
 from hefesto_dualsense4unix.mods.manifesto import (
     CHAVE_DE_JOGO,
     COR_HEXA,
@@ -32,6 +33,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
 )
 
 NOME_DO_ARQUIVO = "opcoes.json"
+TETO_DO_ARQUIVO = 1024 * 1024
 
 Formas = dict[str, list[list[float]]]
 Valor = str | bool | float | list[str] | dict[str, str] | Formas
@@ -273,11 +275,17 @@ def modo_valido(valor: Any) -> str:
 
 
 def _guardados(mod_id: str, lugares: Lugares) -> dict[str, Any]:
+    alvo = caminho(mod_id, lugares)
     try:
-        bruto = json.loads(caminho(mod_id, lugares).read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        bruto = json.loads(ler_da_caixa(alvo, TETO_DO_ARQUIVO).decode("utf-8"))
+    except OSError:
         return {}
-    return bruto if isinstance(bruto, dict) else {}
+    except (ValueError, RecursionError):
+        bruto = None
+    if isinstance(bruto, dict):
+        return bruto
+    dizer_a_recusa(alvo, "nao_e_um_objeto")
+    return {}
 
 
 def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
@@ -368,7 +376,10 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
                 herdadas[chave] = antigo
                 break
     if herdadas:
-        _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
+        try:
+            _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
+        except RecursionError:
+            _gravar(manifesto.id, herdadas, lugares)
     return herdadas
 
 

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.mods import meu_css, tema
+from hefesto_dualsense4unix.mods.leitura_da_caixa import ler_ou_vazio
 
 PAPEL_DOS_TOKENS = (
     ("--app-bg", "Fundo"), ("--panel", "Painel"), ("--elevated", "Cartão"),
@@ -149,10 +150,8 @@ def _com_o_destaque(cores: dict[str, str], destaque: str) -> dict[str, str]:
 def _primeiras_linhas(mod_id: str, lugares: Any) -> tuple[str, ...]:
     alvo = meu_css.caminho(mod_id, lugares)
     try:
-        if not alvo.is_file() or alvo.stat().st_size > meu_css.TAMANHO_MAXIMO:
-            return ()
-        texto = alvo.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+        texto = ler_ou_vazio(alvo, meu_css.TAMANHO_MAXIMO).decode("utf-8")
+    except UnicodeDecodeError:
         return ()
     linhas = [ln.rstrip() for ln in texto.splitlines() if ln.strip()]
     return tuple("".join(c for c in ln if c.isprintable())[:80] for ln in linhas[:LINHAS_DO_CSS])

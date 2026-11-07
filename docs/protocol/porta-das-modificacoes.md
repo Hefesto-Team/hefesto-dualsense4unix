@@ -533,7 +533,9 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
-  primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio).
+  primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio). A pasta é escrita pela caixa,
+  então link, FIFO ou arquivo acima de 1 MiB valem como ausentes, e a recusa vai ao log
+  (`src/hefesto_dualsense4unix/mods/leitura_da_caixa.py`).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil`, `aparelhos`, `conexoes` e `linhas` (os pares que a extensão publica), sem repetir.
 - **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
@@ -737,7 +739,8 @@ troca o tema na hora, sem recarregar a página; a barra de cima e a variante do 
 A extensão de tema pode declarar UMA opção de `tipo` `css` (`padrao` falso de fábrica). Ligada, a janela põe o
 `<dados>/<id>/meu.css` por cima da folha do tema, pelo mesmo vigia: salvar o arquivo repinta sem recarregar. É livre
 (cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`, funções de
-imagem, `expression(`, `\` nem `<`, até 16 KB, e chaves em par. Agrupam regras `@media`, `@supports`, `@container` e o
+imagem, `expression(`, `\` nem `<`, até 16 KB, chaves em par e até 32 níveis, em arquivo comum (link e FIFO não se
+abrem). Agrupam regras `@media`, `@supports`, `@container` e o
 `@layer` com bloco; o `@layer` sem bloco não entra. O WebKit só deixa a folha de usuário vencer a da página com
 `!important`, então a leitura o põe em cada declaração (menos dentro de `@keyframes`). O que a leitura recusa não se
 aplica, e a janela da extensão diz a linha na forma curta, em vermelho («Linha 3: url()»); a frase longa fica no log.

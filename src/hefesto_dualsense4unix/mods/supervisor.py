@@ -24,14 +24,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
-import errno
 import json
 import os
 import re
 import secrets
 import shutil
 import signal
-import stat
 import threading
 import time
 from collections import deque
@@ -55,6 +53,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     manifesto_instalado,
     troca_viva,
 )
+from hefesto_dualsense4unix.mods.leitura_da_caixa import abrir_sem_seguir
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     ManifestoRecusadoError,
@@ -177,18 +176,8 @@ def diario_da_extensao(lugares: Lugares, mod_id: str) -> Path:
     return lugares.pasta_do_diario(mod_id) / DIARIO_DA_MODIFICACAO
 
 
-def _abrir_sem_seguir(caminho: str, flags: int) -> int:
-    """O descritor do diário: sem seguir link, sem esperar a outra ponta de um FIFO, e só de
-    arquivo regular."""
-    descritor = os.open(caminho, flags | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
-    if stat.S_ISREG(os.fstat(descritor).st_mode):
-        return descritor
-    os.close(descritor)
-    raise OSError(errno.EINVAL, "o diário não é um arquivo regular", caminho)
-
-
 def _abrir_o_diario(caminho: Path, modo: str) -> IO[bytes]:
-    return open(caminho, modo, opener=_abrir_sem_seguir)
+    return open(caminho, modo, opener=abrir_sem_seguir)
 
 
 def ultima_linha_do_diario(caminho: Path, *, teto: int = 200, hora: bool = False) -> str:
