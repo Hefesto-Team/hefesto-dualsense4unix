@@ -191,22 +191,20 @@ install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
     "${STAGING}/usr/lib/modprobe.d/hefesto-hid-playstation.conf"
 install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-playstation.conf"
-echo "Copiando fontes DKMS do hid-nintendo patchado (Onda T) ..."
+echo "Copiando as fontes DKMS de cada módulo patchado ..."
 install -Dm644 scripts/dkms_lib.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh"
-mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
-cp -a assets/dkms/hid-nintendo/. \
-    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
-mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation"
-cp -a assets/dkms/hid-playstation/. \
-    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation/"
-mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid"
-cp -a assets/dkms/usb-f-hid/. \
-    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid/"
-echo "Copiando fontes DKMS do rtw88-usb patchado (Onda W) ..."
-mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
-cp -a assets/dkms/rtw88-usb/. \
-    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
+install -Dm755 scripts/dkms_do_pacote.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh"
+for _conf in assets/dkms/*/dkms.conf; do
+    _modulo="$(basename "$(dirname "${_conf}")")"
+    mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/${_modulo}"
+    cp -a "assets/dkms/${_modulo}/." "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/${_modulo}/"
+done
+install -Dm755 packaging/debian/kernel-postinst \
+    "${STAGING}/etc/kernel/postinst.d/hefesto-dualsense4unix"
+install -Dm755 packaging/debian/kernel-postinst \
+    "${STAGING}/etc/kernel/header_postinst.d/hefesto-dualsense4unix"
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/LICENSES"
 cp -a LICENSES/. \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/LICENSES/"

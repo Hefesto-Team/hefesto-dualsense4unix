@@ -19,6 +19,8 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CASA="${HEFESTO_CASA:-$HOME/.local/state/hefesto-casa}"
 JOBS_TXT="$RAIZ/scripts/ci-local/jobs.txt"
 DOCKERFILE="$RAIZ/scripts/ci-local/Dockerfile"
+RUNNER_DO_GITHUB="$RAIZ/scripts/ci-local/runner-do-github.sh"
+FERRAMENTAS_DO_RUNNER=/opt/ferramentas-do-runner
 BASE="catthehacker/ubuntu:act-26.04-dev"
 BASE_24="catthehacker/ubuntu:act-24.04"
 BASE_22="catthehacker/ubuntu:act-22.04"
@@ -166,7 +168,7 @@ imagem_de() {
     echo "$base"
     return 0
   fi
-  nome="hefesto-ci-local:$({ cat "$DOCKERFILE"; echo "$base"; } | sha256sum | cut -c1-10)"
+  nome="hefesto-ci-local:$({ cat "$DOCKERFILE" "$RUNNER_DO_GITHUB"; echo "$base"; } | sha256sum | cut -c1-10)"
   if ! docker image inspect "$nome" >/dev/null 2>&1; then
     echo "ci-local: montando a imagem $nome sobre $base (uma vez só; a base baixa uns 570 MB)" >&2
     docker build -q --build-arg "BASE=$base" -t "$nome" -f "$DOCKERFILE" "$RAIZ/scripts/ci-local" >/dev/null 2>&1 \
@@ -201,7 +203,7 @@ DOCKERFILE_22="$RAIZ/scripts/ci-local/Dockerfile.ubuntu-22.04"
 for j in "${JOBS[@]}"; do
   [ "$(campo ROLA "$j" 4)" = ubuntu-22.04 ] || continue
   if [ -f "$DOCKERFILE_22" ]; then
-    IMAGEM_22="hefesto-ci-local-22:$(sha256sum "$DOCKERFILE_22" | cut -c1-10)"
+    IMAGEM_22="hefesto-ci-local-22:$(cat "$DOCKERFILE_22" "$RUNNER_DO_GITHUB" | sha256sum | cut -c1-10)"
     if ! docker image inspect "$IMAGEM_22" >/dev/null 2>&1; then
       echo "ci-local: montando a imagem $IMAGEM_22 sobre $BASE_22 (uma vez só)" >&2
       docker build -q -t "$IMAGEM_22" -f "$DOCKERFILE_22" "$RAIZ/scripts/ci-local" >/dev/null 2>&1 \
@@ -224,7 +226,7 @@ git -C "$RAIZ" checkout-index -a -f --prefix="$ARV/" 2>/dev/null \
   || { echo "ci-local: não exportou o índice de $RAIZ; nada rodou" >&2; exit 2; }
 GITDIR="$(git -C "$RAIZ" rev-parse --absolute-git-dir 2>/dev/null || true)"
 GITCOMUM="$(git -C "$RAIZ" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
-OPCOES_DOCKER=()
+OPCOES_DOCKER=(--init --tmpfs /tmp:exec,mode=1777,size=4g)
 if [ -n "$GITDIR" ] && [ -d "$GITDIR" ]; then
   printf 'gitdir: %s\n' "$GITDIR" > "$ARV/.git"
   OPCOES_DOCKER+=("-v $GITDIR:$GITDIR:ro")
@@ -309,7 +311,7 @@ chamar_act() {
       --artifact-server-addr 127.0.0.1 --artifact-server-port "$porta" \
       --cache-server-addr 127.0.0.1 \
       --concurrent-jobs "$PERNAS" \
-      --env RUNNER_TOOL_CACHE=/tmp/hostedtoolcache --env AGENT_TOOLSDIRECTORY=/tmp/hostedtoolcache \
+      --env "RUNNER_TOOL_CACHE=$FERRAMENTAS_DO_RUNNER" --env "AGENT_TOOLSDIRECTORY=$FERRAMENTAS_DO_RUNNER" \
       --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env 'GIT_CONFIG_VALUE_0=*' \
       "${OPCOES[@]}" ${CI_LOCAL_ACT_EXTRA:-} >"$log" 2>&1
   )
@@ -321,6 +323,14 @@ chamar_act() {
 
 INICIO_DO_PASSO=$'\xe2\xad\x90 Run '
 FALHA_DO_PASSO=$'\xe2\x9d\x8c  Failure - '
+JOB_QUE_PASSOU=$'\xf0\x9f\x8f\x81  Job succeeded'
+todo_job_passou() {
+  awk -v abriu="${INICIO_DO_PASSO}Set up job" -v passou="$JOB_QUE_PASSOU" '
+    { p = ""; if (match($0, /^\[[^]]*\]/)) p = substr($0, 1, RLENGTH) }
+    p != "" && index($0, abriu) { abertos[p]++ }
+    p != "" && index($0, passou) { fechados[p]++ }
+    END { for (p in abertos) { n++; if (abertos[p] != fechados[p]) exit 1 } exit (n == 0) }' "$1"
+}
 so_a_rede_reprovou() {
   local log="$1" redes act_rede=0
   redes="$(grep -nE -e "$REDE_PASSO" "$log" | cut -d: -f1 | tr '\n' ' ')"
@@ -361,8 +371,13 @@ rodar_job() {
     echo "ci-local: a rede caiu no meio deste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
     echo rede > "$SAIDA/$job.motivo"; rc=2
   elif [ "$rc" != 0 ] && [ "$rc" != 2 ] && ! grep -qF "$FALHA_DO_PASSO" "$log" && grep -qE "$DOCKER_CAIDO" "$log"; then
-    echo "ci-local: o docker não respondeu a tempo neste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
-    echo docker > "$SAIDA/$job.motivo"; rc=2
+    if todo_job_passou "$log"; then
+      echo "ci-local: todo passo deste job passou; só a remoção do contêiner estourou o minuto do act (o log tem a linha)" >> "$log"
+      rc=0
+    else
+      echo "ci-local: o docker não respondeu a tempo neste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
+      echo docker > "$SAIDA/$job.motivo"; rc=2
+    fi
   fi
   echo "$rc" > "$SAIDA/$job.rc"
   echo $(( $(date +%s) - ini )) > "$SAIDA/$job.seg"

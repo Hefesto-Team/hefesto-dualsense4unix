@@ -28,6 +28,12 @@ RAIZ = Path(__file__).resolve().parents[2]
 WORKFLOWS = RAIZ / ".github" / "workflows"
 TABELA = RAIZ / "scripts" / "ci-local" / "jobs.txt"
 SCRIPT = RAIZ / "scripts" / "ci-local.sh"
+RUNNER_DO_GITHUB = RAIZ / "scripts" / "ci-local" / "runner-do-github.sh"
+IMAGENS = (
+    RAIZ / "scripts" / "ci-local" / "Dockerfile",
+    RAIZ / "scripts" / "ci-local" / "Dockerfile.ubuntu-22.04",
+)
+FERRAMENTAS_DA_IMAGEM = "/opt/ferramentas-do-runner"
 
 FERRAMENTAS = (
     "awk",
@@ -207,6 +213,7 @@ echo "---YAML---"
 cat "$yml"
 echo "---FIM---"
 RUN=$'\xe2\xad\x90 Run'; FALHA=$'\xe2\x9d\x8c  Failure -'; OK=$'\xe2\x9c\x85  Success -'
+PASSOU=$'\xf0\x9f\x8f\x81  Job succeeded'
 TEXTO="Temporary failure resolving 'archive.ubuntu.com'"
 # a rede caída como o apt a escreve, na saída do passo que reprovou (`[job]   | texto`)
 case ",${FAKE_REDE:-}," in *",$job,"*)
@@ -237,6 +244,20 @@ case ",${FAKE_PERNAS:-}," in *",$job,"*)
 # o docker que não respondeu ao limpar o container de um job que passou
 case ",${FAKE_DOCKER:-}," in *",$job,"*)
   echo "[CI/$job] failed to remove container: Delete http://x: context deadline exceeded"
+  echo "Error: Error occurred running finally: context deadline exceeded"; exit 1 ;; esac
+# o job inteiro passou e só a remoção do contêiner estourou o minuto do act
+case ",${FAKE_LIMPEZA:-}," in *",$job,"*)
+  echo "[CI/$job] $RUN Set up job"
+  echo "[CI/$job] failed to remove container: Delete http://x: context deadline exceeded"
+  echo "[CI/$job] Error while stop job container: context deadline exceeded"
+  echo "[CI/$job] $PASSOU"
+  echo "Error: Error occurred running finally: context deadline exceeded"; exit 1 ;; esac
+# duas pernas: uma passou, a outra ficou sem resposta do docker no meio
+case ",${FAKE_LIMPEZA_NO_MEIO:-}," in *",$job,"*)
+  echo "[CI/$job-1] $RUN Set up job"
+  echo "[CI/$job-2] $RUN Set up job"
+  echo "[CI/$job-1] $PASSOU"
+  echo "[CI/$job-2] failed to remove container: Delete http://x: context deadline exceeded"
   echo "Error: Error occurred running finally: context deadline exceeded"; exit 1 ;; esac
 # o mesmo docker lento, num job que JÁ tinha reprovado num passo
 case ",${FAKE_DOCKER_E_FALHA:-}," in *",$job,"*)
@@ -413,6 +434,22 @@ def test_o_docker_que_nao_respondeu_nao_e_verde_nem_vermelho(mundo: Mundo) -> No
     assert "o docker não respondeu" in mundo.log("glifos") and "NÃO RODOU (docker)" in r.stderr
 
 
+def test_a_remocao_atrasada_do_conteiner_nao_desfaz_o_job_que_passou(mundo: Mundo) -> None:
+    """O `act` dá um minuto à remoção e sai 1 depois do `Job succeeded`. Medido em 07/11/2026:
+    2 de 17 jobs do `--rapido` com a máquina cheia. MORDIDA: tirar o `todo_job_passou`."""
+    r = mundo.rodar("--rapido", FAKE_LIMPEZA="glifos")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "0 vermelho(s), 0 não rodado(s)" in r.stdout
+    assert "todo passo deste job passou" in mundo.log("glifos")
+
+
+def test_a_remocao_atrasada_de_uma_perna_nao_fecha_a_outra(mundo: Mundo) -> None:
+    """MORDIDA: contar um `Job succeeded` no job inteiro, e não por perna, faz isto dar verde."""
+    r = mundo.rodar("--rapido", FAKE_LIMPEZA_NO_MEIO="glifos")
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "1 não rodado(s) [glifos]" in r.stdout
+
+
 def test_o_texto_da_rede_citado_dentro_do_log_nao_e_rede(mundo: Mundo) -> None:
     """Um teste que cita a frase da rede caída não faz o job vermelho virar «não rodou»."""
     r = mundo.rodar("--rapido", FAKE_CITA="glifos")
@@ -483,12 +520,129 @@ def test_o_act_nao_compartilha_a_ferramenta_nem_abre_o_servidor_para_a_rede_loca
 ) -> None:
     mundo.rodar("--job", "glifos")
     log = mundo.log("glifos")
-    assert "RUNNER_TOOL_CACHE=/tmp/hostedtoolcache" in log, (
-        "o Python do setup-python voltou a ficar num volume que sobrevive ao job"
+    assert "RUNNER_TOOL_CACHE=/opt/hostedtoolcache" not in log, (
+        "o act monta o volume `act-toolcache` nessa pasta, e ele esconde o Python da imagem"
     )
+    assert f"RUNNER_TOOL_CACHE={FERRAMENTAS_DA_IMAGEM}" in log
+    assert f"AGENT_TOOLSDIRECTORY={FERRAMENTAS_DA_IMAGEM}" in log
     assert "--artifact-server-addr 127.0.0.1" in log
     assert "--cache-server-addr 127.0.0.1" in log
     assert "--pull=false" in log and "--rm" in log
+
+
+def _diretivas(dockerfile: Path, nome: str) -> list[str]:
+    linhas = dockerfile.read_text(encoding="utf-8").splitlines()
+    return [ln.split(None, 1)[1] for ln in linhas if ln.startswith(f"{nome} ")]
+
+
+@pytest.mark.parametrize("dockerfile", IMAGENS, ids=lambda d: d.name)
+def test_a_imagem_roda_como_o_runner_do_github_e_nao_como_root(dockerfile: Path) -> None:
+    """MORDIDA: sem o `USER runner`, as pernas voltam a rodar com uid 0 e 42 arquivos reprovam."""
+    assert _diretivas(dockerfile, "USER")[-1:] == ["runner"]
+    env = " ".join(_diretivas(dockerfile, "ENV"))
+    assert "USER=runner" in env and "RUNNER_USER=runner" in env, "a imagem da act diz root"
+    assert f"AGENT_TOOLSDIRECTORY={FERRAMENTAS_DA_IMAGEM}" in env
+    assert any(RUNNER_DO_GITHUB.name in ln for ln in _diretivas(dockerfile, "RUN"))
+
+
+def test_o_usuario_da_imagem_e_o_do_runner_com_sudo_sem_senha() -> None:
+    texto = RUNNER_DO_GITHUB.read_text(encoding="utf-8")
+    assert "useradd --uid 1001" in texto, "o runner do GitHub é o uid 1001"
+    assert "NOPASSWD:ALL" in texto, "os passos dos workflows chamam `sudo` sem senha"
+    assert "patchelf --set-rpath" in texto, "o Python nasce apontando para /opt/hostedtoolcache"
+
+
+@pytest.mark.parametrize("pacote", ["patchelf", "sound-theme-freedesktop", "xvfb"])
+def test_a_imagem_traz_o_que_o_runner_traz(pacote: str) -> None:
+    """MORDIDA: sem o `xvfb`, a guarda da tela sai com rc=1 no `lint-test`."""
+    apt = next(ln for ln in _diretivas(IMAGENS[0], "RUN") if "apt-get update" in ln)
+    continuacao = IMAGENS[0].read_text(encoding="utf-8").split(apt, 1)[1].split("\nENV ", 1)[0]
+    assert pacote in continuacao.split(), f"a imagem não instala {pacote}"
+
+
+@pytest.mark.parametrize(("no_act", "pula"), [(True, True), (False, False)], ids=["act", "casa"])
+def test_a_caixa_que_nao_abre_so_pula_no_act(
+    monkeypatch: pytest.MonkeyPatch, no_act: bool, pula: bool,
+) -> None:
+    """Na casa e no GitHub a caixa que não abre reprova: o `bwrap` existe e o produto conta com ele.
+
+    MORDIDA: tirar a condição do `ACT` de `exigir_caixa_do_bwrap` esconde a caixa quebrada."""
+    import tests.conftest as casa
+
+    monkeypatch.setattr(casa, "_por_que_o_bwrap_nao_abre_a_caixa", lambda: "o /proc não monta")
+    monkeypatch.setattr(casa.shutil, "which", lambda _nome: "/usr/bin/bwrap")
+    monkeypatch.setenv("ACT", "true") if no_act else monkeypatch.delenv("ACT", raising=False)
+    try:
+        casa.exigir_caixa_do_bwrap()
+        pulou = False
+    except pytest.skip.Exception:
+        pulou = True
+    assert pulou is pula
+
+
+def _pythons_da_imagem(dockerfile: Path) -> set[str]:
+    achado = re.search(r'PYTHONS_DO_RUNNER="([^"]+)"', dockerfile.read_text(encoding="utf-8"))
+    assert achado, f"{dockerfile.name} não diz quais Pythons traz"
+    return set(achado.group(1).split())
+
+
+def _pythons_pedidos() -> set[tuple[str, str]]:
+    pedidos = set()
+    for job in _jobs_dos_workflows().values():
+        matriz = (job.get("strategy") or {}).get("matrix") or {}
+        pernas = matriz.get("os") or [job.get("runs-on")]
+        for passo in job.get("steps") or []:
+            if not str(passo.get("uses", "")).startswith("actions/setup-python@"):
+                continue
+            versao = str(passo["with"]["python-version"])
+            versoes = matriz["python"] if "matrix.python" in versao else [versao]
+            pedidos |= {(str(perna), str(v)) for perna in pernas for v in versoes}
+    return pedidos
+
+
+def test_toda_versao_que_um_workflow_pede_vem_na_imagem_do_runner_dele() -> None:
+    """MORDIDA: tirar o 3.10 do `Dockerfile` reprova (o `lint-test` e o `acentuacao` o pedem).
+
+    Sem a versão no cache de ferramentas o setup-python busca o manifesto a cada job, e o manifesto
+    cortado no meio sai 0 sem Python nenhum: medido em 06/11/2026, cinco chamadas em doze."""
+    pedidos = _pythons_pedidos()
+    assert {("ubuntu-latest", "3.10"), ("ubuntu-22.04", "3.12")} <= pedidos
+    do_ultimo, do_22 = (_pythons_da_imagem(dockerfile) for dockerfile in IMAGENS)
+    faltam = sorted(
+        (perna, versao) for perna, versao in pedidos
+        if versao not in (do_22 if perna == "ubuntu-22.04" else do_ultimo))
+    assert not faltam, f"versão que nenhuma imagem traz: {faltam}"
+
+
+def test_o_contener_tem_quem_recolhe_o_orfao(mundo: Mundo) -> None:
+    """O PID 1 do `act` é um `tail`, que não recolhe filho: o órfão morto fica zumbi e `kill -0`
+    responde que ele vive. No GitHub o PID 1 é o systemd. MORDIDA: tirar o `--init` do script."""
+    mundo.rodar("--job", "glifos")
+    achado = re.search(r"--container-options (\S+)", mundo.log("glifos"))
+    assert achado and achado.group(1) == "--init", mundo.log("glifos")
+
+
+def test_o_tmp_do_contener_e_memoria_como_o_da_casa(mundo: Mundo) -> None:
+    """A captura do pytest grava em `/tmp`: no disco da máquina, a escrita do fio do uhid parou
+    155 ms a 2 s dentro do `join` do tique, e o disco cheio virou 4798 erros de ENOSPC. MORDIDA:
+    tirar o `--tmpfs` do script."""
+    mundo.rodar("--job", "glifos")
+    assert "--tmpfs /tmp:exec,mode=1777" in mundo.log("glifos"), mundo.log("glifos")
+
+
+def test_o_script_do_runner_entra_no_nome_da_imagem(mundo: Mundo) -> None:
+    """MORDIDA: tirar o `runner-do-github.sh` do `sha256sum` faz a imagem velha seguir valendo."""
+    pasta = mundo.arvore / "scripts" / "ci-local"
+    (pasta / "Dockerfile").write_text("FROM base\n", encoding="utf-8")
+
+    def imagem_com(texto: str) -> str:
+        (pasta / "runner-do-github.sh").write_text(texto, encoding="utf-8")
+        mundo.rodar("--job", "glifos", CI_LOCAL_IMAGEM="")
+        achado = re.search(r"ubuntu-latest=(hefesto-ci-local:\w+)", mundo.log("glifos"))
+        assert achado, mundo.log("glifos")
+        return achado.group(1)
+
+    assert imagem_com("uma\n") != imagem_com("outra\n")
 
 
 def _passos_do_yaml_do_log(log: str) -> list[str]:

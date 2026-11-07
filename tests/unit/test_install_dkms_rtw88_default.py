@@ -334,7 +334,7 @@ class TestParidadePackaging:
         }
         for nome, caminho in manifestos.items():
             texto = caminho.read_text(encoding="utf-8")
-            assert "rtw88-usb" in texto, (
+            assert "rtw88-usb" in texto or "assets/dkms/*/dkms.conf" in texto, (
                 f"{nome} não empacota as fontes DKMS do rtw88 — a cura de raiz "
                 "do fantasma USB não chega ao usuário de pacote"
             )

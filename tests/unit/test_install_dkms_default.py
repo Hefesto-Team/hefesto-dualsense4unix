@@ -292,7 +292,7 @@ class TestParidadePackaging:
         }
         for nome, caminho in manifestos.items():
             texto = caminho.read_text(encoding="utf-8")
-            assert "dkms/hid-nintendo" in texto, (
+            assert "dkms/hid-nintendo" in texto or "assets/dkms/*/dkms.conf" in texto, (
                 f"{nome} não empacota as fontes DKMS — a conf modprobe.d "
                 "fica inerte e a cura de raiz do probe BT não chega ao usuário"
             )

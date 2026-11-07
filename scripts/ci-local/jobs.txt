@@ -12,7 +12,10 @@
 #   FORA-DE-CASA|job|motivo         não roda em casa. O motivo é medida, com o comando e o que ele respondeu.
 #
 # O que se mede aqui NÃO é o runner do GitHub: é o `catthehacker/ubuntu:act-26.04-dev` (o `ubuntu-latest`; o
-# `ubuntu-24.04` no `act-24.04`) + scripts/ci-local/Dockerfile.
+# `ubuntu-24.04` no `act-24.04`) + scripts/ci-local/Dockerfile. As pernas rodam como o usuário `runner`, uid 1001, como o
+# GitHub. O que só o contêiner não faz: o `bwrap` não abre a caixa, porque o Docker mascara o `/proc` («Can't mount proc»,
+# rc=1), e `--security-opt systempaths=unconfined` deixaria o `sudo sysctl -w` dos workflows escrever no kernel da máquina.
+# Os testes da caixa pulam só no `act`, por `exigir_caixa_do_bwrap` (tests/conftest.py), e rodam na suíte de casa e no GitHub.
 
 # --- ci.yml -------------------------------------------------------------------------------------
 ROLA|anonymity|rapido

@@ -6,6 +6,7 @@ import atexit
 import contextlib
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -113,6 +114,8 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
         os.environ["DISPLAY"] = f":{numero}"
         os.environ.pop("WAYLAND_DISPLAY", None)
         os.environ["GDK_BACKEND"] = "x11"
+        if not _a_sessao_tem_barramento():
+            os.environ["DBUS_SESSION_BUS_ADDRESS"] = "disabled:"
         os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
         os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
         atexit.register(derrubar_tela_de_mentira)
@@ -131,6 +134,20 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
         "Nenhuma tela Xvfb livre entre :80 e :129 — este instrumento não vai "
         "abrir janela na sessão de quem usa para contornar isso."
     )
+
+
+def _a_sessao_tem_barramento() -> bool:
+    """A conta da GLib: o endereço do ambiente, ou o socket da sessão no ``XDG_RUNTIME_DIR``."""
+    if os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+        return True
+    corrida = os.environ.get("XDG_RUNTIME_DIR")
+    if not corrida:
+        return False
+    try:
+        socket_da_sessao = (Path(corrida) / "bus").stat()
+    except OSError:
+        return False
+    return stat.S_ISSOCK(socket_da_sessao.st_mode) and socket_da_sessao.st_uid == os.geteuid()
 
 
 def derrubar_tela_de_mentira() -> None:

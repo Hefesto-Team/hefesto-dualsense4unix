@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 from hefesto_dualsense4unix.mods import instalador
 from hefesto_dualsense4unix.mods.instalador import Lugares
+from tests.conftest import exigir_caixa_do_bwrap
 
 _LEITOR_BOM = (
     "import json\n"
@@ -112,6 +113,7 @@ def test_a_modificacao_ligada_vira_cartao_pelo_mesmo_procurador(
     a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
     """ARRANQUE o ``+ _das_modificacoes()`` de ``_declarados`` e isto reprova."""
+    exigir_caixa_do_bwrap()
     lg = _plantar(tmp_path)
     _no_xdg(monkeypatch, lg)
     _so_as_modificacoes(a07, monkeypatch)
@@ -225,6 +227,7 @@ def test_o_leitor_que_passa_do_prazo_nao_derruba_o_cartao(
     a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
     """A pintura segue com os outros cartões, e o do KytyPS5 diz o motivo."""
+    exigir_caixa_do_bwrap()
     lg = _plantar(tmp_path, bloco=_bloco(leitor={"executar": ["python3", "ler.py"],
                                                   "prazo_s": 0.5}),
                   leitor="import time\ntime.sleep(30)\n")
@@ -262,9 +265,9 @@ def test_na_caixa_o_leitor_le_a_casa_e_nao_escreve_nem_ve_a_sessao(
     sumiria de qualquer jeito, o que fazia a régua passar com a raiz gravável
     (medido em 13/10/2026). O ``/var/tmp`` fica visível na caixa, como o ``/home``.
     """
+    exigir_caixa_do_bwrap()
     bwrap = shutil.which("bwrap")
-    if bwrap is None:
-        pytest.skip("sem bwrap nesta máquina: a caixa não existe para provar")
+    assert bwrap is not None
     try:
         casa = Path(tempfile.mkdtemp(prefix="hef-caixa-", dir="/var/tmp"))
     except OSError:
@@ -304,6 +307,8 @@ def test_o_perfil_do_jogo_casa_pelo_id_no_titulo(
 ) -> None:
     """ARRANQUE o ramo do título em ``_criar_o_perfil_de`` e isto reprova."""
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+    exigir_caixa_do_bwrap()
 
     lg = _plantar(tmp_path)
     _no_xdg(monkeypatch, lg)

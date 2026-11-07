@@ -376,12 +376,17 @@ for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
     fi
 done
 
+_leva_a_fonte_do_dkms() {
+    grep -qF "dkms/$1" "$2" 2>/dev/null && return 0
+    grep -qF 'assets/dkms/*/dkms.conf' "$2" 2>/dev/null
+}
+
 echo "== paridade da cura DKMS (assets/dkms/hid-nintendo × instaladores) =="
 if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
     missing=()
     for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
-        { grep -qF "dkms/hid-nintendo" "${inst}" 2>/dev/null \
+        { _leva_a_fonte_do_dkms hid-nintendo "${inst}" \
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
@@ -411,7 +416,7 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     missing=()
     for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
-        { grep -qF "dkms/rtw88-usb" "${inst}" 2>/dev/null \
+        { _leva_a_fonte_do_dkms rtw88-usb "${inst}" \
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
@@ -567,7 +572,7 @@ if [[ -f assets/dkms/hid-playstation/dkms.conf ]]; then
     missing=()
     for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
-        { grep -qF "dkms/hid-playstation" "${inst}" 2>/dev/null \
+        { _leva_a_fonte_do_dkms hid-playstation "${inst}" \
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
@@ -602,7 +607,7 @@ if [[ -f assets/dkms/usb-f-hid/dkms.conf ]]; then
     missing=()
     for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
-        { grep -qF "dkms/usb-f-hid" "${inst}" 2>/dev/null \
+        { _leva_a_fonte_do_dkms usb-f-hid "${inst}" \
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done

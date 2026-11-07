@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -151,3 +152,86 @@ def test_o_lock_do_proprio_xvfb_nao_adota_o_socket_de_outro_processo() -> None:
     conferência do socket, a tela alheia se adota."""
     medida = _correr(_CONFERENCIA, _FALSO_XVFB, "1.0", "alheio")
     assert medida["adotou"] is False, medida
+
+
+_DERRUBA_A_TELA_COM_O_BARRAMENTO_ABERTO = r"""
+import os, time
+from gi.repository import Gio, GLib
+from hefesto_dualsense4unix.utils import tela_de_mentira as t
+t.garantir_tela_de_mentira(anunciar=False)
+try:
+    Gio.bus_get_sync(Gio.BusType.SESSION, None)
+except GLib.Error:
+    pass
+t.derrubar_tela_de_mentira()
+contexto, fim = GLib.MainContext.default(), time.monotonic() + 2
+while time.monotonic() < fim:
+    contexto.iteration(False)
+    time.sleep(0.01)
+print(os.environ.get("DBUS_SESSION_BUS_ADDRESS"))
+"""
+
+
+_SO_O_ENDERECO = r"""
+import os
+from hefesto_dualsense4unix.utils import tela_de_mentira as t
+t.garantir_tela_de_mentira(anunciar=False)
+t.derrubar_tela_de_mentira()
+print(os.environ.get("DBUS_SESSION_BUS_ADDRESS"))
+"""
+
+
+def _derrubar_a_tela(
+    tmp_path: Path, sonda: str = _DERRUBA_A_TELA_COM_O_BARRAMENTO_ABERTO, **ambiente: str
+) -> subprocess.CompletedProcess[str]:
+    if shutil.which("Xvfb") is None:
+        pytest.skip("sem `Xvfb` não há tela de mentira a derrubar")
+    limpo = {
+        chave: valor for chave, valor in os.environ.items()
+        if chave not in {"HEFESTO_NA_TELA", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS"}
+    }
+    limpo.update({"DISPLAY": ":0", "HOME": str(tmp_path), "XDG_RUNTIME_DIR": str(tmp_path),
+                  "PYTHONPATH": str(_SRC), **ambiente})
+    return subprocess.run([sys.executable, "-c", sonda],
+                          env=limpo, capture_output=True, text=True, timeout=60)
+
+
+def test_derrubar_a_tela_nao_mata_quem_nao_tinha_barramento(tmp_path: Path) -> None:
+    """Sem barramento de sessão, a GLib o sobe pelo `dbus-launch`, preso a esta tela, e a conexão
+    dele nasce com `exit-on-close`: a tela cai, o barramento cai, e a GDBus faz `raise(SIGTERM)`.
+
+    Medido por `strace` em 06/11/2026 no contêiner 26.04: `kill(xvfb)`, 1 ms depois
+    `tgkill(pytest, gdbus, SIGTERM)`, e o `test_a_tela_nao_samba` morria com 143 depois do sumário.
+    O sinal sai do laço principal da GLib: sem iterar o contexto, a conexão morta passa calada.
+    MORDIDA: tirar o `disabled:` de `garantir_tela_de_mentira` reprova aqui pelo endereço. A morte
+    mede-se fora do pytest: no contêiner, a sonda sai com 143, e o `test_a_tela_nao_samba` pelo
+    `rodar-a-suite.sh --lote` diz `MORREU PELO SINAL 15` sem o `disabled:` e fecha verde com ele."""
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("a sonda abre a conexão da GDBus")
+    feito = _derrubar_a_tela(tmp_path)
+    assert (feito.returncode, feito.stdout.strip()) == (0, "disabled:"), feito.stderr[-400:]
+
+
+def test_o_barramento_que_ja_existe_fica(tmp_path: Path) -> None:
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("a sonda abre a conexão da GDBus")
+    endereco = f"unix:path={tmp_path}/nenhum"
+    feito = _derrubar_a_tela(tmp_path, DBUS_SESSION_BUS_ADDRESS=endereco)
+    assert (feito.returncode, feito.stdout.strip()) == (0, endereco), feito.stderr[-400:]
+
+
+def test_o_barramento_do_xdg_runtime_dir_fica(tmp_path: Path) -> None:
+    """A sessão de `systemd --user` nem sempre exporta o endereço: a GLib acha o `bus` sozinha, e
+    esse barramento não depende da tela. MORDIDA: voltar a olhar só o ambiente reprova."""
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as ouvinte:
+        ouvinte.bind(str(tmp_path / "bus"))
+        feito = _derrubar_a_tela(tmp_path, _SO_O_ENDERECO)
+    assert (feito.returncode, feito.stdout.strip()) == (0, "None"), feito.stderr[-400:]
+
+
+def test_um_arquivo_comum_no_lugar_do_socket_nao_e_barramento(tmp_path: Path) -> None:
+    (tmp_path / "bus").write_text("", encoding="utf-8")
+    feito = _derrubar_a_tela(tmp_path, _SO_O_ENDERECO)
+    assert (feito.returncode, feito.stdout.strip()) == (0, "disabled:"), feito.stderr[-400:]

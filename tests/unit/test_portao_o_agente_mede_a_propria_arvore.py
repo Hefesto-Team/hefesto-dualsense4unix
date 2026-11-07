@@ -33,20 +33,14 @@ def env_do_despachante(wt: Path) -> dict[str, str]:
 
 @pytest.fixture
 def worktree(tmp_path: Path):
-    """Um worktree DESTACADO da árvore de verdade, e destacado de propósito."""
+    """Uma cópia do HEAD fora da árvore de verdade, sem escrever no ``.git``, que no CI de casa é
+    só de leitura e é de todas as árvores."""
     destino = tmp_path / "arvore-duble"
-    r = subprocess.run(
-        ["git", "worktree", "add", "--detach", str(destino), "HEAD"],
-        cwd=RAIZ, capture_output=True, text=True,
-    )
-    assert r.returncode == 0, "não consegui criar o worktree dublê:\n" + r.stderr
-    try:
-        yield destino
-    finally:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(destino)],
-            cwd=RAIZ, capture_output=True, text=True,
-        )
+    destino.mkdir()
+    pacote = subprocess.run(["git", "archive", "HEAD", "src"], cwd=RAIZ, capture_output=True)
+    assert pacote.returncode == 0, pacote.stderr.decode()
+    subprocess.run(["tar", "-x", "-C", str(destino)], input=pacote.stdout, check=True)
+    return destino
 
 
 def _importa(wt: Path, env_extra: dict[str, str]) -> subprocess.CompletedProcess[str]:

@@ -3,8 +3,9 @@
 _dkms_src_root() { printf '%s' "${HEFESTO_DKMS_SRC_ROOT:-/usr/src}"; }
 _dkms_modules_root() { printf '%s' "${HEFESTO_DKMS_MODULES_ROOT:-/lib/modules}"; }
 _dkms_tree_root() { printf '%s' "${HEFESTO_DKMS_TREE:-/var/lib/dkms}"; }
+_dkms_kernel_alvo() { printf '%s' "${HEFESTO_DKMS_KERNEL:-$(uname -r)}"; }
 _dkms_initramfs_path() {
-    printf '%s' "${HEFESTO_INITRAMFS_PATH:-/boot/initrd.img-$(uname -r)}"
+    printf '%s' "${HEFESTO_INITRAMFS_PATH:-/boot/initrd.img-$(_dkms_kernel_alvo)}"
 }
 
 _dkms_licenses_dir() {
@@ -157,9 +158,9 @@ _DKMS_INITRAMFS_ARGV=()
 _dkms_initramfs_detect() {
     _DKMS_INITRAMFS_ARGV=()
     if command -v update-initramfs >/dev/null 2>&1; then
-        _DKMS_INITRAMFS_ARGV=(update-initramfs -u -k "$(uname -r)")
+        _DKMS_INITRAMFS_ARGV=(update-initramfs -u -k "$(_dkms_kernel_alvo)")
     elif command -v dracut >/dev/null 2>&1; then
-        _DKMS_INITRAMFS_ARGV=(dracut --force --kver "$(uname -r)")
+        _DKMS_INITRAMFS_ARGV=(dracut --force --kver "$(_dkms_kernel_alvo)")
     elif command -v mkinitcpio >/dev/null 2>&1; then
         _DKMS_INITRAMFS_ARGV=(mkinitcpio -P)
     fi
@@ -224,9 +225,17 @@ _dkms_esquecer_o_veredito_que_falhou() {
     sudo rm -f "${_arquivo}" "${_arquivo%.txt}.tar" || true
 }
 
+_dkms_arquivo_do_modulo() {
+    if [[ -n "${HEFESTO_DKMS_KERNEL:-}" ]]; then
+        modinfo -k "${HEFESTO_DKMS_KERNEL}" -F filename "$1" 2>/dev/null
+    else
+        modinfo -F filename "$1" 2>/dev/null
+    fi
+}
+
 dkms_module_from_updates() {
     local _path
-    _path="$(modinfo -F filename "$1" 2>/dev/null)" || return 1
+    _path="$(_dkms_arquivo_do_modulo "$1")" || return 1
     [[ "${_path}" == */updates/dkms/* ]]
 }
 
@@ -247,7 +256,7 @@ dkms_module_loaded() {
 
 _dkms_initramfs_desatualizado() {
     local _ko _img
-    _ko="$(modinfo -F filename "$1" 2>/dev/null)" || return 0
+    _ko="$(_dkms_arquivo_do_modulo "$1")" || return 0
     _img="$(_dkms_initramfs_path)"
     [[ -f "${_ko}" && -f "${_img}" ]] || return 0
     [[ "${_ko}" -nt "${_img}" ]]
@@ -260,7 +269,7 @@ _dkms_status_texto() {
 dkms_install_patched_module() {
     local _pkg="$1" _ver="$2" _src="$3" _built="$4"
     local _kver _srcdst _dkms_lic
-    _kver="$(uname -r)"
+    _kver="${HEFESTO_DKMS_KERNEL:-$(uname -r)}"
     _srcdst="$(_dkms_src_root)/${_pkg}-${_ver}"
 
     if ! command -v dkms >/dev/null 2>&1; then
@@ -332,8 +341,9 @@ dkms_install_patched_module() {
         fi
     fi
 
-    if [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" != *installed* ]]; then
-        if ! sudo dkms install "${_pkg}/${_ver}" -k "${_kver}"; then
+    if [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" != *installed* ]] \
+        || [[ "$(_dkms_status_texto "${_pkg}/${_ver}" -k "${_kver}")" == *"between built and installed"* ]]; then
+        if ! sudo dkms install "${_pkg}/${_ver}" -k "${_kver}" --force; then
             _dkms_warn "dkms install falhou p/ ${_pkg}/${_ver} — in-tree continua"
             return 0
         fi
@@ -341,7 +351,9 @@ dkms_install_patched_module() {
 
     if dkms_module_from_updates "${_built}"; then
         _dkms_log "ok: modinfo resolve ${_built} p/ updates/dkms (vence o in-tree no próximo carregamento)"
-        if _dkms_initramfs_desatualizado "${_built}"; then
+        if [[ -n "${HEFESTO_DKMS_KERNEL:-}" && ! -f "$(_dkms_initramfs_path)" ]]; then
+            _dkms_log "o initramfs de ${_kver} ainda não nasceu: ele já nasce com o ${_built}"
+        elif _dkms_initramfs_desatualizado "${_built}"; then
             dkms_mark_initramfs_stale "${_built}"
         else
             _dkms_log "initramfs já mais novo que o ${_built} de updates/dkms — sem regeneração"

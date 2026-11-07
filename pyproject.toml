@@ -52,6 +52,8 @@ dev = [
     # Dois verificadores de desenho abrem o Chrome do sistema pelo Playwright; o pacote
     # pip basta, sem `playwright install`.
     "playwright>=1.62",
+    # O portal de mentira da captura de tela fala por ele: o CI instala só o `.[dev]`.
+    "jeepney>=0.8",
 ]
 emulation = [
     "python-uinput>=0.11",

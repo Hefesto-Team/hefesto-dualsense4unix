@@ -19,6 +19,7 @@ from typing import Any
 import pytest
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
 from hefesto_dualsense4unix.mods.supervisor import comando_na_caixa, pastas_dos_jogos
+from tests.conftest import exigir_caixa_do_bwrap
 
 APPID = "9914401"
 
@@ -73,8 +74,7 @@ def test_na_caixa_a_biblioteca_da_casa_aparece_so_de_leitura(
     jogos = pastas_dos_jogos(manifesto, lar)
     sem = _caixa(tmp_path, lar, _manifesto("ler:estado"), jogos, ["true"])
     assert str(principal) not in sem, "sem a permissão, nenhuma pasta"
-    if shutil.which("bwrap") is None:
-        pytest.skip("sem bwrap nesta máquina")
+    exigir_caixa_do_bwrap()
     ler = f"cat {principal}/appmanifest_{APPID}.acf && ls {outra} && touch {principal}/x"
     feito = subprocess.run(_caixa(tmp_path, lar, manifesto, jogos, ["sh", "-c", ler]),
                            capture_output=True, text=True, timeout=30, check=False)

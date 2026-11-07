@@ -746,36 +746,47 @@ def test_o_doctor_avisa_o_drop_in_de_outro_projeto_e_nao_o_apaga(tmp_path: Path)
     assert alvo.read_text(encoding="utf-8") == texto
 
 
+def _portal_em_execucao(copia: Path) -> subprocess.Popen[bytes]:
+    """Uma cópia do ``bash`` com a marca, parada num ``read`` de 30 s dentro do próprio processo.
+
+    O ``sleep`` não serve: no Ubuntu 26.04 ele é o coreutils de Rust, um binário multichamada que
+    recusa o nome da cópia (``unknown program``) e morre antes de o doctor ler o ``/proc``."""
+    bash = shutil.which("bash")
+    assert bash is not None
+    copia.write_bytes(Path(bash).read_bytes() + b"\0/obra/" + MARCA.encode() + b"\0")
+    copia.chmod(0o755)
+    processo = subprocess.Popen([str(copia), "-c", "read -t 30"], stdin=subprocess.PIPE)
+    assert processo.poll() is None, "a cópia do programa morreu ao nascer"
+    return processo
+
+
+def _parar(processo: subprocess.Popen[bytes]) -> None:
+    assert processo.stdin is not None
+    processo.stdin.close()
+    processo.kill()
+    processo.wait(timeout=10)
+
+
 def test_o_doctor_le_o_programa_que_o_systemd_executa(tmp_path: Path) -> None:
     """MORDIDA: ler só o /usr/libexec deixa de ver o binário que o processo do portal roda."""
-    sleep = shutil.which("sleep")
-    assert sleep is not None
     copia = tmp_path / "xdg-desktop-portal-cosmic"
-    copia.write_bytes(Path(sleep).read_bytes() + b"\0/obra/" + MARCA.encode() + b"\0")
-    copia.chmod(0o755)
-    processo = subprocess.Popen(["sleep", "30"], executable=copia)
+    processo = _portal_em_execucao(copia)
     try:
         saida = _doctor(tmp_path, pid_vivo=processo.pid)
     finally:
-        processo.kill()
-        processo.wait(timeout=10)
+        _parar(processo)
     assert f"[ OK ] o portal de captura ({copia})" in saida, saida
 
 
 def test_o_doctor_le_o_programa_em_execucao_mesmo_trocado_no_disco(tmp_path: Path) -> None:
     """MORDIDA: ler o caminho do disco, e não o /proc/PID/exe, perde o programa que o apt trocou."""
-    sleep = shutil.which("sleep")
-    assert sleep is not None
     copia = tmp_path / "xdg-desktop-portal-cosmic"
-    copia.write_bytes(Path(sleep).read_bytes() + b"\0/obra/" + MARCA.encode() + b"\0")
-    copia.chmod(0o755)
-    processo = subprocess.Popen(["sleep", "30"], executable=copia)
+    processo = _portal_em_execucao(copia)
     try:
         copia.unlink()
         saida = _doctor(tmp_path, pid_vivo=processo.pid)
     finally:
-        processo.kill()
-        processo.wait(timeout=10)
+        _parar(processo)
     assert f"[ OK ] o portal de captura ({copia} (deleted))" in saida, saida
 
 

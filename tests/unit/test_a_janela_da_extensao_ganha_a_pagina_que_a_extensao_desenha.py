@@ -8,6 +8,7 @@ Agora o manifesto declara a página, um HTML da pasta do código, que a janela m
 """
 from __future__ import annotations
 
+import ast
 import asyncio
 import json
 import os
@@ -163,6 +164,44 @@ def test_sem_resposta_a_tempo_a_mensagem_volta_sem_resposta(curto: pathlib.Path)
     calada, fora = asyncio.run(corrida())
     assert calada == {"enviada": True, "respondeu": False, "resposta": None}
     assert fora == {"enviada": False, "respondeu": False, "resposta": None}
+
+
+def _pega_so_o_embutido(tipo: ast.expr | None) -> bool:
+    nomes = tipo.elts if isinstance(tipo, ast.Tuple) else [tipo]
+    embutido = any(isinstance(no, ast.Name) and no.id == "TimeoutError" for no in nomes)
+    return embutido and not any(
+        isinstance(no, ast.Attribute) and no.attr == "TimeoutError" for no in nomes)
+
+
+def _prazos_que_o_3_10_deixa_escapar(arvore: ast.AST) -> list[int]:
+    return [
+        tratador.lineno
+        for tentativa in ast.walk(arvore) if isinstance(tentativa, ast.Try)
+        if any(isinstance(no, ast.Attribute) and no.attr == "wait_for"
+               for corpo in tentativa.body for no in ast.walk(corpo))
+        for tratador in tentativa.handlers
+        if _pega_so_o_embutido(tratador.type)
+    ]
+
+
+@pytest.mark.parametrize(("tratador", "escapa"), [
+    ("TimeoutError", True), ("(TimeoutError, OSError)", True),
+    ("(TimeoutError, asyncio.TimeoutError)", False), ("asyncio.TimeoutError", False)])
+def test_a_regua_do_prazo_le_a_tupla(tratador: str, escapa: bool) -> None:
+    fonte = f"try:\n    asyncio.wait_for(x, 1)\nexcept {tratador}:\n    pass\n"
+    assert bool(_prazos_que_o_3_10_deixa_escapar(ast.parse(fonte))) is escapa
+
+
+def test_o_prazo_do_asyncio_e_pego_tambem_no_python_3_10() -> None:
+    """No 3.10 o ``asyncio.TimeoutError`` não é o ``TimeoutError`` embutido, e o 3.10 é suportado.
+
+    Medido na corrida 42250502449: só a perna 3.10 reprovou ``test_sem_resposta_a_tempo``, com o
+    prazo fora do ``except TimeoutError``. MORDIDA: devolver esse ``except`` a ``mods/porta.py``."""
+    fonte = pathlib.Path(pt.__file__).resolve().parents[1]
+    com_prazo = [a for a in sorted(fonte.rglob("*.py")) if b"wait_for" in a.read_bytes()]
+    achados = [f"{arquivo.relative_to(fonte)}:{linha}" for arquivo in com_prazo
+               for linha in _prazos_que_o_3_10_deixa_escapar(ast.parse(arquivo.read_bytes()))]
+    assert not achados, f"`except TimeoutError` em volta de `asyncio.wait_for`: {achados}"
 
 
 def test_acima_de_64_kb_e_de_30_por_segundo_recusa(curto: pathlib.Path) -> None:  # noqa: F811

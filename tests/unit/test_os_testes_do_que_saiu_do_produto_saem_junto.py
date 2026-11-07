@@ -7,13 +7,15 @@ ou um arquivo de teste da janela GTK; cada um era um verde que não provava nada
 A régua lê cada arquivo de ``tests/unit/`` e acha o pulo guardado pela ausência de um caminho
 (``if not X.exists(): pytest.skip(...)`` e ``skipif(not X.exists())``). Quando o caminho resolve
 para dentro do repositório e não existe, o alvo saiu: o teste sai junto, ou passa a ler o que
-ficou. Caminho de fora do repositório (o Chrome, o ``/usr``, o aparelho) é ambiente e fica.
+ficou. Caminho de fora do repositório (o Chrome, o ``/usr``, o aparelho) é ambiente e fica. O
+caminho que o git ignora também fica: num clone limpo ele nunca veio, e não saiu de lugar nenhum.
 """
 
 from __future__ import annotations
 
 import ast
 import pathlib
+import subprocess
 from typing import Any
 
 import pytest
@@ -127,6 +129,11 @@ def _funcoes_de_um_retorno(corpo: list[ast.stmt]) -> dict[str, ast.expr]:
     return fora
 
 
+def _o_git_ignora(raiz: pathlib.Path, relativo: pathlib.Path) -> bool:
+    return subprocess.run(["git", "-C", str(raiz), "check-ignore", "-q", str(relativo)],
+                          capture_output=True, timeout=30, check=False).returncode == 0
+
+
 def pulos_por_alvo_que_saiu(arquivo: pathlib.Path, fonte: str,
                             raiz: pathlib.Path = RAIZ) -> list[str]:
     """Os pulos de ``fonte`` guardados por um caminho do repositório que não existe."""
@@ -163,7 +170,7 @@ def pulos_por_alvo_que_saiu(arquivo: pathlib.Path, fonte: str,
         if not caminho.is_relative_to(raiz) or caminho.exists():
             continue
         relativo = caminho.relative_to(raiz)
-        if any(parte.startswith(".") for parte in relativo.parts):
+        if any(parte.startswith(".") for parte in relativo.parts) or _o_git_ignora(raiz, relativo):
             continue
         achados.append(f"{arquivo.name}:{no.lineno}: {relativo}")
     return achados
@@ -209,3 +216,17 @@ ARQUIVO_DE_PROVA = RAIZ / "tests" / "unit" / "test_de_prova.py"
         "a-venv-da-arvore", "o-ramo-publicado"])
 def test_a_regua_acha_o_alvo_que_saiu_e_deixa_o_ambiente(fonte: str, acha: bool) -> None:
     assert bool(pulos_por_alvo_que_saiu(ARQUIVO_DE_PROVA, fonte)) is acha
+
+
+def test_o_alvo_que_o_git_ignora_nao_saiu_do_produto(tmp_path: pathlib.Path) -> None:
+    """O ``docs/process`` não viaja pelo git, e no clone limpo do GitHub o ``fecho.sh`` não existe.
+
+    MORDIDA: tirar o ``_o_git_ignora`` reprova, e a corrida 42250502449 reprovava por ele."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / ".gitignore").write_text("ignorada/\n", encoding="utf-8")
+    arquivo = tmp_path / "tests" / "unit" / "test_de_prova.py"
+    fonte = ('import pathlib\nimport pytest\nRAIZ = pathlib.Path(__file__).resolve().parents[2]\n'
+             'def test_x():\n    if not (RAIZ / "ignorada/x.sh").exists():\n'
+             '        pytest.skip("clone limpo")\n')
+    assert pulos_por_alvo_que_saiu(arquivo, fonte, tmp_path) == []
+    assert pulos_por_alvo_que_saiu(arquivo, fonte.replace("ignorada", "outra"), tmp_path)

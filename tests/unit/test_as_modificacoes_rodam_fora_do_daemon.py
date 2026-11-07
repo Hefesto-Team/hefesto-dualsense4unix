@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.mods.porta import (
     o_jogo_escreve_no_servico,
 )
 from hefesto_dualsense4unix.mods.supervisor import Supervisor, parar_o_grupo
+from tests.conftest import exigir_caixa_do_bwrap
 
 UNIQ = "aa:bb:cc:00:00:01"
 OUTRO = "aa:bb:cc:00:00:02"
@@ -512,10 +513,10 @@ def test_o_filho_fala_pela_porta_com_a_ficha_e_sem_caixa_o_estado_diz(
     asyncio.run(corrida())
 
 
-@pytest.mark.skipif(shutil.which("bwrap") is None, reason="sem bwrap nesta máquina")
 def test_com_bwrap_a_caixa_esconde_a_casa_a_rede_e_o_socket_principal(
     lar: Lugares, curto: Path
 ) -> None:
+    exigir_caixa_do_bwrap()
     assert not curto.is_relative_to("/tmp"), "no /tmp a caixa esconde tudo sozinha"
     from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
@@ -635,13 +636,13 @@ def _com_a_marca(marca: str) -> list[int]:
     return achados
 
 
-@pytest.mark.skipif(shutil.which("bwrap") is None, reason="sem bwrap nesta máquina")
 def test_na_caixa_o_que_a_modificacao_abriu_morre_com_o_usuario(
     lar: Lugares, curto: Path
 ) -> None:
     """O ``--new-session`` do ``bwrap`` põe o filho fora do grupo do PID criado: sem
     o espaço de PID próprio, o neto que a modificação deixa de fundo sobrevive ao
     «parar». Mordida: tirar o ``--unshare-pid`` e ver o neto vivo."""
+    exigir_caixa_do_bwrap()
     marca = f"neto-da-modificacao-{os.getpid()}-{time.monotonic_ns()}"
     pasta = _pasta_do_mod(curto / "fontes", "neto")
     manifesto = _manifesto()
@@ -672,13 +673,13 @@ def test_na_caixa_o_que_a_modificacao_abriu_morre_com_o_usuario(
     assert depois == [], f"o neto {depois} sobreviveu ao «parar»"
 
 
-@pytest.mark.skipif(shutil.which("bwrap") is None, reason="sem bwrap nesta máquina")
 def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(
     lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Sem ``XDG_RUNTIME_DIR``, o socket principal não vai para a ``HOME``: o
     ``platformdirs`` resolve ``/run/user/<uid>``. A caixa esconde o avô da porta.
     Mordida: esconder só o ``XDG_RUNTIME_DIR`` do ambiente e ver o principal à mostra."""
+    exigir_caixa_do_bwrap()
     assert not curto.is_relative_to("/tmp"), "no /tmp a caixa esconde tudo sozinha"
     execucao = curto / "execucao-da-casa" / "hefesto-dualsense4unix"
     execucao.mkdir(parents=True)

@@ -202,6 +202,9 @@ def _tema_de_icones_de_traco(raiz: Path) -> None:
 
 
 def _sondar(raiz: Path, folha: str, icones: str) -> dict[str, Any]:
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("a sonda abre os botões da janela no GTK real")
     ambiente = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", XDG_DATA_HOME=str(raiz),
                     XDG_CONFIG_HOME=str(raiz / "config"))
     filho = subprocess.run([sys.executable, "-c", _SONDA_DOS_BOTOES, folha, icones],

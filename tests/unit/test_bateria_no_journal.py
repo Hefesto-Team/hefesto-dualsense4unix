@@ -518,7 +518,10 @@ class TestFiacao:
 
         with structlog.testing.capture_logs() as registros:
             run_task = asyncio.create_task(daemon.run())
-            await asyncio.sleep(0.15)
+            for _ in range(1000):
+                await asyncio.sleep(0.01)
+                if any(r["event"] == "bateria_na_queda" for r in registros):
+                    break
             daemon.stop()
             await run_task
         quedas = [r for r in registros if r["event"] == "bateria_na_queda"]

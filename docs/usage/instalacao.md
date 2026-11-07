@@ -173,4 +173,5 @@ bash scripts/purge.sh --yes
 |---|---|---|
 | Pop!\_OS 24.04 | COSMIC | testado com controles |
 | Ubuntu 22.04 e 24.04 | GNOME | integração contínua, sem controle |
-| Fedora, Arch, Debian, Mint | qualquer | não testado; relatos são bem-vindos |
+| Debian 12 | qualquer | sem controle; no kernel 6.1 o `hid-playstation`, o `hid-nintendo` e o `usb_f_hid` ficam nos de fábrica, e o `doctor` diz o motivo |
+| Fedora, Arch, Debian 13, Mint | qualquer | não testado; relatos são bem-vindos |

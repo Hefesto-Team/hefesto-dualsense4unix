@@ -27,6 +27,8 @@ case "$1" in
             fi
         fi
 
+        /usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh || true
+
         if command -v udevadm >/dev/null 2>&1; then
             udevadm control --reload-rules
             udevadm trigger --action=change --subsystem-match=usb
@@ -52,10 +54,12 @@ case "$1" in
         echo ""
         echo "O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do"
         echo "jogo, cura de raiz do duplicado) ja foi ligado: ele atende quem esta"
-        echo "na frente do computador. Os modulos DKMS patchados hid-nintendo (Onda T"
-        echo "— cura de raiz do probe BT dos controles Nintendo/8BitDo) e rtw88_usb"
-        echo "(Onda W — cura de raiz do fantasma USB do dongle WiFi; ambos requerem"
-        echo "os pacotes dkms + headers) saem deste helper:"
+        echo "na frente do computador. Os modulos DKMS patchados (hid-nintendo,"
+        echo "hid-playstation, rtw88_usb, usb_f_hid e uhid) foram compilados agora"
+        echo "para este kernel e voltam a compilar em cada kernel novo; sem os"
+        echo "pacotes dkms e headers, o de fabrica continua. Instalados depois, rode:"
+        echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh"
+        echo "As regras do udev se refazem com:"
         echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
         echo ""
         echo "Ou abra 'Hefesto' no menu de aplicativos."

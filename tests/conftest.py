@@ -5,12 +5,14 @@ import contextlib
 import datetime
 import errno
 import fnmatch
+import functools
 import hashlib
 import inspect
 import itertools
 import os
 import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -223,6 +225,27 @@ def exigir_gi_real(motivo: str = "") -> None:
             pytrace=False,
         )
     pytest.skip(texto, allow_module_level=True)
+
+
+@functools.lru_cache(maxsize=1)
+def _por_que_o_bwrap_nao_abre_a_caixa() -> str:
+    bwrap = shutil.which("bwrap")
+    if bwrap is None:
+        return "sem bwrap nesta máquina"
+    sonda = subprocess.run(
+        [bwrap, "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--unshare-user",
+         "--unshare-net", "--unshare-pid", "--new-session", "true"],
+        capture_output=True, text=True, timeout=30, check=False)
+    if sonda.returncode == 0:
+        return ""
+    return f"o bwrap não abriu a caixa nesta máquina: {sonda.stderr.strip()[:120]}"
+
+
+def exigir_caixa_do_bwrap() -> None:
+    """Pula sem o bwrap, ou no contêiner do `act`, onde ele existe e o `/proc` não deixa abrir."""
+    motivo = _por_que_o_bwrap_nao_abre_a_caixa()
+    if motivo and (shutil.which("bwrap") is None or os.environ.get("ACT") == "true"):
+        pytest.skip(motivo)
 
 
 def instalar_stubs_gi(

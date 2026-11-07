@@ -1736,7 +1736,7 @@ class Porta:
             self._avisar_a(mod_id, EVENTO_DA_MENSAGEM, {"mod": mod_id, "id": ident, "dados": dados})
             try:
                 resposta, respondeu = await asyncio.wait_for(espera, PRAZO_DA_RESPOSTA_S), True
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 resposta, respondeu = None, False
         finally:
             self._esperas.pop(ident, None)

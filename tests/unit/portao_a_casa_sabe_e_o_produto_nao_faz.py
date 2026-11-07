@@ -41,7 +41,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "`assets/systemd/hefesto-hidraw-broker.service:34` (`ExecStart`). O .deb "
-        "(`hidraw_broker` em `scripts/build_deb.sh:219`) e o flatpak fazem o mesmo por conta "
+        "(`hidraw_broker` em `scripts/build_deb.sh:217`) e o flatpak fazem o mesmo por conta "
         "própria. A boca não morreu; mudou de arquivo, que é exatamente o "
         "caso que esta régua manda CONFERIR em vez de apagar",
     ),
@@ -291,7 +291,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
         "roda na máquina de quem usa e um teste de GUI que chamasse `Salvar` com a "
         "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
-        "`tests/conftest.py:1961` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
+        "`tests/conftest.py:1984` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
         "Onde procurar os arquivos de `assets/` "

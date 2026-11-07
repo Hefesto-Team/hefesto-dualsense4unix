@@ -27,6 +27,7 @@ from tests.unit.test_o_pino_chega_a_qualquer_computador import (
     trava_da_rede,  # noqa: F401
 )
 from tests.unit.test_o_proton_novo_so_entra_se_passar import _proton_de_mentira
+from tests.conftest import exigir_caixa_do_bwrap
 
 RAIZ = Path(__file__).resolve().parents[2]
 NATIVO = ".config/heroic"
@@ -326,8 +327,8 @@ def _extensao_do_lutris(lar: Path, monkeypatch: pytest.MonkeyPatch, *,
 def test_o_lutris_pela_extensao_fixa_pelo_manifesto(
         lar: Path, conf: dict[str, str], monkeypatch: pytest.MonkeyPatch, caixa: bool) -> None:
     """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO. Mordida: tire o laço das extensões."""
-    if caixa and shutil.which("bwrap") is None:
-        pytest.skip("sem bwrap nesta máquina")
+    if caixa:
+        exigir_caixa_do_bwrap()
     _pino_na(_steam_de_verdade(lar))
     yml = _extensao_do_lutris(lar, monkeypatch, com_fixador=True)
 

@@ -311,7 +311,7 @@ jobs:
   # apenas PERGUNTA qual foi a conclusão do ci.yml na MESMA SHA.
   #
   # A política de "o que é flaky" continua morando no ci.yml, onde já está
-  # declarada: fedora-40 e archlinux são `continue-on-error: true`, portanto a
+  # declarada: fedora-42 e archlinux são `continue-on-error: true`, portanto a
   # falha deles não muda a conclusão do run e não trava a release. Este guarda
   # não mantém lista paralela nenhuma — se amanhã alguém marcar outro job como
   # experimental, o guarda obedece sem ser editado.

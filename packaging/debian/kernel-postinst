@@ -1,0 +1,5 @@
+#!/bin/sh
+ajudante=/usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh
+[ -x "$ajudante" ] || exit 0
+"$ajudante" "$1" || true
+exit 0
