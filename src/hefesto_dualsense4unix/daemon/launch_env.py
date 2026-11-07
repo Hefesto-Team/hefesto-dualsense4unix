@@ -63,7 +63,7 @@ import itertools
 import os
 import threading
 import time
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -463,16 +463,41 @@ def launch_session_appid(
     marker = read_last_run_marker(base_dir)
     if marker is None:
         return None
-    marker_pid = read_last_run_pid(base_dir)
+    return _appid_da_sessao(
+        marker,
+        read_last_run_pid(base_dir),
+        read_last_exit_marker(base_dir),
+        read_last_exit_pid(base_dir),
+        now,
+    )
+
+
+def _appid_da_sessao(
+    marker: tuple[int, int],
+    marker_pid: int | None,
+    exit_marker: int | None,
+    exit_pid: int | None,
+    now: float | None,
+) -> int | None:
+    """O appid do `marker` se o jogo dele ainda roda, ou None. Não toca o disco."""
     vivo = wrapper_game_running(
         marker=marker,
-        exit_marker=read_last_exit_marker(base_dir),
+        exit_marker=exit_marker,
         pid_alive=pid_is_alive(marker_pid),
         marker_pid=marker_pid,
-        exit_pid=read_last_exit_pid(base_dir),
+        exit_pid=exit_pid,
         now=now,
     )
     return marker[0] if vivo else None
+
+
+def _sessao_da_folha(folha: FolhaDoLancamento, now: float | None) -> int | None:
+    """`launch_session_appid` sobre a folha pronta, sem tocar o disco."""
+    if folha.marker is None:
+        return None
+    return _appid_da_sessao(
+        folha.marker, folha.marker_pid, folha.exit_marker, folha.exit_pid, now
+    )
 
 
 _CLASSES_CEGAS: frozenset[str] = frozenset({"", "unknown"})
@@ -496,12 +521,22 @@ def steam_input_exception_appid(
     base_dir: Path | None = None,
     now: float | None = None,
     allowlist: set[int] | None = None,
+    folha: FolhaDoLancamento | None = None,
 ) -> int | None:
-    """Appid da allowlist com sessão ATIVA agora (R-06), ou None."""
-    appids = allowlist if allowlist is not None else steam_input_appids()
+    """Appid da allowlist com sessão ATIVA agora (R-06), ou None. Com `folha`, sem disco."""
+    appids: Collection[int]
+    if allowlist is not None:
+        appids = allowlist
+    elif folha is not None:
+        appids = folha.allowlist
+    else:
+        appids = steam_input_appids()
     if not appids:
         return None
-    sessao = launch_session_appid(base_dir=base_dir, now=now)
+    if folha is None:
+        sessao = launch_session_appid(base_dir=base_dir, now=now)
+    else:
+        sessao = _sessao_da_folha(folha, now)
     if sessao is not None and sessao in appids:
         return sessao
     store = getattr(daemon, "store", None)
@@ -842,6 +877,7 @@ def arm_launch_profile(
     *,
     base_dir: Path | None = None,
     now: float | None = None,
+    folha: FolhaDoLancamento | None = None,
 ) -> dict[str, Any] | None:
     """Aplica o modo do perfil do jogo NO LAUNCH, não quando a janela aparece.
 
@@ -930,16 +966,18 @@ def arm_launch_profile(
         tique_da_escada(daemon)
     o_fim_do_jogo_devolve_o_modo(daemon)
 
-    marker = read_last_run_marker(base_dir)
+    marker = read_last_run_marker(base_dir) if folha is None else folha.marker
     if marker is None:
         return None
     appid, epoch = marker
     moment = now if now is not None else time.time()
     if (moment - epoch) > LAUNCH_ARM_WINDOW_SEC:
         return None
-    if getattr(daemon, "_launch_armed_for", None) == (appid, epoch):
-        return None
     armado_antes = getattr(daemon, "_launch_armed_for", None)
+    if armado_antes == (appid, epoch):
+        return None
+    if folha is not None and _a_folha_nao_viu_o_arme(armado_antes, epoch):
+        return None
     daemon._launch_armed_for = (appid, epoch)
     _encerrar_a_autoridade_do_jogo_que_acabou(daemon, appid, armado_antes)
     _soltar_a_trava_do_lancamento(daemon)
@@ -949,6 +987,11 @@ def arm_launch_profile(
     do_proprio = _a_autoridade_e_do_proprio_jogo(daemon, appid)
     with o_arme_do_proprio_jogo(appid if do_proprio else None):
         return _armar_o_jogo(daemon, appid, epoch, base_dir)
+
+
+def _a_folha_nao_viu_o_arme(armado: Any, epoch: int) -> bool:
+    """O ping armou pelo disco um lançamento mais novo que o `epoch` da folha?"""
+    return isinstance(armado, tuple) and epoch < armado[1]
 
 
 def _guardar_o_modo_do_arme(daemon: Any, appid: int, mode: Any) -> None:
@@ -1576,8 +1619,22 @@ def a_assinatura(
     """A forma única da assinatura: o vigia e o recibo da foto leem a MESMA conta."""
     return (
         native, enabled, flavor, tuple(backends), fisicos,
-        _o_freestyle_na_assinatura(daemon), selo_dos_perfis(), _pares_de_fora(daemon),
+        _o_freestyle_na_assinatura(daemon), _o_selo_do_laco(daemon), _pares_de_fora(daemon),
     )
+
+
+def _a_folha_pronta(daemon: Any) -> FolhaDoLancamento | None:
+    """A folha do caderno que atende este laço; None sem caderno ou sem leitura."""
+    caderno = getattr(daemon, "_caderno_do_lancamento", None)
+    if isinstance(caderno, CadernoDoLancamento) and caderno.atende_aqui():
+        return caderno.folha()
+    return None
+
+
+def _o_selo_do_laco(daemon: Any) -> SeloDosPerfis:
+    """O selo da folha pronta, ou o do disco sem folha."""
+    folha = _a_folha_pronta(daemon)
+    return selo_dos_perfis() if folha is None else folha.selo
 
 
 def _assinatura_da_mesa(daemon: DaemonProtocol) -> AssinaturaDaMesa:
@@ -1653,7 +1710,8 @@ def _avisar_se_o_jogo_ja_congelou(
         agora_tem = cobertura_total(backends=list(atual[3]), fisicos=atual[4])
         if antes == agora_tem:
             return
-        appid = launch_session_appid()
+        folha = _a_folha_pronta(daemon)
+        appid = launch_session_appid() if folha is None else _sessao_da_folha(folha, None)
         if appid is None:
             return
         logger.warning(
@@ -1898,23 +1956,24 @@ def env_do_modo(
     return env
 
 
-def appids_em_cena(
-    daemon: Any, *, base_dir: Path | None = None, now: float | None = None
-) -> set[int]:
-    """Appids cujo perfil está (ou deveria estar) VALENDO agora."""
-    out: set[int] = set()
-    with contextlib.suppress(Exception):
-        sessao = launch_session_appid(base_dir=base_dir, now=now)
-        if sessao is not None:
-            out.add(sessao)
+def _em_cena_de_memoria(daemon: Any) -> frozenset[int]:
+    """O appid da janela em foco, que se sabe sem tocar o disco."""
     with contextlib.suppress(Exception):
         store = getattr(daemon, "store", None)
         wm_class = getattr(store, "window_detect_current_class", None)
-        foco = steam_appid_from_wm_class(
-            wm_class if isinstance(wm_class, str) else None
-        )
+        foco = steam_appid_from_wm_class(wm_class if isinstance(wm_class, str) else None)
         if foco is not None:
-            out.add(foco)
+            return frozenset({foco})
+    return frozenset()
+
+
+def _em_cena_com_a_sessao(de_memoria: frozenset[int]) -> set[int]:
+    """`de_memoria` somado à sessão do wrapper, que se lê do disco."""
+    out = set(de_memoria)
+    with contextlib.suppress(Exception):
+        sessao = launch_session_appid()
+        if sessao is not None:
+            out.add(sessao)
     return out
 
 
@@ -2192,7 +2251,7 @@ def _a_parte_de_fora(
     default_env, estado = _o_ambiente_padrao(foto)
     _write_atomic(target / "default.env", _render(default_env, estado))
     desired = {"default.env"}
-    em_cena = foto.em_cena
+    em_cena = _em_cena_com_a_sessao(foto.em_cena)
     divergencias: list[dict[str, Any]] = []
     freestyle = _o_freestyle_que_manda(leitor)
     receitas = _receitas_dos_jogos()
@@ -2603,7 +2662,7 @@ def _foto_do_lancamento(
         backends=tuple(backends),
         fisicos=fisicos,
         modo_vivo=modo_vivo,
-        em_cena=frozenset(appids_em_cena(daemon)),
+        em_cena=_em_cena_de_memoria(daemon),
         identidade=_identidade_do_primario(daemon),
         permite_uhid=_permite_uhid(daemon),
         vpads_previstos=_vpads_previstos(daemon, fisicos),
@@ -2795,6 +2854,103 @@ def desarmar_o_escrevente(escrevente: EscreventeDoLancamento, teto_s: float = 5.
     if _ESCREVENTE is escrevente:
         _ESCREVENTE = None
     escrevente.esvaziar_e_parar(teto_s)
+
+
+@dataclass(frozen=True)
+class FolhaDoLancamento:
+    """O que o relógio `launch` pergunta ao disco, lido inteiro numa passada do caderno."""
+
+    marker: tuple[int, int] | None
+    marker_pid: int | None
+    exit_marker: int | None
+    exit_pid: int | None
+    allowlist: frozenset[int]
+    selo: SeloDosPerfis
+
+
+FOLHA_EM_BRANCO = FolhaDoLancamento(None, None, None, None, frozenset(), ())
+
+
+def ler_a_folha() -> FolhaDoLancamento:
+    """Lê do disco a folha inteira. Espera o disco: nunca no fio do laço."""
+    return FolhaDoLancamento(
+        marker=read_last_run_marker(),
+        marker_pid=read_last_run_pid(),
+        exit_marker=read_last_exit_marker(),
+        exit_pid=read_last_exit_pid(),
+        allowlist=frozenset(steam_input_appids()),
+        selo=selo_dos_perfis(),
+    )
+
+
+class CadernoDoLancamento:
+    """O fio que lê o disco do relógio `launch`; o tique lê só a folha pronta.
+
+    Fio próprio, e não o pool do `_run_blocking`: uma seca de disco ali encheria os dois
+    fios que o `read_state` usa. A folha mudou, `ao_mudar` volta ao laço na hora, e o prazo
+    do lançamento segue sendo o do relógio.
+    """
+
+    def __init__(
+        self,
+        laco: asyncio.AbstractEventLoop,
+        ao_mudar: Callable[[], None],
+        periodo_s: float,
+        folha: FolhaDoLancamento | None = None,
+    ) -> None:
+        self._laco = laco
+        self._ao_mudar = ao_mudar
+        self._periodo_s = periodo_s
+        self._folha = folha
+        self._fio = threading.Thread(
+            target=self._ler_sempre, name="hefesto-caderno-do-lancamento", daemon=True
+        )
+        self._fio.start()
+
+    def atende_aqui(self) -> bool:
+        """Quem pergunta está no laço deste caderno?"""
+        try:
+            return asyncio.get_running_loop() is self._laco
+        except RuntimeError:
+            return False
+
+    def folha(self) -> FolhaDoLancamento | None:
+        """A última folha lida; None até a primeira leitura voltar."""
+        return self._folha
+
+    def vivo(self) -> bool:
+        """O fio segue lendo? Fio morto faz o relógio abrir outro caderno."""
+        return self._fio.is_alive()
+
+    def _ler_sempre(self) -> None:
+        while not self._laco.is_closed():
+            nova = ler_a_folha()
+            if nova != self._folha:
+                self._folha = nova
+                with contextlib.suppress(RuntimeError):
+                    self._laco.call_soon_threadsafe(self._ao_mudar)
+            time.sleep(self._periodo_s)
+
+
+def a_folha_do_relogio(
+    daemon: Any, ao_mudar: Callable[[], None], periodo_s: float
+) -> FolhaDoLancamento | None:
+    """A folha pronta do caderno deste laço; None até a primeira leitura voltar.
+
+    Sem laço rodando não há entrada a segurar, e a leitura é na hora.
+    """
+    try:
+        laco = asyncio.get_running_loop()
+    except RuntimeError:
+        return ler_a_folha()
+    caderno = getattr(daemon, "_caderno_do_lancamento", None)
+    if not (isinstance(caderno, CadernoDoLancamento) and caderno.atende_aqui()):
+        caderno = CadernoDoLancamento(laco, ao_mudar, periodo_s)
+        daemon._caderno_do_lancamento = caderno
+    elif not caderno.vivo():
+        caderno = CadernoDoLancamento(laco, ao_mudar, periodo_s, caderno.folha())
+        daemon._caderno_do_lancamento = caderno
+    return caderno.folha()
 
 
 def _identidade_do_primario(daemon: Any) -> str | None:
@@ -2994,15 +3150,18 @@ def _o_modo_e_o_da_ponte(perfil: Any, ponte: ponte_escada.Ponte) -> bool:
 __all__ = [
     "ENV_ALLOWLIST",
     "ESTADO_ALLOWLIST_STEAM_INPUT",
+    "FOLHA_EM_BRANCO",
     "JANELA_DE_SOSSEGO_SEC",
     "LAUNCH_ARM_WINDOW_SEC",
     "PAR_DUALSENSE_FISICO",
     "WRAPPER_MARKER_WINDOW_SEC",
+    "CadernoDoLancamento",
+    "FolhaDoLancamento",
     "ModoAntecipado",
     "ParDoComputador",
     "_receitas_dos_jogos",
+    "a_folha_do_relogio",
     "ambiente_do_lancamento",
-    "appids_em_cena",
     "arm_launch_profile",
     "armar_rematerializacao",
     "cobertura_total",
@@ -3012,6 +3171,7 @@ __all__ = [
     "divergencias_publicadas",
     "env_do_modo",
     "launch_session_appid",
+    "ler_a_folha",
     "materialize_launch_env",
     "modo_do_computador",
     "modo_do_estado_vivo",

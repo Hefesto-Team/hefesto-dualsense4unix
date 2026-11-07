@@ -80,6 +80,7 @@ from hefesto_dualsense4unix.profiles.schema import MOTOR_PCT_PADRAO
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
+    from hefesto_dualsense4unix.daemon.launch_env import FolhaDoLancamento
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
@@ -243,7 +244,10 @@ def steam_input_excecao_ativa(daemon: Any) -> bool:
 
 
 def sync_steam_input_exception(
-    daemon: DaemonProtocol, *, now: float | None = None
+    daemon: DaemonProtocol,
+    *,
+    now: float | None = None,
+    folha: FolhaDoLancamento | None = None,
 ) -> bool:
     """Liga/desliga a exceção de Steam Input por appid. True = ativa (R-06).
 
@@ -284,7 +288,7 @@ def sync_steam_input_exception(
     """
     from hefesto_dualsense4unix.daemon.launch_env import steam_input_exception_appid
 
-    appid = steam_input_exception_appid(daemon, now=now)
+    appid = steam_input_exception_appid(daemon, now=now, folha=folha)
     ativa = appid is not None
     anterior = steam_input_excecao_ativa(daemon)
     if ativa == anterior:
@@ -1216,22 +1220,37 @@ def _reconciliar_launch(daemon: DaemonProtocol) -> None:
 
     Quem a chama é o relógio ``launch`` do `_poll_loop` (1 Hz, com fase própria),
     depois da entrada do tique: o `dispatch_gamepad` não a chama mais, porque a porta
-    varre `/proc` e o encaminhamento do botão ao jogo não espera por isso.
+    varre `/proc` e o encaminhamento do botão ao jogo não espera por isso. O disco é do
+    fio do caderno: aqui se lê a folha pronta, e a folha que muda chama esta função.
     """
-    with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.daemon.launch_env import arm_launch_profile
+    from hefesto_dualsense4unix.daemon.launch_env import (
+        FOLHA_EM_BRANCO,
+        a_folha_do_relogio,
+        arm_launch_profile,
+        rematerializar_se_sossegou,
+        vigiar_a_mesa,
+    )
 
-        arm_launch_profile(daemon)
+    folha = None
     with contextlib.suppress(Exception):
-        sync_steam_input_exception(daemon)
-    with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.daemon.launch_env import (
-            rematerializar_se_sossegou,
-            vigiar_a_mesa,
+        folha = a_folha_do_relogio(
+            daemon, lambda: _a_folha_mudou(daemon), LAUNCH_RECONCILE_INTERVAL_SEC
         )
-
+        arm_launch_profile(daemon, folha=FOLHA_EM_BRANCO if folha is None else folha)
+    with contextlib.suppress(Exception):
+        sync_steam_input_exception(daemon, folha=FOLHA_EM_BRANCO if folha is None else folha)
+    if folha is None:
+        return
+    with contextlib.suppress(Exception):
         vigiar_a_mesa(daemon)
         rematerializar_se_sossegou(daemon)
+
+
+def _a_folha_mudou(daemon: DaemonProtocol) -> None:
+    """A folha nova reconcilia na hora, salvo com o serviço parando."""
+    parada = getattr(daemon, "_stop_event", None)
+    if parada is None or not parada.is_set():
+        _reconciliar_launch(daemon)
 
 
 def _rebackend_em_cooldown(daemon: DaemonProtocol, now: float) -> bool:
