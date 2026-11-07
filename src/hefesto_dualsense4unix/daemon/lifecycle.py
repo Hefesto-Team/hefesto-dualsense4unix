@@ -1816,7 +1816,7 @@ class Daemon:
             velocidades=velocidades,
             arranjo=arranjo,
         )
-        return None if _laco_deste_fio() is not None else feito.result()
+        return None if _no_fio_de_um_laco() else feito.result()
 
     def escolher_o_modo_unico(self, modo: object, *, porta: PortaQueGrava) -> str:
         """O modo único de TODOS os controles: o escritor só, do IPC, do PS + L3 e do PS + R3.
@@ -4809,12 +4809,13 @@ def _gravar_medida(store: Any, nome: str, valor: int) -> None:
     store.bump(nome, valor - store.counter(nome))
 
 
-def _laco_deste_fio() -> asyncio.AbstractEventLoop | None:
-    """O laço que roda NESTE fio, ou ``None`` fora de laço nenhum."""
+def _no_fio_de_um_laco() -> bool:
+    """Este fio roda um laço agora? Quem está nele não pode esperar disco."""
     try:
-        return asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
-        return None
+        return False
+    return True
 
 
 def _gravar_o_modo_no_fio(ativo: str | None, *, kind: str, **modo: Any) -> str | None:
@@ -4941,8 +4942,10 @@ def _importar_o_que_a_subida_usa() -> None:
 
     nomes = [f"{subsystems.__name__}.{m.name}" for m in pkgutil.iter_modules(subsystems.__path__)]
     for nome in (*nomes, "hefesto_dualsense4unix.integrations.canal_sem_imu"):
-        with contextlib.suppress(Exception):
+        try:
             importlib.import_module(nome)
+        except Exception as exc:
+            logger.warning("subida_nao_importou", modulo=nome, err=str(exc))
 
 
 def _a_fabrica_do_supervisor() -> Callable[[Any], Any]:

@@ -96,9 +96,7 @@ def _onde(quadro: FrameType | None) -> str:
 def quem_prende(laco: asyncio.AbstractEventLoop, fio: int) -> tuple[str, str]:
     """A tarefa (ou o callback) que está no fio do laço agora, e a linha onde está."""
     quadro = sys._current_frames().get(fio)
-    tarefa = None
-    with contextlib.suppress(Exception):
-        tarefa = asyncio.current_task(laco)
+    tarefa = asyncio.current_task(laco)
     nome = _nome_da_tarefa(tarefa) if tarefa is not None else _callback_em_curso(quadro)
     return nome or SEM_AMOSTRA, _onde(quadro)
 
