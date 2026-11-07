@@ -67,13 +67,13 @@ def tela() -> Any:
 
 def test_delete_com_perfil_escolhido_aciona_o_remover_duas_vezes_pergunta_e_confirma(
         tela: Any) -> None:
-    tela.executar(_escolher("Elden Ring"))
+    tela.executar(_escolher("Jogo um"))
     assert json.loads(tela.executar(_apertar("body"))) == [1, True]
     assert json.loads(tela.executar(_apertar("body"))) == [2, True]
 
 
 def test_delete_dentro_do_campo_de_texto_e_do_campo(tela: Any) -> None:
-    tela.executar(_escolher("Elden Ring"))
+    tela.executar(_escolher("Jogo um"))
     assert json.loads(tela.executar(_apertar("input.procura"))) == [0, False]
 
 
