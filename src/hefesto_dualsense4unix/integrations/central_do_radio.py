@@ -2583,7 +2583,11 @@ class CentralDoRadio:
             self.pedir_o_religador()
 
     def _os_caidos(self, dono: bluez_dbus.LeitorDoBluez) -> frozenset[str] | None:
-        """Os controles pareados e confiáveis fora do ar, por endereço. ``None`` = não sei."""
+        """Os controles pareados e confiáveis fora do ar, por endereço. ``None`` = não sei.
+
+        Quem responde é o BlueZ e o kernel, de agora. A lista de controles que a janela pede fica
+        de fora: só anda com a janela aberta, e guardaria no ar quem já caiu.
+        """
         aparelhos = dono.aparelhos()
         if aparelhos is None:
             return None
@@ -2596,7 +2600,7 @@ class CentralDoRadio:
                           for o in objetos)
             if not pareado or _o_bluez_diz_controle(objetos) is not True:
                 continue
-            if self._no_ar(endereco, dono):
+            if self._onde_esta(_hex12(endereco)) or any(o.conectado is True for o in objetos):
                 continue
             kernel = self._no_kernel(endereco)
             if kernel is None:
@@ -2620,7 +2624,7 @@ class CentralDoRadio:
             if aparelho != _TODOS_OS_CAIDOS:
                 self._chamadas[aparelho] = _Chamada(agora, agora + RECUOS_DO_RELIGADOR_S[0])
         for aparelho, chamada in list(self._chamadas.items()):
-            if aparelho not in caidos and agora >= chamada.proxima:
+            if aparelho not in caidos and (chamada.passo or agora >= chamada.proxima):
                 del self._chamadas[aparelho]
                 logger.info("central_religou", aparelho=mascarar(aparelho),
                             tentativas=chamada.passo)
@@ -2660,8 +2664,11 @@ class CentralDoRadio:
     ) -> bool:
         """Tenta os candidatos, em sequência, e marca o próximo passo. Diz se tentou."""
         candidatos = dono.caminhos_para_conectar(aparelho, primeiro=self._onde_esteve(aparelho))
+        if not candidatos:
+            self._chamadas[aparelho].adiantar(agora)
+            return False
         motivos: list[str] = []
-        for no in candidatos or ():
+        for no in candidatos:
             motivo = self._um_connect(dono, no)
             if motivo is None:
                 break

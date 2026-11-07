@@ -208,7 +208,7 @@ def test_quem_esta_no_ar_ou_no_cabo_nao_recebe_connect(
     mundo.pareado(SALA, VERMELHO, conectado=onde == "bluez")
     central = _central(dono, mundo, relogio, no_cabo)
     if onde == "mesa":
-        central.conhecer([{"uniq": rm.uniq(VERMELHO), "jogador": 2}])
+        central._onde_esta = lambda _u: SALA
     elif onde == "cabo":
         no_cabo.add(VERMELHO)
     elif onde == "nao_sei":
@@ -382,6 +382,24 @@ def test_com_a_trava_ocupada_a_tentativa_espera_a_vez(
     assert mundo.connects() == [(SALA, VERMELHO)]
 
 
+def test_com_um_movimento_em_curso_o_religador_espera(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mundo.pareado(SALA, VERMELHO, conectado=False)
+    central = _central(dono, mundo, relogio)
+    central.pedir_o_religador()
+    monkeypatch.setattr(central, "_ocupada", lambda: True)
+
+    assert _andar(central, relogio, 6) == []
+    assert mundo.connects() == []
+    assert central._chamadas[VERMELHO].passo == 0
+
+    monkeypatch.undo()
+
+    assert central.religar() == VERMELHO
+
+
 def test_com_a_busca_aberta_o_religador_espera(
     diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
 ) -> None:
@@ -391,6 +409,132 @@ def test_com_a_busca_aberta_o_religador_espera(
     central._janela_da_busca = object()  # type: ignore[assignment]
 
     assert _andar(central, relogio, 6) == []
+
+
+def test_a_lista_da_janela_fechada_nao_segura_quem_caiu(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
+) -> None:
+    """A lista que a janela pede só anda com a janela aberta: fechada, a queda não a muda."""
+    mundo.pareado(SALA, VERMELHO, conectado=True)
+    central = _central(dono, mundo, relogio)
+    central.conhecer([{"uniq": rm.uniq(VERMELHO), "connected": True}])
+    mundo._emitir(bd.Sinal("desconectou", caminho=_no(SALA, VERMELHO), razao=bd.RAZAO_TIMEOUT))
+    mundo.desligar(VERMELHO)
+
+    _andar(central, relogio, 6)
+
+    assert mundo.connects() == [(SALA, VERMELHO)]
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) == SALA
+
+
+@pytest.mark.parametrize("sem_adaptador,com_adaptador", [(VERMELHO, AZUL), (AZUL, VERMELHO)])
+def test_quem_nao_tem_adaptador_ligado_nao_segura_a_vez_dos_outros(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
+    sem_adaptador: str, com_adaptador: str,
+) -> None:
+    mundo.pareado(SALA, sem_adaptador, conectado=False)
+    mundo.pareado(QUARTO, com_adaptador, conectado=False)
+    mundo.mesa[rm.HCIS[SALA]][bd.ADAPTADOR]["Powered"] = False
+    central = _central(dono, mundo, relogio)
+    central.pedir_o_religador()
+
+    _andar(central, relogio, 8)
+
+    assert mundo.connects() == [(QUARTO, com_adaptador)]
+
+
+def test_quem_voltou_pelo_ps_e_saiu_por_gesto_nao_e_chamado(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
+) -> None:
+    mundo.pareado(SALA, VERMELHO, conectado=False)
+    mundo.dormindo.add(VERMELHO)
+    central = _central(dono, mundo, relogio)
+    central.pedir_o_religador()
+    assert _andar(central, relogio, 6) == [5.0]
+
+    mundo._mudar(_no(SALA, VERMELHO), bd.APARELHO, "Connected", True)
+    central.religar()
+    assert not central._chamadas
+
+    mundo._emitir(bd.Sinal(
+        "desconectou", caminho=_no(SALA, VERMELHO), razao=bd.RAZAO_DO_CONTROLE))
+    mundo._mudar(_no(SALA, VERMELHO), bd.APARELHO, "Connected", False)
+
+    assert _andar(central, relogio, 30) == []
+
+
+@pytest.mark.parametrize("sobra,mora", [(SALA, QUARTO), (QUARTO, SALA)])
+def test_a_queda_lembra_o_adaptador_em_que_ele_estava_pelo_aviso(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio, sobra: str, mora: str,
+) -> None:
+    mundo.pareado(sobra, VERMELHO, conectado=False, host=False)
+    mundo.pareado(mora, VERMELHO, conectado=True)
+    central = _central(dono, mundo, relogio)
+    mundo.dormindo.add(VERMELHO)
+    mundo._emitir(bd.Sinal("desconectou", caminho=_no(mora, VERMELHO), razao=bd.RAZAO_TIMEOUT))
+    mundo.desligar(VERMELHO)
+
+    _andar(central, relogio, 6)
+
+    assert [onde for onde, _ in mundo.connects()] == [mora, sobra]
+
+
+@pytest.mark.parametrize("sobra,mora", [(SALA, QUARTO), (QUARTO, SALA)])
+def test_o_adaptador_que_o_kernel_lembrou_vem_primeiro(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio, sobra: str, mora: str,
+) -> None:
+    mundo.pareado(sobra, VERMELHO, conectado=False, host=False)
+    mundo.pareado(mora, VERMELHO, conectado=True)
+    central = _central(dono, mundo, relogio)
+    central._lembrar_onde_estao()
+    mundo.dormindo.add(VERMELHO)
+    mundo.desligar(VERMELHO)
+    central.religar()
+    central._onde_caiu.clear()
+    central.pedir_o_religador()
+
+    _andar(central, relogio, 6)
+
+    assert [onde for onde, _ in mundo.connects()] == [mora, sobra]
+
+
+@pytest.mark.parametrize("campo", ["Paired", "Trusted", "Bonded"])
+def test_so_o_pareado_e_confiavel_e_chamado(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio, campo: str,
+) -> None:
+    mundo.pareado(SALA, VERMELHO, conectado=False)
+    mundo.mesa[_no(SALA, VERMELHO)][bd.APARELHO][campo] = False
+    central = _central(dono, mundo, relogio)
+    central.pedir_o_religador()
+
+    _andar(central, relogio, 70)
+
+    assert mundo.connects() == []
+
+
+def test_o_que_nao_e_controle_nunca_e_chamado(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
+) -> None:
+    mundo.pareado(SALA, VERMELHO, conectado=False, classe=rm.CLASSE_DE_FONE)
+    central = _central(dono, mundo, relogio)
+    central.pedir_o_religador()
+
+    _andar(central, relogio, 70)
+
+    assert mundo.connects() == []
+
+
+def test_o_controle_sem_classe_entra_pelo_icone(
+    diario: Path, mundo: _Radio, dono: bd.DonoVivo, relogio: rm.Relogio,
+) -> None:
+    """O Xbox de hoje fala LE: o BlueZ não dá ``Class``, só o ``Icon``."""
+    mundo.pareado(SALA, VERMELHO, conectado=False, classe=None, icone=cr.ICONE_DE_CONTROLE)
+    central = _central(dono, mundo, relogio)
+    central.pedir_o_religador()
+
+    _andar(central, relogio, 6)
+
+    assert mundo.connects() == [(SALA, VERMELHO)]
 
 
 _MESAS = {
