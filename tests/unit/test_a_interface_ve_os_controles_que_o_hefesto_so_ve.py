@@ -144,21 +144,21 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
         "a regra que esconde o marcador saiu do CSS da aba 01")
 
 
-def _a_saida_estavel() -> str:
-    """O fim do aviso do `hid-nintendo`, com a palavra PERGUNTADA ao dono."""
+def _o_estado_no_radio() -> str:
+    """O estado do `hid-nintendo` pelo rádio, com a palavra PERGUNTADA ao dono."""
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )
 
-    return f"pelo {palavra_do_transporte('usb')} é estável"
+    return f"Instável no {palavra_do_transporte('bt')}"
 
 
 def test_a_jogar_avisa_a_armadilha_do_driver_so_no_nintendo() -> None:
     """O aviso do `hid-nintendo` nasce no Pro por rádio, e em mais ninguém."""
     do_pro = jogar.pacote(_ctx([UM_PRO]))["externos"]
-    assert _a_saida_estavel() in do_pro
+    assert _o_estado_no_radio() in do_pro
     do_8bitdo = jogar.pacote(_ctx([UM_8BITDO]))["externos"]
-    assert _a_saida_estavel() not in do_8bitdo
+    assert _o_estado_no_radio() not in do_8bitdo
 
 
 def test_a_jogar_nao_inventa_cor_de_plastico_para_o_externo() -> None:
@@ -191,7 +191,7 @@ def test_a_conexoes_lista_o_externo() -> None:
     assert 'class="ext-linha"' in html
     assert "Controle 4" in html
     assert "só vê" in html
-    assert _a_saida_estavel() in html
+    assert _o_estado_no_radio() in html
 
 
 def test_a_conexoes_apaga_a_lista_quando_nao_ha_externo() -> None:
