@@ -30,9 +30,12 @@ import re
 import secrets
 import shutil
 import signal
+import threading
 import time
+from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -220,8 +223,11 @@ class _AHoraDeCadaLinha:
         self.no_meio = False
         self.resto = b""
 
+    def carimbo(self) -> bytes:
+        return time.strftime("%Y-%m-%d %H:%M:%S ", self.relogio()).encode()
+
     def _carimbos(self) -> tuple[bytes, bytes]:
-        carimbo = time.strftime("%Y-%m-%d %H:%M:%S ", self.relogio()).encode()
+        carimbo = self.carimbo()
         return carimbo, carimbo
 
     def marcar(self, pedaco: bytes, *, fim: bool = False) -> bytes:
@@ -245,6 +251,89 @@ class _AHoraDeCadaLinha:
         return saida
 
 
+_TRAVAS_DOS_DIARIOS: dict[str, threading.Lock] = {}
+
+
+class _EscritorDoDiario:
+    """O fio que grava o diário de uma extensão, atrás de uma fila com teto em bytes.
+
+    O laço só enfileira: nem ``stat``, nem ``open``, nem ``write``. O teto da fila é o maior
+    pedaço do diário, para a poda nunca levar junto a conta: acima dele sai a linha mais velha,
+    e o diário diz quantas saíram, no ponto em que saíram. A trava é do arquivo: o escritor da
+    abertura anterior pode ainda estar no disco quando a extensão reabre.
+    """
+
+    def __init__(self, caminho: Path, pedaco_max: int, hora: _AHoraDeCadaLinha,
+                 ao_terminar: Callable[[], None]) -> None:
+        self.caminho = caminho
+        self.pedaco_max = pedaco_max
+        self.hora = hora
+        self.ao_terminar = ao_terminar
+        self._vez = threading.Condition()
+        self._linhas: deque[bytes] = deque()
+        self._na_fila = 0
+        self._perdidas = 0
+        self._fechou = False
+        self._recusou = False
+        self._trava = _TRAVAS_DOS_DIARIOS.setdefault(str(caminho), threading.Lock())
+        threading.Thread(target=self._rodar, name=f"mods-diario-{caminho.parent.name}",
+                         daemon=True).start()
+
+    def por(self, dados: bytes) -> None:
+        """Enfileira sem tocar no disco. Nunca espera: o cano não para."""
+        with self._vez:
+            for linha in BytesIO(dados):
+                self._linhas.append(linha)
+                self._na_fila += len(linha)
+            while self._na_fila > self.pedaco_max and len(self._linhas) > 1:
+                self._na_fila -= len(self._linhas.popleft())
+                self._perdidas += 1
+            self._vez.notify()
+
+    def fechar(self) -> None:
+        """Não entra mais nada: o fio escoa o que está na fila e sai."""
+        with self._vez:
+            self._fechou = True
+            self._vez.notify()
+
+    def _gravar(self, dados: bytes) -> None:
+        with self._trava:
+            for inicio in range(0, len(dados), self.pedaco_max):
+                parte = dados[inicio:inicio + self.pedaco_max]
+                try:
+                    _aparar_o_diario(self.caminho, len(parte))
+                    with self.caminho.open("ab") as diario:
+                        diario.write(parte)
+                except OSError as exc:
+                    if not self._recusou:
+                        logger.warning("mods_diario_recusado", diario=str(self.caminho),
+                                       err=str(exc))
+                    self._recusou = True
+
+    def _a_linha_das_perdidas(self, perdidas: int) -> bytes:
+        if not perdidas:
+            return b""
+        frase = "1 linha saiu" if perdidas == 1 else f"{perdidas} linhas saíram"
+        return self.hora.carimbo() + f"({frase}: o disco não acompanhou)\n".encode()
+
+    def _rodar(self) -> None:
+        try:
+            while True:
+                with self._vez:
+                    while not self._linhas and not self._fechou:
+                        self._vez.wait()
+                    if not self._linhas:
+                        return
+                    dados = b"".join(self._linhas)
+                    perdidas, self._perdidas = self._perdidas, 0
+                    self._linhas.clear()
+                    self._na_fila = 0
+                self._gravar(self._a_linha_das_perdidas(perdidas) + dados)
+        finally:
+            with contextlib.suppress(RuntimeError):
+                self.ao_terminar()
+
+
 async def _copiar_para_o_diario(
     leitor: asyncio.StreamReader,
     caminho: Path,
@@ -253,36 +342,36 @@ async def _copiar_para_o_diario(
 ) -> None:
     """A saída e o erro do processo vão para o diário com a hora de cada linha, sem passar do teto.
 
-    O cano é lido até o fim mesmo quando o disco recusa a escrita: um cano parado trava o
-    processo no ``print`` seguinte. A recusa vai ao log uma vez. O pedaço sem quebra que sobra
-    entra quando o cano fecha, ou quando a cópia é cancelada.
+    O cano é lido até o fim, e o disco fica no :class:`_EscritorDoDiario`: um cano parado trava
+    o processo no ``print`` seguinte, e a recusa do disco vai ao log uma vez. O pedaço sem quebra
+    que sobra entra quando o cano fecha, ou quando a cópia é cancelada. Nos dois casos a cópia
+    espera o escritor escoar a fila, até :data:`ESPERA_DO_DIARIO_S`.
     """
     pedaco_max = max(1, TETO_DO_DIARIO_BYTES // 4)
     hora = _AHoraDeCadaLinha(relogio, pedaco_max)
-    recusou = False
+    laco = asyncio.get_running_loop()
+    escoou = asyncio.Event()
 
-    def gravar(dados: bytes) -> None:
-        nonlocal recusou
-        for inicio in range(0, len(dados), pedaco_max):
-            parte = dados[inicio:inicio + pedaco_max]
-            try:
-                _aparar_o_diario(caminho, len(parte))
-                with caminho.open("ab") as diario:
-                    diario.write(parte)
-            except OSError as exc:
-                if not recusou:
-                    logger.warning("mods_diario_recusado", diario=str(caminho), err=str(exc))
-                recusou = True
+    def ao_terminar() -> None:
+        laco.call_soon_threadsafe(escoou.set)
 
+    escritor = _EscritorDoDiario(caminho, pedaco_max, hora, ao_terminar)
     try:
         while pedaco := await leitor.read(pedaco_max):
-            gravar(hora.marcar(pedaco))
+            escritor.por(hora.marcar(pedaco))
     finally:
-        gravar(hora.marcar(b"", fim=True))
+        escritor.por(hora.marcar(b"", fim=True))
+        escritor.fechar()
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(escoou.wait(), ESPERA_DO_DIARIO_S)
 
 
 async def _esvaziar_a_copia(copia: asyncio.Task[None] | None, prazo: float) -> None:
-    """Espera a cópia ler o que sobrou no cano; quem segura o cano além do prazo perde a cópia."""
+    """Espera a cópia ler o que sobrou no cano e escoar a fila.
+
+    Quem segura o cano além do prazo perde a cópia; o disco preso além do prazo perde a espera, e
+    o escritor segue sozinho até esvaziar a fila.
+    """
     if copia is None:
         return
     await asyncio.wait({copia}, timeout=prazo)
