@@ -54,7 +54,7 @@ def test_ha_geradores_para_varrer() -> None:
 
 @pytest.mark.parametrize("arquivo", GERADORES, ids=lambda p: p.name)
 def test_nenhum_gerador_traz_exemplo_real(arquivo: pathlib.Path) -> None:
-    """MORDE: devolva «Mortal Kombat» ao `PERFIS` de `aba10.py` e reprova."""
+    """MORDE: devolva `UB500` ao `modelo` do adaptador em `aba08.py` e reprova."""
     achados = [f"{arquivo.name}:{n}: {t[:90]!r}"
                for n, t in _constantes(arquivo) if NOMES.search(t)]
     assert not achados, "\n".join(achados)
