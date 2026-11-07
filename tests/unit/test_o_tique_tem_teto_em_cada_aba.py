@@ -46,6 +46,8 @@ TETO_DO_P95_MS = 40.0
 TETO_DA_ABA_S = 20.0
 
 CADENCIA_DA_MEDIDA_MS = 25
+REFERENCIA_MS = 0.7
+REFERENCIA_COM_CARGA_MS = 0.97
 
 
 @contextmanager
@@ -61,6 +63,14 @@ def _sem_o_rastreador() -> Iterator[None]:
         yield
     finally:
         sys.settrace(antes)
+
+
+def _trabalho_de_referencia() -> float:
+    """CPU de um trabalho fixo, em ms: o que o mesmo código custa nesta máquina agora."""
+    t0 = time.thread_time()
+    cartoes = [{"id": i, "nome": f"controle-{i}", "valor": i * 3} for i in range(600)]
+    json.loads(json.dumps(cartoes))
+    return (time.thread_time() - t0) * 1000
 
 
 def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
@@ -82,6 +92,7 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
     monkeypatch.setattr(ondas_de_som, "_LIGADO", [False])
 
     custos: dict[str, list[float]] = {aba: [] for aba in ABAS}
+    referencias: dict[str, list[float]] = {aba: [] for aba in ABAS}
     roteiro = SimpleNamespace(i=0, chegou=0, desde=time.monotonic(), acabou=False,
                               famintas=[])
     with hv._o_processo_da_janela():
@@ -93,6 +104,7 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
                 return False
             pulos = piloto._pulados_por_voo + piloto._pulados_por_custo
             with _sem_o_rastreador():
+                referencia = _trabalho_de_referencia()
                 t0 = time.thread_time()
                 volta = tique_original()
                 custo = (time.thread_time() - t0) * 1000
@@ -102,6 +114,7 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
                 roteiro.chegou += 1
                 if roteiro.chegou > ASSENTAR:
                     custos[aba].append(custo)
+                    referencias[aba].append(referencia)
             return volta
 
         piloto._tique = tique  # type: ignore[method-assign]
@@ -139,7 +152,18 @@ def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
     assert not roteiro.famintas, (
         f"abas que não juntaram {TIQUES} tiques em {TETO_DA_ABA_S:.0f} s: "
         f"{roteiro.famintas} (a página não ficou de pé, ou o laço andou devagar)")
-    return custos
+    return {aba: _sem_a_carga(valores, referencias[aba]) for aba, valores in custos.items()}
+
+
+def _sem_a_carga(custos: list[float], referencias: list[float]) -> list[float]:
+    """O custo na CPU da máquina quieta: a carga encarece o mesmo trabalho sem mudar o produto.
+
+    O tempo de CPU do fio não conta a espera, mas sobe com núcleo irmão ocupado (medido em
+    07/11: maior mediana de 8,65 ms a 14,81 ms, e a referência de 0,69 a 0,97, no mesmo código,
+    com 16 processos em `nice 19`). O fator nunca fica abaixo de 1: máquina mais rápida não
+    aperta o teto."""
+    fator = max(1.0, statistics.median(referencias) / REFERENCIA_MS)
+    return [custo / fator for custo in custos]
 
 
 def test_o_cronometro_do_tique_suspende_o_rastreador_e_o_devolve() -> None:
@@ -174,15 +198,42 @@ def test_o_tique_de_cada_aba_tem_teto(
     Prova da D-1610-A-JANELA-DE-TESTE-ANDA-NA-CADENCIA-ACELERADA.
     """
     assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
-    custos = _medir_as_dez(monkeypatch)
+    acima = _acima_do_teto(_medir_as_dez(monkeypatch))
+    assert not acima, (
+        f"o tique passou do teto (mediana {TETO_DA_MEDIANA_MS:.0f} ms, p95 "
+        f"{TETO_DO_P95_MS:.0f} ms de CPU do fio do GTK): {acima}")
+
+
+def _acima_do_teto(custos: dict[str, list[float]]) -> dict[str, str]:
     acima = {}
     for aba, valores in custos.items():
         mediana, p95 = statistics.median(valores), _p95(valores)
         if mediana > TETO_DA_MEDIANA_MS or p95 > TETO_DO_P95_MS:
             acima[aba] = f"mediana {mediana:.1f} ms · p95 {p95:.1f} ms"
-    assert not acima, (
-        f"o tique passou do teto (mediana {TETO_DA_MEDIANA_MS:.0f} ms, p95 "
-        f"{TETO_DO_P95_MS:.0f} ms de CPU do fio do GTK): {acima}")
+    return acima
+
+
+def test_a_carga_da_maquina_nao_vira_tique_lento() -> None:
+    """Os 15,6 ms da aba 10 no vermelho de 07/11, com a razão da medida alternada, a 0,97 ms.
+
+    A referência daquela corrida não existia: a razão vem da medida com carga, não do vermelho."""
+    no_vermelho = [15.6] * 40
+    assert _acima_do_teto({"10": no_vermelho}), "o caso medido já não passa do teto cru"
+    com_a_carga = _sem_a_carga(no_vermelho, [REFERENCIA_COM_CARGA_MS] * 40)
+    assert not _acima_do_teto({"10": com_a_carga})
+
+
+def test_a_aba_lenta_segue_reprovando_com_a_maquina_ocupada() -> None:
+    assert _acima_do_teto({"10": _sem_a_carga([30.0] * 40, [REFERENCIA_COM_CARGA_MS] * 40)})
+
+
+def test_a_maquina_rapida_nao_aperta_o_teto() -> None:
+    assert _sem_a_carga([14.0] * 3, [REFERENCIA_MS / 2] * 3) == [14.0] * 3
+
+
+def test_o_trabalho_de_referencia_mede_alguma_coisa() -> None:
+    """Medida zerada faria o fator cair a 1 em silêncio, e a carga voltaria a reprovar."""
+    assert _trabalho_de_referencia() > REFERENCIA_MS / 20
 
 
 _PELO_PRODUTO = r'''

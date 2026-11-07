@@ -381,6 +381,31 @@ _leva_a_fonte_do_dkms() {
     grep -qF 'assets/dkms/*/dkms.conf' "$2" 2>/dev/null
 }
 
+echo "== todo módulo de assets/dkms/ nos três pacotes, no ajudante e na remoção =="
+missing=()
+for conf in assets/dkms/*/dkms.conf; do
+    [[ -f "${conf}" ]] || continue
+    pasta="$(basename "$(dirname "${conf}")")"
+    pacote="$(sed -n 's/^PACKAGE_NAME="\(.*\)"$/\1/p' "${conf}")"
+    pacote="${pacote:-hefesto-${pasta}}"
+    for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        _leva_a_fonte_do_dkms "${pasta}" "${inst}" || missing+=("${inst}(${pasta})")
+    done
+    for hook in packaging/debian/prerm packaging/debian/postrm \
+                packaging/arch/hefesto-dualsense4unix.install \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        grep -qF "dkms remove \"${pacote}/" "${hook}" 2>/dev/null \
+            || missing+=("${hook}(remoção de ${pacote})")
+    done
+done
+if [[ "${#missing[@]}" -eq 0 ]]; then
+    echo "[ OK ] módulos DKMS: toda pasta sai pelo laço dos três pacotes, e a remoção desfaz cada uma"
+else
+    echo "[FAIL] módulos DKMS: FALTANDO em: ${missing[*]}"
+    rc=1
+fi
+
 echo "== paridade da cura DKMS (assets/dkms/hid-nintendo × instaladores) =="
 if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
     missing=()
@@ -611,7 +636,7 @@ if [[ -f assets/dkms/usb-f-hid/dkms.conf ]]; then
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
-    grep -qF "%{_datadir}/%{app_id}/dkms/usb-f-hid/" \
+    grep -qxF "%{_datadir}/%{app_id}/dkms/" \
         packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
         || missing+=("packaging/fedora/hefesto-dualsense4unix.spec(%files)")
     grep -qF "assets/dkms/usb-f-hid" flatpak/*.yml 2>/dev/null \

@@ -48,6 +48,8 @@ post_install() {
     echo ">>> Carregando modulo do kernel uinput (para emulacao Xbox 360)..."
     modprobe uinput 2>/dev/null || true
 
+    /usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh || true
+
     cat <<MSG
 
 ================================================================
@@ -61,10 +63,11 @@ post_install() {
 
   O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
   cura de raiz do duplicado) ja foi ligado: ele atende quem esta na frente
-  do computador. Os modulos DKMS patchados hid-nintendo (Onda T — cura de
-  raiz do probe BT dos controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura
-  de raiz do fantasma USB do dongle WiFi; requer dkms + linux-headers) saem
-  deste helper:
+  do computador. Os modulos DKMS patchados foram compilados agora para este
+  kernel; sem dkms e linux-headers, o de fabrica continua. Instalados depois,
+  rode:
+    sudo /usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh
+  As regras do udev se refazem com:
     sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
 
   Pacotes opcionais recomendados:
@@ -202,6 +205,17 @@ pre_remove() {
                 [ -n "${_v}" ] || continue
                 dkms remove "hefesto-usb-f-hid/${_v}" --all 2>/dev/null || true
                 rm -rf "/usr/src/hefesto-usb-f-hid-${_v}"
+            done
+        depmod -a >/dev/null 2>&1 || true
+    fi
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-uhid 2>/dev/null | grep -q .; then
+        dkms status hefesto-uhid 2>/dev/null \
+            | sed -n 's|^hefesto-uhid/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-uhid/${_v}" --all 2>/dev/null || true
+                rm -rf "/usr/src/hefesto-uhid-${_v}"
             done
         depmod -a >/dev/null 2>&1 || true
     fi

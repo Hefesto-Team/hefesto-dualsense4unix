@@ -12,6 +12,7 @@ USO:
     bash scripts/ci-local.sh --conferir        # diz o que rodaria e sai 1 se rodaria alguma coisa
   para triar, com --job:  --sem-passo 'job|nome do passo' (repetível) tira um passo da cópia do YAML;
                           --perna ubuntu-22.04 roda só essa perna da matriz de runners
+  ambiente: CI_LOCAL_TMP=PASTA põe a pasta temporária da corrida fora do /tmp, quando ele não tem espaço
 AJUDA
 }
 
@@ -20,10 +21,14 @@ CASA="${HEFESTO_CASA:-$HOME/.local/state/hefesto-casa}"
 JOBS_TXT="$RAIZ/scripts/ci-local/jobs.txt"
 DOCKERFILE="$RAIZ/scripts/ci-local/Dockerfile"
 RUNNER_DO_GITHUB="$RAIZ/scripts/ci-local/runner-do-github.sh"
+SERVIDOR_DE_ARTEFATOS="$RAIZ/scripts/ci-local/servidor-de-artefatos.py"
 FERRAMENTAS_DO_RUNNER=/opt/ferramentas-do-runner
 BASE="catthehacker/ubuntu:act-26.04-dev"
 BASE_24="catthehacker/ubuntu:act-24.04"
 BASE_22="catthehacker/ubuntu:act-22.04"
+PISO_DO_TMP_MB=1536
+PISO_DOS_CONTEINERES_MB=8192
+PASTA_TMP="${CI_LOCAL_TMP:-/tmp}"
 EM_PARALELO="${CI_LOCAL_JOBS:-2}"
 PERNAS="${CI_LOCAL_PERNAS:-3}"
 CACHE_ACOES="${CI_LOCAL_CACHE_ACOES:-$HOME/.cache/act}"
@@ -160,6 +165,18 @@ done
 [ -n "$ACT" ] || { echo "ci-local: não há act (esperado em $CASA/bin/act ou no PATH); nada rodou, e nada rodado não é verde" >&2; exit 2; }
 docker info >/dev/null 2>&1 || { echo "ci-local: o docker não responde; nada rodou, e nada rodado não é verde" >&2; exit 2; }
 
+conferir_espaco() {
+  local pasta="$1" piso="$2" livre
+  livre="$(df --output=avail -m "$pasta" 2>/dev/null | tail -n 1 | tr -d ' ')"
+  case "$livre" in '' | *[!0-9]*) echo "ci-local: não consegui medir o espaço de $pasta; nada rodou, e nada rodado não é verde" >&2; return 1 ;; esac
+  [ "$livre" -ge "$piso" ] && return 0
+  echo "ci-local: $pasta tem $livre MB livres e a corrida pede $piso MB; nada rodou, e nada rodado não é verde" >&2
+  return 1
+}
+conferir_espaco "$PASTA_TMP" "$PISO_DO_TMP_MB" || exit 2
+RAIZ_DO_DOCKER="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)"
+if [ -d "$RAIZ_DO_DOCKER" ]; then conferir_espaco "$RAIZ_DO_DOCKER" "$PISO_DOS_CONTEINERES_MB" || exit 2; fi
+
 imagem_de() {
   local base="$1" nome
   if [ ! -f "$DOCKERFILE" ]; then
@@ -217,8 +234,31 @@ for j in "${JOBS[@]}"; do
 done
 
 mkdir -p "$SAIDA" "$CASA/ci-local/artefatos"
-TMP="$(mktemp -d /tmp/cil.XXXXXX)"
-trap 'rm -rf "$TMP"' EXIT
+TMP="$(mktemp -d "$PASTA_TMP/cil.XXXXXX")" || { echo "ci-local: não criei a pasta da corrida em $PASTA_TMP; nada rodou" >&2; exit 2; }
+PID_ARTEFATOS=""
+GRUPOS_DOS_JOBS=()
+derrubar_os_jobs() {
+  local g
+  for g in "${GRUPOS_DOS_JOBS[@]:-}"; do [ -z "$g" ] || kill -INT -- "-$g" 2>/dev/null; done
+  for _ in {1..300}; do [ -n "$(jobs -rp)" ] || return 0; sleep 0.1; done
+  for g in "${GRUPOS_DOS_JOBS[@]:-}"; do [ -z "$g" ] || kill -KILL -- "-$g" 2>/dev/null; done
+}
+trap '[ -z "$PID_ARTEFATOS" ] || kill "$PID_ARTEFATOS" 2>/dev/null; rm -rf "$TMP"' EXIT
+trap 'derrubar_os_jobs; exit 130' INT
+trap 'derrubar_os_jobs; exit 143' TERM
+
+python3 "$SERVIDOR_DE_ARTEFATOS" --raiz "$CASA/ci-local/artefatos" --porta-em "$TMP/porta-dos-artefatos" --dono "$$" \
+  >"$SAIDA/servidor-de-artefatos.log" 2>&1 &
+PID_ARTEFATOS=$!
+disown "$PID_ARTEFATOS"
+for _ in {1..100}; do
+  [ -s "$TMP/porta-dos-artefatos" ] && break
+  kill -0 "$PID_ARTEFATOS" 2>/dev/null || break
+  sleep 0.1
+done
+[ -s "$TMP/porta-dos-artefatos" ] || { echo "ci-local: o servidor de artefatos não subiu (log $SAIDA/servidor-de-artefatos.log); nada rodou" >&2; exit 2; }
+PORTA_DOS_ARTEFATOS="$(cat "$TMP/porta-dos-artefatos")"
+export ACTIONS_RUNTIME_URL="http://127.0.0.1:$PORTA_DOS_ARTEFATOS/"
 
 ARV="$TMP/arvore"
 mkdir -p "$ARV"
@@ -303,7 +343,7 @@ chamar_act() {
   fi
   (
     cd "$ARV" || exit 2
-    "$ACT" push -W "$yml" -j "$job" \
+    exec "$ACT" push -W "$yml" -j "$job" \
       -P "ubuntu-latest=$IMAGEM" -P "ubuntu-26.04=$IMAGEM" "${extras[@]}" \
       --pull=false --rm --container-architecture linux/amd64 "${OFFLINE[@]}" \
       --action-cache-path "$cache" \
@@ -430,10 +470,13 @@ for j in "${JOBS[@]}"; do
   [ -n "$j" ] || continue
   [ -z "${COBERTO[$j]:-}" ] || continue
   while [ "$(jobs -rp | wc -l)" -ge "$EM_PARALELO" ]; do wait -n 2>/dev/null || true; done
-  ( rodar_job "$j" "$i"; rc=$?
+  set -m
+  ( trap 'exit 130' INT; rodar_job "$j" "$i"; rc=$?
     if [ "$rc" = 0 ]; then echo "ci-local: $j verde ($(cat "$SAIDA/$j.seg")s)" >&2
     elif [ "$rc" = 2 ]; then echo "ci-local: $j NÃO RODOU$([ -f "$SAIDA/$j.motivo" ] && echo " ($(cat "$SAIDA/$j.motivo"))") (log $SAIDA/$j.log)" >&2
-    else echo "ci-local: $j VERMELHO rc=$rc (log $SAIDA/$j.log)" >&2; fi ) &
+    else echo "ci-local: $j VERMELHO rc=$rc (log $SAIDA/$j.log)" >&2; fi ) </dev/null &
+  GRUPOS_DOS_JOBS+=("$!")
+  set +m
   i=$((i + 1))
 done
 wait

@@ -113,13 +113,11 @@ def test_remocao_desregistra_o_hid_playstation(hook: Path) -> None:
     ), f"{hook.name} não desregistra o hefesto-hid-playstation do DKMS"
 
 
-def test_spec_lista_o_dkms_hid_playstation_em_files() -> None:
-    spec = _ler(SPEC)
-    assert "dkms/hid-playstation" in spec
-    _corpo, _, files = spec.partition("\n%files")
+def test_spec_lista_a_pasta_dos_modulos_em_files() -> None:
+    _corpo, _, files = _ler(SPEC).partition("\n%files")
     assert files, "seção %files não encontrada no spec"
-    assert "%{_datadir}/%{app_id}/dkms/hid-playstation/" in files, (
-        "dkms/hid-playstation instalado e NAO empacotado — com "
+    assert "%{_datadir}/%{app_id}/dkms/\n" in files, (
+        "fontes DKMS instaladas e NAO empacotadas: com "
         "%_unpackaged_files_terminate_build no default o rpmbuild aborta"
     )
 

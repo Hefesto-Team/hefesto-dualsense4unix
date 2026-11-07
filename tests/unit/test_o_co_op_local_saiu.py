@@ -5,6 +5,7 @@ import json
 import pathlib
 import re
 import sys
+import time
 from typing import Any
 
 import pytest
@@ -292,6 +293,35 @@ def test_nenhum_dos_dez_pacotes_pinta_co_op(jogadores: int) -> None:
     assert not achados, (
         f"com {jogadores} jogador(es), o tique pinta «co-op»:\n  "
         + "\n  ".join(achados[:6]))
+
+
+_SELO_DO_VIZINHO: list[int] = []
+
+
+def test_a_faixa_lenta_de_um_teste_fica_com_ele() -> None:
+    """Par do seguinte: suja o cache como o teste vizinho suja, e o seguinte o acha limpo."""
+    import pacotes
+
+    pacotes.a09_sistema._LENTO.update(valor=("de outro teste",), quando=time.monotonic())
+    _SELO_DO_VIZINHO.append(pacotes.a09_sistema._LENTO_SELO[0])
+
+
+def test_a_faixa_lenta_nasce_vazia_em_cada_teste() -> None:
+    """Medido em 07/11: `test_o_casamento_das_dez` enchia `_LENTO`, e o dublê de `_diario` chegava
+    tarde: os quatro `test_nenhum_dos_dez_pacotes_pinta_co_op` reprovavam só no lote."""
+    import pacotes
+
+    assert not pacotes.a09_sistema._LENTO
+
+
+def test_a_releitura_em_voo_do_teste_anterior_nao_pousa(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O fio do vizinho termina depois dele, com o dublê dele, e o selo o descarta."""
+    import pacotes
+
+    sistema = pacotes.a09_sistema
+    monkeypatch.setattr(sistema, "_ler_a_faixa_lenta", lambda *_a, **_k: ("do fio do vizinho",))
+    sistema._guardar_a_faixa_lenta(None, None, _SELO_DO_VIZINHO[-1])
+    assert not sistema._LENTO
 
 
 class _Ponte:

@@ -202,32 +202,17 @@ install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
 # (o feature_retries, no valor que a conf declara). Mesmo fail-safe: sem o modulo DKMS o in-tree ignora.
 install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-hid-playstation.conf
-# Onda T (corretor, achado #9): a conf acima e INERTE sem o MODULO DKMS.
-# Empacota as fontes + a lib generica; o install-host-udev.sh (abaixo) roda
-# o dkms add/build/install no pos-instalacao (mesma instrucao do broker).
 install -Dm644 scripts/dkms_lib.sh \
     %{buildroot}%{_datadir}/%{app_id}/scripts/dkms_lib.sh
-mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo
-cp -a assets/dkms/hid-nintendo/. \
-    %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo/
-# Contencao BT (2026-07-25): fontes do hid-playstation patchado (retry de
-# feature report na probe) — mesma paridade da Onda T/W.
-mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-playstation
-cp -a assets/dkms/hid-playstation/. \
-    %{buildroot}%{_datadir}/%{app_id}/dkms/hid-playstation/
-# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): fontes do usb_f_hid patchado (a
-# resposta do GET_REPORT dos pads USB virtuais) — mesma paridade.
-mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/usb-f-hid
-cp -a assets/dkms/usb-f-hid/. \
-    %{buildroot}%{_datadir}/%{app_id}/dkms/usb-f-hid/
-# Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
-# port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
-# Onda T: o install-host-udev.sh roda o dkms add/build/install no host.
-mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb
-cp -a assets/dkms/rtw88-usb/. \
-    %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb/
+install -Dm755 scripts/dkms_do_pacote.sh \
+    %{buildroot}%{_datadir}/%{app_id}/scripts/dkms_do_pacote.sh
+for _conf in assets/dkms/*/dkms.conf; do
+    _modulo="$(basename "$(dirname "${_conf}")")"
+    mkdir -p "%{buildroot}%{_datadir}/%{app_id}/dkms/${_modulo}"
+    cp -a "assets/dkms/${_modulo}/." "%{buildroot}%{_datadir}/%{app_id}/dkms/${_modulo}/"
+done
 # CR-05 (07/08/2026): a GPL-2.0, secao 1, exige que a copia do texto da licenca
-# viaje JUNTO com o fonte. Os tres diretorios acima sao GPL (o rtw88-usb e
+# viaje JUNTO com o fonte. Os diretorios acima sao GPL (o rtw88-usb e
 # GPL-2.0 OR BSD-3-Clause, licenca dupla), e ate 07/08 nenhum texto os
 # acompanhava. Procedencia em LICENSES/README.md.
 mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/LICENSES
@@ -374,13 +359,15 @@ fi
 /usr/sbin/udevadm control --reload-rules || :
 /usr/sbin/udevadm trigger || :
 /usr/sbin/modprobe uinput 2>/dev/null || :
+%{_datadir}/%{app_id}/scripts/dkms_do_pacote.sh || :
 
 cat <<MSG
 O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo, cura
 de raiz do duplicado) ja foi ligado: ele atende quem esta na frente do
-computador. Os modulos DKMS patchados hid-nintendo (Onda T — cura de raiz do
-probe BT dos controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura de raiz do
-fantasma USB do dongle WiFi; requer dkms + kernel-devel) saem deste helper:
+computador. Os modulos DKMS patchados foram compilados agora para este kernel;
+sem dkms e kernel-devel, o de fabrica continua. Instalados depois, rode:
+  sudo %{_datadir}/%{app_id}/scripts/dkms_do_pacote.sh
+As regras do udev se refazem com:
   sudo %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 MSG
 
@@ -494,6 +481,17 @@ if [ $1 -eq 0 ]; then
             done
         depmod -a >/dev/null 2>&1 || :
     fi
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-uhid 2>/dev/null | grep -q .; then
+        dkms status hefesto-uhid 2>/dev/null \
+            | sed -n 's|^hefesto-uhid/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-uhid/${_v}" --all >/dev/null 2>&1 || :
+                rm -rf "/usr/src/hefesto-uhid-${_v}"
+            done
+        depmod -a >/dev/null 2>&1 || :
+    fi
     # INITRAMFS-01: os `dkms remove` acima limpam /lib/modules, mas o initramfs
     # guarda uma COPIA dos .ko e seguiria entregando os modulos do hefesto no
     # boot. Regenera uma vez, best-effort (nunca falha a transacao do rpm).
@@ -549,14 +547,8 @@ fi
 %{_datadir}/locale/*/LC_MESSAGES/hefesto-dualsense4unix.mo
 %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 %{_datadir}/%{app_id}/scripts/dkms_lib.sh
-%{_datadir}/%{app_id}/dkms/hid-nintendo/
-# Contencao BT (2026-07-25): as fontes do hid-playstation eram INSTALADAS no
-# %install e nao apareciam aqui — com %_unpackaged_files_terminate_build no
-# default o rpmbuild ABORTAVA com "Installed (but unpackaged) file(s) found",
-# ou seja o spec inteiro nao compilava.
-%{_datadir}/%{app_id}/dkms/hid-playstation/
-%{_datadir}/%{app_id}/dkms/usb-f-hid/
-%{_datadir}/%{app_id}/dkms/rtw88-usb/
+%{_datadir}/%{app_id}/scripts/dkms_do_pacote.sh
+%{_datadir}/%{app_id}/dkms/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 /usr/lib/%{app_id}/hefesto-hidraw-broker
 %{_unitdir}/hefesto-hidraw-broker.service

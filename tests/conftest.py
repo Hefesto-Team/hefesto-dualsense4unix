@@ -3904,3 +3904,13 @@ def _a_aba_perfis_nao_herda_o_ultimo_tique() -> None:
     modulo = sys.modules.get("hefesto_dualsense4unix.interface.pacotes.a10_perfis")
     if modulo is not None:
         modulo._VISTO = ("", "")
+
+
+@pytest.fixture(autouse=True)
+def _a_aba_sistema_nao_herda_a_faixa_lenta() -> None:
+    """`_LENTO` guarda por 2 s o que outro teste leu, com o dublê dele; o selo descarta o voo."""
+    for nome in ("pacotes.a09_sistema", "hefesto_dualsense4unix.interface.pacotes.a09_sistema"):
+        modulo = sys.modules.get(nome)
+        if modulo is not None:
+            modulo._LENTO_SELO[0] += 1
+            modulo._LENTO.clear()

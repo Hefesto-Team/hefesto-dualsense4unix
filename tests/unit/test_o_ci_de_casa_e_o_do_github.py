@@ -17,9 +17,13 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import signal
+import socket
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 import yaml
@@ -28,6 +32,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 WORKFLOWS = RAIZ / ".github" / "workflows"
 TABELA = RAIZ / "scripts" / "ci-local" / "jobs.txt"
 SCRIPT = RAIZ / "scripts" / "ci-local.sh"
+SERVIDOR_DE_ARTEFATOS = RAIZ / "scripts" / "ci-local" / "servidor-de-artefatos.py"
 RUNNER_DO_GITHUB = RAIZ / "scripts" / "ci-local" / "runner-do-github.sh"
 IMAGENS = (
     RAIZ / "scripts" / "ci-local" / "Dockerfile",
@@ -43,6 +48,7 @@ FERRAMENTAS = (
     "cp",
     "cut",
     "date",
+    "df",
     "dirname",
     "git",
     "grep",
@@ -52,10 +58,13 @@ FERRAMENTAS = (
     "mktemp",
     "mv",
     "pwd",
+    "python3",
     "rm",
     "sed",
     "sha256sum",
+    "sleep",
     "sort",
+    "tail",
     "tr",
     "uniq",
     "wc",
@@ -298,6 +307,7 @@ class Mundo:
         self.arvore.mkdir()
         (self.arvore / "scripts" / "ci-local").mkdir(parents=True)
         shutil.copy(SCRIPT, self.arvore / "scripts" / "ci-local.sh")
+        shutil.copy(SERVIDOR_DE_ARTEFATOS, self.arvore / "scripts" / "ci-local")
         (self.arvore / "scripts" / "ci-local" / "jobs.txt").write_text(
             tabela if tabela is not None else TABELA.read_text(encoding="utf-8"), encoding="utf-8"
         )
@@ -496,6 +506,169 @@ def test_cada_job_da_corrida_tem_a_sua_porta_de_artefato(mundo: Mundo) -> None:
         jobs_por_porta.setdefault(porta, set()).add(job)
     repetidas = {p: j for p, j in jobs_por_porta.items() if len(j) > 1}
     assert len(portas) > 10 and not repetidas, repetidas
+
+
+ACT_QUE_SOBE_ARTEFATO = """#!/usr/bin/env bash
+exec python3 -c '
+import json, os, urllib.request
+base = os.environ["ACTIONS_RUNTIME_URL"]
+corpo = {
+    "workflow_run_backend_id": "1", "workflow_job_run_backend_id": "1",
+    "name": "dados", "version": 7, "mime_type": "application/zip",
+}
+pedido = urllib.request.Request(
+    base + "twirp/github.actions.results.api.v1.ArtifactService/CreateArtifact",
+    data=json.dumps(corpo).encode(), headers={"Content-Type": "application/json"},
+)
+print("PORTA:", base, urllib.request.urlopen(pedido, timeout=10).read().decode())
+'
+"""
+
+
+def test_o_passo_de_artefato_fala_com_o_servidor_da_casa_e_ele_sai_com_a_corrida(
+    mundo: Mundo,
+) -> None:
+    """Sem o `ACTIONS_RUNTIME_URL`, o job fala com o servidor do `act`, que recusa o `mime_type`."""
+    _escrever_exec(mundo.casa / "bin" / "act", ACT_QUE_SOBE_ARTEFATO)
+    r = mundo.rodar("--job", "glifos")
+    assert r.returncode == 0, r.stdout + r.stderr + mundo.log("glifos")
+    linha = next(ln for ln in mundo.log("glifos").splitlines() if ln.startswith("PORTA:"))
+    assert '"ok": true' in linha
+    assert (mundo.casa / "ci-local" / "artefatos" / "1" / "dados" / "meta.json").is_file()
+    endereco = urlsplit(linha.split()[1])
+    with pytest.raises(OSError):
+        socket.create_connection(("127.0.0.1", endereco.port or 0), timeout=3)
+
+
+def test_sem_o_servidor_de_artefatos_nada_roda(mundo: Mundo) -> None:
+    (mundo.arvore / "scripts" / "ci-local" / "servidor-de-artefatos.py").unlink()
+    r = mundo.rodar("--job", "glifos")
+    assert r.returncode == 2 and "servidor de artefatos" in r.stderr, r.stdout + r.stderr
+
+
+def _df_de_mentira(mundo: Mundo, **livres: int) -> None:
+    """Um `df` que devolve o espaço de cada pasta, com a saída de `df --output=avail -m`."""
+    casos = "".join(f'  *{pasta}) echo " {mb}" ;;\n' for pasta, mb in livres.items())
+    corpo = f'echo " Disp."\ncase "${{!#}}" in\n{casos}  *) echo " 999999" ;;\nesac\n'
+    (mundo.ferramentas / "df").unlink()
+    _escrever_exec(mundo.ferramentas / "df", "#!/usr/bin/env bash\n" + corpo)
+
+
+def _docker_com_raiz(mundo: Mundo, raiz: Path) -> None:
+    raiz.mkdir(exist_ok=True)
+    _escrever_exec(
+        mundo.ferramentas / "docker",
+        f'#!/usr/bin/env bash\n[ "$1" = info ] && [ "$2" = --format ] && echo "{raiz}"\nexit 0\n',
+    )
+
+
+@pytest.mark.parametrize(
+    ("pasta", "livre", "piso"),
+    [("tmp-pequeno", 850, 1536), ("raiz-dos-conteineres", 900, 8192)],
+)
+def test_sem_espaco_a_recusa_sai_antes_de_qualquer_job(
+    mundo: Mundo, pasta: str, livre: int, piso: int
+) -> None:
+    """850 MB no `/tmp` e o disco cheio já viraram vermelho de teste, sem aviso."""
+    tmp = mundo.base / "tmp-pequeno"
+    tmp.mkdir()
+    _docker_com_raiz(mundo, mundo.base / "raiz-dos-conteineres")
+    _df_de_mentira(mundo, **{pasta: livre})
+    r = mundo.rodar("--job", "glifos", CI_LOCAL_TMP=str(tmp))
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert f"{pasta} tem {livre} MB livres e a corrida pede {piso} MB" in r.stderr, r.stderr
+    assert "nada rodou" in r.stderr
+    assert not (mundo.saida / "glifos.log").exists(), "o job foi lançado mesmo sem espaço"
+
+
+def test_pasta_que_nao_existe_recusa_antes_de_qualquer_job(mundo: Mundo) -> None:
+    pasta = mundo.base / "nao-existe"
+    r = mundo.rodar("--job", "glifos", CI_LOCAL_TMP=str(pasta))
+    assert r.returncode == 2 and f"não consegui medir o espaço de {pasta}" in r.stderr, r.stderr
+    assert "nada rodou" in r.stderr
+    assert not (mundo.saida / "glifos.log").exists()
+
+
+def test_espaco_que_nao_se_mede_recusa_e_nao_passa_por_sobra(mundo: Mundo) -> None:
+    """Não saber não é ter espaço: a trava existe para o vermelho falso não voltar."""
+    (mundo.ferramentas / "df").unlink()
+    _escrever_exec(mundo.ferramentas / "df", '#!/usr/bin/env bash\nexit 1\n')
+    tmp = mundo.base / "tmp-sem-medida"
+    tmp.mkdir()
+    r = mundo.rodar("--job", "glifos", CI_LOCAL_TMP=str(tmp))
+    assert r.returncode == 2 and "não consegui medir" in r.stderr, r.stderr
+    assert not (mundo.saida / "glifos.log").exists()
+
+
+def test_com_espaco_a_corrida_segue_e_usa_a_pasta_medida(mundo: Mundo) -> None:
+    tmp = mundo.base / "tmp-grande"
+    tmp.mkdir()
+    _docker_com_raiz(mundo, mundo.base / "raiz-dos-conteineres")
+    _df_de_mentira(mundo, **{"tmp-grande": 1536, "raiz-dos-conteineres": 8192})
+    r = mundo.rodar("--job", "glifos", CI_LOCAL_TMP=str(tmp))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert f"{tmp}/cil." in next(
+        ln for ln in mundo.log("glifos").splitlines() if ln.startswith("CWD:")
+    )
+
+
+def test_docker_de_outra_maquina_nao_impede_a_corrida(mundo: Mundo) -> None:
+    """O `DockerRootDir` de um `DOCKER_HOST` remoto não existe aqui: não há o que medir."""
+    _escrever_exec(
+        mundo.ferramentas / "docker",
+        '#!/usr/bin/env bash\n[ "$1" = info ] && [ "$2" = --format ] && echo /nao/existe\nexit 0\n',
+    )
+    assert mundo.rodar("--job", "glifos").returncode == 0
+
+
+def _vivo(pid: int) -> bool:
+    try:
+        return Path(f"/proc/{pid}/stat").read_text(encoding="utf-8").split(") ")[1][0] != "Z"
+    except OSError:
+        return False
+
+
+def test_a_corrida_morta_por_sinal_derruba_os_jobs_e_nao_deixa_a_pasta(mundo: Mundo) -> None:
+    """Sem o `trap` do TERM, cada corrida interrompida deixa quase 1 GB no `/tmp` da máquina; sem
+    derrubar o grupo do job, o `act` seguia rodando a suíte sem dono. O sinal é o INT: no TERM o
+    `act` sai na hora e o contêiner fica de pé (medido em 07/11)."""
+    tmp = mundo.base / "tmp"
+    tmp.mkdir()
+    _escrever_exec(
+        mundo.casa / "bin" / "act",
+        f"#!/usr/bin/env bash\ntrap 'echo INT > \"{mundo.base}/sinal\"; exit 0' INT\n"
+        f"trap 'echo TERM > \"{mundo.base}/sinal\"; exit 0' TERM\n"
+        f'echo $$ > "{mundo.base}/act-no-ar.novo"\n'
+        f'mv "{mundo.base}/act-no-ar.novo" "{mundo.base}/act-no-ar"\n'
+        "while :; do sleep 0.05; done\n",
+    )
+    ambiente = {
+        "PATH": str(mundo.ferramentas), "HOME": str(mundo.base), "HEFESTO_CASA": str(mundo.casa),
+        "CI_LOCAL_SAIDA": str(mundo.saida), "CI_LOCAL_IMAGEM": "imagem-de-mentira",
+        "CI_LOCAL_TMP": str(tmp), "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_SYSTEM": os.devnull,
+    }
+    corrida = subprocess.Popen(
+        ["bash", str(mundo.arvore / "scripts" / "ci-local.sh"), "--job", "glifos"],
+        cwd=mundo.arvore, env=ambiente, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    prazo = time.monotonic() + 30
+    while not (mundo.base / "act-no-ar").exists():
+        assert time.monotonic() < prazo and corrida.poll() is None, "o act não subiu"
+        time.sleep(0.05)
+    act = int((mundo.base / "act-no-ar").read_text(encoding="utf-8"))
+    assert list(tmp.glob("cil.*"))
+    corrida.terminate()
+    try:
+        assert corrida.wait(timeout=10) == 143
+        assert not list(tmp.glob("cil.*"))
+        prazo = time.monotonic() + 3
+        while _vivo(act) and time.monotonic() < prazo:
+            time.sleep(0.05)
+        assert not _vivo(act), "o act ficou rodando depois da corrida morta"
+        assert (mundo.base / "sinal").read_text(encoding="utf-8").strip() == "INT"
+    finally:
+        if _vivo(act):
+            os.kill(act, signal.SIGKILL)
 
 
 def test_a_tabela_e_so_a_do_jobs_txt(mundo: Mundo) -> None:
