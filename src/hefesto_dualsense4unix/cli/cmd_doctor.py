@@ -56,6 +56,8 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
 
 
 _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
+_PREFIXO_DA_VOLTA = "poll.laco.lenta."
+_PREFIXO_DO_OCUPANTE = "poll.pool.ocupante."
 
 
 def _linha_do_nascimento(counters: Any) -> tuple[str, str] | None:
@@ -102,22 +104,63 @@ def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
     contagem = f"tique do laço: {estouros} de {medidos} acima de 16,7 ms"
     if "poll.tique.p99_us" not in counters:
         return ("[ OK ]", contagem)
-    relogios = {
-        chave[len(_PREFIXO_DO_RELOGIO):]: valor
+    relogio = _o_pior_nome(counters, _PREFIXO_DO_RELOGIO)
+    onde = f", o pior com «{relogio[0].replace('_', ' ')}»" if relogio is not None else ""
+    atraso = ""
+    if "poll.tique.atraso_p99_us" in counters:
+        atraso = (
+            f"; atraso p99 {ms('poll.tique.atraso_p99_us')} ms, "
+            f"pior {ms('poll.tique.atraso_pior_us')} ms"
+        )
+    return (
+        "[ OK ]",
+        f"{contagem}; p99 {ms('poll.tique.p99_us')} ms, pior {ms('poll.tique.pior_us')} ms{onde}"
+        f"{atraso}",
+    )
+
+
+def _o_pior_nome(counters: dict[str, Any], prefixo: str) -> tuple[str, int] | None:
+    """O nome de maior medida entre os contadores de ``prefixo``, e a medida em µs."""
+    nomes = {
+        chave[len(prefixo):]: valor
         for chave, valor in counters.items()
-        if chave.startswith(_PREFIXO_DO_RELOGIO)
+        if chave.startswith(prefixo)
         and isinstance(valor, int)
         and not isinstance(valor, bool)
         and valor > 0
     }
-    onde = ""
-    if relogios:
-        pior = max(relogios, key=lambda nome: relogios[nome])
-        onde = f", o pior com «{pior.replace('_', ' ')}»"
-    return (
-        "[ OK ]",
-        f"{contagem}; p99 {ms('poll.tique.p99_us')} ms, pior {ms('poll.tique.pior_us')} ms{onde}",
-    )
+    if not nomes:
+        return None
+    pior = max(nomes, key=lambda nome: nomes[nome])
+    return pior, nomes[pior]
+
+
+def _linha_do_atraso(counters: Any) -> tuple[str, str] | None:
+    """O laço e o pool presos desde que o serviço subiu, com o nome de quem prendeu.
+
+    ``None`` quando o daemon não conhece a medida. A janela do tique esquece em segundos:
+    estes contadores são os que ainda valem depois de jogar.
+    """
+    if not isinstance(counters, dict) or "poll.laco.lentas" not in counters:
+        return None
+    lentas = counters.get("poll.laco.lentas", 0)
+    filas = counters.get("poll.pool.lentas", 0)
+    if not lentas and not filas:
+        return ("[ OK ]", "atraso do serviço: nenhuma parada acima de 100 ms")
+    partes = []
+    if lentas:
+        pior = _o_pior_nome(counters, _PREFIXO_DA_VOLTA)
+        detalhe = "" if pior is None else (
+            f", a pior {formata_pt_br(pior[1] / 1000)} ms em «{pior[0]}»"
+        )
+        partes.append(f"{lentas} acima de 100 ms{detalhe}")
+    if filas:
+        pior = _o_pior_nome(counters, _PREFIXO_DO_OCUPANTE)
+        detalhe = "" if pior is None else (
+            f", a pior {formata_pt_br(pior[1] / 1000)} ms atrás de «{pior[0]}»"
+        )
+        partes.append(f"{filas} na fila do pool{detalhe}")
+    return ("[ OK ]", "atraso do serviço: " + "; ".join(partes))
 
 
 def _linha_da_mascara_pro(estado: Any) -> tuple[str, str] | None:
@@ -210,6 +253,11 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             )
             if linha_do_tique is not None:
                 rows.append(linha_do_tique)
+            linha_do_atraso = _linha_do_atraso(
+                estado.get("counters") if isinstance(estado, dict) else None
+            )
+            if linha_do_atraso is not None:
+                rows.append(linha_do_atraso)
             linha_do_nascimento = _linha_do_nascimento(
                 estado.get("counters") if isinstance(estado, dict) else None
             )

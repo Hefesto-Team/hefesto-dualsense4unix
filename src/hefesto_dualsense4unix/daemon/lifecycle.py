@@ -59,6 +59,7 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     escrever_rumble_no_dono,
     soltar_os_que_vibram,
 )
+from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import PoolQueDizQuem, vigia_ativo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
@@ -727,7 +728,7 @@ class Daemon:
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
         self._stop_event = asyncio.Event()
-        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="hefesto-hid")
+        self._executor = PoolQueDizQuem(max_workers=2, thread_name_prefix="hefesto-hid")
         self._external_executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="hefesto-ext"
         )
@@ -4160,7 +4161,8 @@ class Daemon:
         evdev_watchdog_next_at: float = 0.0
         grab_reconcile_next_at: float = 0.0
         relogios = _RelogiosLentos(loop.time())
-        medidor = _MedidorDoTique(self.store)
+        medidor = _MedidorDoTique(self.store, pool=self._executor)
+        aperto = _o_aperto_do_laco(self)
         passos = _PassosDoLaco(self.store)
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
@@ -4220,6 +4222,7 @@ class Daemon:
 
         while not self._is_stopping():
             tick_started = loop.time()
+            medidor.abrir(tick_started, aperto.levar_o_previsto())
             grace_passed = tick_started >= self._input_ready_at
             if grace_passed:
                 get_coop_manager(self).forward_all()
@@ -4842,20 +4845,37 @@ def _gravar_medida(store: Any, nome: str, valor: int) -> None:
 
 
 class _MedidorDoTique:
-    """Mede a duração de cada tique do `_poll_loop` e a publica nos contadores.
+    """Mede cada tique do `_poll_loop` e o publica nos contadores, só ao fechar a janela.
 
-    ``poll.tique.medidos`` e ``poll.tique.estouros`` (acima de 16,7 ms) somam a
-    cada tique. A cada janela, ``poll.tique.p99_us`` e ``poll.tique.pior_us`` valem
-    a última janela, e ``poll.tique.relogio.<nome>`` guarda o pior tique (em µs)
-    em que aquele relógio lento disparou (``entrada`` quando nenhum disparou).
+    ``poll.tique.medidos`` e ``estouros`` (acima de 16,7 ms) somam a cada tique; ``p99_us``,
+    ``pior_us`` e ``relogio.<nome>`` valem a última janela. O corpo não vê o laço parado: quem
+    vê é o atraso (``atraso_p99_us`` e ``atraso_pior_us``, o acordar real contra o previsto),
+    o maior intervalo entre tiques (``intervalo_pior_us``) e a maior fila do pool
+    (``espera_pool_pior_us``, a mesma do ``read_state``). A janela esquece; o que vale desde
+    a subida é ``poll.laco.*`` e ``poll.pool.*``.
     """
 
-    __slots__ = ("_duracoes", "_pior_por_relogio", "_store")
+    __slots__ = (
+        "_atrasos", "_duracoes", "_maior_intervalo", "_pior_por_relogio", "_pool", "_store",
+        "_tique_anterior",
+    )
 
-    def __init__(self, store: Any) -> None:
+    def __init__(self, store: Any, pool: Any = None) -> None:
         self._store = store
+        self._pool = pool if isinstance(pool, PoolQueDizQuem) else None
         self._duracoes: list[float] = []
         self._pior_por_relogio: dict[str, float] = {}
+        self._atrasos: list[float] = []
+        self._maior_intervalo = 0.0
+        self._tique_anterior: float | None = None
+
+    def abrir(self, agora: float, previsto: float | None) -> None:
+        """O começo do tique: ``previsto`` é o prazo da espera; sem espera, não há atraso."""
+        if self._tique_anterior is not None:
+            self._maior_intervalo = max(self._maior_intervalo, agora - self._tique_anterior)
+        self._tique_anterior = agora
+        if previsto is not None:
+            self._atrasos.append(max(agora - previsto, 0.0))
 
     def registrar(self, duracao_s: float, relogios: list[str]) -> None:
         self._store.bump("poll.tique.medidos")
@@ -4867,6 +4887,22 @@ class _MedidorDoTique:
                 self._pior_por_relogio[nome] = duracao_s
         if len(self._duracoes) >= JANELA_DO_MEDIDOR_DO_TIQUE:
             self._fechar_a_janela()
+
+    def _do_atraso(self) -> dict[str, int]:
+        """O atraso, o intervalo e a fila da janela; medida que não houve não sai como zero."""
+        medidas: dict[str, int] = {}
+        if self._atrasos:
+            ordenados = sorted(self._atrasos)
+            p99 = ordenados[min(len(ordenados) - 1, int(len(ordenados) * 0.99))]
+            medidas["poll.tique.atraso_p99_us"] = round(p99 * 1e6)
+            medidas["poll.tique.atraso_pior_us"] = round(ordenados[-1] * 1e6)
+        if self._maior_intervalo > 0.0:
+            medidas["poll.tique.intervalo_pior_us"] = round(self._maior_intervalo * 1e6)
+        if self._pool is not None:
+            medidas.update(self._pool.colher_a_janela())
+        self._atrasos.clear()
+        self._maior_intervalo = 0.0
+        return medidas
 
     def _fechar_a_janela(self) -> None:
         ordenadas = sorted(self._duracoes)
@@ -4884,6 +4920,13 @@ class _MedidorDoTique:
             "poll.tique.relogio.entrada",
             round(self._pior_por_relogio.get("entrada", 0.0) * 1e6),
         )
+        medidas = self._do_atraso()
+        vigia = vigia_ativo()
+        if vigia is not None:
+            vigia.publicar(dict(medidas))
+            medidas.update(vigia.medidas())
+        for nome, valor in medidas.items():
+            _gravar_medida(self._store, nome, valor)
         self._duracoes.clear()
         self._pior_por_relogio.clear()
 
@@ -4976,7 +5019,7 @@ def _o_movimento_vai_ao_stick(daemon: Any, uniq: str | None) -> bool:
 class _OAperto:
     """O evento do aperto de UM laço, e a hora da última volta do jogo."""
 
-    __slots__ = ("evento", "laco", "ultima_volta")
+    __slots__ = ("evento", "laco", "previsto", "ultima_volta")
 
     def __init__(self, laco: asyncio.AbstractEventLoop, daemon: Any = None) -> None:
         from hefesto_dualsense4unix.core.evdev_reader import definir_o_despertador
@@ -4984,6 +5027,7 @@ class _OAperto:
         self.laco = laco
         self.evento = asyncio.Event()
         self.ultima_volta = laco.time()
+        self.previsto: float | None = None
         evento = self.evento
 
         def acordar() -> None:
@@ -4991,6 +5035,11 @@ class _OAperto:
                 laco.call_soon_threadsafe(evento.set)
 
         definir_o_despertador(acordar, lambda uniq: _o_movimento_vai_ao_stick(daemon, uniq))
+
+    def levar_o_previsto(self) -> float | None:
+        """O prazo da última espera, uma vez só: o tique sem espera não tem atraso a medir."""
+        previsto, self.previsto = self.previsto, None
+        return previsto
 
 
 def _o_aperto_do_laco(daemon: Any) -> _OAperto:
@@ -5008,6 +5057,7 @@ async def _esperar_o_tique(daemon: Any, stop_event: asyncio.Event, timeout: floa
     aperto = _o_aperto_do_laco(daemon)
     laco = aperto.laco
     prazo = laco.time() + timeout
+    aperto.previsto = prazo
     aperto.ultima_volta = laco.time()
     parada = laco.create_task(stop_event.wait())
     try:

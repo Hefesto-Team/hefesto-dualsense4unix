@@ -17,10 +17,12 @@ SEGUNDOS_DO_LACO_SAO = 6.0
 CPU_DA_TAREFA_S = 0.002
 
 COMECO = textwrap.dedent(f"""
-    import asyncio, os, re, signal, sys, time
+    import asyncio, functools, os, re, signal, sys, time
     from hefesto_dualsense4unix.utils.logging_config import configure_logging
     configure_logging()
-    from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import vigiado
+    from hefesto_dualsense4unix.daemon.subsystems import vigia_do_laco
+
+    vigiado = functools.partial(vigia_do_laco.vigiado, saida=sys.stderr)
 
     LIMITE_S, PASSO_S = {LIMITE_S}, {PASSO_S}
     CPU_DA_TAREFA_S, SEGUNDOS_DO_LACO_SAO = {CPU_DA_TAREFA_S}, {SEGUNDOS_DO_LACO_SAO}
