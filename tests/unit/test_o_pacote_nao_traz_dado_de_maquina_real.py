@@ -30,7 +30,7 @@ ENDERECOS = r"\b(?:" + "|".join(OUIS) + r")[:_-][0-9a-f]{2}[:_-][0-9a-f]{2}[:_-]
 IDS = (r"(?<!\d)(?:1971870|1245620|1358160|2380050|3357650|1599660|2497900|2111190|851100"
        r"|1088850|2054970)(?!\d)")
 LUGAR = (
-    r"máquina de teste|\buid 1000\b|/mnt/Apate|/home/[a-z]|[Rr]itual-Aurora|Fronteira Aurora"
+    r"máquina de teste|\buid 1000\b|/mnt/" r"Apate|/home/[a-z]|[Rr]itual-Aurora|Fronteira Aurora"
     r"|precedente da Aurora|a Aurora (?:cobre|sair)|journal do ensaio|\baurora-[a-z]"
 )
 PROIBIDO = {
@@ -102,7 +102,7 @@ def test_ha_o_que_varrer() -> None:
 
 @pytest.mark.parametrize("fonte", _fontes(), ids=lambda p: str(p.relative_to(SRC)))
 def test_nenhum_texto_do_src_traz_dado_real(fonte: pathlib.Path) -> None:
-    """MORDE: devolva `steam_app_1599660` a uma docstring de `simple_match.py` e reprova."""
+    """MORDE: devolva um `steam_app_<id>` real a uma docstring de `simple_match.py` e reprova."""
     achados = [f"{fonte.name}:{n}: {a}" for n, t in _textos_do_py(fonte) for a in _acha(t)]
     assert not achados, "\n".join(achados)
 
