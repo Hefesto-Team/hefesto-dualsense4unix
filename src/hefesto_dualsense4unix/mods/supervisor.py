@@ -254,6 +254,12 @@ class _AHoraDeCadaLinha:
 _TRAVAS_DOS_DIARIOS: dict[str, threading.Lock] = {}
 
 
+def _aparar_na_vez_do_arquivo(caminho: Path) -> None:
+    """A poda da abertura, nunca junto com o escritor que sobrou da abertura anterior."""
+    with _TRAVAS_DOS_DIARIOS.setdefault(str(caminho), threading.Lock()):
+        _aparar_o_diario(caminho)
+
+
 class _EscritorDoDiario:
     """O fio que grava o diário de uma extensão, atrás de uma fila com teto em bytes.
 
@@ -869,7 +875,7 @@ class Supervisor:
             )
         else:
             argv = comando
-        _aparar_o_diario(diario)
+        await asyncio.to_thread(_aparar_na_vez_do_arquivo, diario)
         processo = await asyncio.create_subprocess_exec(
             *argv,
             cwd=str(codigo),

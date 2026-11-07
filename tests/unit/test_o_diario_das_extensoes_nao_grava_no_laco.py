@@ -17,8 +17,11 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.mods import supervisor as supervisor_mod
+from tests.unit import test_o_diario_da_modificacao_tem_teto_enquanto_roda as teto
 
 _TETO_DO_FURO_S = 0.25
+curto = teto.curto
+lar = teto.lar
 
 
 class _Arquivo:
@@ -320,6 +323,35 @@ def test_a_reabertura_nao_escreve_junto_com_o_escritor_que_sobrou(
     _esperar_o_fio()
     assert pico[0] == 1, "dois escritores no mesmo diário ao mesmo tempo"
     assert sorted(_textos(diario)) == ["da primeira abertura", "da segunda abertura"]
+
+
+def test_a_abertura_apara_fora_do_laco_e_na_vez_do_arquivo(
+    lar: Any, curto: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Toda poda do diário, a da abertura inclusive, longe do laço e com a trava do arquivo."""
+    teto._instalar_e_ligar(lar, curto, "fica")
+    aparar = supervisor_mod._aparar_o_diario
+    vistos: list[tuple[int, bool]] = []
+
+    def anotar(caminho: Path, chegando: int = 0) -> None:
+        trava = supervisor_mod._TRAVAS_DOS_DIARIOS[str(caminho)]
+        vistos.append((threading.get_ident(), trava.locked()))
+        aparar(caminho, chegando)
+
+    monkeypatch.setattr(supervisor_mod, "_aparar_o_diario", anotar)
+
+    async def corrida() -> None:
+        supervisor = teto._supervisor(lar)
+        await supervisor.iniciar()
+        try:
+            await teto._ate(lambda: bool(vistos))
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())
+
+    assert vistos
+    assert all(fio != threading.get_ident() and presa for fio, presa in vistos), vistos
 
 
 @pytest.mark.parametrize("falando", [1, 2, 3, 4])
