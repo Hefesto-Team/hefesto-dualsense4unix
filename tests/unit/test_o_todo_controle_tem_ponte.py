@@ -210,7 +210,7 @@ P = tuple(f"aa:bb:cc:00:00:{i:02x}" for i in range(1, 5))
 CABO, COM_PONTE, SEM_PONTE, PRO, OITO_BITDO = "cabo", "com_ponte", "sem_ponte", "pro", "8bitdo"
 SONY, XBOX, NINTENDO, STEAM, NAVEGACAO, NATIVO = (
     "dualsense", "xbox", "nintendo", "steam", "navegacao", "nativo")
-APPID = 1196590
+APPID = 9900010
 _RECEITA = tv.Receita(som_no_corpo_escolhido=True)
 
 

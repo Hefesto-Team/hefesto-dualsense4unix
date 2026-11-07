@@ -27,7 +27,7 @@ CALADO, RUMBLE, ENDPOINT = "calado", "rumble", "endpoint"
 SONY, XBOX, NINTENDO, STEAM, NAVEGACAO, NATIVO = (
     "dualsense", "xbox", "nintendo", "steam", "navegacao", "nativo")
 DUALSENSE, EDGE, PRO, OITO_BITDO = "dualsense", "edge", "pro", "8bitdo"
-APPID = 1196590
+APPID = 9900010
 TIPOS = (pv.SEM_EFEITO, pv.DO_ESTILO, *pv.PADROES)
 _RECEITA = tv.Receita(padroes_escolhidos=True)
 
