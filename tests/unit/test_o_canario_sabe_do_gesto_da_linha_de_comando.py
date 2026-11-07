@@ -213,7 +213,8 @@ def test_todo_comando_que_muda_o_lar_anota_o_gesto_com_os_caminhos(
     gestos = canario.gestos_das_extensoes(_diario(real).read_text(encoding="utf-8"), "")
     lugares = instalador.Lugares.do_xdg()
     assert (f"[gesto] mod {verbo} {MOD}", tuple(str(c) for c in (
-        lugares.codigo / MOD, lugares.dados / MOD, lugares.registro))) in gestos, gestos
+        lugares.codigo / MOD, lugares.dados / MOD, lugares.pasta_do_diario(MOD),
+        lugares.registro))) in gestos, gestos
 
 
 def test_o_instalar_anota_antes_de_escrever(

@@ -73,6 +73,8 @@ TETO_DO_DIARIO_DO_PREPARO_BYTES = 256 * 1024
 DIARIO_DOS_GESTOS = "gestos-das-extensoes.log"
 TETO_DO_DIARIO_DOS_GESTOS_BYTES = 64 * 1024
 
+PASTA_DOS_DIARIOS = ".diarios"
+
 _DA_SESSAO_NO_PREPARO = (
     "PATH", "LANG", "HOME", "USER", "LOGNAME",
     "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_RUNTIME_DIR",
@@ -126,6 +128,10 @@ class Lugares:
     def diario_dos_gestos(self) -> Path:
         """O diário dos gestos que mudam o lar, ao lado da pasta dos dados."""
         return self.dados.parent / DIARIO_DOS_GESTOS
+
+    def pasta_do_diario(self, mod_id: str) -> Path:
+        """A pasta do supervisor para o diário de ``mod_id``: a caixa só monta ``<dados>/<id>``."""
+        return self.dados / PASTA_DOS_DIARIOS / mod_id
 
 
 class Entrada(BaseModel):
@@ -221,7 +227,8 @@ def anotar_o_gesto(lg: Lugares, verbo: str, ids: Sequence[str], *,
     barra o gesto.
     """
     if tocados is None:
-        caminhos = [str(p) for mod_id in ids for p in (lg.codigo / mod_id, lg.dados / mod_id)]
+        caminhos = [str(p) for mod_id in ids for p in (
+            lg.codigo / mod_id, lg.dados / mod_id, lg.pasta_do_diario(mod_id))]
         caminhos.append(str(lg.registro))
     else:
         caminhos = [str(p) for p in tocados]
@@ -994,7 +1001,8 @@ def _apagar_o_codigo(lg: Lugares, mod_id: str) -> None:
 
 def _apagar_os_dados(lg: Lugares, mod_id: str) -> None:
     """Apaga ``<dados>/<id>`` menos o ``meu.css``: ele é escrita da pessoa, e reinstalar a
-    extensão o encontra (``meu_css.garantir`` nunca reescreve)."""
+    extensão o encontra (``meu_css.garantir`` nunca reescreve). O diário sai junto."""
+    shutil.rmtree(lg.pasta_do_diario(mod_id), ignore_errors=True)
     pasta = lg.dados / mod_id
     if pasta.is_symlink() or not pasta.is_dir():
         shutil.rmtree(pasta, ignore_errors=True)
@@ -1035,7 +1043,7 @@ def conferir_remocao(mod_id: str, *, lugares: Lugares | None = None) -> list[str
     conta: ele é da pessoa e fica (``o_css_que_fica``)."""
     lg = lugares or Lugares.do_xdg()
     restos: list[str] = []
-    for pasta in (lg.codigo / mod_id, lg.dados / mod_id):
+    for pasta in (lg.codigo / mod_id, lg.dados / mod_id, lg.pasta_do_diario(mod_id)):
         if pasta.exists() or pasta.is_symlink():
             if pasta == lg.dados / mod_id and _so_o_css_da_pessoa(pasta):
                 continue

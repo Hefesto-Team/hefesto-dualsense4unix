@@ -95,7 +95,7 @@ def _instalar_e_ligar(lar: Lugares, curto: Path, modo: str) -> Path:
     instalar(str(pasta), lugares=lar)
     ligar("falador", permissoes_vistas=manifesto_instalado("falador", lugares=lar).permissoes,
           lugares=lar)
-    return lar.dados / "falador" / "diario.log"
+    return supervisor_mod.diario_da_extensao(lar, "falador")
 
 
 def _supervisor(lar: Lugares, **mais: Any) -> Supervisor:
@@ -140,7 +140,8 @@ def test_a_modificacao_que_fala_muito_nao_passa_do_teto_enquanto_roda(
         await supervisor.iniciar()
         try:
             await _ate(lambda: "a linha final" in _texto(diario))
-            assert supervisor.estado_de("falador").estado == "rodando"
+            estado = supervisor.estado_de("falador")
+            assert estado is not None and estado.estado == "rodando"
             assert diario.stat().st_size <= TETO, diario.stat().st_size
             linhas = [_HORA.sub("", linha, count=1) for linha in _texto(diario).splitlines()]
             assert linhas[-1] == "a linha final"

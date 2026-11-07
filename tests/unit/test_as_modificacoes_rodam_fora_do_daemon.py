@@ -573,7 +573,7 @@ def test_o_filho_que_cai_volta_tres_vezes_e_na_quarta_para_com_a_ultima_linha(
             assert estado["quedas"] == 4
             assert estado["ultima_linha"] == "falhei agora"
             assert estado["motivo"] == "Caiu 4 vezes seguidas (código 3)."
-            diario = (lar.dados / "exemplo" / "diario.log").read_text(encoding="utf-8")
+            diario = (lar.pasta_do_diario("exemplo") / "diario.log").read_text(encoding="utf-8")
             assert diario.count("falhei agora") == 4
         finally:
             await supervisor.parar()
@@ -714,7 +714,7 @@ def test_a_que_parou_fica_parada_ate_ligar_de_novo(lar: Lugares, curto: Path) ->
     """Outra linha do registro que muda não reabre a que parou na quarta queda.
     Mordida: reabrir toda vigia terminada e ver o diário passar de quatro quedas."""
     _instalar_e_ligar(lar, curto, "cai")
-    diario = lar.dados / "exemplo" / "diario.log"
+    diario = lar.pasta_do_diario("exemplo") / "diario.log"
 
     def quedas_no_diario() -> int:
         return diario.read_text(encoding="utf-8").count("falhei agora")

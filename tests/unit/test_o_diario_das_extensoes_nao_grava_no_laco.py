@@ -46,14 +46,14 @@ class _Arquivo:
 def disco(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, Callable[[], None]]]:
     """Por nome de pasta, o que o ``write`` do diário faz antes de escrever."""
     atrasos: dict[str, Callable[[], None]] = {}
-    abrir = Path.open
+    abrir = supervisor_mod._abrir_o_diario
 
-    def _open(self: Path, mode: str = "r", *a: Any, **k: Any) -> Any:
-        real = abrir(self, mode, *a, **k)
-        atraso = atrasos.get(self.parent.name)
-        return _Arquivo(real, atraso) if atraso is not None and mode == "ab" else real
+    def _abrir(caminho: Path, modo: str) -> Any:
+        real = abrir(caminho, modo)
+        atraso = atrasos.get(caminho.parent.name)
+        return _Arquivo(real, atraso) if atraso is not None and modo == "ab" else real
 
-    monkeypatch.setattr(Path, "open", _open)
+    monkeypatch.setattr(supervisor_mod, "_abrir_o_diario", _abrir)
     yield atrasos
 
 

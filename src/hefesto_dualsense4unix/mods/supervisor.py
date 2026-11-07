@@ -24,12 +24,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
+import errno
 import json
 import os
 import re
 import secrets
 import shutil
 import signal
+import stat
 import threading
 import time
 from collections import deque
@@ -37,7 +39,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES, opcoes
@@ -81,6 +83,8 @@ DIARIO_DA_MODIFICACAO = "diario.log"
 TETO_DO_DIARIO_BYTES = 1 << 20
 
 ESPERA_DO_DIARIO_S = 1.0
+
+ESPERA_DA_PODA_S = 0.5
 
 ESPERAS_PARA_VOLTAR: tuple[float, ...] = (1.0, 2.0, 4.0)
 
@@ -168,13 +172,32 @@ class _Vigiada:
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
 
 
+def diario_da_extensao(lugares: Lugares, mod_id: str) -> Path:
+    """Onde mora o diário de ``mod_id``: toda leitura e toda escrita nascem deste caminho."""
+    return lugares.pasta_do_diario(mod_id) / DIARIO_DA_MODIFICACAO
+
+
+def _abrir_sem_seguir(caminho: str, flags: int) -> int:
+    """O descritor do diário: sem seguir link, sem esperar a outra ponta de um FIFO, e só de
+    arquivo regular."""
+    descritor = os.open(caminho, flags | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+    if stat.S_ISREG(os.fstat(descritor).st_mode):
+        return descritor
+    os.close(descritor)
+    raise OSError(errno.EINVAL, "o diário não é um arquivo regular", caminho)
+
+
+def _abrir_o_diario(caminho: Path, modo: str) -> IO[bytes]:
+    return open(caminho, modo, opener=_abrir_sem_seguir)
+
+
 def ultima_linha_do_diario(caminho: Path, *, teto: int = 200, hora: bool = False) -> str:
     """A última linha não vazia do diário (o que a tela mostra quando parou).
 
     Com ``hora``, o diário é o que :func:`_copiar_para_o_diario` escreve, e a hora do começo sai.
     """
     try:
-        with caminho.open("rb") as arquivo:
+        with _abrir_o_diario(caminho, "rb") as arquivo:
             arquivo.seek(0, os.SEEK_END)
             tamanho = arquivo.tell()
             arquivo.seek(max(0, tamanho - 4096))
@@ -193,19 +216,17 @@ def _aparar_o_diario(caminho: Path, chegando: int = 0) -> None:
 
     O diário é do supervisor: ninguém mais o abre, e só a cópia dele escreve.
     """
-    if not caminho.is_file():
-        return
-    tamanho = caminho.stat().st_size
-    if tamanho + chegando <= TETO_DO_DIARIO_BYTES:
-        return
-    corte = tamanho - TETO_DO_DIARIO_BYTES // 2
-    if corte <= 0:
-        return
-    with caminho.open("rb") as arquivo:
+    with contextlib.suppress(FileNotFoundError), _abrir_o_diario(caminho, "r+b") as arquivo:
+        tamanho = arquivo.seek(0, os.SEEK_END)
+        corte = tamanho - TETO_DO_DIARIO_BYTES // 2
+        if tamanho + chegando <= TETO_DO_DIARIO_BYTES or corte <= 0:
+            return
         arquivo.seek(corte)
         resto = arquivo.read()
-    quebra = resto.find(b"\n")
-    caminho.write_bytes(resto[quebra + 1:] if quebra >= 0 else b"")
+        quebra = resto.find(b"\n")
+        arquivo.seek(0)
+        arquivo.write(resto[quebra + 1:] if quebra >= 0 else b"")
+        arquivo.truncate()
 
 
 class _AHoraDeCadaLinha:
@@ -254,10 +275,62 @@ class _AHoraDeCadaLinha:
 _TRAVAS_DOS_DIARIOS: dict[str, threading.Lock] = {}
 
 
-def _aparar_na_vez_do_arquivo(caminho: Path) -> None:
-    """A poda da abertura, nunca junto com o escritor que sobrou da abertura anterior."""
-    with _TRAVAS_DOS_DIARIOS.setdefault(str(caminho), threading.Lock()):
-        _aparar_o_diario(caminho)
+def _mudar_o_diario_velho(velho: Path, diario: Path) -> None:
+    """O diário da pasta que a caixa escreve vem para a do supervisor, uma vez.
+
+    Vem o conteúdo, até o teto, pelo descritor: o link e o FIFO se recusam ao abrir, e o inode que
+    a caixa conheceu fica para trás.
+    """
+    if os.path.lexists(diario):
+        return
+    with contextlib.suppress(FileNotFoundError, FileExistsError):
+        with _abrir_o_diario(velho, "rb") as antigo:
+            antigo.seek(max(0, antigo.seek(0, os.SEEK_END) - TETO_DO_DIARIO_BYTES))
+            conteudo = antigo.read(TETO_DO_DIARIO_BYTES)
+        with _abrir_o_diario(diario, "xb") as novo:
+            novo.write(conteudo)
+        velho.unlink()
+
+
+def _preparar_na_vez_do_arquivo(velho: Path, diario: Path, prazo: float) -> None:
+    """A mudança e a poda da abertura, nunca junto com o escritor que sobrou da abertura anterior.
+
+    Passado o ``prazo`` sem a vez, pula: o escritor poda a cada gravação. A recusa fica no registro
+    e não segura a abertura.
+    """
+    trava = _TRAVAS_DOS_DIARIOS.setdefault(str(diario), threading.Lock())
+    if not trava.acquire(timeout=prazo):
+        logger.warning("mods_diario_sem_a_vez", diario=str(diario))
+        return
+    try:
+        diario.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        _mudar_o_diario_velho(velho, diario)
+        _aparar_o_diario(diario)
+    except OSError as exc:
+        logger.warning("mods_diario_recusado", diario=str(diario), err=str(exc))
+    finally:
+        trava.release()
+
+
+async def _preparar_com_teto(velho: Path, diario: Path, prazo: float) -> None:
+    """:func:`_preparar_na_vez_do_arquivo` num fio próprio, com a espera até ``prazo``.
+
+    Fora do executor padrão: um disco preso seguraria aquele fio e, com ele, a saída do serviço.
+    """
+    laco = asyncio.get_running_loop()
+    feito = asyncio.Event()
+
+    def preparar() -> None:
+        try:
+            _preparar_na_vez_do_arquivo(velho, diario, prazo)
+        finally:
+            with contextlib.suppress(RuntimeError):
+                laco.call_soon_threadsafe(feito.set)
+
+    threading.Thread(target=preparar, name=f"mods-preparo-{diario.parent.name}",
+                     daemon=True).start()
+    with contextlib.suppress(asyncio.TimeoutError):
+        await asyncio.wait_for(feito.wait(), prazo)
 
 
 class _EscritorDoDiario:
@@ -308,7 +381,7 @@ class _EscritorDoDiario:
                 parte = dados[inicio:inicio + self.pedaco_max]
                 try:
                     _aparar_o_diario(self.caminho, len(parte))
-                    with self.caminho.open("ab") as diario:
+                    with _abrir_o_diario(self.caminho, "ab") as diario:
                         diario.write(parte)
                 except OSError as exc:
                     if not self._recusou:
@@ -788,7 +861,7 @@ class Supervisor:
     async def _cuidar(self, vigiada: _Vigiada, manifesto: Manifesto) -> None:
         mod_id = vigiada.mod_id
         quedas = 0
-        diario = self.lugares.dados / mod_id / DIARIO_DA_MODIFICACAO
+        diario = diario_da_extensao(self.lugares, mod_id)
         caixa = "bwrap" if self.bwrap else ""
         sem_caixa = "" if self.bwrap else "Roda sem caixa: o bwrap não está instalado."
         while not vigiada.quer_parar.is_set():
@@ -800,6 +873,8 @@ class Supervisor:
             except (OSError, ValueError) as exc:
                 self._marcar(mod_id, EstadoDaModificacao(
                     "parou", caixa=caixa, motivo=f"Não abriu: {exc}", quedas=quedas))
+                return
+            if processo is None:
                 return
             self._marcar(mod_id, EstadoDaModificacao(
                 "rodando", pid=processo.pid, caixa=caixa, motivo=sem_caixa, quedas=quedas))
@@ -834,7 +909,8 @@ class Supervisor:
 
     async def _abrir(
         self, vigiada: _Vigiada, manifesto: Manifesto, diario: Path
-    ) -> asyncio.subprocess.Process:
+    ) -> asyncio.subprocess.Process | None:
+        """O processo, ou ``None`` quando a parada chegou no meio: nada fica aberto."""
         assert manifesto.processo is not None
         codigo = self.lugares.codigo / manifesto.id
         dados = self.lugares.dados / manifesto.id
@@ -875,7 +951,9 @@ class Supervisor:
             )
         else:
             argv = comando
-        await asyncio.to_thread(_aparar_na_vez_do_arquivo, diario)
+        await _preparar_com_teto(dados / DIARIO_DA_MODIFICACAO, diario, ESPERA_DA_PODA_S)
+        if vigiada.quer_parar.is_set():
+            return None
         processo = await asyncio.create_subprocess_exec(
             *argv,
             cwd=str(codigo),
@@ -891,6 +969,11 @@ class Supervisor:
         vigiada.copia = asyncio.create_task(
             _copiar_para_o_diario(processo.stdout, diario), name=f"mods-diario-{manifesto.id}"
         )
+        if vigiada.quer_parar.is_set():
+            await parar_o_grupo(processo, self.prazo_para_parar_s)
+            copia, vigiada.copia = vigiada.copia, None
+            await _esvaziar_a_copia(copia, ESPERA_DO_DIARIO_S)
+            return None
         self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes,
                              comandos=_comandos_do_lancador(manifesto),
                              acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto))
@@ -977,6 +1060,7 @@ __all__ = [
     "DIARIO_DA_MODIFICACAO",
     "ESCONDIDO_SEM_A_PERMISSAO",
     "ESPERAS_PARA_VOLTAR",
+    "ESPERA_DA_PODA_S",
     "ESPERA_DA_VIGIA_S",
     "ESPERA_DEPOIS_DO_SIGKILL_S",
     "ESPERA_DO_DIARIO_S",
@@ -986,6 +1070,7 @@ __all__ = [
     "EstadoDaModificacao",
     "Supervisor",
     "comando_na_caixa",
+    "diario_da_extensao",
     "parar_o_grupo",
     "pastas_dos_jogos",
     "supervisor_do_servico",
