@@ -11,6 +11,11 @@ from rich.console import Console
 
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.daemon.subsystems.diario_do_corpo import (
+    CHAVE_DO_SURDO,
+    FALA_DA_RECUSA,
+    PREFIXO_DO_CONTROLE,
+)
 from hefesto_dualsense4unix.utils.repo_files import (
     bases_de_instalacao,
     encontrar_arquivo_do_repo,
@@ -59,6 +64,7 @@ _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
 _PREFIXO_DA_VOLTA = "poll.laco.lenta."
 _PREFIXO_DO_OCUPANTE = "poll.pool.ocupante."
 _SEM_AMOSTRA = "sem_amostra"
+_SUFIXO_DOS_BLOCOS = ".blocos"
 
 
 def _linha_do_nascimento(counters: Any) -> tuple[str, str] | None:
@@ -79,6 +85,37 @@ def _linha_do_nascimento(counters: Any) -> tuple[str, str] | None:
         "[ OK ]",
         f"nascimento do pad fora do tique: {nascidos}, média {formata_pt_br(total / nascidos)} ms",
     )
+
+
+def _linhas_do_corpo(counters: Any) -> list[tuple[str, str]]:
+    """O que o Som no corpo tocou em cada controle, dos contadores que o minuto sobe ao store."""
+    if not isinstance(counters, dict):
+        return []
+    contas: dict[str, tuple[int, dict[str, int]]] = {}
+    for chave, valor in counters.items():
+        if not isinstance(chave, str) or not chave.startswith(PREFIXO_DO_CONTROLE):
+            continue
+        if not isinstance(valor, int) or isinstance(valor, bool):
+            continue
+        rotulo, _ponto, conta = chave[len(PREFIXO_DO_CONTROLE):].partition(".recusa.")
+        if conta:
+            contas.setdefault(rotulo, (0, {}))[1][conta] = valor
+        elif rotulo.endswith(_SUFIXO_DOS_BLOCOS):
+            rotulo = rotulo[: -len(_SUFIXO_DOS_BLOCOS)]
+            contas[rotulo] = (valor, contas.get(rotulo, (0, {}))[1])
+    linhas = []
+    for rotulo, (blocos, recusas) in sorted(contas.items()):
+        ditas = ", ".join(
+            f"{FALA_DA_RECUSA.get(motivo, motivo)} {n}"
+            for motivo, n in sorted(recusas.items()) if n
+        )
+        tag = "[WARN]" if ditas and not blocos else "[ OK ]"
+        ditas = ditas or "nenhuma"
+        linhas.append((tag, f"Som no corpo, {rotulo}: {blocos} blocos com sinal; recusas: {ditas}"))
+    surdos = counters.get(CHAVE_DO_SURDO)
+    if isinstance(surdos, int) and not isinstance(surdos, bool) and surdos > 0:
+        linhas.append(("[WARN]", f"ouvido do jogo ficou surdo {surdos} vez(es) com jogo aberto"))
+    return linhas
 
 
 def _linha_do_tique(counters: Any) -> tuple[str, str] | None:
@@ -266,6 +303,9 @@ async def _daemon_checks() -> list[tuple[str, str]]:
             )
             if linha_do_nascimento is not None:
                 rows.append(linha_do_nascimento)
+            rows.extend(
+                _linhas_do_corpo(estado.get("counters") if isinstance(estado, dict) else None)
+            )
             linha_da_pro = _linha_da_mascara_pro(estado)
             if linha_da_pro is not None:
                 rows.append(linha_da_pro)

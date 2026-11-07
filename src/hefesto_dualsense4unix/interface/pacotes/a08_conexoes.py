@@ -2360,15 +2360,35 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
     HZ_INPUT_COM_MIC,
     HZ_INPUT_SEM_MIC,
     N_MAX_PONTES,
+    QUEDA_PASSOU_DO_PRAZO,
     SEGURA_O_NIVEL_S,
+    ControleNoAr,
     Diagnostico,
+    OrcamentoDoAdaptador,
+    ar_da_porta,
     atualizar_a_referencia,
+    cabe_no_adaptador,
+    custo_da_ponte,
     diagnosticar_o_movimento,
+    n_max_do_adaptador,
     nivel_do_movimento,
 )
 
 PONTES_POR_ADAPTADOR = N_MAX_PONTES
-MARGINAL_DA_PONTE = (FATIAS_DA_PONTE - 1) * HZ_DA_PONTE
+MARGINAL_DA_PONTE = custo_da_ponte()
+OPCAO_DA_FALTA = ""
+FALAS_DA_FALTA = {
+    "a": ("Falta {n} adaptador", "Faltam {n} adaptadores", "Cabe em {lugar}"),
+    "b": ("Pede mais {n} adaptador", "Pede mais {n} adaptadores", "Melhor em {lugar}"),
+    "c": ("+{n} adaptador", "+{n} adaptadores", "Som em {lugar}"),
+}
+FALA_DA_PORTA = "Use porta direta"
+FALA_DO_PRAZO = "Som não subiu"
+DICA_DA_FALTA = ("Som e vibração pelo Bluetooth pedem {pedidos} nesta formação: em porta direta, "
+                 "sem hub e longe de USB 3.0. Até lá, a vibração vai pelos motores.")
+DICA_DO_ASSENTO = ("Mudar de adaptador é esquecer e parear de novo, com PS + Create, entre "
+                   "uma partida e outra.")
+DICA_DO_PRAZO = "A vibração vai pelos motores até o som subir."
 DICA_DO_MOVIMENTO = {
     NIVEL_LISO: "Movimento por segundo: completo",
     NIVEL_MEDIO: "Movimento por segundo: reduzido",
@@ -2895,6 +2915,88 @@ def _no_ar(ap: dict[str, Any]) -> bool:
     return not ap.get("nao_conectou") and not ap.get("desligado")
 
 
+TIPOS_QUE_DIVIDEM_O_AR = ("controle", "gamepad")
+
+
+def _controles_no_radio(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
+    """Quem divide o ar deste adaptador, DualSense ou de fora: o cabo não gasta, e quem espera
+    ainda não chegou."""
+    return [a for a in _moradores(cena, lid)
+            if a.get("tipo") in TIPOS_QUE_DIVIDEM_O_AR and _no_ar(a)
+            and not a.get("usb") and not a.get("esperando")]
+
+
+def _ar_do_lugar(cena: dict[str, Any], lid: str) -> float:
+    lug: dict[str, Any] = next((g for g in cena.get("lugares", ()) if str(g.get("id")) == lid), {})
+    return ar_da_porta(bool(lug.get("hub")))
+
+
+def n_max_do_lugar(cena: dict[str, Any], lid: str) -> int:
+    """Quantas pontes este adaptador comporta, pelo dono da conta e pela porta dele."""
+    return n_max_do_adaptador(
+        len(_controles_no_radio(cena, lid)), ar=_ar_do_lugar(cena, lid),
+        teto=PONTES_POR_ADAPTADOR)
+
+
+def _a_conta_fecha(cena: dict[str, Any], lid: str) -> bool:
+    """As pontes cabem e todo controle fica acima do piso da mira, pela conta do adaptador."""
+    return cabe_no_adaptador(
+        _ar_do_lugar(cena, lid), controles=len(_controles_no_radio(cena, lid)),
+        pontes=len(_pontes(cena, lid)), teto=n_max_do_lugar(cena, lid))
+
+
+def reparticao_da_cena(cena: dict[str, Any]) -> Any:
+    """A conta da formação pelo que a sala mostra: a de `plano_de_radio`, nunca outra."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import plano_de_radio
+
+    planos = {}
+    pedem: list[str] = []
+    for lug in cena.get("lugares", ()):
+        lid = str(lug["id"])
+        controles = _controles_no_radio(cena, lid)
+        pedem += [str(a["id"]) for a in controles if a.get("pede_ponte")]
+        planos[lid] = plano_de_radio.PlanoDoAdaptador(
+            endereco=lid,
+            orcamento=OrcamentoDoAdaptador(
+                adaptador=lid, n_max=n_max_do_lugar(cena, lid),
+                controles=tuple(ControleNoAr(str(a["id"]), ponte=a.get("ponte"))
+                                for a in controles)))
+    return plano_de_radio.repartir_a_formacao(
+        planos, pedem_ponte=pedem,
+        atras_de_hub=[str(g["id"]) for g in cena.get("lugares", ()) if g.get("hub")],
+        varrendo=[str(g["id"]) for g in cena.get("lugares", ()) if g.get("varrendo")])
+
+
+def _fala_do_assento(assento: Any, conta: Any, frases: tuple[str, str, str],
+                     cena: dict[str, Any]) -> tuple[str, str]:
+    """`(fala, dica)` da linha de quem não senta onde está."""
+    pedidos = conta.pedidos or len(conta.assentos)
+    dica = DICA_DA_FALTA.format(
+        pedidos=f"{pedidos} adaptador{'es' if pedidos != 1 else ''}")
+    if assento.origem in conta.trocar_de_porta:
+        return FALA_DA_PORTA, dica
+    if not assento.destino:
+        um, varios, _ = frases
+        return (um if conta.faltam == 1 else varios).format(n=conta.faltam), dica
+    lugar = next(g for g in cena.get("lugares", ()) if str(g["id"]) == assento.destino)
+    return frases[2].format(lugar=_titulo_do_lugar(lugar)), f"{dica} {DICA_DO_ASSENTO}"
+
+
+def com_a_falta(cena: dict[str, Any], opcao: str | None = None) -> dict[str, Any]:
+    """A cena com a fala de cada linha sem ponte; sem opção escolhida, a cena volta intacta."""
+    escolhida = OPCAO_DA_FALTA if opcao is None else opcao
+    if not escolhida:
+        return cena
+    conta = reparticao_da_cena(cena)
+    falas = {a.uniq: _fala_do_assento(a, conta, FALAS_DA_FALTA[escolhida], cena)
+             for a in conta.assentos if not a.fica}
+    for ap in cena.get("aparelhos", ()):
+        if ap.get("pelo_motor") == QUEDA_PASSOU_DO_PRAZO and str(ap["id"]) not in falas:
+            falas[str(ap["id"])] = (FALA_DO_PRAZO, DICA_DO_PRAZO)
+    return {**cena, "falas_da_falta": falas}
+
+
 def _pontes(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
     """As pontes deste adaptador NA ORDEM DAS VAGAS — a «N de 2» de cada linha."""
     moradores = [a for a in _moradores(cena, lid)
@@ -2993,6 +3095,10 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
             f'title="{rotulo}: até {round(HZ_DA_PONTE)} por segundo. Pelo BT, som ou '
             f'vibração, um por vez.{passou}" style="flex:{flex}" '
             f'data-alvo="{aid}">{_ic(ICONE_DO_CUSTO[k])}{hz}</span>')
+    fala = (cena.get("falas_da_falta") or {}).get(str(ap["id"]))
+    if fala is not None:
+        botoes_da_ponte = [b for b in botoes_da_ponte if "data-ligada" in b]
+        botoes_da_ponte.append(f'<span class="falta" title="{_x(fala[1])}">{_x(fala[0])}</span>')
     return (
         '<div class="faixa-do-aparelho" style="width:100%">'
         f'<div class="fluxo manda" style="flex:{manda} 1 0" title="O que o controle manda">'
@@ -3138,12 +3244,13 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
                  f'{_ic(glifo_do_tipo(ap.get("tipo")))}'
                  '</div></div>')
     vaga = _vaga_de(ap, cena)
-    passou = vaga > PONTES_POR_ADAPTADOR
-    titulo = ("Passou do limite" if passou else f"Som {vaga} de {PONTES_POR_ADAPTADOR}"
+    maximo = n_max_do_lugar(cena, str(ap.get("lugar") or ""))
+    passou = vaga > maximo
+    titulo = ("Passou do limite" if passou else f"Som {vaga} de {maximo}"
               ) if vaga else "Sem som"
     fatias = (f'<span class="conta-da-vaga{" alem" if passou else ""}" '
               f'data-alvo="{aid}" title="{titulo}">'
-              + (f"{vaga} de {PONTES_POR_ADAPTADOR}" if vaga else TRACO_CURTO) + "</span>")
+              + (f"{vaga} de {maximo}" if vaga else TRACO_CURTO) + "</span>")
     return (abre + desenho + campo + f'<div class="features">{faixa}</div>' + fatias
             + _o_menu(ap) + "</div>")
 
@@ -3208,7 +3315,7 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
 
 def _conta_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
     n = len(_pontes(cena, str(lug["id"])))
-    maximo = PONTES_POR_ADAPTADOR
+    maximo = n_max_do_lugar(cena, str(lug["id"]))
     classe = "estourou" if n > maximo else ("apertado" if n == maximo else "")
     dica = f"Controles com som ou vibração: {n} de {maximo}" + (
         " — o som engasga" if n > maximo else "")
@@ -3231,7 +3338,7 @@ def _conta_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
 
 def _barra_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
     pontes = _pontes(cena, str(lug["id"]))
-    maximo = PONTES_POR_ADAPTADOR
+    maximo = n_max_do_lugar(cena, str(lug["id"]))
     escala = max(maximo, len(pontes))
     vagas = []
     for i in range(escala):
@@ -3282,7 +3389,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
              and cena.get("destino_do_conectar") != lug["id"])
     aberto = cena.get("aberto") == lug["id"] and not vazio
     classes = ["lugar"]
-    if len(pontes) > PONTES_POR_ADAPTADOR:
+    if len(pontes) > n_max_do_lugar(cena, str(lug["id"])):
         classes.append("cheio")
     if any(a.get("esperando") for a in moradores):
         classes.append("esperando")
@@ -3336,7 +3443,8 @@ def pergunta_de_mover(ap: dict[str, Any], destino: dict[str, Any], cena: dict[st
     """A pergunta ANTES de mover (R7): só ele sai, e o que o usuário faz com a mão."""
     feminino = ARTIGO_DO_TIPO.get(str(ap.get("tipo"))) == "a"
     cheio = (ap.get("tipo") == "controle" and ap.get("ponte")
-             and len(_pontes(cena, str(destino["id"]))) >= PONTES_POR_ADAPTADOR)
+             and len(_pontes(cena, str(destino["id"])))
+             >= n_max_do_lugar(cena, str(destino["id"])))
     return (f"Mover {como_se_chama(ap)} para {como_se_chama_o_lugar(destino)}?<br>"
             f"Só {'esta' if feminino else 'este'} sai daqui. {_como_se_pareia(ap)}"
             + (" Lá o som pode engasgar." if cheio else ""))
@@ -3370,14 +3478,16 @@ def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
                     f'<template class="pergunta-molde" data-pedido="{chave}" '
                     f'data-alvo="{_x(ap["id"])}" data-destino="{_x(destino["id"])}" '
                     f'data-sim="Mover e ligar" data-outro="Ligar aqui">'
-                    f'{_maiuscula(como_se_chama_o_lugar(origem))} já tem {PONTES_POR_ADAPTADOR} '
+                    f'{_maiuscula(como_se_chama_o_lugar(origem))} já tem '
+                    f'{n_max_do_lugar(cena, str(origem["id"]))} '
                     f'controles com som ou vibração.<br>Mover {como_se_chama(ap)} para '
                     f'{como_se_chama_o_lugar(destino)} e ligar lá?</template>')
             else:
                 moldes.append(
                     f'<template class="pergunta-molde" data-pedido="{chave}" '
                     f'data-alvo="{_x(ap["id"])}" data-destino="" data-sim="" data-outro="Ligar">'
-                    f'Todas as entradas já têm {PONTES_POR_ADAPTADOR} controles com som ou '
+                    f'Todas as entradas já têm '
+                    f'{n_max_do_lugar(cena, str(origem["id"]))} controles com som ou '
                     f'vibração.<br>Ligar {o_que} mesmo assim? Pode engasgar.</template>')
     return "".join(moldes)
 
@@ -3466,7 +3576,7 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
     for ap in movidos:
         itens = [("hub" if d.get("hub") else "placa",
                   f'{_titulo_do_lugar(d)} · com som {len(_pontes(cena, str(d["id"])))} de '
-                  f'{PONTES_POR_ADAPTADOR}',
+                  f'{n_max_do_lugar(cena, str(d["id"]))}',
                   f'data-aparelho="{_x(ap["id"])}" data-destino="{_x(d["id"])}"')
                  for d in lugares if d["id"] != ap.get("lugar")]
         titulo = f'Para onde vai {nome_na_conexoes(ap)}?'
@@ -3495,7 +3605,7 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
                     f'title="{ESPERANDO_O_CONTROLE}" data-alvo="{_x(lid)}">'
                     f'{_x(_titulo_do_lugar(lug))}</button>')
         return (f'<button class="op" aria-pressed="{aceso}" '
-                f'title="Com som: {len(_pontes(cena, lid))} de {PONTES_POR_ADAPTADOR}" '
+                f'title="Com som: {len(_pontes(cena, lid))} de {n_max_do_lugar(cena, lid)}" '
                 f'data-gesto="escolher-adaptador" data-alvo="{_x(lid)}">'
                 f'{_x(_titulo_do_lugar(lug))}</button>')
 
@@ -4202,7 +4312,7 @@ def _diagnostico_do_controle(a: dict[str, Any], controles: list[dict[str, Any]],
     return diagnosticar_o_movimento(
         a.get("hz_mov"), sinal_dbm=a.get("sinal"), referencia_hz=referencia,
         via_radio=not a.get("usb"),
-        adaptador_cheio=len(_pontes(cena, lugar)) > PONTES_POR_ADAPTADOR)
+        adaptador_cheio=not _a_conta_fecha(cena, lugar))
 
 
 def _niveis_e_dicas(controles: list[dict[str, Any]], cena: dict[str, Any], segurar: bool,
@@ -4243,7 +4353,8 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
                 del _REFERENCIA_DO_HZ[chave]
         for saiu in set(_PONTE_CEDEU_EM) - {str(a["id"]) for a in controles}:
             del _PONTE_CEDEU_EM[saiu]
-    cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)},
+    cena = {**com_a_falta(cena),
+            "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)},
             "dicas": {str(a["id"]): d for a, d in zip(controles, dicas, strict=True)}}
     return {
         "radio-sala": _sala_estavel(cena),
@@ -4983,6 +5094,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             "mic": (not audio.get("mic_mudo")) if "mic_mudo" in audio
             else bool(c.get("hz_voz")),
             "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
+            "pede_ponte": True, "pelo_motor": c.get("corpo_pelo_motor"),
             "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": _a_luz_acesa(c, st),
             "sinal": c.get("sinal_dbm"),
             "ponte_pausada": pausada.get(_so_hex(uniq), False),

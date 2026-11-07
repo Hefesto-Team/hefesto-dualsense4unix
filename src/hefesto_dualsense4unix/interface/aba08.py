@@ -1195,6 +1195,13 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio span.vaga.som[data-ligada]{border-color:var(--c-som);color:var(--c-som)}
   .radio span.vaga.haptica[data-ligada]{border-color:var(--c-haptica);color:var(--c-haptica)}
   .radio span.selo-zero[data-ligada]{border-color:var(--yellow);color:var(--yellow)}
+  .radio .ponte .falta{flex:1 1 0;min-width:0;align-self:center;font-size:12.5px;cursor:help;
+                       color:var(--texto-suave);white-space:nowrap;overflow:hidden;
+                       text-overflow:ellipsis;text-align:center}
+  .radio div.opcoes-da-falta{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .radio .opcao-da-falta{display:flex;align-items:center;gap:10px}
+  .radio .opcao-da-falta .letra{flex:none;width:2ch;color:var(--texto-suave)}
+  .radio .opcao-da-falta .linha{flex:1 1 0;min-width:0}
   .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
                                                           color:var(--fg)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
@@ -1533,6 +1540,7 @@ def _cena_do_desenho() -> dict:
             "mic": "mic" in ligado, "luz": "luz" in ligado, "fixo": "fixo" in ligado,
             "ponte": ("haptica" if "vib" in ligado else "som" if "ponte" in ligado else None),
             "som": float(linha["d"] or 0), "esperando": False, "alem": False,
+            "pede_ponte": linha["a"] == "controle",
         })
     webcam = next(i for i, a in enumerate(aparelhos) if a["tipo"] == "webcam")
     aparelhos.insert(webcam + 1, {
@@ -1635,9 +1643,31 @@ def _cena_do_desenho() -> dict:
     return cena
 
 
-CENA_DO_RADIO = _cena_do_desenho()
+CENA_CRUA_DO_RADIO = _cena_do_desenho()
+CENA_DO_RADIO = _pacote08.com_a_falta(CENA_CRUA_DO_RADIO, _pacote08.OPCAO_DA_FALTA or "a")
 CAMPOS_DO_RADIO = _pacote08.campos_da_secao(CENA_DO_RADIO)
 SALA_DO_DESENHO = _pacote08.html_da_sala(CENA_DO_RADIO, com_hz=True)
+
+
+def _opcoes_da_falta() -> str:
+    """As opções da frase, um adaptador só com quatro controles. Some quando a escolha vem."""
+    if _pacote08.OPCAO_DA_FALTA:
+        return ""
+    cheio = next(lg for lg in CENA_CRUA_DO_RADIO["lugares"]
+                 if len(_pacote08._controles_no_radio(CENA_CRUA_DO_RADIO, str(lg["id"]))) > 2)
+    so_ele = {**CENA_CRUA_DO_RADIO, "lugares": [cheio]}
+    linhas = []
+    for opcao in _pacote08.FALAS_DA_FALTA:
+        cena = _pacote08.com_a_falta(so_ele, opcao)
+        ap = next(a for a in cena["aparelhos"] if str(a["id"]) in cena["falas_da_falta"])
+        linha = re.sub(r'\sdata-(?:campo|gesto|alvo|hef-[a-z]+)="[^"]*"', "",
+                       _pacote08.html_da_linha(ap, cena, True))
+        linhas.append(f'<div class="opcao-da-falta"><span class="letra">{opcao.upper()}</span>'
+                      f'{linha}</div>')
+    return '<template class="opcoes-da-falta">' + "".join(linhas) + "</template>"
+
+
+OPCOES_DA_FALTA = _opcoes_da_falta()
 INTERRUPTOR_PROCURAR = (
     '<button class="cadeado'
     + (" ligada" if CAMPOS_DO_RADIO["radio-procurando"] == _pacote08.PROCURAR_LIGADO else "")
@@ -2450,6 +2480,7 @@ MIOLO = f'''{TABELA_DAS_CORES}
         </div>
 
         <div class="sala" data-campo="radio-sala" data-hef-alvo="html">{SALA_DO_DESENHO}</div>
+        {OPCOES_DA_FALTA}
         <button hidden id="rd-reordenar" data-gesto="adaptador-reordenar" value=""></button>
         <button hidden id="rd-escolher" data-gesto="escolher-adaptador" data-alvo=""></button>
         <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html">{CAMPOS_DO_RADIO["radio-moldes"]}</div>

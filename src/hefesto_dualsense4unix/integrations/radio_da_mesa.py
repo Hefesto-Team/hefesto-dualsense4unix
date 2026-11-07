@@ -108,7 +108,7 @@ import os
 import re
 import threading
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -120,6 +120,11 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     NIVEL_ENGASGA,
     NIVEL_LISO,
     NIVEL_MEDIO,
+)
+from hefesto_dualsense4unix.integrations.conexao_zumbi import adaptadores_na_mesa
+from hefesto_dualsense4unix.integrations.mesa_de_radio import (
+    Adaptador,
+    adaptadores_bluetooth,
 )
 from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -347,6 +352,12 @@ def adaptador_por_uniq(
 
 N_MAX_PONTES = 2
 
+QUEDA_NO_MOTOR = "no_motor"
+QUEDA_PASSOU_DO_PRAZO = "passou_do_prazo"
+
+VALIDADE_DA_PORTA_S = 30.0
+_PORTA_LIDA: dict[str, tuple[float, bool]] = {}
+
 HZ_DA_PONTE = 93.75
 
 FATIAS_DA_PONTE = 3
@@ -426,7 +437,8 @@ def diagnosticar_o_movimento(
       ``adaptador_cheio``, quando a conta de quem divide diz). Hz normal e sinal bom: liso.
     * O Hz cai contra a REFERÊNCIA do controle naquele adaptador, não contra um número fixo;
       sem referência, vale o absoluto (:func:`nivel_do_movimento`).
-    * Pelo rádio sem o sinal, a linha não é verde: ``sem_sinal`` e cor neutra.
+    * Pelo rádio sem o sinal, a linha não é verde: ``sem_sinal`` e cor neutra. Hz caindo com a
+      conta contra diz ``adaptador_cheio``, porque a causa não depende do sinal.
     """
     absoluto = nivel_do_movimento(hz)
     if not absoluto:
@@ -441,6 +453,9 @@ def diagnosticar_o_movimento(
     caindo = nivel != NIVEL_LISO
     if not via_radio:
         return Diagnostico(nivel)
+    if caindo and adaptador_cheio and (
+            isinstance(sinal_dbm, bool) or not isinstance(sinal_dbm, int | float)):
+        return Diagnostico(nivel, CAUSA_ADAPTADOR_CHEIO)
     if isinstance(sinal_dbm, bool) or not isinstance(sinal_dbm, int | float):
         return Diagnostico(nivel if caindo else "", CAUSA_SEM_SINAL)
     if not caindo:
@@ -646,11 +661,46 @@ def n_max_pela_capacidade(
     return max(0, min(int(teto), int(sobra // preco)))
 
 
-def n_max_do_adaptador(controles: int, *, ligado: bool | None = None, **conta: Any) -> int:
-    """O ``n_max`` que o produto usa: a capacidade quando o interruptor manda, senão o teto."""
+def n_max_do_adaptador(
+    controles: int, *, ligado: bool | None = None, endereco: str = "", **conta: Any
+) -> int:
+    """O ``n_max`` que o produto usa: a capacidade quando o interruptor manda, senão o teto.
+
+    Com ``endereco``, o ar é o da porta DESTE adaptador, lido só com o interruptor ligado.
+    """
     if not (N_MAX_PELA_CAPACIDADE if ligado is None else ligado):
         return int(conta.get("teto", N_MAX_PONTES))
+    if endereco and "ar" not in conta:
+        conta["ar"] = ar_da_porta(_porta_guardada(endereco))
     return n_max_pela_capacidade(controles, **conta)
+
+
+def ar_da_porta(atras_de_hub: bool) -> float:
+    """O ar útil de um adaptador pela porta em que ele está."""
+    return AR_DO_ADAPTADOR_ATRAS_DO_HUB if atras_de_hub else AR_DO_ADAPTADOR_PORTA_DIRETA
+
+
+def atras_de_hub_no_sysfs(
+    endereco: str,
+    *,
+    na_mesa: Callable[[], Mapping[str, str]] = adaptadores_na_mesa,
+    adaptadores: Callable[[], Sequence[Adaptador]] = adaptadores_bluetooth,
+) -> bool:
+    """O adaptador deste endereço fica atrás de um hub? Quem não se acha conta como porta direta."""
+    alvo = norm_mac(endereco)
+    interfaces = {nome for nome, mac in na_mesa().items() if norm_mac(mac) == alvo}
+    return any(a.atras_de_hub for a in adaptadores() if a.interface in interfaces)
+
+
+def _porta_guardada(endereco: str) -> bool:
+    """A porta só muda com o adaptador fora do ar: o tique da tela não varre ``/sys``."""
+    agora = time.monotonic()
+    lida = _PORTA_LIDA.get(endereco)
+    if lida is not None and agora - lida[0] < VALIDADE_DA_PORTA_S:
+        return lida[1]
+    atras = atras_de_hub_no_sysfs(endereco)
+    _PORTA_LIDA[endereco] = (agora, atras)
+    return atras
 
 
 def hz_por_controle_na_conta(
@@ -662,6 +712,49 @@ def hz_por_controle_na_conta(
     meio = custo_da_ponte(HZ_DA_PONTE_NO_DEGRAU) if custo_no_degrau is None else custo_no_degrau
     livre = max(0.0, ar - preco * cheias - meio * no_degrau)
     return livre / FATIAS_POR_RELATORIO_DE_ENTRADA / max(1, int(controles))
+
+
+def cabe_no_adaptador(
+    ar: float,
+    *,
+    controles: int,
+    pontes: int,
+    teto: int = N_MAX_PONTES,
+    piso_hz: float = HZ_QUE_ENGASGA,
+    custo: float | None = None,
+) -> bool:
+    """A conta de um adaptador: as pontes dentro do teto e todo controle em ``piso_hz`` ou mais."""
+    if controles <= 0:
+        return True
+    return pontes <= teto and hz_por_controle_na_conta(
+        ar, controles, cheias=pontes, custo=custo) >= piso_hz
+
+
+def adaptadores_que_a_formacao_pede(
+    pontes: int,
+    *,
+    sem_ponte: int = 0,
+    ar: float | None = None,
+    teto: int = N_MAX_PONTES,
+    piso_hz: float = HZ_QUE_ENGASGA,
+    custo: float | None = None,
+) -> int | None:
+    """Quantos adaptadores dão ponte a todos, em partes iguais. ``None`` = nem um por controle.
+
+    ``pontes`` são os controles que pedem ponte; ``sem_ponte`` são os que só usam a entrada.
+    ``ar`` em ``None`` é a porta direta, lida na hora.
+    """
+    c_eff = AR_DO_ADAPTADOR_PORTA_DIRETA if ar is None else ar
+    todos = max(0, pontes) + max(0, sem_ponte)
+    if todos == 0:
+        return 0
+    for quantos in range(1, todos + 1):
+        no_cheio = (todos + quantos - 1) // quantos
+        pontes_no_cheio = (max(0, pontes) + quantos - 1) // quantos
+        if cabe_no_adaptador(c_eff, controles=no_cheio, pontes=pontes_no_cheio, teto=teto,
+                             piso_hz=piso_hz, custo=custo):
+            return quantos
+    return None
 
 
 @dataclass(frozen=True)
@@ -861,7 +954,8 @@ def orcamento_por_adaptador(
         saida[endereco] = OrcamentoDoAdaptador(
             adaptador=endereco,
             controles=tuple(por_adaptador.get(endereco, ())),
-            n_max=n_max_do_adaptador(len(por_adaptador.get(endereco, ())), teto=n_max),
+            n_max=n_max_do_adaptador(
+                len(por_adaptador.get(endereco, ())), endereco=endereco, teto=n_max),
             entrada_por_s=_numero_ou_none(getattr(leitura, "entrada_por_s", None)),
             saida_por_s=_numero_ou_none(getattr(leitura, "saida_por_s", None)),
             canais_evitados=evitados.get(endereco),
@@ -944,6 +1038,8 @@ __all__ = [
     "PALAVRA_CHEIA",
     "PALAVRA_FOLGADA",
     "PERIODO_DO_SINAL_S",
+    "QUEDA_NO_MOTOR",
+    "QUEDA_PASSOU_DO_PRAZO",
     "SEGURA_O_NIVEL_S",
     "SEM_ADAPTADOR",
     "SEM_SINAL_SOLTA_A_PAUSA_S",
@@ -960,7 +1056,11 @@ __all__ = [
     "PausaPeloSinal",
     "PonteNaFila",
     "adaptador_por_uniq",
+    "adaptadores_que_a_formacao_pede",
+    "ar_da_porta",
+    "atras_de_hub_no_sysfs",
     "atualizar_a_referencia",
+    "cabe_no_adaptador",
     "custo_da_ponte",
     "diagnosticar_o_movimento",
     "hz_por_controle_na_conta",

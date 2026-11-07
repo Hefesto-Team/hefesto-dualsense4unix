@@ -161,6 +161,7 @@ class HapticaDoCabo:
         self._conferidos: set[str] = set()
         self._recusadas: dict[str, RotaDoCabo] = {}
         self._falhas: dict[str, tuple[str, str]] = {}
+        self._ganho_dito: set[str] = set()
 
     def aparelhos(self) -> dict[str, RotaDoCabo]:
         """As marcas com laço pedido, e a rota de cada uma. Leitura."""
@@ -295,12 +296,9 @@ class HapticaDoCabo:
         except Exception as exc:
             return self._dizer_a_falha(marca, dono, f"erro: {exc}", motores)
         self._falhas.pop(marca, None)
-        logger.info(
-            "haptica_do_cabo_portao",
-            controle=marca,
-            uniq=dono,
-            motores=motores,
-        )
+        dizer = logger.debug if marca in self._ganho_dito else logger.info
+        self._ganho_dito.add(marca)
+        dizer("haptica_do_cabo_portao", controle=marca, uniq=dono, motores=motores)
         return True
 
     def _dizer_a_falha(
@@ -335,6 +333,7 @@ class HapticaDoCabo:
             logger.info("haptica_do_cabo_laco_solto", controle=marca)
         self._motores.pop(marca, None)
         self._conferidos.discard(marca)
+        self._ganho_dito.discard(marca)
 
     def parar(self) -> None:
         """Todos os laços caem (o ``stop`` do subsystem)."""

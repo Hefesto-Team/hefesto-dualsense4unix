@@ -5221,6 +5221,9 @@ class IpcHandlersMixin:
         no_ar_fn = getattr(
             getattr(self.daemon, "_alto_falante_subsystem", None), "haptica_no_ar", None
         )
+        queda = getattr(getattr(getattr(self.daemon, "_tato_vivo", None), "queda", None),
+                        "estados", None)
+        pelo_motor = {chave(u): e for u, e in queda.items()} if queda else {}
         for entry in entries:
             uniq = entry.get("uniq") if isinstance(entry.get("uniq"), str) else None
             radio = entry.get("transport") == "bt"
@@ -5249,6 +5252,7 @@ class IpcHandlersMixin:
                 with contextlib.suppress(Exception):
                     no_ar = no_ar_fn(uniq) is True
             entry["haptica_no_ar"] = no_ar
+            entry["corpo_pelo_motor"] = pelo_motor.get(chave(uniq))
 
     def _adaptadores_do_radio(self, uniqs: list[str]) -> dict[str, str]:
         """``{uniq: endereço do adaptador | ""}``, relido no máximo a cada 2 s."""

@@ -244,7 +244,6 @@ def _onda_do_furtivo(eventos: list[tv.Evento]) -> list[tuple[float, int, int]]:
     atuador = tv.AtuadorDosMotores(
         escrever,
         lambda _u: pv.padrao_que_vale(pv.DO_ESTILO, "furtivo"),
-        lambda _u: False,
         lambda _u: 1.0,
         lambda: "furtivo",
     )

@@ -2,9 +2,8 @@
 
 Sete padrões (Tranco, Batida, Onda, Coice, Pancada do lado, Ressoar e Ricochete): nenhum passa
 de 2000 ms, nenhum passo dura menos de 60 ms e todos terminam em zero. O padrão toca no mesmo
-tiro da receita, no motor que a pessoa escolheu, só onde o jogo não vibra o motor, e com o
-gatilho que vibra (Metralhadora e vizinhas) só na soltura do tiro. Tudo com dublês: o motor do
-rumble é uma lista e o relógio é injetado.
+tiro da receita, no motor que a pessoa escolheu e só onde o jogo não vibra o motor. Tudo com
+dublês: o motor do rumble é uma lista e o relógio é injetado.
 """
 from __future__ import annotations
 
@@ -104,19 +103,18 @@ class Motores:
 
 
 def _montar(
-    escolhas: dict[str, str], *, vibra: bool = False, forca: float = 1.0,
+    escolhas: dict[str, str], *, forca: float = 1.0,
 ) -> tuple[tv.TatoVivo, Motores]:
     motores = Motores()
     atuador = tv.AtuadorDosMotores(
         motores,
         lambda uniq: pv.padrao_que_vale(escolhas.get(uniq), None),
-        lambda _uniq: vibra,
         lambda _uniq: forca,
     )
     return tv.TatoVivo([atuador]), motores
 
 
-def _tiro(uniq: str, t: float, tipo: str = tv.TIPO_DEDO, lado: str = tv.LADO_DIREITO) -> tv.Evento:
+def _tiro(uniq: str, t: float, tipo: str = tv.TIPO_DEDO, lado: str = tv.LADO_CENTRO) -> tv.Evento:
     return tv.Evento(t, uniq, tipo, lado, 1.0)
 
 
@@ -202,37 +200,17 @@ def test_o_jogo_que_passa_a_vibrar_no_meio_solta_o_padrao_sem_escrever_por_cima(
     assert len(motores.escritas) == antes
 
 
-@pytest.mark.parametrize("forma", ["tranco", "batida", "onda", "pancada_do_lado"])
-def test_com_o_gatilho_vibrando_o_padrao_nao_toca_na_rajada(forma: str) -> None:
-    motor, motores = _montar({AZUL: forma}, vibra=True)
-    for i in range(10):
-        for tipo in (tv.TIPO_DEDO, tv.TIPO_SOM, tv.TIPO_RUMBLE):
-            motor.anotar(_tiro(AZUL, i * 0.05, tipo))
-    _correr(motor, motores, (AZUL,), 0.6)
-    assert motores.escritas == [], "a rajada é do gatilho: o padrão só toca ao soltar"
-
-
-@pytest.mark.parametrize("forma", ["tranco", "batida", "onda", "coice", "pancada_do_lado"])
-def test_com_o_gatilho_vibrando_o_padrao_toca_na_soltura(forma: str) -> None:
-    motor, motores = _montar({AZUL: forma}, vibra=True)
-    motor.anotar(_tiro(AZUL, 0.0, tv.TIPO_DEDO))
-    _correr(motor, motores, (AZUL,), 0.3)
-    assert motores.escritas == []
-    motor.anotar(_tiro(AZUL, 0.31, tv.TIPO_SOLTA))
-    _correr(motor, motores, (AZUL,), 2.5, desde_s=0.31)
-    assert motores.de(AZUL)[-1][1:] == (0, 0)
-    assert len(motores.de(AZUL)) >= 2
-
-
-def test_o_ritmo_do_estilo_de_rajada_tambem_segura_o_padrao() -> None:
-    motor, motores = _montar({AZUL: "tranco"}, vibra=False)
+@pytest.mark.parametrize("forma", ["tranco", "batida", "onda"])
+def test_o_ritmo_do_estilo_de_rajada_toca_no_aperto_e_a_soltura_cala(forma: str) -> None:
+    motor, motores = _montar({AZUL: forma})
     receita = tv.Receita(padroes_escolhidos=True, gatilho_no_ritmo=True)
     motor.anotar(_tiro(AZUL, 0.0, tv.TIPO_DEDO))
-    _correr(motor, motores, (AZUL,), 0.3, receita=receita)
-    assert motores.escritas == []
-    motor.anotar(_tiro(AZUL, 0.31, tv.TIPO_SOLTA))
-    _correr(motor, motores, (AZUL,), 1.0, receita=receita, desde_s=0.31)
-    assert motores.escritas
+    _correr(motor, motores, (AZUL,), 2.5, receita=receita)
+    assert motores.escritas, "o aperto toca em toda opção da aba Jogar"
+    feitas = len(motores.escritas)
+    motor.anotar(_tiro(AZUL, 2.6, tv.TIPO_SOLTA))
+    _correr(motor, motores, (AZUL,), 3.0, receita=receita, desde_s=2.6)
+    assert len(motores.escritas) == feitas, "a soltura fica só para o que é soltura por natureza"
 
 
 def test_o_coice_toca_na_soltura_e_nunca_no_aperto() -> None:
@@ -343,14 +321,13 @@ def test_na_producao_o_padrao_para_no_motor_parado(monkeypatch: pytest.MonkeyPat
     assert controller.rumble[-1] == (AZUL, 0, 0)
 
 
-def test_na_producao_o_gatilho_que_vibra_segura_o_padrao(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_na_producao_o_gatilho_que_vibra_nao_segura_o_padrao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _atuador, controller, motor = _o_atuador_de_producao(monkeypatch, "fps", False)
     motor.vibra_o_gatilho = tv.VibracaoDoGatilho(geral=True)
     motor.anotar(_tiro(AZUL, 0.0))
     motor.tique(0.0, lambda _u: _LIVRE, tv.Receita(padroes_escolhidos=True), uniqs=(AZUL,))
-    assert controller.rumble == []
-    motor.anotar(_tiro(AZUL, 0.1, tv.TIPO_SOLTA))
-    motor.tique(0.1, lambda _u: _LIVRE, tv.Receita(padroes_escolhidos=True), uniqs=(AZUL,))
     assert controller.rumble
 
 

@@ -18,6 +18,7 @@ from array import array
 from collections import deque
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol
 
 from hefesto_dualsense4unix.core.events import EventTopic, tem_assinante
@@ -27,12 +28,25 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
     MODO_DUALSENSE,
     MODO_NATIVO,
     MODO_XBOX,
+    modo_do_controle,
     modo_do_pad,
     o_hefesto_fala_no_modo,
 )
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao
+from hefesto_dualsense4unix.daemon.subsystems.diario_do_corpo import (
+    PASSO_DO_DIARIO_S,
+    RECUSA_ECONOMIA,
+    RECUSA_FORCA_ZERO,
+    RECUSA_JOGO_NO_ENDPOINT,
+    RECUSA_SEM_APARELHO,
+    DiarioDoCorpo,
+)
 from hefesto_dualsense4unix.daemon.subsystems.intensidade_da_cena import IntensidadeDaCena
 from hefesto_dualsense4unix.integrations.classe_do_rumble import calado
+from hefesto_dualsense4unix.integrations.radio_da_mesa import (
+    QUEDA_NO_MOTOR,
+    QUEDA_PASSOU_DO_PRAZO,
+)
 from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
     FAMILIAS,
@@ -79,6 +93,11 @@ JANELA_DO_TETO_S = 1.0
 INTERVALO_S = 1.0 / 60.0
 RELEITURA_DA_RECEITA_S = 1.0
 CORPO_MAX_PEDACOS = 16
+SINAL_DO_CORPO = 0.001
+ESCRITAS_DA_QUEDA_POR_S = 1000.0 / 60
+SILENCIO_DA_QUEDA_S = 0.25
+PRAZO_DA_PONTE_S = 15.0
+RECUSAS_SEM_QUEDA = frozenset({RECUSA_FORCA_ZERO, RECUSA_JOGO_NO_ENDPOINT})
 
 CAMPO_DA_RECEITA = "receita_do_tato"
 
@@ -104,6 +123,7 @@ class EstadoDoCanal:
     sessao_aberta: bool = False
     ha_jogo: bool = False
     sessao_ha_s: float | None = None
+    motores_no_audio: bool = False
 
 
 FOLGA_DA_SESSAO_S = 0.25
@@ -124,7 +144,12 @@ def _o_modo_cala_o_motor(estado: EstadoDoCanal) -> bool:
 
 
 def decidir(canal: str, estado: EstadoDoCanal) -> bool:
-    """``True`` quando o jogo cala neste canal e o motor pode escrever."""
+    """``True`` quando o jogo cala neste canal e o motor pode escrever.
+
+    Os motores no áudio somam ao que o jogo toca: ali o jogo não cala nada, e só o Nativo cala.
+    """
+    if canal == CANAL_MOTORES and estado.motores_no_audio:
+        return estado.ha_jogo and estado.modo != MODO_NATIVO
     if _o_modo_cala_o_motor(estado):
         return False
     carimbo = _CARIMBO_DO_CANAL.get(canal)
@@ -468,6 +493,7 @@ class TatoVivo:
         self.escolhas_de_imersao: dict[str, str] = {}
         self.vibra_o_gatilho: VibracaoDoGatilho = SEM_VIBRACAO
         self.armas_do_gatilho: ArmasDoGatilho = SEM_ARMAS
+        self.steam_input: frozenset[int] = frozenset()
         self.rumble_visto_em: dict[str, float] = {}
         self.rumble_com_forca_em: dict[str, float] = {}
         self.rumble_de_agora: dict[str, tuple[int, int]] = {}
@@ -476,6 +502,7 @@ class TatoVivo:
         self.disparo: dict[tuple[str, str], int] = {}
         self.volta: Any = None
         self.meus_toques: Any = None
+        self.queda: Any = None
         self.cena = IntensidadeDaCena()
 
     def anotar(self, evento: Evento) -> None:
@@ -508,7 +535,8 @@ class TatoVivo:
         """Devolve o que venceu, decide cada evento da fila e escreve. Retorna as escritas.
 
         ``uniqs`` são os controles da mesa: o atuador que anda com o relógio (os momentos
-        da imersão) olha cada um deles a cada tique, com ou sem evento.
+        da imersão) olha cada um deles a cada tique, com ou sem evento. O modo que cala no meio
+        do padrão devolve os motores: ali não há jogo para mandar o zero dele.
         """
         with self._lock:
             eventos = list(self._fila)
@@ -521,6 +549,9 @@ class TatoVivo:
         for (uniq, canal), prazo in list(self._pendentes.items()):
             estado = estado_de(uniq)
             if estado is not None and not decidir(canal, estado):
+                if canal == CANAL_MOTORES and _o_modo_cala_o_motor(estado):
+                    self._devolver(uniq, canal, agora)
+                    continue
                 del self._pendentes[(uniq, canal)]
                 self.contadores["soltos_ao_jogo"] += 1
                 soltar = getattr(self._atuador(canal), "soltar", None)
@@ -602,6 +633,8 @@ class TatoVivo:
         instante = time.monotonic() if agora is None else agora
         with self._lock:
             self._fila.clear()
+        if self.queda is not None:
+            self.queda.soltar_tudo()
         for uniq, canal in list(self._pendentes):
             self._devolver(uniq, canal, instante)
         for atuador in self.atuadores:
@@ -2110,16 +2143,17 @@ class AtuadorDosMotores:
         self,
         escrever: Callable[[str, int, int], object],
         padrao_de: Callable[[str], str | None],
-        gatilho_vibra: Callable[[str], bool],
         forca_de: Callable[[str], float],
         estilo_de: Callable[[], Any] | None = None,
+        largar: Callable[[str], object] = lambda _uniq: None,
     ) -> None:
         self._escrever = escrever
         self._estilo_de = estilo_de or (lambda: None)
         self._padrao_de = padrao_de
-        self._gatilho_vibra = gatilho_vibra
         self._forca_de = forca_de
-        self._em_curso: dict[str, _PadraoEmCurso] = {}
+        self._largar = largar
+        self._em_curso: dict[tuple[str, str], _PadraoEmCurso] = {}
+        self._par: dict[str, tuple[int, int]] = {}
         self._coices: dict[str, deque[float]] = {}
 
     def _cabe_o_coice(self, uniq: str, instante: float) -> bool:
@@ -2129,14 +2163,14 @@ class AtuadorDosMotores:
         return len(fila) < COICES_POR_S
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
-        if evento.tipo not in (TIPO_DEDO, TIPO_SOM, TIPO_SOLTA) or evento.uniq in self._em_curso:
+        if (evento.tipo not in (TIPO_DEDO, TIPO_SOM, TIPO_SOLTA)
+                or (evento.uniq, _pista(evento)) in self._em_curso):
             return False
         padrao = self._padrao_de(evento.uniq)
         if padrao is None:
             return False
-        vibra = receita.gatilho_no_ritmo or self._gatilho_vibra(evento.uniq)
         regra = padroes_de_vibracao.na_soltura_do_estilo(padrao, self._estilo_de())
-        if vibra or padrao in padroes_de_vibracao.NA_SOLTURA or regra is not None:
+        if padrao in padroes_de_vibracao.NA_SOLTURA or regra is not None:
             if evento.tipo != TIPO_SOLTA:
                 return False
             if regra is not None and (
@@ -2154,19 +2188,17 @@ class AtuadorDosMotores:
         padrao = self._padrao_de(uniq)
         if padrao is None:
             return None
-        motores = padroes_de_vibracao.AMBOS
-        if padrao in padroes_de_vibracao.DO_LADO_DO_SOM:
-            motores = _MOTOR_DO_LADO.get(evento.lado, padroes_de_vibracao.AMBOS)
         if padrao in padroes_de_vibracao.NA_SOLTURA:
             self._coices.setdefault(uniq, deque()).append(evento.instante)
-        passos = padroes_de_vibracao.sequencia(padrao, motores)
-        self._em_curso[uniq] = _PadraoEmCurso(passos, agora, self._forca_de(uniq))
-        self._andar(uniq, agora)
+        pista = _pista(evento)
+        passos = padroes_de_vibracao.sequencia(padrao, pista)
+        self._em_curso[(uniq, pista)] = _PadraoEmCurso(passos, agora, self._forca_de(uniq))
+        self._andar((uniq, pista), agora)
         return agora + padroes_de_vibracao.duracao_ms(padrao) / 1000.0 + FOLGA_DA_VOLTA_S
 
-    def _andar(self, uniq: str, agora: float) -> None:
-        """Escreve o passo em que o relógio está; no fim, zera os motores e solta o padrão."""
-        curso = self._em_curso.get(uniq)
+    def _andar(self, chave: tuple[str, str], agora: float) -> None:
+        """Escreve o passo em que o relógio está; no fim, solta o padrão daquele lado."""
+        curso = self._em_curso.get(chave)
         if curso is None:
             return
         decorrido_ms = (agora - curso.inicio) * 1000.0
@@ -2177,14 +2209,26 @@ class AtuadorDosMotores:
                 if indice != curso.indice:
                     curso.indice = indice
                     curso.escrito = (_valor(direito, curso.forca), _valor(esquerdo, curso.forca))
-                    self._escrever(uniq, *curso.escrito)
+                    self._escrever_o_par(chave[0])
                 return
-        self._zerar(uniq)
+        del self._em_curso[chave]
+        self._escrever_o_par(chave[0])
+
+    def _cursos_de(self, uniq: str) -> list[tuple[str, str]]:
+        return [chave for chave in self._em_curso if chave[0] == uniq]
+
+    def _escrever_o_par(self, uniq: str) -> None:
+        """Os dois lados de um controle saem num par só, o maior de cada motor."""
+        escritos = [self._em_curso[c].escrito or (0, 0) for c in self._cursos_de(uniq)]
+        par = (max((e[0] for e in escritos), default=0), max((e[1] for e in escritos), default=0))
+        if par != self._par.get(uniq, (0, 0)):
+            self._escrever(uniq, *par)
+        self._par[uniq] = par
 
     def _zerar(self, uniq: str) -> None:
-        curso = self._em_curso.pop(uniq, None)
-        if curso is not None and curso.escrito != (0, 0):
-            self._escrever(uniq, 0, 0)
+        for chave in self._cursos_de(uniq):
+            del self._em_curso[chave]
+        self._escrever_o_par(uniq)
 
     def relogio(
         self,
@@ -2195,28 +2239,39 @@ class AtuadorDosMotores:
         receita: Receita,
     ) -> int:
         escritas = 0
-        for uniq in list(self._em_curso):
-            if uniq not in uniqs or estado_de(uniq) is None:
-                self._em_curso.pop(uniq, None)
+        for chave in list(self._em_curso):
+            if chave[0] not in uniqs or estado_de(chave[0]) is None:
+                self.soltar(chave[0])
                 continue
-            antes = self._em_curso[uniq].indice
-            self._andar(uniq, agora)
-            curso = self._em_curso.get(uniq)
+            curso = self._em_curso.get(chave)
+            if curso is None:
+                continue
+            antes = curso.indice
+            self._andar(chave, agora)
+            curso = self._em_curso.get(chave)
             if curso is None or curso.indice != antes:
                 escritas += 1
                 motor.contadores["escritas"] += 1
         return escritas
 
     def soltar(self, uniq: str) -> None:
-        """O jogo tomou os motores: o padrão deixa de valer, sem escrever nada."""
-        self._em_curso.pop(uniq, None)
+        """O jogo tomou os motores: o padrão deixa de valer, sem escrever por cima do jogo."""
+        for chave in self._cursos_de(uniq):
+            del self._em_curso[chave]
+        self._par.pop(uniq, None)
+        self._largar(uniq)
 
     def devolver(self, uniq: str, agora: float) -> None:
         self._zerar(uniq)
 
     def devolver_tudo(self, agora: float) -> None:
-        for uniq in list(self._em_curso):
+        for uniq in {chave[0] for chave in self._em_curso}:
             self._zerar(uniq)
+
+
+def _pista(evento: Evento) -> str:
+    """O motor do lado do evento: L2 no esquerdo, R2 no direito, o som do centro nos dois."""
+    return _MOTOR_DO_LADO.get(evento.lado, padroes_de_vibracao.AMBOS)
 
 
 def _valor(passo: int, forca: float) -> int:
@@ -2377,6 +2432,8 @@ class Controle:
     l2: int = 0
     r2: int = 0
     estado_gatilho: tuple[int, int] | None = None
+    externo: bool = False
+    modo: str | None = None
 
 
 def _inteiro(valor: Any) -> int:
@@ -2400,16 +2457,25 @@ def _status_do_disparo(leitor: Any) -> tuple[int, int] | None:
 def controles_do_daemon(daemon: Any) -> list[Controle]:
     """P1 (o pad primário) e P2 a P4 (os jogadores do co-op), cada um com o seu."""
     vistos: dict[str, Controle] = {}
+    estilo = estilo_ativo(daemon)
+    motor = motor_do(daemon)
+    steam_input = motor.steam_input if motor is not None else frozenset()
+
+    def modo_de(vpad: Any) -> str:
+        return modo_do_controle(daemon, vpad, estilo=estilo, steam_input=steam_input)
+
     controller = getattr(daemon, "controller", None)
     primario = getattr(controller, "primary_uniq", None)
     if isinstance(primario, str) and primario:
         estado = getattr(daemon, "_last_state", None)
+        vpad_do_primario = getattr(daemon, "_gamepad_device", None)
         vistos[primario] = Controle(
             primario,
-            getattr(daemon, "_gamepad_device", None),
+            vpad_do_primario,
             _inteiro(getattr(estado, "l2_raw", 0)),
             _inteiro(getattr(estado, "r2_raw", 0)),
             _status_do_disparo(getattr(daemon, "_motion_reader", None)),
+            modo=modo_de(vpad_do_primario),
         )
     coop = getattr(daemon, "_coop_manager", None)
     jogadores = getattr(coop, "_players", None)
@@ -2423,9 +2489,11 @@ def controles_do_daemon(daemon: Any) -> list[Controle]:
                 foto = leitor.snapshot() if leitor is not None else None
                 l2 = _inteiro(getattr(foto, "l2_raw", 0))
                 r2 = _inteiro(getattr(foto, "r2_raw", 0))
+            vpad = getattr(jogador, "vpad", None)
             vistos[mac] = Controle(
-                mac, getattr(jogador, "vpad", None), l2, r2,
-                _status_do_disparo(getattr(jogador, "motion_reader", None)))
+                mac, vpad, l2, r2,
+                _status_do_disparo(getattr(jogador, "motion_reader", None)),
+                bool(getattr(jogador, "externo", False)), modo_de(vpad))
     return list(vistos.values())
 
 
@@ -2441,7 +2509,8 @@ def ha_jogo(daemon: Any) -> bool:
 
 
 def estado_do_controle(
-    controle: Controle, jogo: bool, sessao_ha_s: float | None = None
+    controle: Controle, jogo: bool, sessao_ha_s: float | None = None,
+    *, motores_no_audio: bool = False,
 ) -> EstadoDoCanal:
     vpad = controle.vpad
     visto: Mapping[str, float] = {}
@@ -2450,11 +2519,12 @@ def estado_do_controle(
         if isinstance(cru, Mapping):
             visto = cru
     return EstadoDoCanal(
-        modo=modo_do_pad(vpad),
+        modo=controle.modo or modo_do_pad(vpad),
         visto_ha_s=visto,
         sessao_aberta=bool(getattr(vpad, "game_open", False)),
         ha_jogo=jogo,
         sessao_ha_s=sessao_ha_s,
+        motores_no_audio=motores_no_audio,
     )
 
 
@@ -2758,8 +2828,227 @@ def _barras_dos_motores(daemon: Any, uniq: str) -> tuple[int, int]:
         return (100, 100)
 
 
+def _na_forca(valor: int, mult: float) -> int:
+    return max(0, min(255, round(valor * mult)))
+
+
 def _na_barra(valor: int, pontos: int) -> int:
-    return max(0, min(255, round(valor * pontos / 100.0)))
+    return _na_forca(valor, pontos / 100.0)
+
+
+def rota_do_padrao(daemon: Any, uniq: str) -> str:
+    """Por onde o padrão do gatilho sai agora; sem quem responda, pelo motor."""
+    perguntar = getattr(getattr(daemon, "_alto_falante_subsystem", None), "rota_do_padrao", None)
+    return perguntar(uniq) if callable(perguntar) else padroes_de_vibracao.ROTA_MOTOR
+
+
+def _mults_no_report(daemon: Any, uniq: str) -> tuple[float, float]:
+    """``(fraco, forte)`` no report: a Força do controle vezes a barra de cada motor.
+
+    Na economia o padrão já vem na ``FORCA_NA_ECONOMIA``, e o teto da mesa contaria duas vezes.
+    """
+    forte_pct, fraco_pct = _barras_dos_motores(daemon, uniq)
+    degrau = 1.0
+    if not _controle_na_economia(uniq):
+        from hefesto_dualsense4unix.daemon.subsystems import gamepad
+
+        degrau = gamepad._game_rumble_mult(daemon, time.monotonic(), uniq)
+    return degrau * fraco_pct / 100.0, degrau * forte_pct / 100.0
+
+
+class SaidaDosPadroes:
+    """A cadeia de queda, uma só: PCM no tocador, motor pelo report, e o nó do controle de fora.
+
+    O par vem na força do padrão (economia e cena); a Força por controle e as barras são do
+    caminho de cada saída. Quem escreveu no motor e mudou de rota zera o motor: o par seguinte
+    vai a outro lugar, e o motor ficaria preso no último passo. O zero só vai ao motor que esta
+    saída ligou: no Steam Input e no Nativo o report é da Steam ou do jogo.
+    """
+
+    def __init__(self, daemon: Any) -> None:
+        self._daemon = daemon
+        self._do_no: dict[str, tuple[Any, Any]] = {}
+        self._no_motor: set[str] = set()
+
+    def _motor_de_fora(self, uniq: str) -> Any:
+        jogadores = getattr(getattr(self._daemon, "_coop_manager", None), "_players", None)
+        jogador = jogadores.get(uniq) if isinstance(jogadores, dict) else None
+        if jogador is None or not getattr(jogador, "externo", False):
+            return None
+        leitor = getattr(jogador, "reader", None)
+        motor, de_quem = self._do_no.get(uniq, (None, None))
+        if motor is None or de_quem is not leitor:
+            from hefesto_dualsense4unix.core.motor_do_no import MotorDoNo
+
+            motor = MotorDoNo(leitor)
+            self._do_no[uniq] = (motor, leitor)
+        return motor
+
+    def _vibrar_o_de_fora(self, motor: Any, uniq: str, fraco: int, forte: int) -> object:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vibrar_o_externo
+
+        return vibrar_o_externo(self._daemon, motor, uniq, fraco, forte) is not None
+
+    def _no_report(self, uniq: str, fraco: int, forte: int) -> object:
+        escrever = getattr(getattr(self._daemon, "controller", None), "set_rumble_for", None)
+        if not callable(escrever):
+            return False
+        mult_fraco, mult_forte = _mults_no_report(self._daemon, uniq)
+        return escrever(uniq, _na_forca(fraco, mult_fraco), _na_forca(forte, mult_forte))
+
+    def _pelo_motor(self, uniq: str, de_fora: Any, fraco: int, forte: int) -> object:
+        if fraco or forte:
+            self._no_motor.add(uniq)
+        else:
+            self._no_motor.discard(uniq)
+        if de_fora is not None:
+            return self._vibrar_o_de_fora(de_fora, uniq, fraco, forte)
+        return self._no_report(uniq, fraco, forte)
+
+    def __call__(self, uniq: str, fraco: int, forte: int) -> object:
+        rota = rota_do_padrao(self._daemon, uniq)
+        de_fora = self._motor_de_fora(uniq)
+        if de_fora is not None and rota == padroes_de_vibracao.ROTA_AUDIO:
+            rota = padroes_de_vibracao.ROTA_MOTOR
+        if rota != padroes_de_vibracao.ROTA_MOTOR and uniq in self._no_motor:
+            self._pelo_motor(uniq, de_fora, 0, 0)
+        if rota == padroes_de_vibracao.ROTA_CALADA:
+            return False
+        if rota == padroes_de_vibracao.ROTA_MOTOR:
+            if not fraco and not forte and uniq not in self._no_motor:
+                return False
+            return self._pelo_motor(uniq, de_fora, fraco, forte)
+        forte_pct, fraco_pct = _barras_dos_motores(self._daemon, uniq)
+        levar = getattr(
+            getattr(self._daemon, "_alto_falante_subsystem", None), "levar_os_lados", None)
+        if not callable(levar):
+            return False
+        return levar(uniq, _na_barra(forte, forte_pct), _na_barra(fraco, fraco_pct))
+
+    def soltar(self, uniq: str) -> None:
+        """Zera o motor que esta saída deixou ligado, e só ele."""
+        if uniq in self._no_motor:
+            self._pelo_motor(uniq, self._motor_de_fora(uniq), 0, 0)
+
+    def largar(self, uniq: str) -> None:
+        """O jogo tomou os motores. No nó de fora o efeito do padrão é só dele, e nunca acaba só."""
+        de_fora = self._motor_de_fora(uniq)
+        if de_fora is not None and uniq in self._no_motor:
+            self._vibrar_o_de_fora(de_fora, uniq, 0, 0)
+        self._no_motor.discard(uniq)
+
+
+def saida_dos_padroes(daemon: Any) -> SaidaDosPadroes:
+    return SaidaDosPadroes(daemon)
+
+
+class QuedaDoCorpo:
+    """O envelope do grave no par de motores, só enquanto o caminho do áudio não sobe.
+
+    Motor por report não convive com o PCM: a rota saiu do motor, o par zera no mesmo tique. O
+    Nativo nunca escreve, e o rumble do jogo passa na frente. A rota é a de todo padrão, então
+    Pro e 8BitDo seguem pelo ``EV_FF`` do nó deles, sem ponte e sem prazo.
+    """
+
+    def __init__(
+        self,
+        saida: Any,
+        rota_de: Callable[[str], str],
+        atrasou: Callable[[str, float], object],
+        tem_ponte: Callable[[str], bool] = lambda _uniq: True,
+    ) -> None:
+        self._saida = saida
+        self._rota_de = rota_de
+        self._atrasou = atrasou
+        self._tem_ponte = tem_ponte
+        self._pico: dict[str, float] = {}
+        self._ouvido_em: dict[str, float] = {}
+        self._desde: dict[str, float] = {}
+        self._nivel: dict[str, int] = {}
+        self._escrito_em: dict[str, float] = {}
+        self._atrasados: set[str] = set()
+        self.estados: Mapping[str, str] = MappingProxyType({})
+
+    def ouvir(self, uniq: str, amostras: Any, agora: float) -> None:
+        """O grave que este controle devia sentir pelo áudio."""
+        pico = max(map(abs, amostras), default=0.0)
+        self._pico[uniq] = max(self._pico.get(uniq, 0.0), pico)
+        self._ouvido_em[uniq] = agora
+
+    def andar(self, agora: float, estado_de: Callable[[str], EstadoDoCanal | None],
+              calados: Collection[str] = ()) -> None:
+        """Um tique. ``calados`` são os controles em que um padrão segura os motores agora."""
+        for uniq in list(self._ouvido_em):
+            self._so_neste(self._andar_um, uniq, agora, estado_de(uniq), uniq in calados)
+        estados = {uniq: QUEDA_NO_MOTOR for uniq in self._desde if self._nivel.get(uniq)}
+        estados.update(dict.fromkeys(self._atrasados, QUEDA_PASSOU_DO_PRAZO))
+        if estados != self.estados:
+            self.estados = MappingProxyType(estados)
+
+    def _so_neste(self, passo: Callable[..., object], uniq: str, *resto: object) -> None:
+        """A falha de um controle fica nele: os outros da mesa seguem."""
+        try:
+            passo(uniq, *resto)
+        except Exception:
+            logger.debug("tato_queda_falhou", exc_info=True)
+
+    def _andar_um(
+        self, uniq: str, agora: float, estado: EstadoDoCanal | None, calado: bool
+    ) -> None:
+        if estado is None or _o_modo_cala_o_motor(estado) or (
+                self._rota_de(uniq) != padroes_de_vibracao.ROTA_MOTOR):
+            self.soltar(uniq)
+            return
+        if not decidir(CANAL_MOTORES, estado):
+            self._esquecer(uniq)
+            self._saida.largar(uniq)
+            return
+        parado = agora - self._ouvido_em[uniq]
+        if calado and parado > SILENCIO_DA_QUEDA_S:
+            self._nivel.pop(uniq, None)
+            self._saida.largar(uniq)
+        if parado > PRAZO_DA_PONTE_S:
+            self.soltar(uniq)
+            return
+        if parado > SILENCIO_DA_QUEDA_S:
+            self._zerar(uniq)
+            return
+        self._ver_o_prazo(uniq, agora)
+        if calado or agora - self._escrito_em.get(uniq, float("-inf")) < (
+                1.0 / ESCRITAS_DA_QUEDA_POR_S):
+            return
+        nivel = round(min(1.0, self._pico.pop(uniq, 0.0)) * 255)
+        self._escrito_em[uniq] = agora
+        if nivel or self._nivel.get(uniq):
+            self._nivel[uniq] = nivel
+            self._saida(uniq, nivel, nivel)
+
+    def _ver_o_prazo(self, uniq: str, agora: float) -> None:
+        desde = self._desde.setdefault(uniq, agora)
+        if agora - desde >= PRAZO_DA_PONTE_S and uniq not in self._atrasados and (
+                self._tem_ponte(uniq)):
+            self._atrasados.add(uniq)
+            self._atrasou(uniq, agora - desde)
+
+    def _zerar(self, uniq: str) -> None:
+        self._pico.pop(uniq, None)
+        if self._nivel.pop(uniq, 0):
+            self._saida.soltar(uniq)
+
+    def _esquecer(self, uniq: str) -> None:
+        for mapa in (self._ouvido_em, self._desde, self._nivel, self._pico, self._escrito_em):
+            mapa.pop(uniq, None)
+        self._atrasados.discard(uniq)
+
+    def soltar(self, uniq: str) -> None:
+        """A queda sai deste controle: o motor zera, e a ponte volta a ser o regime."""
+        self._zerar(uniq)
+        self._esquecer(uniq)
+
+    def soltar_tudo(self) -> None:
+        for uniq in list(self._ouvido_em):
+            self._so_neste(self.soltar, uniq)
+        self.estados = MappingProxyType({})
 
 
 def fator_da_cena(daemon: Any) -> float:
@@ -2853,12 +3142,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         forca = min(degrau, FORCA_NA_ECONOMIA) if na_economia(uniq) else degrau
         return forca * fator_da_cena(daemon)
 
-    def motores(uniq: str, fraco: int, forte: int) -> object:
-        escrever = getattr(controller, "set_rumble_for", None)
-        if not callable(escrever):
-            return False
-        forte_pct, fraco_pct = _barras_dos_motores(daemon, uniq)
-        return escrever(uniq, _na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct))
+    motores = saida_dos_padroes(daemon)
 
     def momento(uniq: str, lado: str, bloco: bytes) -> object:
         escrever = getattr(controller, "set_game_trigger_for", None)
@@ -2973,7 +3257,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             na_economia,
         ),
         AtuadorDosMotores(
-            motores, padrao_de, gatilho_vibra, forca_do_padrao, lambda: estilo_ativo(daemon)),
+            motores, padrao_de, forca_do_padrao, lambda: estilo_ativo(daemon), motores.largar),
     ]
 
 
@@ -3513,7 +3797,9 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
     def modo_de(uniq: str) -> str | None:
         alvo = norm_mac(uniq)
         controle = next((c for c in controles_do_daemon(daemon) if norm_mac(c.uniq) == alvo), None)
-        return modo_do_pad(controle.vpad) if controle is not None else None
+        if controle is None:
+            return None
+        return controle.modo or modo_do_pad(controle.vpad)
 
     def falante() -> Any:
         return getattr(daemon, "_alto_falante_subsystem", None)
@@ -3555,6 +3841,29 @@ def ligar_a_fonte_de_fora(daemon: Any, fonte: FonteDeFora) -> FonteDeFora:
     return fonte
 
 
+def _o_que_cala_o_corpo(uniq: str, estado: EstadoDoCanal) -> str | None:
+    """Por que quem escolheu o corpo não recebe; o modo que cala não é recusa: nada toca ali."""
+    if _o_modo_cala_o_motor(estado):
+        return None
+    if not decidir(CANAL_HAPTICA, estado):
+        return RECUSA_JOGO_NO_ENDPOINT
+    return RECUSA_ECONOMIA if _controle_na_economia(uniq) else None
+
+
+def cor_do_plastico_de(daemon: Any, uniq: str) -> str | None:
+    """O nome da cor do plástico de ``uniq``; ``None`` quando a fábrica ainda não disse."""
+    ler = getattr(getattr(daemon, "identity_registry", None), "identidade_de_fabrica", None)
+    if not callable(ler):
+        return None
+    return getattr(getattr(ler(uniq), "cor", None), "nome", None) or None
+
+
+def subida_ao_store(daemon: Any) -> Callable[[str, int], object]:
+    """Quem leva a conta do minuto ao ``store``; sem ``store``, nada sobe."""
+    subir = getattr(getattr(daemon, "store", None), "bump", None)
+    return subir if callable(subir) else lambda _chave, _delta: None
+
+
 def motor_do(daemon: Any) -> TatoVivo | None:
     motor = getattr(daemon, "_tato_vivo", None)
     return motor if isinstance(motor, TatoVivo) else None
@@ -3580,6 +3889,24 @@ class Passo:
         self._agora_da_continua = 0.0
         self.fonte_do_som = FonteDoSom()
         self._corpo_discreto: frozenset[str] = frozenset()
+        self._externos: frozenset[str] = frozenset()
+        self.diario_do_corpo = DiarioDoCorpo(
+            lambda uniq: cor_do_plastico_de(daemon, uniq), subida_ao_store(daemon))
+        self.queda_do_corpo = motor.queda = QuedaDoCorpo(
+            saida_dos_padroes(daemon), lambda uniq: rota_do_padrao(daemon, uniq),
+            self._a_ponte_atrasou, self._pede_ponte)
+
+    def _pede_ponte(self, uniq: str) -> bool:
+        """Pro e 8BitDo não têm voice-coil: neles o motor é o regime."""
+        return uniq not in self._externos
+
+    def _a_ponte_atrasou(self, uniq: str, ha_s: float) -> None:
+        """O regime é a ponte de pé: passou do prazo, o diário diz com o motivo do dono."""
+        por_que = getattr(
+            getattr(self.daemon, "_alto_falante_subsystem", None), "por_que_sem_ponte", None)
+        logger.warning(
+            "tato_corpo_pelo_motor_passou_do_prazo", controle=self.diario_do_corpo.rotulo(uniq),
+            ha_s=round(ha_s), motivo=por_que(uniq) if callable(por_que) else None)
 
     def som_assinado(self) -> bool:
         """Uma extensão assina o som do jogo pela porta."""
@@ -3625,11 +3952,13 @@ class Passo:
     def alimentar_o_corpo(self, pcm: bytes) -> None:
         """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o quer, e a energia
         do som vai à intensidade da cena."""
+        self.diario_do_corpo.somar_o_pcm(len(pcm))
         if self._som_so_da_porta():
             return
         self.motor.cena.ouvir_o_som(pcm)
         if self.receita_vigente.som_no_corpo_escolhido or self._corpo_discreto:
-            self._corpo.append(self._filtro_do_corpo.processar(pcm))
+            pedaco = self._filtro_do_corpo.processar(pcm)
+            self._corpo.append((pedaco, max(map(abs, pedaco), default=0.0) >= SINAL_DO_CORPO))
 
     def _levar_o_corpo(
         self, receita: Receita, uniqs: Sequence[str],
@@ -3644,34 +3973,82 @@ class Passo:
                 break
         if not pedacos:
             return
+        com_sinal = any(sinal for _pedaco, sinal in pedacos)
         donos = []
         for uniq in uniqs if receita.som_no_corpo_escolhido else ():
             estado = estado_de(uniq)
             forma = formas_de_haptica.forma_que_vale(
                 self.motor.escolhas.get(norm_mac(uniq) or ""), estilo_ativo(self.daemon))
-            if (forma == formas_de_haptica.SOM_NO_CORPO
-                    and estado is not None and decidir(CANAL_HAPTICA, estado)
-                    and not _controle_na_economia(uniq)):
+            if forma != formas_de_haptica.SOM_NO_CORPO or estado is None:
+                continue
+            motivo = _o_que_cala_o_corpo(uniq, estado)
+            if motivo is None and not _o_modo_cala_o_motor(estado):
                 donos.append(uniq)
+            elif motivo is not None:
+                self._recusar(uniq, motivo)
         discretos = [u for u in uniqs if u in self._corpo_discreto and u not in donos]
         if not donos and not discretos:
             return
         amostras = array("f")
-        for pedaco in pedacos:
+        for pedaco, _sinal in pedacos:
             amostras.extend(pedaco)
         alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
         levar = getattr(alto_falante, "tocar_o_corpo", None)
         if not callable(levar):
+            for uniq in (*donos, *discretos):
+                self._recusar(uniq, RECUSA_SEM_APARELHO)
             return
         fator = fator_da_cena(self.daemon)
         if fator != 1.0:
             amostras = array("f", [x * fator for x in amostras])
         for uniq in donos:
-            levar(uniq, amostras)
+            self._cair_pelo_motor(
+                uniq, amostras, self._entregar(levar, uniq, amostras, com_sinal), com_sinal)
         if discretos:
             metade = array("f", [x * FORCA_DO_CORPO_DISCRETO for x in amostras])
             for uniq in discretos:
-                levar(uniq, metade)
+                self._cair_pelo_motor(
+                    uniq, metade, self._entregar(levar, uniq, metade, com_sinal), com_sinal)
+
+    def _cair_pelo_motor(self, uniq: str, amostras: Any, desfecho: Any, com_sinal: bool) -> None:
+        """O tocador segue acordando a ponte; a queda ouve quem pode sentir pelo motor."""
+        if com_sinal and getattr(desfecho, "motivo", None) not in RECUSAS_SEM_QUEDA:
+            self.queda_do_corpo.ouvir(uniq, amostras, self._agora_da_continua)
+
+    def _ler_a_lista_do_steam_input(self) -> None:
+        """A lista só importa com o Modo Nativo ligado, e o disco fica fora do tique."""
+        nativo = getattr(self.daemon, "is_native_mode", None)
+        if not callable(nativo) or not nativo():
+            return
+        from hefesto_dualsense4unix.daemon.launch_env import steam_input_appids
+
+        self.motor.steam_input = frozenset(steam_input_appids())
+
+    def _recusar(self, uniq: str, motivo: str) -> None:
+        """Pro e 8BitDo não têm voice-coil: ali nada toca, e isso não é recusa."""
+        if uniq not in self._externos:
+            self.diario_do_corpo.recusado(uniq, motivo)
+
+    def _entregar(
+        self, levar: Callable[..., Any], uniq: str, amostras: Any, com_sinal: bool
+    ) -> Any:
+        desfecho = levar(uniq, amostras)
+        if not desfecho:
+            self._recusar(uniq, getattr(desfecho, "motivo", None) or RECUSA_SEM_APARELHO)
+        elif com_sinal:
+            self.diario_do_corpo.entregue(uniq)
+        return desfecho
+
+    def andar_o_diario(self, agora: float) -> None:
+        """O passo do diário do corpo, chamado fora do tique: a falha fica neste passo."""
+        try:
+            self._ler_a_lista_do_steam_input()
+            ouvido = self.motor.ouvido
+            self.diario_do_corpo.andar(
+                agora, jogo=self.jogo, pedido=self.ouvido_quer(),
+                surdo_ha_s=ouvido.surdo_ha_s() if ouvido is not None else 0.0)
+        except Exception:
+            logger.debug("tato_diario_do_corpo_falhou", exc_info=True)
 
     def _acordar_a_fonte_do_som(
         self, receita: Receita, controles: Sequence[Controle], jogo: bool,
@@ -3725,7 +4102,7 @@ class Passo:
         alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
         levar = getattr(alto_falante, "tocar_o_corpo", None)
         if callable(levar) and len(amostras):
-            levar(uniq, amostras)
+            self._entregar(levar, uniq, amostras, True)
 
     def _levar_o_grao(
         self, receita: Receita, uniqs: Sequence[str],
@@ -3800,6 +4177,7 @@ class Passo:
             return 0
         self.motor.ligado = True
         controles = controles_do_daemon(self.daemon)
+        self._externos = frozenset(c.uniq for c in controles if c.externo)
         for controle in controles:
             for evento in self.dedo.ver(controle.uniq, controle.l2, controle.r2, agora):
                 self.motor.anotar(evento)
@@ -3810,7 +4188,9 @@ class Passo:
         jogo = self.jogo = ha_jogo(self.daemon)
         por_uniq = {
             c.uniq: com_o_rumble_anotado(
-                estado_do_controle(c, jogo, self._sessao_ha_s(c, agora)),
+                estado_do_controle(
+                    c, jogo, self._sessao_ha_s(c, agora), motores_no_audio=(
+                        rota_do_padrao(self.daemon, c.uniq) == padroes_de_vibracao.ROTA_AUDIO)),
                 self.motor.rumble_visto_em.get(norm_mac(c.uniq) or c.uniq),
                 agora,
             )
@@ -3823,8 +4203,9 @@ class Passo:
             ouvido=bool(getattr(self.motor.ouvido, "ouvindo", False))
             and not self._som_so_da_porta(),
             uniqs=tuple(por_uniq))
-        self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
         self._agora_da_continua = agora
+        self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
+        self.queda_do_corpo.andar(agora, por_uniq.get, self.motor.segurando(CANAL_MOTORES))
         vpads = {c.uniq: c.vpad for c in controles}
         self._levar_o_grao(receita, tuple(por_uniq), por_uniq.get)
         self._levar_o_motor_de_epoca(receita, tuple(por_uniq), por_uniq.get, vpads.get)
@@ -3882,6 +4263,13 @@ class Passo:
                            estalo.energia))
 
 
+async def _diario_do_corpo_loop(daemon: DaemonProtocol, passo: Passo) -> None:
+    """A linha do minuto, fora do tique: quem escreve no diário não segura o laço de 60 Hz."""
+    while not daemon._is_stopping():
+        await asyncio.sleep(PASSO_DO_DIARIO_S)
+        await asyncio.to_thread(passo.andar_o_diario, time.monotonic())
+
+
 async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
     passo = Passo(daemon, motor)
     if motor.ouvido is None:
@@ -3898,6 +4286,8 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
             assinado=passo.som_assinado,
             ao_estalo=motor.de_fora.guardar_o_estalo,
         )
+    diario = asyncio.create_task(
+        _diario_do_corpo_loop(daemon, passo), name="tato_diario_do_corpo")
     volta = motor.volta
     barramento = getattr(daemon, "bus", None) if volta is not None else None
     gestos = estados = None
@@ -3913,6 +4303,7 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
             passo.tique_do_laco(agora)
             motor.de_fora.andar(agora)
     finally:
+        diario.cancel()
         if barramento is not None:
             barramento.unsubscribe(EventTopic.ACESSORIOS_GESTO, gestos)
             barramento.unsubscribe(EventTopic.ACESSORIOS_ESTADO, estados)

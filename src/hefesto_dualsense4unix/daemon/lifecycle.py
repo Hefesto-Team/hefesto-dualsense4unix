@@ -574,6 +574,9 @@ class ModoJogoPadrao:
 MODO_NATIVO: Final = "nativo"
 MODO_DUALSENSE: Final = "dualsense"
 MODO_XBOX: Final = "xbox"
+MODO_NAVEGACAO: Final = "navegacao"
+MODO_STEAM_INPUT: Final = "steam_input"
+ESTILO_NATIVO: Final = "nativo"
 
 
 def modo_do_pad(vpad: Any) -> str:
@@ -588,9 +591,33 @@ def modo_do_pad(vpad: Any) -> str:
     return MODO_NATIVO
 
 
+def modo_do_controle(
+    daemon: Any, vpad: Any, *, estilo: str | None = None,
+    steam_input: frozenset[int] = frozenset(),
+) -> str:
+    """O modo da aba Jogar: a pergunta única do Nativo, que só o chip e o estilo Nativo respondem.
+
+    Pad nenhum com o Modo Nativo ligado é o chip Nativo, ou o Steam Input quando o jogo em cena
+    está na lista; pad nenhum com ele desligado é a Navegação.
+    """
+    if estilo == ESTILO_NATIVO:
+        return MODO_NATIVO
+    nativo = getattr(daemon, "is_native_mode", None)
+    if not callable(nativo):
+        return modo_do_pad(vpad)
+    if nativo():
+        em_cena = getattr(daemon, "appid_em_cena", None)
+        return MODO_STEAM_INPUT if em_cena in steam_input else MODO_NATIVO
+    modo = modo_do_pad(vpad)
+    return MODO_NAVEGACAO if modo == MODO_NATIVO else modo
+
+
 def o_hefesto_fala_no_modo(modo: str) -> bool:
-    """``False`` no Modo Nativo: o jogo fala com o aparelho, e nada do Hefesto fala por cima."""
-    return modo != MODO_NATIVO
+    """``False`` no Modo Nativo: o jogo fala com o aparelho, e nada do Hefesto fala por cima.
+
+    No Steam Input a Steam é dona do físico, e o que não passa por ele fica com o motor do tato.
+    """
+    return modo not in (MODO_NATIVO, MODO_STEAM_INPUT)
 
 
 @dataclass

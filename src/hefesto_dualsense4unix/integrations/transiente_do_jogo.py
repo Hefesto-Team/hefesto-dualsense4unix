@@ -45,7 +45,8 @@ from array import array
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from enum import Enum
+from typing import Any, Final
 
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     LATENCIA_DO_GRAVADOR_MS,
@@ -432,6 +433,7 @@ class FluxoDoJogo:
     pid: int
     ident: int | None = None
     nome_perdido: bool = False
+    pausado: bool = False
 
 
 def _inteiro_da_propriedade(propriedades: Mapping[str, str], chave: str) -> int | None:
@@ -457,8 +459,9 @@ def fluxo_do_jogo(fluxos: Iterable[Any], pids: Iterable[int]) -> FluxoDoJogo | N
         if pid is None or pid not in dos_jogos or nome.startswith("hefesto"):
             continue
         perdidos: frozenset[str] = getattr(fluxo, "perdidos", frozenset()) or frozenset()
+        pausado = bool(getattr(fluxo, "corked", False))
         candidatos.append((
-            bool(getattr(fluxo, "corked", False)),
+            pausado,
             FluxoDoJogo(
                 indice=int(getattr(fluxo, "indice", -1)),
                 serial=_inteiro_da_propriedade(propriedades, "object.serial"),
@@ -466,12 +469,24 @@ def fluxo_do_jogo(fluxos: Iterable[Any], pids: Iterable[int]) -> FluxoDoJogo | N
                 pid=pid,
                 ident=_inteiro_da_propriedade(propriedades, "object.id"),
                 nome_perdido="node.name" in perdidos,
+                pausado=pausado,
             ),
         ))
     if not candidatos:
         return None
     candidatos.sort(key=lambda par: par[0])
     return candidatos[0][1]
+
+
+class SemLink(Enum):
+    """O grafo respondeu sem origem: o nó do gravador está lá sem link, ou não está lá."""
+
+    SEM_LINK = "sem_link"
+    SEM_NO = "sem_no"
+
+
+SEM_LINK: Final = SemLink.SEM_LINK
+SEM_NO: Final = SemLink.SEM_NO
 
 
 def e_o_fluxo_pedido(origem: OrigemDoGravador | str | None, fluxo: FluxoDoJogo) -> bool | None:
@@ -545,7 +560,16 @@ def argv_do_ouvido(
 PROCURA_S = 5.0
 VIVO_S = 1.0
 PRAZO_DA_VOLTA_DO_OUVIDO_S = 1.5
+PRAZO_DO_SILENCIO_S = 10.0
+RECUO_TETO_S = 60.0
+LINK_FIRME_S = 30.0
 LEITURA = BYTES_POR_JANELA * 4
+
+MOTIVO_GRAVADOR_SAIU = "gravador_saiu"
+MOTIVO_LINK_CAIDO = "link_caido"
+MOTIVO_FLUXO_NOVO = "fluxo_novo"
+MOTIVO_SEM_PCM = "sem_pcm"
+MOTIVO_ALVO_ERRADO = "alvo_errado"
 
 
 class OuvidoDoJogo:
@@ -559,7 +583,7 @@ class OuvidoDoJogo:
         montar_argv: Callable[[FluxoDoJogo], list[str]] | None = None,
         abrir: Callable[[list[str]], Any] | None = None,
         derrubar: Callable[..., Any] | None = None,
-        conferir_o_alvo: Callable[[str], OrigemDoGravador | str | None] | None = None,
+        conferir_o_alvo: Callable[[str], OrigemDoGravador | SemLink | str | None] | None = None,
         relogio: Callable[[], float] = time.monotonic,
         procura_s: float = PROCURA_S,
         recortar: Callable[[], bool] | None = None,
@@ -589,9 +613,18 @@ class OuvidoDoJogo:
         self._leitor: threading.Thread | None = None
         self._fluxo: FluxoDoJogo | None = None
         self._conferido = False
+        self._no_visto = False
         self._ultimo_pcm = float("-inf")
+        self._ligado_em = float("-inf")
+        self._motivo: str | None = None
+        self._serial_de_antes: int | None = None
+        self._seguidas = 0
+        self._religar_em = float("-inf")
+        self._ouviu_em = float("-inf")
+        self._pedido_em: float | None = None
+        self.pausado = False
         self.detector = DetectorDeTransiente()
-        self.contadores = {"gravacoes": 0, "transientes": 0, "alvo_errado": 0}
+        self.contadores = {"gravacoes": 0, "transientes": 0, "alvo_errado": 0, "religadas": 0}
 
     def comecar(self) -> None:
         """Sobe a volta de procura (idempotente). A volta dorme enquanto ninguém quer."""
@@ -613,34 +646,95 @@ class OuvidoDoJogo:
         self._calar()
 
     def uma_volta(self) -> None:
-        """Uma passada: cala sem pedido; sem gravador, procura; com ele, confere o alvo."""
+        """Uma passada: cala sem pedido; sem gravador, procura; com ele, confere o link."""
         if not self._querer():
             self._calar()
+            self._esquecer_a_religada()
+            self._pedido_em = None
             return
+        if self._pedido_em is None:
+            self._pedido_em = self._relogio()
         self.detector.recortar = bool(self._recortar())
         self.detector.imprimir = self._imprimir()
         if self._proc is not None and not self._gravando():
-            self._calar()
+            self._perder(MOTIVO_GRAVADOR_SAIU)
         if self._proc is None:
-            self._ligar()
+            if self._relogio() >= self._religar_em:
+                self._ligar()
             return
-        if not self._conferido and self._fluxo is not None:
-            origem = self._conferir_o_alvo(ROTULO_DO_OUVIDO)
-            certo = e_o_fluxo_pedido(origem, self._fluxo)
-            if certo is None:
-                return
-            if not certo:
-                self.contadores["alvo_errado"] += 1
-                identidade = origem if isinstance(origem, OrigemDoGravador) else None
-                logger.warning(
-                    "tato_ouvido_alvo_errado",
-                    alvo=identidade.nome if identidade is not None else origem,
-                    alvo_serial=identidade.serial if identidade is not None else None,
-                    fluxo=self._fluxo.nome, serial=self._fluxo.serial,
-                )
-                self._calar()
-                return
-            self._conferido = True
+        motivo = self._conferir()
+        if motivo is not None and self._relogio() >= self._religar_em:
+            self._perder(motivo)
+            self._ligar()
+
+    def _conferir(self) -> str | None:
+        """O que obriga a refazer o gravador agora. ``None`` = nada, ou não sei.
+
+        O link vem primeiro: o silêncio sozinho é o jogo pausado, em que o link fica de
+        pé e o PCM para. Ele só pesa com o fluxo dizendo que toca. O nó que o grafo nunca
+        mostrou é o gravador sem o rótulo nele (o ``parec`` no PipeWire): nada prova a surdez.
+        """
+        fluxo = self._fluxo
+        if fluxo is None:
+            return None
+        self._conferido = False
+        origem = self._conferir_o_alvo(ROTULO_DO_OUVIDO)
+        if origem is None or (origem is SEM_NO and not self._no_visto):
+            return None
+        self._no_visto = True
+        if isinstance(origem, SemLink):
+            return MOTIVO_LINK_CAIDO
+        certo = e_o_fluxo_pedido(origem, fluxo)
+        if certo is None:
+            return None
+        if not certo:
+            self.contadores["alvo_errado"] += 1
+            identidade = origem if isinstance(origem, OrigemDoGravador) else None
+            logger.warning(
+                "tato_ouvido_alvo_errado",
+                alvo=identidade.nome if identidade is not None else origem,
+                alvo_serial=identidade.serial if identidade is not None else None,
+                fluxo=fluxo.nome, serial=fluxo.serial,
+            )
+            return MOTIVO_ALVO_ERRADO
+        self._conferido = True
+        agora = self._relogio()
+        if self._ultimo_pcm > self._ligado_em and agora - self._ligado_em >= LINK_FIRME_S:
+            self._seguidas = 0
+            self._religar_em = float("-inf")
+        if agora - max(self._ultimo_pcm, self._ligado_em) < PRAZO_DO_SILENCIO_S:
+            self.pausado = False
+            return None
+        achado = self._achar_o_fluxo()
+        self.pausado = achado is not None and achado.pausado
+        if achado is None or achado.pausado:
+            return None
+        return MOTIVO_SEM_PCM if achado.serial == fluxo.serial else MOTIVO_FLUXO_NOVO
+
+    def _perder(self, motivo: str) -> None:
+        self._serial_de_antes = self._fluxo.serial if self._fluxo is not None else None
+        self._calar()
+        self._motivo = motivo
+
+    def _esquecer_a_religada(self) -> None:
+        self._motivo = self._serial_de_antes = None
+        self._seguidas = 0
+        self._religar_em = float("-inf")
+
+    def _contar_a_religada(self, fluxo: FluxoDoJogo) -> None:
+        motivo, self._motivo = self._motivo, None
+        if motivo is None:
+            return
+        if motivo == MOTIVO_GRAVADOR_SAIU and fluxo.serial != self._serial_de_antes:
+            motivo = MOTIVO_FLUXO_NOVO
+        self.contadores["religadas"] += 1
+        self._seguidas += 1
+        recuo = min(RECUO_TETO_S, self.procura_s * 2 ** (self._seguidas - 1))
+        self._religar_em = self._relogio() + recuo
+        logger.info(
+            "tato_ouvido_religado", motivo=motivo, religadas=self.contadores["religadas"],
+            recuo_s=recuo, fluxo=fluxo.nome, serial=fluxo.serial,
+        )
 
     def _imprimir(self) -> bool:
         return self._publicar is not None and bool(self._assinado())
@@ -669,14 +763,16 @@ class OuvidoDoJogo:
         self.detector = DetectorDeTransiente(
             recortar=bool(self._recortar()), imprimir=self._imprimir())
         self._fluxo = fluxo
-        self._conferido = False
+        self._conferido = self._no_visto = False
         self._proc = proc
+        self._ligado_em = self._relogio()
         self.contadores["gravacoes"] += 1
         self._leitor = threading.Thread(
             target=self._ler, args=(saida,), name="tato-ouvido-leitor", daemon=True
         )
         self._leitor.start()
         logger.info("tato_ouvido_ligado", fluxo=fluxo.nome, serial=fluxo.serial, pid=fluxo.pid)
+        self._contar_a_religada(fluxo)
 
     def _ler(self, saida: Any) -> None:
         while True:
@@ -688,7 +784,7 @@ class OuvidoDoJogo:
             if not pedaco:
                 return
             agora = self._relogio()
-            self._ultimo_pcm = agora
+            self._ultimo_pcm = self._ouviu_em = agora
             if self._ao_pcm is not None:
                 try:
                     self._ao_pcm(pedaco)
@@ -728,6 +824,7 @@ class OuvidoDoJogo:
         proc, leitor = self._proc, self._leitor
         self._proc = self._leitor = self._fluxo = None
         self._ultimo_pcm = float("-inf")
+        self.pausado = False
         if proc is not None:
             self._derrubar_o(proc, leitor)
             logger.info("tato_ouvido_calado")
@@ -741,6 +838,15 @@ class OuvidoDoJogo:
         if volta is not None and volta is not threading.current_thread():
             volta.join(timeout=PRAZO_DA_VOLTA_DO_OUVIDO_S)
         self._calar()
+        self._esquecer_a_religada()
+        self._pedido_em = None
+
+    def surdo_ha_s(self) -> float:
+        """Há quantos segundos o ouvido pedido não recebe PCM; a pausa do jogo não conta."""
+        desde = self._pedido_em
+        if desde is None or self.pausado:
+            return 0.0
+        return max(0.0, self._relogio() - max(self._ouviu_em, desde))
 
     @property
     def ouvindo(self) -> bool:
@@ -801,11 +907,23 @@ def montar_o_argv_do_ouvido(fluxo: FluxoDoJogo) -> list[str]:
     return argv_do_ouvido(fluxo, pipewire=o_servidor_e_o_pipewire())
 
 
-def conferir_o_alvo_do_ouvido(rotulo: str) -> OrigemDoGravador | None:
-    """A origem do gravador do ouvido, com a identidade do nó. ``None`` = não sei."""
-    from hefesto_dualsense4unix.integrations.alto_falante_bt import origem_do_gravador
+def _no_grafo(objetos: Iterable[Any], rotulo: str) -> bool:
+    """Há um nó com este ``node.name`` no grafo lido?"""
+    return any(
+        isinstance(o, dict) and o.get("type") == "PipeWire:Interface:Node"
+        and ((o.get("info") or {}).get("props") or {}).get("node.name") == rotulo
+        for o in objetos)
 
-    return origem_do_gravador(rotulo)
+
+def conferir_o_alvo_do_ouvido(rotulo: str) -> OrigemDoGravador | SemLink | None:
+    """A origem do gravador do ouvido, :data:`SEM_LINK` ou :data:`SEM_NO`. ``None`` = sem grafo."""
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import origem_no_grafo
+    from hefesto_dualsense4unix.integrations.porta_do_som import ler_o_grafo, lista_do_json
+
+    objetos = lista_do_json(ler_o_grafo())
+    if not objetos:
+        return None
+    return origem_no_grafo(objetos, rotulo) or (SEM_LINK if _no_grafo(objetos, rotulo) else SEM_NO)
 
 
 MARCA_DO_ESTALO = "hefesto-tato-estalo-"
@@ -1169,10 +1287,13 @@ __all__ = [
     "GRAVADORES_DO_FLUXO",
     "MARCA_DO_ESTALO",
     "ROTULO_DO_OUVIDO",
+    "SEM_LINK",
+    "SEM_NO",
     "DetectorDeTransiente",
     "FluxoDoJogo",
     "OuvidoDoJogo",
     "Recorte",
+    "SemLink",
     "TocadorDoEstalo",
     "Transiente",
     "achar_o_fluxo_do_jogo",

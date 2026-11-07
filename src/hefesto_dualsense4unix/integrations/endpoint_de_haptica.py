@@ -858,6 +858,7 @@ def bloco_com_timbre(
 FREQUENCIA_DO_TOQUE_HZ = formas.FORMAS[formas.TOQUE].componentes[0][0]
 ATAQUE_DO_TOQUE_MS = formas.FORMAS[formas.TOQUE].ataque_ms
 QUADROS_DO_CORPO_NA_FILA = _TAXA // 10
+VALIDADE_DOS_LADOS_S = 1.0
 CANAIS_DO_LADO: dict[str, tuple[int, ...]] = {
     "esquerdo": (2,),
     "direito": (3,),
@@ -889,6 +890,19 @@ def misturar_o_toque(
     if sys.byteorder != "little":  # pragma: no cover
         quadros.byteswap()
     return quadros.tobytes()
+
+
+def somar_os_lados(
+    bloco: bytes, lados: tuple[int, int], antes: tuple[int, int], fase: int
+) -> bytes:
+    """Soma o nível de cada motor ao canal dele: o esquerdo no 2 e o direito no 3."""
+    camada = array("f")
+    camada.frombytes(bloco_da_haptica(lados[1], lados[0], fase=fase, antes=antes[::-1]))
+    if sys.byteorder != "little":  # pragma: no cover
+        camada.byteswap()
+    for canal in (*CANAIS_DO_LADO["esquerdo"], *CANAIS_DO_LADO["direito"]):
+        bloco = misturar_o_toque(bloco, camada[canal::CANAIS_DA_HAPTICA], 0, (canal,))
+    return bloco
 
 
 def argv_do_tocador(
@@ -1053,6 +1067,9 @@ class TocadorDoRumble:
         self._toque_em_laco = False
         self._corpo: array[float] = array("f")
         self._corpo_canais: tuple[int, ...] = CANAIS_DO_LADO["centro"]
+        self._lados: tuple[int, int] = (0, 0)
+        self._lados_antes: tuple[int, int] = (0, 0)
+        self._lados_valem_ate = 0.0
 
 
     @property
@@ -1192,6 +1209,21 @@ class TocadorDoRumble:
             self._garantir_o_fio()
         self._acordar.set()
 
+    def levar_os_lados(self, esquerdo: int, direito: int, *, sink: str, dono: str) -> None:
+        """O padrão do gatilho: um nível por motor, somado ao rumble e ao corpo.
+
+        Vale até o prazo: quem pediu pode sumir no meio, e o motor nunca fica preso.
+        """
+        par = (max(0, min(255, int(esquerdo))), max(0, min(255, int(direito))))
+        with self._trava:
+            self._lados = par
+            self._lados_valem_ate = self._relogio() + VALIDADE_DOS_LADOS_S
+            if any(par):
+                self._sink = str(sink or "")
+                self._dono = str(dono or self._dono)
+                self._garantir_o_fio()
+        self._acordar.set()
+
     def _garantir_o_fio(self) -> None:
         """Sobe o fio do tocador se ele não está de pé. Chamado com a trava."""
         if not self._fim.is_set() and (self._fio is None or not self._fio.is_alive()):
@@ -1207,6 +1239,11 @@ class TocadorDoRumble:
     @property
     def tocando_o_corpo(self) -> bool:
         return len(self._corpo) > 0
+
+    @property
+    def lados(self) -> tuple[int, int]:
+        """O par ``(esquerdo, direito)`` do padrão do gatilho que vale agora."""
+        return self._lados if self._relogio() < self._lados_valem_ate else (0, 0)
 
     def proximo_bloco(
         self, nivel: tuple[int, int], antes: tuple[int, int], fase: int
@@ -1225,7 +1262,11 @@ class TocadorDoRumble:
             corpo = self._corpo[:QUADROS_POR_BLOCO]
             del self._corpo[:QUADROS_POR_BLOCO]
             canais_do_corpo = self._corpo_canais
+            lados, lados_antes = self.lados, self._lados_antes
+            self._lados_antes = lados
         bloco = self._bloco(nivel, antes, fase)
+        if any(lados) or any(lados_antes):
+            bloco = somar_os_lados(bloco, lados, lados_antes, fase)
         if len(corpo):
             bloco = misturar_o_toque(bloco, corpo, 0, canais_do_corpo)
         if toque is None:
@@ -1262,7 +1303,7 @@ class TocadorDoRumble:
                 return
             with self._trava:
                 nivel, sink, toque = self._nivel, self._sink, self._toque
-                corpo = len(self._corpo) > 0
+                corpo = len(self._corpo) > 0 or any(self.lados)
             if (not any(nivel) and toque is None and not corpo) or not sink or (
                 self._relogio() < self._recusado_ate
             ):
@@ -1317,7 +1358,7 @@ class TocadorDoRumble:
             if proc.poll() is not None:
                 return "morreu"
             agora = self._relogio()
-            if any(nivel) or self._toque is not None or self._corpo:
+            if any(nivel) or self._toque is not None or self._corpo or any(self.lados):
                 silencio_desde = None
             elif silencio_desde is None:
                 silencio_desde = agora
@@ -1468,5 +1509,6 @@ __all__ = [
     "rotulo_da_haptica",
     "rotulo_do_tocador",
     "rotulo_no_ar",
+    "somar_os_lados",
     "varrer_endpoints_orfaos",
 ]

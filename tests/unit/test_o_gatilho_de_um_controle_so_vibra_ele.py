@@ -47,6 +47,7 @@ class Mesa:
     def __init__(self, backend: str, jogo: bool) -> None:
         self.controller = Gravador(QUATRO[0])
         self.alto_falante = Gravador()
+        self.alto_falante.rota_do_padrao = lambda _uniq: "motor"
         self.gatilhos = {u: SimpleNamespace(l2_raw=0, r2_raw=0) for u in QUATRO}
         pads = {u: SimpleNamespace(backend=backend, game_open=False, visto_ha_s={})
                 for u in QUATRO}

@@ -20,6 +20,10 @@ DIREITO = "direito"
 AMBOS = "ambos"
 MOTORES: tuple[str, ...] = (ESQUERDO, DIREITO, AMBOS)
 
+ROTA_AUDIO = "audio"
+ROTA_MOTOR = "motor"
+ROTA_CALADA = "calada"
+
 PADROES: dict[str, tuple[Passo, ...]] = {
     "batida": ((110, 255, 255), (90, 0, 0), (110, 190, 190), (520, 0, 0)),
     "onda": ((90, 60, 60), (90, 120, 120), (90, 190, 190), (90, 255, 255),
@@ -51,7 +55,7 @@ DICAS: dict[str, str] = {
     "coice": "O recuo da arma, ao soltar",
     "pancada_do_lado": "Um golpe do lado do som",
     "ressoar": "Um golpe e o grave que ressoa",
-    "ricochete": "O golpe quica de um lado ao outro",
+    "ricochete": "O golpe quica e perde força",
 }
 FORMAS_DE_CRIAR: tuple[str, ...] = ("batida", "onda", "tranco", "coice", "pancada_do_lado")
 NA_SOLTURA = frozenset({"coice"})
@@ -122,16 +126,24 @@ def duracao_ms(padrao: str) -> int:
     return sum(ms for ms, _esq, _dir in PADROES[padrao])
 
 
+def _no_motor(esquerdo: int, direito: int, motores: str) -> tuple[int, int]:
+    if motores == AMBOS:
+        return esquerdo, direito
+    forma = max(esquerdo, direito)
+    return (forma, 0) if motores == ESQUERDO else (0, forma)
+
+
 def sequencia(padrao: str, motores: str = AMBOS) -> tuple[Passo, ...]:
-    """Os passos do padrão pedido com o motor que não toca em zero. Recusa o que não conhece."""
+    """Os passos do padrão no motor pedido: um lado só leva a forma inteira, e o outro fica em zero.
+
+    Recusa o que não conhece.
+    """
     if padrao not in PADROES:
         raise ValueError(f"padrão de vibração desconhecido: {padrao!r}. "
                          f"Os que existem: {', '.join(PADROES)}")
     if motores not in MOTORES:
         raise ValueError(f"motor desconhecido: {motores!r}. Os que existem: {', '.join(MOTORES)}")
-    return tuple(
-        (ms, 0 if motores == DIREITO else esq, 0 if motores == ESQUERDO else dir_)
-        for ms, esq, dir_ in PADROES[padrao])
+    return tuple((ms, *_no_motor(esq, dir_, motores)) for ms, esq, dir_ in PADROES[padrao])
 
 
 def tocar(

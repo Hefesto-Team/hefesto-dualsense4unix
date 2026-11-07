@@ -144,7 +144,7 @@ EVENTOS_DE_ESTADO_NORMAL: frozenset[str] = frozenset({
     "speaker_reaplicado_no_connect", "mic_reaplicado_no_connect", "volume_padrao_na_adocao",
     "som_do_sistema_mudou",
     "game_session_devolvida", "mascara_do_perfil_convergiu",
-    "haptica_do_cabo_portao", "som_gravador_alvo_nao_conferido",
+    "som_gravador_alvo_nao_conferido",
     "som_radio_gravador_colhido", "haptica_radio_gravador_colhido", "som_radio_fonte_secou",
     "som_ponte_ociosa_descida", "som_sink_publicado", "som_sink_removido", "som_no_derrubado",
     "bt_mic_source_publicada", "bt_mic_source_removida",

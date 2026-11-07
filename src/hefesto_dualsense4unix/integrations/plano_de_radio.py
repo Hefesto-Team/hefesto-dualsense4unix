@@ -22,6 +22,10 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     Ocupacao,
     OrcamentoDoAdaptador,
     adaptador_por_uniq,
+    adaptadores_que_a_formacao_pede,
+    ar_da_porta,
+    cabe_no_adaptador,
+    hz_por_controle_na_conta,
     orcamento_por_adaptador,
     palavra_das_pontes,
 )
@@ -549,6 +553,152 @@ def _ordem_que_equilibra(
     return None
 
 
+@dataclass(frozen=True)
+class Assento:
+    """Onde um controle senta. ``destino`` vazio: nenhum adaptador de hoje comporta a ponte dele."""
+
+    uniq: str
+    origem: str
+    destino: str
+
+    @property
+    def fica(self) -> bool:
+        return self.origem == self.destino
+
+
+@dataclass(frozen=True)
+class Reparticao:
+    """A conta da formação, como DADO PURO.
+
+    Nunca se executa sozinha: o controle guarda um host só, e mudar de adaptador é esquecer e
+    parear com a mão, numa arrumação de sessão.
+    """
+
+    pedidos: int | None
+    faltam: int
+    assentos: tuple[Assento, ...] = ()
+    trocar_de_porta: tuple[str, ...] = ()
+    hz_previsto: Mapping[str, float] = field(default_factory=dict)
+
+    @property
+    def sem_lugar(self) -> tuple[str, ...]:
+        """Quem fica sem ponte com os adaptadores de hoje."""
+        return tuple(a.uniq for a in self.assentos if not a.destino)
+
+    @property
+    def mudam(self) -> tuple[Assento, ...]:
+        """Quem cabe em outro adaptador de hoje."""
+        return tuple(a for a in self.assentos if a.destino and not a.fica)
+
+    @property
+    def cabe(self) -> bool:
+        return not self.faltam and not self.mudam and not self.trocar_de_porta
+
+
+@dataclass
+class _Lotacao:
+    ar: float
+    teto: int
+    controles: int = 0
+    pontes: int = 0
+
+    def senta_mais_um(self) -> bool:
+        return cabe_no_adaptador(self.ar, controles=self.controles + 1, pontes=self.pontes + 1,
+                                 teto=self.teto)
+
+    def sentar(self) -> None:
+        self.controles += 1
+        self.pontes += 1
+
+
+def _sentar_todos(
+    reais: Mapping[str, PlanoDoAdaptador],
+    fixos: Mapping[str, int],
+    fila: Sequence[tuple[ControleNoAr, str]],
+    ares: Mapping[str, float],
+    destinos: Sequence[str],
+) -> tuple[list[Assento], dict[str, _Lotacao]]:
+    """Quem cabe fica; o resto vai ao adaptador de menos pontes, na ordem da D8."""
+    lotacoes = {
+        endereco: _Lotacao(ares[endereco], plano.n_max, controles=fixos.get(endereco, 0))
+        for endereco, plano in reais.items()
+    }
+    assentos: list[Assento] = []
+    sobra: list[tuple[ControleNoAr, str]] = []
+    for controle, origem in fila:
+        if lotacoes[origem].senta_mais_um():
+            lotacoes[origem].sentar()
+            assentos.append(Assento(controle.uniq, origem, origem))
+        else:
+            sobra.append((controle, origem))
+    for controle, origem in sobra:
+        livres = [e for e in destinos if e != origem and lotacoes[e].senta_mais_um()]
+        destino = min(livres, key=lambda e: lotacoes[e].pontes) if livres else ""
+        if destino:
+            lotacoes[destino].sentar()
+        assentos.append(Assento(controle.uniq, origem, destino))
+    return assentos, lotacoes
+
+
+def _quantos_cabem_num_novo() -> int:
+    """Quantas pontes cabem num adaptador novo em porta direta; ao menos um por controle."""
+    return next(
+        (n for n in range(N_MAX_PONTES, 0, -1)
+         if cabe_no_adaptador(ar_da_porta(False), controles=n, pontes=n)),
+        1,
+    )
+
+
+def repartir_a_formacao(
+    planos: Mapping[str, PlanoDoAdaptador],
+    *,
+    pedem_ponte: Iterable[str] | None = None,
+    atras_de_hub: Iterable[str] = (),
+    varrendo: Iterable[str] | None = None,
+) -> Reparticao:
+    """Quantos adaptadores a formação pede e onde cada controle senta, pela conta do dono.
+
+    ``pedem_ponte`` são os ``uniq`` que têm voice-coil e alto-falante (``None`` = todos); quem
+    está fora da lista só usa a entrada e fica onde está. Quem já tem ponte de pé senta primeiro,
+    depois a ordem de chegada: nunca o número do jogador. ``faltam`` conta adaptadores novos em
+    porta direta; ``trocar_de_porta`` são os adaptadores atrás de hub que, em porta direta,
+    deixariam a conta caber com menos movimento.
+    """
+    reais = {e: p for e, p in planos.items() if e != SEM_ADAPTADOR}
+    querem = None if pedem_ponte is None else set(pedem_ponte)
+    fixos: dict[str, int] = {}
+    fila: list[tuple[ControleNoAr, str]] = []
+    for endereco, plano in reais.items():
+        for controle in plano.orcamento.controles if plano.orcamento is not None else ():
+            if not controle.uniq:
+                continue
+            if querem is None or controle.uniq in querem:
+                fila.append((controle, endereco))
+            else:
+                fixos[endereco] = fixos.get(endereco, 0) + 1
+    fila.sort(key=lambda par: not par[0].ponte)
+    hub = set(atras_de_hub)
+    destinos = [str(p.endereco) for p in ordem_dos_destinos(reais, varrendo=varrendo)]
+    ares = {e: ar_da_porta(e in hub) for e in reais}
+    assentos, lotacoes = _sentar_todos(reais, fixos, fila, ares, destinos)
+    sem_lugar = sum(1 for a in assentos if not a.destino)
+    mudam = sum(1 for a in assentos if a.destino and a.destino != a.origem)
+    em_porta_direta, _ = _sentar_todos(
+        reais, fixos, fila, {e: ar_da_porta(False) for e in reais}, destinos)
+    melhor = sum(1 for a in em_porta_direta if a.destino != a.origem)
+    return Reparticao(
+        pedidos=adaptadores_que_a_formacao_pede(len(fila), sem_ponte=sum(fixos.values())),
+        faltam=-(-sem_lugar // _quantos_cabem_num_novo()),
+        assentos=tuple(assentos),
+        trocar_de_porta=tuple(
+            sorted(e for e in reais if e in hub)) if melhor < sem_lugar + mudam else (),
+        hz_previsto={
+            e: hz_por_controle_na_conta(lot.ar, lot.controles, cheias=lot.pontes)
+            for e, lot in lotacoes.items() if lot.controles
+        },
+    )
+
+
 def microfone_nasce_ligado() -> bool:
     """O microfone nasce ligado? **Sim, desde 17/09/2026.**"""
     return True
@@ -582,10 +732,13 @@ __all__ = [
     "POR_QUE_IMPORTA_O_NUMERO",
     "POR_QUE_IMPORTA_O_SINAL",
     "SEM_NUMERO",
+    "Assento",
     "PlanoDoAdaptador",
     "Redistribuicao",
+    "Reparticao",
     "microfone_nasce_ligado",
     "ordem_de_redistribuicao",
     "ordem_dos_destinos",
     "plano_por_adaptador",
+    "repartir_a_formacao",
 ]

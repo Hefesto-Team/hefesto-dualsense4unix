@@ -243,6 +243,7 @@ class TestPlayerPorControle:
              "ponte_do_radio": None, "sinal_dbm": None,
              "haptica_pct": HAPTICA_PCT_PADRAO, "haptica_alcanca": True,
              "haptica_vale_pct": HAPTICA_PCT_PADRAO, "haptica_no_ar": False,
+             "corpo_pelo_motor": None,
              "mira": {"ligada": False, "virtual": False, "lado": "analogico_direito",
                       "destino": "nenhum", "toque": "nenhum",
                       "sensibilidade": 6, "sensibilidade_h": 4, "sensibilidade_v": 4,

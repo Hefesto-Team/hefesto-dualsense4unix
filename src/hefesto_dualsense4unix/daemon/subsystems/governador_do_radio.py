@@ -626,12 +626,13 @@ class GovernadorDoRadio:
 
         A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01: com
         ``radio_da_mesa.N_MAX_PELA_CAPACIDADE`` ligado, sai da capacidade pelos enlaces ACL que o
-        medidor viu no adaptador, nunca acima de :attr:`n_max`; desligado, é o :attr:`n_max`.
+        medidor viu no adaptador e pelo ar da porta dele, nunca acima de :attr:`n_max`; desligado,
+        é o :attr:`n_max`.
         """
         ar = (self._amostra or {}).get(adaptador)
         enlaces = getattr(ar, "conexoes", None) or ()  # (noqa-acento)
         controles = sum(1 for e in enlaces if getattr(e, "tipo", None) == TIPO_ACL)
-        return n_max_do_adaptador(controles, teto=self.n_max)
+        return n_max_do_adaptador(controles, endereco=adaptador, teto=self.n_max)
 
     def _nao_sei_se_ha_vaga(self, exceto: str) -> bool:
         """«Não sei» se há vaga em outro adaptador. Chamado com a trava."""

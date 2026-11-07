@@ -117,7 +117,17 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.relogio_da_conexao import HAPTICA, RELOGIO
 from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
+from hefesto_dualsense4unix.daemon.subsystems.diario_do_corpo import (
+    RECUSA_FORCA_ZERO,
+    RECUSA_JOGO_NO_ENDPOINT,
+    RECUSA_RADIO_CEDE,
+    RECUSA_SEM_APARELHO,
+    RECUSA_SEM_ENDPOINT,
+    TOCOU,
+    DesfechoDoCorpo,
+)
 from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -906,6 +916,11 @@ class AltoFalanteSubsystem:
         return saida
 
 
+    def por_que_sem_ponte(self, uniq: str) -> str | None:
+        """O motivo dito da ponte que falta a este controle."""
+        return next(
+            (m for u, m in self._sem_ponte_porque.items() if _mesmo_controle(u, uniq)), None)
+
     def _fonte_do_controle(self, uniq: str) -> str:
         """`mix` ou `sfx` para ESTE controle, lido do perfil ativo."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import FONTE_PADRAO
@@ -1257,20 +1272,52 @@ class AltoFalanteSubsystem:
             tocador.tocar_o_toque(energia, lado, duracao_ms, sink=sink, dono=chave, forma=forma)
         return True
 
-    def tocar_o_corpo(self, uniq: str, amostras: Any, lado: str = "centro") -> bool:
-        """Um pedaço do Som no corpo no tocador do aparelho de ``uniq``.
+    def rota_do_padrao(self, uniq: str) -> str:
+        """Por onde o padrão do gatilho sai agora: uma pergunta só, para os dois lados.
 
-        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva.
+        O áudio soma ao que o jogo toca, também com o jogo no endpoint; sem caminho de áudio vai
+        o motor, onde o jogo manda. A Força 0 cala, e não cai para o motor.
         """
+        if GANHO.pct(uniq) <= 0:
+            return padroes_de_vibracao.ROTA_CALADA
         chave = self._chave_do_rumble(uniq)
-        if chave is None or not self._quer_a_haptica_fina(chave) or self._o_radio_cede(chave):
+        if (chave is None or self._o_que_falta_ao_audio(chave) is not None
+                or not self._o_caminho_do_audio_esta_de_pe(chave)):
+            return padroes_de_vibracao.ROTA_MOTOR
+        return padroes_de_vibracao.ROTA_AUDIO
+
+    def levar_os_lados(self, uniq: str, esquerdo: int, direito: int) -> bool:
+        """O nível de cada motor no tocador do aparelho de ``uniq``, somado ao que já toca."""
+        chave = self._chave_do_rumble(uniq)
+        if chave is None or self._o_que_falta_ao_audio(chave) is not None:
             return False
         alvo = self._o_tocador_de(chave)
         if alvo is None:
             return False
         tocador, sink = alvo
-        tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave)
+        tocador.levar_os_lados(esquerdo, direito, sink=sink, dono=chave)
         return True
+
+    def tocar_o_corpo(self, uniq: str, amostras: Any, lado: str = "centro") -> DesfechoDoCorpo:
+        """Um pedaço do Som no corpo no tocador do aparelho de ``uniq``.
+
+        Contínuo: cede ao rádio sem fatia livre, e só onde a háptica fina leva. O desfecho é
+        verdadeiro quando tocou e traz o motivo quando recusou: é o dono desse motivo.
+        """
+        chave = self._chave_do_rumble(uniq)
+        if chave is None:
+            return DesfechoDoCorpo(RECUSA_SEM_APARELHO)
+        falta = self._o_que_falta_a_fina(chave)
+        if falta is not None:
+            return DesfechoDoCorpo(falta)
+        if self._o_radio_cede(chave):
+            return DesfechoDoCorpo(RECUSA_RADIO_CEDE)
+        alvo = self._o_tocador_de(chave)
+        if alvo is None:
+            return DesfechoDoCorpo(RECUSA_SEM_ENDPOINT)
+        tocador, sink = alvo
+        tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave)
+        return TOCOU
 
     def _carimbar_a_haptica(self) -> None:
         """O relógio da conexão: quem já tem o laço da háptica de pé no cabo."""
@@ -1579,15 +1626,24 @@ class AltoFalanteSubsystem:
         A-HAPTICA-01): o motor só acorda no report com o bit que cala o PCM, então com o jogo
         tocando a vibração dele vai como áudio, somada à háptica dele.
         """
+        return self._o_que_falta_ao_audio(chave) is None
+
+    def _o_que_falta_ao_audio(self, chave: str) -> str | None:
+        """Por que o áudio não chega a este aparelho. ``None`` = nada falta."""
         marca = self._aparelho_de.get(chave)
         if marca is None:
-            return False
+            return RECUSA_SEM_APARELHO
         endpoint = self._endpoints.get(marca)
-        return bool(
-            endpoint is not None and GANHO.pct(chave) > 0
-            and getattr(endpoint, "module_id", None) is not None
-            and getattr(endpoint, "nome", "")
-        )
+        if (endpoint is None or getattr(endpoint, "module_id", None) is None
+                or not getattr(endpoint, "nome", "")):
+            return RECUSA_SEM_ENDPOINT
+        return None if GANHO.pct(chave) > 0 else RECUSA_FORCA_ZERO
+
+    def _o_que_falta_a_fina(self, chave: str) -> str | None:
+        """Por que o que é NOSSO não toca aqui. ``None`` = nada falta."""
+        if self._aparelho_de.get(chave) in self._aparelhos_com_jogo:
+            return RECUSA_JOGO_NO_ENDPOINT
+        return self._o_que_falta_ao_audio(chave)
 
     def _quer_a_haptica_fina(self, chave: str) -> bool:
         """O que é NOSSO (o toque, o corpo, o estalo): só onde o jogo não toca a háptica dele.
@@ -1595,10 +1651,7 @@ class AltoFalanteSubsystem:
         O rumble não passa por aqui: a vibração do jogo soma na háptica do jogo
         (:meth:`_quer_o_rumble_pelo_audio`).
         """
-        marca = self._aparelho_de.get(chave)
-        if marca is None or marca in self._aparelhos_com_jogo:
-            return False
-        return self._quer_o_rumble_pelo_audio(chave)
+        return self._o_que_falta_a_fina(chave) is None
 
     def _recebe_o_rumble(self, uniq: str) -> bool:
         """O tocador do aparelho deste controle está de pé tocando o rumble DELE."""
@@ -1613,8 +1666,10 @@ class AltoFalanteSubsystem:
 
     def _a_haptica_leva(self, chave: str) -> bool:
         """O caminho do tocador ao controle está de pé AGORA, e é o deste controle."""
-        if not self._recebe_o_rumble(chave):
-            return False
+        return self._recebe_o_rumble(chave) and self._o_caminho_do_audio_esta_de_pe(chave)
+
+    def _o_caminho_do_audio_esta_de_pe(self, chave: str) -> bool:
+        """Do endpoint ao controle há caminho: o laço do cabo ou a ponte do rádio."""
         marca = self._aparelho_de.get(chave)
         cabo = self._cabo
         if cabo is not None and marca is not None:

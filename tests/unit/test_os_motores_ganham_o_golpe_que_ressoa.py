@@ -104,7 +104,7 @@ def _tocar(escolhas: dict[str, str], forca: float, estado: tv.EstadoDoCanal) -> 
     motores = _Motores()
     atuador = tv.AtuadorDosMotores(
         motores, lambda uniq: pv.padrao_que_vale(escolhas.get(uniq), None),
-        lambda _u: False, lambda _u: forca)
+        lambda _u: forca)
     motor = tv.TatoVivo([atuador])
     for uniq in escolhas:
         motor.anotar(tv.Evento(0.0, uniq, tv.TIPO_DEDO, tv.LADO_DIREITO, 1.0))
@@ -117,8 +117,9 @@ def _tocar(escolhas: dict[str, str], forca: float, estado: tv.EstadoDoCanal) -> 
 
 
 def _esperado(chave: str, forca: float) -> list[tuple[int, int]]:
-    """Os passos como o motor os escreve: (fraco = direito, forte = esquerdo), vezes a força."""
-    return [(round(d * forca), round(e * forca)) for _ms, e, d in pv.PADROES[chave]]
+    """Os passos como o motor os escreve no R2: a forma inteira no fraco, vezes a força."""
+    return [(round(d * forca), round(e * forca))
+            for _ms, e, d in pv.sequencia(chave, pv.DIREITO)]
 
 
 @pytest.mark.parametrize("estado", [_MODO_DUALSENSE, _MODO_XBOX], ids=["dualsense", "xbox"])
@@ -136,7 +137,7 @@ def test_os_quatro_controles_tocam_os_dois_pelo_funil_de_sempre(
 
 def test_a_bateria_longa_baixa_a_cauda_inteira_e_o_usuario_continua_caindo() -> None:
     motores = _tocar({QUATRO[0]: "ressoar"}, tv.FORCA_NA_ECONOMIA, _MODO_DUALSENSE)
-    cauda = [forte for _fraco, forte in motores.de(QUATRO[0])[1:]]
+    cauda = [fraco for fraco, _forte in motores.de(QUATRO[0])[1:]]
     assert cauda[0] == round(200 * tv.FORCA_NA_ECONOMIA)
     assert all(a > b for a, b in pairwise(cauda)) and cauda[-1] == 0
 
