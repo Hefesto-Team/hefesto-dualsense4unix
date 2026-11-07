@@ -87,7 +87,7 @@ def _curva(*forcas: int) -> dict[str, int]:
 
 
 IMERSOES: tuple[Imersao, ...] = (
-    Imersao("ferrolho-que-volta", "Golpe · imersivo", "arma",
+    Imersao("ferrolho-que-volta", "Golpe · rearme", "arma",
             "O gatilho rearma sozinho a cada tiro, firme e curto.",
             {"Weapon": {"start": 2, "end": 6, "force": 210}},
             na_frente=("fps", "luta", "esportes", "ritmo")),

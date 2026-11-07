@@ -568,7 +568,7 @@ def dica_da_imersao(chave: str) -> str:
     """A dica da caixa do efeito do gatilho: «Nome. frase». A frase mora SÓ aqui e no `title`.
 
     A das criadas e a do nenhum efeito («—») são fixas. O nome leva a família
-    («Golpe · imersivo»), que a caixa também mostra como etiqueta.
+    («Golpe · rearme»), que a caixa também mostra como etiqueta.
     """
     imer = _imersoes()
     feita = imer.POR_CHAVE.get(chave) if imer else None
