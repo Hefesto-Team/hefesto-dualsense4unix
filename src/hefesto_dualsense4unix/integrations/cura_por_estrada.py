@@ -301,8 +301,22 @@ def _modo_de_nascimento(pasta: Path) -> int:
         return 0o644
 
 
+def _ja_esta_gravado(alvo: Path, texto: str) -> bool:
+    """O alvo já tem este texto, byte a byte. Quem não se lê não está gravado."""
+    try:
+        return alvo.read_bytes() == texto.encode("utf-8")
+    except OSError:
+        return False
+
+
 def _escrever_atomico(alvo: Path, texto: str) -> None:
-    """Grava por arquivo temporário no MESMO diretório, e então renomeia."""
+    """Grava por arquivo temporário no MESMO diretório, e então renomeia.
+
+    Com o texto igual não faz nada: o ``mtime`` do arquivo do lançador entra na assinatura das
+    bibliotecas, e regravar o mesmo texto a cada materialização dispara uma releitura à toa.
+    """
+    if _ja_esta_gravado(alvo, texto):
+        return
     alvo.parent.mkdir(parents=True, exist_ok=True)
     try:
         antes: os.stat_result | None = alvo.stat()
