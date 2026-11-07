@@ -623,6 +623,15 @@ def _a_dica_do_receptor(cena: dict[str, Any] | None) -> list[Any]:
     return saida
 
 
+def _a_dica_do_cabo(cena: dict[str, Any] | None) -> list[Any]:
+    """Um cartão por cabo plugado que ainda não virou controle (``cena["cabos_esperando"]``)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import dicas_da_conexao
+
+    return [dicas_da_conexao.dica_do_cabo_em_espera(str(x["instancia"]), str(x["motivo"]))
+            for x in (cena or {}).get("cabos_esperando") or ()]
+
+
 def _a_cura(texto: str) -> str:
     """«O que fazer: …» pela frase do dono (`secao_exame.PREFIXO_DA_CURA`); vazio sem texto."""
     if not texto.strip():
@@ -642,7 +651,7 @@ def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 
-    cartoes: list[Any] = list(_as_dicas_do_pedido(cena))
+    cartoes: list[Any] = list(_as_dicas_do_pedido(cena)) + _a_dica_do_cabo(cena)
     certos: list[str] = []
     movimento = _o_movimento_da_central(cena)
     if movimento is not None:
@@ -1626,7 +1635,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     É o `title` do número e do aparelho de cada cartão (*"Escolhe só este controle: a luz, os
     gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele."*), e
     `controller.target.set` faz isso (`_handle_controller_target_set`,
-    `daemon/ipc_handlers.py:3325`: *"Define o ALVO das ações de output"*), o método do
+    `daemon/ipc_handlers.py:3326`: *"Define o ALVO das ações de output"*), o método do
     seletor da GUI estável (`app/actions/status_actions.py`). Sem função no `ipc_bridge` (degrau 3
     da ponte), passa pelo mesmo `_safe_call` e timeout.
 
@@ -4580,6 +4589,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "wifi": wifi,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
         "pedindo": pedindo,
+        "cabos_esperando": list(st.get("cabos_esperando") or ()),
         "passo_da_espera": next((str(m.get("passo") or "") for m in esperando), ""),
         "procurando": (TRAVESSAO_DO_PROCURAR if not isinstance(st.get("radio_central"), dict)
                        else PROCURAR_LIGADO if busca_em else PROCURAR_DESLIGADO),

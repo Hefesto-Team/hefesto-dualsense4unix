@@ -15,8 +15,10 @@ import shutil
 import subprocess
 import threading
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.relogio_da_conexao import MICROFONE, RELOGIO
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -86,6 +88,16 @@ def o_driver_guarda_o_audio(raiz_do_modulo: str | None = None) -> bool:
             return fh.read().strip() in SRCVERSION_DO_0003_SEM_A_MARCA
     except (OSError, UnicodeDecodeError):
         return False
+
+
+def _ate_a_proxima_varredura() -> float:
+    """O relógio da varredura, ou o fim do recuo do `pactl`, se ele vencer antes."""
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        falta_do_recuo_do_pactl,
+    )
+
+    falta = falta_do_recuo_do_pactl()
+    return min(RECONCILIA_S, falta) if falta > 0 else RECONCILIA_S
 
 
 class RegistroDePedidosDeCanal:
@@ -737,6 +749,9 @@ class BtMicSubsystem:
             target=self._loop, name="hefesto-btmic-sup", daemon=True
         )
         self._thread.start()
+        threading.Thread(
+            target=self._ouvir_as_fontes, name="hefesto-btmic-fontes", daemon=True
+        ).start()
         logger.info(
             "bt_mic_subsystem_iniciado",
             declarados=len(self._declarados_antes),
@@ -830,6 +845,9 @@ class BtMicSubsystem:
                 self._soltar_os_que_o_usuario_desmarcou()
                 self._reconciliar_o_cabo(nos)
                 gerenciador.reconciliar(self.alvos(nos))
+                for uniq in getattr(gerenciador, "pontes", None) or ():
+                    RELOGIO.marcar(uniq, MICROFONE)
+                self._refazer_quem_esperava_o_canal()
                 self._aplicar_a_palavra_do_usuario()
                 self._varrer_os_orfaos(nos)
                 self._renomear_os_canais_velhos()
@@ -839,9 +857,39 @@ class BtMicSubsystem:
             if self._dormir(gerenciador):
                 return
 
+    def _ouvir_as_fontes(self) -> None:
+        """O ouvinte: a fonte de um controle nasceu ou sumiu no servidor, e a volta acorda.
+
+        Os nós nossos não contam: o canal que a própria volta ergue não a acorda de novo, a não
+        ser que uma eleição o espere.
+        """
+        from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            fontes_de_captura_agora,
+            ha_quem_espere_o_canal,
+        )
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import sem_os_nos_nossos
+        from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
+
+        tipos = ("sources",)
+        marca = RETRATO.marca(tipos)
+        vistas: frozenset[str] | None = None
+        while not self._parar.is_set():
+            nova = RETRATO.esperar(marca, RECONCILIA_S, tipos)
+            if nova == marca:
+                continue
+            marca = nova
+            agora = frozenset(sem_os_nos_nossos(fontes_de_captura_agora()))
+            if agora != vistas or ha_quem_espere_o_canal():
+                vistas = agora
+                self._registro.novidade.set()
+
+    def acordar_a_volta(self, _por_quem: str = "") -> None:
+        """Pede a volta AGORA, sem esperar o relógio. Nunca levanta."""
+        self._registro.novidade.set()
+
     def _dormir(self, gerenciador: Any) -> bool:
         """Dorme até a próxima varredura — ou até alguém PEDIR um canal."""
-        if self._registro.novidade.wait(RECONCILIA_S):
+        if self._registro.novidade.wait(_ate_a_proxima_varredura()):
             self._registro.novidade.clear()
         return self._parar.is_set() or gerenciador.dormir(0.0)
 
@@ -850,7 +898,13 @@ class BtMicSubsystem:
         do_radio = frozenset(
             (norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos
         ) - {""}
-        self._registro.esquecer_ausentes(do_radio | self.uniqs_na_mesa())
+        from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            esquecer_a_espera_de_quem_saiu,
+        )
+
+        presentes = do_radio | self.uniqs_na_mesa()
+        self._registro.esquecer_ausentes(presentes)
+        esquecer_a_espera_de_quem_saiu(presentes)
 
 
     def _reconciliar_o_cabo(self, nos: list[Any]) -> None:
@@ -929,6 +983,30 @@ class BtMicSubsystem:
                 self._fechar_o_canal_do_cabo(uniq)
                 return
             logger.info("bt_mic_canal_do_cabo_no_ar", uniq=uniq, source=canal.nome)
+            RELOGIO.marcar(uniq, MICROFONE)
+
+    def _refazer_quem_esperava_o_canal(self) -> None:
+        """O canal chegou: a eleição que esperava por ele se refaz, pelo nascimento de sempre."""
+        laco = self._laco
+        if laco is None or self._daemon is None:
+            return
+        from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
+            consumir_quem_achou_o_canal,
+        )
+
+        acharam = consumir_quem_achou_o_canal()
+        if not acharam:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+            agendar_o_nascimento_do_microfone,
+        )
+
+        for uniq in acharam:
+            logger.info("bt_mic_a_eleicao_se_refaz", uniq=uniq)
+            with contextlib.suppress(RuntimeError):
+                laco.call_soon_threadsafe(
+                    partial(agendar_o_nascimento_do_microfone, self._daemon, uniq=uniq)
+                )
 
     def _fechar_o_canal_do_cabo(self, uniq: str) -> None:
         """Derruba o canal deste `uniq` PELO DONO dele, e esquece a posse."""

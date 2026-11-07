@@ -329,6 +329,27 @@ def dica_do_pedido(aparelho: str, nome: str, perto: str, destino: str) -> Dica:
         primeiro=True)
 
 
+TITULO_DO_CABO_EM_ESPERA = "Cabo aguardando o controle"
+PORQUE_DO_CABO_SEM_MOTIVO = "O cabo está ligado, e o controle ainda não passou para ele."
+PORQUE_DO_CABO: dict[str, str] = {
+    "modo_nativo": "O Modo Nativo mantém este controle no Bluetooth.",
+    "sem_a_regra": "Atualize o Hefesto para o cabo assumir no lugar do Bluetooth.",
+    "sem_gemeo": "O controle deste cabo ainda não apareceu no Bluetooth.",
+    "ja_derrubado": "O Bluetooth deste controle saiu há pouco, e o cabo tenta de novo.",
+    "sem_endereco": "O sistema não leu este controle, e plugar o cabo de novo resolve.",
+    "o_radio_nao_soltou": "O Bluetooth não soltou este controle, e plugar o cabo de novo resolve.",
+}
+
+
+def dica_do_cabo_em_espera(instancia: str, motivo: str) -> Dica:
+    """O cabo plugado que ainda não virou controle, e o porquê numa frase."""
+    return Dica(
+        chave=f"cabo-em-espera:{instancia}", icone=ICONE_ENTRADA,
+        titulo=limitar_o_titulo(TITULO_DO_CABO_EM_ESPERA), nivel=AJUSTE,
+        acao=Acao(MAPA, ROTULO_VER_NO_MAPA, href=PAGINA_DO_MAPA),
+        porque=uma_frase(PORQUE_DO_CABO.get(motivo, PORQUE_DO_CABO_SEM_MOTIVO)))
+
+
 def montar(dicas: Iterable[Dica], certos: Sequence[str] = ()) -> Painel:
     """Os que mais pesam primeiro (o nível, depois a ordem em que chegaram); as caladas no fim."""
     todas = list(dicas)
@@ -359,6 +380,7 @@ __all__ = [
     "Painel",
     "dica_da_conferencia",
     "dica_da_ordem",
+    "dica_do_cabo_em_espera",
     "dica_do_movimento",
     "dica_do_pedido",
     "dica_do_receptor",

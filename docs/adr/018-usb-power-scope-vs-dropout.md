@@ -66,6 +66,19 @@ acusa o `054c:0df2:gn` como defeito. Decisão por delegação, a validar pelo us
 o DualSense Edge físico, que tem o mesmo PID, perde o `gn` do usbcore e fica
 com a cura da camada de som (`hefesto-dualsense-storm.conf`).
 
+### Nota (2026-11-06): o preço do `n` medido na enumeração
+
+A alavanca (A) fica como está: é a cura do `-71`, e esta nota não a muda. O preço medido em
+dois plugs do mesmo `0ce6`, com `054c:0ce6:gn` no sysfs: 5,2 s e 14,7 s do plug ao kernel pronto,
+contra 0,2 s do Edge virtual no `vhci`, que faz o mesmo caminho sem a quirk. O trecho igual nos dois
+plugs (1,25 s até as `strings`, 0,67 s até o `Registered`) é de ~6 e ~3 pedidos a 208 ms.
+
+Os 10,7 s antes do `hidraw` se repetem idênticos no plug direto e na troca do rádio pelo cabo, o
+que aponta uma sequência fixa; os 51 pedidos a 208 ms seguem hipótese. Quem responde é a sonda
+`scripts/sondas/pedidos-do-cabo.bt`, por interface. A decisão sobre o `n` só sai do A/B em
+`/sys/module/usbcore/parameters/quirks`, que vale na próxima enumeração sem reiniciar: dez plugs
+com `gn`, dez sem, contando tempo e `-71`. Sem o A/B, a quirk fica, com este preço.
+
 ### Diagnóstico
 
 - O `doctor.sh` ganhou `check_usb_quirk`: reporta se o quirk está ativo (cmdline),

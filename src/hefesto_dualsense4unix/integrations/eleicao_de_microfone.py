@@ -78,6 +78,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     CasamentoUSB,
     escolher_fonte,
@@ -97,6 +98,49 @@ _NADA_DO_PIPEWIRE = "auto_null"
 
 ESPERA_DO_CANAL_PASSOS = 12
 ESPERA_DO_CANAL_PASSO_S = 0.25
+
+_O_QUE_A_ESPERA_OUVE: tuple[str, ...] = ("sources",)
+
+_QUEM_ESPERA_O_CANAL: set[str] = set()
+_QUEM_ESPERA_A_TRAVA = threading.Lock()
+
+
+def esperar_o_canal(uniq: str) -> None:
+    """A eleição deste controle não achou o canal e se refaz quando o canal subir.
+
+    O cartão novo nasce no tempo do servidor de som, e na troca do rádio pelo cabo passa do que
+    uma eleição pode segurar o próprio fio. O prazo da eleição não vira desistência.
+    """
+    with _QUEM_ESPERA_A_TRAVA:
+        _QUEM_ESPERA_O_CANAL.add(uniq)
+
+
+def ha_quem_espere_o_canal() -> bool:
+    """Alguma eleição espera o canal agora."""
+    with _QUEM_ESPERA_A_TRAVA:
+        return bool(_QUEM_ESPERA_O_CANAL)
+
+
+def esquecer_a_espera_de_quem_saiu(presentes: frozenset[str]) -> None:
+    """Quem saiu da mesa não espera mais: a volta dele nasce sozinha, pelo caminho de sempre."""
+    with _QUEM_ESPERA_A_TRAVA:
+        _QUEM_ESPERA_O_CANAL.difference_update(
+            [u for u in _QUEM_ESPERA_O_CANAL if (norm_mac(u) or u) not in presentes]
+        )
+
+
+def consumir_quem_achou_o_canal() -> list[str]:
+    """Quem esperava e já tem o canal no ar. Sem ninguém esperando, não pergunta ao servidor."""
+    with _QUEM_ESPERA_A_TRAVA:
+        esperando = sorted(_QUEM_ESPERA_O_CANAL)
+    if not esperando:
+        return []
+    fontes = fontes_de_captura_agora()
+    acharam = [u for u in esperando if escolher_fonte(fontes, u, [], None) is not None]
+    with _QUEM_ESPERA_A_TRAVA:
+        _QUEM_ESPERA_O_CANAL.difference_update(acharam)
+    return acharam
+
 
 _PEDIDOR_DE_CANAL: Callable[[str], bool] | None = None
 
@@ -534,13 +578,21 @@ class EleitorDeMicrofone:
             return fontes, usb
         if not pedir_canal(uniq):
             return fontes, usb
-        for _ in range(ESPERA_DO_CANAL_PASSOS):
-            time.sleep(ESPERA_DO_CANAL_PASSO_S)
+        from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
+
+        marca = RETRATO.marca(_O_QUE_A_ESPERA_OUVE)
+        fim = time.monotonic() + ESPERA_DO_CANAL_PASSOS * ESPERA_DO_CANAL_PASSO_S
+        while True:
+            passo = min(ESPERA_DO_CANAL_PASSO_S, max(0.0, fim - time.monotonic()))
+            marca = RETRATO.esperar(marca, passo, _O_QUE_A_ESPERA_OUVE)
             novas = fontes_de_captura_agora()
             if escolher_fonte(novas, uniq, [], None) is not None:
                 logger.info("eleicao_mic_canal_no_ar", uniq=uniq)
                 return novas, casamento_usb_agora(conectados)
-        logger.warning("eleicao_mic_canal_nao_subiu", uniq=uniq)
+            if time.monotonic() >= fim:
+                break
+        esperar_o_canal(uniq)
+        logger.info("eleicao_mic_espera_o_canal", uniq=uniq)
         return fontes, usb
 
 
@@ -856,11 +908,15 @@ __all__ = [
     "_script_conhece",
     "canal_publicado",
     "casamento_usb_agora",
+    "consumir_quem_achou_o_canal",
     "dizer_no_ar",
+    "esperar_o_canal",
+    "esquecer_a_espera_de_quem_saiu",
     "esquecer_a_palavra",
     "fonte_ativa",
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
+    "ha_quem_espere_o_canal",
     "outra_captura_elegivel",
     "palavra_no_ar",
     "passar_a_escolha_gravada_ao_nome_novo",

@@ -10,6 +10,10 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 RAIZ_DAS_ENTRADAS = "/dev/input"
 RAIZ_DOS_NOS = "/dev"
 PREFIXO_DOS_NOS = "hidraw"
@@ -90,6 +94,7 @@ class DonoDoEvento:
         self._geracoes: dict[str, dict[str, int]] = {
             raiz: dict.fromkeys(_TIPOS, 0) for raiz in self._prefixos
         }
+        self._ouvintes: list[Callable[[], None]] = []
 
 
     @property
@@ -147,6 +152,27 @@ class DonoDoEvento:
                 os.close(fd)
         _limpar_os_caches()
 
+
+    @property
+    def descritor(self) -> int:
+        """O fd do ``inotify``, para quem quer acordar com ele; -1 desarmado."""
+        return self._fd
+
+    def ouvir(self, ouvinte: Callable[[], None]) -> Callable[[], None]:
+        """Chama ``ouvinte`` a cada geração que sobe, de qualquer fio. Não pode demorar."""
+        with self._trava:
+            self._ouvintes.append(ouvinte)
+
+        def soltar() -> None:
+            with self._trava, contextlib.suppress(ValueError):
+                self._ouvintes.remove(ouvinte)
+
+        return soltar
+
+    def drenar(self) -> None:
+        """Lê o que o kernel enfileirou agora, e os ouvintes ficam sabendo."""
+        with self._trava:
+            self._drenar()
 
     def olha(self, raiz: str) -> bool:
         """Esta raiz está sob o olhar agora? (armado, e o olhar da raiz vivo)."""
@@ -220,6 +246,11 @@ class DonoDoEvento:
     def _subir(self, raiz: str, *tipos: str) -> None:
         for tipo in tipos:
             self._geracoes[raiz][tipo] += 1
+        for ouvinte in self._ouvintes:
+            try:
+                ouvinte()
+            except Exception as exc:
+                logger.debug("dono_do_evento_ouvinte_falhou", err=str(exc))
 
     def _subir_tudo(self) -> None:
         for raiz in self._geracoes:

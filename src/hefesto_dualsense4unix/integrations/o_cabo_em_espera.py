@@ -39,6 +39,25 @@ TETO_POR_CONTROLE_S = 120.0
 ESPERA_DEPOIS_DA_RECUSA_S = 5.0
 RECUSAS_ANTES_DE_DESISTIR = 5
 
+REOLHAR_QUEM_ESPERA_S = 30.0
+REOLHAR_O_MODO_NATIVO_S = 5.0
+
+MOTIVO_MODO_NATIVO = "o Modo Nativo segura o controle no rádio"
+MOTIVO_SEM_A_REGRA = "falta a regra que religa o cabo"
+MOTIVO_SEM_GEMEO = "o gêmeo deste cabo não é um controle do rádio na mesa"
+MOTIVO_JA_DERRUBADO = "o rádio deste controle já foi derrubado há pouco"
+MOTIVO_SEM_ENDERECO = "o driver não leu endereço deste cabo: não há gêmeo no rádio"
+MOTIVO_O_RADIO_NAO_SOLTOU = "o BlueZ não soltou o rádio deste controle"
+
+_PORQUE_DA_TELA: dict[str, str] = {
+    MOTIVO_MODO_NATIVO: "modo_nativo",
+    MOTIVO_SEM_A_REGRA: "sem_a_regra",
+    MOTIVO_SEM_GEMEO: "sem_gemeo",
+    MOTIVO_JA_DERRUBADO: "ja_derrubado",
+    MOTIVO_SEM_ENDERECO: "sem_endereco",
+    MOTIVO_O_RADIO_NAO_SOLTOU: "o_radio_nao_soltou",
+}
+
 QUEM = "o-cabo-assume"
 
 
@@ -190,6 +209,8 @@ class VigiaDoCabo:
     ultima_olhada: float | None = None
     recusas: dict[str, int] = field(default_factory=dict)
     tentar_de_novo_em: dict[str, float] = field(default_factory=dict)
+    motivos: dict[str, str] = field(default_factory=dict)
+    reolhar_em: dict[str, float] = field(default_factory=dict)
     _cargas_vistas: dict[str, str | None] = field(default_factory=dict)
 
     def observar_a_carga(self, no_radio: Mapping[str, str | None], agora: float) -> None:
@@ -215,6 +236,8 @@ class VigiaDoCabo:
             self.resolvidos.discard(instancia)
             self.recusas.pop(instancia, None)
             self.tentar_de_novo_em.pop(instancia, None)
+            self.motivos.pop(instancia, None)
+            self.reolhar_em.pop(instancia, None)
         pendentes: list[CaboEmEspera] = []
         for instancia, cabo in vivos.items():
             self.visto_em.setdefault(instancia, agora)
@@ -236,7 +259,8 @@ class VigiaDoCabo:
             for instancia, visto in self.visto_em.items()
         ) or any(
             instancia not in self.resolvidos and desde < quando <= agora
-            for instancia, quando in self.tentar_de_novo_em.items()
+            for prazos in (self.tentar_de_novo_em, self.reolhar_em)
+            for instancia, quando in prazos.items()
         )
 
     def decidir(
@@ -253,14 +277,9 @@ class VigiaDoCabo:
             if endereco is None:
                 if not maduro:
                     return Decisao(motivo="a probe do cabo ainda pode estar correndo")
-                return Decisao(
-                    motivo="o driver não leu endereço deste cabo: não há gêmeo no rádio",
-                    desistir=True,
-                )
+                return Decisao(motivo=MOTIVO_SEM_ENDERECO, desistir=True)
             if endereco not in no_radio:
-                return Decisao(
-                    motivo="o gêmeo deste cabo não é um controle do rádio na mesa", desistir=True
-                )
+                return Decisao(motivo=MOTIVO_SEM_GEMEO, desistir=True)
             return self._com_teto(Decisao(par=endereco, fonte="hid_uniq_do_cabo"), agora)
         if not maduro:
             return Decisao(motivo="sem o endereço do cabo, ele espera ficar órfão")
@@ -286,11 +305,24 @@ class VigiaDoCabo:
         par = decisao.par
         ultima = self.derrubado_em.get(par, float("-inf")) if par is not None else None
         if ultima is not None and agora - ultima < TETO_POR_CONTROLE_S:
-            return Decisao(motivo="o rádio deste controle já foi derrubado há pouco", desistir=True)
+            return Decisao(motivo=MOTIVO_JA_DERRUBADO, desistir=True)
         return decisao
 
     def resolver(self, instancia: str) -> None:
         self.resolvidos.add(instancia)
+        self.motivos.pop(instancia, None)
+        self.reolhar_em.pop(instancia, None)
+
+    def adiar(self, instancia: str, motivo: str, agora: float) -> None:
+        """Este cabo não passa agora: o motivo fica à vista, e toda volta refaz a decisão.
+
+        A volta seguinte vem de qualquer evento; sem evento, do prazo.
+        """
+        self.motivos[instancia] = motivo
+        espera = (
+            REOLHAR_O_MODO_NATIVO_S if motivo == MOTIVO_MODO_NATIVO else REOLHAR_QUEM_ESPERA_S
+        )
+        self.reolhar_em[instancia] = agora + espera
 
     def recusado(self, instancia: str, agora: float) -> bool:
         """O BlueZ não derrubou o rádio deste cabo. ``True`` = tenta de novo."""
@@ -299,10 +331,22 @@ class VigiaDoCabo:
         if vezes >= RECUSAS_ANTES_DE_DESISTIR:
             self.resolvidos.add(instancia)
             self.tentar_de_novo_em.pop(instancia, None)
+            self.motivos[instancia] = MOTIVO_O_RADIO_NAO_SOLTOU
             return False
         self.resolvidos.discard(instancia)
         self.tentar_de_novo_em[instancia] = agora + ESPERA_DEPOIS_DA_RECUSA_S
         return True
+
+    def esperando(self) -> dict[str, str]:
+        """``{instância: motivo}`` de todo cabo sem driver que ainda não passou."""
+        return dict(self.motivos)
+
+    def para_a_tela(self) -> list[dict[str, str]]:
+        """A espera de cada cabo, na forma que a tela lê: a instância e o porquê em uma palavra."""
+        return [
+            {"instancia": instancia, "motivo": _PORQUE_DA_TELA.get(motivo, "")}
+            for instancia, motivo in sorted(self.motivos.items())
+        ]
 
     def derrubou(self, uniq: str, agora: float) -> None:
         self.derrubado_em[uniq] = agora
@@ -325,10 +369,18 @@ __all__ = [
     "ESPERA_DEPOIS_DA_RECUSA_S",
     "ESPERA_PARA_SER_ORFAO_S",
     "JANELA_DO_PAR_PELA_CARGA_S",
+    "MOTIVO_JA_DERRUBADO",
+    "MOTIVO_MODO_NATIVO",
+    "MOTIVO_O_RADIO_NAO_SOLTOU",
+    "MOTIVO_SEM_A_REGRA",
+    "MOTIVO_SEM_ENDERECO",
+    "MOTIVO_SEM_GEMEO",
     "NOME_DA_REGRA",
     "RAIZ_DO_BARRAMENTO_HID",
     "RECUSAS_ANTES_DE_DESISTIR",
     "REGRAS_QUE_RELIGAM",
+    "REOLHAR_O_MODO_NATIVO_S",
+    "REOLHAR_QUEM_ESPERA_S",
     "TETO_POR_CONTROLE_S",
     "CaboEmEspera",
     "Decisao",  # (noqa-acento)

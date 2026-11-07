@@ -115,6 +115,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.relogio_da_conexao import HAPTICA, RELOGIO
 from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 from hefesto_dualsense4unix.profiles import formas_de_haptica
@@ -743,6 +744,7 @@ class AltoFalanteSubsystem:
     _no_radio: frozenset[str] = frozenset()
     _o_que_a_volta_viu: frozenset[str] | None = None
     _volta_pedida: bool = False
+    _placas_vistas: frozenset[str] | None = None
     _aparelho_de: Mapping[str, str] = MappingProxyType({})
     _endpoint_da_ponte: Mapping[str, str] = MappingProxyType({})
     _leva_da_ponte: Mapping[str, bool] = MappingProxyType({})
@@ -1269,6 +1271,16 @@ class AltoFalanteSubsystem:
         tocador, sink = alvo
         tocador.levar_o_corpo(amostras, lado, sink=sink, dono=chave)
         return True
+
+    def _carimbar_a_haptica(self) -> None:
+        """O relógio da conexão: quem já tem o laço da háptica de pé no cabo."""
+        cabo = self._cabo
+        if cabo is None:
+            return
+        de_pe = cabo.aparelhos()
+        for uniq, marca in self._aparelho_de.items():
+            if marca in de_pe:
+                RELOGIO.marcar(uniq, HAPTICA)
 
     def _o_tocador_de(self, chave: str) -> tuple[Any, str] | None:
         """O tocador do aparelho deste controle e o nó em que ele toca."""
@@ -2075,6 +2087,7 @@ class AltoFalanteSubsystem:
             self._casar_o_cabo(controles, motores)
         except Exception:
             logger.warning("haptica_do_cabo_falhou", exc_info=True)
+        self._carimbar_a_haptica()
 
         self._dizer_o_ganho_do_radio(vivos)
         governador = self.governador
@@ -2597,7 +2610,7 @@ class AltoFalanteSubsystem:
             if self._volta_pedida:
                 self._volta_pedida = False
                 return False
-            if self._a_mesa_do_som_mudou():
+            if self._a_mesa_do_som_mudou() or self._as_placas_mudaram():
                 return False
 
     def _o_que_a_mesa_do_som_diz(self) -> frozenset[str] | None:
@@ -2618,6 +2631,27 @@ class AltoFalanteSubsystem:
             logger.debug("som_mesa_ilegivel_no_retrato", err=str(exc))
             return None
         return None if tocando is None else frozenset(tocando)
+
+    @staticmethod
+    def _as_placas_de_agora() -> frozenset[str] | None:
+        """As placas de saída de DualSense que o retrato vê. ``None`` = não sei."""
+        from hefesto_dualsense4unix.integrations import retrato_do_som
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import sinks_dualsense
+
+        saida = retrato_do_som.responder(["pactl", "list", "sinks", "short"])
+        return frozenset(sinks_dualsense(saida)) if isinstance(saida, str) else None
+
+    def _as_placas_mudaram(self) -> bool:
+        """A placa de um controle nasceu ou sumiu desde que a volta começou?
+
+        A placa nasce depois do `controller_connected`, no tempo do servidor de som: sem este aviso
+        o nó do controle só subia na volta seguinte do relógio.
+        """
+        agora = self._as_placas_de_agora()
+        if agora is None or agora == self._placas_vistas:
+            return False
+        logger.debug("som_volta_acordada_pela_placa", agora=len(agora))
+        return True
 
     def _a_mesa_do_som_mudou(self) -> bool:
         """Algum nó dos controles do rádio abriu ou fechou fluxo desde que a volta começou?"""
@@ -2644,6 +2678,7 @@ class AltoFalanteSubsystem:
             if e_radio(str(getattr(c, "transporte", "") or ""))
         )
         self._o_que_a_volta_viu = self._o_que_a_mesa_do_som_diz()
+        self._placas_vistas = self._as_placas_de_agora()
         self._casar_as_pontes(alvos)
         gerenciador.reconciliar(alvos)
 

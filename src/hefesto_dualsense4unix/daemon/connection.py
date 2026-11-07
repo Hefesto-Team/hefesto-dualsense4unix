@@ -9,6 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
+from hefesto_dualsense4unix.core import relogio_da_conexao as _relogio
 from hefesto_dualsense4unix.core.escritor_cru import (
     PASSO_DA_VIGIA_S,
     PassoDaVigia,
@@ -59,6 +60,86 @@ RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
 PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC: float = 0.25
 
 PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC: float = 0.5
+
+PASSO_ENQUANTO_UMA_ABERTURA_FALTA_SEC: float = 0.25
+
+ACOMODAR_O_EVENTO_SEC: float = 0.05
+
+VOLTA_DEMORADA_SEC: float = 1.0
+
+
+_QUEM_PEDE_A_VOLTA = frozenset({"abertura", "troca"})
+
+
+class SinoDaVolta:
+    """O evento que acorda a volta da reconexão, tocado de qualquer fio.
+
+    O ``inotify`` do dono do evento, o netlink do ouvido do USB, a abertura que terminou e a troca
+    que andou tocam o mesmo sino, nos dois ramos da volta. Os passos de relógio ficam de reserva.
+    """
+
+    def __init__(self, laco: asyncio.AbstractEventLoop) -> None:
+        self._laco = laco
+        self._evento = asyncio.Event()
+        self.pelo = ""
+        self.pede_a_volta = False
+
+    def tocar(self, pelo: str = "") -> None:
+        self.pelo = pelo
+        self.pede_a_volta = self.pede_a_volta or pelo in _QUEM_PEDE_A_VOLTA
+        with contextlib.suppress(RuntimeError):
+            self._laco.call_soon_threadsafe(self._evento.set)
+
+    def limpar(self) -> None:
+        self._evento.clear()
+
+    async def esperar(self, parar: asyncio.Event | None, prazo: float) -> bool:
+        """Espera até ``prazo``. True = o sino tocou."""
+        esperas = {asyncio.ensure_future(self._evento.wait())}
+        if parar is not None:
+            esperas.add(asyncio.ensure_future(parar.wait()))
+        try:
+            await asyncio.wait(esperas, timeout=prazo, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for espera in esperas:
+                espera.cancel()
+        return self._evento.is_set()
+
+
+def acordar_a_volta(daemon: Any, pelo: str = "") -> None:
+    """Toca o sino da volta deste daemon, de qualquer fio. Sem volta no ar, nada acontece."""
+    sino = getattr(daemon, "_sino_da_volta", None)
+    if isinstance(sino, SinoDaVolta):
+        sino.tocar(pelo)
+
+
+def _armar_o_sino(daemon: DaemonProtocol) -> Callable[[], None]:
+    """Pendura o sino no daemon e no ``inotify``. Devolve quem desfaz."""
+    laco = asyncio.get_running_loop()
+    sino = SinoDaVolta(laco)
+    desfazer: list[Callable[[], object]] = []
+    setattr(daemon, "_sino_da_volta", sino)  # noqa: B010
+    dono = _ode.dono_armado()
+    if dono is not None and dono.descritor >= 0:
+        fd = dono.descritor
+        desfazer.append(dono.ouvir(lambda: sino.tocar("inotify")))
+        with contextlib.suppress(OSError, ValueError, NotImplementedError):
+            laco.add_reader(fd, dono.drenar)
+            desfazer.append(lambda: laco.remove_reader(fd))
+    ouvir = getattr(getattr(daemon, "controller", None), "ouvir_as_aberturas", None)
+    if callable(ouvir):
+        ouvir(lambda: sino.tocar("abertura"))
+        desfazer.append(lambda: ouvir(None))
+
+    def _desfazer() -> None:
+        for passo in reversed(desfazer):
+            try:
+                passo()
+            except Exception as exc:
+                logger.debug("sino_da_volta_nao_desarmou", err=str(exc))
+        setattr(daemon, "_sino_da_volta", None)  # noqa: B010
+
+    return _desfazer
 
 
 async def reapply_speaker_after_connect(
@@ -289,6 +370,21 @@ def vigia_do_cabo_de(daemon: DaemonProtocol) -> Any:
     return vigia
 
 
+def _um_cabo_ficou_sem_driver(daemon: DaemonProtocol) -> bool:
+    """Um HID de DualSense perdeu o driver agora? Só depois de o sino tocar por um nó.
+
+    A recusa do kernel (`-17`) não muda a pasta do barramento: tira o `driver` do HID que já
+    estava ali, e o que avisa é o `hidraw` dele sumindo.
+    """
+    ctrl = getattr(daemon, "controller", None)
+    if not callable(getattr(ctrl, "iniciar_troca_de_transporte", None)):
+        return False
+    from hefesto_dualsense4unix.integrations import o_cabo_em_espera
+
+    vigia = vigia_do_cabo_de(daemon)
+    return any(c.instancia not in vigia.visto_em for c in o_cabo_em_espera.cabos_em_espera())
+
+
 def _o_barramento_hid_mudou(daemon: DaemonProtocol) -> bool:
     """O barramento HID mudou, ou um cabo que espera ficou maduro? (O-CABO-ASSUME-DO-RADIO-01)"""
     ctrl = getattr(daemon, "controller", None)
@@ -309,22 +405,22 @@ def _o_barramento_hid_mudou(daemon: DaemonProtocol) -> bool:
     return bool(vigia_do_cabo_de(daemon).quer_olhar_de_novo(time.monotonic()))
 
 
-async def vigiar_o_cabo_em_espera(
-    daemon: DaemonProtocol,
-    *,
-    agora: float | None = None,
-    leitor_do_bluez: Any = None,
-) -> int:
-    """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram."""
+def _quem_passa_para_o_cabo(
+    daemon: DaemonProtocol, agora: float
+) -> list[tuple[Any, str, str]]:
+    """Os `(cabo, par, fonte)` que passam agora, já com a troca marcada no backend.
+
+    Quem ainda não passa fica adiado com o motivo: a decisão se refaz quando a mesa do rádio muda
+    e no prazo do adiamento, e o HID nunca fica sem dono até o próximo plug.
+    """
     ctrl = getattr(daemon, "controller", None)
     iniciar = getattr(ctrl, "iniciar_troca_de_transporte", None)
     descrever = getattr(ctrl, "describe_controllers", None)
     if not callable(iniciar) or not callable(descrever):
-        return 0
+        return []
     from hefesto_dualsense4unix.integrations import o_cabo_em_espera as oce
 
     vigia = vigia_do_cabo_de(daemon)
-    agora = time.monotonic() if agora is None else float(agora)
     try:
         mesa = [item for item in descrever() or () if item.get("connected") and item.get("uniq")]
         no_radio = {
@@ -336,46 +432,68 @@ async def vigiar_o_cabo_em_espera(
         cabos = oce.cabos_em_espera()
     except Exception as exc:
         logger.debug("o_cabo_em_espera_leitura_falhou", err=str(exc))
-        return 0
+        return []
     vigia.observar_a_carga(no_radio, agora)
     vigia.observar_quem_esta_no_cabo(no_cabo)
     pendentes = vigia.observar_os_cabos(cabos, agora)
     if not pendentes:
-        return 0
+        return []
     if _modo_nativo(daemon):
         for cabo in pendentes:
+            vigia.adiar(cabo.instancia, oce.MOTIVO_MODO_NATIVO, agora)
             if vigia.primeira_vez(f"nativo:{cabo.instancia}"):
                 logger.info("o_cabo_espera_o_modo_nativo", instancia=cabo.instancia)
-        return 0
+        return []
     impedimentos = oce.impedimentos_da_troca()
     if impedimentos:
+        for cabo in pendentes:
+            vigia.adiar(cabo.instancia, oce.MOTIVO_SEM_A_REGRA, agora)
         if vigia.primeira_vez("impedida"):
             logger.warning("o_cabo_em_espera_impedido", motivos=impedimentos)
-        return 0
-    passaram = 0
+        return []
+    pedidos: list[tuple[Any, str, str]] = []
     for cabo in pendentes:
         decisao = vigia.decidir(cabo, no_radio=no_radio, agora=agora)
         if decisao.par is None:
             if decisao.desistir:
-                vigia.resolver(cabo.instancia)
-                logger.info(
-                    "o_cabo_em_espera_fica_no_radio",
-                    instancia=cabo.instancia,
-                    motivo=decisao.motivo,
-                )
+                vigia.adiar(cabo.instancia, decisao.motivo, agora)
+                if vigia.primeira_vez(f"fica:{cabo.instancia}:{decisao.motivo}"):
+                    logger.info(
+                        "o_cabo_em_espera_fica_no_radio",
+                        instancia=cabo.instancia,
+                        motivo=decisao.motivo,
+                    )
             continue
         vigia.resolver(cabo.instancia)
-        par = decisao.par
-        if not iniciar(par, motivo="o_cabo_chegou"):
-            continue
+        if iniciar(decisao.par, motivo="o_cabo_chegou"):
+            _relogio.RELOGIO.marcar(decisao.par, _relogio.O_CABO_CHEGOU)
+            pedidos.append((cabo, decisao.par, decisao.fonte))
+    return pedidos
 
-        def _derrubar(uniq: str = par) -> tuple[bool, str]:
-            return oce.derrubar_o_radio(uniq, leitor=leitor_do_bluez)
 
+async def _derrubar_os_radios(
+    daemon: DaemonProtocol,
+    pedidos: Sequence[tuple[Any, str, str]],
+    agora: float,
+    leitor_do_bluez: Any = None,
+) -> int:
+    """Derruba o rádio de cada par, cada um no seu fio.
+
+    A leitura do BlueZ corre junta; os `Disconnect` passam um por vez pela trava comum do rádio.
+    """
+    from hefesto_dualsense4unix.integrations import o_cabo_em_espera as oce
+
+    async def _derrubar(par: str) -> tuple[bool, str]:
         try:
-            feito, motivo = await asyncio.to_thread(_derrubar)
+            return await asyncio.to_thread(oce.derrubar_o_radio, par, leitor_do_bluez)
         except Exception as exc:
-            feito, motivo = False, str(exc)
+            return False, str(exc)
+
+    ctrl = getattr(daemon, "controller", None)
+    vigia = vigia_do_cabo_de(daemon)
+    resultados = await asyncio.gather(*(_derrubar(par) for _cabo, par, _fonte in pedidos))
+    passaram = 0
+    for (cabo, par, fonte), (feito, motivo) in zip(pedidos, resultados, strict=True):
         if not feito:
             cancelar = getattr(ctrl, "cancelar_troca_de_transporte", None)
             if callable(cancelar):
@@ -392,13 +510,122 @@ async def vigiar_o_cabo_em_espera(
             continue
         vigia.derrubou(par, agora)
         passaram += 1
+        _relogio.RELOGIO.marcar(par, _relogio.O_CABO_ASSUME)
         logger.info(
             "o_cabo_assume",
             uniq=oce.mascarar(par),
             instancia=cabo.instancia,
-            fonte=decisao.fonte,
+            fonte=fonte,
         )
     return passaram
+
+
+async def vigiar_o_cabo_em_espera(
+    daemon: DaemonProtocol,
+    *,
+    agora: float | None = None,
+    leitor_do_bluez: Any = None,
+) -> int:
+    """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram."""
+    agora = time.monotonic() if agora is None else float(agora)
+    pedidos = _quem_passa_para_o_cabo(daemon, agora)
+    if not pedidos:
+        return 0
+    return await _derrubar_os_radios(daemon, pedidos, agora, leitor_do_bluez)
+
+
+def _passar_os_cabos_sem_segurar_a_volta(daemon: DaemonProtocol) -> None:
+    """A decisão sai aqui; o `Disconnect` do BlueZ corre em fundo e acorda a volta ao terminar.
+
+    Medido em 06/11: o `Disconnect` levou 2,4 s, e o kernel registrou o cabo no meio deles. A volta
+    parada ali era o tempo do jogo sem controle.
+    """
+    agora = time.monotonic()
+    pedidos = _quem_passa_para_o_cabo(daemon, agora)
+    if not pedidos:
+        return
+    em_fundo: set[asyncio.Task[int]] = getattr(daemon, "_trocas_em_fundo", None) or set()
+    tarefa = asyncio.create_task(_derrubar_os_radios(daemon, pedidos, agora))
+    em_fundo.add(tarefa)
+    setattr(daemon, "_trocas_em_fundo", em_fundo)  # noqa: B010
+
+    def _terminou(feita: asyncio.Task[int]) -> None:
+        em_fundo.discard(feita)
+        if not feita.cancelled() and feita.exception() is not None:
+            logger.warning("o_cabo_troca_em_fundo_falhou", err=str(feita.exception()))
+        acordar_a_volta(daemon, "troca")
+
+    tarefa.add_done_callback(_terminou)
+
+
+async def _soltar_a_troca_em_fundo(daemon: DaemonProtocol) -> None:
+    em_fundo = list(getattr(daemon, "_trocas_em_fundo", None) or ())
+    for tarefa in em_fundo:
+        tarefa.cancel()
+    if em_fundo:
+        await asyncio.gather(*em_fundo, return_exceptions=True)
+
+
+def _dizer_se_a_volta_demorou(comeco: float, depois_do_connect: float) -> None:
+    """Enquanto a volta trabalha, ninguém dispara os gatilhos: a demora fica no diário."""
+    agora = time.monotonic()
+    if agora - comeco >= VOLTA_DEMORADA_SEC:
+        logger.info(
+            "volta_demorou",
+            connect_ms=round((depois_do_connect - comeco) * 1000),
+            resto_ms=round((agora - depois_do_connect) * 1000),
+        )
+
+
+def _falta_abrir_alguem(daemon: DaemonProtocol) -> bool:
+    """Há controle no disco que a volta ainda não conseguiu abrir?"""
+    pergunta = getattr(getattr(daemon, "controller", None), "falta_abrir_alguem", None)
+    if not callable(pergunta):
+        return False
+    try:
+        return pergunta() is True
+    except Exception as exc:
+        logger.debug("falta_abrir_alguem_falhou", err=str(exc))
+        return False
+
+
+def _avisar_quem_conectou(
+    alvos_antes: Mapping[str, str | None],
+    alvos_agora: Mapping[str, str | None] | None,
+    transportes_antes: Mapping[str, str],
+    transportes_agora: Mapping[str, str] | None,
+) -> bool:
+    """Carimba quem entrou ou trocou de transporte. True = a mesa mudou."""
+    agora = alvos_agora or {}
+    transportes = transportes_agora or {}
+    mudou = set(alvos_antes) != set(agora)
+    for key, uniq in agora.items():
+        transporte = transportes.get(key, "")
+        if key in alvos_antes and transporte == transportes_antes.get(key, transporte):
+            continue
+        mudou = True
+        _relogio.RELOGIO.marcar(uniq, _relogio.CONECTADO, transporte=transporte)
+    return mudou
+
+
+def avisar_que_a_mesa_mudou(daemon: DaemonProtocol) -> None:
+    """Quem esperava a mesa pelo relógio olha agora: o movimento, o som, a háptica e o microfone.
+
+    Vale para todo controle que entrou, saiu ou trocou de transporte, em qualquer posição.
+    """
+    from hefesto_dualsense4unix.core.physical_report_reader import acordar_quem_recua
+
+    acordar_quem_recua()
+    for nome, metodo in (
+        ("_alto_falante_subsystem", "_acordar_a_volta"),
+        ("_bt_mic_subsystem", "acordar_a_volta"),
+    ):
+        acordar = getattr(getattr(daemon, nome, None), metodo, None)
+        if callable(acordar):
+            try:
+                acordar("mesa")
+            except Exception as exc:
+                logger.debug("mesa_mudou_ouvinte_falhou", ouvinte=nome, err=str(exc))
 
 
 def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None) -> str | None:
@@ -615,6 +842,7 @@ async def reconnect_loop(
     )
 
     armou = input_watch is None and _ode.armar()
+    desfazer_o_sino: Callable[[], None] | None = None
     try:
         dono = _ode.dono_armado()
         if input_watch is not None:
@@ -628,16 +856,19 @@ async def reconnect_loop(
             setattr(daemon, "_watch_dos_hidraw", nos)  # noqa: B010
         registrar_gatilho_da_lightbar(daemon)
         registrar_a_chegada(daemon)
+        desfazer_o_sino = _armar_o_sino(daemon)
         watch.poll()
         if nos is not None:
             nos.poll()
 
+        recuo_da_abertura = PASSO_ENQUANTO_UMA_ABERTURA_FALTA_SEC
         initial_connected = bool(daemon.controller.is_connected())
         restored = was_connected = initial_connected
         alvos_antes = alvos_conectados_de(daemon) or {}
         transportes_antes = transportes_dos_alvos_de(daemon) or {}
         anunciar_a_chegada(daemon, {}, alvos_antes)
         while not daemon._is_stopping():
+            comeco_da_volta = time.monotonic()
             try:
                 await daemon._run_blocking(daemon.controller.connect)
             except Exception as exc:
@@ -646,16 +877,28 @@ async def reconnect_loop(
                 await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
                 continue
 
+            depois_do_connect = time.monotonic()
             armar_gatilho_da_cor(daemon)
             armar_gatilho_da_cor_por_numeracao(daemon)
             await vigiar_escritor_cru(daemon, forcar=True)
             await carimbar_o_nascimento(daemon)
-            await vigiar_o_cabo_em_espera(daemon)
+            _passar_os_cabos_sem_segurar_a_volta(daemon)
 
             is_connected = bool(daemon.controller.is_connected())
             alvos_agora = alvos_conectados_de(daemon)
             transportes_agora = transportes_dos_alvos_de(daemon)
             trocando = trocas_de_transporte_pendentes(daemon)
+            falta_abrir = _falta_abrir_alguem(daemon)
+            espera_da_abertura = recuo_da_abertura
+            recuo_da_abertura = (
+                min(recuo_da_abertura * 2, RECONNECT_PROBE_INTERVAL_SEC)
+                if falta_abrir
+                else PASSO_ENQUANTO_UMA_ABERTURA_FALTA_SEC
+            )
+            if _avisar_quem_conectou(
+                alvos_antes, alvos_agora, transportes_antes, transportes_agora
+            ):
+                avisar_que_a_mesa_mudou(daemon)
             if is_connected and not was_connected:
                 daemon._arm_input_grace()
                 publicar_a_borda_do_primario(daemon, alvos_antes, alvos_agora)
@@ -698,6 +941,7 @@ async def reconnect_loop(
             if transportes_agora is not None:
                 transportes_antes = transportes_agora
 
+            _dizer_se_a_volta_demorou(comeco_da_volta, depois_do_connect)
             if is_connected:
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -710,7 +954,8 @@ async def reconnect_loop(
                     await asyncio.get_running_loop().run_in_executor(
                         broker_executor_for(daemon), rehide_physical_hidraw, daemon
                     )
-                if await _wait_online_or_hotplug(daemon, watch):
+                prazo = {"falta_abrir_em": espera_da_abertura} if falta_abrir else {}
+                if await _wait_online_or_hotplug(daemon, watch, **prazo):
                     logger.info(
                         "backend_hotplug_reconcile", trigger="input_dir_change"
                     )
@@ -720,13 +965,16 @@ async def reconnect_loop(
                 )
                 if gatilho_lightbar is not None:
                     gatilho_lightbar.desarmar()
+                _relogio.RELOGIO.varrer()
+                passo = espera_da_abertura if falta_abrir else RECONNECT_PROBE_INTERVAL_SEC
                 await _wait_or_stop(
                     daemon,
-                    PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
-                    if trocando
-                    else RECONNECT_PROBE_INTERVAL_SEC,
+                    PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC if trocando else passo,
                 )
     finally:
+        await _soltar_a_troca_em_fundo(daemon)
+        if desfazer_o_sino is not None:
+            desfazer_o_sino()
         if armou:
             _ode.desarmar()
 
@@ -826,7 +1074,21 @@ def anunciar_a_chegada(
         chegada.chegou(uniq)
     registrar_a_chegada(daemon)
     armar_gatilho(daemon, NOME_DO_GATILHO, evento="controle_novo", quantos=len(novos))
+    acordar_a_volta(daemon, "chegada")
     return len(novos)
+
+
+async def responder_a_chegada(daemon: DaemonProtocol) -> None:
+    """O Toque de quem chegou sai assim que a háptica tem por onde, sem esperar o sossego."""
+    from hefesto_dualsense4unix.daemon.subsystems.chegada import Chegada
+
+    chegada = getattr(daemon, "_chegada", None)
+    if not isinstance(chegada, Chegada) or not chegada.falta_o_toque:
+        return
+    try:
+        await daemon._run_blocking(chegada.responder)
+    except Exception as exc:
+        logger.debug("chegada_primeira_resposta_falhou", err=str(exc))
 
 
 def _preparar_a_lightbar(daemon: DaemonProtocol) -> None:
@@ -1312,9 +1574,12 @@ def _permissoes_das_entradas() -> tuple[int, ...] | None:
 
 
 async def _wait_online_or_hotplug(
-    daemon: DaemonProtocol, watch: InputDirWatch
+    daemon: DaemonProtocol, watch: InputDirWatch, *, falta_abrir_em: float | None = None
 ) -> bool:
-    """Espera o intervalo online em fatias, sondando o watch de /dev/input."""
+    """Espera o intervalo online em fatias, sondando o watch de /dev/input.
+
+    `falta_abrir_em`: um controle no disco ainda não abriu, e a volta o tenta de novo nesse prazo.
+    """
     await vigiar_o_sequestro(daemon)
     pelo_evento = _ode.dono_armado() is not None
     teto = (
@@ -1333,13 +1598,18 @@ async def _wait_online_or_hotplug(
             step = min(step, PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC)
         if vigia_do_sequestro_de(daemon).vigilante:
             step = min(step, PASSO_DA_VIGIA_S)
-        await _wait_or_stop(daemon, step)
+        if falta_abrir_em is not None:
+            step = min(step, max(falta_abrir_em - elapsed, 0.0))
+        comeco = time.monotonic()
+        acordou = await _wait_or_stop(daemon, step)
         if daemon._is_stopping():
             return False
-        elapsed += step
+        elapsed += time.monotonic() - comeco if acordou else step
+        _relogio.RELOGIO.varrer()
         await vigiar_escritor_cru(daemon, forcar=False)
         await vigiar_o_sequestro(daemon)
         await disparar_gatilhos_devidos(daemon)
+        await responder_a_chegada(daemon)
         armar_gatilho_da_cor_por_numeracao(daemon)
         if watch.poll():
             return True
@@ -1352,19 +1622,42 @@ async def _wait_online_or_hotplug(
         if permissoes is not None and _permissoes_das_entradas() != permissoes:
             logger.debug("volta_acordada", pelo="permissao_de_entrada")
             return True
-        if _o_barramento_hid_mudou(daemon):
+        if _o_barramento_hid_mudou(daemon) or (acordou and _um_cabo_ficou_sem_driver(daemon)):
+            return True
+        sino = getattr(daemon, "_sino_da_volta", None)
+        if acordou and isinstance(sino, SinoDaVolta) and sino.pede_a_volta:
+            sino.pede_a_volta = False
+            return True
+        if falta_abrir_em is not None and elapsed >= falta_abrir_em:
             return True
     return False
 
 
-async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
-    """Dorme `timeout` segundos respeitando `_stop_event`."""
+async def _dormir_ou_parar(daemon: DaemonProtocol, timeout: float) -> None:
     stop_event = getattr(daemon, "_stop_event", None)
     if stop_event is None:
         await asyncio.sleep(timeout)
         return
     with contextlib.suppress(asyncio.TimeoutError):
         await asyncio.wait_for(stop_event.wait(), timeout=timeout)
+
+
+async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> bool:
+    """Dorme `timeout` segundos respeitando `_stop_event`. True = o sino da volta acordou.
+
+    Depois do sino, espera a rajada do mesmo evento assentar: o kernel cria os nós de um controle
+    em sequência, e a recusa do cabo tira o `driver` um instante depois de apagar o `hidraw`.
+    """
+    sino = getattr(daemon, "_sino_da_volta", None)
+    if not isinstance(sino, SinoDaVolta):
+        await _dormir_ou_parar(daemon, timeout)
+        return False
+    if not await sino.esperar(getattr(daemon, "_stop_event", None), timeout):
+        return False
+    sino.limpar()
+    logger.debug("volta_acordada", pelo=sino.pelo)
+    await _dormir_ou_parar(daemon, ACOMODAR_O_EVENTO_SEC)
+    return True
 
 
 _TETO_DA_TAREFA_S = 5.0
@@ -1509,17 +1802,22 @@ def publicar_a_queda_de_cada_alvo(
 
 
 __all__ = [
+    "ACOMODAR_O_EVENTO_SEC",
     "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC",
+    "PASSO_ENQUANTO_UMA_ABERTURA_FALTA_SEC",
     "PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC",
     "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC",
     "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
     "RECONNECT_PROBE_INTERVAL_SEC",
     "TETO_DA_VOLTA_PELO_EVENTO_SEC",
+    "SinoDaVolta",
     "Tarefa",
+    "acordar_a_volta",
     "armar_gatilho",
     "armar_gatilho_da_cor",
     "armar_gatilho_da_cor_por_evento",
     "armar_gatilho_da_cor_por_numeracao",
+    "avisar_que_a_mesa_mudou",
     "disparar_gatilhos_devidos",
     "o_jogo_que_o_boot_restaura",
     "parar_as_tarefas",

@@ -783,8 +783,8 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:212-213` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:821-825`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1236-1238`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:90` | **ALTA** — lido no código |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:263-264` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:821-825`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1286-1288`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:90` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: um ajuste acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
@@ -809,7 +809,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
      `backend_pydualsense.py`, e as três citações de áudio desceram ~21 linhas.
      As AFIRMAÇÕES não mudaram — só onde as afirmações abrem. -->
 
-> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:253-268` (`_byte_da_rota`) | **MEDIDO** — com a orelha do usuário em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:304-319` (`_byte_da_rota`) | **MEDIDO** — com a orelha do usuário em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
 > apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do
@@ -894,7 +894,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   e o `0x11` não é opcional. **O que o produto escreve é o `0x36` combinado**,
   de 398 B, com os quatro blocos num quadro só (`0x11`, `0x10`, `0x12` e o som
   em `0x13`/`0x16`), desde 03/10/2026, provado no aparelho:
-  `integrations/alto_falante_bt.py:543` (`DEGRAU_COMBINADO`).
+  `integrations/alto_falante_bt.py:544` (`DEGRAU_COMBINADO`).
 
 > **NOTA DATADA — 11/08/2026: CONTRADIÇÃO INTERNA EM ABERTO, e não é a que
 > parece.**
@@ -1658,10 +1658,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
 >   ligados em TODO report, e o `common[41]` vai sempre zero
->   (`core/backend_pydualsense.py:415`) — escolha deliberada, travada por
+>   (`core/backend_pydualsense.py:466`) — escolha deliberada, travada por
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
->   (`core/backend_pydualsense.py:400-405`), porque reengatá-lo em regime
+>   (`core/backend_pydualsense.py:451-456`), porque reengatá-lo em regime
 >   trava a exibição no firmware — é o keepalive da barra de luz.
 >
 > E o perigo registrado, que esta página não carregava: uma
@@ -1739,8 +1739,8 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:300` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:44` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:903-938` (`_observe_jack`) | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:319` (`extract_jack_status`), offset (`JACK_STATUS_OFFSET`) em `:46` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:947-982` (`_observe_jack`) | **ALTA** |
 > | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1304` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:296` | **ALTA** |
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1290`, offset `_STATUS1_OFFSET = 53` em `:272` | **ALTA** |
 >
@@ -1769,7 +1769,7 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 > `assets/dkms/hid-playstation/hid-playstation.c:196-197`,
 > `DS_STATUS0_BATTERY_CAPACITY` = `GENMASK(3, 0)` e `DS_STATUS0_CHARGING` =
 > `GENMASK(7, 4)` — e o código do Hefesto o decodifica em cinco casos
-> (`core/physical_report_reader.py:334-369`, `decodificar_bateria`):
+> (`core/physical_report_reader.py:353-388`, `decodificar_bateria`):
 >
 > | nibble alto | significa | o que esta árvore faz |
 > |---|---|---|

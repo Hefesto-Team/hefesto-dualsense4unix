@@ -13,10 +13,12 @@ import contextlib
 import os
 import threading
 import time
+import weakref
 from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
+from hefesto_dualsense4unix.core.relogio_da_conexao import MOVIMENTO, RELOGIO
 from hefesto_dualsense4unix.core.roteador_de_movimento import janela_que_sai
 from hefesto_dualsense4unix.core.virtual_motion import DESTINO_JOGO, REGISTRO
 from hefesto_dualsense4unix.integrations import usb_pai
@@ -78,6 +80,23 @@ _HZ_STALE_S = 1.0
 
 
 _RAIZ_HIDRAW = usb_pai.RAIZ_HIDRAW
+
+_LEITORES: weakref.WeakSet[PhysicalReportReader] = weakref.WeakSet()
+_LEITORES_TRAVA = threading.Lock()
+_ACORDAR: list[int] = [0]
+
+
+def _chamadas_do_acordar() -> int:
+    return _ACORDAR[0]
+
+
+def acordar_quem_recua() -> None:
+    """Um nó de controle mudou: todo leitor que recua, de qualquer jogador, olha de novo agora."""
+    with _LEITORES_TRAVA:
+        _ACORDAR[0] += 1
+        leitores = list(_LEITORES)
+    for leitor in leitores:
+        leitor.cortar_o_recuo()
 
 
 def uniq_do_hidraw(path: str) -> str | None:
@@ -387,6 +406,7 @@ class PhysicalReportReader:
             opener if opener is not None else _open_por_caminho
         )
         self._stop_flag = threading.Event()
+        self._em_recuo = False
         self._thread: threading.Thread | None = None
         self._fd: int | None = None
         self._fd_lock = threading.Lock()
@@ -413,6 +433,8 @@ class PhysicalReportReader:
         self._disparos: dict[str, int] = {"L2": 0, "R2": 0}
         self._disparou_em: dict[str, float] = {}
         self._gatilho_ouvinte: Callable[[str, int, int, float], None] | None = None
+        with _LEITORES_TRAVA:
+            _LEITORES.add(self)
         self._reports_seen = 0
         self._windows_emitted = 0
         self._bt_drops = 0
@@ -630,29 +652,51 @@ class PhysicalReportReader:
                 os.close(fd)
 
 
+    def _esperar_o_recuo(self, backoff: float, marca: int) -> float | None:
+        """Dorme o recuo, e o `request_reopen` corta. O recuo seguinte; ``None`` = parar."""
+        self._em_recuo = True
+        try:
+            if marca != _chamadas_do_acordar():
+                return _BACKOFF_START_S
+            pronto = prontos_ou_acordado(self._wake_r, -1, backoff)
+        except (OSError, ValueError):
+            return None if self._stop_flag.wait(backoff) else min(backoff * 2, _BACKOFF_MAX_S)
+        finally:
+            self._em_recuo = False
+        if pronto:
+            self._drain_wake()
+        if self._stop_flag.is_set():
+            return None
+        if self._reopen_flag.is_set() or marca != _chamadas_do_acordar():
+            return _BACKOFF_START_S
+        return min(backoff * 2, _BACKOFF_MAX_S)
+
+    def cortar_o_recuo(self) -> None:
+        """Quem está recuando olha de novo agora; quem está lendo não sente nada."""
+        if self._em_recuo:
+            self._wake()
+
     def _run(self) -> None:
-        backoff = _BACKOFF_START_S
-        while not self._stop_flag.is_set():
+        backoff: float | None = _BACKOFF_START_S
+        while backoff is not None and not self._stop_flag.is_set():
             self._reopen_flag.clear()
+            marca = _chamadas_do_acordar()
             path = self._resolve_path()
             if path is None:
-                if self._stop_flag.wait(backoff):
-                    break
-                backoff = min(backoff * 2, _BACKOFF_MAX_S)
+                backoff = self._esperar_o_recuo(backoff, marca)
                 continue
             try:
                 fd = self._opener(path)
             except OSError as exc:
                 logger.warning("motion_reader_open_failed", path=path, err=str(exc))
-                if self._stop_flag.wait(backoff):
-                    break
-                backoff = min(backoff * 2, _BACKOFF_MAX_S)
+                backoff = self._esperar_o_recuo(backoff, marca)
                 continue
             with self._fd_lock:
                 self._fd = fd
             backoff = _BACKOFF_START_S
             self._uniq_aberto = uniq_do_hidraw(path)
             logger.info("motion_reader_started", path=path)
+            RELOGIO.marcar(self._uniq_aberto, MOVIMENTO)
             with contextlib.suppress(Exception):
                 self._vpad.set_motion_streaming(True)
             try:
@@ -1081,6 +1125,7 @@ __all__ = [
     "TRIGGER_STATE_SHIFT",
     "PhysicalReportReader",
     "a_peca_calou",
+    "acordar_quem_recua",
     "decodificar_bateria",
     "extract_battery_status",
     "extract_estado_do_gatilho",

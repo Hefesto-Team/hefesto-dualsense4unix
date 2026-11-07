@@ -317,7 +317,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC": (
         "Ajuste fino do tempo de espera da inicialização do backend "
-        "(`INIT_TIMEOUT_SEC` em `src/hefesto_dualsense4unix/core/backend_pydualsense.py:187`). "
+        "(`INIT_TIMEOUT_SEC` em `src/hefesto_dualsense4unix/core/backend_pydualsense.py:188`). "
         "Número de calibração, não "
         "escolha "
         "de quem usa: não há nada na tela que se reconheça como esta chave. "
@@ -416,7 +416,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC": (
         "Intervalo mínimo entre escritas de report de saída "
         "(`HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC` em "
-        "`src/hefesto_dualsense4unix/core/backend_pydualsense.py:190`). Número de calibração do "
+        "`src/hefesto_dualsense4unix/core/backend_pydualsense.py:241`). Número de calibração do "
         "transporte, "
         "medido com o aparelho na mão; não é superfície de escolha. MEDIDO em "
         "12/08/2026."
@@ -1413,7 +1413,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/doctor.sh:2963` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4491 (`varrendo`))."
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4500 (`varrendo`))."
     ),
     "integrations/varredura_do_radio.py::quem_esta_varrendo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
@@ -1543,7 +1543,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
         "`scripts/ensaios/a_faixa_do_receptor.py` "
         "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3799 "
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3808 "
         "(`FAIXA_NAO_ENCONTRADA`), no `_o_botao_da_descoberta`). Fecha quando o ensaio B9 "
         "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
         "passa pelo desenho."

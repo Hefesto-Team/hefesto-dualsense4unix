@@ -117,6 +117,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     COMMON_LEN,
     bt_crc32,
 )
+from hefesto_dualsense4unix.core.relogio_da_conexao import RELOGIO, SOM
 from hefesto_dualsense4unix.integrations import porta_do_som
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     BLOCO_AUDIO_CONTROL,
@@ -1085,6 +1086,7 @@ class SinkVirtualPipeWire:
         self._rotas.append(linhas[-1])
         self._fios[linhas[-1]] = _as_pontas(" ".join(argv[3:]))
         logger.info("som_rota_ligada", sink=self.nome, module_id=linhas[-1])
+        RELOGIO.marcar(self.uniq, SOM)
         return True
 
     def _fios_de_pe(

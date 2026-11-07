@@ -260,7 +260,7 @@ def test_com_netlink_o_remove_do_aparelho_rele_e_o_da_interface_nao(
 def _espera_que_falha(pendentes: list[OSError]) -> Any:
     """O ``_esperar_evento`` de mentira: levanta o erro posto na fila, senão nada chega."""
 
-    async def esperar(_sock: socket.socket, _prazo: float) -> bool:
+    async def esperar(_sock: socket.socket, _prazo: float, _daemon: Any = None) -> bool:
         if pendentes:
             raise pendentes.pop(0)
         await asyncio.sleep(0.01)

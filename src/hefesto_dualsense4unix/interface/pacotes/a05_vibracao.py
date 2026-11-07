@@ -895,8 +895,8 @@ def _par_das_barras(
     está na entrega, com as linhas nomeadas.
 
     A INVERSÃO É A ARMADILHA DESTE ASSUNTO: `weak` é o motor da DIREITA (`d`) e
-    `strong` o da ESQUERDA (`e`) — `core/backend_pydualsense.py:2634` faz
-    `setLeftMotor(eff_strong)`. A tradução não se digita aqui: é de
+    `strong` o da ESQUERDA (`e`) — `core/backend_pydualsense.py:3652` faz
+    `setLeftMotor(strong)`. A tradução não se digita aqui: é de
     `app/telas/vibracao.LADO_PARA_MOTOR`, e :func:`_barras_dos_motores` já
     devolve o mapa na língua da tela.
 

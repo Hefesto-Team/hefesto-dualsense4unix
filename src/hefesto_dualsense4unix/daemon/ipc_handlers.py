@@ -1812,7 +1812,8 @@ class IpcHandlersMixin:
         result["jogo_steam"] = self._jogo_steam_payload()
 
         result["pontes_confirmadas"] = self._pontes_confirmadas_no_tique()
-
+        vigia = getattr(self.daemon, "_vigia_do_cabo_em_espera", None)
+        result["cabos_esperando"] = list(vigia.para_a_tela()) if vigia is not None else []
         describe = getattr(self.controller, "describe_controllers", None)
         if callable(describe):
             controllers = describe()

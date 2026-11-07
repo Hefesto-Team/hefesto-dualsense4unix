@@ -126,6 +126,7 @@ def _backend(handles: dict[str, Any]) -> Any:
     """O controlador de produção, sem aparelho: os handles, o lock e o mapa."""
     b = bp.PyDualSenseController.__new__(bp.PyDualSenseController)
     b._handles = handles
+    b._abrindo = {}
     b._io_lock = _LockFalso()
     b._mic_mute_by_uniq = {}
     return b

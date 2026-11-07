@@ -17,6 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.core.relogio_da_conexao import RELOGIO
 from hefesto_dualsense4unix.daemon.subsystems.identity import _read_boot_id
 from hefesto_dualsense4unix.integrations import diario_do_usb
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo, ler_o_barramento
@@ -31,6 +32,8 @@ ACOMODAR_S = 0.5
 PRAZO_DA_ESPERA_S = 5.0
 _TAMANHO_DA_MENSAGEM = 1 << 16
 _ACOES = frozenset({"add", "remove"})
+_ACOES_DO_HID = frozenset({"add", "remove", "bind", "unbind"})
+PRODUTO_DA_SONY = "54c/"
 
 
 def abrir_o_netlink() -> socket.socket | None:
@@ -70,7 +73,34 @@ def interessa(dado: bytes) -> bool:
     )
 
 
-def _drenar(sock: socket.socket) -> bool:
+def a_volta_quer_saber(dado: bytes) -> bool:
+    """O barramento mudou, ou o kernel terminou (ou desfez) a probe de um HID.
+
+    O ``bind`` de um HID é o aviso exato de «o driver terminou», e sai depois de todos os nós.
+    """
+    campos = eventos_de(dado)
+    return interessa(dado) or (
+        campos.get("SUBSYSTEM") == "hid" and campos.get("ACTION") in _ACOES_DO_HID
+    )
+
+
+def _avisar_a_volta(daemon: Any, dado: bytes) -> None:
+    """O sino da volta toca assim que o kernel diz, antes de o censo assentar."""
+    if not a_volta_quer_saber(dado):
+        return
+    from hefesto_dualsense4unix.daemon.connection import acordar_a_volta
+
+    campos = eventos_de(dado)
+    if (
+        campos.get("ACTION") == "add"
+        and campos.get("DEVTYPE") == "usb_device"
+        and campos.get("PRODUCT", "").startswith(PRODUTO_DA_SONY)
+    ):
+        RELOGIO.usb_entrou(campos.get("DEVPATH", "").rsplit("/", 1)[-1])
+    acordar_a_volta(daemon, "netlink")
+
+
+def _drenar(sock: socket.socket, daemon: Any = None) -> bool:
     """Lê o que ficou na fila sem esperar; diz se algo ali interessa."""
     algum = False
     while True:
@@ -82,6 +112,8 @@ def _drenar(sock: socket.socket) -> bool:
             return algum
         if not dado:
             return algum
+        if daemon is not None:
+            _avisar_a_volta(daemon, dado)
         algum = algum or interessa(dado)
 
 
@@ -151,7 +183,7 @@ class Ouvido:
         self._registrar(diario_do_usb.PAROU_DE_OUVIR, {})
 
 
-async def _esperar_evento(sock: socket.socket, prazo: float) -> bool:
+async def _esperar_evento(sock: socket.socket, prazo: float, daemon: Any = None) -> bool:
     """O aviso do kernel dentro do prazo; ``False`` quando nada chegou.
 
     No Python 3.10 o ``asyncio.wait_for`` levanta ``asyncio.TimeoutError``, que só vira o
@@ -162,17 +194,21 @@ async def _esperar_evento(sock: socket.socket, prazo: float) -> bool:
         dado = await asyncio.wait_for(loop.sock_recv(sock, _TAMANHO_DA_MENSAGEM), prazo)
     except (TimeoutError, asyncio.TimeoutError):
         return False
+    if daemon is not None:
+        _avisar_a_volta(daemon, dado)
     return interessa(dado)
 
 
-async def _ouvir(sock: socket.socket, prazo: float) -> tuple[bool, socket.socket | None]:
+async def _ouvir(
+    sock: socket.socket, prazo: float, daemon: Any = None
+) -> tuple[bool, socket.socket | None]:
     """``(mudou, o socket que segue)``. O erro do netlink nunca para o ouvido.
 
     ``ENOBUFS``: a rajada estourou a fila e o kernel jogou eventos fora; o que se perdeu só a
     releitura recupera. Outro erro: o socket caiu, e o laço segue pela releitura periódica.
     """
     try:
-        return await _esperar_evento(sock, prazo), sock
+        return await _esperar_evento(sock, prazo, daemon), sock
     except OSError as erro:
         if erro.errno == errno.ENOBUFS:
             logger.info("ouvido_do_usb_eventos_perdidos")
@@ -199,10 +235,10 @@ async def ouvido_do_usb_loop(
                 await asyncio.sleep(intervalo)
                 mudou = True
             else:
-                mudou, sock = await _ouvir(sock, prazo)
+                mudou, sock = await _ouvir(sock, prazo, daemon)
                 if mudou and sock is not None:
                     await asyncio.sleep(acomodar)
-                    _drenar(sock)
+                    _drenar(sock, daemon)
             await asyncio.to_thread(ouvido.passo, mudou=mudou)
     finally:
         if sock is not None:
@@ -224,6 +260,7 @@ def start_ouvido_do_usb(daemon: Any) -> None:
 __all__ = [
     "NETLINK_KOBJECT_UEVENT",
     "Ouvido",
+    "a_volta_quer_saber",
     "abrir_o_netlink",
     "eventos_de",
     "interessa",

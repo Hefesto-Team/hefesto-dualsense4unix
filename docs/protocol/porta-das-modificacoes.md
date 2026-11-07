@@ -279,8 +279,8 @@ nesse prazo, o serviço o solta
 (`TETO_DO_RUMBLE_FIXADO_S` em `src/hefesto_dualsense4unix/daemon/subsystems/rumble.py:373`). Quem quer uma
 vibração contínua repete o pedido antes dos 3 s. A resposta de sucesso não garante o motor: no Modo Nativo, e com o `uniq` de um controle fora da
 mesa, a resposta traz `status: "recusado"`, o `desfecho` e o `motivo` na frase
-(`RUMBLE_RECUSADO_MODO_NATIVO` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3428`,
-`RUMBLE_RECUSADO_ALVO_AUSENTE` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3444`). Quem acompanha o
+(`RUMBLE_RECUSADO_MODO_NATIVO` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3429`,
+`RUMBLE_RECUSADO_ALVO_AUSENTE` em `src/hefesto_dualsense4unix/daemon/ipc_handlers.py:3445`). Quem acompanha o
 resultado lê o `status`.
 
 Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os controles ligados agora, cada um

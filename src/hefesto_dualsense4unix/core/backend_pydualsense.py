@@ -13,7 +13,7 @@ import select
 import sys
 import threading
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
 from pydualsense import pydualsense
@@ -49,6 +49,7 @@ from hefesto_dualsense4unix.core.led_control import (
     degrau_do_brilho_das_luzes,
     reescalar,
 )
+from hefesto_dualsense4unix.core.relogio_da_conexao import ABERTO, RELOGIO, TENTATIVA_FALHOU
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 from hefesto_dualsense4unix.core.trigger_effects import (
     TAMANHO_DO_BLOCO_DO_GATILHO,
@@ -185,6 +186,56 @@ def _is_virtual_hidraw(path: bytes) -> bool:
     )
 
 INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", "5"))
+
+TETO_DA_ABERTURA_NA_VOLTA_SEC: float = 1.0
+JUNTA_AS_ABERTURAS_SEC: float = 0.1
+FOLGA_DA_ABERTURA_SEM_VOLTA_SEC: float = 1.0
+
+
+@dataclass
+class _Abertura:
+    """A abertura de um controle em fio próprio: o que a volta colhe quando termina."""
+
+    key: str
+    path: bytes
+    pronta: threading.Event = field(default_factory=threading.Event)
+    handle: Any = None
+    erro: Exception | None = None
+    abandonada: bool = False
+
+
+def _o_kernel_ainda_cria(path: bytes | str) -> bool:
+    """O `hid-playstation` está no meio da probe deste nó: o endereço ainda não chegou.
+
+    Quem abrir agora abre um controle sem identidade, que a volta seguinte fecharia.
+    """
+    nome = os.path.basename(os.fsdecode(path))
+    aparelho = os.path.join(usb_pai.RAIZ_HIDRAW, nome, "device")
+    try:
+        driver = os.path.basename(os.readlink(os.path.join(aparelho, "driver")))
+        with open(os.path.join(aparelho, "uevent"), encoding="utf-8", errors="replace") as arquivo:
+            linhas = arquivo.read().splitlines()
+    except OSError:
+        return False
+    return driver == "playstation" and "HID_UNIQ=" in linhas
+
+
+def _fechar_ou_dizer(handle: Any) -> None:
+    """Fecha o handle; o erro de quem já foi embora fica no diário."""
+    try:
+        handle.close()
+    except Exception as exc:
+        logger.debug("handle_nao_fechou", err=str(exc))
+
+
+def _porta_usb_do_no(path: bytes | str) -> str | None:
+    """A porta USB (`3-4.1.3`) de um `/dev/hidrawN`, ou `None` fora do cabo."""
+    nome = os.path.basename(os.fsdecode(path))
+    if not nome.startswith("hidraw"):
+        return None
+    pai = usb_pai.dispositivo_usb_pai(os.path.join(usb_pai.RAIZ_HIDRAW, nome, "device"))
+    return os.path.basename(pai) or None
+
 
 REPORT_THREAD_THROTTLE_SEC: float = float(
     os.environ.get("HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC", "0.008")
@@ -1382,6 +1433,9 @@ class PyDualSenseController(IController):
         self._pinturas_de_lightbar = 0
         self._io_lock = threading.RLock()
         self._opening: set[str] = set()
+        self._abrindo: dict[str, _Abertura] = {}
+        self._ouvinte_das_aberturas: Callable[[], None] | None = None
+        self._falta_abrir = False
         self._evdev = evdev_reader if evdev_reader is not None else EvdevReader()
         self._motion_reader: Any | None = None
         self._primary_change_observer: Callable[[str | None, str | None], None] | None = None
@@ -2093,6 +2147,8 @@ class PyDualSenseController(IController):
             if _is_virtual_hidraw(info.path):
                 continue
             serial = info.serial_number
+            if not serial and _o_kernel_ainda_cria(info.path):
+                continue
             key = serial if serial else info.path.decode("utf-8", "replace")
             entrada = (key, info.path, info.product_id == DUALSENSE_EDGE_PID)
             if key in posicao:
@@ -2171,6 +2227,103 @@ class PyDualSenseController(IController):
             raise exc
         return ds
 
+    def ouvir_as_aberturas(self, ouvinte: Callable[[], None] | None) -> None:
+        """Chama `ouvinte` quando a abertura de um controle termina, de qualquer fio."""
+        self._ouvinte_das_aberturas = ouvinte
+
+    def falta_abrir_alguem(self) -> bool:
+        """Algum controle no disco não abriu na última volta, ou ainda está abrindo?"""
+        return self._falta_abrir
+
+    def _abrir_em_fundo(self, abertura: _Abertura, is_edge: bool) -> None:
+        try:
+            abertura.handle = self._open_one(abertura.path, is_edge=is_edge)
+        except Exception as exc:
+            abertura.erro = exc
+        with self._io_lock:
+            abandonada = abertura.abandonada
+            abertura.pronta.set()
+        if abandonada:
+            if abertura.handle is not None:
+                _fechar_ou_dizer(abertura.handle)
+            return
+        ouvinte = self._ouvinte_das_aberturas
+        if ouvinte is not None:
+            try:
+                ouvinte()
+            except Exception as exc:
+                logger.debug("ouvinte_das_aberturas_falhou", err=str(exc))
+
+    def _abrir_cada_um_no_seu_fio(
+        self, pedidos: list[tuple[str, bytes, bool]], trocar: set[str]
+    ) -> list[_Abertura]:
+        """Abre cada controle no próprio fio e devolve quem já terminou.
+
+        Um `init` preso não segura os outros: quem demora segue em voo, e a abertura que termina
+        toca a volta seguinte. A espera só existe quando há abertura nova, e tem teto.
+        """
+        lancadas = False
+        for key, path, is_edge in pedidos:
+            with self._io_lock:
+                if key in self._opening or (key in self._handles and key not in trocar):
+                    continue
+                self._opening.add(key)
+                abertura = _Abertura(key, path)
+                self._abrindo[key] = abertura
+            lancadas = True
+            threading.Thread(
+                target=self._abrir_em_fundo,
+                args=(abertura, is_edge),
+                name="hefesto-ds-abrir",
+                daemon=True,
+            ).start()
+        if lancadas:
+            self._esperar_as_aberturas()
+        with self._io_lock:
+            return self._colher_as_prontas_locked()
+
+    def _colher_as_prontas_locked(self) -> list[_Abertura]:
+        colhidas = [a for a in self._abrindo.values() if a.pronta.is_set()]
+        for abertura in colhidas:
+            self._abrindo.pop(abertura.key, None)
+            self._opening.discard(abertura.key)
+        return colhidas
+
+    def _abandonar_as_aberturas_locked(self) -> list[Any]:
+        """Ninguém mais colhe o que está em voo. Devolve os handles prontos, a fechar fora."""
+        prontos = [a.handle for a in self._colher_as_prontas_locked() if a.handle is not None]
+        for abertura in self._abrindo.values():
+            abertura.abandonada = True
+            self._opening.discard(abertura.key)
+        self._abrindo.clear()
+        return prontos
+
+    def _esperar_as_aberturas(self) -> None:
+        """Até a primeira abertura terminar e as vizinhas assentarem, ou até o teto da volta.
+
+        Sem volta ouvindo (a CLI, o boot), ninguém colhe depois: a espera vai até o fim de cada
+        abertura, que o `INIT_TIMEOUT_SEC` limita.
+        """
+        com_volta = self._ouvinte_das_aberturas is not None
+        teto = (
+            TETO_DA_ABERTURA_NA_VOLTA_SEC
+            if com_volta
+            else INIT_TIMEOUT_SEC + FOLGA_DA_ABERTURA_SEM_VOLTA_SEC
+        )
+        fim = time.monotonic() + teto
+        while True:
+            with self._io_lock:
+                em_voo = list(self._abrindo.values())
+            faltam = [a for a in em_voo if not a.pronta.is_set()]
+            if not faltam:
+                return
+            if com_volta and len(faltam) < len(em_voo):
+                fim = min(fim, time.monotonic() + JUNTA_AS_ABERTURAS_SEC)
+            falta = fim - time.monotonic()
+            if falta <= 0:
+                return
+            faltam[0].pronta.wait(min(falta, JUNTA_AS_ABERTURAS_SEC))
+
     def connect(self) -> None:
         """Reconcilia os handles abertos com os controles fisicamente plugados; idempotente, é o
         TICK DE HOTPLUG do `reconnect_loop`.
@@ -2179,12 +2332,16 @@ class PyDualSenseController(IController):
         próximo a primário; presente por OUTRO nó: troca o handle no mesmo lugar
         (O-CABO-ASSUME-DO-RADIO-01, `_o_no_mudou_locked`).
         """
+        self._falta_abrir = False
         want = self._enumerate_device_keys()
         if not want:
             with self._io_lock:
                 self._close_handles(keep=set())
                 self._recompute_primary()
                 self._offline = True
+                sobras = self._abandonar_as_aberturas_locked()
+            for sobra in sobras:
+                _fechar_ou_dizer(sobra)
             return
 
         want_keys = {key for key, _, _ in want}
@@ -2196,51 +2353,62 @@ class PyDualSenseController(IController):
                 key for key in existing if self._o_no_mudou_locked(key, caminho_pedido[key])
             }
 
+        pedidos = [
+            (key, path, is_edge)
+            for key, path, is_edge in want
+            if key not in existing or key in trocar
+        ]
+        colhidas = self._abrir_cada_um_no_seu_fio(pedidos, trocar)
         new_handles: list[tuple[str, pydualsense]] = []
         trocados: dict[str, str] = {}
-        for key, path, is_edge in want:
-            if key in existing and key not in trocar:
+        for abertura in colhidas:
+            key = abertura.key
+            if abertura.erro is not None:
+                self._falta_abrir = True
+                logger.info("backend_open_one_failed", key=key, err=str(abertura.erro))
+                RELOGIO.marcar(self._key_to_uniq(key), TENTATIVA_FALHOU)
                 continue
+            handle = abertura.handle
+            if handle is None:
+                self._falta_abrir = True
+                continue
+            if caminho_pedido.get(key) != abertura.path:
+                self._falta_abrir = self._falta_abrir or key in caminho_pedido
+                _fechar_ou_dizer(handle)
+                continue
+            dup: pydualsense | None = None
+            antigo: pydualsense | None = None
             with self._io_lock:
-                if key in self._opening or (key in self._handles and key not in trocar):
-                    continue
-                self._opening.add(key)
-            try:
-                handle = self._open_one(path, is_edge=is_edge)
-                if handle is None:
-                    continue
-                dup: pydualsense | None = None
-                antigo: pydualsense | None = None
-                with self._io_lock:
-                    if key in trocar and self._o_no_mudou_locked(key, path):
-                        antigo = self._handles[key]
-                        self._handles[key] = handle
-                    elif key in self._handles:
-                        dup = handle
-                    else:
-                        self._handles[key] = handle
-                if dup is not None:
-                    with contextlib.suppress(Exception):
-                        dup.close()
-                    continue
-                if antigo is not None:
-                    trocados[key] = self._detect_transport(antigo)
-                    with contextlib.suppress(Exception):
-                        antigo.close()
-                    self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, antigo)
-                    logger.info(
-                        "handle_trocado_de_no",
-                        uniq=_endereco_mascarado(self._key_to_uniq(key)),
-                        antes=trocados[key],
-                        agora=self._detect_transport(handle),
-                    )
-                new_handles.append((key, handle))
-            except Exception as exc:
-                logger.debug("backend_open_one_failed", key=key, err=str(exc))
+                if key in trocar and self._o_no_mudou_locked(key, abertura.path):
+                    antigo = self._handles[key]
+                    self._handles[key] = handle
+                elif key in self._handles:
+                    dup = handle
+                else:
+                    self._handles[key] = handle
+            if dup is not None:
+                _fechar_ou_dizer(dup)
                 continue
-            finally:
-                with self._io_lock:
-                    self._opening.discard(key)
+            if antigo is not None:
+                trocados[key] = self._detect_transport(antigo)
+                _fechar_ou_dizer(antigo)
+                self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, antigo)
+                logger.info(
+                    "handle_trocado_de_no",
+                    uniq=_endereco_mascarado(self._key_to_uniq(key)),
+                    antes=trocados[key],
+                    agora=self._detect_transport(handle),
+                )
+            RELOGIO.marcar(
+                self._key_to_uniq(key),
+                ABERTO,
+                transporte=self._detect_transport(handle),
+                no=_porta_usb_do_no(abertura.path),
+            )
+            new_handles.append((key, handle))
+
+        with self._io_lock:
+            self._falta_abrir = self._falta_abrir or bool(self._abrindo)
 
         with self._io_lock:
             self._recompute_primary()
@@ -2464,8 +2632,9 @@ class PyDualSenseController(IController):
         with contextlib.suppress(Exception):
             self._evdev.stop()
         with self._io_lock:
+            sobras = self._abandonar_as_aberturas_locked()
             saindo = [(key, self._handles.pop(key)) for key in list(self._handles)]
-            _fechar_os_handles_juntos(handle for _key, handle in saindo)
+            _fechar_os_handles_juntos([*sobras, *(handle for _key, handle in saindo)])
             for key, handle in saindo:
                 self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
             if self._primary_key is not None:

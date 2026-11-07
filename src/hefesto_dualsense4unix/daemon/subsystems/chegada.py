@@ -2,9 +2,10 @@
 
 Ao conectar, a barra sobe na cor do controle, a háptica dá um Toque e o gatilho clica uma vez. O
 Toque tem a nota da unidade, pela cor do plástico e nunca pelo número do jogador: Starlight Blue
-150 Hz, White 165, Cosmic Red 180, Galactic Purple 195. Espera a rajada da Steam passar (um gatilho
-de fim de sequência, como o da lightbar), cede ao que o jogo já escreveu e vale em todo estilo,
-menos o Nativo e o Personalizado, no cabo e no rádio.
+150 Hz, White 165, Cosmic Red 180, Galactic Purple 195. O Toque sai assim que a háptica tem por
+onde; a luz e o clique, que a rajada da Steam pisa, esperam a rajada passar (um gatilho de fim
+de sequência, como o da lightbar). Cede ao que o jogo já escreveu e vale em todo estilo, menos o
+Nativo e o Personalizado, no cabo e no rádio.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.core.relogio_da_conexao import CHEGADA, RELOGIO
 from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -83,6 +85,7 @@ class Chegada:
     def __init__(self, pontas: PontasDaChegada) -> None:
         self._pontas = pontas
         self._pendentes: dict[str, None] = {}
+        self._tocados: set[str] = set()
         self._subindo: frozenset[str] = frozenset()
 
     @property
@@ -98,14 +101,47 @@ class Chegada:
         """Um controle novo na mesa: a Chegada dele fica devida (uma por conexão)."""
         if uniq:
             self._pendentes[uniq] = None
+            self._tocados.discard(uniq)
 
     def esquecer(self) -> None:
         self._pendentes.clear()
+        self._tocados.clear()
+
+    @property
+    def falta_o_toque(self) -> bool:
+        """Alguém chegou e ainda não sentiu o Toque."""
+        return any(uniq not in self._tocados for uniq in tuple(self._pendentes))
+
+    def _o_toque(self, uniq: str) -> bool:
+        forma = formas_de_haptica.forma_da_nota(self._pontas.nota(uniq))
+        return bool(
+            self._pontas.tocar(uniq, ENERGIA_DO_TOQUE, "centro", DURACAO_DO_TOQUE_MS, forma))
+
+    def responder(self) -> int:
+        """A primeira resposta: o Toque de quem chegou, se a háptica já tem por onde.
+
+        A rajada da Steam não alcança o Toque, e ele sai na hora. Quem não tem por onde fica para a
+        próxima chamada, ou para a Chegada inteira. Devolve quantos tocaram.
+        """
+        faltam = [u for u in tuple(self._pendentes) if u not in self._tocados]
+        if not faltam or not self._pontas.pode():
+            return 0
+        na_mesa = self._pontas.conectados()
+        tocaram = 0
+        for uniq in faltam:
+            if uniq in na_mesa and self._o_toque(uniq):
+                self._tocados.add(uniq)
+                RELOGIO.marcar(uniq, CHEGADA)
+                tocaram += 1
+        return tocaram
 
     def tocar(self) -> dict[str, dict[str, bool]]:
         """A Chegada de todo controle pendente que ainda está na mesa. Devolve o que escreveu."""
         pendentes, self._pendentes = tuple(self._pendentes), {}
+        tocados, self._tocados = self._tocados, set()
         if not pendentes or not self._pontas.pode():
+            for uniq in pendentes:
+                RELOGIO.dispensar(uniq, CHEGADA)
             return {}
         na_mesa = self._pontas.conectados()
         quem = [u for u in pendentes if u in na_mesa]
@@ -118,15 +154,15 @@ class Chegada:
             feito[uniq] = {"luz": cor is not None, "toque": False, "gatilho": livre_gatilho}
             if cor is not None:
                 luz[uniq] = cor
-            forma = formas_de_haptica.forma_da_nota(self._pontas.nota(uniq))
-            feito[uniq]["toque"] = bool(
-                self._pontas.tocar(uniq, ENERGIA_DO_TOQUE, "centro", DURACAO_DO_TOQUE_MS, forma))
+            feito[uniq]["toque"] = uniq in tocados or self._o_toque(uniq)
             if livre_gatilho:
                 self._pontas.clicar(uniq)
         self._subir_a_luz(luz)
         for uniq, canais in feito.items():
             if canais["gatilho"]:
                 self._pontas.soltar_o_clique(uniq)
+        for uniq in quem:
+            RELOGIO.marcar(uniq, CHEGADA)
         logger.info("chegada_tocada", controles=len(feito))
         return feito
 

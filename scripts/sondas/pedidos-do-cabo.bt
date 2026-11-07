@@ -1,0 +1,37 @@
+// pedidos-do-cabo.bt — cada pedido de controle que um DualSense no cabo faz, com o tempo gasto.
+//
+// O-CABO-LIGA-E-E-RECONHECIDO-NA-HORA-01 (06/11/2026). A enumeração do `0ce6` leva de 5,2 a 14,7 s,
+// e o trecho antes do `hidraw` varia de 1,1 s para 10,7 s entre dois plugs. A hipótese é o
+// `snd-usb-audio` lendo o mixer com 208 ms por pedido da quirk `n`: uma linha por pedido responde.
+//
+// Uso, plug a plug: `sudo bpftrace scripts/sondas/pedidos-do-cabo.bt`, plugue o cabo, Ctrl+C.
+// `iface` é o `wIndex` do pedido endereçado à interface (áudio 0 a 2, HID 3 no DualSense), e `--`
+// o pedido do aparelho. O total por interface sai no fim, em `@pedidos` e `@gasto_ms`.
+// Só lê (kprobes). `usb_control_msg` é quem dorme a quirk, e o tempo inclui o sono.
+BEGIN { printf("sondas prontas\n"); }
+kprobe:usb_control_msg
+/((struct usb_device *)arg0)->descriptor.idVendor == 0x054c/
+{
+  @t[tid] = nsecs;
+  @alvo[tid] = (arg3 & 0x1f) == 1 ? (int64)(arg5 & 0xff) : -1;
+  @pedido[tid] = arg2;
+}
+kretprobe:usb_control_msg
+/@t[tid]/
+{
+  $ms = (nsecs - @t[tid]) / 1000000;
+  $alvo = @alvo[tid];
+  if ($alvo >= 0) {
+    printf("PEDIDO %s desde_ms=%lld ms=%lld iface=%lld req=0x%02x comm=%s\n",
+           strftime("%H:%M:%S", nsecs), elapsed / 1000000, $ms, $alvo, @pedido[tid], comm);
+  } else {
+    printf("PEDIDO %s desde_ms=%lld ms=%lld iface=-- req=0x%02x comm=%s\n",
+           strftime("%H:%M:%S", nsecs), elapsed / 1000000, $ms, @pedido[tid], comm);
+  }
+  @pedidos[$alvo] = count();
+  @gasto_ms[$alvo] = sum($ms);
+  delete(@t[tid]);
+  delete(@alvo[tid]);
+  delete(@pedido[tid]);
+}
+END { clear(@t); clear(@alvo); clear(@pedido); }

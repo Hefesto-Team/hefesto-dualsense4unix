@@ -1465,6 +1465,11 @@ class RecuoDoPactl:
         with self._lock:
             return self._relogio() < self._ate
 
+    def falta_s(self) -> float:
+        """Quanto falta para o recuo vencer. 0 fora do recuo."""
+        with self._lock:
+            return max(0.0, self._ate - self._relogio()) if self._ate else 0.0
+
     def perguntar(
         self, runner: Callable[[list[str]], str | None], argv: list[str]
     ) -> str | None:
@@ -1491,6 +1496,11 @@ PACTL = RecuoDoPactl()
 def pactl_mudo() -> bool:
     """O `pactl` está em recuo agora — nada desta casa deve perguntar nada a ele."""
     return PACTL.mudo()
+
+
+def falta_do_recuo_do_pactl() -> float:
+    """Quanto falta para se poder perguntar ao `pactl` de novo. 0 fora do recuo."""
+    return PACTL.falta_s()
 
 
 def _anotar_o_prazo(exc: BaseException) -> None:
