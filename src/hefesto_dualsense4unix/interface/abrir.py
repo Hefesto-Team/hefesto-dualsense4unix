@@ -8,17 +8,26 @@ cada parte está em `docs/research/o-porque-dos-modulos.md`, seção `abrir`.
 """
 from __future__ import annotations
 
+import atexit
+import contextlib
+import datetime
 import importlib.util
+import io
 import os
 import re
 import runpy
 import sys
+import threading
+from collections import deque
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TYPE_CHECKING, Any, BinaryIO, TextIO
 
 from hefesto_dualsense4unix.utils.identidade import Identidade
 from hefesto_dualsense4unix.utils.marca_do_parar import marca_do_parar
 from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
+
+if TYPE_CHECKING:
+    from _typeshed import ReadableBuffer
 
 RAIZ = Path(__file__).resolve().parents[3]
 
@@ -168,10 +177,116 @@ def armar_a_volta_a_frente(nome: str) -> None:
 
 
 TETO_DO_DIARIO = 1 << 20
+TETO_DA_FILA_DO_DIARIO = TETO_DO_DIARIO // 4
+ESPERA_DO_DIARIO_NA_SAIDA_S = 2.5
+_JA_TEM_HORA = re.compile(rb"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+
+
+def _a_hora() -> bytes:
+    return datetime.datetime.now().isoformat(timespec="milliseconds").encode()
+
+
+class _FilaDoDiario(io.RawIOBase):
+    """O fim do ``sys.stdout`` da janela: ``write`` só enfileira, e o disco é de um fio próprio.
+
+    Cada linha ganha a hora ao entrar, fora a que já nasce com hora, a do ``structlog``. O pedaço
+    sem quebra junta até a quebra. Acima do teto sai a linha mais velha, e o diário conta quantas
+    saíram, no ponto em que saíram.
+    """
+
+    def __init__(self, arquivo: BinaryIO) -> None:
+        super().__init__()
+        self.arquivo = arquivo
+        self._vez = threading.Condition()
+        self._linhas: deque[bytes] = deque()
+        self._na_fila = 0
+        self._perdidas = 0
+        self._resto = b""
+        self._no_disco = False
+        self._parar = False
+        threading.Thread(target=self._rodar, name="diario-da-janela", daemon=True).start()
+
+    def writable(self) -> bool:
+        return True
+
+    def fileno(self) -> int:
+        return self.arquivo.fileno()
+
+    def _por(self, linha: bytes) -> None:
+        if linha and not _JA_TEM_HORA.match(linha):
+            linha = _a_hora() + b" " + linha
+        self._linhas.append(linha + b"\n")
+        self._na_fila += len(linha) + 1
+        while self._na_fila > TETO_DA_FILA_DO_DIARIO and len(self._linhas) > 1:
+            self._na_fila -= len(self._linhas.popleft())
+            self._perdidas += 1
+
+    def write(self, dados: ReadableBuffer, /) -> int:
+        bruto = bytes(dados)
+        with self._vez:
+            partes = (self._resto + bruto).split(b"\n")
+            self._resto = partes.pop()
+            if len(self._resto) > TETO_DA_FILA_DO_DIARIO:
+                partes.append(self._resto)
+                self._resto = b""
+            for linha in partes:
+                self._por(linha)
+            self._vez.notify_all()
+        return len(bruto)
+
+    def _tirar_da_fila(self) -> bytes | None:
+        with self._vez:
+            self._no_disco = False
+            self._vez.notify_all()
+            while not self._linhas:
+                if self._parar:
+                    return None
+                self._vez.wait()
+            self._no_disco = True
+            perdidas, self._perdidas = self._perdidas, 0
+            dados = b"".join(self._linhas)
+            self._linhas.clear()
+            self._na_fila = 0
+        if not perdidas:
+            return dados
+        frase = "1 linha saiu" if perdidas == 1 else f"{perdidas} linhas saíram"
+        return _a_hora() + f" ({frase}: o disco não acompanhou)\n".encode() + dados
+
+    def _rodar(self) -> None:
+        while (dados := self._tirar_da_fila()) is not None:
+            with contextlib.suppress(OSError):
+                self.arquivo.write(dados)
+
+    def escoar(self, prazo: float) -> bool:
+        """Espera a fila chegar ao disco, com o pedaço sem quebra junto. Diz se chegou."""
+        with self._vez:
+            if self._resto:
+                self._por(self._resto)
+                self._resto = b""
+                self._vez.notify_all()
+            return self._vez.wait_for(
+                lambda: not self._linhas and not self._no_disco, timeout=prazo)
+
+    def close(self) -> None:
+        if self.closed:
+            return
+        self.escoar(ESPERA_DO_DIARIO_NA_SAIDA_S)
+        with self._vez:
+            self._parar = True
+            self._vez.notify_all()
+        super().close()
+
+
+def _escoar_o_diario(fluxo: TextIO, fila: _FilaDoDiario) -> None:
+    """O fim do processo espera o disco, e o fim do processo nunca para por causa dele."""
+    with contextlib.suppress(ValueError):
+        fluxo.flush()
+    with contextlib.suppress(ValueError):
+        fila.escoar(ESPERA_DO_DIARIO_NA_SAIDA_S)
 
 
 def diario_da_janela() -> TextIO | None:
-    """O arquivo onde a janela deixa rastro, ou ``None`` se há terminal."""
+    """O fluxo onde a janela deixa rastro, ou ``None`` se há terminal."""
     fluxo = sys.stderr
     aberto = fluxo is not None and not getattr(fluxo, "closed", False)
     if aberto and hasattr(fluxo, "isatty") and fluxo.isatty():
@@ -184,10 +299,15 @@ def diario_da_janela() -> TextIO | None:
     try:
         if diario.exists() and diario.stat().st_size > TETO_DO_DIARIO:
             diario.replace(casa / "interface.log.1")
-        return diario.open("a", buffering=1, encoding="utf-8", errors="replace")
+        arquivo = diario.open("ab", buffering=0)
     except OSError as erro:
         print(f"  sem diário da janela ({erro})", file=sys.stderr)
         return None
+    fila = _FilaDoDiario(arquivo)
+    escritor = io.TextIOWrapper(
+        io.BufferedWriter(fila), encoding="utf-8", errors="replace", line_buffering=True)
+    atexit.register(_escoar_o_diario, escritor, fila)
+    return escritor
 
 
 def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) -> int:
@@ -204,8 +324,6 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
 
     diario = diario_da_janela()
     if diario is not None:
-        import datetime
-
         sys.stdout = diario
         sys.stderr = diario
         print(f"\n===== a janela abriu em "

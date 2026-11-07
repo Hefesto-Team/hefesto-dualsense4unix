@@ -16,8 +16,9 @@ O que faz, por ordem:
    `interface.log*` (e do diário, quando ele alcança): quantas gravações, de que
    janela, de que `origem`, de que GESTO, e se foi uma rajada de arraste ou uma
    gravação de abertura. O gesto é a linha `[gesto] <página> · <nome>` que o
-   piloto imprime quando o gesto termina: a linha não tem hora, e vem DEPOIS das
-   gravações que o gesto fez (a primeira depois das gravações, na mesma janela).
+   piloto imprime quando o gesto termina: essa linha vem DEPOIS das gravações que o
+   gesto fez (a primeira depois das gravações, na mesma janela). Desde 07/11/2026
+   a linha traz a hora na frente; o `interface.log.1` velho segue sem hora.
 3. Lê a migração de `profiles/loader.py` e diz se a migração toca o brilho.
 4. Diz o escritor que a medida sustenta, e o que falta quando a medida não alcança.
 
@@ -43,11 +44,11 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 _ENDERECO_COM_SEPARADOR = re.compile(r"\b[0-9a-fA-F]{2}(?:[:-][0-9a-fA-F]{2}){5}\b")
 _ENDERECO_COLADO = re.compile(r"\b[0-9a-fA-F]{12}\b")
 _HORA_DO_NOME = re.compile(r"(\d{8})T(\d{6})")
-_LINHA_DO_LOG = re.compile(
-    r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?) \[\w+\s*\] (\S+)\s*(.*)$")
+_HORA_DA_LINHA = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?"
+_LINHA_DO_LOG = re.compile(rf"^({_HORA_DA_LINHA}) \[\w+\s+\] (\S+)\s*(.*)$")
 _JANELA = re.compile(r"a janela abriu em (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
 _PARES = re.compile(r"(\w+)=(\S+)")
-_GESTO = re.compile(r"^\[gesto(?: falhou)?\] (\S+) · ([^:→]+)")
+_GESTO = re.compile(rf"^(?:{_HORA_DA_LINHA} )?\[gesto(?: falhou)?\] (\S+) · ([^:→]+)")
 _DIARIO = re.compile(
     r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})[^ ]* \S+ [^ ]+\[\d+\]: (.*)$")
 

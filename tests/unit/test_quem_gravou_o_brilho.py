@@ -89,7 +89,7 @@ def lar(tmp_path: pathlib.Path) -> dict[str, pathlib.Path]:
         "[gesto] 04-iluminacao.html · cor → aplicado",
         "2026-09-26T19:11:00.400000 [info     ] profile_salvo                  "
         "arquivo=freestyle.json origem=interface-nova pid=60112",
-        "[gesto] 02-controles.html · salvar → aplicado",
+        "2026-09-26T19:11:00.500 [gesto] 02-controles.html · salvar → aplicado",
         "===== a janela abriu em 2026-09-28T09:00:00 =====",
         "2026-09-28T09:00:01.000000 [info     ] perfis_de_jogo_semeados        jogos=1",
         "2026-09-28T09:00:01.050000 [info     ] profile_salvo                  "
@@ -191,7 +191,7 @@ def test_diz_os_candidatos_e_o_que_falta_quando_sao_varias(ens, lar, capsys):
 
 
 def test_cada_gravacao_leva_o_gesto_que_a_fez(ens, lar, capsys):
-    """O `[gesto]` não tem hora e sai DEPOIS das gravações do gesto."""
+    """O `[gesto]` sai DEPOIS das gravações do gesto, com hora ou na forma velha, sem hora."""
     saida = _rodar(ens, lar, capsys)
     assert ("os gestos que gravaram: 02-controles.html · salvar (2), "
             "04-iluminacao.html · brilho (2).") in saida
@@ -229,3 +229,23 @@ def test_a_migracao_que_fala_de_brilho_e_apontada(ens, lar, capsys):
 def test_so_a_peca_pedida(ens, lar, capsys):
     saida = _rodar(ens, lar, capsys, "--peca", "Z")
     assert "Controle B" not in saida
+
+
+def test_a_linha_da_janela_com_hora_nao_vira_evento_do_log(ens):
+    """A linha `[janela]` ganhou hora: o anterior de uma gravação segue o do `structlog`."""
+    assert ens._LINHA_DO_LOG.match("2026-09-26T19:11:00.500 [janela] fechou: x") is None
+    assert ens._LINHA_DO_LOG.match(
+        "2026-09-26T19:11:00.400000 [info     ] profile_salvo  arquivo=x").group(2) == (
+        "profile_salvo")
+    assert ens._LINHA_DO_LOG.match(
+        "2026-09-26T19:11:00.400000 [critical ] queda").group(2) == "queda"
+
+
+def test_as_duas_formas_do_gesto_contam(ens):
+    for linha in ("[gesto] 02-controles.html · salvar → aplicado",
+                  "2026-09-26T19:11:00.500 [gesto] 02-controles.html · salvar → aplicado",
+                  "[gesto falhou] 02-controles.html · salvar: não",
+                  "2026-09-26T19:11:00.500 [gesto falhou] 02-controles.html · salvar: não"):
+        casou = ens._GESTO.match(linha)
+        assert casou is not None, linha
+        assert (casou.group(1), casou.group(2).strip()) == ("02-controles.html", "salvar"), linha
