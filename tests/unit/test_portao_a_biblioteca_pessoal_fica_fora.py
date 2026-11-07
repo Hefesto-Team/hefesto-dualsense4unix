@@ -179,14 +179,14 @@ def test_a_revisao_e_medida_pelo_que_o_git_guarda(repo: Path, lista: Path, tmp_p
 def test_a_divida_declarada_avisa_e_a_divida_morta_reprova(
     repo: Path, lista: Path, tmp_path: Path
 ) -> None:
-    _escreve(repo, "mockup/09-sistema.html", "<p>Pássaro Azul Distante</p>\n")
+    _escreve(repo, "docs/data/decisoes-de-produto.csv", "Pássaro Azul Distante\n")
     r = _roda(repo, "--lista", str(lista), env=_ambiente(tmp_path))
     assert r.returncode == 0, r.stdout
     assert "dívida declarada" in r.stdout
-    _escreve(repo, "mockup/09-sistema.html", "<p>Jogo Fictício A</p>\n")
+    _escreve(repo, "docs/data/decisoes-de-produto.csv", "Jogo Fictício A\n")
     morta = _roda(repo, "--lista", str(lista), env=_ambiente(tmp_path))
     assert morta.returncode == 1
-    assert "mockup/09-sistema.html: dívida morta" in morta.stdout
+    assert "docs/data/decisoes-de-produto.csv: dívida morta" in morta.stdout
 
 
 def test_o_ramo_que_o_push_leva_e_medido_pelo_nome(repo: Path, lista: Path, tmp_path: Path) -> None:
