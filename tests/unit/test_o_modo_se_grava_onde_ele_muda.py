@@ -26,7 +26,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import hashlib
-from collections.abc import Iterator
+from collections.abc import Coroutine, Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Literal
@@ -37,6 +37,7 @@ import structlog
 from hefesto_dualsense4unix.daemon import launch_env
 from hefesto_dualsense4unix.daemon import lifecycle
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+from hefesto_dualsense4unix.daemon.ipc_server import _o_perfil_em_dia
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
@@ -235,9 +236,20 @@ def _freestyle_ligado_em(d: _DaemonDaCasa, caminho: str) -> None:
     _pad_de_pe(d, caminho)
 
 
+def _pelo_ipc(pedido: Coroutine[Any, Any, dict[str, Any]]) -> dict[str, Any]:
+    """O handler como o servidor o chama: a resposta espera o modo chegar ao disco."""
+
+    async def corpo() -> dict[str, Any]:
+        resposta = await pedido
+        await _o_perfil_em_dia()
+        return resposta
+
+    return asyncio.run(corpo())
+
+
 def _chip(h: _Handlers, caminho: str) -> dict[str, Any]:
     """O pedido que o chip da aba Jogar manda (o passo do plano, à mão)."""
-    return asyncio.run(h._handle_gamepad_emulation_set(
+    return _pelo_ipc(h._handle_gamepad_emulation_set(
         {"enabled": True, "caminho": caminho, "origin": "manual"}))
 
 
@@ -283,7 +295,7 @@ def test_a_escolha_sobrevive_ao_ativar_e_ao_boot(ensaio: _Ensaio) -> None:
     _chip(h, "dualsense")
     paradas = ensaio.paradas
 
-    asyncio.run(h._handle_profile_switch({"name": FREESTYLE}))
+    _pelo_ipc(h._handle_profile_switch({"name": FREESTYLE}))
 
     assert ensaio.paradas == paradas, (
         f"a ativação à mão do Freestyle parou o pad {ensaio.paradas - paradas} vez(es): "
@@ -371,7 +383,7 @@ def test_o_nativo_a_mao_grava_native(ensaio: _Ensaio) -> None:
     _pad_de_pe(d, "xbox")
     h = _Handlers(d, _gerente(d))
 
-    asyncio.run(h._handle_native_mode_set({"enabled": True, "origin": "manual"}))
+    _pelo_ipc(h._handle_native_mode_set({"enabled": True, "origin": "manual"}))
 
     modo = _modo_no_disco(JOGO)
     assert modo is not None and modo.kind == "native", f"o Nativo não foi ao perfil: {modo!r}"
@@ -398,7 +410,7 @@ def test_o_nativo_ja_aceso_grava_native_no_perfil_que_divergiu(ensaio: _Ensaio) 
     assert _modo_no_disco(JOGO).kind == "gamepad", "premissa: o perfil divergiu"  # type: ignore[union-attr]
     h = _Handlers(d, _gerente(d))
 
-    asyncio.run(h._handle_native_mode_set({"enabled": True, "origin": "manual"}))
+    _pelo_ipc(h._handle_native_mode_set({"enabled": True, "origin": "manual"}))
 
     modo = _modo_no_disco(JOGO)
     assert modo is not None and modo.kind == "native", (
@@ -419,7 +431,7 @@ def test_a_navegacao_a_mao_grava_desktop(ensaio: _Ensaio) -> None:
     d.store.set_active_profile(JOGO)
     h = _Handlers(d, _gerente(d))
 
-    asyncio.run(h._handle_desktop_arranjo_apply({"origin": "manual"}))
+    _pelo_ipc(h._handle_desktop_arranjo_apply({"origin": "manual"}))
 
     modo = _modo_no_disco(JOGO)
     assert modo is not None and modo.kind == "desktop", f"a Navegação não foi ao perfil: {modo!r}"
@@ -442,7 +454,7 @@ def test_ligar_sem_caminho_saindo_do_nativo_grava_gamepad(ensaio: _Ensaio) -> No
     d.set_native_mode(True, origin="profile")
     h = _Handlers(d, _gerente(d))
 
-    asyncio.run(h._handle_gamepad_emulation_set({"enabled": True, "origin": "manual"}))
+    _pelo_ipc(h._handle_gamepad_emulation_set({"enabled": True, "origin": "manual"}))
 
     assert d.is_native_mode() is False, "premissa: o pedido saiu do Nativo"
     modo = _modo_no_disco(JOGO)
@@ -458,8 +470,8 @@ def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(ensaio: _Ensaio) -> None:
     _pad_de_pe(d, "xbox")
     h = _Handlers(d, _gerente(d))
 
-    asyncio.run(h._handle_native_mode_set({"enabled": False, "origin": "manual"}))
-    asyncio.run(h._handle_gamepad_emulation_set({"enabled": False, "origin": "manual"}))
+    _pelo_ipc(h._handle_native_mode_set({"enabled": False, "origin": "manual"}))
+    _pelo_ipc(h._handle_gamepad_emulation_set({"enabled": False, "origin": "manual"}))
 
     assert _modo_no_disco(JOGO) is None
 
@@ -483,7 +495,9 @@ def _chamadas(arvore: ast.AST, nome: str) -> list[int]:
             alvo = no.func
             chamado = (alvo.id if isinstance(alvo, ast.Name)
                        else alvo.attr if isinstance(alvo, ast.Attribute) else "")
-            if chamado == nome:
+            pela_trava = chamado == "sob_a_trava_do_perfil" and bool(no.args) and (
+                isinstance(no.args[0], ast.Name) and no.args[0].id == nome)
+            if chamado == nome or pela_trava:
                 linhas.append(no.lineno)
     return linhas
 
@@ -590,11 +604,11 @@ def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
     _perfil(FREESTYLE, mode={"kind": "gamepad", "caminho": "dualsense"})
     _perfil(JOGO, mode=None, match=MatchCriteria(window_class=[JANELA_DO_JOGO]))
     h = _Handlers(d, _gerente(d))
-    asyncio.run(h._handle_profile_switch({"name": FREESTYLE}))
+    _pelo_ipc(h._handle_profile_switch({"name": FREESTYLE}))
     assert d._gamepad_device is not None, "premissa: o Freestyle ligou o pad"
     paradas = ensaio.paradas
 
-    asyncio.run(h._handle_profile_switch({"name": JOGO}))
+    _pelo_ipc(h._handle_profile_switch({"name": JOGO}))
 
     if pad_da_maquina:
         assert ensaio.paradas == paradas and d._gamepad_device is not None, (

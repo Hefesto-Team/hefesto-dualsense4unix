@@ -466,6 +466,12 @@ class CoopManager:
             self._publicar_a_mesa(None)
             self._repintar_se_o_numero_mudou()
             return
+        primary = self._primary_identity()
+        if _o_posto_espera_o_mac(self, primary):
+            self._seguir_o_p1_emprestado(False)
+            logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
+            self._retry_spawn = True
+            return
         achados = nos if nos is not None else self._nos_de_agora(force, origem)
         if achados is None:
             self._publicar_a_mesa(None)
@@ -477,8 +483,7 @@ class CoopManager:
         )
         from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
-        primary = self._primary_identity()
-        vistos = {} if _o_posto_espera_o_mac(self, primary) else achados[0]
+        vistos = achados[0]
         sozinho = not vistos and not _a_mesa_tem_dualsense(self)
         self._seguir_o_p1_emprestado(sozinho)
         if not sozinho and _o_posto_sem_mac(self, primary):

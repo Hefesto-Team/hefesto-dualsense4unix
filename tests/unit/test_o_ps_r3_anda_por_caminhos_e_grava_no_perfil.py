@@ -54,6 +54,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles import loader
+from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
 from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     Profile,
@@ -235,6 +236,7 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
         assert (vivo.backend if vivo is not None else None) == canal, f"aperto {aperto}"
         if vivo is not None:
             assert vivo.flavor == mascara, f"aperto {aperto}: a máscara não seguiu o modo"
+        FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
         gravado = loader.load_profile(PERFIL).mode
         assert gravado is not None
         assert (gravado.kind, gravado.caminho) == modo, (

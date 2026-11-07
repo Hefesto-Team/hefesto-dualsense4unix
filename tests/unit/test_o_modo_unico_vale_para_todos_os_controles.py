@@ -17,6 +17,7 @@ MORDIDAS:
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any
 
 import pytest
@@ -27,6 +28,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles import loader
+from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
 from hefesto_dualsense4unix.profiles.schema import Profile
 from tests.unit.test_a_mascara_do_cartao_vale_com_o_vpad_de_pe import (
     P1,
@@ -44,6 +46,14 @@ __all__ = ["_ensaio"]
 
 def _todos(d: Any) -> list[Any]:
     return [d._gamepad_device, _vpad_do(P2), _vpad_do(P3)]
+
+
+async def _o_gesto_assentou(d: Any, esperado: str) -> None:
+    """Os outros controles seguem na volta da descoberta, e o modo vai ao disco no fio do perfil."""
+    prazo = time.monotonic() + 5.0
+    while [v.flavor for v in _todos(d)] != [esperado] * 3 and time.monotonic() < prazo:
+        await asyncio.sleep(0.005)
+    FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
 
 
 def _perfil(controles: dict[str, Any], modo: dict[str, Any] | None = None) -> Profile:
@@ -78,6 +88,7 @@ async def test_o_ps_l3_anda_o_modo_de_todos() -> None:
 
     for esperado in ("xbox", "nintendo", "dualsense"):
         await gesto()
+        await _o_gesto_assentou(d, esperado)
         assert [v.flavor for v in _todos(d)] == [esperado] * 3, esperado
         modo = loader.load_profile(PERFIL).mode
         assert modo is not None and modo.gamepad_flavor == esperado
