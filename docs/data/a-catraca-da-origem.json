@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1214945,
+      "piso": 1215663,
       "por_item": {
-        "docs": 106490,
-        "scripts": 111733,
-        "src": 307052,
-        "tests": 689670
+        "docs": 106491,
+        "scripts": 111830,
+        "src": 307069,
+        "tests": 690273
       },
-      "razao": "tamanho: +2471 linhas (1212474 -> 1214945), pagas por Origem: D-2309-A-MIRA-VIRTUAL, identidade.pareamento; registrado no fecho, topo 5442cda226d6",
+      "razao": "tamanho: +718 linhas (1214945 -> 1215663), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 212345f75424",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1863,10 +1863,16 @@
           "de": 1212474,
           "para": 1214945,
           "razao": "tamanho: +2471 linhas (1212474 -> 1214945), pagas por Origem: D-2309-A-MIRA-VIRTUAL, identidade.pareamento; registrado no fecho, topo 5442cda226d6"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1214945,
+          "para": 1215663,
+          "razao": "tamanho: +718 linhas (1214945 -> 1215663), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 212345f75424"
         }
       ],
       "unidade": "linhas",
-      "universo": 3383
+      "universo": 3386
     }
   }
 }
