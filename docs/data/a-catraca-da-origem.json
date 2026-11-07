@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217683,
+      "piso": 1223340,
       "por_item": {
-        "docs": 106739,
+        "docs": 106740,
         "scripts": 111831,
-        "src": 307269,
-        "tests": 691844
+        "src": 308875,
+        "tests": 695894
       },
-      "razao": "tamanho: +1397 linhas (1216286 -> 1217683), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 9fce2a0a8261",
+      "razao": "tamanho: +5657 linhas (1217683 -> 1223340), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento, vibracao.haptics_vcm, vibracao.rumble.direito, vibracao.rumble.esquerdo; registrado no fecho, topo 95e01b69006e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1881,10 +1881,16 @@
           "de": 1216286,
           "para": 1217683,
           "razao": "tamanho: +1397 linhas (1216286 -> 1217683), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 9fce2a0a8261"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1217683,
+          "para": 1223340,
+          "razao": "tamanho: +5657 linhas (1217683 -> 1223340), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento, vibracao.haptics_vcm, vibracao.rumble.direito, vibracao.rumble.esquerdo; registrado no fecho, topo 95e01b69006e"
         }
       ],
       "unidade": "linhas",
-      "universo": 3392
+      "universo": 3403
     }
   }
 }
