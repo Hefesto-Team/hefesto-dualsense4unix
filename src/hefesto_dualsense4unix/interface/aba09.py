@@ -442,7 +442,7 @@ MIOLO = f'''
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
 [23:41:09] perfil "Jogo um" aplicado aos {N} · gatilho L2 escrito, sem leitura de volta
 [23:41:12] rádio: 1 adaptador · {_NO_RADIO} {'controle' if _NO_RADIO == 1 else 'controles'} · sem fila
-[23:41:15] janela da frente: steam_app_100010 · perfil "Jogo um" mantido</div>
+[23:41:15] janela da frente: steam_app_9900010 · perfil "Jogo um" mantido</div>
         </div>
 
       </div>

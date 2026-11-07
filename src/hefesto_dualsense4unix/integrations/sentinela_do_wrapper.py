@@ -10,7 +10,7 @@ no jogo, enquanto o perfil do jogo seguia ativo no controle, com tudo
 funcionando fora do jogo.
 
 O daemon estava SAUDÁVEL o tempo todo — vpad P1 com os quatro nós, grab retido
-(`grab=True ok=True state=held`), `launch_env/steam_app_100040.env`
+(`grab=True ok=True state=held`), `launch_env/steam_app_9900040.env`
 materializado com o conteúdo certo. Ele fez a parte dele. O arquivo nunca foi
 lido, **porque quem o lê é o wrapper, e o wrapper não rodou**.
 
