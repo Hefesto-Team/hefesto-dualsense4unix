@@ -149,7 +149,7 @@ from hefesto_dualsense4unix.integrations.gesto_de_pareamento import (
     Resultado,
     e_controle,
 )
-from hefesto_dualsense4unix.integrations.gesto_de_reconexao import mascarar
+from hefesto_dualsense4unix.integrations.gesto_de_reconexao import mascarar, tem_hid_no_kernel
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -222,6 +222,20 @@ ESPERA_DO_DESLIGAR_S = 3.0
 VALIDADE_DOS_ADAPTADORES_S = 2.0
 
 ESPERA_DA_PONTE_S = 20.0
+
+RECUOS_DO_RELIGADOR_S = (5.0, 15.0, 45.0)
+
+RECUO_LONGO_DO_RELIGADOR_S = 120.0
+
+JANELA_DO_RELIGADOR_S = 600.0
+
+ESPERA_DO_CONNECT_DO_RELIGADOR_S = 6.0
+
+ESPERA_DA_TRAVA_DO_RELIGADOR_S = 0.5
+
+SAIDAS_QUE_RELIGAM = frozenset({bluez_dbus.SAIDA_CAIU, bluez_dbus.SAIDA_SEM_RAZAO})
+
+_TODOS_OS_CAIDOS = "*"
 
 INTERVALO_DA_FAXINA_S = 30.0
 
@@ -457,6 +471,21 @@ def _o_bluez_diz_controle(objetos: Iterable[bluez_dbus.AparelhoDoBluez]) -> bool
     return None
 
 
+@dataclass
+class _Chamada:
+    """A janela do religador para um controle: desde quando e a próxima tentativa."""
+
+    inicio: float
+    proxima: float
+    passo: int = 0
+
+    def adiantar(self, agora: float) -> None:
+        self.passo += 1
+        recuos = RECUOS_DO_RELIGADOR_S
+        self.proxima = agora + (
+            recuos[self.passo] if self.passo < len(recuos) else RECUO_LONGO_DO_RELIGADOR_S)
+
+
 @dataclass(frozen=True)
 class _Foto:
     adaptadores: Mapping[str, bluez_dbus.AdaptadorDoBluez]
@@ -584,6 +613,7 @@ class CentralDoRadio:
         *,
         dono: bluez_dbus.LeitorDoBluez | None = None,
         onde_esta: OndeEsta | None = None,
+        no_kernel: Callable[[str], bool | None] | None = None,
         movimento: Movimentacao | None = None,
         esquecer_na_ponte: EsquecerNaPonte | None = None,
         abrir_janela: AbrirJanela | None = None,
@@ -599,6 +629,7 @@ class CentralDoRadio:
     ) -> None:
         self._dono_fixo = dono
         self._onde_esta = onde_esta or _onde_esta_pelo_hid_phys
+        self._no_kernel = no_kernel or tem_hid_no_kernel
         self._movimento = movimento
         self._esquecer_na_ponte = esquecer_na_ponte or esquecer_pela_ponte
         self._abrir_janela = abrir_janela or _janela_de_busca
@@ -643,6 +674,10 @@ class CentralDoRadio:
         self._sem_lapide_dito: set[tuple[str, str]] = set()
         self._pedido_da_janela = ""
         self._ouvindo: object | None = None
+        self._religar_pedidos: set[str] = set()
+        self._chamadas: dict[str, _Chamada] = {}
+        self._onde_caiu: dict[str, str] = {}
+        self._estado_do_radio: tuple[str, frozenset[str]] | None = None
         if dono is not None:
             self._ouvir(dono)
 
@@ -669,6 +704,7 @@ class CentralDoRadio:
         """Chega no fio do barramento: só anota e pede — nada de D-Bus aqui."""
         if aviso == bluez_dbus.AVISO_DESLIGOU:
             self._pedir_a_limpeza(QUANDO_O_CONTROLE_DESLIGOU)
+            self._anotar_a_queda(dados)
         elif aviso == bluez_dbus.AVISO_SAIU_PAREADO:
             adaptador = endereco_de(dados.get("adaptador"))
             aparelho = endereco_de(dados.get("aparelho"))
@@ -678,6 +714,23 @@ class CentralDoRadio:
             with self._tranca_da_limpeza:
                 if not any(p[:2] == pendente[:2] for p in self._saidas_de_fora):
                     self._saidas_de_fora.append(pendente)
+
+    def _anotar_a_queda(self, dados: Mapping[str, Any]) -> None:
+        """Onde o controle estava no ar, e o pedido ao religador se a queda não foi um gesto."""
+        aparelho = endereco_de(dados.get("aparelho"))
+        adaptador = endereco_de(dados.get("adaptador"))
+        if aparelho is None:
+            return
+        with self._tranca_da_limpeza:
+            if adaptador is not None:
+                self._onde_caiu[aparelho] = adaptador
+        if dados.get("saida") in SAIDAS_QUE_RELIGAM:
+            self.pedir_o_religador(aparelho)
+
+    def pedir_o_religador(self, aparelho: str = _TODOS_OS_CAIDOS) -> None:
+        """Abre a janela de ``aparelho``, ou de todo controle caído, na volta seguinte."""
+        with self._tranca_da_limpeza:
+            self._religar_pedidos.add(aparelho)
 
     def _pedir_a_limpeza(self, por_que: str) -> None:
         """Pede UMA volta da limpeza ao fio da faxina (:meth:`limpar`)."""
@@ -2465,6 +2518,7 @@ class CentralDoRadio:
     def _faxinar_sempre(self, intervalo_s: float, passo_s: float | None = None) -> None:
         passo = min(intervalo_s, INTERVALO_DOS_NOMES_S) if passo_s is None else float(passo_s)
         desde_a_faxina = 0.0
+        self.pedir_o_religador()
         while not self._parar.is_set():
             pedida = self._limpeza_pedida.wait(passo)
             if self._parar.is_set():
@@ -2484,9 +2538,144 @@ class CentralDoRadio:
             if faxina or vivo:
                 self.tirar_as_meias_chaves()
                 self.cuidar_dos_nomes()
+                self.religar()
             if faxina:
                 desde_a_faxina = 0.0
                 self.limpar(NA_VOLTA_DA_FAXINA)
+
+    def religar(self) -> str | None:
+        """Uma volta do religador: chama no máximo UM controle, e diz qual. Nunca levanta.
+
+        O controle pareado e confiável, fora da mesa, sem cabo e sem conexão no BlueZ é chamado de
+        volta, um ``Connect`` por vez, sob a trava comum. A janela abre na subida do daemon, na
+        queda (:data:`SAIDAS_QUE_RELIGAM`) e na volta de um adaptador ou do ``bluetoothd``, e cala
+        em :data:`JANELA_DO_RELIGADOR_S`. Nenhuma chave muda aqui: a chave velha para a chamada e
+        fica com a cura de pareamento.
+        """
+        try:
+            dono = self._dono_sem_abrir()
+            if dono is None:
+                return None
+            self._perceber_a_volta_do_radio(dono)
+            agora = self._relogio()
+            if not self._abrir_as_chamadas(dono, agora) or self._ocupada():
+                return None
+            if self._janela_da_busca is not None:
+                return None
+            vencidas = [(c.proxima, a) for a, c in self._chamadas.items() if c.proxima <= agora]
+            if not vencidas:
+                return None
+            aparelho = min(vencidas)[1]
+            return aparelho if self._chamar_de_volta(dono, aparelho, agora) else None
+        except Exception:
+            logger.warning("central_religador_levantou", exc_info=True)
+            return None
+
+    def _perceber_a_volta_do_radio(self, dono: bluez_dbus.LeitorDoBluez) -> None:
+        """Adaptador novo no ar, ou outro ``bluetoothd``: reabre a janela de quem está fora."""
+        adaptadores = dono.adaptadores()
+        if adaptadores is None:
+            return
+        ligados = frozenset(a.endereco for a in adaptadores if a.ligado is not False)
+        agora = (dono.dono_do_bluez(), ligados)
+        antes, self._estado_do_radio = self._estado_do_radio, agora
+        if antes is not None and (agora[0] != antes[0] or ligados - antes[1]):
+            self.pedir_o_religador()
+
+    def _os_caidos(self, dono: bluez_dbus.LeitorDoBluez) -> frozenset[str] | None:
+        """Os controles pareados e confiáveis fora do ar, por endereço. ``None`` = não sei."""
+        aparelhos = dono.aparelhos()
+        if aparelhos is None:
+            return None
+        por_endereco: dict[str, list[bluez_dbus.AparelhoDoBluez]] = {}
+        for objeto in aparelhos:
+            por_endereco.setdefault(objeto.endereco, []).append(objeto)
+        caidos: set[str] = set()
+        for endereco, objetos in por_endereco.items():
+            pareado = any(o.pareado is True and o.confiavel is True and o.vinculado is not False
+                          for o in objetos)
+            if not pareado or _o_bluez_diz_controle(objetos) is not True:
+                continue
+            if self._no_ar(endereco, dono):
+                continue
+            kernel = self._no_kernel(endereco)
+            if kernel is None:
+                return None
+            if not kernel:
+                caidos.add(endereco)
+        return frozenset(caidos)
+
+    def _abrir_as_chamadas(self, dono: bluez_dbus.LeitorDoBluez, agora: float) -> bool:
+        """Abre o que foi pedido e fecha quem voltou ou venceu. Diz se sobrou chamada."""
+        with self._tranca_da_limpeza:
+            pedidos, self._religar_pedidos = self._religar_pedidos, set()
+        if not pedidos and not self._chamadas:
+            return False
+        caidos = self._os_caidos(dono)
+        if caidos is None:
+            with self._tranca_da_limpeza:
+                self._religar_pedidos |= pedidos
+            return False
+        for aparelho in (pedidos | caidos if _TODOS_OS_CAIDOS in pedidos else pedidos):
+            if aparelho != _TODOS_OS_CAIDOS:
+                self._chamadas[aparelho] = _Chamada(agora, agora + RECUOS_DO_RELIGADOR_S[0])
+        for aparelho, chamada in list(self._chamadas.items()):
+            if aparelho not in caidos and agora >= chamada.proxima:
+                del self._chamadas[aparelho]
+                logger.info("central_religou", aparelho=mascarar(aparelho),
+                            tentativas=chamada.passo)
+            elif agora - chamada.inicio >= JANELA_DO_RELIGADOR_S:
+                del self._chamadas[aparelho]
+                logger.info("central_religador_calou", aparelho=mascarar(aparelho),
+                            tentativas=chamada.passo)
+        return bool(self._chamadas)
+
+    def _onde_esteve(self, aparelho: str) -> str:
+        """O adaptador em que o controle esteve no ar por último, pelo kernel ou pela queda."""
+        with self._tranca:
+            lembrada = self._lembrancas.get(aparelho)
+        if lembrada is not None:
+            return lembrada[0]
+        with self._tranca_da_limpeza:
+            return self._onde_caiu.get(aparelho, "")
+
+    def _um_connect(self, dono: bluez_dbus.LeitorDoBluez, no: str) -> str | None:
+        """Um ``Connect`` sob a trava comum: o motivo, ou ``None`` se a vez não veio."""
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        try:
+            with bluez_dbus.na_trava(QUEM, prazo_s=ESPERA_DA_TRAVA_DO_RELIGADOR_S):
+                if self._ocupada():
+                    return None
+                escrita = dono.conectar(no, espera=ESPERA_DO_CONNECT_DO_RELIGADOR_S, quem=QUEM)
+        except TravaOcupadaError:
+            return None
+        if escrita.erro == bluez_dbus.TRAVA_OCUPADA:
+            return None
+        return bluez_dbus.motivo_do_connect(escrita)
+
+    def _chamar_de_volta(
+        self, dono: bluez_dbus.LeitorDoBluez, aparelho: str, agora: float
+    ) -> bool:
+        """Tenta os candidatos, em sequência, e marca o próximo passo. Diz se tentou."""
+        candidatos = dono.caminhos_para_conectar(aparelho, primeiro=self._onde_esteve(aparelho))
+        motivos: list[str] = []
+        for no in candidatos or ():
+            motivo = self._um_connect(dono, no)
+            if motivo is None:
+                break
+            motivos.append(motivo)
+            if motivo in ("", bluez_dbus.MOTIVO_JA_CONECTADO):
+                break
+        if not motivos:
+            return False
+        self._chamadas[aparelho].adiantar(agora)
+        logger.info("central_religador_tentou", aparelho=mascarar(aparelho),
+                    tentativa=self._chamadas[aparelho].passo, motivos=motivos)
+        if motivos[-1] in ("", bluez_dbus.MOTIVO_JA_CONECTADO) or all(
+                m == bluez_dbus.MOTIVO_CHAVE_VELHA for m in motivos):
+            del self._chamadas[aparelho]
+        return True
 
     def _o_dono_e_a_foto_viva(self) -> bool:
         """O dono de agora lê da foto em memória (o Gio), e não de subprocessos."""

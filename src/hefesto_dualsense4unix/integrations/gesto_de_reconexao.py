@@ -156,11 +156,17 @@ def _leitor(executar: Executar | None) -> bluez_dbus.LeitorDoBluez:
     return bluez_dbus.dono() if executar is None else bluez_dbus.pelo_executor(executar)
 
 
-def _caminho(leitor: bluez_dbus.LeitorDoBluez, mac: str) -> str | None:
+def _candidatos(leitor: bluez_dbus.LeitorDoBluez, mac: str) -> tuple[str, ...]:
+    """Os nós deste controle, pela ordem de ``LeitorDoBluez.caminhos_para_conectar``."""
     alvo = _normalizar(mac)
     if alvo is None:
-        return None
-    return leitor.caminho_do_aparelho(alvo.replace("_", ":").lower())
+        return ()
+    return leitor.caminhos_para_conectar(alvo.replace("_", ":").lower()) or ()
+
+
+def _caminho(leitor: bluez_dbus.LeitorDoBluez, mac: str) -> str | None:
+    candidatos = _candidatos(leitor, mac)
+    return candidatos[0] if candidatos else None
 
 
 def _conectado(leitor: bluez_dbus.LeitorDoBluez, caminho: str) -> bool | None:
@@ -170,7 +176,7 @@ def _conectado(leitor: bluez_dbus.LeitorDoBluez, caminho: str) -> bool | None:
 
 
 def caminho_do_controle(mac: str, *, executar: Executar | None = None) -> str | None:
-    """O caminho D-Bus deste endereço, em QUALQUER adaptador. ``None`` se não há."""
+    """O caminho D-Bus deste endereço, o primeiro da ordem de conectar. ``None`` se não há."""
     return _caminho(_leitor(executar), mac)
 
 
@@ -230,21 +236,30 @@ def _modalias_dos_dualsense() -> tuple[str, ...]:
     return tuple(f"v{PHYS_VENDOR:04X}p{pid:04X}" for pid in sorted(PHYS_PRODUCTS))
 
 
+def _juntar_o_conectado(
+    antes: bool | None, novo: bool | None
+) -> bool | None:
+    """Dois adaptadores, um controle: conectado em um é conectado; quem não respondeu é ``None``."""
+    if antes is True or novo is True:
+        return True
+    return None if antes is None or novo is None else False
+
+
 def dualsenses_do_radio(
     *, executar: Executar | None = None
 ) -> list[tuple[str, bool | None]]:
-    """Os DualSense que o BlueZ conhece: ``[(mac, conectado)]``, pela árvore.
+    """Os DualSense que o BlueZ conhece: ``[(mac, conectado)]``, pela árvore, um por endereço.
 
     ``conectado`` é a resposta de três valores de :func:`esta_conectado` —
     ``None`` quer dizer *"não deu para perguntar"*, e quem chama não pode lê-lo
     como *"está fora"*.
 
     A LISTA É DA ÁRVORE INTEIRA, de todos os adaptadores: o índice ``hciN``
-    inverte entre boots, e é a mesma razão de :func:`caminho_do_controle` não
-    receber adaptador nenhum.
+    inverte entre boots, e cada controle entra uma vez, mesmo com vínculo em dois
+    adaptadores: quem escolhe o adaptador é :func:`reconectar`.
     """
     leitor = _leitor(executar)
-    achados: list[tuple[str, bool | None]] = []
+    achados: dict[str, bool | None] = {}
     for caminho in leitor.caminhos() or ():
         mac = bluez_dbus.endereco_do_aparelho(caminho)
         if mac is None:
@@ -254,8 +269,15 @@ def dualsenses_do_radio(
             par.upper() in modalias.upper() for par in _modalias_dos_dualsense()
         ):
             continue
-        achados.append((mac, _conectado(leitor, caminho)))
-    return achados
+        conectado = _conectado(leitor, caminho)
+        achados[mac] = _juntar_o_conectado(achados.get(mac, False), conectado)
+    return list(achados.items())
+
+
+def _conectou(leitor: bluez_dbus.LeitorDoBluez, caminho: str) -> bool:
+    escrita = leitor.conectar(caminho, quem=QUEM)
+    return escrita.feita or (
+        bluez_dbus.motivo_do_connect(escrita) == bluez_dbus.MOTIVO_JA_CONECTADO)
 
 
 def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
@@ -263,12 +285,12 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
     mascara = mascarar(mac)
-    caminho = caminho_do_controle(mac, executar=executar)
-    if caminho is None:
+    leitor = _leitor(executar)
+    candidatos = _candidatos(leitor, mac)
+    if not candidatos:
         logger.info("reconexao_sem_alvo_no_bluez", endereco=mascara)
         return Resultado(ESTADO_SEM_ALVO, FRASE_SEM_ALVO, mascara)
 
-    leitor = _leitor(executar)
     try:
         with bluez_dbus.na_trava(QUEM):
             com_hid = tem_hid_no_kernel(mac)
@@ -279,15 +301,15 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
                 if com_hid is None:
                     logger.info("reconexao_sem_o_kernel_elo_preservado", endereco=mascara)
                     return Resultado(ESTADO_NAO_DEU, FRASE_SEM_O_KERNEL, mascara)
-                if not leitor.desconectar(caminho, quem=QUEM).feita:
+                if not leitor.desconectar(candidatos[0], quem=QUEM).feita:
                     logger.warning("reconexao_disconnect_nao_deu", endereco=mascara)
                     return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)
                 logger.info("reconexao_elo_morto_derrubado", endereco=mascara)
-            voltou = leitor.conectar(caminho, quem=QUEM)
+            voltou = any(_conectou(leitor, candidato) for candidato in candidatos)
     except TravaOcupadaError:
         logger.warning("reconexao_trava_ocupada", endereco=mascara)
         return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)
-    if not voltou.feita:
+    if not voltou:
         logger.info("reconexao_connect_recusado", endereco=mascara)
         return Resultado(ESTADO_SO_O_PS, FRASE_SO_O_PS, mascara)
     logger.info("reconexao_voltou_pelo_radio", endereco=mascara)

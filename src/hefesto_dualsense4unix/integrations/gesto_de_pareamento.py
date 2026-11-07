@@ -118,6 +118,8 @@ SEGUNDOS_DA_JANELA = 30
 SEGUNDOS_MAX = 120
 
 ESPERA_DO_PAREAR_S = 60.0
+ESPERA_DO_OBJETO_S = 5.0
+PASSO_DA_ESPERA_DO_OBJETO_S = 0.25
 
 
 CLASSE_MAIOR_PERIFERICO = 0x05
@@ -529,11 +531,20 @@ class JanelaDeBusca:
             return False
         return bluez_dbus.como_booleano(dono.propriedade(no, bluez_dbus.APARELHO, "Paired")) is True
 
+    def _esperar_o_objeto(self, dono: bluez_dbus.LeitorDoBluez, alvo: str) -> str | None:
+        """O nó deste aparelho, com a espera do ``Device1`` que a varredura publica aos poucos."""
+        prazo = time.monotonic() + ESPERA_DO_OBJETO_S
+        while True:
+            no = dono.caminho_do_aparelho(alvo, adaptador=self.adaptador)
+            if no is not None or not self.aberta or time.monotonic() >= prazo:
+                return no
+            time.sleep(PASSO_DA_ESPERA_DO_OBJETO_S)
+
     def _parear_pelo_dono(
         self, dono: bluez_dbus.LeitorDoBluez, alvo: str, mascara: str
     ) -> Resultado:
         """O ``Pair`` pela conexão do dono — atendido pelo agente próprio (R5)."""
-        no = dono.caminho_do_aparelho(alvo, adaptador=self.adaptador)
+        no = self._esperar_o_objeto(dono, alvo)
         if no is None:
             logger.warning("pareamento_sem_objeto", endereco=mascara)
             return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)

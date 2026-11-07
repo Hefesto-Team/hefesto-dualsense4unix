@@ -539,7 +539,7 @@ def o_radio_de_volta(ctx: Any, *, so_o_elo_morto: bool = False) -> tuple[int, in
     """O rádio dos DualSense fora da mesa do Hefesto: ``(voltaram, esperam_o_ps)``.
 
     Para cada DualSense que o BlueZ conhece (a árvore inteira, todos os
-    adaptadores) e que NÃO está entre os controles da mesa, o dono do rádio
+    adaptadores, uma vez por endereço) e que NÃO está entre os controles da mesa, o dono do rádio
     (``gesto_de_reconexao.reconectar``) derruba o elo morto e chama de volta.
     Quem decide se o elo está morto é o kernel, lá dentro: com o HID vivo, o
     controle fica (O-RECONECTAR-SO-DERRUBA-O-ELO-MORTO-01).
@@ -567,9 +567,12 @@ def o_radio_de_volta(ctx: Any, *, so_o_elo_morto: bool = False) -> tuple[int, in
         conhecidos = radio.dualsenses_do_radio()
     except Exception:
         return (0, 0)
+    vistos: set[str] = set()
     for mac, conectado in conhecidos:
-        if (norm_mac(mac) or "") in na_mesa:
+        chave = norm_mac(mac) or mac
+        if chave in na_mesa or chave in vistos:
             continue
+        vistos.add(chave)
         if so_o_elo_morto and conectado is not True:
             continue
         try:

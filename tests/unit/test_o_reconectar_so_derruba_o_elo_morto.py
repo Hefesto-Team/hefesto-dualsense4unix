@@ -36,7 +36,8 @@ def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> bm.Barramento
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(tmp_path / "radio-diario.jsonl"))
     barramento = bm.BarramentoDeMentira()
-    barramento.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO]["Connected"] = True
+    barramento.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO].update(
+        {"Connected": True, "Paired": True, "Bonded": True})
     barramento.mesa[bm.no_de(SEGUNDO)] = {
         bd.APARELHO: {
             "Address": SEGUNDO.upper(),

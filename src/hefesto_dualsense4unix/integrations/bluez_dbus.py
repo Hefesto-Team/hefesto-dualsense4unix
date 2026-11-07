@@ -83,6 +83,18 @@ ESPERA_DO_BUSCTL_S = 5.0
 
 ESPERA_DO_CONNECT_S = 12.0
 
+MOTIVO_DORMINDO = "dormindo"
+MOTIVO_ADAPTADOR = "adaptador"
+MOTIVO_CHAVE_VELHA = "chave_velha"
+MOTIVO_JA_CONECTADO = "ja_conectado"
+
+_TEXTOS_DE_JA_CONECTADO = ("alreadyconnected", "already connected", "already-connected")
+_TEXTOS_DE_CHAVE_VELHA = ("authentication", "key-missing", "key missing")
+_TEXTOS_DE_DORMINDO = (
+    "page-timeout", "page timeout", "host is down", "host-down", "create-socket", "timed out",
+    "timeout", "noreply",
+)
+
 ESPERA_DO_PAIR_S = 45.0
 
 ESPERA_DA_FOTO_S = 3.0
@@ -174,6 +186,26 @@ class Escrita:
         return self.erro in (RECUSA_DA_SUITE, SEM_BARRAMENTO, SEM_AGENTE, TRAVA_OCUPADA)
 
 
+def motivo_do_connect(escrita: Escrita) -> str:
+    """Por que o ``Connect`` não deu, pelo nome do erro e pelo texto do BlueZ. ``""`` se deu.
+
+    ``org.bluez.Error.Failed`` é o nome de quase tudo: o texto é que separa o controle desligado
+    (``br-connection-create-socket``, medido em 02/10/2026) da chave que não vale. O resto é do
+    adaptador: quem chama tenta o próximo candidato.
+    """
+    if escrita.feita:
+        return ""
+    texto = f"{escrita.erro} {escrita.mensagem}".casefold()
+    for textos, motivo in (
+        (_TEXTOS_DE_JA_CONECTADO, MOTIVO_JA_CONECTADO),
+        (_TEXTOS_DE_CHAVE_VELHA, MOTIVO_CHAVE_VELHA),
+        (_TEXTOS_DE_DORMINDO, MOTIVO_DORMINDO),
+    ):
+        if any(sinal in texto for sinal in textos):
+            return motivo
+    return MOTIVO_ADAPTADOR
+
+
 class RecusaNoBarramento(Exception):  # noqa: N818
     """Levantada por quem atende um objeto exportado: vira erro D-Bus na resposta."""
 
@@ -247,6 +279,16 @@ def a_trava_esta_tomada() -> bool:
         os.close(fd)
 
 
+def _o_desfecho(metodo: str, escrita: Escrita) -> dict[str, Any]:
+    """A escrita no diário: o nome do erro, o texto do BlueZ e, no ``Connect``, o motivo."""
+    desfecho: dict[str, Any] = {"feita": escrita.feita, "erro": escrita.erro or None}
+    if escrita.mensagem:
+        desfecho["mensagem"] = escrita.mensagem
+    if metodo == "Connect" and not escrita.feita:
+        desfecho["motivo"] = motivo_do_connect(escrita)
+    return desfecho
+
+
 def _no_diario(quem: str, metodo: str, caminho: str, escrita: Escrita) -> None:
     """A linha da borda no diário comum. Nunca levanta: a escrita já aconteceu."""
     if metodo not in _METODOS_DO_DIARIO:
@@ -258,7 +300,7 @@ def _no_diario(quem: str, metodo: str, caminho: str, escrita: Escrita) -> None:
             quem,
             ESCREVEU_NO_BLUEZ,
             metodo,
-            depois={"feita": escrita.feita, "erro": escrita.erro or None},
+            depois=_o_desfecho(metodo, escrita),
             chamada=metodo,
             hci=_hci_de(caminho) or _hci_de(caminho.rsplit("/dev_", 1)[0]) or None,
             controle=endereco_do_aparelho(caminho),
@@ -769,6 +811,39 @@ class LeitorDoBluez:
         return None
 
 
+    def caminhos_para_conectar(
+        self, endereco: str, *, primeiro: str = ""
+    ) -> tuple[str, ...] | None:
+        """Onde chamar este aparelho, na ordem de tentar: o único lugar que escolhe.
+
+        Só onde o aparelho está ``Paired`` e ``Bonded``, em adaptador ligado, e o nó conectado,
+        que é o elo a derrubar, mesmo sem vínculo. Ele vem primeiro, depois o adaptador
+        ``primeiro``, em que o aparelho esteve no ar por último, e os outros pelo endereço do
+        adaptador: o ``hciN`` inverte entre boots. Quem não responde a ``Paired`` fica: não é a
+        recusa do BlueZ. ``None`` = não deu para perguntar.
+        """
+        nos = self.caminhos_do_aparelho(endereco)
+        if nos is None:
+            return None
+        adaptadores = {a.caminho: a for a in self.adaptadores() or ()}
+        frente = _mac(primeiro)
+
+        def conectado(no: str) -> bool:
+            return como_booleano(self.propriedade(no, APARELHO, "Connected")) is True
+
+        def serve(no: str) -> bool:
+            pai = adaptadores.get(no.rsplit("/", 1)[0])
+            return conectado(no) or ((pai is None or pai.ligado is not False) and all(
+                como_booleano(self.propriedade(no, APARELHO, nome)) is not False
+                for nome in ("Paired", "Bonded")))
+
+        def ordem(no: str) -> tuple[bool, bool, str, str]:
+            pai = adaptadores.get(no.rsplit("/", 1)[0])
+            onde = (_mac(pai.endereco) or "") if pai is not None else ""
+            return (not conectado(no), not (frente and onde == frente), onde, no)
+
+        return tuple(sorted(filter(serve, nos), key=ordem))
+
     def escrever_alias(
         self, caminho_do_adaptador: str, texto: str, *, quem: str = QUEM_PADRAO
     ) -> Escrita:
@@ -901,6 +976,7 @@ LEITURAS = (
     "caminho_do_adaptador",
     "caminho_do_aparelho",
     "caminhos_do_aparelho",
+    "caminhos_para_conectar",
     "conferir_os_lugares",
     "dono_do_bluez",
     "entrada",
