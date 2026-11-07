@@ -519,7 +519,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
                                    "não volta"),
     "opcoes.json": (CASA, "os valores das opções de uma modificação; não identifica controle"),
     "diario.log": (CASA, "o diário de cada modificação, na pasta do supervisor (.diarios/<id>)"),
-    "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta de dados"),
+    "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta do supervisor "
+                          "(.diarios/<id>)"),
     "gestos-das-extensoes.log": (CASA, "o diário dos gestos que mudam as modificações; não "
                                        "identifica controle"),
     "memoria_dos_jogos.json": (CASA, "a chave Memória de cada jogo; não identifica controle"),

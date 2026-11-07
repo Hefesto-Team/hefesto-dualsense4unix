@@ -131,7 +131,8 @@ def test_o_preparo_roda_fora_da_caixa_como_quem_usa(lar: Lugares, tmp_path: Path
     assert f"HEFESTO_MOD_DADOS={lar.dados / 'exemplo'}" in ambiente.splitlines()
     assert "HEFESTO_MOD_ID=exemplo" in ambiente.splitlines()
     assert "SEGREDO_DA_SESSAO" not in ambiente, "o preparo não herda a sessão inteira"
-    assert "preparando" in (lar.dados / "exemplo" / DIARIO_DO_PREPARO).read_text(encoding="utf-8")
+    diario = lar.pasta_do_diario("exemplo") / DIARIO_DO_PREPARO
+    assert "preparando" in diario.read_text(encoding="utf-8")
     entrada = _entrada(lar)
     assert entrada.preparada_em == entrada.instalada_em == feito.instalada_em
     assert entrada.preparo_aceito == _PREPARAR and entrada.motivo_do_preparo == ""

@@ -434,7 +434,7 @@ dados, o certificado), e é o instalador que o roda (`mods/instalador.py`, `_pre
   `XDG_*` e o proxy da sessão, mais `HEFESTO_MOD_ID`, `HEFESTO_MOD_DADOS` e `HEFESTO_MOD_API`;
 - com prazo de dez minutos (`PRAZO_DO_PREPARO_S`): passado ele, o grupo de processos que o instalador abriu
   recebe o `SIGKILL`;
-- com a saída em `preparo.log`, na pasta de dados (a da última vez, até 256 KiB).
+- com a saída em `preparo.log`, em `<dados>/.diarios/<id>/`, onde a caixa não alcança (a da última vez, até 256 KiB).
 
 O preparo só roda depois do «sim», e o «sim» é o «ligar». A primeira instalação, a extensão desligada e a
 versão que ainda espera o «sim» do aviso ou das permissões o deixam para o «ligar», antes de a chave ligar;

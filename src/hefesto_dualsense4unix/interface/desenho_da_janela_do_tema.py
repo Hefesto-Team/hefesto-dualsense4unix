@@ -25,6 +25,7 @@ from hefesto_dualsense4unix.interface.desenho_da_experimental import (
     _nota_da_opcao,
     _radio_da_aba,
     chave_da_aba,
+    nota_curta,
 )
 from hefesto_dualsense4unix.interface.desenho_dos_lancadores import _a, _e
 from hefesto_dualsense4unix.mods import retrato_do_tema as rt
@@ -44,16 +45,6 @@ SEM = "—"
 _PECAS_DA_MINI = (("--m-bg", "--app-bg"), ("--m-pn", "--panel"), ("--m-el", "--elevated"),
                   ("--m-fg", "--fg"), ("--m-sv", "--texto-mudo"), ("--m-ac", "--green"),
                   ("--m-rx", "--purple"), ("--m-rs", "--pink"))
-
-
-def recusa_curta(frase: str) -> str:
-    """A palavra que a tela diz em vermelho; a frase inteira vai na dica."""
-    return "Ilegível" if "ilegível" in frase.casefold() else "Não ligou"
-
-
-def _recusa(frase: str) -> str:
-    return (f'<span class="tm-recusa" data-dica="{_a(frase)}">{recusa_curta(frase)}</span>'
-            if frase else "")
 
 
 def _estilo_das_cores(cores: Mapping[str, str]) -> str:
@@ -143,7 +134,7 @@ def _cores_html(o: OpcaoDaJanela, retrato: Retrato, importado: OpcaoDaJanela | N
     acoes.append(_botao(GESTO_DE_EXPORTAR, o.mod, ROTULO_DE_EXPORTAR, DICA_DO_EXPORTAR))
     return (f'<div class="tm-sec" id="{PEDACO}op-{_a(o.id)}">'
             f'<div class="tm-cartas" style="--n:{max(1, len(retrato.cartas))}">{cartas}</div>'
-            f'<div class="tm-acoes">{"".join(acoes)}{_recusa(o.nota)}</div></div>')
+            f'<div class="tm-acoes">{"".join(acoes)}{nota_curta(o.nota)}</div></div>')
 
 
 def _destaque_html(o: OpcaoDaJanela, retrato: Retrato) -> str:
@@ -159,7 +150,7 @@ def _destaque_html(o: OpcaoDaJanela, retrato: Retrato) -> str:
                '<i class="bt">Aplicar</i><i class="tg"></i><i class="ab">Aba</i>'
                '<i class="ch"></i></span>')
     return (f'<div class="tm-sec" id="{PEDACO}op-{_a(o.id)}">'
-            f'<div class="tm-cores">{prontas}{livre}</div>{amostra}{_recusa(o.nota)}</div>')
+            f'<div class="tm-cores">{prontas}{livre}</div>{amostra}{nota_curta(o.nota)}</div>')
 
 
 def _botoes_html(o: OpcaoDaJanela, retrato: Retrato) -> str:
@@ -176,7 +167,8 @@ def _botoes_html(o: OpcaoDaJanela, retrato: Retrato) -> str:
             f'<span class="tm-mini-barra {LADO_DA_BARRA.get(lado, "sis")}"><i></i><i></i><i></i>'
             f"</span><b>{_e(escolha)}</b></label>")
     return (f'<div class="tm-sec" id="{PEDACO}op-{_a(o.id)}"><span class="tm-sec-rot">'
-            f'{_e(o.rotulo)}</span><div class="tm-lados">{"".join(cartoes)}</div></div>')
+            f'{_e(o.rotulo)}</span><div class="tm-lados">{"".join(cartoes)}</div>'
+            f'{nota_curta(o.nota)}</div>')
 
 
 def _logo_html(o: OpcaoDaJanela) -> str:
@@ -188,7 +180,7 @@ def _logo_html(o: OpcaoDaJanela) -> str:
         botoes += _botao(GESTO_DE_TIRAR, v, ROTULO_DE_TIRAR, arquivo)
     return (f'<div class="tm-sec" id="{PEDACO}op-{_a(o.id)}"><span class="tm-sec-rot">'
             f'{_e(o.rotulo)}</span><div class="tm-logo-linha"><span class="logo tm-logo"></span>'
-            f'<span class="tm-acoes">{botoes}{_recusa(o.nota)}</span></div></div>')
+            f'<span class="tm-acoes">{botoes}{nota_curta(o.nota)}</span></div></div>')
 
 
 def _css_html(o: OpcaoDaJanela, retrato: Retrato) -> str:
@@ -259,5 +251,4 @@ def janela_do_tema_html(nome: str, opcoes: Sequence[OpcaoDaJanela], retrato: Ret
                       coluna=coluna_html(retrato, nome), corpo="tm-corpo")
 
 
-__all__ = ["GESTO_DE_EXPORTAR", "coluna_html", "faixa_html", "janela_do_tema_html", "mini_html",
-           "recusa_curta"]
+__all__ = ["GESTO_DE_EXPORTAR", "coluna_html", "faixa_html", "janela_do_tema_html", "mini_html"]

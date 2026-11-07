@@ -105,6 +105,47 @@ class AvisoParaVerError(InstalacaoRecusadaError):
         self.aviso = aviso
 
 
+def tirar_da_caixa(alvo: Path) -> None:
+    """Apaga ``alvo`` da pasta que a caixa escreve, sem seguir link.
+
+    A pasta plantada muda de nome antes: a caixa pode ter fechado a pasta ou seguir escrevendo, e
+    o que não se apagar fica fora do caminho.
+    """
+    try:
+        alvo.unlink(missing_ok=True)
+    except IsADirectoryError:
+        fora = tempfile.mkdtemp(prefix=".plantado-", dir=alvo.parent)
+        try:
+            os.rename(alvo, fora)
+        finally:
+            shutil.rmtree(fora, ignore_errors=True)
+
+
+def gravar_na_caixa(destino: Path, dados: bytes, frase: str) -> None:
+    """Grava em ``destino``, na pasta que a caixa escreve: arquivo novo e ``rename``, em ``0600``.
+
+    Quem lê nunca vê a metade. O ``rename`` troca o link e o FIFO sem abri-los, e a pasta plantada
+    sai antes dele. O que não grava é a recusa ``frase``, com a causa do sistema.
+    """
+    try:
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        fd, nome = tempfile.mkstemp(prefix=".gravando-", dir=destino.parent)
+        try:
+            with os.fdopen(fd, "wb") as arquivo:
+                arquivo.write(dados)
+            try:
+                os.replace(nome, destino)
+            except IsADirectoryError:
+                tirar_da_caixa(destino)
+                os.replace(nome, destino)
+        except BaseException:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(nome)
+            raise
+    except OSError as exc:
+        raise InstalacaoRecusadaError(f"{frase}: {exc.strerror or exc}.") from exc
+
+
 def aviso_por_ver(entrada: Entrada, manifesto: Manifesto) -> str:
     """O ``aviso`` do manifesto que esta instalação ainda não aceitou; vazio quando não há."""
     return manifesto.aviso if manifesto.aviso and manifesto.aviso != entrada.aviso_aceito else ""
@@ -464,12 +505,13 @@ def _ambiente_do_preparo(lg: Lugares, mod_id: str) -> dict[str, str]:
 
 def _aparar_o_diario_do_preparo(diario: Path) -> None:
     """Fica só o fim do diário, até o teto: o preparo que fala demais não enche o disco."""
-    with contextlib.suppress(OSError):
-        if diario.stat().st_size > TETO_DO_DIARIO_DO_PREPARO_BYTES:
-            with diario.open("rb") as arquivo:
-                arquivo.seek(-TETO_DO_DIARIO_DO_PREPARO_BYTES, os.SEEK_END)
-                fim = arquivo.read()
-            diario.write_bytes(fim)
+    with contextlib.suppress(OSError), open(diario, "r+b", opener=abrir_sem_seguir) as arquivo:
+        if arquivo.seek(0, os.SEEK_END) > TETO_DO_DIARIO_DO_PREPARO_BYTES:
+            arquivo.seek(-TETO_DO_DIARIO_DO_PREPARO_BYTES, os.SEEK_END)
+            fim = arquivo.read()
+            arquivo.seek(0)
+            arquivo.write(fim)
+            arquivo.truncate()
 
 
 def _parar_o_preparo(processo: subprocess.Popen[bytes]) -> None:
@@ -483,10 +525,15 @@ def _preparar(lg: Lugares, manifesto: Manifesto) -> str:
     """Roda o ``preparar`` fora da caixa, como quem usa: o motivo da falha, ou vazio.
 
     Nunca como root. A pasta de trabalho é a do código, a entrada é vazia (sem terminal, vale o
-    padrão do comando) e a saída vai a :data:`DIARIO_DO_PREPARO`. Passado o prazo, o grupo de
+    padrão do comando) e a saída vai a :data:`DIARIO_DO_PREPARO`, na pasta do diário: a caixa não
+    a alcança, e o velho da pasta de dados se muda uma vez. Passado o prazo, o grupo de
     processos que o instalador abriu recebe o ``SIGKILL``, pelo PID que ele mesmo guardou.
     """
-    from hefesto_dualsense4unix.mods.supervisor import _resolver_o_comando, ultima_linha_do_diario
+    from hefesto_dualsense4unix.mods.supervisor import (
+        _mudar_o_diario_velho,
+        _resolver_o_comando,
+        ultima_linha_do_diario,
+    )
 
     assert manifesto.preparar
     nome = manifesto.nome
@@ -496,10 +543,14 @@ def _preparar(lg: Lugares, manifesto: Manifesto) -> str:
     comando = _resolver_o_comando(codigo, manifesto.preparar)
     if comando is None:
         return f"O preparo de «{nome}» não achou o comando {manifesto.preparar[0]}."
-    diario = lg.dados / manifesto.id / DIARIO_DO_PREPARO
+    dados = lg.dados / manifesto.id
+    diario = lg.pasta_do_diario(manifesto.id) / DIARIO_DO_PREPARO
     try:
-        diario.parent.mkdir(parents=True, exist_ok=True)
-        with diario.open("wb") as saida:
+        dados.mkdir(parents=True, exist_ok=True)
+        diario.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            _mudar_o_diario_velho(dados / DIARIO_DO_PREPARO, diario)
+        with open(diario, "wb", opener=abrir_sem_seguir) as saida:
             processo = subprocess.Popen(
                 comando,
                 cwd=codigo,
@@ -1097,6 +1148,7 @@ __all__ = [
     "conferir_remocao",
     "desligar",
     "esperar_parar",
+    "gravar_na_caixa",
     "gravar_registro",
     "instalar",
     "ler_estado",
@@ -1106,5 +1158,6 @@ __all__ = [
     "o_css_que_fica",
     "origem_da_tag",
     "remover",
+    "tirar_da_caixa",
     "troca_viva",
 ]

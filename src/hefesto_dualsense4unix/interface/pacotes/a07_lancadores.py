@@ -1395,6 +1395,18 @@ def _dizendo_a_recusa() -> Any:
         raise RuntimeError(exc.frase) from exc
 
 
+@contextlib.contextmanager
+def _dizendo_na_linha(item: _Instalada, opcao_id: str) -> Any:
+    """A recusa de gravar aparece na linha da opção, e a janela volta ao que está guardado."""
+    try:
+        with _dizendo_a_recusa():
+            yield
+    except RuntimeError as exc:
+        _MEXIDA.recusa_do_importar = {_linha_do_importar(item, opcao_id): str(exc)}
+        _montar_a_janela_da_extensao(item.entrada.id)
+        raise
+
+
 def _extensao_de(item: _Instalada) -> Any:
     """A linha do quadro «Extensões» de uma modificação instalada."""
     from hefesto_dualsense4unix.mods.instalador import aviso_por_ver
@@ -1783,6 +1795,7 @@ def _guardar_a_chave_da_modificacao(mod_id: str, ligada: bool) -> None:
     item = _a_instalada(mod_id)
     if item.manifesto is None or not item.manifesto.chave:
         raise RuntimeError("Esta extensão não tem a chave Ligado/Desligado. Nada foi guardado.")
+    _MEXIDA.recusa_do_importar = {}
     with _dizendo_a_recusa():
         opcoes.guardar(item.manifesto, item.manifesto.chave, ligada, _lugares())
 
@@ -1860,10 +1873,24 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     _MEXIDA.aba = opcao.grupo or ""
     if opcao.tipo == "deslizante":
         _OPCOES_VIVAS.soltou(mod_id, opcao_id, _numero(o.get("carimbo")))
-    _guardar_a_opcao_da_modificacao(
-        item, {opcao_id: _validada(opcao, valor, item), **_o_destaque_que_liga(item, opcao_id)})
+    valores = {opcao_id: _validada(opcao, valor, item), **_o_destaque_que_liga(item, opcao_id)}
+    try:
+        _guardar_a_opcao_da_modificacao(item, valores)
+    except RuntimeError:
+        if opcao.tipo == "deslizante":
+            _a_extensao_volta_ao_guardado(item, opcao_id, p)
+        raise
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
+
+
+def _a_extensao_volta_ao_guardado(item: _Instalada, opcao_id: str, p: Any) -> None:
+    """O soltar não gravou: a extensão recebe o valor guardado, o que a barra voltou a mostrar,
+    no lugar do último arrastar, aplicado sem gravar."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    guardado = opcoes.ler(item.manifesto, _lugares())[opcao_id]
+    p.chamar_com_o_corpo(METODO_DA_OPCAO, mod=item.entrada.id, id=opcao_id, valor=guardado)
 
 
 def _o_destaque_que_liga(item: _Instalada, opcao_id: str) -> dict[str, bool]:
@@ -1934,7 +1961,7 @@ def _importar_na_modificacao(item: _Instalada, opcao_id: str, origem: str) -> st
 def _tirar_da_modificacao(item: _Instalada, opcao_id: str) -> None:
     from hefesto_dualsense4unix.mods import importados
 
-    with _dizendo_a_recusa():
+    with _dizendo_na_linha(item, opcao_id):
         importados.tirar(item.manifesto, opcao_id, _lugares())
 
 
@@ -2025,11 +2052,13 @@ def tirar_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
 
 
 def _guardar_a_opcao_da_modificacao(item: _Instalada, valores: dict[str, Any]) -> None:
-    """Grava cada opção validada no ``opcoes.json``, o ``livre`` primeiro."""
+    """Grava cada opção validada no ``opcoes.json``, o ``livre`` primeiro. A recusa velha sai: a
+    nota da linha diz a última gravação, não a de antes."""
     from hefesto_dualsense4unix.mods import opcoes
 
-    with _dizendo_a_recusa():
-        for opcao_id, valor in _livre_primeiro(item.manifesto, valores):
+    _MEXIDA.recusa_do_importar = {}
+    for opcao_id, valor in _livre_primeiro(item.manifesto, valores):
+        with _dizendo_na_linha(item, opcao_id):
             opcoes.guardar(item.manifesto, opcao_id, valor, _lugares())
 
 
@@ -3206,7 +3235,11 @@ def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
 @gesto("07-lancadores.html", exp.GESTO_DO_MODO, grava="_guardar_a_opcao_da_modificacao")
 def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Soltar», «Segurar» ou «Repetir» (o ``livre`` com ``modos``): o modo grava na hora, como
-    as outras escolhas, e vale na barra e na extensão. ``data-v`` é ``mod:id:modo``."""
+    as outras escolhas, e vale na barra e na extensão. ``data-v`` é ``mod:id:modo``.
+
+    A recusa de gravar já remontou a janela no guardado, e a extensão segue no ``certo``: o modo
+    vivo volta a ele para o ``_desfazer_o_modo`` ver a diferença.
+    """
     _MEXIDA.armada = ()
     from hefesto_dualsense4unix.mods import opcoes
 
@@ -3222,7 +3255,12 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     if recusa is not None:
         _montar_a_janela_da_extensao(mod_id)
         raise RuntimeError(recusa)
-    _guardar_a_opcao_da_modificacao(item, {chave: certo})
+    try:
+        _guardar_a_opcao_da_modificacao(item, {chave: certo})
+    except RuntimeError:
+        _VIVA.com_o_modo(mod_id, certo)
+        _desfazer_o_modo(mod_id, p)
+        raise
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
 

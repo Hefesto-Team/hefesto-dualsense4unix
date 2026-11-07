@@ -606,7 +606,7 @@ def _linha_da_entrada(o: OpcaoDaJanela) -> str:
     return (f'<div class="tql" id="{PEDACO}op-{_a(o.id)}" data-dica="{_a(o.dica or o.rotulo)}">'
             f'<svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">'
             f'<use href="#en-{_a(entrada_da_opcao(o) or "")}"/></svg>'
-            f'{onda}{_controle_da_opcao(o)}</div>')
+            f'{onda}{nota_curta(o.nota)}{_controle_da_opcao(o)}</div>')
 
 
 def _simbolo_do_glifo(ident: str, arquivo: str, terca: float | None = None) -> str:
@@ -653,6 +653,22 @@ def _grupos_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> dict[str, list[OpcaoD
 def _nota_da_opcao(opcao: OpcaoDaJanela) -> str:
     """A nota da opção, em vermelho sob o rótulo; vazia sem nota."""
     return f'<span class="ky-recusa">{_e(opcao.nota)}</span>' if opcao.nota else ""
+
+
+def recusa_curta(frase: str) -> str:
+    """A palavra que a tela diz em vermelho; a frase inteira vai na dica."""
+    dobrada = frase.casefold()
+    if "ilegível" in dobrada:
+        return "Ilegível"
+    if "não foi gravad" in dobrada:
+        return "Não gravou"
+    return "Não apagou" if "não foi apagad" in dobrada else "Não ligou"
+
+
+def nota_curta(frase: str) -> str:
+    """A nota de uma palavra, para o lugar que não cabe a frase; vazia sem frase."""
+    return (f'<span class="tm-recusa" data-dica="{_a(frase)}">{recusa_curta(frase)}</span>'
+            if frase else "")
 
 
 def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
@@ -768,7 +784,8 @@ def _linha_da_opcao(o: OpcaoDaJanela) -> str:
     """A linha de uma opção: rótulo à esquerda e controle à direita, ou a lista embaixo."""
     if o.tipo in _EMPILHADAS:
         return (f'<div id="{PEDACO}op-{_a(o.id)}"{_dica_da_linha(o)}><div class="ky-rot">'
-                f'<span>{_e(o.rotulo)}</span></div>{_controle_da_opcao(o)}</div>')
+                f'<span>{_e(o.rotulo)}</span>{_nota_da_opcao(o)}</div>'
+                f'{_controle_da_opcao(o)}</div>')
     return (f'<div class="ky-linha" id="{PEDACO}op-{_a(o.id)}"{_dica_da_linha(o)}>'
             f'<div class="ky-rot"><span>{_e(o.rotulo)}</span>'
             f'{_nota_da_opcao(o)}</div>'
@@ -799,7 +816,7 @@ def _grade(itens: Sequence[OpcaoDaJanela]) -> str:
     if dono is None:
         return f'<div class="tq-lista">{linhas}</div>'
     return (f'<div id="{PEDACO}op-{_a(dono.id)}"{_dica_da_linha(dono)}><div class="ky-rot">'
-            f'<span>{_e(dono.rotulo)}</span></div>'
+            f'<span>{_e(dono.rotulo)}</span>{_nota_da_opcao(dono)}</div>'
             f'<div class="tq-lista" aria-label="{_a(dono.rotulo)}">{linhas}</div></div>')
 
 

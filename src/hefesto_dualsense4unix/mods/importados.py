@@ -9,16 +9,17 @@ O valor da opção é o nome do arquivo de origem, só para a tela; vazio é «n
 from __future__ import annotations
 
 import base64
-import contextlib
-import os
 import stat
 import struct
-import tempfile
 from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.mods import meu_css, tema
-from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError
+from hefesto_dualsense4unix.mods.instalador import (
+    InstalacaoRecusadaError,
+    gravar_na_caixa,
+    tirar_da_caixa,
+)
 from hefesto_dualsense4unix.mods.leitura_da_caixa import ler_ou_vazio
 
 SUFIXO = ".importado"
@@ -35,6 +36,7 @@ def caminho(mod_id: str, opcao_id: str, lugares: Any) -> Path:
 
 
 _NAO_LEU = "O arquivo não pôde ser lido."
+_NAO_GRAVOU = "O arquivo não foi gravado"
 
 
 def _ler_pequeno(alvo: Path, teto: int) -> bytes:
@@ -145,21 +147,6 @@ def css_valido(dados: bytes) -> str:
     return texto
 
 
-def _gravar(destino: Path, dados: bytes) -> None:
-    """Arquivo novo e ``rename``, em ``0600``: o vigia da janela nunca lê a cópia pela metade."""
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    fd, nome = tempfile.mkstemp(prefix=".importando-", dir=destino.parent)
-    try:
-        with os.fdopen(fd, "wb") as arquivo:
-            arquivo.write(dados)
-        os.chmod(nome, 0o600)
-        os.replace(nome, destino)
-    except BaseException:
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(nome)
-        raise
-
-
 def nome_para_a_tela(origem: Path) -> str:
     """O nome do arquivo de origem, sem caractere de controle e cortado para caber na linha."""
     limpo = "".join(c for c in origem.name if c.isprintable()).strip()
@@ -177,14 +164,15 @@ def importar(manifesto: Any, opcao_id: str, origem: Path, lugares: Any) -> str:
     formato = "css" if opcao.tipo == "css" else str(opcao.formato)
     dados = _ler_pequeno(origem, TAMANHO_POR_FORMATO[formato])
     if formato == "css":
-        _gravar(meu_css.caminho(manifesto.id, lugares), css_valido(dados).encode("utf-8"))
+        gravar_na_caixa(meu_css.caminho(manifesto.id, lugares), css_valido(dados).encode("utf-8"),
+                        _NAO_GRAVOU)
         opcoes.guardar(manifesto, opcao_id, True, lugares)
         return nome_para_a_tela(origem)
     if formato == "tema":
         dados = tema_valido(dados).encode("utf-8")
     else:
         logo_valida(dados)
-    _gravar(caminho(manifesto.id, opcao_id, lugares), dados)
+    gravar_na_caixa(caminho(manifesto.id, opcao_id, lugares), dados, _NAO_GRAVOU)
     nome = nome_para_a_tela(origem)
     opcoes.guardar(manifesto, opcao_id, nome, lugares)
     return nome
@@ -197,8 +185,11 @@ def tirar(manifesto: Any, opcao_id: str, lugares: Any) -> None:
     opcao = next((o for o in manifesto.opcoes if o.id == opcao_id), None)
     if opcao is None or opcao.tipo != "importar":
         raise InstalacaoRecusadaError(f"«{manifesto.nome}» não importa em «{opcao_id}».")
-    with contextlib.suppress(FileNotFoundError):
-        caminho(manifesto.id, opcao_id, lugares).unlink()
+    try:
+        tirar_da_caixa(caminho(manifesto.id, opcao_id, lugares))
+    except OSError as exc:
+        raise InstalacaoRecusadaError(
+            f"O arquivo não foi apagado: {exc.strerror or exc}.") from exc
     opcoes.guardar(manifesto, opcao_id, "", lugares)
 
 

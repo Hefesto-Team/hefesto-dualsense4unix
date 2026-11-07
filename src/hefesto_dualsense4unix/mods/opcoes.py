@@ -13,13 +13,15 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
-import tempfile
 from collections.abc import Collection, Sequence
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, Lugares
+from hefesto_dualsense4unix.mods.instalador import (
+    InstalacaoRecusadaError,
+    Lugares,
+    gravar_na_caixa,
+)
 from hefesto_dualsense4unix.mods.leitura_da_caixa import dizer_a_recusa, ler_da_caixa
 from hefesto_dualsense4unix.mods.manifesto import (
     CHAVE_DE_JOGO,
@@ -330,20 +332,8 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
 
 
 def _gravar(mod_id: str, valores: dict[str, Any], lugares: Lugares) -> None:
-    """Arquivo novo e ``rename``, em ``0600``: quem lê nunca vê o arquivo pela metade."""
-    destino = caminho(mod_id, lugares)
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    fd, nome = tempfile.mkstemp(prefix=".opcoes-", suffix=".json", dir=destino.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as arquivo:
-            json.dump(valores, arquivo, ensure_ascii=False, indent=2)
-            arquivo.write("\n")
-        os.chmod(nome, 0o600)
-        os.replace(nome, destino)
-    except BaseException:
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(nome)
-        raise
+    texto = json.dumps(valores, ensure_ascii=False, indent=2) + "\n"
+    gravar_na_caixa(caminho(mod_id, lugares), texto.encode("utf-8"), "A opção não foi gravada")
 
 
 def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,

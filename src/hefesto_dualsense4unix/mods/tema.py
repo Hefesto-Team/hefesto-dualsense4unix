@@ -59,7 +59,6 @@ _TOKEN_DE_CATEGORIA = re.compile(r"--(?:c|sala|mapa)-[a-z][a-z_]{0,23}")
 PLASTICOS = frozenset({"--cosmic-red", "--nova-pink", "--starlight-blue", "--galactic-purple",
                        "--midnight-black"})
 
-_COMENTARIO = re.compile(r"/\*.*?\*/", re.S)
 _BLOCO = re.compile(r"\s*:root\s*\{([^{}]*)\}\s*")
 _NOME = re.compile(r"--[a-z][a-z0-9_-]*")
 _APELIDO = re.compile(r"var\(\s*(--[a-z][a-z0-9_-]*)\s*\)")
@@ -69,8 +68,7 @@ _RGB = re.compile(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*"
 _PROIBIDO = re.compile(r"url\s*\(|@import|\\|<|expression\s*\(", re.I)
 _GRADIENTE = re.compile(r"radial-gradient\((.*)\)", re.S)
 _FORMA = re.compile(r"(?:circle|ellipse)?\s*(?:at\s+\d{1,3}%\s+\d{1,3}%)?")
-_PARADA = re.compile(r"(.+?)(?:\s+\d{1,3}%)?")
-_VIRGULA_DE_FORA = re.compile(r",(?![^()]*\))")
+_POSICAO_DA_PARADA = re.compile(r"\s(\d{1,3}%)\Z")
 
 
 class TemaRecusadoError(ValueError):
@@ -114,6 +112,49 @@ def token_permitido(nome: str) -> bool:
             or bool(_TOKEN_DE_CATEGORIA.fullmatch(nome)))
 
 
+def _sem_comentario(texto: str) -> str:
+    """O texto sem os ``/* … */``; o que abre e não fecha fica. Cada trecho se varre uma vez: o
+    tema importado é entrada de quem usa, e um ``/*`` repetido não pode custar quadrático."""
+    pedacos: list[str] = []
+    i = 0
+    while (abre := texto.find("/*", i)) >= 0:
+        fecha = texto.find("*/", abre + 2)
+        if fecha < 0:
+            break
+        pedacos.append(texto[i:abre])
+        i = fecha + 2
+    pedacos.append(texto[i:])
+    return "".join(pedacos)
+
+
+def _sem_important(valor: str) -> str:
+    """O valor já sem espaço nas pontas, sem o ``!important`` do fim."""
+    antes, marca, depois = valor.rpartition("!")
+    return antes.rstrip() if marca and depois.strip().lower() == "important" else valor
+
+
+def _virgulas_de_fora(texto: str) -> list[str]:
+    """O texto cortado nas vírgulas cujo parêntese seguinte não fecha. Lê de trás para a frente
+    para saber esse parêntese sem voltar a varrer."""
+    partes: list[str] = []
+    fim = len(texto)
+    seguinte = ""
+    for i in range(len(texto) - 1, -1, -1):
+        if texto[i] in "()":
+            seguinte = texto[i]
+        elif texto[i] == "," and seguinte != ")":
+            partes.append(texto[i + 1:fim])
+            fim = i
+    partes.append(texto[:fim])
+    return partes[::-1]
+
+
+def _cor_da_parada(parada: str) -> str:
+    """A cor de ``<cor> [N%]``. A posição cabe em cinco caracteres, e só o fim se confere."""
+    posicao = _POSICAO_DA_PARADA.search(parada[-5:])
+    return parada[:-len(posicao.group(1))].rstrip() if posicao else parada
+
+
 def fundo_da_logo(valor: str) -> bool:
     """``none``, uma cor, ou ``radial-gradient(<forma>, <cor> [N%], <cor> [N%]…)`` só de cores."""
     texto = valor.strip().lower()
@@ -122,15 +163,12 @@ def fundo_da_logo(valor: str) -> bool:
     m = _GRADIENTE.fullmatch(texto)
     if m is None:
         return False
-    partes = [p.strip() for p in _VIRGULA_DE_FORA.split(m.group(1))]
-    primeira = _PARADA.fullmatch(partes[0])
-    if primeira is None or cor(primeira.group(1)) is None:
+    partes = [p.strip() for p in _virgulas_de_fora(m.group(1))]
+    if cor(_cor_da_parada(partes[0])) is None:
         if not partes[0] or not _FORMA.fullmatch(partes[0]):
             return False
         partes = partes[1:]
-    paradas = [_PARADA.fullmatch(p) for p in partes]
-    return len(paradas) >= 2 and all(p is not None and cor(p.group(1)) is not None
-                                     for p in paradas)
+    return len(partes) >= 2 and all(cor(_cor_da_parada(p)) is not None for p in partes)
 
 
 def cor(valor: str) -> tuple[float, float, float, float] | None:
@@ -201,7 +239,7 @@ def e_escuro(tokens: dict[str, str], casa: dict[str, str] | None = None) -> bool
 
 
 def _declaracoes_do_root(texto: str) -> list[tuple[str, str]]:
-    m = re.search(r":root\s*\{([^{}]*)\}", _COMENTARIO.sub("", texto))
+    m = re.search(r":root\s*\{([^{}]*)\}", _sem_comentario(texto))
     if m is None:
         return []
     pares = (declaracao.partition(":") for declaracao in m.group(1).split(";"))
@@ -248,7 +286,7 @@ def validar(folha: str, *, casa: dict[str, str] | None = None,
     """Aceita o tema ou o recusa com :class:`TemaRecusadoError` (uma frase para a tela)."""
     if len(folha.encode("utf-8")) > TAMANHO_MAXIMO:
         raise TemaRecusadoError("O tema passa de 16 KB: um tema só troca cores.")
-    sem_comentario = _COMENTARIO.sub("", folha)
+    sem_comentario = _sem_comentario(folha)
     if _PROIBIDO.search(sem_comentario):
         raise TemaRecusadoError("O tema não pode buscar nada fora nem usar url(), @import ou "
                                 "escape: só cores.")
@@ -262,7 +300,7 @@ def validar(folha: str, *, casa: dict[str, str] | None = None,
             continue
         nome, dois_pontos, valor = declaracao.partition(":")
         nome = nome.strip()
-        valor = re.sub(r"\s*!\s*important\s*$", "", valor.strip(), flags=re.I)
+        valor = _sem_important(valor.strip())
         if not dois_pontos or not _NOME.fullmatch(nome):
             raise TemaRecusadoError(f"O tema tem «{declaracao.strip()}», que não é um token de "
                                     "cor: só cores, nada de layout.")
