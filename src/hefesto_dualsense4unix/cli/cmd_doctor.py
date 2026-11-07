@@ -58,6 +58,7 @@ def _avisar_ausente(relpath: str, consequencia: str) -> None:
 _PREFIXO_DO_RELOGIO = "poll.tique.relogio."
 _PREFIXO_DA_VOLTA = "poll.laco.lenta."
 _PREFIXO_DO_OCUPANTE = "poll.pool.ocupante."
+_SEM_AMOSTRA = "sem_amostra"
 
 
 def _linha_do_nascimento(counters: Any) -> tuple[str, str] | None:
@@ -150,16 +151,18 @@ def _linha_do_atraso(counters: Any) -> tuple[str, str] | None:
     partes = []
     if lentas:
         pior = _o_pior_nome(counters, _PREFIXO_DA_VOLTA)
-        detalhe = "" if pior is None else (
-            f", a pior {formata_pt_br(pior[1] / 1000)} ms em «{pior[0]}»"
-        )
-        partes.append(f"{lentas} acima de 100 ms{detalhe}")
+        detalhe = "" if pior is None else f", a pior {formata_pt_br(pior[1] / 1000)} ms"
+        if pior is not None and pior[0] != _SEM_AMOSTRA:
+            detalhe += f" em «{pior[0]}»"
+        palavra = "parada" if lentas == 1 else "paradas"
+        partes.append(f"{lentas} {palavra} acima de 100 ms{detalhe}")
     if filas:
         pior = _o_pior_nome(counters, _PREFIXO_DO_OCUPANTE)
         detalhe = "" if pior is None else (
             f", a pior {formata_pt_br(pior[1] / 1000)} ms atrás de «{pior[0]}»"
         )
-        partes.append(f"{filas} na fila do pool{detalhe}")
+        palavra = "espera" if filas == 1 else "esperas"
+        partes.append(f"{filas} {palavra} na fila do controle{detalhe}")
     return ("[ OK ]", "atraso do serviço: " + "; ".join(partes))
 
 

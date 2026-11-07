@@ -37,7 +37,7 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
 )
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import gesto_de_agora
-from hefesto_dualsense4unix.profiles.manager import ProfileManager, gravacao_em_voo
+from hefesto_dualsense4unix.profiles.manager import ProfileManager, gravacao_do_pedido
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
@@ -328,10 +328,14 @@ class IpcServer(IpcHandlersMixin):
 
 
 async def _o_perfil_em_dia() -> None:
-    """A resposta do gesto sai com o modo no disco; quem espera é o pedido, nunca o laço."""
-    feito = gravacao_em_voo()
+    """A resposta do gesto sai com o modo no disco; só ele espera, e nunca o laço.
+
+    A pergunta de outro cliente não paga o disco do gesto: era o `[daemon mudo]` por outra porta.
+    O ``shield`` guarda a gravação da fila: quem desiste de esperar não a cancela.
+    """
+    feito = gravacao_do_pedido()
     if feito is not None:
-        await asyncio.wrap_future(feito)
+        await asyncio.shield(asyncio.wrap_future(feito))
 
 
 def _o_cliente_ja_foi(writer: asyncio.StreamWriter) -> bool:

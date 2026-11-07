@@ -139,7 +139,7 @@ class PoolQueDizQuem(ThreadPoolExecutor):
                                 "ocupado_por": sorted(set(ocupantes))})
 
     def _rodar(
-        self, nome: str, chegou: float, ocupantes: list[str], fn: Callable[..., T],
+        self, nome: str, chegou: float, ocupantes: list[str], fn: Callable[..., T], /,
         *args: Any, **kwargs: Any,
     ) -> T:
         self._medir_a_fila(nome, time.monotonic() - chegou, ocupantes)

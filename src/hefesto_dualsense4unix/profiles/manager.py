@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import math
 import threading
 from collections.abc import Callable, Iterable
@@ -1731,7 +1732,9 @@ def _chave_do_appid(appid: object) -> int | None:
 _TRAVA_DA_MUDANCA_NO_PERFIL = threading.Lock()
 FIO_DO_PERFIL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="hefesto-perfil")
 GANHO_PEDIDO = "pedido"
-_gravacao_em_voo: Future[Any] | None = None
+_GRAVACAO_DO_PEDIDO: contextvars.ContextVar[Future[Any] | None] = contextvars.ContextVar(
+    "gravacao_do_pedido", default=None
+)
 
 
 class _PedidosDoGanho:
@@ -1786,14 +1789,14 @@ PEDIDOS_DO_GANHO = _PedidosDoGanho()
 
 def no_fio_do_perfil(fazer: Callable[..., _Extra], /, *args: Any, **kwargs: Any) -> Future[_Extra]:
     """Entrega uma gravação ao fio único do perfil, na ordem dos gestos."""
-    global _gravacao_em_voo
-    _gravacao_em_voo = feito = FIO_DO_PERFIL.submit(fazer, *args, **kwargs)
+    feito = FIO_DO_PERFIL.submit(fazer, *args, **kwargs)
+    _GRAVACAO_DO_PEDIDO.set(feito)
     return feito
 
 
-def gravacao_em_voo() -> Future[Any] | None:
-    """A última gravação entregue ao fio, até terminar."""
-    feito = _gravacao_em_voo
+def gravacao_do_pedido() -> Future[Any] | None:
+    """A gravação que ESTE pedido entregou ao fio, até terminar; a dos outros não é dele."""
+    feito = _GRAVACAO_DO_PEDIDO.get()
     return None if feito is None or feito.done() else feito
 
 

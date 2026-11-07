@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import json
 import os
 import subprocess
 import sys
@@ -540,11 +541,10 @@ def test_o_profile_switch_com_ganho_responde_enquanto_o_amixer_dorme(
     servidor.profile_manager.mic_applier = lambda *_a, **_k: "aplicado"
     _perfil_com_ganho()
 
-    gasto, corria, _resposta = asyncio.run(_o_status_durante(
+    gasto, _corria, _resposta = asyncio.run(_o_status_durante(
         servidor, servidor._handlers["profile.switch"]({"name": "Com Ganho"})))
 
     assert gasto < TETO_IPC_S, f"o profile.switch parou o laço {gasto:.2f} s"
-    assert not corria or gasto < TETO_IPC_S
     assert PEDIDOS_DO_GANHO.esperar(DORME_S * 8)
     _o_fio_do_laco_nao_rodou(amixer)
     assert set(amixer.fios) == {"hefesto-ganho-do-mic"}, amixer.fios
@@ -573,6 +573,39 @@ def test_o_pedido_mais_novo_de_cada_controle_vence(monkeypatch: pytest.MonkeyPat
 
     assert pedidos.esperar(5.0)
     assert sorted(feitos) == [("a", 1), ("a", 4), ("b", 5)], feitos
+
+
+def test_os_quatro_controles_pedem_o_ganho_de_cada_um(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O ganho é por controle: ninguém fica de fora, e o estado volta no relatório de cada um.
+
+    MORDIDA: faça o `_esvaziar` servir só o primeiro pedido.
+    """
+    from hefesto_dualsense4unix.app.actions.profiles_actions import mensagem_de_ativacao
+    from hefesto_dualsense4unix.integrations import ganho_do_microfone
+    from hefesto_dualsense4unix.profiles.manager import GANHO_PEDIDO, PEDIDOS_DO_GANHO
+
+    feitos: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        ganho_do_microfone, "definir",
+        lambda uniq, pct, _mesa: feitos.append((uniq, pct)) or (pct, 0.0),
+    )
+    servidor = _servidor(tmp_path)
+    servidor.profile_manager.mic_applier = lambda *_a, **_k: "aplicado"
+    ganhos = {f"aabbcc00000{n}": 10 * n for n in (1, 2, 3, 4)}
+    perfil = Profile(
+        name="Os Quatro", match=MatchAny(type="any"),
+        controllers={uniq: ControllerOverrides(mic=ControllerMicOverride(gain=ganho))
+                     for uniq, ganho in ganhos.items()},
+    )
+
+    relatorio = servidor.profile_manager.apply_controller_mics(perfil)
+
+    assert PEDIDOS_DO_GANHO.esperar(5.0)
+    assert dict(feitos) == ganhos, feitos
+    assert all(relatorio[f"mic:{uniq}"] == GANHO_PEDIDO for uniq in ganhos), relatorio
+    assert mensagem_de_ativacao("Os Quatro", {"secoes": relatorio}) == "Perfil ativado: Os Quatro"
 
 
 def test_o_volume_da_captura_nao_para_o_laco(
@@ -674,6 +707,100 @@ def test_fora_do_laco_o_modo_espera_e_devolve_o_nome(tmp_path: Path) -> None:
 
     assert nome == "Ensaio"
     assert loader.load_profile("Ensaio").mode.caminho == "xbox"
+
+
+_PERGUNTA = b'{"jsonrpc": "2.0", "id": 1, "method": "daemon.status"}\n'
+
+
+def test_a_pergunta_de_outro_cliente_nao_espera_o_disco_do_gesto(
+    tmp_path: Path, gravacao_lenta: _GravacaoLenta,
+) -> None:
+    """O PS + L3 grava em fio próprio: a janela que pergunta nesse instante responde na hora.
+
+    MORDIDA: faça `gravacao_do_pedido` devolver a última gravação de qualquer pedido.
+    """
+    from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
+
+    servidor = _servidor(tmp_path)
+    gravacao_lenta.ligar()
+
+    async def corpo() -> float:
+        async def gesto_do_controle() -> None:
+            servidor.daemon.gravar_o_modo_escolhido("gamepad", caminho="xbox", mascara="xbox",
+                                                    porta="ipc")
+
+        await asyncio.ensure_future(gesto_do_controle())
+        t0 = time.perf_counter()
+        await servidor._dispatch(_PERGUNTA)
+        return time.perf_counter() - t0
+
+    gasto = asyncio.run(corpo())
+    FIO_DO_PERFIL.submit(lambda: None).result(timeout=DORME_S * 6)
+
+    assert gasto < TETO_IPC_S, f"a pergunta esperou o disco do gesto {gasto:.2f} s"
+    assert loader.load_profile("Ensaio").mode.caminho == "xbox"
+
+
+def test_a_resposta_do_gesto_sai_com_o_modo_no_disco(
+    tmp_path: Path, gravacao_lenta: _GravacaoLenta,
+) -> None:
+    """Quem pediu pelo IPC lê o disco logo depois: a resposta dele espera, e o laço não.
+
+    MORDIDA: tire o `await _o_perfil_em_dia()` do `_dispatch`.
+    """
+    servidor = _servidor(tmp_path)
+    gravacao_lenta.ligar()
+
+    async def gesto(_params: dict[str, Any]) -> dict[str, str]:
+        servidor.daemon.gravar_o_modo_escolhido("gamepad", caminho="xbox", mascara="xbox",
+                                                porta="ipc")
+        return {"status": "ok"}
+
+    servidor._handlers["ensaio.gesto"] = gesto
+
+    async def corpo() -> Any:
+        tarefa = asyncio.ensure_future(servidor._dispatch(
+            b'{"jsonrpc": "2.0", "id": 2, "method": "ensaio.gesto"}\n'))
+        await asyncio.sleep(0.05)
+        assert not tarefa.done(), "a resposta saiu antes do disco"
+        await servidor._dispatch(_PERGUNTA)
+        assert not tarefa.done(), "o laço devia seguir atendendo com o gesto esperando"
+        return await tarefa
+
+    assert json.loads(asyncio.run(corpo()))["result"] == {"status": "ok"}
+    assert loader.load_profile("Ensaio").mode.caminho == "xbox"
+
+
+def test_quem_desiste_de_esperar_nao_cancela_a_gravacao_da_fila(
+    tmp_path: Path, gravacao_lenta: _GravacaoLenta,
+) -> None:
+    """O cliente caiu com o gesto na fila: o aparelho já trocou, e o modo chega ao perfil.
+
+    MORDIDA: tire o ``asyncio.shield`` de `_o_perfil_em_dia`.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_server import _o_perfil_em_dia
+    from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
+
+    servidor = _servidor(tmp_path)
+    gravacao_lenta.ligar()
+    daemon = servidor.daemon
+
+    async def pedido() -> None:
+        daemon.gravar_o_modo_escolhido("gamepad", caminho="dualsense", mascara="dualsense",
+                                       porta="ipc")
+        await _o_perfil_em_dia()
+
+    async def corpo() -> None:
+        daemon.gravar_o_modo_escolhido("gamepad", caminho="xbox", mascara="xbox", porta="ipc")
+        tarefa = asyncio.ensure_future(pedido())
+        await asyncio.sleep(0.05)
+        tarefa.cancel()
+        await asyncio.gather(tarefa, return_exceptions=True)
+
+    asyncio.run(corpo())
+    FIO_DO_PERFIL.submit(lambda: None).result(timeout=DORME_S * 6)
+
+    assert loader.load_profile("Ensaio").mode.caminho == "dualsense"
 
 
 def test_o_daemon_status_com_appid_varre_as_receitas_fora_do_laco(
@@ -814,6 +941,24 @@ def test_o_no_que_mudou_no_meio_do_gesto_se_corrige_na_volta(coop_de_verdade: An
     assert m.criados[-1] == (_P2, "/dev/input/event-novo-do-p2"), m.criados
 
 
+def test_o_tique_no_meio_da_volta_nao_apaga_a_origem_do_gesto(coop_de_verdade: Any) -> None:
+    """A origem decide se a máscara espera o jogo: a volta que anda depois tem de ser a do gesto.
+
+    MORDIDA: em ``_nos_de_agora``, guarde só a ``origem`` do pedido mais novo.
+    """
+    m = coop_de_verdade
+
+    async def corpo() -> None:
+        m.gerente._nos_de_agora(True, "manual")
+        m.gerente._nos_de_agora(False, None)
+        assert m.gerente._pedido_dos_nos == (True, "manual")
+        await asyncio.sleep(DORME_S * 2 + 0.3)
+
+    asyncio.run(corpo())
+
+    assert m.gerente._pedido_dos_nos == (False, None)
+
+
 def test_o_coop_que_desliga_esquece_os_nos(coop_de_verdade: Any, monkeypatch: Any) -> None:
     """Horas depois, o nó guardado pode ser outro aparelho: quem desliga não guarda a mesa.
 
@@ -853,10 +998,48 @@ def test_fora_do_laco_o_sync_descobre_na_hora(coop_de_verdade: Any) -> None:
     assert coop_de_verdade.criados == [(_P2, "/dev/input/event-do-p2")]
 
 
-def test_a_subida_importa_fora_do_fio_do_laco() -> None:
-    """O import do `_hotkey` e o CSV do `canal_sem_imu` saem do laço, antes de `subir`.
+_FICAM_FRIOS = {
+    "hefesto_dualsense4unix.interface": "só o relatório de CLI do `storm_doctor`",
+    "hefesto_dualsense4unix.interface.onde": "só o relatório de CLI do `storm_doctor`",
+    "hefesto_dualsense4unix.testing": "só a subida com o controle de mentira",
+}
 
-    MORDIDA: tire o ``to_thread(_importar_o_que_a_subida_usa)`` do ``Daemon.run``.
+_OS_FRIOS = """
+import ast, importlib.util, pathlib, sys
+from hefesto_dualsense4unix.daemon import lifecycle as lc
+lc._importar_o_que_a_subida_usa()
+raiz = pathlib.Path(lc.__file__).resolve().parents[1]
+pacote = "hefesto_dualsense4unix"
+frios = set()
+def existe(nome):
+    try:
+        return importlib.util.find_spec(nome) is not None
+    except (ImportError, AttributeError, ValueError):
+        return False
+for parte in ("core", "daemon", "integrations", "mods", "plugin_api", "profiles", "utils"):
+    for arquivo in (raiz / parte).rglob("*.py"):
+        for bloco in ast.walk(ast.parse(arquivo.read_text(encoding="utf-8"))):
+            if not isinstance(bloco, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for no in ast.walk(bloco):
+                nomes = []
+                if isinstance(no, ast.ImportFrom) and (no.module or "").startswith(pacote):
+                    nomes = [no.module, *(f"{no.module}.{a.name}" for a in no.names)]
+                elif isinstance(no, ast.Import):
+                    nomes = [a.name for a in no.names if a.name.startswith(pacote)]
+                frios.update(n for n in nomes if n not in sys.modules and existe(n))
+print("\\n".join(sorted(frios)))
+"""
+
+
+def test_a_subida_importa_fora_do_fio_do_laco() -> None:
+    """Nenhum import de dentro de função paga o disco no laço: a subida já os trouxe, todos.
+
+    O dono é a lista de imports do próprio serviço: módulo novo importado de dentro de função
+    entra sozinho na régua, e a parada de 17 s não muda de módulo.
+
+    MORDIDA: tire o ``to_thread(_importar_o_que_a_subida_usa)`` do ``Daemon.run``, ou troque
+    `_PACOTES_DO_SERVICO` por só `daemon.subsystems`.
     """
     fonte = (_SRC / "hefesto_dualsense4unix/daemon/lifecycle.py").read_text(encoding="utf-8")
     corpo = next(no for no in ast.walk(ast.parse(fonte))
@@ -865,11 +1048,6 @@ def test_a_subida_importa_fora_do_fio_do_laco() -> None:
 
     assert "await asyncio.to_thread(_importar_o_que_a_subida_usa)" in texto
     assert texto.index("_importar_o_que_a_subida_usa") < texto.index("subir(")
-    programa = (
-        "import sys; from hefesto_dualsense4unix.daemon import lifecycle as lc;"
-        "lc._importar_o_que_a_subida_usa();"
-        "pacote = 'hefesto_dualsense4unix.';"
-        "assert pacote + 'daemon.subsystems.hotkey' in sys.modules;"
-        "assert pacote + 'integrations.canal_sem_imu' in sys.modules"
-    )
-    subprocess.run([sys.executable, "-c", programa], check=True, timeout=60)
+    saida = subprocess.run([sys.executable, "-c", _OS_FRIOS], check=True, timeout=120,
+                           capture_output=True, text=True).stdout
+    assert set(saida.split()) == set(_FICAM_FRIOS), saida

@@ -565,7 +565,7 @@ class CoopManager:
             laco = asyncio.get_running_loop()
         except RuntimeError:
             return descobrir_os_nos()
-        self._pedido_dos_nos = (force or self._pedido_dos_nos[0], origem)
+        self._pedido_dos_nos = (force or self._pedido_dos_nos[0], origem or self._pedido_dos_nos[1])
         if self._descobrindo:
             self._redescobrir = True
         else:

@@ -356,17 +356,19 @@ def test_so_o_p3_de_pe_mede_o_mesmo_atraso() -> None:
 
 
 @pytest.mark.parametrize(
-    ("mesa", "quem"),
+    ("mesa", "quem", "kind", "caminho"),
     [
-        (("usb", "usb", "usb", "bt"), 2),
-        (("usb", "bt", "bt", "bt"), 3),
-        (("usb", "usb", "bt", "bt"), 4),
-        (("bt", "bt", "bt", "bt"), 2),
+        (("usb", "usb", "usb", "bt"), 2, "gamepad", "xbox"),
+        (("usb", "bt", "bt", "bt"), 3, "gamepad", "dualsense"),
+        (("usb", "usb", "bt", "bt"), 4, "native", None),
+        (("bt", "bt", "bt", "bt"), 2, "desktop", None),
     ],
-    ids=["3-cabos-1-radio-do-p2", "1-cabo-3-radios-do-p3", "2-e-2-do-p4", "4-radios-do-p2"],
+    ids=["3-cabos-1-radio-do-p2-xbox", "1-cabo-3-radios-do-p3-dualsense", "2-e-2-do-p4-nativo",
+         "4-radios-do-p2-mouse-e-teclado"],
 )
 def test_o_gesto_de_modo_de_um_nao_para_a_entrada_dos_outros_tres(
-    mesa: tuple[str, ...], quem: int, monkeypatch: pytest.MonkeyPatch,
+    mesa: tuple[str, ...], quem: int, kind: str, caminho: str | None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Os três custos do gesto dormindo: o disco, a descoberta e a gravação, e os outros jogando.
 
@@ -394,8 +396,8 @@ def test_o_gesto_de_modo_de_um_nao_para_a_entrada_dos_outros_tres(
 
         def fazer() -> None:
             daemon._coop_manager._nos_de_agora(True, "manual")
-            Daemon.gravar_o_modo_escolhido(daemon, "gamepad",  # type: ignore[arg-type]
-                                           caminho="xbox", mascara="xbox", porta="controle")
+            Daemon.gravar_o_modo_escolhido(daemon, kind,  # type: ignore[arg-type]
+                                           caminho=caminho, mascara=caminho, porta="controle")
 
         laco.call_later(0.1, fazer)
         evento = SimpleNamespace(type=ecodes.EV_KEY, code=ecodes.BTN_SOUTH, value=1)
@@ -577,8 +579,18 @@ def test_o_doctor_diz_o_atraso_e_quem_prendeu() -> None:
         "poll.pool.lentas": 2, "poll.pool.ocupante.segura_o_fio": 300_000,
     })
 
-    assert linha == ("[ OK ]", "atraso do serviço: 3 acima de 100 ms, a pior 1234,0 ms em "
-                     "«poll_loop»; 2 na fila do pool, a pior 300,0 ms atrás de «segura_o_fio»")
+    assert linha == ("[ OK ]", "atraso do serviço: 3 paradas acima de 100 ms, a pior 1234,0 ms em "
+                     "«poll_loop»; 2 esperas na fila do controle, a pior 300,0 ms atrás de "
+                     "«segura_o_fio»")
+
+
+def test_o_doctor_sem_amostra_diz_a_parada_sem_inventar_nome() -> None:
+    """A parada que ninguém pegou segue contada, e o nome interno não vai à frase."""
+    linha = cmd_doctor._linha_do_atraso({
+        "poll.laco.lentas": 1, f"poll.laco.lenta.{vl.SEM_AMOSTRA}": 150_000,
+    })
+
+    assert linha == ("[ OK ]", "atraso do serviço: 1 parada acima de 100 ms, a pior 150,0 ms")
 
 
 def test_o_doctor_sem_parada_diz_que_nao_houve_e_sem_medida_cala() -> None:

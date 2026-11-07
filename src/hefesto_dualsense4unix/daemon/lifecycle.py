@@ -4932,16 +4932,42 @@ class _MedidorDoTique:
         self._pior_por_relogio.clear()
 
 
+_PACOTES_DO_SERVICO: tuple[str, ...] = tuple(
+    f"hefesto_dualsense4unix.{nome}"
+    for nome in ("core", "daemon", "integrations", "mods", "plugin_api", "profiles", "utils")
+)
+_MODULOS_AVULSOS_DO_SERVICO: tuple[str, ...] = (
+    "hefesto_dualsense4unix.app.actions.atos_da_bandeja",
+    "hefesto_dualsense4unix.app.actions.external_controllers",
+    "hefesto_dualsense4unix.app.actions.trigger_specs",
+    "hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo",
+    "hefesto_dualsense4unix.app.gui_prefs",
+    "hefesto_dualsense4unix.broker.hidraw_broker",
+)
+
+
 def _importar_o_que_a_subida_usa() -> None:
-    """Os módulos que a subida importa e leem o disco ao nascer, fora do fio do laço.
+    """Todo módulo que o serviço importa de dentro de função, fora do fio do laço.
 
-    O import preguiçoso no laço custou 16 s numa subida com o disco ocupado. Módulo que não sobe
-    aqui segue pelo import de quem o usa, que diz o erro.
+    O import preguiçoso no laço custou 16 s numa subida com o disco ocupado, e a parada só mudava
+    de módulo: quem sobra frio paga o disco no tique ou no gesto. Módulo que não sobe aqui segue
+    pelo import de quem o usa, que diz o erro.
     """
-    from hefesto_dualsense4unix.daemon import subsystems
-
-    nomes = [f"{subsystems.__name__}.{m.name}" for m in pkgutil.iter_modules(subsystems.__path__)]
-    for nome in (*nomes, "hefesto_dualsense4unix.integrations.canal_sem_imu"):
+    nomes = list(_MODULOS_AVULSOS_DO_SERVICO)
+    for pacote in _PACOTES_DO_SERVICO:
+        try:
+            modulo = importlib.import_module(pacote)
+        except Exception as exc:
+            logger.warning("subida_nao_importou", modulo=pacote, err=str(exc))
+            continue
+        nomes += [
+            achado.name
+            for achado in pkgutil.walk_packages(
+                modulo.__path__, f"{pacote}.",
+                onerror=lambda nome: logger.warning("subida_nao_importou", modulo=nome),
+            )
+        ]
+    for nome in nomes:
         try:
             importlib.import_module(nome)
         except Exception as exc:
