@@ -41,6 +41,7 @@ _PROIBIDOS: tuple[tuple[re.Pattern[str], str, str], ...] = (
 )
 _NAO_LEU = "O seu CSS não foi aplicado: o arquivo não pôde ser lido."
 _NAO_LEU_CURTA = "Não abriu"
+_NAO_ABRIU_PARA_EDITAR = "O seu CSS não abriu"
 _MUITO_GRANDE = "Passa de 16 KB"
 _NAO_E_COMUM = "Não é arquivo comum"
 _IMPORTANTE = re.compile(r"\s*!\s*important\s*$", re.I)
@@ -96,14 +97,21 @@ def caminho(mod_id: str, lugares: Any) -> Path:
 
 
 def garantir(mod_id: str, lugares: Any) -> Path:
-    """O arquivo da pessoa, criado com o exemplo comentado se ainda não existe (nunca reescreve)."""
+    """O arquivo comum da pessoa, que nunca se reescreve. Ausente, nasce com o exemplo comentado; o
+    que a caixa plantou no lugar dele (pasta, FIFO, soquete, link) sai do caminho do mesmo jeito.
+    O que não abre nem grava é a recusa do instalador, com a frase da tela."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, gravar_na_caixa
+
     alvo = caminho(mod_id, lugares)
-    alvo.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with alvo.open("x", encoding="utf-8") as arquivo:
-            arquivo.write(EXEMPLO)
-    except FileExistsError:
-        return alvo
+        ler_da_caixa(alvo, TAMANHO_MAXIMO)
+    except FileNotFoundError:
+        gravar_na_caixa(alvo, EXEMPLO.encode("utf-8"), _NAO_ABRIU_PARA_EDITAR)
+    except LeituraRecusadaError as exc:
+        if exc.motivo == NAO_E_COMUM:
+            gravar_na_caixa(alvo, EXEMPLO.encode("utf-8"), _NAO_ABRIU_PARA_EDITAR)
+        elif exc.motivo != GRANDE_DEMAIS:
+            raise InstalacaoRecusadaError(f"{_NAO_ABRIU_PARA_EDITAR}.") from exc
     return alvo
 
 

@@ -7,7 +7,11 @@ import sys
 
 from hefesto_dualsense4unix.core.controller import IController
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig, IpcIndisponivel
-from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
+from hefesto_dualsense4unix.utils.logging_config import (
+    configure_logging,
+    get_logger,
+    guardar_o_registro_do_servico,
+)
 
 
 def build_controller() -> IController:
@@ -79,7 +83,10 @@ def run_daemon(poll_hz: int | None = None) -> int:
 
     from hefesto_dualsense4unix.utils.single_instance import acquire_or_takeover
 
-    acquire_or_takeover(single_instance_name())
+    instancia = single_instance_name()
+    acquire_or_takeover(instancia)
+    if instancia == "daemon":
+        guardar_o_registro_do_servico()
 
     try:
         nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))

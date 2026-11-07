@@ -1925,14 +1925,18 @@ def _criar_o_css_da_modificacao(mod_id: str) -> pathlib.Path:
 @gesto("07-lancadores.html", exp.GESTO_DO_CSS, grava="_criar_o_css_da_modificacao")
 def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Editar»: o ``meu.css`` da extensão nasce com o exemplo, se ainda não existe, e
-    abre no editor do sistema. Salvar o aplica na janela, sem reabrir (o vigia é o do tema)."""
+    abre no editor do sistema. Salvar o aplica na janela, sem reabrir (o vigia é o do tema). A
+    recusa aparece na linha da opção."""
     _MEXIDA.armada = ()
+    _MEXIDA.recusa_do_importar = {}
     mod_id, _, opcao_id = _id_do_clique(o, exp.GESTO_DO_CSS).partition(":")
     item = _a_instalada(mod_id)
     opcao = item.manifesto.opcao_do_css if item.manifesto else None
     if opcao is None or opcao.id != opcao_id:
         raise RuntimeError("Esta extensão não aceita o CSS de quem usa. Nada foi aberto.")
-    _abrir_no_editor(_criar_o_css_da_modificacao(mod_id))
+    with _dizendo_na_linha(item, opcao_id):
+        _abrir_no_editor(_criar_o_css_da_modificacao(mod_id))
+    _montar_a_janela_da_extensao(mod_id, item)
     return _a_pintura_agora(ctx)
 
 

@@ -1096,6 +1096,15 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     ]
 
 
+def _posicao_no_kernel(dev: Any, code: int) -> int | None:
+    """O valor que o ``input_dev`` guarda para o eixo; ``None`` quando o kernel não responde."""
+    try:
+        return int(dev.absinfo(code).value)
+    except OSError as exc:
+        logger.debug("evdev_eixo_ilegivel", codigo=code, err=str(exc))
+        return None
+
+
 class _EvdevReconnectLoop:
     """Loop base de leitura evdev com auto-reconnect e backoff exponencial."""
 
@@ -1121,6 +1130,10 @@ class _EvdevReconnectLoop:
     _TETO_SEM_AVISO_S: ClassVar[float] = 60.0
 
     _BUSCAS_DEPOIS_DO_AVISO: ClassVar[int] = 3
+
+    _RELE_O_KERNEL_NO_BURACO: ClassVar[bool] = False
+    _no_buraco: bool = False
+    _relido: bool = False
 
     def __init__(self) -> None:
         """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader)."""
@@ -1237,6 +1250,30 @@ class _EvdevReconnectLoop:
         """Hook "o kernel ainda concorda comigo?". No-op na base (VIGIA-DO-MUDO-01)."""
         return {}
 
+    def _fora_do_quadro(self, event: Any, dev: Any, ecodes: Any) -> bool:
+        """O protocolo do ``SYN_DROPPED``: o resto do quadro não vale, e o ``SYN_REPORT`` seguinte
+        relê o estado do kernel. Devolve se o evento fica de fora do ``_handle_event``.
+
+        O que sobrou do lote foi lido antes da releitura, então é o estado de antes. Refeito depois,
+        ele prende o botão: o ``EVIOCGKEY`` esvazia as teclas da fila do nó, e o soltar que estava
+        ali não chega mais. Por isso ``_relido`` faz o laço largar o lote.
+        """
+        if not self._RELE_O_KERNEL_NO_BURACO:
+            return False
+        if event.type != getattr(ecodes, "EV_SYN", 0):
+            return self._no_buraco
+        if event.code == getattr(ecodes, "SYN_DROPPED", 3):
+            self._no_buraco = True
+            return True
+        if self._no_buraco and event.code == getattr(ecodes, "SYN_REPORT", 0):
+            self._no_buraco = False
+            self._relido = self._ressincronizar(dev, ecodes)
+        return False
+
+    def _ressincronizar(self, dev: Any, ecodes: Any) -> bool:
+        """Hook "a fila do nó transbordou, releia o kernel". Devolve se releu; a base não relê."""
+        return False
+
     def _on_device_opened(self, dev: Any) -> None:
         """Hook genérico "o device acabou de abrir". No-op na base."""
 
@@ -1313,6 +1350,8 @@ class _EvdevReconnectLoop:
 
     def _read_until_signaled(self, dev: Any, ecodes: Any) -> str:
         """Lê eventos do `dev` até stop/reopen pedido; devolve o motivo."""
+        self._no_buraco = False
+        self._relido = False
         silencio = 0.0
         discordancias = 0
         while True:
@@ -1351,7 +1390,12 @@ class _EvdevReconnectLoop:
             for event in dev.read():
                 if self._stop_flag.is_set():
                     return "stop"
+                if self._fora_do_quadro(event, dev, ecodes):
+                    continue
                 self._handle_event(event, ecodes)
+                if self._relido:
+                    self._relido = False
+                    break
 
     def _run(self) -> None:
         """Loop com auto-reconnect; ENODEV/erro real dispara reset + reabrir."""
@@ -1448,6 +1492,7 @@ class EvdevReader(_EvdevReconnectLoop):
     BUTTON_MAP: ClassVar[dict[str, str]] = BOTOES_DO_LEITOR
 
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
+    _RELE_O_KERNEL_NO_BURACO: ClassVar[bool] = True
 
     def __init__(self, device_path: Path | None = None, target_uniq: str | None = None) -> None:
         super().__init__()
@@ -1663,6 +1708,43 @@ class EvdevReader(_EvdevReconnectLoop):
             if abs(do_kernel - int(publicado)) > self._TOLERANCIA_MUDO:
                 divergencia[campo] = (int(publicado), do_kernel)
         return divergencia
+
+    def _ressincronizar(self, dev: Any, ecodes: Any) -> bool:
+        """O retrato inteiro, do estado que o kernel guarda: o transbordo leva os eventos, não o
+        estado. O aperto do buraco conta uma borda. Sem as teclas, o retrato fica como estava."""
+        try:
+            ativas = [int(code) for code in dev.active_keys()]
+        except OSError as exc:
+            logger.warning("evdev_ressincronia_sem_teclas", err=str(exc))
+            return False
+        botoes = {
+            nome for code in ativas if (nome := self._keycode_name(code, ecodes)) is not None
+        }
+        with self._lock:
+            declarados = set(self._eixos)
+        posicoes: dict[int, int] = {}
+        for nome_evdev in (*(n for n, _ in self._CAMPOS_DE_EIXO), "ABS_HAT0X", "ABS_HAT0Y"):
+            code = getattr(ecodes, nome_evdev, None)
+            if code is not None and int(code) in declarados:
+                cru = _posicao_no_kernel(dev, int(code))
+                if cru is not None:
+                    posicoes[int(code)] = cru
+        with self._lock:
+            antes = self._snapshot.buttons_pressed
+            for code, cru in posicoes.items():
+                self._handle_abs(code, cru, ecodes)
+            for nome in sorted(botoes - self._pressed):
+                self._contar_o_aperto(nome)
+            self._pressed = botoes | (self._pressed - set(self.BUTTON_MAP.values()))
+            for nome in ("l2_btn", "r2_btn"):
+                self._sintetizar_gatilho(nome, int(nome in botoes))
+            self._sync_buttons_to_snapshot()
+            depois = self._snapshot.buttons_pressed
+        logger.info("evdev_ressincronizado", path=str(self._device_path), botoes=len(depois),
+                    mudou=depois != antes)
+        if depois != antes:
+            _acordar_quem_entrega_ao_jogo()
+        return True
 
     def _log_prefix(self) -> str:
         return "evdev"
@@ -2076,6 +2158,7 @@ class TouchpadReader(_EvdevReconnectLoop):
     _REGION_LEFT_LIMIT: ClassVar[int] = 640
     _REGION_RIGHT_LIMIT: ClassVar[int] = 1280
     _THREAD_NAME: ClassVar[str] = "hefesto-touchpad"
+    _RELE_O_KERNEL_NO_BURACO: ClassVar[bool] = True
 
     def __init__(
         self,
@@ -2201,6 +2284,36 @@ class TouchpadReader(_EvdevReconnectLoop):
                     self._touching = event.value == 1
                     self._motion_last_x = None
                     self._motion_last_y = None
+
+    def _ressincronizar(self, dev: Any, ecodes: Any) -> bool:
+        """Dedo e clique do kernel. O delta do buraco não vira salto do cursor: a âncora renasce.
+
+        O ``absinfo`` só conta o slot corrente: os dedos do multitoque saem do retrato, e o que
+        continua apoiado segue em ``touching``, sem prender nenhum fantasma.
+        """
+        try:
+            ativas = {int(code) for code in dev.active_keys()}
+        except OSError as exc:
+            logger.warning("touchpad_ressincronia_sem_teclas", err=str(exc))
+            return False
+        x = _posicao_no_kernel(dev, ecodes.ABS_X)
+        y = _posicao_no_kernel(dev, ecodes.ABS_Y)
+        slot = _posicao_no_kernel(dev, ecodes.ABS_MT_SLOT)
+        with self._lock:
+            self._last_abs_x = self._last_abs_x if x is None else x
+            self._last_abs_y = self._last_abs_y if y is None else y
+            self._mt_slot = self._mt_slot if slot is None else slot
+            self._mt_slots.clear()
+            self._touching = ecodes.BTN_TOUCH in ativas
+            self._motion_last_x = None
+            self._motion_last_y = None
+            if ecodes.BTN_LEFT not in ativas:
+                self._regions = frozenset()
+            elif not self._regions:
+                self._regions = frozenset({self._region_from_x(self._last_abs_x)})
+        logger.info("touchpad_ressincronizado", path=str(self._device_path),
+                    dedo=ecodes.BTN_TOUCH in ativas)
+        return True
 
     def _handle_multitoque(self, event: Any, ecodes: Any) -> None:
         """Os slots MT do kernel — o SEGUNDO dedo (MULTITOQUE-01)."""

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -424,6 +425,52 @@ def _print_bloco_entrada() -> int:
     return _gravidade_das_linhas(linhas)
 
 
+_AVISOS_DO_REGISTRO = 5
+_LARGURA_DA_LINHA_DO_REGISTRO = 200
+_LINHA_DE_AVISO = re.compile(
+    r"\[(?:warning|error|critical)\s*\]|\"level\": \"(?:warning|error|critical)\""
+)
+
+
+def _linhas_do_registro(atual: Path) -> list[tuple[str, str]]:
+    """Até onde o registro do serviço alcança, e os últimos avisos dele, do mais velho ao novo."""
+    from hefesto_dualsense4unix.utils.logging_config import geracoes_do_registro
+
+    try:
+        geracoes = [c for c in geracoes_do_registro(atual) if c.is_file()]
+        if not geracoes:
+            return [("[INFO]", "registro do serviço: o arquivo nasce quando o serviço sobe")]
+        tamanho = sum(c.stat().st_size for c in geracoes)
+        with geracoes[-1].open(encoding="utf-8", errors="replace") as mais_velho:
+            comeco = mais_velho.readline()[:16].replace("T", " ")
+        avisos: list[str] = []
+        for caminho in geracoes:
+            texto = caminho.read_text(encoding="utf-8", errors="replace")
+            achadas = [linha for linha in texto.splitlines() if _LINHA_DE_AVISO.search(linha)]
+            avisos = [*achadas[-(_AVISOS_DO_REGISTRO - len(avisos)):], *avisos]
+            if len(avisos) >= _AVISOS_DO_REGISTRO:
+                break
+    except OSError as exc:
+        return [("[WARN]", f"registro do serviço: não deu para ler {atual} ({exc.strerror})")]
+    desde = f"desde {comeco}, " if comeco else ""
+    linhas = [("[ OK ]", f"registro do serviço: {formata_pt_br(tamanho / (1 << 20))} MB "
+                         f"{desde}em {atual}")]
+    linhas.extend(("[INFO]", aviso[:_LARGURA_DA_LINHA_DO_REGISTRO]) for aviso in avisos)
+    return linhas
+
+
+def _print_bloco_registro() -> int:
+    """O registro próprio do serviço. Devolve a gravidade do bloco."""
+    from hefesto_dualsense4unix.utils.logging_config import caminho_do_registro
+
+    console.print("\n== registro do serviço ==")
+    linhas = _linhas_do_registro(caminho_do_registro())
+    for tag, mensagem in linhas:
+        console.print(f"{tag} ", end="")
+        console.print(mensagem, soft_wrap=True, highlight=False, markup=False)
+    return _gravidade_das_linhas(linhas)
+
+
 def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
@@ -456,6 +503,8 @@ def doctor_cmd(
     rc = max(rc, _print_bloco_proton_fixado())
 
     rc = max(rc, _print_bloco_entrada())
+
+    rc = max(rc, _print_bloco_registro())
 
     console.print("\n== daemon (via IPC) ==")
     linhas_do_daemon = asyncio.run(_daemon_checks())

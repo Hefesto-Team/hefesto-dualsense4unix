@@ -521,6 +521,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "diario.log": (CASA, "o diário de cada modificação, na pasta do supervisor (.diarios/<id>)"),
     "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta do supervisor "
                           "(.diarios/<id>)"),
+    "servico.log": (CASA, "o registro do serviço, já pela máscara; não identifica controle"),
     "gestos-das-extensoes.log": (CASA, "o diário dos gestos que mudam as modificações; não "
                                        "identifica controle"),
     "memoria_dos_jogos.json": (CASA, "a chave Memória de cada jogo; não identifica controle"),

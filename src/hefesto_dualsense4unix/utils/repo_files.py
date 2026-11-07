@@ -10,7 +10,7 @@ código, que já haviam divergido:
 
 - `app/actions/daemon_actions.py:354` (`BASES_DE_INSTALACAO`) — ganhou
   `/app/share` na T-02(b), hoje;
-- `cli/cmd_doctor.py:42` (`_find_repo_file`) — ficou com as três bases de
+- `cli/cmd_doctor.py:47` (`_find_repo_file`) — ficou com as três bases de
   sempre, e por isso o `doctor` continuava cego no Flatpak.
 
 Este módulo é a resposta única. **BG-BASES-01 (26/08/2026): as outras quatro

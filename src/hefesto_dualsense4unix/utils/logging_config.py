@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import atexit
+import contextlib
+import datetime
 import errno
 import logging
 import os
@@ -10,7 +12,9 @@ import sys
 import threading
 import time
 import traceback
+from collections import deque
 from collections.abc import Callable, MutableMapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -49,7 +53,9 @@ def mascarar_a_linha(texto: str) -> str:
 def _mascarar_o_renderizado(_logger: Any, _metodo: str, renderizado: Any) -> Any:
     """O último processador da cadeia: o texto já renderizado, pelo dono."""
     if isinstance(renderizado, str):
-        return mascarar_a_linha(renderizado)
+        mascarado = mascarar_a_linha(renderizado)
+        _REGISTRO.por(mascarado)
+        return mascarado
     return renderizado
 
 
@@ -80,10 +86,12 @@ def _escrever_no_stderr(texto: str) -> None:
     Se a escrita num stderr aberto falhar, o erro sobe ao interpretador, que é o
     dono da falha de um gancho, e ele tenta o mesmo stderr: nada sai cru por outra porta.
     """
+    mascarado = mascarar_a_linha(texto)
+    _REGISTRO.por(mascarado)
     saida = sys.stderr
     if saida is None or getattr(saida, "closed", False):
         return
-    saida.write(mascarar_a_linha(texto))
+    saida.write(mascarado)
     saida.flush()
 
 
@@ -129,6 +137,8 @@ EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
     "launch_env_rematerializado_no_sossego": (),
     "launch_env_ignore_omitido_sem_cobertura": (),
     "usb_ausente_neste_boot": (),
+    "evdev_ressincronizado": ("path", "mudou"),
+    "touchpad_ressincronizado": ("path",),
 }
 JANELA_DO_AGREGADO_S = 60.0
 JANELA_MAXIMA_DO_AGREGADO_S = 900.0
@@ -299,6 +309,177 @@ def _o_destino_fechou(erro: BaseException) -> bool:
     return isinstance(erro, ValueError) and "closed file" in str(erro)
 
 
+NOME_DO_REGISTRO = "servico.log"
+TETO_DO_REGISTRO = 4 << 20
+GERACOES_DO_REGISTRO = 2
+TETO_DA_FILA_DO_REGISTRO = 1 << 18
+ESPERA_DO_REGISTRO_NA_SAIDA_S = 2.0
+_JA_TEM_HORA = re.compile(rb"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+
+
+def _a_hora() -> bytes:
+    return datetime.datetime.now().isoformat(timespec="milliseconds").encode()
+
+
+class RegistroDoServico:
+    """O arquivo do serviço: ``por`` só enfileira, e o disco é de um fio próprio.
+
+    Recebe a linha já pela máscara e sem depender do diário do sistema, que outro programa pode
+    encher. Acima do teto da fila sai a linha mais velha, e o arquivo conta quantas saíram. O
+    arquivo gira antes de passar de :data:`TETO_DO_REGISTRO`. Fechado, ``por`` não faz nada: é o
+    caso de todo processo que não é o serviço.
+    """
+
+    def __init__(self) -> None:
+        self._vez = threading.Condition()
+        self._linhas: deque[bytes] = deque()
+        self._na_fila = 0
+        self._perdidas = 0
+        self._no_disco = False
+        self._parar = False
+        self._caminho: Path | None = None
+        self._fio: threading.Thread | None = None
+        self._arquivo: int | None = None
+        self._tamanho = 0
+
+    @property
+    def aberto(self) -> bool:
+        return self._caminho is not None
+
+    def abrir(self, caminho: Path) -> None:
+        """Abre o arquivo e põe o fio de pé; o :class:`OSError` de abrir sobe a quem pediu."""
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        self._caminho = caminho
+        try:
+            self._arquivo = self._abrir_o_arquivo(caminho)
+        except OSError:
+            self._caminho = None
+            raise
+        self._parar = False
+        self._fio = threading.Thread(target=self._rodar, name="registro-do-servico", daemon=True)
+        self._fio.start()
+
+    def _abrir_o_arquivo(self, caminho: Path) -> int:
+        arquivo = os.open(caminho, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        self._tamanho = os.fstat(arquivo).st_size
+        return arquivo
+
+    def por(self, texto: str) -> None:
+        """Enfileira a linha, com a hora na frente quando vem sem hora. Nunca escreve."""
+        if self._caminho is None:
+            return
+        linha = _COR_DO_TERMINAL.sub("", texto).encode("utf-8", "replace")
+        if not _JA_TEM_HORA.match(linha):
+            linha = _a_hora() + b" " + linha
+        linha = linha[:TETO_DA_FILA_DO_REGISTRO - 1] + b"\n"
+        with self._vez:
+            self._linhas.append(linha)
+            self._na_fila += len(linha)
+            while self._na_fila > TETO_DA_FILA_DO_REGISTRO and len(self._linhas) > 1:
+                self._na_fila -= len(self._linhas.popleft())
+                self._perdidas += 1
+            self._vez.notify_all()
+
+    def _tirar_da_fila(self) -> bytes | None:
+        with self._vez:
+            self._no_disco = False
+            self._vez.notify_all()
+            while not self._linhas:
+                if self._parar:
+                    return None
+                self._vez.wait()
+            self._no_disco = True
+            dados = b"".join(self._linhas)
+            self._linhas.clear()
+            self._na_fila = 0
+        return dados
+
+    def _girar(self, caminho: Path) -> None:
+        if self._arquivo is not None:
+            os.close(self._arquivo)
+            self._arquivo = None
+        for geracao in range(GERACOES_DO_REGISTRO, 0, -1):
+            velho = caminho.with_name(f"{caminho.name}.{geracao - 1}") if geracao > 1 else caminho
+            with contextlib.suppress(FileNotFoundError):
+                os.replace(velho, caminho.with_name(f"{caminho.name}.{geracao}"))
+        self._tamanho = 0
+
+    def _gravar(self, dados: bytes) -> None:
+        caminho = self._caminho
+        if caminho is None:
+            return
+        if self._tamanho and self._tamanho + len(dados) > TETO_DO_REGISTRO:
+            self._girar(caminho)
+        if self._arquivo is None:
+            self._arquivo = self._abrir_o_arquivo(caminho)
+        resto = memoryview(dados)
+        while resto:
+            escrito = os.write(self._arquivo, resto)
+            self._tamanho += escrito
+            resto = resto[escrito:]
+
+    def _gravar_contando(self, dados: bytes) -> None:
+        """Grava com o aviso do que saiu antes. O que o disco recusa entra na conta do próximo."""
+        with self._vez:
+            perdidas = self._perdidas
+        aviso = b""
+        if perdidas:
+            frase = "1 linha saiu" if perdidas == 1 else f"{perdidas} linhas saíram"
+            aviso = _a_hora() + f" ({frase}: o disco não acompanhou)\n".encode()
+        try:
+            self._gravar(aviso + dados)
+        except OSError:
+            with self._vez:
+                self._perdidas += dados.count(b"\n")
+        else:
+            with self._vez:
+                self._perdidas -= perdidas
+
+    def _rodar(self) -> None:
+        while (dados := self._tirar_da_fila()) is not None:
+            self._gravar_contando(dados)
+
+    def escoar(self, prazo: float) -> bool:
+        """Espera a fila chegar ao disco. Diz se chegou; o disco parado nunca segura a saída."""
+        with self._vez:
+            return self._vez.wait_for(
+                lambda: self._caminho is None or (not self._linhas and not self._no_disco),
+                timeout=prazo,
+            )
+
+    def fechar(self) -> None:
+        """Escoa, para o fio e fecha o arquivo."""
+        fio = self._fio
+        if fio is None:
+            return
+        self.escoar(ESPERA_DO_REGISTRO_NA_SAIDA_S)
+        with self._vez:
+            self._parar = True
+            self._caminho = None
+            self._vez.notify_all()
+        fio.join(ESPERA_DO_REGISTRO_NA_SAIDA_S)
+        self._fio = None
+        if self._arquivo is not None:
+            with contextlib.suppress(OSError):
+                os.close(self._arquivo)
+            self._arquivo = None
+
+
+class _ManipuladorDoRegistro(logging.Handler):
+    """A linha de biblioteca no registro do serviço, pelo mesmo filtro do diário."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setFormatter(logging.Formatter("%(message)s"))
+        self.addFilter(MascaraDoDiario())
+
+    def emit(self, record: logging.LogRecord) -> None:
+        _REGISTRO.por(self.format(record))
+
+
+_REGISTRO = RegistroDoServico()
+atexit.register(_REGISTRO.escoar, ESPERA_DO_REGISTRO_NA_SAIDA_S)
+
 _AGREGADO = AgregadoDoDiario()
 atexit.register(_AGREGADO.fechar_tudo)
 
@@ -367,6 +548,30 @@ def configure_logging(
     _configured = True
 
 
+def caminho_do_registro() -> Path:
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    return state_dir() / NOME_DO_REGISTRO
+
+
+def geracoes_do_registro(atual: Path) -> list[Path]:
+    """O arquivo de agora e os girados, do mais novo ao mais velho."""
+    return [atual, *(atual.with_name(f"{atual.name}.{n}")
+                     for n in range(1, GERACOES_DO_REGISTRO + 1))]
+
+
+def guardar_o_registro_do_servico(caminho: Path | None = None) -> None:
+    """Liga o registro próprio do serviço. Quem chama é o único escritor do arquivo."""
+    if _REGISTRO.aberto:
+        return
+    try:
+        _REGISTRO.abrir(caminho or caminho_do_registro())
+    except OSError as erro:
+        get_logger(__name__).warning("registro_do_servico_sem_arquivo", err=str(erro))
+        return
+    logging.getLogger().addHandler(_ManipuladorDoRegistro())
+
+
 def get_logger(name: str | None = None) -> Any:
     """Retorna um logger structlog. Configura automaticamente se preciso."""
     if not _configured:
@@ -377,6 +582,11 @@ def get_logger(name: str | None = None) -> Any:
 def reset_for_tests() -> None:
     """Reseta o estado interno — uso exclusivo em testes."""
     global _configured, _nivel_minimo
+    _REGISTRO.fechar()
+    raiz = logging.getLogger()
+    for manipulador in list(raiz.handlers):
+        if isinstance(manipulador, _ManipuladorDoRegistro):
+            raiz.removeHandler(manipulador)
     _configured = False
     _nivel_minimo = logging.INFO
     structlog.reset_defaults()
@@ -385,12 +595,17 @@ def reset_for_tests() -> None:
 __all__ = [
     "EVENTOS_AGREGADOS",
     "EVENTOS_DE_ESTADO_NORMAL",
+    "NOME_DO_REGISTRO",
     "AgregadoDoDiario",
     "MascaraDoDiario",
+    "RegistroDoServico",
     "cadeia_do_diario",
+    "caminho_do_registro",
     "configure_logging",
     "desce_o_estado_normal",
+    "geracoes_do_registro",
     "get_logger",
+    "guardar_o_registro_do_servico",
     "instalar_os_ganchos_do_fio_que_cai",
     "mascarar_a_linha",
     "reset_for_tests",
