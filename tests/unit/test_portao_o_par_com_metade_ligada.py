@@ -270,6 +270,9 @@ def _fatos_do_texto(
             nome = getattr(alvo, "id", None) or getattr(alvo, "attr", None)
             if isinstance(nome, str):
                 chamadas.append((nome, no.lineno))
+            for valor in (*no.args, *(k.value for k in no.keywords)):
+                if isinstance(valor, ast.Attribute):
+                    chamadas.append((valor.attr, no.lineno))
         elif (
             isinstance(no, ast.Constant)
             and isinstance(no.value, str)
@@ -603,6 +606,18 @@ class TestOPortaoMorde:
         assert "getattr(daemon" not in muda, "o plantio mudo ainda lê a flag"
         (copia / _PLANTIO).write_text(muda, encoding="utf-8")
         assert "_plantio_da_mordida" not in pares_com_metade_ligada(copia)
+
+    def test_metodo_passado_como_alvo_de_fio_e_chamador(self) -> None:
+        texto = (
+            "class C:\n"
+            "    def abre(self):\n"
+            "        Thread(target=self._volta).start()\n"
+            "        laco.call_soon_threadsafe(self._chegou, 1)\n"
+        )
+        fatos = _fatos_do_texto(texto)
+        assert fatos is not None
+        nomes = {nome for nome, _ in fatos[1]}
+        assert {"_volta", "_chegou"} <= nomes
 
     def test_a_regua_nao_confunde_prosa_com_chamador(self, tmp_path: Path) -> None:
         """As duas armadilhas do cabeçalho, plantadas."""
