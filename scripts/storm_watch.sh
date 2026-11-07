@@ -319,7 +319,8 @@ echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-P
 
 bt_delta_loop &
 BT_LOOP_PID=$!
-trap 'kill "${BT_LOOP_PID}" 2>/dev/null' EXIT INT TERM
+trap 'kill "${BT_LOOP_PID}" 2>/dev/null' EXIT
+trap 'exit 0' INT TERM
 
 journalctl -f "${DESDE[@]}" -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
     _TRANSPORT=kernel + _SYSTEMD_UNIT=bluetooth.service \
