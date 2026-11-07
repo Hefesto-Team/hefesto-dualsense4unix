@@ -104,7 +104,7 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
     sem_servidor = False
     try:
         while True:
-            if shutil.which("pactl") is None:
+            if await asyncio.to_thread(shutil.which, "pactl") is None:
                 if not sem_pactl:
                     sem_pactl = True
                     retrato_do_som.RETRATO.soltar()

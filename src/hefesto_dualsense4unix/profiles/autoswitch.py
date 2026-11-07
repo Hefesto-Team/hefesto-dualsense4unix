@@ -138,6 +138,17 @@ def _appids_de_jogo_do_perfil(profile: object) -> frozenset[int]:
     return frozenset(achados)
 
 
+@dataclass(frozen=True)
+class _OQueOTiqueLeu:
+    """O que o `_tick` pergunta ao disco, lido antes dele, no executor do `run()`."""
+
+    perfis: list[Profile]
+    janela: str
+    na_exclusao: bool
+    escolha: Profile | None
+    freestyle_diz_o_modo: bool
+
+
 @dataclass
 class AutoSwitcher:
     manager: ProfileManager
@@ -184,6 +195,7 @@ class AutoSwitcher:
     _jogo_da_trava_visto_vivo: bool = False
     _ultima_janela: str = ""
     _entrou_pelo_jogo: str | None = None
+    _lido: _OQueOTiqueLeu | None = None
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -214,17 +226,21 @@ class AutoSwitcher:
             executor.shutdown(wait=False, cancel_futures=True)
 
     def _ler_fora_do_laco(self) -> dict[str, Any]:
-        """O passo do tique que bloqueia: os perfis do disco e a janela.
+        """O passo do tique que bloqueia: a janela e tudo o que o `_tick` pergunta ao disco.
 
         Roda no executor do `run()`. A leitura dos perfis daqui é a que semeia os jogos quando é a
         vez (no serviço, a leitura feita no laço não semeia) e a que decodifica o arquivo mudado;
-        o `_tick` que vem depois, no laço, acha a leitura pela assinatura em dia e só confere o
-        `stat` de cada arquivo.
+        o `_tick` que vem depois, no laço, só lê memória.
         """
         from hefesto_dualsense4unix.profiles.loader import perfis_para_consulta
 
-        perfis_para_consulta()
-        return self.window_reader()
+        perfis = perfis_para_consulta()
+        info = self.window_reader()
+        janela = str(info.get("wm_class") or "").strip()
+        self._lido = _OQueOTiqueLeu(
+            perfis, janela, self._na_lista_de_exclusao(janela), self._perfil_da_escolha(),
+            self.freestyle_ligado() and self._o_freestyle_diz_o_modo())
+        return info
 
     def freestyle_ligado(self) -> bool:
         """True quando o Modo Freestyle está ligado: o tique não casa a janela."""
@@ -324,6 +340,15 @@ class AutoSwitcher:
 
     def _tick(self, info: dict[str, Any], now: float) -> None:
         """Um ciclo de decisão do autoswitch (leitura já feita pelo caller)."""
+        from hefesto_dualsense4unix.profiles.loader import com_os_perfis_lidos
+
+        try:
+            with com_os_perfis_lidos(None if self._lido is None else self._lido.perfis):
+                self._decidir(info, now)
+        finally:
+            self._lido = None
+
+    def _decidir(self, info: dict[str, Any], now: float) -> None:
         self._perfil_corrente()
         self._acompanhar_a_trava_da_mao()
         self._outra_janela_invalida_o_negativo(info)
@@ -396,7 +421,7 @@ class AutoSwitcher:
         self._fica_log_key = None
         self._lancador_log_key = None
         if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
-            profile = self._perfil_da_escolha()
+            profile = self._perfil_da_escolha() if self._lido is None else self._lido.escolha
             veio_da_escolha = profile is not None
         candidate = profile.name if profile else None
 
@@ -582,13 +607,10 @@ class AutoSwitcher:
     def _na_exclusao(self, info: dict[str, Any]) -> bool:
         """A janela em foco está na lista de exclusão? Aplica ou solta (E3)."""
         wm_class = str(info.get("wm_class") or "").strip()
-        reader = self.exclusao_reader
-        excluida = False
-        if wm_class and reader is not None:
-            try:
-                excluida = bool(reader(wm_class))
-            except Exception as exc:
-                logger.warning("exclusao_leitura_falhou", err=str(exc))
+        lido = self._lido
+        excluida = (
+            lido.na_exclusao if lido is not None and lido.janela == wm_class
+            else self._na_lista_de_exclusao(wm_class))
         if excluida:
             if self._exclusao_em_foco != wm_class:
                 logger.info("autoswitch_janela_excluida", wm_class=wm_class)
@@ -609,6 +631,17 @@ class AutoSwitcher:
                     logger.warning("exclusao_revert_falhou", err=str(exc))
             self._exclusao_em_foco = None
         return False
+
+    def _na_lista_de_exclusao(self, wm_class: str) -> bool:
+        """A pergunta à lista de exclusão. Nunca levanta."""
+        reader = self.exclusao_reader
+        if not wm_class or reader is None:
+            return False
+        try:
+            return bool(reader(wm_class))
+        except Exception as exc:
+            logger.warning("exclusao_leitura_falhou", err=str(exc))
+            return False
 
     def _sincronizar_modo_jogo_padrao(
         self, motivo: str, info: dict[str, Any]
@@ -640,7 +673,8 @@ class AutoSwitcher:
 
     def _modo_jogo_padrao_sob_o_freestyle(self, info: dict[str, Any]) -> None:
         """O modo jogo padrão com o Freestyle ligado: só quando ele não diz o modo."""
-        if self._o_freestyle_diz_o_modo():
+        lido = self._lido
+        if self._o_freestyle_diz_o_modo() if lido is None else lido.freestyle_diz_o_modo:
             return
         motivo = (
             MOTIVO_JOGO_SEM_PERFIL_PROPRIO

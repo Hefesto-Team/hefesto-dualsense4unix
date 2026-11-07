@@ -1597,7 +1597,8 @@ class IpcHandlersMixin:
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
         pontes = await asyncio.to_thread(_pontes_confirmadas_seguro)
         await self._marker_lido.em_dia()
-        ambiente = self._agendar_arming_do_launch(params, await self._receitas_do_pedido(params))
+        ambiente = self._agendar_arming_do_launch(
+            params, await self._receitas_do_pedido(params), await self._folha_do_pedido(params))
         snap = self.store.snapshot()
         controller = snap.controller
         return {
@@ -3196,13 +3197,26 @@ class IpcHandlersMixin:
 
         return await asyncio.to_thread(launch_env._receitas_dos_jogos)
 
+    async def _folha_do_pedido(self, params: Any) -> Any:
+        """O disco que o `daemon.status {appid}` e o arme dele perguntam, fora do laço."""
+        if not (isinstance(params, dict) and params.get("appid") is not None):
+            return None
+        from hefesto_dualsense4unix.daemon import launch_env
+
+        try:
+            return await asyncio.to_thread(launch_env.a_folha_do_pedido, self.daemon)
+        except Exception as exc:
+            logger.warning("launch_folha_do_pedido_falhou", err=str(exc))
+            return None
+
     def _agendar_arming_do_launch(
-        self, params: Any = None, receitas: dict[str, dict[str, str]] | None = None
+        self, params: Any = None, receitas: dict[str, dict[str, str]] | None = None,
+        folha: Any = None,
     ) -> dict[str, Any]:
         """Arma o modo do perfil no ping de um launch; com o `appid`, devolve o ambiente dele."""
         from hefesto_dualsense4unix.daemon import launch_env
 
-        ambiente = launch_env.o_ambiente_no_status(self.daemon, params, receitas)
+        ambiente = launch_env.o_ambiente_no_status(self.daemon, params, receitas, folha)
         if self.daemon is None:
             return ambiente
         marker = self._wrapper_marker_cached()
@@ -3219,9 +3233,13 @@ class IpcHandlersMixin:
     async def _armar_launch(self) -> None:
         """Corpo do arming agendado — best-effort, nunca derruba o loop."""
         with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.daemon.launch_env import arm_launch_profile
+            from hefesto_dualsense4unix.daemon.launch_env import (
+                a_folha_com_o_arme,
+                arm_launch_profile,
+            )
 
-            resultado = arm_launch_profile(self.daemon)
+            folha = await asyncio.to_thread(a_folha_com_o_arme, self.daemon)
+            resultado = arm_launch_profile(self.daemon, folha=folha)
             if isinstance(resultado, dict) and resultado.get("armado"):
                 logger.info(
                     "launch_arm_pelo_ping_do_wrapper",

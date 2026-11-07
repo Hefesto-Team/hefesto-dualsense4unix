@@ -136,7 +136,7 @@ class EventosDoPerfil:
 
     async def ao_conectar(self) -> bool:
         """Um controle conectou: entra o primeiro perfil de «Controle conectado»."""
-        perfis = self._perfis_do(CONTROLE_CONECTADO)
+        perfis = await asyncio.to_thread(self._perfis_do, CONTROLE_CONECTADO)
         return bool(perfis) and await self._entrar(perfis[0], CONTROLE_CONECTADO)
 
     async def ver_os_comandos(self) -> list[str]:
@@ -144,7 +144,7 @@ class EventosDoPerfil:
 
         Nunca levanta: a leitura e a ativação dizem a própria falha, e o laço segue no tempo dele.
         """
-        perfis = self._perfis_do(MEU_COMANDO)
+        perfis = await asyncio.to_thread(self._perfis_do, MEU_COMANDO)
         vistos: set[tuple[str, str]] = set()
         entraram: list[str] = []
         for perfil in perfis:

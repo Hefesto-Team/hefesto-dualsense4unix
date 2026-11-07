@@ -382,9 +382,11 @@ def _armou_pelo_status(daemon: Any, marker: tuple[int, int] | None) -> list[Any]
     armados: list[Any] = []
 
     async def _corpo() -> None:
-        await _HandlerDeLaunch(daemon, marker)._handle_daemon_status({})
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
+        handler = _HandlerDeLaunch(daemon, marker)
+        await handler._handle_daemon_status({})
+        tarefa = getattr(handler, "_launch_arm_task", None)
+        if tarefa is not None:
+            await tarefa
 
     def _falso_arm(alvo: Any, **kw: Any) -> dict[str, Any]:
         armados.append(alvo)

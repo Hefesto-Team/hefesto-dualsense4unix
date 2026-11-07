@@ -1375,18 +1375,28 @@ def o_dono_lembrado_do_p1() -> str | None:
     return lido if _doze_hex(lido) else None
 
 
+_DONO_GRAVADO: tuple[Path, str] | None = None
+
+
 def lembrar_o_dono_do_p1(identity: str | None) -> None:
     """Grava o dono do posto do P1 no runtime da sessão; nunca levanta."""
-    if not _doze_hex(identity) or identity == o_dono_lembrado_do_p1():
+    global _DONO_GRAVADO
+    if not _doze_hex(identity):
         return
     assert identity is not None
     arquivo = _arquivo_do_dono_do_p1()
+    if (arquivo, identity) == _DONO_GRAVADO:
+        return
+    if identity == o_dono_lembrado_do_p1():
+        _DONO_GRAVADO = (arquivo, identity)
+        return
     try:
         arquivo.parent.mkdir(parents=True, exist_ok=True)
         provisorio = arquivo.with_name(f".{arquivo.name}.{os.getpid()}")
         provisorio.write_text(identity, encoding="ascii")
         os.chmod(provisorio, 0o600)
         os.replace(provisorio, arquivo)
+        _DONO_GRAVADO = (arquivo, identity)
     except OSError as exc:
         logger.warning("dono_do_p1_nao_gravado", err=str(exc))
 

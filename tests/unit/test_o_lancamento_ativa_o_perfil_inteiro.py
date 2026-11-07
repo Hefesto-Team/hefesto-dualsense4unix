@@ -123,7 +123,7 @@ class _GerenteEspiao:
         type(self).construidos.append(kwargs)
 
     def activate(
-        self, nome: str, *, origin: str = "manual", relatorio: Any = None
+        self, nome: str, *, origin: str = "manual", relatorio: Any = None, ja_lido: Any = None
     ) -> Any:
         type(self).chamadas.append((nome, origin))
         if type(self).levanta:

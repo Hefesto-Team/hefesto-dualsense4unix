@@ -1,6 +1,7 @@
 """Gerencia perfis em memória e coordena aplicação no controle."""
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import contextvars
 import math
@@ -301,6 +302,7 @@ class ProfileManager:
         *,
         origin: str = "manual",
         relatorio: dict[str, str] | None = None,
+        ja_lido: tuple[Profile, Profile] | None = None,
     ) -> Profile:
         """Carrega, aplica triggers + LEDs + teclado + emulação e marca como ativo.
 
@@ -339,7 +341,8 @@ class ProfileManager:
         poderia ser lido como se fosse o de outra.
         """
         return self._ativar(
-            name, origin=origin, relatorio=relatorio, e_a_escolha=origin == "manual"
+            name, origin=origin, relatorio=relatorio, e_a_escolha=origin == "manual",
+            ja_lido=ja_lido,
         )
 
     def reaplicar(
@@ -401,8 +404,12 @@ class ProfileManager:
         e_a_escolha: bool,
         apagando_o_freestyle: bool = False,
         prender: bool = False,
+        ja_lido: tuple[Profile, Profile] | None = None,
     ) -> Profile:
-        """A cadeia única da ativação e do «Aplicar». Ver :meth:`activate`."""
+        """A cadeia única da ativação e do «Aplicar». Ver :meth:`activate`.
+
+        `ja_lido` é o `(perfil, o que vale dele)` que o lançamento leu fora do laço.
+        """
         manda = o_freestyle_manda(self.store)
         if not e_a_escolha and manda and not apagando_o_freestyle and not e_o_freestyle(name):
             logger.info("perfil_recusado_o_freestyle_manda", pedido=name, origin=origin)
@@ -414,8 +421,7 @@ class ProfileManager:
             raise OFreestyleDesligadoError(
                 f"o Modo Freestyle está desligado: {name!r} não entra por {origin!r}"
             )
-        carregado = load_profile(name)
-        profile = o_que_vale(carregado)
+        carregado, profile = _o_perfil_lido(name) if ja_lido is None else ja_lido
         self.apply(
             profile, origin=origin, relatorio=relatorio,
             recusados=_gatilhos_recusados(carregado),
@@ -449,12 +455,10 @@ class ProfileManager:
         elif reaplicacao and prender:
             armar_a_trava_da_mao(self.store)
         elif origin == "launch":
-            from hefesto_dualsense4unix.utils.session import lembrar_o_ultimo_jogo
-
             soltar_a_trava_da_mao(
                 self.store, "lancamento_de_jogo_com_perfil", perfil=profile.name
             )
-            lembrar_o_ultimo_jogo(profile.name)
+            _lembrar_o_ultimo_jogo_fora_do_laco(profile.name)
         return profile
 
     def apply(
@@ -1785,6 +1789,24 @@ class _PedidosDoGanho:
 
 
 PEDIDOS_DO_GANHO = _PedidosDoGanho()
+
+
+def _o_perfil_lido(name: str) -> tuple[Profile, Profile]:
+    """`(perfil do disco, o que vale dele)`."""
+    carregado = load_profile(name)
+    return carregado, o_que_vale(carregado)
+
+
+def _lembrar_o_ultimo_jogo_fora_do_laco(nome: str) -> None:
+    """Grava o último jogo no fio do perfil quando quem pede é o laço; fora dele, na hora."""
+    from hefesto_dualsense4unix.utils.session import lembrar_o_ultimo_jogo
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        lembrar_o_ultimo_jogo(nome)
+        return
+    FIO_DO_PERFIL.submit(lembrar_o_ultimo_jogo, nome)
 
 
 def no_fio_do_perfil(fazer: Callable[..., _Extra], /, *args: Any, **kwargs: Any) -> Future[_Extra]:

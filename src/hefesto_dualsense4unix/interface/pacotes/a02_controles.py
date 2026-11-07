@@ -1798,7 +1798,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:313`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:299`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -2018,7 +2018,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:4149`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:4163`) e a GUI estável manda exatamente isto
     (`controller_card.py:2474`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O

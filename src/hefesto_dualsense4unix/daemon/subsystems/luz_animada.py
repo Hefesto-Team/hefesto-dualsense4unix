@@ -18,8 +18,10 @@ import time
 import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Protocol
+from functools import partial
+from typing import Any, Protocol, cast
 
+from hefesto_dualsense4unix.daemon.caderno_do_tique import a_resposta_chegou, no_caderno
 from hefesto_dualsense4unix.daemon.subsystems.chegada import segurando_a_luz
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     CANAL_LUZ,
@@ -87,6 +89,7 @@ QUADROS_POR_SEGUNDO_MAXIMO = 30
 INTERVALO_MINIMO = 1.0 / QUADROS_POR_SEGUNDO_MAXIMO
 INTERVALO_DO_LACO_S = INTERVALO_MINIMO
 RELEITURA_DO_PLANO_S = 0.5
+PORTA_DA_LUZ = "perfil da luz"
 RELEITURA_DA_CARGA_S = 2.0
 REACAO_ACENDE = "acende"
 REACAO_BATERIA = "bateria"
@@ -507,9 +510,16 @@ def perfil_ativo(daemon: Any) -> Profile | None:
     Sem perfil ativo vale o computador por baixo de um perfil vazio, o mesmo ``perfil_que_vale``
     que a aba Iluminação mostra e grava ali (``onde_grava``) e que o tato lê
     (D-1610-O-TATO-LE-O-COMPUTADOR-SEM-PERFIL-ATIVO). O computador que nunca escolheu efeito dá
-    um perfil sem efeito: a barra segue fixa.
+    um perfil sem efeito: a barra segue fixa. No laço, vale o que o caderno do tique leu.
     """
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
+    return cast("Profile | None", no_caderno(
+        daemon, PORTA_DA_LUZ, nome if isinstance(nome, str) else None,
+        partial(_ler_o_perfil_ativo, nome), periodo_s=RELEITURA_DO_PLANO_S))
+
+
+def _ler_o_perfil_ativo(nome: object) -> Profile | None:
+    """O perfil `nome` como vale neste computador. Espera o disco."""
     try:
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             o_perfil_sem_perfil_ativo,
@@ -557,7 +567,8 @@ class Passo:
         controles = controles_do_daemon(self.daemon)
         if self._houve_repintura_de_fora():
             self.luz.repintar()
-        if agora - self._lido_em >= RELEITURA_DO_PLANO_S:
+        relida = agora - self._lido_em >= RELEITURA_DO_PLANO_S
+        if a_resposta_chegou(self.daemon, PORTA_DA_LUZ) or relida:
             self._lido_em = agora
             perfil = perfil_ativo(self.daemon)
             self._perfil = perfil

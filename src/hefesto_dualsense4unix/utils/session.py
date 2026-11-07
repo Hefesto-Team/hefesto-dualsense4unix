@@ -25,6 +25,10 @@ import contextlib
 import json
 import os
 import tempfile
+from collections.abc import Callable, Iterator, Mapping
+from contextvars import ContextVar
+from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +41,79 @@ logger = get_logger(__name__)
 _SESSION_FILE = "session.json"
 _PROFILE_KEY = "last_profile"
 _ACTIVE_MARKER_FILE = "active_profile.txt"
+
+
+@dataclass(frozen=True)
+class _BandeirasLidas:
+    textos: dict[str, str | None]
+    entregar: Callable[[Callable[[], None]], Any]
+
+
+_BANDEIRAS_LIDAS: ContextVar[_BandeirasLidas | None] = ContextVar("bandeiras_lidas", default=None)
+
+
+def _texto_no_disco(nome: str) -> str | None:
+    caminho = config_dir() / nome
+    return caminho.read_text(encoding="utf-8") if caminho.exists() else None
+
+
+def _escrever_no_disco(nome: str, texto: str | None) -> None:
+    caminho = config_dir(ensure=True) / nome
+    if texto is None:
+        caminho.unlink(missing_ok=True)
+    else:
+        caminho.write_text(texto, encoding="utf-8")
+
+
+def _escrever_sem_levantar(nome: str, texto: str | None) -> None:
+    try:
+        _escrever_no_disco(nome, texto)
+    except Exception as exc:
+        logger.debug("bandeira_nao_gravada", bandeira=nome, err=str(exc))
+
+
+def _ler_a_bandeira(nome: str) -> str | None:
+    """O texto da bandeira, `None` sem arquivo; com as bandeiras lidas, de memória."""
+    lidas = _BANDEIRAS_LIDAS.get()
+    return _texto_no_disco(nome) if lidas is None else lidas.textos.get(nome)
+
+
+def _escrever_a_bandeira(nome: str, texto: str | None) -> None:
+    """Grava a bandeira, e `None` a apaga; com as bandeiras lidas, por quem as abriu."""
+    lidas = _BANDEIRAS_LIDAS.get()
+    if lidas is None:
+        _escrever_no_disco(nome, texto)
+        return
+    lidas.textos[nome] = texto
+    lidas.entregar(partial(_escrever_sem_levantar, nome, texto))
+
+
+def ler_as_bandeiras_do_modo() -> dict[str, str | None]:
+    """O que `com_as_bandeiras_lidas` precisa. Espera o disco; a que não se lê vale como ausente."""
+    textos: dict[str, str | None] = {}
+    for nome in (_MOUSE_EMULATION_FLAG_FILE, _GAMEPAD_EMULATION_FLAG_FILE,
+                 _GAMEPAD_DISABLED_FLAG_FILE):
+        try:
+            textos[nome] = _texto_no_disco(nome)
+        except Exception as exc:
+            logger.debug("bandeira_nao_lida", bandeira=nome, err=str(exc))
+            textos[nome] = None
+    return textos
+
+
+@contextlib.contextmanager
+def com_as_bandeiras_lidas(
+    textos: Mapping[str, str | None], entregar: Callable[[Callable[[], None]], Any]
+) -> Iterator[None]:
+    """Neste contexto, as bandeiras do modo se leem de `textos` e gravam por `entregar`, na ordem.
+
+    Quem está no laço e não pode tocar o disco (o arme do lançamento) as leu antes, fora dele.
+    """
+    marca = _BANDEIRAS_LIDAS.set(_BandeirasLidas(dict(textos), entregar))
+    try:
+        yield
+    finally:
+        _BANDEIRAS_LIDAS.reset(marca)
 
 
 def _session_path() -> Path:
@@ -391,13 +468,8 @@ _NATIVE_MODE_FLAG_FILE = "native_mode.flag"
 def save_native_mode(active: bool, *, emu_stash: dict[str, Any] | None = None) -> None:
     """Persiste o Modo Nativo (FEAT-NATIVE-MODE-01) — existe = ativo."""
     try:
-        flag = config_dir(ensure=True) / _NATIVE_MODE_FLAG_FILE
-        if active:
-            flag.write_text(
-                json.dumps(emu_stash or {}), encoding="utf-8"
-            )
-        else:
-            flag.unlink(missing_ok=True)
+        _escrever_a_bandeira(
+            _NATIVE_MODE_FLAG_FILE, json.dumps(emu_stash or {}) if active else None)
         logger.debug("native_mode_saved", active=active)
     except Exception as exc:
         logger.debug("native_mode_save_failed", err=str(exc))
@@ -427,12 +499,12 @@ _MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"
 def _read_mouse_flag() -> dict[str, Any] | None:
     """Lê o flag de mouse cru: ``None`` = arquivo ausente (nunca configurada)."""
     try:
-        flag = config_dir() / _MOUSE_EMULATION_FLAG_FILE
-        if not flag.exists():
-            return None
-        content = flag.read_text(encoding="utf-8").strip()
+        texto = _ler_a_bandeira(_MOUSE_EMULATION_FLAG_FILE)
     except Exception:
         return None
+    if texto is None:
+        return None
+    content = texto.strip()
     if not content:
         return {}
     try:
@@ -466,8 +538,7 @@ def save_mouse_emulation(
                 payload[key] = int(valor)
             elif key in anterior:
                 payload[key] = anterior[key]
-        flag = config_dir(ensure=True) / _MOUSE_EMULATION_FLAG_FILE
-        flag.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+        _escrever_a_bandeira(_MOUSE_EMULATION_FLAG_FILE, json.dumps(payload) + "\n")
         logger.debug(
             "mouse_emulation_state_saved",
             enabled=enabled,
@@ -699,15 +770,13 @@ _GAMEPAD_DISABLED_FLAG_FILE = "gamepad_disabled.flag"
 def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
     """Persiste o estado do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
     try:
-        cfg = config_dir(ensure=True)
-        flag = cfg / _GAMEPAD_EMULATION_FLAG_FILE
-        optout = cfg / _GAMEPAD_DISABLED_FLAG_FILE
         if enabled:
-            flag.write_text(f"{(flavor or 'dualsense').strip()}\n", encoding="utf-8")
-            optout.unlink(missing_ok=True)
+            _escrever_a_bandeira(
+                _GAMEPAD_EMULATION_FLAG_FILE, f"{(flavor or 'dualsense').strip()}\n")
+            _escrever_a_bandeira(_GAMEPAD_DISABLED_FLAG_FILE, None)
         else:
-            flag.unlink(missing_ok=True)
-            optout.write_text("1\n", encoding="utf-8")
+            _escrever_a_bandeira(_GAMEPAD_EMULATION_FLAG_FILE, None)
+            _escrever_a_bandeira(_GAMEPAD_DISABLED_FLAG_FILE, "1\n")
         logger.debug("gamepad_emulation_state_saved", enabled=enabled, flavor=flavor)
     except Exception as exc:
         logger.debug("gamepad_emulation_state_save_failed", err=str(exc))
@@ -716,11 +785,10 @@ def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
 def load_gamepad_preference() -> tuple[bool | None, str | None]:
     """Preferência PERSISTIDA do gamepad virtual: ``(ligado|None, flavor)``."""
     try:
-        cfg = config_dir()
-        flag = cfg / _GAMEPAD_EMULATION_FLAG_FILE
-        if flag.exists():
-            return True, (flag.read_text(encoding="utf-8").strip() or None)
-        if (cfg / _GAMEPAD_DISABLED_FLAG_FILE).exists():
+        texto = _ler_a_bandeira(_GAMEPAD_EMULATION_FLAG_FILE)
+        if texto is not None:
+            return True, (texto.strip() or None)
+        if _ler_a_bandeira(_GAMEPAD_DISABLED_FLAG_FILE) is not None:
             return False, None
         return None, None
     except Exception:

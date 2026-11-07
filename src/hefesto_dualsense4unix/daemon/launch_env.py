@@ -63,7 +63,7 @@ import itertools
 import os
 import threading
 import time
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -661,7 +661,8 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
 
 
 def _ativar_o_perfil_do_lancamento(
-    daemon: DaemonProtocol, profile: Any, *, appid: int, na_allowlist: bool = False
+    daemon: DaemonProtocol, profile: Any, *, appid: int, na_allowlist: bool = False,
+    ja_lido: tuple[Any, Any] | None = None,
 ) -> dict[str, str]:
     """Ativa o perfil do jogo que ACABOU de subir, e devolve o relatório."""
     nome = getattr(profile, "name", None)
@@ -678,7 +679,7 @@ def _ativar_o_perfil_do_lancamento(
         )
         gerente_do_daemon(
             daemon, store=getattr(daemon, "store", None), **desvio
-        ).activate(str(nome), origin="launch", relatorio=relatorio)
+        ).activate(str(nome), origin="launch", relatorio=relatorio, ja_lido=ja_lido)
     except Exception as exc:
         logger.warning(
             "launch_ativacao_do_perfil_falhou",
@@ -790,7 +791,9 @@ def _appid_da_autoridade(daemon: Any) -> int | None:
     return appid_da_autoridade(daemon)
 
 
-def _a_autoridade_e_do_proprio_jogo(daemon: Any, appid: int) -> bool:
+def _a_autoridade_e_do_proprio_jogo(
+    daemon: Any, appid: int, outro_jogo: Callable[[], tuple[bool, list[int]]]
+) -> bool:
     """A autoridade `game` de agora é a do jogo que está abrindo, e nenhum outro está vivo?
 
     O tique do sinal viu o jogo ANTES do ping do wrapper (a rodada C3 de 23/10: 43 ms): a
@@ -804,14 +807,15 @@ def _a_autoridade_e_do_proprio_jogo(daemon: Any, appid: int) -> bool:
     if not callable(getattr(daemon, "_gather_game_signal_inputs", None)):
         return False
     try:
-        return not _ha_outro_jogo_vivo(daemon, appid)[0]
+        return not outro_jogo()[0]
     except Exception as exc:
         logger.warning("launch_arm_autoridade_nao_lida", appid=appid, err=str(exc))
         return False
 
 
 def _encerrar_a_autoridade_do_jogo_que_acabou(
-    daemon: Any, appid: int, anterior: object
+    daemon: Any, appid: int, anterior: object,
+    outro_jogo: Callable[[], tuple[bool, list[int]]],
 ) -> bool:
     """O lançamento de `appid` encerra a autoridade `game` que é só o resíduo do jogo anterior.
 
@@ -838,7 +842,7 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
         if _appid_da_autoridade(daemon) == appid:
             logger.info("launch_arm_autoridade_mantida_mesmo_jogo", appid=appid)
             return False
-        ha_outro, outros = _ha_outro_jogo_vivo(daemon, appid)
+        ha_outro, outros = outro_jogo()
         if ha_outro:
             logger.info(
                 "launch_arm_autoridade_mantida_outro_jogo_vivo", appid=appid, outros=outros
@@ -978,15 +982,53 @@ def arm_launch_profile(
         return None
     if folha is not None and _a_folha_nao_viu_o_arme(armado_antes, epoch):
         return None
+    leitura = (
+        _ler_o_arme(daemon, marker, steam_input_appids(), base_dir=base_dir)
+        if folha is None else folha.arme
+    )
+    if leitura is None or leitura.marker != marker:
+        return None
     daemon._launch_armed_for = (appid, epoch)
-    _encerrar_a_autoridade_do_jogo_que_acabou(daemon, appid, armado_antes)
+    _encerrar_a_autoridade_do_jogo_que_acabou(
+        daemon, appid, armado_antes, leitura.outro_jogo)
     _soltar_a_trava_do_lancamento(daemon)
 
     from hefesto_dualsense4unix.daemon.subsystems.game_signal import o_arme_do_proprio_jogo
 
-    do_proprio = _a_autoridade_e_do_proprio_jogo(daemon, appid)
-    with o_arme_do_proprio_jogo(appid if do_proprio else None):
-        return _armar_o_jogo(daemon, appid, epoch, base_dir)
+    do_proprio = _a_autoridade_e_do_proprio_jogo(daemon, appid, leitura.outro_jogo)
+    with o_arme_do_proprio_jogo(appid if do_proprio else None), _o_que_o_arme_leu(daemon, leitura):
+        return _armar_o_jogo(daemon, appid, epoch, leitura)
+
+
+@contextlib.contextmanager
+def _o_que_o_arme_leu(daemon: Any, leitura: LeituraDoArme) -> Iterator[None]:
+    """Durante o arme, o disco é o que ele leu, e as bandeiras do modo gravam no fio do perfil."""
+    if leitura.arranjo is None or leitura.bandeiras is None:
+        yield
+        return
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import com_o_computador_lido
+    from hefesto_dualsense4unix.utils.session import com_as_bandeiras_lidas
+
+    daemon._arranjo_lido_no_arme = (leitura.arranjo[0], leitura.perfis)
+    try:
+        with com_o_computador_lido(leitura.computador), com_as_bandeiras_lidas(
+            leitura.bandeiras, _gravar_fora_do_laco
+        ):
+            yield
+    finally:
+        daemon._arranjo_lido_no_arme = None
+
+
+def _gravar_fora_do_laco(gravar: Callable[[], None]) -> None:
+    """No laço, o fio do perfil grava, na ordem; fora dele, grava agora."""
+    from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        gravar()
+        return
+    FIO_DO_PERFIL.submit(gravar)
 
 
 def _a_folha_nao_viu_o_arme(armado: Any, epoch: int) -> bool:
@@ -1181,7 +1223,7 @@ def _pedir_o_par(daemon: Any, par: ParDoComputador) -> str:
 
 
 def _armar_o_jogo(
-    daemon: DaemonProtocol, appid: int, epoch: int, base_dir: Path | None
+    daemon: DaemonProtocol, appid: int, epoch: int, leitura: LeituraDoArme
 ) -> dict[str, Any] | None:
     """O resto do arme de `arm_launch_profile`: a roupa, o perfil, o modo e a trava do pad."""
     from hefesto_dualsense4unix.daemon.lifecycle import APLICADO
@@ -1194,15 +1236,11 @@ def _armar_o_jogo(
         _vestir_para_o_jogo(daemon, appid, ROUPA_PADRAO)
         return {"appid": appid, "armado": False, "motivo": "freestyle_ligado"}
 
-    na_allowlist = appid in steam_input_appids()
-    roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir, lido_ate=epoch)
+    na_allowlist = leitura.na_allowlist
+    roupa = leitura.roupa
     _guardar_a_roupa_do_arme(daemon, appid, roupa)
 
-    profile = None
-    for candidato_appid, candidato in _steam_profiles(daemon):
-        if candidato_appid == appid:
-            profile = candidato
-            break
+    profile = leitura.perfil
     if profile is None:
         logger.info(
             "launch_arm_pulado_allowlist_steam_input"
@@ -1236,7 +1274,7 @@ def _armar_o_jogo(
             )
 
     ativacao = _ativar_o_perfil_do_lancamento(
-        daemon, profile, appid=appid, na_allowlist=na_allowlist
+        daemon, profile, appid=appid, na_allowlist=na_allowlist, ja_lido=leitura.ja_lido
     )
 
     if na_allowlist:
@@ -1729,7 +1767,10 @@ def _avisar_se_o_jogo_ja_congelou(
 
 
 def _load_profiles(daemon: DaemonProtocol) -> list[Any]:
-    """Perfis do disco, best-effort ([] quando indisponível)."""
+    """Perfis do disco, best-effort ([] quando indisponível); o leitor com a lista pronta a dá."""
+    lidos = getattr(daemon, "perfis_lidos", None)
+    if lidos is not None:
+        return list(lidos)
     try:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
@@ -2083,6 +2124,16 @@ def _jogos_do_comum(foto: _FotoDoLancamento) -> dict[str, str]:
     """`{appid: fonte}` dos jogos instalados cuja roupa é o `0ce6`; vazio sem o dono."""
     if not foto.o_dono_esconde():
         return {}
+    if foto.comuns is not None:
+        return dict(foto.comuns)
+    return _ler_os_comuns(
+        steam_input_appids(), so_o_cache=_no_laco_do_servico(), ao_aquecer=foto.a_roupa_aqueceu)
+
+
+def _ler_os_comuns(
+    allowlist: Collection[int], *, so_o_cache: bool, ao_aquecer: Callable[[], None]
+) -> dict[str, str]:
+    """A pergunta de `_jogos_do_comum` ao catálogo da Steam. Nunca levanta."""
     try:
         from hefesto_dualsense4unix.integrations.a_roupa_do_jogo import (
             ROUPA_DO_COMUM,
@@ -2090,10 +2141,7 @@ def _jogos_do_comum(foto: _FotoDoLancamento) -> dict[str, str]:
         )
 
         roupas = roupas_dos_jogos(
-            steam_input=steam_input_appids(),
-            so_o_cache=_no_laco_do_servico(),
-            ao_aquecer=foto.a_roupa_aqueceu,
-        )
+            steam_input=allowlist, so_o_cache=so_o_cache, ao_aquecer=ao_aquecer)
     except Exception:
         logger.debug("roupa_dos_jogos_falhou", exc_info=True)
         return {}
@@ -2462,30 +2510,32 @@ def o_ambiente_do_jogo(
 
 
 def ambiente_do_lancamento(
-    daemon: DaemonProtocol, appid: int, receitas: dict[str, dict[str, str]] | None = None
+    daemon: DaemonProtocol, appid: int, receitas: dict[str, dict[str, str]] | None = None,
+    folha: FolhaDoLancamento | None = None,
 ) -> dict[str, Any]:
     """Arma o lançamento do `appid` e devolve o ambiente dele, do estado armado, em memória.
 
     O arquivo é escrito em fundo e pode chegar depois do `exec`; esta resposta é o que o
     wrapper exporta quando o daemon atende. A conta é a do arquivo (`o_ambiente_do_jogo`),
-    com a roupa que o arme decidiu e a receita que o handler leu fora do laço.
+    com a roupa que o arme decidiu e a receita que o handler leu fora do laço. Com a `folha`
+    (`a_folha_do_pedido`), o disco também veio de fora do laço.
     """
     t0 = time.perf_counter()
     appid = int(appid)
-    marker = read_last_run_marker()
+    marker = read_last_run_marker() if folha is None else folha.marker
     armado: dict[str, Any] | None = None
     if marker is not None and marker[0] == appid:
         try:
-            armado = arm_launch_profile(daemon)
+            armado = arm_launch_profile(daemon, folha=folha)
         except Exception as exc:
             logger.warning("launch_ambiente_arme_falhou", appid=appid, err=str(exc))
-    foto = _foto_do_lancamento(daemon, no_fio=False, com_as_vozes=False)
+    foto = _foto_do_lancamento(daemon, no_fio=folha is not None, com_as_vozes=False, folha=folha)
     padrao = _o_ambiente_padrao(foto)
     comuns = _OsJogosDoComum(foto)
     ambiente = o_ambiente_do_jogo(
         foto, appid,
-        do_jogo=next((p for a, p in _steam_profiles(daemon) if a == appid), None),
-        freestyle=_o_freestyle_que_manda(daemon), padrao=padrao,
+        do_jogo=next((p for a, p in _steam_profiles(foto.leitor) if a == appid), None),
+        freestyle=_o_freestyle_que_manda(foto.leitor), padrao=padrao,
         receita=(_receitas_dos_jogos() if receitas is None else receitas).get(str(appid), {}),
         roupa=lambda: _a_roupa_do_jogo(foto, comuns, appid),
     )
@@ -2510,6 +2560,7 @@ def ambiente_do_lancamento(
 def o_ambiente_no_status(
     daemon: DaemonProtocol | None, params: Any,
     receitas: dict[str, dict[str, str]] | None = None,
+    folha: FolhaDoLancamento | None = None,
 ) -> dict[str, Any]:
     """O bloco `ambiente` do `daemon.status` com o `appid`; `{}` sem pedido ou sem resposta."""
     appid = params.get("appid") if isinstance(params, dict) else None
@@ -2520,7 +2571,7 @@ def o_ambiente_no_status(
     if daemon is None:
         return {}
     try:
-        return {"ambiente": ambiente_do_lancamento(daemon, appid, receitas)}
+        return {"ambiente": ambiente_do_lancamento(daemon, appid, receitas, folha)}
     except Exception as exc:
         logger.warning("launch_ambiente_falhou", appid=appid, err=str(exc))
         return {}
@@ -2575,9 +2626,12 @@ def _a_foto_ou_nada(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLancament
 class _OQueOFioLe:
     """O que a parte de fora lê no lugar do daemon — O-APP-RESPONDE-NA-HORA-01."""
 
-    def __init__(self, freestyle_ligado: bool) -> None:
+    def __init__(
+        self, freestyle_ligado: bool, perfis_lidos: tuple[Any, ...] | None = None
+    ) -> None:
         self.controller = None
         self.store = _StoreDaFoto(freestyle_ligado)
+        self.perfis_lidos = perfis_lidos
 
 
 @dataclass(frozen=True)
@@ -2610,6 +2664,7 @@ class _FotoDoLancamento:
     roupas_do_arme: Mapping[int, int] = field(default_factory=dict)
     modo_do_computador: ModoAntecipado | None = None
     externos: tuple[tuple[int, int], ...] = ()
+    comuns: Mapping[str, str] | None = None
 
 
 def _o_dono_esconde(daemon: Any) -> bool:
@@ -2625,7 +2680,8 @@ _ORDEM_DAS_FOTOS = itertools.count(1)
 
 
 def _foto_do_lancamento(
-    daemon: DaemonProtocol, *, no_fio: bool, com_as_vozes: bool = True
+    daemon: DaemonProtocol, *, no_fio: bool, com_as_vozes: bool = True,
+    folha: FolhaDoLancamento | None = None,
 ) -> _FotoDoLancamento:
     """A foto do daemon vivo, com as vozes do diagnóstico que leem dele."""
     t0 = time.perf_counter()
@@ -2666,7 +2722,10 @@ def _foto_do_lancamento(
         identidade=_identidade_do_primario(daemon),
         permite_uhid=_permite_uhid(daemon),
         vpads_previstos=_vpads_previstos(daemon, fisicos),
-        leitor=_OQueOFioLe(freestyle_ligado) if no_fio else daemon,
+        leitor=(
+            _OQueOFioLe(freestyle_ligado, None if folha is None else folha.perfis)
+            if no_fio else daemon
+        ),
         publicar=publicar,
         carimbar=carimbar,
         foto_ms=(time.perf_counter() - t0) * 1000,
@@ -2676,6 +2735,7 @@ def _foto_do_lancamento(
         roupas_do_arme=_as_roupas_dos_armes(daemon),
         modo_do_computador=modo_do_computador(daemon, modo_vivo=modo_vivo, fisicos=fisicos),
         externos=recibo[7],
+        comuns=None if folha is None else folha.comuns,
     )
 
 
@@ -2866,9 +2926,138 @@ class FolhaDoLancamento:
     exit_pid: int | None
     allowlist: frozenset[int]
     selo: SeloDosPerfis
+    perfis: tuple[Any, ...] | None = field(default=None, compare=False)
+    arme: LeituraDoArme | None = field(default=None, compare=False)
+    comuns: Mapping[str, str] | None = field(default=None, compare=False)
 
 
 FOLHA_EM_BRANCO = FolhaDoLancamento(None, None, None, None, frozenset(), ())
+
+
+@dataclass(frozen=True)
+class LeituraDoArme:
+    """O que o arme do `marker` pergunta ao disco, lido antes de ele correr."""
+
+    marker: tuple[int, int]
+    na_allowlist: bool
+    roupa: int
+    perfil: Any | None
+    ja_lido: tuple[Any, Any] | None
+    outro_jogo: Callable[[], tuple[bool, list[int]]]
+    arranjo: tuple[Any] | None = None
+    perfis: tuple[Any, ...] = ()
+    computador: Any = None
+    bandeiras: Mapping[str, str | None] | None = None
+
+
+def _ler_o_arme(
+    daemon: Any, marker: tuple[int, int], allowlist: Collection[int], *,
+    base_dir: Path | None = None, leitor: Any = None,
+) -> LeituraDoArme:
+    """Lê o que o arme do `marker` pergunta. Espera o disco; com `leitor`, nunca no laço."""
+    appid, epoch = marker
+    na_allowlist = appid in allowlist
+    roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir, lido_ate=epoch)
+    fonte = daemon if leitor is None else leitor
+    perfil = next((p for a, p in _steam_profiles(fonte) if a == appid), None)
+    if leitor is None:
+        return LeituraDoArme(
+            marker, na_allowlist, roupa, perfil, None, lambda: _ha_outro_jogo_vivo(daemon, appid))
+    from hefesto_dualsense4unix.utils.session import ler_as_bandeiras_do_modo
+
+    ja_lido = None if perfil is None else _o_perfil_que_vale(perfil)
+    aquecer_a_sessao = getattr(daemon, "_arranjo_da_sessao", None)
+    if callable(aquecer_a_sessao):
+        aquecer_a_sessao()
+    return LeituraDoArme(
+        marker, na_allowlist, roupa, perfil, ja_lido,
+        _a_resposta_do_outro_jogo(daemon, appid),
+        (ja_lido[1] if ja_lido is not None else _o_perfil_do_arranjo(daemon),),
+        tuple(_load_profiles(leitor)), _o_computador_lido(), ler_as_bandeiras_do_modo(),
+    )
+
+
+def _o_computador_lido() -> Any:
+    """O computador do disco; `None` sem leitura, e o arme cai na pergunta de sempre."""
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+
+    try:
+        return o_computador()
+    except Exception as exc:
+        logger.warning("launch_arm_computador_nao_lido", err=str(exc))
+        return None
+
+
+def _o_perfil_que_vale(perfil: Any) -> tuple[Any, Any] | None:
+    """`(perfil, o que vale dele)`; None sem o computador, e a ativação conta a falha."""
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
+
+    try:
+        return perfil, o_que_vale(perfil)
+    except Exception as exc:
+        logger.warning("launch_arm_computador_nao_lido", err=str(exc))
+        return None
+
+
+def _a_resposta_do_outro_jogo(
+    daemon: Any, appid: int
+) -> Callable[[], tuple[bool, list[int]]]:
+    """A varredura de `_ha_outro_jogo_vivo` feita agora; a resposta devolve ou levanta igual."""
+    try:
+        resposta = _ha_outro_jogo_vivo(daemon, appid)
+    except Exception as exc:
+        erro = exc
+
+        def levantar() -> tuple[bool, list[int]]:
+            raise erro
+
+        return levantar
+    return lambda: resposta
+
+
+def _o_perfil_do_arranjo(daemon: Any) -> Any:
+    """O perfil ativo que o arranjo do desktop vai perguntar durante o arme."""
+    perguntar = getattr(daemon, "_perfil_do_arranjo", None)
+    return perguntar() if callable(perguntar) else None
+
+
+def _na_janela_do_arme(marker: tuple[int, int] | None) -> bool:
+    return marker is not None and (time.time() - marker[1]) <= LAUNCH_ARM_WINDOW_SEC
+
+
+def a_folha_com_o_arme(
+    daemon: Any = None,
+    anterior: FolhaDoLancamento | None = None,
+    *,
+    com_os_perfis: bool = False,
+) -> FolhaDoLancamento:
+    """A folha e, com lançamento na janela, o que o arme dele lê. Nunca no fio do laço.
+
+    A lista de perfis só se relê quando o selo mudou, e a leitura do arme uma vez por `marker`.
+    """
+    folha = ler_a_folha()
+    no_prazo = _na_janela_do_arme(folha.marker)
+    if not (no_prazo or com_os_perfis):
+        return folha
+    memoria = anterior if anterior is not None and anterior.selo == folha.selo else None
+    perfis = memoria.perfis if memoria is not None else None
+    if perfis is None:
+        sem_lista: Any = _OQueOFioLe(False)
+        perfis = tuple(_load_profiles(sem_lista))
+    arme = memoria.arme if memoria is not None else None
+    if not no_prazo or folha.marker is None:
+        arme = None
+    elif arme is None or arme.marker != folha.marker:
+        arme = _ler_o_arme(
+            daemon, folha.marker, folha.allowlist, leitor=_OQueOFioLe(False, perfis))
+    return replace(folha, perfis=perfis, arme=arme)
+
+
+def a_folha_do_pedido(daemon: Any) -> FolhaDoLancamento:
+    """A folha do `daemon.status` do wrapper: o marker de agora, os perfis e os jogos do comum."""
+    folha = a_folha_com_o_arme(daemon, com_os_perfis=True)
+    return replace(folha, comuns=_ler_os_comuns(
+        folha.allowlist, so_o_cache=True, ao_aquecer=lambda: _a_roupa_aqueceu(daemon)))
 
 
 def ler_a_folha() -> FolhaDoLancamento:
@@ -2897,8 +3086,10 @@ class CadernoDoLancamento:
         ao_mudar: Callable[[], None],
         periodo_s: float,
         folha: FolhaDoLancamento | None = None,
+        daemon: Any = None,
     ) -> None:
         self._laco = laco
+        self._daemon = daemon
         self._ao_mudar = ao_mudar
         self._periodo_s = periodo_s
         self._folha = folha
@@ -2924,8 +3115,9 @@ class CadernoDoLancamento:
 
     def _ler_sempre(self) -> None:
         while not self._laco.is_closed():
-            nova = ler_a_folha()
-            if nova != self._folha:
+            anterior = self._folha
+            nova = a_folha_com_o_arme(self._daemon, anterior)
+            if nova != anterior or (anterior is not None and nova.arme is not anterior.arme):
                 self._folha = nova
                 with contextlib.suppress(RuntimeError):
                     self._laco.call_soon_threadsafe(self._ao_mudar)
@@ -2942,13 +3134,13 @@ def a_folha_do_relogio(
     try:
         laco = asyncio.get_running_loop()
     except RuntimeError:
-        return ler_a_folha()
+        return a_folha_com_o_arme(daemon)
     caderno = getattr(daemon, "_caderno_do_lancamento", None)
     if not (isinstance(caderno, CadernoDoLancamento) and caderno.atende_aqui()):
-        caderno = CadernoDoLancamento(laco, ao_mudar, periodo_s)
+        caderno = CadernoDoLancamento(laco, ao_mudar, periodo_s, daemon=daemon)
         daemon._caderno_do_lancamento = caderno
     elif not caderno.vivo():
-        caderno = CadernoDoLancamento(laco, ao_mudar, periodo_s, caderno.folha())
+        caderno = CadernoDoLancamento(laco, ao_mudar, periodo_s, caderno.folha(), daemon)
         daemon._caderno_do_lancamento = caderno
     return caderno.folha()
 

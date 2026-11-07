@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextvars import ContextVar
 from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.profiles.schema import (
@@ -360,6 +361,17 @@ def o_que_vale(perfil: Profile) -> Profile:
 
 
 _O_COMPUTADOR_LIDO: tuple[Any, Any] = (None, None)
+_O_COMPUTADOR_DESTE_CONTEXTO: ContextVar[Any] = ContextVar("computador_lido", default=None)
+
+
+@contextlib.contextmanager
+def com_o_computador_lido(computador: Any) -> Iterator[None]:
+    """Neste contexto, `o_computador` responde `computador` e não vai ao disco."""
+    marca = _O_COMPUTADOR_DESTE_CONTEXTO.set(computador)
+    try:
+        yield
+    finally:
+        _O_COMPUTADOR_DESTE_CONTEXTO.reset(marca)
 
 
 def selo_da_maquina() -> tuple[int, int, int] | None:
@@ -378,6 +390,9 @@ def o_computador() -> Any:
     global _O_COMPUTADOR_LIDO
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
+    deste_contexto = _O_COMPUTADOR_DESTE_CONTEXTO.get()
+    if deste_contexto is not None:
+        return deste_contexto
     selo = selo_da_maquina()
     lido_em, computador = _O_COMPUTADOR_LIDO
     if computador is None or selo is None or selo != lido_em:

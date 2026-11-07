@@ -1994,6 +1994,20 @@ def load_all_profiles() -> list[Profile]:
     return _ler_todos_os_perfis(copiar=True)
 
 
+_PERFIS_DESTE_CONTEXTO: ContextVar[list[Profile] | None] = ContextVar(
+    "perfis_lidos", default=None)
+
+
+@contextlib.contextmanager
+def com_os_perfis_lidos(perfis: list[Profile] | None) -> Iterator[None]:
+    """Neste contexto, `perfis_para_consulta` responde `perfis` e não vai ao disco."""
+    marca = _PERFIS_DESTE_CONTEXTO.set(perfis)
+    try:
+        yield
+    finally:
+        _PERFIS_DESTE_CONTEXTO.reset(marca)
+
+
 def perfis_para_consulta() -> list[Profile]:
     """Os perfis para quem só os CONSULTA (a escolha pela janela), sem cópia profunda.
 
@@ -2001,6 +2015,9 @@ def perfis_para_consulta() -> list[Profile]:
     edita, e copia o que for usar (a escolha copia só o perfil escolhido). Fora da leitura pela
     assinatura, cada chamada lê do disco, como o :func:`load_all_profiles`.
     """
+    lidos = _PERFIS_DESTE_CONTEXTO.get()
+    if lidos is not None:
+        return lidos
     _maybe_seed_presets()
     _talvez_semear_jogos()
     return _ler_todos_os_perfis(copiar=False)

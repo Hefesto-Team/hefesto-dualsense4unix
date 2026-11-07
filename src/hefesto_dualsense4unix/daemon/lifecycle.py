@@ -369,6 +369,19 @@ class IpcIndisponivel(RuntimeError):  # noqa: N818
         )
 
 
+PERIODO_DA_PREFERENCIA_DO_PAD_S = 2.0
+
+
+def _a_preferencia_do_pad(daemon: Any, *, vazio: Any = None) -> Any:
+    """A preferência persistida do pad, do caderno do tique; `vazio` é a que a subida leu."""
+    from hefesto_dualsense4unix.daemon.caderno_do_tique import no_caderno
+    from hefesto_dualsense4unix.utils.session import load_gamepad_preference
+
+    return no_caderno(
+        daemon, "preferência do pad", None, load_gamepad_preference,
+        periodo_s=PERIODO_DA_PREFERENCIA_DO_PAD_S, vazio=vazio)
+
+
 @dataclass
 class DaemonConfig:
     poll_hz: int = DEFAULT_POLL_HZ
@@ -686,6 +699,7 @@ class Daemon:
     _emulation_suppressed: bool = False
     _tabela_no_jogo: Any = None
     _arranjo_do_perfil: str | None = None
+    _arranjo_lido_no_arme: tuple[Any, tuple[Any, ...]] | None = None
     _teclado_so_no_jogo: bool = False
     _teclado_sempre: bool = False
     _estava_no_jogo: bool = False
@@ -814,7 +828,11 @@ class Daemon:
             o_arquivo_de_mascaras_vira_o_modo(
                 nome_do_perfil_que_grava(getattr(self.store, "active_profile", None))
             )
-        from hefesto_dualsense4unix.utils.session import load_gamepad_emulation
+        from hefesto_dualsense4unix.utils.session import (
+            load_gamepad_emulation,
+            load_gamepad_preference,
+        )
+        _a_preferencia_do_pad(self, vazio=load_gamepad_preference())
         gp_enabled, gp_flavor = load_gamepad_emulation()
         if gp_enabled and not self._native_mode:
             self.config.gamepad_emulation_enabled = True
@@ -1273,7 +1291,13 @@ class Daemon:
         return bool(pref and ok)
 
     def _perfil_do_arranjo(self) -> Any | None:
-        """O perfil ATIVO carregado do disco, ou ``None`` — nunca levanta."""
+        """O perfil ATIVO carregado do disco, ou ``None`` — nunca levanta.
+
+        Durante o arme vale o que ele leu fora do laço (`launch_env._o_arranjo_lido`).
+        """
+        lido = getattr(self, "_arranjo_lido_no_arme", None)
+        if lido is not None:
+            return lido[0]
         try:
             from hefesto_dualsense4unix.profiles.loader import load_profile
             from hefesto_dualsense4unix.profiles.manager import (
@@ -2002,11 +2026,13 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
-        from hefesto_dualsense4unix.utils.session import load_gamepad_preference
 
         if self.config.gamepad_emulation_enabled and self._gamepad_device is not None:
             return APLICADO
-        preferencia, _flavor = load_gamepad_preference()
+        lida = _a_preferencia_do_pad(self)
+        if lida is None:
+            return self._log_gamepad_multi(ADIADO_LOCK_MANUAL, "preferencia_por_ler", 0)
+        preferencia, _flavor = lida
         if preferencia is not None:
             return self._log_gamepad_multi(
                 IGNORADO_GESTO_DO_USUARIO,
@@ -4611,10 +4637,7 @@ class Daemon:
         if arranjo != ARRANJO_POINT_AND_CLICK:
             return base
         from hefesto_dualsense4unix.profiles import loader
-        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
-            o_computador,
-            o_que_vale,
-        )
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
         escolha = getattr(getattr(base, "mouse", None), "point_and_click", None)
         if not escolha:
@@ -4623,7 +4646,7 @@ class Daemon:
         quem, _, resto = str(escolha or "molde:point_and_click").partition(":")
         try:
             if quem == "perfil":
-                fonte = o_que_vale(loader.load_profile(resto.strip()))
+                fonte = self._vista_do_point_and_click(resto.strip())
             else:
                 chave = resto if resto in loader.MOLDE_POR_CHAVE else "point_and_click"
                 fonte = loader.perfil_do_molde(chave, loader.MOLDE_POR_CHAVE[chave].nome)
@@ -4632,6 +4655,20 @@ class Daemon:
             return base
         tabelas = {"button_actions": fonte.button_actions, "key_bindings": fonte.key_bindings}
         return base.model_copy(update=tabelas) if base is not None else fonte
+
+    def _vista_do_point_and_click(self, nome: str) -> Any:
+        """A vista do perfil `nome`; durante o arme, da lista que ele leu fora do laço."""
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
+        from hefesto_dualsense4unix.profiles.slug import find_by_slug
+
+        lido = self._arranjo_lido_no_arme
+        if lido is None:
+            return o_que_vale(load_profile(nome))
+        perfil = find_by_slug(nome, lido[1])
+        if perfil is None:
+            raise FileNotFoundError(f"perfil não encontrado: {nome}")
+        return o_que_vale(perfil)
 
     def _aplicar_as_tabelas(self, profile: Any, relatorio: dict[str, str] | None) -> None:
         """`key_bindings` e `button_actions` de ``profile`` nos dois devices, pelos appliers."""
@@ -5067,7 +5104,7 @@ async def _a_troca_que_o_jogo_adiou(
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
     try:
-        if not troca.troca_pendente():
+        if not await asyncio.to_thread(troca.troca_pendente):
             return
         espera = getattr(daemon, "_espera_da_troca", None)
         if espera is None:

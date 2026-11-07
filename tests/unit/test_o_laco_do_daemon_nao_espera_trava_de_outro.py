@@ -210,8 +210,7 @@ def test_o_tique_da_luz_nao_escreve_no_disco_da_trava(
     loader._PERFIS_PELA_ASSINATURA.esquecer()
     loader.save_profile(_perfil())
     monkeypatch.setattr(loader, "FileLock", _TravaDoDiscoLento)
-    daemon = SimpleNamespace(store=SimpleNamespace(active_profile="Jogo da Régua"))
-    perfil, gasto = _no_laco(lambda: luz_animada.perfil_ativo(daemon))
+    perfil, gasto = _no_laco(lambda: luz_animada._ler_o_perfil_ativo("Jogo da Régua"))
     loader._PERFIS_PELA_ASSINATURA.esquecer()
     assert gasto < TETO_S, (
         f"o tique da luz ficou {gasto:.2f} s no laço no ftruncate do .lock do perfil")
@@ -227,9 +226,8 @@ def test_o_tique_da_luz_nao_espera_o_filelock_do_perfil(
     monkeypatch.setattr(loader, "_LEITURA_LIGADA_PELO_PROCESSO", pela_assinatura)
     loader._PERFIS_PELA_ASSINATURA.esquecer()
     caminho = loader.save_profile(_perfil())
-    daemon = SimpleNamespace(store=SimpleNamespace(active_profile="Jogo da Régua"))
     with _Dono(FileLock(str(loader._lock_path(caminho)))):
-        perfil, gasto = _no_laco(lambda: luz_animada.perfil_ativo(daemon))
+        perfil, gasto = _no_laco(lambda: luz_animada._ler_o_perfil_ativo("Jogo da Régua"))
     loader._PERFIS_PELA_ASSINATURA.esquecer()
     assert gasto < TETO_S, (
         f"o tique da luz ficou {gasto:.2f} s no laço esperando o FileLock do perfil")

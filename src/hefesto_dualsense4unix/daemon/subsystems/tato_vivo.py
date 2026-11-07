@@ -18,12 +18,14 @@ from array import array
 from collections import deque
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
+from functools import partial
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from hefesto_dualsense4unix.core.events import EventTopic, tem_assinante
 from hefesto_dualsense4unix.core.physical_report_reader import TRIGGER_ESTADO_DISPAROU
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+from hefesto_dualsense4unix.daemon.caderno_do_tique import a_resposta_chegou, no_caderno
 from hefesto_dualsense4unix.daemon.lifecycle import (
     MODO_DUALSENSE,
     MODO_NATIVO,
@@ -92,6 +94,7 @@ TETO_TOTAL = 40
 JANELA_DO_TETO_S = 1.0
 INTERVALO_S = 1.0 / 60.0
 RELEITURA_DA_RECEITA_S = 1.0
+PORTA_DO_TATO = "receita do tato"
 CORPO_MAX_PEDACOS = 16
 SINAL_DO_CORPO = 0.001
 ESCRITAS_DA_QUEDA_POR_S = 1000.0 / 60
@@ -2607,10 +2610,17 @@ def receita_ativa(daemon: Any) -> Receita:
     arquivo (sem semear, sem varrer), como o ganho da háptica: este é o laço de
     60 Hz do daemon, e o `load_profile` semeia e reaponta perfis de jogo. Quando o
     nome não tem arquivo com o slug dele, cai no `load_profile` UMA vez por nome
-    (A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01).
+    (A-RECEITA-DO-TATO-SE-LE-SEM-SEMEAR-NEM-VARRER-01). No laço, vale o que o caderno do tique leu.
     """
-    global _PELO_CARREGADOR, _VISTA_LIDA
     nome = _nome_do_perfil_ativo(daemon)
+    return cast("Receita", no_caderno(
+        daemon, PORTA_DO_TATO, nome, partial(_ler_a_receita, nome),
+        periodo_s=RELEITURA_DA_RECEITA_S, vazio=DESLIGADA))
+
+
+def _ler_a_receita(nome: str) -> Receita:
+    """A receita do perfil `nome`, ou a do computador sem nome. Espera o disco."""
+    global _PELO_CARREGADOR, _VISTA_LIDA
     if not nome:
         return _receita_do_computador()
     try:
@@ -3933,7 +3943,8 @@ class Passo:
 
     def receita_de_agora(self, agora: float) -> Receita:
         vivas = extensoes_vivas_do(self.daemon)
-        if agora - self._lida_em >= RELEITURA_DA_RECEITA_S or vivas != self._vivas:
+        relida = agora - self._lida_em >= RELEITURA_DA_RECEITA_S or vivas != self._vivas
+        if a_resposta_chegou(self.daemon, PORTA_DO_TATO) or relida:
             self._lida_em = agora
             self._vivas = vivas
             self.receita_vigente = receita_ativa(self.daemon)
