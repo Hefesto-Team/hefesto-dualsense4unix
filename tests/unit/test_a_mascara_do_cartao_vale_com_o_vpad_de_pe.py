@@ -25,7 +25,6 @@ caminho — o P2 e o P3 ficam no canal de antes; ou devolva o degrau por identid
 """
 from __future__ import annotations
 
-import asyncio
 import functools
 import threading
 from collections.abc import Iterator
@@ -44,6 +43,7 @@ from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileModeConfig
 from hefesto_dualsense4unix.utils import session, xdg_paths
+from tests.unit.test_o_modo_se_grava_onde_ele_muda import _pelo_ipc
 
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
@@ -225,7 +225,7 @@ def _vpad_do(identity: str) -> _Vpad:
 
 def _cartao(d: _Daemon, uniq: str, mascara: str) -> dict[str, Any]:
     """O chip do cartão: `gamepad.mask.set {uniq, flavor}` pelo handler REAL."""
-    return asyncio.run(
+    return _pelo_ipc(
         ih.IpcHandlersMixin._handle_gamepad_mask_set(
             _Handlers(d), {"uniq": uniq, "flavor": mascara}
         )
@@ -239,7 +239,7 @@ def test_o_cartao_de_qualquer_controle_leva_os_tres_ao_modo_novo(quem: str | Non
     assert [v.flavor for v in antes] == ["dualsense"] * 3, "premissa"
 
     params = {"flavor": "xbox"} if quem is None else {"uniq": quem, "flavor": "xbox"}
-    resposta = asyncio.run(ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), params))
+    resposta = _pelo_ipc(ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), params))
 
     assert resposta["status"] == "ok", resposta
     assert all(v.parado for v in antes), (
@@ -256,7 +256,7 @@ def test_o_cartao_de_qualquer_controle_leva_os_tres_ao_modo_novo(quem: str | Non
 def test_o_modo_vazio_ou_desconhecido_e_recusado(flavor: str | None) -> None:
     d = _mesa_com_o_jogo_aberto()
     with pytest.raises(ValueError, match="modo desconhecido"):
-        asyncio.run(
+        _pelo_ipc(
             ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), {"flavor": flavor})
         )
     assert d.config.gamepad_flavor == "dualsense"
@@ -265,7 +265,7 @@ def test_o_modo_vazio_ou_desconhecido_e_recusado(flavor: str | None) -> None:
 def test_o_nintendo_pro_sobe_sem_caminho_para_os_tres() -> None:
     d = _mesa_com_o_jogo_aberto()
 
-    asyncio.run(ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), {"flavor": "nintendo"}))
+    _pelo_ipc(ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), {"flavor": "nintendo"}))
 
     agora = [d._gamepad_device, _vpad_do(P2), _vpad_do(P3)]
     assert [(v.flavor, v.backend) for v in agora] == [("nintendo", "uinput")] * 3

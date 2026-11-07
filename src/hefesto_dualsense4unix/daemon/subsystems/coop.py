@@ -155,6 +155,7 @@ class CoopManager:
     _descobrindo: bool = False
     _redescobrir: bool = False
     _pedido_dos_nos: tuple[bool, str | None] = (False, None)
+    _nos_vistos: tuple[dict[str, Path], dict[str, EntradaDeFora]] | None = None
 
     def __init__(self, daemon: DaemonProtocol) -> None:
         self._daemon = daemon
@@ -426,12 +427,14 @@ class CoopManager:
         """Reconcilia os secundários com os controles plugados. Idempotente.
 
         A descoberta abre e fecha todo nó de ``/dev/input``: no fio do laço a volta corre em fio
-        próprio, e este `sync` renasce com ``nos`` quando a resposta chega.
+        próprio, e este `sync` renasce com ``nos`` quando a resposta chega. O pedido forçado anda
+        na hora sobre os nós já vistos, e a volta confere depois.
         """
         self._garantir_aviso_de_primario()
         self._o_prazo_do_lugar_guardado_espera_o_jogo()
         if not self.should_be_active():
             self._was_active = False
+            self._nos_vistos = None
             self._publicar_a_mesa(None, ativa=False)
             if self._players or self._leds_overridden:
                 self.disable()
@@ -477,6 +480,7 @@ class CoopManager:
             self._publicar_a_mesa(None)
             self._repintar_se_o_numero_mudou()
             return
+        self._nos_vistos = achados
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             mascara_efetiva,
             vpad_ficou_para_tras,
@@ -556,7 +560,7 @@ class CoopManager:
     def _nos_de_agora(
         self, force: bool, origem: str | None
     ) -> tuple[dict[str, Path], dict[str, EntradaDeFora]] | None:
-        """Os nós da mesa agora; ``None`` quando a descoberta foi pedida a um fio próprio."""
+        """Os nós da mesa agora; ``None`` quando a resposta só vem da descoberta em fio próprio."""
         try:
             laco = asyncio.get_running_loop()
         except RuntimeError:
@@ -564,12 +568,12 @@ class CoopManager:
         self._pedido_dos_nos = (force or self._pedido_dos_nos[0], origem)
         if self._descobrindo:
             self._redescobrir = True
-            return None
-        self._descobrindo = True
-        threading.Thread(
-            target=self._descobrir, args=(laco,), name="hefesto-nos-do-coop", daemon=True
-        ).start()
-        return None
+        else:
+            self._descobrindo = True
+            threading.Thread(
+                target=self._descobrir, args=(laco,), name="hefesto-nos-do-coop", daemon=True
+            ).start()
+        return self._nos_vistos if force else None
 
     def _descobrir(self, laco: asyncio.AbstractEventLoop) -> None:
         """A volta da descoberta, fora do laço; o pedido feito durante a volta a refaz."""
@@ -583,8 +587,10 @@ class CoopManager:
         except Exception as exc:
             nos = None
             logger.warning("coop_descoberta_falhou", err=str(exc))
-        with contextlib.suppress(RuntimeError):
+        try:
             laco.call_soon_threadsafe(self._os_nos_chegaram, nos)
+        except RuntimeError:
+            self._descobrindo = False
 
     def _os_nos_chegaram(
         self, nos: tuple[dict[str, Path], dict[str, EntradaDeFora]] | None

@@ -771,6 +771,82 @@ def test_o_pedido_no_meio_da_descoberta_nao_abre_outro_fio_e_refaz_a_volta(
     assert m.criados == [(_P2, "/dev/input/event-do-p2")], m.criados
 
 
+def test_o_gesto_anda_na_hora_sobre_os_nos_vistos_e_a_descoberta_confere_depois(
+    coop_de_verdade: Any,
+) -> None:
+    """O modo não muda os nós: quem segue o gesto troca no mesmo instante, sem esperar a volta.
+
+    MORDIDA: devolva ``None`` no fim de ``_nos_de_agora``.
+    """
+    m = coop_de_verdade
+    m.gerente.sync(force=True, origem="manual")
+    m.gerente._players.clear()
+
+    async def corpo() -> None:
+        m.gerente.sync(force=True, origem="manual")
+        assert len(m.criados) == 2, "o gesto esperou a descoberta com a mesa parada"
+        await asyncio.sleep(DORME_S + 0.2)
+
+    asyncio.run(corpo())
+
+    assert m.descoberta.fios[-1:] == ["hefesto-nos-do-coop"], m.descoberta.fios
+    assert m.gerente._descobrindo is False
+
+
+def test_o_no_que_mudou_no_meio_do_gesto_se_corrige_na_volta(coop_de_verdade: Any) -> None:
+    """O gesto anda sobre o que viu, e a descoberta que confere leva ao nó de agora.
+
+    MORDIDA: tire a chamada de ``_descobrir`` de ``_nos_de_agora`` quando há nós vistos.
+    """
+    m = coop_de_verdade
+    m.gerente.sync(force=True, origem="manual")
+    m.gerente._players.clear()
+    m.descoberta.resposta = {_P2: Path("/dev/input/event-novo-do-p2")}
+
+    async def corpo() -> None:
+        m.gerente.sync(force=True, origem="manual")
+        assert m.criados[-1] == (_P2, "/dev/input/event-do-p2"), m.criados
+        m.gerente._players.clear()
+        await asyncio.sleep(DORME_S + 0.2)
+
+    asyncio.run(corpo())
+
+    assert m.criados[-1] == (_P2, "/dev/input/event-novo-do-p2"), m.criados
+
+
+def test_o_coop_que_desliga_esquece_os_nos(coop_de_verdade: Any, monkeypatch: Any) -> None:
+    """Horas depois, o nó guardado pode ser outro aparelho: quem desliga não guarda a mesa.
+
+    MORDIDA: tire ``self._nos_vistos = None`` do ramo inativo de ``sync``.
+    """
+    m = coop_de_verdade
+    m.gerente.sync(force=True, origem="manual")
+    assert m.gerente._nos_vistos is not None
+
+    monkeypatch.setattr(type(m.gerente), "should_be_active", lambda _self: False)
+    m.gerente.sync()
+
+    assert m.gerente._nos_vistos is None
+
+
+def test_a_volta_que_acha_o_laco_fechado_nao_prende_a_proxima(coop_de_verdade: Any) -> None:
+    """O laço fechado não recebe a resposta, e a marca de «descobrindo» não fica presa.
+
+    MORDIDA: volte `_descobrir` a só engolir o ``RuntimeError``.
+    """
+    m = coop_de_verdade
+
+    async def corpo() -> None:
+        m.gerente.sync(force=True, origem="manual")
+
+    asyncio.run(corpo())
+    prazo = time.monotonic() + DORME_S + 2.0
+    while m.gerente._descobrindo and time.monotonic() < prazo:
+        time.sleep(0.01)
+
+    assert m.gerente._descobrindo is False
+
+
 def test_fora_do_laco_o_sync_descobre_na_hora(coop_de_verdade: Any) -> None:
     coop_de_verdade.gerente.sync(force=True, origem="manual")
 

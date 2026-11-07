@@ -50,6 +50,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 from hefesto_dualsense4unix.utils import session, xdg_paths
+from tests.unit.test_o_modo_se_grava_onde_ele_muda import _pelo_ipc
 
 P1 = "aabbcc000001"
 PERFIL = "Ensaio"
@@ -143,7 +144,7 @@ class _Ponte:
     def chamar(self, metodo: str, **params: Any) -> bool:
         self.pedidos.append((metodo, dict(params)))
         if metodo == "gamepad.emulation.set":
-            asyncio.run(
+            _pelo_ipc(
                 ih.IpcHandlersMixin._handle_gamepad_emulation_set(
                     SimpleNamespace(daemon=self.daemon), params  # type: ignore[arg-type]
                 )

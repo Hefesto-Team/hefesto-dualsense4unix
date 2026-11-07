@@ -17,10 +17,7 @@ MORDIDAS:
 from __future__ import annotations
 
 import asyncio
-import time
 from typing import Any
-
-import pytest
 
 from hefesto_dualsense4unix.daemon import ipc_handlers as ih
 from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
@@ -40,20 +37,13 @@ from tests.unit.test_a_mascara_do_cartao_vale_com_o_vpad_de_pe import (
     _mesa_com_o_jogo_aberto,
     _vpad_do,
 )
+from tests.unit.test_o_modo_se_grava_onde_ele_muda import _pelo_ipc
 
 __all__ = ["_ensaio"]
 
 
 def _todos(d: Any) -> list[Any]:
     return [d._gamepad_device, _vpad_do(P2), _vpad_do(P3)]
-
-
-async def _o_gesto_assentou(d: Any, esperado: str) -> None:
-    """Os outros controles seguem na volta da descoberta, e o modo vai ao disco no fio do perfil."""
-    prazo = time.monotonic() + 5.0
-    while [v.flavor for v in _todos(d)] != [esperado] * 3 and time.monotonic() < prazo:
-        await asyncio.sleep(0.005)
-    FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
 
 
 def _perfil(controles: dict[str, Any], modo: dict[str, Any] | None = None) -> Profile:
@@ -71,7 +61,7 @@ def test_o_mask_set_leva_o_modo_a_todo_controle() -> None:
     """Prova da D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: um pedido muda o modo dos três."""
     d = _mesa_com_o_jogo_aberto()
 
-    resposta = asyncio.run(
+    resposta = _pelo_ipc(
         ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), {"flavor": "xbox"})
     )
 
@@ -81,15 +71,14 @@ def test_o_mask_set_leva_o_modo_a_todo_controle() -> None:
     assert [v.flavor for v in _todos(d)] == ["xbox"] * 3
 
 
-@pytest.mark.asyncio
-async def test_o_ps_l3_anda_o_modo_de_todos() -> None:
+def test_o_ps_l3_anda_o_modo_de_todos() -> None:
     d = _mesa_com_o_jogo_aberto()
     gesto = hotkey.build_next_mask_callback(d)  # type: ignore[arg-type]
 
     for esperado in ("xbox", "nintendo", "dualsense"):
-        await gesto()
-        await _o_gesto_assentou(d, esperado)
+        asyncio.run(gesto())
         assert [v.flavor for v in _todos(d)] == [esperado] * 3, esperado
+        FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
         modo = loader.load_profile(PERFIL).mode
         assert modo is not None and modo.gamepad_flavor == esperado
 
