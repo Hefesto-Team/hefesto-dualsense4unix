@@ -51,7 +51,7 @@
       "data": "2026-11-07",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 959,
+      "piso": 957,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -84,7 +84,7 @@
         "daemon/battery_journal.py": 2,
         "daemon/connection.py": 34,
         "daemon/ganho_da_haptica.py": 5,
-        "daemon/ipc_handlers.py": 73,
+        "daemon/ipc_handlers.py": 71,
         "daemon/ipc_rumble_policy.py": 2,
         "daemon/ipc_server.py": 4,
         "daemon/launch_env.py": 15,
@@ -253,7 +253,7 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 421
+      "universo": 424
     },
     "tamanho": {
       "data": "2026-11-07",
