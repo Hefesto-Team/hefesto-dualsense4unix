@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1207286,
+      "piso": 1210189,
       "por_item": {
-        "docs": 106461,
+        "docs": 106475,
         "scripts": 111687,
-        "src": 304587,
-        "tests": 684551
+        "src": 305680,
+        "tests": 686347
       },
-      "razao": "tamanho: +2313 linhas (1204973 -> 1207286), pagas por Origem: D-0210-O-APERTO-ACORDA-O-TIQUE; registrado no fecho, topo 45601abdb1f1",
+      "razao": "tamanho: +2903 linhas (1207286 -> 1210189), pagas por Origem: D-2509-O-CABO-ASSUME-DO-RADIO; registrado no fecho, topo 108eed35d21a",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1845,10 +1845,16 @@
           "de": 1204973,
           "para": 1207286,
           "razao": "tamanho: +2313 linhas (1204973 -> 1207286), pagas por Origem: D-0210-O-APERTO-ACORDA-O-TIQUE; registrado no fecho, topo 45601abdb1f1"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1207286,
+          "para": 1210189,
+          "razao": "tamanho: +2903 linhas (1207286 -> 1210189), pagas por Origem: D-2509-O-CABO-ASSUME-DO-RADIO; registrado no fecho, topo 108eed35d21a"
         }
       ],
       "unidade": "linhas",
-      "universo": 3368
+      "universo": 3371
     }
   }
 }
