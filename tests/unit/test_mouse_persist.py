@@ -103,8 +103,17 @@ def _boot_config() -> DaemonConfig:
     )
 
 
+async def _subida_inteira(daemon: Daemon) -> None:
+    async def _ate_subir() -> None:
+        while daemon._reconnect_task is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(_ate_subir(), 5)
+
+
 async def _boot_and_stop(daemon: Daemon) -> None:
     run_task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.05)
     daemon.stop()
     await run_task

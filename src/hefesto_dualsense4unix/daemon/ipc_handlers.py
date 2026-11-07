@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import inspect
 import json
 import os
@@ -160,6 +161,104 @@ def _pontes_confirmadas_seguro() -> dict[str, Any]:
         return {}
 
 
+class _LeituraForaDoLaco:
+    """O último valor de uma leitura de disco: quem pergunta não espera, e a leitura corre num fio.
+
+    O `state_full` responde daqui. O valor velho vale enquanto a leitura nova corre, e nunca há
+    duas leituras da mesma porta ao mesmo tempo, com a chave que for.
+    """
+
+    def __init__(self, ler: Callable[..., Any], vazio: Any, validade_s: float | None) -> None:
+        self._ler = ler
+        self._vazio = vazio
+        self._validade_s = validade_s
+        self._valor = vazio
+        self._chave: tuple[Any, ...] | None = None
+        self._lido_em: float | None = None
+        self._esquecimentos = 0
+        self._corrida: asyncio.Task[None] | None = None
+
+    def _vale(self, chave: tuple[Any, ...]) -> bool:
+        if self._lido_em is None or chave != self._chave:
+            return False
+        return self._validade_s is None or time.monotonic() - self._lido_em < self._validade_s
+
+    def _disparar(self, chave: tuple[Any, ...]) -> None:
+        if self._corrida is None:
+            with contextlib.suppress(RuntimeError):
+                self._corrida = asyncio.get_running_loop().create_task(self._correr(chave))
+
+    async def _correr(self, chave: tuple[Any, ...]) -> None:
+        esquecimentos = self._esquecimentos
+        try:
+            valor = await asyncio.to_thread(self._ler, *chave)
+        except Exception as exc:
+            leitor = getattr(self._ler, "__name__", type(self._ler).__name__)
+            logger.warning("leitura_fora_do_laco_falhou", leitor=leitor, err=str(exc))
+            valor = self._valor if chave == self._chave else self._vazio
+        finally:
+            self._corrida = None
+        self._valor = valor
+        self._chave = chave
+        self._lido_em = time.monotonic() if esquecimentos == self._esquecimentos else None
+
+    def agora(self, *chave: Any) -> Any:
+        """O que se sabe; venceu a validade ou mudou a chave, pede a leitura nova."""
+        if not self._vale(chave):
+            self._disparar(chave)
+        return self._valor
+
+    def e_de(self, *chave: Any) -> bool:
+        return chave == self._chave
+
+    def ja_leu(self) -> bool:
+        """Falso até uma leitura começada depois do último `esquecer` acabar."""
+        return self._lido_em is not None
+
+    def esquecer(self) -> None:
+        self._lido_em = None
+        self._esquecimentos += 1
+
+    async def sem_leitura_correndo(self) -> None:
+        while self._corrida is not None:
+            await asyncio.shield(self._corrida)
+
+    async def em_dia(self, *chave: Any) -> Any:
+        """Para quem precisa do disco de agora: espera uma leitura que começa depois do pedido."""
+        await self.sem_leitura_correndo()
+        self._disparar(chave)
+        if self._corrida is not None:
+            await asyncio.shield(self._corrida)
+        return self._valor
+
+    async def de_novo(self) -> None:
+        """O disco de agora, para a mesma pergunta da última leitura."""
+        await self.em_dia(*(self._chave or ()))
+
+
+def _o_marker_do_disco() -> tuple[int, int] | None:
+    from hefesto_dualsense4unix.daemon.launch_env import read_last_run_marker
+
+    return read_last_run_marker()
+
+
+def _o_que_nao_entrou_neste_jogo(
+    wm_class: str, wm_name: str, exe_basename: str
+) -> list[dict[str, str]]:
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.porque_nao_entrou import (
+        frase_do_perfil_que_nao_entrou,
+        perfis_que_nao_entraram,
+    )
+
+    info = {"wm_class": wm_class, "wm_name": wm_name, "exe_basename": exe_basename}
+    return [
+        {"nome": a.nome, "frase": frase_do_perfil_que_nao_entrou(a)}
+        for a in perfis_que_nao_entraram(info, load_all_profiles())
+        if a.e_regra_deste_jogo
+    ]
+
+
 class _RenumberAuthorityChangedError(Exception):
     """F3: um jogo abriu enquanto o renumber esperava os locks — abortar."""
 
@@ -182,6 +281,10 @@ class _NumeroForaDaMesaError(Exception):
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
 _PONTES_CONFIRMADAS_TTL_SEC = 5.0
+
+_MOTORES_DO_PERFIL_TTL_SEC = 1.0
+
+_OSK_DISPONIVEL_TTL_SEC = 10.0
 
 
 _HID_DEVICES_DIR = "/sys/bus/hid/devices"
@@ -508,10 +611,7 @@ class IpcHandlersMixin:
         dict[str, tuple[float, tuple[int, int, int] | None, bool]] | None
     ) = None
 
-    _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
-
-    _pontes_confirmadas_cache: tuple[float, dict[str, Any]] | None = None
 
     _hid_orfaos_cache: tuple[float, list[str]] | None = None
 
@@ -520,6 +620,33 @@ class IpcHandlersMixin:
     ) = None
 
     _launch_arm_task: Any = None
+
+    @functools.cached_property
+    def _pontes_lidas(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(_pontes_confirmadas_seguro, {}, _PONTES_CONFIRMADAS_TTL_SEC)
+
+    @functools.cached_property
+    def _marker_lido(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(_o_marker_do_disco, None, _WRAPPER_MARKER_TTL_SEC)
+
+    @functools.cached_property
+    def _perfil_mudo_lido(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(_o_que_nao_entrou_neste_jogo, [], None)
+
+    @functools.cached_property
+    def _motores_lidos(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(self._ler_os_motores, {}, _MOTORES_DO_PERFIL_TTL_SEC)
+
+    @functools.cached_property
+    def _osk_lido(self) -> _LeituraForaDoLaco:
+        return _LeituraForaDoLaco(self._ler_o_osk, False, _OSK_DISPONIVEL_TTL_SEC)
+
+    def aquecer_as_leituras(self) -> None:
+        """A primeira janela já encontra o que o `state_full` responde sem esperar."""
+        self._pontes_lidas.agora()
+        self._marker_lido.agora()
+        self._motores_lidos.agora(None)
+        self._osk_lido.agora()
 
     _identidade_de_fabrica_cache: dict[str, dict[str, str | None]] | None = None
     _agenda_da_identidade: Any = None
@@ -1469,6 +1596,7 @@ class IpcHandlersMixin:
 
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
         pontes = await asyncio.to_thread(_pontes_confirmadas_seguro)
+        await self._marker_lido.em_dia()
         ambiente = self._agendar_arming_do_launch(params, await self._receitas_do_pedido(params))
         snap = self.store.snapshot()
         controller = snap.controller
@@ -1514,24 +1642,21 @@ class IpcHandlersMixin:
         bloqueio = self._bloqueio_da_emulacao_de_desktop(
             enabled=enabled, device_ativo=device_ativo
         )
-        osk_disponivel = False
-        with contextlib.suppress(Exception):
-            controlador = getattr(daemon, "_osk_controller", None)
-            if controlador is not None:
-                osk_disponivel = bool(controlador.disponivel())
-            else:
-                from hefesto_dualsense4unix.daemon.subsystems.keyboard import (
-                    osk_disponivel_no_sistema,
-                )
-
-                osk_disponivel = bool(osk_disponivel_no_sistema())
         return {
             "enabled": enabled,
             "device_ativo": device_ativo,
             "despachando": bloqueio is None,
             "bloqueio": bloqueio,
-            "osk_disponivel": osk_disponivel,
+            "osk_disponivel": self._osk_lido.agora(),
         }
+
+    def _ler_o_osk(self) -> bool:
+        controlador = getattr(self.daemon, "_osk_controller", None)
+        if controlador is not None:
+            return bool(controlador.disponivel())
+        from hefesto_dualsense4unix.daemon.subsystems.keyboard import osk_disponivel_no_sistema
+
+        return bool(osk_disponivel_no_sistema())
 
     def _bloqueio_da_emulacao_de_desktop(
         self, *, enabled: bool, device_ativo: bool
@@ -1984,17 +2109,8 @@ class IpcHandlersMixin:
                 getattr(daemon_cfg, "rumble_policy_custom_mult", 0.7)
             )
             result["rumble_mult_applied"] = rumble_mult_applied
-            result["rumble_motores"] = {}
             result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                    _motores_do_perfil_ativo,
-                )
-
-                result["rumble_motores"] = {
-                    uniq: {"forte_pct": par[0], "fraco_pct": par[1]}
-                    for uniq, par in _motores_do_perfil_ativo(self.daemon).items()
-                }
+            result["rumble_motores"] = self._motores_lidos.agora(snap.active_profile)
 
             vpads: list[tuple[int, Any, Any, str | None]] = []
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
@@ -3024,8 +3140,6 @@ class IpcHandlersMixin:
         }
 
 
-    _perfil_mudo_cache: tuple[tuple[str, str, str], list[dict[str, str]]] | None = None
-
     def _perfil_que_nao_entrou(self) -> list[dict[str, str]]:
         """Perfis que são regra DESTE jogo e mesmo assim não entraram.
 
@@ -3040,32 +3154,17 @@ class IpcHandlersMixin:
             valor = getattr(self.store, nome, None)
             return valor if isinstance(valor, str) else ""
 
+        leitura = self._perfil_mudo_lido
         wm_class = _txt("window_detect_current_class")
         if steam_appid_from_wm_class(wm_class) is None:
-            self._perfil_mudo_cache = None
+            leitura.esquecer()
             return []
         chave = (wm_class, _txt("window_detect_current_name"), _txt("window_detect_current_exe"))
-        cache = self._perfil_mudo_cache
-        if cache is not None and cache[0] == chave:
-            return cache[1]
-
-        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
-        from hefesto_dualsense4unix.profiles.porque_nao_entrou import (
-            frase_do_perfil_que_nao_entrou,
-            perfis_que_nao_entraram,
-        )
-
-        info = {"wm_class": chave[0], "wm_name": chave[1], "exe_basename": chave[2]}
-        achados = [
-            {"nome": a.nome, "frase": frase_do_perfil_que_nao_entrou(a)}
-            for a in perfis_que_nao_entraram(info, load_all_profiles())
-            if a.e_regra_deste_jogo
-        ]
-        self._perfil_mudo_cache = (chave, achados)
-        return achados
+        achados = leitura.agora(*chave)
+        return achados if leitura.e_de(*chave) else []
 
     def _wrapper_used_now(self) -> bool | None:
-        """`wrapper_used` do momento: True/False com jogo em foco, None sem."""
+        """`wrapper_used` do momento: True/False com jogo em foco, None sem ou sem o marker dele."""
         from hefesto_dualsense4unix.daemon.launch_env import (
             steam_appid_from_wm_class,
             wrapper_used_state,
@@ -3082,11 +3181,11 @@ class IpcHandlersMixin:
         if first is None or first[0] != appid:
             first = (appid, time.time())
             self._wrapper_first_seen = first
-        return wrapper_used_state(
-            appid=appid,
-            marker=self._wrapper_marker_cached(),
-            first_seen_epoch=first[1],
-        )
+            self._marker_lido.esquecer()
+        marker = self._wrapper_marker_cached()
+        if not self._marker_lido.ja_leu():
+            return None
+        return wrapper_used_state(appid=appid, marker=marker, first_seen_epoch=first[1])
 
     @staticmethod
     async def _receitas_do_pedido(params: Any) -> dict[str, dict[str, str]] | None:
@@ -3140,25 +3239,19 @@ class IpcHandlersMixin:
         `_pontes_confirmadas_seguro`, a mesma do `daemon.status`; o que muda é o teto
         (`_PONTES_CONFIRMADAS_TTL_SEC`: o tique paga cache, o gesto paga o disco).
         """
-        now = time.monotonic()
-        hit = self._pontes_confirmadas_cache
-        if hit is not None and (now - hit[0]) < _PONTES_CONFIRMADAS_TTL_SEC:
-            return hit[1]
-        pontes = _pontes_confirmadas_seguro()
-        self._pontes_confirmadas_cache = (now, pontes)
-        return pontes
+        return cast("dict[str, Any]", self._pontes_lidas.agora())
+
+    def _ler_os_motores(self, _perfil: str | None = None) -> dict[str, dict[str, int]]:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import _motores_do_perfil_ativo
+
+        return {
+            uniq: {"forte_pct": par[0], "fraco_pct": par[1]}
+            for uniq, par in _motores_do_perfil_ativo(self.daemon).items()
+        }
 
     def _wrapper_marker_cached(self) -> tuple[int, int] | None:
         """Marker `last_run` com cache TTL — o state_full roda a 10-20 Hz."""
-        now = time.monotonic()
-        hit = self._wrapper_marker_cache
-        if hit is not None and (now - hit[0]) < _WRAPPER_MARKER_TTL_SEC:
-            return hit[1]
-        from hefesto_dualsense4unix.daemon.launch_env import read_last_run_marker
-
-        marker = read_last_run_marker()
-        self._wrapper_marker_cache = (now, marker)
-        return marker
+        return cast("tuple[int, int] | None", self._marker_lido.agora())
 
     def _no_do_vpad_cached(
         self, uniq: str | None, nome: str | None
@@ -3781,7 +3874,9 @@ class IpcHandlersMixin:
                 esquecer_motores_do_perfil,
             )
 
+            await self._motores_lidos.sem_leitura_correndo()
             esquecer_motores_do_perfil(self.daemon)
+            await self._motores_lidos.de_novo()
         GANHO.ler_do_daemon(self.daemon, forcar=True)
         logger.info(
             "rumble_motores_gravados",

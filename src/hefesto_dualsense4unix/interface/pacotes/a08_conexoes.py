@@ -1635,7 +1635,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     É o `title` do número e do aparelho de cada cartão (*"Escolhe só este controle: a luz, os
     gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele."*), e
     `controller.target.set` faz isso (`_handle_controller_target_set`,
-    `daemon/ipc_handlers.py:3329`: *"Define o ALVO das ações de output"*), o método do
+    `daemon/ipc_handlers.py:3422`: *"Define o ALVO das ações de output"*), o método do
     seletor da GUI estável (`app/actions/status_actions.py`). Sem função no `ipc_bridge` (degrau 3
     da ponte), passa pelo mesmo `_safe_call` e timeout.
 

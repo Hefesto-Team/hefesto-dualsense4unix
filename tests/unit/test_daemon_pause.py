@@ -78,6 +78,14 @@ def test_session_paused_persistence(
     assert session.load_paused_state() is False
 
 
+async def _subida_inteira(daemon: Daemon) -> None:
+    async def _ate_subir() -> None:
+        while daemon._reconnect_task is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(_ate_subir(), 5)
+
+
 @pytest.mark.asyncio
 async def test_paused_suppresses_button_down(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pausado (fora do grace), pressionar um botão NÃO publica BUTTON_DOWN,"""
@@ -90,6 +98,7 @@ async def test_paused_suppresses_button_down(monkeypatch: pytest.MonkeyPatch) ->
 
     daemon = Daemon(controller=fc, bus=bus, store=store, config=_config())
     run_task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.12)
     daemon.pause()
     fc.set_buttons(["cross"])
@@ -114,6 +123,7 @@ async def test_resume_restores_dispatch(monkeypatch: pytest.MonkeyPatch) -> None
 
     daemon = Daemon(controller=fc, bus=bus, store=store, config=_config())
     run_task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.12)
     daemon.pause()
     fc.set_buttons(["cross"])
@@ -141,6 +151,7 @@ async def test_run_restores_paused_state(monkeypatch: pytest.MonkeyPatch) -> Non
     fc = FakeController(transport="usb", states=[_state()])
     daemon = Daemon(controller=fc, config=_config())
     run_task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.06)
     assert daemon.is_paused() is True
     daemon.stop()

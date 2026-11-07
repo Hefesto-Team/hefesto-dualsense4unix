@@ -446,6 +446,12 @@ def server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
     )
 
 
+async def _estado_com_o_marker_lido(server: IpcServer) -> dict[str, Any]:
+    await server._handle_daemon_state_full({})
+    await server._marker_lido.sem_leitura_correndo()
+    return await server._handle_daemon_state_full({})
+
+
 async def test_wrapper_used_null_sem_jogo(server: IpcServer) -> None:
     result = await server._handle_daemon_state_full({})
     ge = result["gamepad_emulation"]
@@ -460,7 +466,7 @@ async def test_wrapper_used_true_com_marker_fresco(
     _grava_marker(
         tmp_path / "launch_env", f"appid={APPID}\nepoch={int(time.time())}\n"
     )
-    result = await server._handle_daemon_state_full({})
+    result = await _estado_com_o_marker_lido(server)
     ge = result["gamepad_emulation"]
     assert ge["wrapper_used"] is True
     assert ge["dedup_ok"] is True
@@ -472,7 +478,7 @@ async def test_wrapper_used_false_sem_marker_derruba_dedup_ok(
 ) -> None:
     """O FATO 0 curado: jogo aberto sem wrapper → wrapper_used=false E o"""
     server.store.record_window_detect_read("xlib", f"steam_app_{APPID}")
-    result = await server._handle_daemon_state_full({})
+    result = await _estado_com_o_marker_lido(server)
     ge = result["gamepad_emulation"]
     assert ge["wrapper_used"] is False
     assert ge["dedup_ok"] is False
@@ -487,7 +493,7 @@ async def test_wrapper_used_false_com_marker_velho(
     _grava_marker(
         tmp_path / "launch_env", f"appid={APPID}\nepoch={epoch_velho}\n"
     )
-    result = await server._handle_daemon_state_full({})
+    result = await _estado_com_o_marker_lido(server)
     assert result["gamepad_emulation"]["wrapper_used"] is False
 
 
@@ -497,7 +503,7 @@ async def test_wrapper_used_false_em_nativo_nao_derruba_dedup(
     """Modo Nativo: não há env que importe (o launch_env omite DISABLE/IGNORE)"""
     server.daemon.is_native_mode = lambda: True  # type: ignore[union-attr]
     server.store.record_window_detect_read("xlib", f"steam_app_{APPID}")
-    result = await server._handle_daemon_state_full({})
+    result = await _estado_com_o_marker_lido(server)
     ge = result["gamepad_emulation"]
     assert ge["wrapper_used"] is False
     assert ge["dedup_ok"] is True
@@ -518,6 +524,7 @@ async def test_wrapper_marker_cache_ttl(
 
     monkeypatch.setattr(le_mod, "read_last_run_marker", contando)
     server.store.record_window_detect_read("xlib", f"steam_app_{APPID}")
+    await _estado_com_o_marker_lido(server)
     for _ in range(5):
         await server._handle_daemon_state_full({})
     assert leituras["n"] == 1

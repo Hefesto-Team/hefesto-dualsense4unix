@@ -56,10 +56,9 @@ async def test_poll_loop_gera_state_update_e_para_no_stop():
         ),
     )
 
-    run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.05)
     state_queue = bus.subscribe(EventTopic.STATE_UPDATE)
-    await asyncio.sleep(0.15)
+    run_task = asyncio.create_task(daemon.run())
+    assert await _ate(lambda: store.counter("poll.tick") >= 5 and not state_queue.empty())
     daemon.stop()
     await run_task
 
@@ -178,8 +177,7 @@ async def test_daemon_desconecta_no_shutdown():
         ),
     )
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.03)
-    assert fc.is_connected() is True
+    assert await _ate(fc.is_connected)
     daemon.stop()
     await run_task
     assert fc.is_connected() is False
@@ -352,7 +350,7 @@ async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
     up_queue = bus.subscribe(EventTopic.BUTTON_UP)
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.15)
+    assert await _ate(lambda: store.counter("button.up.emitted") >= 2)
     daemon.stop()
     await run_task
 
@@ -409,7 +407,7 @@ async def test_poll_loop_emits_mic_btn_down_up(monkeypatch):
     up_queue = bus.subscribe(EventTopic.BUTTON_UP)
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.1)
+    assert await _ate(lambda: store.counter("button.up.emitted") >= 1)
     daemon.stop()
     await run_task
 
@@ -456,7 +454,7 @@ async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
     up_queue = bus.subscribe(EventTopic.BUTTON_UP)
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.15)
+    assert await _ate(lambda: store.counter("poll.tick") >= 15)
     daemon.stop()
     await run_task
 
@@ -496,8 +494,7 @@ async def test_metrics_sobe_quando_metrics_enabled():
 
     run_task = asyncio.create_task(daemon.run())
     try:
-        await asyncio.sleep(0.1)
-        assert daemon._metrics_subsystem is not None
+        assert await _ate(lambda: daemon._metrics_subsystem is not None)
         url = f"http://127.0.0.1:{port}/metrics"
         payload = await asyncio.to_thread(
             lambda: urllib.request.urlopen(url, timeout=5).read().decode("utf-8")

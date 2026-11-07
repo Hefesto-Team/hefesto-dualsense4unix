@@ -175,6 +175,14 @@ def _mk_states(n: int) -> list[Any]:
     ]
 
 
+async def _subida_inteira(daemon: Daemon) -> None:
+    async def _ate_subir() -> None:
+        while daemon._reconnect_task is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(_ate_subir(), 5)
+
+
 async def _boot_com_preferencia(
     monkeypatch: pytest.MonkeyPatch, pref: bool | None
 ) -> tuple[Daemon, list[Any]]:
@@ -206,6 +214,7 @@ async def _boot_com_preferencia(
         ),
     )
     task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.05)
     daemon.stop()
     await task
@@ -346,6 +355,7 @@ async def test_state_full_publica_o_mesmo_bloco() -> None:
     daemon = Daemon(controller=FakeController(transport="usb"))
     daemon._keyboard_device = MagicMock()
     h = _HandlersStatus(daemon, daemon.store, daemon.controller)
+    await h._osk_lido.em_dia()
     cheio = await h._handle_daemon_state_full({})
     status = await h._handle_daemon_status({})
     assert cheio["keyboard_emulation"] == status["keyboard_emulation"]

@@ -1617,7 +1617,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 
     ELE NÃO SE INVENTA, e a razão é do aparelho: o DualSense **não devolve** o
     registrador de volume, então `daemon.state_full` só publica a chave
-    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:2701`). Mandar
+    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:2821`). Mandar
     um número de palpite tomaria a posse com o valor errado.
 
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
@@ -1928,7 +1928,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     A Jogar não tem botão de mudo desde 02/11/2026: o volume do alto-falante em 0 cala, e o
     volume que sobe solta o mudo (o gesto `volume`).
 
-    O `mic.set` é o MUDO NO FIRMWARE (camada 3, `ipc_handlers.py:4136`): é o único que apaga
+    O `mic.set` é o MUDO NO FIRMWARE (camada 3, `ipc_handlers.py:4275`): é o único que apaga
     a luz vermelha do plástico, e a partir dele o botão físico do controle deixa de valer — é
     o que o `title` do desenho já promete.
 
@@ -2018,7 +2018,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:4020`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:4149`) e a GUI estável manda exatamente isto
     (`controller_card.py:2474`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
@@ -2350,7 +2350,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **E A FALTA DELES TRANCAVA O ♪.** O DualSense não devolve o volume do
     alto-falante, então o daemon só publica a chave `speaker` **depois** de
-    alguém ESCREVER um (`ipc_handlers.py:2701`); sem escritor nesta tela, o ♪
+    alguém ESCREVER um (`ipc_handlers.py:2821`); sem escritor nesta tela, o ♪
     recusava para sempre num controle cujo volume nunca foi ajustado por outro
     caminho — e a frase de recusa original mandava *"use o controle deslizante
     primeiro"*, sobre um deslizante que não existia. Este gesto é o escritor que

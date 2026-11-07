@@ -38,6 +38,14 @@ def _config() -> DaemonConfig:
     )
 
 
+async def _subida_inteira(daemon: Daemon) -> None:
+    async def _ate_subir() -> None:
+        while daemon._reconnect_task is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(_ate_subir(), 5)
+
+
 async def _run_with_gates(
     monkeypatch: pytest.MonkeyPatch, *, paused: bool, suppressed: bool
 ) -> tuple[MagicMock, MagicMock]:
@@ -56,6 +64,7 @@ async def _run_with_gates(
     daemon._keyboard_device = kbd
 
     run_task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.05)
     if suppressed:
         daemon.set_emulation_suppressed(True)
@@ -109,6 +118,7 @@ async def test_gamepad_respeita_grace_period(monkeypatch: pytest.MonkeyPatch) ->
     daemon._gamepad_device = gp
 
     run_task = asyncio.create_task(daemon.run())
+    await _subida_inteira(daemon)
     await asyncio.sleep(0.06)
     daemon.stop()
     await run_task

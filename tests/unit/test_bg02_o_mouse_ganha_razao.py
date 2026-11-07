@@ -255,6 +255,7 @@ async def test_a_mordida_a_ponte_confirmada_chega_no_state_full(
     daemon = Daemon(controller=FakeController(transport="usb"))
     h = _HandlersCompletos(daemon, daemon.store, daemon.controller)
 
+    await h._pontes_lidas.em_dia()
     estado = await h._handle_daemon_state_full({})
     assert "pontes_confirmadas" in estado, (
         "o `state_full` não leva mais o carimbo — o editor de perfil volta a "
@@ -287,6 +288,7 @@ async def test_o_tique_paga_cache_e_o_gesto_paga_o_disco(
     daemon = Daemon(controller=FakeController(transport="usb"))
     h = _HandlersCompletos(daemon, daemon.store, daemon.controller)
 
+    await h._pontes_lidas.em_dia()
     for _ in range(5):
         await h._handle_daemon_state_full({})
     assert leituras == [1], f"o tique varreu o disco {len(leituras)} vezes"
@@ -310,18 +312,19 @@ async def test_o_cache_vence_quando_o_tempo_passa(
     daemon = Daemon(controller=FakeController(transport="usb"))
     h = _HandlersCompletos(daemon, daemon.store, daemon.controller)
 
-    await h._handle_daemon_state_full({})
+    await h._pontes_lidas.em_dia()
     relogio[0] += ih._PONTES_CONFIRMADAS_TTL_SEC + 0.1
     await h._handle_daemon_state_full({})
+    corrida = h._pontes_lidas._corrida
+    assert corrida is not None
+    await corrida
     assert len(leituras) == 2
 
 
 def test_o_cache_e_por_instancia_e_nao_da_classe() -> None:
     """Class attribute com shadow na instância — o padrão dos vizinhos."""
-    assert IpcHandlersMixin._pontes_confirmadas_cache is None
-    h = _Handlers(_FakeDaemonMouse())
-    h._pontes_confirmadas_no_tique()
-    assert h.__dict__["_pontes_confirmadas_cache"] is not None
-    assert IpcHandlersMixin._pontes_confirmadas_cache is None
+    um, outro = _Handlers(_FakeDaemonMouse()), _Handlers(_FakeDaemonMouse())
+    assert um._pontes_lidas is um._pontes_lidas
+    assert um._pontes_lidas is not outro._pontes_lidas
 
 

@@ -763,7 +763,10 @@ class TestOEstadoDevolveAsBarras:
         fonte = inspect.getsource(
             ipc_handlers.IpcHandlersMixin._handle_daemon_state_full
         )
-        assert '_motores_do_perfil_ativo(self.daemon)' in fonte, (
+        leitor = inspect.getsource(ipc_handlers.IpcHandlersMixin._ler_os_motores)
+        assert "_motores_lidos.agora" in fonte and (
+            "_motores_do_perfil_ativo(self.daemon)" in leitor
+        ), (
             "o `state_full` deixou de ler o MESMO mapa que `apply_game_rumble` "
             "multiplica"
         )

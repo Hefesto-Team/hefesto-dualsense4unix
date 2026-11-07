@@ -129,6 +129,14 @@ def test_state_full_inclui_native_mode(daemon: Daemon) -> None:
     assert state["native_mode"] is True
 
 
+async def _subida_inteira(daemon: Daemon) -> None:
+    async def _ate_subir() -> None:
+        while daemon._reconnect_task is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(_ate_subir(), 5)
+
+
 async def test_boot_em_modo_nativo_nao_restaura_emulacao(
     tmp_config: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -146,6 +154,7 @@ async def test_boot_em_modo_nativo_nao_restaura_emulacao(
     )
     d = Daemon(controller=FakeController(transport="usb"), config=cfg)
     run_task = asyncio.create_task(d.run())
+    await _subida_inteira(d)
     await asyncio.sleep(0.05)
     d.stop()
     await run_task

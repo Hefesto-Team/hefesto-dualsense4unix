@@ -1,0 +1,45 @@
+BEGIN { printf("o fio %d, por %d s\n", $1, $2); }
+
+kprobe:ext4_file_read_iter /tid == $1/ {
+  $arquivo = ((struct kiocb *)arg0)->ki_filp;
+  @ler[str($arquivo->f_path.dentry->d_name.name)] = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kprobe:ext4_file_write_iter /tid == $1/ {
+  $arquivo = ((struct kiocb *)arg0)->ki_filp;
+  @escrever[str($arquivo->f_path.dentry->d_name.name)] = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kprobe:ext4_lookup /tid == $1/ {
+  @procurar[str(((struct dentry *)arg1)->d_name.name)] = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kprobe:ext4_readdir /tid == $1/ {
+  @listar[str(((struct file *)arg0)->f_path.dentry->d_name.name)] = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kprobe:ext4_getattr /tid == $1/ {
+  @stat = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kprobe:ext4_sync_file /tid == $1/ {
+  @fsync = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kprobe:ext4_rename2 /tid == $1/ {
+  @renomear = count();
+  @ext4_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+kretprobe:handle_mm_fault /tid == $1 && (retval & 4)/ {
+  @falta_maior = count();
+  @falta_maior_a_cada_5s[elapsed / 5000000000] = count();
+}
+
+interval:s:$2 { exit(); }

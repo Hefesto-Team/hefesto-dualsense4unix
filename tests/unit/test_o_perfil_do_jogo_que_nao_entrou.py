@@ -227,12 +227,20 @@ def _disco(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> list[int]:
     return leituras
 
 
-def test_o_daemon_manda_a_frase_pronta_do_perfil_deste_jogo(
+async def _lido(handlers: _Handlers) -> list[dict[str, str]]:
+    handlers._perfil_que_nao_entrou()
+    corrida = handlers._perfil_mudo_lido._corrida
+    if corrida is not None:
+        await corrida
+    return handlers._perfil_que_nao_entrou()
+
+
+async def test_o_daemon_manda_a_frase_pronta_do_perfil_deste_jogo(
     _disco: list[int],
 ) -> None:
     """A ponta do daemon: o estado carrega nome e frase, prontos para a tela."""
     handlers = _Handlers(_StoreDublado("steam_app_9967153"))
-    achados = handlers._perfil_que_nao_entrou()
+    achados = await _lido(handlers)
 
     assert [a["nome"] for a in achados] == ["Pragmata"]
     assert "PRAGMATA.exe" in achados[0]["frase"]
@@ -252,7 +260,7 @@ def test_fora_de_jogo_nao_toca_no_disco(_disco: list[int]) -> None:
     assert _disco == [], "leu o disco fora de janela de jogo"
 
 
-def test_o_cache_evita_reler_o_disco_a_cada_tique(_disco: list[int]) -> None:
+async def test_o_cache_evita_reler_o_disco_a_cada_tique(_disco: list[int]) -> None:
     """Dez tiques com a mesma janela = UMA leitura de disco.
 
     Morde no cache. Arranque: sem ele são 10 leituras aqui — e ~140 JSON por
@@ -260,17 +268,17 @@ def test_o_cache_evita_reler_o_disco_a_cada_tique(_disco: list[int]) -> None:
     """
     handlers = _Handlers(_StoreDublado("steam_app_9967153"))
     for _ in range(10):
-        handlers._perfil_que_nao_entrou()
+        await _lido(handlers)
     assert len(_disco) == 1
 
 
-def test_mudar_de_janela_invalida_o_cache(_disco: list[int]) -> None:
+async def test_mudar_de_janela_invalida_o_cache(_disco: list[int]) -> None:
     """Cache que não invalida vira mentira: o aviso do jogo anterior ficaria."""
     store = _StoreDublado("steam_app_9967153")
     handlers = _Handlers(store)
-    handlers._perfil_que_nao_entrou()
+    await _lido(handlers)
     store.window_detect_current_exe = "PRAGMATA.exe"
-    achados = handlers._perfil_que_nao_entrou()
+    achados = await _lido(handlers)
 
     assert len(_disco) == 2, "a mudança de executável tinha de recalcular"
     assert achados == [], "com o exe casando, o perfil entra e não há aviso"

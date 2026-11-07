@@ -469,7 +469,7 @@ def test_10_a_parada_do_daemon_fecha_o_teclado_do_dono(transporte: str) -> None:
     async def _rodar_e_parar() -> None:
         tarefa = asyncio.create_task(d.run())
         for _ in range(500):
-            if d._stop_event is not None:
+            if d._reconnect_task is not None:
                 break
             await asyncio.sleep(0.01)
         await asyncio.sleep(0.05)

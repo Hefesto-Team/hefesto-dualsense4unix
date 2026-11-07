@@ -665,7 +665,7 @@ class Daemon:
     store: StateStore = field(default_factory=StateStore)
     config: DaemonConfig = field(default_factory=DaemonConfig)
 
-    _stop_event: asyncio.Event | None = None
+    _stop_event: asyncio.Event | None = field(default_factory=asyncio.Event)
     _executor: ThreadPoolExecutor | None = None
     _external_executor: ThreadPoolExecutor | None = None
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
@@ -755,15 +755,16 @@ class Daemon:
         )
         from hefesto_dualsense4unix.daemon.subsystems import subir
 
-        await asyncio.to_thread(_importar_o_que_a_subida_usa)
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
-        self._stop_event = asyncio.Event()
+        self._install_signal_handlers(loop)
+        await asyncio.to_thread(_importar_o_que_a_subida_usa)
+        if self._is_stopping():
+            return
         self._executor = PoolQueDizQuem(max_workers=2, thread_name_prefix="hefesto-hid")
         self._external_executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="hefesto-ext"
         )
-        self._install_signal_handlers(loop)
         from hefesto_dualsense4unix.utils.session import load_paused_state
         self._paused = load_paused_state()
         from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
@@ -867,11 +868,15 @@ class Daemon:
         migrate_coop_optout()
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
+            if self._is_stopping():
+                return
             from hefesto_dualsense4unix.integrations.virtual_pad import FioDeNascimento
 
             self._fio_de_nascimento = FioDeNascimento()
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             await subir(self)
+            if self._is_stopping():
+                return
             if not self.config.ipc_enabled:
                 _dizer_pronto()
             self._audit_config_on_boot()
@@ -882,6 +887,8 @@ class Daemon:
             self._wire_abridor_do_handle()
             try:
                 await self._run_blocking(self.controller.connect)
+                if self._is_stopping():
+                    return
                 if self.controller.is_connected():
                     from hefesto_dualsense4unix.daemon import connection as _conexao
 
@@ -899,6 +906,8 @@ class Daemon:
 
                     with contextlib.suppress(Exception):
                         await restore_last_profile(self)
+                    if self._is_stopping():
+                        return
                     with contextlib.suppress(Exception):
                         await reaplicar_som_em_todos_os_alvos(self)
             except Exception as exc:
@@ -913,12 +922,18 @@ class Daemon:
                 )
 
                 materialize_launch_env(self)
+            if self._is_stopping():
+                return
             await subir(self, depois_do_controle=True)
+            if self._is_stopping():
+                return
             self._reconnect_task = asyncio.create_task(
                 reconnect_loop(self), name="reconnect_loop"
             )
             self._tasks.append(self._reconnect_task)
-            await self._stop_event.wait()
+            parada = self._stop_event
+            assert parada is not None
+            await parada.wait()
         finally:
             tabela_no_jogo = self._tabela_no_jogo
             if tabela_no_jogo is not None:
@@ -3282,6 +3297,8 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.ipc import start_ipc
 
         await _dizer_pronto_depois_de(start_ipc(self))
+        if self._ipc_server is not None:
+            self._ipc_server.aquecer_as_leituras()
 
     async def _start_dsu(self) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.dsu import start_dsu
@@ -3504,8 +3521,10 @@ class Daemon:
         """Inicia um subsystem isolando falhas (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01).
 
         `essencial` devolve a exceção com que o `run()` termina quando este
-        subsistema não sobe; sem ele, a falha só entra no diário.
+        subsistema não sobe; sem ele, a falha só entra no diário. Com a parada pedida, nada parte.
         """
+        if self._is_stopping():
+            return
         try:
             result = starter()
             if inspect.isawaitable(result):
