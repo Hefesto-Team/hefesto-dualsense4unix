@@ -67,6 +67,7 @@ class _Vigia:
         _executavel(bin_dir / "hciconfig", "#!/bin/bash\nexit 0\n")
         self.marca = tmp_path / "journalctl-de-pe"
         self.registro = tmp_path / "state" / "hefesto-dualsense4unix" / "kernel.log"
+        self.erros = tmp_path / "stderr"
         ambiente = {
             "HOME": str(tmp_path),
             "PATH": f"{bin_dir}:/usr/bin:/bin",
@@ -76,26 +77,26 @@ class _Vigia:
             "MARCA_DO_JOURNALCTL": str(self.marca),
             "JOURNALCTL_CAI": "1" if journalctl_cai else "0",
         }
-        self.processo = subprocess.Popen(
-            ["bash", str(SCRIPT)],
-            env=ambiente,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+        with self.erros.open("wb") as erros:
+            self.processo = subprocess.Popen(
+                ["bash", str(SCRIPT)],
+                env=ambiente,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=erros,
+                start_new_session=True,
+            )
 
     def de_pe(self) -> set[int]:
         assert _esperar(self.marca.exists), "o journalctl de mentira não subiu"
         assert _esperar(lambda: len(_filhos(self.processo.pid)) >= 2)
         return _filhos(self.processo.pid)
 
-    def sinal_como_o_systemd(self, numero: int) -> None:
-        os.killpg(self.processo.pid, numero)
-
-    def sinal_so_no_principal_e_no_journalctl(self, numero: int) -> None:
-        os.kill(self.processo.pid, numero)
-        os.kill(int(self.marca.read_text()), signal.SIGTERM)
+    def sinal(self, numero: int, *, no_grupo: bool) -> None:
+        if no_grupo:
+            os.killpg(self.processo.pid, numero)
+        else:
+            os.kill(self.processo.pid, numero)
 
     def saida(self) -> int:
         return self.processo.wait(timeout=PRAZO_S)
@@ -109,28 +110,18 @@ class _Vigia:
         self.processo.wait(timeout=PRAZO_S)
 
 
+@pytest.mark.parametrize("no_grupo", [True, False], ids=["no-grupo", "so-no-principal"])
 @pytest.mark.parametrize("numero", [signal.SIGTERM, signal.SIGINT], ids=["TERM", "INT"])
-def test_a_parada_do_systemd_sai_zero_sem_a_linha_falsa(tmp_path: Path, numero: int) -> None:
-    vigia = _Vigia(tmp_path, journalctl_cai=False)
-    try:
-        vigia.de_pe()
-        vigia.sinal_como_o_systemd(numero)
-        assert vigia.saida() == 0
-        assert A_LINHA_FALSA not in vigia.texto_do_registro()
-    finally:
-        vigia.limpar()
-
-
-@pytest.mark.parametrize("numero", [signal.SIGTERM, signal.SIGINT], ids=["TERM", "INT"])
-def test_a_parada_leva_o_laco_do_radio_que_o_sinal_nao_alcancou(
-    tmp_path: Path, numero: int
+def test_a_parada_sai_zero_calada_e_nao_deixa_filho(
+    tmp_path: Path, numero: int, no_grupo: bool
 ) -> None:
     vigia = _Vigia(tmp_path, journalctl_cai=False)
     try:
         filhos = vigia.de_pe()
-        vigia.sinal_so_no_principal_e_no_journalctl(numero)
+        vigia.sinal(numero, no_grupo=no_grupo)
         assert vigia.saida() == 0
         assert A_LINHA_FALSA not in vigia.texto_do_registro()
+        assert vigia.erros.read_text(encoding="utf-8") == ""
         assert _esperar(lambda: not any(_vivo(pid) for pid in filhos)), (
             "um filho direto do vigia sobreviveu à parada"
         )

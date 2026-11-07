@@ -318,13 +318,13 @@ fi
 echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE PROBE-PERDIDA FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo; o -71 leva o lugar; a probe perdida chama o religar)" >>"${LOG}"
 
 bt_delta_loop &
-BT_LOOP_PID=$!
-trap 'kill "${BT_LOOP_PID}" 2>/dev/null' EXIT
+trap 'kill $(jobs -p) 2>/dev/null' EXIT
 trap 'exit 0' INT TERM
 
 journalctl -f "${DESDE[@]}" -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
     _TRANSPORT=kernel + _SYSTEMD_UNIT=bluetooth.service \
-    2>>"${LOG}" | classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}"
+    2>>"${LOG}" | classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}" &
+wait "$!"
 
 echo "# $(date '+%F %T') kernel-watch terminou inesperadamente (journalctl caiu?) — a unit re-tenta" >>"${LOG}"
 exit 1
