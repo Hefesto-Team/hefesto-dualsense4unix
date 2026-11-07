@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1215663,
+      "piso": 1216286,
       "por_item": {
-        "docs": 106491,
+        "docs": 106492,
         "scripts": 111830,
-        "src": 307069,
-        "tests": 690273
+        "src": 307162,
+        "tests": 690802
       },
-      "razao": "tamanho: +718 linhas (1214945 -> 1215663), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 212345f75424",
+      "razao": "tamanho: +623 linhas (1215663 -> 1216286), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 5862eaeff786",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1869,10 +1869,16 @@
           "de": 1214945,
           "para": 1215663,
           "razao": "tamanho: +718 linhas (1214945 -> 1215663), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 212345f75424"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1215663,
+          "para": 1216286,
+          "razao": "tamanho: +623 linhas (1215663 -> 1216286), pagas por Origem: D-1610-O-CI-TEM-PRAZO-NO-APT-E-EM-CADA-JOB, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-O-USUARIO-RODA, D-2309-A-MIRA-VIRTUAL, D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE, identidade.pareamento; registrado no fecho, topo 5862eaeff786"
         }
       ],
       "unidade": "linhas",
-      "universo": 3386
+      "universo": 3387
     }
   }
 }
