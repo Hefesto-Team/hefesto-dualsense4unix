@@ -259,14 +259,14 @@
       "data": "2026-11-07",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1212474,
+      "piso": 1214945,
       "por_item": {
-        "docs": 106475,
-        "scripts": 111688,
-        "src": 306217,
-        "tests": 688094
+        "docs": 106490,
+        "scripts": 111733,
+        "src": 307052,
+        "tests": 689670
       },
-      "razao": "tamanho: +2285 linhas (1210189 -> 1212474), pagas por Origem: identidade.pareamento; registrado no fecho, topo 3b546d7a730d",
+      "razao": "tamanho: +2471 linhas (1212474 -> 1214945), pagas por Origem: D-2309-A-MIRA-VIRTUAL, identidade.pareamento; registrado no fecho, topo 5442cda226d6",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1857,10 +1857,16 @@
           "de": 1210189,
           "para": 1212474,
           "razao": "tamanho: +2285 linhas (1210189 -> 1212474), pagas por Origem: identidade.pareamento; registrado no fecho, topo 3b546d7a730d"
+        },
+        {
+          "data": "2026-11-07",
+          "de": 1212474,
+          "para": 1214945,
+          "razao": "tamanho: +2471 linhas (1212474 -> 1214945), pagas por Origem: D-2309-A-MIRA-VIRTUAL, identidade.pareamento; registrado no fecho, topo 5442cda226d6"
         }
       ],
       "unidade": "linhas",
-      "universo": 3375
+      "universo": 3383
     }
   }
 }
