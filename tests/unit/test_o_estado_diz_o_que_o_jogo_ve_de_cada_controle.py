@@ -75,8 +75,6 @@ def test_o_modo_xbox_e_o_xbox_360_com_a_mira_pelo_hefesto() -> None:
         assert _chega(visto)["gatilho_adaptativo"] == oqv.PELO_HEFESTO
         assert _chega(visto)["giroscopio"] == oqv.NAO_CHEGA
         assert _chega(_ve(pad, MIRA_LIGADA))["giroscopio"] == oqv.PELO_HEFESTO
-        inclinacao = ArranjoDeMovimento(acelerometro="analogico_esquerdo")
-        assert _chega(_ve(pad, inclinacao))["giroscopio"] == oqv.PELO_HEFESTO
     finally:
         pad.stop()
 
@@ -152,15 +150,11 @@ def test_no_dualsense_a_mira_e_o_cursor_tiram_o_giro_e_o_toque_do_pad() -> None:
 def test_fora_do_dualsense_a_mira_anda_so_com_o_sensor_ligado() -> None:
     """O tique (`gamepad.aplicar_o_movimento`) não move a Mira com o sensor desligado.
 
-    MORDIDA: ignore `giro_ligado` e `acel_ligado` fora do DualSense, e a Mira sem sensor
-    sai `pelo_hefesto`.
+    MORDIDA: ignore `giro_ligado` fora do DualSense, e a Mira sem sensor sai `pelo_hefesto`.
     """
     pad = _fabrica("dualsense", vp.CAMINHO_XBOX)
     try:
         assert _chega(_ve(pad, MIRA_LIGADA, giro_ligado=False))["giroscopio"] == oqv.NAO_CHEGA
-        inclinacao = ArranjoDeMovimento(acelerometro="analogico_esquerdo")
-        assert _chega(_ve(pad, inclinacao, acel_ligado=False))["giroscopio"] == oqv.NAO_CHEGA
-        assert _chega(_ve(pad, inclinacao, giro_ligado=False))["giroscopio"] == oqv.PELO_HEFESTO
     finally:
         pad.stop()
 

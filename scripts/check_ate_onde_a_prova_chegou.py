@@ -48,11 +48,10 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
     "analogico-lado": (
         "médio",
         "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
-        "o lado do Analógico Virtual leva o giro e a inclinação juntos (o chip da "
-        "Inclinação saiu da 02), e `movimento.acelerometro@dualsense` está em MONTOU "
-        "nos dois transportes. A régua da E12b leva o clique ao perfil no disco e de "
-        "volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
-        "aberto andar com o controle inclinado na mão, que é a prova da sprint",
+        "o lado do Analógico Virtual leva o giro, e `movimento.giroscopio@dualsense` está "
+        "em MONTOU nos dois transportes. A régua da E12b leva o clique ao perfil no disco "
+        "e de volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
+        "aberto andar com o controle girando na mão, que é a prova da sprint",
     ),
     "touchpad": (
         "médio",
@@ -135,6 +134,36 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "o eixo invertido da Mira da Calibrar troca o sinal do giro "
         "(`movimento.giroscopio@dualsense`, MONTOU nos dois transportes); falta o jogo "
         "aberto virar a câmera para o lado que a mão espera. É da MESA-DE-QUATRO-01",
+    ),
+    "calibrar-rampa": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
+        "a rampa do início do analógico escreve no pad do jogador; falta o jogo aberto "
+        "dizer onde a câmera anda. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-sensibilidade-h": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
+        "a sensibilidade horizontal da mira age sobre o giro (`movimento.giroscopio@dualsense`, "
+        "MONTOU nos dois transportes); falta o jogo aberto. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-sensibilidade-v": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
+        "a sensibilidade vertical da mira age sobre o giro (`movimento.giroscopio@dualsense`, "
+        "MONTOU nos dois transportes); falta o jogo aberto. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-inicio": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
+        "o início do analógico é o `piso` da saída da mira; falta o jogo aberto dizer se o "
+        "gesto pequeno vence a zona morta dele. É da MESA-DE-QUATRO-01",
+    ),
+    "mira-velocidade": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio.md",
+        "a velocidade do jogo é o `Smáx` da saída da mira; falta o jogo aberto dizer se o "
+        "número casa com a câmera dele. É da MESA-DE-QUATRO-01",
     ),
     "calibrar-comecar": (
         "médio",

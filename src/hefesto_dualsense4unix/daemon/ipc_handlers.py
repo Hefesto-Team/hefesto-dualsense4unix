@@ -2956,11 +2956,14 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.integrations.o_que_o_jogo_ve import o_que_o_jogo_ve
 
         store, sensores = getattr(self, "store", None), REGISTRO.estado(uniq)
+        movimento = roteador.da_peca(store, uniq, roteador.ativo(store))
+        if (movimento is not None and uniq
+                and self._o_que_falta_ao_movimento(uniq, idade_aceita=5.0) is not None):
+            movimento = replace(movimento, destino=roteador.DESTINO_NENHUM)
         return o_que_o_jogo_ve(
-            vpad, roteador.da_peca(store, uniq, roteador.ativo(store)),
+            vpad, movimento,
             transporte=transporte,
             giro_ligado=sensores.giroscopio,
-            acel_ligado=sensores.acelerometro,
             toque_ligado=REGISTRO.touchpad_ligado(uniq),
         )
 
@@ -5132,6 +5135,7 @@ class IpcHandlersMixin:
             self._merge_no_jogo(entries)
         with contextlib.suppress(Exception):
             self._merge_zero(entries)
+        self._merge_passos_da_calibrar(entries)
 
     def _os_receptores_publicam(self) -> dict[str, Any]:
         """``state_full["radio_receptores"]``: a saúde de cada receptor 2.4G (a última hora).
@@ -5445,9 +5449,9 @@ class IpcHandlersMixin:
         return {"status": status, "movimento": movimento.publicar()}
 
 
-    _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s",
-                       "gatilho", "inverter_horizontal", "inverter_vertical",
-                       "inclinacao", "toque", "mesmo_parado", "lado")
+    _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "sensibilidade_h", "sensibilidade_v",
+                       "zona_morta_graus_s", "gatilho", "inverter_horizontal", "inverter_vertical",
+                       "toque", "mesmo_parado", "lado", "piso", "velocidade_do_jogo")
 
     def _merge_acessibilidade(self, entries: list[dict[str, Any]]) -> None:
         """``entry["acessibilidade"]``: a ativação e a curva que valem AGORA neste controle."""
@@ -5473,6 +5477,7 @@ class IpcHandlersMixin:
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
         """``entry["mira"]`` de cada controle: o chip e o bloco da Calibrar."""
         from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.profiles.schema import sensibilidade_da_mira_antiga
 
         store = getattr(self, "store", None)
         mesa = rot.ativo(store)
@@ -5483,25 +5488,49 @@ class IpcHandlersMixin:
                 continue
             vale = rot.da_peca(store, uniq, mesa)
             numeros = rot.parametros_da_peca(store, uniq)
-            mira = vale if vale is not None and vale.ligado else None
+            anda = self._o_que_falta_ao_movimento(uniq, idade_aceita=5.0) is None
+            mira = vale if vale is not None and vale.ligado and anda else None
             entry["mira"] = {
                 "ligada": mira is not None,
-                "virtual": vale is not None and rot.virtual_aceso(vale),
+                "virtual": mira is not None and rot.virtual_aceso(mira),
                 "lado": rot.lado_do_virtual(vale if vale is not None else numeros),
                 "destino": mira.destino if mira is not None else rot.DESTINO_NENHUM,
                 "toque": vale.toque if vale is not None else rot.DESTINO_NENHUM,
-                "inclinacao": vale.acelerometro if vale is not None else rot.DESTINO_NENHUM,
-                "sensibilidade": numeros.sensibilidade,
+                "sensibilidade": sensibilidade_da_mira_antiga(
+                    numeros.sensibilidade_h, numeros.sensibilidade_v
+                ),
+                "sensibilidade_h": numeros.sensibilidade_h,
+                "sensibilidade_v": numeros.sensibilidade_v,
                 "zona_morta_graus_s": numeros.zona_morta_graus_s,
                 "gatilho": numeros.gatilho,
                 "inverter_horizontal": numeros.inverter_horizontal,
                 "inverter_vertical": numeros.inverter_vertical,
-                "inclinacao_parada": (
-                    vale is not None and vale.inclina and not vale.mesmo_parado
-                    and rot.inclinacao_parada(store, uniq, agora)
+                "parada": (
+                    mira is not None and not mira.mesmo_parado
+                    and rot.mira_parada(store, uniq, agora)
                 ),
                 "mesmo_parado": numeros.mesmo_parado,
+                "piso": numeros.piso,
+                "velocidade_do_jogo": numeros.velocidade_do_jogo,
             }
+
+    def _o_que_falta_ao_movimento(self, uniq: str, *, idade_aceita: float = 0.0) -> str | None:
+        """A frase do controle de fora em que a mira não anda; `None` quando a mira anda."""
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        registro = getattr(self.daemon, "external_registry", None)
+        conectados = registro.snapshot_connected() if registro is not None else ()
+        if chave_de_sensor(uniq) not in {chave_de_sensor(u) for u in conectados}:
+            return None
+        familia = self._garantir_sensor_hub().familia_do_movimento(
+            uniq, idade_aceita=idade_aceita
+        )
+        if familia is None:
+            return "Este controle não tem sensor de movimento neste modo"
+        if rot.orientar(familia, (0.0, 0.0, 0.0)) is None:
+            return "A mira por movimento não vale neste controle"
+        return None
 
     async def _handle_mira_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE."""
@@ -5509,15 +5538,22 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.profiles.schema import (
             ControllerOverrides,
             ProfileMovimentoConfig,
+            sensibilidade_da_mira_antiga,
+            sensibilidade_da_mira_nova,
         )
 
+        if "inclinacao" in params:
+            raise ValueError(
+                "mira.set: a inclinação saiu da mira; a mira segue só o giro do controle"
+            )
         desconhecidos = sorted(set(params) - {"uniq", *self._CAMPOS_DA_MIRA})
         if desconhecidos:
             raise ValueError(
                 f"mira.set não conhece {desconhecidos}: a tela oferece o chip "
-                "(`ligada`), o lado dele (`lado`), os dois deslizantes (`sensibilidade`, "
-                "`zona_morta_graus_s`), o `gatilho`, os dois `inverter_*`, a "
-                "`inclinacao`, o `toque` e o `mesmo_parado`, e o resto do arranjo "
+                "(`ligada`), o lado dele (`lado`), os deslizantes (`sensibilidade_h`, "
+                "`sensibilidade_v`, `zona_morta_graus_s`, `piso`, `velocidade_do_jogo`), o "
+                "`gatilho`, os dois `inverter_*`, o `toque` e o `mesmo_parado`, e o resto do "
+                "arranjo "
                 "mora no perfil"
             )
         pedidos: dict[str, Any] = {}
@@ -5529,14 +5565,21 @@ class IpcHandlersMixin:
         if "lado" in params and params["lado"] not in rot.LADOS_DO_VIRTUAL:
             raise ValueError(
                 f"mira.set: 'lado' é um de {', '.join(rot.LADOS_DO_VIRTUAL)} — o "
-                "analógico que o giro e a inclinação movem"
+                "analógico que o giro move"
             )
         o_virtual = "ligada" in params or "lado" in params
         if "sensibilidade" in params:
             valor = params["sensibilidade"]
-            if isinstance(valor, bool) or not isinstance(valor, int):
+            if isinstance(valor, bool) or not isinstance(valor, int) or not 1 <= valor <= 12:
                 raise ValueError("mira.set: 'sensibilidade' é um inteiro de 1 a 12")
-            pedidos["sensibilidade"] = valor
+            pedidos["sensibilidade_h"] = pedidos["sensibilidade_v"] = (
+                sensibilidade_da_mira_nova(valor))
+        for eixo in ("sensibilidade_h", "sensibilidade_v"):
+            if eixo in params:
+                valor = params[eixo]
+                if isinstance(valor, bool) or not isinstance(valor, int) or not 0 <= valor <= 10:
+                    raise ValueError(f"mira.set: '{eixo}' é um inteiro de 0 a 10; 0 desliga o eixo")
+                pedidos[eixo] = valor
         if "zona_morta_graus_s" in params:
             valor = params["zona_morta_graus_s"]
             if isinstance(valor, bool) or not isinstance(valor, (int, float)):
@@ -5545,6 +5588,21 @@ class IpcHandlersMixin:
                     "em graus por segundo"
                 )
             pedidos["zona_morta_graus_s"] = float(valor)
+        if "piso" in params:
+            valor = params["piso"]
+            if isinstance(valor, bool) or not isinstance(valor, (int, float)) or not (
+                    0.0 <= valor <= 1.0):
+                raise ValueError("mira.set: 'piso' é o início do analógico, de 0 a 1")
+            pedidos["piso"] = float(valor)
+        if "velocidade_do_jogo" in params:
+            valor = params["velocidade_do_jogo"]
+            if isinstance(valor, bool) or not isinstance(valor, (int, float)) or not (
+                    0.0 < valor <= 2000.0):
+                raise ValueError(
+                    "mira.set: 'velocidade_do_jogo' é a velocidade da câmera do jogo com o "
+                    "analógico no fim, em graus por segundo, até 2000"
+                )
+            pedidos["velocidade_do_jogo"] = float(valor)
         if "gatilho" in params:
             valor = params["gatilho"]
             if valor is not None and not isinstance(valor, str):
@@ -5559,15 +5617,6 @@ class IpcHandlersMixin:
                 if not isinstance(valor, bool):
                     raise ValueError(f"mira.set: '{lado}' precisa ser boolean")
                 pedidos[lado] = valor
-        if "inclinacao" in params:
-            valor = params["inclinacao"]
-            if not isinstance(valor, str) or valor not in rot.DESTINOS_DA_INCLINACAO:
-                raise ValueError(
-                    "mira.set: 'inclinacao' é um de "
-                    f"{', '.join(rot.DESTINOS_DA_INCLINACAO)} — o analógico que a "
-                    "inclinação move, ou nenhum"
-                )
-            pedidos["acelerometro"] = valor
         if "toque" in params:
             valor = params["toque"]
             if valor not in rot.TOQUES:
@@ -5618,7 +5667,7 @@ class IpcHandlersMixin:
         nativo = bool(
             self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
         )
-        if nativo and {"ligada", "lado", "inclinacao", "toque"} & set(params):
+        if nativo and {"ligada", "lado", "toque"} & set(params):
             logger.info("mira_set_recusado_no_nativo", uniq=chave)
             return {
                 "status": "nativo",
@@ -5629,6 +5678,12 @@ class IpcHandlersMixin:
                 ),
             }
 
+        falta = (self._o_que_falta_ao_movimento(alvo)
+                 if params.get("ligada", "lado" in params) else None)
+        if falta is not None:
+            logger.info("mira_set_recusado_sem_movimento", uniq=chave)
+            return {"status": "sem_movimento", "uniq": alvo, "motivo": falta}
+
         def o_arranjo(mesa: Any, escritos: dict[str, Any]) -> tuple[Any, Any, bool]:
             try:
                 finais = pedidos
@@ -5637,7 +5692,7 @@ class IpcHandlersMixin:
                         mesa, ProfileMovimentoConfig.model_validate(escritos))
                     lado = params.get("lado") or rot.lado_do_virtual(atual)
                     rota = lado if params.get("ligada", True) else rot.DESTINO_NENHUM
-                    finais = {"lado": lado, "destino": rota, "acelerometro": rota, **pedidos}
+                    finais = {"lado": lado, "destino": rota, **pedidos}
                 campos = {**escritos, **finais}
                 secao = ProfileMovimentoConfig.model_validate(campos)
                 return secao, rot.arranjo_da_peca(mesa, secao), escritos != campos
@@ -5666,6 +5721,8 @@ class IpcHandlersMixin:
 
         rot.definir_da_peca(self.store, chave, arranjo)
         rot.sincronizar_o_filtro(self.store)
+        if {"inverter_horizontal", "inverter_vertical"} & set(params):
+            self._esquecer_o_sinal(chave)
 
         ressalva: str | None = None
         if nativo:
@@ -5681,13 +5738,13 @@ class IpcHandlersMixin:
             gravado=gravado,
             ligada=arranjo.ligado,
             lado=arranjo.lado,
-            sensibilidade=arranjo.sensibilidade,
+            sensibilidade_h=arranjo.sensibilidade_h,
+            sensibilidade_v=arranjo.sensibilidade_v,
             zona_morta_graus_s=arranjo.zona_morta_graus_s,
             gatilho=arranjo.gatilho,
             inverter_horizontal=arranjo.inverter_horizontal,
             inverter_vertical=arranjo.inverter_vertical,
             toque=arranjo.toque,
-            acelerometro=arranjo.acelerometro,
             mesmo_parado=arranjo.mesmo_parado,
             nativo=nativo,
         )
@@ -5699,14 +5756,19 @@ class IpcHandlersMixin:
             "ligada": arranjo.ligado,
             "virtual": rot.virtual_aceso(arranjo),
             "lado": rot.lado_do_virtual(arranjo),
-            "sensibilidade": arranjo.sensibilidade,
+            "sensibilidade": sensibilidade_da_mira_antiga(
+                arranjo.sensibilidade_h, arranjo.sensibilidade_v
+            ),
+            "sensibilidade_h": arranjo.sensibilidade_h,
+            "sensibilidade_v": arranjo.sensibilidade_v,
             "zona_morta_graus_s": arranjo.zona_morta_graus_s,
             "gatilho": arranjo.gatilho,
             "inverter_horizontal": arranjo.inverter_horizontal,
             "inverter_vertical": arranjo.inverter_vertical,
             "toque": arranjo.toque,
-            "inclinacao": arranjo.acelerometro,
             "mesmo_parado": arranjo.mesmo_parado,
+            "piso": arranjo.piso,
+            "velocidade_do_jogo": arranjo.velocidade_do_jogo,
             "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
             "ressalva": ressalva,
         }
@@ -5775,7 +5837,7 @@ class IpcHandlersMixin:
         """``entry["no_jogo"]``: os analógicos que o pad DAQUELE controle mandou ao jogo
         (O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01).
 
-        O cartão pintava só a mão (`inputs`); com Inclinação ou Mira num analógico o jogo recebe
+        O cartão pintava só a mão (`inputs`); com a Mira num analógico o jogo recebe
         outra coisa. Vem do último envio do pad (`eixos_no_jogo`), o MESMO pad do `vpad_backend`,
         sem cópia no laço do jogo. `None` sem pad (Nativo, Navegação, pendente), com o jogador
         cedido ao primário (o `forward_all` o pula), sem endereço ou antes do primeiro envio. Nunca
@@ -5928,6 +5990,140 @@ class IpcHandlersMixin:
             if estado is None:
                 estado = self._ZERO_PRONTO if guardado else self._ZERO_PARADO
             entry["zero"] = {"estado": estado, "guardado": guardado}
+
+    _SINAL_MEDINDO = "medindo"
+    _SINAL_NAO_MEDIDO = "nao_medido"
+
+    def _estados_do_sinal(self) -> dict[str, dict[str, str]]:
+        """Os vereditos do passo do sinal, por chave de sensor; vivem até o daemon reiniciar."""
+        estados = getattr(self, "_estados_do_sinal_por_chave", None)
+        if not isinstance(estados, dict):
+            estados = {}
+            self._estados_do_sinal_por_chave = estados
+        return estados
+
+    def _esquecer_o_sinal(self, uniq: str) -> None:
+        """O `inverter` mudou: o veredito de antes não diz mais o que o controle faz."""
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        estados = self._estados_do_sinal()
+        chave = chave_de_sensor(uniq)
+        if estados.get(chave, {}).get("estado") != self._SINAL_MEDINDO:
+            estados.pop(chave, None)
+
+    async def _handle_motion_sinal(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`motion.sinal {uniq}` — confere o gesto guiado de UM controle, sem gravar nada.
+
+        Responde na hora ``{status: "medindo", uniq, segundos}``; a medida corre por
+        ``SEGUNDOS_DO_SINAL`` e o veredito aparece em ``entry["sinal"]`` do ``state_full``:
+        ``bateu``, ``contrario`` ou ``parado``, por eixo e no todo.
+        """
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        uniq = params.get("uniq")
+        if not isinstance(uniq, str) or not chave_de_sensor(uniq):
+            raise ValueError("motion.sinal exige 'uniq': o sinal é de um controle")
+        uniq = uniq.strip()
+        chave = chave_de_sensor(uniq)
+        estados = self._estados_do_sinal()
+        resposta = {
+            "status": self._SINAL_MEDINDO, "uniq": uniq, "segundos": float(rot.SEGUNDOS_DO_SINAL),
+        }
+        if estados.get(chave, {}).get("estado") == self._SINAL_MEDINDO:
+            return resposta
+        estados[chave] = {"estado": self._SINAL_MEDINDO}
+        tarefa = asyncio.get_running_loop().create_task(self._medir_o_sinal(uniq, chave))
+        em_voo = getattr(self, "_medidas_do_sinal_em_voo", None)
+        if not isinstance(em_voo, set):
+            em_voo = set()
+            self._medidas_do_sinal_em_voo = em_voo
+        em_voo.add(tarefa)
+        tarefa.add_done_callback(em_voo.discard)
+        return resposta
+
+    async def _medir_o_sinal(self, uniq: str, chave: str) -> None:
+        """A medida do sinal: lê o giro e a gravidade da peça e guarda o veredito. Nunca levanta."""
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+        estados = self._estados_do_sinal()
+        try:
+            hub = self._garantir_sensor_hub()
+            laco = asyncio.get_running_loop()
+            fim = laco.time() + float(rot.SEGUNDOS_DO_SINAL)
+            amostras: list[tuple[Any, Any]] = []
+            while laco.time() < fim:
+                giro = rot.descontar_o_vies(self.store, uniq, hub.velocidade_do_movimento(uniq))
+                if giro is not None:
+                    amostras.append((giro, hub.aceleracao_do_movimento(uniq)))
+                await asyncio.sleep(self._INTERVALO_DO_ZERO_S)
+            arranjo = rot.parametros_da_peca(self.store, uniq)
+            estados[chave] = rot.conferir_o_sinal(amostras, arranjo, self._INTERVALO_DO_ZERO_S)
+            logger.info("sinal_conferido", uniq=uniq, **estados[chave])
+        except asyncio.CancelledError:
+            estados[chave] = {"estado": rot.SINAL_PARADO}
+            raise
+        except Exception as exc:
+            estados[chave] = {"estado": rot.SINAL_PARADO}
+            logger.warning("sinal_falhou", uniq=uniq, err=str(exc))
+
+    async def _handle_motion_rampa(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`motion.rampa {uniq, pedido}` — a rampa do «Início do analógico», num controle.
+
+        ``comecar`` sobe o analógico que a mira desta peça move, só no pad deste jogador, até
+        ``TETO_DA_RAMPA`` em ``TEMPO_DA_RAMPA_S``; ``andou`` para a rampa e grava o ponto em que
+        a câmera andou como o `piso` da peça; ``parar`` encerra sem gravar. Recusa sem gravar
+        no Nativo (`status: "nativo"`), sem jogo aberto (`"sem_jogo"`) e na peça sem o Analógico
+        Virtual aceso (`"sem_mira"`).
+        """
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO, chave_de_sensor
+
+        uniq = params.get("uniq")
+        pedido = params.get("pedido")
+        if not isinstance(uniq, str) or not chave_de_sensor(uniq):
+            raise ValueError("motion.rampa exige 'uniq': a rampa é de um controle")
+        if pedido not in ("comecar", "andou", "parar"):
+            raise ValueError("motion.rampa: 'pedido' é uma de comecar, andou, parar")
+        uniq = uniq.strip()
+        agora = time.monotonic()
+        if pedido == "parar":
+            rot.parar_a_rampa(self.store, uniq, agora)
+            return {"status": "parada", "uniq": uniq}
+        if pedido == "andou":
+            valor = rot.parar_a_rampa(self.store, uniq, agora)
+            if valor is None:
+                return {"status": "parada", "uniq": uniq}
+            piso = round(valor, 2)
+            corpo = await self._handle_mira_set({"uniq": uniq, "piso": piso})
+            return {"status": corpo.get("status"), "uniq": uniq, "piso": piso}
+        if self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)():
+            return {"status": "nativo", "uniq": uniq}
+        if not REGISTRO.jogo_aberto():
+            return {"status": "sem_jogo", "uniq": uniq}
+        vale = rot.da_peca(self.store, uniq, rot.ativo(self.store))
+        if (vale is None or not rot.virtual_aceso(vale)
+                or self._o_que_falta_ao_movimento(uniq) is not None):
+            return {"status": "sem_mira", "uniq": uniq}
+        rot.comecar_a_rampa(self.store, uniq, agora)
+        return {"status": "subindo", "uniq": uniq, "segundos": float(rot.TEMPO_DA_RAMPA_S)}
+
+    def _merge_passos_da_calibrar(self, entries: list[dict[str, Any]]) -> None:
+        """``entry["sinal"]`` e ``entry["rampa"]``: o sinal conferido e a rampa viva."""
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        estados = self._estados_do_sinal()
+        agora = time.monotonic()
+        for entry in entries:
+            uniq = entry.get("uniq")
+            if not isinstance(uniq, str) or not chave_de_sensor(uniq):
+                entry["sinal"] = entry["rampa"] = None
+                continue
+            entry["sinal"] = estados.get(
+                chave_de_sensor(uniq), {"estado": self._SINAL_NAO_MEDIDO})
+            valor = rot.rampa_agora(self.store, uniq, agora)
+            entry["rampa"] = {"subindo": valor is not None, "valor": valor}
 
     async def _grava_a_acessibilidade(
         self, metodo: str, secao: str, params: dict[str, Any], *, por_peca: bool

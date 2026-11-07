@@ -110,7 +110,7 @@ def _a_pagina_publicada_tem_a_mira(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a11_calibrar_sensores, "_TEM_A_MIRA", True)
 
 
-def _gestos_para_o_p3(servidor: IpcServer, uniq: str = _P3, *, anda: int = 9, tremor: int = 7,
+def _gestos_para_o_p3(servidor: IpcServer, uniq: str = _P3, *, anda: int = 8, tremor: int = 7,
                       segurar: str = "l2",
                       inverter: tuple[str, ...] = ("lado",)) -> _PonteDoServidor:
     """Os quatro gestos da Calibrar, chamados como o clique chama, sobre o `mira.set` real."""
@@ -172,7 +172,7 @@ def test_mudar_na_calibrar_e_ler_nas_outras_tres(
         _mira_set(servidor, uniq=uniq, ligada=True)
     _gestos_para_o_p3(servidor)
     ctx = _ctx(_estado(servidor, transportes))
-    _confere_as_quatro(ctx, _P3, 9, 7, "L2", ("esquerda e direita",), gatilho="l2")
+    _confere_as_quatro(ctx, _P3, 8, 7, "L2", ("esquerda e direita",), gatilho="l2")
     for outro in (_P1, _P2, _P4):
         _confere_as_quatro(ctx, outro, calibrar.SENSIBILIDADE[2], calibrar.TREMOR[2],
                            calibrar.ROTULO_SEMPRE)
@@ -182,7 +182,7 @@ def test_cada_um_dos_quatro_lugares_diz_o_proprio(perfis: Path, tmp_path: Path) 
     """Réguas 1 e 3. O gesto feito uma vez em CADA lugar, com números diferentes: nenhum
     controle diz o do vizinho."""
     servidor = _servidor_com_perfil(tmp_path)
-    por_lugar = {_P1: (2, 11), _P2: (4, 13), _P3: (9, 7), _P4: (12, 40)}
+    por_lugar = {_P1: (2, 11), _P2: (4, 13), _P3: (8, 7), _P4: (12, 40)}
     for uniq, (anda, tremor) in por_lugar.items():
         _mira_set(servidor, uniq=uniq, ligada=True)
         _gestos_para_o_p3(servidor, uniq, anda=anda, tremor=tremor, segurar=calibrar.SEMPRE,
@@ -198,19 +198,19 @@ def test_mudar_de_novo_chega_no_tique_seguinte_sem_reabrir(perfis: Path, tmp_pat
     servidor = _servidor_com_perfil(tmp_path)
     _mira_set(servidor, uniq=_P3, ligada=True)
     _gestos_para_o_p3(servidor, inverter=())
-    _confere_as_quatro(_ctx(_estado(servidor)), _P3, 9, 7, "L2", gatilho="l2")
-    _mira_set(servidor, uniq=_P3, sensibilidade=3)
-    _confere_as_quatro(_ctx(_estado(servidor)), _P3, 3, 7, "L2", gatilho="l2")
+    _confere_as_quatro(_ctx(_estado(servidor)), _P3, 8, 7, "L2", gatilho="l2")
+    _mira_set(servidor, uniq=_P3, sensibilidade=4)
+    _confere_as_quatro(_ctx(_estado(servidor)), _P3, 4, 7, "L2", gatilho="l2")
 
 
 def test_o_chip_apagado_nao_afirma_a_mira_nas_outras_abas(perfis: Path, tmp_path: Path) -> None:  # noqa: F811
     """O número existe com o chip apagado (a Calibrar o mostra), e nenhuma outra aba afirma uma
     Mira que não anda: a Conexões e a Navegação não a dizem mais."""
     servidor = _servidor_com_perfil(tmp_path)
-    _mira_set(servidor, uniq=_P3, ligada=False, sensibilidade=9)
+    _mira_set(servidor, uniq=_P3, ligada=False, sensibilidade=8)
     ctx = _ctx(_estado(servidor))
     lido = _lado_a_lado(ctx, _P3)
-    assert lido["calibrar"]["mira-sensibilidade-num"] == "9"
+    assert lido["calibrar"]["mira-sensibilidade-num"] == "8"
     assert "est-mira" not in a08_conexoes.pacote(ctx)["colunas"][_P3]
 
 
@@ -240,7 +240,7 @@ def test_o_endereco_existe_dos_dois_lados(perfis: Path, tmp_path: Path) -> None:
     _mira_set(servidor, uniq=_P3, ligada=True)
     ctx = _ctx(_estado(servidor))
     lido = _lado_a_lado(ctx, _P3)
-    novos = {"calibrar-sensores.html": {"perfil", "mira-sensibilidade-num", "mira-tremor-num"},
+    novos = {"calibrar-sensores.html": {"perfil", "mira-sensibilidade-h-num", "mira-tremor-num"},
              "10-perfis.html": {"guarda.dica"}}
     for pagina, campos in novos.items():
         faltam = campos - _enderecos(pagina)
@@ -268,16 +268,16 @@ def _troca_para(servidor: IpcServer, nome: str) -> None:
 
 
 def test_trocar_de_perfil_troca_os_numeros_nas_quatro(perfis: Path, tmp_path: Path) -> None:  # noqa: F811
-    """Régua 6. Dois perfis no disco: o A com o P3 em 9, e o B com o P3 em 4 e o P4 em 11. O
-    `profile.switch` para o B, um tique, e as quatro abas dizem 4 e 11; de volta ao A, dizem 9 e
+    """Régua 6. Dois perfis no disco: o A com o P3 em 8, e o B com o P3 em 4 e o P4 em 11. O
+    `profile.switch` para o B, um tique, e as quatro abas dizem 4 e 11; de volta ao A, dizem 8 e
     o P4 volta ao que o A diz dele (nada: Mira apagada, número de nascença). MORDIDA: um
     `definir_da_peca` por cima do mapa velho no lugar do `definir_por_peca` — o P4 do perfil B
     sobrevive à volta ao A."""
     servidor = _servidor_com_perfil(tmp_path)
-    _grava_perfil("Perfil A", p3=9)
+    _grava_perfil("Perfil A", p3=8)
     _grava_perfil("Perfil B", p3=4, p4=11)
     tremor, anda0, sempre = calibrar.TREMOR[2], calibrar.SENSIBILIDADE[2], calibrar.ROTULO_SEMPRE
-    for nome, p3, p4 in (("Perfil B", 4, 11), ("Perfil A", 9, None), ("Perfil B", 4, 11)):
+    for nome, p3, p4 in (("Perfil B", 4, 11), ("Perfil A", 8, None), ("Perfil B", 4, 11)):
         _troca_para(servidor, nome)
         ctx = _ctx(_estado(servidor))
         assert perfil.nome_do_ativo(ctx.state) == nome
@@ -298,22 +298,22 @@ def test_o_nome_do_perfil_na_calibrar_e_o_perfil_que_gravou(
     servidor = _servidor_com_perfil(tmp_path)
     ponte = _PonteDoServidor(servidor)
     ctx = _ctx(_estado(servidor))
-    a11_calibrar_sensores.mira_sensibilidade(ctx, {"uniq": _P3, "valor": "9"}, ponte)
+    a11_calibrar_sensores.mira_sensibilidade(ctx, {"uniq": _P3, "valor": "8"}, ponte)
     gravou_em = ponte.respostas[-1]["perfil"]
     assert gravou_em == "Ensaio"
     assert pacotes.topo(ctx)["perfil"] == gravou_em
-    assert load_profile(gravou_em).controllers[CHAVE[_P3]].movimento.sensibilidade == 9
+    assert load_profile(gravou_em).controllers[CHAVE[_P3]].movimento.sensibilidade_h == 7
 
     servidor.store.set_active_profile(None)
     monkeypatch.setattr(session, "resolve_boot_profile", lambda: "Ensaio")
     calado = _ctx(_estado(servidor))
     assert calado.state["active_profile"] is None
-    a11_calibrar_sensores.mira_sensibilidade(calado, {"uniq": _P3, "valor": "5"}, ponte)
+    a11_calibrar_sensores.mira_sensibilidade(calado, {"uniq": _P3, "valor": "11"}, ponte)
     gravou_em = ponte.respostas[-1]["perfil"]
     assert gravou_em == "Ensaio", "o marcador valia e o `mira.set` não gravou nele"
     assert pacotes.topo(calado)["perfil"] == gravou_em, (
         "o chip da Calibrar não diz o perfil em que a Mira acabou de gravar")
-    assert load_profile(gravou_em).controllers[CHAVE[_P3]].movimento.sensibilidade == 5
+    assert load_profile(gravou_em).controllers[CHAVE[_P3]].movimento.sensibilidade_h == 9
 
 
 def test_a_cena_dos_geradores_diz_o_mesmo_que_o_produto() -> None:

@@ -267,8 +267,8 @@ def posicoes_do_jogo(
     """Onde o jogo segura cada analógico, em %; `None` onde o anel fica apagado.
 
     Acende só onde uma rota aponta para AQUELE analógico, perguntado aos mesmos
-    donos que pintam os chips: a Mira ligada com o destino nele, ou a Inclinação
-    nele. No Nativo o jogo lê o físico, e na Navegação não há pad: nada acende.
+    donos que pintam os chips: a Mira ligada com o destino nele. No Nativo o jogo lê o
+    físico, e na Navegação não há pad: nada acende.
     A conta é a mesma `pos_do_analogico` do ponto da mão.
     """
     saida: dict[str, tuple[float, float] | None] = dict.fromkeys(CAMPOS_DO_JOGO)
@@ -277,9 +277,8 @@ def posicoes_do_jogo(
         return saida
     mira = _mira_ligada(entrada) is True
     destino = _destino_da_mira(entrada, "destino")
-    inclinacao = _destino_da_mira(entrada, "inclinacao")
     for alvo, (analogico, eixos) in _O_ANALOGICO_DO_ANEL.items():
-        if not ((mira and destino == analogico) or inclinacao == analogico):
+        if not (mira and destino == analogico):
             continue
         x, y = (no_jogo.get(eixo) for eixo in eixos)
         if all(isinstance(v, int) and not isinstance(v, bool) for v in (x, y)):
@@ -1395,7 +1394,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "mira-fora": mira_fora(_nativo(ctx)),
                 **_so_se_a_pagina_tiver({
                     "mira-lado": lado_aceso(c),
-                    "inclinacao-parada": _pausa_da_inclinacao(c),
+                    "inclinacao-parada": _pausa_da_mira(c),
                 }),
                 "luz-cor": _cor_da_barra(rotulo_da_luz, base_da_luz),
                 "lampadas": luzinhas(int(casa.get("jogador") or 0) or 1),
@@ -1510,8 +1509,8 @@ def _mira_ligada(dele: dict[str, Any]) -> bool | None:
 def _analogico_virtual(dele: dict[str, Any]) -> bool | None:
     """`True`/`False` do chip «Analógico virtual» deste controle; `None` = ninguém leu.
 
-    É o `virtual` do bloco `mira` (`ipc_handlers._merge_mira`): o giro ou a inclinação
-    move um analógico. O giro no cursor não acende o chip.
+    É o `virtual` do bloco `mira` (`ipc_handlers._merge_mira`): o giro move um analógico.
+    O giro no cursor não acende o chip.
     """
     bloco = dele.get("mira")
     if not isinstance(bloco, dict):
@@ -1538,7 +1537,7 @@ def lado_aceso(dele: dict[str, Any]) -> str:
 
 
 def _destino_da_mira(dele: dict[str, Any], chave: str) -> str | None:
-    """O `destino`, a `inclinacao`, o `toque` ou o `lado` deste controle; `None` = ninguém leu."""
+    """O `destino`, o `toque` ou o `lado` deste controle; `None` = ninguém leu."""
     bloco = dele.get("mira")
     if not isinstance(bloco, dict):
         return None
@@ -1546,10 +1545,10 @@ def _destino_da_mira(dele: dict[str, Any], chave: str) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
-def _pausa_da_inclinacao(dele: dict[str, Any]) -> str:
+def _pausa_da_mira(dele: dict[str, Any]) -> str:
     """A pausa do controle parado: `parada` quando o daemon a diz; a tela só lê."""
     bloco = dele.get("mira")
-    parada = isinstance(bloco, dict) and bloco.get("inclinacao_parada") is True
+    parada = isinstance(bloco, dict) and bloco.get("parada") is True
     return INCLINACAO_PARADA if parada else "segurada"
 
 
@@ -2019,7 +2018,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:4017`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:4020`) e a GUI estável manda exatamente isto
     (`controller_card.py:2474`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
@@ -2285,14 +2284,21 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             "o Hefesto não confirmou a mira: ou ele parou, ou este controle se "
             "desligou")
+    _recusa_da_mira(corpo)
+
+
+def _recusa_da_mira(corpo: dict[str, Any]) -> None:
+    """Levanta a frase de quem recusou a mira; `ok` passa."""
     if corpo.get("status") == "nativo":
         raise RuntimeError(MIRA_CINZA_NO_NATIVO)
+    if corpo.get("status") == "sem_movimento":
+        raise RuntimeError(str(corpo.get("motivo")))
     if corpo.get("status") != "ok":
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
 
 
 def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O lado do analógico virtual: o giro e a inclinação passam a mover este analógico.
+    """O lado do analógico virtual: o giro passa a mover este analógico.
 
     O corpo do «Usar como analógico virtual» da 02 e do «Esquerdo | Direito» da Calibrar
     (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01). O `lado` sozinho liga: com o
@@ -2311,10 +2317,7 @@ def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if corpo is None:
         raise RuntimeError(
             "o Hefesto não confirmou o lado: ou ele parou, ou este controle se desligou")
-    if corpo.get("status") == "nativo":
-        raise RuntimeError(MIRA_CINZA_NO_NATIVO)
-    if corpo.get("status") != "ok":
-        raise RuntimeError(MIRA_SEM_O_CONTROLE)
+    _recusa_da_mira(corpo)
 
 
 @gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "analogico-lado", grava="mira_set_detalhado")

@@ -1,4 +1,4 @@
-"""NO-MODO-XBOX-TUDO-FUNCIONA-01 — a ponte do `mira.set` leva o toque e a inclinação.
+"""NO-MODO-XBOX-TUDO-FUNCIONA-01 — a ponte do `mira.set` leva o toque.
 
 A resposta de 28/09/2026 (~16h50) pôs na aba 02 os chips «Cursor | Botões» do touchpad e
 «Inclinação» embaixo de cada analógico. A «Inclinação» virou o lado do Analógico Virtual
@@ -35,16 +35,14 @@ def _ponte_que_anota(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, Any]]:
     return pedidos
 
 
-def test_a_ponte_leva_os_dois_campos(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_ponte_leva_o_toque(monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: tire o `payload["toque"]` da ponte e o segundo caso reprova."""
     from hefesto_dualsense4unix.app import ipc_bridge
 
     pedidos = _ponte_que_anota(monkeypatch)
-    ipc_bridge.mira_set_detalhado(inclinacao="analogico_direito", uniq=_P4)
     ipc_bridge.mira_set_detalhado(toque="zonas", uniq=_P2)
     ipc_bridge.mira_set_detalhado(toque="nenhum", uniq=_P2)
     assert pedidos == [
-        ("mira.set", {"inclinacao": "analogico_direito", "uniq": _P4}),
         ("mira.set", {"toque": "zonas", "uniq": _P2}),
         ("mira.set", {"toque": "nenhum", "uniq": _P2}),
     ]
@@ -65,5 +63,5 @@ def test_os_chamadores_de_hoje_mandam_o_mesmo_corpo(
         ("mira.set", {"sensibilidade": 9, "uniq": _P1}),
     ]
     padrao = inspect.signature(ipc_bridge.mira_set_detalhado).parameters
-    assert padrao["inclinacao"].default is None
+    assert "inclinacao" not in padrao
     assert padrao["toque"].default is None

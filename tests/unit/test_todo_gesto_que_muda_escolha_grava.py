@@ -47,6 +47,9 @@ _PERGUNTA_DO_RADIO = (
     "que declara `grava=`")
 
 ATOS: dict[Chave, str] = {
+    ("calibrar-sensores.html", "calibrar-sinal"):
+        "ato: lê o giro da peça por 3 s e diz se o sentido bateu; nada se grava "
+        "(A-CALIBRAR-MEDE-O-QUE-A-MIRA-USA-01)",
     ("03-gatilhos.html", "sentir"):
         "ato: toca o efeito da área de criar nos gatilhos do controle e devolve o que ele "
         "recebia antes; nenhuma escolha de quem usa muda (A-ABA-GATILHOS-DO-TODO-01)",

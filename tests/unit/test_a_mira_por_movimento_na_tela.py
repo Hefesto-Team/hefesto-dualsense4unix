@@ -59,8 +59,11 @@ class _LeitorDoNo:
     def snapshot(self) -> Any:
         return SimpleNamespace(x=self._giro[0], y=self._giro[1], z=self._giro[2])
 
-    def consume_angulo(self) -> tuple[float, float, float]:
-        return (0.0, 0.0, 0.0)
+    def accel_snapshot(self) -> Any:
+        return SimpleNamespace(x=0.0, y=1.0, z=0.0)
+
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
+        return (self._giro[0] * 0.01, self._giro[1] * 0.01, self._giro[2] * 0.01), 0.01
 
 
 def _hub(giro_por_uniq: dict[str, tuple[float, float, float]]) -> SensorHub:
@@ -220,7 +223,7 @@ def test_o_arranjo_desligado_nao_move_nada() -> None:
     """O arranjo `nenhum` guarda os números dos deslizantes e não move o eixo."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
-    desligado = _mira(destino=rot.DESTINO_NENHUM, sensibilidade=12)
+    desligado = _mira(destino=rot.DESTINO_NENHUM, sensibilidade_h=10)
     assert rot.deflexao((0.0, 200.0, 0.0), desligado) == (0, 0)
     assert rot.pixels((0.0, 30.0, 0.0), desligado) == (0.0, 0.0)
     assert rot.deflexao((0.0, 200.0, 0.0), rot.SO_NAS_PECAS) == (0, 0)
@@ -257,19 +260,19 @@ def test_a_peca_com_opiniao_manda_e_a_calada_segue_o_perfil() -> None:
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     store = SimpleNamespace()
-    mesa = _mira(sensibilidade=4)
+    mesa = _mira(sensibilidade_h=3)
     rot.definir_ativo(store, mesa)
     rot.definir_por_peca(store, {
-        _P3: _mira(sensibilidade=11),
+        _P3: _mira(sensibilidade_h=9),
         _P4: _mira(destino=rot.DESTINO_NENHUM),
     })
     ativo = rot.ativo(store)
     assert rot.da_peca(store, _P2, ativo) is mesa, "o P2 calado não seguiu o perfil"
-    assert rot.da_peca(store, _P3, ativo).sensibilidade == 11, (
+    assert rot.da_peca(store, _P3, ativo).sensibilidade_h == 9, (
         "o P3 tem a mira dele e recebeu a do perfil")
     assert rot.da_peca(store, _P4, ativo) is None, (
         "o P4 APAGOU o chip e mira assim mesmo, pela mira do perfil")
-    assert rot.da_peca(store, "aabbcc000003", ativo).sensibilidade == 11
+    assert rot.da_peca(store, "aabbcc000003", ativo).sensibilidade_h == 9
 
 
 def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
@@ -281,7 +284,7 @@ def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
     peca = ProfileMovimentoConfig(destino="analogico_direito")
     arranjo = rot.arranjo_da_peca(perfil, peca)
     assert arranjo.ligado
-    assert arranjo.zona_morta_graus_s == 30.0 and arranjo.sensibilidade == 9
+    assert arranjo.zona_morta_graus_s == 30.0 and arranjo.sensibilidade_h == 8
 
 
 def test_o_perfil_sem_mira_por_peca_apaga_a_do_anterior() -> None:
@@ -384,12 +387,12 @@ def test_o_perfil_leva_a_mira_de_cada_peca_ao_tique() -> None:
     gerente = ProfileManager.__new__(ProfileManager)
     gerente.store = store  # type: ignore[attr-defined]
     gerente.apply_movimento(_perfil_com_miras(**{
-        "aabbcc000003": {"destino": "analogico_direito", "sensibilidade": 10},
+        "aabbcc000003": {"destino": "analogico_direito", "sensibilidade_h": 8},
         "aabbcc000004": {"destino": "nenhum", "zona_morta_graus_s": 25.0},
     }))
     ativo = rot.ativo(store)
     assert ativo is rot.SO_NAS_PECAS
-    assert rot.da_peca(store, _P3, ativo).sensibilidade == 10
+    assert rot.da_peca(store, _P3, ativo).sensibilidade_h == 8
     assert rot.da_peca(store, _P4, ativo) is None
     assert rot.da_peca(store, _P2, ativo) is None
     assert rot.parametros_da_peca(store, _P4).zona_morta_graus_s == 25.0
@@ -513,9 +516,9 @@ class _LeitorQueConta(_LeitorDoNo):
         super().__init__(giro)
         self.drenagens = 0
 
-    def consume_angulo(self) -> tuple[float, float, float]:
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
         self.drenagens += 1
-        return (0.0, 0.0, 0.0)
+        return (0.0, 0.0, 0.0), 0.01
 
 
 def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
@@ -600,8 +603,8 @@ def test_o_que_o_usuario_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) ->
     assert corpo["status"] == "ok" and corpo["gravado"] is True and corpo["ligada"]
     dele = load_profile("Ensaio").controllers["aabbcc000003"].movimento
     assert dele is not None and dele.destino == "analogico_direito"
-    assert dele.acelerometro == "analogico_direito" and dele.lado == "analogico_direito"
-    assert dele.model_fields_set == {"destino", "acelerometro", "lado"}, (
+    assert dele.lado == "analogico_direito"
+    assert dele.model_fields_set == {"destino", "lado"}, (
         "o chip gravou campos que ninguém mexeu — a peça deixaria de herdar do "
         "perfil")
     corpo = _mira_set(servidor, uniq=_P3, zona_morta_graus_s=22.0)
@@ -615,13 +618,13 @@ def test_o_que_o_usuario_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) ->
 def test_a_tela_nao_liga_a_mira_sozinha(perfis: Path, tmp_path: Path) -> None:
     """Mexer no deslizante de um controle de mira apagada NÃO a acende."""
     servidor = _servidor_com_perfil(tmp_path)
-    corpo = _mira_set(servidor, uniq=_P2, sensibilidade=9)
+    corpo = _mira_set(servidor, uniq=_P2, sensibilidade=8)
     assert corpo["status"] == "ok" and corpo["ligada"] is False
     assert not REGISTRO.roteado(_P2)
     entradas: list[dict[str, Any]] = [{"uniq": _P1}, {"uniq": _P2}]
     servidor._merge_mira(entradas)
     assert [e["mira"]["ligada"] for e in entradas] == [False, False]
-    assert entradas[1]["mira"]["sensibilidade"] == 9, (
+    assert entradas[1]["mira"]["sensibilidade"] == 8, (
         "o número ajustado com a mira apagada sumiu da leitura de volta")
 
 
@@ -664,14 +667,14 @@ def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
     perfil = Profile(
         name="Ensaio",
         match=MatchAny(type="any"),
-        movimento=ProfileMovimentoConfig(destino="analogico_direito", sensibilidade=9),
+        movimento=ProfileMovimentoConfig(destino="analogico_direito", sensibilidade=8),
     )
     servidor = _servidor_com_perfil(tmp_path, perfil)
     corpo = _mira_set(servidor, uniq=_P2, zona_morta_graus_s=20.0)
-    assert corpo["ligada"] is True and corpo["sensibilidade"] == 9, corpo
+    assert corpo["ligada"] is True and corpo["sensibilidade"] == 8, corpo
     store = servidor.store
     vivo = rot.da_peca(store, _P2, rot.ativo(store))
-    assert vivo is not None and (vivo.sensibilidade, vivo.zona_morta_graus_s) == (9, 20.0), (
+    assert vivo is not None and (vivo.sensibilidade_h, vivo.zona_morta_graus_s) == (7, 20.0), (
         f"mexer no tremor do P2 mudou a mira dele para {vivo}")
     servidor.profile_manager.apply_movimento(load_profile("Ensaio"))
     assert rot.da_peca(store, _P2, rot.ativo(store)) == vivo, (
@@ -766,8 +769,8 @@ def test_os_numeros_dos_deslizantes_sao_os_do_esquema() -> None:
     """O gerador roda sem o pacote e escreve os números; o dono é o esquema."""
     import calibrar
 
-    escrito = calibrar.SENSIBILIDADE
-    assert escrito == _faixa_do_esquema("sensibilidade")
+    assert _faixa_do_esquema("sensibilidade_h") == (0, 10, 4)
+    assert _faixa_do_esquema("sensibilidade_v") == (0, 10, 4)
     ge, le, nasce = _faixa_do_esquema("zona_morta_graus_s")
     assert (ge, le, nasce) == (0.0, 60.0, 3.0), "o esquema mudou — releia a sprint"
     escrito = calibrar.TREMOR
@@ -782,7 +785,8 @@ def test_a_calibrar_tem_os_dois_deslizantes_de_cada_controle() -> None:
     cartoes = re.findall(r'<div class="ctr"[^>]*\s+data-controle="(p\d)"', doc)
     colunas = re.findall(r'<div class="mira"[^>]* data-controle="(p\d)">', doc)
     assert cartoes and colunas == cartoes, (cartoes, colunas)
-    for gesto, (minimo, maximo, nasce) in (("mira-sensibilidade", calibrar.SENSIBILIDADE),
+    for gesto, (minimo, maximo, nasce) in (("mira-sensibilidade-h", calibrar.EIXO_DA_MIRA),
+                                           ("mira-sensibilidade-v", calibrar.EIXO_DA_MIRA),
                                            ("mira-tremor", calibrar.TREMOR)):
         trilhos = re.findall(rf'<input class="trilho" type="range" min="{minimo}" '
                              rf'max="{maximo}" step="1" value="{nasce}" '

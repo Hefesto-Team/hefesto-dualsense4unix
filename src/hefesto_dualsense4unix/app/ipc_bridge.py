@@ -1163,12 +1163,15 @@ def mira_set_detalhado(
     *,
     ligada: bool | None = None,
     sensibilidade: int | None = None,
+    sensibilidade_h: int | None = None,
+    sensibilidade_v: int | None = None,
+    piso: float | None = None,
+    velocidade_do_jogo: float | None = None,
     zona_morta_graus_s: float | None = None,
     uniq: str | None = None,
     gatilho: str | None = None,
     inverter_horizontal: bool | None = None,
     inverter_vertical: bool | None = None,
-    inclinacao: str | None = None,
     toque: str | None = None,
     mesmo_parado: bool | None = None,
     lado: str | None = None,
@@ -1179,6 +1182,14 @@ def mira_set_detalhado(
         payload["ligada"] = bool(ligada)
     if sensibilidade is not None:
         payload["sensibilidade"] = int(sensibilidade)
+    if sensibilidade_h is not None:
+        payload["sensibilidade_h"] = int(sensibilidade_h)
+    if sensibilidade_v is not None:
+        payload["sensibilidade_v"] = int(sensibilidade_v)
+    if piso is not None:
+        payload["piso"] = float(piso)
+    if velocidade_do_jogo is not None:
+        payload["velocidade_do_jogo"] = float(velocidade_do_jogo)
     if zona_morta_graus_s is not None:
         payload["zona_morta_graus_s"] = float(zona_morta_graus_s)
     if gatilho is not None:
@@ -1187,8 +1198,6 @@ def mira_set_detalhado(
         payload["inverter_horizontal"] = bool(inverter_horizontal)
     if inverter_vertical is not None:
         payload["inverter_vertical"] = bool(inverter_vertical)
-    if inclinacao is not None:
-        payload["inclinacao"] = str(inclinacao)
     if toque is not None:
         payload["toque"] = str(toque)
     if mesmo_parado is not None:

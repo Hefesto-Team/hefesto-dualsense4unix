@@ -89,8 +89,7 @@ def _entrada(uniq: str, jogador: int, **troca: Any) -> dict[str, Any]:
         "audio": {"mic_mudo": False, "mic_mudo_desejado": None,
                   "canal_ativo": True, "canal_mudo": False},
         "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": True},
-        "mira": {"ligada": False, "toque": rot.DESTINO_NENHUM,
-                 "inclinacao": rot.DESTINO_NENHUM},
+        "mira": {"ligada": False, "toque": rot.DESTINO_NENHUM},
         "acessibilidade": {"ativacao": True, "analogicos": True},  # (noqa-acento)
     }
     for chave, valor in troca.items():
@@ -123,9 +122,7 @@ def _o_cenario() -> dict[str, Any]:
         _entrada(UNIQS[1], 2, lightbar_on=False, lightbar_rgb=[0, 0, 0],
                  acessibilidade={"analogicos": False}),
         _entrada(UNIQS[2], 3),
-        _entrada(UNIQS[3], 4, mira={"ligada": True,
-                                    "toque": rot.DESTINO_NENHUM,
-                                    "inclinacao": rot.DESTINO_NENHUM}),
+        _entrada(UNIQS[3], 4, mira={"ligada": True, "toque": rot.DESTINO_NENHUM}),
     )
 
 
@@ -182,9 +179,9 @@ def _o_dono_diz(secao: str, entrada: dict[str, Any], state: dict[str, Any]) -> b
                  for q in ("giroscopio", "acelerometro")}
         return True if True in lidos else (False if lidos == {False} else None)
     if secao == "movimento":
-        destinos = {a02_controles._destino_da_mira(entrada, c) for c in ("toque", "inclinacao")}
-        return bool(a02_controles._mira_ligada(entrada)) or bool(
-            destinos - {None, rot.DESTINO_NENHUM})
+        toque = a02_controles._destino_da_mira(entrada, "toque")
+        return bool(a02_controles._mira_ligada(entrada)) or toque not in (
+            None, rot.DESTINO_NENHUM)
     if secao in ("ativacao", "analogicos"):  # (noqa-acento)
         valor = (entrada.get("acessibilidade") or {}).get(secao)
         return valor if isinstance(valor, bool) else None

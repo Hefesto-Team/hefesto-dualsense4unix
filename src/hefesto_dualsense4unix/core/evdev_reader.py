@@ -30,6 +30,14 @@ logger = get_logger(__name__)
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PIDS = {0x0CE6, 0x0DF2}
 
+FAMILIA_SONY = "sony"
+FAMILIA_PRO = "pro"
+FAMILIA_8BITDO = "8bitdo"
+
+_SUFIXO_DO_NO_DE_MOVIMENTO_NINTENDO = "(IMU)"
+
+_VERSAO_DO_8BITDO = 0x0200
+
 DUALSENSE_GYRO_RES_PER_DEG_S = 1024
 
 DUALSENSE_ACC_RES_PER_G = 8192
@@ -333,6 +341,11 @@ def _no_de_dualsense_no_sysfs(caminho: str) -> bool:
             product = int(fh.read().strip(), 16)
     except (OSError, ValueError):
         return False
+    return _e_um_dualsense(vendor, product)
+
+
+def _e_um_dualsense(vendor: int, product: int) -> bool:
+    """O par VID/PID é de um DualSense físico."""
     return vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS
 
 
@@ -1888,6 +1901,64 @@ def discover_dualsense_motion_evdevs() -> dict[str, Path]:
     return _discover_dualsense_por_nome("Motion Sensors")
 
 
+def _familia_pela_identidade(
+    vendor: int, product: int, nome: str, versao: int | None
+) -> str | None:
+    """A família dona de um nó de movimento; `None` se o nó não é de movimento."""
+    from hefesto_dualsense4unix.core.linhagem_nintendo import VIDS_NINTENDO
+
+    if _e_um_dualsense(vendor, product) and "Motion Sensors" in nome:
+        return FAMILIA_SONY
+    if f"{vendor:04x}" in VIDS_NINTENDO and nome.endswith(_SUFIXO_DO_NO_DE_MOVIMENTO_NINTENDO):
+        return FAMILIA_8BITDO if versao == _VERSAO_DO_8BITDO else FAMILIA_PRO
+    return None
+
+
+def _versao_no_sysfs(path: str | Path) -> int | None:
+    """O `id/version` do nó, que separa o 8BitDo (`0200`) do Pro genuíno (`0210`)."""
+    raiz = f"/sys/class/input/{Path(path).name}/device"
+    try:
+        with open(f"{raiz}/id/version", encoding="ascii") as fh:
+            return int(fh.read().strip(), 16)
+    except (OSError, ValueError) as erro:
+        logger.debug("versao_do_no_ilegivel", no=str(path), erro=str(erro))
+        return None
+
+
+def familia_do_no_de_movimento(path: str | Path) -> str | None:
+    """A família do nó de movimento em `path`, pelo sysfs, sem abrir o nó."""
+    lido = _identidade_no_sysfs(str(path))
+    if lido is None:
+        return None
+    vendor, product, nome, _uniq = lido
+    return _familia_pela_identidade(vendor, product, nome, _versao_no_sysfs(path))
+
+
+def discover_motion_evdevs() -> dict[str, Path]:
+    """MAC normalizado -> node evdev de movimento de TODA família que o tem.
+
+    O DualSense pelo «Motion Sensors» e a linhagem do `hid-nintendo` pelo « (IMU)». O 8BitDo em
+    X-input não publica nó de movimento: ali o mapa não traz o controle.
+    """
+    try:
+        from evdev import list_devices
+    except ImportError:
+        return {}
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    found = dict(discover_dualsense_motion_evdevs())
+    for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
+        if _is_virtual_evdev(path):
+            continue
+        lido = _identidade_no_sysfs(path)
+        if lido is None:
+            continue
+        vendor, product, nome, uniq = lido
+        if _familia_pela_identidade(vendor, product, nome, None) not in (None, FAMILIA_SONY):
+            found.setdefault(norm_mac(uniq) or f"path:{path}", Path(path))
+    return found
+
+
 def find_dualsense_touchpad_evdev(target_uniq: str | None = None) -> Path | None:
     """Retorna path do evdev do touchpad do DualSense; None se ausente.
 
@@ -2320,17 +2391,29 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._resolucoes: dict[str, int] = {}
         self._resolucoes_accel: dict[str, int] = {}
         self._angulo: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        self._tempo_do_angulo: float = 0.0
         self._ultimo_syn: float | None = None
         self._epoca: int = 0
         self._carimbo_us: int | None = None
         self._carimbo_bruto: int | None = None
+        self._familia: str | None = None
 
-    def consume_angulo(self) -> tuple[float, float, float]:
-        """Ângulo percorrido em cada eixo desde a última chamada — e ZERA."""
+    def familia(self) -> str | None:
+        """A família do nó aberto; `None` antes de abrir."""
+        return self._familia
+
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
+        """Ângulo percorrido em cada eixo desde a última chamada e o tempo do kernel que ele cobre.
+
+        ZERA os dois. Dividir um pelo outro é a média das amostras daquele trecho, em qualquer
+        taxa do fio; tempo 0 é o trecho em que nenhuma amostra chegou.
+        """
         with self._lock:
             valores = (self._angulo["x"], self._angulo["y"], self._angulo["z"])
+            segundos = self._tempo_do_angulo
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
-            return valores
+            self._tempo_do_angulo = 0.0
+            return valores, segundos
 
     def hz_do_movimento(self) -> float | None:
         """Pacotes por segundo que o nó de movimento recebe AGORA, ou ``None``.
@@ -2434,9 +2517,12 @@ class MotionSensorReader(_EvdevReconnectLoop):
 
 
     def _locate(self) -> Path | None:
-        mapa = discover_dualsense_motion_evdevs()
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        mapa = discover_motion_evdevs()
         if self._target_uniq is not None:
-            return mapa.get(self._target_uniq)
+            alvo = chave_de_sensor(self._target_uniq)
+            return next((no for uniq, no in mapa.items() if chave_de_sensor(uniq) == alvo), None)
         ordenados = sorted(mapa.values(), key=_event_num)
         return ordenados[0] if ordenados else None
 
@@ -2449,6 +2535,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
     def _on_device_opened(self, dev: Any) -> None:
         """Lê a escala de cada eixo do `absinfo` do node recém-aberto."""
         self._zerar_a_taxa(aberto=True)
+        self._familia = familia_do_no_de_movimento(getattr(dev, "path", ""))
         with self._lock:
             self._epoca += 1
             self._carimbo_us = None
@@ -2482,6 +2569,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
             self._resolucoes = {}
             self._resolucoes_accel = {}
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
+            self._tempo_do_angulo = 0.0
             self._ultimo_syn = None
             self._carimbo_us = None
             self._carimbo_bruto = None
@@ -2535,6 +2623,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
             for eixo in ("x", "y", "z"):
                 valor = self._angulo[eixo] + self._eixos[eixo] * dt
                 self._angulo[eixo] = max(-teto, min(teto, valor))
+            self._tempo_do_angulo += dt
 
 
 def _esperar_o_backoff(leitor: _EvdevReconnectLoop, segundos: float) -> bool:
@@ -2638,7 +2727,7 @@ def definir_o_despertador(
     """Liga (ou desliga, com ``None``) quem o leitor acorda num aperto ou num eixo que andou.
 
     ``pergunta_do_movimento(uniq)`` diz se o quadro de movimento da peça ``uniq`` entra no
-    analógico do jogo (o giro ou a inclinação misturados no stick): só então o quadro acorda.
+    analógico do jogo (o giro misturado no stick): só então o quadro acorda.
     """
     global _despertador, _pergunta_do_movimento
     _despertador = acordar
@@ -2679,6 +2768,9 @@ __all__ = [
     "EIXO_MAX_HEFESTO",
     "ESPECIE_DUALSENSE",
     "ESPECIE_EXTERNAL",
+    "FAMILIA_8BITDO",
+    "FAMILIA_PRO",
+    "FAMILIA_SONY",
     "AccelSnapshot",
     "AmostraDoMovimento",
     "EixoAbsoluto",
@@ -2695,7 +2787,9 @@ __all__ = [
     "discover_dualsense_touchpad_evdevs",
     "discover_external_gamepads",
     "discover_gamepads",
+    "discover_motion_evdevs",
     "faixas_de_eixo",
+    "familia_do_no_de_movimento",
     "find_all_dualsense_evdevs",
     "find_dualsense_evdev",
     "find_dualsense_touchpad_evdev",

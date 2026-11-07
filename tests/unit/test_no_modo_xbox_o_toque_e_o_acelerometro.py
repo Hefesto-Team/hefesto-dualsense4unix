@@ -1,4 +1,4 @@
-"""NO-MODO-XBOX-TUDO-FUNCIONA-01 — no modo Xbox, o toque e a inclinação chegam."""
+"""NO-MODO-XBOX-TUDO-FUNCIONA-01 — no modo Xbox, o toque e o giro chegam."""
 
 from __future__ import annotations
 
@@ -95,30 +95,23 @@ class TestOPerfil:
     def test_nascem_sem_opiniao(self) -> None:
         secao = ProfileMovimentoConfig()
         assert secao.toque == "nenhum", "o touchpad nasceria longe do computador"
-        assert secao.acelerometro == "nenhum", "o personagem andaria sozinho"
         assert "ProfileMovimentoConfig.toque" in NASCIMENTO_DOS_CAMPOS
-        assert "ProfileMovimentoConfig.acelerometro" in NASCIMENTO_DOS_CAMPOS
 
     def test_o_perfil_de_ontem_sai_igual(self) -> None:
         """Um hefesto antigo recusa o perfil INTEIRO ao ver chave que não conhece."""
         mira = ProfileMovimentoConfig(destino="analogico_direito", sensibilidade=9)
         dump = mira.model_dump()
-        assert "toque" not in dump and "acelerometro" not in dump
+        assert "toque" not in dump
         volta = ProfileMovimentoConfig.model_validate(dump)
         assert volta == mira
 
     def test_quem_escreveu_leva_a_chave_inclusive_o_nenhum(self) -> None:
         """A peça que APAGOU o toque por cima do perfil tem opinião, e a opinião vai."""
-        dump = ProfileMovimentoConfig(
-            toque="nenhum", acelerometro="analogico_esquerdo").model_dump()
-        assert dump["toque"] == "nenhum"
-        assert dump["acelerometro"] == "analogico_esquerdo"
+        assert ProfileMovimentoConfig(toque="nenhum").model_dump()["toque"] == "nenhum"
 
     def test_valor_desconhecido_e_recusado(self) -> None:
         with pytest.raises(ValidationError):
             ProfileMovimentoConfig(toque="gestos")
-        with pytest.raises(ValidationError):
-            ProfileMovimentoConfig(acelerometro="mouse")
 
     def test_a_peca_sobrepoe_so_o_que_escreveu(self) -> None:
         """O chip do toque da peça não apaga a mira que a peça herda do perfil."""
@@ -126,7 +119,7 @@ class TestOPerfil:
         peca = ProfileMovimentoConfig(toque="zonas")
         arranjo = rot.arranjo_da_peca(mesa, peca)
         assert arranjo.toque == "zonas"
-        assert arranjo.destino == "analogico_direito" and arranjo.sensibilidade == 8
+        assert arranjo.destino == "analogico_direito" and arranjo.sensibilidade_h == 7
 
 
 class TestAsZonas:
@@ -159,71 +152,8 @@ class TestAsZonas:
         assert GATILHOS["l2"] == rot.BOTAO_DA_ZONA_DE_BAIXO
 
 
-class TestAInclinacao:
-    """O acelerômetro vira analógico: zona morta, teto, sentido e sensibilidade."""
-
-    def _a(self, **kw: Any) -> rot.ArranjoDeMovimento:
-        return rot.ArranjoDeMovimento(acelerometro=rot.DESTINO_ANALOGICO_ESQUERDO, **kw)
-
-    def test_a_mao_que_respira_nao_anda(self) -> None:
-        assert rot.deflexao_da_inclinacao(_inclinado(4.0), _DEITADO, self._a()) == (0, 0)
-
-    def test_inclinar_para_a_frente_anda_para_a_frente(self) -> None:
-        dh, dv = rot.deflexao_da_inclinacao(_inclinado(20.0), _DEITADO, self._a())
-        assert dh == 0 and dv < 0, "o nariz desceu e o analógico não foi para cima"
-
-    def test_inclinar_para_a_direita_vai_para_a_direita(self) -> None:
-        dh, dv = rot.deflexao_da_inclinacao(_inclinado(0.0, 20.0), _DEITADO, self._a())
-        assert dh > 0 and dv == 0
-
-    def test_o_teto_e_o_batente(self) -> None:
-        dh, _ = rot.deflexao_da_inclinacao(_inclinado(0.0, 80.0), _DEITADO, self._a())
-        assert dh == rot.DEFLEXAO_MAXIMA
-
-    def test_a_sensibilidade_encurta_o_caminho(self) -> None:
-        leve = rot.deflexao_da_inclinacao(_inclinado(0.0, 15.0), _DEITADO, self._a())
-        forte = rot.deflexao_da_inclinacao(
-            _inclinado(0.0, 15.0), _DEITADO, self._a(sensibilidade=12)
-        )
-        assert forte[0] > leve[0] > 0
-
-    def test_o_neutro_e_como_o_usuario_segura(self) -> None:
-        """Quem segura a 30 graus não anda: o neutro é o ângulo da mão do usuário."""
-        mao = _inclinado(30.0)
-        assert rot.deflexao_da_inclinacao(mao, mao, self._a()) == (0, 0)
-
-    def test_o_inverter_vale(self) -> None:
-        dh, _ = rot.deflexao_da_inclinacao(
-            _inclinado(0.0, 20.0), _DEITADO, self._a(inverter_horizontal=True)
-        )
-        assert dh < 0
-
-    def test_sem_gravidade_nao_ha_angulo(self) -> None:
-        assert rot.deflexao_da_inclinacao((0.0, 0.0, 0.0), _DEITADO, self._a()) == (0, 0)
-
-    def test_o_arranjo_sem_inclinacao_nao_move(self) -> None:
-        assert rot.deflexao_da_inclinacao(
-            _inclinado(40.0), _DEITADO, rot.ArranjoDeMovimento()
-        ) == (0, 0)
-
-
-class TestONeutroEODedo:
-    """As duas memórias por peça, no `store`, e o silêncio que recomeça."""
-
-    def test_o_silencio_recentra(self) -> None:
-        store = SimpleNamespace()
-        assert rot.neutro_da_inclinacao(store, _P2, _DEITADO, 10.0) == _DEITADO
-        mao = _inclinado(30.0)
-        assert rot.neutro_da_inclinacao(store, _P2, mao, 10.1) == _DEITADO
-        assert rot.neutro_da_inclinacao(store, _P2, mao, 20.0) == mao, (
-            "depois de um silêncio o neutro seguiu o de antes — o controle que "
-            "voltou, ou o aperto novo do «Só enquanto eu segurar», não recentrou"
-        )
-
-    def test_cada_peca_tem_o_seu(self) -> None:
-        store = SimpleNamespace()
-        rot.neutro_da_inclinacao(store, _P2, _DEITADO, 1.0)
-        assert rot.neutro_da_inclinacao(store, _P3, _inclinado(30.0), 1.0) == _inclinado(30.0)
+class TestODedo:
+    """A memória do dedo por peça, no `store`, e o silêncio que recomeça."""
 
     def test_o_dedo_so_ancora_na_chegada(self) -> None:
         store = SimpleNamespace()
@@ -250,12 +180,13 @@ class TestONeutroEODedo:
         from hefesto_dualsense4unix.integrations.uinput_mouse import TOUCHPAD_SENSITIVITY
 
         assert rot.PIXELS_POR_UNIDADE_DO_TOQUE == TOUCHPAD_SENSITIVITY
-        arranjo = rot.ArranjoDeMovimento(toque=rot.TOQUE_CURSOR, sensibilidade=12)
+        arranjo = rot.ArranjoDeMovimento(
+            toque=rot.TOQUE_CURSOR, sensibilidade_h=8, sensibilidade_v=8)
         assert rot.pixels_do_toque(100, 0, arranjo) == (100 * TOUCHPAD_SENSITIVITY * 2, 0.0)
 
 
 class TestORoteador:
-    """A peça que só toca ou só inclina entra no tique; a Mira segue sendo o giro."""
+    """A peça que só toca entra no tique; a Mira segue sendo o giro."""
 
     def test_so_o_toque_entra_no_tique(self) -> None:
         store = SimpleNamespace()
@@ -264,12 +195,10 @@ class TestORoteador:
         assert rot.ativo(store) is so_toque
         assert not so_toque.ligado, "a Mira acendeu com o toque"
 
-    def test_a_peca_que_so_inclina_entra_pela_peca(self) -> None:
+    def test_a_peca_que_so_toca_entra_pela_peca(self) -> None:
         store = SimpleNamespace()
         rot.definir_ativo(store, None)
-        rot.definir_por_peca(
-            store, {_P3: rot.montar(ProfileMovimentoConfig(acelerometro="analogico_esquerdo"))}
-        )
+        rot.definir_por_peca(store, {_P3: rot.montar(ProfileMovimentoConfig(toque="zonas"))})
         mesa = rot.ativo(store)
         assert mesa is rot.SO_NAS_PECAS
         assert rot.da_peca(store, _P3, mesa) is not None
@@ -278,8 +207,6 @@ class TestORoteador:
     def test_o_montar_recusa_o_que_nao_sabe(self) -> None:
         with pytest.raises(rot.ArranjoRecusadoError):
             rot.montar(SimpleNamespace(toque="gestos"))
-        with pytest.raises(rot.ArranjoRecusadoError):
-            rot.montar(SimpleNamespace(acelerometro="mouse"))
 
 
 class TestOReportDoUhid:
@@ -308,8 +235,7 @@ class TestOReportDoUhid:
 
     def test_sem_rota_a_janela_e_a_mesma(self) -> None:
         store = SimpleNamespace()
-        rot.definir_ativo(
-            store, rot.montar(ProfileMovimentoConfig(acelerometro="analogico_esquerdo")))
+        rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig()))
         rot.definir_por_peca(store, {})
         rot.sincronizar_o_filtro(store)
         janela = self._janela()
@@ -329,6 +255,7 @@ class _LeitorDeMovimento:
 
     def __init__(self, acel: tuple[float, float, float] = _DEITADO) -> None:
         self.acel = acel
+        self.giro = (0.0, 0.0, 0.0)
 
     def start(self) -> bool:
         return True
@@ -337,10 +264,11 @@ class _LeitorDeMovimento:
         pass
 
     def snapshot(self) -> Any:
-        return SimpleNamespace(x=0.0, y=0.0, z=0.0)
+        return SimpleNamespace(x=self.giro[0], y=self.giro[1], z=self.giro[2])
 
-    def consume_angulo(self) -> tuple[float, float, float]:
-        return (0.0, 0.0, 0.0)
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
+        x, y, z = self.giro
+        return (x * 0.01, y * 0.01, z * 0.01), 0.01
 
     def accel_snapshot(self) -> Any:
         return SimpleNamespace(x=self.acel[0], y=self.acel[1], z=self.acel[2])
@@ -583,46 +511,46 @@ class TestOP1NoModoXbox:
         finally:
             daemon._gamepad_device.stop()
 
-    def test_a_inclinacao_chega_ao_xbox_360(
+    def test_o_giro_chega_ao_xbox_360(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
     ) -> None:
         movimento = _LeitorDeMovimento(_DEITADO)
         hub = _hub({_P1: movimento}, {})
         perfil = Profile(
-            name="Inclinar", match=MatchAny(type="any"),
-            movimento=ProfileMovimentoConfig(acelerometro="analogico_esquerdo"),
+            name="Girar", match=MatchAny(type="any"),
+            movimento=ProfileMovimentoConfig(destino="analogico_esquerdo"),
         )
         daemon, _ = _mesa_de_verdade(tmp_path, hub, perfil)
         no = self._tiques(monkeypatch, daemon, hub)
         try:
             assert no.ultimo(_EC.EV_ABS, _EC.ABS_X) in (None, 128), (
-                "o controle na mesa já andava: o neutro não é o ângulo de partida")
-            movimento.acel = _inclinado(0.0, 25.0)
+                "o controle parado já andava")
+            movimento.giro = (0.0, -180.0, 0.0)
             gp.dispatch_gamepad(daemon, _estado(), frozenset())
             assert (no.ultimo(_EC.EV_ABS, _EC.ABS_X) or 128) > 128, (
-                "inclinar o controle para a direita não moveu o analógico esquerdo")
+                "girar o controle para a direita não moveu o analógico esquerdo")
         finally:
             daemon._gamepad_device.stop()
 
-    def test_a_inclinacao_no_analogico_direito(
+    def test_o_giro_no_analogico_direito(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
     ) -> None:
         """O chip embaixo do analógico DIREITO move o direito, e só ele."""
         movimento = _LeitorDeMovimento(_DEITADO)
         hub = _hub({_P1: movimento}, {})
         perfil = Profile(
-            name="Inclinar", match=MatchAny(type="any"),
-            movimento=ProfileMovimentoConfig(acelerometro="analogico_direito"),
+            name="Girar", match=MatchAny(type="any"),
+            movimento=ProfileMovimentoConfig(destino="analogico_direito"),
         )
         daemon, _ = _mesa_de_verdade(tmp_path, hub, perfil)
         no = self._tiques(monkeypatch, daemon, hub)
         try:
-            movimento.acel = _inclinado(0.0, 25.0)
+            movimento.giro = (0.0, -180.0, 0.0)
             gp.dispatch_gamepad(daemon, _estado(), frozenset())
             assert (no.ultimo(_EC.EV_ABS, _EC.ABS_RX) or 128) > 128, (
-                "inclinar para a direita não moveu o analógico direito")
+                "girar para a direita não moveu o analógico direito")
             assert no.ultimo(_EC.EV_ABS, _EC.ABS_X) in (None, 128), (
-                "a inclinação do direito andou o analógico esquerdo")
+                "o giro do direito andou o analógico esquerdo")
         finally:
             daemon._gamepad_device.stop()
 
@@ -735,32 +663,6 @@ class TestOsJogadores2a4:
         assert vpads[_P3].buttons[0] == frozenset(), "o P3 não tocou e apertou botão"
         assert "l1" in vpads[_P4].buttons[0]
 
-    def test_cada_jogador_inclina_o_proprio_analogico(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        acel = {_P2: _inclinado(0.0, 25.0), _P3: _inclinado(0.0, 25.0), _P4: _DEITADO}
-        monkeypatch.setattr(
-            REGISTRO, "estado",
-            lambda uniq: SimpleNamespace(giroscopio=True, acelerometro=uniq != _P3),
-        )
-
-        class _HubDaInclinacao:
-            def aceleracao_do_movimento(self, uniq: str) -> Any:
-                return acel[uniq]
-
-        arranjo = rot.montar(ProfileMovimentoConfig(acelerometro="analogico_esquerdo"))
-        store_de_partida: dict[str, Any] = {}
-        monkeypatch.setattr(
-            rot, "neutro_da_inclinacao",
-            lambda dono, uniq, a, agora: store_de_partida.setdefault(uniq, _DEITADO),
-        )
-        vpads = _mesa_dos_secundarios(monkeypatch, arranjo, _HubDaInclinacao())
-        assert vpads[_P2].analog[0]["lx"] > 128, "o P2 inclinou e não andou"
-        assert vpads[_P3].analog[0]["lx"] == 128, (
-            "o P3 tinha o acelerômetro DESLIGADO por quem usa e andou assim mesmo")
-        assert vpads[_P4].analog[0]["lx"] == 128, "o P4 estava na mesa e andou"
-
-
 def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -770,8 +672,11 @@ def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
         def velocidade_do_movimento(self, uniq: str) -> Any:
             return (0.0, 150.0, 0.0)
 
+        def aceleracao_do_movimento(self, uniq: str) -> Any:
+            return (0.0, 1.0, 0.0)
+
         def angulo_do_movimento(self, uniq: str) -> Any:
-            return (0.0, 0.0, 0.0)
+            return ((0.0, 1.5, 0.0), 0.01)
 
         def toque_da_peca(self, uniq: str) -> Any:
             return _toque(_DEDO_NO_L2), False
@@ -783,7 +688,7 @@ def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
     rot.definir_ativo(
         store,
         rot.montar(ProfileMovimentoConfig(
-            destino="analogico_direito", gatilho="l2", toque="zonas", sensibilidade=12)),
+            destino="analogico_direito", gatilho="l2", toque="zonas", sensibilidade_h=10)),
     )
     vpad = _VpadDoJogador()
     hub = _Hub()
@@ -799,7 +704,7 @@ def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
 
 
 def test_na_navegacao_o_toque_e_o_do_computador(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem controle virtual, o dedo segue sendo o ponteiro e a inclinação não move nada."""
+    """Sem controle virtual, o dedo segue sendo o ponteiro."""
     from hefesto_dualsense4unix.daemon.subsystems import mouse as mo
 
     perguntas: list[str] = []
@@ -809,10 +714,10 @@ def test_na_navegacao_o_toque_e_o_do_computador(monkeypatch: pytest.MonkeyPatch)
             return (0.0, 0.0, 0.0)
 
         def angulo_do_movimento(self, uniq: str) -> Any:
-            return (0.0, 0.0, 0.0)
+            return ((0.0, 0.0, 0.0), 0.01)
 
         def aceleracao_do_movimento(self, uniq: str) -> Any:
-            perguntas.append("inclinacao")
+            perguntas.append("aceleracao")
             return _inclinado(0.0, 40.0)
 
         def toque_da_peca(self, uniq: str) -> Any:
@@ -821,8 +726,7 @@ def test_na_navegacao_o_toque_e_o_do_computador(monkeypatch: pytest.MonkeyPatch)
 
     monkeypatch.setattr(gp, "primary_identity", lambda d: _P1)
     store = SimpleNamespace()
-    rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(
-        toque="zonas", acelerometro="analogico_esquerdo")))
+    rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(toque="zonas")))
     hub = _Hub()
     daemon = SimpleNamespace(
         _ipc_server=SimpleNamespace(_garantir_sensor_hub=lambda: hub), store=store,
@@ -865,66 +769,31 @@ def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
 
 
 class TestOIpc:
-    """MORDIDA: tire o `"toque"` de `_CAMPOS_DA_MIRA` e `test_os_dois_chips_gravam_na_peca`"""
+    """MORDIDA: tire o `"toque"` de `_CAMPOS_DA_MIRA` e `test_o_chip_do_toque_grava_na_peca`."""
 
-    def test_os_dois_chips_gravam_na_peca(self, perfis: Path, tmp_path: Path) -> None:
+    def test_o_chip_do_toque_grava_na_peca(self, perfis: Path, tmp_path: Path) -> None:
         from hefesto_dualsense4unix.profiles.loader import load_profile
 
         servidor = _servidor(tmp_path)
-        corpo = _mira_set(servidor, uniq=_P3, inclinacao="analogico_esquerdo")
-        assert corpo["status"] == "ok" and corpo["inclinacao"] == "analogico_esquerdo"
-        assert corpo["ligada"] is False, "a inclinação acendeu a Mira"
         corpo = _mira_set(servidor, uniq=_P3, toque="zonas")
-        assert corpo["toque"] == "zonas"
+        assert corpo["status"] == "ok" and corpo["toque"] == "zonas"
+        assert corpo["ligada"] is False, "o toque acendeu a Mira"
         dele = load_profile("Ensaio").controllers["aabbcc000003"].movimento
         assert dele is not None
-        assert dele.model_fields_set == {"acelerometro", "toque"}, (
+        assert dele.model_fields_set == {"toque"}, (
             "o chip gravou campos que quem usa não mexeu")
-        assert dele.acelerometro == "analogico_esquerdo" and dele.toque == "zonas"
+        assert dele.toque == "zonas"
         entradas: list[dict[str, Any]] = [{"uniq": _P2}, {"uniq": _P3}]
         servidor._merge_mira(entradas)
         assert entradas[1]["mira"]["toque"] == "zonas"
-        assert entradas[1]["mira"]["inclinacao"] == "analogico_esquerdo"
-        assert entradas[0]["mira"]["inclinacao"] == "nenhum"
         assert entradas[1]["mira"]["ligada"] is False
         assert entradas[0]["mira"]["toque"] == "nenhum"
         assert REGISTRO.toque_roteado(_P3) and not REGISTRO.toque_roteado(_P2)
-
-    def test_o_chip_de_cada_analogico_grava_o_seu(self, perfis: Path, tmp_path: Path) -> None:
-        """A tela tem uma «Inclinação» embaixo de CADA analógico, e o pedido diz qual.
-
-        Conferência de 28/09: o `mira.set` nasceu com `inclinacao: bool`, que só
-        sabia o esquerdo, e o `state_full` publicava um booleano — o chip do
-        analógico direito não tinha como gravar nem como acender. MORDIDA: faça
-        o `mira.set` gravar sempre o esquerdo e este teste reprova.
-        """
-        from hefesto_dualsense4unix.profiles.loader import load_profile
-
-        servidor = _servidor(tmp_path)
-        corpo = _mira_set(servidor, uniq=_P2, inclinacao="analogico_direito")
-        assert corpo["inclinacao"] == "analogico_direito"
-        dele = load_profile("Ensaio").controllers["aabbcc000002"].movimento
-        assert dele is not None and dele.acelerometro == "analogico_direito"
-        entradas: list[dict[str, Any]] = [{"uniq": _P2}]
-        servidor._merge_mira(entradas)
-        assert entradas[0]["mira"]["inclinacao"] == "analogico_direito", (
-            "a tela não teria como acender o chip do analógico direito")
-        corpo = _mira_set(servidor, uniq=_P2, inclinacao="nenhum")
-        assert corpo["inclinacao"] == "nenhum"
-        servidor._merge_mira(entradas)
-        assert entradas[0]["mira"]["inclinacao"] == "nenhum"
-        dele = load_profile("Ensaio").controllers["aabbcc000002"].movimento
-        assert dele is not None and "acelerometro" in dele.model_fields_set, (
-            "a peça que apagou a inclinação perdeu a opinião no disco")
 
     def test_o_toque_desconhecido_e_recusado(self, perfis: Path, tmp_path: Path) -> None:
         servidor = _servidor(tmp_path)
         with pytest.raises(ValueError, match="toque"):
             _mira_set(servidor, uniq=_P3, toque="gestos")
-        with pytest.raises(ValueError, match="inclinacao"):
-            _mira_set(servidor, uniq=_P3, inclinacao="sim")
-        with pytest.raises(ValueError, match="inclinacao"):
-            _mira_set(servidor, uniq=_P3, inclinacao=True)
 
     def test_no_nativo_os_chips_nao_gravam(
         self, perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -933,7 +802,7 @@ class TestOIpc:
 
         servidor = _servidor(tmp_path)
         monkeypatch.setattr(servidor.daemon, "is_native_mode", lambda: True)
-        for pedido in ({"toque": "cursor"}, {"inclinacao": "analogico_direito"}):
+        for pedido in ({"toque": "cursor"}, {"lado": "analogico_direito"}):
             corpo = _mira_set(servidor, uniq=_P3, **pedido)
             assert corpo["status"] == "nativo"
         assert not (load_profile("Ensaio").controllers or {})

@@ -420,7 +420,7 @@ def chip_da_inclinacao(destino, aceso=False):
     O aceso é o `mira-lado` (o lado do analógico virtual, `a02_controles.lado_aceso`) e o
     clique é o gesto `analogico-lado`: no apagado liga o lado, no aceso desliga a mira. O invólucro
     `inclinacao-parada` é a pausa do controle parado (29/09/2026): o daemon diz
-    `inclinacao_parada` no bloco `mira`, e o chip aceso fica meio apagado.
+    `parada` no bloco `mira`, e o chip aceso fica meio apagado.
     """
     return (f'<span class="pausa-da-inclinacao" data-campo="inclinacao-parada" '
             f'data-hef-alvo="classe" data-hef-classe="parada" '

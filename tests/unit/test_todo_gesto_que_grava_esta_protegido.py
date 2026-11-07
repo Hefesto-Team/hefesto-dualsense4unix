@@ -154,6 +154,7 @@ METODOS_QUE_ESCREVEM = {
     "navegacao.interna.set",
     "navegacao.big_picture.set",
     "motion.calibrate",
+    "motion.rampa",
 }
 
 _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")

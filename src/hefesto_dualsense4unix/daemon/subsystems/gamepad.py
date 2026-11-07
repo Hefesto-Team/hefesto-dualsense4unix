@@ -2302,14 +2302,16 @@ def aplicar_o_movimento(
         from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
 
         store = getattr(daemon, "store", None)
+        agora = time.monotonic()
         peca = roteador.da_peca(store, uniq, arranjo)
         if na_navegacao:
             arranjo = roteador.para_o_cursor(arranjo)
             peca = roteador.para_o_cursor(peca) if peca is not None else None
-        quer_angulo = arranjo.quer_angulo or (peca is not None and peca.quer_angulo)
-        angulo = hub.angulo_do_movimento(uniq) if quer_angulo else None
-        if angulo is not None:
-            angulo = roteador.angulo_do_tique(store, uniq, angulo, time.monotonic())
+        drena = arranjo.ligado or (peca is not None and peca.ligado)
+        lido = hub.angulo_do_movimento(uniq) if drena else None
+        angulo = None
+        if lido is not None and (arranjo.quer_angulo or (peca is not None and peca.quer_angulo)):
+            angulo = roteador.angulo_do_tique(store, uniq, lido[0], agora)
         if peca is None:
             return lx, ly, rx, ry
         arranjo = peca
@@ -2318,43 +2320,63 @@ def aplicar_o_movimento(
         if destino != arranjo.destino:
             arranjo = replace(arranjo, destino=destino)
 
+        rampa = roteador.rampa_agora(store, uniq, agora)
+        if rampa is not None and arranjo.destino in roteador.LADOS_DO_VIRTUAL:
+            roteador.zerar_o_resto(store, uniq)
+            dh, dv = roteador.deflexao_da_rampa(rampa)
+            return _no_lado_do_arranjo(roteador, arranjo, lx, ly, rx, ry, dh, dv)
+
+        velocidade = roteador.velocidade_do_tique(store, uniq, lido, agora)
+        acel = hub.aceleracao_do_movimento(uniq) if velocidade is not None else None
+        gravidade = roteador.gravidade_do_tique(store, uniq, acel, agora)
+        parada = velocidade is not None and roteador.parada_agora(
+            store, uniq, velocidade, acel, agora, mesmo_parado=arranjo.mesmo_parado
+        )
+
         gatilho = arranjo.gatilho
         if gatilho is not None and GATILHOS_DO_JOGO.get(gatilho, gatilho) not in botoes:
+            roteador.zerar_o_resto(store, uniq)
             return lx, ly, rx, ry
         from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
 
         sensores = REGISTRO.estado(uniq)
-        if arranjo.inclina and sensores.acelerometro and not na_navegacao:
-            lx, ly, rx, ry = _a_inclinacao(hub, store, arranjo, uniq, lx, ly, rx, ry)
-        if not arranjo.ligado or not sensores.giroscopio:
-            return lx, ly, rx, ry
-
-        velocidade = roteador.descontar_o_vies(store, uniq, hub.velocidade_do_movimento(uniq))
-        if velocidade is None:
+        if not arranjo.ligado or not sensores.giroscopio or velocidade is None or parada:
+            roteador.zerar_o_resto(store, uniq)
             return lx, ly, rx, ry
 
         if arranjo.quer_angulo:
             if angulo is None:
                 return lx, ly, rx, ry
-            if not roteador.passa_da_zona_morta(velocidade, arranjo):
+            if not roteador.passa_da_zona_morta(velocidade, arranjo, gravidade):
                 return lx, ly, rx, ry
             mouse = getattr(daemon, "_mouse_device", None)
             if mouse is not None:
-                dx, dy = roteador.pixels(angulo, arranjo, roteador.PESO_DA_MIRA.ganho(uniq))
+                dx, dy = roteador.pixels(
+                    angulo, arranjo, roteador.PESO_DA_MIRA.ganho(uniq), gravidade
+                )
                 mouse.emit_gyro_move(dx, dy)
             return lx, ly, rx, ry
 
-        dh, dv = roteador.deflexao(velocidade, arranjo, roteador.PESO_DA_MIRA.ganho(uniq))
+        dh, dv = roteador.deflexao_do_tique(
+            store, uniq, velocidade, arranjo, roteador.PESO_DA_MIRA.ganho(uniq), gravidade
+        )
         if dh == 0 and dv == 0:
             return lx, ly, rx, ry
-        if arranjo.destino == roteador.DESTINO_ANALOGICO_ESQUERDO:
-            lx, ly = roteador.misturar(lx, ly, dh, dv)
-        else:
-            rx, ry = roteador.misturar(rx, ry, dh, dv)
-        return lx, ly, rx, ry
+        return _no_lado_do_arranjo(roteador, arranjo, lx, ly, rx, ry, dh, dv)
     except Exception as exc:
         logger.warning("roteador_de_movimento_falhou", err=str(exc))
         return lx, ly, rx, ry
+
+
+def _no_lado_do_arranjo(
+    roteador: Any, arranjo: Any, lx: int, ly: int, rx: int, ry: int, dh: int, dv: int
+) -> tuple[int, int, int, int]:
+    """Soma a deflexão ao analógico que o arranjo move."""
+    if arranjo.destino == roteador.DESTINO_ANALOGICO_ESQUERDO:
+        lx, ly = roteador.misturar(lx, ly, dh, dv)
+    else:
+        rx, ry = roteador.misturar(rx, ry, dh, dv)
+    return lx, ly, rx, ry
 
 
 def _agora() -> float:
@@ -2640,48 +2662,6 @@ def dispatch_gamepad(
             pump()
     except Exception as exc:
         logger.warning("gamepad_dispatch_failed", err=str(exc))
-
-
-def _a_inclinacao(
-    hub: Any,
-    store: Any,
-    arranjo: Any,
-    uniq: str,
-    lx: int,
-    ly: int,
-    rx: int,
-    ry: int,
-) -> tuple[int, int, int, int]:
-    """O acelerômetro da peça somado ao analógico do arranjo. Nunca levanta.
-
-    O giro entra para a regra saber se alguém segura a peça (o controle parado não
-    inclina, D-2909-O-CONTROLE-PARADO-NAO-INCLINA), e é lido mesmo com o giroscópio
-    desligado pelo usuário: ler para saber não roteia nada ao jogo.
-    """
-    from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
-
-    perguntar = getattr(hub, "aceleracao_do_movimento", None)
-    acel = perguntar(uniq) if callable(perguntar) else None
-    if acel is None:
-        return lx, ly, rx, ry
-    ler = getattr(hub, "velocidade_do_movimento", None)
-    giro = roteador.descontar_o_vies(store, uniq, ler(uniq)) if callable(ler) else None
-    extra: dict[str, Any] = {}
-    if giro is not None:
-        extra["giro"] = giro
-    if getattr(arranjo, "mesmo_parado", False):
-        extra["mesmo_parado"] = True
-    neutro = roteador.neutro_da_inclinacao(store, uniq, acel, time.monotonic(), **extra)
-    parada = not roteador.inclina_agora(store, uniq)
-    dh, dv = roteador.deflexao_da_inclinacao(acel, neutro, arranjo, parada=parada)
-    if dh == 0 and dv == 0:
-        return lx, ly, rx, ry
-    destino = curva_do_analogico.lado_do_giro(store, uniq, arranjo.acelerometro)
-    if destino == roteador.DESTINO_ANALOGICO_DIREITO:
-        rx, ry = roteador.misturar(rx, ry, dh, dv)
-    else:
-        lx, ly = roteador.misturar(lx, ly, dh, dv)
-    return lx, ly, rx, ry
 
 
 def _dedos_do_toque(estado: Any) -> list[tuple[int, int, int]]:

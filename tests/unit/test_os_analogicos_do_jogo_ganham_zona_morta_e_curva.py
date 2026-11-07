@@ -255,8 +255,11 @@ class _Hub:
     def velocidade_do_movimento(self, _u: str) -> tuple[float, float, float]:
         return (0.0, 120.0, 0.0)
 
-    def angulo_do_movimento(self, _u: str) -> tuple[float, float, float]:
-        return (0.0, 0.0, 0.0)
+    def aceleracao_do_movimento(self, _u: str) -> tuple[float, float, float]:
+        return (0.0, 1.0, 0.0)
+
+    def angulo_do_movimento(self, _u: str) -> tuple[tuple[float, float, float], float]:
+        return (0.0, 1.2, 0.0), 0.01
 
 
 def _com_o_giro(monkeypatch: pytest.MonkeyPatch, store: Any, destino: str) -> Any:

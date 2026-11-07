@@ -551,7 +551,7 @@ def test_a_mira_virtual_chega_ao_xbox_360(monkeypatch: pytest.MonkeyPatch) -> No
         monkeypatch.setattr(gp, "primary_identity", lambda _d: MACS[0])
         monkeypatch.setattr(REGISTRO, "estado", lambda _u: SimpleNamespace(giroscopio=True))
         store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
-        rot.definir_ativo(store, _arranjo(sensibilidade=12))
+        rot.definir_ativo(store, _arranjo(sensibilidade_h=10))
         daemon = _daemon_do_tamanho_do_real(
             _Hub(velocidade=(0.0, 120.0, 0.0)), store=store, _gamepad_device=pad,
             _mouse_device=None,

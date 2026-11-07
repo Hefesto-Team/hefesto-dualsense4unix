@@ -48,7 +48,7 @@ def _texto(valor: object) -> str | None:
     return valor if isinstance(valor, str) and valor else None
 
 
-def _o_giro(forma: str, movimento: object, *, giro_ligado: bool, acel_ligado: bool) -> str:
+def _o_giro(forma: str, movimento: object, *, giro_ligado: bool) -> str:
     """O giroscópio, pelas mesmas portas do tique (`gamepad.aplicar_o_movimento`).
 
     A Mira anda só com o sensor ligado; no DualSense, a Mira que anda tira o giro
@@ -59,8 +59,7 @@ def _o_giro(forma: str, movimento: object, *, giro_ligado: bool, acel_ligado: bo
         if mira:
             return PELO_HEFESTO
         return NATIVO if giro_ligado else NAO_CHEGA
-    inclina = bool(getattr(movimento, "inclina", False)) and acel_ligado
-    return PELO_HEFESTO if mira or inclina else NAO_CHEGA
+    return PELO_HEFESTO if mira else NAO_CHEGA
 
 
 def _o_toque(forma: str, movimento: object, *, toque_ligado: bool) -> str:
@@ -89,14 +88,13 @@ def o_que_o_jogo_ve(
     *,
     transporte: object = None,
     giro_ligado: bool = True,
-    acel_ligado: bool = True,
     toque_ligado: bool = True,
 ) -> dict[str, Any] | None:
     """O que o jogo vê deste pad, ou ``None`` quando o pad não sabe dizer.
 
     ``movimento`` é o arranjo de mira desta peça (`roteador_de_movimento.da_peca`);
-    ``transporte`` é o do plástico (`usb` ou `bt`); ``giro_ligado``,
-    ``acel_ligado`` e ``toque_ligado`` são as chaves por controle
+    ``transporte`` é o do plástico (`usb` ou `bt`); ``giro_ligado``
+    e ``toque_ligado`` são as chaves por controle
     (`virtual_motion.REGISTRO`).
     """
     mascara = _texto(getattr(vpad, "flavor", None))
@@ -112,7 +110,7 @@ def o_que_o_jogo_ve(
         return None
     funcoes = dict(_TABELA[forma])
     funcoes["giroscopio"] = _o_giro(
-        forma, movimento, giro_ligado=giro_ligado, acel_ligado=acel_ligado
+        forma, movimento, giro_ligado=giro_ligado
     )
     funcoes["touchpad"] = _o_toque(forma, movimento, toque_ligado=toque_ligado)
     porta = _a_porta(vpad) if forma == "dualsense" else None

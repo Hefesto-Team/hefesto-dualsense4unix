@@ -7,8 +7,8 @@ do `mira.set` cravava o analógico direito, e a inclinação era um interruptor 
 O contrato que esta régua mede:
 
 1. `mira.set` ganha `lado`; `ligada: true` liga no lado guardado (o direito para o perfil
-   antigo), `lado` sozinho troca o lado e liga, `ligada: false` apaga os dois movimentos;
-2. o giro e a inclinação vão ao MESMO lado (a PERGUNTA 1, a recomendada);
+   antigo), `lado` sozinho troca o lado e liga, `ligada: false` apaga o giro;
+2. o giro vai ao lado escolhido, e a inclinação não é rota;
 3. o liga e o lado moram só na 02, que pinta o `mira-lado` pelo leitor único; a Calibrar não
    tem gesto nem campo do analógico virtual (CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01);
 4. o perfil que já existe lê como está escrito, P1 a P4 são quatro opiniões, e o Nativo
@@ -57,15 +57,6 @@ def test_o_perfil_antigo_so_com_ligada_le_o_direito() -> None:
     assert rot.lado_do_virtual(arranjo) == _DIR and rot.virtual_aceso(arranjo)
     apagado = rot.montar(ProfileMovimentoConfig.model_validate({}))
     assert rot.lado_do_virtual(apagado) == _DIR and not rot.virtual_aceso(apagado)
-
-
-def test_inclina_num_lado_e_giro_no_outro_a_tela_acende_o_do_giro() -> None:
-    """O perfil da tela velha: o motor segue com os dois como estão; a tela acende o do giro."""
-    arranjo = rot.ArranjoDeMovimento(destino=_DIR, acelerometro=_ESQ)
-    assert (arranjo.destino, arranjo.acelerometro) == (_DIR, _ESQ)
-    assert rot.lado_do_virtual(arranjo) == _DIR and rot.virtual_aceso(arranjo)
-    so_inclina = rot.ArranjoDeMovimento(acelerometro=_ESQ)
-    assert rot.lado_do_virtual(so_inclina) == _ESQ and rot.virtual_aceso(so_inclina)
 
 
 def test_o_mouse_conta_como_apagado() -> None:
@@ -150,60 +141,35 @@ def test_o_ligada_liga_no_lado_guardado_e_os_dois_movimentos_vao_juntos(
 
     MORDIDA: o `destino` cravado no direito — o lado esquerdo não chega ao giro.
 
-    D-0810-O-ANALOGICO-VIRTUAL-E-UM-SO: os dois movimentos vão juntos para o lado escolhido.
+    D-0810-O-ANALOGICO-VIRTUAL-E-UM-SO: o giro vai ao lado escolhido.
     """
     servidor = _servidor(tmp_path)
     corpo = _mira_set(servidor, uniq=_P2, ligada=True)
     assert corpo["status"] == "ok" and corpo["virtual"] is True and corpo["lado"] == _DIR
     dele = _movimento(_P2)
-    assert (dele.destino, dele.acelerometro, dele.lado) == (_DIR, _DIR, _DIR)
+    assert (dele.destino, dele.lado) == (_DIR, _DIR)
 
     corpo = _mira_set(servidor, uniq=_P2, lado=_ESQ)
     assert corpo["lado"] == _ESQ and corpo["virtual"] is True, corpo
     dele = _movimento(_P2)
-    assert (dele.destino, dele.acelerometro, dele.lado) == (_ESQ, _ESQ, _ESQ)
+    assert (dele.destino, dele.lado) == (_ESQ, _ESQ)
 
     corpo = _mira_set(servidor, uniq=_P2, ligada=False)
     assert corpo["virtual"] is False and corpo["lado"] == _ESQ, corpo
     dele = _movimento(_P2)
-    assert (dele.destino, dele.acelerometro, dele.lado) == (
-        rot.DESTINO_NENHUM, rot.DESTINO_NENHUM, _ESQ), "apagar esqueceu o lado"
+    assert (dele.destino, dele.lado) == (rot.DESTINO_NENHUM, _ESQ), "apagar esqueceu o lado"
 
     corpo = _mira_set(servidor, uniq=_P2, ligada=True)
     assert corpo["lado"] == _ESQ, "religar voltou ao direito em vez do lado guardado"
     p2 = next(e for e in _lidos(servidor) if e["uniq"] == _P2)["mira"]
     assert p2["virtual"] is True and p2["lado"] == _ESQ
-    assert p2["destino"] == _ESQ and p2["inclinacao"] == _ESQ
+    assert p2["destino"] == _ESQ
 
 
 def test_o_lado_sozinho_liga_o_apagado(perfis: Path, tmp_path: Path) -> None:
     servidor = _servidor(tmp_path)
     corpo = _mira_set(servidor, uniq=_P3, lado=_ESQ)
     assert corpo["status"] == "ok" and corpo["virtual"] is True and corpo["lado"] == _ESQ
-
-
-def test_o_primeiro_clique_no_lado_junta_o_perfil_dividido(perfis: Path, tmp_path: Path) -> None:
-    """Giro no direito e inclinação no esquerdo: a tela acende o direito; o lado junta os dois."""
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-    from hefesto_dualsense4unix.profiles.schema import (
-        ControllerOverrides,
-        MatchAny,
-        Profile,
-        ProfileMovimentoConfig,
-    )
-
-    servidor = _servidor(tmp_path)
-    dividido = ProfileMovimentoConfig(destino=_DIR, acelerometro=_ESQ)
-    perfil = Profile(name="Ensaio", match=MatchAny(type="any"),
-                     controllers={_CHAVE[_P1]: ControllerOverrides(movimento=dividido)})
-    save_profile(perfil)
-    servidor.profile_manager.apply_movimento(perfil)
-    p1 = next(e for e in _lidos(servidor) if e["uniq"] == _P1)["mira"]
-    assert (p1["virtual"], p1["lado"], p1["destino"], p1["inclinacao"]) == (True, _DIR, _DIR, _ESQ)
-
-    _mira_set(servidor, uniq=_P1, lado=_DIR)
-    dele = _movimento(_P1)
-    assert (dele.destino, dele.acelerometro) == (_DIR, _DIR), "o lado não juntou os dois"
 
 
 def test_ligar_do_cursor_troca_pelo_analogico(tmp_path: Path) -> None:
@@ -216,7 +182,7 @@ def test_ligar_do_cursor_troca_pelo_analogico(tmp_path: Path) -> None:
     corpo = _mira_set(servidor, uniq=_P4, ligada=True)
     assert corpo["virtual"] is True and corpo["lado"] == _DIR, corpo
     vale = rot.parametros_da_peca(servidor.store, chave)
-    assert vale.destino == _DIR and vale.acelerometro == _DIR
+    assert vale.destino == _DIR
 
 
 def test_o_lado_do_p2_nao_muda_o_p1_nem_o_p3(perfis: Path, tmp_path: Path) -> None:
@@ -228,8 +194,7 @@ def test_o_lado_do_p2_nao_muda_o_p1_nem_o_p3(perfis: Path, tmp_path: Path) -> No
     assert [lidos[u]["lado"] for u in _TODOS] == [_DIR, _ESQ, _DIR, _DIR]
     assert [lidos[u]["virtual"] for u in _TODOS] == [True, True, True, False]
     for uniq in (_P1, _P3):
-        dele = _movimento(uniq)
-        assert (dele.destino, dele.acelerometro) == (_DIR, _DIR), uniq
+        assert _movimento(uniq).destino == _DIR, uniq
 
 
 def test_o_nativo_recusa_o_lado_e_nada_vai_ao_disco(perfis: Path, tmp_path: Path) -> None:
@@ -254,13 +219,13 @@ class _Hub:
         self.giro = (0.0, 0.0, 0.0)
 
     def aceleracao_do_movimento(self, _u: str) -> tuple[float, float, float]:
-        return (0.0, 0.0, 9.81)
+        return (0.0, 1.0, 0.0)
 
     def velocidade_do_movimento(self, _u: str) -> tuple[float, float, float]:
         return self.giro
 
-    def angulo_do_movimento(self, _u: str) -> tuple[float, float, float]:
-        return (0.0, 0.0, 0.0)
+    def angulo_do_movimento(self, _u: str) -> tuple[tuple[float, float, float], float]:
+        return ((self.giro[0] * 0.01, self.giro[1] * 0.01, self.giro[2] * 0.01), 0.01)
 
 
 def test_o_motor_move_o_lado_de_cada_controle(
@@ -346,7 +311,7 @@ def test_o_clique_no_lado_pela_02(
     _gesto("01-jogar.html", "analogico-lado")(
         _ctx(_lidos(servidor)), {"uniq": _P2, "lado": _ESQ}, ponte)
     dele = _movimento(_P2)
-    assert (dele.destino, dele.acelerometro, dele.lado) == (_ESQ, _ESQ, _ESQ)
+    assert (dele.destino, dele.lado) == (_ESQ, _ESQ)
     cards = list(a02.pacote(_ctx(_lidos(servidor)))["cards"].values())
     assert [c["mira-lado"] for c in cards] == ["nenhum", _ESQ, "nenhum", "nenhum"]
 
@@ -375,7 +340,7 @@ def test_clicar_no_lado_aceso_da_02_desliga_a_mira(
     assert _movimento(_P2).destino == _ESQ
     gesto(_ctx(_lidos(servidor)), {"uniq": _P2, "lado": _ESQ}, ponte)
     dele = _movimento(_P2)
-    assert dele.destino != _ESQ and dele.acelerometro != _ESQ, "o clique no aceso não desligou"
+    assert dele.destino != _ESQ, "o clique no aceso não desligou"
     assert dele.lado == _ESQ, "desligar esqueceu o lado"
 
 

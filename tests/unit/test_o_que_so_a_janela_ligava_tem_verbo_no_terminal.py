@@ -39,6 +39,8 @@ ISENTOS: dict[str, str] = {
     "sensor.set": _PELO_PERFIL,
     "profile.reaplicar": "a reaplicação do perfil ativo é o `profile activate`",
     "motion.calibrate": _GESTO_DA_TELA + " (calibrar pede o controle parado, olhando a tela)",
+    "motion.sinal": _GESTO_DA_TELA + " (o gesto guiado pede a tela e devolve pelo estado)",
+    "motion.rampa": _GESTO_DA_TELA + " (a rampa pede o jogo aberto e quem olha a câmera)",
     "mira.set": _GESTO_DA_TELA + " (a mira se ajusta olhando o alvo)",
     "haptica.testar": _GESTO_DA_TELA + " (o teste de háptica é um clique com resposta ao vivo)",
     "navegacao.interna.set": _GESTO_DA_TELA + " (a Navegação Interna é a da própria janela)",

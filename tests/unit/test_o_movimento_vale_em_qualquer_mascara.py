@@ -44,6 +44,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileMovimentoConfig,
 )
+from tests.unit.apoio_do_giro import tique_de
 
 
 def _arranjo(**kw: Any) -> rot.ArranjoDeMovimento:
@@ -63,9 +64,9 @@ def test_a_deriva_do_controle_do_usuario_nao_move_a_mira() -> None:
     usa a deriva MEDIDA no aparelho do usuário, não um número inventado.
     """
     assert rot.deflexao((0.0, 0.0, 0.0), _arranjo()) == (0, 0)
-    for sensibilidade in (1, 6, 12):
+    for sensibilidade in (1, 4, 10):
         assert rot.deflexao(
-            (0.0, DERIVA_MEDIDA_GRAUS_S, 0.0), _arranjo(sensibilidade=sensibilidade)
+            (0.0, DERIVA_MEDIDA_GRAUS_S, 0.0), _arranjo(sensibilidade_h=sensibilidade)
         ) == (0, 0), (
             f"a deriva de {DERIVA_MEDIDA_GRAUS_S} graus/s moveu a mira na "
             f"sensibilidade {sensibilidade}")
@@ -74,10 +75,10 @@ def test_a_deriva_do_controle_do_usuario_nao_move_a_mira() -> None:
 def test_a_zona_morta_alta_e_o_dial_de_quem_tem_tremor() -> None:
     """ARRANQUE a zona morta e este teste reprova — e é o ÚNICO que reprova."""
     tremor = (0.0, 25.0, 0.0)
-    forte = _arranjo(sensibilidade=12)
+    forte = _arranjo(sensibilidade_h=10, sensibilidade_v=10)
     assert rot.deflexao(tremor, forte) != (0, 0), (
         "a premissa caiu: 25 graus/s já não passa nem sem zona morta")
-    com_dial = _arranjo(sensibilidade=12, zona_morta_graus_s=30.0)
+    com_dial = _arranjo(sensibilidade_h=10, sensibilidade_v=10, zona_morta_graus_s=30.0)
     assert rot.deflexao(tremor, com_dial) == (0, 0), (
         "a zona morta alta não cortou o tremor — o dial não faz nada")
 
@@ -143,12 +144,10 @@ def test_a_mira_sobrevive_a_ida_e_volta_pelo_disco() -> None:
     assert load_profile("Mira Ida E Volta").movimento == _MIRA_DO_USUARIO
 
 
-def test_teto_abaixo_da_zona_morta_e_recusado_no_load() -> None:
-    """ARRANQUE o `model_validator` e este teste reprova — o arranjo silencioso"""
+def test_velocidade_do_jogo_sem_chao_e_recusada_no_load() -> None:
+    """ARRANQUE o `gt=0.0` e este teste reprova: a conta da saída dividiria por zero."""
     with pytest.raises(ValidationError):
-        ProfileMovimentoConfig(
-            destino="analogico_direito", zona_morta_graus_s=50.0, teto_graus_s=20.0
-        )
+        ProfileMovimentoConfig(destino="analogico_direito", velocidade_do_jogo=0.0)
 
 
 def test_o_ps_nunca_vira_gatilho_da_mira() -> None:
@@ -184,7 +183,8 @@ def test_um_giro_rapido_entre_dois_tiques_nao_se_perde() -> None:
     for n in range(21):
         leitor._eixos["y"] = 100.0
         leitor._handle_event(_evento(_EC.EV_SYN, _EC.SYN_REPORT, t=n * 0.005), _EC)
-    _, y, _ = leitor.consume_angulo()
+    (_, y, _), segundos = leitor.consume_angulo()
+    assert segundos == pytest.approx(0.1)
     assert 9.5 <= y <= 10.5, f"20 pacotes de 100 graus/s deram {y}, não ~10"
 
 
@@ -194,15 +194,15 @@ def test_o_buraco_de_tempo_nao_vira_virada_de_camera() -> None:
     leitor._eixos["y"] = 100.0
     leitor._integrar_o_angulo(0.0)
     leitor._integrar_o_angulo(30.0)
-    assert leitor.consume_angulo() == (0.0, 0.0, 0.0)
+    assert leitor.consume_angulo() == ((0.0, 0.0, 0.0), 0.0)
 
 
 def test_o_angulo_drena_e_nao_se_repete() -> None:
     """ARRANQUE o zeramento de `consume_angulo` e este teste reprova: a mira"""
     leitor = _leitor()
     leitor._angulo = {"x": 0.0, "y": 7.0, "z": 0.0}
-    assert leitor.consume_angulo() == (0.0, 7.0, 0.0)
-    assert leitor.consume_angulo() == (0.0, 0.0, 0.0)
+    assert leitor.consume_angulo() == ((0.0, 7.0, 0.0), 0.0)
+    assert leitor.consume_angulo() == ((0.0, 0.0, 0.0), 0.0)
 
 
 def test_o_primeiro_pacote_nao_inventa_intervalo() -> None:
@@ -210,7 +210,7 @@ def test_o_primeiro_pacote_nao_inventa_intervalo() -> None:
     leitor = _leitor()
     leitor._eixos["y"] = 500.0
     leitor._handle_event(_evento(_EC.EV_SYN, _EC.SYN_REPORT, t=1.0), _EC)
-    assert leitor.consume_angulo() == (0.0, 0.0, 0.0)
+    assert leitor.consume_angulo() == ((0.0, 0.0, 0.0), 0.0)
 
 
 def test_o_angulo_some_quando_o_controle_some() -> None:
@@ -219,7 +219,7 @@ def test_o_angulo_some_quando_o_controle_some() -> None:
     leitor._angulo = {"x": 1.0, "y": 2.0, "z": 3.0}
     leitor._ultimo_syn = 9.0
     leitor._reset_on_disconnect()
-    assert leitor.consume_angulo() == (0.0, 0.0, 0.0)
+    assert leitor.consume_angulo() == ((0.0, 0.0, 0.0), 0.0)
     assert leitor._ultimo_syn is None
 
 
@@ -257,11 +257,14 @@ class _Hub:
     """A torneira de mentira. Conta as DRENAGENS — é o que a 9.2 mede."""
 
     def __init__(self, *, velocidade: Any = (0.0, 0.0, 0.0),
-                 angulo: Any = (0.0, 0.0, 0.0), levanta: bool = False) -> None:
+                 angulo: Any = None, levanta: bool = False) -> None:
         self._velocidade = velocidade
         self._angulo = angulo
         self._levanta = levanta
         self.drenagens = 0
+
+    def aceleracao_do_movimento(self, uniq: str) -> Any:
+        return (0.0, 1.0, 0.0)
 
     def velocidade_do_movimento(self, uniq: str) -> Any:
         if self._levanta:
@@ -272,7 +275,7 @@ class _Hub:
         self.drenagens += 1
         if self._levanta:
             raise RuntimeError("o hub caiu")
-        return self._angulo
+        return self._angulo or tique_de(self._velocidade)
 
 
 def _daemon_do_tamanho_do_real(hub: Any, **campos: Any) -> SimpleNamespace:
@@ -316,7 +319,7 @@ def _despachar(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any, hub: _Hub,
 def test_a_mira_vale_na_mascara_xbox(monkeypatch: pytest.MonkeyPatch) -> None:
     """A ENTREGA INTEIRA NUMA LINHA. ARRANQUE a chamada de"""
     dev = _despachar(monkeypatch,
-                     arranjo=_arranjo(sensibilidade=12),
+                     arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10),
                      hub=_Hub(velocidade=(0.0, 120.0, 0.0)))
     assert dev.analog and dev.analog[0]["rx"] != 128, (
         f"o analógico direito saiu em {dev.analog} — a mira não chegou ao jogo")
@@ -338,7 +341,7 @@ def test_uma_mira_quebrada_nao_leva_o_controle_junto(
 def test_o_giro_desligado_pelo_usuario_desliga_a_mira(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o portão do `REGISTRO` e este teste reprova: o interruptor de"""
-    dev = _despachar(monkeypatch, arranjo=_arranjo(sensibilidade=12),
+    dev = _despachar(monkeypatch, arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10),
                      hub=_Hub(velocidade=(0.0, 300.0, 0.0)), giro_ligado=False)
     assert dev.analog[0]["rx"] == 128
 
@@ -358,7 +361,7 @@ def test_o_gatilho_dispara_com_o_botao_que_o_produto_entrega(
     assert nome_no_jogo != "l2", (
         "a premissa do achado 9.1 caiu — o leitor passou a falar o id da tela")
     dev = _despachar(monkeypatch,
-                     arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
+                     arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10, gatilho="l2"),
                      hub=_Hub(velocidade=(0.0, 300.0, 0.0)),
                      botoes=frozenset({nome_no_jogo}))
     assert dev.analog[0]["rx"] != 128, (
@@ -369,7 +372,7 @@ def test_o_gatilho_dispara_com_o_botao_que_o_produto_entrega(
 def test_o_gatilho_solto_nao_move(monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o portão do gatilho e este teste reprova: a mira valeria"""
     dev = _despachar(monkeypatch,
-                     arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
+                     arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10, gatilho="l2"),
                      hub=_Hub(velocidade=(0.0, 300.0, 0.0)),
                      botoes=frozenset())
     assert dev.analog[0]["rx"] == 128
@@ -387,7 +390,7 @@ def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
                         lambda uniq: SimpleNamespace(giroscopio=True))
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
     remap.definir_ativo(store, {"l2": "r2"})
-    rot.definir_ativo(store, _arranjo(sensibilidade=12, gatilho="l2"))
+    rot.definir_ativo(store, _arranjo(sensibilidade_h=10, sensibilidade_v=10, gatilho="l2"))
     dev = _Device()
     gp.dispatch_gamepad(
         _daemon_do_tamanho_do_real(_Hub(velocidade=(0.0, 300.0, 0.0)),
@@ -402,7 +405,7 @@ def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_gatilho_solto_nao_deixa_o_angulo_acumular(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ACHADO 9.2 do advogado do diabo. MOVA a drenagem para DEPOIS dos"""
-    hub = _Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 400.0, 0.0))
+    hub = _Hub(velocidade=(0.0, 300.0, 0.0))
     dev = _despachar(monkeypatch,
                      arranjo=_arranjo(destino=rot.DESTINO_MOUSE, gatilho="l2"),
                      hub=hub, botoes=frozenset(), mouse=_Mouse())
@@ -414,7 +417,7 @@ def test_o_gatilho_solto_nao_deixa_o_angulo_acumular(
 
 def test_o_giro_desligado_tambem_drena(monkeypatch: pytest.MonkeyPatch) -> None:
     """O mesmo achado 9.2, pelo segundo portão: com o giroscópio desligado por"""
-    hub = _Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 400.0, 0.0))
+    hub = _Hub(velocidade=(0.0, 300.0, 0.0))
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=hub, giro_ligado=False, mouse=_Mouse())
     assert hub.drenagens == 1
@@ -424,8 +427,7 @@ def test_o_destino_mouse_move_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
     """A entrega do destino «mouse»: ângulo percorrido vira pixel."""
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
-               hub=_Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 10.0, 0.0)),
-               mouse=mouse, tiques=2)
+               hub=_Hub(velocidade=(0.0, 300.0, 0.0)), mouse=mouse, tiques=2)
     assert len(mouse.movimentos) == 1, (
         f"o cursor andou {len(mouse.movimentos)} vez(es) em dois tiques — o "
         "primeiro é o acumulado e sai como nada")
@@ -436,8 +438,7 @@ def test_sem_no_de_mouse_a_mira_nao_inventa_um(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o `if mouse is not None` e este teste reprova (com um"""
     dev = _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
-                     hub=_Hub(velocidade=(0.0, 300.0, 0.0),
-                              angulo=(0.0, 10.0, 0.0)), mouse=None)
+                     hub=_Hub(velocidade=(0.0, 300.0, 0.0)), mouse=None)
     assert dev.analog and dev.buttons, "o forward caiu por falta de nó de mouse"
 
 
@@ -445,8 +446,7 @@ def test_a_deriva_nao_passeia_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o portão `deflexao(velocidade) == (0, 0)` do ramo do mouse e"""
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
-               hub=_Hub(velocidade=(0.0, 1.0, 0.0), angulo=(0.0, 8.0, 0.0)),
-               mouse=mouse, tiques=2)
+               hub=_Hub(velocidade=(0.0, 1.0, 0.0)), mouse=mouse, tiques=2)
     assert mouse.movimentos == [], (
         f"a deriva moveu o cursor em {mouse.movimentos}")
 
@@ -564,9 +564,9 @@ class _ReaderDeMotionFalso:
     def snapshot(self) -> Any:
         return SimpleNamespace(x=self._giro[0], y=self._giro[1], z=self._giro[2])
 
-    def consume_angulo(self) -> tuple[float, float, float]:
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
         valores, self._angulo = self._angulo, (0.0, 0.0, 0.0)
-        return valores
+        return valores, 0.01
 
     def start(self) -> bool:
         return True
@@ -635,8 +635,8 @@ def test_a_porta_do_angulo_drena_e_a_da_velocidade_nao() -> None:
     assert hub.velocidade_do_movimento(_UNIQ) == (0.0, 42.0, 0.0)
     assert hub.velocidade_do_movimento(_UNIQ) == (0.0, 42.0, 0.0), (
         "a porta da velocidade DRENOU — a porta não pode roubar de ninguém")
-    assert hub.angulo_do_movimento(_UNIQ) == (0.0, 5.0, 0.0)
-    assert hub.angulo_do_movimento(_UNIQ) == (0.0, 0.0, 0.0)
+    assert hub.angulo_do_movimento(_UNIQ) == ((0.0, 5.0, 0.0), 0.01)
+    assert hub.angulo_do_movimento(_UNIQ) == ((0.0, 0.0, 0.0), 0.01)
 
 
 class _VpadDoJogador:
@@ -682,8 +682,11 @@ def _mesa_de_quatro(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any,
         def velocidade_do_movimento(self, uniq: str) -> Any:
             return giro_por_uniq.get(uniq)
 
+        def aceleracao_do_movimento(self, uniq: str) -> Any:
+            return (0.0, 1.0, 0.0)
+
         def angulo_do_movimento(self, uniq: str) -> Any:
-            return (0.0, 0.0, 0.0)
+            return tique_de(giro_por_uniq.get(uniq))
 
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
     rot.definir_ativo(store, arranjo)
@@ -718,7 +721,7 @@ def test_a_mira_vale_para_os_jogadores_2_3_e_4(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """A ORDEM DE PRODUTO NUMA LINHA. ARRANQUE a chamada de `aplicar_o_movimento` do"""
     vpads = _mesa_de_quatro(
-        monkeypatch, arranjo=_arranjo(sensibilidade=12),
+        monkeypatch, arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0),
                        _P4: (0.0, 200.0, 0.0)})
     for uniq, vpad in sorted(vpads.items()):
@@ -731,20 +734,20 @@ def test_cada_jogador_le_o_proprio_giroscopio(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o `uniq=player.identity` e ponha um endereço fixo: este teste"""
     vpads = _mesa_de_quatro(
-        monkeypatch, arranjo=_arranjo(sensibilidade=12),
+        monkeypatch, arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 0.0, 0.0),
                        _P4: (0.0, -200.0, 0.0)})
-    assert vpads[_P2].analog[0]["rx"] > 128, "o P2 girou e não mirou"
+    assert vpads[_P2].analog[0]["rx"] < 128, "o P2 girou e não mirou"
     assert vpads[_P3].analog[0]["rx"] == 128, (
         "o P3 estava PARADO e a mira dele se mexeu — o laço leu o giro de outro")
-    assert vpads[_P4].analog[0]["rx"] < 128, "o P4 girou ao contrário do P2"
+    assert vpads[_P4].analog[0]["rx"] > 128, "o P4 girou ao contrário do P2"
 
 
 def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o portão do `REGISTRO` (ou passe o uniq errado) e este teste"""
     vpads = _mesa_de_quatro(
-        monkeypatch, arranjo=_arranjo(sensibilidade=12),
+        monkeypatch, arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},
         giro_ligado={_P3: False})
     assert vpads[_P2].analog[0]["rx"] != 128, "o P2 tinha o giro LIGADO"
@@ -755,7 +758,7 @@ def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
 def test_o_gatilho_e_por_controle_no_coop(monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE `botoes=botoes` (a mão deste jogador) e este teste reprova: o"""
     vpads = _mesa_de_quatro(
-        monkeypatch, arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
+        monkeypatch, arranjo=_arranjo(sensibilidade_h=10, sensibilidade_v=10, gatilho="l2"),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},
         botoes_por_uniq={_P2: frozenset({remap.GATILHOS["l2"]})})
     assert vpads[_P2].analog[0]["rx"] != 128, "o P2 apertou o gatilho e não mirou"

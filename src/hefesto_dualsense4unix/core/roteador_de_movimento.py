@@ -38,7 +38,7 @@ import threading
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, fields, replace
-from types import MappingProxyType
+from types import MappingProxyType, SimpleNamespace
 from typing import Final
 
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO, chave_de_sensor
@@ -56,16 +56,7 @@ DESTINOS: Final[tuple[str, ...]] = (
 TOQUE_CURSOR: Final = "cursor"
 TOQUE_ZONAS: Final = "zonas"
 TOQUES: Final[tuple[str, ...]] = (DESTINO_NENHUM, TOQUE_CURSOR, TOQUE_ZONAS)
-DESTINOS_DA_INCLINACAO: Final[tuple[str, ...]] = (
-    DESTINO_NENHUM,
-    DESTINO_ANALOGICO_ESQUERDO,
-    DESTINO_ANALOGICO_DIREITO,
-)
 LADOS_DO_VIRTUAL: Final[tuple[str, ...]] = (DESTINO_ANALOGICO_ESQUERDO, DESTINO_ANALOGICO_DIREITO)
-
-EIXO_YAW: Final = "yaw"
-EIXO_ROLL: Final = "roll"
-EIXOS_HORIZONTAIS: Final[tuple[str, ...]] = (EIXO_YAW, EIXO_ROLL)
 
 CENTRO_DO_EIXO: Final = 128
 EIXO_MIN: Final = 0
@@ -73,13 +64,19 @@ EIXO_MAX: Final = 255
 DEFLEXAO_MAXIMA: Final = 127
 
 ZONA_MORTA_PADRAO_GRAUS_S: Final = 3.0
-TETO_PADRAO_GRAUS_S: Final = 220.0
+RUIDO_DO_GIRO_GRAUS_S: Final = 1.0
 
-SENSIBILIDADE_MIN: Final = 1
-SENSIBILIDADE_MAX: Final = 12
-SENSIBILIDADE_PADRAO: Final = 6
+SENSIBILIDADE_MIN: Final = 0
+SENSIBILIDADE_MAX: Final = 10
+SENSIBILIDADE_PADRAO: Final = 4
 
-EXPO_DO_GIRO: Final = 1.6
+VELOCIDADE_DO_JOGO_PADRAO_GRAUS_S: Final = 180.0
+PISO_PADRAO: Final = 0.27
+GANHO_NA_SENSIBILIDADE_PADRAO: Final = 1.5
+
+MENOR_PLANO_DA_GRAVIDADE: Final = 0.5
+GRAVIDADE_DE_BASE: Final[tuple[float, float, float]] = (0.0, 1.0, 0.0)
+TEMPO_DA_GRAVIDADE_S: Final = 0.25
 
 PIXELS_POR_GRAU_PADRAO: Final = 12.0
 
@@ -95,16 +92,16 @@ class ArranjoDeMovimento:
     """UM arranjo de mira por movimento — imutável, e é o que viaja pelo store."""
 
     destino: str = DESTINO_NENHUM
-    sensibilidade: int = SENSIBILIDADE_PADRAO
-    eixo_horizontal: str = EIXO_YAW
+    sensibilidade_h: int = SENSIBILIDADE_PADRAO
+    sensibilidade_v: int = SENSIBILIDADE_PADRAO
     inverter_horizontal: bool = False
     inverter_vertical: bool = False
     zona_morta_graus_s: float = ZONA_MORTA_PADRAO_GRAUS_S
-    teto_graus_s: float = TETO_PADRAO_GRAUS_S
+    velocidade_do_jogo: float = VELOCIDADE_DO_JOGO_PADRAO_GRAUS_S
+    piso: float = PISO_PADRAO
     pixels_por_grau: float = PIXELS_POR_GRAU_PADRAO
     gatilho: str | None = None
     toque: str = DESTINO_NENHUM
-    acelerometro: str = DESTINO_NENHUM
     mesmo_parado: bool = False
     lado: str = DESTINO_ANALOGICO_DIREITO
 
@@ -119,14 +116,9 @@ class ArranjoDeMovimento:
         return self.toque in (TOQUE_CURSOR, TOQUE_ZONAS)
 
     @property
-    def inclina(self) -> bool:
-        """A inclinação desta peça move um analógico (NO-MODO-XBOX, 28/09)."""
-        return self.acelerometro in (DESTINO_ANALOGICO_ESQUERDO, DESTINO_ANALOGICO_DIREITO)
-
-    @property
     def roteia(self) -> bool:
-        """Alguma rota anda: o giro, o toque ou a inclinação."""
-        return self.ligado or self.toca or self.inclina
+        """Alguma rota anda: o giro ou o toque."""
+        return self.ligado or self.toca
 
     @property
     def quer_angulo(self) -> bool:
@@ -134,13 +126,35 @@ class ArranjoDeMovimento:
         return self.destino == DESTINO_MOUSE
 
 
-def _componentes(
-    giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
+def _no_espaco_do_jogador(
+    vetor: tuple[float, float, float], gravidade: tuple[float, float, float] | None
 ) -> tuple[float, float]:
-    """Os três eixos do sensor viram (horizontal, vertical), já com o sinal."""
-    gx, gy, gz = giro
-    horizontal = gz if arranjo.eixo_horizontal == EIXO_ROLL else gy
-    vertical = gx
+    """(para a esquerda, para cima): o giro do controle no espaço de quem o segura.
+
+    O horizontal soma, no plano y e z, as duas formas de virar: em torno da vertical do mundo e
+    como volante, em torno do eixo que aponta para quem segura. Valem em qualquer altura da mão,
+    e a soma para em `hypot(gy, gz)` para o gesto entre as duas não valer em dobro. Medido em
+    06/11, no cabo e no rádio: esquerda dá `ABS_RY` positivo, nariz para cima dá `ABS_RX` positivo.
+    """
+    gx, gy, gz = vetor
+    _ux, uy, uz = GRAVIDADE_DE_BASE if gravidade is None else gravidade
+    plano = max(MENOR_PLANO_DA_GRAVIDADE, math.hypot(uy, uz))
+    cima_y, cima_z = uy / plano, uz / plano
+    em_torno_da_vertical = gy * cima_y + gz * cima_z
+    como_volante = gz * cima_y - gy * cima_z
+    soma = em_torno_da_vertical + como_volante
+    return math.copysign(min(abs(soma), math.hypot(gy, gz)), soma), gx
+
+
+def _componentes(
+    giro: tuple[float, float, float],
+    arranjo: ArranjoDeMovimento,
+    gravidade: tuple[float, float, float] | None = None,
+) -> tuple[float, float]:
+    """Os três eixos do sensor viram (direita, baixo) do analógico, já com o sinal."""
+    esquerda, cima = _no_espaco_do_jogador(giro, gravidade)
+    horizontal = -esquerda
+    vertical = -cima
     if arranjo.inverter_horizontal:
         horizontal = -horizontal
     if arranjo.inverter_vertical:
@@ -154,7 +168,9 @@ def _acima_da_zona(magnitude: float, arranjo: ArranjoDeMovimento) -> bool:
 
 
 def passa_da_zona_morta(
-    giro: tuple[float, float, float], arranjo: ArranjoDeMovimento
+    giro: tuple[float, float, float],
+    arranjo: ArranjoDeMovimento,
+    gravidade: tuple[float, float, float] | None = None,
 ) -> bool:
     """O giro (graus/s) passa da zona morta, sem o arredondamento do eixo do analógico.
 
@@ -163,40 +179,53 @@ def passa_da_zona_morta(
     """
     if not arranjo.ligado:
         return False
-    horizontal, vertical = _componentes(giro, arranjo)
+    horizontal, vertical = _componentes(giro, arranjo, gravidade)
     return _acima_da_zona(math.hypot(horizontal, vertical), arranjo)
 
 
-def _fator_radial(
-    horizontal: float, vertical: float, arranjo: ArranjoDeMovimento
+def _saida_do_eixo(
+    velocidade: float, sensibilidade: int, arranjo: ArranjoDeMovimento, ganho: float
 ) -> float:
-    """0.0 a 1.0: quanto do curso do eixo este movimento merece."""
-    magnitude = math.hypot(horizontal, vertical)
-    if not _acima_da_zona(magnitude, arranjo):
+    """UM eixo do analógico, em contagens exatas: o inverso da resposta do analógico do jogo.
+
+    `piso` é onde o jogo começa a ler o analógico, e o resto do curso pede ao jogo a velocidade
+    que a mão fez. O ganho da Imersão pesa acima do piso, para nunca calar a mira. Com a zona em
+    zero, o ruído do sensor (`RUIDO_DO_GIRO_GRAUS_S`) não acende o piso.
+    """
+    magnitude = abs(velocidade)
+    zona = max(RUIDO_DO_GIRO_GRAUS_S, arranjo.zona_morta_graus_s)
+    if sensibilidade <= 0 or magnitude <= zona:
         return 0.0
-    zona = max(0.0, arranjo.zona_morta_graus_s)
-    faixa = arranjo.teto_graus_s - zona
-    if faixa <= 0.0:
-        return 1.0
-    return float(min(1.0, (magnitude - zona) / faixa) ** EXPO_DO_GIRO)
+    piso = max(0.0, min(1.0, arranjo.piso))
+    ganho_do_eixo = GANHO_NA_SENSIBILIDADE_PADRAO * sensibilidade / SENSIBILIDADE_PADRAO * ganho
+    curso = min(1.0, ganho_do_eixo * (magnitude - zona) / arranjo.velocidade_do_jogo)
+    return math.copysign((piso + (1.0 - piso) * curso) * DEFLEXAO_MAXIMA, velocidade)
+
+
+def _deflexao_exata(
+    giro: tuple[float, float, float],
+    arranjo: ArranjoDeMovimento,
+    ganho: float,
+    gravidade: tuple[float, float, float] | None,
+) -> tuple[float, float]:
+    if not arranjo.ligado:
+        return 0.0, 0.0
+    horizontal, vertical = _componentes(giro, arranjo, gravidade)
+    return (
+        _saida_do_eixo(horizontal, arranjo.sensibilidade_h, arranjo, ganho),
+        _saida_do_eixo(vertical, arranjo.sensibilidade_v, arranjo, ganho),
+    )
 
 
 def deflexao(
-    giro: tuple[float, float, float], arranjo: ArranjoDeMovimento, ganho: float = 1.0
+    giro: tuple[float, float, float],
+    arranjo: ArranjoDeMovimento,
+    ganho: float = 1.0,
+    gravidade: tuple[float, float, float] | None = None,
 ) -> tuple[int, int]:
-    """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico."""
-    if not passa_da_zona_morta(giro, arranjo):
-        return 0, 0
-    horizontal, vertical = _componentes(giro, arranjo)
-    fator = _fator_radial(horizontal, vertical, arranjo)
-    if fator <= 0.0:
-        return 0, 0
-    magnitude = math.hypot(horizontal, vertical)
-    alcance = fator * DEFLEXAO_MAXIMA * (arranjo.sensibilidade / SENSIBILIDADE_MAX) * ganho
-    return (
-        round(alcance * horizontal / magnitude),
-        round(alcance * vertical / magnitude),
-    )
+    """Velocidade angular (graus/s) → deslocamento a SOMAR num analógico, eixo a eixo."""
+    horizontal, vertical = _deflexao_exata(giro, arranjo, ganho, gravidade)
+    return round(horizontal), round(vertical)
 
 
 GANHO_MINIMO_DA_MIRA: Final = 0.3
@@ -317,14 +346,17 @@ def misturar(eixo_h: int, eixo_v: int, dh: int, dv: int) -> tuple[int, int]:
 
 
 def pixels(
-    angulo: tuple[float, float, float], arranjo: ArranjoDeMovimento, ganho: float = 1.0
+    angulo: tuple[float, float, float],
+    arranjo: ArranjoDeMovimento,
+    ganho: float = 1.0,
+    gravidade: tuple[float, float, float] | None = None,
 ) -> tuple[float, float]:
     """Ângulo percorrido (graus) → deslocamento de cursor, em pixels FLOAT."""
     if not arranjo.ligado:
         return 0.0, 0.0
-    horizontal, vertical = _componentes(angulo, arranjo)
-    fator = arranjo.pixels_por_grau * (arranjo.sensibilidade / SENSIBILIDADE_PADRAO) * ganho
-    return horizontal * fator, vertical * fator
+    horizontal, vertical = _componentes(angulo, arranjo, gravidade)
+    fator = arranjo.pixels_por_grau * ganho / SENSIBILIDADE_PADRAO
+    return horizontal * fator * arranjo.sensibilidade_h, vertical * fator * arranjo.sensibilidade_v
 
 
 def montar(secao: object) -> ArranjoDeMovimento:
@@ -334,29 +366,18 @@ def montar(secao: object) -> ArranjoDeMovimento:
         raise ArranjoRecusadoError(
             f"destino desconhecido: {destino!r} (conhecidos: {', '.join(DESTINOS)})"
         )
-    eixo = str(getattr(secao, "eixo_horizontal", EIXO_YAW) or EIXO_YAW)
-    if eixo not in EIXOS_HORIZONTAIS:
-        raise ArranjoRecusadoError(
-            f"eixo horizontal desconhecido: {eixo!r} "
-            f"(conhecidos: {', '.join(EIXOS_HORIZONTAIS)})"
-        )
     zona = float(getattr(secao, "zona_morta_graus_s", ZONA_MORTA_PADRAO_GRAUS_S))
-    teto = float(getattr(secao, "teto_graus_s", TETO_PADRAO_GRAUS_S))
-    if teto <= zona:
+    velocidade = float(getattr(secao, "velocidade_do_jogo", VELOCIDADE_DO_JOGO_PADRAO_GRAUS_S))
+    if velocidade <= 0.0:
         raise ArranjoRecusadoError(
-            f"teto ({teto}°/s) tem de ser maior que a zona morta ({zona}°/s)"
+            f"a velocidade do jogo ({velocidade}°/s) tem de ser maior que zero"
         )
-    sens = int(getattr(secao, "sensibilidade", SENSIBILIDADE_PADRAO))
+    sens_h = int(getattr(secao, "sensibilidade_h", SENSIBILIDADE_PADRAO))
+    sens_v = int(getattr(secao, "sensibilidade_v", SENSIBILIDADE_PADRAO))
     toque = str(getattr(secao, "toque", DESTINO_NENHUM) or DESTINO_NENHUM)
     if toque not in TOQUES:
         raise ArranjoRecusadoError(
             f"toque desconhecido: {toque!r} (conhecidos: {', '.join(TOQUES)})"
-        )
-    inclinacao = str(getattr(secao, "acelerometro", DESTINO_NENHUM) or DESTINO_NENHUM)
-    if inclinacao not in DESTINOS_DA_INCLINACAO:
-        raise ArranjoRecusadoError(
-            f"destino da inclinação desconhecido: {inclinacao!r} "
-            f"(conhecidos: {', '.join(DESTINOS_DA_INCLINACAO)})"
         )
     lado = str(getattr(secao, "lado", DESTINO_ANALOGICO_DIREITO) or DESTINO_ANALOGICO_DIREITO)
     if lado not in LADOS_DO_VIRTUAL:
@@ -366,39 +387,34 @@ def montar(secao: object) -> ArranjoDeMovimento:
         )
     return ArranjoDeMovimento(
         destino=destino,
-        sensibilidade=max(SENSIBILIDADE_MIN, min(SENSIBILIDADE_MAX, sens)),
-        eixo_horizontal=eixo,
+        sensibilidade_h=max(SENSIBILIDADE_MIN, min(SENSIBILIDADE_MAX, sens_h)),
+        sensibilidade_v=max(SENSIBILIDADE_MIN, min(SENSIBILIDADE_MAX, sens_v)),
         inverter_horizontal=bool(getattr(secao, "inverter_horizontal", False)),
         inverter_vertical=bool(getattr(secao, "inverter_vertical", False)),
         zona_morta_graus_s=zona,
-        teto_graus_s=teto,
+        velocidade_do_jogo=velocidade,
+        piso=max(0.0, min(1.0, float(getattr(secao, "piso", PISO_PADRAO)))),
         pixels_por_grau=float(
             getattr(secao, "pixels_por_grau", PIXELS_POR_GRAU_PADRAO)
         ),
         gatilho=(getattr(secao, "gatilho", None) or None),
         toque=toque,
-        acelerometro=inclinacao,
         mesmo_parado=bool(getattr(secao, "mesmo_parado", False)),
         lado=lado,
     )
 
 
 def lado_do_virtual(arranjo: ArranjoDeMovimento) -> str:
-    """O lado que a tela acende: o do giro; sem giro num analógico, o da inclinação; senão o
-    guardado."""
-    if arranjo.destino in LADOS_DO_VIRTUAL:
-        return arranjo.destino
-    if arranjo.acelerometro in LADOS_DO_VIRTUAL:
-        return arranjo.acelerometro
-    return arranjo.lado
+    """O lado que a tela acende: o do giro; sem giro num analógico, o guardado."""
+    return arranjo.destino if arranjo.destino in LADOS_DO_VIRTUAL else arranjo.lado
 
 
 def virtual_aceso(arranjo: ArranjoDeMovimento) -> bool:
-    """O Analógico Virtual está aceso: o giro ou a inclinação move um analógico.
+    """O Analógico Virtual está aceso: o giro move um analógico.
 
     O `mouse` não conta: o giro no cursor não é lado de analógico.
     """
-    return arranjo.destino in LADOS_DO_VIRTUAL or arranjo.acelerometro in LADOS_DO_VIRTUAL
+    return arranjo.destino in LADOS_DO_VIRTUAL
 
 
 def definir_ativo(dono: object, arranjo: ArranjoDeMovimento | None) -> None:
@@ -588,8 +604,129 @@ def angulo_do_tique(
     )
 
 
-ZONA_MORTA_DA_INCLINACAO_GRAUS: Final = 6.0
-TETO_DA_INCLINACAO_GRAUS: Final = 30.0
+SILENCIO_DA_AMOSTRA_S: Final = 0.050
+
+_ATRIBUTO_DA_MIRA: Final = "_roteador_de_movimento_mira"
+
+_PARADO: Final[tuple[float, float, float]] = (0.0, 0.0, 0.0)
+
+
+@dataclass(slots=True)
+class _Mira:
+    """O que a mira lembra de UMA peça entre dois tiques: nada aqui é da mesa."""
+
+    velocidade: tuple[float, float, float] = _PARADO
+    amostra_em: float = -math.inf
+    gravidade: tuple[float, float, float] | None = None
+    gravidade_em: float = -math.inf
+    resto_h: float = 0.0
+    resto_v: float = 0.0
+
+
+def _mira_da_peca(dono: object, uniq: str) -> _Mira:
+    if dono is None:
+        return _Mira()
+    mapa = getattr(dono, _ATRIBUTO_DA_MIRA, None)
+    if not isinstance(mapa, dict):
+        mapa = {}
+        setattr(dono, _ATRIBUTO_DA_MIRA, mapa)
+    chave = chave_de_sensor(uniq)
+    estado = mapa.get(chave)
+    if not isinstance(estado, _Mira):
+        estado = _Mira()
+        mapa[chave] = estado
+    return estado
+
+
+def velocidade_do_tique(
+    dono: object,
+    uniq: str,
+    lido: tuple[tuple[float, float, float], float] | None,
+    agora: float,
+) -> tuple[float, float, float] | None:
+    """A média do giro no tique: o ângulo drenado sobre o tempo do kernel, sem o viés do zero.
+
+    `lido` é o `(ângulo, segundos)` do hub. Tique sem amostra repete a última velocidade por até
+    `SILENCIO_DA_AMOSTRA_S`, e depois vai a zero, para o analógico nunca ficar preso numa queda.
+    Trecho maior que `SILENCIO_DA_DRENAGEM_S` é o que acumulou enquanto ninguém drenava.
+    """
+    if lido is None:
+        return None
+    angulo, segundos = lido
+    estado = _mira_da_peca(dono, uniq)
+    if segundos > SILENCIO_DA_DRENAGEM_S:
+        estado.velocidade = _PARADO
+        estado.amostra_em = agora
+        estado.resto_h = estado.resto_v = 0.0
+        return _PARADO
+    if segundos <= 0.0:
+        if agora - estado.amostra_em <= SILENCIO_DA_AMOSTRA_S:
+            return estado.velocidade
+        return _PARADO
+    velocidade = descontar_o_vies(
+        dono, uniq, (angulo[0] / segundos, angulo[1] / segundos, angulo[2] / segundos)
+    )
+    if velocidade is None:
+        return None
+    estado.velocidade = velocidade
+    estado.amostra_em = agora
+    return velocidade
+
+
+def gravidade_do_tique(
+    dono: object, uniq: str, acel: tuple[float, float, float] | None, agora: float
+) -> tuple[float, float, float] | None:
+    """A gravidade filtrada da peça, unitária; o filtro anda por tempo, nunca por amostra."""
+    estado = _mira_da_peca(dono, uniq)
+    leitura = _unitario(acel) if acel is not None else None
+    if leitura is None:
+        return estado.gravidade
+    decorrido = agora - estado.gravidade_em
+    estado.gravidade_em = agora
+    anterior = estado.gravidade
+    if anterior is None or decorrido > SILENCIO_DA_DRENAGEM_S:
+        estado.gravidade = leitura
+        return leitura
+    peso = 1.0 - math.exp(-max(0.0, decorrido) / TEMPO_DA_GRAVIDADE_S)
+    misturada = (
+        anterior[0] + (leitura[0] - anterior[0]) * peso,
+        anterior[1] + (leitura[1] - anterior[1]) * peso,
+        anterior[2] + (leitura[2] - anterior[2]) * peso,
+    )
+    estado.gravidade = _unitario(misturada) or leitura
+    return estado.gravidade
+
+
+def deflexao_do_tique(
+    dono: object,
+    uniq: str,
+    velocidade: tuple[float, float, float],
+    arranjo: ArranjoDeMovimento,
+    ganho: float = 1.0,
+    gravidade: tuple[float, float, float] | None = None,
+) -> tuple[int, int]:
+    """A `deflexao` do tique: o que o arredondamento perde vai ao tique seguinte, por eixo."""
+    horizontal, vertical = _deflexao_exata(velocidade, arranjo, ganho, gravidade)
+    estado = _mira_da_peca(dono, uniq)
+    dh, estado.resto_h = _com_o_resto(horizontal, estado.resto_h)
+    dv, estado.resto_v = _com_o_resto(vertical, estado.resto_v)
+    return dh, dv
+
+
+def _com_o_resto(valor: float, resto: float) -> tuple[int, float]:
+    if valor == 0.0:
+        return 0, 0.0
+    total = valor + resto
+    inteiro = round(total)
+    return inteiro, total - inteiro
+
+
+def zerar_o_resto(dono: object, uniq: str) -> None:
+    """A mira da peça fechou: a próxima ativação nasce sem o resto da anterior."""
+    estado = _mira_da_peca(dono, uniq)
+    estado.resto_h = estado.resto_v = 0.0
+
+
 GRAVIDADE_MINIMA_G: Final = 0.2
 
 PIXELS_POR_UNIDADE_DO_TOQUE: Final = 0.45
@@ -609,7 +746,7 @@ _SETORES_DO_DIRECIONAL: Final[tuple[frozenset[str], ...]] = (
     frozenset({"dpad_down", "dpad_right"}),
 )
 
-_ATRIBUTO_DO_NEUTRO: Final = "_roteador_de_movimento_neutro"
+_ATRIBUTO_DO_REPOUSO: Final = "_roteador_de_movimento_repouso"
 _ATRIBUTO_DO_DEDO: Final = "_roteador_de_movimento_ultimo_dedo"
 
 
@@ -621,71 +758,18 @@ def _unitario(vetor: tuple[float, float, float]) -> tuple[float, float, float] |
     return x / modulo, y / modulo, z / modulo
 
 
-def inclinacao(
-    acel: tuple[float, float, float], neutro: tuple[float, float, float]
-) -> tuple[float, float] | None:
-    """Quanto o controle inclinou desde o neutro, em graus: (direita, para trás)."""
-    a = _unitario(acel)
-    n = _unitario(neutro)
-    if a is None or n is None:
-        return None
-    direita = math.degrees(
-        math.asin(max(-1.0, min(1.0, n[0]))) - math.asin(max(-1.0, min(1.0, a[0])))
-    )
-    para_tras = math.degrees(math.atan2(n[2] * a[1] - n[1] * a[2], n[1] * a[1] + n[2] * a[2]))
-    return direita, para_tras
-
-
-def deflexao_da_inclinacao(
-    acel: tuple[float, float, float],
-    neutro: tuple[float, float, float],
-    arranjo: ArranjoDeMovimento,
-    *,
-    parada: bool = False,
-) -> tuple[int, int]:
-    """A inclinação desde o neutro vira deslocamento a SOMAR num analógico.
-
-    `parada` (a peça que ninguém segura, `inclina_agora` falso) não inclina nada: o
-    analógico volta ao centro, e o neutro da mão fica guardado na regra.
-    """
-    if not arranjo.inclina or parada:
-        return 0, 0
-    angulos = inclinacao(acel, neutro)
-    if angulos is None:
-        return 0, 0
-    horizontal, vertical = angulos
-    if arranjo.inverter_horizontal:
-        horizontal = -horizontal
-    if arranjo.inverter_vertical:
-        vertical = -vertical
-    magnitude = math.hypot(horizontal, vertical)
-    zona = ZONA_MORTA_DA_INCLINACAO_GRAUS
-    if magnitude <= zona:
-        return 0, 0
-    teto = max(
-        zona + 1.0,
-        TETO_DA_INCLINACAO_GRAUS * SENSIBILIDADE_PADRAO / max(1, arranjo.sensibilidade),
-    )
-    alcance = min(1.0, (magnitude - zona) / (teto - zona)) * DEFLEXAO_MAXIMA
-    return (
-        round(alcance * horizontal / magnitude),
-        round(alcance * vertical / magnitude),
-    )
-
-
 VARIACAO_DO_PARADO_GRAUS_S: Final = 1.5
 GRAVIDADE_DO_PARADO_GRAUS: Final = 2.0
 TEMPO_DO_PARADO_S: Final = 3.0
 SAIDA_DO_PARADO_GRAUS: Final = 3.0
-LIMIAR_DO_ASSENTO_GRAUS_S: Final = 20.0
-TEMPO_DO_ASSENTO_S: Final = 0.5
+GIRO_DA_PEGADA_GRAUS_S: Final = 20.0
+TEMPO_DA_PEGADA_S: Final = 0.25
 
 
 @dataclass(slots=True)
 class _Repouso:
     """O que a regra lembra de UMA peça entre dois tiques."""
 
-    neutro: tuple[float, float, float]
     carimbo: float
     inicio: float
     menor: list[float]
@@ -694,10 +778,7 @@ class _Repouso:
     virgem: bool = True
     parado: bool = False
     gravidade_do_parado: tuple[float, float, float] | None = None
-    provisorio: bool = False
-    assentando: bool = False
-    assento_desde: float = 0.0
-    gravidade_do_assento: tuple[float, float, float] | None = None
+    pegando_desde: float | None = None
 
 
 def _graus_entre(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
@@ -738,106 +819,86 @@ def _o_tique_da_janela(
     if agora - estado.inicio > TEMPO_DO_PARADO_S:
         estado.parado = True
         estado.gravidade_do_parado = acel
-        estado.provisorio = estado.provisorio or estado.virgem
-        estado.assentando = False
 
 
-def _o_tique_do_assento(
+def _a_mao_pegou(
     estado: _Repouso, giro: tuple[float, float, float], acel: tuple[float, float, float],
     agora: float,
-) -> None:
-    """O neutro provisório espera a mão assentar, e ali vira a leitura da peça."""
-    calmo = math.sqrt(sum(float(v) * float(v) for v in giro)) < LIMIAR_DO_ASSENTO_GRAUS_S
-    base = estado.gravidade_do_assento
-    if not calmo or base is None or _graus_entre(acel, base) >= SAIDA_DO_PARADO_GRAUS:
-        estado.assento_desde = agora
-        estado.gravidade_do_assento = acel
-        return
-    if agora - estado.assento_desde >= TEMPO_DO_ASSENTO_S:
-        estado.neutro = acel
-        estado.provisorio = False
-        estado.assentando = False
+) -> bool:
+    """A peça parada só sai do parado com movimento que dura: o esbarrão passa e não conta.
+
+    Mexer é a gravidade longe da que parou ou o giro acima de `GIRO_DA_PEGADA_GRAUS_S`, e a
+    saída pede `TEMPO_DA_PEGADA_S` de mexer sem pausa.
+    """
+    base = estado.gravidade_do_parado
+    mexe = (
+        base is None
+        or _graus_entre(acel, base) >= SAIDA_DO_PARADO_GRAUS
+        or math.sqrt(sum(float(v) * float(v) for v in giro)) >= GIRO_DA_PEGADA_GRAUS_S
+    )
+    if not mexe:
+        estado.pegando_desde = None
+        return False
+    if estado.pegando_desde is None:
+        estado.pegando_desde = agora
+    if agora - estado.pegando_desde < TEMPO_DA_PEGADA_S:
+        return False
+    estado.pegando_desde = None
+    return True
 
 
-def neutro_da_inclinacao(
+def parada_agora(
     dono: object,
     uniq: str,
-    acel: tuple[float, float, float],
+    giro: tuple[float, float, float],
+    acel: tuple[float, float, float] | None,
     agora: float,
-    giro: tuple[float, float, float] | None = None,
     *,
     mesmo_parado: bool = False,
-) -> tuple[float, float, float]:
-    """O NEUTRO desta peça: como estava na primeira leitura depois de um silêncio.
+) -> bool:
+    """A peça está largada: a mira fica calada, e um esbarrão não rouba a vez no jogo.
 
-    Com o `giro` (a velocidade angular do mesmo tique), a regra também sabe se a peça
-    está PARADA: o giro variando menos de `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico
-    em cada eixo e a gravidade andando menos de `GRAVIDADE_DO_PARADO_GRAUS`, por
-    `TEMPO_DO_PARADO_S`. Parada, a inclinação da peça sai do analógico
-    (`inclina_agora` responde falso) e o neutro da mão fica guardado: não se recentra
-    na mesa, porque pegar de volta andaria sozinho. Sai do parado quando a gravidade
-    anda `SAIDA_DO_PARADO_GRAUS`, e a inclinação volta na hora contra o neutro antigo.
-    O neutro que NASCEU com a peça quieta é provisório e se reaprende quando a mão
-    assenta. `mesmo_parado` (o «Mesmo parado» da Calibrar) nunca entra no parado.
-    `giro=None` é o comportamento de antes, byte a byte: sem leitura ninguém para.
+    Parada é o giro variando menos de `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico em cada eixo e
+    a gravidade andando menos de `GRAVIDADE_DO_PARADO_GRAUS`, por `TEMPO_DO_PARADO_S`. A saída é
+    a de `_a_mao_pegou`. `mesmo_parado` (o «Mesmo parado» da Calibrar) nunca para.
     """
     if dono is None:
-        return acel
-    mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
+        return False
+    mapa = getattr(dono, _ATRIBUTO_DO_REPOUSO, None)
     if not isinstance(mapa, dict):
         mapa = {}
-        setattr(dono, _ATRIBUTO_DO_NEUTRO, mapa)
+        setattr(dono, _ATRIBUTO_DO_REPOUSO, mapa)
     chave = chave_de_sensor(uniq)
+    leitura = _PARADO if acel is None else acel
     estado = mapa.get(chave)
-    zero = (0.0, 0.0, 0.0) if giro is None else giro
     if not isinstance(estado, _Repouso) or agora - estado.carimbo > SILENCIO_DA_DRENAGEM_S:
         estado = _Repouso(
-            neutro=acel, carimbo=agora, inicio=agora,
-            menor=[float(v) for v in zero], maior=[float(v) for v in zero],
-            gravidade_do_inicio=acel,
+            carimbo=agora, inicio=agora, menor=[float(v) for v in giro],
+            maior=[float(v) for v in giro], gravidade_do_inicio=leitura,
         )
         mapa[chave] = estado
     else:
         estado.carimbo = agora
-    if giro is None or mesmo_parado:
-        estado.parado = estado.assentando = estado.provisorio = False
-        _recomecar_a_janela(estado, zero, acel, agora)
-        estado.virgem = False
-        return estado.neutro
-    if estado.parado:
-        base = estado.gravidade_do_parado
-        if base is None or _graus_entre(acel, base) < SAIDA_DO_PARADO_GRAUS:
-            return estado.neutro
+    if mesmo_parado:
         estado.parado = False
-        estado.virgem = False
-        _recomecar_a_janela(estado, giro, acel, agora)
-        if estado.provisorio:
-            estado.assentando = True
-            estado.assento_desde = agora
-            estado.gravidade_do_assento = acel
-        return estado.neutro
-    if estado.assentando:
-        _o_tique_do_assento(estado, giro, acel, agora)
-    _o_tique_da_janela(estado, giro, acel, agora)
-    return estado.neutro
+        _recomecar_a_janela(estado, giro, leitura, agora)
+        return False
+    if estado.parado:
+        if _a_mao_pegou(estado, giro, leitura, agora):
+            estado.parado = False
+            _recomecar_a_janela(estado, giro, leitura, agora)
+        return estado.parado
+    _o_tique_da_janela(estado, giro, leitura, agora)
+    return estado.parado
 
 
-def inclina_agora(dono: object, uniq: str) -> bool:
-    """A inclinação desta peça vai ao analógico: nem parada, nem esperando a mão assentar."""
-    mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
-    estado = mapa.get(chave_de_sensor(uniq)) if isinstance(mapa, dict) else None
-    if not isinstance(estado, _Repouso):
-        return True
-    return not (estado.parado or estado.assentando)
-
-
-def inclinacao_parada(dono: object, uniq: str, agora: float) -> bool:
+def mira_parada(dono: object, uniq: str, agora: float) -> bool:
     """A última resposta da regra para esta peça: parada agora (o chip meio apagado).
 
     Sem tique há mais de `SILENCIO_DA_DRENAGEM_S` (a rota apagou, o controle saiu),
     a resposta é falsa: a regra não mede o que não lê.
     """
-    mapa = getattr(dono, _ATRIBUTO_DO_NEUTRO, None)
+    mapa = getattr(dono, _ATRIBUTO_DO_REPOUSO, None)
     estado = mapa.get(chave_de_sensor(uniq)) if isinstance(mapa, dict) else None
     if not isinstance(estado, _Repouso) or agora - estado.carimbo > SILENCIO_DA_DRENAGEM_S:
         return False
@@ -900,9 +961,12 @@ def delta_do_toque(
 
 
 def pixels_do_toque(dx: int, dy: int, arranjo: ArranjoDeMovimento) -> tuple[float, float]:
-    """O dedo que andou vira pixels de cursor, pela `sensibilidade` do arranjo."""
-    fator = PIXELS_POR_UNIDADE_DO_TOQUE * (arranjo.sensibilidade / SENSIBILIDADE_PADRAO)
-    return dx * fator, dy * fator
+    """O dedo que andou vira pixels de cursor; o 0 da mira não desliga o dedo."""
+    fator = PIXELS_POR_UNIDADE_DO_TOQUE / SENSIBILIDADE_PADRAO
+    return (
+        dx * fator * max(1, arranjo.sensibilidade_h),
+        dy * fator * max(1, arranjo.sensibilidade_v),
+    )
 
 
 def quer_cursor(dono: object) -> bool:
@@ -927,10 +991,9 @@ Vetor = tuple[float, float, float]
 
 @dataclass(frozen=True, slots=True)
 class ZeroDoControle:
-    """O repouso medido de UM controle: o viés do giro (°/s) e a gravidade (g)."""
+    """O repouso medido de UM controle: o viés do giro (°/s)."""
 
     giro: Vetor
-    gravidade: Vetor
 
 
 def _media(vetores: Sequence[Vetor]) -> Vetor:
@@ -946,7 +1009,7 @@ def _trecho_quieto(lista: Sequence[tuple[Vetor, Vetor]]) -> Sequence[tuple[Vetor
     """O trecho contínuo mais longo em que a peça ficou parada, pela régua do parado."""
     giro0, acel0 = lista[0]
     estado = _Repouso(
-        neutro=acel0, carimbo=0.0, inicio=0.0,
+        carimbo=0.0, inicio=0.0,
         menor=[float(v) for v in giro0], maior=[float(v) for v in giro0],
         gravidade_do_inicio=acel0,
     )
@@ -983,9 +1046,7 @@ def medir_o_zero(amostras: Sequence[tuple[Vetor, Vetor]]) -> ZeroDoControle | No
     minimo = len(lista) * FRACAO_QUIETA_DO_ZERO
     if len(quieto) < max(MINIMO_DE_AMOSTRAS_DO_ZERO, minimo):
         return None
-    return ZeroDoControle(
-        giro=_media([g for g, _ in quieto]), gravidade=_media([a for _, a in quieto])
-    )
+    return ZeroDoControle(giro=_media([g for g, _ in quieto]))
 
 
 def _zeros(dono: object) -> dict[str, ZeroDoControle]:
@@ -1037,12 +1098,12 @@ def descontar_o_vies(dono: object, uniq: str | None, giro: Vetor | None) -> Veto
 
 
 def zeros_para_gravar(dono: object) -> dict[str, dict[str, list[float]]]:
-    """Os zeros guardados, na forma do arquivo: chave de sensor → giro e gravidade."""
+    """Os zeros guardados, na forma do arquivo: chave de sensor → giro."""
     mapa = getattr(dono, _ATRIBUTO_DO_ZERO, None)
     if not isinstance(mapa, dict):
         return {}
     return {
-        chave: {"giro": list(zero.giro), "gravidade": list(zero.gravidade)}
+        chave: {"giro": list(zero.giro)}
         for chave, zero in sorted(mapa.items())
         if isinstance(zero, ZeroDoControle)
     }
@@ -1060,19 +1121,144 @@ def _vetor(valor: object) -> Vetor | None:
 
 
 def carregar_os_zeros(dono: object, dados: object) -> int:
-    """Devolve ao `dono` os zeros lidos do arquivo; a entrada torta fica de fora."""
+    """Devolve ao `dono` os zeros lidos do arquivo; a entrada torta fica de fora.
+
+    A gravidade que o arquivo antigo traz não se lê e não volta ao disco.
+    """
     if dono is None or not isinstance(dados, Mapping):
         return 0
     contados = 0
     for chave, valor in dados.items():
         if not isinstance(valor, Mapping):
             continue
-        giro, gravidade = _vetor(valor.get("giro")), _vetor(valor.get("gravidade"))
-        if giro is None or gravidade is None or not chave_de_sensor(str(chave)):
+        giro = _vetor(valor.get("giro"))
+        if giro is None or not chave_de_sensor(str(chave)):
             continue
-        definir_o_zero(dono, str(chave), ZeroDoControle(giro=giro, gravidade=gravidade))
+        definir_o_zero(dono, str(chave), ZeroDoControle(giro=giro))
         contados += 1
     return contados
+
+
+SEGUNDOS_DO_SINAL: Final = 3.0
+GIRO_DO_SINAL_GRAUS: Final = 15.0
+SINAL_BATEU: Final = "bateu"
+SINAL_CONTRARIO: Final = "contrario"
+SINAL_PARADO: Final = "parado"
+TEMPO_DA_RAMPA_S: Final = 12.0
+TETO_DA_RAMPA: Final = 0.6
+_ATRIBUTO_DA_RAMPA: Final = "_roteador_de_movimento_rampa"
+
+
+def _primeiro_sentido(valores: Sequence[float], passo: float) -> int:
+    """O sinal do ângulo somado ao cruzar `GIRO_DO_SINAL_GRAUS`; 0 se nunca cruzou."""
+    soma = 0.0
+    for valor in valores:
+        soma += valor * passo
+        if abs(soma) >= GIRO_DO_SINAL_GRAUS:
+            return -1 if soma < 0.0 else 1
+    return 0
+
+
+def _veredito_do_eixo(sentido: int) -> str:
+    if sentido == 0:
+        return SINAL_PARADO
+    return SINAL_BATEU if sentido < 0 else SINAL_CONTRARIO
+
+
+def conferir_o_sinal(
+    amostras: Sequence[tuple[Vetor, Vetor | None]], arranjo: ArranjoDeMovimento, passo: float
+) -> dict[str, str]:
+    """O gesto guiado contra o arranjo: virar à esquerda e levantar o nariz.
+
+    Os dois gestos têm de levar o analógico à esquerda e para cima, com o `inverter` da peça
+    já aplicado. Nada se grava aqui: o que fica é o veredito, e quem quer o contrário usa o
+    `inverter`.
+    """
+    memoria = SimpleNamespace()
+    horizontais: list[float] = []
+    verticais: list[float] = []
+    agora = 0.0
+    for giro, acel in amostras:
+        agora += passo
+        gravidade = gravidade_do_tique(memoria, "sinal", acel, agora)
+        horizontal, vertical = _componentes(giro, arranjo, gravidade)
+        horizontais.append(horizontal)
+        verticais.append(vertical)
+    do_lado = _veredito_do_eixo(_primeiro_sentido(horizontais, passo))
+    do_nariz = _veredito_do_eixo(_primeiro_sentido(verticais, passo))
+    vereditos = {do_lado, do_nariz}
+    if SINAL_PARADO in vereditos:
+        estado = SINAL_PARADO
+    elif SINAL_CONTRARIO in vereditos:
+        estado = SINAL_CONTRARIO
+    else:
+        estado = SINAL_BATEU
+    return {"estado": estado, "horizontal": do_lado, "vertical": do_nariz}
+
+
+def _rampas(dono: object) -> dict[str, float]:
+    mapa = getattr(dono, _ATRIBUTO_DA_RAMPA, None)
+    if not isinstance(mapa, dict):
+        mapa = {}
+        setattr(dono, _ATRIBUTO_DA_RAMPA, mapa)
+    return mapa
+
+
+def comecar_a_rampa(dono: object, uniq: str, agora: float) -> None:
+    """Começa a rampa no analógico desta peça."""
+    _rampas(dono)[chave_de_sensor(uniq)] = agora
+
+
+def rampa_agora(dono: object, uniq: str | None, agora: float) -> float | None:
+    """A fração do analógico que a rampa desta peça pede agora; `None` sem rampa viva.
+
+    Passado `TEMPO_DA_RAMPA_S` a rampa some sozinha: ninguém disse que andou, e o analógico volta.
+    """
+    mapa = getattr(dono, _ATRIBUTO_DA_RAMPA, None)
+    if not isinstance(mapa, dict) or not uniq:
+        return None
+    chave = chave_de_sensor(uniq)
+    inicio = mapa.get(chave)
+    if inicio is None:
+        return None
+    passou = agora - inicio
+    if passou >= TEMPO_DA_RAMPA_S:
+        del mapa[chave]
+        return None
+    return float(TETO_DA_RAMPA * max(0.0, passou) / TEMPO_DA_RAMPA_S)
+
+
+def parar_a_rampa(dono: object, uniq: str, agora: float) -> float | None:
+    """Encerra a rampa desta peça e devolve o ponto em que estava; `None` se não havia."""
+    valor = rampa_agora(dono, uniq, agora)
+    mapa = getattr(dono, _ATRIBUTO_DA_RAMPA, None)
+    if isinstance(mapa, dict):
+        mapa.pop(chave_de_sensor(uniq), None)
+    return valor
+
+
+def deflexao_da_rampa(valor: float) -> tuple[int, int]:
+    """A fração da rampa em `(dh, dv)`: o analógico anda só para a direita."""
+    return round(valor * 127), 0
+
+
+EIXOS_DA_SONY: Final[tuple[tuple[int, float], ...]] = ((0, 1.0), (1, 1.0), (2, 1.0))
+ORIENTACAO_MEDIDA: Final[dict[str, tuple[tuple[int, float], ...]]] = {"sony": EIXOS_DA_SONY}
+
+
+def orientar(familia: str | None, vetor: Vetor) -> Vetor | None:
+    """O vetor do sensor no referencial da Sony; `None` na família sem gesto medido.
+
+    Cada linha da `ORIENTACAO_MEDIDA` diz, para x, y e z da Sony, o eixo da família e o sinal.
+    Só entra família medida no aparelho. Sem família (o dublê, o nó ainda fechado) vale a Sony.
+    """
+    eixos = EIXOS_DA_SONY if familia is None else ORIENTACAO_MEDIDA.get(familia)
+    if eixos is None:
+        return None
+    if eixos is EIXOS_DA_SONY:
+        return vetor
+    x, y, z = (vetor[eixo] * sinal for eixo, sinal in eixos)
+    return (x, y, z)
 
 
 __all__ = [
@@ -1082,43 +1268,50 @@ __all__ = [
     "CENTRO_DO_EIXO",
     "DEFLEXAO_MAXIMA",
     "DESTINOS",
-    "DESTINOS_DA_INCLINACAO",
     "DESTINO_ANALOGICO_DIREITO",
     "DESTINO_ANALOGICO_ESQUERDO",
     "DESTINO_MOUSE",
     "DESTINO_NENHUM",
-    "EIXOS_HORIZONTAIS",
-    "EIXO_ROLL",
-    "EIXO_YAW",
-    "EXPO_DO_GIRO",
     "FRACAO_DO_DIRECIONAL",
     "GANHO_MINIMO_DA_MIRA",
+    "GANHO_NA_SENSIBILIDADE_PADRAO",
+    "GIRO_DA_PEGADA_GRAUS_S",
+    "GRAVIDADE_DE_BASE",
     "GRAVIDADE_DO_PARADO_GRAUS",
     "GRAVIDADE_MINIMA_G",
-    "LIMIAR_DO_ASSENTO_GRAUS_S",
+    "MENOR_PLANO_DA_GRAVIDADE",
     "MINIMO_DE_AMOSTRAS_DO_ZERO",
     "MIOLO_DO_DIRECIONAL",
+    "ORIENTACAO_MEDIDA",
     "PESO_DA_MIRA",
+    "PISO_PADRAO",
     "PIXELS_POR_GRAU_PADRAO",
     "PIXELS_POR_UNIDADE_DO_TOQUE",
     "PRAZO_MAXIMO_DO_PESO_MS",
+    "RUIDO_DO_GIRO_GRAUS_S",
     "SAIDA_DO_PARADO_GRAUS",
+    "SEGUNDOS_DO_SINAL",
     "SEGUNDOS_DO_ZERO",
     "SENSIBILIDADE_MAX",
     "SENSIBILIDADE_MIN",
     "SENSIBILIDADE_PADRAO",
+    "SILENCIO_DA_AMOSTRA_S",
     "SILENCIO_DA_DRENAGEM_S",
+    "SINAL_BATEU",
+    "SINAL_CONTRARIO",
+    "SINAL_PARADO",
     "SO_NAS_PECAS",
-    "TEMPO_DO_ASSENTO_S",
+    "TEMPO_DA_GRAVIDADE_S",
+    "TEMPO_DA_PEGADA_S",
+    "TEMPO_DA_RAMPA_S",
     "TEMPO_DO_PARADO_S",
-    "TETO_DA_INCLINACAO_GRAUS",
-    "TETO_PADRAO_GRAUS_S",
+    "TETO_DA_RAMPA",
     "TODOS_OS_CONTROLES",
     "TOQUES",
     "TOQUE_CURSOR",
     "TOQUE_ZONAS",
     "VARIACAO_DO_PARADO_GRAUS_S",
-    "ZONA_MORTA_DA_INCLINACAO_GRAUS",
+    "VELOCIDADE_DO_JOGO_PADRAO_GRAUS_S",
     "ZONA_MORTA_PADRAO_GRAUS_S",
     "ArranjoDeMovimento",
     "ArranjoRecusadoError",
@@ -1129,26 +1322,30 @@ __all__ = [
     "ativo",
     "botoes_das_zonas",
     "carregar_os_zeros",
+    "comecar_a_rampa",
+    "conferir_o_sinal",
     "da_peca",
     "definir_ativo",
     "definir_da_peca",
     "definir_o_zero",
     "definir_por_peca",
     "deflexao",
-    "deflexao_da_inclinacao",
+    "deflexao_da_rampa",
+    "deflexao_do_tique",
     "delta_do_toque",
     "descontar_o_vies",
     "fracao_quieta",
-    "inclina_agora",
-    "inclinacao",
-    "inclinacao_parada",
+    "gravidade_do_tique",
     "janela_que_sai",
     "medir_o_zero",
+    "mira_parada",
     "misturar",
     "montar",
-    "neutro_da_inclinacao",
+    "orientar",
     "para_o_cursor",
+    "parada_agora",
     "parametros_da_peca",
+    "parar_a_rampa",
     "passa_da_zona_morta",
     "pecas_que_miram",
     "pesar_a_janela",
@@ -1156,7 +1353,10 @@ __all__ = [
     "pixels_do_toque",
     "por_peca",
     "quer_cursor",
+    "rampa_agora",
     "sincronizar_o_filtro",
+    "velocidade_do_tique",
+    "zerar_o_resto",
     "zero_de",
     "zeros_para_gravar",
 ]

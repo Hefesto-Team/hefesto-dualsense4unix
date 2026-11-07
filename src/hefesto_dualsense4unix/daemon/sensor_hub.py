@@ -87,6 +87,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from hefesto_dualsense4unix.core.roteador_de_movimento import orientar
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -131,6 +132,7 @@ class SensorHub:
         auto_manutencao: bool = True,
         ha_jogo: Callable[[], bool] | None = None,
         toque_proprio_do_jogo: Callable[[str], bool] | None = None,
+        familia_do_no: Callable[[Any], str | None] | None = None,
     ) -> None:
         """As fábricas e os descobridores são injetáveis para teste.
 
@@ -148,6 +150,8 @@ class SensorHub:
         self._descobrir_motion = descobrir_motion or self._descobrir_motion_real
         self._descobrir_touch = descobrir_touch or self._descobrir_touch_real
         self._descobrir_gamepad = descobrir_gamepad or self._descobrir_gamepad_real
+        self._familia_do_no = familia_do_no or self._familia_do_no_real
+        self._familias_lidas: dict[str, tuple[float, str | None]] = {}
 
         self._lock = threading.RLock()
         self._demanda: dict[str, float] = {}
@@ -164,6 +168,26 @@ class SensorHub:
         self._parar = threading.Event()
         self._thread: threading.Thread | None = None
         self._demanda_do_movimento: dict[str, float] = {}
+
+    def _familia_do_leitor(self, motion: Any) -> str | None:
+        familia = getattr(motion, "familia", None)
+        return familia() if callable(familia) else None
+
+    def familia_do_movimento(self, uniq: str, *, idade_aceita: float = 0.0) -> str | None:
+        """A família do nó de movimento de `uniq`, perguntada à descoberta; `None` sem nó.
+
+        `idade_aceita` é de quem pergunta dentro do `state_full`: a resposta de até tantos
+        segundos atrás serve, e o tique da tela não paga o sysfs a cada volta.
+        """
+        agora = self._relogio()
+        lembrada = self._familias_lidas.get(uniq)
+        if lembrada is not None and agora - lembrada[0] <= idade_aceita:
+            return lembrada[1]
+        nodes = self._chamar_descobridor(self._descobrir_motion)
+        node = self._no_do_endereco(nodes, uniq)
+        familia = None if node is None else self._familia_do_no(node)
+        self._familias_lidas[uniq] = (agora, familia)
+        return familia
 
     def velocidade_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
         """Velocidade angular de `uniq` AGORA, em graus/s; `None` sem reader.
@@ -190,12 +214,15 @@ class SensorHub:
             return None
         try:
             giro = motion.snapshot()
-            return (float(giro.x), float(giro.y), float(giro.z))
+            cru = (float(giro.x), float(giro.y), float(giro.z))
+            return orientar(self._familia_do_leitor(motion), cru) or cru
         except Exception:
             return None
 
-    def angulo_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
-        """Ângulo percorrido por `uniq` desde a última chamada — **DRENA**.
+    def angulo_do_movimento(
+        self, uniq: str
+    ) -> tuple[tuple[float, float, float], float] | None:
+        """Ângulo percorrido por `uniq` desde a última chamada e os segundos dele — **DRENA**.
 
         TEM UM DONO SÓ, e ele está escrito para ninguém acrescentar o segundo:
         o roteador de movimento, no tique do jogo. Um segundo chamador
@@ -214,8 +241,9 @@ class SensorHub:
         if motion is None:
             return None
         try:
-            x, y, z = motion.consume_angulo()
-            return (float(x), float(y), float(z))
+            (x, y, z), segundos = motion.consume_angulo()
+            angulo = orientar(self._familia_do_leitor(motion), (float(x), float(y), float(z)))
+            return None if angulo is None else (angulo, float(segundos))
         except Exception:
             return None
 
@@ -651,7 +679,7 @@ class SensorHub:
         with self._lock:
             if uniq in self._mapa(tipo):
                 return True
-        node = nodes.get(uniq)
+        node = self._no_do_endereco(nodes, uniq)
         if node is None:
             return False
         try:
@@ -676,6 +704,17 @@ class SensorHub:
 
 
     @staticmethod
+    def _no_do_endereco(nodes: dict[str, Any], uniq: str) -> Any:
+        """O nó da peça: a descoberta devolve o endereço normalizado, e quem pede, o seu."""
+        from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+
+        node = nodes.get(uniq)
+        if node is not None:
+            return node
+        chave = chave_de_sensor(uniq)
+        return next((no for dono, no in nodes.items() if chave_de_sensor(dono) == chave), None)
+
+    @staticmethod
     def _motion_reader_real(uniq: str, node: Any) -> Any:
         from hefesto_dualsense4unix.core.evdev_reader import MotionSensorReader
 
@@ -698,11 +737,15 @@ class SensorHub:
 
     @staticmethod
     def _descobrir_motion_real() -> dict[str, Any]:
-        from hefesto_dualsense4unix.core.evdev_reader import (
-            discover_dualsense_motion_evdevs,
-        )
+        from hefesto_dualsense4unix.core.evdev_reader import discover_motion_evdevs
 
-        return dict(discover_dualsense_motion_evdevs())
+        return dict(discover_motion_evdevs())
+
+    @staticmethod
+    def _familia_do_no_real(node: Any) -> str | None:
+        from hefesto_dualsense4unix.core.evdev_reader import familia_do_no_de_movimento
+
+        return familia_do_no_de_movimento(node)
 
     @staticmethod
     def _descobrir_touch_real() -> dict[str, Any]:
@@ -734,7 +777,8 @@ class SensorHub:
             return None
         try:
             acel = motion.accel_snapshot()
-            return (float(acel.x), float(acel.y), float(acel.z))
+            cru = (float(acel.x), float(acel.y), float(acel.z))
+            return orientar(self._familia_do_leitor(motion), cru) or cru
         except Exception:
             return None
 

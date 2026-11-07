@@ -42,7 +42,6 @@ from tests.unit.test_no_modo_xbox_o_toque_e_o_acelerometro import (
     _EC,
     _AbsInfo,
     _hub,
-    _inclinado,
     _NoGravado,
 )
 
@@ -76,11 +75,15 @@ def _registro_limpo() -> Iterator[None]:
     REGISTRO.limpar()
 
 
+_A_DIREITA = (0.0, -180.0, 0.0)
+_PARADO = (0.0, 0.0, 0.0)
+
+
 class _NaMao:
     """O leitor de movimento de um controle SEGURO: o giro treme como a mão.
 
     Com a regra do controle parado (D-2909-O-CONTROLE-PARADO-NAO-INCLINA) na
-    árvore, um giro em zero seria a mesa, e a régua mediria o neutro, não o anel.
+    árvore, um giro em zero seria a mesa, e a régua mediria o centro, não o anel.
     """
 
     def __init__(self, acel: tuple[float, float, float] = _DEITADO,
@@ -101,8 +104,9 @@ class _NaMao:
         self._lado = -self._lado
         return SimpleNamespace(x=self._lado, y=0.5 * self._lado, z=0.0)
 
-    def consume_angulo(self) -> tuple[float, float, float]:
-        return (0.0, 0.0, 0.0)
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
+        giro = self.snapshot()
+        return (giro.x * 0.01, giro.y * 0.01, giro.z * 0.01), 0.01
 
     def accel_snapshot(self) -> Any:
         return SimpleNamespace(x=self.acel[0], y=self.acel[1], z=self.acel[2])
@@ -152,7 +156,7 @@ def _o_p1(servidor: IpcServer) -> dict[str, Any]:
     return p1
 
 
-def test_1_o_p1_inclina_e_o_state_full_diz_o_que_o_no_recebeu(
+def test_1_o_p1_gira_e_o_state_full_diz_o_que_o_no_recebeu(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
 ) -> None:
     """MORDIDAS: o `_merge_no_jogo` copiar o `inputs` → `lx == 128` e reprova no `==`;
@@ -160,7 +164,7 @@ def test_1_o_p1_inclina_e_o_state_full_diz_o_que_o_no_recebeu(
     movimento = _NaMao(_DEITADO)
     hub = _hub({_P1: movimento}, {})  # type: ignore[dict-item]
     daemon, servidor = _mesa(
-        tmp_path, hub, ProfileMovimentoConfig(acelerometro="analogico_esquerdo"), monkeypatch)
+        tmp_path, hub, ProfileMovimentoConfig(destino="analogico_esquerdo"), monkeypatch)
     pad = make_virtual_pad("dualsense", identity=_P1, caminho=CAMINHO_XBOX)
     assert pad is not None
     no = pad._device  # type: ignore[attr-defined]
@@ -168,11 +172,11 @@ def test_1_o_p1_inclina_e_o_state_full_diz_o_que_o_no_recebeu(
     daemon._gamepad_device = pad
     try:
         _tiques(daemon, hub)
-        movimento.acel = _inclinado(0.0, 25.0)
+        movimento.giro = _A_DIREITA
         gp.dispatch_gamepad(daemon, _estado(), frozenset())
         p1 = _o_p1(servidor)
         no_x = no.ultimo(_EC.EV_ABS, _EC.ABS_X)
-        assert no_x is not None and no_x > 128, f"premissa: a inclinação não chegou ao nó ({no_x})"
+        assert no_x is not None and no_x > 128, f"premissa: o giro não chegou ao nó ({no_x})"
         assert p1["inputs"]["lx"] == 128, p1["inputs"]
         assert p1["no_jogo"] is not None, "o state_full não disse o que o jogo recebe"
         assert p1["no_jogo"]["lx"] == no_x, (p1["no_jogo"], no_x)
@@ -240,20 +244,20 @@ def test_2_o_uhid_diz_o_byte_do_report(
     movimento = _NaMao(_DEITADO)
     hub = _hub({_P1: movimento}, {})  # type: ignore[dict-item]
     daemon, servidor = _mesa(
-        tmp_path, hub, ProfileMovimentoConfig(acelerometro="analogico_esquerdo"), monkeypatch)
+        tmp_path, hub, ProfileMovimentoConfig(destino="analogico_esquerdo"), monkeypatch)
     daemon._gamepad_device = pad
     _tiques(daemon, hub)
-    movimento.acel = _inclinado(0.0, 25.0)
+    movimento.giro = _A_DIREITA
     gp.dispatch_gamepad(daemon, _estado(), frozenset())
     assert reports, "premissa: o uhid não emitiu report"
     lx_do_report = reports[-1][_BYTE_DO_LX]
-    assert lx_do_report > 128, f"premissa: a inclinação não chegou ao report ({lx_do_report})"
+    assert lx_do_report > 128, f"premissa: o giro não chegou ao report ({lx_do_report})"
     p1 = _o_p1(servidor)
     assert p1["no_jogo"]["lx"] == lx_do_report, (p1["no_jogo"], lx_do_report)
     assert p1["inputs"]["lx"] == 128
 
 
-def _o_coop(monkeypatch: pytest.MonkeyPatch, acel: dict[str, tuple[float, float, float]],
+def _o_coop(monkeypatch: pytest.MonkeyPatch, giro: dict[str, tuple[float, float, float]],
             cedidos: frozenset[str] = frozenset()) -> tuple[IpcServer, dict[str, Any]]:
     """O `forward_all` de verdade com PADS de verdade (uinput sobre o evdev que grava)."""
     from hefesto_dualsense4unix.daemon.subsystems import coop as co
@@ -266,22 +270,24 @@ def _o_coop(monkeypatch: pytest.MonkeyPatch, acel: dict[str, tuple[float, float,
             return SimpleNamespace(buttons_pressed=frozenset(), l2_raw=0, r2_raw=0,
                                    lx=128, ly=128, rx=128, ry=128)
 
-    class _HubDaInclinacao:
+    class _HubDoGiro:
         def aceleracao_do_movimento(self, uniq: str) -> Any:
-            return acel[uniq]
+            return _DEITADO
+
+        def velocidade_do_movimento(self, uniq: str) -> Any:
+            return giro[uniq]
+
+        def angulo_do_movimento(self, uniq: str) -> Any:
+            x, y, z = giro[uniq]
+            return (x * 0.01, y * 0.01, z * 0.01), 0.01
 
     monkeypatch.setattr(
         REGISTRO, "estado",
-        lambda uniq: SimpleNamespace(giroscopio=True, acelerometro=uniq != _P3),
-    )
-    neutros: dict[str, Any] = {}
-    monkeypatch.setattr(
-        rot, "neutro_da_inclinacao",
-        lambda dono, uniq, a, agora, **_: neutros.setdefault(uniq, _DEITADO),
+        lambda uniq: SimpleNamespace(giroscopio=uniq != _P3, acelerometro=True),
     )
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
-    rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(acelerometro="analogico_esquerdo")))
-    hub = _HubDaInclinacao()
+    rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(destino="analogico_esquerdo")))
+    hub = _HubDoGiro()
     daemon = SimpleNamespace(
         _ipc_server=SimpleNamespace(_garantir_sensor_hub=lambda: hub), store=store,
         _mouse_device=None, _gamepad_device=None,
@@ -321,7 +327,7 @@ def test_3_os_jogadores_2_a_4_cada_um_o_seu(
 ) -> None:
     """MORDIDA: publicar o pad do primário (ou um só) em toda entrada → reprova no P3 e no P4."""
     servidor, pads = _o_coop(
-        monkeypatch, {_P2: _inclinado(0.0, 25.0), _P3: _inclinado(0.0, 25.0), _P4: _DEITADO})
+        monkeypatch, {_P2: _A_DIREITA, _P3: _A_DIREITA, _P4: _PARADO})
     try:
         entradas = _entradas()
         servidor._merge_no_jogo(entradas)
@@ -329,9 +335,9 @@ def test_3_os_jogadores_2_a_4_cada_um_o_seu(
         for uniq, pad in pads.items():
             no_x = pad._device.ultimo(_EC.EV_ABS, _EC.ABS_X)
             assert lido[uniq] is not None and lido[uniq]["lx"] == no_x, (uniq, lido[uniq], no_x)
-        assert lido[_P2]["lx"] > 128, "o P2 inclinou e o jogo não recebeu"
-        assert lido[_P3]["lx"] == 128, "o P3 tem o acelerômetro desligado e andou"
-        assert lido[_P4]["lx"] == 128, "o P4 estava deitado e andou"
+        assert lido[_P2]["lx"] > 128, "o P2 girou e o jogo não recebeu"
+        assert lido[_P3]["lx"] == 128, "o P3 tem o giroscópio desligado e andou"
+        assert lido[_P4]["lx"] == 128, "o P4 estava parado e andou"
     finally:
         for pad in pads.values():
             pad.stop()
@@ -346,7 +352,7 @@ def test_5_quem_nao_tem_pad_diz_none(
     tirar o `_fd is None` do uhid devolve o `_AXES_NEUTRAL` do pad parado.
     """
     servidor, pads = _o_coop(
-        monkeypatch, {_P2: _inclinado(0.0, 25.0), _P3: _DEITADO, _P4: _DEITADO},
+        monkeypatch, {_P2: _A_DIREITA, _P3: _PARADO, _P4: _PARADO},
         cedidos=frozenset({_P2}))
     try:
         servidor.daemon._coop_manager._players[_P4].vpad = None
@@ -406,41 +412,37 @@ def _anel(a02: Any, monkeypatch: pytest.MonkeyPatch, mira: dict[str, Any],
     return {campo: card[campo] for campo in campos}
 
 
-def test_6_a_inclinacao_no_esquerdo_acende_o_esquerdo(a02: Any, monkeypatch: pytest.MonkeyPatch,
-                                                      ) -> None:
+def test_6_a_mira_no_esquerdo_acende_o_esquerdo(a02: Any, monkeypatch: pytest.MonkeyPatch,
+                                                ) -> None:
     """MORDIDAS: `posicoes_do_jogo` ler o `inputs` → o anel cai na mão (50.2) e reprova;
     acender sempre que há `no_jogo` → o `ana-d-jogo` acende e reprova."""
-    anel = _anel(a02, monkeypatch, {"ligada": False, "destino": "nenhum",
-                                    "inclinacao": "analogico_esquerdo"})
+    anel = _anel(a02, monkeypatch, {"ligada": True, "destino": "analogico_esquerdo"})
     assert anel["pos-ana-e-jogo"] == f"{round(200 / 255 * 100, 1)},{round(128 / 255 * 100, 1)}"
     assert anel["ana-e-jogo"] == "sim"
     assert anel["ana-d-jogo"] == "" and anel["pos-ana-d-jogo"] == ""
 
 
 def test_6_a_mira_no_direito_acende_o_direito(a02: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    anel = _anel(a02, monkeypatch, {"ligada": True, "destino": "analogico_direito",
-                                    "inclinacao": "nenhum"})
+    anel = _anel(a02, monkeypatch, {"ligada": True, "destino": "analogico_direito"})
     assert anel["pos-ana-d-jogo"] == f"{round(64 / 255 * 100, 1)},{round(128 / 255 * 100, 1)}"
     assert anel["ana-d-jogo"] == "sim" and anel["ana-e-jogo"] == ""
 
 
 def test_6_a_mira_no_cursor_nao_acende(a02: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: acender pelo `mira.ligada` sem olhar o destino → o «mouse» acende e reprova."""
-    anel = _anel(a02, monkeypatch, {"ligada": True, "destino": "mouse",
-                                    "inclinacao": "nenhum"})
+    anel = _anel(a02, monkeypatch, {"ligada": True, "destino": "mouse"})
     assert anel["ana-e-jogo"] == "" and anel["ana-d-jogo"] == "", anel
 
 
 def test_6_a_mira_desligada_com_destino_nao_acende(a02: Any,
                                                     monkeypatch: pytest.MonkeyPatch) -> None:
-    anel = _anel(a02, monkeypatch, {"ligada": False, "destino": "analogico_direito",
-                                    "inclinacao": "nenhum"})
+    anel = _anel(a02, monkeypatch, {"ligada": False, "destino": "analogico_direito"})
     assert anel["ana-d-jogo"] == "", anel
 
 
 @pytest.mark.parametrize("caso", ["nativo", "navegacao", "sem_no_jogo"])
 def test_6_sem_pad_nada_acende(a02: Any, monkeypatch: pytest.MonkeyPatch, caso: str) -> None:
-    mira = {"ligada": True, "destino": "analogico_direito", "inclinacao": "analogico_esquerdo"}
+    mira = {"ligada": True, "destino": "analogico_direito"}
     estado = {"nativo": {"native_mode": True},
               "navegacao": {"gamepad_emulation": {"enabled": False}, "connected": True},
               "sem_no_jogo": NO_GAMEPAD}[caso]
@@ -459,7 +461,7 @@ def test_6_sem_o_endereco_na_pagina_o_pacote_cala(a02: Any,
     ctx = pacotes.Contexto(state=NO_GAMEPAD, mesa=MESA, conectados=[{
         "uniq": UNIQ, "is_primary": True, "connected": True, "inputs": {},
         "no_jogo": {"lx": 200, "ly": 128, "rx": 128, "ry": 128},
-        "mira": {"inclinacao": "analogico_esquerdo"}}], estados={})
+        "mira": {"ligada": True, "destino": "analogico_esquerdo"}}], estados={})
     card = a02.pacote(ctx)["cards"][UNIQ]
     assert not ({*a02.CAMPOS_DO_JOGO.values(), *a02.ACENDE_O_JOGO.values()} & set(card))
 

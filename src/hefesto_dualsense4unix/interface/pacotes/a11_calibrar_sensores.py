@@ -114,6 +114,50 @@ def _a_pagina_tem_a_mira() -> bool:
     return _TEM_A_MIRA
 
 
+_OPCAO_PUBLICADA: list[str | None] = []
+
+
+def _opcao_da_pagina() -> str | None:
+    """O desenho novo que a página PUBLICADA traz, `a` ou `b`; `None` no desenho de antes."""
+    if not _OPCAO_PUBLICADA:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            doc = ""
+        if 'data-gesto="mira-sensibilidade-h"' not in doc:
+            _OPCAO_PUBLICADA.append(None)
+        else:
+            _OPCAO_PUBLICADA.append("b" if 'id="v-sinal"' in doc else "a")
+    return _OPCAO_PUBLICADA[0]
+
+
+def _campos_do_desenho_novo(b: dict[str, Any], entrada: dict[str, Any]) -> dict[str, Any]:
+    """Os dois eixos, o início do analógico, a velocidade e os dois passos."""
+    campos: dict[str, Any] = {}
+    for campo, chave in (("mira-sensibilidade-h", "sensibilidade_h"),
+                         ("mira-sensibilidade-v", "sensibilidade_v")):
+        valor = b.get(chave)
+        ha = isinstance(valor, int) and not isinstance(valor, bool)
+        if ha:
+            campos[campo] = str(valor)
+        campos[f"{campo}-num"] = str(valor) if ha else calibrar.SEM_LEITURA
+    piso, velocidade = b.get("piso"), b.get("velocidade_do_jogo")
+    if isinstance(piso, (int, float)) and not isinstance(piso, bool):
+        campos["mira-inicio"] = campos["mira-inicio-num"] = str(round(piso * 100))
+    if isinstance(velocidade, (int, float)) and not isinstance(velocidade, bool):
+        campos["mira-velocidade"] = campos["mira-velocidade-num"] = str(round(velocidade))
+    sinal = entrada.get("sinal")
+    estado = sinal.get("estado") if isinstance(sinal, dict) else None
+    campos["sinal-estado"] = (estado if estado in calibrar.ESTADOS_DO_SINAL
+                              else calibrar.SINAL_NAO_MEDIDO)
+    rampa = entrada.get("rampa")
+    subindo = isinstance(rampa, dict) and rampa.get("subindo") is True
+    campos["rampa-estado"] = calibrar.RAMPA_SUBINDO if subindo else calibrar.RAMPA_PARADA
+    return campos
+
+
 def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
     """A posição dos dois deslizantes e os dois números, pelo bloco `mira`.
 
@@ -144,6 +188,8 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
         valor = b.get(chave)
         campos[f"mira-inverter-{qual}"] = _selo_do_sensor(
             valor if isinstance(valor, bool) else None)
+    if _opcao_da_pagina() is not None:
+        campos.update(_campos_do_desenho_novo(b, entrada))
     return campos
 
 
@@ -263,6 +309,16 @@ def passos_da_fita(estados: list[str]) -> dict[str, str]:
             for estado in (calibrar.ZERO_PARADO, calibrar.ZERO_MEDINDO, calibrar.ZERO_PRONTO)}
 
 
+def _a_conta_ou_a_falha(mesa: list[dict[str, Any]], colunas: dict[str, dict[str, Any]]) -> str:
+    """A conta dos controles, ou quem mexeu na medida e o que fazer."""
+    mexeram = [f"P{item.get('jogador')}" for item in mesa
+               if colunas.get(str(item.get("pref") or ""), {}).get(CAMPO_DO_ZERO)
+               == calibrar.ZERO_MEXEU]
+    if mexeram:
+        return f"{', '.join(mexeram)}: {calibrar.O_QUE_FAZER_QUANDO_MEXEU}"
+    return str(calibrar.contagem(len(mesa)))
+
+
 @registrar(PAGINA)
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """O que o tique escreve nesta página: os cartões, as leituras e a conta.
@@ -291,12 +347,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     nomes = nomes_de_quem_joga()
     com_quem = [{**item, "quem": quem_joga_com_o_numero(
         nomes, str(item.get("uniq") or ""), item.get("jogador"))} for item in ctx.mesa]
-    blocos = {BLOCO_DOS_CONTROLES: calibrar.controles(com_quem)}
+    opcao = _opcao_da_pagina()
+    blocos = {BLOCO_DOS_CONTROLES: calibrar.controles(com_quem, opcao)}
     if tem_a_mira:
-        blocos[BLOCO_DAS_MIRAS] = calibrar.miras(com_quem)
+        blocos[BLOCO_DAS_MIRAS] = calibrar.miras(com_quem, opcao)
     return {
         "blocos": blocos,
-        "quantos": calibrar.contagem(len(ctx.mesa)),
+        "quantos": _a_conta_ou_a_falha(com_quem, colunas),
         **passos_da_fita([colunas[p][CAMPO_DO_ZERO] for p in colunas]),
         "colunas": colunas,
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 1
@@ -343,6 +400,49 @@ def mira_sensibilidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     n = _numero_do_deslizante(o, "mira-sensibilidade", calibrar.SENSIBILIDADE)
     if n is not None:
         _pedir_a_mira(p, uniq, sensibilidade=n)
+
+
+def _o_eixo(o: dict[str, Any], p: Any, nome: str, campo: str) -> None:
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError(f"{nome}: o clique não disse em qual controle")
+    n = _numero_do_deslizante(o, nome, calibrar.EIXO_DA_MIRA)
+    if n is not None:
+        _pedir_a_mira(p, uniq, **{campo: n})
+
+
+@gesto(PAGINA, "mira-sensibilidade-h", grava="mira_set_detalhado")
+def mira_sensibilidade_h(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Horizontal» — a sensibilidade do eixo horizontal DESTE controle; 0 desliga o eixo."""
+    _o_eixo(o, p, "mira-sensibilidade-h", "sensibilidade_h")
+
+
+@gesto(PAGINA, "mira-sensibilidade-v", grava="mira_set_detalhado")
+def mira_sensibilidade_v(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Vertical» — a sensibilidade do eixo vertical DESTE controle; 0 desliga o eixo."""
+    _o_eixo(o, p, "mira-sensibilidade-v", "sensibilidade_v")
+
+
+@gesto(PAGINA, "mira-inicio", grava="mira_set_detalhado")
+def mira_inicio(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Início do analógico» — o `piso` DESTE controle, em porcentos na tela."""
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira-inicio: o clique não disse em qual controle")
+    n = _numero_do_deslizante(o, "mira-inicio", calibrar.INICIO)
+    if n is not None:
+        _pedir_a_mira(p, uniq, piso=n / 100)
+
+
+@gesto(PAGINA, "mira-velocidade", grava="mira_set_detalhado")
+def mira_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Velocidade do jogo» — a câmera do jogo com o analógico no fim, DESTE controle."""
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira-velocidade: o clique não disse em qual controle")
+    n = _numero_do_deslizante(o, "mira-velocidade", calibrar.VELOCIDADE)
+    if n is not None:
+        _pedir_a_mira(p, uniq, velocidade_do_jogo=float(n))
 
 
 @gesto(PAGINA, "mira-tremor", grava="mira_set_detalhado")
@@ -409,3 +509,32 @@ def calibrar_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         if not isinstance(resposta, dict) or resposta.get("status") != calibrar.ZERO_MEDINDO:
             raise RuntimeError(
                 "a medida não começou: ou o Hefesto parou, ou este controle se desligou")
+
+
+@gesto(PAGINA, "calibrar-sinal")
+def calibrar_sinal(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O passo do sinal: confere o gesto guiado DESTE controle, sem gravar nada."""
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("calibrar-sinal: o clique não disse em qual controle")
+    resposta = p.resultado("motion.sinal", uniq=uniq)
+    if not isinstance(resposta, dict) or resposta.get("status") != calibrar.ZERO_MEDINDO:
+        raise RuntimeError(
+            "a medida não começou: ou o Hefesto parou, ou este controle se desligou")
+
+
+@gesto(PAGINA, "calibrar-rampa", grava="motion.rampa")
+def calibrar_rampa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O passo do início do analógico: começa a rampa ou diz que a câmera andou."""
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("calibrar-rampa: o clique não disse em qual controle")
+    pedido = str(o.get("pedido") or "")
+    resposta = p.resultado("motion.rampa", uniq=uniq, pedido=pedido)
+    status = resposta.get("status") if isinstance(resposta, dict) else None
+    frase = calibrar.RECUSAS_DA_RAMPA.get(str(status))
+    if frase:
+        raise RuntimeError(frase)
+    if status not in ("subindo", "parada", "ok"):
+        raise RuntimeError(
+            "a rampa não respondeu: ou o Hefesto parou, ou este controle se desligou")

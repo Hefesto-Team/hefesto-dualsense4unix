@@ -57,7 +57,10 @@ class _HubQuieto:
         return (0.0, 0.0, 0.0)
 
     def angulo_do_movimento(self, uniq: str) -> Any:
-        return (0.0, 0.0, 0.0)
+        return (0.0, 0.0, 0.0), 0.01
+
+    def aceleracao_do_movimento(self, uniq: str) -> Any:
+        return (0.0, 1.0, 0.0)
 
 
 def _daemon(pad: Any, arranjo: Any) -> SimpleNamespace:

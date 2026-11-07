@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Annotated, Any, Literal, NamedTuple
+from typing import Annotated, Any, Final, Literal, NamedTuple
 
 from pydantic import (
     BaseModel,
@@ -404,6 +405,29 @@ class RumbleConfig(BaseModel):
         return self
 
 
+CAMPOS_DA_MIRA_ANTIGA: Final[frozenset[str]] = frozenset(
+    {"sensibilidade", "eixo_horizontal", "teto_graus_s", "acelerometro"}
+)
+TETO_DA_MIRA_ANTIGA: Final = 220.0
+SENSIBILIDADE_ANTIGA_PADRAO: Final = 6
+SENSIBILIDADE_NOVA_PADRAO: Final = 4
+
+
+def sensibilidade_da_mira_nova(antiga: int) -> int:
+    """A sensibilidade de 1 a 12 na escala de 0 a 10: o padrão velho é o padrão novo."""
+    if antiga == SENSIBILIDADE_ANTIGA_PADRAO:
+        return SENSIBILIDADE_NOVA_PADRAO
+    return max(1, min(10, round(antiga * 10 / 12)))
+
+
+def sensibilidade_da_mira_antiga(horizontal: int, vertical: int) -> int:
+    """O caminho de volta, para quem ainda fala 1 a 12: o maior dos dois eixos."""
+    nova = max(horizontal, vertical)
+    if nova == SENSIBILIDADE_NOVA_PADRAO:
+        return SENSIBILIDADE_ANTIGA_PADRAO
+    return max(1, round(nova * 12 / 10))
+
+
 class ProfileMovimentoConfig(BaseModel):
     """A mira por MOVIMENTO por perfil — MOVIMENTO-EM-QUALQUER-MASCARA-01.
 
@@ -432,29 +456,53 @@ class ProfileMovimentoConfig(BaseModel):
     destino: Literal["nenhum", "analogico_direito", "analogico_esquerdo", "mouse"] = (
         "nenhum"
     )
-    sensibilidade: int = Field(default=6, ge=1, le=12)
-    eixo_horizontal: Literal["yaw", "roll"] = "yaw"
+    sensibilidade_h: int = Field(default=4, ge=0, le=10)
+    sensibilidade_v: int = Field(default=4, ge=0, le=10)
     inverter_horizontal: bool = False
     inverter_vertical: bool = False
     zona_morta_graus_s: float = Field(default=3.0, ge=0.0, le=60.0)
-    teto_graus_s: float = Field(default=220.0, gt=0.0, le=2000.0)
+    velocidade_do_jogo: float = Field(default=180.0, gt=0.0, le=2000.0)
+    piso: float = Field(default=0.27, ge=0.0, le=1.0)
     pixels_por_grau: float = Field(default=12.0, gt=0.0, le=200.0)
     gatilho: str | None = None
     toque: Literal["nenhum", "cursor", "zonas"] = "nenhum"
-    acelerometro: Literal["nenhum", "analogico_esquerdo", "analogico_direito"] = (
-        "nenhum"
-    )
     mesmo_parado: bool = False
     lado: Literal["analogico_esquerdo", "analogico_direito"] = "analogico_direito"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _a_secao_antiga_vira_a_da_mira_nova(cls, dados: Any) -> Any:
+        """Lê a forma de antes de 06/11, sem ligar nem desligar nada; a seção nova passa intacta.
+
+        A forma antiga se reconhece pelos campos que saíram, e a migração não os devolve: ler de
+        novo não muda nada, e um `inverter_*` da forma nova nunca é tocado.
+        """
+        if not isinstance(dados, Mapping):
+            return dados
+        if not CAMPOS_DA_MIRA_ANTIGA & set(dados):
+            return dados
+        novos = {k: v for k, v in dados.items() if k not in CAMPOS_DA_MIRA_ANTIGA}
+        if isinstance(dados.get("sensibilidade"), int):
+            sens = sensibilidade_da_mira_nova(dados["sensibilidade"])
+            novos.setdefault("sensibilidade_h", sens)
+            novos.setdefault("sensibilidade_v", sens)
+        teto = dados.get("teto_graus_s", TETO_DA_MIRA_ANTIGA)
+        if teto != TETO_DA_MIRA_ANTIGA:
+            novos.setdefault("velocidade_do_jogo", teto)
+        for inverter in ("inverter_horizontal", "inverter_vertical"):
+            if novos.get(inverter) is True:
+                novos[inverter] = False
+        return novos
+
     @model_serializer(mode="wrap")
-    def _o_toque_e_a_inclinacao_sem_opiniao_nao_vao_ao_disco(
+    def _o_que_nao_foi_escrito_nao_vai_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Os campos de 28/09, o de 29/09 e o de 08/10 só vão ao arquivo quando escritos."""
+        """Sem escrita, o campo herda: só o que a peça escolheu vai ao arquivo."""
         dados = handler(self)
         if isinstance(dados, dict):
-            for novo in ("toque", "acelerometro", "mesmo_parado", "lado"):
+            for novo in ("sensibilidade_h", "sensibilidade_v", "velocidade_do_jogo", "piso",
+                         "toque", "mesmo_parado", "lado"):
                 if novo not in self.model_fields_set:
                     dados.pop(novo, None)
         return dados
@@ -464,16 +512,6 @@ class ProfileMovimentoConfig(BaseModel):
     def _o_cursor_fora_da_navegacao_e_o_analogico_direito(cls, value: str) -> str:
         """O destino «mouse» é o analógico direito — A-MIRA-NA-NAVEGACAO-02."""
         return "analogico_direito" if value == "mouse" else value
-
-    @model_validator(mode="after")
-    def _o_teto_fica_acima_da_zona_morta(self) -> ProfileMovimentoConfig:
-        """Teto abaixo da zona morta é arranjo que nunca move nada."""
-        if self.teto_graus_s <= self.zona_morta_graus_s:
-            raise ValueError(
-                f"teto_graus_s ({self.teto_graus_s}) tem de ser maior que "
-                f"zona_morta_graus_s ({self.zona_morta_graus_s})"
-            )
-        return self
 
     @field_validator("gatilho")
     @classmethod
@@ -2994,15 +3032,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "para experimentar sem perder a calibração. A seção só existe por gesto "
         "do usuário; ver `Profile.movimento`.",
     ),
-    "ProfileMovimentoConfig.sensibilidade": Nascimento(
+    "ProfileMovimentoConfig.sensibilidade_h": Nascimento(
         E_CONTRATO,
-        "Parâmetro do arranjo, não a feature. O `ge=1` garante que nenhum "
-        "nascimento seja mudo — a faixa 1-12 é a do cursor.",
+        "Parâmetro do arranjo, não a feature: nasce em 4, o padrão do PRAGMATA, e o "
+        "`nenhum` do `destino` é quem desliga. O 0 é o eixo que o usuário apagou.",
     ),
-    "ProfileMovimentoConfig.eixo_horizontal": Nascimento(
-        E_CONTRATO,
-        "Parâmetro: `yaw` é girar o controle como quem mira; `roll` é incliná-lo "
-        "como volante. Os dois movem — nenhum é o silêncio.",
+    "ProfileMovimentoConfig.sensibilidade_v": Nascimento(
+        E_CONTRATO, "Ver `ProfileMovimentoConfig.sensibilidade_h`."
     ),
     "ProfileMovimentoConfig.inverter_horizontal": Nascimento(
         E_CONTRATO,
@@ -3017,10 +3053,15 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "Parâmetro: 3°/s é a deriva do giro parado. Zero seria a mira andando "
         "sozinha com o controle na mesa.",
     ),
-    "ProfileMovimentoConfig.teto_graus_s": Nascimento(
+    "ProfileMovimentoConfig.velocidade_do_jogo": Nascimento(
         E_CONTRATO,
-        "Parâmetro: os graus/s que valem deflexão cheia. O `gt=0` e a trava "
-        "acima da zona morta impedem um teto que nunca mova nada.",
+        "Parâmetro: a velocidade de câmera que o analógico cheio dá no jogo. O `gt=0` "
+        "impede a conta sem chão; é ponto de partida, e o jogo tem o seu.",
+    ),
+    "ProfileMovimentoConfig.piso": Nascimento(
+        E_CONTRATO,
+        "Parâmetro: a fração do curso em que o jogo começa a ler o analógico. Zero é "
+        "válido num jogo sem zona morta; a mira segue andando.",
     ),
     "ProfileMovimentoConfig.pixels_por_grau": Nascimento(
         E_CONTRATO, "Parâmetro do cursor (a Navegação) só; o `gt=0` impede o mudo."
@@ -3037,16 +3078,11 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "(TOUCHPAD-DO-SISTEMA-01). Nascer em `zonas` tiraria o ponteiro do usuário; "
         "em `cursor`, trocaria o dono do cursor sem pedido.",
     ),
-    "ProfileMovimentoConfig.acelerometro": Nascimento(
-        E_CONTRATO,
-        "`nenhum` = a inclinação não move analógico nenhum. Ligada sem o gesto "
-        "do usuário, o personagem andaria sozinho com o controle torto na mão.",
-    ),
     "ProfileMovimentoConfig.mesmo_parado": Nascimento(
         E_CONTRATO,
-        "`False` = a inclinação pausa com o controle largado na mesa "
-        "(D-2909-O-CONTROLE-PARADO-NAO-INCLINA). Nascer ligado faria o analógico "
-        "seguir o controle torto parado, o defeito que a pausa cura.",
+        "`False` = a mira pausa com o controle largado na mesa "
+        "(D-2909-O-CONTROLE-PARADO-NAO-INCLINA). Nascer ligado faria um esbarrão "
+        "virar arranque do analógico e roubar a vez de quem joga.",
     ),
     "ProfileMovimentoConfig.lado": Nascimento(
         E_CONTRATO,

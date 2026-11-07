@@ -111,7 +111,7 @@ def test_disco_sem_escrita_devolve_o_zero_anterior_intacto(
     casa = _casa_sem_escrita(tmp_path)
     try:
         servidor = _servidor(casa, tmp_path, monkeypatch)
-        anterior = rot.ZeroDoControle(giro=_ANTES, gravidade=_GRAVIDADE)
+        anterior = rot.ZeroDoControle(giro=_ANTES)
         rot.definir_o_zero(servidor.store, _P1, anterior)
         zero = _medir(servidor, _P1)
         assert zero["estado"] == "parado", zero
@@ -127,7 +127,7 @@ def test_o_zero_de_um_controle_nao_mexe_no_do_outro_quando_o_disco_falha(
     casa = _casa_sem_escrita(tmp_path)
     try:
         servidor = _servidor(casa, tmp_path, monkeypatch)
-        do_p2 = rot.ZeroDoControle(giro=_ANTES, gravidade=_GRAVIDADE)
+        do_p2 = rot.ZeroDoControle(giro=_ANTES)
         rot.definir_o_zero(servidor.store, _P2, do_p2)
         _medir(servidor, _P1)
         assert rot.zero_de(servidor.store, _P2) is do_p2

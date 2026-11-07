@@ -102,11 +102,14 @@ class _LeitorQueGira:
     def snapshot(self) -> Any:
         return SimpleNamespace(x=self._giro[0], y=self._giro[1], z=self._giro[2])
 
-    def consume_angulo(self) -> tuple[float, float, float]:
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
         self.drenagens += 1
         dt = self._relogio() - self._desde
         self._desde = self._relogio()
-        return (self._giro[0] * dt, self._giro[1] * dt, self._giro[2] * dt)
+        return (self._giro[0] * dt, self._giro[1] * dt, self._giro[2] * dt), dt
+
+    def accel_snapshot(self) -> Any:
+        return SimpleNamespace(x=0.0, y=1.0, z=0.0)
 
 
 class _LeitorDeEntradas:
@@ -199,7 +202,7 @@ class _RegistroDeIdentidade:
 
 def _navegacao(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str,
-    *, perfil: Profile | None = None, giro: tuple[float, float, float] = (0.0, _GIRO_S, 0.0),
+    *, perfil: Profile | None = None, giro: tuple[float, float, float] = (0.0, -_GIRO_S, 0.0),
 ) -> SimpleNamespace:
     """O `Daemon` e o `IpcServer` do produto, na Navegação: sem controle"""
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -316,7 +319,7 @@ def test_a_sensibilidade_e_o_inverter_valem_no_cursor(
 ) -> None:
     """Sensibilidade 12 dobra o passo; «Inverter esquerda e direita» troca o"""
     nav = _navegacao(tmp_path, monkeypatch, "bt")
-    _mira_set(nav.servidor, uniq=_P[2], ligada=True, sensibilidade=12,
+    _mira_set(nav.servidor, uniq=_P[2], ligada=True, sensibilidade_h=8, sensibilidade_v=8,
               inverter_horizontal=True)
     assert _ate_andar(nav) == (-2 * _PX_POR_TIQUE, 0)
 

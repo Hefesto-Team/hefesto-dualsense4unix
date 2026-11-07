@@ -24,6 +24,8 @@ _DO_EXTERNO = ("declara o controle externo (a cor do plástico, a chave de modo,
                "aparelho")
 
 NAO_E_DO_APARELHO: dict[str, str] = {
+    "calibrar-sinal": "O passo do sentido só lê o giro da peça e diz o veredito: não grava "
+                      "estado nenhum, nem no aparelho, nem no perfil.",
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
     "padrao-da-aba": "devolve a aba ao desenho — é da tela",
     "vizinho-o-que-e": "abre a explicação de um vizinho de porta — é texto",
@@ -304,7 +306,7 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "modo-da-luz": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
     "custo-mic": ("audio.microfone.mudo",),
-    "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
+    "analogico-lado": ("movimento.giroscopio",),
     "touchpad": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
     "efeito-haptico": ("vibracao.haptics_vcm",),
@@ -321,6 +323,11 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mira-segurar": ("movimento.giroscopio",),
     "mira-inverter": ("movimento.giroscopio",),
     "calibrar-comecar": ("movimento.giroscopio",),
+    "calibrar-rampa": ("movimento.giroscopio",),
+    "mira-sensibilidade-h": ("movimento.giroscopio",),
+    "mira-sensibilidade-v": ("movimento.giroscopio",),
+    "mira-inicio": ("movimento.giroscopio",),
+    "mira-velocidade": ("movimento.giroscopio",),
     "intensidade-do-gatilho": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
 }
 
@@ -356,6 +363,11 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mira-tremor": ("movimento", "movimento"),
     "mira-segurar": ("movimento", "movimento"),
     "mira-inverter": ("movimento", "movimento"),
+    "calibrar-rampa": ("movimento", "movimento"),
+    "mira-sensibilidade-h": ("movimento", "movimento"),
+    "mira-sensibilidade-v": ("movimento", "movimento"),
+    "mira-inicio": ("movimento", "movimento"),
+    "mira-velocidade": ("movimento", "movimento"),
     "intensidade-do-gatilho": (None, "triggers"),
 }
 

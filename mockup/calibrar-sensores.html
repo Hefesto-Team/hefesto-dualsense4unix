@@ -178,6 +178,46 @@
     color:var(--fg)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
   [data-gesto]{min-height:24px}
+
+  .par{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .conferir{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .mira{gap:5px}
+  .mira .desl{row-gap:1px}
+  .miudo{height:24px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
+         border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);
+         padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .miudo:hover{border-color:var(--comment)}
+  .rampa{display:grid}
+  .sinal,.rampa .miudo{width:100%}
+  .sinal .e,.rampa .e{display:none}
+  .sinal[data-sinal="nao_medido"] .e-nao_medido,
+  .sinal[data-sinal="medindo"] .e-medindo,
+  .sinal[data-sinal="bateu"] .e-bateu,
+  .sinal[data-sinal="contrario"] .e-contrario,
+  .sinal[data-sinal="parado"] .e-parado{display:inline}
+  .sinal[data-sinal="bateu"]{border-color:var(--green);color:var(--green)}
+  .sinal[data-sinal="contrario"]{border-color:var(--purple);color:var(--purple)}
+  .rampa[data-rampa="parada"] .e-parada,
+  .rampa[data-rampa="subindo"] .e-subindo{display:block}
+  .painel{display:none;flex-direction:column;gap:9px;border-top:1px solid var(--border-sutil);
+          padding-top:9px;font-size:12px;color:var(--fg)}
+  .painel .miudo{height:30px}
+  #v-sinal:checked ~ .grade .leitura,
+  #v-inicio:checked ~ .grade .leitura{display:none}
+  #v-sinal:checked ~ .grade .painel-sinal,
+  #v-inicio:checked ~ .grade .painel-inicio{display:flex}
+  #v-sinal:checked ~ .rodape .fazer,
+  #v-inicio:checked ~ .rodape .fazer{display:none}
+  #v-sinal:checked ~ .passos .passo:nth-child(n),
+  #v-inicio:checked ~ .passos .passo:nth-child(n){
+    border-color:var(--border-sutil);background:var(--panel)}
+  #v-sinal:checked ~ .passos .passo:nth-child(n) .n,
+  #v-inicio:checked ~ .passos .passo:nth-child(n) .n{border-color:var(--border-forte)}
+  #v-sinal:checked ~ .passos .passo:nth-child(2),
+  #v-inicio:checked ~ .passos .passo:nth-child(3){
+    border-color:var(--purple);background:var(--sel-bg)}
+  #v-sinal:checked ~ .passos .passo:nth-child(2) .n,
+  #v-inicio:checked ~ .passos .passo:nth-child(3) .n{border-color:var(--purple)}
   :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
   body{padding:var(--recuo-do-corpo)}
   .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
@@ -894,17 +934,29 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="mira-cx" data-bloco="miras">
           <div class="mira" style="--plastico:#ae335a" data-controle="p1">
             <span class="quem" data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">1</span></span>
-              <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
+            <div class="par">
+              <label class="desl" data-dica="0 desliga este eixo"><span class="r">Horizontal</span><input class="trilho" type="range" min="0" max="10" step="1" value="4" data-gesto="mira-sensibilidade-h" data-campo="mira-sensibilidade-h" data-hef-alvo="valor" aria-label="Horizontal"><span class="n"><span data-campo="mira-sensibilidade-h-num">4</span></span></label>
+              <label class="desl" data-dica="0 desliga este eixo"><span class="r">Vertical</span><input class="trilho" type="range" min="0" max="10" step="1" value="4" data-gesto="mira-sensibilidade-v" data-campo="mira-sensibilidade-v" data-hef-alvo="valor" aria-label="Vertical"><span class="n"><span data-campo="mira-sensibilidade-v-num">4</span></span></label>
+            </div>
+              <label class="desl" data-dica="Onde a câmera do jogo começa a andar"><span class="r">Início do analógico</span><input class="trilho" type="range" min="0" max="100" step="1" value="27" data-gesto="mira-inicio" data-campo="mira-inicio" data-hef-alvo="valor" aria-label="Início do analógico"><span class="n"><span data-campo="mira-inicio-num">27</span> <span class="un">%</span></span></label>
+              <label class="desl" data-dica="A câmera do jogo com o analógico no fim"><span class="r">Velocidade do jogo</span><input class="trilho" type="range" min="30" max="720" step="10" value="180" data-gesto="mira-velocidade" data-campo="mira-velocidade" data-hef-alvo="valor" aria-label="Velocidade do jogo"><span class="n"><span data-campo="mira-velocidade-num">180</span> <span class="un">°/s</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
               <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
+            <div class="conferir"><button class="miudo sinal" data-gesto="calibrar-sinal" data-dica="Vire à esquerda e levante o nariz" data-campo="sinal-estado" data-hef-alvo="atributo" data-hef-atributo="data-sinal" data-sinal="nao_medido"><span class="e e-nao_medido">Testar sentido</span><span class="e e-medindo">Medindo…</span><span class="e e-bateu">Sentido certo</span><span class="e e-contrario">Ao contrário</span><span class="e e-parado">Não mexeu</span></button><span class="rampa" data-campo="rampa-estado" data-hef-alvo="atributo" data-hef-atributo="data-rampa" data-rampa="parada"><button class="miudo e e-parada" data-gesto="calibrar-rampa" data-pedido="comecar" data-dica="Com um jogo aberto, clique quando a câmera andar">Achar início</button><button class="miudo e e-subindo" data-gesto="calibrar-rampa" data-pedido="andou" data-dica="Com um jogo aberto, clique quando a câmera andar">Andou</button></span></div>
           </div>
           <div class="mira" style="--plastico:#7eb8d4" data-controle="p2">
             <span class="quem" data-campo="quem-joga" data-hef-alvo="html">P<span data-campo="jogador" data-hef-alvo="html">2</span></span>
-              <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
+            <div class="par">
+              <label class="desl" data-dica="0 desliga este eixo"><span class="r">Horizontal</span><input class="trilho" type="range" min="0" max="10" step="1" value="4" data-gesto="mira-sensibilidade-h" data-campo="mira-sensibilidade-h" data-hef-alvo="valor" aria-label="Horizontal"><span class="n"><span data-campo="mira-sensibilidade-h-num">4</span></span></label>
+              <label class="desl" data-dica="0 desliga este eixo"><span class="r">Vertical</span><input class="trilho" type="range" min="0" max="10" step="1" value="4" data-gesto="mira-sensibilidade-v" data-campo="mira-sensibilidade-v" data-hef-alvo="valor" aria-label="Vertical"><span class="n"><span data-campo="mira-sensibilidade-v-num">4</span></span></label>
+            </div>
+              <label class="desl" data-dica="Onde a câmera do jogo começa a andar"><span class="r">Início do analógico</span><input class="trilho" type="range" min="0" max="100" step="1" value="27" data-gesto="mira-inicio" data-campo="mira-inicio" data-hef-alvo="valor" aria-label="Início do analógico"><span class="n"><span data-campo="mira-inicio-num">27</span> <span class="un">%</span></span></label>
+              <label class="desl" data-dica="A câmera do jogo com o analógico no fim"><span class="r">Velocidade do jogo</span><input class="trilho" type="range" min="30" max="720" step="10" value="180" data-gesto="mira-velocidade" data-campo="mira-velocidade" data-hef-alvo="valor" aria-label="Velocidade do jogo"><span class="n"><span data-campo="mira-velocidade-num">180</span> <span class="un">°/s</span></span></label>
               <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
               <label class="desl"><span class="r">Só enquanto eu segurar</span><select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar" data-hef-alvo="valor" aria-label="Só enquanto eu segurar"><option value="sempre" selected>Sempre</option><option value="mesmo_parado">Mesmo parado</option><option value="cross">Cruz</option><option value="circle">Círculo</option><option value="square">Quadrado</option><option value="triangle">Triângulo</option><option value="l1">L1</option><option value="r1">R1</option><option value="l2">L2</option><option value="r2">R2</option><option value="l3">L3</option><option value="r3">R3</option><option value="dpad_up">D-pad cima</option><option value="dpad_down">D-pad baixo</option><option value="dpad_left">D-pad esquerda</option><option value="dpad_right">D-pad direita</option><option value="options">Options</option><option value="create">Share</option></select></label>
               <div class="desl"><span class="r">Inverter</span><span class="inverter"><button class="sw off" data-gesto="mira-inverter" data-inverter="lado" data-campo="mira-inverter-lado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter esquerda e direita"><span class="p"></span>Esquerda e direita</button><button class="sw off" data-gesto="mira-inverter" data-inverter="cima-baixo" data-campo="mira-inverter-cima-baixo" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" aria-label="Inverter cima e baixo"><span class="p"></span>Cima e baixo</button></span></div>
+            <div class="conferir"><button class="miudo sinal" data-gesto="calibrar-sinal" data-dica="Vire à esquerda e levante o nariz" data-campo="sinal-estado" data-hef-alvo="atributo" data-hef-atributo="data-sinal" data-sinal="nao_medido"><span class="e e-nao_medido">Testar sentido</span><span class="e e-medindo">Medindo…</span><span class="e e-bateu">Sentido certo</span><span class="e e-contrario">Ao contrário</span><span class="e e-parado">Não mexeu</span></button><span class="rampa" data-campo="rampa-estado" data-hef-alvo="atributo" data-hef-atributo="data-rampa" data-rampa="parada"><button class="miudo e e-parada" data-gesto="calibrar-rampa" data-pedido="comecar" data-dica="Com um jogo aberto, clique quando a câmera andar">Achar início</button><button class="miudo e e-subindo" data-gesto="calibrar-rampa" data-pedido="andou" data-dica="Com um jogo aberto, clique quando a câmera andar">Andou</button></span></div>
           </div>
     </div>
     </div>

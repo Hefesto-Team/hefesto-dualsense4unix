@@ -142,6 +142,8 @@ class IpcServer(IpcHandlersMixin):
             "perfil.cursor.set": self._handle_perfil_cursor_set,
             "sequencia.gravar": self._handle_sequencia_gravar,
             "sequencia.tocar": self._handle_sequencia_tocar,
+            "motion.sinal": self._handle_motion_sinal,
+            "motion.rampa": self._handle_motion_rampa,
         }
 
     async def start(self) -> None:

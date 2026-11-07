@@ -8,7 +8,7 @@ daemon, e um controle com viés de giro andava sozinho com a zona morta baixa.
 O contrato que esta régua mede:
 
 1. o roteador mede o zero com a MESMA régua do parado (a peça que mexe não guarda nada)
-   e desconta o viés antes da Mira e da inclinação; sem zero, o giro é o mesmo objeto;
+   e desconta o viés antes da Mira; sem zero, o giro é o mesmo objeto;
 2. o zero é por controle: o do P2 não muda o P1 nem o P3, e o mesmo endereço pelo cabo
    e pelo BT acha o mesmo zero;
 3. `motion.calibrate {uniq}` responde «medindo», e o `state_full` diz «pronto» ou «mexeu»;
@@ -34,13 +34,14 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+from tests.unit.apoio_do_giro import tique_de
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]
                        / "src" / "hefesto_dualsense4unix" / "interface"))
 
 _P1, _P2, _P3 = (f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3))
-_GRAVIDADE = (0.0, 0.0, 1.0)
+_GRAVIDADE = (0.0, 1.0, 0.0)
 _VIES = (0.6, -2.4, 1.1)
 
 
@@ -50,11 +51,10 @@ def _parado(n: int = 100, vies: tuple[float, float, float] = _VIES) -> list[Any]
             for i in range(n)]
 
 
-def test_a_peca_parada_guarda_o_vies_e_a_gravidade() -> None:
+def test_a_peca_parada_guarda_o_vies() -> None:
     zero = rot.medir_o_zero(_parado())
     assert zero is not None
     assert zero.giro == pytest.approx((0.65, -2.4, 1.05))
-    assert zero.gravidade == pytest.approx(_GRAVIDADE)
 
 
 def test_a_peca_que_mexe_nao_guarda_nada() -> None:
@@ -75,7 +75,6 @@ def test_a_peca_que_assenta_no_comeco_guarda_o_repouso_que_veio_depois() -> None
     zero = rot.medir_o_zero(amostras)
     assert zero is not None
     assert zero.giro == pytest.approx((0.65, -2.4, 1.05))
-    assert zero.gravidade == pytest.approx(_GRAVIDADE)
     assert rot.fracao_quieta(amostras) == pytest.approx(0.7)
 
 
@@ -99,13 +98,13 @@ def test_o_desconto_zera_o_vies_e_sem_zero_e_o_mesmo_giro() -> None:
     cru = (_VIES[0], _VIES[1], _VIES[2])
     assert rot.descontar_o_vies(dono, _P1, cru) is cru, "sem zero, o giro mudou"
     assert rot.descontar_o_vies(dono, _P1, None) is None
-    rot.definir_o_zero(dono, _P1, rot.ZeroDoControle(giro=_VIES, gravidade=_GRAVIDADE))
+    rot.definir_o_zero(dono, _P1, rot.ZeroDoControle(giro=_VIES))
     assert rot.descontar_o_vies(dono, _P1, cru) == pytest.approx((0.0, 0.0, 0.0))
 
 
 def test_o_zero_do_p2_nao_vale_para_o_p1_nem_o_p3() -> None:
     dono = SimpleNamespace()
-    rot.definir_o_zero(dono, _P2, rot.ZeroDoControle(giro=_VIES, gravidade=_GRAVIDADE))
+    rot.definir_o_zero(dono, _P2, rot.ZeroDoControle(giro=_VIES))
     assert rot.zero_de(dono, _P1) is None and rot.zero_de(dono, _P3) is None
     assert rot.descontar_o_vies(dono, _P3, _VIES) == _VIES
 
@@ -113,14 +112,14 @@ def test_o_zero_do_p2_nao_vale_para_o_p1_nem_o_p3() -> None:
 def test_o_cabo_e_o_bt_acham_o_mesmo_zero() -> None:
     """A chave é a de sensor: o endereço com ou sem dois-pontos, em qualquer caixa."""
     dono = SimpleNamespace()
-    rot.definir_o_zero(dono, _P2, rot.ZeroDoControle(giro=_VIES, gravidade=_GRAVIDADE))
+    rot.definir_o_zero(dono, _P2, rot.ZeroDoControle(giro=_VIES))
     for grafia in (_P2.upper(), _P2.replace(":", ""), _P2.replace(":", "").upper()):
         assert rot.zero_de(dono, grafia) is not None, grafia
 
 
 def test_o_arquivo_vai_e_volta_e_a_entrada_torta_fica_de_fora() -> None:
     dono = SimpleNamespace()
-    rot.definir_o_zero(dono, _P2, rot.ZeroDoControle(giro=_VIES, gravidade=_GRAVIDADE))
+    rot.definir_o_zero(dono, _P2, rot.ZeroDoControle(giro=_VIES))
     dados = json.loads(json.dumps(rot.zeros_para_gravar(dono)))
     dados["torto"] = {"giro": [1, 2], "gravidade": "x"}
     outro = SimpleNamespace()
@@ -141,8 +140,8 @@ class _Hub:
     def velocidade_do_movimento(self, u: str) -> tuple[float, float, float] | None:
         return self.giros.get(u)
 
-    def angulo_do_movimento(self, _u: str) -> tuple[float, float, float]:
-        return (0.0, 0.0, 0.0)
+    def angulo_do_movimento(self, u: str) -> tuple[tuple[float, float, float], float] | None:
+        return tique_de(self.giros.get(u))
 
 
 def test_o_motor_desconta_o_vies_so_de_quem_tem_zero(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -163,7 +162,7 @@ def test_o_motor_desconta_o_vies_so_de_quem_tem_zero(monkeypatch: pytest.MonkeyP
     rot.definir_ativo(store, arranjo)
     vies_forte = (0.0, 6.0, 0.0)
     hub = _Hub({_P1: vies_forte, _P2: vies_forte, _P3: vies_forte})
-    rot.definir_o_zero(store, _P2, rot.ZeroDoControle(giro=vies_forte, gravidade=_GRAVIDADE))
+    rot.definir_o_zero(store, _P2, rot.ZeroDoControle(giro=vies_forte))
     daemon = SimpleNamespace(_garantir_sensor_hub=lambda: hub, store=store, _mouse_device=None)
     saida = {u: gp.aplicar_o_movimento(daemon, arranjo, uniq=u, lx=128, ly=128, rx=128, ry=128,
                                        botoes=frozenset()) for u in (_P1, _P2, _P3)}

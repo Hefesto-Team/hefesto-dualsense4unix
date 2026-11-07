@@ -244,13 +244,17 @@ class TestPlayerPorControle:
              "haptica_pct": HAPTICA_PCT_PADRAO, "haptica_alcanca": True,
              "haptica_vale_pct": HAPTICA_PCT_PADRAO, "haptica_no_ar": False,
              "mira": {"ligada": False, "virtual": False, "lado": "analogico_direito",
-                      "destino": "nenhum", "toque": "nenhum", "inclinacao": "nenhum",
-                      "sensibilidade": 6, "zona_morta_graus_s": 3.0,
+                      "destino": "nenhum", "toque": "nenhum",
+                      "sensibilidade": 6, "sensibilidade_h": 4, "sensibilidade_v": 4,
+                      "zona_morta_graus_s": 3.0,
                       "gatilho": None, "inverter_horizontal": False,
                       "inverter_vertical": False,
-                      "inclinacao_parada": False, "mesmo_parado": False},
+                      "parada": False, "mesmo_parado": False,
+                      "piso": 0.27, "velocidade_do_jogo": 180.0},
              "acessibilidade": {"ativacao": False, "analogicos": False},  # (noqa-acento)
-             "no_jogo": None, "zero": {"estado": "parado", "guardado": False}},
+             "no_jogo": None, "zero": {"estado": "parado", "guardado": False},
+             "sinal": {"estado": "nao_medido"},
+             "rampa": {"subindo": False, "valor": None}},
         ]
 
     @pytest.mark.asyncio

@@ -2,7 +2,7 @@
 
 A sprint: A-CALIBRAR-GRAVA-O-ZERO-DESCONTA-EM-TODO-CAMINHO-E-CABE-A-940-PX-01.
 
-O defeito medido em 08/10/2026: a velocidade (o analógico) e a inclinação já descontavam o
+O defeito medido em 08/10/2026: a velocidade (o analógico) já descontava o
 zero que o «Começar» da Calibrar guarda, mas o ÂNGULO do Modo mouse (a integral do giro cru
 no leitor) passava sem desconto. O portão da velocidade já descontada esconde o defeito com
 o controle PARADO, e ele aparece EM MOVIMENTO: cada tique que passa o portão leva
@@ -35,7 +35,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.profiles.schema import ProfileMovimentoConfig
 
 _P1, _P2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
-_GRAVIDADE = (0.0, 0.0, 1.0)
+_GRAVIDADE = (0.0, 1.0, 0.0)
 _TIQUE_S = 1.0 / 60.0
 _GIRO_REAL = 30.0
 _VIES = (0.0, 1.5, 0.0)
@@ -64,6 +64,7 @@ class _Hub:
         self.vies = vies
         self.real: dict[str, float] = dict.fromkeys(vies, 0.0)
         self.acumulado: dict[str, list[float]] = {u: [0.0, 0.0, 0.0] for u in vies}
+        self.segundos: dict[str, float] = dict.fromkeys(vies, 0.0)
 
     def _cru(self, u: str) -> tuple[float, float, float]:
         v = self.vies[u]
@@ -73,6 +74,7 @@ class _Hub:
         for u in self.vies:
             for i, g in enumerate(self._cru(u)):
                 self.acumulado[u][i] += g * segundos
+            self.segundos[u] += segundos
 
     def aceleracao_do_movimento(self, _u: str) -> tuple[float, float, float]:
         return _GRAVIDADE
@@ -80,12 +82,16 @@ class _Hub:
     def velocidade_do_movimento(self, u: str) -> tuple[float, float, float] | None:
         return self._cru(u) if u in self.vies else None
 
-    def angulo_do_movimento(self, u: str) -> tuple[float, float, float] | None:
+    def angulo_do_movimento(
+        self, u: str
+    ) -> tuple[tuple[float, float, float], float] | None:
         if u not in self.vies:
             return None
         a = self.acumulado[u]
+        s = self.segundos[u]
         self.acumulado[u] = [0.0, 0.0, 0.0]
-        return (a[0], a[1], a[2])
+        self.segundos[u] = 0.0
+        return (a[0], a[1], a[2]), s
 
 
 class _Ensaio:
@@ -105,7 +111,7 @@ class _Ensaio:
         self.arranjo = base if na_navegacao else rot.para_o_cursor(base)
         rot.definir_ativo(self.store, self.arranjo)
         for u, z in zeros.items():
-            rot.definir_o_zero(self.store, u, rot.ZeroDoControle(giro=z, gravidade=_GRAVIDADE))
+            rot.definir_o_zero(self.store, u, rot.ZeroDoControle(giro=z))
         self.hub = _Hub(vies)
         self.mouses = {u: _Mouse() for u in vies}
 
@@ -170,7 +176,7 @@ def test_o_desconto_vale_nos_tres_eixos_do_giro() -> None:
     """O roteador desconta `viés x dt` de x, y e z, com o dt da drenagem anterior."""
     dono = SimpleNamespace()
     zero = (0.6, -2.4, 1.1)
-    rot.definir_o_zero(dono, _P1, rot.ZeroDoControle(giro=zero, gravidade=_GRAVIDADE))
+    rot.definir_o_zero(dono, _P1, rot.ZeroDoControle(giro=zero))
     assert rot.angulo_do_tique(dono, _P1, (9.0, 9.0, 9.0), 10.0) is None
     descontado = rot.angulo_do_tique(dono, _P1, (9.0, 9.0, 9.0), 10.25)
     assert descontado == pytest.approx(
@@ -190,7 +196,7 @@ def test_o_ultimo_instante_da_drenagem_avanca_mesmo_sem_zero() -> None:
     dono = SimpleNamespace()
     rot.angulo_do_tique(dono, _P1, (0.0, 0.0, 0.0), 1.0)
     rot.angulo_do_tique(dono, _P1, (0.0, 0.0, 0.0), 1.2)
-    rot.definir_o_zero(dono, _P1, rot.ZeroDoControle(giro=(0.0, 1.0, 0.0), gravidade=_GRAVIDADE))
+    rot.definir_o_zero(dono, _P1, rot.ZeroDoControle(giro=(0.0, 1.0, 0.0)))
     saida = rot.angulo_do_tique(dono, _P1, (0.0, 5.0, 0.0), 1.3)
     assert saida == pytest.approx((0.0, 5.0 - 0.1, 0.0))
 

@@ -2545,7 +2545,7 @@ def _sensores_agora(entrada: dict[str, Any], _state: dict[str, Any],
 
 def _comandos_virtuais_agora(entrada: dict[str, Any], _state: dict[str, Any],
                              _linha: dict[str, Any]) -> bool | None:
-    """Mira, toque ou inclinação ligados (`a02_controles._mira_ligada` e"""
+    """Mira ou toque ligados (`a02_controles._mira_ligada` e"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     from . import a02_controles
@@ -2553,9 +2553,8 @@ def _comandos_virtuais_agora(entrada: dict[str, Any], _state: dict[str, Any],
     ligada = a02_controles._mira_ligada(entrada)
     if ligada is None:
         return None
-    destinos = [a02_controles._destino_da_mira(entrada, chave)
-                for chave in ("toque", "inclinacao")]
-    return ligada or any(d not in (None, rot.DESTINO_NENHUM) for d in destinos)
+    toque = a02_controles._destino_da_mira(entrada, "toque")
+    return ligada or toque not in (None, rot.DESTINO_NENHUM)
 
 
 def _da_acessibilidade(entrada: dict[str, Any], secao: str) -> bool | None:

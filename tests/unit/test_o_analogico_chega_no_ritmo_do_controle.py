@@ -370,7 +370,6 @@ OUTRO = "aa:bb:cc:00:00:02"
     [
         (roteador.ArranjoDeMovimento(destino=roteador.DESTINO_ANALOGICO_DIREITO), True),
         (roteador.ArranjoDeMovimento(destino=roteador.DESTINO_ANALOGICO_ESQUERDO), True),
-        (roteador.ArranjoDeMovimento(acelerometro=roteador.DESTINO_ANALOGICO_ESQUERDO), True),
         (roteador.ArranjoDeMovimento(destino=roteador.DESTINO_MOUSE), False),
         (roteador.ArranjoDeMovimento(), False),
         (None, False),

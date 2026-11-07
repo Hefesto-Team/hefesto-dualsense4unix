@@ -529,6 +529,7 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         "angulo_do_movimento",
         "apertos",
         "entradas",
+        "familia_do_movimento",
         "grab_do_movimento",
         "grab_do_toque",
         "hz_do_movimento",

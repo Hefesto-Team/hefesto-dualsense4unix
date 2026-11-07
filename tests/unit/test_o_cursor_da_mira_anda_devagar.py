@@ -90,10 +90,13 @@ class _LeitorQueGira:
     def snapshot(self) -> Any:
         return SimpleNamespace(x=self._giro[0], y=self._giro[1], z=self._giro[2])
 
-    def consume_angulo(self) -> tuple[float, float, float]:
+    def consume_angulo(self) -> tuple[tuple[float, float, float], float]:
         dt = self._relogio() - self._desde
         self._desde = self._relogio()
-        return (self._giro[0] * dt, self._giro[1] * dt, self._giro[2] * dt)
+        return (self._giro[0] * dt, self._giro[1] * dt, self._giro[2] * dt), dt
+
+    def accel_snapshot(self) -> Any:
+        return SimpleNamespace(x=0.0, y=1.0, z=0.0)
 
 
 class _LeitorDeEntradas:
@@ -133,7 +136,7 @@ def _a_mesa(
 
     relogio = _Relogio()
     monkeypatch.setattr(gp, "time", SimpleNamespace(monotonic=relogio))
-    giro = (0.0, giro_graus_s, 0.0)
+    giro = (0.0, -giro_graus_s, 0.0)
     hub = SensorHub(
         motion_factory=lambda uniq, node: _LeitorQueGira(relogio, giro),
         touch_factory=lambda uniq, node: _LeitorDeEntradas(),
@@ -198,8 +201,8 @@ def _na_navegacao(
     """O chip da Mira aceso pela tela (`mira.set`), e o cursor da Navegação."""
     mesa = _a_mesa(tmp_path, monkeypatch, giro, transporte)
     corpo = asyncio.run(mesa.servidor._handlers["mira.set"](  # type: ignore[arg-type]
-        {"uniq": uniq, "ligada": True, "sensibilidade": sensibilidade,
-         "zona_morta_graus_s": zona}))
+        {"uniq": uniq, "ligada": True, "sensibilidade_h": sensibilidade,
+         "sensibilidade_v": sensibilidade, "zona_morta_graus_s": zona}))
     assert corpo["status"] == "ok", corpo
     return _andou_em_um_segundo(mesa, uniq, na_navegacao=True)
 

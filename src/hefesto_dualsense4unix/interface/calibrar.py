@@ -78,6 +78,12 @@ ZERO_MEDINDO = "medindo"
 ZERO_PRONTO = "pronto"
 ZERO_MEXEU = "mexeu"
 ESTADOS_DO_ZERO = (ZERO_PARADO, ZERO_MEDINDO, ZERO_PRONTO, ZERO_MEXEU)
+O_QUE_FAZER_QUANDO_MEXEU = "Deixe parado e comece de novo"
+RECUSAS_DA_RAMPA = {
+    "nativo": "No Modo Nativo o jogo lê o controle direto",
+    "sem_jogo": "Abra um jogo para achar o início do analógico",
+    "sem_mira": "Ligue o Analógico Virtual deste controle",
+}
 
 SEM_LEITURA = "—"
 
@@ -92,12 +98,47 @@ ROTULO_TREMOR = "Ignorar tremor até"
 UNIDADE_DO_TREMOR = "graus/s"
 SENSIBILIDADE = (1, 12, 6)
 TREMOR = (1, 60, 3)
+ROTULO_HORIZONTAL = "Horizontal"
+ROTULO_VERTICAL = "Vertical"
+EIXO_DA_MIRA = (0, 10, 4)
+ROTULO_INICIO = "Início do analógico"
+UNIDADE_DO_INICIO = "%"
+INICIO = (0, 100, 27)
+ROTULO_VELOCIDADE = "Velocidade do jogo"
+UNIDADE_DA_VELOCIDADE = "°/s"
+VELOCIDADE = (30, 720, 180)
+PASSO_DA_VELOCIDADE = 10
+DICA_DO_EIXO = "0 desliga este eixo"
+DICA_DO_INICIO = "Onde a câmera do jogo começa a andar"
+DICA_DA_VELOCIDADE = "A câmera do jogo com o analógico no fim"
+OPCOES = ("a", "b")
+SINAL_NAO_MEDIDO = "nao_medido"
+SINAL_MEDINDO = "medindo"
+ESTADOS_DO_SINAL = (SINAL_NAO_MEDIDO, SINAL_MEDINDO, "bateu", "contrario", "parado")
+ROTULOS_DO_SINAL = (
+    (SINAL_NAO_MEDIDO, "Testar sentido"),
+    (SINAL_MEDINDO, "Medindo…"),
+    ("bateu", "Sentido certo"),
+    ("contrario", "Ao contrário"),
+    ("parado", "Não mexeu"),
+)
+DICA_DO_SINAL = "Vire à esquerda e levante o nariz"
+RAMPA_PARADA = "parada"
+RAMPA_SUBINDO = "subindo"
+ROTULO_ACHAR_O_INICIO = "Achar início"
+ROTULO_ANDOU = "Andou"
+DICA_DA_RAMPA = "Com um jogo aberto, clique quando a câmera andar"
 
 AJUDA_DA_PAGINA = "Mede o zero de cada controle parado"
 PASSOS = (
     ("e-parado", "Deixe parados", "Numa superfície plana, sem tocar"),
     ("e-medindo", f"Medindo {SEGUNDOS} s", "Encostar recomeça a conta"),
     ("e-pronto", "Pronto", "O zero fica guardado e vale em todo jogo"),
+)
+PASSOS_DA_OPCAO_B = (
+    ("v-zero", "Zero", "Os controles parados"),
+    ("v-sinal", "Sentido", DICA_DO_SINAL),
+    ("v-inicio", "Início do analógico", DICA_DA_RAMPA),
 )
 LUGARES = 4
 
@@ -355,6 +396,46 @@ CSS = """
     color:var(--fg)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
   [data-gesto]{min-height:24px}
+
+  .par{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .conferir{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .mira{gap:5px}
+  .mira .desl{row-gap:1px}
+  .miudo{height:24px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
+         border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);
+         padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .miudo:hover{border-color:var(--comment)}
+  .rampa{display:grid}
+  .sinal,.rampa .miudo{width:100%}
+  .sinal .e,.rampa .e{display:none}
+  .sinal[data-sinal="nao_medido"] .e-nao_medido,
+  .sinal[data-sinal="medindo"] .e-medindo,
+  .sinal[data-sinal="bateu"] .e-bateu,
+  .sinal[data-sinal="contrario"] .e-contrario,
+  .sinal[data-sinal="parado"] .e-parado{display:inline}
+  .sinal[data-sinal="bateu"]{border-color:var(--green);color:var(--green)}
+  .sinal[data-sinal="contrario"]{border-color:var(--purple);color:var(--purple)}
+  .rampa[data-rampa="parada"] .e-parada,
+  .rampa[data-rampa="subindo"] .e-subindo{display:block}
+  .painel{display:none;flex-direction:column;gap:9px;border-top:1px solid var(--border-sutil);
+          padding-top:9px;font-size:12px;color:var(--fg)}
+  .painel .miudo{height:30px}
+  #v-sinal:checked ~ .grade .leitura,
+  #v-inicio:checked ~ .grade .leitura{display:none}
+  #v-sinal:checked ~ .grade .painel-sinal,
+  #v-inicio:checked ~ .grade .painel-inicio{display:flex}
+  #v-sinal:checked ~ .rodape .fazer,
+  #v-inicio:checked ~ .rodape .fazer{display:none}
+  #v-sinal:checked ~ .passos .passo:nth-child(n),
+  #v-inicio:checked ~ .passos .passo:nth-child(n){
+    border-color:var(--border-sutil);background:var(--panel)}
+  #v-sinal:checked ~ .passos .passo:nth-child(n) .n,
+  #v-inicio:checked ~ .passos .passo:nth-child(n) .n{border-color:var(--border-forte)}
+  #v-sinal:checked ~ .passos .passo:nth-child(2),
+  #v-inicio:checked ~ .passos .passo:nth-child(3){
+    border-color:var(--purple);background:var(--sel-bg)}
+  #v-sinal:checked ~ .passos .passo:nth-child(2) .n,
+  #v-inicio:checked ~ .passos .passo:nth-child(3) .n{border-color:var(--purple)}
 """
 
 
@@ -406,7 +487,34 @@ def _quem(c):
     return SEM_LEITURA
 
 
-def controle(c):
+def _botao_do_sinal(c):
+    """O botão do passo do sinal: um estado por vez, pelo atributo que o tique pinta."""
+    estados = "".join(f'<span class="e e-{estado}">{rotulo}</span>'
+                      for estado, rotulo in ROTULOS_DO_SINAL)
+    return (f'<button class="miudo sinal" data-gesto="calibrar-sinal" data-dica="{DICA_DO_SINAL}"'
+            f' data-campo="sinal-estado" data-hef-alvo="atributo"'
+            f' data-hef-atributo="data-sinal" data-sinal="{SINAL_NAO_MEDIDO}">{estados}</button>')
+
+
+def _botao_da_rampa(c):
+    """Os dois botões da rampa, que se trocam pelo atributo que o tique pinta."""
+    return (f'<span class="rampa" data-campo="rampa-estado" data-hef-alvo="atributo"'
+            f' data-hef-atributo="data-rampa" data-rampa="{RAMPA_PARADA}">'
+            f'<button class="miudo e e-parada" data-gesto="calibrar-rampa" data-pedido="comecar"'
+            f' data-dica="{DICA_DA_RAMPA}">{ROTULO_ACHAR_O_INICIO}</button>'
+            f'<button class="miudo e e-subindo" data-gesto="calibrar-rampa" data-pedido="andou"'
+            f' data-dica="{DICA_DA_RAMPA}">{ROTULO_ANDOU}</button></span>')
+
+
+def _paineis_dos_passos(c, opcao):
+    """Os dois passos dentro do cartão, só na opção B."""
+    if opcao != "b":
+        return ""
+    return (f'            <div class="painel painel-sinal">{DICA_DO_SINAL}{_botao_do_sinal(c)}</div>\n'
+            f'            <div class="painel painel-inicio">{DICA_DA_RAMPA}{_botao_da_rampa(c)}</div>\n')
+
+
+def controle(c, opcao=None):
     """O cartão de UM controle — o desenho, a identidade e as seis linhas vazias.
 
     A PRIMEIRA LINHA DIZ QUEM JOGA (07/10/2026, a resposta [45]): o nome que o usuário deu ao controle e o
@@ -424,7 +532,7 @@ def controle(c):
             <div class="leitura">
 {_eixos()}
             </div>
-          </div>'''
+{_paineis_dos_passos(c, opcao)}          </div>'''
 
 
 def lugares_vazios(quem):
@@ -445,7 +553,7 @@ def _numero(c):
     return n if isinstance(n, int) else None
 
 
-def controles(quem):
+def controles(quem, opcao=None):
     """O miolo do bloco `[data-bloco="controles"]`: os cartões e os lugares vazios, ou a frase.
 
     O LUGAR VAZIO ENTRA NA POSIÇÃO DO NÚMERO DELE. Com o P2 fora e o P1 e o P3
@@ -461,17 +569,18 @@ def controles(quem):
         n = _numero(c)
         while livres and n is not None and livres[0] < n:
             partes.append(lugar(livres.pop(0)))
-        partes.append(controle(c))
+        partes.append(controle(c, opcao))
     return "\n".join(partes + [lugar(n) for n in livres])
 
 
-def _deslizante(gesto, rotulo, faixa, campo, unidade=""):
+def _deslizante(gesto, rotulo, faixa, campo, unidade="", passo=1, dica=""):
     """Uma linha de deslizante da mira: o rótulo, o trilho e o número."""
     minimo, maximo, nasce = faixa
     un = f' <span class="un">{unidade}</span>' if unidade else ""
-    return (f'              <label class="desl"><span class="r">{rotulo}</span>'
+    com_dica = f' data-dica="{dica}"' if dica else ""
+    return (f'              <label class="desl"{com_dica}><span class="r">{rotulo}</span>'
             f'<input class="trilho" type="range" min="{minimo}" max="{maximo}"'
-            f' step="1" value="{nasce}" data-gesto="{gesto}"'
+            f' step="{passo}" value="{nasce}" data-gesto="{gesto}"'
             f' data-campo="{campo}" data-hef-alvo="valor" aria-label="{rotulo}">'
             f'<span class="n"><span data-campo="{campo}-num">{nasce}</span>{un}'
             f'</span></label>')
@@ -501,8 +610,30 @@ def _inverter():
             f'<span class="inverter">{botoes}</span></div>')
 
 
-def mira(c):
+def _coluna_do_desenho_novo(c, opcao):
+    """A coluna da mira com H e V, o início do analógico, a velocidade e, na A, os dois passos."""
+    conferir = (f'            <div class="conferir">{_botao_do_sinal(c)}{_botao_da_rampa(c)}</div>\n'
+                if opcao == "a" else "")
+    return (f'          <div class="mira" style="--plastico:{_plastico(c)}"'
+            f' data-controle="{c.get("pref") or ""}">\n'
+            f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
+            f'            <div class="par">\n'
+            f'{_deslizante("mira-sensibilidade-h", ROTULO_HORIZONTAL, EIXO_DA_MIRA, "mira-sensibilidade-h", dica=DICA_DO_EIXO)}\n'
+            f'{_deslizante("mira-sensibilidade-v", ROTULO_VERTICAL, EIXO_DA_MIRA, "mira-sensibilidade-v", dica=DICA_DO_EIXO)}\n'
+            f'            </div>\n'
+            f'{_deslizante("mira-inicio", ROTULO_INICIO, INICIO, "mira-inicio", UNIDADE_DO_INICIO, dica=DICA_DO_INICIO)}\n'
+            f'{_deslizante("mira-velocidade", ROTULO_VELOCIDADE, VELOCIDADE, "mira-velocidade", UNIDADE_DA_VELOCIDADE, PASSO_DA_VELOCIDADE, DICA_DA_VELOCIDADE)}\n'
+            f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
+            f'{_segurar()}\n'
+            f'{_inverter()}\n'
+            f'{conferir}'
+            f'          </div>')
+
+
+def mira(c, opcao=None):
     """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu"""
+    if opcao is not None:
+        return _coluna_do_desenho_novo(c, opcao)
     return (f'          <div class="mira" style="--plastico:{_plastico(c)}"'
             f' data-controle="{c.get("pref") or ""}">\n'
             f'            <span class="quem" data-campo="quem-joga" data-hef-alvo="html">{_quem(c)}</span>\n'
@@ -513,26 +644,37 @@ def mira(c):
             f'          </div>')
 
 
-def miras(quem):
+def miras(quem, opcao=None):
     """O miolo do bloco `[data-bloco="miras"]`: o título e uma coluna por controle."""
     if not quem:
         return ""
-    colunas = "\n".join(mira(c) for c in quem)
+    colunas = "\n".join(mira(c, opcao) for c in quem)
     return f'\n{colunas}\n    '
 
 
-def _passos():
+def _passos(opcao=None):
     """A fita dos três passos: o número e o nome, com a frase curta em `data-dica`."""
     return "\n".join(
         f'      <label class="passo" for="{rid}" data-dica="{dica}">'
         f'<span class="n">{n}</span><b>{rot}</b></label>'
-        for n, (rid, rot, dica) in enumerate(PASSOS, 1))
+        for n, (rid, rot, dica) in enumerate(
+            PASSOS_DA_OPCAO_B if opcao == "b" else PASSOS, 1))
+
+
+def _radios_da_opcao(opcao):
+    """Os três passos clicáveis da opção B: nascem no zero, sem JavaScript."""
+    if opcao != "b":
+        return ""
+    return "".join(
+        f'    <input class="et" type="radio" name="passo-b" id="{rid}"'
+        f'{" checked" if rid == "v-zero" else ""}>\n'
+        for rid, _, _ in PASSOS_DA_OPCAO_B)
 
 
 ABA_DO_CALIBRAR = "01-jogar.html"
 
 
-def documento(quem):
+def documento(quem, opcao="a"):
     """A página inteira, com os cartões de ``quem``, pronta para gravar."""
     html = f'''<!doctype html>
 <html lang="pt-BR">
@@ -555,17 +697,17 @@ def documento(quem):
     <input class="et" type="radio" name="etapa" id="e-parado" data-campo="passo-parado" data-hef-alvo="marcado" checked>
     <input class="et" type="radio" name="etapa" id="e-medindo" data-campo="passo-medindo" data-hef-alvo="marcado">
     <input class="et" type="radio" name="etapa" id="e-pronto" data-campo="passo-pronto" data-hef-alvo="marcado">
-
+{_radios_da_opcao(opcao)}
     <div class="passos">
-{_passos()}
+{_passos(opcao)}
     </div>
 
     <div class="grade">
     <div class="controles" data-bloco="controles">
-{controles(quem)}
+{controles(quem, opcao)}
     </div>
 
-    <div class="mira-cx" data-bloco="miras">{miras(quem)}</div>
+    <div class="mira-cx" data-bloco="miras">{miras(quem, opcao)}</div>
     </div>
 
     <div class="rodape">
@@ -591,7 +733,10 @@ def main():
         raise SystemExit(f"ERRO em calibrar-sensores: o «Fechar» leva a {ABA_DO_CALIBRAR}, "
                          "que não está na tira de abas.")
     quem = monta.CONECTADOS
-    onde.pagina("calibrar-sensores.html").write_text(documento(quem))
+    onde.pagina("calibrar-sensores.html").write_text(documento(quem, "a"))
+    pasta_da_escolha = onde.saida() / "escolha"
+    pasta_da_escolha.mkdir(exist_ok=True)
+    (pasta_da_escolha / "calibrar-sensores-b.html").write_text(documento(quem, "b"))
     print(f"calibrar-sensores.html: {contagem(len(quem))} no desenho · "
           f"3 estados clicáveis")
 

@@ -93,8 +93,9 @@ def _de_fora(pasta: pathlib.Path) -> list[pathlib.Path]:
 
 
 def _com_a_espera(arq: pathlib.Path) -> object:
-    """O publicado de fora declarado em trabalho espera o `--publicar` do fecho."""
-    if arq.parent == PUBLICADO and arq.name in DE_FORA and arq.name in _EM_TRABALHO:
+    """O publicado de fora declarado em trabalho, ainda sem a letra, espera o `--publicar`."""
+    if (arq.parent == PUBLICADO and arq.name in DE_FORA and arq.name in _EM_TRABALHO
+            and "@font-face" not in arq.read_text(encoding="utf-8")):
         return pytest.param(arq, marks=pytest.mark.xfail(
             strict=True, reason=f"{arq.name} declarada no DIVERGENCIAS até o --publicar"))
     return arq

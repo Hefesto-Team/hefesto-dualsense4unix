@@ -7,12 +7,11 @@ AS-TRES-SECOES-DA-ACESSIBILIDADE-GANHAM-IPC-E-O-TOQUE-SEGUE-A-MAO-01. Um teste p
 2. o cursor do touchpad (`CursorDoToque`) segue a precisão, a permanência e o clique travado
    do mesmo `AjusteDoCursor` do cursor dos analógicos;
 3. o teclado virtual não recebe o botão da precisão nem o do clique travado;
-4. a inclinação vai ao lado que a mão escolhida manda, o mesmo do giro;
-5. no co-op o filtro do botão roda na mesma ordem do jogador sozinho (toque, filtro, movimento).
+4. no co-op o filtro do botão roda na mesma ordem do jogador sozinho (toque, filtro, movimento).
 
 AS MORDIDAS estão no relato da entrega: o registro dos métodos tirado do `_handlers` (1), o
-`ajudar` tirado do `aplicar_o_toque` (2), o `botoes_do_cursor` tirado do teclado (3), o
-`lado_do_giro` tirado da inclinação (4) e o filtro do co-op passado para depois do movimento (5).
+`ajudar` tirado do `aplicar_o_toque` (2), o `botoes_do_cursor` tirado do teclado (3) e o filtro do
+co-op passado para depois do movimento (4).
 
 Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI real.
 """
@@ -36,7 +35,6 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.integrations import uinput_mouse
 from hefesto_dualsense4unix.profiles.schema import (
-    ProfileAnalogicosConfig,
     ProfileCursorConfig,
     ProfileMovimentoConfig,
 )
@@ -320,7 +318,10 @@ def test_o_aplicar_o_toque_entrega_o_ajuste_ao_cursor(
 
 
 def test_o_botao_do_cursor_nao_vira_tecla(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o mouse virtual de pé, a precisão e o clique travado saem do que o teclado recebe."""
+    """Com o mouse virtual de pé, a precisão e o clique travado saem do que o teclado recebe.
+
+    (D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO)
+    """
     from hefesto_dualsense4unix.daemon.subsystems import keyboard
 
     store = SimpleNamespace()
@@ -341,47 +342,6 @@ def test_o_botao_do_cursor_nao_vira_tecla(monkeypatch: pytest.MonkeyPatch) -> No
 def test_a_tabela_do_jogo_tambem_cala_o_teclado() -> None:
     fonte = (_SRC / "daemon" / "subsystems" / "mouse.py").read_text(encoding="utf-8")
     assert "botoes_do_cursor(store)" in fonte, "a tabela do jogo entrega tudo ao teclado"
-
-
-def _inclina(mao: str | None, destino: str) -> tuple[int, int, int, int]:
-    """A inclinação de uma peça inclinada para o lado, no `_a_inclinacao` do produto."""
-    store = SimpleNamespace()
-    if mao is not None:
-        curva_do_analogico.definir_ativo(
-            store, curva_do_analogico.montar(ProfileAnalogicosConfig(mao=mao)), {})
-    arranjo = rot.ArranjoDeMovimento(
-        destino=destino, acelerometro=destino, lado=destino, sensibilidade=8)
-    hub = SimpleNamespace(
-        aceleracao_do_movimento=lambda _u: (0.0, 1.0, 0.0),
-        velocidade_do_movimento=lambda _u: (0.0, 0.0, 0.0))
-    return gp._a_inclinacao(hub, store, arranjo, _P1, 128, 128, 128, 128)
-
-
-def test_a_mao_manda_a_inclinacao_para_o_mesmo_lado_do_giro(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem mão a inclinação fica onde foi posta; com a mão, vai ao lado que sobra do olhar.
-
-    (D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO)
-    """
-    chamadas: list[str] = []
-    monkeypatch.setattr(
-        rot, "misturar",
-        lambda x, y, dh, dv: (chamadas.append("misturou") or (x + 1, y + 1)))
-    monkeypatch.setattr(rot, "deflexao_da_inclinacao", lambda *_a, **_k: (10, 10))
-    monkeypatch.setattr(rot, "neutro_da_inclinacao", lambda *_a, **_k: (0.0, 0.0, 0.0))
-    monkeypatch.setattr(rot, "inclina_agora", lambda *_a, **_k: True)
-    esq, dire = rot.DESTINO_ANALOGICO_ESQUERDO, rot.DESTINO_ANALOGICO_DIREITO
-
-    lx, ly, rx, ry = _inclina(None, esq)
-    assert (lx, ly, rx, ry) == (129, 129, 128, 128), "sem mão, o esquerdo continua esquerdo"
-    lx, ly, rx, ry = _inclina("esquerda", esq)
-    assert (rx, ry) == (129, 129) and (lx, ly) == (128, 128), (
-        "a mão esquerda manda o olhar ao direito, como o giro")
-    lx, ly, rx, ry = _inclina("direita", dire)
-    assert (lx, ly) == (129, 129) and (rx, ry) == (128, 128), (
-        "a mão direita troca os lados DEPOIS: a inclinação entra no esquerdo, como o giro")
-    assert curva_do_analogico.lado_do_giro(
-        SimpleNamespace(), _P1, dire) == dire, "sem curva o destino não muda"
 
 
 def _ordem(arquivo: str, funcao: str) -> list[str]:

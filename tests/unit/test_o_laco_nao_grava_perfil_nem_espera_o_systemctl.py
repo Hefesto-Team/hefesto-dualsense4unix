@@ -245,7 +245,7 @@ def test_dois_handlers_seguidos_nao_perdem_a_gravacao_um_do_outro(
     perfil = loader.load_profile("Ensaio")
     chave = _P1.replace(":", "")
     movimento = perfil.controllers[chave].movimento
-    assert movimento is not None and movimento.sensibilidade == 7
+    assert movimento is not None and movimento.sensibilidade_h == 6
     assert perfil.cursor.precisao == 55
 
 

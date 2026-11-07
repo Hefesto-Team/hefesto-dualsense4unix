@@ -81,7 +81,7 @@ def test_no_nativo_a_recusa_leva_o_pedido_inteiro(perfis: Path, tmp_path: Path) 
 
     servidor = _servidor_com_perfil(tmp_path)
     servidor.daemon._native_mode = True
-    corpo = _mira_set(servidor, uniq=_P2, ligada=True, sensibilidade=9)
+    corpo = _mira_set(servidor, uniq=_P2, ligada=True, sensibilidade=8)
     assert corpo["status"] == "nativo"
     assert not load_profile("Ensaio").controllers
 
@@ -127,7 +127,7 @@ def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     corpo = _mira_set(servidor, uniq=_P4, inverter_horizontal=True)
     assert corpo["inverter_horizontal"] is True and corpo["inverter_vertical"] is False
     dele = load_profile("Ensaio").controllers["aabbcc000004"].movimento
-    assert dele.model_fields_set == {"destino", "acelerometro", "lado", "gatilho",
+    assert dele.model_fields_set == {"destino", "lado", "gatilho",
                                      "inverter_horizontal"}
     vivo = rot.da_peca(servidor.store, _P4, rot.ativo(servidor.store))
     assert vivo is not None and (vivo.gatilho, vivo.inverter_horizontal) == ("l2", True)

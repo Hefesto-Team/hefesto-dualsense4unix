@@ -73,7 +73,7 @@ if _INTERFACE not in sys.path:
 
 _P = {n: f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4)}
 _CHAVE = {n: f"aabbcc00000{n}" for n in (1, 2, 3, 4)}
-_GIRO = (0.0, 150.0, 0.0)
+_GIRO = (0.0, -150.0, 0.0)
 _CENTRO = 128
 
 
@@ -119,7 +119,7 @@ def test_o_mouse_escrito_a_mao_vira_o_analogico_direito(perfis: Path) -> None:
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     secao = ProfileMovimentoConfig.model_validate({"destino": "mouse", "sensibilidade": 9})
-    assert (secao.destino, secao.sensibilidade) == ("analogico_direito", 9)
+    assert (secao.destino, secao.sensibilidade_h) == ("analogico_direito", 8)
     peca = ControllerOverrides.model_validate({"movimento": {"destino": "mouse"}})
     assert peca.movimento is not None and peca.movimento.destino == "analogico_direito"
     bruto = _perfil_escrito_a_mao(mesa={"destino": "mouse", "gatilho": "l2"},
