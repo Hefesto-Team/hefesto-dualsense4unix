@@ -235,6 +235,9 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "tests/unit/test_o_laco_do_daemon_nao_le_o_disco.py::_FORA_DO_EXT4": (
+        "as leituras de /sys e /dev, que moram na memória do kernel e não no ext4: a régua "
+        "pergunta pelo disco, e nenhum caso de disco fica fora da conta"),
     "scripts/reapontar-citacoes.py::_HOJE": (
         "o cache do texto de hoje e das definições de cada arquivo, para a leitura da história não "
         "reler o mesmo arquivo: nenhum caso fica de fora de regra nenhuma"),
