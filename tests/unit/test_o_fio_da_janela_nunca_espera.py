@@ -56,7 +56,7 @@ LEEM = ("open", "os.listdir", "os.scandir", "glob.glob")
 
 PROC_DO_PROPRIO_PROCESSO = "/proc/self/"
 
-FIOS_FORA_DO_DONO = {"mesa_viva.py", "pacotes/a05_vibracao.py", "pacotes/fios.py"}
+FIOS_FORA_DO_DONO = {"abrir.py", "mesa_viva.py", "pacotes/a05_vibracao.py", "pacotes/fios.py"}
 
 
 _VIGIA = SimpleNamespace(ligado=False, principal=threading.main_thread().ident, achados=[])

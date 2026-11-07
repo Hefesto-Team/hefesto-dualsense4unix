@@ -6,6 +6,8 @@ escaninho de quem pediu (o tique seguinte a lê) ou por `GLib.idle_add`.
 
 Ficam fora os dois fios com o endereço no nome (`mesa_viva`, `a05_vibracao`): a régua 4
 de `test_o_registro_copiado_nao_entrega_o_endereco.py` os lê por `Thread(name=mascarar(…))`.
+O fio do diário em `abrir.py` também: ele nasce antes da vez da janela, e importar este pacote
+custa 176 módulos e meio segundo a quem só ia achar a janela aberta.
 """
 from __future__ import annotations
 
