@@ -3,7 +3,8 @@
 
 O motor puro (`core/curva_do_analogico.py`); os dois caminhos do pad virtual
 (`gamepad.dispatch_gamepad` do P1 e `coop.forward_all` de P2 a P4); o giro feito analógico, que
-passa pela mesma curva; as duas mãos; o depósito pelo perfil e o computador por baixo.
+não passa pela forma da curva (`test_a_curva_do_analogico_nao_come_a_mira.py`); as duas mãos; o
+depósito pelo perfil e o computador por baixo.
 
 A MORDIDA, e cada uma foi rodada na entrega:
 
@@ -52,10 +53,11 @@ def test_o_padrao_e_a_identidade_byte_a_byte() -> None:
     for v in range(256):
         assert cv.moldar(identidade, v, 255 - v) == (v, 255 - v)
         assert cv.gatilho(identidade, v) == v
-        assert cv.analogicos(identidade, v, 255 - v, (v * 7) % 256, (v * 3) % 256) == (
+        assert cv.inverter_e_trocar(identidade, v, 255 - v, (v * 7) % 256, (v * 3) % 256) == (
             v, 255 - v, (v * 7) % 256, (v * 3) % 256)
     store = SimpleNamespace()
-    assert cv.aplicar(store, P1, 1, 2, 3, 4, 5, 6) == (1, 2, 3, 4, 5, 6)
+    assert cv.moldar_o_fisico(store, P1, 1, 2, 3, 4) == (1, 2, 3, 4)
+    assert cv.entregar(store, P1, 1, 2, 3, 4, 5, 6) == (1, 2, 3, 4, 5, 6)
 
 
 def test_a_zona_morta_de_20_zera_10_e_nao_zera_30() -> None:
@@ -79,21 +81,21 @@ def test_a_zona_externa_leva_o_fim_do_curso_ao_maximo() -> None:
 def test_inverter_y_espelha_em_torno_do_centro() -> None:
     curva = _curva(inverter=["ly"])
     for v in range(1, 256):
-        saida = cv.analogicos(curva, 100, v, 100, v)
+        saida = cv.inverter_e_trocar(curva, 100, v, 100, v)
         assert saida[0] == 100 and saida[2] == 100, "o X e o outro lado não mudam"
         assert saida[1] - 128 == -(v - 128) or v == 255, (v, saida)
         assert saida[3] == v, "o Y do analógico direito não foi pedido"
-    assert cv.analogicos(curva, 0, 0, 0, 0)[1] == 255, "o zero espelha no fundo do outro lado"
-    assert cv.analogicos(curva, 0, 128, 0, 128)[1] == 128
+    assert cv.inverter_e_trocar(curva, 0, 0, 0, 0)[1] == 255, "o zero espelha no outro lado"
+    assert cv.inverter_e_trocar(curva, 0, 128, 0, 128)[1] == 128
 
 
 def test_a_troca_entrega_lx_no_rx() -> None:
-    saida = cv.analogicos(_curva(trocar=True), 10, 20, 30, 40)
+    saida = cv.inverter_e_trocar(_curva(trocar=True), 10, 20, 30, 40)
     assert saida == (30, 40, 10, 20)
 
 
 def test_a_inversao_e_do_analogico_fisico_e_a_troca_vem_depois() -> None:
-    saida = cv.analogicos(_curva(trocar=True, inverter=["lx"]), 10, 20, 30, 40)
+    saida = cv.inverter_e_trocar(_curva(trocar=True, inverter=["lx"]), 10, 20, 30, 40)
     assert saida == (30, 40, 246, 20), "o lx físico inverte e SÓ ENTÃO vai ao lado direito"
 
 
@@ -294,7 +296,7 @@ def test_a_mao_esquerda_olha_pelo_giro_e_anda_pelo_analogico_esquerdo(
     lx, ly, rx, ry = tique(200, 128, 128, 128)
     assert (lx, ly) == (200, 128), "o analógico esquerdo continua só da mão"
     assert (rx, ry) != (128, 128), "o olhar veio pelo giro, no analógico direito"
-    jogo = cv.aplicar(store, P1, lx, ly, rx, ry, 0, 0)
+    jogo = cv.entregar(store, P1, lx, ly, rx, ry, 0, 0)
     assert jogo[:2] == (200, 128) and jogo[2:4] == (rx, ry), "a mão esquerda não troca os lados"
 
 
@@ -306,7 +308,7 @@ def test_a_mao_direita_anda_pelo_analogico_direito_e_olha_pelo_giro(
     tique = _com_o_giro(monkeypatch, store, rot.DESTINO_ANALOGICO_DIREITO)
     lx, ly, rx, ry = tique(128, 128, 200, 128)
     assert (rx, ry) == (200, 128), "o giro foi ao esquerdo, e o direito é o da mão"
-    jogo_lx, jogo_ly, jogo_rx, jogo_ry, _, _ = cv.aplicar(store, P1, lx, ly, rx, ry, 0, 0)
+    jogo_lx, jogo_ly, jogo_rx, jogo_ry, _, _ = cv.entregar(store, P1, lx, ly, rx, ry, 0, 0)
     assert (jogo_lx, jogo_ly) == (200, 128), "o movimento do jogo veio da mão direita"
     assert (jogo_rx, jogo_ry) != (128, 128), "o olhar do jogo veio do giro"
 
@@ -326,14 +328,13 @@ def test_o_giro_no_cursor_nao_muda_de_lado_com_a_mao() -> None:
         rot.DESTINO_ANALOGICO_ESQUERDO)
 
 
-def test_o_giro_feito_analogico_passa_pela_mesma_curva(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_giro_feito_analogico_nao_passa_pela_forma(monkeypatch: pytest.MonkeyPatch) -> None:
     store = SimpleNamespace()
     tique = _com_o_giro(monkeypatch, store, rot.DESTINO_ANALOGICO_DIREITO)
     cru = tique(128, 128, 128, 128)
     assert cru[2:] != (128, 128)
     cv.definir_ativo(store, _curva(zona_morta=50, sensibilidade=50))
-    moldado = cv.aplicar(store, P1, *cru, 0, 0)
-    assert moldado[:4] != cru, "o giro feito analógico ganha a curva do analógico"
+    assert cv.entregar(store, P1, *cru, 0, 0)[:4] == cru, "a forma é só do analógico físico"
 
 
 def test_o_perfil_seguinte_larga_a_curva_do_anterior(monkeypatch: pytest.MonkeyPatch) -> None:

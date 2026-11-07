@@ -2210,6 +2210,9 @@ class CoopManager:
                 if com_filtro:
                     botoes, l2, r2, soltos = filtrar_o_botao(
                         store, player.identity, botoes, l2, r2, soltos)
+                if com_curva:
+                    lx, ly, rx, ry = moldar_os_analogicos(
+                        store, player.identity, lx, ly, rx, ry)
                 if arranjo_de_movimento is not None:
                     lx, ly, rx, ry = aplicar_o_movimento(
                         self._daemon,
@@ -2230,7 +2233,7 @@ class CoopManager:
                     botoes, l2, r2, tocados = ativar_o_botao(
                         store, player.identity, botoes, l2, r2, tocados)
                 if com_curva:
-                    lx, ly, rx, ry, l2, r2 = moldar_os_analogicos(
+                    lx, ly, rx, ry, l2, r2 = entregar_os_analogicos(
                         store, player.identity, lx, ly, rx, ry, l2, r2)
                 player.vpad.forward_analog(
                     lx=lx,
@@ -3081,6 +3084,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ativar_o_botao,
     com_os_acionadores,
     cortar_pelo_limiar,
+    entregar_os_analogicos,
     filtrar_o_botao,
     gatilhos_dos_acionadores,
     moldar_os_analogicos,

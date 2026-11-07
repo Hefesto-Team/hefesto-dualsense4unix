@@ -2416,14 +2416,25 @@ def filtrar_o_botao(
 
 
 def moldar_os_analogicos(
+    store: Any, uniq: str | None, lx: int, ly: int, rx: int, ry: int
+) -> tuple[int, int, int, int]:
+    """A forma dos analógicos FÍSICOS do controle ``uniq``: o dono único do P1 e do co-op.
+
+    Entra ANTES de `aplicar_o_movimento`: a curva é da mão, e a mira tem piso e calibração
+    próprios. Sem curva neste controle, tudo passa intacto.
+    """
+    return curva_do_analogico.moldar_o_fisico(store, uniq, lx, ly, rx, ry)
+
+
+def entregar_os_analogicos(
     store: Any, uniq: str | None, lx: int, ly: int, rx: int, ry: int, l2: int, r2: int
 ) -> tuple[int, int, int, int, int, int]:
-    """A curva dos analógicos e dos gatilhos do controle ``uniq``: o dono único do P1 e do co-op.
+    """A inversão, a troca e os gatilhos do controle ``uniq``: o dono único do P1 e do co-op.
 
-    Entra depois do giro feito analógico, para que ele passe pela mesma curva. Sem curva neste
-    controle, tudo passa intacto.
+    Entra DEPOIS de `aplicar_o_movimento`: o sentido e o lado de saída valem para o físico e
+    para a mira, e o `lado_do_giro` conta com isso. Sem curva neste controle, tudo passa intacto.
     """
-    return curva_do_analogico.aplicar(store, uniq, lx, ly, rx, ry, l2, r2)
+    return curva_do_analogico.entregar(store, uniq, lx, ly, rx, ry, l2, r2)
 
 
 def soltar_a_ativacao(daemon: Any, uniq: str | None = None) -> None:
@@ -2633,6 +2644,10 @@ def dispatch_gamepad(
                 store, primary_identity(daemon), botoes, l2, r2, tocados)
         lx, ly = state.raw_lx, state.raw_ly
         rx, ry = state.raw_rx, state.raw_ry
+        com_curva = curva_do_analogico.alguma(store)
+        if com_curva:
+            lx, ly, rx, ry = moldar_os_analogicos(
+                store, primary_identity(daemon), lx, ly, rx, ry)
         if arranjo is not None:
             lx, ly, rx, ry = aplicar_o_movimento(
                 daemon,
@@ -2644,8 +2659,8 @@ def dispatch_gamepad(
                 ry=ry,
                 botoes=da_mao,
             )
-        if curva_do_analogico.alguma(store):
-            lx, ly, rx, ry, l2, r2 = moldar_os_analogicos(
+        if com_curva:
+            lx, ly, rx, ry, l2, r2 = entregar_os_analogicos(
                 store, primary_identity(daemon), lx, ly, rx, ry, l2, r2)
         device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
         if com_modo:

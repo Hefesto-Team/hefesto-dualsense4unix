@@ -1,9 +1,9 @@
 """Os analógicos do jogo: zona morta, curva, sensibilidade, inversão, troca e uma mão só.
 
 Dono único e puro. O mesmo módulo serve o pad virtual do primeiro controle e o dos outros
-jogadores, e entra DEPOIS do giro feito analógico (a mesma curva vale para os dois). O padrão
-é a identidade, byte a byte, de 0 a 255. Cada analógico é moldado como o aparelho o entrega
-(zona morta radial, curva, sensibilidade), depois invertido, e só então os dois lados trocam.
+jogadores. O padrão é a identidade, byte a byte, de 0 a 255. Cada analógico físico é moldado
+como o aparelho o entrega (zona morta radial, curva, sensibilidade); a mira soma ali, com piso
+e calibração próprios, sem herdar a forma; só então a soma é invertida e os dois lados trocam.
 A mão esquerda e a direita são predefinições: dizem quem troca e para que lado o giro olha.
 """
 from __future__ import annotations
@@ -173,12 +173,10 @@ def gatilho(curva: Curva, valor: int) -> int:
     return min(max(round((valor - inicio) * 255.0 / (fim - inicio)), 0), 255)
 
 
-def analogicos(
+def inverter_e_trocar(
     curva: Curva, lx: int, ly: int, rx: int, ry: int
 ) -> tuple[int, int, int, int]:
-    """Molda cada lado, inverte o que foi pedido e, por último, troca os lados."""
-    lx, ly = moldar(curva, lx, ly)
-    rx, ry = moldar(curva, rx, ry)
+    """Inverte o que foi pedido e, por último, troca os lados."""
     if curva.inverter:
         lx = _invertido(lx) if "lx" in curva.inverter else lx
         ly = _invertido(ly) if "ly" in curva.inverter else ly
@@ -233,14 +231,24 @@ def alguma(dono: object) -> bool:
         isinstance(v, Curva) and v.algum for v in mapa.values())
 
 
-def aplicar(
+def moldar_o_fisico(
+    dono: object, uniq: object, lx: int, ly: int, rx: int, ry: int
+) -> tuple[int, int, int, int]:
+    """A forma dos dois analógicos físicos do controle ``uniq``. Sem curva, intactos."""
+    curva = da_peca(dono, uniq)
+    if curva is None:
+        return lx, ly, rx, ry
+    return (*moldar(curva, lx, ly), *moldar(curva, rx, ry))
+
+
+def entregar(
     dono: object, uniq: object, lx: int, ly: int, rx: int, ry: int, l2: int, r2: int
 ) -> tuple[int, int, int, int, int, int]:
-    """Os analógicos e os gatilhos do controle ``uniq`` pela curva dele. Sem curva, intactos."""
+    """A inversão, a troca e os gatilhos do controle ``uniq``. Sem curva, intactos."""
     curva = da_peca(dono, uniq)
     if curva is None:
         return lx, ly, rx, ry, l2, r2
-    lx, ly, rx, ry = analogicos(curva, lx, ly, rx, ry)
+    lx, ly, rx, ry = inverter_e_trocar(curva, lx, ly, rx, ry)
     return lx, ly, rx, ry, gatilho(curva, l2), gatilho(curva, r2)
 
 
@@ -271,14 +279,15 @@ __all__ = [
     "MAOS",
     "Curva",
     "alguma",
-    "analogicos",
-    "aplicar",
     "campos_juntos",
     "da_peca",
     "definir_ativo",
+    "entregar",
     "gatilho",
+    "inverter_e_trocar",
     "lado_do_giro",
     "moldar",
+    "moldar_o_fisico",
     "montar",
     "recusar",
 ]
