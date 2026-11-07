@@ -445,7 +445,7 @@ def test_a_troca_de_cabo_de_um_nao_fura_o_tique_dos_outros_tres(
             if vezes:
                 laco.call_later(1 / 60, perguntar, vezes - 1)
 
-        perguntar(30)
+        laco.call_later(0.1, perguntar, 30)
         for leitor in daemon.leitores.values():
             laco.call_later(0.3, leitor._handle_event, evento, ecodes)
 

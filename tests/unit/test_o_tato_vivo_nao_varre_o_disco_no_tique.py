@@ -201,17 +201,18 @@ def test_fora_do_teto_o_leitor_segue_com_o_prazo_dele(tmp_path: Path) -> None:
     assert lida.estado == censo.ILEGIVEL and "0.3 s" in lida.erros[0], lida
 
 
+@pytest.mark.parametrize("presos", [1, 2], ids=["um-preso", "dois-presos"])
 def test_teto_estourado_deixa_o_caderno_anterior_e_nao_insiste(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    presos: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A leitura pela metade não vira caderno, e a mesma assinatura não refaz a espera.
 
-    MORDIDA: tire o `teto.estourou = True` de `ler_por_processo`.
+    MORDIDA: tire o `teto.estourou = True` do prazo estourado em `ler_por_processo`.
     """
     monkeypatch.setattr(jl, "RELOGIO_DO_CADERNO_S", 0.0)
     monkeypatch.setattr(jl, "TETO_DA_RELEITURA_S", 0.2)
     monkeypatch.setattr(jl, "assinatura_das_janelas", lambda *_a, **_k: ("nova",))
-    leitores = _leitores_presos(tmp_path, 2)
+    leitores = _leitores_presos(tmp_path, presos)
     voltas: list[int] = []
 
     def ler(*_a: Any, **_k: Any) -> list[jl.JogoLocal]:
@@ -231,6 +232,21 @@ def test_teto_estourado_deixa_o_caderno_anterior_e_nao_insiste(
     assert voltas == [1], "a mesma assinatura estourada voltou a esperar"
     assert jl.jogos_de_janela() == [_jogo()], "o caderno anterior não ficou valendo"
     assert jl._NOMES_DAS_JANELAS is not None and jl._NOMES_DAS_JANELAS[0] == ("velha",)
+
+
+def test_o_teto_ja_gasto_nem_abre_o_leitor_e_avisa(tmp_path: Path) -> None:
+    """O leitor que chega depois do teto não abre processo, e a releitura sabe que parou ali.
+
+    MORDIDA: tire o `teto.estourou = True` do prazo gasto em `ler_por_processo`.
+    """
+    leitor = _leitores_presos(tmp_path, 1)[0]
+
+    with censo.teto_conjunto(0.0) as teto:
+        biblioteca = censo.ler_por_processo(leitor, bwrap=False)
+
+    assert teto.estourou
+    assert biblioteca.estado == censo.ILEGIVEL
+    assert biblioteca.erros == ["a releitura passou do teto conjunto"]
 
 
 def test_quem_chega_antes_do_primeiro_caderno_no_laco_nao_espera(
