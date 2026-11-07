@@ -24,6 +24,7 @@ O_QUE_PODE_ESCREVER_O_NOME: frozenset[tuple[Path, str]] = frozenset(
     {
         (Path(repo_files.__file__).resolve(), repo_files.FRASE_DE_ATUALIZAR[True]),
         (Path(repo_files.__file__).resolve(), "install.sh"),
+        (SRC / "app" / "actions" / "versao_ao_abrir.py", "install.sh"),
     }
 )
 

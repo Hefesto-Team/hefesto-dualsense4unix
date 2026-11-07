@@ -3916,5 +3916,6 @@ elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '     bash scripts/install_usb_quirk.sh\n'
     printf '─────────────────────────────────────────\n'
 fi
+[[ "${DRY_RUN:-0}" -eq 1 ]] || rm -f "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pendente"
 dizer_o_reinicio_pendente
 printf '\n'

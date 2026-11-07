@@ -3,8 +3,9 @@
 Dois chamadores: o console script (`entrada`) e o calço `scripts/abrir_interface.py` (`abrir`).
 Nada roda no import; o piloto roda por `runpy.run_module`, depois da identidade e da guarda da
 tela. Uma janela por tela (`tomar_a_vez`); o serviço parado volta com a janela
-(`trazer_o_servico`), salvo o Parar da aba Sistema (a marca de `utils/marca_do_parar`). O porquê de
-cada parte está em `docs/research/o-porque-dos-modulos.md`, seção `abrir`.
+(`trazer_o_servico`), salvo o Parar da aba Sistema (a marca de `utils/marca_do_parar`). A versão
+mais recente baixa num fio e entra no fecho (`app/actions/versao_ao_abrir`). O porquê de cada parte
+está em `docs/research/o-porque-dos-modulos.md`, seção `abrir`.
 """
 from __future__ import annotations
 
@@ -354,9 +355,11 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
         armar_a_volta_a_frente(vez)
     if a_janela_vai_para_a_tela(args):
         from hefesto_dualsense4unix.app.actions.atos_da_bandeja import garantir_a_bandeja
+        from hefesto_dualsense4unix.app.actions.versao_ao_abrir import baixar_ao_abrir
 
         garantir_a_bandeja()
         trazer_o_servico()
+        baixar_ao_abrir(RAIZ)
 
     sys.argv = [piloto, *args]
     runpy.run_module(piloto, run_name="__main__")
