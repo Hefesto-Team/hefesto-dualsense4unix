@@ -144,12 +144,13 @@ class TestOGanhoViajaNoPerfil:
             relatorio: dict[str, str] = {}
             secao = type("S", (), {"gain": 62})()
             estado = m._aplicar_ganho_do_mic(secao, "aa:bb:cc:00:00:01", relatorio)
+            assert mgr.PEDIDOS_DO_GANHO.esperar(5.0)
         finally:
             integrations.ganho_do_microfone.definir = antes
 
         assert escritos == [("aa:bb:cc:00:00:01", 62, ("aa:bb:cc:00:00:01",))]
-        assert estado == "aplicado"
-        assert relatorio["mic:ganho:aa:bb:cc:00:00:01"] == "aplicado"
+        assert estado == "pedido"
+        assert relatorio["mic:ganho:aa:bb:cc:00:00:01"] == "pedido"
 
     def test_sem_uniq_nao_escreve_na_placa_de_ninguem(self):
         """A seção GLOBAL não sabe em qual placa escrever, e chutar a primeira"""

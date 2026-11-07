@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import functools
+import importlib
 import inspect
 import os
+import pkgutil
 import signal
 import threading
 import time
@@ -725,6 +728,7 @@ class Daemon:
         )
         from hefesto_dualsense4unix.daemon.subsystems import subir
 
+        await asyncio.to_thread(_importar_o_que_a_subida_usa)
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
         self._stop_event = asyncio.Event()
@@ -748,7 +752,7 @@ class Daemon:
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import migrar_uma_vez
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina
         with contextlib.suppress(Exception):
-            migrar_uma_vez()
+            await asyncio.to_thread(migrar_uma_vez)
         self._maquina = carregar_maquina()
         self.config.orcamento_da_mesa = lambda: self._maquina.orcamento.teto
         from hefesto_dualsense4unix.profiles.schema import (
@@ -1787,71 +1791,32 @@ class Daemon:
     ) -> str | None:
         """O modo que o usuário escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
 
-        O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): QUEM TROCA O MODO GRAVA O
-        MODO. A escolha feita pelo chip da aba Jogar era gravada pela janela,
-        depois da resposta: com quatro controles a troca leva ~2,9 s, a janela
-        desiste aos 2,0 s, e o modo nunca chegava ao perfil — o Freestyle
-        seguiu em Xbox depois do «Sony DualSense» das 01:43 de 29/09. O PS + R3
-        gravava no daemon, e o cartão também. Agora há um escritor só, aqui, e
-        os três setters do modo o chamam depois do aparelho, só quando a porta
-        diz que é escolha do usuário (`grava_o_modo`).
-
-        O perfil é o de :func:`manager.nome_do_perfil_que_grava` (o ativo: com o
-        Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou a
-        escolha do usuário; «sem escolha», nenhum), e a regra da seção é a do dono,
-        :func:`manager.secao_do_modo_com_o_caminho`: o caminho e a máscara vão em
-        par (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES), e nada mudou, nada se
-        grava. `porta` vai ao `profile_salvo`.
-
-        `mouse_ligado` (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada na Navegação
-        grava, na MESMA gravação, o ``mouse.enabled`` que o usuário deixou de pé,
-        pela regra do dono (`manager.secao_do_mouse_da_navegacao`), com as
-        velocidades vivas quando o perfil não tinha a seção.
-
-        O CARIMBO VAI JUNTO (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01,
-        03/10/2026): o daemon passa o jogo que vale (o appid do wrapper vivo, o
-        mesmo que a escada usa) e o Steam Input dele (a allowlist que a escada
-        lê), e o escritor carimba a ponte com `POR_ESCOLHA_DO_USUARIO` quando o perfil
-        que grava é a regra desse jogo. A autoridade de exibição não entra: a
-        escolha pela janela acontece com a janela do Hefesto em foco.
-
-        NUNCA LEVANTA: o aparelho já trocou, e um `.json` ilegível não pode
-        transformar a troca em recusa.
+        Escritor único: os três setters do modo o chamam depois do aparelho, só com a porta da
+        escolha do usuário. O perfil é o de :func:`manager.nome_do_perfil_que_grava`, e nada
+        mudou, nada se grava. A gravação vai ao fio único do perfil, na ordem dos gestos, sob a
+        trava de `mudar_o_perfil`: no fio do laço o gesto não espera o disco e devolve ``None``.
+        Nunca levanta: o aparelho já trocou.
         """
-        from hefesto_dualsense4unix.daemon import launch_env
-        from hefesto_dualsense4unix.profiles.manager import (
-            gravar_o_modo_no_perfil_ativo,
-            nome_do_perfil_que_grava,
-        )
+        from hefesto_dualsense4unix.profiles import manager
 
-        try:
-            nome = nome_do_perfil_que_grava(
-                getattr(getattr(self, "store", None), "active_profile", None)
-            )
-            velocidades = (
-                (self.config.mouse_speed, self.config.mouse_scroll_speed)
-                if mouse_ligado is not None
-                else None
-            )
-            appid = launch_env.launch_session_appid()
-            salvo = gravar_o_modo_no_perfil_ativo(
-                nome,
-                kind=kind,
-                caminho=caminho,
-                mascara=mascara,
-                arranjo=arranjo,
-                porta=porta,
-                mouse_ligado=mouse_ligado,
-                velocidades=velocidades,
-                appid_do_jogo=appid,
-                steam_input=appid is not None and appid in launch_env.steam_input_appids(),
-            )
-        except Exception as exc:
-            logger.warning(
-                "modo_escolhido_nao_gravou", kind=kind, porta=porta, err=str(exc)
-            )
-            return None
-        return getattr(salvo, "name", None)
+        velocidades = (
+            (self.config.mouse_speed, self.config.mouse_scroll_speed)
+            if mouse_ligado is not None
+            else None
+        )
+        feito = manager.no_fio_do_perfil(
+            contextvars.copy_context().run,
+            _gravar_o_modo_no_fio,
+            getattr(getattr(self, "store", None), "active_profile", None),
+            kind=kind,
+            caminho=caminho,
+            mascara=mascara,
+            porta=porta,
+            mouse_ligado=mouse_ligado,
+            velocidades=velocidades,
+            arranjo=arranjo,
+        )
+        return None if _laco_deste_fio() is not None else feito.result()
 
     def escolher_o_modo_unico(self, modo: object, *, porta: PortaQueGrava) -> str:
         """O modo único de TODOS os controles: o escritor só, do IPC, do PS + L3 e do PS + R3.
@@ -4161,7 +4126,7 @@ class Daemon:
         evdev_watchdog_next_at: float = 0.0
         grab_reconcile_next_at: float = 0.0
         relogios = _RelogiosLentos(loop.time())
-        medidor = _MedidorDoTique(self.store, pool=self._executor)
+        medidor = _MedidorDoTique(self.store, pool=getattr(self, "_executor", None))
         aperto = _o_aperto_do_laco(self)
         passos = _PassosDoLaco(self.store)
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
@@ -4844,6 +4809,41 @@ def _gravar_medida(store: Any, nome: str, valor: int) -> None:
     store.bump(nome, valor - store.counter(nome))
 
 
+def _laco_deste_fio() -> asyncio.AbstractEventLoop | None:
+    """O laço que roda NESTE fio, ou ``None`` fora de laço nenhum."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+
+def _gravar_o_modo_no_fio(ativo: str | None, *, kind: str, **modo: Any) -> str | None:
+    """O corpo de `Daemon.gravar_o_modo_escolhido`, no fio do perfil. Nunca levanta."""
+    from hefesto_dualsense4unix.daemon import launch_env
+    from hefesto_dualsense4unix.profiles.manager import (
+        gravar_o_modo_no_perfil_ativo,
+        nome_do_perfil_que_grava,
+        sob_a_trava_do_perfil,
+    )
+
+    try:
+        appid = launch_env.launch_session_appid()
+        salvo = sob_a_trava_do_perfil(
+            gravar_o_modo_no_perfil_ativo,
+            nome_do_perfil_que_grava(ativo),
+            kind=kind,
+            appid_do_jogo=appid,
+            steam_input=appid is not None and appid in launch_env.steam_input_appids(),
+            **modo,
+        )
+    except Exception as exc:
+        logger.warning(
+            "modo_escolhido_nao_gravou", kind=kind, porta=modo.get("porta"), err=str(exc)
+        )
+        return None
+    return getattr(salvo, "name", None)
+
+
 class _MedidorDoTique:
     """Mede cada tique do `_poll_loop` e o publica nos contadores, só ao fechar a janela.
 
@@ -4929,6 +4929,20 @@ class _MedidorDoTique:
             _gravar_medida(self._store, nome, valor)
         self._duracoes.clear()
         self._pior_por_relogio.clear()
+
+
+def _importar_o_que_a_subida_usa() -> None:
+    """Os módulos que a subida importa e leem o disco ao nascer, fora do fio do laço.
+
+    O import preguiçoso no laço custou 16 s numa subida com o disco ocupado. Módulo que não sobe
+    aqui segue pelo import de quem o usa, que diz o erro.
+    """
+    from hefesto_dualsense4unix.daemon import subsystems
+
+    nomes = [f"{subsystems.__name__}.{m.name}" for m in pkgutil.iter_modules(subsystems.__path__)]
+    for nome in (*nomes, "hefesto_dualsense4unix.integrations.canal_sem_imu"):
+        with contextlib.suppress(Exception):
+            importlib.import_module(nome)
 
 
 def _a_fabrica_do_supervisor() -> Callable[[Any], Any]:

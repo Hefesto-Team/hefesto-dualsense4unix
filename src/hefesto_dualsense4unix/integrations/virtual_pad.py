@@ -588,6 +588,14 @@ class PedidoDePad:
             self._fio.parar_o_pad(sobra)
 
 
+def com_a_calibracao_lida(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Os argumentos do pad com a calibração lida: a leitura vai ao aparelho, fora do laço."""
+    calibracao = kwargs.get("calibration_0x05")
+    if not callable(calibracao):
+        return kwargs
+    return {**kwargs, "calibration_0x05": calibracao()}
+
+
 class FioDeNascimento:
     """O dono único do nascimento do pad fora do laço do tique.
 
@@ -662,7 +670,7 @@ class FioDeNascimento:
             pad: VirtualPad | None = None
             flavor, kwargs = argumentos
             try:
-                pad = make_virtual_pad(flavor, **kwargs)
+                pad = make_virtual_pad(flavor, **com_a_calibracao_lida(kwargs))
             except Exception as exc:
                 logger.warning("vpad_nascimento_falhou", err=str(exc))
             alvo._entregar(pad, (time.monotonic() - inicio) * 1000.0)

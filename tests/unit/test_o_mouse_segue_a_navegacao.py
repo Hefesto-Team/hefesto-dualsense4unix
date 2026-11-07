@@ -328,7 +328,11 @@ def _ativo(d: _DaemonDaNavegacao, nome: str) -> None:
 def _o_chip(d: _DaemonDaNavegacao) -> dict[str, Any]:
     import asyncio
 
-    return asyncio.run(_Handlers(d)._handle_desktop_arranjo_apply({"origin": "manual"}))
+    from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
+
+    resposta = asyncio.run(_Handlers(d)._handle_desktop_arranjo_apply({"origin": "manual"}))
+    FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
+    return resposta
 
 
 def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(ensaio: _Ensaio) -> None:

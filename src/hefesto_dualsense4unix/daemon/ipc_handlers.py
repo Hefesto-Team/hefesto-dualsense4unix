@@ -579,7 +579,10 @@ class IpcHandlersMixin:
     async def _handle_profile_list(self, params: dict[str, Any]) -> dict[str, Any]:
         from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
-        profiles = os_perfis_de_escolher(self.profile_manager.list_profiles())
+        def ler() -> list[Any]:
+            return os_perfis_de_escolher(self.profile_manager.list_profiles())
+
+        profiles = await asyncio.to_thread(ler)
         return {
             "profiles": [
                 {
@@ -1465,14 +1468,15 @@ class IpcHandlersMixin:
 
 
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
-        ambiente = self._agendar_arming_do_launch(params)
+        pontes = await asyncio.to_thread(_pontes_confirmadas_seguro)
+        ambiente = self._agendar_arming_do_launch(params, await self._receitas_do_pedido(params))
         snap = self.store.snapshot()
         controller = snap.controller
         return {
             "connected": bool(controller and controller.connected),
             "transport": controller.transport if controller else None,
             "active_profile": snap.active_profile,
-            "pontes_confirmadas": _pontes_confirmadas_seguro(),
+            "pontes_confirmadas": pontes,
             "battery_pct": controller.battery_pct if controller else None,
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
             "freestyle_ligado": bool(self.store.freestyle_ligado),
@@ -3080,11 +3084,22 @@ class IpcHandlersMixin:
             first_seen_epoch=first[1],
         )
 
-    def _agendar_arming_do_launch(self, params: Any = None) -> dict[str, Any]:
+    @staticmethod
+    async def _receitas_do_pedido(params: Any) -> dict[str, dict[str, str]] | None:
+        """A varredura dos jogos que o `daemon.status {appid}` precisa, fora do laço."""
+        if not (isinstance(params, dict) and params.get("appid") is not None):
+            return None
+        from hefesto_dualsense4unix.daemon import launch_env
+
+        return await asyncio.to_thread(launch_env._receitas_dos_jogos)
+
+    def _agendar_arming_do_launch(
+        self, params: Any = None, receitas: dict[str, dict[str, str]] | None = None
+    ) -> dict[str, Any]:
         """Arma o modo do perfil no ping de um launch; com o `appid`, devolve o ambiente dele."""
         from hefesto_dualsense4unix.daemon import launch_env
 
-        ambiente = launch_env.o_ambiente_no_status(self.daemon, params)
+        ambiente = launch_env.o_ambiente_no_status(self.daemon, params, receitas)
         if self.daemon is None:
             return ambiente
         marker = self._wrapper_marker_cached()
@@ -3622,6 +3637,7 @@ class IpcHandlersMixin:
             ESCOLHAS as FORMAS_DE_HAPTICA,
         )
         from hefesto_dualsense4unix.profiles.formas_de_haptica import escolha_que_vale
+        from hefesto_dualsense4unix.profiles.manager import sob_a_trava_do_perfil
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             chave_no_perfil,
             gravar_pelo_gesto,
@@ -3728,8 +3744,10 @@ class IpcHandlersMixin:
             atuais[original] = dele.model_copy(update={"rumble": novo})
             return perfil.model_copy(update={"controllers": atuais})
 
-        onde, _ = gravar_pelo_gesto("vibracao", nome, _com_as_barras, uniq=chave,
-                                    origem="rumble.motores.set")
+        onde, _ = await asyncio.to_thread(
+            sob_a_trava_do_perfil, gravar_pelo_gesto, "vibracao", nome, _com_as_barras,
+            uniq=chave, origem="rumble.motores.set",
+        )
         efetivos = self._pcts_efetivos(visto.get("novo"))
         haptica = pct_da_haptica(visto.get("novo"))
         efeitos = {
@@ -3852,6 +3870,7 @@ class IpcHandlersMixin:
         if toque is not None:
             REGISTRO.definir_touchpad(chave, ligado=toque == "ligado")
 
+        from hefesto_dualsense4unix.profiles.manager import sob_a_trava_do_perfil
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             chave_no_perfil,
             gravar_pelo_gesto,
@@ -3883,8 +3902,10 @@ class IpcHandlersMixin:
             atuais[original] = dele.model_copy(update={"sensores": novo})
             return perfil.model_copy(update={"controllers": atuais})
 
-        onde, _ = gravar_pelo_gesto("sensores", nome, _com_os_sensores, uniq=chave,
-                                    origem="sensor.set")
+        onde, _ = await asyncio.to_thread(
+            sob_a_trava_do_perfil, gravar_pelo_gesto, "sensores", nome, _com_os_sensores,
+            uniq=chave, origem="sensor.set",
+        )
         gravado = bool(visto.get("gravado"))
 
         hub = self._garantir_sensor_hub()
@@ -4389,18 +4410,19 @@ class IpcHandlersMixin:
         )
 
         if uniq:
-            fonte = fonte_de_captura_do_uniq(
+            fonte = await asyncio.to_thread(
+                fonte_de_captura_do_uniq,
                 uniq, mesa=recado_do_microfone.mesa_de_agora(self.daemon))
             if not fonte:
                 return {"status": "sem_fonte", "fonte": None, "volume": None,
                         "por_uniq": True}
             por_uniq = True
         else:
-            fonte = fonte_de_captura_do_controle()
+            fonte = await asyncio.to_thread(fonte_de_captura_do_controle)
             por_uniq = False
         if not fonte:
             return {"status": "sem_fonte", "fonte": None, "volume": None}
-        ok = definir_volume_da_captura(volume, fonte=fonte)
+        ok = await asyncio.to_thread(definir_volume_da_captura, volume, fonte=fonte)
         aparelho = None
         escritor = getattr(self.controller, "set_microphone_volume", None)
         if callable(escritor):
@@ -4412,7 +4434,7 @@ class IpcHandlersMixin:
         return {
             "status": "ok" if ok else "erro",
             "fonte": fonte,
-            "volume": volume_da_captura(fonte=fonte),
+            "volume": await asyncio.to_thread(volume_da_captura, fonte=fonte),
             "por_uniq": por_uniq,
             "aparelho": aparelho,
         }
@@ -4885,10 +4907,13 @@ class IpcHandlersMixin:
         del params
         if self.daemon is None:
             raise ValueError("daemon não disponível para reconciliar o co-op")
-        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+        from hefesto_dualsense4unix.daemon.subsystems.coop import (
+            descobrir_os_nos,
+            get_coop_manager,
+        )
 
         coop = get_coop_manager(self.daemon)
-        coop.sync(force=True)
+        coop.sync(force=True, nos=await asyncio.to_thread(descobrir_os_nos))
         players = coop.player_count()
         return {
             "status": "ok",

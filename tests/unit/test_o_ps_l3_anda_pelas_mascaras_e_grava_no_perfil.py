@@ -32,6 +32,7 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     HotkeyManager,
 )
 from hefesto_dualsense4unix.profiles import loader
+from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileModeConfig
 from hefesto_dualsense4unix.utils import session
 
@@ -173,6 +174,7 @@ def _perfil_em_dualsense() -> None:
 
 
 def _par_gravado() -> tuple[str | None, str | None]:
+    FIO_DO_PERFIL.submit(lambda: None).result(timeout=5.0)
     modo = loader.load_profile(PERFIL).mode
     assert modo is not None and modo.kind == "gamepad"
     return modo.caminho, modo.gamepad_flavor

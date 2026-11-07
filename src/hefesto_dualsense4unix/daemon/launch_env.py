@@ -2402,12 +2402,14 @@ def o_ambiente_do_jogo(
     return None
 
 
-def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]:
+def ambiente_do_lancamento(
+    daemon: DaemonProtocol, appid: int, receitas: dict[str, dict[str, str]] | None = None
+) -> dict[str, Any]:
     """Arma o lançamento do `appid` e devolve o ambiente dele, do estado armado, em memória.
 
     O arquivo é escrito em fundo e pode chegar depois do `exec`; esta resposta é o que o
     wrapper exporta quando o daemon atende. A conta é a do arquivo (`o_ambiente_do_jogo`),
-    com a roupa que o arme decidiu e a receita lida agora.
+    com a roupa que o arme decidiu e a receita que o handler leu fora do laço.
     """
     t0 = time.perf_counter()
     appid = int(appid)
@@ -2425,7 +2427,7 @@ def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]
         foto, appid,
         do_jogo=next((p for a, p in _steam_profiles(daemon) if a == appid), None),
         freestyle=_o_freestyle_que_manda(daemon), padrao=padrao,
-        receita=_receitas_dos_jogos().get(str(appid), {}),
+        receita=(_receitas_dos_jogos() if receitas is None else receitas).get(str(appid), {}),
         roupa=lambda: _a_roupa_do_jogo(foto, comuns, appid),
     )
     env, estado = padrao if ambiente is None else (ambiente.env, ambiente.estado)
@@ -2446,7 +2448,10 @@ def ambiente_do_lancamento(daemon: DaemonProtocol, appid: int) -> dict[str, Any]
     }
 
 
-def o_ambiente_no_status(daemon: DaemonProtocol | None, params: Any) -> dict[str, Any]:
+def o_ambiente_no_status(
+    daemon: DaemonProtocol | None, params: Any,
+    receitas: dict[str, dict[str, str]] | None = None,
+) -> dict[str, Any]:
     """O bloco `ambiente` do `daemon.status` com o `appid`; `{}` sem pedido ou sem resposta."""
     appid = params.get("appid") if isinstance(params, dict) else None
     if appid is None:
@@ -2456,7 +2461,7 @@ def o_ambiente_no_status(daemon: DaemonProtocol | None, params: Any) -> dict[str
     if daemon is None:
         return {}
     try:
-        return {"ambiente": ambiente_do_lancamento(daemon, appid)}
+        return {"ambiente": ambiente_do_lancamento(daemon, appid, receitas)}
     except Exception as exc:
         logger.warning("launch_ambiente_falhou", appid=appid, err=str(exc))
         return {}
@@ -2995,6 +3000,7 @@ __all__ = [
     "WRAPPER_MARKER_WINDOW_SEC",
     "ModoAntecipado",
     "ParDoComputador",
+    "_receitas_dos_jogos",
     "ambiente_do_lancamento",
     "appids_em_cena",
     "arm_launch_profile",

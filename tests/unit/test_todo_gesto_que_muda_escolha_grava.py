@@ -278,6 +278,7 @@ def test_o_sensor_grava_pelo_daemon() -> None:
                    and no.name == "_handle_sensor_set")
     grava = {getattr(no.func, "id", getattr(no.func, "attr", ""))
              for no in ast.walk(handler) if isinstance(no, ast.Call)}
+    grava |= {no.id for no in ast.walk(handler) if isinstance(no, ast.Name)}
     assert grava & {"save_profile", "gravar_pelo_gesto"}, (
         "o `sensor.set` do daemon deixou de gravar: o sensor que quem usa "
         "desliga voltaria ligado no próximo Salvar ou na próxima troca")

@@ -109,6 +109,9 @@ class _Ipc(IpcHandlersMixin):
         self.daemon = daemon
 
 
+_CALIBRACAO_DE_VERDADE = gp.read_primary_calibration
+
+
 @pytest.fixture
 def mesa(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNamespace]:
     from hefesto_dualsense4unix.utils import session as session_mod
@@ -422,3 +425,29 @@ def test_fora_do_laco_a_borda_nasce_na_hora(mesa: SimpleNamespace) -> None:
     assert _PRAZO not in mesa.estado.ordem, mesa.estado.ordem
     assert mesa.estado.pedidos == [fio.name]
     assert mesa.daemon._gamepad_device is mesa.estado.pads["None"]
+
+
+def test_a_calibracao_do_p1_vai_ao_aparelho_no_fio_de_nascimento(
+    mesa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ida e volta do ``HIDIOCGFEATURE`` dorme, e o White segue jogando com o P1 nascendo.
+
+    MORDIDA: em ``start_gamepad_emulation_desfecho``, leia ``read_primary_calibration(daemon)``
+    na hora, em vez de o entregar ao fio.
+    """
+    fios: list[str] = []
+
+    def dorme() -> bytes:
+        fios.append(threading.current_thread().name)
+        time.sleep(0.2)
+        return _CALIB
+
+    monkeypatch.setattr(gp, "read_primary_calibration", _CALIBRACAO_DE_VERDADE)
+    monkeypatch.setattr(mesa.daemon.controller, "read_calibration", dorme, raising=False)
+    monkeypatch.setattr(mesa.daemon, "contar_controles_fisicos", lambda: 2)
+    mesa.daemon._gamepad_device = None
+
+    _o_gesto_volta_na_hora_e_o_p1_nasce_pelo_fio(
+        mesa, mesa.daemon.aplicar_gamepad_para_multiplos_controles)
+
+    assert fios == ["hefesto-nascimento-do-pad"], fios

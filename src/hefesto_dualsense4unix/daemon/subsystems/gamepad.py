@@ -56,6 +56,7 @@ Política:
 from __future__ import annotations
 
 import contextlib
+import functools
 import os
 import re
 import threading
@@ -2017,7 +2018,7 @@ def start_gamepad_emulation_desfecho(
             "rumble_sink": make_primary_rumble_sink(daemon),
             "player": carta,
             "allow_uhid": controller_allows_uhid(daemon),
-            "calibration_0x05": read_primary_calibration(daemon),
+            "calibration_0x05": functools.partial(read_primary_calibration, daemon),
             "caminho": caminho_pedido,
             "roupa": roupa,
             **make_primary_replica_sinks(daemon),
@@ -2054,7 +2055,11 @@ def start_gamepad_emulation_desfecho(
             origin=origin,
         )
         return EMU_APLICADO
-    device: VirtualPad | None = make_virtual_pad(key, identity=identity, **contexto.kwargs)
+    from hefesto_dualsense4unix.integrations.virtual_pad import com_a_calibracao_lida
+
+    device: VirtualPad | None = make_virtual_pad(
+        key, identity=identity, **com_a_calibracao_lida(contexto.kwargs)
+    )
     desfecho = instalar_o_p1(daemon, device, contexto, None)
     gravar_o_gesto(desfecho)
     return desfecho

@@ -5,6 +5,7 @@ import contextlib
 import math
 import threading
 from collections.abc import Callable, Iterable
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
@@ -1326,19 +1327,12 @@ class ProfileManager:
         pedido = getattr(secao, "gain", None)
         if pedido is None:
             return None
-        from hefesto_dualsense4unix.integrations import ganho_do_microfone
         if not uniq:
             resultado["mic:ganho"] = "sem_uniq"
             return "sem_uniq"
-        try:
-            ficou = ganho_do_microfone.definir(str(uniq), int(pedido), [str(uniq)])
-        except Exception as exc:  # pragma: no cover
-            logger.warning("profile_mic_gain_failed", uniq=uniq, err=str(exc))
-            resultado[f"mic:ganho:{uniq}"] = "falhou"
-            return "falhou"
-        estado = "sem_placa" if ficou is None else "aplicado"
-        resultado[f"mic:ganho:{uniq}"] = estado
-        return estado
+        PEDIDOS_DO_GANHO.pedir(str(uniq), int(pedido))
+        resultado[f"mic:ganho:{uniq}"] = GANHO_PEDIDO
+        return GANHO_PEDIDO
 
     def reapply_speaker_on_connect(self, uniq: str | None = None) -> str | None:
         """Reaplica o volume do perfil ATIVO quando um controle (re)conecta.
@@ -1735,6 +1729,78 @@ def _chave_do_appid(appid: object) -> int | None:
 
 
 _TRAVA_DA_MUDANCA_NO_PERFIL = threading.Lock()
+FIO_DO_PERFIL = ThreadPoolExecutor(max_workers=1, thread_name_prefix="hefesto-perfil")
+GANHO_PEDIDO = "pedido"
+_gravacao_em_voo: Future[Any] | None = None
+
+
+class _PedidosDoGanho:
+    """O ganho do microfone sai do fio de quem ativa: o pedido mais novo de cada controle vence.
+
+    O `definir` acha a placa no grafo do som e roda três `amixer`, um processo filho atrás do
+    outro. Quem ativa o perfil só pede; a releitura fica com quem lê o ganho.
+    """
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._pedidos: dict[str, int] = {}
+        self._fio: threading.Thread | None = None
+
+    def pedir(self, uniq: str, por_cento: int) -> None:
+        with self._trava:
+            self._pedidos[uniq] = por_cento
+            if self._fio is None:
+                self._fio = threading.Thread(
+                    target=self._esvaziar, name="hefesto-ganho-do-mic", daemon=True
+                )
+                self._fio.start()
+
+    def _esvaziar(self) -> None:
+        from hefesto_dualsense4unix.integrations import ganho_do_microfone
+
+        while True:
+            with self._trava:
+                if not self._pedidos:
+                    self._fio = None
+                    return
+                uniq, por_cento = self._pedidos.popitem()
+            try:
+                ficou = ganho_do_microfone.definir(uniq, por_cento, [uniq])
+            except Exception as exc:
+                logger.warning("profile_mic_gain_failed", uniq=uniq, err=str(exc))
+                continue
+            logger.info("profile_mic_gain", uniq=uniq, pedido=por_cento, ficou=ficou)
+
+    def esperar(self, teto_s: float) -> bool:
+        """O fio esvaziou dentro de ``teto_s``? Quem lê o ganho logo depois do pedido espera."""
+        with self._trava:
+            fio = self._fio
+        if fio is None:
+            return True
+        fio.join(teto_s)
+        return not fio.is_alive()
+
+
+PEDIDOS_DO_GANHO = _PedidosDoGanho()
+
+
+def no_fio_do_perfil(fazer: Callable[..., _Extra], /, *args: Any, **kwargs: Any) -> Future[_Extra]:
+    """Entrega uma gravação ao fio único do perfil, na ordem dos gestos."""
+    global _gravacao_em_voo
+    _gravacao_em_voo = feito = FIO_DO_PERFIL.submit(fazer, *args, **kwargs)
+    return feito
+
+
+def gravacao_em_voo() -> Future[Any] | None:
+    """A última gravação entregue ao fio, até terminar."""
+    feito = _gravacao_em_voo
+    return None if feito is None or feito.done() else feito
+
+
+def sob_a_trava_do_perfil(fazer: Callable[..., _Extra], /, *args: Any, **kwargs: Any) -> _Extra:
+    """Roda um ler-mudar-gravar inteiro sob a trava de :func:`mudar_o_perfil`, fora do laço."""
+    with _TRAVA_DA_MUDANCA_NO_PERFIL:
+        return fazer(*args, **kwargs)
 _Extra = TypeVar("_Extra")
 
 

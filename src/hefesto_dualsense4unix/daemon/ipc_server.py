@@ -37,7 +37,7 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
 )
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import gesto_de_agora
-from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.manager import ProfileManager, gravacao_em_voo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
@@ -302,6 +302,7 @@ class IpcServer(IpcHandlersMixin):
         status = "erro"
         try:
             result = await handler(params)
+            await _o_perfil_em_dia()
             status = "ok"
         except FileNotFoundError as exc:
             return _json_rpc_error(req_id, CODE_PROFILE_NOT_FOUND, str(exc))
@@ -324,6 +325,13 @@ class IpcServer(IpcHandlersMixin):
         if req_id is None:
             return None
         return _json_rpc_result(req_id, result)
+
+
+async def _o_perfil_em_dia() -> None:
+    """A resposta do gesto sai com o modo no disco; quem espera é o pedido, nunca o laço."""
+    feito = gravacao_em_voo()
+    if feito is not None:
+        await asyncio.wrap_future(feito)
 
 
 def _o_cliente_ja_foi(writer: asyncio.StreamWriter) -> bool:

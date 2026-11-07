@@ -2208,3 +2208,42 @@ são em 10 min nunca foi medido, e é a medida que confirma o piso no aparelho.
 ## `_escolhido` da aba Perfis (a10_perfis.py)
 
 A escolha deixa de valer quando o perfil sai do disco (apagado por fora, renomeado, `HEFESTO_VARIANTE` trocado): sem a queda, "Voltar à de ontem" miraria arquivo inexistente. Sob o `pytest`, `load_all_profiles()` devolve `[]` (a `conftest.py` liga `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1`), o `ativo` nunca está nos nomes e nada é gravado. Em 06/11/2026 a linha passou a seguir o ativo que muda: abrir um jogo troca o perfil, e a linha velha deixava o editor em outro perfil.
+
+## `Daemon.gravar_o_modo_escolhido` (lifecycle.py)
+
+O modo que o usuário escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
+
+O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): QUEM TROCA O MODO GRAVA O
+MODO. A escolha feita pelo chip da aba Jogar era gravada pela janela,
+depois da resposta: com quatro controles a troca leva ~2,9 s, a janela
+desiste aos 2,0 s, e o modo nunca chegava ao perfil — o Freestyle
+seguiu em Xbox depois do «Sony DualSense» das 01:43 de 29/09. O PS + R3
+gravava no daemon, e o cartão também. Agora há um escritor só, aqui, e
+os três setters do modo o chamam depois do aparelho, só quando a porta
+diz que é escolha do usuário (`grava_o_modo`).
+
+O perfil é o de :func:`manager.nome_do_perfil_que_grava` (o ativo: com o
+Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou a
+escolha do usuário; «sem escolha», nenhum), e a regra da seção é a do dono,
+:func:`manager.secao_do_modo_com_o_caminho`: o caminho e a máscara vão em
+par (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES), e nada mudou, nada se
+grava. `porta` vai ao `profile_salvo`.
+
+`mouse_ligado` (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada na Navegação
+grava, na MESMA gravação, o ``mouse.enabled`` que o usuário deixou de pé,
+pela regra do dono (`manager.secao_do_mouse_da_navegacao`), com as
+velocidades vivas quando o perfil não tinha a seção.
+
+O CARIMBO VAI JUNTO (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01,
+03/10/2026): o daemon passa o jogo que vale (o appid do wrapper vivo, o
+mesmo que a escada usa) e o Steam Input dele (a allowlist que a escada
+lê), e o escritor carimba a ponte com `POR_ESCOLHA_DO_USUARIO` quando o perfil
+que grava é a regra desse jogo. A autoridade de exibição não entra: a
+escolha pela janela acontece com a janela do Hefesto em foco.
+
+A GRAVAÇÃO NÃO RODA NO LAÇO: vai ao fio único do perfil, na ordem dos gestos, sob a
+trava de `mudar_o_perfil`. No fio do laço o gesto não espera o disco e devolve ``None``;
+fora dele, espera e devolve o nome.
+
+NUNCA LEVANTA: o aparelho já trocou, e um `.json` ilegível não pode
+transformar a troca em recusa.

@@ -17,6 +17,7 @@ import ast
 import asyncio
 import os
 import subprocess
+import sys
 import threading
 import time
 from collections import defaultdict, deque
@@ -31,6 +32,8 @@ from hefesto_dualsense4unix.daemon import launch_env as le
 from hefesto_dualsense4unix.integrations import ponte_escada, ponte_tentativa
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import (
+    ControllerMicOverride,
+    ControllerOverrides,
     MatchAny,
     MatchCriteria,
     Profile,
@@ -43,6 +46,7 @@ TETO_IPC_S = 0.4
 APPID = 9931101
 JOGO = "Jogo da Régua do Laço"
 _P1 = "aa:bb:cc:00:00:01"
+_P2 = "aa:bb:cc:00:00:02"
 _SRC = Path(__file__).resolve().parents[2] / "src"
 
 
@@ -299,25 +303,7 @@ _BARREIRAS = {
     "hefesto_dualsense4unix.daemon.launch_env.materialize_launch_env": "escrevente.atende_aqui()",
     "hefesto_dualsense4unix.daemon.launch_env.tique_da_escada": "escrevente.atende_aqui()",
 }
-_ONDA_SEGUINTE = "O-LACO-DO-DAEMON-NAO-RODA-O-AMIXER-NEM-GRAVA-O-GESTO-01"
-_H = "hefesto_dualsense4unix.daemon.ipc_handlers.IpcHandlersMixin."
-_D = "hefesto_dualsense4unix.daemon.lifecycle.Daemon."
-_AINDA_NO_LACO: dict[str, str] = {
-    _H + "_armar_launch": _ONDA_SEGUINTE,
-    _H + "_handle_daemon_status": _ONDA_SEGUINTE,
-    _H + "_handle_machine_declare": _ONDA_SEGUINTE,
-    _H + "_handle_mic_volume_set": _ONDA_SEGUINTE,
-    _H + "_handle_profile_reaplicar": _ONDA_SEGUINTE,
-    _H + "_handle_profile_switch": _ONDA_SEGUINTE,
-    _H + "_handle_rumble_motores_set": _ONDA_SEGUINTE,
-    _H + "_handle_sensor_set": _ONDA_SEGUINTE,
-    _H + "_o_que_volta_sem_o_freestyle": _ONDA_SEGUINTE,
-    _D + "_poll_loop": _ONDA_SEGUINTE,
-    _D + "run": _ONDA_SEGUINTE,
-    (
-        "hefesto_dualsense4unix.daemon.subsystems.eventos_do_perfil.EventosDoPerfil._entrar"
-    ): _ONDA_SEGUINTE,
-}
+_AINDA_NO_LACO: dict[str, str] = {}
 
 
 class _Funcao:
@@ -508,3 +494,306 @@ def test_nenhum_async_do_daemon_alcanca_gravacao_ou_processo_sem_to_thread(
     assert not novos, "async def do daemon gravando o perfil ou rodando processo no laço:\n" + (
         "\n".join(f"{chave}: {caminho}" for chave, caminho in novos.items()))
     assert not curados, f"saíram do laço; tire de `_AINDA_NO_LACO`: {curados}"
+
+
+class _Espiao:
+    """A função de verdade trocada por uma que dorme ``DORME_S``, e anota o fio de cada chamada."""
+
+    def __init__(self, resposta: Any = None) -> None:
+        self.resposta = resposta
+        self.fios: list[str] = []
+
+    def __call__(self, *_a: Any, **_k: Any) -> Any:
+        self.fios.append(threading.current_thread().name)
+        time.sleep(DORME_S)
+        return self.resposta
+
+
+def _o_fio_do_laco_nao_rodou(espiao: _Espiao) -> None:
+    assert espiao.fios, "a chamada lenta não aconteceu"
+    assert threading.main_thread().name not in espiao.fios, espiao.fios
+
+
+def _perfil_com_ganho() -> None:
+    chave = _P1.replace(":", "")
+    loader.save_profile(Profile(
+        name="Com Ganho", match=MatchAny(type="any"),
+        controllers={chave: ControllerOverrides(mic=ControllerMicOverride(gain=62))},
+    ))
+
+
+def test_o_profile_switch_com_ganho_responde_enquanto_o_amixer_dorme(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ativação só pede o ganho: o `amixer` dorme em fio próprio e o laço segue atendendo.
+
+    MORDIDA: chame o ``definir`` direto em ``_aplicar_ganho_do_mic``, e o status espera.
+    """
+    from hefesto_dualsense4unix.app import audio_saida
+    from hefesto_dualsense4unix.integrations import ganho_do_microfone
+    from hefesto_dualsense4unix.profiles.manager import PEDIDOS_DO_GANHO
+
+    amixer = _Espiao("Capture 'x' [50%] [-3.00dB]")
+    monkeypatch.setattr(ganho_do_microfone, "placa_do_controle", lambda *_a: "9")
+    monkeypatch.setattr(audio_saida, "rodar_leitura", amixer)
+    servidor = _servidor(tmp_path)
+    servidor.profile_manager.mic_applier = lambda *_a, **_k: "aplicado"
+    _perfil_com_ganho()
+
+    gasto, corria, _resposta = asyncio.run(_o_status_durante(
+        servidor, servidor._handlers["profile.switch"]({"name": "Com Ganho"})))
+
+    assert gasto < TETO_IPC_S, f"o profile.switch parou o laço {gasto:.2f} s"
+    assert not corria or gasto < TETO_IPC_S
+    assert PEDIDOS_DO_GANHO.esperar(DORME_S * 8)
+    _o_fio_do_laco_nao_rodou(amixer)
+    assert set(amixer.fios) == {"hefesto-ganho-do-mic"}, amixer.fios
+
+
+def test_o_pedido_mais_novo_de_cada_controle_vence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Quatro pedidos de dois controles enquanto o primeiro dorme: só os últimos saem."""
+    from hefesto_dualsense4unix.integrations import ganho_do_microfone
+    from hefesto_dualsense4unix.profiles.manager import _PedidosDoGanho
+
+    solta = threading.Event()
+    feitos: list[tuple[str, int]] = []
+
+    def definir(uniq: str, por_cento: int, _mesa: Any) -> tuple[int, float]:
+        solta.wait(5.0)
+        feitos.append((uniq, por_cento))
+        return por_cento, 0.0
+
+    monkeypatch.setattr(ganho_do_microfone, "definir", definir)
+    pedidos = _PedidosDoGanho()
+    pedidos.pedir("a", 1)
+    time.sleep(0.05)
+    for uniq, por_cento in (("a", 2), ("b", 3), ("a", 4), ("b", 5)):
+        pedidos.pedir(uniq, por_cento)
+    solta.set()
+
+    assert pedidos.esperar(5.0)
+    assert sorted(feitos) == [("a", 1), ("a", 4), ("b", 5)], feitos
+
+
+def test_o_volume_da_captura_nao_para_o_laco(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MORDIDA: tire o ``asyncio.to_thread`` do ``definir_volume_da_captura`` no handler."""
+    from hefesto_dualsense4unix.integrations import audio_control
+
+    definir = _Espiao(True)
+    monkeypatch.setattr(audio_control, "fonte_de_captura_do_uniq", lambda *_a, **_k: "fonte")
+    monkeypatch.setattr(audio_control, "definir_volume_da_captura", definir)
+    monkeypatch.setattr(audio_control, "volume_da_captura", lambda **_k: 40)
+    servidor = _servidor(tmp_path)
+
+    gasto, corria, resposta = asyncio.run(_o_status_durante(
+        servidor, servidor._handlers["mic.volume.set"]({"volume": 40, "uniq": _P1})))
+
+    assert gasto < TETO_IPC_S and corria, f"o mic.volume.set parou o laço {gasto:.2f} s"
+    assert resposta["status"] == "ok"
+    _o_fio_do_laco_nao_rodou(definir)
+
+
+@pytest.mark.parametrize(
+    ("chamada", "params"),
+    [
+        ("rumble.motores.set", {"uniq": _P1, "fraco_pct": 40}),
+        ("sensor.set", {"uniq": _P1, "giroscopio": False}),
+    ],
+)
+def test_o_gesto_que_grava_nao_para_o_laco(
+    tmp_path: Path, gravacao_lenta: _GravacaoLenta, chamada: str, params: dict[str, Any],
+) -> None:
+    """MORDIDA: chame o ``gravar_pelo_gesto`` direto no handler, e o status espera a gravação."""
+    servidor = _servidor(tmp_path)
+    gravacao_lenta.ligar()
+
+    gasto, corria, _resposta = asyncio.run(
+        _o_status_durante(servidor, servidor._handlers[chamada](dict(params))))
+
+    assert gasto < TETO_IPC_S and corria, f"{chamada} parou o laço {gasto:.2f} s"
+    assert gravacao_lenta.fios and threading.main_thread().name not in gravacao_lenta.fios
+
+
+def test_dois_gestos_no_mesmo_perfil_nao_perdem_um_ao_outro(
+    tmp_path: Path, gravacao_lenta: _GravacaoLenta,
+) -> None:
+    """Fora do laço a ordem deixa de ser de graça: a trava é que guarda as duas gravações.
+
+    MORDIDA: troque ``sob_a_trava_do_perfil`` por uma chamada direta nos dois handlers.
+    """
+    servidor = _servidor(tmp_path)
+    gravacao_lenta.ligar()
+
+    async def corpo() -> None:
+        await asyncio.gather(
+            servidor._handlers["rumble.motores.set"]({"uniq": _P1, "fraco_pct": 40}),
+            servidor._handlers["sensor.set"]({"uniq": _P1, "giroscopio": False}),
+        )
+
+    asyncio.run(corpo())
+    controles = loader.load_profile("Ensaio").controllers
+    dele = controles[_P1.replace(":", "")]
+    assert dele.rumble is not None and dele.sensores is not None, dele
+
+
+def test_o_modo_escolhido_no_laco_grava_no_fio_do_perfil(
+    tmp_path: Path, gravacao_lenta: _GravacaoLenta,
+) -> None:
+    """O gesto de modo no fio do laço não espera o disco, e o modo chega ao perfil, em ordem.
+
+    MORDIDA: em ``gravar_o_modo_escolhido``, espere o ``feito.result()`` também no laço.
+    """
+    from hefesto_dualsense4unix.profiles.manager import FIO_DO_PERFIL
+
+    servidor = _servidor(tmp_path)
+    gravacao_lenta.ligar()
+
+    async def corpo() -> float:
+        t0 = time.perf_counter()
+        servidor.daemon.gravar_o_modo_escolhido("gamepad", caminho="xbox", mascara="xbox",
+                                                porta="ipc")
+        servidor.daemon.gravar_o_modo_escolhido("gamepad", caminho="dualsense",
+                                                mascara="dualsense", porta="ipc")
+        return time.perf_counter() - t0
+
+    gasto = asyncio.run(corpo())
+    FIO_DO_PERFIL.submit(lambda: None).result(timeout=DORME_S * 6)
+
+    assert gasto < TETO_TIQUE_S, f"o gesto esperou o disco {gasto:.3f} s no laço"
+    assert all(nome.startswith("hefesto-perfil") for nome in gravacao_lenta.fios)
+    assert loader.load_profile("Ensaio").mode.caminho == "dualsense", "a ordem dos gestos virou"
+
+
+def test_fora_do_laco_o_modo_espera_e_devolve_o_nome(tmp_path: Path) -> None:
+    servidor = _servidor(tmp_path)
+
+    nome = servidor.daemon.gravar_o_modo_escolhido("gamepad", caminho="xbox", mascara="xbox",
+                                                   porta="ipc")
+
+    assert nome == "Ensaio"
+    assert loader.load_profile("Ensaio").mode.caminho == "xbox"
+
+
+def test_o_daemon_status_com_appid_varre_as_receitas_fora_do_laco(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MORDIDA: chame o ``_receitas_dos_jogos`` direto no ``ambiente_do_lancamento``."""
+    receitas = _Espiao({str(APPID): {"PECA": "1"}})
+    monkeypatch.setattr(le, "_receitas_dos_jogos", receitas)
+    servidor = _servidor(tmp_path)
+
+    async def corpo() -> tuple[float, bool, Any]:
+        return await _o_status_durante(
+            servidor, servidor._handlers["daemon.status"]({"appid": APPID}))
+
+    gasto, corria, resposta = asyncio.run(corpo())
+
+    assert gasto < TETO_IPC_S and corria, f"o status com appid parou o laço {gasto:.2f} s"
+    _o_fio_do_laco_nao_rodou(receitas)
+    assert resposta["ambiente"]["receita"] == ["PECA=1"], resposta
+
+
+def test_o_profile_list_le_o_disco_fora_do_laco(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    servidor = _servidor(tmp_path)
+    lista = _Espiao([])
+    monkeypatch.setattr(servidor.profile_manager, "list_profiles", lista)
+
+    gasto, corria, _resposta = asyncio.run(
+        _o_status_durante(servidor, servidor._handlers["profile.list"]({})))
+
+    assert gasto < TETO_IPC_S and corria, f"o profile.list parou o laço {gasto:.2f} s"
+    _o_fio_do_laco_nao_rodou(lista)
+
+
+@pytest.fixture
+def coop_de_verdade(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """O `CoopManager.sync` de produção com a mesa de um primário e o P2 de pé no disco."""
+    from hefesto_dualsense4unix.core import evdev_reader
+    from hefesto_dualsense4unix.daemon.subsystems import coop as co
+    from hefesto_dualsense4unix.testing import FakeController
+
+    descoberta = _Espiao({_P2: Path("/dev/input/event-do-p2")})
+    monkeypatch.setattr(evdev_reader, "discover_dualsense_evdevs", descoberta)
+    monkeypatch.setattr(co, "externos_que_ganham_virtual", dict)
+    monkeypatch.setattr(co.CoopManager, "should_be_active", lambda self: True)
+    criados: list[tuple[str, str]] = []
+    monkeypatch.setattr(co.CoopManager, "_spawn_player",
+                        lambda self, mac, no, **_k: criados.append((mac, no)))
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+    gerente = co.CoopManager(Daemon(controller=FakeController()))
+    gerente._primary_identity = lambda: _P1  # type: ignore[method-assign]
+    return SimpleNamespace(gerente=gerente, descoberta=descoberta, criados=criados)
+
+
+def test_o_sync_forcado_no_laco_descobre_em_fio_proprio_e_renasce(coop_de_verdade: Any) -> None:
+    """O gesto não paga o `close` de todo nó: o `sync` volta na hora e anda quando a volta chega.
+
+    MORDIDA: em ``_nos_de_agora``, chame ``descobrir_os_nos()`` direto no laço.
+    """
+    m = coop_de_verdade
+
+    async def corpo() -> float:
+        t0 = time.perf_counter()
+        m.gerente.sync(force=True, origem="manual")
+        gasto = time.perf_counter() - t0
+        assert m.criados == [], "o sync não esperou a descoberta e já criou"
+        await asyncio.sleep(DORME_S + 0.2)
+        return gasto
+
+    gasto = asyncio.run(corpo())
+
+    assert gasto < TETO_TIQUE_S, f"o sync esperou a descoberta {gasto:.3f} s no laço"
+    assert m.descoberta.fios == ["hefesto-nos-do-coop"], m.descoberta.fios
+    assert m.criados == [(_P2, "/dev/input/event-do-p2")], m.criados
+
+
+def test_o_pedido_no_meio_da_descoberta_nao_abre_outro_fio_e_refaz_a_volta(
+    coop_de_verdade: Any,
+) -> None:
+    """O nó que nasceu no meio da volta não se perde: quem pede ali refaz a descoberta."""
+    m = coop_de_verdade
+
+    async def corpo() -> None:
+        m.gerente.sync(force=True, origem="manual")
+        await asyncio.sleep(0.05)
+        m.gerente.sync(force=True, origem="manual")
+        await asyncio.sleep(DORME_S * 2 + 0.3)
+
+    asyncio.run(corpo())
+
+    assert m.descoberta.fios == ["hefesto-nos-do-coop"] * 2, m.descoberta.fios
+    assert m.gerente._descobrindo is False
+    assert m.criados == [(_P2, "/dev/input/event-do-p2")], m.criados
+
+
+def test_fora_do_laco_o_sync_descobre_na_hora(coop_de_verdade: Any) -> None:
+    coop_de_verdade.gerente.sync(force=True, origem="manual")
+
+    assert coop_de_verdade.criados == [(_P2, "/dev/input/event-do-p2")]
+
+
+def test_a_subida_importa_fora_do_fio_do_laco() -> None:
+    """O import do `_hotkey` e o CSV do `canal_sem_imu` saem do laço, antes de `subir`.
+
+    MORDIDA: tire o ``to_thread(_importar_o_que_a_subida_usa)`` do ``Daemon.run``.
+    """
+    fonte = (_SRC / "hefesto_dualsense4unix/daemon/lifecycle.py").read_text(encoding="utf-8")
+    corpo = next(no for no in ast.walk(ast.parse(fonte))
+                 if isinstance(no, ast.AsyncFunctionDef) and no.name == "run")
+    texto = ast.unparse(corpo)
+
+    assert "await asyncio.to_thread(_importar_o_que_a_subida_usa)" in texto
+    assert texto.index("_importar_o_que_a_subida_usa") < texto.index("subir(")
+    programa = (
+        "import sys; from hefesto_dualsense4unix.daemon import lifecycle as lc;"
+        "lc._importar_o_que_a_subida_usa();"
+        "pacote = 'hefesto_dualsense4unix.';"
+        "assert pacote + 'daemon.subsystems.hotkey' in sys.modules;"
+        "assert pacote + 'integrations.canal_sem_imu' in sys.modules"
+    )
+    subprocess.run([sys.executable, "-c", programa], check=True, timeout=60)

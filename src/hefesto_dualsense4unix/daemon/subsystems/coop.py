@@ -1,6 +1,7 @@
 """Subsystem Co-op local — N controles = N jogadores (FEAT-DSX-COOP-LOCAL-01)."""
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import os
 import threading
@@ -151,6 +152,9 @@ class CoopManager:
     _fila_do_nascimento: tuple[str, ...] = ()
     _nascendo: tuple[str, _SecondaryPlayer | None, Any] | None = None
     _p1_que_nasce: Any = None
+    _descobrindo: bool = False
+    _redescobrir: bool = False
+    _pedido_dos_nos: tuple[bool, str | None] = (False, None)
 
     def __init__(self, daemon: DaemonProtocol) -> None:
         self._daemon = daemon
@@ -415,8 +419,15 @@ class CoopManager:
             self._teardown_player(identity)
 
 
-    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
-        """Reconcilia os secundários com os controles plugados. Idempotente."""
+    def sync(
+        self, *, force: bool = False, origem: str | None = None,
+        nos: tuple[dict[str, Path], dict[str, EntradaDeFora]] | None = None,
+    ) -> None:
+        """Reconcilia os secundários com os controles plugados. Idempotente.
+
+        A descoberta abre e fecha todo nó de ``/dev/input``: no fio do laço a volta corre em fio
+        próprio, e este `sync` renasce com ``nos`` quando a resposta chega.
+        """
         self._garantir_aviso_de_primario()
         self._o_prazo_do_lugar_guardado_espera_o_jogo()
         if not self.should_be_active():
@@ -450,11 +461,16 @@ class CoopManager:
             or vpad_morto
             or retry_needed
             or force
+            or nos is not None
         ):
             self._publicar_a_mesa(None)
             self._repintar_se_o_numero_mudou()
             return
-        from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+        achados = nos if nos is not None else self._nos_de_agora(force, origem)
+        if achados is None:
+            self._publicar_a_mesa(None)
+            self._repintar_se_o_numero_mudou()
+            return
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             mascara_efetiva,
             vpad_ficou_para_tras,
@@ -462,7 +478,7 @@ class CoopManager:
         from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
         primary = self._primary_identity()
-        vistos = {} if _o_posto_espera_o_mac(self, primary) else discover_dualsense_evdevs()
+        vistos = {} if _o_posto_espera_o_mac(self, primary) else achados[0]
         sozinho = not vistos and not _a_mesa_tem_dualsense(self)
         self._seguir_o_p1_emprestado(sozinho)
         if not sozinho and _o_posto_sem_mac(self, primary):
@@ -471,7 +487,7 @@ class CoopManager:
             return
         want = {mac: str(path) for mac, path in vistos.items() if mac != primary}
         dualsenses = set(want)
-        externos = self._externos_escondidos(externos_que_ganham_virtual())
+        externos = self._externos_escondidos(achados[1])
         want.update(externos)
         desired_flavor = self._flavor()
         desired_caminho = self._caminho()
@@ -531,6 +547,54 @@ class CoopManager:
         self._publicar_a_mesa({*dualsenses, *([primary] if primary else [])})
 
         self._apply_coop_player_leds()
+
+    def _nos_de_agora(
+        self, force: bool, origem: str | None
+    ) -> tuple[dict[str, Path], dict[str, EntradaDeFora]] | None:
+        """Os nós da mesa agora; ``None`` quando a descoberta foi pedida a um fio próprio."""
+        try:
+            laco = asyncio.get_running_loop()
+        except RuntimeError:
+            return descobrir_os_nos()
+        self._pedido_dos_nos = (force or self._pedido_dos_nos[0], origem)
+        if self._descobrindo:
+            self._redescobrir = True
+            return None
+        self._descobrindo = True
+        threading.Thread(
+            target=self._descobrir, args=(laco,), name="hefesto-nos-do-coop", daemon=True
+        ).start()
+        return None
+
+    def _descobrir(self, laco: asyncio.AbstractEventLoop) -> None:
+        """A volta da descoberta, fora do laço; o pedido feito durante a volta a refaz."""
+        nos: tuple[dict[str, Path], dict[str, EntradaDeFora]] | None = None
+        try:
+            while True:
+                self._redescobrir = False
+                nos = descobrir_os_nos()
+                if not self._redescobrir:
+                    break
+        except Exception as exc:
+            nos = None
+            logger.warning("coop_descoberta_falhou", err=str(exc))
+        with contextlib.suppress(RuntimeError):
+            laco.call_soon_threadsafe(self._os_nos_chegaram, nos)
+
+    def _os_nos_chegaram(
+        self, nos: tuple[dict[str, Path], dict[str, EntradaDeFora]] | None
+    ) -> None:
+        """A descoberta voltou ao laço: o `sync` que a pediu anda agora. Nunca levanta."""
+        self._descobrindo = False
+        force, origem = self._pedido_dos_nos
+        self._pedido_dos_nos = (False, None)
+        if nos is None:
+            self._retry_spawn = True
+            return
+        try:
+            self.sync(force=force, origem=origem, nos=nos)
+        except Exception as exc:
+            logger.warning("coop_sync_da_descoberta_falhou", err=str(exc))
 
     def _adotar_o_numero_do_jogo(self) -> None:
         """O número que o jogo escreveu nas lâmpadas de um pad passa a ser o do Hefesto.
@@ -3033,7 +3097,7 @@ def _numeros_sem_vpad(
     - **Conexão Nativa (Sony)**: o jogo abre o controle FÍSICO e fala direto com
       ele. Não há intermediário, mas há controle na mão de alguém, e o número
       dele **já está calculado** — o ``identity_registry`` é chaveado pelo MAC e
-      não consulta modo nenhum (``daemon/lifecycle.py:4187-4188`` roda o
+      não consulta modo nenhum (``daemon/lifecycle.py:4154-4155`` roda o
       ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
       dado pronto que a tela não publicava.
 
@@ -3138,6 +3202,13 @@ def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
         bump("vpad.nascimento_ms_total", round(ms))
     except Exception as exc:
         logger.debug("vpad_nascimento_nao_contado", err=str(exc))
+
+
+def descobrir_os_nos() -> tuple[dict[str, Path], dict[str, EntradaDeFora]]:
+    """A descoberta inteira da mesa: os DualSense e os de fora. Abre todo nó; fora do laço."""
+    from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+
+    return discover_dualsense_evdevs(), externos_que_ganham_virtual()
 
 
 def externos_que_ganham_virtual() -> dict[str, EntradaDeFora]:
@@ -3314,6 +3385,7 @@ def planejar_a_ordem(
 __all__ = [
     "CoopManager",
     "calibration_cache",
+    "descobrir_os_nos",
     "get_coop_manager",
     "numero_do_nome_do_primario",
     "planejar_a_ordem",

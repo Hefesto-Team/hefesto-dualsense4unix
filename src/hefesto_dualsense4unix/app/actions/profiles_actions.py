@@ -227,7 +227,9 @@ def _e_falta(chave: str, estado: str) -> bool:
     return estado != "aplicado"
 
 
-NAO_E_FALTA = frozenset({"de_fabrica", "do_computador", "desligado", "ignorado_sem_device"})
+NAO_E_FALTA = frozenset(
+    {"de_fabrica", "do_computador", "desligado", "ignorado_sem_device", "pedido"}
+)
 
 
 def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
