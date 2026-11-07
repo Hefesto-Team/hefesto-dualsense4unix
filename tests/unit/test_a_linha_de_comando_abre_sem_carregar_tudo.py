@@ -100,7 +100,7 @@ def test_a_versao_so_se_le_quando_alguem_pede() -> None:
             "assert isinstance(h.__version__, str) and h.__version__.count('.') >= 2\n"
         ),
     )
-    assert "importlib.metadata" in pedindo, "a versão deixou de ser lida do pacote instalado"
+    assert "importlib.metadata" not in pedindo, "a árvore pagou o `dist-info` para dizer a versão"
 
 
 def test_o_atributo_que_nao_existe_continua_sendo_erro() -> None:

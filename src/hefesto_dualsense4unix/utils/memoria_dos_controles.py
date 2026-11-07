@@ -534,6 +534,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
                                        "identifica controle"),
     "mods.sock": ("install", "a porta das modificações (pasta de execução)"),
     "mods-estado.json": ("install", "o estado vivo das modificações (pasta de execução)"),
+    "install-ao-fechar.log": (CASA, "a saída do último install que o fecho da janela soltou"),
     "vigia-do-laco.json": ("install", "os números do laço do serviço (pasta de execução)"),
     "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
     "winevulkan.json": ("fora", "o driver Vulkan do Wine, lido no prefixo"),

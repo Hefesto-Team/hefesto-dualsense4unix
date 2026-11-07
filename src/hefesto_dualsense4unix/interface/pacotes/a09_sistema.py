@@ -56,6 +56,7 @@ from hefesto_dualsense4unix.app.actions import atos_da_bandeja as _bandeja
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+from hefesto_dualsense4unix.app.actions.versao_ao_abrir import pendencia_do_install
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
@@ -352,6 +353,9 @@ def _achados(state: dict[str, Any] | None,
     with contextlib.suppress(Exception):
         linhas.extend((*p, TEMA_DOS_ACRESCIMOS["perfis"])
                       for p in linhas_dos_perfis(pode_perguntar))
+    install = pendencia_do_install()
+    if install:
+        linhas.append((*install, TEMA_DOS_ACRESCIMOS["install"]))
     return linhas
 
 
@@ -1246,7 +1250,8 @@ TEMA_DA_FONTE: dict[str, str] = {
 TEMA_DO_EXAME = ("audio", "audio", "audio", "steam-input", "audio", "audio")
 
 TEMA_DOS_ACRESCIMOS = {"vigia": "steam-input", "prontuario": "steam-input", "som": "audio",
-                       "vulkan": "steam-input", "perfis": "troca-de-perfil"}
+                       "vulkan": "steam-input", "perfis": "troca-de-perfil",
+                       "install": "serviço"}
 
 
 def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:

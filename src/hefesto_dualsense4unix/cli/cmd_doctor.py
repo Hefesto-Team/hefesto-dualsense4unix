@@ -471,6 +471,18 @@ def _print_bloco_registro() -> int:
     return _gravidade_das_linhas(linhas)
 
 
+def _print_bloco_install() -> int:
+    """O install que o fecho da janela soltou e parou com um motivo. Devolve a gravidade."""
+    from hefesto_dualsense4unix.app.actions.versao_ao_abrir import pendencia_do_install
+
+    linha = pendencia_do_install()
+    if linha is None:
+        return 0
+    console.print("\n== versão nova (o install do fecho da janela) ==")
+    console.print(f"{linha[0]} {linha[1]}", soft_wrap=True, highlight=False)
+    return _gravidade_das_linhas([linha])
+
+
 def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
@@ -505,6 +517,7 @@ def doctor_cmd(
     rc = max(rc, _print_bloco_entrada())
 
     rc = max(rc, _print_bloco_registro())
+    rc = max(rc, _print_bloco_install())
 
     console.print("\n== daemon (via IPC) ==")
     linhas_do_daemon = asyncio.run(_daemon_checks())

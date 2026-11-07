@@ -1851,13 +1851,16 @@ for _diario_sessao in "${_diarios_da_sessao[@]}"; do
     fi
 done
 if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
-    for _kw in "${ESTADO_DO_RADIO}/kernel.log" "${ESTADO_DO_RADIO}/kernel-watch.boot"; do
+    for _kw in "${ESTADO_DO_RADIO}/kernel.log" "${ESTADO_DO_RADIO}/kernel-watch.boot" \
+        "${ESTADO_DO_RADIO}/servico.log" "${ESTADO_DO_RADIO}/servico.log.1" "${ESTADO_DO_RADIO}/servico.log.2"; do
         if [[ -f "${_kw}" ]]; then
             log "removendo ${_kw} (--purge-config)"
             rm -f "${_kw}"
         fi
     done
 fi
+rm -f "${ESTADO_DO_RADIO}/install-pendente" "${ESTADO_DO_RADIO}/install-escolhas" \
+    "${ESTADO_DO_RADIO}/install-ao-fechar.log" "${ESTADO_DO_RADIO}/install-ao-fechar.trava"
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
 rmdir "${ESTADO_DO_RADIO}" 2>/dev/null || true
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do

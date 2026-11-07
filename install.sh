@@ -1013,6 +1013,7 @@ _NEEDS_SUDO=1
 if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" && "${NO_DKMS}" -eq 1 ]]; then
     _NEEDS_SUDO=0
 fi
+[[ "${DRY_RUN:-0}" -eq 1 ]] || { mkdir -p "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix" && printf '%s\n' "$$" > "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix/install-em-curso"; } 2>/dev/null || true
 acquire_sudo
 
 # shellcheck source=scripts/lib/camada_de_maquina.sh
@@ -3917,5 +3918,7 @@ elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '─────────────────────────────────────────\n'
 fi
 [[ "${DRY_RUN:-0}" -eq 1 ]] || rm -f "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-pendente"
+[[ "${DRY_RUN:-0}" -ne 1 ]] || _faria "guardar as flags desta linha em ${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas (o install do fecho da janela repete as mesmas)"
+[[ "${DRY_RUN:-0}" -eq 1 ]] || { mkdir -p "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix" && printf '%s\n' "--format=${FORMAT:-native}" "$@" > "${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/install-escolhas"; } 2>/dev/null || true
 dizer_o_reinicio_pendente
 printf '\n'

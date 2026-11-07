@@ -6,20 +6,40 @@ if TYPE_CHECKING:
     __version__: str
 else:
 
-    def __getattr__(nome: str) -> str:
-        """A versão só se lê quando alguém pede (o `importlib.metadata` custa 27 ms no import).
+    def _versao_do_codigo() -> str | None:
+        """O número do `pyproject.toml` da árvore que roda; `None` fora de uma árvore do produto."""
+        import re
+        from pathlib import Path
 
-        O fallback literal é o que `check_version_consistency.py` e o CI conferem contra o
-        pyproject.
+        try:
+            raiz = Path(__file__).resolve().parents[2]
+            texto = (raiz / "pyproject.toml").read_text(encoding="utf-8")
+        except (IndexError, OSError, ValueError):
+            texto = ""
+        projeto = texto.partition("[project]\n")[2].partition("\n[")[0]
+        nome = re.search(r'^name\s*=\s*"([^"]+)"', projeto, re.MULTILINE)
+        numero = re.search(r'^version\s*=\s*"([^"]+)"', projeto, re.MULTILINE)
+        if nome is None or numero is None or nome.group(1) != "hefesto-dualsense4unix":
+            return None
+        return numero.group(1)
+
+    def __getattr__(nome: str) -> str:
+        """A versão só se lê quando alguém pede, e sai do código que roda.
+
+        Numa árvore, é o `pyproject.toml`: o `dist-info` do `.venv` só anda com o install. O
+        `importlib.metadata` (27 ms) fica para a instalação por pacote. O literal é o que
+        `check_version_consistency.py` e o CI conferem contra o pyproject.
         """
         if nome != "__version__":
             raise AttributeError(f"module {__name__!r} has no attribute {nome!r}")
-        from importlib.metadata import PackageNotFoundError, version
+        __version__ = _versao_do_codigo()
+        if __version__ is None:
+            from importlib.metadata import PackageNotFoundError, version
 
-        try:
-            __version__ = version("hefesto-dualsense4unix")
-        except PackageNotFoundError:
-            __version__ = "0.9.5.1"
+            try:
+                __version__ = version("hefesto-dualsense4unix")
+            except PackageNotFoundError:
+                __version__ = "0.9.5.1"
         globals()["__version__"] = __version__
         return __version__
 

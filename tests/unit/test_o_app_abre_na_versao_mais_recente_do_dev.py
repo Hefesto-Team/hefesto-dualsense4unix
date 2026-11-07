@@ -186,14 +186,19 @@ def test_ja_na_mais_recente_nao_ha_o_que_aplicar(casa: Casa) -> None:
     "packaging/hefesto.desktop", "locale/en/LC_MESSAGES/hefesto.mo",
     *(n for n in va.PEDEM_INSTALL if n.startswith(va.PASTA_DO_SERVICO)),
 ])
-def test_a_faixa_que_pede_install_nao_roda_nada_e_fica_anotada(casa: Casa, caminho: str) -> None:
+def test_a_faixa_que_pede_install_nao_reinicia_o_servico_e_fica_anotada(
+    casa: Casa, caminho: str,
+) -> None:
     casa.publicar("src/hefesto/novo.py")
     alvo = casa.publicar(caminho)
     assert va.baixar(casa.clone, jogo_aberto=_sem_jogo) == alvo
     pedidos: list[Any] = []
-    assert va.aplicar(casa.clone, alvo, jogo_aberto=_sem_jogo, disparar=pedidos.append)
+    instalados: list[Path] = []
+    assert va.aplicar(casa.clone, alvo, jogo_aberto=_sem_jogo, disparar=pedidos.append,
+                      instalar=instalados.append)
     assert casa.topo() == alvo
     assert pedidos == []
+    assert instalados == [casa.clone]
     nota = casa.base / "estado" / va.ANOTACAO_DO_INSTALL
     assert nota.read_text(encoding="utf-8").strip().endswith(alvo[:va.CURTO])
 
@@ -229,7 +234,7 @@ def test_a_mudanca_de_lugar_conta_os_dois_lados(casa: Casa) -> None:
     casa.publicar("assets/uma-unit.service")
     _git(casa.clone, "pull", "-q", "--ff-only", "origin", "dev")
     assert va.aplicar(casa.clone, casa.publicar_mudanca_de_lugar(), jogo_aberto=_sem_jogo,
-                      disparar=lambda _i: None)
+                      disparar=lambda _i: None, instalar=lambda _r: None)
     assert (casa.base / "estado" / va.ANOTACAO_DO_INSTALL).read_text(encoding="utf-8").strip()
 
 
