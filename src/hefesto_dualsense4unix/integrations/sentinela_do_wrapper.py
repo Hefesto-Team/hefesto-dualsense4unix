@@ -134,8 +134,8 @@ try:
         steam_running,
         tirar_o_atalho_dos_jogos,
     )
+    from .vigia_do_jogo_novo import esperar_a_calma, jogos_novos_a_receber
     from .vigia_do_jogo_novo import garantir as garantir_o_vigia
-    from .vigia_do_jogo_novo import jogos_novos_a_receber
 except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         WRAPPER_PREFIX,
@@ -152,8 +152,11 @@ except ImportError:  # pragma: no cover
         steam_running,
         tirar_o_atalho_dos_jogos,
     )
+    from vigia_do_jogo_novo import (  # type: ignore[no-redef]
+        esperar_a_calma,
+        jogos_novos_a_receber,
+    )
     from vigia_do_jogo_novo import garantir as garantir_o_vigia  # type: ignore[no-redef]
-    from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
 REGISTRO_BASENAME = "wrapper-visto.json"
 
@@ -546,6 +549,11 @@ def main(argv: list[str] | None = None) -> int:
         help="repõe o wrapper onde falta (exige Steam fechada; adia se não der)",
     )
     grupo.add_argument(
+        "--esperar-a-calma",
+        action="store_true",
+        help="segura a volta do guarda até a Steam parar de escrever",
+    )
+    grupo.add_argument(
         "--nao-quero",
         metavar="APPID",
         help="marca um jogo como 'sem wrapper, de propósito'",
@@ -587,6 +595,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.censo:
         censo = censo_do_wrapper(vdfs=args.vdf, anotar=False)
         print(json.dumps(censo.como_dicionario(), ensure_ascii=False))
+        return 0
+
+    if args.esperar_a_calma:
+        esperar_a_calma()
         return 0
 
     if args.reparar:

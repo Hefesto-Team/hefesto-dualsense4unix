@@ -15,7 +15,8 @@ import os
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 try:
@@ -40,6 +41,9 @@ UNIDADE = "hefesto-steam-input-guard"
 DROPIN_DOS_CAMINHOS = "caminhos.conf"
 DROPIN_DO_RITMO = "ritmo.conf"
 PRAZO_DO_SYSTEMCTL_S = 20
+CALMA_S = 10.0
+TETO_DA_CALMA_S = 60.0
+PASSO_DA_CALMA_S = 1.0
 
 LIGADO = "ligado"
 DESLIGADO = "desligado"
@@ -117,6 +121,48 @@ def caminhos_a_vigiar(home: Path | None = None) -> list[Path]:
         if pasta.is_dir():
             anotar(pasta)
     return caminhos
+
+
+def _instantes_de_escrita(caminho: Path) -> Iterator[float]:
+    """Quando `caminho` e o que mora direto nele foram escritos."""
+    with contextlib.suppress(OSError):
+        yield caminho.stat().st_mtime
+        if not caminho.is_dir():
+            return
+        with os.scandir(caminho) as filhos:
+            for filho in filhos:
+                with contextlib.suppress(OSError):
+                    yield filho.stat().st_mtime
+
+
+def _ultima_mudanca(caminhos: list[Path]) -> float:
+    """O instante da escrita mais nova nos caminhos vigiados. Data no futuro não é escrita de
+    agora: é o relógio de outra máquina, e seguraria toda volta até o teto."""
+    instantes = [i for caminho in caminhos for i in _instantes_de_escrita(caminho)]
+    agora = time.time()
+    return max((i for i in instantes if i <= agora), default=0.0)
+
+
+def esperar_a_calma(
+    home: Path | None = None,
+    *,
+    calma_s: float = CALMA_S,
+    teto_s: float = TETO_DA_CALMA_S,
+    passo_s: float = PASSO_DA_CALMA_S,
+) -> bool:
+    """Segura a volta do guarda até a Steam parar de escrever. Falso se o teto venceu.
+
+    Abrir a Steam ou baixar um jogo regrava os `appmanifest` a cada dois segundos, e cada escrita
+    é um `PathChanged`. Enquanto esta espera corre, a unidade está subindo e o `.path` não vigia:
+    a rajada inteira vira uma volta, depois da última escrita. Sem escrita recente, sai na hora.
+    """
+    caminhos = caminhos_a_vigiar(home)
+    fim = time.monotonic() + teto_s
+    while time.time() - _ultima_mudanca(caminhos) < calma_s:
+        if time.monotonic() >= fim:
+            return False
+        time.sleep(passo_s)
+    return True
 
 
 def _como_especificador(caminho: Path, base: Path) -> str:

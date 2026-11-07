@@ -29,6 +29,8 @@ PROPRIEDADES = "org.freedesktop.DBus.Properties"
 OBJETOS = "org.freedesktop.DBus.ObjectManager"
 BARRAMENTO_DBUS = "org.freedesktop.DBus"
 RAIZ_DO_BLUEZ = "/org/bluez"
+CAMINHO_DO_BARRAMENTO = "/org/freedesktop/DBus"
+ACORDAR = "StartServiceByName"
 
 FERRAMENTA = "busctl"
 
@@ -53,7 +55,7 @@ QUEM_PADRAO = "hefesto"
 ESCREVEU_NO_BLUEZ = "escreveu no BlueZ"
 
 _METODOS_DO_DIARIO = frozenset(
-    {"Connect", "Disconnect", "Pair", "RemoveDevice", "StartDiscovery", "StopDiscovery"}
+    {"Connect", "Disconnect", "Pair", "RemoveDevice", "StartDiscovery", "StopDiscovery", ACORDAR}
 )
 
 METODOS_SEM_TRAVA = frozenset({"StopDiscovery"})
@@ -80,6 +82,7 @@ SEGURADO_DA_VAGA_S = 2.0
 JANELA_DA_VAGA_S = 3.0
 
 ESPERA_DO_BUSCTL_S = 5.0
+ESPERA_PARA_ACORDAR_S = 10.0
 
 ESPERA_DO_CONNECT_S = 12.0
 
@@ -715,6 +718,16 @@ class LeitorDoBluez:
         )
 
 
+    def acordar(
+        self, *, espera: float = ESPERA_PARA_ACORDAR_S, quem: str = QUEM_PADRAO
+    ) -> Escrita:
+        """Sobe o ``org.bluez`` parado: a única mensagem nossa que ativa, e só o gesto de quem usa
+        a pede. Toda pergunta sai sem ativar (:func:`busctl`, ``NO_AUTO_START``)."""
+        return self._na_borda(quem, ACORDAR, RAIZ_DO_BLUEZ, lambda: self._pedir_a_ativacao(espera))
+
+    def _pedir_a_ativacao(self, espera: float) -> Escrita:
+        raise NotImplementedError
+
     def endereco_do_adaptador(
         self,
         caminho: str,
@@ -986,6 +999,7 @@ ESCRITAS = (
     "parear",
     "comecar_busca",
     "parar_busca",
+    "acordar",
 )
 LEITURAS = (
     "pode_perguntar",
@@ -1063,6 +1077,16 @@ class PeloBusctl(LeitorDoBluez):
         bruto = self._rodar(
             ["set-property", SERVICO, caminho, interface, nome, assinatura,
              _texto_do_busctl(valor)],
+            espera,
+        )
+        if bruto is None:
+            return Escrita(False, mensagem="o busctl não confirmou")
+        return Escrita(True, resposta=bruto)
+
+    def _pedir_a_ativacao(self, espera: float) -> Escrita:
+        bruto = self._rodar(
+            ["call", BARRAMENTO_DBUS, CAMINHO_DO_BARRAMENTO, BARRAMENTO_DBUS, ACORDAR, "su",
+             SERVICO, "0"],
             espera,
         )
         if bruto is None:
@@ -1788,6 +1812,12 @@ class DonoVivo(LeitorDoBluez):
         self, caminho: str, interface: str, nome: str, assinatura: str, valor: Any, espera: float
     ) -> Escrita:
         return self._barramento.escrever(caminho, interface, nome, assinatura, valor, espera=espera)
+
+    def _pedir_a_ativacao(self, espera: float) -> Escrita:
+        return self._barramento.chamar(
+            BARRAMENTO_DBUS, CAMINHO_DO_BARRAMENTO, BARRAMENTO_DBUS, ACORDAR, "su", (SERVICO, 0),
+            espera=espera,
+        )
 
     def comecar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
         """``StartDiscovery`` pela NOSSA conexão — a busca vive enquanto a conexão viver."""

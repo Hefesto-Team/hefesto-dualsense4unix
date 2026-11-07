@@ -50,7 +50,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
         "`install.sh:3728` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
-        "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:28`); o "
+        "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:34`); o "
         "`scripts/doctor.sh:1658` (`check_sentinela_wrapper`, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
@@ -83,7 +83,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3717` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
-        "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:53`) — o mesmo "
+        "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:59`) — o mesmo "
         "caminho dos "
         "irmãos __SENTINELA__ e __PROTON_PIN__, que rodam na mesma unit",
     ),
@@ -1413,7 +1413,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/doctor.sh:2963` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4611 (`varrendo`))."
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4625 (`varrendo`))."
     ),
     "integrations/varredura_do_radio.py::quem_esta_varrendo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
@@ -1543,7 +1543,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
         "`scripts/ensaios/a_faixa_do_receptor.py` "
         "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3918 "
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3932 "
         "(`FAIXA_NAO_ENCONTRADA`), no `_o_botao_da_descoberta`). Fecha quando o ensaio B9 "
         "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
         "passa pelo desenho."

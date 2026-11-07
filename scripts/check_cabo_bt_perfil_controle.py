@@ -177,7 +177,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "equilibrar-radio": "abre a proposta da central de rádio — é da tela",
     "confirmar-mudanca": "move um aparelho de adaptador (`radio.mover`) — é o rádio "
                          "da máquina: o controle continua o mesmo, com o mesmo perfil",
-    "conectar-aparelho": "abre o painel do «Conectar» (sem alvo, nada vai ao rádio); "
+    "conectar-aparelho": "abre o painel do «Conectar» (sem alvo, só acorda o rádio parado); "
                          "com alvo, conecta um aparelho conhecido — é o rádio da máquina",
     "parear-aparelho": "pareia um aparelho achado num adaptador — é o rádio da máquina",
     "parear-o-pedido": "leva o controle conhecido que pede para parear ao adaptador que o ouve "

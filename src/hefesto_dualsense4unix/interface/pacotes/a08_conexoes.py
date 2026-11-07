@@ -3622,18 +3622,32 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
            f'<button class="btn" data-gesto="parear-aparelho" data-alvo="{_x(a["id"])}">'
            'Parear</button>')
         + "</div>" for a in cena.get("perto", ()) if a.get("adaptador") == destino)
-    procurando = any(lug.get("conectando") for lug in lugares)
-    titulo = (' data-titulo="Procurando" data-pulso="1"' if procurando
-              else ' data-titulo="Conectar"')
-    moldes.append(f'<template class="painel-molde" data-painel="conectar" data-alvo=""'
-                  f'{titulo}>'
-                  f'<div class="conectar"><div class="escolha-lugar" role="group" '
-                  f'aria-label="Em qual adaptador conectar">{chips}</div>'
-                  f'<div class="achados">{achados}</div></div></template>')
+    moldes.append(_molde_do_conectar(cena, chips, achados))
     return "".join(moldes)
 
 
+def _molde_do_conectar(cena: dict[str, Any], chips: str = "", achados: str = "") -> str:
+    """A gaveta do «Conectar». Com o rádio parado, nasce sem adaptador nenhum: o clique abre a
+    gaveta com o pulso, e a resposta do Bluetooth chega ali."""
+    resposta = cena.get("acordar") or {}
+    frase = str(resposta.get("frase") or "")
+    if frase:
+        achados += f'<div class="sala-vazia">{_x(frase)}</div>'
+    procurando = any(lug.get("conectando") for lug in cena.get("lugares") or ())
+    titulo = (' data-titulo="Procurando" data-pulso="1"' if procurando
+              else ' data-titulo="Conectar" data-pulso="1"' if resposta.get("pulso")
+              else ' data-titulo="Conectar"')
+    return (f'<template class="painel-molde" data-painel="conectar" data-alvo=""{titulo}>'
+            f'<div class="conectar"><div class="escolha-lugar" role="group" '
+            f'aria-label="Em qual adaptador conectar">{chips}</div>'
+            f'<div class="achados">{achados}</div></div></template>')
+
+
 NENHUM_ADAPTADOR = "Nenhum adaptador Bluetooth encontrado."
+BLUETOOTH_NAO_LIGOU = "O Bluetooth não ligou."
+PRAZO_DOS_ADAPTADORES_S = 6.0
+_O_ACORDAR: dict[str, Any] = {"falhou": False, "ligou_em": None}
+_O_DESTINO_CHEGOU = threading.Event()
 
 
 def html_da_sala(cena: dict[str, Any], com_hz: bool = False) -> str:
@@ -3648,7 +3662,7 @@ def html_da_sala(cena: dict[str, Any], com_hz: bool = False) -> str:
 def html_dos_moldes(cena: dict[str, Any]) -> str:
     """As perguntas, os painéis e o balão prontos, em `<template>` — a página os abre."""
     if not cena.get("lugares"):
-        return ""
+        return _molde_do_conectar(cena) if cena.get("acordar") else ""
     perguntas = "" if _ocupado(cena) else _moldes_de_pergunta(cena)
     return perguntas + _moldes_de_esquecer(cena) + _moldes_de_painel(cena) + _molde_do_balao(cena)
 
@@ -4711,7 +4725,64 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     }
     cena["destino_da_central"] = _destino_da_central(cena, st)
     cena["destino_do_conectar"] = _destino_do_conectar(cena)
+    cena["acordar"] = _a_resposta_do_acordar(
+        em_fundo.em_fundo("bluez-parado", _ler_se_o_radio_parou, 3.0) is True, bool(lugares))
     return cena
+
+
+def _ler_se_o_radio_parou() -> bool | None:
+    """O ``org.bluez`` está sem dono? Perguntar não o acorda. Sob a suíte, nada: a régua injeta."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    if bluez_dbus.a_suite_esta_rodando():
+        return None
+    return not bluez_dbus.dono().responde()
+
+
+def _a_resposta_do_acordar(parado: bool, ha_lugar: bool) -> dict[str, Any]:
+    """O que a gaveta do «Conectar» mostra enquanto o rádio parado acorda: o pulso até o adaptador
+    chegar, e a frase quando ele não liga, quando ligou e caiu, ou quando ligou e não há adaptador
+    nenhum."""
+    if not parado:
+        _O_ACORDAR["falhou"] = False
+        if ha_lugar:
+            _O_ACORDAR["ligou_em"] = None
+    if _O_ACORDAR["falhou"]:
+        return {"frase": BLUETOOTH_NAO_LIGOU}
+    ligou_em = _O_ACORDAR["ligou_em"]
+    venceu = ligou_em is not None and time.monotonic() - ligou_em >= PRAZO_DOS_ADAPTADORES_S
+    if parado:
+        return {"frase": BLUETOOTH_NAO_LIGOU} if venceu else {"pulso": True}
+    if ligou_em is None:
+        return {}
+    return {"frase": NENHUM_ADAPTADOR} if venceu else {"pulso": True}
+
+
+def _acordar_o_radio() -> bool:
+    """O clique é o gesto que autoriza acordar o rádio parado, e a leitura nunca o faz. Verdadeiro
+    quando acordou agora; a falha levanta, e a gaveta a diz (:func:`_a_resposta_do_acordar`)."""
+    if _ler_se_o_radio_parou() is not True:
+        return False
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    _O_ACORDAR.update(falhou=False, ligou_em=None)
+    _O_DESTINO_CHEGOU.clear()
+    feita = bluez_dbus.dono().acordar(quem="tela").feita
+    em_fundo.esquecer("bluez", "bluez-parado")
+    if not feita:
+        _O_ACORDAR["falhou"] = True
+        raise RuntimeError(BLUETOOTH_NAO_LIGOU)
+    _O_ACORDAR["ligou_em"] = time.monotonic()
+    return True
+
+
+def _destino_depois_de_acordar(acordou: bool) -> str:
+    """O destino que a tela mostra; o rádio que acordou agora o traz nas próximas voltas."""
+    if acordou:
+        _O_DESTINO_CHEGOU.wait(PRAZO_DOS_ADAPTADORES_S)
+    return str(_CENA_NA_TELA.get("destino_do_conectar") or "")
 
 
 def _onde_espera(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
@@ -5288,6 +5359,8 @@ def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
     global _CENA_NA_TELA
     cena = cena_do_radio(ctx)
     _CENA_NA_TELA = cena
+    if cena.get("destino_do_conectar"):
+        _O_DESTINO_CHEGOU.set()
     campos = campos_da_secao(cena, segurar=True)
     with contextlib.suppress(Exception):
         campos.update(_campos_da_cerimonia())
@@ -5433,6 +5506,7 @@ def _mover(p: Any, aparelho: str | None, destino: str) -> dict[str, Any]:
     """`radio.mover` pelo dono (a central) — SEMPRE com o destino que a tela mostrou."""
     if _CENA_NA_TELA.get("ocupado"):
         raise RuntimeError("outro movimento está esperando PS + Create")
+    _acordar_o_radio()
     return _pedir_ao_radio(p, aparelho, destino)
 
 
@@ -5476,9 +5550,10 @@ def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "conectar-aparelho", grava="radio.mover")
 def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Conectar»: sem alvo, SÓ ABRE o painel com a lista — quem liga a busca"""
+    """«Conectar»: sem alvo, abre o painel e acorda o rádio parado — quem liga a busca"""
     alvo = str(o.get("alvo") or "")
     if not alvo:
+        _acordar_o_radio()
         return _so_abre()
     escolha = _escolher_na_busca(p, alvo)
     if escolha is not None:
@@ -5682,6 +5757,8 @@ def equilibrar_radio(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
 
 def _ligar_a_busca(p: Any, ligada: bool, destino: str) -> dict[str, Any]:
     """O ``radio.busca.set`` com valor absoluto, e o verde só com a resposta"""
+    if ligada:
+        _acordar_o_radio()
     parametros: dict[str, Any] = {"ligada": ligada}
     if destino:
         parametros["destino"] = destino
@@ -5708,7 +5785,8 @@ def radio_procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     if agora not in (PROCURAR_LIGADO, PROCURAR_DESLIGADO):
         raise RuntimeError(PROCURAR_RECUSA)
     ligar = agora != PROCURAR_LIGADO
-    destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "") if ligar else ""
+    acordou = ligar and _acordar_o_radio()
+    destino = _destino_depois_de_acordar(acordou) if ligar else ""
     if ligar and not destino:
         raise RuntimeError("não há adaptador Bluetooth para procurar")
     feito = _ligar_a_busca(p, ligar, destino)

@@ -4,6 +4,12 @@ Description=Hefesto — devolve a configuração que a Steam reescreve (Steam In
 
 [Service]
 Type=oneshot
+# Abrir a Steam ou baixar um jogo regrava os appmanifest a cada dois segundos, e cada
+# escrita é um PathChanged (medido em 07/11/2026: 14 partidas em 24 s). Enquanto a
+# unidade sobe, o .path não vigia, e por isso esta espera faz da rajada uma volta só
+# (medido no systemd 255: 14 escritas, 1 partida). Sem escrita recente, sai na hora.
+# O `-` é porque a espera nunca segura o guarda.
+ExecStartPre=-/usr/bin/env python3 __SENTINELA__ --esperar-a-calma
 # __SCRIPT__, __SENTINELA__ e __PROTON_PIN__ são substituídos pelo install.sh com o
 # caminho absoluto do repo; cada opt-out do install apaga só a SUA linha.
 #

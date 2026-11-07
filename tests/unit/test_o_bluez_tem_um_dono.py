@@ -173,6 +173,7 @@ _ARGUMENTOS_DE_ESCRITA: dict[str, tuple[Any, ...]] = {
     "parear": (bm.no_de(bm.CONTROLE),),
     "comecar_busca": (bm.HCI,),
     "parar_busca": (bm.HCI,),
+    "acordar": (),
 }
 
 
