@@ -432,14 +432,33 @@ def test_a_limpeza_tambem_segura_os_da_casa(lar: Lar) -> None:
     assert ordem[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic", ordem
 
 
-def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path) -> None:
+def _funcao_do_install(nome: str) -> str:
+    corpo = (RAIZ / "scripts/lib/camada_de_maquina.sh").read_text(encoding="utf-8")
+    inicio = corpo.index(f"{nome}() {{")
+    return corpo[inicio:corpo.index("\n}\n", inicio) + 3]
+
+
+def test_o_visudo_so_se_chama_no_ajudante_que_grava_toda_regra() -> None:
+    corpo = (RAIZ / "scripts/lib/camada_de_maquina.sh").read_text(encoding="utf-8")
+    assert corpo.count("visudo -cqf") == 1
+    assert "visudo -cqf" in _funcao_do_install("_gravar_regra_do_sudo")
+    for rotina in ("install_atualizador_raiz_host", "install_placa_acordada_host",
+                   "install_bt_ponte_privilegiada_host"):
+        assert "_gravar_regra_do_sudo " in _funcao_do_install(rotina), rotina
+
+
+@pytest.mark.parametrize(("rotina", "regra"), [
+    ("install_atualizador_raiz_host", "49-hefesto-atualizador"),
+    ("install_placa_acordada_host", "49-hefesto-placa"),
+    ("install_bt_ponte_privilegiada_host", "49-hefesto-bt-ponte"),
+])
+def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path, rotina: str,
+                                                             regra: str) -> None:
     lib, regras = tmp_path / "lib", tmp_path / "sudoers.d"
     lib.mkdir()
     regras.mkdir()
-    corpo = (RAIZ / "scripts/lib/camada_de_maquina.sh").read_text(encoding="utf-8")
-    inicio = corpo.index("install_atualizador_raiz_host() {")
-    funcao = corpo[inicio:corpo.index("\n}\n", inicio) + 3]
-    funcao = funcao.replace("/usr/local/lib/hefesto-dualsense4unix", str(lib)) \
+    codigo = _funcao_do_install("_gravar_regra_do_sudo") + _funcao_do_install(rotina)
+    codigo = codigo.replace("/usr/local/lib/hefesto-dualsense4unix", str(lib)) \
         .replace("/etc/sudoers.d", str(regras))
     log, bin_ = tmp_path / "sudo.log", tmp_path / "bin"
     bin_.mkdir()
@@ -461,21 +480,23 @@ def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path) -> 
     (bin_ / "visudo").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     (bin_ / "visudo").chmod(0o755)
     roteiro = tmp_path / "roda.sh"
-    roteiro.write_text(f'warn() {{ echo "AVISO $*"; }}\nROOT_DIR="{RAIZ}"\n{funcao}\n'
-                       "install_atualizador_raiz_host\n", encoding="utf-8")
+    roteiro.write_text(f'warn() {{ echo "AVISO $*"; }}\nROOT_DIR="{RAIZ}"\n'
+                       "_garantir_a_conta_no_grupo_hefesto() { return 0; }\n"
+                       f"{codigo}\nset -euo pipefail\n{rotina}\n", encoding="utf-8")
     feito = subprocess.run(["bash", str(roteiro)], capture_output=True, text=True, timeout=60,
                            env={**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}",
                                 "SUDO_USER": "fulana", "TMPDIR": str(tmp_path)},
                            check=False)
-    assert "AVISO" not in feito.stdout, feito.stdout + feito.stderr
+    assert feito.returncode == 0 and "AVISO" not in feito.stdout, feito.stdout + feito.stderr
     viu = [x for x in log.read_text(encoding="utf-8").splitlines() if x.startswith("visudo-viu")]
     assert len(viu) == 1
     modo, caminho = viu[0].split()[1:]
     assert Path(caminho).parent == regras and Path(caminho).name.startswith("."), viu
     assert modo == "440", "o visudo confere o arquivo que só o root escreve, não o rascunho"
-    final = regras / "49-hefesto-atualizador"
-    assert "fulana ALL=(root) NOPASSWD: HEFESTO_ATUALIZADOR" in final.read_text(encoding="utf-8")
-    assert sorted(p.name for p in regras.iterdir()) == ["49-hefesto-atualizador"]
+    final = regras / regra
+    assert "fulana" in final.read_text(encoding="utf-8")
+    assert sorted(p.name for p in regras.iterdir()) == [regra]
+    assert not list(tmp_path.glob("tmp.*")), "o rascunho de quem usa não sobra"
 
 
 def test_o_oldkern_que_nao_e_o_kernel_registrado_nao_vira_volta(lar: Lar) -> None:

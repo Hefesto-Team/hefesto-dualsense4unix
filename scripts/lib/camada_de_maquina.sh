@@ -387,6 +387,24 @@ _garantir_a_conta_no_grupo_hefesto() {
     return 0
 }
 
+_gravar_regra_do_sudo() {
+    local _rascunho="$1" _regra="$2"
+    local _novo="${_regra%/*}/.${_regra##*/}.novo"
+    if ! sudo install -Dm440 -o root -g root "${_rascunho}" "${_novo}" 2>/dev/null; then
+        rm -f "${_rascunho}"
+        return 2
+    fi
+    rm -f "${_rascunho}"
+    if ! sudo visudo -cqf "${_novo}" 2>/dev/null; then
+        sudo rm -f "${_novo}" 2>/dev/null || true
+        return 1
+    fi
+    if ! sudo mv -f "${_novo}" "${_regra}" 2>/dev/null; then
+        sudo rm -f "${_novo}" 2>/dev/null || true
+        return 2
+    fi
+}
+
 install_bt_ponte_privilegiada_host() {
     local _ponte_fonte="${ROOT_DIR}/scripts/bt_ponte_privilegiada.sh"
     local _ponte_alvo=/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh
@@ -427,17 +445,16 @@ install_bt_ponte_privilegiada_host() {
         rm -f "${_ponte_tmp}"
         return 0
     fi
-    if ! sudo visudo -cqf "${_ponte_tmp}" 2>/dev/null; then
+    local _ponte_rc=0
+    _gravar_regra_do_sudo "${_ponte_tmp}" "${_ponte_regra}" || _ponte_rc=$?
+    if [[ "${_ponte_rc}" -eq 1 ]]; then
         warn "a regra gerada NÃO passou no 'visudo -c' — nada gravado em ${_ponte_regra} (o sudo desta máquina segue intacto)"
-        rm -f "${_ponte_tmp}"
         return 0
     fi
-    if ! sudo install -Dm440 -o root -g root "${_ponte_tmp}" "${_ponte_regra}" 2>/dev/null; then
+    if [[ "${_ponte_rc}" -ne 0 ]]; then
         warn "não consegui gravar ${_ponte_regra} — a janela vai precisar de senha para mover controle entre dongles"
-        rm -f "${_ponte_tmp}"
         return 0
     fi
-    rm -f "${_ponte_tmp}"
     printf '      ponte privilegiada instalada: mover controle entre dongles sem digitar senha\n'
     printf '        (%s, NOPASSWD só para o grupo hefesto e para %s; os verbos nomeados um a um, o endereço\n' \
         "${_ponte_regra}" "${_ponte_usuaria}"
@@ -484,17 +501,16 @@ install_placa_acordada_host() {
         rm -f "${_placa_tmp}"
         return 0
     fi
-    if ! sudo visudo -cqf "${_placa_tmp}" 2>/dev/null; then
+    local _placa_rc=0
+    _gravar_regra_do_sudo "${_placa_tmp}" "${_placa_regra}" || _placa_rc=$?
+    if [[ "${_placa_rc}" -eq 1 ]]; then
         warn "a regra da placa NÃO passou no 'visudo -c' — nada gravado em ${_placa_regra} (o sudo desta máquina segue intacto)"
-        rm -f "${_placa_tmp}"
         return 0
     fi
-    if ! sudo install -Dm440 -o root -g root "${_placa_tmp}" "${_placa_regra}" 2>/dev/null; then
+    if [[ "${_placa_rc}" -ne 0 ]]; then
         warn "não consegui gravar ${_placa_regra} — o lançador não vai acordar a placa"
-        rm -f "${_placa_tmp}"
         return 0
     fi
-    rm -f "${_placa_tmp}"
     printf '      placa acordada instalada: o jogo pede o piso de clock da placa e o devolve ao sair\n'
     printf '        (%s, NOPASSWD só para %s, três verbos e o PID pelo stdin)\n' \
         "${_placa_regra}" "${_placa_usuaria}"
@@ -552,21 +568,14 @@ install_atualizador_raiz_host() {
         rm -f "${_at_tmp}"
         return 0
     fi
-    local _at_novo="${_at_regra%/*}/.${_at_regra##*/}.novo"
-    if ! sudo install -Dm440 -o root -g root "${_at_tmp}" "${_at_novo}" 2>/dev/null; then
-        warn "não consegui gravar ${_at_regra} — o atualizador vai recusar o que pede root"
-        rm -f "${_at_tmp}"
-        return 0
-    fi
-    rm -f "${_at_tmp}"
-    if ! sudo visudo -cqf "${_at_novo}" 2>/dev/null; then
+    local _at_rc=0
+    _gravar_regra_do_sudo "${_at_tmp}" "${_at_regra}" || _at_rc=$?
+    if [[ "${_at_rc}" -eq 1 ]]; then
         warn "a regra do atualizador NÃO passou no 'visudo -c' — nada gravado em ${_at_regra} (o sudo desta máquina segue intacto)"
-        sudo rm -f "${_at_novo}" 2>/dev/null || true
         return 0
     fi
-    if ! sudo mv -f "${_at_novo}" "${_at_regra}" 2>/dev/null; then
+    if [[ "${_at_rc}" -ne 0 ]]; then
         warn "não consegui gravar ${_at_regra} — o atualizador vai recusar o que pede root"
-        sudo rm -f "${_at_novo}" 2>/dev/null || true
         return 0
     fi
     printf '      atualizador instalado: as peças do sistema sobem pela janela sem pedir senha\n'

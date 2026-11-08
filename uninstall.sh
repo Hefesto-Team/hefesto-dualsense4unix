@@ -708,7 +708,7 @@ if sudo -n true 2>/dev/null; then
         /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh 2>/dev/null || true
     if [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
         log "removendo a regra da ponte privilegiada do Bluetooth (/etc/sudoers.d/49-hefesto-bt-ponte)"
-        sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte 2>/dev/null || true
+        sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte /etc/sudoers.d/.49-hefesto-bt-ponte.novo 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh 2>/dev/null || true
     if [[ -x /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]]; then
@@ -717,7 +717,7 @@ if sudo -n true 2>/dev/null; then
     fi
     if [[ -e /etc/sudoers.d/49-hefesto-placa ]]; then
         log "removendo a regra da placa acordada (/etc/sudoers.d/49-hefesto-placa)"
-        sudo rm -f /etc/sudoers.d/49-hefesto-placa 2>/dev/null || true
+        sudo rm -f /etc/sudoers.d/49-hefesto-placa /etc/sudoers.d/.49-hefesto-placa.novo 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh 2>/dev/null || true
     if [[ -e /etc/sudoers.d/49-hefesto-atualizador ]]; then
