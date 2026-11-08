@@ -1744,6 +1744,13 @@ def _o_pino_que_a_casa_ve(proprio: Path, pino: str, *, conf: dict[str, str], com
         achado = _onde_ja_esta(proprio, nome, vista)
         if achado is not None:
             return achado
+        sha = _read_manifest_sha256(nome, compat) if nome != conf["name"] else None
+        if extrair and sha and (cache / f"{nome}.tar.gz").is_file():
+            proprio.mkdir(parents=True, exist_ok=True)
+            ensure_pinned_proton({"name": nome, "url": "", "sha256": sha}, compat_dir=proprio,
+                                 cache_dir=cache, downloader=None)
+            if pinned_proton_installed(nome, proprio):
+                return proprio / nome
     if not extrair or not (cache / f"{conf['name']}.tar.gz").is_file():
         return None
     proprio.mkdir(parents=True, exist_ok=True)
@@ -2008,7 +2015,7 @@ def desinstalar_as_que_sobram(
         porque = _PORQUE_A_STEAM_BARRA.get(barra, barra)
         return saiu, {s.pasta.name: porque for s in sobras}
     for sobra in sobras:
-        if sobra.pasta.parent.name != "compatibilitytools.d" or not sobra.pasta.is_dir():
+        if not _e_pasta_de_proton(sobra.pasta) or not sobra.pasta.is_dir():
             recusadas[sobra.pasta.name] = "não está mais em compatibilitytools.d"
             continue
         motivo: str | None
@@ -2024,6 +2031,221 @@ def desinstalar_as_que_sobram(
         else:
             recusadas[sobra.pasta.name] = motivo
     return saiu, recusadas
+
+
+def _e_pasta_de_proton(pasta: Path) -> bool:
+    pai = pasta.parent
+    return pai.name == "compatibilitytools.d" or (
+        pai.name == "proton" and pai.parent.name == "tools")
+
+
+def sobras_das_casas_do_heroic(home: Path | None = None, *,
+                               compat_dir: Path | None = None) -> list[VersaoQueSobra]:
+    """As versões que o Hefesto extraiu na ``tools/proton`` de cada Heroic, deixadas para trás.
+
+    Só sai a pasta com o manifesto do Hefesto, nunca a que o Heroic baixou sozinho, e só quando a
+    casa já enxerga o pino e nenhum jogo do Heroic cita a versão velha. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    try:
+        compat = compat_dir if compat_dir is not None else default_compat_dir(home)
+        pino = pino_que_vale(_load_conf(None), compat)
+        uso = censo.proton_em_uso(home)
+        if uso.duvida:
+            return []
+        usadas = {n.casefold() for n in uso.versoes} | {pino.casefold()}
+        sobras: list[VersaoQueSobra] = []
+        for casa in censo.casas_do_heroic(home)[0]:
+            tools = casa / "tools" / "proton"
+            if not tools.is_dir():
+                continue
+            if not (pinned_proton_installed(pino, tools)
+                    or pinned_proton_installed(pino, compat)):
+                continue
+            for pasta in sorted(p for p in tools.iterdir() if p.is_dir() and not p.is_symlink()):
+                if not (pasta / MANIFEST_BASENAME).is_file():
+                    continue
+                nomes = nomes_internos(pasta)
+                if not all(e_da_familia_proton(n) for n in nomes):
+                    continue
+                if usadas.intersection(n.casefold() for n in (*nomes, pasta.name)):
+                    continue
+                sobras.append(VersaoQueSobra(pasta, nomes, _tamanho_da_pasta(pasta)))
+        return sobras
+    except Exception:
+        return []
+
+
+GE_ULTIMA_API = "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest"
+ULTIMA_DO_GE_BASENAME = "ultima-do-ge.json"
+INTERVALO_DA_CONSULTA_S = 6 * 3600
+
+
+@dataclass(frozen=True)
+class Atualizacao:
+    """O que o passo de atualizar o Proton fez: a palavra do estado, a versão e o detalhe."""
+
+    estado: str
+    versao: str = ""
+    detalhe: str = ""
+
+
+def _ler_da_rede(url: str) -> bytes:
+    pedido = urllib.request.Request(url, headers={
+        "User-Agent": "hefesto-dualsense4unix", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(pedido, timeout=30) as resposta:
+        return bytes(resposta.read(1024 * 1024))
+
+
+def a_ultima_do_ge(release: dict[str, object]) -> tuple[str, str, str] | None:
+    """Da release do GitHub: (nome, url do tarball x86_64, url do sha512sum), ou ``None``."""
+    ativos = release.get("assets")
+    if not isinstance(ativos, list):
+        return None
+    urls = {str(a.get("name", "")): str(a.get("browser_download_url", ""))
+            for a in ativos if isinstance(a, dict)}
+    for nome, url in sorted(urls.items()):
+        if not (nome.startswith("GE-Proton") and nome.endswith("-x86_64.tar.gz")):
+            continue
+        base = nome[: -len(".tar.gz")]
+        soma = urls.get(f"{base}.sha512sum")
+        if soma and url:
+            return base, url, soma
+    return None
+
+
+def _ler_registro(cache: Path) -> dict[str, object]:
+    try:
+        dado = json.loads((cache / ULTIMA_DO_GE_BASENAME).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return dado if isinstance(dado, dict) else {}
+
+
+def _gravar_registro(cache: Path, registro: dict[str, object]) -> None:
+    cache.mkdir(parents=True, exist_ok=True)
+    tmp = cache / f".{ULTIMA_DO_GE_BASENAME}.tmp"
+    tmp.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
+    tmp.replace(cache / ULTIMA_DO_GE_BASENAME)
+
+
+def _sha512_do_arquivo(path: Path) -> str:
+    digest = hashlib.sha512()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def baixar_a_ultima_do_ge(
+    cache: Path,
+    *,
+    ler: Callable[[str], bytes] = _ler_da_rede,
+    baixar: Callable[[str, Path], None] = baixar_a_release,
+    agora: Callable[[], float] = time.time,
+    forcar: bool = False,
+) -> Atualizacao:
+    """Traz para o cache a GE-Proton mais nova publicada, conferida pelo sha512 do próprio release.
+
+    A consulta se repete no máximo a cada ``INTERVALO_DA_CONSULTA_S`` (``forcar`` ignora o prazo).
+    Sem rede, ``nao_consultado``, nunca «em dia». O tarball só fica no cache com o sha512 batendo,
+    e o registro guarda o sha256 dele, que é o que a extração confere. Nunca levanta.
+    """
+    registro = _ler_registro(cache)
+    try:
+        consultada = float(str(registro.get("consultada_em", 0) or 0))
+    except ValueError:
+        consultada = 0.0
+    nome_antigo = str(registro.get("name", ""))
+    if (not forcar and nome_antigo and agora() - consultada < INTERVALO_DA_CONSULTA_S
+            and (cache / f"{nome_antigo}.tar.gz").is_file()):
+        return Atualizacao("em_cache", nome_antigo, "consultada há pouco")
+    try:
+        release = json.loads(ler(GE_ULTIMA_API).decode("utf-8"))
+        achada = a_ultima_do_ge(release) if isinstance(release, dict) else None
+    except Exception as exc:
+        return Atualizacao("nao_consultado", nome_antigo, str(exc) or type(exc).__name__)
+    if achada is None:
+        return Atualizacao("nao_consultado", nome_antigo, "a release não traz o tarball x86_64")
+    nome, url, url_da_soma = achada
+    tarball = cache / f"{nome}.tar.gz"
+    sha256_guardado = str(registro.get("sha256", ""))
+    try:
+        if (nome == nome_antigo and tarball.is_file() and sha256_guardado
+                and sha256_of_file(tarball) == sha256_guardado):
+            _gravar_registro(cache, {**registro, "consultada_em": agora()})
+            return Atualizacao("em_cache", nome)
+    except OSError:
+        pass
+    try:
+        esperado = ler(url_da_soma).decode("utf-8").split()[0].lower()
+    except Exception as exc:
+        return Atualizacao("nao_consultado", nome, f"o sha512 não veio: {exc}")
+    parcial = cache / f"{nome}.tar.gz.hefesto-download"
+    try:
+        cache.mkdir(parents=True, exist_ok=True)
+        baixar(url, parcial)
+        if _sha512_do_arquivo(parcial) != esperado:
+            parcial.unlink(missing_ok=True)
+            return Atualizacao("checksum", nome, f"o sha512 de {url} não é o publicado")
+        sha256 = sha256_of_file(parcial)
+        parcial.replace(tarball)
+        _gravar_registro(cache, {"name": nome, "url": url, "sha256": sha256,
+                                 "consultada_em": agora()})
+    except OSError as exc:
+        return Atualizacao("falhou", nome, str(exc))
+    return Atualizacao("baixada", nome)
+
+
+def instalar_a_ultima_do_cache(
+    conf: dict[str, str],
+    *,
+    compat_dir: Path,
+    cache_dir: Path,
+    steam_barra: Callable[[], str | None] | None = None,
+) -> Atualizacao:
+    """Extrai na Steam a GE-Proton do registro, se mais nova que o pino; só fica se passar na ficha.
+
+    A Steam lê ``compatibilitytools.d`` ao abrir: aberta, a extração espera (``espera_a_steam``).
+    A que reprova na ficha sai do disco, e o pino fica onde estava. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
+    registro = _ler_registro(cache_dir)
+    nome, sha = str(registro.get("name", "")), str(registro.get("sha256", ""))
+    if not nome or not sha or not (cache_dir / f"{nome}.tar.gz").is_file():
+        return Atualizacao("sem_candidata")
+    try:
+        vale = pino_que_vale(conf, compat_dir)
+        if qp.ordem_da_versao(nome) <= qp.ordem_da_versao(vale):
+            return Atualizacao("em_dia", vale)
+        if pinned_proton_installed(nome, compat_dir):
+            return Atualizacao("reprovou", nome, "instalada e fora da ficha")
+        barra = (steam_barra or _steam_gate)()
+        if barra:
+            return Atualizacao("espera_a_steam", nome, _PORQUE_A_STEAM_BARRA.get(barra, barra))
+        if not compat_dir.parent.is_dir():
+            return Atualizacao("sem_steam", nome)
+        resultado = ensure_pinned_proton({"name": nome, "url": str(registro.get("url", "")),
+                                          "sha256": sha}, compat_dir=compat_dir,
+                                         cache_dir=cache_dir, downloader=None)
+        if not pinned_proton_installed(nome, compat_dir):
+            return Atualizacao("falhou", nome, resultado.detail)
+        if pino_que_vale(conf, compat_dir) == nome:
+            return Atualizacao("instalada", nome)
+        fixada = compat_dir / vale if pinned_proton_installed(vale, compat_dir) else None
+        faltas = qp.ficha(compat_dir / nome, fixada).faltas
+        shutil.rmtree(compat_dir / nome, ignore_errors=True)
+        return Atualizacao("reprovou", nome, "; ".join(faltas) or "a ficha não passou")
+    except Exception as exc:
+        return Atualizacao("falhou", nome, str(exc) or type(exc).__name__)
+
+
+def apagar_as_sobras(home: Path | None = None) -> tuple[list[VersaoQueSobra], dict[str, str]]:
+    """Apaga de vez as versões que ficaram para trás na Steam e nas casas do Heroic (D-2210)."""
+    return desinstalar_as_que_sobram([*versoes_que_sobram(home), *sobras_das_casas_do_heroic(home)],
+                                     steam_barra=_steam_gate)
 
 
 def proton_pin_report(
@@ -2216,13 +2438,53 @@ def _cmd_lancadores(args: argparse.Namespace) -> int:
     return _manter_os_lancadores(conf, args, "lançadores")
 
 
-def _cmd_manter(args: argparse.Namespace) -> int:
-    """O que o vigia da Steam roda: repõe o pino, trava todo jogo da Steam e fixa os lançadores."""
+def _dizer_a_atualizacao(prefixo: str, feita: Atualizacao) -> None:
+    print(f"[proton-pin] {prefixo}: atualizar: {feita.estado}"
+          + (f" {feita.versao}" if feita.versao else "")
+          + (f" ({feita.detalhe})" if feita.detalhe else ""))
+
+
+def _atualizar_o_proton(conf: dict[str, str], args: argparse.Namespace, prefixo: str, *,
+                        forcar: bool) -> None:
+    cache = args.cache_dir if args.cache_dir else default_cache_dir()
+    compat = args.compat_dir if args.compat_dir else default_compat_dir()
+    if not args.offline:
+        _dizer_a_atualizacao(prefixo, baixar_a_ultima_do_ge(cache, forcar=forcar))
+    _dizer_a_atualizacao(prefixo, instalar_a_ultima_do_cache(conf, compat_dir=compat,
+                                                             cache_dir=cache))
+
+
+def _apagar_e_dizer(prefixo: str) -> None:
+    saiu, recusadas = apagar_as_sobras()
+    for sobra in saiu:
+        print(f"[proton-pin] {prefixo}: saiu {sobra.pasta} ({sobra.tamanho // 2**20} MB)")
+    for nome, porque in recusadas.items():
+        print(f"[proton-pin] {prefixo}: {nome} fica por agora: {porque}")
+
+
+def _cmd_atualizar(args: argparse.Namespace) -> int:
     conf = _conf_ou_rc(args)
     if isinstance(conf, int):
         return conf
+    _atualizar_o_proton(conf, args, "atualizar", forcar=True)
+    return 0
+
+
+def _cmd_apagar_as_sobras(args: argparse.Namespace) -> int:
+    _apagar_e_dizer("sobras")
+    return 0
+
+
+def _cmd_manter(args: argparse.Namespace) -> int:
+    """O vigia da Steam: atualiza o Proton, trava todo jogo, fixa os lançadores, apaga as sobras."""
+    conf = _conf_ou_rc(args)
+    if isinstance(conf, int):
+        return conf
+    _atualizar_o_proton(conf, args, "manter", forcar=False)
     rc = _manter_a_steam(conf, args)
     _manter_os_lancadores(conf, args, "manter")
+    if rc == 0:
+        _apagar_e_dizer("manter")
     return rc
 
 
@@ -2485,6 +2747,17 @@ def main(argv: list[str] | None = None) -> int:
              "e fixa os outros lançadores (--lancadores); adia com a Steam aberta",
     )
     group.add_argument(
+        "--atualizar",
+        action="store_true",
+        help="consulta a GE-Proton mais nova publicada, baixa para o cache conferindo o sha512 "
+             "do release e, com a Steam fechada, a extrai e a fixa se passar na ficha",
+    )
+    group.add_argument(
+        "--apagar-as-sobras",
+        action="store_true",
+        help="apaga as versões do Proton deixadas para trás na Steam e no Heroic (Steam fechada)",
+    )
+    group.add_argument(
         "--lancadores",
         action="store_true",
         help="fixa no Proton fixado todo jogo dos lançadores que não são a Steam "
@@ -2536,6 +2809,10 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_unlock(args)
         if args.manter:
             return _cmd_manter(args)
+        if args.atualizar:
+            return _cmd_atualizar(args)
+        if args.apagar_as_sobras:
+            return _cmd_apagar_as_sobras(args)
         if args.lancadores:
             return _cmd_lancadores(args)
         if args.fora_do_pino is not None:

@@ -48,7 +48,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "`install.sh:3728` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`install.sh:3732` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:34`); o "
         "`scripts/doctor.sh:1658` (`check_sentinela_wrapper`, --censo) também o roda",
@@ -66,7 +66,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "`install.sh:3760` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
+        "`install.sh:3764` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
         "`uninstall.sh:1713` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1855` (`steam_launch_options`) o publica como cura",
     ),
@@ -80,7 +80,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "`install.sh:3717` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
+        "`install.sh:3721` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:59`) — o mesmo "
@@ -100,7 +100,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
         "`scripts/doctor.sh:3803` (`check_exame_da_mesa`) o roda — e o "
-        "`install.sh:3861` (`bash`) roda o doctor",
+        "`install.sh:3871` (`bash`) roda o doctor",
     ),
 }
 

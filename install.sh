@@ -3600,7 +3600,11 @@ elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "garantir a versão de Proton VALIDADA em compatibilitytools.d (cache em ${HOME}/.cache/hefesto-dualsense4unix/proton; SHA256 obrigatório — checksum errado e NADA é extraído)"
     _faria "  (sem Steam nativa nesta máquina, só baixa e confere para o cache: nada é extraído e a pasta da Steam não é criada)"
     _nao_faria "sobrescrever um Proton pinado que VOCÊ já tenha instalado por fora (ProtonUp ou à mão): ele é mantido"
+    _faria "consultar a GE-Proton mais nova publicada e baixá-la para o cache, conferida pelo sha512 do release"
 else
+    # shellcheck disable=SC2086
+    ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --atualizar \
+        || warn "a consulta da GE-Proton mais nova falhou; o vigia da Steam tenta de novo"
     _pp_rc=0
     # shellcheck disable=SC2086
     _pp_saida="$(${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
@@ -3818,6 +3822,9 @@ elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
 elif [[ "${_pp_pronto}" -ne 1 ]]; then
     printf '      trava adiada — o Proton pinado não ficou pronto no passo 11a (ver acima)\n'
 else
+    # shellcheck disable=SC2086
+    ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --atualizar --offline \
+        || warn "a GE-Proton mais nova do cache não entrou agora; o vigia da Steam tenta de novo"
     _pl_rc=0
     # shellcheck disable=SC2086
     ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
@@ -3836,6 +3843,9 @@ if [[ "${NO_PROTON_PIN}" -eq 0 && "${DRY_RUN:-0}" -ne 1 && -f "${PROTON_PIN_PY}"
     # shellcheck disable=SC2086
     ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lancadores \
         || warn "os outros lançadores não foram fixados agora; o vigia da Steam tenta de novo em até 30 minutos"
+    # shellcheck disable=SC2086
+    ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --apagar-as-sobras \
+        || warn "as versões velhas do Proton ficaram por agora; o vigia da Steam as apaga depois"
 elif [[ "${DRY_RUN:-0}" -eq 1 && "${NO_PROTON_PIN}" -eq 0 ]]; then
     _faria "apontar para a mesma versão do Proton os jogos do Heroic (nativo e Flatpak) e os das extensões que dizem como fixar; o jogo que roda pelo Wine fica, e a aba Lançadores o mostra"
 fi
