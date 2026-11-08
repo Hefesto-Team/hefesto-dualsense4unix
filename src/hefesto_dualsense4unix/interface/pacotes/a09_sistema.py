@@ -1593,12 +1593,7 @@ SUFIXO_DA_RAZAO = "-razao"
 
 BOTOES_CINZAS = ("reiniciar",)
 
-ESPERA_A_PUBLICACAO: dict[str, str] = {
-    campo: "a seção das atualizações (O-HEFESTO-SE-ATUALIZA-INTEIRO-01). O `data-campo` está "
-           "em `mockup/09-sistema.html` e chega ao produto no `--publicar 09`."
-    for campo in ("atualizar-sozinho", "prazo-da-atualizacao", "atualizacoes-novas",
-                  "atualizacoes-lista")
-}
+ESPERA_A_PUBLICACAO: dict[str, str] = {}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:

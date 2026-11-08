@@ -26,6 +26,3 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **07/11/2026** — a frase da falta na linha do controle sem ponte, em três opções, no molde `opcoes-da-falta` abaixo da sala. Enquanto a escolha não vem, `a08_conexoes.OPCAO_DA_FALTA` fica vazia e o produto não mostra frase nenhuma. Escolher é gravar a letra nessa constante, o que tira o bloco do desenho, e rodar o `--publicar 08`.
-
-## 09-sistema.html
-- **08/11/2026** — a seção das atualizações (O-HEFESTO-SE-ATUALIZA-INTEIRO-01): a grade das onze peças, o «Atualizar sozinho», o prazo, «Versões anteriores» e «Ver atualizações», e o «Atualizar» do serviço que vira «Reler atalhos». O pacote já emite os quatro endereços (`a09_sistema.ESPERA_A_PUBLICACAO`); chega ao produto no `--publicar 09`. Até publicar, a aba Sistema do produto continua sem a seção e com o «Atualizar» do serviço: os quatro endereços não acham casa, e a pergunta das atualizações aparece sozinha por cima de qualquer aba quando o prazo vence.

@@ -282,7 +282,7 @@ def test_na_grade_a_versao_cede_antes_do_rotulo() -> None:
     from hefesto_dualsense4unix.interface import aba09
 
     conferencia = {"pecas": [
-        {"id": "nvidia", "nome": "Driver NVIDIA", "estado": "nova", "de": "595.104.02",
+        {"id": "nvidia", "nome": "Driver Nvidia", "estado": "nova", "de": "595.104.02",
          "para": "595.110.07", "marcada": True, "volta": 1},
         {"id": "sistema", "nome": "Pacotes do sistema", "estado": "em_dia", "de": "24.04",
          "para": "24.04", "rotulo": "12 pacotes", "marcada": True, "volta": 1}]}

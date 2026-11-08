@@ -785,7 +785,7 @@ def registro() -> list[Peca]:
              "Os jogos com a peça", versoes_da_gdk, volta=2),
         Peca("python", "Python", "As bibliotecas do Hefesto", "O serviço e a janela",
              versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python),
-        Peca("nvidia", "Driver NVIDIA", "O driver da placa de vídeo", "No próximo início",
+        Peca("nvidia", "Driver Nvidia", "O driver da placa de vídeo", "No próximo início",
              versoes_da_nvidia, _do_apt("nvidia", "baixar"), _do_apt("nvidia", "instalar"),
              _limpar),
         Peca("kernel", "Kernel", "O kernel do sistema", "No próximo início",

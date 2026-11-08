@@ -439,7 +439,7 @@ def _secao_das_atualizacoes():
             ("portal", "Portal do COSMIC", "A captura de tela do COSMIC", "1.0.0", "", "fixa", False, 2, ""),
             ("gdk", "GameInput", "A peça GDK e o GameInput", "1", "", "fixa", False, 2, ""),
             ("python", "Python", "evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3", "", "2", "nova", False, 1, "2 pacotes"),
-            ("nvidia", "Driver NVIDIA", "nvidia-driver-595", "595.104.02", "595.104.02", "em_dia", True, 1, ""),
+            ("nvidia", "Driver Nvidia", "nvidia-driver-595", "595.104.02", "595.104.02", "em_dia", True, 1, ""),
             ("kernel", "Kernel", "linux-system76", "7.2.15", "7.2.15", "em_dia", True, 1, ""),
             ("dkms", "Módulos do kernel", "4 módulos · 7.2.15", "1.0.0", "1.0.0", "em_dia", True, 1, ""),
             ("sistema", "Pacotes do sistema", "Pop!_OS 24.04", "24.04", "24.04", "em_dia", True, 1, ""),
