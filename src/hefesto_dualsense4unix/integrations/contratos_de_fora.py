@@ -305,6 +305,63 @@ def _sonda_proton(amb: Ambiente) -> Resultado:
     return Resultado(OK)
 
 
+_RUNTIME_PEDIDO_RX = re.compile(r'"require_tool_appid"\s+"(\d+)"')
+
+
+def _o_recibo_do_proton() -> list[dict[str, str]]:
+    """As linhas do recibo dos Protons, pelo dono (``qualificar_proton``); vazio se não se lê."""
+    from .qualificar_proton import caminho_do_recibo, ler_recibo
+
+    try:
+        return ler_recibo(caminho_do_recibo().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def _sonda_runtime_do_proton(amb: Ambiente) -> Resultado:
+    """O buildid do runtime que cada GE pede, contra o ``runtime`` da linha «passou» do recibo."""
+    from hefesto_dualsense4unix.daemon.subsystems.identidade_do_jogo import buildid_do_appid
+
+    from .steam_launch_options import pastas_steamapps, raizes_de_jogos
+
+    raizes = raizes_de_jogos(amb.home)
+    if not raizes:
+        return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
+    pedidos = [
+        (pasta.name, achado.group(1))
+        for raiz in raizes
+        for pasta in sorted((raiz / "compatibilitytools.d").glob("GE-Proton*"))
+        if (achado := _RUNTIME_PEDIDO_RX.search(_texto_do_arquivo(pasta / "toolmanifest.vdf")))
+    ]
+    if not pedidos:
+        return Resultado(AUSENTE, "nenhum GE-Proton instalado pede um runtime da Steam")
+    provados = {
+        linha["versão"]: linha["runtime"]
+        for linha in _o_recibo_do_proton()
+        if linha["veredito"] == "passou" and linha["runtime"]
+    }
+    bibliotecas = pastas_steamapps(amb.home)
+    mudaram: list[str] = []
+    sem_dado: list[str] = []
+    for nome, appid in pedidos:
+        buildid = buildid_do_appid(int(appid), bibliotecas)
+        provado = provados.get(nome)
+        if buildid is None:
+            sem_dado.append(f"{nome} pede o runtime {appid}, que não está em biblioteca nenhuma")
+        elif provado is None:
+            sem_dado.append(f"o recibo não tem a rodada do {nome} num runtime (hoje no {buildid})")
+        elif provado != buildid:
+            mudaram.append(
+                f"o runtime da Steam mudou depois da prova do Proton fixado: o {nome} passou com "
+                f"o runtime {appid} no buildid {provado}, e ele está no {buildid}"
+            )
+    if mudaram:
+        return Resultado(QUEBROU, "; ".join(mudaram))
+    if sem_dado:
+        return Resultado(AUSENTE, "; ".join(sem_dado))
+    return Resultado(OK)
+
+
 GE_COM_A_PILHA_DO_CONTROLE = (11, 4)
 ENV_DO_FALLBACK_XINPUT = "PROTON_SONY_AUTO_XINPUT"
 _GE_RX = re.compile(r"GE-Proton(\d+)-(\d+)")
@@ -701,6 +758,21 @@ CONTRATOS: tuple[Contrato, ...] = (
         promessa="cada Proton em compatibilitytools.d traz compatibilitytool.vdf e o `proton`",
         conferir="ls ~/.steam/steam/compatibilitytools.d/*/",
         sonda=_sonda_proton,
+    ),
+    Contrato(
+        id="runtime-do-proton",
+        dono="steam",
+        promessa=(
+            "o Steam Linux Runtime que o GE-Proton pede está no buildid em que a rodada provou o "
+            "Proton fixado"
+        ),
+        conferir=(
+            "grep require_tool_appid "
+            "~/.steam/steam/compatibilitytools.d/GE-Proton*/toolmanifest.vdf; "
+            "grep -r buildid ~/.steam/steam/steamapps/appmanifest_4183110.acf"
+        ),
+        sonda=_sonda_runtime_do_proton,
+        cobre=("cfg:toolmanifest.vdf",),
     ),
     Contrato(
         id="ge-por-versao",
