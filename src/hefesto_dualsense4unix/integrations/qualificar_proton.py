@@ -57,7 +57,8 @@ TAG_OK = "[ OK ]"
 TAG_INFO = "[INFO]"
 TAG_WARN = "[WARN]"
 
-CAMPOS_DO_RECIBO = ("versão", "sha256", "ficha", "rodada", "veredito", "prova", "data")
+CAMPOS_DO_RECIBO = ("versão", "sha256", "ficha", "rodada", "veredito", "prova", "data", "runtime")
+RODADA_NAO_MEDIDA = "não medida"
 
 _VERSAO_GE_RE = re.compile(r"GE-Proton(\d+)-(\d+)", re.IGNORECASE)
 
@@ -266,6 +267,12 @@ def ficha(
     return resultado
 
 
+def buildid_do_appmanifest(texto: str) -> str | None:
+    """O ``buildid`` de um ``appmanifest_<appid>.acf`` da Steam, ou ``None`` sem ele."""
+    achado = re.search(r'"buildid"\s+"(\d+)"', texto)
+    return achado.group(1) if achado else None
+
+
 def caminho_do_recibo(raiz_do_repo: Path | None = None) -> Path:
     """O recibo: na `raiz_do_repo` dada, ou onde esta instalação o pôs."""
     if raiz_do_repo is not None:
@@ -280,9 +287,11 @@ def ler_recibo(texto: str) -> list[dict[str, str]]:
         linha for linha in texto.splitlines() if linha.strip() and not linha.startswith("#")
     ]
     leitor = csv.DictReader(io.StringIO("\n".join(linhas)))
-    if tuple(leitor.fieldnames or ()) != CAMPOS_DO_RECIBO:
+    if tuple(leitor.fieldnames or ()) not in (CAMPOS_DO_RECIBO, CAMPOS_DO_RECIBO[:-1]):
         raise ValueError(f"o recibo tem de ter as colunas {', '.join(CAMPOS_DO_RECIBO)}")
-    return [{k: (v or "").strip() for k, v in linha.items()} for linha in leitor]
+    return [
+        {k: (linha.get(k) or "").strip() for k in CAMPOS_DO_RECIBO} for linha in leitor
+    ]
 
 
 def ordem_da_versao(versao: str) -> tuple[int, int]:
@@ -331,18 +340,25 @@ def o_pino_sem_recibo(pino: dict[str, str], recibo: Sequence[dict[str, str]]) ->
     return []
 
 
-def linha_do_recibo(f: Ficha, sha256: str, rodada: str, data: str) -> str:
-    """A linha CSV de uma versão, depois da ficha e da rodada."""
+def linha_do_recibo(f: Ficha, sha256: str, rodada: str, data: str, runtime: str = "") -> str:
+    """A linha CSV de uma versão, depois da ficha e da rodada, com o buildid do runtime."""
     passou = f.passou and rodada == VEREDITO_PASSOU
+    if passou:
+        veredito = VEREDITO_PASSOU
+    elif f.passou and rodada.startswith(RODADA_NAO_MEDIDA):
+        veredito = RODADA_NAO_MEDIDA
+    else:
+        veredito = VEREDITO_REPROVOU
     saida = io.StringIO()
     csv.writer(saida, lineterminator="").writerow([
         f.versao,
         sha256,
         f.resumo(),
         rodada,
-        VEREDITO_PASSOU if passou else VEREDITO_REPROVOU,
+        veredito,
         "" if passou else ("; ".join(f.faltas) or rodada),
         data,
+        runtime,
     ])
     return saida.getvalue()
 

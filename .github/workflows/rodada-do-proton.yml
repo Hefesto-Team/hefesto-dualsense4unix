@@ -1,0 +1,141 @@
+name: Rodada do Proton
+
+# A-RODADA-DO-PROTON-RODA-FORA-DA-MAQUINA-DE-QUEM-JOGA-01. Só à mão. O passo 0 (medir) diz o que o runner
+# sustenta: o banco de prova (rádio e cabo), /dev/kvm, uhid, uinput, o servidor de som, o Steam Linux Runtime
+# 4.0 (appid 4183110) pelo steamcmd anônimo e pela imagem pública, e o sha256 do sonda.exe compilado aqui.
+# A rodada roda a matriz com o GE candidato; perna que o runner não sustenta sai «não medida».
+on:
+  workflow_dispatch:
+    inputs:
+      passo:
+        description: "medir: só o passo 0; rodada: o passo 0 e a matriz"
+        type: choice
+        options: [medir, rodada]
+        default: medir
+      candidato:
+        description: "o GE-Proton candidato (GE-Proton11-12); vazio é o mais novo publicado"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  rodada:
+    name: Rodada do Proton (${{ inputs.passo }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      MEDIDA: ${{ github.workspace }}/medida
+      SLR_APPID: "4183110"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prazo do apt (três tentativas, 30 s por conexão)
+        run: |
+          sudo mkdir -p /etc/apt/apt.conf.d
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\n' | sudo tee /etc/apt/apt.conf.d/80-prazo
+      - name: O banco de prova (o rádio e o cabo no runner)
+        continue-on-error: true
+        timeout-minutes: 45
+        env:
+          SONDA_PASTA: ${{ github.workspace }}/medida/banco
+        run: bash scripts/banco_de_prova/sonda.sh
+      - name: O que o runner tem
+        run: |
+          mkdir -p "$MEDIDA"
+          {
+            echo "kernel=$(uname -r)"
+            echo "kvm=$([ -e /dev/kvm ] && echo sim || echo não)"
+            echo "uhid=$([ -e /dev/uhid ] && echo sim || echo não)"
+            echo "uinput=$([ -e /dev/uinput ] && echo sim || echo não)"
+            echo "som=$(pactl info >/dev/null 2>&1 && echo sim || echo não)"
+          } | tee "$MEDIDA/runner.txt"
+      - name: A sonda do Proton, compilada pela linha do pino
+        timeout-minutes: 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64-posix
+          cd assets/sonda-proton
+          $(sed -n 's/^compilar=//p' pino.txt)
+          echo "sonda_sha256=$(sha256sum sonda.exe | cut -d' ' -f1)" | tee -a "$MEDIDA/runner.txt"
+          echo "sonda_sha256_do_pino=$(sed -n 's/^sha256=//p' pino.txt)" | tee -a "$MEDIDA/runner.txt"
+          cp sonda.exe "$MEDIDA/"
+      - name: O Steam Linux Runtime 4.0 pelo steamcmd anônimo
+        continue-on-error: true
+        timeout-minutes: 30
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y lib32gcc-s1
+          mkdir -p steamcmd slr
+          curl -fsSL --retry 3 -o steamcmd.tgz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+          tar -xzf steamcmd.tgz -C steamcmd
+          rc=0
+          ./steamcmd/steamcmd.sh +@sSteamCmdForcePlatformType linux +force_install_dir "$PWD/slr" \
+            +login anonymous +app_update "$SLR_APPID" validate +quit > "$MEDIDA/steamcmd.log" 2>&1 || rc=$?
+          echo "slr_steamcmd_rc=$rc" | tee -a "$MEDIDA/runner.txt"
+          acf="slr/steamapps/appmanifest_${SLR_APPID}.acf"
+          buildid="$(sed -n 's/.*"buildid"[[:space:]]*"\([0-9]*\)".*/\1/p' "$acf" 2>/dev/null | head -n 1)"
+          echo "slr_buildid=${buildid}" | tee -a "$MEDIDA/runner.txt"
+          echo "slr_entrada=$([ -x slr/_v2-entry-point ] && echo sim || echo não)" | tee -a "$MEDIDA/runner.txt"
+      - name: O Steam Linux Runtime 4.0 pela imagem pública
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          rc=0
+          docker pull registry.gitlab.steamos.cloud/steamrt/steamrt4/sdk:latest > "$MEDIDA/imagem.log" 2>&1 || rc=$?
+          echo "slr_imagem_rc=$rc" | tee -a "$MEDIDA/runner.txt"
+      - name: O GE candidato, conferido pelo sha512 do release
+        if: inputs.passo == 'rodada'
+        timeout-minutes: 15
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATO: ${{ inputs.candidato }}
+        run: |
+          tag="${CANDIDATO:-$(gh release view --repo GloriousEggroll/proton-ge-custom --json tagName -q .tagName)}"
+          mkdir -p ge && cd ge
+          gh release download "$tag" --repo GloriousEggroll/proton-ge-custom --pattern '*-x86_64.tar.gz' --pattern '*-x86_64.sha512sum'
+          sha512sum -c ./*.sha512sum
+          tar -xzf ./*-x86_64.tar.gz
+          echo "ge_tag=$tag" | tee -a "$MEDIDA/runner.txt"
+          echo "ge_sha256=$(sha256sum ./*-x86_64.tar.gz | cut -d' ' -f1)" | tee -a "$MEDIDA/runner.txt"
+      - name: A matriz da rodada
+        if: inputs.passo == 'rodada'
+        timeout-minutes: 30
+        run: |
+          python3 -m venv .venv-rodada
+          .venv-rodada/bin/pip install -e .
+          mkdir -p rodada
+          pasta="$(find ge -maxdepth 1 -mindepth 1 -type d -name 'GE-Proton*' | head -n 1)"
+          runtime=()
+          [ -x slr/_v2-entry-point ] && runtime=(--runtime slr)
+          rc=0
+          .venv-rodada/bin/python scripts/ensaios/a_rodada_do_proton_candidato.py "$pasta" \
+            --sonda "$MEDIDA/sonda.exe" --compilar \
+            --tarball-sha256 "$(sed -n 's/^ge_sha256=//p' "$MEDIDA/runner.txt")" \
+            "${runtime[@]}" --medida "$MEDIDA/banco/sonda.txt" \
+            --saida rodada/linha.csv --relato rodada/relato.json || rc=$?
+          echo "rodada_rc=$rc" | tee -a "$MEDIDA/runner.txt"
+      - name: O resumo
+        if: always()
+        env:
+          PASSO: ${{ inputs.passo }}
+        run: |
+          {
+            echo "## Rodada do Proton ($PASSO)"
+            echo '```'
+            cat "$MEDIDA/runner.txt" 2>/dev/null
+            grep -E '^(casa_radio|casa_cabo)=' "$MEDIDA/banco/sonda.txt" 2>/dev/null
+            cat rodada/linha.csv 2>/dev/null
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Sobe a medida e a linha do recibo
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rodada-do-proton-${{ inputs.passo }}
+          path: |
+            medida/
+            rodada/
+          if-no-files-found: warn
+          retention-days: 30

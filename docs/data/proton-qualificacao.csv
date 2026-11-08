@@ -3,5 +3,6 @@
 # reprova o assets/proton-pin.conf que nomeie uma versão sem a linha «passou» com o mesmo sha256.
 # rodada «herdada»: a versão fixada antes de o instrumento existir (17/09/2026, daac867da),
 # em uso desde então; a primeira rodada na VM a confirma ou a derruba.
-versão,sha256,ficha,rodada,veredito,prova,data
-GE-Proton11-7-x86_64,c5448b76a230384e2d7bc6beb5ccb97bafb7e2c3b6c527cb03a1a546bbcb00a0,passou,herdada,passou,,2026-10-16
+# runtime: o buildid do Steam Linux Runtime em que a rodada rodou; a herdada não o guardou.
+versão,sha256,ficha,rodada,veredito,prova,data,runtime
+GE-Proton11-7-x86_64,c5448b76a230384e2d7bc6beb5ccb97bafb7e2c3b6c527cb03a1a546bbcb00a0,passou,herdada,passou,,2026-10-16,
