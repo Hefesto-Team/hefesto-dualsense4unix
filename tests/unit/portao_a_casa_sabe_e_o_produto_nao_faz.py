@@ -3150,12 +3150,13 @@ class TestOPortaoMorde:
         copia = _copia_de_src(tmp_path)
         alvo = copia / "daemon" / "subsystems" / "gamepad.py"
         texto = alvo.read_text(encoding="utf-8")
-        chamada = "sync_steam_input_exception(daemon)"
-        assert chamada in texto, (
-            "a chamada mudou de forma — esta mordida precisa de outro alvo, "
-            "senão deixa de morder em silêncio"
+        arrancado, chamadas = re.subn(
+            r"^(\s+)sync_steam_input_exception\(", r"\1_chamada_arrancada(", texto, flags=re.M)
+        assert chamadas == 1, (
+            f"{chamadas} chamada(s) de sync_steam_input_exception no gamepad.py — esta mordida "
+            "precisa de outro alvo, senão deixa de morder em silêncio"
         )
-        alvo.write_text(texto.replace(chamada, "None"), encoding="utf-8")
+        alvo.write_text(arrancado, encoding="utf-8")
 
         chave = "daemon/subsystems/gamepad.py::sync_steam_input_exception"
         assert chave in promessas_sem_caminho(copia), (
