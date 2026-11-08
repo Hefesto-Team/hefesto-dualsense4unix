@@ -215,13 +215,53 @@ def test_a_pergunta_nasce_sozinha_uma_vez_quando_o_prazo_vence(
     assert gestos.conteudo(None) == ""
 
 
-def test_a_grade_da_aba_tem_tres_colunas_e_a_volta_2_sem_marca(registro: list[at.Peca]) -> None:
+def test_a_grade_da_aba_tem_quatro_colunas_e_a_volta_2_sem_marca(registro: list[at.Peca]) -> None:
     grade = tela.grade_da_aba(gestos.conferencia_vista())
     colunas = grade.split('<div class="risco"></div>')
-    assert len(colunas) == 3
-    assert [c.count('class="saude"') for c in colunas] == [4, 1, 0]
-    assert '<input type="checkbox" class="at-marca" disabled>' in grade
+    assert len(colunas) == 4
+    assert [c.count('class="saude') for c in colunas] == [4, 1, 0, 0]
+    assert '<div class="saude fixa"><input type="checkbox" class="at-marca" disabled>' in grade
     assert grade.count('data-gesto="peca-da-atualizacao"') == 4
+
+
+def test_o_andamento_ausente_ou_meio_escrito_e_sem_andamento(registro: list[at.Peca]) -> None:
+    arquivo = at._estado() / at.ARQUIVO_DO_ANDAMENTO
+    for estragado in ('{"pecas": [{"id": "ker', '{"pecas": "x", "inicio": 5}',
+                      '{"pecas": [{"id": "k"}], "inicio": "ontem"}', "[]"):
+        arquivo.write_text(estragado, encoding="utf-8")
+        assert gestos.conteudo(None, agora=10.0) == ""
+    arquivo.unlink()
+    assert gestos.conteudo(None, agora=10.0) == ""
+
+
+def test_o_hefesto_nao_tem_voltar_a_anterior() -> None:
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+
+    hefesto = next(p for p in pa.registro() if p.id == "hefesto")
+    assert hefesto.voltar is None
+    anteriores = {"hefesto": {"nome": "Hefesto", "agora": "0.9.5.2", "anterior": "0.9.5.1"},
+                  "kernel": {"nome": "Kernel", "agora": "7.2.18", "anterior": "7.2.15"}}
+    voltam = [p.id for p in pa.registro() if p.voltar is not None]
+    corpo = tela.html_das_anteriores(anteriores, voltam)
+    assert 'data-v="kernel"' in corpo and 'data-v="hefesto"' not in corpo
+
+
+def test_o_portal_e_a_gdk_aparecem_fixos_na_volta_2(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+    from hefesto_dualsense4unix.integrations import receitas_de_ambiente as receitas
+
+    monkeypatch.setattr(pa, "_instalados", lambda *_p: {
+        pa.PACOTE_DO_PORTAL: "1.0.0~1780000000+0~hefesto1"})
+    monkeypatch.setattr(receitas, "peca_do_hefesto_instalada", lambda *_a, **_k: True)
+    pecas = {p.id: p for p in pa.registro()}
+    for ident in ("bluetooth", "som", "portal", "gdk"):
+        assert pecas[ident].volta == 2 and pecas[ident].instalar is None
+    assert pa.versoes_do_portal(True).instalada == "1.0.0~1780000000+0~hefesto1"
+    assert pa.versoes_da_gdk(True).instalada.isdigit()
+    lista = [pecas[i] for i in ("portal", "gdk")]
+    estados = {i["id"]: i["estado"] for i in at.conferir(rede=True, lista=lista)["pecas"]}
+    assert estados == {"portal": at.FIXA, "gdk": at.FIXA}
+    assert tela.ORDEM_NA_TELA.index("gdk") < tela.ORDEM_NA_TELA.index("python")
 
 
 def test_a_aba_sistema_tem_a_secao_e_o_reler_atalhos() -> None:

@@ -388,18 +388,23 @@ CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 22px;align-items:start}
+  .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 12px;align-items:start}
   .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap}
   .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px}
   .at-grade .saude .ver .nv{color:var(--fg)}
   .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
+  .at-grade .saude{gap:6px}
+  .at-grade .saude .txt{flex:1 1 auto}
+  body .at-grade .saude .selo{flex:0 0 70px !important;padding-left:4px;padding-right:4px}
+  .at-grade .saude .ver .seta{margin:0 1px}
   .at-marca{width:16px;height:16px;accent-color:var(--pink);margin:0;flex:0 0 16px;cursor:pointer}
   .atualiza:not(:has(.at-cab .cadeado.ligada)) .at-marca{display:none}
   .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .txt,
   .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .ver{color:var(--texto-mudo)}
   @media (max-height:760px){
     body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
-    .at-grade{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .at-grade{grid-template-columns:repeat(4,minmax(0,1fr));gap:0 24px}
+    .at-grade .saude.fixa{display:none}
     .at-grade .col-lista{display:contents}
     .at-grade .risco{display:none}
     body .sec-rot.at-cab{height:24px !important}
@@ -427,6 +432,8 @@ def _secao_das_atualizacoes():
             ("proton", "GE-Proton", "Os jogos da Steam e do Heroic", "11-7", "11-12", "nova", True, 1, ""),
             ("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto", "5.87", "", "fixa", False, 2, ""),
             ("som", "Som", "PipeWire e WirePlumber", "1.6.9", "", "fixa", False, 2, ""),
+            ("portal", "Portal do COSMIC", "A captura de tela do COSMIC", "1.0.0", "", "fixa", False, 2, ""),
+            ("gdk", "GameInput", "A peça GDK e o GameInput", "1", "", "fixa", False, 2, ""),
             ("python", "Python", "evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3", "", "2", "nova", False, 1, "2 pacotes"),
             ("nvidia", "Driver NVIDIA", "nvidia-driver-595", "595.104.02", "595.104.02", "em_dia", True, 1, ""),
             ("kernel", "Kernel", "linux-system76", "7.2.15", "7.2.15", "em_dia", True, 1, ""),

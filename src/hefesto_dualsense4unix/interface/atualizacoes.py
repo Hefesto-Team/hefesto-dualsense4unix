@@ -16,9 +16,9 @@ from collections.abc import Sequence
 from typing import Any
 
 ID_DA_CAIXA = "hef-atualizacoes"
-ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "python", "nvidia", "kernel", "dkms",
-                 "sistema", "mangohud", "umu")
-COLUNAS_DA_GRADE = (4, 4, 3)
+ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
+                 "kernel", "dkms", "sistema", "mangohud", "umu")
+COLUNAS_DA_GRADE = (4, 3, 3, 3)
 ROTULO_DO_GRUPO = "Bibliotecas, drivers e plugins"
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
@@ -452,7 +452,8 @@ def grade_da_aba(conferencia: dict[str, Any]) -> str:
         marca = (f'<input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" '
                  f'data-v="{_e(item["id"])}"{" checked" if item.get("marcada") else ""}>'
                  if marcavel else '<input type="checkbox" class="at-marca" disabled>')
-        linhas.append(f'<div class="saude">{marca}{_selo_da_grade(item)}'
+        fixa = " fixa" if item.get("estado") == "fixa" else ""
+        linhas.append(f'<div class="saude{fixa}">{marca}{_selo_da_grade(item)}'
                       f'<span class="txt"{_dica(item.get("dica", ""))}><span>{_e(item.get("nome"))}'
                       f'</span></span><span class="ver">{_ver(item)}</span></div>')
     colunas, i = [], 0

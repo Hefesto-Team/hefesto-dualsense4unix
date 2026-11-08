@@ -492,3 +492,17 @@ def test_a_peca_hefesto_le_o_que_o_dev_trouxe(monkeypatch: pytest.MonkeyPatch,
         ("0.9.5.1", "0.9.5.2", True)
     respostas[("rev-parse", "--verify", "-q", "FETCH_HEAD^{commit}")] = "a" * 40
     assert not pa.versoes_do_hefesto(True).tem_nova()
+
+
+def test_os_modulos_do_kernel_cobrem_os_cinco(monkeypatch: pytest.MonkeyPatch) -> None:
+    modulos = ("hefesto-hid-playstation", "hefesto-hid-nintendo", "hefesto-rtw88-usb",
+               "hefesto-usb-f-hid", "hefesto-uhid")
+    monkeypatch.setattr(pa, "_kernels_com_headers", lambda: ["7.2.15-generic", "7.2.18-generic"])
+    status = [(m, "1.0.0", "7.2.15-generic", "installed") for m in modulos]
+    monkeypatch.setattr(pa, "_dkms_status", lambda: status)
+    versoes = pa.versoes_do_dkms(True)
+    assert versoes.dica.startswith("5 módulos") and versoes.tem_nova()
+    status += [(m, "1.0.0", "7.2.18-generic", "installed") for m in modulos[:4]]
+    assert pa.versoes_do_dkms(True).tem_nova()
+    status.append((modulos[4], "1.0.0", "7.2.18-generic", "installed"))
+    assert not pa.versoes_do_dkms(True).tem_nova()

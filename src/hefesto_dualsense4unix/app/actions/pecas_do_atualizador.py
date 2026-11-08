@@ -747,6 +747,28 @@ def versoes_do_som(_rede: bool) -> Versoes:
     return Versoes(achado.group(1) if achado else "", None, existe=achado is not None)
 
 
+PACOTE_DO_PORTAL = "xdg-desktop-portal-cosmic"
+
+
+def versoes_do_portal(_rede: bool) -> Versoes:
+    versao = _instalados(PACOTE_DO_PORTAL).get(PACOTE_DO_PORTAL, "")
+    return Versoes(_a_montante(versao), None, dica=versao, existe=bool(versao))
+
+
+def versoes_da_gdk(_rede: bool) -> Versoes:
+    from hefesto_dualsense4unix.integrations import receitas_de_ambiente as receitas
+
+    if not receitas.peca_do_hefesto_instalada():
+        return Versoes(existe=False)
+    try:
+        texto = receitas.PINO_DA_PECA.read_text(encoding="utf-8")
+    except OSError:
+        return Versoes(existe=False)
+    achado = re.search(r"^name=(\S+)$", texto, re.MULTILINE)
+    nome = achado.group(1) if achado else ""
+    return Versoes(nome.rsplit("-", 1)[-1], None, dica=nome, existe=bool(nome))
+
+
 def registro() -> list[Peca]:
     """As peças, na ordem da fila: o kernel antes dos módulos, o repositório por último."""
     return [
@@ -757,6 +779,10 @@ def registro() -> list[Peca]:
              "O serviço do Bluetooth", versoes_do_bluetooth, volta=2),
         Peca("som", "Som", "PipeWire e WirePlumber", "O PipeWire e o WirePlumber da sessão",
              versoes_do_som, volta=2),
+        Peca("portal", "Portal do COSMIC", "A captura de tela do COSMIC, com a correção do Hefesto",
+             "A sessão", versoes_do_portal, volta=2),
+        Peca("gdk", "GameInput", "A peça GDK e o GameInput dos jogos do Xbox no PC",
+             "Os jogos com a peça", versoes_da_gdk, volta=2),
         Peca("python", "Python", "As bibliotecas do Hefesto", "O serviço e a janela",
              versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python),
         Peca("nvidia", "Driver NVIDIA", "O driver da placa de vídeo", "No próximo início",

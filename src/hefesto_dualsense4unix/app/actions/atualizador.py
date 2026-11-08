@@ -178,7 +178,7 @@ def _ler_json(caminho: Path) -> dict[str, Any]:
 
 def _gravar_json(caminho: Path, dado: dict[str, Any]) -> None:
     caminho.parent.mkdir(parents=True, exist_ok=True)
-    tmp = caminho.with_name(f".{caminho.name}.{os.getpid()}.tmp")
+    tmp = caminho.with_name(f".{caminho.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp.write_text(json.dumps(dado, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(caminho)
 

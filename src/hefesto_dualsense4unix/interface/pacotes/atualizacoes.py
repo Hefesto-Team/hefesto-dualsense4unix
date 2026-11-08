@@ -51,15 +51,24 @@ def _jogo_aberto(ctx: Contexto | None) -> bool:
     return jogo_com_autoridade(getattr(ctx, "state", None))
 
 
+def _inicio(andamento: dict[str, Any]) -> float:
+    try:
+        return float(andamento.get("inicio", 0) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _andamento_a_mostrar(andamento: dict[str, Any], rodando: bool, agora: float) -> bool:
-    if not andamento or not andamento.get("pecas"):
+    """Arquivo ausente, meio escrito ou de outra forma é «sem andamento», nunca erro."""
+    pecas = andamento.get("pecas")
+    if not isinstance(pecas, list) or not any(isinstance(p, dict) for p in pecas):
         return False
-    if float(andamento.get("inicio", 0) or 0) == TELA["escondida"]:
+    inicio = _inicio(andamento)
+    if not inicio or inicio == TELA["escondida"]:
         return False
     if rodando:
         return True
-    return not andamento.get("visto") and agora - float(andamento.get("inicio", 0) or 0) \
-        < VALIDADE_DO_FIM_S
+    return not andamento.get("visto") and agora - inicio < VALIDADE_DO_FIM_S
 
 
 def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
@@ -173,7 +182,7 @@ def fechar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O fechar: esconde o andamento (a fila segue) ou fecha a pergunta; o fim visto não volta."""
     if TELA["vista"] == "andamento":
         andamento = at.ler_o_andamento()
-        TELA["escondida"] = float(andamento.get("inicio", 0) or 0)
+        TELA["escondida"] = _inicio(andamento)
         if not at.em_curso():
             at.marcar_o_andamento_visto()
     TELA["vista"] = ""
