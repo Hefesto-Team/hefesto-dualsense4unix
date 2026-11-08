@@ -33,3 +33,5 @@
 assets/dkms/**/*.c       ia-literal
 assets/dkms/**/*.h       ia-literal
 assets/dkms/**/*.patch   ia-literal
+assets/*-backport/patches/** ia-literal
+assets/gdk-runtime/*.c     ia-literal

@@ -201,16 +201,29 @@ def test_o_ensaio_acha_o_kernel_na_arvore_extraida(tmp_path: Path) -> None:
         ensaio.achar_o_kernel(tmp_path)
 
 
-def test_o_fonte_do_kernel_viaja_byte_a_byte_pelo_commit() -> None:
+FONTES_DE_FORA = {
+    "dkms": ("assets/dkms/**/*.c", "assets/dkms/**/*.h", "assets/dkms/**/*.patch"),
+    "bluez": ("assets/bluez-backport/patches/*",),
+    "pipewire": ("assets/pipewire-backport/patches/*",),
+    "portal": ("assets/portal-cosmic-backport/patches/*",),
+    "gdk-runtime": ("assets/gdk-runtime/*.c",),
+}
+
+
+@pytest.mark.parametrize("grupo", sorted(FONTES_DE_FORA))
+def test_o_fonte_de_fora_viaja_byte_a_byte_pelo_commit(grupo: str) -> None:
     """D-0811-O-KERNEL-NOVO-CHEGA-COM-AS-CURAS-DA-CASA: o commit não troca palavra do fonte."""
     if shutil.which("git") is None or not (RAIZ / ".git").exists():
         pytest.skip("fora de uma árvore do git")
     fixados = sorted(
-        str(p.relative_to(RAIZ))
-        for p in DKMS.rglob("*")
-        if p.is_file() and p.suffix in {".c", ".h", ".patch"}
+        {
+            str(p.relative_to(RAIZ))
+            for padrao in FONTES_DE_FORA[grupo]
+            for p in RAIZ.glob(padrao)
+            if p.is_file()
+        }
     )
-    assert fixados
+    assert fixados, f"{grupo}: nenhum arquivo, a régua não mede nada"
     feito = subprocess.run(
         ["git", "-C", str(RAIZ), "check-attr", "ia-literal", "--", *fixados],
         capture_output=True,
