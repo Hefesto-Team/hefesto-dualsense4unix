@@ -360,8 +360,9 @@ class TestBaselineEParidadeDosPatches:
         assert dados.get("KERNEL_TESTED") == "7.0.11-76070011-generic"
         assert dados.get("KERNEL_TESTED_2") == "7.1.5-76070105-generic"
         assert dados.get("KERNEL_TESTED_3") == "7.2.6-76070206-generic"
+        assert dados.get("KERNEL_TESTED_4") == "7.2.15-76070215-generic"
         assert dados.get("KERNELS_VALIDADOS", "").split() == [
-            "7.0.11-76070011", "7.1.5-76070105", "7.2.6-76070206",
+            "7.0.11-76070011", "7.1.5-76070105", "7.2.6-76070206", "7.2.15-76070215",
         ]
         assert re.fullmatch(r"[0-9a-f]{40}", dados.get("POP_LINUX_COMMIT", "")), (
             "POP_LINUX_COMMIT precisa ser o sha do repo pop-os/linux"
@@ -377,6 +378,7 @@ class TestBaselineEParidadeDosPatches:
             "SHA256_MAIN_7_0_11_76070011",
             "SHA256_MAIN_7_1_5_76070105",
             "SHA256_MAIN_7_2_6_76070206",
+            "SHA256_MAIN_7_2_15_76070215",
             "SHA256_VANILLA_C_7_2_6",
             "SHA256_PATCHED_C_7_2_6",
             "SHA256_RX_H_7_2_6",

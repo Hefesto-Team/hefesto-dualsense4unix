@@ -70,6 +70,11 @@ def _fonte_de_fabrica(destino: Path, por_kernel: dict[str, str] | None = None) -
 
 RTW88 = "drivers/net/wireless/realtek/rtw88"
 PASTA_7_2_6 = "7.2.6-76070206"
+PASTA_7_2_15 = "7.2.15-76070215"
+DAS_PASTAS_IGUAIS = (
+    f"fonte-por-kernel/{PASTA_7_2_6}",
+    f"fonte-por-kernel/{PASTA_7_2_15}",
+)
 
 
 def _fonte_do_rtw88(destino: Path, build: str | None = None, rx_h: bytes | None = None) -> Path:
@@ -167,7 +172,7 @@ def test_o_7_2_6_confere_pela_pasta_dele_e_a_raiz_pede_rebase(tmp_path: Path) ->
     )
     nintendo = ck.conferir("hid-nintendo", fonte)
     assert nintendo.veredito == ck.CONFERE
-    assert nintendo.base == "fonte-por-kernel/7.2.6-76070206"
+    assert nintendo.base in DAS_PASTAS_IGUAIS
     so_a_raiz = ck.conferir("hid-nintendo", fonte, so_a_raiz=True)
     assert so_a_raiz.veredito == ck.PEDE_REBASE
     leds, usb = (
@@ -204,7 +209,7 @@ def test_o_7_2_6_do_rtw88_confere_pela_pasta_dele(tmp_path: Path) -> None:
     fonte = _fonte_do_rtw88(tmp_path / "linux", PASTA_7_2_6)
     resposta = ck.conferir("rtw88-usb", fonte)
     assert resposta.veredito == ck.CONFERE, resposta
-    assert resposta.base == f"fonte-por-kernel/{PASTA_7_2_6}"
+    assert resposta.base in DAS_PASTAS_IGUAIS
     raiz = ck.conferir("rtw88-usb", fonte, so_a_raiz=True)
     assert raiz.veredito == ck.PEDE_REBASE, raiz
     assert raiz.mudou == [f"{RTW88}/rx.h"]
@@ -256,7 +261,7 @@ def test_rx_h_mudado_no_7_2_6_tambem_pede_rebase(tmp_path: Path) -> None:
     resposta = ck.conferir("rtw88-usb", fonte)
     assert resposta.veredito == ck.PEDE_REBASE, resposta
     assert resposta.mudou == [f"{RTW88}/rx.h"]
-    assert resposta.serie == f"de fonte-por-kernel/{PASTA_7_2_6}", resposta
+    assert resposta.serie in {f"de {p}" for p in DAS_PASTAS_IGUAIS}, resposta
 
 
 def test_pasta_por_kernel_so_com_o_0002_nao_levanta_excecao(tmp_path: Path) -> None:
@@ -269,7 +274,7 @@ def test_pasta_por_kernel_so_com_o_0002_nao_levanta_excecao(tmp_path: Path) -> N
     usb.write_bytes(usb.read_bytes().replace(b"int rtw_usb_probe", b"int  rtw_usb_probe", 1))
     resposta = ck.conferir("rtw88-usb", fonte)
     assert resposta.veredito in (ck.APLICA_LIMPA, ck.PEDE_REBASE), resposta
-    assert resposta.serie == f"de fonte-por-kernel/{PASTA_7_2_6}", resposta
+    assert resposta.serie in {f"de {p}" for p in DAS_PASTAS_IGUAIS}, resposta
     assert all(nome.startswith("0002") for nome in resposta.por_patch), resposta
 
 
