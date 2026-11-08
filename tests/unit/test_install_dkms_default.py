@@ -299,8 +299,8 @@ class TestParidadePackaging:
             assert "dkms_lib.sh" in texto, f"{nome} não empacota a lib DKMS"
 
     def test_install_host_udev_roda_o_dkms_dos_pacotes(self) -> None:
-        assert "dkms_install_patched_module hefesto-hid-nintendo" in HOST_UDEV
-        assert "dkms_module_from_updates hid-nintendo" in HOST_UDEV, (
+        assert 'dkms_install_patched_module "${pacote}"' in HOST_UDEV
+        assert 'dkms_module_from_updates "${ko}"' in HOST_UDEV, (
             "mensagem de staging honesta exige a prova por modinfo"
         )
         assert "skip_tx_on_rate_exceeded" in HOST_UDEV, (

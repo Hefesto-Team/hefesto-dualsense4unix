@@ -415,6 +415,11 @@ def test_broker_parity_do_repo_real_esta_verde() -> None:
     assert "[FAIL]" not in broker_section[1].split("═", 1)[0].split("─", 1)[0]
 
 
+_HOST_UDEV_DO_DONO = (
+    'for conf in "${DKMS_DIR}"/*/dkms.conf; do\n'
+    '    dkms_install_patched_module "${pacote}" "${versao}" "${fonte}" "${modulo}"\n'
+    "done\n"
+)
 _DKMS_REMOVE_NINTENDO = 'dkms remove "hefesto-hid-nintendo/1.0.0" --all\n'
 
 
@@ -449,7 +454,7 @@ def fake_repo_dkms_nintendo(tmp_path: Path) -> Path:
     )
     (tmp_path / "flatpak" / "fake-dkms.yml").write_text(fontes, encoding="utf-8")
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
-        "dkms_install_patched_module hefesto-hid-nintendo\n", encoding="utf-8"
+        _HOST_UDEV_DO_DONO, encoding="utf-8"
     )
     (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
         fontes + _DKMS_REMOVE_NINTENDO, encoding="utf-8"
@@ -576,7 +581,7 @@ def fake_repo_dkms_playstation(tmp_path: Path) -> Path:
     (tmp_path / "packaging" / "arch" / "PKGBUILD").write_text(fontes, encoding="utf-8")
     (tmp_path / "flatpak" / "fake-dkms.yml").write_text(fontes, encoding="utf-8")
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
-        "dkms_install_patched_module hefesto-hid-playstation\n", encoding="utf-8"
+        _HOST_UDEV_DO_DONO, encoding="utf-8"
     )
     (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
         fontes + _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"

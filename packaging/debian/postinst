@@ -54,10 +54,12 @@ case "$1" in
         echo ""
         echo "O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do"
         echo "jogo, cura de raiz do duplicado) ja foi ligado: ele atende quem esta"
-        echo "na frente do computador. Os modulos DKMS patchados (hid-nintendo,"
-        echo "hid-playstation, rtw88_usb, usb_f_hid e uhid) foram compilados agora"
-        echo "para este kernel e voltam a compilar em cada kernel novo; sem os"
-        echo "pacotes dkms e headers, o de fabrica continua. Instalados depois, rode:"
+        _modulos="$(sed -n 's/^BUILT_MODULE_NAME\[0\]="\(.*\)"$/\1/p' \
+            /usr/share/hefesto-dualsense4unix/dkms/*/dkms.conf 2>/dev/null | paste -sd' ' -)" || true
+        echo "na frente do computador. Os modulos DKMS patchados (${_modulos})"
+        echo "foram compilados agora para este kernel e voltam a compilar em cada"
+        echo "kernel novo; sem os pacotes dkms e headers, o de fabrica continua."
+        echo "Instalados depois, rode:"
         echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh"
         echo "As regras do udev se refazem com:"
         echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"

@@ -381,7 +381,12 @@ _leva_a_fonte_do_dkms() {
     grep -qF 'assets/dkms/*/dkms.conf' "$2" 2>/dev/null
 }
 
-echo "== todo módulo de assets/dkms/ nos três pacotes, no ajudante e na remoção =="
+_roda_o_dkms_do_dono() {
+    grep -qF '/*/dkms.conf' "$1" 2>/dev/null \
+        && grep -qF 'dkms_install_patched_module "${pacote}"' "$1" 2>/dev/null
+}
+
+echo "== todo módulo de assets/dkms/ nos três pacotes, no Flatpak, no ajudante e na remoção =="
 missing=()
 for conf in assets/dkms/*/dkms.conf; do
     [[ -f "${conf}" ]] || continue
@@ -392,6 +397,9 @@ for conf in assets/dkms/*/dkms.conf; do
                 packaging/fedora/hefesto-dualsense4unix.spec; do
         _leva_a_fonte_do_dkms "${pasta}" "${inst}" || missing+=("${inst}(${pasta})")
     done
+    _leva_a_fonte_do_dkms "${pasta}" flatpak/*.yml || missing+=("flatpak/*.yml(${pasta})")
+    _roda_o_dkms_do_dono scripts/install-host-udev.sh \
+        || missing+=("scripts/install-host-udev.sh(${pasta}: não lê a lista do dono)")
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
@@ -400,7 +408,7 @@ for conf in assets/dkms/*/dkms.conf; do
     done
 done
 if [[ "${#missing[@]}" -eq 0 ]]; then
-    echo "[ OK ] módulos DKMS: toda pasta sai pelo laço dos três pacotes, e a remoção desfaz cada uma"
+    echo "[ OK ] módulos DKMS: toda pasta sai pelo laço dos três pacotes e do Flatpak, o install-host-udev lê a lista do dono, e a remoção desfaz cada uma"
 else
     echo "[FAIL] módulos DKMS: FALTANDO em: ${missing[*]}"
     rc=1
@@ -415,10 +423,10 @@ if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
-    { grep -qF "dkms/hid-nintendo" flatpak/*.yml 2>/dev/null \
+    { _leva_a_fonte_do_dkms hid-nintendo flatpak/*.yml \
         && grep -qF "dkms_lib.sh" flatpak/*.yml 2>/dev/null; } \
         || missing+=("flatpak/*.yml")
-    grep -qF "dkms_install_patched_module" scripts/install-host-udev.sh 2>/dev/null \
+    _roda_o_dkms_do_dono scripts/install-host-udev.sh \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
@@ -445,11 +453,10 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
-    { grep -qF "dkms/rtw88-usb" flatpak/*.yml 2>/dev/null \
+    { _leva_a_fonte_do_dkms rtw88-usb flatpak/*.yml \
         && grep -qF "dkms_lib.sh" flatpak/*.yml 2>/dev/null; } \
         || missing+=("flatpak/*.yml")
-    grep -qF "dkms_install_patched_module hefesto-rtw88-usb" \
-        scripts/install-host-udev.sh 2>/dev/null \
+    _roda_o_dkms_do_dono scripts/install-host-udev.sh \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
@@ -462,7 +469,7 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     for msg in packaging/debian/postinst \
                packaging/arch/hefesto-dualsense4unix.install \
                packaging/fedora/hefesto-dualsense4unix.spec; do
-        grep -qiE "rtw88[_-]usb" "${msg}" 2>/dev/null \
+        grep -qiE 'rtw88[_-]usb|/dkms/\*/dkms\.conf' "${msg}" 2>/dev/null \
             || missing+=("${msg}(mensagem sem rtw88_usb)")
     done
     if [[ "${#missing[@]}" -eq 0 ]]; then
@@ -601,11 +608,10 @@ if [[ -f assets/dkms/hid-playstation/dkms.conf ]]; then
             && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
             || missing+=("${inst}")
     done
-    { grep -qF "dkms/hid-playstation" flatpak/*.yml 2>/dev/null \
+    { _leva_a_fonte_do_dkms hid-playstation flatpak/*.yml \
         && grep -qF "dkms_lib.sh" flatpak/*.yml 2>/dev/null; } \
         || missing+=("flatpak/*.yml")
-    grep -qF "dkms_install_patched_module hefesto-hid-playstation" \
-        scripts/install-host-udev.sh 2>/dev/null \
+    _roda_o_dkms_do_dono scripts/install-host-udev.sh \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
@@ -639,10 +645,9 @@ if [[ -f assets/dkms/usb-f-hid/dkms.conf ]]; then
     grep -qxF "%{_datadir}/%{app_id}/dkms/" \
         packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
         || missing+=("packaging/fedora/hefesto-dualsense4unix.spec(%files)")
-    grep -qF "assets/dkms/usb-f-hid" flatpak/*.yml 2>/dev/null \
+    _leva_a_fonte_do_dkms usb-f-hid flatpak/*.yml \
         || missing+=("flatpak/*.yml")
-    grep -qF "dkms_install_patched_module hefesto-usb-f-hid" \
-        scripts/install-host-udev.sh 2>/dev/null \
+    _roda_o_dkms_do_dono scripts/install-host-udev.sh \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \

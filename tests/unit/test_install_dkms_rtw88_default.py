@@ -340,8 +340,8 @@ class TestParidadePackaging:
             )
 
     def test_install_host_udev_roda_o_dkms_dos_pacotes(self) -> None:
-        assert "dkms_install_patched_module hefesto-rtw88-usb" in HOST_UDEV
-        assert "dkms_module_from_updates rtw88_usb" in HOST_UDEV, (
+        assert 'dkms_install_patched_module "${pacote}"' in HOST_UDEV
+        assert 'dkms_module_from_updates "${ko}"' in HOST_UDEV, (
             "mensagem de staging honesta exige a prova por modinfo"
         )
 

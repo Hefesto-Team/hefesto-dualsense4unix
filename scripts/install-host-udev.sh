@@ -452,17 +452,6 @@ else
     exit 1
 fi
 
-DKMS_SRC=""
-for candidate in \
-    "/app/share/hefesto-dualsense4unix/dkms/hid-nintendo" \
-    "/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo" \
-    "${SCRIPT_DIR}/../assets/dkms/hid-nintendo" \
-; do
-    if [[ -f "${candidate}/dkms.conf" ]]; then
-        DKMS_SRC="${candidate}"
-        break
-    fi
-done
 DKMS_LIB_SH=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
@@ -474,142 +463,75 @@ for candidate in \
         break
     fi
 done
-if [[ -n "${DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${DKMS_SRC}/dkms.conf")"
-    if [[ -n "${DKMS_VER}" ]]; then
-        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
-            sudo() { "$@"; }
-        fi
-        echo ""
-        echo "Cura de raiz do probe BT (Onda T): módulo DKMS hid-nintendo patchado ..."
-        # shellcheck source=dkms_lib.sh
-        source "${DKMS_LIB_SH}"
-        dkms_install_patched_module hefesto-hid-nintendo "${DKMS_VER}" \
-            "${DKMS_SRC}" hid-nintendo
-        if dkms_module_from_updates hid-nintendo; then
-            echo "  módulo patchado staged (vence o in-tree no próximo boot/carregamento)"
-        else
-            echo "  módulo patchado NÃO staged (avisos acima) — driver in-tree continua (fail-safe)"
-        fi
-    fi
-else
-    echo ""
-    echo "AVISO: fontes DKMS do hid-nintendo não encontradas neste formato — a conf"
-    echo "       hefesto-hid-nintendo.conf fica inerte sem o módulo patchado (in-tree segue)."
-fi
-
-RTW88_DKMS_SRC=""
+DKMS_DIR=""
 for candidate in \
-    "/app/share/hefesto-dualsense4unix/dkms/rtw88-usb" \
-    "/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb" \
-    "${SCRIPT_DIR}/../assets/dkms/rtw88-usb" \
+    "/app/share/hefesto-dualsense4unix/dkms" \
+    "/usr/share/hefesto-dualsense4unix/dkms" \
+    "${SCRIPT_DIR}/../assets/dkms" \
 ; do
-    if [[ -f "${candidate}/dkms.conf" ]]; then
-        RTW88_DKMS_SRC="${candidate}"
+    if compgen -G "${candidate}/*/dkms.conf" >/dev/null; then
+        DKMS_DIR="${candidate}"
         break
     fi
 done
-if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    RTW88_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${RTW88_DKMS_SRC}/dkms.conf")"
-    if [[ -n "${RTW88_DKMS_VER}" ]]; then
-        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
-            sudo() { "$@"; }
-        fi
-        echo ""
-        echo "Cura de raiz do fantasma USB do dongle WiFi (Onda W): módulo DKMS rtw88_usb patchado ..."
-        # shellcheck source=dkms_lib.sh
-        source "${DKMS_LIB_SH}"
-        dkms_install_patched_module hefesto-rtw88-usb "${RTW88_DKMS_VER}" \
-            "${RTW88_DKMS_SRC}" rtw88_usb
-        if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
-            printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
-            echo "  hang_reset rearmado a quente (vale já; sem reload, sem reboot)"
-        fi
-        if dkms_module_from_updates rtw88_usb; then
-            echo "  módulo patchado staged (vence o in-tree no próximo boot — NUNCA recarregamos com WiFi em uso)"
-        else
-            echo "  módulo patchado NÃO staged (avisos acima) — driver in-tree continua (fail-safe)"
-        fi
-    fi
-else
-    echo ""
-    echo "AVISO: fontes DKMS do rtw88-usb não encontradas neste formato — sem o módulo"
-    echo "       patchado o fantasma USB do dongle WiFi segue possível (in-tree continua)."
-fi
 
-HIDPS_DKMS_SRC=""
-for candidate in \
-    "/app/share/hefesto-dualsense4unix/dkms/hid-playstation" \
-    "/usr/share/hefesto-dualsense4unix/dkms/hid-playstation" \
-    "${SCRIPT_DIR}/../assets/dkms/hid-playstation" \
-; do
-    if [[ -f "${candidate}/dkms.conf" ]]; then
-        HIDPS_DKMS_SRC="${candidate}"
-        break
+_depois_do_usb_f_hid() {
+    if ! dkms_module_from_updates usb_f_hid; then
+        echo "  módulo patchado NÃO staged (avisos acima) — o de fábrica continua: o jogo no Proton espera 5 s por pedido de feature"
+    elif [[ ! -d /sys/module/usb_f_hid || -z "$(dkms_usb_f_hid_marcas_que_faltam /sys/module)" ]]; then
+        echo "  módulo patchado staged (o curado já está carregado, ou entra no próximo carregamento)"
+    elif [[ "$(cat /sys/module/usb_f_hid/refcnt 2>/dev/null)" == "0" ]] \
+         && sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null; then
+        echo "  usb_f_hid trocado a quente (nenhum pad no ar)"
+    else
+        echo "  módulo patchado staged — com pads USB virtuais no ar, vale no próximo boot (ou rode ./install.sh, que solta os pads e troca)"
     fi
-done
-if [[ -n "${HIDPS_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    HIDPS_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${HIDPS_DKMS_SRC}/dkms.conf")"
-    if [[ -n "${HIDPS_DKMS_VER}" ]]; then
-        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
-            sudo() { "$@"; }
-        fi
-        echo ""
-        echo "Cura de raiz da contenção BT: módulo DKMS hid-playstation patchado ..."
-        # shellcheck source=dkms_lib.sh
-        source "${DKMS_LIB_SH}"
-        dkms_install_patched_module hefesto-hid-playstation "${HIDPS_DKMS_VER}" \
-            "${HIDPS_DKMS_SRC}" hid-playstation
-        if dkms_module_from_updates hid-playstation; then
-            echo "  módulo patchado staged (vence o in-tree no próximo boot — NUNCA recarregamos com DualSense em uso)"
-        else
-            echo "  módulo patchado NÃO staged (avisos acima) — driver in-tree continua (fail-safe)"
-        fi
-    fi
-else
-    echo ""
-    echo "AVISO: fontes DKMS do hid-playstation não encontradas neste formato — sem o"
-    echo "       módulo patchado, o 2º DualSense segue podendo se perder na probe."
-fi
+}
 
-FHID_DKMS_SRC=""
-for candidate in \
-    "/app/share/hefesto-dualsense4unix/dkms/usb-f-hid" \
-    "/usr/share/hefesto-dualsense4unix/dkms/usb-f-hid" \
-    "${SCRIPT_DIR}/../assets/dkms/usb-f-hid" \
-; do
-    if [[ -f "${candidate}/dkms.conf" ]]; then
-        FHID_DKMS_SRC="${candidate}"
-        break
+_depois_do_modulo() {
+    local ko="$1"
+    if [[ "${ko}" == "rtw88_usb" && -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
+        printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
+        echo "  hang_reset rearmado a quente (vale já; sem reload, sem reboot)"
     fi
-done
-if [[ -n "${FHID_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    FHID_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${FHID_DKMS_SRC}/dkms.conf")"
-    if [[ -n "${FHID_DKMS_VER}" ]]; then
-        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
-            sudo() { "$@"; }
-        fi
+    if dkms_module_from_updates "${ko}"; then
+        echo "  módulo patchado staged (vence o in-tree no próximo boot/carregamento — NUNCA recarregamos com o aparelho em uso)"
+    else
+        echo "  módulo patchado NÃO staged (avisos acima) — o driver de fábrica continua (fail-safe)"
+    fi
+}
+
+_dkms_do_dono() {
+    local conf fonte pacote ko ver
+    for conf in "${DKMS_DIR}"/*/dkms.conf; do
+        [[ -f "${conf}" ]] || continue
+        fonte="${conf%/dkms.conf}"
+        pacote="$(sed -n 's/^PACKAGE_NAME="\(.*\)"$/\1/p' "${conf}")"
+        ko="$(sed -n 's/^BUILT_MODULE_NAME\[0\]="\(.*\)"$/\1/p' "${conf}")"
+        ver="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${conf}")"
+        [[ -n "${pacote}" && -n "${ko}" && -n "${ver}" ]] || continue
         echo ""
-        echo "A resposta do GET_REPORT dos pads USB virtuais: módulo DKMS usb_f_hid patchado ..."
-        # shellcheck source=dkms_lib.sh
-        source "${DKMS_LIB_SH}"
-        dkms_install_patched_module hefesto-usb-f-hid "${FHID_DKMS_VER}" \
-            "${FHID_DKMS_SRC}" usb_f_hid
-        if ! dkms_module_from_updates usb_f_hid; then
-            echo "  módulo patchado NÃO staged (avisos acima) — o de fábrica continua: o jogo no Proton espera 5 s por pedido de feature"
-        elif [[ ! -d /sys/module/usb_f_hid || -z "$(dkms_usb_f_hid_marcas_que_faltam /sys/module)" ]]; then
-            echo "  módulo patchado staged (o curado já está carregado, ou entra no próximo carregamento)"
-        elif [[ "$(cat /sys/module/usb_f_hid/refcnt 2>/dev/null)" == "0" ]] \
-             && sudo modprobe -r usb_f_hid 2>/dev/null && sudo modprobe usb_f_hid 2>/dev/null; then
-            echo "  usb_f_hid trocado a quente (nenhum pad no ar)"
-        else
-            echo "  módulo patchado staged — com pads USB virtuais no ar, vale no próximo boot (ou rode ./install.sh, que solta os pads e troca)"
-        fi
+        echo "Módulo DKMS patchado ${ko} (${pacote}) ..."
+        dkms_install_patched_module "${pacote}" "${ver}" "${fonte}" "${ko}"
+        case "${ko}" in
+            usb_f_hid) _depois_do_usb_f_hid ;;
+            *) _depois_do_modulo "${ko}" ;;
+        esac
+    done
+}
+
+if [[ -n "${DKMS_DIR}" && -n "${DKMS_LIB_SH}" ]]; then
+    if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+        sudo() { "$@"; }
     fi
+    # shellcheck source=dkms_lib.sh
+    source "${DKMS_LIB_SH}"
+    _dkms_do_dono
 else
     echo ""
-    echo "AVISO: fontes DKMS do usb_f_hid não encontradas neste formato — sem o módulo"
-    echo "       patchado, o jogo no Proton espera 5 s por pedido de feature dos pads USB virtuais."
+    echo "AVISO: fontes DKMS não encontradas neste formato — sem os módulos patchados, a"
+    echo "       contenção BT, o microfone pelo rádio, o GET_REPORT dos pads virtuais e o"
+    echo "       fantasma USB do dongle WiFi seguem possíveis (os drivers de fábrica continuam)."
 fi
 
 if [[ -n "${DKMS_LIB_SH}" ]]; then
