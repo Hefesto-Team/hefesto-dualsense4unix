@@ -1145,7 +1145,7 @@ tests/unit/test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py,20829,medido
 tests/unit/test_o_byte_dois_e_a_variavel_que_ninguem_variou.py,361,medido
 tests/unit/test_o_cabecalho_das_tabelas_tem_um_tom_so.py,2141,medido
 tests/unit/test_o_cabo_assume_do_radio.py,4084,medido
-tests/unit/test_o_cabo_liga_e_e_reconhecido_na_hora.py,34200,medido
+tests/unit/test_o_cabo_liga_e_e_reconhecido_na_hora.py,8000,medido
 tests/unit/test_o_cabo_que_cai_volta_com_o_numero.py,2565,medido
 tests/unit/test_o_cache_da_roupa_nao_confia_no_mtime_do_mesmo_tique.py,394,medido
 tests/unit/test_o_cadeado_da_moldura_nunca_sai_da_janela.py,8020,medido
@@ -1731,7 +1731,7 @@ tests/unit/test_o_reinicio_volta_ao_ultimo_jogo.py,698,medido
 tests/unit/test_o_reinicio_volta_com_o_pad_do_ultimo_jogo.py,492,medido
 tests/unit/test_o_relato_do_gatilho_nao_promete_byte_que_nao_saiu.py,361,medido
 tests/unit/test_o_reload_do_daemon_responde.py,354,medido
-tests/unit/test_o_relogio_do_lancamento_nao_le_o_disco_no_tique.py,41600,medido
+tests/unit/test_o_relogio_do_lancamento_nao_le_o_disco_no_tique.py,8200,medido
 tests/unit/test_o_remapeamento_vale_por_jogador.py,442,medido
 tests/unit/test_o_renomear_o_perfil_leva_a_escolha_ao_nome_novo.py,739,medido
 tests/unit/test_o_report_de_entrada_bate_com_o_driver.py,573,medido

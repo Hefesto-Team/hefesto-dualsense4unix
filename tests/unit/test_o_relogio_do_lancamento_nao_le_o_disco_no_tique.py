@@ -44,7 +44,15 @@ from tests.unit import test_o_tique_tem_orcamento as orcamento
 
 HZ = 120
 APPID = 7070707
-DORME_S = 2.0
+DORME_S = 0.25
+PASSO_S = 0.002
+PRAZO_S = 8.0
+PERIODO_S = 0.2
+SOSSEGO_S = 0.1
+FASES_EM_TIQUES = (4, 17, 29)
+LEITURAS_DE_CALMA = 6
+TIQUES_MEDIDOS = 72
+PARADA_MAXIMA_S = DORME_S * 0.75
 IDADE_DO_JOGO_S = int(le.LAUNCH_ARM_WINDOW_SEC) + 60
 LEITORES = (
     "read_last_run_marker",
@@ -132,9 +140,17 @@ def _com_jogo(casa: SimpleNamespace, epoch: int | None = None) -> None:
 class _Daemon(orcamento._DaemonDeLaco):
     """O daemon de laço com o `_reconciliar_launch` DE VERDADE, parando por relógio."""
 
-    def __init__(self, segundos: float, mascara: str = "xbox360") -> None:
+    def __init__(
+        self,
+        segundos: float,
+        mascara: str = "xbox360",
+        *,
+        ate: Callable[[], bool] | None = None,
+    ) -> None:
         super().__init__(tiques=10**9, poll_hz=HZ)
         self.ate = time.perf_counter() + segundos
+        self.pronto = ate
+        self.estourou = False
         self.display_authority = "unknown"
         self.config.gamepad_emulation_enabled = True
         self.config.gamepad_flavor = mascara
@@ -142,7 +158,10 @@ class _Daemon(orcamento._DaemonDeLaco):
     def _is_stopping(self) -> bool:
         self.inicio_do_tique = time.perf_counter()
         self.numero_do_tique += 1
-        return time.perf_counter() >= self.ate
+        if self.pronto is not None and self.pronto():
+            return True
+        self.estourou = time.perf_counter() >= self.ate
+        return self.estourou
 
     def is_native_mode(self) -> bool:
         return self._native_mode
@@ -174,6 +193,40 @@ def _dormindo(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> None:
         monkeypatch.setattr(le, nome, lento)
 
 
+def _esperar(pronto: Callable[[], bool], prazo_s: float = PRAZO_S) -> bool:
+    fim = time.monotonic() + prazo_s
+    while not pronto():
+        if time.monotonic() >= fim:
+            return False
+        time.sleep(PASSO_S)
+    return True
+
+
+async def _esperar_no_laco(pronto: Callable[[], bool], prazo_s: float = PRAZO_S) -> bool:
+    fim = time.monotonic() + prazo_s
+    while not pronto():
+        if time.monotonic() >= fim:
+            return False
+        await asyncio.sleep(PASSO_S)
+    return True
+
+
+@pytest.fixture()
+def relogio_curto(monkeypatch: pytest.MonkeyPatch) -> float:
+    """O relógio `launch` num período menor e o sossego mais curto: as esperas escalam com eles."""
+    monkeypatch.setattr(gp, "LAUNCH_RECONCILE_INTERVAL_SEC", PERIODO_S)
+    monkeypatch.setattr(
+        lc,
+        "RELOGIOS_LENTOS",
+        tuple(
+            (nome, PERIODO_S if nome == "launch" else periodo, fase)
+            for nome, periodo, fase in lc.RELOGIOS_LENTOS
+        ),
+    )
+    monkeypatch.setattr(le, "JANELA_DE_SOSSEGO_SEC", SOSSEGO_S)
+    return PERIODO_S
+
+
 def _pior_buraco(daemon: _Daemon) -> float:
     """O maior vão sem entrada, contando o fim: parada que atravessa o fim também é parada."""
     instantes = [*sorted(daemon.despachos.values()), daemon.fim]
@@ -184,23 +237,24 @@ def _pior_buraco(daemon: _Daemon) -> float:
 def test_o_tique_nao_cai_com_o_disco_preso(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
-    """Todo leitor dormindo 2 s: antes da cura, 5 tiques por segundo; depois, perto de 100."""
+    """Todo leitor dormindo: antes da cura o tique despencava; depois, fica perto de 100."""
     if jogo:
         _com_jogo(casa)
     _dormindo(monkeypatch, *LEITORES)
-    segundos = 3.5
-    daemon = _Daemon(segundos)
+    daemon = _Daemon(PRAZO_S, ate=lambda: len(daemon.despachos) >= TIQUES_MEDIDOS)
+    inicio = time.perf_counter()
 
     asyncio.run(daemon.rodar())
 
-    por_segundo = len(daemon.despachos) / segundos
+    assert not daemon.estourou, f"{TIQUES_MEDIDOS} tiques não vieram em {PRAZO_S} s"
+    por_segundo = len(daemon.despachos) / (daemon.fim - inicio)
     assert por_segundo > 40, f"o tique caiu a {por_segundo:.1f} por segundo"
-    assert _pior_buraco(daemon) < 1.0, f"o laço parou {_pior_buraco(daemon):.2f} s"
+    assert _pior_buraco(daemon) < PARADA_MAXIMA_S, f"o laço parou {_pior_buraco(daemon):.2f} s"
 
 
 @pytest.mark.parametrize("leitor", ["read_last_run_marker", "read_last_exit_marker"])
 def test_um_leitor_preso_nao_para_o_laco_na_rematerializacao(
-    casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, leitor: str
+    casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, relogio_curto: float, leitor: str
 ) -> None:
     """Só um leitor preso: a folha chega e o sossego vence, com a foto ainda fora do disco."""
     _com_jogo(casa)
@@ -213,15 +267,17 @@ def test_um_leitor_preso_nao_para_o_laco_na_rematerializacao(
         return tirar(*a, **k)
 
     monkeypatch.setattr(le, "_foto_do_lancamento", contar)
-    segundos = 6.0
-    daemon = _Daemon(segundos)
+    daemon = _Daemon(
+        PRAZO_S, ate=lambda: bool(fotos) and time.perf_counter() - fotos[0] > DORME_S
+    )
+    inicio = time.perf_counter()
 
     asyncio.run(daemon.rodar())
 
-    assert fotos, "o sossego não venceu: a régua não mediu nada"
+    assert fotos and not daemon.estourou, "o sossego não venceu: a régua não mediu nada"
     assert daemon.fim - fotos[0] > DORME_S / 2, "a foto caiu perto demais do fim da corrida"
-    assert len(daemon.despachos) / segundos > 40
-    assert _pior_buraco(daemon) < 1.0, f"o laço parou {_pior_buraco(daemon):.2f} s"
+    assert len(daemon.despachos) / (daemon.fim - inicio) > 40
+    assert _pior_buraco(daemon) < PARADA_MAXIMA_S, f"o laço parou {_pior_buraco(daemon):.2f} s"
 
 
 def test_a_foto_nao_le_a_sessao_e_a_escrita_sim(casa: SimpleNamespace) -> None:
@@ -259,7 +315,7 @@ async def _o_que_a_passada_toca(daemon: _Daemon) -> list[str]:
     caderno = daemon._caderno_do_lancamento
     prazo = time.monotonic() + 5.0
     while caderno.folha() is None and time.monotonic() < prazo:
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(PASSO_S)
     await asyncio.sleep(0)
     daemon._launch_env_sossego_em = None
     daemon._launch_env_assinatura = le._assinatura_da_mesa(daemon)
@@ -337,7 +393,7 @@ def test_a_folha_velha_nao_rearma_o_jogo_de_antes(
         caderno = le.CadernoDoLancamento(asyncio.get_running_loop(), lambda: None, 60.0)
         daemon._caderno_do_lancamento = caderno
         while caderno.folha() is None:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(PASSO_S)
         gp._reconciliar_launch(daemon)
         gravar(novo)
         le.arm_launch_profile(daemon)
@@ -351,24 +407,32 @@ def test_a_folha_velha_nao_rearma_o_jogo_de_antes(
     assert daemon._launch_armed_for == novo
 
 
-def test_o_lancamento_novo_arma_no_prazo_de_hoje(casa: SimpleNamespace) -> None:
+def test_o_lancamento_novo_arma_no_prazo_de_hoje(
+    casa: SimpleNamespace, relogio_curto: float
+) -> None:
     """O marker gravado arma em até um período do relógio, como o tique que lia o disco."""
-    daemon = _Daemon(7.0)
+    feito = threading.Event()
+    daemon = _Daemon(PRAZO_S, ate=feito.is_set)
     prazos: list[float] = []
 
     def lancar() -> None:
-        time.sleep(1.2)
-        for numero in range(3):
-            time.sleep(0.37 * (numero + 1))
-            epoch = int(time.time())
-            marca = (APPID + numero, epoch)
-            t0 = time.perf_counter()
-            (casa.base / "last_run").write_text(
-                f"appid={marca[0]}\nepoch={epoch}\npid={os.getpid()}\n", encoding="utf-8"
-            )
-            while daemon._launch_armed_for != marca and time.perf_counter() - t0 < 3.0:
-                time.sleep(0.002)
-            prazos.append(time.perf_counter() - t0)
+        try:
+            _esperar(lambda: getattr(daemon, "_caderno_do_lancamento", None) is not None)
+            caderno = daemon._caderno_do_lancamento
+            _esperar(lambda: caderno.folha() is not None)
+            for numero, fase in enumerate(FASES_EM_TIQUES):
+                alvo = daemon.numero_do_tique + fase
+                _esperar(lambda alvo=alvo: daemon.numero_do_tique >= alvo)
+                epoch = int(time.time())
+                marca = (APPID + numero, epoch)
+                t0 = time.perf_counter()
+                (casa.base / "last_run").write_text(
+                    f"appid={marca[0]}\nepoch={epoch}\npid={os.getpid()}\n", encoding="utf-8"
+                )
+                _esperar(lambda marca=marca: daemon._launch_armed_for == marca, 3.0)
+                prazos.append(time.perf_counter() - t0)
+        finally:
+            feito.set()
 
     daemon._launch_armed_for = None
     fio = threading.Thread(target=lancar, daemon=True)
@@ -376,8 +440,9 @@ def test_o_lancamento_novo_arma_no_prazo_de_hoje(casa: SimpleNamespace) -> None:
     asyncio.run(daemon.rodar())
     fio.join(1.0)
 
+    assert not daemon.estourou, f"os três lançamentos não armaram em {PRAZO_S} s"
     assert len(prazos) == 3
-    assert max(prazos) < 1.3, f"o arme demorou {max(prazos):.2f} s"
+    assert max(prazos) < relogio_curto * 1.3, f"o arme demorou {max(prazos):.2f} s"
 
 
 def test_o_disco_preso_atrasa_o_arme_e_nao_a_entrada(
@@ -389,57 +454,77 @@ def test_o_disco_preso_atrasa_o_arme_e_nao_a_entrada(
         f"appid={APPID}\nepoch={epoch}\npid={os.getpid()}\n", encoding="utf-8"
     )
     _dormindo(monkeypatch, "read_last_run_marker")
-    daemon = _Daemon(4.5)
+    daemon = _Daemon(
+        PRAZO_S,
+        ate=lambda: getattr(daemon, "_launch_armed_for", None) == (APPID, epoch)
+        and len(daemon.despachos) >= TIQUES_MEDIDOS,
+    )
+    inicio = time.perf_counter()
 
     asyncio.run(daemon.rodar())
 
+    assert not daemon.estourou, "o arme não chegou depois da volta da leitura presa"
     assert daemon._launch_armed_for == (APPID, epoch)
-    assert len(daemon.despachos) / 4.5 > 40
-    assert _pior_buraco(daemon) < 1.0
+    assert len(daemon.despachos) / (daemon.fim - inicio) > 40
+    assert _pior_buraco(daemon) < PARADA_MAXIMA_S
 
 
-def test_a_saida_do_jogo_da_allowlist_devolve_o_fisico_no_prazo(casa: SimpleNamespace) -> None:
+def test_a_saida_do_jogo_da_allowlist_devolve_o_fisico_no_prazo(
+    casa: SimpleNamespace, relogio_curto: float
+) -> None:
     """O `last_exit` entra pela folha: a exceção do Steam Input liga e desliga sem disco."""
     _com_jogo(casa)
-    daemon = _Daemon(4.0)
+    feito = threading.Event()
+    daemon = _Daemon(PRAZO_S, ate=feito.is_set)
     vistos: list[bool] = []
 
     def sair() -> None:
-        time.sleep(2.0)
-        vistos.append(gp.steam_input_excecao_ativa(daemon))
-        (casa.base / "last_exit").write_text(
-            f"epoch={int(time.time())}\npid={os.getpid()}\n", encoding="utf-8"
-        )
-        time.sleep(1.5)
-        vistos.append(gp.steam_input_excecao_ativa(daemon))
+        try:
+            vistos.append(_esperar(lambda: gp.steam_input_excecao_ativa(daemon)))
+            (casa.base / "last_exit").write_text(
+                f"epoch={int(time.time())}\npid={os.getpid()}\n", encoding="utf-8"
+            )
+            vistos.append(_esperar(lambda: not gp.steam_input_excecao_ativa(daemon)))
+        finally:
+            feito.set()
 
     fio = threading.Thread(target=sair, daemon=True)
     fio.start()
     asyncio.run(daemon.rodar())
     fio.join(1.0)
 
-    assert vistos == [True, False]
+    assert vistos == [True, True], "a exceção não ligou, ou não desligou, no prazo"
 
 
-def test_o_perfil_novo_ainda_chega_ao_vigia(casa: SimpleNamespace) -> None:
+def test_o_perfil_novo_ainda_chega_ao_vigia(
+    casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, relogio_curto: float
+) -> None:
     """Um perfil que nasce fora da janela muda o selo da folha, e o vigia arma o sossego."""
-    daemon = _Daemon(3.5)
+    daemon = _Daemon(PRAZO_S)
     vistos: list[Any] = []
+    passadas: list[float] = []
+    vigiar = le.vigiar_a_mesa
 
-    def assentar_e_criar() -> None:
-        time.sleep(1.6)
-        vistos.append(daemon._launch_env_sossego_em)
-        (casa.perfis / "novo.json").write_text("{}", encoding="utf-8")
+    def contar(*a: Any, **k: Any) -> Any:
+        passadas.append(time.perf_counter())
+        return vigiar(*a, **k)
+
+    monkeypatch.setattr(le, "vigiar_a_mesa", contar)
 
     async def corpo() -> None:
         tarefa = asyncio.create_task(daemon.rodar())
-        await asyncio.sleep(1.2)
+        assentou = await _esperar_no_laco(lambda: len(passadas) >= 1)
         daemon._launch_env_sossego_em = None
         daemon._launch_env_assinatura = le._assinatura_da_mesa(daemon)
-        await asyncio.to_thread(assentar_e_criar)
-        await asyncio.sleep(1.4)
+        base = len(passadas)
+        calmo = await _esperar_no_laco(lambda: len(passadas) >= base + 2)
         vistos.append(daemon._launch_env_sossego_em)
+        (casa.perfis / "novo.json").write_text("{}", encoding="utf-8")
+        chegou = await _esperar_no_laco(lambda: daemon._launch_env_sossego_em is not None)
+        vistos.append(daemon._launch_env_sossego_em)
+        daemon.ate = 0.0
         await tarefa
+        assert assentou and calmo and chegou, "o vigia não andou no prazo"
 
     asyncio.run(corpo())
 
@@ -458,7 +543,7 @@ def test_o_vigia_e_o_recibo_leem_a_mesma_conta(
         caderno = le.CadernoDoLancamento(asyncio.get_running_loop(), lambda: None, 0.05)
         daemon._caderno_do_lancamento = caderno
         while caderno.folha() is None:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(PASSO_S)
         folha = caderno.folha()
         monkeypatch.setattr(le, "selo_dos_perfis", lambda: pytest.fail("disco no laço"))
         return folha, le._assinatura_da_mesa(daemon)
@@ -476,7 +561,7 @@ def test_fora_do_laco_a_conta_vai_ao_disco(casa: SimpleNamespace) -> None:
         caderno = le.CadernoDoLancamento(asyncio.get_running_loop(), lambda: None, 60.0)
         daemon._caderno_do_lancamento = caderno
         while caderno.folha() is None:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(PASSO_S)
         return le._a_folha_pronta(daemon), await asyncio.to_thread(le._a_folha_pronta, daemon)
 
     no_laco, em_outro_fio = asyncio.run(corpo())
@@ -518,7 +603,7 @@ def test_o_aviso_do_jogo_congelado_nao_le_a_sessao_no_laco(
         caderno = le.CadernoDoLancamento(asyncio.get_running_loop(), lambda: None, 60.0)
         daemon._caderno_do_lancamento = caderno
         while caderno.folha() is None:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(PASSO_S)
         monkeypatch.setattr(
             le, "launch_session_appid", lambda **k: pytest.fail("a sessão foi ao disco")
         )
@@ -561,10 +646,22 @@ def test_o_caderno_so_chama_quando_a_folha_muda(casa: SimpleNamespace) -> None:
         caderno = le.CadernoDoLancamento(
             asyncio.get_running_loop(), lambda: chamadas.append(caderno.folha()), 0.02
         )
-        await asyncio.sleep(0.3)
-        antes = len(chamadas)
-        _com_jogo(casa)
-        await asyncio.sleep(0.3)
+        lidas = []
+        ler = le.ler_a_folha
+
+        def contar() -> Any:
+            lidas.append(1)
+            return ler()
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(le, "ler_a_folha", contar)
+            assert await _esperar_no_laco(lambda: len(lidas) >= LEITURAS_DE_CALMA)
+            antes = len(chamadas)
+            _com_jogo(casa)
+            base = len(lidas)
+            assert await _esperar_no_laco(
+                lambda: chamadas[-1].marker is not None and len(lidas) >= base + LEITURAS_DE_CALMA
+            )
         return antes, len(chamadas)
 
     antes, depois = asyncio.run(corpo())
@@ -579,7 +676,7 @@ def test_o_fio_do_caderno_acaba_com_o_laco(casa: SimpleNamespace) -> None:
 
     async def corpo() -> le.CadernoDoLancamento:
         caderno = le.CadernoDoLancamento(asyncio.get_running_loop(), lambda: None, 0.02)
-        await asyncio.sleep(0.05)
+        assert await _esperar_no_laco(lambda: caderno.folha() is not None)
         return caderno
 
     caderno = asyncio.run(corpo())
@@ -656,7 +753,7 @@ def test_o_fio_que_morre_ganha_outro_caderno(
         novo = daemon._caderno_do_lancamento
         prazo = time.monotonic() + 5.0
         while novo.folha() is None and time.monotonic() < prazo:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(PASSO_S)
         return novo is not morto, novo.folha()
 
     trocou, folha = asyncio.run(corpo())
@@ -683,7 +780,7 @@ def test_o_caderno_novo_herda_a_folha_do_que_morreu(
         pedir()
         primeiro = daemon._caderno_do_lancamento
         while primeiro.folha() is None:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(PASSO_S)
         with pytest.MonkeyPatch.context() as mp:
             mp.setattr(le, "ler_a_folha", quebrada)
             primeiro._fio.join(2.0)

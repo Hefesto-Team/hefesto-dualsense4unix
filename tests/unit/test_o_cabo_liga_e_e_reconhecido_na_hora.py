@@ -10,7 +10,7 @@ import asyncio
 import os
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
@@ -24,6 +24,7 @@ from hefesto_dualsense4unix.core import o_dono_do_evento as ode
 from hefesto_dualsense4unix.core import physical_report_reader as prr
 from hefesto_dualsense4unix.core import relogio_da_conexao as rel
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+from hefesto_dualsense4unix.core import evdev_reader
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon import connection as conn
@@ -43,8 +44,47 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
 MACS = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 PRAZO_DO_EVENTO_S = 1.0
+PASSO_S = 0.005
+PASSADAS_DO_LACO = 8
+ESPERA_DA_VOLTA_S = 0.8
+PRAZO_S = 6.0
+TETO_S = 0.1
+PRESO_S = 0.3
+RECUO_LONGO_S = 3.0
 
 _DERRUBAR_REAL = oce.derrubar_o_radio
+
+
+def _esperar(pronto: Callable[[], bool], prazo_s: float = PRAZO_S) -> bool:
+    fim = time.monotonic() + prazo_s
+    while not pronto():
+        if time.monotonic() >= fim:
+            return False
+        time.sleep(PASSO_S)
+    return True
+
+
+async def _esperar_no_laco(pronto: Callable[[], bool], prazo_s: float = PRAZO_S) -> bool:
+    fim = time.monotonic() + prazo_s
+    while not pronto():
+        if time.monotonic() >= fim:
+            return False
+        await asyncio.sleep(PASSO_S)
+    return True
+
+
+def _aberturas_prontas(ctl: PyDualSenseController) -> bool:
+    return all(a.pronta.is_set() for a in list(ctl._abrindo.values()))
+
+
+@pytest.fixture(autouse=True)
+def _sem_o_inventario_do_input_de_verdade(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(evdev_reader, "discover_gamepads", lambda **_k: [])
+
+
+@pytest.fixture()
+def teto_curto(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(backend_mod, "TETO_DA_ABERTURA_NA_VOLTA_SEC", TETO_S)
 
 
 class Controle:
@@ -106,12 +146,11 @@ async def _nasce_e_mede(nos: Path, *, online: bool, nome: str) -> float:
     daemon, fios = _daemon(controle)
     watch = InputDirWatch(root=str(nos / "input"))
     tarefa = asyncio.create_task(conn.reconnect_loop(daemon, input_watch=watch))
-    await asyncio.sleep(0.3)
+    assert await _esperar_no_laco(lambda: len(controle.connects) >= 1), "a volta não começou"
     antes = len(controle.connects)
     comeco = time.monotonic()
     (nos / "input" / nome).write_text("")
-    while len(controle.connects) == antes and time.monotonic() - comeco < 8.0:
-        await asyncio.sleep(0.005)
+    await _esperar_no_laco(lambda: len(controle.connects) != antes, 8.0)
     gasto = time.monotonic() - comeco
     daemon._stop_event.set()
     tarefa.cancel()
@@ -218,6 +257,11 @@ class Vpad:
 
 
 class TestOLeitorNaoDormeORecuo:
+    @pytest.fixture(autouse=True)
+    def _recuo_longo(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(prr, "_BACKOFF_START_S", RECUO_LONGO_S)
+        monkeypatch.setattr(prr, "_BACKOFF_MAX_S", RECUO_LONGO_S)
+
     def _leitor(self) -> tuple[prr.PhysicalReportReader, dict[str, Any], threading.Event]:
         estado: dict[str, Any] = {"no": None}
         aberto = threading.Event()
@@ -233,7 +277,7 @@ class TestOLeitorNaoDormeORecuo:
 
     def _no_recuo_longo(self, leitor: prr.PhysicalReportReader) -> None:
         leitor.start()
-        time.sleep(1.8)
+        assert _esperar(lambda: leitor._em_recuo), "o leitor não entrou no recuo"
 
     def teardown_method(self) -> None:
         for fd in getattr(self, "_fds", ()):
@@ -323,30 +367,28 @@ def _quatro() -> list[tuple[str, bytes, bool]]:
     return [(mac, f"/ensaio/hidraw{n}".encode(), False) for n, mac in enumerate(MACS)]
 
 
+@pytest.mark.usefixtures("teto_curto")
 class TestUmControleNaoSeguraOsOutros:
     @pytest.mark.parametrize("preso", range(4), ids=[f"preso-P{n + 1}" for n in range(4)])
     def test_um_init_preso_nao_atrasa_os_outros_tres(self, preso: int) -> None:
         chaves = _quatro()
-        ctl, _abertos = _backend(chaves, {chaves[preso][1]: 1.5})
-        comeco = time.monotonic()
+        ctl, _abertos = _backend(chaves, {chaves[preso][1]: PRESO_S})
         ctl.connect()
-        gasto = time.monotonic() - comeco
         vivos = set(ctl._handles)
-        assert vivos == {mac for mac, _p, _e in chaves} - {chaves[preso][0]}
-        assert gasto < 0.6, f"um init preso segurou a volta por {gasto:.2f} s"
+        assert vivos == {mac for mac, _p, _e in chaves} - {chaves[preso][0]}, (
+            "um init preso segurou a volta"
+        )
         assert ctl.falta_abrir_alguem()
         ctl.disconnect()
 
     def test_o_preso_entra_na_volta_seguinte_e_a_abertura_toca_o_sino(self) -> None:
         chaves = _quatro()
-        ctl, _abertos = _backend(chaves, {chaves[2][1]: 0.4})
+        ctl, _abertos = _backend(chaves, {chaves[2][1]: PRESO_S})
         toques: list[float] = []
         ctl.ouvir_as_aberturas(lambda: toques.append(time.monotonic()))
         ctl.connect()
         assert MACS[2] not in ctl._handles
-        limite = time.monotonic() + 2.0
-        while len(toques) < len(chaves) and time.monotonic() < limite:
-            time.sleep(0.01)
+        _esperar(lambda: len(toques) >= len(chaves))
         assert len(toques) == len(chaves), "a abertura que terminou não acordou a volta"
         ctl.connect()
         assert set(ctl._handles) == set(MACS)
@@ -355,19 +397,34 @@ class TestUmControleNaoSeguraOsOutros:
 
     def test_cada_abertura_corre_no_proprio_fio(self) -> None:
         chaves = _quatro()
-        ctl, _abertos = _backend(chaves, dict.fromkeys((p for _m, p, _e in chaves), 0.2))
-        comeco = time.monotonic()
+        ctl, _abertos = _backend(chaves, dict.fromkeys((p for _m, p, _e in chaves), TETO_S * 0.8))
+        em_voo: list[int] = [0]
+        pico: list[int] = [0]
+        trava = threading.Lock()
+        aberta = ctl._open_one
+
+        def contar(path: bytes, *, is_edge: bool) -> _Handle:
+            with trava:
+                em_voo[0] += 1
+                pico[0] = max(pico[0], em_voo[0])
+            try:
+                return aberta(path, is_edge=is_edge)
+            finally:
+                with trava:
+                    em_voo[0] -= 1
+
+        ctl._open_one = contar  # type: ignore[method-assign]
         ctl.connect()
-        assert time.monotonic() - comeco < 0.6, "abriu em série"
+        assert pico[0] == len(chaves), "abriu em série"
         assert set(ctl._handles) == set(MACS)
         ctl.disconnect()
 
     def test_o_controle_que_saiu_enquanto_abria_nao_fica_aberto(self) -> None:
         chaves = _quatro()[:2]
-        ctl, abertos = _backend(chaves, {chaves[1][1]: 0.3})
+        ctl, abertos = _backend(chaves, {chaves[1][1]: TETO_S * 2})
         ctl.connect()
         ctl._enumerate_device_keys = lambda: chaves[:1]  # type: ignore[method-assign]
-        time.sleep(0.5)
+        assert _esperar(lambda: _aberturas_prontas(ctl) and chaves[1][1] in abertos)
         ctl.connect()
         assert set(ctl._handles) == {MACS[0]}
         assert abertos[chaves[1][1]].closed
@@ -375,17 +432,18 @@ class TestUmControleNaoSeguraOsOutros:
 
     def test_o_disconnect_fecha_o_que_estava_em_voo(self) -> None:
         chaves = _quatro()[:1]
-        ctl, abertos = _backend(chaves, {chaves[0][1]: 2.0})
+        ctl, abertos = _backend(chaves, {chaves[0][1]: PRESO_S})
         ctl.connect()
         assert not ctl._handles
         ctl.disconnect()
         ctl._abrindo.clear()
-        time.sleep(1.5)
-        assert abertos[chaves[0][1]].closed, "a abertura órfã vazou o handle"
+        assert _esperar(lambda: chaves[0][1] in abertos and abertos[chaves[0][1]].closed), (
+            "a abertura órfã vazou o handle"
+        )
 
     def test_sem_volta_o_connect_espera_quem_abre(self) -> None:
         chaves = _quatro()[:2]
-        ctl, _abertos = _backend(chaves, {chaves[1][1]: 1.3}, com_volta=False)
+        ctl, _abertos = _backend(chaves, {chaves[1][1]: PRESO_S}, com_volta=False)
         ctl.connect()
         assert set(ctl._handles) == set(MACS[:2]), (
             "a CLI e o boot não têm volta seguinte para colher quem passou do teto"
@@ -413,11 +471,13 @@ class TestUmControleNaoSeguraOsOutros:
 
     def test_quem_saiu_nao_apaga_a_falta_de_quem_ficou(self) -> None:
         chaves = _quatro()[:2]
-        ctl, _abertos = _backend(chaves, dict.fromkeys((p for _m, p, _e in chaves), 1.15))
+        ctl, _abertos = _backend(chaves, dict.fromkeys((p for _m, p, _e in chaves), PRESO_S))
+        terminaram: list[bytes] = []
 
         def abrir(path: bytes, *, is_edge: bool) -> _Handle:
             del is_edge
-            time.sleep(1.15)
+            time.sleep(PRESO_S)
+            terminaram.append(path)
             if path == chaves[0][1]:
                 raise OSError("sem permissão")
             return _Handle(path)
@@ -425,7 +485,7 @@ class TestUmControleNaoSeguraOsOutros:
         ctl._open_one = abrir  # type: ignore[method-assign]
         ctl.connect()
         ctl._enumerate_device_keys = lambda: chaves[:1]  # type: ignore[method-assign]
-        time.sleep(0.4)
+        assert _esperar(lambda: len(terminaram) == 2 and _aberturas_prontas(ctl))
         ctl.connect()
         assert ctl.falta_abrir_alguem(), "o que saiu calou a tentativa de quem ficou"
         ctl.disconnect()
@@ -457,7 +517,7 @@ class TestUmControleNaoSeguraOsOutros:
             tarefa = asyncio.create_task(
                 conn.reconnect_loop(daemon, input_watch=InputDirWatch(root="/nao-existe"))
             )
-            await asyncio.sleep(1.5)
+            await _esperar_no_laco(lambda: len(controle.connects) >= 3, 3.0)
             daemon._stop_event.set()
             tarefa.cancel()
             await asyncio.gather(tarefa, return_exceptions=True)
@@ -989,21 +1049,26 @@ MESAS = {
 }
 
 
+@pytest.mark.usefixtures("teto_curto")
 class TestOsQuatroJuntos:
     """A volta e o backend de verdade: cada mesa, com um `init` preso de cada vez."""
 
     async def _plugar(
         self, transportes: tuple[str, ...], preso: int, monkeypatch: pytest.MonkeyPatch
-    ) -> tuple[list[tuple[str, float]], PyDualSenseController]:
+    ) -> tuple[list[tuple[str, float]], PyDualSenseController, float, bool]:
         chaves = _quatro()
         ctl = PyDualSenseController()
         ctl._enumerate_device_keys = lambda: chaves  # type: ignore[method-assign]
         por_no = dict(zip((p for _m, p, _e in chaves), transportes, strict=True))
         no_preso = chaves[preso][1]
+        solto = threading.Event()
+        preso_abriu: list[bool] = []
 
         def abrir(path: bytes, *, is_edge: bool) -> _HandleDeTransporte:
             del is_edge
-            time.sleep(1.2 if path == no_preso else 0.02)
+            if path == no_preso:
+                solto.wait(PRAZO_S)
+                preso_abriu.append(True)
             return _HandleDeTransporte(path, por_no[path])
 
         ctl._open_one = abrir  # type: ignore[method-assign]
@@ -1024,17 +1089,27 @@ class TestOsQuatroJuntos:
             conn.reconnect_loop(daemon, input_watch=InputDirWatch(root="/nao-existe"))
         )
         chegaram: list[tuple[str, float]] = []
-        while len(chegaram) < 4 and time.monotonic() - comeco < 4.0:
-            try:
-                evento = await asyncio.wait_for(fila.get(), 0.05)
-            except asyncio.TimeoutError:
-                continue
-            chegaram.append((str(evento["uniq"]), time.monotonic() - comeco))
+        solto_em = 0.0
+        preso_abriu_antes = False
+
+        async def colher(quantos: int) -> None:
+            while len(chegaram) < quantos and time.monotonic() - comeco < PRAZO_S:
+                try:
+                    evento = await asyncio.wait_for(fila.get(), PASSO_S * 10)
+                except asyncio.TimeoutError:
+                    continue
+                chegaram.append((str(evento["uniq"]), time.monotonic() - comeco))
+
+        await colher(3)
+        preso_abriu_antes = bool(preso_abriu)
+        solto_em = time.monotonic() - comeco
+        solto.set()
+        await colher(4)
         daemon._stop_event.set()
         tarefa.cancel()
         await asyncio.gather(tarefa, return_exceptions=True)
         fios.shutdown(wait=False)
-        return chegaram, ctl
+        return chegaram, ctl, solto_em, preso_abriu_antes
 
     @pytest.mark.parametrize("nome", list(MESAS))
     @pytest.mark.parametrize("preso", [0, 3], ids=["preso-P1", "preso-P4"])
@@ -1042,7 +1117,9 @@ class TestOsQuatroJuntos:
         self, nome: str, preso: int, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         rel.RELOGIO.limpar()
-        chegaram, ctl = asyncio.run(self._plugar(MESAS[nome], preso, monkeypatch))
+        chegaram, ctl, solto_em, preso_abriu_antes = asyncio.run(
+            self._plugar(MESAS[nome], preso, monkeypatch)
+        )
         ctl.disconnect()
         conexoes_abertas = dict(rel.RELOGIO._abertas)
         rel.RELOGIO.limpar()
@@ -1051,10 +1128,11 @@ class TestOsQuatroJuntos:
             assert {rel.ABERTO, rel.CONECTADO} <= set(conexao.marcas)
             assert conexao.transporte == transporte
         assert len({uniq for uniq, _t in chegaram}) == 4, f"faltou controle: {chegaram}"
-        tres = [t for _uniq, t in chegaram[:3]]
-        assert max(tres) < 0.8, f"o preso segurou os outros: {chegaram}"
-        assert chegaram[3][1] >= 1.0, f"o preso não pode ter aberto antes: {chegaram}"
-        assert chegaram[3][1] < 2.0, f"a abertura que terminou não acordou a volta: {chegaram}"
+        assert not preso_abriu_antes, "o preso abriu antes de ser solto"
+        assert chegaram[3][1] >= solto_em, f"o preso não pode ter chegado antes: {chegaram}"
+        assert chegaram[3][1] - solto_em < ESPERA_DA_VOLTA_S, (
+            f"a abertura que terminou não acordou a volta: {chegaram}"
+        )
 
 
 class ControleDaTroca(Controle):
@@ -1103,10 +1181,7 @@ class TestAVoltaDeVerdade:
             tarefa = asyncio.create_task(
                 conn.reconnect_loop(daemon, input_watch=InputDirWatch(root="/nao-existe"))
             )
-            while not depois:
-                await asyncio.sleep(0.01)
-                if controle.connects and time.monotonic() - controle.connects[0] > 1.5:
-                    break
+            await _esperar_no_laco(lambda: bool(depois), 1.5)
             gasto = (depois[0] if depois else time.monotonic()) - controle.connects[0]
             solto.set()
             daemon._stop_event.set()
@@ -1131,7 +1206,8 @@ class TestAVoltaDeVerdade:
             watch = InputDirWatch(root="/nao-existe")
             watch.poll()
             espera = asyncio.create_task(conn._wait_online_or_hotplug(daemon, watch))
-            await asyncio.sleep(0.2)
+            for _ in range(PASSADAS_DO_LACO):
+                await asyncio.sleep(0)
             comeco = time.monotonic()
             cabos.append(oce.CaboEmEspera("0003:054C:0CE6.0001", uniq=MACS[0]))
             daemon._sino_da_volta.tocar("inotify")
@@ -1180,11 +1256,10 @@ class TestAVoltaDeVerdade:
             tarefa = asyncio.create_task(
                 conn.reconnect_loop(daemon, input_watch=InputDirWatch(root="/nao-existe"))
             )
-            await asyncio.sleep(0.2)
+            assert await _esperar_no_laco(lambda: len(controle.connects) >= 1)
             conn.acordar_a_volta(daemon, "abertura")
             comeco = time.monotonic()
-            while not pontas.toques and time.monotonic() - comeco < 2.5:
-                await asyncio.sleep(0.01)
+            await _esperar_no_laco(lambda: bool(pontas.toques), 2.5)
             gasto = time.monotonic() - comeco if pontas.toques else None
             daemon._stop_event.set()
             tarefa.cancel()
@@ -1224,11 +1299,9 @@ class TestAVoltaDeVerdade:
             tarefa = asyncio.create_task(
                 conn.reconnect_loop(daemon, input_watch=InputDirWatch(root="/nao-existe"))
             )
-            await asyncio.sleep(0.2)
+            assert await _esperar_no_laco(lambda: len(controle.connects) >= 1)
             conn.acordar_a_volta(daemon, "abertura")
-            comeco = time.monotonic()
-            while not avisos and time.monotonic() - comeco < 1.5:
-                await asyncio.sleep(0.01)
+            await _esperar_no_laco(lambda: bool(avisos), 1.5)
             daemon._stop_event.set()
             tarefa.cancel()
             await asyncio.gather(tarefa, return_exceptions=True)
@@ -1272,9 +1345,7 @@ class TestCadaPecaCarimbaORelogio:
         try:
             leitor.start()
             assert aberto.wait(1.0)
-            limite = time.monotonic() + 1.0
-            while rel.MOVIMENTO not in self._marcas(relogio) and time.monotonic() < limite:
-                time.sleep(0.01)
+            _esperar(lambda: rel.MOVIMENTO in self._marcas(relogio), 1.0)
         finally:
             leitor.stop()
             os.close(leitor_r)
