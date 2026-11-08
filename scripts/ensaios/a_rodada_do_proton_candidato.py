@@ -242,13 +242,11 @@ def rodada(
 
 def buildid_do_runtime(runtime: Path | None) -> str:
     """O buildid do Steam Linux Runtime instalado em ``runtime`` (o ``force_install_dir``)."""
+    from hefesto_dualsense4unix.daemon.subsystems.identidade_do_jogo import buildid_do_appid
+
     if runtime is None:
         return ""
-    acf = runtime / "steamapps" / f"appmanifest_{APPID_DO_RUNTIME}.acf"
-    try:
-        return qp.buildid_do_appmanifest(acf.read_text(encoding="utf-8", errors="replace")) or ""
-    except OSError:
-        return ""
+    return buildid_do_appid(int(APPID_DO_RUNTIME), [runtime / "steamapps"]) or ""
 
 
 def main(argv: Sequence[str] | None = None) -> int:

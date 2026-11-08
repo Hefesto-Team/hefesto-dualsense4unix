@@ -267,12 +267,6 @@ def ficha(
     return resultado
 
 
-def buildid_do_appmanifest(texto: str) -> str | None:
-    """O ``buildid`` de um ``appmanifest_<appid>.acf`` da Steam, ou ``None`` sem ele."""
-    achado = re.search(r'"buildid"\s+"(\d+)"', texto)
-    return achado.group(1) if achado else None
-
-
 def caminho_do_recibo(raiz_do_repo: Path | None = None) -> Path:
     """O recibo: na `raiz_do_repo` dada, ou onde esta instalação o pôs."""
     if raiz_do_repo is not None:

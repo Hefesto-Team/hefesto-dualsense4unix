@@ -152,12 +152,6 @@ def test_o_recibo_do_repositorio_tem_a_coluna_runtime() -> None:
     assert tuple(cabecalho.split(",")) == qp.CAMPOS_DO_RECIBO
 
 
-def test_o_buildid_sai_do_appmanifest() -> None:
-    acf = '"AppState"\n{\n\t"appid"\t\t"4183110"\n\t"buildid"\t\t"26116036"\n}\n'
-    assert qp.buildid_do_appmanifest(acf) == "26116036"
-    assert qp.buildid_do_appmanifest('"AppState"\n{\n}\n') is None
-
-
 def test_o_buildid_do_runtime_sai_da_pasta_instalada(r: ModuleType, tmp_path: Path) -> None:
     (tmp_path / "steamapps").mkdir()
     (tmp_path / "steamapps" / "appmanifest_4183110.acf").write_text(
