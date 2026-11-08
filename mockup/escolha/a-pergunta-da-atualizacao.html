@@ -39,7 +39,10 @@
   .pagina:has(#op-c:checked) label[for="op-c"],
   .pagina:has(#est-pergunta:checked) label[for="est-pergunta"],
   .pagina:has(#est-jogo:checked) label[for="est-jogo"],
-  .pagina:has(#est-voltar:checked) label[for="est-voltar"]{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
+  .pagina:has(#est-voltar:checked) label[for="est-voltar"],
+  .pagina:has(#est-meio:checked) label[for="est-meio"],
+  .pagina:has(#est-falhou:checked) label[for="est-falhou"],
+  .pagina:has(#est-fim:checked) label[for="est-fim"]{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
   .recomenda{font-size:12.5px;color:var(--texto-suave)}
   .recomenda b{color:var(--green)}
 
@@ -181,6 +184,57 @@
   .c-h .btn{height:30px}
   .c-dir .empurra-baixo{margin-top:auto;display:flex;gap:8px}
 </style>
+<style>
+  .pagina:has(#est-meio:checked) .pop,.pagina:has(#est-falhou:checked) .pop,.pagina:has(#est-fim:checked) .pop{display:none!important}
+  .pagina:has(#est-meio:checked) #pop-meio,.pagina:has(#est-falhou:checked) #pop-falhou,.pagina:has(#est-fim:checked) #pop-fim{display:flex!important}
+  .pop-and{display:none}
+  .pop-and.tn-cx{width:900px}
+  .and-multi{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .and-multi .and-barra{gap:6px}
+  .and-multi .qual{flex:0 0 44px;font-size:11px;color:var(--texto-suave)}
+  .and-multi .n{flex:0 0 40px;font-size:11px}
+  .and-multi .trilho{height:4px}
+  .and-total{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;height:34px}
+  .and-total .rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
+  .and-total .n{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg);white-space:nowrap}
+  .and-total .n.erro{color:var(--red)}
+  .trilho{height:6px;border-radius:3px;background:var(--border-forte);position:relative;flex:1;min-width:0}
+  .trilho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
+  .and-total .trilho{height:8px;border-radius:4px}
+  .and-total .trilho .cheio{border-radius:4px;background:var(--green)}
+  .and-lista{display:flex;flex-direction:column;border-top:1px solid var(--border-sutil)}
+  .and-l{display:grid;grid-template-columns:104px 112px 300px minmax(0,1fr) 96px;align-items:center;gap:10px;
+         height:40px;border-bottom:1px solid var(--border-sutil);font-size:12.5px}
+  .and-l:last-child{border-bottom:0}
+  .and-l .nome{font-weight:600;white-space:nowrap}
+  .and-l .ver{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--texto-suave);white-space:nowrap}
+  .and-l .ver .seta{color:var(--purple);margin:0 3px}
+  .and-l .ver .nv{color:var(--fg)}
+  .etapas{display:flex;gap:5px}
+  .etapas{gap:14px}
+  .etp{height:24px;font-size:12px;display:inline-flex;align-items:center;gap:5px;color:var(--texto-mudo);white-space:nowrap}
+  .etp::before{content:"○";font-size:10px}
+  .etp.feito{color:var(--green)}
+  .etp.feito::before{content:"✓";font-size:11px}
+  .etp.agora{color:var(--cyan);font-weight:600}
+  .etp.agora::before{content:"●";font-size:9px}
+  .etp.erro{color:var(--red);font-weight:600}
+  .etp.erro::before{content:"✕";font-size:10px}
+  .and-barra{display:flex;align-items:center;gap:8px;min-width:0}
+  .and-barra .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--fg);flex:0 0 46px;text-align:right;white-space:nowrap}
+  .and-barra.pronta .cheio{background:var(--green)}
+  .and-barra .motivo{color:var(--red);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .and-l.na-fila .nome,.and-l.na-fila .ver{color:var(--texto-mudo)}
+  .and-l.na-fila .ver .nv{color:var(--texto-mudo)}
+  .and-l.servico{border-top:1px solid var(--linha)}
+  .selo.fila{color:var(--texto-mudo);box-shadow:inset 0 0 0 1px var(--border-forte)}
+  .selo.baixando{background:var(--cyan);color:var(--app-bg)}
+  .selo.instalando{background:var(--purple);color:var(--app-bg)}
+  .selo.aplicando{background:var(--pink);color:var(--app-bg)}
+  .selo.falhou{background:var(--red);color:var(--app-bg)}
+  .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
+  .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
+</style>
 <style id="base-comum">
 [data-dica]{cursor:help}
 button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
@@ -219,157 +273,212 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <input class="et" type="radio" name="est" id="est-pergunta" checked>
   <input class="et" type="radio" name="est" id="est-jogo">
   <input class="et" type="radio" name="est" id="est-voltar">
+  <input class="et" type="radio" name="est" id="est-meio">
+  <input class="et" type="radio" name="est" id="est-falhou">
+  <input class="et" type="radio" name="est" id="est-fim">
 
   <div class="cabeca">
     <span class="nome">A pergunta da atualização</span>
     <div class="abas-op">
-      <label for="op-a">A · Lista única <span class="estrela">Recomendada</span></label>
+      <label for="op-a">A · Lista única <span class="estrela">Escolhida</span></label>
       <label for="op-b">B · Três escolhas</label>
       <label for="op-c">C · Lista e detalhe</label>
     </div>
     <div class="abas-est">
       <label for="est-pergunta">Pergunta</label>
       <label for="est-jogo">Jogo aberto</label>
-      <label for="est-voltar">Voltar à anterior</label>
+      <label for="est-voltar">Voltar</label>
+      <label for="est-meio">Andamento</label>
+      <label for="est-falhou">Falhou</label>
+      <label for="est-fim">Fim</label>
     </div>
   </div>
-  <div class="recomenda"><b>Recomendo a A:</b> a lista é a própria pergunta (os dois grupos são as duas escolhas e «Agora não» é a terceira), numa tela só e sem passo a mais.</div>
 
   <div class="palco">
-    <iframe src="../01-jogar.html" title="Aba Jogar, atrás da pergunta" tabindex="-1"></iframe>
+    <iframe src="../01-jogar.html" title="Aba Jogar" tabindex="-1"></iframe>
     <div class="veu">
 
       <div class="pop tn-cx" id="pop-a" role="dialog" aria-modal="true" aria-label="Atualizações">
         <div class="tn-topo">
-          <span class="tn-tit" data-dica="Aparece ao abrir o Hefesto, no prazo escolhido">Atualizações</span>
+          <span class="tn-tit">Atualizações</span>
           <span class="tn-tit e-voltar">· Versões anteriores</span>
-          <a class="tn-x" href="#" data-dica="Fechar: pergunta de novo no próximo prazo">×</a>
+          <a class="tn-x" href="#" data-dica="Fechar">×</a>
         </div>
         <div class="tn-corpo">
-          <div class="at-lista e-lista" data-lista="a">
-            <label class="at-l grupo"><input type="checkbox" checked data-conta><span class="at-n" data-dica="O próprio Hefesto: a interface, o serviço e as correções">Hefesto</span><span class="at-v">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span><span class="selo nova">NOVA</span></label>
+          <div class="at-lista e-lista">
+            <label class="at-l grupo"><input type="checkbox" checked data-conta><span class="at-n" data-dica="Interface, serviço e correções">Hefesto</span><span class="at-v">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span><span class="selo nova">NOVA</span></label>
             <div class="sep-lista"></div>
-            <label class="at-l grupo"><input type="checkbox" class="mae" data-mae="a"><span class="at-n" data-dica="O que o Hefesto instala no sistema para os controles funcionarem">Bibliotecas, drivers e plugins<span class="q">2 de 3</span></span><span class="at-v"></span><span></span></label>
-            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Se atualiza sozinho com a Steam fechada; a versão nova só vale para os jogos depois da prova, e a 11-7 fica de reserva">GE-Proton</span><span class="at-v"><span class="nv">11-12</span></span><span class="selo sozinho">SOZINHO</span></label>
-            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="BlueZ: o Bluetooth, com as correções do Hefesto em cima">Bluetooth</span><span class="at-v">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="selo nova">NOVA</span></label>
-            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19, juntos">Som</span><span class="at-v">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="selo nova">NOVA</span></label>
-            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Os quatro módulos do Hefesto para o kernel que está rodando">Kernel</span><span class="at-v"><span class="nv">7.2.15</span></span><span class="selo ok">EM DIA</span></label>
-            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="O painel de desempenho por cima do jogo">MangoHud</span><span class="at-v"><span class="nv">0.8.4</span></span><span class="selo ok">EM DIA</span></label>
-            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="O que abre os jogos de fora da Steam no Proton">umu</span><span class="at-v"></span><span class="selo ok">EM DIA</span></label>
-            <label class="at-l filho de-fora"><input type="checkbox" data-conta data-filho="a"><span class="at-n" data-dica="Bibliotecas Python: evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3">Python</span><span class="at-v">2 pacotes</span><span class="selo nova">NOVA</span></label>
+            <label class="at-l grupo"><input type="checkbox" class="mae" data-mae="a"><span class="at-n">Bibliotecas, drivers e plugins<span class="q"></span></span><span class="at-v"></span><span></span></label>
+            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="Os jogos da Steam e do Heroic">GE-Proton</span><span class="at-v">11-7<span class="seta">→</span><span class="nv">11-12</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="BlueZ, com as correções do Hefesto">Bluetooth</span><span class="at-v">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19">Som</span><span class="at-v">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l filho de-fora"><input type="checkbox" data-conta data-filho="a"><span class="at-n" data-dica="evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3">Python</span><span class="at-v">2 pacotes</span><span class="selo nova">NOVA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="nvidia-driver-595">Driver NVIDIA</span><span class="at-v"><span class="nv">595.104.02</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="linux-system76">Kernel</span><span class="at-v"><span class="nv">7.2.15</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Os quatro módulos do Hefesto para o 7.2.15">Módulos do kernel</span><span class="at-v"><span class="nv">1.0.0</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Pop!_OS 24.04">Pacotes do sistema</span><span class="at-v"><span class="nv">24.04</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="O painel por cima do jogo">MangoHud</span><span class="at-v"><span class="nv">0.8.4</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Os jogos de fora da Steam no Proton">umu</span><span class="at-v"></span><span class="selo ok">EM DIA</span></label>
           </div>
           <div class="vt-lista e-voltar">
             <div class="vt-cab"><span>Peça</span><span>Agora</span><span>Desde</span><span></span></div>
-            <div class="vt-l"><span>GE-Proton</span><span class="v">11-12</span><span class="d">08/11</span><button class="btn amarelo-padrao" data-dica="Todo jogo volta para a 11-7, a reserva">Voltar a 11-7</button></div>
-            <div class="vt-l"><span>Kernel</span><span class="v">7.2.15</span><span class="d">07/11</span><button class="btn amarelo-padrao" data-dica="O 7.2.6 abre no próximo reinício, com os módulos dele">Voltar a 7.2.6</button></div>
-            <div class="vt-l"><span>Hefesto</span><span class="v">0.9.5.1</span><span class="d">06/10</span><button class="btn amarelo-padrao" data-dica="Volta o código e roda a instalação dele ao fechar">Voltar a 0.9.5</button></div>
+            <div class="vt-l"><span>Kernel</span><span class="v">7.2.15</span><span class="d">08/11</span><button class="btn amarelo-padrao" data-dica="No próximo início">Voltar a 7.2.6</button></div>
+            <div class="vt-l"><span>Hefesto</span><span class="v">0.9.5.1</span><span class="d">06/10</span><button class="btn amarelo-padrao">Voltar a 0.9.5</button></div>
           </div>
-          <div class="at-ajuste e-lista">
-            <button class="cadeado" data-cadeado data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
-            <span class="prazo" data-dica="De quanto em quanto tempo o Hefesto confere"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span>
-          </div>
-          <div class="pendente e-jogo e-lista" data-dica="A atualização começa sozinha quando o jogo fechar"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
+          <div class="at-ajuste e-lista"><button class="cadeado" data-cadeado data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span></div>
+          <div class="pendente e-jogo e-lista"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
         </div>
         <div class="tn-rod">
-          <button class="btn e-lista" data-dica="As versões que ficaram guardadas">Versões anteriores</button>
-          <button class="btn e-voltar" data-dica="De volta à lista">← Atualizações</button>
-          <button class="btn empurra e-lista" data-dica="Pergunta de novo no próximo prazo">Agora não</button>
-          <button class="btn principal e-lista e-livre" data-principal>Atualizar <span class="n" data-n>3</span></button>
-          <button class="btn principal e-lista e-jogo" data-dica="Fica marcado e começa quando o jogo fechar">Atualizar ao fechar o jogo</button>
+          <button class="btn e-lista">Versões anteriores</button>
+          <button class="btn e-voltar">← Atualizações</button>
+          <button class="btn empurra e-lista">Agora não</button>
+          <button class="btn principal e-lista e-livre" data-principal>Atualizar <span class="n" data-n>4</span></button>
+          <button class="btn principal e-lista e-jogo">Atualizar ao fechar o jogo</button>
         </div>
       </div>
 
       <div class="pop tn-cx" id="pop-b" role="dialog" aria-modal="true" aria-label="Atualizações">
         <div class="tn-topo">
-          <span class="tn-tit" data-dica="Aparece ao abrir o Hefesto, no prazo escolhido">Atualizações</span>
+          <span class="tn-tit">Atualizações</span>
           <span class="tn-tit e-voltar">· Versões anteriores</span>
-          <a class="tn-x" href="#" data-dica="Fechar: pergunta de novo no próximo prazo">×</a>
+          <a class="tn-x" href="#" data-dica="Fechar">×</a>
         </div>
         <div class="tn-corpo">
           <div class="op3 e-lista">
-            <button class="on" data-op3 data-dica="O que o Hefesto instala no sistema para os controles funcionarem"><b>Bibliotecas, drivers e plugins</b><span>2 de 3 novas</span></button>
-            <button class="on" data-op3 data-dica="O próprio Hefesto: a interface, o serviço e as correções"><b>Hefesto</b><span>0.9.5.1 → 0.9.5.2</span></button>
-            <button class="nada" data-dica="Pergunta de novo no próximo prazo"><b>Agora não</b><span>De novo em 7 dias</span></button>
+            <button class="on" data-op3><b>Bibliotecas, drivers e plugins</b><span>3 de 4 novas</span></button>
+            <button class="on" data-op3><b>Hefesto</b><span>0.9.5.1 → 0.9.5.2</span></button>
+            <button class="nada"><b>Agora não</b><span>De novo em 7 dias</span></button>
           </div>
-          <span class="rot-lista e-lista">O que entra</span>
-          <div class="at-lista e-lista" data-lista="b">
-            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="Se atualiza sozinho com a Steam fechada; a versão nova só vale para os jogos depois da prova, e a 11-7 fica de reserva">GE-Proton</span><span class="at-v"><span class="nv">11-12</span></span><span class="selo sozinho">SOZINHO</span></label>
-            <label class="at-l"><input type="checkbox" checked data-conta><span class="at-n" data-dica="BlueZ: o Bluetooth, com as correções do Hefesto em cima">Bluetooth</span><span class="at-v">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="selo nova">NOVA</span></label>
-            <label class="at-l"><input type="checkbox" checked data-conta><span class="at-n" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19, juntos">Som</span><span class="at-v">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="selo nova">NOVA</span></label>
-            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="Os quatro módulos do Hefesto para o kernel que está rodando">Kernel</span><span class="at-v"><span class="nv">7.2.15</span></span><span class="selo ok">EM DIA</span></label>
-            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="O painel de desempenho por cima do jogo">MangoHud</span><span class="at-v"><span class="nv">0.8.4</span></span><span class="selo ok">EM DIA</span></label>
-            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="O que abre os jogos de fora da Steam no Proton">umu</span><span class="at-v"></span><span class="selo ok">EM DIA</span></label>
-            <label class="at-l de-fora"><input type="checkbox" data-conta><span class="at-n" data-dica="Bibliotecas Python: evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3">Python</span><span class="at-v">2 pacotes</span><span class="selo nova">NOVA</span></label>
+          <div class="at-lista e-lista">
+            <label class="at-l "><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="Os jogos da Steam e do Heroic">GE-Proton</span><span class="at-v">11-7<span class="seta">→</span><span class="nv">11-12</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l "><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="BlueZ, com as correções do Hefesto">Bluetooth</span><span class="at-v">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l "><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19">Som</span><span class="at-v">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l  de-fora"><input type="checkbox" data-conta data-filho="a"><span class="at-n" data-dica="evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3">Python</span><span class="at-v">2 pacotes</span><span class="selo nova">NOVA</span></label>
+            <label class="at-l "><span class="at-ok">✓</span><span class="at-n" data-dica="nvidia-driver-595">Driver NVIDIA</span><span class="at-v"><span class="nv">595.104.02</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l "><span class="at-ok">✓</span><span class="at-n" data-dica="linux-system76">Kernel</span><span class="at-v"><span class="nv">7.2.15</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l "><span class="at-ok">✓</span><span class="at-n" data-dica="Os quatro módulos do Hefesto para o 7.2.15">Módulos do kernel</span><span class="at-v"><span class="nv">1.0.0</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l "><span class="at-ok">✓</span><span class="at-n" data-dica="Pop!_OS 24.04">Pacotes do sistema</span><span class="at-v"><span class="nv">24.04</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l "><span class="at-ok">✓</span><span class="at-n" data-dica="O painel por cima do jogo">MangoHud</span><span class="at-v"><span class="nv">0.8.4</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l "><span class="at-ok">✓</span><span class="at-n" data-dica="Os jogos de fora da Steam no Proton">umu</span><span class="at-v"></span><span class="selo ok">EM DIA</span></label>
           </div>
           <div class="vt-lista e-voltar">
             <div class="vt-cab"><span>Peça</span><span>Agora</span><span>Desde</span><span></span></div>
-            <div class="vt-l"><span>GE-Proton</span><span class="v">11-12</span><span class="d">08/11</span><button class="btn amarelo-padrao" data-dica="Todo jogo volta para a 11-7, a reserva">Voltar a 11-7</button></div>
-            <div class="vt-l"><span>Kernel</span><span class="v">7.2.15</span><span class="d">07/11</span><button class="btn amarelo-padrao" data-dica="O 7.2.6 abre no próximo reinício, com os módulos dele">Voltar a 7.2.6</button></div>
-            <div class="vt-l"><span>Hefesto</span><span class="v">0.9.5.1</span><span class="d">06/10</span><button class="btn amarelo-padrao" data-dica="Volta o código e roda a instalação dele ao fechar">Voltar a 0.9.5</button></div>
+            <div class="vt-l"><span>Kernel</span><span class="v">7.2.15</span><span class="d">08/11</span><button class="btn amarelo-padrao" data-dica="No próximo início">Voltar a 7.2.6</button></div>
+            <div class="vt-l"><span>Hefesto</span><span class="v">0.9.5.1</span><span class="d">06/10</span><button class="btn amarelo-padrao">Voltar a 0.9.5</button></div>
           </div>
-          <div class="pendente e-jogo e-lista" data-dica="A atualização começa sozinha quando o jogo fechar"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
+          <div class="pendente e-jogo e-lista"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
         </div>
         <div class="tn-rod">
-          <button class="btn e-lista" data-dica="As versões que ficaram guardadas">Versões anteriores</button>
-          <button class="btn e-voltar" data-dica="De volta à lista">← Atualizações</button>
-          <button class="cadeado e-lista" data-cadeado data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
-          <span class="prazo e-lista" data-dica="De quanto em quanto tempo o Hefesto confere"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span>
-          <button class="btn principal empurra e-lista e-livre" data-principal>Atualizar <span class="n" data-n>3</span></button>
-          <button class="btn principal empurra e-lista e-jogo" data-dica="Fica marcado e começa quando o jogo fechar">Atualizar ao fechar o jogo</button>
+          <button class="btn e-lista">Versões anteriores</button>
+          <button class="btn e-voltar">← Atualizações</button>
+          <span class="e-lista" style="display:contents"><button class="cadeado" data-cadeado data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span></span>
+          <button class="btn principal empurra e-lista e-livre" data-principal>Atualizar <span class="n" data-n>4</span></button>
+          <button class="btn principal empurra e-lista e-jogo">Atualizar ao fechar o jogo</button>
         </div>
       </div>
 
       <div class="pop tn-cx" id="pop-c" role="dialog" aria-modal="true" aria-label="Atualizações">
-        <div class="tn-topo">
-          <span class="tn-tit" data-dica="Aparece ao abrir o Hefesto, no prazo escolhido">Atualizações</span>
-          <a class="tn-x" href="#" data-dica="Fechar: pergunta de novo no próximo prazo">×</a>
-        </div>
+        <div class="tn-topo"><span class="tn-tit">Atualizações</span><a class="tn-x" href="#" data-dica="Fechar">×</a></div>
         <div class="tn-corpo">
           <div class="c-grade">
             <div class="c-esq">
               <div class="at-lista">
                 <label class="at-l c-l grupo"><input type="checkbox" checked data-conta><span class="at-n">Hefesto</span><span class="selo nova">NOVA</span></label>
                 <div class="sep-lista"></div>
-                <label class="at-l c-l filho sel-voltar"><span class="at-ok">✓</span><span class="at-n">GE-Proton</span><span class="selo sozinho">SOZINHO</span></label>
+                <label class="at-l c-l filho"><input type="checkbox" checked data-conta><span class="at-n">GE-Proton</span><span class="selo nova">NOVA</span></label>
                 <label class="at-l c-l filho sel-lista"><input type="checkbox" checked data-conta><span class="at-n">Bluetooth</span><span class="selo nova">NOVA</span></label>
                 <label class="at-l c-l filho"><input type="checkbox" checked data-conta><span class="at-n">Som</span><span class="selo nova">NOVA</span></label>
-                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">Kernel</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho"><input type="checkbox" data-conta><span class="at-n">Python</span><span class="selo nova">NOVA</span></label>
+                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">Driver NVIDIA</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho sel-voltar"><span class="at-ok">✓</span><span class="at-n">Kernel</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">Módulos do kernel</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">Pacotes do sistema</span><span class="selo ok">EM DIA</span></label>
                 <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">MangoHud</span><span class="selo ok">EM DIA</span></label>
                 <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">umu</span><span class="selo ok">EM DIA</span></label>
-                <label class="at-l c-l filho de-fora"><input type="checkbox" data-conta><span class="at-n">Python</span><span class="selo nova">NOVA</span></label>
               </div>
-              <div class="at-ajuste">
-                <button class="cadeado" data-cadeado data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
-                <span class="prazo" data-dica="De quanto em quanto tempo o Hefesto confere"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span>
-              </div>
+              <div class="at-ajuste"><button class="cadeado" data-cadeado data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span></div>
             </div>
             <div class="c-dir e-lista">
               <div class="c-tit"><b>Bluetooth</b><span>BlueZ</span></div>
               <div class="c-salto"><span class="velha">5.87</span><span class="seta">→</span>5.88</div>
               <div class="c-fatos">
                 <div class="c-f"><span>Publicada</span><span class="v">05/11</span></div>
-                <div class="c-f"><span data-dica="As correções do Hefesto sobem junto, em cima da versão nova">Correções do Hefesto</span><span class="v verde">Vão junto</span></div>
-                <div class="c-f"><span>Fica guardada</span><span class="v">5.87</span></div>
+                <div class="c-f"><span>Correções do Hefesto</span><span class="v verde">Junto</span></div>
+                <div class="c-f"><span>Guardada</span><span class="v">5.87</span></div>
               </div>
-              <div class="pendente e-jogo" data-dica="A atualização começa sozinha quando o jogo fechar"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
+              <div class="pendente e-jogo"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
             </div>
             <div class="c-dir e-voltar">
-              <div class="c-tit"><b>GE-Proton</b><span>Proton dos jogos</span></div>
-              <div class="c-salto">11-12</div>
+              <div class="c-tit"><b>Kernel</b><span>linux-system76</span></div>
+              <div class="c-salto">7.2.15</div>
               <div class="c-fatos">
-                <div class="c-f"><span>Prova</span><span class="v verde">Passou</span></div>
-                <div class="c-f"><span data-dica="Confere e baixa a mais nova com a Steam fechada">Atualiza</span><span class="v">Sozinho</span></div>
+                <div class="c-f"><span>Desde</span><span class="v">08/11</span></div>
+                <div class="c-f"><span>Módulos do Hefesto</span><span class="v verde">4 de 4</span></div>
               </div>
               <div class="c-hist">
-                <div class="c-h"><span>Reserva</span><span class="v">11-7</span><button class="btn amarelo-padrao" data-dica="Todo jogo volta para a 11-7">Voltar a 11-7</button></div>
+                <div class="c-h"><span>Anterior</span><span class="v">7.2.6</span><button class="btn amarelo-padrao" data-dica="No próximo início">Voltar a 7.2.6</button></div>
               </div>
             </div>
           </div>
         </div>
         <div class="tn-rod">
-          <button class="btn empurra" data-dica="Pergunta de novo no próximo prazo">Agora não</button>
-          <button class="btn principal e-livre" data-principal>Atualizar <span class="n" data-n>3</span></button>
-          <button class="btn principal e-jogo" data-dica="Fica marcado e começa quando o jogo fechar">Atualizar ao fechar o jogo</button>
+          <button class="btn empurra">Agora não</button>
+          <button class="btn principal e-livre" data-principal>Atualizar <span class="n" data-n>4</span></button>
+          <button class="btn principal e-jogo">Atualizar ao fechar o jogo</button>
+        </div>
+      </div>
+
+      <div class="pop-and tn-cx" id="pop-meio" role="dialog" aria-modal="true" aria-label="Atualizações">
+        <div class="tn-topo"><span class="tn-tit">Atualizações</span><a class="tn-x" href="#" data-dica="Esconder">×</a></div>
+        <div class="tn-corpo">
+          <div class="and-total"><span class="rot">Total</span><span class="trilho"><span class="cheio" style="width:22%"></span></span><span class="n">1 de 4 · 22%</span><span></span></div>
+          <div class="and-lista">
+            <div class="and-l"><span class="nome">Bluetooth</span><span class="ver">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp feito" data-dica="O serviço do Bluetooth">Aplicar em todos</span></span><span class="and-barra pronta"><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">100%</span></span><span class="selo ok">PRONTA</span></div>
+            <div class="and-l"><span class="nome">Som</span><span class="ver">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="etapas"><span class="etp agora">Baixar</span><span class="etp ">Instalar</span><span class="etp " data-dica="O PipeWire e o WirePlumber da sessão">Aplicar em todos</span></span><span class="and-barra"><span class="trilho"><span class="cheio" style="width:62%"></span></span><span class="n">62%</span></span><span class="selo baixando">BAIXANDO</span></div>
+            <div class="and-l na-fila"><span class="nome">GE-Proton</span><span class="ver">11-7<span class="seta">→</span><span class="nv">11-12</span></span><span class="etapas"><span class="etp ">Baixar</span><span class="etp ">Instalar</span><span class="etp " data-dica="Todos os jogos da Steam e do Heroic">Aplicar em todos</span></span><span class="and-barra"><span class="trilho"></span><span class="n"></span></span><span class="selo fila">NA FILA</span></div>
+            <div class="and-l na-fila"><span class="nome">Hefesto</span><span class="ver">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span><span class="etapas"><span class="etp ">Baixar</span><span class="etp ">Instalar</span><span class="etp " data-dica="O serviço e a janela">Aplicar em todos</span></span><span class="and-barra"><span class="trilho"></span><span class="n"></span></span><span class="selo fila">NA FILA</span></div>
+            <div class="and-l servico na-fila"><span class="nome">Serviço</span><span class="ver"></span><span class="etapas"><span class="etp ">Reiniciar o serviço</span><span class="etp ">Reabrir o Hefesto</span></span><span class="and-barra"><span class="trilho"></span><span class="n"></span></span><span class="selo fila">NA FILA</span></div>
+          </div>
+        </div>
+        <div class="tn-rod">
+          <button class="btn" data-dica="O registro desta atualização">Registro</button>
+          <button class="btn borda-vermelha empurra">Parar</button>
+        </div>
+      </div>
+
+      <div class="pop-and tn-cx" id="pop-falhou" role="dialog" aria-modal="true" aria-label="Atualizações">
+        <div class="tn-topo"><span class="tn-tit">Atualizações</span><a class="tn-x" href="#" data-dica="Esconder">×</a></div>
+        <div class="tn-corpo">
+          <div class="and-total"><span class="rot">Total</span><span class="trilho"><span class="cheio" style="width:58%"></span></span><span class="n">2 de 4 · 58%</span><span class="n erro">1 falhou</span></div>
+          <div class="and-lista">
+            <div class="and-l"><span class="nome">Bluetooth</span><span class="ver">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp feito" data-dica="O serviço do Bluetooth">Aplicar em todos</span></span><span class="and-barra pronta"><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">100%</span></span><span class="selo ok">PRONTA</span></div>
+            <div class="and-l"><span class="nome">Som</span><span class="ver">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp erro">Instalar</span><span class="etp " data-dica="O PipeWire e o WirePlumber da sessão">Aplicar em todos</span></span><span class="and-barra"><span class="motivo" data-dica="Ver o registro">Erro ao compilar</span></span><span class="selo falhou">FALHOU</span></div>
+            <div class="and-l"><span class="nome">GE-Proton</span><span class="ver">11-7<span class="seta">→</span><span class="nv">11-12</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp agora" data-dica="Todos os jogos da Steam e do Heroic">Aplicar em todos</span></span><span class="and-multi"><span class="and-barra"><span class="qual">Steam</span><span class="trilho"><span class="cheio" style="width:71%"></span></span><span class="n">41/58</span></span><span class="and-barra"><span class="qual">Heroic</span><span class="trilho"><span class="cheio" style="width:0%"></span></span><span class="n">0/4</span></span></span><span class="selo aplicando">APLICANDO</span></div>
+            <div class="and-l na-fila"><span class="nome">Hefesto</span><span class="ver">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span><span class="etapas"><span class="etp ">Baixar</span><span class="etp ">Instalar</span><span class="etp " data-dica="O serviço e a janela">Aplicar em todos</span></span><span class="and-barra"><span class="trilho"></span><span class="n"></span></span><span class="selo fila">NA FILA</span></div>
+            <div class="and-l servico na-fila"><span class="nome">Serviço</span><span class="ver"></span><span class="etapas"><span class="etp ">Reiniciar o serviço</span><span class="etp ">Reabrir o Hefesto</span></span><span class="and-barra"><span class="trilho"></span><span class="n"></span></span><span class="selo fila">NA FILA</span></div>
+          </div>
+        </div>
+        <div class="tn-rod">
+          <button class="btn" data-dica="O registro desta atualização">Registro</button>
+          <button class="btn empurra">Tentar de novo</button><button class="btn borda-vermelha">Parar</button>
+        </div>
+      </div>
+
+      <div class="pop-and tn-cx" id="pop-fim" role="dialog" aria-modal="true" aria-label="Atualizações">
+        <div class="tn-topo"><span class="tn-tit">Atualizações</span><a class="tn-x" href="#" data-dica="Esconder">×</a></div>
+        <div class="tn-corpo">
+          <div class="and-total"><span class="rot">Total</span><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">4 de 4 · 100%</span><span></span></div>
+          <div class="and-lista">
+            <div class="and-l"><span class="nome">Bluetooth</span><span class="ver">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp feito" data-dica="O serviço do Bluetooth">Aplicar em todos</span></span><span class="and-barra pronta"><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">100%</span></span><span class="selo ok">PRONTA</span></div>
+            <div class="and-l"><span class="nome">Som</span><span class="ver">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp feito" data-dica="O PipeWire e o WirePlumber da sessão">Aplicar em todos</span></span><span class="and-barra pronta"><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">100%</span></span><span class="selo ok">PRONTA</span></div>
+            <div class="and-l"><span class="nome">GE-Proton</span><span class="ver">11-7<span class="seta">→</span><span class="nv">11-12</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp feito" data-dica="Todos os jogos da Steam e do Heroic">Aplicar em todos</span></span><span class="and-multi"><span class="and-barra pronta"><span class="qual">Steam</span><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">58/58</span></span><span class="and-barra pronta"><span class="qual">Heroic</span><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">4/4</span></span></span><span class="selo ok">PRONTA</span></div>
+            <div class="and-l"><span class="nome">Hefesto</span><span class="ver">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span><span class="etapas"><span class="etp feito">Baixar</span><span class="etp feito">Instalar</span><span class="etp feito" data-dica="O serviço e a janela">Aplicar em todos</span></span><span class="and-barra pronta"><span class="trilho"><span class="cheio" style="width:100%"></span></span><span class="n">100%</span></span><span class="selo ok">PRONTA</span></div>
+            <div class="and-l servico"><span class="nome">Serviço</span><span class="ver"></span><span class="etapas"><span class="etp agora">Reiniciar o serviço</span><span class="etp ">Reabrir o Hefesto</span></span><span class="and-barra"><span class="trilho"><span class="cheio" style="width:40%"></span></span><span class="n">40%</span></span><span class="selo aplicando">REINICIANDO</span></div>
+          </div>
+        </div>
+        <div class="tn-rod">
+          <button class="btn" data-dica="O registro desta atualização">Registro</button>
+
         </div>
       </div>
 
