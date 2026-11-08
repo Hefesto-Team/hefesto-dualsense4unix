@@ -266,6 +266,19 @@ _dkms_status_texto() {
     sudo dkms status "$@" 2>/dev/null || true
 }
 
+dkms_fontes_so_do_root() {
+    local _raiz _pasta _falhou=0
+    _raiz="$(_dkms_src_root)"
+    for _pasta in "${_raiz}"/hefesto-*; do
+        [[ -d "${_pasta}" && ! -L "${_pasta}" ]] || continue
+        if ! sudo chown -R root:root "${_pasta}" || ! sudo chmod -R go-w "${_pasta}"; then
+            _dkms_warn "o fonte em ${_pasta} não ficou só do root — o kernel novo compilaria código que outro escreve"
+            _falhou=1
+        fi
+    done
+    return "${_falhou}"
+}
+
 dkms_install_patched_module() {
     local _pkg="$1" _ver="$2" _src="$3" _built="$4"
     local _kver _srcdst _dkms_lic

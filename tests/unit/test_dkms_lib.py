@@ -260,6 +260,8 @@ def _prepara_e2e(tmp_path: Path, build_falha: bool = False) -> dict[str, Path | 
     (assets / "patch" / "0001-ref.patch").write_text("referência\n", encoding="utf-8")
     _stub(stubs, "uname", f'echo "{kver}"')
     _stub(stubs, "sudo", f'echo "sudo $@" >> "{log}"\nexec "$@"')
+    for dono in ("chown", "chmod"):
+        _stub(stubs, dono, "exit 0")
     _stub(stubs, "modinfo", 'echo "/lib/modules/x/updates/dkms/hid-teste.ko"')
     build_acao = "exit 1" if build_falha else f'touch "{estado}/built"'
     _stub(
@@ -429,3 +431,48 @@ class TestRemocaoFalhasNaoMentem:
             f"set -e matou o uninstall no rm -rf: {resultado.stderr}"
         )
         assert "não consegui apagar" in resultado.stdout, "warn honesto do resto"
+
+
+class TestOFonteJaInstaladoFicaSoDoRoot:
+    """O fonte em /usr/src/hefesto-* que já existia vira root:root sem escrita de grupo e outros.
+
+    MORDIDA (feita, com a cura devolvida): sem o chown e o chmod da `dkms_fontes_so_do_root`, o
+    sudo de mentira não ouve nada e o caso reprova; sem a chamada no install-host-udev.sh, o caso
+    da chamada reprova.
+    """
+
+    def _lar(self, tmp_path: Path) -> tuple[Path, Path, Path]:
+        bin_ = tmp_path / "bin"
+        bin_.mkdir()
+        chamadas = tmp_path / "chamadas.log"
+        _stub(bin_, "sudo", f'echo "sudo $*" >> "{chamadas}"')
+        src = tmp_path / "src"
+        for nome in ("hefesto-hid-playstation-1.0.0", "hefesto-uhid-1.0.0", "outra-coisa-1.0"):
+            (src / nome).mkdir(parents=True)
+        (src / "hefesto-link-1.0.0").symlink_to(tmp_path)
+        return bin_, chamadas, src
+
+    def test_toda_pasta_hefesto_vira_so_do_root_a_cada_corrida(self, tmp_path: Path) -> None:
+        bin_, chamadas, src = self._lar(tmp_path)
+        for _ in range(2):
+            feito = _roda("dkms_fontes_so_do_root", f"{bin_}:/usr/bin:/bin",
+                          {"HEFESTO_DKMS_SRC_ROOT": str(src)})
+            assert feito.returncode == 0, feito.stderr
+        linhas = chamadas.read_text(encoding="utf-8").splitlines()
+        for nome in ("hefesto-hid-playstation-1.0.0", "hefesto-uhid-1.0.0"):
+            assert linhas.count(f"sudo chown -R root:root {src / nome}") == 2
+            assert linhas.count(f"sudo chmod -R go-w {src / nome}") == 2
+        assert not any("outra-coisa" in x or "hefesto-link" in x for x in linhas)
+
+    def test_o_sudo_que_falha_avisa_e_devolve_erro(self, tmp_path: Path) -> None:
+        bin_, _chamadas, src = self._lar(tmp_path)
+        _stub(bin_, "sudo", "exit 1")
+        feito = _roda("dkms_fontes_so_do_root", f"{bin_}:/usr/bin:/bin",
+                      {"HEFESTO_DKMS_SRC_ROOT": str(src)})
+        assert feito.returncode != 0
+        assert "não ficou só do root" in feito.stdout + feito.stderr
+
+    def test_o_install_normaliza_a_cada_corrida(self) -> None:
+        udev = (REPO_ROOT / "scripts" / "install-host-udev.sh").read_text(encoding="utf-8")
+        fim = udev[udev.rindex('source "${DKMS_LIB_SH}"'):]
+        assert fim.index("dkms_fontes_so_do_root") < fim.index("dkms_flush_initramfs")

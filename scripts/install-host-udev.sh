@@ -543,6 +543,7 @@ fi
 if [[ -n "${DKMS_LIB_SH}" ]]; then
     # shellcheck source=dkms_lib.sh
     source "${DKMS_LIB_SH}"
+    dkms_fontes_so_do_root || true
     dkms_flush_initramfs
 fi
 
