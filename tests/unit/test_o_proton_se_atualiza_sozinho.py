@@ -105,6 +105,7 @@ def _atualizar(lar: Path, rede: _Rede, **kw: object) -> tuple[pp.Atualizacao, pp
 
 def test_a_mais_nova_publicada_vira_o_pino_todo_jogo_vai_e_a_velha_sai(
         casa: Path, tmp_path: Path) -> None:
+    """Prova da D-0811-O-PROTON-SE-ATUALIZA-SOZINHO."""
     rede = _Rede(_rede(_tarball(tmp_path)))
     baixada, instalada = _atualizar(casa, rede)
     assert (baixada.estado, instalada.estado) == ("baixada", "instalada")

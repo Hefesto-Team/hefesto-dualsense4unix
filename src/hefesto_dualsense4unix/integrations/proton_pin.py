@@ -2080,6 +2080,7 @@ def sobras_das_casas_do_heroic(home: Path | None = None, *,
 GE_ULTIMA_API = "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest"
 ULTIMA_DO_GE_BASENAME = "ultima-do-ge.json"
 INTERVALO_DA_CONSULTA_S = 6 * 3600
+PRAZO_DA_CONSULTA_S = 30
 
 
 @dataclass(frozen=True)
@@ -2094,7 +2095,7 @@ class Atualizacao:
 def _ler_da_rede(url: str) -> bytes:
     pedido = urllib.request.Request(url, headers={
         "User-Agent": "hefesto-dualsense4unix", "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(pedido, timeout=30) as resposta:
+    with urllib.request.urlopen(pedido, timeout=PRAZO_DA_CONSULTA_S) as resposta:
         return bytes(resposta.read(1024 * 1024))
 
 
@@ -2171,13 +2172,14 @@ def baixar_a_ultima_do_ge(
     nome, url, url_da_soma = achada
     tarball = cache / f"{nome}.tar.gz"
     sha256_guardado = str(registro.get("sha256", ""))
-    try:
-        if (nome == nome_antigo and tarball.is_file() and sha256_guardado
-                and sha256_of_file(tarball) == sha256_guardado):
+    if nome == nome_antigo and tarball.is_file() and sha256_guardado:
+        try:
+            igual = sha256_of_file(tarball) == sha256_guardado
+        except OSError as exc:
+            return Atualizacao("falhou", nome, f"o tarball do cache não se lê: {exc}")
+        if igual:
             _gravar_registro(cache, {**registro, "consultada_em": agora()})
             return Atualizacao("em_cache", nome)
-    except OSError:
-        pass
     try:
         esperado = ler(url_da_soma).decode("utf-8").split()[0].lower()
     except Exception as exc:
