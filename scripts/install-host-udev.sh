@@ -510,6 +510,12 @@ _dkms_do_dono() {
         ko="$(sed -n 's/^BUILT_MODULE_NAME\[0\]="\(.*\)"$/\1/p' "${conf}")"
         ver="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${conf}")"
         [[ -n "${pacote}" && -n "${ko}" && -n "${ver}" ]] || continue
+        if [[ "${ko}" == "uhid" && "${COM_UHID_CONTRAPRESSAO:-0}" -ne 1 \
+              && ! -f "${HEFESTO_UHID_CONF:-/etc/modprobe.d/hefesto-uhid.conf}" ]]; then
+            echo ""
+            echo "uhid com contrapressão: pulado (opt-in: ./install.sh --uhid-contrapressao); o de fábrica segue"
+            continue
+        fi
         echo ""
         echo "Módulo DKMS patchado ${ko} (${pacote}) ..."
         dkms_install_patched_module "${pacote}" "${ver}" "${fonte}" "${ko}"

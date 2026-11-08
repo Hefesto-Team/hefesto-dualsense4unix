@@ -101,6 +101,7 @@ def _base_de_mentira(tmp_path: Path) -> tuple[dict[str, str], Path]:
         "HEFESTO_DKMS_MODULES_ROOT": str(tmp_path / "modules"),
         "HEFESTO_DKMS_TREE": str(tmp_path / "arvore"),
         "HEFESTO_EFIVARS_ROOT": str(tmp_path / "sem-efi"),
+        "COM_UHID_CONTRAPRESSAO": "1",
     }
     return ambiente, registro
 

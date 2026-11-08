@@ -85,11 +85,15 @@ def _funcoes_do_host_udev() -> str:
     return texto[inicio:fim]
 
 
-def _instala_pelo_host_udev(dkms_dir: Path, tmp_path: Path) -> list[str]:
+def _instala_pelo_host_udev(
+    dkms_dir: Path, tmp_path: Path, *, opt_in: bool = True
+) -> list[str]:
     registro = tmp_path / "chamadas.log"
     script = "\n".join(
         (
             "set -eu",
+            f"export COM_UHID_CONTRAPRESSAO={int(opt_in)}",
+            f"export HEFESTO_UHID_CONF='{tmp_path}/nao-existe.conf'",
             "sudo() { :; }",
             f'dkms_install_patched_module() {{ echo "$1 $2 $4" >> "{registro}"; }}',
             "dkms_module_from_updates() { return 0; }",
@@ -156,3 +160,48 @@ def test_o_deb_diz_os_modulos_que_o_dono_tem(tmp_path: Path) -> None:
 def test_o_deb_nao_lista_modulo_a_mao(nome: str) -> None:
     texto = POSTINST.read_text(encoding="utf-8")
     assert nome not in texto, f"{nome} escrito à mão no postinst: a lista é do dono"
+
+
+def test_o_uhid_e_opt_in_no_install_host_udev(tmp_path: Path) -> None:
+    """D-0811-O-FLATPAK-E-O-DEB-LEVAM-OS-CINCO-MODULOS: sem o opt-in, o uhid de fábrica fica."""
+    chamadas = _instala_pelo_host_udev(DKMS, tmp_path, opt_in=False)
+    assert len(chamadas) == 4
+    assert not any(c.endswith(" uhid") for c in chamadas), chamadas
+
+
+def test_o_conf_do_uhid_da_casa_vale_como_opt_in(tmp_path: Path) -> None:
+    (tmp_path / "nao-existe.conf").write_text("options uhid backpressure=1\n", encoding="utf-8")
+    chamadas = _instala_pelo_host_udev(DKMS, tmp_path, opt_in=False)
+    assert any(c.endswith(" uhid") for c in chamadas), chamadas
+
+
+def _ajudante_do_pacote(tmp_path: Path, extra: dict[str, str]) -> str:
+    base = tmp_path / "pacote"
+    (base / "scripts").mkdir(parents=True)
+    (base / "scripts" / "dkms_lib.sh").write_text(
+        'dkms_pkg_version() { echo 1.0.0; }\n'
+        f'dkms_install_patched_module() {{ echo "$1" >> "{tmp_path}/c.log"; }}\n'
+        "dkms_flush_initramfs() { :; }\n",
+        encoding="utf-8",
+    )
+    shutil.copytree(DKMS, base / "dkms")
+    env = {
+        "PATH": "/usr/bin:/bin",
+        "HEFESTO_PACOTE_BASE": str(base),
+        "HEFESTO_UHID_CONF": str(tmp_path / "sem.conf"),
+        **extra,
+    }
+    feito = subprocess.run(
+        ["bash", str(RAIZ / "scripts" / "dkms_do_pacote.sh")],
+        env=env, capture_output=True, text=True, check=False, timeout=60,
+    )
+    assert feito.returncode == 0, feito.stderr
+    return (tmp_path / "c.log").read_text(encoding="utf-8")
+
+
+def test_o_ajudante_do_pacote_so_instala_o_uhid_com_o_opt_in(tmp_path: Path) -> None:
+    """D-0811-O-FLATPAK-E-O-DEB-LEVAM-OS-CINCO-MODULOS: o postinst do deb herda o opt-in."""
+    sem = _ajudante_do_pacote(tmp_path / "a", {})
+    assert "hefesto-uhid" not in sem and "hefesto-usb-f-hid" in sem
+    com = _ajudante_do_pacote(tmp_path / "b", {"COM_UHID_CONTRAPRESSAO": "1"})
+    assert "hefesto-uhid" in com
