@@ -552,17 +552,23 @@ install_atualizador_raiz_host() {
         rm -f "${_at_tmp}"
         return 0
     fi
-    if ! sudo visudo -cqf "${_at_tmp}" 2>/dev/null; then
-        warn "a regra do atualizador NÃO passou no 'visudo -c' — nada gravado em ${_at_regra} (o sudo desta máquina segue intacto)"
-        rm -f "${_at_tmp}"
-        return 0
-    fi
-    if ! sudo install -Dm440 -o root -g root "${_at_tmp}" "${_at_regra}" 2>/dev/null; then
+    local _at_novo="${_at_regra%/*}/.${_at_regra##*/}.novo"
+    if ! sudo install -Dm440 -o root -g root "${_at_tmp}" "${_at_novo}" 2>/dev/null; then
         warn "não consegui gravar ${_at_regra} — o atualizador vai recusar o que pede root"
         rm -f "${_at_tmp}"
         return 0
     fi
     rm -f "${_at_tmp}"
+    if ! sudo visudo -cqf "${_at_novo}" 2>/dev/null; then
+        warn "a regra do atualizador NÃO passou no 'visudo -c' — nada gravado em ${_at_regra} (o sudo desta máquina segue intacto)"
+        sudo rm -f "${_at_novo}" 2>/dev/null || true
+        return 0
+    fi
+    if ! sudo mv -f "${_at_novo}" "${_at_regra}" 2>/dev/null; then
+        warn "não consegui gravar ${_at_regra} — o atualizador vai recusar o que pede root"
+        sudo rm -f "${_at_novo}" 2>/dev/null || true
+        return 0
+    fi
     printf '      atualizador instalado: as peças do sistema sobem pela janela sem pedir senha\n'
     printf '        (%s, NOPASSWD só para %s, os verbos do ajudante com o argumento exato)\n' \
         "${_at_regra}" "${_at_usuaria}"

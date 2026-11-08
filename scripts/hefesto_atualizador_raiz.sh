@@ -5,6 +5,7 @@ ALVO_INSTALADO=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
 SUFIXOS_INSTALADOS=/usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa
 REPO_DO_MANGOHUD=flightlessmango/MangoHud
 GRUPOS="nvidia kernel sistema"
+TETO_DO_BAIXADO=$((512 * 1024 * 1024))
 
 if [[ "$(id -u)" -eq 0 ]]; then
     export PATH=/usr/sbin:/usr/bin:/sbin:/bin
@@ -76,7 +77,10 @@ _segurar_os_da_casa() {
         BEGIN { n = split(lista, s, "\n") }
         $2 ~ /^ii/ { for (i = 1; i <= n; i++) if (s[i] != "" && index($3, s[i])) { print $1; break } }')
     [[ "${#da_casa[@]}" -gt 0 ]] || return 0
-    mapfile -t ja < <(apt-mark showhold 2>/dev/null)
+    local segurados_antes
+    segurados_antes="$(apt-mark showhold 2>/dev/null)" \
+        || _recusar "não li os pacotes já segurados: nada sobe sem saber o que não se solta"
+    mapfile -t ja <<<"${segurados_antes}"
     local p j
     for p in "${da_casa[@]}"; do
         for j in "${ja[@]}"; do
@@ -160,7 +164,7 @@ verbo_apt_instalar() {
         printf 'a volta possível: %s\n' "${rodando}"
     fi
 }
-verbo_apt_limpar() { _exige_raiz apt-limpar; _apt autoremove --purge; }
+verbo_apt_limpar() { _exige_raiz apt-limpar; _segurar_os_da_casa; _apt autoremove --purge; }
 
 _fonte_e_do_root() {
     local pasta="$1" fora
@@ -220,6 +224,39 @@ _casa_da_usuaria() {
     getent passwd "${usuaria}" | cut -d: -f6
 }
 
+_uid_da_usuaria() {
+    if [[ -n "${CASA_DA_USUARIA}" ]]; then
+        id -u
+        return
+    fi
+    id -u -- "${SUDO_USER}"
+}
+
+_copiar_o_baixado() {
+    python3 -I - "$1" "$2" "$3" "${TETO_DO_BAIXADO}" <<'COPIA'
+import os, stat, sys
+origem, destino, dono, teto = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+try:
+    fd = os.open(origem, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+except OSError as erro:
+    sys.exit(f"não abri {origem}: {erro.strerror}")
+st = os.fstat(fd)
+if not stat.S_ISREG(st.st_mode):
+    sys.exit(f"{origem} não é um arquivo comum")
+if st.st_uid != dono or st.st_nlink != 1:
+    sys.exit(f"{origem} não é de quem baixou")
+if st.st_size > teto:
+    sys.exit(f"{origem} passa do teto")
+lidos = 0
+with os.fdopen(fd, "rb") as entrada, open(destino, "wb") as saida:
+    while bloco := entrada.read(1024 * 1024):
+        lidos += len(bloco)
+        if lidos > teto:
+            sys.exit(f"{origem} passa do teto")
+        saida.write(bloco)
+COPIA
+}
+
 _digest_publicado() {
     local nome="$1"
     curl -fsSL --max-time 30 -H 'Accept: application/vnd.github+json' "${API}" \
@@ -267,7 +304,9 @@ verbo_mangohud_instalar() {
     [[ "${nome}" =~ ^MangoHud-[A-Za-z0-9._-]+\.tar\.gz$ ]] || _recusar "nome estranho: ${nome}"
     install -d -m 700 "${CACHE}/mangohud"
     _e_so_do_dono "${CACHE}/mangohud" || _recusar "a pasta ${CACHE}/mangohud não é só do root"
-    cat <"${origem}" >"${CACHE}/mangohud/novo.tar.gz" || _recusar "não li ${origem}"
+    rm -f "${CACHE}/mangohud/novo.tar.gz"
+    _copiar_o_baixado "${origem}" "${CACHE}/mangohud/novo.tar.gz" "$(_uid_da_usuaria)" \
+        || { rm -f "${CACHE}/mangohud/novo.tar.gz"; _recusar "não li ${origem}"; }
     esperado="$(_digest_publicado "${nome}")"
     [[ "${esperado}" =~ ^[0-9a-f]{64}$ ]] || { rm -f "${CACHE}/mangohud/novo.tar.gz"; _recusar "a soma publicada de ${nome} não veio"; }
     obtido="$(sha256sum "${CACHE}/mangohud/novo.tar.gz" | cut -d' ' -f1)"

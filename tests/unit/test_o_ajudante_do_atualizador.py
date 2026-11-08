@@ -376,3 +376,95 @@ def test_o_fonte_do_dkms_fica_so_do_root_antes_do_build(tmp_path: Path) -> None:
     dono = linhas.index(f"sudo chown -R root:root {destino}")
     escrita = linhas.index(f"sudo chmod -R go-w {destino}")
     assert dono < escrita < linhas.index("sudo dkms add hefesto-hid-playstation/1.0.0")
+
+
+def _plantar_no_find(lar: Lar, plantado: Path) -> None:
+    real = shutil.which("find") or "/usr/bin/find"
+    lar.duble("find", f'case "$*" in *MangoHud-*) echo "{plantado}"; exit 0 ;; esac\n'
+                      f'exec "{real}" "$@"')
+
+
+def test_o_mangohud_trocado_por_link_depois_da_busca_nao_se_le(lar: Lar) -> None:
+    arq = _tar_do_mangohud(lar)
+    _api(lar, arq.name, hashlib.sha256(arq.read_bytes()).hexdigest())
+    fora = lar.base / "fora.tar.gz"
+    arq.replace(fora)
+    arq.symlink_to(fora)
+    _plantar_no_find(lar, arq)
+    feito = lar.rodar("mangohud-instalar")
+    assert feito.returncode == 2 and "não li" in feito.stderr, feito.stderr
+    assert not any(linha.startswith("setup") for linha in lar.lidas())
+    assert not (lar.cache / "mangohud" / "novo.tar.gz").exists()
+
+
+def test_o_mangohud_trocado_por_fifo_nao_trava_o_root(lar: Lar) -> None:
+    arq = _tar_do_mangohud(lar)
+    _api(lar, arq.name, hashlib.sha256(arq.read_bytes()).hexdigest())
+    arq.unlink()
+    os.mkfifo(arq)
+    _plantar_no_find(lar, arq)
+    feito = lar.rodar("mangohud-instalar")
+    assert feito.returncode == 2 and "não é um arquivo comum" in feito.stderr, feito.stderr
+    assert not any(linha.startswith("setup") for linha in lar.lidas())
+
+
+def test_sem_saber_o_que_ja_esta_segurado_nada_sobe(lar: Lar) -> None:
+    lar.duble("apt-mark", '[ "$1" = showhold ] && exit 1; exit 0')
+    feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode == 2 and "já segurados" in feito.stderr, feito.stderr
+    assert not [x for x in lar.lidas() if x.startswith(("apt-get", "apt-mark hold"))]
+
+
+def test_a_limpeza_tambem_segura_os_da_casa(lar: Lar) -> None:
+    feito = lar.rodar("apt-limpar")
+    assert feito.returncode == 0, feito.stderr
+    ordem = _ordem(lar)
+    assert ordem[0] == "apt-mark hold bluez xdg-desktop-portal-cosmic", ordem
+    assert "autoremove" in ordem[1]
+    assert ordem[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic", ordem
+
+
+def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path) -> None:
+    lib, regras = tmp_path / "lib", tmp_path / "sudoers.d"
+    lib.mkdir()
+    regras.mkdir()
+    corpo = (RAIZ / "scripts/lib/camada_de_maquina.sh").read_text(encoding="utf-8")
+    inicio = corpo.index("install_atualizador_raiz_host() {")
+    funcao = corpo[inicio:corpo.index("\n}\n", inicio) + 3]
+    funcao = funcao.replace("/usr/local/lib/hefesto-dualsense4unix", str(lib)) \
+        .replace("/etc/sudoers.d", str(regras))
+    log, bin_ = tmp_path / "sudo.log", tmp_path / "bin"
+    bin_.mkdir()
+    (bin_ / "sudo").write_text(
+        "#!/bin/bash\n"
+        f'echo "$*" >> "{log}"\n'
+        '[[ "$1" == -n ]] && shift\n'
+        '[[ "$1" == true || "$1" == -l ]] && exit 0\n'
+        'if [[ "$1" == visudo ]]; then\n'
+        f'  echo "visudo-viu $(stat -c %a "${{@: -1}}") ${{@: -1}}" >> "{log}"; exit 0\n'
+        'fi\n'
+        'if [[ "$1" == install ]]; then\n'
+        '  args=(); for a in "${@:2}"; do [[ "$a" == -o || "$a" == -g || "$a" == root ]] '
+        '|| args+=("$a"); done\n'
+        '  exec install "${args[@]}"\n'
+        'fi\n'
+        'exec "$@"\n', encoding="utf-8")
+    (bin_ / "sudo").chmod(0o755)
+    (bin_ / "visudo").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (bin_ / "visudo").chmod(0o755)
+    roteiro = tmp_path / "roda.sh"
+    roteiro.write_text(f'warn() {{ echo "AVISO $*"; }}\nROOT_DIR="{RAIZ}"\n{funcao}\n'
+                       "install_atualizador_raiz_host\n", encoding="utf-8")
+    feito = subprocess.run(["bash", str(roteiro)], capture_output=True, text=True, timeout=60,
+                           env={**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}",
+                                "SUDO_USER": "fulana", "TMPDIR": str(tmp_path)},
+                           check=False)
+    assert "AVISO" not in feito.stdout, feito.stdout + feito.stderr
+    viu = [x for x in log.read_text(encoding="utf-8").splitlines() if x.startswith("visudo-viu")]
+    assert len(viu) == 1
+    modo, caminho = viu[0].split()[1:]
+    assert Path(caminho).parent == regras and Path(caminho).name.startswith("."), viu
+    assert modo == "440", "o visudo confere o arquivo que só o root escreve, não o rascunho"
+    final = regras / "49-hefesto-atualizador"
+    assert "fulana ALL=(root) NOPASSWD: HEFESTO_ATUALIZADOR" in final.read_text(encoding="utf-8")
+    assert sorted(p.name for p in regras.iterdir()) == ["49-hefesto-atualizador"]
