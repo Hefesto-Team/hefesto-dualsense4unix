@@ -82,6 +82,8 @@ def _base_de_mentira(tmp_path: Path) -> tuple[dict[str, str], Path]:
     falsos = {
         "dkms": f'#!/bin/sh\necho "$*" >> {registro}\nexit 0\n',
         "sudo": '#!/bin/sh\nexec "$@"\n',
+        "chown": f'#!/bin/sh\necho "chown $*" >> {registro}\n',
+        "chmod": f'#!/bin/sh\necho "chmod $*" >> {registro}\n',
         "modinfo": "#!/bin/sh\nexit 1\n",
         "uname": "#!/bin/sh\necho 7.0.0-kernel-que-roda\n",
         "update-initramfs": f'#!/bin/sh\necho "update-initramfs $*" >> {registro}\n',
