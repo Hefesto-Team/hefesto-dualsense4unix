@@ -83,7 +83,7 @@ MARCAS = frozenset({
     "Xbox", "Freestyle", "Nintendo", "Pro", "Sony", "PlayStation", "Windows",
     "Wi-Fi", "Bluetooth", "Vulkan", "Big", "Picture", "Input", "Ryujinx",
     "Lutris", "Heroic", "Wayland", "AppImage", "Flatpak", "Edge",
-    "Lovense", "Intiface", "Kyty",
+    "Lovense", "Intiface", "Kyty", "Nvidia",
 })
 
 TECLAS = frozenset({
