@@ -18,7 +18,6 @@ import os
 import re
 import shutil
 import signal
-import socket
 import subprocess
 import time
 from pathlib import Path
@@ -508,6 +507,8 @@ def test_cada_job_da_corrida_tem_a_sua_porta_de_artefato(mundo: Mundo) -> None:
     assert len(portas) > 10 and not repetidas, repetidas
 
 
+PRAZO_DO_FIM_DO_SERVIDOR_S = 3.0
+
 ACT_QUE_SOBE_ARTEFATO = """#!/usr/bin/env bash
 exec python3 -c '
 import json, os, urllib.request
@@ -535,9 +536,26 @@ def test_o_passo_de_artefato_fala_com_o_servidor_da_casa_e_ele_sai_com_a_corrida
     linha = next(ln for ln in mundo.log("glifos").splitlines() if ln.startswith("PORTA:"))
     assert '"ok": true' in linha
     assert (mundo.casa / "ci-local" / "artefatos" / "1" / "dados" / "meta.json").is_file()
-    endereco = urlsplit(linha.split()[1])
-    with pytest.raises(OSError):
-        socket.create_connection(("127.0.0.1", endereco.port or 0), timeout=3)
+    assert urlsplit(linha.split()[1]).port
+    servidor = str(mundo.arvore / "scripts" / "ci-local" / "servidor-de-artefatos.py")
+    prazo = time.monotonic() + PRAZO_DO_FIM_DO_SERVIDOR_S
+    while _processos_com(servidor) and time.monotonic() < prazo:
+        time.sleep(0.05)
+    assert not _processos_com(servidor), "o servidor de artefatos ficou vivo depois da corrida"
+
+
+def _processos_com(trecho: str) -> list[int]:
+    vivos = []
+    for pid in Path("/proc").iterdir():
+        if not pid.name.isdigit():
+            continue
+        try:
+            linha = (pid / "cmdline").read_bytes()
+        except OSError:
+            continue
+        if trecho.encode() in linha:
+            vivos.append(int(pid.name))
+    return vivos
 
 
 def test_sem_o_servidor_de_artefatos_nada_roda(mundo: Mundo) -> None:
