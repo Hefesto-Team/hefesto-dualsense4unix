@@ -41,6 +41,7 @@ def _cena(tmp_path: Path) -> dict[str, Path | str]:
     (assets / "patch" / "0001-ref.patch").write_text("referência\n", encoding="utf-8")
     _stub(stubs, "uname", f'echo "{kver}"')
     _stub(stubs, "sudo", f'echo "sudo $@" >> "{log}"\nexec "$@"')
+    _stub(stubs, "chown", f'echo "chown $@" >> "{log}"')
     _stub(stubs, "modinfo", 'echo "/lib/modules/x/updates/dkms/mod-teste.ko"')
     _stub(
         stubs,

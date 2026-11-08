@@ -1103,6 +1103,10 @@ _ensaio_camada() {
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-placa (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
             ;;
+        atualizador)
+            _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz"
+            _faria_root "gravar /etc/sudoers.d/49-hefesto-atualizador (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
+            ;;
         gabinete)
             _faria_root "ler a tabela SMBIOS 8 com dmidecode (leitura pura, nada é escrito no firmware)"
             _faria "gravar o censo em ${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
@@ -1221,6 +1225,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_bt_agent_host:bt-agent"
     "install_bt_ponte_privilegiada_host:bt-ponte"
     "install_placa_acordada_host:placa"
+    "install_atualizador_raiz_host:atualizador"
     "install_censo_do_gabinete_host:gabinete"
     "install_dkms_hid_nintendo_host:dkms-nintendo"
     "install_dkms_rtw88_usb_host:dkms-rtw88"
@@ -1459,6 +1464,8 @@ if [[ "${FORMAT}" != "native" ]]; then
     install_bt_ponte_privilegiada_host
     step "placa" "a placa de vídeo acordada enquanto um jogo vive (DEFAULT em todo formato)"
     install_placa_acordada_host
+    step "atualizador" "o atualizador sobe as peças do sistema sem pedir senha (DEFAULT em todo formato)"
+    install_atualizador_raiz_host
     step "gabinete" "as entradas USB do gabinete, lidas do firmware (DEFAULT em todo formato)"
     install_censo_do_gabinete_host
     step "dkms" "módulo hid-nintendo corrigido (DKMS; DEFAULT em todo formato)"
@@ -2115,6 +2122,9 @@ install_bt_ponte_privilegiada_host
 
 step "3e-ter-bis" "a placa de vídeo acordada enquanto um jogo vive"
 install_placa_acordada_host
+
+step "3e-ter-ter" "o atualizador sobe as peças do sistema sem pedir senha"
+install_atualizador_raiz_host
 
 step "3e-quater" "as entradas USB do gabinete (tabela SMBIOS 8 + barramento)"
 install_censo_do_gabinete_host

@@ -177,7 +177,7 @@ def _instalar(tmp_path: Path, *, ligado: bool, inscrita: bool) -> tuple[str, str
     """Roda `dkms_install_patched_module` com `sudo` e `dkms` que só anotam."""
     bin_ = _bin(tmp_path)
     registro = tmp_path / "chamadas.log"
-    for nome in ("sudo", "dkms", "modinfo"):
+    for nome in ("sudo", "dkms", "modinfo", "chown", "chmod"):
         (bin_ / nome).write_text(
             f'#!/bin/sh\necho "{nome} $*" >> "{registro}"\n'
             + ('exec "$@"\n' if nome == "sudo" else "exit 0\n"),

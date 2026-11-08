@@ -222,6 +222,8 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh ]] && _NEEDS_SUDO=1
 [[ -e /etc/sudoers.d/49-hefesto-placa ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]] && _NEEDS_SUDO=1
+[[ -e /etc/sudoers.d/49-hefesto-atualizador ]] && _NEEDS_SUDO=1
+[[ -e /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
 [[ -e /etc/apt/preferences.d/hefesto-pipewire ]] && _NEEDS_SUDO=1
 [[ -e /etc/apt/sources.list.d/hefesto-pipewire.sources || -e /var/lib/hefesto-pipewire ]] && _NEEDS_SUDO=1
@@ -718,6 +720,12 @@ if sudo -n true 2>/dev/null; then
         sudo rm -f /etc/sudoers.d/49-hefesto-placa 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh 2>/dev/null || true
+    if [[ -e /etc/sudoers.d/49-hefesto-atualizador ]]; then
+        log "removendo a regra do atualizador (/etc/sudoers.d/49-hefesto-atualizador)"
+        sudo rm -f /etc/sudoers.d/49-hefesto-atualizador 2>/dev/null || true
+    fi
+    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz 2>/dev/null || true
+    sudo rm -rf /var/cache/hefesto-dualsense4unix/mangohud 2>/dev/null || true
     sudo rm -rf /run/hefesto-dualsense4unix/placa 2>/dev/null || true
     sudo rm -rf /run/hefesto-bt-ponte /run/hefesto-bt-rebind /run/hefesto-bt-watchdog \
         /run/hefesto-bt-watchdog.restart-stamp 2>/dev/null || true
@@ -864,7 +872,8 @@ elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         || -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
         || -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf \
         || -e /etc/sudoers.d/49-hefesto-bt-ponte \
-        || -e /etc/sudoers.d/49-hefesto-placa ]]; then
+        || -e /etc/sudoers.d/49-hefesto-placa \
+        || -e /etc/sudoers.d/49-hefesto-atualizador ]]; then
     log "sudo indisponível — resiliência do bluetoothd (timers/drop-ins/scripts) NÃO removida"
     if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
         log "  nem a trava comum do rádio:"
@@ -877,6 +886,10 @@ elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
     if [[ -e /etc/sudoers.d/49-hefesto-placa ]]; then
         log "  e a placa acordada FICOU: é privilégio de root pendurado, remova à mão —"
         log "  sudo rm /etc/sudoers.d/49-hefesto-placa /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
+    fi
+    if [[ -e /etc/sudoers.d/49-hefesto-atualizador ]]; then
+        log "  e o atualizador FICOU: é privilégio de root pendurado, remova à mão —"
+        log "  sudo rm /etc/sudoers.d/49-hefesto-atualizador /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz"
     fi
 fi
 if [[ "${KEEP_CONFIG}" -eq 0 ]] && ! sudo -n true 2>/dev/null \

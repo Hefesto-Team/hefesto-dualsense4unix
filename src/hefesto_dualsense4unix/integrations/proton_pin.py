@@ -2126,6 +2126,9 @@ def _ler_registro(cache: Path) -> dict[str, object]:
 
 
 def _gravar_registro(cache: Path, registro: dict[str, object]) -> None:
+    segurada = _ler_registro(cache).get("segurada")
+    if segurada and "segurada" not in registro:
+        registro = {**registro, "segurada": segurada}
     cache.mkdir(parents=True, exist_ok=True)
     tmp = cache / f".{ULTIMA_DO_GE_BASENAME}.tmp"
     tmp.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -2243,6 +2246,8 @@ def instalar_a_ultima_do_cache(
     nome, sha = str(registro.get("name", "")), str(registro.get("sha256", ""))
     if not nome or not sha or not (cache_dir / f"{nome}.tar.gz").is_file():
         return Atualizacao("sem_candidata")
+    if nome == str(registro.get("segurada", "")):
+        return Atualizacao("segurada", nome)
     try:
         vale = pino_que_vale(conf, compat_dir)
         if qp.ordem_da_versao(nome) <= qp.ordem_da_versao(vale):
@@ -2267,6 +2272,11 @@ def instalar_a_ultima_do_cache(
         return Atualizacao("reprovou", nome, "; ".join(faltas) or "a ficha não passou")
     except Exception as exc:
         return Atualizacao("falhou", nome, str(exc) or type(exc).__name__)
+
+
+def segurar(cache: Path, nome: str) -> None:
+    """A versão de que se voltou não entra de novo; a próxima publicada, sim."""
+    _gravar_registro(cache, {**_ler_registro(cache), "segurada": nome})
 
 
 def apagar_as_sobras(home: Path | None = None) -> tuple[list[VersaoQueSobra], dict[str, str]]:

@@ -316,6 +316,11 @@ dkms_install_patched_module() {
         fi
     fi
 
+    if ! sudo chown -R root:root "${_srcdst}" || ! sudo chmod -R go-w "${_srcdst}"; then
+        _dkms_warn "o source em ${_srcdst} não ficou só do root — pulando ${_pkg} (in-tree continua)"
+        return 0
+    fi
+
     if [[ -z "$(_dkms_status_texto "${_pkg}/${_ver}")" ]]; then
         if ! sudo dkms add "${_pkg}/${_ver}"; then
             _dkms_warn "dkms add falhou p/ ${_pkg}/${_ver} — in-tree continua"

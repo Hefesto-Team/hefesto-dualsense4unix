@@ -505,6 +505,62 @@ install_placa_acordada_host() {
     fi
 }
 
+install_atualizador_raiz_host() {
+    local _at_fonte="${ROOT_DIR}/scripts/hefesto_atualizador_raiz.sh"
+    local _at_alvo=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
+    local _at_regra=/etc/sudoers.d/49-hefesto-atualizador
+    local _at_usuaria _at_tmp
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — o atualizador sem senha NÃO instalado (as peças do sistema não sobem pela janela)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — o atualizador sem senha pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    _at_usuaria="${SUDO_USER:-$(id -un)}"
+    if [[ "${_at_usuaria}" == "root" ]]; then
+        warn "install rodando como root sem SUDO_USER — não sei para quem abrir o atualizador; regra do sudoers NÃO gravada (rode ./install.sh como você, sem sudo)"
+        return 0
+    fi
+    if ! sudo install -Dm755 -o root -g root "${_at_fonte}" "${_at_alvo}" 2>/dev/null; then
+        warn "não consegui instalar ${_at_alvo} — o atualizador sem senha indisponível"
+        return 0
+    fi
+    if ! command -v visudo >/dev/null 2>&1; then
+        warn "visudo ausente — a regra do sudoers do atualizador NÃO foi gravada (sudoers inválido derruba o sudo da máquina inteira; não gravamos sem conferir)"
+        return 0
+    fi
+    _at_tmp="$(mktemp)" || {
+        warn "não consegui criar arquivo temporário — regra do atualizador NÃO gravada"
+        return 0
+    }
+    if ! bash "${_at_alvo}" regra-sudo "${_at_usuaria}" >"${_at_tmp}" 2>/dev/null; then
+        warn "o ajudante do atualizador recusou gerar a regra para '${_at_usuaria}' — nada gravado em ${_at_regra}"
+        rm -f "${_at_tmp}"
+        return 0
+    fi
+    if ! sudo visudo -cqf "${_at_tmp}" 2>/dev/null; then
+        warn "a regra do atualizador NÃO passou no 'visudo -c' — nada gravado em ${_at_regra} (o sudo desta máquina segue intacto)"
+        rm -f "${_at_tmp}"
+        return 0
+    fi
+    if ! sudo install -Dm440 -o root -g root "${_at_tmp}" "${_at_regra}" 2>/dev/null; then
+        warn "não consegui gravar ${_at_regra} — o atualizador vai recusar o que pede root"
+        rm -f "${_at_tmp}"
+        return 0
+    fi
+    rm -f "${_at_tmp}"
+    printf '      atualizador instalado: as peças do sistema sobem pela janela sem pedir senha\n'
+    printf '        (%s, NOPASSWD só para %s, os verbos do ajudante com o argumento exato)\n' \
+        "${_at_regra}" "${_at_usuaria}"
+    if sudo -n -l -U "${_at_usuaria}" "${_at_alvo}" apt-lista >/dev/null 2>&1; then
+        printf '      conferido no próprio sudo: a regra já vale para %s (não é só arquivo no disco)\n' "${_at_usuaria}"
+    else
+        warn "a regra do atualizador foi gravada mas o sudo NÃO a reconheceu para ${_at_usuaria} — confira ${_at_regra} e o '#includedir /etc/sudoers.d' em /etc/sudoers"
+    fi
+}
+
 install_censo_do_gabinete_host() {
     local _gab_alvo="${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
     local _gab_tmp _gab_saida
