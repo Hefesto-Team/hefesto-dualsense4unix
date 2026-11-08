@@ -444,10 +444,20 @@ def _guardar_a_anterior(peca: Peca, versoes: Versoes, dados: dict[str, Any],
     _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
 
 
+def _devolver_a_anterior(ident: str, antes: Any) -> None:
+    anteriores = ler_as_anteriores()
+    if antes is None:
+        anteriores.pop(ident, None)
+    else:
+        anteriores[ident] = antes
+    _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
+
+
 def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
                   agora: Callable[[], float]) -> None:
     linha = andamento.peca(peca.id)
     dados: dict[str, Any] = {}
+    antes = ler_as_anteriores().get(peca.id)
     for etapa in ETAPAS:
         if _pediram_parar():
             raise FilaParadaError
@@ -478,6 +488,8 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
             linha["selo"] = FALHOU
             linha["motivo"] = str(erro)
             _anotar(f"{peca.id}: {etapa} falhou: {erro}")
+            if etapa == "instalar":
+                _devolver_a_anterior(peca.id, antes)
             andamento.gravar()
             return
         except FilaParadaError:
@@ -488,6 +500,8 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
             linha["selo"] = FALHOU
             linha["motivo"] = motivo
             _anotar(f"{peca.id}: {etapa} levantou: {motivo}")
+            if etapa == "instalar":
+                _devolver_a_anterior(peca.id, antes)
             andamento.gravar()
             return
         linha["etapas"][etapa] = "feito"
@@ -597,7 +611,7 @@ def rodar(
         andamento.dado["fase"] = FIM
         andamento.gravar()
         with contextlib.suppress(OSError):
-            conferir(rede=False, lista=lista)
+            conferir(rede=True, lista=lista)
         return 1 if andamento.dado["total"]["falhas"] else 0
     finally:
         os.close(trava)

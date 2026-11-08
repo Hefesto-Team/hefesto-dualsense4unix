@@ -506,3 +506,26 @@ def test_os_modulos_do_kernel_cobrem_os_cinco(monkeypatch: pytest.MonkeyPatch) -
     assert pa.versoes_do_dkms(True).tem_nova()
     status.append((modulos[4], "1.0.0", "7.2.18-generic", "installed"))
     assert not pa.versoes_do_dkms(True).tem_nova()
+
+
+def test_a_instalacao_que_falha_nao_troca_a_anterior_que_volta() -> None:
+    d = _Diario()
+    _rodar([_peca(d, "a", de="1.0", para="1.1", voltar=True)], ["a"])
+    boa = at.ler_as_anteriores()["a"]
+    _rodar([_peca(d, "a", de="1.1", para="1.2", falha_em="instalar", voltar=True)], ["a"])
+    assert at.ler_as_anteriores()["a"] == boa, "a 1.2 não entrou: a volta segue sendo à 1.0"
+    _rodar([_peca(d, "b", de="2.0", para="2.1", falha_em="instalar", voltar=True)], ["b"])
+    assert "b" not in at.ler_as_anteriores(), "sem instalar, não há anterior a que voltar"
+    _rodar([_peca(d, "c", de="3.0", para="3.1", falha_em="aplicar", voltar=True)], ["c"])
+    assert at.ler_as_anteriores()["c"]["anterior"] == "3.0", "instalou: a anterior fica"
+
+
+def test_o_fim_da_fila_guarda_a_versao_publicada_para_o_tentar_de_novo() -> None:
+    d = _Diario()
+    lista = [_peca(d, "a", de="1.0", para="1.1", falha_em="instalar", voltar=True)]
+    _rodar(lista, ["a"])
+    item = next(i for i in at.ler_a_conferencia()["pecas"] if i["id"] == "a")
+    assert item["para"] == "1.1" and item["estado"] == at.NOVA, item
+    at.rodar(["a"], lista=lista, jogo_aberto=lambda: False, reiniciar=lambda: True,
+             reabrir=lambda: True, dormir=lambda _s: None)
+    assert at.ler_o_andamento()["pecas"][0]["para"] == "1.1"
