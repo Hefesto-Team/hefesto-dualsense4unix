@@ -62,6 +62,10 @@ class Lar:
         self.modulos = base / "modules"
         self.entradas = base / "entries"
         self.entradas.mkdir()
+        self.esp = base / "esp"
+        self.esp.mkdir()
+        self.boot = base / "boot"
+        self.boot.mkdir()
         self.casa = base / "casa"
         self.casa.mkdir()
         self.estado = base / "estado"
@@ -90,6 +94,8 @@ class Lar:
                     "HEFESTO_ATUALIZADOR_SRC": str(self.src),
                     "HEFESTO_ATUALIZADOR_MODULOS": str(self.modulos),
                     "HEFESTO_ATUALIZADOR_ENTRADAS": str(self.entradas),
+                    "HEFESTO_ATUALIZADOR_ESP": str(self.esp),
+                    "HEFESTO_ATUALIZADOR_BOOT": str(self.boot),
                     "HEFESTO_ATUALIZADOR_CASA": str(self.casa),
                     "HEFESTO_ATUALIZADOR_ESTADO": str(self.estado),
                     "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
@@ -262,9 +268,11 @@ def test_o_mangohud_nao_volta_de_pasta_que_outro_escreve(lar: Lar) -> None:
     assert lar.lidas().count("setup install") == 2
 
 
-def _kernels(lar: Lar, *versoes: str) -> None:
+def _kernels(lar: Lar, *versoes: str, velho: str = "") -> None:
     for versao in versoes:
         (lar.modulos / versao).mkdir(parents=True, exist_ok=True)
+        (lar.boot / f"vmlinuz-{versao}").write_bytes(f"imagem {versao}".encode())
+    (lar.esp / "vmlinuz-previous.efi").write_bytes(f"imagem {velho or versoes[0]}".encode())
     (lar.entradas / "Pop_OS-current.conf").write_text("linux /vmlinuz.efi\n", encoding="utf-8")
     (lar.entradas / "Pop_OS-oldkern.conf").write_text("linux /vmlinuz-previous.efi\n",
                                                       encoding="utf-8")
@@ -468,3 +476,17 @@ def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path) -> 
     final = regras / "49-hefesto-atualizador"
     assert "fulana ALL=(root) NOPASSWD: HEFESTO_ATUALIZADOR" in final.read_text(encoding="utf-8")
     assert sorted(p.name for p in regras.iterdir()) == ["49-hefesto-atualizador"]
+
+
+def test_o_oldkern_que_nao_e_o_kernel_registrado_nao_vira_volta(lar: Lar) -> None:
+    _kernels(lar, "7.2.15-generic", velho="7.2.6-generic")
+    _apt_que_traz_o_kernel(lar, "7.2.18-generic")
+    assert lar.rodar("apt-instalar", "kernel").returncode == 0
+    feito = lar.rodar("kernel-anterior")
+    assert feito.returncode == 2 and "não é o kernel 7.2.15-generic" in feito.stderr, feito.stderr
+    assert not [x for x in lar.lidas() if x.startswith("bootctl")]
+    assert (lar.estado / "kernel-anterior").exists(), "a volta recusada não gasta o registro"
+    (lar.entradas / "Pop_OS-oldkern.conf").write_text("linux /../../etc/shadow\n",
+                                                      encoding="utf-8")
+    assert lar.rodar("kernel-anterior").returncode == 2
+    assert not [x for x in lar.lidas() if x.startswith("bootctl")]

@@ -14,6 +14,8 @@ if [[ "$(id -u)" -eq 0 ]]; then
     SRC=/usr/src
     MODULOS=/lib/modules
     ENTRADAS=/boot/efi/loader/entries
+    ESP=/boot/efi
+    BOOT=/boot
     ESTADO=/var/lib/hefesto-dualsense4unix/atualizador
     SUFIXOS="${SUFIXOS_INSTALADOS}"
     CASA_DA_USUARIA=""
@@ -24,6 +26,8 @@ else
     SRC="${HEFESTO_ATUALIZADOR_SRC:-/usr/src}"
     MODULOS="${HEFESTO_ATUALIZADOR_MODULOS:-/lib/modules}"
     ENTRADAS="${HEFESTO_ATUALIZADOR_ENTRADAS:-/boot/efi/loader/entries}"
+    ESP="${HEFESTO_ATUALIZADOR_ESP:-/boot/efi}"
+    BOOT="${HEFESTO_ATUALIZADOR_BOOT:-/boot}"
     ESTADO="${HEFESTO_ATUALIZADOR_ESTADO:-}"
     SUFIXOS="${HEFESTO_ATUALIZADOR_SUFIXOS:-${SUFIXOS_INSTALADOS}}"
     CASA_DA_USUARIA="${HEFESTO_ATUALIZADOR_CASA:-}"
@@ -329,8 +333,15 @@ verbo_mangohud_voltar() {
     printf 'MangoHud de volta à versão anterior\n'
 }
 
+_imagem_da_entrada() {
+    local caminho
+    caminho="$(awk 'tolower($1) == "linux" { print $2; exit }' "$1" 2>/dev/null)"
+    [[ "${caminho}" =~ ^/[A-Za-z0-9._/-]+$ && "${caminho}" != *..* ]] || return 1
+    printf '%s%s\n' "${ESP}" "${caminho}"
+}
+
 _entrada_do_kernel() {
-    local ver="$1" e
+    local ver="$1" e velha imagem
     for e in "${ENTRADAS}"/*.conf; do
         [[ -f "${e}" ]] || continue
         if [[ "${e##*/}" == *"${ver}"* ]] || grep -qF -- "${ver}" "${e}"; then
@@ -338,7 +349,12 @@ _entrada_do_kernel() {
             return 0
         fi
     done
-    find "${ENTRADAS}" -maxdepth 1 -name '*oldkern.conf' -printf '%f\n' 2>/dev/null | head -n 1
+    velha="$(find "${ENTRADAS}" -maxdepth 1 -name '*oldkern.conf' -printf '%f\n' 2>/dev/null | head -n 1)"
+    [[ -n "${velha}" ]] || return 0
+    imagem="$(_imagem_da_entrada "${ENTRADAS}/${velha}")" || return 3
+    [[ -f "${imagem}" && -f "${BOOT}/vmlinuz-${ver}" ]] || return 3
+    cmp -s -- "${imagem}" "${BOOT}/vmlinuz-${ver}" || return 3
+    printf '%s\n' "${velha}"
 }
 
 verbo_kernel_anterior() {
@@ -349,7 +365,8 @@ verbo_kernel_anterior() {
     ver="$(head -n 1 "${registro}")"
     [[ "${ver}" =~ ^[A-Za-z0-9._+-]+$ ]] || _recusar "o registro do kernel anterior está estragado"
     [[ -d "${MODULOS}/${ver}" ]] || _recusar "o kernel ${ver} não está mais instalado"
-    entrada="$(_entrada_do_kernel "${ver}")"
+    entrada="$(_entrada_do_kernel "${ver}")" \
+        || _recusar "a entrada «oldkern» do carregador não é o kernel ${ver}: nada muda"
     [[ -n "${entrada}" ]] || _recusar "sem a entrada do kernel ${ver} no carregador"
     command -v bootctl >/dev/null 2>&1 || _recusar "bootctl ausente"
     bootctl set-default "${entrada}" || exit 1
