@@ -1,26 +1,20 @@
 """Os contratos de fora no doctor: o que o Hefesto assume do mundo do outro, por capacidade.
 
-O censo (``docs/data/contratos-de-fora.csv``) lista cada ponto de contato com o BlueZ, o
-PipeWire, o systemd, a Steam, o Proton, o kernel e o COSMIC. Aqui moram as perguntas que o
-``doctor`` faz a cada um, e a regra é a do censo: **a capacidade, nunca a versão**, salvo o GE e
-o SDL, que mudam o padrão por dentro sem mudar porta (a faixa medida está nas constantes
-``GE_*`` e ``SDL_DO_EDGE``). Todas as outras perguntam se a porta existe e responde do jeito
-que o Hefesto usa (a interface D-Bus, o JSON do ``pactl``, o nó do kernel, o arquivo da Steam).
-
-Quando uma sonda não converge, a linha do doctor nomeia o CONTRATO que quebrou e o comando
-para conferir, em vez de falha calada. Dono que não existe nesta máquina (sem Steam, sem
-COSMIC) é ``[INFO]``: o produto é para qualquer computador, e ausência não é defeito.
-
-Só leitura: nenhuma sonda escreve no BlueZ, no servidor de som, na Steam nem no kernel. O
-``busctl`` só faz ``tree``; o ``pactl``, só ``info``; o ``wpctl``, só ``status``.
+O censo é ``docs/data/contratos-de-fora.csv``. A regra é **a capacidade, nunca a versão**: a
+sonda pergunta se a porta existe e responde do jeito que o Hefesto usa. O GE se lê no script
+instalado (com o piso ``GE_COM_A_PILHA_DO_CONTROLE``) e o SDL tem o teto ``SDL_DO_EDGE``. A
+linha que não converge nomeia o contrato e o comando para conferir; dono ausente é
+``[INFO]``. Só leitura: nenhuma sonda escreve no BlueZ, no som, na Steam nem no kernel.
 """
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
 import subprocess
+import textwrap
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -312,8 +306,7 @@ def _sonda_proton(amb: Ambiente) -> Resultado:
 
 
 GE_COM_A_PILHA_DO_CONTROLE = (11, 4)
-GE_ULTIMO_COM_LISTA_POR_APPID = (11, 7)
-GE_ULTIMO_MEDIDO = (11, 8)
+ENV_DO_FALLBACK_XINPUT = "PROTON_SONY_AUTO_XINPUT"
 _GE_RX = re.compile(r"GE-Proton(\d+)-(\d+)")
 
 ENV_DA_PILHA_DE_SOM = "PROTON_ENABLE_MHWILDS_USB_AUDIO"
@@ -356,26 +349,87 @@ def _versao_do_ge(pasta: Path) -> tuple[int, int] | None:
     return (int(achou.group(1)), int(achou.group(2))) if achou else None
 
 
-def _fala_da_versao_do_ge(nome: str, versao: tuple[int, int]) -> str | None:
-    rotulo = f"{versao[0]}-{versao[1]}"
+def _nome_da_env_tocada(no: ast.AST) -> str | None:
+    if (
+        isinstance(no, ast.Subscript)
+        and isinstance(no.value, ast.Attribute)
+        and no.value.attr in ("env", "environ")
+        and isinstance(no.slice, ast.Constant)
+    ):
+        return str(no.slice.value)
+    return None
+
+
+def _valores_por_padrao(script: str, env: str) -> list[tuple[str, bool]] | str:
+    """``[(valor, por_appid)]`` de cada lugar do script que põe a ``env``, ou por que não se lê.
+
+    ``por_appid`` é o lugar dentro de um ``if`` que pergunta pelo ``appid``: vale só para os
+    jogos da lista, e não para todo jogo.
+    """
+    try:
+        arvore = ast.parse(textwrap.dedent(script))
+    except SyntaxError as erro:
+        return f"{erro.msg}, linha {erro.lineno}"
+    achados: list[tuple[str, bool]] = []
+
+    def visitar(no: ast.AST, por_appid: bool) -> None:
+        if isinstance(no, ast.If):
+            dentro = por_appid or "appid" in ast.unparse(no.test).lower()
+            for filho in no.body:
+                visitar(filho, dentro)
+            for filho in no.orelse:
+                visitar(filho, por_appid)
+            return
+        valor: ast.AST | None = None
+        if isinstance(no, ast.Assign) and any(_nome_da_env_tocada(a) == env for a in no.targets):
+            valor = no.value
+        elif (
+            isinstance(no, ast.Call)
+            and isinstance(no.func, ast.Attribute)
+            and no.func.attr == "setdefault"
+            and isinstance(no.func.value, ast.Attribute)
+            and no.func.value.attr in ("env", "environ")
+            and len(no.args) > 1
+            and isinstance(no.args[0], ast.Constant)
+            and no.args[0].value == env
+        ):
+            valor = no.args[1]
+        if isinstance(valor, ast.Constant):
+            achados.append((str(valor.value), por_appid))
+        for filho in ast.iter_child_nodes(no):
+            visitar(filho, por_appid)
+
+    visitar(arvore, False)
+    return achados
+
+
+def _fala_da_versao_do_ge(pasta: Path, versao: tuple[int, int]) -> str | None:
+    """O que o script do GE instalado liga por padrão para o controle, lido no disco."""
+    nome = pasta.name
     if versao < GE_COM_A_PILHA_DO_CONTROLE:
         return (
             f"{nome} é anterior ao 11-4, que trouxe o alto-falante e a vibração do controle pelo "
             "som: o jogo nessa versão fica sem os dois"
         )
-    if versao > GE_ULTIMO_MEDIDO:
+    script = _texto_do_arquivo(pasta / "proton")
+    if not script:
+        return None
+    valores = _valores_por_padrao(script, ENV_DO_FALLBACK_XINPUT)
+    if isinstance(valores, str):
         return (
-            f"{nome} é posterior ao último GE que o Hefesto mediu (11-{GE_ULTIMO_MEDIDO[1]}): o "
-            "que essa versão liga por padrão para o controle não foi lido"
+            f"o script proton de {nome} não se lê ({valores}): o que ele liga por padrão para o "
+            "controle não foi lido"
         )
-    if versao > GE_ULTIMO_COM_LISTA_POR_APPID:
-        return (
-            f"{nome}: a lista por appid de PROTON_SONY_HIDRAW_XINPUT saiu e "
-            "PROTON_SONY_AUTO_XINPUT=1 vale para todo jogo com o Steam Input desligado, então o "
-            "controle virtual do Hefesto pode ganhar vaga XInput por cima da máscara escolhida "
-            f"(medido no script do {rotulo}, ainda sem rodada de jogo)"
-        )
-    return None
+    if ("1", False) not in valores:
+        return None
+    sem_lista = not any("XInput" in efeitos for efeitos in _trocas_por_appid(script).values())
+    return (
+        f"{nome}: o script põe {ENV_DO_FALLBACK_XINPUT}=1 para todo jogo com o Steam Input "
+        "desligado"
+        + (" (a lista por appid de PROTON_SONY_HIDRAW_XINPUT saiu)" if sem_lista else "")
+        + ", então o controle virtual do Hefesto pode ganhar vaga XInput por cima da máscara "
+        "escolhida (lido no script, ainda sem rodada de jogo)"
+    )
 
 
 def _o_mapa_dos_jogos(amb: Ambiente) -> dict[str, str]:
@@ -455,7 +509,7 @@ def _sonda_ge_por_versao(amb: Ambiente) -> Resultado:
     avisos = [
         aviso
         for p, v in instalados
-        for aviso in (_fala_da_versao_do_ge(p.name, v), _fala_das_trocas_do_ge(p, mapa, amb))
+        for aviso in (_fala_da_versao_do_ge(p, v), _fala_das_trocas_do_ge(p, mapa, amb))
         if aviso
     ]
     return Resultado(QUEBROU, "; ".join(avisos)) if avisos else Resultado(OK)
@@ -652,10 +706,14 @@ CONTRATOS: tuple[Contrato, ...] = (
         id="ge-por-versao",
         dono="proton",
         promessa=(
-            "o GE-Proton instalado está na faixa em que o Hefesto mediu o que o controle vê "
-            "(11-4 a 11-8), e a lista por appid do script não troca o controle de jogo nenhum"
+            "o GE-Proton instalado é do 11-4 em diante, o script dele não põe o fallback XInput "
+            "da Sony para todo jogo, e a lista por appid não troca o controle de jogo nenhum"
         ),
-        conferir="cat ~/.steam/steam/compatibilitytools.d/GE-Proton*/version",
+        conferir=(
+            "cat ~/.steam/steam/compatibilitytools.d/GE-Proton*/version; "
+            f"grep -n {ENV_DO_FALLBACK_XINPUT} "
+            "~/.steam/steam/compatibilitytools.d/GE-Proton*/proton"
+        ),
         sonda=_sonda_ge_por_versao,
         cobre=("cfg:GE-Proton*",),
     ),

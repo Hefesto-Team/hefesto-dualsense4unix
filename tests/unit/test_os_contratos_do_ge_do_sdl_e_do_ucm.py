@@ -7,9 +7,9 @@ alsa-ucm-conf 1.2.15 traz um UCM do DualSense que esconde os canais da háptica.
 são de mentira, numa Steam e num `/usr` de `tmp_path`: nada do que está instalado é lido.
 
 A MORDIDA: tirar de `docs/data/contratos-de-fora.csv` a linha de um dos quatro contratos
-reprova `test_o_censo_tem_a_linha_de_cada_contrato`; subir `GE_ULTIMO_MEDIDO` sem medir reprova
-`test_ge_depois_do_ultimo_medido_avisa`; ler a lista por appid só no jogo mapeado (sem o padrão
-`"0"`) reprova `test_o_padrao_da_steam_leva_a_lista_aos_jogos_sem_escolha`; pôr no
+reprova `test_o_censo_tem_a_linha_de_cada_contrato`; voltar a um teto de versão digitado
+reprova `test_ge_novo_sem_o_fallback_no_script_calado`; ler a lista por appid só no jogo mapeado
+(sem o padrão `"0"`) reprova `test_o_padrao_da_steam_leva_a_lista_aos_jogos_sem_escolha`; pôr no
 `install_ucm_dualsense.sh` um guarda que pula o nosso com o do sistema no disco reprova
 `test_o_roteiro_grava_o_nosso_mesmo_com_o_do_sistema`.
 """
@@ -134,8 +134,24 @@ def test_ge_dentro_da_faixa_calada(casa: _Casa, pasta: str) -> None:
     assert _linha(casa.amb, "ge-por-versao")[0] == "[ OK ]"
 
 
+_SCRIPT_COM_O_FALLBACK = """
+def setup(self, appid):
+    if appid in [
+        "1580240",
+    ]:
+        self.env.setdefault("PROTON_SONY_AUTO_XINPUT", "0")
+    self.env.setdefault("PROTON_SONY_AUTO_XINPUT", "1")
+"""
+
+_SCRIPT_SEM_O_FALLBACK = """
+def setup(self, appid):
+    if appid in ["1904"]:
+        self.env["PROTON_SONY_HIDRAW_XINPUT"] = "1"
+"""
+
+
 def test_ge_11_8_avisa_o_que_mudou(casa: _Casa) -> None:
-    casa.ge("GE-Proton11-8-x86_64")
+    casa.ge("GE-Proton11-8-x86_64", script=_SCRIPT_COM_O_FALLBACK)
     tag, mensagem = _linha(casa.amb, "ge-por-versao")
     assert tag == "[WARN]", mensagem
     assert "GE-Proton11-8-x86_64" in mensagem
@@ -144,10 +160,16 @@ def test_ge_11_8_avisa_o_que_mudou(casa: _Casa) -> None:
     assert "cat ~/.steam/steam/compatibilitytools.d/GE-Proton*/version" in mensagem
 
 
-def test_ge_depois_do_ultimo_medido_avisa(casa: _Casa) -> None:
-    casa.ge("GE-Proton11-9-x86_64")
+def test_ge_novo_sem_o_fallback_no_script_calado(casa: _Casa) -> None:
+    casa.ge("GE-Proton11-99-x86_64", script=_SCRIPT_SEM_O_FALLBACK)
+    assert _linha(casa.amb, "ge-por-versao")[0] == "[ OK ]"
+
+
+def test_o_fallback_e_lido_no_script_e_nao_no_numero(casa: _Casa) -> None:
+    casa.ge("GE-Proton11-99-x86_64", script=_SCRIPT_COM_O_FALLBACK)
     tag, mensagem = _linha(casa.amb, "ge-por-versao")
-    assert tag == "[WARN]" and "posterior ao último GE que o Hefesto mediu" in mensagem, mensagem
+    assert tag == "[WARN]" and "PROTON_SONY_AUTO_XINPUT=1" in mensagem, mensagem
+    assert "posterior" not in mensagem, mensagem
 
 
 def test_ge_antes_da_pilha_do_controle_avisa(casa: _Casa) -> None:
@@ -157,7 +179,7 @@ def test_ge_antes_da_pilha_do_controle_avisa(casa: _Casa) -> None:
 
 
 def test_ge_com_nome_que_nao_diz_a_versao_le_o_arquivo_version(casa: _Casa) -> None:
-    casa.ge("GE-Proton-meu", version="1789520217 GE-Proton11-9\n")
+    casa.ge("GE-Proton-meu", version="1789520217 GE-Proton11-3\n")
     assert _linha(casa.amb, "ge-por-versao")[0] == "[WARN]"
     casa.ge("GE-Proton-outro", version="lixo\n")
     assert "GE-Proton-outro" not in _linha(casa.amb, "ge-por-versao")[1]
@@ -165,7 +187,7 @@ def test_ge_com_nome_que_nao_diz_a_versao_le_o_arquivo_version(casa: _Casa) -> N
 
 def test_o_ge_bom_ao_lado_nao_apaga_o_aviso_do_outro(casa: _Casa) -> None:
     casa.ge("GE-Proton11-7-x86_64")
-    casa.ge("GE-Proton11-8-x86_64")
+    casa.ge("GE-Proton11-8-x86_64", script=_SCRIPT_COM_O_FALLBACK)
     tag, mensagem = _linha(casa.amb, "ge-por-versao")
     assert tag == "[WARN]" and "GE-Proton11-8-x86_64" in mensagem, mensagem
     assert "GE-Proton11-7-x86_64" not in mensagem, mensagem
@@ -229,9 +251,9 @@ def test_a_raiz_da_steam_por_link_nao_dobra_o_aviso(tmp_path: Path) -> None:
     real.parent.mkdir(parents=True)
     casa.steam.rename(real)
     casa.steam.symlink_to(real)
-    casa.ge("GE-Proton11-9-x86_64")
+    casa.ge("GE-Proton11-3-x86_64")
     mensagem = _linha(casa.amb, "ge-por-versao")[1]
-    assert mensagem.count("GE-Proton11-9-x86_64") == 1, mensagem
+    assert mensagem.count("GE-Proton11-3-x86_64") == 1, mensagem
 
 
 def test_sem_ge_ou_sem_steam_e_informacao(casa: _Casa, tmp_path: Path) -> None:
