@@ -512,6 +512,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "hefesto-btusb-no-autosuspend.conf": (
         "install", "a regra do btusb no modprobe.d; o exame e o doctor só leem"),
     ".hefesto-proton-pin.json": ("install", "o manifesto do Proton que o install extrai"),
+    "ultima-do-ge.json": ("install", "a GE-Proton mais nova consultada e conferida no cache"),
     "mods": (CASA, "o código e os dados das modificações (codigo-das-modificacoes e "
              "dados-das-modificacoes); não identificam controle"),
     "mods.json": (CASA, "o registro das modificações instaladas e ligadas"),

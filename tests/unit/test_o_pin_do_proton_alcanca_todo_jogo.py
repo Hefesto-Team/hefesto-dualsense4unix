@@ -57,6 +57,8 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         raise AssertionError("a régua foi à rede")
 
     monkeypatch.setattr(pp, "baixar_a_release", _sem_rede)
+    monkeypatch.setattr(pp, "baixar_a_ultima_do_ge",
+                        lambda *_a, **_k: pp.Atualizacao("nao_consultado"))
     return casa
 
 

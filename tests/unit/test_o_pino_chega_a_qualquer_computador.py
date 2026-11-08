@@ -151,6 +151,8 @@ def trava_da_rede(monkeypatch: pytest.MonkeyPatch) -> list[object]:
 
     monkeypatch.setattr(socket.socket, "connect", _conectar)
     monkeypatch.setattr(socket, "getaddrinfo", _resolver)
+    monkeypatch.setattr(pp, "baixar_a_ultima_do_ge",
+                        lambda *_a, **_k: pp.Atualizacao("nao_consultado"))
     yield pedidos
     assert not pedidos, f"o teste do pino pediu rede: {pedidos}"
 
