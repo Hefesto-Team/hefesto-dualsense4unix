@@ -275,7 +275,10 @@ class _Biquad:
 
 
 class FiltroDoCorpo:
-    """O som do jogo (PCM estéreo, s16le) vira o grave de 40 a 220 Hz, mono, com ganho e teto."""
+    """O som do jogo (PCM estéreo, s16le) vira o grave de 40 a 220 Hz, mono, com ganho.
+
+    Sem teto: o teto é do :class:`TetoDoCorpo` de cada controle, que limita sem quadrar a onda.
+    """
 
     def __init__(self, taxa: int = TAXA) -> None:
         self.taxa = taxa
@@ -291,9 +294,78 @@ class FiltroDoCorpo:
         saida = array("f", bytes(4 * (len(quadros) // 2)))
         for i in range(len(saida)):
             mono = (quadros[2 * i] + quadros[2 * i + 1]) / (2.0 * _ESCALA_DO_PCM)
-            y = GANHO_DO_CORPO * self._baixo.passar(self._alto.passar(mono))
-            saida[i] = max(-TETO_DO_CORPO, min(TETO_DO_CORPO, y))
+            saida[i] = GANHO_DO_CORPO * self._baixo.passar(self._alto.passar(mono))
         return saida
+
+
+FRACAO_DO_SUSTO = 0.7
+SOLTURA_DO_SUSTO_S = 3.0
+FREQUENCIA_DA_SOLTURA_HZ = 50
+
+
+def teto_do_susto(fator: float) -> float:
+    """O teto do corpo antes do ganho ``fator``: 70% do pico que sai hoje, que o PCM corta em 1."""
+    pico_de_hoje = TETO_DO_CORPO if fator <= 0 else min(TETO_DO_CORPO, 1.0 / fator)
+    return FRACAO_DO_SUSTO * pico_de_hoje
+
+
+def _curva_da_soltura(fracao: float) -> float:
+    return 0.5 * (1.0 + math.cos(math.pi * min(1.0, max(0.0, fracao))))
+
+
+class TetoDoCorpo:
+    """O teto do Som no corpo de um controle: o som alto sai no teto, e o susto solta devagar.
+
+    O ganho cai na hora em que o grave passa do teto e volta em :data:`SOLTURA_DO_SUSTO_S`, sem
+    quadrar a onda. Quando o som alto acaba, uma cauda grave segura o nível do teto e desce até
+    zero em :data:`SOLTURA_DO_SUSTO_S`, sem passar do teto somada ao que o jogo ainda toca.
+    """
+
+    def __init__(self, teto: float = FRACAO_DO_SUSTO * TETO_DO_CORPO, taxa: int = TAXA) -> None:
+        self.teto = teto
+        self.taxa = taxa
+        self._pico = 0.0
+        self._ganho = 1.0
+        self._desde_o_alto: int | None = None
+        self._fase = 0.0
+
+    @property
+    def soltando(self) -> bool:
+        """A cauda do susto ainda soa."""
+        return self._desde_o_alto is not None
+
+    def passar(self, amostras: array[float]) -> array[float]:
+        """O pedaço sob o teto, com a cauda do susto somada enquanto solta."""
+        n = len(amostras)
+        if not n:
+            return array("f")
+        teto = max(0.0, self.teto)
+        entrada = max(map(abs, amostras))
+        self._pico = max(entrada, self._pico * math.exp(-n / (self.taxa * SOLTURA_DO_SUSTO_S)))
+        alvo = teto / self._pico if self._pico > teto else 1.0
+        antes, self._ganho = self._ganho, alvo
+        if alvo <= antes:
+            saida = array("f", [x * alvo for x in amostras])
+        else:
+            passo = (alvo - antes) / n
+            saida = array("f", [x * (antes + passo * i) for i, x in enumerate(amostras)])
+        if entrada > teto:
+            self._desde_o_alto = 0
+            return saida
+        if self._desde_o_alto is None:
+            return saida
+        self._desde_o_alto += n
+        fracao = self._desde_o_alto / (self.taxa * SOLTURA_DO_SUSTO_S)
+        if fracao >= 1.0:
+            self._desde_o_alto = None
+            return saida
+        cauda = teto * _curva_da_soltura(fracao) - max(map(abs, saida))
+        if cauda <= 0.0:
+            return saida
+        giro = 2.0 * math.pi * FREQUENCIA_DA_SOLTURA_HZ / self.taxa
+        fase = self._fase
+        self._fase = (fase + giro * n) % (2.0 * math.pi)
+        return array("f", [x + cauda * math.sin(fase + giro * i) for i, x in enumerate(saida)])
 
 
 GRAO_MS = 6
@@ -556,6 +628,8 @@ __all__ = [
     "ESTALO",
     "FORMAS",
     "FORMAS_LONGAS",
+    "FRACAO_DO_SUSTO",
+    "FREQUENCIA_DA_SOLTURA_HZ",
     "GANHO_DO_CORPO",
     "GANHO_DO_GRAO_DO_TIMBRE",
     "GRAO",
@@ -574,6 +648,7 @@ __all__ = [
     "SEM_EFEITO",
     "SEM_GRAO",
     "SEM_TIMBRE",
+    "SOLTURA_DO_SUSTO_S",
     "SOM_NO_CORPO",
     "TAXA",
     "TETO_DO_CORPO",
@@ -582,6 +657,7 @@ __all__ = [
     "Forma",
     "GeradorDoGrao",
     "GeradorDoMotorDeEpoca",
+    "TetoDoCorpo",
     "amostras",
     "ciclos_do_timbre",
     "escolha_que_vale",
@@ -590,5 +666,6 @@ __all__ = [
     "forma_do_estilo",
     "forma_que_vale",
     "tem_estilo",
+    "teto_do_susto",
     "timbre_do_rumble",
 ]

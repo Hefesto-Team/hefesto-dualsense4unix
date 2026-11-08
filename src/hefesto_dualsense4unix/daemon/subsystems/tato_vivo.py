@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.core.events import EventTopic, tem_assinante
 from hefesto_dualsense4unix.core.physical_report_reader import TRIGGER_ESTADO_DISPAROU
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.caderno_do_tique import a_resposta_chegou, no_caderno
+from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
 from hefesto_dualsense4unix.daemon.lifecycle import (
     MODO_DUALSENSE,
     MODO_NATIVO,
@@ -3893,6 +3894,7 @@ class Passo:
         self._aberta_em: dict[str, float | None] = {}
         self._filtro_do_corpo = formas_de_haptica.FiltroDoCorpo()
         self._corpo: deque[Any] = deque(maxlen=CORPO_MAX_PEDACOS)
+        self._tetos_do_corpo: dict[str, formas_de_haptica.TetoDoCorpo] = {}
         self._graos: dict[str, formas_de_haptica.GeradorDoGrao] = {}
         self._motores_de_epoca: dict[str, formas_de_haptica.GeradorDoMotorDeEpoca] = {}
         self._continua_em: dict[str, float] = {}
@@ -4010,16 +4012,24 @@ class Passo:
                 self._recusar(uniq, RECUSA_SEM_APARELHO)
             return
         fator = fator_da_cena(self.daemon)
-        if fator != 1.0:
-            amostras = array("f", [x * fator for x in amostras])
+        tocam = {*donos, *discretos}
+        self._tetos_do_corpo = {u: t for u, t in self._tetos_do_corpo.items() if u in tocam}
         for uniq in donos:
+            meu = self._sob_o_teto(uniq, amostras, fator)
             self._cair_pelo_motor(
-                uniq, amostras, self._entregar(levar, uniq, amostras, com_sinal), com_sinal)
-        if discretos:
-            metade = array("f", [x * FORCA_DO_CORPO_DISCRETO for x in amostras])
-            for uniq in discretos:
-                self._cair_pelo_motor(
-                    uniq, metade, self._entregar(levar, uniq, metade, com_sinal), com_sinal)
+                uniq, meu, self._entregar(levar, uniq, meu, com_sinal), com_sinal)
+        for uniq in discretos:
+            metade = self._sob_o_teto(uniq, amostras, fator * FORCA_DO_CORPO_DISCRETO)
+            self._cair_pelo_motor(
+                uniq, metade, self._entregar(levar, uniq, metade, com_sinal), com_sinal)
+
+    def _sob_o_teto(self, uniq: str, amostras: Any, forca: float) -> Any:
+        """O corpo de ``uniq`` sob o teto do ganho dele, na ``forca`` da cena: o susto sai a 70%
+        do pico de hoje e solta devagar."""
+        teto = self._tetos_do_corpo.setdefault(uniq, formas_de_haptica.TetoDoCorpo())
+        teto.teto = formas_de_haptica.teto_do_susto(GANHO.fator(uniq))
+        meu = teto.passar(amostras)
+        return meu if forca == 1.0 else array("f", [x * forca for x in meu])
 
     def _cair_pelo_motor(self, uniq: str, amostras: Any, desfecho: Any, com_sinal: bool) -> None:
         """O tocador segue acordando a ponte; a queda ouve quem pode sentir pelo motor."""

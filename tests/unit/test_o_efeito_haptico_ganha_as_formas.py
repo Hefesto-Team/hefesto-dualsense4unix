@@ -301,8 +301,9 @@ def test_o_filtro_deixa_passar_o_grave_e_barra_o_agudo_e_o_infragrave() -> None:
 
 
 def test_o_corpo_nunca_passa_do_teto() -> None:
-    saida = fh.FiltroDoCorpo().processar(_pcm(100, 9600, amplitude=1.0))
-    assert max(abs(x) for x in saida) <= fh.TETO_DO_CORPO + 1e-9
+    teto = fh.TetoDoCorpo()
+    saida = teto.passar(fh.FiltroDoCorpo().processar(_pcm(100, 9600, amplitude=1.0)))
+    assert max(abs(x) for x in saida) <= teto.teto + 1e-6 < fh.TETO_DO_CORPO
 
 
 def test_meio_quadro_solto_no_fim_do_pedaco_e_descartado() -> None:
