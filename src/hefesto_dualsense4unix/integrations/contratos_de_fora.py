@@ -453,8 +453,8 @@ def _valores_por_padrao(script: str, env: str) -> list[tuple[str, bool]] | str:
             valor = no.args[1]
         if isinstance(valor, ast.Constant):
             achados.append((str(valor.value), por_appid))
-        for filho in ast.iter_child_nodes(no):
-            visitar(filho, por_appid)
+        for abaixo in ast.iter_child_nodes(no):
+            visitar(abaixo, por_appid)
 
     visitar(arvore, False)
     return achados
