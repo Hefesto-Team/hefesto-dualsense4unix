@@ -317,8 +317,10 @@ class TetoDoCorpo:
     """O teto do Som no corpo de um controle: o som alto sai no teto, e o susto solta devagar.
 
     O ganho cai na hora em que o grave passa do teto e volta em :data:`SOLTURA_DO_SUSTO_S`, sem
-    quadrar a onda. Quando o som alto acaba, uma cauda grave segura o nível do teto e desce até
-    zero em :data:`SOLTURA_DO_SUSTO_S`, sem passar do teto somada ao que o jogo ainda toca.
+    quadrar a onda. O som alto é o que passa do pico de antes (o teto sobre
+    :data:`FRACAO_DO_SUSTO`): quando ele acaba, uma cauda grave segura o nível do teto e desce até
+    zero em :data:`SOLTURA_DO_SUSTO_S`, sem passar do teto somada ao que o jogo ainda toca. O
+    grave que nunca gritou não ganha cauda.
     """
 
     def __init__(self, teto: float = FRACAO_DO_SUSTO * TETO_DO_CORPO, taxa: int = TAXA) -> None:
@@ -349,7 +351,7 @@ class TetoDoCorpo:
         else:
             passo = (alvo - antes) / n
             saida = array("f", [x * (antes + passo * i) for i, x in enumerate(amostras)])
-        if entrada > teto:
+        if entrada * FRACAO_DO_SUSTO > teto:
             self._desde_o_alto = 0
             return saida
         if self._desde_o_alto is None:

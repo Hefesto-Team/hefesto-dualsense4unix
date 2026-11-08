@@ -11,7 +11,11 @@ MORDIDAS:
   ``test_o_susto_sai_a_setenta_por_cento_do_pico_de_hoje_em_todo_ganho`` reprova: o pico volta
   a 100%;
 - troque o ganho do ``TetoDoCorpo.passar`` por ``max(-teto, min(teto, x))`` e
-  ``test_o_susto_baixa_o_ganho_sem_cravar_a_onda_no_teto`` reprova: a onda volta a quadrar.
+  ``test_o_susto_baixa_o_ganho_sem_cravar_a_onda_no_teto`` reprova: a onda volta a quadrar;
+- troque ``entrada * FRACAO_DO_SUSTO > teto`` por ``entrada > teto`` e
+  ``test_o_grave_que_nunca_gritou_nao_ganha_cauda`` reprova: o vão da batida zumbe;
+- tire a limpeza de ``_tetos_do_corpo`` do ``Passo._levar_o_corpo`` e
+  ``test_o_susto_nao_sobrevive_ao_efeito_desligado`` reprova: a cauda volta ao religar.
 """
 from __future__ import annotations
 
@@ -62,19 +66,40 @@ class _Alto:
         return dc.DesfechoDoCorpo(None)
 
 
-def _tocar(monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> dict[str, list[float]]:
+def _passo(monkeypatch: pytest.MonkeyPatch) -> tuple[tv.Passo, _Alto]:
     monkeypatch.setattr(tv.GANHO, "fator", lambda uniq: FATORES[uniq])
     alto = _Alto()
     motor = tv.TatoVivo([])
     motor.escolhas = {norm_mac(u): fh.SOM_NO_CORPO for u in P}
     daemon = SimpleNamespace(_alto_falante_subsystem=alto, store=state_store.StateStore())
-    passo = tv.Passo(daemon, motor)
-    passo.receita_vigente = tv.Receita(som_no_corpo_escolhido=True)
+    return tv.Passo(daemon, motor), alto
+
+
+def _levar(passo: tv.Passo, pcm: bytes, uniqs: tuple[str, ...] = P, ligado: bool = True) -> None:
+    passo.receita_vigente = tv.Receita(som_no_corpo_escolhido=ligado)
     passo_do_pcm = QUADROS_DO_TIQUE * 4
     for i in range(0, len(pcm), passo_do_pcm):
         passo.alimentar_o_corpo(pcm[i:i + passo_do_pcm])
-        passo._levar_o_corpo(passo.receita_vigente, P, lambda _u: _XBOX)
+        passo._levar_o_corpo(passo.receita_vigente, uniqs, lambda _u: _XBOX)
+
+
+def _tocar(monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> dict[str, list[float]]:
+    passo, alto = _passo(monkeypatch)
+    _levar(passo, pcm)
     return alto.saida
+
+
+def _batida(nivel: float, segundos: float = 4.0) -> bytes:
+    quadros = array("h")
+    for i in range(round(fh.TAXA * segundos)):
+        t = i / fh.TAXA
+        v = int(32767 * nivel * math.sin(2.0 * math.pi * 80 * t)) if t % 0.5 < 0.15 else 0
+        quadros.extend((v, v))
+    return quadros.tobytes()
+
+
+def _silencio(segundos: float) -> bytes:
+    return bytes(4 * round(fh.TAXA * segundos))
 
 
 def _no_controle(amostras: list[float], fator: float) -> list[float]:
@@ -171,3 +196,40 @@ def test_o_grave_abaixo_do_teto_passa_sem_mudar(monkeypatch: pytest.MonkeyPatch)
     picos = {u: max(map(abs, _no_controle(saida[u], f))) for u, f in FATORES.items()}
     for u, f in FATORES.items():
         assert picos[u] == pytest.approx(max(map(abs, esperado)) * f, rel=1e-4), "o ganho age"
+
+
+def test_o_grave_que_nunca_gritou_nao_ganha_cauda(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Uma batida que passava limpa sai no teto, e o vão entre as batidas continua mudo."""
+    pcm = _batida(0.15)
+    grave = fh.FiltroDoCorpo().processar(pcm)
+    assert fh.teto_do_susto(1.5) < max(map(abs, grave)) < min(fh.TETO_DO_CORPO, 1.0 / 1.5)
+    saida = _tocar(monkeypatch, pcm)[P[1]]
+    vaos = [abs(x) for i, x in enumerate(saida) if i >= fh.TAXA and (i / fh.TAXA) % 0.5 > 0.25]
+    assert max(vaos) < 0.01
+
+
+def test_o_susto_nao_sobrevive_ao_efeito_desligado(
+        monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> None:
+    """Desligado no meio da cauda, o Som no corpo religa sem o susto velho."""
+    passo, alto = _passo(monkeypatch)
+    fim = round(fh.TAXA * (SILENCIO_S + ESTRONDO_S + 0.1)) * 4
+    _levar(passo, pcm[:fim])
+    _levar(passo, _silencio(0.5), ligado=False)
+    antes = {u: len(alto.saida[u]) for u in P}
+    _levar(passo, _silencio(1.0))
+    for uniq in P:
+        assert max(map(abs, alto.saida[uniq][antes[uniq]:]), default=0.0) < 0.01, uniq
+
+
+def test_o_susto_de_um_controle_nao_vaza_para_quem_chega(
+        monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> None:
+    """O controle que chega depois do estrondo não herda a cauda nem o ganho baixo do outro."""
+    passo, alto = _passo(monkeypatch)
+    fim = round(fh.TAXA * (SILENCIO_S + ESTRONDO_S)) * 4
+    _levar(passo, pcm[:fim] + _silencio(0.3), uniqs=(P[0],))
+    _levar(passo, _batida(0.02, segundos=1.0), uniqs=P[:2])
+    esperado = fh.FiltroDoCorpo().processar(pcm[:fim] + _silencio(0.3) + _batida(0.02, 1.0))
+    chegou = len(alto.saida[P[1]])
+    assert chegou == fh.TAXA
+    assert alto.saida[P[1]] == pytest.approx(list(esperado[-chegou:]), abs=1e-6)
+    assert max(map(abs, alto.saida[P[0]][-chegou:])) > 0.2

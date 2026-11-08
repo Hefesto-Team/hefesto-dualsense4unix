@@ -3985,6 +3985,8 @@ class Passo:
             except IndexError:
                 break
         if not pedacos:
+            if not (receita.som_no_corpo_escolhido or self._corpo_discreto):
+                self._tetos_do_corpo = {}
             return
         com_sinal = any(sinal for _pedaco, sinal in pedacos)
         donos = []
@@ -4000,6 +4002,8 @@ class Passo:
             elif motivo is not None:
                 self._recusar(uniq, motivo)
         discretos = [u for u in uniqs if u in self._corpo_discreto and u not in donos]
+        tocam = {*donos, *discretos}
+        self._tetos_do_corpo = {u: t for u, t in self._tetos_do_corpo.items() if u in tocam}
         if not donos and not discretos:
             return
         amostras = array("f")
@@ -4012,8 +4016,6 @@ class Passo:
                 self._recusar(uniq, RECUSA_SEM_APARELHO)
             return
         fator = fator_da_cena(self.daemon)
-        tocam = {*donos, *discretos}
-        self._tetos_do_corpo = {u: t for u, t in self._tetos_do_corpo.items() if u in tocam}
         for uniq in donos:
             meu = self._sob_o_teto(uniq, amostras, fator)
             self._cair_pelo_motor(
