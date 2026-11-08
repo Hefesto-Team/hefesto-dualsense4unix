@@ -2,9 +2,12 @@
 
 O disco é o de verdade, no lar isolado da suíte: a biblioteca da Steam com um `appmanifest` e
 quatro perfis (um de jogo instalado, um de jogo desinstalado, o ativo de jogo desinstalado e um sem
-jogo). O arquivo do desinstalado fica no disco e volta à lista quando o jogo volta.
+jogo). O arquivo do desinstalado fica no disco e volta à lista quando o jogo volta. O ativo de jogo
+desinstalado também sai (O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA-01, 08/11/2026), e o
+Freestyle assume pelo `profile.switch`, pedido uma vez.
 
-AS MORDIDAS: troque o `_so_os_instalados` do `pacote` pelos perfis do disco, e o desinstalado volta;
+AS MORDIDAS: ponha a exceção do ativo de volta no `_so_os_instalados`, e o ativo fica;
+troque o `_so_os_instalados` do `pacote` pelos perfis do disco, e o desinstalado volta;
 troque o do `_alvo_do_editor`, e o editor abre no perfil que a lista não mostra; tire o
 `bool(foto.nomes)`, e a leitura da Steam que falha esconde todo jogo do usuário.
 """
@@ -19,6 +22,9 @@ from hefesto_dualsense4unix.integrations import jogos_locais
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
 
+PEDIDOS: list[tuple[str, dict[str, Any]]] = []
+
+
 @pytest.fixture(autouse=True)
 def _memoria_limpa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -30,6 +36,11 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     for nome in ("_NOMES_DOS_JOGOS", "_FORA_DO_DISCO"):
         monkeypatch.setattr(a10_perfis, nome, None, raising=False)
     monkeypatch.setattr(jogos_locais, "_NOMES_DAS_JANELAS", None, raising=False)
+    monkeypatch.setattr(a10_perfis, "_PADRAO_PEDIDO", "", raising=False)
+    PEDIDOS.clear()
+    monkeypatch.setattr(a10_perfis.fios, "soltar", lambda nome, alvo, *a: alvo(*a))
+    monkeypatch.setattr(a10_perfis.ponte, "resultado",
+                        lambda metodo, timeout=None, **params: PEDIDOS.append((metodo, params)))
 
 
 def _steamapps() -> Path:
@@ -72,7 +83,7 @@ def test_a_lista_traz_o_instalado_o_ativo_e_o_sem_jogo_e_o_arquivo_fica() -> Non
 
     _instalar("9100001", "Jogo Instalado")
     _perfis()
-    assert _nomes() == ["Ativo fora", "Instalado", "Sem jogo"]
+    assert _nomes() == ["Instalado", "Sem jogo"]
     assert load_profile("Desinstalado").name == "Desinstalado"
 
 
@@ -156,3 +167,39 @@ def test_a_leitura_da_steam_que_falha_nao_esconde_nada(monkeypatch: pytest.Monke
 
     monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", falha)
     assert _nomes() == ["Ativo fora", "Desinstalado", "Instalado", "Sem jogo"]
+
+
+def test_o_ativo_de_jogo_desinstalado_sai_e_o_padrao_assume_uma_vez() -> None:
+    """Prova da D-0811-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA."""
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    assert "Ativo fora" not in _nomes()
+    assert PEDIDOS == [("profile.switch", {"name": "Freestyle"})]
+    _nomes()
+    assert len(PEDIDOS) == 1
+
+
+def test_o_ativo_instalado_ou_sem_jogo_nao_troca_nada() -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    for ativo in ("Instalado", "Sem jogo"):
+        assert ativo in _nomes(valendo=ativo)
+    assert PEDIDOS == []
+
+
+def test_sem_a_biblioteca_da_steam_nada_se_troca() -> None:
+    _perfis()
+    assert "Ativo fora" in _nomes()
+    assert PEDIDOS == []
+
+
+def test_com_a_leitura_da_steam_falhando_nada_se_troca(monkeypatch: pytest.MonkeyPatch) -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+
+    def falha() -> dict[str, str]:
+        raise OSError("biblioteca ilegível")
+
+    monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", falha)
+    assert "Ativo fora" in _nomes()
+    assert PEDIDOS == []
