@@ -39,18 +39,23 @@ def _corpo_da_funcao(texto: str, nome: str) -> str:
 
 
 def _corpo_expandido() -> str:
-    """O corpo da função com os `local X=/caminho` já substituídos."""
-    corpo = _corpo_da_funcao(texto_do_instalador(), FUNCAO)
+    """O corpo da função com os `local X=/caminho` já substituídos, mais o do ajudante que grava a
+    regra do sudo, com a regra que a função passa."""
+    texto = texto_do_instalador()
+    corpo = _corpo_da_funcao(texto, FUNCAO)
     for nome, valor in re.findall(r'^\s*local (\w+)=([^\s"]+)$', corpo, re.M):
         corpo = corpo.replace("${" + nome + "}", valor)
+    for regra in re.findall(r'_gravar_regra_do_sudo "\$\{\w+\}" "([^"]+)"', corpo):
+        ajudante = _corpo_da_funcao(texto, "_gravar_regra_do_sudo")
+        corpo += ajudante.replace("${_regra}", regra)
     return corpo
 
 
 def _caminhos_gravados() -> set[str]:
-    """Só o que o install de fato ESCREVE — as linhas de `install -D`."""
+    """Só o que o install de fato ESCREVE — as linhas de `install -D` e a troca da regra."""
     achados: set[str] = set()
     for linha in _corpo_expandido().splitlines():
-        if "install -D" not in linha:
+        if "install -D" not in linha and "mv -f" not in linha:
             continue
         achados.update(re.findall(r"/(?:etc|usr/local)/[\w./-]+", linha))
     return achados
@@ -173,7 +178,7 @@ def test_nada_vai_para_o_sudoers_sem_passar_pelo_visudo() -> None:
     corpo = _corpo_expandido()
     assert "visudo" in corpo, "a função não confere o sudoers antes de gravá-lo"
     posicao_visudo = corpo.index("visudo -cqf")
-    grava = re.search(rf"install -Dm440[^\n]*{re.escape(REGRA)}", corpo)
+    grava = re.search(rf"mv -f[^\n]*{re.escape(REGRA)}", corpo)
     assert grava is not None, "a função não grava a regra em " + REGRA
     posicao_grava = grava.start()
     assert posicao_visudo < posicao_grava, "o visudo -c roda DEPOIS da gravação"
@@ -189,7 +194,8 @@ def test_o_install_confere_no_proprio_sudo_e_nao_so_no_disco() -> None:
 def test_o_install_grava_o_sudoers_com_o_modo_que_o_sudo_exige() -> None:
     """0440 root:root. Com qualquer outro modo o sudo ignora o arquivo calado."""
     corpo = _corpo_expandido()
-    assert re.search(rf"install -Dm440 -o root -g root .*{re.escape(REGRA)}", corpo)
+    assert re.search(r'install -Dm440 -o root -g root "\$\{_rascunho\}" "\$\{_novo\}"', corpo)
+    assert 'local _novo="${_regra%/*}/.${_regra##*/}.novo"' in corpo
     assert re.search(rf"install -Dm755 -o root -g root .*{re.escape(ALVO)}", corpo)
 
 
