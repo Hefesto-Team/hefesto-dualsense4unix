@@ -199,3 +199,23 @@ def test_o_ensaio_acha_o_kernel_na_arvore_extraida(tmp_path: Path) -> None:
     (tmp_path / "lib" / "modules" / "9.9.8-1-generic").mkdir()
     with pytest.raises(ValueError, match="esperava um kernel"):
         ensaio.achar_o_kernel(tmp_path)
+
+
+def test_o_fonte_do_kernel_viaja_byte_a_byte_pelo_commit() -> None:
+    """D-0811-O-KERNEL-NOVO-CHEGA-COM-AS-CURAS-DA-CASA: o commit não troca palavra do fonte."""
+    if shutil.which("git") is None or not (RAIZ / ".git").exists():
+        pytest.skip("fora de uma árvore do git")
+    fixados = sorted(
+        str(p.relative_to(RAIZ))
+        for p in DKMS.rglob("*")
+        if p.is_file() and p.suffix in {".c", ".h", ".patch"}
+    )
+    assert fixados
+    feito = subprocess.run(
+        ["git", "-C", str(RAIZ), "check-attr", "ia-literal", "--", *fixados],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    soltos = [linha for linha in feito.stdout.splitlines() if not linha.endswith(": set")]
+    assert not soltos, soltos

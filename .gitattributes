@@ -29,3 +29,7 @@
 *.mo    binary
 # Dados de ensaio comprimidos. Idem.
 *.gz    binary
+
+assets/dkms/**/*.c       ia-literal
+assets/dkms/**/*.h       ia-literal
+assets/dkms/**/*.patch   ia-literal

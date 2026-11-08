@@ -158,7 +158,7 @@ struct ps_led_info {
 
 /*
  * HEFESTO / MIC-NAO-E-BOTAO-01: bit 1 do byte 1 de um 0x31 de Bluetooth.
- * Ligado, o report carrega quadros de audio agente do microfone -- nao estado
+ * Ligado, o report carrega quadros de audio Opus do microfone -- nao estado
  * de gamepad. Mesmo id, mesmo tamanho e CRC valido nos dois casos.
  */
 #define DS_INPUT_BT_FLAG_AUDIO 0x02
@@ -1622,7 +1622,7 @@ static int dualsense_parse_report(struct ps_device *ps_dev, struct hid_report *r
 		/*
 		 * HEFESTO / MIC-NAO-E-BOTAO-01 (10/09/2026): quando o microfone
 		 * do controle esta no ar, o firmware manda os quadros de audio
-		 * agente com o MESMO reportID 0x31, o MESMO tamanho de 78 bytes e
+		 * Opus com o MESMO reportID 0x31, o MESMO tamanho de 78 bytes e
 		 * um CRC-32 valido. Nada acima distingue os dois -- so o bit 1
 		 * do byte 1, que o firmware liga nos reports de AUDIO.
 		 *
