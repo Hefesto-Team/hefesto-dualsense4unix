@@ -428,22 +428,26 @@
   .fita-linha .perfil-ativo{margin-left:auto}
 
   .selo.nova{background:var(--purple);color:var(--app-bg)}
-  .selo.sozinho{background:transparent;color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+  .at-cab > span:last-child{display:flex;align-items:center;gap:8px}
+  .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
+  .at-cab .btn{height:28px;padding:0 12px;font-size:12px}
+  .at-cab .btn.verde.cheio{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;text-decoration:none}
+  .at-cab .btn.verde.cheio:hover{background:color-mix(in srgb,var(--green) 75%,#fff)}
+  .at-cab .btn .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;margin-left:6px}
+  .prazo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
+  .prazo .pm{width:24px;height:24px;border-radius:6px;border:1px solid var(--linha);background:var(--app-bg);
+             color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
+  .prazo .pm:hover{border-color:var(--comment)}
+  .prazo .dias{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
+  .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 22px;align-items:start}
   .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap}
   .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px}
   .at-grade .saude .ver .nv{color:var(--fg)}
-  body .sec-rot.sr-atualiza{margin-bottom:8px !important}
-  .at-acoes{display:flex;align-items:center;gap:10px;margin-top:8px}
-  .at-acoes .cadeado{width:auto;border-radius:999px;padding:0 16px 0 12px;font-weight:600}
-  .at-acoes .empurra{margin-left:auto}
-  .prazo{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg);white-space:nowrap}
-  .prazo .pm{width:28px;height:28px;border-radius:6px;border:1px solid var(--linha);background:var(--app-bg);
-             color:var(--fg);font:600 14px/1 'JetBrains Mono',monospace;cursor:pointer}
-  .prazo .pm:hover{border-color:var(--comment)}
-  .prazo .dias{min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  .btn.verde.cheio{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;text-decoration:none}
-  .btn.verde.cheio:hover{background:color-mix(in srgb,var(--green) 75%,#fff);color:var(--app-bg)}
-  .btn.verde.cheio .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;margin-left:6px}
+  .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
+  .at-marca{width:16px;height:16px;accent-color:var(--pink);margin:0;flex:0 0 16px;cursor:pointer}
+  .atualiza:not(:has(.at-cab .cadeado.ligada)) .at-marca{display:none}
+  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .txt,
+  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .ver{color:var(--texto-mudo)}
 </style>
 <style id="base-comum">
 [data-dica]{cursor:help}
@@ -682,35 +686,32 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
           </div>
         </div>
 
-        <div class="sec-rot sr-status3 sec-alta sr-atualiza">
-          <span data-dica="O Hefesto mantém atualizado o que ele instala no sistema, nunca com jogo aberto, e guarda a versão anterior">Atualizações</span>
+        <div class="atualiza">
+        <div class="sec-rot sr-log sec-alta at-cab">
+          <span>Atualizações</span>
+          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span><button class="btn" data-gesto="versoes-anteriores">Versões anteriores</button><a class="btn verde cheio" href="a-pergunta-da-atualizacao.html" data-gesto="ver-atualizacoes">Ver atualizações<span class="n" data-campo="atualizacoes-novas">4</span></a></span>
         </div>
-        <div class="avancadas at-grade" data-campo="atualizacoes-lista" data-hef-alvo="html">
+        <div class="at-grade" data-campo="atualizacoes-lista" data-hef-alvo="html">
           <div class="col-lista">
-            <div class="saude"><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="O próprio Hefesto: 0.9.5.1 → 0.9.5.2"><span>Hefesto</span></span><span class="ver"><span class="seta">→</span><span class="nv">0.9.5.2</span></span></div>
-            <div class="saude"><span class="selo sozinho"><span class="sg">↻</span>SOZINHO</span><span class="txt" data-dica="Se atualiza sozinho com a Steam fechada; a versão nova só vale para os jogos depois da prova, e a 11-7 fica de reserva"><span>GE-Proton</span></span><span class="ver"><span class="nv">11-12</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="Interface, serviço e correções"><span>Hefesto</span></span><span class="ver">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="Os jogos da Steam e do Heroic"><span>GE-Proton</span></span><span class="ver">11-7<span class="seta">→</span><span class="nv">11-12</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="BlueZ, com as correções do Hefesto"><span>Bluetooth</span></span><span class="ver">5.87<span class="seta">→</span><span class="nv">5.88</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19"><span>Som</span></span><span class="ver">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span></div>
           </div>
           <div class="risco"></div>
           <div class="col-lista">
-            <div class="saude"><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="BlueZ 5.87 → 5.88, com as correções do Hefesto em cima"><span>Bluetooth</span></span><span class="ver"><span class="seta">→</span><span class="nv">5.88</span></span></div>
-            <div class="saude"><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="PipeWire 1.6.9 → 1.6.11 e WirePlumber 0.5.18 → 0.5.19, juntos"><span>Som</span></span><span class="ver"><span class="seta">→</span><span class="nv">1.6.11</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao"><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3"><span>Python</span></span><span class="ver">2 pacotes</span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="nvidia-driver-595"><span>Driver NVIDIA</span></span><span class="ver"><span class="nv">595.104.02</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="linux-system76"><span>Kernel</span></span><span class="ver"><span class="nv">7.2.15</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="Os quatro módulos do Hefesto para o 7.2.15"><span>Módulos do kernel</span></span><span class="ver"><span class="nv">1.0.0</span></span></div>
           </div>
           <div class="risco"></div>
           <div class="col-lista">
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="Os quatro módulos do Hefesto para o kernel 7.2.15"><span>Kernel</span></span><span class="ver"><span class="nv">7.2.15</span></span></div>
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="O painel de desempenho por cima do jogo"><span>MangoHud</span></span><span class="ver"><span class="nv">0.8.4</span></span></div>
-          </div>
-          <div class="risco"></div>
-          <div class="col-lista">
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="O que abre os jogos de fora da Steam no Proton"><span>umu</span></span><span class="ver"></span></div>
-            <div class="saude"><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="Bibliotecas Python: evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3"><span>Python</span></span><span class="ver">2 pacotes</span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="Pop!_OS 24.04"><span>Pacotes do sistema</span></span><span class="ver"><span class="nv">24.04</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="O painel por cima do jogo"><span>MangoHud</span></span><span class="ver"><span class="nv">0.8.4</span></span></div>
+            <div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="Os jogos de fora da Steam no Proton"><span>umu</span></span><span class="ver"></span></div>
           </div>
         </div>
-        <div class="at-acoes">
-          <button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
-          <span class="prazo" data-dica="De quanto em quanto tempo o Hefesto confere e pergunta"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span>
-          <button class="btn empurra" data-gesto="versoes-anteriores" data-dica="As versões que ficaram guardadas, para voltar">Versões anteriores</button>
-          <a class="btn verde cheio" href="a-pergunta-da-atualizacao.html" data-gesto="ver-atualizacoes" data-dica="Abre a lista para marcar o que entra">Ver atualizações<span class="n" data-campo="atualizacoes-novas">4</span></a>
         </div>
 
         <div class="sec-rot sr-log sec-alta">
