@@ -256,17 +256,17 @@
       "universo": 424
     },
     "tamanho": {
-      "data": "2026-11-07",
+      "data": "2026-11-08",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1233046,
+      "piso": 1233571,
       "por_item": {
-        "docs": 106749,
+        "docs": 106750,
         "scripts": 112296,
-        "src": 310665,
-        "tests": 703336
+        "src": 310969,
+        "tests": 703556
       },
-      "razao": "tamanho: +1780 linhas (1231266 -> 1233046), pagas por Origem: D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO; registrado no fecho, topo bfd03804cfd8",
+      "razao": "tamanho: +525 linhas (1233046 -> 1233571), pagas por Origem: D-0811-O-PROTON-SE-ATUALIZA-SOZINHO; registrado no fecho, topo 36d1f6b28799",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1929,10 +1929,16 @@
           "de": 1231266,
           "para": 1233046,
           "razao": "tamanho: +1780 linhas (1231266 -> 1233046), pagas por Origem: D-3110-O-LACO-DO-DAEMON-NUNCA-ESPERA-TRAVA-DE-OUTRO; registrado no fecho, topo bfd03804cfd8"
+        },
+        {
+          "data": "2026-11-08",
+          "de": 1233046,
+          "para": 1233571,
+          "razao": "tamanho: +525 linhas (1233046 -> 1233571), pagas por Origem: D-0811-O-PROTON-SE-ATUALIZA-SOZINHO; registrado no fecho, topo 36d1f6b28799"
         }
       ],
       "unidade": "linhas",
-      "universo": 3425
+      "universo": 3426
     }
   }
 }
