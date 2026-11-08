@@ -2,6 +2,7 @@
 set -u
 
 ALVO_INSTALADO=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
+SUFIXOS_INSTALADOS=/usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa
 REPO_DO_MANGOHUD=flightlessmango/MangoHud
 GRUPOS="nvidia kernel sistema"
 
@@ -12,6 +13,8 @@ if [[ "$(id -u)" -eq 0 ]]; then
     SRC=/usr/src
     MODULOS=/lib/modules
     ENTRADAS=/boot/efi/loader/entries
+    ESTADO=/var/lib/hefesto-dualsense4unix/atualizador
+    SUFIXOS="${SUFIXOS_INSTALADOS}"
     CASA_DA_USUARIA=""
     DONO=root
     API="https://api.github.com/repos/${REPO_DO_MANGOHUD}/releases/latest"
@@ -20,10 +23,14 @@ else
     SRC="${HEFESTO_ATUALIZADOR_SRC:-/usr/src}"
     MODULOS="${HEFESTO_ATUALIZADOR_MODULOS:-/lib/modules}"
     ENTRADAS="${HEFESTO_ATUALIZADOR_ENTRADAS:-/boot/efi/loader/entries}"
+    ESTADO="${HEFESTO_ATUALIZADOR_ESTADO:-}"
+    SUFIXOS="${HEFESTO_ATUALIZADOR_SUFIXOS:-${SUFIXOS_INSTALADOS}}"
     CASA_DA_USUARIA="${HEFESTO_ATUALIZADOR_CASA:-}"
     DONO="${HEFESTO_ATUALIZADOR_DONO:-root}"
     API="${HEFESTO_ATUALIZADOR_API:-}"
 fi
+
+umask 077
 
 _erro() { printf '%s: %s\n' "${0##*/}" "$*" >&2; }
 _recusar() { _erro "$*"; exit 2; }
@@ -37,9 +44,51 @@ _apt() {
         -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
 }
 
+_instalados() {
+    dpkg-query -W -f '${Package}\t${db:Status-Abbrev}\t${Version}\n' 2>/dev/null
+}
+
 _instalados_que_casam() {
-    dpkg-query -W -f '${Package}\t${db:Status-Abbrev}\n' 2>/dev/null \
-        | awk -F'\t' -v re="$1" '$2 ~ /^ii/ && $1 ~ re { print $1 }'
+    _instalados | awk -F'\t' -v re="$1" '$2 ~ /^ii/ && $1 ~ re { print $1 }'
+}
+
+_e_so_do_dono() {
+    local alvo="$1" fora
+    [[ -e "${alvo}" ]] || return 1
+    fora="$(find "${alvo}" \( ! -user "${DONO}" -o -perm /022 \) -print -quit 2>/dev/null)"
+    [[ -z "${fora}" ]]
+}
+
+SEGURADOS=()
+
+_soltar_os_da_casa() {
+    [[ "${#SEGURADOS[@]}" -gt 0 ]] || return 0
+    apt-mark unhold "${SEGURADOS[@]}" >/dev/null || _erro "não soltei: ${SEGURADOS[*]}"
+    SEGURADOS=()
+}
+
+_segurar_os_da_casa() {
+    _e_so_do_dono "${SUFIXOS}" || _recusar "sem a lista dos sufixos da casa só do root (${SUFIXOS}): rode o install"
+    local -a sufixos da_casa ja
+    mapfile -t sufixos < <(grep -E '^[A-Za-z0-9.+~:-]+$' "${SUFIXOS}")
+    [[ "${#sufixos[@]}" -gt 0 ]] || _recusar "a lista dos sufixos da casa está vazia"
+    mapfile -t da_casa < <(_instalados | awk -F'\t' -v lista="$(printf '%s\n' "${sufixos[@]}")" '
+        BEGIN { n = split(lista, s, "\n") }
+        $2 ~ /^ii/ { for (i = 1; i <= n; i++) if (s[i] != "" && index($3, s[i])) { print $1; break } }')
+    [[ "${#da_casa[@]}" -gt 0 ]] || return 0
+    mapfile -t ja < <(apt-mark showhold 2>/dev/null)
+    local p j
+    for p in "${da_casa[@]}"; do
+        for j in "${ja[@]}"; do
+            [[ "${p}" == "${j}" ]] && continue 2
+        done
+        SEGURADOS+=("${p}")
+    done
+    [[ "${#SEGURADOS[@]}" -gt 0 ]] || return 0
+    trap _soltar_os_da_casa EXIT
+    trap 'exit 130' INT TERM HUP
+    apt-mark hold "${SEGURADOS[@]}" >/dev/null || _recusar "não segurei os pacotes da casa: ${SEGURADOS[*]}"
+    printf 'fora da subida (da casa): %s\n' "${SEGURADOS[*]}"
 }
 
 _pacotes_do_grupo() {
@@ -65,6 +114,7 @@ verbo_apt_lista() {
 _apt_do_grupo() {
     local grupo="$1"; shift
     _grupo_valido "${grupo}"
+    _segurar_os_da_casa
     if [[ "${grupo}" == "sistema" ]]; then
         _apt "$@" full-upgrade
         return
@@ -79,7 +129,37 @@ _apt_do_grupo() {
 }
 
 verbo_apt_baixar() { _exige_raiz apt-baixar; _apt_do_grupo "${1:-}" -d; }
-verbo_apt_instalar() { _exige_raiz apt-instalar; _apt_do_grupo "${1:-}"; }
+_kernels_instalados() {
+    local k
+    for k in "${MODULOS}"/*; do
+        [[ -d "${k}" ]] && printf '%s\n' "${k##*/}"
+    done
+}
+
+_pasta_do_estado() {
+    [[ -n "${ESTADO}" ]] || _recusar "sem a pasta do estado do ajudante"
+    install -d -m 700 "${ESTADO}" || _recusar "não criei ${ESTADO}"
+    _e_so_do_dono "${ESTADO}" || _recusar "a pasta ${ESTADO} não é só do root"
+}
+
+verbo_apt_instalar() {
+    _exige_raiz apt-instalar
+    local grupo="${1:-}" antes depois rodando
+    if [[ "${grupo}" != "kernel" ]]; then
+        _apt_do_grupo "${grupo}"
+        return
+    fi
+    _pasta_do_estado
+    antes="$(_kernels_instalados)"
+    rodando="$(uname -r)"
+    _apt_do_grupo kernel || return 1
+    depois="$(_kernels_instalados)"
+    if [[ "${depois}" != "${antes}" && "${rodando}" =~ ^[A-Za-z0-9._+-]+$ ]]; then
+        printf '%s\n' "${rodando}" > "${ESTADO}/kernel-anterior"
+        chmod 600 "${ESTADO}/kernel-anterior"
+        printf 'a volta possível: %s\n' "${rodando}"
+    fi
+}
 verbo_apt_limpar() { _exige_raiz apt-limpar; _apt autoremove --purge; }
 
 _fonte_e_do_root() {
@@ -186,6 +266,7 @@ verbo_mangohud_instalar() {
     nome="${origem##*/}"
     [[ "${nome}" =~ ^MangoHud-[A-Za-z0-9._-]+\.tar\.gz$ ]] || _recusar "nome estranho: ${nome}"
     install -d -m 700 "${CACHE}/mangohud"
+    _e_so_do_dono "${CACHE}/mangohud" || _recusar "a pasta ${CACHE}/mangohud não é só do root"
     cat <"${origem}" >"${CACHE}/mangohud/novo.tar.gz" || _recusar "não li ${origem}"
     esperado="$(_digest_publicado "${nome}")"
     [[ "${esperado}" =~ ^[0-9a-f]{64}$ ]] || { rm -f "${CACHE}/mangohud/novo.tar.gz"; _recusar "a soma publicada de ${nome} não veio"; }
@@ -202,21 +283,39 @@ verbo_mangohud_instalar() {
 
 verbo_mangohud_voltar() {
     _exige_raiz mangohud-voltar
-    [[ -f "${CACHE}/mangohud/anterior.tar.gz" ]] || _recusar "sem versão anterior do MangoHud"
+    _e_so_do_dono "${CACHE}/mangohud" || _recusar "a pasta ${CACHE}/mangohud não é só do root"
+    [[ -f "${CACHE}/mangohud/anterior.tar.gz" ]] || _recusar "sem versão anterior do MangoHud trocada por este ajudante"
     _instalar_o_tar_do_mangohud "${CACHE}/mangohud/anterior.tar.gz" || exit 1
-    mv -f "${CACHE}/mangohud/anterior.tar.gz" "${CACHE}/mangohud/volta.tar.gz"
-    [[ -f "${CACHE}/mangohud/atual.tar.gz" ]] && mv -f "${CACHE}/mangohud/atual.tar.gz" "${CACHE}/mangohud/anterior.tar.gz"
-    mv -f "${CACHE}/mangohud/volta.tar.gz" "${CACHE}/mangohud/atual.tar.gz"
+    mv -f "${CACHE}/mangohud/anterior.tar.gz" "${CACHE}/mangohud/atual.tar.gz"
     printf 'MangoHud de volta à versão anterior\n'
+}
+
+_entrada_do_kernel() {
+    local ver="$1" e
+    for e in "${ENTRADAS}"/*.conf; do
+        [[ -f "${e}" ]] || continue
+        if [[ "${e##*/}" == *"${ver}"* ]] || grep -qF -- "${ver}" "${e}"; then
+            printf '%s\n' "${e##*/}"
+            return 0
+        fi
+    done
+    find "${ENTRADAS}" -maxdepth 1 -name '*oldkern.conf' -printf '%f\n' 2>/dev/null | head -n 1
 }
 
 verbo_kernel_anterior() {
     _exige_raiz kernel-anterior
-    local entrada
-    entrada="$(find "${ENTRADAS}" -maxdepth 1 -name '*oldkern.conf' -printf '%f\n' 2>/dev/null | head -n 1)"
-    [[ -n "${entrada}" ]] || _recusar "sem a entrada do kernel anterior no carregador"
+    _pasta_do_estado
+    local registro="${ESTADO}/kernel-anterior" ver entrada
+    _e_so_do_dono "${registro}" || _recusar "nenhuma subida de kernel deste ajudante a desfazer"
+    ver="$(head -n 1 "${registro}")"
+    [[ "${ver}" =~ ^[A-Za-z0-9._+-]+$ ]] || _recusar "o registro do kernel anterior está estragado"
+    [[ -d "${MODULOS}/${ver}" ]] || _recusar "o kernel ${ver} não está mais instalado"
+    entrada="$(_entrada_do_kernel "${ver}")"
+    [[ -n "${entrada}" ]] || _recusar "sem a entrada do kernel ${ver} no carregador"
     command -v bootctl >/dev/null 2>&1 || _recusar "bootctl ausente"
-    bootctl set-default "${entrada}" && printf 'o próximo início usa %s\n' "${entrada}"
+    bootctl set-default "${entrada}" || exit 1
+    rm -f "${registro}"
+    printf 'o próximo início usa %s (%s)\n' "${entrada}" "${ver}"
 }
 
 verbo_regra_sudo() {

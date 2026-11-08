@@ -725,7 +725,9 @@ if sudo -n true 2>/dev/null; then
         sudo rm -f /etc/sudoers.d/49-hefesto-atualizador 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz 2>/dev/null || true
+    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa 2>/dev/null || true
     sudo rm -rf /var/cache/hefesto-dualsense4unix/mangohud 2>/dev/null || true
+    sudo rm -rf /var/lib/hefesto-dualsense4unix/atualizador 2>/dev/null || true
     sudo rm -rf /run/hefesto-dualsense4unix/placa 2>/dev/null || true
     sudo rm -rf /run/hefesto-bt-ponte /run/hefesto-bt-rebind /run/hefesto-bt-watchdog \
         /run/hefesto-bt-watchdog.restart-stamp 2>/dev/null || true

@@ -329,6 +329,14 @@ INVENTARIO: tuple[Lugar, ...] = (
         "o diário dos motores root do rádio",
     ),
     Lugar(
+        "estado-do-atualizador", "varlib", "atualizador",
+        "scripts/hefesto_atualizador_raiz.sh:ESTADO",
+        ROOT, CASA, COPIAR,
+        "o kernel anterior que o ajudante do atualizador trocou (uma volta por subida); "
+        "não identifica controle",
+        devolve=False,
+    ),
+    Lugar(
         "zeros-dos-sensores", "config", f"{_C}/zeros-dos-sensores.json",
         "utils/session.py:_ZEROS_DOS_SENSORES_FILE",
         USUARIO, CONTROLES, MOVER,
@@ -525,6 +533,13 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "servico.log": (CASA, "o registro do serviço, já pela máscara; não identifica controle"),
     "gestos-das-extensoes.log": (CASA, "o diário dos gestos que mudam as modificações; não "
                                        "identifica controle"),
+    "atualizador.json": (CASA, "a escolha do atualizador (as peças marcadas, o «Atualizar sozinho» "
+                               "e o prazo); não identifica controle"),
+    "atualizador-conferencia.json": (CASA, "as versões instaladas e publicadas de cada peça"),
+    "atualizador-andamento.json": (CASA, "o andamento da última atualização"),
+    "atualizador-anteriores.json": (CASA, "a versão anterior de cada peça, para voltar"),
+    "atualizador": (CASA, "o cache dos downloads do atualizador (o MangoHud baixado)"),
+    "atualizador.log": (CASA, "o registro das atualizações; não identifica controle"),
     "memoria_dos_jogos.json": (CASA, "a chave Memória de cada jogo; não identifica controle"),
     "peso_da_mira_dos_jogos.json": (CASA, "a chave do peso da mira de cada jogo com anticheat; "
                                           "não identifica controle"),

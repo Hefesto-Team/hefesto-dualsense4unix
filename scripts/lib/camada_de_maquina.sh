@@ -509,6 +509,7 @@ install_atualizador_raiz_host() {
     local _at_fonte="${ROOT_DIR}/scripts/hefesto_atualizador_raiz.sh"
     local _at_alvo=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
     local _at_regra=/etc/sudoers.d/49-hefesto-atualizador
+    local _at_sufixos=/usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa
     local _at_usuaria _at_tmp
     if ! command -v sudo >/dev/null 2>&1; then
         warn "sudo ausente — o atualizador sem senha NÃO instalado (as peças do sistema não sobem pela janela)"
@@ -527,6 +528,17 @@ install_atualizador_raiz_host() {
         warn "não consegui instalar ${_at_alvo} — o atualizador sem senha indisponível"
         return 0
     fi
+    _at_tmp="$(mktemp)" || {
+        warn "não consegui criar arquivo temporário — os sufixos da casa NÃO gravados"
+        return 0
+    }
+    grep -h '^SUFIXO=' "${ROOT_DIR}"/assets/*-backport/BASELINE 2>/dev/null | cut -d= -f2- \
+        | sort -u >"${_at_tmp}"
+    if [[ ! -s "${_at_tmp}" ]] \
+        || ! sudo install -Dm644 -o root -g root "${_at_tmp}" "${_at_sufixos}" 2>/dev/null; then
+        warn "os sufixos dos backports da casa NÃO gravados em ${_at_sufixos} — o ajudante recusa subir pacote do apt"
+    fi
+    rm -f "${_at_tmp}"
     if ! command -v visudo >/dev/null 2>&1; then
         warn "visudo ausente — a regra do sudoers do atualizador NÃO foi gravada (sudoers inválido derruba o sudo da máquina inteira; não gravamos sem conferir)"
         return 0

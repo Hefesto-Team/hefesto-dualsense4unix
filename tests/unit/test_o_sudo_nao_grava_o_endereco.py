@@ -424,6 +424,8 @@ def test_a_faxina_da_central_esquece_as_quatro_sobras(mesa: Mesa) -> None:
 
 SUDO_PERMITIDO = Counter(
     {
+        ("app/actions/pecas_do_atualizador.py", "_ajudante_pronto"): 1,
+        ("app/actions/pecas_do_atualizador.py", "_raiz"): 1,
         ("integrations/conexao_zumbi.py", "pedido_a_ponte"): 2,
         ("utils/memoria_dos_controles.py", "Sistema.rodar_parte_do_root"): 2,
     }

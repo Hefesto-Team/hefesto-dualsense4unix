@@ -1105,6 +1105,7 @@ _ensaio_camada() {
             ;;
         atualizador)
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz"
+            _faria_root "gravar /usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa (os SUFIXO= dos assets/*-backport/BASELINE)"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-atualizador (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
             ;;
         gabinete)

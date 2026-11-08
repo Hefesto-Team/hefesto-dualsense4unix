@@ -8,7 +8,11 @@ anotam a chamada.
 AS MORDIDAS (feitas na sprint, com a cura devolvida): a regra com curinga reprova o caso da regra;
 o dkms_lib.sh sem o chown reprova o caso do fonte só do root;
 o grupo livre aceito reprova o caso do grupo; o DKMS refeito com fonte que não é só do dono
-reprova o caso do fonte; o MangoHud instalado sem conferir o digest reprova o caso da soma errada.
+reprova o caso do fonte; o MangoHud instalado sem conferir o digest reprova o caso da soma errada;
+a subida do apt sem segurar os pacotes da casa reprova o caso dos backports; o voltar do kernel
+sem o registro (o de antes, que ia ao «oldkern» de qualquer jeito) reprova o caso do kernel; o
+registro que não se apaga reprova a segunda volta; o voltar do MangoHud que troca as duas versões
+reprova a segunda volta dele.
 """
 from __future__ import annotations
 
@@ -25,6 +29,22 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
+INSTALADOS = (("nvidia-driver-595", "595.104.02-0ubuntu1"),
+              ("libnvidia-gl-595", "595.104.02-0ubuntu1"), ("linux-system76", "7.2.15.76070215"),
+              ("linux-image-7.2.15", "7.2.15-1"),
+              ("curl", "8.5.0-2ubuntu10"), ("bluez", "5.87-0ubuntu0.1~hefesto24.04.5"),
+              ("pipewire", "1.6.9-0~hefesto24.04.1"),
+              ("xdg-desktop-portal-cosmic", "1.0.0~1780000000+0~hefesto1"))
+
+
+def sufixos_dos_backports() -> list[str]:
+    """Os ``SUFIXO=`` de cada ``assets/*-backport/BASELINE``, como o install os grava."""
+    achados = []
+    for baseline in sorted(RAIZ.glob("assets/*-backport/BASELINE")):
+        for linha in baseline.read_text(encoding="utf-8").splitlines():
+            if linha.startswith("SUFIXO="):
+                achados.append(linha.split("=", 1)[1])
+    return sorted(set(achados))
 SCRIPT = RAIZ / "scripts" / "hefesto_atualizador_raiz.sh"
 ALVO = "/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz"
 
@@ -44,12 +64,20 @@ class Lar:
         self.entradas.mkdir()
         self.casa = base / "casa"
         self.casa.mkdir()
+        self.estado = base / "estado"
+        self.segurados = base / "segurados"
+        self.segurados.write_text("pipewire\n", encoding="utf-8")
+        self.sufixos = base / "sufixos-da-casa"
+        self.sufixos.write_text("".join(f"{x}\n" for x in sufixos_dos_backports()),
+                                encoding="utf-8")
+        self.sufixos.chmod(0o644)
         self.api = ""
         for nome in ("apt-get", "dkms", "bootctl", "update-initramfs"):
             self.duble(nome)
-        self.duble("dpkg-query", 'printf "nvidia-driver-595\\tii \\nlibnvidia-gl-595\\tii \\n'
-                                 'linux-system76\\tii \\nlinux-image-7.2.15\\tii \\n'
-                                 'curl\\tii \\n"')
+        self.duble("uname", 'echo 7.2.15-generic')
+        self.duble("apt-mark", f'[ "$1" = showhold ] && cat "{self.segurados}"; exit 0')
+        linhas = "".join(f"{p}\\tii \\t{v}\\n" for p, v in INSTALADOS)
+        self.duble("dpkg-query", f'printf "{linhas}"')
 
     def duble(self, nome: str, corpo: str = "") -> None:
         arq = self.bin / nome
@@ -63,6 +91,9 @@ class Lar:
                     "HEFESTO_ATUALIZADOR_MODULOS": str(self.modulos),
                     "HEFESTO_ATUALIZADOR_ENTRADAS": str(self.entradas),
                     "HEFESTO_ATUALIZADOR_CASA": str(self.casa),
+                    "HEFESTO_ATUALIZADOR_ESTADO": str(self.estado),
+                    "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
+                    "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name,
                     "HEFESTO_ATUALIZADOR_API": self.api, **env}
         if root:
             ambiente["HEFESTO_ATUALIZADOR_CACHE"] = str(self.cache)
@@ -107,7 +138,9 @@ def test_a_regra_lista_cada_verbo_sem_curinga(lar: Lar) -> None:
 
 def test_verbo_e_argumento_fora_da_lista_se_recusam(lar: Lar) -> None:
     for args in (("rm",), ("apt-baixar", "tudo"), ("apt-baixar",), ("apt-lista", "x"),
-                 ("apt-instalar", "nvidia", "x"), ("dkms-refazer", "--force"), ()):
+                 ("apt-instalar", "nvidia", "x"), ("dkms-refazer", "--force"), ("apt-limpar", "x"),
+                 ("apt-limpar", "bluez"), ("kernel-anterior", "7.2.15"),
+                 ("mangohud-voltar", "0.8.3"), ()):
         assert lar.rodar(*args).returncode == 2, args
     assert lar.lidas() == []
 
@@ -155,7 +188,7 @@ def test_o_dkms_so_se_refaz_com_o_fonte_do_dono(lar: Lar) -> None:
 
 def test_o_dkms_recusa_o_fonte_de_outro_dono(lar: Lar) -> None:
     _fonte(lar)
-    feito = lar.rodar("dkms-refazer")
+    feito = lar.rodar("dkms-refazer", HEFESTO_ATUALIZADOR_DONO="root")
     assert feito.returncode != 0
     assert not [linha for linha in lar.lidas() if linha.startswith("dkms install")]
 
@@ -195,21 +228,143 @@ def test_o_mangohud_so_entra_com_a_soma_publicada(lar: Lar) -> None:
     assert (lar.cache / "mangohud" / "atual.tar.gz").read_bytes() == arq.read_bytes()
 
 
-def test_o_mangohud_volta_ao_anterior(lar: Lar) -> None:
-    assert lar.rodar("mangohud-voltar").returncode == 2
-    arq = _tar_do_mangohud(lar)
+def _instalar_mangohud(lar: Lar, nome: str) -> bytes:
+    pasta = lar.casa / ".cache" / "hefesto-dualsense4unix" / "atualizador" / "mangohud"
+    if pasta.exists():
+        shutil.rmtree(pasta)
+    arq = _tar_do_mangohud(lar, nome)
     _api(lar, arq.name, hashlib.sha256(arq.read_bytes()).hexdigest())
     assert lar.rodar("mangohud-instalar").returncode == 0
-    (lar.cache / "mangohud" / "anterior.tar.gz").write_bytes(arq.read_bytes())
+    return arq.read_bytes()
+
+
+def test_o_mangohud_volta_uma_vez_so_ao_que_o_ajudante_trocou(lar: Lar) -> None:
+    assert lar.rodar("mangohud-voltar").returncode == 2
+    velho = _instalar_mangohud(lar, "MangoHud-0.8.4.r0.tar.gz")
+    novo = _instalar_mangohud(lar, "MangoHud-0.8.5.r0.tar.gz")
+    pasta = lar.cache / "mangohud"
+    assert (pasta / "anterior.tar.gz").read_bytes() == velho
+    assert (pasta / "atual.tar.gz").read_bytes() == novo
     assert lar.rodar("mangohud-voltar").returncode == 0
+    assert (pasta / "atual.tar.gz").read_bytes() == velho
+    assert lar.lidas().count("setup install") == 3
+    segunda = lar.rodar("mangohud-voltar")
+    assert segunda.returncode == 2 and "sem versão anterior" in segunda.stderr
+    assert lar.lidas().count("setup install") == 3
+
+
+def test_o_mangohud_nao_volta_de_pasta_que_outro_escreve(lar: Lar) -> None:
+    _instalar_mangohud(lar, "MangoHud-0.8.4.r0.tar.gz")
+    _instalar_mangohud(lar, "MangoHud-0.8.5.r0.tar.gz")
+    (lar.cache / "mangohud").chmod(0o777)
+    feito = lar.rodar("mangohud-voltar")
+    assert feito.returncode == 2 and "não é só do root" in feito.stderr
     assert lar.lidas().count("setup install") == 2
 
 
-def test_o_kernel_anterior_vale_no_proximo_inicio(lar: Lar) -> None:
-    assert lar.rodar("kernel-anterior").returncode == 2
-    (lar.entradas / "Pop_OS-oldkern.conf").write_text("", encoding="utf-8")
-    assert lar.rodar("kernel-anterior").returncode == 0
+def _kernels(lar: Lar, *versoes: str) -> None:
+    for versao in versoes:
+        (lar.modulos / versao).mkdir(parents=True, exist_ok=True)
+    (lar.entradas / "Pop_OS-current.conf").write_text("linux /vmlinuz.efi\n", encoding="utf-8")
+    (lar.entradas / "Pop_OS-oldkern.conf").write_text("linux /vmlinuz-previous.efi\n",
+                                                      encoding="utf-8")
+
+
+def _apt_que_traz_o_kernel(lar: Lar, novo: str) -> None:
+    lar.duble("apt-get", f'case "$*" in *install*) mkdir -p "{lar.modulos}/{novo}" ;; esac')
+
+
+def test_o_kernel_so_volta_ao_que_o_ajudante_trocou_e_uma_vez(lar: Lar) -> None:
+    _kernels(lar, "7.2.15-generic")
+    feito = lar.rodar("kernel-anterior")
+    assert feito.returncode == 2 and "nenhuma subida" in feito.stderr
+    assert not [x for x in lar.lidas() if x.startswith("bootctl")]
+    assert lar.rodar("apt-instalar", "kernel").returncode == 0
+    assert not (lar.estado / "kernel-anterior").exists()
+    _apt_que_traz_o_kernel(lar, "7.2.18-generic")
+    assert lar.rodar("apt-instalar", "kernel").returncode == 0
+    registro = lar.estado / "kernel-anterior"
+    assert registro.read_text(encoding="utf-8").strip() == "7.2.15-generic"
+    assert oct(registro.stat().st_mode & 0o777) == "0o600"
+    feito = lar.rodar("kernel-anterior")
+    assert feito.returncode == 0, feito.stderr
     assert "bootctl set-default Pop_OS-oldkern.conf" in lar.lidas()
+    assert not registro.exists()
+    segunda = lar.rodar("kernel-anterior")
+    assert segunda.returncode == 2
+    assert [x for x in lar.lidas() if x.startswith("bootctl")] == [
+        "bootctl set-default Pop_OS-oldkern.conf"]
+
+
+def test_o_kernel_registrado_que_saiu_ou_registro_de_outro_nao_volta(lar: Lar) -> None:
+    _kernels(lar, "7.2.15-generic")
+    _apt_que_traz_o_kernel(lar, "7.2.18-generic")
+    assert lar.rodar("apt-instalar", "kernel").returncode == 0
+    registro = lar.estado / "kernel-anterior"
+    registro.chmod(0o666)
+    assert lar.rodar("kernel-anterior").returncode == 2
+    registro.chmod(0o600)
+    (lar.modulos / "7.2.15-generic").rmdir()
+    feito = lar.rodar("kernel-anterior")
+    assert feito.returncode == 2 and "não está mais instalado" in feito.stderr
+    assert not [x for x in lar.lidas() if x.startswith("bootctl")]
+
+
+def test_a_entrada_com_a_versao_no_nome_vence_o_oldkern(lar: Lar) -> None:
+    _kernels(lar, "7.2.15-generic")
+    (lar.entradas / "maquina-7.2.15-generic.conf").write_text("", encoding="utf-8")
+    _apt_que_traz_o_kernel(lar, "7.2.18-generic")
+    assert lar.rodar("apt-instalar", "kernel").returncode == 0
+    assert lar.rodar("kernel-anterior").returncode == 0
+    assert "bootctl set-default maquina-7.2.15-generic.conf" in lar.lidas()
+
+
+def test_os_sufixos_saem_de_cada_backport_da_casa() -> None:
+    baselines = sorted(RAIZ.glob("assets/*-backport/BASELINE"))
+    assert len(baselines) >= 3
+    for baseline in baselines:
+        texto = baseline.read_text(encoding="utf-8")
+        sufixos = [x.split("=", 1)[1] for x in texto.splitlines() if x.startswith("SUFIXO=")]
+        assert len(sufixos) == 1 and "~hefesto" in sufixos[0], baseline
+    pipewire = (RAIZ / "assets/pipewire-backport/BASELINE").read_text(encoding="utf-8")
+    for chave in ("PW_REVISAO", "WP_REVISAO"):
+        valor = next(x for x in pipewire.splitlines() if x.startswith(f"{chave}="))
+        assert "~hefesto24.04." in valor
+    camada = (RAIZ / "scripts/lib/camada_de_maquina.sh").read_text(encoding="utf-8")
+    assert "grep -h '^SUFIXO=' \"${ROOT_DIR}\"/assets/*-backport/BASELINE" in camada
+
+
+def _ordem(lar: Lar) -> list[str]:
+    return [x for x in lar.lidas() if x.startswith(("apt-get", "apt-mark hold", "apt-mark unhold"))]
+
+
+@pytest.mark.parametrize("grupo", ["sistema", "nvidia", "kernel"])
+def test_a_subida_do_apt_nao_troca_os_backports_da_casa(lar: Lar, grupo: str) -> None:
+    feito = lar.rodar("apt-instalar", grupo)
+    assert feito.returncode == 0, feito.stderr
+    ordem = _ordem(lar)
+    assert ordem[0] == "apt-mark hold bluez xdg-desktop-portal-cosmic", ordem
+    assert ordem[1].startswith("apt-get")
+    assert ordem[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic", ordem
+    assert not any("pipewire" in x for x in ordem), "o que já estava segurado não se solta"
+
+
+def test_a_subida_que_falha_solta_os_da_casa_igual(lar: Lar) -> None:
+    lar.duble("apt-get", "exit 100")
+    feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode != 0
+    assert _ordem(lar)[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic"
+
+
+def test_sem_a_lista_dos_sufixos_nenhum_pacote_sobe(lar: Lar) -> None:
+    lar.sufixos.unlink()
+    feito = lar.rodar("apt-instalar", "sistema")
+    assert feito.returncode == 2 and "sufixos da casa" in feito.stderr
+    assert not [x for x in lar.lidas() if x.startswith("apt-get")]
+    lar.sufixos.write_text("~hefesto24.04.\n", encoding="utf-8")
+    lar.sufixos.chmod(0o666)
+    assert lar.rodar("apt-instalar", "sistema").returncode == 2
+    assert not [x for x in lar.lidas() if x.startswith("apt-get")]
 
 
 def test_o_fonte_do_dkms_fica_so_do_root_antes_do_build(tmp_path: Path) -> None:
