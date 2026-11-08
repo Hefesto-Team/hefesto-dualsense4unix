@@ -286,7 +286,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     buildid = buildid_do_runtime(args.runtime)
     f = qp.ficha(args.proton, args.fixada)
     if not f.passou:
-        linha = qp.linha_do_recibo(f, args.tarball_sha256, "não rodou", hoje, buildid)
+        linha = qp.linha_do_recibo(f, args.tarball_sha256, qp.RODADA_NAO_RODOU, hoje, buildid)
         resultado = Resultado([], {}, {}, 0)
     else:
         sys.path.insert(0, str(Path(__file__).resolve().parent))

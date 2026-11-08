@@ -1683,9 +1683,10 @@ def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
 
     22/10/2026, decisão de produto: é sempre a versão mais recente do Proton, desde que cumpra
     os pré-requisitos, e só a nova se usa. Os pré-requisitos são a ficha de qualificação
-    (:func:`qualificar_proton.ficha`, contra a do `proton-pin.conf` quando está no disco). Só
-    conta versão do GE-Proton que está em ``compat_dir`` e é mais nova que a do conf; nada vem
-    da rede. Sem candidata, ou na dúvida (pasta que não se lê), vale a do conf. Nunca levanta.
+    (:func:`qualificar_proton.ficha`, contra a do `proton-pin.conf` quando está no disco), e
+    nenhuma rodada que rodou a reprovou. Só conta versão do GE-Proton que está em ``compat_dir``
+    e é mais nova que a do conf; nada vem da rede. Sem candidata, ou na dúvida (pasta que não
+    se lê), vale a do conf. Nunca levanta.
     """
     nome = conf["name"]
     compat = compat_dir if compat_dir is not None else default_compat_dir()
@@ -1696,13 +1697,16 @@ def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
         if ordem_do_melhor == (-1, -1):
             return nome
         fixada = compat / nome if pinned_proton_installed(nome, compat) else None
+        recibo = qp.recibo_do_repositorio()
         for pasta in sorted(compat.iterdir()):
             if pasta.is_symlink() or not pasta.is_dir():
                 continue
             if not pinned_proton_installed(pasta.name, compat):
                 continue
             ordem = qp.ordem_da_versao(pasta.name)
-            if ordem <= ordem_do_melhor or not qp.ficha(pasta, fixada).passou:
+            if ordem <= ordem_do_melhor or qp.reprovada_pela_rodada(pasta.name, recibo):
+                continue
+            if not qp.ficha(pasta, fixada).passou:
                 continue
             melhor, ordem_do_melhor = pasta.name, ordem
         return melhor
@@ -2252,6 +2256,9 @@ def instalar_a_ultima_do_cache(
         vale = pino_que_vale(conf, compat_dir)
         if qp.ordem_da_versao(nome) <= qp.ordem_da_versao(vale):
             return Atualizacao("em_dia", vale)
+        vetada = qp.reprovada_pela_rodada(nome, qp.recibo_do_repositorio())
+        if vetada:
+            return Atualizacao("reprovou", nome, f"a rodada reprovou: {vetada}")
         if pinned_proton_installed(nome, compat_dir):
             return Atualizacao("reprovou", nome, "instalada e fora da ficha")
         barra = (steam_barra or _steam_gate)()

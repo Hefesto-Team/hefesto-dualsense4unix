@@ -50,6 +50,7 @@ ACAO_PADRAO = "padrão"
 VEREDITO_PASSOU = "passou"
 VEREDITO_REPROVOU = "reprovou"
 RODADA_HERDADA = "herdada"
+RODADA_NAO_RODOU = "não rodou"
 
 CAMINHO_DO_RECIBO = "docs/data/proton-qualificacao.csv"
 
@@ -296,6 +297,36 @@ def ordem_da_versao(versao: str) -> tuple[int, int]:
     """
     achado = _VERSAO_GE_RE.search(versao)
     return (int(achado.group(1)), int(achado.group(2))) if achado else (-1, -1)
+
+
+def recibo_do_repositorio() -> list[dict[str, str]]:
+    """As linhas do recibo desta instalação; o recibo que não se lê é vazio, e vazio não veta."""
+    try:
+        return ler_recibo(caminho_do_recibo().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        linhas: list[dict[str, str]] = []
+    return linhas
+
+
+def reprovada_pela_rodada(versao: str, recibo: Sequence[dict[str, str]]) -> str | None:
+    """A prova da rodada que RODOU e reprovou a versão; ``None`` quando nenhuma a vetou.
+
+    Sem rodada, rodada herdada, ficha que reprovou antes de rodar e perna «não medida» não
+    vetam: a subida segue pela ficha (D-0811-O-PROTON-SE-ATUALIZA-SOZINHO).
+    """
+    ordem = ordem_da_versao(versao)
+    if ordem == (-1, -1):
+        return None
+    for linha in recibo:
+        rodada = linha["rodada"]
+        if (
+            ordem_da_versao(linha["versão"]) == ordem
+            and linha["veredito"] == VEREDITO_REPROVOU
+            and linha["ficha"].startswith(VEREDITO_PASSOU)
+            and rodada not in (RODADA_HERDADA, RODADA_NAO_RODOU)
+        ):
+            return linha["prova"] or rodada
+    return None
 
 
 def a_mais_recente_que_passa(recibo: Sequence[dict[str, str]]) -> str | None:
