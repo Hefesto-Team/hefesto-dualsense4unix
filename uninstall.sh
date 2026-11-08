@@ -722,7 +722,7 @@ if sudo -n true 2>/dev/null; then
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh 2>/dev/null || true
     if [[ -e /etc/sudoers.d/49-hefesto-atualizador ]]; then
         log "removendo a regra do atualizador (/etc/sudoers.d/49-hefesto-atualizador)"
-        sudo rm -f /etc/sudoers.d/49-hefesto-atualizador 2>/dev/null || true
+        sudo rm -f /etc/sudoers.d/49-hefesto-atualizador /etc/sudoers.d/.49-hefesto-atualizador.novo 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz 2>/dev/null || true
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa 2>/dev/null || true
