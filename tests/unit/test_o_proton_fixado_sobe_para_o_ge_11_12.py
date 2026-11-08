@@ -12,7 +12,9 @@ avisa «posterior») reprova `test_o_ge_novo_sem_o_fallback_no_script_cala`; sub
 `test_todo_input_report_do_pad_cabe_no_tamanho_declarado`; trocar o `UHID_DESTROY` do
 `_destruir_o_device` por só fechar o fd reprova `test_o_pad_que_sai_e_volta_e_aparelho_novo`;
 manter o pad de pé com a máscara mudada (a comparação do `flavor` em `start_gamepad_emulation`
-trocada por ``True``) reprova `test_a_mascara_que_muda_desce_o_pad_e_sobe_outro`.
+trocada por ``True``) reprova `test_a_mascara_que_muda_desce_o_pad_e_sobe_outro`; ler o GE só
+na Steam nativa e em ``~/.local/share/Steam`` reprova
+`test_o_script_do_ge_se_le_em_toda_raiz_da_steam_e_no_heroic` no Flatpak e nas duas casas do Heroic.
 """
 
 from __future__ import annotations
@@ -102,6 +104,39 @@ def test_o_script_que_nao_se_le_avisa_que_nao_foi_lido(tmp_path: Path) -> None:
 
 def test_o_contrato_nao_guarda_teto_de_versao() -> None:
     assert not [nome for nome in vars(cf) if nome.startswith("GE_ULTIMO")]
+
+
+@pytest.mark.parametrize(
+    "onde",
+    [
+        ".steam/steam/compatibilitytools.d",
+        ".local/share/Steam/compatibilitytools.d",
+        ".var/app/com.valvesoftware.Steam/.steam/steam/compatibilitytools.d",
+        ".config/heroic/tools/proton",
+        ".var/app/com.heroicgameslauncher.hgl/config/heroic/tools/proton",
+    ],
+)
+def test_o_script_do_ge_se_le_em_toda_raiz_da_steam_e_no_heroic(tmp_path: Path, onde: str) -> None:
+    """D-0811-O-CONTRATO-DO-GE-LE-O-SCRIPT-INSTALADO."""
+    lar = tmp_path / "casa"
+    alvo = lar / onde / "GE-Proton11-12-x86_64"
+    alvo.mkdir(parents=True)
+    (alvo / "proton").write_text(SCRIPT_DO_11_12, encoding="utf-8")
+    (tmp_path / "raiz").mkdir()
+    tag, mensagem = _ge_por_versao(cf.Ambiente(home=lar, env={}, raiz=tmp_path / "raiz"))
+    assert tag == "[WARN]", mensagem
+    assert mensagem.count("GE-Proton11-12-x86_64: o script põe") == 1, mensagem
+
+
+def test_o_mesmo_ge_na_steam_e_no_heroic_avisa_uma_vez(tmp_path: Path) -> None:
+    lar = tmp_path / "casa"
+    for onde in (".steam/steam/compatibilitytools.d", ".config/heroic/tools/proton"):
+        alvo = lar / onde / "GE-Proton11-12-x86_64"
+        alvo.mkdir(parents=True)
+        (alvo / "proton").write_text(SCRIPT_DO_11_12, encoding="utf-8")
+    (tmp_path / "raiz").mkdir()
+    _tag, mensagem = _ge_por_versao(cf.Ambiente(home=lar, env={}, raiz=tmp_path / "raiz"))
+    assert mensagem.count("GE-Proton11-12-x86_64: o script põe") == 1, mensagem
 
 
 def _tamanhos_de_entrada(descritor: bytes) -> dict[int, int]:

@@ -384,14 +384,6 @@ UCM_DO_UPSTREAM = "USB-Audio/Sony/DualSense-PS5-HiFi.conf"
 UCM_DO_HEFESTO = "USB-Audio/Hefesto/DualSense-HiFi.conf"
 
 
-def _compatibilitytools(amb: Ambiente) -> list[Path]:
-    return [
-        p
-        for raiz in _raizes_da_steam(amb)
-        if (p := raiz / "compatibilitytools.d").is_dir()
-    ]
-
-
 def _texto_do_arquivo(caminho: Path, teto: int | None = None) -> str:
     """O texto do arquivo, ou vazio se ele não abre: a sonda pergunta, e ausência não é defeito."""
     try:
@@ -550,26 +542,52 @@ def _fala_das_trocas_do_ge(pasta: Path, mapa: dict[str, str], amb: Ambiente) -> 
     )
 
 
+def _pastas_dos_ge(amb: Ambiente) -> tuple[list[Path], list[Path]]:
+    """``(da Steam, do Heroic)``: a ``compatibilitytools.d`` de toda raiz da Steam e a
+    ``tools/proton`` de toda casa do Heroic, pelos donos."""
+    from .censo_dos_lancadores import pastas_que_existem
+    from .steam_launch_options import raizes_de_jogos
+
+    try:
+        casas = pastas_que_existem(
+            "Heroic",
+            amb.home,
+            xdg_config=_pasta_xdg(amb, "XDG_CONFIG_HOME", ".config"),
+            xdg_data=_pasta_xdg(amb, "XDG_DATA_HOME", ".local/share"),
+        )
+    except OSError:
+        casas = ()
+    return (
+        [r / "compatibilitytools.d" for r in raizes_de_jogos(amb.home)],
+        [c / "tools" / "proton" for c in casas],
+    )
+
+
 def _sonda_ge_por_versao(amb: Ambiente) -> Resultado:
-    pastas = _compatibilitytools(amb)
-    if not _raizes_da_steam(amb):
-        return Resultado(AUSENTE, "a Steam não está instalada para este usuário")
+    da_steam, do_heroic = _pastas_dos_ge(amb)
+    if not da_steam and not do_heroic:
+        return Resultado(AUSENTE, "nem a Steam nem o Heroic estão instalados para este usuário")
     instalados = [
-        (p, v)
-        for pasta in pastas
+        (p, v, pasta in da_steam)
+        for pasta in (*da_steam, *do_heroic)
+        if pasta.is_dir()
         for p in sorted(pasta.glob("GE-Proton*"))
         if p.is_dir() and (v := _versao_do_ge(p)) is not None
     ]
     if not instalados:
-        return Resultado(AUSENTE, "nenhum GE-Proton em compatibilitytools.d")
+        return Resultado(AUSENTE, "nenhum GE-Proton na Steam nem no Heroic")
     mapa = _o_mapa_dos_jogos(amb)
     avisos = [
         aviso
-        for p, v in instalados
-        for aviso in (_fala_da_versao_do_ge(p, v), _fala_das_trocas_do_ge(p, mapa, amb))
+        for p, v, na_steam in instalados
+        for aviso in (
+            _fala_da_versao_do_ge(p, v),
+            _fala_das_trocas_do_ge(p, mapa, amb) if na_steam else None,
+        )
         if aviso
     ]
-    return Resultado(QUEBROU, "; ".join(avisos)) if avisos else Resultado(OK)
+    unicos = list(dict.fromkeys(avisos))
+    return Resultado(QUEBROU, "; ".join(unicos)) if unicos else Resultado(OK)
 
 
 def _chave_do_proton_da_valve(pasta: str) -> str:
