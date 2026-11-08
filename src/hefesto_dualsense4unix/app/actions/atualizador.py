@@ -320,6 +320,13 @@ def ler_o_andamento() -> dict[str, Any]:
     return _ler_json(_estado() / ARQUIVO_DO_ANDAMENTO)
 
 
+def marcar_o_andamento_visto() -> None:
+    """O fim que quem usa fechou não volta na próxima abertura."""
+    andamento = ler_o_andamento()
+    if andamento:
+        _gravar_json(_estado() / ARQUIVO_DO_ANDAMENTO, {**andamento, "visto": True})
+
+
 def total(andamento: dict[str, Any]) -> dict[str, Any]:
     """A linha «Total»: quantas prontas de quantas, a média das barras e quantas falharam."""
     itens = [p for p in andamento.get("pecas") or [] if isinstance(p, dict)]
@@ -339,7 +346,8 @@ class _Andamento:
             "fase": ANDANDO, "inicio": time.time(), "pid": os.getpid(),
             "pecas": [{
                 "id": p.id, "nome": p.nome, "de": versoes[p.id].instalada,
-                "para": versoes[p.id].publicada or "", "dica_do_aplicar": p.dica_do_aplicar,
+                "para": versoes[p.id].publicada or "", "rotulo": versoes[p.id].rotulo,
+                "dica_do_aplicar": p.dica_do_aplicar,
                 "etapas": dict.fromkeys(ETAPAS, ""), "pct": 0, "selo": FILA, "motivo": "",
                 "contagens": [],
             } for p in lista],
@@ -564,7 +572,8 @@ def rodar(
                        if isinstance(item, dict)}
         for peca in escolhidas:
             visto = conferencia.get(peca.id)
-            versoes[peca.id] = (Versoes(str(visto.get("de", "")), str(visto.get("para", "")))
+            versoes[peca.id] = (Versoes(str(visto.get("de", "")), str(visto.get("para", "")),
+                                        rotulo=str(visto.get("rotulo", "")))
                                 if visto else Versoes())
         andamento = _Andamento(escolhidas, versoes)
         _anotar(f"fila: {', '.join(p.id for p in escolhidas) or 'nada'}")

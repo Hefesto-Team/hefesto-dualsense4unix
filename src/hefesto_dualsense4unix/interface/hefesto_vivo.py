@@ -1708,6 +1708,14 @@ class LeitorDoEstado:
             self._uma_leitura()
 
 
+def _pintar_a_atualizacao(piloto: Any, ctx: Any) -> None:
+    """A pergunta da atualização e o andamento, por cima da aba aberta."""
+    try:
+        pacotes.atualizacoes.pintar(piloto.ponte, piloto.pagina, ctx)
+    except (AttributeError, RuntimeError) as erro:
+        print(f"[atualizações] a caixa não pintou: {erro}", file=sys.stderr)
+
+
 class Piloto:
     SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = 4.0
     SEGUNDOS_DE_ESPERA_DOS_EXTERNOS = 3.0
@@ -2450,6 +2458,7 @@ class Piloto:
         t_ipc = (time.perf_counter() - t0) * 1000
         self._mesa_de_agora, self._ctx_de_agora = ctx.mesa, ctx
         pacotes.bater_os_coracoes(ctx, ponte)
+        _pintar_a_atualizacao(self, ctx)
         self._navegar(st, ctx)
         t_pacote0 = time.perf_counter()
         try:

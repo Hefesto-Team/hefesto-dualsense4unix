@@ -12,7 +12,9 @@ clique manda o IPC `daemon.reload`, que do outro lado derruba e sobe o leitor
 dos atalhos do controle e reescreve os arquivos de ambiente que a Steam usa
 para lançar jogo. Quem para de mentir é a DICA, não o rótulo: a metade barata
 (reler a aba, 4 ms) **já acontece sozinha a cada 2 s** (`a09_sistema.LENTO_S`),
-e é por isso que o nome cabe num botão que faz os dois.
+e é por isso que o nome cabe num botão que faz os dois. **Caducou em 08/11/2026:** o desenho das
+atualizações (O-HEFESTO-SE-ATUALIZA-INTEIRO-01) chama o botão «Reler atalhos» e a espera
+«Relendo…»; «Atualizar» passa a ser das atualizações.
 
 **[02] — apagado e ainda assim responde.** Três botões desta página ficam sem
 trabalho a fazer, e a conta de quem está sem já existia no produto
@@ -298,14 +300,12 @@ class TestODesenhoCarregaAPeca:
         atributos, rotulo = achado.group(1), achado.group(2)
         assert rotulo == aba09.ROTULO_ATUALIZAR, rotulo
         assert f'data-hef-em-voo="{aba09.EM_VOO_ATUALIZAR}"' in atributos
-        assert rotulo == "Atualizar", (
-            f"o botão diz {rotulo!r}. A decisão manteve 'Atualizar' — os dois "
-            "gestos seguem, com o mesmo nome, 09-Q1, 05/09/2026 —, "
-            "revertendo a recomendação de 04/09 que o rebatizava pela metade "
-            "cara.")
-        assert 'data-hef-em-voo="Atualizando…"' in atributos, (
-            f"o rótulo da espera não é o decidido: {atributos!r}. Na 09-Q3 o "
-            "botão diz «Atualizando…».")
+        assert rotulo == "Reler atalhos", (
+            f"o botão diz {rotulo!r}. O desenho de 08/11/2026 o chama «Reler atalhos»: "
+            "«Atualizar» é das atualizações (O-HEFESTO-SE-ATUALIZA-INTEIRO-01).")
+        assert 'data-hef-em-voo="Relendo…"' in atributos, (
+            f"o rótulo da espera não é o decidido: {atributos!r}. Desde 08/11 o "
+            "botão diz «Relendo…».")
 
     def test_a_dica_do_reload_parou_de_negar_o_trabalho_caro(self) -> None:
         import re

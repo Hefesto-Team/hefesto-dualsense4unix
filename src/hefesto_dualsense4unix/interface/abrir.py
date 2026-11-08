@@ -355,11 +355,12 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
         armar_a_volta_a_frente(vez)
     if a_janela_vai_para_a_tela(args):
         from hefesto_dualsense4unix.app.actions.atos_da_bandeja import garantir_a_bandeja
+        from hefesto_dualsense4unix.app.actions.atualizador import conferir_ao_abrir
         from hefesto_dualsense4unix.app.actions.versao_ao_abrir import baixar_ao_abrir
 
         garantir_a_bandeja()
         trazer_o_servico()
-        baixar_ao_abrir(RAIZ)
+        conferir_ao_abrir(baixar_ao_abrir(RAIZ))
 
     sys.argv = [piloto, *args]
     runpy.run_module(piloto, run_name="__main__")

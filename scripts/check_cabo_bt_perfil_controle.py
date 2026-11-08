@@ -24,6 +24,13 @@ _DO_EXTERNO = ("declara o controle externo (a cor do plástico, a chave de modo,
                "aparelho")
 
 NAO_E_DO_APARELHO: dict[str, str] = {
+    **{gesto: "a atualização do Hefesto e das peças da máquina (O-HEFESTO-SE-ATUALIZA-INTEIRO-01) "
+              "— é do computador, nunca do controle"
+       for gesto in ("atualizacoes-abrir", "atualizacoes-agora-nao", "atualizacoes-anteriores",
+                     "atualizacoes-atualizar", "atualizacoes-fechar", "atualizacoes-lista",
+                     "atualizacoes-parar", "atualizacoes-registro", "atualizacoes-tentar",
+                     "atualizar-sozinho", "peca-da-atualizacao", "pecas-do-grupo",
+                     "prazo-da-atualizacao", "voltar-a-anterior")},
     "calibrar-sinal": "O passo do sentido só lê o giro da peça e diz o veredito: não grava "
                       "estado nenhum, nem no aparelho, nem no perfil.",
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",

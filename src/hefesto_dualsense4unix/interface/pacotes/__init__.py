@@ -1137,6 +1137,7 @@ from . import (  # noqa: E402
     a11_calibrar_sensores,  # noqa: F401
     a12_mapa_das_portas,  # noqa: F401
     a13_mapa_do_controle,  # noqa: F401
+    atualizacoes,  # noqa: F401
     camada,  # noqa: F401
     rodape,  # noqa: F401
 )
@@ -1149,6 +1150,7 @@ def _carregar_tudo() -> None:
     for f in sorted(aqui.glob("a[0-9][0-9]_*.py")):
         importlib.import_module(f"{__name__}.{f.stem}")
     importlib.import_module(f"{__name__}.rodape")
+    importlib.import_module(f"{__name__}.atualizacoes")
     importlib.import_module(f"{__name__}.camada")
 
 

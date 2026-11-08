@@ -1380,7 +1380,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "(instrumento). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
-        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3552`) e o daemon "
+        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3561`) e o daemon "
         "publica o estado "
         "do "
         "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "
@@ -2995,7 +2995,7 @@ class TestOPortaoMorde:
         ), (
             "a varredura não vê despacho por STRING — `getattr(pin, "
             '"lock_proton_for_all_games", None)` em '
-            "`src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py:2514` "
+            "`src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py:2540` "
             "(`lock_proton_for_all_games`) é o ÚNICO caminho "
             "deste "
             "símbolo. Foi assim que a passada anterior errou cinco vezes numa "

@@ -34,6 +34,11 @@ CAMADA: dict[tuple[str, str], str] = {
     **{(pagina, gesto): dono for pagina in PAGINAS_DA_SECAO_DOS_CONTROLES
        for gesto, dono in _DA_SECAO_DOS_CONTROLES.items()},
     ("01-jogar.html", "cadeado"): _C,
+    ("09-sistema.html", "atualizacoes-abrir"): _W,
+    ("09-sistema.html", "atualizacoes-anteriores"): _W,
+    ("09-sistema.html", "atualizar-sozinho"): _C,
+    ("09-sistema.html", "peca-da-atualizacao"): _C,
+    ("09-sistema.html", "prazo-da-atualizacao"): _C,
     ("01-jogar.html", "escolher-na-fita"): _W,
     ("01-jogar.html", "hefesto"): _J,
     ("01-jogar.html", "modo-dualsense"): _J,

@@ -138,6 +138,7 @@ ESCREVEM = {
     "_guardar_a_chave_da_modificacao",
     "_curar_o_impedimento",
     "_gravar_a_memoria_do_jogo",
+    "mudar_a_escolha",
 
 }
 
@@ -172,6 +173,14 @@ ISENTOS: dict[tuple[str, str], str] = {
 
 
 FORA_DA_ARVORE: dict[tuple[str, str], str] = {
+    ("*", "atualizacoes-atualizar"):
+        "solta a fila do atualizador num processo fora da janela (`atualizador.soltar`): o "
+        "perigo é instalar peças e reiniciar o serviço, e quem grava é o processo, não o gesto",
+    ("*", "atualizacoes-tentar"):
+        "idem: solta de novo, num fio que espera a fila de agora, as peças que falharam",
+    ("*", "voltar-a-anterior"):
+        "volta a peça pelo passo `voltar` do registro do atualizador (Proton, MangoHud, umu, "
+        "Python, kernel), que a árvore não alcança pelo nome: é campo de um `Peca`",
     ("08-conexoes.html", "mapear-gravar"):
         "grava o nome e o lugar da porta da vez no `maquina.json` de quem usa pelo "
         "`MapearAsPortas.gravar` do dono do mapa (`entrada_a_entrada.o_mapa()`, "

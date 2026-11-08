@@ -1106,6 +1106,25 @@ def _com_quem_esta_na_frente(valor: Any, state: Any) -> str | None:
             f'<span title="{html.escape(classe)}">{html.escape(_curto(classe))}</span>')
 
 
+CAMPO_DO_SOZINHO = "atualizar-sozinho"
+CAMPO_DO_PRAZO = "prazo-da-atualizacao"
+CAMPO_DAS_NOVAS = "atualizacoes-novas"
+CAMPO_DA_GRADE = "atualizacoes-lista"
+
+
+def campos_das_atualizacoes() -> dict[str, Any]:
+    """A seção Atualizações: a grade das peças, o «Atualizar sozinho», o prazo e as novas."""
+    from hefesto_dualsense4unix.app.actions import atualizador as at
+    from hefesto_dualsense4unix.interface import atualizacoes as tela
+    from hefesto_dualsense4unix.interface.pacotes.atualizacoes import conferencia_vista
+
+    escolha = at.ler_a_escolha()
+    conferencia = conferencia_vista()
+    return {CAMPO_DO_SOZINHO: escolha.sozinho, CAMPO_DO_PRAZO: str(escolha.dias),
+            CAMPO_DAS_NOVAS: str(tela.quantas_novas(conferencia)),
+            CAMPO_DA_GRADE: tela.grade_da_aba(conferencia)}
+
+
 @registrar("09-sistema.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `interface/sistema.pacote` — a camada do PRODUTO.
@@ -1154,6 +1173,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 CAMPO_DA_BANDEJA: _bandeja.bandeja_ligada(),
                 CAMPO_DO_TAMANHO: str(tamanho_da_interface()),
                 **razoes_do_cinza(ctx),
+                **campos_das_atualizacoes(),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
 
     fora: dict[str, object] = {}
@@ -1178,6 +1198,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     if tira:
         fora[CAMPO_DA_FITA] = tira
     fora.update(razoes_do_cinza(ctx))
+    fora.update(campos_das_atualizacoes())
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
     fora["cobertura"] = {"pintados": len(fora), "sem_dono": len(SEM_DONO)}
     fora[CAMPO_DO_MODO_AVULSO] = (
@@ -1572,7 +1593,12 @@ SUFIXO_DA_RAZAO = "-razao"
 
 BOTOES_CINZAS = ("reiniciar",)
 
-ESPERA_A_PUBLICACAO: dict[str, str] = {}
+ESPERA_A_PUBLICACAO: dict[str, str] = {
+    campo: "a seção das atualizações (O-HEFESTO-SE-ATUALIZA-INTEIRO-01). O `data-campo` está "
+           "em `mockup/09-sistema.html` e chega ao produto no `--publicar 09`."
+    for campo in ("atualizar-sozinho", "prazo-da-atualizacao", "atualizacoes-novas",
+                  "atualizacoes-lista")
+}
 
 
 def razoes_do_cinza(ctx: Contexto) -> dict[str, str]:
@@ -1699,7 +1725,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:142-170`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:2029`) e
+    `interface/hefesto_vivo.py:2037`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para

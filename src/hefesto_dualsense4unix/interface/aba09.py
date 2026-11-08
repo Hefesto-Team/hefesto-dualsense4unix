@@ -370,9 +370,79 @@ DICA_DA_BATERIA = "Vale para todos os controles"
 DICA_DA_SAUDE = "Verde é ligado. Clique para trocar"
 DICA_DO_REGISTRO = "O registro do serviço; copie para relatar um problema"
 
-ROTULO_ATUALIZAR = "Atualizar"
-EM_VOO_ATUALIZAR = "Atualizando…"
-DICA_ATUALIZAR = "Relê os atalhos e os arquivos da Steam"
+ROTULO_ATUALIZAR = "Reler atalhos"
+EM_VOO_ATUALIZAR = "Relendo…"
+DICA_ATUALIZAR = "Os atalhos e os arquivos da Steam"
+
+CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-bg)}
+  .at-cab{grid-template-columns:minmax(0,1fr) auto;height:auto}
+  body .sec-rot.at-cab{height:35px !important}
+  .at-cab > span:last-child{display:flex;align-items:center;gap:8px}
+  .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
+  .at-cab .btn{height:28px;padding:0 12px;font-size:12px}
+  .at-cab .btn.verde.cheio{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;text-decoration:none}
+  .at-cab .btn.verde.cheio:hover{background:color-mix(in srgb,var(--green) 75%,#fff)}
+  .at-cab .btn .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;margin-left:6px}
+  .prazo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
+  .prazo .pm{width:24px;height:24px;border-radius:6px;border:1px solid var(--linha);background:var(--app-bg);
+             color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
+  .prazo .pm:hover{border-color:var(--comment)}
+  .prazo .dias{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
+  .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 22px;align-items:start}
+  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap}
+  .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px}
+  .at-grade .saude .ver .nv{color:var(--fg)}
+  .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
+  .at-marca{width:16px;height:16px;accent-color:var(--pink);margin:0;flex:0 0 16px;cursor:pointer}
+  .atualiza:not(:has(.at-cab .cadeado.ligada)) .at-marca{display:none}
+  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .txt,
+  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .ver{color:var(--texto-mudo)}
+  @media (max-height:760px){
+    body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
+    .at-grade{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .at-grade .col-lista{display:contents}
+    .at-grade .risco{display:none}
+    body .sec-rot.at-cab{height:24px !important}
+    .at-cab .cadeado,.at-cab .btn{height:22px}
+    .at-cab .prazo .pm{width:20px;height:20px;font-size:12px}
+    .at-grade .saude{height:19px}
+    .at-grade .selo{padding-top:1px;padding-bottom:1px}
+  }
+"""
+
+
+def _secao_das_atualizacoes():
+    """A seção Atualizações: o cabeçalho com os ajustes e a grade das peças, do motor."""
+    from hefesto_dualsense4unix.app.actions.atualizador import DIAS_PADRAO
+    from hefesto_dualsense4unix.interface.atualizacoes import (
+        DICA_DO_PRAZO, DICA_DO_SOZINHO, grade_da_aba, quantas_novas)
+    from hefesto_dualsense4unix.interface.pacotes.a09_sistema import (
+        CAMPO_DA_GRADE, CAMPO_DAS_NOVAS, CAMPO_DO_PRAZO, CAMPO_DO_SOZINHO)
+
+    exemplo = {"pecas": [
+        {"id": i, "nome": n, "dica": d, "de": de, "para": para, "estado": e, "marcada": m,
+         "volta": v, "grupo": "hefesto" if i == "hefesto" else "infra", "rotulo": r}
+        for i, n, d, de, para, e, m, v, r in (
+            ("hefesto", "Hefesto", "Interface, serviço e correções", "0.9.5.1", "0.9.5.2", "nova", True, 1, ""),
+            ("proton", "GE-Proton", "Os jogos da Steam e do Heroic", "11-7", "11-12", "nova", True, 1, ""),
+            ("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto", "5.87", "", "fixa", False, 2, ""),
+            ("som", "Som", "PipeWire e WirePlumber", "1.6.9", "", "fixa", False, 2, ""),
+            ("python", "Python", "evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3", "", "2", "nova", False, 1, "2 pacotes"),
+            ("nvidia", "Driver NVIDIA", "nvidia-driver-595", "595.104.02", "595.104.02", "em_dia", True, 1, ""),
+            ("kernel", "Kernel", "linux-system76", "7.2.15", "7.2.15", "em_dia", True, 1, ""),
+            ("dkms", "Módulos do kernel", "4 módulos · 7.2.15", "1.0.0", "1.0.0", "em_dia", True, 1, ""),
+            ("sistema", "Pacotes do sistema", "Pop!_OS 24.04", "24.04", "24.04", "em_dia", True, 1, ""),
+            ("mangohud", "MangoHud", "O painel por cima do jogo", "0.8.4", "0.8.4", "em_dia", True, 1, ""),
+            ("umu", "umu", "Os jogos de fora da Steam no Proton", "", "", "em_dia", True, 1, ""))]}
+    return f'''
+        <div class="atualiza">
+        <div class="sec-rot sec-alta at-cab">
+          <span>Atualizações</span>
+          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="{CAMPO_DO_SOZINHO}" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="{DICA_DO_SOZINHO}"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="{DICA_DO_PRAZO}"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="{CAMPO_DO_PRAZO}">{DIAS_PADRAO}</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span><button class="btn" data-gesto="atualizacoes-anteriores">Versões anteriores</button><button class="btn verde cheio" data-gesto="atualizacoes-abrir">Ver atualizações<span class="n" data-campo="{CAMPO_DAS_NOVAS}">{quantas_novas(exemplo)}</span></button></span>
+        </div>
+        <div class="at-grade" data-campo="{CAMPO_DA_GRADE}" data-hef-alvo="html">{grade_da_aba(exemplo)}</div>
+        </div>
+'''
 
 ROTULO_PARAR = "Parar"
 
@@ -432,6 +502,7 @@ MIOLO = f'''
           </div>
         </div>
 
+{_secao_das_atualizacoes()}
         <div class="sec-rot sr-log sec-alta">
           <span data-dica="{DICA_DO_REGISTRO}">Detalhes técnicos</span>
           <span>{item("Copiar", "Copia o registro inteiro", "btn copiar", gesto=_gesto("copiar-registro")).strip()}{item("Salvar", "Guarda o registro num arquivo", "btn copiar", gesto=_gesto("salvar-registro")).strip()}</span>
@@ -536,7 +607,8 @@ if not _PILULAS:
 if _SEM_GLIFO:
     raise SystemExit("ERRO: pílula sem glifo: " + " · ".join(repr(r) for r in _SEM_GLIFO))
 
-_PILULAS_LIGAVEIS = re.findall(r'<button class="cadeado( ligada)?"[^>]*>', MIOLO)
+_PILULAS_LIGAVEIS = re.findall(
+    r'<button class="cadeado( ligada)?"(?![^>]*data-gesto="atualizar-sozinho")[^>]*>', MIOLO)
 if len(_PILULAS_LIGAVEIS) != len(LIGAVEIS) + 1:
     raise SystemExit(f"ERRO: a página tem {len(_PILULAS_LIGAVEIS)} ligáveis e o desenho "
                      f"declara {len(LIGAVEIS)} na coluna e a da bandeja no canto.")
@@ -626,11 +698,11 @@ if not _RELOAD:
     raise SystemExit("ERRO: o botão do `atualizar` sumiu da coluna do serviço — "
                      "seletor que casa ZERO é erro, não silêncio.")
 _ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
-_PALAVRA_DOUSUARIO_09Q1 = "Atualizar"
+_PALAVRA_DOUSUARIO_09Q1 = "Reler atalhos"
 if ROTULO_ATUALIZAR != _PALAVRA_DOUSUARIO_09Q1 or _ROT_RELOAD != _PALAVRA_DOUSUARIO_09Q1:
     raise SystemExit(
-        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e a ordem foi manter "
-        f"{_PALAVRA_DOUSUARIO_09Q1!r} (09-Q1, 05/09/2026).")
+        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e o desenho de 08/11/2026 o "
+        f"chama {_PALAVRA_DOUSUARIO_09Q1!r}: «Atualizar» é das atualizações.")
 if f'data-hef-em-voo="{EM_VOO_ATUALIZAR}"' not in _ATRS:
     raise SystemExit(f"ERRO: o botão {ROTULO_ATUALIZAR!r} perdeu o `data-hef-em-voo` (09-Q3).")
 if "Não muda nada" in _ATRS:
@@ -660,7 +732,7 @@ CAMPO_DO_CHIP = "fita-chip"
 
 def escrever_o_ensaio():
     """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`."""
-    n = monta("09-sistema", "Sistema", MIOLO, CSS)
+    n = monta("09-sistema", "Sistema", MIOLO, CSS + CSS_DAS_ATUALIZACOES)
 
     p = onde.pagina("09-sistema.html")
     s = p.read_text()

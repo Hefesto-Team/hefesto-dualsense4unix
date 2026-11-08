@@ -97,7 +97,7 @@ def test_as_quatro_colunas_estao_na_ordem_do_usuario() -> None:
     colunas = re.split(r'<div class="risco"></div>', avancadas)
     assert len(colunas) == 4, f"{len(colunas)} colunas de botões"
     textos = [re.findall(r">([^<>]+)</button>", c) for c in colunas]
-    assert textos[0] == ["Parar", "Atualizar", "Corrigir o serviço", "Reiniciar"], textos[0]
+    assert textos[0] == ["Parar", "Reler atalhos", "Corrigir o serviço", "Reiniciar"], textos[0]
     assert textos[1] == ["Padrão", "Confortável", "Espaçoso"], textos[1]
     assert textos[3] == ["Permitir correções automáticas", "Iniciar com o sistema",
                          "Restaurar de fábrica"], textos[3]
