@@ -287,13 +287,19 @@ def test_na_grade_a_versao_cede_antes_do_rotulo() -> None:
         {"id": "sistema", "nome": "Pacotes do sistema", "estado": "em_dia", "de": "24.04",
          "para": "24.04", "rotulo": "12 pacotes", "marcada": True, "volta": 1}]}
     grade = tela.grade_da_aba(conferencia)
-    assert ('<span class="ver" data-dica="595.104.02 → 595.110.07"><span class="de">595.104.02'
-            '</span><span class="seta">→</span><span class="nv">595.110.07</span>') in grade
-    assert '<span class="ver" data-dica="12 pacotes"><span class="rot">12 pacotes</span>' in grade
+    assert ('<span class="ver" data-dica="595.104.02 → 595.110.07"><span class="par">'
+            '<span class="de">595.104.02</span><span class="seta">→</span></span>'
+            '<span class="nv">595.110.07</span>') in grade
+    assert ('<span class="ver" data-dica="12 pacotes"><span class="num">12</span>'
+            ' <span class="resto">pacotes</span>') in grade
     css = re.sub(r"\s+", "", Path(aba09.__file__).read_text(encoding="utf-8"))
     assert ".at-grade.saude.txt{flex:00auto}" in css
-    assert ".at-grade.saude.ver.de,.at-grade.saude.ver.rot{min-width:0;overflow:hidden;" \
-           "text-overflow:ellipsis}" in css
+    assert "flex-flow:row-reversewrap;align-content:flex-start;height:24px;line-height:24px;" \
+           "overflow:hidden}" in css
+    assert ".at-grade.saude.ver.nv{color:var(--fg);flex:none;order:-1}" in css
+    assert ".at-grade.saude.ver.par{flex:none}" in css
+    assert ".at-grade.saude.ver:has(.num){display:block;text-align:right;white-space:normal}" in css
+    assert ".at-grade.saude.ver.num,.at-grade.saude.ver.resto{white-space:nowrap}" in css
     caixa = re.sub(r"\s+", "", tela.CSS)
     assert "max-height:min(717px,calc(100vh-40px))" in caixa
     assert ".hef-atualiza.tn-cx:has(.pendente).at-l{height:32px}" in caixa
@@ -317,3 +323,39 @@ def test_o_jogo_aberto_diz_o_nome_que_a_steam_ja_sabe(registro: list[at.Peca],
     for estado in ({"jogo_steam": {"lido": True, "appid": None}}, {}, None):
         html = gestos.conteudo(SimpleNamespace(state=estado))
         assert '<div class="pendente"><span>Jogo aberto</span><span>· espera</span></div>' in html
+
+
+def test_o_jogo_de_fora_da_steam_diz_o_nome_do_perfil_de_jogo_que_entrou(
+        registro: list[at.Peca], monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.profiles import schema
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    monkeypatch.setattr(schema, "_CLASSES_DE_JOGO_CONHECIDAS",
+                        frozenset({"heroic-jogo-de-mentira"}))
+    save_profile(schema.Profile(name="Jogo do Heroic",
+                                match=schema.MatchCriteria(window_class=["heroic-jogo-de-mentira"]),
+                                priority=80))
+    save_profile(schema.Profile(name="Outro de jogo", nome_do_jogo="Nome dado na aba",
+                                match=schema.MatchCriteria(window_class=["heroic-jogo-de-mentira"]),
+                                priority=80))
+    save_profile(schema.Profile(name="Só a janela",
+                                match=schema.MatchCriteria(window_class=["um-editor"]),
+                                priority=10))
+    monkeypatch.setattr(gestos, "_jogo_aberto", lambda _ctx: True)
+    at.conferir(rede=True, lista=LISTA)
+    gestos.TELA["vista"] = "pergunta"
+
+    def pendente(estado: dict[str, Any]) -> str:
+        html = gestos.conteudo(SimpleNamespace(state=estado))
+        return re.search(r'<div class="pendente">.*?</div>', html).group(0)
+
+    sem_steam = {"jogo_steam": {"lido": True, "appid": None}}
+    assert "<span class=\"jogo\">Jogo do Heroic</span>" in pendente(
+        {**sem_steam, "active_profile": "Jogo do Heroic"})
+    assert "<span class=\"jogo\">Nome dado na aba</span>" in pendente(
+        {**sem_steam, "active_profile": "Outro de jogo"})
+    for ativo in ("Só a janela", "Perfil que não existe", None):
+        assert pendente({**sem_steam, "active_profile": ativo}) == (
+            '<div class="pendente"><span>Jogo aberto</span><span>· espera</span></div>')

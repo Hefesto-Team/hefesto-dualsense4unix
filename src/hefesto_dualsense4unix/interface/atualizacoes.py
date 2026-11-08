@@ -73,14 +73,15 @@ CSS = """
 .hef-atualiza .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
   color:var(--green)}
 .hef-atualiza .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-.hef-atualiza .prazo{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;
-  color:var(--fg);white-space:nowrap}
+.hef-atualiza .prazo{display:inline-block;font-size:12.5px;color:var(--fg);white-space:nowrap}
+.hef-atualiza .prazo > *{vertical-align:middle;margin-left:6px}
+.hef-atualiza .prazo > :first-child{margin-left:0}
 .hef-atualiza .prazo .pm{width:28px;height:28px;border-radius:6px;
   border:1px solid var(--linha,#53576f);background:var(--app-bg);color:var(--fg);
   font:600 14px/1 'JetBrains Mono',monospace;cursor:pointer}
 .hef-atualiza .prazo .pm:hover{border-color:var(--comment)}
-.hef-atualiza .prazo .dias{min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;
-  font-weight:500;color:var(--cyan)}
+.hef-atualiza .prazo .dias{display:inline-block;min-width:26px;text-align:center;
+  font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
 .hef-atualiza .selo{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;
   font-family:'JetBrains Mono',monospace;white-space:nowrap;text-align:center;flex:none}
 .hef-atualiza .selo.nova{background:var(--purple);color:var(--app-bg)}
@@ -218,10 +219,12 @@ def _ordenadas(itens: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 def _ver(item: dict[str, Any]) -> str:
     de, para = str(item.get("de") or ""), str(item.get("para") or "")
     if item.get("rotulo"):
-        return f'<span class="rot">{_e(item["rotulo"])}</span>'
+        num, _, resto = str(item["rotulo"]).partition(" ")
+        return f'<span class="num">{_e(num)}</span>' + (
+            f' <span class="resto">{_e(resto)}</span>' if resto else "")
     if item.get("estado") == "nova" and de and para:
-        return (f'<span class="de">{_e(de)}</span><span class="seta">→</span>'
-                f'<span class="nv">{_e(para)}</span>')
+        return (f'<span class="par"><span class="de">{_e(de)}</span><span class="seta">→</span>'
+                f'</span><span class="nv">{_e(para)}</span>')
     atual = de or para
     return f'<span class="nv">{_e(atual)}</span>' if atual else ""
 
@@ -451,10 +454,8 @@ def _selo_da_grade(item: dict[str, Any]) -> str:
     if estado == "em_dia":
         return '<span class="selo ok"><span class="sg">✓</span>EM DIA</span>'
     if estado == "fixa":
-        return (f'<span class="selo nt"{_dica(DICA_DA_FIXA)}><span class="sg">&ndash;</span>'
-                'FIXA</span>')
-    return (f'<span class="selo nt"{_dica(item.get("dica", ""))}><span class="sg">&ndash;</span>'
-            'SEM REDE</span>')
+        return '<span class="selo nt"><span class="sg">&ndash;</span>FIXA</span>'
+    return '<span class="selo nt"><span class="sg">&ndash;</span>SEM REDE</span>'
 
 
 def grade_da_aba(conferencia: dict[str, Any]) -> str:
@@ -467,8 +468,10 @@ def grade_da_aba(conferencia: dict[str, Any]) -> str:
                  f'data-v="{_e(item["id"])}"{" checked" if item.get("marcada") else ""}>'
                  if marcavel else '<input type="checkbox" class="at-marca" disabled>')
         fixa = " fixa" if item.get("estado") == "fixa" else ""
+        dica = " · ".join(x for x in (str(item.get("dica") or ""),
+                                      DICA_DA_FIXA if fixa else "") if x)
         linhas.append(f'<div class="saude{fixa}">{marca}{_selo_da_grade(item)}'
-                      f'<span class="txt"{_dica(item.get("dica", ""))}><span>{_e(item.get("nome"))}'
+                      f'<span class="txt"{_dica(dica)}><span>{_e(item.get("nome"))}'
                       f'</span></span><span class="ver"{_dica(_ver_inteira(item))}>{_ver(item)}'
                       '</span></div>')
     colunas, i = [], 0

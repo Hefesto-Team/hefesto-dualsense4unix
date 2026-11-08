@@ -382,17 +382,21 @@ CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-
   .at-cab .btn{height:28px;padding:0 12px;font-size:12px}
   .at-cab .btn.verde.cheio{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;text-decoration:none}
   .at-cab .btn.verde.cheio:hover{background:color-mix(in srgb,var(--green) 75%,#fff)}
-  .at-cab .btn .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;margin-left:6px}
-  .prazo{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
+  .at-cab .btn .n{font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:6px}
+  .prazo{display:inline-block;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
+  .prazo > *{vertical-align:middle;margin-left:6px}
+  .prazo > :first-child{margin-left:0}
   .prazo .pm{width:24px;height:24px;border-radius:6px;border:1px solid var(--linha);background:var(--app-bg);
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
-  .prazo .dias{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
+  .prazo .dias{display:inline-block;min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
   .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 12px;align-items:start}
-  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap;display:flex;min-width:0;overflow:hidden}
+  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap;min-width:0;display:flex;flex-flow:row-reverse wrap;align-content:flex-start;height:24px;line-height:24px;overflow:hidden}
+  .at-grade .saude .ver:has(.num){display:block;text-align:right;white-space:normal}
   .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px;flex:none}
-  .at-grade .saude .ver .nv{color:var(--fg);flex:none}
-  .at-grade .saude .ver .de,.at-grade .saude .ver .rot{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .at-grade .saude .ver .nv{color:var(--fg);flex:none;order:-1}
+  .at-grade .saude .ver .par{flex:none}
+  .at-grade .saude .ver .num,.at-grade .saude .ver .resto{white-space:nowrap}
   .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
   .at-grade .saude{gap:6px}
   .at-grade .saude .txt{flex:0 0 auto}
@@ -409,8 +413,7 @@ CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-
     .at-grade .col-lista{display:contents}
     .at-grade .risco{display:none}
     body .sec-rot.at-cab{height:24px !important}
-    .at-cab .cadeado,.at-cab .btn{height:22px}
-    .at-cab .prazo .pm{width:20px;height:20px;font-size:12px}
+    .at-cab .cadeado,.at-cab .btn{height:24px}
     .at-grade .saude{height:19px}
     .at-grade .selo{padding-top:1px;padding-bottom:1px}
   }

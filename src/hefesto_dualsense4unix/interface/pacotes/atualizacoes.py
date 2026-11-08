@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import os
 import sys
-import threading
 import time
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions import atualizador as at
 from hefesto_dualsense4unix.interface import atualizacoes as tela
 
-from . import Contexto, gesto
+from . import Contexto, fios, gesto
 
 PAGINA = "*"
 INTERVALO_DA_LEITURA_S = 0.5
@@ -52,14 +51,27 @@ def _jogo_aberto(ctx: Contexto | None) -> bool:
 
 
 def _nome_do_jogo(ctx: Contexto | None) -> str:
+    """O nome do jogo aberto: o da Steam pelo appid, e senão o do perfil de jogo que entrou."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
+    from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
+    from hefesto_dualsense4unix.profiles.schema import perfil_e_de_jogo
 
     estado = getattr(ctx, "state", None)
-    jogo = estado.get("jogo_steam") if isinstance(estado, dict) else None
-    appid = jogo.get("appid") if isinstance(jogo, dict) else None
-    if not isinstance(appid, int) or isinstance(appid, bool):
+    if not isinstance(estado, dict):
         return ""
-    return nome_do_appid(str(appid)) or ""
+    jogo = estado.get("jogo_steam")
+    appid = jogo.get("appid") if isinstance(jogo, dict) else None
+    if isinstance(appid, int) and not isinstance(appid, bool):
+        nome = nome_do_appid(str(appid))
+        if nome:
+            return nome
+    ativo = estado.get("active_profile")
+    if not isinstance(ativo, str) or not ativo.strip():
+        return ""
+    perfil = perfil_em_disco(ativo)
+    if not perfil_e_de_jogo(perfil):
+        return ""
+    return str(getattr(perfil, "nome_do_jogo", None) or perfil.name).strip()
 
 
 def _inicio(andamento: dict[str, Any]) -> float:
@@ -138,8 +150,7 @@ def pintar(ponte: Any, pagina: str, ctx: Contexto | None, *, em_fundo: bool = Tr
         return
     TELA["lido_em"], TELA["calculando"] = agora, True
     if em_fundo:
-        threading.Thread(target=_calcular, args=(ctx, TELA["vez"]),
-                         name="atualizador-caixa", daemon=True).start()
+        fios.soltar("atualizador-caixa", _calcular, ctx, TELA["vez"])
     else:
         _calcular(ctx, TELA["vez"])
 
@@ -164,7 +175,7 @@ def _conferir_em_fundo() -> None:
             print(f"[atualizações] a conferência não gravou: {erro}", file=sys.stderr)
         _repintar()
 
-    threading.Thread(target=_conferir, name="atualizador-conferir", daemon=True).start()
+    fios.soltar("atualizador-conferir", _conferir)
 
 
 @gesto("*", "atualizacoes-abrir")
@@ -303,7 +314,7 @@ def tentar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         _repintar()
 
     TELA["escondida"] = 0.0
-    threading.Thread(target=_quando_livre, name="atualizador-tentar", daemon=True).start()
+    fios.soltar("atualizador-tentar", _quando_livre)
 
 
 @gesto("*", "atualizacoes-registro")

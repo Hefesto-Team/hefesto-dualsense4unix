@@ -59,7 +59,7 @@ ABAS = ("01-jogar", "02-controles", "03-gatilhos", "04-iluminacao", "05-vibracao
 
 LER = r"""(function(){
   // https: o endereço de rede não é frase
-  const _MARCAS = /^(iPhone|iPad|iPod|iOS|macOS|dB|dBm|mA|ms|kHz|MHz|GHz|https?:\/\/)/;
+  const _MARCAS = /^(iPhone|iPad|iPod|iOS|macOS|umu\b|dB|dBm|mA|ms|kHz|MHz|GHz|https?:\/\/)/;
   const FORA = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);
   const visivel = e => {
     for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
