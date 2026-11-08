@@ -2081,6 +2081,7 @@ GE_ULTIMA_API = "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/r
 ULTIMA_DO_GE_BASENAME = "ultima-do-ge.json"
 INTERVALO_DA_CONSULTA_S = 6 * 3600
 PRAZO_DA_CONSULTA_S = 30
+TRAVA_DA_CONSULTA = ".ultima-do-ge.trava"
 
 
 @dataclass(frozen=True)
@@ -2151,8 +2152,29 @@ def baixar_a_ultima_do_ge(
 
     A consulta se repete no máximo a cada ``INTERVALO_DA_CONSULTA_S`` (``forcar`` ignora o prazo).
     Sem rede, ``nao_consultado``, nunca «em dia». O tarball só fica no cache com o sha512 batendo,
-    e o registro guarda o sha256 dele, que é o que a extração confere. Nunca levanta.
+    e o registro guarda o sha256 dele, que é o que a extração confere. Um processo por vez (o
+    segundo recebe ``em_andamento``). Nunca levanta.
     """
+    import fcntl
+
+    try:
+        cache.mkdir(parents=True, exist_ok=True)
+        fd = os.open(cache / TRAVA_DA_CONSULTA, os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError as exc:
+        return Atualizacao("falhou", "", f"a trava do cache não abre: {exc}")
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return Atualizacao("em_andamento", "", "outro processo está baixando")
+        return _baixar_com_a_trava(cache, ler=ler, baixar=baixar, agora=agora, forcar=forcar)
+    finally:
+        os.close(fd)
+
+
+def _baixar_com_a_trava(cache: Path, *, ler: Callable[[str], bytes],
+                        baixar: Callable[[str, Path], None], agora: Callable[[], float],
+                        forcar: bool) -> Atualizacao:
     registro = _ler_registro(cache)
     try:
         consultada = float(str(registro.get("consultada_em", 0) or 0))
@@ -2186,7 +2208,10 @@ def baixar_a_ultima_do_ge(
         return Atualizacao("nao_consultado", nome, f"o sha512 não veio: {exc}")
     parcial = cache / f"{nome}.tar.gz.hefesto-download"
     try:
-        cache.mkdir(parents=True, exist_ok=True)
+        if tarball.is_file() and _sha512_do_arquivo(tarball) == esperado:
+            _gravar_registro(cache, {"name": nome, "url": url,
+                                     "sha256": sha256_of_file(tarball), "consultada_em": agora()})
+            return Atualizacao("em_cache", nome)
         baixar(url, parcial)
         if _sha512_do_arquivo(parcial) != esperado:
             parcial.unlink(missing_ok=True)

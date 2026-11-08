@@ -189,3 +189,31 @@ def test_a_sobra_do_heroic_so_sai_com_o_manifesto_do_hefesto(
     monkeypatch.setattr(pp, "_load_conf", lambda _p: CONF)
     sobras = pp.sobras_das_casas_do_heroic(casa, compat_dir=_compat(casa))
     assert [s.pasta.name for s in sobras] == [VELHA]
+
+
+def test_dois_processos_nao_baixam_juntos(casa: Path, tmp_path: Path) -> None:
+    import fcntl
+    import os
+
+    rede = _Rede(_rede(_tarball(tmp_path)))
+    _cache(casa).mkdir(parents=True)
+    fd = os.open(_cache(casa) / pp.TRAVA_DA_CONSULTA, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        feita = pp.baixar_a_ultima_do_ge(_cache(casa), ler=rede.ler, baixar=rede.baixar)
+    finally:
+        os.close(fd)
+    assert feita.estado == "em_andamento" and rede.pedidos == []
+    depois = pp.baixar_a_ultima_do_ge(_cache(casa), ler=rede.ler, baixar=rede.baixar)
+    assert depois.estado == "baixada"
+
+
+def test_o_tarball_que_ja_esta_no_cache_e_confere_nao_se_baixa_de_novo(
+        casa: Path, tmp_path: Path) -> None:
+    dado = _tarball(tmp_path)
+    rede = _Rede(_rede(dado))
+    _cache(casa).mkdir(parents=True)
+    (_cache(casa) / f"{NOVA}.tar.gz").write_bytes(dado)
+    baixada, instalada = _atualizar(casa, rede)
+    assert baixada.estado == "em_cache" and URL_DO_TAR not in rede.pedidos
+    assert instalada.estado == "instalada"
