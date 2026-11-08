@@ -122,6 +122,7 @@ PROGRAMAS_DO_USUARIO: dict[str, str] = {
     "integrations/reposicao_dos_lancadores.py::abrir": (
         "o lançador reposto no «Reiniciar o serviço»"
     ),
+    "interface/pacotes/atualizacoes.py::registro": "o registro do atualizador no editor do sistema",
 }
 
 _DO_OS = frozenset({
