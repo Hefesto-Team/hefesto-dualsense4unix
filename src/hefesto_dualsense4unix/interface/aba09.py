@@ -389,12 +389,13 @@ CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
   .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 12px;align-items:start}
-  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap}
-  .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px}
-  .at-grade .saude .ver .nv{color:var(--fg)}
+  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap;display:flex;min-width:0;overflow:hidden}
+  .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px;flex:none}
+  .at-grade .saude .ver .nv{color:var(--fg);flex:none}
+  .at-grade .saude .ver .de,.at-grade .saude .ver .rot{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
   .at-grade .saude{gap:6px}
-  .at-grade .saude .txt{flex:1 1 auto}
+  .at-grade .saude .txt{flex:0 0 auto}
   body .at-grade .saude .selo{flex:0 0 70px !important;padding-left:4px;padding-right:4px}
   .at-grade .saude .ver .seta{margin:0 1px}
   .at-marca{width:16px;height:16px;accent-color:var(--pink);margin:0;flex:0 0 16px;cursor:pointer}

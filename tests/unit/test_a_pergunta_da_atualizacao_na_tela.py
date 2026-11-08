@@ -276,3 +276,22 @@ def test_a_aba_sistema_tem_a_secao_e_o_reler_atalhos() -> None:
     campos = a09_sistema.campos_das_atualizacoes()
     assert campos[a09_sistema.CAMPO_DO_PRAZO] == str(at.DIAS_PADRAO)
     assert campos[a09_sistema.CAMPO_DO_SOZINHO] is False
+
+
+def test_na_grade_a_versao_cede_antes_do_rotulo() -> None:
+    from hefesto_dualsense4unix.interface import aba09
+
+    conferencia = {"pecas": [
+        {"id": "nvidia", "nome": "Driver NVIDIA", "estado": "nova", "de": "595.104.02",
+         "para": "595.110.07", "marcada": True, "volta": 1},
+        {"id": "sistema", "nome": "Pacotes do sistema", "estado": "em_dia", "de": "24.04",
+         "para": "24.04", "rotulo": "12 pacotes", "marcada": True, "volta": 1}]}
+    grade = tela.grade_da_aba(conferencia)
+    assert ('<span class="ver" data-dica="595.104.02 → 595.110.07"><span class="de">595.104.02'
+            '</span><span class="seta">→</span><span class="nv">595.110.07</span>') in grade
+    assert '<span class="ver" data-dica="12 pacotes"><span class="rot">12 pacotes</span>' in grade
+    css = re.sub(r"\s+", "", Path(aba09.__file__).read_text(encoding="utf-8"))
+    assert ".at-grade.saude.txt{flex:00auto}" in css
+    assert ".at-grade.saude.ver.de,.at-grade.saude.ver.rot{min-width:0;overflow:hidden;" \
+           "text-overflow:ellipsis}" in css
+    assert "max-height:min(760px,calc(100vh-32px))" in re.sub(r"\s+", "", tela.CSS)

@@ -37,7 +37,7 @@ CSS = """
 .hef-atualiza.aberta{display:flex}
 .hef-atualiza .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
   border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);display:flex;
-  flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
+  flex-direction:column;max-height:min(760px,calc(100vh - 32px))}
 .hef-atualiza .tn-cx.larga{width:900px}
 .hef-atualiza .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
 .hef-atualiza .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
@@ -216,11 +216,21 @@ def _ordenadas(itens: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 def _ver(item: dict[str, Any]) -> str:
     de, para = str(item.get("de") or ""), str(item.get("para") or "")
     if item.get("rotulo"):
-        return _e(item["rotulo"])
+        return f'<span class="rot">{_e(item["rotulo"])}</span>'
     if item.get("estado") == "nova" and de and para:
-        return f'{_e(de)}<span class="seta">→</span><span class="nv">{_e(para)}</span>'
+        return (f'<span class="de">{_e(de)}</span><span class="seta">→</span>'
+                f'<span class="nv">{_e(para)}</span>')
     atual = de or para
     return f'<span class="nv">{_e(atual)}</span>' if atual else ""
+
+
+def _ver_inteira(item: dict[str, Any]) -> str:
+    de, para = str(item.get("de") or ""), str(item.get("para") or "")
+    if item.get("rotulo"):
+        return str(item["rotulo"])
+    if item.get("estado") == "nova" and de and para:
+        return f"{de} → {para}"
+    return ""
 
 
 def _selo_da_pergunta(item: dict[str, Any]) -> str:
@@ -455,7 +465,8 @@ def grade_da_aba(conferencia: dict[str, Any]) -> str:
         fixa = " fixa" if item.get("estado") == "fixa" else ""
         linhas.append(f'<div class="saude{fixa}">{marca}{_selo_da_grade(item)}'
                       f'<span class="txt"{_dica(item.get("dica", ""))}><span>{_e(item.get("nome"))}'
-                      f'</span></span><span class="ver">{_ver(item)}</span></div>')
+                      f'</span></span><span class="ver"{_dica(_ver_inteira(item))}>{_ver(item)}'
+                      '</span></div>')
     colunas, i = [], 0
     for n in COLUNAS_DA_GRADE:
         colunas.append(f'<div class="col-lista">{"".join(linhas[i:i + n])}</div>')
