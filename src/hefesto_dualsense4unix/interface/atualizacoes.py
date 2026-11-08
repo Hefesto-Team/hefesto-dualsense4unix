@@ -37,7 +37,7 @@ CSS = """
 .hef-atualiza.aberta{display:flex}
 .hef-atualiza .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
   border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);display:flex;
-  flex-direction:column;max-height:min(760px,calc(100vh - 32px))}
+  flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
 .hef-atualiza .tn-cx.larga{width:900px}
 .hef-atualiza .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
 .hef-atualiza .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
@@ -97,6 +97,7 @@ CSS = """
   align-items:center;gap:10px;height:34px;border-bottom:1px solid var(--border-sutil);
   font-size:12.5px;cursor:pointer;color:var(--fg)}
 .hef-atualiza .at-l:last-child{border-bottom:0}
+.hef-atualiza .tn-cx:has(.pendente) .at-l{height:32px}
 .hef-atualiza .at-l input{width:16px;height:16px;accent-color:var(--pink);margin:0;cursor:pointer}
 .hef-atualiza .at-l .at-ok{color:var(--green);font-size:13px;text-align:center;width:16px}
 .hef-atualiza .at-l.filho{padding-left:26px}
@@ -116,6 +117,7 @@ CSS = """
 .hef-atualiza .pendente{display:flex;align-items:center;gap:8px;padding:7px 10px;
   border:1px dashed var(--orange);border-radius:6px;font-size:12px;color:var(--orange);
   background:rgba(255,184,108,.07)}
+.hef-atualiza .pendente .jogo{color:var(--fg);font-weight:600}
 .hef-atualiza .vt-lista{display:flex;flex-direction:column}
 .hef-atualiza .vt-l,.hef-atualiza .vt-cab{display:grid;
   grid-template-columns:minmax(0,1fr) 120px 64px 150px;align-items:center;gap:10px}
@@ -266,7 +268,7 @@ def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
 
 
 def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
-                     jogo_aberto: bool) -> str:
+                     jogo_aberto: bool, nome_do_jogo: str = "") -> str:
     """O arranjo A: Hefesto, o grupo das peças de fora, o ajuste e o rodapé."""
     itens = _ordenadas(conferencia.get("pecas") or [])
     do_hefesto = [i for i in itens if i.get("grupo") == "hefesto"]
@@ -297,7 +299,9 @@ def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
               f'<span class="dias">{_e(escolha.get("dias", 7))}'
               f'</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" '
               f'aria-label="Mais um dia">+</button><span>dias</span></span></div>')
-    pendente = ('<div class="pendente"><span>Jogo aberto</span><span>· espera</span></div>'
+    jogo = (f'<span>Jogo aberto:</span><span class="jogo">{_e(nome_do_jogo)}</span>'
+            if nome_do_jogo else '<span>Jogo aberto</span>')
+    pendente = (f'<div class="pendente">{jogo}<span>· espera</span></div>'
                 if jogo_aberto else "")
     principal = ('<button class="btn principal" data-gesto="atualizacoes-atualizar">'
                  'Atualizar ao fechar o jogo</button>' if jogo_aberto else

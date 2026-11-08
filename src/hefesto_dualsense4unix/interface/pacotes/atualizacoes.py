@@ -51,6 +51,17 @@ def _jogo_aberto(ctx: Contexto | None) -> bool:
     return jogo_com_autoridade(getattr(ctx, "state", None))
 
 
+def _nome_do_jogo(ctx: Contexto | None) -> str:
+    from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
+
+    estado = getattr(ctx, "state", None)
+    jogo = estado.get("jogo_steam") if isinstance(estado, dict) else None
+    appid = jogo.get("appid") if isinstance(jogo, dict) else None
+    if not isinstance(appid, int) or isinstance(appid, bool):
+        return ""
+    return nome_do_appid(str(appid)) or ""
+
+
 def _inicio(andamento: dict[str, Any]) -> float:
     try:
         return float(andamento.get("inicio", 0) or 0)
@@ -86,9 +97,11 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
         TELA["vista"] = "pergunta"
     if TELA["vista"] == "pergunta":
         escolha = at.ler_a_escolha()
+        aberto = _jogo_aberto(ctx)
         return tela.html_da_pergunta(conferencia_vista(), {"sozinho": escolha.sozinho,
                                                           "dias": escolha.dias},
-                                     jogo_aberto=_jogo_aberto(ctx))
+                                     jogo_aberto=aberto,
+                                     nome_do_jogo=_nome_do_jogo(ctx) if aberto else "")
     if TELA["vista"] == "voltar":
         voltam = [p.id for p in at.pecas() if p.voltar is not None]
         return tela.html_das_anteriores(at.ler_as_anteriores(), voltam)

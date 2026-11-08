@@ -294,4 +294,26 @@ def test_na_grade_a_versao_cede_antes_do_rotulo() -> None:
     assert ".at-grade.saude.txt{flex:00auto}" in css
     assert ".at-grade.saude.ver.de,.at-grade.saude.ver.rot{min-width:0;overflow:hidden;" \
            "text-overflow:ellipsis}" in css
-    assert "max-height:min(760px,calc(100vh-32px))" in re.sub(r"\s+", "", tela.CSS)
+    caixa = re.sub(r"\s+", "", tela.CSS)
+    assert "max-height:min(717px,calc(100vh-40px))" in caixa
+    assert ".hef-atualiza.tn-cx:has(.pendente).at-l{height:32px}" in caixa
+
+
+def test_o_jogo_aberto_diz_o_nome_que_a_steam_ja_sabe(registro: list[at.Peca],
+                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    monkeypatch.setattr(slo, "nome_do_appid", lambda appid, home=None:
+                        "Jogo um" if appid == "4242" else None)
+    monkeypatch.setattr(gestos, "_jogo_aberto", lambda _ctx: True)
+    at.conferir(rede=True, lista=LISTA)
+    gestos.TELA["vista"] = "pergunta"
+    ctx = SimpleNamespace(state={"jogo_steam": {"lido": True, "appid": 4242}})
+    html = gestos.conteudo(ctx)
+    assert ('<div class="pendente"><span>Jogo aberto:</span><span class="jogo">Jogo um</span>'
+            '<span>· espera</span></div>') in html
+    for estado in ({"jogo_steam": {"lido": True, "appid": None}}, {}, None):
+        html = gestos.conteudo(SimpleNamespace(state=estado))
+        assert '<div class="pendente"><span>Jogo aberto</span><span>· espera</span></div>' in html
