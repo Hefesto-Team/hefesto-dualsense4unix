@@ -77,7 +77,7 @@ def test_o_daemon_consulta_a_chave_antes_de_tomar_o_aparelho():
         RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "main.py"
     ).read_text(encoding="utf-8")
     onde_a_chave = fonte.index("chave.motivo_do_desligamento()")
-    onde_o_takeover = fonte.index("acquire_or_takeover(single_instance_name())")
+    onde_o_takeover = fonte.index("acquire_or_takeover(")
     assert onde_a_chave < onde_o_takeover, (
         "a chave tem de ser consultada ANTES do takeover do aparelho"
     )
