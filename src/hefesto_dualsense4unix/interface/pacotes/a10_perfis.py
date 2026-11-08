@@ -716,11 +716,20 @@ def _jogo_fora_do_disco(prof: Any, foto: _FotoDoCatalogo, steam: bool,
     return False
 
 
-def _fora_do_disco(todos: list[Any], foto: _FotoDoCatalogo) -> list[Any]:
+def _casa_a_janela(prof: Any, janela: str) -> bool:
+    """O perfil casa a janela de outro app em cena: o jogo dele está aberto, e o censo erra."""
+    try:
+        return bool(janela) and bool(prof.matches({"wm_class": janela}))
+    except Exception:
+        return False
+
+
+def _fora_do_disco(todos: list[Any], foto: _FotoDoCatalogo, janela: str = "") -> list[Any]:
     """Os perfis de jogo que o censo sabe desinstalado; sem a Steam legível, nenhum."""
     steam = bool(foto.nomes) and _a_steam_responde()
     fora = _chaves_fora_do_disco()
-    return [p for p in todos if _jogo_fora_do_disco(p, foto, steam, fora)]
+    return [p for p in todos
+            if _jogo_fora_do_disco(p, foto, steam, fora) and not _casa_a_janela(p, janela)]
 
 
 def _sem_os_ocultos(todos: list[Any], ocultos: list[Any]) -> list[Any]:
@@ -729,37 +738,50 @@ def _sem_os_ocultos(todos: list[Any], ocultos: list[Any]) -> list[Any]:
     return [p for p in todos if id(p) not in fora]
 
 
-def _so_os_instalados(todos: list[Any], foto: _FotoDoCatalogo) -> list[Any]:
+def _so_os_instalados(todos: list[Any], foto: _FotoDoCatalogo, janela: str = "") -> list[Any]:
     """Os perfis sem o de jogo desinstalado (uma leitura do catálogo)."""
-    return _sem_os_ocultos(todos, _fora_do_disco(todos, foto))
+    return _sem_os_ocultos(todos, _fora_do_disco(todos, foto, janela))
 
 
 _PADRAO_PEDIDO: str = ""
+_PADRAO_FALHOU_EM: float | None = None
+_ESPERA_DEPOIS_DA_FALHA = 5.0
 
 
 def _o_padrao_assume(ctx: Contexto, do_disco: list[Any], ocultos: list[Any]) -> None:
     """O perfil ativo é de jogo fora do disco: o Freestyle assume, uma vez, por `profile.switch`.
 
     É o «Ativar» do Freestyle da aba (`_ativar_o`), pedido num fio: o pacote é lido no tique e não
-    espera o daemon. O pedido não se repete enquanto o mesmo perfil seguir ativo.
+    espera o daemon. O pedido aceito não se repete enquanto o mesmo perfil seguir ativo; o recusado
+    ou sem resposta volta a sair `_ESPERA_DEPOIS_DA_FALHA` segundos depois.
     """
-    global _PADRAO_PEDIDO
+    global _PADRAO_PEDIDO, _PADRAO_FALHOU_EM
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
     ativo = _em_uso(ctx, do_disco)
     fora = {str(getattr(p, "name", "") or "") for p in ocultos}
     if not ativo or ativo not in fora:
         _PADRAO_PEDIDO = ""
+        _PADRAO_FALHOU_EM = None
         return
     if ativo == _PADRAO_PEDIDO:
+        return
+    if (_PADRAO_FALHOU_EM is not None
+            and time.monotonic() - _PADRAO_FALHOU_EM < _ESPERA_DEPOIS_DA_FALHA):
         return
     _PADRAO_PEDIDO = ativo
 
     def pedir() -> None:
+        global _PADRAO_PEDIDO, _PADRAO_FALHOU_EM
         try:
             ponte.resultado("profile.switch", name=NOME_DO_PADRAO)
-        except RuntimeError as erro:
+        except Exception as erro:
+            _PADRAO_FALHOU_EM = time.monotonic()
+            if ativo == _PADRAO_PEDIDO:
+                _PADRAO_PEDIDO = ""
             print(f"[10-perfis.html] o padrão não assumiu: {erro!r}", file=sys.stderr)
+            return
+        _PADRAO_FALHOU_EM = None
 
     fios.soltar("perfis-padrao-assume", pedir)
 
@@ -1063,7 +1085,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     try:
         do_disco = os_perfis_de_escolher(load_all_profiles())
         foto = _foto_do_catalogo()
-        ocultos = _fora_do_disco(do_disco, foto)
+        ocultos = _fora_do_disco(do_disco, foto, _classe_de_outro_app(ctx))
         todos = _sem_os_ocultos(do_disco, ocultos)
         _o_padrao_assume(ctx, do_disco, ocultos)
         ativo = _em_uso(ctx, todos)
@@ -1360,7 +1382,7 @@ def _alvo_do_editor(ctx: Contexto, todos: list[Any] | None = None) -> Any:
         from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
         do_disco = os_perfis_de_escolher(load_all_profiles())
-        todos = _so_os_instalados(do_disco, _foto_do_catalogo())
+        todos = _so_os_instalados(do_disco, _foto_do_catalogo(), _classe_de_outro_app(ctx))
     escolhido = _escolhido([{"nome": x.name} for x in todos], _valendo(ctx, todos))
     alvo = find_by_slug(escolhido, todos) if escolhido else None
     if alvo is None and todos:
