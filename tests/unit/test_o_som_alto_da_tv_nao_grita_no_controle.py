@@ -9,7 +9,9 @@ MORDIDAS:
   ``test_o_susto_desce_devagar_ate_zero_em_tres_segundos`` reprova: o corte seco volta;
 - troque ``teto.teto = ...`` do ``Passo._sob_o_teto`` por ``teto.teto = float("inf")`` e
   ``test_o_susto_sai_a_setenta_por_cento_do_pico_de_hoje_em_todo_ganho`` reprova: o pico volta
-  a 100%.
+  a 100%;
+- troque o ganho do ``TetoDoCorpo.passar`` por ``max(-teto, min(teto, x))`` e
+  ``test_o_susto_baixa_o_ganho_sem_cravar_a_onda_no_teto`` reprova: a onda volta a quadrar.
 """
 from __future__ import annotations
 
@@ -110,6 +112,24 @@ def test_o_susto_sai_a_setenta_por_cento_do_pico_de_hoje_em_todo_ganho(
         assert sum(1 for x in no_controle if abs(x) >= 0.999) == 0, "nada encosta no teto do PCM"
 
 
+def _maior_trecho_no_pico(amostras: list[float]) -> float:
+    """O maior trecho seguido, em ms, com a amostra a 0,5% do pico: a onda cravada no teto."""
+    limiar = 0.995 * max(map(abs, amostras))
+    maior = atual = 0
+    for x in amostras:
+        atual = atual + 1 if abs(x) >= limiar else 0
+        maior = max(maior, atual)
+    return 1000.0 * maior / fh.TAXA
+
+
+def test_o_susto_baixa_o_ganho_sem_cravar_a_onda_no_teto(
+        monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> None:
+    """O teto é ganho, não corte: no estrondo, a onda nunca fica parada no pico."""
+    saida = _tocar(monkeypatch, pcm)
+    for uniq, fator in FATORES.items():
+        assert _maior_trecho_no_pico(_no_controle(saida[uniq], fator)) < 1.0, uniq
+
+
 def test_o_susto_segura_enquanto_o_som_alto_dura(
         monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> None:
     saida = _tocar(monkeypatch, pcm)
@@ -148,3 +168,6 @@ def test_o_grave_abaixo_do_teto_passa_sem_mudar(monkeypatch: pytest.MonkeyPatch)
     saida = _tocar(monkeypatch, pcm)
     for uniq in P:
         assert saida[uniq] == pytest.approx(esperado, abs=1e-6), uniq
+    picos = {u: max(map(abs, _no_controle(saida[u], f))) for u, f in FATORES.items()}
+    for u, f in FATORES.items():
+        assert picos[u] == pytest.approx(max(map(abs, esperado)) * f, rel=1e-4), "o ganho age"
