@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Hefesto — a pergunta da atualização</title>
+<style>
+  @font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 700;font-display:swap;src:url('../../assets/fontes/SpaceGrotesk-wght.ttf') format('truetype')}
+  @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 500;font-display:swap;src:url('../../assets/fontes/JetBrainsMono-wght.ttf') format('truetype')}
+  :root{
+    --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
+    --border-sutil:#343746; --border-forte:#44475a;
+    --fundo-da-pagina:#11121a;
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
+    --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
+    --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
+    --sel-bg:rgba(189,147,249,0.16);
+    --linha:#53576f;
+    --rot-campo:var(--green);
+    --h-escolha:36px; --h-acao:34px; --gap:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--fundo-da-pagina);color:var(--fg);
+       font-family:'Space Grotesk',system-ui,sans-serif;padding:16px;
+       display:flex;flex-direction:column;align-items:center}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  .et{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+
+  .pagina{width:1180px;display:flex;flex-direction:column;gap:10px}
+  .cabeca{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .cabeca .nome{font-size:15px;font-weight:700;color:var(--pink);margin-right:6px}
+  .abas-op,.abas-est{display:flex;gap:6px}
+  .abas-est{margin-left:auto}
+  .abas-op label,.abas-est label{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;
+    border-radius:7px;border:1px solid var(--linha);background:var(--app-bg);font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .abas-op label:hover,.abas-est label:hover{border-color:var(--comment)}
+  .estrela{font-size:10.5px;font-weight:700;color:var(--app-bg);background:var(--green);border-radius:4px;padding:1px 6px}
+  .pagina:has(#op-a:checked) label[for="op-a"],
+  .pagina:has(#op-b:checked) label[for="op-b"],
+  .pagina:has(#op-c:checked) label[for="op-c"],
+  .pagina:has(#est-pergunta:checked) label[for="est-pergunta"],
+  .pagina:has(#est-jogo:checked) label[for="est-jogo"],
+  .pagina:has(#est-voltar:checked) label[for="est-voltar"]{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
+  .recomenda{font-size:12.5px;color:var(--texto-suave)}
+  .recomenda b{color:var(--green)}
+
+  .palco{position:relative;width:1180px;height:777px;border-radius:10px;overflow:hidden;
+         border:1px solid var(--linha);box-shadow:0 18px 50px rgba(0,0,0,.45);background:var(--app-bg)}
+  .palco iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
+  .veu{position:absolute;inset:0;background:rgba(9,10,15,.72);display:flex;align-items:center;justify-content:center}
+
+  .pop{display:none}
+  .pagina:has(#op-a:checked) #pop-a,
+  .pagina:has(#op-b:checked) #pop-b,
+  .pagina:has(#op-c:checked) #pop-c{display:flex}
+  .pagina:not(:has(#est-jogo:checked)) .e-jogo{display:none}
+  .pagina:has(#est-jogo:checked) .e-livre{display:none}
+  .pagina:not(:has(#est-voltar:checked)) .e-voltar{display:none}
+  .pagina:has(#est-voltar:checked) .e-lista{display:none}
+
+  .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
+         border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);
+         flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
+  .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
+  .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
+  .tn-x{margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none;
+        border:1px solid var(--border-forte);color:var(--fg);font-size:14px;
+        display:flex;align-items:center;justify-content:center}
+  .tn-x:hover{border-color:var(--red);color:var(--red)}
+  .tn-corpo{padding:11px 18px 14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+  .tn-rod{display:flex;align-items:center;gap:10px;padding:12px 18px 16px;flex:none;
+          border-top:1px solid var(--border-sutil)}
+  .tn-rod .empurra{margin-left:auto}
+
+  .btn{height:var(--h-acao);padding:0 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
+       border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
+       display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;text-decoration:none}
+  .btn:hover{border-color:var(--texto-suave);color:var(--fg)}
+  .btn.principal{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;padding:0 16px}
+  .btn.principal:hover{background:color-mix(in srgb,var(--green) 75%,#fff);color:var(--app-bg)}
+  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
+  .btn.amarelo-padrao:hover{background:rgba(241,250,140,.08)}
+  .btn.apagado{border-color:var(--border-sutil);color:var(--fg);opacity:.45;cursor:not-allowed}
+  .btn .n{font-family:'JetBrains Mono',monospace;font-size:11.5px}
+
+  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:9px;
+           height:var(--h-acao);white-space:nowrap;border-radius:999px;padding:0 16px 0 12px;
+           font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;
+           border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg)}
+  .cadeado .p{width:10px;height:10px;border-radius:50%;flex:0 0 auto;background:var(--border-forte)}
+  .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);color:var(--green)}
+  .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+
+  .prazo{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg);white-space:nowrap}
+  .prazo .pm{width:28px;height:28px;border-radius:6px;border:1px solid var(--linha);background:var(--app-bg);
+             color:var(--fg);font:600 14px/1 'JetBrains Mono',monospace;cursor:pointer}
+  .prazo .pm:hover{border-color:var(--comment)}
+  .prazo .dias{min-width:26px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
+
+  .selo{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;
+        font-family:'JetBrains Mono',monospace;white-space:nowrap;text-align:center}
+  .selo.nova{background:var(--purple);color:var(--app-bg)}
+  .selo.ok{color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+  .selo.sozinho{color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+  .selo.prova{background:var(--orange);color:var(--app-bg)}
+
+  .at-lista{display:flex;flex-direction:column}
+  .at-l{display:grid;grid-template-columns:22px minmax(0,1fr) auto 84px;align-items:center;gap:10px;
+        height:34px;border-bottom:1px solid var(--border-sutil);font-size:12.5px;cursor:pointer}
+  .at-l:last-child{border-bottom:0}
+  .at-l input{width:16px;height:16px;accent-color:var(--pink);margin:0;cursor:pointer}
+  .at-l input:disabled{cursor:default}
+  .at-l .at-ok{color:var(--green);font-size:13px;text-align:center;width:16px}
+  .at-l.filho{padding-left:26px;grid-template-columns:22px minmax(0,1fr) auto 84px}
+  .at-l.grupo .at-n{font-weight:600}
+  .at-l .at-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .at-l .at-n .q{color:var(--texto-mudo);font-weight:400;margin-left:6px}
+  .at-l .at-v{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);text-align:right;white-space:nowrap}
+  .at-v .seta{color:var(--purple);margin:0 4px}
+  .at-v .nv{color:var(--fg);font-weight:500}
+  .at-l.de-fora .at-n,.at-l.de-fora .at-v{color:var(--texto-mudo)}
+  .at-l.de-fora .at-v .nv{color:var(--texto-mudo)}
+  .sep-lista{height:8px}
+
+  .at-ajuste{display:flex;align-items:center;gap:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
+
+  .pendente{display:flex;align-items:center;gap:8px;padding:7px 10px;
+            border:1px dashed var(--orange);border-radius:6px;
+            font-size:12px;color:var(--orange);background:rgba(255,184,108,.07)}
+  .pendente .jogo{color:var(--fg);font-weight:600}
+
+  .vt-lista{display:flex;flex-direction:column}
+  .vt-l{display:grid;grid-template-columns:minmax(0,1fr) 120px 64px 150px;align-items:center;gap:10px;
+        height:40px;border-bottom:1px solid var(--border-sutil);font-size:12.5px}
+  .vt-l:last-child{border-bottom:0}
+  .vt-l .v{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg)}
+  .vt-l .d{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--texto-mudo)}
+  .vt-l .btn{height:30px}
+  .vt-cab{display:grid;grid-template-columns:minmax(0,1fr) 120px 64px 150px;gap:10px;
+          font-size:12px;font-weight:600;color:var(--rot-campo);padding-bottom:4px;border-bottom:1px solid var(--border-sutil)}
+
+  .op3{display:grid;grid-template-columns:1.4fr 1fr .8fr;gap:8px}
+  .op3 button{height:64px;border-radius:9px;border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
+              font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+              gap:5px;padding:0 14px;text-align:left}
+  .op3 button b{font-size:13px;font-weight:600}
+  .op3 button span{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--texto-suave)}
+  .op3 button.on{border-color:var(--purple);background:var(--sel-bg)}
+  .op3 button.on b::before{content:"✓ ";color:var(--pink)}
+  .op3 button:hover:not(.on){border-color:var(--comment)}
+  .op3 button.nada span{color:var(--texto-mudo)}
+  .rot-lista{font-size:12px;font-weight:600;color:var(--rot-campo)}
+
+  #pop-b.tn-cx{width:740px}
+  #pop-c.tn-cx{width:860px}
+  .c-grade{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;align-items:stretch}
+  .c-esq{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .c-l{grid-template-columns:22px minmax(0,1fr) 84px;padding:0 8px;border-radius:6px}
+  .c-l.filho{padding-left:8px;grid-template-columns:22px minmax(0,1fr) 84px}
+  .pagina:not(:has(#est-voltar:checked)) .c-l.sel-lista,
+  .pagina:has(#est-voltar:checked) .c-l.sel-voltar{background:var(--sel-bg);box-shadow:inset 0 0 0 1px var(--purple);border-bottom-color:transparent}
+  .c-dir{border:1px solid var(--linha);border-radius:9px;background:var(--app-bg);padding:14px 16px;
+         display:flex;flex-direction:column;gap:12px;min-width:0}
+  .c-tit{display:flex;align-items:baseline;gap:9px}
+  .c-tit b{font-size:15px;font-weight:600;color:var(--purple)}
+  .c-tit span{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-mudo)}
+  .c-salto{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;color:var(--fg)}
+  .c-salto .seta{color:var(--purple);margin:0 8px}
+  .c-salto .velha{color:var(--texto-mudo)}
+  .c-fatos{display:flex;flex-direction:column}
+  .c-f{display:flex;align-items:center;justify-content:space-between;gap:9px;height:30px;font-size:12.5px;
+       color:var(--texto-suave);border-bottom:1px solid var(--border-sutil)}
+  .c-f:last-child{border-bottom:0}
+  .c-f .v{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg)}
+  .c-f .v.verde{color:var(--green)}
+  .c-hist{display:flex;flex-direction:column;gap:6px}
+  .c-h{display:grid;grid-template-columns:minmax(0,1fr) 64px 130px;align-items:center;gap:10px;height:34px;
+       font-size:12.5px;border-bottom:1px solid var(--border-sutil)}
+  .c-h:last-child{border-bottom:0}
+  .c-h .v{font-family:'JetBrains Mono',monospace;color:var(--fg)}
+  .c-h .d{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--texto-mudo)}
+  .c-h .btn{height:30px}
+  .c-dir .empurra-baixo{margin-top:auto;display:flex;gap:8px}
+</style>
+<style id="base-comum">
+[data-dica]{cursor:help}
+button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
+#hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
+  background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda);
+  font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
+  opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#hef-dica.da-base.visivel{opacity:1;transform:none}
+[data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+
+.modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+  border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.modo-auto .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);background:transparent;
+  transition:all .15s}
+.modo-auto:hover{border-color:#5fd3e6;color:#fff}
+.modo-auto[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff;box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+.modo-auto[aria-pressed="true"] .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+.modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+.governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
+
+.menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
+  background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
+  border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
+.menu-hefesto button:hover{background:rgba(189,147,249,.14)}
+.menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+</style>
+</head>
+<body>
+<div class="pagina">
+  <input class="et" type="radio" name="op" id="op-a" checked>
+  <input class="et" type="radio" name="op" id="op-b">
+  <input class="et" type="radio" name="op" id="op-c">
+  <input class="et" type="radio" name="est" id="est-pergunta" checked>
+  <input class="et" type="radio" name="est" id="est-jogo">
+  <input class="et" type="radio" name="est" id="est-voltar">
+
+  <div class="cabeca">
+    <span class="nome">A pergunta da atualização</span>
+    <div class="abas-op">
+      <label for="op-a">A · Lista única <span class="estrela">Recomendada</span></label>
+      <label for="op-b">B · Três escolhas</label>
+      <label for="op-c">C · Lista e detalhe</label>
+    </div>
+    <div class="abas-est">
+      <label for="est-pergunta">Pergunta</label>
+      <label for="est-jogo">Jogo aberto</label>
+      <label for="est-voltar">Voltar à anterior</label>
+    </div>
+  </div>
+  <div class="recomenda"><b>Recomendo a A:</b> a lista é a própria pergunta (os dois grupos são as duas escolhas e «Agora não» é a terceira), numa tela só e sem passo a mais.</div>
+
+  <div class="palco">
+    <iframe src="../01-jogar.html" title="Aba Jogar, atrás da pergunta" tabindex="-1"></iframe>
+    <div class="veu">
+
+      <div class="pop tn-cx" id="pop-a" role="dialog" aria-modal="true" aria-label="Atualizações">
+        <div class="tn-topo">
+          <span class="tn-tit" data-dica="Aparece ao abrir o Hefesto, no prazo escolhido">Atualizações</span>
+          <span class="tn-tit e-voltar">· Versões anteriores</span>
+          <a class="tn-x" href="#" data-dica="Fechar: pergunta de novo no próximo prazo">×</a>
+        </div>
+        <div class="tn-corpo">
+          <div class="at-lista e-lista" data-lista="a">
+            <label class="at-l grupo"><input type="checkbox" checked data-conta><span class="at-n" data-dica="O próprio Hefesto: a interface, o serviço e as correções">Hefesto</span><span class="at-v">0.9.5.1<span class="seta">→</span><span class="nv">0.9.5.2</span></span><span class="selo nova">NOVA</span></label>
+            <div class="sep-lista"></div>
+            <label class="at-l grupo"><input type="checkbox" class="mae" data-mae="a"><span class="at-n" data-dica="O que o Hefesto instala no sistema para os controles funcionarem">Bibliotecas, drivers e plugins<span class="q">2 de 3</span></span><span class="at-v"></span><span></span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Se atualiza sozinho com a Steam fechada; a versão nova só vale para os jogos depois da prova, e a 11-7 fica de reserva">GE-Proton</span><span class="at-v"><span class="nv">11-12</span></span><span class="selo sozinho">SOZINHO</span></label>
+            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="BlueZ: o Bluetooth, com as correções do Hefesto em cima">Bluetooth</span><span class="at-v">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l filho"><input type="checkbox" checked data-conta data-filho="a"><span class="at-n" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19, juntos">Som</span><span class="at-v">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="Os quatro módulos do Hefesto para o kernel que está rodando">Módulos do kernel</span><span class="at-v"><span class="nv">7.2.15</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="O painel de desempenho por cima do jogo">MangoHud</span><span class="at-v"><span class="nv">0.8.4</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho"><span class="at-ok">✓</span><span class="at-n" data-dica="O que abre os jogos de fora da Steam no Proton">umu</span><span class="at-v"></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l filho de-fora"><input type="checkbox" data-conta data-filho="a"><span class="at-n" data-dica="evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3">Bibliotecas Python</span><span class="at-v">2 pacotes</span><span class="selo nova">NOVA</span></label>
+          </div>
+          <div class="vt-lista e-voltar">
+            <div class="vt-cab"><span>Peça</span><span>Agora</span><span>Desde</span><span></span></div>
+            <div class="vt-l"><span>GE-Proton</span><span class="v">11-12</span><span class="d">08/11</span><button class="btn amarelo-padrao" data-dica="Todo jogo volta para a 11-7, a reserva">Voltar a 11-7</button></div>
+            <div class="vt-l"><span>Módulos do kernel</span><span class="v">7.2.15</span><span class="d">07/11</span><button class="btn amarelo-padrao" data-dica="O 7.2.6 abre no próximo reinício, com os módulos dele">Voltar a 7.2.6</button></div>
+            <div class="vt-l"><span>Hefesto</span><span class="v">0.9.5.1</span><span class="d">06/10</span><button class="btn amarelo-padrao" data-dica="Volta o código e roda a instalação dele ao fechar">Voltar a 0.9.5</button></div>
+          </div>
+          <div class="at-ajuste e-lista">
+            <button class="cadeado" data-cadeado data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
+            <span class="prazo" data-dica="De quanto em quanto tempo o Hefesto confere"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span>
+          </div>
+          <div class="pendente e-jogo e-lista" data-dica="A atualização começa sozinha quando o jogo fechar"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
+        </div>
+        <div class="tn-rod">
+          <button class="btn e-lista" data-dica="As versões que ficaram guardadas">Versões anteriores</button>
+          <button class="btn e-voltar" data-dica="De volta à lista">← Atualizações</button>
+          <button class="btn empurra e-lista" data-dica="Pergunta de novo no próximo prazo">Agora não</button>
+          <button class="btn principal e-lista e-livre" data-principal>Atualizar <span class="n" data-n>3</span></button>
+          <button class="btn principal e-lista e-jogo" data-dica="Fica marcado e começa quando o jogo fechar">Atualizar ao fechar o jogo</button>
+        </div>
+      </div>
+
+      <div class="pop tn-cx" id="pop-b" role="dialog" aria-modal="true" aria-label="Atualizações">
+        <div class="tn-topo">
+          <span class="tn-tit" data-dica="Aparece ao abrir o Hefesto, no prazo escolhido">Atualizações</span>
+          <span class="tn-tit e-voltar">· Versões anteriores</span>
+          <a class="tn-x" href="#" data-dica="Fechar: pergunta de novo no próximo prazo">×</a>
+        </div>
+        <div class="tn-corpo">
+          <div class="op3 e-lista">
+            <button class="on" data-op3 data-dica="O que o Hefesto instala no sistema para os controles funcionarem"><b>Bibliotecas, drivers e plugins</b><span>2 de 3 novas</span></button>
+            <button class="on" data-op3 data-dica="O próprio Hefesto: a interface, o serviço e as correções"><b>Hefesto</b><span>0.9.5.1 → 0.9.5.2</span></button>
+            <button class="nada" data-dica="Pergunta de novo no próximo prazo"><b>Agora não</b><span>De novo em 7 dias</span></button>
+          </div>
+          <span class="rot-lista e-lista">O que entra</span>
+          <div class="at-lista e-lista" data-lista="b">
+            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="Se atualiza sozinho com a Steam fechada; a versão nova só vale para os jogos depois da prova, e a 11-7 fica de reserva">GE-Proton</span><span class="at-v"><span class="nv">11-12</span></span><span class="selo sozinho">SOZINHO</span></label>
+            <label class="at-l"><input type="checkbox" checked data-conta><span class="at-n" data-dica="BlueZ: o Bluetooth, com as correções do Hefesto em cima">Bluetooth</span><span class="at-v">5.87<span class="seta">→</span><span class="nv">5.88</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l"><input type="checkbox" checked data-conta><span class="at-n" data-dica="PipeWire 1.6.11 e WirePlumber 0.5.19, juntos">Som</span><span class="at-v">1.6.9<span class="seta">→</span><span class="nv">1.6.11</span></span><span class="selo nova">NOVA</span></label>
+            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="Os quatro módulos do Hefesto para o kernel que está rodando">Módulos do kernel</span><span class="at-v"><span class="nv">7.2.15</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="O painel de desempenho por cima do jogo">MangoHud</span><span class="at-v"><span class="nv">0.8.4</span></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l"><span class="at-ok">✓</span><span class="at-n" data-dica="O que abre os jogos de fora da Steam no Proton">umu</span><span class="at-v"></span><span class="selo ok">EM DIA</span></label>
+            <label class="at-l de-fora"><input type="checkbox" data-conta><span class="at-n" data-dica="evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3">Bibliotecas Python</span><span class="at-v">2 pacotes</span><span class="selo nova">NOVA</span></label>
+          </div>
+          <div class="vt-lista e-voltar">
+            <div class="vt-cab"><span>Peça</span><span>Agora</span><span>Desde</span><span></span></div>
+            <div class="vt-l"><span>GE-Proton</span><span class="v">11-12</span><span class="d">08/11</span><button class="btn amarelo-padrao" data-dica="Todo jogo volta para a 11-7, a reserva">Voltar a 11-7</button></div>
+            <div class="vt-l"><span>Módulos do kernel</span><span class="v">7.2.15</span><span class="d">07/11</span><button class="btn amarelo-padrao" data-dica="O 7.2.6 abre no próximo reinício, com os módulos dele">Voltar a 7.2.6</button></div>
+            <div class="vt-l"><span>Hefesto</span><span class="v">0.9.5.1</span><span class="d">06/10</span><button class="btn amarelo-padrao" data-dica="Volta o código e roda a instalação dele ao fechar">Voltar a 0.9.5</button></div>
+          </div>
+          <div class="pendente e-jogo e-lista" data-dica="A atualização começa sozinha quando o jogo fechar"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
+        </div>
+        <div class="tn-rod">
+          <button class="btn e-lista" data-dica="As versões que ficaram guardadas">Versões anteriores</button>
+          <button class="btn e-voltar" data-dica="De volta à lista">← Atualizações</button>
+          <button class="cadeado e-lista" data-cadeado data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
+          <span class="prazo e-lista" data-dica="De quanto em quanto tempo o Hefesto confere"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span>
+          <button class="btn principal empurra e-lista e-livre" data-principal>Atualizar <span class="n" data-n>3</span></button>
+          <button class="btn principal empurra e-lista e-jogo" data-dica="Fica marcado e começa quando o jogo fechar">Atualizar ao fechar o jogo</button>
+        </div>
+      </div>
+
+      <div class="pop tn-cx" id="pop-c" role="dialog" aria-modal="true" aria-label="Atualizações">
+        <div class="tn-topo">
+          <span class="tn-tit" data-dica="Aparece ao abrir o Hefesto, no prazo escolhido">Atualizações</span>
+          <a class="tn-x" href="#" data-dica="Fechar: pergunta de novo no próximo prazo">×</a>
+        </div>
+        <div class="tn-corpo">
+          <div class="c-grade">
+            <div class="c-esq">
+              <div class="at-lista">
+                <label class="at-l c-l grupo"><input type="checkbox" checked data-conta><span class="at-n">Hefesto</span><span class="selo nova">NOVA</span></label>
+                <div class="sep-lista"></div>
+                <label class="at-l c-l filho sel-voltar"><span class="at-ok">✓</span><span class="at-n">GE-Proton</span><span class="selo sozinho">SOZINHO</span></label>
+                <label class="at-l c-l filho sel-lista"><input type="checkbox" checked data-conta><span class="at-n">Bluetooth</span><span class="selo nova">NOVA</span></label>
+                <label class="at-l c-l filho"><input type="checkbox" checked data-conta><span class="at-n">Som</span><span class="selo nova">NOVA</span></label>
+                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">Módulos do kernel</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">MangoHud</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho"><span class="at-ok">✓</span><span class="at-n">umu</span><span class="selo ok">EM DIA</span></label>
+                <label class="at-l c-l filho de-fora"><input type="checkbox" data-conta><span class="at-n">Bibliotecas Python</span><span class="selo nova">NOVA</span></label>
+              </div>
+              <div class="at-ajuste">
+                <button class="cadeado" data-cadeado data-dica="Atualiza tudo no prazo, sem perguntar, sempre com o jogo fechado"><span class="p"></span>Atualizar sozinho</button>
+                <span class="prazo" data-dica="De quanto em quanto tempo o Hefesto confere"><span>A cada</span><button class="pm" data-pm="-1" aria-label="Menos um dia">−</button><span class="dias" data-dias>7</span><button class="pm" data-pm="1" aria-label="Mais um dia">+</button><span>dias</span></span>
+              </div>
+            </div>
+            <div class="c-dir e-lista">
+              <div class="c-tit"><b>Bluetooth</b><span>BlueZ</span></div>
+              <div class="c-salto"><span class="velha">5.87</span><span class="seta">→</span>5.88</div>
+              <div class="c-fatos">
+                <div class="c-f"><span>Publicada</span><span class="v">05/11</span></div>
+                <div class="c-f"><span data-dica="As correções do Hefesto sobem junto, em cima da versão nova">Correções do Hefesto</span><span class="v verde">Vão junto</span></div>
+                <div class="c-f"><span>Fica guardada</span><span class="v">5.87</span></div>
+              </div>
+              <div class="pendente e-jogo" data-dica="A atualização começa sozinha quando o jogo fechar"><span>Jogo aberto:</span><span class="jogo">Jogo um</span><span>· espera</span></div>
+            </div>
+            <div class="c-dir e-voltar">
+              <div class="c-tit"><b>GE-Proton</b><span>Proton dos jogos</span></div>
+              <div class="c-salto">11-12</div>
+              <div class="c-fatos">
+                <div class="c-f"><span>Prova</span><span class="v verde">Passou</span></div>
+                <div class="c-f"><span data-dica="Confere e baixa a mais nova com a Steam fechada">Atualiza</span><span class="v">Sozinho</span></div>
+              </div>
+              <div class="c-hist">
+                <div class="c-h"><span>Reserva</span><span class="v">11-7</span><button class="btn amarelo-padrao" data-dica="Todo jogo volta para a 11-7">Voltar a 11-7</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tn-rod">
+          <button class="btn empurra" data-dica="Pergunta de novo no próximo prazo">Agora não</button>
+          <button class="btn principal e-livre" data-principal>Atualizar <span class="n" data-n>3</span></button>
+          <button class="btn principal e-jogo" data-dica="Fica marcado e começa quando o jogo fechar">Atualizar ao fechar o jogo</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script id="base-comum">
+(() => {
+  let dica = null, alvo = null;
+  const descrever = (el, liga) => {
+    const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
+    if (liga) lista.push('hef-dica');
+    if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
+  };
+  const mostrar = el => {
+    if (alvo && alvo !== el) descrever(alvo, false);
+    if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
+    alvo = el; dica.textContent = el.dataset.dica;
+    descrever(el, true);
+    if (!dica.isConnected) document.body.append(dica);
+    const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
+    if (y + d.height > innerHeight - 6) y = r.top - d.height - 8;
+    dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
+    dica.classList.add('visivel');
+  };
+  const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
+  document.addEventListener('mousemove', e => {
+    let el = e.target && e.target.nodeType === 1 ? e.target : null;
+    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
+      const daRegra = el.hasAttribute('data-dica-do-corte');
+      if (el.hasAttribute('data-dica') && !daRegra) return;
+      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (texto && el.scrollWidth > el.clientWidth + 1) {
+        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
+      } else if (daRegra) {
+        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
+      }
+      return;
+    }
+  }, true);
+  for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
+    document.addEventListener(ev, e => {
+      if (window.__hefDica || (f === 'in' && window.__hefFocoDoCodigo === e.target)) return;
+      const el = e.target.closest && e.target.closest('[data-dica]');
+      if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
+      if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
+    });
+  const sincronizar = b => {
+    const on = b.getAttribute('aria-pressed') === 'true';
+    const pedido = on ? 'personalizado' : 'automatico';
+    if (b.dataset.modo !== pedido) b.dataset.modo = pedido;
+    if (b.dataset.governa)
+      document.querySelectorAll(b.dataset.governa).forEach(el => el.classList.toggle('governado-pelo-jogo', on));
+  };
+  const sincronizarTodos = () => document.querySelectorAll('.modo-auto').forEach(sincronizar);
+  sincronizarTodos();
+  new MutationObserver(ms => {
+    if (ms.some(m => m.type === 'childList' || (m.target.matches && m.target.matches('.modo-auto')))) sincronizarTodos();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['aria-pressed']});
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.modo-auto');
+    if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
+  });
+  const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault(); fechar();
+    const m = document.createElement('div'); m.className = 'menu-hefesto vivo'; m.setAttribute('role', 'menu');
+    const sel = String(getSelection()).trim() !== '';
+    const servico = (document.querySelector('[data-campo="servico"]') || {dataset: {}}).dataset.servico;
+    const ligar = servico === 'parado' || servico === 'pausado';
+    const item = ligar
+      ? '<button type="button" role="menuitem" data-gesto="menu-desligar" data-dica="O Hefesto volta a cuidar dos controles">Ligar</button>'
+      : '<button type="button" role="menuitem" data-gesto="menu-desligar" data-menu="desligar" data-dica="O Hefesto sai da frente e o jogo lê o controle direto">Desligar</button>';
+    m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
+      ${item}
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button>
+      <button type="button" role="menuitem" data-gesto="menu-reconectar" data-dica="Desliga e liga de novo todos os controles">Reconectar controles</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
+    document.body.append(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+    m.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.menu-hefesto button');
+    if (!b) { fechar(); return; }
+    if (b.disabled) return;
+    if (b.dataset.menu === 'copiar') document.execCommand('copy');
+    if (b.dataset.menu === 'desligar') {
+      if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
+    }
+    setTimeout(fechar, 0);
+  });
+})();
+(() => {
+  const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[contenteditable=""],[contenteditable="true"]';
+  const GESTO = '[data-gesto],[data-hef-gesto]';
+  const SEM_PARADA = 'option,optgroup,html,body';
+  const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
+    || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
+  const PEDE_PARADA = GESTO + ',[data-dica]';
+  const marcar = raiz => {
+    const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
+    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(PEDE_PARADA));
+    for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
+  };
+  marcar(document.body);
+  new MutationObserver(ms => {
+    for (const m of ms) {
+      if (m.type === 'attributes') marcar(m.target);
+      else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
+    }
+  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
+  document.addEventListener('keydown', e => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const el = e.target;
+    if (!el || !el.matches || !el.matches(GESTO) || el.matches(NATIVO)) return;
+    e.preventDefault();
+    el.click();
+  });
+  const caixaDe = tela => tela.querySelector('.tn-cx') || tela.firstElementChild;
+  const prepararTelas = () => document.querySelectorAll('.tela-nova').forEach(tela => {
+    const caixa = caixaDe(tela);
+    if (!caixa) return;
+    if (!caixa.hasAttribute('role')) caixa.setAttribute('role', 'dialog');
+    if (!caixa.hasAttribute('aria-modal')) caixa.setAttribute('aria-modal', 'true');
+    const tit = tela.querySelector('.tn-tit');
+    if (tit && !caixa.hasAttribute('aria-label') && !caixa.hasAttribute('aria-labelledby'))
+      caixa.setAttribute('aria-label', tit.textContent.replace(/\s+/g, ' ').trim());
+  });
+  prepararTelas();
+  const PARADAS = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const paradasDe = caixa => Array.from(caixa.querySelectorAll(PARADAS)).filter(aparece);
+  const aberta = () => document.querySelector('.tela-nova:target');
+  let quemAbriu = null, ultimo = null, estavaAberta = false;
+  document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (a && !a.closest('.tela-nova')) ultimo = a;
+  }, true);
+  const focarSemDica = el => {
+    window.__hefFocoDoCodigo = el;
+    try { el.focus(); } finally { window.__hefFocoDoCodigo = null; }
+  };
+  const aoMudar = () => {
+    const tela = aberta();
+    if (tela && !estavaAberta) {
+      quemAbriu = ultimo;
+      const caixa = caixaDe(tela);
+      const alvo = caixa && (caixa.querySelector('[autofocus]') || paradasDe(caixa)[0]);
+      if (alvo) focarSemDica(alvo);
+      else if (caixa) { caixa.setAttribute('tabindex', '-1'); focarSemDica(caixa); }
+    } else if (!tela && estavaAberta && quemAbriu && quemAbriu.isConnected) {
+      focarSemDica(quemAbriu); quemAbriu = null;
+    }
+    estavaAberta = !!tela;
+  };
+  addEventListener('hashchange', aoMudar);
+  addEventListener('DOMContentLoaded', aoMudar);
+  addEventListener('load', aoMudar);
+  aoMudar();
+  document.addEventListener('keydown', e => {
+    const tela = aberta();
+    if (!tela || e.defaultPrevented) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const x = tela.querySelector('a.tn-x,.fechar,[data-fechar]');
+      if (x) x.click(); else location.hash = '';
+    } else if (e.key === 'Tab') {
+      const caixa = caixaDe(tela), lista = caixa ? paradasDe(caixa) : [];
+      if (!lista.length) { e.preventDefault(); return; }
+      const dentro = caixa.contains(document.activeElement);
+      const fim = e.shiftKey ? lista[0] : lista[lista.length - 1];
+      if (!dentro || document.activeElement === fim) { e.preventDefault(); (e.shiftKey ? lista[lista.length - 1] : lista[0]).focus(); }
+    }
+  });
+})();
+</script>
+<script>
+(() => {
+  const contar = pop => {
+    const n = pop.querySelectorAll('input[data-conta]:checked').length;
+    pop.querySelectorAll('[data-n]').forEach(s => { s.textContent = n; });
+    pop.querySelectorAll('[data-principal]').forEach(b => b.classList.toggle('apagado', n === 0));
+    pop.querySelectorAll('input.mae').forEach(m => {
+      const filhos = [...pop.querySelectorAll(`input[data-filho="${m.dataset.mae}"]`)];
+      const marcados = filhos.filter(f => f.checked).length;
+      m.checked = marcados === filhos.length;
+      m.indeterminate = marcados > 0 && marcados < filhos.length;
+      const q = m.closest('.at-l').querySelector('.q');
+      if (q) q.textContent = `${marcados} de ${filhos.length}`;
+    });
+    pop.querySelectorAll('input[data-conta]').forEach(i => i.closest('.at-l').classList.toggle('de-fora', !i.checked));
+  };
+  document.addEventListener('change', e => {
+    const pop = e.target.closest('.pop');
+    if (!pop) return;
+    if (e.target.matches('input.mae'))
+      pop.querySelectorAll(`input[data-filho="${e.target.dataset.mae}"]`).forEach(f => { f.checked = e.target.checked; });
+    contar(pop);
+  });
+  document.addEventListener('click', e => {
+    const c = e.target.closest('[data-cadeado]');
+    if (c) c.classList.toggle('ligada');
+    const pm = e.target.closest('[data-pm]');
+    if (pm) {
+      const d = pm.parentElement.querySelector('[data-dias]');
+      d.textContent = Math.min(90, Math.max(1, Number(d.textContent) + Number(pm.dataset.pm)));
+    }
+    const o = e.target.closest('[data-op3]');
+    if (o) o.classList.toggle('on');
+  });
+  document.querySelectorAll('.pop').forEach(contar);
+})();
+</script>
+</body>
+</html>
