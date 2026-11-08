@@ -1055,7 +1055,7 @@ class TestOsQuatroJuntos:
 
     async def _plugar(
         self, transportes: tuple[str, ...], preso: int, monkeypatch: pytest.MonkeyPatch
-    ) -> tuple[list[tuple[str, float]], PyDualSenseController, float, bool]:
+    ) -> tuple[list[tuple[str, float]], PyDualSenseController, float, bool, int]:
         chaves = _quatro()
         ctl = PyDualSenseController()
         ctl._enumerate_device_keys = lambda: chaves  # type: ignore[method-assign]
@@ -1101,6 +1101,7 @@ class TestOsQuatroJuntos:
                 chegaram.append((str(evento["uniq"]), time.monotonic() - comeco))
 
         await colher(3)
+        antes_de_soltar = len(chegaram)
         preso_abriu_antes = bool(preso_abriu)
         solto_em = time.monotonic() - comeco
         solto.set()
@@ -1109,7 +1110,7 @@ class TestOsQuatroJuntos:
         tarefa.cancel()
         await asyncio.gather(tarefa, return_exceptions=True)
         fios.shutdown(wait=False)
-        return chegaram, ctl, solto_em, preso_abriu_antes
+        return chegaram, ctl, solto_em, preso_abriu_antes, antes_de_soltar
 
     @pytest.mark.parametrize("nome", list(MESAS))
     @pytest.mark.parametrize("preso", [0, 3], ids=["preso-P1", "preso-P4"])
@@ -1117,7 +1118,7 @@ class TestOsQuatroJuntos:
         self, nome: str, preso: int, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         rel.RELOGIO.limpar()
-        chegaram, ctl, solto_em, preso_abriu_antes = asyncio.run(
+        chegaram, ctl, solto_em, preso_abriu_antes, antes_de_soltar = asyncio.run(
             self._plugar(MESAS[nome], preso, monkeypatch)
         )
         ctl.disconnect()
@@ -1127,6 +1128,7 @@ class TestOsQuatroJuntos:
             conexao = conexoes_abertas[mac.replace(":", "")]
             assert {rel.ABERTO, rel.CONECTADO} <= set(conexao.marcas)
             assert conexao.transporte == transporte
+        assert antes_de_soltar == 3, f"o preso segurou os outros: {chegaram}"
         assert len({uniq for uniq, _t in chegaram}) == 4, f"faltou controle: {chegaram}"
         assert not preso_abriu_antes, "o preso abriu antes de ser solto"
         assert chegaram[3][1] >= solto_em, f"o preso não pode ter chegado antes: {chegaram}"

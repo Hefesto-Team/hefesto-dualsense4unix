@@ -484,7 +484,9 @@ def test_a_saida_do_jogo_da_allowlist_devolve_o_fisico_no_prazo(
             (casa.base / "last_exit").write_text(
                 f"epoch={int(time.time())}\npid={os.getpid()}\n", encoding="utf-8"
             )
-            vistos.append(_esperar(lambda: not gp.steam_input_excecao_ativa(daemon)))
+            vistos.append(
+                _esperar(lambda: not gp.steam_input_excecao_ativa(daemon), relogio_curto * 3)
+            )
         finally:
             feito.set()
 
