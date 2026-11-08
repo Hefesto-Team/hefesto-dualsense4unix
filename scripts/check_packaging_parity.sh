@@ -469,7 +469,7 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     for msg in packaging/debian/postinst \
                packaging/arch/hefesto-dualsense4unix.install \
                packaging/fedora/hefesto-dualsense4unix.spec; do
-        grep -qiE 'rtw88[_-]usb|/dkms/\*/dkms\.conf' "${msg}" 2>/dev/null \
+        grep -qiE 'rtw88[_-]usb|/dkms/\*/dkms\.conf|dkms_do_pacote\.sh --lista' "${msg}" 2>/dev/null \
             || missing+=("${msg}(mensagem sem rtw88_usb)")
     done
     if [[ "${#missing[@]}" -eq 0 ]]; then

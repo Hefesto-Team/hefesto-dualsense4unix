@@ -135,25 +135,41 @@ def test_o_script_nao_nomeia_modulo_a_mao() -> None:
     assert "compgen -G" in texto and "/*/dkms.conf" in texto
 
 
-def test_o_deb_diz_os_modulos_que_o_dono_tem(tmp_path: Path) -> None:
-    texto = POSTINST.read_text(encoding="utf-8")
-    linhas = texto.splitlines()
-    inicio = next(i for i, ln in enumerate(linhas) if ln.strip().startswith('_modulos="$(sed'))
+def _modulos_do_postinst(tmp_path: Path, extra: dict[str, str]) -> list[str]:
+    linhas = POSTINST.read_text(encoding="utf-8").splitlines()
+    inicio = next(i for i, ln in enumerate(linhas) if ln.strip().startswith('_modulos="$('))
     comando = "\n".join(linhas[inicio : inicio + 2])
-    base = tmp_path / "usr" / "share" / "hefesto-dualsense4unix" / "dkms"
-    shutil.copytree(DKMS, base)
-    comando = comando.replace("/usr/share/hefesto-dualsense4unix/dkms", str(base))
+    base = tmp_path / "usr" / "share" / "hefesto-dualsense4unix"
+    shutil.copytree(DKMS, base / "dkms")
+    comando = comando.replace(
+        "/usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh",
+        str(RAIZ / "scripts" / "dkms_do_pacote.sh"),
+    )
+    env = {
+        "PATH": "/usr/bin:/bin",
+        "HEFESTO_PACOTE_BASE": str(base),
+        "HEFESTO_UHID_CONF": str(tmp_path / "sem.conf"),
+        **extra,
+    }
     feito = subprocess.run(
         ["bash", "-c", f'set -e\n{comando}\necho "${{_modulos}}"'],
+        env=env,
         capture_output=True,
         text=True,
         check=False,
         timeout=60,
     )
     assert feito.returncode == 0, feito.stderr
-    nomes = {_dono()[p][1] for p in _dono()}
-    assert set(feito.stdout.split()) == nomes
-    assert "uhid" in feito.stdout.split()
+    return feito.stdout.split()
+
+
+def test_o_deb_diz_os_modulos_que_o_ajudante_compila(tmp_path: Path) -> None:
+    """D-0811-O-FLATPAK-E-O-DEB-LEVAM-OS-CINCO-MODULOS: sem o opt-in, a mensagem não diz o uhid."""
+    nomes = {modulo for _, modulo in _dono().values()}
+    sem = _modulos_do_postinst(tmp_path / "a", {})
+    assert set(sem) == nomes - {"uhid"}, sem
+    com = _modulos_do_postinst(tmp_path / "b", {"COM_UHID_CONTRAPRESSAO": "1"})
+    assert set(com) == nomes, com
 
 
 @pytest.mark.parametrize("nome", sorted(m for _, m in _dono().values()))

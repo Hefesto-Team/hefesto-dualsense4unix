@@ -54,8 +54,8 @@ case "$1" in
         echo ""
         echo "O broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do"
         echo "jogo, cura de raiz do duplicado) ja foi ligado: ele atende quem esta"
-        _modulos="$(sed -n 's/^BUILT_MODULE_NAME\[0\]="\(.*\)"$/\1/p' \
-            /usr/share/hefesto-dualsense4unix/dkms/*/dkms.conf 2>/dev/null | paste -sd' ' -)" || true
+        _modulos="$(/usr/share/hefesto-dualsense4unix/scripts/dkms_do_pacote.sh --lista \
+            2>/dev/null | paste -sd' ' -)" || true
         echo "na frente do computador. Os modulos DKMS patchados (${_modulos})"
         echo "foram compilados agora para este kernel e voltam a compilar em cada"
         echo "kernel novo; sem os pacotes dkms e headers, o de fabrica continua."
