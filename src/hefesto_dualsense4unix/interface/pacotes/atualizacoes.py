@@ -44,7 +44,8 @@ def _com_a_escolha(conferencia: dict[str, Any], escolha: at.Escolha,
 
 def _reinstalar() -> set[str]:
     """As peças em dia marcadas para reinstalar: valem até o «Atualizar», sem ir ao disco."""
-    return TELA.setdefault("reinstalar", set())
+    marcadas: set[str] = TELA.setdefault("reinstalar", set())
+    return marcadas
 
 
 def conferencia_vista() -> dict[str, Any]:
