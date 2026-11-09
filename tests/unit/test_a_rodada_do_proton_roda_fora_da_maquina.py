@@ -154,7 +154,7 @@ def test_o_recibo_do_repositorio_tem_a_coluna_runtime() -> None:
 
 def test_o_buildid_do_runtime_sai_da_pasta_instalada(r: ModuleType, tmp_path: Path) -> None:
     (tmp_path / "steamapps").mkdir()
-    (tmp_path / "steamapps" / "appmanifest_4183110.acf").write_text(
+    (tmp_path / "steamapps" / f"appmanifest_{r.APPID_DO_RUNTIME}.acf").write_text(
         '"AppState"\n{\n\t"buildid"\t\t"26116036"\n}\n', encoding="utf-8"
     )
     assert r.buildid_do_runtime(tmp_path) == "26116036"

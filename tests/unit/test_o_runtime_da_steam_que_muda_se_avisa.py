@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.integrations import contratos_de_fora as cf
 
 RAIZES = (".steam/steam", ".local/share/Steam", ".var/app/com.valvesoftware.Steam/.steam/steam")
 GE = "GE-Proton11-12-x86_64"
-APPID = "4183110"
+APPID = "9900040"
 
 
 def _casa(home: Path, raiz: str, *, buildid: str | None) -> cf.Ambiente:
