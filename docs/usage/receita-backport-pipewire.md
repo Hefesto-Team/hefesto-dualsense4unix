@@ -33,6 +33,7 @@ manda fechá-la pelo menu. A instalação à mão é a de
 | Peça | De onde | Quem fixa |
 |---|---|---|
 | o PipeWire 1.6.11 e o WirePlumber 0.5.19 | o arquivo da tag no GitLab do freedesktop | SHA-256 e o commit da tag em `assets/pipewire-backport/BASELINE` |
+| a versão nova pelo atualizador | o arquivo da tag no GitLab, que o upstream não assina | o SHA-256 revisado em `assets/pipewire-backport/SOMAS-REVISADAS`; sem ele, a peça pede revisão e não baixa nada |
 | o `debian/` | o tarball do pacote do Pop!_OS (`1.6.8-1pop1…` e `0.5.12-2pop1…`) | SHA-256 em `assets/pipewire-backport/BASELINE` |
 | as mudanças do Pop no fonte do PipeWire | `assets/pipewire-backport/patches/pop-0001` e `pop-0002` | SHA-256 de cada uma no `BASELINE` |
 | o CVE-2026-14330 | o `debian/patches` do Debian 1.6.9-2, como `debian-0001` | SHA-256 no `BASELINE` |

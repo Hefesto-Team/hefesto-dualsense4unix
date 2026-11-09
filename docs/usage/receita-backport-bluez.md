@@ -235,7 +235,11 @@ repositório dele. Nenhuma origem troca o BlueZ da casa num `full-upgrade`, nem
 o `pop-os-release`, nem o archive, nem um PPA, mesmo com versão maior. A
 forma é a expressão regular de versão: o glob `*~hefesto*` não pega a versão
 que só mora no `dpkg/status`. A subida do BlueZ da casa vem pelo atualizador,
-por esta receita. O `./uninstall.sh` tira o pino sempre, e o `--dry-run` dos
+por esta receita, e só com a versão nova assinada: o `gpgv` confere o
+`bluez-<versão>.tar.sign` do kernel.org contra o chaveiro
+`assets/bluez-backport/chaves-de-release.asc` e as `CHAVES_DE_RELEASE` do
+`BASELINE`; assinatura que não confere ou chave de fora param a peça com o
+porquê. O `./uninstall.sh` tira o pino sempre, e o `--dry-run` dos
 dois o lista. Para conferir: `apt-cache policy bluez` mostra `1002` na linha
 `***`, e `apt full-upgrade -s` não lista o `bluez`.
 

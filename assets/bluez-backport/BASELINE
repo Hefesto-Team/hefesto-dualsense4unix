@@ -19,8 +19,8 @@
 # debian/patches, os mesmos CVE portados para a 5.85, que a série desta casa
 # já leva do upstream.
 # A chave de quem assina as releases do BlueZ: a de Marcel Holtmann, exportada
-# mínima de keys/06CA9F5D1DCF2659.asc do git.kernel.org (docs/kernel/pgpkeys.git,
-# o chaveiro oficial dos mantenedores do kernel.org), e a mesma digital no
+# mínima do arquivo da chave em keys/ do git.kernel.org (docs/kernel/pgpkeys.git, o
+# chaveiro oficial dos mantenedores do kernel.org), e a mesma digital no
 # keyserver.ubuntu.com e no keys.openpgp.org (09/11/2026). Assina o .tar.sign da
 # 5.80 à 5.88. Release assinada por outra chave para o atualizador até a casa
 # conferir a chave nova e acrescentá-la aqui e no chaveiro.
