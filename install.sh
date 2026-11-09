@@ -2172,6 +2172,30 @@ _bz_veredito() {
     fi
 }
 
+_bz_pino() {
+    local pref="${ROOT_DIR}/assets/bluez-backport/apt/hefesto-bluez.pref"
+    local destino="${_BZ_PINO:-/etc/apt/preferences.d/hefesto-bluez}" ver
+    ver="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+    if [[ "${ver}" != *~hefesto* ]]; then
+        [[ "${DRY_RUN:-0}" -eq 1 && "${1:-}" == "vai-instalar" ]] \
+            && _faria_root "fixar o BlueZ da casa no apt em ${destino} (nenhuma origem troca a versão ~hefesto)"
+        return 0
+    fi
+    if cmp -s "${pref}" "${destino}"; then
+        printf '      pino do apt: %s (nenhuma origem troca o BlueZ %s)\n' "${destino}" "${ver}"
+        return 0
+    fi
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria_root "fixar o BlueZ da casa no apt em ${destino} (nenhuma origem troca o ${ver})"
+        return 0
+    fi
+    if sudo install -m 0644 "${pref}" "${destino}" 2>/dev/null; then
+        printf '      pino do apt gravado: %s (nenhuma origem troca o BlueZ %s)\n' "${destino}" "${ver}"
+    else
+        warn "não consegui gravar ${destino} — um full-upgrade pode trocar o BlueZ do Hefesto pelo da distribuição"
+    fi
+}
+
 _bz_maior_do_archive() {
     local pkg="$1" linhas v maior=""
     linhas="$(apt-cache madison "${pkg}" 2>/dev/null || true)"
@@ -2202,6 +2226,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
     case "${_bz_ver}" in
         curado)
             printf '      o bluetoothd em execução (%s) já traz as curas do backport — nada a fazer\n' "${_bz_vivo}"
+            _bz_pino
             ;;
         sem-binario)
             printf '      bluetoothd não encontrado (nem na unit, nem no pacote bluez) — passo pulado\n'
@@ -2240,6 +2265,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
                 _faria "gravar ${_bz_dir}/VERSOES-ANTERIORES.txt (o manifesto que o uninstall usa para devolver o BlueZ de origem — com a versão que o archive SERVE)"
                 _faria_root "instalar os .debs do backport do BlueZ ${_BZ_TARGET} (libbluetooth3, bluez, bluez-cups) — o postinst do PRÓPRIO pacote REINICIA o bluetoothd e os controles por Bluetooth caem até reconectar"
+                _bz_pino vai-instalar
             elif ! sudo -n true 2>/dev/null; then
                 warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
             elif _avisa_pacote_a_meio "o backport do BlueZ ${_BZ_TARGET}"; then
@@ -2275,6 +2301,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                             -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
                             "${_bz_debs[@]}" >/dev/null 2>&1; then
                         printf '      backport %s aplicado — o bluetoothd reiniciou; os controles BT voltam sozinhos ou com o PS\n' "${_BZ_TARGET}"
+                        _bz_pino
                     else
                         warn "apt-get install do backport falhou — rode manualmente com os .debs em ${_bz_dir}"
                     fi

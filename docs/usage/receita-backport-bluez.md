@@ -215,6 +215,18 @@ do alvo, confere o `SHA256SUMS`, grava as versões anteriores em
 volta) e instala os três `.deb` juntos. A instalação reinicia o Bluetooth, e os
 controles caem até reconectar.
 
+Com o backport instalado, o mesmo passo grava o pino do apt
+`assets/bluez-backport/apt/hefesto-bluez.pref` em
+`/etc/apt/preferences.d/hefesto-bluez`: toda versão com `~hefesto` dos três
+pacotes do `src:bluez` fica a 1002, acima do 1001 que o Pop!_OS dá ao
+repositório dele. Nenhuma origem troca o BlueZ da casa num `full-upgrade`, nem
+o `pop-os-release`, nem o archive, nem um PPA, mesmo com versão maior. A
+forma é a expressão regular de versão: o glob `*~hefesto*` não pega a versão
+que só mora no `dpkg/status`. A subida do BlueZ da casa vem pelo atualizador,
+por esta receita. O `./uninstall.sh` tira o pino sempre, e o `--dry-run` dos
+dois o lista. Para conferir: `apt-cache policy bluez` mostra `1002` na linha
+`***`, e `apt full-upgrade -s` não lista o `bluez`.
+
 Para relatar um travamento do `bluetoothd` ao BlueZ, mande o backtrace
 (`coredumpctl info`), nunca o arquivo de core: ele carrega as chaves de todos os
 aparelhos pareados. O core nunca sai da máquina.

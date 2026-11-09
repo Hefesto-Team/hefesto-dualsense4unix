@@ -225,6 +225,7 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /etc/sudoers.d/49-hefesto-atualizador ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/atualizador-raiz ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
+[[ -e /etc/apt/preferences.d/hefesto-bluez ]] && _NEEDS_SUDO=1
 [[ -e /etc/apt/preferences.d/hefesto-pipewire ]] && _NEEDS_SUDO=1
 [[ -e /etc/apt/sources.list.d/hefesto-pipewire.sources || -e /var/lib/hefesto-pipewire ]] && _NEEDS_SUDO=1
 [[ -f "${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt" ]] \
@@ -1180,6 +1181,18 @@ else
         fi
     fi
 fi
+
+BLUEZ_PREF="${_BZ_PINO:-/etc/apt/preferences.d/hefesto-bluez}"
+tirar_o_pino_do_bluez() {
+    [[ -e "${BLUEZ_PREF}" ]] || return 0
+    if sudo -n true 2>/dev/null && sudo rm -f "${BLUEZ_PREF}"; then
+        log "removido o pino do apt do BlueZ (${BLUEZ_PREF}): o apt volta a escolher o BlueZ pelas origens da distribuição"
+    else
+        log "sudo indisponível — o pino do apt do BlueZ NÃO foi removido"
+        log "  sudo rm -f ${BLUEZ_PREF}"
+    fi
+}
+tirar_o_pino_do_bluez
 
 PIPEWIRE_PREF=/etc/apt/preferences.d/hefesto-pipewire
 PIPEWIRE_FONTE=/etc/apt/sources.list.d/hefesto-pipewire.sources
