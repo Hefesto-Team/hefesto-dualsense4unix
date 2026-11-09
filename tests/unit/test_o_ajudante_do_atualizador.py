@@ -129,10 +129,13 @@ def test_a_regra_lista_cada_verbo_sem_curinga(lar: Lar) -> None:
               if linha.strip().startswith(ALVO)]
     assert verbos == [f"{ALVO} {v}" for v in (
         "apt-lista", "apt-baixar nvidia", "apt-instalar nvidia", "apt-baixar kernel",
-        "apt-instalar kernel", "apt-baixar sistema", "apt-instalar sistema", "apt-limpar",
-        "dkms-refazer", "mangohud-instalar", "mangohud-voltar",
+        "apt-instalar kernel", "apt-baixar sistema", "apt-instalar sistema",
+        "apt-rebaixar nvidia", "apt-reinstalar nvidia", "apt-rebaixar kernel",
+        "apt-reinstalar kernel", "apt-consertar", "apt-limpar",
+        "dkms-refazer", "dkms-reinstalar", "mangohud-instalar", "mangohud-reinstalar",
+        "mangohud-voltar",
         *(f"backport-{v} {p}" for p in ("bluez", "pipewire", "portal")
-          for v in ("construir", "instalar", "voltar")),
+          for v in ("construir", "instalar", "reinstalavel", "reinstalar", "voltar")),
         "kernel-anterior")]
     visudo = shutil.which("visudo") or "/usr/sbin/visudo"
     if Path(visudo).exists():

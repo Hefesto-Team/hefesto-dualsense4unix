@@ -6,6 +6,7 @@ SUFIXOS_INSTALADOS=/usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa
 RECEITAS_INSTALADAS=/usr/local/lib/hefesto-dualsense4unix/receitas
 REPO_DO_MANGOHUD=flightlessmango/MangoHud
 GRUPOS="nvidia kernel sistema"
+GRUPOS_DA_REINSTALACAO="nvidia kernel"
 BACKPORTS="bluez pipewire portal"
 TETO_DO_BAIXADO=$((512 * 1024 * 1024))
 
@@ -52,6 +53,9 @@ _apt() {
     apt-get -y -o APT::Status-Fd=1 \
         -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold "$@"
 }
+
+APT_SO_ASSINADO=(-o APT::Get::AllowUnauthenticated=false -o Acquire::AllowInsecureRepositories=false
+    -o Acquire::AllowDowngradeToInsecureRepositories=false)
 
 _instalados() {
     dpkg-query -W -f '${Package}\t${db:Status-Abbrev}\t${Version}\n' 2>/dev/null
@@ -141,6 +145,53 @@ _apt_do_grupo() {
 }
 
 verbo_apt_baixar() { _exige_raiz apt-baixar; _apt_do_grupo "${1:-}" -d; }
+
+_grupo_da_reinstalacao() {
+    local g
+    for g in ${GRUPOS_DA_REINSTALACAO}; do
+        [[ "$1" == "${g}" ]] && return 0
+    done
+    _recusar "grupo sem reinstalação: '$1' (${GRUPOS_DA_REINSTALACAO// / | })"
+}
+
+_pacotes_da_reinstalacao() {
+    local grupo="$1" rodando="$2"
+    _instalados | awk -F'\t' -v grupo="${grupo}" -v k="-${rodando}" '
+        $2 !~ /^ii/ { next }
+        grupo == "nvidia" && $1 ~ /^(nvidia-|libnvidia-|xserver-xorg-video-nvidia)/ { print $1 "=" $3 }
+        grupo == "kernel" && $1 ~ /^linux-/ && length($1) > length(k) \
+            && substr($1, length($1) - length(k) + 1) == k { print $1 "=" $3 }' | sort -u
+}
+
+_apt_reinstalar_do_grupo() {
+    local grupo="$1" rodando="" p
+    shift
+    _grupo_da_reinstalacao "${grupo}"
+    if [[ "${grupo}" == "kernel" ]]; then
+        rodando="$(uname -r)"
+        [[ "${rodando}" =~ ^[A-Za-z0-9._+-]+$ ]] || _recusar "o kernel em uso tem um nome estranho: '${rodando}'"
+    fi
+    _segurar_os_da_casa
+    local -a pacotes
+    mapfile -t pacotes < <(_pacotes_da_reinstalacao "${grupo}" "${rodando}")
+    [[ "${#pacotes[@]}" -gt 0 ]] || _recusar "nada instalado no grupo ${grupo} para reinstalar"
+    for p in "${pacotes[@]}"; do
+        [[ "${p}" =~ ^[a-z0-9][a-z0-9.+-]*=[A-Za-z0-9.+:~-]+$ ]] || _recusar "pacote estranho: '${p}'"
+    done
+    _apt "${APT_SO_ASSINADO[@]}" "$@" install --reinstall --no-install-recommends "${pacotes[@]}"
+}
+
+verbo_apt_rebaixar() { _exige_raiz apt-rebaixar; _apt_reinstalar_do_grupo "${1:-}" -d; }
+verbo_apt_reinstalar() { _exige_raiz apt-reinstalar; _apt_reinstalar_do_grupo "${1:-}"; }
+
+verbo_apt_consertar() {
+    _exige_raiz apt-consertar
+    local rc=0
+    _segurar_os_da_casa
+    dpkg --force-confdef --force-confold --configure -a || rc=1
+    _apt "${APT_SO_ASSINADO[@]}" --no-install-recommends -f install || rc=1
+    return "${rc}"
+}
 _kernels_instalados() {
     local k
     for k in "${MODULOS}"/*; do
@@ -187,10 +238,19 @@ _kernels_com_build() {
     done
 }
 
-verbo_dkms_refazer() {
-    _exige_raiz dkms-refazer
+_dkms_compilar() {
+    local nome="$1" ver="$2" kernel="$3" forcar="$4"
+    if [[ "${forcar}" -eq 0 ]]; then
+        dkms install -m "${nome}" -v "${ver}" -k "${kernel}"
+        return
+    fi
+    dkms build --force -m "${nome}" -v "${ver}" -k "${kernel}" \
+        && dkms install --force -m "${nome}" -v "${ver}" -k "${kernel}"
+}
+
+_dkms_por_fonte() {
+    local forcar="$1" pasta nome ver kernel mudou=0 falhou=0
     command -v dkms >/dev/null 2>&1 || _recusar "dkms ausente"
-    local pasta nome ver kernel mudou=0 falhou=0
     for pasta in "${SRC}"/hefesto-*-*; do
         [[ -d "${pasta}" && -f "${pasta}/dkms.conf" ]] || continue
         if ! _fonte_e_do_root "${pasta}"; then
@@ -203,11 +263,12 @@ verbo_dkms_refazer() {
         nome="${nome%-*}"
         while IFS= read -r kernel; do
             [[ -n "${kernel}" ]] || continue
-            if dkms status -m "${nome}" -v "${ver}" -k "${kernel}" 2>/dev/null | grep -q ': installed'; then
+            if [[ "${forcar}" -eq 0 ]] \
+                && dkms status -m "${nome}" -v "${ver}" -k "${kernel}" 2>/dev/null | grep -q ': installed'; then
                 continue
             fi
             printf 'refazendo %s %s para %s\n' "${nome}" "${ver}" "${kernel}"
-            if dkms install -m "${nome}" -v "${ver}" -k "${kernel}"; then
+            if _dkms_compilar "${nome}" "${ver}" "${kernel}" "${forcar}"; then
                 mudou=1
             else
                 _erro "${nome} não compilou para ${kernel}"
@@ -220,6 +281,9 @@ verbo_dkms_refazer() {
     fi
     [[ "${falhou}" -eq 0 ]]
 }
+
+verbo_dkms_refazer() { _exige_raiz dkms-refazer; _dkms_por_fonte 0; }
+verbo_dkms_reinstalar() { _exige_raiz dkms-reinstalar; _dkms_por_fonte 1; }
 
 _casa_da_usuaria() {
     if [[ -n "${CASA_DA_USUARIA}" ]]; then
@@ -298,9 +362,8 @@ _instalar_o_tar_do_mangohud() {
     return "${rc}"
 }
 
-verbo_mangohud_instalar() {
-    _exige_raiz mangohud-instalar
-    local casa origem nome esperado obtido
+_mangohud_do_baixado() {
+    local girar="$1" casa origem nome esperado obtido
     casa="$(_casa_da_usuaria)"
     [[ -n "${casa}" && -d "${casa}" ]] || _recusar "a casa de quem baixou não existe"
     local -a achados
@@ -323,10 +386,15 @@ verbo_mangohud_instalar() {
         _recusar "o sha256 de ${nome} não é o publicado"
     fi
     _instalar_o_tar_do_mangohud "${CACHE}/mangohud/novo.tar.gz" || exit 1
-    [[ -f "${CACHE}/mangohud/atual.tar.gz" ]] && mv -f "${CACHE}/mangohud/atual.tar.gz" "${CACHE}/mangohud/anterior.tar.gz"
+    if [[ "${girar}" -eq 1 && -f "${CACHE}/mangohud/atual.tar.gz" ]]; then
+        mv -f "${CACHE}/mangohud/atual.tar.gz" "${CACHE}/mangohud/anterior.tar.gz"
+    fi
     mv -f "${CACHE}/mangohud/novo.tar.gz" "${CACHE}/mangohud/atual.tar.gz"
     printf 'MangoHud instalado: %s\n' "${nome}"
 }
+
+verbo_mangohud_instalar() { _exige_raiz mangohud-instalar; _mangohud_do_baixado 1; }
+verbo_mangohud_reinstalar() { _exige_raiz mangohud-reinstalar; _mangohud_do_baixado 0; }
 
 verbo_mangohud_voltar() {
     _exige_raiz mangohud-voltar
@@ -540,6 +608,41 @@ verbo_backport_instalar() {
     printf 'instalado: %s\n' "${peca}"
 }
 
+_entrega_da_reinstalacao() {
+    local peca="$1" base lista deb pacote ver instalada
+    _backport_valido "${peca}"
+    base="${CACHE}/backports/${peca}"
+    [[ -d "${base}/atual" && ! -L "${base}/atual" ]] && _e_so_do_dono "${base}/atual" \
+        || _recusar "sem a entrega de ${peca} que este ajudante instalou: a reinstalação vem depois da primeira subida pela janela"
+    _conferir_a_entrega "${base}/atual" || _recusar "a soma dos pacotes de ${peca} não confere"
+    lista="$(_debs_da_casa "${base}/atual" "${peca}")" || _recusar "os pacotes de ${peca} não são da casa"
+    [[ -n "${lista}" ]] || _recusar "nenhum dos pacotes de ${peca} está instalado nesta máquina"
+    while IFS= read -r deb; do
+        pacote="$(dpkg-deb -f "${deb}" Package 2>/dev/null)"
+        ver="$(dpkg-deb -f "${deb}" Version 2>/dev/null)"
+        instalada="$(_instalados | awk -F'\t' -v p="${pacote}" '$1 == p && $2 ~ /^ii/ { print $3; exit }')"
+        [[ -n "${ver}" && "${ver}" == "${instalada}" ]] \
+            || _recusar "a entrega de ${peca} traz ${pacote} ${ver}, e a máquina tem ${instalada:-nada}: não é a versão de agora"
+    done <<<"${lista}"
+    printf '%s\n' "${lista}"
+}
+
+verbo_backport_reinstalavel() {
+    _exige_raiz backport-reinstalavel
+    _entrega_da_reinstalacao "$1" >/dev/null || exit 2
+    printf 'reinstala: %s\n' "$1"
+}
+
+verbo_backport_reinstalar() {
+    _exige_raiz backport-reinstalar
+    local lista
+    lista="$(_entrega_da_reinstalacao "$1")" || exit 2
+    local -a debs
+    mapfile -t debs <<<"${lista}"
+    _apt "${APT_SO_ASSINADO[@]}" install --reinstall --no-install-recommends "${debs[@]}" || exit 1
+    printf 'reinstalado: %s\n' "$1"
+}
+
 verbo_backport_voltar() {
     _exige_raiz backport-voltar
     local peca="$1" base
@@ -568,13 +671,22 @@ verbo_regra_sudo() {
         printf '    %s apt-baixar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
         printf '    %s apt-instalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
     done
+    for g in ${GRUPOS_DA_REINSTALACAO}; do
+        printf '    %s apt-rebaixar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+        printf '    %s apt-reinstalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+    done
+    printf '    %s apt-consertar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s apt-limpar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s dkms-refazer, \\\n' "${ALVO_INSTALADO}"
+    printf '    %s dkms-reinstalar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-instalar, \\\n' "${ALVO_INSTALADO}"
+    printf '    %s mangohud-reinstalar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-voltar, \\\n' "${ALVO_INSTALADO}"
     for g in ${BACKPORTS}; do
         printf '    %s backport-construir %s, \\\n' "${ALVO_INSTALADO}" "${g}"
         printf '    %s backport-instalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+        printf '    %s backport-reinstalavel %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+        printf '    %s backport-reinstalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
         printf '    %s backport-voltar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
     done
     printf '    %s kernel-anterior\n' "${ALVO_INSTALADO}"
@@ -587,14 +699,21 @@ case "${1:-}" in
     apt-lista) [[ $# -eq 1 ]] || _recusar "apt-lista não leva argumento"; verbo_apt_lista ;;
     apt-baixar) [[ $# -eq 2 ]] || _recusar "apt-baixar <grupo>"; verbo_apt_baixar "$2" ;;
     apt-instalar) [[ $# -eq 2 ]] || _recusar "apt-instalar <grupo>"; verbo_apt_instalar "$2" ;;
+    apt-rebaixar) [[ $# -eq 2 ]] || _recusar "apt-rebaixar <grupo>"; verbo_apt_rebaixar "$2" ;;
+    apt-reinstalar) [[ $# -eq 2 ]] || _recusar "apt-reinstalar <grupo>"; verbo_apt_reinstalar "$2" ;;
+    apt-consertar) [[ $# -eq 1 ]] || _recusar "apt-consertar não leva argumento"; verbo_apt_consertar ;;
     apt-limpar) [[ $# -eq 1 ]] || _recusar "apt-limpar não leva argumento"; verbo_apt_limpar ;;
     dkms-refazer) [[ $# -eq 1 ]] || _recusar "dkms-refazer não leva argumento"; verbo_dkms_refazer ;;
+    dkms-reinstalar) [[ $# -eq 1 ]] || _recusar "dkms-reinstalar não leva argumento"; verbo_dkms_reinstalar ;;
     mangohud-instalar) [[ $# -eq 1 ]] || _recusar "mangohud-instalar não leva argumento"; verbo_mangohud_instalar ;;
+    mangohud-reinstalar) [[ $# -eq 1 ]] || _recusar "mangohud-reinstalar não leva argumento"; verbo_mangohud_reinstalar ;;
     mangohud-voltar) [[ $# -eq 1 ]] || _recusar "mangohud-voltar não leva argumento"; verbo_mangohud_voltar ;;
     kernel-anterior) [[ $# -eq 1 ]] || _recusar "kernel-anterior não leva argumento"; verbo_kernel_anterior ;;
     backport-construir) [[ $# -eq 2 ]] || _recusar "backport-construir <peça>"; verbo_backport_construir "$2" ;;
     backport-instalar) [[ $# -eq 2 ]] || _recusar "backport-instalar <peça>"; verbo_backport_instalar "$2" ;;
+    backport-reinstalavel) [[ $# -eq 2 ]] || _recusar "backport-reinstalavel <peça>"; verbo_backport_reinstalavel "$2" ;;
+    backport-reinstalar) [[ $# -eq 2 ]] || _recusar "backport-reinstalar <peça>"; verbo_backport_reinstalar "$2" ;;
     backport-voltar) [[ $# -eq 2 ]] || _recusar "backport-voltar <peça>"; verbo_backport_voltar "$2" ;;
     regra-sudo) verbo_regra_sudo "${2:-}" ;;
-    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar <grupo> | apt-instalar <grupo> | apt-limpar | dkms-refazer | mangohud-instalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
+    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-rebaixar|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
 esac

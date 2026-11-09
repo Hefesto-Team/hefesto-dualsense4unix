@@ -1,9 +1,9 @@
 """O atualizador: cada peça de fora na versão mais nova publicada, uma por vez, sem jogo aberto.
 
-O motor conhece as peças pelo registro (:mod:`pecas_do_atualizador`), cada uma com a versão
-instalada, a publicada e os passos baixar, instalar e aplicar em todos. A fila roda num processo
-próprio, fora da janela (``--rodar``), e escreve o andamento num arquivo que a janela lê a cada
-tique: o serviço reinicia no fim, e a tela não pode depender dele para saber onde a fila está.
+O motor conhece as peças pelo registro (:mod:`pecas_do_atualizador`): a versão instalada, a
+publicada e os passos baixar, instalar e aplicar; a peça em dia reinstala a de agora
+(:class:`Reinstalacao`), ou diz por quê não. A fila roda num processo próprio (``--rodar``) e
+escreve o andamento num arquivo que a janela lê a cada tique: o serviço reinicia no fim.
 
 A escolha das peças, a «Atualização automática», o prazo da pergunta e a versão que se voltou
 (segurada, para não subir de novo) moram no ``atualizador.json`` da configuração. Antes de
@@ -59,6 +59,10 @@ PRONTA = "pronta"
 FALHOU = "falhou"
 REINICIANDO = "reiniciando"
 SELO_DA_ETAPA = {"baixar": BAIXANDO, "instalar": INSTALANDO, "aplicar": APLICANDO}
+
+SUBIR = "subir"
+REINSTALAR = "reinstalar"
+NAO_SE_REINSTALA = "esta peça não se reinstala pela janela"
 
 ANDANDO = "andando"
 ESPERA_O_JOGO = "espera_o_jogo"
@@ -127,6 +131,16 @@ Etapa = Callable[[Passo, dict[str, Any]], dict[str, Any] | None]
 
 
 @dataclass(frozen=True)
+class Reinstalacao:
+    """A versão que está na máquina, de novo; ``por_que_nao`` vazio: reinstala, senão o porquê."""
+
+    baixar: Etapa | None = None
+    instalar: Etapa | None = None
+    aplicar: Etapa | None = None
+    por_que_nao: Callable[[Versoes], str] | None = None
+
+
+@dataclass(frozen=True)
 class Peca:
     """Uma peça de fora. ``volta`` 2: a tela a mostra, e o motor ainda não a sobe."""
 
@@ -142,6 +156,7 @@ class Peca:
     grupo: str = "infra"
     volta: int = 1
     marcada_por_padrao: bool = True
+    reinstalacao: Reinstalacao | None = None
 
 
 def pecas() -> list[Peca]:
@@ -272,6 +287,18 @@ def _estado_da_peca(peca: Peca, versoes: Versoes, escolha: Escolha) -> str:
     return EM_DIA
 
 
+def _sem_reinstalar(peca: Peca, versoes: Versoes, estado: str) -> str:
+    """Vazio se a peça em dia reinstala; o porquê senão. A pergunta só vai à peça em dia."""
+    if peca.reinstalacao is None:
+        return NAO_SE_REINSTALA
+    if estado != EM_DIA or peca.reinstalacao.por_que_nao is None:
+        return ""
+    try:
+        return peca.reinstalacao.por_que_nao(versoes)
+    except Exception as erro:
+        return str(erro) or type(erro).__name__
+
+
 def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
              agora: Callable[[], float] = time.time) -> dict[str, Any]:
     """O vigia: a versão instalada e a publicada de cada peça. Sem rede, «não consultado».
@@ -286,6 +313,7 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
         except Exception as erro:
             versoes = Versoes(dica=str(erro) or type(erro).__name__)
         estado = _estado_da_peca(peca, versoes, escolha)
+        sem_reinstalar = _sem_reinstalar(peca, versoes, estado)
         itens.append({
             "id": peca.id, "nome": peca.nome, "grupo": peca.grupo, "volta": peca.volta,
             "dica": versoes.revisar or versoes.dica or peca.dica,
@@ -294,6 +322,7 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
             "completa": versoes.completa, "rotulo": versoes.rotulo, "estado": estado,
             "marcada": escolha.marcada(peca),
             "pode_voltar": peca.voltar is not None,
+            "reinstala": not sem_reinstalar, "sem_reinstalar": sem_reinstalar,
         })
     conferencia = {"em": agora(), "rede": rede, "pecas": itens}
     _gravar_json(_estado() / ARQUIVO_DA_CONFERENCIA, conferencia)
@@ -348,12 +377,14 @@ def total(andamento: dict[str, Any]) -> dict[str, Any]:
 class _Andamento:
     """O arquivo do andamento, regravado inteiro a cada mudança (troca atômica)."""
 
-    def __init__(self, lista: Sequence[Peca], versoes: dict[str, Versoes]) -> None:
+    def __init__(self, lista: Sequence[Peca], versoes: dict[str, Versoes],
+                 o_que_fazer: dict[str, str]) -> None:
         self.dado: dict[str, Any] = {
             "fase": ANDANDO, "inicio": time.time(), "pid": os.getpid(),
             "pecas": [{
                 "id": p.id, "nome": p.nome, "de": versoes[p.id].instalada,
                 "para": versoes[p.id].publicada or "", "rotulo": versoes[p.id].rotulo,
+                "fazer": o_que_fazer[p.id],
                 "dica_do_aplicar": p.dica_do_aplicar,
                 "etapas": dict.fromkeys(ETAPAS, ""), "pct": 0, "selo": FILA, "motivo": "",
                 "contagens": [],
@@ -465,10 +496,12 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
     linha = andamento.peca(peca.id)
     dados: dict[str, Any] = {}
     antes = ler_as_anteriores().get(peca.id)
+    reinstala = linha["fazer"] == REINSTALAR
+    fonte: Any = peca.reinstalacao if reinstala else peca
     for etapa in ETAPAS:
         if _pediram_parar():
             raise FilaParadaError
-        fazer = getattr(peca, etapa)
+        fazer = getattr(fonte, etapa)
         inicio, fim = FAIXA_DA_ETAPA[etapa]
         linha["etapas"][etapa] = "agora"
         linha["selo"] = SELO_DA_ETAPA[etapa]
@@ -484,7 +517,7 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
         passo = Passo()
         passo.aviso = functools.partial(avisar, passo)
         try:
-            if etapa == "instalar":
+            if etapa == "instalar" and not reinstala:
                 _guardar_a_anterior(peca, versoes, dados, agora())
             if fazer is not None:
                 volta = fazer(passo, dados)
@@ -495,7 +528,7 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
             linha["selo"] = FALHOU
             linha["motivo"] = str(erro)
             _anotar(f"{peca.id}: {etapa} falhou: {erro}")
-            if etapa == "instalar":
+            if etapa == "instalar" and not reinstala:
                 _devolver_a_anterior(peca.id, antes)
             andamento.gravar()
             return
@@ -507,20 +540,21 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
             linha["selo"] = FALHOU
             linha["motivo"] = motivo
             _anotar(f"{peca.id}: {etapa} levantou: {motivo}")
-            if etapa == "instalar":
+            if etapa == "instalar" and not reinstala:
                 _devolver_a_anterior(peca.id, antes)
             andamento.gravar()
             return
         linha["etapas"][etapa] = "feito"
         linha["pct"] = round(fim)
         andamento.gravar()
-    if dados:
+    if dados and not reinstala:
         anteriores = ler_as_anteriores()
         if peca.id in anteriores:
             anteriores[peca.id]["dados"] = dados
             _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
     linha["selo"] = PRONTA
-    _anotar(f"{peca.id}: {versoes.instalada} -> {versoes.publicada} pronta")
+    _anotar(f"{peca.id}: {versoes.instalada} reinstalada" if reinstala
+            else f"{peca.id}: {versoes.instalada} -> {versoes.publicada} pronta")
     andamento.gravar()
 
 
@@ -558,6 +592,16 @@ def _rodar_o_servico(andamento: _Andamento, reiniciar: Callable[[], bool],
     reinicio["selo"] = PRONTA
 
 
+def _o_que_fazer(peca: Peca, visto: dict[str, Any] | None) -> str:
+    """Subir, reinstalar ou nada: a peça em dia reinstala só se a conferência disse que pode."""
+    if not visto or visto.get("estado") != EM_DIA:
+        return SUBIR
+    if peca.reinstalacao is None or not visto.get("reinstala"):
+        _anotar(f"{peca.id}: em dia, não se reinstala ({visto.get('sem_reinstalar') or '—'})")
+        return ""
+    return REINSTALAR
+
+
 def rodar(
     ids: Sequence[str],
     *,
@@ -572,6 +616,9 @@ def rodar(
 ) -> int:
     """A fila: uma peça por vez, cada uma em baixar, instalar e aplicar em todos.
 
+    A peça que a conferência viu em dia reinstala a versão de agora; a que não se reinstala sai
+    da fila.
+
     Um processo por vez (o segundo sai com 3). Com jogo aberto, espera ele fechar de vez antes
     de cada peça; no prazo, sai como «parado». Uma peça que falha não para as outras. No fim,
     reinicia o serviço e reabre a janela. Devolve 0 com tudo pronto, 1 com alguma falha.
@@ -585,18 +632,21 @@ def rodar(
         with contextlib.suppress(OSError):
             (_runtime() / PEDIDO_DE_PARAR).unlink()
         registro = _por_id(pecas() if lista is None else lista)
-        escolhidas = [registro[i] for i in dict.fromkeys(ids)
-                      if i in registro and registro[i].volta == 1]
-        versoes: dict[str, Versoes] = {}
         conferencia = {str(item.get("id")): item
                        for item in ler_a_conferencia().get("pecas") or []
                        if isinstance(item, dict)}
+        o_que_fazer = {i: _o_que_fazer(registro[i], conferencia.get(i)) for i in dict.fromkeys(ids)
+                 if i in registro and registro[i].volta == 1}
+        escolhidas = [registro[i] for i, fazer in o_que_fazer.items() if fazer]
+        versoes: dict[str, Versoes] = {}
         for peca in escolhidas:
             visto = conferencia.get(peca.id)
-            versoes[peca.id] = (Versoes(str(visto.get("de", "")), str(visto.get("para", "")),
-                                        rotulo=str(visto.get("rotulo", "")))
-                                if visto else Versoes())
-        andamento = _Andamento(escolhidas, versoes)
+            de = str(visto.get("de", "")) if visto else ""
+            para = de if o_que_fazer[peca.id] == REINSTALAR else (
+                str(visto.get("para", "")) if visto else "")
+            versoes[peca.id] = Versoes(de, para, rotulo=str(visto.get("rotulo", ""))) \
+                if visto else Versoes()
+        andamento = _Andamento(escolhidas, versoes, o_que_fazer)
         _anotar(f"fila: {', '.join(p.id for p in escolhidas) or 'nada'}")
         prazo = PRAZO_DA_VIGIA_S if prazo_do_jogo_s is None else prazo_do_jogo_s
         try:

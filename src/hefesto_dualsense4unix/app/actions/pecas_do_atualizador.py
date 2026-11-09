@@ -4,6 +4,10 @@ O que pede root passa pelo ajudante que o install põe em ``AJUDANTE``, por ``su
 verbo de lista fechada e nenhum argumento livre; sem a regra no sudoers, a etapa falha com o
 porquê, e nada pede senha. O que é de quem usa (o Proton, o umu, as bibliotecas do Python e o
 repositório) roda como quem usa.
+
+A reinstalação refaz a versão que está na máquina pelo mesmo caminho da subida, com verbos
+fechados no ajudante: o apt só com os pacotes e as versões que o próprio ajudante lê, e o
+backport da casa só da entrega que ele mesmo instalou, conferida de novo.
 """
 from __future__ import annotations
 
@@ -27,6 +31,7 @@ from hefesto_dualsense4unix.app.actions.atualizador import (
     EtapaFalhouError,
     Passo,
     Peca,
+    Reinstalacao,
     Versoes,
     _anotar,
     ordem,
@@ -35,6 +40,7 @@ from hefesto_dualsense4unix.app.actions.atualizador import (
 AJUDANTE = Path("/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz")
 RAIZ_DO_REPOSITORIO = Path(__file__).resolve().parents[4]
 API_DO_GITHUB = "https://api.github.com/repos/{}/releases/latest"
+API_DA_TAG = "https://api.github.com/repos/{}/releases/tags/{}"
 REPO_DO_MANGOHUD = "flightlessmango/MangoHud"
 REPO_DO_UMU = "Open-Wine-Components/umu-launcher"
 PRAZO_DA_REDE_S = 30
@@ -154,7 +160,8 @@ def _sem_v(tag: str) -> str:
     return tag[1:] if tag[:1] in ("v", "V") and tag[1:2].isdigit() else tag
 
 
-def _raiz(acao: str, *args: str, passo: Passo | None = None) -> None:
+def _raiz(acao: str, *args: str, passo: Passo | None = None,
+          teto_s: float = TETO_DO_COMANDO_S) -> None:
     """O ajudante root, sem senha: falha com o porquê se a regra do install não está lá."""
     if not AJUDANTE.is_file():
         raise EtapaFalhouError("o ajudante do install não está instalado: rode o install")
@@ -165,9 +172,29 @@ def _raiz(acao: str, *args: str, passo: Passo | None = None) -> None:
             with contextlib.suppress(ValueError):
                 passo.fracao(float(achado.group("pct")) / 100.0)
 
-    rc, ultima = _comando(["sudo", "-n", str(AJUDANTE), acao, *args], linha=linha)
+    rc, ultima = _comando(["sudo", "-n", str(AJUDANTE), acao, *args], linha=linha, teto_s=teto_s)
     if rc != 0:
         raise EtapaFalhouError(ultima or f"{acao} saiu com {rc}")
+
+
+def _pergunta_da_raiz(acao: str, *args: str) -> str:
+    """O ajudante responde sem mexer em nada: vazio se sim, senão o porquê."""
+    try:
+        _raiz(acao, *args, teto_s=TETO_DA_PERGUNTA_S)
+    except EtapaFalhouError as erro:
+        texto = str(erro)
+        if texto.startswith("sudo:"):
+            return "a regra do sudo não traz a reinstalação: rode o install"
+        return re.sub(r"^[\w.-]+: ", "", texto) or acao
+    return ""
+
+
+def _do_ajudante(acao: str, *args: str) -> Etapa:
+    def etapa(passo: Passo, _dados_: dict[str, Any]) -> None:
+        _raiz(acao, *args, passo=passo)
+        passo.fracao(1.0)
+
+    return etapa
 
 
 def _ajudante_pronto() -> bool:
@@ -417,6 +444,58 @@ def _aplicar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
     passo.fracao(1.0)
 
 
+def _conf_da_reinstalacao() -> dict[str, str] | None:
+    """O pino que vale, com a url e o sha256 que o conf ou o registro da última guardaram."""
+    pp = _proton()
+    conf = pp._load_conf(None)
+    vale = pp.pino_que_vale(conf, pp.default_compat_dir())
+    registro = pp._ler_registro(pp.default_cache_dir())
+    for fonte in (conf, registro):
+        if str(fonte.get("name", "")) == vale and fonte.get("sha256") and fonte.get("url"):
+            return {"name": vale, "url": str(fonte["url"]), "sha256": str(fonte["sha256"])}
+    return None
+
+
+def _proton_sem_reinstalar(_versoes: Versoes) -> str:
+    if _conf_da_reinstalacao() is None:
+        return "a versão de agora não tem a soma guardada: a reinstalação espera a próxima subida"
+    return ""
+
+
+def _tarball_da_reinstalacao(conf: dict[str, str], baixar: Callable[[str, Path], None] | None,
+                             ) -> Path:
+    pp = _proton()
+    feito = pp.adiantar_para_o_cache(conf, cache_dir=pp.default_cache_dir(), downloader=baixar)
+    if feito.state != "em_cache":
+        raise EtapaFalhouError(feito.detail or feito.state)
+    return Path(feito.detail)
+
+
+def _rebaixar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+    conf = _conf_da_reinstalacao()
+    if conf is None:
+        raise EtapaFalhouError("a versão de agora não tem a soma guardada")
+    _tarball_da_reinstalacao(conf, lambda url, destino: _baixar(url, destino, passo))
+    passo.fracao(1.0)
+    return {"conf": conf}
+
+
+def _reinstalar_o_proton(passo: Passo, dados: dict[str, Any]) -> None:
+    pp = _proton()
+    conf = dados.get("conf") or {}
+    if not conf.get("name"):
+        raise EtapaFalhouError("o tarball da versão de agora não veio")
+    tarball = _tarball_da_reinstalacao(conf, None)
+    barra = pp._steam_gate()
+    if barra:
+        raise EtapaFalhouError(pp._PORQUE_A_STEAM_BARRA.get(barra, barra))
+    try:
+        pp._extract_verified_tarball(tarball, conf["name"], pp.default_compat_dir())
+    except (OSError, tarfile.TarError) as erro:
+        raise EtapaFalhouError(f"o {conf['name']} não se refez: {erro}") from None
+    passo.fracao(1.0)
+
+
 def _voltar_o_proton(anterior: dict[str, Any]) -> None:
     pp = _proton()
     dados = anterior.get("dados") or {}
@@ -468,6 +547,23 @@ def _baixar_o_mangohud(passo: Passo, _dados_: dict[str, Any]) -> None:
 def _instalar_o_mangohud(passo: Passo, _dados_: dict[str, Any]) -> None:
     _raiz("mangohud-instalar", passo=passo)
     passo.fracao(1.0)
+
+
+def _mangohud_sem_reinstalar(versoes: Versoes) -> str:
+    if not versoes.instalada:
+        return "o MangoHud não está instalado"
+    if versoes.publicada != versoes.instalada:
+        return "a reinstalação traz só a versão publicada, que não é a instalada"
+    return ""
+
+
+def _rebaixar_o_mangohud(passo: Passo, dados: dict[str, Any]) -> None:
+    texto = _saida(["mangohud", "--version"]) if shutil.which("mangohud") else None
+    instalada = _sem_v((texto or "").strip().split()[0]) if (texto or "").strip() else ""
+    publicada = _sem_v(str(_release(REPO_DO_MANGOHUD).get("tag_name", "")))
+    if not instalada or publicada != instalada:
+        raise EtapaFalhouError("a versão publicada não é a instalada: nada se reinstala")
+    _baixar_o_mangohud(passo, dados)
 
 
 def _voltar_o_mangohud(_anterior: dict[str, Any]) -> None:
@@ -573,6 +669,44 @@ def _aplicar_o_umu(passo: Passo, dados: dict[str, Any]) -> None:
         if velha.name not in ("atual", str(dados.get("tag", "")),
                               str(dados.get("anterior_dir", ""))) and velha.is_dir():
             shutil.rmtree(velha, ignore_errors=True)
+    passo.fracao(1.0)
+
+
+def _tag_do_umu_de_agora() -> str:
+    atual = _pasta_do_umu() / "atual"
+    tag = atual.resolve().name if atual.is_symlink() else ""
+    return tag if re.fullmatch(r"\d+(?:\.\d+)+", tag) else ""
+
+
+def _umu_sem_reinstalar(_versoes: Versoes) -> str:
+    if not _umu_e_nosso(_umu_na_casa()):
+        return "o umu-run desta máquina não é o do Hefesto"
+    if not _tag_do_umu_de_agora():
+        return "a versão de agora do umu não está no disco"
+    return ""
+
+
+def _rebaixar_o_umu(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+    tag = _tag_do_umu_de_agora()
+    if not tag or not _umu_e_nosso(_umu_na_casa()):
+        raise EtapaFalhouError("o umu de agora não é o do Hefesto")
+    release: dict[str, Any] = {}
+    for nome in (tag, f"v{tag}"):
+        with contextlib.suppress(OSError, ValueError):
+            achada = json.loads(_ler(API_DA_TAG.format(REPO_DO_UMU, nome)).decode("utf-8"))
+            if isinstance(achada, dict) and _sem_v(str(achada.get("tag_name", ""))) == tag:
+                release = achada
+                break
+    if not release:
+        raise EtapaFalhouError(f"a release do umu {tag} não veio")
+    nome, url, sha = _ativo(release, _e_o_zipapp)
+    destino = _cache() / "umu" / nome
+    _baixar(url, destino, passo, sha)
+    return {"tar": str(destino), "tag": tag}
+
+
+def _reapontar_o_umu(passo: Passo, dados: dict[str, Any]) -> None:
+    _apontar_o_umu(str(dados.get("tag", "")))
     passo.fracao(1.0)
 
 
@@ -708,6 +842,48 @@ def _instalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
     passo.fracao(1.0)
 
 
+def _rodas_de_agora() -> dict[str, str]:
+    from importlib import metadata
+
+    saida = {}
+    for nome in _dependencias_do_produto():
+        with contextlib.suppress(metadata.PackageNotFoundError):
+            saida[nome] = metadata.version(nome)
+    return saida
+
+
+def _pasta_da_reinstalacao_do_python() -> Path:
+    return _cache() / "python-de-agora"
+
+
+def _rebaixar_o_python(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+    rodas = _rodas_de_agora()
+    if not rodas:
+        raise EtapaFalhouError("as bibliotecas do Hefesto não estão instaladas")
+    pasta = _pasta_da_reinstalacao_do_python()
+    shutil.rmtree(pasta, ignore_errors=True)
+    pasta.mkdir(parents=True)
+    _rodas(pasta, [f"{n}=={v}" for n, v in sorted(rodas.items())])
+    passo.fracao(1.0)
+    return {"rodas": rodas}
+
+
+def _reinstalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
+    rodas = dados.get("rodas") or {}
+    if not rodas:
+        raise EtapaFalhouError("as rodas de agora não vieram")
+    rc, ultima = _pip("install", "--no-index", "--only-binary", ":all:", "--force-reinstall",
+                      "--no-deps", "--find-links", str(_pasta_da_reinstalacao_do_python()),
+                      *(f"{n}=={v}" for n, v in sorted(rodas.items())))
+    if rc != 0:
+        raise EtapaFalhouError(ultima or "o pip não reinstalou")
+    passo.fracao(0.8)
+    motivo = _o_produto_sobe()
+    if motivo:
+        raise EtapaFalhouError(f"o Hefesto não sobe depois da reinstalação ({motivo})")
+    passo.fracao(1.0)
+
+
 def _voltar_o_python(anterior: dict[str, Any]) -> None:
     pacotes = (anterior.get("dados") or {}).get("pacotes") or {}
     if not pacotes:
@@ -782,6 +958,22 @@ def _aplicar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> None:
         motivo = vao._motivo_da_nota(vao._linhas_da_nota() or [])
         if motivo:
             raise EtapaFalhouError(motivo)
+    passo.fracao(1.0)
+
+
+def _hefesto_sem_reinstalar(_versoes: Versoes) -> str:
+    return "" if (RAIZ_DO_REPOSITORIO / ".git").exists() else "instalação sem clone"
+
+
+def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> None:
+    vao = _vao()
+    motivo = vao.por_que_nao(RAIZ_DO_REPOSITORIO)
+    if motivo:
+        raise EtapaFalhouError(motivo)
+    vao._instalar(RAIZ_DO_REPOSITORIO, vao._rodar_o_install)
+    motivo = vao._motivo_da_nota(vao._linhas_da_nota() or [])
+    if motivo:
+        raise EtapaFalhouError(motivo)
     passo.fracao(1.0)
 
 
@@ -1051,6 +1243,18 @@ def _instalar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     return {"guardadas": guardadas}
 
 
+def _reinstalar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> None:
+    pino = _pino_da_gdk()
+    cache = _cache() / "gdk"
+    pasta = _pasta_da_gdk()
+    for arquivo, chave, _, _ in ARQUIVOS_DA_GDK:
+        if _sha_do_arquivo(cache / "nova" / arquivo) != pino.get(chave, ""):
+            raise EtapaFalhouError(f"o {arquivo} baixado não é o do pino")
+    for arquivo, _, _, destino in ARQUIVOS_DA_GDK:
+        _por_no_lugar(cache / "nova" / arquivo, pasta.joinpath(*destino))
+    passo.fracao(1.0)
+
+
 def _voltar_a_gdk(anterior: dict[str, Any]) -> None:
     cache = _cache() / "gdk" / "anterior"
     pasta = _pasta_da_gdk()
@@ -1078,41 +1282,65 @@ def _etapas_da_casa(
     return construir, instalar, None, voltar
 
 
+def _reinstalacao_da_casa(backport: str) -> Reinstalacao:
+    return Reinstalacao(
+        None, _do_ajudante("backport-reinstalar", backport), None,
+        lambda _versoes: _pergunta_da_raiz("backport-reinstalavel", backport))
+
+
+def _reinstalacao_do_apt(grupo: str, aplicar: Etapa | None) -> Reinstalacao:
+    return Reinstalacao(_do_ajudante("apt-rebaixar", grupo), _do_ajudante("apt-reinstalar", grupo),
+                        aplicar)
+
+
 def registro() -> list[Peca]:
     """As peças, na ordem da fila: o kernel antes dos módulos, o repositório por último."""
     return [
         Peca("proton", "GE-Proton", "Os jogos da Steam e do Heroic",
              "Todos os jogos da Steam e do Heroic", versoes_do_proton,
-             _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton),
+             _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton,
+             reinstalacao=Reinstalacao(_rebaixar_o_proton, _reinstalar_o_proton,
+                                       _aplicar_o_proton, _proton_sem_reinstalar)),
         Peca("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto",
              "O serviço do Bluetooth", versoes_do_bluetooth,
-             *_etapas_da_casa("bluez")),
+             *_etapas_da_casa("bluez"), reinstalacao=_reinstalacao_da_casa("bluez")),
         Peca("som", "Som", "PipeWire e WirePlumber", "No próximo início da sessão",
-             versoes_do_som, *_etapas_da_casa("pipewire")),
+             versoes_do_som, *_etapas_da_casa("pipewire"),
+             reinstalacao=_reinstalacao_da_casa("pipewire")),
         Peca("portal", "Portal do COSMIC", "A captura de tela do COSMIC, com a correção do Hefesto",
-             "No próximo início da sessão", versoes_do_portal, *_etapas_da_casa("portal")),
+             "No próximo início da sessão", versoes_do_portal, *_etapas_da_casa("portal"),
+             reinstalacao=_reinstalacao_da_casa("portal")),
         Peca("gdk", "GameInput", "A peça GDK e o GameInput dos jogos do Xbox no PC",
              "Os jogos com a peça", versoes_da_gdk, _baixar_a_gdk, _instalar_a_gdk, None,
-             _voltar_a_gdk),
+             _voltar_a_gdk, reinstalacao=Reinstalacao(_baixar_a_gdk, _reinstalar_a_gdk)),
         Peca("python", "Python", "As bibliotecas do Hefesto", "O serviço e a janela",
-             versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python),
+             versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python,
+             reinstalacao=Reinstalacao(_rebaixar_o_python, _reinstalar_o_python)),
         Peca("nvidia", "Driver Nvidia", "O driver da placa de vídeo", "No próximo início",
              versoes_da_nvidia, _do_apt("nvidia", "baixar"), _do_apt("nvidia", "instalar"),
-             _limpar),
+             _limpar, reinstalacao=_reinstalacao_do_apt("nvidia", None)),
         Peca("kernel", "Kernel", "O kernel do sistema", "No próximo início",
              versoes_do_kernel, _do_apt("kernel", "baixar"), _instalar_o_kernel,
-             _aplicar_o_kernel, _voltar_o_kernel),
+             _aplicar_o_kernel, _voltar_o_kernel,
+             reinstalacao=_reinstalacao_do_apt("kernel", _refazer_o_dkms)),
         Peca("dkms", "Módulos do kernel", "Os módulos do Hefesto", "Os kernels instalados",
-             versoes_do_dkms, None, _refazer_o_dkms, None),
+             versoes_do_dkms, None, _refazer_o_dkms, None,
+             reinstalacao=Reinstalacao(None, _do_ajudante("dkms-reinstalar"))),
         Peca("sistema", "Pacotes do sistema", "Os pacotes da distribuição", "O sistema",
              versoes_do_sistema, _do_apt("sistema", "baixar"), _do_apt("sistema", "instalar"),
-             _limpar),
+             _limpar, reinstalacao=Reinstalacao(None, _do_ajudante("apt-consertar"))),
         Peca("mangohud", "MangoHud", "O painel por cima do jogo", "Todos os jogos",
              versoes_do_mangohud, _baixar_o_mangohud, _instalar_o_mangohud, None,
-             _voltar_o_mangohud),
+             _voltar_o_mangohud,
+             reinstalacao=Reinstalacao(_rebaixar_o_mangohud, _do_ajudante("mangohud-reinstalar"),
+                                       None, _mangohud_sem_reinstalar)),
         Peca("umu", "umu", "Os jogos de fora da Steam no Proton", "Os jogos de fora da Steam",
-             versoes_do_umu, _baixar_o_umu, _instalar_o_umu, _aplicar_o_umu, _voltar_o_umu),
+             versoes_do_umu, _baixar_o_umu, _instalar_o_umu, _aplicar_o_umu, _voltar_o_umu,
+             reinstalacao=Reinstalacao(_rebaixar_o_umu, _instalar_o_umu, _reapontar_o_umu,
+                                       _umu_sem_reinstalar)),
         Peca("hefesto", "Hefesto", "Interface, serviço e correções", "O serviço e a janela",
              versoes_do_hefesto, _baixar_o_hefesto, _instalar_o_hefesto, _aplicar_o_hefesto,
-             grupo="hefesto"),
+             grupo="hefesto",
+             reinstalacao=Reinstalacao(None, _reinstalar_o_hefesto, None,
+                                       _hefesto_sem_reinstalar)),
     ]
