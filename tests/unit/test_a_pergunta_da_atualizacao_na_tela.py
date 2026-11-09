@@ -48,7 +48,7 @@ def _peca(ident: str, *, de: str = "1.0", para: str = "1.1", grupo: str = "infra
 
     return at.Peca(ident, ident.capitalize(), f"dica de {ident}", "todos",
                    lambda _rede: at.Versoes(de, para), nada, nada, nada, grupo=grupo,
-                   volta=volta)
+                   volta=volta, reinstalacao=at.Reinstalacao(nada, nada, nada))
 
 
 LISTA = [_peca("hefesto", grupo="hefesto"), _peca("proton"), _peca("python"),

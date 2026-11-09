@@ -538,6 +538,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
                                "e o prazo); não identifica controle"),
     "atualizador-conferencia.json": (CASA, "as versões instaladas e publicadas de cada peça"),
     "atualizador-andamento.json": (CASA, "o andamento da última atualização"),
+    "curas-avisadas.json": (CASA, "o kernel em que a cura da casa desfeita já se avisou; não "
+                                  "identifica controle"),
     "atualizador-anteriores.json": (CASA, "a versão anterior de cada peça, para voltar"),
     "atualizador": (CASA, "o cache dos downloads do atualizador (o MangoHud baixado)"),
     "atualizador.log": (CASA, "o registro das atualizações; não identifica controle"),
