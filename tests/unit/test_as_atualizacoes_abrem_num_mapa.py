@@ -226,7 +226,7 @@ def test_o_cartao_le_o_estado_e_os_campos_do_motor_nos_dois_formatos() -> None:
          "completa": "1.11.0~1792525517~24.04~f448ddf+0~hefesto1"},
         {"id": "gdk", "nome": "GameInput", "estado": "fora", "volta": 1, "de": "1"}]
     antes = tela.html_do_mapa({"pecas": [hoje]})
-    assert '<div class="mp-g fixa"><span>Com o Hefesto</span>' in antes
+    assert '<div class="mp-g em-dia"><span>Atualizado</span>' in antes and "fixa" not in antes
     assert "mp-m" not in antes
     mapa = tela.html_do_mapa({"pecas": volta_2})
     grupos = re.findall(r'<div class="mp-g ([a-z-]+)">', mapa)
@@ -277,3 +277,36 @@ def test_o_atualizar_se_apaga_sem_peca_marcada_tambem_com_o_jogo_aberto() -> Non
         corpo = tela.html_da_pergunta(nada, {"sozinho": False, "dias": 7}, jogo_aberto=aberto)
         assert re.search(r'class="btn principal apagado" data-gesto="atualizacoes-atualizar"',
                          corpo), aberto
+
+
+def _grupos(corpo: str) -> list[str]:
+    return re.findall(r'<div class="mp-g ([a-z-]+)"><span>([^<]+)</span>', corpo)
+
+
+def test_o_mapa_tem_so_escolha_revisar_e_atualizado_e_a_fixa_vai_para_o_atualizado() -> None:
+    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: o grupo «Com o Hefesto» saiu do mapa.
+
+    MORDIDA: o grupo «fixa» de volta no ``GRUPOS_DO_MAPA``, ou a peça fixa fora do «Atualizado»,
+    reprova; o desenho com peça fixa nos dados de exemplo também.
+    """
+    assert [c for c, _ in tela.GRUPOS_DO_MAPA] == ["nova", "revisar", "em_dia", "sem_rede"]
+    pecas = [{"id": "hefesto", "nome": "Hefesto", "estado": "nova", "de": "1", "para": "2",
+              "marcada": True, "volta": 1},
+             {"id": "portal", "nome": "Portal do COSMIC", "estado": "fixa", "volta": 2, "de": "1"},
+             {"id": "kernel", "nome": "Kernel", "estado": "em_dia", "de": "7", "para": "7",
+              "marcada": True, "volta": 1}]
+    mapa = tela.html_do_mapa({"pecas": pecas})
+    assert _grupos(mapa) == [("nova", "Escolha o que deve ser atualizado"),
+                             ("em-dia", "Atualizado")]
+    assert '<span class="q">2</span>' in mapa
+    assert "fixa" not in mapa and "Com o Hefesto" not in mapa
+    assert "fixa" not in tela.CSS
+    revisar = tela.html_do_mapa({"pecas": [*pecas, {"id": "som", "nome": "Som",
+                                                    "estado": "revisar", "volta": 1}]})
+    assert [c for c, _ in _grupos(revisar)] == ["nova", "revisar", "em-dia"]
+    desenho = (RAIZ / "mockup/escolha/o-mapa-das-atualizacoes.html").read_text(encoding="utf-8")
+    for pagina in (tela.html_do_mapa(aba09.EXEMPLO_DAS_PECAS), desenho):
+        assert [c for c, _ in _grupos(pagina)] == ["nova", "em-dia"]
+        assert "Com o Hefesto" not in pagina and "mp-c fixa" not in pagina
+    assert all(p["estado"] in ("nova", "em_dia") for p in aba09.EXEMPLO_DAS_PECAS["pecas"])
+

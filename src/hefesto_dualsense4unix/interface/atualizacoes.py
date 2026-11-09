@@ -18,9 +18,10 @@ ID_DA_CAIXA = "hef-atualizacoes"
 ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
                  "kernel", "dkms", "sistema", "mangohud", "umu")
 GRUPOS_DO_MAPA = (("nova", "Escolha o que deve ser atualizado"), ("revisar", "A revisar"),
-                  ("em_dia", "Atualizado"), ("fixa", "Com o Hefesto"), ("sem_rede", "Sem rede"))
-ESTADOS_DO_MAPA = ("nova", "revisar", "em_dia", "fixa")
-MARCAVEIS = ("nova", "em_dia", "fixa")
+                  ("em_dia", "Atualizado"), ("sem_rede", "Sem rede"))
+ESTADOS_DO_MAPA = ("nova", "revisar", "em_dia")
+GRUPO_DO_ESTADO = {"fixa": "em_dia"}
+MARCAVEIS = ("nova", "em_dia")
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
@@ -114,7 +115,7 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
   color:var(--green)}
 .hef-atualiza .mp-g + .mp-grade{margin-bottom:2px}
 .hef-atualiza .mp-g.nova{color:var(--purple)}
-.hef-atualiza .mp-g.fixa,.hef-atualiza .mp-g.sem-rede{color:var(--comment)}
+.hef-atualiza .mp-g.sem-rede{color:var(--comment)}
 .hef-atualiza .mp-g .q{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
   color:var(--texto-mudo)}
 .hef-atualiza .mp-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 10px}
@@ -157,8 +158,8 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-n,
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v,
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v .nv{color:var(--texto-mudo)}
-.hef-atualiza .mapa:not(.auto) .mp-c:is(.em-dia,.fixa) .mp-mx{visibility:hidden}
-.hef-atualiza .mapa.auto .mp-c:is(.em-dia,.fixa):has(.mp-m:not(:checked)) .mp-t{
+.hef-atualiza .mapa:not(.auto) .mp-c.em-dia .mp-mx{visibility:hidden}
+.hef-atualiza .mapa.auto .mp-c.em-dia:has(.mp-m:not(:checked)) .mp-t{
   color:var(--texto-mudo)}
 .hef-atualiza .mp-c.em-dia{border-color:color-mix(in srgb,var(--green) 45%,var(--border-forte));
   background:color-mix(in srgb,var(--green) 5%,var(--app-bg))}
@@ -171,11 +172,9 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .mp-s{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font:700 13px/1 'JetBrains Mono',monospace;background:var(--orange);
   color:var(--app-bg)}
-.hef-atualiza .mp-c.fixa,.hef-atualiza .mp-c.sem-rede{border-style:dashed;
-  background:transparent}
-.hef-atualiza .mp-c.fixa .mp-i,.hef-atualiza .mp-c.sem-rede .mp-i{color:var(--comment);
-  background:var(--border-sutil)}
-.hef-atualiza .mp-c.fixa .mp-n,.hef-atualiza .mp-c.sem-rede .mp-n{color:var(--texto-suave)}
+.hef-atualiza .mp-c.sem-rede{border-style:dashed;background:transparent}
+.hef-atualiza .mp-c.sem-rede .mp-i{color:var(--comment);background:var(--border-sutil)}
+.hef-atualiza .mp-c.sem-rede .mp-n{color:var(--texto-suave)}
 .hef-atualiza .pendente{display:flex;align-items:center;gap:8px;padding:7px 10px;
   border:1px dashed var(--orange);border-radius:6px;font-size:12px;color:var(--orange);
   background:rgba(255,184,108,.07)}
@@ -320,6 +319,7 @@ def _icone(ident: str) -> str:
 
 def _grupo_do_cartao(item: dict[str, Any]) -> str:
     estado = str(item.get("estado") or "")
+    estado = GRUPO_DO_ESTADO.get(estado, estado)
     return estado if estado in ESTADOS_DO_MAPA else "sem_rede"
 
 

@@ -86,8 +86,10 @@ def test_o_mapa_agrupa_o_que_ha_para_baixar_e_so_a_nova_e_marcavel_inteira(
     grupos = re.findall(r'<div class="mp-g ([a-z-]+)"><span>([^<]+)</span>'
                         r'<span class="q">(\d+)</span>', corpo)
     assert grupos == [("nova", "Escolha o que deve ser atualizado", "3"),
-                      ("em-dia", "Atualizado", "1"),
-                      ("fixa", "Com o Hefesto", "1")]
+                      ("em-dia", "Atualizado", "2")]
+    assert "Com o Hefesto" not in corpo and "mp-c fixa" not in corpo
+    assert re.search(r'<div class="mp-c em-dia"[^>]*><span class="mp-i">.*?'
+                     r'<span class="mp-n">Bluetooth</span>.*?</span></span></div>', corpo)
     nomes = re.findall(r'class="mp-n">([^<]+)<', corpo)
     assert nomes[:3] == ["Hefesto", "Proton", "Python"]
     assert 'data-v="bluetooth"' not in corpo
