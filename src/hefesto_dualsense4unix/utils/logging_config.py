@@ -34,7 +34,8 @@ else:
             Processor = Callable[..., Any]  # type: ignore[misc,assignment]
 
 _configured = False
-_ENTREGUES: weakref.WeakSet[Any] = weakref.WeakSet()
+_o_padrao_do_reset = False
+_ENTREGUES: weakref.WeakSet[Any] = globals().get("_ENTREGUES") or weakref.WeakSet()
 
 _COR_DO_TERMINAL = re.compile(r"(\x1b\[[0-9;]*m)")
 
@@ -514,9 +515,9 @@ def configure_logging(
     fmt: str | None = None,
     stream: Any = None,
 ) -> None:
-    """Configura logging stdlib + structlog. Idempotente."""
-    global _configured
-    if _configured:
+    """Configura logging stdlib + structlog. Idempotente, salvo sobre o padrão do reset."""
+    global _configured, _o_padrao_do_reset
+    if _configured and not _o_padrao_do_reset:
         return
 
     level_name = (level or os.getenv("HEFESTO_DUALSENSE4UNIX_LOG_LEVEL") or "INFO").upper()
@@ -539,6 +540,7 @@ def configure_logging(
     if any(manipulador not in antes for manipulador in raiz.handlers):
         instalar_os_ganchos_do_fio_que_cai()
 
+    _soltar_os_entregues()
     structlog.configure(
         processors=cadeia_do_diario(log_fmt, stream),
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
@@ -548,6 +550,17 @@ def configure_logging(
     )
 
     _configured = True
+    _o_padrao_do_reset = False
+
+
+def _soltar_os_entregues() -> None:
+    """O logger entregue que guardou a montagem volta a montar no próximo uso.
+
+    O guardado prende a lista de processadores, o nível e o destino da configuração de antes, e
+    cada ``configure`` do structlog troca a lista por outra.
+    """
+    for logger in list(_ENTREGUES):
+        vars(logger).pop("bind", None)
 
 
 def caminho_do_registro() -> Path:
@@ -586,11 +599,11 @@ def get_logger(name: str | None = None) -> Any:
 def reset_for_tests() -> None:
     """Reseta o estado interno — uso exclusivo em testes.
 
-    O logger entregue que já guardou a montagem de antes volta a montar no próximo uso: o
-    guardado prende a lista de processadores, o nível e o destino daquela configuração, e o
-    ``reset_defaults`` troca a lista por outra.
+    Devolve o estado de recém-importado: configurado no padrão, como o ``get_logger`` do import
+    deixa. Sem isso, o primeiro ``get_logger`` depois do reset configura sozinho, e dentro de um
+    ``capture_logs`` troca a lista que ele esvaziou. Um ``configure_logging`` depois do reset vale.
     """
-    global _configured, _nivel_minimo
+    global _configured, _nivel_minimo, _o_padrao_do_reset
     _REGISTRO.fechar()
     raiz = logging.getLogger()
     for manipulador in list(raiz.handlers):
@@ -599,8 +612,8 @@ def reset_for_tests() -> None:
     _configured = False
     _nivel_minimo = logging.INFO
     structlog.reset_defaults()
-    for logger in list(_ENTREGUES):
-        vars(logger).pop("bind", None)
+    configure_logging()
+    _o_padrao_do_reset = True
 
 
 __all__ = [
