@@ -1109,20 +1109,20 @@ def _com_quem_esta_na_frente(valor: Any, state: Any) -> str | None:
 CAMPO_DO_SOZINHO = "atualizar-sozinho"
 CAMPO_DO_PRAZO = "prazo-da-atualizacao"
 CAMPO_DAS_NOVAS = "atualizacoes-novas"
-CAMPO_DA_GRADE = "atualizacoes-lista"
 
 
 def campos_das_atualizacoes() -> dict[str, Any]:
-    """A seção Atualizações: a grade das peças, o «Atualizar sozinho», o prazo e as novas."""
+    """A seção Atualizações: o «Atualizar sozinho», o prazo e o número do que há para baixar,
+    que se apaga quando não há nada."""
     from hefesto_dualsense4unix.app.actions import atualizador as at
     from hefesto_dualsense4unix.interface import atualizacoes as tela
     from hefesto_dualsense4unix.interface.pacotes.atualizacoes import conferencia_vista
 
     escolha = at.ler_a_escolha()
-    conferencia = conferencia_vista()
-    return {CAMPO_DO_SOZINHO: escolha.sozinho, CAMPO_DO_PRAZO: str(escolha.dias),
-            CAMPO_DAS_NOVAS: str(tela.quantas_novas(conferencia)),
-            CAMPO_DA_GRADE: tela.grade_da_aba(conferencia)}
+    novas = tela.quantas_novas(conferencia_vista())
+    return {CAMPO_DO_SOZINHO: escolha.sozinho,
+            CAMPO_DO_PRAZO: str(escolha.dias),
+            CAMPO_DAS_NOVAS: str(novas) if novas else ""}
 
 
 @registrar("09-sistema.html")

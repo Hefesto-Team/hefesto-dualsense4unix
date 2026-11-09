@@ -1,16 +1,15 @@
-"""A pergunta da atualização e o andamento, como o arranjo A do desenho.
+"""O mapa das atualizações, as versões anteriores e o andamento.
 
-O desenho é ``mockup/escolha/a-pergunta-da-atualizacao.html``. O arranjo A: a lista única com o
-Hefesto em cima e as peças de fora num grupo marcável, o «Atualizar sozinho» e o prazo embaixo;
-as versões anteriores; e o andamento com o total, uma barra por peça e o
-reinício do serviço no fim. A caixa nasce por cima de qualquer aba (``JS_DA_CAIXA``) e se repinta
-inteira a cada mudança; a grade da aba Sistema (``grade_da_aba``) é a mesma conferência em três
-colunas. Puro: recebe os dicionários do motor e devolve HTML.
+O mapa nasce do botão «Atualizações» da aba Sistema (e sozinho, quando o prazo vence com peça
+nova): as peças em cartões, agrupados pelo que há para baixar, marcáveis, com o «Atualizar» e as
+versões anteriores no rodapé. A caixa nasce por cima de qualquer aba (``JS_DA_CAIXA``) e se repinta
+inteira a cada mudança. Puro: recebe os dicionários do motor e devolve HTML.
 """
 from __future__ import annotations
 
 import html
 import json
+import re
 import time
 from collections.abc import Sequence
 from typing import Any
@@ -18,12 +17,34 @@ from typing import Any
 ID_DA_CAIXA = "hef-atualizacoes"
 ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
                  "kernel", "dkms", "sistema", "mangohud", "umu")
-COLUNAS_DA_GRADE = (4, 3, 3, 3)
-ROTULO_DO_GRUPO = "Bibliotecas, drivers e plugins"
+GRUPOS_DO_MAPA = (("nova", "Para baixar"), ("em_dia", "Em dia"), ("fixa", "Com o Hefesto"),
+                  ("sem_rede", "Sem rede"))
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
-DICA_DA_FIXA = "Sobe junto com o Hefesto"
+ICONES = {
+    "hefesto": '<path d="M3 7h13l5-3v5l-5 2v2h-3v3h3l1 4H6l1-4h3v-3H7v-1.5C5 11 3 9.5 3 7z"/>',
+    "proton": '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>',
+    "bluetooth": '<path d="M7 7l10 10-5 5V2l5 5L7 17"/>',
+    "som": '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/>'
+           '<path d="M19 6.5a7.5 7.5 0 0 1 0 11"/>',
+    "portal": '<path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><circle cx="12" cy="12" r="3"/>',
+    "gdk": '<path d="M7 8h10a5 5 0 0 1 5 5v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14'
+           'v-1a5 5 0 0 1 5-5z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16.5" cy="12" r=".6"/>',
+    "python": '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14"/>',
+    "nvidia": '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="9" cy="12" r="3"/>'
+              '<path d="M15 10h3.5M15 14h3.5"/>',
+    "kernel": '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 7V3M14 7V3M10 21v-4'
+              'M14 21v-4M7 10H3M7 14H3M21 10h-4M21 14h-4"/>',
+    "dkms": '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" '
+            'height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/>'
+            '<path d="M17 14v6M14 17h6"/>',
+    "sistema": '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    "mangohud": '<path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l4.5-5"/>'
+                '<path d="M3 20h18"/>',
+    "umu": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9v6l5-3z"/>',
+    "": '<rect x="4" y="4" width="16" height="16" rx="2"/>',
+}
 ETAPAS_NA_TELA = (("baixar", "Baixar"), ("instalar", "Instalar"), ("aplicar", "Aplicar em todos"))
 ETAPAS_DO_REINICIO = (("reiniciar", "Reiniciar o serviço"), ("reabrir", "Reabrir o Hefesto"))
 SELO_DO_ANDAMENTO = {"fila": ("fila", "NA FILA"), "baixando": ("baixando", "BAIXANDO"),
@@ -93,28 +114,69 @@ CSS = """
 .hef-atualiza .selo.instalando{background:var(--purple);color:var(--app-bg)}
 .hef-atualiza .selo.aplicando{background:var(--pink);color:var(--app-bg)}
 .hef-atualiza .selo.falhou{background:var(--red);color:var(--app-bg)}
-.hef-atualiza .at-lista{display:flex;flex-direction:column}
-.hef-atualiza .at-l{display:grid;grid-template-columns:22px minmax(0,1fr) auto 84px;
-  align-items:center;gap:10px;height:34px;border-bottom:1px solid var(--border-sutil);
-  font-size:12.5px;cursor:pointer;color:var(--fg)}
-.hef-atualiza .at-l:last-child{border-bottom:0}
-.hef-atualiza .tn-cx:has(.pendente) .at-l{height:32px}
-.hef-atualiza .at-l input{width:16px;height:16px;accent-color:var(--pink);margin:0;cursor:pointer}
-.hef-atualiza .at-l .at-ok{color:var(--green);font-size:13px;text-align:center;width:16px}
-.hef-atualiza .at-l.filho{padding-left:26px}
-.hef-atualiza .at-l.grupo .at-n{font-weight:600}
-.hef-atualiza .at-l .at-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hef-atualiza .at-l .at-n .q{color:var(--texto-mudo);font-weight:400;margin-left:6px}
-.hef-atualiza .at-l .at-v{font-family:'JetBrains Mono',monospace;font-size:12px;
-  color:var(--texto-suave);text-align:right;white-space:nowrap}
-.hef-atualiza .at-v .seta{color:var(--purple);margin:0 4px}
-.hef-atualiza .and-l .ver .seta{color:var(--purple);margin:0 3px}
-.hef-atualiza .at-v .nv{color:var(--fg);font-weight:500}
-.hef-atualiza .at-l.de-fora .at-n,.hef-atualiza .at-l.de-fora .at-v,
-.hef-atualiza .at-l.de-fora .at-v .nv{color:var(--texto-mudo)}
-.hef-atualiza .sep-lista{height:8px}
-.hef-atualiza .at-ajuste{display:flex;align-items:center;gap:14px;padding-top:10px;
-  border-top:1px solid var(--border-sutil)}
+.hef-atualiza .tn-cx.mapa{width:min(1180px,calc(100vw - 32px));
+  height:min(668px,calc(100vh - 32px));max-height:none;max-width:none}
+.hef-atualiza .mapa .tn-topo{padding:14px 18px 12px;gap:16px;
+  border-bottom:1px solid var(--border-sutil)}
+.hef-atualiza .mapa .tn-tit{font-size:18px;font-weight:700;color:var(--pink)}
+.hef-atualiza .mapa .btn.voltar{height:30px}
+.hef-atualiza .mapa .at-ajuste{margin-left:auto;display:flex;align-items:center;gap:14px}
+.hef-atualiza .mapa .at-ajuste .cadeado{height:30px}
+.hef-atualiza .mapa .tn-corpo{padding:14px 18px;flex:1}
+.hef-atualiza .mapa .tn-rod .empurra{flex:1}
+.hef-atualiza .btn.apagado{opacity:.45;pointer-events:none}
+.hef-atualiza .mp-corpo{display:flex;flex-direction:column;gap:10px}
+.hef-atualiza .mp-g{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:600;
+  color:var(--green)}
+.hef-atualiza .mp-g + .mp-grade{margin-bottom:6px}
+.hef-atualiza .mp-g.nova{color:var(--purple)}
+.hef-atualiza .mp-g.fixa,.hef-atualiza .mp-g.sem-rede{color:var(--comment)}
+.hef-atualiza .mp-g .q{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
+  color:var(--texto-mudo)}
+.hef-atualiza .mp-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.hef-atualiza .mp-c{display:grid;grid-template-columns:40px minmax(0,1fr) 28px;align-items:center;
+  gap:12px;height:64px;padding:0 10px 0 12px;border-radius:9px;
+  border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg)}
+.hef-atualiza label.mp-c{cursor:pointer}
+.hef-atualiza label.mp-c:hover{border-color:var(--comment)}
+.hef-atualiza .mp-i{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;color:var(--green);background:rgba(80,250,123,.10)}
+.hef-atualiza .mp-i svg{width:22px;height:22px}
+.hef-atualiza .mp-t{display:flex;flex-direction:column;gap:4px;min-width:0}
+.hef-atualiza .mp-n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.hef-atualiza .mp-v{font-family:'JetBrains Mono',monospace;font-size:12px;
+  color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hef-atualiza .mp-v .seta{color:var(--purple);margin:0 5px}
+.hef-atualiza .mp-c.nova .mp-v .nv{color:var(--fg);font-weight:500}
+.hef-atualiza .mp-mx{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer}
+.hef-atualiza .mp-m{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin:0;
+  cursor:pointer;border-radius:5px;border:1.5px solid var(--linha,#53576f);background:var(--panel);
+  display:grid;place-content:center}
+.hef-atualiza .mp-m:checked{background:var(--pink);border-color:var(--pink)}
+.hef-atualiza .mp-m:checked::after{content:"";width:9px;height:5px;margin-top:-2px;
+  border-left:2px solid var(--app-bg);border-bottom:2px solid var(--app-bg);
+  transform:rotate(-45deg)}
+.hef-atualiza .mp-c.nova{border-color:var(--purple);
+  background:color-mix(in srgb,var(--purple) 8%,var(--app-bg))}
+.hef-atualiza .mp-c.nova .mp-i{color:var(--purple);
+  background:color-mix(in srgb,var(--purple) 18%,transparent)}
+.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)){border-color:var(--border-forte);
+  background:var(--app-bg)}
+.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-i{color:var(--texto-mudo);
+  background:var(--border-sutil)}
+.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-n,
+.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v,
+.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v .nv{color:var(--texto-mudo)}
+.hef-atualiza:not(:has(.cadeado.ligada)) .mp-c.em-dia .mp-mx{visibility:hidden}
+.hef-atualiza:has(.cadeado.ligada) .mp-c.em-dia:has(.mp-m:not(:checked)) .mp-t{
+  color:var(--texto-mudo)}
+.hef-atualiza .mp-c.fixa,.hef-atualiza .mp-c.sem-rede{border-style:dashed;
+  background:transparent}
+.hef-atualiza .mp-c.fixa .mp-i,.hef-atualiza .mp-c.sem-rede .mp-i{color:var(--comment);
+  background:var(--border-sutil)}
+.hef-atualiza .mp-c.fixa .mp-n,.hef-atualiza .mp-c.sem-rede .mp-n{color:var(--texto-suave)}
 .hef-atualiza .pendente{display:flex;align-items:center;gap:8px;padding:7px 10px;
   border:1px dashed var(--orange);border-radius:6px;font-size:12px;color:var(--orange);
   background:rgba(255,184,108,.07)}
@@ -216,53 +278,79 @@ def _ordenadas(itens: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return [i for i in vistas if i.get("estado") != "fora"]
 
 
-def _ver(item: dict[str, Any]) -> str:
+def versao_curta(versao: object) -> str:
+    """A versão do upstream: sem a época e sem o sufixo da distribuição e da casa."""
+    texto = str(versao or "").strip()
+    texto = re.sub(r"^\d+:", "", texto)
+    return re.split(r"[~+]", texto, maxsplit=1)[0]
+
+
+def _par_de_versoes(item: dict[str, Any]) -> tuple[str, str]:
     de, para = str(item.get("de") or ""), str(item.get("para") or "")
-    if item.get("rotulo"):
-        num, _, resto = str(item["rotulo"]).partition(" ")
-        return f'<span class="num">{_e(num)}</span>' + (
-            f' <span class="resto">{_e(resto)}</span>' if resto else "")
     if item.get("estado") == "nova" and de and para:
-        return (f'<span class="par"><span class="de">{_e(de)}</span><span class="seta">→</span>'
-                f'</span><span class="nv">{_e(para)}</span>')
-    atual = de or para
-    return f'<span class="nv">{_e(atual)}</span>' if atual else ""
+        return de, para
+    return "", de or para
 
 
-def _ver_inteira(item: dict[str, Any]) -> str:
-    de, para = str(item.get("de") or ""), str(item.get("para") or "")
+def _versao_a_vista(item: dict[str, Any]) -> str:
     if item.get("rotulo"):
-        return str(item["rotulo"])
-    if item.get("estado") == "nova" and de and para:
-        return f"{de} → {para}"
-    return ""
+        return f'<span class="nv">{_e(item["rotulo"])}</span>'
+    de, agora = _par_de_versoes(item)
+    if de:
+        return (f'<span class="de">{_e(versao_curta(de))}</span><span class="seta">→</span>'
+                f'<span class="nv">{_e(versao_curta(agora))}</span>')
+    return f'<span class="nv">{_e(versao_curta(agora))}</span>' if agora else ""
 
 
-def _selo_da_pergunta(item: dict[str, Any]) -> str:
-    estado = item.get("estado")
-    if estado == "nova":
-        return '<span class="selo nova">NOVA</span>'
-    if estado == "em_dia":
-        return '<span class="selo ok">EM DIA</span>'
-    if estado == "fixa":
-        return f'<span class="selo fila"{_dica(DICA_DA_FIXA)}>FIXA</span>'
-    return f'<span class="selo fila"{_dica(item.get("dica", ""))}>SEM REDE</span>'
+def _versao_inteira(item: dict[str, Any]) -> str:
+    de, agora = _par_de_versoes(item)
+    if de:
+        return f"{de} → {agora}"
+    return agora if versao_curta(agora) != agora else ""
 
 
-def _linha_da_pergunta(item: dict[str, Any], classe: str) -> str:
-    nova = item.get("estado") == "nova"
-    marcada = bool(item.get("marcada"))
-    if nova:
-        caixa = (f'<input type="checkbox"{" checked" if marcada else ""} '
-                 f'data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
-        extra = "" if marcada else " de-fora"
-    else:
-        em_dia = item.get("estado") == "em_dia"
-        caixa = '<span class="at-ok">✓</span>' if em_dia else "<span></span>"
-        extra = ""
-    return (f'<label class="at-l {classe}{extra}">{caixa}'
-            f'<span class="at-n"{_dica(item.get("dica", ""))}>{_e(item.get("nome"))}</span>'
-            f'<span class="at-v">{_ver(item)}</span>{_selo_da_pergunta(item)}</label>')
+def _icone(ident: str) -> str:
+    desenho = ICONES.get(ident, ICONES[""])
+    return (f'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" '
+            f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+            f'{desenho}</svg>')
+
+
+def _grupo_do_cartao(item: dict[str, Any]) -> str:
+    estado = str(item.get("estado") or "")
+    return estado if estado in ("nova", "em_dia", "fixa") else "sem_rede"
+
+
+def _cartao(item: dict[str, Any]) -> str:
+    grupo = _grupo_do_cartao(item)
+    marcavel = item.get("volta", 1) == 1 and grupo in ("nova", "em_dia")
+    dica = " · ".join(x for x in (str(item.get("dica") or ""), _versao_inteira(item)) if x)
+    inteiro = grupo == "nova" and marcavel
+    marca = ""
+    if marcavel:
+        caixa = (f'<input type="checkbox" class="mp-m"{" checked" if item.get("marcada") else ""}'
+                 f' data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
+        marca = f'<span class="mp-mx">{caixa}</span>' if inteiro else \
+            f'<label class="mp-mx">{caixa}</label>'
+    etiqueta = "label" if inteiro else "div"
+    return (f'<{etiqueta} class="mp-c {grupo.replace("_", "-")}"{_dica(dica)}>'
+            f'<span class="mp-i">{_icone(str(item.get("id") or ""))}</span>'
+            f'<span class="mp-t"><span class="mp-n">{_e(item.get("nome"))}</span>'
+            f'<span class="mp-v">{_versao_a_vista(item)}</span></span>{marca}</{etiqueta}>')
+
+
+def html_do_mapa(conferencia: dict[str, Any]) -> str:
+    """As peças em cartões, por grupo: o que há para baixar primeiro."""
+    itens = _ordenadas(conferencia.get("pecas") or [])
+    blocos = []
+    for chave, rotulo in GRUPOS_DO_MAPA:
+        dentro = [i for i in itens if _grupo_do_cartao(i) == chave]
+        if not dentro:
+            continue
+        blocos.append(f'<div class="mp-g {chave.replace("_", "-")}"><span>{rotulo}</span>'
+                      f'<span class="q">{len(dentro)}</span></div>'
+                      f'<div class="mp-grade">{"".join(_cartao(i) for i in dentro)}</div>')
+    return f'<div class="mp-corpo">{"".join(blocos)}</div>'
 
 
 def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
@@ -270,54 +358,40 @@ def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
             if i.get("estado") == "nova" and i.get("marcada")]
 
 
+def _ajuste(escolha: dict[str, Any]) -> str:
+    sozinho = " ligada" if escolha.get("sozinho") else ""
+    return (f'<span class="at-ajuste"><button class="cadeado{sozinho}" '
+            f'data-gesto="atualizar-sozinho"'
+            f'{_dica(DICA_DO_SOZINHO)}><span class="p"></span>Atualizar sozinho</button>'
+            f'<span class="prazo"{_dica(DICA_DO_PRAZO)}><span>A cada</span>'
+            f'<button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" '
+            f'aria-label="Menos um dia">&minus;</button>'
+            f'<span class="dias">{_e(escolha.get("dias", 7))}'
+            f'</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" '
+            f'aria-label="Mais um dia">+</button><span>dias</span></span></span>')
+
+
 def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
                      jogo_aberto: bool, nome_do_jogo: str = "") -> str:
-    """O arranjo A: Hefesto, o grupo das peças de fora, o ajuste e o rodapé."""
-    itens = _ordenadas(conferencia.get("pecas") or [])
-    do_hefesto = [i for i in itens if i.get("grupo") == "hefesto"]
-    de_fora = [i for i in itens if i.get("grupo") != "hefesto"]
-    novas_de_fora = [i for i in de_fora if i.get("estado") == "nova"]
-    marcadas_de_fora = [i for i in novas_de_fora if i.get("marcada")]
-    linhas = [_linha_da_pergunta(i, "grupo") for i in do_hefesto]
-    if de_fora:
-        linhas.append('<div class="sep-lista"></div>')
-        todas = bool(novas_de_fora) and len(marcadas_de_fora) == len(novas_de_fora)
-        meio = " data-meio" if marcadas_de_fora and not todas else ""
-        mae = (f'<input type="checkbox" data-gesto="pecas-do-grupo" '
-               f'data-v="{0 if todas else 1}"{" checked" if todas else ""}{meio}>'
-               if novas_de_fora else "<span></span>")
-        conta = (f'<span class="q">{len(marcadas_de_fora)} de {len(novas_de_fora)}</span>'
-                 if novas_de_fora else "")
-        linhas.append(f'<label class="at-l grupo">{mae}<span class="at-n">{ROTULO_DO_GRUPO}'
-                      f'{conta}</span><span class="at-v"></span><span></span></label>')
-        linhas.extend(_linha_da_pergunta(i, "filho") for i in de_fora)
+    """O mapa das atualizações: o topo com o ajuste, os cartões e o rodapé."""
     n = len(ids_para_atualizar(conferencia))
-    sozinho = " ligada" if escolha.get("sozinho") else ""
-    ajuste = (f'<div class="at-ajuste"><button class="cadeado{sozinho}" '
-              f'data-gesto="atualizar-sozinho"'
-              f'{_dica(DICA_DO_SOZINHO)}><span class="p"></span>Atualizar sozinho</button>'
-              f'<span class="prazo"{_dica(DICA_DO_PRAZO)}><span>A cada</span>'
-              f'<button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" '
-              f'aria-label="Menos um dia">&minus;</button>'
-              f'<span class="dias">{_e(escolha.get("dias", 7))}'
-              f'</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" '
-              f'aria-label="Mais um dia">+</button><span>dias</span></span></div>')
     jogo = (f'<span>Jogo aberto:</span><span class="jogo">{_e(nome_do_jogo)}</span>'
             if nome_do_jogo else '<span>Jogo aberto</span>')
     pendente = (f'<div class="pendente">{jogo}<span>· espera</span></div>'
                 if jogo_aberto else "")
+    apagado = "" if n else " apagado"
     principal = ('<button class="btn principal" data-gesto="atualizacoes-atualizar">'
                  'Atualizar ao fechar o jogo</button>' if jogo_aberto else
-                 f'<button class="btn principal" data-gesto="atualizacoes-atualizar">'
+                 f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar">'
                  f'Atualizar <span class="n">{n}</span></button>')
-    return (f'<div class="tn-cx" role="dialog" aria-modal="true" aria-label="Atualizações">'
-            f'<div class="tn-topo"><span class="tn-tit">Atualizações</span>'
-            f'<button class="tn-x" data-gesto="atualizacoes-fechar"{_dica("Fechar")}>&times;'
-            f'</button></div>'
-            f'<div class="tn-corpo"><div class="at-lista">{"".join(linhas)}</div>{ajuste}{pendente}'
-            f'</div><div class="tn-rod">'
+    return (f'<div class="tn-cx mapa" role="dialog" aria-modal="true" aria-label="Atualizações">'
+            f'<div class="tn-topo"><button class="btn voltar" data-gesto="atualizacoes-fechar">'
+            f'← Voltar</button><span class="tn-tit">Atualizações</span>{_ajuste(escolha)}'
+            f'</div><div class="tn-corpo">{html_do_mapa(conferencia)}</div>'
+            f'<div class="tn-rod">'
             f'<button class="btn" data-gesto="atualizacoes-anteriores">Versões anteriores</button>'
-            f'<button class="btn empurra" data-gesto="atualizacoes-agora-nao">Agora não</button>'
+            f'<span class="empurra"></span>{pendente}'
+            f'<button class="btn" data-gesto="atualizacoes-agora-nao">Agora não</button>'
             f'{principal}</div></div>')
 
 
@@ -338,10 +412,12 @@ def html_das_anteriores(anteriores: dict[str, Any], pode_voltar: Sequence[str]) 
         dica = _dica("No próximo início") if ident == "kernel" else ""
         linhas.append(
             f'<div class="vt-l"><span>{_e(dado.get("nome") or ident)}</span>'
-            f'<span class="v">{_e(dado.get("agora"))}</span>'
+            f'<span class="v"{_dica(str(dado.get("agora") or ""))}>'
+            f'{_e(versao_curta(dado.get("agora")))}</span>'
             f'<span class="d">{_data(dado.get("desde"))}'
             f'</span><button class="btn amarelo-padrao" data-gesto="voltar-a-anterior" '
-            f'data-v="{_e(ident)}"{dica}>Voltar a {_e(dado.get("anterior"))}</button></div>')
+            f'data-v="{_e(ident)}"{dica}>Voltar a {_e(versao_curta(dado.get("anterior")))}'
+            f'</button></div>')
     return (f'<div class="tn-cx" role="dialog" aria-modal="true" aria-label="Atualizações">'
             f'<div class="tn-topo"><span class="tn-tit">Atualizações</span>'
             f'<span class="tn-tit">· Versões anteriores</span>'
@@ -383,9 +459,10 @@ def _linha_do_andamento(peca: dict[str, Any]) -> str:
     if peca.get("rotulo"):
         ver = _e(peca["rotulo"])
     elif de and para and de != para:
-        ver = f'{_e(de)}<span class="seta">→</span><span class="nv">{_e(para)}</span>'
+        ver = (f'{_e(versao_curta(de))}<span class="seta">→</span>'
+               f'<span class="nv">{_e(versao_curta(para))}</span>')
     else:
-        ver = f'<span class="nv">{_e(para or de)}</span>'
+        ver = f'<span class="nv">{_e(versao_curta(para or de))}</span>'
     dica_do_aplicar = str(peca.get("dica_do_aplicar", ""))
     contagens = [c for c in peca.get("contagens") or [] if isinstance(c, dict)]
     if contagens and not na_fila:
@@ -445,42 +522,6 @@ def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
             f'<span class="n">{feitas} de {de} · {pct}%</span>{erro}</div>'
             f'<div class="and-lista">{"".join(_linha_do_andamento(p) for p in pecas)}{linha_r}'
             f'</div></div><div class="tn-rod">{"".join(botoes)}</div></div>')
-
-
-def _selo_da_grade(item: dict[str, Any]) -> str:
-    estado = item.get("estado")
-    if estado == "nova":
-        return '<span class="selo nova"><span class="sg">↑</span>NOVA</span>'
-    if estado == "em_dia":
-        return '<span class="selo ok"><span class="sg">✓</span>EM DIA</span>'
-    if estado == "fixa":
-        return '<span class="selo nt"><span class="sg">&ndash;</span>FIXA</span>'
-    return '<span class="selo nt"><span class="sg">&ndash;</span>SEM REDE</span>'
-
-
-def grade_da_aba(conferencia: dict[str, Any]) -> str:
-    """As peças da aba Sistema em três colunas, com a marca que vale com «Atualizar sozinho»."""
-    itens = _ordenadas(conferencia.get("pecas") or [])
-    linhas = []
-    for item in itens:
-        marcavel = item.get("volta", 1) == 1
-        marca = (f'<input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" '
-                 f'data-v="{_e(item["id"])}"{" checked" if item.get("marcada") else ""}>'
-                 if marcavel else '<input type="checkbox" class="at-marca" disabled>')
-        fixa = " fixa" if item.get("estado") == "fixa" else ""
-        dica = " · ".join(x for x in (str(item.get("dica") or ""),
-                                      DICA_DA_FIXA if fixa else "") if x)
-        linhas.append(f'<div class="saude{fixa}">{marca}{_selo_da_grade(item)}'
-                      f'<span class="txt"{_dica(dica)}><span>{_e(item.get("nome"))}'
-                      f'</span></span><span class="ver"{_dica(_ver_inteira(item))}>{_ver(item)}'
-                      '</span></div>')
-    colunas, i = [], 0
-    for n in COLUNAS_DA_GRADE:
-        colunas.append(f'<div class="col-lista">{"".join(linhas[i:i + n])}</div>')
-        i += n
-    if i < len(linhas):
-        colunas[-1] = colunas[-1][:-6] + "".join(linhas[i:]) + "</div>"
-    return '<div class="risco"></div>'.join(colunas)
 
 
 def quantas_novas(conferencia: dict[str, Any]) -> int:

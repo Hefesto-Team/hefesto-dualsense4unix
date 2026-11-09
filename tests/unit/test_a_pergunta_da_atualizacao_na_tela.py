@@ -1,15 +1,15 @@
-"""A pergunta da atualização, o andamento e a seção da aba Sistema, ligados ao motor.
+"""O mapa das atualizações, o andamento e a seção da aba Sistema, ligados ao motor.
 
-O-HEFESTO-SE-ATUALIZA-INTEIRO-01, volta 1 (08/11/2026), no desenho de
-``mockup/escolha/a-pergunta-da-atualizacao.html`` (arranjo A) e de
-``mockup/escolha/09-sistema-com-atualizacoes.html``. O lar é ``tmp_path`` com ``XDG_*`` desviados;
+O-HEFESTO-SE-ATUALIZA-INTEIRO-01, volta 1 (08/11/2026); o mapa é de
+AS-ATUALIZACOES-ABREM-NUM-MAPA-COMO-O-DAS-CONEXOES-01 (09/11/2026), no desenho de
+``mockup/escolha/o-mapa-das-atualizacoes.html``. O lar é ``tmp_path`` com ``XDG_*`` desviados;
 o registro das peças é dublado e a fila não abre processo (``soltar`` dublado).
 
 AS MORDIDAS (feitas na sprint, com a cura devolvida): o «Atualizar N» que conta também as
-desmarcadas reprova o caso da contagem; a marca que age no clique e na troca reprova o caso do
+desmarcadas reprova o caso do mapa; a marca que age no clique e na troca reprova o caso do
 duplo; a caixa que repinta a cada tique reprova o caso da ponte; a leitura de antes do fechar que
 ainda pinta reprova o caso da leitura velha; o motivo da falha escrito na linha em vez da dica
-reprova o caso da falha.
+reprova o caso da falha; o cartão com a versão inteira reprova o caso da versão curta.
 """
 from __future__ import annotations
 
@@ -78,18 +78,24 @@ def _gesto(nome: str, **o: Any) -> Any:
     return pacotes.GESTOS[("*", nome)](_ctx(), o, None)
 
 
-def test_a_pergunta_tem_o_hefesto_em_cima_e_o_grupo_marcavel(registro: list[at.Peca]) -> None:
+def test_o_mapa_agrupa_o_que_ha_para_baixar_e_so_a_nova_e_marcavel_inteira(
+        registro: list[at.Peca]) -> None:
     at.mudar_a_escolha(peca="python", marcada=False)
     corpo = tela.html_da_pergunta(gestos.conferencia_vista(), {"sozinho": False, "dias": 7},
                                   jogo_aberto=False)
-    nomes = re.findall(r'class="at-n"[^>]*>([^<]+)<', corpo)
-    assert nomes[0] == "Hefesto" and nomes[1] == tela.ROTULO_DO_GRUPO
-    assert "Bluetooth" in nomes and "Kernel" in nomes
+    grupos = re.findall(r'<div class="mp-g ([a-z-]+)"><span>([^<]+)</span>'
+                        r'<span class="q">(\d+)</span>', corpo)
+    assert grupos == [("nova", "Para baixar", "3"), ("em-dia", "Em dia", "1"),
+                      ("fixa", "Com o Hefesto", "1")]
+    nomes = re.findall(r'class="mp-n">([^<]+)<', corpo)
+    assert nomes[:3] == ["Hefesto", "Proton", "Python"]
     assert 'data-v="bluetooth"' not in corpo
     assert re.search(r'Atualizar <span class="n">2</span>', corpo)
-    assert re.search(r'<label class="at-l filho de-fora"><input type="checkbox" '
-                     r'data-gesto="peca-da-atualizacao" data-v="python">', corpo)
-    assert "data-meio" in corpo
+    assert '<input type="checkbox" class="mp-m" data-gesto="peca-da-atualizacao" ' \
+           'data-v="python">' in corpo
+    assert re.search(r'<label class="mp-c nova"[^>]*>.*?data-v="proton"', corpo)
+    assert re.search(r'<div class="mp-c em-dia"[^>]*>.*?<label class="mp-mx">'
+                     r'<input[^>]*data-v="kernel"', corpo)
     assert gestos.tela.ids_para_atualizar(gestos.conferencia_vista()) == ["hefesto", "proton"]
 
 
@@ -176,7 +182,7 @@ def test_a_caixa_repinta_so_quando_muda(registro: list[at.Peca],
     _gesto("atualizacoes-abrir")
     _tique(ponte, "01-jogar.html")
     _tique(ponte, "01-jogar.html")
-    assert len(ponte.scripts) == 1 and "Bibliotecas, drivers e plugins" in ponte.scripts[0]
+    assert len(ponte.scripts) == 1 and "Para baixar" in ponte.scripts[0]
     _tique(ponte, "09-sistema.html")
     assert len(ponte.scripts) == 2
     _gesto("atualizacoes-fechar")
@@ -192,7 +198,7 @@ def test_a_leitura_velha_nao_reabre_a_caixa_fechada(registro: list[at.Peca]) -> 
     _gesto("atualizacoes-fechar")
     gestos.TELA["calculado"] = velho
     gestos.pintar(ponte, "01-jogar.html", None, em_fundo=False)
-    assert all("Bibliotecas" not in s for s in ponte.scripts)
+    assert all("Para baixar" not in s for s in ponte.scripts)
 
 
 def test_o_andamento_aparece_em_qualquer_aba_e_o_fim_fechado_nao_volta(
@@ -213,15 +219,6 @@ def test_a_pergunta_nasce_sozinha_uma_vez_quando_o_prazo_vence(
     assert "Agora não" in gestos.conteudo(None)
     _gesto("atualizacoes-agora-nao")
     assert gestos.conteudo(None) == ""
-
-
-def test_a_grade_da_aba_tem_quatro_colunas_e_a_volta_2_sem_marca(registro: list[at.Peca]) -> None:
-    grade = tela.grade_da_aba(gestos.conferencia_vista())
-    colunas = grade.split('<div class="risco"></div>')
-    assert len(colunas) == 4
-    assert [c.count('class="saude') for c in colunas] == [4, 1, 0, 0]
-    assert '<div class="saude fixa"><input type="checkbox" class="at-marca" disabled>' in grade
-    assert grade.count('data-gesto="peca-da-atualizacao"') == 4
 
 
 def test_o_andamento_ausente_ou_meio_escrito_e_sem_andamento(registro: list[at.Peca]) -> None:
@@ -270,39 +267,35 @@ def test_a_aba_sistema_tem_a_secao_e_o_reler_atalhos() -> None:
 
     assert aba09.ROTULO_ATUALIZAR == "Reler atalhos"
     for campo in (a09_sistema.CAMPO_DO_SOZINHO, a09_sistema.CAMPO_DO_PRAZO,
-                  a09_sistema.CAMPO_DAS_NOVAS, a09_sistema.CAMPO_DA_GRADE):
+                  a09_sistema.CAMPO_DAS_NOVAS):
         assert f'data-campo="{campo}"' in aba09.MIOLO
     assert 'data-gesto="atualizacoes-abrir"' in aba09.MIOLO
     campos = a09_sistema.campos_das_atualizacoes()
     assert campos[a09_sistema.CAMPO_DO_PRAZO] == str(at.DIAS_PADRAO)
     assert campos[a09_sistema.CAMPO_DO_SOZINHO] is False
+    assert campos[a09_sistema.CAMPO_DAS_NOVAS] == ""
 
 
-def test_na_grade_a_versao_cede_antes_do_rotulo() -> None:
-    from hefesto_dualsense4unix.interface import aba09
-
+def test_no_cartao_a_versao_e_curta_e_a_inteira_vai_a_dica() -> None:
     conferencia = {"pecas": [
         {"id": "nvidia", "nome": "Driver Nvidia", "estado": "nova", "de": "595.104.02",
-         "para": "595.110.07", "marcada": True, "volta": 1},
+         "para": "595.110.07", "marcada": True, "volta": 1, "dica": "nvidia-driver-595"},
+        {"id": "portal", "nome": "Portal do COSMIC", "estado": "fixa", "volta": 2,
+         "de": "1.11.0~1792525517~24.04~f448ddf+0~hefesto1", "dica": "A captura"},
         {"id": "sistema", "nome": "Pacotes do sistema", "estado": "em_dia", "de": "24.04",
          "para": "24.04", "rotulo": "12 pacotes", "marcada": True, "volta": 1}]}
-    grade = tela.grade_da_aba(conferencia)
-    assert ('<span class="ver" data-dica="595.104.02 → 595.110.07"><span class="par">'
-            '<span class="de">595.104.02</span><span class="seta">→</span></span>'
-            '<span class="nv">595.110.07</span>') in grade
-    assert ('<span class="ver" data-dica="12 pacotes"><span class="num">12</span>'
-            ' <span class="resto">pacotes</span>') in grade
-    css = re.sub(r"\s+", "", Path(aba09.__file__).read_text(encoding="utf-8"))
-    assert ".at-grade.saude.txt{flex:00auto}" in css
-    assert "flex-flow:row-reversewrap;align-content:flex-start;height:24px;line-height:24px;" \
-           "overflow:hidden}" in css
-    assert ".at-grade.saude.ver.nv{color:var(--fg);flex:none;order:-1}" in css
-    assert ".at-grade.saude.ver.par{flex:none}" in css
-    assert ".at-grade.saude.ver:has(.num){display:block;text-align:right;white-space:normal}" in css
-    assert ".at-grade.saude.ver.num,.at-grade.saude.ver.resto{white-space:nowrap}" in css
+    mapa = tela.html_do_mapa(conferencia)
+    assert ('data-dica="nvidia-driver-595 · 595.104.02 → 595.110.07"' in mapa)
+    assert ('<span class="mp-v"><span class="de">595.104.02</span><span class="seta">→</span>'
+            '<span class="nv">595.110.07</span></span>') in mapa
+    assert 'data-dica="A captura · 1.11.0~1792525517~24.04~f448ddf+0~hefesto1"' in mapa
+    assert '<span class="mp-v"><span class="nv">1.11.0</span></span>' in mapa
+    assert '<span class="mp-v"><span class="nv">12 pacotes</span></span>' in mapa
+    assert tela.versao_curta("1:2.40-1ubuntu1") == "2.40-1ubuntu1"
+    assert tela.versao_curta("11-12") == "11-12"
     caixa = re.sub(r"\s+", "", tela.CSS)
-    assert "max-height:min(717px,calc(100vh-40px))" in caixa
-    assert ".hef-atualiza.tn-cx:has(.pendente).at-l{height:32px}" in caixa
+    assert ".hef-atualiza.tn-cx.mapa{width:min(1180px,calc(100vw-32px));" \
+           "height:min(668px,calc(100vh-32px));" in caixa
 
 
 def test_o_jogo_aberto_diz_o_nome_que_a_steam_ja_sabe(registro: list[at.Peca],

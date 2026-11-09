@@ -374,15 +374,19 @@ ROTULO_ATUALIZAR = "Reler atalhos"
 EM_VOO_ATUALIZAR = "Relendo…"
 DICA_ATUALIZAR = "Os atalhos e os arquivos da Steam"
 
-CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-bg)}
-  .at-cab{grid-template-columns:minmax(0,1fr) auto;height:auto}
-  body .sec-rot.at-cab{height:35px !important}
-  .at-cab > span:last-child{display:flex;align-items:center;gap:8px}
+CSS_DAS_ATUALIZACOES = """  body .sec-rot.at-cab{display:flex;align-items:center;justify-content:space-between;
+    height:auto !important;gap:14px}
+  .at-cab > span{display:flex;align-items:center;gap:12px}
+  .at-cab .btn.at-mapa{height:32px;padding:0 10px 0 12px;gap:8px;font-size:13px;font-weight:600;
+    color:var(--fg);border-color:var(--border-forte);width:auto}
+  .at-cab .btn.at-mapa:hover{border-color:var(--purple)}
+  .at-cab .btn.at-mapa svg{width:18px;height:18px;color:var(--purple);flex:none}
+  .at-cab .btn.at-mapa .n{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+    min-width:22px;height:22px;padding:0 6px;border-radius:999px;display:inline-flex;
+    align-items:center;justify-content:center;background:var(--purple);color:var(--app-bg)}
+  .at-cab .btn.at-mapa .n:empty{display:none}
+  .at-cab .btn.at-mapa:has(.n:empty) svg{color:var(--texto-suave)}
   .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
-  .at-cab .btn{height:28px;padding:0 12px;font-size:12px}
-  .at-cab .btn.verde.cheio{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;text-decoration:none}
-  .at-cab .btn.verde.cheio:hover{background:color-mix(in srgb,var(--green) 75%,#fff)}
-  .at-cab .btn .n{font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:6px}
   .prazo{display:inline-block;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
   .prazo > *{vertical-align:middle;margin-left:6px}
   .prazo > :first-child{margin-left:0}
@@ -390,68 +394,66 @@ CSS_DAS_ATUALIZACOES = """  .selo.nova{background:var(--purple);color:var(--app-
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{display:inline-block;min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 12px;align-items:start}
-  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap;min-width:0;display:flex;flex-flow:row-reverse wrap;align-content:flex-start;height:24px;line-height:24px;overflow:hidden}
-  .at-grade .saude .ver:has(.num){display:block;text-align:right;white-space:normal}
-  .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px;flex:none}
-  .at-grade .saude .ver .nv{color:var(--fg);flex:none;order:-1}
-  .at-grade .saude .ver .par{flex:none}
-  .at-grade .saude .ver .num,.at-grade .saude .ver .resto{white-space:nowrap}
-  .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
-  .at-grade .saude{gap:6px}
-  .at-grade .saude .txt{flex:0 0 auto}
-  body .at-grade .saude .selo{flex:0 0 70px !important;padding-left:4px;padding-right:4px}
-  .at-grade .saude .ver .seta{margin:0 1px}
-  .at-marca{width:16px;height:16px;accent-color:var(--pink);margin:0;flex:0 0 16px;cursor:pointer}
-  .atualiza:not(:has(.at-cab .cadeado.ligada)) .at-marca{display:none}
-  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .txt,
-  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .ver{color:var(--texto-mudo)}
   @media (max-height:760px){
     body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
-    .at-grade{grid-template-columns:repeat(4,minmax(0,1fr));gap:0 24px}
-    .at-grade .saude.fixa{display:none}
-    .at-grade .col-lista{display:contents}
-    .at-grade .risco{display:none}
-    body .sec-rot.at-cab{height:24px !important}
-    .at-cab .cadeado,.at-cab .btn{height:24px}
-    .at-grade .saude{height:19px}
-    .at-grade .selo{padding-top:1px;padding-bottom:1px}
   }
 """
 
+ICONE_DAS_ATUALIZACOES = (
+    '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/>'
+    '<path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>')
+
+
+EXEMPLO_DAS_PECAS = {"pecas": [
+    {"id": i, "nome": n, "dica": d, "de": de, "para": para, "estado": e, "marcada": m,
+     "volta": v, "grupo": "hefesto" if i == "hefesto" else "infra", "rotulo": r}
+    for i, n, d, de, para, e, m, v, r in (
+        ("hefesto", "Hefesto", "Interface, serviço e correções", "0.9.5.1", "0.9.5.2", "nova", True,
+         1, ""),
+        ("proton", "GE-Proton", "Os jogos da Steam e do Heroic", "11-7", "11-12", "nova", True, 1,
+         ""),
+        ("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto", "5.87", "", "fixa", False,
+         2, ""),
+        ("som", "Som", "PipeWire e WirePlumber", "1.6.9", "", "fixa", False, 2, ""),
+        ("portal", "Portal do COSMIC", "A captura de tela do COSMIC",
+         "1.11.0~1792525517~24.04~f448ddf+0~hefesto1", "", "fixa", False, 2, ""),
+        ("gdk", "GameInput", "A peça GDK e o GameInput", "1", "", "fixa", False, 2, ""),
+        ("python", "Python", "evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3", "", "2", "nova",
+         False, 1, "2 pacotes"),
+        ("nvidia", "Driver Nvidia", "nvidia-driver-595", "595.104.02", "595.104.02", "em_dia", True,
+         1, ""),
+        ("kernel", "Kernel", "linux-system76", "7.2.15", "7.2.15", "em_dia", True, 1, ""),
+        ("dkms", "Módulos do kernel", "4 módulos · 7.2.15", "1.0.0", "1.0.0", "em_dia", True, 1,
+         ""),
+        ("sistema", "Pacotes do sistema", "Pop!_OS 24.04", "24.04", "24.04", "em_dia", True, 1, ""),
+        ("mangohud", "MangoHud", "O painel por cima do jogo", "0.8.4", "0.8.4", "em_dia", True, 1,
+         ""),
+        ("umu", "umu", "Os jogos de fora da Steam no Proton", "", "1.4.4", "em_dia", True, 1, ""))]}
+
+
+def _novas_do_desenho():
+    from hefesto_dualsense4unix.interface.atualizacoes import quantas_novas
+
+    return quantas_novas(EXEMPLO_DAS_PECAS) or ""
+
+
+NOVAS_DO_DESENHO = _novas_do_desenho()
+
 
 def _secao_das_atualizacoes():
-    """A seção Atualizações: o cabeçalho com os ajustes e a grade das peças, do motor."""
+    """A seção Atualizações: o botão que abre o mapa, o «Atualizar sozinho» e o prazo."""
     from hefesto_dualsense4unix.app.actions.atualizador import DIAS_PADRAO
-    from hefesto_dualsense4unix.interface.atualizacoes import (
-        DICA_DO_PRAZO, DICA_DO_SOZINHO, grade_da_aba, quantas_novas)
+    from hefesto_dualsense4unix.interface.atualizacoes import DICA_DO_PRAZO, DICA_DO_SOZINHO
     from hefesto_dualsense4unix.interface.pacotes.a09_sistema import (
-        CAMPO_DA_GRADE, CAMPO_DAS_NOVAS, CAMPO_DO_PRAZO, CAMPO_DO_SOZINHO)
+        CAMPO_DAS_NOVAS, CAMPO_DO_PRAZO, CAMPO_DO_SOZINHO)
 
-    exemplo = {"pecas": [
-        {"id": i, "nome": n, "dica": d, "de": de, "para": para, "estado": e, "marcada": m,
-         "volta": v, "grupo": "hefesto" if i == "hefesto" else "infra", "rotulo": r}
-        for i, n, d, de, para, e, m, v, r in (
-            ("hefesto", "Hefesto", "Interface, serviço e correções", "0.9.5.1", "0.9.5.2", "nova", True, 1, ""),
-            ("proton", "GE-Proton", "Os jogos da Steam e do Heroic", "11-7", "11-12", "nova", True, 1, ""),
-            ("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto", "5.87", "", "fixa", False, 2, ""),
-            ("som", "Som", "PipeWire e WirePlumber", "1.6.9", "", "fixa", False, 2, ""),
-            ("portal", "Portal do COSMIC", "A captura de tela do COSMIC", "1.0.0", "", "fixa", False, 2, ""),
-            ("gdk", "GameInput", "A peça GDK e o GameInput", "1", "", "fixa", False, 2, ""),
-            ("python", "Python", "evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3", "", "2", "nova", False, 1, "2 pacotes"),
-            ("nvidia", "Driver Nvidia", "nvidia-driver-595", "595.104.02", "595.104.02", "em_dia", True, 1, ""),
-            ("kernel", "Kernel", "linux-system76", "7.2.15", "7.2.15", "em_dia", True, 1, ""),
-            ("dkms", "Módulos do kernel", "4 módulos · 7.2.15", "1.0.0", "1.0.0", "em_dia", True, 1, ""),
-            ("sistema", "Pacotes do sistema", "Pop!_OS 24.04", "24.04", "24.04", "em_dia", True, 1, ""),
-            ("mangohud", "MangoHud", "O painel por cima do jogo", "0.8.4", "0.8.4", "em_dia", True, 1, ""),
-            ("umu", "umu", "Os jogos de fora da Steam no Proton", "", "", "em_dia", True, 1, ""))]}
     return f'''
         <div class="atualiza">
         <div class="sec-rot sec-alta at-cab">
-          <span>Atualizações</span>
-          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="{CAMPO_DO_SOZINHO}" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="{DICA_DO_SOZINHO}"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="{DICA_DO_PRAZO}"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="{CAMPO_DO_PRAZO}">{DIAS_PADRAO}</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span><button class="btn" data-gesto="atualizacoes-anteriores">Versões anteriores</button><button class="btn verde cheio" data-gesto="atualizacoes-abrir">Ver atualizações<span class="n" data-campo="{CAMPO_DAS_NOVAS}">{quantas_novas(exemplo)}</span></button></span>
+          <span><button class="btn at-mapa" data-gesto="atualizacoes-abrir">{ICONE_DAS_ATUALIZACOES}Atualizações<span class="n" data-campo="{CAMPO_DAS_NOVAS}">{NOVAS_DO_DESENHO}</span></button></span>
+          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="{CAMPO_DO_SOZINHO}" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="{DICA_DO_SOZINHO}"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="{DICA_DO_PRAZO}"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="{CAMPO_DO_PRAZO}">{DIAS_PADRAO}</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span></span>
         </div>
-        <div class="at-grade" data-campo="{CAMPO_DA_GRADE}" data-hef-alvo="html">{grade_da_aba(exemplo)}</div>
         </div>
 '''
 
@@ -741,6 +743,22 @@ CAMPO_DA_FITA = "fita-chips"
 CAMPO_DO_CHIP = "fita-chip"
 
 
+DESENHO_DO_MAPA = "escolha/o-mapa-das-atualizacoes.html"
+
+
+def o_mapa_aberto(pagina):
+    """A aba Sistema com o mapa das atualizações aberto por cima, como o produto o pinta."""
+    from hefesto_dualsense4unix.app.actions.atualizador import DIAS_PADRAO
+    from hefesto_dualsense4unix.interface import atualizacoes as tela
+
+    corpo = tela.html_da_pergunta(EXEMPLO_DAS_PECAS, {"sozinho": False, "dias": DIAS_PADRAO},
+                                  jogo_aberto=False)
+    caixa = (f'<style>{tela.CSS}</style><div id="{tela.ID_DA_CAIXA}" '
+             f'class="hef-atualiza aberta">{corpo}</div>')
+    return pagina.replace("url('../assets/", "url('../../assets/").replace(
+        "</body>", caixa + "</body>", 1)
+
+
 def escrever_o_ensaio():
     """Monta a página e a GRAVA em `mockup/09-sistema.html`. Só do `__main__`."""
     n = monta("09-sistema", "Sistema", MIOLO, CSS + CSS_DAS_ATUALIZACOES)
@@ -765,7 +783,10 @@ def escrever_o_ensaio():
                          f"{len(CONECTADOS)} conectados — a forma da fita mudou. "
                          f"O dono do `data-campo=\"{CAMPO_DO_CHIP}\"` é "
                          "`interface/monta.fita()`; esta aba só confere.")
-    onde.gravar("09-sistema.html", com_o_piso("09-sistema", s[:abre.start()] + novo + s[fim:]))
+    pagina = com_o_piso("09-sistema", s[:abre.start()] + novo + s[fim:])
+    onde.gravar("09-sistema.html", pagina)
+    onde.pagina(DESENHO_DO_MAPA).parent.mkdir(exist_ok=True)
+    onde.gravar(DESENHO_DO_MAPA, o_mapa_aberto(pagina))
 
     print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
           + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))
@@ -783,4 +804,5 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     escrever_o_ensaio()
     shutil.copyfile(_prova / "09-sistema.html", _real / "09-sistema.html")
+    shutil.copyfile(_prova / DESENHO_DO_MAPA, _real / DESENHO_DO_MAPA)
     shutil.rmtree(_prova)

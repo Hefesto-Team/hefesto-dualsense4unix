@@ -69,7 +69,7 @@ def _nome_do_jogo(ctx: Contexto | None) -> str:
     if not isinstance(ativo, str) or not ativo.strip():
         return ""
     perfil = perfil_em_disco(ativo)
-    if not perfil_e_de_jogo(perfil):
+    if perfil is None or not perfil_e_de_jogo(perfil):
         return ""
     return str(getattr(perfil, "nome_do_jogo", None) or perfil.name).strip()
 
@@ -180,7 +180,7 @@ def _conferir_em_fundo() -> None:
 
 @gesto("*", "atualizacoes-abrir")
 def abrir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Ver atualizações» da aba Sistema: a pergunta, com a conferência refeita se velha."""
+    """O botão «Atualizações» da aba Sistema: o mapa, com a conferência refeita se velha."""
     TELA["vista"] = "pergunta"
     TELA["escondida"] = 0.0
     _conferir_em_fundo()
@@ -196,7 +196,7 @@ def anteriores(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "atualizacoes-lista")
 def lista(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«← Atualizações»: de volta à pergunta."""
+    """«← Atualizações»: de volta ao mapa."""
     TELA["vista"] = "pergunta"
     _repintar()
 
