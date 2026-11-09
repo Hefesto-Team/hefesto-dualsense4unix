@@ -13,7 +13,8 @@ adulterada, da chave de fora e da digital não fixada; o PipeWire que compila se
 reprova o caso da versão nova sem soma; o ajudante que
 segue o atalho da entrega reprova o caso do atalho; o instalar sem filtrar o sufixo da casa reprova
 o caso do pacote de fora; a série nova sem «revisar» reprova o caso do BlueZ 6; a GDK instalada
-sem conferir o sha256 reprova o caso do download trocado.
+sem conferir o sha256 reprova o caso do download trocado; a receita que constrói a série nova
+que a conferência não viu reprova o caso do BlueZ 6.0.
 
 AS ASSINATURAS DE TESTE (``tests/fixtures/receita-assinada``): os ``.tar`` têm a raiz
 ``bluez-5.89``, e os ``.sign`` saíram de duas chaves ed25519 de uso único («casa» e «estranha»),
@@ -213,6 +214,20 @@ def test_o_chaveiro_versionado_e_a_chave_das_digitais_fixadas() -> None:
         DIGITAL_DE_TESTE
     with pytest.raises(rn.FonteNaoConfere):
         rn.desarmar("nada aqui\n")
+
+
+@COM_GPGV
+def test_a_receita_do_bluez_nao_constroi_a_serie_nova_que_a_conferencia_nao_viu(
+        receita_bz) -> None:
+    """A fila espera o jogo fechar, e o índice muda entre a conferência e a construção: a receita
+    para no BlueZ de série nova antes de baixar, com a mesma regra do «revisar» do motor."""
+    rn, receita, rede = receita_bz
+    _bluez_publicado(rede, publicada="6.0")
+    with pytest.raises(rn.Revisar, match="série nova"):
+        rn.receita_do_bluez(receita, receita / "fontes")
+    assert not (receita / "fontes").exists(), "nada se baixa da série nova"
+    base = rn.ler_baseline((receita / "assets" / "bluez-backport" / "BASELINE").read_text())
+    assert base["VERSAO_UPSTREAM"] == "5.88"
 
 
 @COM_GPGV

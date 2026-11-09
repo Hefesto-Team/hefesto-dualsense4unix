@@ -271,6 +271,8 @@ def receita_do_bluez(receita: Path, fontes: Path) -> str:
     nova = ultima_do_bluez(ler(INDICE_DO_BLUEZ).decode("utf-8", "replace"))
     if nova is None or ordem(nova) <= ordem(base["VERSAO_UPSTREAM"]):
         return base["VERSAO_UPSTREAM"]
+    if ordem(nova)[:1] != ordem(base["VERSAO_UPSTREAM"])[:1]:
+        raise Revisar(f"o BlueZ {nova} abre uma série nova")
     nome = f"bluez-{nova}.tar.xz"
     dado = ler(INDICE_DO_BLUEZ + nome)
     fontes.mkdir(parents=True, exist_ok=True)
