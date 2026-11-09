@@ -440,8 +440,16 @@ _conferir_a_entrega() {
     (cd "${pasta}" && sha256sum --quiet --strict -c SHA256SUMS) >/dev/null 2>&1
 }
 
+_fontes_da_peca() {
+    case "$1" in
+        bluez) printf 'bluez\n' ;;
+        pipewire) printf 'pipewire\nwireplumber\n' ;;
+        portal) printf 'xdg-desktop-portal-cosmic\n' ;;
+    esac
+}
+
 _debs_da_casa() {
-    local pasta="$1" deb pacote ver s da_casa
+    local pasta="$1" peca="$2" deb pacote ver fonte s da_casa
     local -a sufixos
     _e_so_do_dono "${SUFIXOS}" || { _erro "sem a lista dos sufixos da casa só do root (${SUFIXOS})"; return 1; }
     mapfile -t sufixos < <(grep -E '^[A-Za-z0-9.+~:-]+$' "${SUFIXOS}")
@@ -454,6 +462,11 @@ _debs_da_casa() {
             [[ -n "${s}" && "${ver}" == *"${s}"* ]] && da_casa=1
         done
         [[ "${da_casa}" -eq 1 ]] || { _erro "${deb##*/} não é um pacote da casa (${ver})"; return 1; }
+        fonte="$(dpkg-deb -f "${deb}" Source 2>/dev/null)"
+        fonte="${fonte%% *}"
+        fonte="${fonte:-${pacote}}"
+        _fontes_da_peca "${peca}" | grep -qxF -- "${fonte}" \
+            || { _erro "${deb##*/} vem do fonte ${fonte}, não do de ${peca}"; return 1; }
         _instalados | awk -F'\t' -v p="${pacote}" '$1 == p && $2 ~ /^ii/ { achou = 1 } END { exit !achou }' \
             && printf '%s\n' "${deb}"
     done
@@ -461,10 +474,10 @@ _debs_da_casa() {
 }
 
 _instalar_da_pasta() {
-    local pasta="$1" lista
-    shift
+    local pasta="$1" peca="$2" lista
+    shift 2
     _conferir_a_entrega "${pasta}" || _recusar "a soma dos pacotes em ${pasta} não confere"
-    lista="$(_debs_da_casa "${pasta}")" || _recusar "os pacotes em ${pasta} não são da casa"
+    lista="$(_debs_da_casa "${pasta}" "${peca}")" || _recusar "os pacotes em ${pasta} não são da casa"
     [[ -n "${lista}" ]] || _recusar "nenhum dos pacotes em ${pasta} está instalado nesta máquina"
     local -a debs
     mapfile -t debs <<<"${lista}"
@@ -491,6 +504,10 @@ verbo_backport_construir() {
         exit "${rc}"
     fi
     rm -rf -- "${base}/novo"
+    if [[ -L "${obra}/entrega" || ! -d "${obra}/entrega" ]]; then
+        _limpar_a_caixa "${peca}"
+        _recusar "a entrega de ${peca} não é uma pasta da caixa"
+    fi
     install -d -m 700 "${base}/novo"
     for arquivo in "${obra}/entrega"/*.deb "${obra}/entrega/SHA256SUMS"; do
         [[ -e "${arquivo}" || -L "${arquivo}" ]] || continue
@@ -516,7 +533,7 @@ verbo_backport_instalar() {
     _backport_valido "${peca}"
     base="${CACHE}/backports/${peca}"
     _e_so_do_dono "${base}/novo" || _recusar "nada construído para ${peca}: a construção vem antes"
-    _instalar_da_pasta "${base}/novo" || exit 1
+    _instalar_da_pasta "${base}/novo" "${peca}" || exit 1
     rm -rf -- "${base}/anterior"
     [[ -d "${base}/atual" ]] && mv -f -- "${base}/atual" "${base}/anterior"
     mv -f -- "${base}/novo" "${base}/atual"
@@ -529,7 +546,7 @@ verbo_backport_voltar() {
     _backport_valido "${peca}"
     base="${CACHE}/backports/${peca}"
     _e_so_do_dono "${base}/anterior" || _recusar "sem versão anterior de ${peca} trocada por este ajudante"
-    _instalar_da_pasta "${base}/anterior" --allow-downgrades || exit 1
+    _instalar_da_pasta "${base}/anterior" "${peca}" --allow-downgrades || exit 1
     rm -rf -- "${base}/atual"
     mv -f -- "${base}/anterior" "${base}/atual"
     printf '%s de volta à versão anterior\n' "${peca}"

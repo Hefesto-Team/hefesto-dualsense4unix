@@ -369,7 +369,8 @@ class Lar:
         self.duble("apt-get")
         self.duble("dpkg-query", f'cat "{self.instalados}"')
         self.duble("dpkg-deb", 'n="${2##*/}"; [ "$3" = Package ] && echo "${n%%_*}";'
-                               ' v="${n#*_}"; [ "$3" = Version ] && echo "${v%_*}"; exit 0')
+                               ' v="${n#*_}"; [ "$3" = Version ] && echo "${v%_*}";'
+                               ' [ "$3" = Source ] && sed -n "s/^Source: //p" "$2"; exit 0')
         self.receita("")
 
     def duble(self, nome: str, corpo: str = "") -> None:
@@ -405,7 +406,8 @@ class Lar:
 
 ENTREGA_BOA = ('cd "$1" && for p in bluez_5.89-0ubuntu0.1~hefesto24.04.7_amd64.deb '
                'libbluetooth3_5.89-0ubuntu0.1~hefesto24.04.7_amd64.deb '
-               'bluez-hcidump_5.89-0ubuntu0.1~hefesto24.04.7_amd64.deb; do echo "$p" > "$p"; done;'
+               'bluez-hcidump_5.89-0ubuntu0.1~hefesto24.04.7_amd64.deb; do'
+               ' printf "Source: bluez (5.89)\\n%s\\n" "$p" > "$p"; done;'
                ' sha256sum *.deb > SHA256SUMS')
 
 
@@ -468,6 +470,28 @@ def test_o_pacote_de_fora_da_casa_nao_se_instala(lar: Lar) -> None:
     feito = lar.rodar("backport-instalar", "bluez")
     assert feito.returncode == 2 and "não são da casa" in feito.stderr
     assert not any(linha.startswith("apt-get") for linha in lar.lidas())
+
+
+def test_o_pacote_da_casa_de_outro_fonte_nao_se_instala(lar: Lar) -> None:
+    lar.instalados.write_text(lar.instalados.read_text() + "sudo\tii \t1.9.15p5-3ubuntu5\n")
+    lar.receita('cd "$1" && echo "Source: sudo" > sudo_1.9.99~hefesto24.04.7_amd64.deb'
+                ' && echo bluez > bluez_5.89-0ubuntu0.1~hefesto24.04.7_amd64.deb'
+                ' && sha256sum *.deb > SHA256SUMS')
+    assert lar.rodar("backport-construir", "bluez").returncode == 0
+    feito = lar.rodar("backport-instalar", "bluez")
+    assert feito.returncode == 2 and "vem do fonte sudo, não do de bluez" in feito.stderr
+    assert not any(linha.startswith("apt-get") for linha in lar.lidas())
+
+
+def test_a_entrega_que_e_atalho_nao_se_le(lar: Lar, tmp_path: Path) -> None:
+    fora = tmp_path / "fora"
+    fora.mkdir()
+    (fora / "bluez_5.89-0ubuntu0.1~hefesto24.04.7_amd64.deb").write_text("Source: bluez\n")
+    lar.receita(f'cd "{fora}" && sha256sum *.deb > SHA256SUMS'
+                f' && rmdir "$1" && ln -s "{fora}" "$1"')
+    feito = lar.rodar("backport-construir", "bluez")
+    assert feito.returncode == 2 and "não é uma pasta da caixa" in feito.stderr
+    assert not (lar.cache / "backports" / "bluez" / "novo").exists()
 
 
 def test_a_soma_trocada_depois_da_construcao_nao_se_instala(lar: Lar) -> None:
