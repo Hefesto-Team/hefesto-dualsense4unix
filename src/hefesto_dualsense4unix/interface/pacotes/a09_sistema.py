@@ -1112,7 +1112,7 @@ CAMPO_DAS_NOVAS = "atualizacoes-novas"
 
 
 def campos_das_atualizacoes() -> dict[str, Any]:
-    """A seção Atualizações: o «Atualizar sozinho», o prazo e o número do que há para baixar,
+    """A seção Atualizações: a «Atualização automática», o prazo e o número do que há para baixar,
     que se apaga quando não há nada."""
     from hefesto_dualsense4unix.app.actions import atualizador as at
     from hefesto_dualsense4unix.interface import atualizacoes as tela

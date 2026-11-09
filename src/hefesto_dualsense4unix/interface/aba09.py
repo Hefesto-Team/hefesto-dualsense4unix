@@ -374,9 +374,8 @@ ROTULO_ATUALIZAR = "Reler atalhos"
 EM_VOO_ATUALIZAR = "Relendo…"
 DICA_ATUALIZAR = "Os atalhos e os arquivos da Steam"
 
-CSS_DAS_ATUALIZACOES = """  body .sec-rot.at-cab{display:flex;align-items:center;justify-content:space-between;
-    height:auto !important;gap:14px}
-  .at-cab > span{display:flex;align-items:center;gap:12px}
+CSS_DAS_ATUALIZACOES = """  .quadro-topo > .at-cab{display:flex;align-items:center;gap:12px;margin-left:auto;flex:0 0 auto}
+  .quadro-topo > .at-cab ~ .cadeado{margin-left:18px}
   .at-cab .btn.at-mapa{height:32px;padding:0 10px 0 12px;gap:8px;font-size:13px;font-weight:600;
     color:var(--fg);border-color:var(--border-forte);width:auto}
   .at-cab .btn.at-mapa:hover{border-color:var(--purple)}
@@ -386,7 +385,7 @@ CSS_DAS_ATUALIZACOES = """  body .sec-rot.at-cab{display:flex;align-items:center
     align-items:center;justify-content:center;background:var(--purple);color:var(--app-bg)}
   .at-cab .btn.at-mapa .n:empty{display:none}
   .at-cab .btn.at-mapa:has(.n:empty) svg{color:var(--texto-suave)}
-  .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
+  .at-cab .cadeado{width:auto;height:30px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12.5px}
   .prazo{display:inline-block;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
   .prazo > *{vertical-align:middle;margin-left:6px}
   .prazo > :first-child{margin-left:0}
@@ -394,9 +393,6 @@ CSS_DAS_ATUALIZACOES = """  body .sec-rot.at-cab{display:flex;align-items:center
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{display:inline-block;min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  @media (max-height:760px){
-    body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
-  }
 """
 
 ICONE_DAS_ATUALIZACOES = (
@@ -441,21 +437,17 @@ def _novas_do_desenho():
 NOVAS_DO_DESENHO = _novas_do_desenho()
 
 
-def _secao_das_atualizacoes():
-    """A seção Atualizações: o botão que abre o mapa, o «Atualizar sozinho» e o prazo."""
+def _cabecalho_das_atualizacoes():
+    """O botão que abre o mapa, a «Atualização automática» e o prazo: no cabeçalho da seção."""
     from hefesto_dualsense4unix.app.actions.atualizador import DIAS_PADRAO
     from hefesto_dualsense4unix.interface.atualizacoes import DICA_DO_PRAZO, DICA_DO_SOZINHO
     from hefesto_dualsense4unix.interface.pacotes.a09_sistema import (
         CAMPO_DAS_NOVAS, CAMPO_DO_PRAZO, CAMPO_DO_SOZINHO)
 
-    return f'''
-        <div class="atualiza">
-        <div class="sec-rot sec-alta at-cab">
-          <span><button class="btn at-mapa" data-gesto="atualizacoes-abrir">{ICONE_DAS_ATUALIZACOES}Atualizações<span class="n" data-campo="{CAMPO_DAS_NOVAS}">{NOVAS_DO_DESENHO}</span></button></span>
-          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="{CAMPO_DO_SOZINHO}" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="{DICA_DO_SOZINHO}"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="{DICA_DO_PRAZO}"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="{CAMPO_DO_PRAZO}">{DIAS_PADRAO}</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span></span>
-        </div>
-        </div>
-'''
+    return f'''        <div class="at-cab">
+          <button class="btn at-mapa" data-gesto="atualizacoes-abrir">{ICONE_DAS_ATUALIZACOES}Atualizações<span class="n" data-campo="{CAMPO_DAS_NOVAS}">{NOVAS_DO_DESENHO}</span></button>
+          <button class="cadeado" data-gesto="atualizar-sozinho" data-campo="{CAMPO_DO_SOZINHO}" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="{DICA_DO_SOZINHO}"><span class="p"></span>Atualização automática</button><span class="prazo" data-dica="{DICA_DO_PRAZO}"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="{CAMPO_DO_PRAZO}">{DIAS_PADRAO}</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span>
+        </div>'''
 
 ROTULO_PARAR = "Parar"
 
@@ -463,6 +455,7 @@ MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="{DICA_DO_TITULO}">Sistema</span>
+{_cabecalho_das_atualizacoes()}
 {ligavel(*BANDEJA)}
       </div>
       <div class="quadro-corpo">
@@ -515,7 +508,6 @@ MIOLO = f'''
           </div>
         </div>
 
-{_secao_das_atualizacoes()}
         <div class="sec-rot sr-log sec-alta">
           <span data-dica="{DICA_DO_REGISTRO}">Detalhes técnicos</span>
           <span>{item("Copiar", "Copia o registro inteiro", "btn copiar", gesto=_gesto("copiar-registro")).strip()}{item("Salvar", "Guarda o registro num arquivo", "btn copiar", gesto=_gesto("salvar-registro")).strip()}</span>

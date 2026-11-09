@@ -85,7 +85,8 @@ def test_o_mapa_agrupa_o_que_ha_para_baixar_e_so_a_nova_e_marcavel_inteira(
                                   jogo_aberto=False)
     grupos = re.findall(r'<div class="mp-g ([a-z-]+)"><span>([^<]+)</span>'
                         r'<span class="q">(\d+)</span>', corpo)
-    assert grupos == [("nova", "Para baixar", "3"), ("em-dia", "Em dia", "1"),
+    assert grupos == [("nova", "Escolha o que deve ser atualizado", "3"),
+                      ("em-dia", "Atualizado", "1"),
                       ("fixa", "Com o Hefesto", "1")]
     nomes = re.findall(r'class="mp-n">([^<]+)<', corpo)
     assert nomes[:3] == ["Hefesto", "Proton", "Python"]
@@ -104,7 +105,7 @@ def test_com_jogo_aberto_a_pergunta_espera(registro: list[at.Peca]) -> None:
                                   jogo_aberto=True)
     assert 'class="pendente"' in corpo
     assert "Atualizar ao fechar o jogo" in corpo
-    assert 'class="cadeado ligada"' in corpo
+    assert 'tn-cx mapa auto"' in corpo and "cadeado" not in corpo
 
 
 def test_a_marca_age_so_na_troca_e_guarda_a_escolha(registro: list[at.Peca]) -> None:
@@ -182,7 +183,7 @@ def test_a_caixa_repinta_so_quando_muda(registro: list[at.Peca],
     _gesto("atualizacoes-abrir")
     _tique(ponte, "01-jogar.html")
     _tique(ponte, "01-jogar.html")
-    assert len(ponte.scripts) == 1 and "Para baixar" in ponte.scripts[0]
+    assert len(ponte.scripts) == 1 and "Escolha o que deve ser atualizado" in ponte.scripts[0]
     _tique(ponte, "09-sistema.html")
     assert len(ponte.scripts) == 2
     _gesto("atualizacoes-fechar")
@@ -198,7 +199,7 @@ def test_a_leitura_velha_nao_reabre_a_caixa_fechada(registro: list[at.Peca]) -> 
     _gesto("atualizacoes-fechar")
     gestos.TELA["calculado"] = velho
     gestos.pintar(ponte, "01-jogar.html", None, em_fundo=False)
-    assert all("Para baixar" not in s for s in ponte.scripts)
+    assert all("Escolha o que deve ser atualizado" not in s for s in ponte.scripts)
 
 
 def test_o_andamento_aparece_em_qualquer_aba_e_o_fim_fechado_nao_volta(

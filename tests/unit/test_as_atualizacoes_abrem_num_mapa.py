@@ -1,4 +1,4 @@
-"""A seção Atualizações da aba Sistema é só o botão do mapa, o «Atualizar sozinho» e o prazo.
+"""A seção Atualizações da aba Sistema é só o botão do mapa, o «Atualização automática» e o prazo.
 
 AS-ATUALIZACOES-ABREM-NUM-MAPA-COMO-O-DAS-CONEXOES-01 (09/11/2026). A grade das peças saiu da aba:
 as peças moram no mapa que o botão abre (``interface/atualizacoes.html_da_pergunta``).
@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.interface import aba09
 from hefesto_dualsense4unix.interface import atualizacoes as tela
 
 RAIZ = Path(__file__).resolve().parents[2]
-GESTOS_DA_SECAO = {"atualizacoes-abrir", "atualizar-sozinho", "prazo-da-atualizacao"}
+GESTOS_DA_SECAO = {"atualizacoes-abrir", "atualizar-sozinho", "prazo-da-atualizacao", "bandeja"}
 GRADE_DE_ANTES = ('<div class="at-grade"><div class="col-lista"><div class="saude">'
                   '<input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" '
                   'data-v="proton"><span class="selo nova">NOVA</span><span class="txt">'
@@ -24,8 +24,8 @@ GRADE_DE_ANTES = ('<div class="at-grade"><div class="col-lista"><div class="saud
 
 
 def _secao(pagina: str) -> str:
-    inicio = pagina.index('<div class="atualiza">')
-    fim = pagina.index('<div class="sec-rot sr-log', inicio)
+    inicio = pagina.index('<div class="quadro-topo">')
+    fim = pagina.index('<div class="quadro-corpo">', inicio)
     return pagina[inicio:fim]
 
 
@@ -46,9 +46,51 @@ def test_a_secao_e_so_o_botao() -> None:
         assert o_que_sobra(pagina) == [], o_que_sobra(pagina)
 
 
+def test_o_botao_e_a_atualizacao_automatica_moram_no_cabecalho_a_esquerda_da_bandeja() -> None:
+    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: o grupo está no cabeçalho, antes da bandeja.
+
+    MORDIDA: o botão numa linha abaixo do Status, ou depois da bandeja, reprova.
+    """
+    for pagina in (aba09.MIOLO, (RAIZ / "mockup/09-sistema.html").read_text(encoding="utf-8")):
+        topo = _secao(pagina)
+        grupo = topo.index('<div class="at-cab">')
+        assert grupo < topo.index('data-gesto="atualizacoes-abrir"') < topo.index(
+            'data-gesto="atualizar-sozinho"') < topo.index("Ícone na bandeja")
+        assert "Atualização automática" in topo and "Atualizar sozinho" not in pagina
+        assert pagina.count('data-gesto="atualizacoes-abrir"') == 1
+        assert pagina.count('data-gesto="atualizar-sozinho"') == 1
+        assert 'class="sec-rot sec-alta at-cab"' not in pagina
+
+
+def test_a_regua_do_cabecalho_morde_o_botao_fora_dele() -> None:
+    botao = re.search(r'<button class="btn at-mapa".*?</button>', aba09.MIOLO, re.S).group(0)
+    fora = aba09.MIOLO.replace(botao, "", 1).replace(
+        '<div class="quadro-corpo">', '<div class="quadro-corpo">' + botao, 1)
+    assert o_que_sobra(fora) == ["0 botões do mapa"]
+
+
+def test_o_mapa_nao_tem_o_ajuste_e_os_grupos_dizem_o_que_sao() -> None:
+    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: o ajuste saiu do mapa; «Atualizado» é o em dia.
+
+    MORDIDA: o ajuste de volta no topo do mapa, ou «Em dia» de volta, reprova.
+    """
+    for sozinho in (False, True):
+        corpo = tela.html_da_pergunta(aba09.EXEMPLO_DAS_PECAS, {"sozinho": sozinho, "dias": 7},
+                                      jogo_aberto=False)
+        for ficou in ("cadeado", "prazo", "atualizar-sozinho", "prazo-da-atualizacao", "at-ajuste"):
+            assert ficou not in corpo, ficou
+        assert ("tn-cx mapa auto" in corpo) is sozinho
+        assert "Escolha o que deve ser atualizado" in corpo and "Atualizado" in corpo
+        assert "Em dia" not in corpo and "Para baixar" not in corpo
+    assert ("em_dia", "Atualizado") in tela.GRUPOS_DO_MAPA
+    assert tela.GRUPOS_DO_MAPA[0] == ("nova", "Escolha o que deve ser atualizado")
+    assert not any(fica in tela.CSS for fica in (".cadeado", ".prazo", "at-ajuste"))
+    assert ".mp-c.em-dia{" in tela.CSS
+
+
 def test_a_regua_morde_a_grade_de_volta() -> None:
     com_a_grade = aba09.MIOLO.replace(
-        '<div class="sec-rot sr-log', GRADE_DE_ANTES + '<div class="sec-rot sr-log', 1)
+        '<div class="quadro-corpo">', GRADE_DE_ANTES + '<div class="quadro-corpo">', 1)
     assert o_que_sobra(com_a_grade) == ["peca-da-atualizacao", "saude", "at-grade", "at-marca",
                                         "selo"]
 

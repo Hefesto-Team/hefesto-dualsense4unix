@@ -237,7 +237,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "atualizar-sozinho", grava="mudar_a_escolha")
 def sozinho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Atualizar sozinho»: liga ou desliga, e a escolha fica guardada."""
+    """«Atualização automática»: liga ou desliga, e a escolha fica guardada."""
     at.mudar_a_escolha(sozinho=not at.ler_a_escolha().sozinho)
     _repintar()
 
@@ -259,7 +259,7 @@ def _so_na_troca(o: dict[str, Any]) -> bool:
 
 @gesto("*", "peca-da-atualizacao", grava="mudar_a_escolha")
 def peca(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A marca de uma peça: entra ou fica de fora, na pergunta e no «Atualizar sozinho»."""
+    """A marca de uma peça: entra ou fica de fora, na pergunta e na «Atualização automática»."""
     if not _so_na_troca(o):
         return
     ident = str(o.get("v") or "")

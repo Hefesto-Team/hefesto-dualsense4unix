@@ -26,3 +26,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **07/11/2026** — a frase da falta na linha do controle sem ponte, em três opções, no molde `opcoes-da-falta` abaixo da sala. Enquanto a escolha não vem, `a08_conexoes.OPCAO_DA_FALTA` fica vazia e o produto não mostra frase nenhuma. Escolher é gravar a letra nessa constante, o que tira o bloco do desenho, e rodar o `--publicar 08`.
+
+## 09-sistema.html
+- **09/11/2026** — o botão «Atualizações» e a «Atualização automática» com o prazo sobem para o cabeçalho do quadro, à esquerda do «Ícone na bandeja», e o registro ganha a altura da linha que saiu; o mapa (`escolha/o-mapa-das-atualizacoes.html`) perde o ajuste, abre com «Escolha o que deve ser atualizado» e «Atualizado» (a cor de em dia). Os campos do produto não mudam (`ESPERA_A_PUBLICACAO` segue vazia); falta o `--publicar 09`.

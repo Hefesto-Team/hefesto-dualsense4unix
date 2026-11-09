@@ -424,9 +424,8 @@
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
-  body .sec-rot.at-cab{display:flex;align-items:center;justify-content:space-between;
-    height:auto !important;gap:14px}
-  .at-cab > span{display:flex;align-items:center;gap:12px}
+  .quadro-topo > .at-cab{display:flex;align-items:center;gap:12px;margin-left:auto;flex:0 0 auto}
+  .quadro-topo > .at-cab ~ .cadeado{margin-left:18px}
   .at-cab .btn.at-mapa{height:32px;padding:0 10px 0 12px;gap:8px;font-size:13px;font-weight:600;
     color:var(--fg);border-color:var(--border-forte);width:auto}
   .at-cab .btn.at-mapa:hover{border-color:var(--purple)}
@@ -436,7 +435,7 @@
     align-items:center;justify-content:center;background:var(--purple);color:var(--app-bg)}
   .at-cab .btn.at-mapa .n:empty{display:none}
   .at-cab .btn.at-mapa:has(.n:empty) svg{color:var(--texto-suave)}
-  .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
+  .at-cab .cadeado{width:auto;height:30px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12.5px}
   .prazo{display:inline-block;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
   .prazo > *{vertical-align:middle;margin-left:6px}
   .prazo > :first-child{margin-left:0}
@@ -444,9 +443,6 @@
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{display:inline-block;min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  @media (max-height:760px){
-    body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
-  }
 
   .fita-linha .perfil-ativo{margin-left:auto}
 </style>
@@ -631,6 +627,10 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Esta aba é do computador, não de um controle">Sistema</span>
+        <div class="at-cab">
+          <button class="btn at-mapa" data-gesto="atualizacoes-abrir"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Atualizações<span class="n" data-campo="atualizacoes-novas">3</span></button>
+          <button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualização automática</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span>
+        </div>
             <button class="cadeado ligada" data-dica="Mostra o Hefesto na barra do sistema e o traz de volta ao entrar" data-gesto="bandeja" data-campo="bandeja" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Ícone na bandeja</button>
       </div>
       <div class="quadro-corpo">
@@ -685,14 +685,6 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
             <button class="cadeado ligada" data-dica="Iniciar com o sistema. Liga o serviço junto com o computador" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
             <button class="btn amarelo-padrao" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
           </div>
-        </div>
-
-
-        <div class="atualiza">
-        <div class="sec-rot sec-alta at-cab">
-          <span><button class="btn at-mapa" data-gesto="atualizacoes-abrir"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Atualizações<span class="n" data-campo="atualizacoes-novas">3</span></button></span>
-          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span></span>
-        </div>
         </div>
 
         <div class="sec-rot sr-log sec-alta">

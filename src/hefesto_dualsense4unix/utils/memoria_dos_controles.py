@@ -533,7 +533,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "servico.log": (CASA, "o registro do serviço, já pela máscara; não identifica controle"),
     "gestos-das-extensoes.log": (CASA, "o diário dos gestos que mudam as modificações; não "
                                        "identifica controle"),
-    "atualizador.json": (CASA, "a escolha do atualizador (as peças marcadas, o «Atualizar sozinho» "
+    "atualizador.json": (CASA, "a escolha do atualizador (as peças marcadas, a «Atualização "
+                                "automática» "
                                "e o prazo); não identifica controle"),
     "atualizador-conferencia.json": (CASA, "as versões instaladas e publicadas de cada peça"),
     "atualizador-andamento.json": (CASA, "o andamento da última atualização"),

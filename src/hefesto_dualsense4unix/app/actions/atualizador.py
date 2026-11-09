@@ -5,7 +5,7 @@ instalada, a publicada e os passos baixar, instalar e aplicar em todos. A fila r
 próprio, fora da janela (``--rodar``), e escreve o andamento num arquivo que a janela lê a cada
 tique: o serviço reinicia no fim, e a tela não pode depender dele para saber onde a fila está.
 
-A escolha das peças, o «Atualizar sozinho», o prazo da pergunta e a versão que se voltou
+A escolha das peças, a «Atualização automática», o prazo da pergunta e a versão que se voltou
 (segurada, para não subir de novo) moram no ``atualizador.json`` da configuração. Antes de
 instalar, a versão de agora vai para as anteriores, que é o que «Versões anteriores» lista.
 """
@@ -198,7 +198,7 @@ def caminho_do_registro() -> Path:
 
 @dataclass
 class Escolha:
-    """O que quem usa escolheu: as peças marcadas, o «Atualizar sozinho» e o prazo."""
+    """O que quem usa escolheu: as peças marcadas, a «Atualização automática» e o prazo."""
 
     sozinho: bool = False
     dias: int = DIAS_PADRAO
@@ -666,7 +666,7 @@ def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None) -> bo
 def conferir_ao_abrir(fio_do_dev: threading.Thread | None = None, *,
                       soltar_: Callable[[Sequence[str]], bool] = soltar,
                       agora: Callable[[], float] = time.time) -> threading.Thread:
-    """O vigia da abertura, num fio: confere, e com «Atualizar sozinho» no prazo, solta a fila.
+    """O vigia da abertura, num fio: confere, e com «Atualização automática» no prazo, solta a fila.
 
     Espera o fio que traz o ``dev`` (a peça Hefesto lê o que ele baixou), sem passar do teto.
     """
@@ -690,7 +690,7 @@ def conferir_ao_abrir(fio_do_dev: threading.Thread | None = None, *,
 
 
 def hora_da_pergunta(agora: float | None = None) -> bool:
-    """A janela abre a pergunta? Sem «Atualizar sozinho», no prazo, com peça nova."""
+    """A janela abre a pergunta? Sem «Atualização automática», no prazo, com peça nova."""
     escolha = ler_a_escolha()
     if escolha.sozinho or em_curso():
         return False

@@ -17,8 +17,8 @@ from typing import Any
 ID_DA_CAIXA = "hef-atualizacoes"
 ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
                  "kernel", "dkms", "sistema", "mangohud", "umu")
-GRUPOS_DO_MAPA = (("nova", "Para baixar"), ("revisar", "A revisar"), ("em_dia", "Em dia"),
-                  ("fixa", "Com o Hefesto"), ("sem_rede", "Sem rede"))
+GRUPOS_DO_MAPA = (("nova", "Escolha o que deve ser atualizado"), ("revisar", "A revisar"),
+                  ("em_dia", "Atualizado"), ("fixa", "Com o Hefesto"), ("sem_rede", "Sem rede"))
 ESTADOS_DO_MAPA = ("nova", "revisar", "em_dia", "fixa")
 MARCAVEIS = ("nova", "em_dia", "fixa")
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
@@ -88,24 +88,6 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
 .hef-atualiza .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
 .hef-atualiza .btn .n{font-family:'JetBrains Mono',monospace;font-size:12px}
-.hef-atualiza .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:9px;
-  height:var(--h-acao,34px);white-space:nowrap;border-radius:999px;padding:0 16px 0 12px;width:auto;
-  font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;
-  border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg)}
-.hef-atualiza .cadeado .p{width:10px;height:10px;border-radius:50%;flex:0 0 auto;
-  background:var(--border-forte)}
-.hef-atualiza .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
-  color:var(--green)}
-.hef-atualiza .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-.hef-atualiza .prazo{display:inline-block;font-size:12.5px;color:var(--fg);white-space:nowrap}
-.hef-atualiza .prazo > *{vertical-align:middle;margin-left:6px}
-.hef-atualiza .prazo > :first-child{margin-left:0}
-.hef-atualiza .prazo .pm{width:28px;height:28px;border-radius:6px;
-  border:1px solid var(--linha,#53576f);background:var(--app-bg);color:var(--fg);
-  font:600 14px/1 'JetBrains Mono',monospace;cursor:pointer}
-.hef-atualiza .prazo .pm:hover{border-color:var(--comment)}
-.hef-atualiza .prazo .dias{display:inline-block;min-width:26px;text-align:center;
-  font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
 .hef-atualiza .selo{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;
   font-family:'JetBrains Mono',monospace;white-space:nowrap;text-align:center;flex:none}
 .hef-atualiza .selo.nova{background:var(--purple);color:var(--app-bg)}
@@ -123,8 +105,6 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
   border-bottom:1px solid var(--border-sutil)}
 .hef-atualiza .mapa .tn-tit{font-size:18px;font-weight:700;color:var(--pink)}
 .hef-atualiza .mapa .btn.voltar{height:30px}
-.hef-atualiza .mapa .at-ajuste{margin-left:auto;display:flex;align-items:center;gap:14px}
-.hef-atualiza .mapa .at-ajuste .cadeado{height:30px}
 .hef-atualiza .mapa .tn-corpo{padding:10px 18px;flex:1}
 .hef-atualiza .mapa .tn-rod{padding:9px 18px 11px}
 .hef-atualiza .mapa .tn-rod .empurra{flex:1}
@@ -177,9 +157,11 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-n,
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v,
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v .nv{color:var(--texto-mudo)}
-.hef-atualiza:not(:has(.cadeado.ligada)) .mp-c:is(.em-dia,.fixa) .mp-mx{visibility:hidden}
-.hef-atualiza:has(.cadeado.ligada) .mp-c:is(.em-dia,.fixa):has(.mp-m:not(:checked)) .mp-t{
+.hef-atualiza .mapa:not(.auto) .mp-c:is(.em-dia,.fixa) .mp-mx{visibility:hidden}
+.hef-atualiza .mapa.auto .mp-c:is(.em-dia,.fixa):has(.mp-m:not(:checked)) .mp-t{
   color:var(--texto-mudo)}
+.hef-atualiza .mp-c.em-dia{border-color:color-mix(in srgb,var(--green) 45%,var(--border-forte));
+  background:color-mix(in srgb,var(--green) 5%,var(--app-bg))}
 .hef-atualiza .mp-g.revisar{color:var(--orange)}
 .hef-atualiza .mp-c.revisar{border-color:var(--orange);
   background:color-mix(in srgb,var(--orange) 7%,var(--app-bg))}
@@ -380,22 +362,9 @@ def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
             if i.get("estado") == "nova" and i.get("marcada")]
 
 
-def _ajuste(escolha: dict[str, Any]) -> str:
-    sozinho = " ligada" if escolha.get("sozinho") else ""
-    return (f'<span class="at-ajuste"><button class="cadeado{sozinho}" '
-            f'data-gesto="atualizar-sozinho"'
-            f'{_dica(DICA_DO_SOZINHO)}><span class="p"></span>Atualizar sozinho</button>'
-            f'<span class="prazo"{_dica(DICA_DO_PRAZO)}><span>A cada</span>'
-            f'<button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" '
-            f'aria-label="Menos um dia">&minus;</button>'
-            f'<span class="dias">{_e(escolha.get("dias", 7))}'
-            f'</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" '
-            f'aria-label="Mais um dia">+</button><span>dias</span></span></span>')
-
-
 def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
                      jogo_aberto: bool, nome_do_jogo: str = "") -> str:
-    """O mapa das atualizações: o topo com o ajuste, os cartões e o rodapé."""
+    """O mapa das atualizações: o topo, os cartões e o rodapé."""
     n = len(ids_para_atualizar(conferencia))
     jogo = (f'<span>Jogo aberto:</span><span class="jogo">{_e(nome_do_jogo)}</span>'
             if nome_do_jogo else '<span>Jogo aberto</span>')
@@ -406,9 +375,11 @@ def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
                  'Atualizar ao fechar o jogo</button>' if jogo_aberto else
                  f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar">'
                  f'Atualizar <span class="n">{n}</span></button>')
-    return (f'<div class="tn-cx mapa" role="dialog" aria-modal="true" aria-label="Atualizações">'
+    auto = " auto" if escolha.get("sozinho") else ""
+    return (f'<div class="tn-cx mapa{auto}" role="dialog" aria-modal="true" '
+            f'aria-label="Atualizações">'
             f'<div class="tn-topo"><button class="btn voltar" data-gesto="atualizacoes-fechar">'
-            f'← Voltar</button><span class="tn-tit">Atualizações</span>{_ajuste(escolha)}'
+            f'← Voltar</button><span class="tn-tit">Atualizações</span>'
             f'</div><div class="tn-corpo">{html_do_mapa(conferencia)}</div>'
             f'<div class="tn-rod">'
             f'<button class="btn" data-gesto="atualizacoes-anteriores">Versões anteriores</button>'
