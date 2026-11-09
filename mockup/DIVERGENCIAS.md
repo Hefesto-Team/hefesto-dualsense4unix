@@ -26,6 +26,3 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **07/11/2026** — a frase da falta na linha do controle sem ponte, em três opções, no molde `opcoes-da-falta` abaixo da sala. Enquanto a escolha não vem, `a08_conexoes.OPCAO_DA_FALTA` fica vazia e o produto não mostra frase nenhuma. Escolher é gravar a letra nessa constante, o que tira o bloco do desenho, e rodar o `--publicar 08`.
-
-## 09-sistema.html
-- **09/11/2026** — a seção «Atualizações» vira uma linha: o botão «Atualizações» com o número do que há para baixar, o «Atualizar sozinho» e o prazo; a grade das peças sai da aba e mora no mapa que o botão abre (`escolha/o-mapa-das-atualizacoes.html`, a caixa que o produto já pinta). Enquanto o `--publicar 09` não sai, o produto continua com a página de hoje: o «Ver atualizações» já abre o mapa, e a grade fica com as peças do desenho antigo, paradas, porque o pacote deixou de escrevê-la. Publicar é o `--publicar 09`.

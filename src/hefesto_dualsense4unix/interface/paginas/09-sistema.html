@@ -424,15 +424,19 @@
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
-  .selo.nova{background:var(--purple);color:var(--app-bg)}
-  .at-cab{grid-template-columns:minmax(0,1fr) auto;height:auto}
-  body .sec-rot.at-cab{height:35px !important}
-  .at-cab > span:last-child{display:flex;align-items:center;gap:8px}
+  body .sec-rot.at-cab{display:flex;align-items:center;justify-content:space-between;
+    height:auto !important;gap:14px}
+  .at-cab > span{display:flex;align-items:center;gap:12px}
+  .at-cab .btn.at-mapa{height:32px;padding:0 10px 0 12px;gap:8px;font-size:13px;font-weight:600;
+    color:var(--fg);border-color:var(--border-forte);width:auto}
+  .at-cab .btn.at-mapa:hover{border-color:var(--purple)}
+  .at-cab .btn.at-mapa svg{width:18px;height:18px;color:var(--purple);flex:none}
+  .at-cab .btn.at-mapa .n{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+    min-width:22px;height:22px;padding:0 6px;border-radius:999px;display:inline-flex;
+    align-items:center;justify-content:center;background:var(--purple);color:var(--app-bg)}
+  .at-cab .btn.at-mapa .n:empty{display:none}
+  .at-cab .btn.at-mapa:has(.n:empty) svg{color:var(--texto-suave)}
   .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
-  .at-cab .btn{height:28px;padding:0 12px;font-size:12px}
-  .at-cab .btn.verde.cheio{background:var(--green);border-color:var(--green);color:var(--app-bg);font-weight:600;text-decoration:none}
-  .at-cab .btn.verde.cheio:hover{background:color-mix(in srgb,var(--green) 75%,#fff)}
-  .at-cab .btn .n{font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:6px}
   .prazo{display:inline-block;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
   .prazo > *{vertical-align:middle;margin-left:6px}
   .prazo > :first-child{margin-left:0}
@@ -440,32 +444,8 @@
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{display:inline-block;min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  .at-grade{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);gap:0 12px;align-items:start}
-  .at-grade .saude .ver{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--texto-suave);white-space:nowrap;min-width:0;display:flex;flex-flow:row-reverse wrap;align-content:flex-start;height:24px;line-height:24px;overflow:hidden}
-  .at-grade .saude .ver:has(.num){display:block;text-align:right;white-space:normal}
-  .at-grade .saude .ver .seta{color:var(--purple);margin:0 3px;flex:none}
-  .at-grade .saude .ver .nv{color:var(--fg);flex:none;order:-1}
-  .at-grade .saude .ver .par{flex:none}
-  .at-grade .saude .ver .num,.at-grade .saude .ver .resto{white-space:nowrap}
-  .at-grade .saude .txt span:last-child{overflow:visible;text-overflow:clip}
-  .at-grade .saude{gap:6px}
-  .at-grade .saude .txt{flex:0 0 auto}
-  body .at-grade .saude .selo{flex:0 0 70px !important;padding-left:4px;padding-right:4px}
-  .at-grade .saude .ver .seta{margin:0 1px}
-  .at-marca{width:16px;height:16px;accent-color:var(--pink);margin:0;flex:0 0 16px;cursor:pointer}
-  .atualiza:not(:has(.at-cab .cadeado.ligada)) .at-marca{display:none}
-  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .txt,
-  .atualiza:has(.at-cab .cadeado.ligada) .saude:has(.at-marca:not(:checked)) .ver{color:var(--texto-mudo)}
   @media (max-height:760px){
     body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
-    .at-grade{grid-template-columns:repeat(4,minmax(0,1fr));gap:0 24px}
-    .at-grade .saude.fixa{display:none}
-    .at-grade .col-lista{display:contents}
-    .at-grade .risco{display:none}
-    body .sec-rot.at-cab{height:24px !important}
-    .at-cab .cadeado,.at-cab .btn{height:24px}
-    .at-grade .saude{height:19px}
-    .at-grade .selo{padding-top:1px;padding-bottom:1px}
   }
 
   .fita-linha .perfil-ativo{margin-left:auto}
@@ -710,10 +690,9 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
 
         <div class="atualiza">
         <div class="sec-rot sec-alta at-cab">
-          <span>Atualizações</span>
-          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span><button class="btn" data-gesto="atualizacoes-anteriores">Versões anteriores</button><button class="btn verde cheio" data-gesto="atualizacoes-abrir">Ver atualizações<span class="n" data-campo="atualizacoes-novas">3</span></button></span>
+          <span><button class="btn at-mapa" data-gesto="atualizacoes-abrir"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Atualizações<span class="n" data-campo="atualizacoes-novas">3</span></button></span>
+          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span></span>
         </div>
-        <div class="at-grade" data-campo="atualizacoes-lista" data-hef-alvo="html"><div class="col-lista"><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="hefesto" checked><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="Interface, serviço e correções"><span>Hefesto</span></span><span class="ver" data-dica="0.9.5.1 → 0.9.5.2"><span class="par"><span class="de">0.9.5.1</span><span class="seta">→</span></span><span class="nv">0.9.5.2</span></span></div><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="proton" checked><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="Os jogos da Steam e do Heroic"><span>GE-Proton</span></span><span class="ver" data-dica="11-7 → 11-12"><span class="par"><span class="de">11-7</span><span class="seta">→</span></span><span class="nv">11-12</span></span></div><div class="saude fixa"><input type="checkbox" class="at-marca" disabled><span class="selo nt"><span class="sg">&ndash;</span>FIXA</span><span class="txt" data-dica="BlueZ, com as correções do Hefesto · Sobe junto com o Hefesto"><span>Bluetooth</span></span><span class="ver"><span class="nv">5.87</span></span></div><div class="saude fixa"><input type="checkbox" class="at-marca" disabled><span class="selo nt"><span class="sg">&ndash;</span>FIXA</span><span class="txt" data-dica="PipeWire e WirePlumber · Sobe junto com o Hefesto"><span>Som</span></span><span class="ver"><span class="nv">1.6.9</span></span></div></div><div class="risco"></div><div class="col-lista"><div class="saude fixa"><input type="checkbox" class="at-marca" disabled><span class="selo nt"><span class="sg">&ndash;</span>FIXA</span><span class="txt" data-dica="A captura de tela do COSMIC · Sobe junto com o Hefesto"><span>Portal do COSMIC</span></span><span class="ver"><span class="nv">1.0.0</span></span></div><div class="saude fixa"><input type="checkbox" class="at-marca" disabled><span class="selo nt"><span class="sg">&ndash;</span>FIXA</span><span class="txt" data-dica="A peça GDK e o GameInput · Sobe junto com o Hefesto"><span>GameInput</span></span><span class="ver"><span class="nv">1</span></span></div><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="python"><span class="selo nova"><span class="sg">↑</span>NOVA</span><span class="txt" data-dica="evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3"><span>Python</span></span><span class="ver" data-dica="2 pacotes"><span class="num">2</span> <span class="resto">pacotes</span></span></div></div><div class="risco"></div><div class="col-lista"><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="nvidia" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="nvidia-driver-595"><span>Driver Nvidia</span></span><span class="ver"><span class="nv">595.104.02</span></span></div><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="kernel" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="linux-system76"><span>Kernel</span></span><span class="ver"><span class="nv">7.2.15</span></span></div><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="dkms" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="4 módulos · 7.2.15"><span>Módulos do kernel</span></span><span class="ver"><span class="nv">1.0.0</span></span></div></div><div class="risco"></div><div class="col-lista"><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="sistema" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="Pop!_OS 24.04"><span>Pacotes do sistema</span></span><span class="ver"><span class="nv">24.04</span></span></div><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="mangohud" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="O painel por cima do jogo"><span>MangoHud</span></span><span class="ver"><span class="nv">0.8.4</span></span></div><div class="saude"><input type="checkbox" class="at-marca" data-gesto="peca-da-atualizacao" data-v="umu" checked><span class="selo ok"><span class="sg">✓</span>EM DIA</span><span class="txt" data-dica="Os jogos de fora da Steam no Proton"><span>umu</span></span><span class="ver"></span></div></div></div>
         </div>
 
         <div class="sec-rot sr-log sec-alta">
