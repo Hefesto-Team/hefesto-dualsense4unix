@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import traceback
+import weakref
 from collections import deque
 from collections.abc import Callable, MutableMapping
 from pathlib import Path
@@ -33,6 +34,7 @@ else:
             Processor = Callable[..., Any]  # type: ignore[misc,assignment]
 
 _configured = False
+_ENTREGUES: weakref.WeakSet[Any] = weakref.WeakSet()
 
 _COR_DO_TERMINAL = re.compile(r"(\x1b\[[0-9;]*m)")
 
@@ -576,11 +578,18 @@ def get_logger(name: str | None = None) -> Any:
     """Retorna um logger structlog. Configura automaticamente se preciso."""
     if not _configured:
         configure_logging()
-    return structlog.get_logger(name)
+    logger = structlog.get_logger(name)
+    _ENTREGUES.add(logger)
+    return logger
 
 
 def reset_for_tests() -> None:
-    """Reseta o estado interno — uso exclusivo em testes."""
+    """Reseta o estado interno — uso exclusivo em testes.
+
+    O logger entregue que já guardou a montagem de antes volta a montar no próximo uso: o
+    guardado prende a lista de processadores, o nível e o destino daquela configuração, e o
+    ``reset_defaults`` troca a lista por outra.
+    """
     global _configured, _nivel_minimo
     _REGISTRO.fechar()
     raiz = logging.getLogger()
@@ -590,6 +599,8 @@ def reset_for_tests() -> None:
     _configured = False
     _nivel_minimo = logging.INFO
     structlog.reset_defaults()
+    for logger in list(_ENTREGUES):
+        vars(logger).pop("bind", None)
 
 
 __all__ = [
