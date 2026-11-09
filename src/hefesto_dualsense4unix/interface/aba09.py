@@ -173,8 +173,9 @@ CSS = """  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(
                 minmax(0,1fr) 1px minmax(0,1fr)}
   .sr-log{grid-template-columns:minmax(0,1fr) auto;height:auto}
   .sr-log > span:last-child{gap:6px}
+  .quadro.estica > .quadro-corpo{padding:6px 14px 8px}
   .quadro-corpo > *{flex-shrink:0}
-  .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
+  .sec-grupo{margin:14px 0 4px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
@@ -196,7 +197,7 @@ CSS = """  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(
   .saude-cols{display:contents}
   .col-lista{display:flex;flex-direction:column;min-width:0}
 
-  .coluna{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .coluna{display:flex;flex-direction:column;gap:3px;min-width:0}
   .coluna .btn{width:100%;justify-content:center;padding:0 8px}
   .so-avulso:not(.mostra){display:none}
   .so-avulso.mostra + .acao{display:none}
@@ -209,13 +210,13 @@ CSS = """  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(
   .btn.borda-vermelha.verde{border-color:var(--green);color:var(--green)}
   .btn.borda-vermelha.verde:hover{background:rgba(80,250,123,.08)}
 
-  .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:6px}
+  .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:3px}
   .seg.bat-perfis button{flex:0 0 var(--h-acao);height:var(--h-acao);min-width:0;
                          padding:0 8px;overflow:hidden;text-overflow:ellipsis;
                          white-space:nowrap}
 
   .saude-app{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-flow:row;
-             grid-template-rows:repeat(3,var(--h-acao));gap:6px 8px;min-width:0}
+             grid-template-rows:repeat(3,var(--h-acao));gap:3px 8px;min-width:0}
   .saude-app .cadeado,.saude-app .btn{width:100%;min-width:0;padding:0 10px;overflow:hidden;
                                       text-overflow:ellipsis}
   .saude-app .btn{justify-content:center}
@@ -238,9 +239,9 @@ CSS = """  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(
 
   .registro{flex:1 1 0;min-height:0;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
-  .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
+  .log{padding:5px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:11px;
-       line-height:1.6;color:var(--texto-suave);overflow:auto;white-space:pre-wrap;
+       line-height:1.4;color:var(--texto-suave);overflow:auto;white-space:pre-wrap;
        overflow-wrap:anywhere}
   .sec-rot .btn.copiar{height:22px;padding:0 12px;font-size:11.5px}
 """ + CSS_GLIFO

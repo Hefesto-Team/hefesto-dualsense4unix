@@ -160,13 +160,13 @@ body .saude .selo{{flex:0 0 84px !important}}
 body .pt{{font-size:{_L}px !important}}
 body .fita .pt{{line-height:1 !important}}
 body .sec-rot .btn.copiar{{height:{_A}px !important;font-size:{_L}px !important}}
-body .sec-rot.sr-log{{height:35px !important}}
+body .sec-rot.sr-log{{height:30px !important}}
 body .log{{font-size:{_L}px !important}}
 body .saude .txt{{min-height:{_A}px !important}}
-body .sec-rot{{height:{_A}px !important;margin-bottom:2px !important}}
+body .sec-rot{{height:{_A}px !important;margin-bottom:0 !important}}
 body .sec-rot>span{{min-height:{_A}px !important}}
 body .quadro-titulo{{min-height:{_A}px !important;display:inline-flex !important;align-items:center !important}}
-body .sec-grupo,body .sec-alta{{margin-top:10px !important;padding-top:8px !important}}
+body .sec-grupo,body .sec-alta{{margin-top:4px !important;padding-top:5px !important}}
 """,
 }
 
