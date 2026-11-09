@@ -31,8 +31,19 @@ RECEITA = RAIZ / "docs" / "usage" / "receita-backport-pipewire.md"
 
 pytestmark = pytest.mark.skipif(DPKG is None, reason="sem dpkg para comparar versões")
 
-PW = "1.6.9-0~hefesto24.04.1"
-WP = "0.5.18-0~hefesto24.04.1"
+BASELINE = (RAIZ / "assets" / "pipewire-backport" / "BASELINE").read_text(encoding="utf-8")
+
+
+def _do_baseline(chave: str) -> str:
+    achado = re.search(rf"^{chave}=(\S+)$", BASELINE, re.MULTILINE)
+    assert achado is not None, chave
+    return achado.group(1)
+
+
+PW = _do_baseline("PW_REVISAO")
+WP = _do_baseline("WP_REVISAO")
+PW_DA_DISTRO_ACIMA = "1.6.99-1"
+WP_DA_DISTRO_ACIMA = "0.5.99-1"
 PW_POP = "1.6.8-1pop1~1787688714~24.04~fdff050"
 WP_POP = "0.5.12-2pop1~1766191027~24.04~d4bf441"
 
@@ -438,16 +449,17 @@ def test_a_entrega_que_nao_confere_nao_instala_nada(tmp_path: Path) -> None:
 def test_nunca_rebaixa(tmp_path: Path) -> None:
     """Um WirePlumber da distro acima da casa fica: a versão mais nova vence."""
     maquina = dict(MAQUINA_DO_POP)
-    maquina["wireplumber"] = ("ii ", "wireplumber", "0.5.19-1")
-    maquina["libwireplumber-0.5-0"] = ("ii ", "libwireplumber-0.5-0:amd64", "0.5.19-1")
+    maquina["wireplumber"] = ("ii ", "wireplumber", WP_DA_DISTRO_ACIMA)
+    maquina["libwireplumber-0.5-0"] = ("ii ", "libwireplumber-0.5-0:amd64", WP_DA_DISTRO_ACIMA)
     c = _correr(tmp_path, maquina=maquina)
     assert c.instalados() == INSTALADOS_DO_POP - {"wireplumber", "libwireplumber-0.5-0"}
 
 
 def test_com_a_cura_ja_instalada_pela_distro_nem_constroi(tmp_path: Path) -> None:
     maquina = dict(MAQUINA_DO_POP)
-    maquina["libpipewire-0.3-modules"] = ("ii ", "libpipewire-0.3-modules:amd64", "1.6.10-1")
-    maquina["wireplumber"] = ("ii ", "wireplumber", "0.5.19-1")
+    maquina["libpipewire-0.3-modules"] = (
+        "ii ", "libpipewire-0.3-modules:amd64", PW_DA_DISTRO_ACIMA)
+    maquina["wireplumber"] = ("ii ", "wireplumber", WP_DA_DISTRO_ACIMA)
     c = _correr(tmp_path, maquina=maquina)
     assert "nada a trocar" in c.saida, c.saida
     assert not c.chamou("construtor"), c.chamadas

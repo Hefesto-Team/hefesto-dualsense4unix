@@ -57,7 +57,7 @@ PW = _revisao("PW_REVISAO")
 WP = _revisao("WP_REVISAO")
 PW_POP = "1.6.8-1pop1~1787688714~24.04~fdff050"
 WP_POP = "0.5.12-2pop1~1766191027~24.04~d4bf441"
-PW_POP_NOVO = "1.6.10-1pop1~1799999999~24.04~0000000"
+PW_POP_NOVO = "1.6.99-1pop1~1799999999~24.04~0000000"
 
 REPO = "/var/lib/hefesto-pipewire"
 FONTE = "/etc/apt/sources.list.d/hefesto-pipewire.sources"
@@ -576,7 +576,7 @@ def test_no_curado_a_construcao_so_se_anuncia_sem_a_entrega(tmp_path: Path, pron
 
 
 def test_com_a_cura_da_distro_nao_ha_fonte_nem_construcao(tmp_path: Path) -> None:
-    b = _cenario(tmp_path, instalada="1.6.10-1")
+    b = _cenario(tmp_path, instalada="1.6.99-1")
     b.passo()
     assert not b.fonte.exists()
     assert not any(c.startswith("construtor") for c in b.chamadas()), b.chamadas()

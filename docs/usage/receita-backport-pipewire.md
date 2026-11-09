@@ -4,8 +4,8 @@ Até a 1.6.8, a do Pop!_OS 24.04, o PipeWire deixa preso para sempre o cliente
 que faz bind num metadata enquanto o WirePlumber sai. A Steam roda
 `wpctl settings`, o `wpctl` não sai, e a Steam não fecha
 ([o estudo](../protocol/o-wpctl-pendurado-pelo-metadata.md)). O upstream curou
-na 1.6.9. O Hefesto oferece o PipeWire 1.6.9 e o WirePlumber 0.5.18, as
-estáveis mais novas, com o empacotamento do Pop. O `hefesto-dualsense4unix doctor`
+na 1.6.9. O Hefesto oferece o PipeWire 1.6.11 e o WirePlumber 0.5.19, as
+estáveis mais novas (a 1.6.x que o `BASELINE` diz), com o empacotamento do Pop. O `hefesto-dualsense4unix doctor`
 manda para cá quando o PipeWire de um Pop!_OS 24.04 está abaixo da 1.6.9; em
 outra distro, a cura vem da própria distro.
 
@@ -15,7 +15,7 @@ outra distro, a cura vem da própria distro.
 scripts/construir_pipewire_backport.sh
 ```
 
-Constrói o `1.6.9-0~hefesto24.04.1` e o `0.5.18-0~hefesto24.04.1` e entrega os
+Constrói o `1.6.11-0~hefesto24.04.1` e o `0.5.19-0~hefesto24.04.1` e entrega os
 `.deb`, com o `SHA256SUMS` e um `ORIGEM.txt`, em
 `~/.cache/hefesto-dualsense4unix/pipewire-backport/`. **Não instala nada e não
 usa sudo.** Quem instala é o `./install.sh`, no passo 3f-bis, e só no Pop!_OS
@@ -24,7 +24,7 @@ script, confere o `SHA256SUMS`, grava o caminho de volta, fixa a prioridade do
 apt, instala só os pacotes que a máquina já tem, publica a entrega conferida
 como fonte local do apt (`/var/lib/hefesto-pipewire`, lida pela
 `/etc/apt/sources.list.d/hefesto-pipewire.sources`) e reinicia o som. Com a
-1.6.9 já instalada, ele só publica a fonte. Com a Steam aberta, ele recusa e
+versão do `BASELINE` já instalada, ele só publica a fonte. Com a Steam aberta, ele recusa e
 manda fechá-la pelo menu. A instalação à mão é a de
 [Instalar](#instalar).
 
@@ -32,7 +32,7 @@ manda fechá-la pelo menu. A instalação à mão é a de
 
 | Peça | De onde | Quem fixa |
 |---|---|---|
-| o PipeWire 1.6.9 e o WirePlumber 0.5.18 | o arquivo da tag no GitLab do freedesktop | SHA-256 e o commit da tag em `assets/pipewire-backport/BASELINE` |
+| o PipeWire 1.6.11 e o WirePlumber 0.5.19 | o arquivo da tag no GitLab do freedesktop | SHA-256 e o commit da tag em `assets/pipewire-backport/BASELINE` |
 | o `debian/` | o tarball do pacote do Pop!_OS (`1.6.8-1pop1…` e `0.5.12-2pop1…`) | SHA-256 em `assets/pipewire-backport/BASELINE` |
 | as mudanças do Pop no fonte do PipeWire | `assets/pipewire-backport/patches/pop-0001` e `pop-0002` | SHA-256 de cada uma no `BASELINE` |
 | o CVE-2026-14330 | o `debian/patches` do Debian 1.6.9-2, como `debian-0001` | SHA-256 no `BASELINE` |
@@ -127,8 +127,8 @@ Depois, instale pelos dois `debian/control` e rode de novo:
 
 ```bash
 cd ~/.cache/hefesto-dualsense4unix/pipewire-obra
-sudo mk-build-deps -ir pipewire-1.6.9/debian/control
-sudo mk-build-deps -ir wireplumber-0.5.18/debian/control
+sudo mk-build-deps -ir pipewire-1.6.11/debian/control
+sudo mk-build-deps -ir wireplumber-0.5.19/debian/control
 ```
 
 ## Instalar
@@ -208,7 +208,7 @@ Steam antes.
    ```
 
 6. Reinicie o som: `systemctl --user restart pipewire pipewire-pulse wireplumber`.
-7. Meça o depois: `pipewire --version` diz 1.6.9, `wpctl status` responde, e o
+7. Meça o depois: `pipewire --version` diz a versão do `BASELINE`, `wpctl status` responde, e o
    `doctor` não tem WARN em `pipewire`. Teste o som e o microfone de cada
    controle e feche a Steam pelo menu depois de jogar.
 
@@ -218,11 +218,16 @@ Para voltar: apague o `/etc/apt/preferences.d/hefesto-pipewire`, a
 
 ## O que muda para o Hefesto
 
-Lido nos NEWS da 1.6.9 e do WirePlumber 0.5.13 ao 0.5.18. O que toca o código
+Lido nos NEWS da 1.6.9 à 1.6.11 e do WirePlumber 0.5.13 ao 0.5.19. O que toca o código
 do Hefesto, com o lugar dele, para conferir depois de instalar:
 
 | Versão | Mudança | Onde o Hefesto depende |
 |---|---|---|
+| WirePlumber 0.5.19 | os nós UCM `HiFi*` ganham a prioridade dos `analog-*` e deixam de perder a saída padrão para o HDMI | o UCM do DualSense que o Hefesto instala: com o controle no cabo, qual vira a saída padrão |
+| WirePlumber 0.5.19 | fechar e reabrir o aparelho depois de um erro do nó ALSA só acontece com `device.recover-on-error` | a placa USB do controle no cabo, quando o nó falha |
+| WirePlumber 0.5.19 | o `bluetooth.autoswitch-restore-timeout` sobe para 4 s, e os perfis A2DP duplex ganham o laço da fonte | o microfone pelo rádio, que o Hefesto liga por conta própria |
+| PipeWire 1.6.11 | as correções do Bluetooth trazidas para a 1.6 (registros de perfil concorrentes, remoção assíncrona de aparelho e nó, ponteiro velho de transporte) e o dreno do plugin ALSA sem XRUN (#5544) | os controles pelo rádio em dois adaptadores |
+| PipeWire 1.6.10 | o `RegisterApplication` do Bluetooth se cancela quando o adaptador some (#5096), e o upmix volta a aceitar o atraso traseiro zero (#5490) | o adaptador desplugado com os controles ligados |
 | WirePlumber 0.5.18 | o `default-nodes` ordena os nós guardados só pela pilha, e o `priority.session` não passa por cima da última escolha do usuário (#1005) | `assets/wireplumber/51-hefesto-dualsense-no-default-source.conf:144-166`, `src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py:34`, `src/hefesto_dualsense4unix/integrations/alto_falante_bt.py:826` e `:2909` |
 | WirePlumber 0.5.18 | o `prepare-link` destrói o fluxo com `node.dont-reconnect` quando o alvo some, como na 0.4, em vez de deixá-lo solto (#1026) | `src/hefesto_dualsense4unix/integrations/endpoint_de_haptica.py:802` e `src/hefesto_dualsense4unix/integrations/alto_falante_bt.py:2136`: o `pw-cat` da háptica e o ouvido saem quando o controle cai |
 | WirePlumber 0.5.18 | o `find-best-profile` escolhe o perfil pela saída disponível antes da prioridade, e o nó ALSA que falha tem no máximo 3 tentativas, zeradas depois de 60 s sem erro | a placa USB do controle no cabo |

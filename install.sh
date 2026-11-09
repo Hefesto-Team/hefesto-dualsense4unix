@@ -2633,7 +2633,7 @@ install_pipewire_da_casa() {
 
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-    step "3f-bis" "PipeWire corrigido (1.6.9 com o WirePlumber 0.5.18: a Steam fecha mesmo depois de o som reiniciar)"
+    step "3f-bis" "PipeWire corrigido ($(sed -n 's/^PW_VERSAO_UPSTREAM=//p' "${ROOT_DIR}/assets/pipewire-backport/BASELINE" 2>/dev/null) com o WirePlumber $(sed -n 's/^WP_VERSAO_UPSTREAM=//p' "${ROOT_DIR}/assets/pipewire-backport/BASELINE" 2>/dev/null): a Steam fecha mesmo depois de o som reiniciar)"
     install_pipewire_da_casa
 fi
 

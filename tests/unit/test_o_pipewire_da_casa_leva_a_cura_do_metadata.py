@@ -28,12 +28,12 @@ SCRIPT = ROOT / "scripts" / "construir_pipewire_backport.sh"
 DOCTOR = ROOT / "scripts" / "doctor.sh"
 
 MEDIDOS = {
-    "PW_FONTE_SHA256": "0cde58c124825bad462b32ab79f9aa286ee7b113cc73a5cda923a4365e752657",
+    "PW_FONTE_SHA256": "0b32fbbece4591376b45dde5a818bfa5b3517e70913a2f7414e33c47c20b07ee",
     "PW_EMPACOTAMENTO_SHA256": "5f19cae7f9ad7e6c1206ff7d7f197f71feec97e1919016a5a82eab50a82f405f",
-    "WP_FONTE_SHA256": "0c2ea30a7b3bb4ecad456bb27e2c283defda59bb53d97df6917a495f12887e33",
+    "WP_FONTE_SHA256": "e743070200e3788b8a46b5cd35438170dea4458302cfa3bb04ab4a9495ad14a4",
     "WP_EMPACOTAMENTO_SHA256": "5fdff117f1dea4297383a3fe4c5441f9bba58f65990f9e5dc68d6cf39f204dc5",
-    "PW_TAG_COMMIT": "8fa27cabdc6c0c1350c69c026af5850ef0af1e26",
-    "WP_TAG_COMMIT": "81606cbb32d29df20147d1b68b662c1082654d81",
+    "PW_TAG_COMMIT": "4287f31510771fc999f8a58a024c81ca10b8d55f",
+    "WP_TAG_COMMIT": "4ab992fa2931ae2b17ef73508b1370030b7878c3",
 }
 
 UNBIND_169 = """\
@@ -79,6 +79,8 @@ def _entrada(changelog: Path) -> tuple[str, dict[str, str]]:
     versao = linhas[0].split("(", 1)[1].split(")", 1)[0]
     campos = {}
     for linha in linhas:
+        if linha.startswith(" -- "):
+            break
         texto = linha.strip().removeprefix("* ")
         for chave in ("Upstream", "Empacotamento"):
             if texto.startswith(f"{chave}: "):

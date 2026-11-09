@@ -1,3 +1,18 @@
+pipewire (1.6.11-0~hefesto24.04.1) noble; urgency=medium
+
+  * O upstream 1.6.11, a última 1.6 publicada, sobre o mesmo empacotamento
+    do Pop!_OS 24.04. Traz a 1.6.10 (os estalos no fim dos formatos sem
+    sinal, o atraso traseiro do upmix #5490, o JACK, a fila de REQUEST do
+    pulse e o RegisterApplication do Bluetooth quando o adaptador some,
+    #5096) e a 1.6.11 (as correções do Bluetooth trazidas para a 1.6 e o
+    travamento ao drenar no plugin ALSA, #5544). O 06de0ed segue no fonte.
+  * pop-0001, pop-0002 e debian-0001 aplicam sem fuzz: a 1.6.11 não traz
+    nenhum dos três.
+  * Upstream: 1.6.11 4287f31510771fc999f8a58a024c81ca10b8d55f
+  * Empacotamento: 1.6.8-1pop1~1787688714~24.04~fdff050
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Mon, 09 Nov 2026 06:00:00 -0300
+
 pipewire (1.6.9-0~hefesto24.04.1) noble; urgency=medium
 
   * O upstream 1.6.9, a estável mais nova, sobre o empacotamento do

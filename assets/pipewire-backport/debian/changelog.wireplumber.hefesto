@@ -1,3 +1,12 @@
+wireplumber (0.5.19-0~hefesto24.04.1) noble; urgency=medium
+
+  * O upstream 0.5.19, a estável mais nova, que anda junto do PipeWire
+    1.6.11 (o aparelho morto que a falha deixava).
+  * Upstream: 0.5.19 4ab992fa2931ae2b17ef73508b1370030b7878c3
+  * Empacotamento: 0.5.12-2pop1~1766191027~24.04~d4bf441
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Mon, 09 Nov 2026 06:00:00 -0300
+
 wireplumber (0.5.18-0~hefesto24.04.1) noble; urgency=medium
 
   * O upstream 0.5.18, a estável mais nova, sobre o empacotamento do
