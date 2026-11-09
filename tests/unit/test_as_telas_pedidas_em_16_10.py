@@ -156,7 +156,8 @@ def test_o_gesto_permitir_navegacao_grava_o_que_cada_botao_diz() -> None:
 
 
 def _quadro_topo_da_09() -> str:
-    return _pagina("09-sistema.html").split('<div class="quadro-topo">')[1].split("</div>")[0]
+    return _pagina("09-sistema.html").split('<div class="quadro-topo">')[1].split(
+        '<div class="quadro-corpo">')[0]
 
 
 def test_as_notas_do_status_saem_em_tercos() -> None:
@@ -207,10 +208,11 @@ def test_o_parar_e_vermelho_e_o_restaurar_e_o_amarelo_do_padrao() -> None:
 def test_a_pilula_da_bandeja_mora_no_canto_do_quadro() -> None:
     """S4: o «Ícone na bandeja» no `.quadro-topo` da 09, a peça do «Modo Freestyle»."""
     topo = _quadro_topo_da_09()
-    pilula = re.search(r'<button class="cadeado[^"]*"[^>]*>', topo)
+    pilula = re.search(
+        r'(<button class="cadeado[^"]*"[^>]*>)<span class="p"></span>Ícone na bandeja', topo)
     assert pilula, "a pílula da bandeja saiu do canto do quadro"
     for atributo in ('data-gesto="bandeja"', 'data-campo="bandeja"', 'data-hef-classe="ligada"'):
-        assert atributo in pilula.group(0), atributo
+        assert atributo in pilula.group(1), atributo
     assert "Ícone na bandeja" in topo
     import pacotes
 
