@@ -30,7 +30,7 @@ buscar e montar, 5 para compilar). Quem instala é o `./install.sh`, no passo
 
 | Peça | De onde | Quem fixa |
 |---|---|---|
-| o fonte do portal | `apt-get source` da versão instalada, do repositório do Pop | o índice assinado do apt e o `Checksums-Sha256` do `.dsc` |
+| o fonte do portal | `apt-get source` da versão instalada, do repositório do Pop | o índice assinado do apt, com a autenticação forçada mesmo que um `apt.conf` a desligue, e o `Checksums-Sha256` do `.dsc` |
 | as crates de cima | o `vendor.tar` que vem dentro do fonte | o `Cargo.lock` do Pop |
 | o PR #92 | `assets/portal-cosmic-backport/patches/cosmic-protocols-92-destroy-antes-do-callback.patch` (o `gh pr diff 92`) | `PATCH_SHA256` no `BASELINE` |
 | a prova no binário | o caminho do `dispatch.rs` remendado, que o rustc grava no binário | a linha `MARCA_` do `BASELINE` |

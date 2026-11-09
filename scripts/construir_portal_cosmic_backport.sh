@@ -160,6 +160,9 @@ campo_do_dsc() {
     ' "$1"
 }
 
+APT_SO_ASSINADO=(-o APT::Get::AllowUnauthenticated=false -o Acquire::AllowInsecureRepositories=false
+    -o Acquire::AllowDowngradeToInsecureRepositories=false)
+
 buscar_fonte() {
     local pacote dir dsc tar esperado
     pacote="$(ler PORTAL_PACOTE)"
@@ -167,7 +170,7 @@ buscar_fonte() {
     mkdir -p "${dir}"
     command -v apt-get >/dev/null || morra "${RC_DEPS}" "falta o apt-get"
     diga "buscando o fonte de ${pacote}=${VERSAO} pelo apt (conferido pelo índice assinado do repositório)"
-    if ! (cd "${dir}" && LC_ALL=C apt-get source --download-only "${pacote}=${VERSAO}") \
+    if ! (cd "${dir}" && LC_ALL=C apt-get "${APT_SO_ASSINADO[@]}" source --download-only "${pacote}=${VERSAO}") \
             > "${dir}/baixar.log" 2>&1; then
         tail -n 5 "${dir}/baixar.log" >&2
         morra "${RC_FONTE}" "o apt não entregou o fonte de ${pacote}=${VERSAO}: o repositório que traz o portal precisa da linha deb-src (no Pop!_OS 24.04 a linha já vem ligada); o registro está em ${dir}/baixar.log"

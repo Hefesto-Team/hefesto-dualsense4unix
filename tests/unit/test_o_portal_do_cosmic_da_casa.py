@@ -311,10 +311,14 @@ class Construcao:
     cache: Path
 
 
-def _construir(tmp_path: Path, dispatch: str, *, curadas: str = "") -> Construcao:
+def _construir(tmp_path: Path, dispatch: str, *, curadas: str = "",
+               adulterar: bool = False) -> Construcao:
     fonte = tmp_path / "fonte"
     fonte.mkdir()
-    _fonte_de_mentira(fonte, dispatch)
+    nome_tar, _sha = _fonte_de_mentira(fonte, dispatch)
+    if adulterar:
+        with (fonte / nome_tar).open("ab") as tar:
+            tar.write(b"\0")
     diario = tmp_path / "chamadas.log"
     fakes = _ferramentas(tmp_path / "bin")
     _dpkg_query(fakes, {PACOTE: ("ii ", DE_CIMA)})
@@ -357,6 +361,26 @@ def test_sem_rust_o_construtor_recusa_e_diz_o_que_instalar(tmp_path: Path) -> No
         f'cosmic-client-toolkit = {{ path = "../{BASE["ARVORE_DO_PATCH"]}/client-toolkit" }}'
         in toml
     )
+
+
+def test_o_fonte_do_portal_so_vem_do_apt_assinado(tmp_path: Path) -> None:
+    """Prova da D-0911-A-ORIGEM-DO-FONTE-SE-CONFERE-PELA-ASSINATURA: o fonte do portal vem só do
+    apt, com a autenticação do índice forçada mesmo que um apt.conf da máquina a desligue."""
+    c = _construir(tmp_path, DISPATCH_ANTES)
+    busca = [linha for linha in c.chamadas if " source " in linha]
+    assert len(busca) == 1, c.chamadas
+    for opcao in ("APT::Get::AllowUnauthenticated=false",
+                  "Acquire::AllowInsecureRepositories=false",
+                  "Acquire::AllowDowngradeToInsecureRepositories=false"):
+        assert f"-o {opcao}" in busca[0], busca[0]
+    assert "--allow-unauthenticated" not in busca[0] and "trusted=yes" not in busca[0]
+
+
+def test_o_tarball_do_portal_que_nao_bate_com_o_dsc_nao_se_usa(tmp_path: Path) -> None:
+    c = _construir(tmp_path, DISPATCH_ANTES, adulterar=True)
+    assert c.rc == 4, c.saida
+    assert "não confere com o" in c.saida, c.saida
+    assert not list((c.cache / "portal-cosmic-obra").glob(f"{PACOTE}-*/Cargo.toml"))
 
 
 def test_a_versao_de_cima_que_ja_traz_o_pr_e_nada_a_fazer(tmp_path: Path) -> None:
