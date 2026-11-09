@@ -9,7 +9,7 @@ troca para o padrão é do serviço (`test_o_servico_troca_o_perfil_de_jogo_desi
 AS MORDIDAS: ponha a exceção do ativo de volta no `_sem_os_ocultos`, e o ativo fica;
 troque o `todos` do `pacote` pelos perfis do disco, e o desinstalado volta; tire o
 `casa_a_janela`, e o
-jogo aberto agora perde o perfil para o Freestyle;
+jogo aberto agora perde o perfil;
 troque o do `_alvo_do_editor`, e o editor abre no perfil que a lista não mostra; tire o
 `bool(foto.nomes)`, e a leitura da Steam que falha esconde todo jogo do usuário.
 """
