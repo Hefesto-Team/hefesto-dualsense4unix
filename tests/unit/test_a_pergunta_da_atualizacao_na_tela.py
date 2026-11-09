@@ -286,8 +286,8 @@ def test_no_cartao_a_versao_e_curta_e_a_inteira_vai_a_dica() -> None:
          "para": "24.04", "rotulo": "12 pacotes", "marcada": True, "volta": 1}]}
     mapa = tela.html_do_mapa(conferencia)
     assert ('data-dica="nvidia-driver-595 · 595.104.02 → 595.110.07"' in mapa)
-    assert ('<span class="mp-v"><span class="de">595.104.02</span><span class="seta">→</span>'
-            '<span class="nv">595.110.07</span></span>') in mapa
+    assert ('<span class="mp-v"><span class="par"><span class="de">595.104.02</span>'
+            '<span class="seta">→</span></span><span class="nv">595.110.07</span></span>') in mapa
     assert 'data-dica="A captura · 1.11.0~1792525517~24.04~f448ddf+0~hefesto1"' in mapa
     assert '<span class="mp-v"><span class="nv">1.11.0</span></span>' in mapa
     assert '<span class="mp-v"><span class="nv">12 pacotes</span></span>' in mapa

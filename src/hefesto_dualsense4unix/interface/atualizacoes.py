@@ -86,7 +86,7 @@ CSS = """
 .hef-atualiza .btn.amarelo-padrao:hover{background:rgba(241,250,140,.08)}
 .hef-atualiza .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
 .hef-atualiza .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
-.hef-atualiza .btn .n{font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.hef-atualiza .btn .n{font-family:'JetBrains Mono',monospace;font-size:12px}
 .hef-atualiza .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:9px;
   height:var(--h-acao,34px);white-space:nowrap;border-radius:999px;padding:0 16px 0 12px;width:auto;
   font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;
@@ -149,7 +149,11 @@ CSS = """
 .hef-atualiza .mp-n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
 .hef-atualiza .mp-v{font-family:'JetBrains Mono',monospace;font-size:12px;
-  color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  color:var(--texto-suave);white-space:nowrap;overflow:hidden;display:flex;
+  flex-flow:row-reverse wrap;justify-content:flex-end;height:16px;line-height:16px}
+.hef-atualiza .mp-v .nv{order:-1;flex:0 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis}
+.hef-atualiza .mp-v .par{flex:none}
 .hef-atualiza .mp-v .seta{color:var(--purple);margin:0 5px}
 .hef-atualiza .mp-c.nova .mp-v .nv{color:var(--fg);font-weight:500}
 .hef-atualiza .mp-mx{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
@@ -184,7 +188,6 @@ CSS = """
 .hef-atualiza .mp-s{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font:700 13px/1 'JetBrains Mono',monospace;background:var(--orange);
   color:var(--app-bg)}
-}
 .hef-atualiza .mp-c.fixa,.hef-atualiza .mp-c.sem-rede{border-style:dashed;
   background:transparent}
 .hef-atualiza .mp-c.fixa .mp-i,.hef-atualiza .mp-c.sem-rede .mp-i{color:var(--comment);
@@ -310,7 +313,8 @@ def _versao_a_vista(item: dict[str, Any]) -> str:
         return f'<span class="nv">{_e(item["rotulo"])}</span>'
     de, agora = _par_de_versoes(item)
     if de:
-        return (f'<span class="de">{_e(versao_curta(de))}</span><span class="seta">→</span>'
+        return (f'<span class="par"><span class="de">{_e(versao_curta(de))}</span>'
+                f'<span class="seta">→</span></span>'
                 f'<span class="nv">{_e(versao_curta(agora))}</span>')
     return f'<span class="nv">{_e(versao_curta(agora))}</span>' if agora else ""
 
@@ -397,7 +401,7 @@ def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
     pendente = (f'<div class="pendente">{jogo}<span>· espera</span></div>'
                 if jogo_aberto else "")
     apagado = "" if n else " apagado"
-    principal = ('<button class="btn principal" data-gesto="atualizacoes-atualizar">'
+    principal = (f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar">'
                  'Atualizar ao fechar o jogo</button>' if jogo_aberto else
                  f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar">'
                  f'Atualizar <span class="n">{n}</span></button>')

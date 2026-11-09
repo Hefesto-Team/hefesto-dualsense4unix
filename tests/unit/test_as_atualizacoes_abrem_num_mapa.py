@@ -85,17 +85,31 @@ MEDIR_O_MAPA = """() => {
           fora: Math.max(0, r.bottom - innerHeight, -r.top),
           cortados: Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn, .cadeado'))
             .filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent.trim()),
-          letra: Math.min(...Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn'))
-            .map(e => parseFloat(getComputedStyle(e).fontSize)))};
+          letra: Math.min(...Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn, .btn .n'))
+            .map(e => parseFloat(getComputedStyle(e).fontSize))),
+          sem_a_nova: Array.from(cx.querySelectorAll('.mp-v')).filter(v => {
+            const nv = v.querySelector('.nv'), a = v.getBoundingClientRect();
+            if (!nv) return false;
+            const b = nv.getBoundingClientRect();
+            return b.top < a.top - 1 || b.bottom > a.bottom + 1 || b.right > a.right + 1
+              || nv.scrollWidth > nv.clientWidth + 1;
+          }).map(v => v.textContent),
+          lisas: Array.from(cx.querySelectorAll('.mp-c.fixa'))
+            .filter(e => getComputedStyle(e).borderStyle !== 'dashed')
+            .map(e => e.textContent.trim())};
 }"""
+
+
+PAR_LONGO = ("1.6.11 · 0.5.19", "1.6.12 · 0.5.19")
 
 
 def _mesa(estados: list[str]) -> dict[str, object]:
     pecas = []
     for i, (ident, estado) in enumerate(zip(tela.ORDEM_NA_TELA, estados, strict=False)):
         exemplo = next(p for p in aba09.EXEMPLO_DAS_PECAS["pecas"] if p["id"] == ident)
+        de, para = PAR_LONGO if ident == "som" else ("10.20.30", "10.20.31")
         pecas.append({**exemplo, "estado": estado, "volta": 1, "marcada": i % 2 == 0,
-                      "de": "10.20.30", "para": "10.20.31", "rotulo": "",
+                      "de": de, "para": para, "rotulo": "",
                       "completa": "1:10.20.31~24.04+0~hefesto1"})
     return {"pecas": pecas}
 
@@ -106,7 +120,8 @@ def _paginas(pasta: Path) -> dict[str, Path]:
     saida = {}
     for nome, estados in MESAS_CHEIAS.items():
         corpo = tela.html_da_pergunta(_mesa(estados), {"sozinho": True, "dias": 7},
-                                      jogo_aberto=True, nome_do_jogo="Um jogo de nome longo")
+                                      jogo_aberto=nome != "treze-novas",
+                                      nome_do_jogo="Um jogo de nome longo")
         caixa = (f'<style>{tela.CSS}</style><div id="{tela.ID_DA_CAIXA}" '
                  f'class="hef-atualiza aberta">{corpo}</div>')
         arquivo = pasta / f"{nome}.html"
@@ -118,7 +133,10 @@ def _paginas(pasta: Path) -> dict[str, Path]:
 def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
     """D-0911-AS-ATUALIZACOES-ABREM-NUM-MAPA: três e quatro grupos cheios cabem em 1212x700.
 
-    MORDIDA: com o cartão de 64 px e os espaços da primeira versão, a «quatro-grupos» rola 54 px.
+    MORDIDA: com o cartão de 64 px e os espaços da primeira versão, a «quatro-grupos» rola 54 px;
+    com a chave solta antes da regra das fixas, as fixas saem lisas («lisas»); com o número do
+    «Atualizar» a 11,5 px, a «letra» fica abaixo de 12; com o par das versões numa linha que
+    corta, a versão nova do «Som» sai com reticências («sem_a_nova»).
     """
     import pytest
 
@@ -138,7 +156,7 @@ def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
                     medida = pg.evaluate(MEDIR_O_MAPA)
                     pg.close()
                     if medida["rola"] > 0 or medida["fora"] > 0 or medida["cortados"] \
-                            or medida["letra"] < 12:
+                            or medida["letra"] < 12 or medida["lisas"] or medida["sem_a_nova"]:
                         falhas.append((nome, f"{larg}x{alt}", medida))
         finally:
             nav.close()
@@ -166,8 +184,8 @@ def test_o_cartao_le_o_estado_e_os_campos_do_motor_nos_dois_formatos() -> None:
     assert grupos == ["nova", "revisar", "em-dia"]
     assert "GameInput" not in mapa
     assert 'data-dica="BlueZ · 5.89-0ubuntu1~hefesto2"' in mapa
-    assert '<span class="de">5.88</span><span class="seta">→</span><span class="nv">5.89</span>' \
-        in mapa
+    assert ('<span class="par"><span class="de">5.88</span><span class="seta">→</span></span>'
+            '<span class="nv">5.89</span>') in mapa
     revisar = re.search(r'<div class="mp-c revisar"[^>]*>.*?</div>', mapa, re.S).group(0)
     assert 'data-dica="a casa precisa revisar os patches · 1.6.11 · 0.5.19 → 1.6.12 · 0.5.19"' \
         in revisar
@@ -177,3 +195,36 @@ def test_o_cartao_le_o_estado_e_os_campos_do_motor_nos_dois_formatos() -> None:
                      r'data-v="portal"', mapa)
     assert tela.ids_para_atualizar({"pecas": volta_2}) == ["bluetooth"]
     assert tela.quantas_novas({"pecas": volta_2}) == 1
+
+
+def chaves_soltas(css: str) -> list[int]:
+    """As linhas em que uma chave fecha sem ter aberto: a regra seguinte some no navegador."""
+    nivel, soltas = 0, []
+    for numero, linha in enumerate(css.splitlines(), 1):
+        for letra in linha:
+            nivel += {"{": 1, "}": -1}.get(letra, 0)
+            if nivel < 0:
+                soltas.append(numero)
+                nivel = 0
+    return soltas + ([-1] if nivel else [])
+
+
+def test_o_css_do_mapa_fecha_cada_chave_que_abre() -> None:
+    """D-0911-AS-ATUALIZACOES-ABREM-NUM-MAPA: nenhuma chave solta no CSS da caixa e da seção.
+
+    MORDIDA: a chave solta depois do selo «!» da peça a revisar apagava a regra das fixas.
+    """
+    for nome, css in (("tela.CSS", tela.CSS), ("aba09", aba09.CSS_DAS_ATUALIZACOES)):
+        assert chaves_soltas(css) == [], (nome, chaves_soltas(css))
+    assert chaves_soltas(".a{x:1}\n}\n.b{y:2}") == [2]
+
+
+def test_o_atualizar_se_apaga_sem_peca_marcada_tambem_com_o_jogo_aberto() -> None:
+    """D-0911-AS-ATUALIZACOES-ABREM-NUM-MAPA: sem peça marcada, o «Atualizar» do rodapé se
+    apaga com o jogo aberto ou fechado, em vez de recusar no clique."""
+    nada = {"pecas": [{"id": "proton", "nome": "GE-Proton", "estado": "em_dia", "volta": 1,
+                       "marcada": True, "de": "11-12", "para": "11-12"}]}
+    for aberto in (False, True):
+        corpo = tela.html_da_pergunta(nada, {"sozinho": False, "dias": 7}, jogo_aberto=aberto)
+        assert re.search(r'class="btn principal apagado" data-gesto="atualizacoes-atualizar"',
+                         corpo), aberto
