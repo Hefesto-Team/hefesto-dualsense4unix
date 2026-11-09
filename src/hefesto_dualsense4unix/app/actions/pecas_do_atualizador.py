@@ -967,7 +967,8 @@ def _hefesto_sem_reinstalar(_versoes: Versoes) -> str:
 
 def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> None:
     vao = _vao()
-    motivo = vao.por_que_nao(RAIZ_DO_REPOSITORIO)
+    motivo = vao.por_que_nao(RAIZ_DO_REPOSITORIO) or (
+        "install em curso" if vao._install_em_curso() else "")
     if motivo:
         raise EtapaFalhouError(motivo)
     vao._instalar(RAIZ_DO_REPOSITORIO, vao._rodar_o_install)

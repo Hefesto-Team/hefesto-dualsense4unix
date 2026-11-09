@@ -658,9 +658,13 @@ def test_o_hefesto_reinstala_rodando_o_install_com_a_guarda_do_avanco(
         def __init__(self) -> None:
             self.motivo = ""
             self.nota: list[str] = []
+            self.em_curso = False
 
         def por_que_nao(self, _raiz: Path) -> str:
             return self.motivo
+
+        def _install_em_curso(self) -> bool:
+            return self.em_curso
 
         def _instalar(self, _raiz: Path, _rodar: Any) -> None:
             feito.append("install")
@@ -684,6 +688,10 @@ def test_o_hefesto_reinstala_rodando_o_install_com_a_guarda_do_avanco(
     with pytest.raises(at.EtapaFalhouError, match="árvore com mudança"):
         r.instalar(at.Passo(), {})
     assert feito == ["install"]
-    vao.motivo, vao.nota = "", ["o install saiu com o código 1"]
+    vao.motivo, vao.em_curso = "", True
+    with pytest.raises(at.EtapaFalhouError, match="install em curso"):
+        r.instalar(at.Passo(), {})
+    assert feito == ["install"]
+    vao.em_curso, vao.nota = False, ["o install saiu com o código 1"]
     with pytest.raises(at.EtapaFalhouError, match="código 1"):
         r.instalar(at.Passo(), {})
