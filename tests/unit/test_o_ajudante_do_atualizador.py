@@ -21,6 +21,7 @@ import io
 import json
 import os
 import pwd
+import re
 import shutil
 import subprocess
 import tarfile
@@ -526,3 +527,35 @@ def test_o_oldkern_que_nao_e_o_kernel_registrado_nao_vira_volta(lar: Lar) -> Non
                                                       encoding="utf-8")
     assert lar.rodar("kernel-anterior").returncode == 2
     assert not [x for x in lar.lidas() if x.startswith("bootctl")]
+
+
+def _o_que_o_root_grava() -> set[str]:
+    camada = (RAIZ / "scripts/lib/camada_de_maquina.sh").read_text(encoding="utf-8")
+    inicio = camada.index("_instalar_as_receitas_do_atualizador() {")
+    fim = camada.index("install_censo_do_gabinete_host() {")
+    gravados = set(re.findall(r"/usr/local/lib/hefesto-dualsense4unix/[\w.-]+", camada[inicio:fim]))
+    ajudante = (RAIZ / "scripts/hefesto_atualizador_raiz.sh").read_text(encoding="utf-8")
+    cache = re.search(r"^\s+CACHE=(/\S+)$", ajudante, re.M)
+    estado = re.search(r"^\s+ESTADO=(/\S+)$", ajudante, re.M)
+    assert cache and estado, "o ajudante mudou a forma das pastas do root"
+    gravados |= {f"{cache.group(1)}/{sub}"
+                 for sub in set(re.findall(r"\$\{CACHE\}/([a-z]+)", ajudante))}
+    gravados.add(estado.group(1))
+    pecas = re.search(r'^BACKPORTS="([^"]+)"', ajudante, re.M)
+    assert pecas, "o ajudante mudou a lista das peças da casa"
+    gravados |= {f"/var/cache/{p}hefesto-backport-{b}"
+                 for b in pecas.group(1).split() for p in ("", "private/")}
+    return gravados
+
+
+def test_o_uninstall_leva_tudo_que_o_install_e_o_ajudante_gravam_como_root() -> None:
+    """O ajudante, os sufixos, as receitas, as entregas dos backports, o MangoHud guardado, o
+    registro do kernel e a caixa da construção saem no uninstall."""
+    removidos = set()
+    for linha in (RAIZ / "uninstall.sh").read_text(encoding="utf-8").splitlines():
+        if re.match(r"\s*sudo rm -[a-z]*f", linha):
+            removidos |= set(re.findall(r"(/[\w./-]+)", linha))
+    gravados = _o_que_o_root_grava()
+    assert {"/usr/local/lib/hefesto-dualsense4unix/receitas",
+            "/var/cache/hefesto-dualsense4unix/backports"} <= gravados
+    assert not gravados - removidos, sorted(gravados - removidos)

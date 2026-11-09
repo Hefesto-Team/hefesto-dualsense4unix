@@ -729,6 +729,9 @@ if sudo -n true 2>/dev/null; then
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa 2>/dev/null || true
     sudo rm -rf /var/cache/hefesto-dualsense4unix/mangohud 2>/dev/null || true
     sudo rm -rf /var/lib/hefesto-dualsense4unix/atualizador 2>/dev/null || true
+    sudo rm -rf /usr/local/lib/hefesto-dualsense4unix/receitas /var/cache/hefesto-dualsense4unix/backports 2>/dev/null || true
+    sudo rm -rf /var/cache/hefesto-backport-bluez /var/cache/hefesto-backport-pipewire /var/cache/hefesto-backport-portal 2>/dev/null || true
+    sudo rm -rf /var/cache/private/hefesto-backport-bluez /var/cache/private/hefesto-backport-pipewire /var/cache/private/hefesto-backport-portal 2>/dev/null || true
     sudo rm -rf /run/hefesto-dualsense4unix/placa 2>/dev/null || true
     sudo rm -rf /run/hefesto-bt-ponte /run/hefesto-bt-rebind /run/hefesto-bt-watchdog \
         /run/hefesto-bt-watchdog.restart-stamp 2>/dev/null || true
