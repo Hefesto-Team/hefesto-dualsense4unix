@@ -1,11 +1,13 @@
 """O-SERVICO-TROCA-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-01: o serviço devolve o padrão sem a aba.
 
-O perfil ativo cujo jogo saiu do disco dá lugar ao Freestyle no passo do autoswitch, ao subir e
-quando a biblioteca muda, sem aba aberta. A biblioteca é a de mentira do lar isolado da suíte.
+O perfil ativo cujo jogo saiu do disco sai no passo do autoswitch, ao subir e quando a biblioteca
+muda, sem aba aberta: o sistema devolve o que o restore devolveria (o último jogo, senão a escolha
+do usuário), e sem nada nenhum perfil fica ativo. A biblioteca é a de mentira do lar isolado.
 
-AS MORDIDAS: tire o `_o_padrao_assume` do `_tick`, e o perfil fica; tire o `bool(foto.nomes)` do
-`fora_do_disco`, e a Steam sem leitura troca o perfil do usuário; tire o `casa_a_janela`, e o jogo
-em cena perde o perfil; tire o `self._chave = chave`, e o laço pergunta ao disco a cada volta.
+AS MORDIDAS: tire o `_o_desinstalado_sai` do `_tick`, e o perfil fica; tire o `bool(foto.nomes)`
+do `fora_do_disco`, e a Steam sem leitura troca o perfil do usuário; tire o `casa_a_janela`, e o
+jogo em cena perde o perfil; tire o `self._chave = chave`, e o laço pergunta ao disco a cada volta;
+troque a devolução por `activate("Freestyle", origin="manual")`, e o próximo jogo não troca.
 """
 from __future__ import annotations
 
@@ -19,6 +21,8 @@ from hefesto_dualsense4unix.integrations import jogos_locais
 from hefesto_dualsense4unix.profiles import jogo_desinstalado
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 
+NENHUM = ("—", "soltar")
+
 
 class _Gerente:
     def __init__(self, store: StateStore) -> None:
@@ -31,6 +35,12 @@ class _Gerente:
             raise RuntimeError("o daemon recusou")
         self.pedidos.append((nome, origin))
         self.store.set_active_profile(nome)
+
+    def soltar_o_perfil(self) -> None:
+        if self.recusar:
+            raise RuntimeError("o daemon recusou")
+        self.pedidos.append(NENHUM)
+        self.store.set_active_profile(None)
 
 
 @pytest.fixture(autouse=True)
@@ -85,7 +95,7 @@ def test_ao_subir_o_ativo_de_jogo_desinstalado_vira_o_padrao_uma_vez() -> None:
     _perfis()
     sw, gerente = _servico("Ativo fora")
     _volta(sw)
-    assert gerente.pedidos == [("Freestyle", "manual")]
+    assert gerente.pedidos == [NENHUM]
     _volta(sw)
     assert len(gerente.pedidos) == 1
 
@@ -103,7 +113,7 @@ def test_quando_a_biblioteca_muda_o_ativo_que_perdeu_o_jogo_troca(
     (default_steam_root() / "steamapps" / "appmanifest_9100003.acf").unlink()
     gerente.store.set_active_profile("Ativo fora")
     _volta(sw)
-    assert gerente.pedidos == [("Freestyle", "manual")]
+    assert gerente.pedidos == [NENHUM]
 
 
 def test_perfil_ativado_depois_tambem_e_visto() -> None:
@@ -114,7 +124,7 @@ def test_perfil_ativado_depois_tambem_e_visto() -> None:
     assert gerente.pedidos == []
     gerente.store.set_active_profile("Ativo fora")
     _volta(sw)
-    assert gerente.pedidos == [("Freestyle", "manual")]
+    assert gerente.pedidos == [NENHUM]
 
 
 def test_instalado_ou_sem_jogo_nao_troca() -> None:
@@ -167,18 +177,77 @@ def test_o_pedido_recusado_volta_depois_da_espera(monkeypatch: pytest.MonkeyPatc
     assert gerente.pedidos == []
     monkeypatch.setattr(jogo_desinstalado, "ESPERA_DEPOIS_DA_FALHA_S", 0.0)
     _volta(sw)
-    assert gerente.pedidos == [("Freestyle", "manual")]
+    assert gerente.pedidos == [NENHUM]
 
 
-def test_o_padrao_e_o_nome_do_produto(monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.profiles import loader
+def test_volta_a_escolha_do_usuario_pela_origem_do_restore() -> None:
+    from hefesto_dualsense4unix.utils.session import load_last_profile, save_last_profile
 
     _instalar("9100001", "Jogo Instalado")
     _perfis()
-    monkeypatch.setattr(loader, "NOME_DO_PADRAO", "Outro padrão")
+    save_last_profile("Sem jogo")
     sw, gerente = _servico("Ativo fora")
     _volta(sw)
-    assert gerente.pedidos == [("Outro padrão", "manual")]
+    assert gerente.pedidos == [("Sem jogo", "system")]
+    assert load_last_profile() == "Sem jogo"
+
+
+def test_o_desinstalado_sai_da_escolha_e_do_ultimo_jogo() -> None:
+    from hefesto_dualsense4unix.utils.session import (
+        a_escolha_do_usuario,
+        lembrar_o_ultimo_jogo,
+        o_ultimo_jogo,
+        save_last_profile,
+    )
+
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    save_last_profile("Ativo fora")
+    lembrar_o_ultimo_jogo("Ativo fora")
+    sw, gerente = _servico("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == [NENHUM]
+    assert a_escolha_do_usuario(freestyle_ligado=False) is None
+    assert o_ultimo_jogo() is None
+    _volta(sw)
+    assert gerente.pedidos == [NENHUM]
+
+
+def test_o_proximo_jogo_troca_o_perfil_depois_da_troca() -> None:
+    """Prova de que a troca não trava a troca por jogo: nem o Modo Freestyle, nem a trava da mão.
+
+    MORDIDA: devolva `activate("Freestyle", origin="manual")` no `_o_desinstalado_sai` e o
+    perfil do jogo aberto não entra.
+    """
+    import time
+
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager, o_freestyle_manda
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+    from hefesto_dualsense4unix.testing import FakeController
+
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    save_profile(Profile(name="Freestyle", priority=0, match=MatchAny()))
+    fc = FakeController()
+    fc.connect()
+    store = StateStore()
+    gerente = ProfileManager(controller=fc, store=store)
+    gerente.activate("Ativo fora", origin="autoswitch")
+    janela = {"wm_class": "kodi"}
+    sw = AutoSwitcher(manager=gerente, window_reader=lambda: dict(janela), store=store)
+    agora = 0.0
+    for _ in range(4):
+        agora += 1.0
+        sw._tick(sw._ler_fora_do_laco(), agora)
+    assert store.active_profile != "Ativo fora"
+    assert not o_freestyle_manda(store)
+    assert not store.manual_profile_lock_active(time.monotonic())
+    janela["wm_class"] = "steam_app_9100001"
+    for _ in range(30):
+        agora += 1.0
+        sw._tick(sw._ler_fora_do_laco(), agora)
+    assert store.active_profile == "Instalado"
 
 
 def test_a_pergunta_repetida_nao_le_o_catalogo(monkeypatch: pytest.MonkeyPatch) -> None:

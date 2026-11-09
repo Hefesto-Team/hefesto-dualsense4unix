@@ -371,7 +371,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "Desliga a detecção de janela em foco (`HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT` em "
         "`src/hefesto_dualsense4unix/cli/app.py:354`, "
         "`HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT` em "
-        "`src/hefesto_dualsense4unix/profiles/autoswitch.py:204`). Existe para o teste do "
+        "`src/hefesto_dualsense4unix/profiles/autoswitch.py:212`). Existe para o teste do "
         "autoswitch "
         "não "
         "depender de um compositor vivo, e para a CLI poder rodar num shell sem "

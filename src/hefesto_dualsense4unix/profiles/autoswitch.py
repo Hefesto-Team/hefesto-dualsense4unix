@@ -140,6 +140,14 @@ def _appids_de_jogo_do_perfil(profile: object) -> frozenset[int]:
 
 
 @dataclass(frozen=True)
+class _ODesinstaladoSai:
+    """O perfil ativo de jogo fora do disco e o que o sistema devolve no lugar dele."""
+
+    perfil: str
+    o_que_volta: str | None
+
+
+@dataclass(frozen=True)
 class _OQueOTiqueLeu:
     """O que o `_tick` pergunta ao disco, lido antes dele, no executor do `run()`."""
 
@@ -148,7 +156,7 @@ class _OQueOTiqueLeu:
     na_exclusao: bool
     escolha: Profile | None
     freestyle_diz_o_modo: bool
-    o_padrao_assume: bool = False
+    o_desinstalado_sai: _ODesinstaladoSai | None = None
 
 
 @dataclass
@@ -240,43 +248,71 @@ class AutoSwitcher:
         perfis = perfis_para_consulta()
         info = self.window_reader()
         janela = str(info.get("wm_class") or "").strip()
+        sai = self._o_desinstalado_que_sai(perfis, janela)
         self._lido = _OQueOTiqueLeu(
             perfis, janela, self._na_lista_de_exclusao(janela), self._perfil_da_escolha(),
-            self.freestyle_ligado() and self._o_freestyle_diz_o_modo(),
-            self._o_padrao_deve_assumir(perfis, janela))
+            self.freestyle_ligado() and self._o_freestyle_diz_o_modo(), sai)
         return info
 
-    def _o_padrao_deve_assumir(self, perfis: list[Profile], janela: str) -> bool:
-        """O perfil ativo é de jogo fora do disco e sem janela dele em cena (leitura do disco)."""
+    def _o_desinstalado_que_sai(
+        self, perfis: list[Profile], janela: str
+    ) -> _ODesinstaladoSai | None:
+        """O perfil ativo de jogo fora do disco sai das memórias do boot (leitura do disco).
+
+        O que volta é o que o restore devolveria: o último jogo e, sem ele, a escolha do usuário.
+        """
         store = self._store_de_estado()
         ativo = getattr(store, "active_profile", None)
         if not isinstance(ativo, str) or not ativo or e_o_freestyle(ativo):
-            return False
+            return None
         try:
             em_cena = janela
             for chave in ("window_detect_last_class", "window_detect_current_class"):
                 classe = str(getattr(store, chave, "") or "").strip()
                 if classe and classe != "unknown" and classe.casefold() not in OWN_GUI_WM_CLASSES:
                     em_cena = em_cena or classe
-            return self._vigia_do_padrao.decidir(ativo, perfis, em_cena)
-        except Exception as exc:
-            logger.warning("autoswitch_padrao_nao_decidiu", err=str(exc))
-            return False
+            if not self._vigia_do_padrao.decidir(ativo, perfis, em_cena):
+                return None
+            from hefesto_dualsense4unix.utils.session import (
+                a_escolha_do_usuario,
+                esquecer_a_escolha,
+                esquecer_o_ultimo_jogo,
+                o_ultimo_jogo,
+            )
 
-    def _o_padrao_assume(self) -> None:
-        """O Freestyle assume o lugar do perfil de jogo desinstalado, pelo gesto do «Ativar»."""
-        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
-
-        store = self._store_de_estado()
-        if store is not None and getattr(store, "native_mode_active", False):
-            return
-        try:
-            self.manager.activate(NOME_DO_PADRAO, origin="manual")
+            esquecer_o_ultimo_jogo(ativo)
+            esquecer_a_escolha(ativo)
+            volta = o_ultimo_jogo() or a_escolha_do_usuario(freestyle_ligado=False)
         except Exception as exc:
             self._vigia_do_padrao.falhou()
-            logger.warning("autoswitch_padrao_nao_assumiu", err=str(exc))
+            logger.warning("autoswitch_desinstalado_nao_decidiu", err=str(exc))
+            return None
+        return _ODesinstaladoSai(ativo, volta)
+
+    def _o_desinstalado_sai(self, sai: _ODesinstaladoSai) -> None:
+        """O sistema devolve o que o restore devolveria; sem nada, nenhum perfil fica ativo.
+
+        A origem é a do restore: não liga o Modo Freestyle, não arma a trava da mão e não grava
+        a escolha, e o próximo jogo que abrir troca o perfil.
+        """
+        store = self._store_de_estado()
+        if store is not None and getattr(store, "native_mode_active", False):
+            self._vigia_do_padrao.falhou()
             return
-        logger.info("autoswitch_padrao_assumiu", para=NOME_DO_PADRAO)
+        try:
+            if sai.o_que_volta:
+                self.manager.activate(sai.o_que_volta, origin="system")
+            else:
+                self.manager.soltar_o_perfil()
+        except Exception as exc:
+            self._vigia_do_padrao.falhou()
+            logger.warning("autoswitch_desinstalado_nao_saiu", perfil=sai.perfil, err=str(exc))
+            return
+        self._ultimo_jogo_lido = False
+        self._current_profile = sai.o_que_volta
+        self._entrou_pelo_jogo = None
+        logger.info("autoswitch_desinstalado_saiu", perfil=sai.perfil,
+                    volta=sai.o_que_volta or "")
 
     def freestyle_ligado(self) -> bool:
         """True quando o Modo Freestyle está ligado: o tique não casa a janela."""
@@ -379,8 +415,8 @@ class AutoSwitcher:
         from hefesto_dualsense4unix.profiles.loader import com_os_perfis_lidos
 
         try:
-            if self._lido is not None and self._lido.o_padrao_assume:
-                self._o_padrao_assume()
+            if self._lido is not None and self._lido.o_desinstalado_sai is not None:
+                self._o_desinstalado_sai(self._lido.o_desinstalado_sai)
             with com_os_perfis_lidos(None if self._lido is None else self._lido.perfis):
                 self._decidir(info, now)
         finally:
