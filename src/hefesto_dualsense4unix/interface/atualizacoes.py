@@ -17,11 +17,13 @@ from typing import Any
 ID_DA_CAIXA = "hef-atualizacoes"
 ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
                  "kernel", "dkms", "sistema", "mangohud", "umu")
-GRUPOS_DO_MAPA = (("nova", "Escolha o que deve ser atualizado"), ("revisar", "A revisar"),
-                  ("em_dia", "Atualizado"), ("sem_rede", "Sem rede"))
+CAMPOS_DO_MAPA = (("mp-marcar", "Escolha o que deve ser atualizado"), ("mp-estado", "Atualizado"))
 ESTADOS_DO_MAPA = ("nova", "revisar", "em_dia")
 GRUPO_DO_ESTADO = {"fixa": "em_dia"}
-MARCAVEIS = ("nova", "em_dia")
+REINSTALAVEIS = ("em_dia", "revisar")
+DICA_DA_REINSTALACAO = "Marcar reinstala a versão de agora"
+DICA_SEM_REINSTALAR = "O Hefesto ainda não reinstala esta peça"
+DICA_SEM_REDE = "Sem rede: a versão publicada não foi conferida"
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
@@ -114,8 +116,7 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .mp-g{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:600;
   color:var(--green)}
 .hef-atualiza .mp-g + .mp-grade{margin-bottom:2px}
-.hef-atualiza .mp-g.nova{color:var(--purple)}
-.hef-atualiza .mp-g.sem-rede{color:var(--comment)}
+.hef-atualiza .mp-g.mp-marcar{color:var(--purple)}
 .hef-atualiza .mp-g .q{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
   color:var(--texto-mudo)}
 .hef-atualiza .mp-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 10px}
@@ -151,16 +152,13 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
   background:color-mix(in srgb,var(--purple) 8%,var(--app-bg))}
 .hef-atualiza .mp-c.nova .mp-i{color:var(--purple);
   background:color-mix(in srgb,var(--purple) 18%,transparent)}
-.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)){border-color:var(--border-forte);
-  background:var(--app-bg)}
-.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-i{color:var(--texto-mudo);
-  background:var(--border-sutil)}
-.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-n,
-.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v,
-.hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v .nv{color:var(--texto-mudo)}
-.hef-atualiza .mapa:not(.auto) .mp-c.em-dia .mp-mx{visibility:hidden}
-.hef-atualiza .mapa.auto .mp-c.em-dia:has(.mp-m:not(:checked)) .mp-t{
-  color:var(--texto-mudo)}
+.hef-atualiza .mp-c.mp-marcar .mp-i{color:var(--texto-suave);background:var(--border-sutil)}
+.hef-atualiza .mp-c.mp-marcar:has(.mp-m:checked){border-color:var(--purple);
+  background:color-mix(in srgb,var(--purple) 8%,var(--app-bg))}
+.hef-atualiza .mp-c.mp-marcar:has(.mp-m:checked) .mp-i{color:var(--purple);
+  background:color-mix(in srgb,var(--purple) 18%,transparent)}
+.hef-atualiza .mp-c.mp-marcar.sem-marca{border-style:dashed;background:transparent}
+.hef-atualiza .mp-c.mp-marcar.sem-marca .mp-n{color:var(--texto-suave)}
 .hef-atualiza .mp-c.em-dia{border-color:color-mix(in srgb,var(--green) 45%,var(--border-forte));
   background:color-mix(in srgb,var(--green) 5%,var(--app-bg))}
 .hef-atualiza .mp-g.revisar{color:var(--orange)}
@@ -323,43 +321,75 @@ def _grupo_do_cartao(item: dict[str, Any]) -> str:
     return estado if estado in ESTADOS_DO_MAPA else "sem_rede"
 
 
-def _cartao(item: dict[str, Any]) -> str:
+def marcavel(item: dict[str, Any]) -> bool:
+    """A peça com versão nova se atualiza; a em dia e a de revisar se reinstalam, se o motor
+    deixa."""
+    if item.get("volta", 1) != 1:
+        return False
     grupo = _grupo_do_cartao(item)
-    marcavel = item.get("volta", 1) == 1 and grupo in MARCAVEIS
-    dica = " · ".join(x for x in (str(item.get("dica") or ""), _versao_inteira(item)) if x)
-    inteiro = grupo == "nova" and marcavel
-    marca = ""
-    if marcavel:
-        caixa = (f'<input type="checkbox" class="mp-m"{" checked" if item.get("marcada") else ""}'
-                 f' data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
-        marca = f'<span class="mp-mx">{caixa}</span>' if inteiro else \
-            f'<label class="mp-mx">{caixa}</label>'
-    elif grupo == "revisar":
-        marca = '<span class="mp-s">!</span>'
-    etiqueta = "label" if inteiro else "div"
-    return (f'<{etiqueta} class="mp-c {grupo.replace("_", "-")}"{_dica(dica)}>'
-            f'<span class="mp-i">{_icone(str(item.get("id") or ""))}</span>'
+    return grupo == "nova" or (grupo in REINSTALAVEIS and item.get("reinstala", True) is not False)
+
+
+def e_reinstalacao(item: dict[str, Any]) -> bool:
+    return marcavel(item) and _grupo_do_cartao(item) != "nova"
+
+
+def marcada(item: dict[str, Any]) -> bool:
+    if not marcavel(item):
+        return False
+    return bool(item.get("reinstalar" if e_reinstalacao(item) else "marcada"))
+
+
+def _por_que_sem_marca(item: dict[str, Any]) -> str:
+    if _grupo_do_cartao(item) == "sem_rede":
+        return DICA_SEM_REDE
+    return str(item.get("motivo") or DICA_SEM_REINSTALAR)
+
+
+def _miolo(item: dict[str, Any]) -> str:
+    return (f'<span class="mp-i">{_icone(str(item.get("id") or ""))}</span>'
             f'<span class="mp-t"><span class="mp-n">{_e(item.get("nome"))}</span>'
-            f'<span class="mp-v">{_versao_a_vista(item)}</span></span>{marca}</{etiqueta}>')
+            f'<span class="mp-v">{_versao_a_vista(item)}</span></span>')
+
+
+def _dica_do_cartao(item: dict[str, Any], *extra: str) -> str:
+    partes = (str(item.get("dica") or ""), _versao_inteira(item), *extra)
+    return " · ".join(x for x in partes if x)
+
+
+def _cartao_da_escolha(item: dict[str, Any]) -> str:
+    if not marcavel(item):
+        return (f'<div class="mp-c mp-marcar sem-marca"'
+                f'{_dica(_dica_do_cartao(item, _por_que_sem_marca(item)))}>{_miolo(item)}</div>')
+    reinstala = DICA_DA_REINSTALACAO if e_reinstalacao(item) else ""
+    caixa = (f'<input type="checkbox" class="mp-m"{" checked" if marcada(item) else ""}'
+             f' data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
+    return (f'<label class="mp-c mp-marcar"{_dica(_dica_do_cartao(item, reinstala))}>'
+            f'{_miolo(item)}<span class="mp-mx">{caixa}</span></label>')
+
+
+def _cartao_do_estado(item: dict[str, Any]) -> str:
+    grupo = _grupo_do_cartao(item)
+    selo = '<span class="mp-s">!</span>' if grupo == "revisar" else ""
+    return (f'<div class="mp-c {grupo.replace("_", "-")}"{_dica(_dica_do_cartao(item))}>'
+            f'{_miolo(item)}{selo}</div>')
 
 
 def html_do_mapa(conferencia: dict[str, Any]) -> str:
-    """As peças em cartões, por grupo: o que há para baixar primeiro."""
+    """As mesmas peças nos dois campos: em cima o que se marca, embaixo o estado de cada uma."""
     itens = _ordenadas(conferencia.get("pecas") or [])
-    blocos = []
-    for chave, rotulo in GRUPOS_DO_MAPA:
-        dentro = [i for i in itens if _grupo_do_cartao(i) == chave]
-        if not dentro:
-            continue
-        blocos.append(f'<div class="mp-g {chave.replace("_", "-")}"><span>{rotulo}</span>'
-                      f'<span class="q">{len(dentro)}</span></div>'
-                      f'<div class="mp-grade">{"".join(_cartao(i) for i in dentro)}</div>')
+    if not itens:
+        return '<div class="mp-corpo"></div>'
+    cartao = {"mp-marcar": _cartao_da_escolha, "mp-estado": _cartao_do_estado}
+    blocos = [f'<div class="mp-g {chave}"><span>{rotulo}</span>'
+              f'<span class="q">{len(itens)}</span></div>'
+              f'<div class="mp-grade">{"".join(cartao[chave](i) for i in itens)}</div>'
+              for chave, rotulo in CAMPOS_DO_MAPA]
     return f'<div class="mp-corpo">{"".join(blocos)}</div>'
 
 
 def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
-    return [str(i["id"]) for i in _ordenadas(conferencia.get("pecas") or [])
-            if i.get("estado") == "nova" and i.get("marcada")]
+    return [str(i["id"]) for i in _ordenadas(conferencia.get("pecas") or []) if marcada(i)]
 
 
 def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,

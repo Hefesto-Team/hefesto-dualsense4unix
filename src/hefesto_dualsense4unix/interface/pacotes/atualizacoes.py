@@ -31,17 +31,24 @@ TELA: dict[str, Any] = {"vista": "", "perguntou": False, "escondida": 0.0, "lido
                         "calculando": False}
 
 
-def _com_a_escolha(conferencia: dict[str, Any], escolha: at.Escolha) -> dict[str, Any]:
+def _com_a_escolha(conferencia: dict[str, Any], escolha: at.Escolha,
+                   reinstalar: set[str] | frozenset[str] = frozenset()) -> dict[str, Any]:
     pecas = []
     for item in conferencia.get("pecas") or []:
         if isinstance(item, dict):
             marcada = escolha.marcadas.get(str(item.get("id")), bool(item.get("marcada", True)))
-            pecas.append({**item, "marcada": marcada and item.get("volta", 1) == 1})
+            pecas.append({**item, "marcada": marcada and item.get("volta", 1) == 1,
+                          "reinstalar": str(item.get("id")) in reinstalar})
     return {**conferencia, "pecas": pecas}
 
 
+def _reinstalar() -> set[str]:
+    """As peças em dia marcadas para reinstalar: valem até o «Atualizar», sem ir ao disco."""
+    return TELA.setdefault("reinstalar", set())
+
+
 def conferencia_vista() -> dict[str, Any]:
-    return _com_a_escolha(at.ler_a_conferencia(), at.ler_a_escolha())
+    return _com_a_escolha(at.ler_a_conferencia(), at.ler_a_escolha(), _reinstalar())
 
 
 def _jogo_aberto(ctx: Contexto | None) -> bool:
@@ -226,9 +233,10 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Atualizar N»: solta a fila das marcadas; com jogo aberto, a fila espera o jogo fechar."""
     ids = tela.ids_para_atualizar(conferencia_vista())
     if not ids:
-        raise ValueError("atualizar: nenhuma peça marcada com versão nova")
+        raise ValueError("atualizar: nenhuma peça marcada")
     if not at.soltar(ids):
         raise RuntimeError("atualizar: a fila não abriu (outra já roda)")
+    _reinstalar().clear()
     at.mudar_a_escolha(perguntada_em=time.time())
     TELA["vista"] = ""
     TELA["escondida"] = 0.0
@@ -259,14 +267,22 @@ def _so_na_troca(o: dict[str, Any]) -> bool:
 
 @gesto("*", "peca-da-atualizacao", grava="mudar_a_escolha")
 def peca(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A marca de uma peça: entra ou fica de fora, na pergunta e na «Atualização automática»."""
+    """A marca de uma peça: a com versão nova entra ou sai, e a escolha fica guardada; a em dia
+    entra ou sai da reinstalação, que vale até o «Atualizar»."""
     if not _so_na_troca(o):
         return
     ident = str(o.get("v") or "")
     registro = {x.id: x for x in at.pecas()}
     if ident not in registro or registro[ident].volta != 1:
         raise ValueError(f"peça desconhecida: {ident!r}")
-    at.mudar_a_escolha(peca=ident, marcada=not at.ler_a_escolha().marcada(registro[ident]))
+    item = next((i for i in conferencia_vista().get("pecas") or [] if str(i.get("id")) == ident),
+                None)
+    if item is None or not tela.marcavel(item):
+        raise ValueError(f"a peça {ident!r} não se marca")
+    if tela.e_reinstalacao(item):
+        _reinstalar().symmetric_difference_update({ident})
+    else:
+        at.mudar_a_escolha(peca=ident, marcada=not at.ler_a_escolha().marcada(registro[ident]))
     _repintar()
 
 

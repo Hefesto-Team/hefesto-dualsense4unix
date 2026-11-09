@@ -85,20 +85,22 @@ def test_o_mapa_agrupa_o_que_ha_para_baixar_e_so_a_nova_e_marcavel_inteira(
                                   jogo_aberto=False)
     grupos = re.findall(r'<div class="mp-g ([a-z-]+)"><span>([^<]+)</span>'
                         r'<span class="q">(\d+)</span>', corpo)
-    assert grupos == [("nova", "Escolha o que deve ser atualizado", "3"),
-                      ("em-dia", "Atualizado", "2")]
+    assert grupos == [("mp-marcar", "Escolha o que deve ser atualizado", "5"),
+                      ("mp-estado", "Atualizado", "5")]
     assert "Com o Hefesto" not in corpo and "mp-c fixa" not in corpo
-    assert re.search(r'<div class="mp-c em-dia"[^>]*><span class="mp-i">.*?'
-                     r'<span class="mp-n">Bluetooth</span>.*?</span></span></div>', corpo)
+    assert re.search(r'<div class="mp-c em-dia"[^>]*><span class="mp-i">(?:(?!</div>).)*?'
+                     r'<span class="mp-n">Bluetooth</span>', corpo)
     nomes = re.findall(r'class="mp-n">([^<]+)<', corpo)
-    assert nomes[:3] == ["Hefesto", "Proton", "Python"]
+    assert nomes[:5] == ["Hefesto", "Proton", "Bluetooth", "Python", "Kernel"] == nomes[5:]
     assert 'data-v="bluetooth"' not in corpo
     assert re.search(r'Atualizar <span class="n">2</span>', corpo)
     assert '<input type="checkbox" class="mp-m" data-gesto="peca-da-atualizacao" ' \
            'data-v="python">' in corpo
-    assert re.search(r'<label class="mp-c nova"[^>]*>.*?data-v="proton"', corpo)
-    assert re.search(r'<div class="mp-c em-dia"[^>]*>.*?<label class="mp-mx">'
-                     r'<input[^>]*data-v="kernel"', corpo)
+    assert re.search(r'<label class="mp-c mp-marcar"[^>]*>(?:(?!</label>).)*?data-v="proton"',
+                     corpo)
+    assert re.search(r'<label class="mp-c mp-marcar"[^>]*>(?:(?!</label>).)*?'
+                     r'<input type="checkbox" class="mp-m" data-gesto="peca-da-atualizacao" '
+                     r'data-v="kernel">', corpo)
     assert gestos.tela.ids_para_atualizar(gestos.conferencia_vista()) == ["hefesto", "proton"]
 
 
@@ -143,6 +145,31 @@ def test_atualizar_solta_so_as_marcadas(registro: list[at.Peca],
     assert soltas == [["hefesto", "python"]]
     assert gestos.TELA["vista"] == ""
     assert at.ler_a_escolha().perguntada_em > 0
+
+
+def test_marcar_a_em_dia_reinstala_e_vale_ate_o_atualizar(registro: list[at.Peca],
+                                                        monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: a em dia nasce desmarcada; marcá-la entra no
+    «Atualizar N» e na fila, sem ir ao ``atualizador.json``, e a marca some depois do «Atualizar».
+
+    MORDIDA: a marca da em dia gravada na escolha, ou fora da contagem, reprova.
+    """
+    soltas: list[list[str]] = []
+    monkeypatch.setattr(at, "soltar", lambda ids, **_k: soltas.append(list(ids)) or True)
+    assert tela.ids_para_atualizar(gestos.conferencia_vista()) == ["hefesto", "proton", "python"]
+    _gesto("peca-da-atualizacao", v="kernel", evento="change")
+    assert "kernel" not in at.ler_a_escolha().marcadas
+    vista = gestos.conferencia_vista()
+    assert tela.ids_para_atualizar(vista) == ["hefesto", "proton", "python", "kernel"]
+    corpo = tela.html_da_pergunta(vista, {"sozinho": False, "dias": 7}, jogo_aberto=False)
+    assert 'Atualizar <span class="n">4</span>' in corpo
+    assert 'class="mp-m" checked data-gesto="peca-da-atualizacao" data-v="kernel"' in corpo
+    _gesto("peca-da-atualizacao", v="kernel", evento="change")
+    assert tela.ids_para_atualizar(gestos.conferencia_vista()) == ["hefesto", "proton", "python"]
+    _gesto("peca-da-atualizacao", v="kernel", evento="change")
+    _gesto("atualizacoes-atualizar")
+    assert soltas == [["hefesto", "proton", "python", "kernel"]]
+    assert "kernel" not in tela.ids_para_atualizar(gestos.conferencia_vista())
 
 
 def _andamento(selo: str, motivo: str = "") -> dict[str, Any]:

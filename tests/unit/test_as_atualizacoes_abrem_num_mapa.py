@@ -82,8 +82,8 @@ def test_o_mapa_nao_tem_o_ajuste_e_os_grupos_dizem_o_que_sao() -> None:
         assert ("tn-cx mapa auto" in corpo) is sozinho
         assert "Escolha o que deve ser atualizado" in corpo and "Atualizado" in corpo
         assert "Em dia" not in corpo and "Para baixar" not in corpo
-    assert ("em_dia", "Atualizado") in tela.GRUPOS_DO_MAPA
-    assert tela.GRUPOS_DO_MAPA[0] == ("nova", "Escolha o que deve ser atualizado")
+    assert [r for _, r in tela.CAMPOS_DO_MAPA] == ["Escolha o que deve ser atualizado",
+                                                   "Atualizado"]
     assert not any(fica in tela.CSS for fica in (".cadeado", ".prazo", "at-ajuste"))
     assert ".mp-c.em-dia{" in tela.CSS
 
@@ -226,22 +226,21 @@ def test_o_cartao_le_o_estado_e_os_campos_do_motor_nos_dois_formatos() -> None:
          "completa": "1.11.0~1792525517~24.04~f448ddf+0~hefesto1"},
         {"id": "gdk", "nome": "GameInput", "estado": "fora", "volta": 1, "de": "1"}]
     antes = tela.html_do_mapa({"pecas": [hoje]})
-    assert '<div class="mp-g em-dia"><span>Atualizado</span>' in antes and "fixa" not in antes
-    assert "mp-m" not in antes
+    assert '<div class="mp-c em-dia"' in antes and "fixa" not in antes
+    assert 'class="mp-m"' not in antes and tela.DICA_SEM_REINSTALAR in antes
     mapa = tela.html_do_mapa({"pecas": volta_2})
-    grupos = re.findall(r'<div class="mp-g ([a-z-]+)">', mapa)
-    assert grupos == ["nova", "revisar", "em-dia"]
+    estado = _campo(mapa, "mp-estado")
+    assert re.findall(r'<div class="mp-c ([a-z-]+)"', estado) == ["nova", "revisar", "em-dia"]
     assert "GameInput" not in mapa
     assert 'data-dica="BlueZ · 5.89-0ubuntu1~hefesto2"' in mapa
     assert ('<span class="par"><span class="de">5.88</span><span class="seta">→</span></span>'
             '<span class="nv">5.89</span>') in mapa
-    revisar = re.search(r'<div class="mp-c revisar"[^>]*>.*?</div>', mapa, re.S).group(0)
+    revisar = re.search(r'<div class="mp-c revisar"[^>]*>.*?</div>', estado, re.S).group(0)
     assert 'data-dica="a casa precisa revisar os patches · 1.6.11 · 0.5.19 → 1.6.12 · 0.5.19"' \
         in revisar
     assert '<span class="mp-s">!</span>' in revisar and "mp-m" not in revisar
-    assert 'data-dica="1.11.0~1792525517~24.04~f448ddf+0~hefesto1"' in mapa
-    assert re.search(r'<div class="mp-c em-dia"[^>]*>.*?<label class="mp-mx"><input[^>]*'
-                     r'data-v="portal"', mapa)
+    assert 'data-dica="1.11.0~1792525517~24.04~f448ddf+0~hefesto1 · Marcar reinstala a versão ' \
+        'de agora"' in mapa
     assert tela.ids_para_atualizar({"pecas": volta_2}) == ["bluetooth"]
     assert tela.quantas_novas({"pecas": volta_2}) == 1
 
@@ -279,34 +278,48 @@ def test_o_atualizar_se_apaga_sem_peca_marcada_tambem_com_o_jogo_aberto() -> Non
                          corpo), aberto
 
 
-def _grupos(corpo: str) -> list[str]:
-    return re.findall(r'<div class="mp-g ([a-z-]+)"><span>([^<]+)</span>', corpo)
+def _campo(mapa: str, chave: str) -> str:
+    inicio = mapa.index(f'<div class="mp-g {chave}">')
+    fim = mapa.find('<div class="mp-g ', inicio + 1)
+    return mapa[inicio:fim if fim > 0 else len(mapa)]
 
 
-def test_o_mapa_tem_so_escolha_revisar_e_atualizado_e_a_fixa_vai_para_o_atualizado() -> None:
-    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: o grupo «Com o Hefesto» saiu do mapa.
+def _nomes(campo: str) -> list[str]:
+    return re.findall(r'class="mp-n">([^<]+)<', campo)
 
-    MORDIDA: o grupo «fixa» de volta no ``GRUPOS_DO_MAPA``, ou a peça fixa fora do «Atualizado»,
-    reprova; o desenho com peça fixa nos dados de exemplo também.
+
+def test_os_dois_campos_mostram_as_mesmas_pecas_e_toda_peca_em_dia_se_marca() -> None:
+    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO, a escolha «Todas marcáveis»: em cima as peças
+    todas, com marca (a com versão nova marcada como o motor diz, a em dia desmarcada, e marcar
+    reinstala, dito só na dica); embaixo as mesmas, sem marca, na cor do estado. A peça que o
+    motor diz que não reinstala (``reinstala: false``, ou da volta 2) fica sem marca, com o
+    porquê na dica.
+
+    MORDIDA: um campo com menos peças que o outro reprova; a peça em dia sem marca possível
+    reprova; a reinstalação dita em texto à vista reprova.
     """
-    assert [c for c, _ in tela.GRUPOS_DO_MAPA] == ["nova", "revisar", "em_dia", "sem_rede"]
-    pecas = [{"id": "hefesto", "nome": "Hefesto", "estado": "nova", "de": "1", "para": "2",
-              "marcada": True, "volta": 1},
-             {"id": "portal", "nome": "Portal do COSMIC", "estado": "fixa", "volta": 2, "de": "1"},
-             {"id": "kernel", "nome": "Kernel", "estado": "em_dia", "de": "7", "para": "7",
-              "marcada": True, "volta": 1}]
-    mapa = tela.html_do_mapa({"pecas": pecas})
-    assert _grupos(mapa) == [("nova", "Escolha o que deve ser atualizado"),
-                             ("em-dia", "Atualizado")]
-    assert '<span class="q">2</span>' in mapa
-    assert "fixa" not in mapa and "Com o Hefesto" not in mapa
-    assert "fixa" not in tela.CSS
-    revisar = tela.html_do_mapa({"pecas": [*pecas, {"id": "som", "nome": "Som",
-                                                    "estado": "revisar", "volta": 1}]})
-    assert [c for c, _ in _grupos(revisar)] == ["nova", "revisar", "em-dia"]
+    for conferencia in (aba09.EXEMPLO_DAS_PECAS, _mesa(["nova", "revisar", "em_dia", "fixa",
+                                                         "nao_consultado"] + ["em_dia"] * 8)):
+        mapa = tela.html_do_mapa(conferencia)
+        cima, baixo = _campo(mapa, "mp-marcar"), _campo(mapa, "mp-estado")
+        assert _nomes(cima) == _nomes(baixo) and len(_nomes(cima)) == 13
+        assert re.findall(r'<span class="q">(\d+)</span>', mapa) == ["13", "13"]
+        assert 'class="mp-m"' not in baixo
+        for item in conferencia["pecas"]:
+            if item["estado"] == "em_dia" and item.get("volta", 1) == 1:
+                cartao = re.search(r'<label class="mp-c mp-marcar"[^>]*>(?:(?!</label>).)*?'
+                                   rf'data-v="{item["id"]}"', cima, re.S)
+                assert cartao, f"{item['id']}: em dia sem marca"
+                assert tela.DICA_DA_REINSTALACAO in cartao.group(0)
+                assert 'class="mp-m" checked' not in cartao.group(0), "a em dia nasce marcada"
+    assert "reinstala" not in re.sub(r'data-dica="[^"]*"', "", mapa)
+    exemplo = tela.html_do_mapa(aba09.EXEMPLO_DAS_PECAS)
+    assert re.findall(r'class="mp-m" checked data-gesto="peca-da-atualizacao" data-v="([a-z]+)"',
+                      exemplo) == ["hefesto", "proton"]
+    sem = {"id": "kernel", "nome": "Kernel", "estado": "em_dia", "volta": 1, "de": "7", "para": "7",
+           "reinstala": False, "motivo": "O kernel em uso não se reinstala"}
+    cartao = _campo(tela.html_do_mapa({"pecas": [sem]}), "mp-marcar")
+    assert 'class="mp-m"' not in cartao and "O kernel em uso não se reinstala" in cartao
     desenho = (RAIZ / "mockup/escolha/o-mapa-das-atualizacoes.html").read_text(encoding="utf-8")
-    for pagina in (tela.html_do_mapa(aba09.EXEMPLO_DAS_PECAS), desenho):
-        assert [c for c, _ in _grupos(pagina)] == ["nova", "em-dia"]
-        assert "Com o Hefesto" not in pagina and "mp-c fixa" not in pagina
-    assert all(p["estado"] in ("nova", "em_dia") for p in aba09.EXEMPLO_DAS_PECAS["pecas"])
+    assert exemplo in desenho and "Com o Hefesto" not in desenho
 
