@@ -111,6 +111,8 @@ SEM_BOTAO_NA_PAGINA = {
     ("07-lancadores.html", "tirar-da-modificacao"),
     ("07-lancadores.html", "exportar-o-tema-da-modificacao"),
     ("03-gatilhos.html", "modo"),
+    ("09-sistema.html", "atualizacoes-anteriores"),
+    ("09-sistema.html", "peca-da-atualizacao"),
 }
 
 
