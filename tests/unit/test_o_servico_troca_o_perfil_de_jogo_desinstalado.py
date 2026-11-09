@@ -214,7 +214,9 @@ def test_o_desinstalado_sai_da_escolha_e_do_ultimo_jogo() -> None:
 
 
 def test_o_proximo_jogo_troca_o_perfil_depois_da_troca() -> None:
-    """Prova de que a troca não trava a troca por jogo: nem o Modo Freestyle, nem a trava da mão.
+    """Prova da D-0811-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA.
+
+    A troca não trava a troca por jogo: nem o Modo Freestyle liga, nem a trava da mão arma.
 
     MORDIDA: devolva `activate("Freestyle", origin="manual")` no `_o_desinstalado_sai` e o
     perfil do jogo aberto não entra.
