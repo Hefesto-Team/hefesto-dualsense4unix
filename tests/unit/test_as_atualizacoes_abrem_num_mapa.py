@@ -94,6 +94,10 @@ MEDIR_O_MAPA = """() => {
             return b.top < a.top - 1 || b.bottom > a.bottom + 1 || b.right > a.right + 1
               || nv.scrollWidth > nv.clientWidth + 1;
           }).map(v => v.textContent),
+          barras: Array.from(document.querySelectorAll('body *'))
+            .filter(e => !e.closest('.hef-atualiza')
+              && getComputedStyle(e).scrollbarWidth !== 'none')
+            .map(e => e.className).slice(0, 5),
           lisas: Array.from(cx.querySelectorAll('.mp-c.fixa'))
             .filter(e => getComputedStyle(e).borderStyle !== 'dashed')
             .map(e => e.textContent.trim())};
@@ -136,7 +140,9 @@ def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
     MORDIDA: com o cartão de 64 px e os espaços da primeira versão, a «quatro-grupos» rola 54 px;
     com a chave solta antes da regra das fixas, as fixas saem lisas («lisas»); com o número do
     «Atualizar» a 11,5 px, a «letra» fica abaixo de 12; com o par das versões numa linha que
-    corta, a versão nova do «Som» sai com reticências («sem_a_nova»).
+    corta, a versão nova do «Som» sai com reticências («sem_a_nova»); sem esconder as barras de
+    rolagem da página de baixo, a do registro da 09 se pinta por cima do «Atualizar» no WebKit
+    («barras»).
     """
     import pytest
 
@@ -156,7 +162,8 @@ def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
                     medida = pg.evaluate(MEDIR_O_MAPA)
                     pg.close()
                     if medida["rola"] > 0 or medida["fora"] > 0 or medida["cortados"] \
-                            or medida["letra"] < 12 or medida["lisas"] or medida["sem_a_nova"]:
+                            or medida["letra"] < 12 or medida["lisas"] or medida["sem_a_nova"] \
+                            or medida["barras"]:
                         falhas.append((nome, f"{larg}x{alt}", medida))
         finally:
             nav.close()

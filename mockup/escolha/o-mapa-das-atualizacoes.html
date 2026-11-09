@@ -909,6 +909,7 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
 .hef-atualiza{display:none;position:fixed;inset:0;z-index:70;background:rgba(9,10,15,.72);
   align-items:center;justify-content:center;font-family:'Space Grotesk',system-ui,sans-serif}
 .hef-atualiza.aberta{display:flex}
+body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-width:none}
 .hef-atualiza .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
   border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);display:flex;
   flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
