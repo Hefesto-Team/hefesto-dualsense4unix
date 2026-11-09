@@ -351,8 +351,9 @@
                 minmax(0,1fr) 1px minmax(0,1fr)}
   .sr-log{grid-template-columns:minmax(0,1fr) auto;height:auto}
   .sr-log > span:last-child{gap:6px}
+  .quadro.estica > .quadro-corpo{padding:6px 14px 8px}
   .quadro-corpo > *{flex-shrink:0}
-  .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
+  .sec-grupo{margin:14px 0 4px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
@@ -374,7 +375,7 @@
   .saude-cols{display:contents}
   .col-lista{display:flex;flex-direction:column;min-width:0}
 
-  .coluna{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .coluna{display:flex;flex-direction:column;gap:3px;min-width:0}
   .coluna .btn{width:100%;justify-content:center;padding:0 8px}
   .so-avulso:not(.mostra){display:none}
   .so-avulso.mostra + .acao{display:none}
@@ -387,13 +388,13 @@
   .btn.borda-vermelha.verde{border-color:var(--green);color:var(--green)}
   .btn.borda-vermelha.verde:hover{background:rgba(80,250,123,.08)}
 
-  .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:6px}
+  .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:3px}
   .seg.bat-perfis button{flex:0 0 var(--h-acao);height:var(--h-acao);min-width:0;
                          padding:0 8px;overflow:hidden;text-overflow:ellipsis;
                          white-space:nowrap}
 
   .saude-app{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-flow:row;
-             grid-template-rows:repeat(3,var(--h-acao));gap:6px 8px;min-width:0}
+             grid-template-rows:repeat(3,var(--h-acao));gap:3px 8px;min-width:0}
   .saude-app .cadeado,.saude-app .btn{width:100%;min-width:0;padding:0 10px;overflow:hidden;
                                       text-overflow:ellipsis}
   .saude-app .btn{justify-content:center}
@@ -416,17 +417,16 @@
 
   .registro{flex:1 1 0;min-height:0;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
-  .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
+  .log{padding:5px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:11px;
-       line-height:1.6;color:var(--texto-suave);overflow:auto;white-space:pre-wrap;
+       line-height:1.4;color:var(--texto-suave);overflow:auto;white-space:pre-wrap;
        overflow-wrap:anywhere}
   .sec-rot .btn.copiar{height:22px;padding:0 12px;font-size:11.5px}
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
-  body .sec-rot.at-cab{display:flex;align-items:center;justify-content:space-between;
-    height:auto !important;gap:14px}
-  .at-cab > span{display:flex;align-items:center;gap:12px}
+  .quadro-topo > .at-cab{display:flex;align-items:center;gap:12px;margin-left:auto;flex:0 0 auto}
+  .quadro-topo > .at-cab ~ .cadeado{margin-left:18px}
   .at-cab .btn.at-mapa{height:32px;padding:0 10px 0 12px;gap:8px;font-size:13px;font-weight:600;
     color:var(--fg);border-color:var(--border-forte);width:auto}
   .at-cab .btn.at-mapa:hover{border-color:var(--purple)}
@@ -436,7 +436,7 @@
     align-items:center;justify-content:center;background:var(--purple);color:var(--app-bg)}
   .at-cab .btn.at-mapa .n:empty{display:none}
   .at-cab .btn.at-mapa:has(.n:empty) svg{color:var(--texto-suave)}
-  .at-cab .cadeado{width:auto;height:28px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12px}
+  .at-cab .cadeado{width:auto;height:30px;border-radius:999px;padding:0 14px 0 11px;font-weight:600;font-size:12.5px}
   .prazo{display:inline-block;font-size:12px;font-weight:400;color:var(--fg);white-space:nowrap}
   .prazo > *{vertical-align:middle;margin-left:6px}
   .prazo > :first-child{margin-left:0}
@@ -444,9 +444,6 @@
              color:var(--fg);font:600 13px/1 'JetBrains Mono',monospace;cursor:pointer}
   .prazo .pm:hover{border-color:var(--comment)}
   .prazo .dias{display:inline-block;min-width:22px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--cyan)}
-  @media (max-height:760px){
-    body .atualiza .sec-alta,body .atualiza + .sec-alta{margin-top:4px !important;padding-top:4px !important}
-  }
 
   .fita-linha .perfil-ativo{margin-left:auto}
 </style>
@@ -484,13 +481,13 @@ body .saude .selo{flex:0 0 84px !important}
 body .pt{font-size:12px !important}
 body .fita .pt{line-height:1 !important}
 body .sec-rot .btn.copiar{height:24px !important;font-size:12px !important}
-body .sec-rot.sr-log{height:35px !important}
+body .sec-rot.sr-log{height:30px !important}
 body .log{font-size:12px !important}
 body .saude .txt{min-height:24px !important}
-body .sec-rot{height:24px !important;margin-bottom:2px !important}
+body .sec-rot{height:24px !important;margin-bottom:0 !important}
 body .sec-rot>span{min-height:24px !important}
 body .quadro-titulo{min-height:24px !important;display:inline-flex !important;align-items:center !important}
-body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !important}
+body .sec-grupo,body .sec-alta{margin-top:4px !important;padding-top:5px !important}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -631,6 +628,10 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Esta aba é do computador, não de um controle">Sistema</span>
+        <div class="at-cab">
+          <button class="btn at-mapa" data-gesto="atualizacoes-abrir"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Atualizações<span class="n" data-campo="atualizacoes-novas">3</span></button>
+          <button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualização automática</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span>
+        </div>
             <button class="cadeado ligada" data-dica="Mostra o Hefesto na barra do sistema e o traz de volta ao entrar" data-gesto="bandeja" data-campo="bandeja" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Ícone na bandeja</button>
       </div>
       <div class="quadro-corpo">
@@ -685,14 +686,6 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
             <button class="cadeado ligada" data-dica="Iniciar com o sistema. Liga o serviço junto com o computador" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
             <button class="btn amarelo-padrao" data-dica="Volta ao padrão; seus perfis salvos ficam. Pergunta antes" data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
           </div>
-        </div>
-
-
-        <div class="atualiza">
-        <div class="sec-rot sec-alta at-cab">
-          <span><button class="btn at-mapa" data-gesto="atualizacoes-abrir"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>Atualizações<span class="n" data-campo="atualizacoes-novas">3</span></button></span>
-          <span><button class="cadeado" data-gesto="atualizar-sozinho" data-campo="atualizar-sozinho" data-hef-alvo="classe" data-hef-classe="ligada" data-dica="Sem pergunta, só com o jogo fechado"><span class="p"></span>Atualizar sozinho</button><span class="prazo" data-dica="Prazo da conferência"><span>A cada</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="-1" aria-label="Menos um dia">−</button><span class="dias" data-campo="prazo-da-atualizacao">7</span><button class="pm" data-gesto="prazo-da-atualizacao" data-v="1" aria-label="Mais um dia">+</button><span>dias</span></span></span>
-        </div>
         </div>
 
         <div class="sec-rot sr-log sec-alta">
