@@ -633,19 +633,60 @@ def versoes_do_python(rede: bool) -> Versoes:
     return Versoes("", str(len(atrasadas)), rotulo=rotulo, dica=dica, nova=bool(atrasadas))
 
 
+PROVA_DO_PRODUTO = (
+    "import inspect\n"
+    "import evdev\n"
+    "import hefesto_dualsense4unix.cli.app\n"
+    "import hefesto_dualsense4unix.daemon.lifecycle\n"
+    "import hefesto_dualsense4unix.daemon.main\n"
+    "from hefesto_dualsense4unix.integrations.uinput_gamepad import _uinput_sem_no_proprio\n"
+    "_uinput_sem_no_proprio(evdev.UInput)\n"
+    "if '_find_device' not in inspect.getsource(evdev.UInput.__init__):\n"
+    "    raise SystemExit('o evdev novo não chama o _find_device que a cura do pad usa')\n"
+)
+
+
+def _pasta_do_python() -> Path:
+    return _cache() / "python"
+
+
+def _rodas(pasta: Path, alvo: Sequence[str]) -> None:
+    rc, ultima = _pip("wheel", "--wheel-dir", str(pasta), *alvo)
+    if rc != 0:
+        raise EtapaFalhouError(ultima or "o pip não montou as rodas")
+
+
+def _instalar_rodas(pasta: Path, alvo: Sequence[str]) -> tuple[int, str]:
+    return _pip("install", "--no-index", "--only-binary", ":all:", "--find-links", str(pasta),
+                *alvo)
+
+
+def _o_produto_sobe() -> str:
+    """Um processo novo importa o serviço e a linha de comando: vazio se sobe, senão o porquê."""
+    rc, ultima = _comando([sys.executable, "-c", PROVA_DO_PRODUTO], teto_s=TETO_DA_PERGUNTA_S)
+    return "" if rc == 0 else (ultima or f"o Hefesto não importou ({rc})")
+
+
 def _baixar_o_python(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     atrasadas = _atrasadas()
     if not atrasadas:
         return {"pacotes": {}}
-    pasta = _cache() / "python"
+    pasta = _pasta_do_python()
     shutil.rmtree(pasta, ignore_errors=True)
-    pasta.mkdir(parents=True)
-    alvo = [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())]
-    rc, ultima = _pip("download", "--dest", str(pasta), *alvo)
-    if rc != 0:
-        raise EtapaFalhouError(ultima or "o pip não baixou")
+    (pasta / "antes").mkdir(parents=True)
+    _rodas(pasta, [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())])
+    passo.fracao(0.5)
+    _rodas(pasta / "antes", [f"{n}=={v}" for n, (v, _u) in sorted(atrasadas.items())])
     passo.fracao(1.0)
     return {"pacotes": {n: [v, u] for n, (v, u) in atrasadas.items()}}
+
+
+def _voltar_as_de_antes(pacotes: dict[str, Any]) -> tuple[int, str]:
+    alvo = [f"{n}=={v}" for n, (v, _u) in sorted(pacotes.items())]
+    antes = _pasta_do_python() / "antes"
+    if antes.is_dir():
+        return _instalar_rodas(antes, alvo)
+    return _pip("install", *alvo)
 
 
 def _instalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
@@ -653,9 +694,15 @@ def _instalar_o_python(passo: Passo, dados: dict[str, Any]) -> None:
     if not pacotes:
         return
     alvo = [f"{n}=={u}" for n, (_v, u) in sorted(pacotes.items())]
-    rc, ultima = _pip("install", "--no-index", "--find-links", str(_cache() / "python"), *alvo)
+    rc, ultima = _instalar_rodas(_pasta_do_python(), alvo)
     if rc != 0:
         raise EtapaFalhouError(ultima or "o pip não instalou")
+    passo.fracao(0.8)
+    motivo = _o_produto_sobe()
+    if motivo:
+        rc, ultima = _voltar_as_de_antes(pacotes)
+        volta = "voltou às versões de antes" if rc == 0 else f"e não voltou: {ultima}"
+        raise EtapaFalhouError(f"o Hefesto não sobe com as versões novas ({motivo}); {volta}")
     passo.fracao(1.0)
 
 
@@ -663,7 +710,7 @@ def _voltar_o_python(anterior: dict[str, Any]) -> None:
     pacotes = (anterior.get("dados") or {}).get("pacotes") or {}
     if not pacotes:
         raise EtapaFalhouError("sem versão anterior")
-    rc, ultima = _pip("install", *(f"{n}=={v}" for n, (v, _u) in sorted(pacotes.items())))
+    rc, ultima = _voltar_as_de_antes(pacotes)
     if rc != 0:
         raise EtapaFalhouError(ultima or "o pip não voltou")
 
