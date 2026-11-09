@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import fcntl
+import functools
 import json
 import os
 import re
@@ -475,7 +476,7 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
             andamento.gravar(ja=False)
 
         passo = Passo()
-        passo.aviso = lambda p=passo: avisar(p)
+        passo.aviso = functools.partial(avisar, passo)
         try:
             if etapa == "instalar":
                 _guardar_a_anterior(peca, versoes, dados, agora())
