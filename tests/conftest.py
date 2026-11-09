@@ -2659,6 +2659,38 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
         system_check._PROC_CARDS = antes
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _as_curas_da_casa_leem_um_lar_vazio(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """As curas da casa leem um lar VAZIO: nenhuma se aplica (A-ABA-SISTEMA-DIZ-QUANDO-...-01).
+
+    `curas_da_casa.MAQUINA` lê o DKMS, o `bluetoothd`, o dpkg e o portal da máquina. Sem esta
+    fixture, `system_warnings() == []`, o `storm_report` e o «Suporte ao controle» mediriam se o
+    kernel desta máquina tem os módulos da casa. Quem precisa de uma máquina forjada passa a
+    dele por argumento ou aponta `MAQUINA` com `monkeypatch`.
+    """
+    vazio = tmp_path_factory.mktemp("curas-sem-maquina")
+    try:
+        from hefesto_dualsense4unix.integrations import curas_da_casa
+    except ModuleNotFoundError as erro:  # pragma: no cover
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+        yield
+        return
+
+    antes = curas_da_casa.MAQUINA
+    curas_da_casa.MAQUINA = curas_da_casa.Maquina(
+        sys_module=vazio, dkms=vazio, assets=vazio, cache=vazio, kernel="0.0.0-suite",
+        comando=lambda _argv: None)
+    curas_da_casa._lembradas.clear()
+    try:
+        yield
+    finally:
+        curas_da_casa.MAQUINA = antes
+        curas_da_casa._lembradas.clear()
+
+
 RAIZES_DO_BROKER = {
     "CONFIGFS_GADGETS": "usb_gadget",
     "SYS_PLATFORM": "platform",

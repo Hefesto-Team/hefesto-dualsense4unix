@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import curas_da_casa as cc
 from hefesto_dualsense4unix.integrations import storm_doctor as sd
 
 PREFIXO = sd.PREFIXO_DA_CURA
@@ -97,6 +98,10 @@ def cenas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
             sd.check_snd_audio_healthy(cards_text=uma_placa, controles_no_cabo=2),
             sd.WARN,
         ),
+        "cura_da_casa_caida": frase(sd.check_curas_da_casa([cc.Cura(
+            "bluetooth", "Bluetooth", cc.CAIU, "O Bluetooth voltou ao da distribuição",
+            cc.RODE_O_INSTALADOR)]), sd.WARN),
+        "nenhuma_cura_da_casa_se_aplica": frase(sd.check_curas_da_casa([]), sd.INFO),
     }
 
 
@@ -177,11 +182,11 @@ def test_todo_ramo_de_alarme_tem_uma_cena(
         and no.value.elts[0].id in {"WARN", "INFO"}
     ]
 
-    assert len(ramos) == 13, (
+    assert len(ramos) == 15, (
         f"o `storm_doctor` passou a ter {len(ramos)} ramos de alarme, e esta "
-        "ensaio cobre 13 (em 14 cenas). Acrescente a cena do ramo novo em "
+        "ensaio cobre 15 (em 16 cenas). Acrescente a cena do ramo novo em "
         "`cenas()` e ajuste este número no mesmo commit — senão a frase nova "
         "nasce sem o 'o que fazer' e ninguém vê.\n"
         f"Linhas: {ramos}"
     )
-    assert len(cenas(tmp_path, monkeypatch)) == 14
+    assert len(cenas(tmp_path, monkeypatch)) == 16

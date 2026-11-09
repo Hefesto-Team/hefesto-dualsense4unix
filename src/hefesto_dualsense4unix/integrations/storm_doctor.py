@@ -23,11 +23,12 @@ import re
 import shutil
 import subprocess
 import warnings
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.utils.repo_files import (
     FRASE_DE_ATUALIZAR,
@@ -643,6 +644,20 @@ def check_snd_audio_healthy(
     )
 
 
+def check_curas_da_casa(curas: Sequence[Any] | None = None) -> tuple[str, str]:
+    """As curas da casa que uma atualização do sistema desfaz, pelo dono das curas
+    (:mod:`curas_da_casa`): o aviso com a frase da que caiu e a cura."""
+    from hefesto_dualsense4unix.integrations import curas_da_casa as cc
+
+    total = cc.resumo(cc.curas_de_agora() if curas is None else curas)
+    if total.estado == cc.CAIU:
+        return (WARN, f"{total.frase}. {PREFIXO_DA_CURA}{total.dica}")
+    if total.estado == cc.VALE:
+        return (OK, f"{cc.ROTULO}: as correções do Hefesto valem")
+    return (INFO, f"{cc.ROTULO}: nenhuma correção do Hefesto se aplica a esta máquina. "
+                  f"{PREFIXO_DA_CURA}nada.")
+
+
 def storm_report(
     home: Path | None = None,
     *,
@@ -653,6 +668,7 @@ def storm_report(
     snd_conf_path: Path | None = None,
     cards_text: str | None = None,
     controles_no_cabo: int | None = None,
+    curas: Sequence[Any] | None = None,
 ) -> list[tuple[str, str]]:
     """Bloco de diagnóstico storm para o `doctor` (read-only).
 
@@ -676,6 +692,7 @@ def storm_report(
         check_steam_input(home),
         check_wireplumber(dropin_dir),
         check_authorized_rule(rules_dir),
+        check_curas_da_casa(curas),
     ]
     reserva = rotulos_de_reserva()
     if reserva:

@@ -3580,23 +3580,23 @@ class Daemon:
             logger.debug("config_audit_failed", err=str(exc))
 
     def _check_system_on_boot(self) -> None:
-        """Detecta problemas de infra no boot (udev/WirePlumber) e AVISA o comando
-        de reparo (FEAT-SYSTEM-AUTOREPAIR-BOOT-01). Nunca roda sudo/reparo sozinho.
-        Best-effort: nunca derruba o boot.
+        """Detecta problemas de infra no boot e AVISA o comando de reparo
+        (FEAT-SYSTEM-AUTOREPAIR-BOOT-01). Nunca roda sudo/reparo sozinho.
+        Best-effort: nunca derruba o boot, e roda num fio próprio.
 
-        O aviso é só o log em `warning` (`journalctl --user -u
-        hefesto-dualsense4unix.service | grep system_check_warning`): a
-        notificação na área de trabalho saiu em 02/10/2026 com a chave que a
-        ligava, que nada escrevia (OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01).
+        O aviso vai ao log em `warning` (`journalctl --user -u
+        hefesto-dualsense4unix.service | grep system_check_warning`); a cura
+        da casa que uma atualização desfez vai também à notificação, uma vez
+        por kernel (A-ABA-SISTEMA-DIZ-QUANDO-A-ATUALIZACAO-DESFEZ-UMA-CURA-01).
         """
         try:
-            from hefesto_dualsense4unix.core.system_check import system_warnings
+            from hefesto_dualsense4unix.core.system_check import (
+                avisar_da_infra_no_boot,
+            )
 
-            infra_warnings = system_warnings()
-            if not infra_warnings:
-                return
-            for detail in infra_warnings:
-                logger.warning("system_check_warning", detail=detail)
+            threading.Thread(
+                target=avisar_da_infra_no_boot, name="aviso-da-infra", daemon=True
+            ).start()
         except Exception as exc:
             logger.debug("system_check_failed", err=str(exc))
 

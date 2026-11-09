@@ -193,6 +193,9 @@ def system_warnings() -> list[str]:
                 "DualSense no cabo sem o perfil UCM — a vibração dos jogos da "
                 "Sony não chega pelo cabo; rode: bash scripts/install_ucm_dualsense.sh"
             )
+        from hefesto_dualsense4unix.integrations import curas_da_casa
+
+        warnings.extend(curas_da_casa.linhas_de_aviso())
     except Exception:
         return warnings
     return warnings
@@ -289,3 +292,26 @@ __all__ = [
     "system_warnings",
     "vagas_do_pad_em_usb",
 ]
+
+
+TENTATIVAS_DO_AVISO_DAS_CURAS = 6
+ESPERA_DO_AVISO_DAS_CURAS_S = 10.0
+
+
+def avisar_da_infra_no_boot(dormir: Callable[[float], Any] | None = None) -> None:
+    """O aviso de infra do boot, fora do laço do daemon: o diário e, para a cura da casa que
+    caiu, a notificação, que espera a sessão gráfica em até seis tentativas."""
+    import time
+
+    from hefesto_dualsense4unix.integrations import curas_da_casa
+    from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+    logger = get_logger(__name__)
+    for detail in system_warnings():
+        logger.warning("system_check_warning", detail=detail)
+    espera = dormir or time.sleep
+    for tentativa in range(TENTATIVAS_DO_AVISO_DAS_CURAS):
+        if curas_da_casa.avisar_uma_vez_por_kernel() is not False:
+            return
+        if tentativa + 1 < TENTATIVAS_DO_AVISO_DAS_CURAS:
+            espera(ESPERA_DO_AVISO_DAS_CURAS_S)

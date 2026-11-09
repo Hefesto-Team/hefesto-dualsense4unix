@@ -45,7 +45,7 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Leitura, Ordem
@@ -265,12 +265,28 @@ def suporte_ao_controle(
     *,
     modulos: Path = Path("/proc/modules"),
     diretorio_do_modulo: Path = Path("/sys/module/hid_playstation"),
+    maquina: Any = None,
 ) -> Item:
-    """O `hid_playstation` está de pé? (`doctor.sh:393-401`)"""
+    """O `hid_playstation` está de pé, e é o do Hefesto? (`doctor.sh:393-401`)
+
+    Carregado não basta: o de fábrica de um kernel novo também carrega, e o dono das curas
+    (:func:`curas_da_casa.driver_do_dualsense`) diz quando é ele.
+    """
+    from hefesto_dualsense4unix.integrations import curas_da_casa
+
     texto = _texto_de(modulos)
     if texto is not None:
         for linha in texto.splitlines():
             if linha.startswith("hid_playstation "):
+                driver = curas_da_casa.driver_do_dualsense(maquina)
+                if driver.estado == curas_da_casa.CAIU:
+                    return Item(
+                        chave="suporte_ao_controle",
+                        rotulo=ROTULO_SUPORTE_AO_CONTROLE,
+                        estado=ESTADO_ATENCAO,
+                        porque=f"{driver.frase}: o microfone pelo rádio fica desligado.",
+                        cura=driver.dica,
+                    )
                 return Item(
                     chave="suporte_ao_controle",
                     rotulo=ROTULO_SUPORTE_AO_CONTROLE,

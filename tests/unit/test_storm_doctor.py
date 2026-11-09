@@ -71,7 +71,7 @@ def test_storm_report_agrega_todos(tmp_path: Path) -> None:
         snd_conf_path=tmp_path / "ausente.conf",
         cards_text="",
     )
-    assert len(rows) == 6
+    assert len(rows) == 7
     assert all(isinstance(t, str) and isinstance(m, str) for t, m in rows)
 
 
