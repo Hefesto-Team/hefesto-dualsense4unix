@@ -521,6 +521,30 @@ install_placa_acordada_host() {
     fi
 }
 
+_instalar_as_receitas_do_atualizador() {
+    local alvo="$1" tmp s a rc=0
+    tmp="$(mktemp -d)" || return 1
+    mkdir -p "${tmp}/receitas/scripts" "${tmp}/receitas/assets"
+    for s in construir_bluez_backport.sh construir_pipewire_backport.sh \
+        construir_portal_cosmic_backport.sh hefesto_receita_nova.py; do
+        cp "${ROOT_DIR}/scripts/${s}" "${tmp}/receitas/scripts/${s}" || rc=1
+    done
+    for a in bluez-backport pipewire-backport portal-cosmic-backport; do
+        cp -r "${ROOT_DIR}/assets/${a}" "${tmp}/receitas/assets/${a}" || rc=1
+    done
+    chmod -R u=rwX,go=rX "${tmp}/receitas"
+    if [[ "${rc}" -eq 0 ]]; then
+        sudo rm -rf "${alvo}.novo" \
+            && sudo cp -r "${tmp}/receitas" "${alvo}.novo" \
+            && sudo chown -R root:root "${alvo}.novo" \
+            && sudo chmod -R go-w "${alvo}.novo" \
+            && sudo rm -rf "${alvo}" \
+            && sudo mv "${alvo}.novo" "${alvo}" || rc=1
+    fi
+    rm -rf "${tmp}"
+    return "${rc}"
+}
+
 install_atualizador_raiz_host() {
     local _at_fonte="${ROOT_DIR}/scripts/hefesto_atualizador_raiz.sh"
     local _at_alvo=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
@@ -555,6 +579,8 @@ install_atualizador_raiz_host() {
         warn "os sufixos dos backports da casa NÃO gravados em ${_at_sufixos} — o ajudante recusa subir pacote do apt"
     fi
     rm -f "${_at_tmp}"
+    _instalar_as_receitas_do_atualizador /usr/local/lib/hefesto-dualsense4unix/receitas \
+        || warn "as receitas da casa NÃO copiadas para /usr/local/lib/hefesto-dualsense4unix/receitas — o Bluetooth, o Som e o Portal não sobem pela janela"
     if ! command -v visudo >/dev/null 2>&1; then
         warn "visudo ausente — a regra do sudoers do atualizador NÃO foi gravada (sudoers inválido derruba o sudo da máquina inteira; não gravamos sem conferir)"
         return 0

@@ -259,11 +259,9 @@ def test_o_registro_tem_as_pecas_da_volta_um_na_ordem() -> None:
     ordem = [p.id for p in pa.registro()]
     assert ordem.index("kernel") < ordem.index("dkms")
     assert ordem[-1] == "hefesto"
-    for ident in ("proton", "python", "nvidia", "kernel", "dkms", "sistema", "mangohud", "umu",
-                  "hefesto"):
+    for ident in ("proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia", "kernel",
+                  "dkms", "sistema", "mangohud", "umu", "hefesto"):
         assert pecas[ident].volta == 1 and pecas[ident].instalar is not None, ident
-    assert pecas["bluetooth"].volta == 2 and pecas["som"].volta == 2
-    assert pecas["bluetooth"].instalar is None and pecas["som"].instalar is None
 
 
 def test_o_ajudante_ausente_falha_sem_pedir_senha(monkeypatch: pytest.MonkeyPatch,

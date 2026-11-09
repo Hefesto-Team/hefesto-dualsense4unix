@@ -23,11 +23,13 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.atualizador import (
+    Etapa,
     EtapaFalhouError,
     Passo,
     Peca,
     Versoes,
     _anotar,
+    ordem,
 )
 
 AJUDANTE = Path("/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz")
@@ -783,37 +785,279 @@ def _aplicar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> None:
     passo.fracao(1.0)
 
 
-def versoes_do_bluetooth(_rede: bool) -> Versoes:
-    texto = _saida(["bluetoothd", "--version"]) if shutil.which("bluetoothd") else None
-    return Versoes((texto or "").strip(), None, existe=bool(texto))
-
-
-def versoes_do_som(_rede: bool) -> Versoes:
-    texto = _saida(["pipewire", "--version"]) if shutil.which("pipewire") else None
-    achado = re.search(r"libpipewire\s+(\S+)\s*$", (texto or "").strip())
-    return Versoes(achado.group(1) if achado else "", None, existe=achado is not None)
-
-
+INDICE_DO_BLUEZ = "https://www.kernel.org/pub/linux/bluetooth/"
+API_DO_GITLAB = "https://gitlab.freedesktop.org/api/v4/projects/pipewire%2F{}/releases?per_page=40"
+PRECISA_REVISAR = "a casa precisa revisar os patches"
 PACOTE_DO_PORTAL = "xdg-desktop-portal-cosmic"
+MARCA_DA_VERSAO_NO_PINO = "{versao}"
+ARQUIVOS_DA_GDK = (
+    ("xgameruntime.dll", "sha256", "url", ("x86_64-windows", "xgameruntime.dll")),
+    ("gameinput.dll", "gameinput_sha256", "gameinput_url", ("nativa", "gameinput.dll")),
+)
 
 
-def versoes_do_portal(_rede: bool) -> Versoes:
-    versao = _instalados(PACOTE_DO_PORTAL).get(PACOTE_DO_PORTAL, "")
-    return Versoes(_a_montante(versao), None, dica=versao, existe=bool(versao))
+def _da_casa(versao: str) -> bool:
+    return "~hefesto" in versao
 
 
-def versoes_da_gdk(_rede: bool) -> Versoes:
+def _curta(versao: str) -> str:
+    achado = re.match(r"\d+(?:\.\d+)*", versao.split(":", 1)[-1])
+    return achado.group(0) if achado else versao
+
+
+def _dpkg_maior(a: str, b: str) -> bool:
+    try:
+        feito = subprocess.run(["dpkg", "--compare-versions", a, "gt", b], check=False,
+                               capture_output=True, timeout=TETO_DA_PERGUNTA_S)
+    except (OSError, subprocess.TimeoutExpired):
+        return ordem(a) > ordem(b)
+    return feito.returncode == 0
+
+
+def ultima_do_bluez(indice: str) -> str | None:
+    """A versão mais nova no índice do kernel.org, por partes (``5.9`` antes de ``5.10``)."""
+    versoes = set(re.findall(r"bluez-(\d+\.\d+)\.tar\.xz", indice))
+    return max(versoes, key=ordem) if versoes else None
+
+
+def versoes_do_bluetooth(rede: bool) -> Versoes:
+    instalada = _instalados("bluez").get("bluez", "")
+    if not _da_casa(instalada):
+        return Versoes(existe=False)
+    curta = _curta(instalada)
+    if not rede:
+        return Versoes(curta, None, completa=instalada)
+    publicada = ultima_do_bluez(_ler(INDICE_DO_BLUEZ).decode("utf-8", "replace"))
+    if publicada is None:
+        return Versoes(curta, None, completa=instalada)
+    nova = ordem(publicada) > ordem(curta)
+    completa = f"{instalada} → {publicada}, com as correções da casa" if nova else instalada
+    if nova and ordem(publicada)[:1] != ordem(curta)[:1]:
+        return Versoes(curta, publicada, completa=completa,
+                       revisar=f"o BlueZ {publicada} abre uma série nova: {PRECISA_REVISAR}")
+    return Versoes(curta, publicada, completa=completa, nova=nova)
+
+
+def _tags_do_gitlab(projeto: str) -> list[str]:
+    lancamentos = json.loads(_ler(API_DO_GITLAB.format(projeto)).decode("utf-8"))
+    tags = [str(item.get("tag_name", "")) for item in lancamentos
+            if isinstance(item, dict)] if isinstance(lancamentos, list) else []
+    return [tag for tag in tags if re.fullmatch(r"\d+\.\d+\.\d+", tag)]
+
+
+def mesma_serie(tags: Sequence[str], atual: str) -> tuple[str, str | None]:
+    """(a mais nova da série de ``atual``, a mais nova de uma série acima, se houver)."""
+    serie = [tag for tag in tags if ordem(tag)[:2] == ordem(atual)[:2]]
+    acima = [tag for tag in tags if ordem(tag)[:2] > ordem(atual)[:2]]
+    return (max([*serie, atual], key=ordem), max(acima, key=ordem) if acima else None)
+
+
+NOMES_DO_SOM = {"pipewire": "PipeWire", "wireplumber": "WirePlumber"}
+
+
+def versoes_do_som(rede: bool) -> Versoes:
+    instalados = _instalados("pipewire", "wireplumber")
+    pw, wp = instalados.get("pipewire", ""), instalados.get("wireplumber", "")
+    if not _da_casa(pw):
+        return Versoes(existe=False)
+    atuais = {"pipewire": _curta(pw), "wireplumber": _curta(wp) if _da_casa(wp) else ""}
+    de = " · ".join(v for v in atuais.values() if v)
+    completa = f"PipeWire {pw} · WirePlumber {wp or '—'}"
+    if not rede:
+        return Versoes(de, None, completa=completa)
+    novas: dict[str, str] = {}
+    series: list[str] = []
+    for projeto, atual in atuais.items():
+        if not atual:
+            continue
+        novas[projeto], acima = mesma_serie(_tags_do_gitlab(projeto), atual)
+        if acima:
+            series.append(f"{NOMES_DO_SOM[projeto]} {acima}")
+    para = " · ".join(novas[p] for p in atuais if p in novas)
+    nova = any(ordem(novas[p]) > ordem(atuais[p]) for p in novas)
+    if nova:
+        completa += " → " + " · ".join(f"{NOMES_DO_SOM[p]} {novas[p]}" for p in novas)
+    if not nova and series:
+        return Versoes(de, para, completa=completa,
+                       revisar=f"{', '.join(series)} é série nova: {PRECISA_REVISAR}")
+    return Versoes(de, para, completa=completa, nova=nova)
+
+
+def _base_do_portal(versao: str) -> str:
+    return re.sub(r"\+0~hefesto.*$", "", versao)
+
+
+def _portal_no_apt() -> str:
+    texto = _saida(["apt-cache", "madison", PACOTE_DO_PORTAL]) or ""
+    melhor = ""
+    for linha in texto.splitlines():
+        partes = [p.strip() for p in linha.split("|")]
+        if len(partes) < 2 or _da_casa(partes[1]) or not partes[1]:
+            continue
+        if not melhor or _dpkg_maior(partes[1], melhor):
+            melhor = partes[1]
+    return melhor
+
+
+def versoes_do_portal(rede: bool) -> Versoes:
+    instalada = _instalados(PACOTE_DO_PORTAL).get(PACOTE_DO_PORTAL, "")
+    if not _da_casa(instalada):
+        return Versoes(existe=False)
+    base = _base_do_portal(instalada)
+    _atualizar_a_lista_do_apt(rede)
+    no_apt = _portal_no_apt() if rede else ""
+    if not no_apt:
+        return Versoes(_curta(base), None, completa=instalada)
+    nova = _dpkg_maior(no_apt, base)
+    completa = f"{instalada} → {no_apt}, com a correção da casa" if nova else instalada
+    return Versoes(_curta(base), _curta(no_apt) if nova else _curta(base),
+                   completa=completa, nova=nova)
+
+
+def _pino_da_gdk() -> dict[str, str]:
     from hefesto_dualsense4unix.integrations import receitas_de_ambiente as receitas
 
-    if not receitas.peca_do_hefesto_instalada():
-        return Versoes(existe=False)
     try:
         texto = receitas.PINO_DA_PECA.read_text(encoding="utf-8")
     except OSError:
+        return {}
+    pino = {}
+    for linha in texto.splitlines():
+        chave, igual, valor = linha.partition("=")
+        if igual and not chave.startswith("#"):
+            pino[chave.strip()] = valor.strip()
+    return pino
+
+
+def _sha_do_arquivo(caminho: Path) -> str:
+    try:
+        return hashlib.sha256(caminho.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _pasta_da_gdk() -> Path:
+    from hefesto_dualsense4unix.integrations import receitas_de_ambiente as receitas
+
+    return receitas.pasta_da_peca()
+
+
+def versoes_da_gdk(_rede: bool) -> Versoes:
+    pino = _pino_da_gdk()
+    pasta = _pasta_da_gdk()
+    if not pino or not (pasta / "x86_64-windows" / "xgameruntime.dll").is_file():
         return Versoes(existe=False)
-    achado = re.search(r"^name=(\S+)$", texto, re.MULTILINE)
-    nome = achado.group(1) if achado else ""
-    return Versoes(nome.rsplit("-", 1)[-1], None, dica=nome, existe=bool(nome))
+    nome = pino.get("name", "")
+    curto = nome.rsplit("-", 1)[-1]
+    instaladas = {arquivo: _sha_do_arquivo(pasta.joinpath(*destino))
+                  for arquivo, _, _, destino in ARQUIVOS_DA_GDK}
+    faltam = [arquivo for arquivo, chave, _, _ in ARQUIVOS_DA_GDK
+              if instaladas[arquivo] != pino.get(chave, "")]
+    gravada = ""
+    with contextlib.suppress(OSError):
+        gravada = (pasta / "versao.txt").read_text(encoding="utf-8").strip()
+    de = curto if not faltam else (gravada.rsplit("-", 1)[-1] if gravada else "antiga")
+    completa = " · ".join(f"{arquivo} {instaladas[arquivo][:12] or '—'}"
+                          for arquivo, _, _, _ in ARQUIVOS_DA_GDK)
+    if faltam:
+        completa += f" → {nome}: " + " · ".join(
+            f"{arquivo} {pino.get(chave, '')[:12]}" for arquivo, chave, _, _ in ARQUIVOS_DA_GDK)
+    return Versoes(de, curto, completa=completa, nova=bool(faltam))
+
+
+def _compilar_a_gdk(pasta: Path, arquivo: str, sha: str) -> Path | None:
+    if not shutil.which("x86_64-w64-mingw32-gcc-posix"):
+        return None
+    construida = pasta / "construida"
+    if not (construida / arquivo).is_file():
+        shutil.rmtree(construida, ignore_errors=True)
+        rc, _ultima = _comando(["bash", str(RAIZ_DO_REPOSITORIO / "assets" / "gdk-runtime"
+                                            / "construir.sh"), str(construida)])
+        if rc != 0:
+            return None
+    feito = construida / arquivo
+    return feito if _sha_do_arquivo(feito) == sha else None
+
+
+def _baixar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> None:
+    pino = _pino_da_gdk()
+    try:
+        versao = _versao_do_pyproject(
+            (RAIZ_DO_REPOSITORIO / "pyproject.toml").read_text(encoding="utf-8"))
+    except OSError:
+        versao = ""
+    pasta = _cache() / "gdk"
+    shutil.rmtree(pasta / "nova", ignore_errors=True)
+    shutil.rmtree(pasta / "construida", ignore_errors=True)
+    for arquivo, chave_sha, chave_url, _destino in ARQUIVOS_DA_GDK:
+        sha = pino.get(chave_sha, "")
+        if not re.fullmatch(r"[0-9a-f]{64}", sha):
+            raise EtapaFalhouError(f"o pino da peça não traz o {chave_sha}")
+        url = pino.get(chave_url, "").replace(MARCA_DA_VERSAO_NO_PINO, versao)
+        try:
+            _baixar(url, pasta / "nova" / arquivo, passo, sha)
+        except EtapaFalhouError as erro:
+            compilada = _compilar_a_gdk(pasta, arquivo, sha)
+            if compilada is None:
+                raise EtapaFalhouError(
+                    f"{erro}; e a compilação aqui não deu o sha256 do pino") from None
+            shutil.copy2(compilada, pasta / "nova" / arquivo)
+
+
+def _por_no_lugar(origem: Path, destino: Path) -> None:
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    temporario = destino.with_name(f".{destino.name}.hefesto")
+    shutil.copy2(origem, temporario)
+    temporario.chmod(0o644)
+    temporario.replace(destino)
+
+
+def _instalar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+    pino = _pino_da_gdk()
+    cache = _cache() / "gdk"
+    pasta = _pasta_da_gdk()
+    for arquivo, chave, _, _ in ARQUIVOS_DA_GDK:
+        if _sha_do_arquivo(cache / "nova" / arquivo) != pino.get(chave, ""):
+            raise EtapaFalhouError(f"o {arquivo} baixado não é o do pino")
+    shutil.rmtree(cache / "anterior", ignore_errors=True)
+    guardadas = []
+    for arquivo, _, _, destino in ARQUIVOS_DA_GDK:
+        if pasta.joinpath(*destino).is_file():
+            (cache / "anterior").mkdir(parents=True, exist_ok=True)
+            shutil.copy2(pasta.joinpath(*destino), cache / "anterior" / arquivo)
+            guardadas.append(arquivo)
+    for arquivo, _, _, destino in ARQUIVOS_DA_GDK:
+        _por_no_lugar(cache / "nova" / arquivo, pasta.joinpath(*destino))
+    (pasta / "versao.txt").write_text(pino.get("name", "") + "\n", encoding="utf-8")
+    passo.fracao(1.0)
+    return {"guardadas": guardadas}
+
+
+def _voltar_a_gdk(anterior: dict[str, Any]) -> None:
+    cache = _cache() / "gdk" / "anterior"
+    pasta = _pasta_da_gdk()
+    guardadas = set(anterior.get("guardadas") or [])
+    for arquivo, _, _, destino in ARQUIVOS_DA_GDK:
+        if arquivo in guardadas and (cache / arquivo).is_file():
+            _por_no_lugar(cache / arquivo, pasta.joinpath(*destino))
+    (pasta / "versao.txt").unlink(missing_ok=True)
+
+
+def _etapas_da_casa(
+        backport: str) -> tuple[Etapa, Etapa, None, Callable[[dict[str, Any]], None]]:
+    def construir(passo: Passo, _dados_: dict[str, Any]) -> None:
+        _raiz("backport-construir", backport, passo=passo)
+        passo.fracao(1.0)
+
+    def instalar(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+        _raiz("backport-instalar", backport, passo=passo)
+        passo.fracao(1.0)
+        return {"backport": backport}
+
+    def voltar(_anterior: dict[str, Any]) -> None:
+        _raiz("backport-voltar", backport)
+
+    return construir, instalar, None, voltar
 
 
 def registro() -> list[Peca]:
@@ -823,13 +1067,15 @@ def registro() -> list[Peca]:
              "Todos os jogos da Steam e do Heroic", versoes_do_proton,
              _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton),
         Peca("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto",
-             "O serviço do Bluetooth", versoes_do_bluetooth, volta=2),
-        Peca("som", "Som", "PipeWire e WirePlumber", "O PipeWire e o WirePlumber da sessão",
-             versoes_do_som, volta=2),
+             "O serviço do Bluetooth", versoes_do_bluetooth,
+             *_etapas_da_casa("bluez")),
+        Peca("som", "Som", "PipeWire e WirePlumber", "No próximo início da sessão",
+             versoes_do_som, *_etapas_da_casa("pipewire")),
         Peca("portal", "Portal do COSMIC", "A captura de tela do COSMIC, com a correção do Hefesto",
-             "A sessão", versoes_do_portal, volta=2),
+             "No próximo início da sessão", versoes_do_portal, *_etapas_da_casa("portal")),
         Peca("gdk", "GameInput", "A peça GDK e o GameInput dos jogos do Xbox no PC",
-             "Os jogos com a peça", versoes_da_gdk, volta=2),
+             "Os jogos com a peça", versoes_da_gdk, _baixar_a_gdk, _instalar_a_gdk, None,
+             _voltar_a_gdk),
         Peca("python", "Python", "As bibliotecas do Hefesto", "O serviço e a janela",
              versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python),
         Peca("nvidia", "Driver Nvidia", "O driver da placa de vídeo", "No próximo início",

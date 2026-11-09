@@ -130,7 +130,10 @@ def test_a_regra_lista_cada_verbo_sem_curinga(lar: Lar) -> None:
     assert verbos == [f"{ALVO} {v}" for v in (
         "apt-lista", "apt-baixar nvidia", "apt-instalar nvidia", "apt-baixar kernel",
         "apt-instalar kernel", "apt-baixar sistema", "apt-instalar sistema", "apt-limpar",
-        "dkms-refazer", "mangohud-instalar", "mangohud-voltar", "kernel-anterior")]
+        "dkms-refazer", "mangohud-instalar", "mangohud-voltar",
+        *(f"backport-{v} {p}" for p in ("bluez", "pipewire", "portal")
+          for v in ("construir", "instalar", "voltar")),
+        "kernel-anterior")]
     visudo = shutil.which("visudo") or "/usr/sbin/visudo"
     if Path(visudo).exists():
         arq = lar.base / "regra"
@@ -458,6 +461,8 @@ def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path, rot
     lib.mkdir()
     regras.mkdir()
     codigo = _funcao_do_install("_gravar_regra_do_sudo") + _funcao_do_install(rotina)
+    if rotina == "install_atualizador_raiz_host":
+        codigo = _funcao_do_install("_instalar_as_receitas_do_atualizador") + codigo
     codigo = codigo.replace("/usr/local/lib/hefesto-dualsense4unix", str(lib)) \
         .replace("/etc/sudoers.d", str(regras))
     log, bin_ = tmp_path / "sudo.log", tmp_path / "bin"
@@ -466,7 +471,7 @@ def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path, rot
         "#!/bin/bash\n"
         f'echo "$*" >> "{log}"\n'
         '[[ "$1" == -n ]] && shift\n'
-        '[[ "$1" == true || "$1" == -l ]] && exit 0\n'
+        '[[ "$1" == true || "$1" == -l || "$1" == chown ]] && exit 0\n'
         'if [[ "$1" == visudo ]]; then\n'
         f'  echo "visudo-viu $(stat -c %a "${{@: -1}}") ${{@: -1}}" >> "{log}"; exit 0\n'
         'fi\n'
@@ -495,6 +500,12 @@ def test_o_install_confere_a_regra_ja_do_root_antes_de_valer(tmp_path: Path, rot
     assert modo == "440", "o visudo confere o arquivo que só o root escreve, não o rascunho"
     final = regras / regra
     assert "fulana" in final.read_text(encoding="utf-8")
+    if rotina == "install_atualizador_raiz_host":
+        receitas = lib / "receitas"
+        assert (receitas / "scripts" / "hefesto_receita_nova.py").is_file()
+        assert (receitas / "assets" / "bluez-backport" / "BASELINE").is_file()
+        assert not any(c.stat().st_mode & 0o022 for c in receitas.rglob("*")), (
+            "o ajudante recusa receita que outro escreve")
     assert sorted(p.name for p in regras.iterdir()) == [regra]
     assert not list(tmp_path.glob("tmp.*")), "o rascunho de quem usa não sobra"
 

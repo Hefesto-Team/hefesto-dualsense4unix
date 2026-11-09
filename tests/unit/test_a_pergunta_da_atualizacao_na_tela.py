@@ -243,21 +243,22 @@ def test_o_hefesto_nao_tem_voltar_a_anterior() -> None:
     assert 'data-v="kernel"' in corpo and 'data-v="hefesto"' not in corpo
 
 
-def test_o_portal_e_a_gdk_aparecem_fixos_na_volta_2(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_portal_e_a_gdk_sobem_pelo_motor_na_volta_2(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
-    from hefesto_dualsense4unix.integrations import receitas_de_ambiente as receitas
 
     monkeypatch.setattr(pa, "_instalados", lambda *_p: {
         pa.PACOTE_DO_PORTAL: "1.0.0~1780000000+0~hefesto1"})
-    monkeypatch.setattr(receitas, "peca_do_hefesto_instalada", lambda *_a, **_k: True)
+    monkeypatch.setattr(pa, "_atualizar_a_lista_do_apt", lambda _rede: None)
+    monkeypatch.setattr(pa, "_portal_no_apt", lambda: "1.0.0~1780000000")
     pecas = {p.id: p for p in pa.registro()}
     for ident in ("bluetooth", "som", "portal", "gdk"):
-        assert pecas[ident].volta == 2 and pecas[ident].instalar is None
-    assert pa.versoes_do_portal(True).instalada == "1.0.0~1780000000+0~hefesto1"
-    assert pa.versoes_da_gdk(True).instalada.isdigit()
-    lista = [pecas[i] for i in ("portal", "gdk")]
-    estados = {i["id"]: i["estado"] for i in at.conferir(rede=True, lista=lista)["pecas"]}
-    assert estados == {"portal": at.FIXA, "gdk": at.FIXA}
+        assert pecas[ident].volta == 1 and pecas[ident].instalar is not None
+    versoes = pa.versoes_do_portal(True)
+    assert versoes.instalada == "1.0.0"
+    assert versoes.completa == "1.0.0~1780000000+0~hefesto1"
+    estados = {i["id"]: i["estado"]
+               for i in at.conferir(rede=True, lista=[pecas["portal"]])["pecas"]}
+    assert estados == {"portal": at.EM_DIA}
     assert tela.ORDEM_NA_TELA.index("gdk") < tela.ORDEM_NA_TELA.index("python")
 
 

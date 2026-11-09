@@ -3,8 +3,10 @@ set -u
 
 ALVO_INSTALADO=/usr/local/lib/hefesto-dualsense4unix/atualizador-raiz
 SUFIXOS_INSTALADOS=/usr/local/lib/hefesto-dualsense4unix/sufixos-da-casa
+RECEITAS_INSTALADAS=/usr/local/lib/hefesto-dualsense4unix/receitas
 REPO_DO_MANGOHUD=flightlessmango/MangoHud
 GRUPOS="nvidia kernel sistema"
+BACKPORTS="bluez pipewire portal"
 TETO_DO_BAIXADO=$((512 * 1024 * 1024))
 
 if [[ "$(id -u)" -eq 0 ]]; then
@@ -18,6 +20,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
     BOOT=/boot
     ESTADO=/var/lib/hefesto-dualsense4unix/atualizador
     SUFIXOS="${SUFIXOS_INSTALADOS}"
+    RECEITAS="${RECEITAS_INSTALADAS}"
     CASA_DA_USUARIA=""
     DONO=root
     API="https://api.github.com/repos/${REPO_DO_MANGOHUD}/releases/latest"
@@ -30,6 +33,7 @@ else
     BOOT="${HEFESTO_ATUALIZADOR_BOOT:-/boot}"
     ESTADO="${HEFESTO_ATUALIZADOR_ESTADO:-}"
     SUFIXOS="${HEFESTO_ATUALIZADOR_SUFIXOS:-${SUFIXOS_INSTALADOS}}"
+    RECEITAS="${HEFESTO_ATUALIZADOR_RECEITAS:-}"
     CASA_DA_USUARIA="${HEFESTO_ATUALIZADOR_CASA:-}"
     DONO="${HEFESTO_ATUALIZADOR_DONO:-root}"
     API="${HEFESTO_ATUALIZADOR_API:-}"
@@ -247,7 +251,7 @@ except OSError as erro:
 st = os.fstat(fd)
 if not stat.S_ISREG(st.st_mode):
     sys.exit(f"{origem} não é um arquivo comum")
-if st.st_uid != dono or st.st_nlink != 1:
+if (dono >= 0 and st.st_uid != dono) or st.st_nlink != 1:
     sys.exit(f"{origem} não é de quem baixou")
 if st.st_size > teto:
     sys.exit(f"{origem} passa do teto")
@@ -374,6 +378,163 @@ verbo_kernel_anterior() {
     printf 'o próximo início usa %s (%s)\n' "${entrada}" "${ver}"
 }
 
+_backport_valido() {
+    local b
+    for b in ${BACKPORTS}; do
+        [[ "$1" == "${b}" ]] && return 0
+    done
+    _recusar "peça da casa desconhecida: '$1' (${BACKPORTS// / | })"
+}
+
+_versao_do_portal_no_apt() {
+    local v melhor=""
+    while IFS= read -r v; do
+        [[ "${v}" =~ ^[0-9A-Za-z.+:~-]+$ && "${v}" != *~hefesto* ]] || continue
+        if [[ -z "${melhor}" ]] || dpkg --compare-versions "${v}" gt "${melhor}"; then
+            melhor="${v}"
+        fi
+    done < <(apt-cache madison xdg-desktop-portal-cosmic 2>/dev/null \
+        | awk -F'|' '{ gsub(/ /, "", $2); print $2 }')
+    printf '%s' "${melhor}"
+}
+
+_obra_da_caixa() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        printf '/var/cache/hefesto-backport-%s' "$1"
+    else
+        printf '%s/backports/%s/obra' "${CACHE}" "$1"
+    fi
+}
+
+_construir_na_caixa() {
+    local peca="$1" ver="$2"
+    local -a receita=(python3 -I "${RECEITAS}/scripts/hefesto_receita_nova.py" construir
+        --peca "${peca}" --receitas "${RECEITAS}" --portal-do-apt "${ver}"
+        --obra "$(_obra_da_caixa "${peca}")")
+    if [[ "$(id -u)" -ne 0 ]]; then
+        "${receita[@]}" </dev/null
+        return
+    fi
+    command -v systemd-run >/dev/null 2>&1 || _recusar "systemd-run ausente: a casa não constrói como root"
+    systemd-run --quiet --wait --pipe --collect \
+        -p DynamicUser=yes -p "CacheDirectory=hefesto-backport-${peca}" \
+        -p ProtectHome=yes -p PrivateTmp=yes -p NoNewPrivileges=yes -p RuntimeMaxSec=4h \
+        -p "WorkingDirectory=/var/cache/hefesto-backport-${peca}" \
+        "${receita[@]}" </dev/null
+}
+
+_limpar_a_caixa() {
+    [[ "$(id -u)" -eq 0 ]] || return 0
+    rm -rf --one-file-system -- "/var/cache/private/hefesto-backport-$1"
+}
+
+_conferir_a_entrega() {
+    local pasta="$1" deb nome
+    [[ -f "${pasta}/SHA256SUMS" ]] || return 1
+    compgen -G "${pasta}/*.deb" >/dev/null || return 1
+    for deb in "${pasta}"/*.deb; do
+        nome="${deb##*/}"
+        awk -v n="${nome}" '$2 == n || $2 == "*" n { achou = 1 } END { exit !achou }' \
+            "${pasta}/SHA256SUMS" || return 1
+    done
+    (cd "${pasta}" && sha256sum --quiet --strict -c SHA256SUMS) >/dev/null 2>&1
+}
+
+_debs_da_casa() {
+    local pasta="$1" deb pacote ver s da_casa
+    local -a sufixos
+    _e_so_do_dono "${SUFIXOS}" || { _erro "sem a lista dos sufixos da casa só do root (${SUFIXOS})"; return 1; }
+    mapfile -t sufixos < <(grep -E '^[A-Za-z0-9.+~:-]+$' "${SUFIXOS}")
+    for deb in "${pasta}"/*.deb; do
+        pacote="$(dpkg-deb -f "${deb}" Package 2>/dev/null)"
+        ver="$(dpkg-deb -f "${deb}" Version 2>/dev/null)"
+        [[ "${pacote}" =~ ^[a-z0-9][a-z0-9.+-]*$ ]] || { _erro "${deb##*/} sem nome de pacote"; return 1; }
+        da_casa=0
+        for s in "${sufixos[@]}"; do
+            [[ -n "${s}" && "${ver}" == *"${s}"* ]] && da_casa=1
+        done
+        [[ "${da_casa}" -eq 1 ]] || { _erro "${deb##*/} não é um pacote da casa (${ver})"; return 1; }
+        _instalados | awk -F'\t' -v p="${pacote}" '$1 == p && $2 ~ /^ii/ { achou = 1 } END { exit !achou }' \
+            && printf '%s\n' "${deb}"
+    done
+    return 0
+}
+
+_instalar_da_pasta() {
+    local pasta="$1" lista
+    shift
+    _conferir_a_entrega "${pasta}" || _recusar "a soma dos pacotes em ${pasta} não confere"
+    lista="$(_debs_da_casa "${pasta}")" || _recusar "os pacotes em ${pasta} não são da casa"
+    [[ -n "${lista}" ]] || _recusar "nenhum dos pacotes em ${pasta} está instalado nesta máquina"
+    local -a debs
+    mapfile -t debs <<<"${lista}"
+    _apt "$@" install --no-install-recommends "${debs[@]}"
+}
+
+verbo_backport_construir() {
+    _exige_raiz backport-construir
+    local peca="$1" ver="" obra arquivo nome rc=0 base
+    _backport_valido "${peca}"
+    [[ -n "${RECEITAS}" ]] && _e_so_do_dono "${RECEITAS}" \
+        || _recusar "sem as receitas da casa só do root (${RECEITAS}): rode o install"
+    base="${CACHE}/backports/${peca}"
+    install -d -m 700 "${CACHE}/backports" "${base}" || _recusar "não criei ${base}"
+    _e_so_do_dono "${CACHE}/backports" || _recusar "a pasta ${CACHE}/backports não é só do root"
+    if [[ "${peca}" == "portal" ]]; then
+        ver="$(_versao_do_portal_no_apt)"
+        [[ -n "${ver}" ]] || _recusar "o apt não diz a versão do portal"
+    fi
+    obra="$(_obra_da_caixa "${peca}")"
+    _construir_na_caixa "${peca}" "${ver}" || rc=$?
+    if [[ "${rc}" -ne 0 ]]; then
+        _limpar_a_caixa "${peca}"
+        exit "${rc}"
+    fi
+    rm -rf -- "${base}/novo"
+    install -d -m 700 "${base}/novo"
+    for arquivo in "${obra}/entrega"/*.deb "${obra}/entrega/SHA256SUMS"; do
+        [[ -e "${arquivo}" || -L "${arquivo}" ]] || continue
+        nome="${arquivo##*/}"
+        if [[ ! "${nome}" =~ ^[A-Za-z0-9._+~-]+$ ]] \
+            || ! _copiar_o_baixado "${arquivo}" "${base}/novo/${nome}" -1; then
+            rm -rf -- "${base}/novo"
+            _limpar_a_caixa "${peca}"
+            _recusar "a entrega de ${peca} traz o que não se copia: ${nome}"
+        fi
+    done
+    _limpar_a_caixa "${peca}"
+    if ! _conferir_a_entrega "${base}/novo"; then
+        rm -rf -- "${base}/novo"
+        _recusar "a entrega de ${peca} não confere com a própria SHA256SUMS"
+    fi
+    printf 'pronto para instalar: %s\n' "${peca}"
+}
+
+verbo_backport_instalar() {
+    _exige_raiz backport-instalar
+    local peca="$1" base
+    _backport_valido "${peca}"
+    base="${CACHE}/backports/${peca}"
+    _e_so_do_dono "${base}/novo" || _recusar "nada construído para ${peca}: a construção vem antes"
+    _instalar_da_pasta "${base}/novo" || exit 1
+    rm -rf -- "${base}/anterior"
+    [[ -d "${base}/atual" ]] && mv -f -- "${base}/atual" "${base}/anterior"
+    mv -f -- "${base}/novo" "${base}/atual"
+    printf 'instalado: %s\n' "${peca}"
+}
+
+verbo_backport_voltar() {
+    _exige_raiz backport-voltar
+    local peca="$1" base
+    _backport_valido "${peca}"
+    base="${CACHE}/backports/${peca}"
+    _e_so_do_dono "${base}/anterior" || _recusar "sem versão anterior de ${peca} trocada por este ajudante"
+    _instalar_da_pasta "${base}/anterior" --allow-downgrades || exit 1
+    rm -rf -- "${base}/atual"
+    mv -f -- "${base}/anterior" "${base}/atual"
+    printf '%s de volta à versão anterior\n' "${peca}"
+}
+
 verbo_regra_sudo() {
     local usuaria="${1:-}" g
     [[ "${usuaria}" =~ ^[A-Za-z_][A-Za-z0-9._-]{0,31}$ ]] \
@@ -394,6 +555,11 @@ verbo_regra_sudo() {
     printf '    %s dkms-refazer, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-instalar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-voltar, \\\n' "${ALVO_INSTALADO}"
+    for g in ${BACKPORTS}; do
+        printf '    %s backport-construir %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+        printf '    %s backport-instalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+        printf '    %s backport-voltar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+    done
     printf '    %s kernel-anterior\n' "${ALVO_INSTALADO}"
     printf '%s ALL=(root) NOPASSWD: HEFESTO_ATUALIZADOR\n' "${usuaria}"
 }
@@ -409,6 +575,9 @@ case "${1:-}" in
     mangohud-instalar) [[ $# -eq 1 ]] || _recusar "mangohud-instalar não leva argumento"; verbo_mangohud_instalar ;;
     mangohud-voltar) [[ $# -eq 1 ]] || _recusar "mangohud-voltar não leva argumento"; verbo_mangohud_voltar ;;
     kernel-anterior) [[ $# -eq 1 ]] || _recusar "kernel-anterior não leva argumento"; verbo_kernel_anterior ;;
+    backport-construir) [[ $# -eq 2 ]] || _recusar "backport-construir <peça>"; verbo_backport_construir "$2" ;;
+    backport-instalar) [[ $# -eq 2 ]] || _recusar "backport-instalar <peça>"; verbo_backport_instalar "$2" ;;
+    backport-voltar) [[ $# -eq 2 ]] || _recusar "backport-voltar <peça>"; verbo_backport_voltar "$2" ;;
     regra-sudo) verbo_regra_sudo "${2:-}" ;;
-    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar <grupo> | apt-instalar <grupo> | apt-limpar | dkms-refazer | mangohud-instalar | mangohud-voltar | kernel-anterior | regra-sudo <usuária>)" ;;
+    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar <grupo> | apt-instalar <grupo> | apt-limpar | dkms-refazer | mangohud-instalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
 esac

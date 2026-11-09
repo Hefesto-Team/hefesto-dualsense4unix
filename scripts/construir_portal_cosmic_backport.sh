@@ -17,6 +17,8 @@ Uso:
       # o binário traz a MARCA_ do BASELINE?
   HEFESTO_PORTAL_CACHE=/outro scripts/construir_portal_cosmic_backport.sh
   HEFESTO_PORTAL_JOBS=4 scripts/construir_portal_cosmic_backport.sh
+  HEFESTO_PORTAL_VERSAO=<versão do apt> scripts/construir_portal_cosmic_backport.sh
+      # constrói sobre outra versão do apt, e não a instalada (o atualizador)
 
 Códigos de saída: 0 certo · 2 uso · 3 falta dependência · 4 fonte · 5 patch ·
 6 sem a cura · 7 build · 9 a versão de cima já traz a cura (nada a fazer).
@@ -452,6 +454,11 @@ main() {
     instalada="$(versao_instalada)"
     [[ -n "${instalada}" ]] || morra "${RC_USO}" "o $(ler PORTAL_PACOTE) não está instalado pelo dpkg"
     VERSAO="$(versao_de_cima "${instalada}")"
+    if [[ -n "${HEFESTO_PORTAL_VERSAO:-}" ]]; then
+        [[ "${HEFESTO_PORTAL_VERSAO}" =~ ^[0-9A-Za-z.+:~-]+$ ]] \
+            || morra "${RC_USO}" "HEFESTO_PORTAL_VERSAO inválida: ${HEFESTO_PORTAL_VERSAO}"
+        VERSAO="${HEFESTO_PORTAL_VERSAO}"
+    fi
     REVISAO="${VERSAO}$(ler SUFIXO)"
     ARVORE="${OBRA}/$(ler PORTAL_PACOTE)-${VERSAO#*:}"
 

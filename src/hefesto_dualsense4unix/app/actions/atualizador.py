@@ -49,6 +49,7 @@ EM_DIA = "em_dia"
 NAO_CONSULTADO = "nao_consultado"
 FIXA = "fixa"
 FORA = "fora"
+REVISAR = "revisar"
 
 FILA = "fila"
 BAIXANDO = "baixando"
@@ -89,6 +90,8 @@ class Versoes:
     dica: str = ""
     nova: bool | None = None
     existe: bool = True
+    completa: str = ""
+    revisar: str = ""
 
     def tem_nova(self) -> bool:
         if self.nova is not None:
@@ -260,6 +263,8 @@ def _estado_da_peca(peca: Peca, versoes: Versoes, escolha: Escolha) -> str:
         return FORA
     if peca.volta != 1:
         return FIXA
+    if versoes.revisar:
+        return REVISAR
     if versoes.publicada is None:
         return NAO_CONSULTADO
     if versoes.tem_nova() and escolha.seguradas.get(peca.id) != versoes.publicada:
@@ -283,9 +288,10 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
         estado = _estado_da_peca(peca, versoes, escolha)
         itens.append({
             "id": peca.id, "nome": peca.nome, "grupo": peca.grupo, "volta": peca.volta,
-            "dica": versoes.dica or peca.dica, "dica_do_aplicar": peca.dica_do_aplicar,
+            "dica": versoes.revisar or versoes.dica or peca.dica,
+            "dica_do_aplicar": peca.dica_do_aplicar,
             "de": versoes.instalada, "para": versoes.publicada or "",
-            "rotulo": versoes.rotulo, "estado": estado,
+            "completa": versoes.completa, "rotulo": versoes.rotulo, "estado": estado,
             "marcada": escolha.marcada(peca),
             "pode_voltar": peca.voltar is not None,
         })
