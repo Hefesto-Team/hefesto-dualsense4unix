@@ -132,7 +132,8 @@ def test_a_regra_lista_cada_verbo_sem_curinga(lar: Lar) -> None:
         "apt-instalar kernel", "apt-baixar sistema", "apt-instalar sistema",
         "apt-baixar-de-novo nvidia", "apt-reinstalar nvidia", "apt-baixar-de-novo kernel",
         "apt-reinstalar kernel", "apt-consertar", "apt-limpar",
-        "dkms-refazer", "dkms-reinstalar", "mangohud-instalar", "mangohud-reinstalar",
+        "dkms-refazer", "dkms-reinstalar", "mangohud-instalar", "mangohud-reinstalavel",
+        "mangohud-reinstalar",
         "mangohud-voltar",
         *(f"backport-{v} {p}" for p in ("bluez", "pipewire", "portal")
           for v in ("construir", "instalar", "reinstalavel", "reinstalar", "voltar")),

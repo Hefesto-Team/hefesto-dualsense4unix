@@ -161,7 +161,7 @@ def _sem_v(tag: str) -> str:
 
 
 def _raiz(acao: str, *args: str, passo: Passo | None = None,
-          teto_s: float = TETO_DO_COMANDO_S) -> None:
+          teto_s: float = TETO_DO_COMANDO_S) -> str:
     """O ajudante root, sem senha: falha com o porquê se a regra do install não está lá."""
     if not AJUDANTE.is_file():
         raise EtapaFalhouError("o ajudante do install não está instalado: rode o install")
@@ -175,18 +175,22 @@ def _raiz(acao: str, *args: str, passo: Passo | None = None,
     rc, ultima = _comando(["sudo", "-n", str(AJUDANTE), acao, *args], linha=linha, teto_s=teto_s)
     if rc != 0:
         raise EtapaFalhouError(ultima or f"{acao} saiu com {rc}")
+    return ultima
 
 
-def _pergunta_da_raiz(acao: str, *args: str) -> str:
-    """O ajudante responde sem mexer em nada: vazio se sim, senão o porquê."""
+def _resposta_da_raiz(acao: str, *args: str) -> tuple[str, str]:
+    """O ajudante responde sem mexer em nada: o porquê (vazio se sim) e a última linha."""
     try:
-        _raiz(acao, *args, teto_s=TETO_DA_PERGUNTA_S)
+        return "", _raiz(acao, *args, teto_s=TETO_DA_PERGUNTA_S) or ""
     except EtapaFalhouError as erro:
         texto = str(erro)
         if texto.startswith("sudo:"):
-            return "a regra do sudo não traz a reinstalação: rode o install"
-        return re.sub(r"^[\w.-]+: ", "", texto) or acao
-    return ""
+            return "a regra do sudo não traz a reinstalação: rode o install", ""
+        return re.sub(r"^[\w.-]+: ", "", texto) or acao, ""
+
+
+def _pergunta_da_raiz(acao: str, *args: str) -> str:
+    return _resposta_da_raiz(acao, *args)[0]
 
 
 def _do_ajudante(acao: str, *args: str) -> Etapa:
@@ -552,18 +556,14 @@ def _instalar_o_mangohud(passo: Passo, _dados_: dict[str, Any]) -> None:
 def _mangohud_sem_reinstalar(versoes: Versoes) -> str:
     if not versoes.instalada:
         return "o MangoHud não está instalado"
-    if versoes.publicada != versoes.instalada:
-        return "a reinstalação traz só a versão publicada, que não é a instalada"
+    motivo, resposta = _resposta_da_raiz("mangohud-reinstalavel")
+    if motivo:
+        return motivo
+    nome = resposta.removeprefix("reinstala: ")
+    guardada = nome.removeprefix("MangoHud-").removesuffix(".tar.gz")
+    if not _e_o_binario_do_mangohud(nome) or _sem_v(guardada) != versoes.instalada:
+        return "o MangoHud que o ajudante guardou não é a versão instalada"
     return ""
-
-
-def _baixar_de_novo_o_mangohud(passo: Passo, dados: dict[str, Any]) -> None:
-    texto = _saida(["mangohud", "--version"]) if shutil.which("mangohud") else None
-    instalada = _sem_v((texto or "").strip().split()[0]) if (texto or "").strip() else ""
-    publicada = _sem_v(str(_release(REPO_DO_MANGOHUD).get("tag_name", "")))
-    if not instalada or publicada != instalada:
-        raise EtapaFalhouError("a versão publicada não é a instalada: nada se reinstala")
-    _baixar_o_mangohud(passo, dados)
 
 
 def _voltar_o_mangohud(_anterior: dict[str, Any]) -> None:
@@ -1332,8 +1332,7 @@ def registro() -> list[Peca]:
         Peca("mangohud", "MangoHud", "O painel por cima do jogo", "Todos os jogos",
              versoes_do_mangohud, _baixar_o_mangohud, _instalar_o_mangohud, None,
              _voltar_o_mangohud,
-             reinstalacao=Reinstalacao(_baixar_de_novo_o_mangohud,
-                                       _do_ajudante("mangohud-reinstalar"), None,
+             reinstalacao=Reinstalacao(None, _do_ajudante("mangohud-reinstalar"), None,
                                        _mangohud_sem_reinstalar)),
         Peca("umu", "umu", "Os jogos de fora da Steam no Proton", "Os jogos de fora da Steam",
              versoes_do_umu, _baixar_o_umu, _instalar_o_umu, _aplicar_o_umu, _voltar_o_umu,

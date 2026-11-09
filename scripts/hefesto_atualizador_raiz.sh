@@ -365,8 +365,9 @@ _instalar_o_tar_do_mangohud() {
     return "${rc}"
 }
 
-_mangohud_do_baixado() {
-    local girar="$1" casa origem nome esperado obtido
+verbo_mangohud_instalar() {
+    _exige_raiz mangohud-instalar
+    local casa origem nome esperado obtido
     casa="$(_casa_da_usuaria)"
     [[ -n "${casa}" && -d "${casa}" ]] || _recusar "a casa de quem baixou não existe"
     local -a achados
@@ -389,15 +390,44 @@ _mangohud_do_baixado() {
         _recusar "o sha256 de ${nome} não é o publicado"
     fi
     _instalar_o_tar_do_mangohud "${CACHE}/mangohud/novo.tar.gz" || exit 1
-    if [[ "${girar}" -eq 1 && -f "${CACHE}/mangohud/atual.tar.gz" ]]; then
+    if [[ -f "${CACHE}/mangohud/atual.tar.gz" ]]; then
         mv -f "${CACHE}/mangohud/atual.tar.gz" "${CACHE}/mangohud/anterior.tar.gz"
+        if [[ -f "${CACHE}/mangohud/atual.nome" ]]; then
+            mv -f "${CACHE}/mangohud/atual.nome" "${CACHE}/mangohud/anterior.nome"
+        else
+            rm -f "${CACHE}/mangohud/anterior.nome"
+        fi
     fi
     mv -f "${CACHE}/mangohud/novo.tar.gz" "${CACHE}/mangohud/atual.tar.gz"
+    printf '%s\n' "${nome}" >"${CACHE}/mangohud/atual.nome"
     printf 'MangoHud instalado: %s\n' "${nome}"
 }
 
-verbo_mangohud_instalar() { _exige_raiz mangohud-instalar; _mangohud_do_baixado 1; }
-verbo_mangohud_reinstalar() { _exige_raiz mangohud-reinstalar; _mangohud_do_baixado 0; }
+_mangohud_de_agora() {
+    local pasta="${CACHE}/mangohud" nome
+    [[ -d "${pasta}" && ! -L "${pasta}" ]] && _e_so_do_dono "${pasta}" \
+        && [[ -f "${pasta}/atual.tar.gz" && ! -L "${pasta}/atual.tar.gz" ]] \
+        && [[ -f "${pasta}/atual.nome" && ! -L "${pasta}/atual.nome" ]] \
+        || _recusar "sem o MangoHud que este ajudante instalou: a reinstalação vem depois da primeira subida pela janela"
+    nome="$(head -n 1 "${pasta}/atual.nome")"
+    [[ "${nome}" =~ ^MangoHud-[A-Za-z0-9._-]+\.tar\.gz$ ]] || _recusar "o nome do MangoHud de agora está estragado"
+    printf '%s\n' "${nome}"
+}
+
+verbo_mangohud_reinstalavel() {
+    _exige_raiz mangohud-reinstalavel
+    local nome
+    nome="$(_mangohud_de_agora)" || exit 2
+    printf 'reinstala: %s\n' "${nome}"
+}
+
+verbo_mangohud_reinstalar() {
+    _exige_raiz mangohud-reinstalar
+    local nome
+    nome="$(_mangohud_de_agora)" || exit 2
+    _instalar_o_tar_do_mangohud "${CACHE}/mangohud/atual.tar.gz" || exit 1
+    printf 'MangoHud reinstalado: %s\n' "${nome}"
+}
 
 verbo_mangohud_voltar() {
     _exige_raiz mangohud-voltar
@@ -405,6 +435,11 @@ verbo_mangohud_voltar() {
     [[ -f "${CACHE}/mangohud/anterior.tar.gz" ]] || _recusar "sem versão anterior do MangoHud trocada por este ajudante"
     _instalar_o_tar_do_mangohud "${CACHE}/mangohud/anterior.tar.gz" || exit 1
     mv -f "${CACHE}/mangohud/anterior.tar.gz" "${CACHE}/mangohud/atual.tar.gz"
+    if [[ -f "${CACHE}/mangohud/anterior.nome" ]]; then
+        mv -f "${CACHE}/mangohud/anterior.nome" "${CACHE}/mangohud/atual.nome"
+    else
+        rm -f "${CACHE}/mangohud/atual.nome"
+    fi
     printf 'MangoHud de volta à versão anterior\n'
 }
 
@@ -684,6 +719,7 @@ verbo_regra_sudo() {
     printf '    %s dkms-refazer, \\\n' "${ALVO_INSTALADO}"
     printf '    %s dkms-reinstalar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-instalar, \\\n' "${ALVO_INSTALADO}"
+    printf '    %s mangohud-reinstalavel, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-reinstalar, \\\n' "${ALVO_INSTALADO}"
     printf '    %s mangohud-voltar, \\\n' "${ALVO_INSTALADO}"
     for g in ${BACKPORTS}; do
@@ -710,6 +746,7 @@ case "${1:-}" in
     dkms-refazer) [[ $# -eq 1 ]] || _recusar "dkms-refazer não leva argumento"; verbo_dkms_refazer ;;
     dkms-reinstalar) [[ $# -eq 1 ]] || _recusar "dkms-reinstalar não leva argumento"; verbo_dkms_reinstalar ;;
     mangohud-instalar) [[ $# -eq 1 ]] || _recusar "mangohud-instalar não leva argumento"; verbo_mangohud_instalar ;;
+    mangohud-reinstalavel) [[ $# -eq 1 ]] || _recusar "mangohud-reinstalavel não leva argumento"; verbo_mangohud_reinstalavel ;;
     mangohud-reinstalar) [[ $# -eq 1 ]] || _recusar "mangohud-reinstalar não leva argumento"; verbo_mangohud_reinstalar ;;
     mangohud-voltar) [[ $# -eq 1 ]] || _recusar "mangohud-voltar não leva argumento"; verbo_mangohud_voltar ;;
     kernel-anterior) [[ $# -eq 1 ]] || _recusar "kernel-anterior não leva argumento"; verbo_kernel_anterior ;;
@@ -719,5 +756,5 @@ case "${1:-}" in
     backport-reinstalar) [[ $# -eq 2 ]] || _recusar "backport-reinstalar <peça>"; verbo_backport_reinstalar "$2" ;;
     backport-voltar) [[ $# -eq 2 ]] || _recusar "backport-voltar <peça>"; verbo_backport_voltar "$2" ;;
     regra-sudo) verbo_regra_sudo "${2:-}" ;;
-    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-baixar-de-novo|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
+    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-baixar-de-novo|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalavel | mangohud-reinstalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
 esac

@@ -8,9 +8,11 @@ AS MORDIDAS (feitas na sprint, com a cura devolvida): o motor sem a reinstalaç�
 marcada sobe ou não faz nada) reprova o caso da peça em dia; o verbo da reinstalação que aceita
 grupo livre reprova o caso dos argumentos; a reinstalação do apt sem a autenticação forçada
 reprova o caso do Nvidia; a entrega da casa sem a versão conferida contra a instalada reprova o
-caso da versão de outra; o DKMS sem o ``--force`` reprova o caso dos módulos; o MangoHud que gira
-a anterior na reinstalação reprova o caso dele; o Python que reinstala na pasta da subida reprova
-o caso das rodas.
+caso da versão de outra; o DKMS sem o ``--force`` reprova o caso dos módulos; o MangoHud que
+reinstala o baixado de quem chama, ou que aceita o guardado de outra versão, reprova os casos
+dele; o Python que reinstala na pasta da subida reprova o caso das rodas; o apt da reinstalação
+sem ``--no-remove`` reprova os casos do Nvidia, do conserto e do backport; o porquê gravado fora
+de ``motivo`` reprova o contrato com a tela.
 """
 from __future__ import annotations
 
@@ -165,10 +167,14 @@ def _regra() -> set[tuple[str, ...]]:
 def test_toda_reinstalacao_pede_ao_root_so_um_verbo_da_regra(
         monkeypatch: pytest.MonkeyPatch) -> None:
     pedidos: list[tuple[str, ...]] = []
-    monkeypatch.setattr(pa, "_raiz", lambda verbo, *args, **_k: pedidos.append((verbo, *args)))
+    def _raiz(verbo: str, *args: str, **_k: object) -> str:
+        pedidos.append((verbo, *args))
+        return "reinstala: MangoHud-1.tar.gz"
+
+    monkeypatch.setattr(pa, "_raiz", _raiz)
     pecas = {p.id: p for p in pa.registro()}
     assert all(p.reinstalacao is not None for p in pecas.values()), "toda peça é marcável"
-    for ident in ("bluetooth", "som", "portal", "nvidia", "kernel", "dkms", "sistema"):
+    for ident in ("bluetooth", "som", "portal", "nvidia", "kernel", "dkms", "sistema", "mangohud"):
         r = pecas[ident].reinstalacao
         assert r is not None
         if r.por_que_nao is not None:
@@ -180,7 +186,8 @@ def test_toda_reinstalacao_pede_ao_root_so_um_verbo_da_regra(
     assert pedidos and all(p in regra for p in pedidos), set(pedidos) - regra
     novos = {p[0] for p in pedidos}
     assert {"apt-baixar-de-novo", "apt-reinstalar", "apt-consertar", "dkms-reinstalar",
-            "backport-reinstalavel", "backport-reinstalar"} <= novos
+            "mangohud-reinstalavel", "mangohud-reinstalar", "backport-reinstalavel",
+            "backport-reinstalar"} <= novos
 
 
 class Lar:
@@ -355,22 +362,32 @@ def _tar_do_mangohud(raiz: Lar, nome: str) -> Path:
     return arq
 
 
-def test_o_mangohud_reinstala_sem_perder_a_anterior(raiz: Lar) -> None:
-    velho = _tar_do_mangohud(raiz, "MangoHud-0.8.4.r0.tar.gz").read_bytes()
+def test_o_mangohud_reinstala_so_o_que_o_ajudante_instalou_sem_perder_a_anterior(
+        raiz: Lar) -> None:
+    for verbo in ("mangohud-reinstalavel", "mangohud-reinstalar"):
+        feito = raiz.rodar(verbo)
+        assert feito.returncode == 2 and "primeira subida" in feito.stderr, verbo
+    velho = _tar_do_mangohud(raiz, "MangoHud-0.8.4.tar.gz").read_bytes()
     assert raiz.rodar("mangohud-instalar").returncode == 0
-    novo = _tar_do_mangohud(raiz, "MangoHud-0.8.5.r0.tar.gz").read_bytes()
+    novo = _tar_do_mangohud(raiz, "MangoHud-0.8.5.tar.gz").read_bytes()
     assert raiz.rodar("mangohud-instalar").returncode == 0
+    _tar_do_mangohud(raiz, "MangoHud-0.8.6.tar.gz")
+    pasta = raiz.cache / "mangohud"
+    feito = raiz.rodar("mangohud-reinstalavel")
+    assert feito.returncode == 0 and feito.stdout.strip() == "reinstala: MangoHud-0.8.5.tar.gz"
     feito = raiz.rodar("mangohud-reinstalar")
     assert feito.returncode == 0, feito.stderr
-    pasta = raiz.cache / "mangohud"
-    assert (pasta / "atual.tar.gz").read_bytes() == novo
+    assert "MangoHud-0.8.5.tar.gz" in feito.stdout
+    assert (pasta / "atual.tar.gz").read_bytes() == novo, "o baixado de quem chama não entra"
     assert (pasta / "anterior.tar.gz").read_bytes() == velho, "a reinstalação não gira a anterior"
     assert raiz.lidas("setup").count("setup install") == 3
-    resposta = raiz.base / "release.json"
-    resposta.write_text(json.dumps({"assets": [{
-        "name": "MangoHud-0.8.5.r0.tar.gz", "digest": f"sha256:{'0' * 64}"}]}))
+    assert len(raiz.lidas("curl")) == 2, "a reinstalação não vai à rede"
+    assert raiz.rodar("mangohud-voltar").returncode == 0
+    assert (pasta / "atual.nome").read_text().strip() == "MangoHud-0.8.4.tar.gz"
+    (pasta / "atual.nome").write_text("MangoHud-0.8.4;rm.tar.gz\n")
     feito = raiz.rodar("mangohud-reinstalar")
-    assert feito.returncode == 2 and "não é o publicado" in feito.stderr
+    assert feito.returncode == 2 and "estragado" in feito.stderr
+    assert raiz.lidas("setup").count("setup install") == 4
 
 
 DEBS_DA_CASA = ("bluez_5.88-0ubuntu0.1~hefesto24.04.6_amd64.deb",
@@ -594,12 +611,17 @@ def test_o_umu_reinstala_a_tag_do_disco_sem_apagar_a_anterior(
     assert "não é o do Hefesto" in r.por_que_nao(at.Versoes("1.4.4", "1.4.4"))
 
 
-def test_o_mangohud_so_reinstala_quando_a_publicada_e_a_instalada() -> None:
+def test_o_mangohud_so_reinstala_o_que_o_ajudante_guardou_na_versao_instalada(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     r = next(p for p in pa.registro() if p.id == "mangohud").reinstalacao
-    assert r is not None and r.por_que_nao is not None
-    assert r.por_que_nao(at.Versoes("0.8.5", "0.8.5")) == ""
-    assert "não é a instalada" in r.por_que_nao(at.Versoes("0.8.4", "0.8.5"))
+    assert r is not None and r.por_que_nao is not None and r.baixar is None
+    resposta = ("", "reinstala: MangoHud-v0.8.5.tar.gz")
+    monkeypatch.setattr(pa, "_resposta_da_raiz", lambda acao, *a: resposta)
+    assert r.por_que_nao(at.Versoes("0.8.5", "0.8.6")) == ""
+    assert "não é a versão instalada" in r.por_que_nao(at.Versoes("0.8.4", "0.8.4"))
     assert "não está instalado" in r.por_que_nao(at.Versoes("", "0.8.5"))
+    resposta = ("sem o MangoHud que este ajudante instalou", "")
+    assert r.por_que_nao(at.Versoes("0.8.5", "0.8.5")) == resposta[0]
 
 
 def test_a_gdk_reinstala_pelo_pino_sem_trocar_a_anterior(
