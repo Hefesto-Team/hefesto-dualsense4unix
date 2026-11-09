@@ -17,8 +17,10 @@ from typing import Any
 ID_DA_CAIXA = "hef-atualizacoes"
 ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
                  "kernel", "dkms", "sistema", "mangohud", "umu")
-GRUPOS_DO_MAPA = (("nova", "Para baixar"), ("em_dia", "Em dia"), ("fixa", "Com o Hefesto"),
-                  ("sem_rede", "Sem rede"))
+GRUPOS_DO_MAPA = (("nova", "Para baixar"), ("revisar", "A revisar"), ("em_dia", "Em dia"),
+                  ("fixa", "Com o Hefesto"), ("sem_rede", "Sem rede"))
+ESTADOS_DO_MAPA = ("nova", "revisar", "em_dia", "fixa")
+MARCAVEIS = ("nova", "em_dia", "fixa")
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
@@ -116,33 +118,34 @@ CSS = """
 .hef-atualiza .selo.falhou{background:var(--red);color:var(--app-bg)}
 .hef-atualiza .tn-cx.mapa{width:min(1180px,calc(100vw - 32px));
   height:min(668px,calc(100vh - 32px));max-height:none;max-width:none}
-.hef-atualiza .mapa .tn-topo{padding:14px 18px 12px;gap:16px;
+.hef-atualiza .mapa .tn-topo{padding:10px 18px 9px;gap:16px;
   border-bottom:1px solid var(--border-sutil)}
 .hef-atualiza .mapa .tn-tit{font-size:18px;font-weight:700;color:var(--pink)}
 .hef-atualiza .mapa .btn.voltar{height:30px}
 .hef-atualiza .mapa .at-ajuste{margin-left:auto;display:flex;align-items:center;gap:14px}
 .hef-atualiza .mapa .at-ajuste .cadeado{height:30px}
-.hef-atualiza .mapa .tn-corpo{padding:14px 18px;flex:1}
+.hef-atualiza .mapa .tn-corpo{padding:10px 18px;flex:1}
+.hef-atualiza .mapa .tn-rod{padding:9px 18px 11px}
 .hef-atualiza .mapa .tn-rod .empurra{flex:1}
 .hef-atualiza .btn.apagado{opacity:.45;pointer-events:none}
-.hef-atualiza .mp-corpo{display:flex;flex-direction:column;gap:10px}
+.hef-atualiza .mp-corpo{display:flex;flex-direction:column;gap:6px}
 .hef-atualiza .mp-g{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:600;
   color:var(--green)}
-.hef-atualiza .mp-g + .mp-grade{margin-bottom:6px}
+.hef-atualiza .mp-g + .mp-grade{margin-bottom:2px}
 .hef-atualiza .mp-g.nova{color:var(--purple)}
 .hef-atualiza .mp-g.fixa,.hef-atualiza .mp-g.sem-rede{color:var(--comment)}
 .hef-atualiza .mp-g .q{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
   color:var(--texto-mudo)}
-.hef-atualiza .mp-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.hef-atualiza .mp-c{display:grid;grid-template-columns:40px minmax(0,1fr) 28px;align-items:center;
-  gap:12px;height:64px;padding:0 10px 0 12px;border-radius:9px;
+.hef-atualiza .mp-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 10px}
+.hef-atualiza .mp-c{display:grid;grid-template-columns:34px minmax(0,1fr) 28px;align-items:center;
+  gap:12px;height:52px;padding:0 10px 0 12px;border-radius:9px;
   border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg)}
 .hef-atualiza label.mp-c{cursor:pointer}
 .hef-atualiza label.mp-c:hover{border-color:var(--comment)}
-.hef-atualiza .mp-i{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;
+.hef-atualiza .mp-i{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;color:var(--green);background:rgba(80,250,123,.10)}
-.hef-atualiza .mp-i svg{width:22px;height:22px}
-.hef-atualiza .mp-t{display:flex;flex-direction:column;gap:4px;min-width:0}
+.hef-atualiza .mp-i svg{width:19px;height:19px}
+.hef-atualiza .mp-t{display:flex;flex-direction:column;gap:2px;min-width:0}
 .hef-atualiza .mp-n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
 .hef-atualiza .mp-v{font-family:'JetBrains Mono',monospace;font-size:12px;
@@ -169,9 +172,19 @@ CSS = """
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-n,
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v,
 .hef-atualiza .mp-c.nova:has(.mp-m:not(:checked)) .mp-v .nv{color:var(--texto-mudo)}
-.hef-atualiza:not(:has(.cadeado.ligada)) .mp-c.em-dia .mp-mx{visibility:hidden}
-.hef-atualiza:has(.cadeado.ligada) .mp-c.em-dia:has(.mp-m:not(:checked)) .mp-t{
+.hef-atualiza:not(:has(.cadeado.ligada)) .mp-c:is(.em-dia,.fixa) .mp-mx{visibility:hidden}
+.hef-atualiza:has(.cadeado.ligada) .mp-c:is(.em-dia,.fixa):has(.mp-m:not(:checked)) .mp-t{
   color:var(--texto-mudo)}
+.hef-atualiza .mp-g.revisar{color:var(--orange)}
+.hef-atualiza .mp-c.revisar{border-color:var(--orange);
+  background:color-mix(in srgb,var(--orange) 7%,var(--app-bg))}
+.hef-atualiza .mp-c.revisar .mp-i{color:var(--orange);
+  background:color-mix(in srgb,var(--orange) 16%,transparent)}
+.hef-atualiza .mp-c.revisar .mp-v .seta{color:var(--orange)}
+.hef-atualiza .mp-s{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font:700 13px/1 'JetBrains Mono',monospace;background:var(--orange);
+  color:var(--app-bg)}
+}
 .hef-atualiza .mp-c.fixa,.hef-atualiza .mp-c.sem-rede{border-style:dashed;
   background:transparent}
 .hef-atualiza .mp-c.fixa .mp-i,.hef-atualiza .mp-c.sem-rede .mp-i{color:var(--comment);
@@ -287,7 +300,7 @@ def versao_curta(versao: object) -> str:
 
 def _par_de_versoes(item: dict[str, Any]) -> tuple[str, str]:
     de, para = str(item.get("de") or ""), str(item.get("para") or "")
-    if item.get("estado") == "nova" and de and para:
+    if item.get("estado") in ("nova", "revisar") and de and para and de != para:
         return de, para
     return "", de or para
 
@@ -303,6 +316,8 @@ def _versao_a_vista(item: dict[str, Any]) -> str:
 
 
 def _versao_inteira(item: dict[str, Any]) -> str:
+    if item.get("completa"):
+        return str(item["completa"])
     de, agora = _par_de_versoes(item)
     if de:
         return f"{de} → {agora}"
@@ -318,12 +333,12 @@ def _icone(ident: str) -> str:
 
 def _grupo_do_cartao(item: dict[str, Any]) -> str:
     estado = str(item.get("estado") or "")
-    return estado if estado in ("nova", "em_dia", "fixa") else "sem_rede"
+    return estado if estado in ESTADOS_DO_MAPA else "sem_rede"
 
 
 def _cartao(item: dict[str, Any]) -> str:
     grupo = _grupo_do_cartao(item)
-    marcavel = item.get("volta", 1) == 1 and grupo in ("nova", "em_dia")
+    marcavel = item.get("volta", 1) == 1 and grupo in MARCAVEIS
     dica = " · ".join(x for x in (str(item.get("dica") or ""), _versao_inteira(item)) if x)
     inteiro = grupo == "nova" and marcavel
     marca = ""
@@ -332,6 +347,8 @@ def _cartao(item: dict[str, Any]) -> str:
                  f' data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
         marca = f'<span class="mp-mx">{caixa}</span>' if inteiro else \
             f'<label class="mp-mx">{caixa}</label>'
+    elif grupo == "revisar":
+        marca = '<span class="mp-s">!</span>'
     etiqueta = "label" if inteiro else "div"
     return (f'<{etiqueta} class="mp-c {grupo.replace("_", "-")}"{_dica(dica)}>'
             f'<span class="mp-i">{_icone(str(item.get("id") or ""))}</span>'

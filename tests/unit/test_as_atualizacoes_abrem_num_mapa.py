@@ -67,3 +67,113 @@ def test_o_desenho_do_mapa_e_o_que_o_produto_pinta() -> None:
                                   jogo_aberto=False)
     assert corpo in desenho
     assert '<span class="mp-v"><span class="nv">1.11.0</span></span>' in corpo
+
+
+CHROME = Path("/usr/bin/google-chrome")
+VISTAS = ((1212, 700), (1212, 809))
+MESAS_CHEIAS = {
+    "treze-novas": ["nova"] * 13,
+    "tres-grupos": ["nova"] * 5 + ["em_dia"] * 5 + ["fixa"] * 3,
+    "quatro-grupos": ["nova", "revisar", "em_dia"] + ["fixa"] * 10,
+    "duas-de-revisar": ["revisar"] * 2 + ["nova"] * 4 + ["em_dia"] * 7,
+}
+MEDIR_O_MAPA = """() => {
+  const cx = document.querySelector('#hef-atualizacoes .tn-cx.mapa');
+  const corpo = cx.querySelector('.tn-corpo');
+  const r = cx.getBoundingClientRect();
+  return {rola: corpo.scrollHeight - corpo.clientHeight,
+          fora: Math.max(0, r.bottom - innerHeight, -r.top),
+          cortados: Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn, .cadeado'))
+            .filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent.trim()),
+          letra: Math.min(...Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn'))
+            .map(e => parseFloat(getComputedStyle(e).fontSize)))};
+}"""
+
+
+def _mesa(estados: list[str]) -> dict[str, object]:
+    pecas = []
+    for i, (ident, estado) in enumerate(zip(tela.ORDEM_NA_TELA, estados, strict=False)):
+        exemplo = next(p for p in aba09.EXEMPLO_DAS_PECAS["pecas"] if p["id"] == ident)
+        pecas.append({**exemplo, "estado": estado, "volta": 1, "marcada": i % 2 == 0,
+                      "de": "10.20.30", "para": "10.20.31", "rotulo": "",
+                      "completa": "1:10.20.31~24.04+0~hefesto1"})
+    return {"pecas": pecas}
+
+
+def _paginas(pasta: Path) -> dict[str, Path]:
+    base = (RAIZ / "mockup/09-sistema.html").read_text(encoding="utf-8").replace(
+        "url('../assets/", f"url('{(RAIZ / 'assets').as_uri()}/")
+    saida = {}
+    for nome, estados in MESAS_CHEIAS.items():
+        corpo = tela.html_da_pergunta(_mesa(estados), {"sozinho": True, "dias": 7},
+                                      jogo_aberto=True, nome_do_jogo="Um jogo de nome longo")
+        caixa = (f'<style>{tela.CSS}</style><div id="{tela.ID_DA_CAIXA}" '
+                 f'class="hef-atualiza aberta">{corpo}</div>')
+        arquivo = pasta / f"{nome}.html"
+        arquivo.write_text(base.replace("</body>", caixa + "</body>", 1), encoding="utf-8")
+        saida[nome] = arquivo
+    return saida
+
+
+def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
+    """D-0911-AS-ATUALIZACOES-ABREM-NUM-MAPA: três e quatro grupos cheios cabem em 1212x700.
+
+    MORDIDA: com o cartão de 64 px e os espaços da primeira versão, a «quatro-grupos» rola 54 px.
+    """
+    import pytest
+
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema")
+    from playwright.sync_api import sync_playwright
+
+    falhas = []
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            for nome, arquivo in _paginas(tmp_path).items():
+                for larg, alt in VISTAS:
+                    pg = nav.new_page(viewport={"width": larg, "height": alt})
+                    pg.goto(arquivo.as_uri())
+                    pg.evaluate("() => document.fonts.ready")
+                    medida = pg.evaluate(MEDIR_O_MAPA)
+                    pg.close()
+                    if medida["rola"] > 0 or medida["fora"] > 0 or medida["cortados"] \
+                            or medida["letra"] < 12:
+                        falhas.append((nome, f"{larg}x{alt}", medida))
+        finally:
+            nav.close()
+    assert not falhas, falhas
+
+
+def test_o_cartao_le_o_estado_e_os_campos_do_motor_nos_dois_formatos() -> None:
+    hoje = {"id": "bluetooth", "nome": "Bluetooth", "estado": "fixa", "volta": 2,
+            "de": "5.87", "dica": "BlueZ"}
+    volta_2 = [
+        {"id": "bluetooth", "nome": "Bluetooth", "estado": "nova", "volta": 1, "marcada": True,
+         "de": "5.88", "para": "5.89", "completa": "5.89-0ubuntu1~hefesto2", "dica": "BlueZ"},
+        {"id": "som", "nome": "Som", "estado": "revisar", "volta": 1, "marcada": True,
+         "de": "1.6.11 · 0.5.19", "para": "1.6.12 · 0.5.19",
+         "dica": "a casa precisa revisar os patches"},
+        {"id": "portal", "nome": "Portal do COSMIC", "estado": "em_dia", "volta": 1,
+         "marcada": True, "de": "1.11.0", "para": "1.11.0",
+         "completa": "1.11.0~1792525517~24.04~f448ddf+0~hefesto1"},
+        {"id": "gdk", "nome": "GameInput", "estado": "fora", "volta": 1, "de": "1"}]
+    antes = tela.html_do_mapa({"pecas": [hoje]})
+    assert '<div class="mp-g fixa"><span>Com o Hefesto</span>' in antes
+    assert "mp-m" not in antes
+    mapa = tela.html_do_mapa({"pecas": volta_2})
+    grupos = re.findall(r'<div class="mp-g ([a-z-]+)">', mapa)
+    assert grupos == ["nova", "revisar", "em-dia"]
+    assert "GameInput" not in mapa
+    assert 'data-dica="BlueZ · 5.89-0ubuntu1~hefesto2"' in mapa
+    assert '<span class="de">5.88</span><span class="seta">→</span><span class="nv">5.89</span>' \
+        in mapa
+    revisar = re.search(r'<div class="mp-c revisar"[^>]*>.*?</div>', mapa, re.S).group(0)
+    assert 'data-dica="a casa precisa revisar os patches · 1.6.11 · 0.5.19 → 1.6.12 · 0.5.19"' \
+        in revisar
+    assert '<span class="mp-s">!</span>' in revisar and "mp-m" not in revisar
+    assert 'data-dica="1.11.0~1792525517~24.04~f448ddf+0~hefesto1"' in mapa
+    assert re.search(r'<div class="mp-c em-dia"[^>]*>.*?<label class="mp-mx"><input[^>]*'
+                     r'data-v="portal"', mapa)
+    assert tela.ids_para_atualizar({"pecas": volta_2}) == ["bluetooth"]
+    assert tela.quantas_novas({"pecas": volta_2}) == 1

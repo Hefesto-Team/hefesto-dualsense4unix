@@ -804,5 +804,6 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     escrever_o_ensaio()
     shutil.copyfile(_prova / "09-sistema.html", _real / "09-sistema.html")
+    (_real / DESENHO_DO_MAPA).parent.mkdir(exist_ok=True)
     shutil.copyfile(_prova / DESENHO_DO_MAPA, _real / DESENHO_DO_MAPA)
     shutil.rmtree(_prova)
