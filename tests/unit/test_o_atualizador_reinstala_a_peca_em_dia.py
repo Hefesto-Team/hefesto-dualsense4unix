@@ -12,7 +12,8 @@ caso da versão de outra; o DKMS sem o ``--force`` reprova o caso dos módulos; 
 reinstala o baixado de quem chama, ou que aceita o guardado de outra versão, reprova os casos
 dele; o Python que reinstala na pasta da subida reprova o caso das rodas; o apt da reinstalação
 sem ``--no-remove`` reprova os casos do Nvidia, do conserto e do backport; o porquê gravado fora
-de ``motivo`` reprova o contrato com a tela.
+de ``motivo`` reprova o contrato com a tela; a peça a revisar que sobe a série nova, ou que não
+pergunta o porquê, reprova o caso da peça a revisar.
 """
 from __future__ import annotations
 
@@ -155,6 +156,37 @@ def test_a_pergunta_da_reinstalacao_so_vai_a_peca_em_dia() -> None:
                    reinstalacao=at.Reinstalacao(por_que_nao=lambda _v: perguntas.append("x") or ""))
     assert at.conferir(rede=True, lista=[peca])["pecas"][0]["estado"] == at.NOVA
     assert perguntas == []
+
+
+def test_a_peca_a_revisar_marcada_reinstala_a_de_agora_e_nunca_sobe() -> None:
+    """A tela marca a peça a revisar como reinstalação (REINSTALAVEIS da 09): o motor reinstala a
+    versão de agora, pergunta o porquê como na em dia, e nunca sobe a série que a casa não
+    revisou."""
+    diario: list[str] = []
+    perguntas: list[str] = []
+
+    def _revisar(ident: str, porque: str) -> at.Peca:
+        base = _peca(diario, ident)
+        assert base.reinstalacao is not None
+        reinstalacao = at.Reinstalacao(
+            base.reinstalacao.baixar, base.reinstalacao.instalar, base.reinstalacao.aplicar,
+            lambda _v: perguntas.append(ident) or porque)
+        return at.Peca(ident, ident.upper(), "dica", "todos",
+                       lambda _r: at.Versoes("5.88", "6.0", revisar="série nova"),
+                       base.baixar, base.instalar, base.aplicar, base.voltar,
+                       reinstalacao=reinstalacao)
+
+    lista = [_revisar("sim", ""), _revisar("sem", "sem a entrega desta máquina")]
+    itens = {i["id"]: i for i in at.conferir(rede=True, lista=lista)["pecas"]}
+    assert {i["estado"] for i in itens.values()} == {at.REVISAR}
+    assert (itens["sim"]["reinstala"], itens["sem"]["reinstala"]) == (True, False)
+    assert itens["sem"]["motivo"] == "sem a entrega desta máquina"
+    assert perguntas == ["sim", "sem"]
+    assert _rodar(lista, ["sim", "sem"]) == 0
+    assert diario == ["sim:baixar-de-novo", "sim:reinstalar", "sim:reaplicar"]
+    linha = at.ler_o_andamento()["pecas"][0]
+    assert (linha["id"], linha["fazer"], linha["de"], linha["para"]) == (
+        "sim", at.REINSTALAR, "5.88", "5.88")
 
 
 def _regra() -> set[tuple[str, ...]]:

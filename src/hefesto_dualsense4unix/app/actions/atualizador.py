@@ -50,6 +50,7 @@ NAO_CONSULTADO = "nao_consultado"
 FIXA = "fixa"
 FORA = "fora"
 REVISAR = "revisar"
+REINSTALAM = (EM_DIA, REVISAR)
 
 FILA = "fila"
 BAIXANDO = "baixando"
@@ -288,10 +289,10 @@ def _estado_da_peca(peca: Peca, versoes: Versoes, escolha: Escolha) -> str:
 
 
 def _sem_reinstalar(peca: Peca, versoes: Versoes, estado: str) -> str:
-    """Vazio se a peça em dia reinstala; o porquê senão. A pergunta só vai à peça em dia."""
+    """Vazio se a peça em dia ou a revisar reinstala; o porquê senão. Só essas se perguntam."""
     if peca.reinstalacao is None:
         return NAO_SE_REINSTALA
-    if estado != EM_DIA or peca.reinstalacao.por_que_nao is None:
+    if estado not in REINSTALAM or peca.reinstalacao.por_que_nao is None:
         return ""
     try:
         return peca.reinstalacao.por_que_nao(versoes)
@@ -593,11 +594,12 @@ def _rodar_o_servico(andamento: _Andamento, reiniciar: Callable[[], bool],
 
 
 def _o_que_fazer(peca: Peca, visto: dict[str, Any] | None) -> str:
-    """Subir, reinstalar ou nada: a peça em dia reinstala só se a conferência disse que pode."""
-    if not visto or visto.get("estado") != EM_DIA:
+    """Subir, reinstalar ou nada: a peça em dia ou a revisar reinstala só se a conferência disse
+    que pode, e a revisar nunca sobe."""
+    if not visto or visto.get("estado") not in REINSTALAM:
         return SUBIR
     if peca.reinstalacao is None or not visto.get("reinstala"):
-        _anotar(f"{peca.id}: em dia, não se reinstala ({visto.get('motivo') or '—'})")
+        _anotar(f"{peca.id}: não se reinstala ({visto.get('motivo') or '—'})")
         return ""
     return REINSTALAR
 
