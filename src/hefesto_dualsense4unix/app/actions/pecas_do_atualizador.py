@@ -853,6 +853,17 @@ def mesma_serie(tags: Sequence[str], atual: str) -> tuple[str, str | None]:
 
 
 NOMES_DO_SOM = {"pipewire": "PipeWire", "wireplumber": "WirePlumber"}
+SOMAS_REVISADAS_DO_SOM = RAIZ_DO_REPOSITORIO / "assets" / "pipewire-backport" / "SOMAS-REVISADAS"
+REVISAR_A_VERSAO_NOVA = "a casa precisa revisar a versão nova"
+
+
+def _revisadas_do_som() -> set[tuple[str, str]]:
+    try:
+        texto = SOMAS_REVISADAS_DO_SOM.read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    return {(partes[0], partes[1]) for partes in map(str.split, texto.splitlines())
+            if len(partes) == 3}
 
 
 def versoes_do_som(rede: bool) -> Versoes:
@@ -880,6 +891,13 @@ def versoes_do_som(rede: bool) -> Versoes:
     if not nova and series:
         return Versoes(de, para, completa=completa,
                        revisar=f"{', '.join(series)} é série nova: {PRECISA_REVISAR}")
+    revisadas = _revisadas_do_som()
+    sem_soma = [f"{NOMES_DO_SOM[p]} {novas[p]}" for p in novas
+                if ordem(novas[p]) > ordem(atuais[p]) and (p, novas[p]) not in revisadas]
+    if sem_soma:
+        return Versoes(de, para, completa=completa, nova=False,
+                       revisar=f"{', '.join(sem_soma)} sem a soma que a casa revisou: "
+                               f"{REVISAR_A_VERSAO_NOVA}")
     return Versoes(de, para, completa=completa, nova=nova)
 
 

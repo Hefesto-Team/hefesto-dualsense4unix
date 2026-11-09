@@ -36,3 +36,7 @@ assets/dkms/**/*.patch   ia-literal
 assets/*-backport/patches/** ia-literal
 tests/fixtures/bluez-5.88/** ia-literal
 assets/gdk-runtime/*.c     ia-literal
+assets/bluez-backport/*.asc ia-literal
+tests/fixtures/receita-assinada/** ia-literal
+tests/fixtures/receita-assinada/*.tar binary
+tests/fixtures/receita-assinada/*.sign* binary

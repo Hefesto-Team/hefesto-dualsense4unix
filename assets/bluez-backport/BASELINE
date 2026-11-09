@@ -11,10 +11,20 @@
 # O 5.85-4ubuntu0.1 SAIU do pool do archive.ubuntu.com (hoje há o 0.3); o
 # Launchpad guarda todas as versões publicadas, e é de lá que vem. O hash do
 # .debian.tar.xz é o que o próprio .dsc do Ubuntu declara (Checksums-Sha256).
-# O do upstream bate com o sha256sums.asc de kernel.org/pub/linux/bluetooth/.
+# O do upstream é o do tarball cuja assinatura (o bluez-<versão>.tar.sign do
+# kernel.org, sobre o .tar descomprimido) o gpgv confere contra o
+# chaves-de-release.asc desta pasta. O atualizador só aceita a versão nova
+# assinada por uma das CHAVES_DE_RELEASE.
 # O empacotamento fica no 0.1 de propósito: o 0.2 e o 0.3 trazem, em
 # debian/patches, os mesmos CVE portados para a 5.85, que a série desta casa
 # já leva do upstream.
+# A chave de quem assina as releases do BlueZ: a de Marcel Holtmann, exportada
+# mínima de keys/06CA9F5D1DCF2659.asc do git.kernel.org (docs/kernel/pgpkeys.git,
+# o chaveiro oficial dos mantenedores do kernel.org), e a mesma digital no
+# keyserver.ubuntu.com e no keys.openpgp.org (09/11/2026). Assina o .tar.sign da
+# 5.80 à 5.88. Release assinada por outra chave para o atualizador até a casa
+# conferir a chave nova e acrescentá-la aqui e no chaveiro.
+CHAVES_DE_RELEASE=E932D120BC2AEC444E558F0106CA9F5D1DCF2659
 VERSAO_UPSTREAM=5.88
 FONTE_UPSTREAM_URL=https://www.kernel.org/pub/linux/bluetooth/bluez-5.88.tar.xz
 FONTE_UPSTREAM_SHA256=6952c39eb5f8b0ee712cc50ab3bcff03be17c410dd97ca640f4849d9a1653ba3

@@ -9,9 +9,11 @@
 # e as mudanças do Pop no fonte estão no próprio fonte, sem debian/patches. As
 # do PipeWire foram medidas pelo diff contra a tag 1.6.8 e viram os pop-NNNN.
 #
-# Os tarballs do upstream vêm do arquivo do GitLab pela tag; o hash é o de dois
-# downloads iguais (15/10/2026; a 1.6.11 e a 0.5.19 em 09/11/2026), e o commit da tag é o que o `git
-# get-tar-commit-id` do próprio tarball diz. Os do Pop vêm do pool
+# Os tarballs do upstream vêm do arquivo do GitLab pela tag, que o upstream não
+# assina (nem a tag nem a release): o hash é o que a casa revisou e fixou em
+# SOMAS-REVISADAS (a 1.6.11 e a 0.5.19 em 09/11/2026), e o commit da tag é o que o
+# `git get-tar-commit-id` do próprio tarball diz. O atualizador só constrói versão
+# nova cuja soma esteja lá. Os do Pop vêm do pool
 # apt.pop-os.org, e o hash é o que o .dsc dele declara.
 
 # --- PipeWire ---

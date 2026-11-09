@@ -2,21 +2,26 @@
 """A receita do backport da casa sobre a versão nova publicada, para o atualizador.
 
 Lê a cópia das receitas (``scripts/construir_*_backport.sh`` e ``assets/*-backport``), acha a
-versão mais nova publicada, baixa o fonte conferido pela soma publicada (o índice do kernel.org)
-ou por dois downloads iguais (o arquivo da tag no GitLab), tria a série da casa sobre ele e
-constrói pela receita. Cada patch que aplica sem fuzz fica; o que só aplica ao contrário o
+versão mais nova publicada, baixa o fonte conferido na origem e tria a série da casa sobre ele
+antes de construir pela receita. O BlueZ só passa com a assinatura da release (o ``.tar.sign`` do
+kernel.org) conferida pelo ``gpgv`` contra o chaveiro da casa e as digitais fixadas no BASELINE.
+O PipeWire e o WirePlumber não assinam a tag: a versão nova só passa com a soma que a casa revisou
+e fixou em ``SOMAS-REVISADAS``; sem a soma, a casa precisa revisar a versão nova. Cada patch que aplica sem fuzz fica; o que só aplica ao contrário o
 upstream já traz e sai da série; o que não aplica de nenhum jeito, ou um patch da casa que o
 upstream levou, para tudo: a casa precisa revisar os patches.
 
 Uso: ``hefesto_receita_nova.py construir --peca bluez|pipewire|portal --receitas DIR --obra DIR``.
 Saídas: 0 entregue em ``<obra>/entrega``; 3 faltam dependências de build; 9 nada a construir
-(a versão de cima já traz a cura); 10 a casa precisa revisar os patches; 4 a fonte não confere.
+(a versão de cima já traz a cura); 10 a casa precisa revisar os patches ou a versão nova; 4 a
+fonte não confere.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import base64
 import json
+import lzma
 import os
 import re
 import shutil
@@ -34,6 +39,9 @@ RC_FONTE = 4
 RC_NADA = 9
 RC_REVISAR = 10
 PRAZO_S = 120
+TETO_DO_TAR = 512 * 1024 * 1024
+CHAVEIRO_DO_BLUEZ = "chaves-de-release.asc"
+SOMAS_REVISADAS = "SOMAS-REVISADAS"
 INDICE_DO_BLUEZ = "https://www.kernel.org/pub/linux/bluetooth/"
 API_DO_GITLAB = "https://gitlab.freedesktop.org/api/v4/projects/pipewire%2F{}/releases?per_page=40"
 ARQUIVO_DO_GITLAB = "https://gitlab.freedesktop.org/pipewire/{0}/-/archive/{1}/{0}-{1}.tar.bz2"
@@ -50,6 +58,10 @@ ASSINATURA = "Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.norep
 
 class Revisar(Exception):
     """A série da casa não cabe na versão nova sem alguém olhar."""
+
+    def __init__(self, porque: str, o_que: str = "os patches") -> None:
+        super().__init__(porque)
+        self.o_que = o_que
 
 
 class FonteNaoConfere(Exception):
@@ -85,13 +97,85 @@ def ultima_do_bluez(indice: str) -> str | None:
     return max(versoes, key=ordem) if versoes else None
 
 
-def soma_publicada(somas: str, nome: str) -> str | None:
-    for linha in somas.splitlines():
+def somas_revisadas(texto: str) -> dict[tuple[str, str], str]:
+    somas: dict[tuple[str, str], str] = {}
+    for linha in texto.splitlines():
         partes = linha.split()
-        if len(partes) == 2 and partes[1].lstrip("*") == nome and re.fullmatch(
-                r"[0-9a-f]{64}", partes[0]):
-            return partes[0]
-    return None
+        if len(partes) == 3 and re.fullmatch(r"[0-9a-f]{64}", partes[2]):
+            somas.setdefault((partes[0], partes[1]), partes[2])
+    return somas
+
+
+def desarmar(texto: str) -> bytes:
+    """O chaveiro em ASCII armor vira o binário que o ``gpgv`` lê."""
+    blocos: list[bytes] = []
+    linhas: list[str] | None = None
+    corpo = False
+    for linha in texto.splitlines():
+        linha = linha.strip()
+        if linha == "-----BEGIN PGP PUBLIC KEY BLOCK-----":
+            linhas, corpo = [], False
+        elif linha == "-----END PGP PUBLIC KEY BLOCK-----" and linhas is not None:
+            blocos.append(base64.b64decode("".join(linhas), validate=True))
+            linhas = None
+        elif linhas is not None and not corpo:
+            corpo = linha == ""
+        elif linhas is not None and not linha.startswith("="):
+            linhas.append(linha)
+    if not blocos:
+        raise FonteNaoConfere("o chaveiro da casa não traz chave nenhuma")
+    return b"".join(blocos)
+
+
+def conferir_assinatura(assinatura: Path, dado: Path, chaveiro: Path, digitais: set[str],
+                        pasta: Path) -> str:
+    """A digital primária de quem assinou ``dado``, conferida só contra o chaveiro e as fixadas."""
+    gpgv = shutil.which("gpgv")
+    if gpgv is None:
+        raise FonteNaoConfere("sem o gpgv, a assinatura do upstream não se confere")
+    if not digitais:
+        raise FonteNaoConfere("o BASELINE não fixa as digitais de quem assina a release")
+    lar = pasta / "gpgv"
+    shutil.rmtree(lar, ignore_errors=True)
+    lar.mkdir(parents=True, mode=0o700)
+    anel = lar / "chaveiro.gpg"
+    try:
+        anel.write_bytes(desarmar(chaveiro.read_text(encoding="utf-8")))
+    except (OSError, ValueError) as erro:
+        raise FonteNaoConfere(f"o chaveiro da casa não se lê: {erro}") from erro
+    feito = subprocess.run(
+        [gpgv, "--homedir", str(lar), "--keyring", str(anel), "--status-fd", "1",
+         str(assinatura), str(dado)],
+        capture_output=True, timeout=PRAZO_S, check=False,
+        env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"})
+    status = feito.stdout.decode("utf-8", "replace").splitlines()
+    validas = [linha.split()[-1] for linha in status if linha.startswith("[GNUPG:] VALIDSIG ")]
+    if feito.returncode != 0 or not validas:
+        sem_chave = any(linha.startswith("[GNUPG:] NO_PUBKEY ") for linha in status)
+        porque = "a chave que assinou não está no chaveiro da casa" if sem_chave else \
+            "a assinatura não confere"
+        raise FonteNaoConfere(f"{dado.name}: {porque}")
+    fora = [digital for digital in validas if digital not in digitais]
+    if fora:
+        raise FonteNaoConfere(f"{dado.name}: assinado por {fora[0]}, fora das digitais fixadas")
+    return validas[0]
+
+
+def _descomprimir(dado: bytes, destino: Path) -> None:
+    descompressor = lzma.LZMADecompressor()
+    escritos = 0
+    with destino.open("wb") as saida:
+        pedaco = descompressor.decompress(dado, max_length=1024 * 1024)
+        while True:
+            escritos += len(pedaco)
+            if escritos > TETO_DO_TAR:
+                raise FonteNaoConfere(f"{destino.name} passa do teto")
+            saida.write(pedaco)
+            if descompressor.eof or (descompressor.needs_input and not pedaco):
+                break
+            pedaco = descompressor.decompress(b"", max_length=1024 * 1024)
+    if not descompressor.eof:
+        raise FonteNaoConfere(f"{destino.name} chegou cortado")
 
 
 def ultima_da_serie(lancamentos: object, serie: tuple[int, ...]) -> str | None:
@@ -188,14 +272,21 @@ def receita_do_bluez(receita: Path, fontes: Path) -> str:
     if nova is None or ordem(nova) <= ordem(base["VERSAO_UPSTREAM"]):
         return base["VERSAO_UPSTREAM"]
     nome = f"bluez-{nova}.tar.xz"
-    esperado = soma_publicada(ler(INDICE_DO_BLUEZ + "sha256sums.asc").decode("utf-8", "replace"),
-                              nome)
     dado = ler(INDICE_DO_BLUEZ + nome)
-    if esperado is None or _sha(dado) != esperado:
-        raise FonteNaoConfere(f"o {nome} não tem a soma que o kernel.org publica")
     fontes.mkdir(parents=True, exist_ok=True)
-    (fontes / nome).write_bytes(dado)
-    arvore = _extrair(fontes / nome, fontes / "triagem")
+    tar = fontes / f"bluez-{nova}.tar"
+    assinatura = fontes / f"bluez-{nova}.tar.sign"
+    assinatura.write_bytes(ler(INDICE_DO_BLUEZ + assinatura.name))
+    try:
+        _descomprimir(dado, tar)
+    except (lzma.LZMAError, EOFError) as erro:
+        raise FonteNaoConfere(f"o {nome} não abre: {erro}") from erro
+    conferir_assinatura(assinatura, tar, assets / CHAVEIRO_DO_BLUEZ,
+                        set(base.get("CHAVES_DE_RELEASE", "").split()), fontes)
+    arvore = _extrair(tar, fontes / "triagem")
+    if arvore.name != f"bluez-{nova}":
+        raise FonteNaoConfere(f"o {nome} assinado abre {arvore.name}, não bluez-{nova}")
+    esperado = _sha(dado)
     vanilla = _sha((arvore / "profiles" / "input" / "device.c").read_bytes())
     revisao = int(base["REVISAO_ULTIMA"])
     serie = []
@@ -226,15 +317,15 @@ def receita_do_bluez(receita: Path, fontes: Path) -> str:
     return nova
 
 
-def _arquivo_da_tag(projeto: str, versao: str, fontes: Path) -> tuple[Path, str]:
+def _arquivo_da_tag(projeto: str, versao: str, fontes: Path, revisada: str) -> Path:
     url = ARQUIVO_DO_GITLAB.format(projeto, versao)
-    primeiro, segundo = ler(url), ler(url)
-    if _sha(primeiro) != _sha(segundo):
-        raise FonteNaoConfere(f"dois downloads de {url} não deram o mesmo arquivo")
+    dado = ler(url)
+    if _sha(dado) != revisada:
+        raise FonteNaoConfere(f"o {projeto} {versao} baixado não tem a soma que a casa revisou")
     fontes.mkdir(parents=True, exist_ok=True)
     destino = fontes / url.rsplit("/", 1)[1]
-    destino.write_bytes(primeiro)
-    return destino, _sha(primeiro)
+    destino.write_bytes(dado)
+    return destino
 
 
 def _commit_da_tag(tarball: Path) -> str:
@@ -251,13 +342,21 @@ def receita_do_pipewire(receita: Path, fontes: Path) -> str:
     texto = (assets / "BASELINE").read_text(encoding="utf-8")
     base = ler_baseline(texto)
     novos: dict[str, str] = {}
+    try:
+        revisadas = somas_revisadas((assets / SOMAS_REVISADAS).read_text(encoding="utf-8"))
+    except OSError:
+        revisadas = {}
     for prefixo, projeto in (("PW", "pipewire"), ("WP", "wireplumber")):
         atual = base[f"{prefixo}_VERSAO_UPSTREAM"]
         lancamentos = json.loads(ler(API_DO_GITLAB.format(projeto)).decode("utf-8"))
         nova = ultima_da_serie(lancamentos, ordem(atual)[:2])
         if nova is None or ordem(nova) <= ordem(atual):
             continue
-        tarball, sha = _arquivo_da_tag(projeto, nova, fontes)
+        sha = revisadas.get((projeto, nova))
+        if sha is None:
+            raise Revisar(f"o {projeto} {nova} não assina a tag, e a casa ainda não fixou a soma "
+                          "dele", o_que="a versão nova")
+        tarball = _arquivo_da_tag(projeto, nova, fontes, sha)
         novos.update({
             f"{prefixo}_VERSAO_UPSTREAM": nova, f"{prefixo}_FONTE_SHA256": sha,
             f"{prefixo}_FONTE_URL": ARQUIVO_DO_GITLAB.format(projeto, nova),
@@ -295,7 +394,7 @@ def construir(peca: str, receitas: Path, obra: Path, versao_do_portal: str = "")
         else:
             versao = versao_do_portal
     except Revisar as erro:
-        print(f"a casa precisa revisar os patches: {erro}")
+        print(f"a casa precisa revisar {erro.o_que}: {erro}")
         return RC_REVISAR
     except (FonteNaoConfere, OSError, ValueError, KeyError) as erro:
         print(f"a fonte não confere: {erro}")

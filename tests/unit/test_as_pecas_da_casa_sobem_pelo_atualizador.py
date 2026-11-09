@@ -8,18 +8,26 @@ fechados. O GameInput é de quem usa e sobe sem root, pelo sha256 do pino. TUDO 
 rede é uma pasta, o ``apt-get`` e o ``dpkg`` são dublês, e o ajudante roda sem root.
 
 AS MORDIDAS (feitas na sprint, com a cura devolvida): a triagem que mantém o patch que não aplica
-reprova o caso da série; a soma do kernel.org não conferida reprova o caso da soma; o ajudante que
+reprova o caso da série; a assinatura do BlueZ não conferida reprova os casos da assinatura
+adulterada, da chave de fora e da digital não fixada; o PipeWire que compila sem a soma revisada
+reprova o caso da versão nova sem soma; o ajudante que
 segue o atalho da entrega reprova o caso do atalho; o instalar sem filtrar o sufixo da casa reprova
 o caso do pacote de fora; a série nova sem «revisar» reprova o caso do BlueZ 6; a GDK instalada
 sem conferir o sha256 reprova o caso do download trocado.
+
+AS ASSINATURAS DE TESTE (``tests/fixtures/receita-assinada``): os ``.tar`` têm a raiz
+``bluez-5.89``, e os ``.sign`` saíram de duas chaves ed25519 de uso único («casa» e «estranha»),
+geradas num GNUPGHOME descartável e apagadas depois; só a pública da «casa» ficou.
 """
 from __future__ import annotations
 
 import hashlib
 import importlib.util
 import io
+import lzma
 import os
 import pwd
+import re
 import shutil
 import subprocess
 import sys
@@ -39,6 +47,10 @@ AJUDANTE = RAIZ / "scripts" / "hefesto_atualizador_raiz.sh"
 ASSETS_BZ = RAIZ / "assets" / "bluez-backport"
 DEVICE_C = RAIZ / "tests" / "fixtures" / "bluez-5.87" / "device.c"
 INDICE = "https://www.kernel.org/pub/linux/bluetooth/"
+ASSINADA = RAIZ / "tests" / "fixtures" / "receita-assinada"
+DIGITAL_DE_TESTE = "3F76C5C83C4E42B67F80D68F5F2075CD29306BA5"
+DIGITAL_DO_BLUEZ = "E932D120BC2AEC444E558F0106CA9F5D1DCF2659"
+COM_GPGV = pytest.mark.skipif(shutil.which("gpgv") is None, reason="sem o gpgv")
 
 
 @pytest.fixture(autouse=True)
@@ -86,33 +98,51 @@ class Rede:
             dado.encode() if isinstance(dado, str) else dado)
 
 
-def _bluez_publicado(rede: Rede, versao: str, device_c: bytes, *, soma: str = "") -> None:
-    nome = f"bluez-{versao}.tar.xz"
-    tar = _tar_xz(f"bluez-{versao}", {"profiles/input/device.c": device_c})
+def _bluez_publicado(rede: Rede, publicada: str = "5.89", *, tar: str = "bluez-5.89.tar",
+                     assinatura: str = "bluez-5.89.tar.sign", adulterar: bool = False) -> bytes:
+    nome = f"bluez-{publicada}.tar.xz"
+    cru = bytearray((ASSINADA / tar).read_bytes())
+    if adulterar:
+        cru[1024] ^= 0x20
+    xz = lzma.compress(bytes(cru), format=lzma.FORMAT_XZ)
     rede.por(INDICE, f'<a href="bluez-5.88.tar.xz">x</a> <a href="{nome}">y</a>')
-    rede.por(INDICE + "sha256sums.asc", f"{soma or _sha(tar)}  {nome}\n")
-    rede.por(INDICE + nome, tar)
+    rede.por(INDICE + nome, xz)
+    rede.por(INDICE + f"bluez-{publicada}.tar.sign", (ASSINADA / assinatura).read_bytes())
+    return xz
+
+
+def _fixar_digitais(assets: Path, digitais: str) -> None:
+    baseline = assets / "BASELINE"
+    texto, trocas = re.subn(r"^CHAVES_DE_RELEASE=.*$", f"CHAVES_DE_RELEASE={digitais}",
+                            baseline.read_text(), flags=re.MULTILINE)
+    assert trocas == 1
+    baseline.write_text(texto)
 
 
 @pytest.fixture
 def receita_bz(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Path, Rede]:
     rn = _receita()
     receita = tmp_path / "receita"
-    shutil.copytree(ASSETS_BZ, receita / "assets" / "bluez-backport")
+    assets = receita / "assets" / "bluez-backport"
+    shutil.copytree(ASSETS_BZ, assets)
+    shutil.copy2(ASSINADA / "chaves-de-teste.asc", assets / "chaves-de-release.asc")
+    _fixar_digitais(assets, DIGITAL_DE_TESTE)
     rede = Rede(tmp_path / "rede")
     monkeypatch.setenv("HEFESTO_RECEITA_REDE", str(rede.pasta))
     return rn, receita, rede
 
 
+@COM_GPGV
 def test_o_bluez_novo_se_reconstroi_com_a_serie_da_casa(receita_bz) -> None:
     """Prova da D-0911-AS-PECAS-DA-CASA-SE-RECONSTROEM-NA-VERSAO-NOVA: o 5.89 publicado vira a
     revisão 7, com o hefesto-0001 e o 0002 aplicados sem fuzz e o device.c conferido."""
     rn, receita, rede = receita_bz
-    _bluez_publicado(rede, "5.89", DEVICE_C.read_bytes())
+    xz = _bluez_publicado(rede)
     assert rn.receita_do_bluez(receita, receita / "fontes") == "5.89"
     base = rn.ler_baseline((receita / "assets" / "bluez-backport" / "BASELINE").read_text())
     velho = rn.ler_baseline((ASSETS_BZ / "BASELINE").read_text())
     assert base["VERSAO_UPSTREAM"] == "5.89" and base["REVISAO_ULTIMA"] == "7"
+    assert base["FONTE_UPSTREAM_SHA256"] == _sha(xz)
     assert base["VERSAO_BASE"] == "5.89-0ubuntu0.1"
     assert base["PATCHES_R7"] == velho["PATCHES_R6"]
     assert base["SHA256_DEVICE_C_R7"] == velho["SHA256_DEVICE_C_R6"]
@@ -122,18 +152,140 @@ def test_o_bluez_novo_se_reconstroi_com_a_serie_da_casa(receita_bz) -> None:
     assert "Cobre a segurança da distro até: 5.72-0ubuntu5.8" in topo
 
 
-def test_o_bluez_com_a_soma_trocada_nao_se_constroi(receita_bz) -> None:
+@COM_GPGV
+@pytest.mark.parametrize(("como", "diz"), [
+    ({"adulterar": True}, "a assinatura não confere"),
+    ({"assinatura": "bluez-5.89.tar.sign-da-estranha"}, "não está no chaveiro da casa"),
+    ({"publicada": "5.90"}, "abre bluez-5.89, não bluez-5.90"),
+])
+def test_o_bluez_sem_a_assinatura_da_casa_nao_se_constroi(receita_bz, como: dict[str, Any],
+                                                          diz: str) -> None:
+    """Prova da D-0911-A-ORIGEM-DO-FONTE-SE-CONFERE-PELA-ASSINATURA: o tarball adulterado, o
+    assinado por chave de fora do chaveiro e o assinado de outra versão param na fonte."""
     rn, receita, rede = receita_bz
-    _bluez_publicado(rede, "5.89", DEVICE_C.read_bytes(), soma="0" * 64)
-    with pytest.raises(rn.FonteNaoConfere):
+    _bluez_publicado(rede, **como)
+    with pytest.raises(rn.FonteNaoConfere, match=diz):
+        rn.receita_do_bluez(receita, receita / "fontes")
+    base = rn.ler_baseline((receita / "assets" / "bluez-backport" / "BASELINE").read_text())
+    assert base["VERSAO_UPSTREAM"] == "5.88"
+
+
+@COM_GPGV
+def test_a_chave_do_chaveiro_sem_a_digital_fixada_nao_assina(receita_bz) -> None:
+    rn, receita, rede = receita_bz
+    _fixar_digitais(receita / "assets" / "bluez-backport", DIGITAL_DO_BLUEZ)
+    _bluez_publicado(rede)
+    with pytest.raises(rn.FonteNaoConfere, match="fora das digitais fixadas"):
         rn.receita_do_bluez(receita, receita / "fontes")
 
 
+@COM_GPGV
+def test_a_assinatura_que_nao_confere_para_antes_da_receita(
+        receita_bz, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    rn, receita, rede = receita_bz
+    _bluez_publicado(rede, adulterar=True)
+    (receita / "scripts").mkdir()
+    marca = tmp_path / "construiu"
+    (receita / "scripts" / "construir_bluez_backport.sh").write_text(f'touch "{marca}"\n')
+    assert rn.construir("bluez", receita, tmp_path / "obra") == rn.RC_FONTE
+    assert "a fonte não confere" in capsys.readouterr().out and not marca.exists()
+
+
+def _digital_v4(chave: bytes) -> str:
+    tag = chave[0]
+    if tag & 0x40:
+        tamanho, corpo = chave[2] if chave[2] < 192 else ((chave[2] - 192) << 8) + chave[3] + 192, \
+            3 if chave[2] < 192 else 4
+    else:
+        largura = {0: 1, 1: 2, 2: 4}[tag & 0x03]
+        tamanho, corpo = int.from_bytes(chave[1:1 + largura], "big"), 1 + largura
+    pacote = chave[corpo:corpo + tamanho]
+    return hashlib.sha1(b"\x99" + len(pacote).to_bytes(2, "big") + pacote).hexdigest().upper()
+
+
+def test_o_chaveiro_versionado_e_a_chave_das_digitais_fixadas() -> None:
+    rn = _receita()
+    base = rn.ler_baseline((ASSETS_BZ / "BASELINE").read_text())
+    chave = rn.desarmar((ASSETS_BZ / "chaves-de-release.asc").read_text())
+    assert base["CHAVES_DE_RELEASE"].split() == [DIGITAL_DO_BLUEZ]
+    assert _digital_v4(chave) == DIGITAL_DO_BLUEZ
+    assert _digital_v4(rn.desarmar((ASSINADA / "chaves-de-teste.asc").read_text())) == \
+        DIGITAL_DE_TESTE
+    with pytest.raises(rn.FonteNaoConfere):
+        rn.desarmar("nada aqui\n")
+
+
+@COM_GPGV
 def test_o_patch_da_casa_que_nao_aplica_pede_revisao(receita_bz) -> None:
     rn, receita, rede = receita_bz
-    _bluez_publicado(rede, "5.89", b"int main(void) { return 0; }\n")
+    _bluez_publicado(rede, tar="bluez-5.89-sem-a-serie.tar",
+                     assinatura="bluez-5.89-sem-a-serie.tar.sign")
     with pytest.raises(rn.Revisar, match="hefesto-0001"):
         rn.receita_do_bluez(receita, receita / "fontes")
+
+
+ASSETS_PW = RAIZ / "assets" / "pipewire-backport"
+API_PW = "https://gitlab.freedesktop.org/api/v4/projects/pipewire%2F{}/releases?per_page=40"
+
+
+@pytest.fixture
+def receita_pw(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Path, Rede]:
+    rn = _receita()
+    receita = tmp_path / "receita"
+    shutil.copytree(ASSETS_PW, receita / "assets" / "pipewire-backport")
+    rede = Rede(tmp_path / "rede")
+    rede.por(API_PW.format("pipewire"), '[{"tag_name": "1.6.12"}, {"tag_name": "1.6.11"}]')
+    rede.por(API_PW.format("wireplumber"), '[{"tag_name": "0.5.19"}]')
+    monkeypatch.setenv("HEFESTO_RECEITA_REDE", str(rede.pasta))
+    return rn, receita, rede
+
+
+def _pipewire_publicado(rede: Rede) -> bytes:
+    saida = io.BytesIO()
+    with tarfile.open(fileobj=saida, mode="w:bz2") as tar:
+        dado = b"metadata\n"
+        info = tarfile.TarInfo("pipewire-1.6.12/src/modules/module-metadata/metadata.c")
+        info.size = len(dado)
+        tar.addfile(info, io.BytesIO(dado))
+    rede.por("https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/1.6.12/"
+             "pipewire-1.6.12.tar.bz2", saida.getvalue())
+    return saida.getvalue()
+
+
+def test_o_som_novo_sem_a_soma_revisada_pede_revisao_e_nao_baixa(receita_pw) -> None:
+    rn, receita, rede = receita_pw
+    _pipewire_publicado(rede)
+    with pytest.raises(rn.Revisar, match=r"pipewire 1\.6\.12") as erro:
+        rn.receita_do_pipewire(receita, receita / "fontes")
+    assert erro.value.o_que == "a versão nova"
+    assert not (receita / "fontes").exists(), "sem a soma revisada, nada se baixa"
+
+
+def test_o_som_novo_com_a_soma_revisada_que_nao_bate_nao_se_constroi(receita_pw) -> None:
+    rn, receita, rede = receita_pw
+    dado = _pipewire_publicado(rede)
+    somas = receita / "assets" / "pipewire-backport" / "SOMAS-REVISADAS"
+    somas.write_text(somas.read_text() + f"pipewire 1.6.12 {'0' * 64}\n")
+    with pytest.raises(rn.FonteNaoConfere, match="a soma que a casa revisou"):
+        rn.receita_do_pipewire(receita, receita / "fontes")
+    somas.write_text(somas.read_text().replace("0" * 64, _sha(dado)))
+    with pytest.raises(rn.Revisar) as erro:
+        rn.receita_do_pipewire(receita, receita / "fontes")
+    assert erro.value.o_que == "os patches", "com a soma que bate, a fonte passa e a série se tria"
+
+
+def test_as_somas_revisadas_trazem_as_versoes_de_hoje() -> None:
+    rn = _receita()
+    base = rn.ler_baseline((ASSETS_PW / "BASELINE").read_text())
+    somas = rn.somas_revisadas((ASSETS_PW / "SOMAS-REVISADAS").read_text())
+    for prefixo, projeto in (("PW", "pipewire"), ("WP", "wireplumber")):
+        versao, sha = base[f"{prefixo}_VERSAO_UPSTREAM"], base[f"{prefixo}_FONTE_SHA256"]
+        assert somas[(projeto, versao)] == sha
+
+
+def test_a_receita_le_a_tag_uma_vez_so() -> None:
+    texto = RECEITA.read_text()
+    assert "ler(url), ler(url)" not in texto and "sha256sums.asc" not in texto
 
 
 @pytest.mark.skipif(shutil.which("patch") is None, reason="sem o patch")
@@ -362,12 +514,21 @@ def test_o_bluetooth_diz_a_curta_a_completa_e_a_serie_nova(monkeypatch: pytest.M
     assert pa.versoes_do_bluetooth(True).existe is False, "sem o BlueZ da casa, o apt cuida"
 
 
-def test_o_som_sobe_na_serie_e_a_serie_nova_pede_revisao(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_o_som_sobe_na_serie_e_a_serie_nova_pede_revisao(monkeypatch: pytest.MonkeyPatch,
+                                                         tmp_path: Path) -> None:
     casa = {"pipewire": "1.6.11-0~hefesto24.04.1", "wireplumber": "0.5.19-0~hefesto24.04.1"}
     api = pa.API_DO_GITLAB.format
     _versoes_com(monkeypatch, casa, {
         api("pipewire"): '[{"tag_name": "1.6.12"}, {"tag_name": "1.8.0"}]',
         api("wireplumber"): '[{"tag_name": "0.5.19"}]'})
+    v = pa.versoes_do_som(True)
+    assert not v.tem_nova() and v.revisar == (
+        f"PipeWire 1.6.12 sem a soma que a casa revisou: {pa.REVISAR_A_VERSAO_NOVA}")
+    peca = next(p for p in pa.registro() if p.id == "som")
+    assert at._estado_da_peca(peca, v, at.Escolha()) == at.REVISAR
+    somas = tmp_path / "SOMAS-REVISADAS"
+    somas.write_text(f"pipewire 1.6.12 {'a' * 64}\n")
+    monkeypatch.setattr(pa, "SOMAS_REVISADAS_DO_SOM", somas)
     v = pa.versoes_do_som(True)
     assert (v.instalada, v.publicada, v.tem_nova(), v.revisar) == (
         "1.6.11 · 0.5.19", "1.6.12 · 0.5.19", True, "")
