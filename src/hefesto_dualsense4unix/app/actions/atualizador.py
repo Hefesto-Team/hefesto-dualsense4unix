@@ -313,7 +313,7 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
         except Exception as erro:
             versoes = Versoes(dica=str(erro) or type(erro).__name__)
         estado = _estado_da_peca(peca, versoes, escolha)
-        sem_reinstalar = _sem_reinstalar(peca, versoes, estado)
+        motivo = _sem_reinstalar(peca, versoes, estado)
         itens.append({
             "id": peca.id, "nome": peca.nome, "grupo": peca.grupo, "volta": peca.volta,
             "dica": versoes.revisar or versoes.dica or peca.dica,
@@ -322,7 +322,7 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
             "completa": versoes.completa, "rotulo": versoes.rotulo, "estado": estado,
             "marcada": escolha.marcada(peca),
             "pode_voltar": peca.voltar is not None,
-            "reinstala": not sem_reinstalar, "sem_reinstalar": sem_reinstalar,
+            "reinstala": not motivo, "motivo": motivo,
         })
     conferencia = {"em": agora(), "rede": rede, "pecas": itens}
     _gravar_json(_estado() / ARQUIVO_DA_CONFERENCIA, conferencia)
@@ -597,7 +597,7 @@ def _o_que_fazer(peca: Peca, visto: dict[str, Any] | None) -> str:
     if not visto or visto.get("estado") != EM_DIA:
         return SUBIR
     if peca.reinstalacao is None or not visto.get("reinstala"):
-        _anotar(f"{peca.id}: em dia, não se reinstala ({visto.get('sem_reinstalar') or '—'})")
+        _anotar(f"{peca.id}: em dia, não se reinstala ({visto.get('motivo') or '—'})")
         return ""
     return REINSTALAR
 

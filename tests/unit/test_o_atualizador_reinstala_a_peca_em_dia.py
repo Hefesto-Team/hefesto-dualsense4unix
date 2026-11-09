@@ -119,14 +119,31 @@ def test_a_peca_em_dia_que_nao_se_reinstala_diz_por_que_e_sai_da_fila() -> None:
              _peca(diario, "fora", porque="a entrega não é a versão de agora"),
              _peca(diario, "sim")]
     itens = {i["id"]: i for i in at.conferir(rede=True, lista=lista)["pecas"]}
-    assert (itens["sem"]["reinstala"], itens["sem"]["sem_reinstalar"]) == (
+    assert (itens["sem"]["reinstala"], itens["sem"]["motivo"]) == (
         False, at.NAO_SE_REINSTALA)
-    assert (itens["fora"]["reinstala"], itens["fora"]["sem_reinstalar"]) == (
+    assert (itens["fora"]["reinstala"], itens["fora"]["motivo"]) == (
         False, "a entrega não é a versão de agora")
-    assert (itens["sim"]["reinstala"], itens["sim"]["sem_reinstalar"]) == (True, "")
+    assert (itens["sim"]["reinstala"], itens["sim"]["motivo"]) == (True, "")
+    assert all("sem_reinstalar" not in item for item in itens.values()), "um nome só: motivo"
     assert _rodar(lista, ["sem", "fora", "sim"]) == 0
     assert diario == ["sim:rebaixar", "sim:reinstalar", "sim:reaplicar"]
     assert [p["id"] for p in at.ler_o_andamento()["pecas"]] == ["sim"]
+
+
+def test_a_tela_le_reinstala_e_motivo_e_o_motor_distingue_pela_conferencia() -> None:
+    """O contrato com a tela: cada item traz ``reinstala`` e ``motivo``; os ids chegam misturados
+    pelo ``soltar`` e o motor separa subir de reinstalar pela conferência, sem gravar a escolha."""
+    diario: list[str] = []
+    lista = [_peca(diario, "em-dia"), _peca(diario, "nova", para="1.1"),
+             _peca(diario, "fora", porque="a entrega não é a versão de agora")]
+    escolha = at._config() / at.ARQUIVO_DA_ESCOLHA
+    for item in at.conferir(rede=True, lista=lista)["pecas"]:
+        assert isinstance(item["reinstala"], bool) and isinstance(item["motivo"], str), item
+        assert item["reinstala"] is (item["motivo"] == ""), item
+    assert _rodar(lista, ["fora", "nova", "em-dia"]) == 0
+    assert not escolha.exists(), "a marca de reinstalar só vive na tela"
+    assert {p["id"]: p["fazer"] for p in at.ler_o_andamento()["pecas"]} == {
+        "em-dia": at.REINSTALAR, "nova": at.SUBIR}
 
 
 def test_a_pergunta_da_reinstalacao_so_vai_a_peca_em_dia() -> None:
