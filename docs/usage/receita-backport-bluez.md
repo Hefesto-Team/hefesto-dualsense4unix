@@ -1,7 +1,7 @@
 # O BlueZ corrigido
 
 O BlueZ do Ubuntu 24.04 e do Pop!_OS 24.04 é o 5.72, que trava com vários
-controles pelo Bluetooth. O Hefesto oferece um BlueZ 5.87 com duas correções
+controles pelo Bluetooth. O Hefesto oferece um BlueZ 5.88 com duas correções
 próprias e as correções de segurança que a distro publica. O instalador e o
 `hefesto-dualsense4unix doctor` mandam para cá quando o BlueZ da máquina não as
 tem.
@@ -12,7 +12,7 @@ tem.
 scripts/construir_bluez_backport.sh
 ```
 
-Constrói o `5.87-0ubuntu0.1~hefesto24.04.5` e entrega `libbluetooth3`, `bluez`
+Constrói o `5.88-0ubuntu0.1~hefesto24.04.6` e entrega `libbluetooth3`, `bluez`
 e `bluez-cups`, com o `SHA256SUMS`, em
 `~/.cache/hefesto-dualsense4unix/bluez-backport/`, onde o instalador procura.
 **Não instala nada e não usa sudo.** Com as dependências de build presentes,
@@ -22,17 +22,18 @@ leva uns três minutos. Depois, rode `./install.sh` de novo.
 
 | Peça | De onde | Quem fixa |
 |---|---|---|
-| o BlueZ 5.87 | `kernel.org/pub/linux/bluetooth/` | SHA-256 em `assets/bluez-backport/BASELINE` |
+| o BlueZ 5.88 | `kernel.org/pub/linux/bluetooth/` | SHA-256 em `assets/bluez-backport/BASELINE` |
 | o empacotamento `5.85-4ubuntu0.1` do Ubuntu 26.04 | Launchpad | SHA-256 em `assets/bluez-backport/BASELINE` |
 | as correções da casa (`hefesto-0001` e `0002`) | `assets/bluez-backport/patches/` | o SHA-256 do `device.c` que cada revisão produz, no `BASELINE` |
-| as correções do upstream (`hefesto-0003` em diante) | `git format-patch` do master do BlueZ | o commit e o SHA-256 de cada uma, na linha `UPSTREAM_` do `BASELINE` |
+| as correções do upstream (`hefesto-0003` em diante, só na revisão 5) | `git format-patch` do master do BlueZ | o commit e o SHA-256 de cada uma, na linha `UPSTREAM_` do `BASELINE` |
 | o changelog das revisões | `assets/bluez-backport/debian/changelog.hefesto` | a versão alvo, conferida pelo `dpkg-parsechangelog` |
 
-A revisão 3 e a 4 nasceram sobre o 5.86: as chaves com o sufixo `_R3` e `_R4`
-do `BASELINE` guardam o que difere das chaves, e o script as lê antes da chave comum.
+A revisão 5 nasceu sobre o 5.87, e a 3 e a 4 sobre o 5.86: as chaves com o
+sufixo `_R3`, `_R4` e `_R5` do `BASELINE` guardam o que difere das chaves, e o
+script as lê antes da chave comum.
 
-O empacotamento do 5.85 pede ajustes para servir ao 5.86 e ao 5.87, e o script
-os faz:
+O empacotamento do 5.85 pede ajustes para servir ao 5.86, ao 5.87 e ao 5.88, e
+o script os faz:
 
 1. o patch `0013-transport-Fix-set-volume-failure-with-invalid-device.patch`
    sai da `series` (a API de volume foi refeita no 5.86);
@@ -45,7 +46,11 @@ os faz:
    sai da `series`, porque o upstream já o traz;
 6. no 5.87, o pacote `bluez-hcidump` sai do `debian/control`, porque o upstream
    tirou o `hcidump` (o `btmon` segue no `bluez`);
-7. no 5.87, a página `btsnoop.7` entra no `debian/bluez.manpages`.
+7. no 5.87, a página `btsnoop.7` entra no `debian/bluez.manpages`;
+8. no 5.88, as cinco páginas novas (`bluetoothctl-cs.1` e as do Channel
+   Sounding e do Ranging) entram no `debian/bluez.manpages`;
+9. no 5.88, o `gatttool` sai do `debian/bluez.install` e a página dele do
+   `debian/bluez.manpages`, porque o upstream tirou o `attrib/`.
 
 Os três primeiros param o script se não acharem o alvo. Do quarto em diante,
 cada um pergunta ao fonte se a mudança dele existe ali.
@@ -80,6 +85,12 @@ controle**. Com a correção:
 Para ver os descartes: `journalctl -u bluetooth | grep 'report dropped'`.
 
 ## As correções do upstream
+
+O 5.88 (05/11/2026) já traz os doze commits da tabela abaixo, conferidos por
+`git merge-base --is-ancestor <commit> 5.88`: na revisão 6 eles saem da série
+(a linha `NO_UPSTREAM_R6` do `BASELINE`), e a série fica só com as duas
+correções da casa, que aplicam sem fuzz porque o `device.c` do 5.88 é o do
+5.87. A tabela é a da revisão 5.
 
 O 5.87 é a estável mais nova, mas saiu antes de uma leva de consertos de
 segurança do master. A revisão 5 leva os que tocam o que a distro já corrigiu,
@@ -136,7 +147,8 @@ Para levar a correção:
 | `~hefesto24.04.2` | mais o `hefesto-0001`, mantendo o pareamento |
 | `~hefesto24.04.3` | o `hefesto-0001` também mantém o aparelho; reconstrói com `--revisao 3` |
 | `~hefesto24.04.4` | mais o `hefesto-0002`; reconstrói com `--revisao 4` |
-| `~hefesto24.04.5` | o 5.87 com as correções do upstream, cobrindo a distro até o `5.72-0ubuntu5.8`; é a que o script constrói |
+| `~hefesto24.04.5` | o 5.87 com as correções do upstream, cobrindo a distro até o `5.72-0ubuntu5.8`; reconstrói com `--revisao 5` |
+| `~hefesto24.04.6` | o 5.88, que já traz as correções do upstream da revisão 5, cobrindo a distro até o `5.72-0ubuntu5.8`; é a que o script constrói |
 
 ## O que o script faz
 
@@ -173,7 +185,7 @@ Se faltar alguma, o script lista o que o `dpkg-checkbuilddeps` disse e sai com
 3. Instale e rode de novo:
 
 ```bash
-cd ~/.cache/hefesto-dualsense4unix/bluez-obra/bluez-5.87
+cd ~/.cache/hefesto-dualsense4unix/bluez-obra/bluez-5.88
 sudo mk-build-deps -ir debian/control
 ```
 

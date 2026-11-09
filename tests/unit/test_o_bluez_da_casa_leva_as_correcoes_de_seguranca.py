@@ -121,7 +121,7 @@ def _rodar(corpo: str, env: dict[str, str]) -> str:
 
 def test_o_changelog_da_r5_diz_o_que_cobre_e_o_que_leva() -> None:
     entrada = _entrada_de_cima(R5)
-    assert CHANGELOG_HEFESTO.read_text(encoding="utf-8").startswith(f"bluez ({R5}) noble;")
+    assert f"\nbluez ({R5}) noble;" in CHANGELOG_HEFESTO.read_text(encoding="utf-8")
     assert f"Cobre a segurança da distro até: {COBERTA}\n" in entrada
     for cve in (
         "CVE-2026-19774",

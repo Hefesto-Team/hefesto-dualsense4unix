@@ -179,6 +179,26 @@ ajustar_empacotamento() {
         nova="usr/share/man/man7/btsnoop.7"
         grep -qxF "${nova}" "${manpages}" || printf '%s\n' "${nova}" >> "${manpages}"
     fi
+
+    for nova in \
+        man1/bluetoothctl-cs.1 \
+        man5/org.bluez.ChannelSounding1.5 \
+        man5/org.bluez.Ranging1.5 \
+        man5/org.bluez.RangingProvider1.5 \
+        man5/org.bluez.RangingProviderManager1.5; do
+        [[ -e "${ARVORE}/doc/${nova#*/}" ]] || continue
+        grep -qxF "usr/share/man/${nova}" "${manpages}" \
+            || printf '%s\n' "usr/share/man/${nova}" >> "${manpages}"
+    done
+
+    if [[ ! -e "${ARVORE}/attrib/gatttool.c" ]] \
+        && grep -qxF "attrib/gatttool usr/bin" "${ARVORE}/debian/bluez.install" 2>/dev/null; then
+        grep -vxF "attrib/gatttool usr/bin" "${ARVORE}/debian/bluez.install" \
+            > "${ARVORE}/debian/bluez.install.novo" || true
+        mv -f "${ARVORE}/debian/bluez.install.novo" "${ARVORE}/debian/bluez.install"
+        grep -vxF "debian/manpages/gatttool.1" "${manpages}" > "${manpages}.novo" || true
+        mv -f "${manpages}.novo" "${manpages}"
+    fi
 }
 
 escrever_changelog() {

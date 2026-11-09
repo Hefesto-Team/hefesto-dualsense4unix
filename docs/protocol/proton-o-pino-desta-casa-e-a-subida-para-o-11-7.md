@@ -132,7 +132,7 @@ Roda `--ensure`, lê o `rc`, e só então `--lock`:
 | 3 (do `--lock`) | Steam aberta — trava ADIADA, com a instrução |
 | 8 | nenhum lançador de jogos instalado — nada baixado, e o vigia baixa quando um aparecer |
 
-E o doctor confere no fim (`check_proton_pin` em `scripts/doctor.sh:3862`), com
+E o doctor confere no fim (`check_proton_pin` em `scripts/doctor.sh:3864`), com
 `proton_pin_report` — read-only.
 
 ---

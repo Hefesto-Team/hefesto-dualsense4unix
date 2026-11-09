@@ -87,9 +87,11 @@ class TestBluezVersionVerdict:
         """O que chega de fábrica é '5.87-0ubuntu1', não '5.87' pelado."""
         assert _rodar("_bluez_version_verdict", "5.87-0ubuntu1") == "nova"
 
-    def test_versao_acima_do_teto_e_nova(self) -> None:
-        """5.88+ também cai no teto: enquanto ninguém conferir se o lançamento"""
-        assert _rodar("_bluez_version_verdict", "5.88") == "nova"
+    def test_o_5_88_traz_o_5bc6aa79_e_passa(self) -> None:
+        """O 5.88 traz o 5bc6aa79 (git merge-base --is-ancestor, 09/11/2026): o teto subiu."""
+        assert _rodar("_bluez_version_verdict", "5.88") == "ok"
+        assert _rodar("_bluez_version_verdict", "5.88-1") == "ok"
+        assert _rodar("_bluez_version_verdict", "5.90") == "ok"
 
 
 class TestCheckBluezBackportVersion:
@@ -460,7 +462,8 @@ class TestFiacaoNoDoctor:
     def test_o_teto_existe_e_e_usado_pelo_veredito(self) -> None:
         """O teto é uma decisão MEDIDA (estudo 2026-08-07 §D) — não pode sumir"""
         texto = self._texto()
-        assert 'readonly _BZ_TETO="5.87"' in texto
+        assert 'readonly _BZ_TETO="5.88"' in texto
+        assert 'readonly _BZ_COM_O_UAF="5.87"' in texto
         bloco = self._bloco("_bluez_version_verdict() {")
         assert "_BZ_TETO" in bloco
         assert "_BZ_PISO" in bloco

@@ -2,11 +2,11 @@
 # Quem lê: scripts/construir_bluez_backport.sh. Nada aqui é baixado sem a
 # conferência do SHA-256 da linha ao lado.
 #
-# A receita: upstream 5.87 (kernel.org) + o empacotamento do resolute
-# 5.85-4ubuntu0.1, com três ajustes de empacotamento (ver o script) e os
-# patches hefesto-NNNN da revisão pedida. A revisão 4 e as anteriores
-# nasceram sobre a 5.86: o que muda nessas revisões vem nas chaves com o sufixo
-# _R<n>, que o script lê antes da chave comum.
+# A receita: upstream 5.88 (kernel.org) + o empacotamento do resolute
+# 5.85-4ubuntu0.1, com os ajustes de empacotamento (ver o script) e os
+# patches hefesto-NNNN da revisão pedida. A revisão 5 nasceu sobre a 5.87, e
+# a 4 e as anteriores sobre a 5.86: o que muda nessas revisões vem nas chaves
+# com o sufixo _R<n>, que o script lê antes da chave comum.
 #
 # O 5.85-4ubuntu0.1 SAIU do pool do archive.ubuntu.com (hoje há o 0.3); o
 # Launchpad guarda todas as versões publicadas, e é de lá que vem. O hash do
@@ -15,27 +15,31 @@
 # O empacotamento fica no 0.1 de propósito: o 0.2 e o 0.3 trazem, em
 # debian/patches, os mesmos CVE portados para a 5.85, que a série desta casa
 # já leva do upstream.
-VERSAO_UPSTREAM=5.87
-FONTE_UPSTREAM_URL=https://www.kernel.org/pub/linux/bluetooth/bluez-5.87.tar.xz
-FONTE_UPSTREAM_SHA256=26bdcf2cebd7310c6f598850606b037ef0c515fe6608ebc54d22c50c4c32b35f
+VERSAO_UPSTREAM=5.88
+FONTE_UPSTREAM_URL=https://www.kernel.org/pub/linux/bluetooth/bluez-5.88.tar.xz
+FONTE_UPSTREAM_SHA256=6952c39eb5f8b0ee712cc50ab3bcff03be17c410dd97ca640f4849d9a1653ba3
 EMPACOTAMENTO_URL=https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/bluez/5.85-4ubuntu0.1/bluez_5.85-4ubuntu0.1.debian.tar.xz
 EMPACOTAMENTO_SHA256=06f0a6bf491dcb3b572b0eb33ed3f542b9b98002345caed98eff4ce309f8ac4e
 VERSAO_UPSTREAM_R3=5.86
 VERSAO_UPSTREAM_R4=5.86
+VERSAO_UPSTREAM_R5=5.87
 FONTE_UPSTREAM_URL_R3=https://www.kernel.org/pub/linux/bluetooth/bluez-5.86.tar.xz
 FONTE_UPSTREAM_URL_R4=https://www.kernel.org/pub/linux/bluetooth/bluez-5.86.tar.xz
+FONTE_UPSTREAM_URL_R5=https://www.kernel.org/pub/linux/bluetooth/bluez-5.87.tar.xz
 FONTE_UPSTREAM_SHA256_R3=99f144540c6070591e4c53bcb977eb42664c62b7b36cb35a29cf72ded339621d
 FONTE_UPSTREAM_SHA256_R4=99f144540c6070591e4c53bcb977eb42664c62b7b36cb35a29cf72ded339621d
+FONTE_UPSTREAM_SHA256_R5=26bdcf2cebd7310c6f598850606b037ef0c515fe6608ebc54d22c50c4c32b35f
 #
 # A versão é BASE + "~hefesto24.04." + revisão. A última é a que o script
 # constrói sem --revisao; as anteriores só se reconstroem para provar a
 # receita (com HEFESTO_BLUEZ_CACHE apontando para fora do cache que o install
 # lê).
 SUFIXO=~hefesto24.04.
-VERSAO_BASE=5.87-0ubuntu0.1
+VERSAO_BASE=5.88-0ubuntu0.1
 VERSAO_BASE_R3=5.86-0ubuntu0.1
 VERSAO_BASE_R4=5.86-0ubuntu0.1
-REVISAO_ULTIMA=5
+VERSAO_BASE_R5=5.87-0ubuntu0.1
+REVISAO_ULTIMA=6
 PATCHES_R3=hefesto-0001-input-keep-bond-on-virtual-cable-unplug.patch
 PATCHES_R4=hefesto-0001-input-keep-bond-on-virtual-cable-unplug.patch hefesto-0002-input-drop-report-on-eagain.patch
 # A R5: o hefesto-0001 reescrito sobre o BDADDR_BREDR do 756da3fa1 (na 5.87),
@@ -47,6 +51,13 @@ PATCHES_R4=hefesto-0001-input-keep-bond-on-virtual-cable-unplug.patch hefesto-00
 # Das mensagens saem as linhas de coautoria, porque o projeto não versiona
 # trailer; o diff fica o do upstream.
 PATCHES_R5=hefesto-0001-input-keep-bond-on-virtual-cable-unplug-5.87.patch hefesto-0002-input-drop-report-on-eagain.patch hefesto-0003-adapter-Fix-crash-on-dev_disconnected.patch hefesto-0004-a2dp-Fix-loading-of-remote-SEP-from-cache.patch hefesto-0005-sdp-xml-Fix-crash-caused-by-type-confusion-when-pars.patch hefesto-0006-avrcp-Fix-Out-of-Bounds-Read-in-AVRCP-GetFolderItems.patch hefesto-0007-avrcp-Fix-media-folder-name-not-being-set.patch hefesto-0008-eir-Fix-stack-buffer-overflow-when-parsing-the-remot.patch hefesto-0009-all-Fix-typo-in-AVRCP_ATTRIBUTE_ILEGAL.patch hefesto-0010-adapter-clear-discovery_found-list-before-discovery_.patch hefesto-0011-avrcp-Fix-out-of-bounds-parsing-of-ListPlayerAttribu.patch hefesto-0012-avrcp-Fix-out-of-bounds-read-parsing-attribute-lists.patch hefesto-0013-adapter-remove-the-devices-from-the-list-before-free.patch hefesto-0014-adapter-Fix-crash-on-short-start-discovery-reply.patch
+# A R6: o upstream 5.88 (05/11/2026), que já traz os doze commits do master que
+# a R5 levava (do hefesto-0003 ao hefesto-0014, conferidos por `git merge-base
+# --is-ancestor <commit> 5.88`, o 5bc6aa79e entre eles): eles saem da série e
+# as linhas UPSTREAM_ ficam para a R5. O device.c do 5.88 é o do 5.87, byte a
+# byte, e o hefesto-0001 e o 0002 aplicam sem fuzz.
+NO_UPSTREAM_R6=hefesto-0003 hefesto-0004 hefesto-0005 hefesto-0006 hefesto-0007 hefesto-0008 hefesto-0009 hefesto-0010 hefesto-0011 hefesto-0012 hefesto-0013 hefesto-0014
+PATCHES_R6=hefesto-0001-input-keep-bond-on-virtual-cable-unplug-5.87.patch hefesto-0002-input-drop-report-on-eagain.patch
 #
 # O commit do upstream de cada patch exportado (a linha `From <hash>` dele) e o
 # SHA-256 do arquivo. A régua confere os dois.
@@ -64,7 +75,8 @@ UPSTREAM_hefesto-0013=eb82d81bf26bd212856f74a301f0fcc24eb6c132 19fe3309676d909ed
 UPSTREAM_hefesto-0014=a734b06059cbe0d0f00442c901506ef17e960960 50c6d37c09ae88af2a4d2de59e0c14cd35fadaa5762ae9242f013bd7813f04ef
 #
 # profiles/input/device.c: o do tarball, e o que sai depois da série inteira.
-# O vanilla da 5.87 é o de tests/fixtures/bluez-5.87/device.c, e o da 5.86 o de
+# O vanilla da 5.88 e o da 5.87 são o de tests/fixtures/bluez-5.87/device.c,
+# e o da 5.86 o de
 # tests/fixtures/bluez-5.86/device.c, byte a byte.
 SHA256_DEVICE_C_VANILLA=c4513b38fe0fae0fb8e24c04ee513961d75b70b328e6c47d255b82b64bfe9047
 SHA256_DEVICE_C_VANILLA_R3=9689c95f3b72fa7aa8077d4db52f9a391610d4b62a3a454a07a259b9a3362c9d
@@ -72,6 +84,7 @@ SHA256_DEVICE_C_VANILLA_R4=9689c95f3b72fa7aa8077d4db52f9a391610d4b62a3a454a07a25
 SHA256_DEVICE_C_R3=1824effdb8b2faa9317f91bc446953f54f724abe2ffa7c6a2ca65d6bdd2cd441
 SHA256_DEVICE_C_R4=d6de95c3d4d3846eed36cc300af15ed072f4220fdaee308562ff23ad99a5d029
 SHA256_DEVICE_C_R5=1b5e8fdea1c8e23bcc561144a28af37098db40969518189ece260b73c07d5d34
+SHA256_DEVICE_C_R6=1b5e8fdea1c8e23bcc561144a28af37098db40969518189ece260b73c07d5d34
 #
 # A marca que cada patch da casa deixa no binário (strings do bluetoothd). Os
 # do upstream não deixam marca própria: quem diz que eles estão no pacote é o

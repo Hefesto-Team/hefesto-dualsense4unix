@@ -48,7 +48,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "`install.sh:3770` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`install.sh:3774` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:34`); o "
         "`scripts/doctor.sh:1658` (`check_sentinela_wrapper`, --censo) também o roda",
@@ -61,26 +61,26 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`scripts/disable_steam_input.sh:193` (`desligar`), e esse roteiro é "
         "o ExecStart "
         "de `assets/hefesto-steam-input-guard.service:13` (`__SCRIPT__`), que o "
-        "`install.sh:3765` (`__SCRIPT__`) troca pelo caminho dele",
+        "`install.sh:3769` (`__SCRIPT__`) troca pelo caminho dele",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "`install.sh:3802` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
+        "`install.sh:3806` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
         "`uninstall.sh:1741` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1855` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "`install.sh:3644` (`PROTON_PIN_PY`, com `--ensure`) e "
+        "`install.sh:3648` (`PROTON_PIN_PY`, com `--ensure`) e "
         "`uninstall.sh:1670` (`PROTON_PIN_PY`) o rodam; "
-        "`scripts/doctor.sh:3862` (`check_proton_pin`, --report) também",
+        "`scripts/doctor.sh:3864` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "`install.sh:3759` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
+        "`install.sh:3763` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:59`) — o mesmo "
@@ -90,7 +90,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
-        "`install.sh:3067` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "`install.sh:3071` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:497` (`curar_audio_ks`) o roda a cada jogo lançado; "
         "`uninstall.sh:1773-1774` (`AUDIO_KS_PY`) o "
@@ -99,7 +99,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "`scripts/doctor.sh:3803` (`check_exame_da_mesa`) o roda — e o "
+        "`scripts/doctor.sh:3805` (`check_exame_da_mesa`) o roda — e o "
         "`install.sh:3909` (`bash`) roda o doctor",
     ),
 }

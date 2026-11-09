@@ -3262,7 +3262,8 @@ check_cmdline_platform() {
 }
 
 readonly _BZ_PISO="5.79"
-readonly _BZ_TETO="5.87"
+readonly _BZ_COM_O_UAF="5.87"
+readonly _BZ_TETO="5.88"
 
 _bluez_version_verdict() {
     local ver="$1"
@@ -3272,7 +3273,8 @@ _bluez_version_verdict() {
     fi
     if ! dpkg --compare-versions "${ver}" ge "${_BZ_PISO}" 2>/dev/null; then
         printf 'old\n'
-    elif dpkg --compare-versions "${ver}" ge "${_BZ_TETO}" 2>/dev/null; then
+    elif dpkg --compare-versions "${ver}" ge "${_BZ_COM_O_UAF}" 2>/dev/null \
+        && dpkg --compare-versions "${ver}" lt "${_BZ_TETO}" 2>/dev/null; then
         printf 'nova\n'
     else
         printf 'ok\n'
@@ -3485,13 +3487,13 @@ check_bluez_backport_version() {
     veredito="$(_bluez_version_verdict "${ver}")"
     case "${veredito}" in
         ok)
-            pass "bluez ${ver}${origem} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
+            pass "bluez ${ver}${origem} >= ${_BZ_PISO} e fora do ${_BZ_COM_O_UAF} (sem os crashes crônicos de input/HIDP do 5.72, e sem o uso-depois-de-liberado do 5.87: o ${_BZ_TETO} traz o 5bc6aa79)"
             ;;
         nova)
             if _bluez_a_casa_leva_o_5bc6aa79 "${ver}"; then
                 pass "bluez ${ver}${origem} é o backport do Hefesto, que leva a correção 5bc6aa79 do uso-depois-de-liberado do 5.87 (a linha «Leva do upstream» do changelog dele)"
             else
-                warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se a versão já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O backport do Hefesto é o 5.87 com o 5bc6aa79$(so_no_checkout "(./install.sh, passo 3f)")."
+                warn "bluez ${ver}${origem} é o ${_BZ_COM_O_UAF}, que carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e chegou no ${_BZ_TETO}: suba o BlueZ para o ${_BZ_TETO} ou mais novo. O backport do Hefesto é o ${_BZ_TETO}$(so_no_checkout "(./install.sh, passo 3f)")."
             fi
             ;;
         old)

@@ -34,4 +34,5 @@ assets/dkms/**/*.c       ia-literal
 assets/dkms/**/*.h       ia-literal
 assets/dkms/**/*.patch   ia-literal
 assets/*-backport/patches/** ia-literal
+tests/fixtures/bluez-5.88/** ia-literal
 assets/gdk-runtime/*.c     ia-literal

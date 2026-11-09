@@ -2172,6 +2172,10 @@ _bz_veredito() {
     fi
 }
 
+_bz_do_baseline() {
+    sed -n "s/^$1=//p" "${ROOT_DIR}/assets/bluez-backport/BASELINE" 2>/dev/null | head -n 1
+}
+
 _bz_pino() {
     local pref="${ROOT_DIR}/assets/bluez-backport/apt/hefesto-bluez.pref"
     local destino="${_BZ_PINO:-/etc/apt/preferences.d/hefesto-bluez}" ver
@@ -2210,9 +2214,9 @@ _bz_maior_do_archive() {
 
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-    step "3f" "BlueZ corrigido (5.87 com as correções de segurança: sem os travamentos, o laço de reconexão e a queda por buffer cheio)"
-    _BZ_TARGET="5.87-0ubuntu0.1~hefesto24.04.5"
     _bz_baseline="${ROOT_DIR}/assets/bluez-backport/BASELINE"
+    _BZ_TARGET="$(_bz_do_baseline VERSAO_BASE)~hefesto24.04.$(_bz_do_baseline REVISAO_ULTIMA)"
+    step "3f" "BlueZ corrigido ($(_bz_do_baseline VERSAO_UPSTREAM) com as correções de segurança: sem os travamentos, o laço de reconexão e a queda por buffer cheio)"
     _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
     _bz_vivo="$(
         systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \

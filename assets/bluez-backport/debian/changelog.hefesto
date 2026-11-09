@@ -1,3 +1,15 @@
+bluez (5.88-0ubuntu0.1~hefesto24.04.6) noble; urgency=high
+
+  * A base sobe para o upstream 5.88 (05/11/2026), a estável mais nova, com o
+    empacotamento do resolute de sempre (5.85-4ubuntu0.1).
+  * O 5.88 já traz os doze commits do master que a revisão 5 levava (os CVE
+    do sdp-xml, do eir e do avrcp, o cache SEP do A2DP e os usos depois de
+    liberar do adaptador, o 5bc6aa79e entre eles): saem da série.
+  * hefesto-0001 e hefesto-0002 como estavam: o device.c do 5.88 é o do 5.87.
+  * Cobre a segurança da distro até: 5.72-0ubuntu5.8
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Mon, 09 Nov 2026 06:00:00 -0300
+
 bluez (5.87-0ubuntu0.1~hefesto24.04.5) noble; urgency=high
 
   * A base sobe para o upstream 5.87, a estável mais nova, com o

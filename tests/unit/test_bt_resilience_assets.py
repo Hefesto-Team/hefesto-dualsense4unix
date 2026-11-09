@@ -228,12 +228,13 @@ class TestSimetriaInstallUninstall:
         assert "hefesto-bt-bonds-snapshot.timer" in text
 
 
-class TestAlvoBluez587:
-    def test_install_aponta_para_o_alvo_587(self) -> None:
+class TestAlvoBluez588:
+    def test_install_aponta_para_o_alvo_588(self) -> None:
         text = texto_do_instalador()
-        assert re.search(r'_BZ_TARGET="5\.87', text), (
-            "passo 3f deve mirar o BlueZ 5.87 da casa "
-            "(O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01)"
+        assert re.search(r'^VERSAO_UPSTREAM=5\.88$', (
+            Path(__file__).resolve().parents[2] / "assets" / "bluez-backport" / "BASELINE"
+        ).read_text(encoding="utf-8"), re.MULTILINE), (
+            "passo 3f deve mirar o BlueZ 5.88 da casa (O-BLUEZ-DA-CASA-SOBE-PARA-O-5-88-01)"
         )
         baseline = (
             Path(__file__).resolve().parents[2] / "assets" / "bluez-backport" / "BASELINE"
@@ -242,7 +243,10 @@ class TestAlvoBluez587:
         revisao = re.search(r"^REVISAO_ULTIMA=(\d+)$", baseline, re.MULTILINE)
         assert base and revisao, "o BASELINE do backport perdeu VERSAO_BASE ou REVISAO_ULTIMA"
         alvo = f"{base.group(1)}~hefesto24.04.{revisao.group(1)}"
-        assert f'_BZ_TARGET="{alvo}"' in text, (
+        assert (
+            '_BZ_TARGET="$(_bz_do_baseline VERSAO_BASE)~hefesto24.04.'
+            '$(_bz_do_baseline REVISAO_ULTIMA)"'
+        ) in text and alvo.startswith("5.88-"), (
             f"o alvo do 3f tem de ser a ÚLTIMA revisão do BASELINE ({alvo}) — é "
             "é a revisão que o construir_bluez_backport.sh entrega no cache"
         )
