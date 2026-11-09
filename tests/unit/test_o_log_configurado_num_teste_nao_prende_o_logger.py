@@ -35,6 +35,8 @@ def test_o_servico_guarda_a_montagem_no_primeiro_uso() -> None:
 
 
 def test_o_capture_logs_depois_do_reset_ve_o_logger_ja_usado() -> None:
+    """D-0911-O-LOG-DE-UM-TESTE-NAO-PRENDE-O-DOS-OUTROS: o logger usado com o log configurado
+    aparece no ``capture_logs`` depois do reset."""
     lc.configure_logging(stream=io.StringIO())
     logger = lc.get_logger("modulo_do_loader")
     logger.warning("usado_com_o_log_configurado")
