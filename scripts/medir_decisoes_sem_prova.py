@@ -232,6 +232,32 @@ COLISOES_DECLARADAS = {
         "pela palavra «leva» («o pacote leva o py.typed vazio»), no sentido de «carrega», e «pacote» "
         "e «extensão» não casam o vocabulário de produto. Mais um caso do limite (25/10/2026)."
     ),
+    "D-0911-A-ORIGEM-DO-FONTE-SE-CONFERE-PELA-ASSINATURA": (
+        "É de PRODUTO: a decisão diz o que o atualizador confere antes de construir o BlueZ, o "
+        "PipeWire e o portal da casa, e "
+        "`test_as_pecas_da_casa_sobem_pelo_atualizador.py::test_o_bluez_sem_a_assinatura_da_casa_nao_se_constroi` "
+        "mede a recusa. A triagem a chama de processo pela palavra «versão» (a versão nova que "
+        "se confere), que aqui é o pacote que a máquina instala (09/11/2026)."
+    ),
+    "D-0911-O-BLUEZ-DA-CASA-SOBE-PARA-O-5-88": (
+        "É de PRODUTO: a decisão diz qual BlueZ a máquina roda e o teto do doctor, e "
+        "`test_o_bluez_da_casa_sobe_para_o_5_88.py::test_o_5_88_de_qualquer_distro_passa_no_teto` "
+        "mede o doctor. A triagem a chama de processo pela palavra «versão», que aqui é o pacote "
+        "instalado (09/11/2026)."
+    ),
+    "D-0911-O-LOG-DE-UM-TESTE-NAO-PRENDE-O-DOS-OUTROS": (
+        "É de PRODUTO: a decisão diz o que o dono do log (`utils/logging_config.py`) faz no "
+        "reset e que o serviço segue com o cache, e "
+        "`test_o_log_configurado_num_teste_nao_prende_o_logger.py::test_o_capture_logs_depois_do_reset_ve_o_logger_ja_usado` "
+        "mede o dono. A triagem a chama de processo pela palavra «leva» na escolha (a leva em "
+        "que o achado nasceu) (09/11/2026)."
+    ),
+    "D-0911-O-PIPEWIRE-DA-CASA-SOBE-PARA-O-ULTIMO-1-6": (
+        "É de PRODUTO: a decisão diz qual PipeWire e WirePlumber a máquina roda, e "
+        "`test_o_pipewire_da_casa_sobe_para_o_ultimo_1_6.py::test_a_maquina_de_hoje_pede_a_revisao_nova` "
+        "mede a conferência. A triagem a chama de processo pela palavra «versão», que aqui é o "
+        "pacote instalado (09/11/2026)."
+    ),
 }
 
 
