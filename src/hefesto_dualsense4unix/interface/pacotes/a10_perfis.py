@@ -63,11 +63,16 @@ import sys
 import time
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, NamedTuple
+from typing import Any
 
 from hefesto_dualsense4unix.app import gui_prefs as _prefs
 from hefesto_dualsense4unix.app.actions import perfis_web as _tela
 from hefesto_dualsense4unix.integrations.jogos_locais import LANCADOR_DIRETO
+from hefesto_dualsense4unix.profiles import jogo_desinstalado as _catalogo
+from hefesto_dualsense4unix.profiles.jogo_desinstalado import (
+    FotoDoCatalogo as _FotoDoCatalogo,
+)
+from hefesto_dualsense4unix.profiles.jogo_desinstalado import fora_do_disco as _fora_do_disco
 from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DA_NAVEGACAO,
     PROCEDENCIA_DA_STEAM,
@@ -80,9 +85,7 @@ from . import (
     TRAVESSAO,
     Contexto,
     ao_abrir,
-    fios,
     perfil,
-    ponte,
     registrar,
 )
 
@@ -630,28 +633,11 @@ _PROCEDENCIAS_SEM_JOGO = frozenset(
 def _ofertas_de_jogos(nomes: dict[str, str] | None = None) -> list[Any]:
     """Os jogos DESTA máquina, das duas origens — a leitura que dois campos usam."""
     try:
-        from hefesto_dualsense4unix.integrations.jogos_locais import (
-            JogoLocal,
-            jogos_de_janela,
-            ofertas_do_campo_do_jogo,
-        )
-
         if nomes is None:
             nomes = _nomes_dos_jogos()
-        de_janela = jogos_de_janela()
-        return list(ofertas_do_campo_do_jogo(
-            [JogoLocal(appid=appid, nome=nome, fonte="steam")
-             for appid, nome in nomes.items()],
-            de_janela))
     except Exception:
         return []
-
-
-class _FotoDoCatalogo(NamedTuple):
-    """O catálogo de jogos desta máquina, perguntado UMA vez por tique."""
-
-    nomes: dict[str, str]
-    ofertas: list[Any]
+    return _catalogo.ofertas_de_jogos(nomes)
 
 
 def _foto_do_catalogo() -> _FotoDoCatalogo:
@@ -663,75 +649,6 @@ def _foto_do_catalogo() -> _FotoDoCatalogo:
     return _FotoDoCatalogo(nomes=nomes, ofertas=_ofertas_de_jogos(nomes))
 
 
-_FORA_DO_DISCO: tuple[object, frozenset[str]] | None = None
-
-
-def _chaves_fora_do_disco() -> frozenset[str]:
-    """Os jogos que o censo sabe desinstalados, relidos só quando a biblioteca muda."""
-    global _FORA_DO_DISCO
-    try:
-        from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
-        assinatura = censo.assinatura_das_bibliotecas()
-        if _FORA_DO_DISCO is None or _FORA_DO_DISCO[0] != assinatura:
-            _FORA_DO_DISCO = (assinatura, censo.chaves_de_janela_fora_do_disco())
-        return _FORA_DO_DISCO[1]
-    except Exception:
-        return frozenset()
-
-
-def _a_steam_responde() -> bool:
-    """A biblioteca da Steam existe aqui; sem a biblioteca, nenhum jogo da Steam sai."""
-    try:
-        from hefesto_dualsense4unix.integrations.jogos_locais import assinatura_da_biblioteca
-
-        return any(mtime >= 0 for _pasta, mtime in assinatura_da_biblioteca())
-    except Exception:
-        return False
-
-
-def _jogo_fora_do_disco(prof: Any, foto: _FotoDoCatalogo, steam: bool,
-                        fora: frozenset[str]) -> bool:
-    """O perfil é de um jogo que o censo sabe desinstalado."""
-    from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
-    from hefesto_dualsense4unix.profiles.simple_match import (
-        detect_simple_preset,
-        normalize_appid,
-        simple_extra,
-    )
-
-    match = getattr(prof, "match", None)
-    if match is None:
-        return False
-    preset = detect_simple_preset(match)
-    chave = simple_extra(match)
-    if preset == "steam_game":
-        appid = normalize_appid(chave)
-        if appid is None or not steam or appid in foto.nomes:
-            return False
-        return not any(normalize_appid(str(getattr(j, "chave", "") or "")) == appid
-                       for j in foto.ofertas)
-    if preset in ("game", "janela") and chave:
-        return chave.casefold() in fora and jogo_da_janela(chave, foto.ofertas) is None
-    return False
-
-
-def _casa_a_janela(prof: Any, janela: str) -> bool:
-    """O perfil casa a janela de outro app em cena: o jogo dele está aberto, e o censo erra."""
-    try:
-        return bool(janela) and bool(prof.matches({"wm_class": janela}))
-    except Exception:
-        return False
-
-
-def _fora_do_disco(todos: list[Any], foto: _FotoDoCatalogo, janela: str = "") -> list[Any]:
-    """Os perfis de jogo que o censo sabe desinstalado; sem a Steam legível, nenhum."""
-    steam = bool(foto.nomes) and _a_steam_responde()
-    fora = _chaves_fora_do_disco()
-    return [p for p in todos
-            if _jogo_fora_do_disco(p, foto, steam, fora) and not _casa_a_janela(p, janela)]
-
-
 def _sem_os_ocultos(todos: list[Any], ocultos: list[Any]) -> list[Any]:
     """Os perfis sem os ocultos, o ativo inclusive; o arquivo fica no disco."""
     fora = {id(p) for p in ocultos}
@@ -741,49 +658,6 @@ def _sem_os_ocultos(todos: list[Any], ocultos: list[Any]) -> list[Any]:
 def _so_os_instalados(todos: list[Any], foto: _FotoDoCatalogo, janela: str = "") -> list[Any]:
     """Os perfis sem o de jogo desinstalado (uma leitura do catálogo)."""
     return _sem_os_ocultos(todos, _fora_do_disco(todos, foto, janela))
-
-
-_PADRAO_PEDIDO: str = ""
-_PADRAO_FALHOU_EM: float | None = None
-_ESPERA_DEPOIS_DA_FALHA = 5.0
-
-
-def _o_padrao_assume(ctx: Contexto, do_disco: list[Any], ocultos: list[Any]) -> None:
-    """O perfil ativo é de jogo fora do disco: o Freestyle assume, uma vez, por `profile.switch`.
-
-    É o «Ativar» do Freestyle da aba (`_ativar_o`), pedido num fio: o pacote é lido no tique e não
-    espera o daemon. O pedido aceito não se repete enquanto o mesmo perfil seguir ativo; o recusado
-    ou sem resposta volta a sair `_ESPERA_DEPOIS_DA_FALHA` segundos depois.
-    """
-    global _PADRAO_PEDIDO, _PADRAO_FALHOU_EM
-    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
-
-    ativo = _em_uso(ctx, do_disco)
-    fora = {str(getattr(p, "name", "") or "") for p in ocultos}
-    if not ativo or ativo not in fora:
-        _PADRAO_PEDIDO = ""
-        _PADRAO_FALHOU_EM = None
-        return
-    if ativo == _PADRAO_PEDIDO:
-        return
-    if (_PADRAO_FALHOU_EM is not None
-            and time.monotonic() - _PADRAO_FALHOU_EM < _ESPERA_DEPOIS_DA_FALHA):
-        return
-    _PADRAO_PEDIDO = ativo
-
-    def pedir() -> None:
-        global _PADRAO_PEDIDO, _PADRAO_FALHOU_EM
-        try:
-            ponte.resultado("profile.switch", name=NOME_DO_PADRAO)
-        except Exception as erro:
-            _PADRAO_FALHOU_EM = time.monotonic()
-            if ativo == _PADRAO_PEDIDO:
-                _PADRAO_PEDIDO = ""
-            print(f"[10-perfis.html] o padrão não assumiu: {erro!r}", file=sys.stderr)
-            return
-        _PADRAO_FALHOU_EM = None
-
-    fios.soltar("perfis-padrao-assume", pedir)
 
 
 def _ofertas_de(foto: _FotoDoCatalogo | None) -> list[Any]:
@@ -1087,7 +961,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         foto = _foto_do_catalogo()
         ocultos = _fora_do_disco(do_disco, foto, _classe_de_outro_app(ctx))
         todos = _sem_os_ocultos(do_disco, ocultos)
-        _o_padrao_assume(ctx, do_disco, ocultos)
         ativo = _em_uso(ctx, todos)
         alvo = _alvo_do_editor(ctx, todos)
         escolhido = str(getattr(alvo, "name", "") or "")
@@ -1461,24 +1334,9 @@ def _nome_livre(base: str, todos: Any) -> str:
     return f"{base} {n}"
 
 
-_NOMES_DOS_JOGOS: tuple[tuple[tuple[str, int], ...], dict[str, str]] | None = None
-
-
 def _nomes_dos_jogos() -> dict[str, str]:
     """``{appid: nome}`` do disco, relido só quando a biblioteca muda."""
-    global _NOMES_DOS_JOGOS
-    from hefesto_dualsense4unix.integrations.jogos_locais import (
-        assinatura_da_biblioteca,
-        catalogo_de_jogos,
-        nomes_por_appid,
-    )
-
-    assinatura = assinatura_da_biblioteca()
-    if _NOMES_DOS_JOGOS is not None and _NOMES_DOS_JOGOS[0] == assinatura:
-        return _NOMES_DOS_JOGOS[1]
-    nomes = nomes_por_appid(catalogo_de_jogos())
-    _NOMES_DOS_JOGOS = (assinatura, nomes)
-    return nomes
+    return _catalogo.nomes_dos_jogos()
 
 
 def _forma_do_que_o_usuario_escolheu(texto: str) -> str:

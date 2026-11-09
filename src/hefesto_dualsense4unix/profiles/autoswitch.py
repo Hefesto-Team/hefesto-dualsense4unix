@@ -9,12 +9,13 @@ import re
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles.jogo_desinstalado import VigiaDoPadrao
 from hefesto_dualsense4unix.profiles.manager import (
     MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
     MOTIVO_SEM_CANDIDATO,
@@ -147,6 +148,7 @@ class _OQueOTiqueLeu:
     na_exclusao: bool
     escolha: Profile | None
     freestyle_diz_o_modo: bool
+    o_padrao_assume: bool = False
 
 
 @dataclass
@@ -196,6 +198,7 @@ class AutoSwitcher:
     _ultima_janela: str = ""
     _entrou_pelo_jogo: str | None = None
     _lido: _OQueOTiqueLeu | None = None
+    _vigia_do_padrao: VigiaDoPadrao = field(default_factory=VigiaDoPadrao, repr=False)
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -239,8 +242,41 @@ class AutoSwitcher:
         janela = str(info.get("wm_class") or "").strip()
         self._lido = _OQueOTiqueLeu(
             perfis, janela, self._na_lista_de_exclusao(janela), self._perfil_da_escolha(),
-            self.freestyle_ligado() and self._o_freestyle_diz_o_modo())
+            self.freestyle_ligado() and self._o_freestyle_diz_o_modo(),
+            self._o_padrao_deve_assumir(perfis, janela))
         return info
+
+    def _o_padrao_deve_assumir(self, perfis: list[Profile], janela: str) -> bool:
+        """O perfil ativo é de jogo fora do disco e sem janela dele em cena (leitura do disco)."""
+        store = self._store_de_estado()
+        ativo = getattr(store, "active_profile", None)
+        if not isinstance(ativo, str) or not ativo or e_o_freestyle(ativo):
+            return False
+        try:
+            em_cena = janela
+            for chave in ("window_detect_last_class", "window_detect_current_class"):
+                classe = str(getattr(store, chave, "") or "").strip()
+                if classe and classe != "unknown" and classe.casefold() not in OWN_GUI_WM_CLASSES:
+                    em_cena = em_cena or classe
+            return self._vigia_do_padrao.decidir(ativo, perfis, em_cena)
+        except Exception as exc:
+            logger.warning("autoswitch_padrao_nao_decidiu", err=str(exc))
+            return False
+
+    def _o_padrao_assume(self) -> None:
+        """O Freestyle assume o lugar do perfil de jogo desinstalado, pelo gesto do «Ativar»."""
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
+        store = self._store_de_estado()
+        if store is not None and getattr(store, "native_mode_active", False):
+            return
+        try:
+            self.manager.activate(NOME_DO_PADRAO, origin="manual")
+        except Exception as exc:
+            self._vigia_do_padrao.falhou()
+            logger.warning("autoswitch_padrao_nao_assumiu", err=str(exc))
+            return
+        logger.info("autoswitch_padrao_assumiu", para=NOME_DO_PADRAO)
 
     def freestyle_ligado(self) -> bool:
         """True quando o Modo Freestyle está ligado: o tique não casa a janela."""
@@ -343,6 +379,8 @@ class AutoSwitcher:
         from hefesto_dualsense4unix.profiles.loader import com_os_perfis_lidos
 
         try:
+            if self._lido is not None and self._lido.o_padrao_assume:
+                self._o_padrao_assume()
             with com_os_perfis_lidos(None if self._lido is None else self._lido.perfis):
                 self._decidir(info, now)
         finally:

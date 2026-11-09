@@ -3,12 +3,12 @@
 O disco é o de verdade, no lar isolado da suíte: a biblioteca da Steam com um `appmanifest` e
 quatro perfis (um de jogo instalado, um de jogo desinstalado, o ativo de jogo desinstalado e um sem
 jogo). O arquivo do desinstalado fica no disco e volta à lista quando o jogo volta. O ativo de jogo
-desinstalado também sai (O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA-01, 08/11/2026), e o
-Freestyle assume pelo `profile.switch`, pedido uma vez.
+desinstalado também sai (O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA-01, 08/11/2026); a
+troca para o padrão é do serviço (`test_o_servico_troca_o_perfil_de_jogo_desinstalado.py`).
 
 AS MORDIDAS: ponha a exceção do ativo de volta no `_sem_os_ocultos`, e o ativo fica;
 troque o `todos` do `pacote` pelos perfis do disco, e o desinstalado volta; tire o
-`_PADRAO_PEDIDO = ""` da falha, e o pedido recusado nunca mais sai; tire o `_casa_a_janela`, e o
+`casa_a_janela`, e o
 jogo aberto agora perde o perfil para o Freestyle;
 troque o do `_alvo_do_editor`, e o editor abre no perfil que a lista não mostra; tire o
 `bool(foto.nomes)`, e a leitura da Steam que falha esconde todo jogo do usuário.
@@ -22,9 +22,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import jogos_locais
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
-
-
-PEDIDOS: list[tuple[str, dict[str, Any]]] = []
+from hefesto_dualsense4unix.profiles import jogo_desinstalado
 
 
 @pytest.fixture(autouse=True)
@@ -36,13 +34,8 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     for nome in ("_ESCOLHIDO", "_PROCURA"):
         monkeypatch.setattr(a10_perfis, nome, "", raising=False)
     for nome in ("_NOMES_DOS_JOGOS", "_FORA_DO_DISCO"):
-        monkeypatch.setattr(a10_perfis, nome, None, raising=False)
+        monkeypatch.setattr(jogo_desinstalado, nome, None)
     monkeypatch.setattr(jogos_locais, "_NOMES_DAS_JANELAS", None, raising=False)
-    monkeypatch.setattr(a10_perfis, "_PADRAO_PEDIDO", "", raising=False)
-    PEDIDOS.clear()
-    monkeypatch.setattr(a10_perfis.fios, "soltar", lambda nome, alvo, *a: alvo(*a))
-    monkeypatch.setattr(a10_perfis.ponte, "resultado",
-                        lambda metodo, timeout=None, **params: PEDIDOS.append((metodo, params)))
 
 
 def _steamapps() -> Path:
@@ -95,7 +88,7 @@ def test_o_jogo_que_volta_traz_o_perfil_de_volta(monkeypatch: pytest.MonkeyPatch
     _perfis()
     assert "Desinstalado" not in _nomes()
     _instalar("9100002", "Jogo Que Volta")
-    monkeypatch.setattr(a10_perfis, "_NOMES_DOS_JOGOS", None)
+    monkeypatch.setattr(jogo_desinstalado, "_NOMES_DOS_JOGOS", None)
     assert "Desinstalado" in _nomes()
 
 
@@ -172,31 +165,21 @@ def test_a_leitura_da_steam_que_falha_nao_esconde_nada(monkeypatch: pytest.Monke
     assert _nomes() == ["Ativo fora", "Desinstalado", "Instalado", "Sem jogo"]
 
 
-def test_o_ativo_de_jogo_desinstalado_sai_e_o_padrao_assume_uma_vez() -> None:
-    """Prova da D-0811-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA."""
+def test_o_ativo_de_jogo_desinstalado_tambem_sai_da_lista() -> None:
+    """Prova da D-0811-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA: a aba só esconde."""
     _instalar("9100001", "Jogo Instalado")
     _perfis()
     assert "Ativo fora" not in _nomes()
-    assert PEDIDOS == [("profile.switch", {"name": "Freestyle"})]
-    _nomes()
-    assert len(PEDIDOS) == 1
 
 
-def test_o_ativo_instalado_ou_sem_jogo_nao_troca_nada() -> None:
+def test_o_ativo_instalado_ou_sem_jogo_segue_na_lista() -> None:
     _instalar("9100001", "Jogo Instalado")
     _perfis()
     for ativo in ("Instalado", "Sem jogo"):
         assert ativo in _nomes(valendo=ativo)
-    assert PEDIDOS == []
 
 
-def test_sem_a_biblioteca_da_steam_nada_se_troca() -> None:
-    _perfis()
-    assert "Ativo fora" in _nomes()
-    assert PEDIDOS == []
-
-
-def test_com_a_leitura_da_steam_falhando_nada_se_troca(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_com_a_leitura_da_steam_falhando_nada_se_esconde(monkeypatch: pytest.MonkeyPatch) -> None:
     _instalar("9100001", "Jogo Instalado")
     _perfis()
 
@@ -205,29 +188,6 @@ def test_com_a_leitura_da_steam_falhando_nada_se_troca(monkeypatch: pytest.Monke
 
     monkeypatch.setattr(a10_perfis, "_nomes_dos_jogos", falha)
     assert "Ativo fora" in _nomes()
-    assert PEDIDOS == []
-
-
-def test_o_pedido_que_falha_volta_a_sair_e_o_aceito_nao(monkeypatch: pytest.MonkeyPatch) -> None:
-    _instalar("9100001", "Jogo Instalado")
-    _perfis()
-    respostas: list[bool] = [False, True]
-
-    def resultado(metodo: str, timeout: float | None = None, **params: Any) -> None:
-        PEDIDOS.append((metodo, params))
-        if not respostas.pop(0):
-            raise RuntimeError("o daemon não respondeu a profile.switch")
-
-    monkeypatch.setattr(a10_perfis.ponte, "resultado", resultado)
-    _nomes()
-    assert len(PEDIDOS) == 1
-    _nomes()
-    assert len(PEDIDOS) == 1
-    monkeypatch.setattr(a10_perfis, "_ESPERA_DEPOIS_DA_FALHA", 0.0)
-    _nomes()
-    assert PEDIDOS == [("profile.switch", {"name": "Freestyle"})] * 2
-    _nomes()
-    assert len(PEDIDOS) == 2
 
 
 def test_o_jogo_aberto_agora_nao_perde_o_perfil() -> None:
@@ -235,19 +195,7 @@ def test_o_jogo_aberto_agora_nao_perde_o_perfil() -> None:
     _perfis()
     for chave in ("window_detect_current_class", "window_detect_last_class"):
         assert "Ativo fora" in _nomes(**{chave: "steam_app_9100003"})
-    assert PEDIDOS == []
     assert "Ativo fora" not in _nomes(window_detect_current_class="steam_app_9100001")
-    assert len(PEDIDOS) == 1
-
-
-def test_o_padrao_e_o_nome_do_produto(monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.profiles import loader
-
-    _instalar("9100001", "Jogo Instalado")
-    _perfis()
-    monkeypatch.setattr(loader, "NOME_DO_PADRAO", "Outro padrão")
-    _nomes()
-    assert PEDIDOS == [("profile.switch", {"name": "Outro padrão"})]
 
 
 def test_com_o_servico_parado_o_marcador_do_disco_nao_troca_nada(
@@ -257,4 +205,3 @@ def test_com_o_servico_parado_o_marcador_do_disco_nao_troca_nada(
     monkeypatch.setattr(a10_perfis, "_valendo", lambda ctx, todos=None: "Ativo fora")
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
     assert "Ativo fora" not in a10_perfis.pacote(ctx)["perfis.linha.nome"]
-    assert PEDIDOS == []

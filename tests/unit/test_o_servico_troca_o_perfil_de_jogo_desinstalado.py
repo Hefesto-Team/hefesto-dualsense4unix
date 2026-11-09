@@ -1,0 +1,195 @@
+"""O-SERVICO-TROCA-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-01: o serviço devolve o padrão sem a aba.
+
+O perfil ativo cujo jogo saiu do disco dá lugar ao Freestyle no passo do autoswitch, ao subir e
+quando a biblioteca muda, sem aba aberta. A biblioteca é a de mentira do lar isolado da suíte.
+
+AS MORDIDAS: tire o `_o_padrao_assume` do `_tick`, e o perfil fica; tire o `bool(foto.nomes)` do
+`fora_do_disco`, e a Steam sem leitura troca o perfil do usuário; tire o `casa_a_janela`, e o jogo
+em cena perde o perfil; tire o `self._chave = chave`, e o laço pergunta ao disco a cada volta.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.integrations import jogos_locais
+from hefesto_dualsense4unix.profiles import jogo_desinstalado
+from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+
+
+class _Gerente:
+    def __init__(self, store: StateStore) -> None:
+        self.store = store
+        self.pedidos: list[tuple[str, str]] = []
+        self.recusar = False
+
+    def activate(self, nome: str, *, origin: str = "manual", **_: Any) -> None:
+        if self.recusar:
+            raise RuntimeError("o daemon recusou")
+        self.pedidos.append((nome, origin))
+        self.store.set_active_profile(nome)
+
+
+@pytest.fixture(autouse=True)
+def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    for var, rel in (("XDG_CONFIG_HOME", ".config"), ("XDG_DATA_HOME", ".local/share"),
+                     ("XDG_CACHE_HOME", ".cache"), ("XDG_STATE_HOME", ".local/state")):
+        monkeypatch.setenv(var, str(tmp_path / rel))
+    for nome in ("_NOMES_DOS_JOGOS", "_FORA_DO_DISCO"):
+        monkeypatch.setattr(jogo_desinstalado, nome, None)
+    monkeypatch.setattr(jogos_locais, "_NOMES_DAS_JANELAS", None, raising=False)
+
+
+def _instalar(appid: str, nome: str) -> None:
+    from hefesto_dualsense4unix.integrations.proton_pin import default_steam_root
+
+    pasta = default_steam_root() / "steamapps"
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / f"appmanifest_{appid}.acf").write_text(
+        f'"AppState"\n{{\n\t"appid"\t\t"{appid}"\n\t"name"\t\t"{nome}"\n}}\n', encoding="utf-8")
+
+
+def _perfis() -> None:
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
+
+    save_profile(Profile(name="Instalado", priority=90,
+                         match=MatchCriteria(window_class=["steam_app_9100001"])))
+    save_profile(Profile(name="Ativo fora", priority=70,
+                         match=MatchCriteria(window_class=["steam_app_9100003"])))
+    save_profile(Profile(name="Sem jogo", priority=60, match=MatchAny()))
+
+
+def _servico(ativo: str, janela: str = "") -> tuple[AutoSwitcher, _Gerente]:
+    store = StateStore()
+    store.set_active_profile(ativo)
+    gerente = _Gerente(store)
+    sw = AutoSwitcher(manager=gerente, window_reader=lambda: {"wm_class": janela},  # type: ignore[arg-type]
+                      store=store)
+    sw._decidir = lambda info, now: None  # type: ignore[method-assign]
+    return sw, gerente
+
+
+def _volta(sw: AutoSwitcher, tempo: float = 0.0) -> None:
+    info = sw._ler_fora_do_laco()
+    sw._tick(info, tempo)
+
+
+def test_ao_subir_o_ativo_de_jogo_desinstalado_vira_o_padrao_uma_vez() -> None:
+    """Prova da D-0811-O-PERFIL-ATIVO-DE-JOGO-DESINSTALADO-TAMBEM-SE-OCULTA."""
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    sw, gerente = _servico("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == [("Freestyle", "manual")]
+    _volta(sw)
+    assert len(gerente.pedidos) == 1
+
+
+def test_quando_a_biblioteca_muda_o_ativo_que_perdeu_o_jogo_troca(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _instalar("9100003", "Jogo Ativo")
+    _perfis()
+    sw, gerente = _servico("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == []
+    from hefesto_dualsense4unix.integrations.proton_pin import default_steam_root
+
+    (default_steam_root() / "steamapps" / "appmanifest_9100003.acf").unlink()
+    gerente.store.set_active_profile("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == [("Freestyle", "manual")]
+
+
+def test_perfil_ativado_depois_tambem_e_visto() -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    sw, gerente = _servico("Instalado")
+    _volta(sw)
+    assert gerente.pedidos == []
+    gerente.store.set_active_profile("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == [("Freestyle", "manual")]
+
+
+def test_instalado_ou_sem_jogo_nao_troca() -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    for ativo in ("Instalado", "Sem jogo"):
+        sw, gerente = _servico(ativo)
+        _volta(sw)
+        assert gerente.pedidos == []
+
+
+def test_sem_biblioteca_legivel_nada_se_troca() -> None:
+    _perfis()
+    sw, gerente = _servico("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == []
+
+
+def test_com_a_leitura_da_steam_falhando_nada_se_troca(monkeypatch: pytest.MonkeyPatch) -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+
+    def falha() -> dict[str, str]:
+        raise OSError("biblioteca ilegível")
+
+    monkeypatch.setattr(jogo_desinstalado, "nomes_dos_jogos", falha)
+    sw, gerente = _servico("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == []
+
+
+def test_com_a_janela_do_jogo_em_cena_nao_troca() -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    sw, gerente = _servico("Ativo fora", janela="steam_app_9100003")
+    _volta(sw)
+    assert gerente.pedidos == []
+
+
+def test_o_pedido_recusado_volta_depois_da_espera(monkeypatch: pytest.MonkeyPatch) -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    sw, gerente = _servico("Ativo fora")
+    gerente.recusar = True
+    _volta(sw)
+    _volta(sw)
+    assert gerente.pedidos == []
+    gerente.recusar = False
+    _volta(sw)
+    assert gerente.pedidos == []
+    monkeypatch.setattr(jogo_desinstalado, "ESPERA_DEPOIS_DA_FALHA_S", 0.0)
+    _volta(sw)
+    assert gerente.pedidos == [("Freestyle", "manual")]
+
+
+def test_o_padrao_e_o_nome_do_produto(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.profiles import loader
+
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    monkeypatch.setattr(loader, "NOME_DO_PADRAO", "Outro padrão")
+    sw, gerente = _servico("Ativo fora")
+    _volta(sw)
+    assert gerente.pedidos == [("Outro padrão", "manual")]
+
+
+def test_a_pergunta_repetida_nao_le_o_catalogo(monkeypatch: pytest.MonkeyPatch) -> None:
+    _instalar("9100001", "Jogo Instalado")
+    _perfis()
+    sw, _gerente = _servico("Instalado")
+    _volta(sw)
+    leituras: list[int] = []
+    original = jogo_desinstalado.foto_do_catalogo
+    monkeypatch.setattr(jogo_desinstalado, "foto_do_catalogo",
+                        lambda: leituras.append(1) or original())
+    for _ in range(5):
+        _volta(sw)
+    assert leituras == []
