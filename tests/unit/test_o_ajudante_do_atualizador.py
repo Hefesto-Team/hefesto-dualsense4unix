@@ -130,7 +130,7 @@ def test_a_regra_lista_cada_verbo_sem_curinga(lar: Lar) -> None:
     assert verbos == [f"{ALVO} {v}" for v in (
         "apt-lista", "apt-baixar nvidia", "apt-instalar nvidia", "apt-baixar kernel",
         "apt-instalar kernel", "apt-baixar sistema", "apt-instalar sistema",
-        "apt-rebaixar nvidia", "apt-reinstalar nvidia", "apt-rebaixar kernel",
+        "apt-baixar-de-novo nvidia", "apt-reinstalar nvidia", "apt-baixar-de-novo kernel",
         "apt-reinstalar kernel", "apt-consertar", "apt-limpar",
         "dkms-refazer", "dkms-reinstalar", "mangohud-instalar", "mangohud-reinstalar",
         "mangohud-voltar",

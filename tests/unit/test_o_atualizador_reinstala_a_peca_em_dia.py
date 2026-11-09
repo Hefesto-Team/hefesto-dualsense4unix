@@ -71,7 +71,7 @@ def _peca(diario: list[str], ident: str, *, de: str = "1.0", para: str = "1.0",
             return {nome: True}
         return fazer
 
-    reinstalacao = at.Reinstalacao(etapa("rebaixar"), etapa("reinstalar"), etapa("reaplicar"),
+    reinstalacao = at.Reinstalacao(etapa("baixar-de-novo"), etapa("reinstalar"), etapa("reaplicar"),
                                    lambda _v: porque) if reinstala else None
     return at.Peca(ident, ident.upper(), "dica", "todos", lambda _rede: at.Versoes(de, para),
                    etapa("baixar"), etapa("instalar"), etapa("aplicar"),
@@ -90,7 +90,7 @@ def test_a_peca_em_dia_marcada_reinstala_a_versao_de_agora() -> None:
     diario: list[str] = []
     lista = [_peca(diario, "em-dia"), _peca(diario, "nova", para="1.1")]
     assert _rodar(lista, ["em-dia", "nova"]) == 0
-    assert diario == ["em-dia:rebaixar", "em-dia:reinstalar", "em-dia:reaplicar",
+    assert diario == ["em-dia:baixar-de-novo", "em-dia:reinstalar", "em-dia:reaplicar",
                       "nova:baixar", "nova:instalar", "nova:aplicar"]
     linhas = {p["id"]: p for p in at.ler_o_andamento()["pecas"]}
     assert linhas["em-dia"]["fazer"] == at.REINSTALAR and linhas["nova"]["fazer"] == at.SUBIR
@@ -107,7 +107,8 @@ def test_a_reinstalacao_que_quebra_falha_sem_trocar_a_anterior_e_a_fila_segue() 
     at._gravar_json(at._estado() / at.ARQUIVO_DAS_ANTERIORES,
                     {"a": {"nome": "A", "agora": "1.0", "anterior": "0.9", "dados": {"x": 1}}})
     assert _rodar(lista, ["a", "b"]) == 1
-    assert diario == ["a:rebaixar", "a:reinstalar", "b:rebaixar", "b:reinstalar", "b:reaplicar"]
+    assert diario == ["a:baixar-de-novo", "a:reinstalar", "b:baixar-de-novo", "b:reinstalar",
+                      "b:reaplicar"]
     linha = next(p for p in at.ler_o_andamento()["pecas"] if p["id"] == "a")
     assert linha["selo"] == at.FALHOU and linha["motivo"] == "a quebrou no reinstalar"
     assert at.ler_as_anteriores()["a"]["anterior"] == "0.9"
@@ -126,7 +127,7 @@ def test_a_peca_em_dia_que_nao_se_reinstala_diz_por_que_e_sai_da_fila() -> None:
     assert (itens["sim"]["reinstala"], itens["sim"]["motivo"]) == (True, "")
     assert all("sem_reinstalar" not in item for item in itens.values()), "um nome só: motivo"
     assert _rodar(lista, ["sem", "fora", "sim"]) == 0
-    assert diario == ["sim:rebaixar", "sim:reinstalar", "sim:reaplicar"]
+    assert diario == ["sim:baixar-de-novo", "sim:reinstalar", "sim:reaplicar"]
     assert [p["id"] for p in at.ler_o_andamento()["pecas"]] == ["sim"]
 
 
@@ -178,7 +179,7 @@ def test_toda_reinstalacao_pede_ao_root_so_um_verbo_da_regra(
     regra = _regra()
     assert pedidos and all(p in regra for p in pedidos), set(pedidos) - regra
     novos = {p[0] for p in pedidos}
-    assert {"apt-rebaixar", "apt-reinstalar", "apt-consertar", "dkms-reinstalar",
+    assert {"apt-baixar-de-novo", "apt-reinstalar", "apt-consertar", "dkms-reinstalar",
             "backport-reinstalavel", "backport-reinstalar"} <= novos
 
 
@@ -256,12 +257,15 @@ def raiz(tmp_path: Path) -> Lar:
 
 AUTENTICACAO = ("-o APT::Get::AllowUnauthenticated=false",
                 "-o Acquire::AllowInsecureRepositories=false",
-                "-o Acquire::AllowDowngradeToInsecureRepositories=false")
+                "-o Acquire::AllowDowngradeToInsecureRepositories=false",
+                " --no-remove ", "-o APT::Get::allow-downgrades=false",
+                "-o APT::Get::allow-remove-essential=false",
+                "-o APT::Get::allow-change-held-packages=false")
 
 
 def test_o_nvidia_e_o_kernel_reinstalam_so_a_versao_instalada_com_o_apt_assinado(
         raiz: Lar) -> None:
-    for args in (("apt-rebaixar", "nvidia"), ("apt-reinstalar", "nvidia"),
+    for args in (("apt-baixar-de-novo", "nvidia"), ("apt-reinstalar", "nvidia"),
                  ("apt-reinstalar", "kernel")):
         feito = raiz.rodar(*args)
         assert feito.returncode == 0, feito.stderr
@@ -289,7 +293,8 @@ def test_o_kernel_de_nome_estranho_e_o_grupo_vazio_nao_reinstalam(raiz: Lar) -> 
 
 def test_os_verbos_da_reinstalacao_nao_aceitam_argumento_livre(raiz: Lar) -> None:
     for args in (("apt-reinstalar", "sistema"), ("apt-reinstalar", "tudo"),
-                 ("apt-rebaixar", "curl"), ("apt-reinstalar",), ("apt-reinstalar", "nvidia", "x"),
+                 ("apt-baixar-de-novo", "curl"), ("apt-reinstalar",),
+                 ("apt-reinstalar", "nvidia", "x"),
                  ("apt-reinstalar", "nvidia=1.0"), ("apt-consertar", "x"),
                  ("dkms-reinstalar", "--force"), ("mangohud-reinstalar", "0.8.5"),
                  ("backport-reinstalar", "../bluez"), ("backport-reinstalar", "kernel"),

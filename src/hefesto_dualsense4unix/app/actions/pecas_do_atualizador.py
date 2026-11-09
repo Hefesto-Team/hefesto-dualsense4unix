@@ -471,7 +471,7 @@ def _tarball_da_reinstalacao(conf: dict[str, str], baixar: Callable[[str, Path],
     return Path(feito.detail)
 
 
-def _rebaixar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+def _baixar_de_novo_o_proton(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     conf = _conf_da_reinstalacao()
     if conf is None:
         raise EtapaFalhouError("a versão de agora não tem a soma guardada")
@@ -557,7 +557,7 @@ def _mangohud_sem_reinstalar(versoes: Versoes) -> str:
     return ""
 
 
-def _rebaixar_o_mangohud(passo: Passo, dados: dict[str, Any]) -> None:
+def _baixar_de_novo_o_mangohud(passo: Passo, dados: dict[str, Any]) -> None:
     texto = _saida(["mangohud", "--version"]) if shutil.which("mangohud") else None
     instalada = _sem_v((texto or "").strip().split()[0]) if (texto or "").strip() else ""
     publicada = _sem_v(str(_release(REPO_DO_MANGOHUD).get("tag_name", "")))
@@ -686,7 +686,7 @@ def _umu_sem_reinstalar(_versoes: Versoes) -> str:
     return ""
 
 
-def _rebaixar_o_umu(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+def _baixar_de_novo_o_umu(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     tag = _tag_do_umu_de_agora()
     if not tag or not _umu_e_nosso(_umu_na_casa()):
         raise EtapaFalhouError("o umu de agora não é o do Hefesto")
@@ -856,7 +856,7 @@ def _pasta_da_reinstalacao_do_python() -> Path:
     return _cache() / "python-de-agora"
 
 
-def _rebaixar_o_python(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+def _baixar_de_novo_o_python(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     rodas = _rodas_de_agora()
     if not rodas:
         raise EtapaFalhouError("as bibliotecas do Hefesto não estão instaladas")
@@ -1289,8 +1289,8 @@ def _reinstalacao_da_casa(backport: str) -> Reinstalacao:
 
 
 def _reinstalacao_do_apt(grupo: str, aplicar: Etapa | None) -> Reinstalacao:
-    return Reinstalacao(_do_ajudante("apt-rebaixar", grupo), _do_ajudante("apt-reinstalar", grupo),
-                        aplicar)
+    return Reinstalacao(_do_ajudante("apt-baixar-de-novo", grupo),
+                        _do_ajudante("apt-reinstalar", grupo), aplicar)
 
 
 def registro() -> list[Peca]:
@@ -1299,7 +1299,7 @@ def registro() -> list[Peca]:
         Peca("proton", "GE-Proton", "Os jogos da Steam e do Heroic",
              "Todos os jogos da Steam e do Heroic", versoes_do_proton,
              _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton,
-             reinstalacao=Reinstalacao(_rebaixar_o_proton, _reinstalar_o_proton,
+             reinstalacao=Reinstalacao(_baixar_de_novo_o_proton, _reinstalar_o_proton,
                                        _aplicar_o_proton, _proton_sem_reinstalar)),
         Peca("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto",
              "O serviço do Bluetooth", versoes_do_bluetooth,
@@ -1315,7 +1315,7 @@ def registro() -> list[Peca]:
              _voltar_a_gdk, reinstalacao=Reinstalacao(_baixar_a_gdk, _reinstalar_a_gdk)),
         Peca("python", "Python", "As bibliotecas do Hefesto", "O serviço e a janela",
              versoes_do_python, _baixar_o_python, _instalar_o_python, None, _voltar_o_python,
-             reinstalacao=Reinstalacao(_rebaixar_o_python, _reinstalar_o_python)),
+             reinstalacao=Reinstalacao(_baixar_de_novo_o_python, _reinstalar_o_python)),
         Peca("nvidia", "Driver Nvidia", "O driver da placa de vídeo", "No próximo início",
              versoes_da_nvidia, _do_apt("nvidia", "baixar"), _do_apt("nvidia", "instalar"),
              _limpar, reinstalacao=_reinstalacao_do_apt("nvidia", None)),
@@ -1332,11 +1332,12 @@ def registro() -> list[Peca]:
         Peca("mangohud", "MangoHud", "O painel por cima do jogo", "Todos os jogos",
              versoes_do_mangohud, _baixar_o_mangohud, _instalar_o_mangohud, None,
              _voltar_o_mangohud,
-             reinstalacao=Reinstalacao(_rebaixar_o_mangohud, _do_ajudante("mangohud-reinstalar"),
-                                       None, _mangohud_sem_reinstalar)),
+             reinstalacao=Reinstalacao(_baixar_de_novo_o_mangohud,
+                                       _do_ajudante("mangohud-reinstalar"), None,
+                                       _mangohud_sem_reinstalar)),
         Peca("umu", "umu", "Os jogos de fora da Steam no Proton", "Os jogos de fora da Steam",
              versoes_do_umu, _baixar_o_umu, _instalar_o_umu, _aplicar_o_umu, _voltar_o_umu,
-             reinstalacao=Reinstalacao(_rebaixar_o_umu, _instalar_o_umu, _reapontar_o_umu,
+             reinstalacao=Reinstalacao(_baixar_de_novo_o_umu, _instalar_o_umu, _reapontar_o_umu,
                                        _umu_sem_reinstalar)),
         Peca("hefesto", "Hefesto", "Interface, serviço e correções", "O serviço e a janela",
              versoes_do_hefesto, _baixar_o_hefesto, _instalar_o_hefesto, _aplicar_o_hefesto,

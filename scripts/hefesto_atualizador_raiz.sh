@@ -56,6 +56,8 @@ _apt() {
 
 APT_SO_ASSINADO=(-o APT::Get::AllowUnauthenticated=false -o Acquire::AllowInsecureRepositories=false
     -o Acquire::AllowDowngradeToInsecureRepositories=false)
+APT_SO_A_PECA=(--no-remove -o APT::Get::allow-downgrades=false -o APT::Get::allow-remove-essential=false
+    -o APT::Get::allow-change-held-packages=false)
 
 _instalados() {
     dpkg-query -W -f '${Package}\t${db:Status-Abbrev}\t${Version}\n' 2>/dev/null
@@ -178,10 +180,11 @@ _apt_reinstalar_do_grupo() {
     for p in "${pacotes[@]}"; do
         [[ "${p}" =~ ^[a-z0-9][a-z0-9.+-]*=[A-Za-z0-9.+:~-]+$ ]] || _recusar "pacote estranho: '${p}'"
     done
-    _apt "${APT_SO_ASSINADO[@]}" "$@" install --reinstall --no-install-recommends "${pacotes[@]}"
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" install --reinstall --no-install-recommends \
+        "${pacotes[@]}"
 }
 
-verbo_apt_rebaixar() { _exige_raiz apt-rebaixar; _apt_reinstalar_do_grupo "${1:-}" -d; }
+verbo_apt_baixar_de_novo() { _exige_raiz apt-baixar-de-novo; _apt_reinstalar_do_grupo "${1:-}" -d; }
 verbo_apt_reinstalar() { _exige_raiz apt-reinstalar; _apt_reinstalar_do_grupo "${1:-}"; }
 
 verbo_apt_consertar() {
@@ -189,7 +192,7 @@ verbo_apt_consertar() {
     local rc=0
     _segurar_os_da_casa
     dpkg --force-confdef --force-confold --configure -a || rc=1
-    _apt "${APT_SO_ASSINADO[@]}" --no-install-recommends -f install || rc=1
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" --no-install-recommends -f install || rc=1
     return "${rc}"
 }
 _kernels_instalados() {
@@ -639,7 +642,8 @@ verbo_backport_reinstalar() {
     lista="$(_entrega_da_reinstalacao "$1")" || exit 2
     local -a debs
     mapfile -t debs <<<"${lista}"
-    _apt "${APT_SO_ASSINADO[@]}" install --reinstall --no-install-recommends "${debs[@]}" || exit 1
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" install --reinstall --no-install-recommends \
+        "${debs[@]}" || exit 1
     printf 'reinstalado: %s\n' "$1"
 }
 
@@ -672,7 +676,7 @@ verbo_regra_sudo() {
         printf '    %s apt-instalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
     done
     for g in ${GRUPOS_DA_REINSTALACAO}; do
-        printf '    %s apt-rebaixar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
+        printf '    %s apt-baixar-de-novo %s, \\\n' "${ALVO_INSTALADO}" "${g}"
         printf '    %s apt-reinstalar %s, \\\n' "${ALVO_INSTALADO}" "${g}"
     done
     printf '    %s apt-consertar, \\\n' "${ALVO_INSTALADO}"
@@ -699,7 +703,7 @@ case "${1:-}" in
     apt-lista) [[ $# -eq 1 ]] || _recusar "apt-lista não leva argumento"; verbo_apt_lista ;;
     apt-baixar) [[ $# -eq 2 ]] || _recusar "apt-baixar <grupo>"; verbo_apt_baixar "$2" ;;
     apt-instalar) [[ $# -eq 2 ]] || _recusar "apt-instalar <grupo>"; verbo_apt_instalar "$2" ;;
-    apt-rebaixar) [[ $# -eq 2 ]] || _recusar "apt-rebaixar <grupo>"; verbo_apt_rebaixar "$2" ;;
+    apt-baixar-de-novo) [[ $# -eq 2 ]] || _recusar "apt-baixar-de-novo <grupo>"; verbo_apt_baixar_de_novo "$2" ;;
     apt-reinstalar) [[ $# -eq 2 ]] || _recusar "apt-reinstalar <grupo>"; verbo_apt_reinstalar "$2" ;;
     apt-consertar) [[ $# -eq 1 ]] || _recusar "apt-consertar não leva argumento"; verbo_apt_consertar ;;
     apt-limpar) [[ $# -eq 1 ]] || _recusar "apt-limpar não leva argumento"; verbo_apt_limpar ;;
@@ -715,5 +719,5 @@ case "${1:-}" in
     backport-reinstalar) [[ $# -eq 2 ]] || _recusar "backport-reinstalar <peça>"; verbo_backport_reinstalar "$2" ;;
     backport-voltar) [[ $# -eq 2 ]] || _recusar "backport-voltar <peça>"; verbo_backport_voltar "$2" ;;
     regra-sudo) verbo_regra_sudo "${2:-}" ;;
-    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-rebaixar|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
+    *) _recusar "verbo desconhecido: '${1:-}' (apt-lista | apt-baixar|apt-instalar <grupo> | apt-baixar-de-novo|apt-reinstalar <grupo> | apt-consertar | apt-limpar | dkms-refazer | dkms-reinstalar | mangohud-instalar | mangohud-reinstalar | mangohud-voltar | kernel-anterior | backport-construir|backport-instalar|backport-reinstalavel|backport-reinstalar|backport-voltar <peça> | regra-sudo <usuária>)" ;;
 esac
