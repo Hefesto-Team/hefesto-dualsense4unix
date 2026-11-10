@@ -124,9 +124,9 @@ jobs:
           {
             echo "## Rodada do Proton ($PASSO)"
             echo '```'
-            cat "$MEDIDA/runner.txt" 2>/dev/null
-            grep -E '^(casa_radio|casa_cabo)=' "$MEDIDA/banco/sonda.txt" 2>/dev/null
-            cat rodada/linha.csv 2>/dev/null
+            cat "$MEDIDA/runner.txt" 2>/dev/null || true
+            grep -E '^(casa_radio|casa_cabo)=' "$MEDIDA/banco/sonda.txt" 2>/dev/null || true
+            cat rodada/linha.csv 2>/dev/null || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Sobe a medida e a linha do recibo

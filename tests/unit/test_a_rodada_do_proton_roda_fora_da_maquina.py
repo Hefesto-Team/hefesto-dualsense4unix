@@ -208,3 +208,22 @@ def test_o_fluxo_so_roda_a_mao_e_leva_o_runtime_ao_recibo() -> None:
     assert "s/^compilar=//p' pino.txt" in texto
     assert "runtime=(--runtime slr)" in texto and "appmanifest_${SLR_APPID}.acf" in texto
     assert texto.index("80-prazo") < texto.index("apt-get")
+
+
+def test_a_sonda_so_usa_a_chave_que_o_mingw_do_runner_declara() -> None:
+    """D-0811-A-RODADA-DO-PROTON-RODA-NO-RUNNER-DO-GITHUB: o mingw do ubuntu-24.04 não declara
+    ``PKEY_Device_ContainerId`` (a rodada de 09/11 parou na compilação); a chave é a mesma da
+    ``DEVPKEY_Device_ContainerId``, que ele declara."""
+    fonte = (RAIZ / "assets" / "sonda-proton" / "sonda.c").read_text(encoding="utf-8")
+    assert "PKEY_Device_ContainerId" not in fonte.replace("DEVPKEY_Device_ContainerId", "")
+
+
+def test_o_resumo_da_rodada_nao_quebra_pelo_arquivo_que_falta() -> None:
+    """D-0811-A-RODADA-DO-PROTON-RODA-NO-RUNNER-DO-GITHUB: o resumo roda sempre e com ``-e``;
+    leitura de arquivo que o passo anterior não deixou não derruba o job."""
+    fluxo = yaml.safe_load((RAIZ / ".github" / "workflows" / "rodada-do-proton.yml")
+                           .read_text(encoding="utf-8"))
+    passo = next(p for p in fluxo["jobs"]["rodada"]["steps"] if p.get("name") == "O resumo")
+    leituras = [linha.strip() for linha in passo["run"].splitlines()
+                if linha.strip().startswith(("cat ", "grep "))]
+    assert leituras and all(linha.endswith("|| true") for linha in leituras)

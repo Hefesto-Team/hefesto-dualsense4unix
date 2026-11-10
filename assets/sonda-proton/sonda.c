@@ -160,7 +160,7 @@ static IMMDevice *endpoint_do_container(EDataFlow fluxo)
                 continue;
             PropVariantInit(&v);
             if (SUCCEEDED(IMMDevice_OpenPropertyStore(dev, STGM_READ, &ps))) {
-                if (SUCCEEDED(IPropertyStore_GetValue(ps, &PKEY_Device_ContainerId, &v))
+                if (SUCCEEDED(IPropertyStore_GetValue(ps, (const PROPERTYKEY *)&DEVPKEY_Device_ContainerId, &v))
                     && v.vt == VT_CLSID && IsEqualGUID(v.puuid, &container_sony))
                     achado = dev;
                 PropVariantClear(&v);
