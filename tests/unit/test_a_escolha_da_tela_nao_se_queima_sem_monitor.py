@@ -229,7 +229,8 @@ def test_a_ficha_que_o_portal_perdeu_sai_do_disco_e_o_pedido_volta_uma_vez(
 def test_os_conectores_contam_o_desconhecido_como_ligado_e_juntam_as_placas(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    drm = _drm(tmp_path, monkeypatch, HDMI_A_1="disconnected", DP_2="unknown", eDP_1="connected")
+    drm = _drm(tmp_path, monkeypatch, HDMI_A_1="disconnected", DP_2="unknown", eDP_1="connected",
+               Writeback_1="unknown")
     (drm.raiz / "card1-HDMI-A-1").mkdir()
     (drm.raiz / "card1-HDMI-A-1" / "status").write_text("connected\n", encoding="utf-8")
     (drm.raiz / "card0").mkdir()
@@ -257,6 +258,23 @@ def test_o_install_sem_tela_ligada_nao_pergunta_e_deixa_para_o_primeiro_jogo(
     assert _DESLIGADA in capsys.readouterr().out
     assert barramento.ativacoes() == 0
     assert ficha.read_text(encoding="utf-8") == "ficha-boa"
+
+
+@_PRECISA_DO_PORTAL
+def test_o_writeback_da_placa_nao_conta_como_tela_ligada(
+    barramento: Barramento, tmp_path: Path, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """A placa com conector de gravação (``Writeback-1``, que diz ``unknown`` ou ``connected``) e
+    a única tela desligada: a fonte não pergunta ao portal."""
+    _drm(tmp_path, monkeypatch, HDMI_A_1="disconnected", Writeback_1="connected")
+    ficha = tmp_path / "ficha"
+    ficha.write_text("ficha-boa", encoding="utf-8")
+    cena = Cena(tj.FonteDoPortal(ficha))
+    with structlog.testing.capture_logs() as diario:
+        cena.correr(6.0)
+    assert barramento.ativacoes() == 0
+    assert ficha.read_text(encoding="utf-8") == "ficha-boa"
+    assert _ausentes(diario) == [_DESLIGADA]
 
 
 class _FonteDoProjetor:

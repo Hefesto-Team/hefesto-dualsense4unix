@@ -156,6 +156,10 @@ _PROCESSO = textwrap.dedent('''
     from tests.unit.test_a_porta_ouve_o_jogo_e_o_microfone import P1, _Cliente
 
     pasta = Path(sys.argv[1])
+    tela = pasta / "drm" / "card0-HDMI-A-1"
+    tela.mkdir(parents=True)
+    (tela / "status").write_text(sys.argv[2], encoding="utf-8")
+    tj.RAIZ_DRM = pasta / "drm"
 
 
     async def escritor(_m, _p):
@@ -204,7 +208,7 @@ def test_o_processo_da_porta_sai_logo_depois_da_parada_com_o_portal_mudo(
         "HEFESTO_DUALSENSE4UNIX_FAKE": "1",
     }
     processo = subprocess.Popen(
-        [sys.executable, str(roteiro), str(tmp_path)], cwd=RAIZ, env=ambiente,
+        [sys.executable, str(roteiro), str(tmp_path), "connected"], cwd=RAIZ, env=ambiente,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     assert processo.stdin is not None and processo.stdout is not None
     try:

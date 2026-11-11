@@ -49,6 +49,7 @@ _CAMINHO_DO_ARMAZEM = "/org/freedesktop/impl/portal/PermissionStore"
 _TABELA_DA_TELA = "screencast"
 _FICHA_PERDIDA = "org.freedesktop.portal.Error.NotFound"
 RAIZ_DRM = Path("/sys/class/drm")
+_SEM_TELA = "Writeback-"
 SINAIS = ("dano", "flash", "escuro", "tremor", "saturacao")
 REGIOES_POR_RECEITA = 8
 AMOSTRAS_DA_REGIAO = 64
@@ -338,8 +339,9 @@ def _aceita(resposta: Any, pedido: str) -> Any:
 def conectores() -> dict[str, bool]:
     """As saídas de vídeo da máquina (``HDMI-A-1``, ``DP-2``…) e se cada uma está ligada, lidas de
     ``RAIZ_DRM/card*-<saída>/status``. Só ``disconnected`` é desligada: ``unknown`` é um conector
-    sem detecção de plugue, e a dúvida não pode travar a captura. Vazio quando o sistema não diz
-    (sem DRM, ou nada legível)."""
+    sem detecção de plugue, e a dúvida não pode travar a captura. O ``Writeback`` não é tela (a
+    placa grava nele, ninguém o vê) e fica de fora. Vazio quando o sistema não diz (sem DRM, ou
+    nada legível)."""
     saidas: dict[str, bool] = {}
     try:
         pastas = sorted(RAIZ_DRM.glob("card*-*"))
@@ -352,6 +354,8 @@ def conectores() -> dict[str, bool]:
         if not estado:
             continue
         nome = pasta.name.split("-", 1)[1]
+        if nome.startswith(_SEM_TELA):
+            continue
         saidas[nome] = saidas.get(nome, False) or estado != "disconnected"
     return saidas
 
