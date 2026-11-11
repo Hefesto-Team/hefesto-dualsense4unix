@@ -8,7 +8,8 @@ portal guarda a ficha e tenta de novo depois da ``espera``. A escolha nasce no p
 que aqui roda com o ``python`` e o portal de mentira: nenhuma prova abre a janela do portal.
 
 MORDIDA: devolver o ``_esquecer`` ao braço do prazo ou ao do ``RuntimeError`` do ``abrir``, ou
-arrancar a guarda do passo do install (a sessão gráfica, o COSMIC ou o ensaio), e a régua reprova.
+arrancar a guarda do passo do install (a sessão gráfica, o COSMIC ou o ensaio), ou errar o módulo
+ou a saída do ``python -c`` do passo, e a régua reprova.
 """
 from __future__ import annotations
 
@@ -237,6 +238,24 @@ def test_na_sessao_do_cosmic_o_install_roda_a_escolha_uma_vez(tmp_path: Path) ->
     assert registro.count("python -c") == 1
     assert "escolher_a_tela" in registro
     assert "aviso" not in registro
+
+
+def test_o_python_do_passo_chama_a_escolha_e_sai_com_o_codigo_da_escolha(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    achado = re.search(r"\"\$\{py\}\" -c '([^']+)'", _funcao_do_install("escolher_a_tela_do_jogo"))
+    assert achado is not None, "o passo do install não roda o python -c"
+    chamadas: list[int] = []
+
+    def escolha_de_mentira() -> int:
+        chamadas.append(1)
+        return 3
+
+    monkeypatch.setattr(tj, "escolher_a_tela", escolha_de_mentira)
+    with pytest.raises(SystemExit) as saida:
+        exec(compile(achado.group(1), "install.sh", "exec"), {})
+    assert saida.value.code == 3
+    assert chamadas == [1]
 
 
 def test_o_ensaio_diz_o_que_faria_e_nao_roda_o_python(tmp_path: Path) -> None:
