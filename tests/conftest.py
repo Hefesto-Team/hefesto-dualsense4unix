@@ -3922,6 +3922,25 @@ def escritas_do_servico_no_journal(desde: str) -> frozenset[str]:
     return caminhos_da_escrita_do_servico(saida.stdout)
 
 
+def o_servico_falou_desde(desde: str) -> bool:
+    """O serviço de quem roda deixou alguma linha no diário dele desde `desde`."""
+    import subprocess
+
+    try:
+        saida = subprocess.run(
+            [
+                "journalctl", "--user", "-u", _UNIDADE_DO_SERVICO,
+                "--since", desde, "--no-pager", "-o", "cat", "-n", "1",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return saida.returncode == 0 and bool(saida.stdout.strip())
+
+
 def _caminho_do_delta(delta: str) -> str:
     resto = delta.split(None, 1)[-1]
     return resto.rsplit(" (", 1)[0] if delta.startswith("MUDADO") else resto
@@ -3956,19 +3975,23 @@ def _anotar_o_filho_que_alcanca_o_lar_real(argumentos: dict[str, Any]) -> None:
 
 
 def _escritas_que_a_suite_nao_podia_fazer(deltas: list[str]) -> list[str]:
-    """Os deltas em pasta que a guarda cobre e que nenhum escrevente da suíte alcançou.
+    """Os deltas em pasta da guarda que nenhum escrevente da suíte alcançou, com o serviço vivo.
 
-    O escrevente é medido, não adivinhado: a guarda vê todo `open`, `rename` e `unlink` do processo
-    dos testes (e recusa), e o `Popen` da sessão vê o filho que nasce com o lar real. Sem recusa e
-    sem filho assim, a escrita no lar real veio de outro processo (o serviço ou a janela de quem
-    roda). Guarda desligada, recusa registrada ou filho com o lar real: nada se atribui a fora.
+    O escrevente é medido, não adivinhado, nos dois lados. Do lado da suíte, a guarda vê todo
+    `open`, `rename` e `unlink` do processo dos testes (e recusa), e o `Popen` da sessão vê o filho
+    que nasce com o lar real. Do lado de fora, o serviço de quem roda falou no diário dele durante
+    a sessão. A guarda não vê a escrita em C nem o filho lançado sem o `Popen`: sem o serviço vivo,
+    nada se atribui a fora, e o canário continua a régua independente da guarda.
     """
-    if not _GUARDA_DA_SESSAO or _FILHOS_COM_O_LAR_REAL:
+    if not _GUARDA_DA_SESSAO or _FILHOS_COM_O_LAR_REAL or not _INICIO_DA_SESSAO:
         return []
     guarda = _GUARDA_DA_SESSAO[0]
     if guarda.recusas:
         return []
-    return [d for d in deltas if guarda.protege(_caminho_do_delta(d))]
+    de_fora = [d for d in deltas if guarda.protege(_caminho_do_delta(d))]
+    if de_fora and not o_servico_falou_desde(_INICIO_DA_SESSAO[0]):
+        return []
+    return de_fora
 
 
 def _sem_a_escrita_de_fora_da_suite(session: Any, deltas: list[str]) -> list[str]:
@@ -3982,7 +4005,8 @@ def _sem_a_escrita_de_fora_da_suite(session: Any, deltas: list[str]) -> list[str
         f"alcançou (guarda sem recusa, nenhum filho com o lar real): {len(de_fora)} caminho(s):",
         *[f"  - {d}" for d in de_fora[:_CANARIO_LIMITE_AVISO]],
         *([f"  ... e mais {restam}"] if restam > 0 else []),
-        "  É o serviço ou a janela de quem roda, em outro processo. Nada aqui é restaurado.",
+        "  O serviço de quem roda falou no diário durante a sessão: a escrita é dele, em outro "
+        "processo. Nada aqui é restaurado.",
     ])
     return [d for d in deltas if d not in de_fora]
 

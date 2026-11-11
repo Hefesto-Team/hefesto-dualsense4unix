@@ -42,6 +42,7 @@ def _lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(canario, "_gestos_da_janela_do_usuario", lambda: [])
     monkeypatch.setattr(canario, "_INICIO_DA_SESSAO", ["2026-11-11 06:40:00"])
     monkeypatch.setattr(canario, "escritas_do_servico_no_journal", lambda desde: frozenset())
+    monkeypatch.setattr(canario, "o_servico_falou_desde", lambda desde: True)
     monkeypatch.setattr(canario, "_FILHOS_COM_O_LAR_REAL", [])
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
@@ -78,6 +79,21 @@ def test_o_servico_vivo_gravando_com_a_guarda_limpa_e_aviso(
     assert status == 0, saida
     assert canario._GUARDA_PORTAO not in saida
     assert "nenhum escrevente da suíte" in saida and str(alvo) in saida
+
+
+def test_sem_o_servico_falar_no_diario_a_escrita_e_da_suite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A guarda não vê a escrita em C: sem o serviço vivo, ninguém de fora escreveu."""
+    lar = _lar(tmp_path, monkeypatch)
+    _com_a_guarda(monkeypatch, lar)
+    monkeypatch.setattr(canario, "o_servico_falou_desde", lambda desde: False)
+    _o_servico_grava(lar)
+
+    status, saida = _veredito(capsys)
+
+    assert status == 1, saida
+    assert "a suíte ESCREVEU" in saida and "nenhum escrevente da suíte" not in saida
 
 
 def test_guarda_com_recusa_mantem_o_portao(
@@ -182,6 +198,22 @@ _DENTRO = textwrap.dedent('''
 ''')
 
 
+def _diario_de_mentira(tmp_path: Path) -> Path:
+    """O diário do serviço de mentira: ele fala só no modo `vivo`, e a régua não lê a máquina."""
+    pasta = tmp_path / "bin"
+    pasta.mkdir()
+    falso = pasta / "journalctl"
+    falso.write_text(
+        '#!/bin/sh\n'
+        'case " $* " in *" -u hefesto-dualsense4unix.service "*)\n'
+        '  [ "$HEFESTO_MODO" = vivo ] && echo o_ultimo_jogo_lembrado ;;\n'
+        'esac\n'
+        'exit 0\n',
+        encoding="utf-8")
+    falso.chmod(0o755)
+    return pasta
+
+
 def _sessao_interna(tmp_path: Path, modo: str) -> tuple[int, str]:
     """Uma sessão de pytest inteira, com este `conftest` como plugin e um `HOME` real de mentira."""
     lar = tmp_path / "lar-real"
@@ -196,6 +228,7 @@ def _sessao_interna(tmp_path: Path, modo: str) -> tuple[int, str]:
         "HEFESTO_SINAL": str(sinal), "HEFESTO_MODO": modo, "HEFESTO_LAR_REAL": str(lar),
         "TMPDIR": os.environ.get("TMPDIR", "/tmp"),
     }
+    env["PATH"] = f"{_diario_de_mentira(tmp_path)}{os.pathsep}{env['PATH']}"
     filho = subprocess.Popen(
         [sys.executable, "-m", "pytest", "-p", "tests.conftest", "-p", "no:cacheprovider",
          "--rootdir", str(tmp_path), "-q", str(teste)],
@@ -203,7 +236,7 @@ def _sessao_interna(tmp_path: Path, modo: str) -> tuple[int, str]:
     limite = time.monotonic() + 60
     while not (sinal / "pronto").exists() and filho.poll() is None and time.monotonic() < limite:
         time.sleep(0.05)
-    if modo == "vivo":
+    if modo in ("vivo", "mudo"):
         (real / ARQUIVO).write_text('{"perfil": "viajante"}\n', encoding="utf-8")
     (sinal / "liberar").write_text("1")
     saida, _ = filho.communicate(timeout=120)
@@ -215,6 +248,13 @@ def test_sessao_inteira_com_o_servico_gravando_nao_reprova(tmp_path: Path) -> No
 
     assert status == 0, saida
     assert "nenhum escrevente da suíte" in saida
+
+
+def test_sessao_inteira_com_a_escrita_de_fora_e_o_servico_mudo_reprova(tmp_path: Path) -> None:
+    status, saida = _sessao_interna(tmp_path, "mudo")
+
+    assert status != 0, saida
+    assert "a suíte ESCREVEU" in saida and ARQUIVO in saida
 
 
 def test_sessao_inteira_com_teste_que_grava_no_lar_real_reprova(tmp_path: Path) -> None:
