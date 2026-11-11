@@ -45,6 +45,7 @@ def _escolhas(portal: PortalDeTeste) -> list[dict[str, object]]:
 def test_o_prazo_esgotado_guarda_a_ficha_e_nao_vira_laco(
     barramento: Barramento, tmp_path: Path, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
+    """D-1111-A-ESCOLHA-DA-TELA-SE-FAZ-UMA-VEZ-E-FICA: o prazo esgotado guarda a ficha, sem laço."""
     monkeypatch.setattr(tj, "PRAZO_DA_ESCOLHA_S", 0.2)
     ficha = tmp_path / "ficha"
     ficha.write_text("ficha-velha", encoding="utf-8")

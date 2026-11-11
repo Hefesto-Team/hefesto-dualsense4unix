@@ -116,7 +116,8 @@ def _ausentes(diario: Sequence[Mapping[str, Any]]) -> list[str]:
 def test_com_a_saida_escolhida_desligada_nada_sai_ao_portal_e_a_ficha_fica_no_armazem(
     barramento: Barramento, tmp_path: Path, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """HDMI-A-1 é a tela da ficha e está desligada; DP-1 está ligada e não basta."""
+    """D-1111-A-ESCOLHA-DA-TELA-NAO-SE-QUEIMA-SEM-MONITOR: HDMI-A-1 é a tela da ficha e está
+    desligada; DP-1 está ligada e não basta."""
     drm = _drm(tmp_path, monkeypatch, HDMI_A_1="disconnected", DP_1="connected")
     ficha = tmp_path / "ficha"
     ficha.write_text("ficha-boa", encoding="utf-8")
