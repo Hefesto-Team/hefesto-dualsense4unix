@@ -88,6 +88,7 @@ def _painel() -> str:
     return a09._repouso_do_painel(_estado())
 
 
+@pytest.mark.o_diario_de_verdade
 @pytest.mark.parametrize("modo", ["dualsense", "xbox"])
 def test_o_diario_citado_nao_denuncia(servico: dict[str, Any], modo: str,
                                       capsys: pytest.CaptureFixture[str]) -> None:
@@ -170,6 +171,7 @@ def test_a_citacao_nao_muda_um_byte(servico: dict[str, Any],
     assert len(copiado) == 2 and copiado[0] == copiado[1], copiado
 
 
+@pytest.mark.o_diario_de_verdade
 def test_as_frases_do_produto_no_diario_nao_sao_citacao(
         servico: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
     """«…está vazio.» é frase do produto: fica fora do registro das citações."""

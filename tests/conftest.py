@@ -7,6 +7,8 @@ import errno
 import fnmatch
 import functools
 import hashlib
+import importlib.abc
+import importlib.machinery
 import inspect
 import itertools
 import os
@@ -3180,6 +3182,12 @@ def pytest_configure(config: Any) -> None:
         "carrega (`docs/process/`, o despacho de leva); pula COM A RAZÃO "
         "quando ele não veio, e só quando o `.gitignore` explica a ausência.",
     )
+    config.addinivalue_line(
+        "markers",
+        f"{_MARCA_DO_DIARIO_DE_VERDADE}: o teste mede o próprio `_diario` da aba 09 "
+        "(o que ele pede ao registro da unit); sem a marca, todo teste de `tests/unit` "
+        "recebe o texto fixo `DIARIO_DE_MENTIRA_DA_SUITE`.",
+    )
 
 
 def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
@@ -3946,3 +3954,76 @@ def _a_aba_sistema_nao_herda_a_faixa_lenta() -> None:
         if modulo is not None:
             modulo._LENTO_SELO[0] += 1
             modulo._LENTO.clear()
+
+
+_MARCA_DO_DIARIO_DE_VERDADE = "o_diario_de_verdade"
+_NOMES_DA_ABA_DO_DIARIO = (
+    "hefesto_dualsense4unix.interface.pacotes.a09_sistema",
+    "pacotes.a09_sistema",
+)
+_RAIZ_DOS_TESTES_UNIT = Path(__file__).resolve().parent / "unit"
+DIARIO_DE_MENTIRA_DA_SUITE = "O registro da unit de mentira da suíte."
+
+
+class _AchadorDaAbaDoDiario(importlib.abc.MetaPathFinder):
+    """Troca o `_diario` da aba 09 no instante em que o módulo é importado dentro do teste.
+
+    A aba tem dois nomes na suíte (o do pacote e o da pasta da interface no `sys.path`), e cada
+    um é um módulo à parte: o achador atende os dois.
+    """
+
+    def __init__(self, trocar: Callable[[types.ModuleType], None]) -> None:
+        self._trocar = trocar
+
+    def find_spec(
+        self, nome: str, caminho: Any = None, alvo: Any = None
+    ) -> importlib.machinery.ModuleSpec | None:
+        if nome not in _NOMES_DA_ABA_DO_DIARIO:
+            return None
+        spec = importlib.machinery.PathFinder.find_spec(nome, caminho)
+        if spec is None or spec.loader is None:
+            return None
+        carregador: Any = spec.loader
+        executar = carregador.exec_module
+
+        def executar_e_trocar(modulo: types.ModuleType) -> None:
+            executar(modulo)
+            self._trocar(modulo)
+
+        carregador.exec_module = executar_e_trocar
+        return spec
+
+
+@pytest.fixture(autouse=True)
+def _o_diario_da_maquina_nao_entra_no_teste(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
+    """O `_diario` da aba 09 devolve um texto fixo em todo teste de `tests/unit`.
+
+    Sem isto, pintar a aba 09 roda o registro da unit de verdade (teto de 8 s): a suíte
+    mede a máquina (medido em 11/11/2026: 14 chamadas reais em 8 réguas das dez abas).
+    Quem mede o `_diario` em si declara `@pytest.mark.o_diario_de_verdade`; quem precisa de outro
+    texto continua trocando o `_diario` à mão, por cima desta troca.
+    """
+    caminho = Path(str(request.node.path))
+    if (
+        not caminho.is_relative_to(_RAIZ_DOS_TESTES_UNIT)
+        or request.node.get_closest_marker(_MARCA_DO_DIARIO_DE_VERDADE) is not None
+    ):
+        yield
+        return
+
+    def trocar(modulo: types.ModuleType) -> None:
+        monkeypatch.setattr(modulo, "_diario", lambda: DIARIO_DE_MENTIRA_DA_SUITE)
+
+    for nome in _NOMES_DA_ABA_DO_DIARIO:
+        ja_carregada = sys.modules.get(nome)
+        if ja_carregada is not None:
+            trocar(ja_carregada)
+    achador = _AchadorDaAbaDoDiario(trocar)
+    sys.meta_path.insert(0, achador)
+    try:
+        yield
+    finally:
+        with contextlib.suppress(ValueError):
+            sys.meta_path.remove(achador)

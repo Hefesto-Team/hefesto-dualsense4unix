@@ -270,6 +270,7 @@ def test_a_linha_do_registro_dobra_e_nao_sai_pela_direita() -> None:
     assert "overflow-wrap:anywhere" in corpo, corpo
 
 
+@pytest.mark.o_diario_de_verdade
 def test_o_diario_pede_so_a_linha_do_daemon(a09, monkeypatch) -> None:
     """O diário lê `--output cat`: sem o nome da máquina e sem o segundo carimbo."""
     import subprocess

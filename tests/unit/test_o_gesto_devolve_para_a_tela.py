@@ -97,6 +97,7 @@ def test_o_endereco_do_registro_existe_na_pagina(pac):
         "em lugar nenhum. Marque-o no gerador `interface/aba09.py` e publique.")
 
 
+@pytest.mark.o_diario_de_verdade
 def test_o_diario_leva_o_journal_para_o_painel(pac, monkeypatch):
     """As linhas do painel são as do `journalctl`, e a unit tem dono."""
     import subprocess
@@ -126,6 +127,7 @@ def test_o_diario_leva_o_journal_para_o_painel(pac, monkeypatch):
     assert str(a09.LINHAS_DO_DIARIO) in visto["argv"]
 
 
+@pytest.mark.o_diario_de_verdade
 def test_o_diario_repassa_o_motivo_do_journalctl(pac, monkeypatch):
     """Sem linhas, a tela mostra o que o `journalctl` disse — não uma frase nossa."""
     import subprocess
