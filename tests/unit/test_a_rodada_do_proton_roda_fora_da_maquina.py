@@ -218,6 +218,16 @@ def test_a_sonda_so_usa_a_chave_que_o_mingw_do_runner_declara() -> None:
     assert "PKEY_Device_ContainerId" not in fonte.replace("DEVPKEY_Device_ContainerId", "")
 
 
+
+def test_a_linha_do_pino_liga_os_guids_do_ks_que_a_sonda_usa() -> None:
+    """D-0811-A-RODADA-DO-PROTON-RODA-NO-RUNNER-DO-GITHUB: no mingw o ``KSCATEGORY_*`` é um
+    símbolo da ``libksguid``; sem a biblioteca na linha do pino, a rodada de 11/11 parou
+    no ``ld``."""
+    fonte = (RAIZ / "assets" / "sonda-proton" / "sonda.c").read_text(encoding="utf-8")
+    pino = (RAIZ / "assets" / "sonda-proton" / "pino.txt").read_text(encoding="utf-8")
+    (linha,) = [x for x in pino.splitlines() if x.startswith("compilar=")]
+    assert "KSCATEGORY_" not in fonte or "-lksguid" in linha.split()
+
 def test_o_resumo_da_rodada_nao_quebra_pelo_arquivo_que_falta() -> None:
     """D-0811-A-RODADA-DO-PROTON-RODA-NO-RUNNER-DO-GITHUB: o resumo roda sempre e com ``-e``;
     leitura de arquivo que o passo anterior não deixou não derruba o job."""
