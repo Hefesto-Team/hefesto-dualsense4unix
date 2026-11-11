@@ -213,7 +213,7 @@ def test_o_passo_publica_ausente_logo_e_tenta_de_novo_depois_da_espera(
     publicados: list[dict[str, object]] = []
     fonte = tj.FonteDoPortal(tmp_path / "ficha")
     captura = tj.Captura(fonte, tj.TelaDoJogo(relogio=lambda: agora[0]),
-                         publicar=publicados.append, assinantes=lambda: 1,
+                         publicar=publicados.append, assinantes=lambda: 1, nascidas=lambda: 1,
                          relogio=lambda: agora[0])
     fio = threading.Thread(target=captura.passo, name="passo-da-captura", daemon=True)
     with structlog.testing.capture_logs() as diario:
@@ -296,7 +296,7 @@ def test_o_remoto_recusado_vira_runtimeerror_e_fecha_a_sessao(
     publicados: list[dict[str, object]] = []
     captura = tj.Captura(tj.FonteDoPortal(tmp_path / "ficha"),
                          tj.TelaDoJogo(relogio=lambda: agora[0]),
-                         publicar=publicados.append, assinantes=lambda: 1,
+                         publicar=publicados.append, assinantes=lambda: 1, nascidas=lambda: 1,
                          relogio=lambda: agora[0])
     captura.passo()
     assert not captura.aberta

@@ -161,6 +161,7 @@ def _captura(fonte: _Fonte, assinantes: list[int], agora: list[float]
     publicadas: list[dict[str, Any]] = []
     captura = tj.Captura(fonte, tj.TelaDoJogo(relogio=lambda: agora[0]),
                          publicar=publicadas.append, assinantes=lambda: assinantes[0],
+                         nascidas=lambda: 1,
                          espera=2.0, relogio=lambda: agora[0])
     return captura, publicadas
 

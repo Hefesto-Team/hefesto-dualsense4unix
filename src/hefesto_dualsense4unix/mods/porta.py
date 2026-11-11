@@ -951,6 +951,7 @@ class Porta:
         self.caminho = caminho
         self._fonte_da_tela = fonte_da_tela
         self._regioes_da_tela: dict[str, Regiao] = {}
+        self._assinaturas_da_tela_nascidas = 0
         self._captura_da_tela: asyncio.Task[None] | None = None
         self._vigia_do_peso: asyncio.Task[None] | None = None
         self._prazo_do_peso: asyncio.TimerHandle | None = None
@@ -1279,6 +1280,7 @@ class Porta:
                            f"mods-{con.sessao.mod_id}-{topico}")
         if TOPICO_DA_TELA in topicos:
             self._regioes_da_tela.update({r.nome: r for r in regioes})
+            self._assinaturas_da_tela_nascidas += 1
             self._ligar_a_captura()
         return {"assinados": list(topicos)}
 
@@ -1412,7 +1414,8 @@ class Porta:
 
         captura = Captura(fonte, TelaDoJogo(tuple(self._regioes_da_tela.values())),
                           publicar=publicar,
-                          assinantes=lambda: self.bus.subscriber_count(TOPICO_DA_TELA))
+                          assinantes=lambda: self.bus.subscriber_count(TOPICO_DA_TELA),
+                          nascidas=lambda: self._assinaturas_da_tela_nascidas)
         passo: asyncio.Future[None] | None = None
         try:
             while True:

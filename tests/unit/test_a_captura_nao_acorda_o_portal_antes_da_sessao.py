@@ -222,11 +222,18 @@ class Cena:
     def __init__(self, fonte: tj.FonteDaTela) -> None:
         self.agora = [100.0]
         self.assinantes = [1]
+        self.nascidas = [1]
         self.publicados: list[dict[str, Any]] = []
         self.captura = tj.Captura(fonte, tj.TelaDoJogo(relogio=lambda: self.agora[0]),
                                   publicar=self.publicados.append,
                                   assinantes=lambda: self.assinantes[0],
+                                  nascidas=lambda: self.nascidas[0],
                                   relogio=lambda: self.agora[0])
+
+    def fica(self, quantos: int) -> None:
+        """A conta de quem assina passa a ``quantos``; cada assinatura a mais é uma nascida."""
+        self.nascidas[0] += max(0, quantos - self.assinantes[0])
+        self.assinantes[0] = quantos
 
     def correr(self, segundos: float) -> None:
         for _ in range(round(segundos / _PASSO_S)):
@@ -376,7 +383,7 @@ def test_o_prazo_esgotado_nao_reabre_a_escolha_em_laco(
         assert portal.pedidos.count(_FECHA) == 1, portal.pedidos
         assert len(cena.publicados) == 1
         assert not cena.captura.aberta
-        cena.assinantes[0] = 2
+        cena.fica(2)
         cena.correr(4.0)
         assert portal.pedidos.count(_ESCOLHE) == 2, portal.pedidos
     finally:
@@ -407,7 +414,7 @@ def test_a_ficha_recusada_se_apaga_e_nao_vira_janela_pela_espera(
         assert escolhas[0]["restore_token"] == ("s", "ficha-velha")
         assert not ficha.exists()
         assert len(cena.publicados) == 1
-        cena.assinantes[0] = 2
+        cena.fica(2)
         cena.correr(1.0)
         escolhas = [o for m, o in portal.levados if m == "SelectSources"]
         assert len(escolhas) == 2, portal.pedidos

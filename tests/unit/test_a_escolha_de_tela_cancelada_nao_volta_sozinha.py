@@ -138,11 +138,18 @@ class Cena:
     def __init__(self, fonte: tj.FonteDaTela) -> None:
         self.agora = [100.0]
         self.assinantes = [1]
+        self.nascidas = [1]
         self.publicados: list[dict[str, Any]] = []
         self.captura = tj.Captura(fonte, tj.TelaDoJogo(relogio=lambda: self.agora[0]),
                                   publicar=self.publicados.append,
                                   assinantes=lambda: self.assinantes[0],
+                                  nascidas=lambda: self.nascidas[0],
                                   relogio=lambda: self.agora[0])
+
+    def fica(self, quantos: int) -> None:
+        """A conta de quem assina passa a ``quantos``; cada assinatura a mais é uma nascida."""
+        self.nascidas[0] += max(0, quantos - self.assinantes[0])
+        self.assinantes[0] = quantos
 
     def correr(self, segundos: float) -> None:
         for _ in range(round(segundos / _PASSO_S)):
@@ -186,7 +193,7 @@ def test_quem_chega_com_a_janela_aberta_ouve_o_mesmo_cancelamento(
     cena = Cena(tj.FonteDoPortal(tmp_path / "ficha"))
 
     def chega_outro() -> None:
-        cena.assinantes[0] = 2
+        cena.fica(2)
 
     cancela.ao_responder = chega_outro
     cena.correr(10.0)
@@ -200,7 +207,7 @@ def test_o_assinante_novo_pede_a_escolha_de_novo(
     cena = Cena(tj.FonteDoPortal(tmp_path / "ficha"))
     cena.correr(4.0)
     assert cancela.pedidos.count(_ESCOLHE) == 1
-    cena.assinantes[0] = 2
+    cena.fica(2)
     cena.correr(4.0)
     assert cancela.pedidos.count(_ESCOLHE) == 2, cancela.pedidos
     cena.correr(10.0)
@@ -212,14 +219,14 @@ def test_quem_sai_nao_reabre_a_escolha_e_quem_volta_reabre(
     cancela: PortalQueResponde, tmp_path: Path
 ) -> None:
     cena = Cena(tj.FonteDoPortal(tmp_path / "ficha"))
-    cena.assinantes[0] = 2
+    cena.fica(2)
     cena.correr(4.0)
-    cena.assinantes[0] = 1
+    cena.fica(1)
     cena.correr(4.0)
     assert cancela.pedidos.count(_ESCOLHE) == 1, cancela.pedidos
-    cena.assinantes[0] = 0
+    cena.fica(0)
     cena.correr(1.0)
-    cena.assinantes[0] = 1
+    cena.fica(1)
     cena.correr(4.0)
     assert cancela.pedidos.count(_ESCOLHE) == 2, cancela.pedidos
 

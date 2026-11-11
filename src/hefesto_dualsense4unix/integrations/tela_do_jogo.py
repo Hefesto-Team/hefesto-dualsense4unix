@@ -75,7 +75,7 @@ class TelaRecusadaError(Exception):
 
 class EscolhaCanceladaError(RuntimeError):
     """A escolha da tela não veio: a pessoa cancelou a janela (o código 1 do ``Response``), o
-    prazo da escolha esgotou, ou a ficha guardada não abriu a tela. Só assinante novo pede de
+    prazo da escolha esgotou, ou a ficha guardada não abriu a tela. Só assinatura nova pede de
     novo."""
 
 
@@ -509,17 +509,21 @@ def fonte_do_sistema() -> FonteDaTela:
 class Captura:
     """Abre a fonte só com assinante e publica um quadro por passo; a fonte que falta ou cai
     vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``. A escolha
-    que não veio (cancelada, esgotada ou com a ficha recusada) não volta sozinha: só com mais
-    assinantes do que havia, ou depois de todos saírem."""
+    que não veio (cancelada, esgotada ou com a ficha recusada) não volta sozinha: só com assinatura
+    nova depois da recusa, ou depois de todos saírem. ``assinantes`` diz quantos existem agora
+    (zero fecha a fonte) e ``nascidas`` quantas assinaturas já nasceram desde sempre: sair e
+    entrar no mesmo passo não muda a primeira conta, e a segunda sobe."""
 
     def __init__(self, fonte: FonteDaTela, tela: TelaDoJogo, *,
                  publicar: Callable[[dict[str, Any]], None],
-                 assinantes: Callable[[], int], espera: float = 2.0,
+                 assinantes: Callable[[], int], nascidas: Callable[[], int],
+                 espera: float = 2.0,
                  relogio: Callable[[], float] = time.monotonic) -> None:
         self.fonte = fonte
         self.tela = tela
         self._publicar = publicar
         self._assinantes = assinantes
+        self._nascidas = nascidas
         self._espera = espera
         self._relogio = relogio
         self.aberta = False
@@ -554,8 +558,7 @@ class Captura:
             return
         if not self.aberta:
             if self._recusada_com is not None:
-                if assinantes <= self._recusada_com:
-                    self._recusada_com = assinantes
+                if self._nascidas() <= self._recusada_com:
                     return
                 self._recusada_com = None
             if self._relogio() < self._proxima:
@@ -565,7 +568,7 @@ class Captura:
                 self.aberta = self.fonte.abrir()
             except EscolhaCanceladaError as erro:
                 self.aberta = False
-                self._recusada_com = max(assinantes, self._assinantes())
+                self._recusada_com = self._nascidas()
                 motivo = str(erro)
             except (OSError, RuntimeError) as erro:
                 self.aberta = False
