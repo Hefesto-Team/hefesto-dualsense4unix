@@ -1,13 +1,12 @@
 """A tela do jogo em cinco números: o dano, o clarão, o escuro, o tremor e a saturação.
 
-Cada quadro que a fonte entrega (o portal de captura do sistema) vira uma grade de 32 por 18
-cores médias, e da grade e da anterior saem os cinco sinais de ``jogo.tela``, de 0 a 1.
-Nenhum pixel sai daqui: uma região declarada pela receita (a barra de vida) publica só a fração
-da cor declarada. Sem assinante a fonte não abre; sem fonte, ou com a fonte caída, o tópico publica
-os cinco como ``None`` (ausente), nunca zero, e tenta de novo sozinho; a escolha de tela que a
-pessoa cancela ou deixa esgotar só se pede de novo com assinatura nova, e só o cancelamento
-apaga a ficha guardada (a escolha nasce no install, ``escolher_a_tela``). A fonte nunca acorda o
-portal antes de a sessão gráfica existir.
+Cada quadro da fonte (o portal de captura) vira uma grade de 32 por 18 cores médias, e da grade e
+da anterior saem os cinco sinais de ``jogo.tela``, de 0 a 1; nenhum pixel sai daqui (uma região da
+receita publica só a fração da cor declarada). Sem assinante a fonte não abre; sem fonte, ou com
+a fonte caída, o tópico publica ``None`` (ausente), nunca zero, e tenta de novo. A escolha
+cancelada ou esgotada só se pede com assinatura nova, e só o cancelamento apaga a ficha
+(``escolher_a_tela``, no install). A fonte não acorda o portal antes da sessão gráfica nem reabre
+com a tela escolhida desligada: o portal consome a ficha no ``SelectSources``.
 """
 from __future__ import annotations
 
@@ -18,7 +17,7 @@ import re
 import socket
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from operator import sub
 from pathlib import Path
@@ -44,6 +43,12 @@ _SEM_A_INTERFACE = frozenset({"org.freedesktop.DBus.Error.UnknownMethod",
                               "org.freedesktop.DBus.Error.UnknownInterface"})
 _CONSERTO_DO_PORTAL = ("o portal subiu sem a captura da tela; o conserto é"
                        " systemctl --user restart xdg-desktop-portal")
+_TELA_DESLIGADA = "a tela escolhida está desligada"
+_ARMAZEM = "org.freedesktop.impl.portal.PermissionStore"
+_CAMINHO_DO_ARMAZEM = "/org/freedesktop/impl/portal/PermissionStore"
+_TABELA_DA_TELA = "screencast"
+_FICHA_PERDIDA = "org.freedesktop.portal.Error.NotFound"
+RAIZ_DRM = Path("/sys/class/drm")
 SINAIS = ("dano", "flash", "escuro", "tremor", "saturacao")
 REGIOES_POR_RECEITA = 8
 AMOSTRAS_DA_REGIAO = 64
@@ -82,6 +87,11 @@ class EscolhaCanceladaError(RuntimeError):
 class EscolhaSemRespostaError(EscolhaCanceladaError):
     """O prazo da escolha esgotou sem resposta: a pessoa não recusou nada, e a ficha guardada
     fica. Só assinatura nova pede de novo, para a espera não virar laço de janelas."""
+
+
+class TelaDesligadaError(RuntimeError):
+    """A saída que a pessoa escolheu está desligada: a fonte espera e não pergunta ao portal, que
+    consumiria a ficha guardada sem ter onde gravar outra."""
 
 
 @dataclass(frozen=True)
@@ -325,6 +335,41 @@ def _aceita(resposta: Any, pedido: str) -> Any:
     return resposta
 
 
+def conectores() -> dict[str, bool]:
+    """As saídas de vídeo da máquina (``HDMI-A-1``, ``DP-2``…) e se cada uma está ligada, lidas de
+    ``RAIZ_DRM/card*-<saída>/status``. Só ``disconnected`` é desligada: ``unknown`` é um conector
+    sem detecção de plugue, e a dúvida não pode travar a captura. Vazio quando o sistema não diz
+    (sem DRM, ou nada legível)."""
+    saidas: dict[str, bool] = {}
+    try:
+        pastas = sorted(RAIZ_DRM.glob("card*-*"))
+    except OSError:
+        return saidas
+    for pasta in pastas:
+        estado = ""
+        with contextlib.suppress(OSError):
+            estado = (pasta / "status").read_text(encoding="utf-8").strip()
+        if not estado:
+            continue
+        nome = pasta.name.split("-", 1)[1]
+        saidas[nome] = saidas.get(nome, False) or estado != "disconnected"
+    return saidas
+
+
+def _textos(valor: Any) -> Iterator[str]:
+    """Todo texto de um valor do barramento, em qualquer fundura: a ficha do portal guarda os dados
+    do compositor num formato que é dele, e o nome da saída é achado pelo que ele é."""
+    if isinstance(valor, str):
+        yield valor
+    elif isinstance(valor, Mapping):
+        for chave, item in valor.items():
+            yield from _textos(chave)
+            yield from _textos(item)
+    elif isinstance(valor, tuple | list):
+        for item in valor:
+            yield from _textos(item)
+
+
 class FonteDoPortal:
     """O portal ``ScreenCast`` pelo PipeWire: a primeira abertura pede a escolha da tela ao
     sistema, e a ficha de volta guardada em ``guarda`` reabre sem pedir de novo. O quadro chega
@@ -390,6 +435,46 @@ class FonteDoPortal:
         with contextlib.suppress(OSError):
             self.guarda.unlink(missing_ok=True)
 
+    def _ler_a_ficha(self, ficha: str) -> tuple[bool, Any]:
+        """O ``Lookup`` da ficha no ``PermissionStore``, que não consome nada. Devolve se o portal
+        ainda guarda a ficha e os dados da entrada; ``(True, None)`` quando a pergunta não teve
+        resposta legível (o armazém fora do ar, o prazo): a ficha vale até o portal dizer o fim."""
+        from jeepney import DBusAddress, HeaderFields, MessageType, new_method_call
+
+        endereco = DBusAddress(_CAMINHO_DO_ARMAZEM, bus_name=_ARMAZEM, interface=_ARMAZEM)
+        try:
+            resposta = self._conexao.send_and_get_reply(
+                new_method_call(endereco, "Lookup", "ss", (_TABELA_DA_TELA, ficha)),
+                timeout=PRAZO_DO_DBUS_S)
+        except (OSError, TimeoutError):
+            return True, None
+        if resposta.header.message_type == MessageType.error:
+            texto = str(resposta.body[0]) if resposta.body else ""
+            perdida = (resposta.header.fields.get(HeaderFields.error_name) == _FICHA_PERDIDA
+                       or texto.startswith("No entry"))
+            return (not perdida), None
+        corpo = resposta.body
+        return True, corpo[1] if len(corpo) > 1 else None
+
+    def _conferir_a_tela(self, ficha: str | None, saidas: Mapping[str, bool]) -> str | None:
+        """Devolve a ficha a levar ao portal, ou levanta :class:`TelaDesligadaError` se a saída
+        escolhida está desligada. A ficha que o portal já não tem sai do disco, e a escolha volta a
+        ser pedida, uma vez. A saída vem dos dados da ficha; sem dado legível, vale qualquer saída
+        ligada."""
+        saida = None
+        if ficha is not None:
+            existe, dados = self._ler_a_ficha(ficha)
+            if not existe:
+                logger.info("tela_do_jogo_escolha_perdida",
+                            motivo="a escolha da tela se perdeu no portal")
+                self._esquecer()
+                ficha = None
+            else:
+                saida = next((t for t in _textos(dados) if t in saidas), None)
+        if saidas and not (saidas[saida] if saida is not None else any(saidas.values())):
+            raise TelaDesligadaError(_TELA_DESLIGADA)
+        return ficha
+
     def abrir(self) -> bool:
         try:
             import gi
@@ -403,6 +488,8 @@ class FonteDoPortal:
         Gst.init(None)
         if Gst.ElementFactory.find("pipewiresrc") is None:
             return False
+        if (saidas := conectores()) and not any(saidas.values()):
+            raise TelaDesligadaError(_TELA_DESLIGADA)
         self._conexao = open_dbus_connection(bus="SESSION", enable_fds=True)
         try:
             if self._interrompida:
@@ -410,12 +497,13 @@ class FonteDoPortal:
             if sessao_ainda_nao_subiu(self._conexao, _PORTAL, PRAZO_DO_DBUS_S):
                 raise RuntimeError(
                     "a sessão gráfica ainda não subiu; o portal não se acorda antes da sessão")
+            guardada = self._conferir_a_tela(self._ficha_guardada(), saidas)
             criada = self._pedir("CreateSession", "a{sv}", (),
                                  {"session_handle_token": ("s", self._ficha())})
             self._sessao = str(criada["session_handle"])
             escolha: dict[str, tuple[str, Any]] = {
                 "types": ("u", 3), "multiple": ("b", False), "persist_mode": ("u", 2)}
-            if (guardada := self._ficha_guardada()) is not None:
+            if guardada is not None:
                 escolha["restore_token"] = ("s", guardada)
             try:
                 self._pedir("SelectSources", "oa{sv}", (self._sessao,), escolha)
@@ -561,6 +649,7 @@ class Captura:
         self.aberta = False
         self._proxima = 0.0
         self._ausente_dito = False
+        self._desligada_dita = False
         self._recusada_com: int | None = None
         self._parada = threading.Event()
 
@@ -569,15 +658,21 @@ class Captura:
         self._parada.set()
         self.fonte.interromper()
 
-    def _cair(self, motivo: str) -> None:
+    def _cair(self, motivo: str, *, desligada: bool = False) -> None:
         if self.aberta:
             self.fonte.fechar()
         self.aberta = False
         self._proxima = self._relogio() + self._espera
-        if not self._ausente_dito and not self._parada.is_set():
+        if self._parada.is_set():
+            return
+        if not self._ausente_dito:
             self._ausente_dito = True
+            self._desligada_dita = desligada
             logger.info("tela_do_jogo_ausente", motivo=motivo)
             self._publicar(self.tela.ausente())
+        elif desligada and not self._desligada_dita:
+            self._desligada_dita = True
+            logger.info("tela_do_jogo_ausente", motivo=motivo)
 
     def passo(self) -> None:
         assinantes = self._assinantes()
@@ -586,6 +681,7 @@ class Captura:
                 self.fonte.fechar()
                 self.aberta = False
             self._ausente_dito = False
+            self._desligada_dita = False
             self._recusada_com = None
             return
         if not self.aberta:
@@ -596,17 +692,22 @@ class Captura:
             if self._relogio() < self._proxima:
                 return
             motivo = "a fonte não abriu"
+            desligada = False
             try:
                 self.aberta = self.fonte.abrir()
             except EscolhaCanceladaError as erro:
                 self.aberta = False
                 self._recusada_com = self._nascidas()
                 motivo = str(erro)
+            except TelaDesligadaError as erro:
+                self.aberta = False
+                desligada = True
+                motivo = str(erro)
             except (OSError, RuntimeError) as erro:
                 self.aberta = False
                 motivo = str(erro) or motivo
             if not self.aberta:
-                self._cair(motivo)
+                self._cair(motivo, desligada=desligada)
                 return
         motivo = "a fonte parou de entregar quadro"
         try:
@@ -618,6 +719,7 @@ class Captura:
             self._cair(motivo)
             return
         self._ausente_dito = False
+        self._desligada_dita = False
         self._publicar(self.tela.medir(quadro))
 
 
@@ -625,6 +727,7 @@ __all__ = [
     "GRADE_X",
     "GRADE_Y",
     "HZ_DA_TELA",
+    "RAIZ_DRM",
     "SINAIS",
     "TOPICO_DA_TELA",
     "Captura",
@@ -635,8 +738,10 @@ __all__ = [
     "FonteDoPortal",
     "Quadro",
     "Regiao",
+    "TelaDesligadaError",
     "TelaDoJogo",
     "TelaRecusadaError",
+    "conectores",
     "deslocamento",
     "escolher_a_tela",
     "fonte_do_sistema",

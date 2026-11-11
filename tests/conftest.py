@@ -4165,3 +4165,33 @@ def _os_fios_da_interface_morrem_com_o_teste(
             + ". Espere o fio no corpo do teste (ou pare o que o mantém de pé).",
             pytrace=False,
         )
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _a_tela_da_suite_e_uma_so_e_esta_ligada(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """As saídas de vídeo da suíte saem de um ``/sys/class/drm`` de mentira com UMA saída ligada.
+
+    A fonte do portal confere se a tela escolhida está ligada antes de reabrir (11/11/2026); com o
+    ``/sys/class/drm`` real, o resultado de todo teste que abre a fonte dependeria do que está
+    plugado na máquina de quem roda.
+    """
+    drm = tmp_path_factory.mktemp("drm-ligado")
+    saida = drm / "card0-HDMI-A-1"
+    saida.mkdir()
+    (saida / "status").write_text("connected\n", encoding="utf-8")
+    try:
+        from hefesto_dualsense4unix.integrations import tela_do_jogo
+    except ModuleNotFoundError as erro:  # pragma: no cover
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+        yield
+        return
+
+    antes = tela_do_jogo.RAIZ_DRM
+    tela_do_jogo.RAIZ_DRM = drm
+    try:
+        yield
+    finally:
+        tela_do_jogo.RAIZ_DRM = antes
