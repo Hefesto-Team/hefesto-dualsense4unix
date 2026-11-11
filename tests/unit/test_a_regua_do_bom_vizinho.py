@@ -42,6 +42,7 @@ from tests.unit.test_o_portal_da_tela_responde_ao_pedido_da_captura import _ha_p
 from tests.unit.test_os_contratos_de_fora import PACOTE, RAIZ, _arvore, _linha, regua
 
 _NOME_NO_BARRAMENTO = {"org.freedesktop.portal": tj._PORTAL,
+                       "org.freedesktop.impl": tj._ARMAZEM,
                        "org.kde": "org.kde.StatusNotifierWatcher"}
 _FORA_DA_PROVA = {"org.freedesktop.DBus", "org.gnome"}
 _ARQUIVO = f"{PACOTE}/novo.py"
@@ -122,6 +123,7 @@ def _o_aviso_da_subida(_barramento: Barramento, _pasta: Path) -> None:
 
 
 def _a_captura_que_assinou(_barramento: Barramento, pasta: Path) -> None:
+    (pasta / "ficha").write_text("ficha-guardada", encoding="utf-8")
     with pytest.raises(RuntimeError):
         tj.FonteDoPortal(pasta / "ficha").abrir()
 
@@ -156,6 +158,7 @@ _CAMINHOS: dict[str, Callable[[Barramento, Path], None]] = {
     "org.bluez": _o_dono_do_radio,
     "org.freedesktop.NetworkManager": _a_faixa_do_wifi,
     "org.freedesktop.Notifications": _o_aviso_da_subida,
+    "org.freedesktop.impl": _a_captura_que_assinou,
     "org.freedesktop.portal": _a_captura_que_assinou,
     "org.freedesktop.systemd1": _o_aviso_da_subida,
     "org.kde": _a_bandeja,
