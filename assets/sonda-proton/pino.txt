@@ -9,5 +9,5 @@
 # Não vai à máquina de quem usa (nenhum instalador o leva): só a rodada o lê.
 name=sonda-proton-1
 url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/sonda-proton-1/sonda.exe
-sha256=a-medir
+sha256=5932b6797df939b92393dfe02a70a42523561dd622a04421dbf7278c62e51d43
 compilar=x86_64-w64-mingw32-gcc-posix -O2 -s -Wall -Wl,--no-insert-timestamp -Wl,--disable-auto-image-base -fno-ident -o sonda.exe sonda.c -lsetupapi -lhid -lole32 -lxinput1_4 -luuid -lksguid
