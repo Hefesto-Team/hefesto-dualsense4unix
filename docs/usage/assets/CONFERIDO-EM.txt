@@ -113,3 +113,4 @@ e1c42d31343e3807602c37055b867a8fdf851fe5  01/11/2026  só sai a marca de escape 
 afc164305a7881569d1e61ee44d605e9f9f78578  02/11/2026  as nove abas publicam o botão apagado com a letra a 45% e a página da extensão como última aba (afc164305), sem mudar o estado que a foto pinta: as nove abas refotografadas nas duas vistas saíram idênticas byte a byte
 ab94d757058edb7bb0e39ded8e34df847097ac60  02/11/2026  a Experimental publica o botão apagado dos lançadores na opacidade da casa
 4fa5046c15cb4624c4bcbc2523f7c1320705bcfa  02/11/2026  as dez abas, nas duas vistas, iguais depois do apagado da janela das extensões
+a737d3c7c44316ccf45fa843ca597703d3b88835  11/11/2026  o registro dos fios da interface (fios.soltar) não muda o que a tela pinta: as dez abas refotografadas nas duas vistas saíram idênticas byte a byte
