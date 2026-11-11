@@ -291,7 +291,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
         "roda na máquina de quem usa e um teste de GUI que chamasse `Salvar` com a "
         "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
-        "`tests/conftest.py:1986` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
+        "`tests/conftest.py:1992` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
         "Onde procurar os arquivos de `assets/` "

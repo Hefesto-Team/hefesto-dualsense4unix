@@ -1450,10 +1450,12 @@ def _escrever_no_terminal(session: Any, linhas: list[str]) -> None:
 
 def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
     """Sob ``HEFESTO_EXIGE_GTK_REAL=1``, pulo por falta de GTK reprova o run."""
+    _FIM_DA_SESSAO.append(True)
     try:
         with _com_o_ambiente_real(session):
             _sessionfinish_das_guardas(session)
     finally:
+        _FIM_DA_SESSAO.clear()
         _varrer_berco(session, getattr(session, "exitstatus", exitstatus))
 
 
@@ -1592,6 +1594,9 @@ def _sessionfinish_das_guardas(session: Any) -> None:
         deltas = [d for d in deltas if d not in no_config]
         if not deltas:
             return
+    deltas = _sem_a_escrita_de_fora_da_suite(session, deltas)
+    if not deltas:
+        return
     linhas = [
         "",
         "CANARIO-FS-01: a suíte ESCREVEU nos diretórios reais da usuária "
@@ -1601,6 +1606,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             "no intervalo"
         ] if any(d in no_config for d in deltas) else []),
         *[f"  - {d}" for d in deltas],
+        *([f"  filho lançado com o lar real: {f}" for f in _FILHOS_COM_O_LAR_REAL[:3]]),
         "  Um teste hermético não deixa rastro em $HOME. Procure constante de",
         "  módulo com Path.home() avaliada no import (monkeypatch de HOME não a",
         "  alcança) — mova para função e injete o caminho.",
@@ -3611,6 +3617,7 @@ def _instalar_popen_da_sessao() -> None:
         except TypeError:
             return _POPEN_INIT_REAL[0](self, *args, **kwargs)
         _desviar_a_placa(amarrado.arguments)
+        _anotar_o_filho_que_alcanca_o_lar_real(amarrado.arguments)
         if som is not None:
             _desviar_para_o_duble(amarrado.arguments, som)
         if lancador is not None:
@@ -3918,6 +3925,66 @@ def escritas_do_servico_no_journal(desde: str) -> frozenset[str]:
 def _caminho_do_delta(delta: str) -> str:
     resto = delta.split(None, 1)[-1]
     return resto.rsplit(" (", 1)[0] if delta.startswith("MUDADO") else resto
+
+
+_FIM_DA_SESSAO: list[bool] = []
+
+_FILHOS_COM_O_LAR_REAL: list[str] = []
+
+
+def _anotar_o_filho_que_alcanca_o_lar_real(argumentos: dict[str, Any]) -> None:
+    """Anota o filho que a suíte lança com um ambiente que resolve as pastas reais do produto.
+
+    O `HOME` e os `XDG_*` da sessão são de mentira e o filho os herda; só quem monta o `env` por
+    fora (ou o deixa sem `HOME`, e o `getpwuid` devolve o lar real) chega às pastas reais. Os filhos
+    do próprio fim da sessão (o canário lê o diário com o ambiente real) não contam.
+    """
+    if not _GUARDA_DA_SESSAO or _FIM_DA_SESSAO:
+        return
+    env = argumentos.get("env")
+    base = os.environ if env is None else env
+    if not hasattr(base, "get"):
+        return
+    home = base.get("HOME") or str(lar_real())
+    pastas = {os.path.join(home, *folha) for folha in _DIRS_DO_PRODUTO}
+    for var, _padrao in _VARS_DO_LAR[1:]:
+        bruto = (base.get(var) or "").strip()
+        if bruto:
+            pastas.add(os.path.join(bruto, _NOME_DO_PRODUTO))
+    if set(_as_duas_formas(pastas)) & set(_GUARDA_DA_SESSAO[0].pastas):
+        _FILHOS_COM_O_LAR_REAL.append(str(argumentos.get("args")))
+
+
+def _escritas_que_a_suite_nao_podia_fazer(deltas: list[str]) -> list[str]:
+    """Os deltas em pasta que a guarda cobre e que nenhum escrevente da suíte alcançou.
+
+    O escrevente é medido, não adivinhado: a guarda vê todo `open`, `rename` e `unlink` do processo
+    dos testes (e recusa), e o `Popen` da sessão vê o filho que nasce com o lar real. Sem recusa e
+    sem filho assim, a escrita no lar real veio de outro processo (o serviço ou a janela de quem
+    roda). Guarda desligada, recusa registrada ou filho com o lar real: nada se atribui a fora.
+    """
+    if not _GUARDA_DA_SESSAO or _FILHOS_COM_O_LAR_REAL:
+        return []
+    guarda = _GUARDA_DA_SESSAO[0]
+    if guarda.recusas:
+        return []
+    return [d for d in deltas if guarda.protege(_caminho_do_delta(d))]
+
+
+def _sem_a_escrita_de_fora_da_suite(session: Any, deltas: list[str]) -> list[str]:
+    de_fora = _escritas_que_a_suite_nao_podia_fazer(deltas)
+    if not de_fora:
+        return deltas
+    restam = len(de_fora) - _CANARIO_LIMITE_AVISO
+    _escrever_no_terminal(session, [
+        "",
+        "CANARIO-FS-01 (aviso, não é portão): o lar real mudou, e nenhum escrevente da suíte o "
+        f"alcançou (guarda sem recusa, nenhum filho com o lar real): {len(de_fora)} caminho(s):",
+        *[f"  - {d}" for d in de_fora[:_CANARIO_LIMITE_AVISO]],
+        *([f"  ... e mais {restam}"] if restam > 0 else []),
+        "  É o serviço ou a janela de quem roda, em outro processo. Nada aqui é restaurado.",
+    ])
+    return [d for d in deltas if d not in de_fora]
 
 
 def _sem_a_escrita_do_servico(session: Any, deltas: list[str]) -> list[str]:
