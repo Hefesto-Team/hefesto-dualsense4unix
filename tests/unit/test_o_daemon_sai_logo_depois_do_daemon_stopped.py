@@ -129,7 +129,7 @@ def test_a_parada_solta_o_passo_preso_na_espera_do_portal(
     monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", barramento)
     publicados: list[dict[str, object]] = []
     captura = tj.Captura(tj.FonteDoPortal(tmp_path / "ficha"), tj.TelaDoJogo(),
-                         publicar=publicados.append, assinantes=lambda: 1)
+                         publicar=publicados.append, assinantes=lambda: 1, nascidas=lambda: 1)
     fio = threading.Thread(target=captura.passo, name="passo-da-captura", daemon=True)
     fio.start()
     assert portal.pedido.wait(5), "o pedido não chegou ao portal"

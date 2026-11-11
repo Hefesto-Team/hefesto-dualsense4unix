@@ -2833,6 +2833,34 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
     install_portal_cosmic_da_casa
 fi
 
+escolher_a_tela_do_jogo() {
+    local py="${VENV_DIR}/bin/python" saida rc=0
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        _faria "abrir uma vez a escolha da tela do portal (só no COSMIC e na sessão gráfica); a escolha fica guardada e o pedido não volta a cada abertura"
+        return 0
+    fi
+    [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]] || return 0
+    if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+        printf '      sem sessão gráfica: a escolha da tela do Modo imersão fica para o primeiro jogo\n'
+        return 0
+    fi
+    if [[ ! -x "${py}" ]]; then
+        printf '      sem o ambiente Python: a escolha da tela do Modo imersão fica para o primeiro jogo\n'
+        return 0
+    fi
+    printf '      escolha a tela que o Modo imersão lê: o pedido aparece uma vez e fica guardado\n'
+    saida="$(timeout 150 "${py}" -c 'import sys; from hefesto_dualsense4unix.integrations.tela_do_jogo import escolher_a_tela; sys.exit(escolher_a_tela())' 2>&1)" || rc=$?
+    printf '%s\n' "${saida}" | sed 's/^/      /'
+    case "${rc}" in
+        0|2) ;;
+        *) warn "a escolha da tela não ficou — o Modo imersão pede de novo no primeiro jogo" ;;
+    esac
+}
+if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
+    step "3f-quater" "a escolha da tela do Modo imersão, uma vez só (fica guardada)"
+    escolher_a_tela_do_jogo
+fi
+
 step "3g" "agente de pareamento Bluetooth sempre de pé (evita o pareamento pela metade)"
 install_bt_agent_host
 

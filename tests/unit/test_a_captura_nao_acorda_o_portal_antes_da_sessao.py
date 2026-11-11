@@ -3,13 +3,13 @@
 Medido no diário do boot de 05/11: o daemon sobe antes da sessão gráfica, e o ``CreateSession``
 da captura é o primeiro pedido ao ``org.freedesktop.portal.Desktop``, que o ativa sem
 ``XDG_CURRENT_DESKTOP``; o portal vive a sessão inteira sem ``ScreenCast`` para todo programa.
-E, com o portal de pé, o prazo da escolha esgotado e a ficha guardada recusada reabriam a janela
-de escolha a cada volta da ``espera``. Aqui o barramento é um ``dbus-daemon`` particular, com um
+E, com o portal de pé, o prazo da escolha esgotado reabria a janela de escolha a cada volta da
+``espera``. Aqui o barramento é um ``dbus-daemon`` particular, com um
 portal ATIVÁVEL que conta as ativações, um ``systemd1`` de mentira e um relógio na mão do teste.
 
 MORDIDA: arrancar a guarda do ``abrir`` (o ``sessao_ainda_nao_subiu``), o ``no_auto_start`` da
 leitura do gerente, a troca do prazo esgotado por ``EscolhaCanceladaError`` no ``_pedir`` ou o
-``_esquecer`` da ficha recusada, e a régua reprova.
+``_esquecer`` do cancelamento da pessoa, e a régua reprova.
 """
 from __future__ import annotations
 
@@ -391,21 +391,13 @@ def test_o_prazo_esgotado_nao_reabre_a_escolha_em_laco(
 
 
 @_PRECISA_DO_PORTAL
-@pytest.mark.parametrize("recusa", ["dois", "sem_fluxo", "erro", "prazo", "cancelada"])
-def test_a_ficha_recusada_se_apaga_e_nao_vira_janela_pela_espera(
-    barramento: Barramento, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, recusa: str
+def test_o_cancelamento_da_pessoa_apaga_a_ficha_e_nao_vira_janela_pela_espera(
+    barramento: Barramento, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(tj, "PRAZO_DA_ESCOLHA_S", 0.2)
     ficha = tmp_path / "ficha"
     ficha.write_text("ficha-velha", encoding="utf-8")
-    jeitos: dict[str, dict[str, Any]] = {
-        "dois": {"respostas": {"Start": 2}},
-        "sem_fluxo": {"sem_fluxo": True},
-        "erro": {"erro_em": frozenset({"Start"})},
-        "prazo": {"respostas": {"Start": None}},
-        "cancelada": {"respostas": {"Start": 1}},
-    }
-    portal = PortalDeTeste(barramento.endereco, **jeitos[recusa])
+    portal = PortalDeTeste(barramento.endereco, respostas={"Start": 1})
     try:
         cena = Cena(tj.FonteDoPortal(ficha))
         cena.correr(10.0)

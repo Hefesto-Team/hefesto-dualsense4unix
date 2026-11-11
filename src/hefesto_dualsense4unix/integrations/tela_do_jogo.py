@@ -5,8 +5,9 @@ cores médias, e da grade e da anterior saem os cinco sinais de ``jogo.tela``, d
 Nenhum pixel sai daqui: uma região declarada pela receita (a barra de vida) publica só a fração
 da cor declarada. Sem assinante a fonte não abre; sem fonte, ou com a fonte caída, o tópico publica
 os cinco como ``None`` (ausente), nunca zero, e tenta de novo sozinho; a escolha de tela que a
-pessoa cancela ou deixa esgotar, e a ficha guardada que o portal recusa, só se pedem de novo com
-assinante novo. A fonte nunca acorda o portal antes de a sessão gráfica existir.
+pessoa cancela ou deixa esgotar só se pede de novo com assinatura nova, e só o cancelamento
+apaga a ficha guardada (a escolha nasce no install, ``escolher_a_tela``). A fonte nunca acorda o
+portal antes de a sessão gráfica existir.
 """
 from __future__ import annotations
 
@@ -74,9 +75,13 @@ class TelaRecusadaError(Exception):
 
 
 class EscolhaCanceladaError(RuntimeError):
-    """A escolha da tela não veio: a pessoa cancelou a janela (o código 1 do ``Response``), o
-    prazo da escolha esgotou, ou a ficha guardada não abriu a tela. Só assinatura nova pede de
-    novo."""
+    """A pessoa cancelou a janela de escolha (o código 1 do ``Response``): é a única recusa que
+    apaga a ficha guardada. Só assinatura nova pede de novo."""
+
+
+class EscolhaSemRespostaError(EscolhaCanceladaError):
+    """O prazo da escolha esgotou sem resposta: a pessoa não recusou nada, e a ficha guardada
+    fica. Só assinatura nova pede de novo, para a espera não virar laço de janelas."""
 
 
 @dataclass(frozen=True)
@@ -358,8 +363,9 @@ class FonteDoPortal:
             try:
                 sinal = self._conexao.recv_until_filtered(fila, timeout=PRAZO_DA_ESCOLHA_S)
             except TimeoutError as erro:
-                raise EscolhaCanceladaError(
-                    f"a escolha da tela não veio em {PRAZO_DA_ESCOLHA_S:.0f} s ({metodo})"
+                raise EscolhaSemRespostaError(
+                    f"o portal não respondeu à escolha da tela em {PRAZO_DA_ESCOLHA_S:.0f} s"
+                    f" ({metodo}); a ficha guardada fica"
                 ) from erro
         codigo, resultados = sinal.body
         if codigo == 1:
@@ -417,15 +423,12 @@ class FonteDoPortal:
                 fluxos = comecou.get("streams") or []
                 if not fluxos:
                     raise RuntimeError("o portal não entregou fluxo")
+            except EscolhaSemRespostaError:
+                raise
             except EscolhaCanceladaError:
                 if guardada is not None and not self._interrompida:
                     self._esquecer()
                 raise
-            except RuntimeError as erro:
-                if guardada is None or self._interrompida:
-                    raise
-                self._esquecer()
-                raise EscolhaCanceladaError(f"o portal recusou a ficha guardada: {erro}") from erro
             self._guardar(comecou.get("restore_token"))
             endereco = DBusAddress(_CAMINHO_DO_PORTAL, bus_name=_PORTAL, interface=_SCREENCAST)
             resposta = _aceita(self._conexao.send_and_get_reply(
@@ -506,10 +509,39 @@ def fonte_do_sistema() -> FonteDaTela:
     return FonteDoPortal(state_dir() / "tela-do-portal.ficha")
 
 
+def escolher_a_tela(fonte: FonteDaTela | None = None, *, tentativas: int = 3,
+                    pausa_s: float = 3.0, dormir: Callable[[float], None] = time.sleep) -> int:
+    """O passo do install: abre a escolha da tela uma vez, com a pessoa diante da tela, e fecha. A
+    ficha de volta fica guardada, e com ficha que o portal aceita a fonte abre sem janela. Sai com
+    0 (a escolha está guardada), 2 (sem portal ou sem sessão: fica para o primeiro jogo) ou 3
+    (a janela foi cancelada ou ficou sem resposta). O portal que acaba de reiniciar tem
+    ``tentativas`` chances, ``pausa_s`` uma da outra."""
+    fonte = fonte if fonte is not None else fonte_do_sistema()
+    motivo = "a fonte não abriu"
+    for tentativa in range(max(1, tentativas)):
+        try:
+            if fonte.abrir():
+                fonte.fechar()
+                print("a escolha da tela está guardada")
+                return 0
+            break
+        except EscolhaCanceladaError as erro:
+            fonte.fechar()
+            print(f"a escolha da tela não ficou: {erro}")
+            return 3
+        except (OSError, RuntimeError) as erro:
+            fonte.fechar()
+            motivo = str(erro) or motivo
+            if tentativa + 1 < tentativas:
+                dormir(pausa_s)
+    print(f"a escolha da tela fica para o primeiro jogo ({motivo})")
+    return 2
+
+
 class Captura:
     """Abre a fonte só com assinante e publica um quadro por passo; a fonte que falta ou cai
     vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``. A escolha
-    que não veio (cancelada, esgotada ou com a ficha recusada) não volta sozinha: só com assinatura
+    que não veio (cancelada ou esgotada) não volta sozinha: só com assinatura
     nova depois da recusa, ou depois de todos saírem. ``assinantes`` diz quantos existem agora
     (zero fecha a fonte) e ``nascidas`` quantas assinaturas já nasceram desde sempre: sair e
     entrar no mesmo passo não muda a primeira conta, e a segunda sobe."""
@@ -597,6 +629,7 @@ __all__ = [
     "TOPICO_DA_TELA",
     "Captura",
     "EscolhaCanceladaError",
+    "EscolhaSemRespostaError",
     "FonteAusente",
     "FonteDaTela",
     "FonteDoPortal",
@@ -605,6 +638,7 @@ __all__ = [
     "TelaDoJogo",
     "TelaRecusadaError",
     "deslocamento",
+    "escolher_a_tela",
     "fonte_do_sistema",
     "fracao",
     "reduzir",
