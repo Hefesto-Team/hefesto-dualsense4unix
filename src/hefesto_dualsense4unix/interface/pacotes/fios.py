@@ -11,9 +11,13 @@ custa 176 módulos e meio segundo a quem só ia achar a janela aberta.
 """
 from __future__ import annotations
 
+import contextlib
 import threading
+import weakref
 from collections.abc import Callable
 from typing import Any
+
+_SOLTOS: weakref.WeakSet[threading.Thread] = weakref.WeakSet()
 
 
 def soltar(nome: str, alvo: Callable[..., Any], *args: Any) -> threading.Thread:
@@ -25,8 +29,19 @@ def soltar(nome: str, alvo: Callable[..., Any], *args: Any) -> threading.Thread:
     if not nome:
         raise ValueError("fio sem nome: diga o que ele faz")
     fio = threading.Thread(target=alvo, args=args, name=nome, daemon=True)
+    with contextlib.suppress(TypeError):
+        _SOLTOS.add(fio)
     fio.start()
     return fio
+
+
+def vivos() -> list[threading.Thread]:
+    """Os fios soltos por :func:`soltar` que ainda correm.
+
+    A suíte pergunta isto ao fim de cada teste: fio da interface que passa da fronteira do teste
+    corre em C (libudev, `/sys`) enquanto o teste seguinte muda o ambiente do processo.
+    """
+    return [fio for fio in list(_SOLTOS) if getattr(fio, "is_alive", lambda: False)()]
 
 
 class AindaNaoChegou(BaseException):

@@ -411,6 +411,7 @@ def test_o_tique_nao_enfileira_com_a_ponte_lenta() -> None:
     finally:
         GLib.source_remove(guarda)
         hv.mesa_viva.estado_do_daemon = guardado  # type: ignore[assignment]
+        piloto._estado_vivo.parar()
         piloto.tela.janela.destroy()
 
     assert len(chamadas) <= 15, (

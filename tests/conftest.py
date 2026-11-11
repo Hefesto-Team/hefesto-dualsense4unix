@@ -4094,3 +4094,50 @@ def _o_diario_da_maquina_nao_entra_no_teste(
     finally:
         with contextlib.suppress(ValueError):
             sys.meta_path.remove(achador)
+
+
+_NOMES_DO_DONO_DOS_FIOS = (
+    "hefesto_dualsense4unix.interface.pacotes.fios",
+    "pacotes.fios",
+)
+_PRAZO_DOS_FIOS_S = 10.0
+
+
+def _fios_da_interface_vivos() -> list[threading.Thread]:
+    """Os fios que a interface soltou e que correm; só olha o dono que o teste já importou."""
+    vivos: list[threading.Thread] = []
+    for nome in _NOMES_DO_DONO_DOS_FIOS:
+        dono = sys.modules.get(nome)
+        if dono is not None:
+            vivos.extend(f for f in dono.vivos() if f not in vivos)
+    return vivos
+
+
+@pytest.fixture(autouse=True)
+def _os_fios_da_interface_morrem_com_o_teste(
+    _hefesto_fake_env: None, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[None]:
+    """Todo fio que a interface solta durante um teste termina antes de o teste acabar.
+
+    O fio atravessava a fronteira do teste e corria em C (`libudev`, `/sys`) enquanto o teste
+    seguinte trocava o `os.environ`: o `getenv` contra o `setenv` derrubou a parte 07 com o sinal
+    11 (11/11/2026). A junção vem antes da volta do `monkeypatch` e do ambiente do caso, pois esta
+    fixture depende dos dois e o pytest desfaz na ordem inversa. O fio que passa do prazo reprova
+    o teste com o nome dele; o teste que solta fio de propósito o espera no próprio corpo.
+    """
+    import time
+
+    antes = _fios_da_interface_vivos()
+    yield
+    soltos = [fio for fio in _fios_da_interface_vivos() if fio not in antes]
+    limite = time.monotonic() + _PRAZO_DOS_FIOS_S
+    for fio in soltos:
+        fio.join(max(0.0, limite - time.monotonic()))
+    presos = sorted(fio.name for fio in soltos if fio.is_alive())
+    if presos:
+        pytest.fail(
+            f"fio da interface vivo depois do teste (prazo {_PRAZO_DOS_FIOS_S:g} s): "
+            + ", ".join(presos)
+            + ". Espere o fio no corpo do teste (ou pare o que o mantém de pé).",
+            pytrace=False,
+        )
