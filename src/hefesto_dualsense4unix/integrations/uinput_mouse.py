@@ -245,7 +245,7 @@ def _eixos_que_fazem(
 
 
 def _compute_scroll_step(raw: int) -> int:
-    """Converte valor 0-255 de stick direito em passo de rolagem discreto."""
+    """Converte valor 0-255 de um analógico em passo de rolagem discreto."""
     offset = raw - STICK_CENTER
     if abs(offset) < SCROLL_DEADZONE:
         return 0

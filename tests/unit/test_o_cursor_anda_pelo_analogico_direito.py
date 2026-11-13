@@ -10,7 +10,9 @@ teclado e mouse (`l3_direcao=__WASD__`, `r3_direcao=__CURSOR__`) deixava a câme
 MORDIDAS (arrancadas e devolvidas): devolver o `dispatch` ao par fixo (cursor só em `lx/ly`,
 rolagem só em `rx/ry`) reprova as de movimento; devolver o `__CURSOR__` só ao esquerdo em
 `LINHAS_DA_ACAO_DE_EIXO` reprova as do `resolver`; fazer o `_eixos_que_fazem` ignorar a soma
-(só o primeiro eixo) reprova a dos dois no cursor.
+(só o primeiro eixo) reprova a dos dois no cursor; ler só o primeiro par no `_emit_scroll`
+reprova a dos dois na rolagem; não refazer os eixos no `set_button_actions(None)` reprova a da
+volta ao de fábrica.
 """
 from __future__ import annotations
 
@@ -164,3 +166,32 @@ def test_trocar_a_escolha_nao_deixa_o_eixo_antigo_vivo(monkeypatch: pytest.Monke
     dev.set_button_actions(do_mouse, acoes.botoes_calados(None))
     _gira(dev, rx=EMPURRADO, ry=EMPURRADO)
     assert not _moveu(mod, device) and _rolou(mod, device)
+
+
+def test_os_dois_analogicos_na_rolagem_somam(monkeypatch: pytest.MonkeyPatch) -> None:
+    escolhas = {ESQ: acoes.TOKEN_ROLAGEM, DIR: acoes.TOKEN_ROLAGEM}
+    dev, mod, device = _aplicado(monkeypatch, escolhas)
+    _gira(dev, lx=255, rx=255, ticks=3)
+    dev1, mod1, device1 = _aplicado(monkeypatch, escolhas)
+    _gira(dev1, lx=255, ticks=3)
+    sozinho = _soma(device1, mod1.REL_HWHEEL)
+    assert sozinho > 0
+    assert _soma(device, mod.REL_HWHEEL) == 2 * sozinho
+
+    dev2, mod2, device2 = _aplicado(monkeypatch, escolhas)
+    _gira(dev2, ly=EMPURRADO, ry=PUXADO, ticks=3)
+    assert not _rolou(mod2, device2), "a rolagem em sentidos opostos não se anulou"
+
+
+def test_voltar_ao_de_fabrica_sem_perfil_devolve_esquerdo_cursor_direito_rolagem(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dev, mod, device = _aplicado(monkeypatch, TECLADO_E_MOUSE)
+    dev.set_button_actions(None)
+    _gira(dev, lx=EMPURRADO, ly=EMPURRADO)
+    assert _moveu(mod, device) and not _rolou(mod, device)
+
+    dev2, mod2, device2 = _aplicado(monkeypatch, TECLADO_E_MOUSE)
+    dev2.set_button_actions(None)
+    _gira(dev2, rx=EMPURRADO, ry=EMPURRADO)
+    assert _rolou(mod2, device2) and not _moveu(mod2, device2)
