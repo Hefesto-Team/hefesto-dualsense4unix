@@ -77,8 +77,8 @@ TECLAS_DO_ANALOGICO: dict[str, tuple[str, str, str, str]] = {
 }
 
 LINHAS_DA_ACAO_DE_EIXO: dict[str, frozenset[str]] = {
-    TOKEN_CURSOR: frozenset({EIXO_ESQUERDO}),
-    TOKEN_ROLAGEM: frozenset({EIXO_DIREITO}),
+    TOKEN_CURSOR: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
+    TOKEN_ROLAGEM: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
     TOKEN_WASD: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
     TOKEN_SETAS: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
 }

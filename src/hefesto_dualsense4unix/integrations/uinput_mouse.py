@@ -79,6 +79,11 @@ EIXO_ESQUERDO = "l3_direcao"
 EIXO_DIREITO = "r3_direcao"
 TOKEN_CURSOR = "__CURSOR__"
 TOKEN_ROLAGEM = "__ROLAGEM__"
+EIXOS = (EIXO_ESQUERDO, EIXO_DIREITO)
+TOKEN_DE_FABRICA_DO_EIXO: dict[str, str] = {
+    EIXO_ESQUERDO: TOKEN_CURSOR,
+    EIXO_DIREITO: TOKEN_ROLAGEM,
+}
 
 MOUSE_EXPO = 1.6
 MOUSE_PX_PER_SEC_STEP = 125.0
@@ -229,6 +234,16 @@ def _compute_move_px_per_sec(
     return vel * (nx / mag), vel * (ny / mag)
 
 
+def _eixos_que_fazem(
+    token: str, do_mouse: dict[str, str], mudos: frozenset[str],
+) -> tuple[str, ...]:
+    """Os analógicos cuja linha vale `token`; sem escolha no perfil, vale o de fábrica."""
+    return tuple(
+        eixo for eixo in EIXOS
+        if eixo not in mudos
+        and do_mouse.get(eixo, TOKEN_DE_FABRICA_DO_EIXO[eixo]) == token)
+
+
 def _compute_scroll_step(raw: int) -> int:
     """Converte valor 0-255 de stick direito em passo de rolagem discreto."""
     offset = raw - STICK_CENTER
@@ -255,8 +270,8 @@ class UinputMouseDevice:
     _uinput_mod: Any = None
     _codigos_apertados: frozenset[str] = field(default_factory=frozenset)
     _setas_apertadas: frozenset[str] = field(default_factory=frozenset)
-    _cursor_ligado: bool = True
-    _rolagem_ligada: bool = True
+    _eixos_do_cursor: tuple[str, ...] = (EIXO_ESQUERDO,)
+    _eixos_da_rolagem: tuple[str, ...] = (EIXO_DIREITO,)
     _last_scroll_at: float = -math.inf
     _prev_edge_keys: frozenset[str] = field(default_factory=frozenset)
     _tp_carry_x: float = 0.0
@@ -401,18 +416,13 @@ class UinputMouseDevice:
             self._mapa_botoes = dict(BUTTON_TO_UINPUT)
             self._mapa_dpad = dict(DPAD_TO_KEY)
             self._mapa_tap = dict(EDGE_KEY_MAP)
-            self._cursor_ligado = True
-            self._rolagem_ligada = True
+            self._eixos_do_cursor = (EIXO_ESQUERDO,)
+            self._eixos_da_rolagem = (EIXO_DIREITO,)
             return
         mudos = frozenset(calados or ())
-        self._cursor_ligado = (
-            EIXO_ESQUERDO not in mudos
-            and do_mouse.get(EIXO_ESQUERDO, TOKEN_CURSOR) == TOKEN_CURSOR)
-        self._rolagem_ligada = (
-            EIXO_DIREITO not in mudos
-            and do_mouse.get(EIXO_DIREITO, TOKEN_ROLAGEM) == TOKEN_ROLAGEM)
-        eixos = (EIXO_ESQUERDO, EIXO_DIREITO)
-        self._mapa_botoes = {b: t for b, t in do_mouse.items() if b not in eixos}
+        self._eixos_do_cursor = _eixos_que_fazem(TOKEN_CURSOR, do_mouse, mudos)
+        self._eixos_da_rolagem = _eixos_que_fazem(TOKEN_ROLAGEM, do_mouse, mudos)
+        self._mapa_botoes = {b: t for b, t in do_mouse.items() if b not in EIXOS}
         self._mapa_dpad = {b: k for b, k in DPAD_TO_KEY.items()
                            if b not in do_mouse and b not in mudos}
         self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
@@ -448,8 +458,8 @@ class UinputMouseDevice:
         """Aplica um snapshot de estado no device virtual.
 
         Args:
-            lx, ly: stick esquerdo (0-255) — vira REL_X/REL_Y com deadzone.
-            rx, ry: stick direito (0-255) — vira REL_WHEEL/REL_HWHEEL.
+            lx, ly, rx, ry: sticks esquerdo e direito (0-255); cada um faz o que a linha dele
+                    diz (`__CURSOR__` move, `__ROLAGEM__` rola; os dois na mesma ação somam).
             l2, r2: trigger analógico (0-255) — a partir de TRIGGER_PRESS_THRESHOLD
                     o botão `l2`/`r2` conta como apertado, e a LINHA dele
                     na tabela diz o que sai (cada gatilho tem a sua).
@@ -469,10 +479,11 @@ class UinputMouseDevice:
         self._emit_buttons(emulated)
         self._emit_dpad(buttons)
         self._emit_edge_keys(buttons)
-        if self._cursor_ligado:
-            self._emit_move(lx, ly, now)
-        if self._rolagem_ligada:
-            self._emit_scroll(rx, ry, now)
+        pares = {EIXO_ESQUERDO: (lx, ly), EIXO_DIREITO: (rx, ry)}
+        if self._eixos_do_cursor:
+            self._emit_move([pares[e] for e in self._eixos_do_cursor], now)
+        if self._eixos_da_rolagem:
+            self._emit_scroll([pares[e] for e in self._eixos_da_rolagem], now)
         self._prev_edge_keys = frozenset(b for b in buttons if b in self._mapa_tap)
         if ajuste is not None and ajuste.permanencia_s > 0:
             self._conferir_a_permanencia(ajuste, now)
@@ -608,8 +619,12 @@ class UinputMouseDevice:
             self._device.emit(ev, 0, syn=False)
         self._device.syn()
 
-    def _emit_move(self, lx: int, ly: int, now: float | None = None) -> None:
-        """Stick esquerdo → REL_X/REL_Y (pipeline float, FEAT-MOUSE-CURSOR-FEEL-01).
+    def _emit_move(
+        self, pares: list[tuple[int, int]], now: float | None = None,
+    ) -> None:
+        """Os sticks do cursor → REL_X/REL_Y (pipeline float, FEAT-MOUSE-CURSOR-FEEL-01).
+
+        `pares` traz o `(x, y)` de cada analógico em `__CURSOR__`; as velocidades somam.
 
         Integra a velocidade-alvo (px/s de `_compute_move_px_per_sec`) pelo
         período do tick (`1/poll_hz`) com carry fracionário: emite a parte
@@ -618,11 +633,15 @@ class UinputMouseDevice:
         são zerados para o resíduo não vazar como drift ao voltar a mover.
         """
         ajuste = self._ajuste
-        if ajuste is None:
-            vx, vy = _compute_move_px_per_sec(lx, ly, self.mouse_speed)
-        else:
-            vx, vy = _compute_move_px_per_sec(
-                lx, ly, self.mouse_speed, ajuste.zona_morta, ajuste.curva)
+        vx = vy = 0.0
+        for x, y in pares:
+            if ajuste is None:
+                dx, dy = _compute_move_px_per_sec(x, y, self.mouse_speed)
+            else:
+                dx, dy = _compute_move_px_per_sec(
+                    x, y, self.mouse_speed, ajuste.zona_morta, ajuste.curva)
+            vx += dx
+            vy += dy
         if vx == 0.0 and vy == 0.0:
             self._stick_carry_x = 0.0
             self._stick_carry_y = 0.0
@@ -645,10 +664,10 @@ class UinputMouseDevice:
             self._device.emit(u.REL_Y, iy, syn=False)
         self._device.syn()
 
-    def _emit_scroll(self, rx: int, ry: int, now: float) -> None:
-        """Stick direito → REL_WHEEL/REL_HWHEEL com deadzone e rate-limit 50ms."""
-        step_v = _compute_scroll_step(ry)
-        step_h = _compute_scroll_step(rx)
+    def _emit_scroll(self, pares: list[tuple[int, int]], now: float) -> None:
+        """Os sticks da rolagem → REL_WHEEL/REL_HWHEEL com deadzone e rate-limit 50ms."""
+        step_v = sum(_compute_scroll_step(y) for _x, y in pares)
+        step_h = sum(_compute_scroll_step(x) for x, _y in pares)
         if step_v == 0 and step_h == 0:
             return
         if (now - self._last_scroll_at) < SCROLL_RATE_LIMIT_SEC / self._fator:

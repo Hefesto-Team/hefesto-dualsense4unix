@@ -7,16 +7,17 @@ Medido antes de curar (17/10/2026), sobre `acoes_de_botao.por_grupo` (o que a ab
 
 * as 19 linhas de botão (fora o PS) ofereciam «Movimento do cursor» e «Rolagem», que só um
   eixo atende: o `resolver` as mandava para `sem_dono`;
-* o analógico esquerdo oferecia «Rolagem» e o direito «Movimento do cursor» (o device liga o
-  cursor só no esquerdo e a rolagem só no direito);
+* o analógico esquerdo oferecia «Rolagem» e o direito «Movimento do cursor» (o device ligava o
+  cursor só no esquerdo e a rolagem só no direito; desde 13/11/2026 cada analógico faz o que a
+  linha dele diz, e as duas ações valem nos dois);
 * a linha de um analógico oferecia 31 ações (20 teclas soltas, comandos e os dois tokens de eixo
   trocados) e só 4 têm atendente.
 
 A lista de cada tipo de linha sai de UMA declaração (`LINHAS_DA_ACAO_DE_EIXO`), que o `resolver`
 lê também (nele é a mesma decisão de antes, agora de uma fonte só). MORDIDAS (arrancadas e
 devolvidas): voltar o `por_grupo` ao filtro velho devolve o cursor aos botões e reprova as de
-lista; declarar o cursor nos dois eixos reprova a do cursor só no esquerdo e a do que o eixo
-emite; devolver o `_o_que_a_linha_mostra` ao rótulo cru reprova a do perfil antigo.
+lista; tirar o cursor ou a rolagem de um dos eixos reprova a do que o eixo emite; devolver o
+`_o_que_a_linha_mostra` ao rótulo cru reprova a do perfil antigo.
 """
 from __future__ import annotations
 
@@ -46,16 +47,16 @@ def test_a_linha_de_botao_nao_oferece_nenhuma_acao_de_eixo(linha: str) -> None:
     assert oferecidos, f"{linha} ficou sem lista"
 
 
-def test_o_cursor_e_so_do_esquerdo_e_a_rolagem_so_do_direito() -> None:
-    assert acoes.TOKEN_CURSOR in _tokens(ESQ) and acoes.TOKEN_ROLAGEM not in _tokens(ESQ)
-    assert acoes.TOKEN_ROLAGEM in _tokens(DIR) and acoes.TOKEN_CURSOR not in _tokens(DIR)
+def test_o_cursor_e_a_rolagem_sao_dos_dois_analogicos() -> None:
+    for linha in EIXOS:
+        assert {acoes.TOKEN_CURSOR, acoes.TOKEN_ROLAGEM} <= _tokens(linha)
 
 
 @pytest.mark.parametrize("linha", EIXOS)
 def test_a_linha_do_analogico_so_oferece_o_que_o_eixo_emite(linha: str) -> None:
     """Nada de tecla solta, de botão do mouse nem de comando: só o próprio, as teclas e o Nada."""
-    proprio = acoes.TOKEN_CURSOR if linha == ESQ else acoes.TOKEN_ROLAGEM
-    esperado = {proprio, acoes.TOKEN_WASD, acoes.TOKEN_SETAS, acoes.TOKEN_NADA}
+    esperado = {acoes.TOKEN_CURSOR, acoes.TOKEN_ROLAGEM, acoes.TOKEN_WASD, acoes.TOKEN_SETAS,
+                acoes.TOKEN_NADA}
     assert _tokens(linha) == esperado, sorted(_tokens(linha) ^ esperado)
 
 
@@ -89,8 +90,8 @@ def test_o_que_o_eixo_nao_emite_cai_em_sem_dono(linha: str, token: str) -> None:
 def test_o_perfil_antigo_com_a_acao_fora_do_lugar_mostra_nada(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
 ) -> None:
-    """Cursor num botão, Rolagem no esquerdo, Cursor no direito e uma tecla solta num analógico:
-    o perfil carrega sem migração calada e cada linha mostra «— Nada —», o que faz.
+    """Cursor e Rolagem num botão e uma tecla solta num analógico: o perfil carrega sem migração
+    calada e cada linha mostra «— Nada —», o que faz; a Rolagem no esquerdo é atendida e aparece.
     MORDIDA: devolver `acoes.rotulo(token)` em `_o_que_a_linha_mostra` reprova."""
     monkeypatch.syspath_prepend(
         str(pathlib.Path(__file__).resolve().parents[2] / "src/hefesto_dualsense4unix/interface"))
@@ -110,8 +111,9 @@ def test_o_perfil_antigo_com_a_acao_fora_do_lugar_mostra_nada(
     ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
     mesa = a06_navegacao.pacote(ctx)["mesa"]
     nada = acoes.rotulo(acoes.TOKEN_NADA)
-    for linha in ("cross", "circle", ESQ, DIR):
+    for linha in ("cross", "circle", DIR):
         assert mesa[f"acao-{linha}"] == nada, (linha, mesa[f"acao-{linha}"])
+    assert mesa[f"acao-{ESQ}"] == acoes.rotulo(acoes.TOKEN_ROLAGEM)
     assert mesa["acao-square"] == "Esc", "a linha de botão com tecla legítima mudou"
 
 
