@@ -26,3 +26,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **07/11/2026** — a frase da falta na linha do controle sem ponte, em três opções, no molde `opcoes-da-falta` abaixo da sala. Enquanto a escolha não vem, `a08_conexoes.OPCAO_DA_FALTA` fica vazia e o produto não mostra frase nenhuma. Escolher é gravar a letra nessa constante, o que tira o bloco do desenho, e rodar o `--publicar 08`.
+
+## 06-navegacao.html
+- **13/11/2026** — as linhas do analógico esquerdo e do direito oferecem «Movimento do cursor» e «Rolagem» nas duas, porque o motor passou a atender as duas ações em qualquer analógico. Enquanto o `--publicar 06` não sai, a linha do analógico com uma ação que a lista publicada não traz (a Rolagem no esquerdo, o cursor no direito) mostra a opção cravada no desenho de antes, e não o que o analógico faz.
