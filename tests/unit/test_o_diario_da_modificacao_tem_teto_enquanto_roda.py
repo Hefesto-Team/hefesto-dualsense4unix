@@ -30,6 +30,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     manifesto_instalado,
 )
 from hefesto_dualsense4unix.mods.supervisor import Supervisor
+from tests.unit.test_as_modificacoes_rodam_fora_do_daemon import chave_sem_caixa_no_lar
 
 TETO = 64 * 1024
 
@@ -102,7 +103,7 @@ def _supervisor(lar: Lugares, **mais: Any) -> Supervisor:
     async def escritor(metodo: str, pedido: dict[str, Any]) -> Any:
         return {"status": "ok"}
 
-    return Supervisor(
+    supervisor = Supervisor(
         EventBus(),
         escritor=escritor,
         o_jogo_escreve=lambda uniq, canal: False,
@@ -111,6 +112,9 @@ def _supervisor(lar: Lugares, **mais: Any) -> Supervisor:
         procurar_bwrap=False,
         **mais,
     )
+    if supervisor.bwrap is None:
+        chave_sem_caixa_no_lar(lar)
+    return supervisor
 
 
 async def _ate(condicao: Any, prazo: float = 15.0) -> None:

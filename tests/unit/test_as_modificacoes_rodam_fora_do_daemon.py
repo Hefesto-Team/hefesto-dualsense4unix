@@ -182,7 +182,7 @@ def _supervisor(
             escritas.append((metodo, pedido))
         return {"status": "ok"}
 
-    return Supervisor(
+    supervisor = Supervisor(
         bus or EventBus(),
         escritor=escritor,
         o_jogo_escreve=lambda uniq, canal: False,
@@ -190,6 +190,15 @@ def _supervisor(
         lugares=lar,
         **mais,
     )
+    if supervisor.bwrap is None:
+        chave_sem_caixa_no_lar(lar)
+    return supervisor
+
+
+def chave_sem_caixa_no_lar(lar: Lugares) -> None:
+    """Sem o bwrap, o lar grava a chave «Rodar sem caixa» de cada extensão instalada."""
+    for mod_id in ler_registro(lar.registro):
+        instalador.rodar_sem_caixa(mod_id, True, lugares=lar)
 
 
 def test_o_manifesto_fora_da_faixa_da_api_e_recusado_com_a_frase(tmp_path: Path) -> None:

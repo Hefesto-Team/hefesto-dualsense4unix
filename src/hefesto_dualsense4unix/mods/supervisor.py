@@ -1,23 +1,11 @@
 """O supervisor das modificações: abre, vigia, reabre e para os processos.
 
-O registro (``mods.json``) diz o que está ligado; o supervisor obedece. Cada
-modificação ligada do tipo ``processo`` vira um processo filho do serviço:
-
-* num grupo próprio (``setsid``), com ``PR_SET_PDEATHSIG``: se o serviço
-  morre, o filho morre junto;
-* com caixa quando o ``bwrap`` existe: raiz só de leitura, ``HOME`` vazia,
-  código só de leitura, dados graváveis, o diretório de execução da sessão
-  escondido (só a porta das modificações aparece), os processos num espaço de
-  PID próprio (o que a modificação abrir morre junto) e ``--unshare-net``
-  quando a rede é ``nenhuma``. Sem ``bwrap``, roda sem caixa, e o estado diz
-  isso numa linha;
-* reaberto com espera crescente (:data:`ESPERAS_PARA_VOLTAR`) nas três
-  primeiras quedas; na quarta, fica «parou», com a última linha do diário;
-* parado com ``SIGTERM`` ao grupo e ``SIGKILL`` no fim do prazo, pelo PID que o
-  supervisor criou, nunca por nome (o gesto ``para`` sem ``ligado: false`` em 300 ms também).
-
-O estado vivo de cada uma vai para ``mods-estado.json`` no diretório de
-execução, que a linha de comando e a tela leem.
+O registro (``mods.json``) diz o que está ligado; o supervisor obedece. Cada extensão ligada
+do tipo ``processo`` vira um filho do serviço num grupo próprio, que morre com ele, e na caixa
+do ``bwrap`` (:func:`comando_na_caixa`). Sem ``bwrap``, fica «recusada» (:data:`FALTA_O_BWRAP`),
+a não ser com a chave «Rodar sem caixa» do registro (``Entrada.sem_caixa``). Volta com espera
+crescente (:data:`ESPERAS_PARA_VOLTAR`) e para pelo PID que criou, nunca por nome. O estado
+vivo vai para ``mods-estado.json``; o porquê de cada regra está no ADR-021.
 """
 from __future__ import annotations
 
@@ -103,6 +91,8 @@ ESPERA_DEPOIS_DO_SIGKILL_S = 2.0
 
 ESPERA_DA_VIGIA_S = 1.0
 
+FALTA_O_BWRAP = "Falta o bwrap: a extensão não abre sem a caixa."
+
 ESCONDIDO_SEM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
     "bluetooth": ("/run/dbus",),
 }
@@ -164,7 +154,7 @@ class _Vigiada:
     processo: asyncio.subprocess.Process | None = None
     copia: asyncio.Task[None] | None = None
     ficha: str = ""
-    instalacao: tuple[str, str, str] = ("", "", "")
+    instalacao: tuple[str, str, str, bool] = ("", "", "", False)
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
 
 
@@ -546,8 +536,8 @@ def _resolver_o_comando(codigo: Path, executar: list[str]) -> list[str] | None:
     return None
 
 
-def _instalacao(entrada: Entrada) -> tuple[str, str, str]:
-    return (entrada.commit, entrada.instalada_em, entrada.ligada_em)
+def _instalacao(entrada: Entrada) -> tuple[str, str, str, bool]:
+    return (entrada.commit, entrada.instalada_em, entrada.ligada_em, entrada.sem_caixa)
 
 
 class Supervisor:
@@ -839,6 +829,9 @@ class Supervisor:
         if manifesto.processo is None:
             self._estados[entrada.id] = EstadoDaModificacao("declarativa")
             return
+        if not self.bwrap and not entrada.sem_caixa:
+            self._estados[entrada.id] = EstadoDaModificacao("recusada", motivo=FALTA_O_BWRAP)
+            return
         if not self.porta.aberta:
             await self.porta.iniciar()
         vigiada = _Vigiada(entrada.id, instalacao=_instalacao(entrada))
@@ -1054,6 +1047,7 @@ __all__ = [
     "ESPERA_DEPOIS_DO_SIGKILL_S",
     "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
+    "FALTA_O_BWRAP",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",

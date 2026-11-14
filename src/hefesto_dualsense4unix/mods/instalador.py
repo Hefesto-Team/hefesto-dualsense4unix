@@ -205,6 +205,7 @@ class Entrada(BaseModel):
     preparada_em: str = ""
     motivo_do_preparo: str = ""
     em_troca: str = ""
+    sem_caixa: bool = False
 
 
 @dataclass(frozen=True)
@@ -703,6 +704,7 @@ def instalar(
             entrada.atualiza_sozinha = anterior.atualiza_sozinha
             entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
             entrada.preparo_aceito = list(anterior.preparo_aceito)
+            entrada.sem_caixa = anterior.sem_caixa
         if prepara_agora:
             _rodar_o_preparo(lg, manifesto, entrada)
         if a_substituir:
@@ -999,6 +1001,20 @@ def desligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:
     return entrada
 
 
+def rodar_sem_caixa(mod_id: str, sim: bool, *, lugares: Lugares | None = None) -> Entrada:
+    """A chave «Rodar sem caixa» da extensão: sem o ``bwrap``, é o que abre a extensão solta."""
+    lg = lugares or Lugares.do_xdg()
+    registro = ler_registro(lg.registro)
+    entrada = registro.get(_conferir_id(mod_id))
+    if entrada is None:
+        raise InstalacaoRecusadaError(f"«{mod_id}» não está instalada.")
+    if entrada.sem_caixa != sim:
+        anotar_o_gesto(lg, "sem-caixa" if sim else "com-caixa", [mod_id], tocados=[lg.registro])
+        entrada.sem_caixa = sim
+        gravar_registro(lg.registro, registro)
+    return entrada
+
+
 def _pid_vivo(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -1158,6 +1174,7 @@ __all__ = [
     "o_css_que_fica",
     "origem_da_tag",
     "remover",
+    "rodar_sem_caixa",
     "tirar_da_caixa",
     "troca_viva",
 ]

@@ -529,6 +529,9 @@ _pkg_nome() {
         kernel-headers)
             _apt="linux-headers-$(uname -r)"; _dnf="kernel-devel"
             _pacman="linux-headers" ;;
+        bubblewrap)
+            _apt="bubblewrap";        _dnf="bubblewrap"
+            _pacman="bubblewrap" ;;
     esac
     case "${_familia}" in
         apt)    printf '%s\n' "${_apt}" ;;
@@ -765,6 +768,7 @@ _DEPS_DE_SISTEMA=(
     "usbutils|importante|cmd:lsusb|o diagnóstico perde a leitura do barramento USB"
     "fontconfig|importante|cmd:fc-cache|a interface troca de fonte em silêncio (Space Grotesk e JetBrains Mono não entram)"
     "curl|importante|cmd:curl|as fontes da identidade visual não são baixadas"
+    "bubblewrap|importante|cmd:bwrap|as extensões não abrem: falta a caixa que as separa do resto do computador"
 )
 
 _dep_presente() {

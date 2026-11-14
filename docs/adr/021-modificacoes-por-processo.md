@@ -64,7 +64,10 @@ permissões que a pessoa aceitou.
        `aparelhos`;
      - com `jogos`, cada pasta `steamapps` das bibliotecas da Steam aparece só de leitura, e o
        `HEFESTO_MOD_JOGOS` as lista.
-   - **Sem `bwrap`**, o filho roda sem caixa, e o estado diz isso numa linha.
+   - **Sem `bwrap`**, a extensão fica «recusada» («Falta o bwrap»), e nenhum processo nasce; o
+     leitor e o fixador do lançador também não abrem. Só a chave «Rodar sem caixa» da extensão,
+     gravada no registro (`sem_caixa`, pelo `mod sem-caixa <id>`), a abre solta, e o estado diz isso.
+     O `install.sh` traz o `bubblewrap` nas três famílias, e o `doctor` avisa quando ele falta.
    - Um filho que cai volta três vezes, esperando 1, 2 e 4 s. Na quarta queda ele fica «parou», com a
      última linha do diário, e só volta quando a pessoa o liga de novo ou o atualiza.
    - Parar é mandar `SIGTERM` ao grupo do PID criado e, no fim do prazo, `SIGKILL`. Nunca por nome. Na
@@ -104,8 +107,8 @@ porque é só ele que o barramento publica.
 - Um `while True` numa modificação gasta o processo da modificação, não o tique do serviço.
 - As escritas passam pelos mesmos handlers do IPC (`led.set`, `rumble.set`, `trigger.set`). A política
   de cada canal (Modo Nativo, alvo fora da mesa, teto da vibração) continua com um dono só.
-- O que a caixa garante depende do `bwrap` da máquina. Sem ele, só a porta confere as permissões: o
-  processo roda com tudo o que a pessoa pode, inclusive o socket principal, e o `mod ligar` diz isso
-  antes do «sim».
+- O que a caixa garante depende do `bwrap` da máquina. Sem ele, a extensão não abre; com a chave
+  «Rodar sem caixa», só a porta confere as permissões: o processo roda com tudo o que a pessoa pode,
+  inclusive o socket principal.
 - Na caixa, `rede:local` e `rede:internet` abrem a mesma rede: só `rede:nenhuma` é imposta.
 - O `uninstall.sh` ainda não conhece os lugares novos.

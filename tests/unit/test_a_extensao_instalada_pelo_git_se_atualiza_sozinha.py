@@ -244,6 +244,7 @@ def test_sem_rede_a_extensao_viva_fica_e_o_supervisor_segue(
 
     async def corrida() -> None:
         sup = _supervisor_rapido(lar)
+        antes = ler_registro(lar.registro)["exemplo"]
         await sup.iniciar()
         try:
             await _ate(lambda: _rodando(sup))
@@ -251,7 +252,7 @@ def test_sem_rede_a_extensao_viva_fica_e_o_supervisor_segue(
             await asyncio.sleep(0.6)
             assert sup._laco is not None and not sup._laco.done(), "a vigia caiu sem rede"
             assert _rodando(sup) and sup.pid_de("exemplo") == pid
-            assert ler_registro(lar.registro)["exemplo"] == entrada
+            assert ler_registro(lar.registro)["exemplo"] == antes
         finally:
             await sup.parar()
 

@@ -12,7 +12,7 @@ import signal
 import subprocess
 import time
 from collections.abc import Callable, Iterator, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -837,6 +837,7 @@ class LeitorPorProcesso:
     prazo_s: float = PRAZO_DO_LEITOR_S
     molde_do_titulo: str = ""
     fontes: tuple[str, ...] = ()
+    sem_caixa: bool = False
 
 
 @dataclass(frozen=True)
@@ -855,6 +856,7 @@ class FixadorPorProcesso:
     pasta: Path
     fontes: tuple[str, ...]
     prazo_s: float = PRAZO_DO_LEITOR_S
+    sem_caixa: bool = False
 
 
 @dataclass(frozen=True)
@@ -978,14 +980,11 @@ def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],
                     bwrap: str | None) -> list[str]:
     """A linha que abre o leitor: dentro da caixa quando o ``bwrap`` existe.
 
-    A caixa do leitor NÃO é a do processo da modificação
-    (``mods/supervisor.comando_na_caixa``), e a diferença é o trabalho dele: a
-    do processo esconde a ``HOME``, e o leitor existe para ler a configuração
-    do emulador que mora na HOME (``~/.config/Emulador/emulador.ini``). Esta deixa a raiz
-    inteira visível e SÓ DE LEITURA, sem rede, sem o barramento do sistema,
-    sem a execução da sessão (o socket do serviço, o do som, o do Wayland) e
-    num espaço de PID próprio, que morre com quem o abriu. Sem ``bwrap``, roda
-    sem caixa, como o supervisor faz com o processo.
+    Não é a caixa do processo (``mods/supervisor.comando_na_caixa``), que esconde a ``HOME``:
+    o leitor lê a configuração do emulador na HOME. Esta deixa a raiz visível e SÓ DE LEITURA,
+    sem rede, sem o barramento do sistema, sem a execução da sessão e num espaço de PID
+    próprio. Sem ``bwrap``, é o comando solto: quem chama só a pede assim com a chave
+    «Rodar sem caixa» da extensão (:data:`FALTA_O_BWRAP_NO_LEITOR`).
     """
     if not bwrap:
         return comando
@@ -1159,13 +1158,13 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
                      bwrap: str | bool | None = True) -> BibliotecaDoLancador:
     """A biblioteca que o leitor da modificação devolve — e nunca levanta.
 
-    Prazo estourado, saída grande demais, código de saída diferente de zero ou
-    JSON torto: a biblioteca fica «não pôde ser lida», com o motivo numa linha,
-    e o resto do censo segue. Uma linha torta dentro de uma lista boa sai
-    sozinha, e as outras ficam.
+    Prazo estourado, saída grande demais, código de saída diferente de zero ou JSON torto: a
+    biblioteca fica «não pôde ser lida», com o motivo numa linha, e o resto do censo segue. Uma
+    linha torta dentro de uma lista boa sai sozinha, e as outras ficam.
 
-    :param bwrap: ``True`` procura o ``bwrap`` no ``PATH``; um caminho usa
-        aquele; ``False`` ou ``None`` roda sem caixa.
+    :param bwrap: ``True`` procura o ``bwrap`` no ``PATH``; um caminho usa aquele; ``False`` ou
+        ``None`` roda sem caixa. Procurado e ausente, o leitor não abre sem a chave «Rodar sem
+        caixa» da extensão (``sem_caixa``).
     """
     nome = leitor.rotulo
     comando = _comando_do_leitor(leitor)
@@ -1180,6 +1179,8 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
                                     ["a releitura passou do teto conjunto"])
     caixa = shutil.which("bwrap") if bwrap is True else (bwrap or None)
+    if bwrap is True and caixa is None and not leitor.sem_caixa:
+        return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [], [FALTA_O_BWRAP_NO_LEITOR])
     try:
         processo = subprocess.Popen(
             linha_do_leitor(leitor, comando, caixa), cwd=str(leitor.pasta),
@@ -1223,6 +1224,8 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
 
 
 PORQUE_O_FIXADOR_FALHOU = "a extensão tentou fixar o Proton e não conseguiu"
+
+FALTA_O_BWRAP_NO_LEITOR = "falta o bwrap: a extensão não abre sem a caixa"
 
 
 def linha_do_fixador(fixador: FixadorPorProcesso, comando: list[str], bwrap: str | None,
@@ -1274,6 +1277,9 @@ def fixar_por_processo(fixador: FixadorPorProcesso, *, nome: str, pino_dir: Path
                 "HEFESTO_PROTON_TARBALL": str(tarball) if tarball is not None else ""}
     leituras = [p for p in (pino_dir, tarball) if p is not None]
     caixa = shutil.which("bwrap") if bwrap is True else (bwrap or None)
+    if bwrap is True and caixa is None and not fixador.sem_caixa:
+        return FixadoNoLancador(
+            0, (ForaDoPino(fixador.modificacao, "", FALTA_O_BWRAP_NO_LEITOR),))
     try:
         processo = subprocess.Popen(
             linha_do_fixador(fixador, comando, caixa, lar, leituras), cwd=str(fixador.pasta),
@@ -1687,6 +1693,11 @@ def lancadores_das_extensoes(lugares: Any = None) -> tuple[LancadorDaExtensao, .
             bloco = lancador_da_modificacao(mod_id, manifesto.lancador, pasta)
         except (ManifestoRecusadoError, ValueError, OSError):
             continue
+        if entrada.sem_caixa:
+            bloco = replace(
+                bloco,
+                leitor=replace(bloco.leitor, sem_caixa=True) if bloco.leitor else None,
+                fixador=replace(bloco.fixador, sem_caixa=True) if bloco.fixador else None)
         fora.append(LancadorDaExtensao(bloco, pela_porta="processo" in manifesto.tipos))
     return tuple(fora)
 

@@ -221,7 +221,7 @@ def cmd_ligar(
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
     if manifesto.processo is not None and shutil.which("bwrap") is None:
-        console.print("Sem o bwrap, a extensão roda sem caixa e pode mais do que estas permissões.")
+        console.print("Sem o bwrap, a extensão não abre: instale o bubblewrap.")
     if not sim and not typer.confirm("Ligar com estas permissões?", default=False):
         console.print("Não liguei.")
         raise typer.Exit(code=1)
@@ -247,6 +247,24 @@ def cmd_desligar(mod_id: str = typer.Argument(..., help="O id da modificação."
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
     console.print(f"«{entrada.nome}» desligada.")
+
+
+@app.command("sem-caixa")
+def cmd_sem_caixa(
+    mod_id: str = typer.Argument(..., help="O id da modificação."),
+    desfazer: bool = typer.Option(False, "--desfazer", help="Volta a exigir a caixa."),
+) -> None:
+    """Sem o bwrap, deixa esta extensão rodar sem caixa, com tudo o que você pode."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, rodar_sem_caixa
+
+    try:
+        entrada = rodar_sem_caixa(mod_id, not desfazer)
+    except InstalacaoRecusadaError as exc:
+        raise _recusar(exc) from exc
+    if entrada.sem_caixa:
+        console.print(f"«{entrada.nome}» roda sem caixa quando o bwrap faltar.")
+    else:
+        console.print(f"«{entrada.nome}» só abre na caixa.")
 
 
 @app.command("remover")

@@ -6372,6 +6372,7 @@ main() {
     check_libhidapi
     check_loader_svg
     check_binding_webkit
+    check_caixa_das_extensoes
     hdr "kernel / udev"
     check_udev
     check_o_no_fisico_nasce_sem_acl
@@ -6505,6 +6506,22 @@ except ImportError:
 caminho = regra_que_o_kmod_le(sys.argv[1], Path(sys.argv[2]))
 print(caminho if caminho is not None else "")
 PY
+}
+
+check_caixa_das_extensoes() {
+    if command -v bwrap >/dev/null 2>&1; then
+        pass "bwrap presente (as extensões abrem na caixa)"
+        return
+    fi
+    local pacote="bubblewrap"
+    if command -v apt-get >/dev/null 2>&1; then
+        pacote="sudo apt install bubblewrap"
+    elif command -v dnf >/dev/null 2>&1; then
+        pacote="sudo dnf install bubblewrap"
+    elif command -v pacman >/dev/null 2>&1; then
+        pacote="sudo pacman -S bubblewrap"
+    fi
+    warn "bwrap AUSENTE — as extensões não abrem sem a caixa. Instale: ${pacote}, ou $(conselho_de_instalacao)"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
