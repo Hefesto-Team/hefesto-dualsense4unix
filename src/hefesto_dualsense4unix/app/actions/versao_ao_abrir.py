@@ -2,8 +2,8 @@
 
 Só numa instalação pelo código, em ``dev``, com a árvore limpa, sem trabalho em voo e sem jogo
 aberto; qualquer outra coisa para em silêncio, com uma linha no diário. A rede fica num fio que a
-janela não espera, e o avanço, só rápido, fica para o fecho: a janela importa código sob demanda.
-A marca de voo conta só as linhas cuja árvore ainda existe; a de conjunto que sumiu sai do arquivo.
+janela não espera, e o avanço, só rápido e só para commit assinado por chave da lista do ``HEAD``
+de agora, fica para o fecho. A marca de voo conta só as linhas cuja árvore ainda existe.
 
 A faixa que pede install o solta fora do cgroup da janela (``--install``): ele espera o jogo fechar
 de vez, roda uma vez só e nunca guarda senha. Sem autorização a parte do sistema fica pendente, e a
@@ -21,6 +21,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable, Iterable, Sequence
@@ -47,6 +48,10 @@ INSTALL_EM_CURSO = "install em curso"
 ESPERAS = (TRABALHO_EM_VOO, JOGO_ABERTO, INSTALL_EM_CURSO)
 SEM_AUTORIZACAO = "sem autorização de administrador"
 FORA_DO_AVANCO = "o ramo local tem o que o remoto não tem: fica como está"
+SEM_ASSINATURA = "o commit novo não tem a assinatura da casa"
+LISTA_DE_QUEM_ASSINA = "assets/assinaturas/quem-assina"
+RECUSA_DA_ASSINATURA = "versao-sem-assinatura"
+INICIO_DA_ASSINATURA_SSH = "gpgsig -----BEGIN SSH SIGNATURE-----"
 REPOSITORIO = re.compile(
     r"(?:^|[:/])hefesto-team/hefesto-dualsense4unix(?:\.git)?/?$", re.IGNORECASE)
 PASTA_DO_SERVICO = "src/"
@@ -180,6 +185,47 @@ def _e_avanco(raiz: Path, antes: str, alvo: str) -> bool:
     return _git(raiz, "merge-base", "--is-ancestor", antes, alvo) is not None
 
 
+def _assinado_por_ssh(commit: str) -> bool:
+    cabecalho = commit.split("\n\n", 1)[0]
+    return INICIO_DA_ASSINATURA_SSH in cabecalho.splitlines()
+
+
+def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
+    """A lista vem do ``HEAD`` de agora, nunca da faixa baixada: chave nova só entra num commit que
+    uma chave da lista já assinou. A assinatura do alvo fixa a faixa inteira pelo hash."""
+    lista = _git(raiz, "show", f"HEAD:{LISTA_DE_QUEM_ASSINA}")
+    commit = _git(raiz, "cat-file", "commit", alvo)
+    if not lista or commit is None or not _assinado_por_ssh(commit):
+        return True
+    descritor, caminho = tempfile.mkstemp(prefix="hefesto-quem-assina-")
+    try:
+        with os.fdopen(descritor, "w", encoding="utf-8") as arquivo:
+            arquivo.write(f"{lista}\n")
+        return _git(
+            raiz, "-c", "gpg.format=ssh", "-c", f"gpg.ssh.allowedSignersFile={caminho}",
+            "-c", "gpg.minTrustLevel=fully", "verify-commit", alvo) is None
+    finally:
+        with contextlib.suppress(OSError):
+            os.unlink(caminho)
+
+
+def _recusa_da_assinatura() -> Path:
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    return state_dir(ensure=True) / RECUSA_DA_ASSINATURA
+
+
+def _recusar_sem_assinatura(alvo: str) -> None:
+    _dizer(f"fica como está ({SEM_ASSINATURA})")
+    with contextlib.suppress(OSError):
+        _recusa_da_assinatura().write_text(f"{alvo}\n", encoding="utf-8")
+
+
+def _esquecer_a_recusa() -> None:
+    with contextlib.suppress(OSError):
+        _recusa_da_assinatura().unlink(missing_ok=True)
+
+
 def baixar(raiz: Path, *, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str | None:
     """Traz o ``dev`` do remoto sem tocar na árvore. Devolve o commit, se ele é outro."""
     motivo = por_que_nao(raiz, jogo_aberto)
@@ -196,10 +242,14 @@ def baixar(raiz: Path, *, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str
     alvo = _git(raiz, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
     topo = _git(raiz, "rev-parse", "HEAD")
     if alvo is not None and alvo == topo:
+        _esquecer_a_recusa()
         _dizer("já é a mais recente")
         return None
     if alvo is None or topo is None or not _e_avanco(raiz, topo, alvo):
         _dizer(FORA_DO_AVANCO)
+        return None
+    if sem_a_assinatura_da_casa(raiz, alvo):
+        _recusar_sem_assinatura(alvo)
         return None
     _dizer(f"{alvo[:CURTO]} baixada: entra quando a janela fechar")
     return alvo
@@ -250,11 +300,14 @@ def _motivo_da_nota(linhas: Iterable[str]) -> str:
 
 
 def pendencia_do_install() -> tuple[str, str] | None:
-    """A linha que a aba Sistema e o ``doctor`` dizem: só o install que parou com um motivo."""
+    """A linha que a aba Sistema e o ``doctor`` dizem: o install que parou com um motivo, ou o
+    commit novo que ficou de fora sem a assinatura da casa."""
     from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
     motivo = _motivo_da_nota(_linhas_da_nota() or [])
     if not motivo:
+        if _recusa_da_assinatura().exists():
+            return ("[WARN]", f"A versão nova ficou de fora ({SEM_ASSINATURA}).")
         return None
     return ("[WARN]",
             f"A versão nova não terminou de entrar ({motivo}): "
@@ -497,6 +550,9 @@ def aplicar(
     if antes is None or not _e_avanco(raiz, antes, alvo):
         _dizer(FORA_DO_AVANCO)
         return False
+    if sem_a_assinatura_da_casa(raiz, alvo):
+        _recusar_sem_assinatura(alvo)
+        return False
     caminhos = _git(raiz, "diff", "--name-only", "--no-renames", antes, alvo)
     avanco = None
     if caminhos is not None:
@@ -505,6 +561,7 @@ def aplicar(
     if caminhos is None or avanco is None:
         _dizer("o avanço não coube: fica como está")
         return False
+    _esquecer_a_recusa()
     pede = o_que_a_faixa_pede(caminhos.splitlines())
     if pede == "install":
         _anotar_o_install(antes, alvo)
