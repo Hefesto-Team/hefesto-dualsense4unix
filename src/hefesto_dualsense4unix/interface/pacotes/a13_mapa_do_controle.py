@@ -215,6 +215,23 @@ def _nome_do_ativo(ctx: Contexto) -> str:
     return perfil.nome_do_ativo(ctx.state).strip()
 
 
+def _vale_a_navegacao(ctx: Contexto) -> bool:
+    """Nenhum perfil de jogo vale agora: o ativo é nenhum, ou o Freestyle, o de fora do jogo."""
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    nome = _nome_do_ativo(ctx)
+    return not nome or opc.e_o_freestyle(nome)
+
+
+def _nome_do_que_vale(ctx: Contexto) -> str:
+    """O nome do perfil que o daemon diz ativo: o do jogo, ou a Navegação fora do jogo.
+
+    O dono único do nome da chave `nav`: o seletor e o campo do nome leem daqui. O perfil
+    ativo é um para todos os controles; o que muda por controle mora dentro dele.
+    """
+    return NOME_DA_NAVEGACAO if _vale_a_navegacao(ctx) else _nome_do_ativo(ctx)
+
+
 def _peca_do_vale_para(ctx: Contexto) -> str | None:
     """O controle (MAC de 12 hex) que o «Vale para» escolheu, ou `None` quando o perfil é o dono.
 
@@ -354,7 +371,10 @@ def _tipo_de(ctx: Contexto, estado: dict[str, Any], valores: dict[str, tuple[str
     """`nav`, `pac` ou `troca`: a cor do perfil que a tela mostra."""
     chave = estado["chave"]
     if chave == NAV:
-        return "nav"
+        if _vale_a_navegacao(ctx):
+            return "nav"
+        padrao = _padrao_da_chave(ctx, chave)
+        valores = {b: par for b, par in valores.items() if padrao.get(b) != par}
     if chave.startswith(MOLDE):
         return "pac"
     tipos = {t for t, _ in valores.values()}
@@ -410,10 +430,7 @@ def _usar_em(ctx: Contexto, estado: dict[str, Any]) -> str:
     """Os chips de «Usar em»: onde o perfil vale, e o «+ Jogo» quando se pode mudar."""
     chave = estado["chave"]
     if chave == NAV:
-        pelo_ativo = _nome_do_ativo(ctx)
-        from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
-
-        quem = FORA_DO_JOGO if (not pelo_ativo or opc.e_o_freestyle(pelo_ativo)) else pelo_ativo
+        quem = FORA_DO_JOGO if _vale_a_navegacao(ctx) else _nome_do_ativo(ctx)
         return f'<span class="jogo">{html.escape(quem)}</span>'
     texto = estado.get("usar_em")
     if texto is None and chave.startswith(PERFIL):
@@ -443,7 +460,7 @@ def _opcoes_do_perfil(ctx: Contexto) -> str:
         f'<option value="{PERFIL}{html.escape(str(c.get("name") or ""), quote=True)}">'
         f'{html.escape(str(c.get("name") or ""))}</option>'
         for c in _perfis_do_disco(ctx))
-    nav = f'<option value="{NAV}">{NOME_DA_NAVEGACAO}</option>'
+    nav = f'<option value="{NAV}">{html.escape(_nome_do_que_vale(ctx))}</option>'
     return (f'<optgroup label="Navegação">{nav}</optgroup>'
             f'<optgroup label="Moldes">{moldes}</optgroup>'
             + (f'<optgroup label="Meus perfis">{meus}</optgroup>' if meus else "")
@@ -455,7 +472,7 @@ def _nome_mostrado(ctx: Contexto, estado: dict[str, Any]) -> str:
     if estado.get("nome") is not None:
         return str(estado["nome"])
     if chave == NAV:
-        return NOME_DA_NAVEGACAO
+        return _nome_do_que_vale(ctx)
     if chave == NOVO:
         return "Novo perfil"
     if chave.startswith(MOLDE):
