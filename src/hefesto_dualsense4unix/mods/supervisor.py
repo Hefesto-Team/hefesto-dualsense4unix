@@ -102,6 +102,11 @@ DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
 
 DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
 
+PASTA_SEM_A_CASA: tuple[str, ...] = (
+    "--config-net", "--quiet", "--foreground", "--no-map-gw",
+    "-t", "none", "-u", "none", "-T", "none", "-U", "none",
+)
+
 _PR_SET_PDEATHSIG = 1
 
 
@@ -493,10 +498,42 @@ def comando_na_caixa(
     ]
     if "jogos" in manifesto.permissoes:
         argv += [arg for p in jogos for arg in ("--ro-bind", str(p), str(p))]
-    if manifesto.rede == "nenhuma":
+    rede = rede_da_caixa(manifesto)
+    if rede == "nenhuma":
         argv.append("--unshare-net")
     argv += ["--die-with-parent", "--new-session", "--chdir", str(codigo), "--", *comando]
+    if rede == "própria":
+        return [rede_propria_da_caixa() or "pasta", *PASTA_SEM_A_CASA, "--", *argv]
     return argv
+
+
+def rede_propria_da_caixa() -> str | None:
+    """O ``pasta``, que dá à caixa com rede um espaço de rede exclusivo, sem o loopback da casa."""
+    return shutil.which("pasta")
+
+
+A_REDE_INCLUI_A_INTERNET = "A rede da extensão inclui a internet."
+
+A_REDE_INCLUI_A_MAQUINA = (
+    "A rede da extensão inclui a internet e os serviços desta máquina, "
+    "inclusive o controle pelo protocolo do DSX.")
+
+
+def frase_da_rede(manifesto: Manifesto) -> str:
+    """O que a rede do «sim» abre de fato: sem o ``pasta``, também os serviços desta máquina."""
+    rede = rede_da_caixa(manifesto)
+    if rede == "casa":
+        return A_REDE_INCLUI_A_MAQUINA
+    if rede == "própria" and manifesto.rede == "local":
+        return A_REDE_INCLUI_A_INTERNET
+    return ""
+
+
+def rede_da_caixa(manifesto: Manifesto) -> str:
+    """``nenhuma``, ``própria`` (o ``pasta``) ou ``casa`` (o espaço de rede da casa, sem ele)."""
+    if manifesto.rede == "nenhuma":
+        return "nenhuma"
+    return "própria" if rede_propria_da_caixa() else "casa"
 
 
 def _escondidas() -> tuple[str, ...]:
@@ -1076,6 +1113,8 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
 
 
 __all__ = [
+    "A_REDE_INCLUI_A_INTERNET",
+    "A_REDE_INCLUI_A_MAQUINA",
     "DEVOLVIDO_COM_A_PERMISSAO",
     "DEVOLVIDO_COM_A_REDE",
     "DIARIO_DA_MODIFICACAO",
@@ -1093,8 +1132,11 @@ __all__ = [
     "Supervisor",
     "comando_na_caixa",
     "diario_da_extensao",
+    "frase_da_rede",
     "parar_o_grupo",
     "pastas_dos_jogos",
+    "rede_da_caixa",
+    "rede_propria_da_caixa",
     "supervisor_do_servico",
     "ultima_linha_do_diario",
 ]

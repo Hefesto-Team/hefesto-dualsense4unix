@@ -6,7 +6,7 @@ Nenhum comando daqui fala com o serviço pelo IPC: todos escrevem o registro
 from __future__ import annotations
 
 import shutil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 from rich.console import Console
@@ -182,6 +182,13 @@ def cmd_listar() -> None:
     console.print(tabela)
 
 
+def _dizer_a_rede(manifesto: Any) -> None:
+    from hefesto_dualsense4unix.mods.supervisor import frase_da_rede
+
+    if manifesto.processo is not None and (frase := frase_da_rede(manifesto)):
+        console.print(frase, markup=False, soft_wrap=True)
+
+
 @app.command("permissoes")  # (noqa-acento)
 def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """O que a modificação instalada pede, uma linha por permissão."""
@@ -198,7 +205,8 @@ def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
     if manifesto.preparar:
-        console.print(frase_do_preparo(manifesto), markup=False)
+        console.print(frase_do_preparo(manifesto), markup=False, soft_wrap=True)
+    _dizer_a_rede(manifesto)
 
 
 @app.command("ligar")
@@ -228,7 +236,8 @@ def cmd_ligar(
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
     if manifesto.preparar and (entrada is None or entrada.preparada_em != entrada.instalada_em):
-        console.print(frase_do_preparo(manifesto), markup=False)
+        console.print(frase_do_preparo(manifesto), markup=False, soft_wrap=True)
+    _dizer_a_rede(manifesto)
     if manifesto.processo is not None and shutil.which("bwrap") is None:
         console.print("Sem o bwrap, a extensão não abre: instale o bubblewrap.")
     if not sim and not typer.confirm("Ligar com estas permissões?", default=False):

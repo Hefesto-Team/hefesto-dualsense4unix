@@ -60,7 +60,9 @@ permissões que a pessoa aceitou.
      - do diretório de execução da sessão aparece só a porta, com ou sem `XDG_RUNTIME_DIR` no ambiente;
      - os processos ficam num espaço de PID, IPC, UTS e cgroup próprios: o que a modificação abrir
        morre com a modificação;
-     - `--unshare-net` entra quando a rede é `nenhuma`;
+     - `--unshare-net` entra quando a rede é `nenhuma`; com rede e com o `pasta` instalado, a caixa
+       sai por um espaço de rede exclusivo (`--no-map-gw`, nenhuma porta encaminhada): os sockets
+       abstratos e o `127.0.0.1` da casa (o UDP do DSX, o DSU) não atendem de dentro;
      - `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nenhum socket de `/run`, como o do
        broker ou o do docker, atende de dentro); volta por cima só o que a permissão pede: o
        `/run/dbus` com `bluetooth`, o `/run/udev` e o `/dev` real com `aparelhos`, o
@@ -116,5 +118,8 @@ porque é só ele que o barramento publica.
 - O que a caixa garante depende do `bwrap` da máquina. Sem ele, a extensão não abre; com a chave
   «Rodar sem caixa», só a porta confere as permissões: o processo roda com tudo o que a pessoa pode,
   inclusive o socket principal.
-- Na caixa, `rede:local` e `rede:internet` abrem a mesma rede: só `rede:nenhuma` é imposta.
+- Na caixa, `rede:local` e `rede:internet` abrem a mesma rede: só `rede:nenhuma` é imposta. O «sim»
+  diz isso: com o `pasta`, «A rede da extensão inclui a internet.» na `rede:local`; sem ele, a caixa fica
+  no espaço de rede da casa, e a frase diz que a rede inclui também os serviços desta máquina,
+  inclusive o controle pelo protocolo do DSX.
 - O `uninstall.sh` ainda não conhece os lugares novos.
