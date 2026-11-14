@@ -48,7 +48,7 @@ INSTALL_EM_CURSO = "install em curso"
 ESPERAS = (TRABALHO_EM_VOO, JOGO_ABERTO, INSTALL_EM_CURSO)
 SEM_AUTORIZACAO = "sem autorização de administrador"
 FORA_DO_AVANCO = "o ramo local tem o que o remoto não tem: fica como está"
-SEM_ASSINATURA = "o commit novo não tem a assinatura da casa"
+SEM_ASSINATURA = "sem a assinatura do projeto"
 LISTA_DE_QUEM_ASSINA = "assets/assinaturas/quem-assina"
 RECUSA_DA_ASSINATURA = "versao-sem-assinatura"
 INICIO_DA_ASSINATURA_SSH = "gpgsig -----BEGIN SSH SIGNATURE-----"
@@ -186,8 +186,10 @@ def _e_avanco(raiz: Path, antes: str, alvo: str) -> bool:
 
 
 def _assinado_por_ssh(commit: str) -> bool:
-    cabecalho = commit.split("\n\n", 1)[0]
-    return INICIO_DA_ASSINATURA_SSH in cabecalho.splitlines()
+    """Uma assinatura só, e SSH: o git junta dois cabeçalhos ``gpgsig`` e confere pelo primeiro."""
+    cabecalho = commit.split("\n\n", 1)[0].splitlines()
+    return [linha for linha in cabecalho if linha.startswith("gpgsig")] == [
+        INICIO_DA_ASSINATURA_SSH]
 
 
 def sem_a_assinatura_da_casa(raiz: Path, alvo: str) -> bool:
@@ -301,13 +303,14 @@ def _motivo_da_nota(linhas: Iterable[str]) -> str:
 
 def pendencia_do_install() -> tuple[str, str] | None:
     """A linha que a aba Sistema e o ``doctor`` dizem: o install que parou com um motivo, ou o
-    commit novo que ficou de fora sem a assinatura da casa."""
+    commit novo que ficou de fora sem a assinatura do projeto."""
     from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
     motivo = _motivo_da_nota(_linhas_da_nota() or [])
     if not motivo:
-        if _recusa_da_assinatura().exists():
-            return ("[WARN]", f"A versão nova ficou de fora ({SEM_ASSINATURA}).")
+        with contextlib.suppress(OSError):
+            if _recusa_da_assinatura().exists():
+                return ("[WARN]", f"A versão nova ficou de fora ({SEM_ASSINATURA}).")
         return None
     return ("[WARN]",
             f"A versão nova não terminou de entrar ({motivo}): "

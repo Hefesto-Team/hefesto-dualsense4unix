@@ -18,7 +18,7 @@ from hefesto_dualsense4unix.app.actions import versao_ao_abrir as va
 
 RAIZ = Path(__file__).resolve().parents[2]
 LISTA = "assets/assinaturas/quem-assina"
-MOTIVO = "o commit novo não tem a assinatura da casa"
+MOTIVO = "sem a assinatura do projeto"
 
 
 def _git(pasta: Path, *args: str) -> str:
@@ -243,6 +243,30 @@ def test_a_assinatura_que_nao_e_ssh_fica_de_fora(casa: Casa, base: Path) -> None
          "commit", "-q", "-S", "-m", "muda")
     alvo = _git(casa.autor, "rev-parse", "HEAD")
     _git(casa.autor, "push", "-q", "origin", "dev")
+    _git(casa.clone, "fetch", "-q", "origin", "dev")
+    assert subprocess.run(["git", "-C", str(casa.clone), "-c", "gpg.minTrustLevel=fully",
+                           "verify-commit", alvo], capture_output=True).returncode == 0
+    antes = casa.topo()
+
+    assert not _avancar(casa, alvo, Pedidos())
+    assert casa.topo() == antes
+
+
+def test_a_assinatura_ssh_atras_de_outra_fica_de_fora(casa: Casa, base: Path) -> None:
+    gpg = base / "gpg-que-confia-em-tudo"
+    gpg.write_text(GPG_QUE_CONFIA_EM_TUDO, encoding="utf-8")
+    gpg.chmod(0o755)
+    _git(casa.clone, "config", "gpg.program", str(gpg))
+    pai = _git(casa.autor, "rev-parse", "HEAD")
+    arvore = _git(casa.autor, "rev-parse", "HEAD^{tree}")
+    corpo = (f"tree {arvore}\nparent {pai}\nauthor t <t@t.t> 1 +0000\n"
+             "committer t <t@t.t> 1 +0000\n"
+             "gpgsig -----BEGIN PGP SIGNATURE-----\n \n AAAA\n -----END PGP SIGNATURE-----\n"
+             "gpgsig -----BEGIN SSH SIGNATURE-----\n AAAA\n -----END SSH SIGNATURE-----\n\nmuda\n")
+    alvo = subprocess.run(["git", "-C", str(casa.autor), "hash-object", "-t", "commit", "-w",
+                           "--stdin"], input=corpo, capture_output=True, text=True,
+                          check=True).stdout.strip()
+    _git(casa.autor, "push", "-q", "origin", f"{alvo}:refs/heads/dev")
     _git(casa.clone, "fetch", "-q", "origin", "dev")
     assert subprocess.run(["git", "-C", str(casa.clone), "-c", "gpg.minTrustLevel=fully",
                            "verify-commit", alvo], capture_output=True).returncode == 0
