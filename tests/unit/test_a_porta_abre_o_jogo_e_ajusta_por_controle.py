@@ -6,11 +6,11 @@ entregou no ``lancador.jogos``, pelo abridor do serviço (fora da caixa, pelo ``
 Xbox, e ``vibracao.escala`` (``escrever:vibracao``) multiplica a força do motor daquele controle no
 funil único; os dois valem enquanto a extensão vale, por controle, de um a quatro.
 
-O ``lancador.abrir`` só passa ao abridor o comando do manifesto e termos de id: a opção («-»), o
-endereço («esquema:») e o «=» recusam, e a recusa do abridor não devolve o texto da exceção. O
-``mira.ligada`` tem as guardas do ``mira.peso``: só no controle cuja seção Controles está no modo da
-extensão («todos» vira esse conjunto, e sem nenhum recusa), num jogo com anticheat só com a chave do
-jogo ligada, e o giro volta quando a seção sai do modo.
+O ``lancador.abrir`` só passa ao abridor o comando do manifesto, achado no ``PATH``, e termos
+de id: a opção («-»), o endereço («esquema:»), a «/» e o «=» recusam, e a recusa do abridor não
+devolve o texto da exceção. O ``mira.ligada`` tem as guardas do ``mira.peso``: só no controle cuja
+seção Controles está no modo da extensão («todos» vira esse conjunto, e sem nenhum recusa), num
+jogo com anticheat só com a chave do jogo ligada, e o giro volta quando a seção sai do modo.
 """
 from __future__ import annotations
 
@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.mods.porta import (
     CODE_SEM_PERMISSAO,
     Porta,
 )
+from hefesto_dualsense4unix.utils import xdg_paths
 from tests.unit.test_a_porta_ouve_o_jogo_e_o_microfone import _Cliente
 
 MESA = ("aa:bb:cc:00:00:71", "aa:bb:cc:00:00:72", "02:fe:00:00:00:73", "02:fe:00:00:00:74")
@@ -69,6 +70,18 @@ def _limpo(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     for dono in ("hook", "outra"):
         roteador.PESO_DA_MIRA.religar_de(dono)
     politica.ESCALA_DA_VIBRACAO.soltar()
+
+
+@pytest.fixture
+def lancador(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    monkeypatch.setattr(xdg_paths, "mods_codigo_dir", lambda: tmp_path / "programas")
+    monkeypatch.setattr(xdg_paths, "mods_dados_dir", lambda: tmp_path / "dados")
+    comando = tmp_path / "bin" / "hefesto-hookshot"
+    comando.parent.mkdir()
+    comando.write_text("#!/bin/sh\nexit 0\n")
+    comando.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{comando.parent}{os.pathsep}/usr/bin")
+    return os.path.realpath(comando)
 
 
 class _Abridor:
@@ -107,7 +120,8 @@ def test_as_permissoes_e_o_topico_novos_estao_no_manifesto() -> None:
     assert permissao_valida("ler:jogo.estilo")
 
 
-def test_lancador_abrir_sem_permissao_recusa_e_com_o_id_de_outra_extensao_recusa() -> None:
+def test_lancador_abrir_sem_permissao_recusa_e_com_o_id_de_outra_extensao_recusa(
+        lancador: str) -> None:
     async def corrida() -> tuple[dict[str, Any], ...]:
         with tempfile.TemporaryDirectory(prefix="pa") as pasta:
             caminho = Path(pasta) / "m.sock"
@@ -129,7 +143,7 @@ def test_lancador_abrir_sem_permissao_recusa_e_com_o_id_de_outra_extensao_recusa
                 desconhecido = await asyncio.to_thread(
                     com.pedir, "lancador.abrir", {"chave": "nenhum"})
                 aberto = await asyncio.to_thread(com.pedir, "lancador.abrir", {"chave": "zelda"})
-                assert abridor.abertos == [("hook", ["hefesto-hookshot"])]
+                assert abridor.abertos == [("hook", [lancador])]
             finally:
                 for cliente in (outra, sem, com):
                     cliente.fechar()
@@ -145,7 +159,7 @@ def test_lancador_abrir_sem_permissao_recusa_e_com_o_id_de_outra_extensao_recusa
     assert aberto["result"] == {"aberto": True, "chave": "zelda"}
 
 
-def test_o_jogo_que_nao_abre_volta_com_o_motivo() -> None:
+def test_o_jogo_que_nao_abre_volta_com_o_motivo(lancador: str) -> None:
     async def corrida() -> dict[str, Any]:
         with tempfile.TemporaryDirectory(prefix="pa") as pasta:
             caminho = Path(pasta) / "m.sock"
@@ -165,10 +179,11 @@ def test_o_jogo_que_nao_abre_volta_com_o_motivo() -> None:
 
 
 @pytest.mark.parametrize("termo", [
-    "--lua-script=/x.lua", "-e", "steam://rungameid/1", "file:///x", "a=b", "", "x\nsh"])
+    "--lua-script=/x.lua", "-e", "steam://rungameid/1", "file:///x", "a=b", "", "x\nsh",
+    "/Jogos/Zelda (US)/rom.z64", "a/b", ".."])
 def test_lancador_abrir_so_passa_o_comando_e_o_id_e_recusa_opcao_endereco_e_igual(
-        termo: str) -> None:
-    bom_argv = ["hefesto-hookshot", "ocarina_1.0", "/Jogos/Zelda (US)/rom.z64"]
+        lancador: str, termo: str) -> None:
+    bom_argv = ["hefesto-hookshot", "ocarina_1.0", "Zelda (US) 1,0+"]
 
     async def corrida() -> tuple[dict[str, Any], dict[str, Any], list[tuple[str, list[str]]]]:
         with tempfile.TemporaryDirectory(prefix="pa") as pasta:
@@ -191,7 +206,7 @@ def test_lancador_abrir_so_passa_o_comando_e_o_id_e_recusa_opcao_endereco_e_igua
     ruim, bom, abertos = asyncio.run(corrida())
     assert ruim["error"]["code"] == CODE_SEM_PERMISSAO
     assert bom["result"] == {"aberto": True, "chave": "bom"}
-    assert abertos == [("hook", bom_argv)]
+    assert abertos == [("hook", [lancador, *bom_argv[1:]])]
 
 
 def test_o_abridor_do_servico_recusa_sob_a_suite() -> None:

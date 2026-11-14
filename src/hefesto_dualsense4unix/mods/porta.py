@@ -18,6 +18,7 @@ import json
 import math
 import os
 import re
+import shutil
 import socket
 import struct
 import time
@@ -102,7 +103,7 @@ ICONES_DO_CONTROLE = ("lampada",)
 OPCOES_DO_CONTROLE = 16
 CORES_DO_PONTO = 3
 _COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
-_TERMO_DO_ABRIR = re.compile(r"[\w./][\w./ +,()-]{0,511}")
+_TERMO_DO_ABRIR = re.compile(r"\w[\w. +,()-]{0,511}")
 EVENTO_DO_PARAR = "extensao.parar"
 EVENTO_DA_ACAO = "extensao.acao"
 EVENTO_DO_LIVRE = "extensao.livre"
@@ -151,6 +152,64 @@ def abrir_pelo_lancador(mod_id: str, argv: Sequence[str]) -> str:
     abertura = fora_do_servico.abrir(linha, env=ambiente_limpo(os.environ),
                                      aplicativo=f"hefesto-mod-{mod_id}")
     return str(abertura.caminho)
+
+
+_NUNCA_FORA_DA_CAIXA = frozenset({
+    "sh", "bash", "dash", "zsh", "fish", "ksh", "mksh", "oksh", "csh", "tcsh", "ash", "yash",
+    "elvish", "nu", "xonsh", "pwsh", "env", "busybox", "toybox", "xargs", "nohup", "setsid",
+    "flatpak-spawn", "flatpak", "sudo", "doas", "pkexec", "su", "runuser", "systemd-run",
+    "nice", "ionice", "chrt", "taskset", "stdbuf", "timeout", "time", "strace", "ltrace", "gdb",
+    "script", "expect", "watch", "unshare", "nsenter", "bwrap", "firejail", "chroot", "awk",
+    "gawk", "mawk", "nawk", "sed", "find", "xdg-open", "gio", "hefesto-launch", "java",
+    "jshell", "deno", "bun", "R", "Rscript", "julia", "guile", "racket", "sbcl", "clisp",
+    "ocaml", "runghc", "ghci", "erl", "escript", "elixir", "iex", "swipl", "gjs", "dotnet",
+    "mono", "qjs",
+})
+_INTERPRETADOR = re.compile(
+    r"(python|pypy|perl|ruby|irb|node|nodejs|luajit|lua|php|tclsh|wish)[\w.-]*"
+    r"|ld(-linux)?[\w.-]*\.so[\d.]*")
+
+
+def _nunca_fora_da_caixa(nome: str) -> bool:
+    return nome in _NUNCA_FORA_DA_CAIXA or bool(_INTERPRETADOR.fullmatch(nome))
+
+
+def pastas_que_a_caixa_escreve() -> tuple[Path, ...]:
+    """O código e os dados de toda extensão, e o que a caixa monta por cima do sistema."""
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    return (xdg_paths.mods_codigo_dir(), xdg_paths.mods_dados_dir(), Path("/dev"), Path("/proc"))
+
+
+def caminho_da_sessao() -> str:
+    """O ``PATH`` com que o jogo abre: o do serviço, limpo como o ambiente do jogo."""
+    from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+
+    return ambiente_limpo(os.environ).get("PATH") or os.defpath
+
+
+def comando_fora_da_caixa(nome: str, caminho: str, pastas: Sequence[Path]) -> str:
+    """O arquivo que ``nome`` abre fora da caixa, ou ``ValueError`` com o motivo (que fica no
+    diário). ``nome`` é nu, achado no ``caminho`` num executável de verdade que não é shell nem
+    interpretador (pelo nome e pelo alvo do link) e que não mora em nenhuma das ``pastas``."""
+    if not nome or "/" in nome or nome.startswith((".", "-")):
+        raise ValueError("o comando não é um nome nu")
+    if _nunca_fora_da_caixa(nome):
+        raise ValueError("shell, interpretador ou lançador genérico")
+    absolutas = os.pathsep.join(p for p in caminho.split(os.pathsep) if os.path.isabs(p))
+    achado = shutil.which(nome, path=absolutas)
+    if achado is None:
+        raise ValueError("o comando não está no PATH")
+    real = Path(os.path.realpath(achado))
+    if not real.is_file() or not os.access(real, os.X_OK):
+        raise ValueError("o comando não é um executável")
+    if _nunca_fora_da_caixa(real.name):
+        raise ValueError("o link aponta para shell, interpretador ou lançador genérico")
+    for pasta in pastas:
+        raiz = Path(os.path.realpath(pasta))
+        if real.is_relative_to(raiz) or Path(achado).is_relative_to(raiz):
+            raise ValueError(f"o comando mora em {raiz}, que a caixa alcança")
+    return str(real)
 
 
 class RecusaError(Exception):
@@ -1015,6 +1074,8 @@ class Porta:
         self._captura_da_tela: asyncio.Task[None] | None = None
         self._vigia_do_peso: asyncio.Task[None] | None = None
         self._prazo_do_peso: asyncio.TimerHandle | None = None
+        self._acordar_o_vigia: asyncio.Event | None = None
+        self._escalas: set[tuple[str, str]] = set()
         self._anticheat_por_appid: dict[str, str] = {}
         self._arbitro: Arbitro | None = (
             arbitro if arbitro is not None
@@ -1392,14 +1453,10 @@ class Porta:
         if (isinstance(ganho, bool) or not isinstance(ganho, (int, float))
                 or isinstance(ate_ms, bool) or not isinstance(ate_ms, int)):
             raise RecusaError(CODE_INVALID_PARAMS, "mira.peso pede ganho e ate_ms em números")
-        jogo = self._jogo_aberto()
-        if jogo is not None:
-            anticheat = await asyncio.to_thread(self._anticheat_do_jogo, jogo)
-            chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(ARQUIVO_DO_PESO_DA_MIRA))
-            if anticheat and not chaves.liberada(jogo, anticheat):
-                raise RecusaError(
-                    CODE_NAO_ESCREVEU,
-                    f"este jogo usa {anticheat}: o peso da mira pede a chave do jogo ligada")
+        if barra := await self._anticheat_que_barra(self._jogo_aberto()):
+            raise RecusaError(
+                CODE_NAO_ESCREVEU,
+                f"este jogo usa {barra}: o peso da mira pede a chave do jogo ligada")
         no_modo = self._no_modo_da_extensao(sessao)
         alvos = sorted(no_modo) if alvo == TODOS_OS_CONTROLES else [
             a for a in (chave_de_sensor(alvo),) if a in no_modo]
@@ -1432,6 +1489,31 @@ class Porta:
             self._anticheat_por_appid[appid] = anticheat_do_jogo(raiz, appid)
         return self._anticheat_por_appid[appid]
 
+    async def _anticheat_que_barra(self, jogo: str | None) -> str:
+        """O anticheat de ``jogo`` quando a chave «Peso da mira» dele está desligada; vazio quando
+        nada barra o peso e o giro desligado."""
+        if jogo is None:
+            return ""
+        anticheat = await asyncio.to_thread(self._anticheat_do_jogo, jogo)
+        if not anticheat:
+            return ""
+        chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(ARQUIVO_DO_PESO_DA_MIRA))
+        liberada = await asyncio.to_thread(chaves.liberada, jogo, anticheat)
+        return "" if liberada else anticheat
+
+    async def _soltar_no_jogo_com_anticheat(self, jogo: str) -> None:
+        try:
+            barra = await self._anticheat_que_barra(jogo)
+        except Exception as exc:
+            logger.warning("mods_porta_anticheat_ilegivel", jogo=jogo, err=type(exc).__name__)
+            barra = "anticheat ilegível"
+        if not barra:
+            return
+        logger.info("mods_porta_giro_religado_pelo_anticheat", jogo=jogo, anticheat=barra)
+        PESO_DA_MIRA.soltar()
+        for dono in PESO_DA_MIRA.donos_do_giro():
+            PESO_DA_MIRA.religar_de(dono)
+
     def _jogo_aberto(self) -> str | None:
         identidade = self.bus.ultimo(EventTopic.JOGO_IDENTIDADE)
         chave = identidade.get("chave") if isinstance(identidade, dict) else None
@@ -1449,13 +1531,17 @@ class Porta:
                 self._soltar_o_peso_quando_preciso(), name="mods-porta-peso-da-mira")
 
     async def _soltar_o_peso_quando_preciso(self) -> None:
-        """O peso volta a 1 quando o jogo fecha e quando a seção Controles de um controle deixa de
-        estar no modo de quem pesou; a vigia acaba quando o peso fica sem donos (o prazo, a queda
-        da extensão), pelo aviso dele."""
+        """O peso volta a 1 quando o jogo fecha; o peso, o giro desligado e a escala da vibração
+        saem quando a seção Controles de um controle deixa o modo de quem pediu; o peso e o giro
+        saem quando o jogo troca para um com anticheat e a chave dele está desligada. A vigia
+        acaba quando nada disso tem dono (o prazo, a queda da extensão), pelo aviso dele."""
         loop = asyncio.get_running_loop()
         vazio = asyncio.Event()
+        self._acordar_o_vigia = vazio
         fechou = self.bus.subscribe(EventTopic.JOGO_FECHOU)
         modos = self.bus.subscribe(EventTopic.MODO_ABA)
+        identidades = self.bus.subscribe(EventTopic.JOGO_IDENTIDADE)
+        conferido: str | None = None
 
         def avisar() -> None:
             if not loop.is_closed():
@@ -1465,13 +1551,19 @@ class Porta:
         try:
             while True:
                 vazio.clear()
-                if not PESO_DA_MIRA.donos() and not PESO_DA_MIRA.donos_do_giro():
+                jogo = self._jogo_aberto()
+                if jogo is not None and jogo != conferido:
+                    conferido = jogo
+                    await self._soltar_no_jogo_com_anticheat(jogo)
+                if (not PESO_DA_MIRA.donos() and not PESO_DA_MIRA.donos_do_giro()
+                        and not self._escalas):
                     break
                 do_fim = asyncio.ensure_future(fechou.get())
                 do_modo = asyncio.ensure_future(modos.get())
+                do_jogo = asyncio.ensure_future(identidades.get())
                 do_vazio = asyncio.ensure_future(vazio.wait())
                 feitos, pendentes = await asyncio.wait(
-                    {do_fim, do_modo, do_vazio}, return_when=asyncio.FIRST_COMPLETED)
+                    {do_fim, do_modo, do_jogo, do_vazio}, return_when=asyncio.FIRST_COMPLETED)
                 for pendente in pendentes:
                     pendente.cancel()
                 if do_fim in feitos:
@@ -1480,11 +1572,13 @@ class Porta:
                     self._soltar_fora_do_modo(do_modo.result())
         finally:
             esquecer()
+            if self._acordar_o_vigia is vazio:
+                self._acordar_o_vigia = None
             self.bus.unsubscribe(EventTopic.JOGO_FECHOU, fechou)
             self.bus.unsubscribe(EventTopic.MODO_ABA, modos)
+            self.bus.unsubscribe(EventTopic.JOGO_IDENTIDADE, identidades)
 
-    @staticmethod
-    def _soltar_fora_do_modo(carga: Any) -> None:
+    def _soltar_fora_do_modo(self, carga: Any) -> None:
         if not isinstance(carga, dict) or not isinstance(carga.get("secoes"), dict):
             return
         modo = carga["secoes"].get("controles")
@@ -1492,9 +1586,16 @@ class Porta:
         for dono in PESO_DA_MIRA.donos():
             if modo != f"extensao:{dono}":
                 PESO_DA_MIRA.soltar(dono, uniq if isinstance(uniq, str) else None)
+        if not isinstance(uniq, str) or not uniq:
+            return
         for dono in PESO_DA_MIRA.donos_do_giro():
-            if modo != f"extensao:{dono}" and isinstance(uniq, str) and uniq:
+            if modo != f"extensao:{dono}":
                 PESO_DA_MIRA.ligar(dono, uniq)
+        chave = chave_de_sensor(uniq)
+        for dono, escalado in sorted(self._escalas):
+            if chave_de_sensor(escalado) == chave and modo != f"extensao:{dono}":
+                ESCALA_DA_VIBRACAO.pedir(dono, escalado, 1.0)
+                self._escalas.discard((dono, escalado))
 
     def _ligar_a_captura(self) -> None:
         if self._captura_da_tela is None or self._captura_da_tela.done():
@@ -1697,6 +1798,12 @@ class Porta:
                 CODE_SEM_PERMISSAO,
                 "o jogo só abre com o comando e o id dele: sem opção, sem endereço e sem «=»")
         try:
+            argv[0] = await asyncio.to_thread(
+                comando_fora_da_caixa, argv[0], caminho_da_sessao(), pastas_que_a_caixa_escreve())
+        except ValueError as exc:
+            logger.warning("mods_porta_comando_recusado", mod=sessao.mod_id, err=str(exc))
+            raise RecusaError(CODE_NAO_ESCREVEU, "o jogo não abriu") from exc
+        try:
             caminho = await asyncio.to_thread(self._abrir_o_jogo, sessao.mod_id, argv)
         except Exception as exc:
             logger.warning("mods_porta_jogo_nao_abriu", mod=sessao.mod_id, err=str(exc))
@@ -1721,14 +1828,10 @@ class Porta:
         if ligada:
             PESO_DA_MIRA.ligar(sessao.mod_id, alvo)
             return {"status": "ok", "ligada": True}
-        jogo = self._jogo_aberto()
-        if jogo is not None:
-            anticheat = await asyncio.to_thread(self._anticheat_do_jogo, jogo)
-            chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(ARQUIVO_DO_PESO_DA_MIRA))
-            if anticheat and not chaves.liberada(jogo, anticheat):
-                raise RecusaError(
-                    CODE_NAO_ESCREVEU,
-                    f"este jogo usa {anticheat}: desligar o giroscópio pede a chave do jogo ligada")
+        if barra := await self._anticheat_que_barra(self._jogo_aberto()):
+            raise RecusaError(
+                CODE_NAO_ESCREVEU,
+                f"este jogo usa {barra}: desligar o giroscópio pede a chave do jogo ligada")
         no_modo = self._no_modo_da_extensao(sessao)
         alvos = sorted(no_modo) if alvo == TODOS_OS_CONTROLES else [
             a for a in (chave_de_sensor(alvo),) if a in no_modo]
@@ -1743,21 +1846,34 @@ class Porta:
     def _escalar_a_vibracao(self, sessao: _Credencial,
                             params: dict[str, Any]) -> dict[str, Any]:
         """O ``vibracao.escala {uniq, escala}``: de 0 a 1, multiplica a força de tudo o que vai
-        ao motor daquele controle, o jogo e as extensões; 1 devolve a força inteira."""
+        ao motor daquele controle, o jogo e as extensões; 1 devolve a força inteira. Abaixo de 1,
+        só no controle cuja seção Controles está no modo da extensão, e sai quando a seção deixa o
+        modo."""
         if "escrever:vibracao" not in sessao.permissoes:
             raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão escrever:vibracao")
         uniq = _uniq_do_pedido(params, "vibracao.escala")
         escala: Any = params.get("escala")
         if not _numero(escala) or not 0 <= escala <= 1:
             raise RecusaError(CODE_INVALID_PARAMS, "vibracao.escala pede a escala de 0 a 1")
+        chave = chave_de_sensor(uniq)
+        if escala < 1 and chave not in self._no_modo_da_extensao(sessao):
+            raise RecusaError(
+                CODE_NAO_ESCREVEU, "a seção Controles deste controle não está no modo da extensão")
         ESCALA_DA_VIBRACAO.pedir(sessao.mod_id, uniq, float(escala))
+        self._escalas = {(d, u) for d, u in self._escalas
+                         if d != sessao.mod_id or chave_de_sensor(u) != chave}
+        if escala < 1:
+            self._escalas.add((sessao.mod_id, uniq))
+            self._vigiar_o_peso()
         return {"status": "ok", "escala": float(escala)}
 
-    @staticmethod
-    def _soltar_os_ajustes(mod_id: str) -> None:
+    def _soltar_os_ajustes(self, mod_id: str) -> None:
         PESO_DA_MIRA.soltar(mod_id)
         PESO_DA_MIRA.religar_de(mod_id)
         ESCALA_DA_VIBRACAO.soltar(mod_id)
+        self._escalas = {(d, u) for d, u in self._escalas if d != mod_id}
+        if self._acordar_o_vigia is not None:
+            self._acordar_o_vigia.set()
 
     async def _soltar_a_vibracao(self, sessao: _Credencial, uniqs: set[str]) -> None:
         """Quem vibrou saiu: os motores que ele deixou ligados param, se o jogo não os tem."""
@@ -2780,7 +2896,9 @@ __all__ = [
     "RecusaError",
     "abrir_pelo_lancador",
     "botoes_de_todo_controle_no_servico",
+    "caminho_da_sessao",
     "carga_do_estilo",
+    "comando_fora_da_caixa",
     "controles_no_servico",
     "cor_do_plastico_no_servico",
     "credencial_do_par",
@@ -2791,6 +2909,7 @@ __all__ = [
     "estado_vazio_dos_acessorios",
     "movimento_de_todo_controle_no_servico",
     "o_jogo_escreve_no_servico",
+    "pastas_que_a_caixa_escreve",
     "pulsar_no_servico",
     "topicos_de_todo_controle_no_servico",
     "uniq_do_posto_no_servico",
