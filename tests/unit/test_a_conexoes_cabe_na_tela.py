@@ -211,7 +211,8 @@ def _pintar_as_dicas(html: str) -> str:
 ESPERA_POR_CONDICAO = True
 QUIETO_MS = 60
 QUIETO_NA_CARGA_MS = 300
-TETO_DA_ESPERA_S = 2.0
+TETO_DA_ESPERA_S = 20.0
+SEM_PROGRESSO_S = 60.0
 INTERVALO_DO_POLL_MS = 15
 _ABERTOS: dict[tuple[int, int], tuple[Any, Any]] = {}
 _REUSANDO = [False]
@@ -312,25 +313,55 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
     respostas: list[str] = []
     view, janela, destruir = _a_view_de(tamanho)
     fila = [hefesto_vivo.BOOTSTRAP, *passos]
+    inicio = time.monotonic()
+    ultimo = [inicio]
+    diario: list[str] = []
+    parou: list[str] = []
+    mortes: list[str] = []
+    acabou = [False]
+    geracao = [0]
+    carga_viva = [False]
+
+    def vale(desta: int) -> bool:
+        return not acabou[0] and desta == geracao[0]
+
+    def progrediu(o_que: str = "") -> None:
+        ultimo[0] = time.monotonic()
+        if o_que:
+            diario.append(f"{ultimo[0] - inicio:.1f}s {o_que}")
+
+    def encerrar(motivo: str) -> None:
+        if not parou:
+            parou.append(motivo)
+        Gtk.main_quit()
 
     def depois_de_aquietar(minimo_ms: int, seguir: Any) -> None:
-        """Chama `seguir` quando o DOM aquietou, ou no teto; sem a espera, na primeira folga."""
+        """Chama `seguir` quando o DOM aquietou; no teto, encerra dizendo. Sem espera, na folga."""
         if not ESPERA_POR_CONDICAO:
             GLib.idle_add(lambda: seguir() or False)
             return
         limite = time.monotonic() + TETO_DA_ESPERA_S
         js = _QUIETO_JS.replace("MINIMO", str(minimo_ms))
         seguidas = [0]
+        desta = geracao[0]
 
         def pergunta() -> bool:
+            if not vale(desta):
+                return False
+
             def respondeu(v: Any, res: Any, _u: Any = None) -> None:
+                if not vale(desta):
+                    return
                 try:
                     quieto = v.evaluate_javascript_finish(res).to_string() == "quieto"
                 except Exception:
                     quieto = True
+                progrediu()
                 seguidas[0] = seguidas[0] + 1 if quieto else 0
-                if seguidas[0] >= 2 or time.monotonic() >= limite:
+                if seguidas[0] >= 2:
                     seguir()
+                elif time.monotonic() >= limite:
+                    encerrar(f"o DOM não aquietou em {TETO_DA_ESPERA_S:g} s")
                 else:
                     GLib.timeout_add(INTERVALO_DO_POLL_MS, pergunta)
 
@@ -340,35 +371,75 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
         GLib.timeout_add(INTERVALO_DO_POLL_MS, pergunta)
 
     def seguinte() -> bool:
+        if acabou[0]:
+            return False
         if not fila:
             Gtk.main_quit()
             return False
 
+        desta = geracao[0]
+
         def respondeu(v: Any, res: Any, _u: Any = None) -> None:
+            if not vale(desta):
+                return
             try:
                 respostas.append(v.evaluate_javascript_finish(res).to_string())
             except Exception as erro:
                 respostas.append(f"ERRO {erro}")
+            progrediu(f"resposta {len(respostas)}")
             depois_de_aquietar(QUIETO_MS, seguinte)
 
         view.evaluate_javascript(fila.pop(0), -1, None, None, None, respondeu, None)
         return False
 
     def carregou(_v: Any, evento: Any) -> None:
-        if evento == WebKit2.LoadEvent.FINISHED:
+        progrediu(f"carga {evento.value_nick}")
+        if evento == WebKit2.LoadEvent.STARTED:
+            carga_viva[0] = True
+        elif evento == WebKit2.LoadEvent.FINISHED and carga_viva[0]:
+            carga_viva[0] = False
             depois_de_aquietar(QUIETO_NA_CARGA_MS, seguinte)
 
-    ligacao = view.connect("load-changed", carregou)
+    def morreu(_v: Any, motivo: Any) -> None:
+        nome = getattr(motivo, "value_nick", None) or str(motivo)
+        mortes.append(nome)
+        progrediu(f"processo web morreu ({nome})")
+        if len(mortes) > 1:
+            encerrar(f"o processo web morreu duas vezes ({', '.join(mortes)})")
+            return
+        geracao[0] += 1
+        carga_viva[0] = False
+        respostas.clear()
+        fila[:] = [hefesto_vivo.BOOTSTRAP, *passos]
+        view.load_uri(pagina.as_uri())
+
+    def vigiar() -> bool:
+        if acabou[0]:
+            return False
+        if time.monotonic() - ultimo[0] >= SEM_PROGRESSO_S:
+            encerrar(f"{SEM_PROGRESSO_S:g} s sem progresso")
+            return False
+        return True
+
+    ligacoes = [view.connect("load-changed", carregou),
+                view.connect("web-process-terminated", morreu),
+                view.connect("notify::estimated-load-progress", lambda *_a: progrediu())]
     view.load_uri(pagina.as_uri())
-    guarda = GLib.timeout_add(60000, Gtk.main_quit)
+    GLib.timeout_add(1000, vigiar)
     try:
         Gtk.main()
     finally:
-        GLib.source_remove(guarda)
-        view.disconnect(ligacao)
+        acabou[0] = True
+        for ligacao in ligacoes:
+            view.disconnect(ligacao)
         if destruir:
             janela.destroy()
-    assert len(respostas) == len(passos) + 1, f"o WebKit parou no meio: {respostas}"
+        if parou and not destruir:
+            _ABERTOS.pop(tamanho, None)
+            janela.destroy()
+    assert not parou and len(respostas) == len(passos) + 1, (
+        f"o WebKit parou no meio ({parou[0] if parou else 'sem motivo'}) depois de "
+        f"{len(respostas)} de {len(passos) + 1} respostas: {diario}")
     return [json.loads(x) if x.startswith("{") else x for x in respostas[1:]]
 
 
@@ -421,6 +492,41 @@ def test_o_modulo_reusa_o_mesmo_webview_para_cada_pagina_do_mesmo_tamanho(tmp_pa
     _no_webkit(pagina, (420, 310), ["'três'"])
     assert _ABERTOS[(410, 310)] is primeiro, "um tamanho novo não tira o que já estava aberto"
     assert (420, 310) in _ABERTOS
+
+
+def test_o_processo_web_que_morre_no_meio_recarrega_a_pagina_uma_vez(tmp_path: Path) -> None:
+    """A-REGUA-DA-CONEXOES-ESPERA-PELO-PROGRESSO-01. MORDIDA: sem ouvir o `web-process-terminated`,
+    a régua espera até o `SEM_PROGRESSO_S` e reprova com «sem progresso»."""
+    from gi.repository import WebKit2
+
+    tamanho = (430, 310)
+    view, _janela, _destruir = _a_view_de(tamanho)
+    matou: list[int] = []
+
+    def matar(v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED and not matou:
+            matou.append(1)
+            v.terminate_web_process()
+
+    ligacao = view.connect("load-changed", matar)
+    try:
+        lidas = _no_webkit(_a_pagina_da_espera(tmp_path), tamanho, [_MEXE_O_DOM, _LE_O_DOM])
+    finally:
+        view.disconnect(ligacao)
+    assert matou, "o processo web não foi morto: a prova não provou nada"
+    assert lidas == ["mexeu", "10"], lidas
+
+
+def test_o_dom_que_nunca_aquieta_reprova_dizendo_e_nao_mede_no_meio(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """MORDIDA: devolver o teto que solta o passo calado faz esta régua não reprovar."""
+    monkeypatch.setattr(sys.modules[__name__], "TETO_DA_ESPERA_S", 1.0)
+    pagina = tmp_path / "inquieta.html"
+    pagina.write_text(_PAGINA_DA_ESPERA.replace(
+        "</body>", "<script>setInterval(function(){document.body.dataset.t=Date.now();},10);"
+                   "</script></body>"), encoding="utf-8")
+    with pytest.raises(AssertionError, match="o DOM não aquietou em 1 s"):
+        _no_webkit(pagina, (440, 310), [_LE_O_DOM])
 
 
 _VISTAS: dict[int, dict[str, Any]] = {}
