@@ -551,6 +551,10 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "atualizador-anteriores.json": (CASA, "a versão anterior de cada peça, para voltar"),
     "atualizador": (CASA, "o cache dos downloads do atualizador (o MangoHud baixado)"),
     "atualizador.log": (CASA, "o registro das atualizações; não identifica controle"),
+    "atualizador-ja-esta.json": (CASA, "a versão de cada peça que não tinha o que subir aqui, e "
+                                       "o porquê; não identifica controle"),
+    "python-sem-roda.json": (CASA, "os pacotes Python cuja versão nova não montou roda, e o "
+                                   "porquê; não identifica controle"),
     "memoria_dos_jogos.json": (CASA, "a chave Memória de cada jogo; não identifica controle"),
     "peso_da_mira_dos_jogos.json": (CASA, "a chave do peso da mira de cada jogo com anticheat; "
                                           "não identifica controle"),
