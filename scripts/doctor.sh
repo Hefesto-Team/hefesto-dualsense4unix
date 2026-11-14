@@ -6333,7 +6333,7 @@ check_o_portal_de_captura_do_cosmic() {
     elif [[ -r "${curadas}" ]] && grep -q -x -F -- "${de_cima}" "${curadas}" 2>/dev/null; then
         pass "o portal de captura ${ver} já traz de cima a cura do cosmic-protocols#${pr}"
     elif [[ ! -e "${pref}" && "${ver}" != *~hefesto* ]]; then
-        info "o portal de captura (${vivo}, pacote ${ver}) é o da distribuição, sem o cosmic-protocols#${pr}: o «Ver a tela» do Modo imersão pode cair — $(conselho_de_instalacao --com-tela) para a casa construir o corrigido"
+        info "o portal de captura (${vivo}, pacote ${ver}) é o da distribuição, sem o cosmic-protocols#${pr}: o «Ver a tela» do Modo imersão pode cair — $(conselho_de_instalacao --com-tela) para construir o corrigido"
     else
         warn "o portal de captura (${vivo}, pacote ${ver}) não traz o cosmic-protocols#${pr}: o compartilhamento de tela cai com «create_frame sent before the previous frame was destroyed», e o portal aborta — $(conselho_de_instalacao --com-tela)$(so_no_checkout "(o passo 3f-ter constrói e instala o portal corrigido: scripts/construir_portal_cosmic_backport.sh, pela receita em docs/usage/receita-backport-portal-cosmic.md)")"
     fi
