@@ -57,8 +57,15 @@ class _Vpad:
 
 
 class _Mouse:
+    acoes: dict[str, str] | None = None
+
     def set_speed(self, *, mouse_speed: int, scroll_speed: int) -> None:
         self.velocidades = (mouse_speed, scroll_speed)
+
+    def set_button_actions(
+        self, do_mouse: dict[str, str] | None, calados: frozenset[str] | None = None
+    ) -> None:
+        self.acoes = do_mouse
 
 
 def _daemon(monkeypatch: pytest.MonkeyPatch, *, transporte: str, mascara: str) -> Daemon:
@@ -136,6 +143,8 @@ def test_do_gamepad_para_o_jogo_de_mouse_sem_mode_o_mouse_liga_e_o_fps_devolve_o
 
     assert d._gamepad_device is None
     assert d.config.mouse_emulation_enabled is True and d._mouse_device is not None
+    if estilo == "point_and_click":
+        assert d._mouse_device.acoes, "os botões do Point and click não chegaram ao mouse"
 
     _abre(d, _perfil_do_jogo("fps", mouse=com_secao_mouse))
 
@@ -166,6 +175,36 @@ def test_o_nativo_que_o_usuario_ligou_nao_ganha_o_mouse_pelo_jogo_sem_mode(
 
     assert d._native_mode is True
     assert d._mouse_device is None
+
+
+@pytest.mark.parametrize("transporte", TRANSPORTES)
+def test_o_nativo_que_um_perfil_ligou_cede_o_mouse_ao_jogo_de_mouse_sem_mode(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    d = _daemon(monkeypatch, transporte=transporte, mascara="dualsense")
+    _abre(d, _perfil_do_jogo("fps", mode={"kind": "native"}))
+    assert d._native_mode is True
+
+    _abre(d, _perfil_do_jogo("visual_novel"))
+
+    assert d._native_mode is False
+    assert d.config.mouse_emulation_enabled is True and d._mouse_device is not None
+
+
+@pytest.mark.parametrize("transporte", TRANSPORTES)
+def test_a_secao_mouse_desligada_do_jogo_de_mouse_sem_mode_vale_como_no_mode_escrito(
+    monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    resultados = []
+    for mode in (None, {"kind": "desktop", "arranjo": "point_and_click"}):
+        d = _daemon(monkeypatch, transporte=transporte, mascara="xbox")
+        _abre(d, _perfil_do_jogo("visual_novel"))
+        assert d._mouse_device is not None
+        dados = _perfil_do_jogo("point_and_click", mode=mode).model_dump(exclude_unset=True)
+        _abre(d, Profile.model_validate({**dados, "mouse": {"enabled": False}}))
+        resultados.append((d._mouse_device is None, d._gamepad_device is None))
+
+    assert resultados == [(True, True), (True, True)]
 
 
 def test_o_mode_escrito_vale_acima_do_estilo(monkeypatch: pytest.MonkeyPatch) -> None:
