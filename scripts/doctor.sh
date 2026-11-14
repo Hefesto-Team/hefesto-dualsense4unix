@@ -4662,7 +4662,7 @@ check_teclado_na_tela() {
     elif command -v dnf >/dev/null 2>&1; then
         comando="sudo dnf install ${pacote}"
     elif command -v pacman >/dev/null 2>&1; then
-        comando="sudo pacman -S ${pacote}"
+        comando="$(_osk_comando_do_pacman "${pacote}")"
     fi
 
     if command -v "${esperado}" >/dev/null 2>&1; then
@@ -4699,7 +4699,7 @@ check_teclado_na_tela() {
             info "para devolver: ${comando}"
             ;;
         falhou|dry-run)
-            fail "teclado na tela: o install TENTOU instalar ${pacote_gravado:-${pacote}} e não conseguiu (motivo: ${motivo:-não registrado}, em ${data:-data não registrada})"
+            _osk_o_install_nao_conseguiu "${pacote_gravado:-${pacote}}" "${motivo}" "${data}"
             info "rode: ${comando}"
             ;;
         *)
@@ -6522,6 +6522,23 @@ check_caixa_das_extensoes() {
         pacote="sudo pacman -S bubblewrap"
     fi
     warn "bwrap AUSENTE — as extensões não abrem sem a caixa. Instale: ${pacote}, ou $(conselho_de_instalacao)"
+}
+
+_osk_comando_do_pacman() {
+    if pacman -Si "$1" >/dev/null 2>&1; then
+        printf 'sudo pacman -S %s' "$1"
+    else
+        printf 'paru -S %s (ou yay -S %s: %s mora no AUR, fora dos repositórios oficiais)' "$1" "$1" "$1"
+    fi
+}
+
+_osk_o_install_nao_conseguiu() {
+    local pacote="$1" motivo="$2" data="$3"
+    if [[ "${motivo}" == "so-no-aur" ]]; then
+        warn "teclado na tela: ${pacote} mora no AUR, e o install não compila pacote do AUR por você (em ${data:-data não registrada}) — o L3 avisa na tela em vez de abrir"
+    else
+        fail "teclado na tela: o install TENTOU instalar ${pacote} e não conseguiu (motivo: ${motivo:-não registrado}, em ${data:-data não registrada})"
+    fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

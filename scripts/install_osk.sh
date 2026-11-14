@@ -101,12 +101,35 @@ gerenciador() {
     printf 'nenhum\n'
 }
 
+no_repositorio_oficial() {
+    [[ "$(gerenciador)" == "pacman" ]] || return 0
+    pacman -Si "$1" >/dev/null 2>&1
+}
+
+comando_do_aur() {
+    local pacote="$1" ajudante
+    for ajudante in paru yay; do
+        if command -v "${ajudante}" >/dev/null 2>&1; then
+            printf '%s -S %s\n' "${ajudante}" "${pacote}"
+            return 0
+        fi
+    done
+    printf 'instale %s pelo AUR (https://aur.archlinux.org/packages/%s), com o paru ou o yay: paru -S %s\n' \
+        "${pacote}" "${pacote}" "${pacote}"
+}
+
 comando_manual() {
     local pacote="$1"
     case "$(gerenciador)" in
         apt)    printf 'sudo apt install %s\n' "${pacote}" ;;
         dnf)    printf 'sudo dnf install %s\n' "${pacote}" ;;
-        pacman) printf 'sudo pacman -S %s\n' "${pacote}" ;;
+        pacman)
+            if no_repositorio_oficial "${pacote}"; then
+                printf 'sudo pacman -S %s\n' "${pacote}"
+            else
+                comando_do_aur "${pacote}"
+            fi
+            ;;
         *)      printf 'instale o pacote %s pela sua distribuição\n' "${pacote}" ;;
     esac
 }
@@ -198,6 +221,13 @@ if [[ "${GERENCIADOR}" == "nenhum" ]]; then
     warn "sem apt/dnf/pacman — não sei instalar ${PACOTE} nesta distribuição"
     info "instale à mão: $(comando_manual "${PACOTE}")"
     gravar_sentinela "falhou" "${PACOTE}" "${ESPERADO}" "sem-gerenciador"
+    exit 0
+fi
+
+if ! no_repositorio_oficial "${PACOTE}"; then
+    warn "${PACOTE} não está nos repositórios oficiais do pacman: mora no AUR, que o Hefesto não compila por você (o L3 vai avisar na tela em vez de abrir)"
+    info "rode: $(comando_do_aur "${PACOTE}")"
+    gravar_sentinela "falhou" "${PACOTE}" "${ESPERADO}" "so-no-aur"
     exit 0
 fi
 
