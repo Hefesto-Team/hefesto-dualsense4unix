@@ -19,6 +19,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
     atualizar,
     frase_do_preparo,
+    gravar_registro,
     instalar,
     ler_registro,
     ligar,
@@ -94,3 +95,22 @@ def test_a_linha_de_comando_mostra_o_preparo_antes_do_sim(
     if comando[0] == "ligar":
         assert saida.index(frase) < saida.index("Ligar com estas permissões?")
         assert not (lar.dados / "exemplo" / "v1").exists()
+
+
+def test_a_tag_que_nao_confere_nao_se_esconde_atras_do_preparo(
+        lar: Lugares, tmp_path: Path) -> None:
+    fonte = _fonte(tmp_path, preparar=["bash", "install.sh", "--yes"])
+    _com_install(fonte, "v1")
+    instalar(str(fonte), lugares=lar)
+    _ligar(lar)
+    registro = ler_registro(lar.registro)
+    registro["exemplo"].origem = "oficial"
+    gravar_registro(lar.registro, registro)
+
+    _fonte(tmp_path, versao="0.2.0", preparar=["bash", "install.sh", "--yes"])
+    _com_install(fonte, "v2")
+    assert not instalar(str(fonte), lugares=lar, sozinha=True).trocou
+
+    entrada = ler_registro(lar.registro)["exemplo"]
+    assert entrada.motivo_da_espera == "A tag da versão 0.2.0 não confere com a chave oficial."
+    assert not (lar.dados / "exemplo" / "v2").exists()

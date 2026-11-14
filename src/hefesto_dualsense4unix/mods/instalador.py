@@ -802,10 +802,10 @@ def _o_que_segura_a_atualizacao(
         return f"A versão {manifesto.versao} traz outro aviso."
     if _preparo_novo(lg, anterior, manifesto):
         return f"A versão {manifesto.versao} traz um preparo novo."
-    if manifesto.preparar:
-        return f"A versão {manifesto.versao} roda o preparo de novo, fora da caixa."
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
+    if manifesto.preparar:
+        return f"A versão {manifesto.versao} roda o preparo de novo, fora da caixa."
     if a_substituir:
         registro = ler_registro(lg.registro)
         nomes = ", ".join(f"«{registro[i].nome if i in registro else i}»" for i in a_substituir)
