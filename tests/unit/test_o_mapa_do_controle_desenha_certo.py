@@ -12,7 +12,9 @@ solto; e o «Usar em» com o nome longo do jogo cabe numa linha.
 MORDIDAS (14/11/2026): devolver a regra que pintava a peça na cor do tipo quando a linha está
 «muda» reprova `test_em_repouso_nada_acende`; voltar a tecla ao anel (`teclas_cheias` sem efeito)
 reprova `test_toda_tecla_tem_o_miolo_pintado`; tirar o `ps_entre_os_analogicos` reprova
-`test_o_ps_fica_no_meio_dos_analogicos`; tirar o `css_do_contraste` reprova o contraste no White.
+`test_o_ps_fica_no_meio_dos_analogicos`; tirar o `css_do_contraste` reprova o contraste no White;
+deixar o filtro do touchpad reprova `test_em_repouso_nada_acende`; e tirar o `:focus` dos gatilhos
+reprova `test_so_acende_a_peca_em_uso`.
 """
 from __future__ import annotations
 
