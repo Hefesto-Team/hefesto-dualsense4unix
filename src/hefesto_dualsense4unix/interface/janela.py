@@ -106,6 +106,28 @@ AS_QUATRO_ARMADILHAS: tuple[str, ...] = (
 
 MS_ANTES_DE_RECARREGAR = 250
 
+PERGUNTA_DA_PAGINA = (
+    "JSON.stringify({titulo: document.title, caminho: location.protocol === 'file:' ? "
+    "decodeURIComponent(location.pathname) : '', "
+    "da_casa: !!document.querySelector('[data-campo],[data-gesto]')})"
+)
+
+
+def e_pagina_da_casa(resposta: str | None, pasta: pathlib.Path) -> tuple[bool, str]:
+    """A página respondeu que é uma página do produto: um arquivo que existe na ``pasta`` das
+    páginas da janela, com o vocabulário que o piloto dirige. Devolve o veredito e o título."""
+    try:
+        lida = json.loads(resposta or "")
+    except ValueError:
+        return False, ""
+    if not isinstance(lida, dict):
+        return False, ""
+    titulo = str(lida.get("titulo") or "")
+    caminho = pathlib.Path(str(lida.get("caminho") or ""))
+    mora_aqui = (caminho.is_absolute() and caminho.is_file()
+                 and caminho.resolve().parent == pasta.resolve())
+    return bool(mora_aqui and lida.get("da_casa") is True), titulo
+
 RECARGAS_SEGUIDAS = 3
 
 SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
@@ -747,7 +769,7 @@ class JanelaDaAba:
         self,
         *,
         arquivo: pathlib.Path,
-        titulo_esperado: str,
+        titulo_esperado: str | None,
         ao_carregar: Callable[[], None],
         ao_receber: Callable[[dict[str, Any]], None] | None = None,
         ao_recusar: Callable[[str, str], None] | None = None,
@@ -1194,11 +1216,17 @@ class JanelaDaAba:
     def _confirmar_a_pagina(self) -> None:
         """Quem diz que a carga deu certo é a PÁGINA, não o evento nem o URI."""
 
-        def respondeu(titulo: str | None, erro: Exception | None) -> None:
+        def respondeu(resposta: str | None, erro: Exception | None) -> None:
             if erro is not None:
                 self._morrer(f"a página não respondeu: {erro}")
                 return
-            if self.titulo_esperado not in (titulo or ""):
+            titulo: str | None
+            if self.titulo_esperado is None:
+                reconhecida, titulo = e_pagina_da_casa(resposta, self.arquivo.parent)
+            else:
+                titulo = resposta
+                reconhecida = self.titulo_esperado in (titulo or "")
+            if not reconhecida:
                 if self.primeira_carga:
                     self._morrer(f"carregou OUTRA página: título {titulo!r}")
                 else:
@@ -1209,7 +1237,8 @@ class JanelaDaAba:
             self._viva_desde = time.monotonic()
             self._ao_carregar()
 
-        self.ponte.perguntar("document.title", respondeu)
+        pergunta = "document.title" if self.titulo_esperado is not None else PERGUNTA_DA_PAGINA
+        self.ponte.perguntar(pergunta, respondeu)
 
     def _morreu_a_pagina(self, _view: Any, motivo: Any) -> None:
         """O processo web do WebKit terminou. A janela RECARREGA — e diz."""

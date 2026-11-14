@@ -64,9 +64,6 @@ MS_DA_PISCADA = 1500
 
 CHAVE_DO_CLIQUE_QUE_SO_ARMOU = "armou"
 
-TITULO_DE_QUALQUER_ABA = "Hefesto — aba "
-
-
 def _a_pagina_pedida(pedido: str) -> str:
     """Resolve o que veio no ``--abre`` para o nome de arquivo da página.
 
@@ -1796,7 +1793,7 @@ class Piloto:
 
         self.tela = JanelaDaAba(
             arquivo=onde.pagina(PRIMEIRA, publicado=True),
-            titulo_esperado=TITULO_DE_QUALQUER_ABA,
+            titulo_esperado=None,
             ao_carregar=self._instalar,
             ao_receber=self._gesto,
             ao_sair_da_aba=self._navegou,
