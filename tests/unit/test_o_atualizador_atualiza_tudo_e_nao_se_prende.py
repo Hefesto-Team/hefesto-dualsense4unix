@@ -142,7 +142,8 @@ def test_o_voo_e_espera_do_hefesto_e_nao_falha(monkeypatch: pytest.MonkeyPatch) 
 
 def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar() -> None:
     """Medida 2: a Steam aberta deixa a peça «Esperando», as outras andam, e ao fechar a peça
-    volta da etapa em que parou (sem baixar de novo) e termina pronta."""
+    volta da etapa em que parou (sem baixar de novo) e termina pronta. O serviço reinicia antes
+    da espera (o B novo não roda sob o serviço velho) e de novo quando o GE-Proton fica pronto."""
     d = _Diario()
     steam = {"aberta": True}
 
@@ -152,24 +153,33 @@ def test_a_steam_aberta_espera_a_fila_segue_e_a_peca_aplica_ao_fechar() -> None:
             raise at.EsperaError("a Steam está aberta", lambda: not steam["aberta"])
 
     voltas = [0]
+    servico: list[str] = []
 
     def dormir(_s: float) -> None:
         voltas[0] += 1
         assert _linha("proton")["selo"] == at.ESPERANDO
         assert _linha("proton")["motivo"] == "a Steam está aberta"
         assert _linha("b")["selo"] == at.PRONTA, "a fila não esperou a Steam para seguir"
+        assert servico == ["reiniciar", "reabrir"], \
+            "o B novo ficou sob o serviço velho enquanto a Steam segurava o GE-Proton"
         if voltas[0] == 3:
             steam["aberta"] = False
 
+    def anotar(o_que: str) -> bool:
+        servico.append(o_que)
+        return True
+
     lista = [_peca(d, "proton", instalar=instalar), _peca(d, "b")]
     at.conferir(rede=True, lista=lista)
-    rc, servico = _rodar(lista, ["proton", "b"], dormir=dormir)
+    rc = at.rodar(["proton", "b"], lista=lista, jogo_aberto=lambda: False,
+                  reiniciar=lambda: anotar("reiniciar"), reabrir=lambda: anotar("reabrir"),
+                  dormir=dormir)
     assert rc == 0
     assert d.feito == ["proton:baixar", "proton:instalar", "b:baixar", "b:instalar", "b:aplicar",
                        "proton:instalar", "proton:aplicar"]
     assert _linha("proton")["selo"] == at.PRONTA and _linha("proton")["motivo"] == ""
     assert at.ler_o_andamento()["total"]["falhas"] == 0
-    assert servico == ["reiniciar", "reabrir"]
+    assert servico == ["reiniciar", "reabrir"] * 2
 
 
 def test_a_steam_que_nao_fecha_no_prazo_deixa_a_peca_para_a_proxima() -> None:

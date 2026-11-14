@@ -737,6 +737,10 @@ def _o_que_fazer(peca: Peca, visto: dict[str, Any] | None) -> str:
     return REINSTALAR
 
 
+def _prontas(andamento: _Andamento) -> set[str]:
+    return {str(p.get("id")) for p in andamento.dado["pecas"] if p.get("selo") == PRONTA}
+
+
 def _livre(espera: EsperaError) -> bool:
     try:
         return bool(espera.livre())
@@ -761,8 +765,9 @@ def rodar(
     segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez e, já em
     dia, fica «Atualizado» sem baixar. A que espera (a Steam, o voo) vai para o fim e volta da
     mesma etapa quando passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma
-    falha não para as outras. Se alguma peça mudou, reinicia o serviço e reabre a janela.
-    Devolve 0 pronto, 1 com falha, 2 parada ou com peça ainda esperando.
+    falha não para as outras. Se alguma peça mudou, reinicia o serviço e reabre a janela: antes
+    de esperar a que ficou para trás (o código novo não roda horas sob o serviço velho) e de novo
+    se a peça mudar. Devolve 0 pronto, 1 com falha, 2 parada ou com peça ainda esperando.
     """
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
@@ -808,6 +813,12 @@ def rodar(
                 espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
                 if espera is not None:
                     adiadas.append((peca, espera, vez))
+            reiniciadas: set[str] = set()
+            if adiadas and _prontas(andamento):
+                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo):
+                    raise FilaParadaError
+                _rodar_o_servico(andamento, reiniciar, reabrir)
+                reiniciadas = _prontas(andamento)
             inicio = relogio()
             while adiadas and relogio() - inicio < prazo:
                 if _pediram_parar():
@@ -835,9 +846,9 @@ def rodar(
                 raise FilaParadaError
             andamento.dado["fase"] = FIM
             andamento.gravar()
-            if any(p.get("selo") == PRONTA for p in andamento.dado["pecas"]):
+            if _prontas(andamento) - reiniciadas:
                 _rodar_o_servico(andamento, reiniciar, reabrir)
-            else:
+            elif not reiniciadas:
                 andamento.dado["reinicio"]["selo"] = ATUALIZADA
         except FilaParadaError:
             andamento.dado["fase"] = PARADO

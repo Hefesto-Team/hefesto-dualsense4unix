@@ -69,12 +69,6 @@ ICONES = {
     "umu": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9v6l5-3z"/>',
     "": '<rect x="4" y="4" width="16" height="16" rx="2"/>',
 }
-ETAPAS_NA_TELA = (("baixar", "Baixar"), ("instalar", "Instalar"), ("aplicar", "Aplicar em todos"))
-ETAPAS_DO_REINICIO = (("reiniciar", "Reiniciar o serviço"), ("reabrir", "Reabrir o Hefesto"))
-SELO_DO_ANDAMENTO = {"fila": ("fila", "NA FILA"), "baixando": ("baixando", "BAIXANDO"),
-                     "instalando": ("instalando", "INSTALANDO"),
-                     "aplicando": ("aplicando", "APLICANDO"), "pronta": ("ok", "PRONTA"),
-                     "falhou": ("falhou", "FALHOU"), "reiniciando": ("aplicando", "REINICIANDO")}
 
 CSS = """
 .hef-atualiza{display:none;position:fixed;inset:0;z-index:70;background:rgba(9,10,15,.72);
