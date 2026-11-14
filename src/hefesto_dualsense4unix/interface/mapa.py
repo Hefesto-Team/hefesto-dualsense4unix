@@ -397,15 +397,38 @@ def css_da_zona(pecas):
         for p in pecas if p in zona_de)
 
 
+def _contraste(a, b):
+    x, y = sorted((_luz(a), _luz(b)), reverse=True)
+    return (x + 0.05) / (y + 0.05)
+
+
+def _cor_do_tema(nome):
+    return re.search(rf"--{nome}:(#[0-9a-fA-F]{{6}})", CSS_BASE).group(1)
+
+
 def css_do_contraste():
-    """A cor de cada glifo contra a tecla que o carrega, em cada modelo: o claro sobre o escuro."""
+    """A cor de cada glifo contra a tecla que o carrega, em cada modelo: entre o claro e o escuro,
+    a de maior contraste com a pior faixa da tecla (a hachura do plástico sem cor sabida tem duas)."""
     svg = SVG.read_text()
     zona_de = _zonas()
+    hachuras = {h: re.findall(r'fill="(#[0-9a-fA-F]{6})"', corpo) for h, corpo in
+                re.findall(r'<pattern id="([^"]+)"[^>]*>(.*?)</pattern>', svg, flags=re.S)}
+    claro, escuro, neutro = (_cor_do_tema(n) for n in ("branco", "app-bg", "sem-plastico"))
+    glifos = sorted(set(re.findall(r'id="glifo-([a-z0-9_]+)"', svg)))
     regras = ["  .mc svg.ds .sobre{color:%s !important}" % FUNDO_ESCURO]
     for cw, corpo in re.findall(r'svg\[data-colorway="([^"]+)"\]\{([^}]*)\}', svg):
-        cores = dict(re.findall(r"--z-([a-z_]+):(#[0-9a-fA-F]{6})", corpo))
-        claras = sorted(pid for pid in set(re.findall(r'id="glifo-([a-z0-9_]+)"', svg))
-                        if _luz(cores.get(zona_de.get(pid, "casca-solida"), "#000000")) > 0.35)
+        cores = dict(re.findall(r"--z-([a-z_-]+):([^;]+)", corpo))
+
+        def faixas(pid, cores=cores):
+            v = cores.get(zona_de.get(pid, "casca-solida"), neutro).strip()
+            h = re.fullmatch(r"url\(#([^)]+)\)", v)
+            if h:
+                return hachuras.get(h.group(1)) or [neutro]
+            return [v] if re.fullmatch(r"#[0-9a-fA-F]{6}", v) else [neutro]
+
+        claras = [pid for pid in glifos
+                  if min(_contraste(escuro, c) for c in faixas(pid))
+                  > min(_contraste(claro, c) for c in faixas(pid))]
         if claras:
             alvo = ",".join(f'.mc svg.ds[data-colorway="{cw}"] .s-{p}' for p in claras)
             regras.append(f"  {alvo}{{color:{FUNDO_CLARO} !important}}")

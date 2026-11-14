@@ -16,8 +16,9 @@ reprova `test_toda_tecla_tem_o_miolo_pintado`; tirar o `ps_entre_os_analogicos` 
 `test_o_ps_fica_no_meio_dos_analogicos`; tirar o `css_do_contraste` reprova o contraste no White;
 deixar o filtro do touchpad reprova `test_em_repouso_nada_acende`; e tirar o `:focus` dos gatilhos
 reprova `test_so_acende_a_peca_em_uso`; tirar o `css_da_zona` reprova `test_em_repouso_nada_acende`;
-tirar o `sem_letra_solta` (o «R» solto, escuro por baixo do glifo do analógico direito) reprova
-`test_nenhum_glifo_solto`.
+voltar a escolher a cor do glifo por um limiar de luz (e não pelo contraste) reprova o
+Hyperpop Rhythm Blue; tirar o `sem_letra_solta` (o «R» solto, escuro por baixo do glifo do
+analógico direito) reprova `test_nenhum_glifo_solto`.
 """
 from __future__ import annotations
 
@@ -35,7 +36,6 @@ from hefesto_dualsense4unix.interface import onde
 
 TAMANHOS = [(1212, 809), (1920, 1080)]
 PAGINAS = [False, True]
-MODELOS = ["", "cosmic-red", "white", "midnight-black", "starlight-blue", "galactic-purple"]
 NOME_LONGO = "Thicc Magic: Elves' Perverted Beauty Standards.gif"
 
 MEDIR = r"""
@@ -71,6 +71,8 @@ MEDIR = r"""
     });
   };
   const cor_do_fundo = p => getComputedStyle(id('mp-' + p).querySelector(fundo)).fill;
+  const faixas = p => { const f = cor_do_fundo(p), u = f.match(/url\("?#([^")]+)"?\)/);
+    return u ? [...id(u[1]).querySelectorAll('rect')].map(r => getComputedStyle(r).fill) : [f]; };
   const glifos = [...ds.querySelectorAll('[id^="mp-glifo-"]')].map(g => g.id.slice(9));
   const com_peca = glifos.filter(p => id('mp-' + p));
   const leitura = {};
@@ -102,10 +104,14 @@ MEDIR = r"""
   leitura.cor_sem_modelo = pecas.filter(p => [...id('mp-' + p).querySelectorAll(geo)]
     .some(e => viva(getComputedStyle(e).fill)));
   leitura.contraste = {};
-  for (const cw of MODELOS) {
+  const todos = [...new Set([...document.querySelectorAll('svg.ds style')]
+    .map(s => s.textContent).join('')
+    .match(/svg\[data-colorway="[^"]+"\]/g).map(s => s.slice(19, -2)))];
+  leitura.modelos = todos.length;
+  for (const cw of ['', ...todos]) {
     ds.dataset.colorway = cw;
-    leitura.contraste[cw] = com_peca.map(p => [p,
-      +contraste(getComputedStyle(id('mp-glifo-' + p)).color, cor_do_fundo(p)).toFixed(2)]);
+    leitura.contraste[cw] = com_peca.map(p => [p, +Math.min(...faixas(p).map(
+      c => contraste(getComputedStyle(id('mp-glifo-' + p)).color, c))).toFixed(2)]);
   }
   const anel = p => centro($('#mp-' + p + ' > path.peca'));
   const L = anel('stick_l'), R = anel('stick_r'), ps = centro($('#mp-ps > circle'));
@@ -127,7 +133,7 @@ MEDIR = r"""
   leitura.rola = document.scrollingElement.scrollHeight - innerHeight;
   return JSON.stringify(leitura);
 })()
-""".replace("MODELOS", json.dumps(MODELOS)).replace("NOME", json.dumps(NOME_LONGO))
+""".replace("NOME", json.dumps(NOME_LONGO))
 
 PRONTA = "document.readyState === 'complete' && document.fonts.status === 'loaded' ? 'ok' : ''"
 
@@ -229,6 +235,7 @@ def test_toda_tecla_tem_o_miolo_pintado(lido: dict[str, Any]) -> None:
 
 
 def test_o_glifo_se_le_sobre_a_tecla_em_todo_plastico(lido: dict[str, Any]) -> None:
+    assert lido["modelos"] >= 20, f"a régua leu só {lido['modelos']} modelos de plástico"
     for cw, pares in lido["contraste"].items():
         fracos = [(p, c) for p, c in pares if c < 3]
         assert not fracos, f"glifo apagado sobre a tecla no modelo {cw or 'sem plástico'}: {fracos}"
