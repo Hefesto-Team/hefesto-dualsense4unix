@@ -164,7 +164,7 @@ finally:
     os.unlink(caminho)" 2>/dev/null; then
         pass "loader SVG do gdk-pixbuf presente (o ícone da bandeja desenha)"
     else
-        fail "loader SVG AUSENTE — o ícone some da barra. Instale o loader do librsvg (Debian: librsvg2-common), ou $(conselho_de_instalacao)"
+        fail "loader SVG AUSENTE — o ícone some da barra. Instale o loader do librsvg ($(_pacote_do_loader_svg)), ou $(conselho_de_instalacao)"
     fi
 }
 
@@ -6522,6 +6522,14 @@ check_caixa_das_extensoes() {
         pacote="sudo pacman -S bubblewrap"
     fi
     warn "bwrap AUSENTE — as extensões não abrem sem a caixa. Instale: ${pacote}, ou $(conselho_de_instalacao)"
+}
+
+_pacote_do_loader_svg() {
+    if command -v apt-get >/dev/null 2>&1; then printf 'sudo apt install librsvg2-common'
+    elif command -v dnf >/dev/null 2>&1; then printf 'sudo dnf install librsvg2'
+    elif command -v pacman >/dev/null 2>&1; then printf 'sudo pacman -S librsvg'
+    else printf 'librsvg2-common no Debian e no Ubuntu, librsvg2 no Fedora, librsvg no Arch'
+    fi
 }
 
 _osk_comando_do_pacman() {
