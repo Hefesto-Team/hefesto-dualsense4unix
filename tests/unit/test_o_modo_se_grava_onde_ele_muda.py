@@ -610,11 +610,8 @@ def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
 
     _pelo_ipc(h._handle_profile_switch({"name": JOGO}))
 
-    if pad_da_maquina:
-        assert ensaio.paradas == paradas and d._gamepad_device is not None, (
-            "o perfil sem `mode` derrubou o pad que a preferência de quem usa deixa ligado: "
-            "o controle caiu no mouse e teclado (22:40:34 de 01/10)")
-        assert d.config.gamepad_emulation_enabled is True
-    else:
-        assert d._gamepad_device is None, (
-            "com o pad desligado de propósito, a reversão de sempre não desligou")
+    assert ensaio.paradas == paradas and d._gamepad_device is not None, (
+        "o perfil de jogo sem `mode` derrubou o pad: o controle caiu no mouse e teclado "
+        "(22:40:34 de 01/10); desde 14/11 ele vale o modo de jogo do estilo, com o pad da "
+        "máquina ligado ou não (O-JOGO-SEM-ARME-NAO-HERDA-A-NAVEGACAO-01)")
+    assert d.config.gamepad_emulation_enabled is True

@@ -148,6 +148,36 @@ def _o_perfil_diz_navegacao(profile: Any) -> bool:
     return getattr(getattr(profile, "mode", None), "kind", None) == "desktop"
 
 
+def _o_modo_do_jogo_sem_arme(profile: Any, mode: Any | None) -> Any | None:
+    """O ``mode`` que vale: o do perfil e, no perfil de JOGO sem ele, o modo de jogo do estilo.
+
+    O jogo aberto por fora do lançador não arma a ponte, e o perfil sem ``mode`` herdava o
+    modo em vigor, a Navegação fora do jogo. O estilo com modo (``estilos_de_jogo``) dá a
+    Navegação no arranjo dele; todo outro, o controle de jogo na máscara do computador.
+    """
+    if mode is not None:
+        return mode
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileModeConfig,
+        normalizar_gamepad_flavor,
+        perfil_e_de_jogo,
+    )
+
+    try:
+        if not perfil_e_de_jogo(profile):
+            return None
+    except Exception:
+        return None
+    estilo = POR_CHAVE.get(str(getattr(profile, "estilo", None) or ""))
+    receita = getattr(estilo, "receita_invisivel", None)
+    if getattr(receita, "modo", None) == "desktop":
+        return ProfileModeConfig(kind="desktop", arranjo=getattr(receita, "arranjo", None))
+    return ProfileModeConfig(
+        kind="gamepad", gamepad_flavor=normalizar_gamepad_flavor(_mascara_da_maquina())
+    )
+
+
 def _o_modo_do_perfil_do_boot(
     store: Any = None, *, appid_em_cena: int | None = None,
 ) -> tuple[str | None, str | None, str | None]:
@@ -4732,6 +4762,11 @@ class Daemon:
         """
         from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
 
+        if mode is None and not (
+            self._native_mode
+            and getattr(self.store, "native_mode_origin", None) != "profile"
+        ):
+            mode = _o_modo_do_jogo_sem_arme(profile, mode)
         do_perfil = getattr(mode, "arranjo", None)
         self._arranjo_do_perfil = (
             do_perfil
