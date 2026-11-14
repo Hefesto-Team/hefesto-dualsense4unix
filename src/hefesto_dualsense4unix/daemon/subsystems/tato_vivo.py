@@ -3439,6 +3439,48 @@ def pcm_do_padrao(padrao: PadraoDeFora, volume: float, taxa: int = TAXA_DE_FORA)
     return estereo.tobytes()
 
 
+QUADROS_DO_FIM_DO_CORTE = 480
+
+
+class RecorteCortado:
+    """O recorte cortado em ``dura_s``, lido do original quando ele se completa: o fim apaga
+    até o silêncio, e o som mais curto que o corte fica inteiro."""
+
+    def __init__(self, recorte: Any, dura_s: float) -> None:
+        self._recorte = recorte
+        self.instante = getattr(recorte, "instante", 0.0)
+        self._bytes = 4 * int(dura_s * TAXA_DE_FORA)
+        self._cortado: bytes | None = None
+
+    @property
+    def pronto(self) -> bool:
+        return bool(self._recorte.pronto)
+
+    @property
+    def pcm(self) -> bytes:
+        if self._cortado is not None:
+            return self._cortado
+        inteiro = bytes(self._recorte.pcm)
+        if len(inteiro) <= self._bytes:
+            cortado = inteiro
+        else:
+            amostras = array("h", inteiro[:self._bytes])
+            quadros = len(amostras) // 2
+            fim = min(QUADROS_DO_FIM_DO_CORTE, quadros)
+            for q in range(quadros - fim, quadros):
+                fator = (quadros - 1 - q) / max(1, fim - 1)
+                amostras[2 * q] = int(amostras[2 * q] * fator)
+                amostras[2 * q + 1] = int(amostras[2 * q + 1] * fator)
+            cortado = amostras.tobytes()
+        if self.pronto:
+            self._cortado = cortado
+        return cortado
+
+    @property
+    def duracao_s(self) -> float:
+        return len(self.pcm) / (TAXA_DE_FORA * 4)
+
+
 @dataclass
 class ToqueDeFora:
     origem: str
@@ -3658,9 +3700,10 @@ class FonteDeFora:
 
     def som(
         self, origem: str, uniq: str, ident: str, volume: float, agora: float,
-        t: float | None = None,
+        t: float | None = None, dura_s: float | None = None,
     ) -> Veredito:
-        """Um som curto no alto-falante: o da extensão, ou o recorte do estalo do jogo."""
+        """Um som curto no alto-falante: o da extensão, ou o recorte do estalo do jogo, cortado
+        no ``dura_s`` do pedido."""
         from hefesto_dualsense4unix.integrations.transiente_do_jogo import recorte_pronto
 
         padrao = self.sons.get((origem, ident))
@@ -3669,19 +3712,23 @@ class FonteDeFora:
             raise ValueError("nenhum estalo do jogo com esse t")
         if ident != SOM_DO_RECORTE and padrao is None:
             raise ValueError(f"som não registrado: {ident}")
-        dura_s = (padrao.dura_ms / 1000.0 if padrao is not None
-                  else float(getattr(recorte, "duracao_s", 0.0)))
+        inteiro_s = (padrao.dura_ms / 1000.0 if padrao is not None
+                     else float(getattr(recorte, "duracao_s", 0.0)))
+        if dura_s is not None:
+            inteiro_s = min(inteiro_s, dura_s) if inteiro_s > 0 else dura_s
         if o_modo_cala_a_extensao(self.modo_de(uniq)):
             self.contadores["recusas_do_modo"] += 1
             return Veredito(False, "modo", ORIGEM_DO_JOGO)
         if self.radio_cede(uniq):
             return Veredito(False, "sem_ponte")
         veredito = self.pedir(origem, "som", uniq, {"centro": volume}, agora,
-                              vida_s=max(dura_s, JANELA_DO_ESTALO_S))
+                              vida_s=max(inteiro_s, JANELA_DO_ESTALO_S))
         if not veredito.vale:
             return veredito
         if padrao is not None and ident != SOM_DO_RECORTE:
             recorte = recorte_pronto(pcm_do_padrao(padrao, volume), agora)
+        if dura_s is not None:
+            recorte = RecorteCortado(recorte, dura_s)
         if not self.tocar_som(uniq, recorte):
             return Veredito(False, "sem_no")
         return veredito

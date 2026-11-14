@@ -219,6 +219,7 @@ class _Conexao:
     escritor: asyncio.StreamWriter | None = None
     filas_do_movimento: list[asyncio.Queue[Any]] = field(default_factory=list)
     assinados: dict[str, _Assinatura] = field(default_factory=dict)
+    ve_a_tela: bool = False
 
     def no_barramento(self, feito: _Assinatura, topico: str, fila: asyncio.Queue[Any]) -> None:
         self.assinaturas.append((topico, fila))
@@ -951,7 +952,7 @@ class Porta:
         self.caminho = caminho
         self._fonte_da_tela = fonte_da_tela
         self._regioes_da_tela: dict[str, Regiao] = {}
-        self._assinaturas_da_tela_nascidas = 0
+        self._pedidos_da_tela = 0
         self._captura_da_tela: asyncio.Task[None] | None = None
         self._vigia_do_peso: asyncio.Task[None] | None = None
         self._prazo_do_peso: asyncio.TimerHandle | None = None
@@ -1163,6 +1164,8 @@ class Porta:
                 return _resposta(req_id, self._desassinar(con, params))
             if metodo == "eventos.publicar":
                 return _resposta(req_id, self._publicar(con, params))
+            if metodo in ("tela.ver", "tela.parar"):
+                return _resposta(req_id, self._ver_a_tela(con, metodo, params))
             if metodo == "acessorios.estado":
                 return _resposta(req_id, self._estado_dos_acessorios(con, params))
             if metodo == "luz.pulso":
@@ -1280,9 +1283,30 @@ class Porta:
                            f"mods-{con.sessao.mod_id}-{topico}")
         if TOPICO_DA_TELA in topicos:
             self._regioes_da_tela.update({r.nome: r for r in regioes})
-            self._assinaturas_da_tela_nascidas += 1
-            self._ligar_a_captura()
+            if con.ve_a_tela:
+                self._pedidos_da_tela += 1
+                self._ligar_a_captura()
         return {"assinados": list(topicos)}
+
+    def _ver_a_tela(self, con: _Conexao, metodo: str, params: dict[str, Any]) -> dict[str, Any]:
+        """O ``tela.ver`` do clique em «Ver a tela» abre a captura (sem ficha, a escolha do portal
+        sai neste clique) para quem assina ``jogo.tela`` e fecha no ``tela.parar``, no jogo que
+        fecha e na extensão que sai. A captura é uma só para a máquina."""
+        assert con.sessao is not None
+        if f"ler:{TOPICO_DA_TELA}" not in con.sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão ler:{TOPICO_DA_TELA}")
+        if metodo == "tela.parar":
+            con.ve_a_tela = False
+            return {"status": "ok"}
+        self._regioes_da_tela.update({r.nome: r for r in _regioes_do_pedido(params)})
+        con.ve_a_tela = True
+        self._pedidos_da_tela += 1
+        self._ligar_a_captura()
+        return {"status": "ok"}
+
+    def _quem_ve_a_tela(self) -> int:
+        return sum(1 for con in self._conexoes
+                   if con.ve_a_tela and TOPICO_DA_TELA in con.assinados)
 
     async def _pesar_a_mira(self, sessao: _Credencial,
                             params: dict[str, Any]) -> dict[str, Any]:
@@ -1404,32 +1428,43 @@ class Porta:
                 self._capturar_a_tela(), name="mods-porta-tela")
 
     async def _capturar_a_tela(self) -> None:
-        """Um passo da :class:`Captura` por vez, fora do laço: a fonte abre só com assinante de
-        ``jogo.tela`` e, sem nenhum, fecha, e a tarefa acaba."""
+        """Um passo da :class:`Captura` por vez, fora do laço: a fonte abre só com quem pediu
+        ``tela.ver`` e assina ``jogo.tela``; sem nenhum, ou com o jogo que fecha, fecha, e a
+        tarefa acaba."""
         laco = asyncio.get_running_loop()
         fonte = self._fonte_da_tela()
+        fechou = self.bus.subscribe(EventTopic.JOGO_FECHOU)
+        vendo = [self._quem_ve_a_tela()]
 
         def publicar(carga: dict[str, Any]) -> None:
             laco.call_soon_threadsafe(self.bus.publish, TOPICO_DA_TELA, carga)
 
         captura = Captura(fonte, TelaDoJogo(tuple(self._regioes_da_tela.values())),
                           publicar=publicar,
-                          assinantes=lambda: self.bus.subscriber_count(TOPICO_DA_TELA),
-                          nascidas=lambda: self._assinaturas_da_tela_nascidas)
+                          assinantes=lambda: vendo[0],
+                          nascidas=lambda: self._pedidos_da_tela)
         passo: asyncio.Future[None] | None = None
         try:
             while True:
+                if not fechou.empty():
+                    while not fechou.empty():
+                        fechou.get_nowait()
+                    for con in self._conexoes:
+                        con.ve_a_tela = False
+                vendo[0] = self._quem_ve_a_tela()
                 captura.tela.regioes = tuple(self._regioes_da_tela.values())
                 passo = laco.run_in_executor(None, captura.passo)
                 await asyncio.shield(passo)
-                if self.bus.subscriber_count(TOPICO_DA_TELA) <= 0 and not captura.aberta:
+                if vendo[0] <= 0 and not captura.aberta:
                     return
                 await asyncio.sleep(1.0 / HZ_DA_TELA)
         finally:
+            self.bus.unsubscribe(EventTopic.JOGO_FECHOU, fechou)
             if passo is not None and not passo.done():
                 captura.parar()
                 await asyncio.wait({passo}, timeout=PRAZO_DA_CAPTURA_SAIR_S)
-            self._regioes_da_tela.clear()
+            if self.bus.subscriber_count(TOPICO_DA_TELA) <= 0:
+                self._regioes_da_tela.clear()
             if captura.aberta:
                 fonte.fechar()
 
@@ -2142,8 +2177,12 @@ class Porta:
             raise ValueError("pede o volume de 0 a 1")
         if t is not None and not _numero(t):
             raise ValueError("pede o t do jogo.som")
+        dura_s: Any = params.get("dura_s")
+        if dura_s is not None and (not _numero(dura_s) or not 0.05 <= dura_s <= 5):
+            raise ValueError("pede o dura_s de 0,05 a 5")
         return fonte.som(origem, uniq, som, float(volume), agora,
-                         None if t is None else float(t))
+                         None if t is None else float(t),
+                         dura_s=None if dura_s is None else float(dura_s))
 
     async def _acender_os_leds(
         self, fonte: Any, origem: str, uniq: str, params: dict[str, Any], agora: float,

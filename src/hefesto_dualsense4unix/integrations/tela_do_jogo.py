@@ -2,11 +2,12 @@
 
 Cada quadro da fonte (o portal de captura) vira uma grade de 32 por 18 cores médias, e da grade e
 da anterior saem os cinco sinais de ``jogo.tela``, de 0 a 1; nenhum pixel sai daqui (uma região da
-receita publica só a fração da cor declarada). Sem assinante a fonte não abre; sem fonte, ou com
-a fonte caída, o tópico publica ``None`` (ausente), nunca zero, e tenta de novo. A escolha
-cancelada ou esgotada só se pede com assinatura nova, e só o cancelamento apaga a ficha
-(``escolher_a_tela``, no install). A fonte não acorda o portal antes da sessão gráfica nem reabre
-com a tela escolhida desligada: o portal consome a ficha no ``SelectSources``.
+receita publica só a fração da cor declarada). A fonte abre só no clique em «Ver a tela» (o
+``tela.ver`` da porta); sem fonte, ou com a fonte caída, o tópico publica ``None`` (ausente), nunca
+zero, e tenta de novo. A escolha cancelada ou esgotada só se pede no clique seguinte, e só o
+cancelamento apaga a ficha (``escolher_a_tela``, no install com ``--com-tela``). A fonte não
+acorda o portal antes da sessão gráfica nem reabre com a tela escolhida desligada: o portal
+consome a ficha no ``SelectSources``.
 """
 from __future__ import annotations
 
@@ -603,11 +604,11 @@ def fonte_do_sistema() -> FonteDaTela:
 
 def escolher_a_tela(fonte: FonteDaTela | None = None, *, tentativas: int = 3,
                     pausa_s: float = 3.0, dormir: Callable[[float], None] = time.sleep) -> int:
-    """O passo do install: abre a escolha da tela uma vez, com a pessoa diante da tela, e fecha. A
-    ficha de volta fica guardada, e com ficha que o portal aceita a fonte abre sem janela. Sai com
-    0 (a escolha está guardada), 2 (sem portal ou sem sessão: fica para o primeiro jogo) ou 3
-    (a janela foi cancelada ou ficou sem resposta). O portal que acaba de reiniciar tem
-    ``tentativas`` chances, ``pausa_s`` uma da outra."""
+    """O passo do install com ``--com-tela``: abre a escolha da tela uma vez, com a pessoa diante
+    da tela, e fecha. A ficha de volta fica guardada, e com ficha que o portal aceita a fonte abre
+    sem janela. Sai com 0 (a escolha está guardada), 2 (sem portal ou sem sessão: fica para o
+    clique em «Ver a tela») ou 3 (a janela foi cancelada ou ficou sem resposta). O portal que
+    acaba de reiniciar tem ``tentativas`` chances, ``pausa_s`` uma da outra."""
     fonte = fonte if fonte is not None else fonte_do_sistema()
     motivo = "a fonte não abriu"
     for tentativa in range(max(1, tentativas)):
@@ -626,16 +627,16 @@ def escolher_a_tela(fonte: FonteDaTela | None = None, *, tentativas: int = 3,
             motivo = str(erro) or motivo
             if tentativa + 1 < tentativas:
                 dormir(pausa_s)
-    print(f"a escolha da tela fica para o primeiro jogo ({motivo})")
+    print(f"a escolha da tela fica para o clique em «Ver a tela» ({motivo})")
     return 2
 
 
 class Captura:
-    """Abre a fonte só com assinante e publica um quadro por passo; a fonte que falta ou cai
-    vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de ``espera``. A escolha
-    que não veio (cancelada ou esgotada) não volta sozinha: só com assinatura
-    nova depois da recusa, ou depois de todos saírem. ``assinantes`` diz quantos existem agora
-    (zero fecha a fonte) e ``nascidas`` quantas assinaturas já nasceram desde sempre: sair e
+    """Abre a fonte só com quem pediu para ver a tela e publica um quadro por passo; a fonte que
+    falta ou cai vira ``jogo.tela`` ausente uma vez, e a próxima tentativa sai depois de
+    ``espera``. A escolha que não veio (cancelada ou esgotada) não volta sozinha: só com pedido
+    novo depois da recusa, ou depois de todos saírem. ``assinantes`` diz quantos veem agora
+    (zero fecha a fonte) e ``nascidas`` quantos pedidos já nasceram desde sempre: sair e
     entrar no mesmo passo não muda a primeira conta, e a segunda sobe."""
 
     def __init__(self, fonte: FonteDaTela, tela: TelaDoJogo, *,

@@ -1,8 +1,9 @@
 """A porta vê a tela do jogo pelo portal, ligada ao serviço (02/11/2026, ensaio).
 
 A fonte de mentira entrega quadros sintéticos à ``Captura`` que a porta liga: a extensão que assina
-``jogo.tela`` recebe os cinco números, e as regiões que declara. Sem assinante a fonte nem abre; o
-último que larga o tópico a fecha. No modo de mentira, a fonte do sistema é a ausente.
+``jogo.tela`` e pede ``tela.ver`` recebe os cinco números, e as regiões que declara. Sem o pedido a
+fonte nem abre; o último que larga o tópico a fecha. No modo de mentira, a fonte do sistema é a
+ausente.
 """
 from __future__ import annotations
 
@@ -80,6 +81,7 @@ def test_a_extensao_assinante_recebe_os_cinco_numeros_da_fonte_ligada() -> None:
                     "topicos": ["jogo.tela"],
                     "tela": {"regioes": [{"nome": "vida", "x": 0.1, "y": 0.9, "largura": 0.3,
                                           "altura": 0.05, "cor": [200, 30, 30]}]}})
+                await asyncio.to_thread(cliente.pedir, "tela.ver", {})
                 evento = await asyncio.wait_for(asyncio.to_thread(cliente.evento), 5)
             finally:
                 cliente.fechar()
@@ -117,6 +119,7 @@ def test_sem_assinante_a_fonte_nao_abre_e_o_ultimo_que_larga_a_fecha() -> None:
                 sem_assinante = len(fontes)
                 await asyncio.to_thread(cliente.pedir, "eventos.assinar",
                                         {"topicos": ["jogo.tela"]})
+                await asyncio.to_thread(cliente.pedir, "tela.ver", {})
                 await _esperar(lambda: bool(fontes) and fontes[0].abertas == 1)
                 await asyncio.to_thread(cliente.pedir, "eventos.desassinar",
                                         {"topicos": ["jogo.tela"]})

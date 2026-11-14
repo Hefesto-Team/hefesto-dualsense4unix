@@ -166,6 +166,7 @@ def test_a_porta_reabre_a_fonte_na_troca_e_o_evento_chega_as_quatro_extensoes(
                     await asyncio.to_thread(cliente.pedir, "mod.ola", {"ficha": f"ficha-{i}"})
                     await asyncio.to_thread(cliente.pedir, "eventos.assinar",
                                             {"topicos": ["jogo.tela"]})
+                    await asyncio.to_thread(cliente.pedir, "tela.ver", {})
                 assert await _esperar(lambda: fonte.aberturas == 1, 3.0)
                 fonte.janela.set()
                 await asyncio.sleep(0.3)

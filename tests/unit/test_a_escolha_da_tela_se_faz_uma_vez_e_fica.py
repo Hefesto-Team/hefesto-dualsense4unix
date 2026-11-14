@@ -166,7 +166,7 @@ def test_o_portal_que_acaba_de_reiniciar_tem_tres_chances_e_depois_fica_para_o_j
     codigo, pausas = _escolher(fonte)
     assert codigo == 2
     assert len(pausas) == 2
-    assert "primeiro jogo" in capsys.readouterr().out
+    assert "Ver a tela" in capsys.readouterr().out
 
 
 def test_o_portal_que_responde_na_segunda_chance_guarda_a_escolha() -> None:
@@ -270,7 +270,7 @@ def test_sem_sessao_grafica_o_install_nao_roda_o_python_e_diz_que_fica_para_o_jo
 ) -> None:
     saida, registro = _rodar_o_passo(tmp_path, cosmic=1, wayland="", dry_run=0)
     assert registro == ""
-    assert "primeiro jogo" in saida
+    assert "Ver a tela" in saida
 
 
 def test_fora_do_cosmic_o_install_nao_roda_o_python(tmp_path: Path) -> None:

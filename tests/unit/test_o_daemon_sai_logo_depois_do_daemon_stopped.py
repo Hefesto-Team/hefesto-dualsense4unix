@@ -177,6 +177,7 @@ _PROCESSO = textwrap.dedent('''
         cliente = _Cliente(pasta / "mods.sock")
         await asyncio.to_thread(cliente.pedir, "mod.ola", {"ficha": "ficha-t"})
         await asyncio.to_thread(cliente.pedir, "eventos.assinar", {"topicos": ["jogo.tela"]})
+        await asyncio.to_thread(cliente.pedir, "tela.ver", {})
         print("assinou", flush=True)
         await asyncio.to_thread(sys.stdin.readline)
         cliente.fechar()

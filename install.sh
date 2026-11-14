@@ -169,6 +169,11 @@ Flags:
                         adaptador (passo 3d-bis); as outras placas ficam como
                         estão. NUNCA reconecta a rede para aplicar. --no-udev
                         pula. uninstall.sh remove.
+  --com-tela            OPT-IN: no COSMIC, constrói o portal de captura da casa
+                        (uns 10 minutos) e abre a escolha da tela do Modo
+                        imersão. Sem a flag, nenhum dos dois: a tela do jogo
+                        só se lê quando você clica em «Ver a tela» na
+                        extensão, e a escolha da tela aparece nesse clique.
   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
                         AppIndicator extension, etc) e assume --format=native.
   --no-systemd          pula a unit do daemon por INTEIRO (passo 6 E passo 7a):
@@ -268,6 +273,7 @@ WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
 NO_DKMS=0
 COM_UHID_CONTRAPRESSAO=0
+COM_TELA=0
 SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
@@ -303,6 +309,7 @@ for arg in "$@"; do
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-dkms)            NO_DKMS=1 ;;
         --uhid-contrapressao) COM_UHID_CONTRAPRESSAO=1 ;;
+        --com-tela)           COM_TELA=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
         --no-ucm)             NO_UCM=1 ;;
         --no-fechar-o-no)     ABRIR_O_NO=1 ;;
@@ -2826,7 +2833,8 @@ install_portal_cosmic_da_casa() {
     fi
 }
 
-if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
+if [[ "${SKIP_UDEV}" -eq 0 ]] && [[ "${COM_TELA}" -eq 1 ]] \
+   && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1 \
    && _pc_portal_no_cosmic; then
     step "3f-ter" "portal de captura do COSMIC corrigido (o compartilhamento de tela não cai com «create_frame sent before the previous frame was destroyed»)"
@@ -2841,11 +2849,11 @@ escolher_a_tela_do_jogo() {
     fi
     [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]] || return 0
     if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
-        printf '      sem sessão gráfica: a escolha da tela do Modo imersão fica para o primeiro jogo\n'
+        printf '      sem sessão gráfica: a escolha da tela do Modo imersão fica para o clique em «Ver a tela»\n'
         return 0
     fi
     if [[ ! -x "${py}" ]]; then
-        printf '      sem o ambiente Python: a escolha da tela do Modo imersão fica para o primeiro jogo\n'
+        printf '      sem o ambiente Python: a escolha da tela do Modo imersão fica para o clique em «Ver a tela»\n'
         return 0
     fi
     printf '      escolha a tela que o Modo imersão lê: o pedido aparece uma vez e fica guardado\n'
@@ -2853,10 +2861,10 @@ escolher_a_tela_do_jogo() {
     printf '%s\n' "${saida}" | sed 's/^/      /'
     case "${rc}" in
         0|2) ;;
-        *) warn "a escolha da tela não ficou — o Modo imersão pede de novo no primeiro jogo" ;;
+        *) warn "a escolha da tela não ficou — o Modo imersão pede de novo no clique em «Ver a tela»" ;;
     esac
 }
-if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
+if [[ "${COM_TELA}" -eq 1 && "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     step "3f-quater" "a escolha da tela do Modo imersão, uma vez só (fica guardada)"
     escolher_a_tela_do_jogo
 fi

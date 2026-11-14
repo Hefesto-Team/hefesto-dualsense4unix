@@ -42,7 +42,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `haptica.registrar` | `{id, golpes: [[inicio_ms, dura_ms, frequencia_hz, amplitude]], repete?}` | `escrever:haptica` | `{status}` <!-- ref-externa: método da porta das extensões, não do daemon --> |
 | `haptica.tocar` | `{uniq, id, forca (0 a 1), lado: esquerdo\|direito, bpm?, ate_ms?}` | `escrever:haptica` | `{status, pelo_motor}` <!-- ref-externa: método da porta das extensões, não do daemon --> |
 | `som.registrar` | `{id, golpes: [...]}` (como o da háptica) | `escrever:som` | `{status}` |
-| `som.tocar` | `{uniq, som: <id>\|recorte, volume (0 a 1), t?}` | `escrever:som` | `{status}` |
+| `som.tocar` | `{uniq, som: <id>\|recorte, volume (0 a 1), t?, dura_s? (0,05 a 5)}` | `escrever:som` | `{status}` |
 | `leds.set` | `{uniq, mascara (0 a 31), ate_ms}` | `escrever:leds` | `{status}` |
 | `mira.peso` | `{uniq\|"todos", ganho (0,3 a 1), ate_ms (até 10000)}` | `escrever:mira` | `{status}` |
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
@@ -51,6 +51,8 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador, cor?}]}` |
 | `chave.ligar` | `{}` | a `chave` no manifesto instalado | `{ligada}` |
+| `tela.ver` | `{tela?: {regioes: [...]}}` | `ler:jogo.tela` | `{status}` |
+| `tela.parar` | `{}` | `ler:jogo.tela` | `{status}` |
 
 O `mira.peso` (ensaio) multiplica o giro de um controle, ou de todos, pelo ganho, até o prazo: na máscara Xbox, a
 deflexão do analógico e o cursor que o giro move; na máscara DualSense, os três eixos do giro que o pad virtual
@@ -223,9 +225,11 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   o quanto falta de luz, `tremor` o deslocamento da cena inteira e `saturacao` a cor viva. Com regiões declaradas
   pela receita (até 8, `{nome, x, y, largura, altura, cor, tolerancia}`, em frações da tela; medida que não é
   número, ou que sai da tela, recusa a receita), vem também `regioes: {nome: fração}`. Nenhum pixel cruza a porta.
-  Sem assinante o portal não abre; sem portal, ou com ele caído, os cinco chegam `null` uma vez (ausente, nunca
+  O portal abre só com o `tela.ver`, que a extensão manda no clique de «Ver a tela», para quem assina `jogo.tela`;
+  assinar sem ele não abre nada. A captura é uma só para a máquina, o evento chega a todo assinante, e a captura fecha no
+  `tela.parar`, quando o jogo fecha e quando a extensão sai. Sem portal, ou com ele caído, os cinco chegam `null` uma vez (ausente, nunca
   zero) e a captura tenta de novo sozinha. A fonte é o portal `ScreenCast` pelo PipeWire (o `pipewiresrc` do
-  GStreamer): a primeira abertura pede ao sistema a escolha da tela, e a ficha que volta reabre sem pedir de novo. As
+  GStreamer): o primeiro `tela.ver` pede ao sistema a escolha da tela, e a ficha que volta reabre sem pedir de novo. As
   regiões vão na assinatura: `eventos.assinar` com `topicos: ["jogo.tela"]` e `tela: {regioes: [...]}`.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
@@ -314,6 +318,7 @@ cabe recebe `-32014`, nunca o silêncio. A ordem é sempre a mesma: o modo, o ma
   `som.registrar`; até 16 golpes de até 4 s, 32 padrões por extensão; o `id` em minúsculas) e pede pelo `id`.
   O padrão com `repete` toca no `bpm` pedido até o prazo, e o teto conta o pedido, não cada batida. O
   `som.tocar` com `som: "recorte"` toca no alto-falante o recorte do estalo do jogo cujo `t` veio no `jogo.som`.
+  Com `dura_s` (de 0,05 a 5), o som se corta naquela duração; o som mais curto que o corte toca inteiro.
 - **O rádio.** Pelo Bluetooth, sem vaga na ponte do controle, o `haptica.tocar` toca o mesmo padrão em pulsos do <!-- ref-externa: método da porta das extensões, não do daemon -->
   motor (`pelo_motor: true`) e o `som.tocar` recusa com `-32015`.
 - **As luzes de jogador.** O bit 0 da `mascara` é a luz da esquerda. No fim do `ate_ms` o serviço devolve as luzes

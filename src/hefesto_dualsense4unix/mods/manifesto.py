@@ -131,7 +131,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     ),
     "ler:jogo.tela": (
         "Saber do dano, do clarão, do escuro e do tremor na tela do jogo, em números, sem "
-        "receber a imagem."
+        "receber a imagem, só depois do clique em «Ver a tela»."
     ),
     "ler:modo.aba": (
         "Saber em que seções de cada controle o modo que a extensão traz está aceso."

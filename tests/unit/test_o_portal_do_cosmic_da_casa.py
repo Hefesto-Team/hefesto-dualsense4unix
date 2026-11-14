@@ -522,6 +522,7 @@ def _correr(
             "HOME": str(lar),
             "ROOT_DIR": str(raiz),
             "AUTO_YES": "1",
+            "COM_TELA": "1",
             "DRY_RUN": "1" if dry_run else "0",
             "XDG_CURRENT_DESKTOP": desktop,
             "_PC_SYSTEMD_DO_SISTEMA": str(sistema),
