@@ -397,6 +397,57 @@ def test_a_mesma_aba_pedida_na_primeira_carga_nao_recarrega_depois(
     assert fora.cargas == 1, f"a aba pedida na primeira carga recarregou: {fora.cargas} cargas"
 
 
+@pytest.mark.no_cover
+def test_a_mesma_aba_pedida_depois_de_instalada_nao_recarrega(
+    casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """Pedir a aba que já está instalada não recarrega: a carga nova voltaria sem o bootstrap.
+
+    Medido em 14/11/2026 no runner do CI: a primeira carga confirmou antes do pedido, o ``_ir``
+    recarregou a mesma aba, o ``_carregou`` a leu como a mesma página pronta e não reinstalou, e
+    os 12 casos de `test_o_recado_de_sucesso_pousa_no_cartao` acharam a página sem o vigia.
+    """
+    gtk, hv, ondas_de_som = _o_piloto_sem_servico(monkeypatch)
+    from gi.repository import GLib, WebKit2
+
+    fora = SimpleNamespace(cargas=0, pediu_em=None)
+    with hv._o_processo_da_janela():
+        piloto = hv.Piloto(_args(sem_ondas=True))
+
+        def no_comeco(_view: Any, evento: Any) -> None:
+            if evento == WebKit2.LoadEvent.STARTED:
+                fora.cargas += 1
+
+        def olhar() -> bool:
+            if piloto.pronto and fora.pediu_em is None:
+                fora.pediu_em = time.monotonic()
+                piloto._ir(hv._pagina_da_uri(piloto.view.get_uri()))
+            passou = fora.pediu_em is not None and time.monotonic() - fora.pediu_em > 2.0
+            if piloto.tela.morreu is not None or passou:
+                gtk.main_quit()
+                return False
+            return True
+
+        piloto.view.connect("load-changed", no_comeco)
+        vigia = GLib.timeout_add(50, olhar)
+        guarda = GLib.timeout_add(30000, gtk.main_quit)
+        try:
+            gtk.main()
+        finally:
+            de_pe = piloto.pronto
+            piloto.pronto = False
+            GLib.source_remove(guarda)
+            if fora.pediu_em is None and piloto.tela.morreu is None:
+                GLib.source_remove(vigia)
+            piloto._estado_vivo.parar()
+            piloto.tela.janela.destroy()
+            ondas_de_som.o_de_sempre().seguir({})
+    assert piloto.tela.morreu is None, f"a janela fechou sozinha: {piloto.tela.morreu}"
+    assert fora.pediu_em is not None, "a primeira carga não se instalou"
+    assert fora.cargas == 1 and de_pe, (
+        f"a aba pedida depois de instalada recarregou: {fora.cargas} cargas")
+
+
 def test_os_fios_da_interface_nascem_por_um_dono_so() -> None:
     """Fio novo da interface nasce por `fios.soltar`, com nome; `threading.Thread` direto, não."""
     soltos = []

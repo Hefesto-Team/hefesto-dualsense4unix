@@ -3138,6 +3138,8 @@ class Piloto:
         if self.tela.primeira_carga:
             self._ir_quando_confirmar = pagina
             return False
+        if self.pronto and _a_pagina_pedida(pagina) == _pagina_da_uri(self.view.get_uri()):
+            return False
         pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
         _soltar_as_ondas()
         self.view.load_uri(alvo.as_uri())
