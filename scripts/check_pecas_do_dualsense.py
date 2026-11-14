@@ -20,7 +20,7 @@ Agora a régua VARRE uma grade dentro da caixa e aceita o primeiro ponto onde o 
 daquela peça é quem recebe o ponteiro. Se nenhum ponto serve, aí sim é falha: a
 peça está inteiramente coberta e ninguém consegue apontá-la.
 """
-import sys, csv, pathlib
+import sys, csv, pathlib, re
 from playwright.sync_api import sync_playwright
 
 R = pathlib.Path(__file__).resolve().parents[1]
@@ -97,7 +97,19 @@ with sync_playwright() as pw:
     falhas.extend(fora)
     print(("  OK   " if not fora else "  FALHA") + f" toda linha da lista cabe na caixa — fora: {fora}")
 
+    def luz(rgb):
+        r, g, b = (int(n) / 255 for n in re.findall(r"\d+", rgb)[:3])
+        lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in (r, g, b)]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+    def contraste(a, b):
+        x, y = sorted((luz(a), luz(b)), reverse=True)
+        return (x + 0.05) / (y + 0.05)
+
     CLARO = "rgb(248, 248, 242)"
+    ESCURO = pg.evaluate("""() => {const d=document.createElement('div');
+      d.style.color='var(--app-bg)'; document.body.appendChild(d);
+      const c=getComputedStyle(d).color; d.remove(); return c;}""")
     somem = []
     for k in pg.evaluate("() => [...document.querySelectorAll('.sobre')]"
                          ".map(g=>[...g.classList].find(c=>c.startsWith('s-')).slice(2))"):
@@ -105,15 +117,21 @@ with sync_playwright() as pw:
             continue
         pg.hover(f".item-{k}"); pg.wait_for_timeout(80)
         v = pg.evaluate(f"""() => {{const g=document.querySelector('.s-{k}');
+          const p=document.querySelector('#mp-{k} {PINTAVEL}');
           const cores=[];
-          g.querySelectorAll('*').forEach(e=>{{ if(e.tagName==='svg'||e.tagName==='g') return;
+          g.querySelectorAll('*').forEach(e=>{{ if(['svg','g','title','desc'].includes(e.tagName)) return;
             const cs=getComputedStyle(e); cores.push(cs.stroke, cs.fill); }});
-          return cores.length?cores:null;}}""")
-        if not v or CLARO not in v:
+          return cores.length?[p?getComputedStyle(p).fill:null, cores]:null;}}""")
+        rgb = [c for c in (v[1] if v else []) if c.startswith("rgb(")]
+        if not v or not v[0] or not v[0].startswith("rgb(") or not rgb:
+            somem.append(k)
+            continue
+        melhor = max(contraste(CLARO, v[0]), contraste(ESCURO, v[0]))
+        if max(contraste(c, v[0]) for c in rgb) < melhor * 0.95:
             somem.append(k)
     falhas.extend(somem)
     print(("  OK   " if not somem else "  FALHA")
-          + f" o glifo continua visível no hover — some em: {somem}")
+          + f" o glifo segue visível no hover, na cor de maior contraste com a peça — falha em: {somem}")
 
     no_svg = pg.evaluate("() => [...document.querySelectorAll('.ds g[id]')].map(e=>e.id.replace('mp-',''))")
     b.close()
