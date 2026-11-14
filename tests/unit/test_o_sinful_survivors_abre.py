@@ -14,17 +14,17 @@ _TAB = "\t"
 Lancamento = tuple[str, str | None]
 
 SINFUL: list[Lancamento] = [
-    ("SinfulSurvivors.exe", None),
-    ("SinfulSurvivors_Linux_0.24.2.x86_64", "linux"),
+    ("Jogo.exe", None),
+    ("Jogo_Linux_0.24.2.x86_64", "linux"),
 ]
 NATIVO_COM_OSLIST: list[Lancamento] = [
-    ("DungeonVixens.exe", "windows"),
-    ("DungeonVixens", "linux"),
+    ("Outro.exe", "windows"),
+    ("Outro", "linux"),
 ]
 NATIVO_COM_SH: list[Lancamento] = [
-    ("FamilyBreeding.exe", "windows"),
-    ("FamilyBreeding.sh", "linux"),
-    ("FamilyBreeding.app", "macos"),
+    ("Terceiro.exe", "windows"),
+    ("Terceiro.sh", "linux"),
+    ("Terceiro.app", "macos"),
 ]
 EXE_EM_PASTA: list[Lancamento] = [("Pasta\\Win64\\Jogo.EXE", ""), ("jogo.x86_64", "linux")]
 BAT_NO_LINUX: list[Lancamento] = [("inicia.bat", "windows,linux")]
@@ -127,8 +127,8 @@ def _steam(lar: Path, apps: dict[str, tuple[str, list[Lancamento] | None]]) -> P
 
 MESA_DE_JOGOS: dict[str, tuple[str, list[Lancamento] | None]] = {
     "4540280": ("windows,linux", SINFUL),
-    "2710970": ("windows,linux", NATIVO_COM_OSLIST),
-    "2853840": ("windows,macos,linux", NATIVO_COM_SH),
+    "9100005": ("windows,linux", NATIVO_COM_OSLIST),
+    "9100006": ("windows,macos,linux", NATIVO_COM_SH),
     "9100001": ("windows,linux", EXE_EM_PASTA),
     "9100002": ("windows,linux", BAT_NO_LINUX),
     "9100003": ("windows,linux", None),
@@ -141,9 +141,9 @@ def test_o_appinfo_diz_o_que_a_steam_oferece_no_linux(tmp_path: Path) -> None:
     arquivo.write_bytes(_appinfo(MESA_DE_JOGOS))
     lido = pp.executaveis_no_linux_do_appinfo(arquivo, [*MESA_DE_JOGOS, "777"])
     assert lido == {
-        "4540280": ("SinfulSurvivors.exe", "SinfulSurvivors_Linux_0.24.2.x86_64"),
-        "2710970": ("DungeonVixens",),
-        "2853840": ("FamilyBreeding.sh",),
+        "4540280": ("Jogo.exe", "Jogo_Linux_0.24.2.x86_64"),
+        "9100005": ("Outro",),
+        "9100006": ("Terceiro.sh",),
         "9100001": ("Pasta\\Win64\\Jogo.EXE", "jogo.x86_64"),
         "9100002": ("inicia.bat",),
         "9100003": (),
@@ -161,7 +161,7 @@ def test_quem_oferece_o_exe_no_linux_nao_e_nativo(lar: Path) -> None:
     """MORDIDA: devolva o `jogos_sem_entrada_nova` a olhar só o `common/oslist`."""
     _steam(lar, MESA_DE_JOGOS)
     nativos = pp.jogos_sem_entrada_nova(list(MESA_DE_JOGOS), home=lar)
-    assert nativos == {"2710970", "2853840", "9100003"}
+    assert nativos == {"9100005", "9100006", "9100003"}
 
 
 def test_o_sinful_ganha_o_pino_e_o_nativo_de_verdade_fica(lar: Path) -> None:
@@ -177,4 +177,4 @@ def test_o_sinful_ganha_o_pino_e_o_nativo_de_verdade_fica(lar: Path) -> None:
     assert mapa.get("4540280") == PINO, mapa
     assert {a: mapa.get(a) for a in ("9100001", "9100002", "9100004")} == {
         "9100001": PINO, "9100002": PINO, "9100004": PINO}
-    assert not {"2710970", "2853840", "9100003"} & set(mapa), mapa
+    assert not {"9100005", "9100006", "9100003"} & set(mapa), mapa

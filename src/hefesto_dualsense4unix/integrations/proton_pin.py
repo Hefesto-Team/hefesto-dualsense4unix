@@ -47,7 +47,7 @@ import urllib.request
 from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple, TypeVar
 
 try:
     from .steam_launch_options import (
@@ -1552,16 +1552,27 @@ def oslist_do_appinfo(
     appinfo: Path, appids: Collection[str]
 ) -> dict[str, str] | None:
     """O `common/oslist` de cada appid pedido, lido do `appinfo.vdf` binário."""
+    return _lido_do_appinfo(appinfo, appids, _oslist_do_app)
+
+
+def _oslist_do_app(vdf: object) -> str:
+    oslist = _chave(_chave(_chave(vdf, "appinfo"), "common"), "oslist")
+    return oslist if isinstance(oslist, str) else ""
+
+
+_Lido = TypeVar("_Lido")
+
+
+def _lido_do_appinfo(
+    appinfo: Path, appids: Collection[str], ler: Callable[[object], _Lido]
+) -> dict[str, _Lido] | None:
+    """`ler(vdf)` de cada appid pedido; o cache que não se lê dá None."""
     if not appids:
         return {}
-    achados: dict[str, str] = {}
     try:
-        for appid, vdf in _vdfs_do_appinfo(appinfo, appids):
-            oslist = _chave(_chave(_chave(vdf, "appinfo"), "common"), "oslist")
-            achados[appid] = oslist if isinstance(oslist, str) else ""
+        return {appid: ler(vdf) for appid, vdf in _vdfs_do_appinfo(appinfo, appids)}
     except ValueError:
         return None
-    return achados
 
 
 _MASCARA_DO_STEAM_INPUT = "steamconfigurator3rdpartynative"
@@ -1614,26 +1625,23 @@ def executaveis_no_linux_do_appinfo(
     appinfo: Path, appids: Collection[str]
 ) -> dict[str, tuple[str, ...]] | None:
     """Os executáveis que a Steam oferece no Linux: `config/launch` sem `oslist` ou com `linux`."""
-    if not appids:
-        return {}
-    achados: dict[str, tuple[str, ...]] = {}
-    try:
-        for appid, vdf in _vdfs_do_appinfo(appinfo, appids):
-            lancamentos = _chave(_chave(_chave(vdf, "appinfo"), "config"), "launch")
-            executaveis: list[str] = []
-            if isinstance(lancamentos, dict):
-                for entrada in lancamentos.values():
-                    executavel = _chave(entrada, "executable")
-                    if not isinstance(executavel, str) or not executavel:
-                        continue
-                    oslist = _chave(_chave(entrada, "config"), "oslist")
-                    if isinstance(oslist, str) and oslist.strip() and not _declara_linux(oslist):
-                        continue
-                    executaveis.append(executavel)
-            achados[appid] = tuple(executaveis)
-    except ValueError:
-        return None
-    return achados
+    return _lido_do_appinfo(appinfo, appids, _executaveis_no_linux)
+
+
+def _executaveis_no_linux(vdf: object) -> tuple[str, ...]:
+    lancamentos = _chave(_chave(_chave(vdf, "appinfo"), "config"), "launch")
+    if not isinstance(lancamentos, dict):
+        return ()
+    executaveis: list[str] = []
+    for entrada in lancamentos.values():
+        executavel = _chave(entrada, "executable")
+        if not isinstance(executavel, str) or not executavel:
+            continue
+        oslist = _chave(_chave(entrada, "config"), "oslist")
+        if isinstance(oslist, str) and oslist.strip() and not _declara_linux(oslist):
+            continue
+        executaveis.append(executavel)
+    return tuple(executaveis)
 
 
 def _oferece_o_windows_no_linux(executaveis: Sequence[str]) -> bool:
@@ -1649,8 +1657,7 @@ def jogos_sem_entrada_nova(
     """Dos `appids`, os que NÃO ganham entrada nova por jogo no pino.
 
     Nativo é o jogo que declara `linux` e cujo lançamento oferecido no Linux não é executável do
-    Windows: um `.exe` sem `oslist` a Steam roda sem Proton, e o jogo não abre (Sinful Survivors,
-    14/11/2026).
+    Windows: um `.exe` sem `oslist` a Steam roda sem Proton, e o jogo não abre.
     """
     raiz = default_steam_root(home)
     appinfo = raiz / "appcache" / "appinfo.vdf"
