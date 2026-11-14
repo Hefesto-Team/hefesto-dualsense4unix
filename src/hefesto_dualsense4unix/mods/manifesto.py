@@ -612,6 +612,55 @@ class ModoDeAba(BaseModel):
         return valor
 
 
+PORTAS_POR_LADO = 8
+
+PRIMEIRA_PORTA_DA_PONTE = 1024
+
+
+class PortaDeclarada(BaseModel):
+    """Uma porta de loopback que a caixa com rede abre, com o nome que o «sim» mostra.
+
+    Cada entrada é um protocolo: TCP, ou UDP com ``udp``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    porta: int = Field(strict=True, ge=1, le=65535)
+    nome: str = Field(min_length=1, max_length=60)
+    udp: bool = Field(default=False, strict=True)
+
+    @field_validator("nome")
+    @classmethod
+    def _uma_linha(cls, valor: str) -> str:
+        if not valor.isprintable() or not valor.strip():
+            raise ValueError("portas: o nome é uma linha de texto")
+        return valor.strip()
+
+
+class Portas(BaseModel):
+    """As portas de loopback da caixa com rede: o resto do ``127.0.0.1`` da casa fica fechado.
+
+    ``da_casa`` é o serviço da máquina que a extensão alcança; ``para_a_casa`` é a ponte da
+    extensão que os programas da máquina alcançam, só no ``127.0.0.1`` da máquina.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    da_casa: list[PortaDeclarada] = Field(default_factory=list, max_length=PORTAS_POR_LADO)
+    para_a_casa: list[PortaDeclarada] = Field(default_factory=list, max_length=PORTAS_POR_LADO)
+
+    @model_validator(mode="after")
+    def _sem_repetir(self) -> Portas:
+        numeros = [(p.porta, p.udp) for p in (*self.da_casa, *self.para_a_casa)]
+        if len(set(numeros)) != len(numeros):
+            raise ValueError("portas: porta repetida")
+        baixas = [p.porta for p in self.para_a_casa if p.porta < PRIMEIRA_PORTA_DA_PONTE]
+        if baixas:
+            raise ValueError(
+                f"portas: para_a_casa começa na {PRIMEIRA_PORTA_DA_PONTE} (pediu {baixas[0]})")
+        return self
+
+
 class Manifesto(BaseModel):
     """O ``hefesto-mod.json`` inteiro."""
 
@@ -646,6 +695,7 @@ class Manifesto(BaseModel):
     estilos: list[str] = Field(default_factory=list)
     modos_de_aba: list[ModoDeAba] = Field(default_factory=list, max_length=1)
     pagina: Pagina | None = None
+    portas: Portas | None = None
 
     @field_validator("id")
     @classmethod
@@ -728,6 +778,8 @@ class Manifesto(BaseModel):
         if self.agora and not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
             raise ValueError(
                 "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
+        if self.portas is not None and self.rede == "nenhuma":
+            raise ValueError("portas pede rede:local ou rede:internet")
         self._conferir_as_acoes_e_o_livre()
         self._conferir_a_chave()
         self._conferir_as_ligas()
@@ -1018,8 +1070,10 @@ __all__ = [
     "NOME_DO_MOVIMENTO",
     "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
+    "PORTAS_POR_LADO",
     "PREFIXO_DO_MODO_DE_EXTENSAO",
     "PRESENTE_NO_ESTADO",
+    "PRIMEIRA_PORTA_DA_PONTE",
     "TIPOS",
     "TOPICOS_DE_LEITURA",
     "TOPICOS_DE_PUBLICACAO",
@@ -1030,6 +1084,8 @@ __all__ = [
     "ModoDeAba",
     "Opcao",  # (noqa-acento)
     "Pagina",  # (noqa-acento)
+    "PortaDeclarada",
+    "Portas",
     "Processo",
     "aceita_a_api",
     "arquivo_da_pagina",

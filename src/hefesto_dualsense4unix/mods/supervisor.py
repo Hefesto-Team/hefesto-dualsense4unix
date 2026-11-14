@@ -18,6 +18,7 @@ import re
 import secrets
 import shutil
 import signal
+import socket
 import threading
 import time
 from collections import deque
@@ -101,6 +102,10 @@ DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
 }
 
 DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
+
+PASTA_DA_CAIXA: tuple[str, ...] = (
+    "--config-net", "--quiet", "--foreground", "--no-map-gw", "-D", "none",
+)
 
 _PR_SET_PDEATHSIG = 1
 
@@ -457,28 +462,30 @@ def comando_na_caixa(
     casa: Path,
     execucao: tuple[Path, ...],
     jogos: tuple[Path, ...] = (),
+    pasta: str | None = None,
+    ocupada: Callable[[int, bool], bool] | None = None,
 ) -> list[str]:
-    """A linha do ``bwrap`` para ``comando``.
+    """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
-    Os ``tmpfs`` vêm antes das pastas montadas por cima deles: a ``HOME`` e os
-    diretórios de execução nascem vazios, e só o código (leitura), os dados
-    (escrita) e a porta das modificações aparecem dentro deles.
-
-    O ``--unshare-pid`` dá à caixa um espaço de PID próprio: quando o ``bwrap``
-    sai, o kernel leva junto TUDO o que a modificação abriu. Sem ele, o
-    ``--new-session`` põe o filho fora do grupo do PID criado, e o neto que a
-    modificação deixasse de fundo sobrevivia ao «parar» (medido em 10/10/2026).
+    Os ``tmpfs`` vêm antes das pastas montadas por cima deles: a ``HOME`` e os diretórios de
+    execução nascem vazios. O ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a
+    modificação abriu (medido em 10/10/2026). Dentro do ``pasta`` (:func:`linha_do_pasta`) o
+    ``uid`` seria 0, e o barramento do sistema recusa quem diz 0 com a credencial de outro: o
+    ``bwrap`` devolve o ``uid`` e o ``gid`` de quem roda (medido em 14/11/2026).
     """
     escondidas = _escondidas()
-    argv = [
-        bwrap,
+    propria = pasta is not None and manifesto.rede != "nenhuma"
+    argv = [bwrap]
+    if propria:
+        argv += ["--unshare-user", "--uid", str(os.getuid()), "--gid", str(os.getgid())]
+    argv += [
         "--ro-bind", "/", "/",
         "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try",
         "--proc", "/proc",
         "--tmpfs", "/tmp",
     ]
-    for pasta in (*escondidas, str(casa), *map(str, execucao)):
-        argv += ["--tmpfs", pasta]
+    for coberta in (*escondidas, str(casa), *map(str, execucao)):
+        argv += ["--tmpfs", coberta]
     if "aparelhos" in manifesto.permissoes:
         argv += ["--dev-bind", "/dev", "/dev"]
     else:
@@ -496,22 +503,89 @@ def comando_na_caixa(
     if manifesto.rede == "nenhuma":
         argv.append("--unshare-net")
     argv += ["--die-with-parent", "--new-session", "--chdir", str(codigo), "--", *comando]
+    if propria:
+        assert pasta is not None
+        return [*linha_do_pasta(pasta, manifesto, ocupada or ocupada_na_casa), "--", *argv]
     return argv
+
+
+def rede_propria_da_caixa() -> str | None:
+    """O ``pasta``, que dá à caixa com rede um espaço de rede próprio; ``None`` sem ele."""
+    return shutil.which("pasta")
+
+
+def ocupada_na_casa(porta: int, udp: bool) -> bool:
+    """Outro programa já escuta em ``127.0.0.1:porta`` da casa.
+
+    O ``pasta`` não abre com uma ponte ocupada, e a extensão inteira ficaria fechada: a porta
+    ocupada fica de fora, como ficava quando a própria extensão a abria no espaço da casa.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM if udp else socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind(("127.0.0.1", porta))
+        except OSError:
+            return True
+    return False
+
+
+def linha_do_pasta(pasta: str, manifesto: Manifesto,
+                   ocupada: Callable[[int, bool], bool]) -> list[str]:
+    """O ``pasta`` com as ``portas`` do manifesto e nenhuma outra.
+
+    ``-T``/``-U`` levam a porta do ``127.0.0.1`` da caixa à da casa (``da_casa``); ``-t``/``-u``
+    trazem a do ``127.0.0.1`` da casa, e só dele, à da caixa (``para_a_casa``). O que não se
+    declara fica em ``none``: o padrão do ``pasta`` encaminha toda porta que se escuta, e o
+    ``--no-map-gw`` tira o caminho do gateway até o loopback da casa.
+    """
+    portas = manifesto.portas
+    da_casa = portas.da_casa if portas else []
+    para_a_casa = [p for p in (portas.para_a_casa if portas else []) if not ocupada(p.porta, p.udp)]
+    linha = [pasta, *PASTA_DA_CAIXA]
+    for opcao, lista, udp, endereco in (("-t", para_a_casa, False, "127.0.0.1/"),
+                                        ("-u", para_a_casa, True, "127.0.0.1/"),
+                                        ("-T", da_casa, False, ""),
+                                        ("-U", da_casa, True, "")):
+        numeros = [f"{endereco}{p.porta}" for p in lista if p.udp == udp]
+        linha += [arg for n in numeros for arg in (opcao, n)] or [opcao, "none"]
+    return linha
 
 
 A_REDE_INCLUI_A_MAQUINA = (
     "A rede da extensão inclui a internet e os serviços desta máquina, "
     "inclusive o controle pelo protocolo do DSX.")
 
+A_REDE_INCLUI_A_INTERNET = "A rede da extensão inclui a internet."
+
+
+def _as_portas_pelo_nome(lista: Sequence[Any]) -> str:
+    nomes: dict[str, list[str]] = {}
+    for p in lista:
+        nomes.setdefault(p.nome, []).append(f"{p.porta}{'/udp' if p.udp else ''}")
+    return "; ".join(f"{nome} ({', '.join(numeros)})" for nome, numeros in nomes.items())
+
 
 def frase_da_rede(manifesto: Manifesto) -> str:
-    """O que a rede do «sim» abre: a caixa com rede fica no espaço de rede da casa.
+    """O que a rede do «sim» abre de fato.
 
-    Um espaço de rede próprio (o ``pasta``) tirava das extensões o ``127.0.0.1`` da casa nos dois
-    sentidos: o jogo deixava de alcançar a ponte que a extensão abre ali, e a extensão, o app que
-    a pessoa abriu na máquina (medido em 14/11/2026 com a da Lovense).
+    Com o ``pasta``, a internet e, do ``127.0.0.1`` da casa, só as ``portas`` declaradas, pelo
+    nome de cada uma. Sem ele, a caixa fica no espaço de rede da casa, e a frase diz que a rede
+    inclui os serviços desta máquina: um espaço próprio sem as portas tirava das extensões a ponte
+    que o jogo alcança e o app que a pessoa abriu na máquina (medido em 14/11/2026).
     """
-    return "" if manifesto.rede == "nenhuma" else A_REDE_INCLUI_A_MAQUINA
+    if manifesto.rede == "nenhuma":
+        return ""
+    if rede_propria_da_caixa() is None:
+        return A_REDE_INCLUI_A_MAQUINA
+    frase = [A_REDE_INCLUI_A_INTERNET]
+    portas = manifesto.portas
+    if portas and portas.da_casa:
+        frase.append(f"Desta máquina, a extensão alcança só: "
+                     f"{_as_portas_pelo_nome(portas.da_casa)}.")
+    if portas and portas.para_a_casa:
+        frase.append(f"Os programas desta máquina alcançam: "
+                     f"{_as_portas_pelo_nome(portas.para_a_casa)}.")
+    return " ".join(frase)
 
 
 def _escondidas() -> tuple[str, ...]:
@@ -982,6 +1056,7 @@ class Supervisor:
                 casa=casa,
                 execucao=_execucao_da_sessao(execucao_bruta, self.porta.caminho),
                 jogos=jogos,
+                pasta=rede_propria_da_caixa(),
             )
         else:
             argv = comando
@@ -1091,6 +1166,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
 
 
 __all__ = [
+    "A_REDE_INCLUI_A_INTERNET",
     "A_REDE_INCLUI_A_MAQUINA",
     "DEVOLVIDO_COM_A_PERMISSAO",
     "DEVOLVIDO_COM_A_REDE",
@@ -1103,6 +1179,7 @@ __all__ = [
     "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
     "FALTA_O_BWRAP",
+    "PASTA_DA_CAIXA",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
@@ -1110,8 +1187,11 @@ __all__ = [
     "comando_na_caixa",
     "diario_da_extensao",
     "frase_da_rede",
+    "linha_do_pasta",
+    "ocupada_na_casa",
     "parar_o_grupo",
     "pastas_dos_jogos",
+    "rede_propria_da_caixa",
     "supervisor_do_servico",
     "ultima_linha_do_diario",
 ]

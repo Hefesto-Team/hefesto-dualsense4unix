@@ -60,10 +60,14 @@ permissões que a pessoa aceitou.
      - do diretório de execução da sessão aparece só a porta, com ou sem `XDG_RUNTIME_DIR` no ambiente;
      - os processos ficam num espaço de PID, IPC, UTS e cgroup próprios: o que a modificação abrir
        morre com a modificação;
-     - `--unshare-net` entra quando a rede é `nenhuma`; com rede, a caixa fica no espaço de rede da
-       casa, porque o jogo alcança a ponte que a extensão abre no `127.0.0.1` e a extensão alcança o
-       app que a pessoa abriu na máquina (um espaço próprio pelo `pasta` fechava os dois, medido em
-       14/11/2026 com a da Lovense);
+     - `--unshare-net` entra quando a rede é `nenhuma`; com rede e com o `pasta` no `PATH`, a caixa
+       ganha um espaço de rede próprio (`--no-map-gw`, `-D none`), e do `127.0.0.1` da casa só as
+       `portas` do manifesto: `-T`/`-U` para cada `da_casa` (o Intiface da máquina) e `-t`/`-u` em
+       `127.0.0.1/<porta>` para cada `para_a_casa` (a ponte que os jogos usam); toda outra porta, o
+       socket abstrato (X11, D-Bus) e o gateway seguem fechados. A ponte que outro programa já ocupa
+       fica de fora, e a extensão abre. Dentro do `pasta` o `bwrap` devolve o `uid` e o `gid` de quem
+       roda: com o `uid` 0 do espaço de usuário do `pasta`, o barramento do sistema recusava o BlueZ
+       (medido em 14/11/2026). Sem o `pasta`, a caixa fica no espaço de rede da casa;
      - `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nenhum socket de `/run`, como o do
        broker ou o do docker, atende de dentro); volta por cima só o que a permissão pede: o
        `/run/dbus` com `bluetooth`, o `/run/udev` e o `/dev` real com `aparelhos`, o
@@ -120,6 +124,9 @@ porque é só ele que o barramento publica.
   «Rodar sem caixa», só a porta confere as permissões: o processo roda com tudo o que a pessoa pode,
   inclusive o socket principal.
 - Na caixa, `rede:local` e `rede:internet` abrem a mesma rede: só `rede:nenhuma` é imposta. O «sim»
-  diz isso: a caixa com rede fica no espaço de rede da casa, e a frase diz que a rede inclui a internet
-  e os serviços desta máquina, inclusive o controle pelo protocolo do DSX.
+  diz o que abre: com o `pasta`, a internet e as `portas` pelo nome de cada uma; sem ele, a caixa fica
+  no espaço de rede da casa, e a frase diz que a rede inclui a internet e os serviços desta máquina,
+  inclusive o controle pelo protocolo do DSX.
+- Com o `pasta`, a extensão alcança no `127.0.0.1` da casa só a porta declarada: o Intiface que a
+  pessoa mudou de porta na máquina fica fora até a extensão declarar a porta nova.
 - O `uninstall.sh` ainda não conhece os lugares novos.

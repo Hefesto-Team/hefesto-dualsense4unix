@@ -718,6 +718,29 @@ teto de 64 000 bytes; `para` que não é de uma mensagem desta extensão, ou que
 (`enviada` falso sem a extensão na porta) ou `{recusa}` com a frase, quando o teto ou o ritmo recusam; a extensão sem
 `pagina` no manifesto recusa (`-32003`).
 
+## As portas da caixa com rede (o que o manifesto declara)
+
+Com `rede:local` ou `rede:internet` e com o `pasta` na máquina, a caixa tem um espaço de rede próprio: a internet e a
+rede da casa respondem, e do `127.0.0.1` da máquina só as portas que o manifesto declara.
+
+```json
+"portas": {"da_casa": [{"porta": 12345, "nome": "o Intiface desta máquina"}],
+           "para_a_casa": [{"porta": 20010, "nome": "a ponte que os jogos usam"},
+                           {"porta": 30010, "nome": "a ponte que os jogos usam"}]}
+```
+
+| campo | forma |
+| --- | --- |
+| `da_casa` | o serviço da máquina que a extensão alcança no `127.0.0.1` de dentro, até 8 |
+| `para_a_casa` | a porta que a extensão escuta no `127.0.0.1` de dentro e os programas da máquina alcançam no `127.0.0.1` da máquina (nunca na rede), de 1024 a 65535, até 8 |
+| `porta` | inteiro de 1 a 65535 |
+| `nome` | o que a porta é, até 60 caracteres, numa linha: o «sim» lista as portas por ele |
+| `udp` | `true` para UDP; sem ele, TCP. A mesma porta nos dois protocolos são duas entradas |
+
+A mesma porta (e protocolo) não se repete, e `portas` sem rede recusa o manifesto. A ponte que outro programa da
+máquina já escuta fica de fora, e a extensão abre assim mesmo. Sem o `pasta`, a caixa com rede fica no espaço de rede da
+casa, e o «sim» diz que a rede inclui os serviços desta máquina.
+
 ## O modo de aba (o que o manifesto declara)
 
 `modos_de_aba` traz no máximo um modo por extensão, irmão do «Modo automático» nas abas que ele lista:

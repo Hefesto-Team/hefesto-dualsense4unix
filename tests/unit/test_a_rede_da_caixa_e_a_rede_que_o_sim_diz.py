@@ -1,9 +1,9 @@
 """A rede da caixa e a rede que o «sim» diz (A-REDE-DA-CAIXA-E-A-REDE-QUE-O-SIM-DIZ-01).
 
-A caixa com rede fica no espaço de rede da casa: o jogo alcança a ponte que a extensão abre no
-``127.0.0.1`` (o Game Mode da Lovense em 20010 e 30010), e a extensão alcança o app que a pessoa
-abriu na máquina (o Intiface Central em 12345). Um espaço de rede próprio, como o do ``pasta``,
-fechava os dois sentidos (medido em 14/11/2026). A frase da rede diz o que o «sim» abre.
+Sem o ``pasta``, a caixa com rede fica no espaço de rede da casa: o jogo alcança a ponte que a
+extensão abre no ``127.0.0.1`` (o Game Mode da Lovense em 20010 e 30010), e a extensão alcança o app
+que a pessoa abriu na máquina (o Intiface Central em 12345). Com ele, só pelas ``portas`` declaradas
+(test_a_caixa_com_rede_abre_so_as_portas_declaradas). A frase da rede diz o que o «sim» abre.
 """
 from __future__ import annotations
 
@@ -124,7 +124,8 @@ def test_a_linha_da_caixa_so_corta_a_rede_na_rede_nenhuma(curto: Path) -> None:
     assert nenhuma[0].endswith("bwrap") and "--unshare-net" in nenhuma
 
 
-def test_a_frase_da_rede_diz_o_que_o_sim_abre() -> None:
+def test_a_frase_da_rede_diz_o_que_o_sim_abre(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: None)
     for rede in ("rede:local", "rede:internet"):
         assert sup.frase_da_rede(_manifesto(rede)) == sup.A_REDE_INCLUI_A_MAQUINA
     assert sup.frase_da_rede(_manifesto("rede:nenhuma")) == ""

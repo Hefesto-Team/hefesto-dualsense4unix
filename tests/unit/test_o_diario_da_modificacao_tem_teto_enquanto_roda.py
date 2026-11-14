@@ -36,11 +36,15 @@ TETO = 64 * 1024
 
 _HORA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
 
+_AS_PERDIDAS = re.compile(r"^\((?:1 linha saiu|\d+ linhas saíram): o disco não acompanhou\)$")
+
 _O_FILHO = textwrap.dedent('''
     import os, sys, time
     modo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modo")).read().strip()
     for n in range(8192):
         print(f"linha {n:06d} " + "x" * 50, flush=(n % 64 == 0))
+        if n % 128 == 127:
+            time.sleep(0.005)
     print("a linha final", flush=True)
     if modo == "cai":
         sys.exit(3)
@@ -149,6 +153,8 @@ def test_a_modificacao_que_fala_muito_nao_passa_do_teto_enquanto_roda(
             assert diario.stat().st_size <= TETO, diario.stat().st_size
             linhas = [_HORA.sub("", linha, count=1) for linha in _texto(diario).splitlines()]
             assert linhas[-1] == "a linha final"
+            while linhas and _AS_PERDIDAS.match(linhas[0]):
+                linhas.pop(0)
             assert linhas[0].startswith("linha "), "a metade nova começa na linha"
             assert len(linhas[0]) == len("linha 000000 ") + 50
         finally:

@@ -1,8 +1,9 @@
 """A caixa com rede e o loopback da casa (A-CAIXA-COM-REDE-NAO-ALCANCA-O-LOOPBACK-DA-CASA-01).
 
 No ``127.0.0.1`` da casa escutam o UDP do DSX e o DSU, sem senha. A caixa sem rede não os alcança;
-a caixa com rede fica no espaço de rede da casa (a ponte do jogo e o app da máquina dependem dele),
-e o «sim» diz, antes da pergunta, que a rede inclui os serviços desta máquina e o DSX.
+sem o ``pasta``, a caixa com rede fica no espaço de rede da casa (a ponte do jogo e o app da máquina
+dependem dele), e o «sim» diz, antes da pergunta, que a rede inclui os serviços desta máquina e o
+DSX. Com o ``pasta``, só as portas declaradas (test_a_caixa_com_rede_abre_so_as_portas_declaradas).
 """
 from __future__ import annotations
 
@@ -59,7 +60,8 @@ def test_a_caixa_sem_rede_nao_alcanca_o_loopback_da_casa(curto: Path) -> None:
 
 
 def test_o_sim_diz_que_a_rede_inclui_esta_maquina_antes_da_pergunta(
-        lar: Lugares, curto: Path) -> None:
+        lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: None)
     assert "os serviços desta máquina" in sup.A_REDE_INCLUI_A_MAQUINA
     assert "DSX" in sup.A_REDE_INCLUI_A_MAQUINA
     instalar(str(_pasta_do_mod(curto / "fontes", permissoes=["rede:internet"])), lugares=lar)
