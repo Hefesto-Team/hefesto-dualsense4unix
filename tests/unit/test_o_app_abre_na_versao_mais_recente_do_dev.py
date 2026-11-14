@@ -116,6 +116,8 @@ def _outro_ramo(casa: Casa) -> None:
 
 
 def _marca_de_voo(casa: Casa) -> None:
+    _git(casa.clone, "worktree", "add", "-q", "-b", "voo/um-conjunto",
+         str(casa.base / "voo" / "um-conjunto"), "dev")
     (casa.clone / ".git" / va.MARCA_DE_VOO).write_text("um-conjunto\n", encoding="utf-8")
 
 

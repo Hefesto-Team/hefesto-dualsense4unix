@@ -1,13 +1,13 @@
 """O atualizador: cada peça de fora na versão mais nova publicada, uma por vez, sem jogo aberto.
 
-O motor conhece as peças pelo registro (:mod:`pecas_do_atualizador`): a versão instalada, a
-publicada e os passos baixar, instalar e aplicar; a peça em dia reinstala a de agora
-(:class:`Reinstalacao`), ou diz por quê não. A fila roda num processo próprio (``--rodar``) e
-escreve o andamento num arquivo que a janela lê a cada tique: o serviço reinicia no fim.
+O motor lê as peças do registro (:mod:`pecas_do_atualizador`): versões e os passos baixar,
+instalar e aplicar; a peça em dia reinstala a de agora (:class:`Reinstalacao`). A fila roda num
+processo próprio (``--rodar``) e escreve o andamento que a janela lê a cada tique. A escolha, o
+prazo e a versão segurada moram no ``atualizador.json``; a versão de agora vai às anteriores.
 
-A escolha das peças, a «Atualização automática», o prazo da pergunta e a versão que se voltou
-(segurada, para não subir de novo) moram no ``atualizador.json`` da configuração. Antes de
-instalar, a versão de agora vai para as anteriores, que é o que «Versões anteriores» lista.
+Cada peça termina Atualizado (instalou, ou nada a fazer), Esperando (a Steam, o jogo, o voo: a
+fila segue e volta a essa peça quando passa) ou Falhou (o erro de verdade). O andamento de um
+processo que morreu no meio se encerra ao ler.
 """
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ ARQUIVO_DA_ESCOLHA = "atualizador.json"
 ARQUIVO_DA_CONFERENCIA = "atualizador-conferencia.json"
 ARQUIVO_DO_ANDAMENTO = "atualizador-andamento.json"
 ARQUIVO_DAS_ANTERIORES = "atualizador-anteriores.json"
+ARQUIVO_DO_QUE_JA_ESTA = "atualizador-ja-esta.json"
 REGISTRO = "atualizador.log"
 TRAVA = "atualizador.trava"
 PEDIDO_DE_PARAR = "atualizador.parar"
@@ -59,6 +60,11 @@ APLICANDO = "aplicando"
 PRONTA = "pronta"
 FALHOU = "falhou"
 REINICIANDO = "reiniciando"
+ESPERANDO = "esperando"
+ATUALIZADA = "atualizada"
+ACABADAS = (PRONTA, ATUALIZADA)
+EM_CURSO = (BAIXANDO, INSTALANDO, APLICANDO, ESPERANDO, REINICIANDO)
+O_JOGO_ABERTO = "o jogo aberto"
 SELO_DA_ETAPA = {"baixar": BAIXANDO, "instalar": INSTALANDO, "aplicar": APLICANDO}
 
 SUBIR = "subir"
@@ -77,6 +83,20 @@ class EtapaFalhouError(Exception):
 
 class FilaParadaError(Exception):
     """Quem usa pediu para parar: a fila sai entre duas etapas, nunca no meio de uma."""
+
+
+class EsperaError(Exception):
+    """A etapa ainda não pode, e não é falha: a mensagem diz o que se espera, e ``livre`` diz quando
+    passou. A fila segue com as outras peças e volta a esta da mesma etapa."""
+
+    def __init__(self, motivo: str, livre: Callable[[], bool]) -> None:
+        super().__init__(motivo)
+        self.livre = livre
+
+
+class NadaAFazerError(Exception):
+    """A peça já está como devia (a versão de cima já traz a cura): fica «Atualizado», e a mesma
+    versão não se oferece de novo."""
 
 
 def ordem(versao: str) -> tuple[tuple[int, int | str], ...]:
@@ -274,7 +294,30 @@ def prazo_vencido(escolha: Escolha, agora: float) -> bool:
     return agora - escolha.perguntada_em >= escolha.dias * DIA_S
 
 
-def _estado_da_peca(peca: Peca, versoes: Versoes, escolha: Escolha) -> str:
+def _chave_do_que_ja_esta(versoes: Versoes) -> str:
+    return versoes.completa or versoes.publicada or ""
+
+
+def _ler_o_que_ja_esta() -> dict[str, Any]:
+    return _ler_json(_estado() / ARQUIVO_DO_QUE_JA_ESTA)
+
+
+def _ja_esta(peca: Peca, versoes: Versoes, ja: dict[str, Any]) -> str:
+    """O porquê de a versão nova não ter o que fazer aqui, se a fila já viu; vazio senão."""
+    visto = ja.get(peca.id)
+    if not isinstance(visto, dict) or visto.get("chave") != _chave_do_que_ja_esta(versoes):
+        return ""
+    return str(visto.get("motivo") or "")
+
+
+def _guardar_o_que_ja_esta(peca: Peca, versoes: Versoes, motivo: str) -> None:
+    ja = _ler_o_que_ja_esta()
+    ja[peca.id] = {"chave": _chave_do_que_ja_esta(versoes), "motivo": motivo}
+    _gravar_json(_estado() / ARQUIVO_DO_QUE_JA_ESTA, ja)
+
+
+def _estado_da_peca(peca: Peca, versoes: Versoes, escolha: Escolha,
+                    ja: dict[str, Any] | None = None) -> str:
     if not versoes.existe:
         return FORA
     if peca.volta != 1:
@@ -283,7 +326,8 @@ def _estado_da_peca(peca: Peca, versoes: Versoes, escolha: Escolha) -> str:
         return REVISAR
     if versoes.publicada is None:
         return NAO_CONSULTADO
-    if versoes.tem_nova() and escolha.seguradas.get(peca.id) != versoes.publicada:
+    if versoes.tem_nova() and escolha.seguradas.get(peca.id) != versoes.publicada \
+            and not _ja_esta(peca, versoes, {} if ja is None else ja):
         return NOVA
     return EM_DIA
 
@@ -307,17 +351,18 @@ def conferir(rede: bool = True, *, lista: Sequence[Peca] | None = None,
     Uma peça que levanta não derruba as outras: fica «não consultado», com o porquê.
     """
     escolha = ler_a_escolha()
+    ja = _ler_o_que_ja_esta()
     itens: list[dict[str, Any]] = []
     for peca in (pecas() if lista is None else lista):
         try:
             versoes = peca.versoes(rede)
         except Exception as erro:
             versoes = Versoes(dica=str(erro) or type(erro).__name__)
-        estado = _estado_da_peca(peca, versoes, escolha)
+        estado = _estado_da_peca(peca, versoes, escolha, ja)
         motivo = _sem_reinstalar(peca, versoes, estado)
         itens.append({
             "id": peca.id, "nome": peca.nome, "grupo": peca.grupo, "volta": peca.volta,
-            "dica": versoes.revisar or versoes.dica or peca.dica,
+            "dica": versoes.revisar or _ja_esta(peca, versoes, ja) or versoes.dica or peca.dica,
             "dica_do_aplicar": peca.dica_do_aplicar,
             "de": versoes.instalada, "para": versoes.publicada or "",
             "completa": versoes.completa, "rotulo": versoes.rotulo, "estado": estado,
@@ -353,8 +398,35 @@ def ler_as_anteriores() -> dict[str, Any]:
     return _ler_json(_estado() / ARQUIVO_DAS_ANTERIORES)
 
 
+def _encerrar_o_orfao(andamento: dict[str, Any]) -> dict[str, Any]:
+    """O andamento que diz «andando» sem fila viva: o processo morreu no meio, e ninguém o termina.
+
+    Fica «parado» e visto, com o que estava em curso de volta à fila: a tela não espera por ele, e
+    o mapa volta a dizer o que há para atualizar.
+    """
+    pecas = [p for p in andamento.get("pecas") or [] if isinstance(p, dict)]
+    for linha in pecas:
+        if linha.get("selo") in EM_CURSO:
+            linha["selo"] = FILA
+        etapas = linha.get("etapas")
+        if isinstance(etapas, dict):
+            linha["etapas"] = {k: ("" if v == "agora" else v) for k, v in etapas.items()}
+    reinicio = andamento.get("reinicio")
+    if isinstance(reinicio, dict) and reinicio.get("selo") in EM_CURSO:
+        reinicio["selo"] = FILA
+    encerrado = {**andamento, "pecas": pecas, "fase": PARADO, "visto": True}
+    encerrado["total"] = total(encerrado)
+    with contextlib.suppress(OSError):
+        _gravar_json(_estado() / ARQUIVO_DO_ANDAMENTO, encerrado)
+    _anotar(f"fila: o processo {andamento.get('pid', '?')} saiu no meio; o andamento se encerrou")
+    return encerrado
+
+
 def ler_o_andamento() -> dict[str, Any]:
-    return _ler_json(_estado() / ARQUIVO_DO_ANDAMENTO)
+    andamento = _ler_json(_estado() / ARQUIVO_DO_ANDAMENTO)
+    if andamento.get("fase") in (ANDANDO, ESPERA_O_JOGO) and not em_curso():
+        return _encerrar_o_orfao(andamento)
+    return andamento
 
 
 def marcar_o_andamento_visto() -> None:
@@ -369,7 +441,7 @@ def total(andamento: dict[str, Any]) -> dict[str, Any]:
     itens = [p for p in andamento.get("pecas") or [] if isinstance(p, dict)]
     if not itens:
         return {"feitas": 0, "de": 0, "pct": 0, "falhas": 0}
-    feitas = sum(1 for p in itens if p.get("selo") == PRONTA)
+    feitas = sum(1 for p in itens if p.get("selo") in ACABADAS)
     falhas = sum(1 for p in itens if p.get("selo") == FALHOU)
     pct = sum(float(p.get("pct", 0) or 0) for p in itens) / len(itens)
     return {"feitas": feitas, "de": len(itens), "pct": round(pct), "falhas": falhas}
@@ -448,7 +520,7 @@ def _jogo_aberto() -> bool:
 
 def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
                       relogio: Callable[[], float], dormir: Callable[[float], None],
-                      prazo_s: float) -> bool:
+                      prazo_s: float, linha: dict[str, Any] | None = None) -> bool:
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
         EsperaSemJogo,
@@ -457,6 +529,7 @@ def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
     espera = EsperaSemJogo()
     inicio = relogio()
     primeiro = True
+    antes = (linha.get("selo"), linha.get("motivo")) if linha is not None else None
     while relogio() - inicio < prazo_s:
         aberto = jogo_aberto()
         if primeiro and not aberto:
@@ -464,10 +537,14 @@ def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
         primeiro = False
         if espera.fechou_de_vez(aberto, relogio()):
             andamento.dado["fase"] = ANDANDO
+            if linha is not None and antes is not None:
+                linha["selo"], linha["motivo"] = antes
             andamento.gravar()
             return True
         if aberto and andamento.dado["fase"] != ESPERA_O_JOGO:
             andamento.dado["fase"] = ESPERA_O_JOGO
+            if linha is not None:
+                linha["selo"], linha["motivo"] = ESPERANDO, O_JOGO_ABERTO
             andamento.gravar()
         if _pediram_parar():
             raise FilaParadaError
@@ -492,14 +569,27 @@ def _devolver_a_anterior(ident: str, antes: Any) -> None:
     _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
 
 
+@dataclass
+class _Vez:
+    """O que a peça carrega entre uma espera e a volta: a etapa de onde segue e os dados."""
+
+    dados: dict[str, Any] = field(default_factory=dict)
+    desde: int = 0
+    antes: Any = None
+
+
 def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
-                  agora: Callable[[], float]) -> None:
+                  agora: Callable[[], float], vez: _Vez | None = None) -> EsperaError | None:
+    """Baixar, instalar e aplicar, da etapa em que a peça parou. Devolve a espera, se esperou."""
     linha = andamento.peca(peca.id)
-    dados: dict[str, Any] = {}
-    antes = ler_as_anteriores().get(peca.id)
+    vez = _Vez(antes=ler_as_anteriores().get(peca.id)) if vez is None else vez
+    dados = vez.dados
     reinstala = linha["fazer"] == REINSTALAR
     fonte: Any = peca.reinstalacao if reinstala else peca
-    for etapa in ETAPAS:
+    linha["motivo"] = ""
+    for indice, etapa in enumerate(ETAPAS):
+        if indice < vez.desde:
+            continue
         if _pediram_parar():
             raise FilaParadaError
         fazer = getattr(fonte, etapa)
@@ -517,34 +607,44 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
 
         passo = Passo()
         passo.aviso = functools.partial(avisar, passo)
+        guardou = etapa == "instalar" and not reinstala
         try:
-            if etapa == "instalar" and not reinstala:
+            if guardou:
                 _guardar_a_anterior(peca, versoes, dados, agora())
             if fazer is not None:
                 volta = fazer(passo, dados)
                 if volta:
                     dados.update(volta)
-        except EtapaFalhouError as erro:
-            linha["etapas"][etapa] = "erro"
-            linha["selo"] = FALHOU
-            linha["motivo"] = str(erro)
-            _anotar(f"{peca.id}: {etapa} falhou: {erro}")
-            if etapa == "instalar" and not reinstala:
-                _devolver_a_anterior(peca.id, antes)
-            andamento.gravar()
-            return
         except FilaParadaError:
             raise
+        except EsperaError as espera:
+            if guardou:
+                _devolver_a_anterior(peca.id, vez.antes)
+            linha["etapas"][etapa] = ""
+            linha["selo"] = ESPERANDO
+            linha["motivo"] = str(espera)
+            linha["pct"] = round(inicio)
+            vez.desde = indice
+            _anotar(f"{peca.id}: {etapa} espera: {espera}")
+            andamento.gravar()
+            return espera
+        except NadaAFazerError as nada:
+            if guardou:
+                _devolver_a_anterior(peca.id, vez.antes)
+            _atualizada(peca, versoes, linha, str(nada), etapa=etapa, guardar=not reinstala)
+            andamento.gravar()
+            return None
         except Exception as erro:
             motivo = str(erro) or type(erro).__name__
             linha["etapas"][etapa] = "erro"
             linha["selo"] = FALHOU
             linha["motivo"] = motivo
-            _anotar(f"{peca.id}: {etapa} levantou: {motivo}")
-            if etapa == "instalar" and not reinstala:
-                _devolver_a_anterior(peca.id, antes)
+            _anotar(f"{peca.id}: {etapa} "
+                    f"{'falhou' if isinstance(erro, EtapaFalhouError) else 'levantou'}: {motivo}")
+            if guardou:
+                _devolver_a_anterior(peca.id, vez.antes)
             andamento.gravar()
-            return
+            return None
         linha["etapas"][etapa] = "feito"
         linha["pct"] = round(fim)
         andamento.gravar()
@@ -555,8 +655,41 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
             _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
     linha["selo"] = PRONTA
     _anotar(f"{peca.id}: {versoes.instalada} reinstalada" if reinstala
-            else f"{peca.id}: {versoes.instalada} -> {versoes.publicada} pronta")
+            else f"{peca.id}: {_de_para(versoes)} pronta")
     andamento.gravar()
+    return None
+
+
+def _de_para(versoes: Versoes) -> str:
+    if versoes.rotulo and not versoes.instalada:
+        return versoes.rotulo
+    return f"{versoes.instalada or '—'} -> {versoes.publicada or '—'}"
+
+
+def _atualizada(peca: Peca, versoes: Versoes, linha: dict[str, Any], motivo: str, *,
+                etapa: str = "", guardar: bool = True) -> None:
+    """A peça sem nada a fazer: «Atualizado», e a mesma versão não se oferece de novo."""
+    for chave in ETAPAS:
+        if linha["etapas"].get(chave) == "agora" or chave == etapa:
+            linha["etapas"][chave] = ""
+    linha["selo"] = ATUALIZADA
+    linha["motivo"] = motivo
+    linha["pct"] = 100
+    if guardar and motivo and versoes.publicada:
+        _guardar_o_que_ja_esta(peca, versoes, motivo)
+    _anotar(f"{peca.id}: nada a fazer ({motivo})" if motivo else f"{peca.id}: já está em dia")
+
+
+def _ainda_em_dia(peca: Peca, visto: dict[str, Any] | None) -> bool:
+    """A peça que ia subir, conferida de novo na sua vez: já está na versão nova?"""
+    try:
+        versoes = peca.versoes(True)
+    except Exception:
+        return False
+    if versoes.publicada is None or not versoes.existe:
+        return False
+    return _estado_da_peca(peca, versoes, ler_a_escolha(), _ler_o_que_ja_esta()) == EM_DIA \
+        and not (visto and visto.get("estado") == REVISAR)
 
 
 def _reiniciar_o_servico() -> bool:
@@ -604,6 +737,14 @@ def _o_que_fazer(peca: Peca, visto: dict[str, Any] | None) -> str:
     return REINSTALAR
 
 
+def _livre(espera: EsperaError) -> bool:
+    try:
+        return bool(espera.livre())
+    except Exception as erro:
+        _anotar(f"a espera não respondeu: {erro}")
+        return False
+
+
 def rodar(
     ids: Sequence[str],
     *,
@@ -616,16 +757,17 @@ def rodar(
     agora: Callable[[], float] = time.time,
     prazo_do_jogo_s: float | None = None,
 ) -> int:
-    """A fila: uma peça por vez, cada uma em baixar, instalar e aplicar em todos.
-
-    A peça que a conferência viu em dia reinstala a versão de agora; a que não se reinstala sai
-    da fila.
-
-    Um processo por vez (o segundo sai com 3). Com jogo aberto, espera ele fechar de vez antes
-    de cada peça; no prazo, sai como «parado». Uma peça que falha não para as outras. No fim,
-    reinicia o serviço e reabre a janela. Devolve 0 com tudo pronto, 1 com alguma falha.
+    """A fila: uma peça por vez, em baixar, instalar e aplicar em todos; um processo por vez (o
+    segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez e, já em
+    dia, fica «Atualizado» sem baixar. A que espera (a Steam, o voo) vai para o fim e volta da
+    mesma etapa quando passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma
+    falha não para as outras. Se alguma peça mudou, reinicia o serviço e reabre a janela.
+    Devolve 0 pronto, 1 com falha, 2 parada ou com peça ainda esperando.
     """
-    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import PRAZO_DA_VIGIA_S
+    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
+        PASSO_DA_VIGIA_S,
+        PRAZO_DA_VIGIA_S,
+    )
 
     trava = _a_trava()
     if trava is None:
@@ -646,24 +788,62 @@ def rodar(
             de = str(visto.get("de", "")) if visto else ""
             para = de if o_que_fazer[peca.id] == REINSTALAR else (
                 str(visto.get("para", "")) if visto else "")
-            versoes[peca.id] = Versoes(de, para, rotulo=str(visto.get("rotulo", ""))) \
+            versoes[peca.id] = Versoes(de, para, rotulo=str(visto.get("rotulo", "")),
+                                       completa=str(visto.get("completa", ""))) \
                 if visto else Versoes()
         andamento = _Andamento(escolhidas, versoes, o_que_fazer)
         _anotar(f"fila: {', '.join(p.id for p in escolhidas) or 'nada'}")
         prazo = PRAZO_DA_VIGIA_S if prazo_do_jogo_s is None else prazo_do_jogo_s
+        adiadas: list[tuple[Peca, EsperaError, _Vez]] = []
         try:
             for peca in escolhidas:
-                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo):
+                linha = andamento.peca(peca.id)
+                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo, linha):
                     raise FilaParadaError
-                _rodar_a_peca(peca, versoes[peca.id], andamento, agora)
+                if o_que_fazer[peca.id] == SUBIR and _ainda_em_dia(peca, conferencia.get(peca.id)):
+                    _atualizada(peca, versoes[peca.id], linha, "", guardar=False)
+                    andamento.gravar()
+                    continue
+                vez = _Vez(antes=ler_as_anteriores().get(peca.id))
+                espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
+                if espera is not None:
+                    adiadas.append((peca, espera, vez))
+            inicio = relogio()
+            while adiadas and relogio() - inicio < prazo:
+                if _pediram_parar():
+                    raise FilaParadaError
+                ainda: list[tuple[Peca, EsperaError, _Vez]] = []
+                for peca, espera, vez in adiadas:
+                    if not _livre(espera):
+                        ainda.append((peca, espera, vez))
+                        continue
+                    linha = andamento.peca(peca.id)
+                    if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo,
+                                             linha):
+                        raise FilaParadaError
+                    outra = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
+                    if outra is not None:
+                        ainda.append((peca, outra, vez))
+                adiadas = ainda
+                if adiadas:
+                    dormir(PASSO_DA_VIGIA_S)
+            for peca, espera, _vez in adiadas:
+                linha = andamento.peca(peca.id)
+                linha["selo"], linha["motivo"] = FILA, str(espera)
+                _anotar(f"{peca.id}: a espera passou do prazo ({espera}); fica para a próxima")
             if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo):
                 raise FilaParadaError
             andamento.dado["fase"] = FIM
             andamento.gravar()
-            if escolhidas:
+            if any(p.get("selo") == PRONTA for p in andamento.dado["pecas"]):
                 _rodar_o_servico(andamento, reiniciar, reabrir)
+            else:
+                andamento.dado["reinicio"]["selo"] = ATUALIZADA
         except FilaParadaError:
             andamento.dado["fase"] = PARADO
+            for linha in andamento.dado["pecas"]:
+                if linha.get("selo") in EM_CURSO:
+                    linha["selo"] = FILA
             _anotar("fila: parada")
             andamento.gravar()
             return 2
@@ -671,7 +851,9 @@ def rodar(
         andamento.gravar()
         with contextlib.suppress(OSError):
             conferir(rede=True, lista=lista)
-        return 1 if andamento.dado["total"]["falhas"] else 0
+        if andamento.dado["total"]["falhas"]:
+            return 1
+        return 2 if adiadas else 0
     finally:
         os.close(trava)
 
@@ -718,7 +900,8 @@ def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None) -> bo
 def conferir_ao_abrir(fio_do_dev: threading.Thread | None = None, *,
                       soltar_: Callable[[Sequence[str]], bool] = soltar,
                       agora: Callable[[], float] = time.time) -> threading.Thread:
-    """O vigia da abertura, num fio: confere, e com «Atualização automática» no prazo, solta a fila.
+    """O vigia da abertura, num fio: encerra o andamento órfão, confere, e com «Atualização
+    automática» no prazo, solta a fila.
 
     Espera o fio que traz o ``dev`` (a peça Hefesto lê o que ele baixou), sem passar do teto.
     """
@@ -726,6 +909,7 @@ def conferir_ao_abrir(fio_do_dev: threading.Thread | None = None, *,
         if fio_do_dev is not None:
             fio_do_dev.join(ESPERA_DO_DEV_S)
         try:
+            ler_o_andamento()
             conferencia = conferir(rede=True)
         except Exception as erro:
             _anotar(f"vigia: {erro}")
@@ -776,4 +960,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    raise SystemExit(main())
+    from hefesto_dualsense4unix.app.actions import atualizador as _o_modulo_das_pecas
+
+    raise SystemExit(_o_modulo_das_pecas.main())

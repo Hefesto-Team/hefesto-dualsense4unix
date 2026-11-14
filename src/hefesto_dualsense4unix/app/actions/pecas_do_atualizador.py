@@ -1,13 +1,12 @@
 """As peças do atualizador: de onde cada uma lê a versão, e como baixa, instala e aplica.
 
-O que pede root passa pelo ajudante que o install põe em ``AJUDANTE``, por ``sudo -n``, com um
-verbo de lista fechada e nenhum argumento livre; sem a regra no sudoers, a etapa falha com o
-porquê, e nada pede senha. O que é de quem usa (o Proton, o umu, as bibliotecas do Python e o
-repositório) roda como quem usa.
+O que pede root passa pelo ajudante do install (``AJUDANTE``), por ``sudo -n``, com verbo de lista
+fechada e sem argumento livre: sem a regra, a etapa falha com o porquê, e nada pede senha. O resto
+roda como quem usa. A reinstalação refaz a versão da máquina pelo caminho da subida, com verbos
+fechados no ajudante.
 
-A reinstalação refaz a versão que está na máquina pelo mesmo caminho da subida, com verbos
-fechados no ajudante: o apt só com os pacotes e as versões que o próprio ajudante lê, e o
-backport da casa só da entrega que ele mesmo instalou, conferida de novo.
+O que só pode depois (a Steam aberta, o voo, um install em curso) levanta ``EsperaError``, com a
+pergunta que diz quando passou; a receita da casa cuja cura já está em cima é «Atualizado».
 """
 from __future__ import annotations
 
@@ -27,8 +26,10 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.atualizador import (
+    EsperaError,
     Etapa,
     EtapaFalhouError,
+    NadaAFazerError,
     Passo,
     Peca,
     Reinstalacao,
@@ -48,6 +49,7 @@ TETO_DO_COMANDO_S = 3 * 3600.0
 TETO_DA_PERGUNTA_S = 60.0
 VALIDADE_DA_LISTA_DO_APT_S = 600.0
 PACOTE_DO_PRODUTO = "hefesto-dualsense4unix"
+RC_NADA_A_CONSTRUIR = 9
 GRUPO_NVIDIA = re.compile(r"^(?:nvidia-|libnvidia-|xserver-xorg-video-nvidia)")
 GRUPO_KERNEL = re.compile(r"^linux-(?:system76|generic|image-|headers-|modules-|signed-)")
 METAS_DO_KERNEL = ("linux-system76", "linux-generic", "linux-image-generic")
@@ -160,6 +162,14 @@ def _sem_v(tag: str) -> str:
     return tag[1:] if tag[:1] in ("v", "V") and tag[1:2].isdigit() else tag
 
 
+class RaizSaiuError(EtapaFalhouError):
+    """O ajudante saiu com um código que não é zero: o código vai junto do porquê."""
+
+    def __init__(self, motivo: str, codigo: int) -> None:
+        super().__init__(motivo)
+        self.codigo = codigo
+
+
 def _raiz(acao: str, *args: str, passo: Passo | None = None,
           teto_s: float = TETO_DO_COMANDO_S) -> str:
     """O ajudante root, sem senha: falha com o porquê se a regra do install não está lá."""
@@ -174,7 +184,7 @@ def _raiz(acao: str, *args: str, passo: Passo | None = None,
 
     rc, ultima = _comando(["sudo", "-n", str(AJUDANTE), acao, *args], linha=linha, teto_s=teto_s)
     if rc != 0:
-        raise EtapaFalhouError(ultima or f"{acao} saiu com {rc}")
+        raise RaizSaiuError(ultima or f"{acao} saiu com {rc}", rc)
     return ultima
 
 
@@ -382,6 +392,16 @@ def _proton() -> Any:
     return pp
 
 
+def _steam_livre() -> bool:
+    return not _proton()._steam_gate()
+
+
+def _esperar_a_steam(barra: str) -> EsperaError:
+    """A Steam lê a pasta dos Protons ao abrir: aberta, a peça espera o fecho e segue sozinha."""
+    pp = _proton()
+    return EsperaError(pp._PORQUE_A_STEAM_BARRA.get(barra, barra), _steam_livre)
+
+
 def _curto_do_ge(nome: str) -> str:
     return nome.removeprefix("GE-Proton").removesuffix("-x86_64")
 
@@ -422,6 +442,8 @@ def _instalar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     with contextlib.suppress(OSError):
         sha = pp.sha256_of_file(tarball) if tarball.is_file() else ""
     feito = pp.instalar_a_ultima_do_cache(conf, compat_dir=compat, cache_dir=cache)
+    if feito.estado == "espera_a_steam":
+        raise EsperaError(feito.detalhe or feito.estado, _steam_livre)
     if feito.estado not in ("instalada", "em_dia"):
         raise EtapaFalhouError(feito.detalhe or feito.estado)
     passo.fracao(1.0)
@@ -436,6 +458,8 @@ def _aplicar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
     jogos = len(pp.list_installed_appids())
     passo.contagem("Steam", 0, jogos)
     travado = pp.lock_proton_for_all_games(conf=conf, todos=True)
+    if travado.get("status") == "recusado" and travado.get("reason") in pp._PORQUE_A_STEAM_BARRA:
+        raise _esperar_a_steam(str(travado["reason"]))
     if travado.get("status") in ("erro", "recusado"):
         raise EtapaFalhouError(str(travado.get("reason") or travado.get("status")))
     passo.contagem("Steam", jogos, jogos)
@@ -492,7 +516,7 @@ def _reinstalar_o_proton(passo: Passo, dados: dict[str, Any]) -> None:
     tarball = _tarball_da_reinstalacao(conf, None)
     barra = pp._steam_gate()
     if barra:
-        raise EtapaFalhouError(pp._PORQUE_A_STEAM_BARRA.get(barra, barra))
+        raise _esperar_a_steam(barra)
     try:
         pp._extract_verified_tarball(tarball, conf["name"], pp.default_compat_dir())
     except (OSError, tarfile.TarError) as erro:
@@ -745,16 +769,22 @@ def _pip(*args: str, linha: Callable[[str], None] | None = None) -> tuple[int, s
 
 
 def _atrasadas() -> dict[str, tuple[str, str]]:
+    """As bibliotecas do produto com versão nova, fora a versão que já não montou aqui."""
     texto = _saida([sys.executable, "-m", "pip", "--disable-pip-version-check", "list",
                     "--outdated", "--format=json"])
     if texto is None:
         raise ValueError("o pip não respondeu")
     deps = set(_dependencias_do_produto())
+    nao_montam = _as_que_nao_montam()
     saida = {}
     for item in json.loads(texto or "[]"):
         nome = str(item.get("name", "")).lower().replace("_", "-")
+        ultima = str(item.get("latest_version", ""))
+        visto = nao_montam.get(nome)
+        if isinstance(visto, dict) and visto.get("nova") == ultima:
+            continue
         if nome in deps:
-            saida[nome] = (str(item.get("version", "")), str(item.get("latest_version", "")))
+            saida[nome] = (str(item.get("version", "")), ultima)
     return saida
 
 
@@ -792,6 +822,36 @@ def _rodas(pasta: Path, alvo: Sequence[str]) -> None:
         raise EtapaFalhouError(ultima or "o pip não montou as rodas")
 
 
+def _roda_de_um(pasta: Path, pedido: str) -> str:
+    """A roda de um pacote só: com o build isolado, e senão com as ferramentas de build do próprio
+    ambiente (o setuptools que já está nele). Vazio se montou; o porquê senão."""
+    rc, ultima = _pip("wheel", "--no-deps", "--wheel-dir", str(pasta), pedido)
+    if rc == 0:
+        return ""
+    rc, ultima = _pip("wheel", "--no-deps", "--no-build-isolation", "--wheel-dir", str(pasta),
+                      pedido)
+    return "" if rc == 0 else (ultima or f"o pip não montou {pedido}")
+
+
+ARQUIVO_DAS_QUE_NAO_MONTAM = "python-sem-roda.json"
+
+
+def _as_que_nao_montam() -> dict[str, Any]:
+    try:
+        dado = json.loads((_cache() / ARQUIVO_DAS_QUE_NAO_MONTAM).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return dado if isinstance(dado, dict) else {}
+
+
+def _anotar_as_que_nao_montam(falhas: dict[str, tuple[str, str]]) -> None:
+    dado = {**_as_que_nao_montam(),
+            **{n: {"nova": v, "motivo": m} for n, (v, m) in falhas.items()}}
+    with contextlib.suppress(OSError):
+        (_cache() / ARQUIVO_DAS_QUE_NAO_MONTAM).write_text(
+            json.dumps(dado, ensure_ascii=False), encoding="utf-8")
+
+
 def _instalar_rodas(pasta: Path, alvo: Sequence[str]) -> tuple[int, str]:
     return _pip("install", "--no-index", "--only-binary", ":all:", "--find-links", str(pasta),
                 *alvo)
@@ -804,15 +864,32 @@ def _o_produto_sobe() -> str:
 
 
 def _baixar_o_python(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+    """As rodas das versões novas e das de agora. Se o conjunto não monta, cada pacote se monta
+    sozinho; o que não monta (nem a nova nem a de agora, para voltar) fica na versão de agora e
+    não se oferece de novo nessa versão."""
     atrasadas = _atrasadas()
     if not atrasadas:
-        return {"pacotes": {}}
+        raise NadaAFazerError("")
     pasta = _pasta_do_python()
     shutil.rmtree(pasta, ignore_errors=True)
     (pasta / "antes").mkdir(parents=True)
-    _rodas(pasta, [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())])
-    passo.fracao(0.5)
-    _rodas(pasta / "antes", [f"{n}=={v}" for n, (v, _u) in sorted(atrasadas.items())])
+    try:
+        _rodas(pasta, [f"{n}=={u}" for n, (_v, u) in sorted(atrasadas.items())])
+        passo.fracao(0.5)
+        _rodas(pasta / "antes", [f"{n}=={v}" for n, (v, _u) in sorted(atrasadas.items())])
+    except EtapaFalhouError:
+        falhas: dict[str, tuple[str, str]] = {}
+        for nome, (velha, nova) in sorted(atrasadas.items()):
+            motivo = _roda_de_um(pasta, f"{nome}=={nova}") or _roda_de_um(
+                pasta / "antes", f"{nome}=={velha}")
+            if motivo:
+                falhas[nome] = (nova, motivo)
+        if len(falhas) == len(atrasadas):
+            raise EtapaFalhouError(next(iter(falhas.values()))[1]) from None
+        _anotar_as_que_nao_montam(falhas)
+        for nome in falhas:
+            _anotar(f"python: {nome} {atrasadas.pop(nome)[1]} fica na de agora "
+                    f"({falhas[nome][1]})")
     passo.fracao(1.0)
     return {"pacotes": {n: [v, u] for n, (v, u) in atrasadas.items()}}
 
@@ -926,12 +1003,26 @@ def versoes_do_hefesto(rede: bool) -> Versoes:
     return Versoes(instalada, nova, nova=True)
 
 
+def _o_hefesto_pode(motivo: str) -> None:
+    """O voo, o jogo aberto e o install em curso passam: a peça espera; o resto é falha."""
+    vao = _vao()
+    if not motivo:
+        return
+    if motivo in vao.ESPERAS:
+        raise EsperaError(motivo, lambda: _por_que_o_hefesto_espera() not in vao.ESPERAS)
+    raise EtapaFalhouError(motivo)
+
+
+def _por_que_o_hefesto_espera() -> str:
+    vao = _vao()
+    return vao.por_que_nao(RAIZ_DO_REPOSITORIO) or (
+        vao.INSTALL_EM_CURSO if vao._install_em_curso() else "")
+
+
 def _baixar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     vao = _vao()
     raiz = RAIZ_DO_REPOSITORIO
-    motivo = vao.por_que_nao(raiz)
-    if motivo:
-        raise EtapaFalhouError(motivo)
+    _o_hefesto_pode(vao.por_que_nao(raiz))
     alvo = vao.baixar(raiz)
     if not alvo:
         raise EtapaFalhouError("o remoto não trouxe versão nova")
@@ -946,7 +1037,8 @@ def _instalar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
                         disparar=lambda _itens: pedidos.append("daemon"),
                         instalar=lambda _raiz_: pedidos.append("install"))
     if not feito:
-        raise EtapaFalhouError(vao.por_que_nao(RAIZ_DO_REPOSITORIO) or "o avanço não coube")
+        _o_hefesto_pode(_por_que_o_hefesto_espera())
+        raise EtapaFalhouError("o avanço não coube")
     passo.fracao(1.0)
     return {"pedidos": pedidos}
 
@@ -967,10 +1059,7 @@ def _hefesto_sem_reinstalar(_versoes: Versoes) -> str:
 
 def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> None:
     vao = _vao()
-    motivo = vao.por_que_nao(RAIZ_DO_REPOSITORIO) or (
-        "install em curso" if vao._install_em_curso() else "")
-    if motivo:
-        raise EtapaFalhouError(motivo)
+    _o_hefesto_pode(_por_que_o_hefesto_espera())
     vao._instalar(RAIZ_DO_REPOSITORIO, vao._rodar_o_install)
     motivo = vao._motivo_da_nota(vao._linhas_da_nota() or [])
     if motivo:
@@ -1176,21 +1265,56 @@ def versoes_da_gdk(_rede: bool) -> Versoes:
     return Versoes(de, curto, completa=completa, nova=bool(faltam))
 
 
-def _compilar_a_gdk(pasta: Path, arquivo: str, sha: str) -> Path | None:
-    if not shutil.which("x86_64-w64-mingw32-gcc-posix"):
-        return None
+COMPILADOR_DA_GDK = "x86_64-w64-mingw32-gcc-posix"
+REPO_DO_PRODUTO = "Hefesto-Team/hefesto-dualsense4unix"
+
+
+def _compilar_a_gdk(pasta: Path, arquivo: str, sha: str) -> tuple[Path | None, str]:
+    """A peça compilada aqui, se bate com o pino; senão, o porquê de não ter dado."""
+    if not shutil.which(COMPILADOR_DA_GDK):
+        return None, f"sem o {COMPILADOR_DA_GDK} para compilar aqui"
     construida = pasta / "construida"
     if not (construida / arquivo).is_file():
         shutil.rmtree(construida, ignore_errors=True)
-        rc, _ultima = _comando(["bash", str(RAIZ_DO_REPOSITORIO / "assets" / "gdk-runtime"
+        rc, ultima = _comando(["bash", str(RAIZ_DO_REPOSITORIO / "assets" / "gdk-runtime"
                                             / "construir.sh"), str(construida)])
         if rc != 0:
-            return None
+            return None, f"a compilação aqui parou ({ultima or rc})"
     feito = construida / arquivo
-    return feito if _sha_do_arquivo(feito) == sha else None
+    soma = _sha_do_arquivo(feito)
+    if soma != sha:
+        return None, (f"o {arquivo} compilado aqui tem outro sha256 ({soma[:12]}, o pino diz "
+                      f"{sha[:12]}): o compilador desta máquina não é o do pino")
+    return feito, ""
+
+
+def _ja_na_maquina(arquivo: str, sha: str, destino: tuple[str, ...]) -> Path | None:
+    """Uma cópia que já bate com o pino: a instalada, a baixada antes ou a guardada."""
+    cache = _cache() / "gdk"
+    for caminho in (_pasta_da_gdk().joinpath(*destino), cache / "nova" / arquivo,
+                    cache / "anterior" / arquivo):
+        if caminho.is_file() and _sha_do_arquivo(caminho) == sha:
+            return caminho
+    return None
+
+
+def _da_release_com_a_soma(arquivo: str, sha: str) -> str:
+    """O endereço do ``arquivo`` em qualquer release publicada cuja soma é a do pino."""
+    with contextlib.suppress(OSError, ValueError):
+        lancamentos = json.loads(_ler(
+            f"https://api.github.com/repos/{REPO_DO_PRODUTO}/releases?per_page=20"
+        ).decode("utf-8"))
+        for release in lancamentos if isinstance(lancamentos, list) else []:
+            for ativo in (release.get("assets") or []) if isinstance(release, dict) else []:
+                if isinstance(ativo, dict) and ativo.get("name") == arquivo \
+                        and ativo.get("digest") == f"sha256:{sha}":
+                    return str(ativo.get("browser_download_url", ""))
+    return ""
 
 
 def _baixar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> None:
+    """Cada arquivo do pino, da cópia que já bate, do release da versão, de outro release com a
+    mesma soma, ou compilado aqui; o porquê de cada caminho que não deu vai junto da falha."""
     pino = _pino_da_gdk()
     try:
         versao = _versao_do_pyproject(
@@ -1198,21 +1322,43 @@ def _baixar_a_gdk(passo: Passo, _dados_: dict[str, Any]) -> None:
     except OSError:
         versao = ""
     pasta = _cache() / "gdk"
-    shutil.rmtree(pasta / "nova", ignore_errors=True)
     shutil.rmtree(pasta / "construida", ignore_errors=True)
-    for arquivo, chave_sha, chave_url, _destino in ARQUIVOS_DA_GDK:
+    prontos: dict[str, Path] = {}
+    for arquivo, chave_sha, chave_url, destino in ARQUIVOS_DA_GDK:
         sha = pino.get(chave_sha, "")
         if not re.fullmatch(r"[0-9a-f]{64}", sha):
             raise EtapaFalhouError(f"o pino da peça não traz o {chave_sha}")
-        url = pino.get(chave_url, "").replace(MARCA_DA_VERSAO_NO_PINO, versao)
-        try:
-            _baixar(url, pasta / "nova" / arquivo, passo, sha)
-        except EtapaFalhouError as erro:
-            compilada = _compilar_a_gdk(pasta, arquivo, sha)
+        local = _ja_na_maquina(arquivo, sha, destino)
+        if local is not None:
+            prontos[arquivo] = local
+            continue
+        porques: list[str] = []
+        da_versao = pino.get(chave_url, "").replace(MARCA_DA_VERSAO_NO_PINO, versao)
+        for url in (da_versao, None):
+            url = url if url is not None else _da_release_com_a_soma(arquivo, sha)
+            if not url or (url == da_versao and porques):
+                continue
+            try:
+                _baixar(url, pasta / "baixada" / arquivo, passo, sha)
+            except EtapaFalhouError as erro:
+                porques.append(str(erro))
+                continue
+            prontos[arquivo] = pasta / "baixada" / arquivo
+            break
+        else:
+            compilada, porque = _compilar_a_gdk(pasta, arquivo, sha)
             if compilada is None:
-                raise EtapaFalhouError(
-                    f"{erro}; e a compilação aqui não deu o sha256 do pino") from None
-            shutil.copy2(compilada, pasta / "nova" / arquivo)
+                raise EtapaFalhouError("; ".join([*porques, porque]))
+            prontos[arquivo] = compilada
+    nova = pasta / "nova"
+    for arquivo, origem in prontos.items():
+        if origem != nova / arquivo:
+            nova.mkdir(parents=True, exist_ok=True)
+            temporario = nova / f".{arquivo}.hefesto"
+            shutil.copy2(origem, temporario)
+            temporario.replace(nova / arquivo)
+    shutil.rmtree(pasta / "baixada", ignore_errors=True)
+    passo.fracao(1.0)
 
 
 def _por_no_lugar(origem: Path, destino: Path) -> None:
@@ -1269,7 +1415,12 @@ def _voltar_a_gdk(anterior: dict[str, Any]) -> None:
 def _etapas_da_casa(
         backport: str) -> tuple[Etapa, Etapa, None, Callable[[dict[str, Any]], None]]:
     def construir(passo: Passo, _dados_: dict[str, Any]) -> None:
-        _raiz("backport-construir", backport, passo=passo)
+        try:
+            _raiz("backport-construir", backport, passo=passo)
+        except RaizSaiuError as erro:
+            if erro.codigo == RC_NADA_A_CONSTRUIR:
+                raise NadaAFazerError(str(erro)) from None
+            raise
         passo.fracao(1.0)
 
     def instalar(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:

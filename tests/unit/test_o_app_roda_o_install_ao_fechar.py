@@ -280,6 +280,8 @@ def test_o_jogo_da_ultima_hora_recomeca_a_espera_e_o_install_roda_depois(casa: C
 def test_a_guarda_fechada_nao_roda_e_a_faixa_fica(casa: Casa, gesto: str) -> None:
     casa.anotar("a..b")
     if gesto == "voo":
+        _git(casa.clone, "worktree", "add", "-q", "-b", "voo/um-conjunto",
+             str(casa.base / "voo" / "um-conjunto"), "dev")
         (casa.clone / ".git" / va.MARCA_DE_VOO).write_text("um-conjunto\n", encoding="utf-8")
     elif gesto == "suja":
         (casa.clone / "README.md").write_text("trabalho\n", encoding="utf-8")

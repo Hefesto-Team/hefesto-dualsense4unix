@@ -584,11 +584,13 @@ def test_o_proton_trocado_no_caminho_ou_com_a_steam_aberta_nao_se_refaz(
     r = next(p for p in pa.registro() if p.id == "proton").reinstalacao
     assert r is not None and r.baixar and r.instalar
     dados = r.baixar(at.Passo(), {}) or {}
-    monkeypatch.setattr(pp, "_steam_gate", lambda: "aberta")
-    with pytest.raises(at.EtapaFalhouError):
+    monkeypatch.setattr(pp, "_steam_gate", lambda: "steam_aberta")
+    with pytest.raises(at.EsperaError, match="a Steam está aberta") as espera:
         r.instalar(at.Passo(), dados)
     assert (pasta / "proton").read_text() == "quebrado"
+    assert espera.value.livre() is False
     monkeypatch.setattr(pp, "_steam_gate", lambda: None)
+    assert espera.value.livre() is True
     (pp.default_cache_dir() / "GE-Proton11-12.tar.gz").write_bytes(b"trocado")
     with pytest.raises(at.EtapaFalhouError):
         r.instalar(at.Passo(), dados)
@@ -687,6 +689,9 @@ def test_o_hefesto_reinstala_rodando_o_install_com_a_guarda_do_avanco(
     feito: list[str] = []
 
     class Vao:
+        INSTALL_EM_CURSO = "install em curso"
+        ESPERAS = ("trabalho em voo", "jogo aberto", INSTALL_EM_CURSO)
+
         def __init__(self) -> None:
             self.motivo = ""
             self.nota: list[str] = []
@@ -721,8 +726,9 @@ def test_o_hefesto_reinstala_rodando_o_install_com_a_guarda_do_avanco(
         r.instalar(at.Passo(), {})
     assert feito == ["install"]
     vao.motivo, vao.em_curso = "", True
-    with pytest.raises(at.EtapaFalhouError, match="install em curso"):
+    with pytest.raises(at.EsperaError, match="install em curso") as espera:
         r.instalar(at.Passo(), {})
+    assert espera.value.livre() is False
     assert feito == ["install"]
     vao.em_curso, vao.nota = False, ["o install saiu com o código 1"]
     with pytest.raises(at.EtapaFalhouError, match="código 1"):

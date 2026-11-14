@@ -3,6 +3,7 @@
 Só numa instalação pelo código, em ``dev``, com a árvore limpa, sem trabalho em voo e sem jogo
 aberto; qualquer outra coisa para em silêncio, com uma linha no diário. A rede fica num fio que a
 janela não espera, e o avanço, só rápido, fica para o fecho: a janela importa código sob demanda.
+A marca de voo conta só as linhas cuja árvore ainda existe; a de conjunto que sumiu sai do arquivo.
 
 A faixa que pede install o solta fora do cgroup da janela (``--install``): ele espera o jogo fechar
 de vez, roda uma vez só e nunca guarda senha. Sem autorização a parte do sistema fica pendente, e a
@@ -41,6 +42,9 @@ TRAVA_DO_INSTALL = "install-ao-fechar.trava"
 MARCA_DO_INSTALL = "install-em-curso"
 PREFIXO_DO_MOTIVO = "motivo: "
 JOGO_ABERTO = "jogo aberto"
+TRABALHO_EM_VOO = "trabalho em voo"
+INSTALL_EM_CURSO = "install em curso"
+ESPERAS = (TRABALHO_EM_VOO, JOGO_ABERTO, INSTALL_EM_CURSO)
 SEM_AUTORIZACAO = "sem autorização de administrador"
 FORA_DO_AVANCO = "o ramo local tem o que o remoto não tem: fica como está"
 REPOSITORIO = re.compile(
@@ -92,14 +96,59 @@ def _jogo_aberto() -> bool:
     return perguntar()
 
 
-def _ha_voo(comum: Path) -> bool:
-    """A marca tem uma linha por conjunto em voo: vazia ou ausente, nada voa."""
+def _arvores_vivas(raiz: Path) -> set[str] | None:
+    """Os nomes que uma linha da marca pode ter: a pasta de cada árvore que existe e o seu ramo
+    ``voo/<nome>``. ``None``: o git não respondeu."""
+    saida = _git(raiz, "worktree", "list", "--porcelain")
+    if saida is None:
+        return None
+    nomes: set[str] = set()
+    caminho: Path | None = None
+    for linha in [*saida.splitlines(), ""]:
+        if linha.startswith("worktree "):
+            caminho = Path(linha.removeprefix("worktree "))
+        elif linha.startswith("branch ") and caminho is not None and caminho.is_dir():
+            nomes.add(linha.removeprefix("branch refs/heads/").removeprefix("voo/"))
+        elif not linha and caminho is not None:
+            if caminho.is_dir():
+                nomes.add(caminho.name)
+            caminho = None
+    return nomes
+
+
+def _tirar_da_marca(marca: Path, mortas: set[str]) -> None:
+    """Regrava a marca sem as linhas de árvore que sumiu, relida na hora: o despacho só
+    acrescenta."""
+    with contextlib.suppress(OSError, ValueError):
+        linhas = marca.read_text(encoding="utf-8").splitlines()
+        ficam = [linha for linha in linhas if linha.strip() not in mortas]
+        if ficam == linhas:
+            return
+        temporaria = marca.with_name(f".{marca.name}.{os.getpid()}")
+        temporaria.write_text("".join(f"{linha}\n" for linha in ficam), encoding="utf-8")
+        temporaria.replace(marca)
+
+
+def _ha_voo(raiz: Path, comum: Path) -> bool:
+    """A marca tem uma linha por conjunto em voo: vazia, ausente ou só de árvores que sumiram,
+    nada voa. A linha de árvore que sumiu sai da marca."""
+    marca = comum / MARCA_DE_VOO
     try:
-        return bool((comum / MARCA_DE_VOO).read_text(encoding="utf-8").strip())
+        linhas = {linha.strip() for linha in marca.read_text(encoding="utf-8").splitlines()}
     except FileNotFoundError:
         return False
     except (OSError, ValueError):
         return True
+    linhas.discard("")
+    if not linhas:
+        return False
+    vivas = _arvores_vivas(raiz)
+    if vivas is None:
+        return True
+    mortas = linhas - vivas
+    if mortas:
+        _tirar_da_marca(marca, mortas)
+    return bool(linhas & vivas)
 
 
 def por_que_nao(raiz: Path, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str:
@@ -111,8 +160,8 @@ def por_que_nao(raiz: Path, jogo_aberto: Callable[[], bool] = _jogo_aberto) -> s
     if _git(raiz, "--no-optional-locks", "status", "--porcelain") != "":
         return "árvore com mudança"
     comum = _git(raiz, "rev-parse", "--git-common-dir")
-    if comum is None or _ha_voo(raiz / comum):
-        return "trabalho em voo"
+    if comum is None or _ha_voo(raiz, raiz / comum):
+        return TRABALHO_EM_VOO
     if jogo_aberto():
         return JOGO_ABERTO
     return ""
@@ -337,7 +386,7 @@ def _por_que_nao_instalar(raiz: Path, jogo_aberto: Callable[[], bool]) -> str:
     if motivo:
         return motivo
     if _install_de_fora():
-        return "install em curso"
+        return INSTALL_EM_CURSO
     if marca_do_parar().exists():
         return "serviço parado de propósito"
     return "janela aberta" if _janela_aberta() else ""
@@ -440,7 +489,7 @@ def aplicar(
     """
     from hefesto_dualsense4unix.utils.marca_do_parar import marca_do_parar
 
-    motivo = por_que_nao(raiz, jogo_aberto) or ("install em curso" if _install_em_curso() else "")
+    motivo = por_que_nao(raiz, jogo_aberto) or (INSTALL_EM_CURSO if _install_em_curso() else "")
     if motivo:
         _dizer(f"a baixada fica para depois ({motivo})")
         return False
