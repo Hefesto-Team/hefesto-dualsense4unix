@@ -81,6 +81,7 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     (bin_ / "atalho-dos-programas").symlink_to(_executavel(programas / "hook" / "abre"))
     (bin_ / "atalho-dos-dados").symlink_to(dados / "hook" / "joguinho")
     (bin_ / "sem-execucao").write_text("#!/bin/sh\n")
+    _executavel(bin_ / "luanti")
     caminho = [str(bin_), str(dados / "hook"), "/usr/bin", "/bin"]
     monkeypatch.setenv("PATH", os.pathsep.join(caminho))
     return SimpleNamespace(lancador=lancador, bin=bin_)
@@ -120,7 +121,9 @@ RECUSADOS = (
     ["flatpak-spawn"], ["abre-o-jogo"], ["joguinho"], ["atalho-dos-programas"],
     ["atalho-dos-dados"],
     ["sem-execucao"], ["nao-existe"], ["./hefesto-hookshot"], ["hefesto-hookshot", "a/b"],
-    ["hefesto-hookshot", "-x"], ["hefesto-hookshot", ".."],
+    ["hefesto-hookshot", "-x"], ["hefesto-hookshot", ".."], ["sg"], ["setpriv"], ["flock"],
+    ["ssh-agent"], ["npx"], ["uvx"], ["hefesto-hookshot", "a b"],
+    ["hefesto-hookshot", "python3"], ["hefesto-hookshot", "npx"],
 )
 
 
@@ -295,3 +298,28 @@ def test_com_a_chave_do_jogo_ligada_o_giro_fica_desligado_na_troca(
                 await porta.parar()
 
     assert struct.unpack_from("<3h", asyncio.run(corrida())) == (0, 0, 0)
+
+
+@pytest.mark.parametrize("argv", [["luanti"], ["hefesto-hookshot", "lua_1.0", "Zelda(US)1,0+"]],
+                         ids="+".join)
+def test_o_jogo_cujo_nome_comeca_como_um_interpretador_abre(
+        lar: SimpleNamespace, argv: list[str]) -> None:
+    async def corrida() -> tuple[dict[str, Any], list[tuple[str, list[str]]]]:
+        with tempfile.TemporaryDirectory(prefix="pa") as pasta:
+            caminho = Path(pasta) / "m.sock"
+            abridor = _Abridor()
+            porta = await _porta(caminho, abridor)
+            com = await _entrar(porta, caminho, ["lancador", "pedir:lancador.abrir"],
+                                ("hefesto-hookshot", argv[0]))
+            try:
+                await asyncio.to_thread(com.pedir, "lancador.jogos", {"jogos": [
+                    {"chave": "bom", "nome": "Bom", "abrir": argv}]})
+                bom = await asyncio.to_thread(com.pedir, "lancador.abrir", {"chave": "bom"})
+            finally:
+                com.fechar()
+                await porta.parar()
+            return bom, abridor.abertos
+
+    bom, abertos = asyncio.run(corrida())
+    assert bom["result"] == {"aberto": True, "chave": "bom"}
+    assert abertos == [("hook", [os.path.realpath(lar.bin / argv[0]), *argv[1:]])]

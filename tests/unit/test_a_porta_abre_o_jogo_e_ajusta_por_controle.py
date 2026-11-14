@@ -180,10 +180,10 @@ def test_o_jogo_que_nao_abre_volta_com_o_motivo(lancador: str) -> None:
 
 @pytest.mark.parametrize("termo", [
     "--lua-script=/x.lua", "-e", "steam://rungameid/1", "file:///x", "a=b", "", "x\nsh",
-    "/Jogos/Zelda (US)/rom.z64", "a/b", ".."])
+    "/Jogos/Zelda (US)/rom.z64", "a/b", "..", "Zelda (US)", "sg"])
 def test_lancador_abrir_so_passa_o_comando_e_o_id_e_recusa_opcao_endereco_e_igual(
         lancador: str, termo: str) -> None:
-    bom_argv = ["hefesto-hookshot", "ocarina_1.0", "Zelda (US) 1,0+"]
+    bom_argv = ["hefesto-hookshot", "ocarina_1.0", "Zelda(US)1,0+"]
 
     async def corrida() -> tuple[dict[str, Any], dict[str, Any], list[tuple[str, list[str]]]]:
         with tempfile.TemporaryDirectory(prefix="pa") as pasta:

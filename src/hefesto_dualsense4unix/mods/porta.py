@@ -103,7 +103,7 @@ ICONES_DO_CONTROLE = ("lampada",)
 OPCOES_DO_CONTROLE = 16
 CORES_DO_PONTO = 3
 _COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
-_TERMO_DO_ABRIR = re.compile(r"\w[\w. +,()-]{0,511}")
+_TERMO_DO_ABRIR = re.compile(r"\w[\w.+,()-]{0,511}")
 EVENTO_DO_PARAR = "extensao.parar"
 EVENTO_DA_ACAO = "extensao.acao"
 EVENTO_DO_LIVRE = "extensao.livre"
@@ -163,15 +163,35 @@ _NUNCA_FORA_DA_CAIXA = frozenset({
     "gawk", "mawk", "nawk", "sed", "find", "xdg-open", "gio", "hefesto-launch", "java",
     "jshell", "deno", "bun", "R", "Rscript", "julia", "guile", "racket", "sbcl", "clisp",
     "ocaml", "runghc", "ghci", "erl", "escript", "elixir", "iex", "swipl", "gjs", "dotnet",
-    "mono", "qjs",
+    "mono", "qjs", "sg", "newgrp", "setpriv", "capsh", "flock", "prlimit", "setarch", "linux32",
+    "linux64", "i386", "x86_64", "aa-exec", "runcon", "ssh-agent", "dbus-run-session",
+    "dbus-launch", "xvfb-run", "xwfb-run", "fakeroot", "fakechroot", "faketime", "numactl",
+    "cpulimit", "chpst", "torsocks", "torify", "proxychains", "proxychains4", "tsocks",
+    "valgrind", "perf", "catchsegv", "start-stop-daemon", "daemonize", "parallel", "make",
+    "gmake", "tmux", "screen", "byobu", "dtach", "abduco", "at", "batch", "systemd-cat",
+    "systemd-inhibit", "systemd-nspawn", "rlwrap", "unbuffer", "run-parts", "ssh", "sshpass",
+    "xdotool", "gtk-launch", "dex", "kstart", "kstart5", "x-terminal-emulator", "xterm",
+    "uxterm", "kitty", "foot", "alacritty", "wezterm", "konsole", "gnome-terminal",
+    "xfce4-terminal", "tilix", "terminator", "cosmic-term", "urxvt", "st", "npx", "npm",
+    "pnpx", "pnpm", "yarn", "bunx", "pipx", "uv", "uvx", "pip", "pip3", "gem", "cargo", "go",
+    "nix", "nix-shell", "guix", "raku", "rakudo", "php-cgi", "groovy", "scala", "kotlin",
+    "clojure", "octave", "gnuplot", "m4", "dc", "bc", "vi", "vim", "nvim", "ex", "emacs",
+    "rc", "es", "sash", "posh", "lksh", "loksh",
 })
 _INTERPRETADOR = re.compile(
-    r"(python|pypy|perl|ruby|irb|node|nodejs|luajit|lua|php|tclsh|wish)[\w.-]*"
+    r"(python|pypy|perl|ruby|irb|node|nodejs|luajit|lua|php|tclsh|wish)[\d.]*(-dbg)?"
     r"|ld(-linux)?[\w.-]*\.so[\d.]*")
 
 
 def _nunca_fora_da_caixa(nome: str) -> bool:
     return nome in _NUNCA_FORA_DA_CAIXA or bool(_INTERPRETADOR.fullmatch(nome))
+
+
+def termos_do_abrir(termos: Sequence[str]) -> bool:
+    """Os termos depois do comando são o id do jogo: sem «/», sem espaço (que faria de um termo
+    uma linha de shell para um lançador que a roda) e nenhum é ele mesmo um comando recusado
+    (que um lançador genérico fora da lista rodaria)."""
+    return all(_TERMO_DO_ABRIR.fullmatch(t) and not _nunca_fora_da_caixa(t) for t in termos)
 
 
 def pastas_que_a_caixa_escreve() -> tuple[Path, ...]:
@@ -1793,7 +1813,7 @@ class Porta:
         if argv[0] not in sessao.comandos:
             raise RecusaError(
                 CODE_SEM_PERMISSAO, f"o comando {argv[0]!r} não está em lancador.comandos")
-        if not all(_TERMO_DO_ABRIR.fullmatch(termo) for termo in argv[1:]):
+        if not termos_do_abrir(argv[1:]):
             raise RecusaError(
                 CODE_SEM_PERMISSAO,
                 "o jogo só abre com o comando e o id dele: sem opção, sem endereço e sem «=»")
@@ -2911,6 +2931,7 @@ __all__ = [
     "o_jogo_escreve_no_servico",
     "pastas_que_a_caixa_escreve",
     "pulsar_no_servico",
+    "termos_do_abrir",
     "topicos_de_todo_controle_no_servico",
     "uniq_do_posto_no_servico",
 ]
