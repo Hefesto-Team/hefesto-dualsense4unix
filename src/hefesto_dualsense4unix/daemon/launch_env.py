@@ -1149,7 +1149,8 @@ def o_fim_do_jogo_devolve_o_modo(daemon: Any) -> str | None:
     """O fim do jogo cujo arme mudou o par devolve o modo do computador ao pad, P1 a P4.
 
     A volta vai pelo escritor único (`set_gamepad_emulation_desfecho`), com origem de perfil;
-    recusada porque um jogo ainda segura o pad, a volta espera o tique seguinte. A escolha à mão
+    recusada porque um jogo ainda segura o pad, a volta espera o tique seguinte. Com outro jogo em
+    cena (o que entrou sem arme, pela janela), a volta espera esse jogo sair. A escolha à mão
     durante o jogo apaga o par guardado (`Daemon.set_gamepad_emulation_desfecho` e
     `Daemon.set_native_mode`): o modo escolhido passa a ser o do computador.
     """
@@ -1161,6 +1162,10 @@ def o_fim_do_jogo_devolve_o_modo(daemon: Any) -> str | None:
         guardado.jogos.difference_update(fechados)
         guardado.volta_pendente = not guardado.jogos
     if not guardado.volta_pendente:
+        return None
+    em_cena = getattr(daemon, "appid_em_cena", None)
+    if (isinstance(em_cena, int) and not isinstance(em_cena, bool) and em_cena > 0
+            and em_cena not in fechados):
         return None
     vivo = _o_par_vivo(daemon)
     if vivo == guardado.par:
