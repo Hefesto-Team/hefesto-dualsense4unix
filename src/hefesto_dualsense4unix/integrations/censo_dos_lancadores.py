@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import fnmatch
 import json
 import os
 import re
@@ -883,8 +884,24 @@ def _agulhas(bloco: dict[str, object], campo: str) -> tuple[str, ...]:
     return limpas
 
 
+FONTES_QUE_EXECUTAM: tuple[str, ...] = (
+    ".bashrc", ".bash_profile", ".bash_login", ".profile", ".zshrc", ".zprofile", ".zshenv",
+    ".zlogin", ".xprofile", ".xsessionrc", ".pam_environment", ".config/autostart",
+    ".config/systemd", ".config/environment.d", ".local/bin", ".ssh", ".gnupg",
+)
+
+
+def fonte_que_executa(fonte: str) -> bool:
+    """A fonte alcança um caminho que roda na sessão ou guarda chave (o padrão conta)."""
+    partes = Path(fonte).parts
+    return any(all(fnmatch.fnmatchcase(proibida, parte) for proibida, parte
+                   in zip(Path(caminho).parts, partes, strict=False))
+               for caminho in FONTES_QUE_EXECUTAM)
+
+
 def _fontes_do_leitor(bruto: object, campo: str = "leitor") -> tuple[str, ...]:
-    """As ``fontes`` do leitor: caminhos relativos à ``HOME``, sem ``..``, até 16."""
+    """As ``fontes`` do leitor: caminhos relativos à ``HOME``, sem ``..``, até 16, e nenhuma que
+    executa (:data:`FONTES_QUE_EXECUTAM`)."""
     if not isinstance(bruto, list) or not all(isinstance(x, str) for x in bruto):
         raise ValueError(f"«{campo}.fontes» precisa ser uma lista de textos")
     limpas = tuple(dict.fromkeys(x.strip() for x in bruto if x.strip()))
@@ -895,7 +912,22 @@ def _fontes_do_leitor(bruto: object, campo: str = "leitor") -> tuple[str, ...]:
         if (fonte.startswith(("/", "~")) or ".." in partes or len(fonte) > 200
                 or any("*" in parte for parte in partes[:-1])):
             raise ValueError(f"«{campo}.fontes» tem {fonte!r}, que não é um caminho da HOME")
+        if fonte_que_executa(fonte):
+            raise ValueError(
+                f"«{campo}.fontes» tem {fonte!r}, que alcança o que roda na sessão ou guarda chave")
     return limpas
+
+
+def frase_do_fixador(lancador: object) -> str:
+    """O que o fixador da extensão escreve na ``HOME``, para o «sim»; sem fixador, nada."""
+    fixador = lancador.get("fixador") if isinstance(lancador, dict) else None
+    if not isinstance(fixador, dict):
+        return ""
+    try:
+        fontes = _fontes_do_leitor(fixador.get("fontes", []), "fixador")
+    except ValueError:
+        return ""
+    return f"Para fixar o Proton, a extensão escreve só: {', '.join(fontes)}." if fontes else ""
 
 
 def _executar_e_prazo(bruto: object, campo: str) -> tuple[tuple[str, ...], float]:
@@ -980,22 +1012,73 @@ def _execucao_escondida() -> tuple[str, ...]:
                                and not os.path.islink(p)))
 
 
+def _lar_de_quem_roda() -> Path:
+    return Path(os.environ.get("HOME") or str(Path.home()))
+
+
+def _a_casa_na_caixa(lar: Path, fontes: Sequence[str], pastas: Sequence[str], *,
+                     escrever: bool) -> list[str]:
+    """A ``HOME`` vazia, e por cima só o que a extensão declarou.
+
+    No leitor voltam, só de leitura, as pastas visíveis da ``HOME`` (sem ponto: onde moram as
+    pastas de jogos que a configuração aponta), a pasta de cada fonte e as pastas da última
+    leitura. No fixador, só as fontes, graváveis, e as pastas da última leitura.
+    """
+    argv = ["--tmpfs", str(lar)]
+    if not escrever:
+        with contextlib.suppress(OSError):
+            for item in sorted(lar.iterdir()):
+                if item.name.startswith("."):
+                    continue
+                if item.is_symlink():
+                    argv += ["--symlink", os.readlink(item), str(item)]
+                else:
+                    argv += ["--ro-bind", str(item), str(item)]
+    for fonte in fontes:
+        alvos = sorted(lar.glob(fonte)) if "*" in fonte else [lar / fonte]
+        pasta = (lar / fonte).parent
+        if not escrever and pasta != lar and pasta.is_dir() and not pasta.is_symlink():
+            argv += ["--ro-bind", str(pasta), str(pasta)]
+            continue
+        for alvo in alvos:
+            if alvo.exists() and not alvo.is_symlink():
+                argv += ["--bind" if escrever else "--ro-bind", str(alvo), str(alvo)]
+    for declarada in pastas:
+        if os.path.isdir(declarada):
+            argv += ["--ro-bind", declarada, declarada]
+    return argv
+
+
+def _o_executavel_fora_da_casa(comando: list[str], lar: Path, argv: list[str]) -> list[str]:
+    """O executável que mora na ``HOME`` (o ``python3`` de um venv) roda pelo alvo real."""
+    if not comando or not comando[0].startswith(f"{lar}/"):
+        return comando
+    real = os.path.realpath(comando[0])
+    if real.startswith(f"{lar}/"):
+        argv += ["--ro-bind", real, real]
+    return [real, *comando[1:]]
+
+
 def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],
-                    bwrap: str | None) -> list[str]:
+                    bwrap: str | None, lar: Path | None = None) -> list[str]:
     """A linha que abre o leitor: dentro da caixa quando o ``bwrap`` existe.
 
     Não é a caixa do processo (``mods/supervisor.comando_na_caixa``), que esconde a ``HOME``:
-    o leitor lê a configuração do emulador na HOME. Esta deixa a raiz visível e SÓ DE LEITURA,
-    sem rede, sem o barramento do sistema, sem a execução da sessão e num espaço de PID
-    próprio. Sem ``bwrap``, é o comando solto: quem chama só a pede assim com a chave
-    «Rodar sem caixa» da extensão (:data:`FALTA_O_BWRAP_NO_LEITOR`).
+    o leitor lê a configuração do emulador e as pastas de jogos. Esta deixa a raiz visível e SÓ
+    DE LEITURA, a ``HOME`` só com o que :func:`_a_casa_na_caixa` devolve, sem rede, sem o
+    barramento do sistema, sem a execução da sessão e num espaço de PID próprio. Sem ``bwrap``,
+    é o comando solto, só com a chave «Rodar sem caixa» (:data:`FALTA_O_BWRAP_NO_LEITOR`).
     """
     if not bwrap:
         return comando
     argv = [bwrap, "--ro-bind", "/", "/", "--unshare-all", "--die-with-parent",
             "--new-session", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    casa = lar or _lar_de_quem_roda()
+    argv += _a_casa_na_caixa(casa, leitor.fontes, pastas_da_ultima_leitura(leitor.modificacao),
+                             escrever=False)
     for pasta in _execucao_escondida():
         argv += ["--tmpfs", pasta]
+    comando = _o_executavel_fora_da_casa(comando, casa, argv)
     argv += ["--ro-bind", str(leitor.pasta), str(leitor.pasta),
              "--chdir", str(leitor.pasta), "--", *comando]
     return argv
@@ -1234,17 +1317,16 @@ FALTA_O_BWRAP_NO_LEITOR = "falta o bwrap: a extensão não abre sem a caixa"
 
 def linha_do_fixador(fixador: FixadorPorProcesso, comando: list[str], bwrap: str | None,
                      lar: Path, leituras: Sequence[Path] = ()) -> list[str]:
-    """A caixa do leitor (:func:`linha_do_leitor`), com as ``fontes`` graváveis."""
+    """A caixa do leitor (:func:`linha_do_leitor`), com a ``HOME`` só das ``fontes``, graváveis."""
     if not bwrap:
         return comando
     argv = [bwrap, "--ro-bind", "/", "/", "--unshare-all", "--die-with-parent",
             "--new-session", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    argv += _a_casa_na_caixa(lar, fixador.fontes, pastas_da_ultima_leitura(fixador.modificacao),
+                             escrever=True)
     for pasta in _execucao_escondida():
         argv += ["--tmpfs", pasta]
-    for fonte in fixador.fontes:
-        for alvo in sorted(lar.glob(fonte)) if "*" in fonte else [lar / fonte]:
-            if alvo.exists() and not alvo.is_symlink():
-                argv += ["--bind", str(alvo), str(alvo)]
+    comando = _o_executavel_fora_da_casa(comando, lar, argv)
     for leitura in leituras:
         if leitura.exists():
             argv += ["--ro-bind", str(leitura), str(leitura)]

@@ -397,11 +397,15 @@ As listas vão até 16 itens.
 ### O leitor no manifesto
 
 A extensão só de `lancador` (sem `processo`) declara o leitor no `lancador.leitor`, e a interface o roda
-numa caixa só de leitura, sem rede (`bwrap`), quando a biblioteca muda:
+numa caixa só de leitura, sem rede (`bwrap`), quando a biblioteca muda. A `HOME` da caixa nasce vazia e recebe, só
+de leitura, as pastas visíveis da `HOME` (sem ponto: onde moram as pastas de jogos que a configuração aponta), a pasta de
+cada fonte e as pastas da última leitura; o resto (`.ssh`, `.gnupg`, as outras pastas de `.config`) não existe ali:
 
 - `executar`: o comando, a partir da pasta da extensão (`["python3", "-I", "leitor.py"]`);
 - `prazo_s`: o prazo da leitura, em segundos;
-- `fontes`: os arquivos que o leitor lê, relativos à `HOME`, até 16. A mudança de um deles é o que faz a
+- `fontes`: os arquivos que o leitor lê, relativos à `HOME`, até 16, nunca o que roda na sessão ou guarda chave
+  (`.bashrc`, `.profile`, `.zshrc`, `.zprofile`, `.config/autostart`, `.config/systemd`, `.config/environment.d`,
+  `.local/bin`, `.ssh`, `.gnupg` e os irmãos deles; o padrão que os alcança também recusa). A mudança de um deles é o que faz a
   leitura sair de novo. A fonte sem `*` conta só pela própria data, e a data de uma pasta muda quando um
   arquivo entra ou sai da pasta, não quando um arquivo de dentro muda no lugar: para a pasta que o leitor
   percorre, declare o padrão (`.config/retroarch/playlists/*.lpl`; o `*` vale só no último pedaço), que
@@ -423,7 +427,8 @@ byte nulo) sai sozinha; a lista sem o objeto continua valendo.
 O Proton fixado vale para todo jogo instalado, de qualquer lançador (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO).
 O Hefesto não conhece o formato da configuração de um lançador que é extensão: quem sabe fixar é a configuração, pelo
 `lancador.fixador`. O vigia da Steam, o install e o «Aplicar soluções» o rodam na mesma caixa do leitor, sem
-rede, com as `fontes` graváveis:
+rede, com a `HOME` só das `fontes`, graváveis, e das pastas da última leitura; o «sim» da extensão lista as `fontes`
+do fixador:
 
 - `executar` e `prazo_s`: como no leitor;
 - `fontes` (exigido): o que o fixador escreve, relativo à `HOME`, até 16 (o `*` vale só no último pedaço).

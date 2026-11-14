@@ -187,6 +187,10 @@ def _dizer_a_rede(manifesto: Any) -> None:
 
     if manifesto.processo is not None and (frase := frase_da_rede(manifesto)):
         console.print(frase, markup=False, soft_wrap=True)
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import frase_do_fixador
+
+    if "lancador" in manifesto.tipos and (frase := frase_do_fixador(manifesto.lancador)):
+        console.print(frase, markup=False, soft_wrap=True)
 
 
 @app.command("permissoes")  # (noqa-acento)
