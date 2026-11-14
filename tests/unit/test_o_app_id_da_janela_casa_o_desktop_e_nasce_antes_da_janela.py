@@ -29,6 +29,7 @@ from types import ModuleType
 
 import pytest
 
+from hefesto_dualsense4unix.app.actions import atualizador
 from hefesto_dualsense4unix.utils import identidade
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -78,6 +79,7 @@ def test_a_identidade_veste_o_processo_antes_de_a_janela_nascer(
     monkeypatch.setattr("hefesto_dualsense4unix.app.arranque.sanear_loaders_do_gdk_pixbuf",
                         lambda: False)
     monkeypatch.setattr(ai, "diario_da_janela", lambda: None)
+    monkeypatch.setattr(atualizador, "conferir_ao_abrir", lambda *_a, **_k: None)
     monkeypatch.setattr(ai, "achar_o_piloto", lambda: "piloto_de_mentira")
     monkeypatch.setattr(ai, "vestir_a_identidade",
                         lambda _casa: chamadas.append("identidade") or [])

@@ -271,8 +271,10 @@ def test_a_janela_que_vai_para_a_tela_traz_o_servico(
     import runpy
 
     from hefesto_dualsense4unix.app import arranque
+    from hefesto_dualsense4unix.app.actions import atualizador
 
     trouxe: list[str] = []
+    monkeypatch.setattr(atualizador, "conferir_ao_abrir", lambda *_a, **_k: None)
     monkeypatch.setattr(abrir, "garantir_tela_de_mentira", lambda: None)
     monkeypatch.setattr(arranque, "sanear_loaders_do_gdk_pixbuf", lambda: False)
     monkeypatch.setattr(abrir, "diario_da_janela", lambda: None)
