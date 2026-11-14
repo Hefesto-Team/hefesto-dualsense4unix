@@ -59,6 +59,12 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "controle (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01): alimentado pelo cano, "
         "sai depois da folga de silêncio e com o `parar`",
     ),
+    "integrations/alto_falante_bt.py::lancar_tocador": (
+        "ajudante", 1,
+        "o `pw-cat` (ou o `pacat`) da caixa separada de um controle no cabo "
+        "(A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01): alimentado pelo cano, preso ao pai "
+        "pelo PDEATHSIG, e a `CaixaQueSeparaNoCabo.descer` o derruba",
+    ),
     "integrations/laco_de_audio.py::Lacos.ligar": (
         "ajudante", 1,
         "o `pw-loopback` de um laço de som, com dono que o fecha",
