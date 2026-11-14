@@ -19,6 +19,10 @@ import pytest
 from hefesto_dualsense4unix.app.actions import troca_no_fim_do_jogo as troca
 from hefesto_dualsense4unix.app.actions import versao_ao_abrir as va
 from hefesto_dualsense4unix.interface import abrir as ai
+from tests.unit.test_o_avanco_do_dev_so_com_commit_assinado import (
+    assinar_todo_commit,
+    gravar_a_lista,
+)
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -41,7 +45,7 @@ def _commitar(pasta: Path, caminho: str, texto: str = "x\n") -> str:
 class Casa:
     """O remoto do produto, o clone de quem usa e o clone de quem publica."""
 
-    def __init__(self, base: Path) -> None:
+    def __init__(self, base: Path, chave: Path) -> None:
         self.base = base
         self.remoto = base / "Hefesto-Team" / "hefesto-dualsense4unix.git"
         self.remoto.mkdir(parents=True)
@@ -50,6 +54,7 @@ class Casa:
         subprocess.run(["git", "clone", "-q", str(self.remoto), str(self.autor)], check=True,
                        capture_output=True)
         _git(self.autor, "checkout", "-q", "-B", "dev")
+        gravar_a_lista(self.autor, chave)
         self.inicio = _commitar(self.autor, "README.md")
         _git(self.autor, "push", "-q", "origin", "dev")
         self.clone = base / "clone"
@@ -91,7 +96,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Casa:
 
     monkeypatch.setattr(xdg_paths, "state_dir", lambda ensure=False: _pasta(tmp_path / "estado"))
     monkeypatch.setattr(troca, "_jogo_aberto", lambda: False)
-    return Casa(tmp_path)
+    return Casa(tmp_path, assinar_todo_commit(tmp_path, monkeypatch))
 
 
 def _pasta(caminho: Path) -> Path:

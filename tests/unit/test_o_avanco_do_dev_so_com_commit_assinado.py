@@ -40,6 +40,25 @@ def _linha_da_lista(chave: Path) -> str:
     return f'{chave.name} namespaces="git" {tipo} {corpo}\n'
 
 
+def assinar_todo_commit(base: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A chave da casa de mentira assina todo commit do teste, pelo ambiente do git."""
+    chave = _chave(base, "da-casa")
+    monkeypatch.delenv("SSH_AUTH_SOCK", raising=False)
+    pares = (("commit.gpgsign", "true"), ("gpg.format", "ssh"), ("user.signingkey", str(chave)))
+    for indice, (nome, valor) in enumerate(pares):
+        monkeypatch.setenv(f"GIT_CONFIG_KEY_{indice}", nome)
+        monkeypatch.setenv(f"GIT_CONFIG_VALUE_{indice}", valor)
+    monkeypatch.setenv("GIT_CONFIG_COUNT", str(len(pares)))
+    return chave
+
+
+def gravar_a_lista(pasta: Path, *chaves: Path) -> None:
+    arquivo = pasta / LISTA
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    arquivo.write_text("".join(_linha_da_lista(chave) for chave in chaves), encoding="utf-8")
+    subprocess.run(["git", "-C", str(pasta), "add", LISTA], check=True)
+
+
 class Casa:
     """O remoto do produto, o clone de quem usa e o clone de quem publica, com a lista no início."""
 

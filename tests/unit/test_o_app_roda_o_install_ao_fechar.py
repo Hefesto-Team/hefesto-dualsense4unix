@@ -25,6 +25,10 @@ from hefesto_dualsense4unix.integrations import fora_do_servico as fora
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 from hefesto_dualsense4unix.utils.marca_do_parar import lembrar_o_parar
 from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+from tests.unit.test_o_avanco_do_dev_so_com_commit_assinado import (
+    assinar_todo_commit,
+    gravar_a_lista,
+)
 
 RAIZ = Path(__file__).resolve().parents[2]
 ESPERA_S = troca.ESPERA_SEM_JOGO_S
@@ -60,7 +64,7 @@ class Tempo:
 class Casa:
     """O remoto, o clone de quem usa, o livro do install e o livro do ``sudo``."""
 
-    def __init__(self, base: Path) -> None:
+    def __init__(self, base: Path, chave: Path) -> None:
         self.base = base
         self.livro = base / "livro-do-install"
         self.livro_do_sudo = base / "livro-do-sudo"
@@ -73,6 +77,7 @@ class Casa:
         self.autor = base / "autor"
         self.autor.mkdir()
         subprocess.run(["git", "init", "-q", "-b", "dev", str(self.autor)], check=True)
+        gravar_a_lista(self.autor, chave)
         self.inicio = self.publicar("README.md")
         instalador = self.autor / "install.sh"
         instalador.write_text(
@@ -167,7 +172,7 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Casa:
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
     monkeypatch.delenv("SUDO_ASKPASS", raising=False)
     (tmp_path / "run").mkdir()
-    casa_ = Casa(tmp_path)
+    casa_ = Casa(tmp_path, assinar_todo_commit(tmp_path, monkeypatch))
     _sudo_de_mentira(casa_, tmp_path / "bin", aceita="'-n true'")
     monkeypatch.setenv("PATH", f"{tmp_path / 'bin'}:{os.environ['PATH']}")
     return casa_
