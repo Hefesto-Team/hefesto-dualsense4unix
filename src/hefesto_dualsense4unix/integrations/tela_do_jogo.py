@@ -637,7 +637,8 @@ class Captura:
     ``espera``. A escolha que não veio (cancelada ou esgotada) não volta sozinha: só com pedido
     novo depois da recusa, ou depois de todos saírem. ``assinantes`` diz quantos veem agora
     (zero fecha a fonte) e ``nascidas`` quantos pedidos já nasceram desde sempre: sair e
-    entrar no mesmo passo não muda a primeira conta, e a segunda sobe."""
+    entrar no mesmo passo não muda a primeira conta, e a segunda sobe. ``recusas`` conta as
+    escolhas canceladas desde que a captura nasceu."""
 
     def __init__(self, fonte: FonteDaTela, tela: TelaDoJogo, *,
                  publicar: Callable[[dict[str, Any]], None],
@@ -656,6 +657,7 @@ class Captura:
         self._ausente_dito = False
         self._desligada_dita = False
         self._recusada_com: int | None = None
+        self.recusas = 0
         self._parada = threading.Event()
 
     def parar(self) -> None:
@@ -703,6 +705,7 @@ class Captura:
             except EscolhaCanceladaError as erro:
                 self.aberta = False
                 self._recusada_com = self._nascidas()
+                self.recusas += 1
                 motivo = str(erro)
             except TelaDesligadaError as erro:
                 self.aberta = False

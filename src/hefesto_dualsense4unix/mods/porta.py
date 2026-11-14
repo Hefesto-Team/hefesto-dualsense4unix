@@ -1284,7 +1284,6 @@ class Porta:
         if TOPICO_DA_TELA in topicos:
             self._regioes_da_tela.update({r.nome: r for r in regioes})
             if con.ve_a_tela:
-                self._pedidos_da_tela += 1
                 self._ligar_a_captura()
         return {"assinados": list(topicos)}
 
@@ -1429,8 +1428,9 @@ class Porta:
 
     async def _capturar_a_tela(self) -> None:
         """Um passo da :class:`Captura` por vez, fora do laço: a fonte abre só com quem pediu
-        ``tela.ver`` e assina ``jogo.tela``; sem nenhum, ou com o jogo que fecha, fecha, e a
-        tarefa acaba."""
+        ``tela.ver`` e assina ``jogo.tela``; sem nenhum, ou com o jogo que fecha, fecha. O jogo que
+        fecha e a escolha cancelada apagam o pedido de todos, e a tarefa acaba quando ninguém
+        mais pediu."""
         laco = asyncio.get_running_loop()
         fonte = self._fonte_da_tela()
         fechou = self.bus.subscribe(EventTopic.JOGO_FECHOU)
@@ -1444,6 +1444,7 @@ class Porta:
                           assinantes=lambda: vendo[0],
                           nascidas=lambda: self._pedidos_da_tela)
         passo: asyncio.Future[None] | None = None
+        recusas = 0
         try:
             while True:
                 if not fechou.empty():
@@ -1455,7 +1456,11 @@ class Porta:
                 captura.tela.regioes = tuple(self._regioes_da_tela.values())
                 passo = laco.run_in_executor(None, captura.passo)
                 await asyncio.shield(passo)
-                if vendo[0] <= 0 and not captura.aberta:
+                if captura.recusas != recusas:
+                    recusas = captura.recusas
+                    for con in self._conexoes:
+                        con.ve_a_tela = False
+                if not captura.aberta and not any(con.ve_a_tela for con in self._conexoes):
                     return
                 await asyncio.sleep(1.0 / HZ_DA_TELA)
         finally:

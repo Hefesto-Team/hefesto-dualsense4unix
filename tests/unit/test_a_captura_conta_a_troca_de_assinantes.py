@@ -3,8 +3,9 @@
 Depois de uma escolha de tela cancelada, o pedido só volta com assinatura NOVA de ``jogo.tela``.
 Quem sai e quem entra no mesmo passo deixa a conta de existentes igual, e o pedido novo não saía;
 a porta agora entrega o contador de nascidas. Sem assinatura nova a recusa continua valendo.
-A prova da porta tem quatro extensões assinando ao mesmo tempo: a troca de assinatura de uma
-extensão reabre a fonte, e o evento chega às quatro.
+A prova da porta tem quatro extensões que pediram ``tela.ver``: a escolha cancelada apaga o
+pedido das quatro, a troca de assinatura não reabre a fonte, o clique seguinte em «Ver a tela» de
+uma extensão reabre, e o evento chega às quatro (A-TELA-SO-SE-LE-NO-CLIQUE-01).
 """
 from __future__ import annotations
 
@@ -140,7 +141,7 @@ def _ler_um_quadro_medido(cliente: _Cliente) -> dict[str, Any]:
             return dados
 
 
-def test_a_porta_reabre_a_fonte_na_troca_e_o_evento_chega_as_quatro_extensoes(
+def test_a_porta_reabre_a_fonte_no_clique_seguinte_e_nao_na_troca_e_o_evento_chega_as_quatro(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(modulo_porta, "HZ_DA_TELA", 1.0)
@@ -177,6 +178,12 @@ def test_a_porta_reabre_a_fonte_na_troca_e_o_evento_chega_as_quatro_extensoes(
                                      ("eventos.desassinar", "eventos.assinar")))
                 clientes[0].sock.sendall(troca)
                 await asyncio.to_thread(_ler_ate, clientes[0], 9001)
+                await asyncio.sleep(3.5)
+                assert fonte.aberturas == 1
+                clique = json.dumps({"jsonrpc": "2.0", "id": 9100, "method": "tela.ver",
+                                     "params": {}}).encode() + b"\n"
+                clientes[0].sock.sendall(clique)
+                await asyncio.to_thread(_ler_ate, clientes[0], 9100)
                 reabriu = await _esperar(lambda: fonte.aberturas == 2, 6.0)
                 assert reabriu, fonte.aberturas
                 eventos = [await asyncio.wait_for(

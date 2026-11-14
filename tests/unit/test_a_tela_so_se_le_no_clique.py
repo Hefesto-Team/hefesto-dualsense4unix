@@ -356,3 +356,57 @@ def test_o_dura_s_corta_o_som_registrado_e_sem_ele_o_som_fica_inteiro() -> None:
     fonte.som(EXT, P[2], "susto", 1.0, 10.0)
     fonte.som(EXT, P[0], "susto", 1.0, 20.0, dura_s=5.0)
     assert [round(r.duracao_s, 3) for r in tocados] == [0.1, 0.3, 0.3]
+
+
+class _PortalQueCancela(_PortalDeMentira):
+    """A pessoa cancela a escolha do portal: cada abertura é um ``SelectSources`` recusado."""
+
+    def abrir(self) -> bool:
+        self.chamadas.append("SelectSources")
+        raise tj.EscolhaCanceladaError("a escolha foi cancelada")
+
+
+def test_a_escolha_cancelada_so_volta_no_clique_seguinte_nunca_na_assinatura() -> None:
+    portal = _PortalQueCancela()
+
+    async def roteiro(_porta: Porta, _bus: EventBus, clientes: list[_Cliente]) -> Any:
+        cliente = clientes[0]
+        await _pedir(cliente, "eventos.assinar", {"topicos": ["jogo.tela"]})
+        await _pedir(cliente, "tela.ver", {})
+        primeira = await _esperar(lambda: portal.conta("SelectSources") == 1)
+        await _pedir(cliente, "eventos.desassinar", {"topicos": ["jogo.tela"]})
+        await asyncio.sleep(0.5)
+        await _pedir(cliente, "eventos.assinar", {"topicos": ["jogo.tela"]})
+        await _pedir(cliente, "eventos.assinar", {"topicos": ["jogo.tela"]})
+        await asyncio.sleep(2.5)
+        sem_clique = portal.conta("SelectSources")
+        await _pedir(cliente, "tela.ver", {})
+        no_clique = await _esperar(lambda: portal.conta("SelectSources") == 2)
+        await asyncio.sleep(0.5)
+        return primeira, sem_clique, no_clique
+
+    primeira, sem_clique, no_clique = _com_a_porta(portal, roteiro)
+    assert primeira
+    assert sem_clique == 1
+    assert no_clique and portal.conta("SelectSources") == 2
+
+
+def test_o_jogo_que_fecha_antes_da_assinatura_apaga_o_clique() -> None:
+    portal = _PortalDeMentira()
+
+    async def roteiro(_porta: Porta, bus: EventBus, clientes: list[_Cliente]) -> Any:
+        cliente = clientes[0]
+        await _pedir(cliente, "tela.ver", {})
+        await asyncio.sleep(0.4)
+        bus.publish(EventTopic.JOGO_FECHOU, {"chave": "steam:1"})
+        await asyncio.sleep(0.4)
+        await _pedir(cliente, "eventos.assinar", {"topicos": ["jogo.tela"]})
+        await asyncio.sleep(1.0)
+        sem_clique = portal.conta("Start")
+        await _pedir(cliente, "tela.ver", {})
+        no_clique = await _esperar(lambda: portal.conta("Start") == 1)
+        return sem_clique, no_clique
+
+    sem_clique, no_clique = _com_a_porta(portal, roteiro)
+    assert sem_clique == 0
+    assert no_clique

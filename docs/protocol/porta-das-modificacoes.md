@@ -229,7 +229,8 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   assinar sem ele não abre nada. A captura é uma só para a máquina, o evento chega a todo assinante, e a captura fecha no
   `tela.parar`, quando o jogo fecha e quando a extensão sai. Sem portal, ou com ele caído, os cinco chegam `null` uma vez (ausente, nunca
   zero) e a captura tenta de novo sozinha. A fonte é o portal `ScreenCast` pelo PipeWire (o `pipewiresrc` do
-  GStreamer): o primeiro `tela.ver` pede ao sistema a escolha da tela, e a ficha que volta reabre sem pedir de novo. As
+  GStreamer): o primeiro `tela.ver` pede ao sistema a escolha da tela, e a ficha que volta reabre sem pedir de novo; a
+  escolha cancelada apaga o pedido, e só o `tela.ver` seguinte pergunta de novo. As
   regiões vão na assinatura: `eventos.assinar` com `topicos: ["jogo.tela"]` e `tela: {regioes: [...]}`.
 
 `jogo.momento`, `sistema.app_abriu` e `sistema.hora` são nomes reservados: nenhum existe como permissão nem tem
