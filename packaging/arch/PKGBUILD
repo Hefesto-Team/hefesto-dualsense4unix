@@ -77,6 +77,7 @@ optdepends=(
     # Wayland, só alcança janelas XWayland — abre e não digita.
     'wvkbd: teclado na tela do L3 em sessão Wayland (cliente Wayland nativo)'
     'onboard: teclado na tela do L3 em sessão X11 (injeta por XTEST)'
+    'dmidecode: o censo do gabinete lê as portas USB na tabela SMBIOS (sem ele, só o barramento)'
     # INSTALL-UNIVERSAL (18/09/2026): o UCM do sistema — o ucm.conf dele lê o
     # gancho do DualSense no cabo que o install.sh grava. No Arch o alsa-lib já
     # depende dele; aqui ele fica nomeado, com o nome do `_pkg_nome alsa-ucm
