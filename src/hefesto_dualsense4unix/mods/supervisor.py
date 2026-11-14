@@ -107,6 +107,8 @@ DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
 
 DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
 
+NOS_QUE_A_CAIXA_ACEITA: tuple[str, ...] = ("/dev/hidraw", "/dev/tty", "/dev/bus/usb/")
+
 PASTA_DA_CAIXA: tuple[str, ...] = (
     "--config-net", "--quiet", "--foreground", "--no-map-gw", "-D", "none",
 )
@@ -184,6 +186,9 @@ class _Vigiada:
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
     pontes: tuple[int, ...] = ()
     escritor: _EscritorDoDiario | None = None
+    manifesto: Manifesto | None = None
+    aparelhos: tuple[str, ...] = ()
+    aparelho_novo: bool = False
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -485,11 +490,13 @@ def comando_na_caixa(
     jogos: tuple[Path, ...] = (),
     pasta: str | None = None,
     ocupada: Callable[[int, bool], bool] | None = None,
+    aparelhos: tuple[str, ...] = (),
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``; com rede e com o ``pasta``, dentro dele.
 
     Os ``tmpfs`` vêm antes das pastas montadas por cima deles: a ``HOME`` e os diretórios de
-    execução nascem vazios. O ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a
+    execução nascem vazios, e o ``/dev`` só traz os ``aparelhos`` (:func:`aparelhos_que_casam`).
+    O ``--unshare-pid`` leva junto, quando o ``bwrap`` sai, TUDO o que a
     modificação abriu (medido em 10/10/2026). Dentro do ``pasta`` (:func:`linha_do_pasta`) o
     ``uid`` seria 0, e o barramento do sistema recusa quem diz 0 com a credencial de outro: o
     ``bwrap`` devolve o ``uid`` e o ``gid`` de quem roda (medido em 14/11/2026).
@@ -507,10 +514,11 @@ def comando_na_caixa(
     ]
     for coberta in (*escondidas, str(casa), *map(str, execucao)):
         argv += ["--tmpfs", coberta]
+    argv += ["--dev", "/dev"]
     if "aparelhos" in manifesto.permissoes:
-        argv += ["--dev-bind", "/dev", "/dev"]
-    else:
-        argv += ["--dev", "/dev"]
+        for no in aparelhos:
+            if no.startswith(NOS_QUE_A_CAIXA_ACEITA) and ".." not in no:
+                argv += ["--dev-bind-try", no, no]
     for caminho in _devolvidos(manifesto, escondidas):
         argv += ["--ro-bind", caminho, caminho]
     comando = _executavel_a_vista(comando, escondidas, argv)
@@ -528,6 +536,75 @@ def comando_na_caixa(
         assert pasta is not None
         return [*linha_do_pasta(pasta, manifesto, ocupada or ocupada_na_casa), "--", *argv]
     return argv
+
+
+def _ler(arquivo: Path) -> str:
+    try:
+        return arquivo.read_text(encoding="ascii", errors="replace").strip()
+    except OSError:
+        return ""
+
+
+def _vid_pid_do_usb(dispositivo: Path) -> tuple[str, str] | None:
+    """O ``idVendor``/``idProduct`` do aparelho USB acima de ``dispositivo`` no ``/sys``."""
+    try:
+        atual = dispositivo.resolve()
+    except OSError:
+        return None
+    for pasta in (atual, *atual.parents):
+        vid, pid = _ler(pasta / "idVendor"), _ler(pasta / "idProduct")
+        if vid and pid:
+            return vid.lower(), pid.lower()
+    return None
+
+
+def _vid_pid_do_hid(dispositivo: Path) -> tuple[str, str] | None:
+    """O ``HID_ID`` do ``uevent`` (``0003:00001A86:0000E429``): vale no USB e no Bluetooth."""
+    for linha in _ler(dispositivo / "uevent").splitlines():
+        if linha.startswith("HID_ID="):
+            partes = linha.split("=", 1)[1].split(":")
+            if len(partes) == 3:
+                return partes[1][-4:].lower(), partes[2][-4:].lower()
+    return None
+
+
+def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> tuple[str, ...]:
+    """Os nós de ``/dev`` dos aparelhos declarados que estão ligados agora.
+
+    Só ``hidraw``, ``tty`` e ``usb``: o ``uinput``, o ``uhid`` e o ``input/`` nunca entram, e um
+    aparelho que não casa (o controle, o teclado) fica fora da caixa.
+    """
+    if "aparelhos" not in manifesto.permissoes or not manifesto.aparelhos:
+        return ()
+    pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos}
+    nos: list[str] = []
+    for classe, onde, ler in (("hidraw", "class/hidraw", _vid_pid_do_hid),
+                              ("tty", "class/tty", _vid_pid_do_usb)):
+        if not any(p[0] == classe for p in pedidos):
+            continue
+        with contextlib.suppress(OSError):
+            for no in sorted((sys_raiz / onde).iterdir()):
+                ids = ler(no / "device")
+                if ids and (classe, *ids) in pedidos:
+                    nos.append(f"/dev/{no.name}")
+    if any(p[0] == "usb" for p in pedidos):
+        with contextlib.suppress(OSError):
+            for usb in sorted((sys_raiz / "bus/usb/devices").iterdir()):
+                vid, pid = _ler(usb / "idVendor").lower(), _ler(usb / "idProduct").lower()
+                barramento, numero = _ler(usb / "busnum"), _ler(usb / "devnum")
+                if ("usb", vid, pid) in pedidos and barramento.isdigit() and numero.isdigit():
+                    nos.append(f"/dev/bus/usb/{int(barramento):03d}/{int(numero):03d}")
+    return tuple(dict.fromkeys(nos))
+
+
+def frase_dos_aparelhos(manifesto: Manifesto) -> str:
+    """Os aparelhos que a caixa abre, pelo nome; sem a permissão, nada."""
+    if "aparelhos" not in manifesto.permissoes:
+        return ""
+    nomes = list(dict.fromkeys(a.nome for a in manifesto.aparelhos))
+    if not nomes:
+        return "A extensão não abre aparelho nenhum: o manifesto não declara qual."
+    return f"Dos aparelhos ligados ao computador, a extensão abre só: {'; '.join(nomes)}."
 
 
 def rede_propria_da_caixa() -> str | None:
@@ -1013,7 +1090,33 @@ class Supervisor:
         while True:
             await asyncio.sleep(self.intervalo_s)
             await self._conferir_o_registro()
+            await self._conferir_os_aparelhos()
             self._talvez_atualizar()
+
+    async def _conferir_os_aparelhos(self) -> None:
+        """O aparelho declarado que entrou depois da abertura reabre a caixa, que o receba.
+
+        Duas voltas seguidas com o nó novo: o que só sai (e volta com o mesmo nó, como o
+        adaptador que reinicia ao abrir) não reabre nada, porque o nó da caixa segue o número.
+        """
+        for mod_id, vigiada in list(self._vigiadas.items()):
+            manifesto = vigiada.manifesto
+            processo = vigiada.processo
+            if (manifesto is None or not self.bwrap or processo is None
+                    or processo.returncode is not None or not manifesto.aparelhos):
+                continue
+            try:
+                agora = await asyncio.to_thread(aparelhos_que_casam, manifesto)
+            except OSError:
+                continue
+            novos = set(agora) - set(vigiada.aparelhos)
+            if not novos:
+                vigiada.aparelho_novo = False
+            elif not vigiada.aparelho_novo:
+                vigiada.aparelho_novo = True
+            elif (entrada := self._registro_lido.get(mod_id)) is not None:
+                logger.info("mods_aparelho_novo_reabre", mod=mod_id, nos=sorted(novos))
+                await self._comecar(entrada)
 
     def _talvez_atualizar(self) -> None:
         """Abre a conferência da primeira extensão do git cujo intervalo passou.
@@ -1257,6 +1360,9 @@ class Supervisor:
         vigiada.pontes = ()
         if self.bwrap and pasta:
             vigiada.pontes = pontes_que_o_pasta_traz(manifesto, ocupada)
+        vigiada.manifesto = manifesto
+        vigiada.aparelhos = aparelhos_que_casam(manifesto) if self.bwrap else ()
+        vigiada.aparelho_novo = False
         if self.bwrap:
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
@@ -1270,6 +1376,7 @@ class Supervisor:
                 jogos=jogos,
                 pasta=pasta,
                 ocupada=ocupada,
+                aparelhos=vigiada.aparelhos,
             )
         else:
             argv = comando
@@ -1394,14 +1501,17 @@ __all__ = [
     "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
     "FALTA_O_BWRAP",
+    "NOS_QUE_A_CAIXA_ACEITA",
     "PASTA_DA_CAIXA",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
     "Supervisor",
+    "aparelhos_que_casam",
     "comando_na_caixa",
     "diario_da_extensao",
     "frase_da_rede",
+    "frase_dos_aparelhos",
     "linha_do_pasta",
     "ocupada_na_casa",
     "parar_o_grupo",

@@ -751,6 +751,25 @@ A mesma porta (e protocolo) não se repete, e `portas` sem rede recusa o manifes
 máquina já escuta fica de fora, e a extensão abre assim mesmo. Sem o `pasta`, a caixa com rede fica no espaço de rede da
 casa, e o «sim» diz que a rede inclui os serviços desta máquina.
 
+## Os aparelhos da caixa (o que o manifesto declara)
+
+Com a permissão `aparelhos`, a caixa fica com o `/dev` mínimo do `bwrap` e recebe só os nós dos aparelhos que o
+manifesto declara, ligados agora: o `uinput`, o `uhid`, o `input/`, o controle e o teclado nunca entram.
+
+```json
+"aparelhos": [{"classe": "hidraw", "vid": "1a86", "pid": "e429", "nome": "o adaptador USB"}]
+```
+
+| campo | forma |
+| --- | --- |
+| `classe` | `hidraw` (o `/dev/hidrawN` do aparelho, no USB ou no Bluetooth), `tty` (a serial USB) ou `usb` (o `/dev/bus/usb/BBB/DDD`) |
+| `vid`, `pid` | quatro dígitos hexadecimais minúsculos |
+| `nome` | o que o aparelho é, até 60 caracteres, numa linha: o «sim» lista os aparelhos por ele |
+
+Até 8, sem repetir classe e VID:PID; a lista sem a permissão recusa o manifesto, e a permissão sem a lista não abre
+aparelho nenhum. O aparelho declarado que entra depois da abertura (duas voltas da vigia, cerca de 2 s) reabre a
+caixa; o que sai e volta com o mesmo nó segue aberto.
+
 ## O modo de aba (o que o manifesto declara)
 
 `modos_de_aba` traz no máximo um modo por extensão, irmão do «Modo automático» nas abas que ele lista:

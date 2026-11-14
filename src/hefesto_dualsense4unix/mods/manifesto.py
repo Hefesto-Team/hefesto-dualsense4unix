@@ -661,6 +661,36 @@ class Portas(BaseModel):
         return self
 
 
+APARELHOS_DECLARADOS = 8
+
+_HEX4 = re.compile(r"^[0-9a-f]{4}$")
+
+
+class AparelhoDeclarado(BaseModel):
+    """Um aparelho que a caixa com ``aparelhos`` recebe: a classe do nó e o VID:PID do USB."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    classe: Literal["hidraw", "tty", "usb"]
+    vid: str
+    pid: str
+    nome: str = Field(min_length=1, max_length=60)
+
+    @field_validator("vid", "pid")
+    @classmethod
+    def _hex(cls, valor: str) -> str:
+        if not _HEX4.match(valor):
+            raise ValueError("aparelhos: vid e pid são quatro dígitos hexadecimais minúsculos")
+        return valor
+
+    @field_validator("nome")
+    @classmethod
+    def _uma_linha(cls, valor: str) -> str:
+        if not valor.isprintable() or not valor.strip():
+            raise ValueError("aparelhos: o nome é uma linha de texto")
+        return valor.strip()
+
+
 class Manifesto(BaseModel):
     """O ``hefesto-mod.json`` inteiro."""
 
@@ -690,7 +720,8 @@ class Manifesto(BaseModel):
     aparelhos_controles: ControlesDosAparelhos | None = None
     lancador: dict[str, Any] | None = None
     tema: dict[str, Any] | None = None
-    aparelhos: list[dict[str, Any]] | None = None
+    aparelhos: list[AparelhoDeclarado] = Field(default_factory=list,
+                                               max_length=APARELHOS_DECLARADOS)
     substitui: list[str] = Field(default_factory=list)
     estilos: list[str] = Field(default_factory=list)
     modos_de_aba: list[ModoDeAba] = Field(default_factory=list, max_length=1)
@@ -780,6 +811,11 @@ class Manifesto(BaseModel):
                 "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
         if self.portas is not None and self.rede == "nenhuma":
             raise ValueError("portas pede rede:local ou rede:internet")
+        if self.aparelhos and "aparelhos" not in self.permissoes:
+            raise ValueError("a lista aparelhos pede a permissão aparelhos")
+        chaves = [(a.classe, a.vid, a.pid) for a in self.aparelhos]
+        if len(set(chaves)) != len(chaves):
+            raise ValueError("aparelhos: aparelho repetido")
         self._conferir_as_acoes_e_o_livre()
         self._conferir_a_chave()
         self._conferir_as_ligas()
@@ -1058,6 +1094,7 @@ __all__ = [
     "ACOES_DA_JANELA",
     "ACOES_DO_APARELHO",
     "ALCANCES_DE_REDE",
+    "APARELHOS_DECLARADOS",
     "BOTOES_DO_POR_BOTAO",
     "CANAIS_DE_ESCRITA",
     "COR_HEXA",
@@ -1079,6 +1116,7 @@ __all__ = [
     "TOPICOS_DE_PUBLICACAO",
     "Acao",  # (noqa-acento)
     "AcoesDosAparelhos",
+    "AparelhoDeclarado",
     "Manifesto",
     "ManifestoRecusadoError",
     "ModoDeAba",

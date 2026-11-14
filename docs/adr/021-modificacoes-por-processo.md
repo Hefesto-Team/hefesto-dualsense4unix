@@ -70,7 +70,7 @@ permissões que a pessoa aceitou.
        (medido em 14/11/2026). Sem o `pasta`, a caixa fica no espaço de rede da casa;
      - `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nenhum socket de `/run`, como o do
        broker ou o do docker, atende de dentro); volta por cima só o que a permissão pede: o
-       `/run/dbus` com `bluetooth`, o `/run/udev` e o `/dev` real com `aparelhos`, o
+       `/run/dbus` com `bluetooth`, o `/run/udev` e só os nós dos aparelhos declarados com `aparelhos`, o
        `/run/systemd/resolve` (e o alvo do `/etc/resolv.conf`) com rede;
      - o executável que mora sob uma raiz escondida (o `python3` de um venv) roda pelo alvo real;
      - a caixa do leitor e do fixador do lançador cobre o `/run` inteiro; os discos seguem à vista,
