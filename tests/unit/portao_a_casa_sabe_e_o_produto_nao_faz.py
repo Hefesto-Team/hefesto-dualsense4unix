@@ -152,6 +152,8 @@ _HEREDOC_PYTHON = re.compile(
     r"""\bpython3?\b[^\n<]*<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$"""
 )
 
+_PYTHON_DE_UMA_LINHA = re.compile(r"""\s-c\s+'([^']*\bhefesto_dualsense4unix\b[^']*)'""")
+
 _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
     "install": ("install.sh", "uninstall.sh"),
     "unit": ("assets",),
@@ -1650,7 +1652,8 @@ def _modulos(raiz: Path) -> list[Path]:
 
 
 def trechos_python_embutidos(roteiro: Path) -> list[str]:
-    """Os corpos de heredoc que um roteiro de shell entrega ao Python."""
+    """Os corpos de heredoc que um roteiro de shell entrega ao Python, e o ``python -c`` de uma
+    linha que importa o pacote."""
     try:
         texto = roteiro.read_text(encoding="utf-8", errors="ignore")
     except OSError:  # pragma: no cover
@@ -1670,6 +1673,7 @@ def trechos_python_embutidos(roteiro: Path) -> list[str]:
             indice += 1
         indice += 1
         trechos.append(textwrap.dedent("\n".join(corpo)))
+    trechos.extend(achado.group(1) for achado in _PYTHON_DE_UMA_LINHA.finditer(texto))
     return trechos
 
 
@@ -2960,6 +2964,10 @@ def _copia_de_src(destino: Path, *, sem_a_ponte: bool = False) -> Path:
 
 class TestOPortaoMorde:
     """Um portão que nunca reprovou é uma decoração com nome de portão."""
+
+    def test_o_python_de_uma_linha_do_install_conta_como_chamador(self) -> None:
+        embutido = "\n".join(trechos_python_embutidos(_RAIZ / "install.sh"))
+        assert "sys.exit(escolher_a_tela())" in embutido
 
     def test_a_varredura_enxerga_os_chamadores_que_existem(self) -> None:
         """A régua conferida contra contagem independente."""
