@@ -137,6 +137,7 @@ _SYS_KCMP = {
 _KCMP_FILE = 0
 SERVIDOS_PATH = "/run/hefesto-hidraw-broker/servidos"
 EXTERNOS_PATH = "/run/hefesto-hidraw-broker/externos"
+ACIONADORES_PATH = "/var/lib/hefesto-dualsense4unix/acionadores/autorizados"
 REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
 REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
@@ -594,6 +595,61 @@ def _teclas_do_input(input_dir: str) -> int:
         return int("".join(f"{int(p, 16):016x}" for p in palavras), 16) if palavras else 0
     except ValueError:
         return 0
+
+
+def acionadores_autorizados(caminho: str | None = None) -> frozenset[str]:
+    """As chaves da lista do root que o broker serve; a lista que outro pode escrever vale vazia.
+
+    Arquivo comum, sem symlink, do root (ou de quem roda o broker, na régua), sem escrita do grupo
+    nem dos outros, uma chave ``vvvv:pppp:hhhhhhhh`` por linha. Na dúvida, nenhuma chave."""
+    caminho = ACIONADORES_PATH if caminho is None else caminho
+    try:
+        fd = os.open(caminho, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    except OSError:
+        return frozenset()
+    try:
+        st = os.fstat(fd)
+        if (
+            not stat_mod.S_ISREG(st.st_mode)
+            or st.st_uid not in (0, os.geteuid())
+            or st.st_mode & 0o022
+            or st.st_size > 64 * 1024
+        ):
+            return frozenset()
+        texto = os.read(fd, 64 * 1024).decode("ascii", errors="replace")
+    except OSError:
+        return frozenset()
+    finally:
+        os.close(fd)
+    return frozenset(
+        linha.strip() for linha in texto.splitlines()
+        if _CHAVE_DO_ACIONADOR_RE.match(linha.strip()))
+
+
+def retirar_o_acionador_autorizado(chave: str, caminho: str | None = None) -> bool:
+    """Tira ``chave`` da lista do root (só estreita); True = a chave não está mais lá."""
+    caminho = ACIONADORES_PATH if caminho is None else caminho
+    if _CHAVE_DO_ACIONADOR_RE.match(chave) is None:
+        return False
+    antes = acionadores_autorizados(caminho)
+    if chave not in antes:
+        return True
+    provisorio = f"{caminho}.novo"
+    try:
+        fd = os.open(provisorio, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW
+                     | os.O_CLOEXEC, 0o644)
+        try:
+            os.fchmod(fd, 0o644)
+            os.write(fd, "".join(f"{c}\n" for c in sorted(antes - {chave})).encode("ascii"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(provisorio, caminho)
+    except OSError:
+        with contextlib.suppress(OSError):
+            os.unlink(provisorio)
+        return False
+    return True
 
 
 def motivo_de_recusar_o_acionador(
@@ -1911,6 +1967,7 @@ class BrokerState:
         marca_do_reinicio: str = REINICIO_SEM_ABRIR_PATH,
         validator_externo: Callable[[str], str | None] | None = None,
         externos_path: str | None = None,
+        acionadores_path: str | None = None,
     ) -> None:
         dev_root = _raiz(dev_root, "DEV_ROOT")
         sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
@@ -1942,6 +1999,7 @@ class BrokerState:
         self._validator = validator
         self._validator_entrada = validator_entrada
         self._validator_acionador = validator_acionador
+        self._acionadores_path = acionadores_path
         self._dev_root = dev_root
         self._dev_input_root = dev_input_root
         self._sys_class_hidraw = sys_class_hidraw
@@ -2404,6 +2462,13 @@ class BrokerState:
                 return self._cmd_open_acionador(
                     conn_id, request.get("node"), request.get("acionador"))
             return self._cmd_open(conn_id, request.get("node"))
+        if cmd == "acionador_retirar":
+            chave = request.get("acionador")
+            ok = isinstance(chave, str) and retirar_o_acionador_autorizado(
+                chave, self._acionadores_path)
+            self._log("acionador_retirado" if ok else "acionador_retirar_falhou")
+            return ({"ok": ok, "cmd": "acionador_retirar"} if ok else
+                    {"ok": False, "cmd": "acionador_retirar", "error": "reject_bad_path"}, None)
         if cmd == "pad_usb_montar":
             return self._cmd_pad_usb_montar(conn_id, request)
         if cmd == "pad_usb_desmontar":
@@ -2814,6 +2879,8 @@ class BrokerState:
                 sys_class_input=self._sys_class_input))
         motivo = validar(raw, chave) if raw is not None and isinstance(chave, str) else (
             "reject_bad_path")
+        if motivo is None and chave not in acionadores_autorizados(self._acionadores_path):
+            motivo = "reject_nao_autorizado"
         if motivo is not None:
             self._log("acionador_recusado", node=raw, motivo=motivo)
             return ({"ok": False, "cmd": "open", "node": raw, "error": motivo}, None)

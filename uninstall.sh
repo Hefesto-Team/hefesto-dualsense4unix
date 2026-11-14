@@ -947,6 +947,9 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
             [[ -e "${BROKER_BIN}" ]] && sudo rm -f "${BROKER_BIN}"
         fi
         sudo rm -f "${BROKER_OWNER_FILE}"
+        sudo rm -f /usr/local/lib/hefesto-dualsense4unix/acionador-raiz \
+            /usr/share/polkit-1/actions/org.hefesto.dualsense4unix.acionador.policy 2>/dev/null || true
+        sudo rm -rf /var/lib/hefesto-dualsense4unix/acionadores 2>/dev/null || true
         sudo rm -rf /run/hefesto-hidraw-broker 2>/dev/null || true
         sudo systemctl daemon-reload >/dev/null 2>&1 || true
     else

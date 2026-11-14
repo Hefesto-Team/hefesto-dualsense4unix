@@ -37,7 +37,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "— as dez curas de HOST saíram do instalador e viraram "
         "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1027` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
-        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:194`) é quem "
+        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:228`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "`assets/systemd/hefesto-hidraw-broker.service:34` (`ExecStart`). O .deb "
@@ -67,14 +67,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
         "`install.sh:3842` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
-        "`uninstall.sh:1744` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
+        "`uninstall.sh:1747` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1855` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
         "`install.sh:3684` (`PROTON_PIN_PY`, com `--ensure`) e "
-        "`uninstall.sh:1673` (`PROTON_PIN_PY`) o rodam; "
+        "`uninstall.sh:1676` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3864` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
@@ -93,7 +93,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`install.sh:3107` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:497` (`curar_audio_ks`) o roda a cada jogo lançado; "
-        "`uninstall.sh:1776-1777` (`AUDIO_KS_PY`) o "
+        "`uninstall.sh:1779-1780` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
@@ -498,7 +498,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "08/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — quanto "
         "o broker espera sem cliente antes de entregar o físico ao sistema "
         "(`_graca_da_entrega_do_ambiente` em "
-        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:3650`). O "
+        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:3717`). O "
         "padrão é a medida (30 s, o dobro do pior reinício do daemon), e "
         "nenhuma unit, install ou empacotamento a escreve: `0` é a válvula de "
         "quem depura o broker para voltar ao comportamento de antes. Nenhum "
@@ -1420,7 +1420,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/doctor.sh:2963` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4625 (`varrendo`))."
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4641 (`varrendo`))."
     ),
     "integrations/varredura_do_radio.py::quem_esta_varrendo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
@@ -1550,7 +1550,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
         "`scripts/ensaios/a_faixa_do_receptor.py` "
         "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` "
-        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3932 "
+        "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:3948 "
         "(`FAIXA_NAO_ENCONTRADA`), no `_o_botao_da_descoberta`). Fecha quando o ensaio B9 "
         "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
         "passa pelo desenho."
@@ -3421,11 +3421,11 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "`uninstall.sh:1434` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
+            "`uninstall.sh:1437` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
             "o extrator engoliu o COMENTÁRIO de "
-            "`uninstall.sh:1419-1419` (`CMDLINE_OWNERS_FILE`) junto com o "
+            "`uninstall.sh:1422-1422` (`CMDLINE_OWNERS_FILE`) junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 

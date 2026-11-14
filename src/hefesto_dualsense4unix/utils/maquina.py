@@ -595,6 +595,16 @@ FRASE_SEM_PERMISSAO_DE_LER: Final = (
 FRASE_O_APARELHO_NAO_ABRE: Final = (
     "este aparelho não abre agora: confira se ele continua ligado e tente de novo")
 
+FRASE_O_APARELHO_NAO_FOI_AUTORIZADO: Final = (
+    "este aparelho ainda não foi autorizado: «Esperar a próxima tecla» pede a senha de "
+    "administrador uma vez")
+FRASE_FALTA_O_POLKIT: Final = "Falta o polkit para autorizar este aparelho"
+FRASE_A_SENHA_NAO_VEIO: Final = (
+    "o aparelho não foi autorizado: a senha de administrador não foi dada")
+RECUSA_DE_QUEM_NAO_FOI_AUTORIZADO = "reject_nao_autorizado"
+AJUDANTE_DO_ACIONADOR = "/usr/local/lib/hefesto-dualsense4unix/acionador-raiz"
+_PRAZO_DA_SENHA_S = 300.0
+
 _PRAZO_DO_BROKER_DO_ACIONADOR_S = 0.5
 
 
@@ -612,28 +622,76 @@ class AparelhoNaoAbreError(OSError):
         return FRASE_O_APARELHO_NAO_ABRE
 
 
+class AcionadorNaoAutorizadoError(SemPermissaoDeLerError):
+    """O broker serve só o aparelho da lista do root, e a chave deste não está na lista."""
+
+    def __str__(self) -> str:
+        return FRASE_O_APARELHO_NAO_FOI_AUTORIZADO
+
+
+def autorizar_o_acionador(
+    chave: str, *, pkexec: str | None = None, ajudante: str | None = None,
+    rodar: Callable[..., Any] | None = None,
+) -> str | None:
+    """Põe ``chave`` na lista do root pelo ``pkexec`` (a senha de administrador, uma vez).
+
+    Devolve a frase do que faltou, ou None quando a chave entrou."""
+    import shutil
+    import subprocess
+
+    if _CHAVE_DO_ACIONADOR.match(chave) is None:
+        return FRASE_O_APARELHO_NAO_ABRE
+    ajudante = ajudante or AJUDANTE_DO_ACIONADOR
+    pkexec = pkexec or shutil.which("pkexec")
+    if pkexec is None:
+        return FRASE_FALTA_O_POLKIT
+    if not os.access(ajudante, os.X_OK):
+        return FRASE_SEM_PERMISSAO_DE_LER
+    try:
+        feito = (rodar or subprocess.run)(
+            [pkexec, ajudante, "autorizar"], input=f"{chave}\n", text=True,
+            capture_output=True, timeout=_PRAZO_DA_SENHA_S, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return FRASE_A_SENHA_NAO_VEIO
+    return None if feito.returncode == 0 else FRASE_A_SENHA_NAO_VEIO
+
+
+def retirar_o_acionador_autorizado(chave: str) -> None:
+    """Pede ao broker que tire ``chave`` da lista (só estreita, sem senha); best effort."""
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
+
+    cliente = HidrawBrokerClient(timeout_s=_PRAZO_DO_BROKER_DO_ACIONADOR_S)
+    try:
+        cliente.retirar_acionador(chave)
+    except Exception as exc:
+        logger.debug("acionador_retirar_falhou", err=str(exc))
+    finally:
+        cliente.close()
+
+
 def frase_da_recusa_de_ler(erro: OSError) -> str:
     """A frase de quem usa para a abertura recusada: a da permissão, ou a do aparelho."""
     return (FRASE_SEM_PERMISSAO_DE_LER if isinstance(erro, PermissionError)
             else FRASE_O_APARELHO_NAO_ABRE)
 
 
-def _pedir_o_acionador_ao_broker(no: str, chave: str) -> int | None:
-    """O fd só de leitura do nó pelo ``open`` do broker, numa conexão curta; None = não serviu."""
+def _pedir_o_acionador_ao_broker(no: str, chave: str) -> tuple[int | None, str]:
+    """``(fd, motivo)`` do nó pelo ``open`` do broker, numa conexão curta; fd None = não serviu."""
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
 
     cliente = HidrawBrokerClient(timeout_s=_PRAZO_DO_BROKER_DO_ACIONADOR_S)
     try:
-        fd = cliente.abrir_acionador(no, chave)[0]
-    except Exception:
-        fd = None
+        resposta = cliente.abrir_acionador(no, chave)
+    except Exception as exc:
+        resposta = (None, str(exc))
     finally:
         cliente.close()
-    return fd
+    return resposta
 
 
 def abrir_o_aparelho_de_entrada(
-    evento: str, *, pedir_ao_broker: Callable[[str, str], int | None] | None = None
+    evento: str, *,
+    pedir_ao_broker: Callable[[str, str], int | tuple[int | None, str] | None] | None = None,
 ) -> Any:
     """O ``/dev/input/<evento>`` aberto pelo evdev, sem prender (quem prende é a ponte, no jogo).
 
@@ -651,9 +709,13 @@ def abrir_o_aparelho_de_entrada(
     except OSError as exc:
         raise AparelhoNaoAbreError(exc.errno, FRASE_O_APARELHO_NAO_ABRE, caminho) from exc
     chave = next((a.chave for a in aparelhos_de_entrada() if a.evento == evento), None)
-    fd = None if chave is None else (pedir_ao_broker or _pedir_o_acionador_ao_broker)(
+    resposta = None if chave is None else (pedir_ao_broker or _pedir_o_acionador_ao_broker)(
         caminho, chave)
+    fd, motivo = resposta if isinstance(resposta, tuple) else (resposta, "")
     if fd is None:
+        if RECUSA_DE_QUEM_NAO_FOI_AUTORIZADO in motivo:
+            raise AcionadorNaoAutorizadoError(recusa.errno, FRASE_O_APARELHO_NAO_FOI_AUTORIZADO,
+                                              caminho) from recusa
         raise SemPermissaoDeLerError(recusa.errno, FRASE_SEM_PERMISSAO_DE_LER,
                                      caminho) from recusa
     from hefesto_dualsense4unix.core.evdev_reader import _input_device_do_fd

@@ -47,6 +47,9 @@ class _Mesa:
         self.sys.mkdir(parents=True)
         self.devices.mkdir(parents=True)
         self.dev.mkdir(parents=True)
+        self.autorizados = raiz / "autorizados"
+        self.autorizados.write_text(CHAVE + "\n", encoding="ascii")
+        self.autorizados.chmod(0o644)
 
     def no(self, evento: str, *, nome: str = NOME, fisico: str = FISICO, vendor: str = "1234",
            product: str = "abcd", teclas: str = TECLAS_DE_TECLADO, uinput: bool = False) -> str:
@@ -84,6 +87,7 @@ class _Mesa:
 
         return hb.BrokerState(allowed_uid=UID, ops=self.ops(), validator_acionador=validar,
                               dev_input_root=str(self.dev), sys_class_input=str(self.sys),
+                              acionadores_path=str(self.autorizados),
                               log=lambda *_a, **_k: None, sleep_fn=lambda _s: None)
 
 
@@ -254,7 +258,7 @@ def test_sem_o_broker_a_recusa_diz_a_frase_do_dono(sem_permissao: dict[str, Any]
 
 def test_o_broker_fora_do_ar_nao_levanta_nem_espera() -> None:
     """O socket que não existe (o da suíte) devolve None na hora, sem exceção."""
-    assert maquina._pedir_o_acionador_ao_broker("/dev/input/event3", CHAVE) is None
+    assert maquina._pedir_o_acionador_ao_broker("/dev/input/event3", CHAVE)[0] is None
 
 
 def test_a_ponte_le_o_declarado_pelo_broker_e_a_retirada_o_fecha(

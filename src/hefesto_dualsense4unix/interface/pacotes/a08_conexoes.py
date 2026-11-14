@@ -1871,12 +1871,23 @@ def acionador_nova_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     if evento is None:
         raise RuntimeError("o aparelho não está ligado nesta máquina")
     from hefesto_dualsense4unix.utils.maquina import (
+        AcionadorNaoAutorizadoError,
         abrir_o_aparelho_de_entrada,
+        autorizar_o_acionador,
         frase_da_recusa_de_ler,
     )
 
+    abrir = _ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada
     try:
-        dispositivo = (_ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada)(evento)
+        dispositivo = abrir(evento)
+    except AcionadorNaoAutorizadoError:
+        falta = autorizar_o_acionador(r.chave)
+        if falta is not None:
+            raise RuntimeError(falta) from None
+        try:
+            dispositivo = abrir(evento)
+        except OSError as exc:
+            raise RuntimeError(frase_da_recusa_de_ler(exc)) from exc
     except OSError as exc:
         raise RuntimeError(frase_da_recusa_de_ler(exc)) from exc
     with _TRAVA_DO_RASCUNHO:
@@ -1934,6 +1945,10 @@ def acionador_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         {"nome": nome, "controle": controle, "teclas": teclas}
         if any(teclas.values()) else None)}}
     _declarar_o_acionador(p, declaracao)
+    if declaracao["acionadores"][r.chave] is None:
+        from hefesto_dualsense4unix.utils.maquina import retirar_o_acionador_autorizado
+
+        (_RETIRAR_O_ACIONADOR or retirar_o_acionador_autorizado)(r.chave)
     with _TRAVA_DO_RASCUNHO:
         _RASCUNHO = None
     return None
@@ -2708,6 +2723,7 @@ _RAIZ_DAS_ENTRADAS: Any = None
 
 
 _ABRIR_O_EVENTO: Callable[[str], Any] | None = None
+_RETIRAR_O_ACIONADOR: Callable[[str], None] | None = None
 
 
 def _evento_do_acionador(chave: str) -> str | None:

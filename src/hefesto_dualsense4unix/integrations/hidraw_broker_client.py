@@ -145,6 +145,14 @@ class HidrawBrokerClient:
         return self._abrir_pelo_pedido(
             {"cmd": "open", "node": node, "acionador": chave}, node)
 
+    def retirar_acionador(self, chave: str) -> bool:
+        """Tira `chave` da lista dos aparelhos que o broker serve; só estreita, sem senha."""
+        response = self._request({"cmd": "acionador_retirar", "acionador": chave})
+        ok = bool(response is not None and response.get("ok"))
+        if not ok:
+            self._log_falha("acionador_retirar", None, response)
+        return ok
+
     def _abrir_pelo_pedido(
         self, pedido: dict[str, Any], node: str
     ) -> tuple[int | None, str]:

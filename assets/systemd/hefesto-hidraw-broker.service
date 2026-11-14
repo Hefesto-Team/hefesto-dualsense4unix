@@ -130,6 +130,7 @@ ReadWritePaths=-/sys/bus/hid/drivers
 # A marca da entrega (MARCA_DA_ENTREGA_PATH): o broker reiniciado com o
 # Hefesto parado herda o controle entregue em vez de fechá-lo.
 ReadWritePaths=-/run/hefesto-hidraw-broker
+ReadWritePaths=-/var/lib/hefesto-dualsense4unix/acionadores
 
 [Install]
 WantedBy=multi-user.target

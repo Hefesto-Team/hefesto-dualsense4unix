@@ -191,6 +191,40 @@ install_ucm_dualsense_host() {
     fi
 }
 
+_chaves_dos_acionadores_declarados() {
+    local _maq="${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix/maquina.json"
+    [[ -f "${_maq}" ]] || return 0
+    python3 -I -c '
+import json, sys
+try:
+    doc = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+acionadores = doc.get("acionadores") if isinstance(doc, dict) else None
+for chave in acionadores if isinstance(acionadores, dict) else ():
+    print(chave)
+' "${_maq}" 2>/dev/null || true
+}
+
+_instalar_o_acionador_raiz() {
+    local _ac_fonte="${ROOT_DIR}/scripts/hefesto_acionador_raiz.sh"
+    local _ac_alvo=/usr/local/lib/hefesto-dualsense4unix/acionador-raiz
+    local _ac_politica="${ROOT_DIR}/assets/polkit/org.hefesto.dualsense4unix.acionador.policy"
+    if ! sudo install -Dm755 -o root -g root "${_ac_fonte}" "${_ac_alvo}" 2>/dev/null; then
+        warn "não consegui instalar ${_ac_alvo} — o teclado ou o pedal novo não vira botão até o próximo install"
+        return 0
+    fi
+    if ! sudo install -Dm644 -o root -g root "${_ac_politica}" \
+            /usr/share/polkit-1/actions/org.hefesto.dualsense4unix.acionador.policy 2>/dev/null; then
+        warn "a política do polkit do acionador NÃO gravada — o pedido da senha sai com a frase genérica do pkexec"
+    fi
+    if ! _chaves_dos_acionadores_declarados | sudo "${_ac_alvo}" semear >/dev/null 2>&1; then
+        warn "a lista dos aparelhos autorizados NÃO semeada — o teclado ou o pedal já declarado pede a senha uma vez na aba Conexões"
+        return 0
+    fi
+    printf '      só o teclado ou o pedal autorizado vira botão; o aparelho novo pede a senha de administrador uma vez\n'
+}
+
 install_broker_host() {
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         printf '      broker pulado (--no-udev) — re-execute ./install.sh sem a flag para ativá-lo\n'
@@ -223,6 +257,7 @@ install_broker_host() {
             /etc/systemd/system/hefesto-hidraw-broker.socket 2>/dev/null; then
         warn "não consegui gravar as units do broker em /etc/systemd/system"
     else
+        _instalar_o_acionador_raiz
         sudo systemctl daemon-reload >/dev/null 2>&1 || true
         if sudo systemctl enable --now hefesto-hidraw-broker.socket >/dev/null 2>&1; then
             printf '      hefesto-hidraw-broker.socket habilitado (atende quem está na frente do computador — só o .socket; o .service sobe na 1ª conexão)\n'
