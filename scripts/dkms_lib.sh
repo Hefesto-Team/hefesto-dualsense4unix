@@ -38,6 +38,29 @@ _dkms_warn() {
     fi
 }
 
+cabecalhos_do_kernel_no_pacman() {
+    local _kver="${1:-$(_dkms_kernel_alvo)}" _dono=""
+    _dono="$(pacman -Qqo "/usr/lib/modules/${_kver}/vmlinuz" 2>/dev/null | head -n 1)"
+    printf '%s-headers\n' "${_dono:-linux}"
+}
+
+_dkms_como_instalar() {
+    local _o_que="$1" _kver="${2:-$(_dkms_kernel_alvo)}"
+    if command -v apt-get >/dev/null 2>&1; then
+        if [[ "${_o_que}" == "dkms" ]]; then printf 'sudo apt install dkms'
+        else printf 'sudo apt install linux-headers-%s' "${_kver}"; fi
+    elif command -v dnf >/dev/null 2>&1; then
+        if [[ "${_o_que}" == "dkms" ]]; then printf 'sudo dnf install dkms'
+        else printf 'sudo dnf install kernel-devel-%s' "${_kver}"; fi
+    elif command -v pacman >/dev/null 2>&1; then
+        if [[ "${_o_que}" == "dkms" ]]; then printf 'sudo pacman -S --needed dkms'
+        else printf 'sudo pacman -S --needed %s' "$(cabecalhos_do_kernel_no_pacman "${_kver}")"; fi
+    else
+        if [[ "${_o_que}" == "dkms" ]]; then printf 'instale o dkms pela sua distribuição'
+        else printf 'instale os cabeçalhos do kernel %s pela sua distribuição' "${_kver}"; fi
+    fi
+}
+
 _dkms_efivars_root() { printf '%s' "${HEFESTO_EFIVARS_ROOT:-/sys/firmware/efi/efivars}"; }
 
 _dkms_familia_da_distro() {
@@ -286,11 +309,11 @@ dkms_install_patched_module() {
     _srcdst="$(_dkms_src_root)/${_pkg}-${_ver}"
 
     if ! command -v dkms >/dev/null 2>&1; then
-        _dkms_warn "dkms ausente — pulando ${_pkg} (módulo in-tree continua); cure com: sudo apt install dkms"
+        _dkms_warn "dkms ausente — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar dkms)"
         return 0
     fi
     if [[ ! -e "$(_dkms_modules_root)/${_kver}/build" ]]; then
-        _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: sudo apt install linux-headers-${_kver}"
+        _dkms_warn "headers do kernel ${_kver} ausentes — pulando ${_pkg} (módulo in-tree continua); cure com: $(_dkms_como_instalar cabecalhos "${_kver}")"
         return 0
     fi
     if [[ ! -f "${_src}/dkms.conf" ]]; then
