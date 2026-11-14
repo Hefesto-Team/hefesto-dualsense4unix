@@ -79,7 +79,8 @@ sudo pacman -S --needed git base-devel dkms dmidecode alsa-utils \
 ```
 
 O `wvkbd` e o `wlrctl` moram no AUR (`paru -S wvkbd`); sem o `wvkbd`, o L3 avisa
-na tela em vez de abrir o teclado, e o `doctor` marca a falta. O `~/.local/bin`
+na tela em vez de abrir o teclado, e o install e o `doctor` dão o comando do
+AUR (o do `paru` ou do `yay` que estiver na máquina). O `~/.local/bin`
 não entra no `PATH` em todo shell do Arch: abra o Hefesto pelo menu de
 aplicativos, ou acrescente a pasta ao `PATH`.
 
