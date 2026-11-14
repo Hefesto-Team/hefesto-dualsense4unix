@@ -32,7 +32,16 @@ CSV = RAIZ / "docs" / "data" / "tempos-da-suite.csv"
 TETO_DE_UMA_ESPERA = 2.0
 TETO_DAS_ESPERAS = 5.0
 
-EXCECOES: dict[str, str] = {}
+EXCECOES: dict[str, str] = {
+    "tests/unit/test_a_captura_conta_a_troca_de_assinantes.py": (
+        "a troca de assinatura NÃO reabre a fonte: a ausência se mede além da espera de 2 s que a "
+        "Captura (integrations/tela_do_jogo.py, ``espera``) põe depois da escolha cancelada"
+    ),
+    "tests/unit/test_a_tela_so_se_le_no_clique.py": (
+        "a escolha cancelada NÃO volta na assinatura: a ausência se mede além da espera de 2 s "
+        "que a Captura (integrations/tela_do_jogo.py, ``espera``) põe depois da recusa"
+    ),
+}
 
 
 def esperas(texto: str) -> list[float]:
