@@ -1087,8 +1087,7 @@ class SinkVirtualPipeWire:
         caixa, self._caixa = self._caixa, None
         if caixa is None:
             return
-        with contextlib.suppress(Exception):
-            caixa.descer()
+        caixa.descer()
         logger.info("som_caixa_separada_desceu", sink=self.nome)
 
     def _casar_a_caixa(self, rota: RotaDoNo | None) -> RotaDoNo | None:
@@ -1121,8 +1120,7 @@ class SinkVirtualPipeWire:
             self._caixa = nova
             self._caixa_recusada_em = None
             return rota
-        with contextlib.suppress(Exception):
-            nova.descer()
+        nova.descer()
         self._caixa_recusada_em = self._relogio()
         logger.info("som_caixa_separada_nao_subiu", sink=self.nome, motivo=nova.motivo)
         return replace(rota, so_efeitos=False)
@@ -2733,7 +2731,10 @@ class CaixaQueSeparaNoCabo:
 
     def descer(self) -> None:
         """Derruba o laço e os dois filhos. Idempotente."""
-        from hefesto_dualsense4unix.integrations.filho_de_som import derrubar_leitor_de_pipe
+        from hefesto_dualsense4unix.integrations.filho_de_som import (
+            ESPERA_PELO_FIM_S,
+            derrubar_leitor_de_pipe,
+        )
 
         self._parar.set()
         gravador, self._gravador = self._gravador, None
@@ -2742,17 +2743,15 @@ class CaixaQueSeparaNoCabo:
         if thread is threading.current_thread():
             thread = None
         if tocador is not None:
-            with contextlib.suppress(Exception):
-                tocador.terminate()
+            tocador.terminate()
         if gravador is not None:
             derrubar_leitor_de_pipe(gravador, leitor=thread)
         if thread is not None:
-            thread.join(timeout=1.0)
+            thread.join(timeout=ESPERA_PELO_FIM_S)
         if tocador is not None:
             entrada = getattr(tocador, "stdin", None)
             if entrada is not None and (thread is None or not thread.is_alive()):
-                with contextlib.suppress(Exception):
-                    entrada.close()
+                entrada.close()
             derrubar_leitor_de_pipe(tocador)
 
 
