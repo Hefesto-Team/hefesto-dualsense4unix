@@ -15,7 +15,9 @@ MORDIDAS:
 - troque ``entrada * FRACAO_DO_SUSTO > teto`` por ``entrada > teto`` e
   ``test_o_grave_que_nunca_gritou_nao_ganha_cauda`` reprova: o vão da batida zumbe;
 - tire a limpeza de ``_tetos_do_corpo`` do ``Passo._levar_o_corpo`` e
-  ``test_o_susto_nao_sobrevive_ao_efeito_desligado`` reprova: a cauda volta ao religar.
+  ``test_o_susto_nao_sobrevive_ao_efeito_desligado`` reprova: a cauda volta ao religar;
+- tire o filtro de ``_tetos_do_corpo`` pelos que tocam e
+  ``test_o_controle_que_sai_no_meio_do_susto_volta_sem_ele`` reprova: a cauda volta com ele.
 """
 from __future__ import annotations
 
@@ -233,3 +235,16 @@ def test_o_susto_de_um_controle_nao_vaza_para_quem_chega(
     assert chegou == fh.TAXA
     assert alto.saida[P[1]] == pytest.approx(list(esperado[-chegou:]), abs=1e-6)
     assert max(map(abs, alto.saida[P[0]][-chegou:])) > 0.2
+
+
+@pytest.mark.parametrize("quem", range(4))
+def test_o_controle_que_sai_no_meio_do_susto_volta_sem_ele(
+        quem: int, monkeypatch: pytest.MonkeyPatch, pcm: bytes) -> None:
+    """Em qualquer posição, quem sai da mesa na cauda e volta não traz o susto velho."""
+    passo, alto = _passo(monkeypatch)
+    fim = round(fh.TAXA * (SILENCIO_S + ESTRONDO_S + 0.1)) * 4
+    _levar(passo, pcm[:fim])
+    _levar(passo, _silencio(0.3), uniqs=tuple(u for u in P if u != P[quem]))
+    antes = len(alto.saida[P[quem]])
+    _levar(passo, _silencio(1.0))
+    assert max(map(abs, alto.saida[P[quem]][antes:]), default=0.0) < 0.01
