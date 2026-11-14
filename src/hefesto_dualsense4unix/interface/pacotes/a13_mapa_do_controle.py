@@ -177,7 +177,7 @@ def _estado() -> dict[str, Any]:
     if not _EDITANDO:
         _EDITANDO.update({"chave": NAV, "edicoes": {}, "nome": None,
                           "usar_em": None, "botao": None, "peca": None,
-                          "seq": {}, "gravando": None})
+                          "seq": {}, "gravando": None, "nav_de": None})
     return _EDITANDO
 
 
@@ -501,6 +501,23 @@ def _chave_no_seletor(ctx: Contexto, chave: str) -> str:
     return chave
 
 
+def _chave_de_agora(ctx: Contexto, estado: dict[str, Any]) -> str:
+    """A chave em edição no seletor de agora: o perfil que subiu com o jogo passa ao topo, e o
+    topo que mudou de dono devolve o que não se guardou ao perfil de antes, ou o larga."""
+    ativo = _nome_do_ativo(ctx)
+    chave = _chave_no_seletor(ctx, str(estado["chave"]))
+    antes = estado.get("nav_de")
+    if chave == NAV and antes is not None and antes != ativo and estado["edicoes"]:
+        meus = {str(c.get("name") or "") for c in _perfis_do_disco(ctx)}
+        if antes and antes in meus:
+            chave = _chave_no_seletor(ctx, PERFIL + antes)
+        else:
+            estado["edicoes"] = {}
+    estado["chave"] = chave
+    estado["nav_de"] = ativo if chave == NAV else None
+    return chave
+
+
 def _chave_do_point_and_click(ctx: Contexto) -> str:
     """O perfil que a aba Navegação escolheu para o point and click, na chave do seletor.
 
@@ -521,9 +538,9 @@ def _chave_das_trocas(ctx: Contexto) -> str:
 def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
     """Tudo o que a tela mostra do perfil em edição, num só dicionário."""
     estado = _estado()
+    chave = _chave_de_agora(ctx, estado)
     valores = _valores(ctx, estado)
     tipo = _tipo_de(ctx, estado, valores)
-    chave = estado["chave"]
     mesa: dict[str, Any] = {
         "mc-tipo": tipo,
         "mc-fixo": "" if chave in (NOVO,) or chave.startswith(MOLDE) else "sim",
@@ -657,7 +674,7 @@ def mapa_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if not _chave_valida(ctx, chave):
         raise RuntimeError(f"não conheço o perfil «{chave}» — escolha um da lista.")
     _largar()
-    _estado()["chave"] = _chave_no_seletor(ctx, chave)
+    _estado()["chave"] = chave
     return _repinta(ctx)
 
 
@@ -1190,7 +1207,7 @@ def _o_que_se_guarda(prof: Any) -> tuple[Any, ...]:
 def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Guardar»: grava o perfil em edição. O molde e o novo viram perfil em «Meus perfis»."""
     estado = _estado()
-    chave = estado["chave"]
+    chave = _chave_de_agora(ctx, estado)
     edicoes = dict(estado["edicoes"])
     loader = perfil._com_o_src()
     if chave == NAV or chave.startswith(PERFIL):

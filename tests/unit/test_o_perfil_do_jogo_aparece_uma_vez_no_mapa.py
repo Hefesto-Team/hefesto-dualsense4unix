@@ -96,3 +96,34 @@ def test_fora_do_jogo_o_freestyle_com_botao_proprio_segue_em_meus_perfis() -> No
     assert opcoes[0][0] == a13.NAV and opcoes[0][1] != FREESTYLE, opcoes
     assert (f"perfil:{FREESTYLE}", FREESTYLE) in opcoes
     assert a13._mesa_da_edicao(ctx)["ancora-trocar"] == f"perfil:{FREESTYLE}"
+
+
+@pytest.mark.parametrize("mesa", MESAS, ids=list(MESAS))
+def test_o_perfil_aberto_antes_do_jogo_subir_segue_numa_opcao_do_seletor(mesa: str) -> None:
+    fora = _ctx(FREESTYLE, MESAS[mesa])
+    a13.mapa_perfil(fora, {"valor": f"perfil:{JOGO}"}, None)
+    assert a13._mesa_da_edicao(fora)["perfil"] == f"perfil:{JOGO}"
+    no_jogo = _ctx(JOGO, MESAS[mesa])
+    valores = {v for v, _t in _opcoes(no_jogo)}
+    aberto = a13._mesa_da_edicao(no_jogo)
+    assert aberto["perfil"] in valores, (aberto["perfil"], valores)
+    assert aberto["nome"] == JOGO, aberto
+
+
+@pytest.mark.parametrize("mesa", MESAS, ids=list(MESAS))
+def test_o_que_nao_se_guardou_no_topo_fica_com_o_jogo_quando_ele_fecha(mesa: str) -> None:
+    no_jogo = _ctx(JOGO, MESAS[mesa])
+    a13.mapa_perfil(no_jogo, {"valor": a13._mesa_da_edicao(no_jogo)["ancora-trocar"]}, None)
+    a13._estado()["edicoes"] = {"cross": ("troca", "circle")}
+    fora = _ctx(FREESTYLE, MESAS[mesa])
+    aberto = a13._mesa_da_edicao(fora)
+    assert (aberto["perfil"], aberto["nome"]) == (f"perfil:{JOGO}", JOGO), aberto
+    assert a13._estado()["edicoes"] == {"cross": ("troca", "circle")}
+
+
+def test_sem_lugar_no_seletor_o_que_nao_se_guardou_no_topo_se_larga() -> None:
+    no_jogo = _ctx("Sem botão", MESAS["p1-a-p4-mista"])
+    a13._mesa_da_edicao(no_jogo)
+    a13._estado()["edicoes"] = {"cross": ("troca", "circle")}
+    aberto = a13._mesa_da_edicao(_ctx(FREESTYLE, MESAS["p1-a-p4-mista"]))
+    assert aberto["perfil"] == a13.NAV and a13._estado()["edicoes"] == {}
