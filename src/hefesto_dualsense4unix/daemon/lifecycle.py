@@ -149,6 +149,14 @@ def _o_modo_do_jogo_sem_arme(profile: Any, mode: Any | None) -> Any | None:
     return o_modo_do_jogo_sem_mode(profile, mode, _mascara_da_maquina)
 
 
+def _o_jogo_sem_mode_ganha_o_estilo(daemon: Any, mode: Any | None) -> bool:
+    """O perfil sem ``mode`` ganha o do estilo, no modo e no mouse; o Nativo do usuário fica."""
+    return mode is None and not (
+        daemon._native_mode
+        and getattr(daemon.store, "native_mode_origin", None) != "profile"
+    )
+
+
 def _o_modo_do_perfil_do_boot(
     store: Any = None, *, appid_em_cena: int | None = None,
 ) -> tuple[str | None, str | None, str | None]:
@@ -2262,7 +2270,7 @@ class Daemon:
         nome = getattr(profile, "name", None)
         speed, scroll_speed = _velocidades_ou_as_da_sessao(speed, scroll_speed)
         mode = getattr(profile, "mode", None)
-        if self._o_jogo_sem_mode_ganha_o_estilo(mode):
+        if _o_jogo_sem_mode_ganha_o_estilo(self, mode):
             from hefesto_dualsense4unix.profiles.manager import o_modo_do_jogo_sem_mode
 
             mode = o_modo_do_jogo_sem_mode(profile, mode)
@@ -4722,13 +4730,6 @@ class Daemon:
             logger.warning("point_and_click_nao_reposto", err=str(exc))
             return False
 
-    def _o_jogo_sem_mode_ganha_o_estilo(self, mode: Any | None) -> bool:
-        """O perfil sem ``mode`` ganha o do estilo, no modo e no mouse; o Nativo do usuário fica."""
-        return mode is None and not (
-            self._native_mode
-            and getattr(self.store, "native_mode_origin", None) != "profile"
-        )
-
     def apply_profile_mode(
         self,
         mode: Any | None,
@@ -4745,7 +4746,7 @@ class Daemon:
         """
         from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
 
-        if self._o_jogo_sem_mode_ganha_o_estilo(mode):
+        if _o_jogo_sem_mode_ganha_o_estilo(self, mode):
             mode = _o_modo_do_jogo_sem_arme(profile, mode)
         do_perfil = getattr(mode, "arranjo", None)
         self._arranjo_do_perfil = (
