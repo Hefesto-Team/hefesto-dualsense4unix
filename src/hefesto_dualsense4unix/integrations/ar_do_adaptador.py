@@ -53,6 +53,7 @@ os aparelhos dele; a taxa por controle vem do nó de movimento de cada um
 from __future__ import annotations
 
 import contextlib
+import errno
 import fcntl
 import socket
 import struct
@@ -209,15 +210,22 @@ def endereco_do_kernel(bdaddr: bytes) -> str:
     return ":".join(f"{b:02x}" for b in bytes(bdaddr)[::-1])
 
 
+def _socket_hci() -> socket.socket:
+    """O socket HCI cru. O Python sem Bluetooth compilado responde como o kernel sem ele."""
+    familia = getattr(socket, "AF_BLUETOOTH", None)
+    protocolo = getattr(socket, "BTPROTO_HCI", None)
+    if familia is None or protocolo is None:
+        raise OSError(errno.EAFNOSUPPORT, "este Python não tem socket de Bluetooth")
+    return socket.socket(familia, socket.SOCK_RAW, protocolo)
+
+
 def _ioctl_do_kernel() -> Ioctl:
     """O ioctl de verdade, num socket HCI aberto na primeira chamada."""
     guardado: list[socket.socket] = []
 
     def chamar(pedido: int, buf: bytearray) -> None:
         if not guardado:
-            guardado.append(
-                socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
-            )
+            guardado.append(_socket_hci())
         fcntl.ioctl(guardado[0].fileno(), pedido, buf, True)
 
     return chamar
@@ -482,7 +490,7 @@ def _erro_do_comando(evento: bytes, opcode_esperado: int) -> int | None:
 
 
 def _abrir_hci_cru(hci: int) -> socket.socket:
-    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_RAW, socket.BTPROTO_HCI)
+    sock = _socket_hci()
     try:
         sock.bind((hci,))
     except OSError:

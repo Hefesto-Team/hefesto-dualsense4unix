@@ -51,6 +51,15 @@ def _carregar(nome: str) -> ModuleType:
     return modulo
 
 
+@pytest.fixture(autouse=True)
+def _porta_direta_sem_ler_o_sys(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A porta do adaptador é da máquina: a régua a fixa direta e não lê o ``/sys`` nem o kernel."""
+    rm._PORTA_LIDA.clear()
+    monkeypatch.setattr(rm, "atras_de_hub_no_sysfs", lambda _endereco: False)
+    yield
+    rm._PORTA_LIDA.clear()
+
+
 fatias = _carregar("a_ponte_em_fatias_no_ar")
 dois = _carregar("a_ponte_com_dois_quadros")
 

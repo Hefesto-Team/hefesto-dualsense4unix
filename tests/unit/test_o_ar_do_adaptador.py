@@ -445,3 +445,21 @@ def test_a_suite_nunca_abre_o_socket_de_verdade(monkeypatch: pytest.MonkeyPatch)
     ar.LeitorDoKernel()
     ar.MedidorDeAr()
     assert abertos == []
+
+
+@pytest.mark.parametrize("ausente", ["AF_BLUETOOTH", "BTPROTO_HCI"])
+def test_o_python_sem_bluetooth_e_nao_sei_e_nunca_excecao(
+    monkeypatch: pytest.MonkeyPatch, ausente: str
+) -> None:
+    """O Python de quem compilou sem os cabeçalhos do Bluetooth não tem a família no ``socket``."""
+    abertos: list[tuple] = []
+    monkeypatch.setattr(socket, "socket", lambda *a, **k: abertos.append(a))
+    monkeypatch.delattr(socket, ausente, raising=False)
+    assert ar.LeitorDoKernel().adaptadores() is None
+    with pytest.raises(OSError):
+        ar._abrir_hci_cru(0)
+    perguntado = ar._perguntar_ao_hci(
+        0, 1, 0x1406, bytes, prazo_s=0.1, abrir=ar._abrir_hci_cru, relogio=lambda: 0.0
+    )
+    assert perguntado is None
+    assert abertos == []
