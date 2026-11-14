@@ -45,10 +45,13 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `som.tocar` | `{uniq, som: <id>\|recorte, volume (0 a 1), t?, dura_s? (0,05 a 5)}` | `escrever:som` | `{status}` |
 | `leds.set` | `{uniq, mascara (0 a 31), ate_ms}` | `escrever:leds` | `{status}` |
 | `mira.peso` | `{uniq\|"todos", ganho (0,3 a 1), ate_ms (até 10000)}` | `escrever:mira` | `{status}` |
+| `mira.ligada` | `{uniq\|"todos", ligada: true\|false}` | `escrever:mira` | `{status, ligada}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
+| `vibracao.escala` | `{uniq, escala (0 a 1)}` | `escrever:vibracao` | `{status, escala}` |
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?, linhas?, presentes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
+| `lancador.abrir` | `{chave}` | `pedir:lancador.abrir` | `{aberto, chave}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador, cor?}]}` |
 | `chave.ligar` | `{}` | a `chave` no manifesto instalado | `{ligada}` |
 | `tela.ver` | `{tela?: {regioes: [...]}}` | `ler:jogo.tela` | `{status}` |
@@ -62,6 +65,17 @@ do controle deixa de estar no modo da extensão; só vale no controle cuja seç�
 (`todos` são esses), e sem nenhum recusa (`-32013`). Num jogo com anticheat (pela lista do appid e pelos marcadores da pasta do jogo na biblioteca Steam), o pedido recusa
 (`-32013`) até a chave «Peso
 da mira» do jogo estar gravada, com o aviso do risco à conta visto, em `peso_da_mira_dos_jogos.json`.
+
+O `mira.ligada` (desde 14/11/2026) liga e desliga o giroscópio de um controle, ou de `todos`, enquanto a extensão <!-- ref-externa: método da porta das extensões, não do daemon -->
+vale: com `ligada: false`, o ganho daquele controle é zero nas duas máscaras (os três eixos do giro que o pad
+virtual recebe saem zerados, e o analógico e o cursor que o giro move ficam parados); o acelerômetro passa. O giro
+volta com `ligada: true`, quando a extensão sai da porta e no «Parar tudo»; o jogo que fecha não o religa, e ele
+não pede a seção Controles no modo da extensão. O `vibracao.escala` (desde 14/11/2026) multiplica, de 0 a 1, a
+força de tudo o que vai ao motor daquele controle, o jogo e as extensões, no funil único da força
+(`forca_para` em `src/hefesto_dualsense4unix/daemon/ipc_rumble_policy.py`): nunca tira o pedido do jogo, só a
+força; com mais de uma extensão vale a menor, e `1` devolve a força inteira. Ele sai junto com a extensão e no
+«Parar tudo». Os dois valem por controle, de um a quatro, no cabo e no rádio; no Modo Nativo o jogo fala direto
+com o controle e nenhum dos dois age.
 
 Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
@@ -198,6 +212,12 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `null` fora de jogo), `executavel` o nome do arquivo do jogo (ou `null`), `buildid` o da versão instalada, lido do
   `appmanifest_<N>.acf` (ou `null`), `loja` é `steam` e `emulador` o nome do emulador quando o jogo roda num (ou
   `null`). Nunca leva PID. É estado: quem assina depois recebe o de agora logo na assinatura.
+- `jogo.estilo` (`ler:jogo.estilo`, desde 14/11/2026) entrega `nome: "jogo.estilo"`: `{estilo, jogo, controles:
+  [{jogador, estilo}], t}`, em que `estilo` é a chave do catálogo dos estilos
+  (`src/hefesto_dualsense4unix/profiles/estilos_de_jogo.py`, como `terror`, `fps`, `corrida`, `luta`) do perfil
+  que vale, ou `null` (sem estilo, ou fora do catálogo), e `jogo` a mesma chave do `perfil.jogo`. Sai do
+  `perfil.trocou` só quando o estilo, o jogo ou o estilo de um controle muda: ao abrir e ao trocar de jogo. É <!-- ref-externa: tópico do barramento, não método do daemon -->
+  estado: quem assina depois recebe o de agora logo na assinatura.
 - `modo.aba` (`ler:modo.aba`) entrega `nome: "modo.aba"`: `{uniq, jogador, secoes: {controles, gatilhos, luz,
   vibracao}}`, um por controle, só quando muda. Cada seção diz o modo que vale ali no perfil ativo:
   `automatico`, `personalizado` ou `extensao:<id>`; o controle que escreve o seu por cima leva o dele. O modo de
@@ -339,6 +359,14 @@ por `lancador.jogos`. A lista inteira substitui a anterior, até 5000 jogos:
 A forma errada volta `-32003`, com a frase. A interface lê a lista pelo IPC do serviço (o `ipc.sock`):
 `mods.jogos {mod}` devolve `{mod, jogos}`, a última lista que aquela extensão entregou, e a lista vazia sem
 conexão viva da extensão. O leitor da biblioteca do lançador mora na extensão, nunca no serviço.
+
+Com a permissão `pedir:lancador.abrir` (desde 14/11/2026), a extensão pede `lancador.abrir {chave}` para abrir um
+jogo da própria lista: o serviço abre o `abrir` daquele jogo fora da caixa e fora do serviço, com o ambiente limpo,
+pelo `hefesto-launch` (o mesmo ambiente do jogo da Steam, quando ele está instalado); o perfil vale pela janela do
+jogo, como o de todo jogo da extensão. Sem a permissão volta `-32010`; a chave de outra extensão volta `-32010`;
+a chave que a extensão não entregou volta `-32003`; o jogo que não abre volta `-32013` com o motivo. Um Hefesto
+mais velho responde `-32601` ao método e recusa o manifesto que pede a permissão nova, com a frase
+«permissão desconhecida»; a extensão mostra a frase.
 
 A aba 07 pede o `mods.jogos` de cada extensão de lançador ligada e sem leitor, e a extensão vira uma linha
 da lista, ao lado da Steam e do Heroic, com a contagem dos instalados («2 jogos»). Desligada ou

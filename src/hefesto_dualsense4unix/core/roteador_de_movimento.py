@@ -194,7 +194,7 @@ def _saida_do_eixo(
     """
     magnitude = abs(velocidade)
     zona = max(RUIDO_DO_GIRO_GRAUS_S, arranjo.zona_morta_graus_s)
-    if sensibilidade <= 0 or magnitude <= zona:
+    if sensibilidade <= 0 or ganho <= 0.0 or magnitude <= zona:
         return 0.0
     piso = max(0.0, min(1.0, arranjo.piso))
     ganho_do_eixo = GANHO_NA_SENSIBILIDADE_PADRAO * sensibilidade / SENSIBILIDADE_PADRAO * ganho
@@ -226,14 +226,41 @@ class PesoDaMira:
     """O ganho que uma extensão pede para o giro, por controle ou para ``todos``, com prazo.
 
     Sem pedido vivo o ganho é 1; com mais de um, vale o menor. O pedido some no prazo e quando
-    quem o fez é solto; quem ouve :meth:`ao_esvaziar` é avisado quando o último some.
+    quem o fez é solto; quem ouve :meth:`ao_esvaziar` é avisado quando o último some. O giro
+    desligado (:meth:`desligar`) zera o ganho do controle sem prazo, até :meth:`ligar` ou
+    :meth:`religar_de`, e fica fora do prazo, dos donos e do :meth:`soltar` do peso.
     """
 
     def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
         self.relogio = relogio
         self._trava = threading.Lock()
         self._pedidos: dict[tuple[str, str], tuple[float, float]] = {}
+        self._desligados: set[tuple[str, str]] = set()
         self._avisos: list[Callable[[], None]] = []
+
+    def desligar(self, dono: str, alvo: str) -> None:
+        with self._trava:
+            self._desligados.add((dono, self._chave(alvo)))
+
+    def ligar(self, dono: str, alvo: str) -> None:
+        chave = self._chave(alvo)
+        with self._trava:
+            if chave == TODOS_OS_CONTROLES:
+                self._desligados = {p for p in self._desligados if p[0] != dono}
+            else:
+                self._desligados.discard((dono, chave))
+
+    def religar_de(self, dono: str) -> None:
+        self.ligar(dono, TODOS_OS_CONTROLES)
+
+    def desligado(self, uniq: str | None) -> bool:
+        chave = chave_de_sensor(uniq) if uniq else None
+        with self._trava:
+            return any(alvo in (TODOS_OS_CONTROLES, chave) for _dono, alvo in self._desligados)
+
+    @staticmethod
+    def _chave(alvo: str) -> str:
+        return alvo if alvo == TODOS_OS_CONTROLES else chave_de_sensor(alvo)
 
     def pedir(self, dono: str, alvo: str, ganho: float, ate_ms: int) -> None:
         if not GANHO_MINIMO_DA_MIRA <= ganho <= 1.0:
@@ -245,6 +272,8 @@ class PesoDaMira:
             self._pedidos[(dono, chave)] = (ganho, self.relogio() + ate_ms / 1000.0)
 
     def ganho(self, uniq: str | None) -> float:
+        if self._desligados and self.desligado(uniq):
+            return 0.0
         if not self._pedidos:
             return 1.0
         agora = self.relogio()

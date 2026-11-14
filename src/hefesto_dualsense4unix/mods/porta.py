@@ -4,10 +4,10 @@ Nunca o socket principal: o enquadramento é o do IPC (um JSON-RPC 2.0 por linha
 tabela de métodos é pequena e fechada. ``mod.ola`` confere a ficha e o ``SO_PEERCRED``;
 cada leitura pede ``ler:<tópico>``, cada publicação ``publicar:<tópico>``, cada escrita
 ``escrever:<canal>`` com o ``uniq`` de um controle e nunca num canal que o jogo escreve;
-``lancador.jogos`` pede ``lancador``. Cada assinatura é uma fila do barramento que
-descarta o mais antigo quando enche; a de ``botoes`` junta as bordas de um botão e nunca
-perde a última. O contrato inteiro, com a vibração que se solta na
-queda, está em ``docs/protocol/porta-das-modificacoes.md``.
+``lancador.jogos`` pede ``lancador``, e ``lancador.abrir``, ``pedir:lancador.abrir``. Cada
+assinatura é uma fila do barramento que descarta o mais antigo quando enche; a de ``botoes``
+junta as bordas de um botão e nunca perde a última. O contrato inteiro, com a vibração que se
+solta na queda, está em ``docs/protocol/porta-das-modificacoes.md``.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ import socket
 import struct
 import time
 from collections import deque
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -30,6 +30,7 @@ from typing import Any
 from hefesto_dualsense4unix.core.events import DEFAULT_QUEUE_MAXSIZE, EventBus, EventTopic
 from hefesto_dualsense4unix.core.roteador_de_movimento import PESO_DA_MIRA, TODOS_OS_CONTROLES
 from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import ESCALA_DA_VIBRACAO
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_INVALID_PARAMS,
     CODE_INVALID_REQUEST,
@@ -116,6 +117,7 @@ ENTRADAS_POR_SEGUNDO = 30
 FAIXA_MORTA_DO_EIXO = 2
 FAIXA_MORTA_DO_DEDO = 0.01
 TOPICO_DO_MOVIMENTO = "movimento"
+TOPICO_DO_ESTILO = "jogo.estilo"
 MOVIMENTO_POR_SEGUNDO = 30
 FAIXA_MORTA_DO_GIRO = 2.0
 FAIXA_MORTA_DA_ACEL = 0.02
@@ -130,6 +132,24 @@ Controles = Callable[[], list[dict[str, Any]]]
 Pulsador = Callable[[str, dict[str, Any]], dict[str, Any]]
 LigarAChave = Callable[[str], Awaitable[bool]]
 Arbitro = Callable[[], Any]
+AbrirOJogo = Callable[[str, Sequence[str]], str]
+
+
+def abrir_pelo_lancador(mod_id: str, argv: Sequence[str]) -> str:
+    """Abre o jogo da extensão fora da caixa e fora do serviço, pelo ``hefesto-launch`` da
+    Steam quando ele está instalado (o mesmo ambiente do jogo), com o ambiente limpo. Devolve o
+    caminho que a abertura tomou."""
+    from hefesto_dualsense4unix.integrations import fora_do_servico
+    from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+    from hefesto_dualsense4unix.integrations.steam_launch_options import WRAPPER_HOME_RELPATH
+
+    if fora_do_servico._a_suite_esta_rodando():
+        raise OSError("a suíte está no ar e este é o computador de verdade")
+    hefesto_launch = Path.home() / WRAPPER_HOME_RELPATH
+    linha = [str(hefesto_launch), *argv] if os.access(hefesto_launch, os.X_OK) else list(argv)
+    abertura = fora_do_servico.abrir(linha, env=ambiente_limpo(os.environ),
+                                     aplicativo=f"hefesto-mod-{mod_id}")
+    return str(abertura.caminho)
 
 
 class RecusaError(Exception):
@@ -918,6 +938,42 @@ def _carga_do_movimento(uniq: str | None, jogador: Any, via: Any, valores: _Movi
             "acel": {"x": round(ax, 3), "y": round(ay, 3), "z": round(az, 3)}}
 
 
+def _estilo_do_catalogo(valor: Any) -> str | None:
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE, chave_do_catalogo
+
+    chave = chave_do_catalogo(valor)
+    return chave if isinstance(chave, str) and chave in POR_CHAVE else None
+
+
+def carga_do_estilo(carga: Any) -> dict[str, Any] | None:
+    """O ``jogo.estilo`` que sai do ``perfil.trocou``: ``{estilo, jogo, controles: [{jogador,
+    estilo}]}``, a chave do catálogo dos estilos (ou ``None``), sem o ``t``."""
+    if not isinstance(carga, dict):
+        return None
+    jogo = carga.get("jogo")
+    controles = carga.get("controles")
+    return {
+        "estilo": _estilo_do_catalogo(carga.get("estilo")),
+        "jogo": jogo if isinstance(jogo, str) and jogo else None,
+        "controles": [
+            {"jogador": c.get("jogador"), "estilo": _estilo_do_catalogo(c.get("estilo"))}
+            for c in (controles if isinstance(controles, list) else []) if isinstance(c, dict)
+        ],
+    }
+
+
+async def _traduzir_o_estilo(entrada: asyncio.Queue[Any], saida: asyncio.Queue[Any]) -> None:
+    """Do ``perfil.trocou`` ao ``jogo.estilo``: só sai quando o estilo, o jogo ou o estilo de um
+    controle muda; o primeiro é o de agora, que o barramento guarda."""
+    antes: dict[str, Any] | None = None
+    while True:
+        agora = carga_do_estilo(await entrada.get())
+        if agora is None or agora == antes:
+            continue
+        antes = agora
+        _por_na_fila(saida, {**agora, "t": time.monotonic()})
+
+
 @dataclass
 class _Compasso:
     """O compasso do arrastar de um ``livre``: o valor que espera e o relógio que o solta."""
@@ -948,8 +1004,10 @@ class Porta:
         relogio: Callable[[], float] = time.monotonic,
         arbitro: Arbitro | None = None,
         fonte_da_tela: Callable[[], FonteDaTela] = fonte_do_sistema,
+        abrir_o_jogo: AbrirOJogo = abrir_pelo_lancador,
     ) -> None:
         self.caminho = caminho
+        self._abrir_o_jogo = abrir_o_jogo
         self._fonte_da_tela = fonte_da_tela
         self._regioes_da_tela: dict[str, Regiao] = {}
         self._pedidos_da_tela = 0
@@ -1118,7 +1176,7 @@ class Porta:
                 await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
             if con.sessao is not None:
-                PESO_DA_MIRA.soltar(con.sessao.mod_id)
+                self._soltar_os_ajustes(con.sessao.mod_id)
                 self._mudaram_as_vivas()
             with contextlib.suppress(Exception):
                 writer.close()
@@ -1172,6 +1230,8 @@ class Porta:
                 return _resposta(req_id, self._pulsar(con.sessao, params))
             if metodo == "lancador.jogos":
                 return _resposta(req_id, self._jogos_do_lancador(con.sessao, params))
+            if metodo == "lancador.abrir":
+                return _resposta(req_id, await self._abrir_do_lancador(con.sessao, params))
             if metodo == "chave.ligar":
                 return _resposta(req_id, await self._ligar_a_chave_de(con.sessao))
             if metodo == "controles.lista":
@@ -1179,6 +1239,10 @@ class Porta:
                     self._lista_dos_controles, con.sessao))
             if metodo == "mira.peso":
                 return _resposta(req_id, await self._pesar_a_mira(con.sessao, params))
+            if metodo == "mira.ligada":
+                return _resposta(req_id, self._ligar_a_mira(con.sessao, params))
+            if metodo == "vibracao.escala":
+                return _resposta(req_id, self._escalar_a_vibracao(con.sessao, params))
             if metodo in _DA_MEMORIA:
                 return _resposta(req_id, await self._varrer(con.sessao, metodo, params))
             if metodo in _DE_FORA:
@@ -1264,6 +1328,13 @@ class Porta:
                                f"mods-{con.sessao.mod_id}-entradas-quedas")
                 elif publico == TOPICO_DO_MOVIMENTO:
                     fila = self._assinar_o_movimento(con, feito)
+                elif publico == TOPICO_DO_ESTILO:
+                    fila = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
+                    feito.filas.append(fila)
+                    perfis = self.bus.subscribe(EventTopic.PERFIL_TROCOU)
+                    con.no_barramento(feito, EventTopic.PERFIL_TROCOU, perfis)
+                    con.tarefa(feito, _traduzir_o_estilo(perfis, fila),
+                               f"mods-{con.sessao.mod_id}-estilo")
                 elif publico == TOPICO_DA_MEMORIA and memoria is not None:
                     fila = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     feito.filas.append(fila)
@@ -1595,6 +1666,72 @@ class Porta:
         self._jogos_dos_lancadores[sessao.mod_id] = jogos
         return {"recebidos": len(jogos)}
 
+    async def _abrir_do_lancador(self, sessao: _Credencial,
+                                 params: dict[str, Any]) -> dict[str, Any]:
+        """O ``lancador.abrir {chave}``: o jogo que a própria extensão entregou no
+        ``lancador.jogos`` abre fora da caixa, pelo ``hefesto-launch``; nunca o de outra."""
+        if "pedir:lancador.abrir" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão pedir:lancador.abrir")
+        chave = params.get("chave")
+        if not isinstance(chave, str) or not chave:
+            raise RecusaError(CODE_INVALID_PARAMS, "lancador.abrir pede a chave do jogo")
+        jogo = next((j for j in self._jogos_dos_lancadores.get(sessao.mod_id, [])
+                     if j["chave"] == chave), None)
+        if jogo is None:
+            de_outra = any(j["chave"] == chave for mod, jogos in self._jogos_dos_lancadores.items()
+                           if mod != sessao.mod_id for j in jogos)
+            raise RecusaError(
+                CODE_SEM_PERMISSAO if de_outra else CODE_INVALID_PARAMS,
+                f"o jogo {chave} é de outra extensão" if de_outra
+                else f"o jogo {chave} não está no lancador.jogos desta extensão")
+        argv = list(jogo["abrir"])
+        if argv[0] not in sessao.comandos:
+            raise RecusaError(
+                CODE_SEM_PERMISSAO, f"o comando {argv[0]!r} não está em lancador.comandos")
+        try:
+            caminho = await asyncio.to_thread(self._abrir_o_jogo, sessao.mod_id, argv)
+        except Exception as exc:
+            logger.warning("mods_porta_jogo_nao_abriu", mod=sessao.mod_id, err=str(exc))
+            raise RecusaError(CODE_NAO_ESCREVEU, f"o jogo não abriu: {exc}") from exc
+        logger.info("mods_porta_jogo_aberto", mod=sessao.mod_id, chave=chave, caminho=caminho)
+        return {"aberto": True, "chave": chave}
+
+    def _ligar_a_mira(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
+        """O ``mira.ligada {uniq|"todos", ligada}``: o giroscópio de um controle desligado
+        enquanto a extensão vale; volta no ``ligada: true``, na saída da extensão e no «Parar
+        tudo»."""
+        if "escrever:mira" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão escrever:mira")
+        alvo, ligada = params.get("uniq"), params.get("ligada")
+        if not isinstance(alvo, str) or not alvo.strip():
+            raise RecusaError(CODE_INVALID_PARAMS, "mira.ligada pede o uniq, ou «todos»")
+        if not isinstance(ligada, bool):
+            raise RecusaError(CODE_INVALID_PARAMS, "mira.ligada pede ligada true ou false")
+        if ligada:
+            PESO_DA_MIRA.ligar(sessao.mod_id, alvo.strip())
+        else:
+            PESO_DA_MIRA.desligar(sessao.mod_id, alvo.strip())
+        return {"status": "ok", "ligada": ligada}
+
+    def _escalar_a_vibracao(self, sessao: _Credencial,
+                            params: dict[str, Any]) -> dict[str, Any]:
+        """O ``vibracao.escala {uniq, escala}``: de 0 a 1, multiplica a força de tudo o que vai
+        ao motor daquele controle, o jogo e as extensões; 1 devolve a força inteira."""
+        if "escrever:vibracao" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão escrever:vibracao")
+        uniq = _uniq_do_pedido(params, "vibracao.escala")
+        escala: Any = params.get("escala")
+        if not _numero(escala) or not 0 <= escala <= 1:
+            raise RecusaError(CODE_INVALID_PARAMS, "vibracao.escala pede a escala de 0 a 1")
+        ESCALA_DA_VIBRACAO.pedir(sessao.mod_id, uniq, float(escala))
+        return {"status": "ok", "escala": float(escala)}
+
+    @staticmethod
+    def _soltar_os_ajustes(mod_id: str) -> None:
+        PESO_DA_MIRA.soltar(mod_id)
+        PESO_DA_MIRA.religar_de(mod_id)
+        ESCALA_DA_VIBRACAO.soltar(mod_id)
+
     async def _soltar_a_vibracao(self, sessao: _Credencial, uniqs: set[str]) -> None:
         """Quem vibrou saiu: os motores que ele deixou ligados param, se o jogo não os tem."""
         fonte = self._fonte()
@@ -1650,7 +1787,7 @@ class Porta:
                  if con.sessao is not None and con.sessao.mod_id == mod_id]
         if not conexoes_do_mod:
             return False
-        PESO_DA_MIRA.soltar(mod_id)
+        self._soltar_os_ajustes(mod_id)
         for con in conexoes_do_mod:
             assert con.sessao is not None
             if "ler:acessorios.gesto" not in con.sessao.permissoes and con.escritor is not None:
@@ -2610,10 +2747,13 @@ __all__ = [
     "PRAZO_DA_RESPOSTA_S",
     "PUBLICACOES_POR_SEGUNDO",
     "TETO_DA_MENSAGEM",
+    "TOPICO_DO_ESTILO",
     "Controles",
     "Porta",
     "RecusaError",
+    "abrir_pelo_lancador",
     "botoes_de_todo_controle_no_servico",
+    "carga_do_estilo",
     "controles_no_servico",
     "cor_do_plastico_no_servico",
     "credencial_do_par",

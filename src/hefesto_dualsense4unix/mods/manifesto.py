@@ -71,6 +71,7 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "modo.aba": (EventTopic.MODO_ABA,),
     "jogo.memoria": ("jogo.memoria",),
     "jogo.tela": ("jogo.tela",),
+    "jogo.estilo": ("jogo.estilo",),
 }
 
 TOPICOS_DE_PUBLICACAO: dict[str, str] = {
@@ -136,8 +137,10 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:modo.aba": (
         "Saber em que seções de cada controle o modo que a extensão traz está aceso."
     ),
+    "ler:jogo.estilo": "Saber o estilo do jogo aberto, como Terror, FPS ou Corrida.",
+    "pedir:lancador.abrir": "Abrir um jogo que a própria extensão lista, pelo Hefesto.",
     "escrever:luz": "Mudar a cor da luz de um controle.",
-    "escrever:vibracao": "Fazer um controle vibrar.",
+    "escrever:vibracao": "Fazer um controle vibrar e deixar a vibração dele mais fraca.",
     "escrever:gatilho": "Mudar a resistência dos gatilhos de um controle.",
     "escrever:haptica": "Tocar na vibração fina de um controle os padrões que a extensão traz.",
     "escrever:som": (
@@ -145,7 +148,8 @@ _O_QUE_DEIXA: dict[str, str] = {
     ),
     "escrever:leds": "Acender por um instante as cinco luzes de jogador de um controle.",
     "escrever:mira": (
-        "Deixar a mira do giroscópio mais pesada por alguns segundos; o peso some sozinho."
+        "Deixar a mira do giroscópio mais pesada por alguns segundos, e desligar o giroscópio de "
+        "um controle enquanto a extensão está ligada."
     ),
     "rede:nenhuma": "Sem acesso à rede.",
     "rede:local": "Usar a rede desta casa.",

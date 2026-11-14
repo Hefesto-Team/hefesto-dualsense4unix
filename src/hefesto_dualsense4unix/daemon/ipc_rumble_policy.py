@@ -2,12 +2,56 @@
 from __future__ import annotations
 
 import contextlib
+import threading
 import time as _time
 from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+class EscalaDaVibracao:
+    """A escala que uma extensão pede para a vibração de um controle, de 0 a 1, enquanto vale.
+
+    Multiplica a força de tudo o que vai ao motor daquele controle (o jogo e as extensões) no
+    funil único (:func:`forca_para`); com mais de uma extensão, vale a menor. Sem pedido, 1.
+    """
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._pedidos: dict[tuple[str, str], float] = {}
+
+    @staticmethod
+    def _chave(uniq: str) -> str:
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        return norm_mac(uniq) or uniq
+
+    def pedir(self, dono: str, uniq: str, escala: float) -> None:
+        if not 0.0 <= escala <= 1.0:
+            raise ValueError("a escala vai de 0 a 1")
+        chave = self._chave(uniq)
+        with self._trava:
+            if escala >= 1.0:
+                self._pedidos.pop((dono, chave), None)
+            else:
+                self._pedidos[(dono, chave)] = escala
+
+    def de(self, uniq: str | None) -> float:
+        if not self._pedidos or not uniq:
+            return 1.0
+        chave = self._chave(uniq)
+        with self._trava:
+            return min((e for (_d, c), e in self._pedidos.items() if c == chave), default=1.0)
+
+    def soltar(self, dono: str | None = None) -> None:
+        with self._trava:
+            self._pedidos = {p: e for p, e in self._pedidos.items()
+                             if dono is not None and p[0] != dono}
+
+
+ESCALA_DA_VIBRACAO = EscalaDaVibracao()
 
 
 def memoria_viva_do_auto(daemon: Any) -> tuple[float, float]:
@@ -138,7 +182,7 @@ def forca_para(daemon: Any, uniq: str | None, agora: float | None = None) -> flo
         with contextlib.suppress(Exception):
             daemon._last_auto_mult = _sob_o_teto(ancora, teto)
             daemon._last_auto_change_at = quando
-    return mult
+    return mult * ESCALA_DA_VIBRACAO.de(alvo)
 
 
 def apply_rumble_policy(
@@ -203,6 +247,8 @@ _apply_rumble_policy = apply_rumble_policy
 
 
 __all__ = [
+    "ESCALA_DA_VIBRACAO",
+    "EscalaDaVibracao",
     "_apply_rumble_policy",
     "apply_rumble_policy",
     "forca_para",
