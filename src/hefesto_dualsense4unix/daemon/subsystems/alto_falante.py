@@ -815,6 +815,7 @@ class AltoFalanteSubsystem:
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         self._fonte_viva: dict[str, str] = {}
         self._so_efeitos_vivos: dict[str, bool] = {}
+        self._pc_inteiro_no_controle: frozenset[str] = frozenset()
         self._store: Any = None
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
@@ -966,9 +967,44 @@ class AltoFalanteSubsystem:
         """A chave «Só efeitos» deste controle: a caixa toca só o efeito do jogo.
 
         A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01: ligada por padrão, em cada controle, no
-        cabo e no rádio; o corpo continua sentindo o som inteiro. Nunca levanta.
+        cabo e no rádio; o corpo continua sentindo o som inteiro. Quem pediu o som
+        inteiro do PC no controle (:meth:`_quem_pediu_o_pc_inteiro`) fica sem o
+        separador: a tela promete a música ali. Nunca levanta.
         """
-        return self._so_efeitos_vivos.get(_uniq_de_perfil(uniq), True)
+        chave = _uniq_de_perfil(uniq)
+        return self._so_efeitos_vivos.get(chave, True) and (
+            chave not in self._pc_inteiro_no_controle
+        )
+
+    def _quem_pediu_o_pc_inteiro(self, alvos: list[Any]) -> frozenset[str]:
+        """Os controles cuja caixa recebe o som INTEIRO do PC por escolha de quem joga.
+
+        «Canais sonoros apenas no DualSense» faz do nó do controle a saída padrão (no
+        rádio não há placa, e o nó é o sink dele), e a fonte ``mix`` soma o monitor da
+        saída padrão ao nó. Nos dois a tela promete o som do PC no controle; o
+        separador tiraria a música dele. Sem leitura do servidor, fica o da volta
+        anterior.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            FONTE_MIX,
+            monitor_da_saida_padrao,
+            nome_do_sink,
+        )
+
+        monitor = monitor_da_saida_padrao()
+        if monitor is None:
+            return self._pc_inteiro_no_controle
+        pediram: set[str] = set()
+        for controle in alvos:
+            uniq = str(getattr(controle, "uniq", "") or "")
+            if not uniq:
+                continue
+            nome = nome_do_sink(uniq)
+            if self._fonte_do_controle(uniq) == FONTE_MIX or (
+                nome and monitor == f"{nome}.monitor"
+            ):
+                pediram.add(_uniq_de_perfil(uniq))
+        return frozenset(pediram)
 
     def escolher_so_efeitos(self, uniq: str, ligado: bool) -> bool:
         """Liga ou desliga «Só efeitos» de ESTE controle, valendo na caixa que já toca."""
@@ -2768,6 +2804,7 @@ class AltoFalanteSubsystem:
         )
         self._o_que_a_volta_viu = self._o_que_a_mesa_do_som_diz()
         self._placas_vistas = self._as_placas_de_agora()
+        self._pc_inteiro_no_controle = self._quem_pediu_o_pc_inteiro(alvos)
         self._casar_as_pontes(alvos)
         gerenciador.reconciliar(alvos)
 

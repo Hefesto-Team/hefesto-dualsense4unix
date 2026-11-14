@@ -809,3 +809,57 @@ def test_cada_ponte_do_radio_leva_a_chave_viva_do_seu_controle(
     assert {u: p.so_efeitos() for u, p in pontes.items()} == {
         CONTROLES[0]: True, CONTROLES[2]: False, CONTROLES[3]: True,
     }
+
+
+@pytest.mark.parametrize("arranjo", list(MESAS.values()), ids=list(MESAS))
+def test_quem_pediu_o_som_inteiro_do_pc_no_controle_fica_sem_o_separador(
+    servidor: _Servidor, monkeypatch: pytest.MonkeyPatch, arranjo: str
+) -> None:
+    transportes = {
+        u: ("usb" if letra == "c" else "bluetooth")
+        for u, letra in zip(CONTROLES, arranjo, strict=True)
+    }
+    controles = _mesa(transportes)
+    padrao = {"monitor": "alsa_output.pci-de-mentira.analog-stereo.monitor"}
+    fontes = {u: af.FONTE_SFX for u in CONTROLES}
+    monkeypatch.setattr(af, "monitor_da_saida_padrao", lambda **_k: padrao["monitor"])
+    sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: list(controles))
+    sub._acordar_a_volta = lambda *_a: None  # type: ignore[method-assign]
+    sub._casar_as_pontes = lambda _a: None  # type: ignore[method-assign]
+    sub._fonte_do_controle = lambda u: fontes[u]  # type: ignore[method-assign]
+    ger = mod.GerenciadorDeNosDeSom(
+        fonte_por_controle=lambda u: fontes[u],
+        ponte_do_radio_por_controle=lambda _u: (lambda: True),
+        runner=servidor,
+        so_efeitos_por_controle=sub.so_efeitos,
+    )
+    cabos = sorted(u for u, t in transportes.items() if t == "usb")
+
+    sub._reconciliar(ger)
+    assert [sub.so_efeitos(u) for u in CONTROLES] == [True] * 4
+    assert sorted(c.uniq for c in _CaixaDeMentira.vivas) == cabos
+
+    padrao["monitor"] = f"{af.nome_do_sink(CONTROLES[1])}.monitor"
+    fontes[CONTROLES[3]] = af.FONTE_MIX
+    sub._reconciliar(ger)
+    assert [sub.so_efeitos(u) for u in CONTROLES] == [True, False, True, False], (
+        "«apenas no DualSense» e o «+ PC» prometem a música na caixa: o separador sai"
+    )
+    assert sorted(c.uniq for c in _CaixaDeMentira.vivas) == sorted(
+        u for u in cabos if u not in (CONTROLES[1], CONTROLES[3])
+    )
+
+    padrao["monitor"] = None  # type: ignore[assignment]
+    sub._reconciliar(ger)
+    assert [sub.so_efeitos(u) for u in CONTROLES] == [True, False, True, False], (
+        "sem leitura do servidor, a escolha da volta anterior fica"
+    )
+
+    padrao["monitor"] = "alsa_output.pci-de-mentira.analog-stereo.monitor"
+    fontes[CONTROLES[3]] = af.FONTE_SFX
+    sub._reconciliar(ger)
+    assert [sub.so_efeitos(u) for u in CONTROLES] == [True] * 4
+    assert sorted(c.uniq for c in _CaixaDeMentira.vivas) == cabos
+
+    for no in ger.nos.values():
+        no.parar()
