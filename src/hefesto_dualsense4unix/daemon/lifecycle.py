@@ -138,41 +138,15 @@ def _velocidades_ou_as_da_sessao(
     return speed, scroll
 
 
-def _o_perfil_diz_navegacao(profile: Any) -> bool:
-    """O perfil tem a seção `mode` com ``kind == "desktop"``? Nunca levanta.
-
-    O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): é o perfil que tem autoridade
-    sobre o liga/desliga do mouse na ativação (`Daemon.apply_profile_mouse`) e
-    que liga o mouse mesmo sem a seção `mouse` (`ProfileManager.apply_emulation`).
-    """
-    return getattr(getattr(profile, "mode", None), "kind", None) == "desktop"
-
-
 def _o_modo_do_jogo_sem_arme(profile: Any, mode: Any | None) -> Any | None:
-    """O ``mode`` que vale: o do perfil e, no perfil de JOGO sem ele, o modo de jogo do estilo.
+    """O ``mode`` que vale (`profiles.manager.o_modo_do_jogo_sem_mode`), na máscara da máquina.
 
     O jogo aberto por fora do lançador não arma a ponte, e o perfil sem ``mode`` herdava o
-    modo em vigor, a Navegação fora do jogo. O estilo com modo (``estilos_de_jogo``) dá a
-    Navegação no arranjo dele; todo outro, o controle de jogo na máscara do computador.
+    modo em vigor, a Navegação fora do jogo.
     """
-    if mode is not None:
-        return mode
-    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
-    from hefesto_dualsense4unix.profiles.schema import (
-        ProfileModeConfig,
-        normalizar_gamepad_flavor,
-        perfil_e_de_jogo,
-    )
+    from hefesto_dualsense4unix.profiles.manager import o_modo_do_jogo_sem_mode
 
-    if not perfil_e_de_jogo(profile):
-        return None
-    estilo = POR_CHAVE.get(str(getattr(profile, "estilo", None) or ""))
-    receita = getattr(estilo, "receita_invisivel", None)
-    if getattr(receita, "modo", None) == "desktop":
-        return ProfileModeConfig(kind="desktop", arranjo=getattr(receita, "arranjo", None))
-    return ProfileModeConfig(
-        kind="gamepad", gamepad_flavor=normalizar_gamepad_flavor(_mascara_da_maquina())
-    )
+    return o_modo_do_jogo_sem_mode(profile, mode, _mascara_da_maquina)
 
 
 def _o_modo_do_perfil_do_boot(
@@ -2287,7 +2261,12 @@ class Daemon:
             return ADIADO_LOCK_MANUAL
         nome = getattr(profile, "name", None)
         speed, scroll_speed = _velocidades_ou_as_da_sessao(speed, scroll_speed)
-        if profile is not None and not _o_perfil_diz_navegacao(profile):
+        mode = getattr(profile, "mode", None)
+        if self._o_jogo_sem_mode_ganha_o_estilo(mode):
+            from hefesto_dualsense4unix.profiles.manager import o_modo_do_jogo_sem_mode
+
+            mode = o_modo_do_jogo_sem_mode(profile, mode)
+        if profile is not None and getattr(mode, "kind", None) != "desktop":
             self.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
             logger.info(
                 "profile_mouse_aplicado", liga_desliga="nao_opina", profile=nome
@@ -4743,6 +4722,13 @@ class Daemon:
             logger.warning("point_and_click_nao_reposto", err=str(exc))
             return False
 
+    def _o_jogo_sem_mode_ganha_o_estilo(self, mode: Any | None) -> bool:
+        """O perfil sem ``mode`` ganha o do estilo, no modo e no mouse; o Nativo do usuário fica."""
+        return mode is None and not (
+            self._native_mode
+            and getattr(self.store, "native_mode_origin", None) != "profile"
+        )
+
     def apply_profile_mode(
         self,
         mode: Any | None,
@@ -4759,10 +4745,7 @@ class Daemon:
         """
         from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
 
-        if mode is None and not (
-            self._native_mode
-            and getattr(self.store, "native_mode_origin", None) != "profile"
-        ):
+        if self._o_jogo_sem_mode_ganha_o_estilo(mode):
             mode = _o_modo_do_jogo_sem_arme(profile, mode)
         do_perfil = getattr(mode, "arranjo", None)
         self._arranjo_do_perfil = (

@@ -55,6 +55,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     leds_do_perfil_na_economia,
     leds_na_economia,
     normalizar_gamepad_flavor,
+    perfil_e_de_jogo,
     perfil_no_modo,
     vibracao_na_economia,
 )
@@ -90,6 +91,33 @@ class OFreestyleMandaError(RuntimeError):
 
 class OFreestyleDesligadoError(RuntimeError):
     """Um caminho que não é a mão do usuário pediu o Freestyle com o modo desligado."""
+
+
+def o_modo_do_jogo_sem_mode(
+    profile: Any, mode: Any | None, mascara: Callable[[], str] | None = None
+) -> Any | None:
+    """O ``mode`` que vale: o do perfil e, no perfil de JOGO sem ele, o modo de jogo do estilo.
+
+    O estilo com modo (``estilos_de_jogo``) dá a Navegação no arranjo dele; todo outro, o
+    controle de jogo na máscara que ``mascara`` diz (sem a função, a máscara fica em aberto). É o
+    dono do modo e do liga do mouse: o daemon e o ``apply_emulation`` perguntam aqui.
+    """
+    if mode is not None:
+        return mode
+    if not perfil_e_de_jogo(profile):
+        return None
+    estilo = ESTILOS_POR_CHAVE.get(str(getattr(profile, "estilo", None) or ""))
+    receita = getattr(estilo, "receita_invisivel", None)
+    if getattr(receita, "modo", None) == "desktop":
+        return ProfileModeConfig(kind="desktop", arranjo=getattr(receita, "arranjo", None))
+    flavor = normalizar_gamepad_flavor(mascara()) if mascara is not None else None
+    return ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor)
+
+
+def o_perfil_diz_navegacao(profile: Any) -> bool:
+    """O modo que o perfil diz (:func:`o_modo_do_jogo_sem_mode`) é a Navegação? Nunca levanta."""
+    mode = o_modo_do_jogo_sem_mode(profile, getattr(profile, "mode", None))
+    return getattr(mode, "kind", None) == "desktop"
 
 
 def e_o_freestyle(nome: object) -> bool:
@@ -944,8 +972,9 @@ class ProfileManager:
         """Aplica a seção `mouse` e a supressão de modo-jogo do perfil."""
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
         secao_mouse = profile.mouse
-        diz_navegacao = getattr(getattr(profile, "mode", None), "kind", None) == "desktop"
-        if self.mouse_applier is not None and (secao_mouse is not None or diz_navegacao):
+        if self.mouse_applier is not None and (
+            secao_mouse is not None or o_perfil_diz_navegacao(profile)
+        ):
             try:
                 resultado["mouse"] = _estado_da_secao(
                     self.mouse_applier(
