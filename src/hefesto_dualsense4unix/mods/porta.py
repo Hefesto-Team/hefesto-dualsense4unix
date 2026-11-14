@@ -102,6 +102,7 @@ ICONES_DO_CONTROLE = ("lampada",)
 OPCOES_DO_CONTROLE = 16
 CORES_DO_PONTO = 3
 _COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
+_TERMO_DO_ABRIR = re.compile(r"[\w./][\w./ +,()-]{0,511}")
 EVENTO_DO_PARAR = "extensao.parar"
 EVENTO_DA_ACAO = "extensao.acao"
 EVENTO_DO_LIVRE = "extensao.livre"
@@ -1240,7 +1241,7 @@ class Porta:
             if metodo == "mira.peso":
                 return _resposta(req_id, await self._pesar_a_mira(con.sessao, params))
             if metodo == "mira.ligada":
-                return _resposta(req_id, self._ligar_a_mira(con.sessao, params))
+                return _resposta(req_id, await self._ligar_a_mira(con.sessao, params))
             if metodo == "vibracao.escala":
                 return _resposta(req_id, self._escalar_a_vibracao(con.sessao, params))
             if metodo in _DA_MEMORIA:
@@ -1464,7 +1465,7 @@ class Porta:
         try:
             while True:
                 vazio.clear()
-                if not PESO_DA_MIRA.donos():
+                if not PESO_DA_MIRA.donos() and not PESO_DA_MIRA.donos_do_giro():
                     break
                 do_fim = asyncio.ensure_future(fechou.get())
                 do_modo = asyncio.ensure_future(modos.get())
@@ -1491,6 +1492,9 @@ class Porta:
         for dono in PESO_DA_MIRA.donos():
             if modo != f"extensao:{dono}":
                 PESO_DA_MIRA.soltar(dono, uniq if isinstance(uniq, str) else None)
+        for dono in PESO_DA_MIRA.donos_do_giro():
+            if modo != f"extensao:{dono}" and isinstance(uniq, str) and uniq:
+                PESO_DA_MIRA.ligar(dono, uniq)
 
     def _ligar_a_captura(self) -> None:
         if self._captura_da_tela is None or self._captura_da_tela.done():
@@ -1688,18 +1692,24 @@ class Porta:
         if argv[0] not in sessao.comandos:
             raise RecusaError(
                 CODE_SEM_PERMISSAO, f"o comando {argv[0]!r} não está em lancador.comandos")
+        if not all(_TERMO_DO_ABRIR.fullmatch(termo) for termo in argv[1:]):
+            raise RecusaError(
+                CODE_SEM_PERMISSAO,
+                "o jogo só abre com o comando e o id dele: sem opção, sem endereço e sem «=»")
         try:
             caminho = await asyncio.to_thread(self._abrir_o_jogo, sessao.mod_id, argv)
         except Exception as exc:
             logger.warning("mods_porta_jogo_nao_abriu", mod=sessao.mod_id, err=str(exc))
-            raise RecusaError(CODE_NAO_ESCREVEU, f"o jogo não abriu: {exc}") from exc
+            raise RecusaError(CODE_NAO_ESCREVEU, "o jogo não abriu") from exc
         logger.info("mods_porta_jogo_aberto", mod=sessao.mod_id, chave=chave, caminho=caminho)
         return {"aberto": True, "chave": chave}
 
-    def _ligar_a_mira(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
-        """O ``mira.ligada {uniq|"todos", ligada}``: o giroscópio de um controle desligado
-        enquanto a extensão vale; volta no ``ligada: true``, na saída da extensão e no «Parar
-        tudo»."""
+    async def _ligar_a_mira(self, sessao: _Credencial,
+                            params: dict[str, Any]) -> dict[str, Any]:
+        """O ``mira.ligada {uniq|"todos", ligada}``: o giroscópio de um controle cuja seção
+        Controles está no modo da extensão, desligado enquanto a extensão vale; num jogo com
+        anticheat, só com a chave «Peso da mira» do jogo ligada. Volta no ``ligada: true``, quando
+        a seção sai do modo, na saída da extensão e no «Parar tudo»."""
         if "escrever:mira" not in sessao.permissoes:
             raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão escrever:mira")
         alvo, ligada = params.get("uniq"), params.get("ligada")
@@ -1707,11 +1717,28 @@ class Porta:
             raise RecusaError(CODE_INVALID_PARAMS, "mira.ligada pede o uniq, ou «todos»")
         if not isinstance(ligada, bool):
             raise RecusaError(CODE_INVALID_PARAMS, "mira.ligada pede ligada true ou false")
+        alvo = alvo.strip()
         if ligada:
-            PESO_DA_MIRA.ligar(sessao.mod_id, alvo.strip())
-        else:
-            PESO_DA_MIRA.desligar(sessao.mod_id, alvo.strip())
-        return {"status": "ok", "ligada": ligada}
+            PESO_DA_MIRA.ligar(sessao.mod_id, alvo)
+            return {"status": "ok", "ligada": True}
+        jogo = self._jogo_aberto()
+        if jogo is not None:
+            anticheat = await asyncio.to_thread(self._anticheat_do_jogo, jogo)
+            chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(ARQUIVO_DO_PESO_DA_MIRA))
+            if anticheat and not chaves.liberada(jogo, anticheat):
+                raise RecusaError(
+                    CODE_NAO_ESCREVEU,
+                    f"este jogo usa {anticheat}: desligar o giroscópio pede a chave do jogo ligada")
+        no_modo = self._no_modo_da_extensao(sessao)
+        alvos = sorted(no_modo) if alvo == TODOS_OS_CONTROLES else [
+            a for a in (chave_de_sensor(alvo),) if a in no_modo]
+        if not alvos:
+            raise RecusaError(
+                CODE_NAO_ESCREVEU, "a seção Controles deste controle não está no modo da extensão")
+        for um in alvos:
+            PESO_DA_MIRA.desligar(sessao.mod_id, um)
+        self._vigiar_o_peso()
+        return {"status": "ok", "ligada": False}
 
     def _escalar_a_vibracao(self, sessao: _Credencial,
                             params: dict[str, Any]) -> dict[str, Any]:

@@ -69,10 +69,11 @@ do controle deixa de estar no modo da extensão; só vale no controle cuja seç�
 da mira» do jogo estar gravada, com o aviso do risco à conta visto, em `peso_da_mira_dos_jogos.json`.
 
 O `mira.ligada` (desde 14/11/2026) liga e desliga o giroscópio de um controle, ou de `todos`, enquanto a extensão <!-- ref-externa: método da porta das extensões, não do daemon -->
-vale: com `ligada: false`, o ganho daquele controle é zero nas duas máscaras (os três eixos do giro que o pad
+vale, com as guardas do `mira.peso`: só no controle cuja seção Controles está no modo da extensão (`todos` são esses,
+e sem nenhum volta `-32013`) e, num jogo com anticheat, só com a chave «Peso da mira» do jogo ligada. Com `ligada: false`, o ganho daquele controle é zero nas duas máscaras (os três eixos do giro que o pad
 virtual recebe saem zerados, e o analógico e o cursor que o giro move ficam parados); o acelerômetro passa. O giro
-volta com `ligada: true`, quando a extensão sai da porta e no «Parar tudo»; o jogo que fecha não o religa, e ele
-não pede a seção Controles no modo da extensão. O `vibracao.escala` (desde 14/11/2026) multiplica, de 0 a 1, a
+volta com `ligada: true`, quando a seção Controles sai do modo da extensão, quando a extensão sai da porta e no
+«Parar tudo»; o jogo que fecha não o religa. O `vibracao.escala` (desde 14/11/2026) multiplica, de 0 a 1, a
 força de tudo o que vai ao motor daquele controle, o jogo e as extensões, no funil único da força
 (`forca_para` em `src/hefesto_dualsense4unix/daemon/ipc_rumble_policy.py`): nunca tira o pedido do jogo, só a
 força; com mais de uma extensão vale a menor, e `1` devolve a força inteira. Ele sai junto com a extensão e no
@@ -366,7 +367,10 @@ Com a permissão `pedir:lancador.abrir` (desde 14/11/2026), a extensão pede `la
 jogo da própria lista: o serviço abre o `abrir` daquele jogo fora da caixa e fora do serviço, com o ambiente limpo,
 pelo `hefesto-launch` (o mesmo ambiente do jogo da Steam, quando ele está instalado); o perfil vale pela janela do
 jogo, como o de todo jogo da extensão. Sem a permissão volta `-32010`; a chave de outra extensão volta `-32010`;
-a chave que a extensão não entregou volta `-32003`; o jogo que não abre volta `-32013` com o motivo. Um Hefesto
+a chave que a extensão não entregou volta `-32003`; o jogo que não abre volta `-32013` («o jogo não abriu»; o
+motivo fica no diário do serviço). O primeiro termo do `abrir` é um dos `lancador.comandos` do manifesto, e os
+outros são o id do jogo: letras, dígitos, espaço e `_ . / + , ( ) -`, sem começar por `-`; a opção, o endereço
+(`esquema:`) e o `=` voltam `-32010`. Um Hefesto
 mais velho responde `-32601` ao método e recusa o manifesto que pede a permissão nova, com a frase
 «permissão desconhecida»; a extensão mostra a frase.
 

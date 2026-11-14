@@ -245,10 +245,19 @@ class PesoDaMira:
     def ligar(self, dono: str, alvo: str) -> None:
         chave = self._chave(alvo)
         with self._trava:
+            havia = bool(self._desligados)
             if chave == TODOS_OS_CONTROLES:
                 self._desligados = {p for p in self._desligados if p[0] != dono}
             else:
                 self._desligados.discard((dono, chave))
+            vazio = havia and not self._desligados and not self._pedidos
+            avisos = list(self._avisos) if vazio else []
+        for aviso in avisos:
+            aviso()
+
+    def donos_do_giro(self) -> frozenset[str]:
+        with self._trava:
+            return frozenset(dono for dono, _alvo in self._desligados)
 
     def religar_de(self, dono: str) -> None:
         self.ligar(dono, TODOS_OS_CONTROLES)

@@ -5,6 +5,12 @@ entregou no ``lancador.jogos``, pelo abridor do serviço (fora da caixa, pelo ``
 ``mira.ligada`` (``escrever:mira``) desliga o giroscópio de um controle, na máscara DualSense e na
 Xbox, e ``vibracao.escala`` (``escrever:vibracao``) multiplica a força do motor daquele controle no
 funil único; os dois valem enquanto a extensão vale, por controle, de um a quatro.
+
+O ``lancador.abrir`` só passa ao abridor o comando do manifesto e termos de id: a opção («-»), o
+endereço («esquema:») e o «=» recusam, e a recusa do abridor não devolve o texto da exceção. O
+``mira.ligada`` tem as guardas do ``mira.peso``: só no controle cuja seção Controles está no modo da
+extensão («todos» vira esse conjunto, e sem nenhum recusa), num jogo com anticheat só com a chave do
+jogo ligada, e o giro volta quando a seção sai do modo.
 """
 from __future__ import annotations
 
@@ -20,9 +26,15 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
-from hefesto_dualsense4unix.core.events import EventBus
+from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon import ipc_rumble_policy as politica
 from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
+from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
+from hefesto_dualsense4unix.integrations.leitor_do_estado import (
+    ChavesDaMemoria,
+    arquivo_das_chaves,
+)
 from hefesto_dualsense4unix.mods import porta as porta_mod
 from hefesto_dualsense4unix.mods.manifesto import permissao_valida
 from hefesto_dualsense4unix.mods.porta import (
@@ -39,8 +51,15 @@ JANELA = struct.pack("<3h", 1000, -2000, 3000) + bytes(range(22))
 JOGO = {"chave": "zelda", "nome": "Ocarina", "abrir": ["hefesto-hookshot"], "janela": "hookshot"}
 
 
+def _modos(no_modo: Sequence[str]) -> dict[str, dict[str, Any]]:
+    return {u: {"uniq": u, "jogador": i, "secoes": {
+        "controles": "extensao:hook" if u in no_modo else "personalizado"}}  # (noqa-acento)
+        for i, u in enumerate(MESA, 1)}
+
+
 @pytest.fixture(autouse=True)
-def _limpo() -> Iterator[None]:
+def _limpo(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setattr(tato_vivo, "_MODO_DA_ABA_DITO", _modos(MESA))
     roteador.PESO_DA_MIRA.soltar()
     for dono in ("hook", "outra"):
         roteador.PESO_DA_MIRA.religar_de(dono)
@@ -64,11 +83,12 @@ class _Abridor:
         return "unidade"
 
 
-async def _porta(caminho: Path, abridor: _Abridor) -> Porta:
+async def _porta(caminho: Path, abridor: _Abridor, bus: EventBus | None = None) -> Porta:
     async def escritor(_m: str, _p: dict[str, Any]) -> Any:
         return {"status": "ok"}
 
-    porta = Porta(caminho, EventBus(), escritor=escritor, o_jogo_escreve=lambda _u, _c: False,
+    porta = Porta(caminho, bus or EventBus(), escritor=escritor,
+                  o_jogo_escreve=lambda _u, _c: False,
                   uniq_do_posto=lambda: P1, abrir_o_jogo=abridor)
     await porta.iniciar()
     return porta
@@ -141,7 +161,37 @@ def test_o_jogo_que_nao_abre_volta_com_o_motivo() -> None:
 
     falhou = asyncio.run(corrida())
     assert falhou["error"]["code"] == CODE_NAO_ESCREVEU
-    assert "sem systemd" in falhou["error"]["message"]
+    assert falhou["error"]["message"] == "o jogo não abriu"
+
+
+@pytest.mark.parametrize("termo", [
+    "--lua-script=/x.lua", "-e", "steam://rungameid/1", "file:///x", "a=b", "", "x\nsh"])
+def test_lancador_abrir_so_passa_o_comando_e_o_id_e_recusa_opcao_endereco_e_igual(
+        termo: str) -> None:
+    bom_argv = ["hefesto-hookshot", "ocarina_1.0", "/Jogos/Zelda (US)/rom.z64"]
+
+    async def corrida() -> tuple[dict[str, Any], dict[str, Any], list[tuple[str, list[str]]]]:
+        with tempfile.TemporaryDirectory(prefix="pa") as pasta:
+            caminho = Path(pasta) / "m.sock"
+            abridor = _Abridor()
+            porta = await _porta(caminho, abridor)
+            com = await _entrar(porta, caminho, "f-c", "hook",
+                                ["lancador", "pedir:lancador.abrir"])
+            try:
+                await asyncio.to_thread(com.pedir, "lancador.jogos", {"jogos": [
+                    {**JOGO, "chave": "ruim", "abrir": ["hefesto-hookshot", termo]},
+                    {**JOGO, "chave": "bom", "abrir": bom_argv}]})
+                ruim = await asyncio.to_thread(com.pedir, "lancador.abrir", {"chave": "ruim"})
+                bom = await asyncio.to_thread(com.pedir, "lancador.abrir", {"chave": "bom"})
+            finally:
+                com.fechar()
+                await porta.parar()
+            return ruim, bom, abridor.abertos
+
+    ruim, bom, abertos = asyncio.run(corrida())
+    assert ruim["error"]["code"] == CODE_SEM_PERMISSAO
+    assert bom["result"] == {"aberto": True, "chave": "bom"}
+    assert abertos == [("hook", bom_argv)]
 
 
 def test_o_abridor_do_servico_recusa_sob_a_suite() -> None:
@@ -276,3 +326,101 @@ def test_o_giro_desligado_sobrevive_ao_jogo_que_fecha_e_sai_no_parar_tudo() -> N
     depois_do_jogo, depois_do_parar = asyncio.run(corrida())
     assert struct.unpack_from("<3h", depois_do_jogo) == (0, 0, 0)
     assert depois_do_parar == JANELA
+
+
+def test_mira_ligada_so_no_modo_da_extensao_e_o_todos_vira_esse_conjunto(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(tato_vivo, "_MODO_DA_ABA_DITO", _modos((P2, P4)))
+
+    async def corrida() -> tuple[dict[str, Any], dict[str, Any], dict[str, bool], dict[str, Any]]:
+        with tempfile.TemporaryDirectory(prefix="pa") as pasta:
+            caminho = Path(pasta) / "m.sock"
+            porta = await _porta(caminho, _Abridor())
+            com = await _entrar(porta, caminho, "f-c", "hook", ["escrever:mira"])
+            try:
+                fora = await asyncio.to_thread(
+                    com.pedir, "mira.ligada", {"uniq": P3, "ligada": False})
+                todos = await asyncio.to_thread(com.pedir, "mira.ligada", {
+                    "uniq": roteador.TODOS_OS_CONTROLES, "ligada": False})
+                desligados = {u: roteador.janela_que_sai(u, JANELA) != JANELA for u in MESA}
+                await asyncio.to_thread(com.pedir, "mira.ligada", {
+                    "uniq": roteador.TODOS_OS_CONTROLES, "ligada": True})
+                monkeypatch.setattr(tato_vivo, "_MODO_DA_ABA_DITO", _modos(()))
+                nenhum = await asyncio.to_thread(com.pedir, "mira.ligada", {
+                    "uniq": roteador.TODOS_OS_CONTROLES, "ligada": False})
+            finally:
+                com.fechar()
+                await porta.parar()
+            return fora, todos, desligados, nenhum
+
+    fora, todos, desligados, nenhum = asyncio.run(corrida())
+    assert fora["error"]["code"] == CODE_NAO_ESCREVEU
+    assert todos["result"] == {"status": "ok", "ligada": False}
+    assert desligados == {P1: False, P2: True, P3: False, P4: True}
+    assert nenhum["error"]["code"] == CODE_NAO_ESCREVEU
+    assert all(roteador.janela_que_sai(u, JANELA) == JANELA for u in MESA)
+
+
+@pytest.mark.parametrize("alvo", MESA)
+def test_o_giro_volta_quando_a_secao_controles_sai_do_modo_da_extensao(alvo: str) -> None:
+    async def corrida() -> tuple[bytes, dict[str, bool]]:
+        with tempfile.TemporaryDirectory(prefix="pa") as pasta:
+            bus = EventBus()
+            bus.bind_loop(asyncio.get_running_loop())
+            caminho = Path(pasta) / "m.sock"
+            porta = await _porta(caminho, _Abridor(), bus)
+            com = await _entrar(porta, caminho, "f-c", "hook", ["escrever:mira"])
+            try:
+                await asyncio.to_thread(com.pedir, "mira.ligada", {
+                    "uniq": roteador.TODOS_OS_CONTROLES, "ligada": False})
+                bus.publish(EventTopic.MODO_ABA, {"uniq": alvo, "secoes": {
+                    "controles": "personalizado"}})
+                for _ in range(100):
+                    if roteador.janela_que_sai(alvo, JANELA) == JANELA:
+                        break
+                    await asyncio.sleep(0.02)
+                volta = roteador.janela_que_sai(alvo, JANELA)
+                outros = {u: roteador.janela_que_sai(u, JANELA) == JANELA
+                          for u in MESA if u != alvo}
+            finally:
+                com.fechar()
+                await porta.parar()
+            return volta, outros
+
+    volta, outros = asyncio.run(corrida())
+    assert volta == JANELA
+    assert outros == {u: False for u in MESA if u != alvo}
+
+
+def test_mira_ligada_num_jogo_com_anticheat_pede_a_chave_do_jogo(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    (tmp_path / "EasyAntiCheat").mkdir()
+    monkeypatch.setattr(prontuario_dos_jogos, "jogos_instalados",
+                        lambda: [("4242", "Jogo", tmp_path)])
+    chaves = ChavesDaMemoria(arquivo_das_chaves().with_name(porta_mod.ARQUIVO_DO_PESO_DA_MIRA))
+
+    async def corrida() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        with tempfile.TemporaryDirectory(prefix="pa") as pasta:
+            bus = EventBus()
+            bus.publish(EventTopic.JOGO_IDENTIDADE, {"chave": "steam_app_4242"})
+            caminho = Path(pasta) / "m.sock"
+            porta = await _porta(caminho, _Abridor(), bus)
+            com = await _entrar(porta, caminho, "f-c", "hook", ["escrever:mira"])
+            try:
+                sem_chave = await asyncio.to_thread(
+                    com.pedir, "mira.ligada", {"uniq": P2, "ligada": False})
+                religar = await asyncio.to_thread(
+                    com.pedir, "mira.ligada", {"uniq": P2, "ligada": True})
+                chaves.gravar("steam_app_4242", True, anticheat="Easy Anti-Cheat",
+                              aviso_visto=True)
+                com_chave = await asyncio.to_thread(
+                    com.pedir, "mira.ligada", {"uniq": P2, "ligada": False})
+            finally:
+                com.fechar()
+                await porta.parar()
+            return sem_chave, religar, com_chave
+
+    sem_chave, religar, com_chave = asyncio.run(corrida())
+    assert sem_chave["error"]["code"] == CODE_NAO_ESCREVEU
+    assert religar["result"] == {"status": "ok", "ligada": True}
+    assert com_chave["result"] == {"status": "ok", "ligada": False}
