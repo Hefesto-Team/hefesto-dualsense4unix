@@ -254,6 +254,10 @@ install -Dm755 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
     %{buildroot}/usr/lib/%{app_id}/hefesto-hidraw-broker
 bash scripts/broker_do_pacote.sh %{buildroot}%{_unitdir} \
     /usr/lib/%{app_id}/hefesto-hidraw-broker
+install -Dm755 scripts/hefesto_acionador_raiz.sh \
+    %{buildroot}/usr/lib/%{app_id}/acionador-raiz
+install -Dm644 assets/polkit/org.hefesto.dualsense4unix.acionador.policy \
+    %{buildroot}%{_datadir}/polkit-1/actions/org.hefesto.dualsense4unix.acionador.policy
 install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
     %{buildroot}%{_datadir}/%{app_id}/broker/hidraw_broker.py
 install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
@@ -551,6 +555,8 @@ fi
 %{_datadir}/%{app_id}/dkms/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 /usr/lib/%{app_id}/hefesto-hidraw-broker
+/usr/lib/%{app_id}/acionador-raiz
+%{_datadir}/polkit-1/actions/org.hefesto.dualsense4unix.acionador.policy
 %{_unitdir}/hefesto-hidraw-broker.service
 %{_unitdir}/hefesto-hidraw-broker.socket
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service

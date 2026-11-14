@@ -337,6 +337,14 @@ INVENTARIO: tuple[Lugar, ...] = (
         devolve=False,
     ),
     Lugar(
+        "acionadores-autorizados", "varlib", "acionadores",
+        "broker/hidraw_broker.py:ACIONADORES_PATH e scripts/hefesto_acionador_raiz.sh:LISTA",
+        ROOT, CASA, COPIAR,
+        "os teclados e os pedais que a senha de administrador deixou virar botão; "
+        "não identifica controle",
+        devolve=False,
+    ),
+    Lugar(
         "zeros-dos-sensores", "config", f"{_C}/zeros-dos-sensores.json",
         "utils/session.py:_ZEROS_DOS_SENSORES_FILE",
         USUARIO, CONTROLES, MOVER,

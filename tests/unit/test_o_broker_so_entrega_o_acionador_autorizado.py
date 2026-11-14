@@ -125,11 +125,44 @@ def test_o_cliente_pede_a_retirada_pela_chave(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_o_broker_pode_gravar_a_pasta_da_lista_e_mais_nenhuma() -> None:
-    gravaveis = [linha.split("=", 1)[1] for linha in UNIDADE.read_text().splitlines()
-                 if linha.startswith("ReadWritePaths=")]
-    assert "-/var/lib/hefesto-dualsense4unix/acionadores" in gravaveis
-    assert not any(g.rstrip("/") in ("-/var/lib/hefesto-dualsense4unix", "/var/lib")
+    linhas = UNIDADE.read_text().splitlines()
+    gravaveis = [linha.split("=", 1)[1] for linha in linhas if linha.startswith("ReadWritePaths=")]
+    estados = [linha.split("=", 1)[1] for linha in linhas if linha.startswith("StateDirectory=")]
+    assert estados == ["hefesto-dualsense4unix/acionadores"], (
+        "a lista tem de nascer com o broker: criada depois pelo pkexec, a pasta fica só de leitura "
+        "no espaço de nomes dele e a retirada não grava")
+    assert "StateDirectoryMode=0755" in linhas
+    assert not any(g.lstrip("-").rstrip("/") in ("/var/lib/hefesto-dualsense4unix", "/var/lib")
                    for g in gravaveis)
+
+
+@pytest.mark.parametrize("roteiro", [
+    "scripts/build_deb.sh", "packaging/arch/PKGBUILD",
+    "packaging/fedora/hefesto-dualsense4unix.spec"])
+def test_o_pacote_leva_o_ajudante_e_a_politica(roteiro: str) -> None:
+    texto = (RAIZ / roteiro).read_text(encoding="utf-8")
+    assert "scripts/hefesto_acionador_raiz.sh" in texto, (
+        f"{roteiro}: sem o ajudante, quem instala pelo pacote nunca autoriza o pedal")
+    assert "/usr/lib/" in texto.split("scripts/hefesto_acionador_raiz.sh", 1)[1].split("\n", 2)[1]
+    assert "polkit-1/actions/org.hefesto.dualsense4unix.acionador.policy" in texto
+    assert maquina.AJUDANTES_DO_ACIONADOR[1] == "/usr/lib/hefesto-dualsense4unix/acionador-raiz"
+
+
+def test_o_cliente_acha_o_ajudante_do_pacote(monkeypatch: pytest.MonkeyPatch) -> None:
+    acessiveis = {maquina.AJUDANTES_DO_ACIONADOR[1]}
+    monkeypatch.setattr(maquina.os, "access",
+                        lambda caminho, _modo: caminho in acessiveis)
+    chamadas: list[list[str]] = []
+
+    def rodar(argv: list[str], **_kw: Any) -> Any:
+        chamadas.append(argv)
+        return SimpleNamespace(returncode=0)
+
+    assert maquina.autorizar_o_acionador(CHAVE, pkexec="/usr/bin/pkexec", rodar=rodar) is None
+    assert chamadas == [["/usr/bin/pkexec", maquina.AJUDANTES_DO_ACIONADOR[1], "autorizar"]]
+    acessiveis.clear()
+    assert maquina.autorizar_o_acionador(
+        CHAVE, pkexec="/usr/bin/pkexec", rodar=rodar) == maquina.FRASE_SEM_PERMISSAO_DE_LER
 
 
 def _ajudante(pasta: Path, verbo: str, entrada: str,
@@ -181,16 +214,21 @@ def test_sem_root_e_sem_pasta_o_ajudante_recusa() -> None:
 
 
 def test_a_politica_pede_a_senha_de_administrador_e_aponta_o_ajudante() -> None:
-    acao = ET.parse(POLITICA).getroot().find("action")
-    assert acao is not None and acao.get("id") == "org.hefesto.dualsense4unix.acionador.autorizar"
-    defaults = acao.find("defaults")
-    assert defaults is not None
-    padroes = {p.tag: p.text for p in defaults}
-    assert padroes == {"allow_any": "no", "allow_inactive": "auth_admin",
-                       "allow_active": "auth_admin"}
-    anotado = {a.get("key"): a.text for a in acao.findall("annotate")}
-    assert anotado["org.freedesktop.policykit.exec.path"] == maquina.AJUDANTE_DO_ACIONADOR
-    assert acao.findtext("message") == "O Hefesto vai ler todas as teclas deste aparelho."
+    acoes = ET.parse(POLITICA).getroot().findall("action")
+    assert [a.get("id") for a in acoes] == [
+        "org.hefesto.dualsense4unix.acionador.autorizar",
+        "org.hefesto.dualsense4unix.acionador.autorizar-do-pacote"]
+    caminhos = []
+    for acao in acoes:
+        defaults = acao.find("defaults")
+        assert defaults is not None
+        padroes = {p.tag: p.text for p in defaults}
+        assert padroes == {"allow_any": "no", "allow_inactive": "auth_admin",
+                           "allow_active": "auth_admin"}
+        anotado = {a.get("key"): a.text for a in acao.findall("annotate")}
+        caminhos.append(anotado["org.freedesktop.policykit.exec.path"])
+        assert acao.findtext("message") == "O Hefesto vai ler todas as teclas deste aparelho."
+    assert tuple(caminhos) == maquina.AJUDANTES_DO_ACIONADOR
 
 
 def _funcao(nome: str) -> str:

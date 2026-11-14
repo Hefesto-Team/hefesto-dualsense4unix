@@ -602,7 +602,11 @@ FRASE_FALTA_O_POLKIT: Final = "Falta o polkit para autorizar este aparelho"
 FRASE_A_SENHA_NAO_VEIO: Final = (
     "o aparelho não foi autorizado: a senha de administrador não foi dada")
 RECUSA_DE_QUEM_NAO_FOI_AUTORIZADO = "reject_nao_autorizado"
-AJUDANTE_DO_ACIONADOR = "/usr/local/lib/hefesto-dualsense4unix/acionador-raiz"
+AJUDANTES_DO_ACIONADOR: Final = (
+    "/usr/local/lib/hefesto-dualsense4unix/acionador-raiz",
+    "/usr/lib/hefesto-dualsense4unix/acionador-raiz",
+)
+AJUDANTE_DO_ACIONADOR: Final = AJUDANTES_DO_ACIONADOR[0]
 _PRAZO_DA_SENHA_S = 300.0
 
 _PRAZO_DO_BROKER_DO_ACIONADOR_S = 0.5
@@ -641,7 +645,8 @@ def autorizar_o_acionador(
 
     if _CHAVE_DO_ACIONADOR.match(chave) is None:
         return FRASE_O_APARELHO_NAO_ABRE
-    ajudante = ajudante or AJUDANTE_DO_ACIONADOR
+    ajudante = ajudante or next(
+        (a for a in AJUDANTES_DO_ACIONADOR if os.access(a, os.X_OK)), AJUDANTE_DO_ACIONADOR)
     pkexec = pkexec or shutil.which("pkexec")
     if pkexec is None:
         return FRASE_FALTA_O_POLKIT

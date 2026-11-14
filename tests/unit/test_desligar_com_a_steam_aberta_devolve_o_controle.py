@@ -426,7 +426,6 @@ class TestAUnit:
             "-/sys/devices/platform",
             "-/run/hefesto-hidraw-broker",
             "-/sys/bus/hid/drivers",
-            "-/var/lib/hefesto-dualsense4unix/acionadores",
         ])
         fonte = Path(hb.__file__).read_text(encoding="utf-8")
         assert 'SYS_BUS_HID_DRIVERS = "/sys/bus/hid/drivers"\n' in fonte
