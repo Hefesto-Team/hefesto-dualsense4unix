@@ -33,13 +33,10 @@ TETO_DE_UMA_ESPERA = 2.0
 TETO_DAS_ESPERAS = 5.0
 
 EXCECOES: dict[str, str] = {
-    "tests/unit/test_a_captura_conta_a_troca_de_assinantes.py": (
-        "a troca de assinatura NÃO reabre a fonte: a ausência se mede além da espera de 2 s que a "
-        "Captura (integrations/tela_do_jogo.py, ``espera``) põe depois da escolha cancelada"
-    ),
     "tests/unit/test_a_tela_so_se_le_no_clique.py": (
-        "a escolha cancelada NÃO volta na assinatura: a ausência se mede além da espera de 2 s "
-        "que a Captura (integrations/tela_do_jogo.py, ``espera``) põe depois da recusa"
+        "a soma (7,9 s) é de janelas de ausência: a fonte não abre sem o clique, não reabre na "
+        "troca, a escolha cancelada não volta. A da recusa caiu de 2,5 s para 0,8 s com a espera "
+        "da Captura em 0,2 s (mordida medida em 14/11); as outras se encurtam caso a caso"
     ),
 }
 

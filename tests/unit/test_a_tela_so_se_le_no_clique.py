@@ -8,6 +8,7 @@ sozinha não abre o portal. O install monta o portal da casa e pergunta a tela s
 from __future__ import annotations
 
 import asyncio
+import functools
 import os
 import re
 import subprocess
@@ -23,6 +24,7 @@ from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from hefesto_dualsense4unix.integrations import tela_do_jogo as tj
 from hefesto_dualsense4unix.integrations import transiente_do_jogo as tr
 from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
+from hefesto_dualsense4unix.mods import porta as modulo_porta
 from hefesto_dualsense4unix.mods.porta import CODE_INVALID_PARAMS, CODE_SEM_PERMISSAO, Porta
 from tests.unit.test_a_porta_ouve_o_jogo_e_o_microfone import _Cliente
 
@@ -366,7 +368,10 @@ class _PortalQueCancela(_PortalDeMentira):
         raise tj.EscolhaCanceladaError("a escolha foi cancelada")
 
 
-def test_a_escolha_cancelada_so_volta_no_clique_seguinte_nunca_na_assinatura() -> None:
+def test_a_escolha_cancelada_so_volta_no_clique_seguinte_nunca_na_assinatura(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(modulo_porta, "Captura", functools.partial(tj.Captura, espera=0.2))
     portal = _PortalQueCancela()
 
     async def roteiro(_porta: Porta, _bus: EventBus, clientes: list[_Cliente]) -> Any:
@@ -378,7 +383,7 @@ def test_a_escolha_cancelada_so_volta_no_clique_seguinte_nunca_na_assinatura() -
         await asyncio.sleep(0.5)
         await _pedir(cliente, "eventos.assinar", {"topicos": ["jogo.tela"]})
         await _pedir(cliente, "eventos.assinar", {"topicos": ["jogo.tela"]})
-        await asyncio.sleep(2.5)
+        await asyncio.sleep(0.8)
         sem_clique = portal.conta("SelectSources")
         await _pedir(cliente, "tela.ver", {})
         no_clique = await _esperar(lambda: portal.conta("SelectSources") == 2)

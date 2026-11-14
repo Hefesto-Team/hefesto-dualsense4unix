@@ -10,6 +10,7 @@ uma extensão reabre, e o evento chega às quatro (A-TELA-SO-SE-LE-NO-CLIQUE-01)
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import os
 import tempfile
@@ -26,6 +27,7 @@ from hefesto_dualsense4unix.mods.porta import Porta
 from tests.unit.test_a_porta_ouve_o_jogo_e_o_microfone import P1, _Cliente
 
 L, A = 64, 36
+ESPERA_DA_CAPTURA_S = 0.2
 
 
 def _quadro() -> tj.Quadro:
@@ -145,6 +147,8 @@ def test_a_porta_reabre_a_fonte_no_clique_seguinte_e_nao_na_troca_e_o_evento_che
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(modulo_porta, "HZ_DA_TELA", 1.0)
+    monkeypatch.setattr(modulo_porta, "Captura",
+                        functools.partial(tj.Captura, espera=ESPERA_DA_CAPTURA_S))
     fonte = _FonteQueRecusaUmaVez()
     fonte.janela.clear()
 
@@ -178,7 +182,7 @@ def test_a_porta_reabre_a_fonte_no_clique_seguinte_e_nao_na_troca_e_o_evento_che
                                      ("eventos.desassinar", "eventos.assinar")))
                 clientes[0].sock.sendall(troca)
                 await asyncio.to_thread(_ler_ate, clientes[0], 9001)
-                await asyncio.sleep(3.5)
+                await asyncio.sleep(1.8)
                 assert fonte.aberturas == 1
                 clique = json.dumps({"jsonrpc": "2.0", "id": 9100, "method": "tela.ver",
                                      "params": {}}).encode() + b"\n"
