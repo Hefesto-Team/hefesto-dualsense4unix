@@ -69,23 +69,27 @@ def test_a_regua_do_cabecalho_morde_o_botao_fora_dele() -> None:
     assert o_que_sobra(fora) == ["0 botões do mapa"]
 
 
-def test_o_mapa_nao_tem_o_ajuste_e_os_grupos_dizem_o_que_sao() -> None:
-    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: o ajuste saiu do mapa; «Atualizado» é o em dia.
+def test_o_mapa_nao_tem_o_ajuste_e_o_estado_e_um_glifo_com_a_palavra_na_dica() -> None:
+    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO: o ajuste saiu do mapa; o em dia é «Atualizado».
+    O-ATUALIZADOR-ATUALIZA-TUDO-E-NAO-SE-PRENDE-01: uma linha por peça, o estado num glifo com a
+    palavra só na dica, e o «Atualizar tudo».
 
-    MORDIDA: o ajuste de volta no topo do mapa, ou «Em dia» de volta, reprova.
+    MORDIDA: o ajuste de volta no topo do mapa, ou o estado escrito à vista, reprova.
     """
     for sozinho in (False, True):
         corpo = tela.html_da_pergunta(aba09.EXEMPLO_DAS_PECAS, {"sozinho": sozinho, "dias": 7},
                                       jogo_aberto=False)
-        for ficou in ("cadeado", "prazo", "atualizar-sozinho", "prazo-da-atualizacao", "at-ajuste"):
+        for ficou in ("cadeado", "prazo", "atualizar-sozinho", "prazo-da-atualizacao", "at-ajuste",
+                      "mp-g", "mp-grade", "mp-c"):
             assert ficou not in corpo, ficou
         assert ("tn-cx mapa auto" in corpo) is sozinho
-        assert "Escolha o que deve ser atualizado" in corpo and "Atualizado" in corpo
-        assert "Em dia" not in corpo and "Para baixar" not in corpo
-    assert [r for _, r in tela.CAMPOS_DO_MAPA] == ["Escolha o que deve ser atualizado",
-                                                   "Atualizado"]
+        assert 'data-dica="Atualizado">✓<' in corpo and 'data-dica="Nova versão">↑<' in corpo
+        sem_dica = re.sub(r'data-dica="[^"]*"', "", corpo)
+        for palavra in ("Atualizado", "Nova versão", "Em dia", "Para baixar"):
+            assert palavra not in sem_dica, palavra
+        assert "Atualizar tudo" in corpo
     assert not any(fica in tela.CSS for fica in (".cadeado", ".prazo", "at-ajuste"))
-    assert ".mp-c.em-dia{" in tela.CSS
+    assert ".mp-s.ok{" in tela.CSS and ".mp-l{" in tela.CSS
 
 
 def test_a_regua_morde_a_grade_de_volta() -> None:
@@ -109,6 +113,7 @@ def test_o_desenho_do_mapa_e_o_que_o_produto_pinta() -> None:
                                   jogo_aberto=False)
     assert corpo in desenho
     assert '<span class="mp-v"><span class="nv">1.11.0</span></span>' in corpo
+    assert len(re.findall(r'class="mp-l ', corpo)) == len(aba09.EXEMPLO_DAS_PECAS["pecas"])
 
 
 CHROME = Path("/usr/bin/google-chrome")
@@ -125,9 +130,9 @@ MEDIR_O_MAPA = """() => {
   const r = cx.getBoundingClientRect();
   return {rola: corpo.scrollHeight - corpo.clientHeight,
           fora: Math.max(0, r.bottom - innerHeight, -r.top),
-          cortados: Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn, .cadeado'))
+          cortados: Array.from(cx.querySelectorAll('.mp-n, .mp-v, .btn, .cadeado'))
             .filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent.trim()),
-          letra: Math.min(...Array.from(cx.querySelectorAll('.mp-n, .mp-v, .mp-g, .btn, .btn .n'))
+          letra: Math.min(...Array.from(cx.querySelectorAll('.mp-n, .mp-v, .btn, .btn .n'))
             .map(e => parseFloat(getComputedStyle(e).fontSize))),
           sem_a_nova: Array.from(cx.querySelectorAll('.mp-v')).filter(v => {
             const nv = v.querySelector('.nv'), a = v.getBoundingClientRect();
@@ -140,9 +145,7 @@ MEDIR_O_MAPA = """() => {
             .filter(e => !e.closest('.hef-atualiza')
               && getComputedStyle(e).scrollbarWidth !== 'none')
             .map(e => e.className).slice(0, 5),
-          lisas: Array.from(cx.querySelectorAll('.mp-c.fixa'))
-            .filter(e => getComputedStyle(e).borderStyle !== 'dashed')
-            .map(e => e.textContent.trim())};
+          linhas: cx.querySelectorAll('.mp-l').length};
 }"""
 
 
@@ -177,14 +180,12 @@ def _paginas(pasta: Path) -> dict[str, Path]:
 
 
 def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
-    """D-0911-AS-ATUALIZACOES-ABREM-NUM-MAPA: três e quatro grupos cheios cabem em 1212x700.
+    """D-0911-AS-ATUALIZACOES-ABREM-NUM-MAPA: as treze peças, em qualquer estado, cabem em
+    1212x700 sem rolar, uma linha por peça.
 
-    MORDIDA: com o cartão de 64 px e os espaços da primeira versão, a «quatro-grupos» rola 54 px;
-    com a chave solta antes da regra das fixas, as fixas saem lisas («lisas»); com o número do
-    «Atualizar» a 11,5 px, a «letra» fica abaixo de 12; com o par das versões numa linha que
-    corta, a versão nova do «Som» sai com reticências («sem_a_nova»); sem esconder as barras de
-    rolagem da página de baixo, a do registro da 09 se pinta por cima do «Atualizar» no WebKit
-    («barras»).
+    MORDIDA: com a linha de 48 px, as treze rolam; com o número do «Atualizar tudo» a 11,5 px, a
+    «letra» fica abaixo de 12; sem esconder as barras de rolagem da página de baixo, a do registro
+    da 09 se pinta por cima do «Atualizar tudo» no WebKit («barras»).
     """
     import pytest
 
@@ -204,8 +205,8 @@ def test_o_mapa_cheio_cabe_sem_rolar(tmp_path: Path) -> None:
                     medida = pg.evaluate(MEDIR_O_MAPA)
                     pg.close()
                     if medida["rola"] > 0 or medida["fora"] > 0 or medida["cortados"] \
-                            or medida["letra"] < 12 or medida["lisas"] or medida["sem_a_nova"] \
-                            or medida["barras"]:
+                            or medida["letra"] < 12 or medida["linhas"] != 13 \
+                            or medida["sem_a_nova"] or medida["barras"]:
                         falhas.append((nome, f"{larg}x{alt}", medida))
         finally:
             nav.close()
@@ -226,19 +227,19 @@ def test_o_cartao_le_o_estado_e_os_campos_do_motor_nos_dois_formatos() -> None:
          "completa": "1.11.0~1792525517~24.04~f448ddf+0~hefesto1"},
         {"id": "gdk", "nome": "GameInput", "estado": "fora", "volta": 1, "de": "1"}]
     antes = tela.html_do_mapa({"pecas": [hoje]})
-    assert '<div class="mp-c em-dia"' in antes and "fixa" not in antes
+    assert '<div class="mp-l ok"' in antes and "fixa" not in antes
     assert 'class="mp-m"' not in antes and tela.DICA_SEM_REINSTALAR in antes
     mapa = tela.html_do_mapa({"pecas": volta_2})
-    estado = _campo(mapa, "mp-estado")
-    assert re.findall(r'<div class="mp-c ([a-z-]+)"', estado) == ["nova", "revisar", "em-dia"]
+    assert re.findall(r'<(?:div|label) class="mp-l ([a-z-]+)"', mapa) == ["nova", "revisar", "ok"]
     assert "GameInput" not in mapa
     assert 'data-dica="BlueZ · 5.89-0ubuntu1~hefesto2"' in mapa
-    assert ('<span class="par"><span class="de">5.88</span><span class="seta">→</span></span>'
-            '<span class="nv">5.89</span>') in mapa
-    revisar = re.search(r'<div class="mp-c revisar"[^>]*>.*?</div>', estado, re.S).group(0)
-    assert 'data-dica="a casa precisa revisar os patches · 1.6.11 · 0.5.19 → 1.6.12 · 0.5.19"' \
-        in revisar
-    assert '<span class="mp-s">!</span>' in revisar and "mp-m" not in revisar
+    assert ('<span class="mp-v">5.88<span class="seta">→</span>'
+            '<span class="nv">5.89</span></span>') in mapa
+    revisar = re.search(r'<label class="mp-l revisar">.*?</label>', mapa, re.S).group(0)
+    assert 'data-dica="a casa precisa revisar os patches · 1.6.11 · 0.5.19 → 1.6.12 · 0.5.19 · ' \
+        'Marcar reinstala a versão de agora"' in revisar
+    assert '<span class="mp-s revisar" data-dica="A revisar">!</span>' in revisar
+    assert 'class="mp-m" data-gesto' in revisar, "a revisar reinstala, nunca sobe"
     assert 'data-dica="1.11.0~1792525517~24.04~f448ddf+0~hefesto1 · Marcar reinstala a versão ' \
         'de agora"' in mapa
     assert tela.ids_para_atualizar({"pecas": volta_2}) == ["bluetooth"]
@@ -278,48 +279,38 @@ def test_o_atualizar_se_apaga_sem_peca_marcada_tambem_com_o_jogo_aberto() -> Non
                          corpo), aberto
 
 
-def _campo(mapa: str, chave: str) -> str:
-    inicio = mapa.index(f'<div class="mp-g {chave}">')
-    fim = mapa.find('<div class="mp-g ', inicio + 1)
-    return mapa[inicio:fim if fim > 0 else len(mapa)]
+def _nomes(mapa: str) -> list[str]:
+    return re.findall(r'class="mp-n"[^>]*>([^<]+)<', mapa)
 
 
-def _nomes(campo: str) -> list[str]:
-    return re.findall(r'class="mp-n">([^<]+)<', campo)
+def test_cada_peca_e_uma_linha_e_toda_peca_em_dia_se_marca() -> None:
+    """D-0911-O-ATUALIZADOR-REINSTALA-A-PECA-EM-DIA, a escolha «Todas marcáveis», numa linha por
+    peça: a com versão nova marcada como o motor diz, a em dia desmarcada, e marcar reinstala, dito
+    só na dica. A peça que o motor diz que não reinstala (``reinstala: false``, ou da volta 2) fica
+    sem marca, com o porquê na dica.
 
-
-def test_os_dois_campos_mostram_as_mesmas_pecas_e_toda_peca_em_dia_se_marca() -> None:
-    """D-0911-AS-ATUALIZACOES-SOBEM-PARA-O-TOPO, a escolha «Todas marcáveis»: em cima as peças
-    todas, com marca (a com versão nova marcada como o motor diz, a em dia desmarcada, e marcar
-    reinstala, dito só na dica); embaixo as mesmas, sem marca, na cor do estado. A peça que o
-    motor diz que não reinstala (``reinstala: false``, ou da volta 2) fica sem marca, com o
-    porquê na dica.
-
-    MORDIDA: um campo com menos peças que o outro reprova; a peça em dia sem marca possível
-    reprova; a reinstalação dita em texto à vista reprova.
+    MORDIDA: uma peça repetida ou faltando reprova; a peça em dia sem marca possível reprova; a
+    reinstalação dita em texto à vista reprova.
     """
     for conferencia in (aba09.EXEMPLO_DAS_PECAS, _mesa(["nova", "revisar", "em_dia", "fixa",
                                                          "nao_consultado"] + ["em_dia"] * 8)):
         mapa = tela.html_do_mapa(conferencia)
-        cima, baixo = _campo(mapa, "mp-marcar"), _campo(mapa, "mp-estado")
-        assert _nomes(cima) == _nomes(baixo) and len(_nomes(cima)) == 13
-        assert re.findall(r'<span class="q">(\d+)</span>', mapa) == ["13", "13"]
-        assert 'class="mp-m"' not in baixo
+        assert len(_nomes(mapa)) == len(set(_nomes(mapa))) == 13
         for item in conferencia["pecas"]:
             if item["estado"] == "em_dia" and item.get("volta", 1) == 1:
-                cartao = re.search(r'<label class="mp-c mp-marcar"[^>]*>(?:(?!</label>).)*?'
-                                   rf'data-v="{item["id"]}"', cima, re.S)
-                assert cartao, f"{item['id']}: em dia sem marca"
-                assert tela.DICA_DA_REINSTALACAO in cartao.group(0)
-                assert 'class="mp-m" checked' not in cartao.group(0), "a em dia nasce marcada"
+                linha = re.search(r'<label class="mp-l [a-z-]+">(?:(?!</label>).)*?'
+                                  rf'data-v="{item["id"]}"', mapa, re.S)
+                assert linha, f"{item['id']}: em dia sem marca"
+                assert tela.DICA_DA_REINSTALACAO in linha.group(0)
+                assert 'class="mp-m" checked' not in linha.group(0), "a em dia nasce marcada"
     assert "reinstala" not in re.sub(r'data-dica="[^"]*"', "", mapa)
     exemplo = tela.html_do_mapa(aba09.EXEMPLO_DAS_PECAS)
     assert re.findall(r'class="mp-m" checked data-gesto="peca-da-atualizacao" data-v="([a-z]+)"',
                       exemplo) == ["hefesto", "proton"]
     sem = {"id": "kernel", "nome": "Kernel", "estado": "em_dia", "volta": 1, "de": "7", "para": "7",
            "reinstala": False, "motivo": "O kernel em uso não se reinstala"}
-    cartao = _campo(tela.html_do_mapa({"pecas": [sem]}), "mp-marcar")
-    assert 'class="mp-m"' not in cartao and "O kernel em uso não se reinstala" in cartao
+    linha = tela.html_do_mapa({"pecas": [sem]})
+    assert 'class="mp-m"' not in linha and "O kernel em uso não se reinstala" in linha
     desenho = (RAIZ / "mockup/escolha/o-mapa-das-atualizacoes.html").read_text(encoding="utf-8")
     assert exemplo in desenho and "Com o Hefesto" not in desenho
 

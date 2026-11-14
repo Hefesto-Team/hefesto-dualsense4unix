@@ -1,9 +1,11 @@
 """O mapa das atualizações, as versões anteriores e o andamento.
 
 O mapa nasce do botão «Atualizações» da aba Sistema (e sozinho, quando o prazo vence com peça
-nova): as peças em cartões, agrupados pelo que há para baixar, marcáveis, com o «Atualizar» e as
-versões anteriores no rodapé. A caixa nasce por cima de qualquer aba (``JS_DA_CAIXA``) e se repinta
-inteira a cada mudança. Puro: recebe os dicionários do motor e devolve HTML.
+nova): uma linha por peça, com o nome, a versão de agora → a nova, o estado por glifo e cor e a
+marca; o «Atualizar tudo» e as versões anteriores no rodapé. O andamento usa a mesma linha, com a
+barra da peça em curso. A explicação mora na dica. A caixa nasce por cima de qualquer aba
+(``JS_DA_CAIXA``) e se repinta inteira a cada mudança. Puro: recebe os dicionários do motor e
+devolve HTML.
 """
 from __future__ import annotations
 
@@ -17,16 +19,33 @@ from typing import Any
 ID_DA_CAIXA = "hef-atualizacoes"
 ORDEM_NA_TELA = ("hefesto", "proton", "bluetooth", "som", "portal", "gdk", "python", "nvidia",
                  "kernel", "dkms", "sistema", "mangohud", "umu")
-CAMPOS_DO_MAPA = (("mp-marcar", "Escolha o que deve ser atualizado"), ("mp-estado", "Atualizado"))
 ESTADOS_DO_MAPA = ("nova", "revisar", "em_dia")
 GRUPO_DO_ESTADO = {"fixa": "em_dia"}
 REINSTALAVEIS = ("em_dia", "revisar")
+ROTULO_DO_ATUALIZAR = "Atualizar tudo"
 DICA_DA_REINSTALACAO = "Marcar reinstala a versão de agora"
 DICA_SEM_REINSTALAR = "O Hefesto ainda não reinstala esta peça"
 DICA_SEM_REDE = "Sem rede: a versão publicada não foi conferida"
 DICA_DO_SOZINHO = "Sem pergunta, só com o jogo fechado"
 DICA_DO_PRAZO = "Prazo da conferência"
 DICA_DO_REGISTRO = "O registro desta atualização"
+DICA_DO_JOGO = "Espera o jogo fechar"
+ATUALIZADO, NOVA_VERSAO, ESPERANDO, APLICANDO, FALHOU, NA_FILA, A_REVISAR, SEM_REDE = (
+    "Atualizado", "Nova versão", "Esperando", "Aplicando", "Falhou", "Na fila", "A revisar",
+    "Sem rede")
+GLIFO = {"ok": "✓", "nova": "↑", "esperando": "◷", "aplicando": "●", "falhou": "!",
+         "fila": "○", "revisar": "!", "sem-rede": "?"}
+ESTADO_DO_MAPA = {"nova": ("nova", NOVA_VERSAO), "em_dia": ("ok", ATUALIZADO),
+                  "revisar": ("revisar", A_REVISAR), "sem_rede": ("sem-rede", SEM_REDE)}
+ESTADO_DO_ANDAMENTO = {"fila": ("fila", NA_FILA), "baixando": ("aplicando", APLICANDO),
+                       "instalando": ("aplicando", APLICANDO),
+                       "aplicando": ("aplicando", APLICANDO),
+                       "reiniciando": ("aplicando", APLICANDO),
+                       "esperando": ("esperando", ESPERANDO),
+                       "pronta": ("ok", ATUALIZADO), "atualizada": ("ok", ATUALIZADO),
+                       "falhou": ("falhou", FALHOU)}
+ETAPA_NA_DICA = {"baixar": "Baixar", "instalar": "Instalar", "aplicar": "Aplicar em todos",
+                 "reiniciar": "Reiniciar o serviço", "reabrir": "Reabrir o Hefesto"}
 ICONES = {
     "hefesto": '<path d="M3 7h13l5-3v5l-5 2v2h-3v3h3l1 4H6l1-4h3v-3H7v-1.5C5 11 3 9.5 3 7z"/>',
     "proton": '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>',
@@ -65,7 +84,6 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
   border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);display:flex;
   flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
-.hef-atualiza .tn-cx.larga{width:900px}
 .hef-atualiza .tn-topo{display:flex;align-items:center;gap:9px;padding:14px 18px 0;flex:none}
 .hef-atualiza .tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
 .hef-atualiza .tn-x{margin-left:auto;width:26px;height:26px;border-radius:6px;cursor:pointer;
@@ -91,56 +109,47 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
 .hef-atualiza .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
 .hef-atualiza .btn .n{font-family:'JetBrains Mono',monospace;font-size:12px}
-.hef-atualiza .selo{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;
-  font-family:'JetBrains Mono',monospace;white-space:nowrap;text-align:center;flex:none}
-.hef-atualiza .selo.nova{background:var(--purple);color:var(--app-bg)}
-.hef-atualiza .selo.ok{background:transparent;color:var(--green);
-  box-shadow:inset 0 0 0 1px var(--green)}
-.hef-atualiza .selo.fila{background:transparent;color:var(--texto-mudo);
-  box-shadow:inset 0 0 0 1px var(--border-forte)}
-.hef-atualiza .selo.baixando{background:var(--cyan);color:var(--app-bg)}
-.hef-atualiza .selo.instalando{background:var(--purple);color:var(--app-bg)}
-.hef-atualiza .selo.aplicando{background:var(--pink);color:var(--app-bg)}
-.hef-atualiza .selo.falhou{background:var(--red);color:var(--app-bg)}
-.hef-atualiza .tn-cx.mapa{width:min(1180px,calc(100vw - 32px));
-  height:min(668px,calc(100vh - 32px));max-height:none;max-width:none}
+.hef-atualiza .tn-cx.mapa{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 32px)}
+.hef-atualiza .tn-cx.larga{width:min(760px,calc(100vw - 32px))}
 .hef-atualiza .mapa .tn-topo{padding:10px 18px 9px;gap:16px;
   border-bottom:1px solid var(--border-sutil)}
 .hef-atualiza .mapa .tn-tit{font-size:18px;font-weight:700;color:var(--pink)}
 .hef-atualiza .mapa .btn.voltar{height:30px}
-.hef-atualiza .mapa .tn-corpo{padding:10px 18px;flex:1}
+.hef-atualiza .mapa .tn-corpo,.hef-atualiza .larga .tn-corpo{padding:6px 18px 8px;flex:1}
 .hef-atualiza .mapa .tn-rod{padding:9px 18px 11px}
 .hef-atualiza .mapa .tn-rod .empurra{flex:1}
 .hef-atualiza .btn.apagado{opacity:.45;pointer-events:none}
-.hef-atualiza .mp-corpo{display:flex;flex-direction:column;gap:6px}
-.hef-atualiza .mp-g{display:flex;align-items:baseline;gap:8px;font-size:13px;font-weight:600;
-  color:var(--green)}
-.hef-atualiza .mp-g + .mp-grade{margin-bottom:2px}
-.hef-atualiza .mp-g.mp-marcar{color:var(--purple)}
-.hef-atualiza .mp-g .q{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
-  color:var(--texto-mudo)}
-.hef-atualiza .mp-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px 10px}
-.hef-atualiza .mp-c{display:grid;grid-template-columns:34px minmax(0,1fr) 28px;align-items:center;
-  gap:12px;height:52px;padding:0 10px 0 12px;border-radius:9px;
-  border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg)}
-.hef-atualiza label.mp-c{cursor:pointer}
-.hef-atualiza label.mp-c:hover{border-color:var(--comment)}
-.hef-atualiza .mp-i{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;color:var(--green);background:rgba(80,250,123,.10)}
-.hef-atualiza .mp-i svg{width:19px;height:19px}
-.hef-atualiza .mp-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hef-atualiza .mp-lista{display:flex;flex-direction:column}
+.hef-atualiza .mp-l{display:grid;grid-template-columns:28px minmax(0,1fr) auto 24px 28px;
+  align-items:center;gap:12px;height:36px;padding:0 4px;color:var(--fg);
+  border-bottom:1px solid var(--border-sutil)}
+.hef-atualiza .mp-l:last-child{border-bottom:0}
+.hef-atualiza label.mp-l{cursor:pointer}
+.hef-atualiza label.mp-l:hover{background:color-mix(in srgb,var(--purple) 6%,transparent)}
+.hef-atualiza .mp-i{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;color:var(--texto-suave);background:var(--border-sutil)}
+.hef-atualiza .mp-i svg{width:16px;height:16px}
 .hef-atualiza .mp-n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis}
-.hef-atualiza .mp-v{font-family:'JetBrains Mono',monospace;font-size:12px;
-  color:var(--texto-suave);white-space:nowrap;overflow:hidden;display:flex;
-  flex-flow:row-reverse wrap;justify-content:flex-end;height:16px;line-height:16px}
-.hef-atualiza .mp-v .nv{order:-1;flex:0 1 auto;min-width:0;overflow:hidden;
-  text-overflow:ellipsis}
-.hef-atualiza .mp-v .par{flex:none}
+  text-overflow:ellipsis;min-width:0}
+.hef-atualiza .mp-v{font-family:'JetBrains Mono',monospace;font-size:12px;white-space:nowrap;
+  color:var(--texto-suave);text-align:right}
 .hef-atualiza .mp-v .seta{color:var(--purple);margin:0 5px}
-.hef-atualiza .mp-c.nova .mp-v .nv{color:var(--fg);font-weight:500}
-.hef-atualiza .mp-mx{width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer}
+.hef-atualiza .mp-l.nova .mp-v .nv{color:var(--fg);font-weight:500}
+.hef-atualiza .mp-s{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font:700 13px/1 'JetBrains Mono',monospace}
+.hef-atualiza .mp-s.ok{color:var(--green);box-shadow:inset 0 0 0 1.5px var(--green)}
+.hef-atualiza .mp-s.nova{background:var(--purple);color:var(--app-bg)}
+.hef-atualiza .mp-s.revisar,.hef-atualiza .mp-s.falhou{background:var(--orange);
+  color:var(--app-bg)}
+.hef-atualiza .mp-s.esperando{color:var(--yellow);box-shadow:inset 0 0 0 1.5px var(--yellow)}
+.hef-atualiza .mp-s.aplicando{color:var(--cyan);box-shadow:inset 0 0 0 1.5px var(--cyan)}
+.hef-atualiza .mp-s.fila,.hef-atualiza .mp-s.sem-rede{color:var(--texto-mudo);
+  box-shadow:inset 0 0 0 1.5px var(--border-forte)}
+.hef-atualiza .mp-l.nova .mp-i{color:var(--purple);
+  background:color-mix(in srgb,var(--purple) 18%,transparent)}
+.hef-atualiza .mp-l.ok .mp-i{color:var(--green);background:rgba(80,250,123,.10)}
+.hef-atualiza .mp-l.sem-rede .mp-n,.hef-atualiza .mp-l.fila .mp-n{color:var(--texto-suave)}
+.hef-atualiza .mp-mx{width:28px;height:28px;display:flex;align-items:center;justify-content:center}
 .hef-atualiza .mp-m{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin:0;
   cursor:pointer;border-radius:5px;border:1.5px solid var(--linha,#53576f);background:var(--panel);
   display:grid;place-content:center}
@@ -148,31 +157,6 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .mp-m:checked::after{content:"";width:9px;height:5px;margin-top:-2px;
   border-left:2px solid var(--app-bg);border-bottom:2px solid var(--app-bg);
   transform:rotate(-45deg)}
-.hef-atualiza .mp-c.nova{border-color:var(--purple);
-  background:color-mix(in srgb,var(--purple) 8%,var(--app-bg))}
-.hef-atualiza .mp-c.nova .mp-i{color:var(--purple);
-  background:color-mix(in srgb,var(--purple) 18%,transparent)}
-.hef-atualiza .mp-c.mp-marcar .mp-i{color:var(--texto-suave);background:var(--border-sutil)}
-.hef-atualiza .mp-c.mp-marcar:has(.mp-m:checked){border-color:var(--purple);
-  background:color-mix(in srgb,var(--purple) 8%,var(--app-bg))}
-.hef-atualiza .mp-c.mp-marcar:has(.mp-m:checked) .mp-i{color:var(--purple);
-  background:color-mix(in srgb,var(--purple) 18%,transparent)}
-.hef-atualiza .mp-c.mp-marcar.sem-marca{border-style:dashed;background:transparent}
-.hef-atualiza .mp-c.mp-marcar.sem-marca .mp-n{color:var(--texto-suave)}
-.hef-atualiza .mp-c.em-dia{border-color:color-mix(in srgb,var(--green) 45%,var(--border-forte));
-  background:color-mix(in srgb,var(--green) 5%,var(--app-bg))}
-.hef-atualiza .mp-g.revisar{color:var(--orange)}
-.hef-atualiza .mp-c.revisar{border-color:var(--orange);
-  background:color-mix(in srgb,var(--orange) 7%,var(--app-bg))}
-.hef-atualiza .mp-c.revisar .mp-i{color:var(--orange);
-  background:color-mix(in srgb,var(--orange) 16%,transparent)}
-.hef-atualiza .mp-c.revisar .mp-v .seta{color:var(--orange)}
-.hef-atualiza .mp-s{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font:700 13px/1 'JetBrains Mono',monospace;background:var(--orange);
-  color:var(--app-bg)}
-.hef-atualiza .mp-c.sem-rede{border-style:dashed;background:transparent}
-.hef-atualiza .mp-c.sem-rede .mp-i{color:var(--comment);background:var(--border-sutil)}
-.hef-atualiza .mp-c.sem-rede .mp-n{color:var(--texto-suave)}
 .hef-atualiza .pendente{display:flex;align-items:center;gap:8px;padding:7px 10px;
   border:1px dashed var(--orange);border-radius:6px;font-size:12px;color:var(--orange);
   background:rgba(255,184,108,.07)}
@@ -189,52 +173,16 @@ body:has(.hef-atualiza.aberta) :not(.hef-atualiza,.hef-atualiza *){scrollbar-wid
 .hef-atualiza .vt-l .btn{height:30px}
 .hef-atualiza .vt-cab{font-size:12px;font-weight:600;color:var(--green);padding-bottom:4px;
   border-bottom:1px solid var(--border-sutil)}
-.hef-atualiza .and-total{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;
-  align-items:center;gap:12px;height:34px}
-.hef-atualiza .and-total .rot{font-size:12px;font-weight:600;color:var(--green)}
+.hef-atualiza .and-total{display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;gap:12px;height:30px}
 .hef-atualiza .and-total .n{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg);
   white-space:nowrap}
-.hef-atualiza .and-total .n.erro{color:var(--red)}
 .hef-atualiza .trilho{height:6px;border-radius:3px;background:var(--border-forte);
   position:relative;flex:1;min-width:0;display:block}
 .hef-atualiza .trilho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;
-  background:var(--purple)}
-.hef-atualiza .and-total .trilho{height:8px;border-radius:4px}
-.hef-atualiza .and-total .trilho .cheio{border-radius:4px;background:var(--green)}
-.hef-atualiza .and-lista{display:flex;flex-direction:column;
-  border-top:1px solid var(--border-sutil)}
-.hef-atualiza .and-l{display:grid;grid-template-columns:104px 112px 300px minmax(0,1fr) 96px;
-  align-items:center;gap:10px;height:40px;border-bottom:1px solid var(--border-sutil);
-  font-size:12.5px;color:var(--fg)}
-.hef-atualiza .and-l:last-child{border-bottom:0}
-.hef-atualiza .and-l .nome{font-weight:600;white-space:nowrap}
-.hef-atualiza .and-l .ver{font-family:'JetBrains Mono',monospace;font-size:11.5px;
-  color:var(--texto-suave);white-space:nowrap}
-.hef-atualiza .and-l .ver .nv{color:var(--fg)}
-.hef-atualiza .etapas{display:flex;gap:14px}
-.hef-atualiza .etp{height:24px;font-size:12px;display:inline-flex;align-items:center;gap:5px;
-  color:var(--texto-mudo);white-space:nowrap}
-.hef-atualiza .etp::before{content:"○";font-size:10px}
-.hef-atualiza .etp.feito{color:var(--green)}
-.hef-atualiza .etp.feito::before{content:"✓";font-size:11px}
-.hef-atualiza .etp.agora{color:var(--cyan);font-weight:600}
-.hef-atualiza .etp.agora::before{content:"●";font-size:9px}
-.hef-atualiza .etp.erro{color:var(--red);font-weight:600}
-.hef-atualiza .etp.erro::before{content:"✕";font-size:10px}
-.hef-atualiza .and-barra{display:flex;align-items:center;gap:8px;min-width:0}
-.hef-atualiza .and-barra .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--fg);
-  flex:0 0 46px;text-align:right;white-space:nowrap}
-.hef-atualiza .and-barra.pronta .cheio{background:var(--green)}
-.hef-atualiza .and-barra.falhou .cheio{background:var(--red)}
-.hef-atualiza .and-barra.falhou .n{color:var(--red)}
-.hef-atualiza .and-multi{display:flex;flex-direction:column;gap:3px;min-width:0}
-.hef-atualiza .and-multi .and-barra{gap:6px}
-.hef-atualiza .and-multi .qual{flex:0 0 44px;font-size:11px;color:var(--texto-suave)}
-.hef-atualiza .and-multi .n{flex:0 0 40px;font-size:11px}
-.hef-atualiza .and-multi .trilho{height:4px}
-.hef-atualiza .and-l.na-fila .nome,.hef-atualiza .and-l.na-fila .ver,
-.hef-atualiza .and-l.na-fila .ver .nv{color:var(--texto-mudo)}
-.hef-atualiza .and-l.reinicio{border-top:1px solid var(--linha,#53576f)}
+  background:var(--cyan)}
+.hef-atualiza .and-total .trilho .cheio{background:var(--green)}
+.hef-atualiza .mp-l .and-barra{width:120px;display:flex;align-items:center}
 """
 
 JS_DA_CAIXA = """(function(css, corpo, id){
@@ -293,8 +241,7 @@ def _versao_a_vista(item: dict[str, Any]) -> str:
         return f'<span class="nv">{_e(item["rotulo"])}</span>'
     de, agora = _par_de_versoes(item)
     if de:
-        return (f'<span class="par"><span class="de">{_e(versao_curta(de))}</span>'
-                f'<span class="seta">→</span></span>'
+        return (f'{_e(versao_curta(de))}<span class="seta">→</span>'
                 f'<span class="nv">{_e(versao_curta(agora))}</span>')
     return f'<span class="nv">{_e(versao_curta(agora))}</span>' if agora else ""
 
@@ -346,46 +293,41 @@ def _por_que_sem_marca(item: dict[str, Any]) -> str:
     return str(item.get("motivo") or DICA_SEM_REINSTALAR)
 
 
-def _miolo(item: dict[str, Any]) -> str:
-    return (f'<span class="mp-i">{_icone(str(item.get("id") or ""))}</span>'
-            f'<span class="mp-t"><span class="mp-n">{_e(item.get("nome"))}</span>'
-            f'<span class="mp-v">{_versao_a_vista(item)}</span></span>')
-
-
-def _dica_do_cartao(item: dict[str, Any], *extra: str) -> str:
-    partes = (str(item.get("dica") or ""), _versao_inteira(item), *extra)
+def _junto(*partes: str) -> str:
     return " · ".join(x for x in partes if x)
 
 
-def _cartao_da_escolha(item: dict[str, Any]) -> str:
+def _selo(classe: str, dica: str) -> str:
+    return f'<span class="mp-s {classe}"{_dica(dica)}>{GLIFO[classe]}</span>'
+
+
+def _linha(item: dict[str, Any], classe: str, dica_do_selo: str, meio: str, fim: str,
+           dica: str, *, marca: bool = False) -> str:
+    """Uma linha: o ícone, o nome e a versão (a explicação na dica), o meio, o selo e a marca."""
+    tag = "label" if marca else "div"
+    return (f'<{tag} class="mp-l {classe}"><span class="mp-i">'
+            f'{_icone(str(item.get("id") or ""))}</span>'
+            f'<span class="mp-n"{_dica(dica)}>{_e(item.get("nome"))}</span>'
+            f'{meio}{_selo(classe, dica_do_selo)}<span class="mp-mx">{fim}</span></{tag}>')
+
+
+def _linha_do_mapa(item: dict[str, Any]) -> str:
+    classe, estado = ESTADO_DO_MAPA[_grupo_do_cartao(item)]
+    versao = f'<span class="mp-v">{_versao_a_vista(item)}</span>'
     if not marcavel(item):
-        return (f'<div class="mp-c mp-marcar sem-marca"'
-                f'{_dica(_dica_do_cartao(item, _por_que_sem_marca(item)))}>{_miolo(item)}</div>')
+        dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), _por_que_sem_marca(item))
+        return _linha(item, classe, estado, versao, "", dica)
     reinstala = DICA_DA_REINSTALACAO if e_reinstalacao(item) else ""
     caixa = (f'<input type="checkbox" class="mp-m"{" checked" if marcada(item) else ""}'
              f' data-gesto="peca-da-atualizacao" data-v="{_e(item["id"])}">')
-    return (f'<label class="mp-c mp-marcar"{_dica(_dica_do_cartao(item, reinstala))}>'
-            f'{_miolo(item)}<span class="mp-mx">{caixa}</span></label>')
-
-
-def _cartao_do_estado(item: dict[str, Any]) -> str:
-    grupo = _grupo_do_cartao(item)
-    selo = '<span class="mp-s">!</span>' if grupo == "revisar" else ""
-    return (f'<div class="mp-c {grupo.replace("_", "-")}"{_dica(_dica_do_cartao(item))}>'
-            f'{_miolo(item)}{selo}</div>')
+    dica = _junto(str(item.get("dica") or ""), _versao_inteira(item), reinstala)
+    return _linha(item, classe, estado, versao, caixa, dica, marca=True)
 
 
 def html_do_mapa(conferencia: dict[str, Any]) -> str:
-    """As mesmas peças nos dois campos: em cima o que se marca, embaixo o estado de cada uma."""
+    """Uma linha por peça: o nome, a versão de agora → a nova, o estado e a marca."""
     itens = _ordenadas(conferencia.get("pecas") or [])
-    if not itens:
-        return '<div class="mp-corpo"></div>'
-    cartao = {"mp-marcar": _cartao_da_escolha, "mp-estado": _cartao_do_estado}
-    blocos = [f'<div class="mp-g {chave}"><span>{rotulo}</span>'
-              f'<span class="q">{len(itens)}</span></div>'
-              f'<div class="mp-grade">{"".join(cartao[chave](i) for i in itens)}</div>'
-              for chave, rotulo in CAMPOS_DO_MAPA]
-    return f'<div class="mp-corpo">{"".join(blocos)}</div>'
+    return f'<div class="mp-lista">{"".join(_linha_do_mapa(i) for i in itens)}</div>'
 
 
 def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
@@ -394,17 +336,16 @@ def ids_para_atualizar(conferencia: dict[str, Any]) -> list[str]:
 
 def html_da_pergunta(conferencia: dict[str, Any], escolha: dict[str, Any], *,
                      jogo_aberto: bool, nome_do_jogo: str = "") -> str:
-    """O mapa das atualizações: o topo, os cartões e o rodapé."""
+    """O mapa das atualizações: o topo, as linhas e o rodapé com o «Atualizar tudo»."""
     n = len(ids_para_atualizar(conferencia))
     jogo = (f'<span>Jogo aberto:</span><span class="jogo">{_e(nome_do_jogo)}</span>'
             if nome_do_jogo else '<span>Jogo aberto</span>')
     pendente = (f'<div class="pendente">{jogo}<span>· espera</span></div>'
                 if jogo_aberto else "")
     apagado = "" if n else " apagado"
-    principal = (f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar">'
-                 'Atualizar ao fechar o jogo</button>' if jogo_aberto else
-                 f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar">'
-                 f'Atualizar <span class="n">{n}</span></button>')
+    principal = (f'<button class="btn principal{apagado}" data-gesto="atualizacoes-atualizar"'
+                 f'{_dica(DICA_DO_JOGO if jogo_aberto else "")}>'
+                 f'{ROTULO_DO_ATUALIZAR} <span class="n">{n}</span></button>')
     auto = " auto" if escolha.get("sozinho") else ""
     return (f'<div class="tn-cx mapa{auto}" role="dialog" aria-modal="true" '
             f'aria-label="Atualizações">'
@@ -452,60 +393,45 @@ def html_das_anteriores(anteriores: dict[str, Any], pode_voltar: Sequence[str]) 
             f'← Atualizações</button></div></div>')
 
 
-def _etapas(estados: dict[str, Any], nomes: Sequence[tuple[str, str]], dica_do_aplicar: str) -> str:
-    saida = []
-    for chave, rotulo in nomes:
-        classe = {"feito": " feito", "agora": " agora", "erro": " erro"}.get(
-            str(estados.get(chave, "")), "")
-        dica = _dica(dica_do_aplicar) if chave == "aplicar" else ""
-        saida.append(f'<span class="etp{classe}"{dica}>{rotulo}</span>')
-    return f'<span class="etapas">{"".join(saida)}</span>'
-
-
-def _barra(pct: object, classe: str, dica: str = "", *, mostra: bool = True) -> str:
+def _barra(pct: object, dica: str = "") -> str:
     try:
         valor = max(0, min(100, round(float(str(pct)))))
     except (TypeError, ValueError):
         valor = 0
-    cheio = f'<span class="cheio" style="width:{valor}%"></span>' if mostra else ""
-    numero = f"{valor}%" if mostra else ""
-    return (f'<span class="and-barra{classe}"{_dica(dica)}><span class="trilho">{cheio}</span>'
-            f'<span class="n">{numero}</span></span>')
+    return (f'<span class="and-barra"{_dica(dica)}><span class="trilho">'
+            f'<span class="cheio" style="width:{valor}%"></span></span></span>')
+
+
+def _etapa_agora(etapas: object) -> str:
+    if not isinstance(etapas, dict):
+        return ""
+    return next((ETAPA_NA_DICA.get(str(k), str(k)) for k, v in etapas.items() if v == "agora"), "")
 
 
 def _linha_do_andamento(peca: dict[str, Any]) -> str:
+    """A linha do mapa, com o estado da fila: a barra só na peça em curso, o porquê na dica."""
     selo = str(peca.get("selo") or "fila")
-    classe_do_selo, texto = SELO_DO_ANDAMENTO.get(selo, ("fila", selo.upper()))
-    motivo = str(peca.get("motivo") or "") if selo == "falhou" else ""
-    na_fila = selo == "fila"
+    classe, estado = ESTADO_DO_ANDAMENTO.get(selo, ("fila", NA_FILA))
+    motivo = str(peca.get("motivo") or "")
+    if classe == "aplicando":
+        estado = _junto(estado, _etapa_agora(peca.get("etapas")))
+    elif classe in ("esperando", "falhou", "ok", "fila") and motivo:
+        estado = f"{estado}: {motivo}"
     de, para = str(peca.get("de") or ""), str(peca.get("para") or "")
     if peca.get("rotulo"):
-        ver = _e(peca["rotulo"])
+        ver = f'<span class="nv">{_e(peca["rotulo"])}</span>'
     elif de and para and de != para:
         ver = (f'{_e(versao_curta(de))}<span class="seta">→</span>'
                f'<span class="nv">{_e(versao_curta(para))}</span>')
     else:
         ver = f'<span class="nv">{_e(versao_curta(para or de))}</span>'
-    dica_do_aplicar = str(peca.get("dica_do_aplicar", ""))
-    contagens = [c for c in peca.get("contagens") or [] if isinstance(c, dict)]
-    if contagens and not na_fila:
-        barras = []
-        for c in contagens:
-            de_n, feitos = int(c.get("de") or 0), int(c.get("feitos") or 0)
-            pct = 100 if de_n == 0 else round(100 * feitos / de_n)
-            pronta = " pronta" if de_n and feitos >= de_n else ""
-            barras.append(f'<span class="and-barra{pronta}"><span class="qual">{_e(c.get("qual"))}'
-                          f'</span><span class="trilho"><span class="cheio" style="width:{pct}%">'
-                          f'</span></span><span class="n">{feitos}/{de_n}</span></span>')
-        barra = f'<span class="and-multi">{"".join(barras)}</span>'
-    else:
-        classe = {"pronta": " pronta", "falhou": " falhou"}.get(selo, "")
-        barra = _barra(peca.get("pct", 0), classe, motivo, mostra=not na_fila)
-    return (f'<div class="and-l{" na-fila" if na_fila else ""}">'
-            f'<span class="nome"{_dica(motivo)}>{_e(peca.get("nome"))}</span>'
-            f'<span class="ver">{ver}</span>'
-            f'{_etapas(peca.get("etapas") or {}, ETAPAS_NA_TELA, dica_do_aplicar)}'
-            f'{barra}<span class="selo {classe_do_selo}"{_dica(motivo)}>{texto}</span></div>')
+    contagens = _junto(*(f'{c.get("qual")} {c.get("feitos", 0)}/{c.get("de", 0)}'
+                         for c in peca.get("contagens") or [] if isinstance(c, dict)))
+    barra = _barra(peca.get("pct", 0), contagens) if classe == "aplicando" else ""
+    meio = f'<span class="mp-v">{barra or ver}</span>'
+    dica = _junto(_versao_inteira({"de": de, "para": para, "estado": "nova"}),
+                  str(peca.get("dica_do_aplicar") or ""))
+    return _linha(peca, classe, estado, meio, "", dica)
 
 
 def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
@@ -515,17 +441,9 @@ def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
     feitas, de, pct = int(total.get("feitas", 0)), int(total.get("de", len(pecas))), \
         int(total.get("pct", 0))
     falhas = int(total.get("falhas", 0))
-    erro = f'<span class="n erro">{falhas} falhou</span>' if falhas else "<span></span>"
     reinicio = andamento.get("reinicio") or {}
-    selo_r = str(reinicio.get("selo") or "fila")
-    classe_r, texto_r = SELO_DO_ANDAMENTO.get(selo_r, ("fila", selo_r.upper()))
-    fila_r = selo_r == "fila"
-    classe_da_barra = " pronta" if selo_r == "pronta" else ""
-    linha_r = (f'<div class="and-l reinicio{" na-fila" if fila_r else ""}">'
-               f'<span class="nome">Serviço</span><span class="ver"></span>'
-               f'{_etapas(reinicio.get("etapas") or {}, ETAPAS_DO_REINICIO, "")}'
-               f'{_barra(reinicio.get("pct", 0), classe_da_barra, mostra=not fila_r)}'
-               f'<span class="selo {classe_r}">{texto_r}</span></div>')
+    servico = {"id": "hefesto", "nome": "Serviço", "selo": reinicio.get("selo") or "fila",
+               "etapas": reinicio.get("etapas") or {}, "pct": reinicio.get("pct", 0)}
     botoes = [f'<button class="btn" data-gesto="atualizacoes-registro"{_dica(DICA_DO_REGISTRO)}>'
               'Registro</button>']
     if falhas:
@@ -540,11 +458,12 @@ def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
             f'<div class="tn-topo"><span class="tn-tit">Atualizações</span>'
             f'<button class="tn-x" data-gesto="atualizacoes-fechar"{_dica("Esconder")}>'
             f'&times;</button>'
-            f'</div><div class="tn-corpo"><div class="and-total"><span class="rot">Total</span>'
+            f'</div><div class="tn-corpo"><div class="and-total">'
             f'<span class="trilho"><span class="cheio" style="width:{pct}%"></span></span>'
-            f'<span class="n">{feitas} de {de} · {pct}%</span>{erro}</div>'
-            f'<div class="and-lista">{"".join(_linha_do_andamento(p) for p in pecas)}{linha_r}'
-            f'</div></div><div class="tn-rod">{"".join(botoes)}</div></div>')
+            f'<span class="n">{feitas} de {de}</span></div>'
+            f'<div class="mp-lista">{"".join(_linha_do_andamento(p) for p in pecas)}'
+            f'{_linha_do_andamento(servico)}</div></div>'
+            f'<div class="tn-rod">{"".join(botoes)}</div></div>')
 
 
 def quantas_novas(conferencia: dict[str, Any]) -> int:

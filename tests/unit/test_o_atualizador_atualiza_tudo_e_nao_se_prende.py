@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import runpy
 import socket
 import subprocess
@@ -401,3 +402,58 @@ def test_o_python_que_nao_monta_um_pacote_sobe_os_outros(
     assert set(pa._atrasadas()) == {"evdev", "rich"}
     assert at._de_para(at.Versoes("", "6", rotulo="6 pacotes")) == "6 pacotes", \
         "o registro dizia «python:  -> 6 pronta»"
+
+
+def test_a_tela_diz_o_estado_por_glifo_e_o_porque_so_na_dica() -> None:
+    """A tela: uma linha por peça, o estado no glifo (Atualizado, Esperando, Aplicando, Falhou) e
+    o motivo só na dica; nenhum vermelho no selo da falha."""
+    from hefesto_dualsense4unix.interface import atualizacoes as tela
+
+    andamento = {"pecas": [
+        {"id": "proton", "nome": "GE-Proton", "de": "11-7", "para": "11-12", "selo": "esperando",
+         "motivo": "a Steam está aberta", "etapas": {}, "pct": 40},
+        {"id": "portal", "nome": "Portal do COSMIC", "de": "1.11.0", "para": "1.11.0",
+         "selo": "atualizada", "motivo": "a versão de cima já traz a cura", "etapas": {},
+         "pct": 100},
+        {"id": "gdk", "nome": "GameInput", "de": "antiga", "para": "1", "selo": "falhou",
+         "motivo": "HTTP Error 404", "etapas": {"baixar": "erro"}, "pct": 0},
+        {"id": "python", "nome": "Python", "rotulo": "2 pacotes", "selo": "instalando",
+         "etapas": {"baixar": "feito", "instalar": "agora"}, "pct": 55}],
+        "total": {"feitas": 1, "de": 4, "pct": 50, "falhas": 1},
+        "reinicio": {"selo": "atualizada", "etapas": {}, "pct": 0}}
+    corpo = tela.html_do_andamento(andamento, rodando=True)
+    assert '<span class="mp-s esperando" data-dica="Esperando: a Steam está aberta">◷</span>' \
+        in corpo
+    assert '<span class="mp-s ok" data-dica="Atualizado: a versão de cima já traz a cura">✓' \
+        in corpo
+    assert '<span class="mp-s falhou" data-dica="Falhou: HTTP Error 404">!</span>' in corpo
+    assert '<span class="mp-s aplicando" data-dica="Aplicando · Instalar">●</span>' in corpo
+    sem_dica = re.sub(r'data-dica="[^"]*"', "", corpo)
+    for texto in ("a Steam está aberta", "já traz a cura", "404", "FALHOU", "PRONTA"):
+        assert texto not in sem_dica, texto
+    regra = re.search(r"\.hef-atualiza \.mp-s\.revisar,\.hef-atualiza \.mp-s\.falhou\{[^}]*\}",
+                      tela.CSS)
+    assert regra and "--red" not in regra.group(0)
+    assert corpo.count('class="mp-l ') == 5
+
+
+def test_depois_da_rodada_o_atualizar_tudo_se_apaga() -> None:
+    """Idempotente na tela: com tudo em dia, o «Atualizar tudo» não tem o que soltar."""
+    from hefesto_dualsense4unix.interface import atualizacoes as tela
+
+    d = _Diario()
+    versao = {"a": "1.0"}
+
+    def instalar(_p: at.Passo, _x: dict[str, Any]) -> None:
+        versao["a"] = "1.1"
+
+    a = at.Peca("proton", "GE-Proton", "dica", "todos",
+                lambda _rede: at.Versoes(versao["a"], "1.1"), None, instalar, None)
+    at.conferir(rede=True, lista=[a])
+    assert tela.ids_para_atualizar(at.ler_a_conferencia()) == ["proton"]
+    _rodar([a], tela.ids_para_atualizar(at.ler_a_conferencia()))
+    conferencia = at.ler_a_conferencia()
+    assert tela.ids_para_atualizar(conferencia) == [] and d.feito == []
+    corpo = tela.html_da_pergunta(conferencia, {"sozinho": False}, jogo_aberto=False)
+    assert 'class="btn principal apagado" data-gesto="atualizacoes-atualizar">Atualizar tudo ' \
+        '<span class="n">0</span>' in corpo

@@ -492,6 +492,9 @@ def abertura(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """``abrir`` inteiro, com tudo que abre janela de mentira, anotando a ordem."""
     ordem: list[str] = []
     from hefesto_dualsense4unix.app.actions import atos_da_bandeja
+    from hefesto_dualsense4unix.app.actions import atualizador
+
+    monkeypatch.setattr(atualizador, "conferir_ao_abrir", lambda *_a, **_k: None)
 
     monkeypatch.setattr(ai, "garantir_tela_de_mentira", lambda: None)
     monkeypatch.setattr(ai, "diario_da_janela", lambda: None)
