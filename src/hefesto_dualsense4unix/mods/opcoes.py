@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import json
-from collections.abc import Collection, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
 
 NOME_DO_ARQUIVO = "opcoes.json"
 TETO_DO_ARQUIVO = 1024 * 1024
+PROFUNDIDADE_MAXIMA = 32
 
 Formas = dict[str, list[list[float]]]
 Valor = str | bool | float | list[str] | dict[str, str] | Formas
@@ -331,12 +332,29 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
     return certo
 
 
+def _profundidade(valor: Any) -> int:
+    """Quantos níveis de lista e objeto ``valor`` aninha, contados sem recursão."""
+    maior = 0
+    pilha: list[tuple[Any, int]] = [(valor, 1)]
+    while pilha:
+        atual, nivel = pilha.pop()
+        if isinstance(atual, dict):
+            filhos: Iterable[Any] = atual.values()
+        elif isinstance(atual, list):
+            filhos = atual
+        else:
+            continue
+        maior = max(maior, nivel)
+        pilha.extend((filho, nivel + 1) for filho in filhos)
+    return maior
+
+
 def _texto_que_se_le(valores: dict[str, Any]) -> bytes | None:
-    """O JSON que o ``ler`` relê, ou ``None``: fundo demais para o ``dump`` ou além do teto."""
-    try:
-        dados = (json.dumps(valores, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    except RecursionError:
+    """O JSON que o ``ler`` relê, ou ``None``: fundo além de ``PROFUNDIDADE_MAXIMA`` ou além do
+    teto. A profundidade se mede antes do ``dump``, que não chega a descer pelo fundo."""
+    if _profundidade(valores) > PROFUNDIDADE_MAXIMA:
         return None
+    dados = (json.dumps(valores, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     return dados if len(dados) <= TETO_DO_ARQUIVO else None
 
 
