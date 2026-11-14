@@ -15,7 +15,9 @@ MORDIDAS (14/11/2026): devolver a regra que pintava a peça na cor do tipo quand
 reprova `test_toda_tecla_tem_o_miolo_pintado`; tirar o `ps_entre_os_analogicos` reprova
 `test_o_ps_fica_no_meio_dos_analogicos`; tirar o `css_do_contraste` reprova o contraste no White;
 deixar o filtro do touchpad reprova `test_em_repouso_nada_acende`; e tirar o `:focus` dos gatilhos
-reprova `test_so_acende_a_peca_em_uso`; tirar o `css_da_zona` reprova `test_em_repouso_nada_acende`.
+reprova `test_so_acende_a_peca_em_uso`; tirar o `css_da_zona` reprova `test_em_repouso_nada_acende`;
+tirar o `sem_letra_solta` (o «R» solto, escuro por baixo do glifo do analógico direito) reprova
+`test_nenhum_glifo_solto`.
 """
 from __future__ import annotations
 
@@ -113,6 +115,9 @@ MEDIR = r"""
   leitura.glifo_fora = com_peca.filter(p => !['share', 'options'].includes(p))
     .filter(p => !dentro(caixa(id('mp-glifo-' + p)), caixa(id('mp-' + p).querySelector(fundo))));
   leitura.glifos = glifos;
+  leitura.letra_solta = [...ds.querySelectorAll('text')]
+    .filter(t => !t.closest('[id^="mp-glifo-"]') && getComputedStyle(t).display !== 'none')
+    .map(t => t.textContent.trim());
   const u = $('.usar-em');
   u.innerHTML = '<span class="jogo">' + NOME + '</span><button class="jogo mais">+ Jogo</button>';
   const j = u.querySelector('.jogo'), rg = document.createRange(); rg.selectNodeContents(j);
@@ -236,6 +241,7 @@ def test_o_ps_fica_no_meio_dos_analogicos(lido: dict[str, Any]) -> None:
 def test_nenhum_glifo_solto(lido: dict[str, Any]) -> None:
     assert lido["glifo_fora"] == [], f"glifo fora da tecla: {lido['glifo_fora']}"
     assert "mic" not in lido["glifos"], "o glifo do microfone voltou a ficar solto embaixo do PS"
+    assert lido["letra_solta"] == [], f"letra fora de glifo no desenho: {lido['letra_solta']}"
 
 
 def test_o_usar_em_cabe_numa_linha(lido: dict[str, Any]) -> None:

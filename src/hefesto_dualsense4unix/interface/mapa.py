@@ -343,8 +343,27 @@ def glifo_no_centro(pid, nome, cx, cy, lado):
             f'scale({lado / 32:.6f})">{corpo}</g>')
 
 
+def sem_letra_solta(x):
+    """O grupo dos glifos sem a letra que não mora em glifo nenhum (o «R» solto do desenho, que
+    saía escuro por baixo do glifo do analógico direito)."""
+    ini = x.index('<g id="mp-grupo-glifos"')
+    fim = bloco_fim(x, ini)
+    prof, soltas = 0, []
+    for m in re.finditer(r"<g\b|</g>|\s*<text\b[^>]*>[^<]*</text>", x[ini:fim]):
+        if m.group(0) == "<g":
+            prof += 1
+        elif m.group(0) == "</g>":
+            prof -= 1
+        elif prof == 1:
+            soltas.append((ini + m.start(), ini + m.end()))
+    for a, b in reversed(soltas):
+        x = x[:a] + x[b:]
+    return x
+
+
 def glifos_do_mapa(x, pecas, centro_do_ps):
     """Troca os glifos do direcional e do PS pelos da lista, centrados; tira o que sobra fora da tecla."""
+    x = sem_letra_solta(x)
     novos = []
     for pid, (ox, oy, lado) in GLIFO_NO_CENTRO.items():
         x = _sem_o_grupo(x, f"mp-glifo-{pid}")
