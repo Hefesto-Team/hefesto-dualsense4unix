@@ -38,6 +38,9 @@ class Lar:
         self.dkms = base / "dkms"
         self.assets = base / "assets"
         self.cache = base / "cache"
+        self.apt = base / "apt"
+        self.apt.mkdir()
+        (self.apt / cc.PREF_DO_PORTAL).write_text("Package: xdg-desktop-portal-cosmic\n")
         (self.assets / "bluez-backport").mkdir(parents=True)
         (self.assets / "bluez-backport" / "BASELINE").write_text(
             f"MARCA_hefesto-0002={MARCA_BZ}\n")
@@ -80,7 +83,8 @@ class Lar:
 
     def maquina(self) -> cc.Maquina:
         return cc.Maquina(sys_module=self.sys_module, dkms=self.dkms, assets=self.assets,
-                          cache=self.cache, kernel=KERNEL, comando=self.comando)
+                          cache=self.cache, kernel=KERNEL, comando=self.comando,
+                          preferencias_do_apt=self.apt)
 
 
 @pytest.fixture
@@ -142,6 +146,15 @@ def test_o_portal_sem_a_marca_cai_e_o_que_ja_cura_de_cima_vale(lar: Lar) -> None
     curadas.parent.mkdir(parents=True)
     curadas.write_text("1.12.0~1794000000~24.04~aaaaaaa\n")
     assert cc.portal(lar.maquina()).estado == cc.VALE
+
+
+def test_o_portal_da_distro_sem_o_com_tela_nao_se_aplica_e_nao_vira_aviso(lar: Lar) -> None:
+    lar.portal.write_bytes(b"\x7fELF portal do pop")
+    lar.dpkg["xdg-desktop-portal-cosmic"] = "1.12.0~1794000000~24.04~aaaaaaa"
+    assert cc.portal(lar.maquina()).dica == "Rode o instalador do Hefesto de novo, com --com-tela."
+    (lar.apt / cc.PREF_DO_PORTAL).unlink()
+    assert cc.portal(lar.maquina()).estado == cc.NAO_SE_APLICA
+    assert cc.linhas_de_aviso(cc.curas(lar.maquina())) == []
 
 
 def test_outra_distro_nao_se_aplica_nunca_vermelho(lar: Lar, tmp_path: Path) -> None:

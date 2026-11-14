@@ -6288,6 +6288,7 @@ _portal_cosmic_em_execucao() {
 check_o_portal_de_captura_do_cosmic() {
     local baseline="${HEFESTO_DOCTOR_PORTAL_BASELINE:-${ROOT_DIR}/assets/portal-cosmic-backport/BASELINE}"
     local curadas="${HEFESTO_DOCTOR_PORTAL_CURADAS:-${HOME}/.cache/hefesto-dualsense4unix/portal-cosmic-backport/A-ORIGEM-JA-CURA.txt}"
+    local pref="${HEFESTO_DOCTOR_PORTAL_PREF:-/etc/apt/preferences.d/hefesto-portal-cosmic}"
     local pacote unidade oficial pr sufixo marca ver de_cima programa vivo arq valor troca=0
     [[ -r "${baseline}" ]] || return 0
     command -v dpkg-query >/dev/null 2>&1 || return 0
@@ -6331,8 +6332,10 @@ check_o_portal_de_captura_do_cosmic() {
         info "o portal de captura em execução é o ${vivo}, de outro projeto: o doctor não sabe se ele traz o cosmic-protocols#${pr}"
     elif [[ -r "${curadas}" ]] && grep -q -x -F -- "${de_cima}" "${curadas}" 2>/dev/null; then
         pass "o portal de captura ${ver} já traz de cima a cura do cosmic-protocols#${pr}"
+    elif [[ ! -e "${pref}" && "${ver}" != *~hefesto* ]]; then
+        info "o portal de captura (${vivo}, pacote ${ver}) é o da distribuição, sem o cosmic-protocols#${pr}: o «Ver a tela» do Modo imersão pode cair — $(conselho_de_instalacao --com-tela) para a casa construir o corrigido"
     else
-        warn "o portal de captura (${vivo}, pacote ${ver}) não traz o cosmic-protocols#${pr}: o compartilhamento de tela cai com «create_frame sent before the previous frame was destroyed», e o portal aborta — $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f-ter constrói e instala o portal corrigido: scripts/construir_portal_cosmic_backport.sh, pela receita em docs/usage/receita-backport-portal-cosmic.md)")"
+        warn "o portal de captura (${vivo}, pacote ${ver}) não traz o cosmic-protocols#${pr}: o compartilhamento de tela cai com «create_frame sent before the previous frame was destroyed», e o portal aborta — $(conselho_de_instalacao --com-tela)$(so_no_checkout "(o passo 3f-ter constrói e instala o portal corrigido: scripts/construir_portal_cosmic_backport.sh, pela receita em docs/usage/receita-backport-portal-cosmic.md)")"
     fi
 }
 

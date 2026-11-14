@@ -687,6 +687,7 @@ def _doctor(
     curadas: str = "",
     dropins: dict[str, str] | None = None,
     pid_vivo: int | None = None,
+    com_a_pref: bool = True,
 ) -> str:
     maquina = MAQUINA_COSMIC if maquina is None else maquina
     lar = tmp_path / "lar"
@@ -704,7 +705,10 @@ def _doctor(
         "XDG_CURRENT_DESKTOP": desktop,
         "HEFESTO_DOCTOR_SYSTEMD_DO_SISTEMA": str(tmp_path / "sistema-vazio"),
         "HEFESTO_DOCTOR_PORTAL_CURADAS": str(tmp_path / "curadas.txt"),
+        "HEFESTO_DOCTOR_PORTAL_PREF": str(tmp_path / "pref-do-portal"),
     }
+    if com_a_pref:
+        (tmp_path / "pref-do-portal").write_text("Package: xdg-desktop-portal-cosmic\n")
     original = (ASSETS / "BASELINE").read_text(encoding="utf-8")
     de_mentira = original.replace(
         f"PORTAL_EXEC={BASE['PORTAL_EXEC']}\n",
@@ -742,7 +746,14 @@ def test_o_doctor_avisa_o_portal_de_cima_sem_a_marca(tmp_path: Path) -> None:
     )
     assert "[WARN] o portal de captura" in saida, saida
     assert "não traz o cosmic-protocols#92" in saida, saida
+    assert "--com-tela" in saida, saida
     assert "WARNS=1" in saida, saida
+
+
+def test_o_doctor_so_informa_o_portal_da_distro_sem_o_com_tela(tmp_path: Path) -> None:
+    saida = _doctor(tmp_path, programa=b"\x7fELF portal do pop", com_a_pref=False)
+    assert "[WARN]" not in saida and "WARNS=0" in saida, saida
+    assert "é o da distribuição" in saida and "--com-tela" in saida, saida
 
 
 def test_o_doctor_aprova_a_versao_de_cima_que_ja_cura(tmp_path: Path) -> None:

@@ -28,6 +28,8 @@ CAIU = "caiu"
 NAO_SE_APLICA = "nao_se_aplica"
 ROTULO = "Correções do sistema"
 RODE_O_INSTALADOR = "Rode o instalador do Hefesto de novo."
+RODE_O_INSTALADOR_COM_A_TELA = "Rode o instalador do Hefesto de novo, com --com-tela."
+PREF_DO_PORTAL = "hefesto-portal-cosmic"
 REINICIE = "Reinicie o computador."
 FONTE_BOM = ("cache", "fabrica")
 PRAZO_S = 10.0
@@ -58,6 +60,7 @@ class Maquina:
 
     sys_module: Path = Path("/sys/module")
     dkms: Path = Path("/var/lib/dkms")
+    preferencias_do_apt: Path = Path("/etc/apt/preferences.d")
     assets: Path = Path(__file__).resolve().parents[3] / "assets"
     cache: Path | None = None
     kernel: str = ""
@@ -224,7 +227,9 @@ def som(maquina: Maquina | None = None) -> Cura:
 
 
 def portal(maquina: Maquina | None = None) -> Cura:
-    """A MARCA_ do cosmic-protocols#92 está no portal de captura do COSMIC?"""
+    """A MARCA_ do cosmic-protocols#92 está no portal de captura do COSMIC? O portal da casa é
+    opt-in (``install.sh --com-tela``): sem a preferência do apt dele e sem a versão da casa,
+    não se aplica."""
     maquina = maquina or MAQUINA
     base = _baseline(maquina.assets / "portal-cosmic-backport" / "BASELINE")
     pacote, programa = base.get("PORTAL_PACOTE", ""), base.get("PORTAL_EXEC", "")
@@ -242,9 +247,11 @@ def portal(maquina: Maquina | None = None) -> Cura:
             .read_text(encoding="utf-8")
     if tem or de_cima in curadas.splitlines():
         return Cura("portal", "Portal de captura", VALE)
+    if "~hefesto" not in versao and not (maquina.preferencias_do_apt / PREF_DO_PORTAL).exists():
+        return Cura("portal", "Portal de captura", NAO_SE_APLICA)
     return Cura("portal", "Portal de captura", CAIU,
                 "A captura de tela voltou à da distribuição, sem a correção do Hefesto",
-                RODE_O_INSTALADOR)
+                RODE_O_INSTALADOR_COM_A_TELA)
 
 
 def curas(maquina: Maquina | None = None) -> list[Cura]:
