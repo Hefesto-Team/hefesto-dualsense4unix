@@ -57,7 +57,21 @@ def single_instance_name() -> str:
     return "daemon-" + sock.removesuffix(".sock")
 
 
+VEZ_DO_GIL_S = 0.0005
+
+
+def ajustar_a_vez_do_gil() -> None:
+    """O fio que espera o GIL o recebe em meio milissegundo, e não nos 5 ms do CPython.
+
+    O leitor de cada controle escreve no pad a cada 4 ms e retoma o GIL várias vezes por report;
+    com a vez de 5 ms e o resto do serviço ocupado, o pad parava até 57 ms
+    (O-CONTROLE-NAO-ESPERA-A-VEZ-DO-GIL-01).
+    """
+    sys.setswitchinterval(VEZ_DO_GIL_S)
+
+
 def run_daemon(poll_hz: int | None = None) -> int:
+    ajustar_a_vez_do_gil()
     from hefesto_dualsense4unix.utils import sd_notify
 
     sd_notify.guardar_o_soquete()
@@ -129,4 +143,4 @@ def run_daemon(poll_hz: int | None = None) -> int:
         return 130
 
 
-__all__ = ["build_controller", "run_daemon", "single_instance_name"]
+__all__ = ["ajustar_a_vez_do_gil", "build_controller", "run_daemon", "single_instance_name"]
