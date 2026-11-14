@@ -1607,18 +1607,64 @@ def _declara_linux(oslist: str) -> bool:
     return "linux" in {p.strip().lower() for p in oslist.split(",")}
 
 
+_EXECUTAVEL_DO_WINDOWS = (".exe", ".bat", ".cmd")
+
+
+def executaveis_no_linux_do_appinfo(
+    appinfo: Path, appids: Collection[str]
+) -> dict[str, tuple[str, ...]] | None:
+    """Os executáveis que a Steam oferece no Linux: `config/launch` sem `oslist` ou com `linux`."""
+    if not appids:
+        return {}
+    achados: dict[str, tuple[str, ...]] = {}
+    try:
+        for appid, vdf in _vdfs_do_appinfo(appinfo, appids):
+            lancamentos = _chave(_chave(_chave(vdf, "appinfo"), "config"), "launch")
+            executaveis: list[str] = []
+            if isinstance(lancamentos, dict):
+                for entrada in lancamentos.values():
+                    executavel = _chave(entrada, "executable")
+                    if not isinstance(executavel, str) or not executavel:
+                        continue
+                    oslist = _chave(_chave(entrada, "config"), "oslist")
+                    if isinstance(oslist, str) and oslist.strip() and not _declara_linux(oslist):
+                        continue
+                    executaveis.append(executavel)
+            achados[appid] = tuple(executaveis)
+    except ValueError:
+        return None
+    return achados
+
+
+def _oferece_o_windows_no_linux(executaveis: Sequence[str]) -> bool:
+    return any(
+        e.replace("\\", "/").rsplit("/", 1)[-1].lower().endswith(_EXECUTAVEL_DO_WINDOWS)
+        for e in executaveis
+    )
+
+
 def jogos_sem_entrada_nova(
     appids: Sequence[str], *, home: Path | None = None
 ) -> set[str]:
-    """Dos `appids`, os que NÃO ganham entrada nova por jogo no pino."""
+    """Dos `appids`, os que NÃO ganham entrada nova por jogo no pino.
+
+    Nativo é o jogo que declara `linux` e cujo lançamento oferecido no Linux não é executável do
+    Windows: um `.exe` sem `oslist` a Steam roda sem Proton, e o jogo não abre (Sinful Survivors,
+    14/11/2026).
+    """
     raiz = default_steam_root(home)
-    oslist = oslist_do_appinfo(raiz / "appcache" / "appinfo.vdf", appids)
+    appinfo = raiz / "appcache" / "appinfo.vdf"
+    oslist = oslist_do_appinfo(appinfo, appids)
+    linux = [a for a in appids if oslist is not None and _declara_linux(oslist.get(a) or "")]
+    lancamentos = executaveis_no_linux_do_appinfo(appinfo, linux) if linux else {}
     compatdatas = [lib / "compatdata" for lib in _pastas_de_biblioteca(home)]
     nativos: set[str] = set()
     for appid in appids:
         declarado = oslist.get(appid) if oslist is not None else None
         if declarado is not None:
-            if _declara_linux(declarado):
+            if _declara_linux(declarado) and not _oferece_o_windows_no_linux(
+                (lancamentos or {}).get(appid, ())
+            ):
                 nativos.add(appid)
             continue
         if not any((c / appid).is_dir() for c in compatdatas):
