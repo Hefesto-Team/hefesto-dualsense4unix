@@ -45,7 +45,7 @@ PECAS_DA_LUZ = (
     "src/hefesto_dualsense4unix/daemon/subsystems/luz_do_mic.py",
 )
 
-BIBLIOTECAS_NAO_DECLARADAS = (
+BIBLIOTECAS_DE_AUDIO_DE_FORA = (
     "numpy",
     "scipy",
     "sounddevice",
@@ -334,10 +334,10 @@ def test_a_regua_de_imports_le_stdlib_puro_como_limpo(tmp_path: Path) -> None:
 
 def test_a_regua_de_imports_pega_a_biblioteca_nao_declarada(tmp_path: Path) -> None:
     """A outra metade, e é a que paga a dívida do `playwright`."""
-    alvo = tmp_path / "peca_com_numpy.py"
-    alvo.write_text("import numpy as np\nimport struct\n", encoding="utf-8")
-    assert "numpy" in _imports_de_terceiros(alvo), (
-        "a régua deixou o `numpy` passar. Ele NÃO está no `pyproject.toml` — "
+    alvo = tmp_path / "peca_com_scipy.py"
+    alvo.write_text("import scipy as sp\nimport struct\n", encoding="utf-8")
+    assert "scipy" in _imports_de_terceiros(alvo), (
+        "a régua deixou o `scipy` passar. Ele NÃO está no `pyproject.toml` — "
         "vive só no `~/.local/lib` desta máquina de teste — e uma árvore criada com "
         '`pip install -e ".[dev,emulation,cosmic]"` nasceria com a luz morta'
     )
@@ -345,13 +345,18 @@ def test_a_regua_de_imports_pega_a_biblioteca_nao_declarada(tmp_path: Path) -> N
 
 def test_nenhum_modulo_do_src_importa_biblioteca_de_audio_nao_declarada() -> None:
     """A régua que já está VIVA hoje, antes de as PEÇAS A/B/C existirem."""
+    declaradas = {
+        re.split(r"[<>=!~\[ ;]", x, maxsplit=1)[0].strip().lower().replace("-", "_")
+        for x in PYPROJECT["project"].get("dependencies", [])
+    }
+    nao_declaradas = set(BIBLIOTECAS_DE_AUDIO_DE_FORA) - declaradas
     achados: list[str] = []
     for caminho in sorted((RAIZ / "src").rglob("*.py")):
         try:
             terceiros = _imports_de_terceiros(caminho)
         except SyntaxError:  # pragma: no cover
             continue
-        for nome in sorted(terceiros & set(BIBLIOTECAS_NAO_DECLARADAS)):
+        for nome in sorted(terceiros & nao_declaradas):
             achados.append(f"{caminho.relative_to(RAIZ)}: {nome}")
     assert not achados, (
         "biblioteca NÃO declarada no `pyproject.toml` importada em `src/`: "
