@@ -33,6 +33,7 @@
   .ds #mp-corpo .peca,.ds #mp-corpo .corpo{stroke:var(--z-casca-solida, var(--sem-plastico));stroke-width:.42;
                       stroke-linejoin:round;stroke-linecap:round}
   .ds .oculta{opacity:0 !important}
+  .ds .peca.cheia{stroke:var(--app-bg);stroke-width:.4;paint-order:stroke}
   .sobre{color:var(--branco);opacity:1;pointer-events:none;--pena:.35}
   .sobre *:not([fill="none"]):not(title){fill:currentColor !important}
   .sobre [stroke]:not([stroke="none"]){stroke:currentColor !important}
@@ -73,10 +74,11 @@
   .mc-perfil[data-fixo="sim"] .nome2{color:var(--fg)}
   .etiqueta{height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:12px;font-size:11.5px;
     font-weight:600;color:var(--app-bg);background:var(--tipo)}
-  .usar-em{display:flex;gap:6px;align-items:center;margin-left:auto}
-  .usar-em .jogo{height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:13px;font-size:11.5px;
-    border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f)}
-  .usar-em .mais{border-style:dashed;color:var(--fg);border-color:var(--border-forte);cursor:pointer}
+  .usar-em{display:flex;gap:6px;align-items:center;margin-left:auto;min-width:0}
+  .usar-em .jogo{height:26px;display:block;line-height:24px;padding:0 10px;border-radius:13px;font-size:11.5px;
+    border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f);
+    min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usar-em .mais{flex:none;border-style:dashed;color:var(--fg);border-color:var(--border-forte);cursor:pointer}
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:306px minmax(0,1fr) 306px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
@@ -155,132 +157,214 @@
   .btn2.amarelo{border-color:#f1fa8c;color:#f1fa8c}
   .btn2.roxo{border-color:var(--purple);color:var(--purple)}
 
-  .mc .mapa:has(.item-circle[data-estado~="muda"]) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
+  .mc svg.ds .sobre{color:var(--branco) !important}
+  .mc svg.ds[data-colorway="white"] .s-circle,.mc svg.ds[data-colorway="white"] .s-cross,.mc svg.ds[data-colorway="white"] .s-dpad_down,.mc svg.ds[data-colorway="white"] .s-dpad_left,.mc svg.ds[data-colorway="white"] .s-dpad_right,.mc svg.ds[data-colorway="white"] .s-dpad_up,.mc svg.ds[data-colorway="white"] .s-l1,.mc svg.ds[data-colorway="white"] .s-l2,.mc svg.ds[data-colorway="white"] .s-r1,.mc svg.ds[data-colorway="white"] .s-r2,.mc svg.ds[data-colorway="white"] .s-square,.mc svg.ds[data-colorway="white"] .s-triangle{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="starlight-blue"] .s-circle,.mc svg.ds[data-colorway="starlight-blue"] .s-cross,.mc svg.ds[data-colorway="starlight-blue"] .s-dpad_down,.mc svg.ds[data-colorway="starlight-blue"] .s-dpad_left,.mc svg.ds[data-colorway="starlight-blue"] .s-dpad_right,.mc svg.ds[data-colorway="starlight-blue"] .s-dpad_up,.mc svg.ds[data-colorway="starlight-blue"] .s-l1,.mc svg.ds[data-colorway="starlight-blue"] .s-l2,.mc svg.ds[data-colorway="starlight-blue"] .s-r1,.mc svg.ds[data-colorway="starlight-blue"] .s-r2,.mc svg.ds[data-colorway="starlight-blue"] .s-square,.mc svg.ds[data-colorway="starlight-blue"] .s-triangle{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="sterling-silver"] .s-circle,.mc svg.ds[data-colorway="sterling-silver"] .s-cross,.mc svg.ds[data-colorway="sterling-silver"] .s-dpad_down,.mc svg.ds[data-colorway="sterling-silver"] .s-dpad_left,.mc svg.ds[data-colorway="sterling-silver"] .s-dpad_right,.mc svg.ds[data-colorway="sterling-silver"] .s-dpad_up,.mc svg.ds[data-colorway="sterling-silver"] .s-l1,.mc svg.ds[data-colorway="sterling-silver"] .s-l2,.mc svg.ds[data-colorway="sterling-silver"] .s-r1,.mc svg.ds[data-colorway="sterling-silver"] .s-r2,.mc svg.ds[data-colorway="sterling-silver"] .s-square,.mc svg.ds[data-colorway="sterling-silver"] .s-triangle{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="hyperpop-remix-green"] .s-circle,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-cross,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-dpad_down,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-dpad_left,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-dpad_right,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-dpad_up,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-square,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-stick_l,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-stick_r,.mc svg.ds[data-colorway="hyperpop-remix-green"] .s-triangle{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="30th-anniversary"] .s-l1,.mc svg.ds[data-colorway="30th-anniversary"] .s-l2,.mc svg.ds[data-colorway="30th-anniversary"] .s-mic,.mc svg.ds[data-colorway="30th-anniversary"] .s-options,.mc svg.ds[data-colorway="30th-anniversary"] .s-ps,.mc svg.ds[data-colorway="30th-anniversary"] .s-r1,.mc svg.ds[data-colorway="30th-anniversary"] .s-r2,.mc svg.ds[data-colorway="30th-anniversary"] .s-share{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="god-of-war-ragnarok"] .s-mic,.mc svg.ds[data-colorway="god-of-war-ragnarok"] .s-options,.mc svg.ds[data-colorway="god-of-war-ragnarok"] .s-ps,.mc svg.ds[data-colorway="god-of-war-ragnarok"] .s-share{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="astro-bot"] .s-circle,.mc svg.ds[data-colorway="astro-bot"] .s-cross,.mc svg.ds[data-colorway="astro-bot"] .s-dpad_down,.mc svg.ds[data-colorway="astro-bot"] .s-dpad_left,.mc svg.ds[data-colorway="astro-bot"] .s-dpad_right,.mc svg.ds[data-colorway="astro-bot"] .s-dpad_up,.mc svg.ds[data-colorway="astro-bot"] .s-l1,.mc svg.ds[data-colorway="astro-bot"] .s-l2,.mc svg.ds[data-colorway="astro-bot"] .s-r1,.mc svg.ds[data-colorway="astro-bot"] .s-r2,.mc svg.ds[data-colorway="astro-bot"] .s-square,.mc svg.ds[data-colorway="astro-bot"] .s-triangle{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="the-last-of-us"] .s-l1,.mc svg.ds[data-colorway="the-last-of-us"] .s-l2,.mc svg.ds[data-colorway="the-last-of-us"] .s-mic,.mc svg.ds[data-colorway="the-last-of-us"] .s-options,.mc svg.ds[data-colorway="the-last-of-us"] .s-ps,.mc svg.ds[data-colorway="the-last-of-us"] .s-r1,.mc svg.ds[data-colorway="the-last-of-us"] .s-r2,.mc svg.ds[data-colorway="the-last-of-us"] .s-share,.mc svg.ds[data-colorway="the-last-of-us"] .s-stick_l,.mc svg.ds[data-colorway="the-last-of-us"] .s-stick_r{color:var(--app-bg) !important}
+  .mc svg.ds[data-colorway="god-of-war-20th"] .s-circle,.mc svg.ds[data-colorway="god-of-war-20th"] .s-cross,.mc svg.ds[data-colorway="god-of-war-20th"] .s-dpad_down,.mc svg.ds[data-colorway="god-of-war-20th"] .s-dpad_left,.mc svg.ds[data-colorway="god-of-war-20th"] .s-dpad_right,.mc svg.ds[data-colorway="god-of-war-20th"] .s-dpad_up,.mc svg.ds[data-colorway="god-of-war-20th"] .s-l1,.mc svg.ds[data-colorway="god-of-war-20th"] .s-l2,.mc svg.ds[data-colorway="god-of-war-20th"] .s-mic,.mc svg.ds[data-colorway="god-of-war-20th"] .s-options,.mc svg.ds[data-colorway="god-of-war-20th"] .s-ps,.mc svg.ds[data-colorway="god-of-war-20th"] .s-r1,.mc svg.ds[data-colorway="god-of-war-20th"] .s-r2,.mc svg.ds[data-colorway="god-of-war-20th"] .s-share,.mc svg.ds[data-colorway="god-of-war-20th"] .s-square,.mc svg.ds[data-colorway="god-of-war-20th"] .s-triangle{color:var(--app-bg) !important}
   .mc .mapa:has(.item-circle[data-estado~="on"]) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-circle[data-estado~="on"]) svg.ds .s-circle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-circle[data-estado~="pisca"]) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-circle[data-estado~="pisca"]) svg.ds .s-circle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-circle:hover) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-circle:hover) svg.ds .s-circle{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-circle:focus) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-circle:focus) svg.ds .s-circle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-circle:hover) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-circle:hover) svg.ds .s-circle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-circle:hover) .item-circle{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-circle:hover) .s-circle, .mc .mapa:has(.a-circle:hover) .s-circle{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-cross[data-estado~="muda"]) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-cross[data-estado~="on"]) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-cross[data-estado~="on"]) svg.ds .s-cross{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-cross[data-estado~="pisca"]) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-cross[data-estado~="pisca"]) svg.ds .s-cross{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-cross:hover) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-cross:hover) svg.ds .s-cross{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-cross:focus) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-cross:focus) svg.ds .s-cross{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-cross:hover) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-cross:hover) svg.ds .s-cross{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-cross:hover) .item-cross{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-cross:hover) .s-cross, .mc .mapa:has(.a-cross:hover) .s-cross{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-dpad_down[data-estado~="muda"]) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-dpad_down[data-estado~="on"]) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_down[data-estado~="on"]) svg.ds .s-dpad_down{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_down[data-estado~="pisca"]) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_down[data-estado~="pisca"]) svg.ds .s-dpad_down{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_down:hover) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_down:hover) svg.ds .s-dpad_down{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-dpad_down:focus) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_down:focus) svg.ds .s-dpad_down{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_down:hover) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-dpad_down:hover) svg.ds .s-dpad_down{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_down:hover) .item-dpad_down{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-dpad_down:hover) .s-dpad_down, .mc .mapa:has(.a-dpad_down:hover) .s-dpad_down{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-dpad_left[data-estado~="muda"]) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-dpad_left[data-estado~="on"]) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_left[data-estado~="on"]) svg.ds .s-dpad_left{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_left[data-estado~="pisca"]) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_left[data-estado~="pisca"]) svg.ds .s-dpad_left{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_left:hover) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_left:hover) svg.ds .s-dpad_left{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-dpad_left:focus) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_left:focus) svg.ds .s-dpad_left{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_left:hover) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-dpad_left:hover) svg.ds .s-dpad_left{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_left:hover) .item-dpad_left{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-dpad_left:hover) .s-dpad_left, .mc .mapa:has(.a-dpad_left:hover) .s-dpad_left{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-dpad_right[data-estado~="muda"]) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-dpad_right[data-estado~="on"]) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_right[data-estado~="on"]) svg.ds .s-dpad_right{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_right[data-estado~="pisca"]) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_right[data-estado~="pisca"]) svg.ds .s-dpad_right{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_right:hover) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_right:hover) svg.ds .s-dpad_right{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-dpad_right:focus) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_right:focus) svg.ds .s-dpad_right{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_right:hover) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-dpad_right:hover) svg.ds .s-dpad_right{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_right:hover) .item-dpad_right{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-dpad_right:hover) .s-dpad_right, .mc .mapa:has(.a-dpad_right:hover) .s-dpad_right{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-dpad_up[data-estado~="muda"]) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-dpad_up[data-estado~="on"]) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_up[data-estado~="on"]) svg.ds .s-dpad_up{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_up[data-estado~="pisca"]) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_up[data-estado~="pisca"]) svg.ds .s-dpad_up{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-dpad_up:hover) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_up:hover) svg.ds .s-dpad_up{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-dpad_up:focus) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-dpad_up:focus) svg.ds .s-dpad_up{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_up:hover) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-dpad_up:hover) svg.ds .s-dpad_up{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-dpad_up:hover) .item-dpad_up{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-dpad_up:hover) .s-dpad_up, .mc .mapa:has(.a-dpad_up:hover) .s-dpad_up{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-l1[data-estado~="muda"]) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-l1[data-estado~="on"]) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l1[data-estado~="on"]) svg.ds .s-l1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-l1[data-estado~="pisca"]) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l1[data-estado~="pisca"]) svg.ds .s-l1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-l1:hover) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l1:hover) svg.ds .s-l1{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-l1:focus) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l1:focus) svg.ds .s-l1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-l1:hover) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-l1:hover) svg.ds .s-l1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-l1:hover) .item-l1{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-l1:hover) .s-l1, .mc .mapa:has(.a-l1:hover) .s-l1{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-l2[data-estado~="muda"]) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-l2[data-estado~="on"]) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l2[data-estado~="on"]) svg.ds .s-l2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-l2[data-estado~="pisca"]) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l2[data-estado~="pisca"]) svg.ds .s-l2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-l2:hover) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l2:hover) svg.ds .s-l2{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-l2:focus) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-l2:focus) svg.ds .s-l2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-l2:hover) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-l2:hover) svg.ds .s-l2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-l2:hover) .item-l2{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-l2:hover) .s-l2, .mc .mapa:has(.a-l2:hover) .s-l2{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-options[data-estado~="muda"]) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-options[data-estado~="on"]) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-options[data-estado~="on"]) svg.ds .s-options{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-options[data-estado~="pisca"]) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-options[data-estado~="pisca"]) svg.ds .s-options{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-options:hover) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-options:hover) svg.ds .s-options{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-options:focus) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-options:focus) svg.ds .s-options{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-options:hover) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-options:hover) svg.ds .s-options{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-options:hover) .item-options{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-options:hover) .s-options, .mc .mapa:has(.a-options:hover) .s-options{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-ps[data-estado~="muda"]) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-ps[data-estado~="on"]) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-ps[data-estado~="on"]) svg.ds .s-ps{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-ps[data-estado~="pisca"]) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-ps[data-estado~="pisca"]) svg.ds .s-ps{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-ps:hover) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-ps:hover) svg.ds .s-ps{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-ps:focus) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-ps:focus) svg.ds .s-ps{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-ps:hover) #mp-ps :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-ps:hover) svg.ds .s-ps{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-ps:hover) .item-ps{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-ps:hover) .s-ps, .mc .mapa:has(.a-ps:hover) .s-ps{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-r1[data-estado~="muda"]) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-r1[data-estado~="on"]) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r1[data-estado~="on"]) svg.ds .s-r1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-r1[data-estado~="pisca"]) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r1[data-estado~="pisca"]) svg.ds .s-r1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-r1:hover) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r1:hover) svg.ds .s-r1{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-r1:focus) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r1:focus) svg.ds .s-r1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-r1:hover) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-r1:hover) svg.ds .s-r1{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-r1:hover) .item-r1{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-r1:hover) .s-r1, .mc .mapa:has(.a-r1:hover) .s-r1{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-r2[data-estado~="muda"]) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-r2[data-estado~="on"]) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r2[data-estado~="on"]) svg.ds .s-r2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-r2[data-estado~="pisca"]) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r2[data-estado~="pisca"]) svg.ds .s-r2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-r2:hover) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r2:hover) svg.ds .s-r2{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-r2:focus) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-r2:focus) svg.ds .s-r2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-r2:hover) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-r2:hover) svg.ds .s-r2{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-r2:hover) .item-r2{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-r2:hover) .s-r2, .mc .mapa:has(.a-r2:hover) .s-r2{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-share[data-estado~="muda"]) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-share[data-estado~="on"]) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-share[data-estado~="on"]) svg.ds .s-share{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-share[data-estado~="pisca"]) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-share[data-estado~="pisca"]) svg.ds .s-share{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-share:hover) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-share:hover) svg.ds .s-share{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-share:focus) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-share:focus) svg.ds .s-share{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-share:hover) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-share:hover) svg.ds .s-share{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-share:hover) .item-share{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-share:hover) .s-share, .mc .mapa:has(.a-share:hover) .s-share{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-square[data-estado~="muda"]) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-square[data-estado~="on"]) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-square[data-estado~="on"]) svg.ds .s-square{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-square[data-estado~="pisca"]) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-square[data-estado~="pisca"]) svg.ds .s-square{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-square:hover) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-square:hover) svg.ds .s-square{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-square:focus) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-square:focus) svg.ds .s-square{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-square:hover) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-square:hover) svg.ds .s-square{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-square:hover) .item-square{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-square:hover) .s-square, .mc .mapa:has(.a-square:hover) .s-square{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-stick_l[data-estado~="muda"]) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-stick_l[data-estado~="on"]) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_l[data-estado~="on"]) svg.ds .s-stick_l{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-stick_l[data-estado~="pisca"]) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_l[data-estado~="pisca"]) svg.ds .s-stick_l{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-stick_l:hover) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_l:hover) svg.ds .s-stick_l{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-stick_l:focus) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_l:focus) svg.ds .s-stick_l{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-stick_l:hover) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-stick_l:hover) svg.ds .s-stick_l{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-stick_l:hover) .item-stick_l{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-stick_l:hover) .s-stick_l, .mc .mapa:has(.a-stick_l:hover) .s-stick_l{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-stick_r[data-estado~="muda"]) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-stick_r[data-estado~="on"]) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_r[data-estado~="on"]) svg.ds .s-stick_r{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-stick_r[data-estado~="pisca"]) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_r[data-estado~="pisca"]) svg.ds .s-stick_r{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-stick_r:hover) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_r:hover) svg.ds .s-stick_r{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-stick_r:focus) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-stick_r:focus) svg.ds .s-stick_r{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-stick_r:hover) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-stick_r:hover) svg.ds .s-stick_r{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-stick_r:hover) .item-stick_r{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-stick_r:hover) .s-stick_r, .mc .mapa:has(.a-stick_r:hover) .s-stick_r{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-touchpad[data-estado~="muda"]) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-touchpad[data-estado~="on"]) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-touchpad[data-estado~="on"]) svg.ds .s-touchpad{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-touchpad[data-estado~="pisca"]) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-touchpad[data-estado~="pisca"]) svg.ds .s-touchpad{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-touchpad:hover) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-touchpad:hover) svg.ds .s-touchpad{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-touchpad:focus) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-touchpad:focus) svg.ds .s-touchpad{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-touchpad:hover) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-touchpad:hover) svg.ds .s-touchpad{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-touchpad:hover) .item-touchpad{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-touchpad:hover) .s-touchpad, .mc .mapa:has(.a-touchpad:hover) .s-touchpad{color:var(--fg) !important;opacity:1}
-  .mc .mapa:has(.item-triangle[data-estado~="muda"]) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--tipo) !important;stroke:var(--tipo) !important}
   .mc .mapa:has(.item-triangle[data-estado~="on"]) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-triangle[data-estado~="on"]) svg.ds .s-triangle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-triangle[data-estado~="pisca"]) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-triangle[data-estado~="pisca"]) svg.ds .s-triangle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.item-triangle:hover) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-triangle:hover) svg.ds .s-triangle{color:var(--app-bg) !important;opacity:1}
+  .mc .mapa:has(.item-triangle:focus) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.item-triangle:focus) svg.ds .s-triangle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-triangle:hover) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .mc .mapa:has(.a-triangle:hover) svg.ds .s-triangle{color:var(--app-bg) !important;opacity:1}
   .mc .mapa:has(.a-triangle:hover) .item-triangle{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
-  .mc .mapa:has(.item-triangle:hover) .s-triangle, .mc .mapa:has(.a-triangle:hover) .s-triangle{color:var(--fg) !important;opacity:1}
 </style>
 <style id="base-comum">
 [data-dica]{cursor:help}
@@ -696,57 +780,57 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <title>Botões da face</title>
     <g id="mp-triangle" class="z-botoes_face" data-entrada="triangle">
       <title>Triângulo</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 37.463 C 97.075 37.463 95.873 39.546 96.835 41.213 C 97.282 41.987 98.107 42.463 99 42.463 C 100.925 42.463 102.127 40.38 101.165 38.713 C 100.718 37.939 99.893 37.463 99 37.463 M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/>
     </g>
     <g id="mp-circle" class="z-botoes_face" data-entrada="circle">
       <title>Círculo</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 107 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
     </g>
     <g id="mp-square" class="z-botoes_face" data-entrada="square">
       <title>Quadrado</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 91 45.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
     </g>
     <g id="mp-cross" class="z-botoes_face" data-entrada="cross">
       <title>Cruz</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 99 53.463 a 2.5 2.5 0 1 0 0 5 a 2.5 2.5 0 0 0 0 -5 M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/>
     </g>
   </g>
   <g id="mp-grupo-direcional">
     <title>Direcional</title>
     <g id="mp-dpad_up" class="z-dpad" data-entrada="dpad_up">
       <title>D-pad cima</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 28.635 45.843 C 28.833 46.054 29.167 46.054 29.365 45.843 L 31.365 43.71 C 31.452 43.617 31.5 43.495 31.5 43.368 L 31.5 39.963 C 31.5 39.687 31.276 39.463 31 39.463 L 27 39.463 C 26.724 39.463 26.5 39.687 26.5 39.963 L 26.5 43.368 C 26.5 43.495 26.548 43.617 26.635 43.71 L 28.635 45.843 Z M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/>
     </g>
     <g id="mp-dpad_right" class="z-dpad" data-entrada="dpad_right">
       <title>D-pad direita</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 32.12 48.598 a 0.5 0.5 0 0 0 0 0.73 l 2.134 2 a 0.5 0.5 0 0 0 0.342 0.135 H 38 a 0.5 0.5 0 0 0 0.5 -0.5 v -4 a 0.5 0.5 0 0 0 -0.5 -0.5 h -3.404 a 0.5 0.5 0 0 0 -0.342 0.135 Z M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/>
     </g>
     <g id="mp-dpad_down" class="z-dpad" data-entrada="dpad_down">
       <title>D-pad baixo</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 29.365 52.083 a 0.5 0.5 0 0 0 -0.73 0 l -2 2.134 a 0.5 0.5 0 0 0 -0.135 0.342 v 3.404 a 0.5 0.5 0 0 0 0.5 0.5 h 4 a 0.5 0.5 0 0 0 0.5 -0.5 V 54.56 a 0.5 0.5 0 0 0 -0.135 -0.342 Z M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/>
     </g>
     <g id="mp-dpad_left" class="z-dpad" data-entrada="dpad_left">
       <title>D-pad esquerda</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 25.88 49.328 C 26.091 49.13 26.091 48.796 25.88 48.598 L 23.747 46.598 C 23.654 46.511 23.531 46.463 23.404 46.463 L 20 46.463 C 19.724 46.463 19.5 46.687 19.5 46.963 L 19.5 50.963 C 19.5 51.239 19.724 51.463 20 51.463 L 23.404 51.463 C 23.531 51.463 23.654 51.415 23.747 51.328 L 25.88 49.328 Z M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/>
     </g>
   </g>
   <g id="mp-grupo-ombros">
     <title>Ombros e gatilhos</title>
     <g id="mp-r1" class="z-gatilhos" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)">
       <title>R1</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
     </g>
     <g id="mp-r2" class="z-gatilhos" data-entrada="r2" data-feature="gatilho-adaptativo-direito">
       <title>R2 — gatilho adaptativo</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
     </g>
     <g id="mp-l1" class="z-gatilhos" transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
       <title>L1</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
     </g>
     <g id="mp-l2" class="z-gatilhos" transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l2" data-feature="gatilho-adaptativo-esquerdo">
       <title>L2 — gatilho adaptativo</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
     </g>
   <g id="mp-corpo" class="z-casca" data-feature="chassi">
       <title>Corpo</title>
@@ -765,13 +849,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   </g>
   <g id="mp-grupo-centro" transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071)" style="">
     <title>Centro</title>
-    <g id="mp-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#mp-outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
+    <g id="mp-touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
       <title>Touchpad</title>
-      <path class="peca" fill="#3a3f4b" fill-rule="evenodd" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593 M 64.869 28.103 C 60.045 28.103 51.391 28.6 47.098 29.583 C 46.263 29.773 45.521 29.954 44.88 30.185 C 44.241 30.416 43.736 30.687 43.358 31.039 C 42.647 31.705 42.262 32.792 42.646 34.965 L 43.008 37.015 C 43.829 41.666 44.558 45.796 45.061 48.382 C 45.282 49.521 45.83 50.525 46.749 51.25 C 47.67 51.974 49.006 52.449 50.855 52.449 L 59.826 52.449 L 76.951 52.449 C 78.308 52.449 79.69 52.053 80.818 51.12 C 81.942 50.19 82.856 48.693 83.225 46.409 L 83.227 46.405 C 84 41.631 84.675 37.462 85.157 33.988 C 85.284 33.072 85.371 32.238 85 31.508 C 84.643 30.804 83.784 30.064 81.675 29.583 C 76.52 28.404 69.905 28.103 64.869 28.103" style="stroke-width: 1.97183px;"/>
+      <path class="peca cheia" fill="#3a3f4b" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593" style="stroke-width: 1.97183px;"/>
     </g>
     <g id="mp-ps" class="z-painel" data-entrada="ps" transform="matrix(1, 0, 0, 1, 0, -1)">
       <title>PS</title>
-      <circle class="peca sem-tinta" fill="none" stroke="none" cx="64.03" cy="64.4" r="3.4"/>
+      <circle class="peca cheia" cx="64.0858" cy="65.1588" r="3.4"/>
     </g>
     <g id="mp-mic" class="z-painel" data-entrada="mic" data-feature="microfone-mudo" transform="matrix(0.839587, 0, 0, 0.839587, 10.326056, 10.035711)" style="opacity: 0.63;">
       <title>Microfone (mudo)</title>
@@ -858,22 +942,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </g>
-    <g id="mp-glifo-dpad_up" class="sobre s-dpad_up" style="--lado: 4.400; transform-origin: 67.4445px 60.9015px" transform="matrix(0, 0.1375, -0.1375, 0, -38.275467, -21.807503)">
-      <title>Glifo — D-pad cima</title>
-      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(0, -1, 1, 0, -69.842484, -293.381805)"/>
-    </g>
-    <g id="mp-glifo-dpad_right" class="sobre s-dpad_right" style="--lado: 4.400; transform-origin: -52.4882px 19.437px" transform="matrix(0, -0.1375, 0.1375, 0, 90.97998, 30.745468)">
-      <title>Glifo — D-pad direita</title>
-      <path d="M 41.312 -12.224 L 48.417 -3.046 L 34.206 -3.046 L 41.312 -12.224 Z" bx:shape="triangle 34.206 -12.224 14.211 9.178 0.5 0 1@a0fe0643" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(-1, 0, 0, -1, -82.623001, 15.27)"/>
-    </g>
-    <g id="mp-glifo-dpad_down" class="sobre s-dpad_down" style="--lado: 4.400; transform-origin: 46.109px -25.7827px;" transform="matrix(0, -0.1375, 0.1375, 0, -17.013714, 82.614662)">
-      <title>Glifo — D-pad baixo</title>
-      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(0, -1, 1, 0, -105.723465, -381.295654)"/>
-    </g>
-    <g id="mp-glifo-dpad_left" class="sobre s-dpad_left" style="--lado:4.400" transform="matrix(0.1375, 0, 0, 0.1375, 21.094742, 46.772293)">
-      <title>Glifo — D-pad esquerda</title>
-      <path d="M 151.833 350.924 L 158.938 360.102 L 144.727 360.102 L 151.833 350.924 Z" bx:shape="triangle 144.727 350.924 14.211 9.178 0.5 0 1@f1e95a2c" style="stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%" transform="matrix(0, -1, 1, 0, -151.568924, -340.16214)"/>
-    </g>
+
+
+
+
     <g id="mp-glifo-l1" class="sobre s-l1" style="--lado: 6.311; transform-origin: 16px 16px;" transform="matrix(0.195302, -0.027448, 0.027448, 0.195302, 15.730036, 12.819365)">
       <title>Glifo — L1</title>
       <text style="dominant-baseline: central; font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre; transform-box: fill-box; transform-origin: 50% 50%" x="16" y="16" transform="matrix(0.999391, 0.034899, -0.034899, 0.999391, 0.000011, -0.000007)" dy="-0.2em">L1</text>
@@ -907,19 +979,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
     </g>
-    <g id="mp-glifo-ps" class="sobre s-ps" style="--lado: 8.600;" transform="matrix(0.351567, 0, 0, 0.351567, 59.971592, 56.378807)">
-      <title>Glifo — PS</title>
-      <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-        <path fill="currentColor" d="M 2.265 23.706 C 1.447 24.279 1.598 25.266 3.466 25.884 C 5.333 26.501 7.504 26.629 9.414 26.286 C 9.359 26.286 9.523 26.286 9.414 26.286 L 9.414 24.336 L 7.558 24.967 C 6.849 25.195 6.139 25.253 5.43 25.082 C 4.884 24.909 4.993 24.565 5.648 24.279 L 9.414 22.902 L 9.414 20.782 L 4.175 22.674 C 3.52 22.902 2.864 23.247 2.265 23.706 Z M 14.925 15.107 L 14.925 20.668 C 17.162 21.814 18.909 20.668 18.909 17.686 C 18.909 14.648 17.872 13.272 14.871 12.184 C 13.288 11.61 11.651 11.094 10.014 10.75 L 10.014 27.317 L 13.834 28.521 L 13.834 14.591 C 13.834 13.961 13.834 13.502 14.271 13.673 C 14.871 13.846 14.925 14.477 14.925 15.107 Z M 22.019 22.387 C 20.437 21.814 18.746 21.584 17.108 21.756 C 16.199 21.816 15.346 22.087 14.489 22.387 L 14.489 24.623 L 18.036 23.247 C 18.746 23.017 19.455 22.96 20.164 23.132 C 20.71 23.305 20.601 23.648 19.946 23.935 L 14.489 26.056 L 14.489 28.234 L 22.019 25.31 C 22.566 25.082 23.056 24.794 23.493 24.336 C 23.875 23.763 23.711 22.96 22.019 22.387 Z"/>
-      </g>
-    </g>
-    <g id="mp-glifo-mic" class="sobre s-mic" style="--lado: 3.000" transform="matrix(0.0682, 0, 0, 0.0682, 62.941559, 69.658447)">
-      <title>Glifo — Microfone</title>
-      <rect x="16.67" y="5.588" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-      <path d="M 12.688 17 C 12.688 22.333 15.688 25 21.688 25 C 27.688 25 30.688 22.333 30.688 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <line x1="21.67" y1="26.588" x2="21.67" y2="29.367" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <line x1="16.688" y1="30" x2="26.688" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </g>
+
+
   </g>
   <g id="mp-grupo-luzes" style="filter: none" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>Luzes</title>
@@ -956,6 +1017,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <title>Glifo — Analógico direito</title>
       <text style="dominant-baseline: central; font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre" x="15.971" y="17.025">R</text>
     </g>
+<g id="mp-glifo-dpad_up" class="sobre s-dpad_up" style="--lado:4.4" transform="translate(26.8000 38.9928) scale(0.137500)"><polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/></g><g id="mp-glifo-dpad_down" class="sobre s-dpad_down" style="--lado:4.4" transform="translate(26.8000 54.5272) scale(0.137500)"><polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/></g><g id="mp-glifo-dpad_left" class="sobre s-dpad_left" style="--lado:4.4" transform="translate(19.0328 46.7600) scale(0.137500)"><polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/></g><g id="mp-glifo-dpad_right" class="sobre s-dpad_right" style="--lado:4.4" transform="translate(34.5672 46.7600) scale(0.137500)"><polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/></g><g id="mp-glifo-ps" class="sobre s-ps" style="--lado:5.6" transform="translate(61.3043 60.8800) scale(0.175000)"><g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
+    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
+  </g></g>
   <g id="mp-feat-haptica" class="oculta" data-feature="haptica"><path class="peca" d="M48.00 25.70 L49.00 25.87 L50.00 26.02 L51.00 26.12 L52.00 26.15 L53.00 26.12 L54.00 26.02 L55.00 25.87 L56.00 25.70 L57.00 25.53 L58.00 25.38 L59.00 25.28 L60.00 25.25 L61.00 25.28 L62.00 25.38 L63.00 25.53 L64.00 25.70 L65.00 25.87 L66.00 26.02 L67.00 26.12 L68.00 26.15 L69.00 26.12 L70.00 26.02 L71.00 25.87 L72.00 25.70 L73.00 25.53 L74.00 25.38 L75.00 25.28 L76.00 25.25 L77.00 25.28 L78.00 25.38 L79.00 25.53 L80.00 25.70 L80.00 26.12 L79.00 25.95 L78.00 25.80 L77.00 25.70 L76.00 25.67 L75.00 25.70 L74.00 25.80 L73.00 25.95 L72.00 26.12 L71.00 26.29 L70.00 26.44 L69.00 26.54 L68.00 26.57 L67.00 26.54 L66.00 26.44 L65.00 26.29 L64.00 26.12 L63.00 25.95 L62.00 25.80 L61.00 25.70 L60.00 25.67 L59.00 25.70 L58.00 25.80 L57.00 25.95 L56.00 26.12 L55.00 26.29 L54.00 26.44 L53.00 26.54 L52.00 26.57 L51.00 26.54 L50.00 26.44 L49.00 26.29 L48.00 26.12 Z"/><path class="peca" d="M48.00 24.20 L49.00 24.37 L50.00 24.52 L51.00 24.62 L52.00 24.65 L53.00 24.62 L54.00 24.52 L55.00 24.37 L56.00 24.20 L57.00 24.03 L58.00 23.88 L59.00 23.78 L60.00 23.75 L61.00 23.78 L62.00 23.88 L63.00 24.03 L64.00 24.20 L65.00 24.37 L66.00 24.52 L67.00 24.62 L68.00 24.65 L69.00 24.62 L70.00 24.52 L71.00 24.37 L72.00 24.20 L73.00 24.03 L74.00 23.88 L75.00 23.78 L76.00 23.75 L77.00 23.78 L78.00 23.88 L79.00 24.03 L80.00 24.20 L80.00 24.62 L79.00 24.45 L78.00 24.30 L77.00 24.20 L76.00 24.17 L75.00 24.20 L74.00 24.30 L73.00 24.45 L72.00 24.62 L71.00 24.79 L70.00 24.94 L69.00 25.04 L68.00 25.07 L67.00 25.04 L66.00 24.94 L65.00 24.79 L64.00 24.62 L63.00 24.45 L62.00 24.30 L61.00 24.20 L60.00 24.17 L59.00 24.20 L58.00 24.30 L57.00 24.45 L56.00 24.62 L55.00 24.79 L54.00 24.94 L53.00 25.04 L52.00 25.07 L51.00 25.04 L50.00 24.94 L49.00 24.79 L48.00 24.62 Z"/></g>
   <g class="alvo a-feat-rumble-esquerdo"><g transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)"><path d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975"/></g></g>
   <g class="alvo a-feat-rumble-direito"><g transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)"><path d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895"/></g></g>
@@ -973,7 +1037,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <g class="alvo a-circle"><path d="M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
   <g class="alvo a-square"><path d="M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
   <g class="alvo a-cross"><path d="M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
-  <g class="alvo a-ps"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(1, 0, 0, 1, 0, -1)"><circle cx="64.03" cy="64.4" r="3.4"/></g></g>
+  <g class="alvo a-ps"><g transform="matrix(1.036309, 0, 0, 0.991123, -2.292725, 0.09071) matrix(1, 0, 0, 1, 0, -1)"><circle cx="64.0858" cy="65.1588" r="3.4"/></g></g>
   <g class="alvo a-r2"><path d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g>
   <g class="alvo a-l2"><g transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)"><path d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
   <g class="alvo a-alto-falante"><g transform="matrix(1, 0, 0, 1, 0.420661, 0)"><circle cx="60.20" cy="55.9" r="0.52"/><circle cx="62.10" cy="55.9" r="0.52"/><circle cx="64.00" cy="55.9" r="0.52"/><circle cx="65.90" cy="55.9" r="0.52"/><circle cx="67.80" cy="55.9" r="0.52"/><circle cx="61.15" cy="57.7" r="0.52"/><circle cx="63.05" cy="57.7" r="0.52"/><circle cx="64.95" cy="57.7" r="0.52"/><circle cx="66.85" cy="57.7" r="0.52"/></g></g>

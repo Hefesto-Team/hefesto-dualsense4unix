@@ -235,6 +235,150 @@ def sobe_a_letra(svg_txt):
 
 
 
+TECLAS_CHEIAS = ("triangle", "circle", "square", "cross", "dpad_up", "dpad_right", "dpad_down",
+                 "dpad_left", "l1", "r1", "l2", "r2", "touchpad")
+
+GLIFO_NO_CENTRO = {"dpad_up": (0, -1, 4.4), "dpad_down": (0, 1, 4.4),
+                   "dpad_left": (-1, 0, 4.4), "dpad_right": (1, 0, 4.4), "ps": (0, 0, 5.6)}
+
+PUXA_PARA_FORA = 0.18
+
+GLIFO_FORA_DO_MAPA = ("mic",)
+
+FUNDO_ESCURO, FUNDO_CLARO = "var(--branco)", "var(--app-bg)"
+
+
+def _afim(texto):
+    """A matriz (a, b, c, d, e, f) de um atributo `transform` inteiro, na ordem do SVG."""
+    m = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    for nome, args in re.findall(r"(matrix|translate|scale|rotate)\s*\(([^)]*)\)", texto):
+        v = [float(n) for n in re.findall(r"-?[\d.]+(?:e-?\d+)?", args)]
+        if nome == "matrix":
+            f = tuple(v)
+        elif nome == "translate":
+            f = (1, 0, 0, 1, v[0], v[1] if len(v) > 1 else 0)
+        elif nome == "scale":
+            f = (v[0], 0, 0, v[1] if len(v) > 1 else v[0], 0, 0)
+        else:
+            r = math.radians(v[0])
+            f = (math.cos(r), math.sin(r), -math.sin(r), math.cos(r), 0, 0)
+        a, b, c, d, e, g = m
+        m = (a * f[0] + c * f[1], b * f[0] + d * f[1], a * f[2] + c * f[3],
+             b * f[2] + d * f[3], a * f[4] + c * f[5] + e, b * f[4] + d * f[5] + g)
+    return m
+
+
+def _cadeia(svg_txt, marca):
+    """A matriz que leva o `<g>` de `marca` (com a dele) ao espaço da raiz do desenho."""
+    i = svg_txt.index(marca)
+    ini = svg_txt.rindex("<g ", 0, i)
+    fim = bloco_fim(svg_txt, ini)
+    textos, k = [], ini + 3
+    while True:
+        p = svg_txt.rfind("<g ", 0, k)
+        if p < 0:
+            break
+        if bloco_fim(svg_txt, p) >= fim:
+            t = re.search(r'\stransform="([^"]*)"', svg_txt[p:svg_txt.index(">", p)])
+            if t:
+                textos.insert(0, t.group(1))
+        k = p
+    return _afim(" ".join(textos))
+
+
+def _aplica(m, x, y):
+    return m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]
+
+
+def _desfaz(m, x, y):
+    det = m[0] * m[3] - m[1] * m[2]
+    x, y = x - m[4], y - m[5]
+    return (m[3] * x - m[2] * y) / det, (m[0] * y - m[1] * x) / det
+
+
+def _centro(peca):
+    return ((float(peca["x1"]) + float(peca["x2"])) / 2, (float(peca["y1"]) + float(peca["y2"])) / 2)
+
+
+def teclas_cheias(x):
+    """Cada tecla pintada por inteiro (o contorno de fora), e não só o anel: a tecla tem miolo, e
+    nenhuma traz contorno de cor própria (o do touchpad era rosa em todo modelo)."""
+    for pid in TECLAS_CHEIAS:
+        ini = x.rindex("<g ", 0, x.index(f'id="mp-{pid}"'))
+        fim = bloco_fim(x, ini)
+        k = [-1]
+
+        def cheia(mm, pid=pid, k=k):
+            k[0] += 1
+            d = subpath_externo(mm.group(2), pid, k[0])
+            inicio = mm.group(1).replace('class="peca"', 'class="peca cheia"', 1)
+            return re.sub(r'\sfill-rule="evenodd"', "", inicio) + f'd="{d}"'
+
+        bloco = re.sub(r'(<path\b[^>]*?\sclass="peca"[^>]*?)d="([^"]*)"', cheia, x[ini:fim])
+        bloco = re.sub(r"filter:\s*url\([^)]*\);?\s*", "", bloco, count=1)
+        x = x[:ini] + bloco + x[fim:]
+    return x.replace('class="peca sem-tinta" fill="none" stroke="none" ', 'class="peca cheia" ', 1)
+
+
+def ps_entre_os_analogicos(x, pecas):
+    """A bola do PS no ponto do meio dos dois analógicos, nos dois eixos."""
+    (lx, ly), (rx, ry) = _centro(pecas["stick_l"]), _centro(pecas["stick_r"])
+    m = _cadeia(x, 'id="mp-ps"')
+    bola = re.search(r'(<circle class="peca cheia"[^>]*?)cx="([\d.]+)" cy="([\d.]+)"', x)
+    if not bola or 'id="mp-ps"' not in x[x.rindex("<g ", 0, bola.start()):bola.start()]:
+        raise SystemExit("ERRO: a bola do PS sumiu do desenho")
+    cx, cy = _desfaz(m, (lx + rx) / 2, (ly + ry) / 2)
+    return x[:bola.start()] + f'{bola.group(1)}cx="{cx:.4f}" cy="{cy:.4f}"' + x[bola.end():], \
+        _aplica(m, cx, cy)
+
+
+def glifo_no_centro(pid, nome, cx, cy, lado):
+    """O glifo da linha (o mesmo arquivo), com o centro da tinta no centro da tecla."""
+    tx, ty = TINTA.get(nome, (16, 16))
+    corpo = re.sub(r"^<svg\b[^>]*>|</svg>$", "", glifo(nome)).strip()
+    if not corpo:
+        raise SystemExit(f"ERRO: o glifo {nome!r} sumiu de assets/glyphs")
+    return (f'<g id="mp-glifo-{pid}" class="sobre s-{pid}" style="--lado:{lado}" '
+            f'transform="translate({cx - tx * lado / 32:.4f} {cy - ty * lado / 32:.4f}) '
+            f'scale({lado / 32:.6f})">{corpo}</g>')
+
+
+def glifos_do_mapa(x, pecas, centro_do_ps):
+    """Troca os glifos do direcional e do PS pelos da lista, centrados; tira o que sobra fora da tecla."""
+    novos = []
+    for pid, (ox, oy, lado) in GLIFO_NO_CENTRO.items():
+        x = _sem_o_grupo(x, f"mp-glifo-{pid}")
+        cx, cy = centro_do_ps if pid == "ps" else _centro(pecas[pid])
+        p = pecas[pid]
+        cx += ox * PUXA_PARA_FORA * (float(p["x2"]) - float(p["x1"]))
+        cy += oy * PUXA_PARA_FORA * (float(p["y2"]) - float(p["y1"]))
+        novos.append(glifo_no_centro(pid, p["glifo"], cx, cy, lado))
+    for pid in GLIFO_FORA_DO_MAPA:
+        x = _sem_o_grupo(x, f"mp-glifo-{pid}")
+    return x.replace("</svg>", "".join(novos) + "\n</svg>", 1)
+
+
+def _luz(hexa):
+    r, g, b = (int(hexa.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in (r, g, b)]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def css_do_contraste():
+    """A cor de cada glifo contra a tecla que o carrega, em cada modelo: o claro sobre o escuro."""
+    svg = SVG.read_text()
+    zona_de = {pid: z for pid, z in re.findall(r'<g id="([a-z0-9_-]+)" class="z-([a-z_]+)"', svg)}
+    regras = ["  .mc svg.ds .sobre{color:%s !important}" % FUNDO_ESCURO]
+    for cw, corpo in re.findall(r'svg\[data-colorway="([^"]+)"\]\{([^}]*)\}', svg):
+        cores = dict(re.findall(r"--z-([a-z_]+):(#[0-9a-fA-F]{6})", corpo))
+        claras = sorted(pid for pid in set(re.findall(r'id="glifo-([a-z0-9_]+)"', svg))
+                        if _luz(cores.get(zona_de.get(pid, "casca-solida"), "#000000")) > 0.35)
+        if claras:
+            alvo = ",".join(f'.mc svg.ds[data-colorway="{cw}"] .s-{p}' for p in claras)
+            regras.append(f"  {alvo}{{color:{FUNDO_CLARO} !important}}")
+    return "\n".join(regras)
+
+
 def controle(pecas):
     """O desenho — que É o próprio SVG — com os alvos do ponteiro por cima."""
     x = sobe_a_letra(SVG.read_text())
@@ -281,6 +425,9 @@ def controle(pecas):
         bloco = x[i0:j0]
         x = x[:i0] + re.sub(r'\sstyle="([^"]*)"', _sem_cor, bloco) + x[j0:]
 
+    por_id = {p["id"]: p for p in pecas}
+    x, centro_do_ps = ps_entre_os_analogicos(teclas_cheias(x), por_id)
+    x = glifos_do_mapa(x, por_id, centro_do_ps)
     x = x.replace("</svg>", ondas_da_haptica() + "\n</svg>", 1)
     alvos = []
     for p in pecas:
@@ -350,6 +497,7 @@ CSS_BASE = """
   .ds #mp-corpo .peca,.ds #mp-corpo .corpo{stroke:var(--z-casca-solida, var(--sem-plastico));stroke-width:.42;
                       stroke-linejoin:round;stroke-linecap:round}
   .ds .oculta{opacity:0 !important}
+  .ds .peca.cheia{stroke:var(--app-bg);stroke-width:.4;paint-order:stroke}
   .sobre{color:var(--branco);opacity:1;pointer-events:none;--pena:.35}
   .sobre *:not([fill="none"]):not(title){fill:currentColor !important}
   .sobre [stroke]:not([stroke="none"]){stroke:currentColor !important}
@@ -389,10 +537,11 @@ CSS_TELA = """
   .mc-perfil[data-fixo="sim"] .nome2{color:var(--fg)}
   .etiqueta{height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:12px;font-size:11.5px;
     font-weight:600;color:var(--app-bg);background:var(--tipo)}
-  .usar-em{display:flex;gap:6px;align-items:center;margin-left:auto}
-  .usar-em .jogo{height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:13px;font-size:11.5px;
-    border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f)}
-  .usar-em .mais{border-style:dashed;color:var(--fg);border-color:var(--border-forte);cursor:pointer}
+  .usar-em{display:flex;gap:6px;align-items:center;margin-left:auto;min-width:0}
+  .usar-em .jogo{height:26px;display:block;line-height:24px;padding:0 10px;border-radius:13px;font-size:11.5px;
+    border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f);
+    min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usar-em .mais{flex:none;border-style:dashed;color:var(--fg);border-color:var(--border-forte);cursor:pointer}
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:306px minmax(0,1fr) 306px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
@@ -476,18 +625,18 @@ _PINTA = ":is(.peca, rect, circle, path, ellipse){fill:var(--%s) !important;stro
 
 
 def css_das_pecas(pecas):
+    """A peça acende em rosa (com o glifo escuro por cima) só enquanto é usada: o botão apertado,
+    a linha escolhida, em foco ou sob o ponteiro, e a peça sob o ponteiro no desenho."""
     regras = []
     for i in pecas:
-        alvo = f"#mp-{i} {_PINTA % ('tipo', 'tipo')}"
-        rosa = f"#mp-{i} {_PINTA % ('pink', 'pink')}"
-        regras.append(f'.mc .mapa:has(.item-{i}[data-estado~="muda"]) {alvo}')
-        for gatilho in ('[data-estado~="on"]', '[data-estado~="pisca"]', ":hover"):
-            regras.append(f".mc .mapa:has(.item-{i}{gatilho}) {rosa}")
-        regras.append(f".mc .mapa:has(.a-{i}:hover) {rosa}")
+        quando = [f".mc .mapa:has(.item-{i}{g})" for g in
+                  ('[data-estado~="on"]', '[data-estado~="pisca"]', ":hover", ":focus")]
+        quando.append(f".mc .mapa:has(.a-{i}:hover)")
+        for q in quando:
+            regras.append(f"{q} #mp-{i} {_PINTA % ('pink', 'pink')}")
+            regras.append(f"{q} svg.ds .s-{i}{{color:{FUNDO_CLARO} !important;opacity:1}}")
         regras.append(f".mc .mapa:has(.a-{i}:hover) .item-{i}"
                       "{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}")
-        regras.append(f".mc .mapa:has(.item-{i}:hover) .s-{i}, .mc .mapa:has(.a-{i}:hover) .s-{i}"
-                      "{color:var(--fg) !important;opacity:1}")
     return "\n".join("  " + r for r in regras)
 
 
@@ -768,6 +917,7 @@ def main():
 <meta charset="utf-8">
 <title>Hefesto — o mapa do controle</title>
 <style>{CSS_BASE}{caixa_da_janela.moldura()}{CSS_TELA}
+{css_do_contraste()}
 {css_das_pecas(sorted({x.peca for x in a13.BOTOES_DA_PAGINA}))}
 </style>
 </head>
