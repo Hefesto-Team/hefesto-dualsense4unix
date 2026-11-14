@@ -123,6 +123,9 @@ PROGRAMAS_DO_USUARIO: dict[str, str] = {
         "o lançador reposto no «Reiniciar o serviço»"
     ),
     "interface/pacotes/atualizacoes.py::registro": "o registro do atualizador no editor do sistema",
+    "mods/porta.py::abrir_pelo_lancador": (
+        "o jogo que a extensão abre pelo «Jogar» (lancador.abrir)"
+    ),
 }
 
 _DO_OS = frozenset({

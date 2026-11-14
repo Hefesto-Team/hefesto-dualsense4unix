@@ -58,11 +58,11 @@ def test_abrir_um_jogo_de_tiro_publica_fps_e_trocar_para_terror_publica_terror()
                 bus.publish(EventTopic.PERFIL_TROCOU, _perfil("Navegar", None, None))
                 await asyncio.to_thread(com.pedir, "eventos.assinar", {"topicos": ["jogo.estilo"]})
                 vistos = [await asyncio.to_thread(com.evento)]
-                bus.publish(EventTopic.PERFIL_TROCOU, _perfil("Doom", "fps", "steam_app_10"))
+                bus.publish(EventTopic.PERFIL_TROCOU, _perfil("Doom", "fps", "steam_app_11"))
                 vistos.append(await asyncio.to_thread(com.evento))
-                bus.publish(EventTopic.PERFIL_TROCOU, {**_perfil("Doom", "fps", "steam_app_10"),
+                bus.publish(EventTopic.PERFIL_TROCOU, {**_perfil("Doom", "fps", "steam_app_11"),
                                                        "memoria": True, "t": 2.0})
-                bus.publish(EventTopic.PERFIL_TROCOU, _perfil("Amnesia", "terror", "steam_app_20"))
+                bus.publish(EventTopic.PERFIL_TROCOU, _perfil("Amnesia", "terror", "steam_app_21"))
                 vistos.append(await asyncio.to_thread(com.evento))
                 tardio = _Cliente(caminho)
                 tardio.sock.settimeout(5.0)
@@ -84,6 +84,6 @@ def test_abrir_um_jogo_de_tiro_publica_fps_e_trocar_para_terror_publica_terror()
     assert [v["params"]["topico"] for v in vistos] == ["jogo.estilo"] * 3
     dados = [v["params"]["dados"] for v in vistos]
     assert [(d["estilo"], d["jogo"]) for d in dados] == [
-        (None, None), ("fps", "steam_app_10"), ("terror", "steam_app_20")]
+        (None, None), ("fps", "steam_app_11"), ("terror", "steam_app_21")]
     assert [c["estilo"] for c in dados[2]["controles"]] == ["terror"] * 4
     assert de_agora["params"]["dados"]["estilo"] == "terror"
