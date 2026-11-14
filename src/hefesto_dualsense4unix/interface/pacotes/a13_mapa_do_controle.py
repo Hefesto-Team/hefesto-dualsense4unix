@@ -462,7 +462,8 @@ def _opcoes_do_perfil(ctx: Contexto) -> str:
     meus = "".join(
         f'<option value="{PERFIL}{html.escape(str(c.get("name") or ""), quote=True)}">'
         f'{html.escape(str(c.get("name") or ""))}</option>'
-        for c in _perfis_do_disco(ctx))
+        for c in _perfis_do_disco(ctx)
+        if _chave_no_seletor(ctx, PERFIL + str(c.get("name") or "")) != NAV)
     nav = f'<option value="{NAV}">{html.escape(_nome_do_que_vale(ctx))}</option>'
     if _vale_a_navegacao(ctx):
         nav = f'<optgroup label="Navegação">{nav}</optgroup>'
@@ -493,6 +494,13 @@ def _cursor(valores: dict[str, tuple[str, str]]) -> str:
     return "esq"
 
 
+def _chave_no_seletor(ctx: Contexto, chave: str) -> str:
+    """O lugar da chave no seletor: o perfil ativo de jogo é a opção do topo, e não se repete."""
+    if chave == PERFIL + _nome_do_ativo(ctx) and not _vale_a_navegacao(ctx):
+        return NAV
+    return chave
+
+
 def _chave_do_point_and_click(ctx: Contexto) -> str:
     """O perfil que a aba Navegação escolheu para o point and click, na chave do seletor.
 
@@ -500,14 +508,14 @@ def _chave_do_point_and_click(ctx: Contexto) -> str:
     segunda leitura do campo. Escolha que não existe mais (perfil apagado) abre em Navegar.
     """
     escolha = a06._o_point_and_click_de_hoje()
-    return escolha if _chave_valida(ctx, escolha) else NAV
+    return _chave_no_seletor(ctx, escolha) if _chave_valida(ctx, escolha) else NAV
 
 
 def _chave_das_trocas(ctx: Contexto) -> str:
     """O perfil ativo, se tem lugar no seletor (troca ou ação própria de botão); senão Navegar."""
     nome = _nome_do_ativo(ctx)
     meus = {str(c.get("name") or "") for c in _perfis_do_disco(ctx)}
-    return PERFIL + nome if nome and nome in meus else NAV
+    return _chave_no_seletor(ctx, PERFIL + nome) if nome and nome in meus else NAV
 
 
 def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
@@ -649,7 +657,7 @@ def mapa_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if not _chave_valida(ctx, chave):
         raise RuntimeError(f"não conheço o perfil «{chave}» — escolha um da lista.")
     _largar()
-    _estado()["chave"] = chave
+    _estado()["chave"] = _chave_no_seletor(ctx, chave)
     return _repinta(ctx)
 
 

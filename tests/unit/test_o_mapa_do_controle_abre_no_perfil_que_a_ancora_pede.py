@@ -38,6 +38,7 @@ from hefesto_dualsense4unix.profiles import loader
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PAGINA = a13.PAGINA
 ATIVO = "Fora do jogo"
+FREESTYLE = loader.NOME_DO_PADRAO
 
 
 def _ctx(ativo: str = ATIVO) -> Contexto:
@@ -129,8 +130,9 @@ def test_o_trocar_abre_o_perfil_ativo_que_tem_trocas(monkeypatch: pytest.MonkeyP
     _o_disco(monkeypatch, {ATIVO: {"name": ATIVO, "remapeamento": {"triangle": "cross"}}})
     _a_escolha_da_06(monkeypatch, None)
     ctx = _ctx()
-    assert _mesa(ctx)["ancora-trocar"] == f"perfil:{ATIVO}"
+    assert _mesa(ctx)["ancora-trocar"] == a13.NAV, "o perfil do jogo mora no topo do seletor"
     a13.mapa_perfil(ctx, {"valor": f"perfil:{ATIVO}"}, None)
+    assert _mesa(ctx)["perfil"] == a13.NAV
     aberto = _mesa(ctx)
     assert aberto["mc-tipo"] == "troca", aberto["mc-tipo"]
     assert aberto["val-triangle"] == "Cruz", "as trocas do perfil ativo aparecem"
@@ -268,23 +270,25 @@ def _pintar(ctx: Contexto) -> str:
     return f"String(window.__hef.pintar({json.dumps(carga)}))"
 
 
-def _preparar(monkeypatch: pytest.MonkeyPatch, escolha: str = "molde:visual_novel") -> Contexto:
-    _o_disco(monkeypatch, {ATIVO: {"name": ATIVO, "remapeamento": {"triangle": "cross"}}})
+def _preparar(monkeypatch: pytest.MonkeyPatch, escolha: str = "molde:visual_novel",
+              ativo: str = ATIVO) -> Contexto:
+    _o_disco(monkeypatch, {ativo: {"name": ativo, "remapeamento": {"triangle": "cross"}}})
     _a_escolha_da_06(monkeypatch, escolha)
-    return _ctx()
+    return _ctx(ativo=ativo)
 
 
-@pytest.mark.parametrize("fragmento,esperado", [
-    ("#point-and-click", "molde:visual_novel"),
-    ("#trocar", f"perfil:{ATIVO}"),
-    ("", "nav"),
-    ("#nao-conheco", "nav"),
-    ("#acessibilidade", "nav"),
+@pytest.mark.parametrize("fragmento,esperado,ativo", [
+    ("#point-and-click", "molde:visual_novel", ATIVO),
+    ("#trocar", f"perfil:{FREESTYLE}", FREESTYLE),
+    ("#trocar", "nav", ATIVO),
+    ("", "nav", ATIVO),
+    ("#nao-conheco", "nav", ATIVO),
+    ("#acessibilidade", "nav", ATIVO),
 ])
 def test_a_pagina_abre_no_perfil_que_a_ancora_pede(
-        monkeypatch: pytest.MonkeyPatch, fragmento: str, esperado: str) -> None:
-    """MORDIDA: ignorar o fragmento reprova `#point-and-click` e `#trocar`."""
-    ctx = _preparar(monkeypatch)
+        monkeypatch: pytest.MonkeyPatch, fragmento: str, esperado: str, ativo: str) -> None:
+    """MORDIDA: ignorar o fragmento reprova `#point-and-click` e o `#trocar` fora do jogo."""
+    ctx = _preparar(monkeypatch, ativo=ativo)
     lido = _no_webkit(fragmento, [OUVIR, _pintar(ctx), LER])[-1]
     assert lido["valor"] == esperado, lido
     if esperado == "nav":
@@ -316,7 +320,7 @@ def test_a_ancora_segue_a_escolha_da_06_no_tempo(monkeypatch: pytest.MonkeyPatch
     ])
     assert lidas[2]["valor"] == "nav" and lidas[2]["mudou"] == []
     assert lidas[4]["valor"] == "molde:visual_novel", lidas[4]
-    assert lidas[6]["valor"] == f"perfil:{ATIVO}", lidas[6]
+    assert lidas[6]["valor"] == "nav", lidas[6]
     assert lidas[9]["valor"] == "molde:mouse", lidas[9]
 
 
@@ -330,20 +334,21 @@ def test_seguida_a_ancora_o_seletor_e_de_quem_usa(monkeypatch: pytest.MonkeyPatc
     Prova da D-1610-A-ANCORA-ABRE-O-MAPA-DO-CONTROLE-NO-PERFIL-QUE-PROMETE-UMA-VEZ-POR-CHEGADA.
     """
     _o_disco(monkeypatch, {
-        ATIVO: {"name": ATIVO, "remapeamento": {"triangle": "cross"}},
+        FREESTYLE: {"name": FREESTYLE, "remapeamento": {"triangle": "cross"}},
         "Corrida": {"name": "Corrida", "remapeamento": {"cross": "circle"}}})
     _a_escolha_da_06(monkeypatch, "molde:visual_novel")
-    ctx = _ctx()
+    ctx = _ctx(ativo=FREESTYLE)
     primeira = _pintar(ctx)
-    a13.mapa_perfil(ctx, {"valor": f"perfil:{ATIVO}"}, None)
+    a13.mapa_perfil(ctx, {"valor": f"perfil:{FREESTYLE}"}, None)
     a13._estado()["edicoes"]["cross"] = ("troca", "square")
     depois = _ctx(ativo="Corrida")
-    assert _mesa(depois)["ancora-trocar"] == "perfil:Corrida"
+    assert _mesa(depois)["ancora-trocar"] == a13.NAV
     segunda = _pintar(depois)
     lidas = _no_webkit("#trocar", [OUVIR, primeira, LER, segunda, LER])
-    assert lidas[2]["mudou"] == [f"perfil:{ATIVO}"], lidas[2]
-    assert lidas[4]["valor"] == f"perfil:{ATIVO}", f"o seletor saiu da mão de quem usa: {lidas[4]}"
-    assert lidas[4]["mudou"] == [f"perfil:{ATIVO}"], f"um segundo `change` saiu: {lidas[4]}"
+    assert lidas[2]["mudou"] == [f"perfil:{FREESTYLE}"], lidas[2]
+    assert lidas[4]["valor"] == f"perfil:{FREESTYLE}", (
+        f"o seletor saiu da mão de quem usa: {lidas[4]}")
+    assert lidas[4]["mudou"] == [f"perfil:{FREESTYLE}"], f"um segundo `change` saiu: {lidas[4]}"
 
 
 def test_o_marcador_da_ancora_nao_aparece_nem_entra_na_tabulacao() -> None:
