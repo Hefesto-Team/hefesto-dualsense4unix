@@ -96,6 +96,13 @@ def _fora_do_proton_fixado(home: Path | None) -> list[str]:
     fora = [str(a) for a in relato["games_off_pin"]]  # type: ignore[attr-defined]
     nomeados = set(pp.ler_jogos_fora_do_pino(pp.fora_do_pino_path(home)))
     fora = [a for a in fora if a not in nomeados]
+    if relato["global_is_pinned"]:
+        so_o_global = [
+            a for a in instalados
+            if a not in nomeados and not mapa.get(a)  # type: ignore[attr-defined]
+        ]
+        alem = pp.jogos_que_o_global_nao_alcanca(so_o_global, home=home) if so_o_global else set()
+        fora += [a for a in so_o_global if a in alem]
     sem_entrada = [a for a in fora if not mapa.get(a)]  # type: ignore[attr-defined]
     nativos = set(pp.jogos_sem_entrada_nova(sem_entrada, home=home)) if sem_entrada else set()
     return [a for a in fora if a not in nativos]

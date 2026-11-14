@@ -1651,6 +1651,18 @@ def _oferece_o_windows_no_linux(executaveis: Sequence[str]) -> bool:
     )
 
 
+def _os_que_declaram_linux(appids: Sequence[str], oslist: dict[str, str] | None) -> list[str]:
+    return [a for a in appids if oslist is not None and _declara_linux(oslist.get(a) or "")]
+
+
+def jogos_que_o_global_nao_alcanca(
+    appids: Sequence[str], *, home: Path | None = None
+) -> set[str]:
+    """Dos `appids`, os que declaram `linux`: o global (`"0"`) da Steam não vale para eles."""
+    appinfo = default_steam_root(home) / "appcache" / "appinfo.vdf"
+    return set(_os_que_declaram_linux(appids, oslist_do_appinfo(appinfo, appids)))
+
+
 def jogos_sem_entrada_nova(
     appids: Sequence[str], *, home: Path | None = None
 ) -> set[str]:
@@ -1662,7 +1674,7 @@ def jogos_sem_entrada_nova(
     raiz = default_steam_root(home)
     appinfo = raiz / "appcache" / "appinfo.vdf"
     oslist = oslist_do_appinfo(appinfo, appids)
-    linux = [a for a in appids if oslist is not None and _declara_linux(oslist.get(a) or "")]
+    linux = _os_que_declaram_linux(appids, oslist)
     lancamentos = executaveis_no_linux_do_appinfo(appinfo, linux) if linux else {}
     compatdatas = [lib / "compatdata" for lib in _pastas_de_biblioteca(home)]
     nativos: set[str] = set()

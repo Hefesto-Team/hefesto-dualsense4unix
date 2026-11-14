@@ -178,3 +178,26 @@ def test_o_sinful_ganha_o_pino_e_o_nativo_de_verdade_fica(lar: Path) -> None:
     assert {a: mapa.get(a) for a in ("9100001", "9100002", "9100004")} == {
         "9100001": PINO, "9100002": PINO, "9100004": PINO}
     assert not {"9100005", "9100006", "9100003"} & set(mapa), mapa
+
+
+def test_a_lista_de_impedimentos_mostra_o_sinful_fora_do_pino_e_cala_o_nativo(lar: Path) -> None:
+    """A janela de configurar a Steam lista o jogo que vai rodar o `.exe` sem Proton, e só ele."""
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    _steam(lar, MESA_DE_JOGOS)
+    fora = {i.appid for i in imp.sondar(home=lar) if i.tipo == imp.PROTON}
+    assert fora == {"4540280", "9100001", "9100002"}, fora
+
+
+def test_resolver_o_impedimento_da_a_entrada_e_a_lista_esvazia(lar: Path) -> None:
+    from hefesto_dualsense4unix.integrations import impedimentos_da_steam as imp
+
+    raiz = _steam(lar, MESA_DE_JOGOS)
+    proton = [i for i in imp.sondar(home=lar) if i.tipo == imp.PROTON]
+    imp.curar(proton, home=lar)
+    mapa = pp.extract_compat_tool_mapping(
+        (raiz / "config" / "config.vdf").read_text(encoding="utf-8"))
+    assert {a: mapa.get(a) for a in ("4540280", "9100001", "9100002")} == {
+        "4540280": PINO, "9100001": PINO, "9100002": PINO}
+    assert not {"9100005", "9100006", "9100003"} & set(mapa), mapa
+    assert not [i for i in imp.sondar(home=lar) if i.tipo == imp.PROTON]
