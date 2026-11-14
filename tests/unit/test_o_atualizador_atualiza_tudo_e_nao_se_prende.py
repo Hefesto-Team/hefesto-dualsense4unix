@@ -457,3 +457,15 @@ def test_depois_da_rodada_o_atualizar_tudo_se_apaga() -> None:
     corpo = tela.html_da_pergunta(conferencia, {"sozinho": False}, jogo_aberto=False)
     assert 'class="btn principal apagado" data-gesto="atualizacoes-atualizar">Atualizar tudo ' \
         '<span class="n">0</span>' in corpo
+
+
+def test_sem_apt_as_pecas_do_apt_nao_aparecem(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Numa distro sem apt (Arch, CachyOS), o kernel e os pacotes do sistema saem do mapa em vez
+    de dizer «Atualizado» sobre o que o Hefesto não sobe ali."""
+    import shutil
+
+    monkeypatch.setattr(shutil, "which", lambda nome: None if nome.startswith("apt") else nome)
+    monkeypatch.setattr(pa, "_saida", lambda _argv: None)
+    assert pa.versoes_do_kernel(True).existe is False
+    assert pa.versoes_do_sistema(True).existe is False
+    assert pa.versoes_da_nvidia(True).existe is False

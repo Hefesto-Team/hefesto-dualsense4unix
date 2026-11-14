@@ -288,6 +288,8 @@ def _kernel_do_pacote(versao: str) -> str:
 
 
 def versoes_do_kernel(rede: bool) -> Versoes:
+    if shutil.which("apt-get") is None:
+        return Versoes(existe=False)
     _atualizar_a_lista_do_apt(rede)
     rodando = os.uname().release
     agora = _kernel_do_pacote(rodando) or rodando
