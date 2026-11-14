@@ -54,6 +54,9 @@ def _ensure_display_env() -> None:
             logger.info("autoswitch_display_env_imported", var=key)
 
 
+_TIQUES_DO_SINAL_DEPOIS_DO_ARME_SEC = 10.0
+
+
 def _appid_valido(appid: object) -> int | None:
     return appid if isinstance(appid, int) and not isinstance(appid, bool) and appid > 0 else None
 
@@ -61,16 +64,28 @@ def _appid_valido(appid: object) -> int | None:
 def _o_jogo_em_cena_do_servico(daemon: object) -> Callable[[], int | None]:
     """O leitor do jogo em cena, lido a cada tique (memória).
 
-    O jogo do lançamento que trava o pad vale primeiro: o arme o grava na hora, e o
-    `appid_em_cena` do sinal só o vê no tique seguinte do sinal (até 2 s depois), com o jogo de
-    antes no lugar. Sem trava, vale o `appid_em_cena`.
+    O jogo do lançamento que trava o pad vale primeiro enquanto o sinal ainda não teve tempo de
+    vê-lo: o arme grava a trava na hora, e o `appid_em_cena` do sinal só o vê no tique seguinte
+    (até 2 s depois), com o jogo de antes no lugar. O prazo conta do `epoch` do lançamento: o arme
+    (`LAUNCH_ARM_WINDOW_SEC`) e alguns tiques do sinal. Depois dele vale o `appid_em_cena`, porque
+    a trava dura enquanto a autoridade fica em `game`, e o jogo que entra pela janela nesse meio é
+    o que está em cena.
     """
+    from hefesto_dualsense4unix.daemon.launch_env import LAUNCH_ARM_WINDOW_SEC
+
+    prazo = LAUNCH_ARM_WINDOW_SEC + _TIQUES_DO_SINAL_DEPOIS_DO_ARME_SEC
 
     def _ler() -> int | None:
         travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
-        if isinstance(travado, tuple) and travado:
+        if isinstance(travado, tuple) and len(travado) == 2:
             lancado = _appid_valido(travado[0])
-            if lancado is not None:
+            epoch = travado[1]
+            if (
+                lancado is not None
+                and isinstance(epoch, (int, float))
+                and not isinstance(epoch, bool)
+                and time.time() - epoch <= prazo
+            ):
                 return lancado
         return _appid_valido(getattr(daemon, "appid_em_cena", None))
 

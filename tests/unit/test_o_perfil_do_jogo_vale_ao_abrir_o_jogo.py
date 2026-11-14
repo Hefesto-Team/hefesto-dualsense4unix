@@ -5,7 +5,9 @@ Duas causas medidas no diário do serviço, e uma régua para cada uma:
 * abrir outro jogo e ver o perfil do jogo de antes voltar: o leitor do jogo em cena do autoswitch
   lia o `appid_em_cena` do sinal, que só vê o lançamento novo no tique seguinte do sinal (até
   2 s); nesse intervalo o autoswitch ativava de novo o perfil do jogo de antes (14/11, 04h35, 0,4 s
-  depois do `origin=launch`). O jogo do lançamento que trava o pad vale primeiro;
+  depois do `origin=launch`). O jogo do lançamento que trava o pad vale primeiro, só até o sinal
+  ter tempo de vê-lo: a trava dura enquanto a autoridade fica em `game`, e o jogo que entra pela
+  janela nesse meio é o que está em cena (13/11, 03h40);
 * o controle virar Navegação no meio do jogo: o `jogo.fechou` do jogo armado devolvia o modo do
   computador com outro jogo em cena, o que entrou pela janela sem arme (13/11, 03h39 a 03h44,
   com a autoridade em `game` o tempo todo). A volta espera o jogo em cena sair.
@@ -14,12 +16,15 @@ AS MORDIDAS (executadas na implementação, com o md5 conferido na volta):
 
 * o leitor sem a trava do lançamento →
   `test_abrir_a_aplica_a_abrir_b_aplica_b_e_fechar_volta` reprova no B;
+* o leitor com a trava sem prazo →
+  `test_o_jogo_que_entra_pela_janela_horas_depois_do_lancamento_aplica_o_perfil_dele` reprova;
 * a volta sem a espera do jogo em cena →
   `test_o_jogo_em_cena_segura_o_modo_do_jogo_e_a_volta_vem_quando_ele_sai` reprova nos dois
   modos do computador.
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -103,7 +108,7 @@ class _Tique:
 def _abre(manager: ProfileManager, servico: Any, nome: str, appid: int) -> None:
     """O arme do lançamento: ativa o perfil do jogo e trava o pad; o sinal só vê depois."""
     manager.activate(nome, origin="launch")
-    servico._pad_travado_pelo_lancamento = (appid, 1)
+    servico._pad_travado_pelo_lancamento = (appid, int(time.time()))
 
 
 def test_abrir_a_aplica_a_abrir_b_aplica_b_e_fechar_volta(perfis_isolados: Path) -> None:
@@ -146,16 +151,47 @@ def test_abrir_a_aplica_a_abrir_b_aplica_b_e_fechar_volta(perfis_isolados: Path)
 
 
 def test_o_leitor_do_servico_le_a_trava_antes_do_sinal() -> None:
-    servico = SimpleNamespace(appid_em_cena=JOGO_A, _pad_travado_pelo_lancamento=(JOGO_B, 7))
+    agora = int(time.time())
+    servico = SimpleNamespace(appid_em_cena=JOGO_A, _pad_travado_pelo_lancamento=(JOGO_B, agora))
     leitor = sub._o_jogo_em_cena_do_servico(servico)
     assert leitor() == JOGO_B
     servico._pad_travado_pelo_lancamento = None
     assert leitor() == JOGO_A
-    servico._pad_travado_pelo_lancamento = (True, 7)
+    servico._pad_travado_pelo_lancamento = (True, agora)
+    assert leitor() == JOGO_A
+    servico._pad_travado_pelo_lancamento = (JOGO_B, "ilegível")
     assert leitor() == JOGO_A
     servico.appid_em_cena = None
     servico._pad_travado_pelo_lancamento = ()
     assert leitor() is None
+
+
+def test_o_jogo_que_entra_pela_janela_horas_depois_do_lancamento_aplica_o_perfil_dele(
+    perfis_isolados: Path,
+) -> None:
+    """A trava do jogo lançado dura enquanto a autoridade fica em `game` (13/11: de 01h08 a 03h46).
+
+    Nesse meio, o jogo que entrou pela janela, sem arme, é o que o sinal vê em cena, e o perfil dele
+    vale (13/11, 03h40: o Sinful Gods Demo pelo `pelo_jogo_em_cena`). A trava velha não fala pelo
+    jogo em cena: só vence o sinal enquanto o sinal ainda não teve tempo de ver o lançamento.
+    """
+    manager, store = _a_mesa()
+    velho = (JOGO_A, int(time.time()) - 3600)
+    servico = SimpleNamespace(appid_em_cena=JOGO_A, _pad_travado_pelo_lancamento=velho)
+    sw = AutoSwitcher(
+        manager=manager, window_reader=dict, store=store,
+        jogo_em_cena_reader=sub._o_jogo_em_cena_do_servico(servico),
+        jogo_vivo_reader=lambda: None,
+    )
+    manager.activate("Jogo A", origin="launch")
+    relogio = _Tique(sw)
+    relogio.ate(3.0, {})
+    assert store.active_profile == "Jogo A", "premissa: o jogo lançado em cena"
+
+    servico.appid_em_cena = JOGO_B
+    relogio.ate(6.0, {})
+    assert store.active_profile == "Jogo B", (
+        "o jogo que entrou pela janela não aplicou o perfil dele: a trava velha falou por ele")
 
 
 def _na_navegacao(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
