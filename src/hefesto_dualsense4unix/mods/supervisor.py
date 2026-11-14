@@ -547,10 +547,7 @@ def _ler(arquivo: Path) -> str:
 
 def _vid_pid_do_usb(dispositivo: Path) -> tuple[str, str] | None:
     """O ``idVendor``/``idProduct`` do aparelho USB acima de ``dispositivo`` no ``/sys``."""
-    try:
-        atual = dispositivo.resolve()
-    except OSError:
-        return None
+    atual = Path(os.path.realpath(dispositivo))
     for pasta in (atual, *atual.parents):
         vid, pid = _ler(pasta / "idVendor"), _ler(pasta / "idProduct")
         if vid and pid:
@@ -568,6 +565,34 @@ def _vid_pid_do_hid(dispositivo: Path) -> tuple[str, str] | None:
     return None
 
 
+def _nos_de_classe(onde: str, ler: Callable[[Path], tuple[str, str] | None]
+                   ) -> Callable[[Path], list[tuple[tuple[str, str] | None, str]]]:
+    def nos(sys_raiz: Path) -> list[tuple[tuple[str, str] | None, str]]:
+        with contextlib.suppress(OSError):
+            return [(ler(no / "device"), f"/dev/{no.name}")
+                    for no in sorted((sys_raiz / onde).iterdir())]
+        return []
+    return nos
+
+
+def _nos_do_usb(sys_raiz: Path) -> list[tuple[tuple[str, str] | None, str]]:
+    fora: list[tuple[tuple[str, str] | None, str]] = []
+    with contextlib.suppress(OSError):
+        for usb in sorted((sys_raiz / "bus/usb/devices").iterdir()):
+            barramento, numero = _ler(usb / "busnum"), _ler(usb / "devnum")
+            if barramento.isdigit() and numero.isdigit():
+                ids = (_ler(usb / "idVendor").lower(), _ler(usb / "idProduct").lower())
+                fora.append((ids, f"/dev/bus/usb/{int(barramento):03d}/{int(numero):03d}"))
+    return fora
+
+
+_NOS_POR_CLASSE: dict[str, Callable[[Path], list[tuple[tuple[str, str] | None, str]]]] = {
+    "hidraw": _nos_de_classe("class/hidraw", _vid_pid_do_hid),
+    "tty": _nos_de_classe("class/tty", _vid_pid_do_usb),
+    "usb": _nos_do_usb,
+}
+
+
 def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> tuple[str, ...]:
     """Os nós de ``/dev`` dos aparelhos declarados que estão ligados agora.
 
@@ -578,22 +603,9 @@ def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> 
         return ()
     pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos}
     nos: list[str] = []
-    for classe, onde, ler in (("hidraw", "class/hidraw", _vid_pid_do_hid),
-                              ("tty", "class/tty", _vid_pid_do_usb)):
-        if not any(p[0] == classe for p in pedidos):
-            continue
-        with contextlib.suppress(OSError):
-            for no in sorted((sys_raiz / onde).iterdir()):
-                ids = ler(no / "device")
-                if ids and (classe, *ids) in pedidos:
-                    nos.append(f"/dev/{no.name}")
-    if any(p[0] == "usb" for p in pedidos):
-        with contextlib.suppress(OSError):
-            for usb in sorted((sys_raiz / "bus/usb/devices").iterdir()):
-                vid, pid = _ler(usb / "idVendor").lower(), _ler(usb / "idProduct").lower()
-                barramento, numero = _ler(usb / "busnum"), _ler(usb / "devnum")
-                if ("usb", vid, pid) in pedidos and barramento.isdigit() and numero.isdigit():
-                    nos.append(f"/dev/bus/usb/{int(barramento):03d}/{int(numero):03d}")
+    for classe, achar in _NOS_POR_CLASSE.items():
+        if any(p[0] == classe for p in pedidos):
+            nos += [no for ids, no in achar(sys_raiz) if ids and (classe, *ids) in pedidos]
     return tuple(dict.fromkeys(nos))
 
 
@@ -1105,10 +1117,7 @@ class Supervisor:
             if (manifesto is None or not self.bwrap or processo is None
                     or processo.returncode is not None or not manifesto.aparelhos):
                 continue
-            try:
-                agora = await asyncio.to_thread(aparelhos_que_casam, manifesto)
-            except OSError:
-                continue
+            agora = await asyncio.to_thread(aparelhos_que_casam, manifesto)
             novos = set(agora) - set(vigiada.aparelhos)
             if not novos:
                 vigiada.aparelho_novo = False
