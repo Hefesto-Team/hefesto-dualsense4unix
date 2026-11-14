@@ -2,7 +2,8 @@
 
 Medido no motor do produto (o WebKit, numa janela fora da tela), no desenho e no publicado, nas duas
 larguras da régua: em repouso nenhuma peça do desenho acende, nem com todas as linhas mudadas (o
-perfil Navegar muda quase todas), e nenhuma traz contorno de cor própria (o do touchpad era rosa);
+perfil Navegar muda quase todas), e nenhuma traz contorno nem cor própria (o contorno do touchpad, o
+Share e os analógicos eram carmim no controle de modelo não sabido);
 focar a linha da Cruz acende só a Cruz, e o botão apertado (o `pisca`) e a linha escolhida (o `on`)
 acendem só a peça deles; toda tecla tem o miolo pintado, com o glifo legível por cima em todo
 modelo de plástico; a bola do PS fica no ponto do meio dos dois analógicos, com o glifo do PS dentro
@@ -14,7 +15,7 @@ MORDIDAS (14/11/2026): devolver a regra que pintava a peça na cor do tipo quand
 reprova `test_toda_tecla_tem_o_miolo_pintado`; tirar o `ps_entre_os_analogicos` reprova
 `test_o_ps_fica_no_meio_dos_analogicos`; tirar o `css_do_contraste` reprova o contraste no White;
 deixar o filtro do touchpad reprova `test_em_repouso_nada_acende`; e tirar o `:focus` dos gatilhos
-reprova `test_so_acende_a_peca_em_uso`.
+reprova `test_so_acende_a_peca_em_uso`; tirar o `css_da_zona` reprova `test_em_repouso_nada_acende`.
 """
 from __future__ import annotations
 
@@ -93,6 +94,11 @@ MEDIR = r"""
   leitura.on = acesas();
   $('.b2[data-b="l1"]').dataset.estado = '';
   leitura.sem_miolo = pecas.filter(p => !pintado(p));
+  const viva = c => { const v = (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    return v.length === 3 && Math.max(...v) - Math.min(...v) > 40; };
+  ds.dataset.colorway = '';
+  leitura.cor_sem_modelo = pecas.filter(p => [...id('mp-' + p).querySelectorAll(geo)]
+    .some(e => viva(getComputedStyle(e).fill)));
   leitura.contraste = {};
   for (const cw of MODELOS) {
     ds.dataset.colorway = cw;
@@ -200,6 +206,7 @@ def lido(request: pytest.FixtureRequest) -> dict[str, Any]:
 def test_em_repouso_nada_acende(lido: dict[str, Any]) -> None:
     assert lido["repouso"] == [] and lido["ativos"] == 0, lido["repouso"]
     assert lido["contorno"] == [], f"peça com contorno de cor própria: {lido['contorno']}"
+    assert lido["cor_sem_modelo"] == [], f"peça com cor própria: {lido['cor_sem_modelo']}"
     assert lido["muda"] == [], f"a linha mudada acende a peça: {lido['muda']}"
     assert lido["muda_mudou"] == [], f"a linha mudada pinta a peça: {lido['muda_mudou']}"
 

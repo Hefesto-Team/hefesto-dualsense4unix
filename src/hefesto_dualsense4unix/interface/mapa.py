@@ -364,10 +364,24 @@ def _luz(hexa):
     return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
 
 
+def _zonas():
+    return dict(re.findall(r'<g id="([a-z0-9_-]+)" class="z-([a-z_]+)"', SVG.read_text()))
+
+
+def css_da_zona(pecas):
+    """Cada peça da lista na cor da própria zona, e no plástico neutro quando o modelo não se sabe:
+    a cor que o desenho traz escrita na peça (o carmim do Share e dos analógicos) não vaza."""
+    zona_de = _zonas()
+    return "\n".join(
+        f"  .mc svg.ds #mp-{p} :is(path,rect,circle,ellipse,polygon):not([fill=\"none\"])"
+        f"{{fill:var(--z-{zona_de[p]}, var(--sem-plastico)) !important}}"
+        for p in pecas if p in zona_de)
+
+
 def css_do_contraste():
     """A cor de cada glifo contra a tecla que o carrega, em cada modelo: o claro sobre o escuro."""
     svg = SVG.read_text()
-    zona_de = {pid: z for pid, z in re.findall(r'<g id="([a-z0-9_-]+)" class="z-([a-z_]+)"', svg)}
+    zona_de = _zonas()
     regras = ["  .mc svg.ds .sobre{color:%s !important}" % FUNDO_ESCURO]
     for cw, corpo in re.findall(r'svg\[data-colorway="([^"]+)"\]\{([^}]*)\}', svg):
         cores = dict(re.findall(r"--z-([a-z_]+):(#[0-9a-fA-F]{6})", corpo))
@@ -917,6 +931,7 @@ def main():
 <meta charset="utf-8">
 <title>Hefesto — o mapa do controle</title>
 <style>{CSS_BASE}{caixa_da_janela.moldura()}{CSS_TELA}
+{css_da_zona(sorted({x.peca for x in a13.BOTOES_DA_PAGINA}))}
 {css_do_contraste()}
 {css_das_pecas(sorted({x.peca for x in a13.BOTOES_DA_PAGINA}))}
 </style>
