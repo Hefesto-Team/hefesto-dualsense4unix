@@ -3,7 +3,9 @@
 O contrato entre uma modificação ([ADR-021](../adr/021-modificacoes-por-processo.md)) e o serviço.
 Versão da porta: **2** (`API_DAS_MODIFICACOES`, em `src/hefesto_dualsense4unix/mods/__init__.py`). A 2
 (19/10/2026) acrescentou o `aviso` do manifesto e o `lancador.jogos`; o resto é o da 1, e a faixa
-`">=1,<3"` aceita as duas.
+`">=1,<3"` aceita as duas. O `lancador.abrir`, o `mira.ligada`, o `vibracao.escala` e o tópico <!-- ref-externa: método da porta das extensões, não do daemon -->
+`jogo.estilo` (14/11/2026) entraram na 2 sem mudar a faixa: a extensão que os pede declara as
+permissões novas, e o Hefesto que não as conhece recusa o manifesto com a frase.
 
 ## O que o filho recebe
 
