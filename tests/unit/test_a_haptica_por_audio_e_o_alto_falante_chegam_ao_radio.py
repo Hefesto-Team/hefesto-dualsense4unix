@@ -85,7 +85,11 @@ class _Codificador:
 
 
 class Mesa:
-    """``_casar_as_pontes`` do produto, com a ``PonteDeSomPorRadio`` e a bomba de verdade."""
+    """``_casar_as_pontes`` do produto, com a ``PonteDeSomPorRadio`` e a bomba de verdade.
+
+    «Só efeitos» desligado: o canto de mentira é um quadro que se repete, e o separador da
+    caixa o calaria; estas réguas medem a rota, e o separador tem as dele.
+    """
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
@@ -117,6 +121,7 @@ class Mesa:
         monkeypatch.setattr(
             AltoFalanteSubsystem, "numero_do_assento", lambda _self, u: MESA.index(u) + 1
         )
+        monkeypatch.setattr(AltoFalanteSubsystem, "so_efeitos", lambda _self, _u: False)
         self.sub._abrir_hidraw = self._abrir  # type: ignore[method-assign]
         self._controle = ControleNaLista
 

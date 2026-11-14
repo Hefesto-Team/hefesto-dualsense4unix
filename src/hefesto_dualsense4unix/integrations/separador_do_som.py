@@ -129,6 +129,13 @@ class _Porta:
         self._banda_antes = np.zeros(self._quantos_antes)
         self._silencio_antes = True
 
+    def _limiar(self, t: int) -> float:
+        np = _np()
+        validos = self._quando > t - self._janela_dos_picos
+        if int(validos.sum()) < 3:
+            return LIMIAR_SEM_HISTORIA_DB
+        return LIMIAR_SOBRE_OS_PICOS * float(np.median(self._alturas[validos]))
+
     def mascara(self, modulo: Any) -> Any:
         np = _np()
         t = self._t
@@ -138,9 +145,9 @@ class _Porta:
         referencia[1:-1] = np.maximum(
             referencia[1:-1], np.maximum(referencia[:-2], referencia[2:])
         )
-        fluxo = float(np.maximum(nivel - referencia, 0.0).mean())
+        fluxo = float(np.maximum(nivel - referencia, 0.0).sum()) / len(nivel)
         self._anel[t % 3] = nivel
-        silencio_agora = float(self._banda_antes.mean()) < self._silencio
+        silencio_agora = float(self._banda_antes.sum()) < self._silencio * self._quantos_antes
         pico = self._fluxo_1 > self._fluxo_2 and self._fluxo_1 >= fluxo and self._fluxo_1 > 0.5
         if pico and not self._silencio_antes:
             self._alturas[self._proximo_pico % self._PICOS] = self._fluxo_1
@@ -148,14 +155,8 @@ class _Porta:
             self._proximo_pico += 1
         self._silencio_antes = silencio_agora
         self._fluxo_2, self._fluxo_1 = self._fluxo_1, fluxo
-        validos = self._quando > t - self._janela_dos_picos
-        limiar = (
-            LIMIAR_SOBRE_OS_PICOS * float(np.median(self._alturas[validos]))
-            if int(validos.sum()) >= 3
-            else LIMIAR_SEM_HISTORIA_DB
-        )
         potencia = modulo * modulo
-        if fluxo > max(limiar, LIMIAR_MINIMO_DB) and t > self._aberta_ate:
+        if fluxo > LIMIAR_MINIMO_DB and t > self._aberta_ate and fluxo > self._limiar(t):
             self._fundo = self._antes.mean(0)
             self._aberta_ate = t + self._segura
             self._abriu_em = t
@@ -188,7 +189,8 @@ class SeparadorDoSom:
     Um por caminho (uma ponte do rádio, uma caixa do cabo), com estado entre as
     chamadas. ``so_efeitos`` é a chave «Só efeitos» daquele controle (um booleano ou
     quem o diz, lido a cada salto); desligada, a máscara vai a 1 em 20 ms, sem estalo.
-    A saída é mono, igual nos canais, porque a caixa é uma só.
+    A máscara sai da potência média dos canais e vale igual em cada um: o estéreo fica
+    estéreo, e o som em oposição de fase não se cancela.
     """
 
     def __init__(
@@ -220,10 +222,11 @@ class SeparadorDoSom:
         self._ligada = self._a_chave()
         self._mistura = 1.0 if self._ligada else 0.0
         self._sinais = 0
-        self._entradas: list[Any] = []
-        self._janelas: list[Any] = []
-        self._somas: list[Any] = []
-        self._saidas: list[list[Any]] = []
+        self._da_mascara = 1
+        self._entrada: Any = None
+        self._janelas: Any = None
+        self._somas: Any = None
+        self._saida: Any = None
 
     @property
     def latencia_amostras(self) -> int:
@@ -242,14 +245,12 @@ class SeparadorDoSom:
     def _preparar(self, quantos: int) -> None:
         np = _np()
         self._sinais = quantos
-        self._entradas = [np.zeros(0) for _ in range(quantos)]
-        self._janelas = [np.zeros(self._janela_n) for _ in range(quantos)]
-        self._somas = [np.zeros(self._janela_n) for _ in range(quantos)]
-        self._saidas = [[] for _ in range(quantos)]
+        self._entrada = np.zeros((quantos, 0))
+        self._janelas = np.zeros((quantos, self._janela_n))
+        self._somas = np.zeros((quantos, self._janela_n))
+        self._saida = np.zeros((quantos, 0))
 
-    def _mascara(self, espectro: Any) -> Any:
-        np = _np()
-        modulo = np.abs(espectro)
+    def _mascara(self, modulo: Any) -> Any:
         separacao = self._porta.mascara(modulo) * self._harmonico.mascara(modulo)
         separacao[self._grave] = 0.0
         self._ligada = self._a_chave()
@@ -262,72 +263,66 @@ class SeparadorDoSom:
             return separacao
         return self._mistura * separacao + (1.0 - self._mistura)
 
-    def _um_salto(self, blocos: list[Any]) -> list[Any]:
+    def _um_salto(self, bloco: Any) -> Any:
         np = _np()
         salto = self._salto
-        espectros = []
-        for indice, bloco in enumerate(blocos):
-            janela = self._janelas[indice]
-            janela[:-salto] = janela[salto:]
-            janela[-salto:] = bloco
-            espectros.append(np.fft.rfft(janela * self._janela))
-        mascara = self._mascara(espectros[0])
-        saidas = []
-        for indice, espectro in enumerate(espectros):
-            soma = self._somas[indice]
-            soma[:-salto] = soma[salto:]
-            soma[-salto:] = 0.0
-            soma += np.fft.irfft(espectro * mascara, self._janela_n) * self._sintese
-            saidas.append(soma[:salto].copy())
-        return saidas
+        janelas = self._janelas
+        janelas[:, :-salto] = janelas[:, salto:]
+        janelas[:, -salto:] = bloco
+        espectros = np.fft.rfft(janelas * self._janela, axis=1)
+        if self._da_mascara == 1:
+            modulo = np.abs(espectros[0])
+        else:
+            canais = espectros[: self._da_mascara]
+            potencia = canais.real**2 + canais.imag**2
+            modulo = np.sqrt(potencia.sum(0) / self._da_mascara)
+        mascara = self._mascara(modulo)
+        somas = self._somas
+        somas[:, :-salto] = somas[:, salto:]
+        somas[:, -salto:] = 0.0
+        somas += np.fft.irfft(espectros * mascara, self._janela_n, axis=1) * self._sintese
+        return somas[:, :salto].copy()
 
-    def separar(self, *sinais: Any) -> list[Any]:
-        """A máscara do primeiro sinal aplicada a todos, em ``float`` mono do mesmo tamanho.
+    def separar(self, *sinais: Any, canais_da_mascara: int = 1) -> list[Any]:
+        """A máscara dos primeiros sinais aplicada a todos, em ``float`` do mesmo tamanho.
 
-        Os outros sinais são testemunhas: como a máscara é linear, passar a música e o
-        efeito separados pela máscara da mistura mostra o que sai de cada um.
+        Os sinais além de ``canais_da_mascara`` são testemunhas: como a máscara é linear,
+        passar a música e o efeito separados pela máscara da mistura mostra o que sai de
+        cada um.
         """
         np = _np()
         if not sinais:
             return []
         if len(sinais) != self._sinais:
             self._preparar(len(sinais))
+        self._da_mascara = max(1, min(int(canais_da_mascara), len(sinais)))
         tamanho = len(sinais[0])
-        for indice, sinal in enumerate(sinais):
-            self._entradas[indice] = np.concatenate(
-                (self._entradas[indice], np.asarray(sinal, dtype=float))
-            )
+        entrada = np.concatenate((self._entrada, np.vstack(sinais).astype(float)), axis=1)
         salto = self._salto
-        while len(self._entradas[0]) >= salto:
-            blocos = [entrada[:salto] for entrada in self._entradas]
-            self._entradas = [entrada[salto:] for entrada in self._entradas]
-            for indice, saida in enumerate(self._um_salto(blocos)):
-                self._saidas[indice].append(saida)
-        resultado = []
-        for indice in range(len(sinais)):
-            pronto = (
-                np.concatenate(self._saidas[indice]) if self._saidas[indice] else np.zeros(0)
-            )
-            if len(pronto) < tamanho:
-                pronto = np.concatenate((np.zeros(tamanho - len(pronto)), pronto))
-            resultado.append(pronto[:tamanho])
-            self._saidas[indice] = [pronto[tamanho:]] if len(pronto) > tamanho else []
-        return resultado
+        saltos = entrada.shape[1] // salto
+        prontos = [self._saida]
+        for indice in range(saltos):
+            prontos.append(self._um_salto(entrada[:, indice * salto:(indice + 1) * salto]))
+        self._entrada = entrada[:, saltos * salto:]
+        pronto = np.concatenate(prontos, axis=1)
+        if pronto.shape[1] < tamanho:
+            falta = np.zeros((len(sinais), tamanho - pronto.shape[1]))
+            pronto = np.concatenate((falta, pronto), axis=1)
+        self._saida = pronto[:, tamanho:]
+        return list(pronto[:, :tamanho])
 
     def processar(self, pcm: bytes) -> bytes:
-        """PCM s16 little-endian intercalado → o mesmo tamanho, só o efeito, em mono."""
+        """PCM s16 little-endian intercalado → o mesmo tamanho, só o efeito."""
         np = _np()
         quadro = 2 * self.canais
         util = len(pcm) - len(pcm) % quadro
         if util <= 0:
             return bytes(len(pcm))
-        amostras = np.frombuffer(pcm[:util], dtype="<i2").reshape(-1, self.canais)
-        mono = amostras.mean(axis=1) / 32768.0
-        (saida,) = self.separar(mono)
-        inteiros = np.clip(np.rint(saida * 32768.0), -32768, 32767)
+        amostras = np.frombuffer(pcm[:util], dtype="<i2").reshape(-1, self.canais) / 32768.0
+        saidas = self.separar(*amostras.T, canais_da_mascara=self.canais)
+        inteiros = np.clip(np.rint(np.stack(saidas, axis=1) * 32768.0), -32768, 32767)
         inteiros[np.abs(inteiros) < SILENCIO_LSB] = 0
-        intercalado = np.repeat(inteiros.astype("<i2"), self.canais)
-        return bytes(intercalado.tobytes()) + bytes(len(pcm) - util)
+        return bytes(inteiros.astype("<i2").tobytes()) + bytes(len(pcm) - util)
 
 
 __all__ = [

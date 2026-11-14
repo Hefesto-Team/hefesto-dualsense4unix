@@ -135,6 +135,38 @@ def test_os_bytes_passam_pela_mesma_mascara_e_do_mesmo_tamanho() -> None:
     assert pelos_bytes.processar(b"\x01\x02\x03") == bytes(3)
 
 
+def test_o_estereo_fica_estereo_e_a_oposicao_de_fase_nao_se_cancela() -> None:
+    acorde, cliques = _sinal(TAXA_DO_RADIO, segundos=4.0)
+    atraso = 480
+    oposto = np.stack((cliques, -cliques), axis=1)
+    pcm = np.clip(np.rint(oposto * 32768.0), -32768, 32767).astype("<i2").tobytes()
+    separador = SeparadorDoSom(TAXA_DO_RADIO)
+    saida = b"".join(
+        separador.processar(pcm[p:p + 4 * BLOCO]) for p in range(0, len(pcm), 4 * BLOCO)
+    )
+    lados = np.frombuffer(saida, dtype="<i2").reshape(-1, 2) / 32768.0
+    for canal, sinal in ((0, cliques), (1, -cliques)):
+        assert _db(lados[atraso:, canal], sinal[:len(lados) - atraso]) >= -3.0
+    so_direita = np.stack((np.zeros_like(cliques), cliques), axis=1)
+    pcm = np.clip(np.rint(so_direita * 32768.0), -32768, 32767).astype("<i2").tobytes()
+    separador = SeparadorDoSom(TAXA_DO_RADIO)
+    saida = b"".join(
+        separador.processar(pcm[p:p + 4 * BLOCO]) for p in range(0, len(pcm), 4 * BLOCO)
+    )
+    lados = np.frombuffer(saida, dtype="<i2").reshape(-1, 2) / 32768.0
+    assert _db(lados[atraso:, 1], cliques[:len(lados) - atraso]) >= -3.0
+    assert not np.any(lados[:, 0])
+    desligado = SeparadorDoSom(TAXA_DO_RADIO, so_efeitos=False)
+    so_esquerda = np.stack((acorde, np.zeros_like(acorde)), axis=1)
+    pcm = np.clip(np.rint(so_esquerda * 32768.0), -32768, 32767).astype("<i2").tobytes()
+    saida = b"".join(
+        desligado.processar(pcm[p:p + 4 * BLOCO]) for p in range(0, len(pcm), 4 * BLOCO)
+    )
+    lados = np.frombuffer(saida, dtype="<i2").reshape(-1, 2) / 32768.0
+    assert _db(lados[atraso:, 0], acorde[:len(lados) - atraso]) >= -0.1
+    assert not np.any(lados[:, 1])
+
+
 def test_a_chave_desligada_devolve_o_som_inteiro_e_religada_volta_a_separar() -> None:
     chave = {"ligada": True}
     separador = SeparadorDoSom(TAXA_DO_CABO, so_efeitos=lambda: chave["ligada"])

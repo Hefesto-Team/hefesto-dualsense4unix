@@ -141,9 +141,27 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[str, 
         return verdadeira(**kw)
 
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _ponte_seca)
+    caixas: list[Any] = []
+
+    class _CaixaSeparada:
+        def __init__(self, *, uniq: str, no: str, sink: str) -> None:
+            self.uniq, self.no, self.sink, self.motivo = uniq, no, sink, ""
+
+        def subir(self) -> bool:
+            caixas.append(self)
+            return True
+
+        def viva(self) -> bool:
+            return self in caixas
+
+        def descer(self) -> None:
+            if self in caixas:
+                caixas.remove(self)
+
+    monkeypatch.setattr(af, "CaixaQueSeparaNoCabo", _CaixaSeparada)
     todo_alto_falante_toca(monkeypatch)
     try:
-        yield {"mandados": mandados, "abertos": abertos}
+        yield {"mandados": mandados, "abertos": abertos, "caixas": caixas}
     finally:
         for fd in fds:
             with contextlib.suppress(OSError):
@@ -233,20 +251,22 @@ async def test_nenhum_no_da_mesa_nasce_sumidouro(mesa: dict[str, Any]) -> None:
         sinks = [linha for linha in nulos if linha not in sem_porta]
         loopbacks = [linha for linha in carregados if "module-loopback" in linha]
         pontes = daemon._alto_falante_subsystem._pontes
+        caixas = list(mesa["caixas"])
 
         assert len(sinks) == 4, f"esperava quatro nós publicados: {sinks}"
         assert len(sem_porta) == 4, f"esperava quatro nós de háptica sem porta: {sem_porta}"
-        assert len(sinks) <= len(loopbacks) + len(pontes), (
+        assert len(sinks) <= len(loopbacks) + len(pontes) + len(caixas), (
             "algum `module-null-sink` foi publicado sem rota NENHUMA — nem "
-            "loopback no cabo, nem ponte no rádio. É o sink que aceita o áudio "
-            f"e o joga fora. sinks={len(sinks)} loopbacks={len(loopbacks)} "
-            f"pontes={len(pontes)}"
+            "loopback nem caixa separada no cabo, nem ponte no rádio. É o sink que "
+            f"aceita o áudio e o joga fora. sinks={len(sinks)} loopbacks={len(loopbacks)} "
+            f"caixas={len(caixas)} pontes={len(pontes)}"
         )
         for uniq, transporte in _MESA:
             if transporte == "cabo":
-                assert any(f"usb-{uniq[-2:]}" in linha for linha in loopbacks), (
-                    f"o do cabo ({uniq}) não teve o loopback para a placa dele"
-                )
+                placa = f"usb-{uniq[-2:]}"
+                assert any(placa in linha for linha in loopbacks) or any(
+                    c.sink.endswith(placa) for c in caixas
+                ), f"o do cabo ({uniq}) não teve o caminho para a placa dele"
     finally:
         daemon.stop()
         await run_task
