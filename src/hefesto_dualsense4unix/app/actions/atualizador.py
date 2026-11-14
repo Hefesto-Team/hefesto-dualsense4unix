@@ -762,12 +762,13 @@ def rodar(
     prazo_do_jogo_s: float | None = None,
 ) -> int:
     """A fila: uma peça por vez, em baixar, instalar e aplicar em todos; um processo por vez (o
-    segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez e, já em
-    dia, fica «Atualizado» sem baixar. A que espera (a Steam, o voo) vai para o fim e volta da
-    mesma etapa quando passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma
-    falha não para as outras. Se alguma peça mudou, reinicia o serviço e reabre a janela: antes
-    de esperar a que ficou para trás (o código novo não roda horas sob o serviço velho) e de novo
-    se a peça mudar. Devolve 0 pronto, 1 com falha, 2 parada ou com peça ainda esperando.
+    segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez (e ao fim
+    da espera, se ainda não começou) e, já em dia, fica «Atualizado» sem baixar. A que espera (a
+    Steam, o voo) vai para o fim e volta da mesma etapa quando passa. Com jogo aberto, espera ele
+    fechar de vez antes de cada peça. Uma falha não para as outras. Se alguma peça mudou,
+    reinicia o serviço e reabre a janela: antes de esperar a que ficou para trás (o código novo
+    não roda horas sob o serviço velho) e de novo se a peça mudar. Devolve 0 pronto, 1 com falha,
+    2 parada ou com peça ainda esperando.
     """
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
@@ -800,14 +801,21 @@ def rodar(
         _anotar(f"fila: {', '.join(p.id for p in escolhidas) or 'nada'}")
         prazo = PRAZO_DA_VIGIA_S if prazo_do_jogo_s is None else prazo_do_jogo_s
         adiadas: list[tuple[Peca, EsperaError, _Vez]] = []
+
+        def _ja_subiu(peca: Peca, linha: dict[str, Any]) -> bool:
+            """A peça que ia subir, conferida antes de começar: em dia, fica «Atualizado»."""
+            if o_que_fazer[peca.id] != SUBIR or not _ainda_em_dia(peca, conferencia.get(peca.id)):
+                return False
+            _atualizada(peca, versoes[peca.id], linha, "", guardar=False)
+            andamento.gravar()
+            return True
+
         try:
             for peca in escolhidas:
                 linha = andamento.peca(peca.id)
                 if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo, linha):
                     raise FilaParadaError
-                if o_que_fazer[peca.id] == SUBIR and _ainda_em_dia(peca, conferencia.get(peca.id)):
-                    _atualizada(peca, versoes[peca.id], linha, "", guardar=False)
-                    andamento.gravar()
+                if _ja_subiu(peca, linha):
                     continue
                 vez = _Vez(antes=ler_as_anteriores().get(peca.id))
                 espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
@@ -832,6 +840,8 @@ def rodar(
                     if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo,
                                              linha):
                         raise FilaParadaError
+                    if vez.desde == 0 and _ja_subiu(peca, linha):
+                        continue
                     outra = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
                     if outra is not None:
                         ainda.append((peca, outra, vez))

@@ -10,10 +10,12 @@ código 9 lido como falha reprova o caso da cura de cima; a falha da GameInput s
 compilação reprova o caso do 404; o andamento lido sem encerrar o órfão reprova o caso do PID
 morto; a fila sem a conferência na vez da peça reprova o caso das duas rodadas; o ``__main__``
 sem entregar ao módulo de nome reprova o caso da classe da falha; o Python sem a roda por pacote
-reprova o caso do pacote que não monta.
+reprova o caso do pacote que não monta; a volta da espera sem conferir de novo reprova o
+caso da peça que subiu por fora, e a conferência também em quem já começou reprova o do aplicar.
 """
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import os
 import re
@@ -201,6 +203,68 @@ def test_a_steam_que_nao_fecha_no_prazo_deixa_a_peca_para_a_proxima() -> None:
     linha = _linha("proton")
     assert linha["selo"] == at.FILA and linha["motivo"] == "a Steam está aberta"
     assert at.ler_o_andamento()["total"]["falhas"] == 0
+
+
+def _peca_que_muda(d: _Diario, ident: str, versao: dict[str, str], **etapas: Any) -> at.Peca:
+    return dataclasses.replace(_peca(d, ident, **etapas),
+                               versoes=lambda rede: at.Versoes(versao["de"],
+                                                               "1.1" if rede else None))
+
+
+def test_a_peca_que_subiu_por_fora_durante_a_espera_termina_atualizado() -> None:
+    """O voo segura o Hefesto antes de baixar; no meio da espera a versão nova chega por outro
+    caminho (o install da mesa). Ao passar, a peça se confere de novo: «Atualizado», sem baixar,
+    sem falha e sem reiniciar o serviço por nada."""
+    d = _Diario()
+    versao = {"de": "1.0"}
+    voo = {"no_ar": True}
+
+    def baixar(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+        d.feito.append("hefesto:baixar")
+        if voo["no_ar"]:
+            raise at.EsperaError(va.TRABALHO_EM_VOO, lambda: not voo["no_ar"])
+        raise at.EtapaFalhouError("o remoto não trouxe versão nova")
+
+    def dormir(_s: float) -> None:
+        versao["de"], voo["no_ar"] = "1.1", False
+
+    lista = [_peca_que_muda(d, "hefesto", versao, baixar=baixar)]
+    at.conferir(rede=True, lista=lista)
+    rc, servico = _rodar(lista, ["hefesto"], dormir=dormir)
+    assert rc == 0
+    assert d.feito == ["hefesto:baixar"]
+    assert _linha("hefesto")["selo"] == at.ATUALIZADA
+    assert at.ler_o_andamento()["total"]["falhas"] == 0
+    assert servico == []
+
+
+def test_a_peca_que_espera_no_aplicar_aplica_mesmo_ja_instalada() -> None:
+    """A conferência da volta vale só para quem ainda não começou: a peça que instalou e esperou
+    no aplicar (a Steam aberta) já diz a versão nova, e mesmo assim aplica ao passar."""
+    d = _Diario()
+    versao = {"de": "1.0"}
+    steam = {"aberta": True}
+
+    def instalar(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+        d.feito.append("proton:instalar")
+        versao["de"] = "1.1"
+
+    def aplicar(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+        d.feito.append("proton:aplicar")
+        if steam["aberta"]:
+            raise at.EsperaError("a Steam está aberta", lambda: not steam["aberta"])
+
+    def dormir(_s: float) -> None:
+        steam["aberta"] = False
+
+    lista = [dataclasses.replace(_peca_que_muda(d, "proton", versao, instalar=instalar),
+                                 aplicar=aplicar)]
+    at.conferir(rede=True, lista=lista)
+    rc, servico = _rodar(lista, ["proton"], dormir=dormir)
+    assert rc == 0
+    assert d.feito == ["proton:baixar", "proton:instalar", "proton:aplicar", "proton:aplicar"]
+    assert _linha("proton")["selo"] == at.PRONTA
+    assert servico == ["reiniciar", "reabrir"]
 
 
 def test_o_proton_espera_a_steam_nas_tres_etapas(monkeypatch: pytest.MonkeyPatch) -> None:
