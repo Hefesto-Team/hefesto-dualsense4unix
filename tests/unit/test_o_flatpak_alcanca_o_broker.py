@@ -40,6 +40,11 @@ LIDOS_PELA_BIBLIOTECA: dict[str, str] = {
     "/run/udev/data": "libudev.so.1",
 }
 
+COBERTAS_PELA_CAIXA = frozenset({
+    "ESCONDIDAS_NA_CAIXA", "ESCONDIDAS_NA_CAIXA_DO_LEITOR",
+    "DEVOLVIDO_COM_A_PERMISSAO", "DEVOLVIDO_COM_A_REDE",
+})
+
 _RE_RUN = re.compile(r"(?<![\w:/])/run/[A-Za-z0-9_.@-]+(?:/[A-Za-z0-9_.@-]+)*")
 
 
@@ -48,6 +53,17 @@ def _docstrings(arvore: ast.AST) -> set[int]:
     for no in ast.walk(arvore):
         if isinstance(no, ast.Expr) and isinstance(no.value, ast.Constant):
             ids.add(id(no.value))
+    return ids
+
+
+def _cobertas(arvore: ast.AST) -> set[int]:
+    """As constantes das listas que a caixa do ``bwrap`` cobre ou devolve: ninguém as abre."""
+    ids: set[int] = set()
+    for no in ast.walk(arvore):
+        alvos = (no.targets if isinstance(no, ast.Assign)
+                 else [no.target] if isinstance(no, ast.AnnAssign) else [])
+        if any(isinstance(a, ast.Name) and a.id in COBERTAS_PELA_CAIXA for a in alvos):
+            ids |= {id(c) for c in ast.walk(no) if isinstance(c, ast.Constant)}
     return ids
 
 
@@ -61,7 +77,7 @@ def _ler_o_codigo() -> tuple[dict[str, list[str]], list[str], list[str]]:
         if relativo.parts[0] in FORA_DO_SANDBOX:
             continue
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
-        docs = _docstrings(arvore)
+        docs = _docstrings(arvore) | _cobertas(arvore)
         for no in ast.walk(arvore):
             if (
                 isinstance(no, ast.Attribute)

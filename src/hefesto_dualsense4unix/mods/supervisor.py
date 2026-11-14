@@ -93,9 +93,14 @@ ESPERA_DA_VIGIA_S = 1.0
 
 FALTA_O_BWRAP = "Falta o bwrap: a extensão não abre sem a caixa."
 
-ESCONDIDO_SEM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
+ESCONDIDAS_NA_CAIXA: tuple[str, ...] = ("/run", "/var/run", "/mnt", "/media", "/srv", "/home")
+
+DEVOLVIDO_COM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
     "bluetooth": ("/run/dbus",),
+    "aparelhos": ("/run/udev",),
 }
+
+DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
 
 _PR_SET_PDEATHSIG = 1
 
@@ -464,23 +469,23 @@ def comando_na_caixa(
     ``--new-session`` põe o filho fora do grupo do PID criado, e o neto que a
     modificação deixasse de fundo sobrevivia ao «parar» (medido em 10/10/2026).
     """
+    escondidas = _escondidas()
     argv = [
         bwrap,
         "--ro-bind", "/", "/",
-        "--unshare-pid",
+        "--unshare-pid", "--unshare-ipc", "--unshare-uts", "--unshare-cgroup-try",
         "--proc", "/proc",
         "--tmpfs", "/tmp",
-        "--tmpfs", str(casa),
     ]
-    for pasta in execucao:
-        argv += ["--tmpfs", str(pasta)]
+    for pasta in (*escondidas, str(casa), *map(str, execucao)):
+        argv += ["--tmpfs", pasta]
     if "aparelhos" in manifesto.permissoes:
         argv += ["--dev-bind", "/dev", "/dev"]
     else:
         argv += ["--dev", "/dev"]
-    for permissao, caminhos in ESCONDIDO_SEM_A_PERMISSAO.items():
-        if permissao not in manifesto.permissoes:
-            argv += [arg for c in caminhos if Path(c).is_dir() for arg in ("--tmpfs", c)]
+    for caminho in _devolvidos(manifesto, escondidas):
+        argv += ["--ro-bind", caminho, caminho]
+    comando = _executavel_a_vista(comando, escondidas, argv)
     argv += [
         "--ro-bind", str(codigo), str(codigo),
         "--bind", str(dados), str(dados),
@@ -492,6 +497,38 @@ def comando_na_caixa(
         argv.append("--unshare-net")
     argv += ["--die-with-parent", "--new-session", "--chdir", str(codigo), "--", *comando]
     return argv
+
+
+def _escondidas() -> tuple[str, ...]:
+    """As raízes que a caixa cobre com ``tmpfs``: o link (``/var/run``) já cai com o alvo."""
+    return tuple(p for p in ESCONDIDAS_NA_CAIXA if os.path.isdir(p) and not os.path.islink(p))
+
+
+def _devolvidos(manifesto: Manifesto, escondidas: Sequence[str]) -> list[str]:
+    """O que volta por cima dos ``tmpfs``: o barramento com ``bluetooth``, o DNS com rede."""
+    caminhos = [c for permissao, lista in DEVOLVIDO_COM_A_PERMISSAO.items()
+                if permissao in manifesto.permissoes for c in lista]
+    if manifesto.rede != "nenhuma":
+        caminhos += list(DEVOLVIDO_COM_A_REDE)
+        resolv = os.path.realpath("/etc/resolv.conf")
+        if _escondido(resolv, escondidas) and not _escondido(resolv, DEVOLVIDO_COM_A_REDE):
+            caminhos.append(resolv)
+    return [c for c in dict.fromkeys(caminhos) if os.path.exists(c)]
+
+
+def _escondido(caminho: str, escondidas: Sequence[str]) -> bool:
+    return any(caminho == raiz or caminho.startswith(f"{raiz}/") for raiz in escondidas)
+
+
+def _executavel_a_vista(comando: list[str], escondidas: Sequence[str],
+                        argv: list[str]) -> list[str]:
+    """O executável sob uma raiz escondida (o ``python3`` de um venv) roda pelo alvo real."""
+    if not comando or not comando[0].startswith("/") or not _escondido(comando[0], escondidas):
+        return comando
+    real = os.path.realpath(comando[0])
+    if _escondido(real, escondidas):
+        argv += ["--ro-bind", real, real]
+    return [real, *comando[1:]]
 
 
 def pastas_dos_jogos(manifesto: Manifesto, casa: Path) -> tuple[Path, ...]:
@@ -1039,8 +1076,10 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
 
 
 __all__ = [
+    "DEVOLVIDO_COM_A_PERMISSAO",
+    "DEVOLVIDO_COM_A_REDE",
     "DIARIO_DA_MODIFICACAO",
-    "ESCONDIDO_SEM_A_PERMISSAO",
+    "ESCONDIDAS_NA_CAIXA",
     "ESPERAS_PARA_VOLTAR",
     "ESPERA_DA_PODA_S",
     "ESPERA_DA_VIGIA_S",

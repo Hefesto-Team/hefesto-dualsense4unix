@@ -970,10 +970,14 @@ def lancador_da_modificacao(mod_id: str, bloco: object, pasta: Path
         fixador=fixador)
 
 
+ESCONDIDAS_NA_CAIXA_DO_LEITOR: tuple[str, ...] = ("/run",)
+
+
 def _execucao_escondida() -> tuple[str, ...]:
-    """O que a caixa do leitor cobre: o barramento do sistema e a execução da sessão."""
-    pastas = ["/run/dbus", os.environ.get("XDG_RUNTIME_DIR", ""), f"/run/user/{os.getuid()}"]
-    return tuple(dict.fromkeys(p for p in pastas if p and os.path.isdir(p)))
+    """O que a caixa do leitor cobre: o ``/run`` inteiro e a execução da sessão fora dele."""
+    pastas = [*ESCONDIDAS_NA_CAIXA_DO_LEITOR, os.environ.get("XDG_RUNTIME_DIR", "")]
+    return tuple(dict.fromkeys(p for p in pastas if p and os.path.isdir(p)
+                               and not os.path.islink(p)))
 
 
 def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],

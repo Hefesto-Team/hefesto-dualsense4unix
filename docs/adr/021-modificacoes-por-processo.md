@@ -58,10 +58,16 @@ permissões que a pessoa aceitou.
      - a raiz é só de leitura e a `HOME` nasce vazia;
      - o código é só de leitura e os dados são graváveis;
      - do diretório de execução da sessão aparece só a porta, com ou sem `XDG_RUNTIME_DIR` no ambiente;
-     - os processos ficam num espaço de PID próprio: o que a modificação abrir morre com a modificação;
+     - os processos ficam num espaço de PID, IPC, UTS e cgroup próprios: o que a modificação abrir
+       morre com a modificação;
      - `--unshare-net` entra quando a rede é `nenhuma`;
-     - o barramento do sistema fica escondido sem `bluetooth`, e o `/dev` real fica escondido sem
-       `aparelhos`;
+     - `/run`, `/mnt`, `/media`, `/srv` e `/home` nascem vazios (nenhum socket de `/run`, como o do
+       broker ou o do docker, atende de dentro); volta por cima só o que a permissão pede: o
+       `/run/dbus` com `bluetooth`, o `/run/udev` e o `/dev` real com `aparelhos`, o
+       `/run/systemd/resolve` (e o alvo do `/etc/resolv.conf`) com rede;
+     - o executável que mora sob uma raiz escondida (o `python3` de um venv) roda pelo alvo real;
+     - a caixa do leitor e do fixador do lançador cobre o `/run` inteiro; os discos seguem à vista,
+       porque o leitor lê a biblioteca de jogos no disco em que estiver;
      - com `jogos`, cada pasta `steamapps` das bibliotecas da Steam aparece só de leitura, e o
        `HEFESTO_MOD_JOGOS` as lista.
    - **Sem `bwrap`**, a extensão fica «recusada» («Falta o bwrap»), e nenhum processo nasce; o
