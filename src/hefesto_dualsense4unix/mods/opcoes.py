@@ -331,9 +331,20 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
     return certo
 
 
+def _texto_que_se_le(valores: dict[str, Any]) -> bytes | None:
+    """O JSON que o ``ler`` relê, ou ``None``: fundo demais para o ``dump`` ou além do teto."""
+    try:
+        dados = (json.dumps(valores, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    except RecursionError:
+        return None
+    return dados if len(dados) <= TETO_DO_ARQUIVO else None
+
+
 def _gravar(mod_id: str, valores: dict[str, Any], lugares: Lugares) -> None:
-    texto = json.dumps(valores, ensure_ascii=False, indent=2) + "\n"
-    gravar_na_caixa(caminho(mod_id, lugares), texto.encode("utf-8"), "A opção não foi gravada")
+    dados = _texto_que_se_le(valores)
+    if dados is None:
+        raise InstalacaoRecusadaError("A opção não foi gravada: o arquivo não se leria de volta.")
+    gravar_na_caixa(caminho(mod_id, lugares), dados, "A opção não foi gravada")
 
 
 def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
@@ -366,10 +377,8 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
                 herdadas[chave] = antigo
                 break
     if herdadas:
-        try:
-            _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
-        except RecursionError:
-            _gravar(manifesto.id, herdadas, lugares)
+        completo = {**feitas, **herdadas}
+        _gravar(manifesto.id, completo if _texto_que_se_le(completo) else herdadas, lugares)
     return herdadas
 
 

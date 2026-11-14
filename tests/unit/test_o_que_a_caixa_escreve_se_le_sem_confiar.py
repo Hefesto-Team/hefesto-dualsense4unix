@@ -253,15 +253,25 @@ def test_o_json_hostil_nao_levanta(lg: Lugares, registro: _Registro, texto: str)
     assert registro.motivos == ["nao_e_um_objeto"]
 
 
-def test_a_troca_herda_mesmo_com_json_fundo_na_nova(lg: Lugares) -> None:
-    """O ``herdar`` regrava o que a nova guardou, e o ``dump`` não aceita o fundo do ``loads``."""
+@pytest.mark.parametrize("limite", [None, 10_000], ids=["limite-padrao", "limite-alto"])
+def test_a_troca_herda_mesmo_com_json_fundo_na_nova(lg: Lugares, limite: int | None) -> None:
+    """O ``herdar`` regrava o que a nova guardou só se o arquivo se lê de volta.
+
+    Com o limite de recursão alto, o ``dump`` aceita o fundo e o texto passa do teto do ``ler``.
+    """
     opcoes.caminho(_OUTRA, lg).parent.mkdir()
     opcoes.caminho(_ID, lg).write_text('{"cor": "#00ff00"}', encoding="utf-8")
     fundo = '{"sobra":' + "[" * 2_000 + "]" * 2_000 + "}"
     nova = Manifesto.model_validate({**_MANIFESTO.model_dump(mode="json"), "id": _OUTRA})
     opcoes.caminho(_OUTRA, lg).write_text(fundo, encoding="utf-8")
+    anterior = sys.getrecursionlimit()
+    sys.setrecursionlimit(limite or anterior)
+    try:
+        assert opcoes.herdar(nova, [_ID], lg) == {"cor": "#00ff00"}
+    finally:
+        sys.setrecursionlimit(anterior)
 
-    assert opcoes.herdar(nova, [_ID], lg) == {"cor": "#00ff00"}
+    assert opcoes.caminho(_OUTRA, lg).stat().st_size <= opcoes.TETO_DO_ARQUIVO
     assert opcoes.ler(nova, lg)["cor"] == "#00ff00"
 
 
