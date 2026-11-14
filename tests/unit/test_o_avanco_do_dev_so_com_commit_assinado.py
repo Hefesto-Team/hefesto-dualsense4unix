@@ -226,7 +226,7 @@ case " $* " in
     printf '\\n[GNUPG:] SIG_CREATED D 22 8 00 1 X\\n' >&2
     printf -- '-----BEGIN PGP SIGNATURE-----\\n\\nAAAA\\n-----END PGP SIGNATURE-----\\n' ;;
   *) cat >/dev/null
-    printf '[GNUPG:] NEWSIG\\n[GNUPG:] GOODSIG 0123456789ABCDEF quem\\n'
+    printf '[GNUPG:] NEWSIG\\n[GNUPG:] GOODSIG CHAVE-DE-MENTIRA quem\\n'
     printf '[GNUPG:] VALIDSIG X\\n[GNUPG:] TRUST_ULTIMATE\\n' ;;
 esac
 """
