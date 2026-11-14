@@ -90,11 +90,9 @@ class _Harmonico:
 class _Porta:
     """A porta de transiente: abre no golpe, guarda o fundo de antes, solta devagar.
 
-    O limiar segue os picos da MÚSICA. Com o fundo em silêncio (abaixo de -60 dBFS nos
-    50 ms de antes) não há música a vazar: qualquer ataque acima do mínimo abre, e o
-    pico dele não entra na conta. Sem isso, o efeito que vem depois do silêncio (o jogo
-    sem trilha, o menu) virava a régua de si mesmo, e de cada três golpes iguais só o
-    primeiro passava.
+    O limiar segue os picos da MÚSICA: o pico que nasce do silêncio (abaixo de -60 dBFS
+    nos 50 ms de antes) não entra na conta. Sem isso, o efeito depois do silêncio (o jogo
+    sem trilha, o menu) virava a régua de si mesmo, e de três golpes iguais só um passava.
     """
 
     _PICOS = 64
@@ -157,8 +155,7 @@ class _Porta:
             else LIMIAR_SEM_HISTORIA_DB
         )
         potencia = modulo * modulo
-        limiar = LIMIAR_MINIMO_DB if silencio_agora else max(limiar, LIMIAR_MINIMO_DB)
-        if fluxo > limiar and t > self._aberta_ate:
+        if fluxo > max(limiar, LIMIAR_MINIMO_DB) and t > self._aberta_ate:
             self._fundo = self._antes.mean(0)
             self._aberta_ate = t + self._segura
             self._abriu_em = t

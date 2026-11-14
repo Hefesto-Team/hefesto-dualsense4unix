@@ -35,6 +35,8 @@ dependencies = [
     # O `.yml` do jogo do Lutris se lê e se escreve com ele, o mesmo leitor do
     # Lutris (a camada da lista de exclusão, A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01).
     "PyYAML>=6.0",
+    # O separador da caixa do controle (a FFT e a máscara a 200 quadros/s) não cabe em Python puro.
+    "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
