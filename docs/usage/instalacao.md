@@ -66,6 +66,23 @@ inscrever a chave do DKMS e reiniciar. O instalador diz qual chave inscrever:
 `/var/lib/shim-signed/mok/MOK.der` no Ubuntu e no Pop!_OS, e
 `/var/lib/dkms/mok.pub` nas outras distribuições.
 
+### Arch e derivadas (CachyOS, EndeavourOS, Manjaro)
+
+Os cabeçalhos do kernel têm de ser os do kernel que roda, e cada derivada tem o
+seu (`linux-cachyos-headers`, `linux-zen-headers`, `linux612-headers`). Atualize,
+reinicie se o kernel mudou e instale antes do `./install.sh`:
+
+```bash
+sudo pacman -Syu
+sudo pacman -S --needed git base-devel dkms dmidecode alsa-utils \
+    "$(pacman -Qqo /usr/lib/modules/$(uname -r)/vmlinuz)-headers"
+```
+
+O `wvkbd` e o `wlrctl` moram no AUR (`paru -S wvkbd`); sem o `wvkbd`, o L3 avisa
+na tela em vez de abrir o teclado, e o `doctor` marca a falta. O `~/.local/bin`
+não entra no `PATH` em todo shell do Arch: abra o Hefesto pelo menu de
+aplicativos, ou acrescente a pasta ao `PATH`.
+
 ## O que o instalador muda no sistema
 
 | Caminho | O que é |
@@ -174,4 +191,5 @@ bash scripts/purge.sh --yes
 | Pop!\_OS 24.04 | COSMIC | testado com controles |
 | Ubuntu 22.04 e 24.04 | GNOME | integração contínua, sem controle |
 | Debian 12 | qualquer | sem controle; no kernel 6.1 o `hid-playstation`, o `hid-nintendo` e o `usb_f_hid` ficam nos de fábrica, e o `doctor` diz o motivo |
-| Fedora, Arch, Debian 13, Mint | qualquer | não testado; relatos são bem-vindos |
+| Arch e CachyOS | contêiner | o install termina, sem controle; no CachyOS o `hid-playstation` e o `hid-nintendo` ficam nos de fábrica (o kernel dele muda o `hid-ids.h`), e o `usb_f_hid` compila |
+| Fedora, Debian 13, Mint | qualquer | não testado; relatos são bem-vindos |
