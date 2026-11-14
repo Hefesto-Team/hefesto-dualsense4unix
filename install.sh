@@ -528,7 +528,12 @@ _pkg_nome() {
             _pacman="base-devel" ;;
         kernel-headers)
             _apt="linux-headers-$(uname -r)"; _dnf="kernel-devel"
-            _pacman="linux-headers" ;;
+            _pacman=""
+            if [[ "${_familia}" == "pacman" ]]; then
+                _pacman="$(pacman -Qqo "/usr/lib/modules/$(uname -r)/vmlinuz" 2>/dev/null || true)"
+            fi
+            [[ "${_pacman}" =~ ^[a-z0-9][a-z0-9._+-]*$ ]] || _pacman="linux"
+            _pacman="${_pacman}-headers" ;;
         bubblewrap)
             _apt="bubblewrap";        _dnf="bubblewrap"
             _pacman="bubblewrap" ;;
