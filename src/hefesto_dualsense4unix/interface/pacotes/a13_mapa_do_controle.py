@@ -452,7 +452,10 @@ def _usar_em(ctx: Contexto, estado: dict[str, Any]) -> str:
 
 
 def _opcoes_do_perfil(ctx: Contexto) -> str:
-    """O conteúdo de `#perfil`: Navegação, Moldes, Meus perfis e o «+ Novo perfil…»."""
+    """O conteúdo de `#perfil`: o perfil que vale, Moldes, Meus perfis e o «+ Novo perfil…».
+
+    O grupo «Navegação» só aparece quando é a Navegação que vale; com o jogo, o nome dele vem solto.
+    """
     moldes = "".join(
         f'<option value="{MOLDE}{m.chave}">{html.escape(m.nome)}</option>'
         for m in _moldes_a_vista())
@@ -461,8 +464,10 @@ def _opcoes_do_perfil(ctx: Contexto) -> str:
         f'{html.escape(str(c.get("name") or ""))}</option>'
         for c in _perfis_do_disco(ctx))
     nav = f'<option value="{NAV}">{html.escape(_nome_do_que_vale(ctx))}</option>'
-    return (f'<optgroup label="Navegação">{nav}</optgroup>'
-            f'<optgroup label="Moldes">{moldes}</optgroup>'
+    if _vale_a_navegacao(ctx):
+        nav = f'<optgroup label="Navegação">{nav}</optgroup>'
+    return (nav
+            + f'<optgroup label="Moldes">{moldes}</optgroup>'
             + (f'<optgroup label="Meus perfis">{meus}</optgroup>' if meus else "")
             + f'<option value="{NOVO}">+ Novo perfil…</option>')
 

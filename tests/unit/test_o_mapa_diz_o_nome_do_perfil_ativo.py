@@ -7,7 +7,8 @@ Navegação. O perfil ativo é um para todos os controles: o nome não muda com 
 «Vale para», com o cabo ou o rádio, nem com a posição do jogador.
 
 MORDIDAS: devolver o nome fixo «Navegar no computador» ao campo ou ao seletor reprova o nome do
-jogo; devolver o `nav` fixo à etiqueta reprova o modo do jogo.
+jogo; devolver o `nav` fixo à etiqueta reprova o modo do jogo; devolver o grupo «Navegação» fixo
+ao seletor reprova o nome do jogo sob o título da Navegação.
 """
 
 from __future__ import annotations
@@ -65,11 +66,16 @@ def _disco(monkeypatch: pytest.MonkeyPatch) -> Any:
     a13._largar()
 
 
+GRUPO_DA_NAVEGACAO = '<optgroup label="Navegação">'
+
+
 def _tela(ctx: Contexto) -> tuple[dict[str, Any], str]:
     pacote = pacote_da_pagina(a13.PAGINA, ctx) or {}
     opcoes = pacote["blocos"][a13.BLOCO_DO_PERFIL]
     achado = re.search(rf'<option value="{a13.NAV}">([^<]*)</option>', opcoes)
     assert achado, opcoes
+    com_o_grupo = opcoes.startswith(GRUPO_DA_NAVEGACAO)
+    assert com_o_grupo == (achado.group(1) == a13.NOME_DA_NAVEGACAO), opcoes
     return pacote["mesa"], achado.group(1)
 
 
