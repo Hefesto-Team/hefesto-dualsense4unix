@@ -185,7 +185,11 @@ def cmd_listar() -> None:
 @app.command("permissoes")  # (noqa-acento)
 def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """O que a modificação instalada pede, uma linha por permissão."""
-    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, manifesto_instalado
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        frase_do_preparo,
+        manifesto_instalado,
+    )
 
     try:
         manifesto = manifesto_instalado(mod_id)
@@ -193,6 +197,8 @@ def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação
         raise _recusar(exc) from exc
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
+    if manifesto.preparar:
+        console.print(frase_do_preparo(manifesto), markup=False)
 
 
 @app.command("ligar")
@@ -205,6 +211,7 @@ def cmd_ligar(
         InstalacaoRecusadaError,
         Lugares,
         aviso_por_ver,
+        frase_do_preparo,
         ler_registro,
         ligar,
         manifesto_instalado,
@@ -220,6 +227,8 @@ def cmd_ligar(
         console.print(f"«{manifesto.nome}» avisa: {aviso}", markup=False)
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
+    if manifesto.preparar and (entrada is None or entrada.preparada_em != entrada.instalada_em):
+        console.print(frase_do_preparo(manifesto), markup=False)
     if manifesto.processo is not None and shutil.which("bwrap") is None:
         console.print("Sem o bwrap, a extensão não abre: instale o bubblewrap.")
     if not sim and not typer.confirm("Ligar com estas permissões?", default=False):

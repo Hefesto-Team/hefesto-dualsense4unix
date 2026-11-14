@@ -590,6 +590,14 @@ def _rodar_o_preparo(lg: Lugares, manifesto: Manifesto, entrada: Entrada) -> Non
         entrada.ligada = False
 
 
+def frase_do_preparo(manifesto: Manifesto) -> str:
+    """O que o «sim» do ligar aceita junto: o ``preparar`` roda fora da caixa, na HOME."""
+    if not manifesto.preparar:
+        return ""
+    return (f"Roda `{' '.join(manifesto.preparar)}` fora da caixa, "
+            "com acesso à sua pasta pessoal.")
+
+
 def _preparo_novo(lg: Lugares, anterior: Entrada, manifesto: Manifesto) -> bool:
     """O ``preparar`` da versão nova é outro que o aceito e que o da versão instalada?"""
     if not manifesto.preparar:
@@ -684,8 +692,8 @@ def instalar(
         _trocar_o_codigo(baixada, lg.codigo / manifesto.id)
         trocou = True
         pronta = not novas and manifesto.aviso in ("", aviso_aceito)
-        prepara_agora = bool(manifesto.preparar) and pronta and anterior is not None and (
-            anterior.ligada and (not sozinha or anterior.preparo_aceito == manifesto.preparar))
+        prepara_agora = (bool(manifesto.preparar) and pronta and anterior is not None
+                         and anterior.ligada and not sozinha)
         entrada = Entrada(
             id=manifesto.id,
             nome=manifesto.nome,
@@ -794,6 +802,8 @@ def _o_que_segura_a_atualizacao(
         return f"A versão {manifesto.versao} traz outro aviso."
     if _preparo_novo(lg, anterior, manifesto):
         return f"A versão {manifesto.versao} traz um preparo novo."
+    if manifesto.preparar:
+        return f"A versão {manifesto.versao} roda o preparo de novo, fora da caixa."
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
     if a_substituir:
@@ -1164,6 +1174,7 @@ __all__ = [
     "conferir_remocao",
     "desligar",
     "esperar_parar",
+    "frase_do_preparo",
     "gravar_na_caixa",
     "gravar_registro",
     "instalar",

@@ -220,8 +220,8 @@ def test_o_preparo_novo_numa_atualizacao_sozinha_espera_o_atualizar(
 
     _preparado(lar).unlink()
     _fonte(tmp_path, versao="0.3.0")
-    assert instalar(str(fonte), lugares=lar, sozinha=True).trocou
-    assert _preparado(lar).is_file() and _entrada(lar).versao_esperando == ""
+    assert not instalar(str(fonte), lugares=lar, sozinha=True).trocou
+    assert not _preparado(lar).exists() and _entrada(lar).versao_esperando == "0.3.0"
 
 
 def test_o_preparo_espera_o_aviso_e_as_permissoes_e_roda_no_ligar(
