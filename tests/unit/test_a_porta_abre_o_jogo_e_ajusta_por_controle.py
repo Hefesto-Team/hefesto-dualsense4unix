@@ -37,8 +37,8 @@ from hefesto_dualsense4unix.integrations.leitor_do_estado import (
 )
 from hefesto_dualsense4unix.mods import porta as porta_mod
 from hefesto_dualsense4unix.mods.manifesto import permissao_valida
+from hefesto_dualsense4unix.daemon.protocolo_do_ipc import CODE_INVALID_PARAMS
 from hefesto_dualsense4unix.mods.porta import (
-    CODE_INVALID_PARAMS,
     CODE_NAO_ESCREVEU,
     CODE_SEM_PERMISSAO,
     Porta,
