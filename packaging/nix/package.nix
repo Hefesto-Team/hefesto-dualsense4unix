@@ -137,6 +137,7 @@ python3Packages.buildPythonApplication rec {
     filelock
     jeepney
     pyyaml
+    numpy
     # pydualsense nao esta em nixpkgs ainda — buildPythonPackage extra
     # abaixo dentro do propagatedBuildInputs como deriv inline.
     (python3Packages.buildPythonPackage rec {

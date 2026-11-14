@@ -64,6 +64,7 @@ Requires:       python3-structlog
 Requires:       python3-platformdirs
 Requires:       python3-filelock
 Requires:       python3-pyyaml
+Requires:       python3-numpy
 Requires:       python3-jeepney
 # pydualsense puxado via pip no %install (sem RPM Fedora ainda).
 

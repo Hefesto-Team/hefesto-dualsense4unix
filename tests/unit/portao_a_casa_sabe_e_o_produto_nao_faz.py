@@ -643,7 +643,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "`loginctl` ele não atende ninguém. Nas distros do install os caminhos fixos "
         "`/usr/bin` e `/bin` bastam; o NixOS não tem nenhum dos dois, e quem LIGA a chave é o "
         "pacote Nix, que acrescenta o `Environment=` à unit com o `sed` do "
-        "`packaging/nix/package.nix:262` (`HEFESTO_BROKER_LOGINCTL`). Os testes também a escrevem, "
+        "`packaging/nix/package.nix:263` (`HEFESTO_BROKER_LOGINCTL`). Os testes também a escrevem, "
         "para simular o logind "
         "ausente, mas não são eles que a sustentam."
     ),
@@ -3483,7 +3483,7 @@ class TestOPortaoMorde:
         )
         assert portas_que_ligam("HEFESTO_BROKER_LOGINCTL") == ["empacotamento"], (
             "o detector não vê a linha que o "
-            "`packaging/nix/package.nix:262` (`HEFESTO_BROKER_LOGINCTL`) acrescenta à "
+            "`packaging/nix/package.nix:263` (`HEFESTO_BROKER_LOGINCTL`) acrescenta à "
             "unit do broker"
         )
 

@@ -190,6 +190,7 @@ modules:
           "filelock>=3.13"
           "jeepney>=0.8"
           "PyYAML>=6.0"
+          "numpy>=1.24"
     sources: []
 
   # Módulo intermediário: libhidapi — biblioteca nativa que o wrapper Python
