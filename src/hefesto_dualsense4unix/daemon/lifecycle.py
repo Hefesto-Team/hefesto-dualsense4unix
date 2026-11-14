@@ -164,10 +164,7 @@ def _o_modo_do_jogo_sem_arme(profile: Any, mode: Any | None) -> Any | None:
         perfil_e_de_jogo,
     )
 
-    try:
-        if not perfil_e_de_jogo(profile):
-            return None
-    except Exception:
+    if not perfil_e_de_jogo(profile):
         return None
     estilo = POR_CHAVE.get(str(getattr(profile, "estilo", None) or ""))
     receita = getattr(estilo, "receita_invisivel", None)
