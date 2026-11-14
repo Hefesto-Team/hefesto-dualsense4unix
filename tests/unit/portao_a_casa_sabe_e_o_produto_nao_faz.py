@@ -920,6 +920,12 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`pacote` da aba (`a03_gatilhos.modo_dos_gatilhos_do_perfil`, "
         "`a04_iluminacao.modo_da_luz_do_perfil`)."
     ),
+    "interface/pacotes/fios.py::vivos": (
+        "11/11/2026 — é instrumento da suíte, não promessa ao produto: o docstring "
+        "diz «A suíte pergunta isto ao fim de cada teste», e quem pergunta é "
+        "`tests/unit/test_o_fio_da_interface_morre_com_o_teste.py`; o produto só "
+        "solta o fio (`soltar`), não precisa contá-lo."
+    ),
     "interface/pacotes/a11_calibrar_sensores.py::bloco_de_nascenca": (
         "07/10/2026, A-MIRA — é do gerador do desenho, não do produto: os geradores "
         "da 06, da 08 e da 10 (`interface/aba06.py`, `aba08.py`, `aba10.py`, o import "
