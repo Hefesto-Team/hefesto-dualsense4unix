@@ -27,6 +27,15 @@ exec sleep 300
 """
 
 
+AWK_QUE_SO_AVISA = """#!/bin/bash
+if [[ "$1" == -W ]]; then
+    echo "awk: option -W $2 unrecognized, ignored" >&2
+    shift 2
+fi
+exec /usr/bin/awk "$@"
+"""
+
+
 def _executavel(caminho: Path, texto: str) -> None:
     caminho.write_text(texto, encoding="utf-8")
     caminho.chmod(0o755)
@@ -60,10 +69,14 @@ def _vivo(pid: int) -> bool:
 
 
 class _Vigia:
-    def __init__(self, tmp_path: Path, *, journalctl_cai: bool) -> None:
+    def __init__(
+        self, tmp_path: Path, *, journalctl_cai: bool, awk_que_so_avisa: bool = False
+    ) -> None:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         _executavel(bin_dir / "journalctl", JOURNALCTL)
+        if awk_que_so_avisa:
+            _executavel(bin_dir / "awk", AWK_QUE_SO_AVISA)
         _executavel(bin_dir / "hciconfig", "#!/bin/bash\nexit 0\n")
         self.marca = tmp_path / "journalctl-de-pe"
         self.registro = tmp_path / "state" / "hefesto-dualsense4unix" / "kernel.log"
@@ -110,12 +123,16 @@ class _Vigia:
         self.processo.wait(timeout=PRAZO_S)
 
 
+@pytest.mark.parametrize(
+    "awk_que_so_avisa", [False, True], ids=["awk-que-aceita", "awk-que-so-avisa"]
+)
 @pytest.mark.parametrize("no_grupo", [True, False], ids=["no-grupo", "so-no-principal"])
 @pytest.mark.parametrize("numero", [signal.SIGTERM, signal.SIGINT], ids=["TERM", "INT"])
 def test_a_parada_sai_zero_calada_e_nao_deixa_filho(
-    tmp_path: Path, numero: int, no_grupo: bool
+    tmp_path: Path, numero: int, no_grupo: bool, awk_que_so_avisa: bool
 ) -> None:
-    vigia = _Vigia(tmp_path, journalctl_cai=False)
+    """O gawk aceita o ``-W interactive`` com saída zero e avisa no stderr: a sonda ouve o aviso."""
+    vigia = _Vigia(tmp_path, journalctl_cai=False, awk_que_so_avisa=awk_que_so_avisa)
     try:
         filhos = vigia.de_pe()
         vigia.sinal(numero, no_grupo=no_grupo)

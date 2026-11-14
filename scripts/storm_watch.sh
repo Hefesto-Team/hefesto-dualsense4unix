@@ -4,7 +4,7 @@ set -uo pipefail
 GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)|playstation 0005:[0-9a-f:.]+: probe with driver playstation failed"
 
 _escolher_awk() {
-    if awk -W interactive 'BEGIN { exit 0 }' </dev/null >/dev/null 2>&1; then
+    if [[ -z "$(awk -W interactive 'BEGIN { exit 0 }' </dev/null 2>&1 || echo falhou)" ]]; then
         echo "awk -W interactive"
     else
         echo "awk"
