@@ -186,3 +186,50 @@ def test_a_secao_resolvida_e_a_do_estilo() -> None:
         ProfileModeConfig(kind="desktop", arranjo="point_and_click")
     )
     assert lifecycle._o_modo_do_jogo_sem_arme(_perfil_da_navegacao(), None) is None
+
+
+class _ConfigDoBoot:
+    gamepad_emulation_enabled = False
+    mouse_emulation_enabled = True
+
+
+class _DaemonDoBoot:
+    store = None
+    appid_em_cena = APPID_FORJADO
+
+    def __init__(self) -> None:
+        self.config = _ConfigDoBoot()
+
+
+@pytest.mark.parametrize("mascara", MASCARAS)
+@pytest.mark.parametrize("estilo", [None, "fps", "terror"])
+def test_o_boot_com_o_jogo_sem_mode_nasce_com_o_pad(
+    monkeypatch: pytest.MonkeyPatch, mascara: str, estilo: str | None
+) -> None:
+    """O reinício com o jogo em cena (ou o último) sem `mode`: o pad nasce, na máscara da
+    máquina, e o mouse não. MORDIDA: devolva o `perfil.mode` cru ao boot e ele nasce no mouse."""
+    from hefesto_dualsense4unix.daemon import connection
+
+    perfil = _perfil_do_jogo(estilo)
+    monkeypatch.setattr(lifecycle, "_mascara_da_maquina", lambda: mascara)
+    monkeypatch.setattr(connection, "o_jogo_que_o_boot_restaura", lambda *_a, **_k: perfil)
+    monkeypatch.setattr(connection, "perfil_que_o_boot_restaura", lambda *_a, **_k: perfil)
+    d = _DaemonDoBoot()
+
+    assert lifecycle._o_pad_do_jogo_volta_no_boot(d, perfil.name) is True
+    assert d.config.gamepad_emulation_enabled is True
+    assert d.config.mouse_emulation_enabled is False
+    assert lifecycle._o_modo_do_perfil_do_boot(None)[1:] == (mascara, perfil.name)
+
+
+def test_o_boot_com_o_jogo_de_navegacao_nao_liga_o_pad(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.daemon import connection
+
+    perfil = _perfil_do_jogo("point_and_click")
+    monkeypatch.setattr(connection, "o_jogo_que_o_boot_restaura", lambda *_a, **_k: perfil)
+    monkeypatch.setattr(connection, "perfil_que_o_boot_restaura", lambda *_a, **_k: perfil)
+    d = _DaemonDoBoot()
+
+    assert lifecycle._o_pad_do_jogo_volta_no_boot(d, perfil.name) is False
+    assert d.config.gamepad_emulation_enabled is False
+    assert lifecycle._o_modo_do_perfil_do_boot(None) == (None, None, perfil.name)

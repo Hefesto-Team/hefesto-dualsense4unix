@@ -191,7 +191,7 @@ def _o_modo_do_perfil_do_boot(
     if perfil is None:
         return None, None, None
     nome = getattr(perfil, "name", None)
-    mode = getattr(perfil, "mode", None)
+    mode = _o_modo_do_jogo_sem_arme(perfil, getattr(perfil, "mode", None))
     if getattr(mode, "kind", None) != "gamepad":
         return None, None, nome
     return (*_o_par_do_pad(mode), nome)
@@ -5311,7 +5311,8 @@ def _o_pad_do_jogo_volta_no_boot(daemon: Any, perfil_do_boot: str | None) -> boo
     perfil = o_jogo_que_o_boot_restaura(
         getattr(daemon, "store", None), appid_em_cena=getattr(daemon, "appid_em_cena", None)
     )
-    if getattr(getattr(perfil, "mode", None), "kind", None) != "gamepad":
+    mode = _o_modo_do_jogo_sem_arme(perfil, getattr(perfil, "mode", None))
+    if getattr(mode, "kind", None) != "gamepad":
         return False
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.mouse_emulation_enabled = False
