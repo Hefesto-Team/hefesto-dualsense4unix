@@ -257,3 +257,21 @@ def test_a_lista_da_casa_tem_o_formato_do_git() -> None:
     assert linhas
     for linha in linhas:
         assert re.fullmatch(r'\S+ namespaces="git" ssh-ed25519 [A-Za-z0-9+/]+=*', linha), linha
+
+
+def test_a_aba_sistema_diz_a_recusa_no_tema_do_servico(
+        casa: Casa, monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.interface import sistema
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema
+    from tests.unit.test_o_app_roda_o_install_ao_fechar import _exame_so_com_o_install
+
+    assert not _avancar(casa, casa.publicar(None), Pedidos())
+    linhas = _exame_so_com_o_install(monkeypatch)
+    assert [(selo, tema) for selo, _texto, tema in linhas] == [("[WARN]", "serviço")]
+    exame = sistema.exame(linhas)
+    monkeypatch.setattr(a09_sistema, "linha_do_gamepad_por_jogador", lambda _s: {})
+    linha = next(a for a in a09_sistema._so_o_que_a_tela_mostra(exame, [], None)["linhas"]
+                 if a["tema"] == "serviço")
+    assert linha["cls"] == "aviso"
+    assert linha["txt"] == "A versão nova ficou de fora"
+    assert MOTIVO in linha["dica"]
