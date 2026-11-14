@@ -106,7 +106,7 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -961,6 +961,8 @@ class SinkVirtualPipeWire:
         canais: int = CANAIS_DO_ENCODER,
         runner: Callable[[list[str]], str | None] | None = None,
         rota: RotaDoNo | None = None,
+        caixa: Callable[..., Any] | None = None,
+        relogio: Callable[[], float] | None = None,
     ) -> None:
         self.uniq = str(uniq)
         self.nome = nome_do_sink(uniq)
@@ -972,6 +974,10 @@ class SinkVirtualPipeWire:
         self._module_id: str | None = None
         self._rotas: list[str] = []
         self._fios: dict[str, tuple[str, str]] = {}
+        self._fabrica_da_caixa = caixa
+        self._relogio = relogio or time.monotonic
+        self._caixa: Any = None
+        self._caixa_recusada_em: float | None = None
 
 
     @property
@@ -1044,6 +1050,7 @@ class SinkVirtualPipeWire:
 
     def _esquecer_o_que_sumiu(self) -> None:
         """O módulo saiu por fora: a memória zera, e as rotas dele (que ficaram) descem."""
+        self._descer_a_caixa()
         for module_id in reversed(self._rotas):
             self.runner(["pactl", "unload-module", module_id])
         self._rotas.clear()
@@ -1070,11 +1077,55 @@ class SinkVirtualPipeWire:
 
     def _ligar_a_rota(self) -> None:
         """Carrega os ``module-loopback`` desta rota. Silencioso quando não há."""
-        rota = self.rota
+        rota = self._casar_a_caixa(self.rota)
         if rota is None or not rota.tem_rota:
             return
         for argv in _enquanto_o_servidor_atende(argv_das_rotas(self.nome, rota)):
             self._subir_o_fio(argv)
+
+    def _descer_a_caixa(self) -> None:
+        caixa, self._caixa = self._caixa, None
+        if caixa is None:
+            return
+        with contextlib.suppress(Exception):
+            caixa.descer()
+        logger.info("som_caixa_separada_desceu", sink=self.nome)
+
+    def _casar_a_caixa(self, rota: RotaDoNo | None) -> RotaDoNo | None:
+        """A rota que vale de fato no cabo: com a caixa separada de pé, ou com o loopback.
+
+        «Só efeitos» no cabo pede a :class:`CaixaQueSeparaNoCabo` no lugar do
+        ``module-loopback`` da saída. Caixa que não sobe ou que caiu devolve a rota sem
+        a chave, e o loopback de sempre toca por :data:`RECUSA_DA_CAIXA_S`, sem piscar
+        entre os dois a cada volta: a caixa muda é pior que a caixa com música.
+        """
+        quer = rota is not None and rota.tem_rota and bool(rota.sink) and rota.so_efeitos
+        caixa = self._caixa
+        if rota is None or not quer:
+            self._descer_a_caixa()
+            return rota
+        if caixa is not None and caixa.sink == rota.sink and caixa.viva():
+            return rota
+        if caixa is not None:
+            caiu = caixa.sink == rota.sink
+            self._descer_a_caixa()
+            if caiu:
+                self._caixa_recusada_em = self._relogio()
+                logger.info("som_caixa_separada_caiu", sink=self.nome, motivo=caixa.motivo)
+        recusada = self._caixa_recusada_em
+        if recusada is not None and self._relogio() - recusada < RECUSA_DA_CAIXA_S:
+            return replace(rota, so_efeitos=False)
+        fabrica = self._fabrica_da_caixa or CaixaQueSeparaNoCabo
+        nova = fabrica(uniq=self.uniq, no=self.nome, sink=rota.sink)
+        if nova.subir():
+            self._caixa = nova
+            self._caixa_recusada_em = None
+            return rota
+        with contextlib.suppress(Exception):
+            nova.descer()
+        self._caixa_recusada_em = self._relogio()
+        logger.info("som_caixa_separada_nao_subiu", sink=self.nome, motivo=nova.motivo)
+        return replace(rota, so_efeitos=False)
 
     def _subir_o_fio(self, argv: Sequence[str]) -> bool:
         """Um ``module-loopback`` da rota. ``True`` = o servidor deu o id."""
@@ -1133,9 +1184,12 @@ class SinkVirtualPipeWire:
         if _o_recuo().mudo():
             logger.debug("som_pactl_mudo_nao_religo", sink=self.nome)
             return False
+        caixa_antes = self._caixa
+        efetiva = self._casar_a_caixa(rota) or rota
+        caixa_mudou = self._caixa is not caixa_antes
         de_pe = self._fios_de_pe(modulos)
         pedidos = {
-            _as_pontas(" ".join(argv[3:])): argv for argv in argv_das_rotas(self.nome, rota)
+            _as_pontas(" ".join(argv[3:])): argv for argv in argv_das_rotas(self.nome, efetiva)
         }
         mix_sem_saber = (
             rota.tem_rota and rota.fonte == FONTE_MIX and rota.monitor_do_mix is None
@@ -1152,7 +1206,7 @@ class SinkVirtualPipeWire:
         vivos = set(de_pe) if modulos is not None else set(self._rotas)
         self._rotas = [i for i in self._rotas if i in vivos]
         if not sobram and not faltam:
-            return False
+            return caixa_mudou
         for module_id in sobram:
             if _o_recuo().mudo():
                 return True
@@ -1182,6 +1236,7 @@ class SinkVirtualPipeWire:
         Com o servidor calado ou o orçamento do stop vencido não manda nada: a
         memória zera e o que ficou no servidor é da varredura do próximo início.
         """
+        self._descer_a_caixa()
         rotas, self._rotas = list(self._rotas), []
         self._fios.clear()
         module_id, self._module_id = self._module_id, None
@@ -1230,6 +1285,7 @@ class SinkVirtualPipeWire:
 
 
 _COLUNA_DO_ESTADO = 4
+RECUSA_DA_CAIXA_S = 30.0
 
 
 MS_POR_QUADRO = 10
@@ -1499,6 +1555,7 @@ class BombaDeSomPeloRadio:
         relogio: Callable[[], float] | None = None,
         so_com_sinal: bool = False,
         ganho_da_haptica: float | Callable[[], float] = 1.0,
+        separador: Any = None,
     ) -> None:
         if common is not None and len(common) != COMMON_LEN:
             raise ValueError(
@@ -1530,6 +1587,7 @@ class BombaDeSomPeloRadio:
         self._calado_desde: float | None = None
         self._escritor_do_relatorio = RelatorioCombinado()
         self.contagem = ContagemDaBomba()
+        self.separador = separador
 
     def quer_o_microfone(self) -> bool:
         """O bit 0 dos enables DESTE report. Nunca levanta."""
@@ -1599,6 +1657,7 @@ class BombaDeSomPeloRadio:
         if len(pcm) < pedido:
             self.contagem.pcm_curto += 1
             pcm = pcm + b"\x00" * (pedido - len(pcm))
+        pcm = self._so_o_efeito(pcm)
         pcm = self._com_a_frente(pcm)
         som_vai = self._o_som_vai(pcm)
         bloco = self._o_bloco_da_haptica(haptico)
@@ -1631,6 +1690,21 @@ class BombaDeSomPeloRadio:
         if self.common is not None:
             return self.common
         return bytes(COMMON_LEN) if bloco is not None else None
+
+    def _so_o_efeito(self, pcm: bytes) -> bytes:
+        """O PCM do nó pelo separador da caixa (A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01).
+
+        Só o nó passa por ele: a frente, que o jogo já manda ao controle, é somada
+        depois, inteira. Separador que falha devolve o PCM como veio. Nunca levanta.
+        """
+        separador = self.separador
+        if separador is None:
+            return pcm
+        try:
+            return bytes(separador.processar(pcm))
+        except Exception:  # pragma: no cover
+            logger.debug("som_radio_separador_falhou", exc_info=True)
+            return pcm
 
     def _com_a_frente(self, pcm: bytes) -> bytes:
         """Soma ao PCM do alto-falante a frente do endpoint deste quadro, saturando.
@@ -2478,6 +2552,233 @@ def fonte_do_monitor_do_no(
     return fonte_de_arquivo(saida.fileno()), proc, ""
 
 
+TAXA_DA_CAIXA_NO_CABO = 48_000
+LATENCIA_DO_TOCADOR_DA_CAIXA_MS = 20
+BYTES_POR_LEITURA_DA_CAIXA = AMOSTRAS_POR_QUADRO * CANAIS_DO_ENCODER * 2
+RECUO_PROIBIDO_DA_CAIXA: tuple[str, ...] = (
+    "node.dont-fallback=true",
+    "node.dont-reconnect=true",
+    "state.restore-target=false",
+    "state.restore-props=false",
+    "channelmix.upmix=false",
+)
+
+
+def argv_do_tocador_da_caixa(
+    sink: str,
+    rotulo: str,
+    *,
+    achar: Callable[[str], str | None] = shutil.which,
+    serial_de: Callable[[str], int | None] | None = None,
+) -> list[str]:
+    """O comando que toca o PCM da caixa nos canais do alto-falante da placa. ``[]`` = não há como.
+
+    Só os canais da frente: os de trás da placa do controle são os motores, e o
+    ``channelmix.upmix=false`` impede que o som da caixa vaze para eles.
+    """
+    if not sink or not rotulo:
+        return []
+    if achar("pw-cat") is not None and o_servidor_e_o_pipewire():
+        serial = (serial_de or serial_do_no)(sink)
+        if serial is not None:
+            return [
+                "pw-cat", "--playback", "--raw", f"--target={serial}",
+                f"--rate={TAXA_DA_CAIXA_NO_CABO}", f"--channels={CANAIS_DO_ENCODER}",
+                "--format=s16", "--channel-map=FL,FR",
+                f"--latency={LATENCIA_DO_TOCADOR_DA_CAIXA_MS}ms", "--volume=1.0",
+                "-P", " ".join((f"node.name={rotulo}", f"media.name={rotulo}",
+                                *RECUO_PROIBIDO_DA_CAIXA)),
+                "-",
+            ]
+    if achar("pacat") is not None:
+        return [
+            "pacat", "--playback", "--raw", f"--device={sink}",
+            f"--rate={TAXA_DA_CAIXA_NO_CABO}", f"--channels={CANAIS_DO_ENCODER}",
+            "--format=s16le", f"--channel-map={CANAIS_DO_ALTO_FALANTE}",
+            f"--latency-msec={LATENCIA_DO_TOCADOR_DA_CAIXA_MS}", "--volume=65536",
+            f"--client-name={rotulo}", f"--stream-name={rotulo}",
+            f"--property=node.name={rotulo}",
+            *(f"--property={p}" for p in RECUO_PROIBIDO_DA_CAIXA),
+        ]
+    return []
+
+
+def lancar_tocador(argv: Sequence[str]) -> subprocess.Popen[bytes]:
+    """O ``Popen`` de um tocador de som: cano no ``stdin``, e preso ao pai."""
+    from hefesto_dualsense4unix.integrations.filho_de_som import morrer_com_o_pai
+
+    return subprocess.Popen(
+        list(argv),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        preexec_fn=morrer_com_o_pai,
+    )
+
+
+class CaixaQueSeparaNoCabo:
+    """A caixa de UM controle no cabo, com o separador no meio: só o efeito chega à placa.
+
+    A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01. No cabo a caixa era um ``module-loopback``
+    do monitor do nó para a placa, sem Python no caminho; com «Só efeitos» ligado ele
+    dá lugar a esta caixa: o gravador do monitor do nó (o mesmo da ponte do rádio, com
+    a conferência do alvo), o :class:`~integrations.separador_do_som.SeparadorDoSom` e
+    um tocador nos canais da frente da placa. Os dois filhos morrem com o daemon.
+    """
+
+    def __init__(
+        self,
+        *,
+        uniq: str,
+        no: str,
+        sink: str,
+        so_efeitos: bool | Callable[[], bool] = True,
+        lancar_gravador: Callable[[list[str]], Any] | None = None,
+        lancar_o_tocador: Callable[[list[str]], Any] | None = None,
+        argv_tocador: Callable[[str, str], list[str]] | None = None,
+    ) -> None:
+        self.uniq = str(uniq)
+        self.no = str(no)
+        self.sink = str(sink)
+        self.so_efeitos = so_efeitos
+        self._lancar_gravador = lancar_gravador
+        self._lancar_o_tocador = lancar_o_tocador or lancar_tocador
+        self._argv_tocador = argv_tocador or argv_do_tocador_da_caixa
+        self._gravador: Any = None
+        self._tocador: Any = None
+        self._thread: threading.Thread | None = None
+        self._parar = threading.Event()
+        self.motivo = ""
+
+    def viva(self) -> bool:
+        """O laço da caixa ainda corre? Nunca levanta."""
+        thread = self._thread
+        return thread is not None and thread.is_alive() and not self._parar.is_set()
+
+    def subir(self) -> bool:
+        """Sobe o gravador, o tocador e o laço. ``False`` = não deu, e nada fica de pé."""
+        from hefesto_dualsense4unix.integrations.filho_de_som import derrubar_leitor_de_pipe
+
+        if self.viva():
+            return True
+        separador = separador_da_caixa(TAXA_DA_CAIXA_NO_CABO, self.so_efeitos)
+        if separador is None:
+            self.motivo = "o separador não monta nesta máquina"
+            return False
+        rotulo = rotulo_do_gravador(uniq=self.uniq, papel="caixa")
+        argv = self._argv_tocador(self.sink, f"{rotulo}-saida") if rotulo else []
+        if not argv:
+            self.motivo = "nem `pw-cat` nem `pacat` para tocar na placa"
+            return False
+        fonte, gravador, motivo = fonte_do_monitor_do_no(
+            self.no,
+            uniq=self.uniq,
+            papel="caixa",
+            abrir=self._lancar_gravador,
+            taxa=TAXA_DA_CAIXA_NO_CABO,
+        )
+        if fonte is None:
+            if gravador is not None:
+                derrubar_leitor_de_pipe(gravador)
+            self.motivo = motivo
+            return False
+        try:
+            tocador = self._lancar_o_tocador(argv)
+        except OSError as erro:
+            derrubar_leitor_de_pipe(gravador)
+            self.motivo = f"não consegui abrir o tocador da caixa: {erro}"
+            return False
+        entrada = getattr(tocador, "stdin", None)
+        if entrada is None:
+            derrubar_leitor_de_pipe(gravador)
+            derrubar_leitor_de_pipe(tocador)
+            self.motivo = "o tocador da caixa subiu sem `stdin`"
+            return False
+        self._gravador, self._tocador = gravador, tocador
+        self._parar = threading.Event()
+        self._thread = threading.Thread(
+            target=self._laco,
+            args=(fonte, entrada.fileno(), separador, self._parar),
+            name=f"som-caixa-{so_hex(self.uniq)[:6]}",
+            daemon=True,
+        )
+        self._thread.start()
+        self.motivo = ""
+        logger.info("som_caixa_separada_de_pe", uniq=self.uniq, sink=self.sink)
+        return True
+
+    def _laco(
+        self,
+        fonte: Callable[[int], bytes],
+        saida: int,
+        separador: Any,
+        parar: threading.Event,
+    ) -> None:
+        por_que = "a caixa desceu"
+        try:
+            while not parar.is_set():
+                pcm = fonte(BYTES_POR_LEITURA_DA_CAIXA)
+                if not pcm:
+                    por_que = "o gravador do nó secou"
+                    break
+                dados = memoryview(separador.processar(pcm))
+                while dados:
+                    escritos = os.write(saida, dados)
+                    dados = dados[escritos:]
+        except OSError:
+            por_que = "o tocador da placa fechou"
+        finally:
+            parar.set()
+            logger.info("som_caixa_separada_saiu", uniq=self.uniq, por_que=por_que)
+
+    def descer(self) -> None:
+        """Derruba o laço e os dois filhos. Idempotente."""
+        from hefesto_dualsense4unix.integrations.filho_de_som import derrubar_leitor_de_pipe
+
+        self._parar.set()
+        gravador, self._gravador = self._gravador, None
+        tocador, self._tocador = self._tocador, None
+        thread, self._thread = self._thread, None
+        if thread is threading.current_thread():
+            thread = None
+        if tocador is not None:
+            with contextlib.suppress(Exception):
+                tocador.terminate()
+        if gravador is not None:
+            derrubar_leitor_de_pipe(gravador, leitor=thread)
+        if thread is not None:
+            thread.join(timeout=1.0)
+        if tocador is not None:
+            entrada = getattr(tocador, "stdin", None)
+            if entrada is not None and (thread is None or not thread.is_alive()):
+                with contextlib.suppress(Exception):
+                    entrada.close()
+            derrubar_leitor_de_pipe(tocador)
+
+
+def separador_da_caixa(taxa_hz: int, so_efeitos: bool | Callable[[], bool]) -> Any:
+    """O separador da caixa deste caminho, ou ``None`` (chave fora, ou sem numpy). Nunca levanta.
+
+    ``so_efeitos`` é a chave «Só efeitos» do controle: ``False`` fixo é o caminho sem
+    separador; quem a diz (um callable) liga o separador, que segue a chave viva.
+    """
+    if so_efeitos is False:
+        return None
+    from hefesto_dualsense4unix.integrations.separador_do_som import (
+        SeparadorDoSom,
+        o_separador_cabe_aqui,
+    )
+
+    if not o_separador_cabe_aqui():
+        logger.info("som_caixa_sem_separador", motivo="o numpy não está nesta máquina")
+        return None
+    try:
+        return SeparadorDoSom(taxa_hz, canais=CANAIS_DO_ENCODER, so_efeitos=so_efeitos)
+    except Exception:  # pragma: no cover
+        logger.warning("som_caixa_separador_nao_montou", exc_info=True)
+        return None
+
+
 class PonteDeSomPorRadio:
     """Do monitor dos nós ao controle, por rádio: o som e a háptica. Uma por controle.
 
@@ -2510,9 +2811,11 @@ class PonteDeSomPorRadio:
         no_do_som: str = "",
         no_da_haptica: str = "",
         ganho_da_haptica: float | Callable[[], float] = 1.0,
+        so_efeitos: bool | Callable[[], bool] = False,
     ) -> None:
         self.uniq = uniq
         self.ganho_da_haptica = ganho_da_haptica
+        self.so_efeitos = so_efeitos
         self._no_do_som = no_do_som
         self._no_da_haptica = no_da_haptica
         self.so_com_sinal = bool(so_com_sinal)
@@ -2591,6 +2894,7 @@ class PonteDeSomPorRadio:
             so_com_sinal=self.so_com_sinal,
             relogio=self._relogio,
             ganho_da_haptica=self.ganho_da_haptica,
+            separador=separador_da_caixa(TAXA_DA_FONTE_DO_SOM, self.so_efeitos),
         )
         self._thread = threading.Thread(
             target=self._laco,
@@ -2805,6 +3109,7 @@ class RotaDoNo:
     motivo: str = ""
     fonte: str = FONTE_PADRAO
     monitor_do_mix: str | None = ""
+    so_efeitos: bool = False
 
 
 def _sink_proprio_vivo(uniq: str, saida_curta: str) -> str:
@@ -2930,9 +3235,18 @@ def rota_do_no(
     fonte: str = FONTE_PADRAO,
     ponte_do_radio: Callable[[], bool] | None = None,
     runner: Callable[[list[str]], str | None] | None = None,
+    so_efeitos: bool = False,
 ) -> RotaDoNo:
-    """Onde este nó entrega o áudio — ou a frase de por que ele não entrega."""
+    """Onde este nó entrega o áudio — ou a frase de por que ele não entrega.
+
+    ``so_efeitos`` é a chave «Só efeitos» do controle: no cabo, ligada, a saída do
+    nó para a placa é a :class:`CaixaQueSeparaNoCabo` em vez do ``module-loopback``.
+    Sem numpy nesta máquina a chave não vale, e o loopback segue como sempre.
+    """
+    from hefesto_dualsense4unix.integrations.separador_do_som import o_separador_cabe_aqui
+
     fonte = fonte if fonte in (FONTE_MIX, FONTE_SFX) else FONTE_PADRAO
+    so_efeitos = bool(so_efeitos) and o_separador_cabe_aqui()
     monitor: str | None = (
         monitor_da_saida_padrao(runner=runner) if fonte == FONTE_MIX else ""
     )
@@ -2945,6 +3259,7 @@ def rota_do_no(
                 por_onde=POR_RADIO,
                 fonte=fonte,
                 monitor_do_mix=_mix_sem_laco(uniq, "", monitor),
+                so_efeitos=so_efeitos,
             )
         motivo = (
             MOTIVO_NO_SEM_PONTE_NO_RADIO
@@ -2961,6 +3276,7 @@ def rota_do_no(
         por_onde=POR_CABO,
         fonte=fonte,
         monitor_do_mix=_mix_sem_laco(uniq, alvo, monitor),
+        so_efeitos=so_efeitos,
     )
 
 
@@ -2988,11 +3304,15 @@ def argv_para_ligar_o_mix(id_do_no: str, monitor: str) -> tuple[str, ...]:
 
 
 def argv_das_rotas(id_do_no: str, rota: RotaDoNo) -> tuple[tuple[str, ...], ...]:
-    """Os ``module-loopback`` desta rota, na ordem em que sobem — () se não há."""
+    """Os ``module-loopback`` desta rota, na ordem em que sobem — () se não há.
+
+    Com «Só efeitos» no cabo a saída para a placa não é loopback: é a
+    :class:`CaixaQueSeparaNoCabo`, que o :class:`SinkVirtualPipeWire` sobe.
+    """
     if not id_do_no or not rota.tem_rota:
         return ()
     comandos: list[tuple[str, ...]] = []
-    if rota.sink:
+    if rota.sink and not rota.so_efeitos:
         comandos.append(argv_para_ligar_o_no(id_do_no, rota.sink))
     if (
         rota.fonte == FONTE_MIX

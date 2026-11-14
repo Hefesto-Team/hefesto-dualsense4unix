@@ -228,10 +228,12 @@ class GerenciadorDeNosDeSom:
         fonte_por_controle: Any = None,
         ponte_do_radio_por_controle: Any = None,
         runner: Any = None,
+        so_efeitos_por_controle: Any = None,
     ) -> None:
         self._runner = runner
         self._fabrica = fabrica
         self._fonte_por_controle = fonte_por_controle
+        self._so_efeitos_por_controle = so_efeitos_por_controle
         self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
         self._nos: dict[str, Any] = {}
         self._transportes: dict[str, str] = {}
@@ -310,7 +312,18 @@ class GerenciadorDeNosDeSom:
             mesa,
             fonte=self._fonte_do_no(uniq),
             ponte_do_radio=self._ponte_do_radio(uniq),
+            so_efeitos=self._so_efeitos_do_no(uniq),
         )
+
+    def _so_efeitos_do_no(self, uniq: str) -> bool:
+        """A chave «Só efeitos» deste controle; sem quem a diga, o caminho sem separador."""
+        if self._so_efeitos_por_controle is None:
+            return False
+        try:
+            return bool(self._so_efeitos_por_controle(uniq))
+        except Exception:  # pragma: no cover
+            logger.debug("som_so_efeitos_ilegivel", uniq=uniq, exc_info=True)
+            return True
 
 
     def _reafinar(
@@ -801,6 +814,7 @@ class AltoFalanteSubsystem:
         self._sem_porta: dict[str, str] = {}
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         self._fonte_viva: dict[str, str] = {}
+        self._so_efeitos_vivos: dict[str, bool] = {}
         self._store: Any = None
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
@@ -947,6 +961,24 @@ class AltoFalanteSubsystem:
     def fonte_escolhida(self, uniq: str) -> str:
         """A fonte que vale para este controle AGORA — a viva, ou a do perfil."""
         return self._fonte_do_controle(uniq)
+
+    def so_efeitos(self, uniq: str) -> bool:
+        """A chave «Só efeitos» deste controle: a caixa toca só o efeito do jogo.
+
+        A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01: ligada por padrão, em cada controle, no
+        cabo e no rádio; o corpo continua sentindo o som inteiro. Nunca levanta.
+        """
+        return self._so_efeitos_vivos.get(_uniq_de_perfil(uniq), True)
+
+    def escolher_so_efeitos(self, uniq: str, ligado: bool) -> bool:
+        """Liga ou desliga «Só efeitos» de ESTE controle, valendo na caixa que já toca."""
+        chave = _uniq_de_perfil(uniq)
+        if not chave:
+            return False
+        self._so_efeitos_vivos[chave] = bool(ligado)
+        logger.info("som_so_efeitos_escolhido", uniq=uniq, ligado=bool(ligado))
+        self._acordar_a_volta("so_efeitos")
+        return True
 
     def _fontes_do_perfil(self) -> dict[str, str]:
         """`{uniq: fonte}` do perfil ativo — e `{}` é resposta honesta."""
@@ -2286,6 +2318,7 @@ class AltoFalanteSubsystem:
                 no_do_som=nome_do_sink(uniq),
                 no_da_haptica=lendo,
                 ganho_da_haptica=functools.partial(GANHO.fator, uniq),
+                so_efeitos=functools.partial(self.so_efeitos, uniq),
             )
             if ponte.subir():
                 if not self._guardar_se_no_ar(
@@ -2487,6 +2520,7 @@ class AltoFalanteSubsystem:
         self._gerenciador = self._gerenciador_injetado or GerenciadorDeNosDeSom(
             ponte_do_radio_por_controle=self._ponte_do_radio_de,
             fonte_por_controle=self._fonte_do_controle,
+            so_efeitos_por_controle=self.so_efeitos,
         )
         abrir = getattr(self._gerenciador, "abrir", None)
         if callable(abrir):
