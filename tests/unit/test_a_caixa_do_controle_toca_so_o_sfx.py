@@ -195,6 +195,54 @@ def test_a_chave_desligada_devolve_o_som_inteiro_e_religada_volta_a_separar() ->
     assert degrau_da_saida <= 1.5 * degrau_da_entrada, "a troca da chave estalou"
 
 
+def test_a_troca_da_chave_leva_uns_20_ms_e_nao_um_salto() -> None:
+    acorde, _ = _sinal(TAXA_DO_CABO, segundos=3.0)
+    chave = {"ligada": True}
+    separador = SeparadorDoSom(TAXA_DO_CABO, so_efeitos=lambda: chave["ligada"])
+    virada = int(2.0 * TAXA_DO_CABO) // BLOCO * BLOCO
+    pedacos = []
+    for p in range(0, len(acorde) - BLOCO + 1, BLOCO):
+        chave["ligada"] = p < virada
+        pedacos.append(separador.separar(acorde[p:p + BLOCO])[0])
+    saida = np.concatenate(pedacos)[separador.latencia_amostras:]
+
+    def nivel(ms: float) -> float:
+        inicio = virada + int(ms / 1000 * TAXA_DO_CABO)
+        fim = inicio + int(0.0025 * TAXA_DO_CABO)
+        return _db(saida[inicio:fim], acorde[inicio:fim])
+
+    assert nivel(2.5) <= -3.0, "a música voltou num salto, sem a rampa da chave"
+    assert nivel(20.0) >= -0.5, "a música não voltou inteira em 20 ms"
+
+
+def test_abaixo_de_250_hz_a_caixa_cala_mesmo_no_golpe() -> None:
+    _, cliques = _sinal(TAXA_DO_CABO)
+    grave = np.zeros_like(cliques)
+    duracao = int(0.06 * TAXA_DO_CABO)
+    curva = np.exp(-np.arange(duracao) / (0.02 * TAXA_DO_CABO))
+    onda = 0.3 * np.sin(2 * np.pi * 90 * np.arange(duracao) / TAXA_DO_CABO) * curva
+    ativos = np.flatnonzero(cliques)
+    for inicio in ativos[np.diff(ativos, prepend=-10**6) > 1000]:
+        trecho = grave[inicio:inicio + duracao]
+        trecho += onda[:len(trecho)]
+    mistura = cliques + grave
+    separador = SeparadorDoSom(TAXA_DO_CABO)
+    tamanho = len(mistura) - len(mistura) % BLOCO
+    saida = np.concatenate(
+        [separador.separar(mistura[p:p + BLOCO])[0] for p in range(0, tamanho, BLOCO)]
+    )
+    atraso = separador.latencia_amostras
+
+    def so_o_grave(sinal: Any) -> Any:
+        espectro = np.fft.rfft(sinal)
+        espectro[np.fft.rfftfreq(len(sinal), 1 / TAXA_DO_CABO) > 160] = 0
+        return np.fft.irfft(espectro, len(sinal))
+
+    entrada = mistura[:tamanho - atraso]
+    assert _db(so_o_grave(saida[atraso:]), so_o_grave(entrada)) <= -30.0
+    assert _db(saida[atraso:], cliques[:tamanho - atraso]) >= -3.0
+
+
 def test_um_separador_por_controle_nao_mistura_o_estado_dos_quatro() -> None:
     acorde, cliques = _sinal(TAXA_DO_RADIO, segundos=3.0)
     sozinho = SeparadorDoSom(TAXA_DO_RADIO)
@@ -210,7 +258,9 @@ def test_um_separador_por_controle_nao_mistura_o_estado_dos_quatro() -> None:
 
 def _bomba(fonte: Any, separador: Any) -> tuple[Any, list[bytes]]:
     capturados: list[bytes] = []
-    bomba = af.BombaDeSomPeloRadio(fonte=fonte, seco=True, so_com_sinal=True, separador=separador)
+    bomba = af.BombaDeSomPeloRadio(
+        fonte=fonte, seco=True, so_com_sinal=True, separador_do_som=separador
+    )
 
     def _codificar(pcm: bytes) -> bytes:
         capturados.append(bytes(pcm))
@@ -287,6 +337,45 @@ def test_a_frente_que_o_jogo_manda_ao_controle_nao_passa_pelo_separador() -> Non
     assert bomba.contagem.quadros_com_frente > 0
 
 
+def test_o_corpo_segue_com_o_som_inteiro_enquanto_a_caixa_perde_a_musica() -> None:
+    acorde, _ = _sinal(TAXA_DO_RADIO, segundos=3.0)
+    quatro = np.zeros((len(acorde), 4))
+    quatro[:, 2] = quatro[:, 3] = acorde
+    pcm_do_corpo = np.clip(np.rint(quatro * 32768.0), -32768, 32767).astype("<i2").tobytes()
+    corpos: dict[str, list[bytes | None]] = {}
+    caixas: dict[str, Any] = {}
+    for nome, separador in (
+        ("sem", None), ("com", af.separador_da_caixa(TAXA_DO_RADIO, True))
+    ):
+        bomba, capturados = _bomba(_fonte_de(acorde), separador)
+        posicao = {"p": 0}
+
+        def _corpo(quantos: int, posicao: dict[str, int] = posicao) -> bytes:
+            inicio = posicao["p"]
+            posicao["p"] = inicio + quantos
+            return pcm_do_corpo[inicio:inicio + quantos]
+
+        bomba.fonte_haptica = _corpo
+        vistos: list[bytes | None] = []
+        escritor = bomba._escritor_do_relatorio
+        original = escritor.relatorio_do_quadro
+
+        def _relatorio(*, vistos: list[bytes | None] = vistos, original: Any = original,
+                       **campos: Any) -> bytes:
+            vistos.append(campos.get("haptico"))
+            return bytes(original(**campos))
+
+        escritor.relatorio_do_quadro = _relatorio
+        for _ in range(len(acorde) // BLOCO - 20):
+            bomba.um_report()
+        corpos[nome] = vistos
+        caixas[nome] = np.concatenate([_mono(q) for q in capturados]) if capturados else []
+    assert any(corpos["sem"]), "o corpo de mentira não levou nada"
+    assert corpos["com"] == corpos["sem"], "o corpo perdeu a música junto com a caixa"
+    um = TAXA_DO_RADIO
+    assert _energia(caixas["com"][um:]) < _energia(caixas["sem"][um:]) / 100
+
+
 def test_a_ponte_do_radio_monta_a_bomba_com_o_separador_que_segue_a_chave(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -315,11 +404,11 @@ def test_a_ponte_do_radio_monta_a_bomba_com_o_separador_que_segue_a_chave(
         ponte.descer()
         assert ponte._bomba is not None
         bombas.append(ponte._bomba)
-    separador = bombas[0].separador
+    separador = bombas[0].separador_do_som
     assert isinstance(separador, SeparadorDoSom)
     chave["ligada"] = False
     assert separador._a_chave() is False
-    assert bombas[1].separador is None
+    assert bombas[1].separador_do_som is None
 
 
 class _Processo:
@@ -604,15 +693,43 @@ def test_a_caixa_que_nao_sobe_deixa_o_loopback_e_nao_pisca_a_cada_volta(
     assert servidor.carregados == {}
 
 
+def test_o_no_que_sumiu_por_fora_leva_a_caixa_junto_e_nao_deixa_duas(
+    servidor: _Servidor,
+) -> None:
+    uniq = CONTROLES[1]
+    rota = af.RotaDoNo(True, sink=PLACA.format(1), por_onde=af.POR_CABO, so_efeitos=True)
+    no = af.SinkVirtualPipeWire(uniq=uniq, runner=servidor, rota=rota)
+    assert no.iniciar()
+    assert [c.uniq for c in _CaixaDeMentira.vivas] == [uniq]
+    primeira = _CaixaDeMentira.vivas[0]
+    servidor.carregados.pop(str(no.module_id))
+    assert no.iniciar()
+    assert not primeira.viva(), "a caixa do nó que sumiu ficou gravando um monitor morto"
+    assert [c.uniq for c in _CaixaDeMentira.vivas] == [uniq]
+    no.parar()
+    assert _CaixaDeMentira.vivas == []
+
+
 def test_sem_numpy_a_rota_segue_sem_a_chave(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.integrations import separador_do_som as sep
 
+    monkeypatch.setattr(af, "sink_do_controle", lambda *_a, **_k: PLACA.format(0))
+    com_numpy = af.rota_do_no(
+        CONTROLES[0], af.TRANSPORTE_CABO, so_efeitos=True,
+        runner=lambda _a: "", ponte_do_radio=None,
+    )
+    assert com_numpy.tem_rota and com_numpy.sink == PLACA.format(0)
+    assert com_numpy.so_efeitos is True
     monkeypatch.setattr(sep, "o_separador_cabe_aqui", lambda: False)
     rota = af.rota_do_no(
         CONTROLES[0], af.TRANSPORTE_CABO, so_efeitos=True,
         runner=lambda _a: "", ponte_do_radio=None,
     )
+    assert rota.tem_rota and rota.sink == PLACA.format(0)
     assert rota.so_efeitos is False
+    assert af.argv_das_rotas(af.nome_do_sink(CONTROLES[0]), rota) == (
+        af.argv_para_ligar_o_no(af.nome_do_sink(CONTROLES[0]), PLACA.format(0)),
+    )
     assert af.separador_da_caixa(TAXA_DO_RADIO, True) is None
 
 

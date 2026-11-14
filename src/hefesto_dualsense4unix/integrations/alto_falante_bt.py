@@ -1553,7 +1553,7 @@ class BombaDeSomPeloRadio:
         relogio: Callable[[], float] | None = None,
         so_com_sinal: bool = False,
         ganho_da_haptica: float | Callable[[], float] = 1.0,
-        separador: Any = None,
+        separador_do_som: Any = None,
     ) -> None:
         if common is not None and len(common) != COMMON_LEN:
             raise ValueError(
@@ -1585,7 +1585,7 @@ class BombaDeSomPeloRadio:
         self._calado_desde: float | None = None
         self._escritor_do_relatorio = RelatorioCombinado()
         self.contagem = ContagemDaBomba()
-        self.separador = separador
+        self.separador_do_som = separador_do_som
 
     def quer_o_microfone(self) -> bool:
         """O bit 0 dos enables DESTE report. Nunca levanta."""
@@ -1695,7 +1695,7 @@ class BombaDeSomPeloRadio:
         Só o nó passa por ele: a frente, que o jogo já manda ao controle, é somada
         depois, inteira. Separador que falha devolve o PCM como veio. Nunca levanta.
         """
-        separador = self.separador
+        separador = self.separador_do_som
         if separador is None:
             return pcm
         try:
@@ -2893,7 +2893,7 @@ class PonteDeSomPorRadio:
             so_com_sinal=self.so_com_sinal,
             relogio=self._relogio,
             ganho_da_haptica=self.ganho_da_haptica,
-            separador=separador_da_caixa(TAXA_DA_FONTE_DO_SOM, self.so_efeitos),
+            separador_do_som=separador_da_caixa(TAXA_DA_FONTE_DO_SOM, self.so_efeitos),
         )
         self._thread = threading.Thread(
             target=self._laco,
