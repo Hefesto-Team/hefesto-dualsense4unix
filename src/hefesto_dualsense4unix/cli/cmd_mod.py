@@ -239,7 +239,11 @@ def cmd_ligar(
         console.print(frase_do_preparo(manifesto), markup=False, soft_wrap=True)
     _dizer_a_rede(manifesto)
     if manifesto.processo is not None and shutil.which("bwrap") is None:
-        console.print("Sem o bwrap, a extensão não abre: instale o bubblewrap.")
+        if entrada is not None and entrada.sem_caixa:
+            console.print(
+                "Sem o bwrap, a extensão roda sem caixa e pode mais do que estas permissões.")
+        else:
+            console.print("Sem o bwrap, a extensão não abre: instale o bubblewrap.")
     if not sim and not typer.confirm("Ligar com estas permissões?", default=False):
         console.print("Não liguei.")
         raise typer.Exit(code=1)

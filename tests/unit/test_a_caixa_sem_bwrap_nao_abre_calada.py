@@ -14,7 +14,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
+from hefesto_dualsense4unix.cli import cmd_mod
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 from hefesto_dualsense4unix.mods.instalador import (
     Lugares,
@@ -216,3 +218,17 @@ def test_o_doctor_avisa_quando_falta_o_bwrap(tmp_path: Path) -> None:
 def test_o_doctor_roda_a_conferencia_da_caixa() -> None:
     texto = (RAIZ / "scripts/doctor.sh").read_text(encoding="utf-8")
     assert "\n    check_caixa_das_extensoes\n" in texto
+
+
+@pytest.mark.parametrize("chave", [False, True])
+def test_o_ligar_sem_bwrap_diz_o_que_a_chave_gravada_faz(
+        lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch, chave: bool) -> None:
+    instalar(str(_pasta_do_mod(curto / "fontes", "fica")), lugares=lar)
+    rodar_sem_caixa("exemplo", chave, lugares=lar)
+    original = shutil.which
+    monkeypatch.setattr(cmd_mod.shutil, "which",
+                        lambda c, *a, **k: None if c == "bwrap" else original(c, *a, **k))
+    saida = CliRunner().invoke(cmd_mod.app, ["ligar", "exemplo"], input="n\n").output
+    roda = "Sem o bwrap, a extensão roda sem caixa e pode mais do que estas permissões."
+    nao_abre = "Sem o bwrap, a extensão não abre: instale o bubblewrap."
+    assert (roda in saida, nao_abre in saida) == (chave, not chave), saida
