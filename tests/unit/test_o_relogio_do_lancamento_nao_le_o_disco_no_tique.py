@@ -724,13 +724,14 @@ def test_a_folha_em_branco_nao_arma_nem_acusa_mudanca(casa: SimpleNamespace) -> 
 
             mp.setattr(gp, "sync_steam_input_exception", exceção)
             gp._reconciliar_launch(daemon)
-            bloqueio.set()
+            try:
+                assert feitos == ["memória", "exceção"]
+                assert daemon._launch_env_assinatura == "a de antes"
+                assert getattr(daemon, "_launch_env_sossego_em", None) is None
+            finally:
+                bloqueio.set()
 
     asyncio.run(corpo())
-
-    assert feitos == ["memória", "exceção"]
-    assert daemon._launch_env_assinatura == "a de antes"
-    assert getattr(daemon, "_launch_env_sossego_em", None) is None
 
 
 def test_o_fio_que_morre_ganha_outro_caderno(
