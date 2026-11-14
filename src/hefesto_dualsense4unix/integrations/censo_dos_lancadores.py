@@ -885,18 +885,40 @@ def _agulhas(bloco: dict[str, object], campo: str) -> tuple[str, ...]:
 
 
 FONTES_QUE_EXECUTAM: tuple[str, ...] = (
-    ".bashrc", ".bash_profile", ".bash_login", ".profile", ".zshrc", ".zprofile", ".zshenv",
-    ".zlogin", ".xprofile", ".xsessionrc", ".pam_environment", ".config/autostart",
-    ".config/systemd", ".config/environment.d", ".local/bin", ".ssh", ".gnupg",
+    ".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".profile", ".zshrc", ".zprofile",
+    ".zshenv", ".zlogin", ".zlogout", ".cshrc", ".tcshrc", ".kshrc", ".mkshrc", ".xprofile",
+    ".xsessionrc", ".xinitrc", ".xsession", ".pam_environment", ".config/autostart",
+    ".config/systemd", ".config/environment.d", ".config/fish", ".config/zsh", ".config/bash",
+    ".config/hefesto-dualsense4unix", ".local/share/hefesto-dualsense4unix",
+    ".local/share/applications", ".local/share/systemd", ".local/share/flatpak",
+    ".local/share/keyrings", ".local/bin", ".local/lib", ".ssh", ".gnupg",
 )
+PECAS_QUE_EXECUTAM = frozenset({"site-packages", "dist-packages"})
+CASAS_DE_LANCADOR: tuple[tuple[str, ...], ...] = ((".config",), (".local", "share"),
+                                                 (".var", "app"))
+
+
+def _na_casa_de_um_lancador(partes: tuple[str, ...]) -> bool:
+    """Numa pasta visível da ``HOME`` ou na pasta de um programa em ``.config``,
+    ``.local/share`` ou ``.var/app`` (o nome da pasta do programa sem padrão)."""
+    if not partes[0].startswith("."):
+        return len(partes) > 1 and "*" not in partes[0]
+    return any(partes[:len(casa)] == casa and len(partes) > len(casa)
+               and "*" not in partes[len(casa)] and not partes[len(casa)].startswith(".")
+               for casa in CASAS_DE_LANCADOR)
 
 
 def fonte_que_executa(fonte: str) -> bool:
-    """A fonte alcança um caminho que roda na sessão ou guarda chave (o padrão conta)."""
+    """A fonte fica fora da pasta de um lançador ou alcança um caminho que roda na sessão ou
+    guarda chave (o padrão conta)."""
     partes = Path(fonte).parts
-    return any(all(fnmatch.fnmatchcase(proibida, parte) for proibida, parte
-                   in zip(Path(caminho).parts, partes, strict=False))
-               for caminho in FONTES_QUE_EXECUTAM)
+    if not partes or PECAS_QUE_EXECUTAM.intersection(partes):
+        return True
+    if any(all(fnmatch.fnmatchcase(proibida, parte) for proibida, parte
+               in zip(Path(caminho).parts, partes, strict=False))
+           for caminho in FONTES_QUE_EXECUTAM):
+        return True
+    return not _na_casa_de_um_lancador(partes)
 
 
 def _fontes_do_leitor(bruto: object, campo: str = "leitor") -> tuple[str, ...]:
@@ -914,7 +936,8 @@ def _fontes_do_leitor(bruto: object, campo: str = "leitor") -> tuple[str, ...]:
             raise ValueError(f"«{campo}.fontes» tem {fonte!r}, que não é um caminho da HOME")
         if fonte_que_executa(fonte):
             raise ValueError(
-                f"«{campo}.fontes» tem {fonte!r}, que alcança o que roda na sessão ou guarda chave")
+                f"«{campo}.fontes» tem {fonte!r}, fora da pasta de um lançador ou no que roda "
+                "na sessão")
     return limpas
 
 
@@ -1016,13 +1039,53 @@ def _lar_de_quem_roda() -> Path:
     return Path(os.environ.get("HOME") or str(Path.home()))
 
 
+def _o_programa(partes: tuple[str, ...]) -> str | None:
+    """O nome da pasta do programa (``dolphin-emu``, ``net.lutris.Lutris``) num caminho da
+    ``HOME`` que mora em ``.config``, ``.local/share`` ou ``.var/app``."""
+    for casa in CASAS_DE_LANCADOR:
+        if partes[:len(casa)] == casa and len(partes) > len(casa):
+            return partes[len(casa)]
+    return None
+
+
+def _relativo_a_casa(caminho: Path, lar: Path) -> tuple[str, ...] | None:
+    """As partes do caminho real relativo à ``HOME`` real; ``None`` fora da ``HOME`` ou na
+    própria ``HOME``."""
+    real, casa = Path(os.path.realpath(caminho)), Path(os.path.realpath(lar))
+    if real == casa or not real.is_relative_to(casa):
+        return None
+    return real.relative_to(casa).parts
+
+
+def _alvo_que_volta(alvo: Path, lar: Path) -> bool:
+    """O alvo de uma fonte, pelo caminho real, ainda mora na pasta de um lançador."""
+    partes = _relativo_a_casa(alvo, lar)
+    return (alvo.exists() and not alvo.is_symlink() and partes is not None
+            and not fonte_que_executa(str(Path(*partes))))
+
+
+def _pasta_que_volta(pasta: str, lar: Path, fontes: Sequence[str], *, escrever: bool) -> bool:
+    """Uma pasta que a última leitura devolveu (saída não confiável) só volta à caixa quando,
+    pelo caminho real, mora na ``HOME`` e é visível (só no fixador: o leitor já as tem) ou é da
+    pasta do mesmo programa de uma fonte declarada. Fora da ``HOME`` a raiz já se vê, e o
+    escondido de propósito (``/tmp``, ``/run``) não volta."""
+    partes = _relativo_a_casa(Path(pasta), lar) if os.path.isdir(pasta) else None
+    if partes is None or fonte_que_executa(str(Path(*partes))):
+        return False
+    if not partes[0].startswith("."):
+        return escrever
+    programas = {_o_programa(Path(fonte).parts) for fonte in fontes}
+    return _o_programa(partes) in programas - {None}
+
+
 def _a_casa_na_caixa(lar: Path, fontes: Sequence[str], pastas: Sequence[str], *,
                      escrever: bool) -> list[str]:
     """A ``HOME`` vazia, e por cima só o que a extensão declarou.
 
     No leitor voltam, só de leitura, as pastas visíveis da ``HOME`` (sem ponto: onde moram as
-    pastas de jogos que a configuração aponta), a pasta de cada fonte e as pastas da última
-    leitura. No fixador, só as fontes, graváveis, e as pastas da última leitura.
+    pastas de jogos que a configuração aponta). Nos dois, cada fonte (o que o padrão casa, e o
+    ``-wal``, o ``-shm`` e o ``-journal`` do banco ao lado), gravável só no fixador, e as pastas
+    da última leitura que :func:`_pasta_que_volta` aceita.
     """
     argv = ["--tmpfs", str(lar)]
     if not escrever:
@@ -1034,17 +1097,15 @@ def _a_casa_na_caixa(lar: Path, fontes: Sequence[str], pastas: Sequence[str], *,
                     argv += ["--symlink", os.readlink(item), str(item)]
                 else:
                     argv += ["--ro-bind", str(item), str(item)]
+    modo = "--bind" if escrever else "--ro-bind"
     for fonte in fontes:
-        alvos = sorted(lar.glob(fonte)) if "*" in fonte else [lar / fonte]
-        pasta = (lar / fonte).parent
-        if not escrever and pasta != lar and pasta.is_dir() and not pasta.is_symlink():
-            argv += ["--ro-bind", str(pasta), str(pasta)]
-            continue
-        for alvo in alvos:
-            if alvo.exists() and not alvo.is_symlink():
-                argv += ["--bind" if escrever else "--ro-bind", str(alvo), str(alvo)]
+        for alvo in sorted(lar.glob(fonte)) if "*" in fonte else [lar / fonte]:
+            irmaos = [alvo.with_name(alvo.name + fim) for fim in ("-wal", "-shm", "-journal")]
+            for item in [alvo, *irmaos] if alvo.is_file() else [alvo]:
+                if _alvo_que_volta(item, lar):
+                    argv += [modo, str(item), str(item)]
     for declarada in pastas:
-        if os.path.isdir(declarada):
+        if _pasta_que_volta(declarada, lar, fontes, escrever=escrever):
             argv += ["--ro-bind", declarada, declarada]
     return argv
 

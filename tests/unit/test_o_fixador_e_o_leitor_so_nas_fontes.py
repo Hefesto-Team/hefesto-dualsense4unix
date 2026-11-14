@@ -2,8 +2,11 @@
 
 A caixa do leitor e do fixador leva ``tmpfs`` na ``HOME``. O leitor recebe, só de leitura, as
 pastas visíveis da ``HOME`` (sem ponto, onde moram as pastas de jogos que a configuração aponta),
-a pasta de cada fonte e as pastas da última leitura; o fixador, só as fontes, graváveis. As fontes
-que alcançam o que roda na sessão ou guarda chave (``.bashrc``, ``.ssh``…) recusam o manifesto.
+cada fonte (com o ``-wal`` e o ``-shm`` do banco) e as pastas da última leitura que são do mesmo
+programa de uma fonte; o fixador, só as fontes, graváveis. A pasta que a leitura devolve é saída
+não confiável: a ``HOME``, a raiz, o escondido do topo e o de outro programa não voltam. A fonte
+fora da pasta de um lançador, ou que alcança o que roda na sessão ou guarda chave (``.bashrc``,
+``.ssh``, ``site-packages``…), recusa o manifesto.
 """
 from __future__ import annotations
 
@@ -41,7 +44,8 @@ def _lar(base: Path) -> Path:
     for rel, texto in ((".ssh/x", "chave"), (".gnupg/y", "segredo"), (".bashrc", "alias"),
                        (".config/emu/emu.ini", "jogos=Jogos"), (".config/emu/outro.ini", "par"),
                        (".config/vizinho/z.ini", "vizinho"), ("Jogos/a.iso", "jogo"),
-                       (".local/share/roms/b.gba", "rom")):
+                       (".local/share/roms/b.gba", "rom"), (".local/share/emu/roms/c.gba", "rom"),
+                       (".config/emu/banco.db", "db"), (".config/emu/banco.db-wal", "wal")):
         alvo = lar / rel
         alvo.parent.mkdir(parents=True, exist_ok=True)
         alvo.write_text(texto)
@@ -56,7 +60,8 @@ def _rodar(argv: list[str], lar: Path) -> dict[str, str]:
 
 
 _LIDOS = [".ssh/x", ".gnupg/y", ".bashrc", ".config/emu/emu.ini", ".config/emu/outro.ini",
-          ".config/vizinho/z.ini", "Jogos/a.iso", ".local/share/roms/b.gba"]
+          ".config/vizinho/z.ini", "Jogos/a.iso", ".local/share/roms/b.gba",
+          ".local/share/emu/roms/c.gba", ".config/emu/banco.db", ".config/emu/banco.db-wal"]
 
 
 def test_com_o_bwrap_real_o_leitor_nao_abre_a_ssh_e_ve_as_fontes(
@@ -66,9 +71,10 @@ def test_com_o_bwrap_real_o_leitor_nao_abre_a_ssh_e_ve_as_fontes(
     pasta = curto / "ext"
     pasta.mkdir()
     leitor = censo.LeitorPorProcesso("emu", "Emu", ("python3",), pasta,
-                                     fontes=(".config/emu/emu.ini",))
+                                     fontes=(".config/emu/emu.ini", ".config/emu/banco.db"))
     monkeypatch.setattr(censo, "_PASTAS_DA_ULTIMA_LEITURA",
-                        {"emu": (str(lar / ".local/share/roms"),)})
+                        {"emu": (str(lar / ".local/share/roms"),
+                                 str(lar / ".local/share/emu/roms"))})
     argv = censo.linha_do_leitor(leitor, ["/usr/bin/python3", "-c", _LEITOR, *_LIDOS],
                                  shutil.which("bwrap"), lar)
     visto = _rodar(argv, lar)
@@ -77,9 +83,53 @@ def test_com_o_bwrap_real_o_leitor_nao_abre_a_ssh_e_ve_as_fontes(
     assert visto[".bashrc"] == "FileNotFoundError", visto
     assert visto[".config/vizinho/z.ini"] == "FileNotFoundError", visto
     assert visto[".config/emu/emu.ini"] == "jogos=Jogos"
-    assert visto[".config/emu/outro.ini"] == "par", "a pasta da fonte volta inteira"
+    assert visto[".config/emu/outro.ini"] == "FileNotFoundError", "só a fonte, não a pasta da fonte"
+    assert visto[".config/emu/banco.db"] == "db"
+    assert visto[".config/emu/banco.db-wal"] == "wal", "o -wal do banco volta com ele"
     assert visto["Jogos/a.iso"] == "jogo", "a pasta de jogos que a configuração aponta"
-    assert visto[".local/share/roms/b.gba"] == "rom", "a pasta da última leitura"
+    assert visto[".local/share/emu/roms/c.gba"] == "rom", "a pasta da última leitura, do emu"
+    assert visto[".local/share/roms/b.gba"] == "FileNotFoundError", "a de outro programa"
+
+
+_PASTAS_RUINS = ("/", "{lar}", "{lar}/..", "{lar}/.ssh", "{lar}/.config", "{lar}/.local/share",
+                 "{lar}/Jogos/atalho", "{lar}/.config/vizinho", "{lar}/.config/autostart")
+
+
+def test_a_pasta_que_a_leitura_devolve_nao_reabre_a_casa(
+        curto: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A pasta da última leitura vem da extensão: a raiz, a HOME, o escondido do topo, o atalho
+    para a ``.ssh`` e a pasta de outro programa não voltam (mordida: aceitar toda pasta)."""
+    exigir_caixa_do_bwrap()
+    lar = _lar(curto)
+    (lar / ".config/autostart").mkdir(parents=True)
+    (lar / "Jogos/atalho").symlink_to(lar / ".ssh")
+    pasta = curto / "ext"
+    pasta.mkdir()
+    leitor = censo.LeitorPorProcesso("emu", "Emu", ("python3",), pasta,
+                                     fontes=(".config/emu/emu.ini",))
+    ruins = tuple(p.format(lar=lar) for p in _PASTAS_RUINS)
+    monkeypatch.setattr(censo, "_PASTAS_DA_ULTIMA_LEITURA", {"emu": ruins})
+    argv = censo.linha_do_leitor(leitor, ["/usr/bin/python3", "-c", _LEITOR, *_LIDOS],
+                                 shutil.which("bwrap"), lar)
+    for escrever in (False, True):
+        casa = censo._a_casa_na_caixa(lar, leitor.fontes, ruins, escrever=escrever)[2:]
+        for ruim in ruins:
+            assert ruim not in casa, ruim
+    visto = _rodar(argv, lar)
+    for segredo in (".ssh/x", ".gnupg/y", ".bashrc", ".config/vizinho/z.ini"):
+        assert visto[segredo] == "FileNotFoundError", (segredo, visto)
+    for escrever in (False, True):
+        for ruim in ruins:
+            assert not censo._pasta_que_volta(ruim, lar, (".config/emu/emu.ini",),
+                                              escrever=escrever), ruim
+
+
+def test_a_fonte_na_raiz_de_config_nao_abre_a_config_inteira(curto: Path) -> None:
+    lar = _lar(curto)
+    (lar / ".config/emu.ini").write_text("x")
+    argv = censo._a_casa_na_caixa(lar, (".config/emu.ini",), (), escrever=False)
+    assert str(lar / ".config") not in argv
+    assert str(lar / ".config/emu.ini") in argv
 
 
 _FIXADOR = """
@@ -118,18 +168,28 @@ def test_com_o_bwrap_real_o_fixador_escreve_so_a_fonte(curto: Path) -> None:
 @pytest.mark.parametrize("fonte", [".bashrc", ".profile", ".zshrc", ".zprofile",
                                    ".config/autostart/x.desktop", ".config/systemd/user/x.service",
                                    ".config/environment.d/x.conf", ".local/bin/x", ".ssh/id",
-                                   ".gnupg/pubring.kbx", ".config/*", "*", ".*rc"])
+                                   ".gnupg/pubring.kbx", ".config/*", "*", ".*rc",
+                                   ".config/fish/config.fish", ".config/zsh/.zshrc",
+                                   ".config/" + "hefesto-dualsense" + "4unix/x.json",
+                                   ".local/share/" + "hefesto-dualsense" + "4unix/mods/x/x.py",
+                                   ".local/share/applications/x.desktop",
+                                   ".local/lib/python3.12/site-packages/x.pth",
+                                   "Jogos/site-packages/x.pth", ".mozilla/x", ".local/share",
+                                   ".config", "emu.ini", ".kshrc", ".xinitrc", ".bash_logout"])
 def test_a_fonte_que_executa_recusa_o_manifesto(fonte: str, tmp_path: Path) -> None:
     for campo in ("leitor", "fixador"):
         bloco = {"rotulo": "Emu", "comandos": ["emu"],
                  campo: {"executar": ["python3", "x.py"], "fontes": [fonte]}}
-        with pytest.raises(ValueError, match="roda na sessão ou guarda chave"):
+        with pytest.raises(ValueError, match="fora da pasta de um lançador ou no que roda"):
             censo.lancador_da_modificacao("emu", bloco, tmp_path)
 
 
 def test_as_fontes_das_extensoes_da_casa_passam(tmp_path: Path) -> None:
     for fonte in (".config/retroarch/playlists/*.lpl", "Games/Hookshot/bin/*",
-                  ".var/app/net.lutris.Lutris/data/lutris/pga.db", ".config/Kyty/Kyty.ini"):
+                  ".var/app/net.lutris.Lutris/data/lutris/pga.db", ".config/Kyty/Kyty.ini",
+                  ".local/share/lutris/games/*.yml", ".config/lutris",
+                  ".config/hookshot/builder.ini",
+                  ".var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu/Dolphin.ini"):
         assert not censo.fonte_que_executa(fonte), fonte
 
 
