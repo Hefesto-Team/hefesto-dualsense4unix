@@ -982,16 +982,21 @@ class AltoFalanteSubsystem:
         «Canais sonoros apenas no DualSense» faz do nó do controle a saída padrão (no
         rádio não há placa, e o nó é o sink dele), e a fonte ``mix`` soma o monitor da
         saída padrão ao nó. Nos dois a tela promete o som do PC no controle; o
-        separador tiraria a música dele. Sem leitura do servidor, fica o da volta
-        anterior.
+        separador tiraria a música dele. A saída padrão vem do retrato do som, como as
+        placas da volta, sem processo novo; sem resposta, fica o da volta anterior.
         """
+        from hefesto_dualsense4unix.integrations import retrato_do_som
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             FONTE_MIX,
             monitor_da_saida_padrao,
             nome_do_sink,
         )
 
-        monitor = monitor_da_saida_padrao()
+        def _pelo_retrato(argv: list[str]) -> str | None:
+            resposta = retrato_do_som.responder(argv)
+            return resposta if isinstance(resposta, str) else None
+
+        monitor = monitor_da_saida_padrao(runner=_pelo_retrato)
         if monitor is None:
             return self._pc_inteiro_no_controle
         pediram: set[str] = set()

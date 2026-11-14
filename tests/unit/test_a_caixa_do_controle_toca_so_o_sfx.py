@@ -863,3 +863,32 @@ def test_quem_pediu_o_som_inteiro_do_pc_no_controle_fica_sem_o_separador(
 
     for no in ger.nos.values():
         no.parar()
+
+
+def test_a_saida_padrao_da_volta_vem_do_retrato_sem_processo_novo(
+    servidor: _Servidor, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    del servidor
+    respostas = {"atual": f"{af.nome_do_sink(CONTROLES[2])}\n"}
+
+    def _retrato(argv: Any) -> Any:
+        if list(argv) == ["pactl", "get-default-sink"]:
+            return respostas["atual"]
+        return retrato_do_som.NAO_SEI
+
+    def _recusa(*_a: Any, **_k: Any) -> Any:
+        raise AssertionError("a volta abriu processo para ler a saída padrão")
+
+    monkeypatch.setattr(retrato_do_som, "responder", _retrato)
+    monkeypatch.setattr(subprocess, "run", _recusa)
+    sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
+    sub._fonte_do_controle = lambda _u: af.FONTE_SFX  # type: ignore[method-assign]
+    mesa = _mesa(dict.fromkeys(CONTROLES, "bluetooth"))
+    assert sub._quem_pediu_o_pc_inteiro(mesa) == frozenset({mod._uniq_de_perfil(CONTROLES[2])})
+    respostas["atual"] = retrato_do_som.NAO_SEI
+    sub._pc_inteiro_no_controle = frozenset({"guardado"})
+    assert sub._quem_pediu_o_pc_inteiro(mesa) == frozenset({"guardado"})
