@@ -139,7 +139,7 @@ def test_o_estilo_de_navegacao_abre_no_arranjo_dele(
     monkeypatch: pytest.MonkeyPatch, estilo: str, arranjo: str
 ) -> None:
     d = _daemon(monkeypatch, transporte="usb", mascara="dualsense")
-    d.set_gamepad_emulation_desfecho(True, "dualsense")
+    d.set_gamepad_emulation_desfecho(True, "dualsense", origin="manual")
 
     _abre_o_jogo_sem_arme(d, _perfil_do_jogo(estilo))
 
