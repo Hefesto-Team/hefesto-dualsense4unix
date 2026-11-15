@@ -398,14 +398,18 @@ As listas vão até 16 itens.
 
 A extensão só de `lancador` (sem `processo`) declara o leitor no `lancador.leitor`, e a interface o roda
 numa caixa só de leitura, sem rede (`bwrap`), quando a biblioteca muda. A `HOME` da caixa nasce vazia e recebe, só
-de leitura, as pastas visíveis da `HOME` (sem ponto: onde moram as pastas de jogos que a configuração aponta), a pasta de
-cada fonte e as pastas da última leitura; o resto (`.ssh`, `.gnupg`, as outras pastas de `.config`) não existe ali:
+de leitura, as pastas visíveis da `HOME` (sem ponto: onde moram as pastas de jogos que a configuração aponta), cada
+fonte (o que o padrão casa, e o `-wal`, o `-shm` e o `-journal` do banco ao lado, nunca a pasta inteira) e as pastas da
+última leitura que, pelo caminho real, moram na pasta do mesmo programa de uma fonte; o resto (`.ssh`, `.gnupg`, as
+outras pastas de `.config`) não existe ali:
 
 - `executar`: o comando, a partir da pasta da extensão (`["python3", "-I", "leitor.py"]`);
 - `prazo_s`: o prazo da leitura, em segundos;
-- `fontes`: os arquivos que o leitor lê, relativos à `HOME`, até 16, nunca o que roda na sessão ou guarda chave
-  (`.bashrc`, `.profile`, `.zshrc`, `.zprofile`, `.config/autostart`, `.config/systemd`, `.config/environment.d`,
-  `.local/bin`, `.ssh`, `.gnupg` e os irmãos deles; o padrão que os alcança também recusa). A mudança de um deles é o que faz a
+- `fontes`: os arquivos que o leitor lê, relativos à `HOME`, até 16, numa pasta visível da `HOME` ou na pasta de um
+  programa em `.config/<programa>`, `.local/share/<programa>` ou `.var/app/<id>`, e nunca o que roda na sessão ou
+  guarda chave (os rc de shell, `.config/autostart`, `.config/systemd`, `.config/environment.d`, `.config/fish`,
+  `.config/zsh`, as pastas do próprio Hefesto, `.local/share/applications`, `.local/bin`, `.local/lib`,
+  `site-packages`, `.ssh`, `.gnupg`; o padrão que os alcança também recusa). A mudança de um deles é o que faz a
   leitura sair de novo. A fonte sem `*` conta só pela própria data, e a data de uma pasta muda quando um
   arquivo entra ou sai da pasta, não quando um arquivo de dentro muda no lugar: para a pasta que o leitor
   percorre, declare o padrão (`.config/retroarch/playlists/*.lpl`; o `*` vale só no último pedaço), que
@@ -418,7 +422,8 @@ quando falta) são opcionais. A linha torta sai sozinha, e as outras ficam.
 
 O leitor que percorre uma pasta escolhida no emulador (a pasta de jogos que o `.ini` aponta, em qualquer
 disco) imprime o objeto `{"jogos": [...], "pastas": [...]}`: `jogos` é a mesma lista, e `pastas` são os
-caminhos absolutos que ele percorreu, até 64. A data de cada pasta da última leitura entra na assinatura
+caminhos absolutos que ele percorreu, até 64. São saída da extensão: na caixa, a `HOME`, a raiz, o escondido do
+topo da `HOME` e a pasta de outro programa não voltam. A data de cada pasta da última leitura entra na assinatura
 das bibliotecas, e o jogo que entra na assinatura faz a leitura sair de novo. A pasta torta (relativa, vazia, com
 byte nulo) sai sozinha; a lista sem o objeto continua valendo.
 
