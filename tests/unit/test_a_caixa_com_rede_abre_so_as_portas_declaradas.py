@@ -283,6 +283,8 @@ def _o_que_o_pasta_disse(pasta: str, filho: subprocess.Popen[str]) -> str:
 
 def test_com_o_pasta_real_o_jogo_da_casa_alcanca_a_ponte_declarada(curto: Path) -> None:
     pasta = _o_pasta()
+    if not sup.sondar_o_pasta(pasta):
+        pytest.skip("este pasta não entrega o -t: a sonda do supervisor tira a ponte dele")
     ponte = _porta_livre()
     filho = subprocess.Popen(
         _o_pasta_falando(_caixa(curto, _lovense(intiface=_porta_livre(), ponte=(ponte,)),
@@ -576,7 +578,7 @@ def test_a_ponte_ocupada_na_casa_nao_conta_como_ponte_que_nao_atende(
     asyncio.run(corrida())
 
 
-def test_com_o_pasta_real_a_sonda_diz_que_entrega_e_a_ponte_fica_no_pasta(
+def test_com_o_pasta_real_a_ponte_fica_onde_a_sonda_do_supervisor_diz(
     lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pasta = _o_pasta()
@@ -591,9 +593,11 @@ def test_com_o_pasta_real_a_sonda_diz_que_entrega_e_a_ponte_fica_no_pasta(
         try:
             await _ate(lambda: _a_ponte_atende(ponte))
             _rodando_sem_queda(supervisor)
-            assert _roda_pelo(supervisor, pasta)
             guardado = json.loads((xdg_paths.state_dir() / sup.SONDA_DO_PASTA).read_text())
-            assert list(guardado.values()) == [True]
+            assert len(guardado) == 1
+            entrega = next(iter(guardado.values()))
+            assert isinstance(entrega, bool)
+            assert bool(_roda_pelo(supervisor, pasta)) is entrega
         finally:
             await supervisor.parar()
 

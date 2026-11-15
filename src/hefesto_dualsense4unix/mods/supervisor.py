@@ -16,7 +16,6 @@ import json
 import os
 import re
 import secrets
-import select
 import shutil
 import signal
 import socket
@@ -60,6 +59,7 @@ from hefesto_dualsense4unix.mods.porta import (
     Pulsador,
     UniqDoPosto,
 )
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import (
     IPC_SOCKET_DEFAULT_NAME,
@@ -651,7 +651,7 @@ def sondar_o_pasta(pasta: str, prazo: float = PRAZO_DA_SONDA_S) -> bool:
         return False
     try:
         assert filho.stdout is not None
-        prontos, _, _ = select.select([filho.stdout], [], [], prazo)
+        prontos = prontos_para_ler([filho.stdout], prazo)
         if not prontos or filho.stdout.readline().strip() != b"ouvindo":
             return False
         resta = max(PASSO_DA_PONTE_S, fim - time.monotonic())
