@@ -90,7 +90,7 @@ jobs:
           SAIDA: /tmp/suite-release
           SUITE_PYTEST_ARGS: --continue-on-collection-errors
         run: |
-          pip install -c constraints.txt -e ".[dev]"
+          pip install -c constraints.txt -e ".[dev]" "numpy<2.5"
           ruff check src/ tests/
           bash scripts/rodar-a-suite.sh
           pytest tests/core -v

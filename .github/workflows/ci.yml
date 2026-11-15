@@ -940,7 +940,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
       - name: Instalar Hefesto - DualSense4Unix em modo dev
-        run: pip install -c constraints.txt -e ".[dev]"
+        run: pip install -c constraints.txt -e ".[dev]" "numpy<2.5"
       - name: Os portões do job, pelo nome na tabela
         run: bash scripts/portoes.sh --so mypy mypy-testes
 
