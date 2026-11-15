@@ -96,7 +96,7 @@ async def _plugar_e_tirar(
     monkeypatch.setattr(conn_mod, "armar_gatilho_da_cor_por_numeracao", lambda d: 0)
     monkeypatch.setattr(conn_mod, "anunciar_a_chegada", lambda *a, **k: 0)
 
-    async def _tique(daemon_: _Daemon, *resto: Any) -> bool:
+    async def _tique(daemon_: _Daemon, *resto: Any, falta_abrir_em: float | None = None) -> bool:
         daemon_.voltas += 1
         controle.na_tomada = daemon_.voltas == 1
         return False

@@ -261,7 +261,9 @@ async def test_o_laco_ve_a_queda_e_a_volta_que_o_agregado_escondia(
     monkeypatch.setattr(conn_mod, "vigiar_escritor_cru", _nada_async)
     monkeypatch.setattr(conn_mod, "carimbar_o_nascimento", _nada_async)
 
-    async def _tique(daemon_: _DaemonDoLaco, watch: object) -> bool:
+    async def _tique(
+        daemon_: _DaemonDoLaco, watch: object, *, falta_abrir_em: float | None = None
+    ) -> bool:
         daemon_.voltas += 1
         if daemon_.voltas == 1:
             controle.alvos.pop(P2)

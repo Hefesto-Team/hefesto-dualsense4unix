@@ -1400,7 +1400,9 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
     )
     estado = {"armada": False}
 
-    async def _espera(daemon_: _DaemonDoLaco, _watch: object) -> bool:
+    async def _espera(
+        daemon_: _DaemonDoLaco, _watch: object, *, falta_abrir_em: float | None = None
+    ) -> bool:
         daemon_.voltas += 1
         mesa.relogio.avancar(TIQUE)
         mesa.kernel.os_handles_percebem()
