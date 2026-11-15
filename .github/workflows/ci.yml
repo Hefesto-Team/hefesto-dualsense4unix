@@ -799,6 +799,10 @@ jobs:
           SUITE_PYTEST_ARGS: --cov=hefesto_dualsense4unix --cov-append --cov-report=
           COVERAGE_FILE: /tmp/cobertura/dados-${{ matrix.faixa }}
           FAIXA: ${{ matrix.faixa }}
+          # O bus de sessão da suíte é próprio, como no fecho de casa: sem ele o GDBus autolança um
+          # bus pelo dbus-launch do Xvfb, e quando esse bus some o processo que o usava leva o
+          # SIGTERM do exit-on-close (o test_a_tela_nao_samba morreu assim depois do sumário).
+          SUITE_SOB_DBUS_PROPRIO: "1"
           # O `rodar-a-suite.sh` grava cada parte em `$SAIDA/parte-NN.log` e só
           # imprime o NOME de quem reprovou. O runner morre com o `/tmp`: sem
           # fixar a pasta, a pilha de um vermelho intermitente se perdia.
