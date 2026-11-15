@@ -29,6 +29,7 @@ fi
 saida="${1:?uso: construir.sh <saída> [--conferir]}"
 conferir="${2:-}"
 mkdir -p "$saida"
+saida="$(cd "$saida" && pwd)"
 
 flags=(-O2 -s -Wall "-Wl,--no-insert-timestamp" "-Wl,--disable-auto-image-base" "-ffile-prefix-map=$aqui=." -fno-ident)
 ( cd "$aqui" && "$CC" -shared "${flags[@]}" -o "$saida/xgameruntime.dll" xgameruntime.c )
