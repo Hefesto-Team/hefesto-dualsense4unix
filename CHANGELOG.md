@@ -4,12 +4,122 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ## [Unreleased]
 
+## [0.9.5.2] — 2026-11-15
+
+### Adicionado
+
+- Na aba Conexões, um teclado ou um pedal pode virar botões de qualquer controle, também de um Pro Controller ou de outro controle de fora, e não só de um DualSense.
+- Com o Modo automático ligado, o mesmo efeito de gatilho muda conforme o estilo do perfil, e cada gatilho tem o seu: num FPS o L2 mira leve e o R2 dispara; numa corrida o freio endurece com o curso.
+- A extensão Modo imersão vem com o Hefesto: o controle reage ao que acontece no jogo, com o som, a vibração, a luz e os gatilhos, ao lado do Modo automático.
+- Uma extensão pode trazer uma página própria, mostrada dentro da janela da extensão, isolada, sem rede e falando só com a própria extensão.
+- Uma extensão com permissão recebe o estalo do som do jogo com o lado de onde veio, o nível do microfone de cada controle e a identidade do jogo aberto, sem nunca receber o áudio.
+- Uma extensão pode pedir a leitura de valores declarados do jogo, como a vida, só com a chave «Memória» daquele jogo ligada; o Hefesto lê só esses valores, e em jogo com anticheat a tela avisa do risco à conta antes de ligar.
+- Com permissão e pelo portal do sistema, o Hefesto mede na tela do jogo o dano, o clarão, o escuro e o tremor, e entrega só esses números às extensões, nunca a imagem.
+- Uma extensão pode pedir um modo próprio, que aparece ao lado do Modo automático nas abas Controles, Gatilhos, Iluminação, Vibração e Perfis; ligar um desliga o outro.
+- As extensões ganham o alto-falante, a háptica e as cinco luzes de jogador do controle, e tudo o que as extensões pedem divide o mesmo limite de efeitos do Hefesto; em cada canal vale o pedido mais forte, do jogo ou da extensão.
+- O doctor passa a dizer o atraso real do serviço e qual tarefa o prendeu.
+- A janela de configurar uma extensão nomeia cada controle pela cor do plástico, mostra a chave da memória do jogo em cena, a coluna «Agora» traz o que a extensão publica, e a linha de um ajuste que o jogo não usa some.
+- A mira passa a funcionar nos controles de fora que têm sensor, e o botão não acende em quem não tem.
+- Numa instalação pelo código, em dev e sem jogo aberto, abrir o app baixa a versão mais recente.
+- O registro do serviço não se perde quando outro programa enche o diário do sistema.
+- Cada controle escolhe o tipo de vibração. Ao apertar, L2 toca no motor esquerdo e R2 no direito, em toda opção da aba Jogar, salvo o Nativo.
+- Com um adaptador só, nem todo controle tem som e vibração pelo Bluetooth. A aba Conexões diz quantos adaptadores a formação pede e onde cada controle senta, e enquanto o som não sobe a vibração vai pelos motores.
+
+### Mudado
+
+- Cada controle conectado tem uma aba da cor do plástico dele no topo do cartão, e um clique troca o controle.
+- A lista de perfis deixa de mostrar o perfil de jogo desinstalado (o arquivo fica guardado e volta quando o jogo volta), e a tecla Delete sobre o perfil escolhido remove-o, com a mesma pergunta do botão.
+- Num perfil com estilo, a lista de efeito que ninguém escolheu vale «Do estilo»; num perfil sem estilo, vale «—». O gatilho de um perfil novo nasce no «—», sem resistência do Hefesto.
+- As listas de efeito de Gatilhos e de Vibração passam a abrir no «—», como a da Iluminação: o efeito do Hefesto só toca depois de escolhido. O efeito que o próprio jogo manda continua chegando ao controle.
+- O install não monta mais a captura de tela nem pergunta qual tela; a captura só abre quando você clica em «Ver a tela» no Modo imersão.
+- A tela de calibrar confere o sentido do movimento, descobre onde o jogo começa a ler o analógico e avisa quando a medida falha.
+- Inclinar o controle deixa de mover a câmera; a mira segue só o giro. A inclinação sai da mira.
+
 ### Corrigido
 
 - O Hefesto não quebra mais o compartilhamento de tela do sistema: a captura espera o ambiente gráfico subir.
 - A aba Perfis abre no perfil ativo e acompanha o jogo aberto.
 - Cada aba só aparece com os dados reais, e a janela Criar perfis não oferece mais jogos de exemplo. Se o serviço demorar, a tela diz que está esperando.
 - A calibração do giroscópio aceita soltar o controle na mesa depois do clique em Começar: bastam 3 segundos parado dentro dos 5 da medida.
+- Quando um controle volta durante o jogo e os números ficam fora de ordem, o Hefesto recriava também controles que já estavam certos, e o jogo perdia esses controles por um instante à toa. Agora ele recria só quem está fora do número que a luz e a tela mostram.
+- Quando o controle do jogador 1 saía por pouco tempo, o jogador 2 passava a dirigir o jogador 1 do jogo enquanto a luz e a tela diziam 2. Agora o jogo também espera o lugar guardado, e o prazo de espera continua valendo depois de o computador suspender.
+- Depois que o prazo do lugar guardado acabava, a tela e a luz renumeravam os controles, mas o jogo mantinha os controles 3 e 4 nos lugares antigos. Agora, passado o prazo, o jogo recria o buraco e os números do jogo ficam iguais aos da tela e da luz.
+- O DualSense Edge físico perdia no Hefesto os dois botões traseiros e os dois Fn, embora o controle virtual já se dissesse Edge para o jogo. Agora as traseiras e os Fn entram no remapeamento e chegam ao jogo em toda máscara, como botões extras ou atalhos.
+- Com o som do jogo tocando no alto-falante do controle pelo Bluetooth, a vibração que o jogo pede chega ao controle no Modo Nativo.
+- A interface que recebe o pedido de saída do sistema termina com sucesso, mesmo que o pedido chegue duas vezes.
+- Toda vez que a janela do Hefesto abre, o cache das páginas é apagado antes, e nada de uma versão anterior sobra.
+- Alguns arquivos que o instalador grava no sistema traziam notas sobre a máquina em que o Hefesto foi desenvolvido.
+- Antes de os dados do computador chegarem, algumas abas mostravam nomes de jogos e de adaptadores que não eram seus.
+- O Proton fixado valia para a Steam, o Heroic e as extensões de lançador; as garrafas do Bottles ficavam no Proton que tinham. Agora a garrafa pelo Proton vai ao Proton fixado, e a que roda pelo Wine fica como estava.
+- O jogo do Heroic que já estava num GE-Proton mais novo que o fixado, e que passa na ficha, era trocado pelo 11.7. Agora ele fica no mais novo, como na Steam.
+- Num computador com mais de uma conta, o vigia do Bluetooth só lia as configurações da conta que instalou o Hefesto.
+- Num kernel diferente dos testados, os módulos do Hefesto não compilavam e o do sistema assumia sem aviso, e parte dos recursos do controle sumia.
+- As entradas novas (gatilhos, analógicos, Sacudir e Inclinar) apareciam numa grade separada dos botões e só desenhavam Direto e Suave. Agora botões e entradas formam uma grade só, na ordem que a extensão declara, e todo efeito tem o seu desenho.
+- Com muitos apertos seguidos, uma extensão podia perder a soltura de um botão e o efeito dele ficava ligado.
+- Um teste interno das páginas podia reprovar por acaso com a máquina ocupada. Agora ele espera o pedido da página em vez de um tempo fixo.
+- Com a máscara Xbox 360, o cartão do controle mostrava uma frase longa sobre a API do Xbox não levar giroscópio. A frase e a dica saíram, junto com as do mesmo estilo nas outras abas; os chips continuam dizendo o que está ligado.
+- As abas Jogar, Lançadores e Conexões ainda tinham frases e dicas que explicavam o sistema por dentro. Agora as três mostram só o estado.
+- Algumas dicas e linhas ainda explicavam como o sistema funciona por dentro, nos chips da Jogar, no resumo dos impedimentos da Lançadores e no mapa e nos cartões da Conexões. Agora essas telas mostram só o estado, e o nome de cada coisa.
+- Um jogo sem perfil próprio podia abrir com o ambiente do jogo anterior, ou com a receita de DLL antiga, e não responder aos botões. Agora o ambiente e a receita chegam do Hefesto na hora em que o jogo abre.
+- Depois de um jogo com modo próprio (por exemplo, o Modo Xbox), o computador continuava nesse modo, e o jogo seguinte nascia nele. Agora, ao fechar o jogo, o modo volta ao que foi escolhido para o computador.
+- Um perfil antigo marcado como controle, sem modelo escolhido, podia abrir no modo do computador em vez do DualSense. Agora ele abre como DualSense em todo computador.
+- Com quatro controles ligados, apertar o R2 de um fazia os quatro vibrarem. Agora o aperto vibra só o controle que apertou, no cabo e no rádio.
+- O código baixado levava junto perfis e nomes de jogos de uma biblioteca de desenvolvimento. Agora o código, o instalador e os pacotes trazem só o perfil Freestyle.
+- Jogos que traziam a lista de controles com o DualSense e o DualSense Edge recebiam o controle virtual como Edge. Agora eles recebem o DualSense comum, e o Edge fica para o jogo feito só para ele ou que precisa dele.
+- Ao abrir um jogo logo depois de outro em outro modo, o jogo podia nascer com o ambiente do anterior e não responder aos botões. Agora o ambiente vem do Hefesto na hora em que o jogo abre.
+- Gravar o modo confirmado de um jogo, um ajuste de mira ou de acessibilidade, ou a subida da troca automática de perfil podiam parar a leitura do controle por alguns segundos. Agora essas gravações correm por fora, e o controle segue respondendo.
+- Trocar de perfil com o ganho do microfone ajustado, mudar o volume da captura ou gravar a vibração e os sensores podiam parar a leitura do controle por um instante. Agora isso corre por fora.
+- Ao abrir um jogo, ou quando outro programa gravava o perfil, o Hefesto podia parar de ler e entregar o controle por dez segundos ou mais. Agora a leitura do controle nunca espera a gravação de outro.
+- No modo DualSense, o controle virtual se apresentava como DualSense Edge em quase todo jogo, e jogo que não conhece o Edge podia não reconhecê-lo. Agora ele é o DualSense comum, que todo jogo conhece, e vira Edge só no jogo que pede o Edge.
+- Na janela de uma extensão com aparelho conectado, clicar em Parear fazia o botão pular para cima quando a faixa «Procurando aparelhos» aparecia. Agora o botão fica onde estava, e a faixa entra acima dos cartões.
+- Um jogo sem modo escolhido, aberto depois de um jogo no Modo Xbox, podia continuar no caminho do Xbox. Agora ele segue o modo do computador.
+- Perfis criados em versões antigas guardavam o modo em formatos diferentes, e o jogo podia abrir num modo diferente do que a aba Jogar mostrava. Agora todo perfil é convertido uma vez para o formato da aba Jogar, e o modo que o jogo confirma fica gravado no perfil.
+- Depois de trocar a escala da tela ou de desligar e ligar o monitor, o ícone do Hefesto na bandeja não escreve mais milhares de avisos por minuto no diário.
+- No COSMIC, o portal de captura de tela que o Hefesto instala traz a correção que impede a queda no meio de uma chamada com tela compartilhada.
+- Ao atualizar uma extensão ligada, a lista mostra «atualizando» e a tela a mantém ligada enquanto o código troca, em vez de «desligada».
+- Depois de atualizar uma extensão ligada, o estado da extensão mostra que a extensão voltou a rodar.
+- Arrastar a velocidade do cursor e logo depois a da rolagem guarda os dois valores, sem a segunda mudança desfazer a primeira.
+- O botão que espera uma condição fica com a letra e a borda mais fracas que o botão pronto, em todas as abas.
+- Um jogo que sai da máquina e é baixado de novo ganha um perfil novo, mesmo que o anterior tenha sido apagado.
+- As fotos das abas no README e no guia são tiradas só depois que a tela termina de desenhar.
+- A dica do número do jogador, na aba Iluminação, para de prometer que o número do Hefesto volta quando um jogo o troca. Com um jogo aberto, vale o número que o jogo acende, em todo controle.
+- Depois de atualizar o Hefesto, ele confere os arquivos dos jogos instalados para saber qual controle cada um conhece. Essa conferência podia parar a leitura do controle por 10 a 16 segundos. Agora a conferência corre em fatias pequenas e guarda o resultado em disco, e o controle não para.
+- O número de jogador e a cor que um jogo escreve logo ao abrir o controle passam a chegar a ele, também no jogo de fora da Steam.
+- Quando a força dos motores ou da háptica muda num perfil com estilo, a resposta do Hefesto passa a dizer «Do estilo» para o efeito que ninguém escolheu, que é o que o controle toca, e não «—».
+- O install espera o módulo velho do pad virtual USB se soltar antes de desistir da troca, e diz quem o segura quando não solta.
+- Quando o Hefesto atualiza o módulo do pad virtual USB, a versão nova passa a entrar na hora, e o diagnóstico avisa quando a carregada é a velha.
+- Com dois jogos abertos ao mesmo tempo, cada um num controle, o número e a cor que cada jogo escreve na abertura chegam ao controle dele. Os botões de todos os controles também deixam de esperar uma varredura dos processos a cada cor que o jogo escreve antes de ser reconhecido.
+- O aviso do módulo de fábrica e o estado que a interface lê passam a reconhecer também o módulo curado pela metade.
+- Um jogo que fecha de repente sem mandar parar a vibração deixa de deixar o controle vibrando, também com a Steam ou o teclado da tela abertos, e também no modo Xbox.
+- O PipeWire que o Hefesto publica como fonte do apt passa a ser assinado, e o apt update fica sem o aviso.
+- Nada muda para quem usa o produto. O código que só servia ao botão ♪ do alto-falante sai, e as provas de tela passam a clicar os botões que ficaram.
+- Quando um jogo liga uma vibração e a mantém sem repetir o pedido, o Hefesto a cortava depois de três segundos. Agora a vibração dura enquanto o jogo estiver vivo, e só se solta quando o jogo fecha, trava ou deixa de ler o controle.
+- No modo Xbox, o Hefesto passa a saber qual jogo segura cada controle, como já sabe nos modos DualSense e Edge.
+- Nada muda para quem usa; o fecho deixa de reprovar a catraca pelo arquivo que ele mesmo gera.
+- Nada muda para quem usa; dois testes que reprovavam desde antes passam a medir o comportamento de hoje.
+- Nada muda para quem usa o produto: a leitura do estado do controle deixa de esperar pelo `select`, que quebra com mais de 1023 descritores abertos, e quatro testes voltam a medir o que prometem.
+- Com o Modo imersão ligado, cancelar a janela que pergunta qual tela compartilhar fazia a janela voltar a cada dois segundos. Agora o cancelamento vale: a janela só volta quando você pede de novo.
+- Parar ou atualizar o Hefesto levava 45 segundos e terminava com o processo morto à força. Agora ele para na hora, sem deixar nada preso.
+- A instalação podia terminar dizendo que estava tudo certo com o serviço do Hefesto parado, e o controle ficava sem ele. Agora a instalação só termina com o serviço rodando, ou diz que não está.
+- O Modo imersão pedia a imagem do jogo ao portal de captura do sistema e, quando o portal recusava, esperava dois minutos a cada tentativa. Agora a recusa se lê na hora e o pedido se repete a cada dois segundos, então a imagem chega assim que o portal do sistema oferece a captura.
+- O Hefesto pedia a imagem da tela antes de o ambiente gráfico subir, e a captura do sistema nascia quebrada para todos os programas. Com o Modo imersão, a janela "Compartilhar a tela" voltava sozinha a cada dois minutos. Agora ele espera a sessão gráfica, e a janela não fica mais voltando: sai uma vez a cada início do Hefesto com o Modo imersão ligado.
+- Sem jogo aberto, o serviço usa bem menos processador.
+- Uma extensão que pediu rede usa a rede, mas não fala com os serviços que só este computador vê, nem mexe no controle por fora das permissões que você aceitou.
+- A atualização que chega ao abrir a janela só entra quando a versão nova traz a assinatura de quem mantém o projeto; sem a assinatura, a instalação fica como está e a aba Sistema diz o motivo.
+- O desenho do controle no Mapa só acende o botão que você usa, as teclas aparecem preenchidas e o botão PS fica no centro.
+- Depois de uma queda do Bluetooth, de ligar o computador ou de atualizar o Hefesto, o controle que já estava pareado passa a ser chamado de volta pelo adaptador em que ele mora, com novas tentativas, em vez de uma tentativa só. Não é preciso mover o controle nem pareá-lo outra vez.
+- O Hefesto só escreve no arquivo do lançador quando o conteúdo mudou.
+- Virar, levantar ou rolar o controle move a câmera do jogo, com ajuste separado para a horizontal e a vertical, para cada jogador.
+- Uma extensão que escreve muito no próprio registro deixa de disputar tempo com o serviço que atende o controle.
+- Com o programa aberto durante o jogo, o serviço deixa de ler arquivos no caminho que atende o controle.
+- Se o sistema perder eventos do controle, o Hefesto relê o estado real e solta o que já foi solto, em todos os jogadores.
+- O registro da janela passa a ser gravado por fora, e cada linha traz a hora.
+- Depois de atualizar, o serviço que vigia o kernel fica sem falha registrada.
+- Antes de a área de trabalho subir, o Hefesto não acorda o serviço de notificações.
+- O Som no corpo volta sozinho quando o som do jogo muda de caminho, em todo jogo e toda conexão.
+- O Hefesto deixa de ligar de novo o serviço de Bluetooth que você parou.
+- O uninstall devolve o portal de captura da distribuição e remove o pino do apt.
+- «Mover com: Analógico direito» no Mapa do controle passa a mover o cursor pelo direito e a rolar pelo esquerdo; antes os dois paravam. Num jogo de teclado e mouse, o esquerdo pode andar com WASD e o direito girar a câmera.
 
 ## [0.9.5.1] — 2026-10-29
 
