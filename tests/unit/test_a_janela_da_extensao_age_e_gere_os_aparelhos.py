@@ -249,6 +249,7 @@ def janela(lar: Any, ctx: Any, tmp_path: pathlib.Path,  # noqa: F811
     a07 = _o_pacote()
     monkeypatch.setattr(a07, "_AGORA", a07._Agora())
     monkeypatch.setattr(a07, "_VIVA", a07._Viva())
+    monkeypatch.setattr(a07, "_OPCOES_VIVAS", a07._OpcoesVivas())
 
     def instalar(mod_id: str = "toque", **extra: Any) -> None:
         _instalar(a07, ctx, _fonte(tmp_path, mod_id, nome=mod_id.title(),
