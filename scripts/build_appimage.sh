@@ -92,7 +92,8 @@ python-appimage build app \
     --python-version "$PYTHON_VERSION" \
     --linux-tag "manylinux2014_x86_64" \
     --name "Hefesto-Dualsense4Unix" \
-    "$WORK_DIR"
+    "$WORK_DIR" \
+    --extra-data "$WORK_DIR/usr"
 
 if [[ -f "$HERE/Hefesto-Dualsense4Unix-x86_64.AppImage" ]]; then
     mv "$HERE/Hefesto-Dualsense4Unix-x86_64.AppImage" "$OUT_FILE"
