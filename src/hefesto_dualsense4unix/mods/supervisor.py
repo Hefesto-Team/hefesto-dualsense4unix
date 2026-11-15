@@ -16,9 +16,12 @@ import json
 import os
 import re
 import secrets
+import select
 import shutil
 import signal
 import socket
+import subprocess
+import sys
 import threading
 import time
 from collections import deque
@@ -62,6 +65,7 @@ from hefesto_dualsense4unix.utils.xdg_paths import (
     IPC_SOCKET_DEFAULT_NAME,
     ipc_socket_name,
     mods_socket_path,
+    state_dir,
 )
 
 logger = get_logger(__name__)
@@ -108,6 +112,18 @@ PASTA_DA_CAIXA: tuple[str, ...] = (
 )
 
 _PR_SET_PDEATHSIG = 1
+
+PRAZO_PARA_A_PONTE_OUVIR_S = 10.0
+
+PRAZO_DA_SONDA_S = 10.0
+
+SONDA_DO_PASTA = "sonda-do-pasta.json"
+
+PASSO_DA_PONTE_S = 0.05
+
+_LOOPBACK_DA_CAIXA = frozenset({"0100007F", "00000000"})
+
+_OUVINDO = "0A"
 
 
 def _prctl() -> Callable[..., int] | None:
@@ -166,6 +182,8 @@ class _Vigiada:
     ficha: str = ""
     instalacao: tuple[str, str, str, bool] = ("", "", "", False)
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
+    pontes: tuple[int, ...] = ()
+    escritor: _EscritorDoDiario | None = None
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -407,6 +425,7 @@ async def _copiar_para_o_diario(
     caminho: Path,
     *,
     relogio: Callable[[], time.struct_time] = time.localtime,
+    ao_abrir: Callable[[_EscritorDoDiario], None] | None = None,
 ) -> None:
     """A saída e o erro do processo vão para o diário com a hora de cada linha, sem passar do teto.
 
@@ -424,6 +443,8 @@ async def _copiar_para_o_diario(
         laco.call_soon_threadsafe(escoou.set)
 
     escritor = _EscritorDoDiario(caminho, pedaco_max, hora, ao_terminar)
+    if ao_abrir is not None:
+        ao_abrir(escritor)
     try:
         while pedaco := await leitor.read(pedaco_max):
             escritor.por(hora.marcar(pedaco))
@@ -558,6 +579,174 @@ A_REDE_INCLUI_A_MAQUINA = (
 A_REDE_INCLUI_A_INTERNET = "A rede da extensão inclui a internet."
 
 
+def frase_da_ponte_calada(porta: int) -> str:
+    """A linha do diário para a ponte declarada em que a extensão não ouve, no ``pasta`` bom."""
+    return (f"A ponte {porta} não atende: a extensão não ouve nessa porta, e os programas desta "
+            f"máquina não a alcançam.")
+
+
+_O_OUVINTE_DA_SONDA = (
+    "import socket, sys\n"
+    "s = socket.socket()\n"
+    "s.bind(('127.0.0.1', int(sys.argv[1])))\n"
+    "s.listen(1)\n"
+    "s.settimeout(float(sys.argv[2]))\n"
+    "print('ouvindo', flush=True)\n"
+    "c, _ = s.accept()\n"
+    "c.sendall(b'1')\n"
+    "c.close()\n"
+)
+
+_SONDAS: dict[tuple[str, int, int], bool] = {}
+
+_VEZ_DA_SONDA = threading.Lock()
+
+
+def _a_chave_do_pasta(pasta: str) -> tuple[str, int, int] | None:
+    real = os.path.realpath(pasta)
+    if not os.path.isfile(real):
+        return None
+    visto = os.stat(real)
+    return real, visto.st_mtime_ns, visto.st_size
+
+
+def _sondas_guardadas(caminho: Path) -> dict[str, bool]:
+    try:
+        bruto = json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(bruto, dict):
+        return {}
+    return {k: v for k, v in bruto.items() if isinstance(k, str) and isinstance(v, bool)}
+
+
+def _guardar_as_sondas(caminho: Path, sondas: dict[str, bool]) -> None:
+    try:
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        temporario = caminho.with_name(f".{caminho.name}.{os.getpid()}")
+        temporario.write_text(json.dumps(sondas, ensure_ascii=False), encoding="utf-8")
+        os.replace(temporario, caminho)
+    except OSError as exc:
+        logger.warning("mods_sonda_nao_gravou", err=str(exc))
+
+
+def _porta_livre_da_casa() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as livre:
+        livre.bind(("127.0.0.1", 0))
+        return int(livre.getsockname()[1])
+
+
+def sondar_o_pasta(pasta: str, prazo: float = PRAZO_DA_SONDA_S) -> bool:
+    """O ``pasta`` entrega o ``-t``? Um ouvinte do supervisor, sem extensão nenhuma, responde um
+    byte no ``127.0.0.1`` de dentro, e a casa liga no próprio ``127.0.0.1``."""
+    porta = _porta_livre_da_casa()
+    argv = [pasta, *PASTA_DA_CAIXA, "-t", f"127.0.0.1/{porta}", "-u", "none", "-T", "none",
+            "-U", "none", "--", sys.executable, "-I", "-c", _O_OUVINTE_DA_SONDA, str(porta),
+            str(prazo)]
+    fim = time.monotonic() + prazo
+    try:
+        filho = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        return False
+    try:
+        assert filho.stdout is not None
+        prontos, _, _ = select.select([filho.stdout], [], [], prazo)
+        if not prontos or filho.stdout.readline().strip() != b"ouvindo":
+            return False
+        resta = max(PASSO_DA_PONTE_S, fim - time.monotonic())
+        with socket.create_connection(("127.0.0.1", porta), timeout=resta) as casa:
+            return casa.recv(1) == b"1"
+    except OSError:
+        return False
+    finally:
+        with contextlib.suppress(OSError):
+            os.killpg(filho.pid, signal.SIGKILL)
+        filho.wait()
+
+
+def o_pasta_entrega_a_ponte(pasta: str) -> bool:
+    """A sonda do supervisor, uma vez por binário: guardada pelo caminho real, a hora e o tamanho
+    do ``pasta``, na memória e no estado do produto."""
+    chave = _a_chave_do_pasta(pasta)
+    if chave is None:
+        return False
+    with _VEZ_DA_SONDA:
+        if chave in _SONDAS:
+            return _SONDAS[chave]
+        caminho = state_dir() / SONDA_DO_PASTA
+        guardadas = _sondas_guardadas(caminho)
+        nome = "|".join(map(str, chave))
+        if nome not in guardadas:
+            guardadas[nome] = sondar_o_pasta(chave[0])
+            _guardar_as_sondas(caminho, guardadas)
+            logger.info("mods_sonda_do_pasta", pasta=chave[0], entrega=guardadas[nome])
+        _SONDAS[chave] = guardadas[nome]
+        return guardadas[nome]
+
+
+def pasta_da_caixa(manifesto: Manifesto) -> str | None:
+    """O ``pasta`` da caixa com rede, escolhido antes de abrir e igual para toda extensão.
+
+    Com ponte declarada (``para_a_casa``), só o ``pasta`` que a sonda do supervisor provou
+    entregar; sem ele, a caixa fica no espaço de rede da casa. O que a extensão faz dentro da
+    caixa nunca troca o caminho.
+    """
+    pasta = rede_propria_da_caixa()
+    portas = manifesto.portas
+    if pasta is None or manifesto.rede == "nenhuma" or not (portas and portas.para_a_casa):
+        return pasta
+    return pasta if o_pasta_entrega_a_ponte(pasta) else None
+
+
+def pontes_que_o_pasta_traz(manifesto: Manifesto,
+                            ocupada: Callable[[int, bool], bool]) -> tuple[int, ...]:
+    """As pontes TCP (``para_a_casa``) que o ``pasta`` traz: a ocupada na casa fica de fora."""
+    portas = manifesto.portas
+    if manifesto.rede == "nenhuma" or portas is None:
+        return ()
+    return tuple(p.porta for p in portas.para_a_casa if not p.udp and not ocupada(p.porta, False))
+
+
+def _filhos(pid: int) -> list[int]:
+    filhos: list[int] = []
+    for tarefa in sorted(Path(f"/proc/{pid}/task").glob("*/children")):
+        with contextlib.suppress(OSError, ValueError):
+            filhos += [int(texto) for texto in tarefa.read_text().split()]
+    return filhos
+
+
+def portas_no_loopback_da_caixa(pid: int) -> dict[int, set[str]]:
+    """As portas TCP do ``127.0.0.1`` da caixa, com os estados de cada uma.
+
+    ``pid`` é o do ``pasta``: o filho dele roda no espaço de rede da caixa, e o
+    ``/proc/<filho>/net/tcp`` é a tabela desse espaço.
+    """
+    portas: dict[int, set[str]] = {}
+    for filho in _filhos(pid)[:1]:
+        with contextlib.suppress(OSError):
+            for linha in Path(f"/proc/{filho}/net/tcp").read_text().splitlines()[1:]:
+                campos = linha.split()
+                endereco, _, porta = campos[1].partition(":") if len(campos) > 3 else ("", "", "")
+                if endereco in _LOOPBACK_DA_CAIXA:
+                    portas.setdefault(int(porta, 16), set()).add(campos[3])
+    return portas
+
+
+async def as_pontes_caladas(
+    pid: int, pontes: Sequence[int],
+    ler: Callable[[int], dict[int, set[str]]] = portas_no_loopback_da_caixa,
+) -> list[int]:
+    """As pontes em que a extensão não ouve no prazo; a extensão segue na caixa mesmo assim."""
+    fim = time.monotonic() + PRAZO_PARA_A_PONTE_OUVIR_S
+    caladas = list(pontes)
+    while caladas and time.monotonic() < fim:
+        caladas = [p for p in caladas if _OUVINDO not in ler(pid).get(p, set())]
+        if caladas:
+            await asyncio.sleep(PASSO_DA_PONTE_S)
+    return caladas
+
+
 def _as_portas_pelo_nome(lista: Sequence[Any]) -> str:
     nomes: dict[str, list[str]] = {}
     for p in lista:
@@ -575,7 +764,7 @@ def frase_da_rede(manifesto: Manifesto) -> str:
     """
     if manifesto.rede == "nenhuma":
         return ""
-    if rede_propria_da_caixa() is None:
+    if pasta_da_caixa(manifesto) is None:
         return A_REDE_INCLUI_A_MAQUINA
     frase = [A_REDE_INCLUI_A_INTERNET]
     portas = manifesto.portas
@@ -987,7 +1176,10 @@ class Supervisor:
             self._marcar(mod_id, EstadoDaModificacao(
                 "rodando", pid=processo.pid, caixa=caixa, motivo=sem_caixa, quedas=quedas))
             aberto_em = time.monotonic()
+            vigia = asyncio.create_task(self._avisar_as_pontes_caladas(vigiada, processo.pid))
             codigo = await processo.wait()
+            vigia.cancel()
+            await asyncio.wait({vigia})
             copia, vigiada.copia = vigiada.copia, None
             await _esvaziar_a_copia(copia, ESPERA_DO_DIARIO_S)
             self.porta.esquecer(vigiada.ficha)
@@ -1014,6 +1206,15 @@ class Supervisor:
                 await asyncio.wait_for(
                     vigiada.quer_parar.wait(), timeout=self.esperas[quedas - 1]
                 )
+
+    async def _avisar_as_pontes_caladas(self, vigiada: _Vigiada, pid: int) -> None:
+        if not vigiada.pontes:
+            return
+        for porta in await as_pontes_caladas(pid, vigiada.pontes):
+            logger.warning("mods_ponte_calada", mod=vigiada.mod_id, porta=porta)
+            if vigiada.escritor is not None:
+                vigiada.escritor.por(vigiada.escritor.hora.carimbo()
+                                     + frase_da_ponte_calada(porta).encode() + b"\n")
 
     async def _abrir(
         self, vigiada: _Vigiada, manifesto: Manifesto, diario: Path
@@ -1045,6 +1246,17 @@ class Supervisor:
         jogos = pastas_dos_jogos(manifesto, casa)
         if jogos:
             ambiente["HEFESTO_MOD_JOGOS"] = os.pathsep.join(str(p) for p in jogos)
+        pasta = await asyncio.to_thread(pasta_da_caixa, manifesto) if self.bwrap else None
+        portas = manifesto.portas
+        ocupadas = {(p.porta, p.udp) for p in (portas.para_a_casa if portas else [])
+                    if pasta and ocupada_na_casa(p.porta, p.udp)}
+
+        def ocupada(porta: int, udp: bool) -> bool:
+            return (porta, udp) in ocupadas
+
+        vigiada.pontes = ()
+        if self.bwrap and pasta:
+            vigiada.pontes = pontes_que_o_pasta_traz(manifesto, ocupada)
         if self.bwrap:
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
@@ -1056,7 +1268,8 @@ class Supervisor:
                 casa=casa,
                 execucao=_execucao_da_sessao(execucao_bruta, self.porta.caminho),
                 jogos=jogos,
-                pasta=rede_propria_da_caixa(),
+                pasta=pasta,
+                ocupada=ocupada,
             )
         else:
             argv = comando
@@ -1076,7 +1289,9 @@ class Supervisor:
         vigiada.processo = processo
         assert processo.stdout is not None
         vigiada.copia = asyncio.create_task(
-            _copiar_para_o_diario(processo.stdout, diario), name=f"mods-diario-{manifesto.id}"
+            _copiar_para_o_diario(processo.stdout, diario,
+                                  ao_abrir=lambda escritor: setattr(vigiada, "escritor", escritor)),
+            name=f"mods-diario-{manifesto.id}",
         )
         if vigiada.quer_parar.is_set():
             await parar_o_grupo(processo, self.prazo_para_parar_s)

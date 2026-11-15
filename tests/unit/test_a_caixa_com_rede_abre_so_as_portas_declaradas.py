@@ -8,23 +8,30 @@ da casa, e o «sim» diz isso. O ``pasta`` real vem do ``PATH`` ou de ``HEFESTO_
 """
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 import re
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.mods import supervisor as sup
+from hefesto_dualsense4unix.mods.instalador import Lugares, instalar, ligar, manifesto_instalado
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
+from hefesto_dualsense4unix.mods.supervisor import Supervisor
+from hefesto_dualsense4unix.utils import xdg_paths
 from tests.conftest import exigir_caixa_do_bwrap
-from tests.unit.test_as_modificacoes_rodam_fora_do_daemon import curto
+from tests.unit.test_as_modificacoes_rodam_fora_do_daemon import curto, lar
 
-__all__ = ["curto"]
+__all__ = ["curto", "lar"]
 
 _PASTA_DE_MENTIRA = "/usr/bin/pasta"
 
@@ -151,6 +158,7 @@ def test_portas_sem_rede_se_recusam() -> None:
 
 def test_o_sim_lista_as_portas_pelo_nome(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: _PASTA_DE_MENTIRA)
+    monkeypatch.setattr(sup, "o_pasta_entrega_a_ponte", lambda _pasta: True)
     frase = sup.frase_da_rede(_lovense())
     assert frase.startswith(sup.A_REDE_INCLUI_A_INTERNET)
     assert "o Intiface desta máquina (12345)" in frase
@@ -158,6 +166,9 @@ def test_o_sim_lista_as_portas_pelo_nome(monkeypatch: pytest.MonkeyPatch) -> Non
     assert "DSX" not in frase
     assert sup.frase_da_rede(_manifesto(["rede:local"])) == sup.A_REDE_INCLUI_A_INTERNET
     assert sup.frase_da_rede(_manifesto(["rede:nenhuma"])) == ""
+    monkeypatch.setattr(sup, "o_pasta_entrega_a_ponte", lambda _pasta: False)
+    assert sup.frase_da_rede(_lovense()) == sup.A_REDE_INCLUI_A_MAQUINA
+    assert sup.frase_da_rede(_manifesto(["rede:local"])) == sup.A_REDE_INCLUI_A_INTERNET
     monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: None)
     assert sup.frase_da_rede(_lovense()) == sup.A_REDE_INCLUI_A_MAQUINA
 
@@ -320,3 +331,270 @@ def test_com_o_pasta_real_a_ponte_nao_se_abre_para_a_rede_da_casa(curto: Path) -
     finally:
         filho.kill()
         filho.wait()
+
+
+_PASTA_QUE_NAO_ENTREGA = """
+import ctypes, fcntl, os, socket, struct, sys
+comando = sys.argv[sys.argv.index("--") + 1:]
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "chamadas"), "a") as f:
+    f.write(("sonda" if "-c" in comando[:3] else "caixa") + "\\n")
+uid, gid = os.getuid(), os.getgid()
+filho = os.fork()
+if filho == 0:
+    if ctypes.CDLL(None, use_errno=True).unshare(0x10000000 | 0x40000000) != 0:
+        os._exit(97)
+    for nome, texto in (("setgroups", "deny"), ("uid_map", f"0 {uid} 1"),
+                        ("gid_map", f"0 {gid} 1")):
+        with open(f"/proc/self/{nome}", "w") as f:
+            f.write(texto)
+    s = socket.socket()
+    bandeiras = struct.unpack("16sH", fcntl.ioctl(s, 0x8913, struct.pack("16sH", b"lo", 0)))[1]
+    fcntl.ioctl(s, 0x8914, struct.pack("16sH", b"lo", bandeiras | 1))
+    os.execvp(comando[0], comando)
+_, status = os.waitpid(filho, 0)
+sys.exit(os.waitstatus_to_exitcode(status))
+"""
+
+_A_EXTENSAO_DA_PONTE = """
+import os, socket, time
+aqui = os.path.dirname(os.path.abspath(__file__))
+porta = int(open(os.path.join(aqui, "porta")).read())
+modo = open(os.path.join(aqui, "modo")).read().strip()
+s = socket.socket()
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+if modo != "calada":
+    s.bind(("127.0.0.1", porta))
+    s.listen(8)
+print("ouvindo", flush=True)
+if modo == "larga":
+    time.sleep(1)
+    s.close()
+while modo != "atende":
+    time.sleep(1)
+while True:
+    c, _ = s.accept()
+    with c:
+        c.sendall(b"ponte")
+"""
+
+
+def _pasta_que_nao_entrega(curto: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    exigir_caixa_do_bwrap()
+    pasta = curto / "pasta"
+    pasta.write_text(f"#!{sys.executable}\n{_PASTA_QUE_NAO_ENTREGA}", encoding="utf-8")
+    pasta.chmod(0o755)
+    feito = subprocess.run([str(pasta), "--", "true"], capture_output=True, timeout=30,
+                           check=False)
+    (curto / "chamadas").unlink(missing_ok=True)
+    if feito.returncode != 0:
+        pytest.skip("sem espaço de usuário próprio, o pasta de mentira não sobe a caixa")
+    monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: str(pasta))
+    monkeypatch.setattr(sup, "_SONDAS", {}, raising=False)
+    return pasta
+
+
+def _instalar_a_ponte(lar: Lugares, curto: Path, ponte: int, modo: str = "atende") -> Path:
+    fonte = curto / "fonte-da-ponte"
+    fonte.mkdir()
+    bruto = {
+        "id": "ponte", "nome": "Ponte", "versao": "0.1.0", "api": ">=1,<3",  # (noqa-acento)
+        "licenca": "MIT", "tipos": ["processo"], "processo": {"executar": ["python3", "m.py"]},
+        "permissoes": ["rede:internet"],  # (noqa-acento)
+        "portas": {"para_a_casa": [{"porta": ponte, "nome": "a ponte que os jogos usam"}]},
+    }
+    (fonte / "hefesto-mod.json").write_text(json.dumps(bruto), encoding="utf-8")
+    (fonte / "m.py").write_text(_A_EXTENSAO_DA_PONTE, encoding="utf-8")
+    (fonte / "porta").write_text(str(ponte), encoding="utf-8")
+    (fonte / "modo").write_text(modo, encoding="utf-8")
+    instalar(str(fonte), lugares=lar)
+    ligar("ponte", permissoes_vistas=manifesto_instalado("ponte", lugares=lar).permissoes,
+          lugares=lar)
+    return sup.diario_da_extensao(lar, "ponte")
+
+
+def _supervisor_com_caixa(lar: Lugares) -> Supervisor:
+    async def escritor(metodo: str, pedido: dict[str, Any]) -> Any:
+        return {"status": "ok"}
+
+    return Supervisor(EventBus(), escritor=escritor, o_jogo_escreve=lambda uniq, canal: False,
+                      uniq_do_posto=lambda: "aa:bb:cc:00:00:01", lugares=lar,
+                      bwrap=shutil.which("bwrap"))
+
+
+def _a_ponte_atende(ponte: int) -> bool:
+    try:
+        with socket.create_connection(("127.0.0.1", ponte), timeout=1) as jogo:
+            jogo.settimeout(2)
+            return jogo.recv(5) == b"ponte"
+    except OSError:
+        return False
+
+
+async def _ate(condicao: Any, prazo: float = 30.0) -> None:
+    fim = time.monotonic() + prazo
+    while not await asyncio.to_thread(condicao):
+        if time.monotonic() > fim:
+            raise AssertionError("o prazo passou sem a condição")
+        await asyncio.sleep(0.1)
+
+
+def _texto(caminho: Path) -> str:
+    try:
+        return caminho.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _roda_pelo(supervisor: Supervisor, programa: str) -> bool:
+    pid = getattr(supervisor.estado_de("ponte"), "pid", None)
+    linha = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")[:2] if pid else []
+    return programa.encode() in linha
+
+
+def _rodando_sem_queda(supervisor: Supervisor) -> None:
+    estado = supervisor.estado_de("ponte")
+    assert estado is not None and estado.estado == "rodando", estado
+    assert estado.quedas == 0, estado
+
+
+def test_a_sonda_diz_que_o_pasta_nao_entrega_e_a_caixa_abre_sem_pasta_ja_na_abertura(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA."""
+    pasta = _pasta_que_nao_entrega(curto, monkeypatch)
+    ponte = _porta_livre()
+    _instalar_a_ponte(lar, curto, ponte)
+
+    async def corrida() -> None:
+        supervisor = _supervisor_com_caixa(lar)
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: _a_ponte_atende(ponte))
+            _rodando_sem_queda(supervisor)
+            assert not _roda_pelo(supervisor, str(pasta))
+            assert _texto(curto / "chamadas").splitlines() == ["sonda"]
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())
+
+
+def test_com_o_pasta_que_entrega_a_extensao_que_larga_a_ponte_segue_no_pasta(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pasta = _pasta_que_nao_entrega(curto, monkeypatch)
+    monkeypatch.setattr(sup, "o_pasta_entrega_a_ponte", lambda _pasta: True, raising=False)
+    ponte = _porta_livre()
+    diario = _instalar_a_ponte(lar, curto, ponte, "larga")
+
+    async def corrida() -> None:
+        supervisor = _supervisor_com_caixa(lar)
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: "ouvindo" in _texto(diario))
+            antes = getattr(supervisor.estado_de("ponte"), "pid", None)
+            await asyncio.sleep(4)
+            _rodando_sem_queda(supervisor)
+            assert getattr(supervisor.estado_de("ponte"), "pid", None) == antes
+            assert _roda_pelo(supervisor, str(pasta))
+            assert _texto(curto / "chamadas").splitlines() == ["caixa"]
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())
+
+
+def test_a_ponte_calada_vai_ao_diario_e_a_extensao_segue_na_caixa(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pasta = _pasta_que_nao_entrega(curto, monkeypatch)
+    monkeypatch.setattr(sup, "o_pasta_entrega_a_ponte", lambda _pasta: True)
+    monkeypatch.setattr(sup, "PRAZO_PARA_A_PONTE_OUVIR_S", 1.0)
+    ponte = _porta_livre()
+    diario = _instalar_a_ponte(lar, curto, ponte, "calada")
+
+    async def corrida() -> None:
+        supervisor = _supervisor_com_caixa(lar)
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: sup.frase_da_ponte_calada(ponte) in _texto(diario))
+            _rodando_sem_queda(supervisor)
+            assert _roda_pelo(supervisor, str(pasta))
+            assert _texto(curto / "chamadas").splitlines() == ["caixa"]
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())
+
+
+def test_a_sonda_roda_uma_vez_por_binario(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pasta = _pasta_que_nao_entrega(curto, monkeypatch)
+    guardado = xdg_paths.state_dir() / sup.SONDA_DO_PASTA
+    assert sup.o_pasta_entrega_a_ponte(str(pasta)) is False
+    medido = guardado.read_text()
+    assert list(json.loads(medido).values()) == [False]
+    guardado.unlink()
+    assert sup.o_pasta_entrega_a_ponte(str(pasta)) is False
+    guardado.write_text(medido)
+    monkeypatch.setattr(sup, "_SONDAS", {})
+    assert sup.o_pasta_entrega_a_ponte(str(pasta)) is False
+    assert _texto(curto / "chamadas").splitlines() == ["sonda"]
+    visto = pasta.stat()
+    os.utime(pasta, ns=(visto.st_atime_ns, visto.st_mtime_ns + 1_000_000_000))
+    assert sup.o_pasta_entrega_a_ponte(str(pasta)) is False
+    assert _texto(curto / "chamadas").splitlines() == ["sonda", "sonda"]
+
+
+def test_a_ponte_ocupada_na_casa_nao_conta_como_ponte_que_nao_atende(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pasta = _pasta_que_nao_entrega(curto, monkeypatch)
+    monkeypatch.setattr(sup, "o_pasta_entrega_a_ponte", lambda _pasta: True)
+    monkeypatch.setattr(sup, "PRAZO_PARA_A_PONTE_OUVIR_S", 1.0)
+    outro = socket.socket()
+    outro.bind(("127.0.0.1", 0))
+    outro.listen(4)
+    ponte = int(outro.getsockname()[1])
+    diario = _instalar_a_ponte(lar, curto, ponte, "calada")
+
+    async def corrida() -> None:
+        supervisor = _supervisor_com_caixa(lar)
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: "ouvindo" in _texto(diario))
+            await asyncio.sleep(2)
+            _rodando_sem_queda(supervisor)
+            assert sup.frase_da_ponte_calada(ponte) not in _texto(diario)
+            assert _roda_pelo(supervisor, str(pasta))
+            assert _texto(curto / "chamadas").splitlines() == ["caixa"]
+        finally:
+            await supervisor.parar()
+            outro.close()
+
+    asyncio.run(corrida())
+
+
+def test_com_o_pasta_real_a_sonda_diz_que_entrega_e_a_ponte_fica_no_pasta(
+    lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pasta = _o_pasta()
+    monkeypatch.setattr(sup, "rede_propria_da_caixa", lambda: pasta)
+    monkeypatch.setattr(sup, "_SONDAS", {})
+    ponte = _porta_livre()
+    _instalar_a_ponte(lar, curto, ponte)
+
+    async def corrida() -> None:
+        supervisor = _supervisor_com_caixa(lar)
+        await supervisor.iniciar()
+        try:
+            await _ate(lambda: _a_ponte_atende(ponte))
+            _rodando_sem_queda(supervisor)
+            assert _roda_pelo(supervisor, pasta)
+            guardado = json.loads((xdg_paths.state_dir() / sup.SONDA_DO_PASTA).read_text())
+            assert list(guardado.values()) == [True]
+        finally:
+            await supervisor.parar()
+
+    asyncio.run(corrida())

@@ -536,6 +536,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
                                    "não volta"),
     "opcoes.json": (CASA, "os valores das opções de uma modificação; não identifica controle"),
     "diario.log": (CASA, "o diário de cada modificação, na pasta do supervisor (.diarios/<id>)"),
+    "sonda-do-pasta.json": (CASA, "o que a sonda do supervisor mediu do pasta desta máquina; não "
+                                  "identifica controle"),
     "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta do supervisor "
                           "(.diarios/<id>)"),
     "servico.log": (CASA, "o registro do serviço, já pela máscara; não identifica controle"),
