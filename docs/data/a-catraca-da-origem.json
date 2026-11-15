@@ -256,17 +256,17 @@
       "universo": 424
     },
     "tamanho": {
-      "data": "2026-11-14",
+      "data": "2026-11-15",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1258738,
+      "piso": 1258742,
       "por_item": {
         "docs": 106944,
         "scripts": 114257,
         "src": 318234,
-        "tests": 719303
+        "tests": 719307
       },
-      "razao": "tamanho: +2192 linhas (1256546 -> 1258738), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo 811713f54bb9",
+      "razao": "tamanho: +4 linhas (1258738 -> 1258742), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo afa1be7974e4",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1953,6 +1953,12 @@
           "de": 1256546,
           "para": 1258738,
           "razao": "tamanho: +2192 linhas (1256546 -> 1258738), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo 811713f54bb9"
+        },
+        {
+          "data": "2026-11-15",
+          "de": 1258738,
+          "para": 1258742,
+          "razao": "tamanho: +4 linhas (1258738 -> 1258742), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo afa1be7974e4"
         }
       ],
       "unidade": "linhas",
