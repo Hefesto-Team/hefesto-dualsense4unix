@@ -39,7 +39,7 @@ else:
             try:
                 __version__ = version("hefesto-dualsense4unix")
             except PackageNotFoundError:
-                __version__ = "0.9.5.2"
+                __version__ = "0.9.5.3"
         globals()["__version__"] = __version__
         return __version__
 

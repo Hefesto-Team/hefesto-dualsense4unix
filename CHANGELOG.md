@@ -4,7 +4,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ## [Unreleased]
 
-## [0.9.5.2] — 2026-11-15
+## [0.9.5.3] — 2026-11-15
 
 ### Adicionado
 
@@ -37,6 +37,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ### Corrigido
 
+- O AppImage passa a levar os scripts que o `doctor --fix` usa; antes, as três curas que ele delega a script respondiam «não encontrado».
 - O Hefesto não quebra mais o compartilhamento de tela do sistema: a captura espera o ambiente gráfico subir.
 - A aba Perfis abre no perfil ativo e acompanha o jogo aberto.
 - Cada aba só aparece com os dados reais, e a janela Criar perfis não oferece mais jogos de exemplo. Se o serviço demorar, a tela diz que está esperando.

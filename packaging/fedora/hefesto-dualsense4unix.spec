@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.5.2
+Version:        0.9.5.3
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -606,6 +606,12 @@ fi
 %{_datadir}/%{app_id}/docs/
 
 %changelog
+* Sun Nov 15 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5.3-1
+- Na aba Conexões, um teclado ou um pedal pode virar botões de qualquer controle, também de um Pro Controller ou de outro controle de fora, e não só de um DualSense.
+- Com o Modo automático ligado, o mesmo efeito de gatilho muda conforme o estilo do perfil, e cada gatilho tem o seu: num FPS o L2 mira leve e o R2 dispara; numa corrida o freio endurece com o curso.
+- A extensão Modo imersão vem com o Hefesto: o controle reage ao que acontece no jogo, com o som, a vibração, a luz e os gatilhos, ao lado do Modo automático.
+- Uma extensão pode trazer uma página própria, mostrada dentro da janela da extensão, isolada, sem rede e falando só com a própria extensão.
+- Uma extensão com permissão recebe o estalo do som do jogo com o lado de onde veio, o nível do microfone de cada controle e a identidade do jogo aberto, sem nunca receber o áudio.
 * Sun Nov 15 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5.2-1
 - Na aba Conexões, um teclado ou um pedal pode virar botões de qualquer controle, também de um Pro Controller ou de outro controle de fora, e não só de um DualSense.
 - Com o Modo automático ligado, o mesmo efeito de gatilho muda conforme o estilo do perfil, e cada gatilho tem o seu: num FPS o L2 mira leve e o R2 dispara; numa corrida o freio endurece com o curso.

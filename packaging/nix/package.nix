@@ -54,7 +54,7 @@
 
 python3Packages.buildPythonApplication rec {
   pname = "hefesto-dualsense4unix";
-  version = "0.9.5.2";
+  version = "0.9.5.3";
   pyproject = true;
 
   # Source local (clonado pelo flake). Em release tag, trocar por
