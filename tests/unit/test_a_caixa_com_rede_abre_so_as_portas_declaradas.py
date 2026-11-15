@@ -367,7 +367,7 @@ if modo != "calada":
     s.listen(8)
 print("ouvindo", flush=True)
 if modo == "larga":
-    time.sleep(1)
+    time.sleep(0.3)
     s.close()
 while modo != "atende":
     time.sleep(1)
@@ -493,7 +493,7 @@ def test_com_o_pasta_que_entrega_a_extensao_que_larga_a_ponte_segue_no_pasta(
         try:
             await _ate(lambda: "ouvindo" in _texto(diario))
             antes = getattr(supervisor.estado_de("ponte"), "pid", None)
-            await asyncio.sleep(4)
+            await asyncio.sleep(1.5)
             _rodando_sem_queda(supervisor)
             assert getattr(supervisor.estado_de("ponte"), "pid", None) == antes
             assert _roda_pelo(supervisor, str(pasta))
