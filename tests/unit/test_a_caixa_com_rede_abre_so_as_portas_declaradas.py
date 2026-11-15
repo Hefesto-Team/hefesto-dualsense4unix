@@ -9,6 +9,7 @@ da casa, e o «sim» diz isso. O ``pasta`` real vem do ``PATH`` ou de ``HEFESTO_
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -251,13 +252,32 @@ except OSError as exc:
 """
 
 
+_SEM_ENDERECO = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
+
+
+def _o_pasta_falando(argv: list[str]) -> list[str]:
+    fim = argv.index("--")
+    return [("--debug" if i < fim and arg == "--quiet" else arg) for i, arg in enumerate(argv)]
+
+
+def _o_que_o_pasta_disse(pasta: str, filho: subprocess.Popen[str]) -> str:
+    if filho.poll() is None:
+        filho.kill()
+    _, erros = filho.communicate(timeout=10)
+    versao = subprocess.run([pasta, "--version"], capture_output=True, text=True, timeout=10)
+    return (f"\n{pasta} --version: {(versao.stdout or versao.stderr).strip()}"
+            f"\no stderr do pasta, com o --debug no lugar do --quiet:\n"
+            f"{_SEM_ENDERECO.sub('xx:xx:xx:xx:xx:xx', erros)[-6000:]}")
+
+
 def test_com_o_pasta_real_o_jogo_da_casa_alcanca_a_ponte_declarada(curto: Path) -> None:
     pasta = _o_pasta()
     ponte = _porta_livre()
     filho = subprocess.Popen(
-        _caixa(curto, _lovense(intiface=_porta_livre(), ponte=(ponte,)),
-               ["/usr/bin/python3", "-c", _PONTE, str(ponte)], pasta=pasta),
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        _o_pasta_falando(_caixa(curto, _lovense(intiface=_porta_livre(), ponte=(ponte,)),
+                                     ["/usr/bin/python3", "-c", _PONTE, str(ponte)],
+                                     pasta=pasta)),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         assert filho.stdout is not None
         assert filho.stdout.readline().strip() == "ouvindo"
@@ -271,10 +291,11 @@ def test_com_o_pasta_real_o_jogo_da_casa_alcanca_a_ponte_declarada(curto: Path) 
             except OSError:
                 pass
             if time.monotonic() > prazo:
-                pytest.fail("o jogo da casa não alcança a ponte declarada")
+                pytest.fail("o jogo da casa não alcança a ponte declarada"
+                            + _o_que_o_pasta_disse(pasta, filho))
             time.sleep(0.1)
-        saida, _ = filho.communicate(timeout=20)
-        assert "o jogo chegou" in saida, saida
+        saida, erros = filho.communicate(timeout=20)
+        assert "o jogo chegou" in saida, saida + erros
     finally:
         if filho.poll() is None:
             filho.kill()
