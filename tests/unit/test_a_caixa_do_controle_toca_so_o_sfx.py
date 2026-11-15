@@ -578,6 +578,11 @@ class _CaixaDeMentira:
 
 
 @pytest.fixture
+def chave_ligada(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(mod, "SO_EFEITOS_DE_FABRICA", True)
+
+
+@pytest.fixture
 def servidor(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> _Servidor:
     servidor = _Servidor()
     _CaixaDeMentira.vivas = []
@@ -616,7 +621,7 @@ MESAS = {
 
 @pytest.mark.parametrize("arranjo", list(MESAS.values()), ids=list(MESAS))
 def test_na_mesa_misturada_cada_cabo_toca_pela_caixa_separada_e_cada_chave_e_do_seu(
-    servidor: _Servidor, arranjo: str
+    servidor: _Servidor, chave_ligada: None, arranjo: str
 ) -> None:
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
     ger = mod.GerenciadorDeNosDeSom(
@@ -632,7 +637,7 @@ def test_na_mesa_misturada_cada_cabo_toca_pela_caixa_separada_e_cada_chave_e_do_
     cabos = [u for u, t in transportes.items() if t == "cabo"]
     ger.reconciliar(_mesa(transportes))
 
-    assert all(sub.so_efeitos(u) for u in CONTROLES), "«Só efeitos» nasce ligado"
+    assert all(sub.so_efeitos(u) for u in CONTROLES), "«Só efeitos» ligado"
     assert servidor.saidas() == set(), "com a chave ligada a placa não recebe o nó inteiro"
     assert sorted(c.uniq for c in _CaixaDeMentira.vivas) == sorted(cabos)
     for caixa in _CaixaDeMentira.vivas:
@@ -733,11 +738,14 @@ def test_sem_numpy_a_rota_segue_sem_a_chave(monkeypatch: pytest.MonkeyPatch) -> 
     assert af.separador_da_caixa(TAXA_DO_RADIO, True) is None
 
 
-def test_a_chave_e_de_cada_controle_e_nasce_ligada() -> None:
+def test_a_chave_e_de_cada_controle_e_nasce_desligada_ate_ter_lugar_na_tela() -> None:
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
     sub._acordar_a_volta = lambda *_a: None  # type: ignore[method-assign]
+    assert mod.SO_EFEITOS_DE_FABRICA is False
     for uniq in CONTROLES:
-        assert sub.so_efeitos(uniq) is True
+        assert sub.so_efeitos(uniq) is False
+    for uniq in CONTROLES:
+        sub.escolher_so_efeitos(uniq, True)
     sub.escolher_so_efeitos(CONTROLES[2], False)
     assert [sub.so_efeitos(u) for u in CONTROLES] == [True, True, False, True]
     assert sub.so_efeitos(CONTROLES[2].upper().replace(":", "")) is False
@@ -778,7 +786,7 @@ class _GerenciadorQueSoOuve:
 
 
 def test_cada_ponte_do_radio_leva_a_chave_viva_do_seu_controle(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, chave_ligada: None
 ) -> None:
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
     from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
@@ -813,7 +821,7 @@ def test_cada_ponte_do_radio_leva_a_chave_viva_do_seu_controle(
 
 @pytest.mark.parametrize("arranjo", list(MESAS.values()), ids=list(MESAS))
 def test_quem_pediu_o_som_inteiro_do_pc_no_controle_fica_sem_o_separador(
-    servidor: _Servidor, monkeypatch: pytest.MonkeyPatch, arranjo: str
+    servidor: _Servidor, monkeypatch: pytest.MonkeyPatch, chave_ligada: None, arranjo: str
 ) -> None:
     transportes = {
         u: ("usb" if letra == "c" else "bluetooth")

@@ -58,6 +58,7 @@ depends=(
     'python-filelock'
     'python-yaml'
     'python-jeepney'
+    'python-numpy'
     # Sem python-pydualsense no Arch — vamos puxar via pip.
 )
 makedepends=(

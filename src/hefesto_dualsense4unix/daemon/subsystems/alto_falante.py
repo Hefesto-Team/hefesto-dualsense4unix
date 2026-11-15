@@ -155,6 +155,8 @@ _O_QUE_A_VOLTA_OUVE: tuple[str, ...] = ("sinks", "sink-inputs")
 
 RECUSA_DA_PONTE_S = 60.0
 
+SO_EFEITOS_DE_FABRICA = False
+
 RECUO_DO_OUVIDO_SEM_FONTE_S = RECONCILIA_S
 
 PAR_DO_TESTE_DA_HAPTICA: tuple[int, int] = (127, 127)
@@ -966,13 +968,14 @@ class AltoFalanteSubsystem:
     def so_efeitos(self, uniq: str) -> bool:
         """A chave «Só efeitos» deste controle: a caixa toca só o efeito do jogo.
 
-        A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01: ligada por padrão, em cada controle, no
-        cabo e no rádio; o corpo continua sentindo o som inteiro. Quem pediu o som
-        inteiro do PC no controle (:meth:`_quem_pediu_o_pc_inteiro`) fica sem o
-        separador: a tela promete a música ali. Nunca levanta.
+        A-CAIXA-DO-CONTROLE-TOCA-SO-O-SFX-01: desligada de fábrica
+        (:data:`SO_EFEITOS_DE_FABRICA`) até a chave ter lugar na tela; ligada, vale em
+        cada controle, no cabo e no rádio, e o corpo continua sentindo o som inteiro.
+        Quem pediu o som inteiro do PC no controle (:meth:`_quem_pediu_o_pc_inteiro`)
+        fica sem o separador: a tela promete a música ali. Nunca levanta.
         """
         chave = _uniq_de_perfil(uniq)
-        return self._so_efeitos_vivos.get(chave, True) and (
+        return self._so_efeitos_vivos.get(chave, SO_EFEITOS_DE_FABRICA) and (
             chave not in self._pc_inteiro_no_controle
         )
 
