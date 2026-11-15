@@ -259,14 +259,14 @@
       "data": "2026-11-14",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1256546,
+      "piso": 1258738,
       "por_item": {
-        "docs": 106942,
+        "docs": 106944,
         "scripts": 114257,
-        "src": 317285,
-        "tests": 718062
+        "src": 318234,
+        "tests": 719303
       },
-      "razao": "tamanho: +10161 linhas (1246385 -> 1256546), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, entrada.botoes; registrado no fecho, topo 2479a7bedd01",
+      "razao": "tamanho: +2192 linhas (1256546 -> 1258738), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo 811713f54bb9",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1947,10 +1947,16 @@
           "de": 1246385,
           "para": 1256546,
           "razao": "tamanho: +10161 linhas (1246385 -> 1256546), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, entrada.botoes; registrado no fecho, topo 2479a7bedd01"
+        },
+        {
+          "data": "2026-11-14",
+          "de": 1256546,
+          "para": 1258738,
+          "razao": "tamanho: +2192 linhas (1256546 -> 1258738), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo 811713f54bb9"
         }
       ],
       "unidade": "linhas",
-      "universo": 3495
+      "universo": 3497
     }
   }
 }
