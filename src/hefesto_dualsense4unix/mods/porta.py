@@ -2043,6 +2043,8 @@ class Porta:
         if fonte is None:
             raise RecusaError(CODE_NAO_ESCREVEU, "o tato vivo não subiu")
         modo = fonte.modo_de(uniq)
+        if modo is None:
+            raise RecusaError(CODE_NAO_ESCREVEU, "corpo.ligar: nenhum controle tem esse uniq")
         if o_modo_cala_a_extensao(modo):
             raise RecusaError(CODE_O_JOGO_ESCREVE, _FRASE_DO_MODO_QUE_CALA.get(
                 str(modo), _FRASE_DO_MODO_QUE_CALA["nativo"]), {"canal": "corpo", "modo": modo})

@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.daemon.subsystems import diario_do_corpo as dc
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, permissao_valida
 from hefesto_dualsense4unix.mods.porta import (
+    CODE_NAO_ESCREVEU,
     CODE_O_JOGO_ESCREVE,
     CODE_SEM_PERMISSAO,
     Porta,
@@ -128,6 +129,31 @@ def test_o_pedido_fora_da_forma_e_recusado(ruim: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         pedidos.pedir(EXT_A, P[0], ruim.get("pedido", tv.PedidoDoCorpo(0.5)),
                       ruim.get("ate_ms", 100))
+
+
+def test_cada_extensao_tem_teto_de_controles_com_pedido_e_o_vencido_libera_a_vaga() -> None:
+    """Uma extensão não enche a memória do daemon com pedidos para uniq inventado."""
+    relogio = _Relogio()
+    pedidos = tv.PedidosDoCorpo(relogio)
+    for i in range(tv.PEDIDOS_DO_CORPO_POR_EXTENSAO):
+        pedidos.pedir(EXT_A, f"uniq-{i}", tv.PedidoDoCorpo(0.5), 500)
+    with pytest.raises(ValueError):
+        pedidos.pedir(EXT_A, "uniq-a-mais", tv.PedidoDoCorpo(0.5), 500)
+    pedidos.pedir(EXT_A, "uniq-0", tv.PedidoDoCorpo(0.7), 500)
+    pedidos.pedir(EXT_B, "uniq-a-mais", tv.PedidoDoCorpo(0.5), 500)
+    relogio.agora += 1.0
+    pedidos.pedir(EXT_A, "uniq-a-mais", tv.PedidoDoCorpo(0.5), 500)
+
+
+def test_a_porta_recusa_o_uniq_que_nao_e_controle_conectado() -> None:
+    fonte = tv.FonteDeFora(tv.Teto(), modo_de=lambda _u: None, relogio=_Relogio())
+
+    async def roteiro(pedir: Callable[..., Any]) -> dict[str, Any]:
+        return await pedir("corpo.ligar", {"uniq": "inventado", "som_no_corpo": 0.5, "ate_ms": 500})
+
+    resposta = _pela_porta(fonte, roteiro, ["escrever:corpo"])
+    assert resposta["error"]["code"] == CODE_NAO_ESCREVEU
+    assert fonte.corpo.de("inventado") is None
 
 
 def test_a_extensao_que_sai_leva_os_proprios_pedidos() -> None:

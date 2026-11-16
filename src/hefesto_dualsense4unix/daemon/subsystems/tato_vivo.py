@@ -3498,6 +3498,7 @@ class RecorteCortado:
 
 
 PRAZO_MAXIMO_DO_CORPO_MS = 10_000
+PEDIDOS_DO_CORPO_POR_EXTENSAO = 8
 
 
 @dataclass(frozen=True)
@@ -3531,7 +3532,14 @@ class PedidosDoCorpo:
             if pedido.som_no_corpo <= 0.0 and pedido.tipo is None:
                 self._pedidos.pop(chave, None)
                 return
-            self._pedidos[chave] = (pedido, self._relogio() + ate_ms / 1000.0)
+            agora = self._relogio()
+            for velha in [c for c, (_p, ate) in self._pedidos.items() if ate <= agora]:
+                del self._pedidos[velha]
+            if chave not in self._pedidos and sum(
+                    1 for c in self._pedidos if c[0] == dono) >= PEDIDOS_DO_CORPO_POR_EXTENSAO:
+                raise ValueError(
+                    f"no máximo {PEDIDOS_DO_CORPO_POR_EXTENSAO} controles com pedido por extensão")
+            self._pedidos[chave] = (pedido, agora + ate_ms / 1000.0)
 
     def soltar(self, dono: str) -> None:
         with self._trava:
