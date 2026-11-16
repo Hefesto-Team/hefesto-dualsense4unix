@@ -511,6 +511,10 @@ _pkg_nome() {
             _apt="gstreamer1.0-pipewire gir1.2-gstreamer-1.0"
             _dnf="pipewire-gstreamer gstreamer1"
             _pacman="gst-plugin-pipewire gstreamer" ;;
+        pipewire-aec)
+            _apt="libspa-0.2-modules libpipewire-0.3-modules"
+            _dnf="pipewire"
+            _pacman="pipewire webrtc-audio-processing-1" ;;
         usbutils)
             _apt="usbutils";          _dnf="usbutils"
             _pacman="usbutils" ;;
@@ -2674,6 +2678,28 @@ if ! _tela_presente; then
     else
         printf '      pulando (a tela do jogo fica ausente para as extensões; instale depois: %s)\n' \
             "$(comando_manual_pkg gst-pipewire)"
+    fi
+fi
+
+_voz_limpa_presente() {
+    local _d
+    for _d in /usr/lib/x86_64-linux-gnu /usr/lib64 /usr/lib /usr/lib/aarch64-linux-gnu; do
+        [[ -f "${_d}/spa-0.2/aec/libspa-aec-webrtc.so" ]] && return 0
+    done
+    return 1
+}
+if ! _voz_limpa_presente; then
+    printf '\n      Voz limpa do microfone do controle (eco e ruído): falta o filtro WebRTC do PipeWire\n'
+    ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        if run_pkg pipewire-aec; then
+            printf '      ok — a voz do controle sai filtrada para os jogos\n'
+        else
+            warn "não instalei o filtro WebRTC — a voz do controle sai sem filtro"
+        fi
+    else
+        printf '      pulando (a voz do controle sai sem filtro; instale depois: %s)\n' \
+            "$(comando_manual_pkg pipewire-aec)"
     fi
 fi
 

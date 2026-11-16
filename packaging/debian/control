@@ -12,7 +12,7 @@ Depends: python3 (>= 3.10), python3-venv,
          libopus0,
          librsvg2-common
 Recommends: ydotool | wlrctl, dkms, pulseaudio-utils, wvkbd | onboard,
-            alsa-ucm-conf
+            alsa-ucm-conf, libspa-0.2-modules
 Maintainer: Hefesto - DualSense4Unix Project <noreply@example.com>
 Description: Gerenciador DualSense para Linux
  Hefesto - DualSense4Unix e um daemon user-level que habilita os gatilhos
