@@ -1,7 +1,7 @@
 {
   "id": "imersao",
   "nome": "Modo imersão",
-  "versao": "0.5.3",
+  "versao": "0.5.4",
   "api": ">=2,<3",
   "licenca": "GPL-3.0-or-later",
   "descricao": "O jogo chega ao controle como no console: a receita de cada jogo lê o que acontece na cena e responde com a vibração, os gatilhos e a luz. Sem receita, vale o modo universal.",
@@ -118,7 +118,7 @@
       "tipo": "ligado",
       "padrao": true,
       "grupo": "Sentidos",
-      "dica": "O batimento, a rajada e o dano que o jogo pede ao motor",
+      "dica": "O batimento, a rajada e o dano que o jogo pede à vibração",
       "canal": "vibracao"
     },
     {
@@ -638,11 +638,6 @@
       "icone": "testar"
     }
   ],
-  "pagina": {
-    "arquivo": "estudio/pagina/estudio.html",
-    "rotulo": "Ensinar este jogo",
-    "altura_max": 720
-  },
   "aparelhos_acoes": {
     "grupo": "Jogo",
     "acoes": [

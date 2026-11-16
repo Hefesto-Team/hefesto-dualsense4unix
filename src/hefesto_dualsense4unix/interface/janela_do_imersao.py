@@ -70,13 +70,16 @@ GRAFO = {"tipo": "grafo", "erros": [], "nos": [
 
 
 def copiar_da_extensao(pasta: pathlib.Path) -> None:
-    """Guarda em `mockup/modo-imersao/` o manifesto e o Estúdio da extensão em `pasta`. O `aviso`
+    """Guarda em `mockup/modo-imersao/` o manifesto e o Estúdio, se houver, da extensão. O `aviso`
     fica fora da cópia: ele é o texto do «sim» da instalação, e a janela não o desenha."""
     DADOS.mkdir(parents=True, exist_ok=True)
     dados = json.loads((pasta / "hefesto-mod.json").read_text(encoding="utf-8"))
     dados.pop("aviso", None)
     MANIFESTO.write_text(json.dumps(dados, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    shutil.copyfile(pasta / DO_ESTUDIO_NA_EXTENSAO, ESTUDIO)
+    if (pasta / DO_ESTUDIO_NA_EXTENSAO).is_file():
+        shutil.copyfile(pasta / DO_ESTUDIO_NA_EXTENSAO, ESTUDIO)
+    else:
+        ESTUDIO.unlink(missing_ok=True)
 
 
 def manifesto() -> Any:
