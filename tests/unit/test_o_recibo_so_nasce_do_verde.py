@@ -277,8 +277,8 @@ def test_o_rodar_a_suite_abre_so_na_corrida_inteira() -> None:
     texto = SUITE.read_text(encoding="utf-8")
     assert texto.count("recibo_da_medida.py\" abrir suite") == 1
     guarda = texto[:texto.index("abrir suite")].rsplit("\nif ", 1)[1].splitlines()[0]
-    assert '[ -z "$so_esta" ]' in guarda, (
-        "o `abrir` da suíte perdeu a guarda da parte única:\n" + guarda)
+    assert "${#partes_pedidas[@]} -eq 0" in guarda, (
+        "o `abrir` da suíte perdeu a guarda das partes pedidas:\n" + guarda)
     assert "${#extra[@]} -eq 0" in guarda, (
         "o `abrir` da suíte perdeu a guarda dos argumentos a mais:\n" + guarda)
 

@@ -114,3 +114,4 @@ afc164305a7881569d1e61ee44d605e9f9f78578  02/11/2026  as nove abas publicam o bo
 ab94d757058edb7bb0e39ded8e34df847097ac60  02/11/2026  a Experimental publica o botão apagado dos lançadores na opacidade da casa
 4fa5046c15cb4624c4bcbc2523f7c1320705bcfa  02/11/2026  as dez abas, nas duas vistas, iguais depois do apagado da janela das extensões
 a737d3c7c44316ccf45fa843ca597703d3b88835  11/11/2026  o registro dos fios da interface (fios.soltar) não muda o que a tela pinta: as dez abas refotografadas nas duas vistas saíram idênticas byte a byte
+e3c0f49143b9026ebd0bc1b5e64367f2db65db32  16/11/2026  olhar.py --todas --publicado --doc (e --vista maximizada): a 07 sai igual byte a byte; a 04, a 05 e a 08 mudam só no estado vivo dos controles da mesa (recorte medido), sem mudança de desenho

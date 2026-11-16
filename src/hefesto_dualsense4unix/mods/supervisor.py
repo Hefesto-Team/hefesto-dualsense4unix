@@ -669,7 +669,8 @@ def _e_entrada_de_gente(classe: str, onde: Path) -> bool:
     O ``hidraw`` se lê pelo descritor (o que não se lê recusa); o ``usb`` cru, por qualquer
     interface HID; o ``tty`` é só a serial.
     """
-    return _DE_GENTE_POR_CLASSE.get(classe, lambda _onde: False)(onde)
+    ler = _DE_GENTE_POR_CLASSE.get(classe)
+    return ler is not None and ler(onde)
 
 
 def _casam(manifesto: Manifesto, aceitos: Collection[str], sys_raiz: Path, *,
