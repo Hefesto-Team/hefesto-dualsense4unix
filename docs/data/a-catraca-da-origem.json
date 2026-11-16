@@ -259,14 +259,14 @@
       "data": "2026-11-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1260629,
+      "piso": 1262060,
       "por_item": {
-        "docs": 107003,
-        "scripts": 114292,
-        "src": 318799,
-        "tests": 720535
+        "docs": 107037,
+        "scripts": 114293,
+        "src": 319785,
+        "tests": 720945
       },
-      "razao": "tamanho: +1886 linhas (1258743 -> 1260629), pagas por Origem: D-1310-O-CI-CHAMA-OS-PORTOES-SO-PELO-NOME, D-1511-O-APARELHO-QUE-RENASCE-VEM-PELA-PORTA, D-1511-O-SIM-DOS-APARELHOS-VALE-SO-PARA-O-ACEITO, D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo a6f13657ad10",
+      "razao": "tamanho: +1431 linhas (1260629 -> 1262060), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo dc3ae5dd5c00",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1971,10 +1971,16 @@
           "de": 1258743,
           "para": 1260629,
           "razao": "tamanho: +1886 linhas (1258743 -> 1260629), pagas por Origem: D-1310-O-CI-CHAMA-OS-PORTOES-SO-PELO-NOME, D-1511-O-APARELHO-QUE-RENASCE-VEM-PELA-PORTA, D-1511-O-SIM-DOS-APARELHOS-VALE-SO-PARA-O-ACEITO, D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo a6f13657ad10"
+        },
+        {
+          "data": "2026-11-16",
+          "de": 1260629,
+          "para": 1262060,
+          "razao": "tamanho: +1431 linhas (1260629 -> 1262060), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo dc3ae5dd5c00"
         }
       ],
       "unidade": "linhas",
-      "universo": 3500
+      "universo": 3503
     }
   }
 }
