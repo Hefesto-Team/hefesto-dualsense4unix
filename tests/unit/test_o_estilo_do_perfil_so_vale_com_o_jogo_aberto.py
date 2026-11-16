@@ -59,6 +59,7 @@ PADS = (("uhid", MODO_DUALSENSE), ("uinput", MODO_XBOX), (None, MODO_NAVEGACAO))
 def test_sem_jogo_o_estilo_nativo_nao_cala_o_controle(
     transporte: str, backend: str | None, modo_do_pad: str
 ) -> None:
+    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: sem o jogo em cena, o estilo do perfil não cala."""
     d = _daemon(transporte, jogo=None)
     vpad = _Vpad(backend) if backend is not None else None
 
