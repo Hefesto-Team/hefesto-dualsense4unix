@@ -733,3 +733,21 @@ def test_o_hefesto_reinstala_rodando_o_install_com_a_guarda_do_avanco(
     vao.em_curso, vao.nota = False, ["o install saiu com o código 1"]
     with pytest.raises(at.EtapaFalhouError, match="código 1"):
         r.instalar(at.Passo(), {})
+
+
+def test_a_subida_pelo_apt_leva_as_travas_da_reinstalacao(raiz: Lar) -> None:
+    """A-SUBIDA-PELO-APT-NAO-REMOVE-E-FORCA-AS-TRAVAS-01: subir não remove, não rebaixa, não solta
+    o segurado e só aceita o assinado; quem remove é só o verbo da limpeza."""
+    for args in (("apt-baixar", "nvidia"), ("apt-instalar", "nvidia"), ("apt-baixar", "kernel"),
+                 ("apt-baixar", "sistema"), ("apt-instalar", "sistema")):
+        feito = raiz.rodar(*args)
+        assert feito.returncode == 0, (args, feito.stderr)
+    apt = raiz.lidas("apt-get")
+    assert len(apt) == 5, apt
+    assert all(o in linha for linha in apt for o in AUTENTICACAO), apt
+    assert all(" full-upgrade" in linha for linha in apt[3:]), apt
+    feito = raiz.rodar("apt-limpar")
+    assert feito.returncode == 0, feito.stderr
+    limpar = raiz.lidas("apt-get")[-1]
+    assert " autoremove --purge" in limpar and " --no-remove " not in limpar
+    assert all(o in limpar for o in AUTENTICACAO[4:] if o != " --no-remove "), limpar

@@ -134,7 +134,7 @@ _apt_do_grupo() {
     _grupo_valido "${grupo}"
     _segurar_os_da_casa
     if [[ "${grupo}" == "sistema" ]]; then
-        _apt "$@" full-upgrade
+        _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" full-upgrade
         return
     fi
     local -a pacotes
@@ -143,7 +143,7 @@ _apt_do_grupo() {
         printf 'nada instalado no grupo %s\n' "${grupo}"
         return 0
     fi
-    _apt "$@" install --only-upgrade "${pacotes[@]}"
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" install --only-upgrade "${pacotes[@]}"
 }
 
 verbo_apt_baixar() { _exige_raiz apt-baixar; _apt_do_grupo "${1:-}" -d; }
@@ -226,7 +226,13 @@ verbo_apt_instalar() {
         printf 'a volta possível: %s\n' "${rodando}"
     fi
 }
-verbo_apt_limpar() { _exige_raiz apt-limpar; _segurar_os_da_casa; _apt autoremove --purge; }
+verbo_apt_limpar() {
+    _exige_raiz apt-limpar
+    _segurar_os_da_casa
+    _apt -o APT::Get::allow-downgrades=false -o APT::Get::allow-remove-essential=false \
+        -o APT::Get::allow-change-held-packages=false \
+        autoremove --purge
+}
 
 _fonte_e_do_root() {
     local pasta="$1" fora
