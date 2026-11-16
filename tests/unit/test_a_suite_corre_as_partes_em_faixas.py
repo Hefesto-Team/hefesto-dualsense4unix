@@ -286,3 +286,108 @@ def test_o_vermelho_de_uma_parte_leve_e_de_uma_que_toca_derruba_a_corrida(tmp_pa
     assert feito.returncode == 1, feito.stdout + feito.stderr
     assert "partes com vermelho: 1" in feito.stdout, feito.stdout
     assert "test_toca_01.py::test_cai" in feito.stdout
+
+
+def test_as_partes_pedidas_correm_em_faixas_e_as_que_tocam_uma_de_cada_vez(tmp_path: Path) -> None:
+    """O fecho pede só as partes sem recibo, e as pedidas correm em faixas como a suíte inteira."""
+    raiz = tmp_path / "arvore"
+    _arvore(raiz, leves=4, tocam=2, com_semaforo=True)
+    (tmp_path / "seco").mkdir()
+    seco = _rodar(
+        raiz,
+        tmp_path / "seco",
+        PARTES="6",
+        A_SECO="1",
+        PARTES_EM_PARALELO="3",
+        VEZ_DO_PYTEST=_a_vez_da_casa(raiz),
+    )
+    assert seco.returncode == 0, seco.stdout + seco.stderr
+    tocam = sorted(ln.split()[0] for ln in seco.stdout.splitlines() if "toca a máquina" in ln)
+    assert len(tocam) == 2, seco.stdout
+    pedidas = ["00", *(t.removeprefix("parte-") for t in tocam)]
+    feito = _rodar(
+        raiz,
+        tmp_path,
+        *pedidas,
+        PARTES="6",
+        PARTES_EM_PARALELO="3",
+        VEZ_DO_PYTEST=_a_vez_da_casa(raiz),
+    )
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    saida = tmp_path / "saida"
+    assert sorted(p.name for p in saida.glob("paralelo-*.rc")) == [
+        f"paralelo-{n}.rc" for n in sorted(pedidas)
+    ]
+    marcas = _marcas(tmp_path)
+    assert len(marcas) == 3, marcas
+    toca = [(i, f) for n, (i, f, _) in marcas.items() if "toca" in n]
+    assert _nunca_juntas(toca), f"duas partes que tocam a máquina correram juntas: {toca}"
+    juntas = [(i, f) for i, f, _ in marcas.values()]
+    assert not _nunca_juntas(juntas), "as pedidas correram em série"
+    assert "partes verdes: 3 · partes com vermelho: 0" in feito.stdout, feito.stdout
+    assert "3 partes não deixam recibo" in feito.stdout, feito.stdout
+    assert not (saida / "recibo-da-corrida.json").exists()
+
+
+def test_o_lote_da_parte_roda_so_os_arquivos_dele_e_recusa_o_de_fora(tmp_path: Path) -> None:
+    """Com LOTES_DAS_PARTES, a parte com `lote-NN` roda só a lista; arquivo de fora não roda."""
+    raiz = tmp_path / "arvore"
+    _arvore(raiz, leves=6, tocam=0, com_semaforo=True)
+    (tmp_path / "seco").mkdir()
+    _rodar(raiz, tmp_path / "seco", PARTES="2", A_SECO="1")
+    divisao = _divisao(tmp_path / "seco" / "saida")
+    lotes = tmp_path / "lotes"
+    lotes.mkdir()
+    (lotes / "lote-01").write_text(divisao["parte-01"][0] + "\n", encoding="utf-8")
+    feito = _rodar(
+        raiz,
+        tmp_path,
+        "00",
+        "01",
+        PARTES="2",
+        PARTES_EM_PARALELO="3",
+        VEZ_DO_PYTEST=_a_vez_da_casa(raiz),
+        LOTES_DAS_PARTES=str(lotes),
+    )
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    rodaram = set(_marcas(tmp_path))
+    esperados = {Path(a).stem for a in divisao["parte-00"]} | {Path(divisao["parte-01"][0]).stem}
+    assert rodaram == esperados, (rodaram, esperados)
+    assert "um lote não deixa recibo" in feito.stdout, feito.stdout
+
+    (tmp_path / "fora").mkdir()
+    (lotes / "lote-01").write_text(divisao["parte-00"][0] + "\n", encoding="utf-8")
+    recusa = _rodar(
+        raiz,
+        tmp_path / "fora",
+        "01",
+        PARTES="2",
+        LOTES_DAS_PARTES=str(lotes),
+    )
+    assert recusa.returncode == 2, recusa.stdout + recusa.stderr
+    assert "fora da parte-01" in recusa.stdout, recusa.stdout
+    assert not list((tmp_path / "fora" / "marcas").glob("*.txt")), "rodou com o lote recusado"
+
+
+def test_cada_filho_guarda_as_falhas_no_proprio_arquivo(tmp_path: Path) -> None:
+    """Dois filhos vermelhos ao mesmo tempo não escrevem no mesmo `falhas.txt`."""
+    raiz = tmp_path / "arvore"
+    _arvore(raiz, leves=2, tocam=0, com_semaforo=True)
+    for i in range(2):
+        (raiz / "tests" / "unit" / f"test_leve_{i:02d}.py").write_text(
+            f"import time\n\n\ndef test_cai_{i}():\n    time.sleep(0.5)\n    assert False\n",
+            encoding="utf-8",
+        )
+    feito = _rodar(
+        raiz,
+        tmp_path,
+        PARTES="2",
+        PARTES_EM_PARALELO="3",
+        VEZ_DO_PYTEST=_a_vez_da_casa(raiz),
+    )
+    assert feito.returncode == 1, feito.stdout + feito.stderr
+    saida = tmp_path / "saida"
+    for n in ("00", "01"):
+        proprio = (saida / f"falhas-{n}.txt").read_text(encoding="utf-8").split()
+        assert len([x for x in proprio if "::" in x]) == 1, (n, proprio)
+    assert "testes vermelhos: 2" in feito.stdout, feito.stdout

@@ -134,6 +134,26 @@ partir_pelo_tempo() {
 }
 [ -n "${PARTIDO:-}" ] || partir_pelo_tempo "$SAIDA/todos.txt" "$CSV_DOS_TEMPOS" "$PARTES" "$SAIDA/parte-" \
   "$SAIDA/toca-a-maquina.txt" "$SAIDA/pesos.tsv"
+com_lotes=0
+if [ -z "${PARTIDO:-}" ] && [ -n "${LOTES_DAS_PARTES:-}" ]; then
+  [ -n "$LOTE" ] && { echo "ERRO: LOTES_DAS_PARTES não se junta ao --lote."; exit 2; }
+  [ -d "$LOTES_DAS_PARTES" ] || { echo "ERRO: LOTES_DAS_PARTES «$LOTES_DAS_PARTES» não é uma pasta."; exit 2; }
+  for ((k = 0; k < PARTES; k++)); do
+    _l=$(printf '%s/lote-%02d' "$LOTES_DAS_PARTES" "$k")
+    _p=$(printf '%s/parte-%02d' "$SAIDA" "$k")
+    [ -s "$_l" ] || continue
+    _fora=$(grep -v '^[[:space:]]*$' "$_l" | LC_ALL=C grep -vxFf "$_p")
+    if [ -n "$_fora" ]; then
+      echo "ERRO: o lote $_l tem arquivo fora da parte-$(printf '%02d' "$k") — nada rodou:"
+      printf '%s\n' "$_fora" | sed 's/^/  /'
+      exit 2
+    fi
+    LC_ALL=C grep -xFf "$_l" "$_p" > "$_p.lote"
+    mv "$_p.lote" "$_p"
+    com_lotes=1
+  done
+  unset _l _p _fora
+fi
 
 IFS= read -r -d '' FECHO_DO_WEBKIT << 'PY' || true
 import ast
@@ -332,7 +352,14 @@ if [ -n "${A_SECO:-}" ]; then
   exit 0
 fi
 
-so_esta="${1:-}"
+partes_pedidas=("$@")
+so_esta=""
+[ ${#partes_pedidas[@]} -ne 1 ] || so_esta="${partes_pedidas[0]}"
+pedida() {
+  [ ${#partes_pedidas[@]} -eq 0 ] && return 0
+  case " ${partes_pedidas[*]} " in *" $1 "*) return 0 ;; esac
+  return 1
+}
 read -r -a extra <<< "${SUITE_PYTEST_ARGS:-}"
 vermelhos=0
 verdes=0
@@ -341,21 +368,25 @@ pulados=0
 logs_desta_corrida=()
 partes_desta_divisao=()
 for ((k = 0; k < PARTES; k++)); do partes_desta_divisao+=("$(printf '%02d' "$k")"); done
-if [ -n "$so_esta" ]; then
+for _pedida in ${partes_pedidas[@]+"${partes_pedidas[@]}"}; do
   case " ${partes_desta_divisao[*]} " in
-    *" $so_esta "*) ;;
-    *) echo "ERRO: a parte «$so_esta» não existe nesta divisão (00 a $(printf '%02d' $((PARTES - 1))))."; exit 2;;
+    *" $_pedida "*) ;;
+    *) echo "ERRO: a parte «$_pedida» não existe nesta divisão (00 a $(printf '%02d' $((PARTES - 1))))."; exit 2;;
   esac
-fi
+done
+unset _pedida
 
 recibo_da_corrida=""
-if [ -z "$LOTE" ] && [ -z "$so_esta" ] && [ ${#extra[@]} -eq 0 ]; then
+if [ -z "$LOTE" ] && [ ${#partes_pedidas[@]} -eq 0 ] && [ "$com_lotes" = 0 ] && [ ${#extra[@]} -eq 0 ]; then
   recibo_da_corrida="$SAIDA/recibo-da-corrida.json"
   "$PY" "$RAIZ/scripts/recibo_da_medida.py" abrir suite \
     --raiz "$RAIZ" --corrida "$recibo_da_corrida" || true
   echo
-elif [ -n "$LOTE" ]; then
+elif [ -n "$LOTE" ] || [ "$com_lotes" = 1 ]; then
   echo "recibo: um lote não deixa recibo — ele não é a suíte"
+  echo
+elif [ ${#partes_pedidas[@]} -gt 1 ]; then
+  echo "recibo: ${#partes_pedidas[@]} partes não deixam recibo — não são a suíte"
   echo
 elif [ -z "$so_esta" ]; then
   echo "recibo: esta corrida não deixa recibo — leva argumentos a mais (SUITE_PYTEST_ARGS)"
@@ -415,6 +446,7 @@ if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
   fila_leve=()
   for n in "${partes_desta_divisao[@]}"; do
     f="$SAIDA/parte-$n"
+    pedida "$n" || continue
     [ -s "$f" ] || continue
     feitas="$feitas$n "
     if grep -qxFf "$SAIDA/toca-a-maquina.txt" "$f"; then fila_toca+=("$n"); else fila_leve+=("$n"); fi
@@ -487,7 +519,7 @@ if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
 fi
 for n in "${partes_desta_divisao[@]}"; do
   f="$SAIDA/parte-$n"
-  [ -z "$so_esta" ] || [ "$n" = "$so_esta" ] || continue
+  pedida "$n" || continue
   case "$feitas" in *" $n "*) continue;; esac
   [ -e "$f" ] || { echo "  parte-$n: SEM ARQUIVO — a divisão quebrou"; vermelhos=$((vermelhos+1)); continue; }
 
@@ -520,15 +552,17 @@ done
 
 [ -z "$so_esta" ] || echo "$passaram $pulados" > "$SAIDA/paralelo-$so_esta.contagem"
 echo
+falhas="$SAIDA/falhas.txt"
+[ -z "${PARTIDO:-}" ] || falhas="$SAIDA/falhas-$so_esta.txt"
 if [ ${#logs_desta_corrida[@]} -gt 0 ]; then
-  grep -ho "^FAILED [^ ]*\|^ERROR [^ ]*" "${logs_desta_corrida[@]}" 2>/dev/null | sort -u > "$SAIDA/falhas.txt"
+  grep -ho "^FAILED [^ ]*\|^ERROR [^ ]*" "${logs_desta_corrida[@]}" 2>/dev/null | sort -u > "$falhas"
 else
-  : > "$SAIDA/falhas.txt"
+  : > "$falhas"
 fi
-quantas=$(wc -l < "$SAIDA/falhas.txt")
+quantas=$(wc -l < "$falhas")
 echo "testes que passaram: $passaram · pulados: $pulados"
 echo "partes verdes: $verdes · partes com vermelho: $vermelhos · testes vermelhos: $quantas"
-[ "$quantas" -eq 0 ] || { echo; cat "$SAIDA/falhas.txt"; }
+[ "$quantas" -eq 0 ] || { echo; cat "$falhas"; }
 echo
 echo "os logs ficam em $SAIDA"
 rc=1
