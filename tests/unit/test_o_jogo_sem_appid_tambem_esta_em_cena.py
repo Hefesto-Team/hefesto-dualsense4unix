@@ -47,9 +47,9 @@ def _servico(transportes: tuple[str, ...], autoridade: str, appid: int | None) -
     d = Daemon(controller=FakeController(transport=transportes[0]),  # type: ignore[arg-type]
                config=DaemonConfig())
     d.controller.primary_uniq = MACS[0]  # type: ignore[attr-defined]
-    d._game_signal = SimpleNamespace(authority=autoridade)  # type: ignore[assignment]
+    d._game_signal = SimpleNamespace(authority=autoridade)
     d._appid_da_evidencia = appid
-    d._coop_manager = SimpleNamespace(_players={  # type: ignore[assignment]
+    d._coop_manager = SimpleNamespace(_players={
         mac: SimpleNamespace(reader=None, vpad=None, motion_reader=None, transport=via)
         for mac, via in zip(MACS[1:], transportes[1:], strict=True)})
     numeros = {mac: n for n, mac in enumerate(MACS, start=1)}
@@ -63,7 +63,7 @@ def _ultimo(fila: Any) -> dict[str, Any]:
     while not fila.empty():
         vistos.append(fila.get_nowait())
     assert vistos, "o anunciador não disse nada"
-    return vistos[-1]
+    return dict(vistos[-1])
 
 
 @pytest.fixture
@@ -111,11 +111,11 @@ def test_o_jogo_nativo_que_abre_e_fecha_leva_o_estilo_e_o_tira(
     anunciador.ver()
     assert carga_do_estilo(_ultimo(fila))["estilo"] is None  # type: ignore[index]
 
-    d._game_signal = SimpleNamespace(authority="game")  # type: ignore[assignment]
+    d._game_signal = SimpleNamespace(authority="game")
     anunciador.ver()
     assert carga_do_estilo(_ultimo(fila))["estilo"] == "terror"  # type: ignore[index]
 
-    jogadores = d._coop_manager._players  # type: ignore[union-attr]
+    jogadores = d._coop_manager._players
     saiu = jogadores.pop(MACS[2])
     anunciador.ver()
     carga = carga_do_estilo(_ultimo(fila))
@@ -125,7 +125,7 @@ def test_o_jogo_nativo_que_abre_e_fecha_leva_o_estilo_e_o_tira(
     carga = carga_do_estilo(_ultimo(fila))
     assert carga is not None and [c["estilo"] for c in carga["controles"]] == ["terror"] * 4
 
-    d._game_signal = SimpleNamespace(authority="daemon")  # type: ignore[assignment]
+    d._game_signal = SimpleNamespace(authority="daemon")
     anunciador.ver()
     carga = carga_do_estilo(_ultimo(fila))
     assert carga is not None and carga["estilo"] is None
