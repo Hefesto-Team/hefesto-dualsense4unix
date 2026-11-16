@@ -1407,18 +1407,27 @@ def _dizendo_na_linha(item: _Instalada, opcao_id: str) -> Any:
         raise
 
 
+def _frases_do_sim(manifesto: Any, entrada: Any) -> list[str]:
+    """As linhas do «sim»: as permissões e cada aparelho com a classe e o VID:PID ao lado."""
+    from hefesto_dualsense4unix.mods.instalador import aceitos_de
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, pedidos_do_sim
+    from hefesto_dualsense4unix.mods.supervisor import frase_do_pedido
+
+    if manifesto is None:
+        return [o_que_a_permissao_deixa(x) for x in aceitos_de(entrada)]
+    return [frase_do_pedido(x, manifesto) for x in pedidos_do_sim(manifesto)]
+
+
 def _extensao_de(item: _Instalada) -> Any:
     """A linha do quadro «Extensões» de uma modificação instalada."""
     from hefesto_dualsense4unix.mods.instalador import aviso_por_ver
-    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
 
     e = item.entrada
     menu = ""
     if _MEXIDA.menu == e.id and not _MEXIDA.menu_na_conf:
-        pedidas = item.manifesto.permissoes if item.manifesto is not None else e.permissoes_aceitas
         aviso = aviso_por_ver(e, item.manifesto) if item.manifesto is not None else ""
         menu = exp.menu_html(
-            e.id, [x for x in (aviso,) if x] + [o_que_a_permissao_deixa(x) for x in pedidas]
+            e.id, [x for x in (aviso,) if x] + _frases_do_sim(item.manifesto, e)
             if _MEXIDA.permissoes == e.id else None, remover=_MEXIDA.remover == e.id)
     dica = item.manifesto.descricao if item.manifesto is not None else ""
     versao = e.versao
@@ -1440,18 +1449,18 @@ def _o_que_pede(item: _Instalada) -> str:
     Vazio quando a chave não está armada (o próximo clique não liga), ou quando a extensão já
     está ligada. O primeiro clique na chave não abre nada no cartão: as três ações moram no ⋮.
     """
-    from hefesto_dualsense4unix.mods.instalador import aviso_por_ver
-    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, permissoes_novas
+    from hefesto_dualsense4unix.mods.instalador import aceitos_de, aviso_por_ver
+    from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim, permissoes_novas
 
     e, m = item.entrada, item.manifesto
     if e.ligada or m is None:
         return ""
-    pedidas = tuple(sorted(m.permissoes))
+    pedidas = tuple(sorted(pedidos_do_sim(m)))
     aviso = aviso_por_ver(e, m)
-    if not (permissoes_novas(e.permissoes_aceitas, list(pedidas)) or aviso) or (
+    if not (permissoes_novas(aceitos_de(e), list(pedidas)) or aviso) or (
             _MEXIDA.vistas.get(e.id) != (*pedidas, aviso)):
         return ""
-    return " ".join([x for x in (aviso,) if x] + [o_que_a_permissao_deixa(x) for x in pedidas])
+    return " ".join([x for x in (aviso,) if x] + _frases_do_sim(m, e))
 
 
 def _jogos_da_fila(lanc: desenho.Lancador) -> str:
@@ -1721,13 +1730,14 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
     o recado não chega à tela), e o ``None`` é o clique que só armou.
     """
     from hefesto_dualsense4unix.mods.instalador import (
+        aceitos_de,
         aviso_por_ver,
         desligar,
         ler_registro,
         ligar,
         manifesto_instalado,
     )
-    from hefesto_dualsense4unix.mods.manifesto import permissoes_novas
+    from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim, permissoes_novas
 
     lg = _lugares()
     with _dizendo_a_recusa():
@@ -1739,9 +1749,9 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
             REGISTRO.esquecer()
             return f"{entrada.nome} desligada."
         manifesto = manifesto_instalado(mod_id, lugares=lg)
-        pedidas = tuple(sorted(manifesto.permissoes))
+        pedidas = tuple(sorted(pedidos_do_sim(manifesto)))
         aviso = aviso_por_ver(entrada, manifesto)
-        if (permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) or aviso) and (
+        if (permissoes_novas(aceitos_de(entrada), list(pedidas)) or aviso) and (
                 _MEXIDA.vistas.get(mod_id) != (*pedidas, aviso)):
             _MEXIDA.vistas[mod_id] = (*pedidas, aviso)
             return None
@@ -2297,7 +2307,6 @@ def resolver_todos_os_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> 
 def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
     """O miolo da janela «Configurar», com o que o produto sabe do lançador e o rascunho."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import lancadores_com_jogos
-    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
 
     lida = VIGIA.agora()
     cartao = next((x for x in desenho.cartoes(lida) if x.chave == chave), None)
@@ -2309,10 +2318,8 @@ def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
     menu = ""
     if mod_id and _MEXIDA.menu == mod_id and _MEXIDA.menu_na_conf:
         item = _a_instalada(mod_id)
-        pedidas = item.manifesto.permissoes if item.manifesto is not None else (
-            item.entrada.permissoes_aceitas)
         menu = exp.menu_html(
-            mod_id, [o_que_a_permissao_deixa(x) for x in pedidas]
+            mod_id, _frases_do_sim(item.manifesto, item.entrada)
             if _MEXIDA.permissoes == mod_id else None, remover=_MEXIDA.remover == mod_id,
             fecha=True)
     elif not mod_id and _MEXIDA.menu == chave:

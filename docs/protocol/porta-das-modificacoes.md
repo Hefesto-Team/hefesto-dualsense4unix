@@ -769,7 +769,16 @@ manifesto declara, ligados agora: o `uinput`, o `uhid`, o `input/`, o controle e
 | `pela_porta` | `true`: o nó nunca entra na caixa, e a extensão o pede pelo `aparelho.abrir`; padrão `false` |
 
 Até 8, sem repetir classe e VID:PID; a lista sem a permissão recusa o manifesto, e a permissão sem a lista não abre
-aparelho nenhum. O aparelho declarado sem `pela_porta` que entra depois da abertura (duas voltas da vigia, cerca de
+aparelho nenhum. A marca de um controle que o Hefesto gerencia (Sony, Nintendo, Microsoft, 8BitDo, HORI, PowerA,
+Valve) recusa o manifesto, e o nó de teclado, mouse ou controle nunca casa: o `hidraw` cujo descritor HID tem uma
+coleção de aplicação de teclado, mouse, ponteiro, joystick ou gamepad (ou que não se lê) e o `usb` cru com uma
+interface HID ficam fora da caixa e da porta.
+
+O «sim» é por aparelho: cada um é uma linha (`aparelho:<classe>:<vid>:<pid>`) com o rótulo do autor e, ao lado, a
+classe, o VID:PID e o nome que o próprio aparelho ligado dá. O registro guarda os aceitos (`aparelhos_aceitos`), e a
+caixa e o `aparelho.abrir` conferem contra eles, nunca contra o manifesto de agora: a versão que pede aparelho novo
+desliga até o «sim» de novo. O «sim» de `aparelhos` gravado antes da lista ganha, uma vez só, os aparelhos do
+manifesto instalado na hora em que o serviço o lê. O aparelho declarado sem `pela_porta` que entra depois da abertura (duas voltas da vigia, cerca de
 2 s) reabre a caixa, uma vez por minuto no máximo: o nó novo que aparece de novo dentro do minuto não reabre mais, e
 o diário diz `mods_aparelho_em_laco`. O que sai e volta com o mesmo nó segue aberto.
 

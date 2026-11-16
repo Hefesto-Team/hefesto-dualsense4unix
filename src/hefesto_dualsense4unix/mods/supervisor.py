@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
+import errno
 import json
 import os
 import re
@@ -19,13 +20,12 @@ import secrets
 import shutil
 import signal
 import socket
-import stat
 import subprocess
 import sys
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import asdict, dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -38,18 +38,23 @@ from hefesto_dualsense4unix.mods.instalador import (
     Entrada,
     InstalacaoRecusadaError,
     Lugares,
+    aceitos_de,
     atualizar,
     aviso_por_ver,
     commit_novo,
+    gravar_registro,
     ler_registro,
     manifesto_instalado,
+    migrar_os_aparelhos,
     troca_viva,
 )
-from hefesto_dualsense4unix.mods.leitura_da_caixa import abrir_sem_seguir
+from hefesto_dualsense4unix.mods.leitura_da_caixa import abrir_o_no_sem_seguir, abrir_sem_seguir
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     ManifestoRecusadoError,
     ler_manifesto,
+    o_que_a_permissao_deixa,
+    pedidos_do_sim,
     permissoes_novas,
 )
 from hefesto_dualsense4unix.mods.porta import (
@@ -193,6 +198,7 @@ class _Vigiada:
     aparelhos: tuple[str, ...] = ()
     aparelho_novo: bool = False
     aparelho_em_laco: bool = False
+    aceitos: tuple[str, ...] = ()
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -602,72 +608,184 @@ _NOS_POR_CLASSE: dict[str, Callable[[Path], list[_Achado]]] = {
 
 CLASSES_PELA_PORTA: tuple[str, ...] = ("hidraw", "tty")
 
+USOS_QUE_NUNCA_SAEM: frozenset[tuple[int, int]] = frozenset(
+    (0x01, uso) for uso in (0x01, 0x02, 0x04, 0x05, 0x06, 0x07))
 
-def _casam(manifesto: Manifesto, sys_raiz: Path, *, so_os_da_caixa: bool,
-           classes: tuple[str, ...] = tuple(_NOS_POR_CLASSE)) -> dict[str, Path]:
+CLASSE_HID_DO_USB = "03"
+
+
+def colecoes_de_aplicacao(descritor: bytes) -> set[tuple[int, int]]:
+    """As coleções de aplicação de primeiro nível do descritor HID, como ``(página, uso)``."""
+    pagina = uso = fundo = i = 0
+    achadas: set[tuple[int, int]] = set()
+    while i < len(descritor):
+        prefixo = descritor[i]
+        if prefixo == 0xFE:
+            i += 3 + (descritor[i + 1] if i + 1 < len(descritor) else 0)
+            continue
+        tamanho = (0, 1, 2, 4)[prefixo & 0x03]
+        dado = int.from_bytes(descritor[i + 1:i + 1 + tamanho], "little")
+        etiqueta = prefixo & 0xFC
+        if etiqueta == 0x04:
+            pagina = dado
+        elif etiqueta == 0x08:
+            uso = dado
+        elif etiqueta == 0xA0:
+            if fundo == 0 and dado == 0x01:
+                achadas.add((uso >> 16, uso & 0xFFFF) if tamanho == 4 else (pagina, uso))
+            fundo += 1
+        elif etiqueta == 0xC0:
+            fundo = max(0, fundo - 1)
+        if etiqueta in (0x80, 0x90, 0xA0, 0xB0, 0xC0):
+            uso = 0
+        i += 1 + tamanho
+    return achadas
+
+
+def _hidraw_de_gente(onde: Path) -> bool:
+    try:
+        descritor = (onde / "device" / "report_descriptor").read_bytes()
+    except OSError:
+        return True
+    return bool(colecoes_de_aplicacao(descritor) & USOS_QUE_NUNCA_SAEM)
+
+
+def _usb_de_gente(onde: Path) -> bool:
+    with contextlib.suppress(OSError):
+        return any(_ler(i / "bInterfaceClass") == CLASSE_HID_DO_USB
+                   for i in onde.iterdir() if (i / "bInterfaceClass").is_file())
+    return True
+
+
+_DE_GENTE_POR_CLASSE: dict[str, Callable[[Path], bool]] = {
+    "hidraw": _hidraw_de_gente,
+    "usb": _usb_de_gente,
+}
+
+
+def _e_entrada_de_gente(classe: str, onde: Path) -> bool:
+    """O nó é de um teclado, de um mouse ou de um controle: nenhuma extensão o abre.
+
+    O ``hidraw`` se lê pelo descritor (o que não se lê recusa); o ``usb`` cru, por qualquer
+    interface HID; o ``tty`` é só a serial.
+    """
+    return _DE_GENTE_POR_CLASSE.get(classe, lambda _onde: False)(onde)
+
+
+def _casam(manifesto: Manifesto, aceitos: Collection[str], sys_raiz: Path, *,
+           so_os_da_caixa: bool, classes: tuple[str, ...] = tuple(_NOS_POR_CLASSE)
+           ) -> dict[str, Path]:
     if "aparelhos" not in manifesto.permissoes:
         return {}
     pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos
-               if not (so_os_da_caixa and a.pela_porta)}
+               if not (so_os_da_caixa and a.pela_porta)
+               and f"{a.classe}:{a.vid}:{a.pid}" in aceitos}
     nos: dict[str, Path] = {}
     for classe, achar in _NOS_POR_CLASSE.items():
         if classe in classes and any(p[0] == classe for p in pedidos):
             for ids, no, onde in achar(sys_raiz):
-                if ids and (classe, *ids) in pedidos:
+                if ids and (classe, *ids) in pedidos and not _e_entrada_de_gente(classe, onde):
                     nos.setdefault(no, onde)
     return nos
 
 
-def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> tuple[str, ...]:
-    """Os nós de ``/dev`` dos aparelhos declarados que estão ligados agora e entram na caixa.
+def aparelhos_que_casam(manifesto: Manifesto, aceitos: Collection[str],
+                        sys_raiz: Path = Path("/sys")) -> tuple[str, ...]:
+    """Os nós de ``/dev`` dos aparelhos declarados e aceitos que estão ligados agora e entram na
+    caixa.
 
-    Só ``hidraw``, ``tty`` e ``usb``: o ``uinput``, o ``uhid`` e o ``input/`` nunca entram, e um
-    aparelho que não casa (o controle, o teclado) fica fora da caixa. O declarado ``pela_porta``
-    também fica fora: a extensão o pede à porta (:func:`abrir_o_aparelho`).
+    Só ``hidraw``, ``tty`` e ``usb``: o ``uinput``, o ``uhid`` e o ``input/`` nunca entram, nem o
+    teclado, o mouse e o controle (:func:`_e_entrada_de_gente`). ``aceitos`` são os
+    ``classe:vid:pid`` que tiveram o «sim» (o registro, não o manifesto de agora). O declarado
+    ``pela_porta`` também fica fora: a extensão o pede à porta (:func:`abrir_o_aparelho`).
     """
-    return tuple(_casam(manifesto, sys_raiz, so_os_da_caixa=True))
+    return tuple(_casam(manifesto, aceitos, sys_raiz, so_os_da_caixa=True))
 
 
-def nos_pela_porta(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> dict[str, Path]:
-    """Os nós ``hidraw`` e ``tty`` dos aparelhos declarados ligados agora, com a pasta do ``/sys``
-    de cada um: só eles saem pela porta, nunca o ``usb`` cru."""
-    return _casam(manifesto, sys_raiz, so_os_da_caixa=False, classes=CLASSES_PELA_PORTA)
+def nos_pela_porta(manifesto: Manifesto, aceitos: Collection[str],
+                   sys_raiz: Path = Path("/sys")) -> dict[str, Path]:
+    """Os nós ``hidraw`` e ``tty`` dos aparelhos declarados e aceitos ligados agora, com a pasta
+    do ``/sys`` de cada um: só eles saem pela porta, nunca o ``usb`` cru."""
+    return _casam(manifesto, aceitos, sys_raiz, so_os_da_caixa=False, classes=CLASSES_PELA_PORTA)
 
 
-def abrir_o_aparelho(manifesto: Manifesto, no: Any, sys_raiz: Path = Path("/sys"),
-                     dev_raiz: Path = Path("/dev")) -> int:
-    """Abre, fora da caixa, o nó ``no`` (``hidraw7``) de um aparelho declarado ligado agora.
+def abrir_o_aparelho(manifesto: Manifesto, no: Any, aceitos: Collection[str],
+                     sys_raiz: Path = Path("/sys"), dev_raiz: Path = Path("/dev")) -> int:
+    """Abre, fora da caixa, o nó ``no`` (``hidraw7``) de um aparelho declarado e aceito.
 
     Só ``hidraw`` e ``tty``, e a classe vem do ``/sys``: o nó tem de estar na pasta da classe,
-    com o VID:PID declarado, neste instante. O que abriu (sem seguir link) tem de ser o
+    com o VID:PID declarado e aceito, neste instante. O que abriu (sem seguir link) tem de ser o
     dispositivo de caractere com o número que o ``/sys`` dá a ele: o nó que renasceu com outro
     aparelho no meio recusa. Levanta ``ValueError`` com a frase da recusa.
     """
     if not isinstance(no, str) or not no or "/" in no or no in (".", ".."):
         raise ValueError("aparelho.abrir: o no é o nome do nó, como hidraw7")
-    onde = nos_pela_porta(manifesto, sys_raiz).get(f"/dev/{no}")
+    onde = nos_pela_porta(manifesto, aceitos, sys_raiz).get(f"/dev/{no}")
     if onde is None:
-        raise ValueError(f"aparelho.abrir: {no} não é de um aparelho declarado ligado agora")
+        raise ValueError(f"aparelho.abrir: {no} não é de um aparelho aceito ligado agora")
     maior, _, menor = _ler(onde / "dev").partition(":")
     if not (maior.isdigit() and menor.isdigit()):
         raise ValueError(f"aparelho.abrir: o /sys não diz o número de {no}")
-    fd = os.open(dev_raiz / no,
-                 os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY | os.O_NOFOLLOW)
-    visto = os.fstat(fd)
-    if not stat.S_ISCHR(visto.st_mode) or visto.st_rdev != os.makedev(int(maior), int(menor)):
-        os.close(fd)
-        raise ValueError(f"aparelho.abrir: {no} mudou de aparelho no meio da abertura")
-    return fd
+    try:
+        return abrir_o_no_sem_seguir(dev_raiz / no, os.makedev(int(maior), int(menor)))
+    except OSError as exc:
+        if exc.errno != errno.ENXIO:
+            raise
+        raise ValueError(f"aparelho.abrir: {no} mudou de aparelho no meio da abertura") from exc
 
 
-def frase_dos_aparelhos(manifesto: Manifesto) -> str:
-    """Os aparelhos que a caixa abre, pelo nome; sem a permissão, nada."""
+def nome_no_sys(classe: str, vid: str, pid: str, sys_raiz: Path = Path("/sys"), *,
+                ler_o_usb: bool = False) -> str:
+    """O nome que o aparelho ligado agora dá a si mesmo; vazio desligado.
+
+    O ``hidraw`` diz o ``HID_NAME`` do ``uevent``, que não toma a trava do USB. O ``product`` do
+    USB toma (``usb_lock_device``) e pode esperar a enumeração: só com ``ler_o_usb``, fora da
+    janela.
+    """
+    for ids, _no, onde in _NOS_POR_CLASSE[classe](sys_raiz):
+        if ids != (vid, pid):
+            continue
+        if classe == "hidraw":
+            for linha in _ler(onde / "device" / "uevent").splitlines():
+                if linha.startswith("HID_NAME="):
+                    return linha.split("=", 1)[1].strip()[:80]
+        elif ler_o_usb:
+            atual = Path(os.path.realpath(onde / "device"))
+            for pasta in (atual, *atual.parents):
+                if (pasta / "idVendor").is_file():
+                    return _ler(pasta / "product")[:80]
+    return ""
+
+
+def frase_do_pedido(palavra: str, manifesto: Manifesto, sys_raiz: Path = Path("/sys"), *,
+                    ler_o_usb: bool = False) -> str:
+    """A linha do «sim» de ``palavra`` (de :func:`pedidos_do_sim`).
+
+    O aparelho diz o rótulo do autor e, ao lado, o que o autor não escolhe: a classe, o VID:PID
+    e, ligado agora, o nome que o próprio aparelho dá.
+    """
+    classe, _, vid_pid = palavra.removeprefix("aparelho:").partition(":")
+    vid, _, pid = vid_pid.partition(":")
+    declarado = next((a for a in manifesto.aparelhos
+                      if (a.classe, a.vid, a.pid) == (classe, vid, pid)), None)
+    if not palavra.startswith("aparelho:") or declarado is None:
+        return o_que_a_permissao_deixa(palavra)
+    nome = nome_no_sys(classe, vid, pid, sys_raiz, ler_o_usb=ler_o_usb)
+    ligado = f", ligado agora: «{nome}»" if nome else ""
+    return f"Abrir «{declarado.nome}» ({classe} {vid}:{pid}{ligado})."
+
+
+def frase_dos_aparelhos(manifesto: Manifesto, sys_raiz: Path = Path("/sys"), *,
+                        ler_o_usb: bool = True) -> str:
+    """Os aparelhos que a caixa abre, com a classe e o VID:PID ao lado do rótulo; sem a
+    permissão, nada."""
     if "aparelhos" not in manifesto.permissoes:
         return ""
-    nomes = list(dict.fromkeys(a.nome for a in manifesto.aparelhos))
-    if not nomes:
+    linhas = [frase_do_pedido(p, manifesto, sys_raiz, ler_o_usb=ler_o_usb).removeprefix(
+        "Abrir ").removesuffix(".") for p in pedidos_do_sim(manifesto) if p.startswith("aparelho:")]
+    if not linhas:
         return "A extensão não abre aparelho nenhum: o manifesto não declara qual."
-    return f"Dos aparelhos ligados ao computador, a extensão abre só: {'; '.join(nomes)}."
+    return f"Dos aparelhos ligados ao computador, a extensão abre só: {'; '.join(linhas)}."
 
 
 def rede_propria_da_caixa() -> str | None:
@@ -1172,7 +1290,7 @@ class Supervisor:
                     or processo.returncode is not None or not manifesto.aparelhos
                     or vigiada.aparelho_em_laco):
                 continue
-            agora = await asyncio.to_thread(aparelhos_que_casam, manifesto)
+            agora = await asyncio.to_thread(aparelhos_que_casam, manifesto, vigiada.aceitos)
             novos = set(agora) - set(vigiada.aparelhos)
             if not novos:
                 vigiada.aparelho_novo = False
@@ -1273,6 +1391,13 @@ class Supervisor:
             logger.warning("mods_registro_ilegivel", err=exc.frase)
             self._registro_lido = {}
             return
+        if migradas := migrar_os_aparelhos(self.lugares, registro):
+            try:
+                gravar_registro(self.lugares.registro, registro)
+                self._marca_do_registro = self._marca()
+                logger.info("mods_aparelhos_aceitos_migrados", mods=migradas)
+            except OSError as exc:
+                logger.warning("mods_aparelhos_aceitos_sem_gravar", err=str(exc))
         self._registro_lido = registro
         em_troca = {k for k, v in registro.items() if v.ligada and troca_viva(v)}
         ligadas = {k: v for k, v in registro.items() if v.ligada and k not in em_troca}
@@ -1297,7 +1422,7 @@ class Supervisor:
             manifesto = ler_manifesto(self.lugares.codigo / entrada.id)
         except ManifestoRecusadoError as exc:
             return exc.frase, None
-        novas = permissoes_novas(entrada.permissoes_aceitas, manifesto.permissoes)
+        novas = permissoes_novas(aceitos_de(entrada), pedidos_do_sim(manifesto))
         if novas:
             return (
                 f"«{manifesto.nome}» pede {', '.join(novas)}, que ainda não teve o «sim».",
@@ -1431,7 +1556,9 @@ class Supervisor:
         if self.bwrap and pasta:
             vigiada.pontes = pontes_que_o_pasta_traz(manifesto, ocupada)
         vigiada.manifesto = manifesto
-        vigiada.aparelhos = aparelhos_que_casam(manifesto) if self.bwrap else ()
+        lida = self._registro_lido.get(manifesto.id)
+        vigiada.aceitos = tuple(lida.aparelhos_aceitos or []) if lida is not None else ()
+        vigiada.aparelhos = aparelhos_que_casam(manifesto, vigiada.aceitos) if self.bwrap else ()
         vigiada.aparelho_novo = False
         if self.bwrap:
             argv = comando_na_caixa(
@@ -1491,13 +1618,13 @@ class Supervisor:
             return None
 
         def abrir(no: Any) -> int:
-            self._o_sim_vale(manifesto.id, ficha)
-            return abrir_o_aparelho(manifesto, no)
+            return abrir_o_aparelho(manifesto, no, self._o_sim_vale(manifesto.id, ficha))
         return abrir
 
-    def _o_sim_vale(self, mod_id: str, ficha: str) -> None:
+    def _o_sim_vale(self, mod_id: str, ficha: str) -> list[str]:
         """O registro de agora diz que a extensão está ligada e que ``aparelhos`` tem o «sim», e
-        a execução que pede é a que está de pé; senão, ``ValueError`` com a frase da recusa."""
+        a execução que pede é a que está de pé; devolve os aparelhos aceitos. Senão,
+        ``ValueError`` com a frase da recusa."""
         try:
             entrada = ler_registro(self.lugares.registro).get(mod_id)
         except InstalacaoRecusadaError as exc:
@@ -1509,6 +1636,7 @@ class Supervisor:
         vigiada = self._vigiadas.get(mod_id)
         if vigiada is None or vigiada.ficha != ficha:
             raise ValueError("aparelho.abrir: esta execução da extensão não está mais de pé")
+        return list(entrada.aparelhos_aceitos or [])
 
     async def _ligar_a_chave(self, mod_id: str) -> bool:
         """A chave da extensão ``mod_id`` gravada ligada, como o clique da janela; ``False`` sem a
@@ -1610,11 +1738,14 @@ __all__ = [
     "Supervisor",
     "abrir_o_aparelho",
     "aparelhos_que_casam",
+    "colecoes_de_aplicacao",
     "comando_na_caixa",
     "diario_da_extensao",
     "frase_da_rede",
+    "frase_do_pedido",
     "frase_dos_aparelhos",
     "linha_do_pasta",
+    "nome_no_sys",
     "nos_pela_porta",
     "ocupada_na_casa",
     "parar_o_grupo",

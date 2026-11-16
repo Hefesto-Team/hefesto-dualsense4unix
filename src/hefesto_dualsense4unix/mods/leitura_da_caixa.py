@@ -43,6 +43,18 @@ def abrir_sem_seguir(caminho: str, flags: int) -> int:
     raise OSError(errno.EINVAL, "não é um arquivo regular", caminho)
 
 
+def abrir_o_no_sem_seguir(caminho: Path, numero: int) -> int:
+    """O descritor do nó de aparelho: sem seguir link, leitura e escrita sem esperar, e só o
+    dispositivo de caractere com o ``numero`` (``st_rdev``) que o ``/sys`` dá a ele."""
+    descritor = os.open(caminho, os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY
+                        | os.O_NOFOLLOW)
+    visto = os.fstat(descritor)
+    if stat.S_ISCHR(visto.st_mode) and visto.st_rdev == numero:
+        return descritor
+    os.close(descritor)
+    raise OSError(errno.ENXIO, "não é o nó do aparelho", str(caminho))
+
+
 def dizer_a_recusa(caminho: Path, motivo: str) -> None:
     """Põe a recusa no registro, salvo se já foi dita neste arquivo."""
     if (str(caminho), motivo) not in _ditas:
@@ -78,5 +90,6 @@ def ler_ou_vazio(caminho: Path, teto: int) -> bytes:
         return b""
 
 
-__all__ = ["GRANDE_DEMAIS", "NAO_ABRIU", "NAO_E_COMUM", "LeituraRecusadaError", "abrir_sem_seguir",
-           "dizer_a_recusa", "ler_da_caixa", "ler_ou_vazio"]
+__all__ = ["GRANDE_DEMAIS", "NAO_ABRIU", "NAO_E_COMUM", "LeituraRecusadaError",
+           "abrir_o_no_sem_seguir", "abrir_sem_seguir", "dizer_a_recusa", "ler_da_caixa",
+           "ler_ou_vazio"]

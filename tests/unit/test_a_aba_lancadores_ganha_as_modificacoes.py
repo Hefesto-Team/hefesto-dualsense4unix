@@ -306,6 +306,18 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
     assert "desligada" in terceiro["recado"] and _entrada(lar, "toque").ligada is False
 
 
+def test_o_sim_da_chave_mostra_o_vid_pid_e_grava_o_aparelho_aceito(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    aparelho = {"classe": "hidraw", "vid": "1a86", "pid": "e429", "nome": "Adaptador"}
+    _instalar(a07, ctx, _fonte(tmp_path, permissoes=("aparelhos",),
+                               extra={"aparelhos": [aparelho]}))
+    primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert primeiro.get("armou") is True
+    assert "Abrir «Adaptador» (hidraw 1a86:e429" in primeiro["blocos"][".ext-lista"]
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _entrada(lar, "toque").aparelhos_aceitos == ["hidraw:1a86:e429"]
+
+
 _AVISO = "Não é afiliada à marca. Jogue só o que você comprou."
 
 

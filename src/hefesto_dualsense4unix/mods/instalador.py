@@ -42,7 +42,10 @@ from hefesto_dualsense4unix.mods.leitura_da_caixa import (
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     ManifestoRecusadoError,
+    aceitos_do_sim,
+    aparelhos_do_sim,
     ler_manifesto,
+    pedidos_do_sim,
     permissoes_novas,
 )
 from hefesto_dualsense4unix.utils import xdg_paths
@@ -192,6 +195,7 @@ class Entrada(BaseModel):
     ref: str | None = None
     commit: str = ""
     permissoes_aceitas: list[str] = []
+    aparelhos_aceitos: list[str] | None = None
     ligada: bool = False
     instalada_em: str = ""
     ligada_em: str = ""
@@ -223,6 +227,30 @@ def _conferir_id(mod_id: str) -> str:
     if not _CHAVE_DE_LANCADOR.match(mod_id or ""):
         raise InstalacaoRecusadaError(f"«{mod_id}» não é um id de modificação.")
     return mod_id
+
+
+def aceitos_de(entrada: Entrada) -> list[str]:
+    """O «sim» gravado na forma de :func:`pedidos_do_sim`: as permissões e os aparelhos."""
+    return aceitos_do_sim(entrada.permissoes_aceitas, entrada.aparelhos_aceitos)
+
+
+def migrar_os_aparelhos(lg: Lugares, registro: dict[str, Entrada]) -> list[str]:
+    """O «sim» de ``aparelhos`` gravado antes dos aparelhos aceitos ganha, uma vez só, os aparelhos
+    do manifesto instalado agora; devolve os ids que migraram (gravar é de quem chama).
+
+    Sem o «sim» de ``aparelhos``, a lista nasce vazia; o manifesto que não se lê não dá nenhum.
+    """
+    migradas: list[str] = []
+    for mod_id, entrada in registro.items():
+        if entrada.aparelhos_aceitos is not None:
+            continue
+        aceitos: list[str] = []
+        if "aparelhos" in entrada.permissoes_aceitas:
+            with contextlib.suppress(ManifestoRecusadoError):
+                aceitos = aparelhos_do_sim(ler_manifesto(lg.codigo / mod_id, exigir_api=False))
+        entrada.aparelhos_aceitos = aceitos
+        migradas.append(mod_id)
+    return migradas
 
 
 def ler_registro(caminho: Path) -> dict[str, Entrada]:
@@ -661,8 +689,12 @@ def instalar(
             raise InstalacaoRecusadaError(
                 f"Já existe «{manifesto.id}» instalada de {anterior.endereco}; remova antes."
             )
+        if anterior is not None:
+            migrar_os_aparelhos(lg, {anterior.id: anterior})
         aceitas = anterior.permissoes_aceitas if anterior is not None else []
-        novas = permissoes_novas(aceitas, manifesto.permissoes)
+        aparelhos_aceitos = anterior.aparelhos_aceitos if anterior is not None else []
+        novas = permissoes_novas(aceitos_do_sim(aceitas, aparelhos_aceitos),
+                                 pedidos_do_sim(manifesto))
         aviso_aceito = anterior.aviso_aceito if anterior is not None else ""
         if aviso_visto is not None and manifesto.aviso:
             if aviso_visto != manifesto.aviso and manifesto.aviso != aviso_aceito:
@@ -703,6 +735,7 @@ def instalar(
             ref=ref,
             commit=commit,
             permissoes_aceitas=list(aceitas),
+            aparelhos_aceitos=list(aparelhos_aceitos or []),
             ligada=(seguia_ligada or bool(antigas_ligadas)) and pronta
             and (prepara_agora or not manifesto.preparar),
             aviso_aceito=aviso_aceito,
@@ -792,10 +825,10 @@ def _o_que_segura_a_atualizacao(
     A permissão nova é a que nem o «sim» dado nem a versão instalada pedem: a extensão que
     nunca foi ligada não espera por uma permissão que o «ligar» ainda vai mostrar.
     """
-    ja_pedidas = list(anterior.permissoes_aceitas)
+    ja_pedidas = aceitos_de(anterior)
     with contextlib.suppress(ManifestoRecusadoError):
-        ja_pedidas += ler_manifesto(lg.codigo / anterior.id, exigir_api=False).permissoes
-    novas = permissoes_novas(ja_pedidas, manifesto.permissoes)
+        ja_pedidas += pedidos_do_sim(ler_manifesto(lg.codigo / anterior.id, exigir_api=False))
+    novas = permissoes_novas(ja_pedidas, pedidos_do_sim(manifesto))
     if novas:
         return f"A versão {manifesto.versao} pede {', '.join(novas)}."
     if aviso_por_ver(anterior, manifesto):
@@ -963,7 +996,7 @@ def ligar(
         manifesto = ler_manifesto(lg.codigo / mod_id)
     except ManifestoRecusadoError as exc:
         raise InstalacaoRecusadaError(exc.frase) from exc
-    if set(permissoes_vistas) != set(manifesto.permissoes):
+    if set(permissoes_vistas) != set(pedidos_do_sim(manifesto)):
         raise InstalacaoRecusadaError(
             f"«{manifesto.nome}» pede outras permissões do que as que você viu; "
             "veja de novo antes de ligar."
@@ -973,6 +1006,7 @@ def ligar(
     _conferir_o_tema(manifesto, lg.codigo / mod_id)
     anotar_o_gesto(lg, "ligar", [mod_id])
     entrada.permissoes_aceitas = list(manifesto.permissoes)
+    entrada.aparelhos_aceitos = aparelhos_do_sim(manifesto)
     entrada.aviso_aceito = manifesto.aviso
     if manifesto.preparar and entrada.preparada_em != entrada.instalada_em:
         _rodar_o_preparo(lg, manifesto, entrada)
@@ -1166,6 +1200,7 @@ __all__ = [
     "InstalacaoRecusadaError",
     "Lugares",
     "Resultado",
+    "aceitos_de",
     "anotar_o_gesto",
     "atualizar",
     "aviso_por_ver",
@@ -1182,6 +1217,7 @@ __all__ = [
     "ler_registro",
     "ligar",
     "manifesto_instalado",
+    "migrar_os_aparelhos",
     "o_css_que_fica",
     "origem_da_tag",
     "remover",

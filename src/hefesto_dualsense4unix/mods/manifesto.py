@@ -25,6 +25,7 @@ from pydantic import (
 )
 
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.integrations.exame_da_mesa import VIDS_DE_CONTROLE
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.tema import conferir_o_bloco_e_as_opcoes
 from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
@@ -264,7 +265,30 @@ def permissao_valida(palavra: str) -> bool:
 
 def o_que_a_permissao_deixa(palavra: str) -> str:
     """A frase curta que a tela mostra ao lado da permissão, antes do «sim»."""
+    if palavra.startswith(PREFIXO_DO_APARELHO):
+        classe, _, vid_pid = palavra.removeprefix(PREFIXO_DO_APARELHO).partition(":")
+        return f"Abrir o aparelho {classe} {vid_pid}."
     return _O_QUE_DEIXA.get(palavra, palavra)
+
+
+PREFIXO_DO_APARELHO = "aparelho:"
+
+
+def aparelhos_do_sim(manifesto: Manifesto) -> list[str]:
+    """Cada aparelho declarado como ``classe:vid:pid``: o «sim» de ``aparelhos`` vale para eles."""
+    if "aparelhos" not in manifesto.permissoes:
+        return []
+    return [f"{a.classe}:{a.vid}:{a.pid}" for a in manifesto.aparelhos]
+
+
+def pedidos_do_sim(manifesto: Manifesto) -> list[str]:
+    """O que o «sim» cobre: as permissões e, com ``aparelhos``, cada aparelho declarado."""
+    return [*manifesto.permissoes, *(PREFIXO_DO_APARELHO + a for a in aparelhos_do_sim(manifesto))]
+
+
+def aceitos_do_sim(permissoes_aceitas: list[str], aparelhos_aceitos: list[str] | None) -> list[str]:
+    """O que o «sim» gravado cobre, na mesma forma de :func:`pedidos_do_sim`."""
+    return [*permissoes_aceitas, *(PREFIXO_DO_APARELHO + a for a in aparelhos_aceitos or [])]
 
 
 def permissoes_novas(aceitas: list[str] | tuple[str, ...], pedidas: list[str]) -> list[str]:
@@ -821,6 +845,10 @@ class Manifesto(BaseModel):
         chaves = [(a.classe, a.vid, a.pid) for a in self.aparelhos]
         if len(set(chaves)) != len(chaves):
             raise ValueError("aparelhos: aparelho repetido")
+        for a in self.aparelhos:
+            if a.vid in VIDS_DE_CONTROLE:
+                raise ValueError(f"aparelhos: {a.vid}:{a.pid} é da marca de um controle que o "
+                                 "Hefesto gerencia, e nenhuma extensão o abre")
         self._conferir_as_acoes_e_o_livre()
         self._conferir_a_chave()
         self._conferir_as_ligas()
@@ -1113,6 +1141,7 @@ __all__ = [
     "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
     "PORTAS_POR_LADO",
+    "PREFIXO_DO_APARELHO",
     "PREFIXO_DO_MODO_DE_EXTENSAO",
     "PRESENTE_NO_ESTADO",
     "PRIMEIRA_PORTA_DA_PONTE",
@@ -1131,6 +1160,8 @@ __all__ = [
     "Portas",
     "Processo",
     "aceita_a_api",
+    "aceitos_do_sim",
+    "aparelhos_do_sim",
     "arquivo_da_pagina",
     "endereco_valido",
     "estilos_pedidos",
@@ -1139,6 +1170,7 @@ __all__ = [
     "ler_manifesto",
     "modos_pedidos",
     "o_que_a_permissao_deixa",
+    "pedidos_do_sim",
     "permissao_valida",
     "permissoes_novas",
     "texto_da_pagina",

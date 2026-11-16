@@ -35,13 +35,18 @@ def _recusar(exc: InstalacaoRecusadaError) -> typer.Exit:
     return typer.Exit(code=1)
 
 
-def _mostrar_permissoes(permissoes: list[str]) -> None:
+def _mostrar_permissoes(permissoes: list[str], manifesto: Any = None) -> None:
+    from rich.markup import escape
+
     from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
+    from hefesto_dualsense4unix.mods.supervisor import frase_do_pedido
 
     if not permissoes:
         console.print("  [dim]nenhuma permissão[/dim]")
     for palavra in permissoes:
-        console.print(f"  [bold]{palavra}[/bold]: {o_que_a_permissao_deixa(palavra)}")
+        frase = (frase_do_pedido(palavra, manifesto, ler_o_usb=True) if manifesto is not None
+                 else o_que_a_permissao_deixa(palavra))
+        console.print(f"  [bold]{escape(palavra)}[/bold]: {escape(frase)}")
 
 
 def _nomes_das_instaladas() -> dict[str, str]:
@@ -185,7 +190,8 @@ def cmd_listar() -> None:
 def _dizer_a_rede(manifesto: Any) -> None:
     from hefesto_dualsense4unix.mods.supervisor import frase_da_rede, frase_dos_aparelhos
 
-    for frase in (frase_da_rede(manifesto), frase_dos_aparelhos(manifesto)):
+    sem_aparelho = frase_dos_aparelhos(manifesto) if not manifesto.aparelhos else ""
+    for frase in (frase_da_rede(manifesto), sem_aparelho):
         if manifesto.processo is not None and frase:
             console.print(frase, markup=False, soft_wrap=True)
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import frase_do_fixador
@@ -202,13 +208,14 @@ def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação
         frase_do_preparo,
         manifesto_instalado,
     )
+    from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim
 
     try:
         manifesto = manifesto_instalado(mod_id)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
     console.print(f"«{manifesto.nome}» pede:")
-    _mostrar_permissoes(manifesto.permissoes)
+    _mostrar_permissoes(pedidos_do_sim(manifesto), manifesto)
     if manifesto.preparar:
         console.print(frase_do_preparo(manifesto), markup=False, soft_wrap=True)
     _dizer_a_rede(manifesto)
@@ -229,6 +236,7 @@ def cmd_ligar(
         ligar,
         manifesto_instalado,
     )
+    from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim
 
     try:
         manifesto = manifesto_instalado(mod_id)
@@ -239,7 +247,7 @@ def cmd_ligar(
     if aviso:
         console.print(f"«{manifesto.nome}» avisa: {aviso}", markup=False)
     console.print(f"«{manifesto.nome}» pede:")
-    _mostrar_permissoes(manifesto.permissoes)
+    _mostrar_permissoes(pedidos_do_sim(manifesto), manifesto)
     if manifesto.preparar and (entrada is None or entrada.preparada_em != entrada.instalada_em):
         console.print(frase_do_preparo(manifesto), markup=False, soft_wrap=True)
     _dizer_a_rede(manifesto)
@@ -253,7 +261,7 @@ def cmd_ligar(
         console.print("Não liguei.")
         raise typer.Exit(code=1)
     try:
-        ligar(mod_id, permissoes_vistas=manifesto.permissoes, aviso_visto=aviso)
+        ligar(mod_id, permissoes_vistas=pedidos_do_sim(manifesto), aviso_visto=aviso)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
     if manifesto.processo is not None:
