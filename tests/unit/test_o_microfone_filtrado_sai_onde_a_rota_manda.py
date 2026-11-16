@@ -102,6 +102,7 @@ class TestAVozFiltradaEAFonteDoControle:
     """MORDIDA: tire a regra da voz de `escolher_fonte` e o cru volta a ser o eleito."""
 
     def test_a_voz_vence_o_cru_do_mesmo_controle(self) -> None:
+        """D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA: o jogo grava a voz, não o cru."""
         uniq = MESA[0]
         fontes = [_cru(uniq), _voz(uniq)]
         assert fontes_de_captura.escolher_fonte(fontes, uniq, list(MESA)) == _voz(uniq)
