@@ -9,6 +9,7 @@ nova subir, com UMA anterior guardada para voltar), esperando com o motivo, ou f
 """
 from __future__ import annotations
 
+import contextlib
 import functools
 import hashlib
 import io
@@ -238,6 +239,32 @@ def test_o_comando_que_trava_calado_respeita_o_teto() -> None:
     rc, ultima = pa._comando(["sleep", "8"], teto_s=0.5)
     assert time.monotonic() - inicio < 5, "o teto vale também para o comando que não escreve"
     assert rc == 124, (rc, ultima)
+
+
+def test_o_teto_solta_a_fila_mesmo_com_o_grupo_fora_do_alcance(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Atrás do ``sudo -n`` o comando é root: quem chama não o mata, e ele segura a saída. O
+    sinal recusado (EPERM, como o kernel responde) não pode prender a fila no teto."""
+    import os
+    import signal
+
+    pids: list[int] = []
+
+    def _recusado(_pgid: int, _sinal: int) -> None:
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(os, "killpg", _recusado)
+    inicio = time.monotonic()
+    try:
+        rc, ultima = pa._comando(["sh", "-c", "echo $$; exec sleep 30"], teto_s=0.5,
+                                 linha=lambda t: pids.extend([int(t)] if t.isdigit() else []))
+    finally:
+        for pid in pids:
+            with contextlib.suppress(OSError):
+                os.kill(pid, signal.SIGKILL)
+    assert time.monotonic() - inicio < 20, "o teto vale também para o comando que não se mata"
+    assert rc == 124, (rc, ultima)
+    assert pids, "a linha do comando chegou antes do teto"
 
 
 def _peca(ident: str, feito: list[str], *, espera: list[bool] | None = None,

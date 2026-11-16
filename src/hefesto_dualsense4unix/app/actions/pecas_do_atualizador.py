@@ -10,17 +10,18 @@ pergunta que diz quando passou; a receita da casa cuja cura já está em cima é
 """
 from __future__ import annotations
 
+import codecs
 import contextlib
 import hashlib
 import json
 import os
 import re
+import selectors
 import shutil
 import signal
 import subprocess
 import sys
 import tarfile
-import threading
 import time
 import urllib.request
 from collections.abc import Callable, Sequence
@@ -49,6 +50,7 @@ REPO_DO_UMU = "Open-Wine-Components/umu-launcher"
 PRAZO_DA_REDE_S = 30
 TETO_DO_COMANDO_S = 3 * 3600.0
 TETO_DA_PERGUNTA_S = 60.0
+PRAZO_DO_ENCERRAMENTO_S = 5.0
 VALIDADE_DA_LISTA_DO_APT_S = 600.0
 PACOTE_DO_PRODUTO = "hefesto-dualsense4unix"
 RC_NADA_A_CONSTRUIR = 9
@@ -60,39 +62,69 @@ _STATUS_DO_APT = re.compile(r"^(?:dlstatus|pmstatus):[^:]*:(?P<pct>[0-9.]+):")
 _apt_lido_em: list[float] = []
 
 
+def _encerrar(processo: subprocess.Popen[bytes]) -> None:
+    for sinal in (signal.SIGTERM, signal.SIGKILL):
+        with contextlib.suppress(OSError):
+            os.killpg(processo.pid, sinal)
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            processo.wait(timeout=PRAZO_DO_ENCERRAMENTO_S)
+            return
+
+
 def _comando(argv: Sequence[str], *, linha: Callable[[str], None] | None = None,
              env: dict[str, str] | None = None,
              teto_s: float = TETO_DO_COMANDO_S) -> tuple[int, str]:
-    """Roda ``argv`` sem terminal, linha a linha. Devolve o código e a última linha não vazia."""
+    """Roda ``argv`` sem terminal, linha a linha. Devolve o código e a última linha não vazia.
+
+    O teto vale com ou sem saída, e a leitura para no teto mesmo que um processo fora do alcance
+    de quem chama (o root atrás do ``sudo``) ainda segure a saída: a fila nunca se prende.
+    """
     try:
         processo = subprocess.Popen(
             list(argv), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, text=True, env=env, start_new_session=True)
+            stderr=subprocess.STDOUT, env=env, start_new_session=True)
     except OSError as erro:
         return 127, erro.strerror or str(erro)
-    ultima = ""
-    estourou = threading.Event()
-
-    def _matar() -> None:
-        estourou.set()
-        with contextlib.suppress(OSError):
-            os.killpg(processo.pid, signal.SIGKILL)
-
-    vigia = threading.Timer(teto_s, _matar)
-    vigia.daemon = True
-    vigia.start()
     assert processo.stdout is not None
-    try:
-        for texto in processo.stdout:
-            texto = texto.rstrip("\n")
-            if texto.strip():
-                ultima = texto.strip()
-            if linha is not None:
-                linha(texto)
-        rc = processo.wait()
-    finally:
-        vigia.cancel()
-    if estourou.is_set():
+    saida = processo.stdout
+    decodificar = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    prazo = time.monotonic() + teto_s
+    ultima, resto, estourou = "", "", False
+
+    def _entregar(texto: str) -> None:
+        nonlocal ultima
+        if texto.strip():
+            ultima = texto.strip()
+        if linha is not None:
+            linha(texto)
+
+    with selectors.DefaultSelector() as olho:
+        olho.register(saida, selectors.EVENT_READ)
+        while True:
+            falta = prazo - time.monotonic()
+            if falta <= 0:
+                estourou = True
+                break
+            if not olho.select(falta):
+                continue
+            bloco = os.read(saida.fileno(), 65536)
+            if not bloco:
+                break
+            resto += decodificar.decode(bloco).replace("\r\n", "\n").replace("\r", "\n")
+            *linhas, resto = resto.split("\n")
+            for texto in linhas:
+                _entregar(texto)
+    resto += decodificar.decode(b"", final=True)
+    if resto:
+        _entregar(resto)
+    if not estourou:
+        try:
+            rc = processo.wait(timeout=max(prazo - time.monotonic(), 0.0))
+        except subprocess.TimeoutExpired:
+            estourou = True
+    saida.close()
+    if estourou:
+        _encerrar(processo)
         return 124, f"passou de {teto_s / 60:.0f} minutos"
     return rc, ultima
 
