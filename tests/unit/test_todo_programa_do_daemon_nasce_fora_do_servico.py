@@ -42,6 +42,11 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "os leitores de som (`parec`/`pw-record`), presos ao pai pelo cano e "
         "pelo PDEATHSIG",
     ),
+    "integrations/microfone_filtrado.py::_lancar_processo": (
+        "ajudante", 1,
+        "o `pipewire -c` do filtro de voz de cada controle (echo-cancel com o "
+        "WebRTC); preso ao pai pelo PDEATHSIG e derrubado com o canal",
+    ),
     "integrations/gesto_de_pareamento.py::_abrir_de_verdade": (
         "ajudante", 1,
         "a janela de busca da ponte root (`sudo … descobrir`); morre com quem "

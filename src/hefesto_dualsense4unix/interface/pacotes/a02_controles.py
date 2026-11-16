@@ -1934,11 +1934,11 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 def _destino_do_retorno(uniq: str, rota: str, na_mesa: tuple[str, ...]) -> str:
     """Onde o 🎙 deste controle toca, pela rota do cartão. BLOQUEANTE — roda `pactl`."""
-    ler = _ler_pelo_dono
     sink = _sink_para_o_som(uniq, na_mesa) if rota == ROTA_TUDO_NO_CONTROLE else ""
-    lista = ler(["pactl", "list", "sinks", "short"])
-    padrao = audio_saida.sink_padrao_da_saida(ler(["pactl", "get-default-sink"]))
-    anterior = audio_saida.RotaDeSaida(runner=ler).estado(padrao).anterior if padrao else ""
+    lista = _ler_pelo_dono(["pactl", "list", "sinks", "short"])
+    padrao = audio_saida.sink_padrao_da_saida(_ler_pelo_dono(["pactl", "get-default-sink"]))
+    rota_de_saida = audio_saida.RotaDeSaida(runner=_ler_pelo_dono)
+    anterior = rota_de_saida.estado(padrao).anterior if padrao else ""
     return monitor_do_microfone.destino_da_rota(
         rota,
         sink_do_controle=sink,
