@@ -259,14 +259,14 @@
       "data": "2026-11-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1262075,
+      "piso": 1265854,
       "por_item": {
-        "docs": 107037,
-        "scripts": 114293,
-        "src": 319785,
-        "tests": 720960
+        "docs": 107094,
+        "scripts": 114340,
+        "src": 321140,
+        "tests": 723280
       },
-      "razao": "tamanho: +15 linhas (1262060 -> 1262075), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo 69502a8751e8",
+      "razao": "tamanho: +3779 linhas (1262075 -> 1265854), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 66b9c5db4549",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1983,10 +1983,16 @@
           "de": 1262060,
           "para": 1262075,
           "razao": "tamanho: +15 linhas (1262060 -> 1262075), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo 69502a8751e8"
+        },
+        {
+          "data": "2026-11-16",
+          "de": 1262075,
+          "para": 1265854,
+          "razao": "tamanho: +3779 linhas (1262075 -> 1265854), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 66b9c5db4549"
         }
       ],
       "unidade": "linhas",
-      "universo": 3503
+      "universo": 3512
     }
   }
 }
