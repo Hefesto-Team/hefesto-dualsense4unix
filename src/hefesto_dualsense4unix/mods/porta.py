@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import inspect
 import json
 import math
 import os
@@ -1274,31 +1275,68 @@ class Porta:
         except Exception as exc:
             logger.warning("mods_porta_erro", err=str(exc), exc_info=True)
         finally:
-            for tarefa in con.tarefas:
-                tarefa.cancel()
-            for topico, fila in con.assinaturas:
-                self.bus.unsubscribe(topico, fila)
-            if con.deu_o_estado and con.sessao is not None:
-                vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
-                self._estados_dos_acessorios[con.sessao.mod_id] = vazio
-                if "ler:acessorios.gesto" in con.sessao.permissoes:
-                    self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
-            if con.acessorio_preso() and con.sessao is not None:
-                self._soltar_o_acessorio(con.sessao.mod_id, con.funcoes_do_acessorio)
-            fonte = self._fonte()
-            if fonte is not None and con.sessao is not None:
-                fonte.esquecer(_origem(con.sessao))
-            if con.vibrando and con.sessao is not None:
-                await self._soltar_a_vibracao(con.sessao, con.vibrando)
-            self._conexoes.discard(con)
-            if con.sessao is not None and con.sessao.mod_id not in self.vivas():
-                self._esquecer_as_escritas(con.sessao.mod_id)
-            if con.sessao is not None:
-                self._soltar_os_ajustes(con.sessao.mod_id)
-                self._mudaram_as_vivas()
+            await self._limpar_a_conexao(con)
             with contextlib.suppress(Exception):
                 writer.close()
                 await writer.wait_closed()
+
+    async def _limpar_a_conexao(self, con: _Conexao) -> None:
+        """A conexão que sai: cada passo roda mesmo quando o de antes falha, para que a vibração
+        nunca fique presa nem a conexão fique na porta."""
+        sessao = con.sessao
+
+        def soltar_a_vibracao() -> Any:
+            if con.vibrando and sessao is not None:
+                return self._soltar_a_vibracao(sessao, con.vibrando)
+            return None
+
+        def esquecer_as_escritas() -> None:
+            if sessao is not None and sessao.mod_id not in self.vivas():
+                self._esquecer_as_escritas(sessao.mod_id)
+
+        def cancelar_as_tarefas() -> None:
+            for tarefa in con.tarefas:
+                tarefa.cancel()
+
+        def soltar_as_assinaturas() -> None:
+            for topico, fila in con.assinaturas:
+                self.bus.unsubscribe(topico, fila)
+
+        passos: list[tuple[str, Callable[[], Any]]] = [
+            ("tarefas", cancelar_as_tarefas),
+            ("assinaturas", soltar_as_assinaturas),
+            ("estado", lambda: self._esvaziar_o_estado(con)),
+            ("acessorio", lambda: self._soltar_o_acessorio(sessao.mod_id, con.funcoes_do_acessorio)
+             if con.acessorio_preso() and sessao is not None else None),
+            ("fonte", lambda: self._esquecer_na_fonte(sessao)),
+            ("motores", soltar_a_vibracao),
+            ("porta", lambda: self._conexoes.discard(con)),
+            ("escritas", esquecer_as_escritas),
+            ("ajustes", lambda: self._soltar_os_ajustes(sessao.mod_id)
+             if sessao is not None else None),
+            ("vivas", lambda: self._mudaram_as_vivas() if sessao is not None else None),
+        ]
+        for nome, passo in passos:
+            try:
+                retorno = passo()
+                if inspect.isawaitable(retorno):
+                    await retorno
+            except Exception:
+                logger.warning("mods_porta_limpeza_falhou", passo=nome,
+                               mod=sessao.mod_id if sessao else None, exc_info=True)
+
+    def _esvaziar_o_estado(self, con: _Conexao) -> None:
+        if not con.deu_o_estado or con.sessao is None:
+            return
+        vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
+        self._estados_dos_acessorios[con.sessao.mod_id] = vazio
+        if "ler:acessorios.gesto" in con.sessao.permissoes:
+            self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
+
+    def _esquecer_na_fonte(self, sessao: _Credencial | None) -> None:
+        fonte = self._fonte()
+        if fonte is not None and sessao is not None:
+            fonte.esquecer(_origem(sessao))
 
     async def _enviar(self, con: _Conexao, writer: asyncio.StreamWriter, linha: bytes) -> None:
         async with con.trava:

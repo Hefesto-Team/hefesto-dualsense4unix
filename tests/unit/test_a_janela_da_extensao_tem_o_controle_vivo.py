@@ -316,3 +316,38 @@ def test_a_conexao_curta_da_extensao_nao_apaga_a_faixa_e_a_saida_sem_estado_limp
         return depois_da_curta, saiu, limpa
 
     assert asyncio.run(corrida()) == (1, 0, True)
+
+
+@pytest.mark.parametrize("deu_o_estado", [False, True])
+def test_a_extensao_que_sai_limpa_a_porta_mesmo_com_um_passo_que_falha(
+        curto, deu_o_estado: bool) -> None:  # noqa: F811
+    """A extensão que sai, com ou sem ter dado o estado, sai inteira da porta: o passo que falha
+    (aqui o aviso do estado vazio no barramento) não pula a conexão nem a memória das escritas."""
+    relogio = _Relogio()
+
+    async def corrida() -> tuple[bool, bool]:
+        porta = await _porta(curto, relogio, set())
+        porta.registrar("ficha", "exemplo", os.getpid(),
+                        ["escrever:luz", "ler:acessorios.gesto"])
+
+        def publicar_que_quebra(*_a: Any, **_k: Any) -> None:
+            raise RuntimeError("o barramento caiu")
+
+        porta.bus.publish = publicar_que_quebra  # type: ignore[method-assign]
+        ext = _Extensao(curto / "mods.sock")
+        try:
+            await asyncio.to_thread(ext.pedir, "mod.ola", {"ficha": "ficha"})
+            await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
+            if deu_o_estado:
+                porta._conexoes.copy().pop().deu_o_estado = True
+        finally:
+            ext.fechar()
+        for _ in range(100):
+            if not porta._conexoes:
+                break
+            await asyncio.sleep(0.02)
+        limpa = not porta._conexoes and "exemplo" not in porta._escritas
+        await porta.parar()
+        return limpa, deu_o_estado
+
+    assert asyncio.run(corrida()) == (True, deu_o_estado)
