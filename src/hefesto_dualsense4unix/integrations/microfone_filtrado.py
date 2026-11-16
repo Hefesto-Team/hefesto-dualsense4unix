@@ -65,8 +65,6 @@ PAPEL_DO_FILTRO = "voz-filtrada"
 
 SUFIXO_DA_DESCRICAO = " (voz limpa)"
 
-_EXECUTAVEL = "pipewire"
-
 _ESPERA_PELO_FIM_S = 2.0
 
 
@@ -175,14 +173,13 @@ def _escrever_o_conf(texto: str) -> str:
 
 def _derrubar(filtro: _Filtro) -> None:
     proc = filtro.proc
-    with contextlib.suppress(Exception):
-        if proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=_ESPERA_PELO_FIM_S)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=_ESPERA_PELO_FIM_S)
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=_ESPERA_PELO_FIM_S)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
     with contextlib.suppress(OSError):
         os.unlink(filtro.conf)
 
@@ -203,7 +200,7 @@ def abrir(
         if ja is not None and ja.vivo() and ja.canal == canal and ja.descricao == descricao:
             return voz
     fechar(uniq)
-    if lancar is None and shutil.which(_EXECUTAVEL) is None:
+    if lancar is None and shutil.which("pipewire") is None:
         logger.info("microfone_filtrado_sem_pipewire", extra={"voz": voz})
         return ""
     try:
@@ -212,7 +209,7 @@ def abrir(
         logger.warning("microfone_filtrado_sem_conf", exc_info=True)
         return ""
     try:
-        proc = (lancar or _lancar_processo)([_EXECUTAVEL, "-c", caminho])
+        proc = (lancar or _lancar_processo)(["pipewire", "-c", caminho])
     except (OSError, ValueError, subprocess.SubprocessError):
         logger.warning("microfone_filtrado_nao_lancou", exc_info=True)
         with contextlib.suppress(OSError):

@@ -446,8 +446,7 @@ def fechar(uniq: str) -> bool:
         alimentador = _ALIMENTANDO.pop(uniq, None)
         _FONTE_PEDIDA.pop(uniq, None)
         _MUDO_ESCRITO.pop(uniq, None)
-    with contextlib.suppress(Exception):
-        microfone_filtrado.fechar(uniq)
+    microfone_filtrado.fechar(uniq)
     if alimentador is not None:
         try:
             alimentador.parar()

@@ -1971,8 +1971,7 @@ def _seguir_o_retorno(conectados: Any, na_mesa: tuple[str, ...]) -> None:
 
 
 def _seguir_um(uniq: str, rota: str, na_mesa: tuple[str, ...]) -> None:
-    with contextlib.suppress(Exception):
-        monitor_do_microfone.seguir(uniq, _destino_do_retorno(uniq, rota, na_mesa))
+    monitor_do_microfone.seguir(uniq, _destino_do_retorno(uniq, rota, na_mesa))
 
 
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
