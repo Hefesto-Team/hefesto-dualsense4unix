@@ -54,6 +54,7 @@ async def _porta(pasta: pathlib.Path, relogio: _Relogio, jogo_escreve: set[str])
 
 
 def test_a_porta_anota_so_o_que_chegou_ao_controle_e_nunca_o_uniq(curto) -> None:  # noqa: F811
+    """D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA: a peça acende pelo que chegou."""
     relogio = _Relogio()
     jogo_escreve: set[str] = set()
 
