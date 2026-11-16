@@ -96,7 +96,9 @@ class AnunciadorDoJogo:
     """Diz no barramento o perfil que mudou (`perfil.trocou`) e o jogo que fechou (`jogo.fechou`).
 
     O `perfil.trocou` diz QUAL jogo é, e nunca leva marca: `perfil`, `jogo` (`steam_app_<N>`,
-    ou `None` fora de jogo), `estilo` e `controles` (jogador, perfil, jogo e estilo de cada um).
+    ou `None` fora de jogo e no jogo sem appid), `em_cena` (a pergunta do modo, `ha_jogo_em_cena`:
+    há jogo aberto, com appid ou sem), `estilo` e `controles` (jogador, perfil, jogo, `em_cena` e
+    estilo de cada um).
     Publica só quando o dito muda; a primeira leitura é a carga inicial, que o barramento guarda.
     Quando o jogo fecha, sai o zero de quem vibrava, depois `jogo.fechou`, depois o perfil sem jogo.
     `jogo_de(uniq)` dá o appid de UM controle; sem ele, todos estão no jogo em cena do serviço.
@@ -135,9 +137,10 @@ class AnunciadorDoJogo:
         if arquivo != self._arquivo:
             self._estilo = _estilo_do_perfil(nome)
             self._arquivo = arquivo
-        controles = self._controles(nome)
+        em_cena = self._ha_jogo()
+        controles = self._controles(nome, em_cena)
         jogo = _chave_do_jogo(self._em_cena())
-        dito = (nome, self._estilo, jogo, controles, _memoria_ligada(jogo))
+        dito = (nome, self._estilo, jogo, controles, _memoria_ligada(jogo), em_cena)
         if dito == self._perfil:
             return
         self._perfil = dito
@@ -149,6 +152,7 @@ class AnunciadorDoJogo:
                 "jogo": dito[2],
                 "controles": [dict(c) for c in controles],
                 "memoria": dito[4],
+                "em_cena": dito[5],
                 "t": time.monotonic(),
             },
         )
@@ -157,18 +161,35 @@ class AnunciadorDoJogo:
         appid = getattr(self._daemon, "appid_em_cena", None)
         return appid if isinstance(appid, int) and not isinstance(appid, bool) else None
 
-    def _controles(self, nome: str | None) -> tuple[tuple[tuple[str, Any], ...], ...]:
-        """Um item por controle, na ordem do serviço; cada item é um mapa congelado (comparável)."""
+    def _ha_jogo(self) -> bool:
+        from hefesto_dualsense4unix.daemon.lifecycle import ha_jogo_em_cena
+
+        return ha_jogo_em_cena(self._daemon)
+
+    def _controles(
+        self, nome: str | None, em_cena: bool
+    ) -> tuple[tuple[tuple[str, Any], ...], ...]:
+        """Um item por controle, na ordem do serviço; cada item é um mapa congelado (comparável).
+
+        Sem `jogo_de`, todo controle está no jogo em cena do serviço. Com ele, o controle está em
+        cena pelo appid dele; o jogo sem appid, que nenhum controle reclama, é de todos.
+        """
         from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import controles_do_daemon
         from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
 
+        sem_appid = em_cena and _appid_valido(self._em_cena()) is None
         itens = []
         for controle in controles_do_daemon(self._daemon):
-            appid = self._jogo_de(controle.uniq) if self._jogo_de is not None else self._em_cena()
+            if self._jogo_de is None:
+                appid, no_jogo = self._em_cena(), em_cena
+            else:
+                appid = self._jogo_de(controle.uniq)
+                no_jogo = _appid_valido(appid) is not None or sem_appid
             itens.append((
                 ("jogador", _jogador_de(self._daemon, controle.uniq)),
                 ("perfil", nome),
                 ("jogo", _chave_do_jogo(appid)),
+                ("em_cena", no_jogo),
                 ("estilo", self._estilo),
             ))
         return tuple(itens)

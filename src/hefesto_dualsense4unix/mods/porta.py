@@ -1060,17 +1060,26 @@ def _estilo_do_catalogo(valor: Any) -> str | None:
     return chave if isinstance(chave, str) and chave in POR_CHAVE else None
 
 
-def _estilo_com_o_jogo(dito: dict[str, Any]) -> str | None:
+def _esta_em_cena(dito: dict[str, Any]) -> bool:
+    em_cena = dito.get("em_cena")
+    if isinstance(em_cena, bool):
+        return em_cena
     jogo = dito.get("jogo")
-    return _estilo_do_catalogo(dito.get("estilo")) if isinstance(jogo, str) and jogo else None
+    return isinstance(jogo, str) and bool(jogo)
+
+
+def _estilo_com_o_jogo(dito: dict[str, Any]) -> str | None:
+    return _estilo_do_catalogo(dito.get("estilo")) if _esta_em_cena(dito) else None
 
 
 def carga_do_estilo(carga: Any) -> dict[str, Any] | None:
     """O ``jogo.estilo`` que sai do ``perfil.trocou``: ``{estilo, jogo, controles: [{jogador,
     estilo}]}``, a chave do catálogo dos estilos (ou ``None``), sem o ``t``.
 
-    O estilo do perfil só vale com o jogo aberto: sem ``jogo`` (o do serviço, ou o de cada
-    controle), o estilo sai ``None``, mesmo com o perfil do jogo fechado ainda em vigor."""
+    O estilo do perfil só vale com o jogo aberto, pelo ``em_cena`` (o do serviço, ou o de cada
+    controle), a mesma pergunta do modo: o jogo nativo sem appid também está em cena. Sem jogo, o
+    estilo sai ``None``, mesmo com o perfil do jogo fechado ainda em vigor. A carga que não traz o
+    ``em_cena`` está em cena quando traz ``jogo``."""
     if not isinstance(carga, dict):
         return None
     jogo = carga.get("jogo")
