@@ -251,6 +251,7 @@ class _Credencial:
     permissoes: frozenset[str]
     comandos: frozenset[str] = frozenset()
     acoes_dos_aparelhos: frozenset[str] = frozenset()
+    abrir_o_aparelho: Callable[[Any], int] | None = None
 
 
 @dataclass(eq=False)
@@ -317,6 +318,7 @@ class _Conexao:
     filas_das_entradas: list[asyncio.Queue[Any]] = field(default_factory=list)
     quer_os_dedos: bool = False
     escritor: asyncio.StreamWriter | None = None
+    fd_da_resposta: int | None = None
     filas_do_movimento: list[asyncio.Queue[Any]] = field(default_factory=list)
     assinados: dict[str, _Assinatura] = field(default_factory=dict)
     ve_a_tela: bool = False
@@ -360,6 +362,18 @@ def credencial_do_par(sock: socket.socket | None) -> tuple[int, int, int] | None
     cru = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
     pid, uid, gid = struct.unpack("3i", cru)
     return pid, uid, gid
+
+
+def entregar_com_o_fd(transporte: Any, linha: bytes, fd: int) -> None:
+    """Manda ``linha`` com o ``fd`` (``SCM_RIGHTS``) pelo socket do transporte, que está vazio.
+
+    O socket do ``asyncio`` não tem ``sendmsg``: a cópia do descritor fala pelo mesmo socket.
+    """
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM,
+                       fileno=os.dup(transporte.fileno())) as sock:
+        sock.settimeout(PRAZO_PARA_FECHAR_S)
+        if socket.send_fds(sock, [linha], [fd]) != len(linha):
+            raise ConnectionError("a resposta com o fd saiu pela metade")
 
 
 def _pai_de(pid: int) -> int | None:
@@ -1128,11 +1142,12 @@ class Porta:
 
     def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
                   *, comandos: tuple[str, ...] = (),
-                  acoes_dos_aparelhos: tuple[str, ...] = ()) -> None:
+                  acoes_dos_aparelhos: tuple[str, ...] = (),
+                  abrir_o_aparelho: Callable[[Any], int] | None = None) -> None:
         """O supervisor diz: esta ficha é da modificação ``mod_id``, no PID ``pid``."""
         self._fichas[ficha] = _Credencial(
             mod_id, pid, frozenset(permissoes), frozenset(comandos),
-            frozenset(acoes_dos_aparelhos))
+            frozenset(acoes_dos_aparelhos), abrir_o_aparelho)
 
     def esquecer(self, ficha: str) -> None:
         self._fichas.pop(ficha, None)
@@ -1266,8 +1281,15 @@ class Porta:
 
     async def _enviar(self, con: _Conexao, writer: asyncio.StreamWriter, linha: bytes) -> None:
         async with con.trava:
-            writer.write(linha + b"\n")
-            await writer.drain()
+            fd, con.fd_da_resposta = con.fd_da_resposta, None
+            if fd is None:
+                writer.write(linha + b"\n")
+                await writer.drain()
+                return
+            try:
+                entregar_com_o_fd(writer.get_extra_info("socket"), linha + b"\n", fd)
+            finally:
+                os.close(fd)
 
     async def _despachar(
         self,
@@ -1288,6 +1310,8 @@ class Porta:
         if not isinstance(metodo, str) or not isinstance(params, dict):
             return _erro(req_id, CODE_INVALID_REQUEST, "method e params são obrigatórios")
         try:
+            if con.sessao is None and metodo == "aparelho.abrir":
+                return _resposta(req_id, await self._abrir_o_aparelho(con, params, par))
             if con.sessao is None:
                 if metodo != "mod.ola":
                     raise RecusaError(CODE_QUEM_E_VOCE, "a primeira palavra é mod.ola")
@@ -1343,6 +1367,28 @@ class Porta:
             raise RecusaError(CODE_METHOD_NOT_FOUND, f"método desconhecido: {metodo}")
         except RecusaError as recusa:
             return _erro(req_id, recusa.codigo, recusa.frase, recusa.dados)
+
+    async def _abrir_o_aparelho(self, con: _Conexao, params: dict[str, Any],
+                                par: tuple[int, int, int] | None) -> dict[str, Any]:
+        """A primeira e única palavra da conexão: o fd do nó declarado vai junto da resposta.
+
+        O nó abre fora da caixa, na hora do pedido: o aparelho que reiniciou e voltou com outro
+        nó se pede de novo, sem reabrir a caixa.
+        """
+        credencial = self._apresentar(params, par)
+        if credencial.abrir_o_aparelho is None:
+            raise RecusaError(CODE_SEM_PERMISSAO,
+                              "aparelho.abrir pede a permissão aparelhos e o aparelho declarado")
+        no = params.get("no")
+        try:
+            fd = await asyncio.to_thread(credencial.abrir_o_aparelho, no)
+        except (OSError, ValueError) as exc:
+            logger.info("mods_porta_aparelho_recusado", mod=credencial.mod_id, no=str(no)[:40],
+                        err=str(exc))
+            raise RecusaError(CODE_INVALID_PARAMS, str(exc)) from exc
+        con.fd_da_resposta = fd
+        logger.info("mods_porta_aparelho_entregue", mod=credencial.mod_id, no=no)
+        return {"no": no}
 
     def _apresentar(
         self, params: dict[str, Any], par: tuple[int, int, int] | None
@@ -2924,6 +2970,7 @@ __all__ = [
     "credencial_do_par",
     "descende_de",
     "entradas_de_todo_controle_no_servico",
+    "entregar_com_o_fd",
     "escritor_do_servico",
     "estado_dos_acessorios",
     "estado_vazio_dos_acessorios",

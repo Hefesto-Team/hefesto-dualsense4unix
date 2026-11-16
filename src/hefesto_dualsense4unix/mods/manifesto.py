@@ -667,7 +667,11 @@ _HEX4 = re.compile(r"^[0-9a-f]{4}$")
 
 
 class AparelhoDeclarado(BaseModel):
-    """Um aparelho que a caixa com ``aparelhos`` recebe: a classe do nó e o VID:PID do USB."""
+    """Um aparelho que a caixa com ``aparelhos`` recebe: a classe do nó e o VID:PID do USB.
+
+    ``pela_porta``: o nó nunca entra na caixa, e a extensão o pede à porta (``aparelho.abrir``),
+    inclusive o nó novo do aparelho que reinicia e volta com outro número.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -675,6 +679,7 @@ class AparelhoDeclarado(BaseModel):
     vid: str
     pid: str
     nome: str = Field(min_length=1, max_length=60)
+    pela_porta: bool = False
 
     @field_validator("vid", "pid")
     @classmethod

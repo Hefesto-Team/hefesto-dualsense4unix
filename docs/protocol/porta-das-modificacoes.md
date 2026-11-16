@@ -58,6 +58,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `chave.ligar` | `{}` | a `chave` no manifesto instalado | `{ligada}` |
 | `tela.ver` | `{tela?: {regioes: [...]}}` | `ler:jogo.tela` | `{status}` |
 | `tela.parar` | `{}` | `ler:jogo.tela` | `{status}` |
+| `aparelho.abrir` | `{ficha, no}`, primeira e única palavra da conexão | `aparelhos` e o aparelho declarado | `{no}`, com o descritor do nó junto (`SCM_RIGHTS`) |
 
 O `mira.peso` (ensaio) multiplica o giro de um controle, ou de todos, pelo ganho, até o prazo: na máscara Xbox, a
 deflexão do analógico e o cursor que o giro move; na máscara DualSense, os três eixos do giro que o pad virtual
@@ -765,10 +766,24 @@ manifesto declara, ligados agora: o `uinput`, o `uhid`, o `input/`, o controle e
 | `classe` | `hidraw` (o `/dev/hidrawN` do aparelho, no USB ou no Bluetooth), `tty` (a serial USB) ou `usb` (o `/dev/bus/usb/BBB/DDD`) |
 | `vid`, `pid` | quatro dígitos hexadecimais minúsculos |
 | `nome` | o que o aparelho é, até 60 caracteres, numa linha: o «sim» lista os aparelhos por ele |
+| `pela_porta` | `true`: o nó nunca entra na caixa, e a extensão o pede pelo `aparelho.abrir`; padrão `false` |
 
 Até 8, sem repetir classe e VID:PID; a lista sem a permissão recusa o manifesto, e a permissão sem a lista não abre
-aparelho nenhum. O aparelho declarado que entra depois da abertura (duas voltas da vigia, cerca de 2 s) reabre a
-caixa; o que sai e volta com o mesmo nó segue aberto.
+aparelho nenhum. O aparelho declarado sem `pela_porta` que entra depois da abertura (duas voltas da vigia, cerca de
+2 s) reabre a caixa, uma vez por minuto no máximo: o nó novo que aparece de novo dentro do minuto não reabre mais, e
+o diário diz `mods_aparelho_em_laco`. O que sai e volta com o mesmo nó segue aberto.
+
+### O nó pela porta
+
+O aparelho que reinicia e volta com outro nó (o adaptador `1a86:e429`, depois do `RESET;`) se declara com
+`pela_porta`: a caixa não o monta e não reabre por ele. A extensão abre uma conexão nova na porta e manda, como
+primeira e única palavra, `aparelho.abrir` com a ficha e o nome do nó que o `/sys` mostra (`hidraw7`). O serviço
+confere pelo `/sys` que o nó é de um aparelho declarado ligado agora, abre-o fora da caixa (leitura e escrita, sem
+bloquear) e confere que o aberto é o dispositivo com o número que o `/sys` dá ao nó; a resposta `{no}` leva o
+descritor junto, e a conexão fecha. A extensão lê a resposta com `recvmsg` (em Python, `socket.recv_fds`). O nó
+novo depois de uma queda se pede de novo, com o nome novo. O nó que não casa recusa com `-32003`; a extensão sem
+aparelho declarado, com `-32010`. Depois do `mod.ola`, o `aparelho.abrir` é método desconhecido: o descritor só
+viaja na conexão própria.
 
 ## O modo de aba (o que o manifesto declara)
 

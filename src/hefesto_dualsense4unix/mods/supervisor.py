@@ -19,6 +19,7 @@ import secrets
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import threading
@@ -109,6 +110,8 @@ DEVOLVIDO_COM_A_REDE: tuple[str, ...] = ("/run/systemd/resolve",)
 
 NOS_QUE_A_CAIXA_ACEITA: tuple[str, ...] = ("/dev/hidraw", "/dev/tty", "/dev/bus/usb/")
 
+JANELA_DO_LACO_DOS_APARELHOS_S = 60.0
+
 PASTA_DA_CAIXA: tuple[str, ...] = (
     "--config-net", "--quiet", "--foreground", "--no-map-gw", "-D", "none",
 )
@@ -142,6 +145,13 @@ def _comandos_do_lancador(manifesto: Manifesto) -> tuple[str, ...]:
     if not isinstance(comandos, list):
         return ()
     return tuple(c for c in comandos if isinstance(c, str) and c.strip())
+
+
+def _abridor_dos_aparelhos(manifesto: Manifesto) -> Callable[[Any], int] | None:
+    """O que a porta chama no ``aparelho.abrir`` desta extensão; ``None`` sem aparelho declarado."""
+    if "aparelhos" not in manifesto.permissoes or not manifesto.aparelhos:
+        return None
+    return lambda no: abrir_o_aparelho(manifesto, no)
 
 
 def _acoes_dos_aparelhos(manifesto: Manifesto) -> tuple[str, ...]:
@@ -189,6 +199,7 @@ class _Vigiada:
     manifesto: Manifesto | None = None
     aparelhos: tuple[str, ...] = ()
     aparelho_novo: bool = False
+    aparelho_em_laco: bool = False
 
 
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
@@ -565,48 +576,83 @@ def _vid_pid_do_hid(dispositivo: Path) -> tuple[str, str] | None:
     return None
 
 
+_Achado = tuple[tuple[str, str] | None, str, Path]
+
+
 def _nos_de_classe(onde: str, ler: Callable[[Path], tuple[str, str] | None]
-                   ) -> Callable[[Path], list[tuple[tuple[str, str] | None, str]]]:
-    def nos(sys_raiz: Path) -> list[tuple[tuple[str, str] | None, str]]:
+                   ) -> Callable[[Path], list[_Achado]]:
+    def nos(sys_raiz: Path) -> list[_Achado]:
         with contextlib.suppress(OSError):
-            return [(ler(no / "device"), f"/dev/{no.name}")
+            return [(ler(no / "device"), f"/dev/{no.name}", no)
                     for no in sorted((sys_raiz / onde).iterdir())]
         return []
     return nos
 
 
-def _nos_do_usb(sys_raiz: Path) -> list[tuple[tuple[str, str] | None, str]]:
-    fora: list[tuple[tuple[str, str] | None, str]] = []
+def _nos_do_usb(sys_raiz: Path) -> list[_Achado]:
+    fora: list[_Achado] = []
     with contextlib.suppress(OSError):
         for usb in sorted((sys_raiz / "bus/usb/devices").iterdir()):
             barramento, numero = _ler(usb / "busnum"), _ler(usb / "devnum")
             if barramento.isdigit() and numero.isdigit():
                 ids = (_ler(usb / "idVendor").lower(), _ler(usb / "idProduct").lower())
-                fora.append((ids, f"/dev/bus/usb/{int(barramento):03d}/{int(numero):03d}"))
+                fora.append((ids, f"/dev/bus/usb/{int(barramento):03d}/{int(numero):03d}", usb))
     return fora
 
 
-_NOS_POR_CLASSE: dict[str, Callable[[Path], list[tuple[tuple[str, str] | None, str]]]] = {
+_NOS_POR_CLASSE: dict[str, Callable[[Path], list[_Achado]]] = {
     "hidraw": _nos_de_classe("class/hidraw", _vid_pid_do_hid),
     "tty": _nos_de_classe("class/tty", _vid_pid_do_usb),
     "usb": _nos_do_usb,
 }
 
 
-def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> tuple[str, ...]:
-    """Os nós de ``/dev`` dos aparelhos declarados que estão ligados agora.
-
-    Só ``hidraw``, ``tty`` e ``usb``: o ``uinput``, o ``uhid`` e o ``input/`` nunca entram, e um
-    aparelho que não casa (o controle, o teclado) fica fora da caixa.
-    """
-    if "aparelhos" not in manifesto.permissoes or not manifesto.aparelhos:
-        return ()
-    pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos}
-    nos: list[str] = []
+def _casam(manifesto: Manifesto, sys_raiz: Path, *, so_os_da_caixa: bool) -> dict[str, Path]:
+    if "aparelhos" not in manifesto.permissoes:
+        return {}
+    pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos
+               if not (so_os_da_caixa and a.pela_porta)}
+    nos: dict[str, Path] = {}
     for classe, achar in _NOS_POR_CLASSE.items():
         if any(p[0] == classe for p in pedidos):
-            nos += [no for ids, no in achar(sys_raiz) if ids and (classe, *ids) in pedidos]
-    return tuple(dict.fromkeys(nos))
+            for ids, no, onde in achar(sys_raiz):
+                if ids and (classe, *ids) in pedidos:
+                    nos.setdefault(no, onde)
+    return nos
+
+
+def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> tuple[str, ...]:
+    """Os nós de ``/dev`` dos aparelhos declarados que estão ligados agora e entram na caixa.
+
+    Só ``hidraw``, ``tty`` e ``usb``: o ``uinput``, o ``uhid`` e o ``input/`` nunca entram, e um
+    aparelho que não casa (o controle, o teclado) fica fora da caixa. O declarado ``pela_porta``
+    também fica fora: a extensão o pede à porta (:func:`abrir_o_aparelho`).
+    """
+    return tuple(_casam(manifesto, sys_raiz, so_os_da_caixa=True))
+
+
+def abrir_o_aparelho(manifesto: Manifesto, no: Any, sys_raiz: Path = Path("/sys"),
+                     dev_raiz: Path = Path("/dev")) -> int:
+    """Abre, fora da caixa, o nó ``no`` (``hidraw7``) de um aparelho declarado ligado agora.
+
+    O nó tem de casar pelo ``/sys`` neste instante, e o que abriu tem de ser o dispositivo de
+    caractere com o número que o ``/sys`` dá a ele: o nó que renasceu com outro aparelho no
+    meio recusa. Levanta ``ValueError`` com a frase da recusa.
+    """
+    if not isinstance(no, str) or not no or no.startswith("/") or ".." in no.split("/"):
+        raise ValueError("aparelho.abrir: o no é o nome do nó, como hidraw7")
+    onde = _casam(manifesto, sys_raiz, so_os_da_caixa=False).get(f"/dev/{no}")
+    if onde is None:
+        raise ValueError(f"aparelho.abrir: {no} não é de um aparelho declarado ligado agora")
+    maior, _, menor = _ler(onde / "dev").partition(":")
+    if not (maior.isdigit() and menor.isdigit()):
+        raise ValueError(f"aparelho.abrir: o /sys não diz o número de {no}")
+    fd = os.open(dev_raiz / no, os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY)
+    visto = os.fstat(fd)
+    if not stat.S_ISCHR(visto.st_mode) or visto.st_rdev != os.makedev(int(maior), int(menor)):
+        os.close(fd)
+        raise ValueError(f"aparelho.abrir: {no} mudou de aparelho no meio da abertura")
+    return fd
 
 
 def frase_dos_aparelhos(manifesto: Manifesto) -> str:
@@ -983,6 +1029,7 @@ class Supervisor:
         self.prazo_para_parar_s = prazo_para_parar_s
         self.intervalo_s = intervalo_s
         self._vigiadas: dict[str, _Vigiada] = {}
+        self._reaberta_pelo_aparelho: dict[str, float] = {}
         self._estados: dict[str, EstadoDaModificacao] = {}
         self._laco: asyncio.Task[None] | None = None
         self._marca_do_registro: tuple[int, int] | None = None
@@ -1108,14 +1155,17 @@ class Supervisor:
     async def _conferir_os_aparelhos(self) -> None:
         """O aparelho declarado que entrou depois da abertura reabre a caixa, que o receba.
 
-        Duas voltas seguidas com o nó novo: o que só sai (e volta com o mesmo nó, como o
-        adaptador que reinicia ao abrir) não reabre nada, porque o nó da caixa segue o número.
+        Duas voltas seguidas com o nó novo: o que só sai (e volta com o mesmo nó) não reabre
+        nada, porque o nó da caixa segue o número. O declarado ``pela_porta`` nunca reabre. A
+        segunda reabertura antes de :data:`JANELA_DO_LACO_DOS_APARELHOS_S` não sai: o aparelho
+        que renasce com outro nó a cada abertura viraria laço.
         """
         for mod_id, vigiada in list(self._vigiadas.items()):
             manifesto = vigiada.manifesto
             processo = vigiada.processo
             if (manifesto is None or not self.bwrap or processo is None
-                    or processo.returncode is not None or not manifesto.aparelhos):
+                    or processo.returncode is not None or not manifesto.aparelhos
+                    or vigiada.aparelho_em_laco):
                 continue
             agora = await asyncio.to_thread(aparelhos_que_casam, manifesto)
             novos = set(agora) - set(vigiada.aparelhos)
@@ -1124,6 +1174,12 @@ class Supervisor:
             elif not vigiada.aparelho_novo:
                 vigiada.aparelho_novo = True
             elif (entrada := self._registro_lido.get(mod_id)) is not None:
+                antes = self._reaberta_pelo_aparelho.get(mod_id)
+                if antes is not None and time.monotonic() - antes < JANELA_DO_LACO_DOS_APARELHOS_S:
+                    vigiada.aparelho_em_laco = True
+                    logger.warning("mods_aparelho_em_laco", mod=mod_id, nos=sorted(novos))
+                    continue
+                self._reaberta_pelo_aparelho[mod_id] = time.monotonic()
                 logger.info("mods_aparelho_novo_reabre", mod=mod_id, nos=sorted(novos))
                 await self._comecar(entrada)
 
@@ -1416,7 +1472,8 @@ class Supervisor:
             return None
         self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes,
                              comandos=_comandos_do_lancador(manifesto),
-                             acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto))
+                             acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto),
+                             abrir_o_aparelho=_abridor_dos_aparelhos(manifesto))
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
         return processo
 
@@ -1510,12 +1567,14 @@ __all__ = [
     "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
     "FALTA_O_BWRAP",
+    "JANELA_DO_LACO_DOS_APARELHOS_S",
     "NOS_QUE_A_CAIXA_ACEITA",
     "PASTA_DA_CAIXA",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
     "Supervisor",
+    "abrir_o_aparelho",
     "aparelhos_que_casam",
     "comando_na_caixa",
     "diario_da_extensao",
