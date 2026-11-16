@@ -136,6 +136,7 @@ def _tarballs(cache: Path) -> list[str]:
 
 def test_o_proton_sobe_troca_os_jogos_apaga_as_velhas_e_guarda_uma_para_voltar(
         steam: dict[str, Any]) -> None:
+    """D-1611-O-ATUALIZAR-TROCA-E-LIMPA: a nova sobe e a velha sai."""
     lista = _so_o_proton()
     assert _rodar(lista, ["proton"]) == 0, at.ler_o_andamento()
     linha = at.ler_o_andamento()["pecas"][0]
