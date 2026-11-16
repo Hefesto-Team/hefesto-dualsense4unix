@@ -318,6 +318,52 @@ def test_o_sim_da_chave_mostra_o_vid_pid_e_grava_o_aparelho_aceito(lar, ctx, tmp
     assert _entrada(lar, "toque").aparelhos_aceitos == ["hidraw:1a86:e429"]
 
 
+def test_o_sys_se_le_no_clique_e_a_pintura_so_repete(lar, ctx, tmp_path, monkeypatch) -> None:
+    from hefesto_dualsense4unix.mods import supervisor
+
+    lidos: list[str] = []
+
+    def nome(classe: str, vid: str, pid: str, *_a: object, **_k: object) -> str:
+        lidos.append(f"{vid}:{pid}")
+        return "Adaptador de mentira"
+
+    monkeypatch.setattr(supervisor, "nome_no_sys", nome)
+    a07 = _a07()
+    aparelho = {"classe": "hidraw", "vid": "1a86", "pid": "e429", "nome": "Adaptador"}
+    _instalar(a07, ctx, _fonte(tmp_path, permissoes=("aparelhos",),
+                               extra={"aparelhos": [aparelho]}))
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    a07.mais_da_modificacao(ctx, {"v": "toque:" + a07.exp.ACOES_DO_MENU[1][0]}, _Ponte())
+    assert lidos == ["1a86:e429", "1a86:e429"]
+    for _ in range(5):
+        html = a07._a_pintura_agora(ctx)["blocos"][".ext-lista"]
+        assert "ligado agora: «Adaptador de mentira»" in html
+    assert lidos == ["1a86:e429", "1a86:e429"]
+
+
+def test_atualizar_com_aparelho_novo_arma_a_chave_com_ele(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    antigo = {"classe": "hidraw", "vid": "1915", "pid": "520a", "nome": "Antigo"}
+    novo = {"classe": "hidraw", "vid": "1a86", "pid": "e429", "nome": "Novo"}
+    pasta = _fonte(tmp_path, permissoes=("aparelhos",), extra={"aparelhos": [antigo]})
+    _instalar(a07, ctx, pasta)
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _entrada(lar, "toque").ligada is False
+    manifesto = json.loads((pasta / "hefesto-mod.json").read_text(encoding="utf-8"))
+    manifesto["versao"], manifesto["aparelhos"] = "0.2", [antigo, novo]  # (noqa-acento)
+    (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    feito = a07.mais_da_modificacao(ctx, {"v": "toque:atualizar"}, _Ponte())
+    assert "permissão nova" in feito["recado"]
+    assert "(hidraw 1a86:e429" in feito["blocos"][".ext-lista"]
+    assert "Aceitar e ligar" in feito["blocos"][".ext-lista"]
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    entrada = _entrada(lar, "toque")
+    assert entrada.ligada is True
+    assert entrada.aparelhos_aceitos == ["hidraw:1915:520a", "hidraw:1a86:e429"]
+
+
 _AVISO = "Não é afiliada à marca. Jogue só o que você comprou."
 
 
@@ -724,7 +770,7 @@ def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_do_usuario(lar, ctx, mo
     a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "kytyps5", "toque"
     item = a07._Instalada(manifesto=None, entrada=SimpleNamespace(
         id="toque", nome="Toque", versao="1.0", origem="oficial", ligada=True,
-        permissoes_aceitas=[]))
+        permissoes_aceitas=[], aparelhos_aceitos=None))
     monkeypatch.setattr(a07, "_a_instalada", lambda mod_id: item)
     a07.mais_da_modificacao(ctx, {"v": "toque", "onde": exp.ONDE_DA_CONF}, _Ponte())
     assert a07._MEXIDA.menu == "toque" and a07._MEXIDA.menu_na_conf

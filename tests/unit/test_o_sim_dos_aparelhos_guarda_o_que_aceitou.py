@@ -23,6 +23,7 @@ import pytest
 from rich.console import Console
 
 from hefesto_dualsense4unix.cli import cmd_mod
+from hefesto_dualsense4unix.mods import de_fabrica_por_endereco as fabrica
 from hefesto_dualsense4unix.mods import supervisor as sup
 from hefesto_dualsense4unix.mods.instalador import (
     InstalacaoRecusadaError,
@@ -40,9 +41,15 @@ from hefesto_dualsense4unix.mods.manifesto import (
     pedidos_do_sim,
     permissoes_novas,
 )
+from tests.unit.test_a_extensao_de_fabrica_por_endereco_chega_pelo_install import (
+    NOVA,
+    _lista,
+    _repo,
+    lg,
+)
 from tests.unit.test_as_modificacoes_rodam_fora_do_daemon import _supervisor, curto, lar
 
-__all__ = ["curto", "lar"]
+__all__ = ["curto", "lar", "lg"]
 
 E429 = {"classe": "hidraw", "vid": "1a86", "pid": "e429", "nome": "Adaptador"}
 ANTIGO = {"classe": "hidraw", "vid": "1915", "pid": "520a", "nome": "Adaptador antigo"}
@@ -247,3 +254,29 @@ def test_a_lovense_publicada_segue_aceita() -> None:
     manifesto = Manifesto.model_validate(lovense)
     assert [p for p in pedidos_do_sim(manifesto) if p.startswith("aparelho:")] == [
         "aparelho:hidraw:1a86:e429", "aparelho:hidraw:1915:520a", "aparelho:tty:1915:520a"]
+
+
+def _de_fabrica_com_aparelhos(tmp_path: Path) -> str:
+    return _repo(tmp_path, NOVA, tipos=["tema", "processo"],
+                 processo={"executar": ["python3", "m.py"]},
+                 permissoes=["tema", "aparelhos"], aparelhos=[E429])
+
+
+def test_a_de_fabrica_com_aparelhos_chega_ligada_com_eles_aceitos(
+        lg: Lugares, tmp_path: Path) -> None:
+    lista = _lista(tmp_path, {"id": NOVA, "endereco": _de_fabrica_com_aparelhos(tmp_path)})
+    feitos = fabrica.trazer(lugares=lg, arquivo=lista)
+    assert [(f.id, f.o_que, f.frase) for f in feitos] == [(NOVA, "ligada", "")]
+    entrada = ler_registro(lg.registro)[NOVA]
+    assert entrada.ligada and entrada.aparelhos_aceitos == ["hidraw:1a86:e429"]
+
+
+def test_a_de_fabrica_com_aparelhos_que_nasceu_desligada_se_liga_com_eles(
+        lg: Lugares, tmp_path: Path) -> None:
+    endereco = _de_fabrica_com_aparelhos(tmp_path)
+    instalar(endereco, lugares=lg)
+    lg.registro.with_name(fabrica.TRAZIDAS).write_text(json.dumps({"trazidas": [NOVA]}))
+    feitos = fabrica.trazer(lugares=lg, arquivo=_lista(tmp_path, {"id": NOVA,
+                                                                  "endereco": endereco}))
+    assert [(f.id, f.o_que, f.frase) for f in feitos] == [(NOVA, "ligada", "")]
+    assert ler_registro(lg.registro)[NOVA].aparelhos_aceitos == ["hidraw:1a86:e429"]

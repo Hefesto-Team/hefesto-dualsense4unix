@@ -1231,6 +1231,7 @@ class _Mexida:
     mod: str = ""
     impedimentos: tuple[Any, ...] = ()
     vistas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
+    frases: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
     html_conf: str = ""
     html_imp: str = ""
     html_mod: str = ""
@@ -1253,6 +1254,7 @@ class _Mexida:
         self.menu_na_conf = False
         self.impedimentos = ()
         self.vistas = {}
+        self.frases = {}
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
         self.ligas = {}
@@ -1418,6 +1420,21 @@ def _frases_do_sim(manifesto: Any, entrada: Any) -> list[str]:
     return [frase_do_pedido(x, manifesto) for x in pedidos_do_sim(manifesto)]
 
 
+def _guardar_as_frases(mod_id: str, manifesto: Any, entrada: Any) -> None:
+    """O clique lê o ``/sys`` uma vez; a pintura só repete o que o clique guardou."""
+    _MEXIDA.frases[mod_id] = tuple(_frases_do_sim(manifesto, entrada))
+
+
+def _frases_guardadas(manifesto: Any, entrada: Any) -> list[str]:
+    from hefesto_dualsense4unix.mods.instalador import aceitos_de
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, pedidos_do_sim
+
+    if entrada.id in _MEXIDA.frases:
+        return list(_MEXIDA.frases[entrada.id])
+    pedidas = pedidos_do_sim(manifesto) if manifesto is not None else aceitos_de(entrada)
+    return [o_que_a_permissao_deixa(x) for x in pedidas]
+
+
 def _extensao_de(item: _Instalada) -> Any:
     """A linha do quadro «Extensões» de uma modificação instalada."""
     from hefesto_dualsense4unix.mods.instalador import aviso_por_ver
@@ -1427,7 +1444,7 @@ def _extensao_de(item: _Instalada) -> Any:
     if _MEXIDA.menu == e.id and not _MEXIDA.menu_na_conf:
         aviso = aviso_por_ver(e, item.manifesto) if item.manifesto is not None else ""
         menu = exp.menu_html(
-            e.id, [x for x in (aviso,) if x] + _frases_do_sim(item.manifesto, e)
+            e.id, [x for x in (aviso,) if x] + _frases_guardadas(item.manifesto, e)
             if _MEXIDA.permissoes == e.id else None, remover=_MEXIDA.remover == e.id)
     dica = item.manifesto.descricao if item.manifesto is not None else ""
     versao = e.versao
@@ -1460,7 +1477,7 @@ def _o_que_pede(item: _Instalada) -> str:
     if not (permissoes_novas(aceitos_de(e), list(pedidas)) or aviso) or (
             _MEXIDA.vistas.get(e.id) != (*pedidas, aviso)):
         return ""
-    return " ".join([x for x in (aviso,) if x] + _frases_do_sim(m, e))
+    return " ".join([x for x in (aviso,) if x] + _frases_guardadas(m, e))
 
 
 def _jogos_da_fila(lanc: desenho.Lancador) -> str:
@@ -1754,6 +1771,7 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
         if (permissoes_novas(aceitos_de(entrada), list(pedidas)) or aviso) and (
                 _MEXIDA.vistas.get(mod_id) != (*pedidas, aviso)):
             _MEXIDA.vistas[mod_id] = (*pedidas, aviso)
+            _guardar_as_frases(mod_id, manifesto, entrada)
             return None
         ligar(mod_id, permissoes_vistas=pedidas, aviso_visto=aviso, lugares=lg)
         _MEXIDA.vistas.pop(mod_id, None)
@@ -2108,7 +2126,8 @@ def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         return _a_pintura_agora(ctx)
     _MEXIDA.menu, _MEXIDA.menu_na_conf = mod_id, na_conf
     if acao == "permissoes":  # (noqa-acento)
-        _a_instalada(mod_id)
+        item = _a_instalada(mod_id)
+        _guardar_as_frases(mod_id, item.manifesto, item.entrada)
         _MEXIDA.permissoes, _MEXIDA.remover = mod_id, ""
         _repintar_a_conf_da(mod_id)
         return _a_pintura_agora(ctx)
@@ -2143,6 +2162,7 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
     O primeiro clique em Remover troca o botão por «Confirmar remoção» e devolve ``None``.
     """
     from hefesto_dualsense4unix.mods.instalador import atualizar, aviso_por_ver, remover
+    from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim
 
     item = _a_instalada(mod_id)
     nome = item.entrada.nome
@@ -2154,7 +2174,8 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
             REGISTRO.esquecer()
             aviso = aviso_por_ver(feito.entrada, feito.manifesto)
             if feito.permissoes_novas or aviso:
-                _MEXIDA.vistas[mod_id] = (*sorted(feito.manifesto.permissoes), aviso)
+                _MEXIDA.vistas[mod_id] = (*sorted(pedidos_do_sim(feito.manifesto)), aviso)
+                _guardar_as_frases(mod_id, feito.manifesto, feito.entrada)
                 _MEXIDA.menu = _MEXIDA.permissoes = mod_id
                 _MEXIDA.remover = ""
             extra = (" A extensão pede permissão nova: ligue-a de novo para aceitar."
@@ -2319,7 +2340,7 @@ def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
     if mod_id and _MEXIDA.menu == mod_id and _MEXIDA.menu_na_conf:
         item = _a_instalada(mod_id)
         menu = exp.menu_html(
-            mod_id, _frases_do_sim(item.manifesto, item.entrada)
+            mod_id, _frases_guardadas(item.manifesto, item.entrada)
             if _MEXIDA.permissoes == mod_id else None, remover=_MEXIDA.remover == mod_id,
             fecha=True)
     elif not mod_id and _MEXIDA.menu == chave:

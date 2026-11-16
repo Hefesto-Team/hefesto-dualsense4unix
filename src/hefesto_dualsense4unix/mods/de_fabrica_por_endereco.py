@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     ligar,
     manifesto_instalado,
 )
+from hefesto_dualsense4unix.mods.manifesto import pedidos_do_sim
 
 ARQUIVO = Path(__file__).resolve().parent / "de_fabrica_por_endereco.json"
 TRAZIDAS = "mods-de-fabrica.json"
@@ -143,7 +144,7 @@ def _trazer_uma(item: DeFabrica, lg: Lugares, instalar_: Callable[..., Any],
         if not _nasceu_desligada(item, lg, entrada):
             return Feito(item.id, o_que)
         try:
-            permissoes = manifesto_instalado(item.id, lugares=lg).permissoes
+            permissoes = pedidos_do_sim(manifesto_instalado(item.id, lugares=lg))
         except InstalacaoRecusadaError as exc:
             return Feito(item.id, o_que, exc.frase)
         return _ligar(item, lg, ligar_, permissoes, o_que)
@@ -155,7 +156,7 @@ def _trazer_uma(item: DeFabrica, lg: Lugares, instalar_: Callable[..., Any],
         return Feito(item.id, "ligada")
     if not item.ligar:
         return Feito(item.id, "instalada")
-    return _ligar(item, lg, ligar_, resultado.manifesto.permissoes, "instalada")
+    return _ligar(item, lg, ligar_, pedidos_do_sim(resultado.manifesto), "instalada")
 
 
 def trazer(*, lugares: Lugares | None = None, arquivo: Path = ARQUIVO,
