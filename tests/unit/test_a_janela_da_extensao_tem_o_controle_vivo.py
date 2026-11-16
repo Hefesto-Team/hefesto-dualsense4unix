@@ -19,7 +19,13 @@ from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.interface import controle_vivo as cv
 from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
-from hefesto_dualsense4unix.mods.porta import JANELA_DO_AO_VIVO_S, Porta, estado_dos_acessorios
+from hefesto_dualsense4unix.mods.porta import (
+    CONTROLES_DO_AO_VIVO,
+    ESCRITAS_POR_CONTROLE,
+    JANELA_DO_AO_VIVO_S,
+    Porta,
+    estado_dos_acessorios,
+)
 from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import (  # noqa: F401
     P1,
     _Extensao,
@@ -113,6 +119,56 @@ def test_a_escrita_de_mais_de_30_s_sai_da_faixa(curto) -> None:  # noqa: F811
 
     antes, depois = asyncio.run(corrida())
     assert len(antes) == 1 and depois == []
+
+
+def test_a_memoria_tem_teto_por_controle_e_guarda_no_maximo_quatro(tmp_path: pathlib.Path) -> None:
+    async def escritor(metodo: str, pedido: dict[str, Any]) -> Any:
+        return {"status": "ok"}
+
+    relogio = _Relogio()
+    uniqs = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 6)]
+    porta = Porta(tmp_path / "x.sock", EventBus(), escritor=escritor,
+                  o_jogo_escreve=lambda uniq, canal: False, uniq_do_posto=lambda: P1,
+                  relogio=relogio,
+                  controles=lambda: [{"uniq": u, "jogador": n} for n, u in enumerate(uniqs, 1)])
+    for passo in range(ESCRITAS_POR_CONTROLE + 50):
+        relogio.t += 0.001
+        porta._anotar_a_escrita("exemplo", "luz" if passo % 2 else "som", uniqs[0])
+    for uniq in [*uniqs[1:], ""]:
+        relogio.t += 0.001
+        porta._anotar_a_escrita("exemplo", "mira", uniq)
+    filas = porta._escritas["exemplo"]
+    assert sum(1 for u in filas if u) == CONTROLES_DO_AO_VIVO and "" in filas
+    assert uniqs[0] not in filas, "o quinto controle tira o que escreveu há mais tempo"
+    assert all(len(f) <= ESCRITAS_POR_CONTROLE for f in filas.values())
+    jogadores = {t["jogador"] for t in porta.ao_vivo_de("exemplo")["trechos"]}
+    assert jogadores == {2, 3, 4, 5, None}
+
+
+def test_a_memoria_se_zera_quando_a_extensao_desliga_e_quando_sai(curto) -> None:  # noqa: F811
+    relogio = _Relogio()
+
+    async def corrida() -> tuple[int, int, int]:
+        porta = await _porta(curto, relogio, set())
+        ext = _Extensao(curto / "mods.sock")
+        try:
+            await asyncio.to_thread(ext.pedir, "mod.ola", {"ficha": "ficha"})
+            await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
+            antes = len(porta.ao_vivo_de("exemplo")["trechos"])
+            await asyncio.to_thread(ext.pedir, "acessorios.estado", {"ligado": False})
+            desligada = len(porta.ao_vivo_de("exemplo")["trechos"])
+            await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
+        finally:
+            ext.fechar()
+        for _ in range(100):
+            if not porta.vivas():
+                break
+            await asyncio.sleep(0.02)
+        saiu = len(porta.ao_vivo_de("exemplo")["trechos"])
+        await porta.parar()
+        return antes, desligada, saiu
+
+    assert asyncio.run(corrida()) == (1, 0, 0)
 
 
 @pytest.mark.parametrize(("limiar", "vale"), [(0, True), (10, True), (11, False), (True, False)])

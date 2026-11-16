@@ -596,7 +596,8 @@ _LADOS = ("esquerdo", "direito")
 
 JANELA_DO_AO_VIVO_S = 30.0
 JUNTA_DO_AO_VIVO_S = 0.6
-ESCRITAS_DO_AO_VIVO = 2048
+ESCRITAS_POR_CONTROLE = 512
+CONTROLES_DO_AO_VIVO = 4
 TRECHOS_DO_AO_VIVO = 240
 
 _DA_MEMORIA = {"memoria.varrer": "varrer", "memoria.refinar": "refinar"}
@@ -1141,7 +1142,7 @@ class Porta:
         self._publicacoes: dict[str, deque[float]] = {}
         self._aparelhos_pedidos: dict[str, deque[float]] = {}
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
-        self._escritas: dict[str, deque[tuple[float, str, str]]] = {}
+        self._escritas: dict[str, dict[str, deque[tuple[float, str]]]] = {}
         self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
         self._botoes_antes: dict[str | None, frozenset[str]] | None = None
         self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
@@ -1276,6 +1277,8 @@ class Porta:
             if con.deu_o_estado and con.sessao is not None:
                 vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
                 self._estados_dos_acessorios[con.sessao.mod_id] = vazio
+            if con.sessao is not None:
+                self._esquecer_as_escritas(con.sessao.mod_id)
                 if "ler:acessorios.gesto" in con.sessao.permissoes:
                     self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
             if con.acessorio_preso() and con.sessao is not None:
@@ -1845,6 +1848,8 @@ class Porta:
         con.deu_o_estado = True
         serie = self._series[con.sessao.mod_id] = self._series.get(con.sessao.mod_id, 0) + 1
         self._estados_dos_acessorios[con.sessao.mod_id] = {**estado, "serie": serie}
+        if estado.get("ligado") is not True:
+            self._esquecer_as_escritas(con.sessao.mod_id)
         if "ler:acessorios.gesto" in con.sessao.permissoes:
             self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
         return {"recebido": True}
@@ -2004,8 +2009,16 @@ class Porta:
     def _anotar_a_escrita(self, mod_id: str, canal: str, uniq: str) -> None:
         """O que chegou ao controle, para a faixa «Ao vivo» da janela: só o que foi escrito de
         fato (nem a recusa, nem o pedido coberto por um mais forte)."""
-        fila = self._escritas.setdefault(mod_id, deque(maxlen=ESCRITAS_DO_AO_VIVO))
-        fila.append((self._relogio(), canal, uniq))
+        filas = self._escritas.setdefault(mod_id, {})
+        if uniq not in filas and uniq and sum(1 for u in filas if u) >= CONTROLES_DO_AO_VIVO:
+            velho = min((u for u in filas if u), key=lambda u: filas[u][-1][0] if filas[u] else 0)
+            del filas[velho]
+        filas.setdefault(uniq, deque(maxlen=ESCRITAS_POR_CONTROLE)).append(
+            (self._relogio(), canal))
+
+    def _esquecer_as_escritas(self, mod_id: str) -> None:
+        """A extensão desligou ou saiu: a faixa «Ao vivo» da extensão recomeça vazia."""
+        self._escritas.pop(mod_id, None)
 
     def _controles_do_ao_vivo(self) -> list[dict[str, Any]]:
         if self._controles is None:
@@ -2023,9 +2036,11 @@ class Porta:
         de_ms, ate_ms}`` (há quanto tempo começou e acabou); as escritas de um canal a menos de
         ``JUNTA_DO_AO_VIVO_S`` uma da outra viram um trecho só. Nunca leva o ``uniq``."""
         agora = self._relogio()
-        fila = self._escritas.get(mod_id)
-        while fila and agora - fila[0][0] > JANELA_DO_AO_VIVO_S:
-            fila.popleft()
+        filas = self._escritas.get(mod_id) or {}
+        for fila in filas.values():
+            while fila and agora - fila[0][0] > JANELA_DO_AO_VIVO_S:
+                fila.popleft()
+        escritas = sorted((t, canal, uniq) for uniq, fila in filas.items() for t, canal in fila)
         controles = self._controles_do_ao_vivo()
         jogador_de = {c["uniq"]: c.get("jogador") for c in controles}
         abertos: dict[tuple[str, str], list[int]] = {}
@@ -2037,7 +2052,7 @@ class Porta:
                             "jogador": jogador if isinstance(jogador, int) else None,
                             "de_ms": par[0], "ate_ms": par[1]})
 
-        for t, canal, uniq in fila or ():
+        for t, canal, uniq in escritas:
             ha = max(0, round((agora - t) * 1000))
             chave = (canal, uniq)
             par = abertos.get(chave)
