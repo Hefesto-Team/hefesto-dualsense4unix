@@ -6423,8 +6423,8 @@ class IpcHandlersMixin:
 
         Sem ``alvo``, a ação é uma das declaradas para a janela; com ele (o ``id``
         de um aparelho), uma das ``aparelhos_acoes``, e ``valor`` (verdadeiro ou falso) é a chave
-        ``ligar``; ou um dos ``controles`` que o aparelho publicou (``_conferir_a_acao``).
-        ``{enviada}`` é falso quando a extensão não está conectada à porta.
+        ``ligar``; ou um dos ``controles`` do aparelho (``_conferir_a_acao``). ``{enviada}`` é falso
+        sem a extensão na porta; a ação com ``responde`` volta ``{enviada, respondeu, resposta}``.
         """
         mod = self._mod_do_pedido(params)
         acao = params.get("acao")  # (noqa-acento)
@@ -6443,7 +6443,7 @@ class IpcHandlersMixin:
         declaradas = (geridos.acoes if geridos else []) if alvo is not None else manifesto.acoes
         conhecida = any(a.id == acao for a in declaradas)
         _conferir_a_acao(manifesto, porta, mod, alvo, acao, valor, conhecida)
-        return {"enviada": bool(porta.acao(mod, acao, alvo=alvo, valor=valor))}
+        return await _enviar_a_acao(porta, mod, acao, alvo, valor, declaradas)
 
     async def _handle_mods_livre(self, params: dict[str, Any]) -> dict[str, Any]:
         """O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``.
@@ -6537,6 +6537,14 @@ def _conferir_a_acao(manifesto: Any, porta: Any, mod: str, alvo: str | None, aca
         onde = "nos aparelhos" if alvo is not None else "na janela"
         raise ValueError(f"«{manifesto.nome}» não declara a ação «{acao}» {onde}.")
     _conferir_o_valor_do_controle(controle, valor)
+
+
+async def _enviar_a_acao(porta: Any, mod: str, acao: str, alvo: str | None, valor: Any,
+                         declaradas: list[Any]) -> dict[str, Any]:
+    """A ação declarada com ``responde`` espera a resposta da extensão; as outras só saem."""
+    if any(a.id == acao and a.responde for a in declaradas):
+        return dict(await porta.acao_com_resposta(mod, acao, alvo=alvo, valor=valor))
+    return {"enviada": bool(porta.acao(mod, acao, alvo=alvo, valor=valor))}
 
 
 def _controle_do_alvo(manifesto: Any, porta: Any, mod: str, alvo: str | None,

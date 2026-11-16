@@ -2221,6 +2221,37 @@ class Porta:
             dados["valor"] = valor
         return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)
 
+    async def acao_com_resposta(self, mod_id: str, acao: str, *, alvo: str | None = None,
+                                valor: bool | str | None = None) -> dict[str, Any]:
+        """A ação que o manifesto declara com ``responde``: o ``extensao.acao`` leva o ``id`` e a
+        porta espera a ``extensao.resposta {para: id, dados}`` por até
+        :data:`PRAZO_DA_RESPOSTA_S`. ``{enviada, respondeu, resposta}``: ``enviada`` falso sem a
+        extensão na porta; ``respondeu`` falso sem a resposta no prazo."""
+        if not self._conexoes_de(mod_id):
+            return {"enviada": False, "respondeu": False, "resposta": None}
+        dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # (noqa-acento)
+        if valor is not None:
+            dados["valor"] = valor
+        respondeu, resposta = await self._esperar_a_resposta(mod_id, EVENTO_DA_ACAO, dados, "a")
+        return {"enviada": True, "respondeu": respondeu, "resposta": resposta}
+
+    async def _esperar_a_resposta(self, mod_id: str, evento: str, dados: dict[str, Any],
+                                  prefixo: str) -> tuple[bool, Any]:
+        """Avisa ``mod_id`` com um ``id`` novo nos ``dados`` e espera a ``extensao.resposta``
+        dele: ``(respondeu, resposta)``."""
+        self._serie_da_mensagem += 1
+        ident = f"{prefixo}{self._serie_da_mensagem}"
+        espera: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
+        self._esperas[ident] = (mod_id, espera)
+        try:
+            self._avisar_a(mod_id, evento, {**dados, "id": ident})
+            try:
+                return True, await asyncio.wait_for(espera, PRAZO_DA_RESPOSTA_S)
+            except asyncio.TimeoutError:
+                return False, None
+        finally:
+            self._esperas.pop(ident, None)
+
     def livre(self, mod_id: str, opcao_id: str, valor: float, *, soltou: bool,
               modo: str | None = None) -> bool:
         """O arrastar do ``livre``: ``extensao.livre {mod, id, valor, soltou, modo?}`` só para
@@ -2295,18 +2326,8 @@ class Porta:
                 CODE_INVALID_PARAMS,
                 f"a página manda até {MENSAGENS_POR_SEGUNDO} mensagens por segundo")
         janela.append(agora)
-        self._serie_da_mensagem += 1
-        ident = f"m{self._serie_da_mensagem}"
-        espera: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
-        self._esperas[ident] = (mod_id, espera)
-        try:
-            self._avisar_a(mod_id, EVENTO_DA_MENSAGEM, {"mod": mod_id, "id": ident, "dados": dados})
-            try:
-                resposta, respondeu = await asyncio.wait_for(espera, PRAZO_DA_RESPOSTA_S), True
-            except asyncio.TimeoutError:
-                resposta, respondeu = None, False
-        finally:
-            self._esperas.pop(ident, None)
+        respondeu, resposta = await self._esperar_a_resposta(
+            mod_id, EVENTO_DA_MENSAGEM, {"mod": mod_id, "dados": dados}, "m")
         return {"enviada": True, "respondeu": respondeu, "resposta": resposta}
 
     def _responder(self, mod_id: str, params: dict[str, Any]) -> dict[str, Any]:

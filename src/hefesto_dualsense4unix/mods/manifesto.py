@@ -500,6 +500,7 @@ class Acao(BaseModel):
     rotulo: str = Field(min_length=1, max_length=30)
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
     icone: Literal["procurar", "testar", "esquecer", "ligar", "atualizar"] | None = None
+    responde: bool = False
 
     @field_validator("id")
     @classmethod

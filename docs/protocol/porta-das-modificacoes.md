@@ -671,9 +671,10 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar:acessorios.estado` (ou
 `ler:acessorios.gesto`): a resposta da extensão é o estado que a extensão devolve, e é ele que tira o «Em curso».
 
-- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?}]`. O `id` é chave (até 32 letras minúsculas, números,
+- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?, responde?}]`. O `id` é chave (até 32 letras minúsculas, números,
   hífen e sublinhado), o `rotulo` tem até 30 letras, o `grupo` é a aba em que o botão mora (sem ele, a primeira) e o `icone`
-  é `procurar`, `testar`, `esquecer`, `ligar` ou `atualizar`. Id repetido recusa o manifesto.
+  é `procurar`, `testar`, `esquecer`, `ligar` ou `atualizar`. Id repetido recusa o manifesto. Com `responde: true`
+  (desde 16/11/2026, também nas `aparelhos_acoes`), o clique espera a resposta da extensão (ver `mods.acao` abaixo).
 - **`aparelhos_acoes`**: `{grupo?, acoes: [{id, rotulo, icone?}]}` (de 1 a 6 ações), as ações de cada aparelho que a extensão
   devolve em `acessorios.estado` com `id`. A ação `ligar` é a chave do cartão (o clique pede o contrário do
   `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com
@@ -718,7 +719,9 @@ A extensão recebe estes como eventos (`{"method": "evento", "params": {"topico"
 
 - `extensao.acao` com `dados: {mod, acao, alvo, valor?}`: `alvo` é o `id` do aparelho (ou `null` nas `acoes` da
   janela) e `valor` vem só na chave `ligar` (`true` liga) e nos `controles` do aparelho: a `acao` é o `id` do
-  controle, e o `valor`, o pedido (a chave, `true` ou `false`; a paleta e a escolha, o `id` da opção);
+  controle, e o `valor`, o pedido (a chave, `true` ou `false`; a paleta e a escolha, o `id` da opção). Na ação
+  com `responde: true`, os `dados` levam também o `id` da vez, e a extensão responde por
+  `extensao.resposta {para: id, dados}`, em até 1 s e uma vez só, como na página;
 - `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou, modo?}`: no máximo 20 por segundo. O primeiro
   arrastar abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora,
   fora do compasso, e leva o valor final. `modo` vem só no `livre` com `modos`, e diz o que fazer ao soltar;
@@ -735,6 +738,13 @@ não publicou no último estado (ou de um manifesto sem `aparelhos_controles`), 
 controle, o `livre` de outro `id`, o `deslizante` que o manifesto não declara ou o valor fora da faixa dele, o `modo` de um `livre` sem `modos` e o `modo` fora dos três. O botão
 diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
 `mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
+
+Na ação com `responde: true`, o `mods.acao` espera a `extensao.resposta` por até 1 s e volta
+`{enviada, respondeu, resposta}`: `respondeu` falso, e `resposta` nula, quando a extensão não respondeu a tempo (o
+pedido saiu do mesmo jeito); sem `responde`, nada espera e a volta segue `{enviada}`. A resposta de um «Testar» que
+toca nos controles tem esta forma, para a janela dizer onde tocou: `{controles: [{uniq, tocou, motivo}]}`, um item por
+controle tentado, com `tocou` verdadeiro ou falso e `motivo` (até 120 letras, ou `null` quando tocou) a frase da
+recusa que a porta devolveu, como «no Modo Nativo o jogo fala direto com o controle».
 
 ### A página da extensão
 
