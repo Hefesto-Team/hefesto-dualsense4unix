@@ -6,7 +6,8 @@ Versão da porta: **2** (`API_DAS_MODIFICACOES`, em `src/hefesto_dualsense4unix/
 `">=1,<3"` aceita as duas. O `lancador.abrir`, o `mira.ligada`, o `vibracao.escala` e o tópico <!-- ref-externa: método da porta das extensões, não do daemon -->
 `jogo.estilo` (14/11/2026) e o `corpo.ligar` (16/11/2026) entraram na 2 sem mudar a faixa: a extensão que os pede declara as
 permissões novas, e o Hefesto que não as conhece recusa o manifesto com a frase. O mesmo vale para o
-`responde` das ações (16/11/2026).
+`responde` das ações (16/11/2026). O campo `em_cena` do `perfil.trocou` (16/11/2026) também entrou na 2: é um campo <!-- ref-externa: tópico do barramento, não método do daemon -->
+a mais, e quem não o lê segue igual.
 
 ## O que o filho recebe
 
@@ -168,11 +169,12 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `nome: "jogo.fechou"` (`{appid, t}`) diz que o jogo em cena saiu; quem vibrava recebe antes o zero que
   faltava. A batida roda no tique do gamepad virtual do P1, e `jogo.fechou` sai do tique do autoswitch (só com
   ele ligado): no Modo Nativo o Hefesto não vê a vibração;
-- `perfil.jogo` (`ler:perfil.jogo`) entrega `nome: "perfil.trocou"`: `{perfil, jogo, estilo, controles: [...], memoria, t}`,
-  em que `jogo` é a chave do jogo em cena (`steam_app_<N>`, ou `null` fora de jogo), `perfil` o nome do perfil
-  efetivo e `estilo` a chave do estilo dele (ou `null`). `controles` tem um item por controle,
-  `{jogador, perfil, jogo, estilo}`, com o número que o controle acende (ou `null`): a extensão segue o
-  controle cujo `jogo` está na lista que a pessoa escolheu. Sai a cada troca de perfil, de jogo ou de estilo
+- `perfil.jogo` (`ler:perfil.jogo`) entrega `nome: "perfil.trocou"`: `{perfil, jogo, em_cena, estilo, controles: [...],
+  memoria, t}`, em que `jogo` é a chave do jogo em cena (`steam_app_<N>`, ou `null` fora de jogo e no jogo sem appid),
+  `em_cena` diz se há jogo aberto, com appid ou sem (o jogo nativo do Linux, fora da Steam, também: é a mesma
+  pergunta que decide o modo do controle), `perfil` o nome do perfil efetivo e `estilo` a chave do estilo dele (ou
+  `null`). `controles` tem um item por controle, `{jogador, perfil, jogo, em_cena, estilo}`, com o número que o
+  controle acende (ou `null`): a extensão segue o controle cujo `jogo` está na lista que a pessoa escolheu. Sai a cada troca de perfil, de jogo ou de estilo
   (no arquivo do perfil), e quando um controle entra ou sai; quando o jogo fecha, sai depois do `jogo.fechou`.
   `memoria` (desde 02/11/2026) diz se a chave «Memória» do jogo em cena está ligada, pelo mesmo arquivo que o
   leitor lê ao abrir o jogo (`false` fora de jogo), e sai de novo quando a chave muda;
@@ -235,8 +237,9 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   [{jogador, estilo}], t}`, em que `estilo` é a chave do catálogo dos estilos
   (`src/hefesto_dualsense4unix/profiles/estilos_de_jogo.py`, como `terror`, `fps`, `corrida`, `luta`) do perfil
   que vale, ou `null` (sem estilo, fora do catálogo, ou sem jogo aberto: desde 16/11/2026 o estilo do perfil só
-  vale com o jogo em cena, o do serviço para `estilo` e o de cada controle para o dele, e o perfil do jogo que
-  fechou não deixa o estilo dele), e `jogo` a mesma chave do `perfil.jogo`. Sai do
+  vale com o jogo em cena, pelo `em_cena` do `perfil.trocou`, o do serviço para `estilo` e o de cada controle para o <!-- ref-externa: tópico do barramento, não método do daemon -->
+  dele; o jogo nativo sem appid também está em cena, e o perfil do jogo que fechou não deixa o estilo dele), e
+  `jogo` a mesma chave do `perfil.jogo` (`null` no jogo sem appid, com o estilo dele). Sai do
   `perfil.trocou` só quando o estilo, o jogo ou o estilo de um controle muda: ao abrir e ao trocar de jogo. É <!-- ref-externa: tópico do barramento, não método do daemon -->
   estado: quem assina depois recebe o de agora logo na assinatura.
 - `modo.aba` (`ler:modo.aba`) entrega `nome: "modo.aba"`: `{uniq, jogador, secoes: {controles, gatilhos, luz,
