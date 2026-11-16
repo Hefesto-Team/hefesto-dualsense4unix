@@ -777,13 +777,22 @@ o diário diz `mods_aparelho_em_laco`. O que sai e volta com o mesmo nó segue a
 
 O aparelho que reinicia e volta com outro nó (o adaptador `1a86:e429`, depois do `RESET;`) se declara com
 `pela_porta`: a caixa não o monta e não reabre por ele. A extensão abre uma conexão nova na porta e manda, como
-primeira e única palavra, `aparelho.abrir` com a ficha e o nome do nó que o `/sys` mostra (`hidraw7`). O serviço
-confere pelo `/sys` que o nó é de um aparelho declarado ligado agora, abre-o fora da caixa (leitura e escrita, sem
-bloquear) e confere que o aberto é o dispositivo com o número que o `/sys` dá ao nó; a resposta `{no}` leva o
-descritor junto, e a conexão fecha. A extensão lê a resposta com `recvmsg` (em Python, `socket.recv_fds`). O nó
-novo depois de uma queda se pede de novo, com o nome novo. O nó que não casa recusa com `-32003`; a extensão sem
-aparelho declarado, com `-32010`. Depois do `mod.ola`, o `aparelho.abrir` é método desconhecido: o descritor só
-viaja na conexão própria.
+primeira e única palavra, `aparelho.abrir` com a ficha e o nome do nó que o `/sys` mostra (`hidraw7`). A cada
+pedido o serviço confere, de novo:
+
+- a ficha e o processo, como no `mod.ola`, e que a execução que pede é a que está de pé;
+- no registro de agora, que a extensão está ligada e que a permissão `aparelhos` tem o «sim»;
+- até 4 pedidos por segundo por extensão; acima disso, `-32014`;
+- que o nome é só o nome do nó (sem `/`, sem `..`) e está na pasta `hidraw` ou `tty` do `/sys`, com o VID:PID de um
+  aparelho declarado, ligado agora: a classe vem do `/sys`, nunca do nome, e o `usb` cru não sai pela porta;
+- que o nó abre sem seguir link (`O_NOFOLLOW`, com `O_CLOEXEC`, leitura e escrita, sem bloquear) e é o dispositivo de
+  caractere com o número que o `/sys` dá a ele.
+
+A resposta `{no}` leva o descritor junto, e a conexão fecha: uma conexão, um descritor. A extensão lê a resposta com
+`recvmsg` e o `MSG_CMSG_CLOEXEC` (o `socket.recv_fds` do Python não repassa o flag). O nó novo depois de uma queda
+se pede de novo, com o nome novo. A recusa do nó vem com `-32003`; a extensão sem aparelho declarado, com `-32010`.
+Depois do `mod.ola`, o `aparelho.abrir` é método desconhecido: o descritor só viaja na conexão própria. A extensão
+que declara o aparelho sem `pela_porta` segue com o nó montado na caixa, como antes.
 
 ## O modo de aba (o que o manifesto declara)
 

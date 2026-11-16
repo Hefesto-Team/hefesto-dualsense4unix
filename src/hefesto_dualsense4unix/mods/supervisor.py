@@ -147,13 +147,6 @@ def _comandos_do_lancador(manifesto: Manifesto) -> tuple[str, ...]:
     return tuple(c for c in comandos if isinstance(c, str) and c.strip())
 
 
-def _abridor_dos_aparelhos(manifesto: Manifesto) -> Callable[[Any], int] | None:
-    """O que a porta chama no ``aparelho.abrir`` desta extensão; ``None`` sem aparelho declarado."""
-    if "aparelhos" not in manifesto.permissoes or not manifesto.aparelhos:
-        return None
-    return lambda no: abrir_o_aparelho(manifesto, no)
-
-
 def _acoes_dos_aparelhos(manifesto: Manifesto) -> tuple[str, ...]:
     """Os ids das ``aparelhos_acoes``: a porta recusa o controle de aparelho que repete um deles."""
     geridos = manifesto.aparelhos_acoes
@@ -607,14 +600,18 @@ _NOS_POR_CLASSE: dict[str, Callable[[Path], list[_Achado]]] = {
 }
 
 
-def _casam(manifesto: Manifesto, sys_raiz: Path, *, so_os_da_caixa: bool) -> dict[str, Path]:
+CLASSES_PELA_PORTA: tuple[str, ...] = ("hidraw", "tty")
+
+
+def _casam(manifesto: Manifesto, sys_raiz: Path, *, so_os_da_caixa: bool,
+           classes: tuple[str, ...] = tuple(_NOS_POR_CLASSE)) -> dict[str, Path]:
     if "aparelhos" not in manifesto.permissoes:
         return {}
     pedidos = {(a.classe, a.vid, a.pid) for a in manifesto.aparelhos
                if not (so_os_da_caixa and a.pela_porta)}
     nos: dict[str, Path] = {}
     for classe, achar in _NOS_POR_CLASSE.items():
-        if any(p[0] == classe for p in pedidos):
+        if classe in classes and any(p[0] == classe for p in pedidos):
             for ids, no, onde in achar(sys_raiz):
                 if ids and (classe, *ids) in pedidos:
                     nos.setdefault(no, onde)
@@ -631,23 +628,31 @@ def aparelhos_que_casam(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> 
     return tuple(_casam(manifesto, sys_raiz, so_os_da_caixa=True))
 
 
+def nos_pela_porta(manifesto: Manifesto, sys_raiz: Path = Path("/sys")) -> dict[str, Path]:
+    """Os nós ``hidraw`` e ``tty`` dos aparelhos declarados ligados agora, com a pasta do ``/sys``
+    de cada um: só eles saem pela porta, nunca o ``usb`` cru."""
+    return _casam(manifesto, sys_raiz, so_os_da_caixa=False, classes=CLASSES_PELA_PORTA)
+
+
 def abrir_o_aparelho(manifesto: Manifesto, no: Any, sys_raiz: Path = Path("/sys"),
                      dev_raiz: Path = Path("/dev")) -> int:
     """Abre, fora da caixa, o nó ``no`` (``hidraw7``) de um aparelho declarado ligado agora.
 
-    O nó tem de casar pelo ``/sys`` neste instante, e o que abriu tem de ser o dispositivo de
-    caractere com o número que o ``/sys`` dá a ele: o nó que renasceu com outro aparelho no
-    meio recusa. Levanta ``ValueError`` com a frase da recusa.
+    Só ``hidraw`` e ``tty``, e a classe vem do ``/sys``: o nó tem de estar na pasta da classe,
+    com o VID:PID declarado, neste instante. O que abriu (sem seguir link) tem de ser o
+    dispositivo de caractere com o número que o ``/sys`` dá a ele: o nó que renasceu com outro
+    aparelho no meio recusa. Levanta ``ValueError`` com a frase da recusa.
     """
-    if not isinstance(no, str) or not no or no.startswith("/") or ".." in no.split("/"):
+    if not isinstance(no, str) or not no or "/" in no or no in (".", ".."):
         raise ValueError("aparelho.abrir: o no é o nome do nó, como hidraw7")
-    onde = _casam(manifesto, sys_raiz, so_os_da_caixa=False).get(f"/dev/{no}")
+    onde = nos_pela_porta(manifesto, sys_raiz).get(f"/dev/{no}")
     if onde is None:
         raise ValueError(f"aparelho.abrir: {no} não é de um aparelho declarado ligado agora")
     maior, _, menor = _ler(onde / "dev").partition(":")
     if not (maior.isdigit() and menor.isdigit()):
         raise ValueError(f"aparelho.abrir: o /sys não diz o número de {no}")
-    fd = os.open(dev_raiz / no, os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY)
+    fd = os.open(dev_raiz / no,
+                 os.O_RDWR | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOCTTY | os.O_NOFOLLOW)
     visto = os.fstat(fd)
     if not stat.S_ISCHR(visto.st_mode) or visto.st_rdev != os.makedev(int(maior), int(menor)):
         os.close(fd)
@@ -1473,9 +1478,37 @@ class Supervisor:
         self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes,
                              comandos=_comandos_do_lancador(manifesto),
                              acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto),
-                             abrir_o_aparelho=_abridor_dos_aparelhos(manifesto))
+                             abrir_o_aparelho=self._abridor_dos_aparelhos(manifesto,
+                                                                          vigiada.ficha))
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
         return processo
+
+    def _abridor_dos_aparelhos(self, manifesto: Manifesto,
+                               ficha: str) -> Callable[[Any], int] | None:
+        """O que a porta chama no ``aparelho.abrir`` desta execução; ``None`` sem aparelho
+        declarado. A cada pedido, o «sim» e a chave se conferem de novo (:meth:`_o_sim_vale`)."""
+        if "aparelhos" not in manifesto.permissoes or not manifesto.aparelhos:
+            return None
+
+        def abrir(no: Any) -> int:
+            self._o_sim_vale(manifesto.id, ficha)
+            return abrir_o_aparelho(manifesto, no)
+        return abrir
+
+    def _o_sim_vale(self, mod_id: str, ficha: str) -> None:
+        """O registro de agora diz que a extensão está ligada e que ``aparelhos`` tem o «sim», e
+        a execução que pede é a que está de pé; senão, ``ValueError`` com a frase da recusa."""
+        try:
+            entrada = ler_registro(self.lugares.registro).get(mod_id)
+        except InstalacaoRecusadaError as exc:
+            raise ValueError(f"aparelho.abrir: o registro não se lê: {exc.frase}") from exc
+        if entrada is None or not entrada.ligada:
+            raise ValueError("aparelho.abrir: a extensão não está ligada")
+        if "aparelhos" not in entrada.permissoes_aceitas:
+            raise ValueError("aparelho.abrir: a permissão aparelhos não tem o «sim»")
+        vigiada = self._vigiadas.get(mod_id)
+        if vigiada is None or vigiada.ficha != ficha:
+            raise ValueError("aparelho.abrir: esta execução da extensão não está mais de pé")
 
     async def _ligar_a_chave(self, mod_id: str) -> bool:
         """A chave da extensão ``mod_id`` gravada ligada, como o clique da janela; ``False`` sem a
@@ -1556,6 +1589,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
 __all__ = [
     "A_REDE_INCLUI_A_INTERNET",
     "A_REDE_INCLUI_A_MAQUINA",
+    "CLASSES_PELA_PORTA",
     "DEVOLVIDO_COM_A_PERMISSAO",
     "DEVOLVIDO_COM_A_REDE",
     "DIARIO_DA_MODIFICACAO",
@@ -1581,6 +1615,7 @@ __all__ = [
     "frase_da_rede",
     "frase_dos_aparelhos",
     "linha_do_pasta",
+    "nos_pela_porta",
     "ocupada_na_casa",
     "parar_o_grupo",
     "pastas_dos_jogos",

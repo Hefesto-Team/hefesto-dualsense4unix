@@ -18,6 +18,7 @@ import shutil
 import socket
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -25,7 +26,12 @@ import pytest
 from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.mods import supervisor as sup
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
-from hefesto_dualsense4unix.mods.porta import CODE_SEM_PERMISSAO, Porta
+from hefesto_dualsense4unix.mods.porta import (
+    APARELHOS_POR_SEGUNDO,
+    CODE_SEM_PERMISSAO,
+    CODE_TETO_CHEIO,
+    Porta,
+)
 from tests.conftest import exigir_caixa_do_bwrap
 from tests.unit.test_as_modificacoes_rodam_fora_do_daemon import curto
 
@@ -220,30 +226,35 @@ def test_o_aparelho_que_entra_depois_reabre_a_caixa(monkeypatch: pytest.MonkeyPa
 
 
 _PELA_PORTA = {**_ADAPTADOR, "pela_porta": True}
+_E429 = "0003:00001A86:0000E429"
+_DUALSENSE = "0003:0000054C:00000CE6"
+_DEV = Path("/dev")
 _NULO = os.stat("/dev/null").st_rdev
 _ZERO = os.stat("/dev/zero").st_rdev
 
 
-def _no_de_mentira(sys_: Path, dev: Path, no: str, hid_id: str, alvo: str = "/dev/null") -> None:
-    """Um hidraw no ``/sys`` com o número do ``/dev/null``; no ``dev``, o nó leva a ``alvo``."""
+def _no_de_mentira(sys_: Path, no: str, hid_id: str, numero_de: str | None = None) -> None:
+    """Um hidraw ``no`` no ``/sys``, com o número do ``/dev/<numero_de>`` (padrão: o próprio).
+
+    Os nós são os de caractere que todo sistema tem (``null``, ``zero``, ``full``): a porta abre
+    o ``/dev`` de verdade, sem seguir link, e nenhum hidraw de verdade se abre.
+    """
     dispositivo = sys_ / "devices/hid" / no
     dispositivo.mkdir(parents=True, exist_ok=True)
     (dispositivo / "uevent").write_text(f"DRIVER=hid-generic\nHID_ID={hid_id}\n")
     classe = sys_ / "class/hidraw" / no
     classe.mkdir(parents=True, exist_ok=True)
-    (classe / "dev").write_text(f"{os.major(_NULO)}:{os.minor(_NULO)}\n")
+    real = _DEV / (numero_de or no)
+    numero = os.stat(real).st_rdev if real.exists() else 0
+    (classe / "dev").write_text(f"{os.major(numero)}:{os.minor(numero)}\n")
     if not (classe / "device").is_symlink():
         (classe / "device").symlink_to(dispositivo)
-    dev.mkdir(exist_ok=True)
-    (dev / no).unlink(missing_ok=True)
-    (dev / no).symlink_to(alvo)
 
 
-def _renascer(sys_: Path, dev: Path, de: str, para: str) -> None:
+def _renascer(sys_: Path, de: str, para: str) -> None:
     """O ``RESET;``: o hidraw ``de`` some e o mesmo adaptador volta como ``para``."""
     shutil.rmtree(sys_ / "class/hidraw" / de)
-    (dev / de).unlink()
-    _no_de_mentira(sys_, dev, para, "0003:00001A86:0000E429")
+    _no_de_mentira(sys_, para, _E429)
 
 
 def test_o_declarado_pela_porta_nunca_entra_na_caixa(tmp_path: Path) -> None:
@@ -253,24 +264,71 @@ def test_o_declarado_pela_porta_nunca_entra_na_caixa(tmp_path: Path) -> None:
     assert sup.aparelhos_que_casam(misto, sys_) == ("/dev/ttyACM0",)
 
 
-def test_abrir_o_aparelho_confere_o_sys_e_o_numero_do_no(tmp_path: Path) -> None:
-    sys_, dev = _sys_de_mentira(tmp_path), tmp_path / "dev"
-    _no_de_mentira(sys_, dev, "hidraw3", "0003:00001A86:0000E429")
-    _no_de_mentira(sys_, dev, "hidraw4", "0003:0000054C:00000CE6")
+def test_a_lovense_sem_pela_porta_segue_com_o_no_montado(tmp_path: Path) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    velha = _manifesto(["aparelhos"], [_ADAPTADOR, {**_ADAPTADOR, "vid": "1915", "pid": "520a"}])
+    assert sup.aparelhos_que_casam(velha, sys_) == ("/dev/hidraw3",)
+
+
+def test_abrir_o_aparelho_so_abre_o_no_declarado_pelo_sys(tmp_path: Path) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    _no_de_mentira(sys_, "null", _E429)
+    _no_de_mentira(sys_, "full", _DUALSENSE)
     manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
-    fd = sup.abrir_o_aparelho(manifesto, "hidraw3", sys_, dev)
+    fd = sup.abrir_o_aparelho(manifesto, "null", sys_, _DEV)
     try:
         assert os.fstat(fd).st_rdev == _NULO
+        assert os.get_inheritable(fd) is False
     finally:
         os.close(fd)
-    for torto in ("hidraw4", "hidraw/../uinput", "/dev/hidraw3", "", 7, None, "uinput"):
+    for torto in ("full", "uinput", "uhid", "input/event3", "hidraw/../uinput", "/dev/null",
+                  "../null", "..", "", 7, None, "zero"):
         with pytest.raises(ValueError, match=r"aparelho\.abrir"):
-            sup.abrir_o_aparelho(manifesto, torto, sys_, dev)
+            sup.abrir_o_aparelho(manifesto, torto, sys_, _DEV)
     with pytest.raises(ValueError, match=r"aparelho\.abrir"):
-        sup.abrir_o_aparelho(_manifesto([]), "hidraw3", sys_, dev)
-    _no_de_mentira(sys_, dev, "hidraw3", "0003:00001A86:0000E429", alvo="/dev/zero")
+        sup.abrir_o_aparelho(_manifesto([]), "null", sys_, _DEV)
+
+
+def test_a_porta_nao_abre_o_usb_cru(tmp_path: Path) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    usb = _manifesto(["aparelhos"], [{**_ADAPTADOR, "classe": "usb"}])
+    assert sup.aparelhos_que_casam(usb, sys_) == ("/dev/bus/usb/003/007",)
+    assert sup.nos_pela_porta(usb, sys_) == {}
+    classes = ("hidraw", "tty", "usb")
+    tudo = _manifesto(["aparelhos"], [{**_ADAPTADOR, "classe": c} for c in classes])
+    assert sorted(sup.nos_pela_porta(tudo, sys_)) == ["/dev/hidraw3", "/dev/ttyACM0"]
+    with pytest.raises(ValueError, match=r"aparelho\.abrir"):
+        sup.abrir_o_aparelho(usb, "bus/usb/003/007", sys_, _DEV)
+    with pytest.raises(ValueError, match="não é de um aparelho declarado"):
+        sup.abrir_o_aparelho(usb, "007", sys_, _DEV / "bus/usb/003")
+
+
+def test_o_nome_com_barra_nunca_vira_caminho(tmp_path: Path,
+                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    monkeypatch.setattr(sup, "_casam", lambda *a, **k: {"/dev/input/event3": sys_,
+                                                       "/dev/../null": sys_})
+    manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
+    for torto in ("input/event3", "../null"):
+        with pytest.raises(ValueError, match="o no é o nome do nó"):
+            sup.abrir_o_aparelho(manifesto, torto, sys_, _DEV)
+
+
+def test_o_numero_do_no_tem_de_bater_com_o_sys(tmp_path: Path) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    _no_de_mentira(sys_, "null", _E429, numero_de="zero")
     with pytest.raises(ValueError, match="mudou de aparelho"):
-        sup.abrir_o_aparelho(manifesto, "hidraw3", sys_, dev)
+        sup.abrir_o_aparelho(_manifesto(["aparelhos"], [_PELA_PORTA]), "null", sys_, _DEV)
+
+
+def test_o_no_que_e_link_nao_se_segue(tmp_path: Path) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    _no_de_mentira(sys_, "null", _E429)
+    dev = tmp_path / "dev"
+    dev.mkdir()
+    (dev / "null").symlink_to("/dev/null")
+    with pytest.raises(OSError):
+        sup.abrir_o_aparelho(_manifesto(["aparelhos"], [_PELA_PORTA]), "null", sys_, dev)
 
 
 def _pedir_o_fd(caminho: Path, pedido: dict[str, Any]) -> tuple[dict[str, Any], list[int]]:
@@ -288,41 +346,79 @@ def _abrir(no: str, ficha: str = "ficha") -> dict[str, Any]:
             "params": {"ficha": ficha, "no": no}}
 
 
-async def _porta_com_o_aparelho(pasta: Path, manifesto: Manifesto, sys_: Path, dev: Path,
-                                pid: int) -> Porta:
+class _Relogio:
+    def __init__(self) -> None:
+        self.agora = 100.0
+
+    def __call__(self) -> float:
+        return self.agora
+
+
+async def _porta_com_o_aparelho(pasta: Path, manifesto: Manifesto, sys_: Path,
+                                pid: int, relogio: _Relogio | None = None) -> Porta:
     async def escritor(metodo: str, pedido: dict[str, Any]) -> Any:
         return {"status": "ok"}
 
     porta = Porta(pasta / "porta.sock", EventBus(), escritor=escritor,
-                  o_jogo_escreve=lambda uniq, canal: False, uniq_do_posto=lambda: None)
+                  o_jogo_escreve=lambda uniq, canal: False, uniq_do_posto=lambda: None,
+                  relogio=relogio or _Relogio())
     await porta.iniciar()
     porta.registrar("ficha", "exemplo", pid, manifesto.permissoes,
-                    abrir_o_aparelho=lambda no: sup.abrir_o_aparelho(manifesto, no, sys_, dev))
+                    abrir_o_aparelho=lambda no: sup.abrir_o_aparelho(manifesto, no, sys_, _DEV))
     return porta
 
 
 def test_o_no_que_renasce_se_pede_de_novo_pela_porta(curto: Path) -> None:
-    sys_, dev = _sys_de_mentira(curto), curto / "dev"
-    _no_de_mentira(sys_, dev, "hidraw3", "0003:00001A86:0000E429")
+    sys_ = _sys_de_mentira(curto)
+    _no_de_mentira(sys_, "null", _E429)
     manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
+    relogio = _Relogio()
 
     async def cena() -> None:
-        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, dev, os.getpid())
+        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, os.getpid(), relogio)
         try:
-            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("hidraw3"))
-            assert resposta["result"] == {"no": "hidraw3"} and len(fds) == 1, resposta
+            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("null"))
+            assert resposta["result"] == {"no": "null"} and len(fds) == 1, resposta
             assert os.fstat(fds[0]).st_rdev == _NULO
             os.close(fds[0])
-            _renascer(sys_, dev, "hidraw3", "hidraw9")
-            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("hidraw3"))
+            _renascer(sys_, "null", "zero")
+            relogio.agora += 1
+            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("null"))
             assert "error" in resposta and fds == [], "o nó que sumiu não abre mais"
-            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("hidraw9"))
-            assert resposta["result"] == {"no": "hidraw9"} and len(fds) == 1, resposta
+            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("zero"))
+            assert resposta["result"] == {"no": "zero"} and len(fds) == 1, resposta
+            assert os.fstat(fds[0]).st_rdev == _ZERO
             assert os.write(fds[0], b"RESET;\r\n") == 8
             os.close(fds[0])
             resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho,
-                                                    _abrir("hidraw9", "outra"))
+                                                    _abrir("zero", "outra"))
             assert resposta["error"]["message"] == "ficha desconhecida" and fds == []
+        finally:
+            await porta.parar()
+
+    asyncio.run(cena())
+
+
+def test_o_aparelho_abrir_tem_teto_por_segundo(curto: Path) -> None:
+    sys_ = _sys_de_mentira(curto)
+    _no_de_mentira(sys_, "null", _E429)
+    manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
+    relogio = _Relogio()
+
+    async def cena() -> None:
+        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, os.getpid(), relogio)
+        try:
+            for _ in range(APARELHOS_POR_SEGUNDO):
+                resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho,
+                                                        _abrir("null"))
+                assert len(fds) == 1, resposta
+                os.close(fds[0])
+            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("null"))
+            assert resposta["error"]["code"] == CODE_TETO_CHEIO and fds == [], resposta
+            relogio.agora += 1
+            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("null"))
+            assert len(fds) == 1, "passado o segundo, o pedido volta a sair"
+            os.close(fds[0])
         finally:
             await porta.parar()
 
@@ -339,7 +435,7 @@ def test_sem_aparelho_declarado_a_porta_nao_entrega_fd(curto: Path) -> None:
         await porta.iniciar()
         porta.registrar("ficha", "exemplo", os.getpid(), ["aparelhos"])
         try:
-            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("hidraw3"))
+            resposta, fds = await asyncio.to_thread(_pedir_o_fd, porta.caminho, _abrir("null"))
             assert resposta["error"]["code"] == CODE_SEM_PERMISSAO and fds == [], resposta
         finally:
             await porta.parar()
@@ -348,8 +444,8 @@ def test_sem_aparelho_declarado_a_porta_nao_entrega_fd(curto: Path) -> None:
 
 
 def test_o_aparelho_abrir_so_vale_como_primeira_palavra(curto: Path) -> None:
-    sys_, dev = _sys_de_mentira(curto), curto / "dev"
-    _no_de_mentira(sys_, dev, "hidraw3", "0003:00001A86:0000E429")
+    sys_ = _sys_de_mentira(curto)
+    _no_de_mentira(sys_, "null", _E429)
     manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
 
     def depois_do_ola(caminho: Path) -> tuple[dict[str, Any], list[int]]:
@@ -357,15 +453,15 @@ def test_o_aparelho_abrir_so_vale_como_primeira_palavra(curto: Path) -> None:
             sock.settimeout(5)
             sock.connect(str(caminho))
             ola = {"jsonrpc": "2.0", "id": 0, "method": "mod.ola", "params": {"ficha": "ficha"}}
-            sock.sendall((json.dumps(ola) + "\n" + json.dumps(_abrir("hidraw3")) + "\n").encode())
-            lido, fds = b"", []
+            sock.sendall((json.dumps(ola) + "\n" + json.dumps(_abrir("null")) + "\n").encode())
+            lido, fds = b"", list[int]()
             while lido.count(b"\n") < 2:
                 cru, novos, _, _ = socket.recv_fds(sock, 65536, 1)
                 lido, fds = lido + cru, fds + novos
         return json.loads(lido.splitlines()[1]), fds
 
     async def cena() -> None:
-        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, dev, os.getpid())
+        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, os.getpid())
         try:
             resposta, fds = await asyncio.to_thread(depois_do_ola, porta.caminho)
             assert "desconhecido" in resposta["error"]["message"] and fds == [], resposta
@@ -375,10 +471,37 @@ def test_o_aparelho_abrir_so_vale_como_primeira_palavra(curto: Path) -> None:
     asyncio.run(cena())
 
 
+def test_o_sim_e_a_chave_se_conferem_a_cada_pedido(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sys_ = _sys_de_mentira(tmp_path)
+    _no_de_mentira(sys_, "null", _E429)
+    manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
+    real = sup.abrir_o_aparelho
+    monkeypatch.setattr(sup, "abrir_o_aparelho", lambda m, no: real(m, no, sys_, _DEV))
+    entrada = SimpleNamespace(ligada=True, permissoes_aceitas=["aparelhos"])
+    monkeypatch.setattr(sup, "ler_registro", lambda caminho: {"exemplo": entrada})
+    supervisor = sup.Supervisor.__new__(sup.Supervisor)
+    supervisor.lugares = SimpleNamespace(registro=tmp_path / "registro.json")  # type: ignore[assignment]
+    supervisor._vigiadas = {"exemplo": sup._Vigiada("exemplo", ficha="ficha")}
+    abrir = supervisor._abridor_dos_aparelhos(manifesto, "ficha")
+    assert abrir is not None
+    os.close(abrir("null"))
+    entrada.ligada = False
+    with pytest.raises(ValueError, match="não está ligada"):
+        abrir("null")
+    entrada.ligada, entrada.permissoes_aceitas = True, []
+    with pytest.raises(ValueError, match="não tem o «sim»"):
+        abrir("null")
+    entrada.permissoes_aceitas = ["aparelhos"]
+    supervisor._vigiadas = {"exemplo": sup._Vigiada("exemplo", ficha="outra")}
+    with pytest.raises(ValueError, match="não está mais de pé"):
+        abrir("null")
+    assert supervisor._abridor_dos_aparelhos(_manifesto(["aparelhos"]), "ficha") is None
+
+
 _NA_CAIXA = """
 import json, os, socket, sys, time
 caminho, no = sys.argv[1], sys.argv[2]
-print("no_na_caixa", os.path.exists("/dev/" + no))
 for _ in range(50):
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
         sock.connect(caminho)
@@ -389,7 +512,7 @@ for _ in range(50):
     resposta = json.loads(cru)
     if fds:
         break
-    time.sleep(0.1)
+    time.sleep(0.25)
 print("resposta", json.dumps(resposta))
 print("rdev", os.fstat(fds[0]).st_rdev if fds else None)
 print("escreveu", os.write(fds[0], b"DeviceType;\\r\\n") if fds else None)
@@ -399,21 +522,22 @@ print("escreveu", os.write(fds[0], b"DeviceType;\\r\\n") if fds else None)
 def test_com_o_bwrap_real_o_no_que_renasce_chega_pela_porta(curto: Path) -> None:
     """D-1511-O-APARELHO-QUE-RENASCE-VEM-PELA-PORTA."""
     exigir_caixa_do_bwrap()
-    sys_, dev = _sys_de_mentira(curto), curto / "dev"
-    _no_de_mentira(sys_, dev, "hidraw3", "0003:00001A86:0000E429")
-    _renascer(sys_, dev, "hidraw3", "hidraw9")
+    sys_ = _sys_de_mentira(curto)
+    _no_de_mentira(sys_, "null", _E429)
+    _renascer(sys_, "null", "zero")
     manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
 
     async def cena() -> str:
-        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, dev, -1)
+        porta = await _porta_com_o_aparelho(curto, manifesto, sys_, -1)
         argv = _caixa(curto, manifesto, ["/usr/bin/python3", "-I", "-c", _NA_CAIXA,
-                                         str(porta.caminho), "hidraw9"],
+                                         str(porta.caminho), "zero"],
                       aparelhos=sup.aparelhos_que_casam(manifesto, sys_))
-        assert not any("hidraw" in a for a in argv[:argv.index("--")])
+        assert "--dev-bind-try" not in argv and "--dev-bind" not in argv
         processo = await asyncio.create_subprocess_exec(
             *argv, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
         porta.registrar("ficha", "exemplo", processo.pid, manifesto.permissoes,
-                        abrir_o_aparelho=lambda no: sup.abrir_o_aparelho(manifesto, no, sys_, dev))
+                        abrir_o_aparelho=lambda no: sup.abrir_o_aparelho(manifesto, no, sys_,
+                                                                         _DEV))
         try:
             saida, _ = await asyncio.wait_for(processo.communicate(), timeout=60)
         finally:
@@ -422,9 +546,8 @@ def test_com_o_bwrap_real_o_no_que_renasce_chega_pela_porta(curto: Path) -> None
 
     saida = asyncio.run(cena())
     visto = dict(linha.split(" ", 1) for linha in saida.splitlines() if " " in linha)
-    assert visto.get("no_na_caixa") == "False", saida
-    assert json.loads(visto["resposta"]).get("result") == {"no": "hidraw9"}, saida
-    assert visto["rdev"] == str(_NULO), saida
+    assert json.loads(visto["resposta"]).get("result") == {"no": "zero"}, saida
+    assert visto["rdev"] == str(_ZERO), saida
     assert visto["escreveu"] == "13", saida
 
 
@@ -453,17 +576,17 @@ def _vigia_de_mentira(manifesto: Manifesto, aparelhos: tuple[str, ...]
 
 def test_o_reset_do_adaptador_pela_porta_nunca_reabre_a_caixa(
         curto: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    sys_, dev = _sys_de_mentira(curto), curto / "dev"
+    sys_ = _sys_de_mentira(curto)
     real = sup.aparelhos_que_casam
     monkeypatch.setattr(sup, "aparelhos_que_casam", lambda m, *a: real(m, sys_))
-    _no_de_mentira(sys_, dev, "hidraw3", "0003:00001A86:0000E429")
+    _no_de_mentira(sys_, "hidraw20", _E429)
     manifesto = _manifesto(["aparelhos"], [_PELA_PORTA])
     supervisor, _vigiada, reabertas = _vigia_de_mentira(manifesto, ())
 
     async def resets() -> None:
-        atual = "hidraw3"
-        for numero in range(10, 16):
-            _renascer(sys_, dev, atual, f"hidraw{numero}")
+        atual = "hidraw20"
+        for numero in range(21, 27):
+            _renascer(sys_, atual, f"hidraw{numero}")
             atual = f"hidraw{numero}"
             for _ in range(3):
                 await supervisor._conferir_os_aparelhos()

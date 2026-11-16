@@ -84,6 +84,7 @@ CODE_SEM_PONTE = -32015
 JANELA_DA_VIBRACAO_DO_JOGO_S = 2.0
 
 PUBLICACOES_POR_SEGUNDO = 20
+APARELHOS_POR_SEGUNDO = 4
 
 PRAZO_PARA_FECHAR_S = 2.0
 PRAZO_DA_CAPTURA_SAIR_S = 2.0
@@ -1127,6 +1128,7 @@ class Porta:
         self._conexoes: set[_Conexao] = set()
         self._relogio = relogio
         self._publicacoes: dict[str, deque[float]] = {}
+        self._aparelhos_pedidos: dict[str, deque[float]] = {}
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
         self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
         self._botoes_antes: dict[str | None, frozenset[str]] | None = None
@@ -1379,6 +1381,14 @@ class Porta:
         if credencial.abrir_o_aparelho is None:
             raise RecusaError(CODE_SEM_PERMISSAO,
                               "aparelho.abrir pede a permissão aparelhos e o aparelho declarado")
+        agora = self._relogio()
+        janela = self._aparelhos_pedidos.setdefault(credencial.mod_id, deque())
+        while janela and agora - janela[0] >= 1.0:
+            janela.popleft()
+        if len(janela) >= APARELHOS_POR_SEGUNDO:
+            raise RecusaError(CODE_TETO_CHEIO, f"aparelho.abrir aceita até {APARELHOS_POR_SEGUNDO} "
+                                               "por segundo por extensão.")
+        janela.append(agora)
         no = params.get("no")
         try:
             fd = await asyncio.to_thread(credencial.abrir_o_aparelho, no)
@@ -2938,6 +2948,7 @@ def _tamanho_da_mensagem(dados: Any) -> int:
 
 
 __all__ = [
+    "APARELHOS_POR_SEGUNDO",
     "CODE_NAO_ESCREVEU",
     "CODE_O_JOGO_ESCREVE",
     "CODE_QUEM_E_VOCE",
