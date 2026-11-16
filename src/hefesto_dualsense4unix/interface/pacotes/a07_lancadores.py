@@ -1550,7 +1550,17 @@ def _extensao_de(item: _Instalada) -> Any:
         versao=versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
         ligada=e.ligada, menu=menu, processo=exp.processo_de(e.ligada, item.estado),
         porque=item.porque, pede=_o_que_pede(item),
-        espera=aviso_por_ver(e, item.manifesto) if item.manifesto is not None else "")
+        espera=aviso_por_ver(e, item.manifesto) if item.manifesto is not None else "",
+        atualizacao=_o_que_a_atualizacao_espera(item))
+
+
+def _o_que_a_atualizacao_espera(item: _Instalada) -> tuple[str, ...]:
+    """As frases do que a atualização da extensão espera o «sim» para ligar de novo."""
+    from hefesto_dualsense4unix.mods.instalador import o_que_a_atualizacao_espera
+
+    if item.manifesto is None:
+        return ()
+    return tuple(o_que_a_atualizacao_espera(item.entrada, item.manifesto))
 
 
 def _o_que_pede(item: _Instalada) -> str:
@@ -1789,7 +1799,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         pagina=_pagina_da_janela(manifesto, mod_id),
         vivo=_vivo_da_janela(manifesto, estado), abas=tuple(manifesto.abas),
         vereditos=_MEXIDA.vereditos, ultimas=_ultimas_da_janela(estado),
-        **_pecas_da_janela(manifesto, mod_id))
+        espera_o_sim=_o_que_a_atualizacao_espera(item), **_pecas_da_janela(manifesto, mod_id))
 
 
 def _pagina_da_janela(manifesto: Any, mod_id: str) -> exp.PaginaDaJanela | None:

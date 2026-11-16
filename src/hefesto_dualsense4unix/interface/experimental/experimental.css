@@ -843,3 +843,9 @@
 #mod-janela .mj-trilha b { flex:1;min-height:2px;height:12%;border-radius:1px;background:var(--border-forte) }
 #mod-janela .mj-trilha b.chegou { background:var(--pink) }
 @media (prefers-reduced-motion:reduce) { #mod-janela .mj-medidor i { transition:none } }
+.ext-espera-sim { display:flex;align-items:center;gap:8px;color:var(--orange) }
+.ext-espera-sim .btn.mini { height:22px;padding:0 8px;font-size:11px }
+#mod-janela .ja-espera-sim { position:relative;display:inline-flex;align-items:center;gap:8px;margin-right:10px;font-size:12px;color:var(--orange) }
+#mod-janela .ja-espera-sim summary { cursor:pointer;list-style:none;padding:2px 8px;border:1px solid var(--border-forte);border-radius:6px;color:var(--fg);font-size:11.5px }
+#mod-janela .ja-espera-sim summary::-webkit-details-marker { display:none }
+#mod-janela .ja-espera-sim .ja-es-lista { position:absolute;top:calc(100% + 6px);right:0;z-index:5;display:flex;flex-direction:column;gap:4px;min-width:260px;max-width:360px;padding:8px 10px;border:1px solid var(--border-forte);border-radius:8px;background:var(--app-bg);color:var(--fg);white-space:normal }

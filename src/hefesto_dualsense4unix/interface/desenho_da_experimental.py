@@ -81,6 +81,7 @@ class Extensao(NamedTuple):
     porque: str = ""
     pede: str = ""
     espera: str = ""
+    atualizacao: Sequence[str] = ()
 
 
 PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo"),
@@ -89,6 +90,8 @@ PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo
 DICA_DE_TENTAR = "Desligue e ligue para tentar de novo."
 ROTULO_DO_SIM = "Aceitar e ligar"
 ROTULO_DA_ESPERA = "Espera o sim"
+ATUALIZACAO_ESPERANDO = "Atualização esperando o seu sim"
+ROTULO_DA_PERMISSAO_NOVA = "Ver a permissão nova"
 
 
 def processo_de(ligada: bool, estado: str) -> str:
@@ -233,6 +236,28 @@ def _selo_da_extensao(ext: Extensao) -> str:
     return f'<span class="lanc-selo {origem}">{ext.selo}</span>'
 
 
+def _o_que_a_extensao_faz(ext: Extensao) -> str:
+    """A descrição da linha; com a atualização que espera o «sim», o aviso e o botão que abre o ⋮
+    com as permissões."""
+    if ext.ligada or not ext.atualizacao:
+        return f'<span class="ext-faz" data-dica="{_a(ext.dica)}">{_e(ext.dica)}</span>'
+    return (f'<span class="ext-faz ext-espera-sim"><span data-dica="{_a(" ".join(ext.atualizacao))}">'
+            f'{ATUALIZACAO_ESPERANDO}</span><button class="btn mini ext-ver-sim" '
+            f'data-gesto="mais-da-modificacao" data-v="{_a(ext.chave)}:permissoes">'  # (noqa-acento)
+            f"{ROTULO_DA_PERMISSAO_NOVA}</button></span>")
+
+
+def espera_o_sim_html(frases: Sequence[str]) -> str:
+    """O aviso da janela da extensão cuja atualização espera o «sim», com o botão que mostra o
+    que a versão nova pede; vazio quando nada espera."""
+    if not frases:
+        return ""
+    itens = "".join(f"<span>{_e(x)}</span>" for x in frases)
+    return (f'<div class="ja-espera-sim"><span>{ATUALIZACAO_ESPERANDO}</span><details>'
+            f"<summary>{ROTULO_DA_PERMISSAO_NOVA}</summary>"
+            f'<span class="ja-es-lista">{itens}</span></details></div>')
+
+
 def extensao_html(ext: Extensao) -> str:
     """Uma linha do quadro «Extensões». Nome, versão e dica vêm do manifesto de terceiros: escapados."""
     menu = (f'\n            <div class="ext-menu ext-pop aberto" data-menu="{_a(ext.chave)}">{ext.menu}</div>'
@@ -241,7 +266,7 @@ def extensao_html(ext: Extensao) -> str:
             <span class="ext-ico" style="color:var(--{ext.cor})">{_icone(ext.chave)}</span>
             <div class="ext-quem" data-dica="{_a(ext.nome)}">
               <span class="ext-sub"><span class="ext-nome">{_e(ext.nome)}</span>{_selo_da_extensao(ext)}<span class="ext-ver">{_e(ext.versao)}</span></span>
-              <span class="ext-faz" data-dica="{_a(ext.dica)}">{_e(ext.dica)}</span>
+              {_o_que_a_extensao_faz(ext)}
             </div>
             {_chave_html(ext)}
             <a class="ext-conf" href="{_a(ext.janela)}" data-gesto="configurar-modificacao" data-v="{_a(ext.chave)}" data-dica="Configurações: {_a(ext.nome)}">{_engrenagem()}</a>
@@ -1797,7 +1822,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            pagina: PaginaDaJanela | None = None,
                            vivo: cv.Vivo | None = None, abas: Sequence[str] = (),
                            vereditos: Mapping[str, Veredito] | None = None,
-                           ultimas: Sequence[Ultima] | None = None) -> str:
+                           ultimas: Sequence[Ultima] | None = None,
+                           espera_o_sim: Sequence[str] = ()) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo (em abas com ``em_abas``, a que
     pinta o tema) e «Para» no topo; toda escolha grava no clique, sem rodapé.
 
@@ -1810,8 +1836,9 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     faz da coluna a «Conexão»; o ``agora`` sem pedaço de coluna é a :func:`faixa_html`."""
     leituras = leituras_do_estado(estado)
     opcoes = [o._replace(leitura=leituras[o.id]) if o.id in leituras else o for o in opcoes]
-    parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
-             else parar_tudo_html(mod) if parar_tudo and mod else "")
+    parar = espera_o_sim_html(espera_o_sim) + (
+        chave_da_extensao_html(mod, chave) if chave is not None and mod
+        else parar_tudo_html(mod) if parar_tudo and mod else "")
     desligada = chave is False and bool(mod)
     agora = agora if mod else ()
     livre_op = next((o for o in opcoes if o.tipo == "livre"), None) if mod else None

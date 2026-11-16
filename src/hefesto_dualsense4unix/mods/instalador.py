@@ -45,6 +45,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
     aceitos_do_sim,
     aparelhos_do_sim,
     ler_manifesto,
+    o_que_a_permissao_deixa,
     pedidos_do_sim,
     permissoes_novas,
 )
@@ -154,6 +155,16 @@ def aviso_por_ver(entrada: Entrada, manifesto: Manifesto) -> str:
     return manifesto.aviso if manifesto.aviso and manifesto.aviso != entrada.aviso_aceito else ""
 
 
+def o_que_a_atualizacao_espera(entrada: Entrada, manifesto: Manifesto) -> list[str]:
+    """O que a atualização da extensão que estava ligada espera o «sim» para ligar de novo, em
+    frases: o aviso novo e o que cada permissão nova deixa; vazio quando nada espera."""
+    if entrada.ligada or not entrada.espera_o_sim:
+        return []
+    novas = permissoes_novas(aceitos_de(entrada), pedidos_do_sim(manifesto))
+    return [x for x in (aviso_por_ver(entrada, manifesto),) if x] + [
+        o_que_a_permissao_deixa(x) for x in novas]
+
+
 @dataclass(frozen=True)
 class Lugares:
     """Os três lugares de toda modificação, e o estado vivo que o serviço escreve."""
@@ -210,6 +221,7 @@ class Entrada(BaseModel):
     motivo_do_preparo: str = ""
     em_troca: str = ""
     sem_caixa: bool = False
+    espera_o_sim: bool = False
 
 
 @dataclass(frozen=True)
@@ -740,6 +752,8 @@ def instalar(
             and (prepara_agora or not manifesto.preparar),
             aviso_aceito=aviso_aceito,
             instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
+            espera_o_sim=not pronta and (seguia_ligada or bool(antigas_ligadas) or (
+                anterior is not None and anterior.espera_o_sim)),
         )
         if anterior is not None:
             entrada.atualiza_sozinha = anterior.atualiza_sozinha
@@ -1014,6 +1028,7 @@ def ligar(
             gravar_registro(lg.registro, registro)
             raise InstalacaoRecusadaError(entrada.motivo_do_preparo)
     entrada.ligada = True
+    entrada.espera_o_sim = False
     entrada.ligada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     gravar_registro(lg.registro, registro)
     return entrada
