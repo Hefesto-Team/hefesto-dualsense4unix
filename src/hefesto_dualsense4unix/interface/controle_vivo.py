@@ -293,8 +293,8 @@ def faixa_html(canais: Sequence[str], marcas: Iterable[Marca], *, ident: str = "
     escreveu nos últimos 30 s, na cor do plástico de cada controle; o agora é a ponta direita.
     ``ident`` é o pedaço das linhas, o que o tique repinta."""
     atributo = f' id="{ident}"' if ident else ""
-    return (f'<div class="mj-faixa cv-faixa"><div class="cv-faixa-topo"><span class="pc-sub">'
-            f'Ao vivo</span><span class="cv-30">30 s</span></div>'
+    return (f'<div class="mj-faixa cv-faixa" data-agora="ao_vivo"><div class="cv-faixa-topo">'
+            f'<span class="pc-sub">Ao vivo</span><span class="cv-30">30 s</span></div>'
             f'<div class="cv-linhas"{atributo}>{linhas_da_faixa(canais, marcas)}</div></div>')
 
 

@@ -177,6 +177,7 @@ def test_a_janela_desenha_o_controle_o_clima_a_faixa_e_os_cartoes_na_ordem_das_a
     assert html.count('class="cv-lugar"') == 1 and 'data-agora="clima"' in html
     assert 'data-gesto="controle-vivo-da-modificacao" data-v="imersao:2"' in html
     assert html.count('class="cv-mk"') == 3 and 'id="mod-ao-vivo"' in html
+    assert 'class="mj-faixa cv-faixa" data-agora="ao_vivo"' in html
     assert re.findall(r'<label for="mj-aba-\d+">([^<]+)<', html) == ["Geral", "Efeitos"]
     assert exp.acoes_por_aba(opcoes, acoes, None, abas=("Geral", "Efeitos")) == {1: acoes}
     assert html.count('class="mj-cartao') == 2 and html.count('class="mj-cartao" data-canal') == 1
