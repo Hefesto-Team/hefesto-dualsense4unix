@@ -259,14 +259,14 @@
       "data": "2026-11-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1262060,
+      "piso": 1262075,
       "por_item": {
         "docs": 107037,
         "scripts": 114293,
         "src": 319785,
-        "tests": 720945
+        "tests": 720960
       },
-      "razao": "tamanho: +1431 linhas (1260629 -> 1262060), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo dc3ae5dd5c00",
+      "razao": "tamanho: +15 linhas (1262060 -> 1262075), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo 69502a8751e8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1977,6 +1977,12 @@
           "de": 1260629,
           "para": 1262060,
           "razao": "tamanho: +1431 linhas (1260629 -> 1262060), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo dc3ae5dd5c00"
+        },
+        {
+          "data": "2026-11-16",
+          "de": 1262060,
+          "para": 1262075,
+          "razao": "tamanho: +15 linhas (1262060 -> 1262075), pagas por Origem: D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA; registrado no fecho, topo 69502a8751e8"
         }
       ],
       "unidade": "linhas",
