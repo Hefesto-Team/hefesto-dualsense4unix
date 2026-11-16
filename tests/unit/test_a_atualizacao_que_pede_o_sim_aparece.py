@@ -78,7 +78,7 @@ def test_a_extensao_nunca_ligada_nao_diz_que_a_atualizacao_espera(
 
 def test_a_linha_diz_que_a_atualizacao_espera_o_sim_e_o_botao_mostra_a_permissao(
         lar: Any, tmp_path: pathlib.Path, ctx: Any) -> None:  # noqa: F811
-    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: a linha diz a espera, e o botão abre o ⋮ com a
+    """D-1611-A-ATUALIZACAO-ESPERA-O-SIM-NA-TELA: a linha diz a espera, e o botão abre o ⋮ com a
     permissão nova escrita por extenso."""
     _ligada_e_atualizada(lar, tmp_path)
     linha = _linha(ctx)

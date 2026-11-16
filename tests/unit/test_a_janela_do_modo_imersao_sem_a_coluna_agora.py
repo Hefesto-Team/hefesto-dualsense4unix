@@ -145,8 +145,8 @@ def _faixa(situacao: dict[str, Any] | None, **estado: Any) -> str:
 
 
 def test_a_faixa_diz_tocando_calado_com_o_motivo_ou_esperando() -> None:
-    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: a faixa do alto diz se a extensão está tocando
-    (com o jogo), calada (com o motivo, nunca em vermelho) ou esperando um jogo."""
+    """D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO: a faixa do alto diz se a extensão
+    está tocando (com o jogo), calada (com o motivo, nunca em vermelho) ou esperando um jogo."""
     motivo = "No Modo Nativo o jogo fala direto com o controle"
     calado = _faixa({"estado": "calado", "frase": motivo},
                     linhas=[{"rotulo": "Sentem", "valor": "Cosmic Red"}])
