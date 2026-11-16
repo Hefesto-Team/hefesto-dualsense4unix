@@ -252,6 +252,7 @@ class Lar:
             ("bluez", "5.88-0ubuntu0.1~hefesto24.04.6"),
             ("libbluetooth3", "5.88-0ubuntu0.1~hefesto24.04.6"))
         self.api = ""
+        self.estado = ""
         for nome in ("apt-get", "dpkg", "dkms", "update-initramfs"):
             self.duble(nome)
         self.duble("uname", "echo 7.2.15-76070215-generic")
@@ -277,6 +278,7 @@ class Lar:
                     "HEFESTO_ATUALIZADOR_MODULOS": str(self.modulos),
                     "HEFESTO_ATUALIZADOR_SUFIXOS": str(self.sufixos),
                     "HEFESTO_ATUALIZADOR_API": self.api,
+                    "HEFESTO_ATUALIZADOR_ESTADO": self.estado,
                     "HEFESTO_ATUALIZADOR_DONO": pwd.getpwuid(os.getuid()).pw_name}
         return subprocess.run(["bash", str(AJUDANTE), *args], env=ambiente, capture_output=True,
                               text=True, timeout=60, check=False)
@@ -751,3 +753,33 @@ def test_a_subida_pelo_apt_leva_as_travas_da_reinstalacao(raiz: Lar) -> None:
     limpar = raiz.lidas("apt-get")[-1]
     assert " autoremove --purge" in limpar and " --no-remove " not in limpar
     assert all(o in limpar for o in AUTENTICACAO[4:] if o != " --no-remove "), limpar
+
+
+def test_o_hold_do_ajudante_que_morreu_se_solta_no_proximo_verbo(raiz: Lar) -> None:
+    """O-HOLD-NAO-FICA-ORFAO-QUANDO-O-AJUDANTE-MORRE-01: o hold do ajudante fica registrado só para
+    o root; o ajudante que morre no meio deixa o registro, e o próximo verbo solta, a não ser que
+    outro ajudante ainda esteja vivo segurando."""
+    import fcntl
+
+    raiz.estado = str(raiz.base / "estado")
+    raiz.duble("apt-get", "kill -KILL $PPID")
+    morto = raiz.rodar("apt-instalar", "sistema")
+    assert morto.returncode != 0
+    assert raiz.lidas("apt-mark hold") == ["apt-mark hold bluez libbluetooth3"]
+    assert raiz.lidas("apt-mark unhold") == [], "morto no meio: o hold ficou"
+    registro = Path(raiz.estado) / "segurados-pelo-ajudante"
+    assert registro.read_text().split() == ["bluez", "libbluetooth3"]
+    raiz.duble("apt-get")
+    with (Path(raiz.estado) / "hold.trava").open("w") as trava:
+        fcntl.flock(trava, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        assert raiz.rodar("apt-lista").returncode == 0
+        assert raiz.lidas("apt-mark unhold") == [], "outro ajudante vivo: o hold é dele"
+    feito = raiz.rodar("apt-lista")
+    assert feito.returncode == 0, feito.stderr
+    assert raiz.lidas("apt-mark unhold") == ["apt-mark unhold bluez libbluetooth3"]
+    assert "bluez libbluetooth3" in feito.stdout
+    assert not registro.exists()
+    assert raiz.rodar("apt-instalar", "sistema").returncode == 0
+    assert raiz.lidas("apt-mark unhold")[-1] == "apt-mark unhold bluez libbluetooth3"
+    assert not registro.exists(), "a subida que acaba solta e apaga o registro"
+

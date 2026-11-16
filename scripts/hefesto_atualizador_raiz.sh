@@ -76,14 +76,47 @@ _e_so_do_dono() {
 
 SEGURADOS=()
 
+_registro_do_hold() { printf '%s/segurados-pelo-ajudante\n' "${ESTADO}"; }
+
+_tomar_a_vez_do_hold() {
+    [[ -n "${ESTADO}" ]] || return 0
+    _pasta_do_estado
+    exec 8>"${ESTADO}/hold.trava"
+    flock -w 600 8 || _recusar "outro ajudante segura os pacotes da casa agora"
+}
+
+_soltar_o_hold_orfao() {
+    [[ -n "${ESTADO}" && -f "$(_registro_do_hold)" ]] || return 0
+    _pasta_do_estado
+    exec 8>"${ESTADO}/hold.trava"
+    if ! flock -n 8; then
+        exec 8>&-
+        return 0
+    fi
+    local -a orfaos
+    mapfile -t orfaos < <(grep -E '^[a-z0-9][a-z0-9.+-]*$' "$(_registro_do_hold)")
+    if [[ "${#orfaos[@]}" -eq 0 ]] || apt-mark unhold "${orfaos[@]}" >/dev/null; then
+        rm -f "$(_registro_do_hold)"
+        [[ "${#orfaos[@]}" -eq 0 ]] || printf 'soltos do ajudante que saiu no meio: %s\n' "${orfaos[*]}"
+    else
+        _erro "não soltei o que ficou segurado: ${orfaos[*]}"
+    fi
+    exec 8>&-
+}
+
 _soltar_os_da_casa() {
     [[ "${#SEGURADOS[@]}" -gt 0 ]] || return 0
-    apt-mark unhold "${SEGURADOS[@]}" >/dev/null || _erro "não soltei: ${SEGURADOS[*]}"
+    if apt-mark unhold "${SEGURADOS[@]}" >/dev/null; then
+        [[ -z "${ESTADO}" ]] || rm -f "$(_registro_do_hold)"
+    else
+        _erro "não soltei: ${SEGURADOS[*]}"
+    fi
     SEGURADOS=()
 }
 
 _segurar_os_da_casa() {
     _e_so_do_dono "${SUFIXOS}" || _recusar "sem a lista dos sufixos da casa só do root (${SUFIXOS}): rode o install"
+    _tomar_a_vez_do_hold
     local -a sufixos da_casa ja
     mapfile -t sufixos < <(grep -E '^[A-Za-z0-9.+~:-]+$' "${SUFIXOS}")
     [[ "${#sufixos[@]}" -gt 0 ]] || _recusar "a lista dos sufixos da casa está vazia"
@@ -105,6 +138,8 @@ _segurar_os_da_casa() {
     [[ "${#SEGURADOS[@]}" -gt 0 ]] || return 0
     trap _soltar_os_da_casa EXIT
     trap 'exit 130' INT TERM HUP
+    [[ -z "${ESTADO}" ]] || printf '%s\n' "${SEGURADOS[@]}" > "$(_registro_do_hold)" \
+        || _recusar "não registrei o que vou segurar"
     apt-mark hold "${SEGURADOS[@]}" >/dev/null || _recusar "não segurei os pacotes da casa: ${SEGURADOS[*]}"
     printf 'fora da subida (da casa): %s\n' "${SEGURADOS[*]}"
 }
@@ -740,6 +775,7 @@ verbo_regra_sudo() {
 }
 
 [[ $# -le 2 ]] || _recusar "argumentos demais"
+[[ "${1:-}" == regra-sudo || -z "${CACHE}" ]] || _soltar_o_hold_orfao
 
 case "${1:-}" in
     apt-lista) [[ $# -eq 1 ]] || _recusar "apt-lista não leva argumento"; verbo_apt_lista ;;
