@@ -8,6 +8,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ### Mudado
 
+- A janela de configurar uma extensão mostra o controle com o mesmo desenho do Mapa dos controles, na cor do plástico de cada controle, e acende as peças que a extensão está mexendo naquele momento. A do Modo imersão ficou em quatro abas: Jogo, Sentidos, Efeitos e Ensinar este jogo.
 - A permissão «aparelhos» de uma extensão mostra cada aparelho numa linha, com o nome dado pela extensão, o tipo, o fabricante e o modelo (VID:PID) e o nome do aparelho ligado. O «sim» vale só para os aparelhos aceitos: se uma atualização pedir outro, a extensão desliga e pede o «sim» de novo.
 
 ### Corrigido

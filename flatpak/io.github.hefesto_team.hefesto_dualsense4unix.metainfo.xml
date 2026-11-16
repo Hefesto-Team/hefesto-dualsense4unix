@@ -21,7 +21,7 @@
   <releases>
     <release version="0.9.5.4" date="2026-11-16">
       <description>
-        <p>A permissão «aparelhos» de uma extensão mostra cada aparelho numa linha, com o nome dado pela extensão, o tipo, o fabricante e o modelo e o nome do aparelho ligado, e o «sim» vale só para os aparelhos aceitos. Nenhuma extensão abre controle, teclado ou mouse. O adaptador USB da Lovense volta a funcionar depois de se reiniciar com outro endereço, sem reiniciar a extensão.</p>
+        <p>A janela de configurar uma extensão mostra o controle com o mesmo desenho do Mapa dos controles e acende as peças que a extensão está mexendo; a do Modo imersão ficou em quatro abas. A permissão «aparelhos» de uma extensão mostra cada aparelho numa linha, com o nome dado pela extensão, o tipo, o fabricante e o modelo e o nome do aparelho ligado, e o «sim» vale só para os aparelhos aceitos. Nenhuma extensão abre controle, teclado ou mouse. O adaptador USB da Lovense volta a funcionar depois de se reiniciar com outro endereço, sem reiniciar a extensão.</p>
       </description>
     </release>
     <release version="0.9.5.3" date="2026-11-15">
