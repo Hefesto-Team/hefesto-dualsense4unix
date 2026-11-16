@@ -256,7 +256,12 @@ class Lar:
         for nome in ("apt-get", "dpkg", "dkms", "update-initramfs"):
             self.duble(nome)
         self.duble("uname", "echo 7.2.15-76070215-generic")
-        self.duble("apt-mark", f'[ "$1" = showhold ] && cat "{self.segurados}"; exit 0')
+        seg = self.segurados
+        self.duble("apt-mark", f'acao="$1"; shift; case "$acao" in showhold) cat "{seg}" ;;'
+                               f' hold) for p; do grep -qx "$p" "{seg}"'
+                               f' || echo "$p" >> "{seg}"; done ;;'
+                               f' unhold) for p; do grep -vx "$p" "{seg}" > "{seg}.t";'
+                               f' mv "{seg}.t" "{seg}"; done ;; esac; exit 0')
         self.duble("dpkg-query", f'cat "{self.instalados}"')
         self.duble("dpkg-deb", 'n="${2##*/}"; [ "$3" = Package ] && echo "${n%%_*}";'
                                ' v="${n#*_}"; [ "$3" = Version ] && echo "${v%_*}";'
@@ -782,4 +787,29 @@ def test_o_hold_do_ajudante_que_morreu_se_solta_no_proximo_verbo(raiz: Lar) -> N
     assert raiz.rodar("apt-instalar", "sistema").returncode == 0
     assert raiz.lidas("apt-mark unhold")[-1] == "apt-mark unhold bluez libbluetooth3"
     assert not registro.exists(), "a subida que acaba solta e apaga o registro"
+    assert raiz.segurados.read_text() == "", "o apt-mark de mentira solta o que segurou"
+
+
+def test_o_hold_orfao_se_solta_quando_o_apt_orfao_acaba_no_meio_do_proximo_verbo(
+        raiz: Lar) -> None:
+    """O ajudante morreu e o ``apt-get`` órfão que herdou a trava ainda roda quando o próximo
+    verbo chega: o verbo espera a trava e, livre a trava, solta o hold órfão antes de seguir. Sem
+    isso, o hold órfão aparece como «já segurado» e atravessa mais uma subida."""
+    import time
+
+    raiz.estado = str(raiz.base / "estado")
+    raiz.duble("apt-get", "kill -KILL $PPID")
+    assert raiz.rodar("apt-instalar", "sistema").returncode != 0
+    assert raiz.segurados.read_text().split() == ["bluez", "libbluetooth3"]
+    raiz.duble("apt-get")
+    orfao = subprocess.Popen(["flock", str(Path(raiz.estado) / "hold.trava"), "sleep", "2"])
+    try:
+        time.sleep(0.5)
+        feito = raiz.rodar("apt-instalar", "sistema")
+    finally:
+        orfao.wait(timeout=30)
+    assert feito.returncode == 0, feito.stderr
+    assert "soltos do ajudante que saiu no meio: bluez libbluetooth3" in feito.stdout, feito.stdout
+    assert raiz.segurados.read_text() == "", "nada fica segurado depois da subida"
+    assert not (Path(raiz.estado) / "segurados-pelo-ajudante").exists()
 

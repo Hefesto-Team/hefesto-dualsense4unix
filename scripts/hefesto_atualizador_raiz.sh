@@ -78,28 +78,33 @@ SEGURADOS=()
 
 _registro_do_hold() { printf '%s/segurados-pelo-ajudante\n' "${ESTADO}"; }
 
+_soltar_o_que_o_registro_guarda() {
+    [[ -f "$(_registro_do_hold)" ]] || return 0
+    local -a orfaos
+    mapfile -t orfaos < <(grep -E '^[a-z0-9][a-z0-9.+-]*$' "$(_registro_do_hold)")
+    if [[ "${#orfaos[@]}" -eq 0 ]] || apt-mark unhold "${orfaos[@]}" >/dev/null; then
+        rm -f "$(_registro_do_hold)"
+        [[ "${#orfaos[@]}" -eq 0 ]] || printf 'soltos do ajudante que saiu no meio: %s\n' "${orfaos[*]}"
+        return 0
+    fi
+    _erro "não soltei o que ficou segurado: ${orfaos[*]}"
+    return 1
+}
+
 _tomar_a_vez_do_hold() {
     [[ -n "${ESTADO}" ]] || return 0
     _pasta_do_estado
     exec 8>"${ESTADO}/hold.trava"
     flock -w 600 8 || _recusar "outro ajudante segura os pacotes da casa agora"
+    _soltar_o_que_o_registro_guarda || _recusar "o que um ajudante que saiu no meio segurou não se soltou"
 }
 
 _soltar_o_hold_orfao() {
     [[ -n "${ESTADO}" && -f "$(_registro_do_hold)" ]] || return 0
     _pasta_do_estado
     exec 8>"${ESTADO}/hold.trava"
-    if ! flock -n 8; then
-        exec 8>&-
-        return 0
-    fi
-    local -a orfaos
-    mapfile -t orfaos < <(grep -E '^[a-z0-9][a-z0-9.+-]*$' "$(_registro_do_hold)")
-    if [[ "${#orfaos[@]}" -eq 0 ]] || apt-mark unhold "${orfaos[@]}" >/dev/null; then
-        rm -f "$(_registro_do_hold)"
-        [[ "${#orfaos[@]}" -eq 0 ]] || printf 'soltos do ajudante que saiu no meio: %s\n' "${orfaos[*]}"
-    else
-        _erro "não soltei o que ficou segurado: ${orfaos[*]}"
+    if flock -n 8; then
+        _soltar_o_que_o_registro_guarda
     fi
     exec 8>&-
 }
