@@ -874,7 +874,8 @@ class Manifesto(BaseModel):
 
     def _conferir_as_acoes_e_o_livre(self) -> None:
         """As ações, os aparelhos geridos e o ``livre``: a permissão do estado, ids sem repetição,
-        um ``livre`` só, e a lista sem ``grupo`` só onde a coluna «Agora» mostra os aparelhos."""
+        o ``cartao`` da ação é o de uma opção, um ``livre`` só, e a lista sem ``grupo`` só onde a
+        coluna «Agora» mostra os aparelhos."""
         livres = [o.id for o in self.opcoes if o.tipo == "livre"]
         pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # (noqa-acento)
                                         ("aparelhos_acoes", self.aparelhos_acoes is not None),
@@ -887,6 +888,11 @@ class Manifesto(BaseModel):
             raise ValueError("mais de uma opção livre")
         if len({a.id for a in self.acoes}) != len(self.acoes):
             raise ValueError("ação repetida em acoes")  # (noqa-acento)
+        cartoes = {o.cartao for o in self.opcoes if o.cartao}
+        sem_cartao = next((a for a in self.acoes if a.cartao and a.cartao not in cartoes), None)
+        if sem_cartao is not None:
+            raise ValueError(f"a ação {sem_cartao.id} mora no cartão «{sem_cartao.cartao}», que "
+                             "nenhuma opção declara")
         geridos = self.aparelhos_acoes
         if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
             raise ValueError(

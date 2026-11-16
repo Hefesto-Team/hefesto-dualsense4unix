@@ -637,7 +637,8 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   O `agora` sem `conexoes`, `aparelhos`, `nivel` nem `clima` (desde 16/11/2026) não abre a coluna: vira a faixa do
   alto da janela, com a pílula da `situacao` (Tocando, Calado ou Esperando um jogo; sem a `situacao`, Ligada), a
   `frase` da `situacao`, os pares das `linhas` e do `perfil` e, com o `controle`, as três últimas escritas que chegaram aos controles
-  (do `ao_vivo`, guardadas pela janela por 60 s), com o canal, o plástico e há quanto tempo.
+  (do `ao_vivo`, guardadas pela janela por 60 s), com o canal, o plástico e há quanto tempo; calado ou esperando um jogo,
+  a faixa não mostra as escritas.
 - **`abas`** (desde 16/11/2026): a ordem das abas, até 12 nomes de grupo. As abas que a lista não cita vêm depois,
   na ordem de sempre; a página própria fica por último.
 - **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
@@ -694,7 +695,8 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   é `procurar`, `testar`, `esquecer`, `ligar` ou `atualizar`. Id repetido recusa o manifesto. Com `responde: true`
   (desde 16/11/2026, também nas `aparelhos_acoes`), o clique espera a resposta da extensão (ver `mods.acao` abaixo).
   O `cartao` (desde 16/11/2026, até 30 letras) põe o botão no pé do cartão de opções de mesmo nome, na aba do
-  `grupo`, e não na barra da aba; o cartão que não aparece leva o botão junto. A ação dos aparelhos não o declara.
+  `grupo`, e não na barra da aba; o cartão que não aparece leva o botão junto, e o cartão de chaves que tem botão
+  nunca vira a fileira de chaves. O `cartao` que nenhuma opção declara recusa o manifesto. A ação dos aparelhos não o declara.
 - **`aparelhos_acoes`**: `{grupo?, acoes: [{id, rotulo, icone?}]}` (de 1 a 6 ações), as ações de cada aparelho que a extensão
   devolve em `acessorios.estado` com `id`. A ação `ligar` é a chave do cartão (o clique pede o contrário do
   `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com

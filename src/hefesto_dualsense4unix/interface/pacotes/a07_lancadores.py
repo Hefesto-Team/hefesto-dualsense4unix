@@ -3155,9 +3155,13 @@ def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     if not (isinstance(corpo, dict) and corpo.get("enviada") is True):
         raise RuntimeError(_nao_esta_rodando(mod_id))
     if not alvo and "respondeu" in corpo:
-        _MEXIDA.vereditos[acao] = (
-            (exp.veredito_da_resposta(corpo.get("resposta")) if corpo.get("respondeu") is True
-             else None) or exp.Veredito(exp.SEM_RESPOSTA_A_TEMPO, False))
+        veredito = (exp.veredito_da_resposta(corpo.get("resposta"))
+                    if corpo.get("respondeu") is True
+                    else exp.Veredito(exp.SEM_RESPOSTA_A_TEMPO, False))
+        if veredito is None:
+            _MEXIDA.vereditos.pop(acao, None)
+        else:
+            _MEXIDA.vereditos[acao] = veredito
         _AGORA.esquecer()
         _redesenhar_a_janela(mod_id)
         return _a_pintura_agora(ctx)

@@ -14,7 +14,9 @@ tempo. O «Testar» mora no pé do cartão do efeito e mostra o veredito pela co
 MORDIDAS: devolver o ``mods.acao`` ao ``TETO_PADRAO_S`` (0,25 s) reprova a régua da extensão
 lenta; a faixa sem a frase da situação reprova o motivo do calado; o ``acoes_por_aba`` com as
 ações do cartão reprova o «Testar» repetido na barra; o veredito guardado sem redesenhar a
-janela reprova o clique.
+janela reprova o clique; o cartão com botão que vira a fileira de chaves, o manifesto que aceita o
+``cartao`` sem opção, a resposta sem ``{controles}`` lida como «não respondeu» e a faixa calada com
+as escritas reprovam cada um a sua régua.
 """
 from __future__ import annotations
 
@@ -340,3 +342,76 @@ def test_o_clique_no_testar_poe_o_veredito_no_cartao(janela: Any, ctx: Any,  # n
     assert pe and frase in pe.group(1), "a janela redesenhada não tem o veredito no cartão"
     assert "aa:bb:cc" not in html + "".join(tique.values())
     assert '<div class="ja-faixa-estado" id="mod-agora">' in html and "Sackboy" in html
+
+
+SENTIDOS = [exp.OpcaoDaJanela("imersao", i, r, "ligado", True, grupo="Sentir",
+                              cartao="O que ele escuta") for i, r in (("som", "Som"),
+                                                                       ("parado", "Parado"))]
+
+
+def test_o_cartao_de_chaves_com_botao_nao_vira_a_fileira_e_o_botao_fica() -> None:
+    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: o cartão «O que ele escuta» só de chaves e sem
+    leitura (a extensão desligada, ou antes do primeiro estado) não vira a fileira de chaves, que
+    não tem pé: o «Ver a tela» dele segue à vista (medido em 16/11/2026, ele sumia da janela)."""
+    ver = (exp.AcaoDaJanela("ver_a_tela", "Ver a tela", "Sentir", "ligar", "O que ele escuta"),)
+    for estado in (None, {"ligado": False}):
+        html = exp.modificacao_miolo_html("Modo imersão", SENTIDOS, mod="imersao", estado=estado,
+                                          agora=("controle", "linhas"), acoes=ver,
+                                          abas=("Sentir",), chave=True)
+        assert html.count('data-v="imersao:ver_a_tela"') == 1, "o botão do cartão sumiu"
+        assert 'id="mod-acoes-c-o-que-ele-escuta"' in html and "mj-fileira" not in html
+    solta = (exp.AcaoDaJanela("ver_a_tela", "Ver a tela", "Sentir"),)
+    sem_botao = exp.modificacao_miolo_html("Modo imersão", SENTIDOS, mod="imersao", estado=None,
+                                           agora=("controle", "linhas"), acoes=solta,
+                                           abas=("Sentir",), chave=True)
+    assert "mj-fileira" in sem_botao and 'data-v="imersao:ver_a_tela"' in sem_botao
+
+
+def test_o_manifesto_recusa_a_acao_num_cartao_que_nenhuma_opcao_declara() -> None:
+    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: a ação cujo ``cartao`` nenhuma opção declara
+    nunca apareceria na janela; o manifesto é recusado em vez de esconder o botão."""
+    from hefesto_dualsense4unix.mods.manifesto import Manifesto
+
+    bruto = json.loads((pathlib.Path(__file__).resolve().parents[2] / "mockup" / "modo-imersao"
+                        / "hefesto-mod.json").read_text(encoding="utf-8"))
+    assert any(a.cartao for a in Manifesto.model_validate(bruto).acoes)
+    torto = {**bruto, ACOES: [{**a, "cartao": "Cartão que não existe"} if a.get("cartao") else a
+                              for a in bruto[ACOES]]}
+    with pytest.raises(ValidationError, match="nenhuma opção declara"):
+        Manifesto.model_validate(torto)
+
+
+def test_a_resposta_fora_da_forma_do_veredito_nao_diz_que_a_extensao_calou(
+        janela: Any, ctx: Any) -> None:  # noqa: F811
+    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: a extensão que respondeu, mas sem
+    ``{controles}``, não ganha «não respondeu a tempo» no cartão, e o veredito velho sai."""
+    a07, instalar, abrir = janela
+    instalar(agora=["controle", "linhas"], abas=["Efeitos"],
+             opcoes=[{"id": ID_DO_CORACAO, "rotulo": "Coração", "tipo": "ligado", PADRAO: True,
+                      "grupo": "Efeitos", "cartao": "Coração"}],
+             acoes=[{"id": "testar_coracao", "rotulo": "Testar", "grupo": "Efeitos",
+                     "icone": "testar", "responde": True, "cartao": "Coração"}])
+    p = _PonteQueResponde({"enviada": True, "respondeu": True, "resposta": VEREDITO})
+    abrir(p)
+    a07.acao_da_modificacao(ctx, {"v": "toque:testar_coracao"}, p)
+    assert "Tocou no Cosmic Red." in a07._MEXIDA.html_mod
+    p.corpo = {"enviada": True, "respondeu": True, "resposta": {"feito": True}}
+    a07.acao_da_modificacao(ctx, {"v": "toque:testar_coracao"}, p)
+    html = a07._MEXIDA.html_mod
+    assert exp.SEM_RESPOSTA_A_TEMPO not in html and "Tocou no Cosmic Red." not in html
+
+
+def test_calado_ou_esperando_a_faixa_nao_mostra_as_escritas() -> None:
+    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: como no desenho aprovado, as últimas escritas
+    saem da faixa fora do «Tocando»: «Calado» ao lado de um efeito de «Agora» se contradiz."""
+    ao_vivo = {"controles": [{"jogador": 1, "cor": "white"}],
+               "escritas": [{"canal": "haptica", "controle": 0, "ha_ms": 200}]}
+    lembradas = [exp.Ultima("haptica", "White", 100)]
+    for situacao, mostra in (("tocando", True), ("calado", False), ("esperando", False),
+                             (None, True)):
+        base: dict[str, Any] = {"ligado": True, "ao_vivo": ao_vivo}
+        if situacao is not None:
+            base[SITUACAO] = {"estado": situacao, "frase": None}
+        for ultimas in (None, lembradas):
+            html = exp.faixa_html(["controle", "linhas"], base, ultimas=ultimas)
+            assert ("fx-feed" in html) is mostra, (situacao, ultimas)

@@ -956,7 +956,8 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela],
                        acoes_dos_cartoes: Mapping[str, str] | None = None) -> str:
     """As linhas soltas e, onde o manifesto junta opções num ``cartao``, os cartões, numa grade
     que corre em colunas; cada cartão entra onde aparece a primeira opção dele, com os botões das
-    ações dele (``acoes_dos_cartoes``, pelo nome do cartão) ao pé."""
+    ações dele (``acoes_dos_cartoes``, pelo nome do cartão) ao pé. O cartão com ação nunca vira a
+    fileira de chaves, que não tem pé."""
     partes: list[tuple[str, Any]] = []
     for o in itens:
         if o.cartao:
@@ -972,12 +973,13 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela],
         if tipo == "soltas":
             saida.append(_linhas_soltas(corpo))
             continue
-        fileiras = [(n, j) for n, j in corpo.items() if _so_chaves(n, j)]
-        cartoes = [(n, j) for n, j in corpo.items() if not _so_chaves(n, j)]
+        acoes_de = acoes_dos_cartoes or {}
+        fileiras = [(n, j) for n, j in corpo.items() if _so_chaves(n, j) and not acoes_de.get(n)]
+        cartoes = [(n, j) for n, j in corpo.items() if (n, j) not in fileiras]
         saida.extend(_fileira_de_chaves(n, j) for n, j in fileiras)
         if cartoes:
             saida.append('<div class="mj-cartoes">' + "".join(
-                _cartao_html(n, j, (acoes_dos_cartoes or {}).get(n, ""))
+                _cartao_html(n, j, acoes_de.get(n, ""))
                 for n, j in cartoes) + "</div>")
     return "".join(saida)
 
@@ -1386,7 +1388,8 @@ def faixa_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     extensão publica (Tocando, Calado ou Esperando um jogo) com a frase da situação (o jogo, ou o
     motivo do calado), os pares das ``linhas`` e do ``perfil`` e, com o pedaço
     ``controle``, as últimas escritas que chegaram ao controle, com o canal, o controle e há
-    quanto tempo. Sem a situação, a pílula diz Ligada; com a extensão parada, a palavra do
+    quanto tempo (só tocando, ou sem situação: calado ou esperando, a faixa não as mostra). Sem a
+    situação, a pílula diz Ligada; com a extensão parada, a palavra do
     processo. As últimas escritas são as que a janela lembra; na falta, as do ``ao_vivo``."""
     ligada = bool(estado and estado.get("ligado") is True)
     situacao = (estado or {}).get("situacao") if ligada else None  # (noqa-acento)
@@ -1417,7 +1420,8 @@ def faixa_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     texto_dos_pares = "".join(f'<span class="fx-par"><span>{_e(r)}</span>{_e(v)}</span>'
                               for r, v in pares)
     feed = ""
-    if "controle" in pedacos and ligada:
+    if "controle" in pedacos and ligada and not (
+            isinstance(situacao, Mapping) and situacao.get("estado") in ("calado", "esperando")):
         feed = _ultimas_html(ultimas if ultimas is not None else ultimas_do_estado(estado))
     linha1 = f'<div class="fx-l1">{_e(frase)}</div>' if frase else ""
     linha2 = f'<div class="fx-l2">{texto_dos_pares}</div>' if texto_dos_pares else ""
