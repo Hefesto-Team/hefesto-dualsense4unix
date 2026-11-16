@@ -849,7 +849,8 @@ def versoes_do_python(rede: bool) -> Versoes:
     atrasadas = _atrasadas()
     dica = " · ".join(f"{n} {v} → {u}" for n, (v, u) in sorted(atrasadas.items()))
     rotulo = _pacotes(len(atrasadas)) if atrasadas else ""
-    return Versoes("", str(len(atrasadas)), rotulo=rotulo, dica=dica, nova=bool(atrasadas))
+    alvo = " · ".join(f"{n} {u}" for n, (_v, u) in sorted(atrasadas.items()))
+    return Versoes("", alvo, rotulo=rotulo, dica=dica, nova=bool(atrasadas))
 
 
 PROVA_DO_PRODUTO = (

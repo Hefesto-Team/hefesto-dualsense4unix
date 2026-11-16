@@ -435,6 +435,14 @@ def test_o_python_so_olha_as_bibliotecas_do_produto(monkeypatch: pytest.MonkeyPa
     assert versoes.tem_nova() and versoes.rotulo == "2 pacotes"
     assert versoes.dica == "evdev 1.9.3 → 2.0.0 · pydantic 2.13.5 → 2.14.3"
     assert pa.versoes_do_python(False).publicada is None
+    segurada = at.Escolha(seguradas={"python": versoes.publicada or ""})
+    lista[1] = {"name": "pydantic", "version": "2.13.5", "latest_version": "2.15.0"}
+    mais_nova = pa.versoes_do_python(True)
+    assert mais_nova.rotulo == "2 pacotes"
+    python = next(p for p in at.pecas() if p.id == "python")
+    assert at._estado_da_peca(python, mais_nova, segurada, {}) == at.NOVA, \
+        "a volta segura as versões de que se voltou, não a contagem: a próxima publicada sobe"
+    assert at._estado_da_peca(python, versoes, segurada, {}) == at.EM_DIA
     instalados: list[tuple[str, ...]] = []
     monkeypatch.setattr(pa, "_pip", lambda *a, **k: instalados.append(a) or (0, ""))
     pa._voltar_o_python({"dados": {"pacotes": {"evdev": ["1.9.3", "2.0.0"]}}})
