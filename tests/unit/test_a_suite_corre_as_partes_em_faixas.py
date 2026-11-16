@@ -36,6 +36,26 @@ def test_x():
         f.write(f"{{inicio}} {{fim}} {{os.environ['HOME']}}\\n")
 """
 
+_ENCONTRO = """\
+import os
+import time
+from pathlib import Path
+
+
+def test_x():
+    marca = Path(os.environ["MARCAS"])
+    (marca / "{nome}.comecou").touch()
+    inicio = time.time()
+    while time.time() - inicio < 20 and not [
+        p for p in marca.glob("*.comecou") if p.stem != "{nome}"
+    ]:
+        time.sleep(0.05)
+    time.sleep(0.3)
+    fim = time.time()
+    with open(marca / "{nome}.txt", "w", encoding="utf-8") as f:
+        f.write(f"{{inicio}} {{fim}} {{os.environ['HOME']}}\\n")
+"""
+
 
 def _arvore(raiz: Path, leves: int, tocam: int, com_semaforo: bool = False) -> None:
     (raiz / "scripts").mkdir(parents=True)
@@ -292,6 +312,9 @@ def test_as_partes_pedidas_correm_em_faixas_e_as_que_tocam_uma_de_cada_vez(tmp_p
     """O fecho pede só as partes sem recibo, e as pedidas correm em faixas como a suíte inteira."""
     raiz = tmp_path / "arvore"
     _arvore(raiz, leves=4, tocam=2, com_semaforo=True)
+    for arq in (raiz / "tests" / "unit").glob("test_*.py"):
+        cabeca = "# chama o systemctl\n" if "toca" in arq.stem else ""
+        arq.write_text(cabeca + _ENCONTRO.format(nome=arq.stem), encoding="utf-8")
     (tmp_path / "seco").mkdir()
     seco = _rodar(
         raiz,
