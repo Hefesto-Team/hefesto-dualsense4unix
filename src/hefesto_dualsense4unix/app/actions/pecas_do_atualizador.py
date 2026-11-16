@@ -16,9 +16,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 import urllib.request
 from collections.abc import Callable, Sequence
@@ -69,18 +71,30 @@ def _comando(argv: Sequence[str], *, linha: Callable[[str], None] | None = None,
     except OSError as erro:
         return 127, erro.strerror or str(erro)
     ultima = ""
-    inicio = time.monotonic()
+    estourou = threading.Event()
+
+    def _matar() -> None:
+        estourou.set()
+        with contextlib.suppress(OSError):
+            os.killpg(processo.pid, signal.SIGKILL)
+
+    vigia = threading.Timer(teto_s, _matar)
+    vigia.daemon = True
+    vigia.start()
     assert processo.stdout is not None
-    for texto in processo.stdout:
-        texto = texto.rstrip("\n")
-        if texto.strip():
-            ultima = texto.strip()
-        if linha is not None:
-            linha(texto)
-        if time.monotonic() - inicio > teto_s:
-            processo.kill()
-            return 124, f"passou de {teto_s / 60:.0f} minutos"
-    return processo.wait(), ultima
+    try:
+        for texto in processo.stdout:
+            texto = texto.rstrip("\n")
+            if texto.strip():
+                ultima = texto.strip()
+            if linha is not None:
+                linha(texto)
+        rc = processo.wait()
+    finally:
+        vigia.cancel()
+    if estourou.is_set():
+        return 124, f"passou de {teto_s / 60:.0f} minutos"
+    return rc, ultima
 
 
 def _saida(argv: Sequence[str]) -> str | None:
@@ -695,6 +709,11 @@ def _aplicar_o_umu(passo: Passo, dados: dict[str, Any]) -> None:
         if velha.name not in ("atual", str(dados.get("tag", "")),
                               str(dados.get("anterior_dir", ""))) and velha.is_dir():
             shutil.rmtree(velha, ignore_errors=True)
+    baixado = Path(str(dados.get("tar", "")))
+    with contextlib.suppress(OSError):
+        for pacote in (_cache() / "umu").glob("*.tar"):
+            if pacote.name != baixado.name and _e_o_zipapp(pacote.name):
+                pacote.unlink()
     passo.fracao(1.0)
 
 

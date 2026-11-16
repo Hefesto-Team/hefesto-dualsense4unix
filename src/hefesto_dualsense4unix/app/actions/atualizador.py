@@ -556,7 +556,8 @@ def _guardar_a_anterior(peca: Peca, versoes: Versoes, dados: dict[str, Any],
                         agora: float) -> None:
     anteriores = ler_as_anteriores()
     anteriores[peca.id] = {"nome": peca.nome, "agora": versoes.publicada or "",
-                           "anterior": versoes.instalada, "desde": agora, "dados": dados}
+                           "anterior": versoes.instalada, "rotulo": versoes.rotulo,
+                           "desde": agora, "dados": dados}
     _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
 
 
@@ -886,7 +887,7 @@ def voltar(ident: str, *, lista: Sequence[Peca] | None = None) -> str:
     anterior = ler_as_anteriores().get(ident)
     if peca is None or peca.voltar is None:
         return "a peça não volta"
-    if not isinstance(anterior, dict) or not anterior.get("anterior"):
+    if not isinstance(anterior, dict) or not (anterior.get("anterior") or anterior.get("rotulo")):
         return "sem versão anterior"
     try:
         peca.voltar(anterior)

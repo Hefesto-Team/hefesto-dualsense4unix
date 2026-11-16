@@ -2195,9 +2195,10 @@ def _ler_registro(cache: Path) -> dict[str, object]:
 
 
 def _gravar_registro(cache: Path, registro: dict[str, object]) -> None:
-    segurada = _ler_registro(cache).get("segurada")
-    if segurada and "segurada" not in registro:
-        registro = {**registro, "segurada": segurada}
+    antes = _ler_registro(cache)
+    for chave in ("segurada", "anterior"):
+        if antes.get(chave) and chave not in registro:
+            registro = {**registro, chave: antes[chave]}
     cache.mkdir(parents=True, exist_ok=True)
     tmp = cache / f".{ULTIMA_DO_GE_BASENAME}.tmp"
     tmp.write_text(json.dumps(registro, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -2337,6 +2338,7 @@ def instalar_a_ultima_do_cache(
         if not pinned_proton_installed(nome, compat_dir):
             return Atualizacao("falhou", nome, resultado.detail)
         if pino_que_vale(conf, compat_dir) == nome:
+            _gravar_registro(cache_dir, {**_ler_registro(cache_dir), "anterior": vale})
             return Atualizacao("instalada", nome)
         fixada = compat_dir / vale if pinned_proton_installed(vale, compat_dir) else None
         faltas = qp.ficha(compat_dir / nome, fixada).faltas
@@ -2351,10 +2353,39 @@ def segurar(cache: Path, nome: str) -> None:
     _gravar_registro(cache, {**_ler_registro(cache), "segurada": nome})
 
 
+def tarballs_que_sobram(home: Path | None = None) -> list[Path]:
+    """Os tarballs do cache que não são o pino, a última baixada nem a anterior que volta.
+
+    Só com o pino instalado: sem ele, o cache pode ser a única cópia.
+    """
+    cache = default_cache_dir(home)
+    compat = default_compat_dir(home)
+    try:
+        vale = pino_que_vale(_load_conf(None), compat)
+    except (OSError, ValueError, KeyError):
+        return []
+    if not pinned_proton_installed(vale, compat):
+        return []
+    registro = _ler_registro(cache)
+    ficam = {vale, str(registro.get("name", "")), str(registro.get("anterior", ""))}
+    try:
+        tarballs = sorted(cache.glob("*.tar.gz"))
+    except OSError:
+        return []
+    return [t for t in tarballs if t.is_file() and not t.is_symlink()
+            and e_da_familia_proton(t.name.removesuffix(".tar.gz"))
+            and t.name.removesuffix(".tar.gz") not in ficam]
+
+
 def apagar_as_sobras(home: Path | None = None) -> tuple[list[VersaoQueSobra], dict[str, str]]:
-    """Apaga de vez as versões que ficaram para trás na Steam e nas casas do Heroic (D-2210)."""
-    return desinstalar_as_que_sobram([*versoes_que_sobram(home), *sobras_das_casas_do_heroic(home)],
-                                     steam_barra=_steam_gate)
+    """Apaga de vez as versões que ficaram para trás na Steam e nas casas do Heroic (D-2210), e
+    no cache os tarballs que não são o pino nem a anterior que volta."""
+    sobras = [*versoes_que_sobram(home), *sobras_das_casas_do_heroic(home)]
+    feito = desinstalar_as_que_sobram(sobras, steam_barra=_steam_gate)
+    for tarball in tarballs_que_sobram(home):
+        with contextlib.suppress(OSError):
+            tarball.unlink()
+    return feito
 
 
 def proton_pin_report(

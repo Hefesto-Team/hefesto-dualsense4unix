@@ -365,16 +365,19 @@ def html_das_anteriores(anteriores: dict[str, Any], pode_voltar: Sequence[str]) 
     linhas = []
     for ident in ORDEM_NA_TELA:
         dado = anteriores.get(ident)
-        if ident not in pode_voltar or not isinstance(dado, dict) or not dado.get("anterior"):
+        if ident not in pode_voltar or not isinstance(dado, dict) \
+                or not (dado.get("anterior") or dado.get("rotulo")):
             continue
         dica = _dica("No próximo início") if ident == "kernel" else ""
+        anterior = versao_curta(dado.get("anterior"))
+        agora = str(dado.get("rotulo") or "") if not anterior else versao_curta(dado.get("agora"))
         linhas.append(
             f'<div class="vt-l"><span>{_e(dado.get("nome") or ident)}</span>'
             f'<span class="v"{_dica(str(dado.get("agora") or ""))}>'
-            f'{_e(versao_curta(dado.get("agora")))}</span>'
+            f'{_e(agora)}</span>'
             f'<span class="d">{_data(dado.get("desde"))}'
             f'</span><button class="btn amarelo-padrao" data-gesto="voltar-a-anterior" '
-            f'data-v="{_e(ident)}"{dica}>Voltar a {_e(versao_curta(dado.get("anterior")))}'
+            f'data-v="{_e(ident)}"{dica}>{f"Voltar a {_e(anterior)}" if anterior else "Voltar"}'
             f'</button></div>')
     return (f'<div class="tn-cx" role="dialog" aria-modal="true" aria-label="Atualizações">'
             f'<div class="tn-topo"><span class="tn-tit">Atualizações</span>'
