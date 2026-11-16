@@ -5,7 +5,8 @@ Versão da porta: **2** (`API_DAS_MODIFICACOES`, em `src/hefesto_dualsense4unix/
 (19/10/2026) acrescentou o `aviso` do manifesto e o `lancador.jogos`; o resto é o da 1, e a faixa
 `">=1,<3"` aceita as duas. O `lancador.abrir`, o `mira.ligada`, o `vibracao.escala` e o tópico <!-- ref-externa: método da porta das extensões, não do daemon -->
 `jogo.estilo` (14/11/2026) e o `corpo.ligar` (16/11/2026) entraram na 2 sem mudar a faixa: a extensão que os pede declara as
-permissões novas, e o Hefesto que não as conhece recusa o manifesto com a frase.
+permissões novas, e o Hefesto que não as conhece recusa o manifesto com a frase. O mesmo vale para o
+`responde` das ações (16/11/2026).
 
 ## O que o filho recebe
 

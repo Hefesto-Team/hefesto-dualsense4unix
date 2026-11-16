@@ -123,8 +123,9 @@ def _servico(lugares: Lugares, porta: Any) -> Any:
 
 
 def _clicar(curto: pathlib.Path, *, responde_no_manifesto: bool, responde_na_extensao: bool,
-            acoes: tuple[str, ...] = ("testar-golpe",)) -> tuple[list[Any], _Extensao, float]:
-    lugares = _lugares(curto, _manifesto(responde_no_manifesto))
+            acoes: tuple[str, ...] = ("testar-golpe",), alvo: str | None = None,
+            manifesto: dict[str, Any] | None = None) -> tuple[list[Any], _Extensao, float]:
+    lugares = _lugares(curto, manifesto or _manifesto(responde_no_manifesto))
 
     async def corrida() -> tuple[list[Any], _Extensao, float]:
         async def escritor(_m: str, _p: dict[str, Any]) -> Any:
@@ -141,7 +142,8 @@ def _clicar(curto: pathlib.Path, *, responde_no_manifesto: bool, responde_na_ext
         try:
             inicio = time.monotonic()
             respostas = [await IpcHandlersMixin._handle_mods_acao(
-                servico, {"mod": "imersao", "acao": a}) for a in acoes]  # (noqa-acento)
+                servico, {"mod": "imersao", "acao": a, "alvo": alvo})  # (noqa-acento)
+                for a in acoes]
             gasto = time.monotonic() - inicio
             await asyncio.sleep(0.3)
         finally:
@@ -183,6 +185,21 @@ def test_a_acao_sem_responde_nao_espera_nem_leva_id(curto: pathlib.Path) -> None
     assert respostas == [{"enviada": True}, {"enviada": True}]
     assert gasto < 0.5, "a ação sem resposta esperou a extensão"
     assert [a.get("id") for a in ext.acoes] == [None, None]
+
+
+def test_a_acao_do_aparelho_que_responde_devolve_a_resposta_com_o_alvo(
+    curto: pathlib.Path,
+) -> None:
+    manifesto = _manifesto(False)
+    manifesto["aparelhos_acoes"] = {"grupo": "Aparelhos", "acoes": [  # (noqa-acento)
+        {"id": "testar", "rotulo": "Testar", "icone": "testar", "responde": True},
+        {"id": "esquecer", "rotulo": "Esquecer", "icone": "esquecer"}]}
+    respostas, ext, _gasto = _clicar(curto, responde_no_manifesto=False,
+                                     responde_na_extensao=True, acoes=("testar", "esquecer"),
+                                     alvo="lampada", manifesto=manifesto)
+    assert respostas == [{"enviada": True, "respondeu": True, "resposta": VEREDITO},
+                         {"enviada": True}]
+    assert [(a["alvo"], "id" in a) for a in ext.acoes] == [("lampada", True), ("lampada", False)]
 
 
 def test_sem_a_extensao_na_porta_nada_e_enviado(curto: pathlib.Path) -> None:

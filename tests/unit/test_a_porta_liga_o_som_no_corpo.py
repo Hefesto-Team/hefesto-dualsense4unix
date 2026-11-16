@@ -201,6 +201,41 @@ def test_no_modo_que_cala_o_pedido_nao_toca(modo: str) -> None:
     assert not alto.saida.get(P[0])
 
 
+def test_sem_jogo_o_corpo_pedido_nao_toca() -> None:
+    passo, alto = _passo(_Relogio())
+    passo.receita_vigente = tv.DESLIGADA
+    estados = dict(zip(P, (tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=False),
+                           tv.EstadoDoCanal(modo=tv.MODO_DUALSENSE, ha_jogo=False)) * 2,
+                       strict=True))
+    for uniq in estados:
+        passo.motor.de_fora.corpo.pedir(EXT, uniq, tv.PedidoDoCorpo(1.0), 1000)
+    _tique(passo, estados)
+    assert not any(alto.saida.values()), "o corpo pedido tocou sem jogo aberto"
+
+
+def test_na_bateria_longa_o_pedido_cala_o_corpo_e_desce_os_motores_so_naquele_controle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    economia = norm_mac(P[1])
+    monkeypatch.setattr(tv, "_controle_na_economia", lambda uniq: norm_mac(uniq) == economia)
+    relogio = _Relogio()
+    passo, alto = _passo(relogio)
+    passo.receita_vigente = tv.DESLIGADA
+    estados = dict(zip(P, (COM_JOGO, COM_JOGO_SONY) * 2, strict=True))
+    for uniq in estados:
+        passo.motor.de_fora.corpo.pedir(EXT, uniq, tv.PedidoDoCorpo(1.0), 1000)
+    _tique(passo, estados)
+    assert not alto.saida.get(P[1]), "o corpo pedido tocou na Bateria longa"
+    assert all(_pico(alto.saida.get(u, [])) > 0.0 for u in P if u != P[1])
+
+    atuador, motor = _motores(relogio)
+    for uniq in P:
+        motor.de_fora.corpo.pedir(EXT, uniq, tv.PedidoDoCorpo(tipo="tranco",
+                                                             forca_dos_motores=0.9), 1000)
+    assert atuador._forca_de(P[1]) == pytest.approx(tv.FORCA_NA_ECONOMIA)
+    assert [atuador._forca_de(u) for u in P if u != P[1]] == [pytest.approx(0.9)] * 3
+
+
 def _motores(relogio: _Relogio, padroes: dict[str, str] | None = None
              ) -> tuple[tv.AtuadorDosMotores, tv.TatoVivo]:
     motor = tv.TatoVivo([])
