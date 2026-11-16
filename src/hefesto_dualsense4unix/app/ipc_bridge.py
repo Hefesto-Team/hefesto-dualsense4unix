@@ -55,6 +55,9 @@ TETOS: dict[str, float] = {
 
 TETO_PADRAO_S: float = 0.25
 
+METODO_QUE_ESPERA_A_EXTENSAO = "mods.acao"
+FOLGA_DA_RESPOSTA_DA_EXTENSAO_S: float = 0.5
+
 PISO_DA_LINHA_DE_COMANDO_S: float = 1.0
 
 FRASE_DO_PRAZO_VENCIDO = (
@@ -63,7 +66,12 @@ FRASE_DO_PRAZO_VENCIDO = (
 
 
 def teto(metodo: str) -> float:
-    """Quanto tempo esperar por aquele método."""
+    """Quanto tempo esperar por aquele método. O ``mods.acao`` cobre o prazo em que a porta espera
+    a resposta da extensão (``PRAZO_DA_RESPOSTA_S``, lido da porta na hora) e a folga."""
+    if metodo == METODO_QUE_ESPERA_A_EXTENSAO:
+        from hefesto_dualsense4unix.mods.porta import PRAZO_DA_RESPOSTA_S
+
+        return PRAZO_DA_RESPOSTA_S + FOLGA_DA_RESPOSTA_DA_EXTENSAO_S
     return TETOS.get(metodo, TETO_PADRAO_S)
 
 
