@@ -3136,10 +3136,22 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
 
     na_economia = _controle_na_economia
 
-    def padrao_de(uniq: str) -> str | None:
+    def do_perfil(uniq: str) -> str | None:
         motor = motor_do(daemon)
         escolha = None if motor is None else motor.escolhas_de_imersao.get(norm_mac(uniq) or "")
         return padroes_de_vibracao.padrao_que_vale(escolha, estilo_ativo(daemon))
+
+    def pedido_de(uniq: str) -> PedidoDoCorpo | None:
+        motor = motor_do(daemon)
+        return None if motor is None else motor.de_fora.corpo.de(uniq)
+
+    def padrao_de(uniq: str) -> str | None:
+        """O padrão do perfil; sem ele, o que uma extensão pediu pela porta."""
+        dele = do_perfil(uniq)
+        if dele is not None:
+            return dele
+        pedido = pedido_de(uniq)
+        return None if pedido is None else pedido.tipo
 
     def gatilho_vibra(uniq: str) -> bool:
         motor = motor_do(daemon)
@@ -3149,7 +3161,11 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
         chave = estilo_ativo(daemon)
-        degrau = FORCA_DO_DEGRAU.get(getattr(POR_CHAVE.get(chave or ""), "vibracao", ""), 1.0)
+        degrau = (FORCA_DO_DEGRAU.get(getattr(POR_CHAVE.get(chave or ""), "vibracao", ""), 1.0)
+                  if do_perfil(uniq) is not None else 0.0)
+        pedido = pedido_de(uniq)
+        if pedido is not None and pedido.tipo is not None:
+            degrau = max(degrau, pedido.forca_dos_motores)
         forca = min(degrau, FORCA_NA_ECONOMIA) if na_economia(uniq) else degrau
         return forca * fator_da_cena(daemon)
 
@@ -3481,6 +3497,74 @@ class RecorteCortado:
         return len(self.pcm) / (TAXA_DE_FORA * 4)
 
 
+PRAZO_MAXIMO_DO_CORPO_MS = 10_000
+
+
+@dataclass(frozen=True)
+class PedidoDoCorpo:
+    """O que uma extensão pede ao tato vivo num controle: a força do Som no corpo (0 não pede) e
+    o padrão dos motores no L2 e no R2 (``tipo`` ``None`` não pede), cada um de 0 a 1."""
+
+    som_no_corpo: float = 0.0
+    tipo: str | None = None
+    forca_dos_motores: float = 0.0
+
+
+class PedidosDoCorpo:
+    """Os pedidos do corpo das extensões, por controle e com prazo: vale o mais forte de cada
+    parte, e o pedido que não se renova sai no prazo."""
+
+    def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
+        self._relogio = relogio
+        self._pedidos: dict[tuple[str, str], tuple[PedidoDoCorpo, float]] = {}
+        self._trava = threading.Lock()
+
+    def pedir(self, dono: str, uniq: str, pedido: PedidoDoCorpo, ate_ms: int) -> None:
+        if not 0 < ate_ms <= PRAZO_MAXIMO_DO_CORPO_MS:
+            raise ValueError(f"o prazo vai de 1 a {PRAZO_MAXIMO_DO_CORPO_MS} ms")
+        if not (0.0 <= pedido.som_no_corpo <= 1.0 and 0.0 <= pedido.forca_dos_motores <= 1.0):
+            raise ValueError("a força vai de 0 a 1")
+        if pedido.tipo is not None and pedido.tipo not in padroes_de_vibracao.PADROES:
+            raise ValueError("o tipo é um dos padrões dos motores")
+        chave = (dono, norm_mac(uniq) or uniq)
+        with self._trava:
+            if pedido.som_no_corpo <= 0.0 and pedido.tipo is None:
+                self._pedidos.pop(chave, None)
+                return
+            self._pedidos[chave] = (pedido, self._relogio() + ate_ms / 1000.0)
+
+    def soltar(self, dono: str) -> None:
+        with self._trava:
+            for chave in [c for c in self._pedidos if c[0] == dono]:
+                del self._pedidos[chave]
+
+    def _vivos(self) -> list[tuple[str, PedidoDoCorpo]]:
+        agora = self._relogio()
+        with self._trava:
+            for chave in [c for c, (_p, ate) in self._pedidos.items() if ate <= agora]:
+                del self._pedidos[chave]
+            return [(c[1], p) for c, (p, _ate) in self._pedidos.items()]
+
+    def pedem(self) -> tuple[bool, bool]:
+        """``(corpo, motores)``: algum pedido vivo do Som no corpo, e algum dos motores."""
+        vivos = [p for _u, p in self._vivos()]
+        return (any(p.som_no_corpo > 0.0 for p in vivos),
+                any(p.tipo is not None for p in vivos))
+
+    def de(self, uniq: str) -> PedidoDoCorpo | None:
+        """O pedido que vale em ``uniq``: o corpo mais forte, e o padrão do pedido mais forte."""
+        alvo = norm_mac(uniq) or uniq
+        dele = [p for u, p in self._vivos() if u == alvo]
+        if not dele:
+            return None
+        motores = max((p for p in dele if p.tipo is not None),
+                      key=lambda p: p.forca_dos_motores, default=None)
+        return PedidoDoCorpo(
+            max(p.som_no_corpo for p in dele),
+            None if motores is None else motores.tipo,
+            0.0 if motores is None else motores.forca_dos_motores)
+
+
 @dataclass
 class ToqueDeFora:
     origem: str
@@ -3529,6 +3613,7 @@ class FonteDeFora:
         self.toques: dict[tuple[str, str], ToqueDeFora] = {}
         self._estalos: deque[tuple[float, Any]] = deque(maxlen=ESTALOS_GUARDADOS)
         self._trava = threading.Lock()
+        self.corpo = PedidosDoCorpo(lambda: self.relogio())
         self.contadores: dict[str, int] = {
             "pedidos": 0, "escritas": 0, "recusas_do_modo": 0, "recusas_do_teto": 0,
             "mais_fracos": 0, "pelo_motor": 0,
@@ -3656,6 +3741,7 @@ class FonteDeFora:
         self.padroes = {k: p for k, p in self.padroes.items() if k[0] != origem}
         self.sons = {k: p for k, p in self.sons.items() if k[0] != origem}
         self.toques = {k: t for k, t in self.toques.items() if t.origem != origem}
+        self.corpo.soltar(origem)
 
     def registrar(self, origem: str, ident: str, padrao: PadraoDeFora) -> None:
         if (origem, ident) not in self.padroes and sum(
@@ -3948,6 +4034,7 @@ class Passo:
         self._agora_da_continua = 0.0
         self.fonte_do_som = FonteDoSom()
         self._corpo_discreto: frozenset[str] = frozenset()
+        self._ha_corpo_pedido = False
         self._externos: frozenset[str] = frozenset()
         self.diario_do_corpo = DiarioDoCorpo(
             lambda uniq: cor_do_plastico_de(daemon, uniq), subida_ao_store(daemon))
@@ -3972,7 +4059,7 @@ class Passo:
         return tem_assinante(getattr(self.daemon, "bus", None), EventTopic.JOGO_SOM)
 
     def _o_tato_quer_o_som(self) -> bool:
-        return self.motor.ligado and pede_o_ouvido(self.receita_vigente)
+        return self.motor.ligado and (pede_o_ouvido(self.receita_vigente) or self._ha_corpo_pedido)
 
     def _som_so_da_porta(self) -> bool:
         return not self._o_tato_quer_o_som() and self.som_assinado()
@@ -4009,6 +4096,17 @@ class Passo:
                 self.motor.meus_toques.ajustar(meus_toques_ativos(self.daemon))
         return self.receita_vigente
 
+    def _com_os_pedidos(self, receita: Receita) -> Receita:
+        """A receita com o que as extensões pediram pela porta por cima: o perfil segue valendo."""
+        corpo, motores = self.motor.de_fora.corpo.pedem()
+        self._ha_corpo_pedido = corpo
+        if not (corpo or motores):
+            return receita
+        return replace(
+            receita,
+            som_no_corpo_escolhido=receita.som_no_corpo_escolhido or corpo,
+            padroes_escolhidos=receita.padroes_escolhidos or motores)
+
     def alimentar_o_corpo(self, pcm: bytes) -> None:
         """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o quer, e a energia
         do som vai à intensidade da cena."""
@@ -4016,7 +4114,8 @@ class Passo:
         if self._som_so_da_porta():
             return
         self.motor.cena.ouvir_o_som(pcm)
-        if self.receita_vigente.som_no_corpo_escolhido or self._corpo_discreto:
+        if (self.receita_vigente.som_no_corpo_escolhido or self._corpo_discreto
+                or self._ha_corpo_pedido):
             pedaco = self._filtro_do_corpo.processar(pcm)
             self._corpo.append((pedaco, max(map(abs, pedaco), default=0.0) >= SINAL_DO_CORPO))
 
@@ -4048,10 +4147,13 @@ class Passo:
                 donos.append(uniq)
             elif motivo is not None:
                 self._recusar(uniq, motivo)
-        discretos = [u for u in uniqs if u in self._corpo_discreto and u not in donos]
-        tocam = {*donos, *discretos}
+        parciais = {u: FORCA_DO_CORPO_DISCRETO
+                    for u in uniqs if u in self._corpo_discreto and u not in donos}
+        for uniq, forca in self._corpo_pedido(uniqs, estado_de, donos).items():
+            parciais[uniq] = max(forca, parciais.get(uniq, 0.0))
+        tocam = {*donos, *parciais}
         self._tetos_do_corpo = {u: t for u, t in self._tetos_do_corpo.items() if u in tocam}
-        if not donos and not discretos:
+        if not donos and not parciais:
             return
         amostras = array("f")
         for pedaco, _sinal in pedacos:
@@ -4059,7 +4161,7 @@ class Passo:
         alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
         levar = getattr(alto_falante, "tocar_o_corpo", None)
         if not callable(levar):
-            for uniq in (*donos, *discretos):
+            for uniq in (*donos, *parciais):
                 self._recusar(uniq, RECUSA_SEM_APARELHO)
             return
         fator = fator_da_cena(self.daemon)
@@ -4067,10 +4169,28 @@ class Passo:
             meu = self._sob_o_teto(uniq, amostras, fator)
             self._cair_pelo_motor(
                 uniq, meu, self._entregar(levar, uniq, meu, com_sinal), com_sinal)
-        for uniq in discretos:
-            metade = self._sob_o_teto(uniq, amostras, fator * FORCA_DO_CORPO_DISCRETO)
+        for uniq, forca in parciais.items():
+            parte = self._sob_o_teto(uniq, amostras, fator * forca)
             self._cair_pelo_motor(
-                uniq, metade, self._entregar(levar, uniq, metade, com_sinal), com_sinal)
+                uniq, parte, self._entregar(levar, uniq, parte, com_sinal), com_sinal)
+
+    def _corpo_pedido(
+        self, uniqs: Sequence[str], estado_de: Callable[[str], EstadoDoCanal | None],
+        donos: Sequence[str],
+    ) -> dict[str, float]:
+        """A força do Som no corpo que uma extensão pediu em cada controle, onde o jogo cala."""
+        fora: dict[str, float] = {}
+        for uniq in uniqs:
+            pedido = self.motor.de_fora.corpo.de(uniq) if uniq not in donos else None
+            estado = estado_de(uniq)
+            if pedido is None or pedido.som_no_corpo <= 0.0 or estado is None:
+                continue
+            motivo = _o_que_cala_o_corpo(uniq, estado)
+            if motivo is not None:
+                self._recusar(uniq, motivo)
+            elif not _o_modo_cala_o_motor(estado):
+                fora[uniq] = pedido.som_no_corpo
+        return fora
 
     def _sob_o_teto(self, uniq: str, amostras: Any, forca: float) -> Any:
         """O corpo de ``uniq`` sob o teto do ganho dele, na ``forca`` da cena: o susto sai a 70%
@@ -4234,7 +4354,7 @@ class Passo:
         return int(meus.tique(entradas_do_daemon(self.daemon), agora))
 
     def _da_receita(self, agora: float) -> int:
-        receita = self.receita_de_agora(agora)
+        receita = self._com_os_pedidos(self.receita_de_agora(agora))
         ligado = receita.ligada
         if not ligado:
             if self.motor.ligado:
@@ -4443,7 +4563,9 @@ __all__ = [
     "MapaDosMomentos",
     "PadraoDeFora",
     "Passo",
+    "PedidoDoCorpo",
     "PedidoVivo",
+    "PedidosDoCorpo",
     "PlanoDoGatilho",
     "Receita",
     "SessaoDoMotor",

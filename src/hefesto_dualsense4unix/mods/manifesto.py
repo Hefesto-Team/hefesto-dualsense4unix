@@ -148,6 +148,10 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Tocar no alto-falante de um controle um som curto, ou o estalo que o jogo acabou de fazer."
     ),
     "escrever:leds": "Acender por um instante as cinco luzes de jogador de um controle.",
+    "escrever:corpo": (
+        "Ligar num controle o som do jogo na vibração e a vibração ao apertar o L2 e o R2, só "
+        "enquanto a extensão pede."
+    ),
     "escrever:mira": (
         "Deixar a mira do giroscópio mais pesada por alguns segundos, e desligar o giroscópio de "
         "um controle enquanto a extensão está ligada."

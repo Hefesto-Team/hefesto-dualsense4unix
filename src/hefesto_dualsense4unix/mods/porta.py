@@ -707,6 +707,12 @@ def _vagas_do_pedido(canal: str, params: dict[str, Any]) -> dict[str, float]:
     return {"centro": brilho_da_luz(rgb, brilho)}
 
 
+_FRASE_DO_MODO_QUE_CALA = {
+    "nativo": "no Modo Nativo o jogo fala direto com o controle",
+    "steam_input": "no Steam Input a Steam fala direto com o controle",
+}
+
+
 def _recusa_do_veredito(veredito: Any, canal: str) -> RecusaError:
     if veredito.motivo == "teto":
         return RecusaError(CODE_TETO_CHEIO, "o teto de efeitos deste controle está cheio",
@@ -1413,6 +1419,8 @@ class Porta:
                 return _resposta(req_id, await self._ligar_a_mira(con.sessao, params))
             if metodo == "vibracao.escala":
                 return _resposta(req_id, self._escalar_a_vibracao(con.sessao, params))
+            if metodo == "corpo.ligar":
+                return _resposta(req_id, self._ligar_o_corpo(con.sessao, params))
             if metodo in _DA_MEMORIA:
                 return _resposta(req_id, await self._varrer(con.sessao, metodo, params))
             if metodo in _DE_FORA:
@@ -2007,6 +2015,50 @@ class Porta:
             self._escalas.add((sessao.mod_id, uniq))
             self._vigiar_o_peso()
         return {"status": "ok", "escala": float(escala)}
+
+    def _ligar_o_corpo(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
+        """O ``corpo.ligar {uniq, som_no_corpo?, gatilhos?: {tipo, forca}, ate_ms}``: o Som no
+        corpo e o padrão dos motores no L2 e no R2 do tato vivo, num controle, até ``ate_ms``; o
+        pedido se renova pedindo de novo, e o vazio solta. O que o perfil liga segue valendo, e
+        o mais forte vale; no Modo Nativo e no Steam Input o jogo fala direto com o controle."""
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
+            PedidoDoCorpo,
+            o_modo_cala_a_extensao,
+        )
+
+        if "escrever:corpo" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão escrever:corpo")
+        uniq = _uniq_do_pedido(params, "corpo.ligar")
+        ate_ms, corpo = params.get("ate_ms"), params.get("som_no_corpo", 0.0)
+        gatilhos = params.get("gatilhos")
+        if isinstance(ate_ms, bool) or not isinstance(ate_ms, int):
+            raise RecusaError(CODE_INVALID_PARAMS, "corpo.ligar pede ate_ms em milissegundos")
+        if not _numero(corpo):
+            raise RecusaError(CODE_INVALID_PARAMS, "corpo.ligar pede o som_no_corpo de 0 a 1")
+        if gatilhos is not None and not (
+                isinstance(gatilhos, dict) and isinstance(gatilhos.get("tipo"), str)
+                and _numero(gatilhos.get("forca"))):
+            raise RecusaError(CODE_INVALID_PARAMS, "corpo.ligar pede gatilhos: {tipo, forca}")
+        fonte = self._fonte()
+        if fonte is None:
+            raise RecusaError(CODE_NAO_ESCREVEU, "o tato vivo não subiu")
+        modo = fonte.modo_de(uniq)
+        if o_modo_cala_a_extensao(modo):
+            raise RecusaError(CODE_O_JOGO_ESCREVE, _FRASE_DO_MODO_QUE_CALA.get(
+                str(modo), _FRASE_DO_MODO_QUE_CALA["nativo"]), {"canal": "corpo", "modo": modo})
+        pedido = PedidoDoCorpo(
+            float(corpo),
+            None if gatilhos is None else str(gatilhos["tipo"]),
+            0.0 if gatilhos is None else float(gatilhos["forca"]))
+        try:
+            fonte.corpo.pedir(_origem(sessao), uniq, pedido, ate_ms)
+        except ValueError as exc:
+            raise RecusaError(CODE_INVALID_PARAMS, f"corpo.ligar: {exc}") from exc
+        if pedido.som_no_corpo > 0:
+            self._anotar_a_escrita(sessao.mod_id, "haptica", uniq)
+        if pedido.tipo is not None:
+            self._anotar_a_escrita(sessao.mod_id, "vibracao", uniq)
+        return {"status": "ok"}
 
     def _soltar_os_ajustes(self, mod_id: str) -> None:
         PESO_DA_MIRA.soltar(mod_id)

@@ -4,7 +4,7 @@ O contrato entre uma modificação ([ADR-021](../adr/021-modificacoes-por-proces
 Versão da porta: **2** (`API_DAS_MODIFICACOES`, em `src/hefesto_dualsense4unix/mods/__init__.py`). A 2
 (19/10/2026) acrescentou o `aviso` do manifesto e o `lancador.jogos`; o resto é o da 1, e a faixa
 `">=1,<3"` aceita as duas. O `lancador.abrir`, o `mira.ligada`, o `vibracao.escala` e o tópico <!-- ref-externa: método da porta das extensões, não do daemon -->
-`jogo.estilo` (14/11/2026) entraram na 2 sem mudar a faixa: a extensão que os pede declara as
+`jogo.estilo` (14/11/2026) e o `corpo.ligar` (16/11/2026) entraram na 2 sem mudar a faixa: a extensão que os pede declara as
 permissões novas, e o Hefesto que não as conhece recusa o manifesto com a frase.
 
 ## O que o filho recebe
@@ -49,6 +49,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `mira.peso` | `{uniq\|"todos", ganho (0,3 a 1), ate_ms (até 10000)}` | `escrever:mira` | `{status}` |
 | `mira.ligada` | `{uniq\|"todos", ligada: true\|false}` | `escrever:mira` | `{status, ligada}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
 | `vibracao.escala` | `{uniq, escala (0 a 1)}` | `escrever:vibracao` | `{status, escala}` |
+| `corpo.ligar` | `{uniq, som_no_corpo? (0 a 1), gatilhos?: {tipo, forca (0 a 1)}, ate_ms (1 a 10000)}` | `escrever:corpo` | `{status}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?, linhas?, presentes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
@@ -80,6 +81,17 @@ força de tudo o que vai ao motor daquele controle, o jogo e as extensões, no f
 força; com mais de uma extensão vale a menor, e `1` devolve a força inteira. Ele sai junto com a extensão e no
 «Parar tudo». Os dois valem por controle, de um a quatro, no cabo e no rádio; no Modo Nativo o jogo fala direto
 com o controle e nenhum dos dois age.
+
+O `corpo.ligar` (desde 16/11/2026) liga num controle o Som no corpo (o grave do som do jogo na vibração fina, com <!-- ref-externa: método da porta das extensões, não do daemon -->
+`som_no_corpo` de 0 a 1) e o padrão dos motores no L2 e no R2 (`gatilhos: {tipo, forca}`, o `tipo` um dos padrões
+dos motores: `tranco`, `batida`, `onda`, `coice`, `pancada_do_lado`, `ressoar` ou `ricochete`), pelo mesmo motor do
+tato vivo que o perfil e a aba Jogar ligam. O pedido vale até `ate_ms` e se renova pedindo de novo antes do prazo; o
+pedido sem nenhum dos dois solta aquele controle, e a extensão que sai da porta leva os próprios. O que o perfil liga segue
+valendo: no corpo vale o mais forte, e nos motores fica o padrão do perfil, com a maior das duas forças. O `coice`
+toca na soltura do gatilho e a `pancada_do_lado` com o estalo do som, como no perfil. Toca só com um jogo aberto; na
+Bateria longa o corpo não toca e os motores descem à força da economia. No Modo Nativo e no Steam Input o jogo fala
+direto com o controle: o pedido recusa (`-32011`, com `{canal: "corpo", modo}`), e o que já estava pedido cala ali.
+Vale por controle, de um a quatro, no cabo e no rádio.
 
 Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
