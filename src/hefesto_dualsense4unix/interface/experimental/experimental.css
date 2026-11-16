@@ -589,6 +589,7 @@
   animation:mj-pulso 1.2s ease-in-out infinite }
 @keyframes mj-pulso { 0%,100% { box-shadow:0 0 0 0 rgba(189,147,249,.5) } 50% { box-shadow:0 0 0 6px rgba(189,147,249,0) } }
 #mod-janela .mj-aps { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding-bottom:8px }
+#mod-janela .mj-tela > :is(.ky-linha,.mj-cartoes,.mj-da-chave) + .mj-aps { margin-top:12px }
 #mod-janela .mj-ap { border:1px solid var(--border-sutil);border-radius:9px;background:var(--app-bg);padding:10px 12px;
   display:flex;flex-direction:column;gap:8px;min-width:0 }
 #mod-janela .mj-ap.fora, #mod-janela .ap.fora, #mod-janela .mj-alvo.fora { opacity:.5 }

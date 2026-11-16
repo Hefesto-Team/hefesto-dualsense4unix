@@ -2426,14 +2426,11 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        controles: tuple[str, str] = ("", ""), armada: Sequence[str] = (),
                        desligada: bool = False, pagina: tuple[str, str] | None = None,
                        abas: Sequence[str] = ()) -> str:
-    """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
-
-    Cada aba é: a fileira das próprias ações (``#mod-acoes-<n>``), a lista dos aparelhos se a aba é a do
-    ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se a aba é a do ``grupo`` deles
-    (``#mod-controles``; ``controles`` é o par aba e cartões, a aba vazia quando nenhum aparelho
-    os tem) e as linhas das opções. A ação sem ``grupo`` vai à primeira aba, como a opção sem
-    grupo. A ponte repinta os blocos a cada tique, e a aba não pula. Ações e aparelhos da mesma
-    aba moram na caixa ``.mj-sec``: o aviso de lista vazia divide a linha com o botão.
+    """As abas do arranjo C: em cada uma, as ações (``#mod-acoes-<n>``), a lista dos aparelhos
+    se a aba é a do ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se é a do
+    ``grupo`` deles (``#mod-controles``; ``controles`` é o par aba e cartões) e as linhas das
+    opções. A ação e a opção sem ``grupo`` vão à primeira aba. Ações e aparelhos dividem a caixa
+    ``.mj-sec``; na aba que tem linhas e também cartões, as linhas vêm antes e os cartões embaixo.
     """
     nomes = _grupos_com_as_pecas(opcoes, acoes, gestao.aparelhos if gestao else None,
                                  controles[0], abas)
@@ -2457,13 +2454,16 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        "</div>")
         lista = (f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>'
                  if gestao and gestao.aparelhos.grupo == nome else "")
-        partes.append(f'<div class="mj-sec">{fileira}{lista}</div>' if fileira and lista
-                      else fileira + lista)
-        if controles[0] and controles[0] == nome and not (gestao and gestao.controles):
-            partes.append(f'<div class="mj-aps mj-ccs" id="mod-controles">{controles[1]}</div>')
+        ccs = (f'<div class="mj-aps mj-ccs" id="mod-controles">{controles[1]}</div>'
+               if controles[0] and controles[0] == nome and not (gestao and gestao.controles)
+               else "")
         chave, linhas = chave_da_aba(nome, por_aba[nome])
-        if linhas:
-            partes.append(_linhas_da_aba(n, linhas, chave))
+        das_linhas = _linhas_da_aba(n, linhas, chave) if linhas else ""
+        if das_linhas and (lista or ccs):
+            partes += [fileira, das_linhas, lista, ccs]
+        else:
+            partes += [f'<div class="mj-sec">{fileira}{lista}</div>' if fileira and lista
+                       else fileira + lista, ccs, das_linhas]
         telas.append(
             f'{_radio_da_aba(n, nome, aberta, mod)}'
             f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
