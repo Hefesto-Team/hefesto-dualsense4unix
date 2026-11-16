@@ -256,17 +256,17 @@
       "universo": 424
     },
     "tamanho": {
-      "data": "2026-11-15",
+      "data": "2026-11-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1258743,
+      "piso": 1260629,
       "por_item": {
-        "docs": 106944,
-        "scripts": 114258,
-        "src": 318234,
-        "tests": 719307
+        "docs": 107003,
+        "scripts": 114292,
+        "src": 318799,
+        "tests": 720535
       },
-      "razao": "tamanho: +1 linhas (1258742 -> 1258743), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, D-ESCADA-DE-RELEASES, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo 48ed17a8497c",
+      "razao": "tamanho: +1886 linhas (1258743 -> 1260629), pagas por Origem: D-1310-O-CI-CHAMA-OS-PORTOES-SO-PELO-NOME, D-1511-O-APARELHO-QUE-RENASCE-VEM-PELA-PORTA, D-1511-O-SIM-DOS-APARELHOS-VALE-SO-PARA-O-ACEITO, D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo a6f13657ad10",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1965,10 +1965,16 @@
           "de": 1258742,
           "para": 1258743,
           "razao": "tamanho: +1 linhas (1258742 -> 1258743), pagas por Origem: D-0610-ASSINATURA-NO-RULESET, D-1310-O-PERFIL-TROCOU-E-ESTADO-GUARDADO-NO-BARRAMENTO, D-1411-A-PONTE-QUE-O-PASTA-NAO-ENTREGA-VOLTA-AO-ESPACO-DA-CASA, D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, D-2709-O-INSTALL-OFERECE-O-PROTON-FIXADO, D-ESCADA-DE-RELEASES, audio.alto_falante.rota, entrada.botoes; registrado no fecho, topo 48ed17a8497c"
+        },
+        {
+          "data": "2026-11-16",
+          "de": 1258743,
+          "para": 1260629,
+          "razao": "tamanho: +1886 linhas (1258743 -> 1260629), pagas por Origem: D-1310-O-CI-CHAMA-OS-PORTOES-SO-PELO-NOME, D-1511-O-APARELHO-QUE-RENASCE-VEM-PELA-PORTA, D-1511-O-SIM-DOS-APARELHOS-VALE-SO-PARA-O-ACEITO, D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo a6f13657ad10"
         }
       ],
       "unidade": "linhas",
-      "universo": 3497
+      "universo": 3500
     }
   }
 }
