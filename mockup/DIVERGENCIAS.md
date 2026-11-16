@@ -26,3 +26,9 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 08-conexoes.html
 - **07/11/2026** — a frase da falta na linha do controle sem ponte, em três opções, no molde `opcoes-da-falta` abaixo da sala. Enquanto a escolha não vem, `a08_conexoes.OPCAO_DA_FALTA` fica vazia e o produto não mostra frase nenhuma. Escolher é gravar a letra nessa constante, o que tira o bloco do desenho, e rodar o `--publicar 08`.
+
+## 07-lancadores.html
+- **16/11/2026** — a janela de extensão ganha o controle vivo (o molde do desenho do Mapa, o script que o veste e o estilo dos cartões e da faixa «Ao vivo»), da sprint A-JANELA-DO-MODO-IMERSAO-GANHA-UM-DESENHO-VIVO-01. Enquanto o `--publicar 07` de quem coordena não sai, o produto continua com a janela de antes: a coluna «Agora» sem o desenho e as abas em linhas.
+
+## janela-do-modo-imersao.html
+- **16/11/2026** — o desenho da janela «Configurar · Modo imersão» (opção A, com o controle do Mapa). A janela não vira página própria: o produto a desenha pela janela de extensão da 07 (`07-lancadores.html`). Os pontos do desenho que não existem hoje (a tabela L2/R2 por estilo, a grade da comunidade com Enviar e Importar, o L2/R2 por controle e os medidores de cada sentido) esperam a sprint deles; enquanto isso, o produto continua com o que a extensão tem nesses pontos.

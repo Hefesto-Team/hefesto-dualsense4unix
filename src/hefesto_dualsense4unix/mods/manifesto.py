@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -348,6 +348,9 @@ class Opcao(BaseModel):
     degraus: int | None = Field(default=None, ge=1, le=1000)
     formato: Literal["tema", "logo"] | None = None
     herda: dict[str, dict[str, str | bool]] | None = None
+    cartao: str | None = Field(default=None, min_length=1, max_length=30)
+    canal: Literal["haptica", "vibracao", "gatilho", "luz", "leds", "som", "mira",
+                   "microfone"] | None = None
 
     @field_validator("id")
     @classmethod
@@ -738,7 +741,8 @@ class Manifesto(BaseModel):
     permissoes: list[str] = Field(default_factory=list)
     opcoes: list[Opcao] = Field(default_factory=list)
     agora: list[
-        Literal["nivel", "perfil", "aparelhos", "conexoes", "linhas"]  # (noqa-acento)
+        Literal["nivel", "perfil", "aparelhos", "conexoes", "linhas",  # (noqa-acento)
+                "controle", "clima", "ao_vivo"]
     ] = Field(default_factory=list)
     conexoes: dict[str, LigaDaConexao] = Field(
         default_factory=dict, max_length=CONEXOES_DA_JANELA)
@@ -754,6 +758,8 @@ class Manifesto(BaseModel):
     substitui: list[str] = Field(default_factory=list)
     estilos: list[str] = Field(default_factory=list)
     modos_de_aba: list[ModoDeAba] = Field(default_factory=list, max_length=1)
+    abas: list[Annotated[str, Field(min_length=1, max_length=30)]] = Field(
+        default_factory=list, max_length=12)
     pagina: Pagina | None = None
     portas: Portas | None = None
 

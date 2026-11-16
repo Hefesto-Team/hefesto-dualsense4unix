@@ -798,3 +798,12 @@
 #mod-janela .tm-contraste { margin-left:auto;font:600 11.5px 'JetBrains Mono',ui-monospace,monospace;color:var(--fg) }
 #mod-janela .tm-paleta { display:flex;gap:6px;height:38px }
 #mod-janela .tm-paleta i { flex:1;border-radius:6px;background:var(--c);border:1px solid var(--border-forte);min-width:0 }
+#mod-janela .mj-cartoes { column-count:3;column-gap:8px;margin:4px 0 0 }
+#mod-janela .mj-cartao { break-inside:avoid;display:block;border:1px solid var(--border-sutil);border-radius:9px;background:var(--app-bg);padding:0 10px;margin:0 0 8px;transition:border-color .2s }
+#mod-janela .mj-cartao:hover { border-color:var(--purple) }
+#mod-janela .mj-cartao .ky-linha { grid-template-columns:minmax(0,1fr) auto;min-height:32px;gap:8px }
+#mod-janela .mj-cartao .ky-ctrl .ext-sel { width:118px }
+#mod-janela .mj-cartao .ky-ctrl:has(input[type=range]) { min-width:0 }
+#mod-janela .mj-cartao .ky-ctrl input[type=range] { width:96px }
+#mod-janela .mj-ct-tit { display:flex;align-items:center;min-height:32px;font-size:12px;font-weight:600;color:var(--fg);border-bottom:1px solid var(--border-sutil) }
+#mod-janela .mj-ct-cabeca .ky-rot > span { font-size:12px;font-weight:600;color:var(--fg) }

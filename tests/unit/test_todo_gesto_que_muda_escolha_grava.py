@@ -135,6 +135,9 @@ ATOS: dict[Chave, str] = {
         "(`guardar-lancador`), que declara `grava=`",
     ("07-lancadores.html", "identificar-lancador"):
         "leitura: esquece o cache, procura o lançador no disco de novo e diz onde ele está",
+    ("07-lancadores.html", "controle-vivo-da-modificacao"):
+        "tela: o chip de um controle troca o controle que o desenho vivo mostra; só a janela "
+        "aberta muda, e nada se grava",
     ("07-lancadores.html", "parar-tudo-da-modificacao"):
         "ato: o serviço publica o gesto «para» só àquela extensão (`mods.parar_tudo`), e os "
         "aparelhos de quem usa vão a zero; o nível e o perfil guardados não mudam",

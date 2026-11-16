@@ -94,6 +94,8 @@ Desde 02/11/2026 o estado pode levar `linhas`, até 6 pares `{rotulo, valor}` (r
 que o pedaço `linhas` do «Agora» mostra como estão, e `presentes`, até 32 nomes (até 40 letras cada) do que a
 extensão tem agora, como as entradas da receita ativa, que o `aparece_com` lê pela chave `@presente`. A linha a mais
 se corta; o texto longo, o par torto ou o nome vazio recusa o estado.
+Desde 16/11/2026 o estado pode levar `limiar`, de 0 a 10 na escala do `nivel`: a linha tracejada do pedaço
+`clima`, onde a cena fica tensa. Fora da faixa, ou que não é número inteiro, recusa o estado.
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -581,6 +583,13 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   mostra o degrau que o aparelho faz naquela posição (`7/20`), também enquanto se arrasta: a fração da faixa
   em `degraus`, arredondada para cima, e o degrau 1 em toda posição acima do mínimo. A faixa anda pelo `passo`.
   Entra na mesma `api` 2; o Hefesto de antes dele recusa o manifesto pelo campo.
+- **`cartao`** (desde 16/11/2026): o nome (até 30 letras) do cartão em que a opção mora dentro da aba. As opções
+  do mesmo cartão viram um cartão só, numa grade que corre em colunas, no lugar da primeira opção; a opção de
+  `rotulo` igual ao nome do cartão é a linha do título, e as outras vêm embaixo. Sem essa opção, o título é o nome.
+- **`canal`** (desde 16/11/2026): `haptica`, `vibracao`, `gatilho`, `luz`, `leds`, `som`, `mira` ou `microfone`, a
+  peça do controle de que a opção fala. Com o pedaço `controle` no `agora`, o ponteiro sobre a linha (ou sobre o
+  cartão da linha) acende aquela peça no desenho. Os dois entram depois da 0.9.5.4, com a mesma `api` 2; o Hefesto de
+  antes recusa o manifesto pelo campo.
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
@@ -589,6 +598,15 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   (`src/hefesto_dualsense4unix/mods/leitura_da_caixa.py`).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil`, `aparelhos`, `conexoes` e `linhas` (os pares que a extensão publica), sem repetir.
+  Desde 16/11/2026, também `controle`, `clima` e `ao_vivo`, o controle vivo. O `controle` é o desenho do «Mapa dos
+  controles», no plástico do controle escolhido, com as peças que a extensão escreveu há pouco (1,5 s) acesas, e
+  um chip por controle ligado, na cor do plástico, para escolher qual o desenho mostra. O `clima` é a curva do
+  `nivel` dos últimos 30 s, com o `limiar` do estado tracejado e «Tenso» quando o agora passa dele. O `ao_vivo` é a
+  faixa embaixo das duas colunas: uma linha por canal `escrever:` das permissões, com o que a extensão escreveu nos
+  últimos 30 s, na cor do plástico de cada controle. A peça acende pelo que chegou ao controle (a porta anota a
+  escrita que passou), nunca pelo que a extensão diz. Os três entram depois da 0.9.5.4, com a mesma `api` 2.
+- **`abas`** (desde 16/11/2026): a ordem das abas, até 12 nomes de grupo. As abas que a lista não cita vêm depois,
+  na ordem de sempre; a página própria fica por último.
 - **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
   «Conexão» (o título muda) a chave de cada conexão. Pede `conexoes` no `agora`; o id tem a forma da chave de um
   lançador, `liga` é o `id` de uma opção `ligado` da própria extensão (nunca a `chave`) e `escolha` o de uma opção
@@ -613,7 +631,11 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 `ipc.sock`, não esta porta):
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
-  aparelhos, conexoes, ajustes}`, mais `linhas`, `presentes` e `jogo` (o jogo em cena) quando os há. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
+  aparelhos, conexoes, ajustes}`, mais `ao_vivo` (com a extensão conectada), `linhas`, `presentes`, `limiar` e <!-- noqa-acento: chave do estado -->
+  `jogo` (o jogo em cena) quando os há. O `ao_vivo` (desde 16/11/2026) é `{controles: [{jogador, cor}], trechos: [{canal, jogador, de_ms,
+  ate_ms}]}`: os controles ligados, com o nome do plástico, e o que a extensão escreveu nos últimos 30 s, em trechos
+  (há quantos milissegundos começou e acabou; as escritas de um canal a menos de 0,6 s uma da outra viram um
+  trecho só), sem o `uniq`. Só entra a escrita que passou: a recusada e a coberta por um pedido mais forte, não. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
   coluna mostra cada pedaço vazio, sem número. Com o `ligado: false` da própria extensão (o «Parar tudo»), o nível
   e o perfil ficam vazios e as conexões e os aparelhos seguem como a extensão os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;

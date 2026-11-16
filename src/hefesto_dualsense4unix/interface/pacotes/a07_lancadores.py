@@ -1248,6 +1248,8 @@ class _Mexida:
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
     aviso_da_memoria: tuple[str, ...] = ()
     vivas: tuple[Any, ...] | None = None
+    controle_vivo: int | None = None
+    clima: list[tuple[float, int]] = dataclasses.field(default_factory=list)
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1266,9 +1268,35 @@ class _Mexida:
         self.pintura.esquecer()
         self.aviso_da_memoria = ()
         self.vivas = None
+        self.controle_vivo = None
+        self.clima = []
 
 
 _MEXIDA = _Mexida()
+
+PEDACOS_DO_VIVO = frozenset({"controle", "clima", "ao_vivo"})
+PASSO_DO_CLIMA_S = 0.5
+PONTOS_DO_CLIMA = 60
+
+
+def _vivo_da_janela(manifesto: Any, estado: dict[str, Any] | None) -> Any:
+    """O controle vivo da janela aberta: os controles e o que a extensão escreveu (o ``ao_vivo``
+    do ``mods.agora``), o controle do desenho e o nível dos últimos instantes, que a janela
+    guarda a cada ``PASSO_DO_CLIMA_S``; ``None`` quando o ``agora`` não pede nada disso."""
+    from hefesto_dualsense4unix.interface import controle_vivo as cv
+
+    if manifesto is None or not PEDACOS_DO_VIVO & set(manifesto.agora):
+        return None
+    nivel = (estado or {}).get("nivel")
+    if (estado or {}).get("ligado") is True and isinstance(nivel, int) \
+            and not isinstance(nivel, bool):
+        agora = time.monotonic()
+        if not _MEXIDA.clima or agora - _MEXIDA.clima[-1][0] >= PASSO_DO_CLIMA_S:
+            _MEXIDA.clima = [*_MEXIDA.clima, (agora, nivel)][-PONTOS_DO_CLIMA:]
+    canais = tuple(cv.CANAL_DA_PERMISSAO[p] for p in manifesto.permissoes
+                   if p in cv.CANAL_DA_PERMISSAO)
+    return cv.vivo_de(estado, canais, _MEXIDA.controle_vivo,
+                      tuple(n for _t, n in _MEXIDA.clima))
 
 TTL_DO_AGORA_S = 0.5
 METODO_DO_AGORA = "mods.agora"
@@ -1530,10 +1558,17 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             blocos[seletor] = miolo
     if _MEXIDA.html_mod and _MEXIDA.agora:
         do_mod = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
+        estado = _AGORA.agora()
+        vivo = _vivo_da_janela(do_mod.manifesto if do_mod else None, estado)
         blocos["#mod-agora"] = exp.agora_html(
-            _MEXIDA.agora, _AGORA.agora(),
+            _MEXIDA.agora, estado,
             processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
-            porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas)
+            porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas, vivo=vivo,
+            mod=_MEXIDA.mod)
+        if vivo is not None and "ao_vivo" in _MEXIDA.agora:
+            from hefesto_dualsense4unix.interface import controle_vivo as cv
+
+            blocos["#mod-ao-vivo"] = cv.linhas_da_faixa(vivo.canais, vivo.marcas)
     carga = _com_os_aparelhos(carga)
     _redesenhar_se_mudou(instaladas)
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
@@ -1670,7 +1705,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         dica=x.dica or "", unidade=x.unidade or "", zero=x.zero or "",
         degraus=x.degraus or 0,
         pede=_MEXIDA.aviso_da_memoria[2] if _MEXIDA.aviso_da_memoria[:2] == (mod_id, jogo)
-        and x.tipo == "memoria" else "")
+        and x.tipo == "memoria" else "",
+        cartao=x.cartao or "", canal=x.canal or "")
         for x in manifesto.opcoes
         if (x.id in aparecem or retrato is not None) and x.id != manifesto.chave
         and (x.tipo != "memoria" or jogo)]
@@ -1690,6 +1726,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
         porque=item.porque, em_abas=bool(manifesto.tema),
         pagina=_pagina_da_janela(manifesto, mod_id),
+        vivo=_vivo_da_janela(manifesto, estado), abas=tuple(manifesto.abas),
         **_pecas_da_janela(manifesto, mod_id))
 
 
@@ -2982,7 +3019,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     elif gestao and _MEXIDA.agora:
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
-            porque=item.porque, gestao=gestao, ligas=_MEXIDA.ligas)
+            porque=item.porque, gestao=gestao, ligas=_MEXIDA.ligas,
+            vivo=_vivo_da_janela(manifesto, estado), mod=mod_id)
     if aba_cc and not (gestao and gestao.controles):
         blocos["#mod-controles"] = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso,
                                                                     _MEXIDA.desligada)
@@ -2990,7 +3028,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     if acoes or (aparelhos and aparelhos.grupo) or aba_cc:
         grupos = [exp.OpcaoDaJanela(mod_id, o.id, o.rotulo, o.tipo, "", grupo=o.grupo or "")
                   for o in manifesto.opcoes if o.tipo != "livre" and o.id != manifesto.chave]
-        for n, acoes_da_aba in exp.acoes_por_aba(grupos, acoes, aparelhos, aba_cc).items():
+        for n, acoes_da_aba in exp.acoes_por_aba(grupos, acoes, aparelhos, aba_cc,
+                                                 tuple(manifesto.abas)).items():
             blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(
                 mod_id, acoes_da_aba, em_curso, _armada_de(mod_id), _MEXIDA.desligada)
     if manifesto.opcao_livre is not None:
@@ -3090,6 +3129,18 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
         return None
     guardado = str(opcoes.ler(manifesto, _lugares())[chave])
     return _o_modo_na_extensao(mod_id, livre.id, guardado, p)
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_CONTROLE_VIVO)
+def controle_vivo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O chip de um controle no controle vivo: o desenho passa a mostrar aquele controle, com o
+    plástico dele e as peças que a extensão escreveu nele. Só a tela muda; nada se grava."""
+    mod_id, numero = _partes_do_clique(o, exp.GESTO_DO_CONTROLE_VIVO, 2)
+    if _MEXIDA.mod != mod_id:
+        raise RuntimeError("Esta janela já fechou. Nada foi alterado.")
+    _MEXIDA.controle_vivo = int(numero) if numero.isdigit() else None
+    _montar_a_janela_da_extensao(mod_id)
+    return _a_pintura_agora(ctx)
 
 
 @gesto("07-lancadores.html", exp.GESTO_DA_ABA)

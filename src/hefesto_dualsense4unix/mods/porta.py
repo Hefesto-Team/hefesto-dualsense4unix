@@ -594,6 +594,11 @@ _NOME_DO_CANAL = {
 
 _LADOS = ("esquerdo", "direito")
 
+JANELA_DO_AO_VIVO_S = 30.0
+JUNTA_DO_AO_VIVO_S = 0.6
+ESCRITAS_DO_AO_VIVO = 2048
+TRECHOS_DO_AO_VIVO = 240
+
 _DA_MEMORIA = {"memoria.varrer": "varrer", "memoria.refinar": "refinar"}
 
 
@@ -952,8 +957,9 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any], *,
 
 def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
     """``linhas`` (o pedaço «linhas» do «Agora»: até ``LINHAS_DO_AGORA`` pares ``{rotulo,
-    valor}``, o resto cai) e ``presentes`` (os nomes que o ``aparece_com`` de ``@presente`` lê, até
-    ``ITENS_DO_ESTADO``); cada um só sai quando a extensão o manda."""
+    valor}``, o resto cai), ``presentes`` (os nomes que o ``aparece_com`` de ``@presente`` lê, até
+    ``ITENS_DO_ESTADO``) e ``limiar`` (de 0 a 10, a linha tracejada do pedaço «clima»); cada um
+    só sai quando a extensão o manda."""
     saida: dict[str, Any] = {}
     if params.get("linhas") is not None:
         linhas = params["linhas"]
@@ -969,6 +975,11 @@ def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
             raise _recusa_do_estado("os presentes são uma lista de nomes.")
         saida["presentes"] = list(dict.fromkeys(
             _curto(n, "um presente", 40) for n in presentes[:ITENS_DO_ESTADO]))
+    if params.get("limiar") is not None:
+        limiar = params["limiar"]
+        if isinstance(limiar, bool) or not isinstance(limiar, int) or not 0 <= limiar <= 10:
+            raise _recusa_do_estado("o limiar do clima é um número de 0 a 10.")
+        saida["limiar"] = limiar
     return saida
 
 
@@ -1130,6 +1141,7 @@ class Porta:
         self._publicacoes: dict[str, deque[float]] = {}
         self._aparelhos_pedidos: dict[str, deque[float]] = {}
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
+        self._escritas: dict[str, deque[tuple[float, str, str]]] = {}
         self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
         self._botoes_antes: dict[str | None, frozenset[str]] | None = None
         self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
@@ -1545,6 +1557,7 @@ class Porta:
         except ValueError as exc:
             raise RecusaError(CODE_INVALID_PARAMS, str(exc)) from exc
         self._vigiar_o_peso()
+        self._anotar_a_escrita(sessao.mod_id, "mira", "" if alvo == TODOS_OS_CONTROLES else alvo)
         return {"status": "ok"}
 
     @staticmethod
@@ -1984,7 +1997,62 @@ class Porta:
         estado = self.ultimo_estado_de(mod_id)
         saida = estado_vazio_dos_acessorios(mod_id) if estado is None else dict(estado)
         jogo = self._jogo_aberto()
+        if estado is not None:
+            saida["ao_vivo"] = self.ao_vivo_de(mod_id)
         return {**saida, "jogo": jogo} if jogo else saida
+
+    def _anotar_a_escrita(self, mod_id: str, canal: str, uniq: str) -> None:
+        """O que chegou ao controle, para a faixa «Ao vivo» da janela: só o que foi escrito de
+        fato (nem a recusa, nem o pedido coberto por um mais forte)."""
+        fila = self._escritas.setdefault(mod_id, deque(maxlen=ESCRITAS_DO_AO_VIVO))
+        fila.append((self._relogio(), canal, uniq))
+
+    def _controles_do_ao_vivo(self) -> list[dict[str, Any]]:
+        if self._controles is None:
+            return []
+        try:
+            brutos = self._controles()
+        except Exception:
+            logger.debug("mods_porta_ao_vivo_sem_controles", exc_info=True)
+            return []
+        return [c for c in brutos if isinstance(c, dict) and isinstance(c.get("uniq"), str)]
+
+    def ao_vivo_de(self, mod_id: str) -> dict[str, Any]:
+        """O ``ao_vivo`` do ``mods.agora``: os controles ligados (``{jogador, cor}``) e o que a
+        extensão escreveu nos últimos ``JANELA_DO_AO_VIVO_S``, em trechos ``{canal, jogador,
+        de_ms, ate_ms}`` (há quanto tempo começou e acabou); as escritas de um canal a menos de
+        ``JUNTA_DO_AO_VIVO_S`` uma da outra viram um trecho só. Nunca leva o ``uniq``."""
+        agora = self._relogio()
+        fila = self._escritas.get(mod_id)
+        while fila and agora - fila[0][0] > JANELA_DO_AO_VIVO_S:
+            fila.popleft()
+        controles = self._controles_do_ao_vivo()
+        jogador_de = {c["uniq"]: c.get("jogador") for c in controles}
+        abertos: dict[tuple[str, str], list[int]] = {}
+        trechos: list[dict[str, Any]] = []
+
+        def fechar(chave: tuple[str, str], par: list[int]) -> None:
+            jogador = jogador_de.get(chave[1])
+            trechos.append({"canal": chave[0],
+                            "jogador": jogador if isinstance(jogador, int) else None,
+                            "de_ms": par[0], "ate_ms": par[1]})
+
+        for t, canal, uniq in fila or ():
+            ha = max(0, round((agora - t) * 1000))
+            chave = (canal, uniq)
+            par = abertos.get(chave)
+            if par is not None and par[1] - ha <= JUNTA_DO_AO_VIVO_S * 1000:
+                par[1] = ha
+                continue
+            if par is not None:
+                fechar(chave, par)
+            abertos[chave] = [ha, ha]
+        for chave, par in abertos.items():
+            fechar(chave, par)
+        trechos.sort(key=lambda t: t["ate_ms"])
+        return {"controles": [{"jogador": c.get("jogador") if isinstance(c.get("jogador"), int)
+                               else None, "cor": str(c.get("cor") or "")} for c in controles],
+                "trechos": trechos[:TRECHOS_DO_AO_VIVO]}
 
     def ultimo_estado_de(self, mod_id: str) -> dict[str, Any] | None:
         """O ``acessorios.estado`` guardado de ``mod_id`` (o próprio objeto), com conexão viva."""
@@ -2437,7 +2505,9 @@ class Porta:
                     f"o jogo está escrevendo {_NOME_DO_CANAL[canal]} deste controle",
                     {"vence": "jogo", "canal": canal},
                 )
-            return await self._levar(metodo, metodo_do_servico, pedido)
+            resposta = await self._levar(metodo, metodo_do_servico, pedido)
+            self._anotar_a_escrita(sessao.mod_id, canal, uniq)
+            return resposta
         vagas = _vagas_do_pedido(canal, params)
         veredito = fonte.pedir(
             _origem(sessao), canal, uniq, vagas, fonte.relogio(),
@@ -2453,7 +2523,9 @@ class Porta:
         if canal == "vibracao":
             pedido = {**pedido, "weak": round(veredito.fortes["direito"] * 255),
                       "strong": round(veredito.fortes["esquerdo"] * 255)}
-        return await self._levar(metodo, metodo_do_servico, pedido)
+        resposta = await self._levar(metodo, metodo_do_servico, pedido)
+        self._anotar_a_escrita(sessao.mod_id, canal, uniq)
+        return resposta
 
     async def _levar(self, metodo: str, metodo_do_servico: str, pedido: dict[str, Any]) -> Any:
         try:
@@ -2499,11 +2571,16 @@ class Porta:
             elif metodo == "som.tocar":
                 veredito = self._tocar_o_som(fonte, origem, uniq, params, agora)
             else:
-                return await self._acender_os_leds(fonte, origem, uniq, params, agora)
+                resposta_dos_leds = await self._acender_os_leds(fonte, origem, uniq, params, agora)
+                if resposta_dos_leds.get("status") == "ok":
+                    self._anotar_a_escrita(sessao.mod_id, canal, uniq)
+                return resposta_dos_leds
         except ValueError as exc:
             raise RecusaError(CODE_INVALID_PARAMS, f"{metodo}: {exc}") from exc
         if not veredito.vale:
             raise _recusa_do_veredito(veredito, canal)
+        if not veredito.coberto:
+            self._anotar_a_escrita(sessao.mod_id, canal, uniq)
         resposta: dict[str, Any] = {"status": "coberto" if veredito.coberto else "ok"}
         if metodo == "haptica.tocar":
             toque = fonte.toques.get((uniq, params.get("lado")))

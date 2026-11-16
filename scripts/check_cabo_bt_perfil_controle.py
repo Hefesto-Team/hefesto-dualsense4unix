@@ -108,6 +108,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "criar-perfil-do-jogo": "cria o perfil do jogo escolhido na janela dos lançadores — é do perfil",
     "ligar-modificacao": "liga ou desliga uma extensão — é do supervisor da máquina",
     "configurar-modificacao": "abre a janela de uma extensão — é da tela",
+    "controle-vivo-da-modificacao": "o chip troca o controle que o desenho da janela mostra — é da tela",
     "guardar-opcao-da-modificacao": "guarda uma opção da extensão no `opcoes.json` da extensão — é da máquina",
     "mais-da-modificacao": "o ⋮ da extensão (atualizar, ver as permissões, remover) — é da máquina",
     "parar-tudo-da-modificacao": "o «Parar tudo» da janela pede à extensão que zere os aparelhos "
