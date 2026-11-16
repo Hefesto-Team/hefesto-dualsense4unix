@@ -1250,6 +1250,10 @@ class _Mexida:
     vivas: tuple[Any, ...] | None = None
     controle_vivo: int | None = None
     clima: list[tuple[float, int]] = dataclasses.field(default_factory=list)
+    vereditos: dict[str, Any] = dataclasses.field(default_factory=dict)
+    ultimas: dict[tuple[str, str], float] = dataclasses.field(default_factory=dict)
+    trilhas: dict[str, list[float]] = dataclasses.field(default_factory=dict)
+    trilha_em: float = float("-inf")
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1270,6 +1274,10 @@ class _Mexida:
         self.vivas = None
         self.controle_vivo = None
         self.clima = []
+        self.vereditos = {}
+        self.ultimas = {}
+        self.trilhas = {}
+        self.trilha_em = float("-inf")
 
 
 _MEXIDA = _Mexida()
@@ -1297,6 +1305,61 @@ def _vivo_da_janela(manifesto: Any, estado: dict[str, Any] | None) -> Any:
             recentes.append((agora, nivel))
         _MEXIDA.clima = recentes[-PONTOS_DO_CLIMA:]
     return cv.vivo_de(estado, _MEXIDA.controle_vivo, tuple(n for _t, n in _MEXIDA.clima))
+
+ULTIMAS_POR_S = 60.0
+PASSO_DA_TRILHA_S = 0.5
+
+
+def _ultimas_da_janela(estado: dict[str, Any] | None) -> list[Any]:
+    """As últimas escritas que chegaram ao controle, para a faixa do alto: as do ``ao_vivo`` de
+    agora e as que a janela lembra do último minuto, uma por canal e controle, da mais nova à mais
+    velha."""
+    agora = time.monotonic()
+    if (estado or {}).get("ligado") is not True:
+        _MEXIDA.ultimas = {}
+        return []
+    for u in exp.ultimas_do_estado(estado):
+        quando = agora - u.ha_ms / 1000
+        chave = (u.canal, u.controle)
+        _MEXIDA.ultimas[chave] = max(quando, _MEXIDA.ultimas.get(chave, float("-inf")))
+    _MEXIDA.ultimas = {k: t for k, t in _MEXIDA.ultimas.items() if agora - t <= ULTIMAS_POR_S}
+    ordem = sorted(_MEXIDA.ultimas.items(), key=lambda kv: -kv[1])
+    return [exp.Ultima(canal, quem, max(0, round((agora - t) * 1000)))
+            for (canal, quem), t in ordem[:exp.ULTIMAS_DA_FAIXA]]
+
+
+def _trilhas_da_janela(estado: dict[str, Any] | None) -> dict[str, list[float]]:
+    """A trilha de cada canal: a cada ``PASSO_DA_TRILHA_S``, quão perto daquele instante a última
+    escrita do canal chegou a algum controle (zero sem escrita no passo)."""
+    agora = time.monotonic()
+    if agora - _MEXIDA.trilha_em < PASSO_DA_TRILHA_S:
+        return _MEXIDA.trilhas
+    _MEXIDA.trilha_em = agora
+    janela_ms = PASSO_DA_TRILHA_S * 1000
+    mais_perto: dict[str, float] = {}
+    if (estado or {}).get("ligado") is True:
+        for u in exp.ultimas_do_estado(estado):
+            if u.ha_ms < janela_ms:
+                v = 1.0 - 0.6 * u.ha_ms / janela_ms
+                mais_perto[u.canal] = max(v, mais_perto.get(u.canal, 0.0))
+    for canal in exp.PALAVRA_DO_CANAL:
+        pontos = _MEXIDA.trilhas.setdefault(canal, [])
+        pontos.append(mais_perto.get(canal, 0.0))
+        del pontos[:-exp.PONTOS_DA_TRILHA]
+    return _MEXIDA.trilhas
+
+
+def _blocos_dos_sentidos(manifesto: Any, estado: dict[str, Any] | None) -> dict[str, str]:
+    """A cada tique, o que cada sentido lê (as ``leituras`` do estado, ao lado da opção) e a
+    trilha de cada chave de canal."""
+    blocos = {f"#mod-leitura-{ident}": exp.leitura_html(leitura)
+              for ident, leitura in exp.leituras_do_estado(estado).items()}
+    trilhas = _trilhas_da_janela(estado)
+    for o in manifesto.opcoes:
+        if o.tipo == "ligado" and o.canal:
+            blocos[f"#mod-trilha-{o.id}"] = exp.trilha_html(trilhas.get(o.canal, ()))
+    return blocos
+
 
 TTL_DO_AGORA_S = 0.5
 METODO_DO_AGORA = "mods.agora"
@@ -1564,7 +1627,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             _MEXIDA.agora, estado,
             processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
             porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas, vivo=vivo,
-            mod=_MEXIDA.mod)
+            mod=_MEXIDA.mod, ultimas=_ultimas_da_janela(estado))
     carga = _com_os_aparelhos(carga)
     _redesenhar_se_mudou(instaladas)
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
@@ -1684,7 +1747,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     nota = _MEXIDA.nota_do_css = item.nota_do_css
     notas = {**_notas_do_tema(manifesto, mod_id), **_MEXIDA.recusa_do_importar}
     vivas = _MEXIDA.vivas = _o_que_muda_a_janela(manifesto, estado)
-    presentes, jogo, memoria = vivas or ((), "", False)
+    presentes, jogo, memoria, _lidos = vivas
     valores = {**valores, **{x.id: memoria for x in manifesto.opcoes if x.tipo == "memoria"}}
     aparecem = opcoes.aparecem(manifesto, valores, presentes)
     linhas = [exp.OpcaoDaJanela(
@@ -1702,7 +1765,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         degraus=x.degraus or 0,
         pede=_MEXIDA.aviso_da_memoria[2] if _MEXIDA.aviso_da_memoria[:2] == (mod_id, jogo)
         and x.tipo == "memoria" else "",
-        cartao=x.cartao or "", canal=x.canal or "")
+        cartao=x.cartao or "", canal=x.canal or "", marca=x.marca or "")
         for x in manifesto.opcoes
         if (x.id in aparecem or retrato is not None) and x.id != manifesto.chave
         and (x.tipo != "memoria" or jogo)]
@@ -1723,6 +1786,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         porque=item.porque, em_abas=bool(manifesto.tema),
         pagina=_pagina_da_janela(manifesto, mod_id),
         vivo=_vivo_da_janela(manifesto, estado), abas=tuple(manifesto.abas),
+        vereditos=_MEXIDA.vereditos, ultimas=_ultimas_da_janela(estado),
         **_pecas_da_janela(manifesto, mod_id))
 
 
@@ -2869,12 +2933,14 @@ def _muda_com_o_estado(manifesto: Any) -> bool:
 
 
 def _o_que_muda_a_janela(manifesto: Any, estado: dict[str, Any] | None
-                         ) -> tuple[tuple[str, ...] | None, str, bool] | None:
+                         ) -> tuple[tuple[str, ...] | None, str, bool, tuple[str, ...]]:
     """O que redesenha as opções sem gesto: os ``presentes`` que a extensão publica, o jogo em
-    cena e a chave «Memória» dele; ``None`` quando nenhuma opção depende disso. Sem estado
-    publicado, os ``presentes`` são ``None``: a extensão desligada mostra todas as opções."""
+    cena, a chave «Memória» dele e as opções que têm leitura (com o lugar do medidor).
+    Sem estado publicado, os ``presentes`` são ``None``: a extensão desligada mostra todas as
+    opções; quando nenhuma opção depende deles, nem do jogo, são vazios."""
+    lidos = tuple(sorted(exp.leituras_do_estado(estado)))
     if not _muda_com_o_estado(manifesto):
-        return None
+        return (), "", False, lidos
     from hefesto_dualsense4unix.integrations.leitor_do_estado import (
         ChavesDaMemoria,
         arquivo_das_chaves,
@@ -2884,7 +2950,8 @@ def _o_que_muda_a_janela(manifesto: Any, estado: dict[str, Any] | None
     presentes = tuple(n for n in bruto if isinstance(n, str)) if isinstance(bruto, list) else None
     jogo = (estado or {}).get("jogo")
     jogo = jogo if isinstance(jogo, str) else ""
-    return presentes, jogo, bool(jogo) and ChavesDaMemoria(arquivo_das_chaves()).ligada(jogo)
+    return (presentes, jogo, bool(jogo) and ChavesDaMemoria(arquivo_das_chaves()).ligada(jogo),
+            lidos)
 
 
 def _redesenhar_se_mudou(instaladas: Sequence[_Instalada]) -> None:
@@ -2956,7 +3023,7 @@ def _aba_dos_controles(manifesto: Any) -> str:
 
 
 def _acao_da_janela(a: Any) -> exp.AcaoDaJanela:
-    return exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "")
+    return exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "", a.cartao or "")
 
 
 def _aparelhos_da_janela(manifesto: Any) -> exp.AparelhosDaJanela | None:
@@ -3016,7 +3083,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
             porque=item.porque, gestao=gestao, ligas=_MEXIDA.ligas,
-            vivo=_vivo_da_janela(manifesto, estado), mod=mod_id)
+            vivo=_vivo_da_janela(manifesto, estado), mod=mod_id,
+            ultimas=_ultimas_da_janela(estado))
     if aba_cc and not (gestao and gestao.controles):
         blocos["#mod-controles"] = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso,
                                                                     _MEXIDA.desligada)
@@ -3027,7 +3095,13 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
         for n, acoes_da_aba in exp.acoes_por_aba(grupos, acoes, aparelhos, aba_cc,
                                                  tuple(manifesto.abas)).items():
             blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(
-                mod_id, acoes_da_aba, em_curso, _armada_de(mod_id), _MEXIDA.desligada)
+                mod_id, acoes_da_aba, em_curso, _armada_de(mod_id), _MEXIDA.desligada,
+                _MEXIDA.vereditos)
+        for cartao, botoes in exp.acoes_dos_cartoes_html(
+                mod_id, acoes, em_curso, _armada_de(mod_id), _MEXIDA.desligada,
+                _MEXIDA.vereditos).items():
+            blocos[f"#{exp.id_do_cartao(cartao)}"] = botoes
+    blocos.update(_blocos_dos_sentidos(manifesto, estado))
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
@@ -3068,10 +3142,24 @@ def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         raise RuntimeError(motivo or "O serviço não respondeu. Nada foi enviado.")
     if not (isinstance(corpo, dict) and corpo.get("enviada") is True):
         raise RuntimeError(_nao_esta_rodando(mod_id))
+    if not alvo and "respondeu" in corpo:
+        _MEXIDA.vereditos[acao] = (
+            (exp.veredito_da_resposta(corpo.get("resposta")) if corpo.get("respondeu") is True
+             else None) or exp.Veredito(exp.SEM_RESPOSTA_A_TEMPO, False))
+        _AGORA.esquecer()
+        _redesenhar_a_janela(mod_id)
+        return _a_pintura_agora(ctx)
     serie = antes.get("serie") if isinstance(antes, dict) else None
     _VIVA.marcar(mod_id, acao, alvo, serie if isinstance(serie, int) else 0)
     _AGORA.esquecer()
     return _a_pintura_agora(ctx)
+
+
+def _redesenhar_a_janela(mod_id: str) -> None:
+    """A janela aberta de ``mod_id`` se monta de novo, com o veredito ao lado do botão."""
+    if _MEXIDA.mod == mod_id and _MEXIDA.html_mod:
+        with contextlib.suppress(RuntimeError):
+            _montar_a_janela_da_extensao(mod_id, _a_instalada(mod_id))
 
 
 def _valor_do_controle(estado: dict[str, Any] | None, alvo: str, controle_id: str,

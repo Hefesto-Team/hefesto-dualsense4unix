@@ -99,6 +99,9 @@ ESCOLHAS_DA_CONEXAO = 8
 LINHAS_DO_AGORA = 6
 ROTULO_DA_LINHA = 20
 VALOR_DA_LINHA = 40
+SITUACOES = ("tocando", "calado", "esperando")
+FRASE_DA_SITUACAO = 120
+FRASE_DA_LEITURA = 60
 CONTROLES_DO_APARELHO = 6
 TIPOS_DO_CONTROLE = ("chave", "paleta", "escolha")
 ICONES_DO_CONTROLE = ("lampada",)
@@ -967,8 +970,9 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any], *,
 def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
     """``linhas`` (o pedaço «linhas» do «Agora»: até ``LINHAS_DO_AGORA`` pares ``{rotulo,
     valor}``, o resto cai), ``presentes`` (os nomes que o ``aparece_com`` de ``@presente`` lê, até
-    ``ITENS_DO_ESTADO``) e ``limiar`` (de 0 a 10, a linha tracejada do pedaço «clima»); cada um
-    só sai quando a extensão o manda."""
+    ``ITENS_DO_ESTADO``), ``limiar`` (de 0 a 10, a linha tracejada do pedaço «clima»),
+    situação (a faixa do alto da janela) e ``leituras`` (o que cada sentido lê agora, até
+    ``ITENS_DO_ESTADO``); cada um só sai quando a extensão o manda."""
     saida: dict[str, Any] = {}
     if params.get("linhas") is not None:
         linhas = params["linhas"]
@@ -989,7 +993,46 @@ def _linhas_e_presentes(params: dict[str, Any]) -> dict[str, Any]:
         if isinstance(limiar, bool) or not isinstance(limiar, int) or not 0 <= limiar <= 10:
             raise _recusa_do_estado("o limiar do clima é um número de 0 a 10.")
         saida["limiar"] = limiar
+    if params.get("situacao") is not None:  # (noqa-acento)
+        saida["situacao"] = _situacao_do_estado(params["situacao"])  # (noqa-acento)
+    if params.get("leituras") is not None:
+        leituras = params["leituras"]
+        if not isinstance(leituras, list):
+            raise _recusa_do_estado("as leituras são uma lista de {opcao, nivel, frase}.")
+        saida["leituras"] = [_leitura_do_estado(x) for x in leituras[:ITENS_DO_ESTADO]]
     return saida
+
+
+def _situacao_do_estado(bruto: Any) -> dict[str, Any]:
+    """``{estado, frase}``: a faixa do alto da janela. ``estado`` é ``tocando``, ``calado`` ou
+    ``esperando``; ``frase`` (até ``FRASE_DA_SITUACAO`` letras, ou nula) é o jogo de agora, ou o
+    motivo do calado."""
+    if not isinstance(bruto, dict) or bruto.get("estado") not in SITUACOES:
+        raise _recusa_do_estado(
+            f"a situação é um objeto {{estado, frase}}, com o estado um de {', '.join(SITUACOES)}.")
+    frase = bruto.get("frase")
+    return {"estado": bruto["estado"],
+            "frase": None if frase in (None, "") else _curto(frase, "a frase da situação",
+                                                              FRASE_DA_SITUACAO)}
+
+
+def _leitura_do_estado(bruto: Any) -> dict[str, Any]:
+    """O que um sentido lê agora, ao lado da opção que a leitura nomeia: ``nivel`` vai de 0 a
+    100, ou nulo; ``frase`` (até ``FRASE_DA_LEITURA`` letras) diz o que ele lê; ``cego`` marca o
+    sentido que não lê nada agora."""
+    if not isinstance(bruto, dict):
+        raise _recusa_do_estado("cada leitura é um objeto {opcao, nivel, frase}.")
+    nivel, frase, cego = bruto.get("nivel"), bruto.get("frase"), bruto.get("cego", False)
+    if nivel is not None and (isinstance(nivel, bool) or not isinstance(nivel, int)
+                              or not 0 <= nivel <= 100):
+        raise _recusa_do_estado("o nível de uma leitura vai de 0 a 100, ou nulo.")
+    if not isinstance(cego, bool):
+        raise _recusa_do_estado("o cego de uma leitura é verdadeiro ou falso.")
+    return {"opcao": _curto(bruto.get("opcao"), "a opção de uma leitura", 40),  # (noqa-acento)
+            "nivel": nivel,
+            "frase": None if frase in (None, "") else _curto(frase, "a frase de uma leitura",
+                                                              FRASE_DA_LEITURA),
+            "cego": cego}
 
 
 OPCOES_DOS_GESTOS = frozenset({

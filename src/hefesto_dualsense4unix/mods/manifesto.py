@@ -355,6 +355,7 @@ class Opcao(BaseModel):
     cartao: str | None = Field(default=None, min_length=1, max_length=30)
     canal: Literal["haptica", "vibracao", "gatilho", "luz", "leds", "som", "mira",
                    "microfone"] | None = None
+    marca: str | None = Field(default=None, min_length=1, max_length=12)
 
     @field_validator("id")
     @classmethod
@@ -501,6 +502,7 @@ class Acao(BaseModel):
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
     icone: Literal["procurar", "testar", "esquecer", "ligar", "atualizar"] | None = None
     responde: bool = False
+    cartao: str | None = Field(default=None, min_length=1, max_length=30)
 
     @field_validator("id")
     @classmethod
@@ -524,8 +526,9 @@ class AcoesDosAparelhos(BaseModel):
 
     @model_validator(mode="after")
     def _sem_grupo_na_acao(self) -> AcoesDosAparelhos:
-        if any(a.grupo for a in self.acoes):
-            raise ValueError("a ação do aparelho mora no cartão dele e não declara grupo")
+        if any(a.grupo or a.cartao for a in self.acoes):
+            raise ValueError(
+                "a ação do aparelho mora no cartão dele e não declara grupo nem cartao")
         if len({a.id for a in self.acoes}) != len(self.acoes):
             raise ValueError("ação repetida nos aparelhos")
         return self

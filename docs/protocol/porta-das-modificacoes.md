@@ -53,7 +53,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `vibracao.escala` | `{uniq, escala (0 a 1)}` | `escrever:vibracao` | `{status, escala}` |
 | `corpo.ligar` | `{uniq, som_no_corpo? (0 a 1), gatilhos?: {tipo, forca (0 a 1)}, ate_ms (1 a 10000)}` | `escrever:corpo` | `{status}` | <!-- ref-externa: método da porta das extensões, não do daemon -->
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
-| `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?, linhas?, presentes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
+| `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?, linhas?, presentes?, situacao?, leituras?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `lancador.abrir` | `{chave}` | `pedir:lancador.abrir` | `{aberto, chave}` |
@@ -110,6 +110,11 @@ extensão tem agora, como as entradas da receita ativa, que o `aparece_com` lê 
 se corta; o texto longo, o par torto ou o nome vazio recusa o estado.
 Desde 16/11/2026 o estado pode levar `limiar`, de 0 a 10 na escala do `nivel`: a linha tracejada do pedaço
 `clima`, onde a cena fica tensa. Fora da faixa, ou que não é número inteiro, recusa o estado.
+Também desde 16/11/2026, a `situacao`, `{estado, frase}`, que a faixa do alto da janela mostra: `estado` é `tocando`,
+`calado` ou `esperando`, e `frase` (até 120 letras, ou nula) é o jogo de agora ou o motivo do calado; e as `leituras`,
+até 32 `{opcao, nivel, frase, cego}`, o que cada sentido lê agora, ao lado da opção `opcao`: `nivel` de 0 a 100 (ou
+nulo, sem medidor), `frase` até 60 letras e `cego` verdadeiro no sentido que não lê nada. Estado fora da forma, nível
+fora da faixa ou texto longo recusa o estado. O Hefesto de antes descarta os dois.
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -606,7 +611,11 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   do mesmo cartão viram um cartão só, numa grade que corre em colunas, no lugar da primeira opção; a opção de
   `rotulo` igual ao nome do cartão é a linha do título, e as outras vêm embaixo. Sem essa opção, o título é o nome.
   O cartão de duas opções `ligado` ou mais, sem a linha do título, vira uma fileira de chaves acima dos cartões:
-  cada opção é uma pílula com o rótulo, acesa quando ligada.
+  cada opção é uma pílula com o rótulo, acesa quando ligada. Desde 16/11/2026, a pílula de opção com `canal` leva
+  a trilha do que chegou àquela peça nos últimos segundos, e a opção com leitura no `leituras` do estado leva, ao
+  lado do rótulo, a frase e o medidor da leitura.
+- **`marca`** (desde 16/11/2026): até 12 letras, o selo ao lado do título do cartão da opção, como «Terror» no
+  efeito que só toca naquele estilo. Vale a da primeira opção do cartão que a declara.
 - **`canal`** (desde 16/11/2026): `haptica`, `vibracao`, `gatilho`, `luz`, `leds`, `som`, `mira` ou `microfone`, a
   peça do controle de que a opção fala. Com o pedaço `controle` no `agora`, o ponteiro sobre a linha (ou sobre o
   cartão da linha) acende aquela peça no desenho. Os dois entram depois da 0.9.5.4, com a mesma `api` 2; o Hefesto de
@@ -625,6 +634,10 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `nivel` dos últimos 30 s, com o `limiar` do estado tracejado e «Tenso» quando o agora passa dele. A peça acende
   pelo que chegou ao controle (a porta anota a escrita que passou), nunca pelo que a extensão diz. Os dois entram
   depois da 0.9.5.4, com a mesma `api` 2.
+  O `agora` sem `conexoes`, `aparelhos`, `nivel` nem `clima` (desde 16/11/2026) não abre a coluna: vira a faixa do
+  alto da janela, com a pílula da `situacao` (Tocando, Calado ou Esperando um jogo; sem a `situacao`, Ligada), a
+  `frase` da `situacao`, os pares das `linhas` e do `perfil` e, com o `controle`, as três últimas escritas que chegaram aos controles
+  (do `ao_vivo`, guardadas pela janela por 60 s), com o canal, o plástico e há quanto tempo.
 - **`abas`** (desde 16/11/2026): a ordem das abas, até 12 nomes de grupo. As abas que a lista não cita vêm depois,
   na ordem de sempre; a página própria fica por último.
 - **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
@@ -676,10 +689,12 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar:acessorios.estado` (ou
 `ler:acessorios.gesto`): a resposta da extensão é o estado que a extensão devolve, e é ele que tira o «Em curso».
 
-- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?, responde?}]`. O `id` é chave (até 32 letras minúsculas, números,
+- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?, responde?, cartao?}]`. O `id` é chave (até 32 letras minúsculas, números,
   hífen e sublinhado), o `rotulo` tem até 30 letras, o `grupo` é a aba em que o botão mora (sem ele, a primeira) e o `icone`
   é `procurar`, `testar`, `esquecer`, `ligar` ou `atualizar`. Id repetido recusa o manifesto. Com `responde: true`
   (desde 16/11/2026, também nas `aparelhos_acoes`), o clique espera a resposta da extensão (ver `mods.acao` abaixo).
+  O `cartao` (desde 16/11/2026, até 30 letras) põe o botão no pé do cartão de opções de mesmo nome, na aba do
+  `grupo`, e não na barra da aba; o cartão que não aparece leva o botão junto. A ação dos aparelhos não o declara.
 - **`aparelhos_acoes`**: `{grupo?, acoes: [{id, rotulo, icone?}]}` (de 1 a 6 ações), as ações de cada aparelho que a extensão
   devolve em `acessorios.estado` com `id`. A ação `ligar` é a chave do cartão (o clique pede o contrário do
   `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com
@@ -747,9 +762,12 @@ diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada est
 Na ação com `responde: true`, o `mods.acao` espera a `extensao.resposta` por até 1 s e volta
 `{enviada, respondeu, resposta}`: `respondeu` falso, e `resposta` nula, quando a extensão não respondeu a tempo (o
 pedido saiu do mesmo jeito); sem `responde`, nada espera e a volta segue `{enviada}`. A resposta de um «Testar» que
-toca nos controles tem esta forma, para a janela dizer onde tocou: `{controles: [{uniq, tocou, motivo}]}`, um item por
-controle tentado, com `tocou` verdadeiro ou falso e `motivo` (até 120 letras, ou `null` quando tocou) a frase da
-recusa que a porta devolveu, como «no Modo Nativo o jogo fala direto com o controle».
+toca nos controles tem esta forma, para a janela dizer onde tocou: `{controles: [{uniq, nome, tocou, motivo}]}`, um
+item por controle tentado, com `nome` o plástico (a janela fala por ele e nunca pelo `uniq`), `tocou` verdadeiro ou
+falso e `motivo` (até 120 letras, ou `null` quando tocou) a frase da recusa que a porta devolveu, como «no Modo
+Nativo o jogo fala direto com o controle». A janela mostra a frase ao lado do botão («Tocou no Cosmic Red.», ou
+«Não tocou no White: …»), e «A extensão não respondeu a tempo.» quando `respondeu` é falso. O teto do `mods.acao` na
+ponte da janela é esse prazo da porta (`PRAZO_DA_RESPOSTA_S`, lido do módulo da porta) mais meio segundo.
 
 ### A página da extensão
 

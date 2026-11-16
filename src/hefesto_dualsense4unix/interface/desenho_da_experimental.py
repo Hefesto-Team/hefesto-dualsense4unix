@@ -335,6 +335,8 @@ class OpcaoDaJanela(NamedTuple):
     pede: str = ""
     cartao: str = ""
     canal: str = ""
+    marca: str = ""
+    leitura: Mapping[str, Any] | None = None
 
 
 GESTO_DA_OPCAO = "guardar-opcao-da-modificacao"
@@ -722,9 +724,10 @@ def _bolinha_da_aba(n: int | str, chave: OpcaoDaJanela | None) -> str:
             f'data-v="{_a(chave.mod)}:{_a(chave.id)}"></i></span>')
 
 
-def _linhas_da_aba(n: int | str, itens: Sequence[OpcaoDaJanela], chave: OpcaoDaJanela | None) -> str:
+def _linhas_da_aba(n: int | str, itens: Sequence[OpcaoDaJanela], chave: OpcaoDaJanela | None,
+                   acoes_dos_cartoes: Mapping[str, str] | None = None) -> str:
     """As linhas de uma aba; com a chave da aba desligada, apagadas e ainda mexíveis."""
-    linhas = _linhas_das_opcoes(itens)
+    linhas = _linhas_das_opcoes(itens, acoes_dos_cartoes)
     if chave is None:
         return linhas
     return (f'<div class="mj-da-chave{"" if chave.valor else " apagada"}" '
@@ -779,6 +782,50 @@ def numero_do_deslizante(valor: Any, unidade: str = "", zero: str = "", degraus:
     return f"{valor} {unidade}" if unidade else str(valor)
 
 
+def leitura_html(leitura: Mapping[str, Any] | None) -> str:
+    """O que um sentido lê agora, ao lado da opção dele: a frase (na cor do aviso quando ele não
+    lê nada) e o medidor de 0 a 100, vazio no sentido que não lê; nada sem leitura."""
+    if not leitura:
+        return ""
+    frase = leitura.get("frase")
+    nivel = leitura.get("nivel")
+    cego = leitura.get("cego") is True
+    partes = []
+    if isinstance(frase, str) and frase:
+        partes.append(f'<span class="mj-lt-frase{" cego" if cego else ""}">{_e(frase)}</span>')
+    if isinstance(nivel, int) and not isinstance(nivel, bool):
+        largura = 0 if cego else max(0, min(100, nivel))
+        partes.append(f'<span class="mj-medidor" role="meter" aria-valuemin="0" '
+                      f'aria-valuemax="100" aria-valuenow="{largura}">'
+                      f'<i style="width:{largura}%"></i></span>')
+    return "".join(partes)
+
+
+def leituras_do_estado(estado: Mapping[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """As ``leituras`` do estado pela opção de cada uma."""
+    return {str(x["opcao"]): x for x in itens_do_estado(estado, "leituras")  # (noqa-acento)
+            if isinstance(x.get("opcao"), str)}  # (noqa-acento)
+
+
+def _slot_da_leitura(o: OpcaoDaJanela) -> str:
+    if o.leitura is None:
+        return ""
+    return (f'<span class="mj-leitura" id="{PEDACO}leitura-{_a(o.id)}">'
+            f"{leitura_html(o.leitura)}</span>")
+
+
+PONTOS_DA_TRILHA = 24
+
+
+def trilha_html(pontos: Sequence[float]) -> str:
+    """A trilha de um canal: uma barra por instante, mais alta quanto mais perto daquele instante
+    a escrita chegou ao controle; a última é a de agora."""
+    ultimos = [max(0.0, min(1.0, float(v))) for v in pontos][-PONTOS_DA_TRILHA:]
+    ultimos = [0.0] * (PONTOS_DA_TRILHA - len(ultimos)) + ultimos
+    return "".join(f'<b class="chegou" style="height:{round(15 + 85 * v)}%"></b>' if v > 0
+                   else "<b></b>" for v in ultimos)
+
+
 def _dica_da_linha(o: OpcaoDaJanela) -> str:
     dica = f' data-dica="{_a(o.dica)}"' if o.dica else ""
     return dica + (f' data-canal="{_a(o.canal)}"' if o.canal else "")
@@ -794,7 +841,7 @@ def _linha_da_opcao(o: OpcaoDaJanela, cabeca: bool = False) -> str:
     classe = "ky-linha mj-ct-cabeca" if cabeca else "ky-linha"
     return (f'<div class="{classe}" id="{PEDACO}op-{_a(o.id)}"{_dica_da_linha(o)}>'
             f'<div class="ky-rot"><span>{_e(o.rotulo)}</span>'
-            f'{_nota_da_opcao(o)}</div>'
+            f'{_nota_da_opcao(o)}{_slot_da_leitura(o)}</div>'
             f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>')
 
 
@@ -833,36 +880,58 @@ def _fileira_de_chaves(nome: str, itens: Sequence[OpcaoDaJanela]) -> str:
         f'<span class="mj-fc{" on" if o.valor else ""}" id="{PEDACO}op-{_a(o.id)}"'
         f'{_dica_da_linha(o)} role="switch" aria-checked="{"true" if o.valor else "false"}" '
         f'tabindex="0" data-gesto="{GESTO_DA_OPCAO}" data-v="{_a(o.mod)}:{_a(o.id)}">'
-        f'{_e(o.rotulo)}</span>'
+        f'{_e(o.rotulo)}'
+        + (f'<span class="mj-trilha" id="{PEDACO}trilha-{_a(o.id)}" aria-hidden="true">'
+           f"{trilha_html(())}</span>" if o.canal else "")
+        + "</span>"
         for o in itens)
     return f'<div class="mj-fileira" role="group" aria-label="{_a(nome)}">{chaves}</div>'
 
 
 def _so_chaves(nome: str, itens: Sequence[OpcaoDaJanela]) -> bool:
-    """O cartão de duas chaves ou mais, sem a linha do título, vira a fileira de chaves."""
+    """O cartão de duas chaves ou mais, sem a linha do título, vira a fileira de chaves; a chave
+    com leitura fica na própria linha, onde cabe o medidor."""
     alvo = nome.strip().casefold()
     return len(itens) >= 2 and all(
-        o.tipo == "ligado" and o.rotulo.strip().casefold() != alvo for o in itens)
+        o.tipo == "ligado" and o.rotulo.strip().casefold() != alvo and o.leitura is None
+        for o in itens)
 
 
-def _cartao_html(nome: str, itens: Sequence[OpcaoDaJanela]) -> str:
+def id_do_cartao(nome: str) -> str:
+    """O pedaço das ações de um cartão, pelo nome dele: só letras sem acento, números e hífen."""
+    import unicodedata
+
+    plano = unicodedata.normalize("NFKD", nome).encode("ascii", "ignore").decode().casefold()
+    return f"{PEDACO}acoes-c-" + (re.sub(r"[^a-z0-9]+", "-", plano).strip("-") or "cartao")
+
+
+def _cartao_html(nome: str, itens: Sequence[OpcaoDaJanela], acoes: str = "") -> str:
     """Um cartão: a opção de rótulo igual ao nome é a linha do título (sem essa opção, o nome
     sozinho), e as outras, as linhas de baixo. O ``canal`` da primeira que o declara acende a peça no
-    desenho do controle vivo sob o ponteiro."""
+    desenho do controle vivo sob o ponteiro; a ``marca`` da primeira que a declara vai ao lado do
+    título, e os botões das ações do cartão ao pé dele."""
     alvo = nome.strip().casefold()
     cabeca = next((o for o in itens if o.rotulo.strip().casefold() == alvo
                    and o.tipo not in _EMPILHADAS), None)
     canal = next((o.canal for o in itens if o.canal), "")
-    titulo = (_linha_da_opcao(cabeca, cabeca=True) if cabeca
-              else f'<div class="mj-ct-tit">{_e(nome)}</div>')
+    marca = next((o.marca for o in itens if o.marca), "")
+    selo = f'<span class="mj-marca">{_e(marca)}</span>' if marca else ""
+    titulo = (_linha_da_opcao(cabeca, cabeca=True).replace(
+        f'<div class="ky-rot"><span>{_e(cabeca.rotulo)}</span>',
+        f'<div class="ky-rot"><span>{_e(cabeca.rotulo)}{selo}</span>', 1) if cabeca and selo
+        else _linha_da_opcao(cabeca, cabeca=True) if cabeca
+        else f'<div class="mj-ct-tit">{_e(nome)}{selo}</div>')
     resto = _linhas_soltas([o for o in itens if o is not cabeca])
     atributo = f' data-canal="{_a(canal)}"' if canal else ""
-    return f'<div class="mj-cartao"{atributo}>{titulo}{resto}</div>'
+    pe = (f'<div class="mj-ct-pe" id="{id_do_cartao(nome)}">{acoes}</div>' if acoes else "")
+    return f'<div class="mj-cartao"{atributo}>{titulo}{resto}{pe}</div>'
 
 
-def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
+def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela],
+                       acoes_dos_cartoes: Mapping[str, str] | None = None) -> str:
     """As linhas soltas e, onde o manifesto junta opções num ``cartao``, os cartões, numa grade
-    que corre em colunas; cada cartão entra onde aparece a primeira opção dele."""
+    que corre em colunas; cada cartão entra onde aparece a primeira opção dele, com os botões das
+    ações dele (``acoes_dos_cartoes``, pelo nome do cartão) ao pé."""
     partes: list[tuple[str, Any]] = []
     for o in itens:
         if o.cartao:
@@ -883,7 +952,8 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
         saida.extend(_fileira_de_chaves(n, j) for n, j in fileiras)
         if cartoes:
             saida.append('<div class="mj-cartoes">' + "".join(
-                _cartao_html(n, j) for n, j in cartoes) + "</div>")
+                _cartao_html(n, j, (acoes_dos_cartoes or {}).get(n, ""))
+                for n, j in cartoes) + "</div>")
     return "".join(saida)
 
 
@@ -1160,8 +1230,9 @@ def _topo_do_agora(vivo: bool, processo: str, porque: str) -> str:
 def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, processo: str = "",
                porque: str = "", gestao: Gestao | None = None,
                ligas: Mapping[str, Liga] | None = None, vivo: cv.Vivo | None = None,
-               mod: str = "") -> str:
+               mod: str = "", ultimas: Sequence[Ultima] | None = None) -> str:
     """O miolo da coluna «Agora» («Conexão» com ``ligas``): só os pedaços que o manifesto declara.
+    Sem pedaço de coluna, o miolo da faixa do alto (:func:`faixa_html`).
 
     Sem estado, ou com a extensão parada (``ligado`` falso), o nível e o perfil ficam vazios. As
     conexões e os aparelhos são os que a extensão publicou, parada ou não (a conexão que cai já
@@ -1170,6 +1241,8 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     ``gestao`` são os aparelhos geridos sem ``grupo``; ``ligas``, pelo id, as conexões que a linha
     liga e desliga no clique; ``vivo``, o controle vivo dos pedaços ``controle`` e ``clima``.
     """
+    if em_faixa(pedacos) and not ligas:
+        return faixa_html(pedacos, estado, processo=processo, porque=porque, ultimas=ultimas)
     ligada = bool(estado and estado.get("ligado") is True)
     titulo = "Conexão" if ligas else "Agora"
     linhas = [f'<div class="ja-ag-topo"><span class="pc-sub">{titulo}</span>'
@@ -1222,6 +1295,110 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     return "".join(linhas)
 
 
+PEDACOS_DA_COLUNA = ("conexoes", "aparelhos", "nivel", "clima")  # (noqa-acento)
+PALAVRA_DA_SITUACAO = {"tocando": ("Tocando", "verde"), "calado": ("Calado", "laranja"),
+                       "esperando": ("Esperando um jogo", "mudo")}
+PALAVRA_DO_CANAL = {"haptica": "Vibração fina", "vibracao": "Motores", "gatilho": "Gatilhos",
+                    "luz": "Barra de luz", "leds": "Luzes de jogador", "som": "Alto-falante",
+                    "mira": "Mira", "microfone": "Microfone"}
+ULTIMAS_DA_FAIXA = 3
+A_TODOS = "todos"
+
+
+class Ultima(NamedTuple):
+    """Uma escrita que chegou ao controle, para a faixa: o canal, o controle e há quanto tempo."""
+
+    canal: str
+    controle: str
+    ha_ms: int
+
+
+def em_faixa(pedacos: Sequence[str]) -> bool:
+    """O ``agora`` sem pedaço de coluna (conexões, aparelhos, o nível e a curva do clima) é a
+    faixa do alto da janela, e a janela fica sem a coluna."""
+    return bool(pedacos) and not set(pedacos) & set(PEDACOS_DA_COLUNA)
+
+
+def ultimas_do_estado(estado: Mapping[str, Any] | None) -> list[Ultima]:
+    """As escritas do ``ao_vivo`` do estado, da mais nova à mais velha, com o nome do controle."""
+    ao = (estado or {}).get("ao_vivo")
+    if not isinstance(ao, Mapping):
+        return []
+    vivo = cv.vivo_de(estado, None)
+    saida = []
+    for e in ao.get("escritas") or ():
+        if not isinstance(e, Mapping) or e.get("canal") not in PALAVRA_DO_CANAL:
+            continue
+        ha, posicao = e.get("ha_ms"), e.get("controle")
+        if isinstance(ha, bool) or not isinstance(ha, int):
+            continue
+        if e.get("todos") is True:
+            quem = A_TODOS
+        elif isinstance(posicao, int) and not isinstance(posicao, bool) \
+                and 0 <= posicao < len(vivo.controles):
+            quem = vivo.controles[posicao].nome
+        else:
+            continue
+        saida.append(Ultima(str(e["canal"]), quem, ha))
+    return sorted(saida, key=lambda u: u.ha_ms)
+
+
+def _ha_quanto(ha_ms: int) -> str:
+    return "Agora" if ha_ms < 1000 else f"{ha_ms // 1000} s"
+
+
+def _ultimas_html(ultimas: Sequence[Ultima]) -> str:
+    itens = "".join(
+        f'<span class="fx-ev{" novo" if n == 0 else ""}"><b>{_e(PALAVRA_DO_CANAL[u.canal])}</b>'
+        f'{_e(u.controle)}<i>{_ha_quanto(u.ha_ms)}</i></span>'
+        for n, u in enumerate(list(ultimas)[:ULTIMAS_DA_FAIXA]))
+    return f'<div class="fx-feed" aria-live="polite">{itens}</div>' if itens else ""
+
+
+def faixa_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, processo: str = "",
+               porque: str = "", ultimas: Sequence[Ultima] | None = None) -> str:
+    """A faixa do alto da janela, no lugar da coluna «Agora»: a pílula da situação que a
+    extensão publica (Tocando, Calado ou Esperando um jogo) com a frase da situação (o jogo, ou o
+    motivo do calado), os pares das ``linhas`` e do ``perfil`` e, com o pedaço
+    ``controle``, as últimas escritas que chegaram ao controle, com o canal, o controle e há
+    quanto tempo. Sem a situação, a pílula diz Ligada; com a extensão parada, a palavra do
+    processo. As últimas escritas são as que a janela lembra; na falta, as do ``ao_vivo``."""
+    ligada = bool(estado and estado.get("ligado") is True)
+    situacao = (estado or {}).get("situacao") if ligada else None  # (noqa-acento)
+    frase = ""
+    if isinstance(situacao, Mapping) and situacao.get("estado") in PALAVRA_DA_SITUACAO:
+        palavra, cor = PALAVRA_DA_SITUACAO[str(situacao["estado"])]
+        frase = str(situacao.get("frase") or "")
+        pilula = f'<span class="est est-{cor} fx-pilula" data-situacao="{situacao["estado"]}">' \
+                 f"<i></i>{palavra}</span>"
+    elif ligada:
+        pilula = '<span class="est est-verde fx-pilula"><i></i>Ligada</span>'
+    else:
+        palavra, cor = PROCESSO.get(processo, ("Parada", "mudo"))
+        dica = " ".join(x for x in (porque, DICA_DE_TENTAR if cor == "vermelho" else "") if x)
+        atributo = f' data-dica="{_a(dica)}"' if dica else ""
+        pilula = f'<span class="est est-{cor} fx-pilula"{atributo}><i></i>{palavra}</span>'
+    pares: list[tuple[str, str]] = []
+    for pedaco in pedacos:
+        if not ligada or not estado:
+            break
+        if pedaco == "linhas":
+            pares += [(str(x.get("rotulo")), str(x.get("valor")))
+                      for x in itens_do_estado(estado, "linhas")
+                      if isinstance(x.get("rotulo"), str) and isinstance(x.get("valor"), str)]
+        elif pedaco == "perfil" and isinstance(estado.get("perfil"), str) \
+                and estado["perfil"].strip():
+            pares.append(("Perfil", estado["perfil"]))
+    texto_dos_pares = "".join(f'<span class="fx-par"><span>{_e(r)}</span>{_e(v)}</span>'
+                              for r, v in pares)
+    feed = ""
+    if "controle" in pedacos and ligada:
+        feed = _ultimas_html(ultimas if ultimas is not None else ultimas_do_estado(estado))
+    linha1 = f'<div class="fx-l1">{_e(frase)}</div>' if frase else ""
+    linha2 = f'<div class="fx-l2">{texto_dos_pares}</div>' if texto_dos_pares else ""
+    return (f'{pilula}<div class="fx-oque">{linha1}{linha2}</div>{feed}')
+
+
 def _linhas_do_agora_html(estado: Mapping[str, Any] | None) -> str:
     """O pedaço «linhas»: cada ``{rotulo, valor}`` que a extensão publicou (a porta já cortou no
     teto), escapado; sem linha, o traço."""
@@ -1256,20 +1433,29 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
                porque: str = "", faixa: str = "", gestao: Gestao | None = None,
                coluna: str = "", corpo: str = "", ligas: Mapping[str, Liga] | None = None,
-               vivo: cv.Vivo | None = None) -> str:
-    """A janela do arranjo C: a chave (ou o «Parar tudo») e o X no topo, a coluna «Agora» e os
-    ajustes. Toda escolha grava no clique: não há rodapé.
+               vivo: cv.Vivo | None = None, ultimas: Sequence[Ultima] | None = None) -> str:
+    """A janela do arranjo C: a chave (ou o «Parar tudo») e o X no topo, a coluna «Agora» (ou,
+    sem pedaço de coluna, a faixa do alto) e os ajustes. Toda escolha grava no clique: não há
+    rodapé.
 
     ``faixa`` é a fixa embaixo das duas colunas; sem ``agora`` nem ``coluna`` (o miolo pronto da
     coluna, quando a extensão não é de aparelhos), os ajustes ocupam a largura inteira. ``corpo``
     é a classe a mais do corpo.
     """
-    tem_coluna = bool(agora or coluna)
-    miolo = coluna or (agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao,
-                                  ligas=ligas, vivo=vivo, mod=mod) if agora else "")
-    coluna = f'<div class="ja-agora" id="mod-agora">{miolo}</div>' if tem_coluna else ""
+    no_alto = not coluna and em_faixa(agora)
+    tem_coluna = bool(agora or coluna) and not no_alto
+    if no_alto:
+        miolo = agora_html(agora, estado, processo=processo, porque=porque, vivo=vivo, mod=mod,
+                           ultimas=ultimas)
+        coluna = f'<div class="ja-faixa-estado" id="mod-agora">{miolo}</div>'
+    else:
+        miolo = coluna or (agora_html(agora, estado, processo=processo, porque=porque,
+                                      gestao=gestao, ligas=ligas, vivo=vivo, mod=mod)
+                           if agora else "")
+        coluna = f'<div class="ja-agora" id="mod-agora">{miolo}</div>' if tem_coluna else ""
     opcoes = f'<div class="ja-opcoes">{ajustes}</div>' if ajustes else ""
     classe = ("ja-corpo" + ("" if tem_coluna else " sem-agora")
+              + (" com-estado" if no_alto else "")
               + (" com-faixa" if faixa and (tem_coluna or ajustes) else "")
               + (f" {corpo}" if corpo else ""))
     return f'''    <div class="tn-topo ja-topo">
@@ -1609,7 +1795,9 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            armada: Sequence[str] = (), em_abas: bool = False,
                            ligas: Mapping[str, Liga] | None = None,
                            pagina: PaginaDaJanela | None = None,
-                           vivo: cv.Vivo | None = None, abas: Sequence[str] = ()) -> str:
+                           vivo: cv.Vivo | None = None, abas: Sequence[str] = (),
+                           vereditos: Mapping[str, Veredito] | None = None,
+                           ultimas: Sequence[Ultima] | None = None) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo (em abas com ``em_abas``, a que
     pinta o tema) e «Para» no topo; toda escolha grava no clique, sem rodapé.
 
@@ -1619,7 +1807,9 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     arranjo C: a coluna à esquerda e os grupos em abas (``aba`` a aberta, ``abas`` a ordem), a
     página própria na última; ``em_curso`` e ``armada`` são as ações que esperam, ``livre`` a faixa
     de baixo, ``vivo`` o controle aceso da coluna, ``controles`` a aba dos controles e ``ligas``
-    faz da coluna a «Conexão»."""
+    faz da coluna a «Conexão»; o ``agora`` sem pedaço de coluna é a :func:`faixa_html`."""
+    leituras = leituras_do_estado(estado)
+    opcoes = [o._replace(leitura=leituras[o.id]) if o.id in leituras else o for o in opcoes]
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
     desligada = chave is False and bool(mod)
@@ -1640,7 +1830,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         if acoes or (gestao and gestao.aparelhos.grupo) or controles:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
                                          controles=cc, armada=armada, desligada=desligada,
-                                         pagina=aba_da_pagina, abas=abas)
+                                         pagina=aba_da_pagina, abas=abas, vereditos=vereditos)
         else:
             ajustes = (_abas_das_opcoes(opcoes, aba, mod, aba_da_pagina, abas) if opcoes
                        else na_pagina or vazio)
@@ -1649,7 +1839,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
                           processo=processo, porque=porque, faixa=faixa, gestao=gestao,
-                          ligas=ligas, vivo=vivo)
+                          ligas=ligas, vivo=vivo, ultimas=ultimas)
     corpo = ((_abas_das_opcoes(opcoes, aba, mod) if em_abas else _cartoes_das_opcoes(opcoes))
              if opcoes else vazio) + na_pagina
     return f'''    <div class="tn-topo">
@@ -1908,12 +2098,67 @@ def telas() -> str:
 
 
 class AcaoDaJanela(NamedTuple):
-    """Uma ação do manifesto: o botão que age na hora."""
+    """Uma ação do manifesto: o botão que age na hora; com ``cartao``, ao pé daquele cartão."""
 
     id: str
     rotulo: str
     grupo: str = ""
     icone: str = ""
+    cartao: str = ""
+
+
+class Veredito(NamedTuple):
+    """O que a extensão respondeu a uma ação: a frase e se tocou em todos os controles."""
+
+    frase: str
+    tocou: bool
+
+
+SEM_RESPOSTA_A_TEMPO = "A extensão não respondeu a tempo."
+NENHUM_CONTROLE_SENTE = "Não tocou: nenhum controle sente os efeitos."
+NOME_SEM_PLASTICO = "um controle"
+
+
+def _juntar_com_e(partes: Sequence[str]) -> str:
+    return partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " e " + partes[-1]
+
+
+def veredito_da_resposta(resposta: Any) -> Veredito | None:
+    """A frase da resposta ``{controles: [{nome, tocou, motivo}]}`` de uma ação: em quais controles
+    tocou e, em cada um que não tocou, por quê; nada quando a resposta não tem essa forma. O
+    ``uniq`` da resposta nunca vai à tela."""
+    if not isinstance(resposta, Mapping) or not isinstance(resposta.get("controles"), list):
+        return None
+    linhas = [c for c in resposta["controles"] if isinstance(c, Mapping)
+              and isinstance(c.get("tocou"), bool)]
+    if not linhas:
+        return Veredito(NENHUM_CONTROLE_SENTE, False)
+
+    def nome(c: Mapping[str, Any]) -> str:
+        n = c.get("nome")
+        return str(n).strip() if isinstance(n, str) and n.strip() else NOME_SEM_PLASTICO
+
+    tocaram = [f"no {nome(c)}" for c in linhas if c["tocou"]]
+    calados = [(nome(c), str(c.get("motivo") or "").strip()) for c in linhas if not c["tocou"]]
+    partes = [f"Tocou {_juntar_com_e(tocaram)}."] if tocaram else []
+    if calados:
+        motivos = {m for _n, m in calados}
+        if len(motivos) == 1:
+            motivo = next(iter(motivos))
+            quem = _juntar_com_e([f"no {n}" for n, _m in calados])
+            partes.append(f"Não tocou {quem}" + (f": {motivo}." if motivo else "."))
+        else:
+            partes.append("Não tocou " + "; ".join(
+                f"no {n}" + (f": {m}" if m else "") for n, m in calados) + ".")
+    return Veredito(" ".join(partes), not calados)
+
+
+def veredito_html(veredito: Veredito | None) -> str:
+    """A frase do veredito ao lado do botão: verde quando tocou em todos, laranja quando não."""
+    if veredito is None:
+        return ""
+    return (f'<span class="mj-veredito {"ok" if veredito.tocou else "nao"}" '  # (noqa-acento)
+            f'data-dica="{_a(veredito.frase)}" role="status">{_e(veredito.frase)}</span>')
 
 
 class AparelhosDaJanela(NamedTuple):
@@ -2007,7 +2252,8 @@ def valor_da_acao(mod: str, acao_id: str, alvo: str = "") -> str:
 
 
 def acao_html(mod: str, acao: AcaoDaJanela, *, alvo: str = "", em_curso: bool = False,
-              forte: bool = False, armada: bool = False, desligada: bool = False) -> str:
+              forte: bool = False, armada: bool = False, desligada: bool = False,
+              veredito: Veredito | None = None) -> str:
     """Um botão de ação (:func:`valor_da_acao`). Enquanto a extensão não devolve o estado, ele diz
     «Em curso»; ``armada`` é o primeiro clique numa ação que pede o segundo: ele diz «Confirmar».
     Com a chave da extensão desligada, ele fica à vista, apagado e sem gesto."""
@@ -2021,7 +2267,8 @@ def acao_html(mod: str, acao: AcaoDaJanela, *, alvo: str = "", em_curso: bool = 
     ocupado = ' aria-busy="true"' if em_curso else ""
     rotulo = EM_CURSO if em_curso else ROTULO_DE_CONFIRMAR if armada else _e(acao.rotulo)
     return (f'<button class="{classe}" data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}"{ocupado}>'
-            f'{_icone_da_acao(acao.icone)}<span>{rotulo}</span></button>')
+            f'{_icone_da_acao(acao.icone)}<span>{rotulo}</span></button>'
+            f"{veredito_html(veredito)}")
 
 
 def armada_em(armada: Sequence[str], acao_id: str, alvo: str = "") -> bool:
@@ -2031,11 +2278,25 @@ def armada_em(armada: Sequence[str], acao_id: str, alvo: str = "") -> bool:
 
 def barra_de_acoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
                         em_curso: frozenset[tuple[str, str]] = frozenset(),
-                        armada: Sequence[str] = (), desligada: bool = False) -> str:
-    """As ações de uma aba, numa fileira; a primeira é a forte."""
-    return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=n == 0,
-                             armada=armada_em(armada, a.id), desligada=desligada)
+                        armada: Sequence[str] = (), desligada: bool = False,
+                        vereditos: Mapping[str, Veredito] | None = None,
+                        forte: bool = True) -> str:
+    """As ações de uma aba, numa fileira; a primeira é a forte (sem ``forte``, nenhuma). Cada uma
+    leva ao lado o veredito da última resposta da extensão àquela ação."""
+    return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=forte and n == 0,
+                             armada=armada_em(armada, a.id), desligada=desligada,
+                             veredito=(vereditos or {}).get(a.id))
                    for n, a in enumerate(acoes))
+
+
+def acoes_dos_cartoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
+                           em_curso: frozenset[tuple[str, str]] = frozenset(),
+                           armada: Sequence[str] = (), desligada: bool = False,
+                           vereditos: Mapping[str, Veredito] | None = None) -> dict[str, str]:
+    """Os botões das ações com ``cartao``, pelo nome do cartão em que moram."""
+    nomes = list(dict.fromkeys(a.cartao for a in acoes if a.cartao))
+    return {n: barra_de_acoes_html(mod, [a for a in acoes if a.cartao == n], em_curso, armada,
+                                   desligada, vereditos, forte=False) for n in nomes}
 
 
 def _aparelhos_geridos(estado: Mapping[str, Any] | None) -> list[dict[str, Any]]:
@@ -2425,7 +2686,8 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        acoes: Sequence[AcaoDaJanela], gestao: Gestao | None,
                        controles: tuple[str, str] = ("", ""), armada: Sequence[str] = (),
                        desligada: bool = False, pagina: tuple[str, str] | None = None,
-                       abas: Sequence[str] = ()) -> str:
+                       abas: Sequence[str] = (),
+                       vereditos: Mapping[str, Veredito] | None = None) -> str:
     """As abas do arranjo C: em cada uma, as ações (``#mod-acoes-<n>``), a lista dos aparelhos
     se a aba é a do ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se é a do
     ``grupo`` deles (``#mod-controles``; ``controles`` é o par aba e cartões) e as linhas das
@@ -2440,17 +2702,19 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
         por_aba[o.grupo or primeiro].append(o)
     acoes_da: dict[str, list[AcaoDaJanela]] = {n: [] for n in nomes}
     for a in acoes:
-        acoes_da[a.grupo or primeiro].append(a)
+        if not a.cartao:
+            acoes_da[a.grupo or primeiro].append(a)
     da_pagina = pagina is not None and aba == pagina[0]
     aberta = aba if aba in por_aba or da_pagina else primeiro
     em_curso = gestao.em_curso if gestao else frozenset()
+    nos_cartoes = acoes_dos_cartoes_html(mod, acoes, em_curso, armada, desligada, vereditos)
     telas = []
     for n, nome in enumerate(nomes):
         partes = []
         fileira = ""
         if acoes_da[nome]:
             fileira = (f'<div class="mj-acoes" id="mod-acoes-{n}">'
-                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada, desligada)}"
+                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada, desligada, vereditos)}"
                        "</div>")
         lista = (f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>'
                  if gestao and gestao.aparelhos.grupo == nome else "")
@@ -2458,7 +2722,7 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                if controles[0] and controles[0] == nome and not (gestao and gestao.controles)
                else "")
         chave, linhas = chave_da_aba(nome, por_aba[nome])
-        das_linhas = _linhas_da_aba(n, linhas, chave) if linhas else ""
+        das_linhas = _linhas_da_aba(n, linhas, chave, nos_cartoes) if linhas else ""
         if das_linhas and (lista or ccs):
             partes += [fileira, das_linhas, lista, ccs]
         else:
@@ -2480,8 +2744,9 @@ def acoes_por_aba(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela]
     ``controles`` é a aba dos controles dos aparelhos, só quando algum os tem; ``abas``, a ordem
     do manifesto."""
     nomes = _grupos_com_as_pecas(opcoes, acoes, aparelhos, controles, abas)
-    return {n: tuple(a for a in acoes if (a.grupo or nomes[0]) == nome)
-            for n, nome in enumerate(nomes) if any((a.grupo or nomes[0]) == nome for a in acoes)}
+    soltas = [a for a in acoes if not a.cartao]
+    return {n: tuple(a for a in soltas if (a.grupo or nomes[0]) == nome)
+            for n, nome in enumerate(nomes) if any((a.grupo or nomes[0]) == nome for a in soltas)}
 
 
 def _y_do_rastro(v: float) -> str:

@@ -1,10 +1,10 @@
 {
   "id": "imersao",
   "nome": "Modo imersão",
-  "versao": "0.5.4",
+  "versao": "0.5.6",
   "api": ">=2,<3",
   "licenca": "GPL-3.0-or-later",
-  "descricao": "O jogo chega ao controle como no console: a receita de cada jogo lê o que acontece na cena e responde com a vibração, os gatilhos e a luz. Sem receita, vale o modo universal.",
+  "descricao": "O jogo chega ao controle como no console: o ajuste de cada jogo lê o que acontece na cena e responde com a vibração, os gatilhos e a luz. Sem ajuste próprio, vale o universal.",
   "tipos": [
     "processo"
   ],
@@ -37,21 +37,23 @@
     "escrever:som",
     "escrever:leds",
     "escrever:mira",
+    "escrever:corpo",
     "publicar:acessorios.estado",
     "rede:internet"
   ],
   "opcoes": [
     {
       "id": "receita",
-      "rotulo": "Receita",
+      "rotulo": "Ajuste",
       "tipo": "escolha",
       "escolhas": [
-        "Pelo jogo",
-        "Universal"
+        "Automático",
+        "Sempre o universal"
       ],
-      "padrao": "Pelo jogo",
-      "grupo": "Jogo",
-      "dica": "Pelo jogo, vale a receita do jogo aberto; sem receita, a universal"
+      "padrao": "Automático",
+      "grupo": "Sentir",
+      "dica": "Automático: o ajuste próprio do jogo aberto, ou o universal quando ele não tem",
+      "cartao": "Este jogo"
     },
     {
       "id": "estilo",
@@ -68,145 +70,198 @@
         "Geral"
       ],
       "padrao": "Pelo jogo",
-      "grupo": "Jogo",
-      "dica": "Pelo jogo, a universal toca o que combina com o estilo do jogo aberto"
+      "grupo": "Sentir",
+      "dica": "Pelo jogo, o universal toca o que combina com o estilo do jogo aberto",
+      "cartao": "Este jogo"
     },
     {
       "id": "forca_geral",
-      "rotulo": "Força",
+      "rotulo": "Intensidade",
       "tipo": "deslizante",
       "minimo": 0,
       "maximo": 100,
       "passo": 5,
       "padrao": 100,
       "unidade": "%",
-      "grupo": "Jogo",
+      "grupo": "Sentir",
       "dica": "Tudo o que a extensão escreve no controle; em 0, nada",
-      "zero": "Nada"
-    },
-    {
-      "id": "para_quem",
-      "rotulo": "O golpe vai para",
-      "tipo": "escolha",
-      "escolhas": [
-        "Quem levou",
-        "Todos os controles"
-      ],
-      "padrao": "Quem levou",
-      "grupo": "Jogo",
-      "dica": "O dano e o impacto no gatilho vão só ao controle que levou, ou a todos"
+      "zero": "Nada",
+      "cartao": "Este jogo"
     },
     {
       "id": "memoria",
       "rotulo": "Memória neste jogo",
       "tipo": "memoria",
-      "grupo": "Sentidos",
-      "dica": "A receita que pede lê da memória do jogo os valores que usa; vale ao abrir o jogo de novo"
+      "grupo": "Sentir",
+      "dica": "A receita que pede lê da memória do jogo os valores que usa; vale ao abrir o jogo de novo",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "sentido_som",
       "rotulo": "Som do jogo",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Sentidos",
+      "grupo": "Sentir",
       "dica": "Os estalos do som do jogo, com o lado, sem receber o áudio",
-      "canal": "som"
+      "canal": "som",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "sentido_vibracao",
       "rotulo": "Vibração do jogo",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Sentidos",
+      "grupo": "Sentir",
       "dica": "O batimento, a rajada e o dano que o jogo pede à vibração",
-      "canal": "vibracao"
+      "canal": "vibracao",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "sentido_microfone",
       "rotulo": "Microfone",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Sentidos",
+      "grupo": "Sentir",
       "dica": "Só o nível do microfone do controle, nunca a voz",
-      "canal": "microfone"
+      "canal": "microfone",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "sentido_parado",
       "rotulo": "Controle parado",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Sentidos",
+      "grupo": "Sentir",
       "dica": "O controle imóvel na mão soma ao clima tenso",
-      "canal": "mira"
+      "canal": "mira",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "sentido_golpe",
       "rotulo": "Golpe no gatilho",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Sentidos",
+      "grupo": "Sentir",
       "dica": "O gatilho apertado no instante do pulso do jogo",
-      "canal": "gatilho"
+      "canal": "gatilho",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "canal_haptica",
       "rotulo": "Vibração fina",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Efeitos",
-      "dica": "O coração, o alívio e o susto no tato",
+      "grupo": "Sentir",
+      "dica": "O Som no corpo, o coração, o alívio e o susto no tato",
       "canal": "haptica",
-      "cartao": "Canais"
+      "cartao": "O que o controle sente"
     },
     {
       "id": "canal_motor",
       "rotulo": "Motores",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Efeitos",
-      "dica": "O golpe com lado",
+      "grupo": "Sentir",
+      "dica": "Os Gatilhos que vibram e o golpe com lado",
       "canal": "vibracao",
-      "cartao": "Canais"
+      "cartao": "O que o controle sente"
     },
     {
       "id": "canal_gatilho",
       "rotulo": "Gatilhos",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Efeitos",
+      "grupo": "Sentir",
       "dica": "O impacto nos gatilhos",
       "canal": "gatilho",
-      "cartao": "Canais"
+      "cartao": "O que o controle sente"
     },
     {
       "id": "canal_luz",
       "rotulo": "Barra de luz",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Efeitos",
+      "grupo": "Sentir",
       "dica": "A luz do dano",
       "canal": "luz",
-      "cartao": "Canais"
+      "cartao": "O que o controle sente"
     },
     {
       "id": "canal_leds",
       "rotulo": "Luzes de jogador",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Efeitos",
+      "grupo": "Sentir",
       "dica": "O lado na luz",
       "canal": "leds",
-      "cartao": "Canais"
+      "cartao": "O que o controle sente"
     },
     {
       "id": "canal_som",
       "rotulo": "Alto-falante",
       "tipo": "ligado",
       "padrao": true,
-      "grupo": "Efeitos",
+      "grupo": "Sentir",
       "dica": "O susto no alto-falante",
       "canal": "som",
-      "cartao": "Canais"
+      "cartao": "O que o controle sente"
+    },
+    {
+      "id": "som_no_corpo",
+      "rotulo": "Som no corpo",
+      "tipo": "deslizante",
+      "minimo": 0,
+      "maximo": 100,
+      "passo": 5,
+      "padrao": 70,
+      "unidade": "%",
+      "grupo": "Efeitos",
+      "zero": "Desligado",
+      "aparece_com": {
+        "@presente": "som_no_corpo"
+      },
+      "dica": "O grave do som do jogo na vibração fina, junto com a TV, em todo estilo",
+      "cartao": "Som no corpo",
+      "canal": "haptica"
+    },
+    {
+      "id": "gatilhos_que_vibram",
+      "rotulo": "Gatilhos que vibram",
+      "tipo": "deslizante",
+      "minimo": 0,
+      "maximo": 100,
+      "passo": 5,
+      "padrao": 70,
+      "unidade": "%",
+      "grupo": "Efeitos",
+      "zero": "Desligado",
+      "aparece_com": {
+        "@presente": "gatilhos_que_vibram"
+      },
+      "dica": "Apertar o L2 vibra o motor esquerdo, e o R2 o direito, em todo estilo",
+      "cartao": "Gatilhos que vibram",
+      "canal": "vibracao"
+    },
+    {
+      "id": "tipo_dos_gatilhos",
+      "rotulo": "Tipo",
+      "tipo": "escolha",
+      "escolhas": [
+        "Tranco",
+        "Batida",
+        "Onda",
+        "Coice",
+        "Pancada do lado",
+        "Ressoar",
+        "Ricochete"
+      ],
+      "padrao": "Tranco",
+      "grupo": "Efeitos",
+      "dica": "A vibração do motor ao apertar o gatilho; o Coice toca ao soltar",
+      "aparece_com": {
+        "@presente": "gatilhos_que_vibram"
+      },
+      "cartao": "Gatilhos que vibram"
     },
     {
       "id": "coracao",
@@ -224,7 +279,8 @@
       },
       "dica": "O batimento na vibração fina quando a cena fica tensa",
       "cartao": "Coração",
-      "canal": "haptica"
+      "canal": "haptica",
+      "marca": "Terror"
     },
     {
       "id": "alivio",
@@ -242,7 +298,8 @@
       },
       "dica": "O batimento lento quando a tensão passa",
       "cartao": "Alívio",
-      "canal": "haptica"
+      "canal": "haptica",
+      "marca": "Terror"
     },
     {
       "id": "golpe_com_lado",
@@ -328,7 +385,8 @@
         "@presente": "clima"
       },
       "dica": "Quanto menor, mais cedo a cena fica tensa e o coração bate",
-      "cartao": "Clima tenso"
+      "cartao": "Clima tenso",
+      "marca": "Terror"
     },
     {
       "id": "peso_da_mira",
@@ -341,7 +399,8 @@
       },
       "dica": "O perigo deixa a mira do giroscópio mais pesada por instantes",
       "cartao": "Peso da mira",
-      "canal": "mira"
+      "canal": "mira",
+      "marca": "Terror"
     },
     {
       "id": "susto_no_alto_falante",
@@ -354,7 +413,8 @@
       },
       "dica": "O estalo do jogo no alto-falante, no susto com a cena tensa",
       "cartao": "Susto",
-      "canal": "som"
+      "canal": "som",
+      "marca": "Terror"
     },
     {
       "id": "susto_no_tato",
@@ -565,9 +625,6 @@
   ],
   "agora": [
     "controle",
-    "nivel",
-    "clima",
-    "perfil",
     "linhas"
   ],
   "modos_de_aba": [
@@ -585,61 +642,67 @@
     }
   ],
   "abas": [
-    "Jogo",
-    "Sentidos",
-    "Efeitos"
+    "Sentir",
+    "Efeitos",
+    "Controles"
   ],
   "acoes": [
     {
-      "id": "procurar",
-      "rotulo": "Procurar receitas",
-      "grupo": "Jogo",
-      "icone": "procurar"
-    },
-    {
       "id": "ver_a_tela",
       "rotulo": "Ver a tela",
-      "grupo": "Sentidos",
-      "icone": "ligar"
+      "grupo": "Sentir",
+      "icone": "ligar",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "parar_de_ver",
       "rotulo": "Parar de ver",
-      "grupo": "Sentidos"
+      "grupo": "Sentir",
+      "cartao": "O que ele escuta"
     },
     {
       "id": "testar_coracao",
-      "rotulo": "Testar o coração",
+      "rotulo": "Testar",
       "grupo": "Efeitos",
-      "icone": "testar"
+      "icone": "testar",
+      "responde": true,
+      "cartao": "Coração"
     },
     {
       "id": "testar_alivio",
-      "rotulo": "Testar o alívio",
+      "rotulo": "Testar",
       "grupo": "Efeitos",
-      "icone": "testar"
+      "icone": "testar",
+      "responde": true,
+      "cartao": "Alívio"
     },
     {
       "id": "testar_golpe",
-      "rotulo": "Testar o golpe",
+      "rotulo": "Testar",
       "grupo": "Efeitos",
-      "icone": "testar"
+      "icone": "testar",
+      "responde": true,
+      "cartao": "Golpe com lado"
     },
     {
       "id": "testar_susto",
-      "rotulo": "Testar o susto",
+      "rotulo": "Testar",
       "grupo": "Efeitos",
-      "icone": "testar"
+      "icone": "testar",
+      "responde": true,
+      "cartao": "Susto"
     },
     {
       "id": "testar_gatilhos",
-      "rotulo": "Testar os gatilhos",
+      "rotulo": "Testar",
       "grupo": "Efeitos",
-      "icone": "testar"
+      "icone": "testar",
+      "responde": true,
+      "cartao": "Impacto nos gatilhos"
     }
   ],
   "aparelhos_acoes": {
-    "grupo": "Jogo",
+    "grupo": "Controles",
     "acoes": [
       {
         "id": "ligar",
@@ -649,6 +712,6 @@
     ]
   },
   "aparelhos_controles": {
-    "grupo": "Jogo"
+    "grupo": "Controles"
   }
 }

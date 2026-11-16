@@ -147,15 +147,19 @@ def test_as_linhas_cortam_no_teto() -> None:
 def test_o_pedaco_linhas_pinta_o_que_a_extensao_publicou() -> None:
     estado = {"ligado": True, "linhas": [{"rotulo": "Último", "valor": "coração, 92 bpm"},
                                          {"rotulo": "Sentem", "valor": "<b>Cosmic Red</b>"}]}
-    html = exp.agora_html(["linhas"], estado)
-    assert re.findall(r'<span class="ja-rot">([^<]*)</span>', html) == ["Último", "Sentem"]
+    html = exp.agora_html(["nivel", "linhas"], estado)
+    assert re.findall(r'<span class="ja-rot">([^<]*)</span>', html)[-2:] == ["Último", "Sentem"]
     assert re.findall(r'<span class="ja-par-valor">([^<]*)</span>', html)[0] == "coração, 92 bpm"
     for regra in (".ja-linhas {", ".ja-par {", ".ja-par > span {"):
         assert regra in exp.CSS, f"o pedaço linhas perdeu a regra {regra!r}"
     assert "text-overflow:ellipsis" in exp.CSS.split(".ja-par > span {")[1].split("}")[0]
     assert "&lt;b&gt;Cosmic Red" in html, "o valor de terceiro não foi escapado"
-    parada = exp.agora_html(["linhas"], {**estado, "ligado": False})
+    parada = exp.agora_html(["nivel", "linhas"], {**estado, "ligado": False})
     assert "Último" not in parada and exp.SEM_VALOR in parada
+    faixa = exp.agora_html(["linhas"], estado)
+    assert re.findall(r'<span class="fx-par"><span>([^<]*)</span>', faixa) == ["Último", "Sentem"]
+    assert "&lt;b&gt;Cosmic Red" in faixa and "ja-linhas" not in faixa
+    assert "Último" not in exp.agora_html(["linhas"], {**estado, "ligado": False})
     assert Manifesto.model_validate(_manifesto(agora=["linhas"])).agora == ["linhas"]
 
 

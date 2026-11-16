@@ -89,7 +89,8 @@ def manifesto() -> Any:
 
 
 def mesa(n: int = 4) -> dict[str, Any]:
-    """O estado de exemplo: a extensão ligada, com `n` controles e escritas de agora há pouco."""
+    """O estado de exemplo: a extensão ligada e tocando no jogo, com `n` controles, o que cada
+    sentido lê e escritas de agora há pouco."""
     aparelhos = [{"id": f"jogador-{j}", "nome": PLASTICOS[j - 1], "ligado": j != 3,
                   "estado": "ligado", "controles": [
                       {"id": ident, "tipo": "escolha", "rotulo": rotulo, "dica": dica,
@@ -102,8 +103,18 @@ def mesa(n: int = 4) -> dict[str, Any]:
                  for j in range(1, n + 1)]
     return {"mod": ID_DO_MOD, "ligado": True, "nivel": 7, "limiar": 6, "perfil": "Universal",
             "aparelhos": aparelhos, "conexoes": [], "presentes": list(PRESENTES),  # (noqa-acento)
+            "situacao": {  # (noqa-acento)
+                "estado": "tocando", "frase": "Sackboy™: A Big Adventure"},
             "linhas": [{"rotulo": "Estilo", "valor": "Terror"},
-                       {"rotulo": "Lendo", "valor": "Som, vibração, microfone"}],
+                       {"rotulo": "Ajuste", "valor": "Universal"},
+                       {"rotulo": "Sentem", "valor": ", ".join(
+                           PLASTICOS[j - 1] for j in range(1, n + 1) if j != 3)},
+                       {"rotulo": "Tensão da cena", "valor": "Tensa"}],
+            "leituras": [{"opcao": "sentido_som", "nivel": 65},  # (noqa-acento)
+                         {"opcao": "sentido_vibracao", "nivel": 40},  # (noqa-acento)
+                         {"opcao": "sentido_microfone", "nivel": 15},  # (noqa-acento)
+                         {"opcao": "sentido_parado"},  # (noqa-acento)
+                         {"opcao": "sentido_golpe", "nivel": 0}],  # (noqa-acento)
             "ao_vivo": {
                 "controles": [{"jogador": j, "cor": PLASTICOS[j - 1]} for j in range(1, n + 1)],
                 "escritas": [{"canal": "haptica", "controle": 0, "ha_ms": 200},
@@ -122,7 +133,8 @@ def opcoes_da_janela(m: Any, estado: dict[str, Any]) -> list[exp.OpcaoDaJanela]:
         mod=ID_DO_MOD, id=o.id, rotulo=o.rotulo, tipo=o.tipo, valor=valores[o.id],
         escolhas=opcoes.escolhas_de(m, o, valores), grupo=o.grupo or "", minimo=o.minimo or 0,
         maximo=o.maximo or 0, passo=o.passo or 1, dica=o.dica or "", unidade=o.unidade or "",
-        zero=o.zero or "", degraus=o.degraus or 0, cartao=o.cartao or "", canal=o.canal or "")
+        zero=o.zero or "", degraus=o.degraus or 0, cartao=o.cartao or "", canal=o.canal or "",
+        marca=o.marca or "")
         for o in m.opcoes if o.id in aparecem]
 
 
@@ -130,7 +142,7 @@ def miolo(aba: str = "", controles: int = 4) -> str:
     """O miolo da janela, aberto em `aba`, com `controles` controles na mesa."""
     m = manifesto()
     estado = mesa(controles)
-    acoes = tuple(exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "")
+    acoes = tuple(exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "", a.cartao or "")
                   for a in m.acoes)
     geridos = m.aparelhos_acoes
     aparelhos = exp.AparelhosDaJanela(
@@ -146,7 +158,8 @@ def miolo(aba: str = "", controles: int = 4) -> str:
         m.nome, opcoes_da_janela(m, estado), mod=ID_DO_MOD, agora=tuple(m.agora), estado=estado,
         parar_tudo=m.parar_tudo, aba=aba, acoes=acoes, aparelhos=aparelhos,
         controles=str(m.aparelhos_controles.grupo) if m.aparelhos_controles else "",
-        pagina=pagina, vivo=cv.vivo_de(estado, 0, CLIMA), abas=tuple(m.abas))
+        pagina=pagina, vivo=cv.vivo_de(estado, 0, CLIMA), abas=tuple(m.abas),
+        vereditos={"testar_golpe": exp.Veredito("Tocou no Starlight Blue e no Cosmic Red.", True)})
     return html
 
 

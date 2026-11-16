@@ -384,7 +384,7 @@ def test_o_desenho_da_janela_do_modo_imersao_e_o_que_o_gerador_escreve() -> None
     assert gravada == "\n".join(linha.rstrip() for linha in gerador.pagina().split("\n"))
     assert "cv-faixa" not in gravada and gravada.count('class="tela-nova"') == 1
     assert re.findall(r'<label for="mj-aba-\d+">([^<]+)<', gravada) == [
-        "Jogo", "Sentidos", "Efeitos"]
+        "Sentir", "Efeitos", "Controles"]
 
 
 def test_na_aba_com_linhas_e_cartoes_as_linhas_vem_antes_dos_cartoes() -> None:
