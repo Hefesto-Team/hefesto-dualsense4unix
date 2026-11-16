@@ -112,7 +112,7 @@ Desde 16/11/2026 o estado pode levar `limiar`, de 0 a 10 na escala do `nivel`: a
 `clima`, onde a cena fica tensa. Fora da faixa, ou que não é número inteiro, recusa o estado.
 Também desde 16/11/2026, a `situacao`, `{estado, frase}`, que a faixa do alto da janela mostra: `estado` é `tocando`,
 `calado` ou `esperando`, e `frase` (até 120 letras, ou nula) é o jogo de agora ou o motivo do calado; e as `leituras`,
-até 32 `{opcao, nivel, frase, cego}`, o que cada sentido lê agora, ao lado da opção `opcao`: `nivel` de 0 a 100 (ou
+até 32 `{opcao, nivel, frase, cego}`, o que cada sentido lê agora, ao lado da opção `opcao` (o id de uma opção do manifesto, na forma de chave): `nivel` de 0 a 100 (ou
 nulo, sem medidor), `frase` até 60 letras e `cego` verdadeiro no sentido que não lê nada. Estado fora da forma, nível
 fora da faixa ou texto longo recusa o estado. O Hefesto de antes descarta os dois.
 

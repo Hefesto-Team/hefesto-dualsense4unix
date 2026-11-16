@@ -251,6 +251,17 @@ def test_cada_sentido_mostra_o_medidor_do_que_le_e_o_que_nao_le_diz_por_que() ->
     assert exp.leitura_html(None) == ""
 
 
+def test_so_a_leitura_de_uma_opcao_do_manifesto_vira_seletor_do_tique() -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
+    manifesto = SimpleNamespace(opcoes=[SimpleNamespace(id="som", tipo="ligado", canal=None)])
+    estado = {"ligado": True, "leituras": [{OPCAO: "som", "nivel": 10},
+                                           {OPCAO: "fora_do_manifesto", "nivel": 20}]}
+    blocos = a07_lancadores._blocos_dos_sentidos(manifesto, estado)
+    assert list(blocos) == ["#mod-leitura-som"]
+
+
 def test_a_trilha_do_canal_nao_veste_a_classe_do_controle_livre() -> None:
     """A barra da trilha que chegou não usa o ``.vivo`` da faixa do controle livre, que a estica
     para 36 px (medido na foto de 16/11/2026, as barras por cima das chaves vizinhas)."""
@@ -271,7 +282,9 @@ def test_a_porta_aceita_a_situacao_e_as_leituras_e_recusa_o_torto() -> None:
                   {SITUACAO: {"estado": "calado", "frase": "x" * 121}},
                   {"leituras": [{OPCAO: "som", "nivel": 101}]},
                   {"leituras": [{OPCAO: "som", "nivel": True}]},
-                  {"leituras": [{OPCAO: "", "nivel": 1}]}, {"leituras": "som"}):
+                  {"leituras": [{OPCAO: "", "nivel": 1}]}, {"leituras": "som"},
+                  {"leituras": [{OPCAO: 'som"],#mod-janela [x', "nivel": 1}]},
+                  {"leituras": [{OPCAO: "Som de fora", "nivel": 1}]}):
         with pytest.raises(modulo_da_porta.RecusaError):
             modulo_da_porta.estado_dos_acessorios("imersao", {"ligado": True, **torto})
 

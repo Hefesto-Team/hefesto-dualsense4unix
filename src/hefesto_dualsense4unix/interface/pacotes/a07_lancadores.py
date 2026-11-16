@@ -1352,8 +1352,10 @@ def _trilhas_da_janela(estado: dict[str, Any] | None) -> dict[str, list[float]]:
 def _blocos_dos_sentidos(manifesto: Any, estado: dict[str, Any] | None) -> dict[str, str]:
     """A cada tique, o que cada sentido lê (as ``leituras`` do estado, ao lado da opção) e a
     trilha de cada chave de canal."""
+    das_opcoes = {o.id for o in manifesto.opcoes}
     blocos = {f"#mod-leitura-{ident}": exp.leitura_html(leitura)
-              for ident, leitura in exp.leituras_do_estado(estado).items()}
+              for ident, leitura in exp.leituras_do_estado(estado).items()
+              if ident in das_opcoes}
     trilhas = _trilhas_da_janela(estado)
     for o in manifesto.opcoes:
         if o.tipo == "ligado" and o.canal:

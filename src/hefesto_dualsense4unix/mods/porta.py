@@ -72,6 +72,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
 from hefesto_dualsense4unix.profiles.loader import gesto_de_agora
 from hefesto_dualsense4unix.profiles.schema import extensao_do_modo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
 
 logger = get_logger(__name__)
 
@@ -1028,7 +1029,10 @@ def _leitura_do_estado(bruto: Any) -> dict[str, Any]:
         raise _recusa_do_estado("o nível de uma leitura vai de 0 a 100, ou nulo.")
     if not isinstance(cego, bool):
         raise _recusa_do_estado("o cego de uma leitura é verdadeiro ou falso.")
-    return {"opcao": _curto(bruto.get("opcao"), "a opção de uma leitura", 40),  # (noqa-acento)
+    opcao = _curto(bruto.get("opcao"), "a opção de uma leitura", 40)  # (noqa-acento)
+    if not _CHAVE_DE_LANCADOR.match(opcao):
+        raise _recusa_do_estado("a opção de uma leitura é o id de uma opção do manifesto.")
+    return {"opcao": opcao,  # (noqa-acento)
             "nivel": nivel,
             "frase": None if frase in (None, "") else _curto(frase, "a frase de uma leitura",
                                                               FRASE_DA_LEITURA),
