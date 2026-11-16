@@ -29,29 +29,35 @@
       "universo": 1
     },
     "rapido-mediana-s": {
-      "data": "2026-11-04",
+      "data": "2026-11-16",
       "folga": 15,
       "nota": "mediana da parede das últimas 9 corridas do rápido",
       "o_que_conta": "mediana, em segundos, da parede do portão rápido",
-      "piso": 27,
+      "piso": 33,
       "por_item": {
-        "rapido-579a5d671-0057.log": 31,
-        "rapido-5f6a3f7cc-0007.log": 26,
-        "rapido-927b55902-0033.log": 27,
-        "rapido-a756f9a31-0922.log": 36,
-        "rapido-b0e09a591-1612.log": 27,
-        "rapido-b9d98e964-1607.log": 27,
-        "rapido-c0240885b-0007.log": 31,
-        "rapido-d3f9eb743-0009.log": 26,
-        "rapido-dfbe9c12c-0913.log": 31
+        "rapido-388e7d99a-1946.log": 43,
+        "rapido-4f324e0a7-1956.log": 33,
+        "rapido-603874a37-2013.log": 34,
+        "rapido-64237760f-1750.log": 33,
+        "rapido-6b93075f2-1754.log": 34,
+        "rapido-83c278546-1716.log": 33,
+        "rapido-d5aee6c3c-1931.log": 40,
+        "rapido-e81c52429-1805.log": 32,
+        "rapido-edb164a95-1759.log": 32
       },
-      "razao": "o tempo desceu: 36 -> 27 s",
+      "razao": "a base da leva já media 33 s; a leva não acrescenta",
       "subidas": [
         {
           "data": "2026-11-01",
           "de": 30,
           "para": 36,
           "razao": "a camada rápida passou de 62 para 66 portões desde o piso de 16/10 (o texto sem pessoa e a biblioteca pessoal, de 30 e 31/10)"
+        },
+        {
+          "data": "2026-11-16",
+          "de": 27,
+          "para": 33,
+          "razao": "a base da leva já media 33 s; a leva não acrescenta"
         }
       ],
       "unidade": "s",
