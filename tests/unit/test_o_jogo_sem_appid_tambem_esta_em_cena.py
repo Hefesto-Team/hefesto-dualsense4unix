@@ -6,7 +6,8 @@ appid, o modo do controle dizia «há jogo» e o `jogo.estilo` saía nulo. A cur
 `em_cena` (geral e por controle) pela mesma pergunta do modo (`ha_jogo_em_cena`), e o estilo sai
 por ele; o `jogo` segue sendo `steam_app_<N>` ou `None`.
 
-MORDIDA: tirar o `em_cena` do anunciador reprova o caso nativo.
+MORDIDA: tirar o `em_cena` do anunciador reprova o caso nativo; tirar o jogo sem appid do `jogo_de`
+reprova o caso de cada controle.
 """
 from __future__ import annotations
 
@@ -145,3 +146,23 @@ def test_o_controle_fora_do_jogo_de_outro_nao_leva_o_estilo(perfil_de_terror: st
     carga = carga_do_estilo(dito)
     assert carga is not None
     assert [c["estilo"] for c in carga["controles"]] == ["terror", None, "terror", None]
+
+
+@pytest.mark.parametrize("mesa", sorted(MESAS))
+def test_o_jogo_sem_appid_e_de_todos_com_o_jogo_de_cada_controle(
+    mesa: str, perfil_de_terror: str
+) -> None:
+    """D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO: com `jogo_de`, o jogo sem appid é dos quatro."""
+    d = _servico(MESAS[mesa], "game", None)
+    bus = EventBus()
+    fila = bus.subscribe(EventTopic.PERFIL_TROCOU)
+    sem_jogo: dict[str, int] = {}
+    AnunciadorDoJogo(bus, SimpleNamespace(active_profile=perfil_de_terror), d, sem_jogo.get).ver()
+
+    dito = _ultimo(fila)
+    assert dito["em_cena"] is True and dito["jogo"] is None
+    assert [c["em_cena"] for c in dito["controles"]] == [True] * 4
+    assert [c["jogo"] for c in dito["controles"]] == [None] * 4
+    carga = carga_do_estilo(dito)
+    assert carga is not None
+    assert [c["estilo"] for c in carga["controles"]] == ["terror"] * 4

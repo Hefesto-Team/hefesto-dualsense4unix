@@ -174,8 +174,9 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `em_cena` diz se há jogo aberto, com appid ou sem (o jogo nativo do Linux, fora da Steam, também: é a mesma
   pergunta que decide o modo do controle), `perfil` o nome do perfil efetivo e `estilo` a chave do estilo dele (ou
   `null`). `controles` tem um item por controle, `{jogador, perfil, jogo, em_cena, estilo}`, com o número que o
-  controle acende (ou `null`): a extensão segue o controle cujo `jogo` está na lista que a pessoa escolheu. Sai a cada troca de perfil, de jogo ou de estilo
-  (no arquivo do perfil), e quando um controle entra ou sai; quando o jogo fecha, sai depois do `jogo.fechou`.
+  controle acende (ou `null`): a extensão segue o controle cujo `jogo` está na lista que a pessoa escolheu. Sai a
+  cada troca de perfil, de jogo (o sem appid também, ao abrir e ao fechar) ou de estilo (no arquivo do perfil), e
+  quando um controle entra ou sai; quando o jogo com appid fecha, sai depois do `jogo.fechou`.
   `memoria` (desde 02/11/2026) diz se a chave «Memória» do jogo em cena está ligada, pelo mesmo arquivo que o
   leitor lê ao abrir o jogo (`false` fora de jogo), e sai de novo quando a chave muda;
   É estado, não evento: o serviço guarda o último, e quem assina depois recebe o de agora logo na assinatura.
