@@ -80,6 +80,7 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_PONTE_BT,
     CasamentoUSB,
     escolher_fonte,
+    fonte_crua_da_voz,
     fontes_dualsense,
     sem_os_nos_nossos,
 )
@@ -275,9 +276,13 @@ def _os_nos_que_carregam_a_voz(
     pergunta é a do `bt_mic` ao erguer o canal (`escolher_fonte` sobre
     `sem_os_nos_nossos`): a lista INTEIRA, para o veto do USB e o um-para-um
     valerem. No rádio não há nó do kernel e a função devolve `None`; no «Nativo» e
-    antes do canal subir os dois nós são o mesmo, e entra uma vez só.
+    antes do canal subir os dois nós são o mesmo, e entra uma vez só. Com a voz filtrada
+    de pé, o canal cru que a alimenta também carrega a voz, para quem o grava pelo nome.
     """
     nos = [no_do_controle]
+    cru = fonte_crua_da_voz(no_do_controle)
+    if cru not in nos:
+        nos.append(cru)
     do_kernel = escolher_fonte(sem_os_nos_nossos(fontes), uniq, uniqs, usb)
     if do_kernel is not None and do_kernel not in nos:
         nos.append(do_kernel)

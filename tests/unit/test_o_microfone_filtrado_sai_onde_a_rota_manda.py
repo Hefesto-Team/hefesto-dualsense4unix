@@ -385,3 +385,74 @@ class TestOGestoDoMicrofone:
         a02._seguir_o_retorno(ctx.conectados, (MESA[0],))
         assert _tocando_em(lacos[-1]) == SINK_P1
         assert sum(p.codigo is None for p in lacos) == 1
+
+
+SAIDA_DE_CADA_UM = {MESA[0]: SINK_P1, MESA[1]: SINK_P2, MESA[2]: SINK_TV, MESA[3]: SINK_TV}
+
+
+class TestOGestoEmTodaAMesa:
+    """Os quatro jogadores, no cabo (P1, P2) e no rádio sem saída própria (P3, P4)."""
+
+    @pytest.mark.parametrize("quem", range(4))
+    def test_rota_no_controle_em_cada_jogador(self, gesto, lacos, quem: int) -> None:
+        a02, _ = gesto
+        uniq = MESA[quem]
+        ctx = _Ctx([_entrada(u, "pc" if u == uniq else "nada") for u in MESA])
+        a02.mic_retorno(ctx, {"uniq": uniq}, None)
+        assert _tocando_em(lacos[-1]) == SAIDA_DE_CADA_UM[uniq]
+        assert lacos[-1].argv[lacos[-1].argv.index("--capture") + 1] == _voz(uniq)
+
+    @pytest.mark.parametrize("quem", range(4))
+    def test_o_pc_preso_no_controle_de_outro_nao_leva_o_retorno(
+        self, gesto, lacos, quem: int
+    ) -> None:
+        a02, estado = gesto
+        uniq = MESA[quem]
+        dono = MESA[1] if quem != 1 else MESA[0]
+        estado["saida"] = SAIDA_DE_CADA_UM[dono]
+        ctx = _Ctx([_entrada(u, "pc" if u == dono else "jogo") for u in MESA])
+        a02.mic_retorno(ctx, {"uniq": uniq}, None)
+        assert _tocando_em(lacos[-1]) == SINK_TV
+
+
+class TestOCliqueQueApagaVenceATroca:
+    """MORDIDA: tire a guarda do `desligar` em `Lacos.seguir` e o retorno apagado reacende."""
+
+    def test_o_retorno_apagado_no_meio_da_troca_fica_apagado(
+        self, lacos: list[_Processo], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        uniq = MESA[2]
+        familia = monitor_do_microfone._LACOS
+        assert monitor_do_microfone.ligar(uniq, _voz(uniq), destino=SINK_TV)
+        real = familia.desligar
+
+        def o_clique_chega_antes(chave: str) -> bool:
+            real(chave)
+            return real(chave)
+
+        monkeypatch.setattr(familia, "desligar", o_clique_chega_antes)
+        assert not monitor_do_microfone.seguir(uniq, SINK_P1)
+        assert len(lacos) == 1
+        assert not monitor_do_microfone.esta_ligado(uniq)
+
+
+class TestQuemGravaOCruAcendeALuz:
+    """MORDIDA: tire o cru de `_os_nos_que_carregam_a_voz` e quem grava o cru some da luz."""
+
+    @pytest.mark.parametrize("quem", range(4))
+    def test_a_voz_e_o_cru_carregam_a_voz(self, quem: int) -> None:
+        from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qo
+
+        uniq = MESA[quem]
+        fontes = [n for u in MESA for n in (_cru(u), _voz(u))]
+        nos = qo._os_nos_que_carregam_a_voz(_voz(uniq), fontes, uniq, list(MESA), None)
+        assert _voz(uniq) in nos
+        assert _cru(uniq) in nos
+        assert all(marca_do_aparelho(uniq) in no for no in nos)
+
+    def test_sem_a_voz_o_cru_entra_uma_vez_so(self) -> None:
+        from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qo
+
+        uniq = MESA[0]
+        nos = qo._os_nos_que_carregam_a_voz(_cru(uniq), [_cru(uniq)], uniq, [uniq], None)
+        assert nos == [_cru(uniq)]

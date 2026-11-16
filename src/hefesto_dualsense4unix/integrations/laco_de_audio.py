@@ -128,7 +128,8 @@ class Lacos:
             return False
         with self._trava:
             pedido = dict(self._pedidos.get(chave) or {})
-        self.desligar(chave)
+        if not pedido or not self.desligar(chave):
+            return False
         pedido["destino"] = destino
         return self.ligar(chave, **pedido)  # type: ignore[arg-type]
 
