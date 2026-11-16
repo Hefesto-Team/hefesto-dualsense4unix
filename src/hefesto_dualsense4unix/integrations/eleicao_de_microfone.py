@@ -574,9 +574,10 @@ class EleitorDeMicrofone:
         """As fontes de agora, PEDINDO o canal deste controle se ele faltar."""
         fontes = fontes_de_captura_agora()
         usb = casamento_usb_agora(conectados) if fontes else None
-        if escolher_fonte(fontes, uniq, conectados, usb) is not None:
+        achada = escolher_fonte(fontes, uniq, conectados, usb) is not None
+        if achada and not _a_voz_falta(uniq, fontes):
             return fontes, usb
-        if not pedir_canal(uniq):
+        if not achada and not pedir_canal(uniq):
             return fontes, usb
         from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
@@ -586,11 +587,16 @@ class EleitorDeMicrofone:
             passo = min(ESPERA_DO_CANAL_PASSO_S, max(0.0, fim - time.monotonic()))
             marca = RETRATO.esperar(marca, passo, _O_QUE_A_ESPERA_OUVE)
             novas = fontes_de_captura_agora()
-            if escolher_fonte(novas, uniq, [], None) is not None:
+            if escolher_fonte(novas, uniq, [], None) is not None and not _a_voz_falta(
+                uniq, novas
+            ):
                 logger.info("eleicao_mic_canal_no_ar", uniq=uniq)
                 return novas, casamento_usb_agora(conectados)
             if time.monotonic() >= fim:
                 break
+        if achada:
+            logger.info("eleicao_mic_voz_filtrada_nao_chegou", uniq=uniq)
+            return fontes_de_captura_agora(), casamento_usb_agora(conectados)
         esperar_o_canal(uniq)
         logger.info("eleicao_mic_espera_o_canal", uniq=uniq)
         return fontes, usb
@@ -712,6 +718,17 @@ def recusa_de_quem_nao_elegeu(eleito: str | None) -> ResultadoDaEleicao:
             "canal de áudio de ninguém"
         ),
     )
+
+
+def _a_voz_falta(uniq: str, fontes: list[str]) -> bool:
+    """O filtro deste controle está de pé e a voz filtrada ainda não chegou à lista?
+
+    A eleição espera a voz: eleger o cru que nasceu antes deixaria os jogos sem o filtro.
+    """
+    from hefesto_dualsense4unix.integrations import microfone_filtrado
+
+    voz = microfone_filtrado.voz_de(uniq)
+    return bool(voz) and voz not in fontes
 
 
 def fontes_de_captura_agora() -> list[str]:

@@ -774,6 +774,13 @@ def no_do_microfone(entry: Any) -> str:
     return str(fonte) if isinstance(fonte, str) and fonte else ""
 
 
+def no_do_nivel(entry: Any) -> str:
+    """O nó que o medidor do microfone lê: o canal CRU, nunca a voz filtrada."""
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import fonte_crua_da_voz
+
+    return fonte_crua_da_voz(no_do_microfone(entry))
+
+
 MIC_SEM_ALVO = "sem-alvo"
 MIC_SEM_FONTE = "sem-fonte"
 
@@ -1287,12 +1294,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         tuple((str(c.get("uniq") or ""), _byte_da_rota(c)) for c in ctx.conectados),
         na_mesa,
     )
+    _seguir_o_retorno(ctx.conectados, na_mesa)
     nos_das_ondas: dict[str, str] = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         if not uniq:
             continue
-        for no in (no_do_microfone(c), no_do_alto_falante(uniq)):
+        for no in (no_do_nivel(c), no_do_alto_falante(uniq)):
             if no:
                 nos_das_ondas[no] = uniq
     _seguir_as_ondas(nos_das_ondas)
@@ -1374,7 +1382,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     else estado["alto_pct"] if estado["alto_pct"] is not None else 0
                 ),
                 **_so_se_a_pagina_tiver({"alto-padrao": "1" if alto_em_padrao else ""}),
-                **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
+                **campos_da_onda(LADO_MIC, alturas_do_no(no_do_nivel(c))),
                 **_so_se_a_pagina_tiver({
                     campo_da_onda_calada(LADO_MIC): (
                         "sim" if _faces_do_microfone(a)[0] else "nao"  # (noqa-acento)
@@ -1917,9 +1925,54 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             "não consegui achar o microfone deste controle para ligar o "
             "retorno")
-    if not monitor_do_microfone.ligar(uniq, fonte):
+    na_mesa = tuple(str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq"))
+    destino = _destino_do_retorno(uniq, aceso_da_rota(uniq, ctx.por_uniq(uniq)), na_mesa)
+    if not monitor_do_microfone.ligar(uniq, fonte, destino=destino):
         raise RuntimeError(
             "não consegui ligar o retorno do microfone deste controle")
+
+
+def _destino_do_retorno(uniq: str, rota: str, na_mesa: tuple[str, ...]) -> str:
+    """Onde o 🎙 deste controle toca, pela rota do cartão. BLOQUEANTE — roda `pactl`."""
+    ler = _ler_pelo_dono
+    sink = _sink_para_o_som(uniq, na_mesa) if rota == ROTA_TUDO_NO_CONTROLE else ""
+    lista = ler(["pactl", "list", "sinks", "short"])
+    padrao = audio_saida.sink_padrao_da_saida(ler(["pactl", "get-default-sink"]))
+    anterior = audio_saida.RotaDeSaida(runner=ler).estado(padrao).anterior if padrao else ""
+    return monitor_do_microfone.destino_da_rota(
+        rota,
+        sink_do_controle=sink,
+        sink_padrao=padrao,
+        anterior=anterior,
+        sinks=audio_saida.nomes_de_sinks(lista),
+        e_de_controle=lambda nome: audio_saida.e_saida_de_controle(nome, lista),
+    )
+
+
+_ROTA_DO_RETORNO: dict[str, tuple[str, str, str]] = {}
+
+
+def _seguir_o_retorno(conectados: Any, na_mesa: tuple[str, ...]) -> None:
+    """O 🎙 aceso troca de saída quando a rota do cartão ou a saída padrão trocam."""
+    for c in conectados:
+        uniq = str(c.get("uniq") or "")
+        if not uniq:
+            continue
+        if not monitor_do_microfone.esta_ligado(uniq):
+            _ROTA_DO_RETORNO.pop(uniq, None)
+            continue
+        lida = _CAMADA_1.get(uniq)
+        chave = (aceso_da_rota(uniq, c), sink_do_cache(uniq),
+                 str(getattr(lida, "sink_padrao", "") or ""))
+        if _ROTA_DO_RETORNO.get(uniq) == chave:
+            continue
+        _ROTA_DO_RETORNO[uniq] = chave
+        fios.soltar("hefesto-retorno-segue", _seguir_um, uniq, chave[0], na_mesa)
+
+
+def _seguir_um(uniq: str, rota: str, na_mesa: tuple[str, ...]) -> None:
+    with contextlib.suppress(Exception):
+        monitor_do_microfone.seguir(uniq, _destino_do_retorno(uniq, rota, na_mesa))
 
 
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:

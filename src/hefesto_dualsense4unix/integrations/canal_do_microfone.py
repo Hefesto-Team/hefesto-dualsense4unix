@@ -9,6 +9,7 @@ import threading
 from typing import Any
 
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as sem_o_endereco
+from hefesto_dualsense4unix.integrations import microfone_filtrado
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_AMOSTRAS_POR_QUADRO,
     MIC_BYTES_POR_AMOSTRA,
@@ -295,8 +296,13 @@ def abrir(
     fabrica: Any = None,
     lancar: Any = None,
     rodar: Any = None,
+    filtrar: Any = None,
 ) -> SourceVirtualPipeWire | None:
-    """Sobe o canal deste controle, ou devolve o que já estava de pé."""
+    """Sobe o canal deste controle, ou devolve o que já estava de pé.
+
+    A voz filtrada (:mod:`integrations.microfone_filtrado`) nasce junto, sobre
+    este canal, no cabo e no rádio; ``filtrar`` troca o lançador do filtro.
+    """
     nome = nome_do_canal(uniq)
     if not nome:
         logger.debug("canal_do_mic_sem_identidade", extra={"uniq": uniq})
@@ -326,7 +332,16 @@ def abrir(
             alimentador = _Alimentador(uniq, fonte, source, lancar=lancar)
             if alimentador.iniciar():
                 _ALIMENTANDO[uniq] = alimentador
-        return source
+    _filtrar(uniq, nome, descricao, filtrar)
+    return source
+
+
+def _filtrar(uniq: str, nome: str, descricao: str, lancar: Any) -> None:
+    """A voz filtrada sobre o canal que acabou de subir. Nunca levanta."""
+    try:
+        microfone_filtrado.abrir(uniq, nome, descricao, lancar=lancar)
+    except Exception:
+        logger.warning("canal_do_mic_filtro_nao_subiu", exc_info=True)
 
 
 def renomear(
@@ -431,6 +446,8 @@ def fechar(uniq: str) -> bool:
         alimentador = _ALIMENTANDO.pop(uniq, None)
         _FONTE_PEDIDA.pop(uniq, None)
         _MUDO_ESCRITO.pop(uniq, None)
+    with contextlib.suppress(Exception):
+        microfone_filtrado.fechar(uniq)
     if alimentador is not None:
         try:
             alimentador.parar()

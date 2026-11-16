@@ -2822,7 +2822,7 @@ def binario_do_venv(nome: str) -> Path | None:
 BINARIOS_DO_SERVIDOR_DE_SOM: tuple[str, ...] = (
     "pactl", "pacmd", "pacat", "parec", "parecord", "paplay", "pamon", "pasuspender",
     "wpctl", "pw-cli", "pw-dump", "pw-metadata", "pw-record", "pw-play", "pw-cat",
-    "pw-link", "pw-loopback", "pw-top", "pw-mon",
+    "pw-link", "pw-loopback", "pw-top", "pw-mon", "pipewire",
     "arecord", "aplay", "speaker-test",
 )
 

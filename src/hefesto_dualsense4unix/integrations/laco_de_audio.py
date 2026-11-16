@@ -27,6 +27,7 @@ class Lacos:
     def __init__(self, familia: str) -> None:
         self.familia = familia
         self._vivos: dict[str, subprocess.Popen[bytes]] = {}
+        self._pedidos: dict[str, dict[str, object]] = {}
         self._trava = threading.Lock()
         _FAMILIAS.append(self)
 
@@ -90,6 +91,8 @@ class Lacos:
             return False
         with self._trava:
             self._vivos[chave] = proc
+            self._pedidos[chave] = {
+                "captura": captura, "destino": destino, "canais": canais, "mapa": mapa}
         logger.info(
             "laco_ligado", familia=self.familia, chave=chave,
             captura=captura, destino=destino or "(padrão)")
@@ -99,6 +102,7 @@ class Lacos:
         """Fecha a laçada. `True` = havia uma e a laçada morreu."""
         with self._trava:
             proc = self._vivos.pop(chave, None)
+            self._pedidos.pop(chave, None)
         if proc is None:
             return False
         try:
@@ -108,6 +112,25 @@ class Lacos:
             pass
         logger.info("laco_desligado", familia=self.familia, chave=chave)
         return True
+
+    def destino_de(self, chave: str) -> str | None:
+        """O destino pedido para a laçada de pé; ``None`` quando não há laçada."""
+        if not self.esta_ligado(chave):
+            return None
+        with self._trava:
+            pedido = self._pedidos.get(chave)
+        return str(pedido.get("destino") or "") if pedido is not None else None
+
+    def seguir(self, chave: str, destino: str) -> bool:
+        """A laçada de pé passa a tocar em ``destino``. ``True`` = trocou agora."""
+        atual = self.destino_de(chave)
+        if atual is None or atual == destino:
+            return False
+        with self._trava:
+            pedido = dict(self._pedidos.get(chave) or {})
+        self.desligar(chave)
+        pedido["destino"] = destino
+        return self.ligar(chave, **pedido)  # type: ignore[arg-type]
 
     def alternar(self, chave: str, *, captura: str, **kw: object) -> bool:
         """Liga se estava desligada, desliga se estava ligada. Devolve o estado NOVO."""

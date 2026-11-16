@@ -14,6 +14,8 @@ PREFIXO_SOURCE_PONTE_BT = "hefesto_dualsense_bt_"
 
 PREFIXO_SOURCE_CANAL_DO_MIC = "hefesto_mic_"
 
+PREFIXO_SOURCE_VOZ_FILTRADA = "hefesto_mic_voz_"
+
 MIN_HEX_SUFIXO_BT = 6
 
 
@@ -80,7 +82,11 @@ def fontes_dualsense(saida_pactl: str) -> list[str]:
         alvo = nome.lower()
         if alvo.endswith(".monitor"):
             continue
-        if sufixo_do_canal_do_mic(nome) or any(marca in alvo for marca in MARCADORES_DUALSENSE):
+        if (
+            sufixo_da_voz_filtrada(nome)
+            or sufixo_do_canal_do_mic(nome)
+            or any(marca in alvo for marca in MARCADORES_DUALSENSE)
+        ):
             out.append(nome)
     return out
 
@@ -232,11 +238,10 @@ def escolher_fonte(
     """
     alvo = so_hex(uniq)
     if alvo:
-        for fonte in fontes:
-            if identidade_e_do_controle(
-                sufixo_do_canal_do_mic(fonte), uniq, forma_velha=False
-            ):
-                return fonte
+        for sufixo in (sufixo_da_voz_filtrada, sufixo_do_canal_do_mic):
+            for fonte in fontes:
+                if identidade_e_do_controle(sufixo(fonte), uniq, forma_velha=False):
+                    return fonte
         for fonte in fontes:
             if fonte.lower().startswith("bluez") and alvo in so_hex(fonte):
                 return fonte
@@ -345,6 +350,20 @@ def sufixo_do_canal_do_mic(fonte: str) -> str:
     return identidade_depois_do_prefixo(fonte, PREFIXO_SOURCE_CANAL_DO_MIC)
 
 
+def sufixo_da_voz_filtrada(fonte: str) -> str:
+    """A marca no nome da VOZ FILTRADA de um controle (``hefesto_mic_voz_<marca>``) — ""."""
+    return identidade_depois_do_prefixo(fonte, PREFIXO_SOURCE_VOZ_FILTRADA)
+
+
+def fonte_crua_da_voz(fonte: str) -> str:
+    """O canal cru que alimenta esta voz filtrada; outro nome volta como veio.
+
+    O nível e o teste leem o cru: o filtro existe para o que os jogos gravam.
+    """
+    marca = sufixo_da_voz_filtrada(fonte)
+    return f"{PREFIXO_SOURCE_CANAL_DO_MIC}{marca}" if marca else fonte
+
+
 _OCTETOS_DE_UM_MAC = 6
 
 
@@ -368,7 +387,12 @@ def identidade_no_nome(fonte: str) -> str:
     A marca do aparelho nos nossos nós; os doze hex no ``bluez_*``, que é nome
     do BlueZ e não nosso; e o rabo hex da forma velha dos nossos, por uma versão.
     """
-    return sufixo_do_canal_do_mic(fonte) or sufixo_da_ponte_bt(fonte) or _mac_no_nome_bluez(fonte)
+    return (
+        sufixo_da_voz_filtrada(fonte)
+        or sufixo_do_canal_do_mic(fonte)
+        or sufixo_da_ponte_bt(fonte)
+        or _mac_no_nome_bluez(fonte)
+    )
 
 
 def identidade_e_do_controle(
@@ -421,10 +445,12 @@ __all__ = [
     "MIN_HEX_SUFIXO_BT",
     "PREFIXO_SOURCE_CANAL_DO_MIC",
     "PREFIXO_SOURCE_PONTE_BT",
+    "PREFIXO_SOURCE_VOZ_FILTRADA",
     "CasamentoUSB",
     "e_de_outro_controle",
     "escolher_fonte",
     "escolher_sink",
+    "fonte_crua_da_voz",
     "fontes_dualsense",
     "identidade_depois_do_prefixo",
     "identidade_e_do_controle",
@@ -434,5 +460,6 @@ __all__ = [
     "sinks_dualsense",
     "so_hex",
     "sufixo_da_ponte_bt",
+    "sufixo_da_voz_filtrada",
     "sufixo_do_canal_do_mic",
 ]
