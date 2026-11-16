@@ -51,10 +51,24 @@ if str(RAIZ / "src/hefesto_dualsense4unix/interface") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 import monta
 
+SO_DESENHO: dict[str, str] = {
+    "janela-do-modo-imersao.html": (
+        "o desenho da janela de extensão; o produto a monta dentro da 07 publicada, "
+        "sem página própria (D-1611-A-JANELA-DA-EXTENSAO-MOSTRA-O-CONTROLE-DO-MAPA)"),
+}
+
 PAGINAS = sorted(p.name for p in ENSAIO.glob("*.html") if p.name not in monta.PAGINAS_QUE_SAIRAM)
 ARQUIVOS = [pytest.param(pasta, nome, id=f"{rotulo}-{nome}")
             for rotulo, pasta in (("mockup", ENSAIO), ("publicada", PUBLICADAS))
-            for nome in PAGINAS]
+            for nome in PAGINAS
+            if rotulo == "mockup" or nome not in SO_DESENHO]
+
+
+def test_o_desenho_sem_pagina_propria_continua_sem_publicada() -> None:
+    for nome in SO_DESENHO:
+        assert (ENSAIO / nome).exists(), f"{nome} saiu do mockup: tire a linha de SO_DESENHO"
+        assert not (PUBLICADAS / nome).exists(), (
+            f"{nome} ganhou página publicada: tire a linha de SO_DESENHO para a régua medi-la")
 
 
 class _Gestos(html.parser.HTMLParser):

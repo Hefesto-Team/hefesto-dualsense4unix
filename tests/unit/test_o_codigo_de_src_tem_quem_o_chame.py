@@ -41,9 +41,10 @@ _FORA_DO_PRODUTO: dict[str, str] = {
     "interface.aba08": _GERADOR,
     "interface.aba09": _GERADOR,
     "interface.aba10": _GERADOR,
-    "interface.mapa": (
-        "gerador da página avulsa «Mapa do controle» e dono das peças que os geradores e o "
-        "portão `pecas-do-dualsense` leem; mora ao lado do `monta.py`, como os `abaNN.py`"
+    "interface.janela_do_imersao": (
+        "gerador do desenho `mockup/janela-do-modo-imersao.html`, com o mesmo miolo da janela "
+        "de extensão do produto; quem edita o desenho o roda à mão, e a prova do controle vivo "
+        "o importa para conferir que o mockup sai dele. O produto monta a janela pela 07"
     ),
     "interface.olhar": (
         "o retratista das dez páginas (Chrome headless), a rotina de toda mudança de tela: a "
