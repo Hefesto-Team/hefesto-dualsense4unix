@@ -619,10 +619,10 @@ def modo_do_controle(
 ) -> str:
     """O modo da aba Jogar: a pergunta única do Nativo, que só o chip e o estilo Nativo respondem.
 
-    Pad nenhum com o Modo Nativo ligado é o chip Nativo, ou o Steam Input quando o jogo em cena
-    está na lista; pad nenhum com ele desligado é a Navegação.
+    O estilo Nativo só vale com o jogo em cena. Pad nenhum com o Modo Nativo ligado é o chip Nativo,
+    ou o Steam Input quando o jogo está na lista; pad nenhum com ele desligado é a Navegação.
     """
-    if estilo == ESTILO_NATIVO:
+    if estilo == ESTILO_NATIVO and ha_jogo_em_cena(daemon):
         return MODO_NATIVO
     nativo = getattr(daemon, "is_native_mode", None)
     if not callable(nativo):
@@ -5383,6 +5383,14 @@ def _so_o_pad(inputs: dict[str, Any], raw: str) -> str | None:
     if raw != "game" or not pad:
         return None
     return pad if classify(**{**inputs, "processo_no_pad": None}) != "game" else None
+
+
+def ha_jogo_em_cena(daemon: Any) -> bool:
+    """Um jogo está em cena: o sinal de jogo deu a autoridade ao jogo, com appid ou sem."""
+    if getattr(daemon, "display_authority", None) == "game":
+        return True
+    appid = getattr(daemon, "appid_em_cena", None)
+    return isinstance(appid, int) and not isinstance(appid, bool) and appid > 0
 
 
 __all__ = [

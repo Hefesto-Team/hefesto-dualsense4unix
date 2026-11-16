@@ -221,7 +221,9 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
 - `jogo.estilo` (`ler:jogo.estilo`, desde 14/11/2026) entrega `nome: "jogo.estilo"`: `{estilo, jogo, controles:
   [{jogador, estilo}], t}`, em que `estilo` é a chave do catálogo dos estilos
   (`src/hefesto_dualsense4unix/profiles/estilos_de_jogo.py`, como `terror`, `fps`, `corrida`, `luta`) do perfil
-  que vale, ou `null` (sem estilo, ou fora do catálogo), e `jogo` a mesma chave do `perfil.jogo`. Sai do
+  que vale, ou `null` (sem estilo, fora do catálogo, ou sem jogo aberto: desde 16/11/2026 o estilo do perfil só
+  vale com o jogo em cena, o do serviço para `estilo` e o de cada controle para o dele, e o perfil do jogo que
+  fechou não deixa o estilo dele), e `jogo` a mesma chave do `perfil.jogo`. Sai do
   `perfil.trocou` só quando o estilo, o jogo ou o estilo de um controle muda: ao abrir e ao trocar de jogo. É <!-- ref-externa: tópico do barramento, não método do daemon -->
   estado: quem assina depois recebe o de agora logo na assinatura.
 - `modo.aba` (`ler:modo.aba`) entrega `nome: "modo.aba"`: `{uniq, jogador, secoes: {controles, gatilhos, luz,

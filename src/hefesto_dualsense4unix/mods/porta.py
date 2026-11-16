@@ -1054,18 +1054,26 @@ def _estilo_do_catalogo(valor: Any) -> str | None:
     return chave if isinstance(chave, str) and chave in POR_CHAVE else None
 
 
+def _estilo_com_o_jogo(dito: dict[str, Any]) -> str | None:
+    jogo = dito.get("jogo")
+    return _estilo_do_catalogo(dito.get("estilo")) if isinstance(jogo, str) and jogo else None
+
+
 def carga_do_estilo(carga: Any) -> dict[str, Any] | None:
     """O ``jogo.estilo`` que sai do ``perfil.trocou``: ``{estilo, jogo, controles: [{jogador,
-    estilo}]}``, a chave do catálogo dos estilos (ou ``None``), sem o ``t``."""
+    estilo}]}``, a chave do catálogo dos estilos (ou ``None``), sem o ``t``.
+
+    O estilo do perfil só vale com o jogo aberto: sem ``jogo`` (o do serviço, ou o de cada
+    controle), o estilo sai ``None``, mesmo com o perfil do jogo fechado ainda em vigor."""
     if not isinstance(carga, dict):
         return None
     jogo = carga.get("jogo")
     controles = carga.get("controles")
     return {
-        "estilo": _estilo_do_catalogo(carga.get("estilo")),
+        "estilo": _estilo_com_o_jogo(carga),
         "jogo": jogo if isinstance(jogo, str) and jogo else None,
         "controles": [
-            {"jogador": c.get("jogador"), "estilo": _estilo_do_catalogo(c.get("estilo"))}
+            {"jogador": c.get("jogador"), "estilo": _estilo_com_o_jogo(c)}
             for c in (controles if isinstance(controles, list) else []) if isinstance(c, dict)
         ],
     }
