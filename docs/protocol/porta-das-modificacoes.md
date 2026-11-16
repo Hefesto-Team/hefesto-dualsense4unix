@@ -632,12 +632,14 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
   aparelhos, conexoes, ajustes}`, mais `ao_vivo` (com a extensão conectada), `linhas`, `presentes`, `limiar` e <!-- noqa-acento: chave do estado -->
-  `jogo` (o jogo em cena) quando os há. O `ao_vivo` (desde 16/11/2026) é `{controles: [{jogador, cor}], trechos: [{canal, jogador, de_ms,
-  ate_ms}]}`: os controles ligados, com o nome do plástico, e o que a extensão escreveu nos últimos 30 s, em trechos
-  (há quantos milissegundos começou e acabou; as escritas de um canal a menos de 0,6 s uma da outra viram um
-  trecho só), sem o `uniq`. Só entra a escrita que passou: a recusada e a coberta por um pedido mais forte, não.
+  `jogo` (o jogo em cena) quando os há. O `ao_vivo` (desde 16/11/2026) é `{controles: [{jogador, cor}], trechos: [{canal, jogador, controle,
+  de_ms, ate_ms, todos?}]}`: os controles ligados, com o nome do plástico, e o que a extensão escreveu nos últimos
+  30 s, em trechos (há quantos milissegundos começou e acabou; as escritas de um canal a menos de 0,6 s uma da
+  outra viram um trecho só), sem o `uniq`. O `controle` é o lugar do controle na lista `controles`, e nulo quando
+  a escrita foi a um controle fora da lista (o de fora, que não tem o desenho do DualSense): esse trecho fica na faixa,
+  sem plástico, e não acende o desenho. `todos` marca a escrita a todos os controles, que acende em qualquer um. Só entra a escrita que passou: a recusada e a coberta por um pedido mais forte, não.
   A porta guarda até 512 escritas por controle, de no máximo 4 controles (o quinto tira o que escreveu há mais
-  tempo) e mais as que vão a todos, e esquece todas quando a extensão publica `ligado: false` ou sai. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
+  tempo) e mais as que vão a todos, e esquece todas quando a extensão publica `ligado: false` ou fecha a última conexão. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
   coluna mostra cada pedaço vazio, sem número. Com o `ligado: false` da própria extensão (o «Parar tudo»), o nível
   e o perfil ficam vazios e as conexões e os aparelhos seguem como a extensão os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;

@@ -603,6 +603,10 @@ TRECHOS_DO_AO_VIVO = 240
 _DA_MEMORIA = {"memoria.varrer": "varrer", "memoria.refinar": "refinar"}
 
 
+def _jogador_do_ao_vivo(jogador: Any) -> int | None:
+    return jogador if isinstance(jogador, int) and not isinstance(jogador, bool) else None
+
+
 def _pedido_da_memoria(params: dict[str, Any]) -> dict[str, Any]:
     """O ``memoria`` da assinatura de ``jogo.memoria``: as linhas que a receita declara e a faixa
     do ``buildid``, conferidas antes de chegar ao leitor."""
@@ -1277,8 +1281,6 @@ class Porta:
             if con.deu_o_estado and con.sessao is not None:
                 vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
                 self._estados_dos_acessorios[con.sessao.mod_id] = vazio
-            if con.sessao is not None:
-                self._esquecer_as_escritas(con.sessao.mod_id)
                 if "ler:acessorios.gesto" in con.sessao.permissoes:
                     self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
             if con.acessorio_preso() and con.sessao is not None:
@@ -1289,6 +1291,8 @@ class Porta:
             if con.vibrando and con.sessao is not None:
                 await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
+            if con.sessao is not None and con.sessao.mod_id not in self.vivas():
+                self._esquecer_as_escritas(con.sessao.mod_id)
             if con.sessao is not None:
                 self._soltar_os_ajustes(con.sessao.mod_id)
                 self._mudaram_as_vivas()
@@ -2008,7 +2012,8 @@ class Porta:
 
     def _anotar_a_escrita(self, mod_id: str, canal: str, uniq: str) -> None:
         """O que chegou ao controle, para a faixa «Ao vivo» da janela: só o que foi escrito de
-        fato (nem a recusa, nem o pedido coberto por um mais forte)."""
+        fato (nem a recusa, nem o pedido coberto por um mais forte); o ``uniq`` vazio é o de
+        todos."""
         filas = self._escritas.setdefault(mod_id, {})
         if uniq not in filas and uniq and sum(1 for u in filas if u) >= CONTROLES_DO_AO_VIVO:
             velho = min((u for u in filas if u), key=lambda u: filas[u][-1][0] if filas[u] else 0)
@@ -2042,15 +2047,17 @@ class Porta:
                 fila.popleft()
         escritas = sorted((t, canal, uniq) for uniq, fila in filas.items() for t, canal in fila)
         controles = self._controles_do_ao_vivo()
-        jogador_de = {c["uniq"]: c.get("jogador") for c in controles}
+        posicao_de = {c["uniq"]: n for n, c in enumerate(controles)}
         abertos: dict[tuple[str, str], list[int]] = {}
         trechos: list[dict[str, Any]] = []
 
         def fechar(chave: tuple[str, str], par: list[int]) -> None:
-            jogador = jogador_de.get(chave[1])
+            posicao = posicao_de.get(chave[1])
+            jogador = controles[posicao].get("jogador") if posicao is not None else None
             trechos.append({"canal": chave[0],
-                            "jogador": jogador if isinstance(jogador, int) else None,
-                            "de_ms": par[0], "ate_ms": par[1]})
+                            "jogador": _jogador_do_ao_vivo(jogador),
+                            "controle": posicao, "de_ms": par[0], "ate_ms": par[1],
+                            **({"todos": True} if not chave[1] else {})})
 
         for t, canal, uniq in escritas:
             ha = max(0, round((agora - t) * 1000))
@@ -2065,8 +2072,8 @@ class Porta:
         for chave, par in abertos.items():
             fechar(chave, par)
         trechos.sort(key=lambda t: t["ate_ms"])
-        return {"controles": [{"jogador": c.get("jogador") if isinstance(c.get("jogador"), int)
-                               else None, "cor": str(c.get("cor") or "")} for c in controles],
+        return {"controles": [{"jogador": _jogador_do_ao_vivo(c.get("jogador")),
+                               "cor": str(c.get("cor") or "")} for c in controles],
                 "trechos": trechos[:TRECHOS_DO_AO_VIVO]}
 
     def ultimo_estado_de(self, mod_id: str) -> dict[str, Any] | None:

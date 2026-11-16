@@ -1288,11 +1288,14 @@ def _vivo_da_janela(manifesto: Any, estado: dict[str, Any] | None) -> Any:
     if manifesto is None or not PEDACOS_DO_VIVO & set(manifesto.agora):
         return None
     nivel = (estado or {}).get("nivel")
-    if (estado or {}).get("ligado") is True and isinstance(nivel, int) \
-            and not isinstance(nivel, bool):
-        agora = time.monotonic()
-        if not _MEXIDA.clima or agora - _MEXIDA.clima[-1][0] >= PASSO_DO_CLIMA_S:
-            _MEXIDA.clima = [*_MEXIDA.clima, (agora, nivel)][-PONTOS_DO_CLIMA:]
+    agora = time.monotonic()
+    if (estado or {}).get("ligado") is not True:
+        _MEXIDA.clima = []
+    elif isinstance(nivel, int) and not isinstance(nivel, bool):
+        recentes = [p for p in _MEXIDA.clima if agora - p[0] <= PASSO_DO_CLIMA_S * PONTOS_DO_CLIMA]
+        if not recentes or agora - recentes[-1][0] >= PASSO_DO_CLIMA_S:
+            recentes.append((agora, nivel))
+        _MEXIDA.clima = recentes[-PONTOS_DO_CLIMA:]
     canais = tuple(cv.CANAL_DA_PERMISSAO[p] for p in manifesto.permissoes
                    if p in cv.CANAL_DA_PERMISSAO)
     return cv.vivo_de(estado, canais, _MEXIDA.controle_vivo,
@@ -3133,8 +3136,9 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
 
 @gesto("07-lancadores.html", exp.GESTO_DO_CONTROLE_VIVO)
 def controle_vivo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O chip de um controle no controle vivo: o desenho passa a mostrar aquele controle, com o
-    plástico dele e as peças que a extensão escreveu nele. Só a tela muda; nada se grava."""
+    """O chip de um controle no controle vivo (o lugar dele na lista): o desenho passa a mostrar
+    aquele controle, com o plástico dele e as peças que a extensão escreveu nele. Só a tela muda;
+    nada se grava."""
     mod_id, numero = _partes_do_clique(o, exp.GESTO_DO_CONTROLE_VIVO, 2)
     if _MEXIDA.mod != mod_id:
         raise RuntimeError("Esta janela já fechou. Nada foi alterado.")

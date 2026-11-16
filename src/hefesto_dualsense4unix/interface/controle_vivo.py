@@ -147,8 +147,9 @@ class ControleDoVivo(NamedTuple):
 
 
 class Vivo(NamedTuple):
-    """O que o controle vivo desenha: os controles, o do desenho, os trechos da faixa, as peças
-    acesas no do desenho, o clima e o limiar dele, e os canais que a extensão pode escrever."""
+    """O que o controle vivo desenha: os controles, o do desenho (o lugar dele na lista), os
+    trechos da faixa, as peças acesas no do desenho, o clima e o limiar dele, e os canais que a
+    extensão pode escrever."""
 
     controles: tuple[ControleDoVivo, ...] = ()
     escolhido: int | None = None
@@ -165,11 +166,13 @@ COR_SEM_PLASTICO = "var(--comment)"
 def colorway_do_nome(nome: str) -> str:
     """O modelo do desenho para o nome do plástico (o da tabela das cores), ou vazio: o desenho
     sem cor sabida, nunca a cor de outro controle."""
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import TABELA
-
     alvo = nome.strip().casefold()
-    if not alvo:
-        return ""
+    return _colorway_do_nome(alvo) if alvo else ""
+
+
+@functools.lru_cache(maxsize=32)
+def _colorway_do_nome(alvo: str) -> str:
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import TABELA
     import monta
 
     slug = next((c.id for c in TABELA.values() if c.nome.casefold() == alvo and c.id), "")
@@ -205,6 +208,7 @@ def pintura_do_modelo(colorway: str) -> tuple[str, tuple[str, ...], str]:
     return variaveis, tuple(dict.fromkeys(claros)), defs
 
 
+@functools.lru_cache(maxsize=32)
 def _cor_de(colorway: str) -> str:
     import monta
 
@@ -223,9 +227,12 @@ def nome_do_controle(jogador: int | None, cor: str, posicao: int) -> str:
 def vivo_de(estado: Mapping[str, Any] | None, canais: Sequence[str], escolhido: int | None,
             clima: Sequence[int] = ()) -> Vivo:
     """O ``Vivo`` do ``ao_vivo`` que o ``mods.agora`` devolve (os controles e os trechos do que a
-    extensão escreveu): o do desenho é o ``escolhido`` se ainda está ligado, senão o primeiro."""
+    extensão escreveu): o do desenho é o ``escolhido`` (o lugar na lista) se ainda está ligado,
+    senão o primeiro. O trecho de todos acende em qualquer um; o de um controle fora da lista (o
+    de fora, que não tem este desenho) fica só na faixa, sem plástico."""
     estado = estado or {}
-    ao = estado.get("ao_vivo") if isinstance(estado.get("ao_vivo"), Mapping) else {}
+    bruto = estado.get("ao_vivo")
+    ao: Mapping[str, Any] = bruto if isinstance(bruto, Mapping) else {}
     controles = []
     for n, c in enumerate(x for x in ao.get("controles") or () if isinstance(x, Mapping)):
         jogador = _inteiro(c.get("jogador"))
@@ -233,19 +240,22 @@ def vivo_de(estado: Mapping[str, Any] | None, canais: Sequence[str], escolhido: 
         colorway = colorway_do_nome(cor)
         controles.append(ControleDoVivo(jogador, nome_do_controle(jogador, cor, n + 1), colorway,
                                         _cor_de(colorway)))
-    numeros = [c.jogador for c in controles]
-    if escolhido not in numeros:
-        escolhido = numeros[0] if numeros else None
-    cor_de = {c.jogador: c.cor for c in controles}
+    if escolhido is None or not 0 <= escolhido < len(controles):
+        escolhido = 0 if controles else None
     marcas, acesos = [], set()
     for t in ao.get("trechos") or ():
         if not isinstance(t, Mapping) or t.get("canal") not in ROTULO_DO_CANAL:
             continue
-        de, ate, jogador = _inteiro(t.get("de_ms")), _inteiro(t.get("ate_ms")), _inteiro(t.get("jogador"))
+        de, ate = _inteiro(t.get("de_ms")), _inteiro(t.get("ate_ms"))
+        posicao = _inteiro(t.get("controle"))
         if de is None or ate is None:
             continue
-        marcas.append(Marca(str(t["canal"]), de, ate, cor_de.get(jogador, COR_SEM_PLASTICO)))
-        if ate <= ACESO_POR_MS and (jogador is None or jogador == escolhido):
+        if posicao is not None and not 0 <= posicao < len(controles):
+            posicao = None
+        cor = controles[posicao].cor if posicao is not None else COR_SEM_PLASTICO
+        marcas.append(Marca(str(t["canal"]), de, ate, cor))
+        no_desenho = t.get("todos") is True or (posicao is not None and posicao == escolhido)
+        if ate <= ACESO_POR_MS and no_desenho:
             acesos.add(str(t["canal"]))
     limiar = _inteiro(estado.get("limiar"))
     return Vivo(tuple(controles), escolhido, tuple(marcas), frozenset(acesos),
@@ -257,7 +267,7 @@ def lugar_html(vivo: Vivo) -> str:
     """O lugar do desenho: a página põe nele o ``<template>`` do Mapa, pintado no modelo do
     controle escolhido (as variáveis das zonas e os glifos claros) e com as peças acesas que o
     ``data-acesos`` diz."""
-    atual = next((c for c in vivo.controles if c.jogador == vivo.escolhido), None)
+    atual = vivo.controles[vivo.escolhido] if vivo.escolhido is not None else None
     variaveis, claros, defs = pintura_do_modelo(atual.colorway if atual else "")
     acesos = " ".join(sorted(vivo.acesos))
     estilo = f' style="{html.escape(variaveis)}"' if variaveis else ""
@@ -330,10 +340,9 @@ def chips_html(vivo: Vivo, gesto: str, mod: str) -> str:
         return ""
     itens = []
     for n, c in enumerate(vivo.controles):
-        valor = str(c.jogador) if c.jogador is not None else f"p{n + 1}"
-        on = " on" if c.jogador == vivo.escolhido else ""
+        on = " on" if n == vivo.escolhido else ""
         itens.append(f'<span class="cv-pl{on}" style="--plastico:{html.escape(c.cor)}" '
-                     f'data-gesto="{gesto}" data-v="{html.escape(mod)}:{valor}" '
+                     f'data-gesto="{gesto}" data-v="{html.escape(mod)}:{n}" '
                      f'role="button">{html.escape(c.nome)}</span>')
     return f'<div class="cv-pls">{"".join(itens)}</div>'
 

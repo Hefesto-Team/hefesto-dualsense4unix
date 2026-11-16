@@ -94,8 +94,8 @@ def test_a_porta_anota_so_o_que_chegou_ao_controle_e_nunca_o_uniq(curto) -> None
     ao_vivo = agora["ao_vivo"]
     assert ao_vivo["controles"] == [{"jogador": 1, "cor": "Cosmic Red"}, {"jogador": 2, "cor": ""}]
     assert ao_vivo["trechos"] == [
-        {"canal": "luz", "jogador": 2, "de_ms": 1000, "ate_ms": 1000},
-        {"canal": "luz", "jogador": 1, "de_ms": 6000, "ate_ms": 5400},
+        {"canal": "luz", "jogador": 2, "controle": 1, "de_ms": 1000, "ate_ms": 1000},
+        {"canal": "luz", "jogador": 1, "controle": 0, "de_ms": 6000, "ate_ms": 5400},
     ], "as três luzes do P1 a 0,3 s uma da outra são um trecho só, e o gatilho recusado não entra"
     assert P1 not in repr(agora) and P2 not in repr(agora)
 
@@ -141,8 +141,11 @@ def test_a_memoria_tem_teto_por_controle_e_guarda_no_maximo_quatro(tmp_path: pat
     assert sum(1 for u in filas if u) == CONTROLES_DO_AO_VIVO and "" in filas
     assert uniqs[0] not in filas, "o quinto controle tira o que escreveu há mais tempo"
     assert all(len(f) <= ESCRITAS_POR_CONTROLE for f in filas.values())
-    jogadores = {t["jogador"] for t in porta.ao_vivo_de("exemplo")["trechos"]}
-    assert jogadores == {2, 3, 4, 5, None}
+    trechos = porta.ao_vivo_de("exemplo")["trechos"]
+    assert {t["jogador"] for t in trechos} == {2, 3, 4, 5, None}
+    assert [t for t in trechos if t.get("todos")] == [
+        {"canal": "mira", "jogador": None, "controle": None, "de_ms": 0, "ate_ms": 0,
+         "todos": True}]
 
 
 def test_a_memoria_se_zera_quando_a_extensao_desliga_e_quando_sai(curto) -> None:  # noqa: F811
@@ -200,16 +203,17 @@ def test_o_manifesto_aceita_o_controle_vivo_o_cartao_o_canal_e_a_ordem_das_abas(
 def _vivo(escolhido: int | None = None) -> cv.Vivo:
     estado = {"ligado": True, "nivel": 6, "limiar": 4, "ao_vivo": {
         "controles": [{"jogador": 1, "cor": "Starlight Blue"}, {"jogador": 2, "cor": "White"}],
-        "trechos": [{"canal": "gatilho", "jogador": 1, "de_ms": 900, "ate_ms": 300},
-                    {"canal": "luz", "jogador": 2, "de_ms": 800, "ate_ms": 200},
-                    {"canal": "som", "jogador": 1, "de_ms": 9000, "ate_ms": 8000}]}}
+        "trechos": [{"canal": "gatilho", "controle": 0, "de_ms": 900, "ate_ms": 300},
+                    {"canal": "luz", "controle": 1, "de_ms": 800, "ate_ms": 200},
+                    {"canal": "som", "controle": 0, "de_ms": 9000, "ate_ms": 8000}]}}
     return cv.vivo_de(estado, ["som", "luz", "gatilho", "haptica"], escolhido, [1, 3, 6])
 
 
 def test_o_desenho_acende_so_o_que_a_extensao_escreveu_ha_pouco_no_controle_escolhido() -> None:
-    um, dois = _vivo(), _vivo(2)
-    assert (um.escolhido, um.acesos) == (1, frozenset({"gatilho"}))
-    assert (dois.escolhido, dois.acesos) == (2, frozenset({"luz"}))
+    um, dois = _vivo(), _vivo(1)
+    assert (um.escolhido, um.acesos) == (0, frozenset({"gatilho"}))
+    assert (dois.escolhido, dois.acesos) == (1, frozenset({"luz"}))
+    assert _vivo(7).escolhido == 0, "o controle que saiu devolve o desenho ao primeiro"
     assert [c.colorway for c in um.controles] == ["starlight-blue", "white"]
     assert um.canais == ("haptica", "gatilho", "luz", "som"), "a faixa segue a ordem dos canais"
     lugar = cv.lugar_html(dois)
@@ -231,7 +235,7 @@ def test_a_janela_desenha_o_controle_o_clima_a_faixa_e_os_cartoes_na_ordem_das_a
         "Modo imersão", opcoes, mod="imersao", agora=("controle", "nivel", "clima", "ao_vivo"),
         estado={"ligado": True, "nivel": 6}, acoes=acoes, vivo=_vivo(), abas=("Geral", "Efeitos"))
     assert html.count('class="cv-lugar"') == 1 and 'data-agora="clima"' in html
-    assert 'data-gesto="controle-vivo-da-modificacao" data-v="imersao:2"' in html
+    assert 'data-gesto="controle-vivo-da-modificacao" data-v="imersao:1"' in html
     assert html.count('class="cv-mk"') == 3 and 'id="mod-ao-vivo"' in html
     assert 'class="mj-faixa cv-faixa" data-agora="ao_vivo"' in html
     assert re.findall(r'<label for="mj-aba-\d+">([^<]+)<', html) == ["Geral", "Efeitos"]
@@ -260,3 +264,55 @@ def test_o_desenho_da_07_leva_o_molde_uma_vez_e_o_script_que_o_veste() -> None:
     pagina = DESENHO_DA_07.read_text(encoding="utf-8")
     assert pagina.count(f'<template id="{cv.ID_DO_MOLDE}">') == 1
     assert "molde.content.firstElementChild" in pagina and "cv-aceso" in pagina
+
+
+def test_o_controle_de_fora_fica_so_na_faixa_e_o_de_todos_acende_em_qualquer_um() -> None:
+    """O trecho de um controle que a lista não traz (o de fora, sem este desenho) não acende o
+    DualSense desenhado; o de todos (a mira em todos) acende em qualquer um."""
+    estado = {"ligado": True, "ao_vivo": {
+        "controles": [{"jogador": None, "cor": ""}, {"jogador": None, "cor": "White"}],
+        "trechos": [{"canal": "vibracao", "controle": None, "de_ms": 300, "ate_ms": 100},
+                    {"canal": "mira", "controle": None, "todos": True, "de_ms": 300,
+                     "ate_ms": 100},
+                    {"canal": "luz", "controle": 1, "de_ms": 300, "ate_ms": 100}]}}
+    primeiro, segundo = (cv.vivo_de(estado, ["vibracao", "mira", "luz"], n) for n in (0, 1))
+    assert primeiro.acesos == frozenset({"mira"})
+    assert segundo.acesos == frozenset({"mira", "luz"}), "sem número de jogador, o chip escolhe"
+    assert primeiro.marcas[0].cor == cv.COR_SEM_PLASTICO
+    chips = cv.chips_html(segundo, "g", "m")
+    assert chips.count('data-v="m:1"') == 1 and chips.count(" on") == 1
+
+
+def test_a_conexao_curta_da_extensao_nao_apaga_a_faixa_e_a_saida_sem_estado_limpa_tudo(
+        curto) -> None:  # noqa: F811
+    """A segunda conexão da mesma extensão (a curta do ``aparelho.abrir``) que fecha não zera a
+    faixa; e a conexão que sai sem nunca ter dado o estado sai inteira da porta."""
+    relogio = _Relogio()
+
+    async def corrida() -> tuple[int, int, bool]:
+        porta = await _porta(curto, relogio, set())
+        porta.registrar("ficha", "exemplo", os.getpid(),
+                        ["escrever:luz", "ler:acessorios.gesto"])
+        ext, curta = _Extensao(curto / "mods.sock"), _Extensao(curto / "mods.sock")
+        try:
+            await asyncio.to_thread(ext.pedir, "mod.ola", {"ficha": "ficha"})
+            await asyncio.to_thread(curta.pedir, "mod.ola", {"ficha": "ficha"})
+            await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
+            curta.fechar()
+            for _ in range(100):
+                if len(porta._conexoes) == 1:
+                    break
+                await asyncio.sleep(0.02)
+            depois_da_curta = len(porta.ao_vivo_de("exemplo")["trechos"])
+        finally:
+            ext.fechar()
+        for _ in range(100):
+            if not porta._conexoes:
+                break
+            await asyncio.sleep(0.02)
+        saiu = len(porta.ao_vivo_de("exemplo")["trechos"])
+        limpa = not porta._conexoes
+        await porta.parar()
+        return depois_da_curta, saiu, limpa
+
+    assert asyncio.run(corrida()) == (1, 0, True)
