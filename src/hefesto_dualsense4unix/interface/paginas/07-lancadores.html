@@ -1180,6 +1180,40 @@
 #mod-janela .mj-fc.on { color:var(--fg);border-color:rgba(80,250,123,.45);background:var(--sel-bg) }
 #mod-janela .mj-fc.on::before { background:var(--green);box-shadow:0 0 6px var(--green) }
 #mod-janela .mj-fc:hover, #mod-janela .mj-fc:focus-visible { border-color:var(--purple);outline:none }
+#mod-janela .ja-corpo.com-estado { grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);row-gap:10px }
+#mod-janela .ja-faixa-estado { display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:6px 14px;padding:10px 14px;border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);min-width:0 }
+#mod-janela .ja-faixa-estado .fx-pilula { font-size:12.5px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid currentColor }
+#mod-janela .ja-faixa-estado .fx-oque { min-width:0;display:flex;flex-direction:column;gap:3px }
+#mod-janela .ja-faixa-estado .fx-l1 { font-size:13.5px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+#mod-janela .ja-faixa-estado .fx-l2 { display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;font-size:12px;color:var(--fg) }
+#mod-janela .ja-faixa-estado .fx-par > span { color:var(--texto-mudo);margin-right:5px }
+#mod-janela .ja-faixa-estado .fx-feed { grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px }
+#mod-janela .fx-ev { display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border-radius:6px;border:1px solid var(--border-sutil);background:var(--panel);font-size:11.5px;color:var(--texto-suave) }
+#mod-janela .fx-ev b { color:var(--pink);font-weight:600 }
+#mod-janela .fx-ev i { font-style:normal;font:11px 'JetBrains Mono',ui-monospace,monospace;color:var(--texto-mudo) }
+#mod-janela .fx-ev.novo { border-color:rgba(255,121,198,.55) }
+#mod-janela .mj-ct-pe { display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 0 8px;border-top:1px solid var(--border-sutil) }
+#mod-janela .mj-ct-pe .btn.mj-acao { height:26px;padding:0 10px;font-size:11.5px }
+#mod-janela .mj-veredito { font-size:11.5px;line-height:1.3;min-width:0;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden }
+#mod-janela .mj-veredito.ok { color:var(--green) }
+#mod-janela .mj-veredito.nao { color:var(--orange) }
+#mod-janela .mj-marca { font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;color:var(--orange);background:rgba(255,184,108,.14);flex:none }
+#mod-janela .mj-ct-tit .mj-marca { margin:0 0 0 8px }
+#mod-janela .mj-leitura { display:inline-flex;align-items:center;gap:8px;margin-left:10px;min-width:0;font-size:11.5px;color:var(--texto-mudo) }
+#mod-janela .mj-lt-frase { white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0 }
+#mod-janela .mj-lt-frase.cego { color:var(--orange) }
+#mod-janela .mj-medidor { display:inline-block;flex:none;width:72px;height:6px;border-radius:3px;background:var(--panel);overflow:hidden }
+#mod-janela .mj-medidor i { display:block;height:100%;background:var(--cyan);border-radius:3px;transition:width .25s }
+#mod-janela .mj-trilha { display:inline-flex;align-items:flex-end;gap:1px;width:64px;height:16px;flex:none;margin-left:4px }
+#mod-janela .mj-trilha b { flex:1;min-height:2px;height:12%;border-radius:1px;background:var(--border-forte) }
+#mod-janela .mj-trilha b.chegou { background:var(--pink) }
+@media (prefers-reduced-motion:reduce) { #mod-janela .mj-medidor i { transition:none } }
+.ext-espera-sim { display:flex;align-items:center;gap:8px;color:var(--orange) }
+.ext-espera-sim .btn.mini { height:22px;padding:0 8px;font-size:11px }
+#mod-janela .ja-espera-sim { position:relative;display:inline-flex;align-items:center;gap:8px;margin-right:10px;font-size:12px;color:var(--orange) }
+#mod-janela .ja-espera-sim summary { cursor:pointer;list-style:none;padding:2px 8px;border:1px solid var(--border-forte);border-radius:6px;color:var(--fg);font-size:11.5px }
+#mod-janela .ja-espera-sim summary::-webkit-details-marker { display:none }
+#mod-janela .ja-espera-sim .ja-es-lista { position:absolute;top:calc(100% + 6px);right:0;z-index:5;display:flex;flex-direction:column;gap:4px;min-width:260px;max-width:360px;padding:8px 10px;border:1px solid var(--border-forte);border-radius:8px;background:var(--app-bg);color:var(--fg);white-space:normal }
 #mod-janela .cv-defs { position:absolute;width:0;height:0;overflow:hidden }
 #mod-janela .cv-lugar { display:block;width:100%;max-width:250px;margin:0 auto }
 #mod-janela .cv-lugar svg.cv-ds { width:100%;height:auto;display:block }
