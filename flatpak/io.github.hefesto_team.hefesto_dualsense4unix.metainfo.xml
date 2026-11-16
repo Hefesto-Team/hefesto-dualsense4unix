@@ -19,6 +19,7 @@
        A numeração recomeçou em 0.1.0: as versões anteriores ficam de fora porque o
        AppStream compara versões e a loja nunca ofereceria uma 0.x depois de uma 3.x. -->
   <releases>
+    <release version="0.9.5.4" date="2026-11-16"/>
     <release version="0.9.5.3" date="2026-11-15">
       <description>
         <p>Na aba Conexões, um teclado ou um pedal pode virar botões de qualquer controle, também de um Pro Controller ou de outro controle de fora, e não só de um DualSense. Com o Modo automático ligado, o mesmo efeito de gatilho muda conforme o estilo do perfil, e cada gatilho tem o seu: num FPS o L2 mira leve e o R2 dispara; numa corrida o freio endurece com o curso. A extensão Modo imersão vem com o Hefesto: o controle reage ao que acontece no jogo, com o som, a vibração, a luz e os gatilhos, ao lado do Modo automático.</p>

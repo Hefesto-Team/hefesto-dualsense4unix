@@ -4,6 +4,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ## [Unreleased]
 
+## [0.9.5.4] — 2026-11-16
+
+### Mudado
+
+- A permissão «aparelhos» de uma extensão mostra cada aparelho numa linha, com o nome dado pela extensão, o tipo, o fabricante e o modelo (VID:PID) e o nome do aparelho ligado. O «sim» vale só para os aparelhos aceitos: se uma atualização pedir outro, a extensão desliga e pede o «sim» de novo.
+
+### Corrigido
+
+- Nenhuma extensão abre controle, teclado ou mouse: o manifesto que declara um controle é recusado, e um aparelho que se apresenta como teclado, mouse ou controle nunca é entregue.
+- O adaptador USB da Lovense volta a funcionar depois de se reiniciar com outro endereço, sem reiniciar a extensão.
+
 ## [0.9.5.3] — 2026-11-15
 
 ### Adicionado

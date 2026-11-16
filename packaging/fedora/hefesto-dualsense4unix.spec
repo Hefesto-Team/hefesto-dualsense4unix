@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.5.3
+Version:        0.9.5.4
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -606,6 +606,8 @@ fi
 %{_datadir}/%{app_id}/docs/
 
 %changelog
+* Mon Nov 16 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5.4-1
+- Versão 0.9.5.4
 * Sun Nov 15 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5.3-1
 - Na aba Conexões, um teclado ou um pedal pode virar botões de qualquer controle, também de um Pro Controller ou de outro controle de fora, e não só de um DualSense.
 - Com o Modo automático ligado, o mesmo efeito de gatilho muda conforme o estilo do perfil, e cada gatilho tem o seu: num FPS o L2 mira leve e o R2 dispara; numa corrida o freio endurece com o curso.
