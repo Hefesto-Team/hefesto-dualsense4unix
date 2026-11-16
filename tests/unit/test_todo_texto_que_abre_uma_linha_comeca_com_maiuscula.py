@@ -198,7 +198,7 @@ ANCORAS_DAS_OUTRAS = (
     ("06-navegacao", "acessibilidade"),
     ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"),
     ("07-lancadores", "impedimentos"), ("07-lancadores", "lanc-conf"),
-    ("07-lancadores", "modificacao"))  # (noqa-acento)
+    ("07-lancadores", "modificacao"), ("janela-do-modo-imersao", "modificacao"))  # (noqa-acento)
 
 
 @pytest.mark.parametrize(("aba", "ancora"), ANCORAS_DAS_OUTRAS)

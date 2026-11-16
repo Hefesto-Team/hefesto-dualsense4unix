@@ -1,8 +1,7 @@
 """O controle vivo da janela de uma extensão (A-JANELA-DO-MODO-IMERSAO-GANHA-UM-DESENHO-VIVO-01).
 
 O desenho é o do «Mapa dos controles» (``mapa.controle``), posto uma vez na 07 num ``<template>``;
-as peças acendem pelo que a porta viu a extensão ESCREVER, por controle, e a faixa «Ao vivo» mostra
-os últimos 30 s, um canal por linha, na cor do plástico de cada controle.
+as peças acendem pelo que a porta viu a extensão ESCREVER, por controle, há pouco.
 """
 
 from __future__ import annotations
@@ -20,9 +19,8 @@ from hefesto_dualsense4unix.interface import controle_vivo as cv
 from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
 from hefesto_dualsense4unix.mods.porta import (
+    ACESO_DO_AO_VIVO_S,
     CONTROLES_DO_AO_VIVO,
-    ESCRITAS_POR_CONTROLE,
-    JANELA_DO_AO_VIVO_S,
     Porta,
     estado_dos_acessorios,
 )
@@ -74,13 +72,13 @@ def test_a_porta_anota_so_o_que_chegou_ao_controle_e_nunca_o_uniq(curto) -> None
                 ok = await asyncio.to_thread(ext.pedir, "luz.set",
                                              {"uniq": P1, "rgb": [255, 0, 0]})
                 assert "result" in ok, ok
-            relogio.t = 1005.0
+            relogio.t = 1001.0
             await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P2, "rgb": [0, 0, 255]})
             jogo_escreve.add("gatilho")
             recusa = await asyncio.to_thread(ext.pedir, "gatilho.set", {
                 "uniq": P1, "lado": "direito", "modo": "Rigid", "forcas": [0, 200]})
             assert "error" in recusa, recusa
-            relogio.t = 1006.0
+            relogio.t = 1001.5
             sem_estado = porta.agora_de("exemplo")
             assert "ao_vivo" not in sem_estado, "sem estado, a janela não tem o que desenhar"
             ok = await asyncio.to_thread(ext.pedir, "acessorios.estado", {"ligado": True})
@@ -93,14 +91,14 @@ def test_a_porta_anota_so_o_que_chegou_ao_controle_e_nunca_o_uniq(curto) -> None
     agora = asyncio.run(corrida())
     ao_vivo = agora["ao_vivo"]
     assert ao_vivo["controles"] == [{"jogador": 1, "cor": "Cosmic Red"}, {"jogador": 2, "cor": ""}]
-    assert ao_vivo["trechos"] == [
-        {"canal": "luz", "jogador": 2, "controle": 1, "de_ms": 1000, "ate_ms": 1000},
-        {"canal": "luz", "jogador": 1, "controle": 0, "de_ms": 6000, "ate_ms": 5400},
-    ], "as três luzes do P1 a 0,3 s uma da outra são um trecho só, e o gatilho recusado não entra"
+    assert ao_vivo["escritas"] == [
+        {"canal": "luz", "controle": 1, "ha_ms": 500},
+        {"canal": "luz", "controle": 0, "ha_ms": 900},
+    ], "a última luz de cada controle, e o gatilho recusado não entra"
     assert P1 not in repr(agora) and P2 not in repr(agora)
 
 
-def test_a_escrita_de_mais_de_30_s_sai_da_faixa(curto) -> None:  # noqa: F811
+def test_a_escrita_velha_apaga_a_peca(curto) -> None:  # noqa: F811
     relogio = _Relogio()
 
     async def corrida() -> tuple[list[Any], list[Any]]:
@@ -109,10 +107,10 @@ def test_a_escrita_de_mais_de_30_s_sai_da_faixa(curto) -> None:  # noqa: F811
         try:
             await asyncio.to_thread(ext.pedir, "mod.ola", {"ficha": "ficha"})
             await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
-            relogio.t += JANELA_DO_AO_VIVO_S - 1
-            antes = porta.ao_vivo_de("exemplo")["trechos"]
-            relogio.t += 2
-            return antes, porta.ao_vivo_de("exemplo")["trechos"]
+            relogio.t += ACESO_DO_AO_VIVO_S - 0.5
+            antes = porta.ao_vivo_de("exemplo")["escritas"]
+            relogio.t += 1
+            return antes, porta.ao_vivo_de("exemplo")["escritas"]
         finally:
             ext.fechar()
             await porta.parar()
@@ -121,7 +119,8 @@ def test_a_escrita_de_mais_de_30_s_sai_da_faixa(curto) -> None:  # noqa: F811
     assert len(antes) == 1 and depois == []
 
 
-def test_a_memoria_tem_teto_por_controle_e_guarda_no_maximo_quatro(tmp_path: pathlib.Path) -> None:
+def test_a_memoria_guarda_so_a_ultima_de_cada_canal_de_no_maximo_quatro(
+        tmp_path: pathlib.Path) -> None:
     async def escritor(metodo: str, pedido: dict[str, Any]) -> Any:
         return {"status": "ok"}
 
@@ -131,21 +130,21 @@ def test_a_memoria_tem_teto_por_controle_e_guarda_no_maximo_quatro(tmp_path: pat
                   o_jogo_escreve=lambda uniq, canal: False, uniq_do_posto=lambda: P1,
                   relogio=relogio,
                   controles=lambda: [{"uniq": u, "jogador": n} for n, u in enumerate(uniqs, 1)])
-    for passo in range(ESCRITAS_POR_CONTROLE + 50):
+    for passo in range(600):
         relogio.t += 0.001
         porta._anotar_a_escrita("exemplo", "luz" if passo % 2 else "som", uniqs[0])
     for uniq in [*uniqs[1:], ""]:
         relogio.t += 0.001
         porta._anotar_a_escrita("exemplo", "mira", uniq)
-    filas = porta._escritas["exemplo"]
-    assert sum(1 for u in filas if u) == CONTROLES_DO_AO_VIVO and "" in filas
-    assert uniqs[0] not in filas, "o quinto controle tira o que escreveu há mais tempo"
-    assert all(len(f) <= ESCRITAS_POR_CONTROLE for f in filas.values())
-    trechos = porta.ao_vivo_de("exemplo")["trechos"]
-    assert {t["jogador"] for t in trechos} == {2, 3, 4, 5, None}
-    assert [t for t in trechos if t.get("todos")] == [
-        {"canal": "mira", "jogador": None, "controle": None, "de_ms": 0, "ate_ms": 0,
-         "todos": True}]
+    guardadas = porta._escritas["exemplo"]
+    assert sum(1 for u in guardadas if u) == CONTROLES_DO_AO_VIVO and "" in guardadas
+    assert uniqs[0] not in guardadas, "o quinto controle tira o que escreveu há mais tempo"
+    assert all(len(canais) == 1 for canais in guardadas.values()), "uma escrita por canal"
+    escritas = porta.ao_vivo_de("exemplo")["escritas"]
+    assert sorted((e["controle"] is None, e["controle"] or 0) for e in escritas) == [
+        (False, 1), (False, 2), (False, 3), (False, 4), (True, 0)]
+    assert [e for e in escritas if e.get("todos")] == [
+        {"canal": "mira", "controle": None, "ha_ms": 0, "todos": True}]
 
 
 def test_a_memoria_se_zera_quando_a_extensao_desliga_e_quando_sai(curto) -> None:  # noqa: F811
@@ -157,9 +156,9 @@ def test_a_memoria_se_zera_quando_a_extensao_desliga_e_quando_sai(curto) -> None
         try:
             await asyncio.to_thread(ext.pedir, "mod.ola", {"ficha": "ficha"})
             await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
-            antes = len(porta.ao_vivo_de("exemplo")["trechos"])
+            antes = len(porta.ao_vivo_de("exemplo")["escritas"])
             await asyncio.to_thread(ext.pedir, "acessorios.estado", {"ligado": False})
-            desligada = len(porta.ao_vivo_de("exemplo")["trechos"])
+            desligada = len(porta.ao_vivo_de("exemplo")["escritas"])
             await asyncio.to_thread(ext.pedir, "luz.set", {"uniq": P1, "rgb": [1, 2, 3]})
         finally:
             ext.fechar()
@@ -167,7 +166,7 @@ def test_a_memoria_se_zera_quando_a_extensao_desliga_e_quando_sai(curto) -> None
             if not porta.vivas():
                 break
             await asyncio.sleep(0.02)
-        saiu = len(porta.ao_vivo_de("exemplo")["trechos"])
+        saiu = len(porta.ao_vivo_de("exemplo")["escritas"])
         await porta.parar()
         return antes, desligada, saiu
 
@@ -191,22 +190,24 @@ def _manifesto(**extra: Any) -> Manifesto:
 
 
 def test_o_manifesto_aceita_o_controle_vivo_o_cartao_o_canal_e_a_ordem_das_abas() -> None:
-    m = _manifesto(agora=["controle", "nivel", "clima", "ao_vivo"], abas=["B", "A"], opcoes=[
+    m = _manifesto(agora=["controle", "nivel", "clima"], abas=["B", "A"], opcoes=[
         {"id": "a", "rotulo": "Coração", "tipo": "ligado", "grupo": "A", "cartao": "Coração",
          "canal": "haptica"}])
     assert (m.agora, m.abas, m.opcoes[0].cartao, m.opcoes[0].canal) == (
-        ["controle", "nivel", "clima", "ao_vivo"], ["B", "A"], "Coração", "haptica")
+        ["controle", "nivel", "clima"], ["B", "A"], "Coração", "haptica")
     with pytest.raises(ValueError):
         _manifesto(opcoes=[{"id": "a", "rotulo": "A", "tipo": "ligado", "canal": "teclado"}])
+    with pytest.raises(ValueError, match="ao_vivo"):
+        _manifesto(agora=["ao_vivo"])
 
 
 def _vivo(escolhido: int | None = None) -> cv.Vivo:
     estado = {"ligado": True, "nivel": 6, "limiar": 4, "ao_vivo": {
         "controles": [{"jogador": 1, "cor": "Starlight Blue"}, {"jogador": 2, "cor": "White"}],
-        "trechos": [{"canal": "gatilho", "controle": 0, "de_ms": 900, "ate_ms": 300},
-                    {"canal": "luz", "controle": 1, "de_ms": 800, "ate_ms": 200},
-                    {"canal": "som", "controle": 0, "de_ms": 9000, "ate_ms": 8000}]}}
-    return cv.vivo_de(estado, ["som", "luz", "gatilho", "haptica"], escolhido, [1, 3, 6])
+        "escritas": [{"canal": "gatilho", "controle": 0, "ha_ms": 300},
+                     {"canal": "luz", "controle": 1, "ha_ms": 200},
+                     {"canal": "som", "controle": 0, "ha_ms": 1900}]}}
+    return cv.vivo_de(estado, escolhido, [1, 3, 6])
 
 
 def test_o_desenho_acende_so_o_que_a_extensao_escreveu_ha_pouco_no_controle_escolhido() -> None:
@@ -215,13 +216,12 @@ def test_o_desenho_acende_so_o_que_a_extensao_escreveu_ha_pouco_no_controle_esco
     assert (dois.escolhido, dois.acesos) == (1, frozenset({"luz"}))
     assert _vivo(7).escolhido == 0, "o controle que saiu devolve o desenho ao primeiro"
     assert [c.colorway for c in um.controles] == ["starlight-blue", "white"]
-    assert um.canais == ("haptica", "gatilho", "luz", "som"), "a faixa segue a ordem dos canais"
     lugar = cv.lugar_html(dois)
     assert 'data-acesos="luz"' in lugar and "--z-casca:" in lugar
     assert cv.lugar_html(cv.Vivo()).startswith('<div class="cv-lugar" data-acesos=""')
 
 
-def test_a_janela_desenha_o_controle_o_clima_a_faixa_e_os_cartoes_na_ordem_das_abas() -> None:
+def test_a_janela_desenha_o_controle_o_clima_a_fileira_e_os_cartoes_na_ordem_das_abas() -> None:
     opcoes = [exp.OpcaoDaJanela("imersao", "forca", "Força", "deslizante", 100, grupo="Geral",
                                 maximo=100),
               exp.OpcaoDaJanela("imersao", "batida", "Coração", "deslizante", 80, grupo="Efeitos",
@@ -229,15 +229,23 @@ def test_a_janela_desenha_o_controle_o_clima_a_faixa_e_os_cartoes_na_ordem_das_a
               exp.OpcaoDaJanela("imersao", "tipo", "Tipo", "escolha", "Batida", ("Batida", "Onda"),
                                 grupo="Efeitos", cartao="Coração"),
               exp.OpcaoDaJanela("imersao", "susto", "Tato", "ligado", True, grupo="Efeitos",
-                                cartao="Susto")]
+                                cartao="Susto"),
+              exp.OpcaoDaJanela("imersao", "c1", "Motores", "ligado", True, grupo="Efeitos",
+                                cartao="Canais", canal="vibracao"),
+              exp.OpcaoDaJanela("imersao", "c2", "Gatilhos", "ligado", False, grupo="Efeitos",
+                                cartao="Canais", canal="gatilho")]
     acoes = (exp.AcaoDaJanela("testar", "Testar", "Efeitos"),)
     html = exp.modificacao_miolo_html(
-        "Modo imersão", opcoes, mod="imersao", agora=("controle", "nivel", "clima", "ao_vivo"),
+        "Modo imersão", opcoes, mod="imersao", agora=("controle", "nivel", "clima"),
         estado={"ligado": True, "nivel": 6}, acoes=acoes, vivo=_vivo(), abas=("Geral", "Efeitos"))
     assert html.count('class="cv-lugar"') == 1 and 'data-agora="clima"' in html
     assert 'data-gesto="controle-vivo-da-modificacao" data-v="imersao:1"' in html
-    assert html.count('class="cv-mk"') == 3 and 'id="mod-ao-vivo"' in html
-    assert 'class="mj-faixa cv-faixa" data-agora="ao_vivo"' in html
+    assert "cv-faixa" not in html and "mod-ao-vivo" not in html, "a faixa «Ao vivo» saiu"
+    assert html.count('class="mj-fileira"') == 1, "o cartão só de chaves vira uma fileira"
+    assert re.search(r'<span class="mj-fc on" id="mod-op-c1" data-canal="vibracao"[^>]*'
+                     r'data-gesto="guardar-opcao-da-modificacao" data-v="imersao:c1">Motores<',
+                     html)
+    assert re.search(r'<span class="mj-fc" id="mod-op-c2"[^>]*aria-checked="false"', html)
     assert re.findall(r'<label for="mj-aba-\d+">([^<]+)<', html) == ["Geral", "Efeitos"]
     assert exp.acoes_por_aba(opcoes, acoes, None, abas=("Geral", "Efeitos")) == {1: acoes}
     assert html.count('class="mj-cartao') == 2 and html.count('class="mj-cartao" data-canal') == 1
@@ -266,27 +274,25 @@ def test_o_desenho_da_07_leva_o_molde_uma_vez_e_o_script_que_o_veste() -> None:
     assert "molde.content.firstElementChild" in pagina and "cv-aceso" in pagina
 
 
-def test_o_controle_de_fora_fica_so_na_faixa_e_o_de_todos_acende_em_qualquer_um() -> None:
-    """O trecho de um controle que a lista não traz (o de fora, sem este desenho) não acende o
-    DualSense desenhado; o de todos (a mira em todos) acende em qualquer um."""
+def test_o_controle_de_fora_nao_acende_e_o_de_todos_acende_em_qualquer_um() -> None:
+    """A escrita a um controle que a lista não traz (o de fora, sem este desenho) não acende o
+    DualSense desenhado; a de todos (a mira em todos) acende em qualquer um."""
     estado = {"ligado": True, "ao_vivo": {
         "controles": [{"jogador": None, "cor": ""}, {"jogador": None, "cor": "White"}],
-        "trechos": [{"canal": "vibracao", "controle": None, "de_ms": 300, "ate_ms": 100},
-                    {"canal": "mira", "controle": None, "todos": True, "de_ms": 300,
-                     "ate_ms": 100},
-                    {"canal": "luz", "controle": 1, "de_ms": 300, "ate_ms": 100}]}}
-    primeiro, segundo = (cv.vivo_de(estado, ["vibracao", "mira", "luz"], n) for n in (0, 1))
+        "escritas": [{"canal": "vibracao", "controle": None, "ha_ms": 100},
+                     {"canal": "mira", "controle": None, "todos": True, "ha_ms": 100},
+                     {"canal": "luz", "controle": 1, "ha_ms": 100}]}}
+    primeiro, segundo = (cv.vivo_de(estado, n) for n in (0, 1))
     assert primeiro.acesos == frozenset({"mira"})
     assert segundo.acesos == frozenset({"mira", "luz"}), "sem número de jogador, o chip escolhe"
-    assert primeiro.marcas[0].cor == cv.COR_SEM_PLASTICO
     chips = cv.chips_html(segundo, "g", "m")
     assert chips.count('data-v="m:1"') == 1 and chips.count(" on") == 1
 
 
-def test_a_conexao_curta_da_extensao_nao_apaga_a_faixa_e_a_saida_sem_estado_limpa_tudo(
+def test_a_conexao_curta_da_extensao_nao_apaga_o_controle_e_a_saida_sem_estado_limpa_tudo(
         curto) -> None:  # noqa: F811
     """A segunda conexão da mesma extensão (a curta do ``aparelho.abrir``) que fecha não zera a
-    faixa; e a conexão que sai sem nunca ter dado o estado sai inteira da porta."""
+    memória do controle aceso; e a conexão que sai sem nunca ter dado o estado sai inteira."""
     relogio = _Relogio()
 
     async def corrida() -> tuple[int, int, bool]:
@@ -303,14 +309,14 @@ def test_a_conexao_curta_da_extensao_nao_apaga_a_faixa_e_a_saida_sem_estado_limp
                 if len(porta._conexoes) == 1:
                     break
                 await asyncio.sleep(0.02)
-            depois_da_curta = len(porta.ao_vivo_de("exemplo")["trechos"])
+            depois_da_curta = len(porta.ao_vivo_de("exemplo")["escritas"])
         finally:
             ext.fechar()
         for _ in range(100):
             if not porta._conexoes:
                 break
             await asyncio.sleep(0.02)
-        saiu = len(porta.ao_vivo_de("exemplo")["trechos"])
+        saiu = len(porta.ao_vivo_de("exemplo")["escritas"])
         limpa = not porta._conexoes
         await porta.parar()
         return depois_da_curta, saiu, limpa
@@ -351,3 +357,31 @@ def test_a_extensao_que_sai_limpa_a_porta_mesmo_com_um_passo_que_falha(
         return limpa, deu_o_estado
 
     assert asyncio.run(corrida()) == (True, deu_o_estado)
+
+
+def test_o_cartao_do_aparelho_rotula_as_escolhas_so_quando_ha_mais_de_uma() -> None:
+    """Duas escolhas de 0 a 100 % no cartão do controle seriam iguais sem o rótulo; uma só, não."""
+    def cartao(*ids: str) -> str:
+        estado = {"ligado": True, "aparelhos": [{"id": "jogador-1", "nome": "White", "ligado": True,
+                                                  "controles": [
+            {"id": i, "tipo": "escolha", "rotulo": i.title(), "valor": "100",
+             "opcoes": [{"id": "100", "rotulo": "100%"}]} for i in ids]}]}  # (noqa-acento)
+        gestao = exp.Gestao("imersao", exp.AparelhosDaJanela((), "Jogo"), estado, frozenset(), (),
+                            False, True)
+        return exp.aparelhos_geridos_html(gestao)
+
+    assert cartao("forca", "volume").count('class="mj-ap-cc-rot"') == 2
+    assert 'class="mj-ap-cc-rot"' not in cartao("forca")
+
+
+def test_o_desenho_da_janela_do_modo_imersao_e_o_que_o_gerador_escreve() -> None:
+    """O `mockup/janela-do-modo-imersao.html` sai do `janela_do_imersao.py`, do mesmo
+    `modificacao_miolo_html` do produto: o HTML à mão que diverge do gerador reprova aqui."""
+    import janela_do_imersao as gerador
+
+    gravada = (pathlib.Path(__file__).resolve().parents[2] / "mockup" / gerador.NOME).read_text(
+        encoding="utf-8")
+    assert gravada == "\n".join(linha.rstrip() for linha in gerador.pagina().split("\n"))
+    assert "cv-faixa" not in gravada and gravada.count('class="tela-nova"') == 1
+    assert re.findall(r'<label for="mj-aba-\d+">([^<]+)<', gravada) == [
+        "Jogo", "Sentidos", "Efeitos", "Ensinar este jogo"]

@@ -586,6 +586,8 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
 - **`cartao`** (desde 16/11/2026): o nome (até 30 letras) do cartão em que a opção mora dentro da aba. As opções
   do mesmo cartão viram um cartão só, numa grade que corre em colunas, no lugar da primeira opção; a opção de
   `rotulo` igual ao nome do cartão é a linha do título, e as outras vêm embaixo. Sem essa opção, o título é o nome.
+  O cartão de duas opções `ligado` ou mais, sem a linha do título, vira uma fileira de chaves acima dos cartões:
+  cada opção é uma pílula com o rótulo, acesa quando ligada.
 - **`canal`** (desde 16/11/2026): `haptica`, `vibracao`, `gatilho`, `luz`, `leds`, `som`, `mira` ou `microfone`, a
   peça do controle de que a opção fala. Com o pedaço `controle` no `agora`, o ponteiro sobre a linha (ou sobre o
   cartão da linha) acende aquela peça no desenho. Os dois entram depois da 0.9.5.4, com a mesma `api` 2; o Hefesto de
@@ -598,13 +600,12 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   (`src/hefesto_dualsense4unix/mods/leitura_da_caixa.py`).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil`, `aparelhos`, `conexoes` e `linhas` (os pares que a extensão publica), sem repetir.
-  Desde 16/11/2026, também `controle`, `clima` e `ao_vivo`, o controle vivo. O `controle` é o desenho do «Mapa dos
+  Desde 16/11/2026, também `controle` e `clima`, o controle vivo. O `controle` é o desenho do «Mapa dos
   controles», no plástico do controle escolhido, com as peças que a extensão escreveu há pouco (1,5 s) acesas, e
   um chip por controle ligado, na cor do plástico, para escolher qual o desenho mostra. O `clima` é a curva do
-  `nivel` dos últimos 30 s, com o `limiar` do estado tracejado e «Tenso» quando o agora passa dele. O `ao_vivo` é a
-  faixa embaixo das duas colunas: uma linha por canal `escrever:` das permissões, com o que a extensão escreveu nos
-  últimos 30 s, na cor do plástico de cada controle. A peça acende pelo que chegou ao controle (a porta anota a
-  escrita que passou), nunca pelo que a extensão diz. Os três entram depois da 0.9.5.4, com a mesma `api` 2.
+  `nivel` dos últimos 30 s, com o `limiar` do estado tracejado e «Tenso» quando o agora passa dele. A peça acende
+  pelo que chegou ao controle (a porta anota a escrita que passou), nunca pelo que a extensão diz. Os dois entram
+  depois da 0.9.5.4, com a mesma `api` 2.
 - **`abas`** (desde 16/11/2026): a ordem das abas, até 12 nomes de grupo. As abas que a lista não cita vêm depois,
   na ordem de sempre; a página própria fica por último.
 - **`conexoes`** (desde 01/11/2026): o mapa `{id da conexão: {liga, escolha?}}`, até 8, que faz da coluna
@@ -632,14 +633,14 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
   aparelhos, conexoes, ajustes}`, mais `ao_vivo` (com a extensão conectada), `linhas`, `presentes`, `limiar` e <!-- noqa-acento: chave do estado -->
-  `jogo` (o jogo em cena) quando os há. O `ao_vivo` (desde 16/11/2026) é `{controles: [{jogador, cor}], trechos: [{canal, jogador, controle,
-  de_ms, ate_ms, todos?}]}`: os controles ligados, com o nome do plástico, e o que a extensão escreveu nos últimos
-  30 s, em trechos (há quantos milissegundos começou e acabou; as escritas de um canal a menos de 0,6 s uma da
-  outra viram um trecho só), sem o `uniq`. O `controle` é o lugar do controle na lista `controles`, e nulo quando
-  a escrita foi a um controle fora da lista (o de fora, que não tem o desenho do DualSense): esse trecho fica na faixa,
-  sem plástico, e não acende o desenho. `todos` marca a escrita a todos os controles, que acende em qualquer um. Só entra a escrita que passou: a recusada e a coberta por um pedido mais forte, não.
-  A porta guarda até 512 escritas por controle, de no máximo 4 controles (o quinto tira o que escreveu há mais
-  tempo) e mais as que vão a todos, e esquece todas quando a extensão publica `ligado: false` ou fecha a última conexão. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
+  `jogo` (o jogo em cena) quando os há. O `ao_vivo` (desde 16/11/2026) é `{controles: [{jogador, cor}], escritas: [{canal,
+  controle, ha_ms, todos?}]}`: os controles ligados, com o nome do plástico, e a última escrita de cada canal em
+  cada controle nos últimos 2 s (há quantos milissegundos), sem o `uniq`. O `controle` é o lugar do controle na
+  lista `controles`, e nulo quando a escrita foi a um controle fora da lista (o de fora, que não tem o desenho do
+  DualSense): essa não acende o desenho. `todos` marca a escrita a todos os controles, que acende em qualquer um.
+  Só entra a escrita que passou: a recusada e a coberta por um pedido mais forte, não. A porta guarda só a última
+  escrita de cada canal, de no máximo 4 controles (o quinto tira o que escreveu há mais tempo) e mais a de todos,
+  e esquece tudo quando a extensão publica `ligado: false` ou fecha a última conexão. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
   coluna mostra cada pedaço vazio, sem número. Com o `ligado: false` da própria extensão (o «Parar tudo»), o nível
   e o perfil ficam vazios e as conexões e os aparelhos seguem como a extensão os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;

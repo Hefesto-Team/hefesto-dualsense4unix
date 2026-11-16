@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Estúdio</title>
+<style>
+:root { --fundo: var(--app-bg, #21222c); --caixa: var(--elevated, #2b2d3a); --texto: var(--fg, #f8f8f2); --apagado: var(--texto-mudo, #9a9eb8); --acento: var(--purple, #bd93f9); --borda: var(--border-sutil, #343746); --borda-forte: var(--border-forte, #44475a); --laranja: var(--orange, #ffb86c); --sel: var(--sel-bg, rgba(189,147,249,.16)); }
+html, body { height: 100%; }
+body { margin: 0; padding: 10px 12px; box-sizing: border-box; background: var(--fundo); color: var(--texto); font: 12.5px/1.4 'Space Grotesk', system-ui, sans-serif; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+button { background: var(--caixa); color: var(--texto); border: 1px solid var(--borda-forte); border-radius: 7px; min-height: 28px; padding: 3px 12px; font: inherit; cursor: pointer; }
+button:hover { border-color: var(--acento); }
+button.principal { background: var(--acento); color: #1e1f29; border-color: var(--acento); font-weight: 600; }
+button[hidden], section[hidden] { display: none; }
+.barra { display: flex; align-items: center; gap: 8px; flex: none; }
+.vistas { display: inline-flex; border: 1px solid var(--borda-forte); border-radius: 8px; overflow: hidden; }
+.vistas button { border: 0; border-radius: 0; background: transparent; color: var(--apagado); }
+.vistas button.on { background: var(--sel); color: var(--texto); box-shadow: inset 0 -2px 0 var(--acento); }
+.fim { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+#area { flex: 1 1 auto; min-height: 0; border: 1px solid var(--borda); border-radius: 9px; background: var(--caixa); padding: 10px 12px; overflow: auto; display: flex; flex-direction: column; }
+#area > section { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#area > section[hidden] { display: none; }
+#frase { font-size: 24px; font-weight: 600; margin: 8px 0 4px; }
+#vez, .apagado { color: var(--apagado); }
+.linha { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+textarea { flex: 1 1 auto; min-height: 0; width: 100%; box-sizing: border-box; font: 12px/1.4 'JetBrains Mono', monospace; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda); border-radius: 8px; padding: 8px; resize: none; }
+#desenho { flex: 1 1 auto; min-height: 0; width: 100%; height: 100%; }
+#erros-do-grafo, #erros-do-texto { white-space: pre-line; margin-top: 6px; }
+#recado { color: var(--laranja); }
+#recado:empty { display: none; }
+select, input { background: var(--fundo); color: var(--texto); border: 1px solid var(--borda-forte); border-radius: 7px; min-height: 28px; padding: 2px 8px; font: inherit; }
+</style>
+</head>
+<body>
+<div class="barra">
+  <button id="ensinar" class="principal" data-gesto="ensinar" title="O Hefesto pergunta, você joga, e a receita deste jogo se monta">Ensinar este jogo</button>
+  <span class="vistas" role="group" aria-label="A receita">
+    <button id="ver-grafo" class="on" data-gesto="grafo" title="A receita em caixas ligadas">Grafo</button>
+    <button id="ver-blocos" data-gesto="blocos" title="A receita em blocos de quando e faça">Blocos</button>
+    <button id="ver-texto" data-gesto="texto" title="A receita em texto, para exportar e importar">Texto</button>
+  </span>
+  <span class="fim">
+    <span id="linha-do-tempo" class="apagado"></span>
+    <button id="gravar" data-gesto="gravar" title="Grava o que o jogo faz agora">Gravar</button>
+    <button id="parar" data-gesto="parar" title="Para de gravar ou de tocar">Parar</button>
+    <button id="tocar" data-gesto="tocar" title="Toca a gravação no controle">Tocar</button>
+  </span>
+</div>
+<div id="recado" role="status"></div>
+<div id="area">
+<section id="escolha" hidden>
+  <div class="linha" id="cacadores"></div>
+</section>
+<section id="caca" hidden>
+  <div id="frase"></div>
+  <div id="vez"></div>
+  <div class="linha">
+    <button id="marcar" class="principal" data-gesto="marcar">Feito</button>
+    <button id="cancelar" data-gesto="cancelar">Cancelar</button>
+  </div>
+</section>
+<section id="nomear" hidden>
+  <div id="frase-do-achado"></div>
+  <div class="linha">
+    <input id="nome" maxlength="40" placeholder="Nome">
+    <button id="guardar" class="principal" data-gesto="guardar">Guardar</button>
+  </div>
+</section>
+<section id="blocos" hidden>
+  <datalist id="nomes-do-quando"></datalist>
+  <div id="lista-de-blocos"></div>
+  <div class="linha">
+    <button id="montar" class="principal" data-gesto="montar">Montar</button>
+  </div>
+</section>
+<section id="grafo" hidden>
+  <svg id="desenho" role="img" aria-label="Grafo da receita"></svg>
+  <div id="erros-do-grafo" class="apagado"></div>
+</section>
+<section id="comunidade" hidden>
+  <div id="origem"></div>
+  <div id="espera-a-memoria" class="apagado" hidden>Esta receita lê a memória: ligue «Memória neste jogo» na aba Sentidos</div>
+</section>
+<section id="texto" hidden>
+  <textarea id="receita-em-texto" spellcheck="false" rows="18"></textarea>
+  <div id="erros-do-texto" class="apagado"></div>
+  <div class="linha">
+    <button id="exportar" data-gesto="exportar">Exportar</button>
+    <button id="importar" class="principal" data-gesto="importar">Importar</button>
+  </div>
+</section>
+</div>
+<script>
+"use strict";
+const ROTULOS = { valor: "Valor", som: "Som", tela: "Canto da tela" };
+const el = (id) => document.getElementById(id);
+const mandar = (pedido) => window.parent.postMessage(pedido, "*");
+const segundos = (n) => Number(n).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " s";
+const frase = (texto) => (texto ? String(texto).charAt(0).toUpperCase() + String(texto).slice(1) : "");
+const VISTA_DO_BOTAO = { grafo: "ver-grafo", blocos: "ver-blocos", texto: "ver-texto" };
+const mostrar = (qual) => {
+  for (const id of ["escolha", "caca", "nomear", "blocos", "grafo", "texto", "comunidade"]) el(id).hidden = id !== qual;
+  for (const [vista, botao] of Object.entries(VISTA_DO_BOTAO)) el(botao).classList.toggle("on", vista === qual);
+};
+let vista = null;
+const PARA = { todos: "Todos", quem_levou: "Quem levou" };
+function campo(rotulo, filho) {
+  const caixa = document.createElement("label");
+  caixa.textContent = rotulo + " ";
+  caixa.append(filho);
+  return caixa;
+}
+function desenharBlocos() {
+  const nomes = el("nomes-do-quando");
+  nomes.replaceChildren(...vista.quando.map((q) => Object.assign(document.createElement("option"), { value: q.nome })));
+  const lista = el("lista-de-blocos");
+  lista.replaceChildren();
+  vista.blocos.forEach((bloco, i) => {
+    const linha = document.createElement("div");
+    linha.className = "linha";
+    const quando = Object.assign(document.createElement("input"), { value: bloco.quando });
+    quando.setAttribute("list", "nomes-do-quando");
+    quando.dataset.gesto = "quando-" + i;
+    quando.addEventListener("change", () => { bloco.quando = quando.value; });
+    const faca = document.createElement("select");
+    faca.dataset.gesto = "faca-" + i;
+    for (const efeito of vista.faca) {
+      const opcao = Object.assign(document.createElement("option"), { value: efeito.nome, textContent: efeito.nome, title: efeito.dica });
+      opcao.selected = (bloco.faca || [])[0] === efeito.nome;
+      faca.append(opcao);
+    }
+    faca.addEventListener("change", () => { bloco.faca = [faca.value, ...(bloco.faca || []).slice(1)]; });
+    const prioridade = Object.assign(document.createElement("input"), { type: "number", min: 0, max: 100, value: bloco.prioridade ?? "" });
+    prioridade.addEventListener("change", () => {
+      if (prioridade.value === "") delete bloco.prioridade; else bloco.prioridade = Number(prioridade.value);
+    });
+    const para = document.createElement("select");
+    for (const [valor, rotulo] of Object.entries(PARA)) {
+      para.append(Object.assign(document.createElement("option"), { value: valor, textContent: rotulo, selected: bloco.para === valor }));
+    }
+    para.addEventListener("change", () => { bloco.para = para.value; });
+    linha.append(campo("Quando", quando), campo("Faça", faca), campo("Prioridade", prioridade), campo("Para", para));
+    lista.append(linha);
+  });
+  mostrar("blocos");
+}
+const SVG = "http://www.w3.org/2000/svg";
+function desenharGrafo(resposta) {
+  const desenho = el("desenho");
+  desenho.replaceChildren();
+  const comErro = new Set((resposta.erros || []).map((e) => e.no));
+  const porColuna = {};
+  const lugar = {};
+  for (const no of resposta.nos) {
+    const linha = (porColuna[no.coluna] = (porColuna[no.coluna] || 0) + 1) - 1;
+    lugar[no.id] = { x: 10 + no.coluna * 150, y: 10 + linha * 28 };
+  }
+  const altura = 20 + 28 * Math.max(1, ...Object.values(porColuna));
+  const largura = 150 + 150 * Math.max(0, ...resposta.nos.map((no) => no.coluna));
+  desenho.setAttribute("viewBox", "0 0 " + largura + " " + altura);
+  for (const [de, para] of resposta.arestas) {
+    const linha = document.createElementNS(SVG, "line");
+    Object.entries({ x1: lugar[de].x + 130, y1: lugar[de].y + 10, x2: lugar[para].x, y2: lugar[para].y + 10, stroke: "var(--apagado)" })
+      .forEach(([k, v]) => linha.setAttribute(k, v));
+    desenho.append(linha);
+  }
+  for (const no of resposta.nos) {
+    const caixa = document.createElementNS(SVG, "g");
+    caixa.dataset.gesto = "no-" + no.id;
+    const fundo = document.createElementNS(SVG, "rect");
+    Object.entries({ x: lugar[no.id].x, y: lugar[no.id].y, width: 130, height: 20, rx: 4, fill: "var(--borda)", stroke: comErro.has(no.id) ? "var(--laranja)" : "var(--borda)" })
+      .forEach(([k, v]) => fundo.setAttribute(k, v));
+    const nome = document.createElementNS(SVG, "text");
+    Object.entries({ x: lugar[no.id].x + 6, y: lugar[no.id].y + 14, fill: "var(--texto)", "font-size": 11 })
+      .forEach(([k, v]) => nome.setAttribute(k, v));
+    nome.textContent = no.tipo === "regra" ? "Regra " + no.nome : no.nome;
+    caixa.append(fundo, nome);
+    desenho.append(caixa);
+  }
+  el("erros-do-grafo").textContent = (resposta.erros || []).map((e) => e.no + ": " + e.frase).join("\n");
+  mostrar("grafo");
+}
+function mostrarErros(erros) {
+  el("erros-do-texto").textContent = erros.length ? erros.map((e) => (e.linha ? "Linha " + e.linha : e.no) + ": " + e.frase).join("\n") : "";
+}
+function receber(resposta) {
+  if (!resposta || typeof resposta !== "object") return;
+  el("recado").textContent = "";
+  if (resposta.tipo === "procurado") {
+    el("origem").textContent = "Vale: " + resposta.origem;
+    el("espera-a-memoria").hidden = !resposta.memoria || resposta.memoria_ligada === true;
+    mostrar("comunidade");
+  } else if (resposta.tipo === "recusado" || resposta.tipo === "erro") {
+    el("recado").textContent = frase(resposta.frase);
+  } else if (resposta.tipo === "grafo") {
+    desenharGrafo(resposta);
+  } else if (resposta.tipo === "exportado") {
+    el("receita-em-texto").value = resposta.texto;
+    mostrarErros([]);
+    mostrar("texto");
+  } else if (resposta.tipo === "validado") {
+    mostrarErros(resposta.erros);
+  } else if (resposta.tipo === "importado") {
+    mostrarErros([]);
+  } else if (resposta.tipo === "blocos") {
+    vista = resposta;
+    desenharBlocos();
+  } else if (["gravando", "gravado", "tocando", "tocado", "parado", "montado"].includes(resposta.tipo)) {
+    el("linha-do-tempo").textContent = { gravando: "Gravando", gravado: "Linha do tempo: " + segundos(resposta.segundos), tocando: "Tocando", tocado: "Linha do tempo: " + segundos(resposta.segundos), parado: "", montado: "" }[resposta.tipo];
+  } else if (resposta.tipo === "estudio") {
+    const lista = el("cacadores");
+    lista.replaceChildren();
+    for (const cacador of resposta.cacadores || []) {
+      const botao = document.createElement("button");
+      botao.textContent = ROTULOS[cacador] || cacador;
+      botao.dataset.gesto = "cacador-" + cacador;
+      botao.addEventListener("click", () => mandar({ tipo: "comecar", cacador }));
+      lista.append(botao);
+    }
+    mostrar("escolha");
+  } else if (resposta.tipo === "passo") {
+    el("frase").textContent = frase(resposta.frase);
+    el("vez").textContent = resposta.passo + " de " + resposta.de;
+    mostrar("caca");
+  } else if (resposta.tipo === "achou") {
+    el("frase-do-achado").textContent = frase(resposta.frase);
+    mostrar("nomear");
+  } else if (resposta.tipo === "guardado" || resposta.tipo === "cancelado") {
+    mostrar(null);
+  } else if (resposta.tipo === "nada") {
+    el("frase").textContent = frase(resposta.frase);
+    el("vez").textContent = "";
+    mostrar("caca");
+  }
+}
+window.addEventListener("message", (evento) => receber(evento.data && evento.data.dados ? evento.data.dados : evento.data));
+el("ensinar").addEventListener("click", () => mandar({ tipo: "abrir" }));
+el("ver-blocos").addEventListener("click", () => mandar({ tipo: "blocos" }));
+el("ver-grafo").addEventListener("click", () => mandar({ tipo: "grafo" }));
+el("ver-texto").addEventListener("click", () => mandar({ tipo: "exportar" }));
+el("exportar").addEventListener("click", () => navigator.clipboard && navigator.clipboard.writeText(el("receita-em-texto").value));
+el("receita-em-texto").addEventListener("input", () => mandar({ tipo: "validar", texto: el("receita-em-texto").value }));
+el("importar").addEventListener("click", () => mandar({ tipo: "importar", texto: el("receita-em-texto").value }));
+el("montar").addEventListener("click", () => vista && mandar({ tipo: "montar", vista }));
+for (const tipo of ["gravar", "parar", "tocar"]) el(tipo).addEventListener("click", () => mandar({ tipo }));
+el("marcar").addEventListener("click", () => mandar({ tipo: "passo" }));
+el("cancelar").addEventListener("click", () => mandar({ tipo: "cancelar" }));
+mandar({ tipo: "grafo" });
+el("guardar").addEventListener("click", () => mandar({ tipo: "guardar", nome: el("nome").value }));
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 """O controle vivo da janela de uma extensão: o desenho do Mapa dos controles com as peças que
-a extensão mexe acesas, o clima da cena e a faixa «Ao vivo», uma linha por canal escrito.
+a extensão mexe acesas, e o clima da cena.
 
 O desenho é o MESMO do Mapa (``mapa.controle``, com as cores, os glifos e as ondas da háptica de lá,
 e as regras de tinta do ``mapa.CSS_BASE``): nenhuma cópia redesenhada. Ele entra uma vez na página
@@ -13,7 +13,7 @@ import html
 import pathlib
 import re
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
 _AQUI = pathlib.Path(__file__).resolve().parent
@@ -21,10 +21,7 @@ if str(_AQUI) not in sys.path:
     sys.path.insert(0, str(_AQUI))
 
 ID_DO_MOLDE = "cv-molde"
-JANELA_DA_FAIXA_MS = 30_000
 ACESO_POR_MS = 1_500
-
-CANAIS = ("haptica", "vibracao", "gatilho", "luz", "leds", "som", "mira")
 
 PECAS_DO_CANAL: dict[str, tuple[str, ...]] = {
     "haptica": ("feat-haptica",),
@@ -36,23 +33,6 @@ PECAS_DO_CANAL: dict[str, tuple[str, ...]] = {
     "mira": ("feat-giroscopio",),
     "microfone": ("mic",),
 }
-
-ROTULO_DO_CANAL = {
-    "haptica": "Vibração fina", "vibracao": "Motores", "gatilho": "Gatilhos",
-    "luz": "Barra de luz", "leds": "Luzes de jogador", "som": "Alto-falante", "mira": "Mira",
-}
-
-CANAL_DA_PERMISSAO = {f"escrever:{c}": c for c in CANAIS}
-
-
-class Marca(NamedTuple):
-    """Um trecho da faixa: o canal, de quanto tempo atrás começou e acabou (ms) e a cor."""
-
-    canal: str
-    de_ms: int
-    ate_ms: int
-    cor: str
-
 
 _FOLHA = re.compile(r'<style id="(?:mp-)?cores-do-dualsense-folha">.*?</style>', re.S)
 _GRADIENTE_DO_MODELO = re.compile(r'<linearGradient id="(?:mp-)?casca-[^"]*".*?</linearGradient>', re.S)
@@ -147,17 +127,14 @@ class ControleDoVivo(NamedTuple):
 
 
 class Vivo(NamedTuple):
-    """O que o controle vivo desenha: os controles, o do desenho (o lugar dele na lista), os
-    trechos da faixa, as peças acesas no do desenho, o clima e o limiar dele, e os canais que a
-    extensão pode escrever."""
+    """O que o controle vivo desenha: os controles, o do desenho (o lugar dele na lista), as
+    peças acesas nele, e o clima e o limiar dele."""
 
     controles: tuple[ControleDoVivo, ...] = ()
     escolhido: int | None = None
-    marcas: tuple[Marca, ...] = ()
     acesos: frozenset[str] = frozenset()
     clima: tuple[int, ...] = ()
     limiar: int | None = None
-    canais: tuple[str, ...] = ()
 
 
 COR_SEM_PLASTICO = "var(--comment)"
@@ -224,12 +201,12 @@ def nome_do_controle(jogador: int | None, cor: str, posicao: int) -> str:
     return cor.strip() or f"Jogador {jogador if jogador is not None else posicao}"
 
 
-def vivo_de(estado: Mapping[str, Any] | None, canais: Sequence[str], escolhido: int | None,
+def vivo_de(estado: Mapping[str, Any] | None, escolhido: int | None,
             clima: Sequence[int] = ()) -> Vivo:
-    """O ``Vivo`` do ``ao_vivo`` que o ``mods.agora`` devolve (os controles e os trechos do que a
-    extensão escreveu): o do desenho é o ``escolhido`` (o lugar na lista) se ainda está ligado,
-    senão o primeiro. O trecho de todos acende em qualquer um; o de um controle fora da lista (o
-    de fora, que não tem este desenho) fica só na faixa, sem plástico."""
+    """O ``Vivo`` do ``ao_vivo`` que o ``mods.agora`` devolve (os controles e as escritas
+    recentes): o do desenho é o ``escolhido`` (o lugar na lista) se ainda está ligado, senão o
+    primeiro. A escrita a todos acende em qualquer um; a de um controle fora da lista (o de fora,
+    que não tem este desenho) não acende nada."""
     estado = estado or {}
     bruto = estado.get("ao_vivo")
     ao: Mapping[str, Any] = bruto if isinstance(bruto, Mapping) else {}
@@ -242,25 +219,16 @@ def vivo_de(estado: Mapping[str, Any] | None, canais: Sequence[str], escolhido: 
                                         _cor_de(colorway)))
     if escolhido is None or not 0 <= escolhido < len(controles):
         escolhido = 0 if controles else None
-    marcas, acesos = [], set()
-    for t in ao.get("trechos") or ():
-        if not isinstance(t, Mapping) or t.get("canal") not in ROTULO_DO_CANAL:
+    acesos = set()
+    for e in ao.get("escritas") or ():
+        if not isinstance(e, Mapping) or e.get("canal") not in PECAS_DO_CANAL:
             continue
-        de, ate = _inteiro(t.get("de_ms")), _inteiro(t.get("ate_ms"))
-        posicao = _inteiro(t.get("controle"))
-        if de is None or ate is None:
-            continue
-        if posicao is not None and not 0 <= posicao < len(controles):
-            posicao = None
-        cor = controles[posicao].cor if posicao is not None else COR_SEM_PLASTICO
-        marcas.append(Marca(str(t["canal"]), de, ate, cor))
-        no_desenho = t.get("todos") is True or (posicao is not None and posicao == escolhido)
-        if ate <= ACESO_POR_MS and no_desenho:
-            acesos.add(str(t["canal"]))
-    limiar = _inteiro(estado.get("limiar"))
-    return Vivo(tuple(controles), escolhido, tuple(marcas), frozenset(acesos),
-                tuple(int(v) for v in clima), limiar,
-                tuple(c for c in CANAIS if c in set(canais) and c in ROTULO_DO_CANAL))
+        ha, posicao = _inteiro(e.get("ha_ms")), _inteiro(e.get("controle"))
+        no_desenho = e.get("todos") is True or (posicao is not None and posicao == escolhido)
+        if ha is not None and ha <= ACESO_POR_MS and no_desenho:
+            acesos.add(str(e["canal"]))
+    return Vivo(tuple(controles), escolhido, frozenset(acesos),
+                tuple(int(v) for v in clima), _inteiro(estado.get("limiar")))
 
 
 def lugar_html(vivo: Vivo) -> str:
@@ -273,39 +241,6 @@ def lugar_html(vivo: Vivo) -> str:
     estilo = f' style="{html.escape(variaveis)}"' if variaveis else ""
     return (f'{defs}<div class="cv-lugar"{estilo} data-acesos="{acesos}" '
             f'data-claros="{" ".join(claros)}"></div>')
-
-
-def _pct(ha_ms: int) -> float:
-    return round(100 - 100 * min(max(ha_ms, 0), JANELA_DA_FAIXA_MS) / JANELA_DA_FAIXA_MS, 2)
-
-
-def linhas_da_faixa(canais: Sequence[str], marcas: Iterable[Marca]) -> str:
-    """As linhas da faixa «Ao vivo», uma por canal, com os trechos de cada uma: o pedaço que o
-    tique repinta."""
-    por_canal: dict[str, list[Marca]] = {}
-    for m in marcas:
-        por_canal.setdefault(m.canal, []).append(m)
-    linhas = []
-    for canal in canais:
-        trechos = "".join(
-            f'<i class="cv-mk" style="left:{_pct(m.de_ms)}%;'
-            f'width:{max(round(_pct(m.ate_ms) - _pct(m.de_ms), 2), 0.6)}%;'
-            f'--plastico:{html.escape(m.cor)}"></i>'
-            for m in por_canal.get(canal, ()))
-        linhas.append(
-            f'<span class="cv-rot" data-canal="{canal}">{ROTULO_DO_CANAL[canal]}</span>'
-            f'<span class="cv-pista" data-canal="{canal}">{trechos}</span>')
-    return "".join(linhas)
-
-
-def faixa_html(canais: Sequence[str], marcas: Iterable[Marca], *, ident: str = "") -> str:
-    """A faixa «Ao vivo»: uma linha por canal que a extensão pode escrever, com o que a extensão
-    escreveu nos últimos 30 s, na cor do plástico de cada controle; o agora é a ponta direita.
-    ``ident`` é o pedaço das linhas, o que o tique repinta."""
-    atributo = f' id="{ident}"' if ident else ""
-    return (f'<div class="mj-faixa cv-faixa" data-agora="ao_vivo"><div class="cv-faixa-topo">'
-            f'<span class="pc-sub">Ao vivo</span><span class="cv-30">30 s</span></div>'
-            f'<div class="cv-linhas"{atributo}>{linhas_da_faixa(canais, marcas)}</div></div>')
 
 
 def clima_html(pontos: Sequence[int], limiar: int | None, maximo: int = 10) -> str:
@@ -373,13 +308,6 @@ CSS = """#mod-janela .cv-defs { position:absolute;width:0;height:0;overflow:hidd
 #mod-janela .cv-limiar { stroke:var(--texto-mudo);stroke-dasharray:3 3;stroke-width:1;vector-effect:non-scaling-stroke }
 #mod-janela .cv-agora { fill:var(--orange) }
 #mod-janela .cv-tenso { font-size:11.5px;color:var(--orange) }
-#mod-janela .cv-faixa { border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:7px 12px 8px;display:flex;flex-direction:column;gap:4px }
-#mod-janela .cv-faixa-topo { display:flex;align-items:center }
-#mod-janela .cv-30 { margin-left:auto;font:500 11px 'JetBrains Mono',monospace;color:var(--texto-mudo) }
-#mod-janela .cv-linhas { display:grid;grid-template-columns:118px minmax(0,1fr);gap:3px 10px }
-#mod-janela .cv-rot { font-size:11px;color:var(--texto-suave);line-height:12px;white-space:nowrap }
-#mod-janela .cv-pista { position:relative;height:12px;border-radius:3px;background:rgba(255,255,255,.03);overflow:hidden }
-#mod-janela .cv-mk { position:absolute;top:2px;height:8px;border-radius:4px;background:var(--plastico);min-width:4px }
 """
 
 JS = r"""(function(){

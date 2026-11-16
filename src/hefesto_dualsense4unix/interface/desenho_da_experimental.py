@@ -826,6 +826,25 @@ def _grade(itens: Sequence[OpcaoDaJanela]) -> str:
             f'<div class="tq-lista" aria-label="{_a(dono.rotulo)}">{linhas}</div></div>')
 
 
+def _fileira_de_chaves(nome: str, itens: Sequence[OpcaoDaJanela]) -> str:
+    """O cartão só de chaves: uma fileira, e cada opção é a própria chave, o rótulo com a luz
+    acesa quando ligada; o nome do cartão é o rótulo da fileira para quem lê a tela."""
+    chaves = "".join(
+        f'<span class="mj-fc{" on" if o.valor else ""}" id="{PEDACO}op-{_a(o.id)}"'
+        f'{_dica_da_linha(o)} role="switch" aria-checked="{"true" if o.valor else "false"}" '
+        f'tabindex="0" data-gesto="{GESTO_DA_OPCAO}" data-v="{_a(o.mod)}:{_a(o.id)}">'
+        f'{_e(o.rotulo)}</span>'
+        for o in itens)
+    return f'<div class="mj-fileira" role="group" aria-label="{_a(nome)}">{chaves}</div>'
+
+
+def _so_chaves(nome: str, itens: Sequence[OpcaoDaJanela]) -> bool:
+    """O cartão de duas chaves ou mais, sem a linha do título, vira a fileira de chaves."""
+    alvo = nome.strip().casefold()
+    return len(itens) >= 2 and all(
+        o.tipo == "ligado" and o.rotulo.strip().casefold() != alvo for o in itens)
+
+
 def _cartao_html(nome: str, itens: Sequence[OpcaoDaJanela]) -> str:
     """Um cartão: a opção de rótulo igual ao nome é a linha do título (sem essa opção, o nome
     sozinho), e as outras, as linhas de baixo. O ``canal`` da primeira que o declara acende a peça no
@@ -854,11 +873,18 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
         if not partes or partes[-1][0] != "soltas":
             partes.append(("soltas", []))
         partes[-1][1].append(o)
-    return "".join(
-        _linhas_soltas(corpo) if tipo == "soltas"
-        else '<div class="mj-cartoes">' + "".join(
-            _cartao_html(nome, juntas) for nome, juntas in corpo.items()) + "</div>"
-        for tipo, corpo in partes)
+    saida = []
+    for tipo, corpo in partes:
+        if tipo == "soltas":
+            saida.append(_linhas_soltas(corpo))
+            continue
+        fileiras = [(n, j) for n, j in corpo.items() if _so_chaves(n, j)]
+        cartoes = [(n, j) for n, j in corpo.items() if not _so_chaves(n, j)]
+        saida.extend(_fileira_de_chaves(n, j) for n, j in fileiras)
+        if cartoes:
+            saida.append('<div class="mj-cartoes">' + "".join(
+                _cartao_html(n, j) for n, j in cartoes) + "</div>")
+    return "".join(saida)
 
 
 def _linhas_soltas(itens: Sequence[OpcaoDaJanela]) -> str:
@@ -1144,11 +1170,10 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     ``gestao`` são os aparelhos geridos sem ``grupo``; ``ligas``, pelo id, as conexões que a linha
     liga e desliga no clique; ``vivo``, o controle vivo dos pedaços ``controle`` e ``clima``.
     """
-    cv_vivo = vivo
-    vivo = bool(estado and estado.get("ligado") is True)
+    ligada = bool(estado and estado.get("ligado") is True)
     titulo = "Conexão" if ligas else "Agora"
     linhas = [f'<div class="ja-ag-topo"><span class="pc-sub">{titulo}</span>'
-              f"{_topo_do_agora(vivo, processo, porque)}</div>"]
+              f"{_topo_do_agora(ligada, processo, porque)}</div>"]
     declarados = [x for x in PEDACOS_DO_AGORA if x in pedacos]
     for pedaco in declarados:
         if pedaco == "conexoes":  # (noqa-acento)
@@ -1160,7 +1185,7 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
             if len(declarados) > 1:
                 linhas.append('<div class="ja-sep"></div>')
         elif pedaco == "nivel":
-            nivel = estado.get("nivel") if vivo and estado else None
+            nivel = estado.get("nivel") if ligada and estado else None
             nivel = nivel if isinstance(nivel, int) and not isinstance(nivel, bool) else None
             numero = (f"<b>{nivel}</b><span>/ {NIVEL_MAXIMO}</span>" if nivel is not None
                       else f"<b>{SEM_VALOR}</b>")
@@ -1171,23 +1196,23 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
                 f'<span class="ja-rot">Nível</span><span class="ja-nivel">{numero}</span></div>'
                 f'<div class="ja-degraus">{degraus}</div></div>')
         elif pedaco == "controle":
-            o_vivo = cv_vivo or cv.Vivo()
+            o_vivo = vivo or cv.Vivo()
             linhas.append(f'<div class="cv-controle" data-agora="controle">'
                           f'{cv.chips_html(o_vivo, GESTO_DO_CONTROLE_VIVO, mod)}'
                           f'{cv.lugar_html(o_vivo)}</div>')
         elif pedaco == "clima":
-            o_vivo = cv_vivo or cv.Vivo()
-            curva = (cv.clima_html(o_vivo.clima, o_vivo.limiar) if vivo
+            o_vivo = vivo or cv.Vivo()
+            curva = (cv.clima_html(o_vivo.clima, o_vivo.limiar) if ligada
                      else f'<span class="cv-clima-vazio">{SEM_VALOR}</span>')
             linhas.append('<div class="cv-clima-linha" data-agora="clima"><span class="ja-rot">'
                           f'Clima</span>{curva}</div>')
         elif pedaco == "perfil":
-            perfil = estado.get("perfil") if vivo and estado else None
+            perfil = estado.get("perfil") if ligada and estado else None
             texto = _e(perfil) if isinstance(perfil, str) and perfil.strip() else SEM_VALOR
             linhas.append('<div class="ja-perfil-linha" data-agora="perfil"><span class="ja-rot">'
                           f'Perfil</span><span class="ja-perfil-nome">{texto}</span></div>')
         elif pedaco == "linhas":
-            linhas.append(_linhas_do_agora_html(estado if vivo else None))
+            linhas.append(_linhas_do_agora_html(estado if ligada else None))
         else:
             itens = (aparelhos_na_coluna_html(gestao) if gestao and not gestao.aparelhos.grupo
                      else "".join(_aparelho_html(a) for a in itens_do_estado(estado, pedaco)))
@@ -1345,7 +1370,7 @@ def pagina_html(mod: str, pagina: PaginaDaJanela) -> str:
                 f'<p class="mj-pagina-recusa">{_e(pagina.recusa)}</p></div>')
     quadro = (f'<iframe class="mj-pagina-quadro" sandbox="allow-scripts" '
               f'referrerpolicy="no-referrer" title="{_a(pagina.rotulo)}" data-mod="{_a(mod)}" '
-              f'style="height:{int(pagina.altura)}px" '
+              f'style="height:{int(pagina.altura)}px;--altura:{int(pagina.altura)}px" '
               f'srcdoc="{_a(documento_da_pagina(pagina.html))}"></iframe>')
     return (f'<div class="mj-pagina" id="mod-pagina" data-dica="{_a(pagina.rotulo)}">{quadro}'
             f'</div><output class="mj-pagina-resposta" data-campo="{CAMPO_DA_RESPOSTA}" '
@@ -1355,6 +1380,10 @@ def pagina_html(mod: str, pagina: PaginaDaJanela) -> str:
 ESTILO_DA_PAGINA = """#mod-janela .mj-pagina { margin-top:8px;border:1px solid var(--border-sutil);
   border-radius:8px;background:var(--panel);overflow:hidden }
 #mod-janela .mj-pagina-quadro { display:block;width:100%;border:0;background:transparent }
+#mod-janela .mj-abas > .mj-tela:has(> .mj-pagina) { display:flex;flex-direction:column }
+#mod-janela .mj-abas > .mj-tela > .mj-pagina { flex:1 1 auto;min-height:0;display:flex }
+#mod-janela .mj-abas > .mj-tela > .mj-pagina > .mj-pagina-quadro { height:auto !important;
+  max-height:var(--altura);flex:1 1 auto }
 #mod-janela .mj-pagina-recusa { margin:0;padding:10px 12px;color:var(--texto-suave) }
 """
 _FORA_DA_PAGINA = """(function(){
@@ -1589,7 +1618,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     desligada apaga as ações. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é o
     arranjo C: a coluna à esquerda e os grupos em abas (``aba`` a aberta, ``abas`` a ordem), a
     página própria na última; ``em_curso`` e ``armada`` são as ações que esperam, ``livre`` a faixa
-    de baixo (sem ele, ``ao_vivo`` põe a de ``vivo``), ``controles`` a aba dos controles e ``ligas``
+    de baixo, ``vivo`` o controle aceso da coluna, ``controles`` a aba dos controles e ``ligas``
     faz da coluna a «Conexão»."""
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
@@ -1618,9 +1647,6 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         fora = dica_da_barra_fora(nome, processo, gestao)
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
-        if not faixa and "ao_vivo" in agora:
-            o_vivo = vivo or cv.Vivo()
-            faixa = cv.faixa_html(o_vivo.canais, o_vivo.marcas, ident=f"{PEDACO}ao-vivo")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
                           processo=processo, porque=porque, faixa=faixa, gestao=gestao,
                           ligas=ligas, vivo=vivo)
@@ -1848,20 +1874,32 @@ JANELAS = ("novo-lancador", "escolher-jogo", "impedimentos", "lanc-conf",
            "modificacao")  # (noqa-acento)
 
 
+def janela_da_extensao(miolo: str) -> str:
+    """A janela «Configurar» de uma extensão, com ``miolo`` dentro."""
+    return _fragmento("modificacao").replace("{{MODIFICACAO}}", miolo).strip()  # (noqa-acento)
+
+
+def miolo_do_desenho_da_extensao() -> str:
+    """O miolo da janela de exemplo que a 07 do desenho leva."""
+    return modificacao_miolo_html(
+        "Minha extensão", OPCOES_DO_DESENHO_DAS_PECAS, mod="exemplo", agora=AGORA_DO_DESENHO,
+        estado=ESTADO_DA_CONEXAO_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
+        aparelhos=APARELHOS_DO_DESENHO, em_curso=frozenset({("testar", "ap-2")}),
+        livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO, ligas=LIGAS_DO_DESENHO,
+        pagina=PAGINA_DO_DESENHO)
+
+
 def telas() -> str:
     """Todas as janelas da aba, em ordem, prontas para entrar antes do fim da página."""
     partes = []
     for nome in JANELAS:
+        if nome == "modificacao":  # (noqa-acento)
+            partes.append(janela_da_extensao(miolo_do_desenho_da_extensao()))
+            continue
         texto = _fragmento(nome)
         texto = texto.replace("{{ESCOLHA}}", escolha_miolo_html("Steam", JOGOS_DA_STEAM, desenho=True))
         texto = texto.replace("{{CONF}}", lanc_conf_miolo_html(CONF_DE_EXEMPLO))
         texto = texto.replace("{{IMPEDIMENTOS}}", impedimentos_miolo_html("Steam", IMPEDIMENTOS_DE_EXEMPLO))
-        texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
-            "Minha extensão", OPCOES_DO_DESENHO_DAS_PECAS, mod="exemplo", agora=AGORA_DO_DESENHO,
-            estado=ESTADO_DA_CONEXAO_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
-            aparelhos=APARELHOS_DO_DESENHO, em_curso=frozenset({("testar", "ap-2")}),
-            livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO, ligas=LIGAS_DO_DESENHO,
-            pagina=PAGINA_DO_DESENHO))
         partes.append(texto.strip())
     return ("\n".join(partes) + f"\n{sprite_dos_botoes()}\n{cv.molde_html()}"
             f"\n<style data-aba=\"experimental\">\n{ESTILO_DA_PAGINA}{cv.css_do_molde()}</style>"
@@ -2042,20 +2080,24 @@ def _por_cento(bateria: Any) -> str:
 
 
 def _controles_no_cartao(g: Gestao, ap: Mapping[str, Any]) -> str:
-    """Os controles do aparelho numa linha do cartão dele, sem rótulo: a chave com o glifo e,
-    ao lado, as escolhas. Vazio quando a aba dos controles é outra ou ele não os tem."""
+    """Os controles do aparelho numa linha do cartão dele: a chave com o glifo e, ao lado, as
+    escolhas. A escolha só leva o rótulo quando o cartão tem mais de uma, que sem ele seriam
+    iguais. Vazio quando a aba dos controles é outra ou ele não os tem."""
     controles = list(ap.get("controles") or []) if g.controles else []
     if not controles:
         return ""
     alvo = str(ap["id"])
+    com_rotulo = sum(1 for c in controles if c["tipo"] == "escolha") > 1
     partes = []
     for c in controles:
         em_curso = (str(c["id"]), alvo) in g.em_curso
         miolo = (_chave_do_controle(g.mod, alvo, c, em_curso, g.desligada) if c["tipo"] == "chave"
                  else _miolo_do_controle(g.mod, alvo, c, em_curso, g.desligada))
         dica = f' data-dica="{_a(c["dica"])}"' if c.get("dica") and c["tipo"] != "chave" else ""
+        rotulo = (f'<span class="mj-ap-cc-rot">{_e(c.get("rotulo") or "")}</span>'
+                  if com_rotulo and c["tipo"] == "escolha" and c.get("rotulo") else "")
         partes.append(f'<span class="mj-ap-cc-um" data-controle-do-aparelho="{_a(c["id"])}"'
-                      f"{dica}>{miolo}</span>")
+                      f"{dica}>{rotulo}{miolo}</span>")
     return f'<div class="mj-ap-cc">{"".join(partes)}</div>'
 
 

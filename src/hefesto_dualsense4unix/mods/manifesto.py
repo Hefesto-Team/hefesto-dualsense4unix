@@ -742,7 +742,7 @@ class Manifesto(BaseModel):
     opcoes: list[Opcao] = Field(default_factory=list)
     agora: list[
         Literal["nivel", "perfil", "aparelhos", "conexoes", "linhas",  # (noqa-acento)
-                "controle", "clima", "ao_vivo"]
+                "controle", "clima"]
     ] = Field(default_factory=list)
     conexoes: dict[str, LigaDaConexao] = Field(
         default_factory=dict, max_length=CONEXOES_DA_JANELA)

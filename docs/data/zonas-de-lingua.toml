@@ -90,6 +90,11 @@ zona = "TELA"
 razao = "o desenho que o usuário aprovou; a direção é mockup/ -> produto."
 
 [[regra]]
+caminho = "mockup/**/*.json"
+zona = "TELA"
+razao = "o manifesto de exemplo que um gerador do desenho lê; o texto dele vira a janela desenhada."
+
+[[regra]]
 caminho = "**/*.desktop"
 zona = "TELA"
 razao = """o lançador mostra Name e Comment na dock ANTES de a janela existir.

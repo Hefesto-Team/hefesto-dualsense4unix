@@ -1274,7 +1274,7 @@ class _Mexida:
 
 _MEXIDA = _Mexida()
 
-PEDACOS_DO_VIVO = frozenset({"controle", "clima", "ao_vivo"})
+PEDACOS_DO_VIVO = frozenset({"controle", "clima"})
 PASSO_DO_CLIMA_S = 0.5
 PONTOS_DO_CLIMA = 60
 
@@ -1296,10 +1296,7 @@ def _vivo_da_janela(manifesto: Any, estado: dict[str, Any] | None) -> Any:
         if not recentes or agora - recentes[-1][0] >= PASSO_DO_CLIMA_S:
             recentes.append((agora, nivel))
         _MEXIDA.clima = recentes[-PONTOS_DO_CLIMA:]
-    canais = tuple(cv.CANAL_DA_PERMISSAO[p] for p in manifesto.permissoes
-                   if p in cv.CANAL_DA_PERMISSAO)
-    return cv.vivo_de(estado, canais, _MEXIDA.controle_vivo,
-                      tuple(n for _t, n in _MEXIDA.clima))
+    return cv.vivo_de(estado, _MEXIDA.controle_vivo, tuple(n for _t, n in _MEXIDA.clima))
 
 TTL_DO_AGORA_S = 0.5
 METODO_DO_AGORA = "mods.agora"
@@ -1568,10 +1565,6 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             processo=exp.processo_de(do_mod.entrada.ligada, do_mod.estado) if do_mod else "",
             porque=do_mod.porque if do_mod else "", ligas=_MEXIDA.ligas, vivo=vivo,
             mod=_MEXIDA.mod)
-        if vivo is not None and "ao_vivo" in _MEXIDA.agora:
-            from hefesto_dualsense4unix.interface import controle_vivo as cv
-
-            blocos["#mod-ao-vivo"] = cv.linhas_da_faixa(vivo.canais, vivo.marcas)
     carga = _com_os_aparelhos(carga)
     _redesenhar_se_mudou(instaladas)
     carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}

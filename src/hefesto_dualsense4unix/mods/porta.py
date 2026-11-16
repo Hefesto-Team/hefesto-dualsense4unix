@@ -595,11 +595,8 @@ _NOME_DO_CANAL = {
 
 _LADOS = ("esquerdo", "direito")
 
-JANELA_DO_AO_VIVO_S = 30.0
-JUNTA_DO_AO_VIVO_S = 0.6
-ESCRITAS_POR_CONTROLE = 512
+ACESO_DO_AO_VIVO_S = 2.0
 CONTROLES_DO_AO_VIVO = 4
-TRECHOS_DO_AO_VIVO = 240
 
 _DA_MEMORIA = {"memoria.varrer": "varrer", "memoria.refinar": "refinar"}
 
@@ -1147,7 +1144,7 @@ class Porta:
         self._publicacoes: dict[str, deque[float]] = {}
         self._aparelhos_pedidos: dict[str, deque[float]] = {}
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
-        self._escritas: dict[str, dict[str, deque[tuple[float, str]]]] = {}
+        self._escritas: dict[str, dict[str, dict[str, float]]] = {}
         self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
         self._botoes_antes: dict[str | None, frozenset[str]] | None = None
         self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
@@ -2049,18 +2046,20 @@ class Porta:
         return {**saida, "jogo": jogo} if jogo else saida
 
     def _anotar_a_escrita(self, mod_id: str, canal: str, uniq: str) -> None:
-        """O que chegou ao controle, para a faixa «Ao vivo» da janela: só o que foi escrito de
-        fato (nem a recusa, nem o pedido coberto por um mais forte); o ``uniq`` vazio é o de
-        todos."""
-        filas = self._escritas.setdefault(mod_id, {})
-        if uniq not in filas and uniq and sum(1 for u in filas if u) >= CONTROLES_DO_AO_VIVO:
-            velho = min((u for u in filas if u), key=lambda u: filas[u][-1][0] if filas[u] else 0)
-            del filas[velho]
-        filas.setdefault(uniq, deque(maxlen=ESCRITAS_POR_CONTROLE)).append(
-            (self._relogio(), canal))
+        """O que chegou ao controle, para o controle aceso da janela: só o que foi escrito de fato
+        (nem a recusa, nem o pedido coberto por um mais forte); o ``uniq`` vazio é o de todos.
+        Guarda só a última escrita de cada canal, de no máximo ``CONTROLES_DO_AO_VIVO``
+        controles (o seguinte tira o que escreveu há mais tempo) e mais a de todos."""
+        porcontrole = self._escritas.setdefault(mod_id, {})
+        if uniq not in porcontrole and uniq and sum(
+                1 for u in porcontrole if u) >= CONTROLES_DO_AO_VIVO:
+            velho = min((u for u in porcontrole if u),
+                        key=lambda u: max(porcontrole[u].values(), default=0.0))
+            del porcontrole[velho]
+        porcontrole.setdefault(uniq, {})[canal] = self._relogio()
 
     def _esquecer_as_escritas(self, mod_id: str) -> None:
-        """A extensão desligou ou saiu: a faixa «Ao vivo» da extensão recomeça vazia."""
+        """A extensão desligou ou saiu: o controle da janela fica apagado."""
         self._escritas.pop(mod_id, None)
 
     def _controles_do_ao_vivo(self) -> list[dict[str, Any]]:
@@ -2075,44 +2074,25 @@ class Porta:
 
     def ao_vivo_de(self, mod_id: str) -> dict[str, Any]:
         """O ``ao_vivo`` do ``mods.agora``: os controles ligados (``{jogador, cor}``) e o que a
-        extensão escreveu nos últimos ``JANELA_DO_AO_VIVO_S``, em trechos ``{canal, jogador,
-        de_ms, ate_ms}`` (há quanto tempo começou e acabou); as escritas de um canal a menos de
-        ``JUNTA_DO_AO_VIVO_S`` uma da outra viram um trecho só. Nunca leva o ``uniq``."""
+        extensão escreveu há no máximo ``ACESO_DO_AO_VIVO_S``, uma ``escrita`` por canal e
+        controle, ``{canal, controle, ha_ms, todos?}``; ``controle`` é o lugar na lista, nulo
+        para o controle fora da lista. Nunca leva o ``uniq``."""
         agora = self._relogio()
-        filas = self._escritas.get(mod_id) or {}
-        for fila in filas.values():
-            while fila and agora - fila[0][0] > JANELA_DO_AO_VIVO_S:
-                fila.popleft()
-        escritas = sorted((t, canal, uniq) for uniq, fila in filas.items() for t, canal in fila)
+        porcontrole = self._escritas.get(mod_id) or {}
         controles = self._controles_do_ao_vivo()
         posicao_de = {c["uniq"]: n for n, c in enumerate(controles)}
-        abertos: dict[tuple[str, str], list[int]] = {}
-        trechos: list[dict[str, Any]] = []
-
-        def fechar(chave: tuple[str, str], par: list[int]) -> None:
-            posicao = posicao_de.get(chave[1])
-            jogador = controles[posicao].get("jogador") if posicao is not None else None
-            trechos.append({"canal": chave[0],
-                            "jogador": _jogador_do_ao_vivo(jogador),
-                            "controle": posicao, "de_ms": par[0], "ate_ms": par[1],
-                            **({"todos": True} if not chave[1] else {})})
-
-        for t, canal, uniq in escritas:
-            ha = max(0, round((agora - t) * 1000))
-            chave = (canal, uniq)
-            par = abertos.get(chave)
-            if par is not None and par[1] - ha <= JUNTA_DO_AO_VIVO_S * 1000:
-                par[1] = ha
-                continue
-            if par is not None:
-                fechar(chave, par)
-            abertos[chave] = [ha, ha]
-        for chave, par in abertos.items():
-            fechar(chave, par)
-        trechos.sort(key=lambda t: t["ate_ms"])
+        escritas: list[dict[str, Any]] = []
+        for uniq, canais in porcontrole.items():
+            for canal, t in canais.items():
+                if agora - t > ACESO_DO_AO_VIVO_S:
+                    continue
+                escritas.append({"canal": canal, "controle": posicao_de.get(uniq),
+                                 "ha_ms": max(0, round((agora - t) * 1000)),
+                                 **({"todos": True} if not uniq else {})})
+        escritas.sort(key=lambda e: (e["ha_ms"], e["canal"]))
         return {"controles": [{"jogador": _jogador_do_ao_vivo(c.get("jogador")),
                                "cor": str(c.get("cor") or "")} for c in controles],
-                "trechos": trechos[:TRECHOS_DO_AO_VIVO]}
+                "escritas": escritas}
 
     def ultimo_estado_de(self, mod_id: str) -> dict[str, Any] | None:
         """O ``acessorios.estado`` guardado de ``mod_id`` (o próprio objeto), com conexão viva."""
