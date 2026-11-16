@@ -93,7 +93,7 @@
       "rotulo": "Memória neste jogo",
       "tipo": "memoria",
       "grupo": "Sentir",
-      "dica": "A receita que pede lê da memória do jogo os valores que usa; vale ao abrir o jogo de novo",
+      "dica": "O ajuste que pede lê da memória do jogo os valores que usa; vale ao abrir o jogo de novo",
       "cartao": "O que ele escuta"
     },
     {
