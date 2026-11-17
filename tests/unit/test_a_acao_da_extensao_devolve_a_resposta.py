@@ -98,7 +98,7 @@ def _manifesto(responde: bool) -> dict[str, Any]:
     if responde:
         testar["responde"] = True
     return {"id": "imersao", "nome": "Imersão", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento)
-            "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento)
+            "licenca": "MIT", "tipos": ["tema"], "tema": {},
             "permissoes": ["publicar:acessorios.estado"],  # (noqa-acento)
             "acoes": [testar, {"id": "parear", "rotulo": "Parear"}]}  # (noqa-acento)
 

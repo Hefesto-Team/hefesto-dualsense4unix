@@ -37,7 +37,7 @@ LIGAR = {"id": "ligada", "rotulo": "Ligada", "tipo": "ligado", "padrao": True}  
 def _versao(pasta: pathlib.Path, versao: str, permissoes: list[str]) -> None:
     arquivo = pasta / "hefesto-mod.json"
     manifesto = json.loads(arquivo.read_text(encoding="utf-8"))
-    manifesto.update(versao=versao, permissoes=permissoes)  # (noqa-acento)
+    manifesto.update(versao=versao, permissoes=permissoes)
     arquivo.write_text(json.dumps(manifesto), encoding="utf-8")
 
 
