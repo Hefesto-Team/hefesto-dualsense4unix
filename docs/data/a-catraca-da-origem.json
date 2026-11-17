@@ -259,14 +259,14 @@
       "data": "2026-11-16",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1265854,
+      "piso": 1265856,
       "por_item": {
         "docs": 107094,
         "scripts": 114340,
         "src": 321140,
-        "tests": 723280
+        "tests": 723282
       },
-      "razao": "tamanho: +3779 linhas (1262075 -> 1265854), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 66b9c5db4549",
+      "razao": "tamanho: +2 linhas (1265854 -> 1265856), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 9cf44a776bf4",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1989,6 +1989,12 @@
           "de": 1262075,
           "para": 1265854,
           "razao": "tamanho: +3779 linhas (1262075 -> 1265854), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 66b9c5db4549"
+        },
+        {
+          "data": "2026-11-16",
+          "de": 1265854,
+          "para": 1265856,
+          "razao": "tamanho: +2 linhas (1265854 -> 1265856), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 9cf44a776bf4"
         }
       ],
       "unidade": "linhas",
