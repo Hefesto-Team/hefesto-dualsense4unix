@@ -44,6 +44,7 @@ from tests.unit.test_o_pad_recusado_pelo_broker_tenta_de_novo import Mesa
 MESAS_DO_P1 = [(1,), (1, 2), (1, 2, 3), (1, 2, 3, 4), (1, 3)]
 IDS_DO_P1 = ["so-o-p1", "p1-e-p2", "p1-p2-p3", "quatro", "todos-usb"]
 TRANSPORTES_DO_P1 = ("cabo", "radio")
+TETO_DA_TROCA_S = 0.5
 MESAS_DO_TARDIO = [((1, 2), 2), ((1, 2), 1), ((1, 2, 3, 4), 4), ((1, 2, 3, 4), 1),
                    ((1,), 1), ((2, 4), 2), ((1, 3), 3)]
 IDS_DO_TARDIO = ["p2-bt", "p1-usb", "quatro-p4", "quatro-p1", "um-so", "todos-bt",
@@ -85,7 +86,11 @@ def test_a_troca_de_ordem_com_o_p1_vivo_nao_prende_o_tique_no_broker_preso(
     transporte: str,
 ) -> None:
     """O broker aceita e não responde: o tique em que o co-op derruba o P1 para a troca
-    de ordem fica abaixo de 50 ms, e a descida do gadget dele chega ao broker depois.
+    de ordem fica abaixo de 0,5 s, e a descida do gadget dele chega ao broker depois.
+
+    O-TIQUE-DA-TROCA-DE-ORDEM-NAO-DEPENDE-DA-CARGA-DO-RUNNER-01: o teto da troca é
+    o ``TETO_DA_TROCA_S``, e não os 50 ms do tique comum. Medido em 17/11: 0,4 ms em
+    casa, 61 e 71 ms no runner do GitHub, ~4 s com o broker esperado no tique.
 
     Mordida: devolva o ``daemon._gamepad_device.stop()`` ao ``stop_gamepad_emulation``
     fora da parada do daemon, e o tique da troca leva as duas tentativas do cliente, ~4 s.
@@ -103,7 +108,7 @@ def test_a_troca_de_ordem_com_o_p1_vivo_nao_prende_o_tique_no_broker_preso(
         antes = time.perf_counter()
         coop._derrubar_para_renascer(_CHAVE_DO_P1)
         duracao = time.perf_counter() - antes + _tique(m, seguem, 0.1)
-        assert duracao < TETO_DO_TIQUE_S, (
+        assert duracao < TETO_DA_TROCA_S, (
             f"o tique da troca de ordem levou {duracao * 1000:.2f} ms com o broker preso"
         )
         assert not p1.is_active() and coop._daemon._gamepad_device is None, (
