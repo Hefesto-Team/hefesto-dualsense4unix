@@ -569,6 +569,7 @@ def test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo(
         TriggerConfig,
         TriggersConfig,
     )
+    from hefesto_dualsense4unix.integrations import uinput_gamepad
     from hefesto_dualsense4unix.testing import FakeController
 
     alvo = tmp_path / "profiles"
@@ -578,6 +579,7 @@ def test_sair_do_modo_nativo_devolve_a_vibracao_ao_jogo(
         "profiles_dir",
         lambda ensure=False: alvo,
     )
+    monkeypatch.setattr(uinput_gamepad.UinputGamepad, "start", lambda self: False)
 
     daemon = Daemon(controller=FakeController(), config=DaemonConfig())
     save_profile(
