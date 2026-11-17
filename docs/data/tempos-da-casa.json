@@ -4,13 +4,13 @@
     "completo-parede-s": {
       "data": "2026-11-16",
       "folga": 20,
-      "nota": "parede do último portoes.sh completo do fecho",
+      "nota": "parede do último portoes.sh completo do fecho, sem portão lembrado",
       "o_que_conta": "segundos de parede do portão completo",
-      "piso": 122,
+      "piso": 76,
       "por_item": {
-        "portoes-2032.out": 122
+        "portoes-2252.out": 76
       },
-      "razao": "a coleta sem GTK dos 44813 testes leva 90 s sozinha e dá a parede",
+      "razao": "o tempo desceu: 122 -> 76 s",
       "subidas": [
         {
           "data": "2026-10-17",
