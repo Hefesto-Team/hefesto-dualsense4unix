@@ -329,6 +329,7 @@ class Mundo:
             _escrever_exec(self.casa / "bin" / "act", ACT_DE_MENTIRA)
         self.casa.mkdir(exist_ok=True)
         self.ferramentas = ferramentas
+        _df_de_mentira(self)
 
     def rodar(self, *args: str, **ambiente: str) -> subprocess.CompletedProcess[str]:
         env = {
@@ -567,7 +568,8 @@ def test_sem_o_servidor_de_artefatos_nada_roda(mundo: Mundo) -> None:
 def _df_de_mentira(mundo: Mundo, **livres: int) -> None:
     """Um `df` que devolve o espaço de cada pasta, com a saída de `df --output=avail -m`."""
     casos = "".join(f'  *{pasta}) echo " {mb}" ;;\n' for pasta, mb in livres.items())
-    corpo = f'echo " Disp."\ncase "${{!#}}" in\n{casos}  *) echo " 999999" ;;\nesac\n'
+    corpo = (f'[ -e "${{!#}}" ] || exit 1\necho " Disp."\ncase "${{!#}}" in\n{casos}'
+             '  *) echo " 999999" ;;\nesac\n')
     (mundo.ferramentas / "df").unlink()
     _escrever_exec(mundo.ferramentas / "df", "#!/usr/bin/env bash\n" + corpo)
 
