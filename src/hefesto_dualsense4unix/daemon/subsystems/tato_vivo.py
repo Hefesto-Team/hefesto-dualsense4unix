@@ -4259,8 +4259,12 @@ class Passo:
         from hefesto_dualsense4unix.daemon.subsystems.meus_toques import entradas_do_daemon
 
         entradas = {e.uniq: e for e in entradas_do_daemon(self.daemon)}
+        estilo = estilo_ativo(self.daemon)
         acordados = set()
         for c in controles:
+            if formas_de_haptica.forma_que_vale(
+                    self.motor.escolhas.get(norm_mac(c.uniq) or ""), estilo) is None:
+                continue
             estado = estado_de(c.uniq)
             calado_aqui = self.fonte_do_som.ver(
                 c.uniq, agora, jogo=jogo, vpad=c.vpad,
@@ -4268,7 +4272,6 @@ class Passo:
                 entrada=entradas.get(c.uniq))
             if calado_aqui and estado is not None and decidir(CANAL_HAPTICA, estado):
                 acordados.add(c.uniq)
-        estilo = estilo_ativo(self.daemon)
         corpo = estilo in ESTILOS_DO_CORPO_DISCRETO
         self.motor.acordados_pelo_som = frozenset(acordados)
         self._corpo_discreto = frozenset(

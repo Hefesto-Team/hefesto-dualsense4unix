@@ -319,3 +319,19 @@ def test_a_batida_rapida_da_musica_o_fundo_aprende_e_o_teto_segura(
     for _ in range(int(2.0 / tv.INTERVALO_S)):
         mesa.tique()
     assert 0 < len(mesa.alto_falante.toques) <= 2 * tv.TETO_POR_CONTROLE
+
+
+@pytest.mark.parametrize("estilo", ["terror", _ACAO, "souls", "aventura"])
+def test_o_controle_no_traco_nao_acorda_pelo_som_nem_no_corpo_discreto(
+    monkeypatch: pytest.MonkeyPatch, estilo: str,
+) -> None:
+    """D-1811-O-TRACO-DO-EFEITO-HAPTICO-CALA-TUDO: o «—» do Efeito háptico cala tudo."""
+    mesa = _Mesa(monkeypatch, estilo)
+    monkeypatch.setattr(tv, "escolhas_ativas", lambda _d: {P1.replace(":", ""): formas.SEM_EFEITO})
+    mesa.jogar(21)
+    mesa.estalo()
+    mesa.grave()
+    mesa.tique()
+    assert P1 not in mesa.motor.acordados_pelo_som
+    assert mesa.alto_falante.toques == []
+    assert mesa.alto_falante.corpos == []
