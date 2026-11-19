@@ -256,17 +256,17 @@
       "universo": 424
     },
     "tamanho": {
-      "data": "2026-11-16",
+      "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1265858,
+      "piso": 1265883,
       "por_item": {
-        "docs": 107094,
+        "docs": 107095,
         "scripts": 114340,
-        "src": 321140,
-        "tests": 723284
+        "src": 321143,
+        "tests": 723305
       },
-      "razao": "tamanho: +2 linhas (1265856 -> 1265858), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 571344adf229",
+      "razao": "tamanho: +25 linhas (1265858 -> 1265883), pagas por Origem: D-1811-O-TRACO-DO-EFEITO-HAPTICO-CALA-TUDO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo ec1ccaef2070",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2001,6 +2001,12 @@
           "de": 1265856,
           "para": 1265858,
           "razao": "tamanho: +2 linhas (1265856 -> 1265858), pagas por Origem: D-1611-A-JANELA-DO-IMERSAO-DIZ-O-QUE-SENTE-NO-ALTO, D-1611-O-ATUALIZAR-TROCA-E-LIMPA, D-1611-O-MICROFONE-SAI-FILTRADO-E-PELA-ROTA, D-1611-O-MODO-IMERSAO-TOCA-EM-TODO-JOGO, audio.microfone; registrado no fecho, topo 571344adf229"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1265858,
+          "para": 1265883,
+          "razao": "tamanho: +25 linhas (1265858 -> 1265883), pagas por Origem: D-1811-O-TRACO-DO-EFEITO-HAPTICO-CALA-TUDO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo ec1ccaef2070"
         }
       ],
       "unidade": "linhas",
