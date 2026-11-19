@@ -571,7 +571,9 @@ jobs:
       # NENHUM job — existia no repo e nunca reprovava nada.
       - name: Pytest core
         if: ${{ !cancelled() && startsWith(matrix.faixa, '00-') }}
-        run: pytest tests/core -v -p no:cacheprovider -p scripts.check_a_coleta_sem_gtk | tee /tmp/suite-ci/core.log
+        run: |
+          set -o pipefail
+          python -m pytest tests/core -v -p no:cacheprovider -p scripts.check_a_coleta_sem_gtk | tee /tmp/suite-ci/core.log
       - name: O censo desta faixa
         if: ${{ !cancelled() }}
         run: |
@@ -1201,15 +1203,15 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v7
-      - name: Prazo do apt (${{ matrix.os }})
+      - name: Prazo do apt (${{ matrix.distro }})
         if: contains(matrix.install_cmd, 'apt-get')
         run: |
           mkdir -p /etc/apt/apt.conf.d
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/80-prazo
-      - name: Fontes da distro (${{ matrix.os }})
+      - name: Fontes da distro (${{ matrix.distro }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
-      - name: Instalar deps do sistema (${{ matrix.os }})
+      - name: Instalar deps do sistema (${{ matrix.distro }})
         run: ${{ matrix.install_cmd }}
       - uses: actions/download-artifact@v8
         with:
@@ -1332,15 +1334,15 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v7
-      - name: Prazo do apt (${{ matrix.os }})
+      - name: Prazo do apt (${{ matrix.distro }})
         if: contains(matrix.install_cmd, 'apt-get')
         run: |
           mkdir -p /etc/apt/apt.conf.d
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/80-prazo
-      - name: Fontes da distro (${{ matrix.os }})
+      - name: Fontes da distro (${{ matrix.distro }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
-      - name: Instalar deps do sistema (${{ matrix.os }})
+      - name: Instalar deps do sistema (${{ matrix.distro }})
         run: ${{ matrix.install_cmd }}
       # O `sudo` e a usuária são criados pelo script, que é quem sabe a família.
       # O que ELE não instala, de propósito: nada do censo do produto. Instalar

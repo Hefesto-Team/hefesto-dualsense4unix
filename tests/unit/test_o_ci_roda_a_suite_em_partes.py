@@ -201,8 +201,19 @@ def faltas_do_lint_test(jobs: dict[str, Any]) -> list[str]:
     faltas = []
     for nome, job in jobs.items():
         for p in job.get("steps", []):
-            if UM_PROCESSO_SO.search(str(p.get("run", ""))):
+            corpo = str(p.get("run", ""))
+            if UM_PROCESSO_SO.search(corpo):
                 faltas.append(f"{nome} / {p.get('name')}: roda `tests/unit` num processo só")
+            if "-p scripts." in corpo and "python -m pytest" not in corpo:
+                faltas.append(
+                    f"{nome} / {p.get('name')}: o plugin de scripts/ pede `python -m pytest`; "
+                    "o `pytest` solto não acha o pacote `scripts`"
+                )
+            if re.search(r"pytest[^\n|]*\|", corpo) and "pipefail" not in corpo:
+                faltas.append(
+                    f"{nome} / {p.get('name')}: o pytest passa por um cano sem `pipefail`; "
+                    "o vermelho dele sai verde"
+                )
     lint = jobs.get("lint-test", {})
     passos = lint.get("steps", [])
     if not any("scripts/rodar-a-suite.sh" in str(p.get("run", "")) for p in passos):
@@ -316,6 +327,27 @@ def test_mordida_as_partes_sem_o_plugin_do_censo() -> None:
         "--continue-on-collection-errors"
     )
     assert "lint-test: as partes rodam sem o plugin do censo de coleta" in todas_as_faltas(jobs, 24)
+
+
+def _passo_do_core(jobs: dict[str, Any]) -> dict[str, Any]:
+    passo: dict[str, Any] = next(
+        p for p in jobs["lint-test"]["steps"] if "tests/core" in str(p.get("run", ""))
+    )
+    return passo
+
+
+def test_mordida_o_core_pelo_pytest_solto() -> None:
+    jobs = _copia()
+    passo = _passo_do_core(jobs)
+    passo["run"] = str(passo["run"]).replace("python -m pytest", "pytest")
+    assert any("pede `python -m pytest`" in f for f in todas_as_faltas(jobs, 24))
+
+
+def test_mordida_o_core_sem_pipefail() -> None:
+    jobs = _copia()
+    passo = _passo_do_core(jobs)
+    passo["run"] = str(passo["run"]).replace("set -o pipefail\n", "")
+    assert any("sem `pipefail`" in f for f in todas_as_faltas(jobs, 24))
 
 
 def test_mordida_o_smoke_volta_a_esperar_o_lint_test() -> None:
