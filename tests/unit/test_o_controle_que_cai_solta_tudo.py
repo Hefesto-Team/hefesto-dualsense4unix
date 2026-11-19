@@ -20,7 +20,11 @@ A MORDIDA, e cada uma foi rodada na entrega:
 - tire o `soltar_o_cursor` do `else` do mouse do desktop e
   :func:`test_a_emulacao_suspensa_solta_o_clique_travado` reprova;
 - volte o `esquecer()` a iterar o dicionário vivo com `del` e
-  :func:`test_esquecer_tolera_quem_mexe_nos_estados_no_meio` reprova.
+  :func:`test_esquecer_tolera_quem_mexe_nos_estados_no_meio` reprova;
+- tire o `soltar_os_virtuais_do_desktop` do ajudante, ou a borda `alimentar_o_desktop` do
+  `_poll_loop`, e :func:`test_quem_larga_o_desktop_solta_toda_tecla_e_clique` reprova;
+- volte o `prime` a zerar a conta calado e
+  :func:`test_o_prime_solta_a_tecla_que_esquece` reprova.
 """
 from __future__ import annotations
 
@@ -38,6 +42,8 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon import lifecycle
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import gamepad, mouse
+from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
+from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
 
@@ -80,9 +86,13 @@ class _Travado:
 
     def __init__(self) -> None:
         self.soltou = 0
+        self.soltou_tudo = 0
 
     def soltar_o_clique_travado(self) -> None:
         self.soltou += 1
+
+    def soltar_o_que_segura(self) -> None:
+        self.soltou_tudo += 1
 
 
 def test_o_ajudante_solta_a_ativacao_os_dois_mouses_e_o_pad_do_p1() -> None:
@@ -101,7 +111,7 @@ def test_o_ajudante_solta_a_ativacao_os_dois_mouses_e_o_pad_do_p1() -> None:
     gamepad.soltar_o_que_o_controle_segurava(daemon, PRIMARIO)
 
     assert list(estados) == [("", "ff")], "só o estado do controle que caiu sai"
-    assert (do_desktop.soltou, da_tabela.soltou) == (1, 1)
+    assert (do_desktop.soltou, da_tabela.soltou, do_desktop.soltou_tudo) == (1, 1, 1)
     pad.forward_analog.assert_called_once_with(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
     pad.forward_buttons.assert_called_once_with(frozenset())
 
@@ -253,3 +263,94 @@ def test_esquecer_tolera_quem_mexe_nos_estados_no_meio(dono_do_estado: Any, mexi
 
     assert ("", "aabb") not in estados
     assert (("", "ccdd") in estados) is (mexida == "cria"), "o estado do outro controle fica"
+
+
+class _NoDeMentira:
+    """O nó do uinput: guarda o último valor que cada código recebeu."""
+
+    def __init__(self) -> None:
+        self.valor: dict[str, int] = {}
+
+    def emit(self, codigo: str, valor: int, syn: bool = True) -> None:
+        self.valor[codigo] = valor
+
+    def syn(self) -> None:
+        pass
+
+    def destroy(self) -> None:
+        pass
+
+    def apertados(self) -> list[str]:
+        return sorted(c for c, v in self.valor.items() if c.startswith(("KEY_", "BTN_")) and v)
+
+
+class _Codigos:
+    """O módulo `uinput`: cada código é o próprio nome."""
+
+    def __getattr__(self, nome: str) -> str:
+        if nome.startswith(("KEY_", "BTN_", "REL_")):
+            return nome
+        raise AttributeError(nome)
+
+
+def _com_no_de_mentira(device: Any) -> _NoDeMentira:
+    no = _NoDeMentira()
+    device._device, device._uinput_mod = no, _Codigos()
+    return no
+
+
+SEGURADOS = frozenset({"cross", "dpad_down", "r1", "triangle"})
+LIGACOES = {"r1": ("KEY_LEFTALT", "KEY_TAB"), "triangle": ("KEY_W",)}
+
+
+def _sair_do_desktop(saida: str, daemon: Daemon, fc: FakeController) -> None:
+    if saida == "queda":
+        fc.desplugar()
+    elif saida == "pausa":
+        daemon._paused = True
+    elif saida == "nativo":
+        daemon._native_mode = True
+    elif saida == "suspensa":
+        daemon._emulation_suppressed = True
+    else:
+        daemon._gamepad_device = MagicMock()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("saida", ["queda", "pausa", "nativo", "suspensa", "pad"])
+async def test_quem_larga_o_desktop_solta_toda_tecla_e_clique(
+    monkeypatch: pytest.MonkeyPatch, saida: str
+) -> None:
+    """D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC: com o botão ainda no fundo."""
+    monkeypatch.setattr(lifecycle, "INPUT_GRACE_SEC", 0.0)
+    monkeypatch.setattr(session, "load_paused_state", lambda: False)
+    fc = FakeController(transport="usb", states=_estados(60))
+    daemon = _daemon(fc)
+    teclado = UinputKeyboardDevice(bindings=dict(LIGACOES))
+    do_mouse = UinputMouseDevice()
+    nos = (_com_no_de_mentira(teclado), _com_no_de_mentira(do_mouse))
+    daemon._keyboard_device = teclado
+    daemon._mouse_device = do_mouse
+    monkeypatch.setattr(daemon, "_evdev_buttons_once", lambda: SEGURADOS)
+    tarefa = asyncio.create_task(daemon.run())
+    try:
+        await _esperar(lambda: all(no.apertados() for no in nos), "o desktop segurar")
+        _sair_do_desktop(saida, daemon, fc)
+        await _esperar(
+            lambda: not any(no.apertados() for no in nos),
+            f"{saida}: soltar {[no.apertados() for no in nos]}",
+        )
+    finally:
+        daemon.stop()
+        await tarefa
+
+
+def test_o_prime_solta_a_tecla_que_esquece() -> None:
+    """D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC: o prime nunca aperta, mas solta."""
+    teclado = UinputKeyboardDevice(bindings=dict(LIGACOES))
+    no = _com_no_de_mentira(teclado)
+    teclado.dispatch(frozenset({"r1", "triangle"}))
+    teclado.prime(frozenset({"triangle"}))
+    assert no.apertados() == ["KEY_W"], "a do botão que segue no fundo fica"
+    teclado.prime(frozenset())
+    assert no.apertados() == []

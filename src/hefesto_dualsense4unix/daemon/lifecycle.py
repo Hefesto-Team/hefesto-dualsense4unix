@@ -4218,6 +4218,18 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         was_connected = False
+        alimentou_o_desktop = False
+
+        def alimentar_o_desktop(agora: bool) -> None:
+            """O mouse e o teclado do desktop soltam tudo na borda em que o laço os larga."""
+            nonlocal alimentou_o_desktop
+            if alimentou_o_desktop and not agora:
+                from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                    soltar_os_virtuais_do_desktop,
+                )
+
+                soltar_os_virtuais_do_desktop(self)
+            alimentou_o_desktop = agora
 
         def esquecer_a_leitura_publicada() -> None:
             """A mesa vazia no store e no `_last_state` (ONDA0-Z5/T1)."""
@@ -4367,6 +4379,7 @@ class Daemon:
 
             input_ready = grace_passed and not self._paused and not self._native_mode
             if not input_ready:
+                alimentar_o_desktop(False)
                 from hefesto_dualsense4unix.daemon.subsystems.mouse import (
                     despachar_no_jogo as _largar_a_tabela,
                 )
@@ -4432,6 +4445,7 @@ class Daemon:
             )
 
             emu_buttons = botoes_com_os_gatilhos(emu_buttons, emu_l2, emu_r2)
+            alimentar_o_desktop(emu_active and not gamepad_dispatched)
             if not gamepad_dispatched:
                 emu_buttons = levar_o_big_picture(self, None, emu_buttons)[0]
                 if self._mouse_device is not None and emu_active:

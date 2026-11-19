@@ -409,7 +409,7 @@ class UinputMouseDevice:
         `core/acoes_de_botao.botoes_calados()`; `None` aqui quer dizer "ninguém
         informou", e é o contrato de antes byte a byte.
         """
-        self._soltar_o_que_segura()
+        self.soltar_o_que_segura()
         self._stick_carry_x = 0.0
         self._stick_carry_y = 0.0
         if do_mouse is None:
@@ -428,8 +428,8 @@ class UinputMouseDevice:
         self._mapa_tap = {b: k for b, k in EDGE_KEY_MAP.items()
                           if b not in do_mouse and b not in mudos}
 
-    def _soltar_o_que_segura(self) -> None:
-        """Solta os cliques e as setas que a tabela ANTERIOR mantinha, que deixou de valer."""
+    def soltar_o_que_segura(self) -> None:
+        """Solta todo clique e toda seta que segura: a tabela trocou ou o laço o largou."""
         segurados = self._codigos_apertados | self._setas_apertadas
         self._codigos_apertados = frozenset()
         self._codigos_reais = frozenset()

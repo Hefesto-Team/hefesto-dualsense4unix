@@ -160,9 +160,11 @@ class UinputKeyboardDevice:
 
         As teclas dos botões semeados entram na conta de quem segura: o soltar
         deles emite o key up, e o de outro botão não derruba a tecla que eles seguram.
+        A tecla que a conta antiga segurava e a nova esquece recebe o key up aqui.
         """
         if self._device is None or self._uinput_mod is None:
             return
+        antes = self._quem_segura
         self._pressed_buttons = frozenset(
             b for b in buttons_pressed if b in self.bindings
         )
@@ -174,6 +176,11 @@ class UinputKeyboardDevice:
             for key_name in seq:
                 if getattr(self._uinput_mod, key_name, None) is not None:
                     self._quem_segura[key_name] = self._quem_segura.get(key_name, 0) + 1
+        esquecidas = sorted(set(antes) - set(self._quem_segura))
+        for key_name in esquecidas:
+            self._device.emit(getattr(self._uinput_mod, key_name), 0, syn=False)
+        if esquecidas:
+            self._device.syn()
 
 
     def _emit_sequence_press(self, button: str) -> None:

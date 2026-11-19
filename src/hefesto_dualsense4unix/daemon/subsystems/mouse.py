@@ -92,6 +92,27 @@ def soltar_o_cursor(daemon: Any) -> None:
     soltar_as_teclas_do_analogico(daemon)
 
 
+def soltar_os_virtuais_do_desktop(daemon: Any) -> None:
+    """Solta toda tecla e todo clique que o mouse e o teclado do desktop seguram. Nunca levanta.
+
+    Um dono só da borda em que o laço deixa de alimentá-los: a queda do controle, a pausa,
+    o Modo Nativo, a emulação suspensa e o pad virtual que assume.
+    """
+    soltar_o_cursor(daemon)
+    mouse = getattr(daemon, "_mouse_device", None)
+    teclado = getattr(daemon, "_keyboard_device", None)
+    soltas = []
+    if mouse is not None:
+        soltas.append(mouse.soltar_o_que_segura)
+    if teclado is not None:
+        soltas.append(lambda: teclado.dispatch(frozenset()))
+    for soltar in soltas:
+        try:
+            soltar()
+        except OSError as exc:
+            logger.warning("desktop_soltar_falhou", err=str(exc))
+
+
 def _soltar_o_travado(device: Any) -> None:
     """Solta o clique travado de um mouse virtual (ou de nenhum). Nunca levanta."""
     solta = getattr(device, "soltar_o_clique_travado", None)
