@@ -405,6 +405,11 @@ trabalho vazia da pasta de execução do Hefesto, nunca na `HOME`. Um Hefesto
 mais velho responde `-32601` ao método e recusa o manifesto que pede a permissão nova, com a frase
 «permissão desconhecida»; a extensão mostra a frase.
 
+Cada `lancador.comandos`, cada porta de `portas` (dos dois lados, pelo número), o `fixador.executar` e cada
+`fontes` do leitor e do fixador são linhas do «sim», como as permissões. O registro guarda os aceitos
+(`alcances_aceitos`): a versão que acrescenta um deles desliga até o «sim» de novo, e a atualização sozinha a deixa
+esperando o «Atualizar». O «sim» gravado antes dessas linhas ganha, uma vez só, as do manifesto instalado.
+
 A aba 07 pede o `mods.jogos` de cada extensão de lançador ligada e sem leitor, e a extensão vira uma linha
 da lista, ao lado da Steam e do Heroic, com a contagem dos instalados («2 jogos»). Desligada ou
 desinstalada, a linha some.
