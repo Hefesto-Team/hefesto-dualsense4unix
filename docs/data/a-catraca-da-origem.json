@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1270256,
+      "piso": 1270489,
       "por_item": {
-        "docs": 107122,
+        "docs": 107124,
         "scripts": 114697,
-        "src": 322594,
-        "tests": 725843
+        "src": 322637,
+        "tests": 726031
       },
-      "razao": "tamanho: +79 linhas (1270177 -> 1270256), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-SESSAO-NASCE-DENTRO-DE-UM-ORCAMENTO-DE-CONTEXTO; registrado no fecho, topo 3983149bc993",
+      "razao": "tamanho: +233 linhas (1270256 -> 1270489), pagas por Origem: D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC, D-1911-O-LEITOR-QUE-CAI-REPOUSA; registrado no fecho, topo 1309bf2eb80d",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2055,6 +2055,12 @@
           "de": 1270177,
           "para": 1270256,
           "razao": "tamanho: +79 linhas (1270177 -> 1270256), pagas por Origem: D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1, D-1911-A-SESSAO-NASCE-DENTRO-DE-UM-ORCAMENTO-DE-CONTEXTO; registrado no fecho, topo 3983149bc993"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1270256,
+          "para": 1270489,
+          "razao": "tamanho: +233 linhas (1270256 -> 1270489), pagas por Origem: D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC, D-1911-O-LEITOR-QUE-CAI-REPOUSA; registrado no fecho, topo 1309bf2eb80d"
         }
       ],
       "unidade": "linhas",
