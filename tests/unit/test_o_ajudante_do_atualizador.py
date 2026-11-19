@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import tarfile
+import time
 from pathlib import Path
 
 import pytest
@@ -224,6 +225,20 @@ def test_a_limpeza_tira_so_o_que_a_subida_deixou_orfao(lar: Lar) -> None:
     assert "--purge" not in remove[0] and "allow-remove-essential=false" in remove[0]
     assert not (lar.estado / "orfaos-antes").exists()
     assert lar.rodar("apt-limpar").stdout.startswith("nada a remover")
+
+
+def test_o_registro_dos_orfaos_de_uma_fila_que_morreu_nao_vale_para_a_seguinte(lar: Lar) -> None:
+    _orfaos(lar)
+    assert lar.rodar("apt-instalar", "nvidia").returncode == 0
+    registro = lar.estado / "orfaos-antes"
+    velho = time.time() - 3 * 3600
+    os.utime(registro, (velho, velho))
+    _orfaos(lar, "pipewire-build-deps")
+    assert lar.rodar("apt-instalar", "sistema").returncode == 0
+    _orfaos(lar, "pipewire-build-deps", "libtrocada2")
+    feito = lar.rodar("apt-limpar")
+    assert feito.returncode == 0, feito.stderr
+    assert "removido: libtrocada2" in feito.stdout and "pipewire-build-deps" not in feito.stdout
 
 
 def test_a_limpeza_que_tiraria_outro_pacote_nao_tira_nada(lar: Lar) -> None:

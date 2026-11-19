@@ -783,7 +783,7 @@ def os_estados_do_andamento(pagina):
                          "motivo": "a Steam está aberta"}]}
     estados = [
         ("Parando", tela.html_do_andamento(ANDAMENTO_DE_EXEMPLO, rodando=True, parando=True)),
-        ("Espera a Steam", tela.html_do_andamento(espera, rodando=True)),
+        ("Espera a Steam", tela.html_do_andamento(espera, rodando=True, fecha_a_steam=True)),
         ("Parada", tela.html_do_andamento({**ANDAMENTO_DE_EXEMPLO, "fase": "parado"},
                                           rodando=False)),
         ("Pede reinício", tela.html_do_andamento(

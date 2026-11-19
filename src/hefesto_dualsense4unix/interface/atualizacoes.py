@@ -203,6 +203,7 @@ JS_DA_CAIXA = """(function(css, corpo, id){
     raiz.innerHTML = corpo;
     raiz.dataset.corpo = corpo;
     raiz.querySelectorAll('[data-meio]').forEach(function(c){ c.indeterminate = true; });
+    raiz.querySelectorAll('pre.registro').forEach(function(r){ r.scrollTop = r.scrollHeight; });
   }
   raiz.classList.toggle('aberta', corpo !== '');
   return corpo === '' ? 0 : 1;
@@ -448,7 +449,7 @@ def _linha_do_andamento(peca: dict[str, Any], *, parada: bool = False) -> str:
 
 
 def html_do_andamento(andamento: dict[str, Any], *, rodando: bool, parando: bool = False,
-                      pede_reinicio: str = "") -> str:
+                      pede_reinicio: str = "", fecha_a_steam: bool = False) -> str:
     """O total, uma linha por peça e o reinício do serviço; o rodapé muda com a fila."""
     parada = not rodando and andamento.get("fase") == "parado"
     pecas = _ordenadas([p for p in andamento.get("pecas") or [] if isinstance(p, dict)])
@@ -462,7 +463,7 @@ def html_do_andamento(andamento: dict[str, Any], *, rodando: bool, parando: bool
     botoes = [f'<button class="btn" data-gesto="atualizacoes-registro"{_dica(DICA_DO_REGISTRO)}>'
               'Registro</button>']
     empurra = " empurra"
-    if rodando and andamento.get("fase") in ("espera", "espera_o_jogo"):
+    if rodando and fecha_a_steam and andamento.get("fase") in ("espera", "espera_o_jogo"):
         botoes.append('<button class="btn empurra" data-gesto="atualizacoes-fechar-a-steam">'
                       'Fechar e continuar</button>')
         empurra = ""

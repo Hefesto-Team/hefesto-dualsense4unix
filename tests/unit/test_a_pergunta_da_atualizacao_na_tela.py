@@ -14,6 +14,7 @@ reprova o caso da falha; o cartão com a versão inteira reprova o caso da vers�
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -458,10 +459,25 @@ def test_a_fila_parada_diz_parada_oferece_continuar_e_o_x_fecha(
     assert soltas == [["kernel", "proton"]]
 
 
-def test_a_espera_da_steam_oferece_fechar_e_continuar() -> None:
-    esperando = {**_andamento("esperando", "a Steam está aberta"), "fase": at.ESPERA}
-    corpo = tela.html_do_andamento(esperando, rodando=True)
-    assert 'data-gesto="atualizacoes-fechar-a-steam"' in corpo and "Fechar e continuar" in corpo
+def test_so_a_espera_que_a_steam_segura_oferece_fechar_e_continuar(registro: list[at.Peca]) -> None:
+    import os
+
+    botao = 'data-gesto="atualizacoes-fechar-a-steam"'
+    da_steam = {**_andamento("esperando", "a Steam está aberta"), "inicio": 1000.0,
+                "fase": at.ESPERA, "espera": {"peca": "kernel", "motivo": "a Steam está aberta"}}
+    do_jogo = {**_andamento("esperando", at.O_JOGO_ABERTO), "inicio": 1000.0,
+               "fase": at.ESPERA_O_JOGO}
+    jogo_da_steam = pacotes.Contexto(state={"jogo_steam": {"appid": 1245620}})
+    trava = at._a_trava()
+    assert trava is not None
+    try:
+        for andamento, ctx, oferece in ((da_steam, None, True), (do_jogo, None, False),
+                                        (do_jogo, _ctx(), False), (do_jogo, jogo_da_steam, True)):
+            at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO, andamento)
+            corpo = gestos.conteudo(ctx, agora=1010.0)
+            assert (botao in corpo and "Fechar e continuar" in corpo) is oferece, (andamento, ctx)
+    finally:
+        os.close(trava)
     _gesto("atualizacoes-fechar-a-steam")
     assert (at._runtime() / at.PEDIDO_DE_FECHAR_A_STEAM).exists()
 
@@ -483,6 +499,8 @@ def test_o_fim_que_pede_reinicio_oferece_reiniciar_agora(monkeypatch: pytest.Mon
 def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,
                                                       monkeypatch: pytest.MonkeyPatch) -> None:
     at.caminho_do_registro().write_text("primeira <fila>\n", encoding="utf-8")
+    at._gravar_json(at._estado() / at.ARQUIVO_DO_ANDAMENTO,
+                    {**_andamento("pronta"), "fase": at.FIM, "fim_em": time.time()})
     _gesto("atualizacoes-registro")
     corpo = gestos.conteudo(None)
     assert "primeira &lt;fila&gt;" in corpo and "Copiar" in corpo and "Salvar" in corpo
@@ -497,6 +515,8 @@ def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,
     _gesto("atualizacoes-registro-salvar")
     salvos = list((lar / "baixados").iterdir())
     assert len(salvos) == 1 and salvos[0].read_text(encoding="utf-8") == "primeira <fila>\n"
+    _gesto("atualizacoes-fechar")
+    assert gestos.conteudo(None) == ""
 
 
 def test_cada_fila_comeca_um_registro_novo_e_guarda_o_anterior() -> None:

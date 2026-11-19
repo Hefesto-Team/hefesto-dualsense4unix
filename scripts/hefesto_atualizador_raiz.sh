@@ -9,6 +9,7 @@ GRUPOS="nvidia kernel sistema"
 GRUPOS_DA_REINSTALACAO="nvidia kernel"
 BACKPORTS="bluez pipewire portal"
 TETO_DO_BAIXADO=$((512 * 1024 * 1024))
+VALE_O_REGISTRO_DOS_ORFAOS_MIN=60
 
 if [[ "$(id -u)" -eq 0 ]]; then
     export PATH=/usr/sbin:/usr/bin:/sbin:/bin
@@ -284,7 +285,8 @@ _registro_dos_orfaos() { printf '%s/orfaos-antes\n' "${ESTADO}"; }
 _gravar_os_orfaos_de_antes() {
     [[ -n "${ESTADO}" ]] || return 0
     _pasta_do_estado
-    [[ -f "$(_registro_dos_orfaos)" ]] && return 0
+    [[ -n "$(find "$(_registro_dos_orfaos)" -maxdepth 0 \
+        -mmin -"${VALE_O_REGISTRO_DOS_ORFAOS_MIN}" 2>/dev/null)" ]] && return 0
     _orfaos autoremove > "$(_registro_dos_orfaos).novo" \
         && mv -f "$(_registro_dos_orfaos).novo" "$(_registro_dos_orfaos)" \
         || _recusar "não registrei o que o apt já tiraria antes da subida"

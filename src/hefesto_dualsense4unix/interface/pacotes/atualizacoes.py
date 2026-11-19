@@ -59,6 +59,19 @@ def _jogo_aberto(ctx: Contexto | None) -> bool:
     return jogo_com_autoridade(getattr(ctx, "state", None))
 
 
+def _a_steam_segura(andamento: dict[str, Any], ctx: Contexto | None) -> bool:
+    """A espera que fechar a Steam solta: a Steam que a fila não fechou, ou um jogo da Steam."""
+    from hefesto_dualsense4unix.integrations.proton_pin import _PORQUE_A_STEAM_BARRA
+
+    espera = andamento.get("espera") if andamento.get("fase") == at.ESPERA else None
+    if isinstance(espera, dict) and espera.get("motivo") in _PORQUE_A_STEAM_BARRA.values():
+        return True
+    estado = getattr(ctx, "state", None)
+    jogo = estado.get("jogo_steam") if isinstance(estado, dict) else None
+    appid = jogo.get("appid") if isinstance(jogo, dict) else None
+    return isinstance(appid, int) and not isinstance(appid, bool)
+
+
 def _nome_do_jogo(ctx: Contexto | None) -> str:
     """O nome do jogo aberto: o da Steam pelo appid, e senão o do perfil de jogo que entrou."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
@@ -122,7 +135,8 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
             trocou_em=at.trocou_o_que_pede_reinicio(andamento))
         return tela.html_do_andamento(andamento, rodando=rodando,
                                       parando=rodando and at.parada_pedida(),
-                                      pede_reinicio=reinicio)
+                                      pede_reinicio=reinicio,
+                                      fecha_a_steam=espera and _a_steam_segura(andamento, ctx))
     if TELA["vista"] == "andamento":
         TELA["vista"] = ""
     if not TELA["vista"] and not TELA["perguntou"] and at.hora_da_pergunta(momento):
@@ -226,7 +240,7 @@ def lista(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 @gesto("*", "atualizacoes-fechar")
 def fechar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O fechar: esconde o andamento (a fila segue) ou fecha a pergunta; o fim visto não volta."""
-    if TELA["vista"] == "andamento":
+    if TELA["vista"] in ("andamento", "registro"):
         andamento = at.ler_o_andamento()
         TELA["escondida"] = _inicio(andamento)
         if not at.em_curso():
@@ -379,11 +393,14 @@ def registro_copiar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "atualizacoes-registro-salvar", grava="salva o registro da atualização")
 def registro_salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    destino = Path(os.environ.get("XDG_DOWNLOAD_DIR") or Path.home() / "Downloads")
+    from gi.repository import GLib
+
+    destino = Path(os.environ.get("XDG_DOWNLOAD_DIR")
+                   or GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOWNLOAD)
+                   or Path.home() / "Downloads")
     destino.mkdir(parents=True, exist_ok=True)
     arquivo = destino / f"hefesto-atualizacao-{time.strftime('%Y-%m-%d-%H%M%S')}.log"
     arquivo.write_text(_o_registro(), encoding="utf-8")
-    TELA["salvo"] = str(arquivo)
 
 
 @gesto("*", "atualizacoes-continuar", grava="continua a atualização parada")
