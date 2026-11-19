@@ -942,9 +942,9 @@ def achar_o_fluxo_do_jogo() -> FluxoDoJogo | SemFluxo | None:
     from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
 
     fluxos = ler_fluxos("sink-inputs", rodar_pactl)
-    if fluxos is None:
+    nos = ler_nos("sinks", rodar_pactl) if fluxos is not None else None
+    if fluxos is None or nos is None:
         return None
-    nos = ler_nos("sinks", rodar_pactl) or ()
     padrao = (rodar_pactl(["pactl", "get-default-sink"]) or "").strip() or None
     return procurar_o_fluxo_do_jogo(
         fluxos, pids_de_jogo(), {str(no.indice): no.nome for no in nos}, padrao)

@@ -5,7 +5,8 @@ canais, para o endpoint ``HEFESTO<marca>`` de cada controle. A procura descarta 
 endpoint da háptica e prefere o que vai à saída padrão; a surdez diz o motivo.
 
 A MORDIDA (executada, com o md5 conferido na volta): sem o filtro do destino, a procura volta
-ao serial 900 (a háptica de P1) → ``test_com_a_haptica_listada_antes_o_ouvido_acha_o_som``.
+ao serial 900 (a háptica de P1) → ``test_com_a_haptica_listada_antes_o_ouvido_acha_o_som``; a
+lista das saídas que não veio lida como vazia → ``test_sem_saber_os_destinos_a_procura_nao_chuta``.
 """
 from __future__ import annotations
 
@@ -75,6 +76,17 @@ def test_so_com_a_haptica_nao_ha_som_a_ouvir(jogo: Any) -> None:
     assert tj.achar_o_fluxo_do_jogo() == tj.SemFluxo(tj.MOTIVO_SO_HAPTICA, 2)
     jogo([])
     assert tj.achar_o_fluxo_do_jogo() == tj.SemFluxo(tj.MOTIVO_SEM_FLUXO, 0)
+
+
+def test_sem_saber_os_destinos_a_procura_nao_chuta(
+    jogo: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM: sem a lista das saídas, «não sei», e não a háptica."""
+    jogo([(1, 60, 900), (3, 50, 902)], padrao="")
+    rodar = af._rodar
+    monkeypatch.setattr(
+        af, "_rodar", lambda argv: None if pj.e_lista_json(argv, "sinks") else rodar(argv))
+    assert tj.achar_o_fluxo_do_jogo() is None, "o ouvido gravaria a háptica sem saber o destino"
 
 
 def test_entre_os_sons_vale_o_da_saida_padrao(jogo: Any) -> None:
