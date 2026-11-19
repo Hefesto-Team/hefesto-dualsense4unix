@@ -2034,10 +2034,11 @@ def versoes_que_sobram(
     *,
     pino: str | None = None,
 ) -> list[VersaoQueSobra]:
-    """As versões do Proton em `compatibilitytools.d` que nenhum lançador usa.
+    """As versões do Proton que o Hefesto extraiu em `compatibilitytools.d` e nenhum lançador usa.
 
-    Só há sobra com o pino INSTALADO: a remoção é de vez, e sem a fixada no disco apagar as outras
-    deixaria a pessoa sem Proton nenhum na pasta.
+    Só sai a pasta com o manifesto do Hefesto, nunca a que outro programa instalou. Só há sobra
+    com o pino INSTALADO: a remoção é de vez, e sem a fixada no disco apagar as outras deixaria a
+    pessoa sem Proton nenhum na pasta.
     """
     raiz, _recusa = steam_root_ou_recusa(home)
     if raiz is None:
@@ -2068,7 +2069,7 @@ def versoes_que_sobram(
         return []
     sobras: list[VersaoQueSobra] = []
     for pasta in pastas:
-        if _extracao_viva(pasta):
+        if _extracao_viva(pasta) or not (pasta / MANIFEST_BASENAME).is_file():
             continue
         nomes = nomes_internos(pasta)
         if not all(e_da_familia_proton(n) for n in nomes):

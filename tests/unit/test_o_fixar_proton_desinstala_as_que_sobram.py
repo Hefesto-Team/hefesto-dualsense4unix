@@ -34,7 +34,8 @@ def _vdf(mapeamento: dict[str, str]) -> str:
 
 
 def _ferramenta(compat: Path, pasta: str, nome: str | None = None) -> Path:
-    """Uma pasta como as do GE: o `compatibilitytool.vdf` com o nome interno."""
+    """Uma pasta como as do GE que o Hefesto extraiu: o `compatibilitytool.vdf` com o nome
+    interno e o manifesto do Hefesto."""
     alvo = compat / pasta
     alvo.mkdir(parents=True)
     interno = nome or pasta
@@ -45,6 +46,8 @@ def _ferramenta(compat: Path, pasta: str, nome: str | None = None) -> Path:
         encoding="utf-8")
     (alvo / "proton").write_bytes(b"x" * 1000)
     (alvo / "version").write_text("1 x\n", encoding="utf-8")
+    (alvo / pp.MANIFEST_BASENAME).write_text(
+        '{"installed_by": "hefesto-dualsense4unix"}', encoding="utf-8")
     return alvo
 
 

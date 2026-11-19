@@ -58,6 +58,8 @@ def casa(tmp_path: Path) -> Path:
     (raiz / "config").mkdir(parents=True)
     (raiz / "steamapps").mkdir()
     _proton_de_mentira(raiz / "compatibilitytools.d" / VELHA)
+    (raiz / "compatibilitytools.d" / VELHA / pp.MANIFEST_BASENAME).write_text(
+        "{}", encoding="utf-8")
     return lar
 
 
