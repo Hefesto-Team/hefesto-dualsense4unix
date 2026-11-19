@@ -9,7 +9,9 @@ Agora o valor de fora passa por faixa antes de virar nome (PlayerLED 0-31, limia
 instruções, o `StateStore` tem teto de chaves e os avisos da porta se juntam no diário.
 
 MORDIDA: tirar a faixa do PlayerLED (o `0 <= mask <= 0b11111`) e trocar o contador por
-`udp.player_led.{mask}` reprova a primeira régua com mais de mil chaves `udp.*`.
+`udp.player_led.{mask}` reprova a primeira régua com mais de mil chaves `udp.*`; guardar
+em `_indices_avisados` o índice fora de 0-3, ou tirar do `EVENTOS_AGREGADOS` o
+`udp_reset_to_user_settings_parcial` ou juntar o `udp_trigger_threshold` pelo valor, também.
 """
 from __future__ import annotations
 
@@ -120,6 +122,8 @@ def test_dez_mil_valores_distintos_nao_criam_chaves(diario: _Diario) -> None:
             handler,
             {"type": 3, "parameters": [i % 8, i]},
             {"type": 4, "parameters": [i % 8, 1 + i % 2, i]},
+            {"type": 3, "parameters": [4 + i, 1]},
+            {"type": 7, "parameters": [i % 4]},
         )
         if i == 999:
             chaves_no_milesimo = _chaves_udp(store)
@@ -133,6 +137,8 @@ def test_dez_mil_valores_distintos_nao_criam_chaves(diario: _Diario) -> None:
     assert store.counter("udp.error.PlayerLED") > 0
     assert len(handler._indices_avisados) <= 2 * 5
     assert len(diario.linhas("udp_indice_sem_jogador")) <= 2
+    assert len(diario.linhas("udp_trigger_threshold")) <= 2
+    assert len(diario.linhas("udp_reset_to_user_settings_parcial")) == 1
 
 
 def test_seiscentas_instrucoes_desconhecidas_dao_duas_linhas(diario: _Diario) -> None:

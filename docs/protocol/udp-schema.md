@@ -214,9 +214,10 @@ O valor que chega de fora nunca vira nome de contador nem chave do diário:
 - O limiar de `TriggerThreshold` se apara em 0-255, como a cor do `RGBUpdate`.
 - Um datagrama aplica no máximo 32 instruções; as demais saem, contadas em
   `udp.instrucoes_demais`.
-- Os avisos da porta (`udp_parse_error`, `udp_unknown_instruction`,
-  `udp_instruction_error` e os vizinhos) se juntam no diário: a primeira
-  ocorrência sai na hora, e a rajada, numa linha com `vezes=`.
+- As linhas da porta (`udp_parse_error`, `udp_unknown_instruction`,
+  `udp_instruction_error`, `udp_trigger_threshold`, `udp_reset_to_user_settings_parcial`
+  e os vizinhos) se juntam no diário: a primeira ocorrência sai na hora, e a
+  rajada, numa linha com `vezes=`.
 - O `StateStore` guarda no máximo 1024 contadores; um nome novo além disso
   conta em `contadores.acima_do_teto`.
 

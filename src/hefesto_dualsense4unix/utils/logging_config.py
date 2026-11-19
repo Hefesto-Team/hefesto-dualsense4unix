@@ -150,7 +150,9 @@ EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
     "udp_instruction_error": ("kind",),
     "udp_indice_sem_jogador": ("kind",),
     "udp_mic_led_pulse_degradado": (),
-    "udp_trigger_threshold": ("side", "value"),
+    "udp_trigger_threshold": ("side",),
+    "udp_reset_to_user_settings_parcial": (),
+    "player_leds_suprimidos_noop": ("op",),
 }
 JANELA_DO_AGREGADO_S = 60.0
 JANELA_MAXIMA_DO_AGREGADO_S = 900.0
