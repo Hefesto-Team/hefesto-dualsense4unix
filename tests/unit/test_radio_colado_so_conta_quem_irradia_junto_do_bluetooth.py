@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from hefesto_dualsense4unix.integrations import exame_da_mesa, mesa_de_radio
+from hefesto_dualsense4unix.utils import maquina
 
 RAIZ_BT = "/mentira/class/bluetooth"
 RAIZ_USB = "/mentira/bus/usb/devices"
@@ -85,3 +89,18 @@ def test_o_receptor_declarado_colado_no_adaptador_acusa() -> None:
     assert len(mesa.apertadas) == 1
     sem_tipo = mesa_de_radio.ler_a_mesa(**sysfs.fontes())
     assert sem_tipo.apertadas == ()
+
+
+def test_o_check_up_le_o_tipo_declarado_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O item do Check-up, sem leitura injetada, passa o tipo declarado à mesa."""
+    sysfs = Sysfs({"1-2": _no("2", "1d57", "fa20")})
+    ler_a_mesa = mesa_de_radio.ler_a_mesa
+    monkeypatch.setattr(
+        mesa_de_radio, "ler_a_mesa", lambda **pedido: ler_a_mesa(**sysfs.fontes(), **pedido)
+    )
+    declarada = SimpleNamespace(mesa=SimpleNamespace(radios={
+        "1d57:fa20": SimpleNamespace(tipo="teclado"),
+    }))
+    monkeypatch.setattr(maquina, "carregar_maquina", lambda: declarada)
+    item = exame_da_mesa.vizinhanca_das_portas()
+    assert item.estado == exame_da_mesa.ESTADO_ATENCAO, item.porque

@@ -379,10 +379,12 @@ def pareamentos(
 
 
 def _vizinhancas_do_sistema() -> Sequence[object]:
-    """Os pares de portas coladas, lidos pela seção "A mesa" da mesma aba."""
-    from hefesto_dualsense4unix.integrations import mesa_de_radio
+    """Os pares de portas coladas da seção "A mesa", com os tipos declarados da máquina."""
+    from hefesto_dualsense4unix.integrations import mapa_das_portas, mesa_de_radio
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
-    return mesa_de_radio.ler_a_mesa().apertadas
+    tipos = mapa_das_portas.tipos_declarados(carregar_maquina())
+    return mesa_de_radio.ler_a_mesa(tipos_declarados=tipos).apertadas
 
 
 def vizinhanca_das_portas(
