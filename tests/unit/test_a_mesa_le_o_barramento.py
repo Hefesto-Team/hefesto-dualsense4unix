@@ -161,6 +161,8 @@ APARELHOS: dict[str, dict[str, str]] = {
     },
 }
 
+WIFI_LIGADO: dict[str, str] = {"1-2.2:1.0": f"{USB1}/1-2/1-2.2/1-2.2:1.0"}
+
 INTERFACES_BT: dict[str, str] = {
     "hci0": f"{USB1}/1-1/1-1:1.0",
     "hci1": f"{USB1}/1-2/1-2.1/1-2.1:1.0",
@@ -197,9 +199,12 @@ class Ensaio:
                 for no in self.aparelhos
             }
         )
+        wifi = WIFI_LIGADO if aparelhos is None else {}
+        self.reais.update({os.path.join(RAIZ_USB, nome): pasta for nome, pasta in wifi.items()})
         self.listagens = {
             RAIZ_BT: sorted(self.interfaces_bt),
-            RAIZ_USB: sorted(os.path.basename(no) for no in self.aparelhos),
+            RAIZ_USB: sorted([*(os.path.basename(no) for no in self.aparelhos), *wifi]),
+            **{pasta: ["ieee80211"] for pasta in wifi.values()},
         }
 
     def listar(self, raiz: str) -> list[str]:
@@ -302,14 +307,14 @@ def test_o_adaptador_nao_aparece_tambem_na_lista_de_radios() -> None:
 
 
 def test_dois_aparelhos_colados_geram_um_aviso_e_nao_dois() -> None:
-    """Dois aparelhos, um problema — e a tela mostra um aviso."""
+    """Um par, um aviso: o Wi-Fi colado no adaptador. Os receptores colados não contam."""
     ensaio = Ensaio()
     mesa = ler_a_mesa(**ensaio.fontes())
     curtos = [
         (os.path.basename(um), os.path.basename(outro)) for um, outro in mesa.apertadas
     ]
 
-    assert curtos == [("1-2.1", "1-2.2"), ("1-3", "1-4")], curtos
+    assert curtos == [("1-2.1", "1-2.2")], curtos
 
 
 def test_portas_vizinhas_em_hubs_diferentes_nao_estao_coladas() -> None:

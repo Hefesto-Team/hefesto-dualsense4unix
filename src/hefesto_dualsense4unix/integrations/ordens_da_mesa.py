@@ -103,6 +103,7 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     NoDeEntrada,
     furos,
 )
+from hefesto_dualsense4unix.integrations.mesa_de_radio import irradia
 from hefesto_dualsense4unix.integrations.portas_do_barramento import (
     hubs_do_mesmo_plastico,
 )
@@ -698,10 +699,11 @@ def _irradia(leitura: Leitura, numero: str) -> bool:
     for aparelho in leitura.censo.conectados():
         if aparelho.nome_do_kernel != caminho:
             continue
-        if _e_bluetooth(aparelho) or aparelho.ligado_como == "wifi":
-            return True
-        tipo = leitura.tipos_declarados.get(f"{aparelho.vid}:{aparelho.pid}", "")
-        return bool(tipo) and tipo != "webcam"
+        return irradia(
+            bluetooth=_e_bluetooth(aparelho),
+            ligado_como=aparelho.ligado_como,
+            tipo_declarado=leitura.tipos_declarados.get(f"{aparelho.vid}:{aparelho.pid}", ""),
+        )
     return False
 
 

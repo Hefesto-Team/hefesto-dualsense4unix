@@ -64,9 +64,14 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+    LIGADO_COMO_BLUETOOTH,
+    LIGADO_COMO_WIFI,
+    _o_que_o_kernel_ligou,
+)
 from hefesto_dualsense4unix.integrations.usb_pai import dispositivo_usb_pai
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
@@ -131,6 +136,7 @@ class RadioUsb:
     atras_de_hub: bool = False
     controlador_pci: str = ""
     usb3: bool = False
+    ligado_como: str = ""
 
     @property
     def caminho(self) -> str:
@@ -160,8 +166,9 @@ def ler_a_mesa(
     ler: Callable[[str], str] | None = None,
     existe: Callable[[str], bool] = os.path.exists,
     real: Callable[[str], str] = os.path.realpath,
+    tipos_declarados: Mapping[str, str] | None = None,
 ) -> Mesa:
-    """As três leituras de uma vez — adaptadores, rádios e quem está colado."""
+    """As três leituras de uma vez; o par colado tem um adaptador e outro rádio que irradia."""
     leitor = ler_texto if ler is None else ler
     adaptadores = adaptadores_bluetooth(
         raiz_bt=raiz_bt, listar=listar, ler=leitor, existe=existe, real=real
@@ -169,11 +176,31 @@ def ler_a_mesa(
     radios = radios_do_barramento(
         adaptadores, raiz_usb=raiz_usb, listar=listar, ler=leitor, real=real
     )
+    tipos = tipos_declarados or {}
+    irradiam = [
+        r for r in radios
+        if irradia(
+            bluetooth=r.ligado_como == LIGADO_COMO_BLUETOOTH,
+            ligado_como=r.ligado_como,
+            tipo_declarado=tipos.get(f"{r.vid}:{r.pid}", ""),
+        )
+    ]
+    nos_bt = {a.no for a in adaptadores}
     return Mesa(
         adaptadores=tuple(adaptadores),
         radios=tuple(radios),
-        apertadas=tuple(vizinhancas_apertadas([*adaptadores, *radios])),
+        apertadas=tuple(
+            par for par in vizinhancas_apertadas([*adaptadores, *irradiam])
+            if nos_bt.intersection(par)
+        ),
     )
+
+
+def irradia(*, bluetooth: bool, ligado_como: str, tipo_declarado: str) -> bool:
+    """Usa 2,4 GHz: Bluetooth, Wi-Fi que o kernel ligou ou o tipo declarado (webcam não)."""
+    if bluetooth or ligado_como == LIGADO_COMO_WIFI:
+        return True
+    return bool(tipo_declarado) and tipo_declarado != "webcam"
 
 
 def adaptadores_bluetooth(
@@ -247,6 +274,7 @@ def radios_do_barramento(
         return []
 
     nos_dos_adaptadores = {a.no for a in adaptadores if a.no}
+    interfaces = [nome for nome in nomes if ":" in nome]
     achados: list[RadioUsb] = []
     for nome in nomes:
         if ":" in nome:
@@ -262,17 +290,23 @@ def radios_do_barramento(
             continue
         if vid in _VIDS_DE_CONTROLE:
             continue
+        busnum = _campo(no, "busnum", leitor)
+        devpath = _campo(no, "devpath", leitor)
         achados.append(
             RadioUsb(
                 no=no,
                 vid=vid,
                 pid=pid,
-                busnum=_inteiro(_campo(no, "busnum", leitor)),
-                devpath=_campo(no, "devpath", leitor),
+                busnum=_inteiro(busnum),
+                devpath=devpath,
                 painel=_painel(no, leitor),
                 atras_de_hub=_atras_de_hub(no, leitor),
                 controlador_pci=_controlador_pci(no, real),
                 usb3=_usb3(_campo(no, "speed", leitor)),
+                ligado_como=_o_que_o_kernel_ligou(
+                    nome, busnum, devpath, raiz_usb, interfaces,
+                    leitor=leitor, real=real, listar=listar,
+                ),
             )
         )
     return achados
@@ -400,6 +434,7 @@ __all__ = [
     "RadioUsb",
     "adaptadores_bluetooth",
     "controladores_dos_barramentos",
+    "irradia",
     "ler_a_mesa",
     "radios_do_barramento",
     "vizinhancas_apertadas",
