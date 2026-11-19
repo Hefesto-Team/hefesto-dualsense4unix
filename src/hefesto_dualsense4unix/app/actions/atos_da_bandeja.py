@@ -196,13 +196,10 @@ def fechar_as_bandejas(pids: list[int], prazo: float) -> list[int]:
     abertas: dict[int, int] = {}
     espera = select.poll()
     for pid in pids:
-        try:
-            fd = os.pidfd_open(pid)
-        except ProcessLookupError:
-            continue
-        abertas[fd] = pid
-        espera.register(fd, select.POLLIN)
         with contextlib.suppress(ProcessLookupError):
+            fd = os.pidfd_open(pid)
+            abertas[fd] = pid
+            espera.register(fd, select.POLLIN)
             signal.pidfd_send_signal(fd, signal.SIGTERM)
     fim = time.monotonic() + prazo
     try:
