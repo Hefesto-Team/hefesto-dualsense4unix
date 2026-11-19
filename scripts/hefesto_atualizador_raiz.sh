@@ -173,6 +173,7 @@ _apt_do_grupo() {
     local grupo="$1"; shift
     _grupo_valido "${grupo}"
     _segurar_os_da_casa
+    [[ $# -gt 0 ]] || _gravar_os_orfaos_de_antes
     if [[ "${grupo}" == "sistema" ]]; then
         _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" full-upgrade
         return
@@ -248,6 +249,22 @@ _pasta_do_estado() {
     _e_so_do_dono "${ESTADO}" || _recusar "a pasta ${ESTADO} não é só do root"
 }
 
+_orfaos() {
+    LC_ALL=C apt-get -s "$@" 2>/dev/null \
+        | awk '$1 == "Remv" && $2 ~ /^[a-z0-9][a-z0-9.+:-]*$/ { print $2 }' | sort -u
+}
+
+_registro_dos_orfaos() { printf '%s/orfaos-antes\n' "${ESTADO}"; }
+
+_gravar_os_orfaos_de_antes() {
+    [[ -n "${ESTADO}" ]] || return 0
+    _pasta_do_estado
+    [[ -f "$(_registro_dos_orfaos)" ]] && return 0
+    _orfaos autoremove > "$(_registro_dos_orfaos).novo" \
+        && mv -f "$(_registro_dos_orfaos).novo" "$(_registro_dos_orfaos)" \
+        || _recusar "não registrei o que o apt já tiraria antes da subida"
+}
+
 verbo_apt_instalar() {
     _exige_raiz apt-instalar
     local grupo="${1:-}" antes depois rodando
@@ -268,10 +285,26 @@ verbo_apt_instalar() {
 }
 verbo_apt_limpar() {
     _exige_raiz apt-limpar
+    if [[ -z "${ESTADO}" ]] || ! _e_so_do_dono "$(_registro_dos_orfaos)"; then
+        printf 'nada a remover: nenhuma subida registrou o que já sobrava antes\n'
+        return 0
+    fi
     _segurar_os_da_casa
-    _apt -o APT::Get::allow-downgrades=false -o APT::Get::allow-remove-essential=false \
-        -o APT::Get::allow-change-held-packages=false \
-        autoremove --purge
+    local p
+    local -a novos sairiam
+    mapfile -t novos < <(_orfaos autoremove | grep -vxF -f "$(_registro_dos_orfaos)")
+    rm -f "$(_registro_dos_orfaos)"
+    [[ "${#novos[@]}" -gt 0 ]] || { printf 'nada a remover\n'; return 0; }
+    mapfile -t sairiam < <(_orfaos remove "${novos[@]}")
+    [[ "${#sairiam[@]}" -gt 0 ]] || _recusar "a simulação da remoção não veio: nada sai"
+    for p in "${sairiam[@]}"; do
+        printf '%s\n' "${novos[@]}" | grep -qxF -- "${p}" \
+            || _recusar "remover ${novos[*]} tiraria também ${p}: nada sai"
+    done
+    _apt "${APT_SO_ASSINADO[@]}" -o APT::Get::allow-downgrades=false \
+        -o APT::Get::allow-remove-essential=false -o APT::Get::allow-change-held-packages=false \
+        -o APT::Get::AutomaticRemove=false remove "${novos[@]}" || return 1
+    printf 'removido: %s\n' "${novos[@]}"
 }
 
 _fonte_e_do_root() {
@@ -633,7 +666,7 @@ _instalar_da_pasta() {
     [[ -n "${lista}" ]] || _recusar "nenhum dos pacotes em ${pasta} está instalado nesta máquina"
     local -a debs
     mapfile -t debs <<<"${lista}"
-    _apt "$@" install --no-install-recommends "${debs[@]}"
+    _apt "${APT_SO_ASSINADO[@]}" "${APT_SO_A_PECA[@]}" "$@" install --no-install-recommends "${debs[@]}"
 }
 
 verbo_backport_construir() {

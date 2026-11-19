@@ -170,12 +170,45 @@ def test_o_grupo_do_apt_sobe_so_os_pacotes_dele(lar: Lar) -> None:
     assert lar.rodar("apt-instalar", "kernel").returncode == 0
     assert lar.rodar("apt-instalar", "sistema").returncode == 0
     assert lar.rodar("apt-limpar").returncode == 0
-    apt = [linha for linha in lar.lidas() if linha.startswith("apt-get")]
+    apt = [linha for linha in lar.lidas() if linha.startswith("apt-get") and " -s " not in linha]
     assert apt[0].endswith("-d install --only-upgrade nvidia-driver-595 libnvidia-gl-595")
     assert apt[1].endswith("install --only-upgrade linux-system76")
     assert apt[2].endswith("full-upgrade")
-    assert apt[3].endswith("autoremove --purge")
+    assert len(apt) == 3 and not any("--purge" in linha for linha in lar.lidas())
     assert all("APT::Status-Fd=1" in linha for linha in apt)
+
+
+def _orfaos(lar: Lar, *nomes: str, alem: str = "") -> None:
+    lista = lar.base / "orfaos"
+    lista.write_text("".join(f"Remv {n} [1.0]\n" for n in nomes), encoding="utf-8")
+    lar.duble("apt-get", f'case "$*" in "-s autoremove") cat "{lista}" ;;'
+                         f' "-s remove "*) shift 2; for p; do echo "Remv $p [1.0]"; done;'
+                         f' [ -n "{alem}" ] && echo "Remv {alem} [1.0]" ;; esac; exit 0')
+
+
+def test_a_limpeza_tira_so_o_que_a_subida_deixou_orfao(lar: Lar) -> None:
+    _orfaos(lar, "libvelha1")
+    assert lar.rodar("apt-limpar").stdout.startswith("nada a remover")
+    assert lar.rodar("apt-instalar", "sistema").returncode == 0
+    _orfaos(lar, "libvelha1", "libtrocada2")
+    feito = lar.rodar("apt-limpar")
+    assert feito.returncode == 0, feito.stderr
+    assert "removido: libtrocada2" in feito.stdout and "libvelha1" not in feito.stdout
+    remove = [x for x in lar.lidas() if x.startswith("apt-get") and " remove " in x
+              and " -s " not in x]
+    assert len(remove) == 1 and remove[0].endswith(" remove libtrocada2"), remove
+    assert "--purge" not in remove[0] and "allow-remove-essential=false" in remove[0]
+    assert not (lar.estado / "orfaos-antes").exists()
+    assert lar.rodar("apt-limpar").stdout.startswith("nada a remover")
+
+
+def test_a_limpeza_que_tiraria_outro_pacote_nao_tira_nada(lar: Lar) -> None:
+    _orfaos(lar, alem="pipewire-build-deps")
+    assert lar.rodar("apt-instalar", "nvidia").returncode == 0
+    _orfaos(lar, "libbluetooth-dev", alem="pipewire-build-deps")
+    feito = lar.rodar("apt-limpar")
+    assert feito.returncode == 2 and "pipewire-build-deps" in feito.stderr, feito.stderr
+    assert not [x for x in lar.lidas() if " remove " in x and " -s " not in x]
 
 
 def _fonte(lar: Lar) -> Path:
@@ -432,11 +465,14 @@ def test_sem_saber_o_que_ja_esta_segurado_nada_sobe(lar: Lar) -> None:
 
 
 def test_a_limpeza_tambem_segura_os_da_casa(lar: Lar) -> None:
+    assert lar.rodar("apt-instalar", "nvidia").returncode == 0
+    _orfaos(lar, "libtrocada2")
+    lar.chamadas.unlink()
     feito = lar.rodar("apt-limpar")
     assert feito.returncode == 0, feito.stderr
     ordem = _ordem(lar)
     assert ordem[0] == "apt-mark hold bluez xdg-desktop-portal-cosmic", ordem
-    assert "autoremove" in ordem[1]
+    assert ordem[-2].endswith(" remove libtrocada2"), ordem
     assert ordem[-1] == "apt-mark unhold bluez xdg-desktop-portal-cosmic", ordem
 
 

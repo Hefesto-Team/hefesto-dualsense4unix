@@ -2232,6 +2232,25 @@ _bz_maior_do_archive() {
     printf '%s\n' "${maior}"
 }
 
+_bz_outros_instalados() {
+    local sums="$1" alvo="$2" arch="$3" n pkg
+    while read -r _ n; do
+        n="${n#\*}"
+        pkg="${n%%_*}"
+        [[ "${n}" == "${pkg}_${alvo}_${arch}.deb" ]] || continue
+        case "${pkg}" in libbluetooth3 | bluez | bluez-cups) continue ;; esac
+        if dpkg-query -W -f='${db:Status-Abbrev}' "${pkg}" 2>/dev/null | grep -q '^ii'; then
+            printf '%s\n' "${pkg}"
+        fi
+    done < "${sums}"
+}
+
+_bz_o_que_sairia() {
+    local sim
+    sim="$(LC_ALL=C apt-get install -s --allow-downgrades "$@" 2>&1)" || return 1
+    awk '$1 == "Remv" { print $2 }' <<<"${sim}"
+}
+
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
     _bz_baseline="${ROOT_DIR}/assets/bluez-backport/BASELINE"
@@ -2273,7 +2292,8 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             _bz_arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
             _bz_debs=()
             _bz_ok=1
-            for _bz_pkg in libbluetooth3 bluez bluez-cups; do
+            mapfile -t _bz_outros < <(_bz_outros_instalados "${_bz_sums}" "${_BZ_TARGET}" "${_bz_arch}" 2>/dev/null)
+            for _bz_pkg in libbluetooth3 bluez bluez-cups "${_bz_outros[@]}"; do
                 _bz_bn="${_bz_pkg}_${_BZ_TARGET}_${_bz_arch}.deb"
                 _bz_sum="$(awk -v bn="${_bz_bn}" '{ n = $2; sub(/^.*\//, "", n); if (n == bn) { print $1; exit } }' "${_bz_sums}" 2>/dev/null || true)"
                 _bz_actual="$(sha256sum "${_bz_dir}/${_bz_bn}" 2>/dev/null | awk '{print $1}' || true)"
@@ -2294,6 +2314,10 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
             elif _avisa_pacote_a_meio "o backport do BlueZ ${_BZ_TARGET}"; then
                 printf '      depois, rode ./install.sh de novo (os .debs ficam em %s)\n' "${_bz_dir}"
+            elif ! _bz_sairia="$(_bz_o_que_sairia "${_bz_debs[@]}")"; then
+                warn "o apt não aceita estes pacotes do BlueZ nesta máquina — nada foi instalado; a simulação é: apt-get install -s ${_bz_debs[*]}"
+            elif [[ -n "${_bz_sairia}" ]]; then
+                warn "instalar o BlueZ da casa tiraria da máquina: $(tr '\n' ' ' <<<"${_bz_sairia}")— nada foi instalado (o bluetoothd de agora segue; scripts/construir_bluez_backport.sh --forcar entrega também os que faltam)"
             else
                 printf '\n      >>> AVISO: aplicar o backport do bluez REINICIA o bluetoothd\n'
                 printf '          (os controles BT caem até reconectar; se algum não voltar,\n'
@@ -2321,7 +2345,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                             warn "não consegui registrar as versões anteriores do BlueZ — o restore do uninstall não vai cobrir bluez/libbluetooth3"
                         fi
                     fi
-                    if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+                    if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-remove --allow-downgrades \
                             -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
                             "${_bz_debs[@]}" >/dev/null 2>&1; then
                         printf '      backport %s aplicado — o bluetoothd reiniciou; os controles BT voltam sozinhos ou com o PS\n' "${_BZ_TARGET}"

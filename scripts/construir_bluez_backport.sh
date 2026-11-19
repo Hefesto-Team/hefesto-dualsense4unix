@@ -393,8 +393,8 @@ entregar() {
     mkdir -p "${SAIDA}"
     while read -r deb; do
         [[ -f "${OBRA}/${deb}" ]] || morra "${RC_BUILD}" "o build não produziu ${deb}"
-        cp -f "${OBRA}/${deb}" "${SAIDA}/${deb}"
     done < <(debs_alvo)
+    cp -f "${OBRA}"/*_"${ALVO}"_*.deb "${SAIDA}/"
 
     tmp="$(mktemp -d)"
     dpkg-deb -x "${SAIDA}/bluez_${ALVO}_${ARCH}.deb" "${tmp}"
@@ -412,7 +412,7 @@ entregar() {
     done
     rm -rf "${tmp}"
 
-    (cd "${SAIDA}" && debs_alvo | xargs sha256sum > SHA256SUMS.novo)
+    (cd "${SAIDA}" && sha256sum -- *_"${ALVO}"_*.deb > SHA256SUMS.novo)
     mv -f "${SAIDA}/SHA256SUMS.novo" "${SAIDA}/SHA256SUMS"
     origem > "${SAIDA}/ORIGEM.txt"
     diga "entregue em ${SAIDA}:"

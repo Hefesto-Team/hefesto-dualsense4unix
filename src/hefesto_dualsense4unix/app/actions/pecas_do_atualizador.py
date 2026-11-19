@@ -223,6 +223,8 @@ def _raiz(acao: str, *args: str, passo: Passo | None = None,
         raise EtapaFalhouError("o ajudante do install não está instalado: rode o install")
 
     def linha(texto: str) -> None:
+        if passo is not None and texto.startswith("removido: "):
+            passo.dizer(texto.strip())
         achado = _STATUS_DO_APT.match(texto)
         if achado and passo is not None:
             with contextlib.suppress(ValueError):

@@ -450,6 +450,22 @@ def test_o_ajudante_constroi_e_instala_so_os_pacotes_da_maquina(lar: Lar) -> Non
     assert (lar.cache / "backports" / "bluez" / "atual").is_dir() and not novo.exists()
 
 
+def test_a_subida_do_bluez_leva_o_dev_instalado_e_nao_remove_nada(lar: Lar) -> None:
+    with lar.instalados.open("a") as instalados:
+        instalados.write("libbluetooth-dev\tii \t5.88-0ubuntu0.1~hefesto24.04.6\n")
+    lar.receita(ENTREGA_BOA.replace("bluez-hcidump_", "libbluetooth-dev_"))
+    assert lar.rodar("backport-construir", "bluez").returncode == 0
+    feito = lar.rodar("backport-instalar", "bluez")
+    assert feito.returncode == 0, feito.stderr
+    apt = [linha for linha in lar.lidas() if linha.startswith("apt-get")]
+    assert len(apt) == 1 and "libbluetooth-dev_5.89" in apt[0], apt
+    assert all(o in apt[0] for o in (
+        " --no-remove ", "-o APT::Get::allow-downgrades=false",
+        "-o APT::Get::allow-remove-essential=false",
+        "-o APT::Get::allow-change-held-packages=false",
+        "-o APT::Get::AllowUnauthenticated=false")), apt[0]
+
+
 def test_a_segunda_subida_guarda_a_anterior_que_volta_uma_vez(lar: Lar) -> None:
     lar.receita(ENTREGA_BOA)
     for _ in range(2):
@@ -670,3 +686,68 @@ def test_a_conferencia_leva_a_completa_e_o_porque_da_revisao() -> None:
     item = at.conferir(rede=True, lista=[peca])["pecas"][0]
     assert item["estado"] == at.REVISAR and item["completa"].startswith("PipeWire 1.6.11")
     assert item["dica"].endswith("a casa precisa revisar os patches")
+
+
+INSTALL = (RAIZ / "install.sh").read_text(encoding="utf-8")
+RECEITA_BZ = (RAIZ / "scripts" / "construir_bluez_backport.sh").read_text(encoding="utf-8")
+ALVO_BZ = "5.89-0ubuntu0.1~hefesto24.04.7"
+
+
+def _fn(fonte: str, nome: str) -> str:
+    inicio = fonte.index(f"{nome}() {{\n")
+    return fonte[inicio:fonte.index("\n}\n", inicio) + 3]
+
+
+def _sh(tmp_path: Path, script: str, **dubles: str) -> subprocess.CompletedProcess[str]:
+    bin_ = tmp_path / "bin"
+    bin_.mkdir(exist_ok=True)
+    for nome, corpo in dubles.items():
+        (bin_ / nome).write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
+        (bin_ / nome).chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_}:{os.environ['PATH']}"}
+    return subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True,
+                          timeout=30, check=False)
+
+
+def test_a_simulacao_do_install_diz_o_que_o_bluez_tiraria(tmp_path: Path) -> None:
+    feito = _sh(tmp_path, _fn(INSTALL, "_bz_o_que_sairia") + "_bz_o_que_sairia a.deb\n",
+                **{"apt-get": 'echo "Inst libbluetooth3 [5.88] (5.89 /a.deb)";'
+                              ' echo "Remv libbluetooth-dev [5.88]";'
+                              ' echo "Remv pipewire-build-deps [1.0]"'})
+    assert feito.returncode == 0, feito.stderr
+    assert feito.stdout.split() == ["libbluetooth-dev", "pipewire-build-deps"]
+
+
+def test_o_passo_do_bluez_simula_antes_e_instala_sem_remover() -> None:
+    passo = INSTALL[INSTALL.index('step "3f"'):INSTALL.index("_pw_versao_ii() {")]
+    simula = passo.index('_bz_sairia="$(_bz_o_que_sairia "${_bz_debs[@]}")"')
+    recusa = passo.index('elif [[ -n "${_bz_sairia}" ]]; then')
+    instala = passo.index("apt-get install -y")
+    assert simula < recusa < instala
+    assert "apt-get install -y --no-remove " in passo
+
+
+def test_o_install_leva_junto_o_pacote_da_entrega_que_a_maquina_tem(tmp_path: Path) -> None:
+    sums = tmp_path / "SHA256SUMS"
+    sums.write_text("".join(f"0  {p}_{ALVO_BZ}_amd64.deb\n" for p in (
+        "libbluetooth3", "bluez", "bluez-cups", "libbluetooth-dev", "bluez-hcidump")))
+    feito = _sh(tmp_path, _fn(INSTALL, "_bz_outros_instalados")
+                + f'_bz_outros_instalados "{sums}" "{ALVO_BZ}" amd64\n',
+                **{"dpkg-query": 'case "$3" in libbluetooth-dev|bluez) printf "ii ";; esac'})
+    assert feito.returncode == 0, feito.stderr
+    assert feito.stdout.split() == ["libbluetooth-dev"]
+
+
+def test_a_receita_do_bluez_entrega_todos_os_binarios_do_fonte(tmp_path: Path) -> None:
+    obra, saida = tmp_path / "obra", tmp_path / "saida"
+    obra.mkdir()
+    for pacote in ("libbluetooth3", "bluez", "bluez-cups", "libbluetooth-dev", "bluez-obexd"):
+        (obra / f"{pacote}_{ALVO_BZ}_amd64.deb").write_text(pacote, encoding="utf-8")
+    script = (f'OBRA="{obra}"; SAIDA="{saida}"; ALVO="{ALVO_BZ}"; ARCH=amd64; PATCHES=""\n'
+              'morra() { echo "$2" >&2; exit 1; }; diga() { :; }; origem() { :; }\n'
+              + _fn(RECEITA_BZ, "debs_alvo") + _fn(RECEITA_BZ, "entregar") + "entregar\n")
+    feito = _sh(tmp_path, script, **{"dpkg-deb": "exit 0"})
+    assert feito.returncode == 0, feito.stderr
+    somas = (saida / "SHA256SUMS").read_text(encoding="utf-8")
+    assert f"libbluetooth-dev_{ALVO_BZ}_amd64.deb" in somas and len(somas.splitlines()) == 5
+    assert (saida / f"bluez-obexd_{ALVO_BZ}_amd64.deb").is_file()

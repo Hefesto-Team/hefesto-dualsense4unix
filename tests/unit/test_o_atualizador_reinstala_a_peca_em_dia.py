@@ -512,6 +512,21 @@ def test_a_pergunta_ao_ajudante_diz_o_porque_sem_o_prefixo(
     assert "rode o install" in pa._pergunta_da_raiz("backport-reinstalavel", "bluez")
 
 
+def test_o_nome_que_a_limpeza_removeu_chega_ao_registro(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    ajudante = tmp_path / "atualizador-raiz"
+    ajudante.write_text("", encoding="utf-8")
+    monkeypatch.setattr(pa, "AJUDANTE", ajudante)
+
+    def comando(_argv: list[str], *, linha: Any = None, **_k: Any) -> tuple[int, str]:
+        linha("removido: libtrocada2\n")
+        return 0, "removido: libtrocada2"
+
+    monkeypatch.setattr(pa, "_comando", comando)
+    pa._limpar(at.Passo(), {})
+    assert "removido: libtrocada2" in at.caminho_do_registro().read_text(encoding="utf-8")
+
+
 def test_o_python_reinstala_as_rodas_de_agora_numa_pasta_propria(
         monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pa, "_rodas_de_agora", lambda: {"evdev": "1.9.3", "pydantic": "2.12.0"})
@@ -753,11 +768,15 @@ def test_a_subida_pelo_apt_leva_as_travas_da_reinstalacao(raiz: Lar) -> None:
     assert len(apt) == 5, apt
     assert all(o in linha for linha in apt for o in AUTENTICACAO), apt
     assert all(" full-upgrade" in linha for linha in apt[3:]), apt
+    raiz.estado = str(raiz.base / "estado")
+    assert raiz.rodar("apt-instalar", "nvidia").returncode == 0
+    raiz.duble("apt-get", 'case "$*" in "-s autoremove") echo "Remv libtrocada2 [1]" ;;'
+                          ' "-s remove libtrocada2") echo "Remv libtrocada2 [1]" ;; esac')
     feito = raiz.rodar("apt-limpar")
     assert feito.returncode == 0, feito.stderr
     limpar = raiz.lidas("apt-get")[-1]
-    assert " autoremove --purge" in limpar and " --no-remove " not in limpar
-    assert all(o in limpar for o in AUTENTICACAO[4:] if o != " --no-remove "), limpar
+    assert limpar.endswith(" remove libtrocada2") and "--purge" not in limpar
+    assert all(o in limpar for o in AUTENTICACAO if o != " --no-remove "), limpar
 
 
 def test_o_hold_do_ajudante_que_morreu_se_solta_no_proximo_verbo(raiz: Lar) -> None:
