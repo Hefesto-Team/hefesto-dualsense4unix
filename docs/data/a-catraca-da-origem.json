@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1270489,
+      "piso": 1270764,
       "por_item": {
-        "docs": 107124,
-        "scripts": 114697,
-        "src": 322637,
-        "tests": 726031
+        "docs": 107126,
+        "scripts": 114707,
+        "src": 322669,
+        "tests": 726262
       },
-      "razao": "tamanho: +233 linhas (1270256 -> 1270489), pagas por Origem: D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC, D-1911-O-LEITOR-QUE-CAI-REPOUSA; registrado no fecho, topo 1309bf2eb80d",
+      "razao": "tamanho: +275 linhas (1270489 -> 1270764), pagas por Origem: D-1911-O-RADIO-COLADO-PEDE-UM-ADAPTADOR-NO-PAR, D-3009-O-TETO-DA-BUSCA; registrado no fecho, topo d60b5b855d29",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2061,10 +2061,16 @@
           "de": 1270256,
           "para": 1270489,
           "razao": "tamanho: +233 linhas (1270256 -> 1270489), pagas por Origem: D-1911-A-QUEDA-SOLTA-TODA-TECLA-E-CLIQUE-DO-PC, D-1911-O-LEITOR-QUE-CAI-REPOUSA; registrado no fecho, topo 1309bf2eb80d"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1270489,
+          "para": 1270764,
+          "razao": "tamanho: +275 linhas (1270489 -> 1270764), pagas por Origem: D-1911-O-RADIO-COLADO-PEDE-UM-ADAPTADOR-NO-PAR, D-3009-O-TETO-DA-BUSCA; registrado no fecho, topo d60b5b855d29"
         }
       ],
       "unidade": "linhas",
-      "universo": 3520
+      "universo": 3523
     }
   }
 }
