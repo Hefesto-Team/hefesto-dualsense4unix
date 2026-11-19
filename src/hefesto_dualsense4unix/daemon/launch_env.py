@@ -1562,12 +1562,11 @@ def _fisicos_na_mesa(daemon: DaemonProtocol) -> int:
 def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
     """(native, emulation_enabled, flavor, backends dos vpads, físicos na mesa).
 
-    WRAPPER-EM-TODOS-01: o quinto campo é novo. Sem ele, `compose_env` decidia
-    pelo TIPO dos vpads (`all(b == "uhid")`) e nunca pela COBERTURA — e um
-    jogador de co-op PENDENTE (aguardando o `EVIOCGRAB`, com `vpad is None`)
-    simplesmente não entrava na lista, fazendo o `all(...)` passar
-    trivialmente. Com 2 DualSense físicos e 1 vpad, o IGNORE escondia os DOIS
-    por VID/PID e só UM voltava.
+    O quinto campo é a COBERTURA (WRAPPER-EM-TODOS-01): o jogador de co-op pendente
+    (`vpad is None`) não entra em `backends`, e sem ele o `all(b == "uhid")` passava
+    trivialmente e o IGNORE escondia dois físicos com um vpad só. O pad do P1 que o
+    fio ainda faz nascer conta como emulação viva, com a máscara e o canal pedidos
+    (`CoopManager.o_p1_que_nasce`).
     """
     native = False
     with contextlib.suppress(Exception):
@@ -1580,6 +1579,12 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
     primary = getattr(daemon, "_gamepad_device", None)
     if primary is not None:
         backends.append(str(getattr(primary, "backend", "") or ""))
+    else:
+        nasce = _de_fora(daemon, "o_p1_que_nasce", None)
+        if isinstance(nasce, tuple) and len(nasce) == 3:
+            mascara, caminho, permite_uhid = nasce
+            enabled, flavor = True, str(mascara)
+            backends.extend(_backends_da_troca(flavor, caminho, bool(permite_uhid)))
     coop = getattr(daemon, "_coop_manager", None)
     players = getattr(coop, "_players", None)
     if isinstance(players, dict):

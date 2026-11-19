@@ -1431,6 +1431,21 @@ class CoopManager:
         self._fila_do_nascimento = (*self._fila_do_nascimento, _CHAVE_DO_P1)
         self._andar_a_fila()
 
+    def o_p1_que_nasce(self) -> tuple[str, str | None, bool] | None:
+        """`(máscara, caminho, permite uhid)` do pad do P1 pedido ao fio e não instalado.
+
+        Vale da fila do nascimento até a entrega; o fio que falha o tira daqui antes da
+        instalação, e `None` volta a valer.
+        """
+        contexto = self._p1_que_nasce
+        if contexto is None:
+            return None
+        return (
+            str(contexto.mascara_do_p1),
+            contexto.caminho_pedido,
+            bool(contexto.kwargs.get("allow_uhid", False)),
+        )
+
     def _largar_o_p1_que_nasce(self) -> None:
         """Ninguém espera mais o P1 que nascia: o pedido dele sai da fila e do fio."""
         contexto, self._p1_que_nasce = self._p1_que_nasce, None
