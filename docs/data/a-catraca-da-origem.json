@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1269146,
+      "piso": 1270043,
       "por_item": {
-        "docs": 107115,
+        "docs": 107121,
         "scripts": 114638,
-        "src": 322099,
-        "tests": 725294
+        "src": 322582,
+        "tests": 725702
       },
-      "razao": "tamanho: +556 linhas (1268590 -> 1269146), pagas por Origem: D-1911-A-BANDEJA-SAI-PELO-NUCLEO-E-A-RECARGA-ESPERA-O-ULTIMO-FIO; registrado no fecho, topo 013ebbbbd407",
+      "razao": "tamanho: +897 linhas (1269146 -> 1270043), pagas por Origem: D-0311-QUEM-NAO-E-JOGO-NAO-SEGURA-MOTOR, D-1911-O-ATALHO-ENTRA-NO-TRECHO-QUE-ABRE-O-JOGO, D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR; registrado no fecho, topo e42cc251ea08",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2037,6 +2037,12 @@
           "de": 1268590,
           "para": 1269146,
           "razao": "tamanho: +556 linhas (1268590 -> 1269146), pagas por Origem: D-1911-A-BANDEJA-SAI-PELO-NUCLEO-E-A-RECARGA-ESPERA-O-ULTIMO-FIO; registrado no fecho, topo 013ebbbbd407"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1269146,
+          "para": 1270043,
+          "razao": "tamanho: +897 linhas (1269146 -> 1270043), pagas por Origem: D-0311-QUEM-NAO-E-JOGO-NAO-SEGURA-MOTOR, D-1911-O-ATALHO-ENTRA-NO-TRECHO-QUE-ABRE-O-JOGO, D-1911-O-JOGO-ABERTO-SE-VE-EM-QUALQUER-LANCADOR; registrado no fecho, topo e42cc251ea08"
         }
       ],
       "unidade": "linhas",
