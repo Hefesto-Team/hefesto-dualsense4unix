@@ -90,7 +90,7 @@ else
   MSG=(-m "${ASSUNTO:-chore: mudança pequena em ${NOMES[*]}}")
   [ -z "$ORIGEM" ] || MSG+=(-m "Origem: $ORIGEM")
   git add -- "${NOMES[@]}" >> "$LOG" 2>&1 || para "commit: o git add falhou"
-  git commit "${MSG[@]}" >> "$LOG" 2>&1 || para "commit: os ganchos recusaram (os arquivos ficam no índice)"
+  PATH="$TOPO/.venv/bin:$PATH" git commit "${MSG[@]}" >> "$LOG" 2>&1 || para "commit: os ganchos recusaram (os arquivos ficam no índice)"
 fi
 C=$((SECONDS - t))
 diz "commit: $(git rev-parse --short HEAD)"
