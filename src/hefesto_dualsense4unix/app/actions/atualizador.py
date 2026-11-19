@@ -36,6 +36,7 @@ REGISTRO = "atualizador.log"
 TRAVA = "atualizador.trava"
 PEDIDO_DE_PARAR = "atualizador.parar"
 PEDIDO_DE_TENTAR = "atualizador.tentar"
+PEDIDO_DE_FECHAR_A_STEAM = "atualizador.fechar-a-steam"
 DIAS_PADRAO = 7
 DIAS_MINIMO = 1
 DIAS_MAXIMO = 90
@@ -182,6 +183,7 @@ class Peca:
     marcada_por_padrao: bool = True
     reinstalacao: Reinstalacao | None = None
     anterior: Callable[[], dict[str, Any] | None] | None = None
+    steam_fechada: bool = False
 
 
 def pecas() -> list[Peca]:
@@ -515,6 +517,19 @@ def pedir_para_tentar(ids: Sequence[str]) -> None:
     _gravar_json(_runtime() / PEDIDO_DE_TENTAR, {"ids": list(ids)})
 
 
+def pedir_para_fechar_a_steam() -> None:
+    with contextlib.suppress(OSError):
+        (_runtime() / PEDIDO_DE_FECHAR_A_STEAM).write_text(str(time.time()), encoding="utf-8")
+
+
+def _pediram_fechar_a_steam() -> bool:
+    try:
+        (_runtime() / PEDIDO_DE_FECHAR_A_STEAM).unlink()
+    except OSError:
+        return False
+    return True
+
+
 def _pedido_de_tentar() -> list[str]:
     caminho = _runtime() / PEDIDO_DE_TENTAR
     ids = _ler_json(caminho).get("ids")
@@ -552,9 +567,28 @@ def _jogo_aberto() -> bool:
     return perguntar()
 
 
+def _steam_aberta() -> bool:
+    from hefesto_dualsense4unix.integrations import proton_pin
+
+    return bool(proton_pin._steam_gate())
+
+
+def _fechar_a_steam() -> bool:
+    from hefesto_dualsense4unix.integrations import steam_launch_options
+
+    return steam_launch_options.stop_steam()
+
+
+def _reabrir_a_steam() -> bool:
+    from hefesto_dualsense4unix.integrations import steam_launch_options
+
+    return steam_launch_options.reopen_steam()
+
+
 def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
                       relogio: Callable[[], float], dormir: Callable[[float], None],
-                      prazo_s: float, linha: dict[str, Any] | None = None) -> bool:
+                      prazo_s: float, linha: dict[str, Any] | None = None,
+                      fechar: Callable[[], None] | None = None) -> bool:
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
         EsperaSemJogo,
@@ -582,6 +616,8 @@ def _esperar_sem_jogo(andamento: _Andamento, jogo_aberto: Callable[[], bool],
             andamento.gravar()
         if _pediram_parar():
             raise FilaParadaError
+        if fechar is not None and _pediram_fechar_a_steam():
+            fechar()
         dormir(PASSO_DA_VIGIA_S)
     return False
 
@@ -777,6 +813,19 @@ def _prontas(andamento: _Andamento) -> set[str]:
     return {str(p.get("id")) for p in andamento.dado["pecas"] if p.get("selo") == PRONTA}
 
 
+def _devolver_a_steam(fechou: list[bool], reabrir: Callable[[], bool]) -> None:
+    """A Steam que a fila fechou volta uma vez, no fim, no «Parar» ou no prazo."""
+    if not fechou:
+        return
+    fechou.clear()
+    try:
+        voltou = reabrir()
+    except Exception as erro:
+        voltou = False
+        _anotar(f"fila: a Steam não reabriu: {erro}")
+    _anotar("fila: a Steam reabriu" if voltou else "fila: a Steam não reabriu")
+
+
 def _livre(espera: EsperaError) -> bool:
     try:
         return bool(espera.livre())
@@ -796,6 +845,9 @@ def rodar(
     dormir: Callable[[float], None] = time.sleep,
     agora: Callable[[], float] = time.time,
     prazo_do_jogo_s: float | None = None,
+    steam_aberta: Callable[[], bool] = _steam_aberta,
+    fechar_a_steam: Callable[[], bool] = _fechar_a_steam,
+    reabrir_a_steam: Callable[[], bool] = _reabrir_a_steam,
 ) -> int:
     """A fila: uma peça por vez, em baixar, instalar e aplicar em todos; um processo por vez (o
     segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez (e ao fim
@@ -814,16 +866,18 @@ def rodar(
     trava = _a_trava()
     if trava is None:
         return 3
+    fechou: list[bool] = []
     try:
-        for pedido in (PEDIDO_DE_PARAR, PEDIDO_DE_TENTAR):
+        for pedido in (PEDIDO_DE_PARAR, PEDIDO_DE_TENTAR, PEDIDO_DE_FECHAR_A_STEAM):
             with contextlib.suppress(OSError):
                 (_runtime() / pedido).unlink()
         registro = _por_id(pecas() if lista is None else lista)
         conferencia = {str(item.get("id")): item
                        for item in ler_a_conferencia().get("pecas") or []
                        if isinstance(item, dict)}
-        o_que_fazer = {i: _o_que_fazer(registro[i], conferencia.get(i)) for i in dict.fromkeys(ids)
-                 if i in registro and registro[i].volta == 1}
+        pedidas = set(ids)
+        o_que_fazer = {i: _o_que_fazer(registro[i], conferencia.get(i)) for i in registro
+                       if i in pedidas and registro[i].volta == 1}
         escolhidas = [registro[i] for i, fazer in o_que_fazer.items() if fazer]
         versoes: dict[str, Versoes] = {}
         for peca in escolhidas:
@@ -842,6 +896,24 @@ def rodar(
             return limite - relogio()
 
         adiadas: list[tuple[Peca, EsperaError, _Vez]] = []
+        reiniciadas: set[str] = set()
+
+        def _fechar_a_steam_da_fila() -> None:
+            if not fechou and steam_aberta() and fechar_a_steam():
+                fechou.append(True)
+                _anotar("fila: a Steam fechou para a fila")
+
+        def _rodar(peca: Peca, vez: _Vez) -> EsperaError | None:
+            if peca.steam_fechada and not jogo_aberto():
+                _fechar_a_steam_da_fila()
+            espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
+            if vez.dados.get("reiniciou") and andamento.peca(peca.id).get("selo") == PRONTA:
+                reiniciadas.update(_prontas(andamento))
+                reinicio = andamento.dado["reinicio"]
+                reinicio["etapas"] = dict.fromkeys(ETAPAS_DO_SERVICO, "feito")
+                reinicio["pct"], reinicio["selo"] = 100, PRONTA
+                andamento.gravar()
+            return espera
 
         def _recolher_o_pedido_de_tentar() -> None:
             for ident in _pedido_de_tentar():
@@ -865,16 +937,16 @@ def rodar(
         try:
             for peca in escolhidas:
                 linha = andamento.peca(peca.id)
-                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo(), linha):
+                if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo(), linha,
+                                         _fechar_a_steam_da_fila):
                     raise FilaParadaError
                 if _ja_subiu(peca, linha):
                     continue
                 vez = _Vez(antes=ler_as_anteriores().get(peca.id))
-                espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
+                espera = _rodar(peca, vez)
                 if espera is not None:
                     adiadas.append((peca, espera, vez))
-            reiniciadas: set[str] = set()
-            if adiadas and _prontas(andamento):
+            if adiadas and _prontas(andamento) - reiniciadas:
                 if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
                     raise FilaParadaError
                 _rodar_o_servico(andamento, reiniciar, reabrir)
@@ -891,11 +963,11 @@ def rodar(
                     andamento.dado["fase"] = ANDANDO
                     linha = andamento.peca(peca.id)
                     if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo(),
-                                             linha):
+                                             linha, _fechar_a_steam_da_fila):
                         raise FilaParadaError
                     if vez.desde == 0 and _ja_subiu(peca, linha):
                         continue
-                    outra = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
+                    outra = _rodar(peca, vez)
                     if outra is not None:
                         ainda.append((peca, outra, vez))
                 adiadas = ainda
@@ -906,12 +978,15 @@ def rodar(
                                                 "ate": agora() + max(0.0, prazo())}
                     andamento.gravar()
                 if adiadas:
+                    if _pediram_fechar_a_steam():
+                        _fechar_a_steam_da_fila()
                     dormir(PASSO_DA_VIGIA_S)
                 _recolher_o_pedido_de_tentar()
             for peca, espera, _vez in adiadas:
                 linha = andamento.peca(peca.id)
                 linha["selo"], linha["motivo"] = FILA, str(espera)
                 _anotar(f"{peca.id}: a espera passou do prazo ({espera}); fica para a próxima")
+            _devolver_a_steam(fechou, reabrir_a_steam)
             if not _esperar_sem_jogo(andamento, jogo_aberto, relogio, dormir, prazo()):
                 raise FilaParadaError
             andamento.dado["fase"], andamento.dado["fim_em"] = FIM, agora()
@@ -921,6 +996,7 @@ def rodar(
             elif not reiniciadas:
                 andamento.dado["reinicio"]["selo"] = ATUALIZADA
         except FilaParadaError:
+            _devolver_a_steam(fechou, reabrir_a_steam)
             andamento.dado["fase"], andamento.dado["fim_em"] = PARADO, agora()
             for linha in andamento.dado["pecas"]:
                 if linha.get("selo") in EM_CURSO:
@@ -937,6 +1013,7 @@ def rodar(
             return 1
         return 2 if adiadas else 0
     finally:
+        _devolver_a_steam(fechou, reabrir_a_steam)
         os.close(trava)
 
 

@@ -437,7 +437,7 @@ def _linha_do_andamento(peca: dict[str, Any]) -> str:
 
 def html_do_andamento(andamento: dict[str, Any], *, rodando: bool) -> str:
     """O total, uma linha por peça e o reinício do serviço; o rodapé muda com a fila."""
-    pecas = [p for p in andamento.get("pecas") or [] if isinstance(p, dict)]
+    pecas = _ordenadas([p for p in andamento.get("pecas") or [] if isinstance(p, dict)])
     total = andamento.get("total") or {}
     feitas, de, pct = int(total.get("feitas", 0)), int(total.get("de", len(pecas))), \
         int(total.get("pct", 0))

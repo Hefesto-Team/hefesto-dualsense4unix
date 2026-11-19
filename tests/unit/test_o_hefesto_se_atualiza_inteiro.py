@@ -121,13 +121,14 @@ def test_sem_rede_o_vigia_diz_nao_consultado_e_nunca_em_dia() -> None:
 
 
 def test_a_fila_roda_uma_peca_por_vez_e_reinicia_no_fim() -> None:
-    """Prova da D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1: uma peça por vez, serviço no fim."""
+    """Prova da D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1: uma peça por vez, na ordem do
+    registro e não na de quem pede, serviço no fim."""
     d = _Diario()
     lista = [_peca(d, "a"), _peca(d, "b")]
     rc, servico = _rodar(lista, ["b", "a"])
     assert rc == 0
-    assert d.feito == ["b:baixar", "b:instalar", "b:aplicar", "a:baixar", "a:instalar",
-                       "a:aplicar"]
+    assert d.feito == ["a:baixar", "a:instalar", "a:aplicar", "b:baixar", "b:instalar",
+                       "b:aplicar"]
     assert servico == ["reiniciar", "reabrir"]
     andamento = at.ler_o_andamento()
     assert andamento["fase"] == at.FIM

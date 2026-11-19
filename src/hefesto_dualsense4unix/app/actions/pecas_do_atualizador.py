@@ -1130,21 +1130,24 @@ def _instalar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
     return {"pedidos": pedidos}
 
 
-def _aplicar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> None:
+def _aplicar_o_hefesto(passo: Passo, dados: dict[str, Any]) -> dict[str, Any]:
     vao = _vao()
     if "install" in (dados.get("pedidos") or []):
         vao._instalar(RAIZ_DO_REPOSITORIO, vao._rodar_o_install)
         motivo = vao._motivo_da_nota(vao._linhas_da_nota() or [])
         if motivo:
             raise EtapaFalhouError(motivo)
+        passo.fracao(1.0)
+        return {"reiniciou": True}
     passo.fracao(1.0)
+    return {}
 
 
 def _hefesto_sem_reinstalar(_versoes: Versoes) -> str:
     return "" if (RAIZ_DO_REPOSITORIO / ".git").exists() else "instalação sem clone"
 
 
-def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> None:
+def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
     vao = _vao()
     _o_hefesto_pode(_por_que_o_hefesto_espera())
     vao._instalar(RAIZ_DO_REPOSITORIO, vao._rodar_o_install)
@@ -1152,6 +1155,7 @@ def _reinstalar_o_hefesto(passo: Passo, _dados_: dict[str, Any]) -> None:
     if motivo:
         raise EtapaFalhouError(motivo)
     passo.fracao(1.0)
+    return {"reiniciou": True}
 
 
 INDICE_DO_BLUEZ = "https://www.kernel.org/pub/linux/bluetooth/"
@@ -1535,12 +1539,6 @@ def _reinstalacao_do_apt(grupo: str, aplicar: Etapa | None) -> Reinstalacao:
 def registro() -> list[Peca]:
     """As peças, na ordem da fila: o kernel antes dos módulos, o repositório por último."""
     return [
-        Peca("proton", "GE-Proton", "Os jogos da Steam e do Heroic",
-             "Todos os jogos da Steam e do Heroic", versoes_do_proton,
-             _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton,
-             reinstalacao=Reinstalacao(_baixar_de_novo_o_proton, _reinstalar_o_proton,
-                                       _aplicar_o_proton, _proton_sem_reinstalar),
-             anterior=_anterior_do_proton),
         Peca("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto",
              "O serviço do Bluetooth", versoes_do_bluetooth,
              *_etapas_da_casa("bluez"), reinstalacao=_reinstalacao_da_casa("bluez")),
@@ -1578,9 +1576,15 @@ def registro() -> list[Peca]:
              versoes_do_umu, _baixar_o_umu, _instalar_o_umu, _aplicar_o_umu, _voltar_o_umu,
              reinstalacao=Reinstalacao(_baixar_de_novo_o_umu, _instalar_o_umu, _reapontar_o_umu,
                                        _umu_sem_reinstalar)),
+        Peca("proton", "GE-Proton", "Os jogos da Steam e do Heroic",
+             "Todos os jogos da Steam e do Heroic", versoes_do_proton,
+             _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton,
+             reinstalacao=Reinstalacao(_baixar_de_novo_o_proton, _reinstalar_o_proton,
+                                       _aplicar_o_proton, _proton_sem_reinstalar),
+             anterior=_anterior_do_proton, steam_fechada=True),
         Peca("hefesto", "Hefesto", "Interface, serviço e correções", "O serviço e a janela",
              versoes_do_hefesto, _baixar_o_hefesto, _instalar_o_hefesto, _aplicar_o_hefesto,
-             grupo="hefesto",
+             grupo="hefesto", steam_fechada=True,
              reinstalacao=Reinstalacao(None, _reinstalar_o_hefesto, None,
                                        _hefesto_sem_reinstalar)),
     ]

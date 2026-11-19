@@ -596,3 +596,111 @@ def test_sem_apt_as_pecas_do_apt_nao_aparecem(monkeypatch: pytest.MonkeyPatch) -
     assert pa.versoes_do_kernel(True).existe is False
     assert pa.versoes_do_sistema(True).existe is False
     assert pa.versoes_da_nvidia(True).existe is False
+
+
+class _Steam:
+    def __init__(self, *, aberta: bool = True, jogo: bool = False) -> None:
+        self.aberta, self.jogo = aberta, jogo
+        self.feito: list[str] = []
+
+    def fechar(self) -> bool:
+        self.feito.append("fechar")
+        self.aberta = self.jogo = False
+        return True
+
+    def reabrir(self) -> bool:
+        self.feito.append("reabrir")
+        self.aberta = True
+        return True
+
+    def kw(self) -> dict[str, Any]:
+        return {"steam_aberta": lambda: self.aberta, "fechar_a_steam": self.fechar,
+                "reabrir_a_steam": self.reabrir, "jogo_aberto": lambda: self.jogo}
+
+
+def _pecas_da_steam(d: _Diario, steam: _Steam) -> list[at.Peca]:
+    def instalar_proton(passo: at.Passo, _dados: dict[str, Any]) -> None:
+        d.feito.append("proton:instalar")
+        if steam.aberta:
+            raise at.EsperaError("a Steam está aberta", lambda: not steam.aberta)
+        passo.fracao(1.0)
+
+    def aplicar_hefesto(passo: at.Passo, _dados: dict[str, Any]) -> dict[str, Any]:
+        d.feito.append("hefesto:aplicar")
+        passo.fracao(1.0)
+        return {"reiniciou": True}
+
+    proton = dataclasses.replace(_peca(d, "proton", instalar=instalar_proton), steam_fechada=True)
+    hefesto = dataclasses.replace(_peca(d, "hefesto"), aplicar=aplicar_hefesto,
+                                  steam_fechada=True)
+    return [_peca(d, "b"), proton, hefesto]
+
+
+def test_a_fila_fecha_a_steam_uma_vez_e_a_reabre_no_fim() -> None:
+    d, steam = _Diario(), _Steam()
+    lista = _pecas_da_steam(d, steam)
+    at.conferir(rede=True, lista=lista)
+    rc, servico = _rodar(lista, ["hefesto", "proton", "b"], **steam.kw())
+    assert rc == 0, at.ler_o_andamento()
+    assert steam.feito == ["fechar", "reabrir"]
+    assert d.feito.index("proton:instalar") < d.feito.index("hefesto:aplicar")
+    assert d.feito.count("proton:instalar") == 1, "o Proton esperou a Steam que a fila fecha"
+    assert servico == [], "o install do Hefesto já reiniciou: a fila não reinicia de novo"
+    andamento = at.ler_o_andamento()
+    assert andamento["reinicio"]["selo"] == at.PRONTA
+    assert [p["selo"] for p in andamento["pecas"]] == [at.PRONTA] * 3
+
+
+def test_a_fila_parada_reabre_a_steam_que_fechou() -> None:
+    d, steam = _Diario(), _Steam()
+    lista = _pecas_da_steam(d, steam)
+
+    def parar_no_aplicar(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+        at.pedir_para_parar()
+
+    lista[1] = dataclasses.replace(lista[1], aplicar=parar_no_aplicar)
+    at.conferir(rede=True, lista=lista)
+    rc, _servico = _rodar(lista, ["b", "proton", "hefesto"], **steam.kw())
+    assert rc == 2
+    assert steam.feito == ["fechar", "reabrir"]
+
+
+def test_com_jogo_aberto_nada_fecha_e_o_pedido_fecha_e_segue() -> None:
+    d, steam = _Diario(), _Steam(jogo=True)
+    lista = _pecas_da_steam(d, steam)[1:2]
+    voltas, tempo = [0], [0.0]
+
+    def dormir(_s: float) -> None:
+        voltas[0] += 1
+        tempo[0] += 5.0
+        if voltas[0] <= 2:
+            assert steam.feito == [], "a fila fechou a Steam com o jogo aberto"
+        if voltas[0] == 2:
+            at.pedir_para_fechar_a_steam()
+
+    at.conferir(rede=True, lista=lista)
+    rc, _servico = _rodar(lista, ["proton"], dormir=dormir, relogio=lambda: tempo[0],
+                          **steam.kw())
+    assert rc == 0
+    assert steam.feito == ["fechar", "reabrir"]
+    assert _linha("proton")["selo"] == at.PRONTA
+
+
+def test_a_fila_segue_a_ordem_do_registro_com_o_proton_antes_do_hefesto() -> None:
+    from hefesto_dualsense4unix.interface import atualizacoes as tela
+
+    d = _Diario()
+    lista = [_peca(d, p.id) for p in pa.registro()]
+    at.conferir(rede=True, lista=lista)
+    _rodar(lista, list(tela.ORDEM_NA_TELA), steam_aberta=lambda: False)
+    ordem = list(dict.fromkeys(f.split(":")[0] for f in d.feito))
+    assert ordem[-2:] == ["proton", "hefesto"], ordem
+    assert ordem.index("kernel") < ordem.index("dkms")
+
+
+def test_sem_o_hefesto_a_fila_reinicia_uma_vez() -> None:
+    d, steam = _Diario(), _Steam(aberta=False)
+    lista = _pecas_da_steam(d, steam)[:1]
+    at.conferir(rede=True, lista=lista)
+    rc, servico = _rodar(lista, ["b"], **steam.kw())
+    assert rc == 0 and servico == ["reiniciar", "reabrir"] and steam.feito == []
