@@ -202,6 +202,7 @@ class _Abertura:
     handle: Any = None
     erro: Exception | None = None
     abandonada: bool = False
+    deixada_em_voo: bool = False
 
 
 def _o_kernel_ainda_cria(path: bytes | str) -> bool:
@@ -1436,6 +1437,7 @@ class PyDualSenseController(IController):
         self._abrindo: dict[str, _Abertura] = {}
         self._ouvinte_das_aberturas: Callable[[], None] | None = None
         self._falta_abrir = False
+        self._falhas_da_abertura: dict[str, tuple[str, int]] = {}
         self._evdev = evdev_reader if evdev_reader is not None else EvdevReader()
         self._motion_reader: Any | None = None
         self._primary_change_observer: Callable[[str | None, str | None], None] | None = None
@@ -2228,7 +2230,9 @@ class PyDualSenseController(IController):
         return ds
 
     def ouvir_as_aberturas(self, ouvinte: Callable[[], None] | None) -> None:
-        """Chama `ouvinte` quando a abertura de um controle termina, de qualquer fio."""
+        """Chama `ouvinte`, de qualquer fio, quando a abertura que a volta deixou em voo abre o
+        controle. A que falha e a que o próprio `connect` colhe não chamam: a falha espera o recuo.
+        """
         self._ouvinte_das_aberturas = ouvinte
 
     def falta_abrir_alguem(self) -> bool:
@@ -2242,10 +2246,13 @@ class PyDualSenseController(IController):
             abertura.erro = exc
         with self._io_lock:
             abandonada = abertura.abandonada
+            deixada_em_voo = abertura.deixada_em_voo
             abertura.pronta.set()
         if abandonada:
             if abertura.handle is not None:
                 _fechar_ou_dizer(abertura.handle)
+            return
+        if not deixada_em_voo or abertura.handle is None:
             return
         ouvinte = self._ouvinte_das_aberturas
         if ouvinte is not None:
@@ -2259,8 +2266,9 @@ class PyDualSenseController(IController):
     ) -> list[_Abertura]:
         """Abre cada controle no próprio fio e devolve quem já terminou.
 
-        Um `init` preso não segura os outros: quem demora segue em voo, e a abertura que termina
-        toca a volta seguinte. A espera só existe quando há abertura nova, e tem teto.
+        Um `init` preso não segura os outros: quem demora segue em voo, e a que termina depois da
+        colheita com o controle aberto toca a volta seguinte. A espera só existe quando há
+        abertura nova, e tem teto.
         """
         lancadas = False
         for key, path, is_edge in pedidos:
@@ -2287,7 +2295,18 @@ class PyDualSenseController(IController):
         for abertura in colhidas:
             self._abrindo.pop(abertura.key, None)
             self._opening.discard(abertura.key)
+        for abertura in self._abrindo.values():
+            abertura.deixada_em_voo = True
         return colhidas
+
+    def _dizer_a_falha_da_abertura(self, key: str, erro: str) -> None:
+        """Uma linha por chave e por erro novo; a repetição só conta, e a contagem sai na troca."""
+        anterior, repeticoes = self._falhas_da_abertura.get(key, ("", 0))
+        if erro == anterior:
+            self._falhas_da_abertura[key] = (erro, repeticoes + 1)
+            return
+        self._falhas_da_abertura[key] = (erro, 1)
+        logger.info("backend_open_one_failed", key=key, err=erro, repeticoes=repeticoes)
 
     def _abandonar_as_aberturas_locked(self) -> list[Any]:
         """Ninguém mais colhe o que está em voo. Devolve os handles prontos, a fechar fora."""
@@ -2335,6 +2354,7 @@ class PyDualSenseController(IController):
         self._falta_abrir = False
         want = self._enumerate_device_keys()
         if not want:
+            self._falhas_da_abertura.clear()
             with self._io_lock:
                 self._close_handles(keep=set())
                 self._recompute_primary()
@@ -2346,6 +2366,8 @@ class PyDualSenseController(IController):
 
         want_keys = {key for key, _, _ in want}
         caminho_pedido = {key: path for key, path, _ in want}
+        for sumiu in set(self._falhas_da_abertura) - want_keys:
+            del self._falhas_da_abertura[sumiu]
         with self._io_lock:
             self._close_handles(keep=want_keys)
             existing = set(self._handles)
@@ -2365,7 +2387,7 @@ class PyDualSenseController(IController):
             key = abertura.key
             if abertura.erro is not None:
                 self._falta_abrir = True
-                logger.info("backend_open_one_failed", key=key, err=str(abertura.erro))
+                self._dizer_a_falha_da_abertura(key, str(abertura.erro))
                 RELOGIO.marcar(self._key_to_uniq(key), TENTATIVA_FALHOU)
                 continue
             handle = abertura.handle
@@ -2405,6 +2427,7 @@ class PyDualSenseController(IController):
                 transporte=self._detect_transport(handle),
                 no=_porta_usb_do_no(abertura.path),
             )
+            self._falhas_da_abertura.pop(key, None)
             new_handles.append((key, handle))
 
         with self._io_lock:

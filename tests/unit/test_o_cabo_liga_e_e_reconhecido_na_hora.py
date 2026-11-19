@@ -388,8 +388,8 @@ class TestUmControleNaoSeguraOsOutros:
         ctl.ouvir_as_aberturas(lambda: toques.append(time.monotonic()))
         ctl.connect()
         assert MACS[2] not in ctl._handles
-        _esperar(lambda: len(toques) >= len(chaves))
-        assert len(toques) == len(chaves), "a abertura que terminou não acordou a volta"
+        _esperar(lambda: len(toques) >= 1 and _aberturas_prontas(ctl))
+        assert len(toques) == 1, "só a abertura deixada em voo acorda a volta"
         ctl.connect()
         assert set(ctl._handles) == set(MACS)
         assert not ctl.falta_abrir_alguem()
