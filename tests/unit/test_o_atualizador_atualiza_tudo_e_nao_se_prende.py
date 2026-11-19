@@ -555,7 +555,7 @@ def test_a_tela_diz_o_estado_por_glifo_e_o_porque_so_na_dica() -> None:
     assert '<span class="mp-s falhou" data-dica="Falhou: HTTP Error 404">!</span>' in corpo
     assert '<span class="mp-s aplicando" data-dica="Aplicando · Instalar">●</span>' in corpo
     sem_dica = re.sub(r'data-dica="[^"]*"', "", corpo)
-    assert '<span class="pendente">a Steam está aberta</span>' in sem_dica
+    assert '<span class="pendente">A Steam está aberta</span>' in sem_dica
     for texto in ("já traz a cura", "404", "FALHOU", "PRONTA"):
         assert texto not in sem_dica, texto
     regra = re.search(r"\.hef-atualiza \.mp-s\.revisar,\.hef-atualiza \.mp-s\.falhou\{[^}]*\}",

@@ -442,7 +442,7 @@ def _linha_do_andamento(peca: dict[str, Any], *, parada: bool = False) -> str:
     barra = _barra(peca.get("pct", 0), contagens) if classe == "aplicando" else ""
     meio = f'<span class="mp-v">{barra or ver}</span>'
     if classe == "esperando" and motivo:
-        meio = f'<span class="pendente">{_e(motivo)}</span>'
+        meio = f'<span class="pendente">{_e(motivo[:1].upper() + motivo[1:])}</span>'
     dica = _junto(_versao_inteira({"de": de, "para": para, "estado": "nova"}),
                   str(peca.get("dica_do_aplicar") or ""))
     return _linha(peca, classe, estado, meio, "", dica)

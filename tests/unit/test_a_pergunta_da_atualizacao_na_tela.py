@@ -260,7 +260,7 @@ def test_com_a_fila_esperando_o_mapa_abre_e_o_atualizar_se_apaga(
     assert trava is not None
     try:
         corpo = gestos.conteudo(None, agora=1010.0)
-        assert f'<span class="pendente">{motivo}</span>' in corpo
+        assert f'<span class="pendente">{motivo[:1].upper() + motivo[1:]}</span>' in corpo
         _gesto("atualizacoes-abrir")
         mapa = gestos.conteudo(None, agora=1010.0)
         assert 'class="mp-lista"' in mapa and "and-total" not in mapa
