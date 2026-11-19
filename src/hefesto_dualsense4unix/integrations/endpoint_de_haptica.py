@@ -120,13 +120,14 @@ import re
 import select
 import shutil
 import subprocess
-import sys
 import threading
 import time
 from array import array
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
+
+import numpy as np
 
 from hefesto_dualsense4unix.integrations import classe_do_rumble, pad_usb, porta_do_som
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
@@ -748,9 +749,10 @@ def _seno(frequencia: int) -> array[float]:
     )
 
 
-_SENO_DO_FORTE = _seno(FREQUENCIA_DO_FORTE_HZ)
-_SENO_DO_FRACO = _seno(FREQUENCIA_DO_FRACO_HZ)
+_SENO_DO_FORTE = np.array(_seno(FREQUENCIA_DO_FORTE_HZ), dtype=np.float64)
+_SENO_DO_FRACO = np.array(_seno(FREQUENCIA_DO_FRACO_HZ), dtype=np.float64)
 _BLOCO_MUDO = bytes(QUADROS_POR_BLOCO * _BYTES_POR_QUADRO)
+_FLOAT32_LE = np.dtype("<f4")
 
 
 def rotulo_do_tocador(marca: str) -> str:
@@ -775,25 +777,36 @@ def bloco_da_haptica(
     b0, b1 = _amplitude(fraco0), _amplitude(fraco)
     if not (a0 or a1 or b0 or b1):
         return _BLOCO_MUDO
+    indices, rampa_a, rampa_b = _rampas(fase, a0, a1, b0, b1)
+    return _quadros_de(rampa_a * _SENO_DO_FORTE[indices], rampa_b * _SENO_DO_FRACO[indices])
+
+
+def _rampas(
+    fase: int, a0: float, a1: float, b0: float, b1: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Os índices no ciclo e as duas rampas do bloco: de ``a0`` a ``a1`` e de ``b0`` a ``b1``."""
     n = QUADROS_POR_BLOCO
-    inicio = int(fase) % QUADROS_DO_CICLO
-    indices = [(inicio + i) % QUADROS_DO_CICLO for i in range(n)]
-    passo_a, passo_b = (a1 - a0) / n, (b1 - b0) / n
-    quadros = array("f", _BLOCO_MUDO)
-    forte_ = _SENO_DO_FORTE
-    fraco_ = _SENO_DO_FRACO
-    quadros[2::4] = array("f", [(a0 + passo_a * i) * forte_[k] for i, k in enumerate(indices)])
-    quadros[3::4] = array("f", [(b0 + passo_b * i) * fraco_[k] for i, k in enumerate(indices)])
-    if sys.byteorder != "little":  # pragma: no cover
-        quadros.byteswap()
+    passos = np.arange(n, dtype=np.float64)
+    indices = (int(fase) % QUADROS_DO_CICLO + np.arange(n)) % QUADROS_DO_CICLO
+    return indices, a0 + (a1 - a0) / n * passos, b0 + (b1 - b0) / n * passos
+
+
+def _quadros_de(forte: np.ndarray, fraco: np.ndarray) -> bytes:
+    """O bloco ``float32le`` com o forte no canal 2 e o fraco no 3."""
+    quadros = np.zeros((len(forte), CANAIS_DA_HAPTICA), dtype=_FLOAT32_LE)
+    quadros[:, 2] = forte
+    quadros[:, 3] = fraco
     return quadros.tobytes()
 
 
-def _rms(valores: Sequence[float]) -> float:
-    return math.sqrt(sum(v * v for v in valores) / len(valores)) if len(valores) else 0.0
+def _rms(valores: np.ndarray) -> float:
+    """O RMS pela soma do Python (compensada): a subida do timbre empata pela mesma conta."""
+    if not len(valores):
+        return 0.0
+    return math.sqrt(sum((valores * valores).tolist()) / len(valores))
 
 
-def _canal_que_nao_perde(timbre: list[float], seno: list[float]) -> list[float]:
+def _canal_que_nao_perde(timbre: np.ndarray, seno: np.ndarray) -> np.ndarray:
     """O canal com timbre, nunca com menos energia que o seno de hoje no mesmo bloco.
 
     Abaixo do seno, o timbre sobe (saturando em 1, o que só o engrossa) até a energia dele; se
@@ -806,7 +819,7 @@ def _canal_que_nao_perde(timbre: list[float], seno: list[float]) -> list[float]:
         return seno
     ganho = alvo / tem
     for _ in range(_SUBIDAS_DO_TIMBRE):
-        subido = [max(-1.0, min(1.0, v * ganho)) for v in timbre]
+        subido = np.clip(timbre * ganho, -1.0, 1.0)
         if _rms(subido) >= alvo:
             return subido
         ganho *= 1.5
@@ -832,27 +845,15 @@ def bloco_com_timbre(
     b0, b1 = _amplitude(fraco0), _amplitude(fraco)
     if not (a0 or a1 or b0 or b1):
         return _BLOCO_MUDO
-    n = QUADROS_POR_BLOCO
-    inicio = int(fase) % QUADROS_DO_CICLO
-    indices = [(inicio + i) % QUADROS_DO_CICLO for i in range(n)]
-    passo_a, passo_b = (a1 - a0) / n, (b1 - b0) / n
-    do_forte, do_fraco = formas.ciclos_do_timbre(timbre, QUADROS_DO_CICLO, _TAXA)
-    rampa_a = [a0 + passo_a * i for i in range(n)]
-    rampa_b = [b0 + passo_b * i for i in range(n)]
-    canal_forte = _canal_que_nao_perde(
-        [r * do_forte[k] for r, k in zip(rampa_a, indices, strict=True)],
-        [r * _SENO_DO_FORTE[k] for r, k in zip(rampa_a, indices, strict=True)],
+    indices, rampa_a, rampa_b = _rampas(fase, a0, a1, b0, b1)
+    do_forte, do_fraco = (
+        np.asarray(c, dtype=np.float64)[indices]
+        for c in formas.ciclos_do_timbre(timbre, QUADROS_DO_CICLO, _TAXA)
     )
-    canal_fraco = _canal_que_nao_perde(
-        [r * do_fraco[k] for r, k in zip(rampa_b, indices, strict=True)],
-        [r * _SENO_DO_FRACO[k] for r, k in zip(rampa_b, indices, strict=True)],
+    return _quadros_de(
+        _canal_que_nao_perde(rampa_a * do_forte, rampa_a * _SENO_DO_FORTE[indices]),
+        _canal_que_nao_perde(rampa_b * do_fraco, rampa_b * _SENO_DO_FRACO[indices]),
     )
-    quadros = array("f", _BLOCO_MUDO)
-    quadros[2::4] = array("f", canal_forte)
-    quadros[3::4] = array("f", canal_fraco)
-    if sys.byteorder != "little":  # pragma: no cover
-        quadros.byteswap()
-    return quadros.tobytes()
 
 
 FREQUENCIA_DO_TOQUE_HZ = formas.FORMAS[formas.TOQUE].componentes[0][0]
@@ -874,34 +875,29 @@ def forma_do_toque(
 
 
 def misturar_o_toque(
-    bloco: bytes, toque: array[float], inicio: int, canais: tuple[int, ...]
+    bloco: bytes, toque: array[float] | np.ndarray, inicio: int, canais: tuple[int, ...]
 ) -> bytes:
     """Soma o trecho ``inicio`` do toque aos ``canais`` do bloco, sem passar de 1."""
-    quadros = array("f")
-    quadros.frombytes(bloco)
-    if sys.byteorder != "little":  # pragma: no cover
-        quadros.byteswap()
-    total = len(quadros) // CANAIS_DA_HAPTICA
-    for i in range(max(0, min(total, len(toque) - inicio))):
-        amostra = toque[inicio + i]
-        for canal in canais:
-            k = i * CANAIS_DA_HAPTICA + canal
-            quadros[k] = max(-1.0, min(1.0, quadros[k] + amostra))
-    if sys.byteorder != "little":  # pragma: no cover
-        quadros.byteswap()
-    return quadros.tobytes()
+    quadros = np.frombuffer(bloco, dtype=_FLOAT32_LE).reshape(-1, CANAIS_DA_HAPTICA)
+    k = max(0, min(len(quadros), len(toque) - inicio))
+    if not k:
+        return bloco
+    trecho = np.asarray(toque[inicio:inicio + k], dtype=np.float64)
+    soma = quadros.copy()
+    for canal in canais:
+        soma[:k, canal] = np.clip(quadros[:k, canal].astype(np.float64) + trecho, -1.0, 1.0)
+    return soma.tobytes()
 
 
 def somar_os_lados(
     bloco: bytes, lados: tuple[int, int], antes: tuple[int, int], fase: int
 ) -> bytes:
     """Soma o nível de cada motor ao canal dele: o esquerdo no 2 e o direito no 3."""
-    camada = array("f")
-    camada.frombytes(bloco_da_haptica(lados[1], lados[0], fase=fase, antes=antes[::-1]))
-    if sys.byteorder != "little":  # pragma: no cover
-        camada.byteswap()
+    camada = np.frombuffer(
+        bloco_da_haptica(lados[1], lados[0], fase=fase, antes=antes[::-1]), dtype=_FLOAT32_LE
+    ).reshape(-1, CANAIS_DA_HAPTICA)
     for canal in (*CANAIS_DO_LADO["esquerdo"], *CANAIS_DO_LADO["direito"]):
-        bloco = misturar_o_toque(bloco, camada[canal::CANAIS_DA_HAPTICA], 0, (canal,))
+        bloco = misturar_o_toque(bloco, camada[:, canal], 0, (canal,))
     return bloco
 
 

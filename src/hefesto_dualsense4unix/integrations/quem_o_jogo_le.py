@@ -144,30 +144,32 @@ def _inode(caminho: str) -> int:
         return 0
 
 
-def _ambiente(pid: int, raiz_proc: pathlib.Path) -> str:
-    try:
-        return (raiz_proc / str(pid) / "environ").read_bytes().decode(
-            "utf-8", "replace"
-        )
-    except OSError:
-        return ""
+_MARCA_DO_JOGO = f"{ENV_DO_JOGO}=".encode()
+_LIDOS_POR_PROGRAMA: dict[str, dict[int, tuple[str, bool]]] = {}
 
 
 def pids_de_jogo(raiz_proc: pathlib.Path | str = "/proc") -> set[int]:
-    """Os processos que são JOGO, pelo ambiente e não pelo nome."""
-    raiz = pathlib.Path(raiz_proc)
-    achados: set[int] = set()
-    try:
-        entradas = list(raiz.iterdir())
-    except OSError:
-        return achados
-    for entrada in entradas:
-        if not entrada.name.isdigit():
+    """Os processos que são JOGO, pelo ambiente e não pelo nome.
+
+    O ambiente de um processo só muda no ``exec``: cada pid se lê uma vez por programa (o alvo
+    do ``exe``), e a varredura seguinte só abre o ambiente do processo novo ou do que trocou de
+    programa. Guarda só os pids da última varredura da mesma raiz.
+    """
+    raiz = os.fspath(raiz_proc)
+    antes = _LIDOS_POR_PROGRAMA.get(raiz, {})
+    agora: dict[int, tuple[str, bool]] = {}
+    for nome in _entradas(raiz):
+        if not nome.isdigit():
             continue
-        pid = int(entrada.name)
-        if f"{ENV_DO_JOGO}=" in _ambiente(pid, raiz):
-            achados.add(pid)
-    return achados
+        pid = int(nome)
+        programa = _alvo_do_link(f"{raiz}/{nome}/exe")
+        lido = antes.get(pid)
+        if lido is None or lido[0] != programa:
+            lido = (programa, _MARCA_DO_JOGO in _bruto(f"{raiz}/{nome}/environ"))
+        agora[pid] = lido
+    _LIDOS_POR_PROGRAMA.clear()
+    _LIDOS_POR_PROGRAMA[raiz] = agora
+    return {pid for pid, (_, jogo) in agora.items() if jogo}
 
 
 def e_avaliador_do_install_script(cmd: str) -> bool:

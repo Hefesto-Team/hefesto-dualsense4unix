@@ -22,6 +22,8 @@ from functools import partial
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+import numpy as np
+
 from hefesto_dualsense4unix.core.events import EventTopic, tem_assinante
 from hefesto_dualsense4unix.core.physical_report_reader import TRIGGER_ESTADO_DISPAROU
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -3429,20 +3431,21 @@ def amostras_de(
     taxa: int = TAXA_DE_FORA,
 ) -> array[float]:
     """As amostras do padrão a partir de ``de_ms``: cada golpe é uma senoide que cai."""
-    saida = array("f", bytes(4 * max(0, quantas)))
-    for i in range(len(saida)):
-        posicao = _posicao_ms(padrao, de_ms + i * 1000.0 / taxa, bpm)
-        if posicao is None:
-            continue
-        soma = 0.0
-        for golpe in padrao.golpes:
-            dentro = posicao - golpe.inicio_ms
-            if 0 <= dentro < golpe.dura_ms:
-                queda = 1.0 - dentro / golpe.dura_ms
-                soma += golpe.amplitude * queda * math.sin(
-                    2 * math.pi * golpe.frequencia_hz * dentro / 1000.0)
-        saida[i] = max(-1.0, min(1.0, soma * forca))
-    return saida
+    instantes = de_ms + np.arange(max(0, quantas), dtype=np.float64) * (1000.0 / taxa)
+    if padrao.repete:
+        periodo = max(60_000.0 / bpm if bpm else padrao.dura_ms, 1.0)
+        valida = instantes >= 0
+        posicao = np.mod(instantes, periodo)
+    else:
+        valida = (instantes >= 0) & (instantes < padrao.dura_ms)
+        posicao = instantes
+    soma = np.zeros(len(instantes))
+    for golpe in padrao.golpes:
+        dentro = posicao - golpe.inicio_ms
+        tocando = valida & (dentro >= 0) & (dentro < golpe.dura_ms)
+        soma += np.where(tocando, golpe.amplitude * (1.0 - dentro / golpe.dura_ms) * np.sin(
+            2 * math.pi * golpe.frequencia_hz * dentro / 1000.0), 0.0)
+    return array("f", np.clip(soma * forca, -1.0, 1.0).astype(np.float32).tobytes())
 
 
 def pcm_do_padrao(padrao: PadraoDeFora, volume: float, taxa: int = TAXA_DE_FORA) -> bytes:

@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import functools
 import math
-import sys
 from array import array
 from dataclasses import dataclass
+
+import numpy as np
 
 from hefesto_dualsense4unix.profiles import sem_efeito as _sem_efeito
 
@@ -249,8 +250,16 @@ TETO_DO_CORPO = 0.7
 _ESCALA_DO_PCM = 32768.0
 
 
+_TRECHO_DO_FILTRO = 256
+
+
 class _Biquad:
-    """Um filtro de segunda ordem (Butterworth), com o estado entre os pedaços."""
+    """Um filtro de segunda ordem (Butterworth), com o estado entre os pedaços.
+
+    Passa o pedaço inteiro de uma vez: em trechos de :data:`_TRECHO_DO_FILTRO` amostras, a
+    resposta ao impulso dos polos e a resposta ao estado de antes, contadas uma vez; o mesmo
+    resultado da recursão amostra por amostra.
+    """
 
     def __init__(self, tipo: str, corte_hz: float, taxa: int) -> None:
         w = 2.0 * math.pi * corte_hz / taxa
@@ -265,13 +274,30 @@ class _Biquad:
         self.b0, self.b1, self.b2 = b0 / a0, b1 / a0, b2 / a0
         self.a1, self.a2 = (-2.0 * cos_w) / a0, (1.0 - alfa) / a0
         self.x1 = self.x2 = self.y1 = self.y2 = 0.0
+        n = _TRECHO_DO_FILTRO
+        impulso = np.zeros(n)
+        for i in range(n):
+            impulso[i] = ((1.0 if i == 0 else 0.0)
+                          - self.a1 * (impulso[i - 1] if i >= 1 else 0.0)
+                          - self.a2 * (impulso[i - 2] if i >= 2 else 0.0))
+        self._impulso = impulso
+        self._do_y1 = -self.a1 * impulso - self.a2 * np.concatenate(([0.0], impulso[:-1]))
+        self._do_y2 = -self.a2 * impulso
 
-    def passar(self, x: float) -> float:
-        y = (self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2
-             - self.a1 * self.y1 - self.a2 * self.y2)
-        self.x2, self.x1 = self.x1, x
-        self.y2, self.y1 = self.y1, y
-        return y
+    def passar(self, x: np.ndarray) -> np.ndarray:
+        """O pedaço ``x`` filtrado, continuando de onde o pedaço anterior parou."""
+        saida = np.empty(len(x))
+        for de in range(0, len(x), _TRECHO_DO_FILTRO):
+            trecho = x[de:de + _TRECHO_DO_FILTRO]
+            n = len(trecho)
+            antes = np.concatenate(([self.x2, self.x1], trecho))
+            direto = self.b0 * antes[2:] + self.b1 * antes[1:-1] + self.b2 * antes[:-2]
+            y = (np.convolve(direto, self._impulso[:n])[:n]
+                 + self.y1 * self._do_y1[:n] + self.y2 * self._do_y2[:n])
+            saida[de:de + n] = y
+            self.x2, self.x1 = float(antes[-2]), float(antes[-1])
+            self.y2, self.y1 = (float(y[-2]) if n > 1 else self.y1), float(y[-1])
+        return saida
 
 
 class FiltroDoCorpo:
@@ -287,15 +313,10 @@ class FiltroDoCorpo:
 
     def processar(self, pcm: bytes) -> array[float]:
         """O pedaço filtrado. Meio quadro solto no fim do pedaço é descartado."""
-        quadros = array("h")
-        quadros.frombytes(pcm[: len(pcm) - len(pcm) % 4])
-        if sys.byteorder != "little":  # pragma: no cover
-            quadros.byteswap()
-        saida = array("f", bytes(4 * (len(quadros) // 2)))
-        for i in range(len(saida)):
-            mono = (quadros[2 * i] + quadros[2 * i + 1]) / (2.0 * _ESCALA_DO_PCM)
-            saida[i] = GANHO_DO_CORPO * self._baixo.passar(self._alto.passar(mono))
-        return saida
+        quadros = np.frombuffer(pcm[: len(pcm) - len(pcm) % 4], dtype="<i2").reshape(-1, 2)
+        mono = quadros.sum(axis=1, dtype=np.float64) / (2.0 * _ESCALA_DO_PCM)
+        filtrado = GANHO_DO_CORPO * self._baixo.passar(self._alto.passar(mono))
+        return array("f", filtrado.astype(np.float32).tobytes())
 
 
 FRACAO_DO_SUSTO = 0.7
@@ -342,32 +363,34 @@ class TetoDoCorpo:
         if not n:
             return array("f")
         teto = max(0.0, self.teto)
-        entrada = max(map(abs, amostras))
+        valores = np.asarray(amostras, dtype=np.float64)
+        entrada = float(np.abs(valores).max())
         self._pico = max(entrada, self._pico * math.exp(-n / (self.taxa * SOLTURA_DO_SUSTO_S)))
         alvo = teto / self._pico if self._pico > teto else 1.0
         antes, self._ganho = self._ganho, alvo
         if alvo <= antes:
-            saida = array("f", [x * alvo for x in amostras])
+            saida = valores * alvo
         else:
-            passo = (alvo - antes) / n
-            saida = array("f", [x * (antes + passo * i) for i, x in enumerate(amostras)])
+            saida = valores * (antes + (alvo - antes) / n * np.arange(n, dtype=np.float64))
+        saida = saida.astype(np.float32)
         if entrada * FRACAO_DO_SUSTO > teto:
             self._desde_o_alto = 0
-            return saida
+            return array("f", saida.tobytes())
         if self._desde_o_alto is None:
-            return saida
+            return array("f", saida.tobytes())
         self._desde_o_alto += n
         fracao = self._desde_o_alto / (self.taxa * SOLTURA_DO_SUSTO_S)
         if fracao >= 1.0:
             self._desde_o_alto = None
-            return saida
-        cauda = teto * _curva_da_soltura(fracao) - max(map(abs, saida))
+            return array("f", saida.tobytes())
+        cauda = teto * _curva_da_soltura(fracao) - float(np.abs(saida).max())
         if cauda <= 0.0:
-            return saida
+            return array("f", saida.tobytes())
         giro = 2.0 * math.pi * FREQUENCIA_DA_SOLTURA_HZ / self.taxa
         fase = self._fase
         self._fase = (fase + giro * n) % (2.0 * math.pi)
-        return array("f", [x + cauda * math.sin(fase + giro * i) for i, x in enumerate(saida)])
+        onda = np.sin(fase + giro * np.arange(n, dtype=np.float64))
+        return array("f", (saida + cauda * onda).astype(np.float32).tobytes())
 
 
 GRAO_MS = 6

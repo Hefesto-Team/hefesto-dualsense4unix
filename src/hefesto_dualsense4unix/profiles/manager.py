@@ -299,7 +299,8 @@ class ProfileManager:
     _ultimo_empate_logado: tuple[str, str] | None = field(default=None, repr=False)
 
     def list_profiles(self) -> list[Profile]:
-        return load_all_profiles()
+        """Os perfis para consultar, sem cópia funda: quem os recebe não os edita."""
+        return perfis_para_consulta()
 
     def get(self, name: str) -> Profile:
         return load_profile(name)
