@@ -334,6 +334,7 @@ def test_o_heroic_com_jogo_debaixo_nao_e_fechado(
     monkeypatch.setattr(qjl, "RAIZ_RUNTIME", str(tmp_path))
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     heroic = next(x for x in rl.LANCADORES if x.chave == "heroic")
+    monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
     monkeypatch.setattr(rl, "abertos", lambda: [heroic])
     monkeypatch.setattr(rl, "pids_de", lambda x: [100] if x is heroic else [])
     fechados: list[str] = []

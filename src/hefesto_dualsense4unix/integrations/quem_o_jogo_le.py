@@ -29,7 +29,7 @@ _TOKEN_DO_INSTALL_SCRIPT = "Install=1"
 
 PHYS_DO_VPAD = "hefesto-vpad"
 UNIQS_DO_VPAD: tuple[str, ...] = ("02:fe:", "hefesto-")
-MARCA_NO_NOME = "Hefesto"
+MARCA_NO_NOME = "(Hefesto"
 
 __all__ = [
     "AGULHAS_DO_HEFESTO",

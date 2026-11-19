@@ -136,3 +136,22 @@ class TestOJogoAbertoEmQualquerLancador:
     def test_o_jogo_no_controle_fisico_nao_e_o_pad_do_hefesto(self, maquina: _Maquina) -> None:
         maquina.processo("retroarch", "/usr/bin/retroarch", maquina.fisico)
         assert maquina.ha_jogo() is False
+
+    def test_o_mouse_e_o_teclado_do_hefesto_nao_sao_pad(self, maquina: _Maquina) -> None:
+        from hefesto_dualsense4unix.integrations import uinput_gamepad, uinput_mouse
+
+        def evento(no: str, nome: str) -> pathlib.Path:
+            (maquina.sys / "class/input" / no / "device").mkdir(parents=True)
+            (maquina.sys / "class/input" / no / "device/name").write_text(nome + "\n")
+            (maquina.dev / "input").mkdir(exist_ok=True)
+            (maquina.dev / "input" / no).write_bytes(b"")
+            return maquina.dev / "input" / no
+
+        teclas = [evento(f"event{n}", nome) for n, nome in enumerate(
+            (uinput_mouse.DEVICE_NAME, uinput_mouse.NOME_DO_CURSOR_DO_TOQUE), start=20)]
+        pads = [evento(f"event{n}", nome) for n, nome in enumerate(
+            (uinput_gamepad.XBOX360_NAME, uinput_gamepad.NINTENDO_PROCON_NAME), start=30)]
+        maquina.processo("libinput", "libinput debug-events", *teclas)
+        assert maquina.ha_jogo() is False
+        achados = qjl.nos_dos_pads_virtuais(str(maquina.sys), str(maquina.dev)).values()
+        assert sorted(achados) == sorted(map(str, [maquina.pad, *pads]))
