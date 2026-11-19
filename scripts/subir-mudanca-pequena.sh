@@ -51,7 +51,7 @@ else
   for n in "${NOMES[@]}"; do
     if [ -n "$(git ls-files --others --exclude-standard -- "$n")" ]; then
       CONTA+=$'\n'"$(wc -l < "$n") 0 $n"
-    elif ! cut -f3 <<< "$CONTA" | grep -qxF -- "$n"; then
+    elif ! grep -qxF -- "$n" <<< "$(cut -f3 <<< "$CONTA")"; then
       recusa "$n não tem mudança a subir"
     fi
   done
