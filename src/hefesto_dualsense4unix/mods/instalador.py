@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -740,6 +741,12 @@ def instalar(
                 raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
             aviso_aceito = manifesto.aviso
         a_substituir = [i for i in manifesto.substitui if i in registro]
+        for mod_id in a_substituir:
+            if not mesma_origem(tipo, endereco, registro[mod_id]):
+                antiga = registro[mod_id].nome
+                raise InstalacaoRecusadaError(
+                    f"«{manifesto.nome}» diz que substitui «{antiga}», que veio de outro lugar; "
+                    f"remova «{antiga}» antes, se quiser.")
         anotar_o_gesto(lg, "instalar" if anterior is None else "atualizar",
                        [manifesto.id, *a_substituir])
         if sozinha and anterior is not None:
@@ -808,6 +815,37 @@ def instalar(
         if troca is not None:
             _desfazer_a_troca(lg, *troca, desligar=trocou)
         shutil.rmtree(temporaria, ignore_errors=True)
+
+
+_ENDERECO_SCP = re.compile(r"^(?:[^@/:]+@)?([^/:]+):(.*)$")
+
+
+def _lugar_da_origem(tipo: Origem, endereco: str) -> tuple[str, str, str] | None:
+    """De onde a extensão veio: a raiz da pasta, ou o host e o dono do endereço git (no
+    ``file://``, a pasta do repositório); ``None`` quando o endereço não diz o dono."""
+    if tipo == "local":
+        return ("local", "", str(Path(endereco).parent))
+    if "://" in endereco:
+        partes = urlsplit(endereco)
+        host, caminho = (partes.hostname or "").lower(), partes.path
+    elif achado := _ENDERECO_SCP.match(endereco):
+        host, caminho = achado.group(1).lower(), achado.group(2)
+    else:
+        return None
+    pedacos = [p for p in caminho.split("/") if p]
+    if len(pedacos) < 2:
+        return None
+    dono = "/".join(pedacos[:-1]) if not host else pedacos[0].lower()
+    return ("git", host, dono)
+
+
+def mesma_origem(tipo: Origem, endereco: str, antiga: Entrada) -> bool:
+    """A nova (``tipo`` e ``endereco``) vem do mesmo lugar que ``antiga``: as duas oficiais, o
+    mesmo host e dono no git, ou a mesma pasta-mãe entre as locais."""
+    if tipo == "oficial" and antiga.origem == "oficial":
+        return True
+    lugar = _lugar_da_origem(tipo, endereco)
+    return lugar is not None and lugar == _lugar_da_origem(antiga.origem, antiga.endereco)
 
 
 def _parar_as_substituidas(lg: Lugares, ids: Sequence[str]) -> list[str]:
@@ -1282,6 +1320,7 @@ __all__ = [
     "ler_registro",
     "ligar",
     "manifesto_instalado",
+    "mesma_origem",
     "migrar_os_alcances",
     "migrar_os_aparelhos",
     "o_css_que_fica",

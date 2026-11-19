@@ -40,6 +40,7 @@
 .ext-instalar input::placeholder,.ext-inst-campo input::placeholder { color:var(--fg) }
 .ext-instalar input:focus,.ext-inst-campo input:focus { outline:none;border-color:var(--purple) }
 .ext-instalar .btn { white-space:nowrap;flex:none;text-decoration:none }
+.ext-instalar .tm-recusa { font-size:11.5px;color:var(--orange);white-space:nowrap;cursor:help;flex:none }
 .lanc-fila { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px }
 .lf { display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid var(--border-sutil);min-height:40px }
 .lf .lanc-nome { white-space:nowrap;overflow:hidden;text-overflow:ellipsis }

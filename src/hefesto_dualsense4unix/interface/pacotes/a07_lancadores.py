@@ -1244,6 +1244,7 @@ class _Mexida:
     armada: tuple[str, ...] = ()
     desligada: bool = False
     recusa_do_importar: dict[str, str] = dataclasses.field(default_factory=dict)
+    recusa_do_instalar: tuple[str, str] = ("", "")
     pinta: bool = True
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
     aviso_da_memoria: tuple[str, ...] = ()
@@ -1268,6 +1269,7 @@ class _Mexida:
         self.armada = ()
         self.desligada = False
         self.recusa_do_importar = {}
+        self.recusa_do_instalar = ("", "")
         self.pinta = True
         self.pintura.esquecer()
         self.aviso_da_memoria = ()
@@ -1625,6 +1627,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
     blocos = carga["blocos"]
     blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
     blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
+    blocos["#ext-instalar"] = exp.instalar_html(*_MEXIDA.recusa_do_instalar)
     _seguir_o_meu_css(instaladas)
     janelas = (("#lanc-janela", _MEXIDA.html_conf), ("#imp-janela", _MEXIDA.html_imp),
                ("#lanc-escolha", _ESCOLHA.miolo_novo))
@@ -2310,17 +2313,27 @@ def _instalar_a_modificacao(origem: str) -> str:
     """Instala de um endereço git ou de uma pasta local. Não liga: ligar é a chave.
 
     O ``aviso`` do manifesto fica por ver: o recado do gesto não chega à tela, e o ⋮ do
-    primeiro «sim» da chave o mostra antes de a extensão fazer qualquer coisa.
+    primeiro «sim» da chave o mostra antes de a extensão fazer qualquer coisa. A recusa fica
+    na linha de instalar até o próximo instalar.
     """
     from hefesto_dualsense4unix.mods.instalador import instalar
 
     lg = _lugares()
     nomes = _nomes_das_instaladas(lg)
-    with _dizendo_a_recusa():
-        feito = instalar(origem, lugares=lg)
+    _MEXIDA.recusa_do_instalar = ("", "")
+    try:
+        with _dizendo_a_recusa():
+            feito = instalar(origem, lugares=lg)
+    except RuntimeError as exc:
+        _MEXIDA.recusa_do_instalar = (origem, str(exc))
+        raise
     REGISTRO.esquecer()
-    return (f"{feito.entrada.nome} instalada.{_saiu(feito.substituidas, nomes)} "
-            "Ligue-a na chave quando quiser.")
+    fim = "Ligue-a na chave quando quiser."
+    if feito.entrada.ligada:
+        lugar = {0: "", 1: " no lugar da antiga"}.get(len(feito.substituidas),
+                                                       " no lugar das antigas")
+        fim = f"Ficou ligada{lugar}."
+    return f"{feito.entrada.nome} instalada.{_saiu(feito.substituidas, nomes)} {fim}"
 
 
 def _nomes_das_instaladas(lg: Any) -> dict[str, str]:

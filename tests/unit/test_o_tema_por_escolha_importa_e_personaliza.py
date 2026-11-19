@@ -73,7 +73,7 @@ def _manifesto(mod_id: str = NOVA, **mais: Any) -> dict[str, Any]:
 
 
 def _pasta(raiz: Path, manifesto: dict[str, Any]) -> Path:
-    pasta = raiz / "fontes" / manifesto["id"] / manifesto["versao"]  # (noqa-acento)
+    pasta = raiz / "fontes" / f"{manifesto['id']}-{manifesto['versao']}"  # (noqa-acento)
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "tema.css").write_text(CLARO, encoding="utf-8")
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")

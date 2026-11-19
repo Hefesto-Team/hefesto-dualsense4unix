@@ -299,6 +299,23 @@ def fila_com_novo_html(filas: Sequence[Fila] = LANCADORES) -> str:
           </a>'''
 
 
+RECUSA_DO_INSTALAR = "Não instalou"
+
+
+def instalar_html(endereco: str = "", recusa: str = "") -> str:
+    """O miolo da linha de instalar; a ``recusa`` vira «Não instalou», com a frase na dica, e
+    o ``endereco`` recusado fica no campo."""
+    valor = f' value="{_a(endereco)}"' if recusa and endereco else ""
+    marca = (f'\n          <span class="tm-recusa" tabindex="0" data-dica="{_a(recusa)}">'
+             f'{RECUSA_DO_INSTALAR}</span>' if recusa else "")
+    return f'''
+          <span class="ext-inst-rot">Instalar de um endereço</span>
+          <input type="text" data-linha="mod-endereco"{valor} placeholder="https://github.com/…">{marca}
+          <a class="btn" href="#" data-gesto="escolher-arquivo-da-modificacao" data-hef-forma="ext-instalar">Escolher a pasta…</a>
+          <button class="btn roxo" data-gesto="instalar-modificacao" data-hef-forma="ext-instalar">Instalar</button>
+        '''
+
+
 def miolo() -> str:
     """Os dois quadros da aba: Extensões e Lançadores."""
     return f'''
@@ -312,12 +329,7 @@ def miolo() -> str:
         <div class="ext-lista">
 {extensoes_html()}
         </div>
-        <div class="ext-instalar ext-instalar-pe" id="ext-instalar">
-          <span class="ext-inst-rot">Instalar de um endereço</span>
-          <input type="text" data-linha="mod-endereco" placeholder="https://github.com/…">
-          <a class="btn" href="#" data-gesto="escolher-arquivo-da-modificacao" data-hef-forma="ext-instalar">Escolher a pasta…</a>
-          <button class="btn roxo" data-gesto="instalar-modificacao" data-hef-forma="ext-instalar">Instalar</button>
-        </div>
+        <div class="ext-instalar ext-instalar-pe" id="ext-instalar">{instalar_html()}</div>
       </div>
     </div>
 
