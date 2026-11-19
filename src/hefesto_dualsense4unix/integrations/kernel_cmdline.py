@@ -11,7 +11,10 @@ o kernelstub do Pop!_OS, o grub (Debian, Ubuntu, Mint, Fedora, Arch) e o systemd
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -271,6 +274,12 @@ BACKEND_GRUB = "grub"
 BACKEND_SYSTEMD_BOOT = "systemd-boot"
 BACKEND_NENHUM = "none"
 _LINHA_DO_GRUB = "GRUB_CMDLINE_LINUX_DEFAULT="
+_ATRIBUICAO_DO_GRUB = re.compile(r"(\s*(?:export\s+)?)GRUB_CMDLINE_LINUX_DEFAULT=(.*)")
+_ESCAPAR_NAS_ASPAS = re.compile(r'([\\"$`])')
+
+
+class GrubNaoEntendidoError(ValueError):
+    """A linha do grub tem uma forma que o shell leria diferente do que se reescreve."""
 
 Which = Callable[[str], "str | None"]
 Rodar = Callable[[list[str]], int]
@@ -323,13 +332,54 @@ def _tokens_do_kernelstub(conf: Path) -> list[str]:
     return [str(t) for t in (opcoes or [])]
 
 
+@dataclass(frozen=True)
+class _LinhaDoGrub:
+    """A atribuição partida: o recuo e o ``export``, o valor como o shell o lê e o comentário."""
+
+    prefixo: str
+    valor: str
+    resto: str
+
+
+def _linha_do_grub(linha: str) -> _LinhaDoGrub | None:
+    """A ``GRUB_CMDLINE_LINUX_DEFAULT=`` desta linha lida como o shell lê; ``None`` em outra linha.
+
+    Expansão (``$``, crase), aspas sem par ou um segundo valor depois do primeiro levantam
+    :class:`GrubNaoEntendidoError` com a linha: reescrever essas formas mudaria o que o shell lê.
+    """
+    achado = _ATRIBUICAO_DO_GRUB.fullmatch(linha.rstrip("\r\n"))
+    if achado is None:
+        return None
+    prefixo, cru = achado.groups()
+    valor, fim = "", 0
+    if cru and not cru[0].isspace():
+        fonte = io.StringIO(cru)
+        leitor = shlex.shlex(fonte, posix=True)
+        leitor.whitespace_split = True
+        leitor.commenters = ""
+        try:
+            valor = leitor.get_token() or ""
+        except ValueError as erro:
+            frase = f"aspas sem par na linha do grub: {linha.strip()}"
+            raise GrubNaoEntendidoError(frase) from erro
+        fim = fonte.tell()
+        if cru[fim - 1].isspace():
+            fim -= 1
+    resto = cru[fim:]
+    expande = "$" in cru[:fim] or "`" in cru[:fim]
+    if expande or (resto.strip() and not resto.lstrip().startswith("#")):
+        frase = f"forma que eu não sei reescrever na linha do grub: {linha.strip()}"
+        raise GrubNaoEntendidoError(frase)
+    return _LinhaDoGrub(prefixo, valor, resto)
+
+
 def _valor_do_grub(texto: str) -> str:
     """O valor da ÚLTIMA ``GRUB_CMDLINE_LINUX_DEFAULT=`` (é a que o grub usa); ``""`` senão."""
     valor = ""
     for linha in texto.splitlines():
-        crua = linha.strip()
-        if crua.startswith(_LINHA_DO_GRUB):
-            valor = crua.split("=", 1)[1].strip().strip('"').strip("'")
+        lida = _linha_do_grub(linha)
+        if lida is not None:
+            valor = lida.valor
     return valor
 
 
@@ -388,17 +438,21 @@ def trocar_tokens(tokens: Sequence[str], tira: Sequence[str], poe: Sequence[str]
 
 
 def _grub_com_tokens(texto: str, tokens: Sequence[str]) -> str:
-    """O ``/etc/default/grub`` com a ``GRUB_CMDLINE_LINUX_DEFAULT`` nova; as outras linhas ficam."""
-    nova = f'{_LINHA_DO_GRUB}"{" ".join(tokens)}"'
+    """O ``/etc/default/grub`` com o valor novo na ÚLTIMA ``GRUB_CMDLINE_LINUX_DEFAULT``.
+
+    Só o valor muda: o recuo, o ``export`` e o comentário ficam, e as outras linhas também.
+    """
+    valor = '"' + _ESCAPAR_NAS_ASPAS.sub(r"\\\1", " ".join(tokens)) + '"'
     linhas = texto.splitlines(keepends=True)
     for i in reversed(range(len(linhas))):
-        if linhas[i].strip().startswith(_LINHA_DO_GRUB):
-            recuo = linhas[i][: len(linhas[i]) - len(linhas[i].lstrip())]
-            linhas[i] = recuo + nova + ("\n" if linhas[i].endswith("\n") else "")
+        lida = _linha_do_grub(linhas[i])
+        if lida is not None:
+            quebra = linhas[i][len(linhas[i].rstrip("\r\n")):]
+            linhas[i] = f"{lida.prefixo}{_LINHA_DO_GRUB}{valor}{lida.resto}{quebra}"
             return "".join(linhas)
     if linhas and not linhas[-1].endswith("\n"):
         linhas[-1] += "\n"
-    return "".join(linhas) + nova + "\n"
+    return "".join(linhas) + _LINHA_DO_GRUB + valor + "\n"
 
 
 def _gravar(caminho: Path, texto: str) -> None:
@@ -544,7 +598,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--poe", action="append", default=[])
     args = parser.parse_args(argv)
     lugares = _lugares_do_argv(args)
-    carregador = ler_o_carregador(lugares)
+    try:
+        carregador = ler_o_carregador(lugares)
+    except GrubNaoEntendidoError as erro:
+        print(f"falhou\t{erro}")
+        return 2
     if args.comando == "ler":
         print(f"backend={carregador.backend}\narquivo={carregador.arquivo}")
         print("tokens=" + " ".join(carregador.tokens))
