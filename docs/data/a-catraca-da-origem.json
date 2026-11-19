@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1271411,
+      "piso": 1272164,
       "por_item": {
-        "docs": 107131,
+        "docs": 107152,
         "scripts": 114765,
-        "src": 322852,
-        "tests": 726663
+        "src": 323003,
+        "tests": 727244
       },
-      "razao": "tamanho: +647 linhas (1270764 -> 1271411), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-1911-O-GRUB-MUDA-SO-O-VALOR-DA-LINHA, D-1911-O-MODULO-DA-CASA-E-A-COPIA-QUE-O-DKMS-GUARDA; registrado no fecho, topo 2aa43de32105",
+      "razao": "tamanho: +753 linhas (1271411 -> 1272164), pagas por Origem: D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES, D-1911-CADA-FONTE-DO-CORPO-SOMA-NO-SEU-LADO, D-1911-O-NO-DA-MESA-ESPERA-A-PORTA-PARA-SE-ADOTAR, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO, D-1911-O-TRABALHO-DE-VAZAO-NAO-PRENDE-O-GIL; registrado no fecho, topo b2f7268cb693",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2073,10 +2073,16 @@
           "de": 1270764,
           "para": 1271411,
           "razao": "tamanho: +647 linhas (1270764 -> 1271411), pagas por Origem: D-0911-A-CURA-DESFEITA-SE-DIZ-PELO-DONO-DAS-CURAS, D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-1911-O-GRUB-MUDA-SO-O-VALOR-DA-LINHA, D-1911-O-MODULO-DA-CASA-E-A-COPIA-QUE-O-DKMS-GUARDA; registrado no fecho, topo 2aa43de32105"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1271411,
+          "para": 1272164,
+          "razao": "tamanho: +753 linhas (1271411 -> 1272164), pagas por Origem: D-1911-A-FILA-DO-CORPO-TEM-ALVO-DE-DOIS-TIQUES, D-1911-CADA-FONTE-DO-CORPO-SOMA-NO-SEU-LADO, D-1911-O-NO-DA-MESA-ESPERA-A-PORTA-PARA-SE-ADOTAR, D-1911-O-OUVIDO-DO-JOGO-OUVE-SO-O-SOM, D-1911-O-TOQUE-NO-AR-VAI-A-ZERO-COM-A-HAPTICA-DO-JOGO, D-1911-O-TRABALHO-DE-VAZAO-NAO-PRENDE-O-GIL; registrado no fecho, topo b2f7268cb693"
         }
       ],
       "unidade": "linhas",
-      "universo": 3528
+      "universo": 3533
     }
   }
 }
