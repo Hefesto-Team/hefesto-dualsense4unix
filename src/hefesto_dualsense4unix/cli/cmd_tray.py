@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import signal
 import subprocess
 from typing import Any
 
@@ -107,7 +106,7 @@ def tray_cmd() -> None:
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import GLib, Gtk
+    from gi.repository import Gtk
 
     if not tomar_a_vez():
         console.print("já há um ícone na bandeja nesta sessão")
@@ -130,7 +129,6 @@ def tray_cmd() -> None:
         raise typer.Exit(code=3)
 
     console.print("[green]tray ativo[/] — clique no ícone para abrir o menu.")
-    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, lambda: Gtk.main_quit() or False)
     try:
         Gtk.main()
     except KeyboardInterrupt:

@@ -11,6 +11,7 @@ import contextlib
 import fcntl
 import os
 import re
+import select
 import shlex
 import signal
 import struct
@@ -24,7 +25,6 @@ from typing import Any
 from rich.console import Console
 
 from hefesto_dualsense4unix.utils import identidade
-from hefesto_dualsense4unix.utils import single_instance as si
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
@@ -189,16 +189,32 @@ def bandejas_da_sessao() -> list[int]:
 
 
 def fechar_as_bandejas(pids: list[int], prazo: float) -> list[int]:
-    """SIGTERM a cada uma e uma espera só, sem SIGKILL. Devolve as que ficaram de pé."""
+    """SIGTERM a cada uma e uma espera só, sem SIGKILL. Devolve as que ficaram de pé.
+
+    A espera é pelo `pidfd`, que só acende com o último fio do processo fora: a vez solta com
+    ele, e o fio principal que sai antes dos outros (o `Z` do `/proc`) ainda a segura."""
+    abertas: dict[int, int] = {}
+    espera = select.poll()
     for pid in pids:
-        with contextlib.suppress(OSError):
-            os.kill(pid, signal.SIGTERM)
+        try:
+            fd = os.pidfd_open(pid)
+        except ProcessLookupError:
+            continue
+        abertas[fd] = pid
+        espera.register(fd, select.POLLIN)
+        with contextlib.suppress(ProcessLookupError):
+            signal.pidfd_send_signal(fd, signal.SIGTERM)
     fim = time.monotonic() + prazo
-    while True:
-        vivas = [pid for pid in pids if si.is_alive(pid)]
-        if not vivas or time.monotonic() >= fim:
-            return vivas
-        time.sleep(si.SIGTERM_POLL_INTERVAL_SEC)
+    try:
+        while abertas and (resta := fim - time.monotonic()) > 0:
+            for fd, _evento in espera.poll(resta * 1000):
+                espera.unregister(fd)
+                os.close(fd)
+                del abertas[fd]
+    finally:
+        for fd in abertas:
+            os.close(fd)
+    return sorted(abertas.values())
 
 
 def _linha_da_bandeja() -> list[str]:

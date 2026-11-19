@@ -168,6 +168,43 @@ def test_todas_as_bandejas_da_sessao_fecham_e_sobe_uma(
     assert "ícone na bandeja: fechado e reaberto" in frases
 
 
+SAI_AOS_POUCOS = """
+import ctypes, os, signal, threading, time
+from hefesto_dualsense4unix.app.actions import atos_da_bandeja as a
+assert a.tomar_a_vez()
+def _ultimo_fio():
+    time.sleep(0.5)
+    os._exit(0)
+def _sinal(*_):
+    threading.Thread(target=_ultimo_fio).start()
+    ctypes.CDLL(None).pthread_exit(None)
+signal.signal(signal.SIGTERM, _sinal)
+signal.pause()
+"""
+
+
+def test_a_bandeja_volta_quando_o_ultimo_fio_da_velha_sai(lar: Path, filhos: Filhos) -> None:
+    """D-1911-A-BANDEJA-SAI-PELO-NUCLEO-E-A-RECARGA-ESPERA-O-ULTIMO-FIO: o `Z` do fio
+    principal ainda segura a vez, e a recarga só sobe a nova com o processo inteiro fora."""
+    bandeja.caminho_do_autostart().parent.mkdir(parents=True)
+    bandeja.caminho_do_autostart().write_text("[Desktop Entry]\nExec=/bin/true\n", encoding="utf-8")
+    velha = subprocess.Popen([sys.executable, "-c", SAI_AOS_POUCOS, "-m",
+                              "hefesto_dualsense4unix.cli.app", "tray"])
+    filhos.append(velha)
+    fim = time.monotonic() + 30
+    while bandeja.bandeja_viva() != velha.pid and time.monotonic() < fim:
+        time.sleep(0.1)
+    abertas: list[list[str]] = []
+
+    frases = recarga.recarregar(
+        abrir=Registro().abrir,
+        subir_a_bandeja=lambda: bandeja.garantir_a_bandeja(
+            abrir=lambda argv, **_k: abertas.append(argv)))
+
+    assert "ícone na bandeja: fechado e reaberto" in frases, frases
+    assert len(abertas) == 1
+
+
 def test_o_install_recarrega_depois_de_reiniciar_o_daemon() -> None:
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
     reinicio = texto.index('systemctl --user restart "${DAEMON_UNIT_NAME}"')

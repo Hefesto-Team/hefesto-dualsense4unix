@@ -11,7 +11,8 @@ O que se mede, num lar de mentira (`XDG_CONFIG_HOME` e `XDG_RUNTIME_DIR` em `tmp
    bandeja (o `Popen` é um dublê que sobe o `tray_cmd` de verdade com um ícone de mentira),
    desligar encerra todas as da sessão;
 2. `garantir_a_bandeja` não sobe uma segunda com a viva de pé, e sobe com a viva morta; a vez da
-   sessão deixa uma de pé mesmo com duas subidas juntas, e o SIGTERM sai pelo `finally`;
+   sessão deixa uma de pé mesmo com duas subidas juntas, e o SIGTERM fecha a bandeja pelo núcleo,
+   com o fio da tela preso;
 3. o «Retomar» e o «Ativar» da Sistema e o «start» da bandeja chamam `garantir_a_bandeja`;
 4. o bloco do autostart do `install.sh`, rodado de verdade, preserva o `false` e o ensaio diz.
 5. o bloco seguinte do `install.sh`, depois do restart do serviço, devolve a bandeja quando a
@@ -234,13 +235,24 @@ def test_o_processo_que_sai_no_meio_nao_e_bandeja_e_o_ilegivel_aparece(
     assert "não consegui ler o processo 43" in capsys.readouterr().out
 
 
-def test_o_sigterm_sai_pelo_finally_e_solta_a_vez(lar: pathlib.Path, subidas: Any) -> None:
+PRESA = FILHO.replace("def start(self): return True", (
+    "def start(self):\n"
+    "        from gi.repository import GLib\n"
+    "        import os\n"
+    "        self.r, self.w = os.pipe()\n"
+    "        GLib.idle_add(os.read, self.r, 1)\n"
+    "        return True"))
+
+
+def test_o_sigterm_fecha_a_bandeja_com_o_fio_da_tela_preso(lar: pathlib.Path, subidas: Any) -> None:
+    """D-1911-A-BANDEJA-SAI-PELO-NUCLEO-E-A-RECARGA-ESPERA-O-ULTIMO-FIO: quem fecha é o núcleo,
+    não o laço do GTK, e a vez solta com o processo."""
     _feitas, filhos = subidas
-    bandeja = _POPEN(LINHA)
+    assert PRESA != FILHO
+    bandeja = _POPEN([sys.executable, "-c", PRESA, "-m", "hefesto_dualsense4unix.cli.app", "tray"])
     filhos.append(bandeja)
     assert _de_pe(bandeja.pid)
-    bandeja.terminate()
-    assert bandeja.wait(timeout=10) == 0
+    assert ab.fechar_as_bandejas([bandeja.pid], 10.0) == [], "o SIGTERM esperou o laço do GTK"
     assert ab.bandeja_viva() is None
 
 
