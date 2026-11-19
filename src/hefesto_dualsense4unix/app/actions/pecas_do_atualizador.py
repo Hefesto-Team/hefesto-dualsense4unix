@@ -469,8 +469,10 @@ def versoes_do_proton(rede: bool) -> Versoes:
     if achada is None:
         return Versoes(_curto_do_ge(vale), None)
     nome = achada[0]
+    registro = pp._ler_registro(pp.default_cache_dir())
+    revisar = pp.reprovada_no_registro(registro) if registro.get("name") == nome else ""
     return Versoes(_curto_do_ge(vale), _curto_do_ge(nome),
-                   nova=qp.ordem_da_versao(nome) > qp.ordem_da_versao(vale))
+                   nova=qp.ordem_da_versao(nome) > qp.ordem_da_versao(vale), revisar=revisar)
 
 
 def _baixar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
@@ -482,22 +484,15 @@ def _baixar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
         raise EtapaFalhouError(feito.detalhe or feito.estado)
 
 
-def _instalar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> dict[str, Any]:
+def _instalar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
     pp = _proton()
-    conf = pp._load_conf(None)
-    compat, cache = pp.default_compat_dir(), pp.default_cache_dir()
-    antes = pp.pino_que_vale(conf, compat)
-    tarball = cache / f"{antes}.tar.gz"
-    sha = ""
-    with contextlib.suppress(OSError):
-        sha = pp.sha256_of_file(tarball) if tarball.is_file() else ""
-    feito = pp.instalar_a_ultima_do_cache(conf, compat_dir=compat, cache_dir=cache)
+    feito = pp.instalar_a_ultima_do_cache(pp._load_conf(None), compat_dir=pp.default_compat_dir(),
+                                          cache_dir=pp.default_cache_dir())
     if feito.estado == "espera_a_steam":
         raise EsperaError(feito.detalhe or feito.estado, _steam_livre)
     if feito.estado not in ("instalada", "em_dia"):
         raise EtapaFalhouError(feito.detalhe or feito.estado)
     passo.fracao(1.0)
-    return {"anterior": antes, "sha256": sha, "nova": feito.versao}
 
 
 def _aplicar_o_proton(passo: Passo, _dados_: dict[str, Any]) -> None:
@@ -574,25 +569,61 @@ def _reinstalar_o_proton(passo: Passo, dados: dict[str, Any]) -> None:
     passo.fracao(1.0)
 
 
-def _voltar_o_proton(anterior: dict[str, Any]) -> None:
+def _anterior_do_proton() -> dict[str, Any] | None:
+    """A anterior que quem instalou guardou no registro do cache, se ainda volta."""
     pp = _proton()
-    dados = anterior.get("dados") or {}
-    velha, sha, nova = str(dados.get("anterior", "")), str(dados.get("sha256", "")), \
-        str(dados.get("nova", ""))
-    if not velha or not nova:
-        raise EtapaFalhouError("sem versão anterior")
     compat, cache = pp.default_compat_dir(), pp.default_cache_dir()
-    if not pp.pinned_proton_installed(velha, compat):
-        if not sha:
-            raise EtapaFalhouError(f"{velha} não está no cache")
-        pp.ensure_pinned_proton({"name": velha, "url": "", "sha256": sha}, compat_dir=compat,
-                                cache_dir=cache, downloader=None)
+    registro = pp._ler_registro(cache)
+    velha = str(registro.get("anterior", ""))
+    if not velha or not (pp.pinned_proton_installed(velha, compat)
+                         or (registro.get("anterior_sha256")
+                             and (cache / f"{velha}.tar.gz").is_file())):
+        return None
+    vale = pp.pino_que_vale(pp._load_conf(None), compat)
+    if vale == velha:
+        return None
+    return {"nome": "GE-Proton", "anterior": _curto_do_ge(velha), "agora": _curto_do_ge(vale),
+            "desde": registro.get("anterior_em", 0)}
+
+
+def _voltar_o_proton(_anterior: dict[str, Any]) -> None:
+    """Volta à anterior do registro: com o jogo, a Steam e a nova livres, sob a trava; os jogos
+    vão para a velha antes de a nova sair, e o que barra devolve o porquê sem mexer em nada."""
+    pp = _proton()
+    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import _jogo_aberto
+
+    compat, cache = pp.default_compat_dir(), pp.default_cache_dir()
+    registro = pp._ler_registro(cache)
+    velha, sha = str(registro.get("anterior", "")), str(registro.get("anterior_sha256", ""))
+    if not velha:
+        raise EtapaFalhouError("sem versão anterior")
+    if _jogo_aberto():
+        raise EtapaFalhouError("há um jogo aberto")
+    barra = pp._steam_gate()
+    if barra:
+        raise EtapaFalhouError(pp._PORQUE_A_STEAM_BARRA.get(barra, barra))
+    with pp.trava_do_compat(compat):
+        conf = pp._load_conf(None)
+        nova = pp.pino_que_vale(conf, compat)
+        if nova == velha:
+            raise EtapaFalhouError("a anterior já é a de agora")
+        if pp._em_uso(compat / nova):
+            raise EtapaFalhouError(f"{nova} está em uso agora")
         if not pp.pinned_proton_installed(velha, compat):
-            raise EtapaFalhouError(f"{velha} não voltou do cache")
-    pp.segurar(cache, nova)
-    shutil.rmtree(compat / nova, ignore_errors=True)
-    pp.lock_proton_for_all_games(conf=pp._load_conf(None), todos=True)
-    pp.apontar_os_lancadores_para_o_pino(conf=pp._load_conf(None))
+            if not sha:
+                raise EtapaFalhouError(f"{velha} não está no cache")
+            pp.ensure_pinned_proton({"name": velha, "url": "", "sha256": sha}, compat_dir=compat,
+                                    cache_dir=cache, downloader=None)
+            if not pp.pinned_proton_installed(velha, compat):
+                raise EtapaFalhouError(f"{velha} não voltou do cache")
+        travado = pp.lock_proton_for_all_games(conf=conf, todos=True, pino=velha)
+        if travado.get("status") in ("erro", "recusado"):
+            motivo = str(travado.get("reason") or travado.get("status"))
+            raise EtapaFalhouError(pp._PORQUE_A_STEAM_BARRA.get(motivo, motivo))
+        pp.segurar(cache, nova)
+        pp._gravar_registro(cache, {**pp._ler_registro(cache), "anterior": ""})
+        shutil.rmtree(compat / nova, ignore_errors=True)
+        pp.apontar_os_lancadores_para_o_pino(conf=conf)
 
 
 def versoes_do_mangohud(rede: bool) -> Versoes:
@@ -1508,7 +1539,8 @@ def registro() -> list[Peca]:
              "Todos os jogos da Steam e do Heroic", versoes_do_proton,
              _baixar_o_proton, _instalar_o_proton, _aplicar_o_proton, _voltar_o_proton,
              reinstalacao=Reinstalacao(_baixar_de_novo_o_proton, _reinstalar_o_proton,
-                                       _aplicar_o_proton, _proton_sem_reinstalar)),
+                                       _aplicar_o_proton, _proton_sem_reinstalar),
+             anterior=_anterior_do_proton),
         Peca("bluetooth", "Bluetooth", "BlueZ, com as correções do Hefesto",
              "O serviço do Bluetooth", versoes_do_bluetooth,
              *_etapas_da_casa("bluez"), reinstalacao=_reinstalacao_da_casa("bluez")),

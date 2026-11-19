@@ -268,6 +268,13 @@ def ficha(
     return resultado
 
 
+def contrato_da_ficha() -> str:
+    """O que a ficha pede hoje: a mesma versão com o mesmo contrato não se confere de novo."""
+    import hashlib
+
+    return hashlib.sha256(repr((CONTRATO_DE_STRINGS, envs_pedidas())).encode()).hexdigest()
+
+
 def caminho_do_recibo(raiz_do_repo: Path | None = None) -> Path:
     """O recibo: na `raiz_do_repo` dada, ou onde esta instalação o pôs."""
     if raiz_do_repo is not None:

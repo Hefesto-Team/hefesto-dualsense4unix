@@ -129,7 +129,7 @@ def conteudo(ctx: Contexto | None, *, agora: float | None = None) -> str:
                                      fila_espera=espera)
     if TELA["vista"] == "voltar":
         voltam = [p.id for p in at.pecas() if p.voltar is not None]
-        return tela.html_das_anteriores(at.ler_as_anteriores(), voltam)
+        return tela.html_das_anteriores(at.anteriores_a_mostrar(), voltam)
     return ""
 
 

@@ -14,8 +14,11 @@ import functools
 import hashlib
 import io
 import json
+import os
+import shutil
 import socket
 import tarfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -24,6 +27,7 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions import atualizador as at
 from hefesto_dualsense4unix.app.actions import pecas_do_atualizador as pa
+from hefesto_dualsense4unix.app.actions import troca_no_fim_do_jogo as troca
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 from hefesto_dualsense4unix.integrations import proton_pin as pp
 from hefesto_dualsense4unix.interface import atualizacoes as tela
@@ -117,6 +121,7 @@ def steam(lar: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[st
     monkeypatch.setattr(censo, "proton_em_uso",
                         lambda *a, **k: censo.ProtonEmUso(frozenset(), ()))
     monkeypatch.setattr(censo, "casas_do_heroic", lambda *a, **k: ((), ()))
+    monkeypatch.setattr(troca, "_jogo_aberto", lambda: False)
     return {"raiz": raiz, "compat": raiz / "compatibilitytools.d", "cache": cache,
             "vdf": raiz / "config" / "config.vdf", "rede": rede}
 
@@ -169,7 +174,8 @@ def test_o_proton_que_nao_sobe_nao_apaga_nada(steam: dict[str, Any],
     assert VELHA in _tarballs(steam["cache"]), "a velha só sai depois que a nova subiu"
 
 
-def test_o_cache_do_proton_guarda_uma_anterior_mesmo_pelo_vigia(steam: dict[str, Any]) -> None:
+def test_o_cache_do_proton_guarda_uma_anterior_mesmo_pelo_vigia(
+        steam: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
     """O ``--manter`` do vigia sobe por fora do atualizador: a limpeza do cache é a mesma."""
     cache, compat = steam["cache"], steam["compat"]
     rede = steam["rede"]
@@ -186,6 +192,82 @@ def test_o_cache_do_proton_guarda_uma_anterior_mesmo_pelo_vigia(steam: dict[str,
     pp.apagar_as_sobras()
     assert _tarballs(cache) == [NOVA, VELHA]
     assert pp._ler_registro(cache).get("anterior") == VELHA
+    assert sorted(p.name for p in compat.iterdir()) == [NOVA]
+    lista = _so_o_proton()
+    assert at.anteriores_a_mostrar(lista)["proton"]["anterior"] == "11-7"
+    monkeypatch.setattr(pp, "_steam_gate", lambda: "steam_aberta")
+    assert at.voltar("proton", lista=lista) == "a Steam está aberta"
+    monkeypatch.setattr(pp, "_steam_gate", lambda: None)
+    assert sorted(p.name for p in compat.iterdir()) == [NOVA], "a Steam aberta não mexe em nada"
+    assert at.voltar("proton", lista=lista) == ""
+    assert sorted(p.name for p in compat.iterdir()) == [VELHA]
+    mapa = pp.extract_compat_tool_mapping(steam["vdf"].read_text(encoding="utf-8"))
+    assert set(mapa.values()) == {VELHA}, "algum jogo ficou sem a pasta do Proton dele"
+    assert "proton" not in at.anteriores_a_mostrar(lista), "a anterior volta uma vez só"
+
+
+def test_a_extracao_viva_nao_e_sobra_e_o_apagar_espera_a_trava(
+        steam: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    compat, cache = steam["compat"], steam["cache"]
+    viva = compat / f".{NOVA}.hefesto-extract-{os.getpid()}"
+    (viva / NOVA).mkdir(parents=True)
+    pp.apagar_as_sobras()
+    assert viva.is_dir(), "a pasta da extração em curso saiu como sobra"
+    shutil.rmtree(viva)
+    soma = pp.sha256_of_file
+    durante: list[bool] = []
+
+    def no_meio_da_extracao(caminho: Path) -> str:
+        fio = threading.Thread(target=pp.apagar_as_sobras)
+        fio.start()
+        fio.join(0.5)
+        durante.append(fio.is_alive())
+        monkeypatch.setattr(pp, "sha256_of_file", soma)
+        fios.append(fio)
+        return soma(caminho)
+
+    fios: list[threading.Thread] = []
+    monkeypatch.setattr(pp, "sha256_of_file", no_meio_da_extracao)
+    pp._extract_verified_tarball(cache / f"{VELHA}.tar.gz", VELHA, compat)
+    fios[0].join(10)
+    assert durante == [True], "o apagar das sobras correu no meio da extração"
+    assert pp.pinned_proton_installed(VELHA, compat)
+
+
+def test_a_versao_que_reprova_na_ficha_nao_se_extrai_de_novo(
+        steam: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
+    cache, compat = steam["cache"], steam["compat"]
+    assert pp.baixar_a_ultima_do_ge(cache, forcar=True, baixar=lambda url, destino:
+                                    destino.write_bytes(steam["rede"].ler(url))).estado == "baixada"
+    monkeypatch.setattr(qp, "ficha", lambda pasta, *_a, **_k: qp.Ficha(
+        versao=pasta.name, faltas=["sem a string do contrato"]))
+    extraidas: list[str] = []
+    extrair = pp._extract_verified_tarball
+    monkeypatch.setattr(pp, "_extract_verified_tarball", lambda tar, nome, pasta: (
+        extraidas.append(nome), extrair(tar, nome, pasta))[1])
+    conf = pp._load_conf(None)
+    for _ in range(3):
+        feito = pp.instalar_a_ultima_do_cache(conf, compat_dir=compat, cache_dir=cache)
+        assert feito.estado == "reprovou" and "sem a string do contrato" in feito.detalhe
+    assert extraidas == [NOVA]
+    assert "sem a string do contrato" in pa.versoes_do_proton(True).revisar
+    monkeypatch.setattr(qp, "contrato_da_ficha", lambda: "outro contrato")
+    pp.instalar_a_ultima_do_cache(conf, compat_dir=compat, cache_dir=cache)
+    assert extraidas == [NOVA, NOVA], "o contrato novo não conferiu de novo"
+
+
+def test_o_vigia_com_jogo_aberto_nao_baixa(steam: dict[str, Any],
+                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    import argparse
+
+    baixadas: list[object] = []
+    monkeypatch.setattr(pp, "baixar_a_ultima_do_ge", lambda *a, **k: baixadas.append(a))
+    monkeypatch.setattr(pp, "_jogo_aberto", lambda: True)
+    args = argparse.Namespace(cache_dir=None, compat_dir=None, offline=False)
+    pp._atualizar_o_proton(pp._load_conf(None), args, "manter", forcar=False)
+    assert baixadas == []
 
 
 def _tar_do_umu(caminho: Path) -> Path:

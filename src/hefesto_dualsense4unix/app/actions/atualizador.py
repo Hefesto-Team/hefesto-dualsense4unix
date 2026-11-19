@@ -181,6 +181,7 @@ class Peca:
     volta: int = 1
     marcada_por_padrao: bool = True
     reinstalacao: Reinstalacao | None = None
+    anterior: Callable[[], dict[str, Any] | None] | None = None
 
 
 def pecas() -> list[Peca]:
@@ -399,6 +400,24 @@ def novas(conferencia: dict[str, Any], escolha: Escolha | None = None,
 
 def ler_as_anteriores() -> dict[str, Any]:
     return _ler_json(_estado() / ARQUIVO_DAS_ANTERIORES)
+
+
+def anteriores_a_mostrar(lista: Sequence[Peca] | None = None) -> dict[str, Any]:
+    """As anteriores que voltam; a peça com registro próprio da anterior lê o próprio registro."""
+    anteriores = ler_as_anteriores()
+    for peca in (pecas() if lista is None else lista):
+        if peca.anterior is None:
+            continue
+        try:
+            propria = peca.anterior()
+        except Exception as erro:
+            _anotar(f"{peca.id}: a anterior não se leu: {erro}")
+            propria = None
+        if propria:
+            anteriores[peca.id] = propria
+        else:
+            anteriores.pop(peca.id, None)
+    return anteriores
 
 
 def _encerrar_o_orfao(andamento: dict[str, Any]) -> dict[str, Any]:
@@ -925,7 +944,7 @@ def voltar(ident: str, *, lista: Sequence[Peca] | None = None) -> str:
     """Volta a peça à versão anterior e segura a que saiu. Devolve o porquê, ou vazio."""
     registro = _por_id(pecas() if lista is None else lista)
     peca = registro.get(ident)
-    anterior = ler_as_anteriores().get(ident)
+    anterior = anteriores_a_mostrar(list(registro.values())).get(ident)
     if peca is None or peca.voltar is None:
         return "a peça não volta"
     if not isinstance(anterior, dict) or not (anterior.get("anterior") or anterior.get("rotulo")):

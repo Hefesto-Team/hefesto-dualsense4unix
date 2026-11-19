@@ -41,6 +41,7 @@ import shutil
 import struct
 import sys
 import tarfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -384,10 +385,55 @@ def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
             )
 
 
+_TRAVA_DO_COMPAT = threading.local()
+_EXTRACAO_RE = re.compile(r"^\..+\.hefesto-extract-(?P<pid>\d+)$")
+
+
+@contextlib.contextmanager
+def trava_do_compat(compat_dir: Path) -> Iterator[None]:
+    """Um `flock` em volta de extrair, fichar, trocar e apagar no `compatibilitytools.d`."""
+    if getattr(_TRAVA_DO_COMPAT, "fd", None) is not None:
+        yield
+        return
+    import fcntl
+
+    try:
+        fd = os.open(compat_dir.parent / ".hefesto-compatibilitytools.trava",
+                     os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+    except OSError:
+        yield
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        _TRAVA_DO_COMPAT.fd = fd
+        yield
+    finally:
+        _TRAVA_DO_COMPAT.fd = None
+        os.close(fd)
+
+
+def _extracao_viva(pasta: Path) -> bool:
+    achado = _EXTRACAO_RE.match(pasta.name)
+    if achado is None:
+        return False
+    try:
+        os.kill(int(achado.group("pid")), 0)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+    return True
+
+
 def _extract_verified_tarball(
     tarball: Path, name: str, compat_dir: Path
 ) -> None:
-    """Extrai o tarball JÁ VERIFICADO em compat_dir/<name>/ (tmp + rename)."""
+    """Extrai o tarball JÁ VERIFICADO em compat_dir/<name>/ (tmp + rename), sob a trava."""
+    with trava_do_compat(compat_dir):
+        _extrair_sob_a_trava(tarball, name, compat_dir)
+
+
+def _extrair_sob_a_trava(tarball: Path, name: str, compat_dir: Path) -> None:
     if not compat_dir.parent.is_dir():
         raise FileNotFoundError(
             f"a raiz da Steam ({compat_dir.parent}) não existe — não crio a "
@@ -1136,6 +1182,7 @@ def lock_proton_for_all_games(
     migrar_de: Sequence[str] = (),
     todos: bool = False,
     compat_dir: Path | None = None,
+    pino: str = "",
 ) -> dict[str, object]:
     """Conveniência ZERO-ARG do botão "Travar Proton validado" da GUI (PLAT-01).
 
@@ -1168,7 +1215,7 @@ def lock_proton_for_all_games(
     if conf is None:
         conf = _load_conf(None)
     compat = compat_dir if compat_dir is not None else default_compat_dir(home)
-    tool_name = pino_que_vale(conf, compat)
+    tool_name = pino or pino_que_vale(conf, compat)
     appids = list_installed_appids(home)
     result = lock_games_to_pinned_proton(
         tool_name=tool_name,
@@ -2021,6 +2068,8 @@ def versoes_que_sobram(
         return []
     sobras: list[VersaoQueSobra] = []
     for pasta in pastas:
+        if _extracao_viva(pasta):
+            continue
         nomes = nomes_internos(pasta)
         if not all(e_da_familia_proton(n) for n in nomes):
             continue
@@ -2310,14 +2359,37 @@ def instalar_a_ultima_do_cache(
     A Steam lê ``compatibilitytools.d`` ao abrir: aberta, a extração espera (``espera_a_steam``).
     A que reprova na ficha sai do disco, e o pino fica onde estava. Nunca levanta.
     """
-    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
-
     registro = _ler_registro(cache_dir)
     nome, sha = str(registro.get("name", "")), str(registro.get("sha256", ""))
     if not nome or not sha or not (cache_dir / f"{nome}.tar.gz").is_file():
         return Atualizacao("sem_candidata")
     if nome == str(registro.get("segurada", "")):
         return Atualizacao("segurada", nome)
+    reprovada = reprovada_no_registro(registro)
+    if reprovada:
+        return Atualizacao("reprovou", nome, reprovada)
+    with trava_do_compat(compat_dir):
+        return _instalar_sob_a_trava(conf, registro, nome, sha, compat_dir=compat_dir,
+                                     cache_dir=cache_dir, steam_barra=steam_barra)
+
+
+def reprovada_no_registro(registro: dict[str, object]) -> str:
+    """O porquê da ficha que já reprovou esta versão, com este tarball e este contrato."""
+    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
+    visto = registro.get("reprovada")
+    if not isinstance(visto, dict) or visto.get("name") != registro.get("name") \
+            or visto.get("sha256") != registro.get("sha256") \
+            or visto.get("contrato") != qp.contrato_da_ficha():
+        return ""
+    return str(visto.get("porque") or "a ficha não passou")
+
+
+def _instalar_sob_a_trava(conf: dict[str, str], registro: dict[str, object], nome: str, sha: str,
+                          *, compat_dir: Path, cache_dir: Path,
+                          steam_barra: Callable[[], str | None] | None) -> Atualizacao:
+    from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
     try:
         vale = pino_que_vale(conf, compat_dir)
         if qp.ordem_da_versao(nome) <= qp.ordem_da_versao(vale):
@@ -2338,12 +2410,18 @@ def instalar_a_ultima_do_cache(
         if not pinned_proton_installed(nome, compat_dir):
             return Atualizacao("falhou", nome, resultado.detail)
         if pino_que_vale(conf, compat_dir) == nome:
-            _gravar_registro(cache_dir, {**_ler_registro(cache_dir), "anterior": vale})
+            tar_velha = cache_dir / f"{vale}.tar.gz"
+            sha_velha = _read_manifest_sha256(vale, compat_dir) or (
+                sha256_of_file(tar_velha) if tar_velha.is_file() else "")
+            _gravar_registro(cache_dir, {**_ler_registro(cache_dir), "anterior": vale,
+                                         "anterior_sha256": sha_velha, "anterior_em": time.time()})
             return Atualizacao("instalada", nome)
         fixada = compat_dir / vale if pinned_proton_installed(vale, compat_dir) else None
-        faltas = qp.ficha(compat_dir / nome, fixada).faltas
+        porque = "; ".join(qp.ficha(compat_dir / nome, fixada).faltas) or "a ficha não passou"
         shutil.rmtree(compat_dir / nome, ignore_errors=True)
-        return Atualizacao("reprovou", nome, "; ".join(faltas) or "a ficha não passou")
+        _gravar_registro(cache_dir, {**_ler_registro(cache_dir), "reprovada": {
+            "name": nome, "sha256": sha, "contrato": qp.contrato_da_ficha(), "porque": porque}})
+        return Atualizacao("reprovou", nome, porque)
     except Exception as exc:
         return Atualizacao("falhou", nome, str(exc) or type(exc).__name__)
 
@@ -2380,8 +2458,9 @@ def tarballs_que_sobram(home: Path | None = None) -> list[Path]:
 def apagar_as_sobras(home: Path | None = None) -> tuple[list[VersaoQueSobra], dict[str, str]]:
     """Apaga de vez as versões que ficaram para trás na Steam e nas casas do Heroic (D-2210), e
     no cache os tarballs que não são o pino nem a anterior que volta."""
-    sobras = [*versoes_que_sobram(home), *sobras_das_casas_do_heroic(home)]
-    feito = desinstalar_as_que_sobram(sobras, steam_barra=_steam_gate)
+    with trava_do_compat(default_compat_dir(home)):
+        sobras = [*versoes_que_sobram(home), *sobras_das_casas_do_heroic(home)]
+        feito = desinstalar_as_que_sobram(sobras, steam_barra=_steam_gate)
     for tarball in tarballs_que_sobram(home):
         with contextlib.suppress(OSError):
             tarball.unlink()
@@ -2588,10 +2667,19 @@ def _atualizar_o_proton(conf: dict[str, str], args: argparse.Namespace, prefixo:
                         forcar: bool) -> None:
     cache = args.cache_dir if args.cache_dir else default_cache_dir()
     compat = args.compat_dir if args.compat_dir else default_compat_dir()
+    if not forcar and _jogo_aberto():
+        _dizer_a_atualizacao(prefixo, Atualizacao("espera_o_jogo"))
+        return
     if not args.offline:
         _dizer_a_atualizacao(prefixo, baixar_a_ultima_do_ge(cache, forcar=forcar))
     _dizer_a_atualizacao(prefixo, instalar_a_ultima_do_cache(conf, compat_dir=compat,
                                                              cache_dir=cache))
+
+
+def _jogo_aberto() -> bool:
+    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import _jogo_aberto as aberto
+
+    return aberto()
 
 
 def _apagar_e_dizer(prefixo: str) -> None:
