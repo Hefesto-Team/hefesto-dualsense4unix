@@ -149,7 +149,7 @@ da fila do co-op), o índice `0` é ele, pela rota sem endereço.
 
 Índice **sem controle na mesa** (o `7`, ou o `3` com dois controles) é
 descartado e contado em `udp.indice_sem_jogador`, com um `log.warn` por tipo e
-índice. Nunca vira «todos»: a instrução não conta em `udp.applied.*` nem em
+índice (o índice fora de 0-3 avisa uma vez por tipo). Nunca vira «todos»: a instrução não conta em `udp.applied.*` nem em
 `udp.error.*`.
 
 O dialeto do Hefesto, sem índice (`TriggerUpdate [side, mode, …]`,
@@ -185,7 +185,7 @@ Consequências que o autor do mod precisa saber:
   (ou reiniciar o daemon) volta ao padrão `0`.
 - Estado corrente exposto em `StateStore.udp_trigger_threshold_de(mac)` e
   `udp_trigger_thresholds_por_controle`; contador
-  `udp.trigger_threshold.<side>.<value>`.
+  `udp.trigger_threshold.<side>`.
 
 ## Fidelidade ao DSX original — o que falta
 
@@ -204,6 +204,21 @@ DSX. O que **ainda não** funciona sem adaptação, para não haver ilusão:
 
 Os modos "prontos" são a lacuna que mais pesa: são a maioria dos atalhos do
 SDK, e é por eles que um mod simples começa.
+
+## Teto
+
+O valor que chega de fora nunca vira nome de contador nem chave do diário:
+
+- `PlayerLED` aceita a máscara de 0 a 31; fora disso, `udp.error.PlayerLED`.
+  O contador é `udp.player_led`.
+- O limiar de `TriggerThreshold` se apara em 0-255, como a cor do `RGBUpdate`.
+- Um datagrama aplica no máximo 32 instruções; as demais saem, contadas em
+  `udp.instrucoes_demais`.
+- Os avisos da porta (`udp_parse_error`, `udp_unknown_instruction`,
+  `udp_instruction_error` e os vizinhos) se juntam no diário: a primeira
+  ocorrência sai na hora, e a rajada, numa linha com `vezes=`.
+- O `StateStore` guarda no máximo 1024 contadores; um nome novo além disso
+  conta em `contadores.acima_do_teto`.
 
 ## Rate limiting
 

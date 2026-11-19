@@ -38,6 +38,7 @@ Só a versão mais recente. Não há correção para versões antigas.
 
 - Escapar ou ganhar poder pelo socket local do Hefesto (`$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock`).
 - Mandar comandos de fora da máquina pela porta UDP de compatibilidade com o DSX (`127.0.0.1:6969`) ou pelas métricas (`127.0.0.1:9090`, quando ligadas).
+- Derrubar o serviço, inchar a memória do serviço ou encher o diário pela porta do DSX. A porta é de toda a máquina: o protocolo do DSX não autentica, e qualquer programa de qualquer conta do computador alcança a porta.
 - Ler ou escrever, sem permissão, arquivos de `~/.config/hefesto-dualsense4unix/`, ou sair da pasta por um nome de perfil montado de propósito.
 - Regras do udev instaladas pelo Hefesto que deem acesso a mais do que o controle.
 - Um controle virtual criado pelo Hefesto com efeito em outra conta do computador.
@@ -47,6 +48,7 @@ Só a versão mais recente. Não há correção para versões antigas.
 - Falhas do kernel Linux, do GTK, do WebKit, do BlueZ ou de outras dependências: relate a quem mantém cada uma.
 - Ataque que precisa de acesso físico ao computador além do controle, ou de outro programa já rodando como você.
 - Derrubar o serviço entupindo o socket local, que só aceita quem já está na sua conta.
+- Um programa de outra conta do computador mudar pela porta do DSX o que o protocolo prevê (a cor, o gatilho, as luzes do jogador, o limiar do gatilho): é o contrato do DSX, que não tem senha.
 - A privacidade do protocolo Bluetooth do controle, que é da Sony.
 
 ## Chave PGP

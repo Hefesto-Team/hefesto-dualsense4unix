@@ -214,7 +214,7 @@ def test_player_led_propaga_bitmask_ao_controller():
     assert pl_cmds[0].payload == (True, False, True, False, True)
     assert fc.last_player_leds == (True, False, True, False, True)
     assert store.counter("udp.applied.PlayerLED") == 1
-    assert store.counter("udp.player_led.21") == 1
+    assert store.counter("udp.player_led") == 1
 
 
 def test_mic_led_propaga_estado_ao_controller():

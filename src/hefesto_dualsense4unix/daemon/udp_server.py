@@ -25,6 +25,8 @@ MAX_DATAGRAM_BYTES = 4096
 RATE_GLOBAL = 2000
 RATE_PER_IP = 1000
 SUPPORTED_VERSION = 1
+MAX_INSTRUCOES_POR_DATAGRAMA = 32
+INDICES_DE_JOGADOR = range(4)
 
 DSX_TRIGGER_SIDES = {1: "left", 2: "right"}
 
@@ -289,7 +291,15 @@ class UdpHandler:
             self.store.bump("udp.invalid_instructions")
             return
 
-        for instr in instructions:
+        if len(instructions) > MAX_INSTRUCOES_POR_DATAGRAMA:
+            self.store.bump("udp.instrucoes_demais")
+            logger.warning(
+                "udp_instrucoes_demais",
+                recebidas=len(instructions),
+                aplicadas=MAX_INSTRUCOES_POR_DATAGRAMA,
+                ip=ip,
+            )
+        for instr in instructions[:MAX_INSTRUCOES_POR_DATAGRAMA]:
             self._dispatch_instruction(instr, ip=ip)
 
     def _dispatch_instruction(self, instr: dict[str, Any], *, ip: str) -> None:
@@ -330,11 +340,10 @@ class UdpHandler:
             self.store.bump(f"udp.applied.{kind}")
         except _IndiceSemJogadorError as exc:
             self.store.bump("udp.indice_sem_jogador")
-            if (kind, exc.indice) not in self._indices_avisados:
-                self._indices_avisados.add((kind, exc.indice))
-                logger.warning(
-                    "udp_indice_sem_jogador", kind=kind, index=exc.indice, ip=ip
-                )
+            indice = exc.indice if exc.indice in INDICES_DE_JOGADOR else None
+            if (kind, indice) not in self._indices_avisados:
+                self._indices_avisados.add((kind, indice))
+                logger.warning("udp_indice_sem_jogador", kind=kind, index=indice, ip=ip)
         except Exception as exc:
             self.store.bump(f"udp.error.{kind}")
             logger.warning("udp_instruction_error", kind=kind, err=str(exc), ip=ip)
@@ -466,6 +475,8 @@ class UdpHandler:
             mask = sum(1 << i for i, aceso in enumerate(acesos) if aceso)
         elif len(params) >= 2:
             mask = int(params[1])
+            if not 0 <= mask <= 0b11111:
+                raise ValueError("PlayerLED bitmask fora de 0-31")
         else:
             raise ValueError("PlayerLED precisa [idx, bitmask] ou [idx, b1..b5]")
         bits: tuple[bool, bool, bool, bool, bool] = (
@@ -481,7 +492,7 @@ class UdpHandler:
             kind="PlayerLED",
             sem_endereco=lambda: self.controller.set_player_leds(bits),
         )
-        self.store.bump(f"udp.player_led.{mask}")
+        self.store.bump("udp.player_led")
 
     def _do_mic_led(self, params: list[Any]) -> None:
         """Aceita `[state]` (Hefesto) e `[idx, MicLEDMode]` (DSX canônico)."""
@@ -528,13 +539,14 @@ class UdpHandler:
         pad virtual e o limiar fica guardado sem efeito. O log `info` abaixo é
         o que torna isso auditável em vez de silencioso.
         """
-        side, value, indice = parse_side_and_value(params, kind="TriggerThreshold")
+        side, bruto, indice = parse_side_and_value(params, kind="TriggerThreshold")
+        value = max(0, min(255, bruto))
         destinos = self._destinos(indice)
         if not destinos:
             raise ValueError("TriggerThreshold sem controle de destino")
         for uniq in destinos:
             self.store.set_udp_trigger_threshold(uniq, side, value)
-        self.store.bump(f"udp.trigger_threshold.{side}.{value}")
+        self.store.bump(f"udp.trigger_threshold.{side}")
         logger.info("udp_trigger_threshold", side=side, value=value, controles=len(destinos))
 
     def _do_reset(self, params: list[Any] | None = None) -> None:
@@ -617,6 +629,7 @@ __all__ = [
     "DSX_TRIGGER_MODES",
     "DSX_TRIGGER_SIDES",
     "MAX_DATAGRAM_BYTES",
+    "MAX_INSTRUCOES_POR_DATAGRAMA",
     "RATE_GLOBAL",
     "RATE_PER_IP",
     "SUPPORTED_VERSION",

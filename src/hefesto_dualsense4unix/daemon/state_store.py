@@ -13,6 +13,9 @@ MANUAL_PROFILE_LOCK_SEC: float = 30.0
 
 WINDOW_DETECT_BLIND_AFTER_SEC: float = 300.0
 
+TETO_DE_CONTADORES = 1024
+CONTADOR_ACIMA_DO_TETO = "contadores.acima_do_teto"
+
 
 @dataclass(frozen=True)
 class StoreSnapshot:
@@ -102,7 +105,10 @@ class StateStore:
             self._steam_jogo_lido = True
 
     def bump(self, counter: str, delta: int = 1) -> int:
+        """Soma `delta` ao contador; nome novo além do teto conta em `contadores.acima_do_teto`."""
         with self._lock:
+            if counter not in self._counters and len(self._counters) >= TETO_DE_CONTADORES:
+                counter = CONTADOR_ACIMA_DO_TETO
             value = self._counters.get(counter, 0) + delta
             self._counters[counter] = value
             return value
@@ -363,7 +369,9 @@ class StateStore:
 
 
 __all__ = [
+    "CONTADOR_ACIMA_DO_TETO",
     "MANUAL_PROFILE_LOCK_SEC",
+    "TETO_DE_CONTADORES",
     "WINDOW_DETECT_BLIND_AFTER_SEC",
     "StateStore",
     "StoreSnapshot",

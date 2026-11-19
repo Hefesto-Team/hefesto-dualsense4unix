@@ -142,6 +142,15 @@ EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
     "usb_ausente_neste_boot": (),
     "evdev_ressincronizado": ("path", "mudou"),
     "touchpad_ressincronizado": ("path",),
+    "udp_oversize": (),
+    "udp_parse_error": (),
+    "udp_unsupported_version": (),
+    "udp_instrucoes_demais": (),
+    "udp_unknown_instruction": (),
+    "udp_instruction_error": ("kind",),
+    "udp_indice_sem_jogador": ("kind",),
+    "udp_mic_led_pulse_degradado": (),
+    "udp_trigger_threshold": ("side", "value"),
 }
 JANELA_DO_AGREGADO_S = 60.0
 JANELA_MAXIMA_DO_AGREGADO_S = 900.0
