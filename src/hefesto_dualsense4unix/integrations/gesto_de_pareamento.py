@@ -238,7 +238,7 @@ def _segundos_validos(segundos: int) -> int:
 
 
 def _abrir_de_verdade(pedido: PedidoAPonte) -> subprocess.Popen[str]:
-    """Abre a ponte de verdade, com a saída em linhas e os dados pelo stdin."""
+    """Abre a ponte de verdade, com a saída em linhas e os dados pelo stdin, aberto até o fechar."""
     processo = subprocess.Popen(
         list(pedido.argv),
         stdin=subprocess.PIPE,
@@ -250,8 +250,7 @@ def _abrir_de_verdade(pedido: PedidoAPonte) -> subprocess.Popen[str]:
     if processo.stdin is not None:
         with contextlib.suppress(OSError):
             processo.stdin.write(pedido.entrada)
-        with contextlib.suppress(OSError):
-            processo.stdin.close()
+            processo.stdin.flush()
     return processo
 
 
@@ -465,13 +464,10 @@ class JanelaDeBusca:
         processo = self._processo
         if processo is None:
             return
-        if processo.poll() is None:
-            try:
-                processo.terminate()
-                processo.wait(timeout=3.0)
-            except (subprocess.TimeoutExpired, OSError):
-                with contextlib.suppress(OSError):
-                    processo.kill()
+        if processo.stdin is not None:
+            with contextlib.suppress(OSError, ValueError):
+                processo.stdin.close()
+        processo.wait()
         for cano in (processo.stdout, processo.stderr):
             if cano is not None:
                 with contextlib.suppress(OSError, ValueError):

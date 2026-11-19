@@ -376,6 +376,12 @@ _fechar_a_busca() {
     return 0
 }
 
+_o_chamador_segue() {
+    local sobra rc=0
+    IFS= read -r -t 1 sobra || rc=$?
+    (( rc > 128 ))
+}
+
 _candidatos_novos() {
     local hci="$1" javistos="$2" caminho endereco nome pareado classe
     _bluez_de_pe || return 0
@@ -400,7 +406,7 @@ _candidatos_novos() {
 }
 
 verbo_descobrir() {
-    local adaptador="$1" segundos="$2" hci fim quantos
+    local adaptador="$1" segundos="$2" hci fim quantos soltou=0
     hci="$(_hci_do_mac "${adaptador}" || true)"
     [[ -n "${hci}" ]] || { _erro "adaptador ${adaptador} não está na mesa (plugado e ligado?)"; exit 1; }
     command -v bluetoothctl >/dev/null 2>&1 \
@@ -414,6 +420,7 @@ verbo_descobrir() {
     BUSCA_JAVISTOS="$(mktemp)" || { _erro "não consegui criar a lista de já-vistos"; exit 1; }
     chmod 600 "${BUSCA_ROTEIRO}" "${BUSCA_JAVISTOS}"
     trap _fechar_a_busca EXIT
+    trap '' PIPE
     printf 'select %s\npower on\npairable on\nscan on\n' "${adaptador}" >"${BUSCA_ROTEIRO}"
     _registrar "janela de busca de ${segundos}s aberta no adaptador ${hci}"
     timeout "$((segundos + 10))" bluetoothctl --timeout "${segundos}" \
@@ -422,9 +429,13 @@ verbo_descobrir() {
     fim=$(( $(date +%s) + segundos ))
     while kill -0 "${BUSCA_PID}" 2>/dev/null && (( $(date +%s) < fim )); do
         _candidatos_novos "${hci}" "${BUSCA_JAVISTOS}"
-        sleep 1
+        _o_chamador_segue || { soltou=1; break; }
     done
-    _candidatos_novos "${hci}" "${BUSCA_JAVISTOS}"
+    if (( soltou )); then
+        kill "${BUSCA_PID}" 2>/dev/null || true
+    else
+        _candidatos_novos "${hci}" "${BUSCA_JAVISTOS}"
+    fi
     wait "${BUSCA_PID}" 2>/dev/null || true
     BUSCA_PID=""
     quantos="$(wc -l <"${BUSCA_JAVISTOS}" 2>/dev/null || printf '0')"
@@ -838,7 +849,7 @@ case "${VERBO}" in
         [[ $# -eq 1 ]] || _recusar "descobrir recebe só os segundos no argv; o endereço vem pelo stdin, uma linha por dado"
         _segundos "${1}";                  ARG_SEGUNDOS="${VALIDADO}"
         _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
-        _fim_do_stdin
+        if read -r -t 0; then _fim_do_stdin; fi
         verbo_descobrir "${ARG_ADAPTADOR}" "${ARG_SEGUNDOS}"
         ;;
     parear)

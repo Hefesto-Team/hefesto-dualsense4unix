@@ -322,19 +322,15 @@ class _ProcessoVivo:
     """Uma janela aberta que não roda nada: o ``parear`` só corre dentro da janela."""
 
     def __init__(self) -> None:
+        self.stdin = io.StringIO()
         self.stdout = io.StringIO("")
         self.stderr = io.StringIO("")
-        self._vivo = True
 
     def poll(self) -> int | None:
-        return None if self._vivo else 0
-
-    def terminate(self) -> None:
-        self._vivo = False
-
-    kill = terminate
+        return 0 if self.stdin.closed else None
 
     def wait(self, timeout: float | None = None) -> int:
+        assert self.stdin.closed, "esperou a ponte sem soltar o stdin"
         return 0
 
 

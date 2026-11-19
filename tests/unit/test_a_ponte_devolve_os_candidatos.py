@@ -45,6 +45,7 @@ PROVA DE MORDIDA (20/09/2026), cada arrancada devolvida em seguida. Controle:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -80,19 +81,26 @@ ENTRADA = f"{ADAPTADOR}\n"
 def _descobrir(
     barramento: Path, segundos: str, extra: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["bash", str(PONTE), "descobrir", segundos],
-        capture_output=True,
-        text=True,
-        input=ENTRADA,
-        env={**_ambiente(barramento), **(extra or {})},
-        timeout=60,
-        check=False,
-    )
+    """A janela inteira: o stdin fica aberto até a ponte sair, como o do chamador."""
+    leitura, escrita = os.pipe()
+    os.write(escrita, ENTRADA.encode())
+    try:
+        return subprocess.run(
+            ["bash", str(PONTE), "descobrir", segundos],
+            capture_output=True,
+            text=True,
+            stdin=leitura,
+            env={**_ambiente(barramento), **(extra or {})},
+            timeout=60,
+            check=False,
+        )
+    finally:
+        os.close(leitura)
+        os.close(escrita)
 
 
 def _abrir_descobrir(barramento: Path, segundos: str) -> subprocess.Popen[str]:
-    """A janela em fluxo, com o adaptador escrito no stdin e o cano FECHADO:"""
+    """A janela em fluxo, com o adaptador escrito no stdin e o cano aberto."""
     processo = subprocess.Popen(
         ["bash", str(PONTE), "descobrir", segundos],
         stdin=subprocess.PIPE,
@@ -104,7 +112,7 @@ def _abrir_descobrir(barramento: Path, segundos: str) -> subprocess.Popen[str]:
     )
     assert processo.stdin is not None
     processo.stdin.write(ENTRADA)
-    processo.stdin.close()
+    processo.stdin.flush()
     return processo
 
 
