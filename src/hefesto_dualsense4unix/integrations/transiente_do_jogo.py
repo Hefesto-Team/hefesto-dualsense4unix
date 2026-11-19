@@ -44,7 +44,7 @@ import time
 from array import array
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any, Final
 
@@ -434,6 +434,27 @@ class FluxoDoJogo:
     ident: int | None = None
     nome_perdido: bool = False
     pausado: bool = False
+    fluxos: int = field(default=1, compare=False)
+
+
+MOTIVO_SEM_FLUXO = "sem_fluxo"
+MOTIVO_SO_HAPTICA = "so_haptica"
+MOTIVO_FLUXO_SEM_PCM = "fluxo_sem_pcm"
+
+
+@dataclass(frozen=True)
+class SemFluxo:
+    """A procura não achou o som do jogo: o motivo e quantos fluxos o jogo tinha."""
+
+    motivo: str
+    fluxos: int = 0
+
+
+def e_endpoint_da_haptica(nome: str) -> bool:
+    """O nó é um endpoint da háptica desta casa (o ``HEFESTO<marca>`` do nome)."""
+    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import MARCA_DO_NOME
+
+    return MARCA_DO_NOME in nome
 
 
 def _inteiro_da_propriedade(propriedades: Mapping[str, str], chave: str) -> int | None:
@@ -446,22 +467,49 @@ def _pid_do_fluxo(propriedades: Mapping[str, str]) -> int | None:
     return int(bruto) if bruto.isdigit() else None
 
 
-def fluxo_do_jogo(fluxos: Iterable[Any], pids: Iterable[int]) -> FluxoDoJogo | None:
-    """O fluxo tocado por um processo de jogo; o que não está pausado vem antes."""
+def fluxo_do_jogo(
+    fluxos: Iterable[Any],
+    pids: Iterable[int],
+    destinos: Mapping[str, str] | None = None,
+    padrao: str | None = None,
+) -> FluxoDoJogo | None:
+    """O fluxo de som tocado por um processo de jogo (:func:`procurar_o_fluxo_do_jogo`)."""
+    achado = procurar_o_fluxo_do_jogo(fluxos, pids, destinos, padrao)
+    return achado if isinstance(achado, FluxoDoJogo) else None
+
+
+def procurar_o_fluxo_do_jogo(
+    fluxos: Iterable[Any],
+    pids: Iterable[int],
+    destinos: Mapping[str, str] | None = None,
+    padrao: str | None = None,
+) -> FluxoDoJogo | SemFluxo:
+    """O fluxo de SOM tocado por um processo de jogo, ou por que não há.
+
+    ``destinos`` dá o nome do nó de cada ``alvo``: o fluxo que vai a um endpoint da háptica
+    (:func:`e_endpoint_da_haptica`) é a vibração do jogo, e fica fora. Entre os que sobram, o
+    não pausado vem antes, e depois o que vai à saída padrão pedida.
+    """
     dos_jogos = set(pids)
     if not dos_jogos:
-        return None
-    candidatos: list[tuple[bool, FluxoDoJogo]] = []
+        return SemFluxo(MOTIVO_SEM_FLUXO)
+    destinos = destinos or {}
+    do_jogo = 0
+    candidatos: list[tuple[tuple[bool, bool], FluxoDoJogo]] = []
     for fluxo in fluxos:
         propriedades: Mapping[str, str] = getattr(fluxo, "propriedades", {}) or {}
         pid = _pid_do_fluxo(propriedades)
         nome = str(propriedades.get("node.name", "") or "")
         if pid is None or pid not in dos_jogos or nome.startswith("hefesto"):
             continue
+        do_jogo += 1
+        destino = destinos.get(str(getattr(fluxo, "alvo", "")), "")
+        if e_endpoint_da_haptica(destino):
+            continue
         perdidos: frozenset[str] = getattr(fluxo, "perdidos", frozenset()) or frozenset()
         pausado = bool(getattr(fluxo, "corked", False))
         candidatos.append((
-            pausado,
+            (pausado, bool(padrao) and destino != padrao),
             FluxoDoJogo(
                 indice=int(getattr(fluxo, "indice", -1)),
                 serial=_inteiro_da_propriedade(propriedades, "object.serial"),
@@ -473,9 +521,9 @@ def fluxo_do_jogo(fluxos: Iterable[Any], pids: Iterable[int]) -> FluxoDoJogo | N
             ),
         ))
     if not candidatos:
-        return None
+        return SemFluxo(MOTIVO_SO_HAPTICA if do_jogo else MOTIVO_SEM_FLUXO, do_jogo)
     candidatos.sort(key=lambda par: par[0])
-    return candidatos[0][1]
+    return replace(candidatos[0][1], fluxos=do_jogo)
 
 
 class SemLink(Enum):
@@ -579,7 +627,7 @@ class OuvidoDoJogo:
         self,
         querer: Callable[[], bool],
         *,
-        achar_o_fluxo: Callable[[], FluxoDoJogo | None] | None = None,
+        achar_o_fluxo: Callable[[], FluxoDoJogo | SemFluxo | None] | None = None,
         montar_argv: Callable[[FluxoDoJogo], list[str]] | None = None,
         abrir: Callable[[list[str]], Any] | None = None,
         derrubar: Callable[..., Any] | None = None,
@@ -612,6 +660,7 @@ class OuvidoDoJogo:
         self._proc: Any = None
         self._leitor: threading.Thread | None = None
         self._fluxo: FluxoDoJogo | None = None
+        self._sem_fluxo = SemFluxo(MOTIVO_SEM_FLUXO)
         self._conferido = False
         self._no_visto = False
         self._ultimo_pcm = float("-inf")
@@ -706,6 +755,8 @@ class OuvidoDoJogo:
             self.pausado = False
             return None
         achado = self._achar_o_fluxo()
+        if isinstance(achado, SemFluxo):
+            achado = None
         self.pausado = achado is not None and achado.pausado
         if achado is None or achado.pausado:
             return None
@@ -745,7 +796,9 @@ class OuvidoDoJogo:
 
     def _ligar(self) -> None:
         fluxo = self._achar_o_fluxo()
-        if fluxo is None:
+        if fluxo is None or isinstance(fluxo, SemFluxo):
+            if fluxo is not None:
+                self._sem_fluxo = fluxo
             return
         argv = self._montar_argv(fluxo)
         if not argv:
@@ -841,6 +894,13 @@ class OuvidoDoJogo:
         self._esquecer_a_religada()
         self._pedido_em = None
 
+    def por_que_surdo(self) -> tuple[str, int]:
+        """O motivo da surdez de agora e quantos fluxos o jogo tinha na última procura."""
+        fluxo = self._fluxo
+        if self._proc is not None and fluxo is not None:
+            return MOTIVO_FLUXO_SEM_PCM, fluxo.fluxos
+        return self._sem_fluxo.motivo, self._sem_fluxo.fluxos
+
     def surdo_ha_s(self) -> float:
         """Há quantos segundos o ouvido pedido não recebe PCM; a pausa do jogo não conta."""
         desde = self._pedido_em
@@ -872,16 +932,22 @@ def carga_do_estalo(estalo: Transiente, bandas: Sequence[float]) -> dict[str, An
     }
 
 
-def achar_o_fluxo_do_jogo() -> FluxoDoJogo | None:
-    """O fluxo do jogo nesta máquina, perguntado ao servidor de som e ao ``/proc``."""
+def achar_o_fluxo_do_jogo() -> FluxoDoJogo | SemFluxo | None:
+    """O fluxo de som do jogo nesta máquina, perguntado ao servidor de som e ao ``/proc``.
+
+    ``None`` = o servidor não respondeu; :class:`SemFluxo` diz por que o jogo não tem som.
+    """
     from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
-    from hefesto_dualsense4unix.integrations.porta_do_som import ler_fluxos
+    from hefesto_dualsense4unix.integrations.porta_do_som import ler_fluxos, ler_nos
     from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
 
     fluxos = ler_fluxos("sink-inputs", rodar_pactl)
-    if not fluxos:
+    if fluxos is None:
         return None
-    return fluxo_do_jogo(fluxos, pids_de_jogo())
+    nos = ler_nos("sinks", rodar_pactl) or ()
+    padrao = (rodar_pactl(["pactl", "get-default-sink"]) or "").strip() or None
+    return procurar_o_fluxo_do_jogo(
+        fluxos, pids_de_jogo(), {str(no.indice): no.nome for no in nos}, padrao)
 
 
 def fontes_capturadas_pelo_jogo() -> frozenset[str] | None:

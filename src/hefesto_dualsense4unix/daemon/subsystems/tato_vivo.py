@@ -4247,7 +4247,8 @@ class Passo:
             ouvido = self.motor.ouvido
             self.diario_do_corpo.andar(
                 agora, jogo=self.jogo, pedido=self.ouvido_quer(),
-                surdo_ha_s=ouvido.surdo_ha_s() if ouvido is not None else 0.0)
+                surdo_ha_s=ouvido.surdo_ha_s() if ouvido is not None else 0.0,
+                por_que=ouvido.por_que_surdo() if ouvido is not None else ("", 0))
         except Exception:
             logger.debug("tato_diario_do_corpo_falhou", exc_info=True)
 

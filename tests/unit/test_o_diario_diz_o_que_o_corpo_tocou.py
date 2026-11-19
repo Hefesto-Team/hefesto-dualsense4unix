@@ -257,6 +257,9 @@ class _Ouvido:
     def surdo_ha_s(self) -> float:
         return self.surdo
 
+    def por_que_surdo(self) -> tuple[str, int]:
+        return ("sem_fluxo", 0)
+
     def comecar(self) -> None:
         return None
 
