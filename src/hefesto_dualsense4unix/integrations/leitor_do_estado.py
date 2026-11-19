@@ -30,6 +30,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 HZ_MAXIMO = 30
 ENTRADAS_POR_RECEITA = 64
 ELOS_DA_CADEIA = 8
@@ -84,7 +88,7 @@ def entradas_da_receita(lista: Sequence[Mapping[str, Any]]) -> tuple[Entrada, ..
             cadeia = tuple(int(x) for x in linha["cadeia_de_ponteiros"])
             tipo = str(linha["tipo"])
             hz = float(linha.get("hz", HZ_MAXIMO))
-        except (KeyError, TypeError, ValueError) as exc:
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
             raise LeituraRecusadaError("Uma linha da receita não tem a forma declarada.") from exc
         if not NOME_DA_ENTRADA.match(nome):
             raise LeituraRecusadaError(f"O nome «{nome}» não serve para um valor da receita.")
@@ -166,15 +170,20 @@ def ler_valor(pid: int, entrada: Entrada) -> int | float:
 
 
 def conferir_buildid(atual: str | int | None, faixa: Mapping[str, Any] | None) -> None:
-    """Recusa quando o ``buildid`` de agora está fora da faixa ``{min, max}`` da receita."""
+    """Recusa quando o ``buildid`` de agora está fora da faixa ``{min, max}`` da receita, ou
+    quando a faixa não é de números inteiros."""
     if not faixa:
         return
+    try:
+        menor, maior = (None if faixa.get(k) is None else int(faixa[k]) for k in ("min", "max"))
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise LeituraRecusadaError(
+            "A faixa de versões da receita não tem a forma declarada.") from exc
     try:
         numero = int(str(atual))
     except ValueError as exc:
         raise LeituraRecusadaError("A versão do jogo não se leu; a receita não vale.") from exc
-    menor, maior = faixa.get("min"), faixa.get("max")
-    if (menor is not None and numero < int(menor)) or (maior is not None and numero > int(maior)):
+    if (menor is not None and numero < menor) or (maior is not None and numero > maior):
         raise LeituraRecusadaError(
             f"A versão do jogo ({numero}) está fora da faixa da receita; nada se lê.")
 
@@ -283,6 +292,20 @@ class Leitor:
         return valores
 
 
+def valor_do_tipo(tipo: str, valor: Any) -> int | float | None:
+    """O valor de um pedido conferido contra o tipo: inteiro na faixa do tipo, fracionário só em
+    ``f32`` e ``f64``; ``None`` passa e qualquer outro recusa."""
+    if valor is None:
+        return None
+    if not isinstance(valor, int | float) or isinstance(valor, bool):
+        raise LeituraRecusadaError(f"O valor do pedido não é um número do tipo «{tipo}».")
+    try:
+        struct.pack(TIPOS[tipo], valor)
+    except (struct.error, OverflowError) as exc:
+        raise LeituraRecusadaError(f"O valor {valor} não cabe no tipo «{tipo}».") from exc
+    return valor
+
+
 def _regioes_gravaveis(pid: int) -> list[tuple[int, int]]:
     regioes = []
     try:
@@ -310,6 +333,7 @@ class Varredura:
             raise LeituraRecusadaError("A chave «Memória» deste jogo está desligada.")
         if tipo not in TIPOS:
             raise LeituraRecusadaError(f"O tipo «{tipo}» não é um dos que o leitor conhece.")
+        valor = valor_do_tipo(tipo, valor)
         self.pid = pid
         self.tipo = tipo
         self.token = secrets.token_hex(8)
@@ -360,6 +384,7 @@ class Varredura:
     def refinar(self, comparacao: str, valor: int | float | None = None) -> int:
         if comparacao not in COMPARACOES:
             raise LeituraRecusadaError(f"A comparação «{comparacao}» não existe.")
+        valor = valor_do_tipo(self.tipo, valor)
         if comparacao == "igual" and valor is None:
             raise LeituraRecusadaError("A comparação «igual» pede o valor.")
         ficam: dict[int, int | float] = {}
@@ -491,10 +516,16 @@ class ServicoDoLeitor:
         return bool(self.jogo) and self.chaves.ligada(self.jogo)
 
     def atender(self, pedido: Mapping[str, Any]) -> dict[str, Any]:
+        """A resposta a um pedido; o pedido que falha vira ``{"recusa": frase}`` e nunca derruba
+        o leitor, pai do jogo."""
         try:
             return self._atender(pedido)
         except LeituraRecusadaError as exc:
             return {"recusa": exc.frase}
+        except Exception:
+            logger.warning("leitor_pedido_recusado", verbo=str(pedido.get("verbo")),
+                           exc_info=True)
+            return {"recusa": "O pedido não tem a forma declarada."}
 
     def _atender(self, pedido: Mapping[str, Any]) -> dict[str, Any]:
         verbo = pedido.get("verbo")
@@ -519,10 +550,8 @@ class ServicoDoLeitor:
                 self._leitores.clear()
                 raise
         if verbo == "varrer":
-            valor = pedido.get("valor")
             varredura = Varredura(processo_do_jogo(self.pid), str(pedido.get("tipo")),
-                                  chave_ligada=True,
-                                  valor=valor if isinstance(valor, int | float) else None)
+                                  chave_ligada=True, valor=pedido.get("valor"))
             while len(self._varreduras) >= self.VARREDURAS:
                 self._varreduras.pop(next(iter(self._varreduras)))
             self._varreduras[varredura.token] = varredura
@@ -531,9 +560,7 @@ class ServicoDoLeitor:
             varredura_achada = self._varreduras.get(str(pedido.get("token")))
             if varredura_achada is None:
                 raise LeituraRecusadaError("Essa varredura não existe mais.")
-            valor = pedido.get("valor")
-            varredura_achada.refinar(str(pedido.get("comparacao")),
-                                     valor if isinstance(valor, int | float) else None)
+            varredura_achada.refinar(str(pedido.get("comparacao")), pedido.get("valor"))
             resumo = varredura_achada.resumo()
             if varredura_achada.contagem == 1:
                 resumo["endereco"] = varredura_achada.endereco()
@@ -682,6 +709,7 @@ __all__ = [
     "ler_valor",
     "processo_do_jogo",
     "resolver",
+    "valor_do_tipo",
 ]
 
 if __name__ == "__main__":
