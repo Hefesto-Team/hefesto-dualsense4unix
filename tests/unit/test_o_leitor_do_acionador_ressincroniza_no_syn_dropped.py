@@ -9,7 +9,8 @@ A régua nunca abre o ``/dev/input`` nem o ``/sys`` da máquina: o ``/sys/class/
 pasta de mentira e o aparelho é um dublê com a fila e o ``active_keys`` do evdev.
 
 MORDIDA: tirar o ramo do ``SYN_DROPPED`` do ``_ler`` reprova os quatro jogadores com a Cruz
-presa.
+presa; aplicar a tecla que chega no buraco (sem o ``or aberto.no_buraco``) reprova o pedal
+apertado antes do fim do quadro.
 """
 from __future__ import annotations
 
@@ -101,3 +102,16 @@ def test_o_que_o_kernel_diz_apertado_depois_do_buraco_vale(tmp_path: Path) -> No
     ponte.andar(declarados, lambda: False)
 
     assert ponte.apertados(UNIQS[0]) == frozenset({"l2_btn"})
+
+
+def test_o_evento_do_buraco_nao_aperta_antes_do_fim_do_quadro(tmp_path: Path) -> None:
+    """D-1911-O-ACIONADOR-RELE-O-KERNEL-NO-BURACO: o que chega no buraco não vale até o kernel."""
+    ponte, aparelho, declarados = _ponte(tmp_path, UNIQS[0])
+    aparelho.fila = [BURACO, _ev(ecodes.EV_KEY, PEDAL, 1)]
+    ponte.andar(declarados, lambda: False)
+    assert ponte.apertados(UNIQS[0]) == frozenset()
+
+    aparelho.fila = [FIM_DO_QUADRO]
+    aparelho.ativas = [TECLA]
+    ponte.andar(declarados, lambda: False)
+    assert ponte.apertados(UNIQS[0]) == frozenset({"cross"})
