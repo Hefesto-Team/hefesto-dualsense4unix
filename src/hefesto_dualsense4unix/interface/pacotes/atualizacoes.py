@@ -424,8 +424,10 @@ def fechar_a_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "atualizacoes-reiniciar-o-computador", grava="reinicia o computador")
 def reiniciar_o_computador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    from hefesto_dualsense4unix.app.actions.daemon_actions import prazo_do_systemctl
+
     feito = subprocess.run(["systemctl", "reboot"], check=False, capture_output=True,
-                           text=True, timeout=30)
+                           text=True, timeout=prazo_do_systemctl(["reboot"]))
     if feito.returncode != 0:
         raise RuntimeError(f"reiniciar: {feito.stderr.strip() or feito.returncode}")
 

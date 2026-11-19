@@ -489,11 +489,13 @@ def test_o_fim_que_pede_reinicio_oferece_reiniciar_agora(monkeypatch: pytest.Mon
     assert tela.REINICIE in corpo and 'data-gesto="atualizacoes-reiniciar-o-computador"' in corpo
     assert "Reiniciar agora" not in tela.html_do_andamento(
         fim, rodando=True, pede_reinicio="O sistema pede o reinício")
-    chamadas: list[list[str]] = []
-    monkeypatch.setattr(gestos.subprocess, "run", lambda argv, **_k: chamadas.append(argv) or
-                        type("R", (), {"returncode": 0, "stderr": ""})())
+    from hefesto_dualsense4unix.app.actions.daemon_actions import prazo_do_systemctl
+
+    chamadas: list[tuple[list[str], Any]] = []
+    monkeypatch.setattr(gestos.subprocess, "run", lambda argv, **k: chamadas.append(
+        (argv, k.get("timeout"))) or type("R", (), {"returncode": 0, "stderr": ""})())
     _gesto("atualizacoes-reiniciar-o-computador")
-    assert chamadas == [["systemctl", "reboot"]]
+    assert chamadas == [(["systemctl", "reboot"], prazo_do_systemctl(["reboot"]))]
 
 
 def test_o_registro_abre_na_caixa_com_copiar_e_salvar(lar: Path,
