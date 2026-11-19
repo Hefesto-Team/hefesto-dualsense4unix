@@ -84,6 +84,8 @@ _SUFIXO_DE_OUTRA_PLACA = ".de-outra-placa"
 
 _SUFIXO_DA_GUARDA_DEVOLVIDA = ".devolvida"
 
+_SUFIXO_DA_GUARDA_APOSENTADA = ".aposentada"
+
 CONTROLADORES_USB_FIELD: Final = "controladores_usb"
 
 _CLASSE_DO_CONTROLADOR_USB = "0x0c03"
@@ -1697,7 +1699,7 @@ def gravar_maquina_com_descartes(
             except OSError as exc:
                 logger.warning("maquina_save_recusado_de_outra_placa", err=str(exc)[:200])
                 return ResultadoDaGravacao(False, ())
-        bruto, devolvidas = devolver_a_guarda_da_renumeracao(bruto, placa)
+        bruto, guardas = devolver_a_guarda_da_renumeracao(bruto, placa)
         descartados: tuple[str, ...] = ()
         try:
             atual = MaquinaConfig.model_validate(_so_o_que_o_schema_conhece(bruto))
@@ -1730,7 +1732,7 @@ def gravar_maquina_com_descartes(
         ):
             documento[PLACA_FIELD] = _copia_funda(placa)
         _escrever(documento)
-        _marcar_as_devolvidas(devolvidas)
+        _marcar_as_guardas(guardas)
         logger.debug("maquina_gravada", campos=sorted(declaracao))
     return ResultadoDaGravacao(True, descartados)
 
@@ -2029,8 +2031,8 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
     """:func:`migrar_o_documento` e :func:`conferir_a_placa` na leitura, e o arquivo regravado."""
     placa = placa_daqui()
     migrado, _ = conferir_a_placa(migrar_o_documento(bruto), placa)
-    migrado, _ = devolver_a_guarda_da_renumeracao(migrado, placa)
-    if migrado == bruto:
+    migrado, guardas = devolver_a_guarda_da_renumeracao(migrado, placa)
+    if migrado == bruto and not guardas.aposentadas:
         return bruto
     try:
         with MAQUINA_FILE_LOCK:
@@ -2039,7 +2041,7 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
                 return migrado
             de_um_registro = migrar_o_documento(agora)
             conferido, de_outra_placa = conferir_a_placa(de_um_registro, placa)
-            migrado, devolvidas = devolver_a_guarda_da_renumeracao(conferido, placa)
+            migrado, guardas = devolver_a_guarda_da_renumeracao(conferido, placa)
             if migrado != agora:
                 if de_um_registro != agora:
                     _guardar_a_copia_de_antes_da_migracao()
@@ -2047,7 +2049,7 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
                 if de_outra_placa is not None:
                     _guardar_o_de_outra_placa(de_outra_placa)
                 _escrever(migrado)
-                _marcar_as_devolvidas(devolvidas)
+            _marcar_as_guardas(guardas)
     except Exception as exc:
         logger.warning("maquina_migracao_nao_gravou", err=str(exc)[:200])
     return migrado
@@ -2271,27 +2273,38 @@ def _ler_a_guarda(guarda: Path) -> dict[str, Any] | None:
     return guardado if isinstance(guardado, dict) else None
 
 
+class GuardasDaRenumeracao(NamedTuple):
+    """As guardas que voltaram ao documento e as que serviriam, mas ele já tem as seções."""
+
+    devolvidas: list[Path]
+    aposentadas: list[Path]
+
+
 def devolver_a_guarda_da_renumeracao(
     documento: dict[str, Any],
     placa: Mapping[str, Any] | None,
     controladores: Callable[[], Mapping[str, str] | None] = familias_dos_controladores_usb,
-) -> tuple[dict[str, Any], list[Path]]:
-    """O documento com o que a renumeração do PCI tirou dele, e as guardas que voltaram.
+) -> tuple[dict[str, Any], GuardasDaRenumeracao]:
+    """O documento com o que a renumeração do PCI tirou dele, e o destino de cada guarda.
 
-    Volta só a guarda sem ``placa`` (tirada pelo mapa, não pela troca de placa), com o
+    Serve só a guarda sem ``placa`` (tirada pelo mapa, não pela troca de placa), com o
     documento gravado nesta placa e TODOS os controladores do mapa guardado reconhecidos aqui;
-    cada seção volta só se o documento não a tem. A guarda devolvida ganha o sufixo
-    ``.devolvida`` depois de o documento ser gravado: a volta não se repete.
+    cada seção volta só se o documento não a tem. Depois de o documento ser gravado, a guarda
+    devolvida ganha o sufixo ``.devolvida`` e a que serviria sem ter o que trazer (nenhuma seção
+    guardada falta ao documento) ganha ``.aposentada``: nenhuma volta mais, e a seção esvaziada
+    depois segue vazia. A guarda que não se reconhece aqui fica.
     """
+    nada = GuardasDaRenumeracao([], [])
     faltam = [secao for secao in SECOES_DESTE_COMPUTADOR if not documento.get(secao)]
     gravada = _placa_gravada(documento)
-    if placa is None or gravada is None or not faltam:
-        return documento, []
+    if placa is None or gravada is None:
+        return documento, nada
     from hefesto_dualsense4unix.integrations.censo_do_gabinete import serve_para_esta_placa
 
     if not serve_para_esta_placa({PLACA_FIELD: gravada}, dict(placa)):
-        return documento, []
+        return documento, nada
     devolvidas: list[Path] = []
+    aposentadas: list[Path] = []
     vivos: Mapping[str, str] | None = None
     for guarda in _guardas_de_outra_placa():
         guardado = _ler_a_guarda(guarda)
@@ -2302,14 +2315,17 @@ def devolver_a_guarda_da_renumeracao(
         ):
             continue
         do_mapa = _controladores_do_mapa(guardado.get("mapa"))
-        trazidas = [secao for secao in faltam if guardado.get(secao)]
-        if not do_mapa or not trazidas:
+        if not do_mapa:
             continue
         vivos = controladores() if vivos is None else vivos
         if vivos is None:
             break
         novos = reconhecer_os_controladores(do_mapa, vivos, _familias_gravadas(guardado))
         if novos is None:
+            continue
+        trazidas = [secao for secao in faltam if guardado.get(secao)]
+        if not trazidas:
+            aposentadas.append(guarda)
             continue
         documento = dict(documento)
         for secao in trazidas:
@@ -2320,27 +2336,29 @@ def devolver_a_guarda_da_renumeracao(
             )
         faltam = [secao for secao in faltam if secao not in trazidas]
         devolvidas.append(guarda)
-        if not faltam:
-            break
     if devolvidas:
         documento = _nos_enderecos_vivos(documento, vivos) or documento
-    return documento, devolvidas
+    return documento, GuardasDaRenumeracao(devolvidas, aposentadas)
 
 
-def _marcar_as_devolvidas(guardas: Sequence[Path]) -> None:
-    for guarda in guardas:
-        alvo = guarda.with_name(guarda.name + _SUFIXO_DA_GUARDA_DEVOLVIDA)
-        n = 2
-        while alvo.exists():
-            alvo = guarda.with_name(f"{guarda.name}{_SUFIXO_DA_GUARDA_DEVOLVIDA}-{n}")
-            n += 1
-        try:
-            os.rename(guarda, alvo)
-        except OSError as exc:
-            logger.warning("maquina_guarda_devolvida_nao_marcada", guarda=str(guarda),
-                           err=str(exc)[:200])
-            continue
-        logger.warning("maquina_guarda_da_renumeracao_devolvida", devolvida_em=str(alvo))
+def _marcar_as_guardas(guardas: GuardasDaRenumeracao) -> None:
+    for lista, sufixo in (
+        (guardas.devolvidas, _SUFIXO_DA_GUARDA_DEVOLVIDA),
+        (guardas.aposentadas, _SUFIXO_DA_GUARDA_APOSENTADA),
+    ):
+        for guarda in lista:
+            alvo = guarda.with_name(guarda.name + sufixo)
+            n = 2
+            while alvo.exists():
+                alvo = guarda.with_name(f"{guarda.name}{sufixo}-{n}")
+                n += 1
+            try:
+                os.rename(guarda, alvo)
+            except OSError as exc:
+                logger.warning("maquina_guarda_nao_marcada", guarda=str(guarda),
+                               err=str(exc)[:200])
+                continue
+            logger.warning("maquina_guarda_da_renumeracao_marcada", marcada_em=str(alvo))
 
 
 def _guardar_o_de_outra_placa(guardado: Mapping[str, Any]) -> Path:
