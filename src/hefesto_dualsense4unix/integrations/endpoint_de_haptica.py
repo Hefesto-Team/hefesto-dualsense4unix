@@ -448,43 +448,51 @@ def nasceu_com_o_relogio(
     return True
 
 
+def a_ancora_pode_ser_dele(uniq: str, caminho: str, outros: Iterable[str] = ()) -> bool:
+    """A âncora declarada ``caminho`` é, ou ainda pode vir a ser, a porta do aparelho ``uniq``.
+
+    É a porta registrada do aparelho; sem porta registrada, é um gadget
+    (:func:`pad_usb.sob_o_vhci`) que não é a porta de nenhum dos ``outros``.
+    """
+    propria = pad_usb.interface_do_aparelho(uniq)
+    if propria is not None:
+        return propria == caminho
+    return pad_usb.sob_o_vhci(caminho) and all(
+        pad_usb.interface_do_aparelho(outro) != caminho for outro in outros
+    )
+
+
 def varrer_endpoints_orfaos(
     vivos: Iterable[str],
     runner: Callable[[list[str]], str | None] | None = None,
     *,
     de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     sem_porta: Iterable[str] = (),
+    na_mesa: Mapping[str, str] | None = None,
 ) -> list[str]:
-    """Derruba todo endpoint desta casa que não é de um aparelho vivo.
+    """Derruba todo endpoint desta casa (:data:`MARCA_DO_NOME`) que não é de aparelho vivo.
 
-    ``vivos`` são as MARCAS dos aparelhos cujo nó fica de pé AGORA
-    (:func:`nome_da_marca`). O que sobra é resto de sessão anterior — e resto
-    de sessão anterior não é inofensivo: ele entra na lista de saídas de som da
-    pessoa com o mesmo nome do endpoint bom, e o jogo que procura o
-    alto-falante do DualSense pode achar o morto.
-
-    **OS NOMES DE ANTES CAEM NA PRIMEIRA VOLTA DEPOIS DO INSTALL.** O endpoint
-    por lugar (``LUGAR<n>``, de 28/09 a 02/10) e o por rabo de endereço
-    (``HEFESTO<6 hex>``, até 28/09) não são de aparelho nenhum, e saem por esta
-    mesma conta: a varredura lê TODO nó desta casa (:data:`MARCA_DO_NOME`), e
-    não só os de nome novo.
-
-    ``de_pe`` é a resposta de :func:`endpoints_de_pe` que quem chama já tem:
-    fazê-la duas vezes por volta seria um ``pactl`` a mais a cada
-    reconciliação. Sem a memória, pergunta.
-
-    Devolve os ``module_id`` derrubados, para o log e para a régua.
+    Ficam o nó das marcas ``vivos`` (:func:`nome_da_marca`), o nó sem porta das ``sem_porta``
+    e, dos aparelhos ``na_mesa`` (marca → ``uniq``), o nó cuja âncora pode ser a porta do
+    aparelho (:func:`a_ancora_pode_ser_dele`), para o ``iniciar`` adotá-lo quando a porta
+    montar. ``de_pe`` é a resposta de :func:`endpoints_de_pe` já lida na volta; sem a resposta,
+    pergunta. Devolve os ``module_id`` derrubados.
     """
     chamar = runner or rodar_pactl
     esperados = (
         {nome_da_marca(marca) for marca in vivos} | {nome_sem_porta(m) for m in sem_porta}
     ) - {""}
+    donos = {nome_da_marca(m): u for m, u in (na_mesa or {}).items()}
     caidos: list[str] = []
     servidor = endpoints_de_pe(chamar) if de_pe is None else de_pe
     for nome, instancias in servidor.items():
         if nome in esperados:
             continue
-        for module_id, _caminho in instancias:
+        for module_id, caminho in instancias:
+            if nome in donos and a_ancora_pode_ser_dele(
+                donos[nome], caminho, [u for u in donos.values() if u != donos[nome]]
+            ):
+                continue
             chamar(["pactl", "unload-module", module_id])
             caidos.append(module_id)
     if caidos:

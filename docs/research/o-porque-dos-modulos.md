@@ -2247,3 +2247,17 @@ fora dele, espera e devolve o nome.
 
 NUNCA LEVANTA: o aparelho já trocou, e um `.json` ilegível não pode
 transformar a troca em recusa.
+
+## A varredura dos endpoints órfãos (`integrations/endpoint_de_haptica.py`, `varrer_endpoints_orfaos`)
+
+O resto de sessão anterior não é inofensivo: ele entra na lista de saídas de som com o mesmo
+nome do endpoint bom, e o jogo que procura o alto-falante do DualSense pode achar o morto. Os
+nomes de antes caem na primeira volta depois do install: o endpoint por lugar (``LUGAR<n>``, de
+28/09 a 02/10) e o por rabo de endereço (``HEFESTO<6 hex>``, até 28/09) não são de aparelho
+nenhum, e a varredura lê todo nó desta casa, não só os de nome novo.
+
+O nó de um aparelho da mesa fica enquanto a âncora pode ser a porta dele (19/11/2026,
+D-1911-O-NO-DA-MESA-ESPERA-A-PORTA-PARA-SE-ADOTAR): na subida com o jogo aberto, o gadget
+ainda não montou, e derrubar o nó destruía o sink em que o jogo escrevia (28 de 33 subidas em
+três dias, nenhuma adoção); o ``iniciar`` o adota quando a porta monta (D-0810). A âncora
+emprestada e a porta de outro aparelho seguem caindo, porque nunca se adotam (D-1410).

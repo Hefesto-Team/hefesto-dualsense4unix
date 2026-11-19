@@ -2123,9 +2123,9 @@ class AltoFalanteSubsystem:
                 if e_sem_porta(getattr(self._endpoints.get(m), "ancora", None))
             ]
             with contextlib.suppress(Exception):
-                caidos = set(
-                    varrer_endpoints_orfaos(com_porta, de_pe=de_pe, sem_porta=sem_porta)
-                )
+                caidos = set(varrer_endpoints_orfaos(
+                    com_porta, de_pe=de_pe, sem_porta=sem_porta, na_mesa=de_pe_agora
+                ))
                 de_pe = {
                     nome: [(m, c) for m, c in instancias if m not in caidos]
                     for nome, instancias in de_pe.items()
