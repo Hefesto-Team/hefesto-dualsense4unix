@@ -78,6 +78,8 @@ WRAPPER_HOME_RELPATH = ".local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 
 MOTIVO_NAO_FIRMOU = "nao_firmou"
 
+LINHA_QUE_NAO_SE_COMPOE = "linha_que_nao_se_compoe"
+
 _WRAPPER_INNER = (
     'W="$HOME/' + WRAPPER_HOME_RELPATH + '"; '
     '[ -x "$W" ] && exec "$W" "$@"; exec env "$@"'
@@ -296,28 +298,132 @@ def strip_value(value: str) -> str:
     DualSense FÍSICO do usuário. Deixar sujeira nossa numa máquina de onde fomos
     embora é o oposto de desinstalar.
     """
-    out = value
-    if WRAPPER_PREFIX in out:
-        out = _remove_token(out, WRAPPER_PREFIX)
+    out = sem_o_atalho(value)
     out = subtrair_nosso_ignore(_tirar_vizinhos_legados(out, _COOCCURRING_TOKENS))
     if out.strip() == "%command%":
         return ""
     return out.strip() if out != value else out
 
 
+_COMANDO = "%command%"
+
+_OPERADORES_DO_SH: tuple[str, ...] = ("&&", "||", ";", "|", "&", "\n")
+
+_PALAVRAS_QUE_ABREM: frozenset[str] = frozenset(
+    {"{", "!", "if", "then", "elif", "else", "while", "until", "do", "time", "exec", "command"}
+)
+
+_FECHA = {"'": "'", '"': '"', "`": "`", "$(": ")", "(": ")"}
+
+
+def _atalho_nas_aspas(aspas: str) -> str:
+    if aspas == '"':
+        return "".join("\\" + c if c in '\\"$`' else c for c in WRAPPER_PREFIX)
+    if aspas == "'":
+        return WRAPPER_PREFIX.replace("'", "'\\''")
+    return WRAPPER_PREFIX
+
+
+_FORMAS_DO_ATALHO: tuple[str, ...] = tuple(_atalho_nas_aspas(a) for a in ("", '"', "'"))
+
+
+def inicio_do_trecho_do_jogo(linha: str) -> tuple[int, str] | None:
+    """O começo do trecho que leva o ``%command%`` e as aspas em volta; ``None`` sem composição.
+
+    O trecho começa depois do último ``&&``, ``||``, ``;``, ``|``, ``&`` ou quebra de linha, ou na
+    abertura das aspas, do ``$(``, do ``(`` ou da crase que guarda o ``%command%``.
+    """
+    pilha: list[list[Any]] = [["", 0]]
+    achado: tuple[int, str] | None = None
+    i = 0
+    while i < len(linha):
+        tipo = pilha[-1][0]
+        if linha.startswith(_COMANDO, i):
+            if achado is not None:
+                return None
+            achado = (pilha[-1][1], tipo)
+            i += len(_COMANDO)
+            continue
+        c = linha[i]
+        if tipo != "'" and c == "\\":
+            i += 2
+            continue
+        if tipo and linha.startswith(_FECHA[tipo], i):
+            pilha.pop()
+            i += 1
+            continue
+        if tipo in ("'", '"'):
+            abre = "$(" if tipo == '"' and linha.startswith("$(", i) else None
+        else:
+            abre = next((a for a in ("$(", "(", "'", '"', "`") if linha.startswith(a, i)), None)
+        if abre is not None:
+            pilha.append([abre, i + len(abre)])
+            i += len(abre)
+            continue
+        operador = next((o for o in _OPERADORES_DO_SH if linha.startswith(o, i)), None)
+        if operador is not None and not (operador == "&" and linha[i - 1 : i] in ("<", ">")):
+            pilha[-1][1] = i + len(operador)
+            i += len(operador)
+            continue
+        i += 1
+    if achado is None or len(pilha) > 1:
+        return None
+    inicio, aspas = achado
+    while True:
+        while inicio < len(linha) and linha[inicio] in " \t":
+            inicio += 1
+        palavra = linha[inicio:].split(None, 1)[0] if linha[inicio:].strip() else ""
+        if palavra == "eval":
+            return None
+        if palavra not in _PALAVRAS_QUE_ABREM:
+            return inicio, aspas
+        inicio += len(palavra)
+
+
+def sem_o_atalho(linha: str) -> str:
+    """A linha sem o atalho do Hefesto, em qualquer lugar e em qualquer aspas."""
+    for forma in _FORMAS_DO_ATALHO:
+        i = linha.find(forma)
+        if i >= 0:
+            fim = i + len(forma)
+            return linha[:i] + linha[fim + 1 if linha[fim : fim + 1] == " " else fim :]
+    return linha
+
+
+def tem_o_atalho(linha: str) -> bool:
+    return sem_o_atalho(linha) != linha
+
+
+def com_o_atalho(linha: str) -> str | None:
+    """O atalho no começo do trecho que abre o jogo; ``None`` na linha que o sh não compõe."""
+    limpa = linha.strip()
+    if not limpa:
+        return WRAPPER_LAUNCH
+    if _COMANDO not in limpa:
+        return WRAPPER_LAUNCH + " " + limpa
+    lugar = inicio_do_trecho_do_jogo(limpa)
+    if lugar is None:
+        return None
+    inicio, aspas = lugar
+    return limpa[:inicio] + _atalho_nas_aspas(aspas) + " " + limpa[inicio:]
+
+
+def atalho_no_lugar(linha: str) -> bool:
+    """A linha leva o atalho, e no começo do trecho que abre o jogo?"""
+    sem = sem_o_atalho(linha)
+    return sem != linha and com_o_atalho(sem) == linha
+
+
 def migrate_value(value: str) -> str:
-    """Migra UMA LaunchOptions envenenada para a chamada do wrapper."""
+    """Migra UMA LaunchOptions para a chamada do wrapper, no trecho que abre o jogo."""
     if has_extended_ignore(value):
         return value
     out = _tirar_vizinhos_legados(value, (*_COOCCURRING_TOKENS, *_PRELOAD_TOKENS))
     out = subtrair_nosso_ignore(out).strip()
-    if WRAPPER_PREFIX in out:
+    if atalho_no_lugar(out):
         return out
-    if not out:
-        return WRAPPER_LAUNCH
-    if "%command%" in out:
-        return WRAPPER_PREFIX + " " + out
-    return WRAPPER_LAUNCH + " " + out
+    composta = com_o_atalho(sem_o_atalho(out))
+    return value if composta is None else composta
 
 
 def transform_vdf_text(
@@ -363,7 +469,7 @@ def transform_vdf_text(
             changed += 1
             continue
         value = _vdf_unescape(m.group("value"))
-        if not (has_poison(value) or WRAPPER_PREFIX in value):
+        if not (has_poison(value) or tem_o_atalho(value)):
             continue
         modo_aqui = mode if na_canonica else "strip"
         new_value = (
@@ -649,12 +755,12 @@ def apply_wrapper_vdf_text(
             if has_extended_ignore(value):
                 skipped.append((appid, "ignore_estendido"))
                 continue
-            if WRAPPER_PREFIX in value:
+            if atalho_no_lugar(value):
                 skipped.append((appid, "ja_tem_wrapper"))
                 continue
             new_value = migrate_value(value)
             if new_value == value:
-                skipped.append((appid, "ja_tem_wrapper"))
+                skipped.append((appid, LINHA_QUE_NAO_SE_COMPOE))
                 continue
             body = lines[idx].rstrip("\r\n")
             eol = lines[idx][len(body):]
@@ -697,7 +803,7 @@ def nao_firmaram(vdf: Path, appids: Sequence[str], *, com_wrapper: bool) -> list
         return list(appids)
     return [
         a for a in appids
-        if (WRAPPER_PREFIX in (lidos.get(a) or "")) != com_wrapper
+        if tem_o_atalho(lidos.get(a) or "") != com_wrapper
     ]
 
 

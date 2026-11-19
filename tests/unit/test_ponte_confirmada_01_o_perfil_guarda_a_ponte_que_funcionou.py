@@ -244,7 +244,7 @@ class TestOProntuarioSabeAPonte:
             appid=_DONT_SCREAM,
             nome="DON'T SCREAM",
             raiz=Path("/jogos/dont-scream"),
-            linha=f"{pdj.WRAPPER_PREFIX}x %command%",
+            linha=f"{pdj.WRAPPER_PREFIX} %command%",
             na_allowlist=True,
             steam_input="1",
             evidencia=_evidencia(),  # type: ignore[arg-type]
@@ -275,7 +275,7 @@ class TestOProntuarioSabeAPonte:
             appid=_SACKBOY,
             nome="Sackboy",
             raiz=Path("/jogos/sackboy"),
-            linha=f"{pdj.WRAPPER_PREFIX}x %command%",
+            linha=f"{pdj.WRAPPER_PREFIX} %command%",
             evidencia=Evidencia(
                 executavel=Path("/jogos/sackboy/Sackboy.exe"),
                 imports=("kernel32.dll",),
@@ -303,7 +303,7 @@ class TestOProntuarioSabeAPonte:
             appid=_DONT_SCREAM,
             nome="DON'T SCREAM",
             raiz=Path("/jogos/dont-scream"),
-            linha=f"{pdj.WRAPPER_PREFIX}x %command%",
+            linha=f"{pdj.WRAPPER_PREFIX} %command%",
             na_allowlist=False,
             evidencia=_evidencia(),  # type: ignore[arg-type]
             ponte=pdj.Ponte(kind="gamepad", gamepad_flavor="dualsense", steam_input=True),
@@ -322,7 +322,7 @@ class TestOProntuarioSabeAPonte:
             appid=_SACKBOY,
             nome="Sackboy",
             raiz=Path("/jogos/sackboy"),
-            linha=f"{pdj.WRAPPER_PREFIX}x %command%",
+            linha=f"{pdj.WRAPPER_PREFIX} %command%",
             na_allowlist=True,
             steam_input="1",
             ponte=pdj.Ponte(kind="gamepad", gamepad_flavor="dualsense", steam_input=False),
@@ -341,14 +341,14 @@ class TestOProntuarioSabeAPonte:
                     appid=_DONT_SCREAM,
                     nome="DON'T SCREAM",
                     raiz=tmp_path,
-                    linha=f"{pdj.WRAPPER_PREFIX}x %command%",
+                    linha=f"{pdj.WRAPPER_PREFIX} %command%",
                     ponte=pdj.Ponte(kind="gamepad", gamepad_flavor="dualsense"),
                 ),
                 pdj.Prontuario(
                     appid=_SACKBOY,
                     nome="Sackboy",
                     raiz=tmp_path,
-                    linha=f"{pdj.WRAPPER_PREFIX}x %command%",
+                    linha=f"{pdj.WRAPPER_PREFIX} %command%",
                 ),
             ]
         )

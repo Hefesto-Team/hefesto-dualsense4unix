@@ -71,7 +71,7 @@ originais intactos; com o wrapper AUSENTE, recebeu o `VKD3D_CONFIG` e abriu do
 mesmo jeito. **Não é preciso — nem se deve — intercalar um `env` extra antes
 do `VKD3D_CONFIG`**: a composição de duas camadas já é a certa, e é a mesma
 que os outros 60 jogos usam. Inventar uma segunda forma de escrever a linha
-quebraria a idempotência (o `WRAPPER_PREFIX in value` deixaria de casar) —
+quebraria a idempotência (o `atalho_no_lugar` deixaria de casar) —
 e com a idempotência, 60 jogos de uma vez.
 
 AS QUATRO PERGUNTAS DO DESENHO, e a resposta de cada uma
@@ -88,7 +88,7 @@ AS QUATRO PERGUNTAS DO DESENHO, e a resposta de cada uma
   mundo), mas só a regressão ganha a frase *"parou de funcionar"* — que é a
   informação que o usuário não tinha.
 - **"O reparo é idempotente?"** — Sim, e não por promessa: ele delega ao
-  `apply_wrapper_to_all_games`, cujo gate `WRAPPER_PREFIX in value` pula quem
+  `apply_wrapper_to_all_games`, cujo gate `atalho_no_lugar` pula quem
   já tem. Rodar dez vezes é igual a rodar uma.
 - **"Há backup?"** — Sim, o mesmo do caminho em massa: um
   `.bak.hefesto-launch-<ts>` ao lado de cada vdf tocado, antes de escrever,
@@ -120,8 +120,8 @@ from pathlib import Path
 
 try:
     from .steam_launch_options import (
-        WRAPPER_PREFIX,
         apply_wrapper_to_all_games,
+        atalho_no_lugar,
         discover_vdfs,
         garantir_blocos_no_texto,
         has_extended_ignore,
@@ -132,14 +132,15 @@ try:
         rotulo_do_jogo,
         steam_game_running,
         steam_running,
+        tem_o_atalho,
         tirar_o_atalho_dos_jogos,
     )
     from .vigia_do_jogo_novo import esperar_a_calma, jogos_novos_a_receber
     from .vigia_do_jogo_novo import garantir as garantir_o_vigia
 except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
-        WRAPPER_PREFIX,
         apply_wrapper_to_all_games,
+        atalho_no_lugar,
         discover_vdfs,
         garantir_blocos_no_texto,
         has_extended_ignore,
@@ -150,6 +151,7 @@ except ImportError:  # pragma: no cover
         rotulo_do_jogo,
         steam_game_running,
         steam_running,
+        tem_o_atalho,
         tirar_o_atalho_dos_jogos,
     )
     from vigia_do_jogo_novo import (  # type: ignore[no-redef]
@@ -337,10 +339,10 @@ def censo_do_wrapper(
             continue
         for appid, valor in sorted(apps.items()):
             if appid in fora_set:
-                if valor is not None and WRAPPER_PREFIX in valor:
+                if valor is not None and tem_o_atalho(valor):
                     recusados_com_wrapper.append(appid)
                 continue
-            if valor is not None and WRAPPER_PREFIX in valor:
+            if valor is not None and atalho_no_lugar(valor):
                 com_wrapper.append(appid)
                 continue
             if valor is not None and has_extended_ignore(valor):
@@ -459,7 +461,7 @@ def reparar_ou_adiar(
     outro lugar: o jogo precisa do wrapper **e** do `VKD3D_CONFIG` que
     cura o crash de 14/08. Repor o wrapper jogando fora a linha do usuário trocaria
     "o jogo não vê o controle" por "o jogo fecha sozinho", que não é conserto
-    nenhum. Quem garante isso é o `migrate_value`, que PREPENDE.
+    nenhum. Quem garante isso é o `migrate_value`, com o atalho no trecho que abre o jogo.
 
     A LISTA DE IGNORE ESTENDIDA À MÃO ENTRA NO REPARO desde 06/09/2026
     (ONDA5-07-01): o `migrate_value` SUBTRAI o nosso par de dentro da lista

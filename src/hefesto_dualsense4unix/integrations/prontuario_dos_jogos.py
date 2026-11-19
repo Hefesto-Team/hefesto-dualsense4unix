@@ -84,8 +84,8 @@ try:
     )
     from .steam_launch_options import (
         _PAR_ACF,
-        WRAPPER_PREFIX,
         _desescapar_acf,
+        atalho_no_lugar,
         discover_vdfs,
         has_extended_ignore,
         is_sandboxed_layout,
@@ -94,6 +94,7 @@ try:
         read_apps_by_appid,
         steam_input_allowlist_path,
     )
+    from .steam_launch_options import WRAPPER_PREFIX as WRAPPER_PREFIX
 except ImportError:  # pragma: no cover
     from a_roupa_do_jogo import roupa_do_jogo  # type: ignore[no-redef]
     from api_de_entrada import Evidencia, Veredito, examinar_pasta  # type: ignore[no-redef]
@@ -116,8 +117,8 @@ except ImportError:  # pragma: no cover
     )
     from steam_launch_options import (  # type: ignore[no-redef]
         _PAR_ACF,
-        WRAPPER_PREFIX,
         _desescapar_acf,
+        atalho_no_lugar,
         discover_vdfs,
         has_extended_ignore,
         is_sandboxed_layout,
@@ -126,6 +127,7 @@ except ImportError:  # pragma: no cover
         read_apps_by_appid,
         steam_input_allowlist_path,
     )
+    from steam_launch_options import WRAPPER_PREFIX as WRAPPER_PREFIX  # type: ignore[no-redef]
 
 IMPEDIDO = "impedido"
 SEM_IMPEDIMENTO = "sem_impedimento_conhecido"
@@ -413,7 +415,7 @@ class Prontuario:
 
     @property
     def tem_wrapper(self) -> bool:
-        return bool(self.linha) and WRAPPER_PREFIX in (self.linha or "")
+        return atalho_no_lugar(self.linha or "")
 
     @property
     def linha_intocavel(self) -> bool:

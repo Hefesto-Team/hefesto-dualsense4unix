@@ -79,30 +79,36 @@ from typing import Any, TypedDict
 
 try:
     from .steam_launch_options import (
-        WRAPPER_PREFIX,
         _vdf_unescape,
+        com_o_atalho,
         discover_vdfs,
         e_a_arvore_canonica,
         garantir_blocos_no_texto,
+        inicio_do_trecho_do_jogo,
         is_sandboxed_layout,
         ler_jogos_sem_wrapper,
+        sem_o_atalho,
         sem_wrapper_path,
         steam_game_running,
         steam_running,
+        tem_o_atalho,
     )
     from .vigia_do_jogo_novo import jogos_novos_a_receber
 except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
-        WRAPPER_PREFIX,
         _vdf_unescape,
+        com_o_atalho,
         discover_vdfs,
         e_a_arvore_canonica,
         garantir_blocos_no_texto,
+        inicio_do_trecho_do_jogo,
         is_sandboxed_layout,
         ler_jogos_sem_wrapper,
+        sem_o_atalho,
         sem_wrapper_path,
         steam_game_running,
         steam_running,
+        tem_o_atalho,
     )
     from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
@@ -298,9 +304,9 @@ def gravar_registro(
 
 
 def linha_desejada(opcoes: str, *, com_atalho: bool) -> str:
-    """A linha final do vdf: o atalho na frente, as opções do usuário atrás."""
+    """A linha final do vdf: o atalho no começo do trecho que abre o jogo (`com_o_atalho`)."""
     limpo = opcoes.strip()
-    return f"{WRAPPER_PREFIX} {limpo}" if com_atalho else limpo
+    return (com_o_atalho(limpo) or limpo) if com_atalho else limpo
 
 
 def _valor_do_vdf(bruto: str) -> str:
@@ -351,14 +357,7 @@ def _sem(tokens: list[str], tirar: list[str]) -> list[str]:
     return resto
 
 
-_OPERADORES = frozenset({"&&", "||", ";", "|", "&"})
 _ATRIBUICAO = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
-
-
-def _inicio_do_trecho_do_jogo(tokens: list[str]) -> int:
-    """Onde começa o comando que leva o ``%command%``: depois do último ``&&`` (ou ``;``)."""
-    fim = tokens.index(_COMANDO) if _COMANDO in tokens else 0
-    return max((i + 1 for i in range(fim) if tokens[i] in _OPERADORES), default=0)
 
 
 def _atribuicoes_e_resto(tokens: list[str]) -> tuple[list[str], list[str]]:
@@ -371,11 +370,7 @@ def _atribuicoes_e_resto(tokens: list[str]) -> tuple[list[str], list[str]]:
 
 def _opcoes_da_linha(linha: str) -> tuple[list[str], list[str]] | None:
     """``(antes, depois)`` do ``%command%`` do que a TABELA escreveu, sem o atalho."""
-    tokens = _tokens(linha)
-    atalho = _tokens(WRAPPER_PREFIX)
-    if tokens[: len(atalho)] == atalho:
-        tokens = tokens[len(atalho):]
-    partes = _parte_antes_e_depois(tokens)
+    partes = _parte_antes_e_depois(_tokens(sem_o_atalho(linha)))
     return None if partes is None else (partes[0], partes[1])
 
 
@@ -392,21 +387,23 @@ def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
         return desejada
     if not vivo.strip() or vivo.strip() == _COMANDO:
         return desejada
-    vivos, quer = _tokens(vivo), _tokens(desejada)
+    com_atalho = tem_o_atalho(desejada)
+    vivo, quer = sem_o_atalho(vivo), _tokens(sem_o_atalho(desejada))
+    vivos = _tokens(vivo)
     if anterior:
-        antiga = _tokens(anterior)
-        i = _acha(vivos, antiga)
+        antiga = _tokens(sem_o_atalho(anterior))
+        i = _acha(vivos, antiga) if antiga else None
         if i is not None:
             spans = [m.span() for m in _TOKEN_DA_LINHA.finditer(vivo)]
-            return vivo[: spans[i][0]] + desejada + vivo[spans[i + len(antiga) - 1][1]:]
-    atalho = _tokens(WRAPPER_PREFIX)
-    com_atalho = quer[: len(atalho)] == atalho
-    pos = _acha(vivos, atalho)
-    if pos is None:
-        pos = _inicio_do_trecho_do_jogo(vivos)
-        antes_do_atalho, resto = vivos[:pos], vivos[pos:]
-    else:
-        antes_do_atalho, resto = vivos[:pos], vivos[pos + len(atalho):]
+            junta = vivo[: spans[i][0]] + " ".join(quer) + vivo[spans[i + len(antiga) - 1][1]:]
+            return com_o_atalho(junta) if com_atalho else junta
+    pos = 0
+    if _COMANDO in vivo:
+        lugar = inicio_do_trecho_do_jogo(vivo)
+        if lugar is None or lugar[1]:
+            return None
+        pos = len(_tokens(vivo[: lugar[0]]))
+    antes_do_trecho, resto = vivos[:pos], vivos[pos:]
     dele = _parte_antes_e_depois(resto)
     nosso = _opcoes_da_linha(desejada)
     if dele is None or nosso is None:
@@ -417,16 +414,14 @@ def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
     pre_dele = _sem(dele[0], nosso[0] + antigo[0])
     pos_dele = _sem(dele[1], nosso[1] + antigo[1])
     tinha_comando = dele[2] or _COMANDO in quer
-    novo = list(antes_do_atalho)
-    if com_atalho:
-        novo += atalho
+    novo = list(antes_do_trecho)
     var_dele, cmd_dele = _atribuicoes_e_resto(pre_dele)
     var_nossa, cmd_nosso = _atribuicoes_e_resto(nosso[0])
     novo += var_dele + var_nossa + cmd_dele + cmd_nosso
     if tinha_comando:
         novo.append(_COMANDO)
     novo += pos_dele + nosso[1]
-    return " ".join(novo)
+    return com_o_atalho(" ".join(novo)) if com_atalho else " ".join(novo)
 
 
 def compor_opcoes_vdf_text(

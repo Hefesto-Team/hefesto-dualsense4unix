@@ -1,6 +1,7 @@
 """DEDUP-05/UX-04: migração e strip das LaunchOptions no localconfig.vdf."""
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -459,6 +460,71 @@ def test_apply_wrapper_prefixa_preservando_opcoes_do_usuario():
     assert pulados == []
     valores = slo.read_launch_options_by_appid(novo)
     assert valores["9900620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
+
+
+_LINHAS_DO_USUARIO = {
+    'eval $( echo "%command%" | sed "s/Launcher/Jogo/" )': "nome=Jogo ",
+    "cd /tmp && %command%": "pwd=/tmp ",
+    "ulimit -n 512 && %command%": "nofile=512 ",
+    "export X=1; %command%": "x=1 ",
+    "VAR=1 %command%": "var=1 ",
+    "gamemoderun %command% -arg": "args=-arg",
+}
+
+
+@pytest.fixture
+def lar_do_atalho(tmp_path: Path) -> Path:
+    atalho = tmp_path / slo.WRAPPER_HOME_RELPATH
+    atalho.parent.mkdir(parents=True)
+    atalho.write_text('#!/bin/sh\nexport HEFESTO_ATALHO=1\nexec env "$@"\n')
+    atalho.chmod(0o755)
+    (tmp_path / "bin").mkdir()
+    gamemoderun = tmp_path / "bin" / "gamemoderun"
+    gamemoderun.write_text('#!/bin/sh\nexec "$@"\n')
+    gamemoderun.chmod(0o755)
+    for nome in ("Jogo", "Launcher"):
+        jogo = tmp_path / nome
+        jogo.write_text(
+            '#!/bin/sh\necho "atalho=${HEFESTO_ATALHO:-} x=${X:-} var=${VAR:-} pwd=$(pwd) '
+            'nofile=$(ulimit -n) nome=$(basename "$0") args=$*"\n'
+        )
+        jogo.chmod(0o755)
+    return tmp_path
+
+
+@pytest.mark.parametrize("linha", sorted(_LINHAS_DO_USUARIO))
+def test_o_atalho_entra_no_trecho_que_abre_o_jogo(lar_do_atalho: Path, linha: str) -> None:
+    """D-1911-O-ATALHO-ENTRA-NO-TRECHO-QUE-ABRE-O-JOGO: o jogo abre com o atalho e a linha dele."""
+    migrada = slo.migrate_value(linha)
+    assert slo.atalho_no_lugar(migrada)
+    assert slo.strip_value(migrada) == linha
+    jogo = lar_do_atalho / ("Launcher" if "sed" in linha else "Jogo")
+    rodou = subprocess.run(
+        ["/bin/sh", "-c", migrada.replace("%command%", str(jogo))],
+        capture_output=True, text=True, check=False,
+        env={"HOME": str(lar_do_atalho), "PATH": f"{lar_do_atalho}/bin:/usr/bin:/bin"},
+    )
+    assert rodou.returncode == 0, rodou.stderr
+    assert rodou.stdout.startswith("atalho=1 ")
+    assert _LINHAS_DO_USUARIO[linha] in rodou.stdout + " "
+
+
+def test_a_linha_quebrada_de_hoje_se_recompoe_e_a_que_nao_se_compoe_fica() -> None:
+    quebrada = f"{slo.WRAPPER_PREFIX} cd /tmp && %command%"
+    ambigua = "eval %command%"
+    texto = _vdf({"9900620": slo._vdf_escape(quebrada), "9900621": ambigua})
+    novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
+    valores = slo.read_launch_options_by_appid(novo)
+    assert valores["9900620"] == f"cd /tmp && {slo.WRAPPER_PREFIX} %command%"
+    assert valores["9900621"] == ambigua
+    assert aplicados == ["9900620"]
+    assert pulados == [("9900621", slo.LINHA_QUE_NAO_SE_COMPOE)]
+    assert slo.apply_wrapper_vdf_text(novo)[1] == []
+    from hefesto_dualsense4unix.integrations import opcoes_por_jogo as opj
+
+    desejada = opj.linha_desejada("VAR=1 %command%", com_atalho=True)
+    composta = opj.compor_linha(quebrada, desejada)
+    assert composta == f"cd /tmp && {slo.WRAPPER_PREFIX} VAR=1 %command%"
 
 
 def test_apply_wrapper_insere_launch_options_em_jogo_sem_nenhuma():
