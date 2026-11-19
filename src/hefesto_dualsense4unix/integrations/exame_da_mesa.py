@@ -316,18 +316,21 @@ def pareamentos(
 ) -> Item:
     """Algum controle com pareamento pela metade? (`doctor.sh:3274-3292`)"""
     from hefesto_dualsense4unix.integrations import bluez_dbus
+    from hefesto_dualsense4unix.integrations.central_do_radio import _o_bluez_diz_controle
 
     leitor = bluez_dbus.dono() if executar is None else bluez_dbus.pelo_executor(executar)
-    arvore = leitor.caminhos()
-    if arvore is None:
+    aparelhos = leitor.aparelhos()
+    if aparelhos is None:
         return Item(
             chave="pareamentos",
             rotulo=ROTULO_PAREAMENTOS,
             estado=ESTADO_NAO_SEI,
             porque="Não deu para perguntar ao Bluetooth do sistema.",
         )
-    caminhos = [c for c in arvore if bluez_dbus.e_caminho_de_aparelho(c)]
-    if not caminhos:
+    controles = [
+        a for a in aparelhos if a.pareado is not False and _o_bluez_diz_controle((a,))
+    ]
+    if not controles:
         return Item(
             chave="pareamentos",
             rotulo=ROTULO_PAREAMENTOS,
@@ -338,17 +341,11 @@ def pareamentos(
         )
     pela_metade = 0
     sem_resposta = 0
-    for caminho in caminhos:
-        pareado = bluez_dbus.como_booleano(
-            leitor.propriedade(caminho, bluez_dbus.APARELHO, "Paired")
-        )
-        vinculado = bluez_dbus.como_booleano(
-            leitor.propriedade(caminho, bluez_dbus.APARELHO, "Bonded")
-        )
-        if pareado is None or vinculado is None:
+    for aparelho in controles:
+        if aparelho.pareado is None or aparelho.vinculado is None:
             sem_resposta += 1
             continue
-        if pareado and not vinculado:
+        if aparelho.pareado and not aparelho.vinculado:
             pela_metade += 1
     if pela_metade:
         return Item(
@@ -363,7 +360,7 @@ def pareamentos(
                 "novo segurando o botão PS."
             ),
         )
-    if sem_resposta == len(caminhos):
+    if sem_resposta == len(controles):
         return Item(
             chave="pareamentos",
             rotulo=ROTULO_PAREAMENTOS,
@@ -375,7 +372,7 @@ def pareamentos(
         rotulo=ROTULO_PAREAMENTOS,
         estado=ESTADO_CERTO,
         porque=(
-            f"Nenhum dos {len(caminhos)} pareamentos está "
+            f"Nenhum dos {len(controles)} pareamentos está "
             "pela metade."
         ),
     )

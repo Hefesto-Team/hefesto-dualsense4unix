@@ -170,6 +170,8 @@ def _busctl_de_mentira(
         chamadas.append(list(argumentos))
         if argumentos[0] == "tree":
             return respostas.get("tree")
+        if argumentos[-1] == "Class":
+            return respostas.get("Class", "u 9480")
         return respostas.get(argumentos[-1])
 
     return chamadas, _rodar
