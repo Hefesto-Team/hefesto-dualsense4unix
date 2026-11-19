@@ -609,18 +609,15 @@ def _anterior_do_proton() -> dict[str, Any] | None:
 
 
 def _voltar_o_proton(_anterior: dict[str, Any]) -> None:
-    """Volta à anterior do registro: com o jogo, a Steam e a nova livres, sob a trava; os jogos
-    vão para a velha antes de a nova sair, e o que barra devolve o porquê sem mexer em nada."""
+    """Volta à anterior do registro (o jogo, quem pergunta é o ``atualizador.voltar``): com a
+    Steam e a nova livres, sob a trava; os jogos vão para a velha antes de a nova sair, e o que
+    barra devolve o porquê sem mexer em nada."""
     pp = _proton()
-    from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import _jogo_aberto
-
     compat, cache = pp.default_compat_dir(), pp.default_cache_dir()
     registro = pp._ler_registro(cache)
     velha, sha = str(registro.get("anterior", "")), str(registro.get("anterior_sha256", ""))
     if not velha:
         raise EtapaFalhouError("sem versão anterior")
-    if _jogo_aberto():
-        raise EtapaFalhouError("há um jogo aberto")
     barra = pp._steam_gate()
     if barra:
         raise EtapaFalhouError(pp._PORQUE_A_STEAM_BARRA.get(barra, barra))

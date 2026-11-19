@@ -682,8 +682,10 @@ class _Vez:
 
 
 def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
-                  agora: Callable[[], float], vez: _Vez | None = None) -> EsperaError | None:
-    """Baixar, instalar e aplicar, da etapa em que a peça parou. Devolve a espera, se esperou."""
+                  agora: Callable[[], float], jogo_aberto: Callable[[], bool],
+                  vez: _Vez | None = None) -> EsperaError | None:
+    """Baixar, instalar e aplicar, da etapa em que a peça parou. Devolve a espera, se esperou: o
+    jogo que abriu depois do baixar segura o instalar e o aplicar até fechar."""
     linha = andamento.peca(peca.id)
     vez = _Vez(antes=ler_as_anteriores().get(peca.id)) if vez is None else vez
     dados = vez.dados
@@ -710,9 +712,12 @@ def _rodar_a_peca(peca: Peca, versoes: Versoes, andamento: _Andamento,
 
         passo = Passo()
         passo.aviso = functools.partial(avisar, passo)
-        guardou = etapa == "instalar" and not reinstala
+        guardou = False
         try:
-            if guardou:
+            if indice and jogo_aberto():
+                raise EsperaError(O_JOGO_ABERTO, lambda: not jogo_aberto())
+            if etapa == "instalar" and not reinstala:
+                guardou = True
                 _guardar_a_anterior(peca, versoes, dados, agora())
             if fazer is not None:
                 volta = fazer(passo, dados)
@@ -884,11 +889,11 @@ def rodar(
     """A fila: uma peça por vez, em baixar, instalar e aplicar em todos; um processo por vez (o
     segundo sai com 3). A em dia reinstala; a que ia subir se confere de novo na sua vez (e ao fim
     da espera, se ainda não começou) e, já em dia, fica «Atualizado» sem baixar. A que espera (a
-    Steam, o voo) vai para o fim e volta da mesma etapa quando passa. Com jogo aberto, espera ele
-    fechar de vez antes de cada peça. Uma falha não para as outras. Se alguma peça mudou,
-    reinicia o serviço e reabre a janela: antes de esperar a que ficou para trás (o código novo
-    não roda horas sob o serviço velho) e de novo se a peça mudar. Devolve 0 pronto, 1 com falha,
-    2 parada ou com peça ainda esperando.
+    Steam, o voo, o jogo que abriu depois do baixar) vai para o fim e volta da mesma etapa quando
+    passa. Com jogo aberto, espera ele fechar de vez antes de cada peça. Uma falha não para as
+    outras. Se alguma peça mudou, reinicia o serviço e reabre a janela: antes de esperar a que
+    ficou para trás (o código novo não roda horas sob o serviço velho) e de novo se a peça mudar.
+    Devolve 0 pronto, 1 com falha, 2 parada ou com peça ainda esperando.
     """
     from hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo import (
         PASSO_DA_VIGIA_S,
@@ -939,7 +944,7 @@ def rodar(
         def _rodar(peca: Peca, vez: _Vez) -> EsperaError | None:
             if peca.steam_fechada and not jogo_aberto():
                 _fechar_a_steam_da_fila()
-            espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, vez)
+            espera = _rodar_a_peca(peca, versoes[peca.id], andamento, agora, jogo_aberto, vez)
             if vez.dados.get("reiniciou") and andamento.peca(peca.id).get("selo") == PRONTA:
                 reiniciadas.update(_prontas(andamento))
                 reinicio = andamento.dado["reinicio"]
@@ -1050,8 +1055,10 @@ def rodar(
         os.close(trava)
 
 
-def voltar(ident: str, *, lista: Sequence[Peca] | None = None) -> str:
-    """Volta a peça à versão anterior e segura a que saiu. Devolve o porquê, ou vazio."""
+def voltar(ident: str, *, lista: Sequence[Peca] | None = None,
+           jogo_aberto: Callable[[], bool] = _jogo_aberto) -> str:
+    """Volta a peça à versão anterior e segura a que saiu, fora da fila e sem jogo aberto. Devolve
+    o porquê, ou vazio."""
     registro = _por_id(pecas() if lista is None else lista)
     peca = registro.get(ident)
     anterior = anteriores_a_mostrar(list(registro.values())).get(ident)
@@ -1059,18 +1066,25 @@ def voltar(ident: str, *, lista: Sequence[Peca] | None = None) -> str:
         return "a peça não volta"
     if not isinstance(anterior, dict) or not (anterior.get("anterior") or anterior.get("rotulo")):
         return "sem versão anterior"
+    trava = _a_trava()
+    if trava is None:
+        return "a atualização está rodando"
     try:
+        if jogo_aberto():
+            return "há um jogo aberto"
         peca.voltar(anterior)
+        escolha = ler_a_escolha()
+        escolha.seguradas[ident] = str(anterior.get("agora", ""))
+        gravar_a_escolha(escolha)
+        anteriores = ler_as_anteriores()
+        anteriores.pop(ident, None)
+        _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
+        _anotar(f"{ident}: voltou a {anterior.get('anterior')}")
+        return ""
     except EtapaFalhouError as erro:
         return str(erro)
-    escolha = ler_a_escolha()
-    escolha.seguradas[ident] = str(anterior.get("agora", ""))
-    gravar_a_escolha(escolha)
-    anteriores = ler_as_anteriores()
-    anteriores.pop(ident, None)
-    _gravar_json(_estado() / ARQUIVO_DAS_ANTERIORES, anteriores)
-    _anotar(f"{ident}: voltou a {anterior.get('anterior')}")
-    return ""
+    finally:
+        os.close(trava)
 
 
 def soltar(ids: Sequence[str], *, abrir: Callable[..., Any] | None = None) -> bool:

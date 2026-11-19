@@ -11,7 +11,8 @@ compilação reprova o caso do 404; o andamento lido sem encerrar o órfão repr
 morto; a fila sem a conferência na vez da peça reprova o caso das duas rodadas; o ``__main__``
 sem entregar ao módulo de nome reprova o caso da classe da falha; o Python sem a roda por pacote
 reprova o caso do pacote que não monta; a volta da espera sem conferir de novo reprova o
-caso da peça que subiu por fora, e a conferência também em quem já começou reprova o do aplicar.
+caso da peça que subiu por fora, e a conferência também em quem já começou reprova o do aplicar;
+a etapa sem a pergunta do jogo reprova o caso do jogo que abre no meio da peça.
 """
 from __future__ import annotations
 
@@ -317,6 +318,35 @@ def test_a_peca_que_espera_no_aplicar_aplica_mesmo_ja_instalada() -> None:
     assert d.feito == ["proton:baixar", "proton:instalar", "proton:aplicar", "proton:aplicar"]
     assert _linha("proton")["selo"] == at.PRONTA
     assert servico == ["reiniciar", "reabrir"]
+
+
+@pytest.mark.parametrize("abre_no", ["baixar", "instalar"])
+def test_o_jogo_que_abre_no_meio_da_peca_segura_a_etapa_seguinte(abre_no: str) -> None:
+    """D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1: nada se instala com jogo aberto.
+
+    O jogo que abre durante o «baixar» (o backport do BlueZ leva horas) ou o «instalar» segura a
+    etapa seguinte: a linha espera «o jogo aberto» e, fechado, segue dali, sem refazer nada."""
+    d = _Diario()
+    jogo = {"aberto": False}
+
+    def etapa(nome: str) -> Any:
+        def fazer(_passo: at.Passo, _dados: dict[str, Any]) -> None:
+            d.feito.append(f"{nome}:{'com jogo' if jogo['aberto'] else 'sem jogo'}")
+            jogo["aberto"] = jogo["aberto"] or nome == abre_no
+        return fazer
+
+    def dormir(_s: float) -> None:
+        assert (_linha("bt")["selo"], _linha("bt")["motivo"]) == (at.ESPERANDO, at.O_JOGO_ABERTO)
+        jogo["aberto"] = False
+
+    lista = [at.Peca("bt", "BT", "dica", "todos",
+                     lambda rede: at.Versoes("1.0", "1.1" if rede else None),
+                     etapa("baixar"), etapa("instalar"), etapa("aplicar"))]
+    at.conferir(rede=True, lista=lista)
+    rc, _servico = _rodar(lista, ["bt"], dormir=dormir, jogo_aberto=lambda: jogo["aberto"])
+    assert rc == 0
+    assert d.feito == ["baixar:sem jogo", "instalar:sem jogo", "aplicar:sem jogo"]
+    assert _linha("bt")["selo"] == at.PRONTA
 
 
 def test_o_proton_espera_a_steam_nas_tres_etapas(monkeypatch: pytest.MonkeyPatch) -> None:

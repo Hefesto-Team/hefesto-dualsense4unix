@@ -312,7 +312,7 @@ def test_a_peca_sem_numero_de_versao_tambem_volta_pela_tela() -> None:
     html = tela.html_das_anteriores(at.ler_as_anteriores(), ["python"])
     assert 'data-gesto="voltar-a-anterior" data-v="python"' in html, html
     assert ">Voltar a <" not in html and ">Voltar a  <" not in html
-    assert at.voltar("python", lista=lista) == ""
+    assert at.voltar("python", lista=lista, jogo_aberto=lambda: False) == ""
     assert feito and "evdev" in feito[0]
 
 

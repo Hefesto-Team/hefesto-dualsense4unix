@@ -10,12 +10,14 @@ caso do ``5.9`` contra o ``5.10``; o vigia que diz «em dia» sem rede reprova o
 fila que para na primeira falha reprova o caso da falha; a espera do jogo arrancada reprova o
 caso do jogo aberto; a trava de um processo arrancada reprova o caso da segunda fila; a segurada
 ignorada reprova o caso do voltar; o umu que extrai caminho de fora reprova o caso do tar mau; o
-download sem conferir a soma reprova o caso do sha256 errado.
+download sem conferir a soma reprova o caso do sha256 errado; o voltar que chama a peça direto
+reprova o caso do jogo aberto e da fila rodando.
 """
 from __future__ import annotations
 
 import io
 import json
+import os
 import socket
 import tarfile
 from pathlib import Path
@@ -208,12 +210,31 @@ def test_a_anterior_se_guarda_e_o_voltar_segura_a_que_saiu() -> None:
     assert anterior["anterior"] == "1.0" and anterior["agora"] == "1.1"
     assert anterior["dados"] == {"baixar": True, "instalar": True, "aplicar": True}
     assert at.voltar("b", lista=lista) == "a peça não volta"
-    assert at.voltar("a", lista=lista) == ""
+    assert at.voltar("a", lista=lista, jogo_aberto=lambda: False) == ""
     assert d.feito[-1] == "a:voltar:1.0"
     assert at.ler_a_escolha().seguradas == {"a": "1.1"}
     estado = {i["id"]: i["estado"] for i in at.conferir(rede=True, lista=lista)["pecas"]}
     assert estado["a"] == at.EM_DIA
     assert at.voltar("a", lista=lista) == "sem versão anterior"
+
+
+def test_o_voltar_recusa_com_jogo_aberto_e_com_a_fila_rodando() -> None:
+    """D-0811-O-HEFESTO-SE-ATUALIZA-INTEIRO-VOLTA-1: o voltar não derruba o jogo nem a fila."""
+    d = _Diario()
+    lista = [_peca(d, "a", de="1.0", para="1.1", voltar=True)]
+    _rodar(lista, ["a"])
+    assert at.voltar("a", lista=lista, jogo_aberto=lambda: True) == "há um jogo aberto"
+    trava = at._a_trava()
+    assert trava is not None
+    try:
+        assert at.voltar("a", lista=lista, jogo_aberto=lambda: False) \
+            == "a atualização está rodando"
+    finally:
+        os.close(trava)
+    assert not [f for f in d.feito if ":voltar" in f]
+    assert at.voltar("a", lista=lista, jogo_aberto=lambda: False) == ""
+    assert d.feito[-1] == "a:voltar:1.0"
+    assert not at.em_curso()
 
 
 def test_a_escolha_o_prazo_e_a_pergunta() -> None:
