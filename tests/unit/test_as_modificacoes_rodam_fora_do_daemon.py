@@ -718,6 +718,46 @@ def test_na_caixa_a_extensao_recebe_o_sigterm_e_limpa_antes_de_sair(
     asyncio.run(corrida())
 
 
+_SEGURA_O_SIGTERM = ("import signal, time\n"
+                     "signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})\n"
+                     "print('pronto', flush=True)\n"
+                     "time.sleep(600)\n")
+
+
+def _sigterm_pendente(pid: int) -> bool:
+    pendentes = 0
+    for linha in Path(f"/proc/{pid}/status").read_text(encoding="utf-8").splitlines():
+        if linha.startswith(("SigPnd:", "ShdPnd:")):
+            pendentes |= int(linha.split()[1], 16)
+    return bool(pendentes >> (signal.SIGTERM - 1) & 1)
+
+
+def test_o_achado_que_sai_antes_do_sinal_nao_leva_o_sigterm_a_grupo_de_fora(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O PID achado na caixa sai entre a leitura e o sinal, e o número volta num processo de
+    fora: o ``SIGTERM`` vai ao grupo do PID criado, nunca ao de fora. MORDIDA: tirar a
+    conferência com o ``pidfd`` aberto."""
+    from hefesto_dualsense4unix.mods import supervisor as supervisor_mod
+
+    def abrir() -> subprocess.Popen[bytes]:
+        processo = subprocess.Popen([sys.executable, "-c", _SEGURA_O_SIGTERM],
+                                    stdout=subprocess.PIPE, start_new_session=True)
+        assert processo.stdout is not None and processo.stdout.readline() == b"pronto\n"
+        return processo
+
+    criado, de_fora = abrir(), abrir()
+    monkeypatch.setattr(supervisor_mod, "a_extensao_na_caixa", lambda pid: de_fora.pid)
+    try:
+        supervisor_mod.avisar_o_grupo_da_extensao(criado.pid)
+        assert _sigterm_pendente(criado.pid)
+        assert not _sigterm_pendente(de_fora.pid), "o SIGTERM foi a um grupo de fora"
+    finally:
+        for processo in (criado, de_fora):
+            processo.kill()
+            processo.communicate()
+
+
 def test_sem_xdg_runtime_dir_a_caixa_esconde_a_execucao_da_sessao(
     lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

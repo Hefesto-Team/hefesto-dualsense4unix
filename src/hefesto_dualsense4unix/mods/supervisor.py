@@ -1671,41 +1671,79 @@ class Supervisor:
         self._marcar(mod_id, EstadoDaModificacao(estado))
 
 
-def _nspid(pid: int) -> list[str]:
+def _campo(pid: int, nome: str) -> list[str]:
     try:
         status = Path(f"/proc/{pid}/status").read_text(encoding="utf-8")
     except OSError:
         return []
     return next((linha.split()[1:] for linha in status.splitlines()
-                 if linha.startswith("NSpid:")), [])
+                 if linha.startswith(f"{nome}:")), [])
 
 
-def o_grupo_da_extensao(pid: int) -> int:
-    """O grupo que recebe o ``SIGTERM`` do parar: o da extensão.
+def _mais_fundo(pid: int, alvo: int) -> bool:
+    nspid = _campo(alvo, "NSpid")
+    return len(nspid) > len(_campo(pid, "NSpid")) and nspid[-1] != "1"
 
-    Na caixa, ``pid`` é o ``bwrap`` (ou o ``pasta``) de fora, e a extensão é o primeiro da
-    cadeia de filhos que mora num espaço de PID mais fundo sem ser o ``init`` dele; o
-    ``--new-session`` a pôs noutro grupo. Sem caixa, o grupo é o do próprio ``pid``.
-    """
-    fundo = len(_nspid(pid))
-    atual = pid
-    while filhos := _filhos(atual):
-        atual = filhos[0]
-        nspid = _nspid(atual)
-        if len(nspid) > fundo and nspid[-1] != "1":
-            try:
-                return os.getpgid(atual)
-            except ProcessLookupError:
-                return pid
-    return pid
+
+def _desce_de(pid: int, alvo: int) -> bool:
+    atual = alvo
+    while (pai := _campo(atual, "PPid")) and (atual := int(pai[0])) > 0:
+        if atual == pid:
+            return True
+    return False
+
+
+def a_extensao_na_caixa(pid: int) -> int | None:
+    """Na caixa, ``pid`` é o ``bwrap`` (ou o ``pasta``) de fora, e a extensão é o primeiro
+    descendente, em largura, que mora num espaço de PID mais fundo sem ser o ``init`` dele.
+    Sem caixa, nenhum."""
+    fila = _filhos(pid)
+    while fila:
+        atual = fila.pop(0)
+        if _mais_fundo(pid, atual):
+            return atual
+        fila += _filhos(atual)
+    return None
+
+
+def _avisar_o_grupo_preso(pid: int, alvo: int) -> bool:
+    try:
+        descritor = os.pidfd_open(alvo)
+    except OSError:
+        return False
+    try:
+        if not (_desce_de(pid, alvo) and _mais_fundo(pid, alvo)):
+            return False
+        grupo = os.getpgid(alvo)
+        signal.pidfd_send_signal(descritor, 0)
+        if grupo == os.getpgrp():
+            return False
+        os.killpg(grupo, signal.SIGTERM)
+        return True
+    except OSError:
+        return False
+    finally:
+        os.close(descritor)
+
+
+def avisar_o_grupo_da_extensao(pid: int) -> None:
+    """``SIGTERM`` ao grupo da extensão na caixa (:func:`a_extensao_na_caixa`), que o
+    ``--new-session`` pôs fora do grupo de ``pid``. O alvo fica preso por ``pidfd`` antes do
+    sinal: com o descritor aberto, ele ainda desce de ``pid``, ainda mora no espaço mais fundo
+    e ainda vive; o grupo de quem sinaliza nunca é alvo. Sem caixa, ou se uma conferência
+    falha, o ``SIGTERM`` vai ao grupo de ``pid``."""
+    alvo = a_extensao_na_caixa(pid)
+    if alvo is not None and _avisar_o_grupo_preso(pid, alvo):
+        return
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(pid, signal.SIGTERM)
 
 
 async def parar_o_grupo(processo: asyncio.subprocess.Process, prazo: float) -> int | None:
-    """``SIGTERM`` ao grupo da extensão (:func:`o_grupo_da_extensao`); ``SIGKILL`` ao grupo do
-    PID criado no fim do prazo."""
+    """``SIGTERM`` ao grupo da extensão (:func:`avisar_o_grupo_da_extensao`); ``SIGKILL`` ao
+    grupo do PID criado no fim do prazo."""
     pid = processo.pid
-    with contextlib.suppress(ProcessLookupError, PermissionError):
-        os.killpg(o_grupo_da_extensao(pid), signal.SIGTERM)
+    avisar_o_grupo_da_extensao(pid)
     espera = asyncio.ensure_future(processo.wait())
     await asyncio.wait({espera}, timeout=prazo)
     if not espera.done():
@@ -1769,8 +1807,10 @@ __all__ = [
     "PRAZO_PARA_PARAR_S",
     "EstadoDaModificacao",
     "Supervisor",
+    "a_extensao_na_caixa",
     "abrir_o_aparelho",
     "aparelhos_que_casam",
+    "avisar_o_grupo_da_extensao",
     "colecoes_de_aplicacao",
     "comando_na_caixa",
     "diario_da_extensao",
