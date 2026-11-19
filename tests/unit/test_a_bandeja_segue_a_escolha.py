@@ -238,9 +238,7 @@ def test_o_processo_que_sai_no_meio_nao_e_bandeja_e_o_ilegivel_aparece(
 PRESA = FILHO.replace("def start(self): return True", (
     "def start(self):\n"
     "        from gi.repository import GLib\n"
-    "        import os\n"
-    "        self.r, self.w = os.pipe()\n"
-    "        GLib.idle_add(os.read, self.r, 1)\n"
+    "        GLib.idle_add(lambda: print('presa', flush=True) or sys.stdin.read())\n"
     "        return True"))
 
 
@@ -249,9 +247,10 @@ def test_o_sigterm_fecha_a_bandeja_com_o_fio_da_tela_preso(lar: pathlib.Path, su
     não o laço do GTK, e a vez solta com o processo."""
     _feitas, filhos = subidas
     assert PRESA != FILHO
-    bandeja = _POPEN([sys.executable, "-c", PRESA, "-m", "hefesto_dualsense4unix.cli.app", "tray"])
+    bandeja = _POPEN([sys.executable, "-c", PRESA, "-m", "hefesto_dualsense4unix.cli.app", "tray"],
+                     stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     filhos.append(bandeja)
-    assert _de_pe(bandeja.pid)
+    assert b"presa\n" in iter(bandeja.stdout.readline, b""), "o laço do GTK não chegou a prender"
     assert ab.fechar_as_bandejas([bandeja.pid], 10.0) == [], "o SIGTERM esperou o laço do GTK"
     assert ab.bandeja_viva() is None
 

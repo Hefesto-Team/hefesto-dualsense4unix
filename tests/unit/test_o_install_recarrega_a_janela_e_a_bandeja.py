@@ -171,7 +171,6 @@ def test_todas_as_bandejas_da_sessao_fecham_e_sobe_uma(
 SAI_AOS_POUCOS = """
 import ctypes, os, signal, threading, time
 from hefesto_dualsense4unix.app.actions import atos_da_bandeja as a
-assert a.tomar_a_vez()
 def _ultimo_fio():
     time.sleep(0.5)
     os._exit(0)
@@ -179,6 +178,7 @@ def _sinal(*_):
     threading.Thread(target=_ultimo_fio).start()
     ctypes.CDLL(None).pthread_exit(None)
 signal.signal(signal.SIGTERM, _sinal)
+assert a.tomar_a_vez()
 signal.pause()
 """
 
@@ -194,6 +194,7 @@ def test_a_bandeja_volta_quando_o_ultimo_fio_da_velha_sai(lar: Path, filhos: Fil
     fim = time.monotonic() + 30
     while bandeja.bandeja_viva() != velha.pid and time.monotonic() < fim:
         time.sleep(0.1)
+    assert bandeja.bandeja_viva() == velha.pid
     abertas: list[list[str]] = []
 
     frases = recarga.recarregar(
