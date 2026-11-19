@@ -1853,7 +1853,7 @@ def chave_do_comando(nome: object) -> str | None:
     try:
         chave = slugify(nome)
     except ValueError:
-        return None
+        chave = ""
     return chave if _SLUG_DO_PERFIL.match(chave) else None
 
 

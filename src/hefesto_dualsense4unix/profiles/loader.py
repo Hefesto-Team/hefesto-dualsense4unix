@@ -1062,8 +1062,8 @@ _COMANDOS_FORAM_PARA_O_COMPUTADOR_MARKER = ".comandos_dos_eventos_foram_para_o_c
 def _o_comando_que_vai(path: Path, dados: dict[str, object]) -> tuple[str, str] | None:
     """``(nome, comando)`` do perfil que leva o «Meu comando» ao computador, ou ``None``.
 
-    Só vai o do arquivo que o produto lê para aquele nome (o slug do nome) e que carrega: o
-    `nome-2.json` de um importado não leva o comando dele.
+    Só vai o do arquivo que o produto lê para aquele nome (o slug do nome): o `nome-2.json` de um
+    importado não leva o comando dele.
     """
     from hefesto_dualsense4unix.utils.maquina import chave_do_comando
 
@@ -1071,10 +1071,6 @@ def _o_comando_que_vai(path: Path, dados: dict[str, object]) -> tuple[str, str] 
     if not (isinstance(nome, str) and isinstance(comando, str) and comando.strip()):
         return None
     if chave_do_comando(nome) != path.stem:
-        return None
-    try:
-        Profile.model_validate(dados)
-    except ValidationError:
         return None
     return nome, comando
 
