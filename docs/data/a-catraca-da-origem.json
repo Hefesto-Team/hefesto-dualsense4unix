@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1272843,
+      "piso": 1273201,
       "por_item": {
-        "docs": 107173,
+        "docs": 107174,
         "scripts": 114765,
-        "src": 323094,
-        "tests": 727811
+        "src": 323306,
+        "tests": 727956
       },
-      "razao": "tamanho: +176 linhas (1272667 -> 1272843), pagas por Origem: D-1911-O-PEDIDO-TORTO-VIRA-RECUSA, D-1911-O-VIGIA-SO-APAGA-O-PROTON-DO-HEFESTO; registrado no fecho, topo c09efb7cf5e6",
+      "razao": "tamanho: +358 linhas (1272843 -> 1273201), pagas por Origem: D-1911-O-COMANDO-DO-EVENTO-E-DO-COMPUTADOR; registrado no fecho, topo 60c44b986678",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2091,6 +2091,12 @@
           "de": 1272667,
           "para": 1272843,
           "razao": "tamanho: +176 linhas (1272667 -> 1272843), pagas por Origem: D-1911-O-PEDIDO-TORTO-VIRA-RECUSA, D-1911-O-VIGIA-SO-APAGA-O-PROTON-DO-HEFESTO; registrado no fecho, topo c09efb7cf5e6"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1272843,
+          "para": 1273201,
+          "razao": "tamanho: +358 linhas (1272843 -> 1273201), pagas por Origem: D-1911-O-COMANDO-DO-EVENTO-E-DO-COMPUTADOR; registrado no fecho, topo 60c44b986678"
         }
       ],
       "unidade": "linhas",
