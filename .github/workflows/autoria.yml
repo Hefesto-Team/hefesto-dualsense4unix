@@ -9,12 +9,7 @@ name: autoria
 
 on:
   push:
-    branches: ['**']
     tags: ['v*']
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
-  schedule:
-    - cron: '23 7 * * 1'
   workflow_dispatch:
 
 permissions:

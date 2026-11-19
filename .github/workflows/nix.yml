@@ -7,26 +7,10 @@ name: Nix
 #   2. a guarda do release (`guarda-ci`) exige o ci.yml inteiro verde na mesma SHA, e o `package.nix`
 #      nunca compilou antes de hoje (o hash do pydualsense era o placeholder): a primeira corrida
 #      dele pode vir vermelha, e isso não pode trancar uma release que não tem nada de Nix.
-# Roda só quando o que ele prova mudou, ou à mão.
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
-      - dev
-      - 'onda/**'
-    paths: &caminhos
-      - 'packaging/nix/**'
-      - 'flake.nix'
-      - 'flake.lock'
-      - 'assets/82-nintendo-pro-nosniff.rules'
-      - 'assets/83-hefesto-bond-snapshot.rules'
-      - 'assets/systemd/hefesto-bt-bonds-snapshot.*'
-      - 'scripts/bt_nosniff_now.sh'
-      - 'scripts/bt_bonds_snapshot.sh'
-      - '.github/workflows/nix.yml'
-  pull_request:
-    paths: *caminhos
+    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read

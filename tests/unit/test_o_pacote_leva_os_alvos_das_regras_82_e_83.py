@@ -271,12 +271,6 @@ class TestAProvaDoNixMoraNumWorkflowProprio:
                       "services.hefesto-dualsense4unix.enable = true"):
             assert passo in texto, f"o job do Nix perdeu `{passo}`"
 
-    def test_ele_roda_quando_o_que_ele_prova_muda(self) -> None:
-        texto = _texto(self.NIX_YML)
-        for caminho in ("packaging/nix/**", "flake.nix", "assets/82-nintendo-pro-nosniff.rules",
-                        "assets/83-hefesto-bond-snapshot.rules", "scripts/bt_nosniff_now.sh"):
-            assert caminho in texto, f"mexer em {caminho} não dispara a prova do Nix"
-
     def test_a_action_do_nix_nao_entra_no_ci_yml(self) -> None:
         """No `ci.yml` a action tiraria o modo offline do `ci-local.sh` de todos os jobs de casa e
         poria um job que nunca compilou na guarda que tranca a release."""

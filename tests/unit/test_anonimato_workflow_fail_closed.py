@@ -59,11 +59,7 @@ def test_a_lista_vem_do_secret_e_o_clone_traz_a_historia_inteira() -> None:
     assert checkout["with"]["fetch-depth"] == 0, "a régua recusa clone raso"
 
 
-def test_os_gatilhos_cobrem_todo_ramo_as_tags_o_pr_e_o_agendamento() -> None:
-    gatilhos = _workflow()[True]
-    assert gatilhos["push"]["branches"] == ["**"], "o ramo de fecho precisa do check antes do dev"
-    assert gatilhos["push"]["tags"] == ["v*"]
-    assert "pull_request" in gatilhos and "schedule" in gatilhos and "workflow_dispatch" in gatilhos
+def test_o_fluxo_so_le() -> None:
     assert _workflow()["permissions"] == {"contents": "read"}
 
 

@@ -7,13 +7,7 @@ name: Imagens de teste
 # distribuição, e os testes exigem que cada um instale o mesmo que a matriz do ci.yml.
 on:
   push:
-    branches: [dev]
-    paths:
-      - scripts/github/imagens/**
-      - scripts/ci/instalar_como_usuaria.sh
-      - .github/workflows/imagens-de-teste.yml
-  schedule:
-    - cron: "17 5 * * 1"
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:

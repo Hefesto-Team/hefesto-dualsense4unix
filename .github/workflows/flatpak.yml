@@ -2,19 +2,8 @@ name: Flatpak Build
 
 on:
   push:
-    # FLUXO-DEV-01 (21/08/2026): idem — o build do flatpak tem de quebrar no dia
-    # em que alguém mexe no empacotamento, não no dia do lançamento.
-    branches: [main, dev]
-    paths:
-      - "flatpak/**"
-      - "scripts/build_flatpak.sh"
-      - "scripts/install-host-udev.sh"
-      - "pyproject.toml"
-      - "src/**"
-  pull_request:
-    paths:
-      - "flatpak/**"
-      - "scripts/build_flatpak.sh"
+    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read

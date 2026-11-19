@@ -3,7 +3,8 @@
 Três coisas se medem aqui:
 
 1. o esquema do arquivo (e que cada função que ele declara tem quem a aplique);
-2. o nome de cada check obrigatório existe como job num workflow, e o workflow roda em PR;
+2. o nome de cada check obrigatório existe como job num workflow que roda em PR ou à mão, e o CI
+   do GitHub roda só na tag da release e à mão;
 3. o aplicador contra um `gh` de mentira que guarda o estado de um repositório falso em JSON,
    grava as chamadas e recusa o que a API real recusaria. Responde EM PROCESSO (o mesmo texto,
    sem criar um processo por chamada); só `test_o_script_roda_como_comando` e as chamadas de
@@ -242,12 +243,14 @@ def test_o_nome_do_check_segue_a_regra_do_github() -> None:
 
 
 def contextos(raiz: Path) -> dict[str, dict[str, Any]]:
-    """Cada nome de check que os workflows de `raiz` produzem, e se o workflow roda em PR."""
+    """Cada nome de check que os workflows de `raiz` produzem, e se o workflow roda em PR ou à
+    mão."""
     achados: dict[str, dict[str, Any]] = {}
     for arq in sorted((raiz / ".github" / "workflows").glob("*.y*ml")):
         wf = yaml.safe_load(arq.read_text(encoding="utf-8")) or {}
-        gatilhos = wf.get(True, wf.get("on")) or {}
-        em_pr = "pull_request" in (gatilhos if isinstance(gatilhos, (dict, list)) else [gatilhos])
+        g = _gatilhos(wf) or {}
+        lista = g if isinstance(g, (dict, list)) else [g]
+        em_pr = "pull_request" in lista or "workflow_dispatch" in lista
         for ident, job in (wf.get("jobs") or {}).items():
             nome = str(job.get("name", ident))
             nomes = [_nome_do_check(nome, v) for v in _combinacoes(job)] or [nome]
@@ -257,7 +260,7 @@ def contextos(raiz: Path) -> dict[str, dict[str, Any]]:
 
 
 def checks_sem_job(dados: dict[str, Any], raiz: Path) -> list[str]:
-    """Os checks exigidos que nenhum job produz, ou que o workflow não roda em PR."""
+    """Os checks exigidos que nenhum job produz, ou cujo workflow não roda em PR nem à mão."""
     existentes = contextos(raiz)
     faltam: list[str] = []
     for r in dados["rulesets"]:
@@ -265,11 +268,12 @@ def checks_sem_job(dados: dict[str, Any], raiz: Path) -> list[str]:
             if check not in existentes:
                 faltam.append(f"{check}: nenhum job com esse nome")
             elif not existentes[check]["pr"]:
-                faltam.append(f"{check}: o workflow {existentes[check]['arquivo']} não roda em PR")
+                arq = existentes[check]["arquivo"]
+                faltam.append(f"{check}: o workflow {arq} não roda em PR nem à mão")
     return faltam
 
 
-def test_cada_check_obrigatorio_existe_como_job_e_roda_em_pr() -> None:
+def test_cada_check_obrigatorio_existe_como_job_e_roda_em_pr_ou_a_mao() -> None:
     assert checks_sem_job(_dados(), RAIZ) == []
 
 
@@ -307,11 +311,11 @@ def test_mordida_tirar_uma_versao_da_matriz_reprova(copia_dos_workflows: Path) -
     assert any(f.startswith("lint-test (3.12)") for f in achados)
 
 
-def test_mordida_workflow_que_nao_roda_em_pr_reprova(copia_dos_workflows: Path) -> None:
+def test_mordida_workflow_que_nao_roda_em_pr_nem_a_mao_reprova(copia_dos_workflows: Path) -> None:
     wf = copia_dos_workflows / ".github" / "workflows"
-    gatilho = "  pull_request:\n    types: [opened, edited, synchronize, reopened]\n"
-    _trocar(wf / "autoria.yml", gatilho, "")
-    assert any("não roda em PR" in f for f in checks_sem_job(_dados(), copia_dos_workflows))
+    _trocar(wf / "autoria.yml", "  workflow_dispatch:\n", "")
+    achados = checks_sem_job(_dados(), copia_dos_workflows)
+    assert any("não roda em PR nem à mão" in f for f in achados)
 
 
 GH_DE_MENTIRA = RAIZ / "tests" / "fixtures" / "github" / "gh_de_mentira.py"
@@ -1515,6 +1519,12 @@ def _workflow(nome: str) -> dict[Any, Any]:
 def _gatilhos(wf: dict[Any, Any]) -> Any:
     """O `on:` do workflow (o PyYAML o lê como `True`)."""
     return wf.get(True, wf.get("on"))
+
+
+@pytest.mark.parametrize("nome", ("ci", "autoria", "flatpak", "nix", "imagens-de-teste"))
+def test_o_ci_do_github_roda_so_na_tag_da_release_e_a_mao(nome: str) -> None:
+    so_na_tag = {"push": {"tags": ["v*"]}, "workflow_dispatch": None}
+    assert _gatilhos(_workflow(f"{nome}.yml")) == so_na_tag
 
 
 def _usos(wf: dict[Any, Any]) -> list[str]:

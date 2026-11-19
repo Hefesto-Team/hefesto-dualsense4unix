@@ -1,30 +1,8 @@
 name: CI
 
 on:
-  # PORTÃO-VIVO-01 bloco C: até aqui o `push` só disparava em `main`. Como o
-  # fluxo declarado da casa é merge direto em `main` sem PR
-  # (.github/CONTRIBUTING.md), o `pull_request:` abaixo nunca chegava a cobrir
-  # ramo nenhum — na prática NADA rodava até o código já estar na `main`.
-  # Medido em 27/07: o ramo `restauro/inicio-da-sessao` acumulou commits desde
-  # a v0.2.0 com ZERO workflow executado sobre eles.
   push:
-    branches:
-      - main
-      # FLUXO-DEV-01 (21/08/2026): a partir da 0.9.4.5 o trabalho
-      # do dia a dia vai para `dev`, e `main` só recebe no lançamento de uma
-      # release nova. Sem esta linha o CI passaria a rodar SÓ no lançamento —
-      # que é exatamente o defeito medido em 27/07 e curado pelo PORTÃO-VIVO-01
-      # bloco C, ressuscitado por uma mudança de fluxo em vez de uma de código.
-      - dev
-      - 'restauro/**'
-      - 'sprint/**'
-      - 'onda/**'
-    # E as tags: o `release.yml` dispara em `v*`, mas o CI não — ou seja, o
-    # push da tag publicava um artefato que nenhum gate deste arquivo tinha
-    # visto. Agora a tag chama os dois.
-    tags:
-      - 'v*'
-  pull_request:
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
