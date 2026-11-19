@@ -15,7 +15,7 @@ permissions:
 # é o `tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py`.
 jobs:
   anonymity:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       # `fetch-depth: 0` veio com o portão da história, que agora roda no workflow
@@ -258,7 +258,7 @@ jobs:
 
   shellcheck:
     name: Shellcheck (severidade error)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     # PORTÃO-VIVO-01 bloco E: cerca de 40 scripts rodam com `sudo` na máquina
     # de quem instala — o `doctor.sh` sozinho tem 150 KB — e NENHUM linter passava por
@@ -317,7 +317,7 @@ jobs:
 
   icones:
     name: Ícones derivados do SVG canônico
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     # ÍCONE-VIVO-01 (03/08): o `scripts/gerar_icones.sh` dizia no cabeçalho que
     # o `--check` "é o que o CI roda" — e NENHUM job o chamava. A divergência
@@ -343,7 +343,7 @@ jobs:
 
   packaging-parity:
     name: Paridade de empacotamento
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     # PORTÃO-VIVO-01 bloco E: 312 linhas de guarda contra regressão de
     # empacotamento que não rodavam em workflow NENHUM. Travar agora é barato
@@ -600,8 +600,8 @@ jobs:
           retention-days: 14
 
   gtk-real:
-    name: Interface com GTK REAL (python3-gi + Xvfb), partes ${{ matrix.faixa }}
-    runs-on: ubuntu-latest
+    name: Interface com GTK REAL (${{ matrix.os }}), partes ${{ matrix.faixa }}
+    runs-on: ${{ matrix.os }}
     # O JOB É UMA FAIXA DE SEIS PARTES (O-CI-TERMINA-E-DIZ-O-VERMELHO-01, 21/10/2026). As 24 partes em
     # série estouraram o prazo de 95 minutos na parte 19 (run 39619656976): cada parte leva de 2 a 6
     # minutos (a média das vinte primeiras é 4,4) e a suíte inteira, perto de 110. Quatro faixas de
@@ -612,7 +612,11 @@ jobs:
       # Como no `lint-test`: cada faixa responde sempre, e uma que reprova não cancela as outras.
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04]
         faixa: ["00-05", "06-11", "12-17", "18-23"]
+        include:
+          - os: ubuntu-26.04
+            faixa: janela-e-bandeja
     # GUARDA-GI-REAL-01. Este job é a razão de a guarda existir: sem ele, os
     # testes de interface ou PULAM (e o pulo passa despercebido) ou rodam
     # contra um `Gtk` de mentira plantado em sys.modules por outro arquivo de
@@ -787,6 +791,10 @@ jobs:
           SAIDA: /tmp/suite-ci
         run: |
           mkdir -p /tmp/cobertura
+          if [ "$FAIXA" = janela-e-bandeja ]; then
+            ls tests/unit/test_*janela*.py tests/unit/test_*bandeja*.py tests/unit/test_*tray*.py > /tmp/janela-e-bandeja.txt
+            exec xvfb-run -a --server-args="-screen 0 1280x1024x24" bash scripts/rodar-a-suite.sh --lote /tmp/janela-e-bandeja.txt
+          fi
           xvfb-run -a --server-args="-screen 0 1280x1024x24" bash -c '
             rc=0
             for ((k = 10#${FAIXA%-*}; k <= 10#${FAIXA#*-}; k++)); do
@@ -1095,15 +1103,15 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v7
-      - name: Prazo do apt (${{ matrix.distro }})
+      - name: Prazo do apt (${{ matrix.os }})
         if: contains(matrix.install_cmd, 'apt-get')
         run: |
           mkdir -p /etc/apt/apt.conf.d
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/80-prazo
-      - name: Fontes da distro (${{ matrix.distro }})
+      - name: Fontes da distro (${{ matrix.os }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
-      - name: Instalar deps do sistema (${{ matrix.distro }})
+      - name: Instalar deps do sistema (${{ matrix.os }})
         run: ${{ matrix.install_cmd }}
       - uses: actions/download-artifact@v8
         with:
@@ -1226,15 +1234,15 @@ jobs:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v7
-      - name: Prazo do apt (${{ matrix.distro }})
+      - name: Prazo do apt (${{ matrix.os }})
         if: contains(matrix.install_cmd, 'apt-get')
         run: |
           mkdir -p /etc/apt/apt.conf.d
           printf 'Acquire::Retries "3";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/80-prazo
-      - name: Fontes da distro (${{ matrix.distro }})
+      - name: Fontes da distro (${{ matrix.os }})
         if: matrix.fontes
         run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
-      - name: Instalar deps do sistema (${{ matrix.distro }})
+      - name: Instalar deps do sistema (${{ matrix.os }})
         run: ${{ matrix.install_cmd }}
       # O `sudo` e a usuária são criados pelo script, que é quem sabe a família.
       # O que ELE não instala, de propósito: nada do censo do produto. Instalar
