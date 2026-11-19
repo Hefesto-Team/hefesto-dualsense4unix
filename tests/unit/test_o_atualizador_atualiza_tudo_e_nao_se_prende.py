@@ -615,7 +615,8 @@ class _Steam:
 
     def kw(self) -> dict[str, Any]:
         return {"steam_aberta": lambda: self.aberta, "fechar_a_steam": self.fechar,
-                "reabrir_a_steam": self.reabrir, "jogo_aberto": lambda: self.jogo}
+                "reabrir_a_steam": self.reabrir, "jogo_aberto": lambda: self.jogo,
+                "prazo_do_jogo_s": 1.0}
 
 
 def _pecas_da_steam(d: _Diario, steam: _Steam) -> list[at.Peca]:
@@ -680,7 +681,7 @@ def test_com_jogo_aberto_nada_fecha_e_o_pedido_fecha_e_segue() -> None:
 
     at.conferir(rede=True, lista=lista)
     rc, _servico = _rodar(lista, ["proton"], dormir=dormir, relogio=lambda: tempo[0],
-                          **steam.kw())
+                          **{**steam.kw(), "prazo_do_jogo_s": 3600.0})
     assert rc == 0
     assert steam.feito == ["fechar", "reabrir"]
     assert _linha("proton")["selo"] == at.PRONTA
