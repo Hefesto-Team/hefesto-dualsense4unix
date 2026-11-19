@@ -259,14 +259,14 @@
       "data": "2026-11-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1266054,
+      "piso": 1266476,
       "por_item": {
-        "docs": 107095,
-        "scripts": 114373,
+        "docs": 107097,
+        "scripts": 114558,
         "src": 321145,
-        "tests": 723441
+        "tests": 723676
       },
-      "razao": "tamanho: +171 linhas (1265883 -> 1266054), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo 3c9d245aabfe",
+      "razao": "tamanho: +422 linhas (1266054 -> 1266476), pagas por Origem: D-1911-A-MUDANCA-FEITA-A-MAO-SOBE-EM-MINUTOS; registrado no fecho, topo 473c0e698cd5",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -2013,10 +2013,16 @@
           "de": 1265883,
           "para": 1266054,
           "razao": "tamanho: +171 linhas (1265883 -> 1266054), pagas por Origem: D-1611-O-ATUALIZAR-TROCA-E-LIMPA; registrado no fecho, topo 3c9d245aabfe"
+        },
+        {
+          "data": "2026-11-19",
+          "de": 1266054,
+          "para": 1266476,
+          "razao": "tamanho: +422 linhas (1266054 -> 1266476), pagas por Origem: D-1911-A-MUDANCA-FEITA-A-MAO-SOBE-EM-MINUTOS; registrado no fecho, topo 473c0e698cd5"
         }
       ],
       "unidade": "linhas",
-      "universo": 3512
+      "universo": 3515
     }
   }
 }
