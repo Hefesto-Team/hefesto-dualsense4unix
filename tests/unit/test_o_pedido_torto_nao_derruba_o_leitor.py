@@ -26,7 +26,7 @@ def _servico(pid: int, pasta: Path) -> leitor.ServicoDoLeitor:
     return leitor.ServicoDoLeitor(pid, JOGO, chaves, buildid="100")
 
 
-def _ler(endereco: int, faixa: Any = None) -> dict[str, Any]:
+def _ler(endereco: float, faixa: Any = None) -> dict[str, Any]:
     pedido: dict[str, Any] = {"verbo": "ler", "entradas": [
         {"nome": "vida", "cadeia_de_ponteiros": [endereco], "tipo": "i32", "hz": 30}]}
     if faixa is not None:
@@ -54,6 +54,24 @@ def test_a_faixa_que_nao_e_numero_recusa_e_o_pedido_seguinte_e_atendido(
     servico = _servico(proc.pid, tmp_path)
     assert "faixa de versões" in servico.atender(_ler(valor, {"min": "abc"}))["recusa"]
     assert servico.atender(_ler(valor, {"min": 50}))["valores"]["vida"] == VALOR
+
+
+def test_o_refino_fora_do_tipo_recusa_e_a_varredura_segue(
+        filho, tmp_path) -> None:  # noqa: F811
+    proc, _, _ = filho
+    servico = _servico(proc.pid, tmp_path)
+    token = servico.atender({"verbo": "varrer", "tipo": "i32", "valor": VALOR})["token"]
+    refino = {"verbo": "refinar", "token": token, "comparacao": "igual", "valor": 1.5}
+    assert "não cabe no tipo «i32»" in servico.atender(refino)["recusa"]
+    assert servico.atender({**refino, "valor": VALOR})["contagem"] >= 1
+
+
+def test_a_cadeia_infinita_recusa_e_o_pedido_seguinte_e_atendido(
+        filho, tmp_path) -> None:  # noqa: F811
+    proc, valor, _ = filho
+    servico = _servico(proc.pid, tmp_path)
+    assert "linha da receita" in servico.atender(_ler(float("inf")))["recusa"]
+    assert servico.atender(_ler(valor))["valores"]["vida"] == VALOR
 
 
 def test_o_fracionario_cabe_so_nos_tipos_de_ponto_flutuante() -> None:
