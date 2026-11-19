@@ -555,12 +555,6 @@ jobs:
       # silêncio de pytest é erro duro, e o log da parte sobe como artefato quando algo
       # reprova. A `--continue-on-collection-errors` segue: um módulo quebrado não esconde o
       # resto da parte dele.
-      # AS FAIXAS (O-LINT-TEST-DO-CI-CORRE-EM-FAIXAS-01, 19/11/2026): as 24 partes em série
-      # levavam de 47 a 82 minutos por perna (2,8 a 3,4 por parte). Cada job roda as partes
-      # da sua faixa, uma a uma e sem parar na primeira vermelha, como o `gtk-real`; o 3.10 e
-      # o 3.11 ficam em quatro faixas de seis partes (uns 17 minutos) para a matriz caber nos
-      # 20 jobs simultâneos. O teto é o dobro da pior faixa. O plugin do censo anota, em cada
-      # parte, o que a coleta fez com cada módulo, e o `lint-test-perna` junta as faixas de cada perna.
       - name: Pytest unit
         timeout-minutes: 35
         env:
